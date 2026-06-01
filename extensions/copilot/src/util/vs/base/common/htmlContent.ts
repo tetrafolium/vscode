@@ -33,7 +33,6 @@ export const enum MarkdownStringTextNewlineStyle {
 }
 
 export class MarkdownString implements IMarkdownString {
-
 	public value: string;
 	public isTrusted?: boolean | MarkdownStringTrustedOptions;
 	public supportThemeIcons?: boolean;
@@ -45,13 +44,22 @@ export class MarkdownString implements IMarkdownString {
 	public static lift(dto: IMarkdownString): MarkdownString {
 		const markdownString = new MarkdownString(dto.value, dto);
 		markdownString.uris = dto.uris;
-		markdownString.baseUri = dto.baseUri ? URI.revive(dto.baseUri) : undefined;
+		markdownString.baseUri = dto.baseUri
+			? URI.revive(dto.baseUri)
+			: undefined;
 		return markdownString;
 	}
 
 	constructor(
 		value: string = '',
-		isTrustedOrOptions: boolean | { isTrusted?: boolean | MarkdownStringTrustedOptions; supportThemeIcons?: boolean; supportHtml?: boolean; supportAlertSyntax?: boolean } = false,
+		isTrustedOrOptions:
+			| boolean
+			| {
+					isTrusted?: boolean | MarkdownStringTrustedOptions;
+					supportThemeIcons?: boolean;
+					supportHtml?: boolean;
+					supportAlertSyntax?: boolean;
+			  } = false,
 	) {
 		this.value = value;
 		if (typeof this.value !== 'string') {
@@ -63,20 +71,31 @@ export class MarkdownString implements IMarkdownString {
 			this.supportThemeIcons = false;
 			this.supportHtml = false;
 			this.supportAlertSyntax = false;
-		}
-		else {
+		} else {
 			this.isTrusted = isTrustedOrOptions.isTrusted ?? undefined;
-			this.supportThemeIcons = isTrustedOrOptions.supportThemeIcons ?? false;
+			this.supportThemeIcons =
+				isTrustedOrOptions.supportThemeIcons ?? false;
 			this.supportHtml = isTrustedOrOptions.supportHtml ?? false;
-			this.supportAlertSyntax = isTrustedOrOptions.supportAlertSyntax ?? false;
+			this.supportAlertSyntax =
+				isTrustedOrOptions.supportAlertSyntax ?? false;
 		}
 	}
 
-	appendText(value: string, newlineStyle: MarkdownStringTextNewlineStyle = MarkdownStringTextNewlineStyle.Paragraph): MarkdownString {
-		this.value += escapeMarkdownSyntaxTokens(this.supportThemeIcons ? escapeIcons(value) : value) // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
+	appendText(
+		value: string,
+		newlineStyle: MarkdownStringTextNewlineStyle = MarkdownStringTextNewlineStyle.Paragraph,
+	): MarkdownString {
+		this.value += escapeMarkdownSyntaxTokens(
+			this.supportThemeIcons ? escapeIcons(value) : value,
+		) // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
 			.replace(/([ \t]+)/g, (_match, g1) => '&nbsp;'.repeat(g1.length)) // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
 			.replace(/\>/gm, '\\>') // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
-			.replace(/\n/g, newlineStyle === MarkdownStringTextNewlineStyle.Break ? '\\\n' : '\n\n'); // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
+			.replace(
+				/\n/g,
+				newlineStyle === MarkdownStringTextNewlineStyle.Break
+					? '\\\n'
+					: '\n\n',
+			); // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
 
 		return this;
 	}
@@ -91,7 +110,11 @@ export class MarkdownString implements IMarkdownString {
 		return this;
 	}
 
-	appendLink(target: URI | string, label: string, title?: string): MarkdownString {
+	appendLink(
+		target: URI | string,
+		label: string,
+		title?: string,
+	): MarkdownString {
 		this.value += '[';
 		this.value += this._escape(label, ']');
 		this.value += '](';
@@ -115,7 +138,9 @@ export class MarkdownString implements IMarkdownString {
 	}
 }
 
-export function isEmptyMarkdownString(oneOrMany: IMarkdownString | IMarkdownString[] | null | undefined): boolean {
+export function isEmptyMarkdownString(
+	oneOrMany: IMarkdownString | IMarkdownString[] | null | undefined,
+): boolean {
 	if (isMarkdownString(oneOrMany)) {
 		return !oneOrMany.value;
 	} else if (Array.isArray(oneOrMany)) {
@@ -129,26 +154,40 @@ export function isMarkdownString(thing: unknown): thing is IMarkdownString {
 	if (thing instanceof MarkdownString) {
 		return true;
 	} else if (thing && typeof thing === 'object') {
-		return typeof (<IMarkdownString>thing).value === 'string'
-			&& (typeof (<IMarkdownString>thing).isTrusted === 'boolean' || typeof (<IMarkdownString>thing).isTrusted === 'object' || (<IMarkdownString>thing).isTrusted === undefined)
-			&& (typeof (<IMarkdownString>thing).supportThemeIcons === 'boolean' || (<IMarkdownString>thing).supportThemeIcons === undefined)
-			&& (typeof (<IMarkdownString>thing).supportAlertSyntax === 'boolean' || (<IMarkdownString>thing).supportAlertSyntax === undefined);
+		return (
+			typeof (<IMarkdownString>thing).value === 'string' &&
+			(typeof (<IMarkdownString>thing).isTrusted === 'boolean' ||
+				typeof (<IMarkdownString>thing).isTrusted === 'object' ||
+				(<IMarkdownString>thing).isTrusted === undefined) &&
+			(typeof (<IMarkdownString>thing).supportThemeIcons === 'boolean' ||
+				(<IMarkdownString>thing).supportThemeIcons === undefined) &&
+			(typeof (<IMarkdownString>thing).supportAlertSyntax === 'boolean' ||
+				(<IMarkdownString>thing).supportAlertSyntax === undefined)
+		);
 	}
 	return false;
 }
 
-export function markdownStringEqual(a: IMarkdownString, b: IMarkdownString): boolean {
+export function markdownStringEqual(
+	a: IMarkdownString,
+	b: IMarkdownString,
+): boolean {
 	if (a === b) {
 		return true;
 	} else if (!a || !b) {
 		return false;
 	} else {
-		return a.value === b.value
-			&& a.isTrusted === b.isTrusted
-			&& a.supportThemeIcons === b.supportThemeIcons
-			&& a.supportHtml === b.supportHtml
-			&& a.supportAlertSyntax === b.supportAlertSyntax
-			&& (a.baseUri === b.baseUri || !!a.baseUri && !!b.baseUri && isEqual(URI.from(a.baseUri), URI.from(b.baseUri)));
+		return (
+			a.value === b.value &&
+			a.isTrusted === b.isTrusted &&
+			a.supportThemeIcons === b.supportThemeIcons &&
+			a.supportHtml === b.supportHtml &&
+			a.supportAlertSyntax === b.supportAlertSyntax &&
+			(a.baseUri === b.baseUri ||
+				(!!a.baseUri &&
+					!!b.baseUri &&
+					isEqual(URI.from(a.baseUri), URI.from(b.baseUri))))
+		);
 	}
 }
 
@@ -172,10 +211,13 @@ export function escapeMarkdownLinkLabel(text: string): string {
 /**
  * @see https://github.com/microsoft/vscode/issues/193746
  */
-export function appendEscapedMarkdownCodeBlockFence(code: string, langId: string) {
+export function appendEscapedMarkdownCodeBlockFence(
+	code: string,
+	langId: string,
+) {
 	const longestFenceLength =
-		code.match(/^`+/gm)?.reduce((a, b) => (a.length > b.length ? a : b)).length ??
-		0;
+		code.match(/^`+/gm)?.reduce((a, b) => (a.length > b.length ? a : b))
+			.length ?? 0;
 	const desiredFenceLength =
 		longestFenceLength >= 3 ? longestFenceLength + 1 : 3;
 
@@ -197,7 +239,10 @@ export function appendEscapedMarkdownCodeBlockFence(code: string, langId: string
  * content begins or ends with a backtick).
  */
 export function appendEscapedMarkdownInlineCode(text: string): string {
-	const longestBacktickRun = Math.max(0, ...(text.match(/`+/g) ?? []).map(m => m.length));
+	const longestBacktickRun = Math.max(
+		0,
+		...(text.match(/`+/g) ?? []).map((m) => m.length),
+	);
 	const fence = '`'.repeat(longestBacktickRun + 1);
 	const needsSpace = text.startsWith('`') || text.endsWith('`');
 	const content = needsSpace ? ` ${text} ` : text;
@@ -215,9 +260,12 @@ export function removeMarkdownEscapes(text: string): string {
 	return text.replace(/\\([\\`*_{}[\]()#+\-.!~])/g, '$1');
 }
 
-export function parseHrefAndDimensions(href: string): { href: string; dimensions: string[] } {
+export function parseHrefAndDimensions(href: string): {
+	href: string;
+	dimensions: string[];
+} {
 	const dimensions: string[] = [];
-	const splitted = href.split('|').map(s => s.trim());
+	const splitted = href.split('|').map((s) => s.trim());
 	href = splitted[0];
 	const parameters = splitted[1];
 	if (parameters) {
@@ -237,19 +285,40 @@ export function parseHrefAndDimensions(href: string): { href: string; dimensions
 	return { href, dimensions };
 }
 
-export function createMarkdownLink(text: string, href: string, title?: string, escapeTokens = true): string {
+export function createMarkdownLink(
+	text: string,
+	href: string,
+	title?: string,
+	escapeTokens = true,
+): string {
 	return `[${escapeTokens ? escapeMarkdownSyntaxTokens(text) : text}](${href}${title ? ` "${escapeMarkdownSyntaxTokens(title)}"` : ''})`;
 }
 
-export function createMarkdownCommandLink(command: { text: string; id: string; arguments?: unknown[]; tooltip: string }, escapeTokens = true): string {
-	const uri = createCommandUri(command.id, ...(command.arguments || [])).toString();
+export function createMarkdownCommandLink(
+	command: {
+		text: string;
+		id: string;
+		arguments?: unknown[];
+		tooltip: string;
+	},
+	escapeTokens = true,
+): string {
+	const uri = createCommandUri(
+		command.id,
+		...(command.arguments || []),
+	).toString();
 	return createMarkdownLink(command.text, uri, command.tooltip, escapeTokens);
 }
 
-export function createCommandUri(commandId: string, ...commandArgs: unknown[]): URI {
+export function createCommandUri(
+	commandId: string,
+	...commandArgs: unknown[]
+): URI {
 	return URI.from({
 		scheme: Schemas.command,
 		path: commandId,
-		query: commandArgs.length ? encodeURIComponent(JSON.stringify(commandArgs)) : undefined,
+		query: commandArgs.length
+			? encodeURIComponent(JSON.stringify(commandArgs))
+			: undefined,
 	});
 }

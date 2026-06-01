@@ -16,7 +16,6 @@ describe('getStructure - csharp', () => {
 	}
 
 	test('source with different syntax constructs', async () => {
-
 		const source = await fromFixture('test.cs');
 
 		expect(await csharpStruct(source)).toMatchSnapshot();

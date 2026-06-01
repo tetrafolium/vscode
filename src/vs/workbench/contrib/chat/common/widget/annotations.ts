@@ -2,24 +2,33 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { basename } from '../../../../../base/common/resources.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { IRange } from '../../../../../editor/common/core/range.js';
-import { isLocation } from '../../../../../editor/common/languages.js';
-import { IChatProgressRenderableResponseContent, IChatProgressResponseContent, appendMarkdownString, canMergeMarkdownStrings } from '../model/chatModel.js';
-import { IChatAgentVulnerabilityDetails } from '../chatService/chatService.js';
+import { MarkdownString } from "../../../../../base/common/htmlContent.js";
+import { basename } from "../../../../../base/common/resources.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { IRange } from "../../../../../editor/common/core/range.js";
+import { isLocation } from "../../../../../editor/common/languages.js";
+import {
+	IChatProgressRenderableResponseContent,
+	IChatProgressResponseContent,
+	appendMarkdownString,
+	canMergeMarkdownStrings,
+} from "../model/chatModel.js";
+import { IChatAgentVulnerabilityDetails } from "../chatService/chatService.js";
 
-export const contentRefUrl = 'http://_vscodecontentref_'; // must be lowercase for URI
+export const contentRefUrl = "http://_vscodecontentref_"; // must be lowercase for URI
 
-export function annotateSpecialMarkdownContent(response: Iterable<IChatProgressResponseContent>): IChatProgressRenderableResponseContent[] {
+export function annotateSpecialMarkdownContent(
+	response: Iterable<IChatProgressResponseContent>,
+): IChatProgressRenderableResponseContent[] {
 	let refIdPool = 0;
 
 	const result: IChatProgressRenderableResponseContent[] = [];
 	for (const item of response) {
-		const previousItemIndex = result.findLastIndex(p => p.kind !== 'textEditGroup' && p.kind !== 'undoStop');
+		const previousItemIndex = result.findLastIndex(
+			(p) => p.kind !== "textEditGroup" && p.kind !== "undoStop",
+		);
 		const previousItem = result[previousItemIndex];
-		if (item.kind === 'inlineReference') {
+		if (item.kind === "inlineReference") {
 			let label: string | undefined = item.name;
 			if (!label) {
 				if (URI.isUri(item.inlineReference)) {
@@ -35,13 +44,22 @@ export function annotateSpecialMarkdownContent(response: Iterable<IChatProgressR
 			// or fenced code block), markdown links won't be parsed, they render as
 			// literal text like [file](http://_vscodecontentref_/1). In that case, emit
 			// just the plain label so the output stays readable.
-			const previousText = previousItem?.kind === 'markdownContent' ? previousItem.content.value : '';
+			const previousText =
+				previousItem?.kind === "markdownContent"
+					? previousItem.content.value
+					: "";
 			if (isInsideCodeContext(previousText)) {
-				if (previousItem?.kind === 'markdownContent') {
-					const merged = appendMarkdownString(previousItem.content, new MarkdownString(label));
+				if (previousItem?.kind === "markdownContent") {
+					const merged = appendMarkdownString(
+						previousItem.content,
+						new MarkdownString(label),
+					);
 					result[previousItemIndex] = { ...previousItem, content: merged };
 				} else {
-					result.push({ content: new MarkdownString(label), kind: 'markdownContent' });
+					result.push({
+						content: new MarkdownString(label),
+						kind: "markdownContent",
+					});
 				}
 			} else {
 				const refId = refIdPool++;
@@ -50,18 +68,38 @@ export function annotateSpecialMarkdownContent(response: Iterable<IChatProgressR
 
 				const annotationMetadata = { [refId]: item };
 
-				if (previousItem?.kind === 'markdownContent') {
-					const merged = appendMarkdownString(previousItem.content, new MarkdownString(markdownText));
-					result[previousItemIndex] = { ...previousItem, content: merged, inlineReferences: { ...annotationMetadata, ...(previousItem.inlineReferences || {}) } };
+				if (previousItem?.kind === "markdownContent") {
+					const merged = appendMarkdownString(
+						previousItem.content,
+						new MarkdownString(markdownText),
+					);
+					result[previousItemIndex] = {
+						...previousItem,
+						content: merged,
+						inlineReferences: {
+							...annotationMetadata,
+							...(previousItem.inlineReferences || {}),
+						},
+					};
 				} else {
-					result.push({ content: new MarkdownString(markdownText), inlineReferences: annotationMetadata, kind: 'markdownContent' });
+					result.push({
+						content: new MarkdownString(markdownText),
+						inlineReferences: annotationMetadata,
+						kind: "markdownContent",
+					});
 				}
 			}
-		} else if (item.kind === 'markdownContent' && previousItem?.kind === 'markdownContent') {
+		} else if (
+			item.kind === "markdownContent" &&
+			previousItem?.kind === "markdownContent"
+		) {
 			if (canMergeMarkdownStrings(previousItem.content, item.content)) {
 				const merged = appendMarkdownString(previousItem.content, item.content);
 				result[previousItemIndex] = { ...previousItem, content: merged };
-			} else if (previousItem.inlineReferences && isContentRefOnly(previousItem.content.value)) {
+			} else if (
+				previousItem.inlineReferences &&
+				isContentRefOnly(previousItem.content.value)
+			) {
 				// The previous item is a standalone inline reference whose MarkdownString
 				// was synthesized with default properties that don't match the incoming
 				// markdown (e.g., different isTrusted). Prepend the reference text and
@@ -76,22 +114,33 @@ export function annotateSpecialMarkdownContent(response: Iterable<IChatProgressR
 			} else {
 				result.push(item);
 			}
-		} else if (item.kind === 'markdownVuln') {
+		} else if (item.kind === "markdownVuln") {
 			const vulnText = encodeURIComponent(JSON.stringify(item.vulnerabilities));
 			const markdownText = `<vscode_annotation details='${vulnText}'>${item.content.value}</vscode_annotation>`;
-			if (previousItem?.kind === 'markdownContent') {
+			if (previousItem?.kind === "markdownContent") {
 				// Since this is inside a codeblock, it needs to be merged into the previous markdown content.
-				const merged = appendMarkdownString(previousItem.content, new MarkdownString(markdownText));
+				const merged = appendMarkdownString(
+					previousItem.content,
+					new MarkdownString(markdownText),
+				);
 				result[previousItemIndex] = { ...previousItem, content: merged };
 			} else {
-				result.push({ content: new MarkdownString(markdownText), kind: 'markdownContent' });
+				result.push({
+					content: new MarkdownString(markdownText),
+					kind: "markdownContent",
+				});
 			}
-		} else if (item.kind === 'codeblockUri') {
-			if (previousItem?.kind === 'markdownContent') {
-				const isEditText = item.isEdit ? ` isEdit` : '';
-				const subAgentText = item.subAgentInvocationId ? ` subAgentInvocationId="${encodeURIComponent(item.subAgentInvocationId)}"` : '';
+		} else if (item.kind === "codeblockUri") {
+			if (previousItem?.kind === "markdownContent") {
+				const isEditText = item.isEdit ? ` isEdit` : "";
+				const subAgentText = item.subAgentInvocationId
+					? ` subAgentInvocationId="${encodeURIComponent(item.subAgentInvocationId)}"`
+					: "";
 				const markdownText = `<vscode_codeblock_uri${isEditText}${subAgentText}>${item.uri.toString()}</vscode_codeblock_uri>`;
-				const merged = appendMarkdownString(previousItem.content, new MarkdownString(markdownText));
+				const merged = appendMarkdownString(
+					previousItem.content,
+					new MarkdownString(markdownText),
+				);
 				// delete the previous and append to ensure that we don't reorder the edit before the undo stop containing it
 				result.splice(previousItemIndex, 1);
 				result.push({ ...previousItem, content: merged });
@@ -104,7 +153,9 @@ export function annotateSpecialMarkdownContent(response: Iterable<IChatProgressR
 	return result;
 }
 
-const contentRefPattern = new RegExp(`^(\\[.*?\\]\\(${contentRefUrl}/\\d+\\))+$`);
+const contentRefPattern = new RegExp(
+	`^(\\[.*?\\]\\(${contentRefUrl}/\\d+\\))+$`,
+);
 
 /**
  * Returns true when the text consists entirely of synthesized content-ref
@@ -122,9 +173,9 @@ function isContentRefOnly(text: string): boolean {
  * would be rendered as literal text.
  */
 export function isInsideCodeContext(text: string): boolean {
-	const lines = text.split('\n');
+	const lines = text.split("\n");
 	let inFencedBlock = false;
-	let fenceChar = '';
+	let fenceChar = "";
 	let fenceLength = 0;
 	const unfencedLines: string[] = [];
 
@@ -134,7 +185,10 @@ export function isInsideCodeContext(text: string): boolean {
 		if (inFencedBlock) {
 			// Check for closing fence: same char, at least same length, only whitespace after
 			const closeLength = countLeadingChar(trimmed, fenceChar);
-			if (closeLength >= fenceLength && trimmed.substring(closeLength).trim() === '') {
+			if (
+				closeLength >= fenceLength &&
+				trimmed.substring(closeLength).trim() === ""
+			) {
 				inFencedBlock = false;
 				unfencedLines.length = 0;
 			}
@@ -143,10 +197,13 @@ export function isInsideCodeContext(text: string): boolean {
 
 		// Check for opening fence (3+ backticks or tildes at start of line)
 		const firstChar = trimmed[0];
-		if (firstChar === '`' || firstChar === '~') {
+		if (firstChar === "`" || firstChar === "~") {
 			const openLength = countLeadingChar(trimmed, firstChar);
 			// Backtick fences: info string must not contain backticks
-			if (openLength >= 3 && (firstChar === '~' || !trimmed.substring(openLength).includes('`'))) {
+			if (
+				openLength >= 3 &&
+				(firstChar === "~" || !trimmed.substring(openLength).includes("`"))
+			) {
 				inFencedBlock = true;
 				fenceChar = firstChar;
 				fenceLength = openLength;
@@ -158,7 +215,7 @@ export function isInsideCodeContext(text: string): boolean {
 		unfencedLines.push(line);
 	}
 
-	return inFencedBlock || hasUnclosedInlineCode(unfencedLines.join('\n'));
+	return inFencedBlock || hasUnclosedInlineCode(unfencedLines.join("\n"));
 }
 
 function countLeadingChar(text: string, char: string): number {
@@ -177,22 +234,22 @@ function countLeadingChar(text: string, char: string): number {
 function hasUnclosedInlineCode(text: string): boolean {
 	let i = 0;
 	while (i < text.length) {
-		if (text[i] !== '`') {
+		if (text[i] !== "`") {
 			i++;
 			continue;
 		}
 
-		const openLen = countLeadingChar(text.substring(i), '`');
+		const openLen = countLeadingChar(text.substring(i), "`");
 		i += openLen;
 
 		// Search for a matching closing backtick sequence of the same length
 		let found = false;
 		while (i < text.length) {
-			if (text[i] !== '`') {
+			if (text[i] !== "`") {
 				i++;
 				continue;
 			}
-			const closeLen = countLeadingChar(text.substring(i), '`');
+			const closeLen = countLeadingChar(text.substring(i), "`");
 			i += closeLen;
 			if (closeLen === openLen) {
 				found = true;
@@ -213,8 +270,20 @@ export interface IMarkdownVulnerability {
 	readonly description: string;
 	readonly range: IRange;
 }
-export function extractCodeblockUrisFromText(text: string): { uri: URI; isEdit?: boolean; subAgentInvocationId?: string; textWithoutResult: string } | undefined {
-	const match = /<vscode_codeblock_uri( isEdit)?( subAgentInvocationId="([^"]*)")?>([\s\S]*?)<\/vscode_codeblock_uri>/ms.exec(text);
+export function extractCodeblockUrisFromText(
+	text: string,
+):
+	| {
+			uri: URI;
+			isEdit?: boolean;
+			subAgentInvocationId?: string;
+			textWithoutResult: string;
+	  }
+	| undefined {
+	const match =
+		/<vscode_codeblock_uri( isEdit)?( subAgentInvocationId="([^"]*)")?>([\s\S]*?)<\/vscode_codeblock_uri>/ms.exec(
+			text,
+		);
 	if (match) {
 		const [all, isEdit, , encodedSubAgentId, uriString] = match;
 		if (uriString) {
@@ -224,7 +293,9 @@ export function extractCodeblockUrisFromText(text: string): { uri: URI; isEdit?:
 			} catch {
 				return undefined;
 			}
-			const textWithoutResult = text.substring(0, match.index) + text.substring(match.index + all.length);
+			const textWithoutResult =
+				text.substring(0, match.index) +
+				text.substring(match.index + all.length);
 			let subAgentInvocationId: string | undefined;
 			if (encodedSubAgentId) {
 				try {
@@ -233,14 +304,22 @@ export function extractCodeblockUrisFromText(text: string): { uri: URI; isEdit?:
 					subAgentInvocationId = encodedSubAgentId;
 				}
 			}
-			return { uri: result, textWithoutResult, isEdit: !!isEdit, subAgentInvocationId };
+			return {
+				uri: result,
+				textWithoutResult,
+				isEdit: !!isEdit,
+				subAgentInvocationId,
+			};
 		}
 	}
 	return undefined;
 }
 
-export function extractSubAgentInvocationIdFromText(text: string): string | undefined {
-	const match = /<vscode_codeblock_uri[^>]* subAgentInvocationId="([^"]*)"/ms.exec(text);
+export function extractSubAgentInvocationIdFromText(
+	text: string,
+): string | undefined {
+	const match =
+		/<vscode_codeblock_uri[^>]* subAgentInvocationId="([^"]*)"/ms.exec(text);
 	if (match) {
 		try {
 			return decodeURIComponent(match[1]);
@@ -252,38 +331,60 @@ export function extractSubAgentInvocationIdFromText(text: string): string | unde
 }
 
 export function hasCodeblockUriTag(text: string): boolean {
-	return text.includes('<vscode_codeblock_uri');
+	return text.includes("<vscode_codeblock_uri");
 }
 
 export function hasEditCodeblockUriTag(text: string): boolean {
-	return text.includes('<vscode_codeblock_uri isEdit');
+	return text.includes("<vscode_codeblock_uri isEdit");
 }
 
-export function extractVulnerabilitiesFromText(text: string): { newText: string; vulnerabilities: IMarkdownVulnerability[] } {
+export function extractVulnerabilitiesFromText(text: string): {
+	newText: string;
+	vulnerabilities: IMarkdownVulnerability[];
+} {
 	const vulnerabilities: IMarkdownVulnerability[] = [];
 	let newText = text;
 	let match: RegExpExecArray | null;
-	while ((match = /<vscode_annotation details='(.*?)'>(.*?)<\/vscode_annotation>/ms.exec(newText)) !== null) {
+	while (
+		(match =
+			/<vscode_annotation details='(.*?)'>(.*?)<\/vscode_annotation>/ms.exec(
+				newText,
+			)) !== null
+	) {
 		const [full, details, content] = match;
 		const start = match.index;
 		const textBefore = newText.substring(0, start);
-		const linesBefore = textBefore.split('\n').length - 1;
-		const linesInside = content.split('\n').length - 1;
+		const linesBefore = textBefore.split("\n").length - 1;
+		const linesInside = content.split("\n").length - 1;
 
-		const previousNewlineIdx = textBefore.lastIndexOf('\n');
+		const previousNewlineIdx = textBefore.lastIndexOf("\n");
 		const startColumn = start - (previousNewlineIdx + 1) + 1;
-		const endPreviousNewlineIdx = (textBefore + content).lastIndexOf('\n');
+		const endPreviousNewlineIdx = (textBefore + content).lastIndexOf("\n");
 		const endColumn = start + content.length - (endPreviousNewlineIdx + 1) + 1;
 
 		try {
-			const vulnDetails: IChatAgentVulnerabilityDetails[] = JSON.parse(decodeURIComponent(details));
-			vulnDetails.forEach(({ title, description }) => vulnerabilities.push({
-				title, description, range: { startLineNumber: linesBefore + 1, startColumn, endLineNumber: linesBefore + linesInside + 1, endColumn }
-			}));
+			const vulnDetails: IChatAgentVulnerabilityDetails[] = JSON.parse(
+				decodeURIComponent(details),
+			);
+			vulnDetails.forEach(({ title, description }) =>
+				vulnerabilities.push({
+					title,
+					description,
+					range: {
+						startLineNumber: linesBefore + 1,
+						startColumn,
+						endLineNumber: linesBefore + linesInside + 1,
+						endColumn,
+					},
+				}),
+			);
 		} catch (err) {
 			// Something went wrong with encoding this text, just ignore it
 		}
-		newText = newText.substring(0, start) + content + newText.substring(start + full.length);
+		newText =
+			newText.substring(0, start) +
+			content +
+			newText.substring(start + full.length);
 	}
 
 	return { newText, vulnerabilities };

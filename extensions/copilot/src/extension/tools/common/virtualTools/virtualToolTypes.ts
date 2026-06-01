@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { LanguageModelToolInformation, LanguageModelToolResult } from 'vscode';
+import type {
+	LanguageModelToolInformation,
+	LanguageModelToolResult,
+} from 'vscode';
 import { createServiceIdentifier } from '../../../../util/common/services';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { IObservable } from '../../../../util/vs/base/common/observableInternal';
@@ -19,7 +22,10 @@ export interface IToolGrouping {
 	 * Should be called for each model tool call. Returns a tool result if the
 	 * call was a virtual tool call that was expanded.
 	 */
-	didCall(localTurnNumber: number, toolCallName: string): LanguageModelToolResult | undefined;
+	didCall(
+		localTurnNumber: number,
+		toolCallName: string,
+	): LanguageModelToolResult | undefined;
 
 	/**
 	 * Should be called for each conversation turn. This is used to monitor
@@ -48,12 +54,18 @@ export interface IToolGrouping {
 	 * Returns a list of tools that should be used for the given request.
 	 * Internally re-reads the request and conversation state.
 	 */
-	compute(query: string, token: CancellationToken): Promise<LanguageModelToolInformation[]>;
+	compute(
+		query: string,
+		token: CancellationToken,
+	): Promise<LanguageModelToolInformation[]>;
 
 	/**
 	 * Returns the complete tree of tools, used for diagnostic purposes.
 	 */
-	computeAll(query: string, token: CancellationToken): Promise<(LanguageModelToolInformation | VirtualTool)[]>;
+	computeAll(
+		query: string,
+		token: CancellationToken,
+	): Promise<(LanguageModelToolInformation | VirtualTool)[]>;
 }
 
 export interface IToolGroupingService {
@@ -66,10 +78,14 @@ export interface IToolGroupingService {
 	 * Creates a tool grouping for a request, based on its conversation and the
 	 * initial set of tools.
 	 */
-	create(sessionId: string, tools: readonly LanguageModelToolInformation[]): IToolGrouping;
+	create(
+		sessionId: string,
+		tools: readonly LanguageModelToolInformation[],
+	): IToolGrouping;
 }
 
-export const IToolGroupingService = createServiceIdentifier<IToolGroupingService>('IToolGroupingService');
+export const IToolGroupingService =
+	createServiceIdentifier<IToolGroupingService>('IToolGroupingService');
 
 export interface IToolGroupingCache {
 	_serviceBrand: undefined;
@@ -87,24 +103,35 @@ export interface IToolGroupingCache {
 	/**
 	 * Gets or inserts the grouping for the given set of tools.
 	 */
-	getDescription(tools: LanguageModelToolInformation[]): Promise<ISummarizedToolCategoryUpdatable>;
+	getDescription(
+		tools: LanguageModelToolInformation[],
+	): Promise<ISummarizedToolCategoryUpdatable>;
 }
 
-export const IToolGroupingCache = createServiceIdentifier<IToolGroupingCache>('IToolGroupingCache');
-
+export const IToolGroupingCache =
+	createServiceIdentifier<IToolGroupingCache>('IToolGroupingCache');
 
 export interface IToolCategorization {
 	/**
 	 * Called whenever new tools are added. The function should add each tool into
 	 * the appropriate virtual tool or top-level tool in the `root`.
 	 */
-	addGroups(query: string, root: VirtualTool, tools: LanguageModelToolInformation[], token: CancellationToken): Promise<void>;
+	addGroups(
+		query: string,
+		root: VirtualTool,
+		tools: LanguageModelToolInformation[],
+		token: CancellationToken,
+	): Promise<void>;
 
 	/**
 	 * Recalculates the "embeddings" group, when enabled, so relevant tools
 	 * for the query are shown at the top level.
 	 */
-	recomputeEmbeddingRankings(query: string, root: VirtualTool, token: CancellationToken): Promise<void>;
+	recomputeEmbeddingRankings(
+		query: string,
+		root: VirtualTool,
+		token: CancellationToken,
+	): Promise<void>;
 }
 
 export interface ISummarizedToolCategory {
@@ -119,4 +146,4 @@ export interface ISummarizedToolCategoryUpdatable {
 	update(up: ISummarizedToolCategory): void;
 }
 
-export class SummarizerError extends Error { }
+export class SummarizerError extends Error {}

@@ -21,7 +21,12 @@ import { ResolvedContextItem } from '../contextProviderRegistry';
 namespace ContextItemSchema {
 	export function is(item: SupportedContextItem): boolean {
 		if (item.importance !== undefined) {
-			if (typeof item.importance !== 'number' || !Number.isInteger(item.importance) || item.importance < 0 || item.importance > 100) {
+			if (
+				typeof item.importance !== 'number' ||
+				!Number.isInteger(item.importance) ||
+				item.importance < 0 ||
+				item.importance > 100
+			) {
 				return false;
 			}
 		}
@@ -45,7 +50,10 @@ namespace TraitSchema {
 			return false;
 		}
 		const candidate = item as Trait;
-		return typeof candidate.name === 'string' && typeof candidate.value === 'string';
+		return (
+			typeof candidate.name === 'string' &&
+			typeof candidate.value === 'string'
+		);
 	}
 }
 
@@ -55,7 +63,10 @@ namespace CodeSnippetSchema {
 			return false;
 		}
 		const candidate = item as CodeSnippet;
-		if (typeof candidate.uri !== 'string' || typeof candidate.value !== 'string') {
+		if (
+			typeof candidate.uri !== 'string' ||
+			typeof candidate.value !== 'string'
+		) {
 			return false;
 		}
 		if (candidate.additionalUris === undefined) {
@@ -79,7 +90,7 @@ namespace DiagnosticBagSchema {
 			return false;
 		}
 		const candidate = item as DiagnosticBag;
-		if (!(URI.isUri(candidate.uri))) {
+		if (!URI.isUri(candidate.uri)) {
 			return false;
 		}
 		if (!Array.isArray(candidate.values)) {
@@ -95,7 +106,9 @@ namespace DiagnosticBagSchema {
 }
 
 namespace SupportedContextItemSchema {
-	export function is(item: SupportedContextItem): SupportedContextItemType | undefined {
+	export function is(
+		item: SupportedContextItem,
+	): SupportedContextItemType | undefined {
 		if (TraitSchema.is(item)) {
 			return 'Trait';
 		} else if (CodeSnippetSchema.is(item)) {
@@ -117,35 +130,49 @@ namespace SupportedContextItemSchema {
  */
 
 export type TraitWithId = Trait & { id: string; type: 'Trait' };
-export type CodeSnippetWithId = CodeSnippet & { id: string; type: 'CodeSnippet' };
-export type DiagnosticBagWithId = DiagnosticBag & { id: string; type: 'DiagnosticBag' };
-export type SupportedContextItemWithId = TraitWithId | CodeSnippetWithId | DiagnosticBagWithId;
+export type CodeSnippetWithId = CodeSnippet & {
+	id: string;
+	type: 'CodeSnippet';
+};
+export type DiagnosticBagWithId = DiagnosticBag & {
+	id: string;
+	type: 'DiagnosticBag';
+};
+export type SupportedContextItemWithId =
+	| TraitWithId
+	| CodeSnippetWithId
+	| DiagnosticBagWithId;
 
 export function filterContextItemsByType<S extends SupportedContextItemType>(
 	resolvedContextItems: ResolvedContextItem[],
-	type: S
+	type: S,
 ): ResolvedContextItem<Extract<SupportedContextItemWithId, { type: S }>>[] {
 	return resolvedContextItems
-		.map(item => {
-			const filteredData = item.data.filter(data => data.type === type) as Extract<
-				SupportedContextItemWithId,
-				{ type: S }
-			>[];
+		.map((item) => {
+			const filteredData = item.data.filter(
+				(data) => data.type === type,
+			) as Extract<SupportedContextItemWithId, { type: S }>[];
 
-			return filteredData.length > 0 ? { ...item, data: filteredData } : undefined;
+			return filteredData.length > 0
+				? { ...item, data: filteredData }
+				: undefined;
 		})
-		.filter(r => r !== undefined) as ResolvedContextItem<Extract<SupportedContextItemWithId, { type: S }>>[];
+		.filter((r) => r !== undefined) as ResolvedContextItem<
+		Extract<SupportedContextItemWithId, { type: S }>
+	>[];
 }
 
-type SupportedContextItemWithType = SupportedContextItem & { type: SupportedContextItemType };
+type SupportedContextItemWithType = SupportedContextItem & {
+	type: SupportedContextItemType;
+};
 
 export function filterSupportedContextItems(
-	contextItems: SupportedContextItem[]
+	contextItems: SupportedContextItem[],
 ): [SupportedContextItemWithType[], number] {
 	const filteredItems: SupportedContextItemWithType[] = [];
 	let invalidItemsCounter = 0;
 
-	contextItems.forEach(item => {
+	contextItems.forEach((item) => {
 		const type = SupportedContextItemSchema.is(item);
 		if (type !== undefined) {
 			filteredItems.push({
@@ -166,7 +193,10 @@ export function filterSupportedContextItems(
  * be problematic when used as prompt components keys.
  */
 function validateContextItemId(id: string): boolean {
-	return id.length > 0 && id.replaceAll(/[^a-zA-Z0-9-]/g, '').length === id.length;
+	return (
+		id.length > 0 &&
+		id.replaceAll(/[^a-zA-Z0-9-]/g, '').length === id.length
+	);
 }
 
 /**
@@ -176,7 +206,7 @@ function validateContextItemId(id: string): boolean {
  */
 export function addOrValidateContextItemsIDs(
 	accessor: ServicesAccessor,
-	contextItems: SupportedContextItemWithType[]
+	contextItems: SupportedContextItemWithType[],
 ): SupportedContextItemWithId[] {
 	const seenIds = new Set<string>();
 	const logTarget = accessor.get(ICompletionsLogTargetService);
@@ -186,12 +216,18 @@ export function addOrValidateContextItemsIDs(
 		let id = item.id ?? generateUuid();
 		if (!validateContextItemId(id)) {
 			const newID = generateUuid();
-			logger.error(logTarget, `Invalid context item ID ${id}, replacing with ${newID}`);
+			logger.error(
+				logTarget,
+				`Invalid context item ID ${id}, replacing with ${newID}`,
+			);
 			id = newID;
 		}
 		if (seenIds.has(id)) {
 			const newID = generateUuid();
-			logger.error(logTarget, `Duplicate context item ID ${id}, replacing with ${newID}`);
+			logger.error(
+				logTarget,
+				`Duplicate context item ID ${id}, replacing with ${newID}`,
+			);
 			id = newID;
 		}
 		seenIds.add(id);

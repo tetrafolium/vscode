@@ -77,47 +77,52 @@ export interface IOsc633ParseResult {
  * Handles `\\` -> `\` and `\xAB` -> character with code 0xAB.
  */
 function deserializeOscMessage(message: string): string {
-	if (message.indexOf('\\') === -1) {
+	if (message.indexOf("\\") === -1) {
 		return message;
 	}
 	return message.replaceAll(
 		/\\(\\|x([0-9a-f]{2}))/gi,
-		(_match: string, op: string, hex?: string) => hex ? String.fromCharCode(parseInt(hex, 16)) : op,
+		(_match: string, op: string, hex?: string) =>
+			hex ? String.fromCharCode(parseInt(hex, 16)) : op,
 	);
 }
 
 function parseOsc633Payload(payload: string): Osc633Event | undefined {
-	const semiIdx = payload.indexOf(';');
+	const semiIdx = payload.indexOf(";");
 	if ((semiIdx === -1 ? payload.length : semiIdx) !== 1) {
 		return undefined;
 	}
 
 	const command = payload[0];
-	const argsRaw = semiIdx === -1 ? '' : payload.substring(semiIdx + 1);
+	const argsRaw = semiIdx === -1 ? "" : payload.substring(semiIdx + 1);
 
 	switch (command) {
-		case 'A':
+		case "A":
 			return { type: Osc633EventType.PromptStart };
-		case 'B':
+		case "B":
 			return { type: Osc633EventType.CommandStart };
-		case 'C':
+		case "C":
 			return { type: Osc633EventType.CommandExecuted };
-		case 'D': {
+		case "D": {
 			const exitCode = argsRaw.length > 0 ? parseInt(argsRaw, 10) : undefined;
 			return {
 				type: Osc633EventType.CommandFinished,
-				exitCode: exitCode !== undefined && !isNaN(exitCode) ? exitCode : undefined,
+				exitCode:
+					exitCode !== undefined && !isNaN(exitCode) ? exitCode : undefined,
 			};
 		}
-		case 'E': {
-			const nonceIdx = argsRaw.indexOf(';');
-			const commandLine = deserializeOscMessage(nonceIdx === -1 ? argsRaw : argsRaw.substring(0, nonceIdx));
-			const nonce = nonceIdx === -1 ? undefined : argsRaw.substring(nonceIdx + 1);
+		case "E": {
+			const nonceIdx = argsRaw.indexOf(";");
+			const commandLine = deserializeOscMessage(
+				nonceIdx === -1 ? argsRaw : argsRaw.substring(0, nonceIdx),
+			);
+			const nonce =
+				nonceIdx === -1 ? undefined : argsRaw.substring(nonceIdx + 1);
 			return { type: Osc633EventType.CommandLine, commandLine, nonce };
 		}
-		case 'P': {
+		case "P": {
 			const deserialized = deserializeOscMessage(argsRaw);
-			const eqIdx = deserialized.indexOf('=');
+			const eqIdx = deserialized.indexOf("=");
 			if (eqIdx === -1) {
 				return undefined;
 			}
@@ -133,11 +138,11 @@ function parseOsc633Payload(payload: string): Osc633Event | undefined {
 }
 
 // OSC introducer is ESC ] (0x1b 0x5d)
-const ESC = '\x1b';
-const OSC_START = ESC + ']';
+const ESC = "\x1b";
+const OSC_START = ESC + "]";
 // Terminators: BEL (0x07) or ST (ESC \)
-const BEL = '\x07';
-const ST = ESC + '\\';
+const BEL = "\x07";
+const ST = ESC + "\\";
 
 /**
  * Stateful parser that handles data chunks, correctly dealing with
@@ -145,7 +150,7 @@ const ST = ESC + '\\';
  */
 export class Osc633Parser {
 	/** Buffer for an incomplete OSC sequence (from ESC] up to but not including the terminator). */
-	private _pendingOsc = '';
+	private _pendingOsc = "";
 	/** Whether we are currently accumulating an OSC sequence. */
 	private _inOsc = false;
 	/** Set when the previous chunk ended with ESC inside an OSC body (potential ST start). */
@@ -161,7 +166,7 @@ export class Osc633Parser {
 			return { cleanedData: data, events };
 		}
 
-		let cleaned = '';
+		let cleaned = "";
 		let i = 0;
 
 		while (i < data.length) {
@@ -169,20 +174,35 @@ export class Osc633Parser {
 				// Handle ESC that was pending from the previous chunk.
 				if (this._pendingEscInOsc) {
 					this._pendingEscInOsc = false;
-					if (data[i] === '\\') {
+					if (data[i] === "\\") {
 						// ESC \ = ST terminator, sequence is complete.
 						i++;
 						this._inOsc = false;
 						const payload = this._pendingOsc;
-						this._pendingOsc = '';
-						this._handleOscPayload(payload, events, { value: cleaned, append(s: string) { cleaned = s; } }, ST);
+						this._pendingOsc = "";
+						this._handleOscPayload(
+							payload,
+							events,
+							{
+								value: cleaned,
+								append(s: string) {
+									cleaned = s;
+								},
+							},
+							ST,
+						);
 						continue;
 					}
 					// ESC was not followed by \, malformed: complete the OSC anyway.
 					this._inOsc = false;
 					const payload = this._pendingOsc;
-					this._pendingOsc = '';
-					this._handleOscPayload(payload, events, { value: cleaned, append(s: string) { cleaned = s; } });
+					this._pendingOsc = "";
+					this._handleOscPayload(payload, events, {
+						value: cleaned,
+						append(s: string) {
+							cleaned = s;
+						},
+					});
 					continue;
 				}
 
@@ -192,8 +212,18 @@ export class Osc633Parser {
 				if (result.complete) {
 					this._inOsc = false;
 					const payload = this._pendingOsc;
-					this._pendingOsc = '';
-					this._handleOscPayload(payload, events, { value: cleaned, append(s: string) { cleaned = s; } }, result.terminator);
+					this._pendingOsc = "";
+					this._handleOscPayload(
+						payload,
+						events,
+						{
+							value: cleaned,
+							append(s: string) {
+								cleaned = s;
+							},
+						},
+						result.terminator,
+					);
 				} else if (result.pendingEsc) {
 					this._pendingEscInOsc = true;
 				}
@@ -214,7 +244,7 @@ export class Osc633Parser {
 
 			// Start of OSC: check if it's 633.
 			i = escIdx + 2; // skip past ESC ]
-			this._pendingOsc = '';
+			this._pendingOsc = "";
 			this._inOsc = true;
 
 			// Try to consume the OSC body in this same chunk.
@@ -223,9 +253,19 @@ export class Osc633Parser {
 			if (result.complete) {
 				this._inOsc = false;
 				const payload = this._pendingOsc;
-				this._pendingOsc = '';
+				this._pendingOsc = "";
 				// If it's a 633 sequence, extract event; otherwise put it back in cleaned.
-				this._handleOscPayload(payload, events, { value: cleaned, append(s: string) { cleaned = s; } }, result.terminator);
+				this._handleOscPayload(
+					payload,
+					events,
+					{
+						value: cleaned,
+						append(s: string) {
+							cleaned = s;
+						},
+					},
+					result.terminator,
+				);
 			} else if (result.pendingEsc) {
 				this._pendingEscInOsc = true;
 			}
@@ -239,7 +279,15 @@ export class Osc633Parser {
 	 * Consume characters from the OSC body, appending to _pendingOsc until a
 	 * terminator (BEL or ST) is found.
 	 */
-	private _consumeOscBody(data: string, startIdx: number): { nextIndex: number; complete: boolean; pendingEsc?: boolean; terminator?: string } {
+	private _consumeOscBody(
+		data: string,
+		startIdx: number,
+	): {
+		nextIndex: number;
+		complete: boolean;
+		pendingEsc?: boolean;
+		terminator?: string;
+	} {
 		const belIdx = data.indexOf(BEL, startIdx);
 		const escIdx = data.indexOf(ESC, startIdx);
 
@@ -255,7 +303,7 @@ export class Osc633Parser {
 			}
 
 			this._pendingOsc += data.substring(startIdx, escIdx);
-			if (data[escIdx + 1] === '\\') {
+			if (data[escIdx + 1] === "\\") {
 				return { nextIndex: escIdx + 2, complete: true, terminator: ST };
 			}
 
@@ -277,7 +325,7 @@ export class Osc633Parser {
 		cleanedRef: { value: string; append(s: string): void } | undefined,
 		terminator = BEL,
 	): void {
-		if (payload.startsWith('633;')) {
+		if (payload.startsWith("633;")) {
 			const oscContent = payload.substring(4); // strip "633;"
 			const event = parseOsc633Payload(oscContent);
 			if (event) {

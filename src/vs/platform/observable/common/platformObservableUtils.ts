@@ -3,10 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DisposableStore, IDisposable } from '../../../base/common/lifecycle.js';
-import { DebugLocation, derivedOpts, IObservable, IReader, observableFromEvent, observableFromEventOpts } from '../../../base/common/observable.js';
-import { IConfigurationService } from '../../configuration/common/configuration.js';
-import { ContextKeyValue, IContextKeyService, RawContextKey } from '../../contextkey/common/contextkey.js';
+import {
+	DisposableStore,
+	IDisposable,
+} from "../../../base/common/lifecycle.js";
+import {
+	DebugLocation,
+	derivedOpts,
+	IObservable,
+	IReader,
+	observableFromEvent,
+	observableFromEventOpts,
+} from "../../../base/common/observable.js";
+import { IConfigurationService } from "../../configuration/common/configuration.js";
+import {
+	ContextKeyValue,
+	IContextKeyService,
+	RawContextKey,
+} from "../../contextkey/common/contextkey.js";
 
 /** Creates an observable update when a configuration key updates. */
 export function observableConfigValue<T>(
@@ -15,12 +29,14 @@ export function observableConfigValue<T>(
 	configurationService: IConfigurationService,
 	debugLocation = DebugLocation.ofCaller(),
 ): IObservable<T> {
-	return observableFromEventOpts({ debugName: () => `Configuration Key "${key}"`, },
-		(handleChange) => configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(key)) {
-				handleChange(e);
-			}
-		}),
+	return observableFromEventOpts(
+		{ debugName: () => `Configuration Key "${key}"` },
+		(handleChange) =>
+			configurationService.onDidChangeConfiguration((e) => {
+				if (e.affectsConfiguration(key)) {
+					handleChange(e);
+				}
+			}),
 		() => configurationService.getValue<T>(key) ?? defaultValue,
 		debugLocation,
 	);
@@ -35,15 +51,27 @@ export function bindContextKey<T extends ContextKeyValue>(
 ): IDisposable {
 	const boundKey = key.bindTo(service);
 	const store = new DisposableStore();
-	derivedOpts({ debugName: () => `Set Context Key "${key.key}"` }, reader => {
-		const value = computeValue(reader);
-		boundKey.set(value);
-		return value;
-	}, debugLocation).recomputeInitiallyAndOnChange(store);
+	derivedOpts(
+		{ debugName: () => `Set Context Key "${key.key}"` },
+		(reader) => {
+			const value = computeValue(reader);
+			boundKey.set(value);
+			return value;
+		},
+		debugLocation,
+	).recomputeInitiallyAndOnChange(store);
 	return store;
 }
 
-
-export function observableContextKey<T>(key: string, contextKeyService: IContextKeyService, debugLocation = DebugLocation.ofCaller()): IObservable<T | undefined> {
-	return observableFromEvent(undefined, contextKeyService.onDidChangeContext, () => contextKeyService.getContextKeyValue<T>(key), debugLocation);
+export function observableContextKey<T>(
+	key: string,
+	contextKeyService: IContextKeyService,
+	debugLocation = DebugLocation.ofCaller(),
+): IObservable<T | undefined> {
+	return observableFromEvent(
+		undefined,
+		contextKeyService.onDidChangeContext,
+		() => contextKeyService.getContextKeyValue<T>(key),
+		debugLocation,
+	);
 }

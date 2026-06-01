@@ -21,16 +21,23 @@ export enum LogLevel {
 	ERROR = 1,
 }
 
-export const ICompletionsLogTargetService = createServiceIdentifier<ICompletionsLogTargetService>('ICompletionsLogTargetService');
+export const ICompletionsLogTargetService =
+	createServiceIdentifier<ICompletionsLogTargetService>(
+		'ICompletionsLogTargetService',
+	);
 export interface ICompletionsLogTargetService {
 	readonly _serviceBrand: undefined;
 	logIt(level: LogLevel, category: string, ...extra: unknown[]): void;
 }
 
 export class Logger {
-	constructor(private readonly category: string) { }
+	constructor(private readonly category: string) {}
 
-	private log(logTarget: ICompletionsLogTargetService, level: LogLevel, ...extra: unknown[]) {
+	private log(
+		logTarget: ICompletionsLogTargetService,
+		level: LogLevel,
+		...extra: unknown[]
+	) {
 		logTarget.logIt(level, this.category, ...extra);
 	}
 
@@ -65,7 +72,13 @@ export class Logger {
 	 */
 	exception(accessor: ServicesAccessor, error: unknown, origin: string) {
 		// ignore VS Code cancellations
-		if (error instanceof Error && error.name === 'Canceled' && error.message === 'Canceled') { return; }
+		if (
+			error instanceof Error &&
+			error.name === 'Canceled' &&
+			error.message === 'Canceled'
+		) {
+			return;
+		}
 
 		let message = origin;
 		if (origin.startsWith('.')) {
@@ -73,10 +86,22 @@ export class Logger {
 			origin = `${this.category}${origin}`;
 		}
 
-		telemetryException(accessor.get(ICompletionsTelemetryService), error, origin);
+		telemetryException(
+			accessor.get(ICompletionsTelemetryService),
+			error,
+			origin,
+		);
 
-		const safeError: Error = error instanceof Error ? error : new Error(`Non-error thrown: ${String(error)}`);
-		this.log(accessor.get(ICompletionsLogTargetService), LogLevel.ERROR, `${message}:`, safeError);
+		const safeError: Error =
+			error instanceof Error
+				? error
+				: new Error(`Non-error thrown: ${String(error)}`);
+		this.log(
+			accessor.get(ICompletionsLogTargetService),
+			LogLevel.ERROR,
+			`${message}:`,
+			safeError,
+		);
 	}
 }
 

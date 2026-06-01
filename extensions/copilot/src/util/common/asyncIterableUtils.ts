@@ -4,8 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 export namespace AsyncIterUtils {
-
-	export async function* map<T0, T1>(iterable: AsyncIterable<T0>, mapItem: (item: T0) => T1): AsyncIterable<T1> {
+	export async function* map<T0, T1>(
+		iterable: AsyncIterable<T0>,
+		mapItem: (item: T0) => T1,
+	): AsyncIterable<T1> {
 		for await (const item of iterable) {
 			yield mapItem(item);
 		}
@@ -19,14 +21,17 @@ export namespace AsyncIterUtils {
 		const iter = iterable[Symbol.asyncIterator]();
 		let v: IteratorResult<T0, R0>;
 
-		while (!((v = await iter.next()).done)) {
+		while (!(v = await iter.next()).done) {
 			yield mapItem(v.value);
 		}
 
 		return mapReturn(v.value);
 	}
 
-	export async function* filter<T>(iterable: AsyncIterable<T>, filterItem: (item: T) => boolean): AsyncIterable<T> {
+	export async function* filter<T>(
+		iterable: AsyncIterable<T>,
+		filterItem: (item: T) => boolean,
+	): AsyncIterable<T> {
 		for await (const item of iterable) {
 			if (filterItem(item)) {
 				yield item;
@@ -48,26 +53,33 @@ export namespace AsyncIterUtils {
 		}
 	}
 
-	export async function* fromArrayWithReturn<T, R>(arr: T[], returnValue: R): AsyncGenerator<T, R> {
+	export async function* fromArrayWithReturn<T, R>(
+		arr: T[],
+		returnValue: R,
+	): AsyncGenerator<T, R> {
 		for (const item of arr) {
 			yield item;
 		}
 		return returnValue;
 	}
 
-	export async function toArrayWithReturn<T, R>(iterable: AsyncIterable<T, R>): Promise<[T[], ret: R]> {
+	export async function toArrayWithReturn<T, R>(
+		iterable: AsyncIterable<T, R>,
+	): Promise<[T[], ret: R]> {
 		const iter = iterable[Symbol.asyncIterator]();
 		const arr: T[] = [];
 		let v: IteratorResult<T, R>;
 
-		while (!((v = await iter.next()).done)) {
+		while (!(v = await iter.next()).done) {
 			arr.push(v.value);
 		}
 
 		return [arr, v.value];
 	}
 
-	export async function drainUntilReturn<T, R>(iterable: AsyncIterable<T, R>): Promise<R> {
+	export async function drainUntilReturn<T, R>(
+		iterable: AsyncIterable<T, R>,
+	): Promise<R> {
 		const iter = iterable[Symbol.asyncIterator]();
 		let v: IteratorResult<T, R>;
 
@@ -83,8 +95,9 @@ export namespace AsyncIterUtils {
  * Namespace for extensions to AsyncIterUtils that are not generally useful enough to be in the main namespace, but are still worth keeping around.
  */
 export namespace AsyncIterUtilsExt {
-
-	export async function* splitLines(stream: AsyncIterable<string>): AsyncIterable<string> {
+	export async function* splitLines(
+		stream: AsyncIterable<string>,
+	): AsyncIterable<string> {
 		let buffer: string | null = null;
 
 		for await (const chunk of stream) {

@@ -3,36 +3,77 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { toAction } from '../../../../../base/common/actions.js';
-import { Emitter, Event } from '../../../../../base/common/event.js';
-import { DisposableStore } from '../../../../../base/common/lifecycle.js';
-import { derived, IObservable, observableValue } from '../../../../../base/common/observable.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { mock } from '../../../../../base/test/common/mock.js';
-import { IActionViewItemFactory, IActionViewItemService } from '../../../../../platform/actions/browser/actionViewItemService.js';
-import { IMenu, IMenuActionOptions, IMenuService, isIMenuItem, MenuId, MenuItemAction, MenuRegistry, SubmenuItemAction } from '../../../../../platform/actions/common/actions.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { TestConfigurationService } from '../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { IStorageService, StorageScope } from '../../../../../platform/storage/common/storage.js';
-import { IMcpServer, IMcpService } from '../../../../../workbench/contrib/mcp/common/mcpTypes.js';
-import { IAgentPluginService } from '../../../../../workbench/contrib/chat/common/plugins/agentPluginService.js';
-import { IAICustomizationItemsModel, ItemsModelSection } from '../../../../../workbench/contrib/chat/browser/aiCustomization/aiCustomizationItemsModel.js';
-import { ICustomizationHarnessService, IHarnessDescriptor } from '../../../../../workbench/contrib/chat/common/customizationHarnessService.js';
-import { getChatSessionType } from '../../../../../workbench/contrib/chat/common/model/chatUri.js';
-import { AICustomizationManagementSection, AICustomizationSources } from '../../../../../workbench/contrib/chat/common/aiCustomizationWorkspaceService.js';
-import { IAICustomizationListItem } from '../../../../../workbench/contrib/chat/browser/aiCustomization/aiCustomizationItemSource.js';
-import { AICustomizationShortcutsWidget } from '../../browser/aiCustomizationShortcutsWidget.js';
-import { CUSTOMIZATION_ITEMS, CustomizationLinkViewItem, SESSIONS_CUSTOMIZATIONS_SIDEBAR_MODE_SETTING, SessionsCustomizationsSidebarMode } from '../../browser/customizationsToolbar.contribution.js';
-import { IEditorService } from '../../../../../workbench/services/editor/common/editorService.js';
-import { ComponentFixtureContext, createEditorServices, defineComponentFixture, defineThemedFixtureGroup, registerWorkbenchServices } from '../../../../../workbench/test/browser/componentFixtures/fixtureUtils.js';
-import { Menus } from '../../../../browser/menus.js';
-import { ISessionsManagementService } from '../../../../services/sessions/common/sessionsManagement.js';
-import { URI } from '../../../../../base/common/uri.js';
+import { toAction } from "../../../../../base/common/actions.js";
+import { Emitter, Event } from "../../../../../base/common/event.js";
+import { DisposableStore } from "../../../../../base/common/lifecycle.js";
+import {
+	derived,
+	IObservable,
+	observableValue,
+} from "../../../../../base/common/observable.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { mock } from "../../../../../base/test/common/mock.js";
+import {
+	IActionViewItemFactory,
+	IActionViewItemService,
+} from "../../../../../platform/actions/browser/actionViewItemService.js";
+import {
+	IMenu,
+	IMenuActionOptions,
+	IMenuService,
+	isIMenuItem,
+	MenuId,
+	MenuItemAction,
+	MenuRegistry,
+	SubmenuItemAction,
+} from "../../../../../platform/actions/common/actions.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { TestConfigurationService } from "../../../../../platform/configuration/test/common/testConfigurationService.js";
+import {
+	IStorageService,
+	StorageScope,
+} from "../../../../../platform/storage/common/storage.js";
+import {
+	IMcpServer,
+	IMcpService,
+} from "../../../../../workbench/contrib/mcp/common/mcpTypes.js";
+import { IAgentPluginService } from "../../../../../workbench/contrib/chat/common/plugins/agentPluginService.js";
+import {
+	IAICustomizationItemsModel,
+	ItemsModelSection,
+} from "../../../../../workbench/contrib/chat/browser/aiCustomization/aiCustomizationItemsModel.js";
+import {
+	ICustomizationHarnessService,
+	IHarnessDescriptor,
+} from "../../../../../workbench/contrib/chat/common/customizationHarnessService.js";
+import { getChatSessionType } from "../../../../../workbench/contrib/chat/common/model/chatUri.js";
+import {
+	AICustomizationManagementSection,
+	AICustomizationSources,
+} from "../../../../../workbench/contrib/chat/common/aiCustomizationWorkspaceService.js";
+import { IAICustomizationListItem } from "../../../../../workbench/contrib/chat/browser/aiCustomization/aiCustomizationItemSource.js";
+import { AICustomizationShortcutsWidget } from "../../browser/aiCustomizationShortcutsWidget.js";
+import {
+	CUSTOMIZATION_ITEMS,
+	CustomizationLinkViewItem,
+	SESSIONS_CUSTOMIZATIONS_SIDEBAR_MODE_SETTING,
+	SessionsCustomizationsSidebarMode,
+} from "../../browser/customizationsToolbar.contribution.js";
+import { IEditorService } from "../../../../../workbench/services/editor/common/editorService.js";
+import {
+	ComponentFixtureContext,
+	createEditorServices,
+	defineComponentFixture,
+	defineThemedFixtureGroup,
+	registerWorkbenchServices,
+} from "../../../../../workbench/test/browser/componentFixtures/fixtureUtils.js";
+import { Menus } from "../../../../browser/menus.js";
+import { ISessionsManagementService } from "../../../../services/sessions/common/sessionsManagement.js";
+import { URI } from "../../../../../base/common/uri.js";
 
 // Ensure color registrations are loaded
-import '../../../../common/theme.js';
-import '../../../../../platform/theme/common/colors/inputColors.js';
-
+import "../../../../common/theme.js";
+import "../../../../../platform/theme/common/colors/inputColors.js";
 
 // ============================================================================
 // One-time menu item registration (module-level).
@@ -42,11 +83,13 @@ import '../../../../../platform/theme/common/colors/inputColors.js';
 
 const menuRegistrations = new DisposableStore();
 for (const [index, config] of CUSTOMIZATION_ITEMS.entries()) {
-	menuRegistrations.add(MenuRegistry.appendMenuItem(Menus.SidebarCustomizations, {
-		command: { id: config.id, title: config.label },
-		group: 'navigation',
-		order: index + 1,
-	}));
+	menuRegistrations.add(
+		MenuRegistry.appendMenuItem(Menus.SidebarCustomizations, {
+			command: { id: config.id, title: config.label },
+			group: "navigation",
+			order: index + 1,
+		}),
+	);
 }
 
 // ============================================================================
@@ -59,22 +102,40 @@ class FixtureMenuService implements IMenuService {
 	createMenu(id: MenuId): IMenu {
 		return {
 			onDidChange: Event.None,
-			dispose: () => { },
+			dispose: () => {},
 			getActions: () => {
 				const items = MenuRegistry.getMenuItems(id).filter(isIMenuItem);
 				items.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-				const actions = items.map(item => {
-					const title = typeof item.command.title === 'string' ? item.command.title : item.command.title.value;
-					return toAction({ id: item.command.id, label: title, run: () => { } });
+				const actions = items.map((item) => {
+					const title =
+						typeof item.command.title === "string"
+							? item.command.title
+							: item.command.title.value;
+					return toAction({ id: item.command.id, label: title, run: () => {} });
 				});
-				return actions.length ? [['navigation', actions as unknown as (MenuItemAction | SubmenuItemAction)[]]] : [];
+				return actions.length
+					? [
+							[
+								"navigation",
+								actions as unknown as (MenuItemAction | SubmenuItemAction)[],
+							],
+						]
+					: [];
 			},
 		};
 	}
 
-	getMenuActions(_id: MenuId, _contextKeyService: unknown, _options?: IMenuActionOptions) { return []; }
-	getMenuContexts() { return new Set<string>(); }
-	resetHiddenStates() { }
+	getMenuActions(
+		_id: MenuId,
+		_contextKeyService: unknown,
+		_options?: IMenuActionOptions,
+	) {
+		return [];
+	}
+	getMenuContexts() {
+		return new Set<string>();
+	}
+	resetHiddenStates() {}
 }
 
 // ============================================================================
@@ -88,13 +149,24 @@ class FixtureActionViewItemService implements IActionViewItemService {
 	private readonly _onDidChange = new Emitter<MenuId>();
 	readonly onDidChange = this._onDidChange.event;
 
-	register(menu: MenuId, commandId: string | MenuId, provider: IActionViewItemFactory): { dispose(): void } {
+	register(
+		menu: MenuId,
+		commandId: string | MenuId,
+		provider: IActionViewItemFactory,
+	): { dispose(): void } {
 		const key = `${menu.id}/${commandId instanceof MenuId ? commandId.id : commandId}`;
 		this._providers.set(key, provider);
-		return { dispose: () => { this._providers.delete(key); } };
+		return {
+			dispose: () => {
+				this._providers.delete(key);
+			},
+		};
 	}
 
-	lookUp(menu: MenuId, commandId: string | MenuId): IActionViewItemFactory | undefined {
+	lookUp(
+		menu: MenuId,
+		commandId: string | MenuId,
+	): IActionViewItemFactory | undefined {
 		const key = `${menu.id}/${commandId instanceof MenuId ? commandId.id : commandId}`;
 		return this._providers.get(key);
 	}
@@ -115,20 +187,46 @@ interface ICustomizationCounts {
 	readonly plugins?: number;
 }
 
-function createMockItemsModel(counts?: ICustomizationCounts): IAICustomizationItemsModel {
+function createMockItemsModel(
+	counts?: ICustomizationCounts,
+): IAICustomizationItemsModel {
 	const fakeItems = (n: number): readonly IAICustomizationListItem[] =>
-		Array.from({ length: n }, (): IAICustomizationListItem => Object.create(null));
+		Array.from(
+			{ length: n },
+			(): IAICustomizationListItem => Object.create(null),
+		);
 
-	const sectionItems = new Map<ItemsModelSection, IObservable<readonly IAICustomizationListItem[]>>([
-		[AICustomizationManagementSection.Agents, observableValue('agentsItems', fakeItems(counts?.agents ?? 0))],
-		[AICustomizationManagementSection.Skills, observableValue('skillsItems', fakeItems(counts?.skills ?? 0))],
-		[AICustomizationManagementSection.Instructions, observableValue('instructionsItems', fakeItems(counts?.instructions ?? 0))],
-		[AICustomizationManagementSection.Prompts, observableValue('promptsItems', fakeItems(counts?.prompts ?? 0))],
-		[AICustomizationManagementSection.Hooks, observableValue('hooksItems', fakeItems(counts?.hooks ?? 0))],
+	const sectionItems = new Map<
+		ItemsModelSection,
+		IObservable<readonly IAICustomizationListItem[]>
+	>([
+		[
+			AICustomizationManagementSection.Agents,
+			observableValue("agentsItems", fakeItems(counts?.agents ?? 0)),
+		],
+		[
+			AICustomizationManagementSection.Skills,
+			observableValue("skillsItems", fakeItems(counts?.skills ?? 0)),
+		],
+		[
+			AICustomizationManagementSection.Instructions,
+			observableValue(
+				"instructionsItems",
+				fakeItems(counts?.instructions ?? 0),
+			),
+		],
+		[
+			AICustomizationManagementSection.Prompts,
+			observableValue("promptsItems", fakeItems(counts?.prompts ?? 0)),
+		],
+		[
+			AICustomizationManagementSection.Hooks,
+			observableValue("hooksItems", fakeItems(counts?.hooks ?? 0)),
+		],
 	]);
-	const pluginCount = observableValue('pluginsCount', counts?.plugins ?? 0);
+	const pluginCount = observableValue("pluginsCount", counts?.plugins ?? 0);
 
-	return new class extends mock<IAICustomizationItemsModel>() {
+	return new (class extends mock<IAICustomizationItemsModel>() {
 		override getItems(section: ItemsModelSection) {
 			return sectionItems.get(section)!;
 		}
@@ -139,47 +237,75 @@ function createMockItemsModel(counts?: ICustomizationCounts): IAICustomizationIt
 		override getPluginCount(): IObservable<number> {
 			return pluginCount;
 		}
-	}();
+	})();
 }
 
 function createMockMcpService(serverCount: number = 0): IMcpService {
 	const MockServer = mock<IMcpServer>();
-	const servers = observableValue<readonly IMcpServer[]>('mockMcpServers', Array.from({ length: serverCount }, () => new MockServer()));
-	return new class extends mock<IMcpService>() {
+	const servers = observableValue<readonly IMcpServer[]>(
+		"mockMcpServers",
+		Array.from({ length: serverCount }, () => new MockServer()),
+	);
+	return new (class extends mock<IMcpService>() {
 		override readonly servers = servers;
-	}();
+	})();
 }
 
-function createMockHarnessService(hiddenSections: readonly string[] = []): ICustomizationHarnessService {
+function createMockHarnessService(
+	hiddenSections: readonly string[] = [],
+): ICustomizationHarnessService {
 	const descriptor: IHarnessDescriptor = {
-		id: 'fixture',
-		label: 'Fixture',
-		icon: ThemeIcon.fromId('vm'),
+		id: "fixture",
+		label: "Fixture",
+		icon: ThemeIcon.fromId("vm"),
 		hiddenSections,
 		getStorageSourceFilter: () => ({ sources: AICustomizationSources.all }),
 	};
-	return new class extends mock<ICustomizationHarnessService>() {
-		override readonly activeSessionResource = observableValue('mockActiveSessionResource', URI.parse(`${descriptor.id}:///session`));
-		override readonly activeHarness = derived(reader => getChatSessionType(this.activeSessionResource.read(reader)));
-		override readonly availableHarnesses = observableValue<readonly IHarnessDescriptor[]>('mockAvailableHarnesses', [descriptor]);
-		override findHarnessById(id: string) { return id === descriptor.id ? descriptor : undefined; }
-		override getActiveDescriptor() { return descriptor; }
-	}();
+	return new (class extends mock<ICustomizationHarnessService>() {
+		override readonly activeSessionResource = observableValue(
+			"mockActiveSessionResource",
+			URI.parse(`${descriptor.id}:///session`),
+		);
+		override readonly activeHarness = derived((reader) =>
+			getChatSessionType(this.activeSessionResource.read(reader)),
+		);
+		override readonly availableHarnesses = observableValue<
+			readonly IHarnessDescriptor[]
+		>("mockAvailableHarnesses", [descriptor]);
+		override findHarnessById(id: string) {
+			return id === descriptor.id ? descriptor : undefined;
+		}
+		override getActiveDescriptor() {
+			return descriptor;
+		}
+	})();
 }
 
 // ============================================================================
 // Render helper
 // ============================================================================
 
-function renderWidget(ctx: ComponentFixtureContext, options?: { mcpServerCount?: number; collapsed?: boolean; counts?: ICustomizationCounts; hiddenSections?: readonly string[]; mode?: SessionsCustomizationsSidebarMode }): void {
-	ctx.container.style.width = '300px';
-	ctx.container.style.backgroundColor = 'var(--vscode-sideBar-background)';
+function renderWidget(
+	ctx: ComponentFixtureContext,
+	options?: {
+		mcpServerCount?: number;
+		collapsed?: boolean;
+		counts?: ICustomizationCounts;
+		hiddenSections?: readonly string[];
+		mode?: SessionsCustomizationsSidebarMode;
+	},
+): void {
+	ctx.container.style.width = "300px";
+	ctx.container.style.backgroundColor = "var(--vscode-sideBar-background)";
 
 	const actionViewItemService = new FixtureActionViewItemService();
 
 	const configurationService = new TestConfigurationService();
 	if (options?.mode !== undefined) {
-		configurationService.setUserConfiguration(SESSIONS_CUSTOMIZATIONS_SIDEBAR_MODE_SETTING, options.mode);
+		configurationService.setUserConfiguration(
+			SESSIONS_CUSTOMIZATIONS_SIDEBAR_MODE_SETTING,
+			options.mode,
+		);
 	}
 
 	const instantiationService = createEditorServices(ctx.disposableStore, {
@@ -190,46 +316,92 @@ function renderWidget(ctx: ComponentFixtureContext, options?: { mcpServerCount?:
 			reg.defineInstance(IMenuService, new FixtureMenuService());
 			reg.defineInstance(IActionViewItemService, actionViewItemService);
 			reg.defineInstance(IConfigurationService, configurationService);
-			reg.defineInstance(IEditorService, new class extends mock<IEditorService>() {
-				override readonly onDidActiveEditorChange = Event.None;
-				override readonly onDidVisibleEditorsChange = Event.None;
-				override readonly onDidEditorsChange = Event.None;
-			}());
-			reg.defineInstance(ISessionsManagementService, new class extends mock<ISessionsManagementService>() {
-				override readonly activeSession = observableValue('mockActiveSession', undefined);
-			}());
-			reg.defineInstance(IAICustomizationItemsModel, createMockItemsModel(options?.counts));
-			reg.defineInstance(ICustomizationHarnessService, createMockHarnessService(options?.hiddenSections));
-			reg.defineInstance(IMcpService, createMockMcpService(options?.mcpServerCount ?? 0));
-			reg.defineInstance(IAgentPluginService, new class extends mock<IAgentPluginService>() {
-				override readonly plugins = observableValue<readonly never[]>('mockPlugins', []);
-			}());
+			reg.defineInstance(
+				IEditorService,
+				new (class extends mock<IEditorService>() {
+					override readonly onDidActiveEditorChange = Event.None;
+					override readonly onDidVisibleEditorsChange = Event.None;
+					override readonly onDidEditorsChange = Event.None;
+				})(),
+			);
+			reg.defineInstance(
+				ISessionsManagementService,
+				new (class extends mock<ISessionsManagementService>() {
+					override readonly activeSession = observableValue(
+						"mockActiveSession",
+						undefined,
+					);
+				})(),
+			);
+			reg.defineInstance(
+				IAICustomizationItemsModel,
+				createMockItemsModel(options?.counts),
+			);
+			reg.defineInstance(
+				ICustomizationHarnessService,
+				createMockHarnessService(options?.hiddenSections),
+			);
+			reg.defineInstance(
+				IMcpService,
+				createMockMcpService(options?.mcpServerCount ?? 0),
+			);
+			reg.defineInstance(
+				IAgentPluginService,
+				new (class extends mock<IAgentPluginService>() {
+					override readonly plugins = observableValue<readonly never[]>(
+						"mockPlugins",
+						[],
+					);
+				})(),
+			);
 		},
 	});
 
 	// Register view item factories from the real CustomizationLinkViewItem
 	for (const config of CUSTOMIZATION_ITEMS) {
-		ctx.disposableStore.add(actionViewItemService.register(Menus.SidebarCustomizations, config.id, (action, options) => {
-			return instantiationService.createInstance(CustomizationLinkViewItem, action, options, config);
-		}));
+		ctx.disposableStore.add(
+			actionViewItemService.register(
+				Menus.SidebarCustomizations,
+				config.id,
+				(action, options) => {
+					return instantiationService.createInstance(
+						CustomizationLinkViewItem,
+						action,
+						options,
+						config,
+					);
+				},
+			),
+		);
 	}
 
 	// Override storage to set initial collapsed state
 	if (options?.collapsed) {
 		const storageService = instantiationService.get(IStorageService);
-		instantiationService.set(IStorageService, new class extends mock<IStorageService>() {
-			override getBoolean(key: string, scope: StorageScope, fallbackValue?: boolean) {
-				if (key === 'agentSessions.customizationsCollapsed') {
-					return true;
+		instantiationService.set(
+			IStorageService,
+			new (class extends mock<IStorageService>() {
+				override getBoolean(
+					key: string,
+					scope: StorageScope,
+					fallbackValue?: boolean,
+				) {
+					if (key === "agentSessions.customizationsCollapsed") {
+						return true;
+					}
+					return storageService.getBoolean(key, scope, fallbackValue!);
 				}
-				return storageService.getBoolean(key, scope, fallbackValue!);
-			}
-			override store() { }
-		}());
+				override store() {}
+			})(),
+		);
 	}
 
 	ctx.disposableStore.add(
-		instantiationService.createInstance(AICustomizationShortcutsWidget, ctx.container, undefined)
+		instantiationService.createInstance(
+			AICustomizationShortcutsWidget,
+			ctx.container,
+			undefined,
+		),
 	);
 }
 
@@ -237,69 +409,77 @@ function renderWidget(ctx: ComponentFixtureContext, options?: { mcpServerCount?:
 // Fixtures
 // ============================================================================
 
-export default defineThemedFixtureGroup({ path: 'sessions/' }, {
-
-	Expanded: defineComponentFixture({
-		labels: { kind: 'screenshot' },
-		render: (ctx) => renderWidget(ctx),
-	}),
-
-	Collapsed: defineComponentFixture({
-		labels: { kind: 'screenshot' },
-		render: (ctx) => renderWidget(ctx, { collapsed: true }),
-	}),
-
-	WithMcpServers: defineComponentFixture({
-		labels: { kind: 'screenshot' },
-		render: (ctx) => renderWidget(ctx, { mcpServerCount: 3 }),
-	}),
-
-	CollapsedWithMcpServers: defineComponentFixture({
-		labels: { kind: 'screenshot' },
-		render: (ctx) => renderWidget(ctx, { mcpServerCount: 3, collapsed: true }),
-	}),
-
-	WithCounts: defineComponentFixture({
-		labels: { kind: 'screenshot' },
-		render: (ctx) => renderWidget(ctx, {
-			mcpServerCount: 2,
-			counts: { agents: 2, skills: 30, instructions: 16, hooks: 4 },
+export default defineThemedFixtureGroup(
+	{ path: "sessions/" },
+	{
+		Expanded: defineComponentFixture({
+			labels: { kind: "screenshot" },
+			render: (ctx) => renderWidget(ctx),
 		}),
-	}),
 
-	// --- Sidebar mode variations ---
-
-	ModeWelcome: defineComponentFixture({
-		labels: { kind: 'screenshot' },
-		render: (ctx) => renderWidget(ctx, {
-			mode: SessionsCustomizationsSidebarMode.Welcome,
-			mcpServerCount: 2,
-			counts: { agents: 2, skills: 30, instructions: 16, hooks: 4 },
+		Collapsed: defineComponentFixture({
+			labels: { kind: "screenshot" },
+			render: (ctx) => renderWidget(ctx, { collapsed: true }),
 		}),
-	}),
 
-	ModeSection: defineComponentFixture({
-		labels: { kind: 'screenshot' },
-		render: (ctx) => renderWidget(ctx, {
-			mode: SessionsCustomizationsSidebarMode.Section,
-			mcpServerCount: 2,
-			counts: { agents: 2, skills: 30, instructions: 16, hooks: 4 },
+		WithMcpServers: defineComponentFixture({
+			labels: { kind: "screenshot" },
+			render: (ctx) => renderWidget(ctx, { mcpServerCount: 3 }),
 		}),
-	}),
 
-	ModeSingle: defineComponentFixture({
-		labels: { kind: 'screenshot' },
-		render: (ctx) => renderWidget(ctx, {
-			mode: SessionsCustomizationsSidebarMode.Single,
-			mcpServerCount: 2,
-			counts: { agents: 2, skills: 30, instructions: 16, hooks: 4 },
+		CollapsedWithMcpServers: defineComponentFixture({
+			labels: { kind: "screenshot" },
+			render: (ctx) =>
+				renderWidget(ctx, { mcpServerCount: 3, collapsed: true }),
 		}),
-	}),
 
-	ModeSingleEmpty: defineComponentFixture({
-		labels: { kind: 'screenshot' },
-		render: (ctx) => renderWidget(ctx, {
-			mode: SessionsCustomizationsSidebarMode.Single,
+		WithCounts: defineComponentFixture({
+			labels: { kind: "screenshot" },
+			render: (ctx) =>
+				renderWidget(ctx, {
+					mcpServerCount: 2,
+					counts: { agents: 2, skills: 30, instructions: 16, hooks: 4 },
+				}),
 		}),
-	}),
-});
+
+		// --- Sidebar mode variations ---
+
+		ModeWelcome: defineComponentFixture({
+			labels: { kind: "screenshot" },
+			render: (ctx) =>
+				renderWidget(ctx, {
+					mode: SessionsCustomizationsSidebarMode.Welcome,
+					mcpServerCount: 2,
+					counts: { agents: 2, skills: 30, instructions: 16, hooks: 4 },
+				}),
+		}),
+
+		ModeSection: defineComponentFixture({
+			labels: { kind: "screenshot" },
+			render: (ctx) =>
+				renderWidget(ctx, {
+					mode: SessionsCustomizationsSidebarMode.Section,
+					mcpServerCount: 2,
+					counts: { agents: 2, skills: 30, instructions: 16, hooks: 4 },
+				}),
+		}),
+
+		ModeSingle: defineComponentFixture({
+			labels: { kind: "screenshot" },
+			render: (ctx) =>
+				renderWidget(ctx, {
+					mode: SessionsCustomizationsSidebarMode.Single,
+					mcpServerCount: 2,
+					counts: { agents: 2, skills: 30, instructions: 16, hooks: 4 },
+				}),
+		}),
+
+		ModeSingleEmpty: defineComponentFixture({
+			labels: { kind: "screenshot" },
+			render: (ctx) =>
+				renderWidget(ctx, {
+					mode: SessionsCustomizationsSidebarMode.Single,
+				}),
+		}),
+	},
+);

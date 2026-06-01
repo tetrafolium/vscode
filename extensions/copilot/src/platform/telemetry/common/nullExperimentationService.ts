@@ -5,12 +5,10 @@
 import { createServiceIdentifier } from '../../../util/common/services';
 import { Emitter, Event } from '../../../util/vs/base/common/event';
 
-
 /**
  * An event describing the change in treatments.
  */
 export interface TreatmentsChangeEvent {
-
 	/**
 	 * List of changed treatments
 	 */
@@ -30,7 +28,6 @@ export interface IExperimentationService {
 	 */
 	onDidTreatmentsChange: Event<TreatmentsChangeEvent>;
 
-
 	/**
 	 * Promise that resolves when the experimentation service has completed
 	 * its first request to the Treatment Assignment Service. If this request
@@ -45,7 +42,9 @@ export interface IExperimentationService {
 	 * must be initialized before calling.
 	 * @param name name of the treatment variable.
 	 */
-	getTreatmentVariable<T extends boolean | number | string>(name: string): T | undefined;
+	getTreatmentVariable<T extends boolean | number | string>(
+		name: string,
+	): T | undefined;
 
 	/**
 	 * Sets the filters for the completions experiments.
@@ -55,19 +54,26 @@ export interface IExperimentationService {
 	setCompletionsFilters(filters: Map<string, string>): void;
 }
 
-export const IExperimentationService = createServiceIdentifier<IExperimentationService>('IExperimentationService');
-
+export const IExperimentationService =
+	createServiceIdentifier<IExperimentationService>('IExperimentationService');
 
 export class NullExperimentationService implements IExperimentationService {
 	declare readonly _serviceBrand: undefined;
-	private readonly _onDidTreatmentsChange = new Emitter<TreatmentsChangeEvent>();
+	private readonly _onDidTreatmentsChange =
+		new Emitter<TreatmentsChangeEvent>();
 	readonly onDidTreatmentsChange = this._onDidTreatmentsChange.event;
 
-	async hasTreatments(): Promise<void> { return Promise.resolve(); }
-	async hasAccountBasedTreatments(): Promise<void> { return Promise.resolve(); }
-	getTreatmentVariable<T extends boolean | number | string>(_name: string): T | undefined {
+	async hasTreatments(): Promise<void> {
+		return Promise.resolve();
+	}
+	async hasAccountBasedTreatments(): Promise<void> {
+		return Promise.resolve();
+	}
+	getTreatmentVariable<T extends boolean | number | string>(
+		_name: string,
+	): T | undefined {
 		return undefined;
 	}
 
-	async setCompletionsFilters(filters: Map<string, string>): Promise<void> { }
+	async setCompletionsFilters(filters: Map<string, string>): Promise<void> {}
 }

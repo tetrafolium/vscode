@@ -109,7 +109,7 @@ export interface IDocsSearchClient {
 		query: string,
 		scopingQuery: ICodeOrDocsSearchSingleRepoScopingQuery,
 		options?: ICodeOrDocsSearchOptions,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<ICodeOrDocsSearchItem[]>;
 
 	/**
@@ -123,9 +123,9 @@ export interface IDocsSearchClient {
 		query: string,
 		scopingQuery: ICodeOrDocsSearchMultiRepoScopingQuery,
 		options?: ICodeOrDocsSearchOptions,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<ICodeOrDocsSearchResult>;
 }
 
-
-export const IDocsSearchClient = createServiceIdentifier<IDocsSearchClient>('docsSearchClient');
+export const IDocsSearchClient =
+	createServiceIdentifier<IDocsSearchClient>('docsSearchClient');

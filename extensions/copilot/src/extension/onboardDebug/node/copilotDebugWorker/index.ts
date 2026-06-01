@@ -44,11 +44,17 @@ while (args.length && flagConfig.hasOwnProperty(args[0])) {
 }
 
 if (!args.length || flagConfig[Flags.Help]) {
-	console.log(`Usage: copilot-debug [${Object.keys(flagConfig).join('] [')}] <command> <args...>`);
+	console.log(
+		`Usage: copilot-debug [${Object.keys(flagConfig).join('] [')}] <command> <args...>`,
+	);
 	console.log('');
 	console.log('Options:');
-	console.log('  --print     Print the generated configuration without running it');
-	console.log('  --no-cache  Generate a new configuration without checking the cache.');
+	console.log(
+		'  --print     Print the generated configuration without running it',
+	);
+	console.log(
+		'  --no-cache  Generate a new configuration without checking the cache.',
+	);
 	console.log('  --save      Save the configuration to your launch.json.');
 	console.log('  --once      Exit after the debug session ends.');
 	console.log('  --help      Print this help.');
@@ -63,7 +69,7 @@ const rl = readline.createInterface({
 readline.emitKeypressEvents(process.stdin);
 process.stdin.setRawMode(true);
 
-const server = createServer(socket => {
+const server = createServer((socket) => {
 	clearInterval(waitingMessage);
 
 	const rpc = new SimpleRPC(socket);
@@ -85,8 +91,8 @@ const server = createServer(socket => {
 		}
 
 		await Promise.all([
-			new Promise<void>(resolve => process.stdout.end(resolve)),
-			new Promise<void>(resolve => process.stderr.end(resolve)),
+			new Promise<void>((resolve) => process.stdout.end(resolve)),
+			new Promise<void>((resolve) => process.stderr.end(resolve)),
 		]).then(() => process.exit(code));
 	});
 
@@ -104,38 +110,58 @@ const server = createServer(socket => {
 
 	process.on('SIGINT', onInterrupt);
 	process.stdin.on('keypress', (_str, key) => {
-		if (key.sequence === '\x03' || (key.name === 'c' && (key.ctrl || key.meta))) {
+		if (
+			key.sequence === '\x03' ||
+			(key.name === 'c' && (key.ctrl || key.meta))
+		) {
 			onInterrupt();
 		}
 	});
 
-	rpc.registerMethod('question', (r: { message: string; defaultValue: string; singleKey?: boolean }) => {
-		return new Promise((resolve) => {
-			if (r.singleKey) {
-				console.log(r.message);
+	rpc.registerMethod(
+		'question',
+		(r: { message: string; defaultValue: string; singleKey?: boolean }) => {
+			return new Promise((resolve) => {
+				if (r.singleKey) {
+					console.log(r.message);
 
-				const onKeyPress = (str: string | undefined) => {
-					if (str) {
-						process.stdout.write('\x08');
-						process.stdin.off('keypress', onKeyPress);
-						resolve(str === '\n' || str === '\r' ? 'Enter' : (str?.toUpperCase() || ''));
-					}
-				};
+					const onKeyPress = (str: string | undefined) => {
+						if (str) {
+							process.stdout.write('\x08');
+							process.stdin.off('keypress', onKeyPress);
+							resolve(
+								str === '\n' || str === '\r'
+									? 'Enter'
+									: str?.toUpperCase() || '',
+							);
+						}
+					};
 
-				process.stdin.on('keypress', onKeyPress);
-			} else {
-				rl.question(`${r.message} [${r.defaultValue}] `, resolve);
-			}
-		});
-	});
-
-	rpc.registerMethod('confirm', (r: { message: string; defaultValue: boolean }) => {
-		return new Promise((resolve) => {
-			rl.question(`${r.message} [${r.defaultValue ? 'Y/n' : 'y/N'}] `, (answer) => {
-				resolve(answer === '' ? r.defaultValue : answer.toLowerCase()[0] === 'y');
+					process.stdin.on('keypress', onKeyPress);
+				} else {
+					rl.question(`${r.message} [${r.defaultValue}] `, resolve);
+				}
 			});
-		});
-	});
+		},
+	);
+
+	rpc.registerMethod(
+		'confirm',
+		(r: { message: string; defaultValue: boolean }) => {
+			return new Promise((resolve) => {
+				rl.question(
+					`${r.message} [${r.defaultValue ? 'Y/n' : 'y/N'}] `,
+					(answer) => {
+						resolve(
+							answer === ''
+								? r.defaultValue
+								: answer.toLowerCase()[0] === 'y',
+						);
+					},
+				);
+			});
+		},
+	);
 
 	const opts: IStartOptions = {
 		cwd: process.cwd(),
@@ -155,16 +181,23 @@ const waitingMessage = setInterval(() => {
 }, 2000);
 
 const pipeName = `copilot-dbg.${process.pid}-${randomBytes(4).toString('hex')}.sock`;
-const pipePath = path.join(process.platform === 'win32' ? '\\\\.\\pipe\\' : tmpdir(), pipeName);
+const pipePath = path.join(
+	process.platform === 'win32' ? '\\\\.\\pipe\\' : tmpdir(),
+	pipeName,
+);
 
 server.listen(pipePath, () => {
-	openVscodeUri(remoteCommand, callbackUrl + (process.platform === 'win32' ? `/${pipeName}` : pipePath)).then(
+	openVscodeUri(
+		remoteCommand,
+		callbackUrl +
+			(process.platform === 'win32' ? `/${pipeName}` : pipePath),
+	).then(
 		() => {
 			// no-op
 		},
-		error => {
+		(error) => {
 			console.error('Failed to open the activation URI:', error);
 			process.exit(1);
-		}
+		},
 	);
 });

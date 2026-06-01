@@ -10,8 +10,8 @@
  * Simplified from src/vs/base/common/uri.ts for stable perf testing.
  */
 
-const _empty = '';
-const _slash = '/';
+const _empty = "";
+const _slash = "/";
 
 export class URI {
 	readonly scheme: string;
@@ -20,7 +20,13 @@ export class URI {
 	readonly query: string;
 	readonly fragment: string;
 
-	private constructor(scheme: string, authority: string, path: string, query: string, fragment: string) {
+	private constructor(
+		scheme: string,
+		authority: string,
+		path: string,
+		query: string,
+		fragment: string,
+	) {
 		this.scheme = scheme;
 		this.authority = authority || _empty;
 		this.path = path || _empty;
@@ -30,7 +36,11 @@ export class URI {
 
 	static file(path: string): URI {
 		let authority = _empty;
-		if (path.length >= 2 && path.charCodeAt(0) === 47 /* / */ && path.charCodeAt(1) === 47 /* / */) {
+		if (
+			path.length >= 2 &&
+			path.charCodeAt(0) === 47 /* / */ &&
+			path.charCodeAt(1) === 47 /* / */
+		) {
 			const idx = path.indexOf(_slash, 2);
 			if (idx === -1) {
 				authority = path.substring(2);
@@ -40,16 +50,33 @@ export class URI {
 				path = path.substring(idx) || _slash;
 			}
 		}
-		return new URI('file', authority, path, _empty, _empty);
+		return new URI("file", authority, path, _empty, _empty);
 	}
 
 	static parse(value: string): URI {
-		const match = /^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/([^/?#]*)([^?#]*)(\?[^#]*)?(#.*)?$/.exec(value);
-		if (!match) { return new URI(_empty, _empty, _empty, _empty, _empty); }
-		return new URI(match[1], match[2], match[3], match[4]?.substring(1) || _empty, match[5]?.substring(1) || _empty);
+		const match =
+			/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/([^/?#]*)([^?#]*)(\?[^#]*)?(#.*)?$/.exec(
+				value,
+			);
+		if (!match) {
+			return new URI(_empty, _empty, _empty, _empty, _empty);
+		}
+		return new URI(
+			match[1],
+			match[2],
+			match[3],
+			match[4]?.substring(1) || _empty,
+			match[5]?.substring(1) || _empty,
+		);
 	}
 
-	with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): URI {
+	with(change: {
+		scheme?: string;
+		authority?: string;
+		path?: string;
+		query?: string;
+		fragment?: string;
+	}): URI {
 		return new URI(
 			change.scheme ?? this.scheme,
 			change.authority ?? this.authority,
@@ -60,12 +87,22 @@ export class URI {
 	}
 
 	toString(): string {
-		let result = '';
-		if (this.scheme) { result += this.scheme + '://'; }
-		if (this.authority) { result += this.authority; }
-		if (this.path) { result += this.path; }
-		if (this.query) { result += '?' + this.query; }
-		if (this.fragment) { result += '#' + this.fragment; }
+		let result = "";
+		if (this.scheme) {
+			result += this.scheme + "://";
+		}
+		if (this.authority) {
+			result += this.authority;
+		}
+		if (this.path) {
+			result += this.path;
+		}
+		if (this.query) {
+			result += "?" + this.query;
+		}
+		if (this.fragment) {
+			result += "#" + this.fragment;
+		}
 		return result;
 	}
 

@@ -8,7 +8,6 @@ import * as mobx from 'mobx';
 export const PREFIX = 'simulationWorkbench_';
 
 export class SimulationStorage {
-
 	private prefix: string;
 
 	constructor() {

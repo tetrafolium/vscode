@@ -14,4 +14,3 @@ suite('isSubword', () => {
 		assert.strictEqual(isSubword('abc', 'ab'), false);
 	});
 });
-

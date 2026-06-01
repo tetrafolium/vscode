@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as ts from 'typescript';
+import * as ts from "typescript";
 
 // ============================================================================
 // Types
@@ -26,25 +26,35 @@ export interface ILocalizeCall {
 // ============================================================================
 
 export const CollectStepResult = Object.freeze({
-	Yes: 'Yes',
-	YesAndRecurse: 'YesAndRecurse',
-	No: 'No',
-	NoAndRecurse: 'NoAndRecurse'
+	Yes: "Yes",
+	YesAndRecurse: "YesAndRecurse",
+	No: "No",
+	NoAndRecurse: "NoAndRecurse",
 });
 
-export type CollectStepResult = typeof CollectStepResult[keyof typeof CollectStepResult];
+export type CollectStepResult =
+	(typeof CollectStepResult)[keyof typeof CollectStepResult];
 
-export function collect(node: ts.Node, fn: (node: ts.Node) => CollectStepResult): ts.Node[] {
+export function collect(
+	node: ts.Node,
+	fn: (node: ts.Node) => CollectStepResult,
+): ts.Node[] {
 	const result: ts.Node[] = [];
 
 	function loop(node: ts.Node) {
 		const stepResult = fn(node);
 
-		if (stepResult === CollectStepResult.Yes || stepResult === CollectStepResult.YesAndRecurse) {
+		if (
+			stepResult === CollectStepResult.Yes ||
+			stepResult === CollectStepResult.YesAndRecurse
+		) {
 			result.push(node);
 		}
 
-		if (stepResult === CollectStepResult.YesAndRecurse || stepResult === CollectStepResult.NoAndRecurse) {
+		if (
+			stepResult === CollectStepResult.YesAndRecurse ||
+			stepResult === CollectStepResult.NoAndRecurse
+		) {
 			ts.forEachChild(node, loop);
 		}
 	}
@@ -54,15 +64,28 @@ export function collect(node: ts.Node, fn: (node: ts.Node) => CollectStepResult)
 }
 
 export function isImportNode(node: ts.Node): boolean {
-	return node.kind === ts.SyntaxKind.ImportDeclaration || node.kind === ts.SyntaxKind.ImportEqualsDeclaration;
+	return (
+		node.kind === ts.SyntaxKind.ImportDeclaration ||
+		node.kind === ts.SyntaxKind.ImportEqualsDeclaration
+	);
 }
 
-export function isCallExpressionWithinTextSpanCollectStep(textSpan: ts.TextSpan, node: ts.Node): CollectStepResult {
-	if (!ts.textSpanContainsTextSpan({ start: node.pos, length: node.end - node.pos }, textSpan)) {
+export function isCallExpressionWithinTextSpanCollectStep(
+	textSpan: ts.TextSpan,
+	node: ts.Node,
+): CollectStepResult {
+	if (
+		!ts.textSpanContainsTextSpan(
+			{ start: node.pos, length: node.end - node.pos },
+			textSpan,
+		)
+	) {
 		return CollectStepResult.No;
 	}
 
-	return node.kind === ts.SyntaxKind.CallExpression ? CollectStepResult.YesAndRecurse : CollectStepResult.NoAndRecurse;
+	return node.kind === ts.SyntaxKind.CallExpression
+		? CollectStepResult.YesAndRecurse
+		: CollectStepResult.NoAndRecurse;
 }
 
 // ============================================================================
@@ -79,15 +102,16 @@ export class SingleFileServiceHost implements ts.LanguageServiceHost {
 		this.options = options;
 		this.filename = filename;
 		this.file = ts.ScriptSnapshot.fromString(contents);
-		this.lib = ts.ScriptSnapshot.fromString('');
+		this.lib = ts.ScriptSnapshot.fromString("");
 	}
 
 	getCompilationSettings = () => this.options;
 	getScriptFileNames = () => [this.filename];
-	getScriptVersion = () => '1';
-	getScriptSnapshot = (name: string) => name === this.filename ? this.file : this.lib;
-	getCurrentDirectory = () => '';
-	getDefaultLibFileName = () => 'lib.d.ts';
+	getScriptVersion = () => "1";
+	getScriptSnapshot = (name: string) =>
+		name === this.filename ? this.file : this.lib;
+	getCurrentDirectory = () => "";
+	getDefaultLibFileName = () => "lib.d.ts";
 
 	readFile(path: string): string | undefined {
 		if (path === this.filename) {
@@ -110,46 +134,72 @@ export class SingleFileServiceHost implements ts.LanguageServiceHost {
  */
 export function analyzeLocalizeCalls(
 	contents: string,
-	functionName: 'localize' | 'localize2'
+	functionName: "localize" | "localize2",
 ): ILocalizeCall[] {
-	const filename = 'file.ts';
+	const filename = "file.ts";
 	const options: ts.CompilerOptions = { noResolve: true };
 	const serviceHost = new SingleFileServiceHost(options, filename, contents);
 	const service = ts.createLanguageService(serviceHost);
-	const sourceFile = ts.createSourceFile(filename, contents, ts.ScriptTarget.ES5, true);
+	const sourceFile = ts.createSourceFile(
+		filename,
+		contents,
+		ts.ScriptTarget.ES5,
+		true,
+	);
 
 	// Find all imports
-	const imports = collect(sourceFile, n => isImportNode(n) ? CollectStepResult.YesAndRecurse : CollectStepResult.NoAndRecurse);
+	const imports = collect(sourceFile, (n) =>
+		isImportNode(n)
+			? CollectStepResult.YesAndRecurse
+			: CollectStepResult.NoAndRecurse,
+	);
 
 	// import nls = require('vs/nls');
 	const importEqualsDeclarations = imports
-		.filter(n => n.kind === ts.SyntaxKind.ImportEqualsDeclaration)
-		.map(n => n as ts.ImportEqualsDeclaration)
-		.filter(d => d.moduleReference.kind === ts.SyntaxKind.ExternalModuleReference)
-		.filter(d => {
-			const text = (d.moduleReference as ts.ExternalModuleReference).expression.getText();
-			return text.endsWith(`/nls'`) || text.endsWith(`/nls"`) || text.endsWith(`/nls.js'`) || text.endsWith(`/nls.js"`);
+		.filter((n) => n.kind === ts.SyntaxKind.ImportEqualsDeclaration)
+		.map((n) => n as ts.ImportEqualsDeclaration)
+		.filter(
+			(d) => d.moduleReference.kind === ts.SyntaxKind.ExternalModuleReference,
+		)
+		.filter((d) => {
+			const text = (
+				d.moduleReference as ts.ExternalModuleReference
+			).expression.getText();
+			return (
+				text.endsWith(`/nls'`) ||
+				text.endsWith(`/nls"`) ||
+				text.endsWith(`/nls.js'`) ||
+				text.endsWith(`/nls.js"`)
+			);
 		});
 
 	// import ... from 'vs/nls';
 	const importDeclarations = imports
-		.filter(n => n.kind === ts.SyntaxKind.ImportDeclaration)
-		.map(n => n as ts.ImportDeclaration)
-		.filter(d => d.moduleSpecifier.kind === ts.SyntaxKind.StringLiteral)
-		.filter(d => {
+		.filter((n) => n.kind === ts.SyntaxKind.ImportDeclaration)
+		.map((n) => n as ts.ImportDeclaration)
+		.filter((d) => d.moduleSpecifier.kind === ts.SyntaxKind.StringLiteral)
+		.filter((d) => {
 			const text = d.moduleSpecifier.getText();
-			return text.endsWith(`/nls'`) || text.endsWith(`/nls"`) || text.endsWith(`/nls.js'`) || text.endsWith(`/nls.js"`);
+			return (
+				text.endsWith(`/nls'`) ||
+				text.endsWith(`/nls"`) ||
+				text.endsWith(`/nls.js'`) ||
+				text.endsWith(`/nls.js"`)
+			);
 		})
-		.filter(d => !!d.importClause && !!d.importClause.namedBindings);
+		.filter((d) => !!d.importClause && !!d.importClause.namedBindings);
 
 	// `nls.localize(...)` calls via namespace import
 	const nlsLocalizeCallExpressions: ts.CallExpression[] = [];
 
 	const namespaceImports = importDeclarations
-		.filter(d => d.importClause?.namedBindings?.kind === ts.SyntaxKind.NamespaceImport)
-		.map(d => (d.importClause!.namedBindings as ts.NamespaceImport).name);
+		.filter(
+			(d) =>
+				d.importClause?.namedBindings?.kind === ts.SyntaxKind.NamespaceImport,
+		)
+		.map((d) => (d.importClause!.namedBindings as ts.NamespaceImport).name);
 
-	const importEqualsNames = importEqualsDeclarations.map(d => d.name);
+	const importEqualsNames = importEqualsDeclarations.map((d) => d.name);
 
 	for (const name of [...namespaceImports, ...importEqualsNames]) {
 		const refs = service.getReferencesAtPosition(filename, name.pos + 1) ?? [];
@@ -157,11 +207,16 @@ export function analyzeLocalizeCalls(
 			if (ref.isWriteAccess) {
 				continue;
 			}
-			const calls = collect(sourceFile, n => isCallExpressionWithinTextSpanCollectStep(ref.textSpan, n));
+			const calls = collect(sourceFile, (n) =>
+				isCallExpressionWithinTextSpanCollectStep(ref.textSpan, n),
+			);
 			const lastCall = calls[calls.length - 1] as ts.CallExpression | undefined;
-			if (lastCall &&
+			if (
+				lastCall &&
 				lastCall.expression.kind === ts.SyntaxKind.PropertyAccessExpression &&
-				(lastCall.expression as ts.PropertyAccessExpression).name.getText() === functionName) {
+				(lastCall.expression as ts.PropertyAccessExpression).name.getText() ===
+					functionName
+			) {
 				nlsLocalizeCallExpressions.push(lastCall);
 			}
 		}
@@ -169,28 +224,39 @@ export function analyzeLocalizeCalls(
 
 	// `localize` named imports
 	const namedImports = importDeclarations
-		.filter(d => d.importClause?.namedBindings?.kind === ts.SyntaxKind.NamedImports)
-		.flatMap(d => Array.from((d.importClause!.namedBindings! as ts.NamedImports).elements));
+		.filter(
+			(d) => d.importClause?.namedBindings?.kind === ts.SyntaxKind.NamedImports,
+		)
+		.flatMap((d) =>
+			Array.from((d.importClause!.namedBindings! as ts.NamedImports).elements),
+		);
 
 	const localizeCallExpressions: ts.CallExpression[] = [];
 
 	// Direct named import: import { localize } from 'vs/nls'
 	for (const namedImport of namedImports) {
-		const isTarget = namedImport.name.getText() === functionName ||
-			(namedImport.propertyName && namedImport.propertyName.getText() === functionName);
+		const isTarget =
+			namedImport.name.getText() === functionName ||
+			(namedImport.propertyName &&
+				namedImport.propertyName.getText() === functionName);
 
 		if (!isTarget) {
 			continue;
 		}
 
-		const searchName = namedImport.propertyName ? namedImport.name : namedImport.name;
-		const refs = service.getReferencesAtPosition(filename, searchName.pos + 1) ?? [];
+		const searchName = namedImport.propertyName
+			? namedImport.name
+			: namedImport.name;
+		const refs =
+			service.getReferencesAtPosition(filename, searchName.pos + 1) ?? [];
 
 		for (const ref of refs) {
 			if (ref.isWriteAccess) {
 				continue;
 			}
-			const calls = collect(sourceFile, n => isCallExpressionWithinTextSpanCollectStep(ref.textSpan, n));
+			const calls = collect(sourceFile, (n) =>
+				isCallExpressionWithinTextSpanCollectStep(ref.textSpan, n),
+			);
 			const lastCall = calls[calls.length - 1] as ts.CallExpression | undefined;
 			if (lastCall) {
 				localizeCallExpressions.push(lastCall);
@@ -201,7 +267,7 @@ export function analyzeLocalizeCalls(
 	// Combine and deduplicate
 	const allCalls = [...nlsLocalizeCallExpressions, ...localizeCallExpressions];
 	const seen = new Set<number>();
-	const uniqueCalls = allCalls.filter(call => {
+	const uniqueCalls = allCalls.filter((call) => {
 		const start = call.getStart();
 		if (seen.has(start)) {
 			return false;
@@ -212,21 +278,27 @@ export function analyzeLocalizeCalls(
 
 	// Convert to ILocalizeCall
 	return uniqueCalls
-		.filter(e => e.arguments.length > 1)
+		.filter((e) => e.arguments.length > 1)
 		.sort((a, b) => a.arguments[0].getStart() - b.arguments[0].getStart())
-		.map(e => {
+		.map((e) => {
 			const args = e.arguments;
 			return {
 				keySpan: {
-					start: ts.getLineAndCharacterOfPosition(sourceFile, args[0].getStart()),
-					end: ts.getLineAndCharacterOfPosition(sourceFile, args[0].getEnd())
+					start: ts.getLineAndCharacterOfPosition(
+						sourceFile,
+						args[0].getStart(),
+					),
+					end: ts.getLineAndCharacterOfPosition(sourceFile, args[0].getEnd()),
 				},
 				key: args[0].getText(),
 				valueSpan: {
-					start: ts.getLineAndCharacterOfPosition(sourceFile, args[1].getStart()),
-					end: ts.getLineAndCharacterOfPosition(sourceFile, args[1].getEnd())
+					start: ts.getLineAndCharacterOfPosition(
+						sourceFile,
+						args[1].getStart(),
+					),
+					end: ts.getLineAndCharacterOfPosition(sourceFile, args[1].getEnd()),
 				},
-				value: args[1].getText()
+				value: args[1].getText(),
 			};
 		});
 }
@@ -247,7 +319,7 @@ export class TextModel {
 		this.lines = [];
 		this.lineEndings = [];
 
-		while (match = regex.exec(contents)) {
+		while ((match = regex.exec(contents))) {
 			this.lines.push(contents.substring(index, match.index));
 			this.lineEndings.push(match[0]);
 			index = regex.lastIndex;
@@ -255,7 +327,7 @@ export class TextModel {
 
 		if (contents.length > 0) {
 			this.lines.push(contents.substring(index, contents.length));
-			this.lineEndings.push('');
+			this.lineEndings.push("");
 		}
 	}
 
@@ -280,22 +352,22 @@ export class TextModel {
 		const startLineNumber = span.start.line;
 		const endLineNumber = span.end.line;
 
-		const startLine = this.lines[startLineNumber] || '';
-		const endLine = this.lines[endLineNumber] || '';
+		const startLine = this.lines[startLineNumber] || "";
+		const endLine = this.lines[endLineNumber] || "";
 
 		this.lines[startLineNumber] = [
 			startLine.substring(0, span.start.character),
 			content,
-			endLine.substring(span.end.character)
-		].join('');
+			endLine.substring(span.end.character),
+		].join("");
 
 		for (let i = startLineNumber + 1; i <= endLineNumber; i++) {
-			this.lines[i] = '';
+			this.lines[i] = "";
 		}
 	}
 
 	toString(): string {
-		let result = '';
+		let result = "";
 		for (let i = 0; i < this.lines.length; i++) {
 			result += this.lines[i] + this.lineEndings[i];
 		}
@@ -311,7 +383,9 @@ export class TextModel {
  * Parses a localize key or value expression.
  * sourceExpression can be "foo", 'foo', `foo` or { key: 'foo', comment: [...] }
  */
-export function parseLocalizeKeyOrValue(sourceExpression: string): string | { key: string; comment?: string[] } {
+export function parseLocalizeKeyOrValue(
+	sourceExpression: string,
+): string | { key: string; comment?: string[] } {
 	// eslint-disable-next-line no-eval
 	return eval(`(${sourceExpression})`);
 }

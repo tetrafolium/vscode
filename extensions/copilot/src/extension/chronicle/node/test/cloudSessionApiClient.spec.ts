@@ -31,7 +31,15 @@ function createMockServices() {
 	return { tokenManager, authService, fetcherService };
 }
 
-function makeFetchResponse(status: number, body: unknown = {}): { ok: boolean; status: number; headers: { get: (n: string) => string | null }; json: () => Promise<unknown> } {
+function makeFetchResponse(
+	status: number,
+	body: unknown = {},
+): {
+	ok: boolean;
+	status: number;
+	headers: { get: (n: string) => string | null };
+	json: () => Promise<unknown>;
+} {
 	return {
 		ok: status >= 200 && status < 300,
 		status,
@@ -43,40 +51,71 @@ function makeFetchResponse(status: number, body: unknown = {}): { ok: boolean; s
 describe('CloudSessionApiClient', () => {
 	describe('createSession', () => {
 		it('returns ok with response on success', async () => {
-			const { tokenManager, authService, fetcherService } = createMockServices();
-			(fetcherService.fetch as any).mockResolvedValue(makeFetchResponse(200, { id: 'sess-1', task_id: 'task-1' }));
+			const { tokenManager, authService, fetcherService } =
+				createMockServices();
+			(fetcherService.fetch as any).mockResolvedValue(
+				makeFetchResponse(200, { id: 'sess-1', task_id: 'task-1' }),
+			);
 
-			const client = new CloudSessionApiClient(tokenManager, authService, fetcherService);
+			const client = new CloudSessionApiClient(
+				tokenManager,
+				authService,
+				fetcherService,
+			);
 			const result = await client.createSession(1, 2, 'local-1');
 
-			expect(result).toEqual({ ok: true, response: { id: 'sess-1', task_id: 'task-1' } });
+			expect(result).toEqual({
+				ok: true,
+				response: { id: 'sess-1', task_id: 'task-1' },
+			});
 		});
 
 		it('maps HTTP 403 to policy_blocked', async () => {
-			const { tokenManager, authService, fetcherService } = createMockServices();
-			(fetcherService.fetch as any).mockResolvedValue(makeFetchResponse(403));
+			const { tokenManager, authService, fetcherService } =
+				createMockServices();
+			(fetcherService.fetch as any).mockResolvedValue(
+				makeFetchResponse(403),
+			);
 
-			const client = new CloudSessionApiClient(tokenManager, authService, fetcherService);
+			const client = new CloudSessionApiClient(
+				tokenManager,
+				authService,
+				fetcherService,
+			);
 			const result = await client.createSession(1, 2, 'local-1');
 
 			expect(result).toEqual({ ok: false, reason: 'policy_blocked' });
 		});
 
 		it('maps other 4xx/5xx to error', async () => {
-			const { tokenManager, authService, fetcherService } = createMockServices();
-			(fetcherService.fetch as any).mockResolvedValue(makeFetchResponse(500));
+			const { tokenManager, authService, fetcherService } =
+				createMockServices();
+			(fetcherService.fetch as any).mockResolvedValue(
+				makeFetchResponse(500),
+			);
 
-			const client = new CloudSessionApiClient(tokenManager, authService, fetcherService);
+			const client = new CloudSessionApiClient(
+				tokenManager,
+				authService,
+				fetcherService,
+			);
 			const result = await client.createSession(1, 2, 'local-1');
 
 			expect(result).toEqual({ ok: false, reason: 'error' });
 		});
 
 		it('maps HTTP 429 to rate_limited', async () => {
-			const { tokenManager, authService, fetcherService } = createMockServices();
-			(fetcherService.fetch as any).mockResolvedValue(makeFetchResponse(429));
+			const { tokenManager, authService, fetcherService } =
+				createMockServices();
+			(fetcherService.fetch as any).mockResolvedValue(
+				makeFetchResponse(429),
+			);
 
-			const client = new CloudSessionApiClient(tokenManager, authService, fetcherService);
+			const client = new CloudSessionApiClient(
+				tokenManager,
+				authService,
+				fetcherService,
+			);
 			const result = await client.createSession(1, 2, 'local-1');
 
 			expect(result).toEqual({ ok: false, reason: 'rate_limited' });
@@ -85,40 +124,68 @@ describe('CloudSessionApiClient', () => {
 
 	describe('submitSessionEvents', () => {
 		it('returns ok on success', async () => {
-			const { tokenManager, authService, fetcherService } = createMockServices();
-			(fetcherService.fetch as any).mockResolvedValue(makeFetchResponse(200));
+			const { tokenManager, authService, fetcherService } =
+				createMockServices();
+			(fetcherService.fetch as any).mockResolvedValue(
+				makeFetchResponse(200),
+			);
 
-			const client = new CloudSessionApiClient(tokenManager, authService, fetcherService);
+			const client = new CloudSessionApiClient(
+				tokenManager,
+				authService,
+				fetcherService,
+			);
 			const result = await client.submitSessionEvents('sess-1', []);
 
 			expect(result).toEqual({ ok: true });
 		});
 
 		it('maps HTTP 403 to policy_blocked', async () => {
-			const { tokenManager, authService, fetcherService } = createMockServices();
-			(fetcherService.fetch as any).mockResolvedValue(makeFetchResponse(403));
+			const { tokenManager, authService, fetcherService } =
+				createMockServices();
+			(fetcherService.fetch as any).mockResolvedValue(
+				makeFetchResponse(403),
+			);
 
-			const client = new CloudSessionApiClient(tokenManager, authService, fetcherService);
+			const client = new CloudSessionApiClient(
+				tokenManager,
+				authService,
+				fetcherService,
+			);
 			const result = await client.submitSessionEvents('sess-1', []);
 
 			expect(result).toEqual({ ok: false, reason: 'policy_blocked' });
 		});
 
 		it('maps other 4xx/5xx to error', async () => {
-			const { tokenManager, authService, fetcherService } = createMockServices();
-			(fetcherService.fetch as any).mockResolvedValue(makeFetchResponse(500));
+			const { tokenManager, authService, fetcherService } =
+				createMockServices();
+			(fetcherService.fetch as any).mockResolvedValue(
+				makeFetchResponse(500),
+			);
 
-			const client = new CloudSessionApiClient(tokenManager, authService, fetcherService);
+			const client = new CloudSessionApiClient(
+				tokenManager,
+				authService,
+				fetcherService,
+			);
 			const result = await client.submitSessionEvents('sess-1', []);
 
 			expect(result).toEqual({ ok: false, reason: 'error' });
 		});
 
 		it('maps HTTP 429 to rate_limited', async () => {
-			const { tokenManager, authService, fetcherService } = createMockServices();
-			(fetcherService.fetch as any).mockResolvedValue(makeFetchResponse(429));
+			const { tokenManager, authService, fetcherService } =
+				createMockServices();
+			(fetcherService.fetch as any).mockResolvedValue(
+				makeFetchResponse(429),
+			);
 
-			const client = new CloudSessionApiClient(tokenManager, authService, fetcherService);
+			const client = new CloudSessionApiClient(
+				tokenManager,
+				authService,
+				fetcherService,
+			);
 			const result = await client.submitSessionEvents('sess-1', []);
 
 			expect(result).toEqual({ ok: false, reason: 'rate_limited' });

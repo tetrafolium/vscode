@@ -12,21 +12,32 @@ import { Disposable } from '../../../util/vs/base/common/lifecycle';
 import { IExtensionContribution } from '../../common/contributions';
 import { IToolsService } from '../../tools/common/toolsService';
 
-export class ExtensionStateCommandContribution extends Disposable implements IExtensionContribution {
+export class ExtensionStateCommandContribution
+	extends Disposable
+	implements IExtensionContribution
+{
 	id = 'extensionStateCommand';
 
 	constructor(
 		@ILogService private readonly _logService: ILogService,
-		@IAuthenticationService private readonly _authenticationService: IAuthenticationService,
-		@IEndpointProvider private readonly _endpointProvider: IEndpointProvider,
+		@IAuthenticationService
+		private readonly _authenticationService: IAuthenticationService,
+		@IEndpointProvider
+		private readonly _endpointProvider: IEndpointProvider,
 		@IToolsService private readonly _toolsService: IToolsService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
 	) {
 		super();
 
-		this._register(vscode.commands.registerCommand('github.copilot.debug.extensionState', async () => {
-			await this._logExtensionState();
-		}));
+		this._register(
+			vscode.commands.registerCommand(
+				'github.copilot.debug.extensionState',
+				async () => {
+					await this._logExtensionState();
+				},
+			),
+		);
 	}
 
 	private async _logExtensionState(): Promise<void> {
@@ -38,23 +49,34 @@ export class ExtensionStateCommandContribution extends Disposable implements IEx
 
 		// Auth state
 		const hasAnySession = !!this._authenticationService.anyGitHubSession;
-		const hasPermissiveSession = !!this._authenticationService.permissiveGitHubSession;
+		const hasPermissiveSession =
+			!!this._authenticationService.permissiveGitHubSession;
 		const hasCopilotToken = !!this._authenticationService.copilotToken;
-		lines.push(`  Auth: anyGitHubSession=${hasAnySession}, repoGitHubSession=${hasPermissiveSession}, copilotToken=${hasCopilotToken}`);
+		lines.push(
+			`  Auth: anyGitHubSession=${hasAnySession}, repoGitHubSession=${hasPermissiveSession}, copilotToken=${hasCopilotToken}`,
+		);
 
 		// Username
 		const session = this._authenticationService.anyGitHubSession;
 		if (session) {
 			lines.push(`  Username: ${session.account.label}`);
 		} else {
-			lines.push('  Username: (not signed in) - check the GitHub Authentication output channel for more details');
+			lines.push(
+				'  Username: (not signed in) - check the GitHub Authentication output channel for more details',
+			);
 		}
 
 		// Proxy setup
-		const proxySupport = vscode.workspace.getConfiguration('http').get<string>('proxySupport', 'override');
-		const proxyUrl = vscode.workspace.getConfiguration('http').get<string>('proxy', '');
+		const proxySupport = vscode.workspace
+			.getConfiguration('http')
+			.get<string>('proxySupport', 'override');
+		const proxyUrl = vscode.workspace
+			.getConfiguration('http')
+			.get<string>('proxy', '');
 		const proxyConfigured = proxyUrl ? 'true' : 'false';
-		lines.push(`  Proxy: http.proxySupport=${proxySupport}, http.proxy=${proxyUrl ? '(configured)' : '(not configured)'}`);
+		lines.push(
+			`  Proxy: http.proxySupport=${proxySupport}, http.proxy=${proxyUrl ? '(configured)' : '(not configured)'}`,
+		);
 
 		let languageModelsLoaded = 'false';
 		let languageModelCount = 0;
@@ -66,35 +88,52 @@ export class ExtensionStateCommandContribution extends Disposable implements IEx
 		if (session) {
 			// Language models
 			try {
-				const endpoints = await this._endpointProvider.getAllChatEndpoints();
+				const endpoints =
+					await this._endpointProvider.getAllChatEndpoints();
 				languageModelCount = endpoints.length;
 				languageModelsLoaded = String(endpoints.length > 0);
-				lines.push(`  Language models loaded: ${endpoints.length > 0} (count: ${endpoints.length})`);
+				lines.push(
+					`  Language models loaded: ${endpoints.length > 0} (count: ${endpoints.length})`,
+				);
 			} catch (e) {
 				lines.push(`  Language models loaded: false (error: ${e})`);
 			}
 
 			// Copilot chat provider registration
 			try {
-				const copilotModels = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+				const copilotModels = await vscode.lm.selectChatModels({
+					vendor: 'copilot',
+				});
 				copilotModelCount = copilotModels.length;
 				copilotProviderRegistered = String(copilotModels.length > 0);
-				lines.push(`  Copilot chat provider registered: ${copilotModels.length > 0} (models: ${copilotModels.length})`);
+				lines.push(
+					`  Copilot chat provider registered: ${copilotModels.length > 0} (models: ${copilotModels.length})`,
+				);
 			} catch (e) {
-				lines.push(`  Copilot chat provider registered: false (error: ${e})`);
+				lines.push(
+					`  Copilot chat provider registered: false (error: ${e})`,
+				);
 			}
 
 			// Copilot embeddings model registration
-			const copilotEmbeddings = vscode.lm.embeddingModels.filter(m => m.startsWith('copilot.'));
+			const copilotEmbeddings = vscode.lm.embeddingModels.filter((m) =>
+				m.startsWith('copilot.'),
+			);
 			copilotEmbeddingsRegistered = String(copilotEmbeddings.length > 0);
-			lines.push(`  Copilot embeddings model registered: ${copilotEmbeddings.length > 0} (models: [${copilotEmbeddings.join(', ')}])`);
+			lines.push(
+				`  Copilot embeddings model registered: ${copilotEmbeddings.length > 0} (models: [${copilotEmbeddings.join(', ')}])`,
+			);
 
 			// Tools
 			toolCount = this._toolsService.tools.length;
-			lines.push(`  Tools loaded: ${toolCount > 0} (count: ${toolCount})`);
+			lines.push(
+				`  Tools loaded: ${toolCount > 0} (count: ${toolCount})`,
+			);
 		}
 
-		lines.push('[ExtensionState] ===============================================================');
+		lines.push(
+			'[ExtensionState] ===============================================================',
+		);
 
 		this._logService.info(lines.join('\n'));
 
@@ -131,7 +170,7 @@ export class ExtensionStateCommandContribution extends Disposable implements IEx
 				languageModelCount,
 				copilotModelCount,
 				toolCount,
-			}
+			},
 		);
 	}
 }

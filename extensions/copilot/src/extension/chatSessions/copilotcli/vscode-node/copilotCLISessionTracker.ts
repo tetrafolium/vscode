@@ -5,11 +5,15 @@
 
 import { execFile } from 'child_process';
 import { l10n, Terminal, window } from 'vscode';
-import { Disposable, IDisposable } from '../../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	IDisposable,
+} from '../../../../util/vs/base/common/lifecycle';
 import { isWindows } from '../../../../util/vs/base/common/platform';
 import { createDecorator } from '../../../../util/vs/platform/instantiation/common/instantiation';
 
-export const ICopilotCLISessionTracker = createDecorator<ICopilotCLISessionTracker>('ICopilotCLISessionTracker');
+export const ICopilotCLISessionTracker =
+	createDecorator<ICopilotCLISessionTracker>('ICopilotCLISessionTracker');
 
 export interface SessionProcessInfo {
 	readonly pid: number;
@@ -52,7 +56,10 @@ export interface ICopilotCLISessionTracker extends Disposable {
 	getTerminal(sessionId: string): Promise<Terminal | undefined>;
 }
 
-export class CopilotCLISessionTracker extends Disposable implements ICopilotCLISessionTracker {
+export class CopilotCLISessionTracker
+	extends Disposable
+	implements ICopilotCLISessionTracker
+{
 	declare _serviceBrand: undefined;
 	private readonly _sessions = new Map<string, SessionProcessInfo>();
 	private readonly _sessionNames = new Map<string, string>();
@@ -61,13 +68,15 @@ export class CopilotCLISessionTracker extends Disposable implements ICopilotCLIS
 
 	constructor() {
 		super();
-		this._register(window.onDidCloseTerminal(closedTerminal => {
-			for (const [id, t] of this._sessionTerminals) {
-				if (t === closedTerminal) {
-					this._sessionTerminals.delete(id);
+		this._register(
+			window.onDidCloseTerminal((closedTerminal) => {
+				for (const [id, t] of this._sessionTerminals) {
+					if (t === closedTerminal) {
+						this._sessionTerminals.delete(id);
+					}
 				}
-			}
-		}));
+			}),
+		);
 	}
 	registerSession(sessionId: string, info: SessionProcessInfo): IDisposable {
 		this._sessions.set(sessionId, info);
@@ -77,7 +86,7 @@ export class CopilotCLISessionTracker extends Disposable implements ICopilotCLIS
 				this._sessionNames.delete(sessionId);
 				this._sessionTerminals.delete(sessionId);
 				this._grandparentPids.delete(sessionId);
-			}
+			},
 		};
 	}
 
@@ -86,7 +95,9 @@ export class CopilotCLISessionTracker extends Disposable implements ICopilotCLIS
 	}
 
 	getSessionDisplayName(sessionId: string): string {
-		return this._sessionNames.get(sessionId) || l10n.t('Copilot CLI Session');
+		return (
+			this._sessionNames.get(sessionId) || l10n.t('Copilot CLI Session')
+		);
 	}
 
 	getSessionIds(): readonly string[] {
@@ -131,7 +142,9 @@ export class CopilotCLISessionTracker extends Disposable implements ICopilotCLIS
 			}
 			const pid = ppids[index];
 			previousPpid = pid;
-			const terminal = pid ? await this._findTerminalByPid(pid) : undefined;
+			const terminal = pid
+				? await this._findTerminalByPid(pid)
+				: undefined;
 			if (terminal) {
 				this._sessionTerminals.set(sessionId, terminal);
 				return terminal;
@@ -141,8 +154,12 @@ export class CopilotCLISessionTracker extends Disposable implements ICopilotCLIS
 		return undefined;
 	}
 
-	private async _findTerminalByPid(targetPid: number): Promise<Terminal | undefined> {
-		const terminalPids = window.terminals.map(t => t.processId.then(pid => ({ terminal: t, pid })));
+	private async _findTerminalByPid(
+		targetPid: number,
+	): Promise<Terminal | undefined> {
+		const terminalPids = window.terminals.map((t) =>
+			t.processId.then((pid) => ({ terminal: t, pid })),
+		);
 
 		for (const promise of terminalPids) {
 			try {
@@ -168,7 +185,11 @@ export async function getParentPid(pid: number): Promise<number | undefined> {
 	try {
 		const stdout = await new Promise<string>((resolve, reject) => {
 			const args = isWindows
-				? ['-NoProfile', '-Command', `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").ParentProcessId`]
+				? [
+						'-NoProfile',
+						'-Command',
+						`(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").ParentProcessId`,
+					]
 				: ['-o', 'ppid=', '-p', String(pid)];
 			const cmd = isWindows ? 'powershell.exe' : 'ps';
 			execFile(cmd, args, { windowsHide: true }, (err, out) => {

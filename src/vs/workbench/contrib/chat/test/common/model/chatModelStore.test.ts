@@ -3,17 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { DeferredPromise } from '../../../../../../base/common/async.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { NullLogService } from '../../../../../../platform/log/common/log.js';
-import { ChatModel } from '../../../common/model/chatModel.js';
-import { ChatModelStore, IStartSessionProps } from '../../../common/model/chatModelStore.js';
-import { ChatAgentLocation } from '../../../common/constants.js';
-import { MockChatModel } from './mockChatModel.js';
+import assert from "assert";
+import { DeferredPromise } from "../../../../../../base/common/async.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import { NullLogService } from "../../../../../../platform/log/common/log.js";
+import { ChatModel } from "../../../common/model/chatModel.js";
+import {
+	ChatModelStore,
+	IStartSessionProps,
+} from "../../../common/model/chatModelStore.js";
+import { ChatAgentLocation } from "../../../common/constants.js";
+import { MockChatModel } from "./mockChatModel.js";
 
-suite('ChatModelStore', () => {
+suite("ChatModelStore", () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
 	let testObject: ChatModelStore;
@@ -23,26 +26,31 @@ suite('ChatModelStore', () => {
 	setup(() => {
 		createdModels = [];
 		willDisposePromises = [];
-		testObject = store.add(new ChatModelStore({
-			createModel: (props: IStartSessionProps) => {
-				const model = new MockChatModel(props.sessionResource);
-				createdModels.push(model);
-				return model as unknown as ChatModel;
-			},
-			willDisposeModel: async (model: ChatModel) => {
-				const p = new DeferredPromise<void>();
-				willDisposePromises.push(p);
-				await p.p;
-			}
-		}, new NullLogService()));
+		testObject = store.add(
+			new ChatModelStore(
+				{
+					createModel: (props: IStartSessionProps) => {
+						const model = new MockChatModel(props.sessionResource);
+						createdModels.push(model);
+						return model as unknown as ChatModel;
+					},
+					willDisposeModel: async (model: ChatModel) => {
+						const p = new DeferredPromise<void>();
+						willDisposePromises.push(p);
+						await p.p;
+					},
+				},
+				new NullLogService(),
+			),
+		);
 	});
 
-	test('create and dispose', async () => {
-		const uri = URI.parse('test://session');
+	test("create and dispose", async () => {
+		const uri = URI.parse("test://session");
 		const props: IStartSessionProps = {
 			sessionResource: uri,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 
 		const ref = testObject.acquireOrCreate(props);
@@ -57,12 +65,12 @@ suite('ChatModelStore', () => {
 		assert.strictEqual(testObject.get(uri), undefined);
 	});
 
-	test('resurrection', async () => {
-		const uri = URI.parse('test://session');
+	test("resurrection", async () => {
+		const uri = URI.parse("test://session");
 		const props: IStartSessionProps = {
 			sessionResource: uri,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 
 		const ref1 = testObject.acquireOrCreate(props);
@@ -88,12 +96,12 @@ suite('ChatModelStore', () => {
 		ref2.dispose();
 	});
 
-	test('get and has', async () => {
-		const uri = URI.parse('test://session');
+	test("get and has", async () => {
+		const uri = URI.parse("test://session");
 		const props: IStartSessionProps = {
 			sessionResource: uri,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 
 		const ref = testObject.acquireOrCreate(props);
@@ -108,12 +116,12 @@ suite('ChatModelStore', () => {
 		assert.strictEqual(testObject.has(uri), false);
 	});
 
-	test('acquireExisting', async () => {
-		const uri = URI.parse('test://session');
+	test("acquireExisting", async () => {
+		const uri = URI.parse("test://session");
 		const props: IStartSessionProps = {
 			sessionResource: uri,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 
 		assert.strictEqual(testObject.acquireExisting(uri), undefined);
@@ -129,18 +137,18 @@ suite('ChatModelStore', () => {
 		await testObject.waitForModelDisposals();
 	});
 
-	test('values', async () => {
-		const uri1 = URI.parse('test://session1');
-		const uri2 = URI.parse('test://session2');
+	test("values", async () => {
+		const uri1 = URI.parse("test://session1");
+		const uri2 = URI.parse("test://session2");
 		const props1: IStartSessionProps = {
 			sessionResource: uri1,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 		const props2: IStartSessionProps = {
 			sessionResource: uri2,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 
 		const ref1 = testObject.acquireOrCreate(props1);
@@ -158,12 +166,12 @@ suite('ChatModelStore', () => {
 		await testObject.waitForModelDisposals();
 	});
 
-	test('dispose store', async () => {
-		const uri = URI.parse('test://session');
+	test("dispose store", async () => {
+		const uri = URI.parse("test://session");
 		const props: IStartSessionProps = {
 			sessionResource: uri,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 
 		const ref = testObject.acquireOrCreate(props);
@@ -173,36 +181,38 @@ suite('ChatModelStore', () => {
 		assert.strictEqual(model.isDisposed, true);
 	});
 
-	test('tracks reference owners and creation owner', async () => {
-		const uri = URI.parse('test://session');
+	test("tracks reference owners and creation owner", async () => {
+		const uri = URI.parse("test://session");
 		const props: IStartSessionProps = {
 			sessionResource: uri,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 
-		const ref1 = testObject.acquireOrCreate(props, 'ChatModelStoreTest#create');
-		const ref2 = testObject.acquireExisting(uri, 'ChatModelStoreTest#existing');
-		const ref3 = testObject.acquireExisting(uri, 'ChatModelStoreTest#existing');
+		const ref1 = testObject.acquireOrCreate(props, "ChatModelStoreTest#create");
+		const ref2 = testObject.acquireExisting(uri, "ChatModelStoreTest#existing");
+		const ref3 = testObject.acquireExisting(uri, "ChatModelStoreTest#existing");
 
 		assert.deepStrictEqual(testObject.getReferenceDebugSnapshot(), {
 			totalModels: 1,
 			totalReferences: 3,
-			models: [{
-				sessionResource: uri,
-				title: '',
-				createdBy: 'ChatModelStoreTest#create',
-				initialLocation: ChatAgentLocation.Chat,
-				isImported: false,
-				willKeepAlive: true,
-				hasPendingEdits: false,
-				pendingDisposal: false,
-				referenceCount: 3,
-				holders: [
-					{ holder: 'ChatModelStoreTest#existing', count: 2 },
-					{ holder: 'ChatModelStoreTest#create', count: 1 }
-				]
-			}]
+			models: [
+				{
+					sessionResource: uri,
+					title: "",
+					createdBy: "ChatModelStoreTest#create",
+					initialLocation: ChatAgentLocation.Chat,
+					isImported: false,
+					willKeepAlive: true,
+					hasPendingEdits: false,
+					pendingDisposal: false,
+					referenceCount: 3,
+					holders: [
+						{ holder: "ChatModelStoreTest#existing", count: 2 },
+						{ holder: "ChatModelStoreTest#create", count: 1 },
+					],
+				},
+			],
 		});
 
 		ref1.dispose();
@@ -212,51 +222,53 @@ suite('ChatModelStore', () => {
 		await testObject.waitForModelDisposals();
 	});
 
-	test('reports pending disposal models without holders', async () => {
-		const uri = URI.parse('test://session');
+	test("reports pending disposal models without holders", async () => {
+		const uri = URI.parse("test://session");
 		const props: IStartSessionProps = {
 			sessionResource: uri,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 
-		const ref = testObject.acquireOrCreate(props, 'ChatModelStoreTest#create');
+		const ref = testObject.acquireOrCreate(props, "ChatModelStoreTest#create");
 		ref.dispose();
 
 		assert.deepStrictEqual(testObject.getReferenceDebugSnapshot(), {
 			totalModels: 1,
 			totalReferences: 0,
-			models: [{
-				sessionResource: uri,
-				title: '',
-				createdBy: 'ChatModelStoreTest#create',
-				initialLocation: ChatAgentLocation.Chat,
-				isImported: false,
-				willKeepAlive: true,
-				hasPendingEdits: false,
-				pendingDisposal: true,
-				referenceCount: 0,
-				holders: []
-			}]
+			models: [
+				{
+					sessionResource: uri,
+					title: "",
+					createdBy: "ChatModelStoreTest#create",
+					initialLocation: ChatAgentLocation.Chat,
+					isImported: false,
+					willKeepAlive: true,
+					hasPendingEdits: false,
+					pendingDisposal: true,
+					referenceCount: 0,
+					holders: [],
+				},
+			],
 		});
 
 		willDisposePromises[0].complete();
 		await testObject.waitForModelDisposals();
 	});
 
-	test('resurrection preserves debug tracking', async () => {
-		const uri = URI.parse('test://session');
+	test("resurrection preserves debug tracking", async () => {
+		const uri = URI.parse("test://session");
 		const props: IStartSessionProps = {
 			sessionResource: uri,
 			location: ChatAgentLocation.Chat,
-			canUseTools: true
+			canUseTools: true,
 		};
 
-		const ref1 = testObject.acquireOrCreate(props, 'OriginalCreator');
+		const ref1 = testObject.acquireOrCreate(props, "OriginalCreator");
 		ref1.dispose();
 
 		// Model is pending disposal — re-acquire before disposal completes
-		const ref2 = testObject.acquireOrCreate(props, 'Rescuer');
+		const ref2 = testObject.acquireOrCreate(props, "Rescuer");
 
 		// Complete the old disposal — should NOT wipe the model or tracking
 		willDisposePromises[0].complete();
@@ -265,18 +277,20 @@ suite('ChatModelStore', () => {
 		assert.deepStrictEqual(testObject.getReferenceDebugSnapshot(), {
 			totalModels: 1,
 			totalReferences: 1,
-			models: [{
-				sessionResource: uri,
-				title: '',
-				createdBy: 'OriginalCreator',
-				initialLocation: ChatAgentLocation.Chat,
-				isImported: false,
-				willKeepAlive: true,
-				hasPendingEdits: false,
-				pendingDisposal: false,
-				referenceCount: 1,
-				holders: [{ holder: 'Rescuer', count: 1 }]
-			}]
+			models: [
+				{
+					sessionResource: uri,
+					title: "",
+					createdBy: "OriginalCreator",
+					initialLocation: ChatAgentLocation.Chat,
+					isImported: false,
+					willKeepAlive: true,
+					hasPendingEdits: false,
+					pendingDisposal: false,
+					referenceCount: 1,
+					holders: [{ holder: "Rescuer", count: 1 }],
+				},
+			],
 		});
 
 		ref2.dispose();

@@ -10,11 +10,17 @@ import { Event } from '../../../../util/vs/base/common/event';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { createFakeResponse } from '../../../test/node/fetcher';
 import { createPlatformServices } from '../../../test/node/services';
-import { FetchOptions, IAbortController, IFetcherService, PaginationOptions, Response, WebSocketConnection } from '../../common/fetcherService';
+import {
+	FetchOptions,
+	IAbortController,
+	IFetcherService,
+	PaginationOptions,
+	Response,
+	WebSocketConnection,
+} from '../../common/fetcherService';
 import { postRequest } from '../../common/networking';
 
 suite('Networking test Suite', function () {
-
 	let headerBuffer: { [name: string]: string } | undefined;
 
 	class StaticFetcherService implements IFetcherService {
@@ -53,14 +59,20 @@ suite('Networking test Suite', function () {
 		getUserMessageForFetcherError(err: any): string {
 			throw new Error('Method not implemented.');
 		}
-		fetchWithPagination<T>(baseUrl: string, options: PaginationOptions<T>): Promise<T[]> {
+		fetchWithPagination<T>(
+			baseUrl: string,
+			options: PaginationOptions<T>,
+		): Promise<T[]> {
 			throw new Error('Method not implemented.');
 		}
 	}
 
 	test('each request contains editor info headers', async function () {
 		const testingServiceCollection = createPlatformServices();
-		testingServiceCollection.define(IFetcherService, new StaticFetcherService());
+		testingServiceCollection.define(
+			IFetcherService,
+			new StaticFetcherService(),
+		);
 		const accessor = testingServiceCollection.createTestingAccessor();
 		await accessor.get(IInstantiationService).invokeFunction(postRequest, {
 			endpointOrUrl: { type: RequestType.Models },
@@ -71,12 +83,18 @@ suite('Networking test Suite', function () {
 
 		assert.strictEqual(headerBuffer!['VScode-SessionId'], 'test-session');
 		assert.strictEqual(headerBuffer!['VScode-MachineId'], 'test-machine');
-		assert.strictEqual(headerBuffer!['Editor-Version'], `vscode/test-version`);
+		assert.strictEqual(
+			headerBuffer!['Editor-Version'],
+			`vscode/test-version`,
+		);
 	});
 
 	test('sets Authorization header when secretKey is provided', async function () {
 		const testingServiceCollection = createPlatformServices();
-		testingServiceCollection.define(IFetcherService, new StaticFetcherService());
+		testingServiceCollection.define(
+			IFetcherService,
+			new StaticFetcherService(),
+		);
 		const accessor = testingServiceCollection.createTestingAccessor();
 		await accessor.get(IInstantiationService).invokeFunction(postRequest, {
 			endpointOrUrl: { type: RequestType.Models },
@@ -90,7 +108,10 @@ suite('Networking test Suite', function () {
 
 	test('omits Authorization header when secretKey is undefined', async function () {
 		const testingServiceCollection = createPlatformServices();
-		testingServiceCollection.define(IFetcherService, new StaticFetcherService());
+		testingServiceCollection.define(
+			IFetcherService,
+			new StaticFetcherService(),
+		);
 		const accessor = testingServiceCollection.createTestingAccessor();
 		await accessor.get(IInstantiationService).invokeFunction(postRequest, {
 			endpointOrUrl: { type: RequestType.Models },

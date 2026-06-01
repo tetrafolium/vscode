@@ -3,7 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export type Complexity = 'O(1)' | 'O(log n)' | 'O(sqrt(n))' | 'O(n)' | 'O(n log n)' | 'O(n^2)' | 'O(n^3)';
+export type Complexity =
+	| 'O(1)'
+	| 'O(log n)'
+	| 'O(sqrt(n))'
+	| 'O(n)'
+	| 'O(n log n)'
+	| 'O(n^2)'
+	| 'O(n^3)';
 
 export interface ComplexityData {
 	n: number;
@@ -23,18 +30,20 @@ export interface ComplexityResult {
 
 // Candidate basis functions
 const models: ComplexityModel[] = [
-	{ name: 'O(1)', type: 'sublinear', basis: _n => 1 },
-	{ name: 'O(log n)', type: 'sublinear', basis: n => Math.log(n) },
-	{ name: 'O(n)', type: 'linear', basis: n => n },
-	{ name: 'O(n log n)', type: 'linear', basis: n => n * Math.log(n) },
-	{ name: 'O(n^2)', type: 'superlinear', basis: n => n * n },
-	{ name: 'O(n^3)', type: 'superlinear', basis: n => n * n * n },
-	{ name: 'O(sqrt(n))', type: 'sublinear', basis: n => Math.sqrt(n) },
+	{ name: 'O(1)', type: 'sublinear', basis: (_n) => 1 },
+	{ name: 'O(log n)', type: 'sublinear', basis: (n) => Math.log(n) },
+	{ name: 'O(n)', type: 'linear', basis: (n) => n },
+	{ name: 'O(n log n)', type: 'linear', basis: (n) => n * Math.log(n) },
+	{ name: 'O(n^2)', type: 'superlinear', basis: (n) => n * n },
+	{ name: 'O(n^3)', type: 'superlinear', basis: (n) => n * n * n },
+	{ name: 'O(sqrt(n))', type: 'sublinear', basis: (n) => Math.sqrt(n) },
 ];
 
-const constantComplexity = models.find(m => m.name === 'O(1)')!;
+const constantComplexity = models.find((m) => m.name === 'O(1)')!;
 
-export function determineTimeComplexity(data: ComplexityData[]): ComplexityResult {
+export function determineTimeComplexity(
+	data: ComplexityData[],
+): ComplexityResult {
 	if (data.length < 2) {
 		return {
 			model: constantComplexity,

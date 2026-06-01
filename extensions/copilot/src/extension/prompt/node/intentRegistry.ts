@@ -16,7 +16,7 @@ export interface CommandDetails {
 	readonly toolEquivalent?: ContributedToolName;
 }
 
-export const IntentRegistry = new class {
+export const IntentRegistry = new (class {
 	private _descriptors: SyncDescriptor<IIntent>[] = [];
 
 	public setIntents(intentDescriptors: SyncDescriptor<IIntent>[]) {
@@ -26,4 +26,4 @@ export const IntentRegistry = new class {
 	public getIntents(): readonly SyncDescriptor<IIntent>[] {
 		return this._descriptors;
 	}
-}();
+})();

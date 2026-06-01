@@ -3,21 +3,36 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BrowserFeatures } from '../../canIUse.js';
-import * as DOM from '../../dom.js';
-import { StandardMouseEvent } from '../../mouseEvent.js';
-import { Disposable, DisposableStore, IDisposable, toDisposable } from '../../../common/lifecycle.js';
-import { AnchorAlignment, AnchorAxisAlignment, AnchorPosition, IRect, layout2d } from '../../../common/layout.js';
-import * as platform from '../../../common/platform.js';
-import { OmitOptional } from '../../../common/types.js';
-import './contextview.css';
+import { BrowserFeatures } from "../../canIUse.js";
+import * as DOM from "../../dom.js";
+import { StandardMouseEvent } from "../../mouseEvent.js";
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+	toDisposable,
+} from "../../../common/lifecycle.js";
+import {
+	AnchorAlignment,
+	AnchorAxisAlignment,
+	AnchorPosition,
+	IRect,
+	layout2d,
+} from "../../../common/layout.js";
+import * as platform from "../../../common/platform.js";
+import { OmitOptional } from "../../../common/types.js";
+import "./contextview.css";
 
-export { AnchorAlignment, AnchorAxisAlignment, AnchorPosition } from '../../../common/layout.js';
+export {
+	AnchorAlignment,
+	AnchorAxisAlignment,
+	AnchorPosition,
+} from "../../../common/layout.js";
 
 export const enum ContextViewDOMPosition {
 	ABSOLUTE = 1,
 	FIXED,
-	FIXED_SHADOW
+	FIXED_SHADOW,
 }
 
 export interface IAnchor {
@@ -30,7 +45,9 @@ export interface IAnchor {
 export function isAnchor(obj: unknown): obj is IAnchor | OmitOptional<IAnchor> {
 	const anchor = obj as IAnchor | OmitOptional<IAnchor> | undefined;
 
-	return !!anchor && typeof anchor.x === 'number' && typeof anchor.y === 'number';
+	return (
+		!!anchor && typeof anchor.x === "number" && typeof anchor.y === "number"
+	);
 }
 
 export interface IDelegate {
@@ -63,7 +80,9 @@ export interface IContextViewProvider {
 	layout(): void;
 }
 
-export function getAnchorRect(anchor: HTMLElement | StandardMouseEvent | IAnchor): IRect {
+export function getAnchorRect(
+	anchor: HTMLElement | StandardMouseEvent | IAnchor,
+): IRect {
 	// Get the element's position and size (to anchor the view)
 	if (DOM.isHTMLElement(anchor)) {
 		const elementPosition = DOM.getDomNodePagePosition(anchor);
@@ -77,14 +96,14 @@ export function getAnchorRect(anchor: HTMLElement | StandardMouseEvent | IAnchor
 			top: elementPosition.top * zoom,
 			left: elementPosition.left * zoom,
 			width: elementPosition.width * zoom,
-			height: elementPosition.height * zoom
+			height: elementPosition.height * zoom,
 		};
 	} else if (isAnchor(anchor)) {
 		return {
 			top: anchor.y,
 			left: anchor.x,
 			width: anchor.width || 1,
-			height: anchor.height || 2
+			height: anchor.height || 2,
 		};
 	} else {
 		return {
@@ -95,15 +114,19 @@ export function getAnchorRect(anchor: HTMLElement | StandardMouseEvent | IAnchor
 			// when showing and thus potentially triggering an action within,
 			// we treat the mouse location like a small sized block element.
 			width: 2,
-			height: 2
+			height: 2,
 		};
 	}
 }
 
 export class ContextView extends Disposable {
-
-	private static readonly BUBBLE_UP_EVENTS = ['click', 'keydown', 'focus', 'blur'];
-	private static readonly BUBBLE_DOWN_EVENTS = ['click'];
+	private static readonly BUBBLE_UP_EVENTS = [
+		"click",
+		"keydown",
+		"focus",
+		"blur",
+	];
+	private static readonly BUBBLE_DOWN_EVENTS = ["click"];
 
 	private container: HTMLElement | null = null;
 	private view: HTMLElement;
@@ -118,14 +141,21 @@ export class ContextView extends Disposable {
 	constructor(container: HTMLElement, domPosition: ContextViewDOMPosition) {
 		super();
 
-		this.view = DOM.$('.context-view');
+		this.view = DOM.$(".context-view");
 		DOM.hide(this.view);
 
 		this.setContainer(container, domPosition);
-		this._register(toDisposable(() => this.setContainer(null, ContextViewDOMPosition.ABSOLUTE)));
+		this._register(
+			toDisposable(() =>
+				this.setContainer(null, ContextViewDOMPosition.ABSOLUTE),
+			),
+		);
 	}
 
-	setContainer(container: HTMLElement | null, domPosition: ContextViewDOMPosition): void {
+	setContainer(
+		container: HTMLElement | null,
+		domPosition: ContextViewDOMPosition,
+	): void {
 		this.useFixedPosition = domPosition !== ContextViewDOMPosition.ABSOLUTE;
 		const usedShadowDOM = this.useShadowDOM;
 		this.useShadowDOM = domPosition === ContextViewDOMPosition.FIXED_SHADOW;
@@ -151,30 +181,41 @@ export class ContextView extends Disposable {
 			this.container = container;
 
 			if (this.useShadowDOM) {
-				this.shadowRootHostElement = DOM.$('.shadow-root-host');
+				this.shadowRootHostElement = DOM.$(".shadow-root-host");
 				this.container.appendChild(this.shadowRootHostElement);
-				this.shadowRoot = this.shadowRootHostElement.attachShadow({ mode: 'open' });
-				const style = document.createElement('style');
+				this.shadowRoot = this.shadowRootHostElement.attachShadow({
+					mode: "open",
+				});
+				const style = document.createElement("style");
 				style.textContent = SHADOW_ROOT_CSS;
 				this.shadowRoot.appendChild(style);
 				this.shadowRoot.appendChild(this.view);
-				this.shadowRoot.appendChild(DOM.$('slot'));
+				this.shadowRoot.appendChild(DOM.$("slot"));
 			} else {
 				this.container.appendChild(this.view);
 			}
 
 			const toDisposeOnSetContainer = new DisposableStore();
 
-			ContextView.BUBBLE_UP_EVENTS.forEach(event => {
-				toDisposeOnSetContainer.add(DOM.addStandardDisposableListener(this.container!, event, e => {
-					this.onDOMEvent(e, false);
-				}));
+			ContextView.BUBBLE_UP_EVENTS.forEach((event) => {
+				toDisposeOnSetContainer.add(
+					DOM.addStandardDisposableListener(this.container!, event, (e) => {
+						this.onDOMEvent(e, false);
+					}),
+				);
 			});
 
-			ContextView.BUBBLE_DOWN_EVENTS.forEach(event => {
-				toDisposeOnSetContainer.add(DOM.addStandardDisposableListener(this.container!, event, e => {
-					this.onDOMEvent(e, true);
-				}, true));
+			ContextView.BUBBLE_DOWN_EVENTS.forEach((event) => {
+				toDisposeOnSetContainer.add(
+					DOM.addStandardDisposableListener(
+						this.container!,
+						event,
+						(e) => {
+							this.onDOMEvent(e, true);
+						},
+						true,
+					),
+				);
 			});
 
 			this.toDisposeOnSetContainer = toDisposeOnSetContainer;
@@ -188,11 +229,11 @@ export class ContextView extends Disposable {
 
 		// Show static box
 		DOM.clearNode(this.view);
-		this.view.className = 'context-view monaco-component';
-		this.view.style.top = '0px';
-		this.view.style.left = '0px';
+		this.view.className = "context-view monaco-component";
+		this.view.style.top = "0px";
+		this.view.style.left = "0px";
 		this.view.style.zIndex = `${2575 + (delegate.layer ?? 0)}`;
-		this.view.style.position = this.useFixedPosition ? 'fixed' : 'absolute';
+		this.view.style.position = this.useFixedPosition ? "fixed" : "absolute";
 		DOM.show(this.view);
 
 		// Render content
@@ -217,7 +258,10 @@ export class ContextView extends Disposable {
 			return;
 		}
 
-		if (this.delegate!.canRelayout === false && !(platform.isIOS && BrowserFeatures.pointerEvents)) {
+		if (
+			this.delegate!.canRelayout === false &&
+			!(platform.isIOS && BrowserFeatures.pointerEvents)
+		) {
 			this.hide();
 			return;
 		}
@@ -235,18 +279,36 @@ export class ContextView extends Disposable {
 
 		// Get anchor
 		const anchor = getAnchorRect(this.delegate!.getAnchor());
-		const containerWindow = this.container ? DOM.getWindow(this.container) : DOM.getActiveWindow();
-		const viewport = { top: containerWindow.pageYOffset, left: containerWindow.pageXOffset, width: containerWindow.innerWidth, height: containerWindow.innerHeight };
-		const view = { width: DOM.getTotalWidth(this.view), height: DOM.getTotalHeight(this.view) };
+		const containerWindow = this.container
+			? DOM.getWindow(this.container)
+			: DOM.getActiveWindow();
+		const viewport = {
+			top: containerWindow.pageYOffset,
+			left: containerWindow.pageXOffset,
+			width: containerWindow.innerWidth,
+			height: containerWindow.innerHeight,
+		};
+		const view = {
+			width: DOM.getTotalWidth(this.view),
+			height: DOM.getTotalHeight(this.view),
+		};
 		const anchorPosition = this.delegate!.anchorPosition;
 		const anchorAlignment = this.delegate!.anchorAlignment;
 		const anchorAxisAlignment = this.delegate!.anchorAxisAlignment;
-		const { top, left } = layout2d(viewport, view, anchor, { anchorAlignment, anchorPosition, anchorAxisAlignment });
+		const { top, left } = layout2d(viewport, view, anchor, {
+			anchorAlignment,
+			anchorPosition,
+			anchorAxisAlignment,
+		});
 
-		this.view.classList.remove('top', 'bottom', 'left', 'right');
-		this.view.classList.add(anchorPosition === AnchorPosition.BELOW ? 'bottom' : 'top');
-		this.view.classList.add(anchorAlignment === AnchorAlignment.LEFT ? 'left' : 'right');
-		this.view.classList.toggle('fixed', this.useFixedPosition);
+		this.view.classList.remove("top", "bottom", "left", "right");
+		this.view.classList.add(
+			anchorPosition === AnchorPosition.BELOW ? "bottom" : "top",
+		);
+		this.view.classList.add(
+			anchorAlignment === AnchorAlignment.LEFT ? "left" : "right",
+		);
+		this.view.classList.toggle("fixed", this.useFixedPosition);
 
 		const containerPosition = DOM.getDomNodePagePosition(this.container!);
 
@@ -256,7 +318,7 @@ export class ContextView extends Disposable {
 
 		this.view.style.top = `${top - (this.useFixedPosition ? DOM.getDomNodePagePosition(this.view).top : containerPosition.top) + containerScrollTop}px`;
 		this.view.style.left = `${left - (this.useFixedPosition ? DOM.getDomNodePagePosition(this.view).left : containerPosition.left) + containerScrollLeft}px`;
-		this.view.style.width = 'initial';
+		this.view.style.width = "initial";
 	}
 
 	hide(data?: unknown): void {
@@ -279,8 +341,14 @@ export class ContextView extends Disposable {
 	private onDOMEvent(e: UIEvent, onCapture: boolean): void {
 		if (this.delegate) {
 			if (this.delegate.onDOMEvent) {
-				this.delegate.onDOMEvent(e, <HTMLElement>DOM.getWindow(e).document.activeElement);
-			} else if (onCapture && !DOM.isAncestor(<HTMLElement>e.target, this.container)) {
+				this.delegate.onDOMEvent(
+					e,
+					<HTMLElement>DOM.getWindow(e).document.activeElement,
+				);
+			} else if (
+				onCapture &&
+				!DOM.isAncestor(<HTMLElement>e.target, this.container)
+			) {
 				this.hide();
 			}
 		}

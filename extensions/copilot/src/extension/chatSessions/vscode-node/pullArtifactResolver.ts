@@ -34,33 +34,50 @@ export async function resolvePullArtifact(
 	}
 	if (ref.globalId) {
 		try {
-			const pr = await octokit.getPullRequestFromGlobalId(ref.globalId, {});
+			const pr = await octokit.getPullRequestFromGlobalId(
+				ref.globalId,
+				{},
+			);
 			if (pr) {
 				return pr;
 			}
 		} catch (e) {
-			log.trace(`resolvePullArtifact: getPullRequestFromGlobalId failed for ${ref.globalId}: ${e}`);
+			log.trace(
+				`resolvePullArtifact: getPullRequestFromGlobalId failed for ${ref.globalId}: ${e}`,
+			);
 		}
 	}
 	// Fallback to listing the repo's open PRs and matching by databaseId or headRef. We list
 	// once and try both predicates so the round trip pays off when either signal is available.
-	if ((ref.databaseId !== undefined || ref.headRef) && ref.repo.owner && ref.repo.name) {
+	if (
+		(ref.databaseId !== undefined || ref.headRef) &&
+		ref.repo.owner &&
+		ref.repo.name
+	) {
 		try {
-			const prs = await octokit.getOpenPullRequestsForUser(ref.repo.owner, ref.repo.name, {});
+			const prs = await octokit.getOpenPullRequestsForUser(
+				ref.repo.owner,
+				ref.repo.name,
+				{},
+			);
 			if (ref.databaseId !== undefined) {
-				const byId = prs.find(p => p.fullDatabaseId === ref.databaseId);
+				const byId = prs.find(
+					(p) => p.fullDatabaseId === ref.databaseId,
+				);
 				if (byId) {
 					return byId;
 				}
 			}
 			if (ref.headRef) {
-				const byHead = prs.find(p => p.headRefName === ref.headRef);
+				const byHead = prs.find((p) => p.headRefName === ref.headRef);
 				if (byHead) {
 					return byHead;
 				}
 			}
 		} catch (e) {
-			log.trace(`resolvePullArtifact: getOpenPullRequestsForUser failed for ${ref.repo.owner}/${ref.repo.name}: ${e}`);
+			log.trace(
+				`resolvePullArtifact: getOpenPullRequestsForUser failed for ${ref.repo.owner}/${ref.repo.name}: ${e}`,
+			);
 		}
 	}
 	return undefined;
@@ -85,9 +102,11 @@ export async function resolvePullArtifactWithRetry(
 			return resolved;
 		}
 		if (i < attempts) {
-			await new Promise(resolve => setTimeout(resolve, spacingMs));
+			await new Promise((resolve) => setTimeout(resolve, spacingMs));
 		}
 	}
-	log.warn(`resolvePullArtifactWithRetry: could not resolve PR after ${attempts} attempts (globalId=${ref.globalId ?? 'n/a'}, headRef=${ref.headRef ?? 'n/a'}, repo=${ref.repo.owner}/${ref.repo.name})`);
+	log.warn(
+		`resolvePullArtifactWithRetry: could not resolve PR after ${attempts} attempts (globalId=${ref.globalId ?? 'n/a'}, headRef=${ref.headRef ?? 'n/a'}, repo=${ref.repo.owner}/${ref.repo.name})`,
+	);
 	return undefined;
 }

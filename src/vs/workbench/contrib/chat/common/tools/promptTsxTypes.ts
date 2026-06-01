@@ -14,7 +14,7 @@
 
 export const enum PromptNodeType {
 	Piece = 1,
-	Text = 2
+	Text = 2,
 }
 export interface TextJSON {
 	type: PromptNodeType.Text;
@@ -29,7 +29,7 @@ export interface TextJSON {
 export const enum PieceCtorKind {
 	BaseChatMessage = 1,
 	Other = 2,
-	ImageChatMessage = 3
+	ImageChatMessage = 3,
 }
 export interface BasePieceJSON {
 	type: PromptNodeType.Piece;
@@ -42,7 +42,7 @@ export interface ImageChatMessagePieceJSON {
 	children: PromptNodeJSON[];
 	props: {
 		src: string;
-		detail?: 'low' | 'high';
+		detail?: "low" | "high";
 	};
 }
 export type PieceJSON = BasePieceJSON | ImageChatMessagePieceJSON;
@@ -54,22 +54,25 @@ export interface PromptElementJSON {
 export function stringifyPromptElementJSON(element: PromptElementJSON): string {
 	const strs: string[] = [];
 	stringifyPromptNodeJSON(element.node, strs);
-	return strs.join('');
+	return strs.join("");
 }
 
 function stringifyPromptNodeJSON(node: PromptNodeJSON, strs: string[]): void {
 	if (node.type === PromptNodeType.Text) {
 		if (node.lineBreakBefore) {
-			strs.push('\n');
+			strs.push("\n");
 		}
 
-		if (typeof node.text === 'string') {
+		if (typeof node.text === "string") {
 			strs.push(node.text);
 		}
 	} else if (node.ctor === PieceCtorKind.ImageChatMessage) {
 		// This case currently can't be hit by prompt-tsx
-		strs.push('<image>');
-	} else if (node.ctor === PieceCtorKind.BaseChatMessage || node.ctor === PieceCtorKind.Other) {
+		strs.push("<image>");
+	} else if (
+		node.ctor === PieceCtorKind.BaseChatMessage ||
+		node.ctor === PieceCtorKind.Other
+	) {
 		for (const child of node.children) {
 			stringifyPromptNodeJSON(child, strs);
 		}

@@ -3,33 +3,46 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IWorkbenchContribution } from '../../../common/contributions.js';
-import { IRemoteAgentService, remoteConnectionLatencyMeasurer } from '../../../services/remote/common/remoteAgentService.js';
-import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
-import { localize } from '../../../../nls.js';
-import { isWeb, OperatingSystem } from '../../../../base/common/platform.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { getRemoteName, getRemoteServerRootPath } from '../../../../platform/remote/common/remoteHosts.js';
-import { IBannerService } from '../../../services/banner/browser/bannerService.js';
-import { IOpenerService } from '../../../../platform/opener/common/opener.js';
-import { IHostService } from '../../../services/host/browser/host.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IProductService } from '../../../../platform/product/common/productService.js';
-import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
-import { Codicon } from '../../../../base/common/codicons.js';
-import Severity from '../../../../base/common/severity.js';
-import { ILinkDescriptor } from '../../../../platform/opener/browser/link.js';
+import { IWorkbenchContribution } from "../../../common/contributions.js";
+import {
+	IRemoteAgentService,
+	remoteConnectionLatencyMeasurer,
+} from "../../../services/remote/common/remoteAgentService.js";
+import { IWorkbenchEnvironmentService } from "../../../services/environment/common/environmentService.js";
+import { localize } from "../../../../nls.js";
+import { isWeb, OperatingSystem } from "../../../../base/common/platform.js";
+import { ITelemetryService } from "../../../../platform/telemetry/common/telemetry.js";
+import {
+	getRemoteName,
+	getRemoteServerRootPath,
+} from "../../../../platform/remote/common/remoteHosts.js";
+import { IBannerService } from "../../../services/banner/browser/bannerService.js";
+import { IOpenerService } from "../../../../platform/opener/common/opener.js";
+import { IHostService } from "../../../services/host/browser/host.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../platform/storage/common/storage.js";
+import { IProductService } from "../../../../platform/product/common/productService.js";
+import { IDialogService } from "../../../../platform/dialogs/common/dialogs.js";
+import { Codicon } from "../../../../base/common/codicons.js";
+import Severity from "../../../../base/common/severity.js";
+import { ILinkDescriptor } from "../../../../platform/opener/browser/link.js";
 
-
-const REMOTE_UNSUPPORTED_CONNECTION_CHOICE_KEY = 'remote.unsupportedConnectionChoice';
-const BANNER_REMOTE_UNSUPPORTED_CONNECTION_DISMISSED_KEY = 'workbench.banner.remote.unsupportedConnection.dismissed';
-const BANNER_REMOTE_ARM32_DEPRECATION_DISMISSED_KEY = 'workbench.banner.remote.arm32Deprecation.dismissed';
+const REMOTE_UNSUPPORTED_CONNECTION_CHOICE_KEY =
+	"remote.unsupportedConnectionChoice";
+const BANNER_REMOTE_UNSUPPORTED_CONNECTION_DISMISSED_KEY =
+	"workbench.banner.remote.unsupportedConnection.dismissed";
+const BANNER_REMOTE_ARM32_DEPRECATION_DISMISSED_KEY =
+	"workbench.banner.remote.arm32Deprecation.dismissed";
 
 export class InitialRemoteConnectionHealthContribution implements IWorkbenchContribution {
-
 	constructor(
-		@IRemoteAgentService private readonly _remoteAgentService: IRemoteAgentService,
-		@IWorkbenchEnvironmentService private readonly _environmentService: IWorkbenchEnvironmentService,
+		@IRemoteAgentService
+		private readonly _remoteAgentService: IRemoteAgentService,
+		@IWorkbenchEnvironmentService
+		private readonly _environmentService: IWorkbenchEnvironmentService,
 		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@IBannerService private readonly bannerService: IBannerService,
 		@IDialogService private readonly dialogService: IDialogService,
@@ -47,29 +60,45 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 		const enum ConnectionChoice {
 			Allow = 1,
 			LearnMore = 2,
-			Cancel = 0
+			Cancel = 0,
 		}
 
-		const { result, checkboxChecked } = await this.dialogService.prompt<ConnectionChoice>({
-			type: Severity.Warning,
-			message: localize('unsupportedGlibcWarning', "You are about to connect to an OS version that is unsupported by {0}.", this.productService.nameLong),
-			buttons: [
-				{
-					label: localize({ key: 'allow', comment: ['&& denotes a mnemonic'] }, "&&Allow"),
-					run: () => ConnectionChoice.Allow
+		const { result, checkboxChecked } =
+			await this.dialogService.prompt<ConnectionChoice>({
+				type: Severity.Warning,
+				message: localize(
+					"unsupportedGlibcWarning",
+					"You are about to connect to an OS version that is unsupported by {0}.",
+					this.productService.nameLong,
+				),
+				buttons: [
+					{
+						label: localize(
+							{ key: "allow", comment: ["&& denotes a mnemonic"] },
+							"&&Allow",
+						),
+						run: () => ConnectionChoice.Allow,
+					},
+					{
+						label: localize(
+							{ key: "learnMore", comment: ["&& denotes a mnemonic"] },
+							"&&Learn More",
+						),
+						run: async () => {
+							await this.openerService.open(
+								"https://aka.ms/vscode-remote/faq/old-linux",
+							);
+							return ConnectionChoice.LearnMore;
+						},
+					},
+				],
+				cancelButton: {
+					run: () => ConnectionChoice.Cancel,
 				},
-				{
-					label: localize({ key: 'learnMore', comment: ['&& denotes a mnemonic'] }, "&&Learn More"),
-					run: async () => { await this.openerService.open('https://aka.ms/vscode-remote/faq/old-linux'); return ConnectionChoice.LearnMore; }
-				}
-			],
-			cancelButton: {
-				run: () => ConnectionChoice.Cancel
-			},
-			checkbox: {
-				label: localize('remember', "Do not show again"),
-			}
-		});
+				checkbox: {
+					label: localize("remember", "Do not show again"),
+				},
+			});
 
 		if (result === ConnectionChoice.LearnMore) {
 			return await this._confirmConnection();
@@ -77,7 +106,12 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 
 		const allowed = result === ConnectionChoice.Allow;
 		if (allowed && checkboxChecked) {
-			this.storageService.store(`${REMOTE_UNSUPPORTED_CONNECTION_CHOICE_KEY}.${this._environmentService.remoteAuthority}`, allowed, StorageScope.PROFILE, StorageTarget.MACHINE);
+			this.storageService.store(
+				`${REMOTE_UNSUPPORTED_CONNECTION_CHOICE_KEY}.${this._environmentService.remoteAuthority}`,
+				allowed,
+				StorageScope.PROFILE,
+				StorageTarget.MACHINE,
+			);
 		}
 
 		return allowed;
@@ -86,52 +120,89 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 	private async _checkInitialRemoteConnectionHealth(): Promise<void> {
 		try {
 			const environment = await this._remoteAgentService.getRawEnvironment();
-			const isArm32Server = environment?.os === OperatingSystem.Linux && environment.arch === 'arm';
+			const isArm32Server =
+				environment?.os === OperatingSystem.Linux && environment.arch === "arm";
 
 			if (environment && environment.isUnsupportedGlibc) {
-				let allowed = this.storageService.getBoolean(`${REMOTE_UNSUPPORTED_CONNECTION_CHOICE_KEY}.${this._environmentService.remoteAuthority}`, StorageScope.PROFILE);
+				let allowed = this.storageService.getBoolean(
+					`${REMOTE_UNSUPPORTED_CONNECTION_CHOICE_KEY}.${this._environmentService.remoteAuthority}`,
+					StorageScope.PROFILE,
+				);
 				if (allowed === undefined) {
 					allowed = await this._confirmConnection();
 				}
 				if (allowed) {
 					this._showVersionedBanner(
-						'unsupportedGlibcWarning.banner',
+						"unsupportedGlibcWarning.banner",
 						BANNER_REMOTE_UNSUPPORTED_CONNECTION_DISMISSED_KEY,
-						localize('unsupportedGlibcWarning.banner', "You are connected to an OS version that is unsupported by {0}.", this.productService.nameLong),
+						localize(
+							"unsupportedGlibcWarning.banner",
+							"You are connected to an OS version that is unsupported by {0}.",
+							this.productService.nameLong,
+						),
 						[
 							{
-								label: localize('unsupportedGlibcBannerLearnMore', "Learn More"),
-								href: 'https://aka.ms/vscode-remote/faq/old-linux'
-							}
-						]
+								label: localize(
+									"unsupportedGlibcBannerLearnMore",
+									"Learn More",
+								),
+								href: "https://aka.ms/vscode-remote/faq/old-linux",
+							},
+						],
 					);
 				} else {
-					this.hostService.openWindow({ forceReuseWindow: true, remoteAuthority: null });
+					this.hostService.openWindow({
+						forceReuseWindow: true,
+						remoteAuthority: null,
+					});
 					return;
 				}
 			}
 
 			if (isArm32Server) {
 				this._showVersionedBanner(
-					'arm32ServerDeprecation.banner',
+					"arm32ServerDeprecation.banner",
 					BANNER_REMOTE_ARM32_DEPRECATION_DISMISSED_KEY,
-					localize('arm32ServerDeprecation.banner', "Support for 32-bit ARM remote servers is deprecated and will be removed in a future release of {0}.", this.productService.nameLong),
+					localize(
+						"arm32ServerDeprecation.banner",
+						"Support for 32-bit ARM remote servers is deprecated and will be removed in a future release of {0}.",
+						this.productService.nameLong,
+					),
 					[
 						{
-							label: localize('arm32ServerDeprecationBannerLearnMore', "Learn More"),
-							href: 'https://aka.ms/vscode-remote-linux-arm-32-eol'
-						}
-					]
+							label: localize(
+								"arm32ServerDeprecationBannerLearnMore",
+								"Learn More",
+							),
+							href: "https://aka.ms/vscode-remote-linux-arm-32-eol",
+						},
+					],
 				);
 			}
 
 			type RemoteConnectionSuccessClassification = {
-				owner: 'alexdima';
-				comment: 'The initial connection succeeded';
-				web: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Is web ui.' };
-				connectionTimeMs: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Time, in ms, until connected' };
-				remoteName: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The name of the resolver.' };
-				tunnelName?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The name of the tunnel for tunnel connections.' };
+				owner: "alexdima";
+				comment: "The initial connection succeeded";
+				web: {
+					classification: "SystemMetaData";
+					purpose: "PerformanceAndHealth";
+					comment: "Is web ui.";
+				};
+				connectionTimeMs: {
+					classification: "SystemMetaData";
+					purpose: "PerformanceAndHealth";
+					comment: "Time, in ms, until connected";
+				};
+				remoteName: {
+					classification: "SystemMetaData";
+					purpose: "PerformanceAndHealth";
+					comment: "The name of the resolver.";
+				};
+				tunnelName?: {
+					classification: "SystemMetaData";
+					purpose: "FeatureInsight";
+					comment: "The name of the tunnel for tunnel connections.";
+				};
 			};
 			type RemoteConnectionSuccessEvent = {
 				web: boolean;
@@ -139,24 +210,45 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 				remoteName: string | undefined;
 				tunnelName?: string;
 			};
-			this._telemetryService.publicLog2<RemoteConnectionSuccessEvent, RemoteConnectionSuccessClassification>('remoteConnectionSuccess', {
+			this._telemetryService.publicLog2<
+				RemoteConnectionSuccessEvent,
+				RemoteConnectionSuccessClassification
+			>("remoteConnectionSuccess", {
 				web: isWeb,
-				connectionTimeMs: await this._remoteAgentService.getConnection()?.getInitialConnectionTimeMs(),
+				connectionTimeMs: await this._remoteAgentService
+					.getConnection()
+					?.getInitialConnectionTimeMs(),
 				remoteName: getRemoteName(this._environmentService.remoteAuthority),
-				tunnelName: getRemoteServerRootPath(this._environmentService.remoteAuthority)
+				tunnelName: getRemoteServerRootPath(
+					this._environmentService.remoteAuthority,
+				),
 			});
 
 			await this._measureExtHostLatency();
-
 		} catch (err) {
-
 			type RemoteConnectionFailureClassification = {
-				owner: 'alexdima';
-				comment: 'The initial connection failed';
-				web: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Is web ui.' };
-				remoteName: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The name of the resolver.' };
-				connectionTimeMs: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Time, in ms, until connection failure' };
-				message: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Error message' };
+				owner: "alexdima";
+				comment: "The initial connection failed";
+				web: {
+					classification: "SystemMetaData";
+					purpose: "PerformanceAndHealth";
+					comment: "Is web ui.";
+				};
+				remoteName: {
+					classification: "SystemMetaData";
+					purpose: "PerformanceAndHealth";
+					comment: "The name of the resolver.";
+				};
+				connectionTimeMs: {
+					classification: "SystemMetaData";
+					purpose: "PerformanceAndHealth";
+					comment: "Time, in ms, until connection failure";
+				};
+				message: {
+					classification: "SystemMetaData";
+					purpose: "PerformanceAndHealth";
+					comment: "Error message";
+				};
 			};
 			type RemoteConnectionFailureEvent = {
 				web: boolean;
@@ -164,20 +256,38 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 				connectionTimeMs: number | undefined;
 				message: string;
 			};
-			this._telemetryService.publicLog2<RemoteConnectionFailureEvent, RemoteConnectionFailureClassification>('remoteConnectionFailure', {
+			this._telemetryService.publicLog2<
+				RemoteConnectionFailureEvent,
+				RemoteConnectionFailureClassification
+			>("remoteConnectionFailure", {
 				web: isWeb,
-				connectionTimeMs: await this._remoteAgentService.getConnection()?.getInitialConnectionTimeMs(),
+				connectionTimeMs: await this._remoteAgentService
+					.getConnection()
+					?.getInitialConnectionTimeMs(),
 				remoteName: getRemoteName(this._environmentService.remoteAuthority),
-				message: err ? err.message : ''
+				message: err ? err.message : "",
 			});
-
 		}
 	}
 
-	private _showVersionedBanner(id: string, storageKey: string, message: string, actions?: ReadonlyArray<ILinkDescriptor>): void {
-		const bannerDismissedVersion = this.storageService.get(storageKey, StorageScope.PROFILE) ?? '';
+	private _showVersionedBanner(
+		id: string,
+		storageKey: string,
+		message: string,
+		actions?: ReadonlyArray<ILinkDescriptor>,
+	): void {
+		const bannerDismissedVersion =
+			this.storageService.get(storageKey, StorageScope.PROFILE) ?? "";
 		// Ignore patch versions and dismiss the banner if the major and minor versions match.
-		const shouldShowBanner = bannerDismissedVersion.slice(0, bannerDismissedVersion.lastIndexOf('.')) !== this.productService.version.slice(0, this.productService.version.lastIndexOf('.'));
+		const shouldShowBanner =
+			bannerDismissedVersion.slice(
+				0,
+				bannerDismissedVersion.lastIndexOf("."),
+			) !==
+			this.productService.version.slice(
+				0,
+				this.productService.version.lastIndexOf("."),
+			);
 		if (!shouldShowBanner) {
 			return;
 		}
@@ -187,25 +297,48 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 			message,
 			actions,
 			icon: Codicon.warning,
-			closeLabel: localize('remoteBannerDoNotShowAgainThisVersion', "Do not show again in v{0}", this.productService.version),
+			closeLabel: localize(
+				"remoteBannerDoNotShowAgainThisVersion",
+				"Do not show again in v{0}",
+				this.productService.version,
+			),
 			onClose: () => {
-				this.storageService.store(storageKey, this.productService.version, StorageScope.PROFILE, StorageTarget.MACHINE);
-			}
+				this.storageService.store(
+					storageKey,
+					this.productService.version,
+					StorageScope.PROFILE,
+					StorageTarget.MACHINE,
+				);
+			},
 		});
 	}
 
 	private async _measureExtHostLatency() {
-		const measurement = await remoteConnectionLatencyMeasurer.measure(this._remoteAgentService);
+		const measurement = await remoteConnectionLatencyMeasurer.measure(
+			this._remoteAgentService,
+		);
 		if (measurement === undefined) {
 			return;
 		}
 
 		type RemoteConnectionLatencyClassification = {
-			owner: 'connor4312';
-			comment: 'The latency to the remote extension host';
-			web: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Whether this is running on web' };
-			remoteName: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Anonymized remote name' };
-			latencyMs: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Latency to the remote, in milliseconds' };
+			owner: "connor4312";
+			comment: "The latency to the remote extension host";
+			web: {
+				classification: "SystemMetaData";
+				purpose: "PerformanceAndHealth";
+				comment: "Whether this is running on web";
+			};
+			remoteName: {
+				classification: "SystemMetaData";
+				purpose: "PerformanceAndHealth";
+				comment: "Anonymized remote name";
+			};
+			latencyMs: {
+				classification: "SystemMetaData";
+				purpose: "PerformanceAndHealth";
+				comment: "Latency to the remote, in milliseconds";
+			};
 		};
 		type RemoteConnectionLatencyEvent = {
 			web: boolean;
@@ -213,10 +346,13 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 			latencyMs: number;
 		};
 
-		this._telemetryService.publicLog2<RemoteConnectionLatencyEvent, RemoteConnectionLatencyClassification>('remoteConnectionLatency', {
+		this._telemetryService.publicLog2<
+			RemoteConnectionLatencyEvent,
+			RemoteConnectionLatencyClassification
+		>("remoteConnectionLatency", {
 			web: isWeb,
 			remoteName: getRemoteName(this._environmentService.remoteAuthority),
-			latencyMs: measurement.current
+			latencyMs: measurement.current,
 		});
 	}
 }

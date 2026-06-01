@@ -6,10 +6,9 @@
 import { CancellationToken, TextDocumentContentProvider, Uri } from 'vscode';
 
 export class CopilotIgnoreInfoFileContentProvider implements TextDocumentContentProvider {
-	constructor(private readonly contentProvider: () => Promise<string>) { }
+	constructor(private readonly contentProvider: () => Promise<string>) {}
 
 	async provideTextDocumentContent(uri: Uri, token: CancellationToken) {
 		return this.contentProvider();
 	}
-
 }

@@ -16,7 +16,11 @@ import { ICAPIClientService } from '../../../endpoint/common/capiClient';
 import { NullTelemetryService } from '../../../telemetry/common/nullTelemetryService';
 import { TestLogService } from '../../../testing/common/testLogService';
 import { HeadersImpl, WebSocketConnection } from '../../common/fetcherService';
-import { CAPIWebSocketErrorEvent, ChatWebSocketManager, isCAPIWebSocketError } from '../chatWebSocketManager';
+import {
+	CAPIWebSocketErrorEvent,
+	ChatWebSocketManager,
+	isCAPIWebSocketError,
+} from '../chatWebSocketManager';
 
 class FakeWebSocket extends EventTarget {
 	readonly CONNECTING = 0;
@@ -46,13 +50,14 @@ class FakeWebSocket extends EventTarget {
 
 function createFakeCAPIClientService(ws: FakeWebSocket): ICAPIClientService {
 	return {
-		createResponsesWebSocket: async () => ({
-			webSocket: ws as unknown as WebSocket,
-			responseHeaders: new HeadersImpl({}),
-			responseStatusCode: 101,
-			responseStatusText: 'Switching Protocols',
-			networkError: undefined,
-		} satisfies WebSocketConnection as unknown as WebSocketConnection),
+		createResponsesWebSocket: async () =>
+			({
+				webSocket: ws as unknown as WebSocket,
+				responseHeaders: new HeadersImpl({}),
+				responseStatusCode: 101,
+				responseStatusText: 'Switching Protocols',
+				networkError: undefined,
+			}) satisfies WebSocketConnection as unknown as WebSocketConnection,
 	} as unknown as ICAPIClientService;
 }
 
@@ -78,7 +83,11 @@ describe('ChatWebSocketManager', () => {
 			{ getConfig: () => undefined } as unknown as IConfigurationService,
 		);
 		disposables.add(manager);
-		const connection = manager.getOrCreateConnection('conv-1', headers, 'req-conn');
+		const connection = manager.getOrCreateConnection(
+			'conv-1',
+			headers,
+			'req-conn',
+		);
 		const connectPromise = connection.connect();
 		// Defer open event to allow connect() to attach listeners first
 		await Promise.resolve();
@@ -87,14 +96,21 @@ describe('ChatWebSocketManager', () => {
 		return connection;
 	}
 
-	const completedEvent = JSON.stringify({ type: 'response.completed', response: { id: 'resp-1' } });
+	const completedEvent = JSON.stringify({
+		type: 'response.completed',
+		response: { id: 'resp-1' },
+	});
 
 	describe('cross-turn connection reuse', () => {
 		it('reuses an open connection across different turns', async () => {
 			const connection = await getConnection();
 
 			// Request a connection for a new turn — should return the same object
-			const connection2 = manager.getOrCreateConnection('conv-1', {}, 'req-conn-2');
+			const connection2 = manager.getOrCreateConnection(
+				'conv-1',
+				{},
+				'req-conn-2',
+			);
 			expect(connection2).toBe(connection);
 			expect(manager.hasActiveConnection('conv-1')).toBe(true);
 		});
@@ -104,7 +120,11 @@ describe('ChatWebSocketManager', () => {
 			connection.dispose();
 
 			// Same manager, new getOrCreateConnection call should replace the disposed one
-			const connection2 = manager.getOrCreateConnection('conv-1', {}, 'req-conn-2');
+			const connection2 = manager.getOrCreateConnection(
+				'conv-1',
+				{},
+				'req-conn-2',
+			);
 			expect(connection2).not.toBe(connection);
 		});
 
@@ -126,7 +146,15 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
@@ -144,7 +172,15 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: false, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: false,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
@@ -161,7 +197,15 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
@@ -180,11 +224,22 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
-			const textDelta = JSON.stringify({ type: 'response.output_text.delta', delta: 'hello' });
+			const textDelta = JSON.stringify({
+				type: 'response.output_text.delta',
+				delta: 'hello',
+			});
 			ws.simulateMessage(textDelta);
 
 			const first = await handle.firstEvent;
@@ -200,17 +255,30 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
-			const capiError = JSON.stringify({ type: 'error', error: { code: 'rate_limited', message: 'Too many requests' } });
-			const donePromise = handle.done.catch(() => { });
+			const capiError = JSON.stringify({
+				type: 'error',
+				error: { code: 'rate_limited', message: 'Too many requests' },
+			});
+			const donePromise = handle.done.catch(() => {});
 			ws.simulateMessage(capiError);
 
 			const first = await handle.firstEvent;
 			expect(isCAPIWebSocketError(first)).toBe(true);
-			expect((first as CAPIWebSocketErrorEvent).error.code).toBe('rate_limited');
+			expect((first as CAPIWebSocketErrorEvent).error.code).toBe(
+				'rate_limited',
+			);
 
 			await expect(handle.done).rejects.toThrow('Too many requests');
 			await donePromise;
@@ -221,13 +289,27 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
-			handle.firstEvent.catch(() => { });
-			handle.done.catch(() => { });
-			ws.dispatchEvent(Object.assign(new Event('close'), { code: 1006, reason: '', wasClean: false }));
+			handle.firstEvent.catch(() => {});
+			handle.done.catch(() => {});
+			ws.dispatchEvent(
+				Object.assign(new Event('close'), {
+					code: 1006,
+					reason: '',
+					wasClean: false,
+				}),
+			);
 
 			await expect(handle.firstEvent).rejects.toThrow();
 			await expect(handle.done).rejects.toThrow();
@@ -240,15 +322,29 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
 			const capiErrors: CAPIWebSocketErrorEvent[] = [];
-			handle.onCAPIError(e => capiErrors.push(e));
+			handle.onCAPIError((e) => capiErrors.push(e));
 
-			const capiError = JSON.stringify({ type: 'error', error: { code: 'quota_exceeded', message: 'Monthly quota exceeded' } });
-			handle.done.catch(() => { });
+			const capiError = JSON.stringify({
+				type: 'error',
+				error: {
+					code: 'quota_exceeded',
+					message: 'Monthly quota exceeded',
+				},
+			});
+			handle.done.catch(() => {});
 			ws.simulateMessage(capiError);
 
 			expect(capiErrors).toHaveLength(1);
@@ -263,15 +359,26 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
 			const events: unknown[] = [];
-			handle.onEvent(e => events.push(e));
+			handle.onEvent((e) => events.push(e));
 
-			const capiError = JSON.stringify({ type: 'error', error: { code: 'rate_limited', message: 'Rate limited' } });
-			handle.done.catch(() => { });
+			const capiError = JSON.stringify({
+				type: 'error',
+				error: { code: 'rate_limited', message: 'Rate limited' },
+			});
+			handle.done.catch(() => {});
 			ws.simulateMessage(capiError);
 
 			expect(events).toHaveLength(0);
@@ -283,12 +390,20 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
 			const capiErrors: CAPIWebSocketErrorEvent[] = [];
-			handle.onCAPIError(e => capiErrors.push(e));
+			handle.onCAPIError((e) => capiErrors.push(e));
 
 			const capiError = JSON.stringify({
 				type: 'error',
@@ -299,14 +414,17 @@ describe('ChatWebSocketManager', () => {
 						percent_remaining: 0,
 						overage_permitted: false,
 						overage_count: 0,
-					}
-				}
+					},
+				},
 			});
-			handle.done.catch(() => { });
+			handle.done.catch(() => {});
 			ws.simulateMessage(capiError);
 
 			expect(capiErrors[0].copilot_quota_snapshots).toBeDefined();
-			expect(capiErrors[0].copilot_quota_snapshots!['premium-chat-requests'].percent_remaining).toBe(0);
+			expect(
+				capiErrors[0].copilot_quota_snapshots!['premium-chat-requests']
+					.percent_remaining,
+			).toBe(0);
 
 			await expect(handle.done).rejects.toThrow();
 		});
@@ -320,7 +438,15 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
@@ -335,12 +461,23 @@ describe('ChatWebSocketManager', () => {
 			const cts = disposables.add(new CancellationTokenSource());
 			const handle = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts.token,
 			);
 
-			const capiError = JSON.stringify({ type: 'error', error: { code: 'rate_limited', message: 'Rate limited' } });
-			const donePromise = handle.done.catch(() => { });
+			const capiError = JSON.stringify({
+				type: 'error',
+				error: { code: 'rate_limited', message: 'Rate limited' },
+			});
+			const donePromise = handle.done.catch(() => {});
 			ws.simulateMessage(capiError);
 
 			expect(connection.statefulMarker).toBeUndefined();
@@ -355,17 +492,33 @@ describe('ChatWebSocketManager', () => {
 			const cts1 = disposables.add(new CancellationTokenSource());
 			const handle1 = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts1.token,
 			);
 
 			// Start a second request before the first completes
-			handle1.done.catch(() => { });
-			handle1.firstEvent.catch(() => { });
+			handle1.done.catch(() => {});
+			handle1.firstEvent.catch(() => {});
 			const cts2 = disposables.add(new CancellationTokenSource());
 			const handle2 = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: false, turnId: 'turn-2', requestId: 'req-2', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: false,
+					turnId: 'turn-2',
+					requestId: 'req-2',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts2.token,
 			);
 
@@ -382,7 +535,15 @@ describe('ChatWebSocketManager', () => {
 			const cts1 = disposables.add(new CancellationTokenSource());
 			const handle1 = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: true, turnId: 'turn-1', requestId: 'req-1', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: true,
+					turnId: 'turn-1',
+					requestId: 'req-1',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts1.token,
 			);
 
@@ -394,11 +555,22 @@ describe('ChatWebSocketManager', () => {
 			const cts2 = disposables.add(new CancellationTokenSource());
 			const handle2 = connection.sendRequest(
 				{ model: 'test-model', messages: [], stream: true },
-				{ userInitiated: false, turnId: 'turn-2', requestId: 'req-2', model: 'test-model', countTokens: () => Promise.resolve(0), tokenCountMax: 4096, modelMaxPromptTokens: 128000 },
+				{
+					userInitiated: false,
+					turnId: 'turn-2',
+					requestId: 'req-2',
+					model: 'test-model',
+					countTokens: () => Promise.resolve(0),
+					tokenCountMax: 4096,
+					modelMaxPromptTokens: 128000,
+				},
 				cts2.token,
 			);
 
-			const completedEvent2 = JSON.stringify({ type: 'response.completed', response: { id: 'resp-2' } });
+			const completedEvent2 = JSON.stringify({
+				type: 'response.completed',
+				response: { id: 'resp-2' },
+			});
 			ws.simulateMessage(completedEvent2);
 			await handle2.done;
 
@@ -408,12 +580,21 @@ describe('ChatWebSocketManager', () => {
 
 	describe('isCAPIWebSocketError', () => {
 		it('returns true for nested CAPI error shape', () => {
-			const event = { type: 'error' as const, error: { code: 'rate_limited', message: 'test' } };
+			const event = {
+				type: 'error' as const,
+				error: { code: 'rate_limited', message: 'test' },
+			};
 			expect(isCAPIWebSocketError(event)).toBe(true);
 		});
 
 		it('returns false for flat OpenAI error shape', () => {
-			const event = { type: 'error' as const, code: 'server_error', message: 'test', param: null, sequence_number: 0 };
+			const event = {
+				type: 'error' as const,
+				code: 'server_error',
+				message: 'test',
+				param: null,
+				sequence_number: 0,
+			};
 			expect(isCAPIWebSocketError(event)).toBe(false);
 		});
 

@@ -22,15 +22,15 @@ import {
 export type IconPath =
 	| Uri
 	| {
-		/**
-		 * The icon path for the light theme.
-		 */
-		light: Uri;
-		/**
-		 * The icon path for the dark theme.
-		 */
-		dark: Uri;
-	}
+			/**
+			 * The icon path for the light theme.
+			 */
+			light: Uri;
+			/**
+			 * The icon path for the dark theme.
+			 */
+			dark: Uri;
+	  }
 	| ThemeIcon;
 
 /**
@@ -386,7 +386,10 @@ export interface EnvironmentManager {
 	 * @param options - Optional parameters for creating the Python environment.
 	 * @returns A promise that resolves to the created Python environment, or undefined if creation failed.
 	 */
-	create?(scope: CreateEnvironmentScope, options?: CreateEnvironmentOptions): Promise<PythonEnvironment | undefined>;
+	create?(
+		scope: CreateEnvironmentScope,
+		options?: CreateEnvironmentOptions,
+	): Promise<PythonEnvironment | undefined>;
 
 	/**
 	 * Removes the specified Python environment.
@@ -420,7 +423,10 @@ export interface EnvironmentManager {
 	 * @param environment - The Python environment to set. If undefined, the environment is unset.
 	 * @returns A promise that resolves when the environment is set.
 	 */
-	set(scope: SetEnvironmentScope, environment?: PythonEnvironment): Promise<void>;
+	set(
+		scope: SetEnvironmentScope,
+		environment?: PythonEnvironment,
+	): Promise<void>;
 
 	/**
 	 * Retrieves the current Python environment within the specified scope.
@@ -446,7 +452,9 @@ export interface EnvironmentManager {
 	 * @param context - The context for resolving the environment, which can be a {@link PythonEnvironment} or a {@link Uri}.
 	 * @returns A promise that resolves to the fully detailed {@link PythonEnvironment}, or `undefined` if the environment cannot be resolved.
 	 */
-	resolve(context: ResolveEnvironmentContext): Promise<PythonEnvironment | undefined>;
+	resolve(
+		context: ResolveEnvironmentContext,
+	): Promise<PythonEnvironment | undefined>;
 
 	/**
 	 * Clears the environment manager's cache.
@@ -601,7 +609,10 @@ export interface PackageManager {
 	 * @param options - Options for managing packages.
 	 * @returns A promise that resolves when the installation is complete.
 	 */
-	manage(environment: PythonEnvironment, options: PackageManagementOptions): Promise<void>;
+	manage(
+		environment: PythonEnvironment,
+		options: PackageManagementOptions,
+	): Promise<void>;
 
 	/**
 	 * Refreshes the package list for the specified Python environment.
@@ -707,7 +718,9 @@ export interface PythonProjectCreator {
 	 *   - Uri or Uri[]: when files are created that do not constitute a project.
 	 *   - undefined: if project creation fails.
 	 */
-	create(options?: PythonProjectCreatorOptions): Promise<PythonProject | PythonProject[] | Uri | Uri[] | undefined>;
+	create(
+		options?: PythonProjectCreatorOptions,
+	): Promise<PythonProject | PythonProject[] | Uri | Uri[] | undefined>;
 
 	/**
 	 * A flag indicating whether the project creator supports quick create where no user input is required.
@@ -732,45 +745,45 @@ export interface DidChangePythonProjectsEventArgs {
 
 export type PackageManagementOptions =
 	| {
-		/**
-		 * Upgrade the packages if they are already installed.
-		 */
-		upgrade?: boolean;
+			/**
+			 * Upgrade the packages if they are already installed.
+			 */
+			upgrade?: boolean;
 
-		/**
-		 * Show option to skip package installation or uninstallation.
-		 */
-		showSkipOption?: boolean;
-		/**
-		 * The list of packages to install.
-		 */
-		install: string[];
+			/**
+			 * Show option to skip package installation or uninstallation.
+			 */
+			showSkipOption?: boolean;
+			/**
+			 * The list of packages to install.
+			 */
+			install: string[];
 
-		/**
-		 * The list of packages to uninstall.
-		 */
-		uninstall?: string[];
-	}
+			/**
+			 * The list of packages to uninstall.
+			 */
+			uninstall?: string[];
+	  }
 	| {
-		/**
-		 * Upgrade the packages if they are already installed.
-		 */
-		upgrade?: boolean;
+			/**
+			 * Upgrade the packages if they are already installed.
+			 */
+			upgrade?: boolean;
 
-		/**
-		 * Show option to skip package installation or uninstallation.
-		 */
-		showSkipOption?: boolean;
-		/**
-		 * The list of packages to install.
-		 */
-		install?: string[];
+			/**
+			 * Show option to skip package installation or uninstallation.
+			 */
+			showSkipOption?: boolean;
+			/**
+			 * The list of packages to install.
+			 */
+			install?: string[];
 
-		/**
-		 * The list of packages to uninstall.
-		 */
-		uninstall: string[];
-	};
+			/**
+			 * The list of packages to uninstall.
+			 */
+			uninstall: string[];
+	  };
 
 /**
  * Options for creating a Python environment.
@@ -823,7 +836,9 @@ export interface PythonProcess {
 	/**
 	 * Event that is fired when the Python process exits.
 	 */
-	onExit(listener: (code: number | null, signal: NodeJS.Signals | null) => void): void;
+	onExit(
+		listener: (code: number | null, signal: NodeJS.Signals | null) => void,
+	): void;
 }
 
 export interface PythonEnvironmentManagerRegistrationApi {
@@ -846,7 +861,10 @@ export interface PythonEnvironmentItemApi {
 	 * @param manager The environment manager to associate with the environment.
 	 * @returns The Python environment.
 	 */
-	createPythonEnvironmentItem(info: PythonEnvironmentInfo, manager: EnvironmentManager): PythonEnvironment;
+	createPythonEnvironmentItem(
+		info: PythonEnvironmentInfo,
+		manager: EnvironmentManager,
+	): PythonEnvironment;
 }
 
 export interface PythonEnvironmentManagementApi {
@@ -898,7 +916,9 @@ export interface PythonEnvironmentsApi {
 	 *
 	 * @param context : The PythonEnvironment or Uri for which details are required.
 	 */
-	resolveEnvironment(context: ResolveEnvironmentContext): Promise<PythonEnvironment | undefined>;
+	resolveEnvironment(
+		context: ResolveEnvironmentContext,
+	): Promise<PythonEnvironment | undefined>;
 }
 
 export interface PythonProjectEnvironmentApi {
@@ -907,14 +927,19 @@ export interface PythonProjectEnvironmentApi {
 	 * @param scope - The scope within which to set the environment.
 	 * @param environment - The Python environment to set. If undefined, the environment is unset.
 	 */
-	setEnvironment(scope: SetEnvironmentScope, environment?: PythonEnvironment): Promise<void>;
+	setEnvironment(
+		scope: SetEnvironmentScope,
+		environment?: PythonEnvironment,
+	): Promise<void>;
 
 	/**
 	 * Retrieves the current Python environment within the specified scope.
 	 * @param scope - The scope within which to retrieve the environment.
 	 * @returns A promise that resolves to the current Python environment, or undefined if none is set.
 	 */
-	getEnvironment(scope: GetEnvironmentScope): Promise<PythonEnvironment | undefined>;
+	getEnvironment(
+		scope: GetEnvironmentScope,
+	): Promise<PythonEnvironment | undefined>;
 
 	/**
 	 * Event that is fired when the selected Python environment changes for Project, Folder or File.
@@ -924,11 +949,12 @@ export interface PythonProjectEnvironmentApi {
 }
 
 export interface PythonEnvironmentManagerApi
-	extends PythonEnvironmentManagerRegistrationApi,
-	PythonEnvironmentItemApi,
-	PythonEnvironmentManagementApi,
-	PythonEnvironmentsApi,
-	PythonProjectEnvironmentApi { }
+	extends
+		PythonEnvironmentManagerRegistrationApi,
+		PythonEnvironmentItemApi,
+		PythonEnvironmentManagementApi,
+		PythonEnvironmentsApi,
+		PythonProjectEnvironmentApi {}
 
 export interface PythonPackageManagerRegistrationApi {
 	/**
@@ -974,7 +1000,11 @@ export interface PythonPackageItemApi {
 	 * @param manager The package manager that installed the package.
 	 * @returns The package item.
 	 */
-	createPackageItem(info: PackageInfo, environment: PythonEnvironment, manager: PackageManager): Package;
+	createPackageItem(
+		info: PackageInfo,
+		environment: PythonEnvironment,
+		manager: PackageManager,
+	): Package;
 }
 
 export interface PythonPackageManagementApi {
@@ -985,14 +1015,18 @@ export interface PythonPackageManagementApi {
 	 * @param packages The packages to install.
 	 * @param options Options for installing packages.
 	 */
-	managePackages(environment: PythonEnvironment, options: PackageManagementOptions): Promise<void>;
+	managePackages(
+		environment: PythonEnvironment,
+		options: PackageManagementOptions,
+	): Promise<void>;
 }
 
 export interface PythonPackageManagerApi
-	extends PythonPackageManagerRegistrationApi,
-	PythonPackageGetterApi,
-	PythonPackageManagementApi,
-	PythonPackageItemApi { }
+	extends
+		PythonPackageManagerRegistrationApi,
+		PythonPackageGetterApi,
+		PythonPackageManagementApi,
+		PythonPackageItemApi {}
 
 export interface PythonProjectCreationApi {
 	/**
@@ -1048,7 +1082,11 @@ export interface PythonProjectModifyApi {
  *
  * By default all `vscode.workspace.workspaceFolders` are treated as projects.
  */
-export interface PythonProjectApi extends PythonProjectCreationApi, PythonProjectGetterApi, PythonProjectModifyApi { }
+export interface PythonProjectApi
+	extends
+		PythonProjectCreationApi,
+		PythonProjectGetterApi,
+		PythonProjectModifyApi {}
 
 export interface PythonTerminalCreateOptions extends TerminalOptions {
 	/**
@@ -1066,7 +1104,10 @@ export interface PythonTerminalCreateApi {
 	 *
 	 * Note: Non-activatable environments have no effect on the terminal.
 	 */
-	createTerminal(environment: PythonEnvironment, options: PythonTerminalCreateOptions): Promise<Terminal>;
+	createTerminal(
+		environment: PythonEnvironment,
+		options: PythonTerminalCreateOptions,
+	): Promise<Terminal>;
 }
 
 /**
@@ -1113,7 +1154,10 @@ export interface PythonTerminalRunApi {
 	 *  - If you close the terminal, this will create a new terminal.
 	 *  - In cases of multi-root/project scenario, it will create a separate terminal for each project.
 	 */
-	runInTerminal(environment: PythonEnvironment, options: PythonTerminalExecutionOptions): Promise<Terminal>;
+	runInTerminal(
+		environment: PythonEnvironment,
+		options: PythonTerminalExecutionOptions,
+	): Promise<Terminal>;
 
 	/**
 	 * Runs a Python script or module in a dedicated terminal. This API will create a terminal if one is not available to use.
@@ -1178,7 +1222,10 @@ export interface PythonTaskRunApi {
 	 * Run a Python script or module as a task.
 	 *
 	 */
-	runAsTask(environment: PythonEnvironment, options: PythonTaskExecutionOptions): Promise<TaskExecution>;
+	runAsTask(
+		environment: PythonEnvironment,
+		options: PythonTaskExecutionOptions,
+	): Promise<TaskExecution>;
 }
 
 /**
@@ -1204,14 +1251,18 @@ export interface PythonBackgroundRunApi {
 	/**
 	 * Run a Python script or module in the background. This API will create a new process to run the script or module.
 	 */
-	runInBackground(environment: PythonEnvironment, options: PythonBackgroundRunOptions): Promise<PythonProcess>;
+	runInBackground(
+		environment: PythonEnvironment,
+		options: PythonBackgroundRunOptions,
+	): Promise<PythonProcess>;
 }
 
 export interface PythonExecutionApi
-	extends PythonTerminalCreateApi,
-	PythonTerminalRunApi,
-	PythonTaskRunApi,
-	PythonBackgroundRunApi { }
+	extends
+		PythonTerminalCreateApi,
+		PythonTerminalRunApi,
+		PythonTaskRunApi,
+		PythonBackgroundRunApi {}
 
 /**
  * Event arguments for when the monitored `.env` files or any other sources change.
@@ -1260,8 +1311,9 @@ export interface PythonEnvironmentVariablesApi {
  * The API for interacting with Python environments, package managers, and projects.
  */
 export interface PythonEnvironmentApi
-	extends PythonEnvironmentManagerApi,
-	PythonPackageManagerApi,
-	PythonProjectApi,
-	PythonExecutionApi,
-	PythonEnvironmentVariablesApi { }
+	extends
+		PythonEnvironmentManagerApi,
+		PythonPackageManagerApi,
+		PythonProjectApi,
+		PythonExecutionApi,
+		PythonEnvironmentVariablesApi {}

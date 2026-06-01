@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { generateUuid } from '../../../../base/common/uuid.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { generateUuid } from "../../../../base/common/uuid.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
 
-export const IRandomService = createDecorator<IRandomService>('randomService');
+export const IRandomService = createDecorator<IRandomService>("randomService");
 
 export interface IRandomService {
 	readonly _serviceBrand: undefined;

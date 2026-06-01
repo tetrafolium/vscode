@@ -3,39 +3,60 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as os from 'os';
-import { IntervalTimer, timeout } from '../../../base/common/async.js';
-import { CancellationToken, CancellationTokenSource } from '../../../base/common/cancellation.js';
-import { Emitter, Event } from '../../../base/common/event.js';
-import { isMacintosh, isWindows } from '../../../base/common/platform.js';
-import { getWindowsReleaseSync } from '../../../base/node/windowsVersion.js';
-import { IMeteredConnectionService } from '../../meteredConnection/common/meteredConnection.js';
-import { IConfigurationService } from '../../configuration/common/configuration.js';
-import { IEnvironmentMainService } from '../../environment/electron-main/environmentMainService.js';
-import { ILifecycleMainService, LifecycleMainPhase } from '../../lifecycle/electron-main/lifecycleMainService.js';
-import { ILogService } from '../../log/common/log.js';
-import { IProductService } from '../../product/common/productService.js';
-import { IRequestService } from '../../request/common/request.js';
-import { StorageScope, StorageTarget } from '../../storage/common/storage.js';
-import { IApplicationStorageMainService } from '../../storage/electron-main/storageMainService.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
-import { AvailableForDownload, DisablementReason, IUpdateService, State, StateType, UpdateType } from '../common/update.js';
+import * as os from "os";
+import { IntervalTimer, timeout } from "../../../base/common/async.js";
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from "../../../base/common/cancellation.js";
+import { Emitter, Event } from "../../../base/common/event.js";
+import { isMacintosh, isWindows } from "../../../base/common/platform.js";
+import { getWindowsReleaseSync } from "../../../base/node/windowsVersion.js";
+import { IMeteredConnectionService } from "../../meteredConnection/common/meteredConnection.js";
+import { IConfigurationService } from "../../configuration/common/configuration.js";
+import { IEnvironmentMainService } from "../../environment/electron-main/environmentMainService.js";
+import {
+	ILifecycleMainService,
+	LifecycleMainPhase,
+} from "../../lifecycle/electron-main/lifecycleMainService.js";
+import { ILogService } from "../../log/common/log.js";
+import { IProductService } from "../../product/common/productService.js";
+import { IRequestService } from "../../request/common/request.js";
+import { StorageScope, StorageTarget } from "../../storage/common/storage.js";
+import { IApplicationStorageMainService } from "../../storage/electron-main/storageMainService.js";
+import { ITelemetryService } from "../../telemetry/common/telemetry.js";
+import {
+	AvailableForDownload,
+	DisablementReason,
+	IUpdateService,
+	State,
+	StateType,
+	UpdateType,
+} from "../common/update.js";
 
-const LAST_KNOWN_VERSION_STORAGE_KEY = 'abstractUpdateService/lastKnownVersion';
+const LAST_KNOWN_VERSION_STORAGE_KEY = "abstractUpdateService/lastKnownVersion";
 
 export interface IUpdateURLOptions {
 	readonly background?: boolean;
 	readonly internalOrg?: string;
 }
 
-export function createUpdateURL(baseUpdateUrl: string, platform: string, quality: string, commit: string, options?: IUpdateURLOptions): string {
-	const url = new URL(`${baseUpdateUrl}/api/update/${platform}/${quality}/${commit}`);
+export function createUpdateURL(
+	baseUpdateUrl: string,
+	platform: string,
+	quality: string,
+	commit: string,
+	options?: IUpdateURLOptions,
+): string {
+	const url = new URL(
+		`${baseUpdateUrl}/api/update/${platform}/${quality}/${commit}`,
+	);
 
 	if (options?.background) {
-		url.searchParams.set('bg', 'true');
+		url.searchParams.set("bg", "true");
 	}
 
-	url.searchParams.set('u', options?.internalOrg ?? 'none');
+	url.searchParams.set("u", options?.internalOrg ?? "none");
 
 	return url.toString();
 }
@@ -49,11 +70,13 @@ export function createUpdateURL(baseUpdateUrl: string, platform: string, quality
  * On macOS, the User-Agent includes the Darwin kernel version.
  * On Windows, the User-Agent includes accurate Windows version from the registry.
  */
-export function getUpdateRequestHeaders(productVersion: string): Record<string, string> | undefined {
+export function getUpdateRequestHeaders(
+	productVersion: string,
+): Record<string, string> | undefined {
 	if (isMacintosh) {
 		const darwinVersion = os.release();
 		return {
-			'User-Agent': `Code/${productVersion} Darwin/${darwinVersion}`
+			"User-Agent": `Code/${productVersion} Darwin/${darwinVersion}`,
 		};
 	}
 
@@ -61,7 +84,7 @@ export function getUpdateRequestHeaders(productVersion: string): Record<string, 
 		const match = getWindowsReleaseSync().match(/^(\d+\.\d+)/);
 		if (match) {
 			return {
-				'User-Agent': `Code/${productVersion} Electron/${process.versions.electron} Windows NT ${match[1]}`
+				"User-Agent": `Code/${productVersion} Electron/${process.versions.electron} Windows NT ${match[1]}`,
 			};
 		}
 	}
@@ -70,13 +93,16 @@ export function getUpdateRequestHeaders(productVersion: string): Record<string, 
 }
 
 export type UpdateErrorClassification = {
-	owner: 'joaomoreno';
-	messageHash: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The hash of the error message.' };
-	comment: 'This is used to know how often VS Code updates have failed.';
+	owner: "joaomoreno";
+	messageHash: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The hash of the error message.";
+	};
+	comment: "This is used to know how often VS Code updates have failed.";
 };
 
 export abstract class AbstractUpdateService implements IUpdateService {
-
 	declare readonly _serviceBrand: undefined;
 
 	protected quality: string | undefined;
@@ -96,9 +122,9 @@ export abstract class AbstractUpdateService implements IUpdateService {
 
 	protected setState(state: State): void {
 		if (state.type === StateType.Updating) {
-			this.logService.trace('update#setState', state.type);
+			this.logService.trace("update#setState", state.type);
 		} else {
-			this.logService.info('update#setState', state.type);
+			this.logService.info("update#setState", state.type);
 		}
 		this._state = state;
 		this._onStateChange.fire(state);
@@ -112,7 +138,10 @@ export abstract class AbstractUpdateService implements IUpdateService {
 		// Schedule 5-minute checks when in Ready state and overwrite is supported
 		if (this.supportsUpdateOverwrite) {
 			if (state.type === StateType.Ready) {
-				this.overwriteUpdatesCheckInterval.cancelAndSet(() => this.checkForOverwriteUpdates(), 5 * 60 * 1000);
+				this.overwriteUpdatesCheckInterval.cancelAndSet(
+					() => this.checkForOverwriteUpdates(),
+					5 * 60 * 1000,
+				);
 			} else {
 				this.overwriteUpdatesCheckInterval.cancel();
 			}
@@ -120,18 +149,24 @@ export abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	constructor(
-		@ILifecycleMainService protected readonly lifecycleMainService: ILifecycleMainService,
-		@IConfigurationService protected configurationService: IConfigurationService,
-		@IEnvironmentMainService protected environmentMainService: IEnvironmentMainService,
+		@ILifecycleMainService
+		protected readonly lifecycleMainService: ILifecycleMainService,
+		@IConfigurationService
+		protected configurationService: IConfigurationService,
+		@IEnvironmentMainService
+		protected environmentMainService: IEnvironmentMainService,
 		@IRequestService protected requestService: IRequestService,
 		@ILogService protected logService: ILogService,
 		@IProductService protected readonly productService: IProductService,
 		@ITelemetryService protected readonly telemetryService: ITelemetryService,
-		@IApplicationStorageMainService protected readonly applicationStorageMainService: IApplicationStorageMainService,
-		@IMeteredConnectionService protected readonly meteredConnectionService: IMeteredConnectionService,
+		@IApplicationStorageMainService
+		protected readonly applicationStorageMainService: IApplicationStorageMainService,
+		@IMeteredConnectionService
+		protected readonly meteredConnectionService: IMeteredConnectionService,
 		protected readonly supportsUpdateOverwrite: boolean,
 	) {
-		lifecycleMainService.when(LifecycleMainPhase.AfterWindowOpen)
+		lifecycleMainService
+			.when(LifecycleMainPhase.AfterWindowOpen)
 			.finally(() => this.initialize());
 	}
 
@@ -150,35 +185,49 @@ export abstract class AbstractUpdateService implements IUpdateService {
 
 		if (this.environmentMainService.disableUpdates) {
 			this.setState(State.Disabled(DisablementReason.DisabledByEnvironment));
-			this.logService.info('update#ctor - updates are disabled by the environment');
+			this.logService.info(
+				"update#ctor - updates are disabled by the environment",
+			);
 			return;
 		}
 
 		if (!this.productService.updateUrl || !this.productService.commit) {
 			this.setState(State.Disabled(DisablementReason.MissingConfiguration));
-			this.logService.info('update#ctor - updates are disabled as there is no update URL');
+			this.logService.info(
+				"update#ctor - updates are disabled as there is no update URL",
+			);
 			return;
 		}
 
-		const updateMode = this.configurationService.getValue<'none' | 'manual' | 'start' | 'default'>('update.mode');
-		const updateModeInspection = this.configurationService.inspect<'none' | 'manual' | 'start' | 'default'>('update.mode');
-		const policyDisablesUpdates = updateModeInspection.policyValue !== undefined && !this.getProductQuality(updateModeInspection.policyValue);
+		const updateMode = this.configurationService.getValue<
+			"none" | "manual" | "start" | "default"
+		>("update.mode");
+		const updateModeInspection = this.configurationService.inspect<
+			"none" | "manual" | "start" | "default"
+		>("update.mode");
+		const policyDisablesUpdates =
+			updateModeInspection.policyValue !== undefined &&
+			!this.getProductQuality(updateModeInspection.policyValue);
 		const quality = this.getProductQuality(updateMode);
 
 		if (!quality) {
 			if (policyDisablesUpdates) {
 				this.setState(State.Disabled(DisablementReason.Policy));
-				this.logService.info('update#ctor - updates are disabled by policy');
+				this.logService.info("update#ctor - updates are disabled by policy");
 			} else {
 				this.setState(State.Disabled(DisablementReason.ManuallyDisabled));
-				this.logService.info('update#ctor - updates are disabled by user preference');
+				this.logService.info(
+					"update#ctor - updates are disabled by user preference",
+				);
 			}
 			return;
 		}
 
 		if (!this.buildUpdateFeedUrl(quality, this.productService.commit!)) {
 			this.setState(State.Disabled(DisablementReason.InvalidConfiguration));
-			this.logService.info('update#ctor - updates are disabled as the update URL is badly formed');
+			this.logService.info(
+				"update#ctor - updates are disabled as the update URL is badly formed",
+			);
 			return;
 		}
 
@@ -188,19 +237,25 @@ export abstract class AbstractUpdateService implements IUpdateService {
 
 		await this.postInitialize();
 
-		if (updateMode === 'manual') {
-			this.logService.info('update#ctor - manual checks only; automatic updates are disabled by user preference');
+		if (updateMode === "manual") {
+			this.logService.info(
+				"update#ctor - manual checks only; automatic updates are disabled by user preference",
+			);
 			return;
 		}
 
-		if (updateMode === 'start') {
-			this.logService.info('update#ctor - startup checks only; automatic updates are disabled by user preference');
+		if (updateMode === "start") {
+			this.logService.info(
+				"update#ctor - startup checks only; automatic updates are disabled by user preference",
+			);
 
 			// Check for updates only once after 30 seconds
 			setTimeout(() => this.checkForUpdates(false), 30 * 1000);
 		} else {
 			// Start checking for updates after 30 seconds
-			this.scheduleCheckForUpdates(30 * 1000).then(undefined, err => this.logService.error(err));
+			this.scheduleCheckForUpdates(30 * 1000).then(undefined, (err) =>
+				this.logService.error(err),
+			);
 		}
 	}
 
@@ -214,8 +269,11 @@ export abstract class AbstractUpdateService implements IUpdateService {
 		}
 
 		let from: ILastKnownVersion | undefined;
-		const raw = this.applicationStorageMainService.get(LAST_KNOWN_VERSION_STORAGE_KEY, StorageScope.APPLICATION);
-		if (typeof raw === 'string') {
+		const raw = this.applicationStorageMainService.get(
+			LAST_KNOWN_VERSION_STORAGE_KEY,
+			StorageScope.APPLICATION,
+		);
+		if (typeof raw === "string") {
 			try {
 				from = JSON.parse(raw);
 			} catch (error) {
@@ -233,7 +291,12 @@ export abstract class AbstractUpdateService implements IUpdateService {
 			return;
 		}
 
-		this.applicationStorageMainService.store(LAST_KNOWN_VERSION_STORAGE_KEY, JSON.stringify(to), StorageScope.APPLICATION, StorageTarget.MACHINE);
+		this.applicationStorageMainService.store(
+			LAST_KNOWN_VERSION_STORAGE_KEY,
+			JSON.stringify(to),
+			StorageScope.APPLICATION,
+			StorageTarget.MACHINE,
+		);
 
 		if (!from) {
 			return;
@@ -250,30 +313,62 @@ export abstract class AbstractUpdateService implements IUpdateService {
 		};
 
 		type VersionChangeClassification = {
-			owner: 'dmitriv';
-			comment: 'Fired when VS Code detects a version change on startup.';
-			fromVersion: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The previous version of VS Code.' };
-			fromCommit: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The commit hash of the previous version.' };
-			fromVersionTime: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Timestamp when the previous version was first detected.' };
-			toVersion: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The current version of VS Code.' };
-			toCommit: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The commit hash of the current version.' };
-			timeToUpdateMs: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Milliseconds between the previous version install and this version install.' };
-			updateMode: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The update mode configured by the user.' };
+			owner: "dmitriv";
+			comment: "Fired when VS Code detects a version change on startup.";
+			fromVersion: {
+				classification: "SystemMetaData";
+				purpose: "FeatureInsight";
+				comment: "The previous version of VS Code.";
+			};
+			fromCommit: {
+				classification: "SystemMetaData";
+				purpose: "FeatureInsight";
+				comment: "The commit hash of the previous version.";
+			};
+			fromVersionTime: {
+				classification: "SystemMetaData";
+				purpose: "FeatureInsight";
+				comment: "Timestamp when the previous version was first detected.";
+			};
+			toVersion: {
+				classification: "SystemMetaData";
+				purpose: "FeatureInsight";
+				comment: "The current version of VS Code.";
+			};
+			toCommit: {
+				classification: "SystemMetaData";
+				purpose: "FeatureInsight";
+				comment: "The commit hash of the current version.";
+			};
+			timeToUpdateMs: {
+				classification: "SystemMetaData";
+				purpose: "FeatureInsight";
+				isMeasurement: true;
+				comment: "Milliseconds between the previous version install and this version install.";
+			};
+			updateMode: {
+				classification: "SystemMetaData";
+				purpose: "FeatureInsight";
+				comment: "The update mode configured by the user.";
+			};
 		};
 
-		this.telemetryService.publicLog2<VersionChangeEvent, VersionChangeClassification>('update:versionChanged', {
+		this.telemetryService.publicLog2<
+			VersionChangeEvent,
+			VersionChangeClassification
+		>("update:versionChanged", {
 			fromVersion: from.version,
 			fromCommit: from.commit,
 			fromVersionTime: from.timestamp,
 			toVersion: to.version,
 			toCommit: to.commit,
 			timeToUpdateMs: to.timestamp - from.timestamp,
-			updateMode: this.configurationService.getValue<string>('update.mode'),
+			updateMode: this.configurationService.getValue<string>("update.mode"),
 		});
 	}
 
 	private getProductQuality(updateMode: string): string | undefined {
-		return updateMode === 'none' ? undefined : this.productService.quality;
+		return updateMode === "none" ? undefined : this.productService.quality;
 	}
 
 	private scheduleCheckForUpdates(delay = 60 * 60 * 1000): Promise<void> {
@@ -286,7 +381,7 @@ export abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	async checkForUpdates(explicit: boolean): Promise<void> {
-		this.logService.trace('update#checkForUpdates, state = ', this.state.type);
+		this.logService.trace("update#checkForUpdates, state = ", this.state.type);
 
 		if (this.state.type !== StateType.Idle) {
 			return;
@@ -296,14 +391,16 @@ export abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	async downloadUpdate(explicit: boolean): Promise<void> {
-		this.logService.trace('update#downloadUpdate, state = ', this.state.type);
+		this.logService.trace("update#downloadUpdate, state = ", this.state.type);
 
 		if (this.state.type !== StateType.AvailableForDownload) {
 			return;
 		}
 
 		if (!explicit && this.meteredConnectionService.isConnectionMetered) {
-			this.logService.info('update#downloadUpdate - skipping download because connection is metered');
+			this.logService.info(
+				"update#downloadUpdate - skipping download because connection is metered",
+			);
 			return;
 		}
 
@@ -315,7 +412,7 @@ export abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	async applyUpdate(): Promise<void> {
-		this.logService.trace('update#applyUpdate, state = ', this.state.type);
+		this.logService.trace("update#applyUpdate, state = ", this.state.type);
 
 		if (this.state.type !== StateType.Downloaded) {
 			return;
@@ -329,7 +426,7 @@ export abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	async quitAndInstall(): Promise<void> {
-		this.logService.trace('update#quitAndInstall, state = ', this.state.type);
+		this.logService.trace("update#quitAndInstall, state = ", this.state.type);
 
 		if (this.state.type !== StateType.Ready) {
 			return undefined;
@@ -340,7 +437,9 @@ export abstract class AbstractUpdateService implements IUpdateService {
 			const didOverwrite = await this.checkForOverwriteUpdates(true);
 
 			if (didOverwrite) {
-				this.logService.info('update#quitAndInstall(): overwrite update detected, postponing quitAndInstall');
+				this.logService.info(
+					"update#quitAndInstall(): overwrite update detected, postponing quitAndInstall",
+				);
 				return;
 			}
 		}
@@ -349,31 +448,39 @@ export abstract class AbstractUpdateService implements IUpdateService {
 		const readyState = this.state;
 
 		this.setState(State.Restarting(this.state.update));
-		this.logService.trace('update#quitAndInstall(): before lifecycle quit()');
+		this.logService.trace("update#quitAndInstall(): before lifecycle quit()");
 
-		this.lifecycleMainService.quit(true /* will restart */).then(vetod => {
-			this.logService.trace(`update#quitAndInstall(): after lifecycle quit() with veto: ${vetod}`);
+		this.lifecycleMainService.quit(true /* will restart */).then((vetod) => {
+			this.logService.trace(
+				`update#quitAndInstall(): after lifecycle quit() with veto: ${vetod}`,
+			);
 			if (vetod) {
-				this.logService.info('update#quitAndInstall(): quit was vetoed, restoring Ready state');
+				this.logService.info(
+					"update#quitAndInstall(): quit was vetoed, restoring Ready state",
+				);
 				this.setState(readyState);
 				return;
 			}
 
-			this.logService.trace('update#quitAndInstall(): running raw#quitAndInstall()');
+			this.logService.trace(
+				"update#quitAndInstall(): running raw#quitAndInstall()",
+			);
 			this.doQuitAndInstall();
 		});
 
 		return Promise.resolve(undefined);
 	}
 
-	private async checkForOverwriteUpdates(explicit: boolean = false): Promise<boolean> {
+	private async checkForOverwriteUpdates(
+		explicit: boolean = false,
+	): Promise<boolean> {
 		if (this._state.type !== StateType.Ready) {
 			return false;
 		}
 
 		const pendingUpdateCommit = this._state.update.version;
 
-		if (!pendingUpdateCommit || pendingUpdateCommit === 'unknown') {
+		if (!pendingUpdateCommit || pendingUpdateCommit === "unknown") {
 			return false;
 		}
 
@@ -381,22 +488,34 @@ export abstract class AbstractUpdateService implements IUpdateService {
 
 		try {
 			const cts = new CancellationTokenSource();
-			const timeoutPromise = timeout(2000).then(() => { cts.cancel(); return undefined; });
-			isLatest = await Promise.race([this.isLatestVersion(pendingUpdateCommit, cts.token), timeoutPromise]);
+			const timeoutPromise = timeout(2000).then(() => {
+				cts.cancel();
+				return undefined;
+			});
+			isLatest = await Promise.race([
+				this.isLatestVersion(pendingUpdateCommit, cts.token),
+				timeoutPromise,
+			]);
 			cts.dispose();
 		} catch (error) {
-			this.logService.warn('update#checkForOverwriteUpdates(): failed to check for updates, proceeding with restart');
+			this.logService.warn(
+				"update#checkForOverwriteUpdates(): failed to check for updates, proceeding with restart",
+			);
 			this.logService.warn(error);
 			return false;
 		}
 
 		if (isLatest === false && this._state.type === StateType.Ready) {
-			this.logService.info('update#readyStateCheck: newer update available, restarting update machinery');
+			this.logService.info(
+				"update#readyStateCheck: newer update available, restarting update machinery",
+			);
 
 			try {
 				await this.cancelPendingUpdate();
 			} catch (error) {
-				this.logService.error('update#checkForOverwriteUpdates(): failed to cancel pending update, aborting overwrite');
+				this.logService.error(
+					"update#checkForOverwriteUpdates(): failed to cancel pending update, aborting overwrite",
+				);
 				this.logService.error(error);
 				return false;
 			}
@@ -410,36 +529,54 @@ export abstract class AbstractUpdateService implements IUpdateService {
 		return false;
 	}
 
-	async isLatestVersion(commit?: string, token: CancellationToken = CancellationToken.None): Promise<boolean | undefined> {
+	async isLatestVersion(
+		commit?: string,
+		token: CancellationToken = CancellationToken.None,
+	): Promise<boolean | undefined> {
 		if (!this.quality) {
 			return undefined;
 		}
 
-		const mode = this.configurationService.getValue<'none' | 'manual' | 'start' | 'default'>('update.mode');
+		const mode = this.configurationService.getValue<
+			"none" | "manual" | "start" | "default"
+		>("update.mode");
 
-		if (mode === 'none') {
+		if (mode === "none") {
 			return undefined;
 		}
 
-		const url = this.buildUpdateFeedUrl(this.quality, commit ?? this.productService.commit!, { internalOrg: this.getInternalOrg() });
+		const url = this.buildUpdateFeedUrl(
+			this.quality,
+			commit ?? this.productService.commit!,
+			{ internalOrg: this.getInternalOrg() },
+		);
 
 		if (!url) {
 			return undefined;
 		}
 
 		const headers = getUpdateRequestHeaders(this.productService.version);
-		this.logService.trace('update#isLatestVersion() - checking update server', { url, headers });
+		this.logService.trace("update#isLatestVersion() - checking update server", {
+			url,
+			headers,
+		});
 
 		try {
-			const context = await this.requestService.request({ url, headers, callSite: 'updateService.isLatestVersion' }, token);
+			const context = await this.requestService.request(
+				{ url, headers, callSite: "updateService.isLatestVersion" },
+				token,
+			);
 			const statusCode = context.res.statusCode;
-			this.logService.trace('update#isLatestVersion() - response', { statusCode });
+			this.logService.trace("update#isLatestVersion() - response", {
+				statusCode,
+			});
 			// The update server replies with 204 (No Content) when no
 			// update is available - that's all we want to know.
 			return statusCode === 204;
-
 		} catch (error) {
-			this.logService.error('update#isLatestVersion(): failed to check for updates');
+			this.logService.error(
+				"update#isLatestVersion(): failed to check for updates",
+			);
 			this.logService.error(error);
 			return undefined;
 		}
@@ -454,7 +591,7 @@ export abstract class AbstractUpdateService implements IUpdateService {
 			return;
 		}
 
-		this.logService.info('update#setInternalOrg', internalOrg);
+		this.logService.info("update#setInternalOrg", internalOrg);
 		this._internalOrg = internalOrg;
 	}
 
@@ -478,6 +615,13 @@ export abstract class AbstractUpdateService implements IUpdateService {
 		// noop
 	}
 
-	protected abstract buildUpdateFeedUrl(quality: string, commit: string, options?: IUpdateURLOptions): string | undefined;
-	protected abstract doCheckForUpdates(explicit: boolean, pendingCommit?: string): void;
+	protected abstract buildUpdateFeedUrl(
+		quality: string,
+		commit: string,
+		options?: IUpdateURLOptions,
+	): string | undefined;
+	protected abstract doCheckForUpdates(
+		explicit: boolean,
+		pendingCommit?: string,
+	): void;
 }

@@ -12,7 +12,13 @@ import { IWorkspaceService } from '../../../../platform/workspace/common/workspa
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { PromptReference } from '../../../prompt/common/conversation';
-import { coalesceParts, LinkifiedPart, LinkifiedText, LinkifyLocationAnchor, LinkifySymbolAnchor } from '../../common/linkifiedText';
+import {
+	coalesceParts,
+	LinkifiedPart,
+	LinkifiedText,
+	LinkifyLocationAnchor,
+	LinkifySymbolAnchor,
+} from '../../common/linkifiedText';
 import { ILinkifyService, LinkifyService } from '../../common/linkifyService';
 
 const workspace = URI.file('/workspace');
@@ -21,26 +27,39 @@ export function workspaceFile(path: string) {
 	return URI.joinPath(workspace, path);
 }
 
-export function createMockFsService(listOfFiles: readonly (string | URI)[]): IFileSystemService {
-	const workspaceEntries = listOfFiles.map(f => URI.isUri(f) ? f : workspaceFile(f));
-	return new class implements Partial<IFileSystemService> {
+export function createMockFsService(
+	listOfFiles: readonly (string | URI)[],
+): IFileSystemService {
+	const workspaceEntries = listOfFiles.map((f) =>
+		URI.isUri(f) ? f : workspaceFile(f),
+	);
+	return new (class implements Partial<IFileSystemService> {
 		async stat(path: URI): Promise<FileStat> {
 			if (path.path === '/' || path.path === workspace.path) {
 				return { ctime: 0, mtime: 0, size: 0, type: FileType.File };
 			}
 
-			const entry = workspaceEntries.find(f => f.toString() === path.toString() || f.toString() === `${path.toString()}/`);
+			const entry = workspaceEntries.find(
+				(f) =>
+					f.toString() === path.toString() ||
+					f.toString() === `${path.toString()}/`,
+			);
 			if (!entry) {
 				throw new Error(`File not found: ${path}`);
 			}
 			const isDirectory = entry.path.endsWith('/');
-			return { ctime: 0, mtime: 0, size: 0, type: isDirectory ? FileType.Directory : FileType.File };
+			return {
+				ctime: 0,
+				mtime: 0,
+				size: 0,
+				type: isDirectory ? FileType.Directory : FileType.File,
+			};
 		}
-	} as any;
+	})() as any;
 }
 
 export function createMockWorkspaceService(): IWorkspaceService {
-	return new class implements Partial<IWorkspaceService> {
+	return new (class implements Partial<IWorkspaceService> {
 		getWorkspaceFolders(): URI[] {
 			return [workspace];
 		}
@@ -52,19 +71,28 @@ export function createMockWorkspaceService(): IWorkspaceService {
 		getWorkspaceFolderName(): string {
 			return 'workspace';
 		}
-	} as any;
+	})() as any;
 }
 
-export function createTestLinkifierService(...listOfFiles: readonly (string | URI)[]): ILinkifyService {
+export function createTestLinkifierService(
+	...listOfFiles: readonly (string | URI)[]
+): ILinkifyService {
 	return new LinkifyService(
 		createMockFsService(listOfFiles),
 		createMockWorkspaceService(),
-		NullEnvService.Instance
+		NullEnvService.Instance,
 	);
 }
 
-export async function linkify(linkifer: ILinkifyService, text: string, references: readonly PromptReference[] = []): Promise<LinkifiedText> {
-	const linkifier = linkifer.createLinkifier({ requestId: undefined, references }, []);
+export async function linkify(
+	linkifer: ILinkifyService,
+	text: string,
+	references: readonly PromptReference[] = [],
+): Promise<LinkifiedText> {
+	const linkifier = linkifer.createLinkifier(
+		{ requestId: undefined, references },
+		[],
+	);
 
 	const initial = await linkifier.append(text, CancellationToken.None);
 	const flushed = await linkifier.flush(CancellationToken.None);
@@ -77,9 +105,15 @@ export async function linkify(linkifer: ILinkifyService, text: string, reference
 	};
 }
 
-
-export function assertPartsEqual(actualParts: readonly LinkifiedPart[], expectedParts: readonly LinkifiedPart[]) {
-	assert.strictEqual(actualParts.length, expectedParts.length, `got ${JSON.stringify(actualParts)}`);
+export function assertPartsEqual(
+	actualParts: readonly LinkifiedPart[],
+	expectedParts: readonly LinkifiedPart[],
+) {
+	assert.strictEqual(
+		actualParts.length,
+		expectedParts.length,
+		`got ${JSON.stringify(actualParts)}`,
+	);
 
 	for (let i = 0; i < actualParts.length; i++) {
 		const actual = actualParts[i];
@@ -87,12 +121,24 @@ export function assertPartsEqual(actualParts: readonly LinkifiedPart[], expected
 		if (typeof actual === 'string') {
 			assert.strictEqual(actual, expected);
 		} else if (actual instanceof LinkifyLocationAnchor) {
-			assert(expected instanceof LinkifyLocationAnchor, 'Expected LinkifyLocationAnchor');
-			assert.strictEqual(actual.value.toString(), expected.value.toString());
+			assert(
+				expected instanceof LinkifyLocationAnchor,
+				'Expected LinkifyLocationAnchor',
+			);
+			assert.strictEqual(
+				actual.value.toString(),
+				expected.value.toString(),
+			);
 		} else {
 			assert(actual instanceof LinkifySymbolAnchor);
-			assert(expected instanceof LinkifySymbolAnchor, 'Expected LinkifySymbolAnchor');
-			assert.strictEqual(actual.symbolInformation.name, expected.symbolInformation.name);
+			assert(
+				expected instanceof LinkifySymbolAnchor,
+				'Expected LinkifySymbolAnchor',
+			);
+			assert.strictEqual(
+				actual.symbolInformation.name,
+				expected.symbolInformation.name,
+			);
 		}
 	}
 }

@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { assertNever } from '../../../../../base/common/assert.js';
-import { VSBuffer } from '../../../../../base/common/buffer.js';
-import { isUndefinedOrNull } from '../../../../../base/common/types.js';
+import { assertNever } from "../../../../../base/common/assert.js";
+import { VSBuffer } from "../../../../../base/common/buffer.js";
+import { isUndefinedOrNull } from "../../../../../base/common/types.js";
 
 /**
  * Updates an error's message and stack trace with a prefix. In V8 the stack
@@ -15,10 +15,11 @@ import { isUndefinedOrNull } from '../../../../../base/common/types.js';
 function prefixError(e: Error, prefix: string): void {
 	e.message = prefix + e.message;
 	if (e.stack) {
-		const nlIdx = e.stack.indexOf('\n');
-		e.stack = nlIdx !== -1
-			? `${e.name}: ${e.message}${e.stack.slice(nlIdx)}`
-			: `${e.name}: ${e.message}`;
+		const nlIdx = e.stack.indexOf("\n");
+		e.stack =
+			nlIdx !== -1
+				? `${e.name}: ${e.message}${e.stack.slice(nlIdx)}`
+				: `${e.name}: ${e.message}`;
 	}
 }
 
@@ -29,9 +30,9 @@ function prefixError(e: Error, prefix: string): void {
  */
 function rethrowWithPathSegment(e: unknown, segment: string | number): never {
 	if (e instanceof Error) {
-		const part = typeof segment === 'number' ? `[${segment}]` : `.${segment}`;
-		const needsSep = !e.message.startsWith('[') && !e.message.startsWith('.');
-		prefixError(e, part + (needsSep ? ': ' : ''));
+		const part = typeof segment === "number" ? `[${segment}]` : `.${segment}`;
+		const needsSep = !e.message.startsWith("[") && !e.message.startsWith(".");
+		prefixError(e, part + (needsSep ? ": " : ""));
 	}
 	throw e;
 }
@@ -64,7 +65,9 @@ export interface TransformValue<TFrom, TTo> extends TransformBase<TFrom, TTo> {
 export interface TransformArray<TFrom, TTo> extends TransformBase<TFrom, TTo> {
 	readonly kind: TransformKind.Array;
 	/** The schema for array items */
-	readonly itemSchema: TransformObject<unknown, unknown> | TransformValue<unknown, unknown>;
+	readonly itemSchema:
+		| TransformObject<unknown, unknown>
+		| TransformValue<unknown, unknown>;
 }
 
 /** Transform for objects with child properties */
@@ -82,14 +85,16 @@ export type Transform<TFrom, TTo> =
 	| TransformObject<TFrom, TTo>;
 
 export type Schema<TFrom, TTo> = {
-	[K in keyof Required<TTo>]: Transform<TFrom, TTo[K]>
+	[K in keyof Required<TTo>]: Transform<TFrom, TTo[K]>;
 };
 
 /**
  * A primitive that will be tracked and compared first. If this is changed, the entire
  * object is thrown out and re-stored.
  */
-export function key<T, R = T>(comparator?: (a: R, b: R) => boolean): TransformValue<T, R> {
+export function key<T, R = T>(
+	comparator?: (a: R, b: R) => boolean,
+): TransformValue<T, R> {
 	return {
 		kind: TransformKind.Key,
 		extract: (from: T) => from as unknown as R,
@@ -98,9 +103,16 @@ export function key<T, R = T>(comparator?: (a: R, b: R) => boolean): TransformVa
 }
 
 /** A value that will be tracked and replaced if the comparator is not equal. */
-export function value<T, R extends string | number | boolean | undefined>(): TransformValue<T, R>;
-export function value<T, R>(comparator: (a: R, b: R) => boolean): TransformValue<T, R>;
-export function value<T, R>(comparator?: (a: R, b: R) => boolean): TransformValue<T, R> {
+export function value<
+	T,
+	R extends string | number | boolean | undefined,
+>(): TransformValue<T, R>;
+export function value<T, R>(
+	comparator: (a: R, b: R) => boolean,
+): TransformValue<T, R>;
+export function value<T, R>(
+	comparator?: (a: R, b: R) => boolean,
+): TransformValue<T, R> {
 	return {
 		kind: TransformKind.Primitive,
 		extract: (from: T) => {
@@ -109,7 +121,7 @@ export function value<T, R>(comparator?: (a: R, b: R) => boolean): TransformValu
 			// mutable type that could be held internally in the LogAdapter and (b) to make
 			// object comparison work with the data we re-hydrate from disk (e.g. if using
 			// objectsEqual, a hydrated URI is not equal to the serialized UriComponents)
-			if (!!value && typeof value === 'object') {
+			if (!!value && typeof value === "object") {
 				value = JSON.parse(JSON.stringify(value));
 			}
 
@@ -120,17 +132,20 @@ export function value<T, R>(comparator?: (a: R, b: R) => boolean): TransformValu
 }
 
 /** An array that will use the schema to compare items positionally. */
-export function array<T, R>(schema: TransformObject<T, R> | TransformValue<T, R>): TransformArray<readonly T[], R[]> {
+export function array<T, R>(
+	schema: TransformObject<T, R> | TransformValue<T, R>,
+): TransformArray<readonly T[], R[]> {
 	return {
 		kind: TransformKind.Array,
 		itemSchema: schema,
-		extract: from => from?.map((item, i) => {
-			try {
-				return schema.extract(item);
-			} catch (e) {
-				rethrowWithPathSegment(e, i);
-			}
-		}),
+		extract: (from) =>
+			from?.map((item, i) => {
+				try {
+					return schema.extract(item);
+				} catch (e) {
+					rethrowWithPathSegment(e, i);
+				}
+			}),
 	};
 }
 
@@ -144,9 +159,14 @@ export interface ObjectOptions<R> {
 }
 
 /** An object schema. */
-export function object<T, R extends object>(schema: Schema<T, R>, options?: ObjectOptions<R>): TransformObject<T, R> {
+export function object<T, R extends object>(
+	schema: Schema<T, R>,
+	options?: ObjectOptions<R>,
+): TransformObject<T, R> {
 	// Sort entries with key properties first for fast key checking
-	const entries = (Object.entries(schema) as [string, Transform<T, R[keyof R]>][]).sort(([, a], [, b]) => a.kind - b.kind);
+	const entries = (
+		Object.entries(schema) as [string, Transform<T, R[keyof R]>][]
+	).sort(([, a], [, b]) => a.kind - b.kind);
 	return {
 		kind: TransformKind.Object,
 		children: entries as SchemaEntries,
@@ -173,7 +193,10 @@ export function object<T, R extends object>(schema: Schema<T, R>, options?: Obje
  * Defines a getter on the object to extract a value, compared with the given schema.
  * It should return the value that will get serialized in the resulting log file.
  */
-export function t<T, O, R>(getter: (obj: T) => O, schema: Transform<O, R>): Transform<T, R> {
+export function t<T, O, R>(
+	getter: (obj: T) => O,
+	schema: Transform<O, R>,
+): Transform<T, R> {
 	return {
 		...schema,
 		extract: (from: T) => schema.extract(getter(from)),
@@ -181,16 +204,23 @@ export function t<T, O, R>(getter: (obj: T) => O, schema: Transform<O, R>): Tran
 }
 
 /** Shortcut for t(fn, value()) */
-export function v<T, R extends string | number | boolean | undefined>(getter: (obj: T) => R): TransformValue<T, R>;
-export function v<T, R>(getter: (obj: T) => R, comparator: (a: R, b: R) => boolean): TransformValue<T, R>;
-export function v<T, R>(getter: (obj: T) => R, comparator?: (a: R, b: R) => boolean): TransformValue<T, R> {
+export function v<T, R extends string | number | boolean | undefined>(
+	getter: (obj: T) => R,
+): TransformValue<T, R>;
+export function v<T, R>(
+	getter: (obj: T) => R,
+	comparator: (a: R, b: R) => boolean,
+): TransformValue<T, R>;
+export function v<T, R>(
+	getter: (obj: T) => R,
+	comparator?: (a: R, b: R) => boolean,
+): TransformValue<T, R> {
 	const inner = value(comparator!);
 	return {
 		...inner,
 		extract: (from: T) => inner.extract(getter(from)),
 	};
 }
-
 
 const enum EntryKind {
 	/** Initial complete object state, valid only as the first entry */
@@ -214,7 +244,7 @@ type Entry =
 	/** Pushes 0 or more new entries to an array. If `i` is set, everything after that index is removed */
 	| { kind: EntryKind.Push; k: ObjectPath; v?: unknown[]; i?: number };
 
-const LF = VSBuffer.fromString('\n');
+const LF = VSBuffer.fromString("\n");
 
 /**
  * Per-string cap (in UTF-16 code units, matching `string.length`) applied when
@@ -238,7 +268,7 @@ export const PERSIST_ENTRY_MAX_STRING_CHARS = 1 * 1024 * 1024;
  */
 export const PERSIST_ENTRY_MAX_TOTAL_CHARS = 100 * 1024 * 1024;
 
-const TRUNCATION_MARKER_PREFIX = '[VS Code: value truncated for persistence';
+const TRUNCATION_MARKER_PREFIX = "[VS Code: value truncated for persistence";
 const TRUNCATION_MARKER_TOTAL = `${TRUNCATION_MARKER_PREFIX}; entry exceeded size budget]`;
 
 /**
@@ -258,7 +288,13 @@ export function stringifyEntryWithFallback(entry: unknown): string {
 		if (!(e instanceof RangeError)) {
 			throw e;
 		}
-		return JSON.stringify(entry, makeTruncatingReplacer(PERSIST_ENTRY_MAX_STRING_CHARS, PERSIST_ENTRY_MAX_TOTAL_CHARS));
+		return JSON.stringify(
+			entry,
+			makeTruncatingReplacer(
+				PERSIST_ENTRY_MAX_STRING_CHARS,
+				PERSIST_ENTRY_MAX_TOTAL_CHARS,
+			),
+		);
 	}
 }
 
@@ -269,10 +305,13 @@ export function stringifyEntryWithFallback(entry: unknown): string {
  * Sizes are tracked in UTF-16 code units (`string.length`); JSON escaping,
  * property keys, and non-string payload are not counted.
  */
-export function makeTruncatingReplacer(maxStringChars: number, maxTotalChars: number): (key: string, value: unknown) => unknown {
+export function makeTruncatingReplacer(
+	maxStringChars: number,
+	maxTotalChars: number,
+): (key: string, value: unknown) => unknown {
 	let total = 0;
 	return (_key, val) => {
-		if (typeof val === 'string') {
+		if (typeof val === "string") {
 			let emitted: string;
 			if (val.length > maxStringChars) {
 				emitted = `${TRUNCATION_MARKER_PREFIX}; original ${val.length} chars]`;
@@ -305,7 +344,7 @@ export class ObjectMutationLog<TFrom, TTo> {
 	constructor(
 		private readonly _transform: Transform<TFrom, TTo>,
 		private readonly _compactAfterEntries = 512,
-	) { }
+	) {}
 
 	/**
 	 * Creates an initial log file from the given object.
@@ -313,7 +352,6 @@ export class ObjectMutationLog<TFrom, TTo> {
 	createInitial(current: TFrom): VSBuffer {
 		return this.createInitialFromSerialized(this._transform.extract(current));
 	}
-
 
 	/**
 	 * Creates an initial log file from the serialized object.
@@ -328,7 +366,7 @@ export class ObjectMutationLog<TFrom, TTo> {
 		this._entryCount = 1;
 		this._clearPending();
 		const entry: Entry = { kind: EntryKind.Initial, v: value };
-		return VSBuffer.fromString(stringifyEntryWithFallback(entry) + '\n');
+		return VSBuffer.fromString(stringifyEntryWithFallback(entry) + "\n");
 	}
 
 	/**
@@ -357,19 +395,19 @@ export class ObjectMutationLog<TFrom, TTo> {
 							break;
 						case EntryKind.Set:
 							if (state === undefined) {
-								throw new Error('Log file is missing an initial entry');
+								throw new Error("Log file is missing an initial entry");
 							}
 							this._applySet(state, entry.k, entry.v);
 							break;
 						case EntryKind.Push:
 							if (state === undefined) {
-								throw new Error('Log file is missing an initial entry');
+								throw new Error("Log file is missing an initial entry");
 							}
 							this._applyPush(state, entry.k, entry.v, entry.i);
 							break;
 						case EntryKind.Delete:
 							if (state === undefined) {
-								throw new Error('Log file is missing an initial entry');
+								throw new Error("Log file is missing an initial entry");
 							}
 							this._applySet(state, entry.k, undefined);
 							break;
@@ -382,7 +420,7 @@ export class ObjectMutationLog<TFrom, TTo> {
 		}
 
 		if (lineCount === 0) {
-			throw new Error('Empty log file');
+			throw new Error("Empty log file");
 		}
 
 		this._previous = state as TTo;
@@ -399,7 +437,7 @@ export class ObjectMutationLog<TFrom, TTo> {
 	 * produce a full initial entry when no confirmed state exists, preventing
 	 * corrupted log files when a write fails.
 	 */
-	write(current: TFrom): { op: 'append' | 'replace'; data: VSBuffer } {
+	write(current: TFrom): { op: "append" | "replace"; data: VSBuffer } {
 		const currentValue = this._transform.extract(current);
 
 		if (!this._previous || this._entryCount > this._compactAfterEntries) {
@@ -408,7 +446,10 @@ export class ObjectMutationLog<TFrom, TTo> {
 			this._pendingPrevious = currentValue;
 			this._pendingEntryCount = 1;
 			const entry: Entry = { kind: EntryKind.Initial, v: currentValue };
-			return { op: 'replace', data: VSBuffer.fromString(stringifyEntryWithFallback(entry) + '\n') };
+			return {
+				op: "replace",
+				data: VSBuffer.fromString(stringifyEntryWithFallback(entry) + "\n"),
+			};
 		}
 
 		// Generate diff entries
@@ -418,7 +459,10 @@ export class ObjectMutationLog<TFrom, TTo> {
 			this._diff(this._transform, path, this._previous, currentValue, entries);
 		} catch (e) {
 			if (e instanceof Error) {
-				const pathStr = path.map(s => typeof s === 'number' ? `[${s}]` : `.${s}`).join('') || '<root>';
+				const pathStr =
+					path
+						.map((s) => (typeof s === "number" ? `[${s}]` : `.${s}`))
+						.join("") || "<root>";
 				prefixError(e, `error diffing at ${pathStr}: `);
 			}
 			throw e;
@@ -427,7 +471,7 @@ export class ObjectMutationLog<TFrom, TTo> {
 		if (entries.length === 0) {
 			// No changes
 			this._clearPending();
-			return { op: 'append', data: VSBuffer.fromString('') };
+			return { op: "append", data: VSBuffer.fromString("") };
 		}
 
 		this._hasPendingWrite = true;
@@ -435,11 +479,11 @@ export class ObjectMutationLog<TFrom, TTo> {
 		this._pendingPrevious = currentValue;
 
 		// Append entries - build string directly
-		let data = '';
+		let data = "";
 		for (const e of entries) {
-			data += stringifyEntryWithFallback(e) + '\n';
+			data += stringifyEntryWithFallback(e) + "\n";
 		}
-		return { op: 'append', data: VSBuffer.fromString(data) };
+		return { op: "append", data: VSBuffer.fromString(data) };
 	}
 
 	/**
@@ -472,14 +516,19 @@ export class ObjectMutationLog<TFrom, TTo> {
 		current[path[path.length - 1]] = value;
 	}
 
-	private _applyPush(state: unknown, path: ObjectPath, values: unknown[] | undefined, startIndex: number | undefined): void {
+	private _applyPush(
+		state: unknown,
+		path: ObjectPath,
+		values: unknown[] | undefined,
+		startIndex: number | undefined,
+	): void {
 		let current = state as Record<string | number, unknown>;
 		for (let i = 0; i < path.length - 1; i++) {
 			current = current[path[i]] as Record<string | number, unknown>;
 		}
 
 		const arrayKey = path[path.length - 1];
-		const arr = current[arrayKey] as unknown[] || [];
+		const arr = (current[arrayKey] as unknown[]) || [];
 
 		if (startIndex !== undefined) {
 			arr.length = startIndex;
@@ -497,9 +546,12 @@ export class ObjectMutationLog<TFrom, TTo> {
 		path: ObjectPath,
 		prev: R,
 		curr: R,
-		entries: Entry[]
+		entries: Entry[],
 	): void {
-		if (transform.kind === TransformKind.Key || transform.kind === TransformKind.Primitive) {
+		if (
+			transform.kind === TransformKind.Key ||
+			transform.kind === TransformKind.Primitive
+		) {
 			// Simple value change - copy path since we're storing it
 			if (!transform.equals(prev, curr)) {
 				entries.push({ kind: EntryKind.Set, k: path.slice(), v: curr });
@@ -515,9 +567,24 @@ export class ObjectMutationLog<TFrom, TTo> {
 				}
 			}
 		} else if (transform.kind === TransformKind.Array) {
-			this._diffArray(transform, path, prev as unknown[], curr as unknown[], entries);
+			this._diffArray(
+				transform,
+				path,
+				prev as unknown[],
+				curr as unknown[],
+				entries,
+			);
 		} else if (transform.kind === TransformKind.Object) {
-			this._diffObject(transform.children, path, prev, curr, entries, transform.sealed as ((obj: unknown, wasSerialized: boolean) => boolean) | undefined);
+			this._diffObject(
+				transform.children,
+				path,
+				prev,
+				curr,
+				entries,
+				transform.sealed as
+					| ((obj: unknown, wasSerialized: boolean) => boolean)
+					| undefined,
+			);
 		} else {
 			throw new Error(`Unknown transform kind ${JSON.stringify(transform)}`);
 		}
@@ -568,7 +635,7 @@ export class ObjectMutationLog<TFrom, TTo> {
 		path: ObjectPath,
 		prev: unknown[] | undefined,
 		curr: unknown[] | undefined,
-		entries: Entry[]
+		entries: Entry[],
 	): void {
 		const prevArr = prev || [];
 		const currArr = curr || [];
@@ -591,21 +658,41 @@ export class ObjectMutationLog<TFrom, TTo> {
 				if (this._hasKeyMismatch(childEntries, prevItem, currItem)) {
 					// Key mismatch: replace from this point onward
 					const newItems = currArr.slice(i);
-					entries.push({ kind: EntryKind.Push, k: path.slice(), v: newItems.length > 0 ? newItems : undefined, i });
+					entries.push({
+						kind: EntryKind.Push,
+						k: path.slice(),
+						v: newItems.length > 0 ? newItems : undefined,
+						i,
+					});
 					return;
 				}
 
 				// Keys match, recurse into the object
 				path.push(i);
-				this._diffObject(childEntries, path, prevItem, currItem, entries, itemSchema.sealed);
+				this._diffObject(
+					childEntries,
+					path,
+					prevItem,
+					currItem,
+					entries,
+					itemSchema.sealed,
+				);
 				path.pop();
 			}
 
 			// Handle length changes
 			if (currArr.length > prevArr.length) {
-				entries.push({ kind: EntryKind.Push, k: path.slice(), v: currArr.slice(prevArr.length) });
+				entries.push({
+					kind: EntryKind.Push,
+					k: path.slice(),
+					v: currArr.slice(prevArr.length),
+				});
 			} else if (currArr.length < prevArr.length) {
-				entries.push({ kind: EntryKind.Push, k: path.slice(), i: currArr.length });
+				entries.push({
+					kind: EntryKind.Push,
+					k: path.slice(),
+					i: currArr.length,
+				});
 			}
 		} else {
 			// No children schema, use the original positional comparison
@@ -622,21 +709,38 @@ export class ObjectMutationLog<TFrom, TTo> {
 				// All common elements match
 				if (currArr.length > prevArr.length) {
 					// New items appended
-					entries.push({ kind: EntryKind.Push, k: path.slice(), v: currArr.slice(prevArr.length) });
+					entries.push({
+						kind: EntryKind.Push,
+						k: path.slice(),
+						v: currArr.slice(prevArr.length),
+					});
 				} else if (currArr.length < prevArr.length) {
 					// Items removed from end
-					entries.push({ kind: EntryKind.Push, k: path.slice(), i: currArr.length });
+					entries.push({
+						kind: EntryKind.Push,
+						k: path.slice(),
+						i: currArr.length,
+					});
 				}
 				// else: same length, all match - no change
 			} else {
 				// Mismatch found, rewrite from that point
 				const newItems = currArr.slice(firstMismatch);
-				entries.push({ kind: EntryKind.Push, k: path.slice(), v: newItems.length > 0 ? newItems : undefined, i: firstMismatch });
+				entries.push({
+					kind: EntryKind.Push,
+					k: path.slice(),
+					v: newItems.length > 0 ? newItems : undefined,
+					i: firstMismatch,
+				});
 			}
 		}
 	}
 
-	private _hasKeyMismatch(children: SchemaEntries, prev: unknown, curr: unknown): boolean {
+	private _hasKeyMismatch(
+		children: SchemaEntries,
+		prev: unknown,
+		curr: unknown,
+	): boolean {
 		const prevObj = prev as Record<string, unknown> | undefined;
 		const currObj = curr as Record<string, unknown>;
 		for (const [key, transform] of children) {

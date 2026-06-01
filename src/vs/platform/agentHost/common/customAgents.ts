@@ -3,8 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { URI } from '../../../base/common/uri.js';
-import { CustomizationType, type AgentCustomization, type Customization } from './state/protocol/state.js';
+import type { URI } from "../../../base/common/uri.js";
+import {
+	CustomizationType,
+	type AgentCustomization,
+	type Customization,
+} from "./state/protocol/state.js";
 
 /**
  * Computes the effective set of selectable custom agents for a session.
@@ -41,7 +45,11 @@ export function getEffectiveAgents(
 		}
 	}
 	const result = [...seen.values()];
-	result.sort((a, b) => a.name.localeCompare(b.name) || a.uri.toString().localeCompare(b.uri.toString()));
+	result.sort(
+		(a, b) =>
+			a.name.localeCompare(b.name) ||
+			a.uri.toString().localeCompare(b.uri.toString()),
+	);
 	return result;
 }
 
@@ -72,12 +80,16 @@ export function resolveAgentHostAgent(
 	storedAgentUri: string | undefined,
 ): AgentCustomization | undefined {
 	if (sessionAgentUri !== undefined) {
-		const sessionStr = typeof sessionAgentUri === 'string' ? sessionAgentUri : sessionAgentUri.toString();
-		const match = agents.find(a => a.uri === sessionStr);
+		const sessionStr =
+			typeof sessionAgentUri === "string"
+				? sessionAgentUri
+				: sessionAgentUri.toString();
+		const match = agents.find((a) => a.uri === sessionStr);
 		if (match) {
 			return match;
 		}
 	}
-	return storedAgentUri ? agents.find(a => a.uri === storedAgentUri) : undefined;
+	return storedAgentUri
+		? agents.find((a) => a.uri === storedAgentUri)
+		: undefined;
 }
-

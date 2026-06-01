@@ -8,7 +8,10 @@ import { createServiceIdentifier } from '../../../util/common/services';
 
 // ── Service identifier ──────────────────────────────────────────────────────────
 
-export const ISessionSyncStateService = createServiceIdentifier<ISessionSyncStateService>('ISessionSyncStateService');
+export const ISessionSyncStateService =
+	createServiceIdentifier<ISessionSyncStateService>(
+		'ISessionSyncStateService',
+	);
 
 // ── Types ────────────────────────────────────────────────────────────────────────
 

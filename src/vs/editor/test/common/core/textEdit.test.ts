@@ -3,19 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { OffsetRange } from '../../../common/core/ranges/offsetRange.js';
-import { StringText } from '../../../common/core/text/abstractText.js';
-import { Random } from './random.js';
+import assert from "assert";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../base/test/common/utils.js";
+import { OffsetRange } from "../../../common/core/ranges/offsetRange.js";
+import { StringText } from "../../../common/core/text/abstractText.js";
+import { Random } from "./random.js";
 
-suite('TextEdit', () => {
+suite("TextEdit", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	suite('inverse', () => {
+	suite("inverse", () => {
 		function runTest(seed: number): void {
 			const rand = Random.create(seed);
-			const source = new StringText(rand.nextMultiLineString(10, new OffsetRange(0, 10)));
+			const source = new StringText(
+				rand.nextMultiLineString(10, new OffsetRange(0, 10)),
+			);
 
 			const edit = rand.nextTextEdit(source, rand.nextIntRange(1, 5));
 			const invEdit = edit.inverse(source);
@@ -26,7 +28,7 @@ suite('TextEdit', () => {
 			assert.deepStrictEqual(s2, source.value);
 		}
 
-		test.skip('brute-force', () => {
+		test.skip("brute-force", () => {
 			for (let i = 0; i < 100_000; i++) {
 				runTest(i);
 			}
@@ -37,11 +39,13 @@ suite('TextEdit', () => {
 		}
 	});
 
-	suite('compose', () => {
+	suite("compose", () => {
 		function runTest(seed: number): void {
 			const rand = Random.create(seed);
 
-			const s0 = new StringText(rand.nextMultiLineString(10, new OffsetRange(0, 10)));
+			const s0 = new StringText(
+				rand.nextMultiLineString(10, new OffsetRange(0, 10)),
+			);
 
 			const edits1 = rand.nextTextEdit(s0, rand.nextIntRange(1, 4));
 			const s1 = edits1.applyToString(s0.value);
@@ -55,7 +59,7 @@ suite('TextEdit', () => {
 			assert.strictEqual(s2C, s2);
 		}
 
-		test.skip('fuzz', function () {
+		test.skip("fuzz", function () {
 			this.timeout(0);
 			for (let i = 0; i < 1_000_000; i++) {
 				runTest(i);

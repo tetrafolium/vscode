@@ -11,16 +11,12 @@ export {
 	Command,
 	Disposable,
 	DocumentUri,
-
 	Position,
-
 	Range,
-
 	TextDocumentItem,
 	TextEdit,
 	VersionedTextDocumentIdentifier,
-
-	WorkspaceFolder
+	WorkspaceFolder,
 } from 'vscode-languageserver-protocol';
 
 const PositionSchema = Type.Object({

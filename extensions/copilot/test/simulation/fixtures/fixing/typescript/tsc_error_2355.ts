@@ -1,5 +1,3 @@
 class UtilityMethods {
-
-	isBiggerThan(a: number, b: number): boolean {
-	}
+	isBiggerThan(a: number, b: number): boolean {}
 }

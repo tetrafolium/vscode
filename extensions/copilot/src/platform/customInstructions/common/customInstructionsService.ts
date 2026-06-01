@@ -10,25 +10,44 @@ import { match } from '../../../util/vs/base/common/glob';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
 import { ResourceSet } from '../../../util/vs/base/common/map';
 import { Schemas } from '../../../util/vs/base/common/network';
-import { IObservable, observableFromEvent } from '../../../util/vs/base/common/observableInternal';
+import {
+	IObservable,
+	observableFromEvent,
+} from '../../../util/vs/base/common/observableInternal';
 import { dirname, isAbsolute } from '../../../util/vs/base/common/path';
 import { extUriBiasedIgnorePathCase } from '../../../util/vs/base/common/resources';
 import { isObject } from '../../../util/vs/base/common/types';
 import { URI } from '../../../util/vs/base/common/uri';
 import { FileType, Uri } from '../../../vscodeTypes';
 import { IRunCommandExecutionService } from '../../commands/common/runCommandExecutionService';
-import { CodeGenerationImportInstruction, CodeGenerationTextInstruction, Config, ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	CodeGenerationImportInstruction,
+	CodeGenerationTextInstruction,
+	Config,
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { INativeEnvService } from '../../env/common/envService';
 import { IExtensionsService } from '../../extensions/common/extensionsService';
 import { IFileSystemService } from '../../filesystem/common/fileSystemService';
 import { ILogService } from '../../log/common/logService';
 import { IPromptPathRepresentationService } from '../../prompts/common/promptPathRepresentationService';
 import { IWorkspaceService } from '../../workspace/common/workspaceService';
-import { COPILOT_INSTRUCTIONS_PATH, COPILOT_PERSONAL_INSTRUCTIONS_PATH, INSTRUCTION_FILE_EXTENSION, INSTRUCTIONS_LOCATION_KEY, PERSONAL_SKILL_FOLDERS, PromptsType, SKILLS_LOCATION_KEY, USE_AGENT_SKILLS_SETTING, WORKSPACE_SKILL_FOLDERS } from './promptTypes';
+import {
+	COPILOT_INSTRUCTIONS_PATH,
+	COPILOT_PERSONAL_INSTRUCTIONS_PATH,
+	INSTRUCTION_FILE_EXTENSION,
+	INSTRUCTIONS_LOCATION_KEY,
+	PERSONAL_SKILL_FOLDERS,
+	PromptsType,
+	SKILLS_LOCATION_KEY,
+	USE_AGENT_SKILLS_SETTING,
+	WORKSPACE_SKILL_FOLDERS,
+} from './promptTypes';
 
 declare const TextDecoder: {
 	decode(input: Uint8Array): string;
-	new(): TextDecoder;
+	new (): TextDecoder;
 };
 
 export interface ICustomInstructions {
@@ -47,7 +66,10 @@ export interface IInstruction {
 	readonly instruction: string;
 }
 
-export const ICustomInstructionsService = createServiceIdentifier<ICustomInstructionsService>('ICustomInstructionsService');
+export const ICustomInstructionsService =
+	createServiceIdentifier<ICustomInstructionsService>(
+		'ICustomInstructionsService',
+	);
 
 export interface IExtensionPromptFile {
 	uri: URI;
@@ -70,12 +92,18 @@ export interface ISkillInfo {
 
 export interface ICustomInstructionsService {
 	readonly _serviceBrand: undefined;
-	fetchInstructionsFromSetting(configKey: Config<CodeGenerationInstruction[]>): Promise<ICustomInstructions[]>;
-	fetchInstructionsFromFile(fileUri: Uri): Promise<ICustomInstructions | undefined>;
+	fetchInstructionsFromSetting(
+		configKey: Config<CodeGenerationInstruction[]>,
+	): Promise<ICustomInstructions[]>;
+	fetchInstructionsFromFile(
+		fileUri: Uri,
+	): Promise<ICustomInstructions | undefined>;
 
 	getAgentInstructions(): Promise<URI[]>;
 
-	parseInstructionIndexFile(promptFileIndexText: string): IInstructionIndexFile;
+	parseInstructionIndexFile(
+		promptFileIndexText: string,
+	): IInstructionIndexFile;
 
 	isExternalInstructionsFile(uri: URI): Promise<boolean>;
 	isExternalInstructionsFolder(uri: URI): boolean;
@@ -91,7 +119,9 @@ export interface ICustomInstructionsService {
 	 */
 	refreshExtensionPromptFiles(): Promise<void>;
 	/** Gets skill info for extension-contributed skill files */
-	getExtensionSkillInfo(uri: URI): (ISkillInfo & { extensionId?: string }) | undefined;
+	getExtensionSkillInfo(
+		uri: URI,
+	): (ISkillInfo & { extensionId?: string }) | undefined;
 }
 
 export interface IInstructionIndexFile {
@@ -101,144 +131,246 @@ export interface IInstructionIndexFile {
 	readonly agents: Set<string>;
 }
 
-export type CodeGenerationInstruction = { languagee?: string; text: string } | { languagee?: string; file: string };
+export type CodeGenerationInstruction =
+	| { languagee?: string; text: string }
+	| { languagee?: string; file: string };
 
-function isCodeGenerationImportInstruction(instruction: any): instruction is CodeGenerationImportInstruction {
+function isCodeGenerationImportInstruction(
+	instruction: any,
+): instruction is CodeGenerationImportInstruction {
 	if (typeof instruction === 'object' && instruction !== null) {
-		return typeof instruction.file === 'string' && (instruction.language === undefined || typeof instruction.language === 'string');
+		return (
+			typeof instruction.file === 'string' &&
+			(instruction.language === undefined ||
+				typeof instruction.language === 'string')
+		);
 	}
 	return false;
 }
 
-function isCodeGenerationTextInstruction(instruction: any): instruction is CodeGenerationTextInstruction {
+function isCodeGenerationTextInstruction(
+	instruction: any,
+): instruction is CodeGenerationTextInstruction {
 	if (typeof instruction === 'object' && instruction !== null) {
-		return typeof instruction.text === 'string' && (instruction.language === undefined || typeof instruction.language === 'string');
+		return (
+			typeof instruction.text === 'string' &&
+			(instruction.language === undefined ||
+				typeof instruction.language === 'string')
+		);
 	}
 	return false;
 }
 
-export class CustomInstructionsService extends Disposable implements ICustomInstructionsService {
-
+export class CustomInstructionsService
+	extends Disposable
+	implements ICustomInstructionsService
+{
 	readonly _serviceBrand: undefined;
 
-	readonly _matchInstructionLocationsFromConfig: IObservable<(uri: URI) => boolean>;
-	readonly _matchInstructionLocationsFromExtensions: IObservable<(uri: URI) => boolean>;
-	readonly _matchInstructionLocationsFromSkills: IObservable<(uri: URI) => ISkillInfo | undefined>;
+	readonly _matchInstructionLocationsFromConfig: IObservable<
+		(uri: URI) => boolean
+	>;
+	readonly _matchInstructionLocationsFromExtensions: IObservable<
+		(uri: URI) => boolean
+	>;
+	readonly _matchInstructionLocationsFromSkills: IObservable<
+		(uri: URI) => ISkillInfo | undefined
+	>;
 
 	private _extensionPromptFilesCache: IExtensionPromptFile[] | undefined;
-	private readonly _onDidChangeExtensionPromptFilesCache = this._register(new Emitter<void>());
+	private readonly _onDidChangeExtensionPromptFilesCache = this._register(
+		new Emitter<void>(),
+	);
 
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 		@INativeEnvService private readonly envService: INativeEnvService,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
-		@IPromptPathRepresentationService private readonly promptPathRepresentationService: IPromptPathRepresentationService,
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
+		@IPromptPathRepresentationService
+		private readonly promptPathRepresentationService: IPromptPathRepresentationService,
 		@ILogService private readonly logService: ILogService,
-		@IExtensionsService private readonly extensionService: IExtensionsService,
-		@IRunCommandExecutionService private readonly runCommandExecutionService: IRunCommandExecutionService,
+		@IExtensionsService
+		private readonly extensionService: IExtensionsService,
+		@IRunCommandExecutionService
+		private readonly runCommandExecutionService: IRunCommandExecutionService,
 	) {
 		super();
 
 		this._matchInstructionLocationsFromConfig = observableFromEvent(
-			(handleChange) => this._register(configurationService.onDidChangeConfiguration(e => {
-				if (e.affectsConfiguration(INSTRUCTIONS_LOCATION_KEY)) {
-					handleChange(e);
-				}
-			})),
+			(handleChange) =>
+				this._register(
+					configurationService.onDidChangeConfiguration((e) => {
+						if (e.affectsConfiguration(INSTRUCTIONS_LOCATION_KEY)) {
+							handleChange(e);
+						}
+					}),
+				),
 			() => {
 				const sanitizedLocations: string[] = [];
-				const locations = this.configurationService.getNonExtensionConfig<Record<string, boolean>>(INSTRUCTIONS_LOCATION_KEY);
+				const locations =
+					this.configurationService.getNonExtensionConfig<
+						Record<string, boolean>
+					>(INSTRUCTIONS_LOCATION_KEY);
 				if (isObject(locations)) {
 					for (const key in locations) {
 						const location = key.trim();
 						const value = locations[key];
 						if (value === true) {
 							if (location.startsWith('~/')) {
-								sanitizedLocations.push(this.promptPathRepresentationService.getFilePath(extUriBiasedIgnorePathCase.joinPath(this.envService.userHome, location.substring(2))));
+								sanitizedLocations.push(
+									this.promptPathRepresentationService.getFilePath(
+										extUriBiasedIgnorePathCase.joinPath(
+											this.envService.userHome,
+											location.substring(2),
+										),
+									),
+								);
 							} else if (isAbsolute(location)) {
 								sanitizedLocations.push(location);
 							}
 						}
 					}
 				}
-				return ((uri: URI) => {
-					if (uri.scheme !== Schemas.file || !uri.path.endsWith(INSTRUCTION_FILE_EXTENSION) || sanitizedLocations.length === 0) {
+				return (uri: URI) => {
+					if (
+						uri.scheme !== Schemas.file ||
+						!uri.path.endsWith(INSTRUCTION_FILE_EXTENSION) ||
+						sanitizedLocations.length === 0
+					) {
 						return false;
 					}
-					const instructionFilePath = this.promptPathRepresentationService.getFilePath(uri);
+					const instructionFilePath =
+						this.promptPathRepresentationService.getFilePath(uri);
 					const instructionFolderPath = dirname(instructionFilePath);
 					for (const location of sanitizedLocations) {
-						if (match(location, instructionFolderPath) || match(location, instructionFilePath)) {
+						if (
+							match(location, instructionFolderPath) ||
+							match(location, instructionFilePath)
+						) {
 							return true;
 						}
 					}
 					return false;
-				});
-			}
+				};
+			},
 		);
 
 		this._matchInstructionLocationsFromExtensions = observableFromEvent(
-			(handleChange) => this._register(this.extensionService.onDidChange(handleChange)),
+			(handleChange) =>
+				this._register(this.extensionService.onDidChange(handleChange)),
 			() => {
 				const locations = new ResourceSet();
 				for (const extension of this.extensionService.all) {
-
-					const chatInstructions = extension.packageJSON['contributes']?.['chatInstructions'];
+					const chatInstructions =
+						extension.packageJSON['contributes']?.[
+							'chatInstructions'
+						];
 					if (Array.isArray(chatInstructions)) {
 						for (const contribution of chatInstructions) {
 							if (contribution.path) {
-								const folderUri = extUriBiasedIgnorePathCase.dirname(Uri.joinPath(extension.extensionUri, contribution.path));
+								const folderUri =
+									extUriBiasedIgnorePathCase.dirname(
+										Uri.joinPath(
+											extension.extensionUri,
+											contribution.path,
+										),
+									);
 								locations.add(folderUri);
 							}
 						}
 					}
 				}
-				return ((uri: URI) => {
+				return (uri: URI) => {
 					for (const location of locations) {
-						if (extUriBiasedIgnorePathCase.isEqualOrParent(uri, location)) {
+						if (
+							extUriBiasedIgnorePathCase.isEqualOrParent(
+								uri,
+								location,
+							)
+						) {
 							return true;
 						}
 					}
 					return false;
-				});
-			}
+				};
+			},
 		);
 
 		this._matchInstructionLocationsFromSkills = observableFromEvent(
 			(handleChange) => {
-				const configurationDisposable = configurationService.onDidChangeConfiguration(e => {
-					if (e.affectsConfiguration(USE_AGENT_SKILLS_SETTING) || e.affectsConfiguration(SKILLS_LOCATION_KEY)) {
-						handleChange(e);
-					}
-				});
-				const workspaceDisposable = workspaceService.onDidChangeWorkspaceFolders(handleChange);
-				const cacheDisposable = this._onDidChangeExtensionPromptFilesCache.event(handleChange);
+				const configurationDisposable =
+					configurationService.onDidChangeConfiguration((e) => {
+						if (
+							e.affectsConfiguration(USE_AGENT_SKILLS_SETTING) ||
+							e.affectsConfiguration(SKILLS_LOCATION_KEY)
+						) {
+							handleChange(e);
+						}
+					});
+				const workspaceDisposable =
+					workspaceService.onDidChangeWorkspaceFolders(handleChange);
+				const cacheDisposable =
+					this._onDidChangeExtensionPromptFilesCache.event(
+						handleChange,
+					);
 				return {
 					dispose: () => {
 						configurationDisposable.dispose();
 						workspaceDisposable.dispose();
 						cacheDisposable.dispose();
-					}
+					},
 				};
 			},
 			() => {
-				if (this.configurationService.getNonExtensionConfig<boolean>(USE_AGENT_SKILLS_SETTING)) {
-					const personalSkillFolderUris = PERSONAL_SKILL_FOLDERS.map(folder => extUriBiasedIgnorePathCase.joinPath(this.envService.userHome, folder));
-					const workspaceSkillFolderUris = this.workspaceService.getWorkspaceFolders().flatMap(workspaceFolder =>
-						WORKSPACE_SKILL_FOLDERS.map(folder => extUriBiasedIgnorePathCase.joinPath(workspaceFolder, folder))
+				if (
+					this.configurationService.getNonExtensionConfig<boolean>(
+						USE_AGENT_SKILLS_SETTING,
+					)
+				) {
+					const personalSkillFolderUris = PERSONAL_SKILL_FOLDERS.map(
+						(folder) =>
+							extUriBiasedIgnorePathCase.joinPath(
+								this.envService.userHome,
+								folder,
+							),
 					);
+					const workspaceSkillFolderUris = this.workspaceService
+						.getWorkspaceFolders()
+						.flatMap((workspaceFolder) =>
+							WORKSPACE_SKILL_FOLDERS.map((folder) =>
+								extUriBiasedIgnorePathCase.joinPath(
+									workspaceFolder,
+									folder,
+								),
+							),
+						);
 					// Tagged list preserving the storage provenance for each folder
-					const taggedSkillFolderUris: { uri: URI; storage: SkillStorage }[] = [
-						...personalSkillFolderUris.map(uri => ({ uri, storage: SkillStorage.Personal as const })),
-						...workspaceSkillFolderUris.map(uri => ({ uri, storage: SkillStorage.Workspace as const })),
+					const taggedSkillFolderUris: {
+						uri: URI;
+						storage: SkillStorage;
+					}[] = [
+						...personalSkillFolderUris.map((uri) => ({
+							uri,
+							storage: SkillStorage.Personal as const,
+						})),
+						...workspaceSkillFolderUris.map((uri) => ({
+							uri,
+							storage: SkillStorage.Workspace as const,
+						})),
 					];
 
 					// Get additional skill locations from config
 					const configSkillLocationUris: URI[] = [];
-					const locations = this.configurationService.getNonExtensionConfig<Record<string, boolean>>(SKILLS_LOCATION_KEY);
+					const locations =
+						this.configurationService.getNonExtensionConfig<
+							Record<string, boolean>
+						>(SKILLS_LOCATION_KEY);
 					const userHome = this.envService.userHome;
-					const workspaceFolders = this.workspaceService.getWorkspaceFolders();
+					const workspaceFolders =
+						this.workspaceService.getWorkspaceFolders();
 					if (isObject(locations)) {
 						for (const key in locations) {
 							const location = key.trim();
@@ -248,29 +380,59 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 							}
 							// Expand ~/ to user home directory
 							if (location.startsWith('~/')) {
-								configSkillLocationUris.push(Uri.joinPath(userHome, location.substring(2)));
+								configSkillLocationUris.push(
+									Uri.joinPath(
+										userHome,
+										location.substring(2),
+									),
+								);
 							} else if (isAbsolute(location)) {
-								configSkillLocationUris.push(URI.file(location));
+								configSkillLocationUris.push(
+									URI.file(location),
+								);
 							} else {
 								// Relative path - join to each workspace folder
 								for (const workspaceFolder of workspaceFolders) {
-									configSkillLocationUris.push(Uri.joinPath(workspaceFolder, location));
+									configSkillLocationUris.push(
+										Uri.joinPath(workspaceFolder, location),
+									);
 								}
 							}
 						}
 					}
 
-					return ((uri: URI) => {
+					return (uri: URI) => {
 						// Check workspace and personal skill folders
-						for (const { uri: topLevelSkillFolderUri, storage } of taggedSkillFolderUris) {
-							if (extUriBiasedIgnorePathCase.isEqualOrParent(uri, topLevelSkillFolderUri)) {
+						for (const {
+							uri: topLevelSkillFolderUri,
+							storage,
+						} of taggedSkillFolderUris) {
+							if (
+								extUriBiasedIgnorePathCase.isEqualOrParent(
+									uri,
+									topLevelSkillFolderUri,
+								)
+							) {
 								// Get the path segments relative to the skill folder
-								const relativePath = extUriBiasedIgnorePathCase.relativePath(topLevelSkillFolderUri, uri);
+								const relativePath =
+									extUriBiasedIgnorePathCase.relativePath(
+										topLevelSkillFolderUri,
+										uri,
+									);
 								if (relativePath) {
 									// The skill directory is the first path segment under the skill folder
-									const skillName = relativePath.split('/')[0];
-									const skillFolderUri = extUriBiasedIgnorePathCase.joinPath(topLevelSkillFolderUri, skillName);
-									return { skillName, skillFolderUri, storage };
+									const skillName =
+										relativePath.split('/')[0];
+									const skillFolderUri =
+										extUriBiasedIgnorePathCase.joinPath(
+											topLevelSkillFolderUri,
+											skillName,
+										);
+									return {
+										skillName,
+										skillFolderUri,
+										storage,
+									};
 								}
 							}
 						}
@@ -278,14 +440,32 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 						// Check config-based skill locations
 						if (configSkillLocationUris.length > 0) {
 							for (const locationUri of configSkillLocationUris) {
-								if (extUriBiasedIgnorePathCase.isEqualOrParent(uri, locationUri)) {
+								if (
+									extUriBiasedIgnorePathCase.isEqualOrParent(
+										uri,
+										locationUri,
+									)
+								) {
 									// Get the path segments relative to the skill folder
-									const relativePath = extUriBiasedIgnorePathCase.relativePath(locationUri, uri);
+									const relativePath =
+										extUriBiasedIgnorePathCase.relativePath(
+											locationUri,
+											uri,
+										);
 									if (relativePath) {
 										// The skill directory is the first path segment under the skill folder
-										const skillName = relativePath.split('/')[0];
-										const skillFolderUri = extUriBiasedIgnorePathCase.joinPath(locationUri, skillName);
-										return { skillName, skillFolderUri, storage: SkillStorage.Workspace };
+										const skillName =
+											relativePath.split('/')[0];
+										const skillFolderUri =
+											extUriBiasedIgnorePathCase.joinPath(
+												locationUri,
+												skillName,
+											);
+										return {
+											skillName,
+											skillFolderUri,
+											storage: SkillStorage.Workspace,
+										};
 									}
 								}
 							}
@@ -293,24 +473,34 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 
 						// Check extension-contributed skills
 						return this.getExtensionSkillInfo(uri);
-					});
+					};
 				}
-				return (() => undefined);
-			}
+				return () => undefined;
+			},
 		);
 	}
 
-	public async fetchInstructionsFromFile(fileUri: Uri): Promise<ICustomInstructions | undefined> {
+	public async fetchInstructionsFromFile(
+		fileUri: Uri,
+	): Promise<ICustomInstructions | undefined> {
 		return await this.readInstructionsFromFile(fileUri);
 	}
 
 	public async getAgentInstructions(): Promise<URI[]> {
 		const result = [];
-		if (this.configurationService.getConfig(ConfigKey.UseInstructionFiles)) {
+		if (
+			this.configurationService.getConfig(ConfigKey.UseInstructionFiles)
+		) {
 			for (const folder of this.workspaceService.getWorkspaceFolders()) {
 				try {
-					const uri = extUriBiasedIgnorePathCase.joinPath(folder, COPILOT_INSTRUCTIONS_PATH);
-					if ((await this.fileSystemService.stat(uri)).type === FileType.File) {
+					const uri = extUriBiasedIgnorePathCase.joinPath(
+						folder,
+						COPILOT_INSTRUCTIONS_PATH,
+					);
+					if (
+						(await this.fileSystemService.stat(uri)).type ===
+						FileType.File
+					) {
 						result.push(uri);
 					}
 				} catch (e) {
@@ -318,8 +508,14 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 				}
 			}
 			try {
-				const uri = extUriBiasedIgnorePathCase.joinPath(this.envService.userHome, COPILOT_PERSONAL_INSTRUCTIONS_PATH);
-				if ((await this.fileSystemService.stat(uri)).type === FileType.File) {
+				const uri = extUriBiasedIgnorePathCase.joinPath(
+					this.envService.userHome,
+					COPILOT_PERSONAL_INSTRUCTIONS_PATH,
+				);
+				if (
+					(await this.fileSystemService.stat(uri)).type ===
+					FileType.File
+				) {
 					result.push(uri);
 				}
 			} catch (e) {
@@ -329,7 +525,9 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 		return result;
 	}
 
-	public async fetchInstructionsFromSetting(configKey: Config<CodeGenerationInstruction[]>): Promise<ICustomInstructions[]> {
+	public async fetchInstructionsFromSetting(
+		configKey: Config<CodeGenerationInstruction[]>,
+	): Promise<ICustomInstructions[]> {
 		const result: ICustomInstructions[] = [];
 
 		const instructions: IInstruction[] = [];
@@ -337,10 +535,23 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 
 		const inspect = this.configurationService.inspectConfig(configKey);
 		if (inspect) {
-			await this.collectInstructionsFromSettings([inspect.workspaceFolderValue, inspect.workspaceValue, inspect.globalValue], seenFiles, instructions, result);
+			await this.collectInstructionsFromSettings(
+				[
+					inspect.workspaceFolderValue,
+					inspect.workspaceValue,
+					inspect.globalValue,
+				],
+				seenFiles,
+				instructions,
+				result,
+			);
 		}
 
-		const reference = Uri.from({ scheme: this.envService.uriScheme, authority: 'settings', path: `/${configKey.fullyQualifiedId}` });
+		const reference = Uri.from({
+			scheme: this.envService.uriScheme,
+			authority: 'settings',
+			path: `/${configKey.fullyQualifiedId}`,
+		});
 		if (instructions.length > 0) {
 			result.push({
 				kind: CustomInstructionsKind.Setting,
@@ -351,59 +562,98 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 		return result;
 	}
 
-	private async collectInstructionsFromSettings(instructionsArrays: (CodeGenerationInstruction[] | undefined)[], seenFiles: Set<string>, instructions: IInstruction[], result: ICustomInstructions[]): Promise<void> {
+	private async collectInstructionsFromSettings(
+		instructionsArrays: (CodeGenerationInstruction[] | undefined)[],
+		seenFiles: Set<string>,
+		instructions: IInstruction[],
+		result: ICustomInstructions[],
+	): Promise<void> {
 		const seenInstructions: Set<string> = new Set();
 		for (const instructionsArray of instructionsArrays) {
 			if (Array.isArray(instructionsArray)) {
 				for (const entry of instructionsArray) {
-					if (isCodeGenerationImportInstruction(entry) && !seenFiles.has(entry.file)) {
+					if (
+						isCodeGenerationImportInstruction(entry) &&
+						!seenFiles.has(entry.file)
+					) {
 						seenFiles.add(entry.file);
-						await this._collectInstructionsFromFile(entry.file, entry.language, result);
+						await this._collectInstructionsFromFile(
+							entry.file,
+							entry.language,
+							result,
+						);
 					}
-					if (isCodeGenerationTextInstruction(entry) && !seenInstructions.has(entry.text)) {
+					if (
+						isCodeGenerationTextInstruction(entry) &&
+						!seenInstructions.has(entry.text)
+					) {
 						seenInstructions.add(entry.text);
-						instructions.push({ instruction: entry.text, languageId: entry.language });
+						instructions.push({
+							instruction: entry.text,
+							languageId: entry.language,
+						});
 					}
 				}
 			}
 		}
 	}
 
-	private async _collectInstructionsFromFile(customInstructionsFile: string, language: string | undefined, result: ICustomInstructions[]): Promise<void> {
-		this.logService.debug(`Collect instructions from file: ${customInstructionsFile}`);
-		const promises = this.workspaceService.getWorkspaceFolders().map(async folderUri => {
-			const fileUri = Uri.joinPath(folderUri, customInstructionsFile);
-			const instruction = await this.readInstructionsFromFile(fileUri, language);
-			if (instruction) {
-				result.push(instruction);
-			}
-		});
+	private async _collectInstructionsFromFile(
+		customInstructionsFile: string,
+		language: string | undefined,
+		result: ICustomInstructions[],
+	): Promise<void> {
+		this.logService.debug(
+			`Collect instructions from file: ${customInstructionsFile}`,
+		);
+		const promises = this.workspaceService
+			.getWorkspaceFolders()
+			.map(async (folderUri) => {
+				const fileUri = Uri.joinPath(folderUri, customInstructionsFile);
+				const instruction = await this.readInstructionsFromFile(
+					fileUri,
+					language,
+				);
+				if (instruction) {
+					result.push(instruction);
+				}
+			});
 		await Promise.all(promises);
 	}
 
-	private async readInstructionsFromFile(fileUri: Uri, languageId?: string): Promise<ICustomInstructions | undefined> {
+	private async readInstructionsFromFile(
+		fileUri: Uri,
+		languageId?: string,
+	): Promise<ICustomInstructions | undefined> {
 		try {
 			const fileContents = await this.fileSystemService.readFile(fileUri);
 			const content = new TextDecoder().decode(fileContents);
 			const instruction = content.trim();
 			if (!instruction) {
-				this.logService.debug(`Instructions file is empty: ${fileUri.toString()}`);
+				this.logService.debug(
+					`Instructions file is empty: ${fileUri.toString()}`,
+				);
 				return;
 			}
 			return {
 				kind: CustomInstructionsKind.File,
 				content: [{ instruction, languageId }],
-				reference: fileUri
+				reference: fileUri,
 			};
 		} catch (e) {
-			this.logService.debug(`Instructions file not found: ${fileUri.toString()}`);
+			this.logService.debug(
+				`Instructions file not found: ${fileUri.toString()}`,
+			);
 			return undefined;
 		}
 	}
 
 	public async refreshExtensionPromptFiles(): Promise<void> {
 		try {
-			const extensionPromptFiles = await this.runCommandExecutionService.executeCommand('vscode.extensionPromptFileProvider') as IExtensionPromptFile[] | undefined;
+			const extensionPromptFiles =
+				(await this.runCommandExecutionService.executeCommand(
+					'vscode.extensionPromptFileProvider',
+				)) as IExtensionPromptFile[] | undefined;
 			this._extensionPromptFilesCache = extensionPromptFiles ?? [];
 		} catch (e) {
 			this.logService.warn(`Error fetching extension prompt files: ${e}`);
@@ -416,26 +666,46 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 		if (!this._extensionPromptFilesCache) {
 			return false;
 		}
-		return this._extensionPromptFilesCache.some(file => {
+		return this._extensionPromptFilesCache.some((file) => {
 			if (file.type === 'skill') {
 				// For skills, the URI points to SKILL.md - allow everything under the parent folder
-				const skillFolderUri = extUriBiasedIgnorePathCase.dirname(file.uri);
-				return extUriBiasedIgnorePathCase.isEqualOrParent(uri, skillFolderUri);
+				const skillFolderUri = extUriBiasedIgnorePathCase.dirname(
+					file.uri,
+				);
+				return extUriBiasedIgnorePathCase.isEqualOrParent(
+					uri,
+					skillFolderUri,
+				);
 			}
 			return extUriBiasedIgnorePathCase.isEqual(file.uri, uri);
 		});
 	}
 
-	public getExtensionSkillInfo(uri: URI): (ISkillInfo & { extensionId?: string }) | undefined {
+	public getExtensionSkillInfo(
+		uri: URI,
+	): (ISkillInfo & { extensionId?: string }) | undefined {
 		if (!this._extensionPromptFilesCache) {
 			return undefined;
 		}
 		for (const file of this._extensionPromptFilesCache) {
 			if (file.type === 'skill') {
-				const skillFolderUri = extUriBiasedIgnorePathCase.dirname(file.uri);
-				if (extUriBiasedIgnorePathCase.isEqualOrParent(uri, skillFolderUri)) {
-					const skillName = extUriBiasedIgnorePathCase.basename(skillFolderUri);
-					return { skillName, skillFolderUri, storage: SkillStorage.Extension, extensionId: file.extensionId };
+				const skillFolderUri = extUriBiasedIgnorePathCase.dirname(
+					file.uri,
+				);
+				if (
+					extUriBiasedIgnorePathCase.isEqualOrParent(
+						uri,
+						skillFolderUri,
+					)
+				) {
+					const skillName =
+						extUriBiasedIgnorePathCase.basename(skillFolderUri);
+					return {
+						skillName,
+						skillFolderUri,
+						storage: SkillStorage.Extension,
+						extensionId: file.extensionId,
+					};
 				}
 			}
 		}
@@ -443,16 +713,24 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 	}
 
 	public parseInstructionIndexFile(content: string): InstructionIndexFile {
-		return new InstructionIndexFile(content, this.promptPathRepresentationService);
+		return new InstructionIndexFile(
+			content,
+			this.promptPathRepresentationService,
+		);
 	}
 
 	public async isExternalInstructionsFile(uri: URI): Promise<boolean> {
-		if (uri.scheme === Schemas.vscodeUserData && uri.path.endsWith(INSTRUCTION_FILE_EXTENSION)) {
+		if (
+			uri.scheme === Schemas.vscodeUserData &&
+			uri.path.endsWith(INSTRUCTION_FILE_EXTENSION)
+		) {
 			return true;
 		}
-		if (this._matchInstructionLocationsFromConfig.get()(uri)
-			|| this._matchInstructionLocationsFromExtensions.get()(uri)
-			|| this._matchInstructionLocationsFromSkills.get()(uri)) {
+		if (
+			this._matchInstructionLocationsFromConfig.get()(uri) ||
+			this._matchInstructionLocationsFromExtensions.get()(uri) ||
+			this._matchInstructionLocationsFromSkills.get()(uri)
+		) {
 			return true;
 		}
 
@@ -465,16 +743,24 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 	}
 
 	public isExternalInstructionsFolder(uri: URI): boolean {
-		return this._matchInstructionLocationsFromExtensions.get()(uri)
-			|| this._matchInstructionLocationsFromSkills.get()(uri) !== undefined;
+		return (
+			this._matchInstructionLocationsFromExtensions.get()(uri) ||
+			this._matchInstructionLocationsFromSkills.get()(uri) !== undefined
+		);
 	}
 
 	public isSkillFile(uri: URI): boolean {
-		return this._matchInstructionLocationsFromSkills.get()(uri) !== undefined;
+		return (
+			this._matchInstructionLocationsFromSkills.get()(uri) !== undefined
+		);
 	}
 
 	public isSkillMdFile(uri: URI): boolean {
-		return this.isSkillFile(uri) && extUriBiasedIgnorePathCase.basename(uri).toLowerCase() === 'skill.md';
+		return (
+			this.isSkillFile(uri) &&
+			extUriBiasedIgnorePathCase.basename(uri).toLowerCase() ===
+				'skill.md'
+		);
 	}
 
 	public getSkillDirectory(uri: URI): URI | undefined {
@@ -499,7 +785,6 @@ export class CustomInstructionsService extends Disposable implements ICustomInst
 }
 
 class InstructionIndexFile implements IInstructionIndexFile {
-
 	private instructionUris: ResourceSet | undefined;
 	private skillUris: ResourceSet | undefined;
 	private skillFolderUris: ResourceSet | undefined;
@@ -507,13 +792,18 @@ class InstructionIndexFile implements IInstructionIndexFile {
 
 	constructor(
 		public readonly content: string,
-		@IPromptPathRepresentationService private readonly promptPathRepresentationService: IPromptPathRepresentationService) {
-	}
+		@IPromptPathRepresentationService
+		private readonly promptPathRepresentationService: IPromptPathRepresentationService,
+	) {}
 
 	/**
 	 * Finds file paths or names in the index file. The index file has XML format: <listElementName><elementName><propertyName>value</propertyName></elementName></listElementName>
 	 */
-	private getValuesInIndexFile(listElementName: string, elementName: string, propertyName: string): string[] {
+	private getValuesInIndexFile(
+		listElementName: string,
+		elementName: string,
+		propertyName: string,
+	): string[] {
 		const result: string[] = [];
 		const lists = xmlContents(this.content, listElementName);
 		for (const list of lists) {
@@ -531,11 +821,14 @@ class InstructionIndexFile implements IInstructionIndexFile {
 	private getURIsFromFilePaths(filePaths: string[]): ResourceSet {
 		const result = new ResourceSet();
 		for (const filePath of filePaths) {
-			const uri = this.promptPathRepresentationService.resolveFilePath(filePath);
+			const uri =
+				this.promptPathRepresentationService.resolveFilePath(filePath);
 			if (uri) {
 				result.add(uri);
 				if (uri.scheme === Schemas.vscodeUserData) {
-					result.add(URI.from({ scheme: Schemas.file, path: uri.path }));
+					result.add(
+						URI.from({ scheme: Schemas.file, path: uri.path }),
+					);
 				}
 			}
 		}
@@ -544,14 +837,22 @@ class InstructionIndexFile implements IInstructionIndexFile {
 
 	get instructions(): ResourceSet {
 		if (this.instructionUris === undefined) {
-			this.instructionUris = this.getURIsFromFilePaths(this.getValuesInIndexFile('instructions', 'instruction', 'file'));
+			this.instructionUris = this.getURIsFromFilePaths(
+				this.getValuesInIndexFile(
+					'instructions',
+					'instruction',
+					'file',
+				),
+			);
 		}
 		return this.instructionUris;
 	}
 
 	get skills(): ResourceSet {
 		if (this.skillUris === undefined) {
-			this.skillUris = this.getURIsFromFilePaths(this.getValuesInIndexFile('skills', 'skill', 'file'));
+			this.skillUris = this.getURIsFromFilePaths(
+				this.getValuesInIndexFile('skills', 'skill', 'file'),
+			);
 		}
 		return this.skillUris;
 	}
@@ -560,7 +861,8 @@ class InstructionIndexFile implements IInstructionIndexFile {
 		if (this.skillFolderUris === undefined) {
 			this.skillFolderUris = new ResourceSet();
 			for (const skillUri of this.skills) {
-				const skillFolderUri = extUriBiasedIgnorePathCase.dirname(skillUri);
+				const skillFolderUri =
+					extUriBiasedIgnorePathCase.dirname(skillUri);
 				this.skillFolderUris.add(skillFolderUri);
 			}
 		}
@@ -569,7 +871,9 @@ class InstructionIndexFile implements IInstructionIndexFile {
 
 	get agents(): Set<string> {
 		if (this.agentNames === undefined) {
-			this.agentNames = new Set(this.getValuesInIndexFile('agents', 'agent', 'file'));
+			this.agentNames = new Set(
+				this.getValuesInIndexFile('agents', 'agent', 'file'),
+			);
 		}
 		return this.agentNames;
 	}

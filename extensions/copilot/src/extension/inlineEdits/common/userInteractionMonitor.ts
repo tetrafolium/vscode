@@ -3,8 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
-import { AggressivenessLevel, AggressivenessSetting, DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION, parseUserHappinessScoreConfigurationString, UserHappinessScoreConfiguration } from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
+import {
+	AggressivenessLevel,
+	AggressivenessSetting,
+	DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION,
+	parseUserHappinessScoreConfigurationString,
+	UserHappinessScoreConfiguration,
+} from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { ILogService } from '../../../platform/log/common/logService';
 import { IExperimentationService } from '../../../platform/telemetry/common/nullExperimentationService';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
@@ -36,7 +45,7 @@ export const MAX_INTERACTIONS_STORED = 30;
  */
 export function getWindowWithIgnoredLimit(
 	actions: NESUserAction[],
-	config: UserHappinessScoreConfiguration
+	config: UserHappinessScoreConfiguration,
 ): NESUserAction[] {
 	const { limitConsecutiveIgnored, limitTotalIgnored, ignoredLimit } = config;
 
@@ -50,7 +59,11 @@ export function getWindowWithIgnoredLimit(
 	let totalIgnored = 0;
 
 	// Walk backwards through history
-	for (let i = actions.length - 1; i >= 0 && result.length < MAX_INTERACTIONS_CONSIDERED; i--) {
+	for (
+		let i = actions.length - 1;
+		i >= 0 && result.length < MAX_INTERACTIONS_CONSIDERED;
+		i--
+	) {
 		const action = actions[i];
 
 		if (action.kind === ActionKind.Ignored) {
@@ -92,7 +105,7 @@ export function getWindowWithIgnoredLimit(
  */
 export function getUserHappinessScore(
 	actions: NESUserAction[],
-	config: UserHappinessScoreConfiguration
+	config: UserHappinessScoreConfiguration,
 ): number {
 	if (actions.length === 0) {
 		return 0.5; // neutral score when no data
@@ -139,7 +152,9 @@ export function getUserHappinessScore(
 		}
 
 		// Normalize score to 0-1 range based on accept/reject weights
-		const normalized = (score - config.rejectedScore) / (config.acceptedScore - config.rejectedScore);
+		const normalized =
+			(score - config.rejectedScore) /
+			(config.acceptedScore - config.rejectedScore);
 
 		weightedScore += normalized * weight;
 		totalWeight += weight;
@@ -154,7 +169,6 @@ export function getUserHappinessScore(
 }
 
 export class UserInteractionMonitor {
-
 	/**
 	 * Used for aggressiveness level calculation.
 	 * Includes all action types (accepted, rejected, ignored).
@@ -165,16 +179,21 @@ export class UserInteractionMonitor {
 	 * Used for timing/debounce calculation.
 	 * Only includes accepted and rejected actions (ignored actions don't affect timing).
 	 */
-	protected _recentUserActionsForTiming: (NESUserAction & { kind: ActionKind.Accepted | ActionKind.Rejected })[] = [];
+	protected _recentUserActionsForTiming: (NESUserAction & {
+		kind: ActionKind.Accepted | ActionKind.Rejected;
+	})[] = [];
 
 	private _lastActionWasAcceptance = false;
 
 	constructor(
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IExperimentationService private readonly _experimentationService: IExperimentationService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IExperimentationService
+		private readonly _experimentationService: IExperimentationService,
 		@ILogService private readonly _logService: ILogService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
-	) { }
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
+	) {}
 
 	// Capture user interactions
 
@@ -205,24 +224,44 @@ export class UserInteractionMonitor {
 
 		// Always record for aggressiveness calculation
 		this._recentUserActionsForAggressiveness.push({ time: now, kind });
-		this._recentUserActionsForAggressiveness = this._recentUserActionsForAggressiveness.slice(-MAX_INTERACTIONS_STORED);
+		this._recentUserActionsForAggressiveness =
+			this._recentUserActionsForAggressiveness.slice(
+				-MAX_INTERACTIONS_STORED,
+			);
 
 		// Only record accepts/rejects for timing calculation
 		if (kind !== ActionKind.Ignored) {
 			this._recentUserActionsForTiming.push({ time: now, kind });
-			this._recentUserActionsForTiming = this._recentUserActionsForTiming.slice(-MAX_INTERACTIONS_CONSIDERED);
+			this._recentUserActionsForTiming =
+				this._recentUserActionsForTiming.slice(
+					-MAX_INTERACTIONS_CONSIDERED,
+				);
 		}
 	}
 
 	// Creates a DelaySession based on recent user interactions
 
 	public createDelaySession(requestTime: number | undefined): DelaySession {
-		const baseDebounceTime = this._configurationService.getExperimentBasedConfig(ConfigKey.TeamInternal.InlineEditsDebounce, this._experimentationService);
+		const baseDebounceTime =
+			this._configurationService.getExperimentBasedConfig(
+				ConfigKey.TeamInternal.InlineEditsDebounce,
+				this._experimentationService,
+			);
 
-		const backoffDebounceEnabled = this._configurationService.getExperimentBasedConfig(ConfigKey.TeamInternal.InlineEditsBackoffDebounceEnabled, this._experimentationService);
-		const expectedTotalTime = backoffDebounceEnabled ? this._getExpectedTotalTime(baseDebounceTime) : undefined;
+		const backoffDebounceEnabled =
+			this._configurationService.getExperimentBasedConfig(
+				ConfigKey.TeamInternal.InlineEditsBackoffDebounceEnabled,
+				this._experimentationService,
+			);
+		const expectedTotalTime = backoffDebounceEnabled
+			? this._getExpectedTotalTime(baseDebounceTime)
+			: undefined;
 
-		return new DelaySession(baseDebounceTime, expectedTotalTime, requestTime);
+		return new DelaySession(
+			baseDebounceTime,
+			expectedTotalTime,
+			requestTime,
+		);
 	}
 
 	private _getExpectedTotalTime(baseDebounceTime: number): number {
@@ -243,15 +282,23 @@ export class UserInteractionMonitor {
 			}
 
 			// Exponential decay: impact decreases as time passes
-			const decayFactor = Math.exp(-timeSinceAction / DEBOUNCE_DECAY_TIME_MS);
-			const actionWeight = action.kind === ActionKind.Rejected ? REJECTION_WEIGHT : ACCEPTANCE_WEIGHT;
-			multiplier *= 1 + ((actionWeight - 1) * decayFactor);
+			const decayFactor = Math.exp(
+				-timeSinceAction / DEBOUNCE_DECAY_TIME_MS,
+			);
+			const actionWeight =
+				action.kind === ActionKind.Rejected
+					? REJECTION_WEIGHT
+					: ACCEPTANCE_WEIGHT;
+			multiplier *= 1 + (actionWeight - 1) * decayFactor;
 		}
 
 		let debounceTime = baseDebounceTime * multiplier;
 
 		// Clamp the debounce time to reasonable bounds
-		debounceTime = Math.min(MAX_DEBOUNCE_TIME, Math.max(MIN_DEBOUNCE_TIME, debounceTime));
+		debounceTime = Math.min(
+			MAX_DEBOUNCE_TIME,
+			Math.max(MIN_DEBOUNCE_TIME, debounceTime),
+		);
 
 		return debounceTime;
 	}
@@ -262,19 +309,36 @@ export class UserInteractionMonitor {
 	 * Returns the aggressiveness level and the user happiness score that was used to derive it.
 	 * The score is returned to avoid race conditions when logging telemetry.
 	 */
-	public getAggressivenessLevel(): { aggressivenessLevel: AggressivenessLevel; userHappinessScore: number | undefined } {
+	public getAggressivenessLevel(): {
+		aggressivenessLevel: AggressivenessLevel;
+		userHappinessScore: number | undefined;
+	} {
 		// User-facing setting takes priority when explicitly set to a non-default value
-		const userAggressiveness = this._configurationService.getExperimentBasedConfig(ConfigKey.Advanced.InlineEditsAggressiveness, this._experimentationService);
+		const userAggressiveness =
+			this._configurationService.getExperimentBasedConfig(
+				ConfigKey.Advanced.InlineEditsAggressiveness,
+				this._experimentationService,
+			);
 		const userLevel = AggressivenessSetting.toLevel(userAggressiveness);
 		if (userLevel !== undefined) {
-			return { aggressivenessLevel: userLevel, userHappinessScore: undefined };
+			return {
+				aggressivenessLevel: userLevel,
+				userHappinessScore: undefined,
+			};
 		}
 
 		// Team-internal experiment-based override
-		const configuredAggressivenessLevel = this._configurationService.getExperimentBasedConfig(ConfigKey.TeamInternal.InlineEditsXtabAggressivenessLevel, this._experimentationService);
+		const configuredAggressivenessLevel =
+			this._configurationService.getExperimentBasedConfig(
+				ConfigKey.TeamInternal.InlineEditsXtabAggressivenessLevel,
+				this._experimentationService,
+			);
 
 		if (configuredAggressivenessLevel !== undefined) {
-			return { aggressivenessLevel: configuredAggressivenessLevel, userHappinessScore: undefined };
+			return {
+				aggressivenessLevel: configuredAggressivenessLevel,
+				userHappinessScore: undefined,
+			};
 		}
 
 		// Default or unrecognized: fall through to happiness-score-based logic
@@ -292,17 +356,25 @@ export class UserInteractionMonitor {
 	}
 
 	protected _getUserHappinessScoreConfiguration(): UserHappinessScoreConfiguration {
-		const configKey = ConfigKey.TeamInternal.InlineEditsUserHappinessScoreConfigurationString;
-		const configString = this._configurationService.getExperimentBasedConfig(configKey, this._experimentationService);
+		const configKey =
+			ConfigKey.TeamInternal
+				.InlineEditsUserHappinessScoreConfigurationString;
+		const configString =
+			this._configurationService.getExperimentBasedConfig(
+				configKey,
+				this._experimentationService,
+			);
 		if (configString === undefined) {
 			return DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION;
 		}
 
 		try {
 			return parseUserHappinessScoreConfigurationString(configString);
-		}
-		catch (e) {
-			this._logService.error(e, 'Failed to parse user happiness score configuration, using default config');
+		} catch (e) {
+			this._logService.error(
+				e,
+				'Failed to parse user happiness score configuration, using default config',
+			);
 			// Log to telemetry when we fail to parse an experimental config, but still offer the default config to avoid disruption.
 			/* __GDPR__
 				"incorrectNesAdaptiveAggressivenessConfig" : {
@@ -313,12 +385,26 @@ export class UserInteractionMonitor {
 					"configValue": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The invalid JSON string." }
 				}
 			*/
-			this._telemetryService.sendMSFTTelemetryEvent('incorrectNesAdaptiveAggressivenessConfig', { configName: configKey.id, errorMessage: ErrorUtils.toString(ErrorUtils.fromUnknown(e)), configValue: configString });
+			this._telemetryService.sendMSFTTelemetryEvent(
+				'incorrectNesAdaptiveAggressivenessConfig',
+				{
+					configName: configKey.id,
+					errorMessage: ErrorUtils.toString(
+						ErrorUtils.fromUnknown(e),
+					),
+					configValue: configString,
+				},
+			);
 			return DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION;
 		}
 	}
 
-	private _getUserHappinessScore(config: UserHappinessScoreConfiguration): number {
-		return getUserHappinessScore(this._recentUserActionsForAggressiveness, config);
+	private _getUserHappinessScore(
+		config: UserHappinessScoreConfiguration,
+	): number {
+		return getUserHappinessScore(
+			this._recentUserActionsForAggressiveness,
+			config,
+		);
 	}
 }

@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as mobx from 'mobx';
-import { Disposable, toDisposable } from '../../../../src/util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	toDisposable,
+} from '../../../../src/util/vs/base/common/lifecycle';
 import { IDetectedTestOutput } from '../../shared/sharedTypes';
 import { spawnSimulation } from '../utils/simulationExec';
 import { genericEquals } from '../utils/utils';
@@ -17,7 +20,6 @@ import { genericEquals } from '../utils/utils';
  */
 
 export class DetectedTests extends Disposable {
-
 	@mobx.observable
 	public tests: IDetectedTestOutput[] = [];
 
@@ -55,7 +57,7 @@ export class DetectedTests extends Disposable {
 		const args = ['--list-tests', '--json', ...(this._extraArgs?.() ?? [])];
 		const result = await spawnSimulation<IDetectedTestOutput>({
 			args,
-			ignoreNonJSONLines: true
+			ignoreNonJSONLines: true,
 		}).toPromise();
 		result.sort((a, b) => a.name.localeCompare(b.name));
 		return result;

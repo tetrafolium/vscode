@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { Value } from '@sinclair/typebox/value';
-import { IInstantiationService, ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ICompletionsCitationManager } from '../citationManager';
 import { ICompletionsLogTargetService } from '../logger';
 import { ICompletionsTextDocumentManagerService } from '../textDocumentManager';
@@ -17,7 +20,10 @@ function isError(payload: unknown): payload is MatchError {
 	return Value.Check(MatchError, payload);
 }
 
-async function snippyRequest<T>(accessor: ServicesAccessor, requestFn: () => T): Promise<ReturnType<typeof requestFn> | undefined> {
+async function snippyRequest<T>(
+	accessor: ServicesAccessor,
+	requestFn: () => T,
+): Promise<ReturnType<typeof requestFn> | undefined> {
 	const instantiationService = accessor.get(IInstantiationService);
 	const res = await requestFn();
 
@@ -35,20 +41,32 @@ async function snippyRequest<T>(accessor: ServicesAccessor, requestFn: () => T):
 	return res;
 }
 
-function isMatchError<T extends object>(response: T | MatchError): response is MatchError {
+function isMatchError<T extends object>(
+	response: T | MatchError,
+): response is MatchError {
 	return 'kind' in response && response.kind === 'failure';
 }
 
-export async function fetchCitations(accessor: ServicesAccessor, uri: string, completionText: string, insertionOffset: number) {
+export async function fetchCitations(
+	accessor: ServicesAccessor,
+	uri: string,
+	completionText: string,
+	insertionOffset: number,
+) {
 	const instantiationService = accessor.get(IInstantiationService);
 	const logTarget = accessor.get(ICompletionsLogTargetService);
-	const documentManager = accessor.get(ICompletionsTextDocumentManagerService);
+	const documentManager = accessor.get(
+		ICompletionsTextDocumentManagerService,
+	);
 	const citationManager = accessor.get(ICompletionsCitationManager);
 	const insertionDoc = await documentManager.getTextDocument({ uri });
 
 	// If the match occurred in a file that no longer exists, bail.
 	if (!insertionDoc) {
-		codeReferenceLogger.debug(logTarget, `Expected document matching ${uri}, got nothing.`);
+		codeReferenceLogger.debug(
+			logTarget,
+			`Expected document matching ${uri}, got nothing.`,
+		);
 		return;
 	}
 
@@ -75,9 +93,12 @@ export async function fetchCitations(accessor: ServicesAccessor, uri: string, co
 		const textWithoutCompletion = docText.slice(0, insertionOffset);
 		const minLexemeStartOffset = SnippyCompute.offsetLastLexemes(
 			textWithoutCompletion,
-			SnippyCompute.MinTokenLength
+			SnippyCompute.MinTokenLength,
 		);
-		potentialMatchContext = docText.slice(minLexemeStartOffset, insertionOffset + completionText.length);
+		potentialMatchContext = docText.slice(
+			minLexemeStartOffset,
+			insertionOffset + completionText.length,
+		);
 	}
 
 	// Depending on where in the document the suggestion was inserted, we may still not have enough context
@@ -86,9 +107,15 @@ export async function fetchCitations(accessor: ServicesAccessor, uri: string, co
 		return;
 	}
 
-	const matchResponse = await instantiationService.invokeFunction(acc => snippyRequest(acc, () => Snippy.Match(acc, potentialMatchContext)));
+	const matchResponse = await instantiationService.invokeFunction((acc) =>
+		snippyRequest(acc, () => Snippy.Match(acc, potentialMatchContext)),
+	);
 
-	if (!matchResponse || isMatchError(matchResponse) || !matchResponse.snippets.length) {
+	if (
+		!matchResponse ||
+		isMatchError(matchResponse) ||
+		!matchResponse.snippets.length
+	) {
 		// No match response from Snippy
 		codeReferenceLogger.info(logTarget, 'No match found');
 		return;
@@ -98,8 +125,12 @@ export async function fetchCitations(accessor: ServicesAccessor, uri: string, co
 
 	const { snippets } = matchResponse;
 
-	const citationPromises = snippets.map(async snippet => {
-		const response = await instantiationService.invokeFunction(acc => snippyRequest(acc, () => Snippy.FilesForMatch(acc, { cursor: snippet.cursor })));
+	const citationPromises = snippets.map(async (snippet) => {
+		const response = await instantiationService.invokeFunction((acc) =>
+			snippyRequest(acc, () =>
+				Snippy.FilesForMatch(acc, { cursor: snippet.cursor }),
+			),
+		);
 
 		if (!response || isMatchError(response)) {
 			return;
@@ -116,14 +147,16 @@ export async function fetchCitations(accessor: ServicesAccessor, uri: string, co
 	});
 
 	const citations = await Promise.all(citationPromises);
-	const filtered = citations.filter(c => c !== undefined);
+	const filtered = citations.filter((c) => c !== undefined);
 	// This shouldn't ever happen, but we should handle it nonetheless.
 	if (!filtered.length) {
 		return;
 	}
 
 	for (const citation of filtered) {
-		const licensesSet = new Set(Object.keys(citation.licenseStats?.count ?? {}));
+		const licensesSet = new Set(
+			Object.keys(citation.licenseStats?.count ?? {}),
+		);
 
 		if (licensesSet.has('NOASSERTION')) {
 			licensesSet.delete('NOASSERTION');
@@ -133,7 +166,8 @@ export async function fetchCitations(accessor: ServicesAccessor, uri: string, co
 		const allLicenses = Array.from(licensesSet).sort();
 
 		const offsetStart = insertionOffset;
-		const offsetEnd = insertionOffset + citation.match.matched_source.length;
+		const offsetEnd =
+			insertionOffset + citation.match.matched_source.length;
 
 		const start = insertionDoc.positionAt(offsetStart);
 		const end = insertionDoc.positionAt(offsetEnd);
@@ -144,7 +178,7 @@ export async function fetchCitations(accessor: ServicesAccessor, uri: string, co
 			version: insertionDoc.version,
 			location: { start, end },
 			matchingText: potentialMatchContext,
-			details: allLicenses.map(license => ({
+			details: allLicenses.map((license) => ({
 				license,
 				url: citation.match.github_url,
 			})),

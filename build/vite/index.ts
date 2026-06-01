@@ -6,12 +6,12 @@
 /// <reference path="../../src/vs/monaco.d.ts" />
 /* eslint-disable local/code-no-standalone-editor */
 
-export * from '../../src/vs/editor/editor.main';
-import './style.css';
-import * as monaco from '../../src/vs/editor/editor.main';
+export * from "../../src/vs/editor/editor.main";
+import "./style.css";
+import * as monaco from "../../src/vs/editor/editor.main";
 
 globalThis.monaco = monaco;
-const root = document.getElementById('sampleContent');
+const root = document.getElementById("sampleContent");
 if (root) {
 	const d = monaco.editor.createDiffEditor(root);
 

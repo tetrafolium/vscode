@@ -13,14 +13,20 @@ class MockWorkbenchService implements IWorkbenchService {
 
 	constructor(
 		private mockSettings: { [key: string]: any } = {},
-		private mockCommands: { label: string; command: string; keybinding: string }[] = []
-	) { }
+		private mockCommands: {
+			label: string;
+			command: string;
+			keybinding: string;
+		}[] = [],
+	) {}
 
 	getAllExtensions(): readonly any[] {
 		return [];
 	}
 
-	async getAllCommands(): Promise<{ label: string; command: string; keybinding: string }[]> {
+	async getAllCommands(): Promise<
+		{ label: string; command: string; keybinding: string }[]
+	> {
 		return this.mockCommands;
 	}
 
@@ -53,7 +59,7 @@ describe('parseSettingsAndCommands', () => {
 
 	it('handles trailing commas in JSON', async () => {
 		const mockService = new MockWorkbenchService({
-			'editor.fontSize': { value: 14 }
+			'editor.fontSize': { value: 14 },
 		});
 		const codeBlock = `\`\`\`json
 [
@@ -68,14 +74,18 @@ describe('parseSettingsAndCommands', () => {
 
 		const result = await parseSettingsAndCommands(mockService, codeBlock);
 		expect(result).toHaveLength(1);
-		expect(result[0].commandToRun?.command).toBe('workbench.action.openSettings');
-		expect(result[0].commandToRun?.arguments).toEqual(['@id:editor.fontSize ']);
+		expect(result[0].commandToRun?.command).toBe(
+			'workbench.action.openSettings',
+		);
+		expect(result[0].commandToRun?.arguments).toEqual([
+			'@id:editor.fontSize ',
+		]);
 	});
 
 	it('processes settings and creates openSettings command', async () => {
 		const mockService = new MockWorkbenchService({
 			'editor.fontSize': { value: 14 },
-			'workbench.colorTheme': { value: 'Dark+' }
+			'workbench.colorTheme': { value: 'Dark+' },
 		});
 		const codeBlock = `\`\`\`json
 [
@@ -97,14 +107,18 @@ describe('parseSettingsAndCommands', () => {
 		const result = await parseSettingsAndCommands(mockService, codeBlock);
 
 		expect(result).toHaveLength(1);
-		expect(result[0].commandToRun?.command).toBe('workbench.action.openSettings');
-		expect(result[0].commandToRun?.arguments).toEqual(['@id:editor.fontSize @id:workbench.colorTheme ']);
+		expect(result[0].commandToRun?.command).toBe(
+			'workbench.action.openSettings',
+		);
+		expect(result[0].commandToRun?.arguments).toEqual([
+			'@id:editor.fontSize @id:workbench.colorTheme ',
+		]);
 		expect(result[0].commandToRun?.title).toBe('Show in Settings Editor');
 	});
 
 	it('filters out unknown settings', async () => {
 		const mockService = new MockWorkbenchService({
-			'editor.fontSize': { value: 14 }
+			'editor.fontSize': { value: 14 },
 			// 'unknown.setting' is intentionally not included
 		});
 		const codeBlock = `\`\`\`json
@@ -127,12 +141,18 @@ describe('parseSettingsAndCommands', () => {
 		const result = await parseSettingsAndCommands(mockService, codeBlock);
 
 		expect(result).toHaveLength(1);
-		expect(result[0].commandToRun?.arguments).toEqual(['@id:editor.fontSize ']);
+		expect(result[0].commandToRun?.arguments).toEqual([
+			'@id:editor.fontSize ',
+		]);
 	});
 
 	it('returns empty quickOpen for unknown command', async () => {
 		const mockService = new MockWorkbenchService({}, [
-			{ label: 'Show All Commands', command: 'workbench.action.showCommands', keybinding: 'Ctrl+Shift+P' }
+			{
+				label: 'Show All Commands',
+				command: 'workbench.action.showCommands',
+				keybinding: 'Ctrl+Shift+P',
+			},
 		]);
 		const codeBlock = `\`\`\`json
 [
@@ -147,7 +167,9 @@ describe('parseSettingsAndCommands', () => {
 
 		const result = await parseSettingsAndCommands(mockService, codeBlock);
 		expect(result).toHaveLength(1);
-		expect(result[0].commandToRun?.command).toBe('workbench.action.quickOpen');
+		expect(result[0].commandToRun?.command).toBe(
+			'workbench.action.quickOpen',
+		);
 		expect(result[0].commandToRun?.arguments).toEqual(['>']);
 		expect(result[0].commandToRun?.title).toBe('Open Command Palette');
 	});
@@ -169,9 +191,13 @@ describe('parseSettingsAndCommands', () => {
 		const result = await parseSettingsAndCommands(mockService, codeBlock);
 
 		expect(result).toHaveLength(1);
-		expect(result[0].commandToRun?.command).toBe('workbench.extensions.search');
+		expect(result[0].commandToRun?.command).toBe(
+			'workbench.extensions.search',
+		);
 		expect(result[0].commandToRun?.arguments).toEqual(['python']);
-		expect(result[0].commandToRun?.title).toBe('Search Extension Marketplace');
+		expect(result[0].commandToRun?.title).toBe(
+			'Search Extension Marketplace',
+		);
 	});
 
 	it('processes extension install command', async () => {
@@ -191,9 +217,13 @@ describe('parseSettingsAndCommands', () => {
 		const result = await parseSettingsAndCommands(mockService, codeBlock);
 
 		expect(result).toHaveLength(1);
-		expect(result[0].commandToRun?.command).toBe('workbench.extensions.search');
+		expect(result[0].commandToRun?.command).toBe(
+			'workbench.extensions.search',
+		);
 		expect(result[0].commandToRun?.arguments).toEqual(['ms-python.python']);
-		expect(result[0].commandToRun?.title).toBe('Search Extension Marketplace');
+		expect(result[0].commandToRun?.title).toBe(
+			'Search Extension Marketplace',
+		);
 	});
 
 	it('handles extension search with known queries', async () => {
@@ -238,7 +268,11 @@ describe('parseSettingsAndCommands', () => {
 
 	it('processes general command with quickOpen', async () => {
 		const mockService = new MockWorkbenchService({}, [
-			{ label: 'Show All Commands', command: 'workbench.action.showCommands', keybinding: 'Ctrl+Shift+P' }
+			{
+				label: 'Show All Commands',
+				command: 'workbench.action.showCommands',
+				keybinding: 'Ctrl+Shift+P',
+			},
 		]);
 		const codeBlock = `\`\`\`json
 [
@@ -254,14 +288,18 @@ describe('parseSettingsAndCommands', () => {
 		const result = await parseSettingsAndCommands(mockService, codeBlock);
 
 		expect(result).toHaveLength(1);
-		expect(result[0].commandToRun?.command).toBe('workbench.action.quickOpen');
-		expect(result[0].commandToRun?.arguments).toEqual(['>Show All Commands']);
+		expect(result[0].commandToRun?.command).toBe(
+			'workbench.action.quickOpen',
+		);
+		expect(result[0].commandToRun?.arguments).toEqual([
+			'>Show All Commands',
+		]);
 		expect(result[0].commandToRun?.title).toBe('Show in Command Palette');
 	});
 
 	it('handles code block without language specified', async () => {
 		const mockService = new MockWorkbenchService({
-			'editor.fontSize': { value: 14 }
+			'editor.fontSize': { value: 14 },
 		});
 		const codeBlock = `\`\`\`
 [
@@ -277,12 +315,14 @@ describe('parseSettingsAndCommands', () => {
 		const result = await parseSettingsAndCommands(mockService, codeBlock);
 
 		expect(result).toHaveLength(1);
-		expect(result[0].commandToRun?.command).toBe('workbench.action.openSettings');
+		expect(result[0].commandToRun?.command).toBe(
+			'workbench.action.openSettings',
+		);
 	});
 
 	it('handles items without details property', async () => {
 		const mockService = new MockWorkbenchService({
-			'editor.fontSize': { value: 14 }
+			'editor.fontSize': { value: 14 },
 		});
 		const codeBlock = `\`\`\`json
 [
@@ -321,7 +361,7 @@ describe('parseSettingsAndCommands', () => {
 
 	it('handles command with empty label', async () => {
 		const mockService = new MockWorkbenchService({}, [
-			{ label: '', command: 'test.command', keybinding: 'Ctrl+T' }
+			{ label: '', command: 'test.command', keybinding: 'Ctrl+T' },
 		]);
 		const codeBlock = `\`\`\`json
 [

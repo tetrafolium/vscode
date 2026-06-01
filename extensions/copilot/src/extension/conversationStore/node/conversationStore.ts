@@ -6,11 +6,15 @@
 import { IChatSessionService } from '../../../platform/chat/common/chatSessionService';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { TimeoutTimer } from '../../../util/vs/base/common/async';
-import { Disposable, DisposableMap } from '../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	DisposableMap,
+} from '../../../util/vs/base/common/lifecycle';
 import { LRUCache } from '../../../util/vs/base/common/map';
 import { Conversation } from '../../prompt/common/conversation';
 
-export const IConversationStore = createServiceIdentifier<IConversationStore>('IConversationStore');
+export const IConversationStore =
+	createServiceIdentifier<IConversationStore>('IConversationStore');
 
 export interface IConversationStore {
 	readonly _serviceBrand: undefined;
@@ -22,20 +26,24 @@ export interface IConversationStore {
 
 const CLEANUP_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
-export class ConversationStore extends Disposable implements IConversationStore {
+export class ConversationStore
+	extends Disposable
+	implements IConversationStore
+{
 	readonly _serviceBrand: undefined;
 
 	private readonly conversationMap: LRUCache<string, Conversation>;
-	private readonly pendingCleanups: DisposableMap<string, TimeoutTimer> = this._register(new DisposableMap());
+	private readonly pendingCleanups: DisposableMap<string, TimeoutTimer> =
+		this._register(new DisposableMap());
 
-	constructor(
-		@IChatSessionService chatSessionService: IChatSessionService,
-	) {
+	constructor(@IChatSessionService chatSessionService: IChatSessionService) {
 		super();
 		this.conversationMap = new LRUCache<string, Conversation>(1000);
-		this._register(chatSessionService.onDidDisposeChatSession(sessionId => {
-			this._scheduleSessionCleanup(sessionId);
-		}));
+		this._register(
+			chatSessionService.onDidDisposeChatSession((sessionId) => {
+				this._scheduleSessionCleanup(sessionId);
+			}),
+		);
 	}
 
 	addConversation(responseId: string, conversation: Conversation): void {

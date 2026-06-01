@@ -10,5 +10,5 @@ export class PromptWishlist {
 	 * and assemble the prompt text from them.
 	 * @param lineEndingOption The line ending option to use
 	 */
-	constructor(_tokenizer: Tokenizer) { }
+	constructor(_tokenizer: Tokenizer) {}
 }

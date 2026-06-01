@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import { IDisposable } from '../../../../base/common/lifecycle.js';
-import { URI } from '../../../../base/common/uri.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { Event } from "../../../../base/common/event.js";
+import { IDisposable } from "../../../../base/common/lifecycle.js";
+import { URI } from "../../../../base/common/uri.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
 
-export const IWorkbenchMcpGatewayService = createDecorator<IWorkbenchMcpGatewayService>('IWorkbenchMcpGatewayService');
+export const IWorkbenchMcpGatewayService =
+	createDecorator<IWorkbenchMcpGatewayService>("IWorkbenchMcpGatewayService");
 
 /**
  * A single server entry exposed by the gateway at the workbench layer.
@@ -59,5 +60,8 @@ export interface IWorkbenchMcpGatewayService {
 	 * @returns A promise that resolves to the gateway result if successful,
 	 * or `undefined` if the requested environment is not available.
 	 */
-	createGateway(inRemote: boolean, chatSessionResource?: URI): Promise<IMcpGatewayResult | undefined>;
+	createGateway(
+		inRemote: boolean,
+		chatSessionResource?: URI,
+	): Promise<IMcpGatewayResult | undefined>;
 }

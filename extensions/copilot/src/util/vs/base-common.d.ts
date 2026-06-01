@@ -8,7 +8,6 @@
 // Declare types that we probe for to implement util and/or polyfill functions
 
 declare global {
-
 	// --- idle callbacks
 
 	interface IdleDeadline {
@@ -16,27 +15,41 @@ declare global {
 		timeRemaining(): number;
 	}
 
-	function requestIdleCallback(callback: (args: IdleDeadline) => void, options?: { timeout: number }): number;
+	function requestIdleCallback(
+		callback: (args: IdleDeadline) => void,
+		options?: { timeout: number },
+	): number;
 	function cancelIdleCallback(handle: number): void;
-
 
 	// --- timeout / interval (available in all contexts, but different signatures in node.js vs web)
 
-	interface TimeoutHandle { readonly _: never; /* this is a trick that seems needed to prevent direct number assignment */ }
+	interface TimeoutHandle {
+		readonly _: never; /* this is a trick that seems needed to prevent direct number assignment */
+	}
 	type Timeout = TimeoutHandle;
-	function setTimeout(handler: string | Function, timeout?: number, ...arguments: any[]): Timeout;
+	function setTimeout(
+		handler: string | Function,
+		timeout?: number,
+		...arguments: any[]
+	): Timeout;
 	function clearTimeout(timeout: Timeout | undefined): void;
 
-	function setInterval(callback: (...args: unknown[]) => void, delay?: number, ...args: unknown[]): Timeout;
+	function setInterval(
+		callback: (...args: unknown[]) => void,
+		delay?: number,
+		...args: unknown[]
+	): Timeout;
 	function clearInterval(timeout: Timeout | undefined): void;
-
 
 	// --- error
 
 	interface ErrorConstructor {
-		captureStackTrace(targetObject: object, constructorOpt?: Function): void;
+		captureStackTrace(
+			targetObject: object,
+			constructorOpt?: Function,
+		): void;
 		stackTraceLimit: number;
 	}
 }
 
-export { }
+export {};

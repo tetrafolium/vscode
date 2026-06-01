@@ -42,39 +42,46 @@ function mapType(jsonType: string): Type {
 }
 
 // Convert JSON schema → Gemini function declaration
-export function toGeminiFunction(name: string, description: string, schema: ToolJsonSchema): FunctionDeclaration {
+export function toGeminiFunction(
+	name: string,
+	description: string,
+	schema: ToolJsonSchema,
+): FunctionDeclaration {
 	// If schema root is array, we use its items for function parameters
-	const target = schema.type === 'array' && schema.items ? schema.items : schema;
+	const target =
+		schema.type === 'array' && schema.items ? schema.items : schema;
 
 	const parameters: Schema = {
 		type: Type.OBJECT,
 		properties: transformProperties(target.properties || {}),
-		required: Array.isArray(target.required) ? target.required : []
+		required: Array.isArray(target.required) ? target.required : [],
 	};
 
 	return {
 		name,
 		description: description || 'No description provided.',
-		parameters
+		parameters,
 	};
 }
 
 // Recursive transformation for nested properties
-function transformProperties(props: Record<string, ToolJsonSchema>): Record<string, any> {
+function transformProperties(
+	props: Record<string, ToolJsonSchema>,
+): Record<string, any> {
 	const result: Record<string, any> = {};
 
 	for (const [key, value] of Object.entries(props)) {
-
 		// Handle anyOf, oneOf, allOf by picking the first valid entry
-		const effectiveValue =
-			(value.anyOf?.[0] || value.oneOf?.[0] || value.allOf?.[0] || value) as ToolJsonSchema;
-
+		const effectiveValue = (value.anyOf?.[0] ||
+			value.oneOf?.[0] ||
+			value.allOf?.[0] ||
+			value) as ToolJsonSchema;
 
 		const transformed: any = {
 			// If type is undefined, throw an error to avoid incorrect assumptions
 			type: effectiveValue.type
 				? mapType(effectiveValue.type)
-				: Type.OBJECT
+				: Type.OBJECT,
 		};
 
 		if (effectiveValue.description) {
@@ -87,12 +94,17 @@ function transformProperties(props: Record<string, ToolJsonSchema>): Record<stri
 		}
 
 		if (effectiveValue.type === 'object' && effectiveValue.properties) {
-			transformed.properties = transformProperties(effectiveValue.properties);
+			transformed.properties = transformProperties(
+				effectiveValue.properties,
+			);
 			if (effectiveValue.required) {
 				transformed.required = effectiveValue.required;
 			}
 		} else if (effectiveValue.type === 'array' && effectiveValue.items) {
-			const itemType = effectiveValue.items.type === 'object' ? Type.OBJECT : mapType(effectiveValue.items.type ?? 'object');
+			const itemType =
+				effectiveValue.items.type === 'object'
+					? Type.OBJECT
+					: mapType(effectiveValue.items.type ?? 'object');
 			const itemSchema: any = { type: itemType };
 
 			if (effectiveValue.items.description) {
@@ -104,7 +116,9 @@ function transformProperties(props: Record<string, ToolJsonSchema>): Record<stri
 			}
 
 			if (effectiveValue.items.properties) {
-				itemSchema.properties = transformProperties(effectiveValue.items.properties);
+				itemSchema.properties = transformProperties(
+					effectiveValue.items.properties,
+				);
 				if (effectiveValue.items.required) {
 					itemSchema.required = effectiveValue.items.required;
 				}

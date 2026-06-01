@@ -18,7 +18,11 @@ export interface ModelDetailsInfo {
  * Formats model details for display in the chat response footer.
  * Uses credits when available, otherwise falls back to the multiplier suffix.
  */
-export function formatModelDetails(modelName: string, multiplier: number | undefined, creditsUsed: number | undefined): string {
+export function formatModelDetails(
+	modelName: string,
+	multiplier: number | undefined,
+	creditsUsed: number | undefined,
+): string {
 	if (creditsUsed !== undefined) {
 		return formatModelDetailsWithCredits(modelName, creditsUsed);
 	}
@@ -29,8 +33,12 @@ export function formatModelDetails(modelName: string, multiplier: number | undef
  * Formats model details with credit usage for display.
  * Returns a localized string like "Model Name • 5 credits" or "Model Name • 1 credit".
  */
-export function formatModelDetailsWithCredits(modelName: string, creditsUsed: number): string {
-	const formatted = creditsUsed % 1 === 0 ? creditsUsed.toString() : creditsUsed.toFixed(1);
+export function formatModelDetailsWithCredits(
+	modelName: string,
+	creditsUsed: number,
+): string {
+	const formatted =
+		creditsUsed % 1 === 0 ? creditsUsed.toString() : creditsUsed.toFixed(1);
 	return creditsUsed === 1
 		? l10n.t('{0} \u2022 {1} credit', modelName, formatted)
 		: l10n.t('{0} \u2022 {1} credits', modelName, formatted);
@@ -40,6 +48,11 @@ export function formatModelDetailsWithCredits(modelName: string, creditsUsed: nu
  * Formats model details with a multiplier suffix for display.
  * Returns "Model Name • 2x" when multiplier is defined, or just "Model Name" otherwise.
  */
-export function formatModelDetailsWithMultiplier(modelName: string, multiplier: number | undefined): string {
-	return multiplier !== undefined ? l10n.t('{0} \u2022 {1}x', modelName, multiplier) : modelName;
+export function formatModelDetailsWithMultiplier(
+	modelName: string,
+	multiplier: number | undefined,
+): string {
+	return multiplier !== undefined
+		? l10n.t('{0} \u2022 {1}x', modelName, multiplier)
+		: modelName;
 }

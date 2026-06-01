@@ -5,7 +5,10 @@
 
 import { expect, suite, test } from 'vitest';
 import { URI } from '../../../../util/vs/base/common/uri';
-import { convertFileTreeToChatResponseFileTree, listFilesInResponseFileTree } from '../../common/fileTreeParser';
+import {
+	convertFileTreeToChatResponseFileTree,
+	listFilesInResponseFileTree,
+} from '../../common/fileTreeParser';
 
 /**
  * Regression test for the "Create Workspace" path-traversal vulnerability.
@@ -21,7 +24,8 @@ import { convertFileTreeToChatResponseFileTree, listFilesInResponseFileTree } fr
  * in `createWorkspace` guards the actual file write as defense in depth.)
  */
 suite('newWorkspace file tree traversal (PoC)', () => {
-	const generatePreviewURI = (filename: string) => URI.file(`/preview/${filename}`);
+	const generatePreviewURI = (filename: string) =>
+		URI.file(`/preview/${filename}`);
 
 	test('parser does not emit traversal paths from a malicious tree', () => {
 		// The PoC tree embeds a `..` directory that points at the parent folder.
@@ -33,7 +37,10 @@ project
 └── safe.txt
 		`;
 
-		const { chatResponseTree } = convertFileTreeToChatResponseFileTree(fileStructure, generatePreviewURI);
+		const { chatResponseTree } = convertFileTreeToChatResponseFileTree(
+			fileStructure,
+			generatePreviewURI,
+		);
 		const files = listFilesInResponseFileTree(chatResponseTree.value);
 
 		// No produced path may contain a `..` (or other) traversal segment.
@@ -54,6 +61,11 @@ project
 └── safe.txt
 		`;
 
-		expect(() => convertFileTreeToChatResponseFileTree(fileStructure, generatePreviewURI)).toThrow();
+		expect(() =>
+			convertFileTreeToChatResponseFileTree(
+				fileStructure,
+				generatePreviewURI,
+			),
+		).toThrow();
 	});
 });

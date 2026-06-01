@@ -3,32 +3,44 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { URI } from '../../../../../../../base/common/uri.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
-import { ILabelService } from '../../../../../../../platform/label/common/label.js';
-import { ToolConfirmKind } from '../../../../common/chatService/chatService.js';
-import { ChatExternalPathConfirmationContribution, IExternalPathInfo } from '../../../../common/tools/builtinTools/chatExternalPathConfirmation.js';
-import { ILanguageModelToolConfirmationRef } from '../../../../common/tools/languageModelToolsConfirmationService.js';
+import assert from "assert";
+import { URI } from "../../../../../../../base/common/uri.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../../base/test/common/utils.js";
+import { ILabelService } from "../../../../../../../platform/label/common/label.js";
+import { ToolConfirmKind } from "../../../../common/chatService/chatService.js";
+import {
+	ChatExternalPathConfirmationContribution,
+	IExternalPathInfo,
+} from "../../../../common/tools/builtinTools/chatExternalPathConfirmation.js";
+import { ILanguageModelToolConfirmationRef } from "../../../../common/tools/languageModelToolsConfirmationService.js";
 
-suite('ChatExternalPathConfirmationContribution', () => {
+suite("ChatExternalPathConfirmationContribution", () => {
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
 
-	const sessionResource = URI.parse('vscode-chat-session:/session/1');
-	const source = { type: 'internal' as const, label: 'test' };
-	const mockLabelService = { getUriLabel: (uri: URI) => uri.fsPath } as ILabelService;
+	const sessionResource = URI.parse("vscode-chat-session:/session/1");
+	const source = { type: "internal" as const, label: "test" };
+	const mockLabelService = {
+		getUriLabel: (uri: URI) => uri.fsPath,
+	} as ILabelService;
 
-	function createRef(filePath: string, isDirectory = false): ILanguageModelToolConfirmationRef {
+	function createRef(
+		filePath: string,
+		isDirectory = false,
+	): ILanguageModelToolConfirmationRef {
 		return {
-			toolId: 'copilot_readFile',
+			toolId: "copilot_readFile",
 			source,
 			parameters: isDirectory ? { path: filePath } : { filePath },
 			chatSessionResource: sessionResource,
 		};
 	}
 
-	function createContribution(findGitRoot?: (pathUri: URI) => Promise<URI | undefined>): ChatExternalPathConfirmationContribution {
-		const getPathInfo = (ref: ILanguageModelToolConfirmationRef): IExternalPathInfo | undefined => {
+	function createContribution(
+		findGitRoot?: (pathUri: URI) => Promise<URI | undefined>,
+	): ChatExternalPathConfirmationContribution {
+		const getPathInfo = (
+			ref: ILanguageModelToolConfirmationRef,
+		): IExternalPathInfo | undefined => {
 			const params = ref.parameters as { filePath?: string; path?: string };
 			if (params?.filePath) {
 				return { path: params.filePath, isDirectory: false };
@@ -48,21 +60,21 @@ suite('ChatExternalPathConfirmationContribution', () => {
 		return contribution;
 	}
 
-	test('getPreConfirmAction returns undefined with no allowlist entries', () => {
+	test("getPreConfirmAction returns undefined with no allowlist entries", () => {
 		const contribution = createContribution();
-		const ref = createRef('/external/repo/src/file.ts');
+		const ref = createRef("/external/repo/src/file.ts");
 		const result = contribution.getPreConfirmAction(ref);
 		assert.strictEqual(result, undefined);
 	});
 
-	test('allow folder in session works', async () => {
+	test("allow folder in session works", async () => {
 		const contribution = createContribution();
-		const ref = createRef('/external/repo/src/file.ts');
+		const ref = createRef("/external/repo/src/file.ts");
 
 		const actions = contribution.getPreConfirmActions(ref);
 		assert.ok(actions.length >= 1);
 		const folderAction = actions[0];
-		assert.ok(folderAction.label.includes('folder'));
+		assert.ok(folderAction.label.includes("folder"));
 
 		const shouldConfirm = await folderAction.select();
 		assert.strictEqual(shouldConfirm, true);
@@ -72,32 +84,32 @@ suite('ChatExternalPathConfirmationContribution', () => {
 		assert.deepStrictEqual(result, { type: ToolConfirmKind.UserAction });
 	});
 
-	test('allow repo in session - first time resolves git root', async () => {
-		const gitRootUri = URI.file('/external/repo');
+	test("allow repo in session - first time resolves git root", async () => {
+		const gitRootUri = URI.file("/external/repo");
 		const contribution = createContribution(async () => gitRootUri);
 
-		const ref = createRef('/external/repo/src/file.ts');
+		const ref = createRef("/external/repo/src/file.ts");
 
 		const actions = contribution.getPreConfirmActions(ref);
 		// Should have "allow folder" and "allow repo" actions
 		assert.strictEqual(actions.length, 2);
 		const repoAction = actions[1];
-		assert.ok(repoAction.label.includes('repository'));
+		assert.ok(repoAction.label.includes("repository"));
 
 		const shouldConfirm = await repoAction.select();
 		assert.strictEqual(shouldConfirm, true);
 
 		// File in the same repo should now be auto-approved
-		const ref2 = createRef('/external/repo/src/other.ts');
+		const ref2 = createRef("/external/repo/src/other.ts");
 		const result = contribution.getPreConfirmAction(ref2);
 		assert.deepStrictEqual(result, { type: ToolConfirmKind.UserAction });
 	});
 
-	test('allow repo in session - cached git root', async () => {
-		const gitRootUri = URI.file('/external/repo');
+	test("allow repo in session - cached git root", async () => {
+		const gitRootUri = URI.file("/external/repo");
 		const contribution = createContribution(async () => gitRootUri);
 
-		const ref = createRef('/external/repo/src/file.ts');
+		const ref = createRef("/external/repo/src/file.ts");
 
 		// First call - resolves git root
 		const actions1 = contribution.getPreConfirmActions(ref);
@@ -114,10 +126,10 @@ suite('ChatExternalPathConfirmationContribution', () => {
 		assert.strictEqual(shouldConfirm, true);
 	});
 
-	test('allow repo in session - git root not found falls back to folder', async () => {
+	test("allow repo in session - git root not found falls back to folder", async () => {
 		const contribution = createContribution(async () => undefined);
 
-		const ref = createRef('/not-in-repo/file.ts');
+		const ref = createRef("/not-in-repo/file.ts");
 
 		const actions = contribution.getPreConfirmActions(ref);
 		assert.strictEqual(actions.length, 2);
@@ -132,10 +144,10 @@ suite('ChatExternalPathConfirmationContribution', () => {
 		assert.deepStrictEqual(result, { type: ToolConfirmKind.UserAction });
 	});
 
-	test('allow repo in session - hides option after git root not found', async () => {
+	test("allow repo in session - hides option after git root not found", async () => {
 		const contribution = createContribution(async () => undefined);
 
-		const ref = createRef('/not-in-repo/file.ts');
+		const ref = createRef("/not-in-repo/file.ts");
 
 		// First call - resolve returns undefined, caches null
 		const actions1 = contribution.getPreConfirmActions(ref);
@@ -147,66 +159,79 @@ suite('ChatExternalPathConfirmationContribution', () => {
 		assert.strictEqual(actions2.length, 1);
 	});
 
-	test('allow repo in session - different files in same repo', async () => {
-		const gitRootUri = URI.file('/external/repo');
+	test("allow repo in session - different files in same repo", async () => {
+		const gitRootUri = URI.file("/external/repo");
 		const contribution = createContribution(async () => gitRootUri);
 
-		const ref1 = createRef('/external/repo/src/a.ts');
-		const ref2 = createRef('/external/repo/lib/b.ts');
-		const ref3 = createRef('/external/repo/deep/nested/c.ts');
+		const ref1 = createRef("/external/repo/src/a.ts");
+		const ref2 = createRef("/external/repo/lib/b.ts");
+		const ref3 = createRef("/external/repo/deep/nested/c.ts");
 
 		// Allow repo via first file
 		const actions = contribution.getPreConfirmActions(ref1);
 		await actions[1].select();
 
 		// All files in the repo should be auto-approved
-		assert.deepStrictEqual(contribution.getPreConfirmAction(ref1), { type: ToolConfirmKind.UserAction });
-		assert.deepStrictEqual(contribution.getPreConfirmAction(ref2), { type: ToolConfirmKind.UserAction });
-		assert.deepStrictEqual(contribution.getPreConfirmAction(ref3), { type: ToolConfirmKind.UserAction });
+		assert.deepStrictEqual(contribution.getPreConfirmAction(ref1), {
+			type: ToolConfirmKind.UserAction,
+		});
+		assert.deepStrictEqual(contribution.getPreConfirmAction(ref2), {
+			type: ToolConfirmKind.UserAction,
+		});
+		assert.deepStrictEqual(contribution.getPreConfirmAction(ref3), {
+			type: ToolConfirmKind.UserAction,
+		});
 
 		// File outside the repo should NOT be auto-approved
-		const refOutside = createRef('/other/place/file.ts');
+		const refOutside = createRef("/other/place/file.ts");
 		assert.strictEqual(contribution.getPreConfirmAction(refOutside), undefined);
 	});
 
-	test('session allowlist is per-session', async () => {
-		const gitRootUri = URI.file('/external/repo');
+	test("session allowlist is per-session", async () => {
+		const gitRootUri = URI.file("/external/repo");
 		const contribution = createContribution(async () => gitRootUri);
 
-		const ref = createRef('/external/repo/src/file.ts');
+		const ref = createRef("/external/repo/src/file.ts");
 		const actions = contribution.getPreConfirmActions(ref);
 		await actions[1].select();
 
 		// Same file, different session
 		const refOtherSession: ILanguageModelToolConfirmationRef = {
-			toolId: 'copilot_readFile',
+			toolId: "copilot_readFile",
 			source,
-			parameters: { filePath: '/external/repo/src/file.ts' },
-			chatSessionResource: URI.parse('vscode-chat-session:/session/2'),
+			parameters: { filePath: "/external/repo/src/file.ts" },
+			chatSessionResource: URI.parse("vscode-chat-session:/session/2"),
 		};
-		assert.strictEqual(contribution.getPreConfirmAction(refOtherSession), undefined);
+		assert.strictEqual(
+			contribution.getPreConfirmAction(refOtherSession),
+			undefined,
+		);
 	});
 
-	test('reset clears all allowlists', async () => {
-		const gitRootUri = URI.file('/external/repo');
+	test("reset clears all allowlists", async () => {
+		const gitRootUri = URI.file("/external/repo");
 		const contribution = createContribution(async () => gitRootUri);
 
-		const ref = createRef('/external/repo/src/file.ts');
+		const ref = createRef("/external/repo/src/file.ts");
 		const actions = contribution.getPreConfirmActions(ref);
 		await actions[1].select();
 
-		assert.deepStrictEqual(contribution.getPreConfirmAction(ref), { type: ToolConfirmKind.UserAction });
+		assert.deepStrictEqual(contribution.getPreConfirmAction(ref), {
+			type: ToolConfirmKind.UserAction,
+		});
 
 		contribution.reset();
 
 		assert.strictEqual(contribution.getPreConfirmAction(ref), undefined);
 	});
 
-	suite('workingDirectory', () => {
-
-		function createRefWithWorkingDir(filePath: string, workingDirectory: URI): ILanguageModelToolConfirmationRef {
+	suite("workingDirectory", () => {
+		function createRefWithWorkingDir(
+			filePath: string,
+			workingDirectory: URI,
+		): ILanguageModelToolConfirmationRef {
 			return {
-				toolId: 'copilot_readFile',
+				toolId: "copilot_readFile",
 				source,
 				parameters: { filePath },
 				chatSessionResource: sessionResource,
@@ -214,31 +239,45 @@ suite('ChatExternalPathConfirmationContribution', () => {
 			};
 		}
 
-		test('file within workingDirectory is auto-approved', () => {
+		test("file within workingDirectory is auto-approved", () => {
 			const contribution = createContribution();
-			const ref = createRefWithWorkingDir('/my-project/src/file.ts', URI.file('/my-project'));
-			assert.deepStrictEqual(contribution.getPreConfirmAction(ref), { type: ToolConfirmKind.UserAction });
+			const ref = createRefWithWorkingDir(
+				"/my-project/src/file.ts",
+				URI.file("/my-project"),
+			);
+			assert.deepStrictEqual(contribution.getPreConfirmAction(ref), {
+				type: ToolConfirmKind.UserAction,
+			});
 		});
 
-		test('file outside workingDirectory is not auto-approved', () => {
+		test("file outside workingDirectory is not auto-approved", () => {
 			const contribution = createContribution();
-			const ref = createRefWithWorkingDir('/other-project/file.ts', URI.file('/my-project'));
+			const ref = createRefWithWorkingDir(
+				"/other-project/file.ts",
+				URI.file("/my-project"),
+			);
 			assert.strictEqual(contribution.getPreConfirmAction(ref), undefined);
 		});
 
-		test('workingDirectory takes precedence over workspace allowlist', () => {
+		test("workingDirectory takes precedence over workspace allowlist", () => {
 			// Even if workspace allowlist would approve it, workingDirectory is checked exclusively
 			const contribution = createContribution();
-			const ref = createRefWithWorkingDir('/my-project/file.ts', URI.file('/my-project'));
+			const ref = createRefWithWorkingDir(
+				"/my-project/file.ts",
+				URI.file("/my-project"),
+			);
 			const result = contribution.getPreConfirmAction(ref);
 			assert.deepStrictEqual(result, { type: ToolConfirmKind.UserAction });
 		});
 
-		test('workspace-allowed file is not approved when workingDirectory excludes it', () => {
+		test("workspace-allowed file is not approved when workingDirectory excludes it", () => {
 			// The file is NOT in the workingDirectory, so it should not be approved
 			// even though the workspace allowlist is not checked when workingDirectory is set
 			const contribution = createContribution();
-			const ref = createRefWithWorkingDir('/workspace/file.ts', URI.file('/different-dir'));
+			const ref = createRefWithWorkingDir(
+				"/workspace/file.ts",
+				URI.file("/different-dir"),
+			);
 			assert.strictEqual(contribution.getPreConfirmAction(ref), undefined);
 		});
 	});

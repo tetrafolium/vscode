@@ -7,7 +7,8 @@ import { createServiceIdentifier } from '../../../util/common/services';
 import { IDisposable } from '../../../util/vs/base/common/lifecycle';
 import { IConversationOptions } from './conversationOptions';
 
-export const IChatAgentService = createServiceIdentifier<IChatAgentService>('IChatAgentService');
+export const IChatAgentService =
+	createServiceIdentifier<IChatAgentService>('IChatAgentService');
 export interface IChatAgentService {
 	readonly _serviceBrand: undefined;
 	register(options: IConversationOptions): IDisposable;

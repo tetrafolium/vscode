@@ -4,11 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { NotebookCell, NotebookDocument, TextLine } from 'vscode';
-import { DEFAULT_WORD_REGEXP, getWordAtText } from '../../../util/vs/editor/common/core/wordHelper';
+import {
+	DEFAULT_WORD_REGEXP,
+	getWordAtText,
+} from '../../../util/vs/editor/common/core/wordHelper';
 import { Position, Range } from '../../../vscodeTypes';
 import { PositionOffsetTransformer } from '../../editing/common/positionOffsetTransformer';
 import { SnapshotDocumentLine } from '../../editing/common/textDocumentSnapshot';
-
 
 export abstract class AlternativeNotebookDocument {
 	private _transformer: PositionOffsetTransformer | null = null;
@@ -31,12 +33,16 @@ export abstract class AlternativeNotebookDocument {
 		}
 
 		const offsetRange = this.transformer.toOffsetRange(range);
-		return this._text.substring(offsetRange.start, offsetRange.endExclusive);
+		return this._text.substring(
+			offsetRange.start,
+			offsetRange.endExclusive,
+		);
 	}
 
-	constructor(protected readonly _text: string, protected readonly notebook: NotebookDocument) {
-
-	}
+	constructor(
+		protected readonly _text: string,
+		protected readonly notebook: NotebookDocument,
+	) {}
 
 	protected positionToOffset(position: Position): number {
 		position = this.validatePosition(position);
@@ -51,7 +57,9 @@ export abstract class AlternativeNotebookDocument {
 	/**
 	 * Translates a position in the alternative document to the corresponding cell index and position in the notebook document.
 	 */
-	abstract toCellPosition(position: Position): { cell: NotebookCell; position: Position } | undefined;
+	abstract toCellPosition(
+		position: Position,
+	): { cell: NotebookCell; position: Position } | undefined;
 
 	getWordRangeAtPosition(_position: Position): Range | undefined {
 		const position = this.validatePosition(_position);
@@ -60,15 +68,19 @@ export abstract class AlternativeNotebookDocument {
 			position.character + 1,
 			DEFAULT_WORD_REGEXP,
 			this.lines[position.line],
-			0
+			0,
 		);
 
 		if (wordAtText) {
-			return new Range(position.line, wordAtText.startColumn - 1, position.line, wordAtText.endColumn - 1);
+			return new Range(
+				position.line,
+				wordAtText.startColumn - 1,
+				position.line,
+				wordAtText.endColumn - 1,
+			);
 		}
 		return undefined;
 	}
-
 
 	private _lines: string[] | null = null;
 
@@ -98,7 +110,11 @@ export abstract class AlternativeNotebookDocument {
 			throw new Error('Illegal value for `line`');
 		}
 
-		return new SnapshotDocumentLine(line, this.lines[line], line === this.lines.length - 1);
+		return new SnapshotDocumentLine(
+			line,
+			this.lines[line],
+			line === this.lines.length - 1,
+		);
 	}
 	offsetAt(position: Position): number {
 		return this.transformer.getOffset(position);

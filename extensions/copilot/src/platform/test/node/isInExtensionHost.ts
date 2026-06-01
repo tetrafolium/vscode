@@ -5,6 +5,8 @@
 
 // For use with the `--in-ext-host` mode of the simulation works.ace
 
-export const isInExtensionHost = !!process.env.VSCODE_SIMULATION_EXTENSION_ENTRY;
+export const isInExtensionHost =
+	!!process.env.VSCODE_SIMULATION_EXTENSION_ENTRY;
 
-export const extensionHostWorkspaceUri = () => require('vscode').workspace.workspaceFolders![0].uri;
+export const extensionHostWorkspaceUri = () =>
+	require('vscode').workspace.workspaceFolders![0].uri;

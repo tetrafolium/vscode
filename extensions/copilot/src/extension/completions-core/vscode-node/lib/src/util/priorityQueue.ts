@@ -106,13 +106,18 @@ export class PriorityQueue<T> {
 			const rightChildIndex = leftChildIndex + 1;
 
 			// Find the child with higher priority
-			if (leftChildIndex < this.size && this.heap[leftChildIndex].priority > this.heap[maxChildIndex].priority) {
+			if (
+				leftChildIndex < this.size &&
+				this.heap[leftChildIndex].priority >
+					this.heap[maxChildIndex].priority
+			) {
 				maxChildIndex = leftChildIndex;
 			}
 
 			if (
 				rightChildIndex < this.size &&
-				this.heap[rightChildIndex].priority > this.heap[maxChildIndex].priority
+				this.heap[rightChildIndex].priority >
+					this.heap[maxChildIndex].priority
 			) {
 				maxChildIndex = rightChildIndex;
 			}

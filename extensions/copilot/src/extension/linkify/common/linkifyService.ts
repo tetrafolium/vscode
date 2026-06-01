@@ -49,7 +49,7 @@ export interface IContributedLinkifier {
 	linkify(
 		text: string,
 		context: LinkifierContext,
-		token: CancellationToken
+		token: CancellationToken,
 	): Promise<LinkifiedText | undefined>;
 }
 
@@ -58,7 +58,8 @@ export interface LinkifierContext {
 	readonly references: readonly PromptReference[];
 }
 
-export const ILinkifyService = createServiceIdentifier<ILinkifyService>('ILinkifyService');
+export const ILinkifyService =
+	createServiceIdentifier<ILinkifyService>('ILinkifyService');
 
 export interface ILinkifyService {
 	readonly _serviceBrand: undefined;
@@ -66,7 +67,9 @@ export interface ILinkifyService {
 	/**
 	 * Register a new global linkifier that is run for all text.
 	 */
-	registerGlobalLinkifier(linkifier: IContributedLinkifierFactory): IDisposable;
+	registerGlobalLinkifier(
+		linkifier: IContributedLinkifierFactory,
+	): IDisposable;
 
 	/**
 	 * Create a new {@link ILinkifier stateful linkifier}.
@@ -78,7 +81,6 @@ export interface ILinkifyService {
 }
 
 export class LinkifyService implements ILinkifyService {
-
 	declare readonly _serviceBrand: undefined;
 
 	private readonly globalLinkifiers = new Set<IContributedLinkifierFactory>();
@@ -87,10 +89,11 @@ export class LinkifyService implements ILinkifyService {
 		@IFileSystemService private readonly fileSystem: IFileSystemService,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
 		@IEnvService private readonly envService: IEnvService,
-	) {
-	}
+	) {}
 
-	registerGlobalLinkifier(linkifier: IContributedLinkifierFactory): IDisposable {
+	registerGlobalLinkifier(
+		linkifier: IContributedLinkifierFactory,
+	): IDisposable {
 		if (this.globalLinkifiers.has(linkifier)) {
 			throw new Error('Linkifier already registered');
 		}
@@ -110,8 +113,12 @@ export class LinkifyService implements ILinkifyService {
 			new ModelFilePathLinkifier(this.workspaceService, statCache),
 			new FilePathLinkifier(this.workspaceService, statCache),
 		];
-		const additional = (additionalLinkifiers || []).map(x => x.create());
-		const global = [...this.globalLinkifiers].map(x => x.create());
-		return new Linkifier(context, this.envService.uriScheme, [...additional, ...builtInLinkifiers, ...global]);
+		const additional = (additionalLinkifiers || []).map((x) => x.create());
+		const global = [...this.globalLinkifiers].map((x) => x.create());
+		return new Linkifier(context, this.envService.uriScheme, [
+			...additional,
+			...builtInLinkifiers,
+			...global,
+		]);
 	}
 }

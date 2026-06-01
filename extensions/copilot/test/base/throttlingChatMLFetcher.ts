@@ -4,8 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 import type { CancellationToken } from 'vscode';
 import { AbstractChatMLFetcher } from '../../src/extension/prompt/node/chatMLFetcher';
-import { IChatMLFetcher, IFetchMLOptions } from '../../src/platform/chat/common/chatMLFetcher';
-import { ChatFetchResponseType, ChatResponses } from '../../src/platform/chat/common/commonTypes';
+import {
+	IChatMLFetcher,
+	IFetchMLOptions,
+} from '../../src/platform/chat/common/chatMLFetcher';
+import {
+	ChatFetchResponseType,
+	ChatResponses,
+} from '../../src/platform/chat/common/commonTypes';
 import { IConversationOptions } from '../../src/platform/chat/common/conversationOptions';
 import { IThrottledWorkerOptions } from '../../src/util/vs/base/common/async';
 import { SyncDescriptor } from '../../src/util/vs/platform/instantiation/common/descriptors';
@@ -18,10 +24,16 @@ import { PausableThrottledWorker } from './pausableThrottledWorker';
  * **NOTE**: The number of requests running in parallel could be higher than this,
  * this enforces just the maximum number of requests that start.
  */
-export type ThrottlingLimits = Record<string, { limit: number; type: 'RPS' | 'RPM' }>;
+export type ThrottlingLimits = Record<
+	string,
+	{ limit: number; type: 'RPS' | 'RPM' }
+>;
 
 export class ChatModelThrottlingTaskLaunchers {
-	private _throttlers = new Map<string, PausableThrottledWorker<() => Promise<void>>>();
+	private _throttlers = new Map<
+		string,
+		PausableThrottledWorker<() => Promise<void>>
+	>();
 	private readonly _limits: ThrottlingLimits;
 	private _rateLimitBackoff = new Map<string, Promise<void>>();
 	private _inFlightRequests = new Map<string, Set<Promise<void>>>();
@@ -43,18 +55,24 @@ export class ChatModelThrottlingTaskLaunchers {
 			if (!this._limits[model]) {
 				this._limits[model] = { limit: 1, type: 'RPS' };
 			}
-			const limit = this._limits[model].type === 'RPM' ? this._limits[model].limit : (this._limits[model].limit * 60);
+			const limit =
+				this._limits[model].type === 'RPM'
+					? this._limits[model].limit
+					: this._limits[model].limit * 60;
 			const options: IThrottledWorkerOptions = {
 				maxBufferedWork: undefined, // We want to hold as many requests as possible
 				maxWorkChunkSize: 1,
 				waitThrottleDelayBetweenWorkUnits: true,
-				throttleDelay: Math.ceil(60000 / limit)
+				throttleDelay: Math.ceil(60000 / limit),
 			};
-			this._throttlers.set(model, new PausableThrottledWorker(options, async (tasks) => {
-				for (const task of tasks) {
-					await task();
-				}
-			}));
+			this._throttlers.set(
+				model,
+				new PausableThrottledWorker(options, async (tasks) => {
+					for (const task of tasks) {
+						await task();
+					}
+				}),
+			);
 		}
 		return this._throttlers.get(model)!;
 	}
@@ -80,7 +98,11 @@ export class ChatModelThrottlingTaskLaunchers {
 	 * @param baseDelay The base delay in milliseconds (usually from the retryAfter value)
 	 * @returns Whether the request should be retried
 	 */
-	async handleRateLimit(model: string, baseDelay: number, retryCount: number): Promise<boolean> {
+	async handleRateLimit(
+		model: string,
+		baseDelay: number,
+		retryCount: number,
+	): Promise<boolean> {
 		this.pauseProcessing(model);
 		if (retryCount > 3) {
 			return false; // Do not retry after too many attempts.
@@ -96,7 +118,7 @@ export class ChatModelThrottlingTaskLaunchers {
 		const delay = baseDelay * retryCount;
 
 		// Create a new backoff promise and set it as active for this model.
-		const backoffPromise = new Promise<void>(resolve => {
+		const backoffPromise = new Promise<void>((resolve) => {
 			setTimeout(resolve, delay);
 		});
 		this._rateLimitBackoff.set(model, backoffPromise);
@@ -114,7 +136,7 @@ export class ChatModelThrottlingTaskLaunchers {
 	 */
 	async executeWithRateLimitHandling(
 		model: string,
-		requestFn: () => Promise<ChatResponses>
+		requestFn: () => Promise<ChatResponses>,
 	): Promise<ChatResponses> {
 		let result!: ChatResponses;
 		let continueRetrying = true;
@@ -135,10 +157,17 @@ export class ChatModelThrottlingTaskLaunchers {
 					result = await requestFn();
 					if (result.type === ChatFetchResponseType.RateLimited) {
 						// Minimum wait should be 5 seconds
-						result.retryAfter ??= Math.max(5, result.retryAfter || 0);
+						result.retryAfter ??= Math.max(
+							5,
+							result.retryAfter || 0,
+						);
 						// Convert the retryAfter value in seconds to milliseconds.
 						const retryAfterMs = result.retryAfter * 1000;
-						const shouldRetry = await this.handleRateLimit(model, retryAfterMs, retryCount);
+						const shouldRetry = await this.handleRateLimit(
+							model,
+							retryAfterMs,
+							retryCount,
+						);
 						if (shouldRetry) {
 							retryCount++;
 							continueRetrying = true;
@@ -160,7 +189,6 @@ export class ChatModelThrottlingTaskLaunchers {
 }
 
 export class ThrottlingChatMLFetcher extends AbstractChatMLFetcher {
-
 	private readonly _fetcher: IChatMLFetcher;
 
 	constructor(
@@ -173,20 +201,29 @@ export class ThrottlingChatMLFetcher extends AbstractChatMLFetcher {
 		this._fetcher = instantiationService.createInstance(fetcherDescriptor);
 	}
 
-	override async fetchMany(opts: IFetchMLOptions, token: CancellationToken): Promise<ChatResponses> {
-		const taskLauncher = this._modelTaskLaunchers.getThrottler(opts.endpoint.model);
+	override async fetchMany(
+		opts: IFetchMLOptions,
+		token: CancellationToken,
+	): Promise<ChatResponses> {
+		const taskLauncher = this._modelTaskLaunchers.getThrottler(
+			opts.endpoint.model,
+		);
 
 		return new Promise<ChatResponses>((resolve, reject) => {
-			taskLauncher.work([async () => {
-				try {
-					const result = await this._modelTaskLaunchers.executeWithRateLimitHandling(opts.endpoint.model, () =>
-						this._fetcher.fetchMany(opts, token)
-					);
-					resolve(result);
-				} catch (error) {
-					reject(error);
-				}
-			}]);
+			taskLauncher.work([
+				async () => {
+					try {
+						const result =
+							await this._modelTaskLaunchers.executeWithRateLimitHandling(
+								opts.endpoint.model,
+								() => this._fetcher.fetchMany(opts, token),
+							);
+						resolve(result);
+					} catch (error) {
+						reject(error);
+					}
+				},
+			]);
 		});
 	}
 }

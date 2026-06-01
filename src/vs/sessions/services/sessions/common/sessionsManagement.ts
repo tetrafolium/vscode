@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import { IObservable } from '../../../../base/common/observable.js';
-import { URI } from '../../../../base/common/uri.js';
-import { localize } from '../../../../nls.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
-import { IChat, ISession, ISessionType, ISessionWorkspace } from './session.js';
-import { ISendRequestOptions } from './sessionsProvider.js';
+import { Event } from "../../../../base/common/event.js";
+import { IObservable } from "../../../../base/common/observable.js";
+import { URI } from "../../../../base/common/uri.js";
+import { localize } from "../../../../nls.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { RawContextKey } from "../../../../platform/contextkey/common/contextkey.js";
+import { IChat, ISession, ISessionType, ISessionWorkspace } from "./session.js";
+import { ISendRequestOptions } from "./sessionsProvider.js";
 
 /**
  * A (provider, session-type) pair returned by
@@ -41,7 +41,14 @@ export interface ICreateNewSessionOptions {
 	readonly sessionTypeId?: string;
 }
 
-export const ActiveSessionSupportsMultiChatContext = new RawContextKey<boolean>('activeSessionSupportsMultiChat', false, localize('activeSessionSupportsMultiChat', "Whether the active session supports multiple chats"));
+export const ActiveSessionSupportsMultiChatContext = new RawContextKey<boolean>(
+	"activeSessionSupportsMultiChat",
+	false,
+	localize(
+		"activeSessionSupportsMultiChat",
+		"Whether the active session supports multiple chats",
+	),
+);
 
 /**
  * Event fired when sessions change within a provider.
@@ -122,7 +129,9 @@ export interface ISessionsManagementService {
 	 * {@link ISessionsProvider.resolveWorkspace} succeeds. Returns `undefined`
 	 * when no registered provider can resolve the URI.
 	 */
-	resolveWorkspace(workspaceUri: URI): { providerId: string; workspace: ISessionWorkspace } | undefined;
+	resolveWorkspace(
+		workspaceUri: URI,
+	): { providerId: string; workspace: ISessionWorkspace } | undefined;
 
 	/**
 	 * Fires when available session types change (providers added/removed).
@@ -180,7 +189,9 @@ export interface ISessionsManagementService {
 	 * pinned via {@link toggleSessionStickiness} are sticky; the remaining
 	 * non-sticky entries get replaced when new sessions are opened.
 	 */
-	readonly visibleSessions: IObservable<readonly (IActiveSession | undefined)[]>;
+	readonly visibleSessions: IObservable<
+		readonly (IActiveSession | undefined)[]
+	>;
 
 	/**
 	 * Toggle a session's stickiness in the grid. The session keeps its grid
@@ -200,7 +211,12 @@ export interface ISessionsManagementService {
 	 * When `activate` is `true` (default), the inserted session also becomes
 	 * the active session. Pass `false` to leave the active session unchanged.
 	 */
-	insertAt(session: ISession, targetSessionId: string, side: 'left' | 'right', activate?: boolean): void;
+	insertAt(
+		session: ISession,
+		targetSessionId: string,
+		side: "left" | "right",
+		activate?: boolean,
+	): void;
 
 	/**
 	 * Close a session: remove it from the visibility model so it is no longer
@@ -217,7 +233,10 @@ export interface ISessionsManagementService {
 	 * Select an existing session as the active session.
 	 * Sets `isNewChatSession` context to false and opens the active chat belonging to the session.
 	 */
-	openSession(sessionResource: URI, options?: { preserveFocus?: boolean }): Promise<void>;
+	openSession(
+		sessionResource: URI,
+		options?: { preserveFocus?: boolean },
+	): Promise<void>;
 
 	/**
 	 * Open a specific chat within a session.
@@ -248,7 +267,10 @@ export interface ISessionsManagementService {
 	 * omitted, defaults to the chosen provider's first advertised type for
 	 * the folder.
 	 */
-	createNewSession(folderUri: URI, options?: ICreateNewSessionOptions): ISession;
+	createNewSession(
+		folderUri: URI,
+		options?: ICreateNewSessionOptions,
+	): ISession;
 
 	/**
 	 * Unset the new session
@@ -258,12 +280,19 @@ export interface ISessionsManagementService {
 	/**
 	 * Send a request, creating a new chat in the session.
 	 */
-	sendNewChatRequest(session: ISession, options: ISendRequestOptions): Promise<void>;
+	sendNewChatRequest(
+		session: ISession,
+		options: ISendRequestOptions,
+	): Promise<void>;
 
 	/**
 	 * Send a request for an existing chat within a session.
 	 */
-	sendRequest(session: ISession, chat: IChat, options: ISendRequestOptions): Promise<void>;
+	sendRequest(
+		session: ISession,
+		chat: IChat,
+		options: ISendRequestOptions,
+	): Promise<void>;
 
 	/**
 	 * Switch to the new-chat-in-session view.
@@ -296,6 +325,7 @@ export interface ISessionsManagementService {
 	renameChat(session: ISession, chatUri: URI, title: string): Promise<void>;
 }
 
-export const ISessionsManagementService = createDecorator<ISessionsManagementService>('sessionsManagementService');
+export const ISessionsManagementService =
+	createDecorator<ISessionsManagementService>("sessionsManagementService");
 
 //#endregion

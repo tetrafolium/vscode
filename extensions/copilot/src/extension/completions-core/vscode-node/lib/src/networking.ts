@@ -7,16 +7,24 @@
 export * from './networkingTypes';
 
 // Import what we need locally for this module's implementation
-import { ConfigKey, IConfigurationService } from '../../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../../platform/configuration/common/configurationService';
 import { IFetcherService } from '../../../../../platform/networking/common/fetcherService';
 import { IExperimentationService } from '../../../../../platform/telemetry/common/nullExperimentationService';
 import { createServiceIdentifier } from '../../../../../util/common/services';
 import { FetchOptions, Response } from './networkingTypes';
 
-export const ICompletionsFetcherService = createServiceIdentifier<ICompletionsFetcherService>('ICompletionsFetcherService');
+export const ICompletionsFetcherService =
+	createServiceIdentifier<ICompletionsFetcherService>(
+		'ICompletionsFetcherService',
+	);
 export interface ICompletionsFetcherService {
 	readonly _serviceBrand: undefined;
-	getImplementation(): ICompletionsFetcherService | Promise<ICompletionsFetcherService>;
+	getImplementation():
+		| ICompletionsFetcherService
+		| Promise<ICompletionsFetcherService>;
 	fetch(url: string, options: FetchOptions): Promise<Response>;
 	disconnectAll(): Promise<unknown>;
 }
@@ -25,17 +33,25 @@ export class CompletionsFetcher implements ICompletionsFetcherService {
 	declare _serviceBrand: undefined;
 
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 		@IFetcherService private readonly fetcherService: IFetcherService,
-		@IExperimentationService private readonly experimentationService: IExperimentationService
-	) { }
+		@IExperimentationService
+		private readonly experimentationService: IExperimentationService,
+	) {}
 
-	getImplementation(): ICompletionsFetcherService | Promise<ICompletionsFetcherService> {
+	getImplementation():
+		| ICompletionsFetcherService
+		| Promise<ICompletionsFetcherService> {
 		return this;
 	}
 
 	fetch(url: string, options: FetchOptions): Promise<Response> {
-		const useFetcher = this.configurationService.getExperimentBasedConfig(ConfigKey.CompletionsFetcher, this.experimentationService) || undefined;
+		const useFetcher =
+			this.configurationService.getExperimentBasedConfig(
+				ConfigKey.CompletionsFetcher,
+				this.experimentationService,
+			) || undefined;
 		const baseOptions = useFetcher ? { ...options, useFetcher } : options;
 		return this.fetcherService.fetch(url, {
 			...baseOptions,
@@ -66,8 +82,18 @@ export abstract class Fetcher {
 }
 
 export function isInterruptedNetworkError(error: unknown): boolean {
-	if (!(error instanceof Error)) { return false; }
-	if (error.message === 'ERR_HTTP2_GOAWAY_SESSION') { return true; }
-	if (!('code' in error)) { return false; }
-	return error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ERR_HTTP2_INVALID_SESSION';
+	if (!(error instanceof Error)) {
+		return false;
+	}
+	if (error.message === 'ERR_HTTP2_GOAWAY_SESSION') {
+		return true;
+	}
+	if (!('code' in error)) {
+		return false;
+	}
+	return (
+		error.code === 'ECONNRESET' ||
+		error.code === 'ETIMEDOUT' ||
+		error.code === 'ERR_HTTP2_INVALID_SESSION'
+	);
 }

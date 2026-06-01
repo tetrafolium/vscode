@@ -6,7 +6,7 @@
 import assert from 'assert';
 import { afterAll, expect, suite, test } from 'vitest';
 import { _getDocumentableNodeIfOnIdentifier } from '../../node/docGenParsing';
-import { _getCoarseParentScope, } from '../../node/parserImpl';
+import { _getCoarseParentScope } from '../../node/parserImpl';
 import { _dispose, _parse } from '../../node/parserWithCaching';
 import { WASMLanguage } from '../../node/treeSitterLanguages';
 import { allKnownQueries } from '../../node/treeSitterQueries';
@@ -22,7 +22,7 @@ suite('getDocumentableNodeIfOnIdentifier', () => {
 			{
 				startIndex: 0,
 				endIndex: 0,
-			}
+			},
 		);
 		expect(result).toBeUndefined();
 	});
@@ -34,7 +34,7 @@ suite('getDocumentableNodeIfOnIdentifier', () => {
 			{
 				startIndex: 6,
 				endIndex: 7,
-			}
+			},
 		);
 		expect(result).toMatchInlineSnapshot(`
 		{
@@ -46,17 +46,15 @@ suite('getDocumentableNodeIfOnIdentifier', () => {
 		}
 	`);
 		expect(
-			insertRangeMarkers('const x = 1;', [result?.nodeRange!])
-		).toMatchInlineSnapshot(
-			`"const <>x = 1</>;"`
-		);
+			insertRangeMarkers('const x = 1;', [result?.nodeRange!]),
+		).toMatchInlineSnapshot(`"const <>x = 1</>;"`);
 	});
 
 	test('should return the identifier and node range for a range containing an identifier in a definition', async () => {
 		const result = await _getDocumentableNodeIfOnIdentifier(
 			WASMLanguage.TypeScript,
 			'function foo() {}',
-			{ startIndex: 9, endIndex: 12 }
+			{ startIndex: 9, endIndex: 12 },
 		);
 		expect(result).toMatchInlineSnapshot(`
 		{
@@ -68,7 +66,7 @@ suite('getDocumentableNodeIfOnIdentifier', () => {
 		}
 	`);
 		expect(
-			insertRangeMarkers('function foo() {}', [result?.nodeRange!])
+			insertRangeMarkers('function foo() {}', [result?.nodeRange!]),
 		).toMatchInlineSnapshot(`"<>function foo() {}</>"`);
 	});
 
@@ -79,7 +77,7 @@ suite('getDocumentableNodeIfOnIdentifier', () => {
 			{
 				startIndex: 6,
 				endIndex: 7,
-			}
+			},
 		);
 		expect(result).toMatchInlineSnapshot(`
 		{
@@ -96,7 +94,7 @@ suite('getDocumentableNodeIfOnIdentifier', () => {
 		const result = await _getDocumentableNodeIfOnIdentifier(
 			WASMLanguage.TypeScript,
 			'var x: number;',
-			{ startIndex: 4, endIndex: 5 }
+			{ startIndex: 4, endIndex: 5 },
 		);
 		expect(result).toMatchInlineSnapshot(`
 		{
@@ -114,13 +112,13 @@ suite('getParentScope', () => {
 	test('Finding parent node in TypeScript', async () => {
 		const result = await _getCoarseParentScope(
 			WASMLanguage.TypeScript,
-			[
-				'interface IFar {',
-				'  bar(): void;',
-				'  foo(): void;',
-				'}'
-			].join('\n'),
-			{ startPosition: { row: 1, column: 2 }, endPosition: { row: 1, column: 5 } }
+			['interface IFar {', '  bar(): void;', '  foo(): void;', '}'].join(
+				'\n',
+			),
+			{
+				startPosition: { row: 1, column: 2 },
+				endPosition: { row: 1, column: 5 },
+			},
 		);
 		expect(result).toStrictEqual({
 			startPosition: { row: 0, column: 0 },
@@ -144,7 +142,7 @@ suite('getParentScope', () => {
 			{
 				startPosition: { row: 5, column: 5 },
 				endPosition: { row: 5, column: 5 },
-			}
+			},
 		);
 		expect(result).toStrictEqual({
 			startPosition: { row: 4, column: 3 },
@@ -168,7 +166,7 @@ suite('getParentScope', () => {
 			{
 				startPosition: { row: 5, column: 5 },
 				endPosition: { row: 5, column: 5 },
-			}
+			},
 		);
 		expect(result).toStrictEqual({
 			startPosition: { row: 4, column: 1 },
@@ -177,9 +175,7 @@ suite('getParentScope', () => {
 	});
 });
 
-
 suite('All Tree Sitter Queries are valid', () => {
-
 	afterAll(() => _dispose());
 
 	for (const language in allKnownQueries) {

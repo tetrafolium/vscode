@@ -3,33 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as performance from '../../../base/common/performance.js';
-import type * as vscode from 'vscode';
-import { createApiFactoryAndRegisterActors } from '../common/extHost.api.impl.js';
-import { INodeModuleFactory, RequireInterceptor } from '../common/extHostRequireInterceptor.js';
-import { ExtensionActivationTimesBuilder } from '../common/extHostExtensionActivator.js';
-import { connectProxyResolver } from './proxyResolver.js';
-import { AbstractExtHostExtensionService } from '../common/extHostExtensionService.js';
-import { ExtHostDownloadService } from './extHostDownloadService.js';
-import { URI } from '../../../base/common/uri.js';
-import { Schemas } from '../../../base/common/network.js';
-import { IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
-import { ExtensionRuntime } from '../common/extHostTypes.js';
-import { CLIServer } from './extHostCLIServer.js';
-import { realpathSync } from '../../../base/node/pfs.js';
-import { ExtHostConsoleForwarder } from './extHostConsoleForwarder.js';
-import { ExtHostDiskFileSystemProvider } from './extHostDiskFileSystemProvider.js';
-import nodeModule from 'node:module';
-import { assertType } from '../../../base/common/types.js';
-import { generateUuid } from '../../../base/common/uuid.js';
-import { BidirectionalMap } from '../../../base/common/map.js';
-import { DisposableStore, toDisposable } from '../../../base/common/lifecycle.js';
+import * as performance from "../../../base/common/performance.js";
+import type * as vscode from "vscode";
+import { createApiFactoryAndRegisterActors } from "../common/extHost.api.impl.js";
+import {
+	INodeModuleFactory,
+	RequireInterceptor,
+} from "../common/extHostRequireInterceptor.js";
+import { ExtensionActivationTimesBuilder } from "../common/extHostExtensionActivator.js";
+import { connectProxyResolver } from "./proxyResolver.js";
+import { AbstractExtHostExtensionService } from "../common/extHostExtensionService.js";
+import { ExtHostDownloadService } from "./extHostDownloadService.js";
+import { URI } from "../../../base/common/uri.js";
+import { Schemas } from "../../../base/common/network.js";
+import { IExtensionDescription } from "../../../platform/extensions/common/extensions.js";
+import { ExtensionRuntime } from "../common/extHostTypes.js";
+import { CLIServer } from "./extHostCLIServer.js";
+import { realpathSync } from "../../../base/node/pfs.js";
+import { ExtHostConsoleForwarder } from "./extHostConsoleForwarder.js";
+import { ExtHostDiskFileSystemProvider } from "./extHostDiskFileSystemProvider.js";
+import nodeModule from "node:module";
+import { assertType } from "../../../base/common/types.js";
+import { generateUuid } from "../../../base/common/uuid.js";
+import { BidirectionalMap } from "../../../base/common/map.js";
+import {
+	DisposableStore,
+	toDisposable,
+} from "../../../base/common/lifecycle.js";
 const require = nodeModule.createRequire(import.meta.url);
 
 class NodeModuleRequireInterceptor extends RequireInterceptor {
-
 	private static _createDataUri(scriptContent: string): string {
-		return `data:text/javascript;base64,${Buffer.from(scriptContent).toString('base64')}`;
+		return `data:text/javascript;base64,${Buffer.from(scriptContent).toString("base64")}`;
 	}
 
 	private static _vscodeImportFnName = `_VSCODE_IMPORT_VSCODE_API`;
@@ -42,18 +47,22 @@ class NodeModuleRequireInterceptor extends RequireInterceptor {
 
 	protected _installInterceptor(): void {
 		const that = this;
-		const node_module = require('module');
+		const node_module = require("module");
 		const originalLoad = node_module._load;
-		node_module._load = function load(request: string, parent: { filename: string }, isMain: boolean) {
+		node_module._load = function load(
+			request: string,
+			parent: { filename: string },
+			isMain: boolean,
+		) {
 			request = applyAlternatives(request);
 			if (!that._factories.has(request)) {
 				return originalLoad.apply(this, arguments);
 			}
-			return that._factories.get(request)!.load(
-				request,
-				URI.file(realpathSync(parent.filename)),
-				request => originalLoad.apply(this, [request, parent, isMain])
-			);
+			return that._factories
+				.get(request)!
+				.load(request, URI.file(realpathSync(parent.filename)), (request) =>
+					originalLoad.apply(this, [request, parent, isMain]),
+				);
 		};
 
 		const originalLookup = node_module._resolveLookupPaths;
@@ -62,15 +71,30 @@ class NodeModuleRequireInterceptor extends RequireInterceptor {
 		};
 
 		const originalResolveFilename = node_module._resolveFilename;
-		node_module._resolveFilename = function resolveFilename(request: string, parent: unknown, isMain: boolean, options?: { paths?: string[] }) {
-			if (request === 'vsda' && Array.isArray(options?.paths) && options.paths.length === 0) {
+		node_module._resolveFilename = function resolveFilename(
+			request: string,
+			parent: unknown,
+			isMain: boolean,
+			options?: { paths?: string[] },
+		) {
+			if (
+				request === "vsda" &&
+				Array.isArray(options?.paths) &&
+				options.paths.length === 0
+			) {
 				// ESM: ever since we moved to ESM, `require.main` will be `undefined` for extensions
 				// Some extensions have been using `require.resolve('vsda', { paths: require.main.paths })`
 				// to find the `vsda` module in our app root. To be backwards compatible with this pattern,
 				// we help by filling in the `paths` array with the node modules paths of the current module.
 				options.paths = node_module._nodeModulePaths(import.meta.dirname);
 			}
-			return originalResolveFilename.call(this, request, parent, isMain, options);
+			return originalResolveFilename.call(
+				this,
+				request,
+				parent,
+				isMain,
+				options,
+			);
 		};
 
 		const applyAlternatives = (request: string) => {
@@ -88,14 +112,18 @@ class NodeModuleRequireInterceptor extends RequireInterceptor {
 		const apiImportDataUrl = new Map<string, string>();
 
 		// define a global function that can be used to get API instances given a random key
-		Object.defineProperty(globalThis, NodeModuleRequireInterceptor._vscodeImportFnName, {
-			enumerable: false,
-			configurable: false,
-			writable: false,
-			value: (key: string) => {
-				return apiInstances.getKey(key);
-			}
-		});
+		Object.defineProperty(
+			globalThis,
+			NodeModuleRequireInterceptor._vscodeImportFnName,
+			{
+				enumerable: false,
+				configurable: false,
+				writable: false,
+				value: (key: string) => {
+					return apiInstances.getKey(key);
+				},
+			},
+		);
 
 		let apiModuleFactory: INodeModuleFactory | undefined;
 
@@ -103,7 +131,7 @@ class NodeModuleRequireInterceptor extends RequireInterceptor {
 			// Get the vscode-module factory - which is the same logic that's also used by
 			// the CommonJS require interceptor
 			if (!apiModuleFactory) {
-				apiModuleFactory = this._factories.get('vscode');
+				apiModuleFactory = this._factories.get("vscode");
 				assertType(apiModuleFactory);
 			}
 
@@ -111,7 +139,9 @@ class NodeModuleRequireInterceptor extends RequireInterceptor {
 
 			// Get or create the API instance. The interface is per extension and extensions are
 			// looked up by the uri (e.data.url) and path containment.
-			const apiInstance = apiModuleFactory.load('_not_used', uri, () => { throw new Error('CANNOT LOAD MODULE from here.'); });
+			const apiInstance = apiModuleFactory.load("_not_used", uri, () => {
+				throw new Error("CANNOT LOAD MODULE from here.");
+			});
 			let key = apiInstances.get(apiInstance);
 			if (!key) {
 				key = generateUuid();
@@ -121,7 +151,11 @@ class NodeModuleRequireInterceptor extends RequireInterceptor {
 			// Create and cache a data-url which is the import script for the API instance
 			let scriptDataUrlSrc = apiImportDataUrl.get(key);
 			if (!scriptDataUrlSrc) {
-				const jsCode = `const _vscodeInstance = globalThis.${NodeModuleRequireInterceptor._vscodeImportFnName}('${key}');\n\n${Object.keys(apiInstance).map((name => `export const ${name} = _vscodeInstance['${name}'];`)).join('\n')}`;
+				const jsCode = `const _vscodeInstance = globalThis.${NodeModuleRequireInterceptor._vscodeImportFnName}('${key}');\n\n${Object.keys(
+					apiInstance,
+				)
+					.map((name) => `export const ${name} = _vscodeInstance['${name}'];`)
+					.join("\n")}`;
 				scriptDataUrlSrc = NodeModuleRequireInterceptor._createDataUri(jsCode);
 				apiImportDataUrl.set(key, scriptDataUrlSrc);
 			}
@@ -129,7 +163,7 @@ class NodeModuleRequireInterceptor extends RequireInterceptor {
 		};
 		const hooks = nodeModule.registerHooks({
 			resolve: (specifier, context, nextResolve) => {
-				if (specifier !== 'vscode' || !context.parentURL) {
+				if (specifier !== "vscode" || !context.parentURL) {
 					return nextResolve(specifier, context);
 				}
 				const otherUrl = lookup(context.parentURL);
@@ -144,7 +178,6 @@ class NodeModuleRequireInterceptor extends RequireInterceptor {
 }
 
 export class ExtHostExtensionService extends AbstractExtHostExtensionService {
-
 	readonly extensionRuntime = ExtensionRuntime.Node;
 
 	protected async _beforeAlmostReadyToRunExtensions(): Promise<void> {
@@ -152,7 +185,9 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		this._instaService.createInstance(ExtHostConsoleForwarder);
 
 		// initialize API and register actors
-		const extensionApiFactory = this._instaService.invokeFunction(createApiFactoryAndRegisterActors);
+		const extensionApiFactory = this._instaService.invokeFunction(
+			createApiFactoryAndRegisterActors,
+		);
 
 		// Register Download command
 		this._instaService.createInstance(ExtHostDownloadService);
@@ -160,7 +195,7 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		// Register CLI Server for ipc
 		if (this._initData.remote.isRemote && this._initData.remote.authority) {
 			const cliServer = this._instaService.createInstance(CLIServer);
-			process.env['VSCODE_IPC_HOOK_CLI'] = cliServer.ipcHandlePath;
+			process.env["VSCODE_IPC_HOOK_CLI"] = cliServer.ipcHandlePath;
 		}
 
 		// Register local file system shortcut
@@ -170,38 +205,64 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		// `module._load` intercepts `require(...)`.
 		// Module loading tricks based on `module.registerHooks`.
 		// `module.registerHooks` is a generic interceptor that intercepts `require(...)`, `import ...`, and `import(...)`.
-		await this._store.add(this._instaService.createInstance(NodeModuleRequireInterceptor, extensionApiFactory, { mine: this._myRegistry, all: this._globalRegistry }))
+		await this._store
+			.add(
+				this._instaService.createInstance(
+					NodeModuleRequireInterceptor,
+					extensionApiFactory,
+					{ mine: this._myRegistry, all: this._globalRegistry },
+				),
+			)
 			.install();
 
-		performance.mark('code/extHost/didInitAPI');
+		performance.mark("code/extHost/didInitAPI");
 
 		// Do this when extension service exists, but extensions are not being activated yet.
 		const configProvider = await this._extHostConfiguration.getConfigProvider();
-		await connectProxyResolver(this._extHostWorkspace, configProvider, this, this._logService, this._mainThreadTelemetryProxy, this._initData, this._store);
-		performance.mark('code/extHost/didInitProxyResolver');
+		await connectProxyResolver(
+			this._extHostWorkspace,
+			configProvider,
+			this,
+			this._logService,
+			this._mainThreadTelemetryProxy,
+			this._initData,
+			this._store,
+		);
+		performance.mark("code/extHost/didInitProxyResolver");
 	}
 
-	protected _getEntryPoint(extensionDescription: IExtensionDescription): string | undefined {
+	protected _getEntryPoint(
+		extensionDescription: IExtensionDescription,
+	): string | undefined {
 		return extensionDescription.main;
 	}
 
-	private async _doLoadModule<T>(extension: IExtensionDescription | null, module: URI, activationTimesBuilder: ExtensionActivationTimesBuilder, mode: 'esm' | 'cjs'): Promise<T> {
+	private async _doLoadModule<T>(
+		extension: IExtensionDescription | null,
+		module: URI,
+		activationTimesBuilder: ExtensionActivationTimesBuilder,
+		mode: "esm" | "cjs",
+	): Promise<T> {
 		if (module.scheme !== Schemas.file) {
 			throw new Error(`Cannot load URI: '${module}', must be of file-scheme`);
 		}
 		let r: T | null = null;
 		activationTimesBuilder.codeLoadingStart();
-		this._logService.trace(`ExtensionService#loadModule [${mode}] -> ${module.toString(true)}`);
+		this._logService.trace(
+			`ExtensionService#loadModule [${mode}] -> ${module.toString(true)}`,
+		);
 		this._logService.flush();
 		const extensionId = extension?.identifier.value;
 		if (extension) {
-			await this._extHostLocalizationService.initializeLocalizedMessages(extension);
+			await this._extHostLocalizationService.initializeLocalizedMessages(
+				extension,
+			);
 		}
 		try {
 			if (extensionId) {
 				performance.mark(`code/extHost/willLoadExtensionCode/${extensionId}`);
 			}
-			if (mode === 'esm') {
+			if (mode === "esm") {
 				r = <T>await import(module.toString(true));
 			} else {
 				r = <T>require(module.fsPath);
@@ -215,15 +276,35 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		return r;
 	}
 
-	protected async _loadCommonJSModule<T>(extension: IExtensionDescription | null, module: URI, activationTimesBuilder: ExtensionActivationTimesBuilder): Promise<T> {
-		return this._doLoadModule<T>(extension, module, activationTimesBuilder, 'cjs');
+	protected async _loadCommonJSModule<T>(
+		extension: IExtensionDescription | null,
+		module: URI,
+		activationTimesBuilder: ExtensionActivationTimesBuilder,
+	): Promise<T> {
+		return this._doLoadModule<T>(
+			extension,
+			module,
+			activationTimesBuilder,
+			"cjs",
+		);
 	}
 
-	protected async _loadESMModule<T>(extension: IExtensionDescription | null, module: URI, activationTimesBuilder: ExtensionActivationTimesBuilder): Promise<T> {
-		return this._doLoadModule<T>(extension, module, activationTimesBuilder, 'esm');
+	protected async _loadESMModule<T>(
+		extension: IExtensionDescription | null,
+		module: URI,
+		activationTimesBuilder: ExtensionActivationTimesBuilder,
+	): Promise<T> {
+		return this._doLoadModule<T>(
+			extension,
+			module,
+			activationTimesBuilder,
+			"esm",
+		);
 	}
 
-	public async $setRemoteEnvironment(env: { [key: string]: string | null }): Promise<void> {
+	public async $setRemoteEnvironment(env: {
+		[key: string]: string | null;
+	}): Promise<void> {
 		if (!this._initData.remote.isRemote) {
 			return;
 		}

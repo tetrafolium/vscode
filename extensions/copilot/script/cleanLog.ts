@@ -29,7 +29,9 @@ and overwrite the original file with the filtered content.
 `);
 }
 
-function parseArgs(args: string[]): { logTopic: string; filePath: string } | 'help' {
+function parseArgs(
+	args: string[],
+): { logTopic: string; filePath: string } | 'help' {
 	if (args.includes('--help') || args.includes('-h')) {
 		return 'help';
 	}
@@ -48,7 +50,9 @@ function parseArgs(args: string[]): { logTopic: string; filePath: string } | 'he
 		throw new Error('Missing required argument: --log=<topic>');
 	}
 	if (!filePath) {
-		throw new Error('Missing required positional argument: <log-file-path>');
+		throw new Error(
+			'Missing required positional argument: <log-file-path>',
+		);
 	}
 
 	return { logTopic, filePath };
@@ -123,15 +127,23 @@ function main() {
 		const filtered = filterLogByTopic(content, logTopic);
 
 		fs.writeFileSync(absolutePath, filtered, 'utf-8');
-		console.log(`Filtered log file to only include [${logTopic}] entries: ${absolutePath}`);
+		console.log(
+			`Filtered log file to only include [${logTopic}] entries: ${absolutePath}`,
+		);
 	} catch (error) {
 		const err = error as NodeJS.ErrnoException;
 		if (err.code === 'ENOENT') {
-			console.error(`Failed to read log file "${absolutePath}": file does not exist.`);
+			console.error(
+				`Failed to read log file "${absolutePath}": file does not exist.`,
+			);
 		} else if (err.code === 'EACCES' || err.code === 'EPERM') {
-			console.error(`Permission denied while accessing log file "${absolutePath}".`);
+			console.error(
+				`Permission denied while accessing log file "${absolutePath}".`,
+			);
 		} else {
-			console.error(`Failed to process log file "${absolutePath}": ${err.message ?? err}`);
+			console.error(
+				`Failed to process log file "${absolutePath}": ${err.message ?? err}`,
+			);
 		}
 		process.exitCode = 1;
 	}

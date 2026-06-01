@@ -5,7 +5,10 @@
 
 import util from 'node:util';
 
-export function formatLogMessage(category: string, ...extra: unknown[]): string {
+export function formatLogMessage(
+	category: string,
+	...extra: unknown[]
+): string {
 	return `[${category}] ${format(extra)}`;
 }
 

@@ -3,37 +3,60 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getNodeStart, isBlockBodyFinished, isEmptyBlockStart } from '../../../prompt/src/parseBlock';
-import { IPosition, LocationFactory, TextDocumentContents } from '../textDocument';
+import {
+	getNodeStart,
+	isBlockBodyFinished,
+	isEmptyBlockStart,
+} from '../../../prompt/src/parseBlock';
+import {
+	IPosition,
+	LocationFactory,
+	TextDocumentContents,
+} from '../textDocument';
 
 export function parsingBlockFinished(
 	doc: TextDocumentContents,
-	position: IPosition
+	position: IPosition,
 ): (completion: string) => Promise<number | undefined> {
-	const prefix = doc.getText(LocationFactory.range(LocationFactory.position(0, 0), position));
+	const prefix = doc.getText(
+		LocationFactory.range(LocationFactory.position(0, 0), position),
+	);
 	const offset = doc.offsetAt(position);
 	const languageId = doc.detectedLanguageId;
 
-	return completion => isBlockBodyFinished(languageId, prefix, completion, offset);
+	return (completion) =>
+		isBlockBodyFinished(languageId, prefix, completion, offset);
 }
 
-export function isEmptyBlockStartUtil(doc: TextDocumentContents, position: IPosition): Promise<boolean> {
-	return isEmptyBlockStart(doc.detectedLanguageId, doc.getText(), doc.offsetAt(position));
+export function isEmptyBlockStartUtil(
+	doc: TextDocumentContents,
+	position: IPosition,
+): Promise<boolean> {
+	return isEmptyBlockStart(
+		doc.detectedLanguageId,
+		doc.getText(),
+		doc.offsetAt(position),
+	);
 }
 
 export async function getNodeStartUtil(
 	doc: TextDocumentContents,
 	position: IPosition,
-	completion: string
+	completion: string,
 ): Promise<IPosition | undefined> {
-	const prefix = doc.getText(LocationFactory.range(LocationFactory.position(0, 0), position));
+	const prefix = doc.getText(
+		LocationFactory.range(LocationFactory.position(0, 0), position),
+	);
 	const text = prefix + completion;
-	const offset = await getNodeStart(doc.detectedLanguageId, text, doc.offsetAt(position));
+	const offset = await getNodeStart(
+		doc.detectedLanguageId,
+		text,
+		doc.offsetAt(position),
+	);
 	if (offset) {
 		return doc.positionAt(offset);
 	}
 }
-
 
 // TODO: This should probably be language specific
 const continuations = [
@@ -65,7 +88,7 @@ const continuations = [
 		'until',
 		'where',
 		'when',
-	].map(s => s + '\\b')
+	].map((s) => s + '\\b'),
 );
 const continuationRegex = new RegExp(`^(${continuations.join('|')})`);
 
@@ -125,7 +148,10 @@ export interface ContextIndentation {
 /**
  * Return the context indentation corresponding to a given position.
  */
-export function contextIndentation(doc: TextDocumentContents, position: IPosition): ContextIndentation {
+export function contextIndentation(
+	doc: TextDocumentContents,
+	position: IPosition,
+): ContextIndentation {
 	const source = doc.getText();
 	const offset = doc.offsetAt(position);
 	return contextIndentationFromText(source, offset, doc.detectedLanguageId);
@@ -134,10 +160,18 @@ export function contextIndentation(doc: TextDocumentContents, position: IPositio
 /**
  * Return the context indentation corresponding to a given offset in text.
  */
-export function contextIndentationFromText(source: string, offset: number, languageId: string): ContextIndentation {
+export function contextIndentationFromText(
+	source: string,
+	offset: number,
+	languageId: string,
+): ContextIndentation {
 	const prevLines = source.slice(0, offset).split('\n');
 	const nextLines = source.slice(offset).split('\n');
-	function seekNonBlank(lines: string[], start: number, direction: -1 | 1): [number | undefined, number | undefined] {
+	function seekNonBlank(
+		lines: string[],
+		start: number,
+		direction: -1 | 1,
+	): [number | undefined, number | undefined] {
 		let i = start;
 		let ind,
 			indIdx: number | undefined = undefined;
@@ -155,7 +189,8 @@ export function contextIndentationFromText(source: string, offset: number, langu
 			const trimmedLine = lines[i].trim();
 
 			if (trimmedLine.endsWith(`"""`)) {
-				const isSingleLineDocString = trimmedLine.startsWith(`"""`) && trimmedLine !== `"""`;
+				const isSingleLineDocString =
+					trimmedLine.startsWith(`"""`) && trimmedLine !== `"""`;
 				if (!isSingleLineDocString) {
 					// Look backwards for the opening """"
 					i--;
@@ -180,7 +215,11 @@ export function contextIndentationFromText(source: string, offset: number, langu
 		}
 		return [ind, indIdx];
 	}
-	const [current, currentIdx] = seekNonBlank(prevLines, prevLines.length - 1, -1);
+	const [current, currentIdx] = seekNonBlank(
+		prevLines,
+		prevLines.length - 1,
+		-1,
+	);
 	const prev = (() => {
 		if (current === undefined || currentIdx === undefined) {
 			return undefined;
@@ -219,19 +258,26 @@ const OfferNextLineCompletion = false;
 function completionCutOrContinue(
 	completion: string,
 	contextIndentation: ContextIndentation,
-	previewText: string | undefined
+	previewText: string | undefined,
 ): number | 'continue' {
 	const completionLines = completion.split('\n');
 	const isContinuation = previewText !== undefined;
 	const lastLineOfPreview = previewText?.split('\n').pop();
 	let startLine = 0;
 	if (isContinuation) {
-		if (lastLineOfPreview?.trim() !== '' && completionLines[0].trim() !== '') {
+		if (
+			lastLineOfPreview?.trim() !== '' &&
+			completionLines[0].trim() !== ''
+		) {
 			// If we're in the middle of a line after the preview, we should at least finish it.
 			startLine++;
 		}
 	}
-	if (!isContinuation && OfferNextLineCompletion && completionLines[0].trim() === '') {
+	if (
+		!isContinuation &&
+		OfferNextLineCompletion &&
+		completionLines[0].trim() === ''
+	) {
 		// See the comment on `OfferNextLineCompletion` for why we might do this.
 		startLine++;
 	}
@@ -243,14 +289,21 @@ function completionCutOrContinue(
 		// A single line that did not yet end.
 		return 'continue';
 	}
-	const breakIndentation = Math.max(contextIndentation.current, contextIndentation.next ?? 0);
+	const breakIndentation = Math.max(
+		contextIndentation.current,
+		contextIndentation.next ?? 0,
+	);
 	for (let i = startLine; i < completionLines.length; i++) {
 		let line = completionLines[i];
 		if (i === 0 && lastLineOfPreview !== undefined) {
 			line = lastLineOfPreview + line;
 		}
 		const ind = indentationOfLine(line);
-		if (ind !== undefined && (ind < breakIndentation || (ind === breakIndentation && !isContinuationLine(line)))) {
+		if (
+			ind !== undefined &&
+			(ind < breakIndentation ||
+				(ind === breakIndentation && !isContinuationLine(line)))
+		) {
 			return completionLines.slice(0, i).join('\n').length;
 		}
 	}
@@ -264,12 +317,16 @@ function completionCutOrContinue(
  */
 export function indentationBlockFinished(
 	contextIndentation: ContextIndentation,
-	previewText: string | undefined
+	previewText: string | undefined,
 ): (completion: string) => number | undefined {
 	// NOTE: The returned callback is only async because streamChoices needs an
 	// async callback
 	return (completion: string) => {
-		const res = completionCutOrContinue(completion, contextIndentation, previewText);
+		const res = completionCutOrContinue(
+			completion,
+			contextIndentation,
+			previewText,
+		);
 		// streamChoices needs a callback with bad type signature where
 		// undefined really means "continue".
 		return res === 'continue' ? undefined : res;

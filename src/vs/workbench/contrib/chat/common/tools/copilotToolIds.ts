@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 export const enum CopilotToolId {
-	ReadFile = 'copilot_readFile',
+	ReadFile = "copilot_readFile",
 }
 
 export const enum CopilotChatSettingId {
-	Gpt55ReadFileToolEnabled = 'github.copilot.chat.gpt55ReadFileTool.enabled',
+	Gpt55ReadFileToolEnabled = "github.copilot.chat.gpt55ReadFileTool.enabled",
 }

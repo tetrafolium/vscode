@@ -3,15 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { RunOnceScheduler } from '../../../../../base/common/async.js';
-import { Disposable, IDisposable, ReferenceCollection, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { IObservable, observableValue } from '../../../../../base/common/observable.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { IGitHubPRComment, IGitHubPullRequestReviewThread } from '../../common/types.js';
-import { GitHubApiClient } from '../githubApiClient.js';
-import { GitHubPRFetcher } from '../fetchers/githubPRFetcher.js';
+import { RunOnceScheduler } from "../../../../../base/common/async.js";
+import {
+	Disposable,
+	IDisposable,
+	ReferenceCollection,
+	toDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import {
+	IObservable,
+	observableValue,
+} from "../../../../../base/common/observable.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import {
+	IGitHubPRComment,
+	IGitHubPullRequestReviewThread,
+} from "../../common/types.js";
+import { GitHubApiClient } from "../githubApiClient.js";
+import { GitHubPRFetcher } from "../fetchers/githubPRFetcher.js";
 
-const LOG_PREFIX = '[GitHubPullRequestReviewThreadsModel]';
+const LOG_PREFIX = "[GitHubPullRequestReviewThreadsModel]";
 const DEFAULT_POLL_INTERVAL_MS = 60_000;
 
 export class GitHubPullRequestReviewThreadsModelReferenceCollection extends ReferenceCollection<GitHubPullRequestReviewThreadsModel> {
@@ -19,19 +30,37 @@ export class GitHubPullRequestReviewThreadsModelReferenceCollection extends Refe
 
 	constructor(
 		apiClient: GitHubApiClient,
-		@ILogService private readonly _logService: ILogService
+		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
 		this._fetcher = new GitHubPRFetcher(apiClient);
 	}
 
-	protected override createReferencedObject(key: string, owner: string, repo: string, prNumber: number): GitHubPullRequestReviewThreadsModel {
-		this._logService.trace(`[GitHubPullRequestReviewThreadsModelReferenceCollection][createReferencedObject] Creating PR review threads model for ${key}`);
-		return new GitHubPullRequestReviewThreadsModel(owner, repo, prNumber, this._fetcher, this._logService);
+	protected override createReferencedObject(
+		key: string,
+		owner: string,
+		repo: string,
+		prNumber: number,
+	): GitHubPullRequestReviewThreadsModel {
+		this._logService.trace(
+			`[GitHubPullRequestReviewThreadsModelReferenceCollection][createReferencedObject] Creating PR review threads model for ${key}`,
+		);
+		return new GitHubPullRequestReviewThreadsModel(
+			owner,
+			repo,
+			prNumber,
+			this._fetcher,
+			this._logService,
+		);
 	}
 
-	protected override destroyReferencedObject(key: string, object: GitHubPullRequestReviewThreadsModel): void {
-		this._logService.trace(`[GitHubPullRequestReviewThreadsModelReferenceCollection][destroyReferencedObject] Disposing PR review threads model for ${key}`);
+	protected override destroyReferencedObject(
+		key: string,
+		object: GitHubPullRequestReviewThreadsModel,
+	): void {
+		this._logService.trace(
+			`[GitHubPullRequestReviewThreadsModelReferenceCollection][destroyReferencedObject] Disposing PR review threads model for ${key}`,
+		);
 		object.dispose();
 	}
 }
@@ -42,9 +71,12 @@ export class GitHubPullRequestReviewThreadsModelReferenceCollection extends Refe
  * from lightweight pull request metadata.
  */
 export class GitHubPullRequestReviewThreadsModel extends Disposable {
-
-	private readonly _reviewThreads = observableValue<readonly IGitHubPullRequestReviewThread[]>(this, []);
-	readonly reviewThreads: IObservable<readonly IGitHubPullRequestReviewThread[]> = this._reviewThreads;
+	private readonly _reviewThreads = observableValue<
+		readonly IGitHubPullRequestReviewThread[]
+	>(this, []);
+	readonly reviewThreads: IObservable<
+		readonly IGitHubPullRequestReviewThread[]
+	> = this._reviewThreads;
 
 	private _refreshPromise: Promise<void> | undefined = undefined;
 
@@ -60,7 +92,9 @@ export class GitHubPullRequestReviewThreadsModel extends Disposable {
 	) {
 		super();
 
-		this._pollScheduler = this._register(new RunOnceScheduler(() => this._poll(), DEFAULT_POLL_INTERVAL_MS));
+		this._pollScheduler = this._register(
+			new RunOnceScheduler(() => this._poll(), DEFAULT_POLL_INTERVAL_MS),
+		);
 	}
 
 	/**
@@ -76,10 +110,9 @@ export class GitHubPullRequestReviewThreadsModel extends Disposable {
 		}
 
 		if (!this._refreshPromise) {
-			this._refreshPromise = this._refresh()
-				.finally(() => {
-					this._refreshPromise = undefined;
-				});
+			this._refreshPromise = this._refresh().finally(() => {
+				this._refreshPromise = undefined;
+			});
 		}
 
 		return this._refreshPromise;
@@ -87,18 +120,34 @@ export class GitHubPullRequestReviewThreadsModel extends Disposable {
 
 	private async _refresh(): Promise<void> {
 		try {
-			const data = await this._fetcher.getReviewThreads(this.owner, this.repo, this.prNumber);
+			const data = await this._fetcher.getReviewThreads(
+				this.owner,
+				this.repo,
+				this.prNumber,
+			);
 			this._reviewThreads.set(data, undefined);
 		} catch (err) {
-			this._logService.error(`${LOG_PREFIX} Failed to refresh threads for PR #${this.prNumber}:`, err);
+			this._logService.error(
+				`${LOG_PREFIX} Failed to refresh threads for PR #${this.prNumber}:`,
+				err,
+			);
 		}
 	}
 
 	/**
 	 * Post a reply to an existing review thread and refresh threads.
 	 */
-	async postReviewComment(body: string, inReplyTo: number): Promise<IGitHubPRComment> {
-		const comment = await this._fetcher.postReviewComment(this.owner, this.repo, this.prNumber, body, inReplyTo);
+	async postReviewComment(
+		body: string,
+		inReplyTo: number,
+	): Promise<IGitHubPRComment> {
+		const comment = await this._fetcher.postReviewComment(
+			this.owner,
+			this.repo,
+			this.prNumber,
+			body,
+			inReplyTo,
+		);
 		await this.refresh(true);
 		return comment;
 	}

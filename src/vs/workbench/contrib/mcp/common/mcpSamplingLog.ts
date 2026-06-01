@@ -3,12 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { localize } from '../../../../nls.js';
-import { ObservableMemento, observableMemento } from '../../../../platform/observable/common/observableMemento.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IMcpServer } from './mcpTypes.js';
-import { MCP } from './modelContextProtocol.js';
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { localize } from "../../../../nls.js";
+import {
+	ObservableMemento,
+	observableMemento,
+} from "../../../../platform/observable/common/observableMemento.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../platform/storage/common/storage.js";
+import { IMcpServer } from "./mcpTypes.js";
+import { MCP } from "./modelContextProtocol.js";
 
 const enum Constants {
 	SamplingRetentionDays = 7,
@@ -23,18 +30,29 @@ export interface ISamplingStoredData {
 	// Requests per day, max length of `Constants.SamplingRetentionDays`
 	bins: number[];
 	// Last sampling requests/responses
-	lastReqs: { request: MCP.SamplingMessage[]; response: string; at: number; model: string }[];
+	lastReqs: {
+		request: MCP.SamplingMessage[];
+		response: string;
+		at: number;
+		model: string;
+	}[];
 }
 
-const samplingMemento = observableMemento<ReadonlyMap<string, ISamplingStoredData>>({
+const samplingMemento = observableMemento<
+	ReadonlyMap<string, ISamplingStoredData>
+>({
 	defaultValue: new Map(),
-	key: 'mcp.sampling.logs',
-	toStorage: v => JSON.stringify(Array.from(v.entries())),
-	fromStorage: v => new Map(JSON.parse(v)),
+	key: "mcp.sampling.logs",
+	toStorage: (v) => JSON.stringify(Array.from(v.entries())),
+	fromStorage: (v) => new Map(JSON.parse(v)),
 });
 
 export class McpSamplingLog extends Disposable {
-	private readonly _logs: { [K in StorageScope]?: ObservableMemento<ReadonlyMap<string, ISamplingStoredData>> } = {};
+	private readonly _logs: {
+		[K in StorageScope]?: ObservableMemento<
+			ReadonlyMap<string, ISamplingStoredData>
+		>;
+	} = {};
 
 	constructor(
 		@IStorageService private readonly _storageService: IStorageService,
@@ -56,20 +74,26 @@ export class McpSamplingLog extends Disposable {
 		const storage = this._getLogStorageForServer(server);
 		const record = storage.get().get(server.definition.id);
 		if (!record) {
-			return '';
+			return "";
 		}
 
 		const parts: string[] = [];
 		const total = record.bins.reduce((sum, value) => sum + value, 0);
-		parts.push(localize('mcp.sampling.rpd', '{0} total requests in the last 7 days.', total));
+		parts.push(
+			localize(
+				"mcp.sampling.rpd",
+				"{0} total requests in the last 7 days.",
+				total,
+			),
+		);
 
 		parts.push(this._formatRecentRequests(record));
-		return parts.join('\n');
+		return parts.join("\n");
 	}
 
 	private _formatRecentRequests(data: ISamplingStoredData): string {
 		if (!data.lastReqs.length) {
-			return '\nNo recent requests.';
+			return "\nNo recent requests.";
 		}
 
 		const result: string[] = [];
@@ -77,25 +101,30 @@ export class McpSamplingLog extends Disposable {
 			const { request, response, at, model } = data.lastReqs[i];
 			result.push(`\n[${i + 1}] ${new Date(at).toISOString()} ${model}`);
 
-			result.push('  Request:');
+			result.push("  Request:");
 			for (const msg of request) {
 				const role = msg.role.padEnd(9);
-				let content = '';
-				if ('text' in msg.content && msg.content.type === 'text') {
+				let content = "";
+				if ("text" in msg.content && msg.content.type === "text") {
 					content = msg.content.text;
-				} else if ('data' in msg.content) {
+				} else if ("data" in msg.content) {
 					content = `[${msg.content.type} data: ${msg.content.mimeType}]`;
 				}
 				result.push(`    ${role}: ${content}`);
 			}
-			result.push('  Response:');
+			result.push("  Response:");
 			result.push(`    ${response}`);
 		}
 
-		return result.join('\n');
+		return result.join("\n");
 	}
 
-	public async add(server: IMcpServer, request: MCP.SamplingMessage[], response: string, model: string) {
+	public async add(
+		server: IMcpServer,
+		request: MCP.SamplingMessage[],
+		response: string,
+		model: string,
+	) {
 		const now = Date.now();
 		const utcOrdinal = Math.floor(now / Constants.MsPerDay);
 		const storage = this._getLogStorageForServer(server);
@@ -110,7 +139,11 @@ export class McpSamplingLog extends Disposable {
 			};
 		} else {
 			// Shift bins back by daysSinceHead, dropping old days
-			for (let i = 0; i < (utcOrdinal - record.head) && i < Constants.SamplingRetentionDays; i++) {
+			for (
+				let i = 0;
+				i < utcOrdinal - record.head && i < Constants.SamplingRetentionDays;
+				i++
+			) {
 				record.bins.pop();
 				record.bins.unshift(0);
 			}
@@ -129,7 +162,11 @@ export class McpSamplingLog extends Disposable {
 	}
 
 	private _getLogStorageForServer(server: IMcpServer) {
-		const scope = server.readDefinitions().get().collection?.scope ?? StorageScope.WORKSPACE;
-		return this._logs[scope] ??= this._register(samplingMemento(scope, StorageTarget.MACHINE, this._storageService));
+		const scope =
+			server.readDefinitions().get().collection?.scope ??
+			StorageScope.WORKSPACE;
+		return (this._logs[scope] ??= this._register(
+			samplingMemento(scope, StorageTarget.MACHINE, this._storageService),
+		));
 	}
 }

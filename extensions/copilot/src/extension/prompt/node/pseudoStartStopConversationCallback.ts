@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as l10n from '@vscode/l10n';
-import { disableErrorLogging, parse as parsePartialJson } from 'best-effort-json-parser';
+import {
+	disableErrorLogging,
+	parse as parsePartialJson,
+} from 'best-effort-json-parser';
 import type { ChatResponseStream, ChatVulnerability } from 'vscode';
 import { IResponsePart } from '../../../platform/chat/common/chatMLFetcher';
 import { IResponseDelta } from '../../../platform/networking/common/fetch';
@@ -34,19 +37,33 @@ export class PseudoStopStartResponseProcessor implements IResponseProcessor {
 
 	private static readonly _toolStreamThrottleMs = 100;
 	private readonly _lastToolStreamUpdate = new Map<string, number>();
-	private readonly _pendingToolStreamUpdates = new Map<string, { id: string; arguments: string | undefined }>();
+	private readonly _pendingToolStreamUpdates = new Map<
+		string,
+		{ id: string; arguments: string | undefined }
+	>();
 
 	constructor(
 		private readonly stopStartMappings: readonly StartStopMapping[],
-		private readonly processNonReportedDelta: ((deltas: IResponseDelta[]) => string[]) | undefined,
-		private readonly options?: { subagentInvocationId?: string }
-	) { }
+		private readonly processNonReportedDelta:
+			| ((deltas: IResponseDelta[]) => string[])
+			| undefined,
+		private readonly options?: { subagentInvocationId?: string },
+	) {}
 
-	async processResponse(_context: IResponseProcessorContext, inputStream: AsyncIterable<IResponsePart>, outputStream: ChatResponseStream, token: CancellationToken): Promise<void> {
+	async processResponse(
+		_context: IResponseProcessorContext,
+		inputStream: AsyncIterable<IResponsePart>,
+		outputStream: ChatResponseStream,
+		token: CancellationToken,
+	): Promise<void> {
 		return this.doProcessResponse(inputStream, outputStream, token);
 	}
 
-	async doProcessResponse(responseStream: AsyncIterable<IResponsePart>, progress: ChatResponseStream, token: CancellationToken): Promise<void> {
+	async doProcessResponse(
+		responseStream: AsyncIterable<IResponsePart>,
+		progress: ChatResponseStream,
+		token: CancellationToken,
+	): Promise<void> {
 		try {
 			for await (const { delta } of responseStream) {
 				if (token.isCancellationRequested) {
@@ -70,35 +87,64 @@ export class PseudoStopStartResponseProcessor implements IResponseProcessor {
 
 	private _flushPendingToolStreamUpdates(progress: ChatResponseStream): void {
 		for (const update of this._pendingToolStreamUpdates.values()) {
-			progress.updateToolInvocation(update.id, { partialInput: tryParsePartialToolInput(update.arguments) });
+			progress.updateToolInvocation(update.id, {
+				partialInput: tryParsePartialToolInput(update.arguments),
+			});
 		}
 		this._clearPendingToolStreamUpdates();
 	}
 
-	protected applyDeltaToProgress(delta: IResponseDelta, progress: ChatResponseStream) {
+	protected applyDeltaToProgress(
+		delta: IResponseDelta,
+		progress: ChatResponseStream,
+	) {
 		if (delta.thinking) {
 			// Don't send parts that are only encrypted content
-			if (!isEncryptedThinkingDelta(delta.thinking) || delta.thinking.text) {
+			if (
+				!isEncryptedThinkingDelta(delta.thinking) ||
+				delta.thinking.text
+			) {
 				progress.thinkingProgress(delta.thinking);
 				this.thinkingActive = true;
 			}
 		} else if (this.thinkingActive) {
-			progress.thinkingProgress({ id: '', text: '', metadata: { vscodeReasoningDone: true, stopReason: delta.text ? 'text' : 'other' } });
+			progress.thinkingProgress({
+				id: '',
+				text: '',
+				metadata: {
+					vscodeReasoningDone: true,
+					stopReason: delta.text ? 'text' : 'other',
+				},
+			});
 			this.thinkingActive = false;
 		}
 
 		reportCitations(delta, progress);
 
-		const vulnerabilities: ChatVulnerability[] | undefined = delta.codeVulnAnnotations?.map(a => ({ title: a.details.type, description: a.details.description }));
+		const vulnerabilities: ChatVulnerability[] | undefined =
+			delta.codeVulnAnnotations?.map((a) => ({
+				title: a.details.type,
+				description: a.details.description,
+			}));
 		if (vulnerabilities?.length) {
-			progress.markdownWithVulnerabilities(delta.text ?? '', vulnerabilities);
+			progress.markdownWithVulnerabilities(
+				delta.text ?? '',
+				vulnerabilities,
+			);
 		} else if (delta.text) {
 			progress.markdown(delta.text);
 		}
 
 		if (delta.beginToolCalls?.length) {
 			for (const beginCall of delta.beginToolCalls) {
-				progress.beginToolInvocation(beginCall.id ?? '', getContributedToolName(beginCall.name), { subagentInvocationId: this.options?.subagentInvocationId });
+				progress.beginToolInvocation(
+					beginCall.id ?? '',
+					getContributedToolName(beginCall.name),
+					{
+						subagentInvocationId:
+							this.options?.subagentInvocationId,
+					},
+				);
 			}
 		}
 
@@ -110,12 +156,22 @@ export class PseudoStopStartResponseProcessor implements IResponseProcessor {
 				}
 				const toolId = update.id ?? '';
 				const lastUpdate = this._lastToolStreamUpdate.get(toolId) ?? 0;
-				if (now - lastUpdate >= PseudoStopStartResponseProcessor._toolStreamThrottleMs) {
+				if (
+					now - lastUpdate >=
+					PseudoStopStartResponseProcessor._toolStreamThrottleMs
+				) {
 					this._lastToolStreamUpdate.set(toolId, now);
 					this._pendingToolStreamUpdates.delete(toolId);
-					progress.updateToolInvocation(toolId, { partialInput: tryParsePartialToolInput(update.arguments) });
+					progress.updateToolInvocation(toolId, {
+						partialInput: tryParsePartialToolInput(
+							update.arguments,
+						),
+					});
 				} else {
-					this._pendingToolStreamUpdates.set(toolId, { id: toolId, arguments: update.arguments });
+					this._pendingToolStreamUpdates.set(toolId, {
+						id: toolId,
+						arguments: update.arguments,
+					});
 				}
 			}
 		}
@@ -124,29 +180,39 @@ export class PseudoStopStartResponseProcessor implements IResponseProcessor {
 	/**
 	 * Update the stagedDeltasToApply list: consume deltas up to `idx` and return them, and delete `length` after that
 	 */
-	private updateStagedDeltasUpToIndex(stopWordIdx: number, length: number): IResponseDelta[] {
+	private updateStagedDeltasUpToIndex(
+		stopWordIdx: number,
+		length: number,
+	): IResponseDelta[] {
 		const result: IResponseDelta[] = [];
-		for (let deltaOffset = 0; deltaOffset < stopWordIdx + length;) {
+		for (let deltaOffset = 0; deltaOffset < stopWordIdx + length; ) {
 			const delta = this.stagedDeltasToApply.shift();
 			if (delta) {
 				if (deltaOffset + delta.text.length <= stopWordIdx) {
 					// This delta is in the prefix, return it
 					result.push(delta);
-				} else if (deltaOffset < stopWordIdx || deltaOffset < stopWordIdx + length) {
+				} else if (
+					deltaOffset < stopWordIdx ||
+					deltaOffset < stopWordIdx + length
+				) {
 					// This delta goes over the stop word, split it
 					if (deltaOffset < stopWordIdx) {
 						const prefixDelta = { ...delta };
-						prefixDelta.text = delta.text.substring(0, stopWordIdx - deltaOffset);
+						prefixDelta.text = delta.text.substring(
+							0,
+							stopWordIdx - deltaOffset,
+						);
 						result.push(prefixDelta);
 					}
 
 					// This is copying the annotation onto both sides of the split delta, better to be safe
 					const postfixDelta = { ...delta };
-					postfixDelta.text = delta.text.substring((stopWordIdx - deltaOffset) + length);
+					postfixDelta.text = delta.text.substring(
+						stopWordIdx - deltaOffset + length,
+					);
 					if (postfixDelta.text) {
 						this.stagedDeltasToApply.unshift(postfixDelta);
 					}
-
 				} else {
 					// This one is already over the idx, delete it
 				}
@@ -160,8 +226,13 @@ export class PseudoStopStartResponseProcessor implements IResponseProcessor {
 		return result;
 	}
 
-	protected checkForKeyWords(pseudoStopWords: string[], delta: IResponseDelta, applyDeltaToProgress: (delta: IResponseDelta) => void): string | undefined {
-		const textDelta = this.stagedDeltasToApply.map(d => d.text).join('') + delta.text;
+	protected checkForKeyWords(
+		pseudoStopWords: string[],
+		delta: IResponseDelta,
+		applyDeltaToProgress: (delta: IResponseDelta) => void,
+	): string | undefined {
+		const textDelta =
+			this.stagedDeltasToApply.map((d) => d.text).join('') + delta.text;
 
 		// Find out if we have a complete stop word
 		for (const pseudoStopWord of pseudoStopWords) {
@@ -172,8 +243,11 @@ export class PseudoStopStartResponseProcessor implements IResponseProcessor {
 
 			// We have a stop word, so apply the text up to the stop word
 			this.stagedDeltasToApply.push(delta);
-			const deltasToReport = this.updateStagedDeltasUpToIndex(stopWordIndex, pseudoStopWord.length);
-			deltasToReport.forEach(item => applyDeltaToProgress(item));
+			const deltasToReport = this.updateStagedDeltasUpToIndex(
+				stopWordIndex,
+				pseudoStopWord.length,
+			);
+			deltasToReport.forEach((item) => applyDeltaToProgress(item));
 
 			return pseudoStopWord;
 		}
@@ -184,14 +258,17 @@ export class PseudoStopStartResponseProcessor implements IResponseProcessor {
 				const partialStopWord = pseudoStopWord.substring(0, i);
 				if (textDelta.endsWith(partialStopWord)) {
 					// We have a partial stop word, so we must stage the text and wait for the rest
-					this.stagedDeltasToApply = [...this.stagedDeltasToApply, delta];
+					this.stagedDeltasToApply = [
+						...this.stagedDeltasToApply,
+						delta,
+					];
 					return;
 				}
 			}
 		}
 
 		// We have no stop word or partial, so apply the text to the progress and turn
-		[...this.stagedDeltasToApply, delta].forEach(item => {
+		[...this.stagedDeltasToApply, delta].forEach((item) => {
 			applyDeltaToProgress(item);
 		});
 		this.stagedDeltasToApply = [];
@@ -203,37 +280,63 @@ export class PseudoStopStartResponseProcessor implements IResponseProcessor {
 		this.nonReportedDeltas.push(delta);
 	}
 
-	protected applyDelta(delta: IResponseDelta, progress: ChatResponseStream): void {
+	protected applyDelta(
+		delta: IResponseDelta,
+		progress: ChatResponseStream,
+	): void {
 		if (delta.retryReason) {
 			this.stagedDeltasToApply = [];
 			this.currentStartStop = undefined;
 			this.nonReportedDeltas = [];
 			this.thinkingActive = false;
 			this._clearPendingToolStreamUpdates();
-			if (delta.retryReason === 'network_error' || delta.retryReason === 'server_error') {
-				progress.clearToPreviousToolInvocation(ChatResponseClearToPreviousToolInvocationReason.NoReason);
+			if (
+				delta.retryReason === 'network_error' ||
+				delta.retryReason === 'server_error'
+			) {
+				progress.clearToPreviousToolInvocation(
+					ChatResponseClearToPreviousToolInvocationReason.NoReason,
+				);
 			} else if (delta.retryReason === FilterReason.Copyright) {
-				progress.clearToPreviousToolInvocation(ChatResponseClearToPreviousToolInvocationReason.CopyrightContentRetry);
+				progress.clearToPreviousToolInvocation(
+					ChatResponseClearToPreviousToolInvocationReason.CopyrightContentRetry,
+				);
 			} else {
-				progress.clearToPreviousToolInvocation(ChatResponseClearToPreviousToolInvocationReason.FilteredContentRetry);
+				progress.clearToPreviousToolInvocation(
+					ChatResponseClearToPreviousToolInvocationReason.FilteredContentRetry,
+				);
 			}
 			return;
 		}
 		if (this.currentStartStop === undefined) {
-			const stopWord = this.checkForKeyWords(this.stopStartMappings.map(e => e.stop), delta, delta => this.applyDeltaToProgress(delta, progress));
+			const stopWord = this.checkForKeyWords(
+				this.stopStartMappings.map((e) => e.stop),
+				delta,
+				(delta) => this.applyDeltaToProgress(delta, progress),
+			);
 			if (stopWord) {
-				this.currentStartStop = this.stopStartMappings.find(e => e.stop === stopWord);
+				this.currentStartStop = this.stopStartMappings.find(
+					(e) => e.stop === stopWord,
+				);
 			}
 			return;
 		} else {
 			if (!this.currentStartStop.start) {
 				return;
 			}
-			const startWord = this.checkForKeyWords([this.currentStartStop.start], delta, this.postReportRecordProgress.bind(this));
+			const startWord = this.checkForKeyWords(
+				[this.currentStartStop.start],
+				delta,
+				this.postReportRecordProgress.bind(this),
+			);
 			if (startWord) {
 				if (this.processNonReportedDelta) {
-					const postProcessed = this.processNonReportedDelta(this.nonReportedDeltas);
-					postProcessed.forEach((text) => this.applyDeltaToProgress({ text }, progress)); // processNonReportedDelta should not return anything that would have annotations
+					const postProcessed = this.processNonReportedDelta(
+						this.nonReportedDeltas,
+					);
+					postProcessed.forEach((text) =>
+						this.applyDeltaToProgress({ text }, progress),
+					); // processNonReportedDelta should not return anything that would have annotations
 				}
 
 				this.currentStartStop = undefined;
@@ -249,14 +352,22 @@ export class PseudoStopStartResponseProcessor implements IResponseProcessor {
 /**
  * Note- IPCitations (snippy) are disabled in non-prod builds. See packagejson.ts, isProduction.
  */
-export function reportCitations(delta: IResponseDelta, progress: ChatResponseStream): void {
+export function reportCitations(
+	delta: IResponseDelta,
+	progress: ChatResponseStream,
+): void {
 	const citations = delta.ipCitations;
 	if (citations?.length) {
-		citations.forEach(c => {
-			const licenseLabel = c.citations.license === 'NOASSERTION' ?
-				l10n.t('unknown') :
-				c.citations.license;
-			progress.codeCitation(URI.parse(c.citations.url), licenseLabel, c.citations.snippet);
+		citations.forEach((c) => {
+			const licenseLabel =
+				c.citations.license === 'NOASSERTION'
+					? l10n.t('unknown')
+					: c.citations.license;
+			progress.codeCitation(
+				URI.parse(c.citations.url),
+				licenseLabel,
+				c.citations.snippet,
+			);
 		});
 	}
 }

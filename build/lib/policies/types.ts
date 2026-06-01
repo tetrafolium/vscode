@@ -37,31 +37,36 @@ export interface Category {
 }
 
 export const PolicyType = Object.freeze({
-	Boolean: 'boolean',
-	Number: 'number',
-	Object: 'object',
-	String: 'string',
-	StringEnum: 'stringEnum',
+	Boolean: "boolean",
+	Number: "number",
+	Object: "object",
+	String: "string",
+	StringEnum: "stringEnum",
 });
-export type PolicyType = typeof PolicyType[keyof typeof PolicyType];
+export type PolicyType = (typeof PolicyType)[keyof typeof PolicyType];
 
 export const Languages = {
-	'fr': 'fr-fr',
-	'it': 'it-it',
-	'de': 'de-de',
-	'es': 'es-es',
-	'ru': 'ru-ru',
-	'zh-hans': 'zh-cn',
-	'zh-hant': 'zh-tw',
-	'ja': 'ja-jp',
-	'ko': 'ko-kr',
-	'cs': 'cs-cz',
-	'pt-br': 'pt-br',
-	'tr': 'tr-tr',
-	'pl': 'pl-pl',
+	fr: "fr-fr",
+	it: "it-it",
+	de: "de-de",
+	es: "es-es",
+	ru: "ru-ru",
+	"zh-hans": "zh-cn",
+	"zh-hant": "zh-tw",
+	ja: "ja-jp",
+	ko: "ko-kr",
+	cs: "cs-cz",
+	"pt-br": "pt-br",
+	tr: "tr-tr",
+	pl: "pl-pl",
 };
 
-export type LanguageTranslations = { [moduleName: string]: { [nlsKey: string]: string } };
-export type Translations = { languageId: string; languageTranslations: LanguageTranslations }[];
+export type LanguageTranslations = {
+	[moduleName: string]: { [nlsKey: string]: string };
+};
+export type Translations = {
+	languageId: string;
+	languageTranslations: LanguageTranslations;
+}[];
 
 export type Version = [number, number, number];

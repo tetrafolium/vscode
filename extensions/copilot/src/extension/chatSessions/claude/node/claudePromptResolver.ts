@@ -24,7 +24,9 @@ function uriToString(uri: URI): string {
  * - Binary image references become `image` content blocks.
  * - Slash-command prompts (starting with `/`) are passed through unmodified.
  */
-export async function resolvePromptToContentBlocks(request: vscode.ChatRequest): Promise<Anthropic.ContentBlockParam[]> {
+export async function resolvePromptToContentBlocks(
+	request: vscode.ChatRequest,
+): Promise<Anthropic.ContentBlockParam[]> {
 	if (request.prompt.startsWith('/')) {
 		return [{ type: 'text', text: request.prompt }];
 	}
@@ -52,8 +54,8 @@ export async function resolvePromptToContentBlocks(request: vscode.ChatRequest):
 					source: {
 						type: 'base64',
 						data: Buffer.from(data).toString('base64'),
-						media_type: mediaType
-					}
+						media_type: mediaType,
+					},
 				});
 				continue;
 			}
@@ -70,7 +72,10 @@ export async function resolvePromptToContentBlocks(request: vscode.ChatRequest):
 				: undefined;
 		if (valueText) {
 			if (ref.range) {
-				prompt = prompt.slice(0, ref.range[0]) + valueText + prompt.slice(ref.range[1]);
+				prompt =
+					prompt.slice(0, ref.range[0]) +
+					valueText +
+					prompt.slice(ref.range[1]);
 			} else {
 				extraRefsTexts.push(`- ${valueText}`);
 			}
@@ -78,14 +83,17 @@ export async function resolvePromptToContentBlocks(request: vscode.ChatRequest):
 	}
 
 	const contentBlocks: Anthropic.ContentBlockParam[] = [
-		{ type: 'text', text: request.command ? `/${request.command} ${prompt}` : prompt },
+		{
+			type: 'text',
+			text: request.command ? `/${request.command} ${prompt}` : prompt,
+		},
 		...imageBlocks,
 	];
 
 	if (extraRefsTexts.length > 0) {
 		contentBlocks.push({
 			type: 'text',
-			text: `<system-reminder>\nThe user provided the following references:\n${extraRefsTexts.join('\n')}\n\nIMPORTANT: this context may or may not be relevant to your tasks. You should not respond to this context unless it is highly relevant to your task.\n</system-reminder>`
+			text: `<system-reminder>\nThe user provided the following references:\n${extraRefsTexts.join('\n')}\n\nIMPORTANT: this context may or may not be relevant to your tasks. You should not respond to this context unless it is highly relevant to your task.\n</system-reminder>`,
 		});
 	}
 

@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { osIsWindows } from '../helpers/os';
-import { spawnHelper2 } from '../shell/common';
-import { withTimeout } from './shared/utils';
+import { osIsWindows } from "../helpers/os";
+import { spawnHelper2 } from "../shell/common";
+import { withTimeout } from "./shared/utils";
 
 export const cleanOutput = (output: string) =>
 	output
-		.replace(/\r\n/g, '\n') // Replace carriage returns with just a normal return
-		.replace(/\x1b\[\?25h/g, '') // removes cursor character if present
-		.replace(/^\n+/, '') // strips new lines from start of output
-		.replace(/\n+$/, ''); // strips new lines from end of output
+		.replace(/\r\n/g, "\n") // Replace carriage returns with just a normal return
+		.replace(/\x1b\[\?25h/g, "") // removes cursor character if present
+		.replace(/^\n+/, "") // strips new lines from start of output
+		.replace(/\n+$/, ""); // strips new lines from end of output
 
 export const executeCommandTimeout = async (
 	fallbacks: {
@@ -22,7 +22,7 @@ export const executeCommandTimeout = async (
 	input: Fig.ExecuteCommandInput,
 	timeout = osIsWindows() ? 20000 : 5000,
 ): Promise<Fig.ExecuteCommandOutput> => {
-	const command = [input.command, ...input.args].join(' ');
+	const command = [input.command, ...input.args].join(" ");
 	try {
 		console.debug(`About to run shell command '${command}'`);
 		const result = await withTimeout(
@@ -31,7 +31,7 @@ export const executeCommandTimeout = async (
 				env: input.env ?? fallbacks.env,
 				cwd: input.cwd ?? fallbacks.cwd,
 				timeout: input.timeout,
-			})
+			}),
 		);
 
 		const cleanStdout = cleanOutput(result.stdout);
@@ -53,14 +53,14 @@ export const executeCommandTimeout = async (
 	}
 };
 
-
 export const executeCommand: (
 	fallbacks: {
 		cwd: string;
 		env: Record<string, string | undefined>;
 	},
-	args: Fig.ExecuteCommandInput
-) => Promise<Fig.ExecuteCommandOutput> = (fallbacks, args) => executeCommandTimeout(fallbacks, args);
+	args: Fig.ExecuteCommandInput,
+) => Promise<Fig.ExecuteCommandOutput> = (fallbacks, args) =>
+	executeCommandTimeout(fallbacks, args);
 
 export interface IFigExecuteExternals {
 	executeCommand: Fig.ExecuteCommandFunction;

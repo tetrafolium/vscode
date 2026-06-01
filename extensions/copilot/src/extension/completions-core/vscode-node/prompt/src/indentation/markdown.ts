@@ -3,7 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IndentationTree, isBlank, LineNode, TopNode, VirtualNode } from './classes';
+import {
+	IndentationTree,
+	isBlank,
+	LineNode,
+	TopNode,
+	VirtualNode,
+} from './classes';
 import {
 	buildLabelRules,
 	flattenVirtual,
@@ -21,12 +27,15 @@ const _MarkdownLabelRules = {
 	subheading: /^## /,
 	subsubheading: /### /,
 } as const;
-const MarkdownLabelRules: LabelRule<string>[] = buildLabelRules(_MarkdownLabelRules);
+const MarkdownLabelRules: LabelRule<string>[] =
+	buildLabelRules(_MarkdownLabelRules);
 
 /**
  * processMarkdown(parseRaw(text)) is supposed to serve as a superior alternative to parseTree(text, "generic")
  */
-export function processMarkdown<L>(originalTree: IndentationTree<L>): IndentationTree<L | string> {
+export function processMarkdown<L>(
+	originalTree: IndentationTree<L>,
+): IndentationTree<L | string> {
 	let tree = originalTree as IndentationTree<L | string>;
 	labelLines(tree, MarkdownLabelRules);
 
@@ -36,14 +45,26 @@ export function processMarkdown<L>(originalTree: IndentationTree<L>): Indentatio
 	}
 
 	// the top level is ordered according to headings / subheadings / subsubheadings
-	function headingLevel(sub: IndentationTree<L | string>): number | undefined {
+	function headingLevel(
+		sub: IndentationTree<L | string>,
+	): number | undefined {
 		// 0 is the tree itself, so we start at 1
-		if (sub.label === 'heading') { return 1; }
-		if (sub.label === 'subheading') { return 2; }
-		if (sub.label === 'subsubheading') { return 3; }
+		if (sub.label === 'heading') {
+			return 1;
+		}
+		if (sub.label === 'subheading') {
+			return 2;
+		}
+		if (sub.label === 'subsubheading') {
+			return 3;
+		}
 		return undefined;
 	}
-	const currentHierarchy: (TopNode<L | string> | LineNode<L | string> | VirtualNode<L | string>)[] = [tree];
+	const currentHierarchy: (
+		| TopNode<L | string>
+		| LineNode<L | string>
+		| VirtualNode<L | string>
+	)[] = [tree];
 	const oldTreeSubs = [...tree.subs];
 	tree.subs = [];
 	for (const sub of oldTreeSubs) {
@@ -53,7 +74,9 @@ export function processMarkdown<L>(originalTree: IndentationTree<L>): Indentatio
 		} else {
 			// take care of "dangling" levels, e.g. if we have a subsubheading after a heading
 			while (currentHierarchy.length < level) {
-				currentHierarchy.push(currentHierarchy[currentHierarchy.length - 1]);
+				currentHierarchy.push(
+					currentHierarchy[currentHierarchy.length - 1],
+				);
 			}
 			// add this to the parent
 			currentHierarchy[level - 1].subs.push(sub);

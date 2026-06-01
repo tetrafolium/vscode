@@ -5,25 +5,31 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const ISimulationTestContext = createServiceIdentifier<ISimulationTestContext>('ISimulationTestContext');
+export const ISimulationTestContext =
+	createServiceIdentifier<ISimulationTestContext>('ISimulationTestContext');
 
 export interface ISimulationTestContext {
-
 	_serviceBrand: undefined;
 
 	readonly isInSimulationTests: boolean;
 
-	writeFile(filename: string, contents: Uint8Array | string, tag: string): Promise<string>;
+	writeFile(
+		filename: string,
+		contents: Uint8Array | string,
+		tag: string,
+	): Promise<string>;
 }
 
-
 export class NulSimulationTestContext implements ISimulationTestContext {
-
 	_serviceBrand: undefined;
 
 	readonly isInSimulationTests = false;
 
-	async writeFile(filename: string, contents: Uint8Array | string, tag: string): Promise<string> {
+	async writeFile(
+		filename: string,
+		contents: Uint8Array | string,
+		tag: string,
+	): Promise<string> {
 		return '';
 	}
 }

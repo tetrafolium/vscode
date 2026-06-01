@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { UriComponents } from '../../../../base/common/uri.js';
-import { IExtensionDescription } from '../../../../platform/extensions/common/extensions.js';
-import type { Dto } from '../../../services/extensions/common/proxyIdentifier.js';
-import { ITaskExecution } from '../../../contrib/tasks/common/tasks.js';
+import { UriComponents } from "../../../../base/common/uri.js";
+import { IExtensionDescription } from "../../../../platform/extensions/common/extensions.js";
+import type { Dto } from "../../../services/extensions/common/proxyIdentifier.js";
+import { ITaskExecution } from "../../../contrib/tasks/common/tasks.js";
 
 export interface ITaskDefinitionDTO {
 	type: string;
@@ -34,8 +34,7 @@ export interface IExecutionOptionsDTO {
 	env?: { [key: string]: string };
 }
 
-export interface IProcessExecutionOptionsDTO extends IExecutionOptionsDTO {
-}
+export interface IProcessExecutionOptionsDTO extends IExecutionOptionsDTO {}
 
 export interface IProcessExecutionDTO {
 	process: string;
@@ -44,53 +43,55 @@ export interface IProcessExecutionDTO {
 }
 
 export interface IShellQuotingOptionsDTO {
-	escape?: string | {
-		escapeChar: string;
-		charsToEscape: string;
-	};
+	escape?:
+		| string
+		| {
+				escapeChar: string;
+				charsToEscape: string;
+		  };
 	strong?: string;
 	weak?: string;
 }
 
 export enum TaskEventKind {
 	/** Indicates that a task's properties or configuration have changed */
-	Changed = 'changed',
+	Changed = "changed",
 
 	/** Indicates that a task has begun executing */
-	ProcessStarted = 'processStarted',
+	ProcessStarted = "processStarted",
 
 	/** Indicates that a task process has completed */
-	ProcessEnded = 'processEnded',
+	ProcessEnded = "processEnded",
 
 	/** Indicates that a task was terminated, either by user action or by the system */
-	Terminated = 'terminated',
+	Terminated = "terminated",
 
 	/** Indicates that a task has started running */
-	Start = 'start',
+	Start = "start",
 
 	/** Indicates that a task has acquired all needed input/variables to execute */
-	AcquiredInput = 'acquiredInput',
+	AcquiredInput = "acquiredInput",
 
 	/** Indicates that a dependent task has started */
-	DependsOnStarted = 'dependsOnStarted',
+	DependsOnStarted = "dependsOnStarted",
 
 	/** Indicates that a task is actively running/processing */
-	Active = 'active',
+	Active = "active",
 
 	/** Indicates that a task is paused/waiting but not complete */
-	Inactive = 'inactive',
+	Inactive = "inactive",
 
 	/** Indicates that a task has completed fully */
-	End = 'end',
+	End = "end",
 
 	/** Indicates that a task's problem matcher has started */
-	ProblemMatcherStarted = 'problemMatcherStarted',
+	ProblemMatcherStarted = "problemMatcherStarted",
 
 	/** Indicates that a task's problem matcher has ended */
-	ProblemMatcherEnded = 'problemMatcherEnded',
+	ProblemMatcherEnded = "problemMatcherEnded",
 
 	/** Indicates that a task's problem matcher has found errors */
-	ProblemMatcherFoundErrors = 'problemMatcherFoundErrors'
+	ProblemMatcherFoundErrors = "problemMatcherFoundErrors",
 }
 
 export interface IShellExecutionOptionsDTO extends IExecutionOptionsDTO {
@@ -112,7 +113,7 @@ export interface IShellExecutionDTO {
 }
 
 export interface ICustomExecutionDTO {
-	customExecution: 'customExecution';
+	customExecution: "customExecution";
 }
 
 export interface ITaskSourceDTO {
@@ -137,7 +138,11 @@ export interface ITaskGroupDTO {
 export interface ITaskDTO {
 	_id: string;
 	name?: string;
-	execution: IProcessExecutionDTO | IShellExecutionDTO | ICustomExecutionDTO | undefined;
+	execution:
+		| IProcessExecutionDTO
+		| IShellExecutionDTO
+		| ICustomExecutionDTO
+		| undefined;
 	definition: ITaskDefinitionDTO;
 	isBackground?: boolean;
 	source: ITaskSourceDTO;
@@ -168,7 +173,6 @@ export interface ITaskProcessEndedDTO {
 	id: string;
 	exitCode: number | undefined;
 }
-
 
 export interface ITaskFilterDTO {
 	version?: string;

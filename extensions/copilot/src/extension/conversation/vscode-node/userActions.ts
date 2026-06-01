@@ -3,40 +3,62 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import * as vscode from 'vscode';
-import { editsAgentName, getChatParticipantIdFromName } from '../../../platform/chat/common/chatAgents';
+import {
+	editsAgentName,
+	getChatParticipantIdFromName,
+} from '../../../platform/chat/common/chatAgents';
 import { EditSurvivalResult } from '../../../platform/editSurvivalTracking/common/editSurvivalReporter';
 import { IGitService } from '../../../platform/git/common/gitService';
 import { ILanguageDiagnosticsService } from '../../../platform/languages/common/languageDiagnosticsService';
 import { IMultiFileEditInternalTelemetryService } from '../../../platform/multiFileEdit/common/multiFileEditQualityTelemetry';
 import { INotebookService } from '../../../platform/notebook/common/notebookService';
 import type { EditOutcome } from '../../../platform/otel/common/genAiAttributes';
-import { emitEditFeedbackEvent, emitEditHunkActionEvent, emitEditSurvivalEvent, emitInlineDoneEvent, emitUserFeedbackEvent } from '../../../platform/otel/common/genAiEvents';
+import {
+	emitEditFeedbackEvent,
+	emitEditHunkActionEvent,
+	emitEditSurvivalEvent,
+	emitInlineDoneEvent,
+	emitUserFeedbackEvent,
+} from '../../../platform/otel/common/genAiEvents';
 import { GenAiMetrics } from '../../../platform/otel/common/genAiMetrics';
 import { IOTelService } from '../../../platform/otel/common/otelService';
 import { resolveWorkspaceOTelMetadata } from '../../../platform/otel/common/workspaceOTelMetadata';
 import { ISurveyService } from '../../../platform/survey/common/surveyService';
-import { ITelemetryService, TelemetryEventMeasurements, TelemetryEventProperties } from '../../../platform/telemetry/common/telemetry';
+import {
+	ITelemetryService,
+	TelemetryEventMeasurements,
+	TelemetryEventProperties,
+} from '../../../platform/telemetry/common/telemetry';
 import { isNotebookCellOrNotebookChatInput } from '../../../util/common/notebooks';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { Schemas } from '../../../util/vs/base/common/network';
 import { Intent } from '../../common/constants';
 import { IConversationStore } from '../../conversationStore/node/conversationStore';
 import { findDiagnosticsTelemetry } from '../../inlineChat/node/diagnosticsTelemetry';
-import { CopilotInteractiveEditorResponse, InteractionOutcome } from '../../inlineChat/node/promptCraftingTypes';
+import {
+	CopilotInteractiveEditorResponse,
+	InteractionOutcome,
+} from '../../inlineChat/node/promptCraftingTypes';
 import { participantIdToModeName } from '../../intents/common/intents';
 import { EditCodeStepTurnMetaData } from '../../intents/node/editCodeStep';
-import { Conversation, ICopilotChatResultIn } from '../../prompt/common/conversation';
+import {
+	Conversation,
+	ICopilotChatResultIn,
+} from '../../prompt/common/conversation';
 import { IFeedbackReporter } from '../../prompt/node/feedbackReporter';
 import { sendUserActionTelemetry } from '../../prompt/node/telemetry';
 import { resolveModelIdForTelemetry } from './resolveModelId';
 
-export const IUserFeedbackService = createServiceIdentifier<IUserFeedbackService>('IUserFeedbackService');
+export const IUserFeedbackService =
+	createServiceIdentifier<IUserFeedbackService>('IUserFeedbackService');
 export interface IUserFeedbackService {
 	_serviceBrand: undefined;
 
-	handleUserAction(e: vscode.ChatUserActionEvent, participantId: string): void;
+	handleUserAction(
+		e: vscode.ChatUserActionEvent,
+		participantId: string,
+	): void;
 	handleFeedback(e: vscode.ChatResultFeedback, participantId: string): void;
 }
 
@@ -45,25 +67,39 @@ export class UserFeedbackService implements IUserFeedbackService {
 
 	constructor(
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
-		@IConversationStore private readonly conversationStore: IConversationStore,
+		@IConversationStore
+		private readonly conversationStore: IConversationStore,
 		@IFeedbackReporter private readonly feedbackReporter: IFeedbackReporter,
 		@ISurveyService private readonly surveyService: ISurveyService,
-		@ILanguageDiagnosticsService private readonly languageDiagnosticsService: ILanguageDiagnosticsService,
-		@IMultiFileEditInternalTelemetryService private readonly multiFileEditTelemetryService: IMultiFileEditInternalTelemetryService,
+		@ILanguageDiagnosticsService
+		private readonly languageDiagnosticsService: ILanguageDiagnosticsService,
+		@IMultiFileEditInternalTelemetryService
+		private readonly multiFileEditTelemetryService: IMultiFileEditInternalTelemetryService,
 		@INotebookService private readonly notebookService: INotebookService,
 		@IOTelService private readonly otelService: IOTelService,
-		@IGitService private readonly gitService: IGitService
-	) { }
+		@IGitService private readonly gitService: IGitService,
+	) {}
 
 	handleUserAction(e: vscode.ChatUserActionEvent, agentId: string): void {
 		const document = vscode.window.activeTextEditor?.document;
 		const selection = vscode.window.activeTextEditor?.selection;
 
 		const result = e.result as ICopilotChatResultIn;
-		const conversation = result.metadata?.responseId && this.conversationStore.getConversation(result.metadata.responseId);
+		const conversation =
+			result.metadata?.responseId &&
+			this.conversationStore.getConversation(result.metadata.responseId);
 
-		if (typeof conversation === 'object' && conversation.getLatestTurn().getMetadata(CopilotInteractiveEditorResponse)) {
-			this._handleChatUserAction(result.metadata?.sessionId, conversation, e);
+		if (
+			typeof conversation === 'object' &&
+			conversation
+				.getLatestTurn()
+				.getMetadata(CopilotInteractiveEditorResponse)
+		) {
+			this._handleChatUserAction(
+				result.metadata?.sessionId,
+				conversation,
+				e,
+			);
 			return;
 		}
 
@@ -84,17 +120,21 @@ export class UserFeedbackService implements IUserFeedbackService {
 						"command": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": false, "comment": "The command used for the chat participant." }
 					}
 				*/
-				this.telemetryService.sendMSFTTelemetryEvent('panel.action.copy', {
-					languageId: document?.languageId,
-					requestId: result.metadata?.responseId,
-					participant: agentId,
-					command: result.metadata?.command,
-				}, {
-					codeBlockIndex: e.action.codeBlockIndex,
-					copyType: e.action.copyKind,
-					characterCount: e.action.copiedCharacters,
-					lineCount: e.action.copiedText.split('\n').length,
-				});
+				this.telemetryService.sendMSFTTelemetryEvent(
+					'panel.action.copy',
+					{
+						languageId: document?.languageId,
+						requestId: result.metadata?.responseId,
+						participant: agentId,
+						command: result.metadata?.command,
+					},
+					{
+						codeBlockIndex: e.action.codeBlockIndex,
+						copyType: e.action.copyKind,
+						characterCount: e.action.copiedCharacters,
+						lineCount: e.action.copiedText.split('\n').length,
+					},
+				);
 				GenAiMetrics.incrementUserActionCount(this.otelService, 'copy');
 				break;
 			case 'insert':
@@ -111,17 +151,24 @@ export class UserFeedbackService implements IUserFeedbackService {
 						"newFile": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "If the insert was done in a new file." }
 					}
 				*/
-				this.telemetryService.sendMSFTTelemetryEvent('panel.action.insert', {
-					languageId: document?.languageId,
-					requestId: result.metadata?.responseId,
-					participant: agentId,
-					command: result.metadata?.command,
-				}, {
-					codeBlockIndex: e.action.codeBlockIndex,
-					characterCount: e.action.totalCharacters,
-					newFile: e.action.newFile ? 1 : 0
-				});
-				GenAiMetrics.incrementUserActionCount(this.otelService, 'insert');
+				this.telemetryService.sendMSFTTelemetryEvent(
+					'panel.action.insert',
+					{
+						languageId: document?.languageId,
+						requestId: result.metadata?.responseId,
+						participant: agentId,
+						command: result.metadata?.command,
+					},
+					{
+						codeBlockIndex: e.action.codeBlockIndex,
+						characterCount: e.action.totalCharacters,
+						newFile: e.action.newFile ? 1 : 0,
+					},
+				);
+				GenAiMetrics.incrementUserActionCount(
+					this.otelService,
+					'insert',
+				);
 				break;
 			case 'followUp':
 				/* __GDPR__
@@ -134,29 +181,48 @@ export class UserFeedbackService implements IUserFeedbackService {
 						"command": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The command used for the chat participant." }
 					}
 				*/
-				this.telemetryService.sendMSFTTelemetryEvent('panel.action.followup', {
-					languageId: document?.languageId,
-					requestId: result.metadata?.responseId,
-					participant: agentId,
-					command: result.metadata?.command,
-				});
-				GenAiMetrics.incrementUserActionCount(this.otelService, 'followup');
+				this.telemetryService.sendMSFTTelemetryEvent(
+					'panel.action.followup',
+					{
+						languageId: document?.languageId,
+						requestId: result.metadata?.responseId,
+						participant: agentId,
+						command: result.metadata?.command,
+					},
+				);
+				GenAiMetrics.incrementUserActionCount(
+					this.otelService,
+					'followup',
+				);
 				break;
 			case 'bug':
 				if (conversation) {
-					this.feedbackReporter.reportChat(conversation.getLatestTurn());
+					this.feedbackReporter.reportChat(
+						conversation.getLatestTurn(),
+					);
 				} else {
-					vscode.window.showInformationMessage('Conversation not found, is it restored? Please try again.');
+					vscode.window.showInformationMessage(
+						'Conversation not found, is it restored? Please try again.',
+					);
 				}
 				break;
 			case 'chatEditingSessionAction':
 				if (conversation instanceof Conversation) {
-					const editCodeStep = conversation.getLatestTurn().getMetadata(EditCodeStepTurnMetaData)?.value;
-					if (editCodeStep && (e.action.outcome === vscode.ChatEditingSessionActionOutcome.Accepted || e.action.outcome === vscode.ChatEditingSessionActionOutcome.Rejected)
+					const editCodeStep = conversation
+						.getLatestTurn()
+						.getMetadata(EditCodeStepTurnMetaData)?.value;
+					if (
+						editCodeStep &&
+						(e.action.outcome ===
+							vscode.ChatEditingSessionActionOutcome.Accepted ||
+							e.action.outcome ===
+								vscode.ChatEditingSessionActionOutcome.Rejected)
 					) {
 						editCodeStep.setWorkingSetEntryState(e.action.uri, {
-							accepted: e.action.outcome === vscode.ChatEditingSessionActionOutcome.Accepted,
-							hasRemainingEdits: e.action.hasRemainingEdits
+							accepted:
+								e.action.outcome ===
+								vscode.ChatEditingSessionActionOutcome.Accepted,
+							hasRemainingEdits: e.action.hasRemainingEdits,
 						});
 					}
 
@@ -174,67 +240,156 @@ export class UserFeedbackService implements IUserFeedbackService {
 							"isNotebookCell": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Whether the document is a notebook cell." }
 						}
 					*/
-					this.telemetryService.sendMSFTTelemetryEvent('panel.edit.feedback', {
-						languageId: document?.languageId,
-						requestId: result.metadata?.responseId,
-						participant: agentId,
-						command: result.metadata?.command,
-						outcome: outcomes.get(e.action.outcome) ?? 'unknown',
-						hasRemainingEdits: String(e.action.hasRemainingEdits),
-					}, {
-						isNotebook: this.notebookService.hasSupportedNotebooks(e.action.uri) ? 1 : 0,
-						isNotebookCell: e.action.uri.scheme === Schemas.vscodeNotebookCell ? 1 : 0
-					});
+					this.telemetryService.sendMSFTTelemetryEvent(
+						'panel.edit.feedback',
+						{
+							languageId: document?.languageId,
+							requestId: result.metadata?.responseId,
+							participant: agentId,
+							command: result.metadata?.command,
+							outcome:
+								outcomes.get(e.action.outcome) ?? 'unknown',
+							hasRemainingEdits: String(
+								e.action.hasRemainingEdits,
+							),
+						},
+						{
+							isNotebook:
+								this.notebookService.hasSupportedNotebooks(
+									e.action.uri,
+								)
+									? 1
+									: 0,
+							isNotebookCell:
+								e.action.uri.scheme ===
+								Schemas.vscodeNotebookCell
+									? 1
+									: 0,
+						},
+					);
 
-					this.telemetryService.sendGHTelemetryEvent('panel.edit.feedback', {
-						languageId: document?.languageId,
-						requestId: result.metadata?.responseId,
-						participant: agentId,
-						command: result.metadata?.command,
-						outcome: outcomes.get(e.action.outcome) ?? 'unknown',
-						hasRemainingEdits: String(e.action.hasRemainingEdits),
-					}, {
-						isNotebook: this.notebookService.hasSupportedNotebooks(e.action.uri) ? 1 : 0,
-						isNotebookCell: e.action.uri.scheme === Schemas.vscodeNotebookCell ? 1 : 0
-					});
+					this.telemetryService.sendGHTelemetryEvent(
+						'panel.edit.feedback',
+						{
+							languageId: document?.languageId,
+							requestId: result.metadata?.responseId,
+							participant: agentId,
+							command: result.metadata?.command,
+							outcome:
+								outcomes.get(e.action.outcome) ?? 'unknown',
+							hasRemainingEdits: String(
+								e.action.hasRemainingEdits,
+							),
+						},
+						{
+							isNotebook:
+								this.notebookService.hasSupportedNotebooks(
+									e.action.uri,
+								)
+									? 1
+									: 0,
+							isNotebookCell:
+								e.action.uri.scheme ===
+								Schemas.vscodeNotebookCell
+									? 1
+									: 0,
+						},
+					);
 
-
-					this.telemetryService.sendInternalMSFTTelemetryEvent('panel.edit.feedback', {
-						languageId: document?.languageId,
-						requestId: result.metadata?.responseId,
-						participant: agentId,
-						command: result.metadata?.command,
-						outcome: outcomes.get(e.action.outcome) ?? 'unknown',
-						hasRemainingEdits: String(e.action.hasRemainingEdits),
-					}, {
-						isNotebook: this.notebookService.hasSupportedNotebooks(e.action.uri) ? 1 : 0,
-						isNotebookCell: e.action.uri.scheme === Schemas.vscodeNotebookCell ? 1 : 0
-					});
+					this.telemetryService.sendInternalMSFTTelemetryEvent(
+						'panel.edit.feedback',
+						{
+							languageId: document?.languageId,
+							requestId: result.metadata?.responseId,
+							participant: agentId,
+							command: result.metadata?.command,
+							outcome:
+								outcomes.get(e.action.outcome) ?? 'unknown',
+							hasRemainingEdits: String(
+								e.action.hasRemainingEdits,
+							),
+						},
+						{
+							isNotebook:
+								this.notebookService.hasSupportedNotebooks(
+									e.action.uri,
+								)
+									? 1
+									: 0,
+							isNotebookCell:
+								e.action.uri.scheme ===
+								Schemas.vscodeNotebookCell
+									? 1
+									: 0,
+						},
+					);
 
 					{
-						const otelOutcome = outcomes.get(e.action.outcome) ?? 'unknown';
-						const workspace = resolveWorkspaceOTelMetadata(this.gitService, e.action.uri);
-						emitEditFeedbackEvent(this.otelService, otelOutcome, document?.languageId ?? '', agentId, result.metadata?.responseId ?? '', 'agent', e.action.hasRemainingEdits, this.notebookService.hasSupportedNotebooks(e.action.uri), workspace);
-						if (e.action.outcome === vscode.ChatEditingSessionActionOutcome.Accepted
-							|| e.action.outcome === vscode.ChatEditingSessionActionOutcome.Rejected) {
-							GenAiMetrics.recordEditAcceptance(this.otelService, 'chat_editing', otelOutcome, document?.languageId);
+						const otelOutcome =
+							outcomes.get(e.action.outcome) ?? 'unknown';
+						const workspace = resolveWorkspaceOTelMetadata(
+							this.gitService,
+							e.action.uri,
+						);
+						emitEditFeedbackEvent(
+							this.otelService,
+							otelOutcome,
+							document?.languageId ?? '',
+							agentId,
+							result.metadata?.responseId ?? '',
+							'agent',
+							e.action.hasRemainingEdits,
+							this.notebookService.hasSupportedNotebooks(
+								e.action.uri,
+							),
+							workspace,
+						);
+						if (
+							e.action.outcome ===
+								vscode.ChatEditingSessionActionOutcome
+									.Accepted ||
+							e.action.outcome ===
+								vscode.ChatEditingSessionActionOutcome.Rejected
+						) {
+							GenAiMetrics.recordEditAcceptance(
+								this.otelService,
+								'chat_editing',
+								otelOutcome,
+								document?.languageId,
+							);
 						}
-						GenAiMetrics.recordChatEditOutcome(this.otelService, 'chat_editing', otelOutcome, document?.languageId, e.action.hasRemainingEdits);
+						GenAiMetrics.recordChatEditOutcome(
+							this.otelService,
+							'chat_editing',
+							otelOutcome,
+							document?.languageId,
+							e.action.hasRemainingEdits,
+						);
 					}
 
-					if (result.metadata?.responseId
-						&& (e.action.outcome === vscode.ChatEditingSessionActionOutcome.Accepted
-							|| e.action.outcome === vscode.ChatEditingSessionActionOutcome.Rejected)
+					if (
+						result.metadata?.responseId &&
+						(e.action.outcome ===
+							vscode.ChatEditingSessionActionOutcome.Accepted ||
+							e.action.outcome ===
+								vscode.ChatEditingSessionActionOutcome.Rejected)
 					) {
-						const outcome = e.action.outcome === vscode.ChatEditingSessionActionOutcome.Accepted ? 'accept' : 'reject';
-						this.multiFileEditTelemetryService.sendEditPromptAndResult({ chatRequestId: result.metadata.responseId }, e.action.uri, outcome);
+						const outcome =
+							e.action.outcome ===
+							vscode.ChatEditingSessionActionOutcome.Accepted
+								? 'accept'
+								: 'reject';
+						this.multiFileEditTelemetryService.sendEditPromptAndResult(
+							{ chatRequestId: result.metadata.responseId },
+							e.action.uri,
+							outcome,
+						);
 					}
 				}
 				break;
 			case 'chatEditingHunkAction': {
 				const outcome = outcomes.get(e.action.outcome);
 				if (outcome) {
-
 					const properties = {
 						requestId: result.metadata?.responseId ?? '',
 						languageId: document?.languageId ?? '',
@@ -242,8 +397,15 @@ export class UserFeedbackService implements IUserFeedbackService {
 					};
 					const measurements = {
 						hasRemainingEdits: e.action.hasRemainingEdits ? 1 : 0,
-						isNotebook: this.notebookService.hasSupportedNotebooks(e.action.uri) ? 1 : 0,
-						isNotebookCell: e.action.uri.scheme === Schemas.vscodeNotebookCell ? 1 : 0,
+						isNotebook: this.notebookService.hasSupportedNotebooks(
+							e.action.uri,
+						)
+							? 1
+							: 0,
+						isNotebookCell:
+							e.action.uri.scheme === Schemas.vscodeNotebookCell
+								? 1
+								: 0,
 						lineCount: e.action.lineCount,
 						linesAdded: e.action.linesAdded,
 						linesRemoved: e.action.linesRemoved,
@@ -254,14 +416,41 @@ export class UserFeedbackService implements IUserFeedbackService {
 						document ?? vscode.window.activeTextEditor?.document,
 						properties,
 						measurements,
-						'edit.hunk.action'
+						'edit.hunk.action',
 					);
 
-					emitEditHunkActionEvent(this.otelService, outcome, document?.languageId ?? '', result.metadata?.responseId ?? '', e.action.lineCount, e.action.linesAdded, e.action.linesRemoved, resolveWorkspaceOTelMetadata(this.gitService, e.action.uri));
-					GenAiMetrics.recordEditAcceptance(this.otelService, 'chat_editing_hunk', outcome, document?.languageId ?? '');
+					emitEditHunkActionEvent(
+						this.otelService,
+						outcome,
+						document?.languageId ?? '',
+						result.metadata?.responseId ?? '',
+						e.action.lineCount,
+						e.action.linesAdded,
+						e.action.linesRemoved,
+						resolveWorkspaceOTelMetadata(
+							this.gitService,
+							e.action.uri,
+						),
+					);
+					GenAiMetrics.recordEditAcceptance(
+						this.otelService,
+						'chat_editing_hunk',
+						outcome,
+						document?.languageId ?? '',
+					);
 					if (outcome === 'accepted') {
-						GenAiMetrics.incrementLinesOfCode(this.otelService, 'added', document?.languageId ?? '', e.action.linesAdded);
-						GenAiMetrics.incrementLinesOfCode(this.otelService, 'removed', document?.languageId ?? '', e.action.linesRemoved);
+						GenAiMetrics.incrementLinesOfCode(
+							this.otelService,
+							'added',
+							document?.languageId ?? '',
+							e.action.linesAdded,
+						);
+						GenAiMetrics.incrementLinesOfCode(
+							this.otelService,
+							'removed',
+							document?.languageId ?? '',
+							e.action.linesRemoved,
+						);
 					}
 				}
 				break;
@@ -275,7 +464,10 @@ export class UserFeedbackService implements IUserFeedbackService {
 			measurements = {
 				totalCharacters: e.action.totalCharacters,
 				totalLines: e.action.totalLines,
-				isAgent: agentId === getChatParticipantIdFromName(editsAgentName) ? 1 : 0,
+				isAgent:
+					agentId === getChatParticipantIdFromName(editsAgentName)
+						? 1
+						: 0,
 			};
 
 			// Copy actions have a copiedCharacters/Lines property since this includes manual copying which can be partial
@@ -307,12 +499,17 @@ export class UserFeedbackService implements IUserFeedbackService {
 					headerRequestId: result.metadata?.responseId ?? '',
 					participant: agentId,
 					languageId: e.action.languageId ?? '',
-					modelId: resolveModelIdForTelemetry(e.action.modelId ?? '', result.metadata?.resolvedModel),
+					modelId: resolveModelIdForTelemetry(
+						e.action.modelId ?? '',
+						result.metadata?.resolvedModel,
+					),
 					comp_type: compType,
 					mode: participantIdToModeName(agentId),
 				},
 				measurements,
-				e.action.kind === 'copy' ? 'conversation.acceptedCopy' : 'conversation.acceptedInsert'
+				e.action.kind === 'copy'
+					? 'conversation.acceptedCopy'
+					: 'conversation.acceptedInsert',
 			);
 		}
 
@@ -322,7 +519,11 @@ export class UserFeedbackService implements IUserFeedbackService {
 		}
 	}
 
-	private handleApplyAction(e: vscode.ChatApplyAction, agentId: string, result: ICopilotChatResultIn): void {
+	private handleApplyAction(
+		e: vscode.ChatApplyAction,
+		agentId: string,
+		result: ICopilotChatResultIn,
+	): void {
 		sendUserActionTelemetry(
 			this.telemetryService,
 			vscode.window.activeTextEditor?.document,
@@ -332,14 +533,20 @@ export class UserFeedbackService implements IUserFeedbackService {
 				headerRequestId: result.metadata?.responseId ?? '',
 				participant: agentId,
 				languageId: e.languageId ?? '',
-				modelId: resolveModelIdForTelemetry(e.modelId, result.metadata?.resolvedModel),
+				modelId: resolveModelIdForTelemetry(
+					e.modelId,
+					result.metadata?.resolvedModel,
+				),
 				mode: participantIdToModeName(agentId),
 			},
 			{
-				isAgent: agentId === getChatParticipantIdFromName(editsAgentName) ? 1 : 0,
+				isAgent:
+					agentId === getChatParticipantIdFromName(editsAgentName)
+						? 1
+						: 0,
 				totalLines: e.totalLines,
 			},
-			'conversation.appliedCodeblock'
+			'conversation.appliedCodeblock',
 		);
 		GenAiMetrics.incrementUserActionCount(this.otelService, 'apply');
 	}
@@ -361,42 +568,61 @@ export class UserFeedbackService implements IUserFeedbackService {
 			"conversationId": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The id of the conversation." }
 		}
 		*/
-		this.telemetryService.sendMSFTTelemetryEvent('panel.action.vote', {
-			languageId: document?.languageId,
-			requestId: result.metadata?.responseId,
-			participant: agentId,
-			command: result.metadata?.command,
-			conversationId: result.metadata?.sessionId
-		}, {
-			direction: e.kind === vscode.ChatResultFeedbackKind.Helpful ? 1 : 2, // map to previous enum values
-		});
+		this.telemetryService.sendMSFTTelemetryEvent(
+			'panel.action.vote',
+			{
+				languageId: document?.languageId,
+				requestId: result.metadata?.responseId,
+				participant: agentId,
+				command: result.metadata?.command,
+				conversationId: result.metadata?.sessionId,
+			},
+			{
+				direction:
+					e.kind === vscode.ChatResultFeedbackKind.Helpful ? 1 : 2, // map to previous enum values
+			},
+		);
 
 		sendUserActionTelemetry(
 			this.telemetryService,
 			document,
 			{
-				rating: e.kind === vscode.ChatResultFeedbackKind.Helpful ? 'positive' : 'negative',
+				rating:
+					e.kind === vscode.ChatResultFeedbackKind.Helpful
+						? 'positive'
+						: 'negative',
 				messageId: result.metadata?.modelMessageId ?? '',
 				headerRequestId: result.metadata?.responseId ?? '',
 			},
 			{},
-			'conversation.messageRating'
+			'conversation.messageRating',
 		);
 
-		const otelRating = e.kind === vscode.ChatResultFeedbackKind.Helpful ? 'positive' : 'negative';
-		emitUserFeedbackEvent(this.otelService, otelRating, agentId, result.metadata?.sessionId ?? '', result.metadata?.responseId ?? '');
+		const otelRating =
+			e.kind === vscode.ChatResultFeedbackKind.Helpful
+				? 'positive'
+				: 'negative';
+		emitUserFeedbackEvent(
+			this.otelService,
+			otelRating,
+			agentId,
+			result.metadata?.sessionId ?? '',
+			result.metadata?.responseId ?? '',
+		);
 		GenAiMetrics.incrementUserFeedbackCount(this.otelService, otelRating);
 	}
 
 	// --- inline
 
-
-	private _handleChatUserAction(sessionId: string | undefined, conversation: Conversation, event: vscode.ChatUserActionEvent) {
-
+	private _handleChatUserAction(
+		sessionId: string | undefined,
+		conversation: Conversation,
+		event: vscode.ChatUserActionEvent,
+	) {
 		enum InteractiveEditorResponseFeedbackKind {
 			Undone = 2,
 			Accepted = 3,
-			Bug = 4
+			Bug = 4,
 		}
 
 		if (!sessionId) {
@@ -405,7 +631,9 @@ export class UserFeedbackService implements IUserFeedbackService {
 
 		let kind: InteractiveEditorResponseFeedbackKind | undefined;
 		if (event.action.kind === 'editor') {
-			kind = event.action.accepted ? InteractiveEditorResponseFeedbackKind.Accepted : InteractiveEditorResponseFeedbackKind.Undone;
+			kind = event.action.accepted
+				? InteractiveEditorResponseFeedbackKind.Accepted
+				: InteractiveEditorResponseFeedbackKind.Undone;
 		} else if (event.action.kind === 'bug') {
 			kind = InteractiveEditorResponseFeedbackKind.Bug;
 		}
@@ -414,22 +642,39 @@ export class UserFeedbackService implements IUserFeedbackService {
 			return;
 		}
 
-		const response = conversation.getLatestTurn().getMetadata(CopilotInteractiveEditorResponse);
+		const response = conversation
+			.getLatestTurn()
+			.getMetadata(CopilotInteractiveEditorResponse);
 		if (!response) {
 			return;
 		}
 
-		let interactionOutcome = conversation.getLatestTurn().getMetadata(InteractionOutcome);
+		let interactionOutcome = conversation
+			.getLatestTurn()
+			.getMetadata(InteractionOutcome);
 		if (!interactionOutcome) {
-			interactionOutcome = new InteractionOutcome(!response.telemetry?.editCount ? 'none' : 'inlineEdit', []);
+			interactionOutcome = new InteractionOutcome(
+				!response.telemetry?.editCount ? 'none' : 'inlineEdit',
+				[],
+			);
 		}
 
-		if (kind === InteractiveEditorResponseFeedbackKind.Bug && conversation) {
-			this.feedbackReporter.reportInline(conversation, response.promptQuery, interactionOutcome);
+		if (
+			kind === InteractiveEditorResponseFeedbackKind.Bug &&
+			conversation
+		) {
+			this.feedbackReporter.reportInline(
+				conversation,
+				response.promptQuery,
+				interactionOutcome,
+			);
 			return;
 		}
 
-		const userActionProperties: { messageId: string; action?: 'undo' | 'accept' } = {
+		const userActionProperties: {
+			messageId: string;
+			action?: 'undo' | 'accept';
+		} = {
 			messageId: response.messageId,
 		};
 		let telemetryEventName: string;
@@ -441,42 +686,76 @@ export class UserFeedbackService implements IUserFeedbackService {
 		const languageId = response.promptQuery.document.languageId;
 
 		// TODO: Only collect for /fix
-		const diagnosticsTelemetryData = (
+		const diagnosticsTelemetryData =
 			intentId === Intent.Fix
-				? findDiagnosticsTelemetry(selection, this.languageDiagnosticsService.getDiagnostics(response.promptQuery.document.uri))
-				: undefined
-		);
-		const isNotebookDocument = isNotebookCellOrNotebookChatInput(response.promptQuery.document.uri) ? 1 : 0;
+				? findDiagnosticsTelemetry(
+						selection,
+						this.languageDiagnosticsService.getDiagnostics(
+							response.promptQuery.document.uri,
+						),
+					)
+				: undefined;
+		const isNotebookDocument = isNotebookCellOrNotebookChatInput(
+			response.promptQuery.document.uri,
+		)
+			? 1
+			: 0;
 
-		this.surveyService.signalUsage(`inline.${intentId ?? 'default'}`, languageId);
+		this.surveyService.signalUsage(
+			`inline.${intentId ?? 'default'}`,
+			languageId,
+		);
 
 		const sharedProps = {
 			languageId: languageId,
 			replyType: interactionOutcome.kind,
 			conversationId: sessionId,
 			requestId: requestId,
-			command: intentId
+			command: intentId,
 		};
 		const editCount = response.telemetry?.editCount ?? 0;
 		const editLineCount = response.telemetry?.editLineCount ?? 0;
 		const sharedMeasures: TelemetryEventMeasurements = {
-			selectionLineCount: selection ? Math.abs(selection.end.line - selection.start.line) : -1,
-			wholeRangeLineCount: wholeRange ? Math.abs(wholeRange.end.line - wholeRange.start.line) : -1,
+			selectionLineCount: selection
+				? Math.abs(selection.end.line - selection.start.line)
+				: -1,
+			wholeRangeLineCount: wholeRange
+				? Math.abs(wholeRange.end.line - wholeRange.start.line)
+				: -1,
 			editCount: editCount > 0 ? editCount : -1,
 			editLineCount: editLineCount > 0 ? editLineCount : -1,
 			isNotebook: isNotebookDocument,
-			problemsCount: diagnosticsTelemetryData?.fileDiagnosticsTelemetry.problemsCount ?? 0,
-			selectionProblemsCount: diagnosticsTelemetryData?.selectionDiagnosticsTelemetry.problemsCount ?? 0,
-			diagnosticsCount: diagnosticsTelemetryData?.fileDiagnosticsTelemetry.diagnosticsCount ?? 0,
-			selectionDiagnosticsCount: diagnosticsTelemetryData?.selectionDiagnosticsTelemetry.diagnosticsCount ?? 0,
+			problemsCount:
+				diagnosticsTelemetryData?.fileDiagnosticsTelemetry
+					.problemsCount ?? 0,
+			selectionProblemsCount:
+				diagnosticsTelemetryData?.selectionDiagnosticsTelemetry
+					.problemsCount ?? 0,
+			diagnosticsCount:
+				diagnosticsTelemetryData?.fileDiagnosticsTelemetry
+					.diagnosticsCount ?? 0,
+			selectionDiagnosticsCount:
+				diagnosticsTelemetryData?.selectionDiagnosticsTelemetry
+					.diagnosticsCount ?? 0,
 		};
 
-		if (kind === InteractiveEditorResponseFeedbackKind.Accepted && response.editSurvivalTracker) {
-			response.editSurvivalTracker.startReporter(res => reportInlineEditSurvivalEvent(res, sharedProps, sharedMeasures, this.otelService));
+		if (
+			kind === InteractiveEditorResponseFeedbackKind.Accepted &&
+			response.editSurvivalTracker
+		) {
+			response.editSurvivalTracker.startReporter((res) =>
+				reportInlineEditSurvivalEvent(
+					res,
+					sharedProps,
+					sharedMeasures,
+					this.otelService,
+				),
+			);
 		}
 		(response as any).editSurvivalTracker = undefined; // TODO@jrieken
 
-		const accepted = (kind === InteractiveEditorResponseFeedbackKind.Accepted) ? 1 : 0;
+		const accepted =
+			kind === InteractiveEditorResponseFeedbackKind.Accepted ? 1 : 0;
 		/* __GDPR__
 			"inline.done" : {
 				"owner": "digitarald",
@@ -498,28 +777,63 @@ export class UserFeedbackService implements IUserFeedbackService {
 				"isNotebook": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Whether the document is a notebook." }
 			}
 		*/
-		this.telemetryService.sendMSFTTelemetryEvent('inline.done', sharedProps, {
-			...sharedMeasures, accepted
-		});
+		this.telemetryService.sendMSFTTelemetryEvent(
+			'inline.done',
+			sharedProps,
+			{
+				...sharedMeasures,
+				accepted,
+			},
+		);
 		this.telemetryService.sendGHTelemetryEvent('inline.done', sharedProps, {
-			...sharedMeasures, accepted
+			...sharedMeasures,
+			accepted,
 		});
 
-		emitInlineDoneEvent(this.otelService, accepted === 1, languageId, editCount, editLineCount, interactionOutcome.kind, isNotebookDocument === 1, resolveWorkspaceOTelMetadata(this.gitService, response.promptQuery.document.uri));
-		GenAiMetrics.recordEditAcceptance(this.otelService, 'inline_chat', accepted === 1 ? 'accepted' : 'rejected', languageId);
+		emitInlineDoneEvent(
+			this.otelService,
+			accepted === 1,
+			languageId,
+			editCount,
+			editLineCount,
+			interactionOutcome.kind,
+			isNotebookDocument === 1,
+			resolveWorkspaceOTelMetadata(
+				this.gitService,
+				response.promptQuery.document.uri,
+			),
+		);
+		GenAiMetrics.recordEditAcceptance(
+			this.otelService,
+			'inline_chat',
+			accepted === 1 ? 'accepted' : 'rejected',
+			languageId,
+		);
 
-		this.telemetryService.sendInternalMSFTTelemetryEvent('interactiveSessionDone', {
-			language: languageId,
-			intent: intentId,
-			query: query,
-			conversationId: sessionId,
-			requestId: requestId,
-			replyType: interactionOutcome.kind,
-			problems: diagnosticsTelemetryData?.fileDiagnosticsTelemetry.problems ?? '',
-			selectionProblems: diagnosticsTelemetryData?.selectionDiagnosticsTelemetry.problems ?? '',
-			diagnosticCodes: diagnosticsTelemetryData?.fileDiagnosticsTelemetry.diagnosticCodes ?? '',
-			selectionDiagnosticCodes: diagnosticsTelemetryData?.selectionDiagnosticsTelemetry.diagnosticCodes ?? '',
-		}, { isNotebook: isNotebookDocument, accepted });
+		this.telemetryService.sendInternalMSFTTelemetryEvent(
+			'interactiveSessionDone',
+			{
+				language: languageId,
+				intent: intentId,
+				query: query,
+				conversationId: sessionId,
+				requestId: requestId,
+				replyType: interactionOutcome.kind,
+				problems:
+					diagnosticsTelemetryData?.fileDiagnosticsTelemetry
+						.problems ?? '',
+				selectionProblems:
+					diagnosticsTelemetryData?.selectionDiagnosticsTelemetry
+						.problems ?? '',
+				diagnosticCodes:
+					diagnosticsTelemetryData?.fileDiagnosticsTelemetry
+						.diagnosticCodes ?? '',
+				selectionDiagnosticCodes:
+					diagnosticsTelemetryData?.selectionDiagnosticsTelemetry
+						.diagnosticCodes ?? '',
+			},
+			{ isNotebook: isNotebookDocument, accepted },
+		);
 
 		switch (kind) {
 			case InteractiveEditorResponseFeedbackKind.Undone:
@@ -536,12 +850,23 @@ export class UserFeedbackService implements IUserFeedbackService {
 		}
 
 		if (telemetryEventName) {
-			sendUserActionTelemetry(this.telemetryService, response.promptQuery.document, userActionProperties, {}, telemetryEventName);
+			sendUserActionTelemetry(
+				this.telemetryService,
+				response.promptQuery.document,
+				userActionProperties,
+				{},
+				telemetryEventName,
+			);
 		}
 	}
 }
 
-function reportInlineEditSurvivalEvent(res: EditSurvivalResult, sharedProps: TelemetryEventProperties | undefined, sharedMeasures: TelemetryEventMeasurements | undefined, otelService: IOTelService) {
+function reportInlineEditSurvivalEvent(
+	res: EditSurvivalResult,
+	sharedProps: TelemetryEventProperties | undefined,
+	sharedMeasures: TelemetryEventMeasurements | undefined,
+	otelService: IOTelService,
+) {
 	/* __GDPR__
 		"inline.trackEditSurvival" : {
 			"owner": "hediet",
@@ -566,34 +891,61 @@ function reportInlineEditSurvivalEvent(res: EditSurvivalResult, sharedProps: Tel
 			"isNotebook": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Whether the document is a notebook" }
 		}
 	*/
-	res.telemetryService.sendMSFTTelemetryEvent('inline.trackEditSurvival', sharedProps, {
-		...sharedMeasures,
-		survivalRateFourGram: res.fourGram,
-		survivalRateNoRevert: res.noRevert,
-		timeDelayMs: res.timeDelayMs,
-		didBranchChange: res.didBranchChange ? 1 : 0,
-	});
-	res.telemetryService.sendGHTelemetryEvent('inline.trackEditSurvival', {
-		...sharedProps,
-		headBranchName: res.workspace?.headBranchName,
-		headCommitHash: res.workspace?.headCommitHash,
-		remoteUrl: res.workspace?.remoteUrl,
-		fileRelativePath: res.workspace?.fileRelativePath,
-	}, {
-		...sharedMeasures,
-		survivalRateFourGram: res.fourGram,
-		survivalRateNoRevert: res.noRevert,
-		timeDelayMs: res.timeDelayMs,
-		didBranchChange: res.didBranchChange ? 1 : 0,
-	});
+	res.telemetryService.sendMSFTTelemetryEvent(
+		'inline.trackEditSurvival',
+		sharedProps,
+		{
+			...sharedMeasures,
+			survivalRateFourGram: res.fourGram,
+			survivalRateNoRevert: res.noRevert,
+			timeDelayMs: res.timeDelayMs,
+			didBranchChange: res.didBranchChange ? 1 : 0,
+		},
+	);
+	res.telemetryService.sendGHTelemetryEvent(
+		'inline.trackEditSurvival',
+		{
+			...sharedProps,
+			headBranchName: res.workspace?.headBranchName,
+			headCommitHash: res.workspace?.headCommitHash,
+			remoteUrl: res.workspace?.remoteUrl,
+			fileRelativePath: res.workspace?.fileRelativePath,
+		},
+		{
+			...sharedMeasures,
+			survivalRateFourGram: res.fourGram,
+			survivalRateNoRevert: res.noRevert,
+			timeDelayMs: res.timeDelayMs,
+			didBranchChange: res.didBranchChange ? 1 : 0,
+		},
+	);
 
-	emitEditSurvivalEvent(otelService, 'inline_chat', res.fourGram, res.noRevert, res.timeDelayMs, res.didBranchChange, String(sharedProps?.requestId ?? ''), res.workspace);
-	GenAiMetrics.recordEditSurvivalFourGram(otelService, 'inline_chat', res.fourGram, res.timeDelayMs);
-	GenAiMetrics.recordEditSurvivalNoRevert(otelService, 'inline_chat', res.noRevert, res.timeDelayMs);
+	emitEditSurvivalEvent(
+		otelService,
+		'inline_chat',
+		res.fourGram,
+		res.noRevert,
+		res.timeDelayMs,
+		res.didBranchChange,
+		String(sharedProps?.requestId ?? ''),
+		res.workspace,
+	);
+	GenAiMetrics.recordEditSurvivalFourGram(
+		otelService,
+		'inline_chat',
+		res.fourGram,
+		res.timeDelayMs,
+	);
+	GenAiMetrics.recordEditSurvivalNoRevert(
+		otelService,
+		'inline_chat',
+		res.noRevert,
+		res.timeDelayMs,
+	);
 }
 
 const outcomes = new Map<vscode.ChatEditingSessionActionOutcome, EditOutcome>([
 	[vscode.ChatEditingSessionActionOutcome.Accepted, 'accepted'],
 	[vscode.ChatEditingSessionActionOutcome.Rejected, 'rejected'],
-	[vscode.ChatEditingSessionActionOutcome.Saved, 'saved']
+	[vscode.ChatEditingSessionActionOutcome.Saved, 'saved'],
 ]);

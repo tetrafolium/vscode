@@ -3,24 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Codicon } from '../../../../base/common/codicons.js';
-import { Color } from '../../../../base/common/color.js';
-import { Event } from '../../../../base/common/event.js';
-import { IDisposable } from '../../../../base/common/lifecycle.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { activityErrorBadgeBackground, activityErrorBadgeForeground, activityWarningBadgeBackground, activityWarningBadgeForeground } from '../../../../platform/theme/common/colors/miscColors.js';
-import { IColorTheme } from '../../../../platform/theme/common/themeService.js';
-import { ViewContainer } from '../../../common/views.js';
+import { Codicon } from "../../../../base/common/codicons.js";
+import { Color } from "../../../../base/common/color.js";
+import { Event } from "../../../../base/common/event.js";
+import { IDisposable } from "../../../../base/common/lifecycle.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import {
+	activityErrorBadgeBackground,
+	activityErrorBadgeForeground,
+	activityWarningBadgeBackground,
+	activityWarningBadgeForeground,
+} from "../../../../platform/theme/common/colors/miscColors.js";
+import { IColorTheme } from "../../../../platform/theme/common/themeService.js";
+import { ViewContainer } from "../../../common/views.js";
 
 export interface IActivity {
 	readonly badge: IBadge;
 }
 
-export const IActivityService = createDecorator<IActivityService>('activityService');
+export const IActivityService =
+	createDecorator<IActivityService>("activityService");
 
 export interface IActivityService {
-
 	readonly _serviceBrand: undefined;
 
 	/**
@@ -31,7 +36,10 @@ export interface IActivityService {
 	/**
 	 * Show activity for the given view container
 	 */
-	showViewContainerActivity(viewContainerId: string, badge: IActivity): IDisposable;
+	showViewContainerActivity(
+		viewContainerId: string,
+		badge: IActivity,
+	): IDisposable;
 
 	/**
 	 * Returns the activity for the given view container
@@ -71,12 +79,12 @@ export interface IBadgeStyles {
 }
 
 class BaseBadge<T = unknown> implements IBadge {
-
 	constructor(
 		protected readonly descriptorFn: (arg: T) => string,
-		private readonly stylesFn: ((theme: IColorTheme) => IBadgeStyles | undefined) | undefined,
-	) {
-	}
+		private readonly stylesFn:
+			| ((theme: IColorTheme) => IBadgeStyles | undefined)
+			| undefined,
+	) {}
 
 	getDescription(): string {
 		return this.descriptorFn(null as T);
@@ -88,8 +96,10 @@ class BaseBadge<T = unknown> implements IBadge {
 }
 
 export class NumberBadge extends BaseBadge<number> {
-
-	constructor(readonly number: number, descriptorFn: (num: number) => string) {
+	constructor(
+		readonly number: number,
+		descriptorFn: (num: number) => string,
+	) {
 		super(descriptorFn, undefined);
 
 		this.number = number;

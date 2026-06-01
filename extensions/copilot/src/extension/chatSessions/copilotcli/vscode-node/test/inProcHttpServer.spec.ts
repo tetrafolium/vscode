@@ -10,14 +10,18 @@ import { InProcHttpServer } from '../inProcHttpServer';
 
 vi.mock('vscode', () => ({
 	Uri: {
-		from: (components: { scheme: string; path: string; fragment: string }) => ({
+		from: (components: {
+			scheme: string;
+			path: string;
+			fragment: string;
+		}) => ({
 			scheme: components.scheme,
 			path: components.path,
 			fragment: components.fragment,
 		}),
 	},
 	window: {
-		onDidCloseTerminal: () => ({ dispose: () => { } }),
+		onDidCloseTerminal: () => ({ dispose: () => {} }),
 	},
 	EventEmitter: class MockEventEmitter<T> {
 		private readonly listeners: Array<(e: T) => void> = [];
@@ -47,11 +51,14 @@ describe('InProcHttpServer.onDidClientDisconnect', () => {
 	let server: InProcHttpServer;
 
 	beforeEach(() => {
-		server = new InProcHttpServer(new TestLogService(), new CopilotCLISessionTracker());
+		server = new InProcHttpServer(
+			new TestLogService(),
+			new CopilotCLISessionTracker(),
+		);
 	});
 
 	it('should return a disposable', () => {
-		const disposable = server.onDidClientDisconnect(() => { });
+		const disposable = server.onDidClientDisconnect(() => {});
 		expect(disposable).toBeDefined();
 		expect(disposable.dispose).toBeInstanceOf(Function);
 	});

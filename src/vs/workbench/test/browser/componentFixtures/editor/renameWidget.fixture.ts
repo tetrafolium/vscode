@@ -3,15 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationTokenSource } from '../../../../../base/common/cancellation.js';
-import { toDisposable } from '../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { ComponentFixtureContext, createEditorServices, createTextModel, defineComponentFixture, defineThemedFixtureGroup } from '../fixtureUtils.js';
-import { CodeEditorWidget, ICodeEditorWidgetOptions } from '../../../../../editor/browser/widget/codeEditor/codeEditorWidget.js';
-import { RenameWidget } from '../../../../../editor/contrib/rename/browser/renameWidget.js';
+import { CancellationTokenSource } from "../../../../../base/common/cancellation.js";
+import { toDisposable } from "../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../base/common/uri.js";
+import {
+	ComponentFixtureContext,
+	createEditorServices,
+	createTextModel,
+	defineComponentFixture,
+	defineThemedFixtureGroup,
+} from "../fixtureUtils.js";
+import {
+	CodeEditorWidget,
+	ICodeEditorWidgetOptions,
+} from "../../../../../editor/browser/widget/codeEditor/codeEditorWidget.js";
+import { RenameWidget } from "../../../../../editor/contrib/rename/browser/renameWidget.js";
 
-import '../../../../../editor/contrib/rename/browser/renameWidget.css';
-import '../../../../../base/browser/ui/codicons/codiconStyles.js';
+import "../../../../../editor/contrib/rename/browser/renameWidget.css";
+import "../../../../../base/browser/ui/codicons/codiconStyles.js";
 
 const SAMPLE_CODE = `class UserService {
 	private _users: Map<string, User> = new Map();
@@ -36,44 +45,53 @@ interface RenameFixtureOptions extends ComponentFixtureContext {
 
 function renderRenameWidget(options: RenameFixtureOptions): void {
 	const { container, disposableStore, theme } = options;
-	container.style.width = '500px';
-	container.style.height = '280px';
-	container.style.border = '1px solid var(--vscode-editorWidget-border)';
+	container.style.width = "500px";
+	container.style.height = "280px";
+	container.style.border = "1px solid var(--vscode-editorWidget-border)";
 
-	const instantiationService = createEditorServices(disposableStore, { colorTheme: theme });
+	const instantiationService = createEditorServices(disposableStore, {
+		colorTheme: theme,
+	});
 
-	const textModel = disposableStore.add(createTextModel(
-		instantiationService,
-		SAMPLE_CODE,
-		URI.parse('inmemory://rename-fixture.ts'),
-		'typescript'
-	));
+	const textModel = disposableStore.add(
+		createTextModel(
+			instantiationService,
+			SAMPLE_CODE,
+			URI.parse("inmemory://rename-fixture.ts"),
+			"typescript",
+		),
+	);
 
 	const editorWidgetOptions: ICodeEditorWidgetOptions = {
-		contributions: []
+		contributions: [],
 	};
 
-	const editor = disposableStore.add(instantiationService.createInstance(
-		CodeEditorWidget,
-		container,
-		{
-			automaticLayout: true,
-			minimap: { enabled: false },
-			lineNumbers: 'on',
-			scrollBeyondLastLine: false,
-			fontSize: 14,
-			cursorBlinking: 'solid',
-		},
-		editorWidgetOptions
-	));
+	const editor = disposableStore.add(
+		instantiationService.createInstance(
+			CodeEditorWidget,
+			container,
+			{
+				automaticLayout: true,
+				minimap: { enabled: false },
+				lineNumbers: "on",
+				scrollBeyondLastLine: false,
+				fontSize: 14,
+				cursorBlinking: "solid",
+			},
+			editorWidgetOptions,
+		),
+	);
 
 	editor.setModel(textModel);
-	editor.setPosition({ lineNumber: options.cursorLine, column: options.cursorColumn });
+	editor.setPosition({
+		lineNumber: options.cursorLine,
+		column: options.cursorColumn,
+	});
 
 	const renameWidget = instantiationService.createInstance(
 		RenameWidget,
 		editor,
-		['editor.action.rename', 'editor.action.rename'],
+		["editor.action.rename", "editor.action.rename"],
 	);
 	disposableStore.add(renameWidget);
 
@@ -90,32 +108,39 @@ function renderRenameWidget(options: RenameFixtureOptions): void {
 		options.currentName,
 		false,
 		undefined,
-		cts
+		cts,
 	);
-	disposableStore.add(toDisposable(() => renameWidget.cancelInput(false, 'fixture-teardown')));
+	disposableStore.add(
+		toDisposable(() => renameWidget.cancelInput(false, "fixture-teardown")),
+	);
 }
 
-export default defineThemedFixtureGroup({ path: 'editor/' }, {
-	RenameVariable: defineComponentFixture({
-		labels: { kind: 'animated' },
-		render: (context) => renderRenameWidget({
-			...context,
-			cursorLine: 4,
-			cursorColumn: 2,
-			currentName: 'getUser',
-			rangeStartColumn: 2,
-			rangeEndColumn: 9,
+export default defineThemedFixtureGroup(
+	{ path: "editor/" },
+	{
+		RenameVariable: defineComponentFixture({
+			labels: { kind: "animated" },
+			render: (context) =>
+				renderRenameWidget({
+					...context,
+					cursorLine: 4,
+					cursorColumn: 2,
+					currentName: "getUser",
+					rangeStartColumn: 2,
+					rangeEndColumn: 9,
+				}),
 		}),
-	}),
-	RenameClass: defineComponentFixture({
-		labels: { kind: 'animated' },
-		render: (context) => renderRenameWidget({
-			...context,
-			cursorLine: 1,
-			cursorColumn: 7,
-			currentName: 'UserService',
-			rangeStartColumn: 7,
-			rangeEndColumn: 18,
+		RenameClass: defineComponentFixture({
+			labels: { kind: "animated" },
+			render: (context) =>
+				renderRenameWidget({
+					...context,
+					cursorLine: 1,
+					cursorColumn: 7,
+					currentName: "UserService",
+					rangeStartColumn: 7,
+					rangeEndColumn: 18,
+				}),
 		}),
-	}),
-});
+	},
+);

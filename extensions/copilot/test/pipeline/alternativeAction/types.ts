@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { Raw } from '@vscode/prompt-tsx';
-import { IAlternativeAction, NextEditTelemetryStatus } from '../../../src/extension/inlineEdits/node/nextEditProviderTelemetry';
+import {
+	IAlternativeAction,
+	NextEditTelemetryStatus,
+} from '../../../src/extension/inlineEdits/node/nextEditProviderTelemetry';
 import { LogEntry } from '../../../src/platform/workspaceRecorder/common/workspaceLog';
 import { ISerializedEdit } from '../logRecordingTypes';
 
@@ -59,16 +62,19 @@ export namespace Scoring {
 		};
 	};
 
-	export function create(recording: Recording.t, edits: SuggestedEdit.t[]): Scoring.t {
+	export function create(
+		recording: Recording.t,
+		edits: SuggestedEdit.t[],
+	): Scoring.t {
 		return {
 			'$web-editor.format-json': true,
-			'$web-editor.default-url': 'https://microsoft.github.io/vscode-workbench-recorder-viewer/?editRating',
+			'$web-editor.default-url':
+				'https://microsoft.github.io/vscode-workbench-recorder-viewer/?editRating',
 			edits,
 			scoringContext: {
 				kind: 'recording',
-				recording
-			}
+				recording,
+			},
 		};
 	}
 }
-

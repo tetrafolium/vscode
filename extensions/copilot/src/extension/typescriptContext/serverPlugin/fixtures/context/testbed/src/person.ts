@@ -10,8 +10,10 @@ export class Age {
 }
 
 export class Person {
-	constructor(private name: string, private age: Age) {
-	}
+	constructor(
+		private name: string,
+		private age: Age,
+	) {}
 	public getName(): string {
 		return this.name;
 	}

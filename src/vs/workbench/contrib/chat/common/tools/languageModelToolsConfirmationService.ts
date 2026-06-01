@@ -3,24 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDisposable } from '../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IQuickInputButton, IQuickTreeItem } from '../../../../../platform/quickinput/common/quickInput.js';
-import { ConfirmedReason } from '../chatService/chatService.js';
-import { IToolData, ToolDataSource } from './languageModelToolsService.js';
+import { IDisposable } from "../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { createDecorator } from "../../../../../platform/instantiation/common/instantiation.js";
+import {
+	IQuickInputButton,
+	IQuickTreeItem,
+} from "../../../../../platform/quickinput/common/quickInput.js";
+import { ConfirmedReason } from "../chatService/chatService.js";
+import { IToolData, ToolDataSource } from "./languageModelToolsService.js";
 
 /**
  * Computes a stable, bounded key for a tool+parameters combination
  * using SHA-256 via SubtleCrypto. The resulting hex digest ensures
  * raw parameter values are never leaked into storage.
  */
-export async function computeCombinationKey(toolId: string, parameters: unknown): Promise<string> {
-	const input = toolId + ':' + JSON.stringify(parameters);
+export async function computeCombinationKey(
+	toolId: string,
+	parameters: unknown,
+): Promise<string> {
+	const input = toolId + ":" + JSON.stringify(parameters);
 	const encoded = new TextEncoder().encode(input);
-	const buffer = await crypto.subtle.digest('SHA-256', encoded);
-	const hashHex = Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-	return toolId + ':combination:' + hashHex;
+	const buffer = await crypto.subtle.digest("SHA-256", encoded);
+	const hashHex = Array.from(new Uint8Array(buffer))
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
+	return toolId + ":combination:" + hashHex;
 }
 
 export interface ILanguageModelToolConfirmationActions {
@@ -31,7 +39,7 @@ export interface ILanguageModelToolConfirmationActions {
 	/** Show a separator before this action */
 	divider?: boolean;
 	/** The scope of this action, if applicable */
-	scope?: 'session' | 'workspace' | 'profile';
+	scope?: "session" | "workspace" | "profile";
 	/** Selects this action. Resolves true if the action should be confirmed after selection */
 	select(): Promise<boolean>;
 }
@@ -59,12 +67,20 @@ export interface ILanguageModelToolConfirmationRef {
 }
 
 export interface ILanguageModelToolConfirmationActionProducer {
-	getPreConfirmAction(ref: ILanguageModelToolConfirmationRef): ConfirmedReason | undefined;
-	getPostConfirmAction(ref: ILanguageModelToolConfirmationRef): ConfirmedReason | undefined;
+	getPreConfirmAction(
+		ref: ILanguageModelToolConfirmationRef,
+	): ConfirmedReason | undefined;
+	getPostConfirmAction(
+		ref: ILanguageModelToolConfirmationRef,
+	): ConfirmedReason | undefined;
 
 	/** Gets the selectable actions to take to memorize confirmation changes */
-	getPreConfirmActions(ref: ILanguageModelToolConfirmationRef): ILanguageModelToolConfirmationActions[];
-	getPostConfirmActions(ref: ILanguageModelToolConfirmationRef): ILanguageModelToolConfirmationActions[];
+	getPreConfirmActions(
+		ref: ILanguageModelToolConfirmationRef,
+	): ILanguageModelToolConfirmationActions[];
+	getPostConfirmActions(
+		ref: ILanguageModelToolConfirmationRef,
+	): ILanguageModelToolConfirmationActions[];
 }
 
 export interface ILanguageModelToolConfirmationContributionQuickTreeItem extends IQuickTreeItem {
@@ -77,24 +93,25 @@ export interface ILanguageModelToolConfirmationContributionQuickTreeItem extends
  * Type that can be registered to provide more specific confirmation
  * actions for a specific tool.
  */
-export type ILanguageModelToolConfirmationContribution = Partial<ILanguageModelToolConfirmationActionProducer> & {
-	/**
-	 * Gets items to be shown in the `manageConfirmationPreferences` quick tree.
-	 * These are added under the tool's category.
-	 */
-	getManageActions?(): ILanguageModelToolConfirmationContributionQuickTreeItem[];
+export type ILanguageModelToolConfirmationContribution =
+	Partial<ILanguageModelToolConfirmationActionProducer> & {
+		/**
+		 * Gets items to be shown in the `manageConfirmationPreferences` quick tree.
+		 * These are added under the tool's category.
+		 */
+		getManageActions?(): ILanguageModelToolConfirmationContributionQuickTreeItem[];
 
-	/**
-	 * Defaults to true. If false, the "Always Allow" options will not be shown
-	 * and _only_ your custom manage actions will be shown.
-	 */
-	canUseDefaultApprovals?: boolean;
+		/**
+		 * Defaults to true. If false, the "Always Allow" options will not be shown
+		 * and _only_ your custom manage actions will be shown.
+		 */
+		canUseDefaultApprovals?: boolean;
 
-	/**
-	 * Reset all confirmation settings for this tool.
-	 */
-	reset?(): void;
-};
+		/**
+		 * Reset all confirmation settings for this tool.
+		 */
+		reset?(): void;
+	};
 
 /**
  * Handles language model tool confirmation.
@@ -113,13 +130,22 @@ export interface ILanguageModelToolsConfirmationService extends ILanguageModelTo
 	readonly _serviceBrand: undefined;
 
 	/** Opens an IQuickTree to let the user manage their preferences.  */
-	manageConfirmationPreferences(tools: readonly IToolData[], options?: { defaultScope?: 'workspace' | 'profile' | 'session'; focusToolId?: string }): void;
+	manageConfirmationPreferences(
+		tools: readonly IToolData[],
+		options?: {
+			defaultScope?: "workspace" | "profile" | "session";
+			focusToolId?: string;
+		},
+	): void;
 
 	/**
 	 * Registers a contribution that provides more specific confirmation logic
 	 * for a tool, in addition to the default confirmation handling.
 	 */
-	registerConfirmationContribution(toolName: string, contribution: ILanguageModelToolConfirmationContribution): IDisposable;
+	registerConfirmationContribution(
+		toolName: string,
+		contribution: ILanguageModelToolConfirmationContribution,
+	): IDisposable;
 
 	/**
 	 * Returns true if the tool has confirmation that can be managed, either
@@ -134,4 +160,7 @@ export interface ILanguageModelToolsConfirmationService extends ILanguageModelTo
 	resetToolAutoConfirmation(): void;
 }
 
-export const ILanguageModelToolsConfirmationService = createDecorator<ILanguageModelToolsConfirmationService>('ILanguageModelToolsConfirmationService');
+export const ILanguageModelToolsConfirmationService =
+	createDecorator<ILanguageModelToolsConfirmationService>(
+		"ILanguageModelToolsConfirmationService",
+	);

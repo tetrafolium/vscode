@@ -7,11 +7,15 @@ import type * as vscode from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { TextDocumentSnapshot } from '../../editing/common/textDocumentSnapshot';
 
-export const IReviewService = createServiceIdentifier<IReviewService>('IReviewService');
+export const IReviewService =
+	createServiceIdentifier<IReviewService>('IReviewService');
 
 export interface ReviewDiagnosticCollection {
 	get(uri: vscode.Uri): readonly vscode.Diagnostic[] | undefined;
-	set(uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[] | undefined): void;
+	set(
+		uri: vscode.Uri,
+		diagnostics: readonly vscode.Diagnostic[] | undefined,
+	): void;
 }
 
 export interface ReviewRanges {
@@ -65,6 +69,8 @@ export interface IReviewService {
 	collapseReviewComment(comment: ReviewComment): void;
 	removeReviewComments(comments: ReviewComment[]): void;
 	updateReviewComment(comment: ReviewComment): void;
-	findReviewComment(threadOrComment: vscode.CommentThread | vscode.Comment): ReviewComment | undefined;
+	findReviewComment(
+		threadOrComment: vscode.CommentThread | vscode.Comment,
+	): ReviewComment | undefined;
 	findCommentThread(comment: ReviewComment): vscode.CommentThread | undefined;
 }

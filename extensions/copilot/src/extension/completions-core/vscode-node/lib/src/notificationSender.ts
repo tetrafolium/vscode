@@ -10,22 +10,38 @@ export interface ActionItem {
 	[key: string]: string | boolean | object;
 }
 
-export const ICompletionsNotificationSender = createServiceIdentifier<ICompletionsNotificationSender>('ICompletionsNotificationSender');
+export const ICompletionsNotificationSender =
+	createServiceIdentifier<ICompletionsNotificationSender>(
+		'ICompletionsNotificationSender',
+	);
 export interface ICompletionsNotificationSender {
 	readonly _serviceBrand: undefined;
 
-	showWarningMessage(message: string, ...actions: ActionItem[]): Promise<ActionItem | undefined>;
+	showWarningMessage(
+		message: string,
+		...actions: ActionItem[]
+	): Promise<ActionItem | undefined>;
 }
 
 export class ExtensionNotificationSender implements ICompletionsNotificationSender {
 	declare _serviceBrand: undefined;
 
-	constructor(@INotificationService private readonly notificationService: INotificationService) {
-	}
+	constructor(
+		@INotificationService
+		private readonly notificationService: INotificationService,
+	) {}
 
-	async showWarningMessage(message: string, ...actions: ActionItem[]): Promise<ActionItem | undefined> {
-		const response = await this.notificationService.showWarningMessage(message, ...actions.map(action => action.title));
-		if (response === undefined) { return; }
+	async showWarningMessage(
+		message: string,
+		...actions: ActionItem[]
+	): Promise<ActionItem | undefined> {
+		const response = await this.notificationService.showWarningMessage(
+			message,
+			...actions.map((action) => action.title),
+		);
+		if (response === undefined) {
+			return;
+		}
 		return { title: response };
 	}
 }

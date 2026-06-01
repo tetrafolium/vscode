@@ -24,7 +24,7 @@ export function truncateToMaxUtf8Length(str: string, maxBytes: number): string {
 
 	// Decode the truncated bytes back to a string, ensuring no partial characters
 	return new TextDecoder().decode(truncatedBytes, {
-		stream: true // Don't emit partial characters
+		stream: true, // Don't emit partial characters
 	});
 }
 
@@ -41,9 +41,13 @@ export function truncateToMaxUtf8Length(str: string, maxBytes: number): string {
 
 export function stripChunkTextMetadata(text: string): string {
 	const lines = splitLines(text);
-	if (lines.length >= 3 && lines[0].startsWith('File: ') && lines[1].startsWith('```') && lines.at(-1)?.startsWith('```')) {
+	if (
+		lines.length >= 3 &&
+		lines[0].startsWith('File: ') &&
+		lines[1].startsWith('```') &&
+		lines.at(-1)?.startsWith('```')
+	) {
 		return lines.slice(2, -1).join('\n');
 	}
 	return text;
 }
-

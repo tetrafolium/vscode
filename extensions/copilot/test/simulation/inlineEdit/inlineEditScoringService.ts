@@ -8,21 +8,35 @@ import { dirname } from 'path';
 import { IRecordingInformation } from '../../../src/extension/inlineEdits/common/observableWorkspaceRecordingReplayer';
 import { DocumentId } from '../../../src/platform/inlineEdits/common/dataTypes/documentId';
 import { RootedEdit } from '../../../src/platform/inlineEdits/common/dataTypes/edit';
-import { deserializeStringEdit, serializeStringEdit } from '../../../src/platform/inlineEdits/common/dataTypes/editUtils';
+import {
+	deserializeStringEdit,
+	serializeStringEdit,
+} from '../../../src/platform/inlineEdits/common/dataTypes/editUtils';
 import { ISerializedEdit } from '../../../src/platform/workspaceRecorder/common/workspaceLog';
 import { JSONFile } from '../../../src/util/node/jsonFile';
 import { CachedFunction } from '../../../src/util/vs/base/common/cache';
-import { equalsIfDefined, thisEqualsC } from '../../../src/util/vs/base/common/equals';
+import {
+	equalsIfDefined,
+	thisEqualsC,
+} from '../../../src/util/vs/base/common/equals';
 import { isDefined } from '../../../src/util/vs/base/common/types';
 import { StringEdit } from '../../../src/util/vs/editor/common/core/edits/stringEdit';
 import { StringText } from '../../../src/util/vs/editor/common/core/text/abstractText';
 
 export interface IInlineEditScoringService {
-	scoreEdit(scoredEditsFilePath: string, context: ScoringContext, docId: DocumentId, editDocumentValue: StringText, edit: RootedEdit | undefined): Promise<EditScoreResult | undefined>;
+	scoreEdit(
+		scoredEditsFilePath: string,
+		context: ScoringContext,
+		docId: DocumentId,
+		editDocumentValue: StringText,
+		edit: RootedEdit | undefined,
+	): Promise<EditScoreResult | undefined>;
 }
 
 /** JSON Serializable */
-export type ScoringContext = { kind: 'unknown'; documentValueBeforeEdit: string } | { kind: 'recording'; recording: IRecordingInformation };
+export type ScoringContext =
+	| { kind: 'unknown'; documentValueBeforeEdit: string }
+	| { kind: 'recording'; recording: IRecordingInformation };
 
 export type EditScoreResultCategory = 'bad' | 'valid' | 'nextEdit';
 
@@ -37,7 +51,7 @@ export class EditScoreResult {
 		 * Should be below 100.
 		 */
 		public readonly score: number,
-	) { }
+	) {}
 
 	toString() {
 		return `${this.category}#${this.score}`;
@@ -46,20 +60,29 @@ export class EditScoreResult {
 	getScoreValue(): number {
 		if (USE_SIMPLE_SCORING) {
 			switch (this.category) {
-				case 'bad': return 0;
-				case 'valid': return 0.1;
-				case 'nextEdit': return 1;
+				case 'bad':
+					return 0;
+				case 'valid':
+					return 0.1;
+				case 'nextEdit':
+					return 1;
 			}
 		} else {
 			const getVal = () => {
 				switch (this.category) {
-					case 'bad': return 0;
-					case 'valid': return 10 + (this.score / 100) * 3;
-					case 'nextEdit': return 100 + 10 * (this.score / 100);
+					case 'bad':
+						return 0;
+					case 'valid':
+						return 10 + (this.score / 100) * 3;
+					case 'nextEdit':
+						return 100 + 10 * (this.score / 100);
 				}
 			};
 			const maxValue = 110;
-			return Math.round(Math.min(getVal() / maxValue, maxValue) * 1000) / 1000;
+			return (
+				Math.round(Math.min(getVal() / maxValue, maxValue) * 1000) /
+				1000
+			);
 		}
 	}
 }
@@ -67,7 +90,11 @@ export class EditScoreResult {
 class InlineEditScoringService implements IInlineEditScoringService {
 	private readonly _scoredEdits = new CachedFunction(async (path: string) => {
 		await mkdir(dirname(path), { recursive: true });
-		const file = await JSONFile.readOrCreate<IScoredEdits | null>(path, null, '\t');
+		const file = await JSONFile.readOrCreate<IScoredEdits | null>(
+			path,
+			null,
+			'\t',
+		);
 
 		return {
 			scoredEdits: undefined as undefined | ScoredEdits,
@@ -75,7 +102,13 @@ class InlineEditScoringService implements IInlineEditScoringService {
 		};
 	});
 
-	async scoreEdit(scoredEditsFilePath: string, context: ScoringContext, docId: DocumentId, editDocumentValue: StringText, edit: RootedEdit | undefined): Promise<EditScoreResult | undefined> {
+	async scoreEdit(
+		scoredEditsFilePath: string,
+		context: ScoringContext,
+		docId: DocumentId,
+		editDocumentValue: StringText,
+		edit: RootedEdit | undefined,
+	): Promise<EditScoreResult | undefined> {
 		const existing = await this._scoredEdits.get(scoredEditsFilePath);
 
 		let shouldWrite = false;
@@ -90,12 +123,18 @@ class InlineEditScoringService implements IInlineEditScoringService {
 				shouldWrite = existing.scoredEdits.removeUnscored(); // we deleted all unscored edits (might be re-added though)
 				const shouldNormalizeExisting = false; // Edits are now normalized before adding to the score database.
 				if (shouldNormalizeExisting) {
-					shouldWrite = existing.scoredEdits.normalizeEdits(editDocumentValue.value) || shouldWrite;
+					shouldWrite =
+						existing.scoredEdits.normalizeEdits(
+							editDocumentValue.value,
+						) || shouldWrite;
 				}
 			}
 		}
 
-		const result = existing.scoredEdits.getScoreOrAddAsUnscored(docId, edit);
+		const result = existing.scoredEdits.getScoreOrAddAsUnscored(
+			docId,
+			edit,
+		);
 		if (!result) {
 			shouldWrite = true; // edit was added as unscored
 		}
@@ -110,7 +149,10 @@ class InlineEditScoringService implements IInlineEditScoringService {
 }
 
 class ScoredEdits {
-	public static fromJson(data: IScoredEdits, scoringContext: ScoringContext): ScoredEdits {
+	public static fromJson(
+		data: IScoredEdits,
+		scoringContext: ScoringContext,
+	): ScoredEdits {
 		// TOD check if context matches!
 		return new ScoredEdits(scoringContext, data.edits);
 	}
@@ -127,34 +169,38 @@ class ScoredEdits {
 		edits: IScoredEdit[],
 	) {
 		this._edits = edits;
-		this._editMatchers = edits.map(e => new EditMatcher(e));
+		this._editMatchers = edits.map((e) => new EditMatcher(e));
 	}
 
 	hasUnscored(): boolean {
-		return this._edits.some(e => !isScoredEdit(e));
+		return this._edits.some((e) => !isScoredEdit(e));
 	}
 
 	normalizeEdits(source: string): boolean {
 		const existing = new Set<string>();
 
-		this._edits = this._edits.map(e => {
-			let n = e.edit ? deserializeStringEdit(e.edit).normalizeOnSource(source) : undefined;
-			if (n?.isEmpty()) {
-				n = undefined;
-			}
-			const key = e.documentUri + '#' + JSON.stringify(n?.toJson());
-			if (existing.has(key)) {
-				return null;
-			}
-			existing.add(key);
+		this._edits = this._edits
+			.map((e) => {
+				let n = e.edit
+					? deserializeStringEdit(e.edit).normalizeOnSource(source)
+					: undefined;
+				if (n?.isEmpty()) {
+					n = undefined;
+				}
+				const key = e.documentUri + '#' + JSON.stringify(n?.toJson());
+				if (existing.has(key)) {
+					return null;
+				}
+				existing.add(key);
 
-			return {
-				...e,
-				edit: n ? serializeStringEdit(n) : null,
-			};
-		}).filter(isDefined);
+				return {
+					...e,
+					edit: n ? serializeStringEdit(n) : null,
+				};
+			})
+			.filter(isDefined);
 
-		this._editMatchers = this._edits.map(e => new EditMatcher(e));
+		this._editMatchers = this._edits.map((e) => new EditMatcher(e));
 
 		return true;
 	}
@@ -163,12 +209,15 @@ class ScoredEdits {
 		if (!this.hasUnscored()) {
 			return false;
 		}
-		this._edits = this._edits.filter(e => isScoredEdit(e));
-		this._editMatchers = this._editMatchers.filter(e => e.isScored());
+		this._edits = this._edits.filter((e) => isScoredEdit(e));
+		this._editMatchers = this._editMatchers.filter((e) => e.isScored());
 		return true;
 	}
 
-	getScoreOrAddAsUnscored(docId: DocumentId, edit: RootedEdit | undefined): EditScoreResult | undefined {
+	getScoreOrAddAsUnscored(
+		docId: DocumentId,
+		edit: RootedEdit | undefined,
+	): EditScoreResult | undefined {
 		edit = edit?.normalize();
 		if (edit?.edit.isEmpty()) {
 			edit = undefined;
@@ -176,7 +225,9 @@ class ScoredEdits {
 
 		const documentUri = docId.uri;
 
-		let existingEdit = this._editMatchers.find(e => e.matches(documentUri, edit));
+		let existingEdit = this._editMatchers.find((e) =>
+			e.matches(documentUri, edit),
+		);
 		if (!existingEdit) {
 			const e: IScoredEdit = {
 				documentUri: documentUri,
@@ -197,7 +248,8 @@ class ScoredEdits {
 		return {
 			...{
 				'$web-editor.format-json': true,
-				'$web-editor.default-url': 'https://microsoft.github.io/vscode-workbench-recorder-viewer/?editRating',
+				'$web-editor.default-url':
+					'https://microsoft.github.io/vscode-workbench-recorder-viewer/?editRating',
 			},
 			edits: this._edits,
 			// Last, so that it is easier to review the file
@@ -210,9 +262,7 @@ class EditMatcher {
 	public readonly documentUri = this.data.documentUri;
 	public readonly edit: StringEdit | undefined;
 
-	constructor(
-		private readonly data: IScoredEdit,
-	) {
+	constructor(private readonly data: IScoredEdit) {
 		this.edit = data.edit ? deserializeStringEdit(data.edit) : undefined;
 	}
 

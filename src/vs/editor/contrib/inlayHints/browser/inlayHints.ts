@@ -3,26 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { CancellationError, onUnexpectedExternalError } from '../../../../base/common/errors.js';
-import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { IPosition, Position } from '../../../common/core/position.js';
-import { Range } from '../../../common/core/range.js';
-import { LanguageFeatureRegistry } from '../../../common/languageFeatureRegistry.js';
-import { InlayHint, InlayHintList, InlayHintsProvider, Command } from '../../../common/languages.js';
-import { ITextModel } from '../../../common/model.js';
-import { createCommandUri } from '../../../../base/common/htmlContent.js';
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import {
+	CancellationError,
+	onUnexpectedExternalError,
+} from "../../../../base/common/errors.js";
+import { DisposableStore } from "../../../../base/common/lifecycle.js";
+import { IPosition, Position } from "../../../common/core/position.js";
+import { Range } from "../../../common/core/range.js";
+import { LanguageFeatureRegistry } from "../../../common/languageFeatureRegistry.js";
+import {
+	InlayHint,
+	InlayHintList,
+	InlayHintsProvider,
+	Command,
+} from "../../../common/languages.js";
+import { ITextModel } from "../../../common/model.js";
+import { createCommandUri } from "../../../../base/common/htmlContent.js";
 
 export class InlayHintAnchor {
-	constructor(readonly range: Range, readonly direction: 'before' | 'after') { }
+	constructor(
+		readonly range: Range,
+		readonly direction: "before" | "after",
+	) {}
 }
 
 export class InlayHintItem {
-
 	private _isResolved: boolean = false;
 	private _currentResolve?: Promise<void>;
 
-	constructor(readonly hint: InlayHint, readonly anchor: InlayHintAnchor, readonly provider: InlayHintsProvider) { }
+	constructor(
+		readonly hint: InlayHint,
+		readonly anchor: InlayHintAnchor,
+		readonly provider: InlayHintsProvider,
+	) {}
 
 	with(delta: { anchor: InlayHintAnchor }): InlayHintItem {
 		const result = new InlayHintItem(this.hint, delta.anchor, this.provider);
@@ -32,7 +46,7 @@ export class InlayHintItem {
 	}
 
 	async resolve(token: CancellationToken): Promise<void> {
-		if (typeof this.provider.resolveInlayHint !== 'function') {
+		if (typeof this.provider.resolveInlayHint !== "function") {
 			return;
 		}
 		if (this._currentResolve) {
@@ -45,15 +59,18 @@ export class InlayHintItem {
 			return this.resolve(token);
 		}
 		if (!this._isResolved) {
-			this._currentResolve = this._doResolve(token)
-				.finally(() => this._currentResolve = undefined);
+			this._currentResolve = this._doResolve(token).finally(
+				() => (this._currentResolve = undefined),
+			);
 		}
 		await this._currentResolve;
 	}
 
 	private async _doResolve(token: CancellationToken) {
 		try {
-			const newHint = await Promise.resolve(this.provider.resolveInlayHint!(this.hint, token));
+			const newHint = await Promise.resolve(
+				this.provider.resolveInlayHint!(this.hint, token),
+			);
 			this.hint.tooltip = newHint?.tooltip ?? this.hint.tooltip;
 			this.hint.label = newHint?.label ?? this.hint.label;
 			this.hint.textEdits = newHint?.textEdits ?? this.hint.textEdits;
@@ -66,23 +83,41 @@ export class InlayHintItem {
 }
 
 export class InlayHintsFragments {
+	private static _emptyInlayHintList: InlayHintList = Object.freeze({
+		dispose() {},
+		hints: [],
+	});
 
-	private static _emptyInlayHintList: InlayHintList = Object.freeze({ dispose() { }, hints: [] });
-
-	static async create(registry: LanguageFeatureRegistry<InlayHintsProvider>, model: ITextModel, ranges: Range[], token: CancellationToken): Promise<InlayHintsFragments> {
-
+	static async create(
+		registry: LanguageFeatureRegistry<InlayHintsProvider>,
+		model: ITextModel,
+		ranges: Range[],
+		token: CancellationToken,
+	): Promise<InlayHintsFragments> {
 		const data: [InlayHintList, InlayHintsProvider][] = [];
 
-		const promises = registry.ordered(model).reverse().map(provider => ranges.map(async range => {
-			try {
-				const result = await provider.provideInlayHints(model, range, token);
-				if (result?.hints.length || provider.onDidChangeInlayHints) {
-					data.push([result ?? InlayHintsFragments._emptyInlayHintList, provider]);
-				}
-			} catch (err) {
-				onUnexpectedExternalError(err);
-			}
-		}));
+		const promises = registry
+			.ordered(model)
+			.reverse()
+			.map((provider) =>
+				ranges.map(async (range) => {
+					try {
+						const result = await provider.provideInlayHints(
+							model,
+							range,
+							token,
+						);
+						if (result?.hints.length || provider.onDidChangeInlayHints) {
+							data.push([
+								result ?? InlayHintsFragments._emptyInlayHintList,
+								provider,
+							]);
+						}
+					} catch (err) {
+						onUnexpectedExternalError(err);
+					}
+				}),
+			);
 
 		await Promise.all(promises.flat());
 
@@ -99,7 +134,11 @@ export class InlayHintsFragments {
 	readonly ranges: readonly Range[];
 	readonly provider: Set<InlayHintsProvider>;
 
-	private constructor(ranges: Range[], data: [InlayHintList, InlayHintsProvider][], model: ITextModel) {
+	private constructor(
+		ranges: Range[],
+		data: [InlayHintList, InlayHintsProvider][],
+		model: ITextModel,
+	) {
 		this.ranges = ranges;
 		this.provider = new Set();
 		const items: InlayHintItem[] = [];
@@ -110,30 +149,44 @@ export class InlayHintsFragments {
 			for (const hint of list.hints) {
 				// compute the range to which the item should be attached to
 				const position = model.validatePosition(hint.position);
-				let direction: 'before' | 'after' = 'before';
+				let direction: "before" | "after" = "before";
 
-				const wordRange = InlayHintsFragments._getRangeAtPosition(model, position);
+				const wordRange = InlayHintsFragments._getRangeAtPosition(
+					model,
+					position,
+				);
 				let range: Range;
 
 				if (wordRange.getStartPosition().isBefore(position)) {
 					range = Range.fromPositions(wordRange.getStartPosition(), position);
-					direction = 'after';
+					direction = "after";
 				} else {
 					range = Range.fromPositions(position, wordRange.getEndPosition());
-					direction = 'before';
+					direction = "before";
 				}
 
-				items.push(new InlayHintItem(hint, new InlayHintAnchor(range, direction), provider));
+				items.push(
+					new InlayHintItem(
+						hint,
+						new InlayHintAnchor(range, direction),
+						provider,
+					),
+				);
 			}
 		}
-		this.items = items.sort((a, b) => Position.compare(a.hint.position, b.hint.position));
+		this.items = items.sort((a, b) =>
+			Position.compare(a.hint.position, b.hint.position),
+		);
 	}
 
 	dispose(): void {
 		this._disposables.dispose();
 	}
 
-	private static _getRangeAtPosition(model: ITextModel, position: IPosition): Range {
+	private static _getRangeAtPosition(
+		model: ITextModel,
+		position: IPosition,
+	): Range {
 		const line = position.lineNumber;
 		const word = model.getWordAtPosition(position);
 		if (word) {

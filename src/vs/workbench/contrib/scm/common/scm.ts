@@ -3,36 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../base/common/uri.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { Event } from '../../../../base/common/event.js';
-import { IDisposable } from '../../../../base/common/lifecycle.js';
-import { Command } from '../../../../editor/common/languages.js';
-import { IAction } from '../../../../base/common/actions.js';
-import { IMenu } from '../../../../platform/actions/common/actions.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { IMarkdownString } from '../../../../base/common/htmlContent.js';
-import { ResourceTree } from '../../../../base/common/resourceTree.js';
-import { ISCMHistoryProvider } from './history.js';
-import { ITextModel } from '../../../../editor/common/model.js';
-import { IObservable } from '../../../../base/common/observable.js';
-import { ISCMArtifact, ISCMArtifactGroup, ISCMArtifactProvider } from './artifact.js';
+import { URI } from "../../../../base/common/uri.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { Event } from "../../../../base/common/event.js";
+import { IDisposable } from "../../../../base/common/lifecycle.js";
+import { Command } from "../../../../editor/common/languages.js";
+import { IAction } from "../../../../base/common/actions.js";
+import { IMenu } from "../../../../platform/actions/common/actions.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import { IMarkdownString } from "../../../../base/common/htmlContent.js";
+import { ResourceTree } from "../../../../base/common/resourceTree.js";
+import { ISCMHistoryProvider } from "./history.js";
+import { ITextModel } from "../../../../editor/common/model.js";
+import { IObservable } from "../../../../base/common/observable.js";
+import {
+	ISCMArtifact,
+	ISCMArtifactGroup,
+	ISCMArtifactProvider,
+} from "./artifact.js";
 
-export const VIEWLET_ID = 'workbench.view.scm';
-export const VIEW_PANE_ID = 'workbench.scm';
-export const REPOSITORIES_VIEW_PANE_ID = 'workbench.scm.repositories';
-export const HISTORY_VIEW_PANE_ID = 'workbench.scm.history';
+export const VIEWLET_ID = "workbench.view.scm";
+export const VIEW_PANE_ID = "workbench.scm";
+export const REPOSITORIES_VIEW_PANE_ID = "workbench.scm.repositories";
+export const HISTORY_VIEW_PANE_ID = "workbench.scm.history";
 
 export const enum ViewMode {
-	List = 'list',
-	Tree = 'tree'
+	List = "list",
+	Tree = "tree",
 }
 
 export interface IBaselineResourceProvider {
 	getBaselineResource(resource: URI): Promise<URI>;
 }
 
-export const ISCMService = createDecorator<ISCMService>('scm');
+export const ISCMService = createDecorator<ISCMService>("scm");
 
 export interface ISCMResourceDecorations {
 	icon?: URI | ThemeIcon;
@@ -104,7 +108,7 @@ export interface ISCMInputValueProviderContext {
 export const enum InputValidationType {
 	Error = 0,
 	Warning = 1,
-	Information = 2
+	Information = 2,
 }
 
 export interface IInputValidation {
@@ -113,12 +117,15 @@ export interface IInputValidation {
 }
 
 export interface IInputValidator {
-	(value: string, cursorPosition: number): Promise<IInputValidation | undefined>;
+	(
+		value: string,
+		cursorPosition: number,
+	): Promise<IInputValidation | undefined>;
 }
 
 export enum SCMInputChangeReason {
 	HistoryPrevious,
-	HistoryNext
+	HistoryNext,
 }
 
 export interface ISCMInputChangeEvent {
@@ -133,7 +140,7 @@ export interface ISCMActionButtonDescriptor {
 }
 
 export interface ISCMActionButton {
-	readonly type: 'actionButton';
+	readonly type: "actionButton";
 	readonly repository: ISCMRepository;
 	readonly button: ISCMActionButtonDescriptor;
 }
@@ -160,7 +167,10 @@ export interface ISCMInput {
 	setFocus(): void;
 	readonly onDidChangeFocus: Event<void>;
 
-	showValidationMessage(message: string | IMarkdownString, type: InputValidationType): void;
+	showValidationMessage(
+		message: string | IMarkdownString,
+		type: InputValidationType,
+	): void;
 	readonly onDidChangeValidationMessage: Event<IInputValidation>;
 
 	clearValidation(): void;
@@ -177,7 +187,6 @@ export interface ISCMRepository extends IDisposable {
 }
 
 export interface ISCMService {
-
 	readonly _serviceBrand: undefined;
 	readonly onDidAddRepository: Event<ISCMRepository>;
 	readonly onDidRemoveRepository: Event<ISCMRepository>;
@@ -205,7 +214,10 @@ export interface ISCMRepositoryMenus {
 	getResourceMenu(resource: ISCMResource): IMenu;
 	getResourceFolderMenu(group: ISCMResourceGroup): IMenu;
 	getArtifactGroupMenu(artifactGroup: ISCMArtifactGroup): IMenu;
-	getArtifactMenu(artifactGroup: ISCMArtifactGroup, artifact: ISCMArtifact): IMenu;
+	getArtifactMenu(
+		artifactGroup: ISCMArtifactGroup,
+		artifact: ISCMArtifact,
+	): IMenu;
 }
 
 export interface ISCMMenus {
@@ -213,17 +225,17 @@ export interface ISCMMenus {
 }
 
 export const enum ISCMRepositorySortKey {
-	DiscoveryTime = 'discoveryTime',
-	Name = 'name',
-	Path = 'path'
+	DiscoveryTime = "discoveryTime",
+	Name = "name",
+	Path = "path",
 }
 
 export const enum ISCMRepositorySelectionMode {
-	Single = 'single',
-	Multiple = 'multiple'
+	Single = "single",
+	Multiple = "multiple",
 }
 
-export const ISCMViewService = createDecorator<ISCMViewService>('scmView');
+export const ISCMViewService = createDecorator<ISCMViewService>("scmView");
 
 export interface ISCMViewVisibleRepositoryChangeEvent {
 	readonly added: Iterable<ISCMRepository>;
@@ -261,6 +273,8 @@ export interface ISCMViewService {
 	 * or the repository associated with the active editor. The active repository is shown in the
 	 * Source Control Repository status bar item.
 	 */
-	readonly activeRepository: IObservable<{ repository: ISCMRepository; pinned: boolean } | undefined>;
+	readonly activeRepository: IObservable<
+		{ repository: ISCMRepository; pinned: boolean } | undefined
+	>;
 	pinActiveRepository(repository: ISCMRepository | undefined): void;
 }

@@ -8,13 +8,17 @@ import { _getNodeToDocument } from '../../node/docGenParsing';
 import { WASMLanguage } from '../../node/treeSitterLanguages';
 import { insertRangeMarkers, MarkerRange } from './markers';
 
-export async function srcWithAnnotatedNodeToDoc(language: WASMLanguage, source: string, includeSelection = false) {
+export async function srcWithAnnotatedNodeToDoc(
+	language: WASMLanguage,
+	source: string,
+	includeSelection = false,
+) {
 	const { deannotatedSrc, annotatedRange: selection } = deannotateSrc(source);
 
 	const result = await _getNodeToDocument(
 		language,
 		deannotatedSrc,
-		selection
+		selection,
 	);
 
 	const identifier = result.nodeIdentifier;
@@ -27,28 +31,24 @@ export async function srcWithAnnotatedNodeToDoc(language: WASMLanguage, source: 
 			markers.push({
 				startIndex: identIx,
 				endIndex: identIx + identifier.length,
-				kind: 'IDENT'
+				kind: 'IDENT',
 			});
 		}
 	}
 
 	if (includeSelection) {
-		markers.push(
-			{
-				startIndex: selection.startIndex,
-				endIndex: selection.endIndex,
-				kind: 'SELECTION'
-			}
-		);
+		markers.push({
+			startIndex: selection.startIndex,
+			endIndex: selection.endIndex,
+			kind: 'SELECTION',
+		});
 	}
 
-	markers.push(
-		{
-			startIndex: result.nodeToDocument.startIndex,
-			endIndex: result.nodeToDocument.endIndex,
-			kind: result.nodeToDocument.type.toUpperCase(),
-		}
-	);
+	markers.push({
+		startIndex: result.nodeToDocument.startIndex,
+		endIndex: result.nodeToDocument.endIndex,
+		kind: result.nodeToDocument.type.toUpperCase(),
+	});
 
 	return insertRangeMarkers(deannotatedSrc, markers);
 }

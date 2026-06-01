@@ -16,19 +16,12 @@ const typeScriptServerPluginBuildOptions: esbuild.BuildOptions = {
 	sourcemap: false,
 	sourcesContent: false,
 	treeShaking: true,
-	external: [
-		'typescript',
-		'typescript/lib/tsserverlibrary'
-	],
-	entryPoints: [
-		{ in: './src/node/main.ts', out: 'main' }
-	]
+	external: ['typescript', 'typescript/lib/tsserverlibrary'],
+	entryPoints: [{ in: './src/node/main.ts', out: 'main' }],
 } satisfies esbuild.BuildOptions;
 
 async function main() {
-	await Promise.all([
-		esbuild.build(typeScriptServerPluginBuildOptions),
-	]);
+	await Promise.all([esbuild.build(typeScriptServerPluginBuildOptions)]);
 }
 
 main();

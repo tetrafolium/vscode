@@ -5,7 +5,16 @@
 
 import type { ConfigurationScope } from 'vscode';
 import { IExperimentationService } from '../../../telemetry/common/nullExperimentationService';
-import { AbstractConfigurationService, BaseConfig, Config, ConfigTarget, ExperimentBasedConfig, ExperimentBasedConfigType, IConfigurationService, InspectConfigResult } from '../../common/configurationService';
+import {
+	AbstractConfigurationService,
+	BaseConfig,
+	Config,
+	ConfigTarget,
+	ExperimentBasedConfig,
+	ExperimentBasedConfigType,
+	IConfigurationService,
+	InspectConfigResult,
+} from '../../common/configurationService';
 
 /**
  * A IConfigurationService that allows overriding of config values.
@@ -27,27 +36,39 @@ export class InMemoryConfigurationService extends AbstractConfigurationService {
 		return this.baseConfigurationService.getConfig(key);
 	}
 
-	override inspectConfig<T>(key: BaseConfig<T>, scope?: ConfigurationScope): InspectConfigResult<T> | undefined {
+	override inspectConfig<T>(
+		key: BaseConfig<T>,
+		scope?: ConfigurationScope,
+	): InspectConfigResult<T> | undefined {
 		const inspect = this.baseConfigurationService.inspectConfig(key, scope);
 
 		const override = this.overrides.get(key);
 		if (override !== undefined) {
 			return {
 				defaultValue: this.getDefaultValue(key),
-				globalValue: override as T
+				globalValue: override as T,
 			};
 		}
 		return inspect;
 	}
 
 	override getNonExtensionConfig<T>(configKey: string): T | undefined {
-		return this.nonExtensionOverrides.get(configKey) ?? this.baseConfigurationService.getNonExtensionConfig(configKey);
+		return (
+			this.nonExtensionOverrides.get(configKey) ??
+			this.baseConfigurationService.getNonExtensionConfig(configKey)
+		);
 	}
 
-	override setConfig<T>(key: BaseConfig<T>, value: T, _target?: ConfigTarget): Promise<void> {
+	override setConfig<T>(
+		key: BaseConfig<T>,
+		value: T,
+		_target?: ConfigTarget,
+	): Promise<void> {
 		this.overrides.set(key, value);
 		this._onDidChangeConfiguration.fire({
-			affectsConfiguration: (section: string) => section === key.fullyQualifiedId || key.fullyQualifiedId.startsWith(section + '.')
+			affectsConfiguration: (section: string) =>
+				section === key.fullyQualifiedId ||
+				key.fullyQualifiedId.startsWith(section + '.'),
 		});
 		return Promise.resolve();
 	}
@@ -55,17 +76,25 @@ export class InMemoryConfigurationService extends AbstractConfigurationService {
 	setNonExtensionConfig<T>(key: string, value: T): Promise<void> {
 		this.nonExtensionOverrides.set(key, value);
 		this._onDidChangeConfiguration.fire({
-			affectsConfiguration: (section: string) => section === key || key.startsWith(section + '.')
+			affectsConfiguration: (section: string) =>
+				section === key || key.startsWith(section + '.'),
 		});
 		return Promise.resolve();
 	}
 
-	override getExperimentBasedConfig<T extends ExperimentBasedConfigType>(key: ExperimentBasedConfig<T>, experimentationService: IExperimentationService, scope?: ConfigurationScope): T {
+	override getExperimentBasedConfig<T extends ExperimentBasedConfigType>(
+		key: ExperimentBasedConfig<T>,
+		experimentationService: IExperimentationService,
+		scope?: ConfigurationScope,
+	): T {
 		const override = this.overrides.get(key);
 		if (override !== undefined) {
 			return override as T;
 		}
-		return this.baseConfigurationService.getExperimentBasedConfig(key, experimentationService);
+		return this.baseConfigurationService.getExperimentBasedConfig(
+			key,
+			experimentationService,
+		);
 	}
 
 	dumpConfig(): { [key: string]: string } {

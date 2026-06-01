@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { UnsupportedProtocolVersionErrorData } from './protocol/errors.js';
+import type { UnsupportedProtocolVersionErrorData } from "./protocol/errors.js";
 
 /**
  * Name of the JSON-RPC method that, when invoked on an agent host spawned
@@ -15,7 +15,7 @@ import type { UnsupportedProtocolVersionErrorData } from './protocol/errors.js';
  * client can offer an "Update server" action without hard-coding the method
  * name on the renderer side.
  */
-export const VSCODE_UPGRADE_METHOD = '_vscodeUpgrade' as const;
+export const VSCODE_UPGRADE_METHOD = "_vscodeUpgrade" as const;
 
 /**
  * Status payload returned by the {@link VSCODE_UPGRADE_METHOD} RPC. The

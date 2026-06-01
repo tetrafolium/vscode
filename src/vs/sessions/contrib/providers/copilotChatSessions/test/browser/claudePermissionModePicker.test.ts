@@ -3,22 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { Event } from '../../../../../../base/common/event.js';
-import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
-import { observableValue } from '../../../../../../base/common/observable.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { IActionWidgetService } from '../../../../../../platform/actionWidget/browser/actionWidget.js';
-import { IActionListItem } from '../../../../../../platform/actionWidget/browser/actionList.js';
-import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
-import { NullTelemetryService } from '../../../../../../platform/telemetry/common/telemetryUtils.js';
-import { ISessionsProvidersService } from '../../../../../services/sessions/browser/sessionsProvidersService.js';
-import { IActiveSession, ISessionsManagementService } from '../../../../../services/sessions/common/sessionsManagement.js';
-import { CopilotChatSessionsProvider, ICopilotChatSession } from '../../browser/copilotChatSessionsProvider.js';
-import { ClaudePermissionModePicker } from '../../browser/claudePermissionModePicker.js';
-import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
-import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
+import assert from "assert";
+import { Event } from "../../../../../../base/common/event.js";
+import { DisposableStore } from "../../../../../../base/common/lifecycle.js";
+import { observableValue } from "../../../../../../base/common/observable.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import { IActionWidgetService } from "../../../../../../platform/actionWidget/browser/actionWidget.js";
+import { IActionListItem } from "../../../../../../platform/actionWidget/browser/actionList.js";
+import { TestInstantiationService } from "../../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import { ITelemetryService } from "../../../../../../platform/telemetry/common/telemetry.js";
+import { NullTelemetryService } from "../../../../../../platform/telemetry/common/telemetryUtils.js";
+import { ISessionsProvidersService } from "../../../../../services/sessions/browser/sessionsProvidersService.js";
+import {
+	IActiveSession,
+	ISessionsManagementService,
+} from "../../../../../services/sessions/common/sessionsManagement.js";
+import {
+	CopilotChatSessionsProvider,
+	ICopilotChatSession,
+} from "../../browser/copilotChatSessionsProvider.js";
+import { ClaudePermissionModePicker } from "../../browser/claudePermissionModePicker.js";
+import { IConfigurationService } from "../../../../../../platform/configuration/common/configuration.js";
+import { TestConfigurationService } from "../../../../../../platform/configuration/test/common/testConfigurationService.js";
 
 interface IPermissionModeItem {
 	readonly id: string;
@@ -26,7 +32,7 @@ interface IPermissionModeItem {
 }
 
 function showPicker(container: HTMLElement): void {
-	const trigger = container.querySelector<HTMLElement>('a.action-label');
+	const trigger = container.querySelector<HTMLElement>("a.action-label");
 	assert.ok(trigger);
 	trigger.click();
 }
@@ -34,42 +40,68 @@ function showPicker(container: HTMLElement): void {
 function createPicker(
 	disposables: DisposableStore,
 	opts?: {
-		setOptionSpy?: (optionId: string, value: { id: string; name: string }) => void;
+		setOptionSpy?: (
+			optionId: string,
+			value: { id: string; name: string },
+		) => void;
 		hasActiveSession?: boolean;
 		configValues?: Record<string, unknown>;
 	},
-): { picker: ClaudePermissionModePicker; actionWidgetItems: IActionListItem<IPermissionModeItem>[]; onSelect: (item: IPermissionModeItem) => void } {
+): {
+	picker: ClaudePermissionModePicker;
+	actionWidgetItems: IActionListItem<IPermissionModeItem>[];
+	onSelect: (item: IPermissionModeItem) => void;
+} {
 	const instantiationService = disposables.add(new TestInstantiationService());
 	const actionWidgetItems: IActionListItem<IPermissionModeItem>[] = [];
 	let capturedOnSelect: ((item: IPermissionModeItem) => void) | undefined;
 
-	const setOptionSpy = opts?.setOptionSpy ?? (() => { });
+	const setOptionSpy = opts?.setOptionSpy ?? (() => {});
 	const hasActiveSession = opts?.hasActiveSession ?? true;
 
-	const activeSession = hasActiveSession ? {
-		providerId: 'default-copilot',
-		sessionId: 'session-id',
-		loading: observableValue('loading', false),
-	} as unknown as IActiveSession : undefined;
+	const activeSession = hasActiveSession
+		? ({
+				providerId: "default-copilot",
+				sessionId: "session-id",
+				loading: observableValue("loading", false),
+			} as unknown as IActiveSession)
+		: undefined;
 
 	const mockSession: Partial<ICopilotChatSession> = {
-		setOption: setOptionSpy as ICopilotChatSession['setOption'],
+		setOption: setOptionSpy as ICopilotChatSession["setOption"],
 	};
 
-	const provider = Object.assign(Object.create(CopilotChatSessionsProvider.prototype), {
-		getSession: () => mockSession,
-	});
+	const provider = Object.assign(
+		Object.create(CopilotChatSessionsProvider.prototype),
+		{
+			getSession: () => mockSession,
+		},
+	);
 
 	instantiationService.stub(IActionWidgetService, {
 		isVisible: false,
-		hide: () => { },
-		show: <T>(_id: string, _supportsPreview: boolean, items: IActionListItem<T>[], delegate: { onSelect: (item: T) => void }) => {
-			actionWidgetItems.splice(0, actionWidgetItems.length, ...(items as IActionListItem<IPermissionModeItem>[]));
-			capturedOnSelect = delegate.onSelect as (item: IPermissionModeItem) => void;
+		hide: () => {},
+		show: <T>(
+			_id: string,
+			_supportsPreview: boolean,
+			items: IActionListItem<T>[],
+			delegate: { onSelect: (item: T) => void },
+		) => {
+			actionWidgetItems.splice(
+				0,
+				actionWidgetItems.length,
+				...(items as IActionListItem<IPermissionModeItem>[]),
+			);
+			capturedOnSelect = delegate.onSelect as (
+				item: IPermissionModeItem,
+			) => void;
 		},
 	});
 	instantiationService.stub(ISessionsManagementService, {
-		activeSession: observableValue<IActiveSession | undefined>('activeSession', activeSession),
+		activeSession: observableValue<IActiveSession | undefined>(
+			"activeSession",
+			activeSession,
+		),
 	} as unknown as ISessionsManagementService);
 	instantiationService.stub(ISessionsProvidersService, {
 		onDidChangeProviders: Event.None,
@@ -83,16 +115,20 @@ function createPicker(
 	}
 	instantiationService.stub(IConfigurationService, configService);
 
-	const picker = disposables.add(instantiationService.createInstance(ClaudePermissionModePicker));
+	const picker = disposables.add(
+		instantiationService.createInstance(ClaudePermissionModePicker),
+	);
 
 	return {
 		picker,
 		actionWidgetItems,
-		get onSelect() { return capturedOnSelect!; },
+		get onSelect() {
+			return capturedOnSelect!;
+		},
 	};
 }
 
-suite('ClaudePermissionModePicker', () => {
+suite("ClaudePermissionModePicker", () => {
 	const disposables = new DisposableStore();
 
 	teardown(() => {
@@ -101,106 +137,135 @@ suite('ClaudePermissionModePicker', () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('shows all three permission modes', () => {
+	test("shows all three permission modes", () => {
 		const { picker, actionWidgetItems } = createPicker(disposables);
-		const container = document.createElement('div');
+		const container = document.createElement("div");
 		picker.render(container);
 		showPicker(container);
 
 		assert.deepStrictEqual(
-			actionWidgetItems.map(item => ({ id: item.item?.id, label: item.label })),
+			actionWidgetItems.map((item) => ({
+				id: item.item?.id,
+				label: item.label,
+			})),
 			[
-				{ id: 'default', label: 'Ask Before Edits' },
-				{ id: 'acceptEdits', label: 'Edit Automatically' },
-				{ id: 'plan', label: 'Plan Mode' },
+				{ id: "default", label: "Ask Before Edits" },
+				{ id: "acceptEdits", label: "Edit Automatically" },
+				{ id: "plan", label: "Plan Mode" },
 			],
 		);
 	});
 
-	test('selecting a mode updates the trigger label', () => {
+	test("selecting a mode updates the trigger label", () => {
 		const result = createPicker(disposables);
-		const container = document.createElement('div');
+		const container = document.createElement("div");
 		result.picker.render(container);
 		showPicker(container);
 
-		result.onSelect({ id: 'plan', label: 'Plan Mode' } as IPermissionModeItem);
+		result.onSelect({ id: "plan", label: "Plan Mode" } as IPermissionModeItem);
 
-		const labelSpan = container.querySelector<HTMLElement>('span.sessions-chat-dropdown-label');
+		const labelSpan = container.querySelector<HTMLElement>(
+			"span.sessions-chat-dropdown-label",
+		);
 		assert.ok(labelSpan);
-		assert.strictEqual(labelSpan.textContent, 'Plan Mode');
+		assert.strictEqual(labelSpan.textContent, "Plan Mode");
 	});
 
-	test('selecting a mode calls setOption on the session', () => {
-		const calls: { optionId: string; value: { id: string; name: string } }[] = [];
+	test("selecting a mode calls setOption on the session", () => {
+		const calls: { optionId: string; value: { id: string; name: string } }[] =
+			[];
 		const result = createPicker(disposables, {
 			setOptionSpy: (optionId, value) => calls.push({ optionId, value }),
 		});
-		const container = document.createElement('div');
+		const container = document.createElement("div");
 		result.picker.render(container);
 		showPicker(container);
 
-		result.onSelect({ id: 'default', label: 'Ask Before Edits' } as IPermissionModeItem);
+		result.onSelect({
+			id: "default",
+			label: "Ask Before Edits",
+		} as IPermissionModeItem);
 
-		assert.deepStrictEqual(calls, [{
-			optionId: 'permissionMode',
-			value: { id: 'default', name: 'Ask Before Edits' },
-		}]);
+		assert.deepStrictEqual(calls, [
+			{
+				optionId: "permissionMode",
+				value: { id: "default", name: "Ask Before Edits" },
+			},
+		]);
 	});
 
-	test('selecting a mode does not throw when no active session', () => {
+	test("selecting a mode does not throw when no active session", () => {
 		const result = createPicker(disposables, { hasActiveSession: false });
-		const container = document.createElement('div');
+		const container = document.createElement("div");
 		result.picker.render(container);
 		showPicker(container);
 
-		assert.doesNotThrow(() => result.onSelect({ id: 'plan', label: 'Plan Mode' } as IPermissionModeItem));
+		assert.doesNotThrow(() =>
+			result.onSelect({
+				id: "plan",
+				label: "Plan Mode",
+			} as IPermissionModeItem),
+		);
 	});
 
-	test('trigger has correct aria label', () => {
+	test("trigger has correct aria label", () => {
 		const { picker } = createPicker(disposables);
-		const container = document.createElement('div');
+		const container = document.createElement("div");
 		picker.render(container);
 
-		const trigger = container.querySelector<HTMLElement>('a.action-label');
+		const trigger = container.querySelector<HTMLElement>("a.action-label");
 		assert.ok(trigger);
 		// Default mode is 'acceptEdits' → "Edit Automatically"
-		assert.ok(trigger.ariaLabel?.includes('Edit Automatically'));
+		assert.ok(trigger.ariaLabel?.includes("Edit Automatically"));
 	});
 
-	test('shows bypass permissions option when setting is enabled', () => {
+	test("shows bypass permissions option when setting is enabled", () => {
 		const { picker, actionWidgetItems } = createPicker(disposables, {
-			configValues: { 'github.copilot.chat.claudeAgent.allowDangerouslySkipPermissions': true },
+			configValues: {
+				"github.copilot.chat.claudeAgent.allowDangerouslySkipPermissions": true,
+			},
 		});
-		const container = document.createElement('div');
+		const container = document.createElement("div");
 		picker.render(container);
 		showPicker(container);
 
 		assert.deepStrictEqual(
-			actionWidgetItems.map(item => ({ id: item.item?.id, label: item.label })),
+			actionWidgetItems.map((item) => ({
+				id: item.item?.id,
+				label: item.label,
+			})),
 			[
-				{ id: 'default', label: 'Ask Before Edits' },
-				{ id: 'acceptEdits', label: 'Edit Automatically' },
-				{ id: 'plan', label: 'Plan Mode' },
-				{ id: 'bypassPermissions', label: 'Bypass Permissions' },
+				{ id: "default", label: "Ask Before Edits" },
+				{ id: "acceptEdits", label: "Edit Automatically" },
+				{ id: "plan", label: "Plan Mode" },
+				{ id: "bypassPermissions", label: "Bypass Permissions" },
 			],
 		);
 	});
 
-	test('selecting bypass permissions writes expected permissionMode option', () => {
-		const calls: { optionId: string; value: { id: string; name: string } }[] = [];
+	test("selecting bypass permissions writes expected permissionMode option", () => {
+		const calls: { optionId: string; value: { id: string; name: string } }[] =
+			[];
 		const result = createPicker(disposables, {
-			configValues: { 'github.copilot.chat.claudeAgent.allowDangerouslySkipPermissions': true },
+			configValues: {
+				"github.copilot.chat.claudeAgent.allowDangerouslySkipPermissions": true,
+			},
 			setOptionSpy: (optionId, value) => calls.push({ optionId, value }),
 		});
-		const container = document.createElement('div');
+		const container = document.createElement("div");
 		result.picker.render(container);
 		showPicker(container);
 
-		result.onSelect({ id: 'bypassPermissions', label: 'Bypass Permissions' } as IPermissionModeItem);
+		result.onSelect({
+			id: "bypassPermissions",
+			label: "Bypass Permissions",
+		} as IPermissionModeItem);
 
-		assert.deepStrictEqual(calls, [{
-			optionId: 'permissionMode',
-			value: { id: 'bypassPermissions', name: 'Bypass Permissions' },
-		}]);
+		assert.deepStrictEqual(calls, [
+			{
+				optionId: "permissionMode",
+				value: { id: "bypassPermissions", name: "Bypass Permissions" },
+			},
+		]);
 	});
 });

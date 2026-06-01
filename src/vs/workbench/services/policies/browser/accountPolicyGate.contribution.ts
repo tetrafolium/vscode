@@ -3,7 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
-import { AccountPolicyGateContribution } from './accountPolicyGateContribution.js';
+import {
+	registerWorkbenchContribution2,
+	WorkbenchPhase,
+} from "../../../common/contributions.js";
+import { AccountPolicyGateContribution } from "./accountPolicyGateContribution.js";
 
-registerWorkbenchContribution2(AccountPolicyGateContribution.ID, AccountPolicyGateContribution, WorkbenchPhase.AfterRestored);
+registerWorkbenchContribution2(
+	AccountPolicyGateContribution.ID,
+	AccountPolicyGateContribution,
+	WorkbenchPhase.AfterRestored,
+);

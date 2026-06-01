@@ -29,32 +29,86 @@ function createMockAuthServiceWithEmitter(opts?: { isFreeUser?: boolean }) {
 	const emitter = new Emitter<void>();
 	const authService = {
 		_serviceBrand: undefined,
-		copilotToken: undefined as { isFreeUser: boolean; quotaInfo: ReturnType<typeof makeQuotaInfo> } | undefined,
+		copilotToken: undefined as
+			| {
+					isFreeUser: boolean;
+					quotaInfo: ReturnType<typeof makeQuotaInfo>;
+			  }
+			| undefined,
 		onDidAuthenticationChange: emitter.event,
 	} as unknown as IAuthenticationService;
 	return {
-		authService, emitter, setToken: (quotaInfo: ReturnType<typeof makeQuotaInfo>) => {
-			(authService as any).copilotToken = { isFreeUser: opts?.isFreeUser ?? false, quotaInfo };
-		}
-	};
-}
-
-function makeQuotaInfo(overrides: { chat?: Partial<SnapshotData>; premium_interactions?: Partial<SnapshotData> } = {}, resetDate = '2026-06-01T00:00:00Z') {
-	return {
-		quota_reset_date: resetDate,
-		quota_snapshots: {
-			chat: { quota_id: 'chat', entitlement: 100, remaining: 50, unlimited: false, overage_count: 0, overage_permitted: false, percent_remaining: 50, ...overrides.chat },
-			completions: { quota_id: 'completions', entitlement: 100, remaining: 100, unlimited: false, overage_count: 0, overage_permitted: false, percent_remaining: 100 },
-			premium_interactions: { quota_id: 'premium', entitlement: 500, remaining: 400, unlimited: false, overage_count: 5, overage_permitted: true, percent_remaining: 80, ...overrides.premium_interactions },
+		authService,
+		emitter,
+		setToken: (quotaInfo: ReturnType<typeof makeQuotaInfo>) => {
+			(authService as any).copilotToken = {
+				isFreeUser: opts?.isFreeUser ?? false,
+				quotaInfo,
+			};
 		},
 	};
 }
 
-type SnapshotData = { quota_id: string; entitlement: number; remaining: number; unlimited: boolean; overage_count: number; overage_permitted: boolean; percent_remaining: number };
+function makeQuotaInfo(
+	overrides: {
+		chat?: Partial<SnapshotData>;
+		premium_interactions?: Partial<SnapshotData>;
+	} = {},
+	resetDate = '2026-06-01T00:00:00Z',
+) {
+	return {
+		quota_reset_date: resetDate,
+		quota_snapshots: {
+			chat: {
+				quota_id: 'chat',
+				entitlement: 100,
+				remaining: 50,
+				unlimited: false,
+				overage_count: 0,
+				overage_permitted: false,
+				percent_remaining: 50,
+				...overrides.chat,
+			},
+			completions: {
+				quota_id: 'completions',
+				entitlement: 100,
+				remaining: 100,
+				unlimited: false,
+				overage_count: 0,
+				overage_permitted: false,
+				percent_remaining: 100,
+			},
+			premium_interactions: {
+				quota_id: 'premium',
+				entitlement: 500,
+				remaining: 400,
+				unlimited: false,
+				overage_count: 5,
+				overage_permitted: true,
+				percent_remaining: 80,
+				...overrides.premium_interactions,
+			},
+		},
+	};
+}
+
+type SnapshotData = {
+	quota_id: string;
+	entitlement: number;
+	remaining: number;
+	unlimited: boolean;
+	overage_count: number;
+	overage_permitted: boolean;
+	percent_remaining: number;
+};
 
 describe('ChatQuotaService', () => {
 	function create() {
-		return new ChatQuotaService(createMockAuthService(), new TestLogService(), createMockCapiClientService());
+		return new ChatQuotaService(
+			createMockAuthService(),
+			new TestLogService(),
+			createMockCapiClientService(),
+		);
 	}
 
 	const TURN_A = 'turn-a';
@@ -173,10 +227,10 @@ describe('ChatQuotaService', () => {
 			svc: ChatQuotaService,
 			turnId: string,
 			nanoAiu: number,
-			delayMs: number = 0
+			delayMs: number = 0,
 		): Promise<void> {
 			if (delayMs > 0) {
-				await new Promise(resolve => setTimeout(resolve, delayMs));
+				await new Promise((resolve) => setTimeout(resolve, delayMs));
 			}
 			svc.setLastCopilotUsage(nanoAiu, turnId);
 		}
@@ -190,7 +244,7 @@ describe('ChatQuotaService', () => {
 		async function simulateTurn(
 			svc: ChatQuotaService,
 			turnId: string,
-			calls: { nanoAiu: number; delayMs: number }[]
+			calls: { nanoAiu: number; delayMs: number }[],
 		): Promise<number | undefined> {
 			svc.resetTurnCredits(turnId);
 			for (const call of calls) {
@@ -202,9 +256,9 @@ describe('ChatQuotaService', () => {
 		test('simple single-turn with tool loop (3 iterations)', async () => {
 			const svc = create();
 			const result = await simulateTurn(svc, 'turn-1', [
-				{ nanoAiu: 500_000_000, delayMs: 0 },   // initial agent call
-				{ nanoAiu: 300_000_000, delayMs: 0 },   // tool call iteration 1
-				{ nanoAiu: 200_000_000, delayMs: 0 },   // tool call iteration 2
+				{ nanoAiu: 500_000_000, delayMs: 0 }, // initial agent call
+				{ nanoAiu: 300_000_000, delayMs: 0 }, // tool call iteration 1
+				{ nanoAiu: 200_000_000, delayMs: 0 }, // tool call iteration 2
 			]);
 			expect(result).toBe(1.0);
 		});
@@ -242,13 +296,13 @@ describe('ChatQuotaService', () => {
 			// Turn B: GPT-4o-mini (cheap, fast — finishes first)
 			const [resultA, resultB] = await Promise.all([
 				simulateTurn(svc, 'window-1-turn', [
-					{ nanoAiu: 56_160_000, delayMs: 0 },      // categorization
-					{ nanoAiu: 24_782_500_000, delayMs: 10 },  // Claude main call (slow)
-					{ nanoAiu: 25_580_500_000, delayMs: 10 },  // Claude follow-up
+					{ nanoAiu: 56_160_000, delayMs: 0 }, // categorization
+					{ nanoAiu: 24_782_500_000, delayMs: 10 }, // Claude main call (slow)
+					{ nanoAiu: 25_580_500_000, delayMs: 10 }, // Claude follow-up
 				]),
 				simulateTurn(svc, 'window-2-turn', [
-					{ nanoAiu: 56_160_000, delayMs: 0 },      // categorization
-					{ nanoAiu: 8_640_000, delayMs: 5 },        // fast gpt-4o-mini
+					{ nanoAiu: 56_160_000, delayMs: 0 }, // categorization
+					{ nanoAiu: 8_640_000, delayMs: 5 }, // fast gpt-4o-mini
 				]),
 			]);
 
@@ -277,8 +331,8 @@ describe('ChatQuotaService', () => {
 			// Final response from turn X
 			svc.setLastCopilotUsage(500_000_000, turnX);
 
-			expect(svc.getCreditsForTurn(turnX)).toBe(4.5);  // 1 + 3 + 0.5
-			expect(svc.getCreditsForTurn(turnY)).toBe(6);     // 2 + 4
+			expect(svc.getCreditsForTurn(turnX)).toBe(4.5); // 1 + 3 + 0.5
+			expect(svc.getCreditsForTurn(turnY)).toBe(6); // 2 + 4
 		});
 
 		test('turn reset during a concurrent turn does not affect the other', async () => {
@@ -298,8 +352,8 @@ describe('ChatQuotaService', () => {
 			// New turn A starts accumulating fresh
 			svc.setLastCopilotUsage(1_000_000_000, turnA);
 
-			expect(svc.getCreditsForTurn(turnA)).toBe(1);   // fresh after reset
-			expect(svc.getCreditsForTurn(turnB)).toBe(5);   // 3 + 2, unaffected
+			expect(svc.getCreditsForTurn(turnA)).toBe(1); // fresh after reset
+			expect(svc.getCreditsForTurn(turnB)).toBe(5); // 3 + 2, unaffected
 		});
 
 		test('many concurrent turns (stress test)', () => {
@@ -342,7 +396,11 @@ describe('ChatQuotaService', () => {
 		//   - turn.id (subagent API calls via parentTurnId)
 		// This simulates the flow in chatParticipantRequestHandler.getResult()
 
-		function getTotalCredits(svc: ChatQuotaService, requestId: string, turnId: string): number | undefined {
+		function getTotalCredits(
+			svc: ChatQuotaService,
+			requestId: string,
+			turnId: string,
+		): number | undefined {
 			const ownCredits = svc.getCreditsForTurn(requestId);
 			const subagentCredits = svc.getCreditsForTurn(turnId);
 			return ownCredits !== undefined || subagentCredits !== undefined
@@ -380,7 +438,9 @@ describe('ChatQuotaService', () => {
 			svc.setLastCopilotUsage(33_000_000_000, parentTurnId);
 			svc.setLastCopilotUsage(33_000_000_000, parentTurnId);
 
-			expect(getTotalCredits(svc, parentRequestId, parentTurnId)).toBe(90);
+			expect(getTotalCredits(svc, parentRequestId, parentTurnId)).toBe(
+				90,
+			);
 		});
 
 		test('two subagent turns do not interfere', () => {
@@ -463,13 +523,30 @@ describe('ChatQuotaService', () => {
 
 	describe('processUserInfoQuotaSnapshot via auth change', () => {
 		test('free user reads from chat snapshot', () => {
-			const { authService, emitter, setToken } = createMockAuthServiceWithEmitter({ isFreeUser: true });
-			const svc = new ChatQuotaService(authService, new TestLogService(), createMockCapiClientService());
+			const { authService, emitter, setToken } =
+				createMockAuthServiceWithEmitter({ isFreeUser: true });
+			const svc = new ChatQuotaService(
+				authService,
+				new TestLogService(),
+				createMockCapiClientService(),
+			);
 
-			setToken(makeQuotaInfo({
-				chat: { percent_remaining: 30, overage_permitted: false, overage_count: 0, entitlement: 100 },
-				premium_interactions: { percent_remaining: 80, overage_permitted: true, overage_count: 5, entitlement: 500 },
-			}));
+			setToken(
+				makeQuotaInfo({
+					chat: {
+						percent_remaining: 30,
+						overage_permitted: false,
+						overage_count: 0,
+						entitlement: 100,
+					},
+					premium_interactions: {
+						percent_remaining: 80,
+						overage_permitted: true,
+						overage_count: 5,
+						entitlement: 500,
+					},
+				}),
+			);
 			emitter.fire();
 
 			const quota = svc.quotaInfo;
@@ -481,13 +558,30 @@ describe('ChatQuotaService', () => {
 		});
 
 		test('paid user reads from premium_interactions snapshot', () => {
-			const { authService, emitter, setToken } = createMockAuthServiceWithEmitter({ isFreeUser: false });
-			const svc = new ChatQuotaService(authService, new TestLogService(), createMockCapiClientService());
+			const { authService, emitter, setToken } =
+				createMockAuthServiceWithEmitter({ isFreeUser: false });
+			const svc = new ChatQuotaService(
+				authService,
+				new TestLogService(),
+				createMockCapiClientService(),
+			);
 
-			setToken(makeQuotaInfo({
-				chat: { percent_remaining: 30, overage_permitted: false, overage_count: 0, entitlement: 100 },
-				premium_interactions: { percent_remaining: 80, overage_permitted: true, overage_count: 5, entitlement: 500 },
-			}));
+			setToken(
+				makeQuotaInfo({
+					chat: {
+						percent_remaining: 30,
+						overage_permitted: false,
+						overage_count: 0,
+						entitlement: 100,
+					},
+					premium_interactions: {
+						percent_remaining: 80,
+						overage_permitted: true,
+						overage_count: 5,
+						entitlement: 500,
+					},
+				}),
+			);
 			emitter.fire();
 
 			const quota = svc.quotaInfo;
@@ -499,8 +593,13 @@ describe('ChatQuotaService', () => {
 		});
 
 		test('fires onDidChange when quota is updated', () => {
-			const { authService, emitter, setToken } = createMockAuthServiceWithEmitter({ isFreeUser: true });
-			const svc = new ChatQuotaService(authService, new TestLogService(), createMockCapiClientService());
+			const { authService, emitter, setToken } =
+				createMockAuthServiceWithEmitter({ isFreeUser: true });
+			const svc = new ChatQuotaService(
+				authService,
+				new TestLogService(),
+				createMockCapiClientService(),
+			);
 			let changeCount = 0;
 			svc.onDidChange(() => changeCount++);
 
@@ -511,10 +610,19 @@ describe('ChatQuotaService', () => {
 		});
 
 		test('no-ops when copilotToken has no quotaInfo', () => {
-			const { authService, emitter } = createMockAuthServiceWithEmitter({ isFreeUser: true });
-			const svc = new ChatQuotaService(authService, new TestLogService(), createMockCapiClientService());
+			const { authService, emitter } = createMockAuthServiceWithEmitter({
+				isFreeUser: true,
+			});
+			const svc = new ChatQuotaService(
+				authService,
+				new TestLogService(),
+				createMockCapiClientService(),
+			);
 
-			(authService as any).copilotToken = { isFreeUser: true, quotaInfo: undefined };
+			(authService as any).copilotToken = {
+				isFreeUser: true,
+				quotaInfo: undefined,
+			};
 			emitter.fire();
 
 			expect(svc.quotaInfo).toBeUndefined();

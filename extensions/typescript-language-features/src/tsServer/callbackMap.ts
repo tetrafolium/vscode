@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ServerResponse } from '../typescriptService';
-import type * as Proto from './protocol/protocol';
+import { ServerResponse } from "../typescriptService";
+import type * as Proto from "./protocol/protocol";
 
 export interface CallbackItem<R> {
 	readonly onSuccess: (value: R) => void;
@@ -16,8 +16,14 @@ export interface CallbackItem<R> {
 }
 
 export class CallbackMap<R extends Proto.Response> {
-	private readonly _callbacks = new Map<number, CallbackItem<ServerResponse.Response<R> | undefined>>();
-	private readonly _asyncCallbacks = new Map<number, CallbackItem<ServerResponse.Response<R> | undefined>>();
+	private readonly _callbacks = new Map<
+		number,
+		CallbackItem<ServerResponse.Response<R> | undefined>
+	>();
+	private readonly _asyncCallbacks = new Map<
+		number,
+		CallbackItem<ServerResponse.Response<R> | undefined>
+	>();
 
 	public destroy(cause: string): void {
 		const cancellation = new ServerResponse.Cancelled(cause);
@@ -31,7 +37,11 @@ export class CallbackMap<R extends Proto.Response> {
 		this._asyncCallbacks.clear();
 	}
 
-	public add(seq: number, callback: CallbackItem<ServerResponse.Response<R> | undefined>, isAsync: boolean) {
+	public add(
+		seq: number,
+		callback: CallbackItem<ServerResponse.Response<R> | undefined>,
+		isAsync: boolean,
+	) {
 		if (isAsync) {
 			this._asyncCallbacks.set(seq, callback);
 		} else {
@@ -39,13 +49,17 @@ export class CallbackMap<R extends Proto.Response> {
 		}
 	}
 
-	public fetch(seq: number): CallbackItem<ServerResponse.Response<R> | undefined> | undefined {
+	public fetch(
+		seq: number,
+	): CallbackItem<ServerResponse.Response<R> | undefined> | undefined {
 		const callback = this._callbacks.get(seq) || this._asyncCallbacks.get(seq);
 		this.delete(seq);
 		return callback;
 	}
 
-	public peek(seq: number): CallbackItem<ServerResponse.Response<R> | undefined> | undefined {
+	public peek(
+		seq: number,
+	): CallbackItem<ServerResponse.Response<R> | undefined> | undefined {
 		return this._callbacks.get(seq) ?? this._asyncCallbacks.get(seq);
 	}
 

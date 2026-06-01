@@ -12,10 +12,10 @@ export default defineConfig(({ mode }) => ({
 		exclude: [
 			'**/node_modules/**',
 			'**/dist/**',
-			'**/.{idea,git,cache,output,temp}/**'
+			'**/.{idea,git,cache,output,temp}/**',
 		],
 		env: loadEnv(mode, process.cwd(), ''),
 		environment: 'node',
-		globals: true
-	}
+		globals: true,
+	},
 }));

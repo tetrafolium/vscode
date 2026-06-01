@@ -29,12 +29,14 @@ interface CloudQueryResponse {
 /**
  * Convert a columnar cloud response to an array of record objects.
  */
-function columnarToRecords(response: CloudQueryResponse): Record<string, unknown>[] {
+function columnarToRecords(
+	response: CloudQueryResponse,
+): Record<string, unknown>[] {
 	const { columns, data } = response;
 	if (!data || !columns) {
 		return [];
 	}
-	return data.map(row => {
+	return data.map((row) => {
 		const record: Record<string, unknown> = {};
 		for (let i = 0; i < columns.length; i++) {
 			record[columns[i]] = row[i];
@@ -47,19 +49,24 @@ function columnarToRecords(response: CloudQueryResponse): Record<string, unknown
  * HTTP client for querying session data from the cloud.
  */
 export class CloudSessionStoreClient {
-
 	constructor(
 		private readonly _tokenManager: ICopilotTokenManager,
 		private readonly _authService: IAuthenticationService,
 		private readonly _fetcherService: IFetcherService,
-	) { }
+	) {}
 
 	/**
 	 * Execute a SQL query against the cloud session store (user-scoped).
 	 * Returns rows on success, an error string on query errors (4xx bad SQL),
 	 * or undefined on auth/network/infrastructure failures (401, 403, network errors).
 	 */
-	async executeQuery(sql: string): Promise<{ rows: Record<string, unknown>[]; truncated: boolean } | { error: string } | undefined> {
+	async executeQuery(
+		sql: string,
+	): Promise<
+		| { rows: Record<string, unknown>[]; truncated: boolean }
+		| { error: string }
+		| undefined
+	> {
 		try {
 			const copilotToken = await this._tokenManager.getCopilotToken();
 			const baseUrl = copilotToken.endpoints?.api;
@@ -78,7 +85,7 @@ export class CloudSessionStoreClient {
 				callSite: 'chronicle.cloudQuery',
 				method: 'POST',
 				headers: {
-					'Authorization': `Bearer ${bearerToken}`,
+					Authorization: `Bearer ${bearerToken}`,
 					'Copilot-Integration-Id': INTEGRATION_ID,
 				},
 				json: { query: sql },
@@ -93,15 +100,19 @@ export class CloudSessionStoreClient {
 
 				// Query errors (bad SQL, etc.) → surface error to model
 				try {
-					const body = await res.json() as { error?: string; message?: string };
-					const msg = body?.error ?? body?.message ?? `HTTP ${res.status}`;
+					const body = (await res.json()) as {
+						error?: string;
+						message?: string;
+					};
+					const msg =
+						body?.error ?? body?.message ?? `HTTP ${res.status}`;
 					return { error: msg };
 				} catch {
 					return { error: `HTTP ${res.status}` };
 				}
 			}
 
-			const data = await res.json() as CloudQueryResponse;
+			const data = (await res.json()) as CloudQueryResponse;
 			const rows = columnarToRecords(data);
 			return { rows, truncated: data.truncated ?? false };
 		} catch (err) {

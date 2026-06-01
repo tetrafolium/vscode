@@ -5,14 +5,15 @@ function fibonacci_recursive(n: number): number {
 }
 
 function generate_fibonacci_recursive(n: number) {
-	const fibonacci_series = Array.from({ length: n }, (_, i) => fibonacci_recursive(i + 1));
+	const fibonacci_series = Array.from({ length: n }, (_, i) =>
+		fibonacci_recursive(i + 1),
+	);
 	return fibonacci_series;
 }
 
 const mock_data = {
-	number: 10
+	number: 10,
 };
 
 console.log('\nFibonacci Series using recursion:');
 console.log(generate_fibonacci_recursive(mock_data.number));
-

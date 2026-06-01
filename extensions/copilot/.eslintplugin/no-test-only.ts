@@ -5,16 +5,16 @@
 
 import * as eslint from 'eslint';
 
-export default new class NoTestOnly implements eslint.Rule.RuleModule {
-
+export default new (class NoTestOnly implements eslint.Rule.RuleModule {
 	create(context: eslint.Rule.RuleContext): eslint.Rule.RuleListener {
 		return {
-			['MemberExpression[object.name=/^(test|suite)$/][property.name="only"]']: (node: any) => {
-				return context.report({
-					node,
-					message: 'only is a dev-time tool and CANNOT be pushed'
-				});
-			}
+			['MemberExpression[object.name=/^(test|suite)$/][property.name="only"]']:
+				(node: any) => {
+					return context.report({
+						node,
+						message: 'only is a dev-time tool and CANNOT be pushed',
+					});
+				},
 		};
 	}
-};
+})();

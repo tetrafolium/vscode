@@ -3,6 +3,4 @@
  *--------------------------------------------------------------------------------------------*/
 import { B } from './file2';
 
-export class A implements B {
-
-}
+export class A implements B {}

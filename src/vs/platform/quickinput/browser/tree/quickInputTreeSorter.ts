@@ -3,11 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ITreeSorter } from '../../../../base/browser/ui/tree/tree.js';
-import { IQuickTreeItem } from '../../common/quickInput.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
+import { ITreeSorter } from "../../../../base/browser/ui/tree/tree.js";
+import { IQuickTreeItem } from "../../common/quickInput.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
 
-export class QuickInputTreeSorter extends Disposable implements ITreeSorter<IQuickTreeItem> {
+export class QuickInputTreeSorter
+	extends Disposable
+	implements ITreeSorter<IQuickTreeItem>
+{
 	private _sortByLabel: boolean = true;
 
 	get sortByLabel(): boolean {

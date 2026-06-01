@@ -44,13 +44,15 @@ export interface QueryMatchNode<DetailType extends DetailBlock> {
  * This assumes that the constructor's `blockInfos` are a part of the same syntax tree.
  */
 export class QueryMatchTree<DetailType extends DetailBlock> {
-
 	public roots: QueryMatchNode<DetailType>[] = [];
 
 	/**
 	 * @remark mutates the passed `groups`
 	 */
-	constructor(groups: MatchGroup<DetailType>[], public readonly syntaxTreeRoot: TreeSitterChunkHeaderInfo) {
+	constructor(
+		groups: MatchGroup<DetailType>[],
+		public readonly syntaxTreeRoot: TreeSitterChunkHeaderInfo,
+	) {
 		this.formTree(groups);
 	}
 	/**
@@ -59,8 +61,11 @@ export class QueryMatchTree<DetailType extends DetailBlock> {
 	 * @param groups to use as node content in the tree
 	 */
 	private formTree(groups: MatchGroup<DetailType>[]) {
-		groups
-			.sort((a, b) => a.mainBlock.startIndex - b.mainBlock.startIndex || a.mainBlock.endIndex - b.mainBlock.endIndex);
+		groups.sort(
+			(a, b) =>
+				a.mainBlock.startIndex - b.mainBlock.startIndex ||
+				a.mainBlock.endIndex - b.mainBlock.endIndex,
+		);
 
 		const recentParentStack: QueryMatchNode<DetailType>[] = [];
 
@@ -68,15 +73,20 @@ export class QueryMatchTree<DetailType extends DetailBlock> {
 			return recentParentStack[recentParentStack.length - 1];
 		};
 
-		const hasEqualRange = (a: MatchGroup<DetailType>, b: MatchGroup<DetailType>) => {
-			return (a.mainBlock.startIndex === b.mainBlock.startIndex &&
-				a.mainBlock.endIndex === b.mainBlock.endIndex);
+		const hasEqualRange = (
+			a: MatchGroup<DetailType>,
+			b: MatchGroup<DetailType>,
+		) => {
+			return (
+				a.mainBlock.startIndex === b.mainBlock.startIndex &&
+				a.mainBlock.endIndex === b.mainBlock.endIndex
+			);
 		};
 
 		for (const group of groups) {
 			const matchNode: QueryMatchNode<DetailType> = {
 				info: group,
-				children: []
+				children: [],
 			};
 			let currParent = peekParent();
 
@@ -91,12 +101,16 @@ export class QueryMatchTree<DetailType extends DetailBlock> {
 				continue;
 			}
 
-			while (currParent && !TreeSitterOffsetRange.doesContain(currParent.info.mainBlock, group.mainBlock)) {
+			while (
+				currParent &&
+				!TreeSitterOffsetRange.doesContain(
+					currParent.info.mainBlock,
+					group.mainBlock,
+				)
+			) {
 				recentParentStack.pop();
 				currParent = peekParent();
 			}
-
-
 
 			if (currParent) {
 				currParent.children.push(matchNode);
@@ -107,7 +121,6 @@ export class QueryMatchTree<DetailType extends DetailBlock> {
 			recentParentStack.push(matchNode);
 		}
 	}
-
 }
 
 /**

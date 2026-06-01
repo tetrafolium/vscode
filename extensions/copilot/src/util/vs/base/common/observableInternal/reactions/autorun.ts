@@ -5,9 +5,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IReaderWithStore, IReader, IObservable, ISettableObservable } from '../base';
+import {
+	IReaderWithStore,
+	IReader,
+	IObservable,
+	ISettableObservable,
+} from '../base';
 import { IChangeTracker } from '../changeTracker';
-import { DisposableStore, IDisposable, toDisposable } from '../commonFacade/deps';
+import {
+	DisposableStore,
+	IDisposable,
+	toDisposable,
+} from '../commonFacade/deps';
 import { DebugNameData, IDebugNameData } from '../debugName';
 import { AutorunObserver } from './autorunImpl';
 import { DebugLocation } from '../debugLocation';
@@ -18,12 +27,15 @@ import { transaction } from '../transaction';
  * Runs immediately and whenever a transaction ends and an observed observable changed.
  * {@link fn} should start with a JS Doc using `@description` to name the autorun.
  */
-export function autorun(fn: (reader: IReaderWithStore) => void, debugLocation = DebugLocation.ofCaller()): IDisposable {
+export function autorun(
+	fn: (reader: IReaderWithStore) => void,
+	debugLocation = DebugLocation.ofCaller(),
+): IDisposable {
 	return new AutorunObserver(
 		new DebugNameData(undefined, undefined, fn),
 		fn,
 		undefined,
-		debugLocation
+		debugLocation,
 	);
 }
 
@@ -31,12 +43,20 @@ export function autorun(fn: (reader: IReaderWithStore) => void, debugLocation = 
  * Runs immediately and whenever a transaction ends and an observed observable changed.
  * {@link fn} should start with a JS Doc using `@description` to name the autorun.
  */
-export function autorunOpts(options: IDebugNameData & {}, fn: (reader: IReaderWithStore) => void, debugLocation = DebugLocation.ofCaller()): IDisposable {
+export function autorunOpts(
+	options: IDebugNameData & {},
+	fn: (reader: IReaderWithStore) => void,
+	debugLocation = DebugLocation.ofCaller(),
+): IDisposable {
 	return new AutorunObserver(
-		new DebugNameData(options.owner, options.debugName, options.debugReferenceFn ?? fn),
+		new DebugNameData(
+			options.owner,
+			options.debugName,
+			options.debugReferenceFn ?? fn,
+		),
 		fn,
 		undefined,
-		debugLocation
+		debugLocation,
 	);
 }
 
@@ -56,13 +76,17 @@ export function autorunHandleChanges<TChangeSummary>(
 		changeTracker: IChangeTracker<TChangeSummary>;
 	},
 	fn: (reader: IReader, changeSummary: TChangeSummary) => void,
-	debugLocation = DebugLocation.ofCaller()
+	debugLocation = DebugLocation.ofCaller(),
 ): IDisposable {
 	return new AutorunObserver(
-		new DebugNameData(options.owner, options.debugName, options.debugReferenceFn ?? fn),
+		new DebugNameData(
+			options.owner,
+			options.debugName,
+			options.debugReferenceFn ?? fn,
+		),
 		fn,
 		options.changeTracker,
-		debugLocation
+		debugLocation,
 	);
 }
 
@@ -73,7 +97,11 @@ export function autorunWithStoreHandleChanges<TChangeSummary>(
 	options: IDebugNameData & {
 		changeTracker: IChangeTracker<TChangeSummary>;
 	},
-	fn: (reader: IReader, changeSummary: TChangeSummary, store: DisposableStore) => void
+	fn: (
+		reader: IReader,
+		changeSummary: TChangeSummary,
+		store: DisposableStore,
+	) => void,
 ): IDisposable {
 	const store = new DisposableStore();
 	const disposable = autorunHandleChanges(
@@ -86,7 +114,7 @@ export function autorunWithStoreHandleChanges<TChangeSummary>(
 		(reader, changeSummary) => {
 			store.clear();
 			fn(reader, changeSummary, store);
-		}
+		},
 	);
 	return toDisposable(() => {
 		disposable.dispose();
@@ -99,7 +127,9 @@ export function autorunWithStoreHandleChanges<TChangeSummary>(
  *
  * @deprecated Use `autorun(reader => { reader.store.add(...) })` instead!
  */
-export function autorunWithStore(fn: (reader: IReader, store: DisposableStore) => void): IDisposable {
+export function autorunWithStore(
+	fn: (reader: IReader, store: DisposableStore) => void,
+): IDisposable {
 	const store = new DisposableStore();
 	const disposable = autorunOpts(
 		{
@@ -107,10 +137,10 @@ export function autorunWithStore(fn: (reader: IReader, store: DisposableStore) =
 			debugName: undefined,
 			debugReferenceFn: fn,
 		},
-		reader => {
+		(reader) => {
 			store.clear();
 			fn(reader, store);
-		}
+		},
 	);
 	return toDisposable(() => {
 		disposable.dispose();
@@ -120,7 +150,7 @@ export function autorunWithStore(fn: (reader: IReader, store: DisposableStore) =
 
 export function autorunDelta<T>(
 	observable: IObservable<T>,
-	handler: (args: { lastValue: T | undefined; newValue: T }) => void
+	handler: (args: { lastValue: T | undefined; newValue: T }) => void,
 ): IDisposable {
 	let _lastValue: T | undefined;
 	return autorunOpts({ debugReferenceFn: handler }, (reader) => {
@@ -134,7 +164,7 @@ export function autorunDelta<T>(
 export function autorunIterableDelta<T>(
 	getValue: (reader: IReader) => Iterable<T>,
 	handler: (args: { addedValues: T[]; removedValues: T[] }) => void,
-	getUniqueIdentifier: (value: T) => unknown = v => v
+	getUniqueIdentifier: (value: T) => unknown = (v) => v,
 ) {
 	const lastValues = new Map<unknown, T>();
 	return autorunOpts({ debugReferenceFn: getValue }, (reader) => {
@@ -154,7 +184,10 @@ export function autorunIterableDelta<T>(
 		}
 
 		if (newValues.size || removedValues.size) {
-			handler({ addedValues: [...newValues.values()], removedValues: [...removedValues.values()] });
+			handler({
+				addedValues: [...newValues.values()],
+				removedValues: [...removedValues.values()],
+			});
 		}
 	});
 }
@@ -181,45 +214,49 @@ export function autorunPerKeyedItem<TIn, TKey>(
 	items: IObservable<readonly TIn[]>,
 	keyFn: (input: TIn) => TKey,
 	setup: (key: TKey, value: IObservable<TIn>, store: DisposableStore) => void,
-	debugLocation = DebugLocation.ofCaller()
+	debugLocation = DebugLocation.ofCaller(),
 ): IDisposable {
 	interface ICell {
 		readonly value: ISettableObservable<TIn>;
 		readonly store: DisposableStore;
 	}
 	const cells = new Map<TKey, ICell>();
-	const ar = autorunOpts({ debugReferenceFn: setup }, reader => {
-		const arr = items.read(reader);
-		const seen = new Set<TKey>();
-		const additions: { key: TKey; cell: ICell }[] = [];
-		transaction(tx => {
-			for (const item of arr) {
-				const key = keyFn(item);
-				seen.add(key);
-				const existing = cells.get(key);
-				if (existing) {
-					existing.value.set(item, tx);
-				} else {
-					const store = new DisposableStore();
-					const value = observableValue<TIn>('keyedItem', item);
-					const cell: ICell = { value, store };
-					cells.set(key, cell);
-					additions.push({ key, cell });
+	const ar = autorunOpts(
+		{ debugReferenceFn: setup },
+		(reader) => {
+			const arr = items.read(reader);
+			const seen = new Set<TKey>();
+			const additions: { key: TKey; cell: ICell }[] = [];
+			transaction((tx) => {
+				for (const item of arr) {
+					const key = keyFn(item);
+					seen.add(key);
+					const existing = cells.get(key);
+					if (existing) {
+						existing.value.set(item, tx);
+					} else {
+						const store = new DisposableStore();
+						const value = observableValue<TIn>('keyedItem', item);
+						const cell: ICell = { value, store };
+						cells.set(key, cell);
+						additions.push({ key, cell });
+					}
 				}
-			}
-			for (const [k, cell] of cells) {
-				if (!seen.has(k)) {
-					cell.store.dispose();
-					cells.delete(k);
+				for (const [k, cell] of cells) {
+					if (!seen.has(k)) {
+						cell.store.dispose();
+						cells.delete(k);
+					}
 				}
+			});
+			// Setup runs after the transaction so per-key autoruns observe the
+			// final cell values on their first read.
+			for (const { key, cell } of additions) {
+				setup(key, cell.value, cell.store);
 			}
-		});
-		// Setup runs after the transaction so per-key autoruns observe the
-		// final cell values on their first read.
-		for (const { key, cell } of additions) {
-			setup(key, cell.value, cell.store);
-		}
-	}, debugLocation);
+		},
+		debugLocation,
+	);
 	return toDisposable(() => {
 		ar.dispose();
 		for (const cell of cells.values()) {
@@ -229,19 +266,22 @@ export function autorunPerKeyedItem<TIn, TKey>(
 	});
 }
 
-export interface IReaderWithDispose extends IReaderWithStore, IDisposable { }
+export interface IReaderWithDispose extends IReaderWithStore, IDisposable {}
 
 /**
  * An autorun with a `dispose()` method on its `reader` which cancels the autorun.
  * It it safe to call `dispose()` synchronously.
  * @deprecated Use autorunSelfDisposable2
  */
-export function autorunSelfDisposable(fn: (reader: IReaderWithDispose) => void, debugLocation = DebugLocation.ofCaller()): IDisposable {
+export function autorunSelfDisposable(
+	fn: (reader: IReaderWithDispose) => void,
+	debugLocation = DebugLocation.ofCaller(),
+): IDisposable {
 	let ar: IDisposable | undefined;
 	let disposed = false;
 
 	// eslint-disable-next-line prefer-const
-	ar = autorun(reader => {
+	ar = autorun((reader) => {
 		fn({
 			delayedStore: reader.delayedStore,
 			store: reader.store,
@@ -249,7 +289,7 @@ export function autorunSelfDisposable(fn: (reader: IReaderWithDispose) => void, 
 			dispose: () => {
 				ar?.dispose();
 				disposed = true;
-			}
+			},
 		});
 	}, debugLocation);
 
@@ -260,18 +300,21 @@ export function autorunSelfDisposable(fn: (reader: IReaderWithDispose) => void, 
 	return ar;
 }
 
-
 /**
  * An autorun with a `dispose()` method on its `reader` which cancels the autorun.
  * It it safe to call `dispose()` synchronously.
  * TODO@hediet/copilot: rename to delete autorunSelfDisposable, and rename autorunSelfDisposable2 to autorunSelfDisposable.
  */
-export function registerAutorunSelfDisposable(store: DisposableStore, fn: (reader: IReaderWithDispose) => void, debugLocation = DebugLocation.ofCaller()): void {
+export function registerAutorunSelfDisposable(
+	store: DisposableStore,
+	fn: (reader: IReaderWithDispose) => void,
+	debugLocation = DebugLocation.ofCaller(),
+): void {
 	let ar: IDisposable | undefined;
 	let disposeSync = false;
 
 	// eslint-disable-next-line prefer-const
-	ar = autorun(reader => {
+	ar = autorun((reader) => {
 		fn({
 			delayedStore: reader.delayedStore,
 			store: reader.store,
@@ -284,7 +327,7 @@ export function registerAutorunSelfDisposable(store: DisposableStore, fn: (reade
 					// dispose on reaction, ar is already registered.
 					store.delete(ar);
 				}
-			}
+			},
 		});
 	}, debugLocation);
 

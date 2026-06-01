@@ -16,15 +16,18 @@ export function count<T>(array: T[], predicate: (value: T) => boolean): number {
 	return count;
 }
 
-export function findInsertionIndexInSortedArray<T>(array: T[], value: T, isBeforeFunction: (a: T, b: T) => boolean): number {
+export function findInsertionIndexInSortedArray<T>(
+	array: T[],
+	value: T,
+	isBeforeFunction: (a: T, b: T) => boolean,
+): number {
 	let low = 0;
 	let high = array.length;
 	while (low < high) {
 		const mid = (low + high) >>> 1;
 		if (isBeforeFunction(array[mid], value)) {
 			low = mid + 1;
-		}
-		else {
+		} else {
 			high = mid;
 		}
 	}
@@ -36,7 +39,10 @@ export function findInsertionIndexInSortedArray<T>(array: T[], value: T, isBefor
  * @param compare - The sort callback to use for comparing elements.
  * @returns The maximum element in the array according to the given sort callback.
  */
-export function max<T>(arr: T[], compare: (a: T, b: T) => number): T | undefined {
+export function max<T>(
+	arr: T[],
+	compare: (a: T, b: T) => number,
+): T | undefined {
 	if (arr.length === 0) {
 		return undefined;
 	}
@@ -54,7 +60,10 @@ export function max<T>(arr: T[], compare: (a: T, b: T) => number): T | undefined
 	return maxElement;
 }
 
-export function filterMap<T, K>(array: T[], map: (t: T) => K | undefined | null): K[] {
+export function filterMap<T, K>(
+	array: T[],
+	map: (t: T) => K | undefined | null,
+): K[] {
 	const result: K[] = [];
 	for (const element of array) {
 		const mapped = map(element);
@@ -81,10 +90,13 @@ export function min(array: number[]): number {
 }
 
 /**
- * 
+ *
  * Last batch may not match batch size.
  */
-export function* batchArrayElements<T>(array: T[], batchSize: number): Iterable<T[]> {
+export function* batchArrayElements<T>(
+	array: T[],
+	batchSize: number,
+): Iterable<T[]> {
 	for (let i = 0; i < array.length; i += batchSize) {
 		yield array.slice(i, i + batchSize);
 	}

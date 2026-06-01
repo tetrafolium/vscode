@@ -3,28 +3,57 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from '../../../../nls.js';
-import { toErrorMessage } from '../../../../base/common/errorMessage.js';
-import { Event, Emitter } from '../../../../base/common/event.js';
-import { URI } from '../../../../base/common/uri.js';
-import { TextFileEditorModel } from './textFileEditorModel.js';
-import { dispose, IDisposable, Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
-import { ITextFileEditorModel, ITextFileEditorModelManager, ITextFileEditorModelResolveOrCreateOptions, ITextFileResolveEvent, ITextFileSaveEvent, ITextFileSaveParticipant } from './textfiles.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { ResourceMap } from '../../../../base/common/map.js';
-import { IFileService, FileChangesEvent, FileOperation, FileChangeType, IFileSystemProviderRegistrationEvent, IFileSystemProviderCapabilitiesChangeEvent } from '../../../../platform/files/common/files.js';
-import { Promises, ResourceQueue } from '../../../../base/common/async.js';
-import { onUnexpectedError } from '../../../../base/common/errors.js';
-import { TextFileSaveParticipant } from './textFileSaveParticipant.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { INotificationService } from '../../../../platform/notification/common/notification.js';
-import { IStoredFileWorkingCopySaveParticipantContext, IWorkingCopyFileService, WorkingCopyFileEvent } from '../../workingCopy/common/workingCopyFileService.js';
-import { ITextSnapshot } from '../../../../editor/common/model.js';
-import { extname, joinPath } from '../../../../base/common/resources.js';
-import { createTextBufferFactoryFromSnapshot } from '../../../../editor/common/model/textModel.js';
-import { PLAINTEXT_EXTENSION, PLAINTEXT_LANGUAGE_ID } from '../../../../editor/common/languages/modesRegistry.js';
-import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
-import { IProgress, IProgressStep } from '../../../../platform/progress/common/progress.js';
+import { localize } from "../../../../nls.js";
+import { toErrorMessage } from "../../../../base/common/errorMessage.js";
+import { Event, Emitter } from "../../../../base/common/event.js";
+import { URI } from "../../../../base/common/uri.js";
+import { TextFileEditorModel } from "./textFileEditorModel.js";
+import {
+	dispose,
+	IDisposable,
+	Disposable,
+	DisposableStore,
+} from "../../../../base/common/lifecycle.js";
+import {
+	ITextFileEditorModel,
+	ITextFileEditorModelManager,
+	ITextFileEditorModelResolveOrCreateOptions,
+	ITextFileResolveEvent,
+	ITextFileSaveEvent,
+	ITextFileSaveParticipant,
+} from "./textfiles.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import { ResourceMap } from "../../../../base/common/map.js";
+import {
+	IFileService,
+	FileChangesEvent,
+	FileOperation,
+	FileChangeType,
+	IFileSystemProviderRegistrationEvent,
+	IFileSystemProviderCapabilitiesChangeEvent,
+} from "../../../../platform/files/common/files.js";
+import { Promises, ResourceQueue } from "../../../../base/common/async.js";
+import { onUnexpectedError } from "../../../../base/common/errors.js";
+import { TextFileSaveParticipant } from "./textFileSaveParticipant.js";
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { INotificationService } from "../../../../platform/notification/common/notification.js";
+import {
+	IStoredFileWorkingCopySaveParticipantContext,
+	IWorkingCopyFileService,
+	WorkingCopyFileEvent,
+} from "../../workingCopy/common/workingCopyFileService.js";
+import { ITextSnapshot } from "../../../../editor/common/model.js";
+import { extname, joinPath } from "../../../../base/common/resources.js";
+import { createTextBufferFactoryFromSnapshot } from "../../../../editor/common/model/textModel.js";
+import {
+	PLAINTEXT_EXTENSION,
+	PLAINTEXT_LANGUAGE_ID,
+} from "../../../../editor/common/languages/modesRegistry.js";
+import { IUriIdentityService } from "../../../../platform/uriIdentity/common/uriIdentity.js";
+import {
+	IProgress,
+	IProgressStep,
+} from "../../../../platform/progress/common/progress.js";
 
 interface ITextFileEditorModelToRestore {
 	readonly source: URI;
@@ -37,42 +66,69 @@ interface ITextFileEditorModelToRestore {
 	readonly encoding?: string;
 }
 
-export class TextFileEditorModelManager extends Disposable implements ITextFileEditorModelManager {
-
-	private readonly _onDidCreate = this._register(new Emitter<TextFileEditorModel>({ leakWarningThreshold: 500, leakWarningName: 'TextFileEditorModelManager._onDidCreate' /* increased for users with hundreds of inputs opened */ }));
+export class TextFileEditorModelManager
+	extends Disposable
+	implements ITextFileEditorModelManager
+{
+	private readonly _onDidCreate = this._register(
+		new Emitter<TextFileEditorModel>({
+			leakWarningThreshold: 500,
+			leakWarningName:
+				"TextFileEditorModelManager._onDidCreate" /* increased for users with hundreds of inputs opened */,
+		}),
+	);
 	readonly onDidCreate = this._onDidCreate.event;
 
-	private readonly _onDidResolve = this._register(new Emitter<ITextFileResolveEvent>());
+	private readonly _onDidResolve = this._register(
+		new Emitter<ITextFileResolveEvent>(),
+	);
 	readonly onDidResolve = this._onDidResolve.event;
 
 	private readonly _onDidRemove = this._register(new Emitter<URI>());
 	readonly onDidRemove = this._onDidRemove.event;
 
-	private readonly _onDidChangeDirty = this._register(new Emitter<TextFileEditorModel>());
+	private readonly _onDidChangeDirty = this._register(
+		new Emitter<TextFileEditorModel>(),
+	);
 	readonly onDidChangeDirty = this._onDidChangeDirty.event;
 
-	private readonly _onDidChangeReadonly = this._register(new Emitter<TextFileEditorModel>());
+	private readonly _onDidChangeReadonly = this._register(
+		new Emitter<TextFileEditorModel>(),
+	);
 	readonly onDidChangeReadonly = this._onDidChangeReadonly.event;
 
-	private readonly _onDidChangeOrphaned = this._register(new Emitter<TextFileEditorModel>());
+	private readonly _onDidChangeOrphaned = this._register(
+		new Emitter<TextFileEditorModel>(),
+	);
 	readonly onDidChangeOrphaned = this._onDidChangeOrphaned.event;
 
-	private readonly _onDidSaveError = this._register(new Emitter<TextFileEditorModel>());
+	private readonly _onDidSaveError = this._register(
+		new Emitter<TextFileEditorModel>(),
+	);
 	readonly onDidSaveError = this._onDidSaveError.event;
 
-	private readonly _onDidSave = this._register(new Emitter<ITextFileSaveEvent>());
+	private readonly _onDidSave = this._register(
+		new Emitter<ITextFileSaveEvent>(),
+	);
 	readonly onDidSave = this._onDidSave.event;
 
-	private readonly _onDidRevert = this._register(new Emitter<TextFileEditorModel>());
+	private readonly _onDidRevert = this._register(
+		new Emitter<TextFileEditorModel>(),
+	);
 	readonly onDidRevert = this._onDidRevert.event;
 
-	private readonly _onDidChangeEncoding = this._register(new Emitter<TextFileEditorModel>());
+	private readonly _onDidChangeEncoding = this._register(
+		new Emitter<TextFileEditorModel>(),
+	);
 	readonly onDidChangeEncoding = this._onDidChangeEncoding.event;
 
 	private readonly mapResourceToModel = new ResourceMap<TextFileEditorModel>();
 	private readonly mapResourceToModelListeners = new ResourceMap<IDisposable>();
-	private readonly mapResourceToDisposeListener = new ResourceMap<IDisposable>();
-	private readonly mapResourceToPendingModelResolvers = new ResourceMap<Promise<void>>();
+	private readonly mapResourceToDisposeListener =
+		new ResourceMap<IDisposable>();
+	private readonly mapResourceToPendingModelResolvers = new ResourceMap<
+		Promise<void>
+	>();
 
 	private readonly modelResolveQueue = this._register(new ResourceQueue());
 
@@ -81,8 +137,20 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 
 		return {
 			onSaveError(error: Error, model: ITextFileEditorModel): void {
-				notificationService.error(localize({ key: 'genericSaveError', comment: ['{0} is the resource that failed to save and {1} the error message'] }, "Failed to save '{0}': {1}", model.name, toErrorMessage(error, false)));
-			}
+				notificationService.error(
+					localize(
+						{
+							key: "genericSaveError",
+							comment: [
+								"{0} is the resource that failed to save and {1} the error message",
+							],
+						},
+						"Failed to save '{0}': {1}",
+						model.name,
+						toErrorMessage(error, false),
+					),
+				);
+			},
 		};
 	})();
 
@@ -91,32 +159,59 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 	}
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IFileService private readonly fileService: IFileService,
-		@INotificationService private readonly notificationService: INotificationService,
-		@IWorkingCopyFileService private readonly workingCopyFileService: IWorkingCopyFileService,
-		@IUriIdentityService private readonly uriIdentityService: IUriIdentityService
+		@INotificationService
+		private readonly notificationService: INotificationService,
+		@IWorkingCopyFileService
+		private readonly workingCopyFileService: IWorkingCopyFileService,
+		@IUriIdentityService
+		private readonly uriIdentityService: IUriIdentityService,
 	) {
 		super();
 
-		this.saveParticipants = this._register(this.instantiationService.createInstance(TextFileSaveParticipant));
+		this.saveParticipants = this._register(
+			this.instantiationService.createInstance(TextFileSaveParticipant),
+		);
 
 		this.registerListeners();
 	}
 
 	private registerListeners(): void {
-
 		// Update models from file change events
-		this._register(this.fileService.onDidFilesChange(e => this.onDidFilesChange(e)));
+		this._register(
+			this.fileService.onDidFilesChange((e) => this.onDidFilesChange(e)),
+		);
 
 		// File system provider changes
-		this._register(this.fileService.onDidChangeFileSystemProviderCapabilities(e => this.onDidChangeFileSystemProviderCapabilities(e)));
-		this._register(this.fileService.onDidChangeFileSystemProviderRegistrations(e => this.onDidChangeFileSystemProviderRegistrations(e)));
+		this._register(
+			this.fileService.onDidChangeFileSystemProviderCapabilities((e) =>
+				this.onDidChangeFileSystemProviderCapabilities(e),
+			),
+		);
+		this._register(
+			this.fileService.onDidChangeFileSystemProviderRegistrations((e) =>
+				this.onDidChangeFileSystemProviderRegistrations(e),
+			),
+		);
 
 		// Working copy operations
-		this._register(this.workingCopyFileService.onWillRunWorkingCopyFileOperation(e => this.onWillRunWorkingCopyFileOperation(e)));
-		this._register(this.workingCopyFileService.onDidFailWorkingCopyFileOperation(e => this.onDidFailWorkingCopyFileOperation(e)));
-		this._register(this.workingCopyFileService.onDidRunWorkingCopyFileOperation(e => this.onDidRunWorkingCopyFileOperation(e)));
+		this._register(
+			this.workingCopyFileService.onWillRunWorkingCopyFileOperation((e) =>
+				this.onWillRunWorkingCopyFileOperation(e),
+			),
+		);
+		this._register(
+			this.workingCopyFileService.onDidFailWorkingCopyFileOperation((e) =>
+				this.onDidFailWorkingCopyFileOperation(e),
+			),
+		);
+		this._register(
+			this.workingCopyFileService.onDidRunWorkingCopyFileOperation((e) =>
+				this.onDidRunWorkingCopyFileOperation(e),
+			),
+		);
 	}
 
 	private onDidFilesChange(e: FileChangesEvent): void {
@@ -128,21 +223,26 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 			// Trigger a model resolve for any update or add event that impacts
 			// the model. We also consider the added event because it could
 			// be that a file was added and updated right after.
-			if (e.contains(model.resource, FileChangeType.UPDATED, FileChangeType.ADDED)) {
+			if (
+				e.contains(model.resource, FileChangeType.UPDATED, FileChangeType.ADDED)
+			) {
 				this.queueModelReload(model);
 			}
 		}
 	}
 
-	private onDidChangeFileSystemProviderCapabilities(e: IFileSystemProviderCapabilitiesChangeEvent): void {
-
+	private onDidChangeFileSystemProviderCapabilities(
+		e: IFileSystemProviderCapabilitiesChangeEvent,
+	): void {
 		// Resolve models again for file systems that changed
 		// capabilities to fetch latest metadata (e.g. readonly)
 		// into all models.
 		this.queueModelReloads(e.scheme);
 	}
 
-	private onDidChangeFileSystemProviderRegistrations(e: IFileSystemProviderRegistrationEvent): void {
+	private onDidChangeFileSystemProviderRegistrations(
+		e: IFileSystemProviderRegistrationEvent,
+	): void {
 		if (!e.added) {
 			return; // only if added
 		}
@@ -168,7 +268,6 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 	}
 
 	private queueModelReload(model: TextFileEditorModel): void {
-
 		// Resolve model to update (use a queue to prevent accumulation of resolves
 		// when the resolve actually takes long. At most we only want the queue
 		// to have a size of 2 (1 running resolve and 1 queued resolve).
@@ -184,12 +283,17 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 		}
 	}
 
-	private readonly mapCorrelationIdToModelsToRestore = new Map<number, ITextFileEditorModelToRestore[]>();
+	private readonly mapCorrelationIdToModelsToRestore = new Map<
+		number,
+		ITextFileEditorModelToRestore[]
+	>();
 
 	private onWillRunWorkingCopyFileOperation(e: WorkingCopyFileEvent): void {
-
 		// Move / Copy: remember models to restore after the operation
-		if (e.operation === FileOperation.MOVE || e.operation === FileOperation.COPY) {
+		if (
+			e.operation === FileOperation.MOVE ||
+			e.operation === FileOperation.COPY
+		) {
 			const modelsToRestore: ITextFileEditorModelToRestore[] = [];
 
 			for (const { source, target } of e.files) {
@@ -201,7 +305,12 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 					// find all models that related to source (can be many if resource is a folder)
 					const sourceModels: TextFileEditorModel[] = [];
 					for (const model of this.models) {
-						if (this.uriIdentityService.extUri.isEqualOrParent(model.resource, source)) {
+						if (
+							this.uriIdentityService.extUri.isEqualOrParent(
+								model.resource,
+								source,
+							)
+						) {
 							sourceModels.push(model);
 						}
 					}
@@ -213,44 +322,63 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 
 						// If the source is the actual model, just use target as new resource
 						let targetModelResource: URI;
-						if (this.uriIdentityService.extUri.isEqual(sourceModelResource, source)) {
+						if (
+							this.uriIdentityService.extUri.isEqual(
+								sourceModelResource,
+								source,
+							)
+						) {
 							targetModelResource = target;
 						}
 
 						// Otherwise a parent folder of the source is being moved, so we need
 						// to compute the target resource based on that
 						else {
-							targetModelResource = joinPath(target, sourceModelResource.path.substr(source.path.length + 1));
+							targetModelResource = joinPath(
+								target,
+								sourceModelResource.path.substr(source.path.length + 1),
+							);
 						}
 
 						const languageId = sourceModel.getLanguageId();
 						modelsToRestore.push({
 							source: sourceModelResource,
 							target: targetModelResource,
-							language: languageId ? {
-								id: languageId,
-								explicit: sourceModel.languageChangeSource === 'user'
-							} : undefined,
+							language: languageId
+								? {
+										id: languageId,
+										explicit: sourceModel.languageChangeSource === "user",
+									}
+								: undefined,
 							encoding: sourceModel.getEncoding(),
-							snapshot: sourceModel.isDirty() ? sourceModel.createSnapshot() : undefined
+							snapshot: sourceModel.isDirty()
+								? sourceModel.createSnapshot()
+								: undefined,
 						});
 					}
 				}
 			}
 
-			this.mapCorrelationIdToModelsToRestore.set(e.correlationId, modelsToRestore);
+			this.mapCorrelationIdToModelsToRestore.set(
+				e.correlationId,
+				modelsToRestore,
+			);
 		}
 	}
 
 	private onDidFailWorkingCopyFileOperation(e: WorkingCopyFileEvent): void {
-
 		// Move / Copy: restore dirty flag on models to restore that were dirty
-		if ((e.operation === FileOperation.MOVE || e.operation === FileOperation.COPY)) {
-			const modelsToRestore = this.mapCorrelationIdToModelsToRestore.get(e.correlationId);
+		if (
+			e.operation === FileOperation.MOVE ||
+			e.operation === FileOperation.COPY
+		) {
+			const modelsToRestore = this.mapCorrelationIdToModelsToRestore.get(
+				e.correlationId,
+			);
 			if (modelsToRestore) {
 				this.mapCorrelationIdToModelsToRestore.delete(e.correlationId);
 
-				modelsToRestore.forEach(model => {
+				modelsToRestore.forEach((model) => {
 					// snapshot presence means this model used to be dirty and so we restore that
 					// flag. we do NOT have to restore the content because the model was only soft
 					// reverted and did not loose its original dirty contents.
@@ -264,65 +392,85 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 
 	private onDidRunWorkingCopyFileOperation(e: WorkingCopyFileEvent): void {
 		switch (e.operation) {
-
 			// Create: Revert existing models
 			case FileOperation.CREATE:
-				e.waitUntil((async () => {
-					for (const { target } of e.files) {
-						const model = this.get(target);
-						if (model && !model.isDisposed()) {
-							await model.revert();
+				e.waitUntil(
+					(async () => {
+						for (const { target } of e.files) {
+							const model = this.get(target);
+							if (model && !model.isDisposed()) {
+								await model.revert();
+							}
 						}
-					}
-				})());
+					})(),
+				);
 				break;
 
 			// Move/Copy: restore models that were resolved before the operation took place
 			case FileOperation.MOVE:
 			case FileOperation.COPY:
-				e.waitUntil((async () => {
-					const modelsToRestore = this.mapCorrelationIdToModelsToRestore.get(e.correlationId);
-					if (modelsToRestore) {
-						this.mapCorrelationIdToModelsToRestore.delete(e.correlationId);
+				e.waitUntil(
+					(async () => {
+						const modelsToRestore = this.mapCorrelationIdToModelsToRestore.get(
+							e.correlationId,
+						);
+						if (modelsToRestore) {
+							this.mapCorrelationIdToModelsToRestore.delete(e.correlationId);
 
-						await Promises.settled(modelsToRestore.map(async modelToRestore => {
+							await Promises.settled(
+								modelsToRestore.map(async (modelToRestore) => {
+									// From this moment on, only operate on the canonical resource
+									// to fix a potential data loss issue:
+									// https://github.com/microsoft/vscode/issues/211374
+									const target = this.uriIdentityService.asCanonicalUri(
+										modelToRestore.target,
+									);
 
-							// From this moment on, only operate on the canonical resource
-							// to fix a potential data loss issue:
-							// https://github.com/microsoft/vscode/issues/211374
-							const target = this.uriIdentityService.asCanonicalUri(modelToRestore.target);
+									// restore the model at the target. if we have previous dirty content, we pass it
+									// over to be used, otherwise we force a reload from disk. this is important
+									// because we know the file has changed on disk after the move and the model might
+									// have still existed with the previous state. this ensures that the model is not
+									// tracking a stale state.
+									const restoredModel = await this.resolve(target, {
+										reload: { async: false }, // enforce a reload
+										contents: modelToRestore.snapshot
+											? createTextBufferFactoryFromSnapshot(
+													modelToRestore.snapshot,
+												)
+											: undefined,
+										encoding: modelToRestore.encoding,
+									});
 
-							// restore the model at the target. if we have previous dirty content, we pass it
-							// over to be used, otherwise we force a reload from disk. this is important
-							// because we know the file has changed on disk after the move and the model might
-							// have still existed with the previous state. this ensures that the model is not
-							// tracking a stale state.
-							const restoredModel = await this.resolve(target, {
-								reload: { async: false }, // enforce a reload
-								contents: modelToRestore.snapshot ? createTextBufferFactoryFromSnapshot(modelToRestore.snapshot) : undefined,
-								encoding: modelToRestore.encoding
-							});
+									// restore model language only if it is specific
+									if (
+										modelToRestore.language?.id &&
+										modelToRestore.language.id !== PLAINTEXT_LANGUAGE_ID
+									) {
+										// an explicitly set language is restored via `setLanguageId`
+										// to preserve it as explicitly set by the user.
+										// (https://github.com/microsoft/vscode/issues/203648)
+										if (modelToRestore.language.explicit) {
+											restoredModel.setLanguageId(modelToRestore.language.id);
+										}
 
-							// restore model language only if it is specific
-							if (modelToRestore.language?.id && modelToRestore.language.id !== PLAINTEXT_LANGUAGE_ID) {
-
-								// an explicitly set language is restored via `setLanguageId`
-								// to preserve it as explicitly set by the user.
-								// (https://github.com/microsoft/vscode/issues/203648)
-								if (modelToRestore.language.explicit) {
-									restoredModel.setLanguageId(modelToRestore.language.id);
-								}
-
-								// otherwise, a model language is applied via lower level
-								// APIs to not confuse it with an explicitly set language.
-								// (https://github.com/microsoft/vscode/issues/125795)
-								else if (restoredModel.getLanguageId() === PLAINTEXT_LANGUAGE_ID && extname(target) !== PLAINTEXT_EXTENSION) {
-									restoredModel.updateTextEditorModel(undefined, modelToRestore.language.id);
-								}
-							}
-						}));
-					}
-				})());
+										// otherwise, a model language is applied via lower level
+										// APIs to not confuse it with an explicitly set language.
+										// (https://github.com/microsoft/vscode/issues/125795)
+										else if (
+											restoredModel.getLanguageId() === PLAINTEXT_LANGUAGE_ID &&
+											extname(target) !== PLAINTEXT_EXTENSION
+										) {
+											restoredModel.updateTextEditorModel(
+												undefined,
+												modelToRestore.language.id,
+											);
+										}
+									}
+								}),
+							);
+						}
+					})(),
+				);
 				break;
 		}
 	}
@@ -336,7 +484,6 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 	}
 
 	private async reload(model: TextFileEditorModel): Promise<void> {
-
 		// Await a pending model resolve first before proceeding
 		// to ensure that we never resolve a model more than once
 		// in parallel.
@@ -350,8 +497,10 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 		await this.doResolve(model, { reload: { async: false } });
 	}
 
-	async resolve(resource: URI, options?: ITextFileEditorModelResolveOrCreateOptions): Promise<TextFileEditorModel> {
-
+	async resolve(
+		resource: URI,
+		options?: ITextFileEditorModelResolveOrCreateOptions,
+	): Promise<TextFileEditorModel> {
 		// Await a pending model resolve first before proceeding
 		// to ensure that we never resolve a model more than once
 		// in parallel.
@@ -364,7 +513,10 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 		return this.doResolve(resource, options);
 	}
 
-	private async doResolve(resourceOrModel: URI | TextFileEditorModel, options?: ITextFileEditorModelResolveOrCreateOptions): Promise<TextFileEditorModel> {
+	private async doResolve(
+		resourceOrModel: URI | TextFileEditorModel,
+		options?: ITextFileEditorModelResolveOrCreateOptions,
+	): Promise<TextFileEditorModel> {
 		let model: TextFileEditorModel | undefined;
 		let resource: URI;
 		if (URI.isUri(resourceOrModel)) {
@@ -380,7 +532,6 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 
 		// Model exists
 		if (model) {
-
 			// Always reload if contents are provided
 			if (options?.contents) {
 				modelResolve = model.resolve(options);
@@ -388,7 +539,6 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 
 			// Reload async or sync based on options
 			else if (options?.reload) {
-
 				// async reload: trigger a reload but return immediately
 				if (options.reload.async) {
 					modelResolve = Promise.resolve();
@@ -419,7 +569,12 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 		else {
 			didCreateModel = true;
 
-			const newModel = model = this.instantiationService.createInstance(TextFileEditorModel, resource, options ? options.encoding : undefined, options ? options.languageId : undefined);
+			const newModel = (model = this.instantiationService.createInstance(
+				TextFileEditorModel,
+				resource,
+				options ? options.encoding : undefined,
+				options ? options.languageId : undefined,
+			));
 			modelResolve = model.resolve(options);
 
 			this.registerModel(newModel);
@@ -445,7 +600,6 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 		try {
 			await modelResolve;
 		} catch (error) {
-
 			// Automatically dispose the model if we created it
 			// because we cannot dispose a model we do not own
 			// https://github.com/microsoft/vscode/issues/138850
@@ -455,7 +609,6 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 
 			throw error;
 		} finally {
-
 			// Remove from pending resolves
 			this.mapResourceToPendingModelResolvers.delete(resource);
 		}
@@ -475,7 +628,8 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 	}
 
 	private joinPendingResolves(resource: URI): Promise<void> | undefined {
-		const pendingModelResolve = this.mapResourceToPendingModelResolvers.get(resource);
+		const pendingModelResolve =
+			this.mapResourceToPendingModelResolvers.get(resource);
 		if (!pendingModelResolve) {
 			return;
 		}
@@ -484,7 +638,6 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 	}
 
 	private async doJoinPendingResolves(resource: URI): Promise<void> {
-
 		// While we have pending model resolves, ensure
 		// to await the last one finishing before returning.
 		// This prevents a race when multiple clients await
@@ -492,7 +645,8 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 		// at the same time.
 		let currentModelCopyResolve: Promise<void> | undefined;
 		while (this.mapResourceToPendingModelResolvers.has(resource)) {
-			const nextPendingModelResolve = this.mapResourceToPendingModelResolvers.get(resource);
+			const nextPendingModelResolve =
+				this.mapResourceToPendingModelResolvers.get(resource);
 			if (nextPendingModelResolve === currentModelCopyResolve) {
 				return; // already awaited on - return
 			}
@@ -507,17 +661,32 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 	}
 
 	private registerModel(model: TextFileEditorModel): void {
-
 		// Install model listeners
 		const modelListeners = new DisposableStore();
-		modelListeners.add(model.onDidResolve(reason => this._onDidResolve.fire({ model, reason })));
-		modelListeners.add(model.onDidChangeDirty(() => this._onDidChangeDirty.fire(model)));
-		modelListeners.add(model.onDidChangeReadonly(() => this._onDidChangeReadonly.fire(model)));
-		modelListeners.add(model.onDidChangeOrphaned(() => this._onDidChangeOrphaned.fire(model)));
-		modelListeners.add(model.onDidSaveError(() => this._onDidSaveError.fire(model)));
-		modelListeners.add(model.onDidSave(e => this._onDidSave.fire({ model, ...e })));
+		modelListeners.add(
+			model.onDidResolve((reason) =>
+				this._onDidResolve.fire({ model, reason }),
+			),
+		);
+		modelListeners.add(
+			model.onDidChangeDirty(() => this._onDidChangeDirty.fire(model)),
+		);
+		modelListeners.add(
+			model.onDidChangeReadonly(() => this._onDidChangeReadonly.fire(model)),
+		);
+		modelListeners.add(
+			model.onDidChangeOrphaned(() => this._onDidChangeOrphaned.fire(model)),
+		);
+		modelListeners.add(
+			model.onDidSaveError(() => this._onDidSaveError.fire(model)),
+		);
+		modelListeners.add(
+			model.onDidSave((e) => this._onDidSave.fire({ model, ...e })),
+		);
 		modelListeners.add(model.onDidRevert(() => this._onDidRevert.fire(model)));
-		modelListeners.add(model.onDidChangeEncoding(() => this._onDidChangeEncoding.fire(model)));
+		modelListeners.add(
+			model.onDidChangeEncoding(() => this._onDidChangeEncoding.fire(model)),
+		);
 
 		// Keep for disposal
 		this.mapResourceToModelListeners.set(model.resource, modelListeners);
@@ -535,7 +704,10 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 
 		// store in cache but remove when model gets disposed
 		this.mapResourceToModel.set(resource, model);
-		this.mapResourceToDisposeListener.set(resource, model.onWillDispose(() => this.remove(resource)));
+		this.mapResourceToDisposeListener.set(
+			resource,
+			model.onWillDispose(() => this.remove(resource)),
+		);
 	}
 
 	remove(resource: URI): void {
@@ -566,18 +738,23 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 		return this.saveParticipants.addSaveParticipant(participant);
 	}
 
-	runSaveParticipants(model: ITextFileEditorModel, context: IStoredFileWorkingCopySaveParticipantContext, progress: IProgress<IProgressStep>, token: CancellationToken): Promise<void> {
+	runSaveParticipants(
+		model: ITextFileEditorModel,
+		context: IStoredFileWorkingCopySaveParticipantContext,
+		progress: IProgress<IProgressStep>,
+		token: CancellationToken,
+	): Promise<void> {
 		return this.saveParticipants.participate(model, context, progress, token);
 	}
 
 	//#endregion
 
 	canDispose(model: TextFileEditorModel): true | Promise<true> {
-
 		// quick return if model already disposed or not dirty and not resolving
 		if (
 			model.isDisposed() ||
-			(!this.mapResourceToPendingModelResolvers.has(model.resource) && !model.isDirty())
+			(!this.mapResourceToPendingModelResolvers.has(model.resource) &&
+				!model.isDirty())
 		) {
 			return true;
 		}
@@ -587,7 +764,6 @@ export class TextFileEditorModelManager extends Disposable implements ITextFileE
 	}
 
 	private async doCanDispose(model: TextFileEditorModel): Promise<true> {
-
 		// Await any pending resolves first before proceeding
 		const pendingResolve = this.joinPendingResolves(model.resource);
 		if (pendingResolve) {

@@ -6,7 +6,10 @@
 import type * as vscode from 'vscode';
 import { ChatLocation } from '../../../platform/chat/common/commonTypes';
 import { IConfigurationService } from '../../../platform/configuration/common/configurationService';
-import { modelSupportsMultiReplaceString, modelSupportsReplaceString } from '../../../platform/endpoint/common/chatModelCapabilities';
+import {
+	modelSupportsMultiReplaceString,
+	modelSupportsReplaceString,
+} from '../../../platform/endpoint/common/chatModelCapabilities';
 import { IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
 import { IAutomodeService } from '../../../platform/endpoint/node/automodeService';
 import { IEnvService } from '../../../platform/env/common/envService';
@@ -32,16 +35,24 @@ import { IToolsService } from '../../tools/common/toolsService';
 import { AgentIntentInvocation } from './agentIntent';
 import { EditCodeIntentOptions } from './editCodeIntent';
 
-const getTools = (instaService: IInstantiationService, request: vscode.ChatRequest): Promise<vscode.LanguageModelToolInformation[]> =>
-	instaService.invokeFunction(async accessor => {
+const getTools = (
+	instaService: IInstantiationService,
+	request: vscode.ChatRequest,
+): Promise<vscode.LanguageModelToolInformation[]> =>
+	instaService.invokeFunction(async (accessor) => {
 		const toolsService = accessor.get<IToolsService>(IToolsService);
-		const endpointProvider = accessor.get<IEndpointProvider>(IEndpointProvider);
-		const notebookService = accessor.get<INotebookService>(INotebookService);
+		const endpointProvider =
+			accessor.get<IEndpointProvider>(IEndpointProvider);
+		const notebookService =
+			accessor.get<INotebookService>(INotebookService);
 		const model = await endpointProvider.getChatEndpoint(request);
 		const lookForTools = new Set<string>([ToolName.EditFile]);
 
-
-		if (requestHasNotebookRefs(request, notebookService, { checkPromptAsWell: true })) {
+		if (
+			requestHasNotebookRefs(request, notebookService, {
+				checkPromptAsWell: true,
+			})
+		) {
 			lookForTools.add(ToolName.CreateNewJupyterNotebook);
 		}
 
@@ -52,21 +63,28 @@ const getTools = (instaService: IInstantiationService, request: vscode.ChatReque
 			}
 		}
 		lookForTools.add(ToolName.EditNotebook);
-		if (requestHasNotebookRefs(request, notebookService, { checkPromptAsWell: true })) {
+		if (
+			requestHasNotebookRefs(request, notebookService, {
+				checkPromptAsWell: true,
+			})
+		) {
 			lookForTools.add(ToolName.GetNotebookSummary);
 			lookForTools.add(ToolName.RunNotebookCell);
 		}
 
-		return toolsService.getEnabledTools(request, model, tool => lookForTools.has(tool.name));
+		return toolsService.getEnabledTools(request, model, (tool) =>
+			lookForTools.has(tool.name),
+		);
 	});
 
 export class EditCode2IntentInvocation extends AgentIntentInvocation {
-
 	public override get linkification(): IntentLinkificationOptions {
 		return { disable: false };
 	}
 
-	protected override prompt: typeof EditCodePrompt2 | typeof NotebookInlinePrompt = EditCodePrompt2;
+	protected override prompt:
+		| typeof EditCodePrompt2
+		| typeof NotebookInlinePrompt = EditCodePrompt2;
 
 	constructor(
 		intent: IIntent,
@@ -77,7 +95,8 @@ export class EditCode2IntentInvocation extends AgentIntentInvocation {
 		@IInstantiationService instantiationService: IInstantiationService,
 		@ICodeMapperService codeMapperService: ICodeMapperService,
 		@IEnvService envService: IEnvService,
-		@IPromptPathRepresentationService promptPathRepresentationService: IPromptPathRepresentationService,
+		@IPromptPathRepresentationService
+		promptPathRepresentationService: IPromptPathRepresentationService,
 		@IEndpointProvider endpointProvider: IEndpointProvider,
 		@IWorkspaceService workspaceService: IWorkspaceService,
 		@IToolsService toolsService: IToolsService,
@@ -90,12 +109,38 @@ export class EditCode2IntentInvocation extends AgentIntentInvocation {
 		@IExperimentationService expService: IExperimentationService,
 		@IAutomodeService automodeService: IAutomodeService,
 		@IOTelService otelService: IOTelService,
-		@ISessionTranscriptService sessionTranscriptService: ISessionTranscriptService,
+		@ISessionTranscriptService
+		sessionTranscriptService: ISessionTranscriptService,
 	) {
-		super(intent, location, endpoint, request, intentOptions, instantiationService, codeMapperService, envService, promptPathRepresentationService, endpointProvider, workspaceService, toolsService, configurationService, editLogService, commandService, telemetryService, notebookService, logService, expService, automodeService, otelService, sessionTranscriptService);
+		super(
+			intent,
+			location,
+			endpoint,
+			request,
+			intentOptions,
+			instantiationService,
+			codeMapperService,
+			envService,
+			promptPathRepresentationService,
+			endpointProvider,
+			workspaceService,
+			toolsService,
+			configurationService,
+			editLogService,
+			commandService,
+			telemetryService,
+			notebookService,
+			logService,
+			expService,
+			automodeService,
+			otelService,
+			sessionTranscriptService,
+		);
 	}
 
-	public override async getAvailableTools(): Promise<vscode.LanguageModelToolInformation[]> {
+	public override async getAvailableTools(): Promise<
+		vscode.LanguageModelToolInformation[]
+	> {
 		return getTools(this.instantiationService, this.request);
 	}
 }

@@ -3,14 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ApplicationService } from '../application';
-import { z } from 'zod';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ApplicationService } from "../application";
+import { z } from "zod";
 
 /**
  * Settings Editor Tools
  */
-export function applySettingsTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applySettingsTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	const tools: RegisteredTool[] = [];
 
 	// I don't think we need this and the batch version
@@ -33,39 +39,51 @@ export function applySettingsTools(server: McpServer, appService: ApplicationSer
 	// 	}
 	// );
 
-	tools.push(server.tool(
-		'vscode_automation_settings_add_user_settings',
-		'Add multiple user settings at once',
-		{
-			settings: z.array(z.tuple([z.string(), z.string()])).describe('Array of [key, value] setting pairs')
-		},
-		async (args) => {
-			const { settings } = args;
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.settingsEditor.addUserSettings(settings as [string, string][]);
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `Added ${settings.length} user settings: ${settings.map(([k, v]) => `${k}=${v}`).join(', ')}`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_settings_add_user_settings",
+			"Add multiple user settings at once",
+			{
+				settings: z
+					.array(z.tuple([z.string(), z.string()]))
+					.describe("Array of [key, value] setting pairs"),
+			},
+			async (args) => {
+				const { settings } = args;
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.settingsEditor.addUserSettings(
+					settings as [string, string][],
+				);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Added ${settings.length} user settings: ${settings.map(([k, v]) => `${k}=${v}`).join(", ")}`,
+						},
+					],
+				};
+			},
+		),
+	);
 
-	tools.push(server.tool(
-		'vscode_automation_settings_clear_user_settings',
-		'Clear all user settings',
-		async () => {
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.settingsEditor.clearUserSettings();
-			return {
-				content: [{
-					type: 'text' as const,
-					text: 'Cleared all user settings'
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_settings_clear_user_settings",
+			"Clear all user settings",
+			async () => {
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.settingsEditor.clearUserSettings();
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: "Cleared all user settings",
+						},
+					],
+				};
+			},
+		),
+	);
 
 	// Playwright can probably figure this one out
 	// server.tool(
@@ -97,24 +115,28 @@ export function applySettingsTools(server: McpServer, appService: ApplicationSer
 	// 	}
 	// );
 
-	tools.push(server.tool(
-		'vscode_automation_settings_search_ui',
-		'Search for settings in the settings UI',
-		{
-			query: z.string().describe('Search query for settings')
-		},
-		async (args) => {
-			const { query } = args;
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.settingsEditor.searchSettingsUI(query);
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `Searched settings UI for: "${query}"`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_settings_search_ui",
+			"Search for settings in the settings UI",
+			{
+				query: z.string().describe("Search query for settings"),
+			},
+			async (args) => {
+				const { query } = args;
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.settingsEditor.searchSettingsUI(query);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Searched settings UI for: "${query}"`,
+						},
+					],
+				};
+			},
+		),
+	);
 
 	return tools;
 }

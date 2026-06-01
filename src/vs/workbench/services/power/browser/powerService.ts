@@ -3,17 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
-import { IPowerService, PowerSaveBlockerType, SystemIdleState, ThermalState } from '../common/powerService.js';
+import { Event } from "../../../../base/common/event.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../platform/instantiation/common/extensions.js";
+import {
+	IPowerService,
+	PowerSaveBlockerType,
+	SystemIdleState,
+	ThermalState,
+} from "../common/powerService.js";
 
 /**
  * Browser stub implementation of IPowerService.
  * Power APIs are not available in web environments.
  */
 export class BrowserPowerService extends Disposable implements IPowerService {
-
 	declare readonly _serviceBrand: undefined;
 
 	// Events never fire in browser
@@ -27,7 +34,7 @@ export class BrowserPowerService extends Disposable implements IPowerService {
 	readonly onDidUnlockScreen = Event.None;
 
 	async getSystemIdleState(_idleThreshold: number): Promise<SystemIdleState> {
-		return 'unknown';
+		return "unknown";
 	}
 
 	async getSystemIdleTime(): Promise<number> {
@@ -35,7 +42,7 @@ export class BrowserPowerService extends Disposable implements IPowerService {
 	}
 
 	async getCurrentThermalState(): Promise<ThermalState> {
-		return 'unknown';
+		return "unknown";
 	}
 
 	async isOnBatteryPower(): Promise<boolean> {
@@ -56,4 +63,8 @@ export class BrowserPowerService extends Disposable implements IPowerService {
 	}
 }
 
-registerSingleton(IPowerService, BrowserPowerService, InstantiationType.Delayed);
+registerSingleton(
+	IPowerService,
+	BrowserPowerService,
+	InstantiationType.Delayed,
+);

@@ -15,7 +15,10 @@ import { IFetcherService } from '../../../networking/common/fetcherService';
 import { ITelemetryService } from '../../../telemetry/common/telemetry';
 import { createPlatformServices } from '../../../test/node/services';
 import { StaticGitHubAuthenticationService } from '../../common/staticGitHubAuthenticationService';
-import { CopilotToken, createTestExtendedTokenInfo } from '../../common/copilotToken';
+import {
+	CopilotToken,
+	createTestExtendedTokenInfo,
+} from '../../common/copilotToken';
 import { ICopilotTokenStore } from '../../common/copilotTokenStore';
 import { FixedCopilotTokenManager } from '../../node/copilotTokenManager';
 
@@ -30,7 +33,9 @@ suite('AuthenticationService', function () {
 
 	beforeEach(async () => {
 		disposables = new DisposableStore();
-		const accessor = disposables.add(createPlatformServices().createTestingAccessor());
+		const accessor = disposables.add(
+			createPlatformServices().createTestingAccessor(),
+		);
 		copilotTokenManager = new FixedCopilotTokenManager(
 			testToken,
 			accessor.get(ILogService),
@@ -38,14 +43,14 @@ suite('AuthenticationService', function () {
 			accessor.get(ICAPIClientService),
 			accessor.get(IDomainService),
 			accessor.get(IFetcherService),
-			accessor.get(IEnvService)
+			accessor.get(IEnvService),
 		);
 		authenticationService = new StaticGitHubAuthenticationService(
 			() => testToken,
 			accessor.get(ILogService),
 			accessor.get(ICopilotTokenStore),
 			copilotTokenManager,
-			accessor.get(IConfigurationService)
+			accessor.get(IConfigurationService),
 		);
 		disposables.add(authenticationService);
 	});
@@ -55,15 +60,24 @@ suite('AuthenticationService', function () {
 	});
 
 	test('Can get anyGitHubToken', async () => {
-		const token = await authenticationService.getGitHubSession('any', { silent: true });
+		const token = await authenticationService.getGitHubSession('any', {
+			silent: true,
+		});
 		expect(token?.accessToken).toBe(testToken);
-		expect(authenticationService.anyGitHubSession?.accessToken).toBe(testToken);
+		expect(authenticationService.anyGitHubSession?.accessToken).toBe(
+			testToken,
+		);
 	});
 
 	test('Can get permissiveGitHubToken', async () => {
-		const token = await authenticationService.getGitHubSession('permissive', { silent: true });
+		const token = await authenticationService.getGitHubSession(
+			'permissive',
+			{ silent: true },
+		);
 		expect(token?.accessToken).toBe(testToken);
-		expect(authenticationService.permissiveGitHubSession?.accessToken).toBe(testToken);
+		expect(authenticationService.permissiveGitHubSession?.accessToken).toBe(
+			testToken,
+		);
 	});
 
 	test('Can get copilotToken', async () => {
@@ -75,32 +89,44 @@ suite('AuthenticationService', function () {
 	test('hasCopilotTokenSource is true for static auth even without a GitHub session', () => {
 		// Static auth represents non-OAuth Copilot token pathways (proxy/HMAC, eval harness, ...),
 		// so it must report a token source regardless of whether anyGitHubSession is populated.
-		const accessor = disposables.add(createPlatformServices().createTestingAccessor());
-		const staticWithoutSession = disposables.add(new StaticGitHubAuthenticationService(
-			undefined,
-			accessor.get(ILogService),
-			accessor.get(ICopilotTokenStore),
-			copilotTokenManager,
-			accessor.get(IConfigurationService),
-		));
+		const accessor = disposables.add(
+			createPlatformServices().createTestingAccessor(),
+		);
+		const staticWithoutSession = disposables.add(
+			new StaticGitHubAuthenticationService(
+				undefined,
+				accessor.get(ILogService),
+				accessor.get(ICopilotTokenStore),
+				copilotTokenManager,
+				accessor.get(IConfigurationService),
+			),
+		);
 		expect(staticWithoutSession.anyGitHubSession).toBeUndefined();
 		expect(staticWithoutSession.hasCopilotTokenSource).toBe(true);
 	});
 
 	test('Emits onDidAuthenticationChange when a Copilot Token change is notified', async () => {
-		const promise = Event.toPromise(authenticationService.onDidAuthenticationChange);
+		const promise = Event.toPromise(
+			authenticationService.onDidAuthenticationChange,
+		);
 		const newToken = 'tid=new';
-		authenticationService.setCopilotToken(new CopilotToken(createTestExtendedTokenInfo({
-			token: newToken,
-			username: 'fake',
-			copilot_plan: 'unknown',
-		})));
+		authenticationService.setCopilotToken(
+			new CopilotToken(
+				createTestExtendedTokenInfo({
+					token: newToken,
+					username: 'fake',
+					copilot_plan: 'unknown',
+				}),
+			),
+		);
 		await promise;
 		expect(authenticationService.copilotToken?.token).toBe(newToken);
 	});
 
 	test.skip('Emits onDidAuthenticationChange when a Copilot Token change is notified from the manager', async () => {
-		const promise = Event.toPromise(authenticationService.onDidAuthenticationChange);
+		const promise = Event.toPromise(
+			authenticationService.onDidAuthenticationChange,
+		);
 		const newToken = 'tid=new';
 		copilotTokenManager.completionsToken = newToken;
 		await promise;

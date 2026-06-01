@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import fs from 'fs';
-import path from 'path';
-import { Page } from 'playwright';
-import { TestContext } from './context.js';
+import assert from "assert";
+import fs from "fs";
+import path from "path";
+import { Page } from "playwright";
+import { TestContext } from "./context.js";
 
 /**
  * UI Test helper class to perform common UI actions and verifications.
@@ -19,11 +19,11 @@ export class UITest {
 
 	constructor(
 		protected readonly context: TestContext,
-		dataDir?: string
+		dataDir?: string,
 	) {
 		if (dataDir) {
-			this._extensionsDir = path.join(dataDir, 'extensions');
-			this._userDataDir = path.join(dataDir, 'user-data');
+			this._extensionsDir = path.join(dataDir, "extensions");
+			this._userDataDir = path.join(dataDir, "user-data");
 		}
 	}
 
@@ -31,21 +31,21 @@ export class UITest {
 	 * The directory where extensions are installed.
 	 */
 	public get extensionsDir(): string {
-		return this._extensionsDir ??= this.context.createTempDir();
+		return (this._extensionsDir ??= this.context.createTempDir());
 	}
 
 	/**
 	 * The workspace directory used for testing.
 	 */
 	public get workspaceDir(): string {
-		return this._workspaceDir ??= this.context.createTempDir();
+		return (this._workspaceDir ??= this.context.createTempDir());
 	}
 
 	/**
 	 * The user data directory used for testing.
 	 */
 	public get userDataDir(): string {
-		return this._userDataDir ??= this.context.createTempDir();
+		return (this._userDataDir ??= this.context.createTempDir());
 	}
 
 	/**
@@ -76,24 +76,24 @@ export class UITest {
 	 * Dismiss the welcome sign-in dialog if it is shown.
 	 */
 	public async dismissWelcomeDialog(page: Page) {
-		this.context.log('Dismissing welcome dialog (if shown)');
-		const closeButton = page.locator('button.onboarding-a-close-btn');
+		this.context.log("Dismissing welcome dialog (if shown)");
+		const closeButton = page.locator("button.onboarding-a-close-btn");
 		try {
-			await closeButton.waitFor({ state: 'visible', timeout: 8_000 });
+			await closeButton.waitFor({ state: "visible", timeout: 8_000 });
 		} catch {
-			this.context.log('Welcome dialog not shown, continuing');
+			this.context.log("Welcome dialog not shown, continuing");
 			return;
 		}
 		await closeButton.click();
-		await closeButton.waitFor({ state: 'hidden' });
+		await closeButton.waitFor({ state: "hidden" });
 	}
 
 	/**
 	 * Dismiss the workspace trust dialog.
 	 */
 	private async dismissWorkspaceTrustDialog(page: Page) {
-		this.context.log('Dismissing workspace trust dialog');
-		await page.getByText('Yes, I trust the authors').click();
+		this.context.log("Dismissing workspace trust dialog");
+		await page.getByText("Yes, I trust the authors").click();
 		await page.waitForTimeout(500);
 	}
 
@@ -102,44 +102,52 @@ export class UITest {
 	 */
 	private async runCommand(page: Page, command: string) {
 		this.context.log(`Running command: ${command}`);
-		await page.keyboard.press('F1');
+		await page.keyboard.press("F1");
 		const input = page.getByPlaceholder(/^Type the name of a command/);
 		await input.fill(`>${command}`);
-		const item = page.locator('span.monaco-highlighted-label', { hasText: new RegExp(`^${command}$`) });
+		const item = page.locator("span.monaco-highlighted-label", {
+			hasText: new RegExp(`^${command}$`),
+		});
 		await item.click();
-		await input.waitFor({ state: 'hidden' });
+		await input.waitFor({ state: "hidden" });
 	}
 
 	/**
 	 * Create a new text file in the editor with some content and save it.
 	 */
 	private async createTextFile(page: Page) {
-		await this.runCommand(page, 'View: Show Explorer');
+		await this.runCommand(page, "View: Show Explorer");
 
-		this.context.log('Clicking New File button');
-		await page.getByLabel('New File...').click();
+		this.context.log("Clicking New File button");
+		await page.getByLabel("New File...").click();
 
-		this.context.log('Typing file name');
-		await page.getByRole('textbox', { name: /^Type file name/ }).fill('helloWorld.txt');
-		await page.keyboard.press('Enter');
+		this.context.log("Typing file name");
+		await page
+			.getByRole("textbox", { name: /^Type file name/ })
+			.fill("helloWorld.txt");
+		await page.keyboard.press("Enter");
 
-		this.context.log('Focusing the code editor');
+		this.context.log("Focusing the code editor");
 		await page.getByText(/Start typing/).focus();
 
-		this.context.log('Typing some content into the file');
-		await page.keyboard.type('Hello, World!', { delay: 100 });
+		this.context.log("Typing some content into the file");
+		await page.keyboard.type("Hello, World!", { delay: 100 });
 
-		await this.runCommand(page, 'File: Save');
+		await this.runCommand(page, "File: Save");
 	}
 
 	/**
 	 * Verify that the text file was created with the expected content.
 	 */
 	protected verifyTextFileCreated() {
-		this.context.log('Verifying file contents');
+		this.context.log("Verifying file contents");
 		const filePath = `${this.workspaceDir}/helloWorld.txt`;
-		const fileContents = fs.readFileSync(filePath, 'utf-8');
-		assert.strictEqual(fileContents, 'Hello, World!', 'File contents do not match expected value');
+		const fileContents = fs.readFileSync(filePath, "utf-8");
+		assert.strictEqual(
+			fileContents,
+			"Hello, World!",
+			"File contents do not match expected value",
+		);
 	}
 
 	/**
@@ -147,21 +155,29 @@ export class UITest {
 	 * the expected match from the file created in {@link createTextFile}.
 	 */
 	private async searchInWorkspace(page: Page) {
-		await this.runCommand(page, 'Search: Find in Files');
+		await this.runCommand(page, "Search: Find in Files");
 
-		this.context.log('Typing search query');
-		const searchInput = page.locator('.search-view .search-widget .search-container textarea').first();
-		await searchInput.waitFor({ state: 'visible' });
-		await searchInput.fill('Hello, World!');
-		await page.keyboard.press('Enter');
+		this.context.log("Typing search query");
+		const searchInput = page
+			.locator(".search-view .search-widget .search-container textarea")
+			.first();
+		await searchInput.waitFor({ state: "visible" });
+		await searchInput.fill("Hello, World!");
+		await page.keyboard.press("Enter");
 
-		this.context.log('Waiting for search result text');
-		const resultMessage = page.locator('.search-view .messages .message').first();
-		await resultMessage.waitFor({ state: 'visible' });
-		await page.waitForFunction(() => {
-			const el = document.querySelector('.search-view .messages .message');
-			return el && /\d+\s+result/.test(el.textContent ?? '');
-		}, undefined, { timeout: 30_000 });
+		this.context.log("Waiting for search result text");
+		const resultMessage = page
+			.locator(".search-view .messages .message")
+			.first();
+		await resultMessage.waitFor({ state: "visible" });
+		await page.waitForFunction(
+			() => {
+				const el = document.querySelector(".search-view .messages .message");
+				return el && /\d+\s+result/.test(el.textContent ?? "");
+			},
+			undefined,
+			{ timeout: 30_000 },
+		);
 
 		const resultText = (await resultMessage.innerText()).trim();
 		this.context.log(`Search result text: ${resultText}`);
@@ -179,29 +195,35 @@ export class UITest {
 	 * Install GitHub Pull Requests extension from the Extensions view.
 	 */
 	private async installExtension(page: Page) {
-		await this.runCommand(page, 'View: Show Extensions');
+		await this.runCommand(page, "View: Show Extensions");
 
-		this.context.log('Typing extension name to search for');
-		await page.getByText('Search Extensions in Marketplace').focus();
-		await page.keyboard.type('GitHub Pull Requests', { delay: 50 });
+		this.context.log("Typing extension name to search for");
+		await page.getByText("Search Extensions in Marketplace").focus();
+		await page.keyboard.type("GitHub Pull Requests", { delay: 50 });
 
-		this.context.log('Waiting for extension to appear in search results');
-		const extensionItem = page.locator('.extension-list-item').getByText(/^GitHub Pull Requests$/);
-		const messageContainer = page.locator('.extensions-viewlet .message-container:not(.hidden)').first();
+		this.context.log("Waiting for extension to appear in search results");
+		const extensionItem = page
+			.locator(".extension-list-item")
+			.getByText(/^GitHub Pull Requests$/);
+		const messageContainer = page
+			.locator(".extensions-viewlet .message-container:not(.hidden)")
+			.first();
 
 		for (let attempt = 0; attempt < 5; attempt++) {
 			const result = await Promise.race([
-				extensionItem.waitFor().then(() => 'found' as const),
-				messageContainer.waitFor().then(() => 'message' as const),
+				extensionItem.waitFor().then(() => "found" as const),
+				messageContainer.waitFor().then(() => "message" as const),
 			]);
 
-			if (result === 'found') {
+			if (result === "found") {
 				break;
 			}
 
-			const message = await messageContainer.locator('.message').innerText();
-			this.context.log(`Marketplace message: ${message} (attempt ${attempt + 1}/5), clicking Refresh`);
-			await page.getByRole('button', { name: 'Refresh' }).click();
+			const message = await messageContainer.locator(".message").innerText();
+			this.context.log(
+				`Marketplace message: ${message} (attempt ${attempt + 1}/5), clicking Refresh`,
+			);
+			await page.getByRole("button", { name: "Refresh" }).click();
 			await page.waitForTimeout(5_000);
 		}
 
@@ -210,47 +232,75 @@ export class UITest {
 		let lastFailure: string | undefined;
 		for (let attempt = 0; attempt < 3; attempt++) {
 			try {
-				this.context.log(`Clicking Install on the first extension in the list (attempt ${attempt + 1}/3)`);
-				const installButton = page.locator('.extension-action:not(.disabled)', { hasText: /Install/ }).first();
+				this.context.log(
+					`Clicking Install on the first extension in the list (attempt ${attempt + 1}/3)`,
+				);
+				const installButton = page
+					.locator(".extension-action:not(.disabled)", { hasText: /Install/ })
+					.first();
 				await installButton.click();
 
-				this.context.log('Waiting for extension to be installed');
-				const uninstallButton = page.getByRole('button', { name: 'Uninstall' }).first();
-				const installed = await uninstallButton.waitFor({ timeout: 5 * 60_000 }).then(() => true, () => false);
+				this.context.log("Waiting for extension to be installed");
+				const uninstallButton = page
+					.getByRole("button", { name: "Uninstall" })
+					.first();
+				const installed = await uninstallButton
+					.waitFor({ timeout: 5 * 60_000 })
+					.then(
+						() => true,
+						() => false,
+					);
 				if (installed) {
 					return;
 				}
-				lastFailure = 'Uninstall button did not appear within 5 minutes';
+				lastFailure = "Uninstall button did not appear within 5 minutes";
 			} catch (error) {
 				lastFailure = error instanceof Error ? error.message : String(error);
 			}
 
-			this.context.log(`Extension install attempt ${attempt + 1}/3 failed: ${lastFailure}`);
+			this.context.log(
+				`Extension install attempt ${attempt + 1}/3 failed: ${lastFailure}`,
+			);
 
-			const messageVisible = await messageContainer.isVisible().catch(() => false);
+			const messageVisible = await messageContainer
+				.isVisible()
+				.catch(() => false);
 			if (messageVisible) {
-				const message = await messageContainer.locator('.message').innerText().catch(() => '<unavailable>');
-				this.context.log(`Marketplace message visible during failed install: ${message}`);
+				const message = await messageContainer
+					.locator(".message")
+					.innerText()
+					.catch(() => "<unavailable>");
+				this.context.log(
+					`Marketplace message visible during failed install: ${message}`,
+				);
 			}
 
 			await this.context.captureScreenshot(page);
 
 			if (attempt < 2) {
-				this.context.log('Waiting 5s before retrying install');
+				this.context.log("Waiting 5s before retrying install");
 				await page.waitForTimeout(5_000);
 			}
 		}
 
-		throw new Error(`Failed to install extension after 3 attempts; last failure: ${lastFailure ?? '<none captured>'}`);
+		throw new Error(
+			`Failed to install extension after 3 attempts; last failure: ${lastFailure ?? "<none captured>"}`,
+		);
 	}
 
 	/**
 	 * Verify that the GitHub Pull Requests extension is installed.
 	 */
 	protected verifyExtensionInstalled() {
-		this.context.log('Verifying extension is installed');
+		this.context.log("Verifying extension is installed");
 		const extensions = fs.readdirSync(this.extensionsDir);
-		const hasExtension = extensions.some(ext => ext.startsWith('github.vscode-pull-request-github'));
-		assert.strictEqual(hasExtension, true, 'GitHub Pull Requests extension is not installed');
+		const hasExtension = extensions.some((ext) =>
+			ext.startsWith("github.vscode-pull-request-github"),
+		);
+		assert.strictEqual(
+			hasExtension,
+			true,
+			"GitHub Pull Requests extension is not installed",
+		);
 	}
 }

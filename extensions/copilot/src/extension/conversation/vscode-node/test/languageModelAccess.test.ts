@@ -8,7 +8,10 @@ import * as vscode from 'vscode';
 import { IChatMLFetcher } from '../../../../platform/chat/common/chatMLFetcher';
 import { ChatFetchResponseType } from '../../../../platform/chat/common/commonTypes';
 import { MockChatMLFetcher } from '../../../../platform/chat/test/common/mockChatMLFetcher';
-import { CopilotToken, createTestExtendedTokenInfo } from '../../../../platform/authentication/common/copilotToken';
+import {
+	CopilotToken,
+	createTestExtendedTokenInfo,
+} from '../../../../platform/authentication/common/copilotToken';
 import { ICopilotTokenManager } from '../../../../platform/authentication/common/copilotTokenManager';
 import { IAutomodeService } from '../../../../platform/endpoint/node/automodeService';
 import { IEndpointProvider } from '../../../../platform/endpoint/common/endpointProvider';
@@ -19,14 +22,24 @@ import { IVSCodeExtensionContext } from '../../../../platform/extContext/common/
 import { IChatEndpoint } from '../../../../platform/networking/common/networking';
 import { ITestingServicesAccessor } from '../../../../platform/test/node/services';
 import { TokenizerType } from '../../../../util/common/tokenizer';
-import { DeferredPromise, raceTimeout } from '../../../../util/vs/base/common/async';
+import {
+	DeferredPromise,
+	raceTimeout,
+} from '../../../../util/vs/base/common/async';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { Event } from '../../../../util/vs/base/common/event';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { createExtensionTestingServices } from '../../../test/vscode-node/services';
-import { buildUtilityAliasModelInfo, CopilotLanguageModelWrapper, LanguageModelAccess } from '../languageModelAccess';
-import { buildReasoningEffortSchemaProperty, normalizeTokenPrices, pickDefaultReasoningEffort } from '../../common/languageModelAccess';
-
+import {
+	buildUtilityAliasModelInfo,
+	CopilotLanguageModelWrapper,
+	LanguageModelAccess,
+} from '../languageModelAccess';
+import {
+	buildReasoningEffortSchemaProperty,
+	normalizeTokenPrices,
+	pickDefaultReasoningEffort,
+} from '../../common/languageModelAccess';
 
 suite('CopilotLanguageModelWrapper', () => {
 	let accessor: ITestingServicesAccessor;
@@ -34,7 +47,10 @@ suite('CopilotLanguageModelWrapper', () => {
 
 	function createAccessor(vscodeExtensionContext?: IVSCodeExtensionContext) {
 		const testingServiceCollection = createExtensionTestingServices();
-		testingServiceCollection.define(IChatMLFetcher, new MockChatMLFetcher());
+		testingServiceCollection.define(
+			IChatMLFetcher,
+			new MockChatMLFetcher(),
+		);
 
 		accessor = testingServiceCollection.createTestingAccessor();
 		instaService = accessor.get(IInstantiationService);
@@ -45,19 +61,40 @@ suite('CopilotLanguageModelWrapper', () => {
 		let endpoint: IChatEndpoint;
 		setup(async () => {
 			createAccessor();
-			endpoint = await accessor.get(IEndpointProvider).getChatEndpoint('copilot-utility');
+			endpoint = await accessor
+				.get(IEndpointProvider)
+				.getChatEndpoint('copilot-utility');
 			wrapper = instaService.createInstance(CopilotLanguageModelWrapper);
 		});
 
-		const runTest = async (messages: vscode.LanguageModelChatMessage[], tools?: vscode.LanguageModelChatTool[], errMsg?: string) => {
+		const runTest = async (
+			messages: vscode.LanguageModelChatMessage[],
+			tools?: vscode.LanguageModelChatTool[],
+			errMsg?: string,
+		) => {
 			await assert.rejects(
-				() => wrapper.provideLanguageModelResponse(endpoint, messages, { tools, requestInitiator: 'unknown', toolMode: vscode.LanguageModelChatToolMode.Auto }, vscode.extensions.all[0].id, { report: () => { } }, CancellationToken.None),
-				err => {
+				() =>
+					wrapper.provideLanguageModelResponse(
+						endpoint,
+						messages,
+						{
+							tools,
+							requestInitiator: 'unknown',
+							toolMode: vscode.LanguageModelChatToolMode.Auto,
+						},
+						vscode.extensions.all[0].id,
+						{ report: () => {} },
+						CancellationToken.None,
+					),
+				(err) => {
 					errMsg ??= 'Invalid request';
 					assert.ok(err instanceof Error, 'expected an Error');
-					assert.ok(err.message.includes(errMsg), `expected error to include "${errMsg}", got ${err.message}`);
+					assert.ok(
+						err.message.includes(errMsg),
+						`expected error to include "${errMsg}", got ${err.message}`,
+					);
 					return true;
-				}
+				},
 			);
 		};
 
@@ -66,7 +103,11 @@ suite('CopilotLanguageModelWrapper', () => {
 		});
 
 		test('bad tool name', async () => {
-			await runTest([vscode.LanguageModelChatMessage.User('hello')], [{ name: 'hello world', description: 'my tool' }], 'Invalid tool name');
+			await runTest(
+				[vscode.LanguageModelChatMessage.User('hello')],
+				[{ name: 'hello world', description: 'my tool' }],
+				'Invalid tool name',
+			);
 		});
 	});
 
@@ -75,11 +116,27 @@ suite('CopilotLanguageModelWrapper', () => {
 		let endpoint: IChatEndpoint;
 		setup(async () => {
 			createAccessor();
-			endpoint = await accessor.get(IEndpointProvider).getChatEndpoint('copilot-utility');
+			endpoint = await accessor
+				.get(IEndpointProvider)
+				.getChatEndpoint('copilot-utility');
 			wrapper = instaService.createInstance(CopilotLanguageModelWrapper);
 		});
-		const runTest = async (messages: vscode.LanguageModelChatMessage[], tools?: vscode.LanguageModelChatTool[]) => {
-			await wrapper.provideLanguageModelResponse(endpoint, messages, { tools, requestInitiator: 'unknown', toolMode: vscode.LanguageModelChatToolMode.Auto }, vscode.extensions.all[0].id, { report: () => { } }, CancellationToken.None);
+		const runTest = async (
+			messages: vscode.LanguageModelChatMessage[],
+			tools?: vscode.LanguageModelChatTool[],
+		) => {
+			await wrapper.provideLanguageModelResponse(
+				endpoint,
+				messages,
+				{
+					tools,
+					requestInitiator: 'unknown',
+					toolMode: vscode.LanguageModelChatToolMode.Auto,
+				},
+				vscode.extensions.all[0].id,
+				{ report: () => {} },
+				CancellationToken.None,
+			);
 		};
 
 		test('simple', async () => {
@@ -88,14 +145,29 @@ suite('CopilotLanguageModelWrapper', () => {
 
 		test('tool call and user message', async () => {
 			const toolCall = vscode.LanguageModelChatMessage.Assistant('');
-			toolCall.content = [new vscode.LanguageModelToolCallPart('id', 'func', { param: 123 })];
+			toolCall.content = [
+				new vscode.LanguageModelToolCallPart('id', 'func', {
+					param: 123,
+				}),
+			];
 			const toolResult = vscode.LanguageModelChatMessage.User('');
-			toolResult.content = [new vscode.LanguageModelToolResultPart('id', [new vscode.LanguageModelTextPart('result')])];
-			await runTest([toolCall, toolResult, vscode.LanguageModelChatMessage.User('user message')]);
+			toolResult.content = [
+				new vscode.LanguageModelToolResultPart('id', [
+					new vscode.LanguageModelTextPart('result'),
+				]),
+			];
+			await runTest([
+				toolCall,
+				toolResult,
+				vscode.LanguageModelChatMessage.User('user message'),
+			]);
 		});
 
 		test('good tool name', async () => {
-			await runTest([vscode.LanguageModelChatMessage.User('hello2')], [{ name: 'hello_world', description: 'my tool' }]);
+			await runTest(
+				[vscode.LanguageModelChatMessage.User('hello2')],
+				[{ name: 'hello_world', description: 'my tool' }],
+			);
 		});
 	});
 
@@ -106,7 +178,9 @@ suite('CopilotLanguageModelWrapper', () => {
 		setup(async () => {
 			createAccessor();
 			fetcher = accessor.get(IChatMLFetcher) as MockChatMLFetcher;
-			endpoint = await accessor.get(IEndpointProvider).getChatEndpoint('copilot-utility');
+			endpoint = await accessor
+				.get(IEndpointProvider)
+				.getChatEndpoint('copilot-utility');
 			wrapper = instaService.createInstance(CopilotLanguageModelWrapper);
 		});
 
@@ -115,7 +189,7 @@ suite('CopilotLanguageModelWrapper', () => {
 				prompt_tokens: 100,
 				completion_tokens: 50,
 				total_tokens: 150,
-				prompt_tokens_details: { cached_tokens: 10 }
+				prompt_tokens_details: { cached_tokens: 10 },
 			};
 			fetcher.setNextResponse({
 				type: ChatFetchResponseType.Success,
@@ -123,23 +197,31 @@ suite('CopilotLanguageModelWrapper', () => {
 				serverRequestId: 'test-server-request-id',
 				usage: expectedUsage,
 				value: 'hello',
-				resolvedModel: 'test-model'
+				resolvedModel: 'test-model',
 			});
 
 			const reportedParts: vscode.LanguageModelResponsePart2[] = [];
 			await wrapper.provideLanguageModelResponse(
 				endpoint,
 				[vscode.LanguageModelChatMessage.User('hello')],
-				{ requestInitiator: 'unknown', toolMode: vscode.LanguageModelChatToolMode.Auto },
+				{
+					requestInitiator: 'unknown',
+					toolMode: vscode.LanguageModelChatToolMode.Auto,
+				},
 				vscode.extensions.all[0].id,
-				{ report: part => reportedParts.push(part) },
-				CancellationToken.None
+				{ report: (part) => reportedParts.push(part) },
+				CancellationToken.None,
 			);
 
-			const usagePart = reportedParts.find((p): p is vscode.LanguageModelDataPart =>
-				p instanceof vscode.LanguageModelDataPart && p.mimeType === CustomDataPartMimeTypes.Usage);
+			const usagePart = reportedParts.find(
+				(p): p is vscode.LanguageModelDataPart =>
+					p instanceof vscode.LanguageModelDataPart &&
+					p.mimeType === CustomDataPartMimeTypes.Usage,
+			);
 			assert.ok(usagePart, 'expected a usage data part to be reported');
-			const decoded = JSON.parse(new TextDecoder().decode(usagePart.data));
+			const decoded = JSON.parse(
+				new TextDecoder().decode(usagePart.data),
+			);
 			assert.deepStrictEqual(decoded, expectedUsage);
 		});
 	});
@@ -165,18 +247,24 @@ suite('LanguageModelAccess model info', () => {
 			tokenizer: TokenizerType.O200K,
 			urlOrRequestMetadata: '',
 		} as unknown as IChatEndpoint;
-		const copilotToken = new CopilotToken(createTestExtendedTokenInfo({ token: 'token', username: 'fake', copilot_plan: 'unknown' }));
+		const copilotToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				token: 'token',
+				username: 'fake',
+				copilot_plan: 'unknown',
+			}),
+		);
 		const testingServiceCollection = createExtensionTestingServices();
 		testingServiceCollection.define(ICopilotTokenManager, {
 			_serviceBrand: undefined,
 			onDidCopilotTokenRefresh: Event.None,
 			getCopilotToken: async () => copilotToken,
-			resetCopilotToken: () => { },
+			resetCopilotToken: () => {},
 		} as unknown as ICopilotTokenManager);
 		testingServiceCollection.define(IAutomodeService, {
 			_serviceBrand: undefined,
 			resolveAutoModeEndpoint: async () => endpoint,
-			invalidateRouterCache: () => { },
+			invalidateRouterCache: () => {},
 		} as unknown as IAutomodeService);
 		testingServiceCollection.define(IEndpointProvider, {
 			_serviceBrand: undefined,
@@ -190,7 +278,9 @@ suite('LanguageModelAccess model info', () => {
 				}
 				return endpoint;
 			},
-			getEmbeddingsEndpoint: async () => { throw new Error('Not implemented in test'); },
+			getEmbeddingsEndpoint: async () => {
+				throw new Error('Not implemented in test');
+			},
 		} as unknown as IEndpointProvider);
 		const accessor = testingServiceCollection.createTestingAccessor();
 		// Pre-populate the prompt base-count cache so that
@@ -199,17 +289,44 @@ suite('LanguageModelAccess model info', () => {
 		// real tokenizer (which is slow and not relevant to this test).
 		const extensionContext = accessor.get(IVSCodeExtensionContext);
 		const baseCountCacheKey = 'lmBaseCount/gpt-4o-mini';
-		await extensionContext.globalState.update(baseCountCacheKey, { extensionVersion: accessor.get(IEnvService).getVersion(), baseCount: 0 });
-		const languageModelAccess = accessor.get(IInstantiationService).createInstance(LanguageModelAccess);
+		await extensionContext.globalState.update(baseCountCacheKey, {
+			extensionVersion: accessor.get(IEnvService).getVersion(),
+			baseCount: 0,
+		});
+		const languageModelAccess = accessor
+			.get(IInstantiationService)
+			.createInstance(LanguageModelAccess);
 		try {
-			const modelInfo = (languageModelAccess as unknown as { _provideLanguageModelChatInfo(options: { silent: boolean }, token: vscode.CancellationToken): Promise<vscode.LanguageModelChatInformation[]> })._provideLanguageModelChatInfo({ silent: true }, CancellationToken.None);
+			const modelInfo = (
+				languageModelAccess as unknown as {
+					_provideLanguageModelChatInfo(
+						options: { silent: boolean },
+						token: vscode.CancellationToken,
+					): Promise<vscode.LanguageModelChatInformation[]>;
+				}
+			)._provideLanguageModelChatInfo(
+				{ silent: true },
+				CancellationToken.None,
+			);
 			const resolved = await raceTimeout(modelInfo, 2_000);
-			assert.ok(resolved, 'provideLanguageModelChatInfo did not resolve while utility alias lookup was pending');
-			assert.deepStrictEqual(resolved.map(model => model.id), ['gpt-4o-mini']);
-			assert.ok(aliasLookupStarted.isResolved, 'expected utility alias lookup to have been started in the background');
+			assert.ok(
+				resolved,
+				'provideLanguageModelChatInfo did not resolve while utility alias lookup was pending',
+			);
+			assert.deepStrictEqual(
+				resolved.map((model) => model.id),
+				['gpt-4o-mini'],
+			);
+			assert.ok(
+				aliasLookupStarted.isResolved,
+				'expected utility alias lookup to have been started in the background',
+			);
 		} finally {
 			languageModelAccess.dispose();
-			await extensionContext.globalState.update(baseCountCacheKey, undefined);
+			await extensionContext.globalState.update(
+				baseCountCacheKey,
+				undefined,
+			);
 		}
 	});
 
@@ -229,21 +346,37 @@ suite('LanguageModelAccess model info', () => {
 			getAllCompletionModels: async () => [],
 			getAllChatEndpoints: async () => [],
 			getChatEndpoint: async () => resolvedEndpoint,
-			getEmbeddingsEndpoint: async () => { throw new Error('Not implemented in test'); },
+			getEmbeddingsEndpoint: async () => {
+				throw new Error('Not implemented in test');
+			},
 		} as unknown as IEndpointProvider);
 		const accessor = testingServiceCollection.createTestingAccessor();
-		const languageModelAccess = accessor.get(IInstantiationService).createInstance(LanguageModelAccess);
+		const languageModelAccess = accessor
+			.get(IInstantiationService)
+			.createInstance(LanguageModelAccess);
 		const internals = languageModelAccess as unknown as {
 			_utilityAliasEndpoints: Map<string, IChatEndpoint>;
-			_resolvedUtilityEndpoints: Map<string, { endpoint: IChatEndpoint; baseCount: number }>;
-			_promptBaseCountCache: { getBaseCount(endpoint: IChatEndpoint): Promise<number> };
+			_resolvedUtilityEndpoints: Map<
+				string,
+				{ endpoint: IChatEndpoint; baseCount: number }
+			>;
+			_promptBaseCountCache: {
+				getBaseCount(endpoint: IChatEndpoint): Promise<number>;
+			};
 			_refreshUtilityOverrides(): Promise<void>;
 		};
-		internals._utilityAliasEndpoints.set('copilot-utility-small', publishedEndpoint);
+		internals._utilityAliasEndpoints.set(
+			'copilot-utility-small',
+			publishedEndpoint,
+		);
 		internals._promptBaseCountCache = { getBaseCount: async () => 0 };
 		try {
 			await internals._refreshUtilityOverrides();
-			assert.strictEqual(internals._resolvedUtilityEndpoints.get('copilot-utility-small')?.endpoint, resolvedEndpoint);
+			assert.strictEqual(
+				internals._resolvedUtilityEndpoints.get('copilot-utility-small')
+					?.endpoint,
+				resolvedEndpoint,
+			);
 		} finally {
 			languageModelAccess.dispose();
 		}
@@ -251,7 +384,6 @@ suite('LanguageModelAccess model info', () => {
 });
 
 suite('buildUtilityAliasModelInfo', () => {
-
 	function makeEndpoint(overrides: Partial<IChatEndpoint>): IChatEndpoint {
 		return {
 			model: 'gpt-4o-mini',
@@ -265,13 +397,18 @@ suite('buildUtilityAliasModelInfo', () => {
 		} as IChatEndpoint;
 	}
 
-	function makeCopilotEndpoint(overrides: Partial<IChatEndpoint>): IChatEndpoint {
+	function makeCopilotEndpoint(
+		overrides: Partial<IChatEndpoint>,
+	): IChatEndpoint {
 		const endpoint = makeEndpoint(overrides);
 		Object.setPrototypeOf(endpoint, CopilotChatEndpoint.prototype);
 		return endpoint;
 	}
 
-	function makeBaseModelInfo(overrides: Partial<vscode.LanguageModelChatInformation> & Pick<vscode.LanguageModelChatInformation, 'id'>): vscode.LanguageModelChatInformation {
+	function makeBaseModelInfo(
+		overrides: Partial<vscode.LanguageModelChatInformation> &
+			Pick<vscode.LanguageModelChatInformation, 'id'>,
+	): vscode.LanguageModelChatInformation {
 		return {
 			name: 'Cloned Display Name',
 			family: 'gpt-4o-mini',
@@ -287,8 +424,17 @@ suite('buildUtilityAliasModelInfo', () => {
 
 	test('clones an existing copilot-provider entry, overriding id/family/selectable/default', () => {
 		const endpoint = makeCopilotEndpoint({ model: 'gpt-4o-mini' });
-		const base = makeBaseModelInfo({ id: 'gpt-4o-mini', requiresAuthorization: { label: 'octocat' } });
-		const result = buildUtilityAliasModelInfo('copilot-utility-small', endpoint, [base], /* baseCount */ 50, undefined);
+		const base = makeBaseModelInfo({
+			id: 'gpt-4o-mini',
+			requiresAuthorization: { label: 'octocat' },
+		});
+		const result = buildUtilityAliasModelInfo(
+			'copilot-utility-small',
+			endpoint,
+			[base],
+			/* baseCount */ 50,
+			undefined,
+		);
 
 		assert.strictEqual(result.synthesized, false);
 		assert.deepStrictEqual(result.info, {
@@ -308,22 +454,34 @@ suite('buildUtilityAliasModelInfo', () => {
 			supportsToolCalls: false,
 			supportsVision: true,
 		});
-		const base = makeBaseModelInfo({ id: 'gpt-4o-mini', requiresAuthorization: { label: 'octocat' } });
-		const result = buildUtilityAliasModelInfo('copilot-utility-small', endpoint, [base], /* baseCount */ 50, { label: 'octocat' });
-
-		assert.deepStrictEqual({
-			synthesized: result.synthesized,
-			name: result.info.name,
-			maxOutputTokens: result.info.maxOutputTokens,
-			requiresAuthorization: result.info.requiresAuthorization,
-			capabilities: result.info.capabilities,
-		}, {
-			synthesized: true,
-			name: 'BYOK GPT 4o mini',
-			maxOutputTokens: 2_048,
+		const base = makeBaseModelInfo({
+			id: 'gpt-4o-mini',
 			requiresAuthorization: { label: 'octocat' },
-			capabilities: { toolCalling: false, imageInput: true },
 		});
+		const result = buildUtilityAliasModelInfo(
+			'copilot-utility-small',
+			endpoint,
+			[base],
+			/* baseCount */ 50,
+			{ label: 'octocat' },
+		);
+
+		assert.deepStrictEqual(
+			{
+				synthesized: result.synthesized,
+				name: result.info.name,
+				maxOutputTokens: result.info.maxOutputTokens,
+				requiresAuthorization: result.info.requiresAuthorization,
+				capabilities: result.info.capabilities,
+			},
+			{
+				synthesized: true,
+				name: 'BYOK GPT 4o mini',
+				maxOutputTokens: 2_048,
+				requiresAuthorization: { label: 'octocat' },
+				capabilities: { toolCalling: false, imageInput: true },
+			},
+		);
 	});
 
 	test('synthesizes when no matching base entry exists, subtracting baseCount and completion reserve', () => {
@@ -336,7 +494,13 @@ suite('buildUtilityAliasModelInfo', () => {
 			supportsToolCalls: false,
 			supportsVision: true,
 		});
-		const result = buildUtilityAliasModelInfo('copilot-utility', endpoint, [], /* baseCount */ 100, { label: 'octocat' });
+		const result = buildUtilityAliasModelInfo(
+			'copilot-utility',
+			endpoint,
+			[],
+			/* baseCount */ 100,
+			{ label: 'octocat' },
+		);
 
 		assert.strictEqual(result.synthesized, true);
 		assert.strictEqual(result.info.id, 'copilot-utility');
@@ -346,33 +510,62 @@ suite('buildUtilityAliasModelInfo', () => {
 		assert.strictEqual(result.info.maxOutputTokens, 1_024);
 		assert.strictEqual(result.info.isUserSelectable, false);
 		assert.strictEqual(result.info.isDefault, false);
-		assert.deepStrictEqual(result.info.capabilities, { toolCalling: false, imageInput: true });
+		assert.deepStrictEqual(result.info.capabilities, {
+			toolCalling: false,
+			imageInput: true,
+		});
 		// Synthesized alias must carry requiresAuthorization so consumers using
 		// `vscode.lm.selectChatModels({ vendor: 'copilot', id: 'copilot-utility' })`
 		// against a BYOK override still go through model-access authorization.
-		assert.deepStrictEqual(result.info.requiresAuthorization, { label: 'octocat' });
+		assert.deepStrictEqual(result.info.requiresAuthorization, {
+			label: 'octocat',
+		});
 		// 32_000 - 100 (baseCount) - BaseTokensPerCompletion. Use a strict
 		// upper bound to assert the subtraction happened without re-importing
 		// the constant in the test.
-		assert.ok(result.info.maxInputTokens! < 32_000 - 100, `expected maxInputTokens to subtract baseCount and completion reserve, got ${result.info.maxInputTokens}`);
+		assert.ok(
+			result.info.maxInputTokens! < 32_000 - 100,
+			`expected maxInputTokens to subtract baseCount and completion reserve, got ${result.info.maxInputTokens}`,
+		);
 	});
 });
 
 suite('reasoning effort schema', () => {
 	test('claude family prefers high when available', () => {
-		assert.strictEqual(pickDefaultReasoningEffort(['low', 'medium', 'high'], 'claude-sonnet-4'), 'high');
+		assert.strictEqual(
+			pickDefaultReasoningEffort(
+				['low', 'medium', 'high'],
+				'claude-sonnet-4',
+			),
+			'high',
+		);
 	});
 
 	test('non-claude family prefers medium when available', () => {
-		assert.strictEqual(pickDefaultReasoningEffort(['low', 'medium', 'high'], 'gpt-5'), 'medium');
-		assert.strictEqual(pickDefaultReasoningEffort(['low', 'medium', 'high'], 'some-other-family'), 'medium');
+		assert.strictEqual(
+			pickDefaultReasoningEffort(['low', 'medium', 'high'], 'gpt-5'),
+			'medium',
+		);
+		assert.strictEqual(
+			pickDefaultReasoningEffort(
+				['low', 'medium', 'high'],
+				'some-other-family',
+			),
+			'medium',
+		);
 	});
 
 	test('falls back to first advertised level when preferred is missing', () => {
 		// Claude without 'high' → first
-		assert.strictEqual(pickDefaultReasoningEffort(['low', 'medium'], 'claude-haiku'), 'low');
+		assert.strictEqual(
+			pickDefaultReasoningEffort(['low', 'medium'], 'claude-haiku'),
+			'low',
+		);
 		// Other family without 'medium' → first
-		assert.strictEqual(pickDefaultReasoningEffort(['low', 'high'], 'unknown-family'), 'low');
+		assert.strictEqual(
+			pickDefaultReasoningEffort(['low', 'high'], 'unknown-family'),
+			'low',
+		);
 	});
 
 	test('returns undefined for empty levels', () => {
@@ -380,8 +573,15 @@ suite('reasoning effort schema', () => {
 	});
 
 	test('buildReasoningEffortSchemaProperty always sets a concrete default for non-empty levels', () => {
-		const prop = buildReasoningEffortSchemaProperty(['low', 'high'], 'unknown-family');
-		assert.strictEqual(prop.default, 'low', 'expected first advertised level, never undefined');
+		const prop = buildReasoningEffortSchemaProperty(
+			['low', 'high'],
+			'unknown-family',
+		);
+		assert.strictEqual(
+			prop.default,
+			'low',
+			'expected first advertised level, never undefined',
+		);
 		assert.deepStrictEqual(prop.enum, ['low', 'high']);
 		assert.strictEqual(prop.group, 'navigation');
 	});
@@ -393,8 +593,14 @@ suite('normalizeTokenPrices', () => {
 	});
 
 	test('returns undefined when flat fields are missing', () => {
-		assert.strictEqual(normalizeTokenPrices({ batch_size: 1_000_000 }), undefined);
-		assert.strictEqual(normalizeTokenPrices({ input_price: 100 }), undefined);
+		assert.strictEqual(
+			normalizeTokenPrices({ batch_size: 1_000_000 }),
+			undefined,
+		);
+		assert.strictEqual(
+			normalizeTokenPrices({ input_price: 100 }),
+			undefined,
+		);
 	});
 
 	test('converts legacy flat nano-AIU prices to credits per 1M tokens', () => {
@@ -449,7 +655,11 @@ suite('normalizeTokenPrices', () => {
 		const result = normalizeTokenPrices({
 			batch_size: 1_000_000,
 			default: { input_price: 3, output_price: 15, cache_price: 0.375 },
-			long_context: { input_price: 6, output_price: 30, cache_price: 0.75 },
+			long_context: {
+				input_price: 6,
+				output_price: 30,
+				cache_price: 0.75,
+			},
 		});
 		assert.ok(result);
 		assert.strictEqual(result.default.inputPrice, 3);

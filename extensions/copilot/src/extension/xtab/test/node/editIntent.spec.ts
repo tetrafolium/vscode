@@ -4,10 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it, vi } from 'vitest';
-import { AggressivenessLevel, EditIntent } from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	AggressivenessLevel,
+	EditIntent,
+} from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { ILogger } from '../../../../platform/log/common/logService';
 import { AsyncIterUtils } from '../../../../util/common/asyncIterableUtils';
-import { EditIntentParseMode, parseEditIntentFromStream } from '../../node/editIntent';
+import {
+	EditIntentParseMode,
+	parseEditIntentFromStream,
+} from '../../node/editIntent';
 
 // ============================================================================
 // Test Utilities
@@ -84,7 +90,10 @@ describe('EditIntent.fromShortName', () => {
 describe('EditIntent.shouldShowEdit', () => {
 	// Matrix of expected results: [intent][aggressiveness] = shouldShow
 	// High confidence → always show, Low confidence → only high aggression
-	const expectations: Record<EditIntent, Record<AggressivenessLevel, boolean>> = {
+	const expectations: Record<
+		EditIntent,
+		Record<AggressivenessLevel, boolean>
+	> = {
 		[EditIntent.NoEdit]: {
 			[AggressivenessLevel.Low]: false,
 			[AggressivenessLevel.Medium]: false,
@@ -109,10 +118,17 @@ describe('EditIntent.shouldShowEdit', () => {
 
 	for (const [intent, aggressivenessMap] of Object.entries(expectations)) {
 		describe(`${intent} intent`, () => {
-			for (const [aggressiveness, expected] of Object.entries(aggressivenessMap)) {
+			for (const [aggressiveness, expected] of Object.entries(
+				aggressivenessMap,
+			)) {
 				const shouldText = expected ? 'should show' : 'should NOT show';
 				it(`${shouldText} for ${aggressiveness} aggressiveness`, () => {
-					expect(EditIntent.shouldShowEdit(intent as EditIntent, aggressiveness as AggressivenessLevel)).toBe(expected);
+					expect(
+						EditIntent.shouldShowEdit(
+							intent as EditIntent,
+							aggressiveness as AggressivenessLevel,
+						),
+					).toBe(expected);
 				});
 			}
 		});
@@ -131,44 +147,79 @@ describe('parseEditIntentFromStream', () => {
 			['medium', EditIntent.Medium],
 			['high', EditIntent.High],
 		])('should parse %s intent', async (intentValue, expectedIntent) => {
-			const inputLines = [`<|edit_intent|>${intentValue}<|/edit_intent|>`, 'line1', 'line2'];
+			const inputLines = [
+				`<|edit_intent|>${intentValue}<|/edit_intent|>`,
+				'line1',
+				'line2',
+			];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+				);
 
 			expect(editIntent).toBe(expectedIntent);
 			expect(parseError).toBeUndefined();
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['line1', 'line2']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'line1',
+				'line2',
+			]);
 		});
 
 		it('should handle content on same line after tag', async () => {
-			const inputLines = ['<|edit_intent|>low<|/edit_intent|>const x = 1;', 'const y = 2;'];
+			const inputLines = [
+				'<|edit_intent|>low<|/edit_intent|>const x = 1;',
+				'const y = 2;',
+			];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+				);
 
 			expect(editIntent).toBe(EditIntent.Low);
 			expect(parseError).toBeUndefined();
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['const x = 1;', 'const y = 2;']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'const x = 1;',
+				'const y = 2;',
+			]);
 		});
 
 		it('should trim whitespace-only content after tag', async () => {
-			const inputLines = ['<|edit_intent|>low<|/edit_intent|>   ', 'const x = 1;'];
+			const inputLines = [
+				'<|edit_intent|>low<|/edit_intent|>   ',
+				'const x = 1;',
+			];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { remainingLinesStream } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			const { remainingLinesStream } = await parseEditIntentFromStream(
+				linesStream,
+				createMockLogger(),
+			);
 
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['const x = 1;']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'const x = 1;',
+			]);
 		});
 
 		it('should handle single-line stream with only tag', async () => {
 			const inputLines = ['<|edit_intent|>no_edit<|/edit_intent|>'];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			const { editIntent, remainingLinesStream } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+				);
 
 			expect(editIntent).toBe(EditIntent.NoEdit);
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([]);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(
+				[],
+			);
 		});
 	});
 
@@ -176,7 +227,10 @@ describe('parseEditIntentFromStream', () => {
 		it('should return emptyResponse error for empty stream', async () => {
 			const linesStream = AsyncIterUtils.fromArray([]);
 
-			const { editIntent, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			const { editIntent, parseError } = await parseEditIntentFromStream(
+				linesStream,
+				createMockLogger(),
+			);
 
 			expect(editIntent).toBe(EditIntent.High);
 			expect(parseError).toBe('emptyResponse');
@@ -186,45 +240,75 @@ describe('parseEditIntentFromStream', () => {
 			const inputLines = ['const x = 1;', 'const y = 2;'];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+				);
 
 			expect(editIntent).toBe(EditIntent.High);
 			expect(parseError).toBe('noTagFound');
 			// All original lines should be preserved
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['const x = 1;', 'const y = 2;']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'const x = 1;',
+				'const y = 2;',
+			]);
 		});
 
 		it('should return malformedTag:startWithoutEnd error', async () => {
 			const inputLines = ['<|edit_intent|>low', 'const x = 1;'];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+				);
 
 			expect(editIntent).toBe(EditIntent.High);
 			expect(parseError).toBe('malformedTag:startWithoutEnd');
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['<|edit_intent|>low', 'const x = 1;']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'<|edit_intent|>low',
+				'const x = 1;',
+			]);
 		});
 
 		it('should return malformedTag:endWithoutStart error', async () => {
 			const inputLines = ['low<|/edit_intent|>', 'const x = 1;'];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+				);
 
 			expect(editIntent).toBe(EditIntent.High);
 			expect(parseError).toBe('malformedTag:endWithoutStart');
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['low<|/edit_intent|>', 'const x = 1;']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'low<|/edit_intent|>',
+				'const x = 1;',
+			]);
 		});
 
 		it('should return unknownIntentValue error for unrecognized intent', async () => {
-			const inputLines = ['<|edit_intent|>unknown_value<|/edit_intent|>', 'const x = 1;'];
+			const inputLines = [
+				'<|edit_intent|>unknown_value<|/edit_intent|>',
+				'const x = 1;',
+			];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+				);
 
 			expect(editIntent).toBe(EditIntent.High);
 			expect(parseError).toBe('unknownIntentValue:unknown_value');
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['const x = 1;']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'const x = 1;',
+			]);
 		});
 	});
 });
@@ -244,32 +328,54 @@ describe('parseEditIntentFromStream (ShortName mode)', () => {
 			const inputLines = [shortName, 'line1', 'line2'];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+					EditIntentParseMode.ShortName,
+				);
 
 			expect(editIntent).toBe(expectedIntent);
 			expect(parseError).toBeUndefined();
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['line1', 'line2']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'line1',
+				'line2',
+			]);
 		});
 
 		it('should handle short name with leading/trailing whitespace', async () => {
 			const inputLines = ['  M  ', 'const x = 1;'];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+					EditIntentParseMode.ShortName,
+				);
 
 			expect(editIntent).toBe(EditIntent.Medium);
 			expect(parseError).toBeUndefined();
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['const x = 1;']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'const x = 1;',
+			]);
 		});
 
 		it('should handle single-line stream with only short name', async () => {
 			const inputLines = ['N'];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+			const { editIntent, remainingLinesStream } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+					EditIntentParseMode.ShortName,
+				);
 
 			expect(editIntent).toBe(EditIntent.NoEdit);
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([]);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(
+				[],
+			);
 		});
 	});
 
@@ -277,7 +383,11 @@ describe('parseEditIntentFromStream (ShortName mode)', () => {
 		it('should return emptyResponse error for empty stream', async () => {
 			const linesStream = AsyncIterUtils.fromArray([]);
 
-			const { editIntent, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+			const { editIntent, parseError } = await parseEditIntentFromStream(
+				linesStream,
+				createMockLogger(),
+				EditIntentParseMode.ShortName,
+			);
 
 			expect(editIntent).toBe(EditIntent.High);
 			expect(parseError).toBe('emptyResponse');
@@ -287,23 +397,39 @@ describe('parseEditIntentFromStream (ShortName mode)', () => {
 			const inputLines = ['const x = 1;', 'const y = 2;'];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+					EditIntentParseMode.ShortName,
+				);
 
 			expect(editIntent).toBe(EditIntent.High);
 			expect(parseError).toBe('unknownIntentValue:const x = 1;');
 			// All original lines should be preserved
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['const x = 1;', 'const y = 2;']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'const x = 1;',
+				'const y = 2;',
+			]);
 		});
 
 		it('should return unknownIntentValue error for multi-character first line', async () => {
 			const inputLines = ['low', 'const x = 1;'];
 			const linesStream = AsyncIterUtils.fromArray(inputLines);
 
-			const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+			const { editIntent, remainingLinesStream, parseError } =
+				await parseEditIntentFromStream(
+					linesStream,
+					createMockLogger(),
+					EditIntentParseMode.ShortName,
+				);
 
 			expect(editIntent).toBe(EditIntent.High);
 			expect(parseError).toBe('unknownIntentValue:low');
-			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual(['low', 'const x = 1;']);
+			expect(await AsyncIterUtils.toArray(remainingLinesStream)).toEqual([
+				'low',
+				'const x = 1;',
+			]);
 		});
 	});
 });
@@ -317,15 +443,27 @@ describe('Edit Intent Filtering Integration', () => {
 
 	describe('Tags mode', () => {
 		describe('no_edit always filtered out', () => {
-			it.each([AggressivenessLevel.Low, AggressivenessLevel.Medium, AggressivenessLevel.High])(
+			it.each([
+				AggressivenessLevel.Low,
+				AggressivenessLevel.Medium,
+				AggressivenessLevel.High,
+			])(
 				'should filter out no_edit with %s aggressiveness',
 				async (aggressiveness) => {
-					const linesStream = AsyncIterUtils.fromArray(['<|edit_intent|>no_edit<|/edit_intent|>', 'code']);
-					const { editIntent } = await parseEditIntentFromStream(linesStream, createMockLogger());
+					const linesStream = AsyncIterUtils.fromArray([
+						'<|edit_intent|>no_edit<|/edit_intent|>',
+						'code',
+					]);
+					const { editIntent } = await parseEditIntentFromStream(
+						linesStream,
+						createMockLogger(),
+					);
 
 					expect(editIntent).toBe(EditIntent.NoEdit);
-					expect(EditIntent.shouldShowEdit(editIntent, aggressiveness)).toBe(false);
-				}
+					expect(
+						EditIntent.shouldShowEdit(editIntent, aggressiveness),
+					).toBe(false);
+				},
 			);
 		});
 
@@ -337,12 +475,20 @@ describe('Edit Intent Filtering Integration', () => {
 			])(
 				'with %s aggressiveness should return %s',
 				async (aggressiveness, expected) => {
-					const linesStream = AsyncIterUtils.fromArray(['<|edit_intent|>low<|/edit_intent|>', 'code']);
-					const { editIntent } = await parseEditIntentFromStream(linesStream, createMockLogger());
+					const linesStream = AsyncIterUtils.fromArray([
+						'<|edit_intent|>low<|/edit_intent|>',
+						'code',
+					]);
+					const { editIntent } = await parseEditIntentFromStream(
+						linesStream,
+						createMockLogger(),
+					);
 
 					expect(editIntent).toBe(EditIntent.Low);
-					expect(EditIntent.shouldShowEdit(editIntent, aggressiveness)).toBe(expected);
-				}
+					expect(
+						EditIntent.shouldShowEdit(editIntent, aggressiveness),
+					).toBe(expected);
+				},
 			);
 		});
 
@@ -351,39 +497,72 @@ describe('Edit Intent Filtering Integration', () => {
 				[AggressivenessLevel.Low, false],
 				[AggressivenessLevel.Medium, true],
 				[AggressivenessLevel.High, true],
-			])('with %s aggressiveness should return %s', async (aggressiveness, expected) => {
-				const linesStream = AsyncIterUtils.fromArray(['<|edit_intent|>medium<|/edit_intent|>', 'code']);
-				const { editIntent } = await parseEditIntentFromStream(linesStream, createMockLogger());
+			])(
+				'with %s aggressiveness should return %s',
+				async (aggressiveness, expected) => {
+					const linesStream = AsyncIterUtils.fromArray([
+						'<|edit_intent|>medium<|/edit_intent|>',
+						'code',
+					]);
+					const { editIntent } = await parseEditIntentFromStream(
+						linesStream,
+						createMockLogger(),
+					);
 
-				expect(EditIntent.shouldShowEdit(editIntent, aggressiveness)).toBe(expected);
-			});
+					expect(
+						EditIntent.shouldShowEdit(editIntent, aggressiveness),
+					).toBe(expected);
+				},
+			);
 		});
 
 		describe('high intent never filtered (always shown)', () => {
-			it.each([AggressivenessLevel.Low, AggressivenessLevel.Medium, AggressivenessLevel.High])(
+			it.each([
+				AggressivenessLevel.Low,
+				AggressivenessLevel.Medium,
+				AggressivenessLevel.High,
+			])(
 				'should NOT filter high intent with %s aggressiveness',
 				async (aggressiveness) => {
-					const linesStream = AsyncIterUtils.fromArray(['<|edit_intent|>high<|/edit_intent|>', 'code']);
-					const { editIntent } = await parseEditIntentFromStream(linesStream, createMockLogger());
+					const linesStream = AsyncIterUtils.fromArray([
+						'<|edit_intent|>high<|/edit_intent|>',
+						'code',
+					]);
+					const { editIntent } = await parseEditIntentFromStream(
+						linesStream,
+						createMockLogger(),
+					);
 
 					expect(editIntent).toBe(EditIntent.High);
-					expect(EditIntent.shouldShowEdit(editIntent, aggressiveness)).toBe(true);
-				}
+					expect(
+						EditIntent.shouldShowEdit(editIntent, aggressiveness),
+					).toBe(true);
+				},
 			);
 		});
 	});
 
 	describe('ShortName mode', () => {
 		describe('N (no_edit) always filtered out', () => {
-			it.each([AggressivenessLevel.Low, AggressivenessLevel.Medium, AggressivenessLevel.High])(
+			it.each([
+				AggressivenessLevel.Low,
+				AggressivenessLevel.Medium,
+				AggressivenessLevel.High,
+			])(
 				'should filter out N with %s aggressiveness',
 				async (aggressiveness) => {
 					const linesStream = AsyncIterUtils.fromArray(['N', 'code']);
-					const { editIntent } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+					const { editIntent } = await parseEditIntentFromStream(
+						linesStream,
+						createMockLogger(),
+						EditIntentParseMode.ShortName,
+					);
 
 					expect(editIntent).toBe(EditIntent.NoEdit);
-					expect(EditIntent.shouldShowEdit(editIntent, aggressiveness)).toBe(false);
-				}
+					expect(
+						EditIntent.shouldShowEdit(editIntent, aggressiveness),
+					).toBe(false);
+				},
 			);
 		});
 
@@ -396,11 +575,17 @@ describe('Edit Intent Filtering Integration', () => {
 				'with %s aggressiveness should return %s',
 				async (aggressiveness, expected) => {
 					const linesStream = AsyncIterUtils.fromArray(['L', 'code']);
-					const { editIntent } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+					const { editIntent } = await parseEditIntentFromStream(
+						linesStream,
+						createMockLogger(),
+						EditIntentParseMode.ShortName,
+					);
 
 					expect(editIntent).toBe(EditIntent.Low);
-					expect(EditIntent.shouldShowEdit(editIntent, aggressiveness)).toBe(expected);
-				}
+					expect(
+						EditIntent.shouldShowEdit(editIntent, aggressiveness),
+					).toBe(expected);
+				},
 			);
 		});
 
@@ -409,24 +594,43 @@ describe('Edit Intent Filtering Integration', () => {
 				[AggressivenessLevel.Low, false],
 				[AggressivenessLevel.Medium, true],
 				[AggressivenessLevel.High, true],
-			])('with %s aggressiveness should return %s', async (aggressiveness, expected) => {
-				const linesStream = AsyncIterUtils.fromArray(['M', 'code']);
-				const { editIntent } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+			])(
+				'with %s aggressiveness should return %s',
+				async (aggressiveness, expected) => {
+					const linesStream = AsyncIterUtils.fromArray(['M', 'code']);
+					const { editIntent } = await parseEditIntentFromStream(
+						linesStream,
+						createMockLogger(),
+						EditIntentParseMode.ShortName,
+					);
 
-				expect(EditIntent.shouldShowEdit(editIntent, aggressiveness)).toBe(expected);
-			});
+					expect(
+						EditIntent.shouldShowEdit(editIntent, aggressiveness),
+					).toBe(expected);
+				},
+			);
 		});
 
 		describe('H (high) intent never filtered (always shown)', () => {
-			it.each([AggressivenessLevel.Low, AggressivenessLevel.Medium, AggressivenessLevel.High])(
+			it.each([
+				AggressivenessLevel.Low,
+				AggressivenessLevel.Medium,
+				AggressivenessLevel.High,
+			])(
 				'should NOT filter H intent with %s aggressiveness',
 				async (aggressiveness) => {
 					const linesStream = AsyncIterUtils.fromArray(['H', 'code']);
-					const { editIntent } = await parseEditIntentFromStream(linesStream, createMockLogger(), EditIntentParseMode.ShortName);
+					const { editIntent } = await parseEditIntentFromStream(
+						linesStream,
+						createMockLogger(),
+						EditIntentParseMode.ShortName,
+					);
 
 					expect(editIntent).toBe(EditIntent.High);
-					expect(EditIntent.shouldShowEdit(editIntent, aggressiveness)).toBe(true);
-				}
+					expect(
+						EditIntent.shouldShowEdit(editIntent, aggressiveness),
+					).toBe(true);
+				},
 			);
 		});
 	});

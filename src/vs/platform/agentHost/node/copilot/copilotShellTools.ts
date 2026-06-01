@@ -3,25 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Tool, ToolResultObject } from '@github/copilot-sdk';
-import { generateUuid } from '../../../../base/common/uuid.js';
-import { URI } from '../../../../base/common/uri.js';
-import { removeAnsiEscapeCodes } from '../../../../base/common/strings.js';
-import * as platform from '../../../../base/common/platform.js';
-import { Disposable, DisposableStore, type IReference, toDisposable } from '../../../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { IEnvironmentService } from '../../../environment/common/environment.js';
-import { IInstantiationService } from '../../../instantiation/common/instantiation.js';
-import { ILogService } from '../../../log/common/log.js';
-import { IProductService } from '../../../product/common/productService.js';
-import { ISandboxHelperService } from '../../../sandbox/common/sandboxHelperService.js';
-import type { ITerminalSandboxResolvedNetworkDomains } from '../../../sandbox/common/terminalSandboxService.js';
-import { TerminalSandboxEngine } from '../../../sandbox/common/terminalSandboxEngine.js';
-import { TerminalClaimKind, type TerminalSessionClaim } from '../../common/state/protocol/state.js';
-import { isZsh } from '../agentHostShellUtils.js';
-import { IAgentHostTerminalManager } from '../agentHostTerminalManager.js';
-import { createAgentHostSandboxEngine } from './agentHostSandboxEngine.js';
-import { IAgentConfigurationService } from '../agentConfigurationService.js';
+import type { Tool, ToolResultObject } from "@github/copilot-sdk";
+import { generateUuid } from "../../../../base/common/uuid.js";
+import { URI } from "../../../../base/common/uri.js";
+import { removeAnsiEscapeCodes } from "../../../../base/common/strings.js";
+import * as platform from "../../../../base/common/platform.js";
+import {
+	Disposable,
+	DisposableStore,
+	type IReference,
+	toDisposable,
+} from "../../../../base/common/lifecycle.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { IEnvironmentService } from "../../../environment/common/environment.js";
+import { IInstantiationService } from "../../../instantiation/common/instantiation.js";
+import { ILogService } from "../../../log/common/log.js";
+import { IProductService } from "../../../product/common/productService.js";
+import { ISandboxHelperService } from "../../../sandbox/common/sandboxHelperService.js";
+import type { ITerminalSandboxResolvedNetworkDomains } from "../../../sandbox/common/terminalSandboxService.js";
+import { TerminalSandboxEngine } from "../../../sandbox/common/terminalSandboxEngine.js";
+import {
+	TerminalClaimKind,
+	type TerminalSessionClaim,
+} from "../../common/state/protocol/state.js";
+import { isZsh } from "../agentHostShellUtils.js";
+import { IAgentHostTerminalManager } from "../agentHostTerminalManager.js";
+import { createAgentHostSandboxEngine } from "./agentHostSandboxEngine.js";
+import { IAgentConfigurationService } from "../agentConfigurationService.js";
 
 /**
  * Maximum scrollback content (in bytes) returned to the model in tool results.
@@ -37,8 +45,9 @@ const DEFAULT_TIMEOUT_MS = 120_000;
  * The sentinel prefix used to detect command completion in terminal output.
  * The full sentinel format is: `<<<COPILOT_SENTINEL_<uuid>_EXIT_<code>>>`.
  */
-const SENTINEL_PREFIX = '<<<COPILOT_SENTINEL_';
-const ALT_BUFFER_MESSAGE = 'The command opened the alternate buffer and is still running in the terminal. It likely launched an interactive terminal UI. Use write_bash/write_powershell to interact with it, or shutdown the shell to stop it.';
+const SENTINEL_PREFIX = "<<<COPILOT_SENTINEL_";
+const ALT_BUFFER_MESSAGE =
+	"The command opened the alternate buffer and is still running in the terminal. It likely launched an interactive terminal UI. Use write_bash/write_powershell to interact with it, or shutdown the shell to stop it.";
 
 /**
  * Tracks a single persistent shell instance backed by a managed PTY terminal.
@@ -50,7 +59,7 @@ interface IManagedShell {
 	readonly executable: string;
 }
 
-export type ShellType = 'bash' | 'powershell';
+export type ShellType = "bash" | "powershell";
 
 /**
  * Routes a resolved shell executable to one of the Copilot SDK's two
@@ -59,36 +68,42 @@ export type ShellType = 'bash' | 'powershell';
  */
 export function shellTypeForExecutable(shellPath: string): ShellType {
 	// Strip path on either separator and the .exe suffix.
-	const lastSep = Math.max(shellPath.lastIndexOf('/'), shellPath.lastIndexOf('\\'));
-	const base = shellPath.slice(lastSep + 1).toLowerCase().replace(/\.exe$/, '');
+	const lastSep = Math.max(
+		shellPath.lastIndexOf("/"),
+		shellPath.lastIndexOf("\\"),
+	);
+	const base = shellPath
+		.slice(lastSep + 1)
+		.toLowerCase()
+		.replace(/\.exe$/, "");
 	switch (base) {
 		// PowerShell
-		case 'pwsh':
-		case 'powershell':
-		case 'pwsh-preview':
-			return 'powershell';
+		case "pwsh":
+		case "powershell":
+		case "pwsh-preview":
+			return "powershell";
 		// POSIX shells
-		case 'bash':
-		case 'sh':
-		case 'zsh':
-		case 'fish':
-		case 'csh':
-		case 'ksh':
-		case 'nu':
-		case 'xonsh':
+		case "bash":
+		case "sh":
+		case "zsh":
+		case "fish":
+		case "csh":
+		case "ksh":
+		case "nu":
+		case "xonsh":
 		// Git for Windows bash entry points
-		case 'git-cmd':
+		case "git-cmd":
 		// WSL launchers — bash inside, but invoked via these stubs
-		case 'wsl':
-		case 'ubuntu':
-		case 'ubuntu1804':
-		case 'kali':
-		case 'debian':
-		case 'opensuse-42':
-		case 'sles-12':
-			return 'bash';
+		case "wsl":
+		case "ubuntu":
+		case "ubuntu1804":
+		case "kali":
+		case "debian":
+		case "opensuse-42":
+		case "sles-12":
+			return "bash";
 		default:
-			return platform.isWindows ? 'powershell' : 'bash';
+			return platform.isWindows ? "powershell" : "bash";
 	}
 }
 
@@ -105,7 +120,6 @@ export function shellTypeForExecutable(shellPath: string): ShellType {
  * the session ends.
  */
 export class ShellManager extends Disposable {
-
 	private readonly _shells = new Map<string, IManagedShell>();
 	private readonly _toolCallShells = new Map<string, string>();
 	private _resolvedExecutable: Promise<string> | undefined;
@@ -113,38 +127,58 @@ export class ShellManager extends Disposable {
 	/** Set of shell ids currently executing a command and unsafe to share. */
 	private readonly _busyShellIds = new Set<string>();
 	/** Release listeners for shells held after a tool returns while the command is still running. */
-	private readonly _heldShellReleaseListeners = new Map<string, DisposableStore>();
+	private readonly _heldShellReleaseListeners = new Map<
+		string,
+		DisposableStore
+	>();
 
-	private readonly _onDidAssociateTerminal = this._register(new Emitter<{ toolCallId: string; terminalUri: string; displayName: string }>());
-	readonly onDidAssociateTerminal: Event<{ toolCallId: string; terminalUri: string; displayName: string }> = this._onDidAssociateTerminal.event;
+	private readonly _onDidAssociateTerminal = this._register(
+		new Emitter<{
+			toolCallId: string;
+			terminalUri: string;
+			displayName: string;
+		}>(),
+	);
+	readonly onDidAssociateTerminal: Event<{
+		toolCallId: string;
+		terminalUri: string;
+		displayName: string;
+	}> = this._onDidAssociateTerminal.event;
 
 	constructor(
 		private readonly _sessionUri: URI,
 		public readonly workingDirectory: URI | undefined,
-		@IAgentHostTerminalManager private readonly _terminalManager: IAgentHostTerminalManager,
+		@IAgentHostTerminalManager
+		private readonly _terminalManager: IAgentHostTerminalManager,
 		@ILogService private readonly _logService: ILogService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@IEnvironmentService private readonly _environmentService: IEnvironmentService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
+		@IEnvironmentService
+		private readonly _environmentService: IEnvironmentService,
 		@IProductService private readonly _productService: IProductService,
-		@IAgentConfigurationService private readonly _agentConfigurationService: IAgentConfigurationService,
-		@ISandboxHelperService private readonly _sandboxHelper: ISandboxHelperService,
+		@IAgentConfigurationService
+		private readonly _agentConfigurationService: IAgentConfigurationService,
+		@ISandboxHelperService
+		private readonly _sandboxHelper: ISandboxHelperService,
 	) {
 		super();
 
-		this._register(toDisposable(() => {
-			for (const store of this._heldShellReleaseListeners.values()) {
-				store.dispose();
-			}
-			this._heldShellReleaseListeners.clear();
-			for (const shell of this._shells.values()) {
-				if (this._terminalManager.hasTerminal(shell.terminalUri)) {
-					this._terminalManager.disposeTerminal(shell.terminalUri);
+		this._register(
+			toDisposable(() => {
+				for (const store of this._heldShellReleaseListeners.values()) {
+					store.dispose();
 				}
-			}
-			this._shells.clear();
-			this._toolCallShells.clear();
-			this._busyShellIds.clear();
-		}));
+				this._heldShellReleaseListeners.clear();
+				for (const shell of this._shells.values()) {
+					if (this._terminalManager.hasTerminal(shell.terminalUri)) {
+						this._terminalManager.disposeTerminal(shell.terminalUri);
+					}
+				}
+				this._shells.clear();
+				this._toolCallShells.clear();
+				this._busyShellIds.clear();
+			}),
+		);
 	}
 
 	/**
@@ -166,7 +200,8 @@ export class ShellManager extends Disposable {
 	 */
 	getOrCreateSandboxEngine(): TerminalSandboxEngine {
 		if (!this._sandboxEngine) {
-			const sessionId = this._sessionUri.path.split('/').pop() ?? generateUuid();
+			const sessionId =
+				this._sessionUri.path.split("/").pop() ?? generateUuid();
 			const engine = createAgentHostSandboxEngine(
 				this._instantiationService,
 				this._environmentService,
@@ -177,9 +212,18 @@ export class ShellManager extends Disposable {
 				this.workingDirectory,
 			);
 			this._register(engine);
-			this._register(toDisposable(() => {
-				void engine.cleanupTempDir().catch(err => this._logService.warn('[ShellManager] Sandbox temp dir cleanup failed', err));
-			}));
+			this._register(
+				toDisposable(() => {
+					void engine
+						.cleanupTempDir()
+						.catch((err) =>
+							this._logService.warn(
+								"[ShellManager] Sandbox temp dir cleanup failed",
+								err,
+							),
+						);
+				}),
+			);
 			this._sandboxEngine = engine;
 		}
 		return this._sandboxEngine;
@@ -199,7 +243,10 @@ export class ShellManager extends Disposable {
 		cwd?: string,
 	): Promise<IReference<IManagedShell>> {
 		for (const shell of this._shells.values()) {
-			if (shell.shellType !== shellType || !this._terminalManager.hasTerminal(shell.terminalUri)) {
+			if (
+				shell.shellType !== shellType ||
+				!this._terminalManager.hasTerminal(shell.terminalUri)
+			) {
 				continue;
 			}
 			const exitCode = this._terminalManager.getExitCode(shell.terminalUri);
@@ -227,22 +274,27 @@ export class ShellManager extends Disposable {
 			toolCallId,
 		};
 
-		const shellDisplayName = shellType === 'bash' ? 'Bash' : 'PowerShell';
+		const shellDisplayName = shellType === "bash" ? "Bash" : "PowerShell";
 		const executable = await this.getResolvedExecutable();
 
-		await this._terminalManager.createTerminal({
-			channel: terminalUri,
-			claim,
-			name: shellDisplayName,
-			cwd: cwd ?? this.workingDirectory?.fsPath,
-		}, { shell: executable, preventShellHistory: true, nonInteractive: true });
+		await this._terminalManager.createTerminal(
+			{
+				channel: terminalUri,
+				claim,
+				name: shellDisplayName,
+				cwd: cwd ?? this.workingDirectory?.fsPath,
+			},
+			{ shell: executable, preventShellHistory: true, nonInteractive: true },
+		);
 
 		const shell: IManagedShell = { id, terminalUri, shellType, executable };
 		this._shells.set(id, shell);
 		this._busyShellIds.add(id);
 		this._trackToolCall(toolCallId, id);
 
-		this._logService.info(`[ShellManager] Created ${shellType} shell ${id} (terminal=${terminalUri},  executable=${executable})`);
+		this._logService.info(
+			`[ShellManager] Created ${shellType} shell ${id} (terminal=${terminalUri},  executable=${executable})`,
+		);
 		return this._makeReference(shell);
 	}
 
@@ -271,7 +323,9 @@ export class ShellManager extends Disposable {
 			this._heldShellReleaseListeners.delete(shell.id);
 			store.dispose();
 		};
-		store.add(this._terminalManager.onCommandFinished(shell.terminalUri, release));
+		store.add(
+			this._terminalManager.onCommandFinished(shell.terminalUri, release),
+		);
 		store.add(this._terminalManager.onExit(shell.terminalUri, release));
 		this._heldShellReleaseListeners.set(shell.id, store);
 	}
@@ -280,8 +334,12 @@ export class ShellManager extends Disposable {
 		this._toolCallShells.set(toolCallId, shellId);
 		const shell = this._shells.get(shellId);
 		if (shell) {
-			const displayName = shell.shellType === 'bash' ? 'Bash' : 'PowerShell';
-			this._onDidAssociateTerminal.fire({ toolCallId, terminalUri: shell.terminalUri, displayName });
+			const displayName = shell.shellType === "bash" ? "Bash" : "PowerShell";
+			this._onDidAssociateTerminal.fire({
+				toolCallId,
+				terminalUri: shell.terminalUri,
+				displayName,
+			});
 		}
 	}
 
@@ -327,11 +385,14 @@ export class ShellManager extends Disposable {
 // ---------------------------------------------------------------------------
 
 function makeSentinelId(): string {
-	return generateUuid().replace(/-/g, '');
+	return generateUuid().replace(/-/g, "");
 }
 
-function buildSentinelCommand(sentinelId: string, shellType: ShellType): string {
-	if (shellType === 'powershell') {
+function buildSentinelCommand(
+	sentinelId: string,
+	shellType: ShellType,
+): string {
+	if (shellType === "powershell") {
 		return `Write-Output "${SENTINEL_PREFIX}${sentinelId}_EXIT_$LASTEXITCODE>>>"`;
 	}
 	return `echo "${SENTINEL_PREFIX}${sentinelId}_EXIT_$?>>>"`;
@@ -346,11 +407,11 @@ function buildSentinelCommand(sentinelId: string, shellType: ShellType): string 
  * suppresses history through PSReadLine instead, so no prefix is needed.
  */
 export function prefixForHistorySuppression(shellType: ShellType): string {
-	return shellType === 'powershell' ? '' : ' ';
+	return shellType === "powershell" ? "" : " ";
 }
 
 export function isMultilineCommand(command: string): boolean {
-	const normalized = command.replace(/\r\n|\r/g, '\n');
+	const normalized = command.replace(/\r\n|\r/g, "\n");
 	return /(?<!\\)\n/.test(normalized);
 }
 
@@ -358,7 +419,10 @@ function shouldUseBracketedPasteMode(command: string): boolean {
 	return platform.isMacintosh || isMultilineCommand(command);
 }
 
-function parseSentinel(content: string, sentinelId: string): { found: boolean; exitCode: number; outputBeforeSentinel: string } {
+function parseSentinel(
+	content: string,
+	sentinelId: string,
+): { found: boolean; exitCode: number; outputBeforeSentinel: string } {
 	const marker = `${SENTINEL_PREFIX}${sentinelId}_EXIT_`;
 	const idx = content.indexOf(marker);
 	if (idx === -1) {
@@ -367,8 +431,9 @@ function parseSentinel(content: string, sentinelId: string): { found: boolean; e
 
 	const outputBeforeSentinel = content.substring(0, idx);
 	const afterMarker = content.substring(idx + marker.length);
-	const endIdx = afterMarker.indexOf('>>>');
-	const exitCodeStr = endIdx >= 0 ? afterMarker.substring(0, endIdx) : afterMarker.trim();
+	const endIdx = afterMarker.indexOf(">>>");
+	const exitCodeStr =
+		endIdx >= 0 ? afterMarker.substring(0, endIdx) : afterMarker.trim();
 	const exitCode = parseInt(exitCodeStr, 10);
 	return {
 		found: true,
@@ -395,14 +460,17 @@ interface IShellExecutionResult {
 }
 
 function makeSuccessResult(text: string): ToolResultObject {
-	return { textResultForLlm: text, resultType: 'success' };
+	return { textResultForLlm: text, resultType: "success" };
 }
 
 function makeFailureResult(text: string, error?: string): ToolResultObject {
-	return { textResultForLlm: text, resultType: 'failure', error };
+	return { textResultForLlm: text, resultType: "failure", error };
 }
 
-function makeExecutionResult(toolResult: ToolResultObject, options?: { keepShellBusy?: boolean }): IShellExecutionResult {
+function makeExecutionResult(
+	toolResult: ToolResultObject,
+	options?: { keepShellBusy?: boolean },
+): IShellExecutionResult {
 	return { toolResult, keepShellBusy: options?.keepShellBusy };
 }
 
@@ -411,7 +479,10 @@ function makeBackgroundExecutionResult(text: string): IShellExecutionResult {
 }
 
 function makeAltBufferExecutionResult(): IShellExecutionResult {
-	return makeExecutionResult(makeFailureResult(ALT_BUFFER_MESSAGE, 'alternateBuffer'), { keepShellBusy: true });
+	return makeExecutionResult(
+		makeFailureResult(ALT_BUFFER_MESSAGE, "alternateBuffer"),
+		{ keepShellBusy: true },
+	);
 }
 
 function registerAltBufferHandler(
@@ -421,10 +492,12 @@ function registerAltBufferHandler(
 	disposables: DisposableStore,
 	finish: (result: IShellExecutionResult) => void,
 ): void {
-	void terminalManager.createAltBufferPromise(shell.terminalUri, disposables).then(() => {
-		logService.info('[ShellTool] Command entered alternate buffer');
-		finish(makeAltBufferExecutionResult());
-	});
+	void terminalManager
+		.createAltBufferPromise(shell.terminalUri, disposables)
+		.then(() => {
+			logService.info("[ShellTool] Command entered alternate buffer");
+			finish(makeAltBufferExecutionResult());
+		});
 }
 
 async function executeCommandInShell(
@@ -435,8 +508,20 @@ async function executeCommandInShell(
 	logService: ILogService,
 ): Promise<IShellExecutionResult> {
 	const result = terminalManager.supportsCommandDetection(shell.terminalUri)
-		? await executeCommandWithShellIntegration(shell, command, timeoutMs, terminalManager, logService)
-		: await executeCommandWithSentinel(shell, command, timeoutMs, terminalManager, logService);
+		? await executeCommandWithShellIntegration(
+				shell,
+				command,
+				timeoutMs,
+				terminalManager,
+				logService,
+			)
+		: await executeCommandWithSentinel(
+				shell,
+				command,
+				timeoutMs,
+				terminalManager,
+				logService,
+			);
 	return {
 		...result,
 		toolResult: {
@@ -460,7 +545,7 @@ async function executeCommandWithShellIntegration(
 ): Promise<IShellExecutionResult> {
 	const disposables = new DisposableStore();
 
-	const result = new Promise<IShellExecutionResult>(resolve => {
+	const result = new Promise<IShellExecutionResult>((resolve) => {
 		let resolved = false;
 		const finish = (result: IShellExecutionResult) => {
 			if (resolved) {
@@ -471,51 +556,92 @@ async function executeCommandWithShellIntegration(
 			resolve(result);
 		};
 
-		disposables.add(terminalManager.onCommandFinished(shell.terminalUri, event => {
-			const output = prepareOutputForModel(event.output);
-			const exitCode = event.exitCode ?? 0;
-			logService.info(`[ShellTool] Command completed (shell integration) with exit code ${exitCode}`);
-			if (exitCode === 0) {
-				finish(makeExecutionResult(makeSuccessResult(`Exit code: ${exitCode}\n${output}`)));
-			} else {
-				finish(makeExecutionResult(makeFailureResult(`Exit code: ${exitCode}\n${output}`)));
-			}
-		}));
+		disposables.add(
+			terminalManager.onCommandFinished(shell.terminalUri, (event) => {
+				const output = prepareOutputForModel(event.output);
+				const exitCode = event.exitCode ?? 0;
+				logService.info(
+					`[ShellTool] Command completed (shell integration) with exit code ${exitCode}`,
+				);
+				if (exitCode === 0) {
+					finish(
+						makeExecutionResult(
+							makeSuccessResult(`Exit code: ${exitCode}\n${output}`),
+						),
+					);
+				} else {
+					finish(
+						makeExecutionResult(
+							makeFailureResult(`Exit code: ${exitCode}\n${output}`),
+						),
+					);
+				}
+			}),
+		);
 
-		registerAltBufferHandler(shell, terminalManager, logService, disposables, finish);
+		registerAltBufferHandler(
+			shell,
+			terminalManager,
+			logService,
+			disposables,
+			finish,
+		);
 
-		disposables.add(terminalManager.onExit(shell.terminalUri, (exitCode: number) => {
-			logService.info(`[ShellTool] Shell exited unexpectedly with code ${exitCode}`);
-			const fullContent = terminalManager.getContent(shell.terminalUri) ?? '';
-			const output = prepareOutputForModel(fullContent);
-			finish(makeExecutionResult(makeFailureResult(`Shell exited with code ${exitCode}\n${output}`)));
-		}));
+		disposables.add(
+			terminalManager.onExit(shell.terminalUri, (exitCode: number) => {
+				logService.info(
+					`[ShellTool] Shell exited unexpectedly with code ${exitCode}`,
+				);
+				const fullContent = terminalManager.getContent(shell.terminalUri) ?? "";
+				const output = prepareOutputForModel(fullContent);
+				finish(
+					makeExecutionResult(
+						makeFailureResult(`Shell exited with code ${exitCode}\n${output}`),
+					),
+				);
+			}),
+		);
 
-		disposables.add(terminalManager.onClaimChanged(shell.terminalUri, (claim) => {
-			if (claim.kind === TerminalClaimKind.Session && !claim.toolCallId) {
-				logService.info(`[ShellTool] Continuing in background (claim narrowed)`);
-				finish(makeBackgroundExecutionResult('The user chose to continue this command in the background. The terminal is still running.'));
-			}
-		}));
+		disposables.add(
+			terminalManager.onClaimChanged(shell.terminalUri, (claim) => {
+				if (claim.kind === TerminalClaimKind.Session && !claim.toolCallId) {
+					logService.info(
+						`[ShellTool] Continuing in background (claim narrowed)`,
+					);
+					finish(
+						makeBackgroundExecutionResult(
+							"The user chose to continue this command in the background. The terminal is still running.",
+						),
+					);
+				}
+			}),
+		);
 
 		const timer = setTimeout(() => {
 			logService.warn(`[ShellTool] Command timed out after ${timeoutMs}ms`);
-			const fullContent = terminalManager.getContent(shell.terminalUri) ?? '';
+			const fullContent = terminalManager.getContent(shell.terminalUri) ?? "";
 			const output = prepareOutputForModel(fullContent);
-			finish(makeExecutionResult(makeFailureResult(
-				`Command timed out after ${Math.round(timeoutMs / 1000)}s. Partial output:\n${output}`,
-				'timeout',
-			)));
+			finish(
+				makeExecutionResult(
+					makeFailureResult(
+						`Command timed out after ${Math.round(timeoutMs / 1000)}s. Partial output:\n${output}`,
+						"timeout",
+					),
+				),
+			);
 		}, timeoutMs);
 		disposables.add(toDisposable(() => clearTimeout(timer)));
-
 	});
 
 	try {
-		await terminalManager.sendText(shell.terminalUri, `${prefixForHistorySuppression(shell.shellType)}${command}`, {
-			shouldExecute: true,
-			bracketedPasteMode: shouldUseBracketedPasteMode(command),
-		});
+		await terminalManager.sendText(
+			shell.terminalUri,
+			`${prefixForHistorySuppression(shell.shellType)}${command}`,
+			{
+				shouldExecute: true,
+				bracketedPasteMode: shouldUseBracketedPasteMode(command),
+			},
+		);
 	} catch (err) {
 		disposables.dispose();
 		throw err;
@@ -539,10 +665,10 @@ async function executeCommandWithSentinel(
 	const sentinelCmd = buildSentinelCommand(sentinelId, shell.shellType);
 	const disposables = new DisposableStore();
 
-	const contentBefore = terminalManager.getContent(shell.terminalUri) ?? '';
+	const contentBefore = terminalManager.getContent(shell.terminalUri) ?? "";
 	const offsetBefore = contentBefore.length;
 
-	const result = new Promise<IShellExecutionResult>(resolve => {
+	const result = new Promise<IShellExecutionResult>((resolve) => {
 		let resolved = false;
 		const finish = (result: IShellExecutionResult) => {
 			if (resolved) {
@@ -554,7 +680,7 @@ async function executeCommandWithSentinel(
 		};
 
 		const checkForSentinel = () => {
-			const fullContent = terminalManager.getContent(shell.terminalUri) ?? '';
+			const fullContent = terminalManager.getContent(shell.terminalUri) ?? "";
 			// Clamp offset: the terminal manager trims content when it exceeds
 			// 100k chars (slices to last 80k). If trimming happened after we
 			// captured offsetBefore, scan from the start of the current buffer.
@@ -563,45 +689,83 @@ async function executeCommandWithSentinel(
 			const parsed = parseSentinel(newContent, sentinelId);
 			if (parsed.found) {
 				const output = prepareOutputForModel(parsed.outputBeforeSentinel);
-				logService.info(`[ShellTool] Command completed with exit code ${parsed.exitCode}`);
+				logService.info(
+					`[ShellTool] Command completed with exit code ${parsed.exitCode}`,
+				);
 				if (parsed.exitCode === 0) {
-					finish(makeExecutionResult(makeSuccessResult(`Exit code: ${parsed.exitCode}\n${output}`)));
+					finish(
+						makeExecutionResult(
+							makeSuccessResult(`Exit code: ${parsed.exitCode}\n${output}`),
+						),
+					);
 				} else {
-					finish(makeExecutionResult(makeFailureResult(`Exit code: ${parsed.exitCode}\n${output}`)));
+					finish(
+						makeExecutionResult(
+							makeFailureResult(`Exit code: ${parsed.exitCode}\n${output}`),
+						),
+					);
 				}
 			}
 		};
 
-		disposables.add(terminalManager.onData(shell.terminalUri, () => {
-			checkForSentinel();
-		}));
+		disposables.add(
+			terminalManager.onData(shell.terminalUri, () => {
+				checkForSentinel();
+			}),
+		);
 
-		registerAltBufferHandler(shell, terminalManager, logService, disposables, finish);
+		registerAltBufferHandler(
+			shell,
+			terminalManager,
+			logService,
+			disposables,
+			finish,
+		);
 
-		disposables.add(terminalManager.onExit(shell.terminalUri, (exitCode: number) => {
-			logService.info(`[ShellTool] Shell exited unexpectedly with code ${exitCode}`);
-			const fullContent = terminalManager.getContent(shell.terminalUri) ?? '';
-			const newContent = fullContent.substring(offsetBefore);
-			const output = prepareOutputForModel(newContent);
-			finish(makeExecutionResult(makeFailureResult(`Shell exited with code ${exitCode}\n${output}`)));
-		}));
+		disposables.add(
+			terminalManager.onExit(shell.terminalUri, (exitCode: number) => {
+				logService.info(
+					`[ShellTool] Shell exited unexpectedly with code ${exitCode}`,
+				);
+				const fullContent = terminalManager.getContent(shell.terminalUri) ?? "";
+				const newContent = fullContent.substring(offsetBefore);
+				const output = prepareOutputForModel(newContent);
+				finish(
+					makeExecutionResult(
+						makeFailureResult(`Shell exited with code ${exitCode}\n${output}`),
+					),
+				);
+			}),
+		);
 
-		disposables.add(terminalManager.onClaimChanged(shell.terminalUri, (claim) => {
-			if (claim.kind === TerminalClaimKind.Session && !claim.toolCallId) {
-				logService.info(`[ShellTool] Continuing in background (claim narrowed)`);
-				finish(makeBackgroundExecutionResult('The user chose to continue this command in the background. The terminal is still running.'));
-			}
-		}));
+		disposables.add(
+			terminalManager.onClaimChanged(shell.terminalUri, (claim) => {
+				if (claim.kind === TerminalClaimKind.Session && !claim.toolCallId) {
+					logService.info(
+						`[ShellTool] Continuing in background (claim narrowed)`,
+					);
+					finish(
+						makeBackgroundExecutionResult(
+							"The user chose to continue this command in the background. The terminal is still running.",
+						),
+					);
+				}
+			}),
+		);
 
 		const timer = setTimeout(() => {
 			logService.warn(`[ShellTool] Command timed out after ${timeoutMs}ms`);
-			const fullContent = terminalManager.getContent(shell.terminalUri) ?? '';
+			const fullContent = terminalManager.getContent(shell.terminalUri) ?? "";
 			const newContent = fullContent.substring(offsetBefore);
 			const output = prepareOutputForModel(newContent);
-			finish(makeExecutionResult(makeFailureResult(
-				`Command timed out after ${Math.round(timeoutMs / 1000)}s. Partial output:\n${output}`,
-				'timeout',
-			)));
+			finish(
+				makeExecutionResult(
+					makeFailureResult(
+						`Command timed out after ${Math.round(timeoutMs / 1000)}s. Partial output:\n${output}`,
+						"timeout",
+					),
+				),
+			);
 		}, timeoutMs);
 		disposables.add(toDisposable(() => clearTimeout(timer)));
 
@@ -609,11 +773,17 @@ async function executeCommandWithSentinel(
 	});
 
 	try {
-		await terminalManager.sendText(shell.terminalUri, `${prefixForHistorySuppression(shell.shellType)}${command}`, {
+		await terminalManager.sendText(
+			shell.terminalUri,
+			`${prefixForHistorySuppression(shell.shellType)}${command}`,
+			{
+				shouldExecute: true,
+				bracketedPasteMode: shouldUseBracketedPasteMode(command),
+			},
+		);
+		await terminalManager.sendText(shell.terminalUri, sentinelCmd, {
 			shouldExecute: true,
-			bracketedPasteMode: shouldUseBracketedPasteMode(command),
 		});
-		await terminalManager.sendText(shell.terminalUri, sentinelCmd, { shouldExecute: true });
 	} catch (err) {
 		disposables.dispose();
 		throw err;
@@ -642,7 +812,9 @@ export interface IUnsandboxedCommandConfirmationRequest {
 	readonly blockedDomains?: readonly string[];
 }
 
-export type UnsandboxedCommandConfirmationHandler = (request: IUnsandboxedCommandConfirmationRequest) => Promise<boolean>;
+export type UnsandboxedCommandConfirmationHandler = (
+	request: IUnsandboxedCommandConfirmationRequest,
+) => Promise<boolean>;
 
 interface IWriteShellArgs {
 	command: string;
@@ -672,30 +844,47 @@ export async function createShellTools(
 	const shellType = shellTypeForExecutable(executable);
 	const engine = shellManager.getOrCreateSandboxEngine();
 	const sandboxEnabled = await engine.isEnabled();
-	const networkDomains = sandboxEnabled ? engine.getResolvedNetworkDomains() : undefined;
+	const networkDomains = sandboxEnabled
+		? engine.getResolvedNetworkDomains()
+		: undefined;
 
 	const primaryTool: Tool<IShellToolArgs> = {
 		name: shellType,
-		description: shellType === 'bash'
-			? (isZsh(executable) ? createZshModelDescription(sandboxEnabled, networkDomains) : createBashModelDescription(sandboxEnabled, networkDomains))
-			: createPowerShellModelDescription(shellType, executable, sandboxEnabled, networkDomains),
+		description:
+			shellType === "bash"
+				? isZsh(executable)
+					? createZshModelDescription(sandboxEnabled, networkDomains)
+					: createBashModelDescription(sandboxEnabled, networkDomains)
+				: createPowerShellModelDescription(
+						shellType,
+						executable,
+						sandboxEnabled,
+						networkDomains,
+					),
 		parameters: {
-			type: 'object',
+			type: "object",
 			properties: {
-				command: { type: 'string', description: 'The command to execute' },
-				timeout: { type: 'number', description: 'Timeout in milliseconds (default 120000)' },
-				...(sandboxEnabled ? {
-					requestUnsandboxedExecution: {
-						type: 'boolean',
-						description: 'Request that this command run outside the sandbox. Only set this after first executing the command in the sandbox and observing that sandboxing caused the failure. The user will be prompted before the command runs unsandboxed.',
-					},
-					requestUnsandboxedExecutionReason: {
-						type: 'string',
-						description: 'A short explanation of the sandboxed execution failure or blocked-domain requirement that justifies retrying outside the sandbox. Only provide this when requestUnsandboxedExecution is true.',
-					},
-				} : {}),
+				command: { type: "string", description: "The command to execute" },
+				timeout: {
+					type: "number",
+					description: "Timeout in milliseconds (default 120000)",
+				},
+				...(sandboxEnabled
+					? {
+							requestUnsandboxedExecution: {
+								type: "boolean",
+								description:
+									"Request that this command run outside the sandbox. Only set this after first executing the command in the sandbox and observing that sandboxing caused the failure. The user will be prompted before the command runs unsandboxed.",
+							},
+							requestUnsandboxedExecutionReason: {
+								type: "string",
+								description:
+									"A short explanation of the sandboxed execution failure or blocked-domain requirement that justifies retrying outside the sandbox. Only provide this when requestUnsandboxedExecution is true.",
+							},
+						}
+					: {}),
 			},
-			required: ['command'],
+			required: ["command"],
 		},
 		overridesBuiltInTool: true,
 		handler: async (args, invocation) => {
@@ -709,23 +898,29 @@ export async function createShellTools(
 			try {
 				let commandToRun = args.command;
 				if (sandboxEnabled) {
-					if (args.requestUnsandboxedExecution && !engine.areUnsandboxedCommandsAllowed()) {
+					if (
+						args.requestUnsandboxedExecution &&
+						!engine.areUnsandboxedCommandsAllowed()
+					) {
 						return makeFailureResult(
-							'Unsandboxed execution is disabled by the chat.agent.sandbox.allowUnsandboxedCommands setting.',
-							'unsandboxed_disabled'
+							"Unsandboxed execution is disabled by the chat.agent.sandbox.allowUnsandboxedCommands setting.",
+							"unsandboxed_disabled",
 						);
 					}
 
-					const autoApproveUnsandboxed = engine.isAutoApproveUnsandboxedCommands();
-					const requestUnsandboxedConfirmation = async (blockedDomains?: readonly string[]): Promise<boolean | ToolResultObject> => {
+					const autoApproveUnsandboxed =
+						engine.isAutoApproveUnsandboxedCommands();
+					const requestUnsandboxedConfirmation = async (
+						blockedDomains?: readonly string[],
+					): Promise<boolean | ToolResultObject> => {
 						if (autoApproveUnsandboxed) {
 							return true;
 						}
 						if (!confirmUnsandboxedExecution) {
-							const blocked = blockedDomains?.join(', ') ?? '(unknown)';
+							const blocked = blockedDomains?.join(", ") ?? "(unknown)";
 							return makeFailureResult(
 								`Command requires approval to run outside the sandbox. Blocked domains: ${blocked}. Re-run with requestUnsandboxedExecution=true and requestUnsandboxedExecutionReason explaining why unsandboxed access is required.`,
-								'sandbox_blocked'
+								"sandbox_blocked",
 							);
 						}
 
@@ -744,33 +939,39 @@ export async function createShellTools(
 						args.command,
 						args.requestUnsandboxedExecution,
 						executable,
-						ref.object.shellType === 'bash' ? shellManager.workingDirectory : undefined,
+						ref.object.shellType === "bash"
+							? shellManager.workingDirectory
+							: undefined,
 					);
 
 					if (args.requestUnsandboxedExecution && !wrapped.isSandboxWrapped) {
-						const decision = await requestUnsandboxedConfirmation(wrapped.blockedDomains);
-						if (typeof decision !== 'boolean') {
+						const decision = await requestUnsandboxedConfirmation(
+							wrapped.blockedDomains,
+						);
+						if (typeof decision !== "boolean") {
 							return decision;
 						}
 						if (!decision) {
-							const blocked = wrapped.blockedDomains?.join(', ') ?? '(none)';
+							const blocked = wrapped.blockedDomains?.join(", ") ?? "(none)";
 							return makeFailureResult(
 								`User declined to run command outside the sandbox. Blocked domains: ${blocked}.`,
-								'sandbox_blocked'
+								"sandbox_blocked",
 							);
 						}
 					}
 
 					if (wrapped.requiresUnsandboxConfirmation) {
-						const decision = await requestUnsandboxedConfirmation(wrapped.blockedDomains);
-						if (typeof decision !== 'boolean') {
+						const decision = await requestUnsandboxedConfirmation(
+							wrapped.blockedDomains,
+						);
+						if (typeof decision !== "boolean") {
 							return decision;
 						}
 						if (!decision) {
-							const blocked = wrapped.blockedDomains?.join(', ') ?? '(unknown)';
+							const blocked = wrapped.blockedDomains?.join(", ") ?? "(unknown)";
 							return makeFailureResult(
 								`User declined to run command outside the sandbox. Blocked domains: ${blocked}.`,
-								'sandbox_blocked'
+								"sandbox_blocked",
 							);
 						}
 
@@ -778,12 +979,20 @@ export async function createShellTools(
 							args.command,
 							true,
 							executable,
-							ref.object.shellType === 'bash' ? shellManager.workingDirectory : undefined,
+							ref.object.shellType === "bash"
+								? shellManager.workingDirectory
+								: undefined,
 						);
 					}
 					commandToRun = wrapped.command;
 				}
-				const result = await executeCommandInShell(ref.object, commandToRun, timeoutMs, terminalManager, logService);
+				const result = await executeCommandInShell(
+					ref.object,
+					commandToRun,
+					timeoutMs,
+					terminalManager,
+					logService,
+				);
 				if (result.keepShellBusy) {
 					shouldReleaseShell = false;
 					shellManager.holdShellUntilCommandFinishes(ref.object);
@@ -801,9 +1010,13 @@ export async function createShellTools(
 		name: `read_${shellType}`,
 		description: `Read the latest output from a running ${shellType} shell.`,
 		parameters: {
-			type: 'object',
+			type: "object",
 			properties: {
-				shell_id: { type: 'string', description: 'Shell ID to read from (optional; uses latest shell if omitted)' },
+				shell_id: {
+					type: "string",
+					description:
+						"Shell ID to read from (optional; uses latest shell if omitted)",
+				},
 			},
 		},
 		overridesBuiltInTool: true,
@@ -814,11 +1027,11 @@ export async function createShellTools(
 				? shellManager.getShell(args.shell_id)
 				: shells[shells.length - 1];
 			if (!shell) {
-				return makeFailureResult('No active shell found.', 'no_shell');
+				return makeFailureResult("No active shell found.", "no_shell");
 			}
 			const content = terminalManager.getContent(shell.terminalUri);
 			if (!content) {
-				return makeSuccessResult('(no output)');
+				return makeSuccessResult("(no output)");
 			}
 			return makeSuccessResult(prepareOutputForModel(content));
 		},
@@ -828,11 +1041,14 @@ export async function createShellTools(
 		name: `write_${shellType}`,
 		description: `Send input to a running ${shellType} shell (e.g. answering a prompt, sending Ctrl+C).`,
 		parameters: {
-			type: 'object',
+			type: "object",
 			properties: {
-				command: { type: 'string', description: 'Text to write to the shell stdin' },
+				command: {
+					type: "string",
+					description: "Text to write to the shell stdin",
+				},
 			},
-			required: ['command'],
+			required: ["command"],
 		},
 		overridesBuiltInTool: true,
 		skipPermission: true,
@@ -840,20 +1056,26 @@ export async function createShellTools(
 			const shells = shellManager.listShells();
 			const shell = shells[shells.length - 1];
 			if (!shell) {
-				return makeFailureResult('No active shell found.', 'no_shell');
+				return makeFailureResult("No active shell found.", "no_shell");
 			}
-			await terminalManager.sendText(shell.terminalUri, args.command, { shouldExecute: false });
-			return makeSuccessResult('Input sent to shell.');
+			await terminalManager.sendText(shell.terminalUri, args.command, {
+				shouldExecute: false,
+			});
+			return makeSuccessResult("Input sent to shell.");
 		},
 	};
 
 	const shutdownTool: Tool<IShutdownShellArgs> = {
-		name: shellType === 'bash' ? 'bash_shutdown' : `${shellType}_shutdown`,
+		name: shellType === "bash" ? "bash_shutdown" : `${shellType}_shutdown`,
 		description: `Stop a ${shellType} shell.`,
 		parameters: {
-			type: 'object',
+			type: "object",
 			properties: {
-				shell_id: { type: 'string', description: 'Shell ID to stop (optional; stops latest shell if omitted)' },
+				shell_id: {
+					type: "string",
+					description:
+						"Shell ID to stop (optional; stops latest shell if omitted)",
+				},
 			},
 		},
 		overridesBuiltInTool: true,
@@ -862,96 +1084,115 @@ export async function createShellTools(
 			if (args.shell_id) {
 				const success = shellManager.shutdownShell(args.shell_id);
 				return success
-					? makeSuccessResult('Shell stopped.')
-					: makeFailureResult('Shell not found.', 'not_found');
+					? makeSuccessResult("Shell stopped.")
+					: makeFailureResult("Shell not found.", "not_found");
 			}
 			const shells = shellManager.listShells();
 			const shell = shells[shells.length - 1];
 			if (!shell) {
-				return makeFailureResult('No active shell to stop.', 'no_shell');
+				return makeFailureResult("No active shell to stop.", "no_shell");
 			}
 			shellManager.shutdownShell(shell.id);
-			return makeSuccessResult('Shell stopped.');
+			return makeSuccessResult("Shell stopped.");
 		},
 	};
 
 	const listTool: Tool<Record<string, never>> = {
 		name: `list_${shellType}`,
 		description: `List active ${shellType} shell instances.`,
-		parameters: { type: 'object', properties: {} },
+		parameters: { type: "object", properties: {} },
 		overridesBuiltInTool: true,
 		skipPermission: true,
 		handler: () => {
 			const shells = shellManager.listShells();
 			if (shells.length === 0) {
-				return makeSuccessResult('No active shells.');
+				return makeSuccessResult("No active shells.");
 			}
-			const descriptions = shells.map(s => {
+			const descriptions = shells.map((s) => {
 				const exitCode = terminalManager.getExitCode(s.terminalUri);
-				const status = exitCode !== undefined ? `exited (${exitCode})` : 'running';
+				const status =
+					exitCode !== undefined ? `exited (${exitCode})` : "running";
 				return `- ${s.id}: ${s.shellType} [${status}]`;
 			});
-			return makeSuccessResult(descriptions.join('\n'));
+			return makeSuccessResult(descriptions.join("\n"));
 		},
 	};
 
 	// Stub the *other* SDK built-in so the model can't bypass our override
 	// (e.g. on Windows still calling `powershell` when Git Bash is configured).
-	const otherShellType: ShellType = shellType === 'bash' ? 'powershell' : 'bash';
+	const otherShellType: ShellType =
+		shellType === "bash" ? "powershell" : "bash";
 	const redirectMessage = `This tool is disabled because the configured shell is ${executable}. Use the \`${shellType}\` tool instead.`;
 	const redirectTool: Tool<IShellToolArgs> = {
 		name: otherShellType,
 		description: redirectMessage,
 		parameters: {
-			type: 'object',
+			type: "object",
 			properties: {
-				command: { type: 'string', description: 'The command to execute' },
-				timeout: { type: 'number', description: 'Timeout in milliseconds (default 120000)' },
+				command: { type: "string", description: "The command to execute" },
+				timeout: {
+					type: "number",
+					description: "Timeout in milliseconds (default 120000)",
+				},
 			},
-			required: ['command'],
+			required: ["command"],
 		},
 		overridesBuiltInTool: true,
 		skipPermission: true,
 		handler: () => {
-			return makeFailureResult(redirectMessage, 'wrong_shell');
+			return makeFailureResult(redirectMessage, "wrong_shell");
 		},
 	};
 
-	return [primaryTool, readTool, writeTool, shutdownTool, listTool, redirectTool];
+	return [
+		primaryTool,
+		readTool,
+		writeTool,
+		shutdownTool,
+		listTool,
+		redirectTool,
+	];
 }
 
 function isWindowsPowerShell(envShell: string): boolean {
-	return envShell.endsWith('System32\\WindowsPowerShell\\v1.0\\powershell.exe');
+	return envShell.endsWith("System32\\WindowsPowerShell\\v1.0\\powershell.exe");
 }
 
-function createPowerShellModelDescription(shellType: string, shellPath: string, isSandboxEnabled: boolean, networkDomains?: ITerminalSandboxResolvedNetworkDomains): string {
+function createPowerShellModelDescription(
+	shellType: string,
+	shellPath: string,
+	isSandboxEnabled: boolean,
+	networkDomains?: ITerminalSandboxResolvedNetworkDomains,
+): string {
 	const isWinPwsh = isWindowsPowerShell(shellPath);
 	const parts = [
-		`This tool allows you to execute ${isWinPwsh ? 'Windows PowerShell 5.1' : 'PowerShell'} commands in a persistent terminal session, preserving environment variables, working directory, and other context across multiple commands.`,
-		'',
-		'Command Execution:',
+		`This tool allows you to execute ${isWinPwsh ? "Windows PowerShell 5.1" : "PowerShell"} commands in a persistent terminal session, preserving environment variables, working directory, and other context across multiple commands.`,
+		"",
+		"Command Execution:",
 		// IMPORTANT: PowerShell 5 does not support `&&` so always re-write them to `;`. Note that
 		// the behavior of `&&` differs a little from `;` but in general it's fine
-		isWinPwsh ? '- Use semicolons ; to chain commands on one line, NEVER use && even when asked explicitly' : '- Prefer ; when chaining commands on one line',
-		'- Prefer pipelines | for object-based data flow',
+		isWinPwsh
+			? "- Use semicolons ; to chain commands on one line, NEVER use && even when asked explicitly"
+			: "- Prefer ; when chaining commands on one line",
+		"- Prefer pipelines | for object-based data flow",
 		'- Never create a sub-shell (eg. powershell -c "command") unless explicitly asked',
-		'',
-		'Directory Management:',
-		'- Prefer relative paths when navigating directories, only use absolute when the path is far away or the current cwd is not expected',
-		'- By default (mode=sync), shell and cwd are reused by subsequent sync commands',
-		'- Use $PWD or Get-Location for current directory',
-		'- Use Push-Location/Pop-Location for directory stack',
-		'',
-		'Program Execution:',
-		'- Supports .NET, Python, Node.js, and other executables',
-		'- Install modules via Install-Module, Install-Package',
-		'- Use Get-Command to verify cmdlet/function availability',
-		'',
-		'Async Mode:',
-		'- For long-running tasks (e.g., servers), use mode=async',
-		'- Returns a terminal ID for checking status and runtime later',
-		'- Use Start-Job for background PowerShell jobs',
-		'',
+		"",
+		"Directory Management:",
+		"- Prefer relative paths when navigating directories, only use absolute when the path is far away or the current cwd is not expected",
+		"- By default (mode=sync), shell and cwd are reused by subsequent sync commands",
+		"- Use $PWD or Get-Location for current directory",
+		"- Use Push-Location/Pop-Location for directory stack",
+		"",
+		"Program Execution:",
+		"- Supports .NET, Python, Node.js, and other executables",
+		"- Install modules via Install-Module, Install-Package",
+		"- Use Get-Command to verify cmdlet/function availability",
+		"",
+		"Async Mode:",
+		"- For long-running tasks (e.g., servers), use mode=async",
+		"- Returns a terminal ID for checking status and runtime later",
+		"- Use Start-Job for background PowerShell jobs",
+		"",
 		`Use write_${shellType} to send commands or input to a terminal session.`,
 	];
 
@@ -960,61 +1201,74 @@ function createPowerShellModelDescription(shellType: string, shellPath: string, 
 	}
 
 	parts.push(
-		'',
-		'Output Management:',
-		'- Output is automatically truncated if longer than 60KB to prevent context overflow',
-		'- Use Select-Object, Where-Object, Format-Table to filter output',
-		'- Use -First/-Last parameters to limit results',
-		'- For pager commands, add | Out-String or | Format-List',
-		'',
-		'Best Practices:',
-		'- Use proper cmdlet names instead of aliases in scripts',
+		"",
+		"Output Management:",
+		"- Output is automatically truncated if longer than 60KB to prevent context overflow",
+		"- Use Select-Object, Where-Object, Format-Table to filter output",
+		"- Use -First/-Last parameters to limit results",
+		"- For pager commands, add | Out-String or | Format-List",
+		"",
+		"Best Practices:",
+		"- Use proper cmdlet names instead of aliases in scripts",
 		'- Quote paths with spaces: "C:\\Path With Spaces"',
-		'- Prefer PowerShell cmdlets over external commands when available',
-		'- Prefer idiomatic PowerShell like Get-ChildItem instead of dir or ls for file listings',
-		'- Use Test-Path to check file/directory existence',
-		'- Be specific with Select-Object properties to avoid excessive output',
-		'- Avoid printing credentials unless absolutely required',
-		'',
-		'Interactive Input Handling:',
-		'- When a terminal command is waiting for interactive input, do NOT suggest alternatives or ask the user whether to proceed. Instead, use the ask_user tool to collect the needed values from the user, then send them.',
+		"- Prefer PowerShell cmdlets over external commands when available",
+		"- Prefer idiomatic PowerShell like Get-ChildItem instead of dir or ls for file listings",
+		"- Use Test-Path to check file/directory existence",
+		"- Be specific with Select-Object properties to avoid excessive output",
+		"- Avoid printing credentials unless absolutely required",
+		"",
+		"Interactive Input Handling:",
+		"- When a terminal command is waiting for interactive input, do NOT suggest alternatives or ask the user whether to proceed. Instead, use the ask_user tool to collect the needed values from the user, then send them.",
 		`- Send exactly one answer per prompt using write_${shellType}. Never send multiple answers in a single send.`,
 		`- After each send, call read_${shellType} to read the next prompt before sending the next answer.`,
-		'- Continue one prompt at a time until the command finishes.',
+		"- Continue one prompt at a time until the command finishes.",
 	);
 
-	return parts.join('\n');
+	return parts.join("\n");
 }
 
-function createSandboxLines(networkDomains?: ITerminalSandboxResolvedNetworkDomains): string[] {
+function createSandboxLines(
+	networkDomains?: ITerminalSandboxResolvedNetworkDomains,
+): string[] {
 	const lines = [
-		'',
-		'Sandboxing:',
-		'- ATTENTION: Terminal sandboxing is enabled, commands run in a sandbox by default',
-		'- When executing commands within the sandboxed environment, all operations requiring a temporary directory must utilize the $TMPDIR environment variable. The /tmp directory is not guaranteed to be accessible or writable and must be avoided',
-		'- Tools and scripts should respect the TMPDIR environment variable, which is automatically set to an appropriate path within the sandbox',
-		'- When a command fails due to sandbox restrictions, immediately re-run it with requestUnsandboxedExecution=true. Do NOT ask the user for permission — setting this flag automatically shows a confirmation prompt to the user',
-		'- Only set requestUnsandboxedExecution=true when there is evidence of failures caused by the sandbox, e.g. \'Operation not permitted\' errors, network failures, or file access errors, etc',
-		'- Do NOT set requestUnsandboxedExecution=true without first executing the command in sandbox mode. Always try the command in the sandbox first, and only set requestUnsandboxedExecution=true when retrying after that sandboxed execution failed due to sandbox restrictions.',
-		'- When setting requestUnsandboxedExecution=true, also provide requestUnsandboxedExecutionReason explaining why the command needs unsandboxed access',
+		"",
+		"Sandboxing:",
+		"- ATTENTION: Terminal sandboxing is enabled, commands run in a sandbox by default",
+		"- When executing commands within the sandboxed environment, all operations requiring a temporary directory must utilize the $TMPDIR environment variable. The /tmp directory is not guaranteed to be accessible or writable and must be avoided",
+		"- Tools and scripts should respect the TMPDIR environment variable, which is automatically set to an appropriate path within the sandbox",
+		"- When a command fails due to sandbox restrictions, immediately re-run it with requestUnsandboxedExecution=true. Do NOT ask the user for permission — setting this flag automatically shows a confirmation prompt to the user",
+		"- Only set requestUnsandboxedExecution=true when there is evidence of failures caused by the sandbox, e.g. 'Operation not permitted' errors, network failures, or file access errors, etc",
+		"- Do NOT set requestUnsandboxedExecution=true without first executing the command in sandbox mode. Always try the command in the sandbox first, and only set requestUnsandboxedExecution=true when retrying after that sandboxed execution failed due to sandbox restrictions.",
+		"- When setting requestUnsandboxedExecution=true, also provide requestUnsandboxedExecutionReason explaining why the command needs unsandboxed access",
 	];
 	if (networkDomains) {
 		const deniedSet = new Set(networkDomains.deniedDomains);
-		const effectiveAllowed = networkDomains.allowedDomains.filter(d => !deniedSet.has(d));
+		const effectiveAllowed = networkDomains.allowedDomains.filter(
+			(d) => !deniedSet.has(d),
+		);
 		if (effectiveAllowed.length === 0) {
-			lines.push('- All network access is blocked in the sandbox');
+			lines.push("- All network access is blocked in the sandbox");
 		} else {
-			lines.push(`- Only the following domains are accessible in the sandbox (all other network access is blocked): ${effectiveAllowed.join(', ')}`);
+			lines.push(
+				`- Only the following domains are accessible in the sandbox (all other network access is blocked): ${effectiveAllowed.join(", ")}`,
+			);
 		}
 		if (networkDomains.deniedDomains.length > 0) {
-			lines.push(`- The following domains are explicitly blocked in the sandbox: ${networkDomains.deniedDomains.join(', ')}`);
+			lines.push(
+				`- The following domains are explicitly blocked in the sandbox: ${networkDomains.deniedDomains.join(", ")}`,
+			);
 		}
 	}
 	return lines;
 }
 
-function createGenericDescription(shellType: string, isSandboxEnabled: boolean, networkDomains?: ITerminalSandboxResolvedNetworkDomains): string {
-	const parts = [`
+function createGenericDescription(
+	shellType: string,
+	isSandboxEnabled: boolean,
+	networkDomains?: ITerminalSandboxResolvedNetworkDomains,
+): string {
+	const parts = [
+		`
 Command Execution:
 - Use && to chain simple commands on one line
 - Prefer pipelines | over temporary files for data flow
@@ -1036,10 +1290,11 @@ Async Mode:
 - For long-running tasks (e.g., servers), use mode=async
 - Returns a terminal ID for checking status and runtime later
 
-Use write_${shellType} to send commands or input to a terminal session.`];
+Use write_${shellType} to send commands or input to a terminal session.`,
+	];
 
 	if (isSandboxEnabled) {
-		parts.push(createSandboxLines(networkDomains).join('\n'));
+		parts.push(createSandboxLines(networkDomains).join("\n"));
 	}
 
 	parts.push(`
@@ -1063,31 +1318,37 @@ Interactive Input Handling:
 - After each send, call read_${shellType} to read the next prompt before sending the next answer.
 - Continue one prompt at a time until the command finishes.`);
 
-	return parts.join('');
+	return parts.join("");
 }
 
-function createBashModelDescription(isSandboxEnabled: boolean, networkDomains?: ITerminalSandboxResolvedNetworkDomains): string {
+function createBashModelDescription(
+	isSandboxEnabled: boolean,
+	networkDomains?: ITerminalSandboxResolvedNetworkDomains,
+): string {
 	return [
-		'This tool allows you to execute shell commands in a persistent bash terminal session, preserving environment variables, working directory, and other context across multiple commands.',
-		createGenericDescription('bash', isSandboxEnabled, networkDomains),
-		'- Use [[ ]] for conditional tests instead of [ ]',
-		'- Prefer $() over backticks for command substitution',
-		'- Use set -e at start of complex commands to exit on errors'
-	].join('\n');
+		"This tool allows you to execute shell commands in a persistent bash terminal session, preserving environment variables, working directory, and other context across multiple commands.",
+		createGenericDescription("bash", isSandboxEnabled, networkDomains),
+		"- Use [[ ]] for conditional tests instead of [ ]",
+		"- Prefer $() over backticks for command substitution",
+		"- Use set -e at start of complex commands to exit on errors",
+	].join("\n");
 }
 
-function createZshModelDescription(isSandboxEnabled: boolean, networkDomains?: ITerminalSandboxResolvedNetworkDomains): string {
+function createZshModelDescription(
+	isSandboxEnabled: boolean,
+	networkDomains?: ITerminalSandboxResolvedNetworkDomains,
+): string {
 	return [
-		'This tool allows you to execute shell commands in a persistent zsh terminal session, preserving environment variables, working directory, and other context across multiple commands.',
-		createGenericDescription('bash', isSandboxEnabled, networkDomains),
-		'- Use type to check command type (builtin, function, alias)',
-		'- Use jobs, fg, bg for job control',
-		'- Use [[ ]] for conditional tests instead of [ ]',
-		'- Prefer $() over backticks for command substitution',
-		'- Take advantage of zsh globbing features (**, extended globs). Note: unmatched globs fail by default (zsh: no matches found) - use a glob qualifier like *(N) or quote the glob if it should be literal',
-		'',
-		'zsh pitfalls - these WILL cause errors or hangs:',
-		'- NEVER use bare == or === as separators (e.g. echo === triggers zsh equals expansion). Quote them: echo \'===\'',
-		'- NEVER use status as a variable name (it is read-only in zsh). Use exit_code or ret instead',
-	].join('\n');
+		"This tool allows you to execute shell commands in a persistent zsh terminal session, preserving environment variables, working directory, and other context across multiple commands.",
+		createGenericDescription("bash", isSandboxEnabled, networkDomains),
+		"- Use type to check command type (builtin, function, alias)",
+		"- Use jobs, fg, bg for job control",
+		"- Use [[ ]] for conditional tests instead of [ ]",
+		"- Prefer $() over backticks for command substitution",
+		"- Take advantage of zsh globbing features (**, extended globs). Note: unmatched globs fail by default (zsh: no matches found) - use a glob qualifier like *(N) or quote the glob if it should be literal",
+		"",
+		"zsh pitfalls - these WILL cause errors or hangs:",
+		"- NEVER use bare == or === as separators (e.g. echo === triggers zsh equals expansion). Quote them: echo '==='",
+		"- NEVER use status as a variable name (it is read-only in zsh). Use exit_code or ret instead",
+	].join("\n");
 }

@@ -23,7 +23,10 @@ export class TestExtensionsService implements IExtensionsService {
 		}
 	}
 
-	getExtension<T = any>(extensionId: string, includeDifferentExtensionHosts?: boolean): Extension<T> | undefined {
+	getExtension<T = any>(
+		extensionId: string,
+		includeDifferentExtensionHosts?: boolean,
+	): Extension<T> | undefined {
 		return this._extensions.get(extensionId) as Extension<T> | undefined;
 	}
 

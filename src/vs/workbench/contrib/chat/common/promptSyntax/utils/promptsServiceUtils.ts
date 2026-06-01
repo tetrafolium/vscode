@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../../base/common/uri.js';
-import { ExtensionIdentifier } from '../../../../../../platform/extensions/common/extensions.js';
-import { IProductService } from '../../../../../../platform/product/common/productService.js';
-import { IAgentSource, PromptsStorage } from '../service/promptsService.js';
+import { URI } from "../../../../../../base/common/uri.js";
+import { ExtensionIdentifier } from "../../../../../../platform/extensions/common/extensions.js";
+import { IProductService } from "../../../../../../platform/product/common/productService.js";
+import { IAgentSource, PromptsStorage } from "../service/promptsService.js";
 
 /**
  * Checks if a prompt file is organization-provided.
@@ -18,13 +18,20 @@ import { IAgentSource, PromptsStorage } from '../service/promptsService.js';
  * @param productService The product service to get the built-in chat extension ID
  * @returns `true` if the prompt file is organization-provided, `false` otherwise
  */
-export function isOrganizationPromptFile(uri: URI, extensionId: ExtensionIdentifier, productService: IProductService): boolean {
+export function isOrganizationPromptFile(
+	uri: URI,
+	extensionId: ExtensionIdentifier,
+	productService: IProductService,
+): boolean {
 	const chatExtensionId = productService.defaultChatAgent?.chatExtensionId;
 	if (!chatExtensionId) {
 		return false;
 	}
-	const isFromBuiltinChatExtension = ExtensionIdentifier.equals(extensionId, chatExtensionId);
-	const pathContainsGithub = uri.path.includes('/github/');
+	const isFromBuiltinChatExtension = ExtensionIdentifier.equals(
+		extensionId,
+		chatExtensionId,
+	);
+	const pathContainsGithub = uri.path.includes("/github/");
 	return isFromBuiltinChatExtension && pathContainsGithub;
 }
 
@@ -33,12 +40,19 @@ export function isOrganizationPromptFile(uri: URI, extensionId: ExtensionIdentif
  * built-in chat extension and not organization-provided. Used for telemetry
  * to decide whether the agent name is safe to send as-is.
  */
-export function isBuiltinAgent(source: IAgentSource, uri: URI, productService: IProductService): boolean {
+export function isBuiltinAgent(
+	source: IAgentSource,
+	uri: URI,
+	productService: IProductService,
+): boolean {
 	if (source.storage !== PromptsStorage.extension) {
 		return false;
 	}
 	const chatExtensionId = productService.defaultChatAgent?.chatExtensionId;
-	if (!chatExtensionId || !ExtensionIdentifier.equals(source.extensionId, chatExtensionId)) {
+	if (
+		!chatExtensionId ||
+		!ExtensionIdentifier.equals(source.extensionId, chatExtensionId)
+	) {
 		return false;
 	}
 	return !isOrganizationPromptFile(uri, source.extensionId, productService);

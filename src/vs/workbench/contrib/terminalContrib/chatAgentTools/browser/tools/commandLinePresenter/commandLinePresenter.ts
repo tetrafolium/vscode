@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { MaybePromise } from '../../../../../../../base/common/async.js';
-import type { OperatingSystem } from '../../../../../../../base/common/platform.js';
+import type { MaybePromise } from "../../../../../../../base/common/async.js";
+import type { OperatingSystem } from "../../../../../../../base/common/platform.js";
 
 export interface ICommandLinePresenter {
 	/**
@@ -15,7 +15,9 @@ export interface ICommandLinePresenter {
 	 *
 	 * @returns The presentation result if this presenter handles the command, undefined otherwise.
 	 */
-	present(options: ICommandLinePresenterOptions): MaybePromise<ICommandLinePresenterResult | undefined>;
+	present(
+		options: ICommandLinePresenterOptions,
+	): MaybePromise<ICommandLinePresenterResult | undefined>;
 }
 
 export interface ICommandLinePresenterOptions {

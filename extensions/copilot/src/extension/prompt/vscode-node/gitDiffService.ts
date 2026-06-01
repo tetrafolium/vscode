@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type CancellationToken, Uri, workspace } from 'vscode';
-import { Diff, IGitDiffService } from '../../../platform/git/common/gitDiffService';
+import {
+	Diff,
+	IGitDiffService,
+} from '../../../platform/git/common/gitDiffService';
 import { IGitExtensionService } from '../../../platform/git/common/gitExtensionService';
 import { Change, Repository } from '../../../platform/git/vscode/git';
 import { IIgnoreService } from '../../../platform/ignore/common/ignoreService';
@@ -30,26 +33,44 @@ export class GitDiffService implements IGitDiffService {
 	declare readonly _serviceBrand: undefined;
 
 	constructor(
-		@IGitExtensionService private readonly _gitExtensionService: IGitExtensionService,
+		@IGitExtensionService
+		private readonly _gitExtensionService: IGitExtensionService,
 		@IIgnoreService private readonly _ignoreService: IIgnoreService,
-		@ILogService private readonly _logService: ILogService
-	) { }
+		@ILogService private readonly _logService: ILogService,
+	) {}
 
-	private async _resolveRepository(repositoryOrUri: Repository | Uri): Promise<Repository | null | undefined> {
+	private async _resolveRepository(
+		repositoryOrUri: Repository | Uri,
+	): Promise<Repository | null | undefined> {
 		if (isUri(repositoryOrUri)) {
 			const extensionApi = this._gitExtensionService.getExtensionApi();
-			return extensionApi?.getRepository(repositoryOrUri) ?? await extensionApi?.openRepository(repositoryOrUri) ?? extensionApi?.repositories.find((repo) => isEqual(repo.rootUri, repositoryOrUri));
+			return (
+				extensionApi?.getRepository(repositoryOrUri) ??
+				(await extensionApi?.openRepository(repositoryOrUri)) ??
+				extensionApi?.repositories.find((repo) =>
+					isEqual(repo.rootUri, repositoryOrUri),
+				)
+			);
 		}
 		return repositoryOrUri;
 	}
 
 	// Get the diff between the current state of the repository and the specified ref for each of the provided changes
-	async getWorkingTreeDiffsFromRef(repositoryOrUri: Repository | Uri, changes: Change[], ref: string, token?: CancellationToken): Promise<Diff[]> {
-		this._logService.debug(`[GitDiffService] Getting working tree diffs from ref ${ref} for ${changes.length} file(s)`);
+	async getWorkingTreeDiffsFromRef(
+		repositoryOrUri: Repository | Uri,
+		changes: Change[],
+		ref: string,
+		token?: CancellationToken,
+	): Promise<Diff[]> {
+		this._logService.debug(
+			`[GitDiffService] Getting working tree diffs from ref ${ref} for ${changes.length} file(s)`,
+		);
 
 		const repository = await this._resolveRepository(repositoryOrUri);
 		if (!repository) {
-			this._logService.debug(`[GitDiffService] Repository not found for uri: ${repositoryOrUri.toString()}`);
+			this._logService.debug(
+				`[GitDiffService] Repository not found for uri: ${repositoryOrUri.toString()}`,
+			);
 			return [];
 		}
 
@@ -60,14 +81,19 @@ export class GitDiffService implements IGitDiffService {
 			}
 
 			if (await this._ignoreService.isCopilotIgnored(change.uri)) {
-				this._logService.debug(`[GitDiffService] Ignoring change due to content exclusion rule based on uri: ${change.uri.toString()}`);
+				this._logService.debug(
+					`[GitDiffService] Ignoring change due to content exclusion rule based on uri: ${change.uri.toString()}`,
+				);
 				continue;
 			}
 
 			let diff: string;
 			if (change.status === 7 /* UNTRACKED */) {
 				// For untracked files, generate a patch showing all content as additions
-				diff = await this._getUntrackedChangePatch(repository, change.uri);
+				diff = await this._getUntrackedChangePatch(
+					repository,
+					change.uri,
+				);
 			} else {
 				// For all other changes, get diff from ref to current working tree state
 				diff = await repository.diffWith(ref, change.uri.fsPath);
@@ -78,21 +104,31 @@ export class GitDiffService implements IGitDiffService {
 				renameUri: change.renameUri,
 				status: change.status,
 				uri: change.uri,
-				diff: this._truncateDiff(diff, change.uri)
+				diff: this._truncateDiff(diff, change.uri),
 			});
 		}
 
-		this._logService.debug(`[GitDiffService] Working tree diffs from ref (after context exclusion): ${diffs.length} file(s)`);
+		this._logService.debug(
+			`[GitDiffService] Working tree diffs from ref (after context exclusion): ${diffs.length} file(s)`,
+		);
 
 		return diffs;
 	}
 
-	async getChangeDiffs(repositoryOrUri: Repository | Uri, changes: Change[], token?: CancellationToken): Promise<Diff[]> {
-		this._logService.debug(`[GitDiffService] Changes (before context exclusion): ${changes.length} file(s)`);
+	async getChangeDiffs(
+		repositoryOrUri: Repository | Uri,
+		changes: Change[],
+		token?: CancellationToken,
+	): Promise<Diff[]> {
+		this._logService.debug(
+			`[GitDiffService] Changes (before context exclusion): ${changes.length} file(s)`,
+		);
 
 		const repository = await this._resolveRepository(repositoryOrUri);
 		if (!repository) {
-			this._logService.debug(`[GitDiffService] Repository not found for uri: ${repositoryOrUri.toString()}`);
+			this._logService.debug(
+				`[GitDiffService] Repository not found for uri: ${repositoryOrUri.toString()}`,
+			);
 			return [];
 		}
 
@@ -103,7 +139,9 @@ export class GitDiffService implements IGitDiffService {
 			}
 
 			if (await this._ignoreService.isCopilotIgnored(change.uri)) {
-				this._logService.debug(`[GitDiffService] Ignoring change due to content exclusion rule based on uri: ${change.uri.toString()}`);
+				this._logService.debug(
+					`[GitDiffService] Ignoring change due to content exclusion rule based on uri: ${change.uri.toString()}`,
+				);
 				continue;
 			}
 
@@ -114,10 +152,15 @@ export class GitDiffService implements IGitDiffService {
 				case 2 /* INDEX_DELETED */:
 				case 3 /* INDEX_RENAMED */:
 				case 4 /* INDEX_COPIED */:
-					diff = await repository.diffIndexWithHEAD(change.uri.fsPath);
+					diff = await repository.diffIndexWithHEAD(
+						change.uri.fsPath,
+					);
 					break;
 				case 7 /* UNTRACKED */:
-					diff = await this._getUntrackedChangePatch(repository, change.uri);
+					diff = await this._getUntrackedChangePatch(
+						repository,
+						change.uri,
+					);
 					break;
 				default:
 					diff = await repository.diffWithHEAD(change.uri.fsPath);
@@ -129,29 +172,41 @@ export class GitDiffService implements IGitDiffService {
 				renameUri: change.renameUri,
 				status: change.status,
 				uri: change.uri,
-				diff: this._truncateDiff(diff, change.uri)
+				diff: this._truncateDiff(diff, change.uri),
 			});
 		}
 
-		this._logService.debug(`[GitDiffService] Changes (after context exclusion): ${diffs.length} file(s)`);
+		this._logService.debug(
+			`[GitDiffService] Changes (after context exclusion): ${diffs.length} file(s)`,
+		);
 
 		return diffs;
 	}
 
-	private async _getUntrackedChangePatch(repository: Repository, resource: Uri): Promise<string> {
+	private async _getUntrackedChangePatch(
+		repository: Repository,
+		resource: Uri,
+	): Promise<string> {
 		const patch: string[] = [];
-		const relativePath = path.relative(repository.rootUri.fsPath, resource.fsPath);
+		const relativePath = path.relative(
+			repository.rootUri.fsPath,
+			resource.fsPath,
+		);
 
 		// Check file size before reading to avoid OOM with large/binary files
 		try {
 			const stat = await workspace.fs.stat(resource);
 			if (stat.size > MAX_UNTRACKED_FILE_SIZE) {
-				this._logService.debug(`[GitDiffService] Skipping untracked file (too large: ${stat.size} bytes): ${resource.toString()}`);
+				this._logService.debug(
+					`[GitDiffService] Skipping untracked file (too large: ${stat.size} bytes): ${resource.toString()}`,
+				);
 				// Return a minimal patch header indicating the file is new but too large to diff
 				patch.push(`diff --git a/${relativePath} b/${relativePath}`);
 				patch.push('new file mode 100644');
 				patch.push('--- /dev/null', `+++ b/${relativePath}`);
-				patch.push(`\\ File too large to diff (${Math.round(stat.size / 1024)} KB)`);
+				patch.push(
+					`\\ File too large to diff (${Math.round(stat.size / 1024)} KB)`,
+				);
 				return patch.join('\n') + '\n';
 			}
 		} catch {
@@ -180,7 +235,7 @@ export class GitDiffService implements IGitDiffService {
 
 				// Range header and content
 				patch.push(`@@ -0,0 +1,${lines.length} @@`);
-				patch.push(...lines.map(line => `+${line}`));
+				patch.push(...lines.map((line) => `+${line}`));
 
 				// Git standard to add this comment if the file does not end with a newline
 				if (!content.endsWith('\n')) {
@@ -188,7 +243,9 @@ export class GitDiffService implements IGitDiffService {
 				}
 			}
 		} catch (err) {
-			this._logService.warn(`[GitDiffService] Failed to generate patch file for untracked file: ${resource.toString()}: ${err}`);
+			this._logService.warn(
+				`[GitDiffService] Failed to generate patch file for untracked file: ${resource.toString()}: ${err}`,
+			);
 		}
 
 		// The patch itself should always end with a newline per git patch standards
@@ -197,8 +254,12 @@ export class GitDiffService implements IGitDiffService {
 
 	private _truncateDiff(diff: string, uri: Uri): string {
 		if (diff.length > MAX_DIFF_SIZE) {
-			this._logService.debug(`[GitDiffService] Truncating diff for ${uri.toString()} (${diff.length} chars -> ${MAX_DIFF_SIZE} chars)`);
-			return diff.substring(0, MAX_DIFF_SIZE) + '\n... [diff truncated]\n';
+			this._logService.debug(
+				`[GitDiffService] Truncating diff for ${uri.toString()} (${diff.length} chars -> ${MAX_DIFF_SIZE} chars)`,
+			);
+			return (
+				diff.substring(0, MAX_DIFF_SIZE) + '\n... [diff truncated]\n'
+			);
 		}
 		return diff;
 	}

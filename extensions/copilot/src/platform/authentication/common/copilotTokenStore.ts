@@ -7,8 +7,8 @@ import { Emitter, Event } from '../../../util/vs/base/common/event';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
 import type { CopilotToken } from './copilotToken';
 
-
-export const ICopilotTokenStore = createServiceIdentifier<ICopilotTokenStore>('ICopilotTokenStore');
+export const ICopilotTokenStore =
+	createServiceIdentifier<ICopilotTokenStore>('ICopilotTokenStore');
 
 /**
  * A simple store that holds the Copilot Token. This is used in the networking & telemetry
@@ -21,7 +21,10 @@ export interface ICopilotTokenStore {
 	onDidStoreUpdate: Event<void>;
 }
 
-export class CopilotTokenStore extends Disposable implements ICopilotTokenStore {
+export class CopilotTokenStore
+	extends Disposable
+	implements ICopilotTokenStore
+{
 	declare readonly _serviceBrand: undefined;
 	private _copilotToken: CopilotToken | undefined;
 	private readonly _onDidStoreUpdate = this._register(new Emitter<void>());

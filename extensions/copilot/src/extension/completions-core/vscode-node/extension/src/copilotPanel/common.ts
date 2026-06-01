@@ -5,8 +5,14 @@
 
 import { Range, commands, window, type Disposable } from 'vscode';
 import { CopilotNamedAnnotationList } from '../../../../../../platform/completions-core/common/openai/copilotAnnotations';
-import { DisposableStore, IDisposable } from '../../../../../../util/vs/base/common/lifecycle';
-import { IInstantiationService, type ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	DisposableStore,
+	IDisposable,
+} from '../../../../../../util/vs/base/common/lifecycle';
+import {
+	IInstantiationService,
+	type ServicesAccessor,
+} from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import * as constants from '../constants';
 import { registerCommand } from '../telemetry';
 import { wrapDoc } from '../textDocumentManager';
@@ -30,7 +36,9 @@ export interface PanelCompletion {
 
 export function registerPanelSupport(accessor: ServicesAccessor): Disposable {
 	const instantiationService = accessor.get(IInstantiationService);
-	const suggestionsPanelManager = instantiationService.createInstance(CopilotSuggestionsPanelManager);
+	const suggestionsPanelManager = instantiationService.createInstance(
+		CopilotSuggestionsPanelManager,
+	);
 
 	const disposableStore = new DisposableStore();
 
@@ -38,7 +46,10 @@ export function registerPanelSupport(accessor: ServicesAccessor): Disposable {
 		return registerCommand(accessor, id, async () => {
 			// hide ghost text while opening the generation ui
 			await commands.executeCommand('editor.action.inlineSuggest.hide');
-			await instantiationService.invokeFunction(commandOpenPanel, suggestionsPanelManager);
+			await instantiationService.invokeFunction(
+				commandOpenPanel,
+				suggestionsPanelManager,
+			);
 		});
 	}
 
@@ -52,14 +63,29 @@ export function registerPanelSupport(accessor: ServicesAccessor): Disposable {
 	return disposableStore;
 }
 
-function commandOpenPanel(accessor: ServicesAccessor, suggestionsPanelManager: CopilotSuggestionsPanelManager) {
+function commandOpenPanel(
+	accessor: ServicesAccessor,
+	suggestionsPanelManager: CopilotSuggestionsPanelManager,
+) {
 	const editor = window.activeTextEditor;
-	if (!editor) { return; }
+	if (!editor) {
+		return;
+	}
 	const wrapped = wrapDoc(editor.document);
-	if (!wrapped) { return; }
+	if (!wrapped) {
+		return;
+	}
 
 	const { line, character } = editor.selection.active;
 
-	suggestionsPanelManager.renderPanel(editor.document, { line, character }, wrapped);
-	return commands.executeCommand('setContext', constants.CopilotPanelVisible, true);
+	suggestionsPanelManager.renderPanel(
+		editor.document,
+		{ line, character },
+		wrapped,
+	);
+	return commands.executeCommand(
+		'setContext',
+		constants.CopilotPanelVisible,
+		true,
+	);
 }

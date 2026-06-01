@@ -5,22 +5,33 @@
 
 import { CharCode } from '../../../util/vs/base/common/charCode';
 import { Lines, LinesEdit } from './editGeneration';
-import { IGuessedIndentation, computeIndentLevel2, guessIndentation } from './indentationGuesser';
-
+import {
+	IGuessedIndentation,
+	computeIndentLevel2,
+	guessIndentation,
+} from './indentationGuesser';
 
 export interface Reporter {
 	recovery(originalLine: number, newLine: number): void;
 	warning(message: string): void;
 }
 
-export function createEditsFromRealDiff(code: Lines, diff: Lines, reporter?: Reporter): LinesEdit[] {
+export function createEditsFromRealDiff(
+	code: Lines,
+	diff: Lines,
+	reporter?: Reporter,
+): LinesEdit[] {
 	const edits: LinesEdit[] = [];
 	let diffLineIndex = findChuck(diff);
 	if (diffLineIndex === -1) {
 		reporter?.warning('No chunk header found in the diff.');
 		diffLineIndex = 0;
 	}
-	function handleLineContentMismatch(diffLine: string, code: Lines, originalLineIndex: number): boolean {
+	function handleLineContentMismatch(
+		diffLine: string,
+		code: Lines,
+		originalLineIndex: number,
+	): boolean {
 		for (let i = originalLineIndex; i < code.length; i++) {
 			if (code[i] === diffLine) {
 				reporter?.recovery(originalLineIndex, i);
@@ -35,10 +46,11 @@ export function createEditsFromRealDiff(code: Lines, diff: Lines, reporter?: Rep
 				return true;
 			}
 		}
-		reporter?.warning(`Diff line does not match original content: Not found,`);
+		reporter?.warning(
+			`Diff line does not match original content: Not found,`,
+		);
 		return false;
 	}
-
 
 	let originalLineIndex = 0;
 	while (diffLineIndex < diff.length && originalLineIndex <= code.length) {
@@ -54,22 +66,40 @@ export function createEditsFromRealDiff(code: Lines, diff: Lines, reporter?: Rep
 					const originalLineHint = parseInt(match[1]);
 					originalLineIndex = originalLineHint - 1;
 				} else {
-					reporter?.warning(`Invalid chunk header found in the diff: ${diffLine}`);
+					reporter?.warning(
+						`Invalid chunk header found in the diff: ${diffLine}`,
+					);
 				}
 				break;
 			}
 			case CharCode.Plus: {
 				const noEOL = isNextLineNoEOLMarker(diff, diffLineIndex);
-				edits.push(new LinesEdit(originalLineIndex, originalLineIndex, [diffLine.substring(1)], '', noEOL ? '' : '\n'));
+				edits.push(
+					new LinesEdit(
+						originalLineIndex,
+						originalLineIndex,
+						[diffLine.substring(1)],
+						'',
+						noEOL ? '' : '\n',
+					),
+				);
 				break;
 			}
 			case CharCode.Dash:
 				if (diffLine.substring(1) !== code[originalLineIndex]) {
-					if (!handleLineContentMismatch(diffLine.substring(1), code, originalLineIndex)) {
+					if (
+						!handleLineContentMismatch(
+							diffLine.substring(1),
+							code,
+							originalLineIndex,
+						)
+					) {
 						break; // don't do the delete
 					}
 				}
-				edits.push(new LinesEdit(originalLineIndex, originalLineIndex + 1, []));
+				edits.push(
+					new LinesEdit(originalLineIndex, originalLineIndex + 1, []),
+				);
 				originalLineIndex++;
 				break;
 			case CharCode.Backslash: {
@@ -77,10 +107,19 @@ export function createEditsFromRealDiff(code: Lines, diff: Lines, reporter?: Rep
 				break;
 			}
 			default: {
-				if (diffLine.substring(1) === code[originalLineIndex] || diffLine === code[originalLineIndex]) {
+				if (
+					diffLine.substring(1) === code[originalLineIndex] ||
+					diffLine === code[originalLineIndex]
+				) {
 					originalLineIndex++;
 				} else {
-					if (handleLineContentMismatch(diffLine.substring(1), code, originalLineIndex)) {
+					if (
+						handleLineContentMismatch(
+							diffLine.substring(1),
+							code,
+							originalLineIndex,
+						)
+					) {
 						originalLineIndex++;
 					}
 				}
@@ -93,7 +132,9 @@ export function createEditsFromRealDiff(code: Lines, diff: Lines, reporter?: Rep
 }
 
 function isNextLineNoEOLMarker(diff: Lines, i: number): boolean {
-	return i + 1 < diff.length && diff[i + 1].charCodeAt(0) === CharCode.Backslash;
+	return (
+		i + 1 < diff.length && diff[i + 1].charCodeAt(0) === CharCode.Backslash
+	);
 }
 
 function findChuck(diff: Lines): number {
@@ -108,11 +149,14 @@ function findChuck(diff: Lines): number {
 enum Match {
 	No,
 	Yes,
-	Similar
+	Similar,
 }
 
-export function createEditsFromPseudoDiff(code: Lines, diff: Lines, reporter?: Reporter): LinesEdit[] {
-
+export function createEditsFromPseudoDiff(
+	code: Lines,
+	diff: Lines,
+	reporter?: Reporter,
+): LinesEdit[] {
 	const diffLineInfos = getLineInfos(diff);
 
 	const codeIndentInfo = guessIndentation(code, 4, false);
@@ -124,7 +168,8 @@ export function createEditsFromPseudoDiff(code: Lines, diff: Lines, reporter?: R
 	function compareLine(diffLineInfo: LineInfo, codeLine: string): Match {
 		const diffLine = diffLineInfo.content;
 		const codeIndentLength = getIndentLength(codeLine);
-		let i = diffLineInfo.indentLength, k = codeIndentLength;
+		let i = diffLineInfo.indentLength,
+			k = codeIndentLength;
 		let charactersMatched = 0;
 
 		// ignore the leading indentation
@@ -137,29 +182,47 @@ export function createEditsFromPseudoDiff(code: Lines, diff: Lines, reporter?: R
 			charactersMatched++;
 		}
 		if (i < diffLine.length || k < codeLine.length) {
-			return (((codeLine.length - codeIndentLength) * 3 / 4 < charactersMatched) && ((diffLine.length - diffLineInfo.indentLength) * 3 / 4 < charactersMatched)) ? Match.Similar : Match.No;
+			return ((codeLine.length - codeIndentLength) * 3) / 4 <
+				charactersMatched &&
+				((diffLine.length - diffLineInfo.indentLength) * 3) / 4 <
+					charactersMatched
+				? Match.Similar
+				: Match.No;
 		}
 		if (indentDiff === undefined) {
 			const diffIndent = computeIndentLevel2(diffLine, diffTabSize);
 			if (diffIndent >= 0) {
-				const codeIndent = computeIndentLevel2(codeLine, codeIndentInfo.tabSize);
+				const codeIndent = computeIndentLevel2(
+					codeLine,
+					codeIndentInfo.tabSize,
+				);
 				indentDiff = codeIndent - diffIndent;
 			}
 		}
 		return Match.Yes;
 	}
-	function handleLineContentMismatch(diffLineInfo: LineInfo, code: Lines, originalLineIndex: number): number {
+	function handleLineContentMismatch(
+		diffLineInfo: LineInfo,
+		code: Lines,
+		originalLineIndex: number,
+	): number {
 		for (let i = originalLineIndex; i < code.length; i++) {
 			if (compareLine(diffLineInfo, code[i]) === Match.Yes) {
 				reporter?.recovery(originalLineIndex, i);
 				return i;
 			}
 		}
-		reporter?.warning('Unable to find a matching line for the diff line: ' + diffLineInfo.content);
+		reporter?.warning(
+			'Unable to find a matching line for the diff line: ' +
+				diffLineInfo.content,
+		);
 		return -1;
 	}
 
-	function findFirstOccurrenceOfLine(diffLineInfo: LineInfo, code: Lines): number {
+	function findFirstOccurrenceOfLine(
+		diffLineInfo: LineInfo,
+		code: Lines,
+	): number {
 		for (let i = 0; i < code.length; i++) {
 			if (compareLine(diffLineInfo, code[i]) === Match.Yes) {
 				return i;
@@ -174,19 +237,35 @@ export function createEditsFromPseudoDiff(code: Lines, diff: Lines, reporter?: R
 	if (diffLineInfos.length > 0) {
 		originalLineIndex = findFirstOccurrenceOfLine(diffLineInfos[0], code);
 	}
-	while (diffLineIndex < diffLineInfos.length && originalLineIndex < code.length) {
+	while (
+		diffLineIndex < diffLineInfos.length &&
+		originalLineIndex < code.length
+	) {
 		const diffLineInfo = diffLineInfos[diffLineIndex];
 		switch (diffLineInfo.op) {
 			case Op.Insert: {
-				const codeLineContent = adjustIndenation(diffLineInfo, diffTabSize, indentDiff ?? 0, codeIndentInfo);
-				edits.push(new LinesEdit(originalLineIndex, originalLineIndex, [codeLineContent]));
+				const codeLineContent = adjustIndenation(
+					diffLineInfo,
+					diffTabSize,
+					indentDiff ?? 0,
+					codeIndentInfo,
+				);
+				edits.push(
+					new LinesEdit(originalLineIndex, originalLineIndex, [
+						codeLineContent,
+					]),
+				);
 				break;
 			}
 			case Op.Delete: {
 				const codeLine = code[originalLineIndex];
 				const match = compareLine(diffLineInfo, codeLine);
 				if (match === Match.No) {
-					const line = handleLineContentMismatch(diffLineInfo, code, originalLineIndex);
+					const line = handleLineContentMismatch(
+						diffLineInfo,
+						code,
+						originalLineIndex,
+					);
 					if (line !== -1) {
 						originalLineIndex = line;
 					} else {
@@ -195,31 +274,63 @@ export function createEditsFromPseudoDiff(code: Lines, diff: Lines, reporter?: R
 				}
 				const nextDiffLine = diffLineInfos[diffLineIndex + 1];
 				if (nextDiffLine?.op === Op.Insert) {
-					if (nextDiffLine.indentLength === diffLineInfo.indentLength) {
+					if (
+						nextDiffLine.indentLength === diffLineInfo.indentLength
+					) {
 						// special handling of the case where an insert follows the remove and they use the same indentation
-						const newContent = getIndent(codeLine) + nextDiffLine.content.substring(nextDiffLine.indentLength);
-						edits.push(new LinesEdit(originalLineIndex, originalLineIndex + 1, [newContent]));
+						const newContent =
+							getIndent(codeLine) +
+							nextDiffLine.content.substring(
+								nextDiffLine.indentLength,
+							);
+						edits.push(
+							new LinesEdit(
+								originalLineIndex,
+								originalLineIndex + 1,
+								[newContent],
+							),
+						);
 						diffLineIndex++;
 						originalLineIndex++;
 						break;
 					}
 				}
-				edits.push(new LinesEdit(originalLineIndex, originalLineIndex + 1, []));
+				edits.push(
+					new LinesEdit(originalLineIndex, originalLineIndex + 1, []),
+				);
 				originalLineIndex++;
 				break;
 			}
 			default: {
-				const match = compareLine(diffLineInfo, code[originalLineIndex]);
+				const match = compareLine(
+					diffLineInfo,
+					code[originalLineIndex],
+				);
 				if (match === Match.No) {
-					const line = handleLineContentMismatch(diffLineInfo, code, originalLineIndex);
+					const line = handleLineContentMismatch(
+						diffLineInfo,
+						code,
+						originalLineIndex,
+					);
 					if (line !== -1) {
 						originalLineIndex = line;
 					} else {
 						break; // do not increase originalLineIndex
 					}
 				} else if (match === Match.Similar) {
-					const codeLineContent = adjustIndenation(diffLineInfo, diffTabSize, indentDiff ?? 0, codeIndentInfo);
-					edits.push(new LinesEdit(originalLineIndex, originalLineIndex + 1, [codeLineContent]));
+					const codeLineContent = adjustIndenation(
+						diffLineInfo,
+						diffTabSize,
+						indentDiff ?? 0,
+						codeIndentInfo,
+					);
+					edits.push(
+						new LinesEdit(
+							originalLineIndex,
+							originalLineIndex + 1,
+							[codeLineContent],
+						),
+					);
 				}
 				originalLineIndex++;
 				break;
@@ -227,18 +338,32 @@ export function createEditsFromPseudoDiff(code: Lines, diff: Lines, reporter?: R
 		}
 		diffLineIndex++;
 	}
-	if (originalLineIndex === code.length && diffLineIndex < diffLineInfos.length) {
+	if (
+		originalLineIndex === code.length &&
+		diffLineIndex < diffLineInfos.length
+	) {
 		// there are still some lines to add
 		for (; diffLineIndex < diffLineInfos.length; diffLineIndex++) {
 			const diffLineInfo = diffLineInfos[diffLineIndex];
 			if (diffLineInfo.op === Op.Insert) {
-				const codeLineContent = adjustIndenation(diffLineInfo, diffTabSize, indentDiff ?? 0, codeIndentInfo);
-				edits.push(new LinesEdit(originalLineIndex, originalLineIndex, [codeLineContent], '\n', ''));
+				const codeLineContent = adjustIndenation(
+					diffLineInfo,
+					diffTabSize,
+					indentDiff ?? 0,
+					codeIndentInfo,
+				);
+				edits.push(
+					new LinesEdit(
+						originalLineIndex,
+						originalLineIndex,
+						[codeLineContent],
+						'\n',
+						'',
+					),
+				);
 			}
 		}
 	}
-
-
 
 	return edits;
 }
@@ -267,27 +392,45 @@ function getIndent(line: string): string {
 	return line.substring(0, i);
 }
 
-
-function adjustIndenation(diffLineInfo: LineInfo, diffLineTabSize: number, indentDifference: number, codeIndentInfo: IGuessedIndentation): string {
-	if (indentDifference === 0 && ((!codeIndentInfo.insertSpaces && diffLineInfo.indentKind === IndentKind.Tabs) || (codeIndentInfo.insertSpaces && diffLineInfo.indentKind === IndentKind.Spaces))) {
+function adjustIndenation(
+	diffLineInfo: LineInfo,
+	diffLineTabSize: number,
+	indentDifference: number,
+	codeIndentInfo: IGuessedIndentation,
+): string {
+	if (
+		indentDifference === 0 &&
+		((!codeIndentInfo.insertSpaces &&
+			diffLineInfo.indentKind === IndentKind.Tabs) ||
+			(codeIndentInfo.insertSpaces &&
+				diffLineInfo.indentKind === IndentKind.Spaces))
+	) {
 		return diffLineInfo.content;
 	}
-	const diffIndent = computeIndentLevel2(diffLineInfo.content, diffLineTabSize);
-	const newIndentation = codeIndentInfo.insertSpaces ? ' '.repeat(codeIndentInfo.tabSize * (diffIndent + indentDifference)) : '\t'.repeat(diffIndent + indentDifference);
-	return newIndentation + diffLineInfo.content.substring(diffLineInfo.indentLength);
+	const diffIndent = computeIndentLevel2(
+		diffLineInfo.content,
+		diffLineTabSize,
+	);
+	const newIndentation = codeIndentInfo.insertSpaces
+		? ' '.repeat(codeIndentInfo.tabSize * (diffIndent + indentDifference))
+		: '\t'.repeat(diffIndent + indentDifference);
+	return (
+		newIndentation +
+		diffLineInfo.content.substring(diffLineInfo.indentLength)
+	);
 }
 
 enum Op {
 	Equal = 0,
 	Insert = 1,
-	Delete = -1
+	Delete = -1,
 }
 
 enum IndentKind {
 	undefined = 0,
 	Tabs = 1,
 	Spaces = 2,
-	Mixed = 3
+	Mixed = 3,
 }
 
 interface LineInfo {
@@ -305,7 +448,10 @@ function udpateIndentInfo(lineInfo: LineInfo): void {
 		const indentChar = line.charCodeAt(0);
 		if (isWhiteSpace(indentChar)) {
 			indentLength++;
-			indentKind = indentChar === CharCode.Space ? IndentKind.Spaces : IndentKind.Tabs;
+			indentKind =
+				indentChar === CharCode.Space
+					? IndentKind.Spaces
+					: IndentKind.Tabs;
 			while (indentLength < line.length) {
 				const charCode = line.charCodeAt(indentLength);
 				if (!isWhiteSpace(charCode)) {
@@ -316,7 +462,6 @@ function udpateIndentInfo(lineInfo: LineInfo): void {
 					indentKind = IndentKind.Mixed;
 				}
 			}
-
 		}
 	}
 	lineInfo.indentKind = indentKind;
@@ -332,11 +477,14 @@ function getLineInfos(diffLines: Lines): LineInfo[] {
 			content: line,
 			op: Op.Equal,
 			indentKind: IndentKind.undefined,
-			indentLength: 0
+			indentLength: 0,
 		};
 		if (line.length > 0) {
 			if (isPlusOrMinus(line.charCodeAt(0))) {
-				lineInfo.op = line.charCodeAt(0) === CharCode.Dash ? Op.Delete : Op.Insert;
+				lineInfo.op =
+					line.charCodeAt(0) === CharCode.Dash
+						? Op.Delete
+						: Op.Insert;
 				if (line.length > 1 && line.charCodeAt(1) === CharCode.Space) {
 					lineInfo.content = line.substring(1);
 					// replace the + or - with a space if the remaining indentation is odd
@@ -355,11 +503,13 @@ function getLineInfos(diffLines: Lines): LineInfo[] {
 	return result;
 }
 
-
 function sanitizeLineInfos(lineInfos: LineInfo[]): void {
 	let min = Number.MAX_VALUE;
 	for (const lineInfo of lineInfos) {
-		if (lineInfo.indentKind !== IndentKind.Spaces || lineInfo.indentLength === 0) {
+		if (
+			lineInfo.indentKind !== IndentKind.Spaces ||
+			lineInfo.indentLength === 0
+		) {
 			return;
 		}
 		if (lineInfo.indentLength < min) {

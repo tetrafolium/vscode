@@ -35,11 +35,20 @@ suite('Compute', function () {
 	});
 
 	test(`lexemeLength returns at most ${SnippyCompute.MinTokenLength} lexemes`, function () {
-		assert.strictEqual(SnippyCompute.lexemeLength(testMatchSource), SnippyCompute.MinTokenLength);
+		assert.strictEqual(
+			SnippyCompute.lexemeLength(testMatchSource),
+			SnippyCompute.MinTokenLength,
+		);
 	});
 
 	test(`hasMinLexemeLength returns true if the string has at least ${SnippyCompute.MinTokenLength} lexemes`, function () {
-		assert.strictEqual(SnippyCompute.hasMinLexemeLength(testMatchSource), true);
-		assert.strictEqual(SnippyCompute.hasMinLexemeLength(`const foo = 'test'`), false);
+		assert.strictEqual(
+			SnippyCompute.hasMinLexemeLength(testMatchSource),
+			true,
+		);
+		assert.strictEqual(
+			SnippyCompute.hasMinLexemeLength(`const foo = 'test'`),
+			false,
+		);
 	});
 });

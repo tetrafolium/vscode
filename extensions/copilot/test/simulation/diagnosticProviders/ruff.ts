@@ -16,7 +16,6 @@ import { LintingDiagnosticsProvider } from './utils';
  * Class which finds python rule tooling diagnostic erors
  */
 export class RuffDiagnosticsProvider extends LintingDiagnosticsProvider {
-
 	override readonly id = 'ruff';
 	override readonly cacheSalt = TestingCacheSalts.ruffCacheSalt;
 	override readonly cacheScope = CacheScope.Ruff;
@@ -33,10 +32,12 @@ preview = true
 [tool.ruff.format]
 preview = true
 `;
-
 	}
 
-	protected override async fetchCommand(temporaryDirectory: string, filePath: string) {
+	protected override async fetchCommand(
+		temporaryDirectory: string,
+		filePath: string,
+	) {
 		const ruffConfigFile = path.join(temporaryDirectory, 'pyproject.toml');
 		await fs.promises.writeFile(ruffConfigFile, this.ruffConfig, 'utf8');
 		const virtualEnvironment = ensurePythonVEnv();
@@ -46,16 +47,31 @@ preview = true
 
 		return {
 			command: virtualEnvironment.pythonInterpreter,
-			arguments: ['-m', 'ruff', 'check', filePath, '--config', ruffConfigFile, '--output-format', 'json']
+			arguments: [
+				'-m',
+				'ruff',
+				'check',
+				filePath,
+				'--config',
+				ruffConfigFile,
+				'--output-format',
+				'json',
+			],
 		};
 	}
 
-	protected override processDiagnostics(fileName: string, stdoutResult: any): ITestDiagnostic[] {
+	protected override processDiagnostics(
+		fileName: string,
+		stdoutResult: any,
+	): ITestDiagnostic[] {
 		assert(Array.isArray(stdoutResult));
 		if (stdoutResult.length === 0) {
 			return [];
 		}
-		const sanitizeLineOrColumn = (lineOrColumn: any) => typeof lineOrColumn !== 'number' || Number.isNaN(lineOrColumn) ? 0 : Math.max(0, lineOrColumn - 1);
+		const sanitizeLineOrColumn = (lineOrColumn: any) =>
+			typeof lineOrColumn !== 'number' || Number.isNaN(lineOrColumn)
+				? 0
+				: Math.max(0, lineOrColumn - 1);
 		const diagnostics = [];
 		const messages = stdoutResult;
 		assert(Array.isArray(messages));
@@ -71,7 +87,7 @@ preview = true
 				message: messageText,
 				code: message.ruleId,
 				relatedInformation: undefined,
-				source: 'Ruff'
+				source: 'Ruff',
 			});
 		}
 		return diagnostics;

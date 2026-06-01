@@ -4,11 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 .chat-setup-dialog {
-
 	/* Continue Buttons */
 
-	.dialog-buttons-row > .dialog-buttons > .monaco-button.continue-button::before {
-		content: '';
+	.dialog-buttons-row
+		> .dialog-buttons
+		> .monaco-button.continue-button::before {
+		content: "";
 		background-size: 16px;
 		background-repeat: no-repeat;
 		background-position: left center;
@@ -19,12 +20,16 @@
 		display: inline-block;
 	}
 
-	.dialog-buttons-row > .dialog-buttons > .monaco-button.continue-button.default::before {
-		background-image: url('./github.svg');
+	.dialog-buttons-row
+		> .dialog-buttons
+		> .monaco-button.continue-button.default::before {
+		background-image: url("./github.svg");
 	}
 
-	.dialog-buttons-row > .dialog-buttons > .monaco-button.continue-button.google::before {
-		background-image: url('./google.svg');
+	.dialog-buttons-row
+		> .dialog-buttons
+		> .monaco-button.continue-button.google::before {
+		background-image: url("./google.svg");
 	}
 
 	/* Link Buttons */
@@ -38,7 +43,9 @@
 		margin-right: auto;
 	}
 
-	.dialog-buttons-row > .dialog-buttons > .monaco-button.link-button.skip-button {
+	.dialog-buttons-row
+		> .dialog-buttons
+		> .monaco-button.link-button.skip-button {
 		font-size: 11px;
 		color: var(--vscode-descriptionForeground) !important;
 	}
@@ -51,11 +58,22 @@
 	}
 }
 
-.monaco-workbench.hc-light .chat-setup-dialog .dialog-buttons-row > .dialog-buttons > .monaco-button.continue-button.apple::before,
-.monaco-workbench.vs .chat-setup-dialog .dialog-buttons-row > .dialog-buttons > .monaco-button.continue-button.apple::before {
-	background-image: url('./apple-light.svg');
+.monaco-workbench.hc-light
+	.chat-setup-dialog
+	.dialog-buttons-row
+	> .dialog-buttons
+	> .monaco-button.continue-button.apple::before,
+.monaco-workbench.vs
+	.chat-setup-dialog
+	.dialog-buttons-row
+	> .dialog-buttons
+	> .monaco-button.continue-button.apple::before {
+	background-image: url("./apple-light.svg");
 }
 
-.chat-setup-dialog .dialog-buttons-row > .dialog-buttons > .monaco-button.continue-button.apple::before {
-	background-image: url('./apple-dark.svg');
+.chat-setup-dialog
+	.dialog-buttons-row
+	> .dialog-buttons
+	> .monaco-button.continue-button.apple::before {
+	background-image: url("./apple-dark.svg");
 }

@@ -323,7 +323,11 @@ export const darkHC: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['storage.modifier.import.java', 'variable.language.wildcard.java', 'storage.modifier.package.java'],
+			scope: [
+				'storage.modifier.import.java',
+				'variable.language.wildcard.java',
+				'storage.modifier.package.java',
+			],
 			settings: {
 				foreground: '#D4D4D4',
 			},
@@ -403,7 +407,11 @@ export const darkHC: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['variable', 'meta.definition.variable.name', 'support.variable'],
+			scope: [
+				'variable',
+				'meta.definition.variable.name',
+				'support.variable',
+			],
 			settings: {
 				foreground: '#9CDCFE',
 			},

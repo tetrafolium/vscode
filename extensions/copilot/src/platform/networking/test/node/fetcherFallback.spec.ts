@@ -12,12 +12,16 @@ import { NullExperimentationService } from '../../../telemetry/common/nullExperi
 import { NullTelemetryService } from '../../../telemetry/common/nullTelemetryService';
 import { FakeHeaders } from '../../../test/node/fetcher';
 import { TestLogService } from '../../../testing/common/testLogService';
-import { FetcherId, FetchOptions, PaginationOptions, Response } from '../../common/fetcherService';
+import {
+	FetcherId,
+	FetchOptions,
+	PaginationOptions,
+	Response,
+} from '../../common/fetcherService';
 import { IFetcher } from '../../common/networking';
 import { fetchWithFallbacks } from '../../node/fetcherFallback';
 
 suite('FetcherFallback Test Suite', function () {
-
 	const knownBadFetchers = new Set<FetcherId>();
 	const logService = new TestLogService();
 	const telemetryService = new NullTelemetryService();
@@ -32,8 +36,21 @@ suite('FetcherFallback Test Suite', function () {
 			{ name: 'fetcher2', response: createFakeResponse(200, someJSON) },
 		];
 		const testFetchers = createTestFetchers(fetcherSpec);
-		const { response, updatedFetchers, updatedKnownBadFetchers } = await fetchWithFallbacks(testFetchers.fetchers, 'https://example.com', { callSite: 'test', expectJSON: true, retryFallbacks: true }, knownBadFetchers, configurationService, logService, telemetryService, experimentationService);
-		assert.deepStrictEqual(testFetchers.calls.map(c => c.name), fetcherSpec.slice(0, 1).map(f => f.name)); // only first fetcher called
+		const { response, updatedFetchers, updatedKnownBadFetchers } =
+			await fetchWithFallbacks(
+				testFetchers.fetchers,
+				'https://example.com',
+				{ callSite: 'test', expectJSON: true, retryFallbacks: true },
+				knownBadFetchers,
+				configurationService,
+				logService,
+				telemetryService,
+				experimentationService,
+			);
+		assert.deepStrictEqual(
+			testFetchers.calls.map((c) => c.name),
+			fetcherSpec.slice(0, 1).map((f) => f.name),
+		); // only first fetcher called
 		assert.strictEqual(updatedFetchers, undefined);
 		assert.strictEqual(updatedKnownBadFetchers, undefined);
 		assert.strictEqual(response.status, 200);
@@ -48,8 +65,21 @@ suite('FetcherFallback Test Suite', function () {
 			{ name: 'fetcher1', response: createFakeResponse(200, someHTML) },
 		];
 		const testFetchers = createTestFetchers(fetcherSpec);
-		const { response, updatedFetchers, updatedKnownBadFetchers } = await fetchWithFallbacks(testFetchers.fetchers, 'https://example.com', { callSite: 'test', expectJSON: true, retryFallbacks: true }, knownBadFetchers, configurationService, logService, telemetryService, experimentationService);
-		assert.deepStrictEqual(testFetchers.calls.map(c => c.name), fetcherSpec.map(f => f.name));
+		const { response, updatedFetchers, updatedKnownBadFetchers } =
+			await fetchWithFallbacks(
+				testFetchers.fetchers,
+				'https://example.com',
+				{ callSite: 'test', expectJSON: true, retryFallbacks: true },
+				knownBadFetchers,
+				configurationService,
+				logService,
+				telemetryService,
+				experimentationService,
+			);
+		assert.deepStrictEqual(
+			testFetchers.calls.map((c) => c.name),
+			fetcherSpec.map((f) => f.name),
+		);
 		assert.ok(updatedFetchers);
 		assert.strictEqual(updatedFetchers[0], testFetchers.fetchers[1]);
 		assert.strictEqual(updatedFetchers[1], testFetchers.fetchers[0]);
@@ -67,8 +97,21 @@ suite('FetcherFallback Test Suite', function () {
 			{ name: 'fetcher2', response: createFakeResponse(401, someJSON) },
 		];
 		const testFetchers = createTestFetchers(fetcherSpec);
-		const { response, updatedFetchers, updatedKnownBadFetchers } = await fetchWithFallbacks(testFetchers.fetchers, 'https://example.com', { callSite: 'test', expectJSON: true, retryFallbacks: true }, knownBadFetchers, configurationService, logService, telemetryService, experimentationService);
-		assert.deepStrictEqual(testFetchers.calls.map(c => c.name), fetcherSpec.map(f => f.name));
+		const { response, updatedFetchers, updatedKnownBadFetchers } =
+			await fetchWithFallbacks(
+				testFetchers.fetchers,
+				'https://example.com',
+				{ callSite: 'test', expectJSON: true, retryFallbacks: true },
+				knownBadFetchers,
+				configurationService,
+				logService,
+				telemetryService,
+				experimentationService,
+			);
+		assert.deepStrictEqual(
+			testFetchers.calls.map((c) => c.name),
+			fetcherSpec.map((f) => f.name),
+		);
 		assert.strictEqual(updatedFetchers, undefined);
 		assert.strictEqual(updatedKnownBadFetchers, undefined);
 		assert.strictEqual(response.status, 407);
@@ -83,23 +126,51 @@ suite('FetcherFallback Test Suite', function () {
 		];
 		const testFetchers = createTestFetchers(fetcherSpec);
 		try {
-			await fetchWithFallbacks(testFetchers.fetchers, 'https://example.com', { callSite: 'test', expectJSON: true, retryFallbacks: true }, knownBadFetchers, configurationService, logService, telemetryService, experimentationService);
+			await fetchWithFallbacks(
+				testFetchers.fetchers,
+				'https://example.com',
+				{ callSite: 'test', expectJSON: true, retryFallbacks: true },
+				knownBadFetchers,
+				configurationService,
+				logService,
+				telemetryService,
+				experimentationService,
+			);
 			assert.fail('Expected to throw');
 		} catch (err) {
 			assert.ok(err instanceof Error);
 			assert.strictEqual(err.message, 'fetcher1 error');
-			assert.deepStrictEqual(testFetchers.calls.map(c => c.name), fetcherSpec.map(f => f.name));
+			assert.deepStrictEqual(
+				testFetchers.calls.map((c) => c.name),
+				fetcherSpec.map((f) => f.name),
+			);
 		}
 	});
 
 	test('useFetcher option selects second fetcher', async function () {
 		const fetcherSpec = [
-			{ name: 'electron-fetch', response: createFakeResponse(200, someJSON) },
+			{
+				name: 'electron-fetch',
+				response: createFakeResponse(200, someJSON),
+			},
 			{ name: 'node-fetch', response: createFakeResponse(200, someJSON) },
 		];
 		const testFetchers = createTestFetchers(fetcherSpec);
-		const { response, updatedFetchers, updatedKnownBadFetchers } = await fetchWithFallbacks(testFetchers.fetchers, 'https://example.com', { callSite: 'test', useFetcher: 'node-fetch' }, knownBadFetchers, configurationService, logService, telemetryService, experimentationService);
-		assert.deepStrictEqual(testFetchers.calls.map(c => c.name), ['node-fetch']); // only second fetcher called
+		const { response, updatedFetchers, updatedKnownBadFetchers } =
+			await fetchWithFallbacks(
+				testFetchers.fetchers,
+				'https://example.com',
+				{ callSite: 'test', useFetcher: 'node-fetch' },
+				knownBadFetchers,
+				configurationService,
+				logService,
+				telemetryService,
+				experimentationService,
+			);
+		assert.deepStrictEqual(
+			testFetchers.calls.map((c) => c.name),
+			['node-fetch'],
+		); // only second fetcher called
 		assert.strictEqual(updatedFetchers, undefined);
 		assert.strictEqual(updatedKnownBadFetchers, undefined);
 		assert.strictEqual(response.status, 200);
@@ -109,16 +180,33 @@ suite('FetcherFallback Test Suite', function () {
 
 	test('useFetcher option falls back to first fetcher when requested fetcher is disabled', async function () {
 		const fetcherSpec = [
-			{ name: 'electron-fetch', response: createFakeResponse(200, someJSON) },
+			{
+				name: 'electron-fetch',
+				response: createFakeResponse(200, someJSON),
+			},
 			{ name: 'node-fetch', response: createFakeResponse(200, someJSON) },
 		];
 		const testFetchers = createTestFetchers(fetcherSpec);
-		const configServiceWithDisabledNodeFetch = new InMemoryConfigurationService(
-			configurationService,
-			new Map([[ConfigKey.Shared.DebugUseNodeFetchFetcher, false]])
-		);
-		const { response, updatedFetchers, updatedKnownBadFetchers } = await fetchWithFallbacks(testFetchers.fetchers, 'https://example.com', { callSite: 'test', useFetcher: 'node-fetch' }, knownBadFetchers, configServiceWithDisabledNodeFetch, logService, telemetryService, experimentationService);
-		assert.deepStrictEqual(testFetchers.calls.map(c => c.name), ['electron-fetch']); // first fetcher used instead
+		const configServiceWithDisabledNodeFetch =
+			new InMemoryConfigurationService(
+				configurationService,
+				new Map([[ConfigKey.Shared.DebugUseNodeFetchFetcher, false]]),
+			);
+		const { response, updatedFetchers, updatedKnownBadFetchers } =
+			await fetchWithFallbacks(
+				testFetchers.fetchers,
+				'https://example.com',
+				{ callSite: 'test', useFetcher: 'node-fetch' },
+				knownBadFetchers,
+				configServiceWithDisabledNodeFetch,
+				logService,
+				telemetryService,
+				experimentationService,
+			);
+		assert.deepStrictEqual(
+			testFetchers.calls.map((c) => c.name),
+			['electron-fetch'],
+		); // first fetcher used instead
 		assert.strictEqual(updatedFetchers, undefined);
 		assert.strictEqual(updatedKnownBadFetchers, undefined);
 		assert.strictEqual(response.status, 200);
@@ -128,13 +216,31 @@ suite('FetcherFallback Test Suite', function () {
 
 	test('useFetcher option falls back to first fetcher when requested fetcher is known bad', async function () {
 		const fetcherSpec = [
-			{ name: 'electron-fetch', response: createFakeResponse(200, someJSON) },
+			{
+				name: 'electron-fetch',
+				response: createFakeResponse(200, someJSON),
+			},
 			{ name: 'node-fetch', response: createFakeResponse(200, someJSON) },
 		];
 		const testFetchers = createTestFetchers(fetcherSpec);
-		const knownBadFetchersWithNodeFetch = new Set<FetcherId>(['node-fetch']);
-		const { response, updatedFetchers, updatedKnownBadFetchers } = await fetchWithFallbacks(testFetchers.fetchers, 'https://example.com', { callSite: 'test', useFetcher: 'node-fetch' }, knownBadFetchersWithNodeFetch, configurationService, logService, telemetryService, experimentationService);
-		assert.deepStrictEqual(testFetchers.calls.map(c => c.name), ['electron-fetch']); // first fetcher used instead
+		const knownBadFetchersWithNodeFetch = new Set<FetcherId>([
+			'node-fetch',
+		]);
+		const { response, updatedFetchers, updatedKnownBadFetchers } =
+			await fetchWithFallbacks(
+				testFetchers.fetchers,
+				'https://example.com',
+				{ callSite: 'test', useFetcher: 'node-fetch' },
+				knownBadFetchersWithNodeFetch,
+				configurationService,
+				logService,
+				telemetryService,
+				experimentationService,
+			);
+		assert.deepStrictEqual(
+			testFetchers.calls.map((c) => c.name),
+			['electron-fetch'],
+		); // first fetcher used instead
 		assert.strictEqual(updatedFetchers, undefined);
 		assert.strictEqual(updatedKnownBadFetchers, undefined);
 		assert.strictEqual(response.status, 200);
@@ -143,8 +249,11 @@ suite('FetcherFallback Test Suite', function () {
 	});
 });
 
-function createTestFetchers(fetcherSpecs: Array<{ name: string; response: Response | Error }>) {
-	const calls: Array<{ name: string; url: string; options: FetchOptions }> = [];
+function createTestFetchers(
+	fetcherSpecs: Array<{ name: string; response: Response | Error }>,
+) {
+	const calls: Array<{ name: string; url: string; options: FetchOptions }> =
+		[];
 	const responseQueues = new Map<string, (Response | Error)[]>();
 	const order: string[] = [];
 	for (const spec of fetcherSpecs) {
@@ -172,16 +281,21 @@ function createTestFetchers(fetcherSpecs: Array<{ name: string; response: Respon
 				}
 				return next;
 			},
-			fetchWithPagination: async <T>(baseUrl: string, options: PaginationOptions<T>): Promise<T[]> => {
+			fetchWithPagination: async <T>(
+				baseUrl: string,
+				options: PaginationOptions<T>,
+			): Promise<T[]> => {
 				throw new Error('Method not implemented.');
 			},
-			disconnectAll: async () => { },
-			makeAbortController: () => { throw new Error('Method not implemented.'); },
+			disconnectAll: async () => {},
+			makeAbortController: () => {
+				throw new Error('Method not implemented.');
+			},
 			isAbortError: () => false,
 			isInternetDisconnectedError: () => false,
 			isFetcherError: () => false,
 			isNetworkProcessCrashedError: () => false,
-			getUserMessageForFetcherError: () => 'error'
+			getUserMessageForFetcherError: () => 'error',
 		});
 	}
 	return { fetchers, calls };
@@ -193,6 +307,6 @@ function createFakeResponse(statusCode: number, content: string) {
 		'status text',
 		new FakeHeaders(),
 		content,
-		'test-stub'
+		'test-stub',
 	);
 }

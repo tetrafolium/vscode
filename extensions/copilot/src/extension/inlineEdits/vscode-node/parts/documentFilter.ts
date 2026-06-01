@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { NotebookDocument, TextDocument } from 'vscode';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { IIgnoreService } from '../../../../platform/ignore/common/ignoreService';
 import { isNotebookCellOrNotebookChatInput } from '../../../../util/common/notebooks';
 import { derived } from '../../../../util/vs/base/common/observableInternal';
@@ -15,18 +18,31 @@ export class DocumentFilter {
 
 	constructor(
 		@IIgnoreService private readonly _ignoreService: IIgnoreService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
 	) {
-		this._enabledLanguagesObs = this._configurationService.getConfigObservable(ConfigKey.Enable);
-		this._ignoreCompletionsDisablement = this._configurationService.getConfigObservable(ConfigKey.TeamInternal.InlineEditsIgnoreCompletionsDisablement);
+		this._enabledLanguagesObs =
+			this._configurationService.getConfigObservable(ConfigKey.Enable);
+		this._ignoreCompletionsDisablement =
+			this._configurationService.getConfigObservable(
+				ConfigKey.TeamInternal.InlineEditsIgnoreCompletionsDisablement,
+			);
 	}
 
-	public async isTrackingEnabled(document: TextDocument | NotebookDocument): Promise<boolean> {
+	public async isTrackingEnabled(
+		document: TextDocument | NotebookDocument,
+	): Promise<boolean> {
 		// this should filter out documents coming from output pane, git fs, etc.
-		if (!['file', 'untitled'].includes(document.uri.scheme) && !isNotebookCellOrNotebookChatInput(document.uri)) {
+		if (
+			!['file', 'untitled'].includes(document.uri.scheme) &&
+			!isNotebookCellOrNotebookChatInput(document.uri)
+		) {
 			return false;
 		}
-		if (isTextDocument(document) && !this._isGhostTextEnabled(document.languageId)) {
+		if (
+			isTextDocument(document) &&
+			!this._isGhostTextEnabled(document.languageId)
+		) {
 			return false;
 		}
 		if (await this._ignoreService.isCopilotIgnored(document.uri)) {
@@ -37,9 +53,10 @@ export class DocumentFilter {
 
 	private _isGhostTextEnabled(languageId: string): boolean {
 		const enabledLanguages = this._enabledLanguages.get();
-		return enabledLanguages.get(languageId) ?? (
-			enabledLanguages.get('*')! ||
-			this._ignoreCompletionsDisablement.get() // respect if there's per-language setting but allow overriding global one
+		return (
+			enabledLanguages.get(languageId) ??
+			(enabledLanguages.get('*')! ||
+				this._ignoreCompletionsDisablement.get()) // respect if there's per-language setting but allow overriding global one
 		);
 	}
 
@@ -53,7 +70,9 @@ export class DocumentFilter {
 	});
 }
 
-function isTextDocument(doc: TextDocument | NotebookDocument): doc is TextDocument {
+function isTextDocument(
+	doc: TextDocument | NotebookDocument,
+): doc is TextDocument {
 	const notebook = doc as NotebookDocument;
 	return !notebook.notebookType;
 }

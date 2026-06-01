@@ -9,15 +9,21 @@ import { raceTimeout } from '../../../../util/vs/base/common/async';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { ResourceMap, ResourceSet } from '../../../../util/vs/base/common/map';
 import { URI } from '../../../../util/vs/base/common/uri';
-import { FolderRepositoryMRUEntry, IChatFolderMruService } from '../../common/folderRepositoryManager';
+import {
+	FolderRepositoryMRUEntry,
+	IChatFolderMruService,
+} from '../../common/folderRepositoryManager';
 import { IClaudeCodeSessionService } from './sessionParser/claudeCodeSessionService';
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
-const WORKTREE_PATH_PATTERNS = ['.claude/worktrees/', '.worktrees/copilot-'] as const;
+const WORKTREE_PATH_PATTERNS = [
+	'.claude/worktrees/',
+	'.worktrees/copilot-',
+] as const;
 
 function isWorktreePath(path: string): boolean {
-	return WORKTREE_PATH_PATTERNS.some(pattern => path.includes(pattern));
+	return WORKTREE_PATH_PATTERNS.some((pattern) => path.includes(pattern));
 }
 
 export class ClaudeCodeFolderMruService implements IChatFolderMruService {
@@ -26,28 +32,40 @@ export class ClaudeCodeFolderMruService implements IChatFolderMruService {
 	private cachedEntries: FolderRepositoryMRUEntry[] | undefined = undefined;
 
 	constructor(
-		@IClaudeCodeSessionService private readonly sessionService: IClaudeCodeSessionService,
+		@IClaudeCodeSessionService
+		private readonly sessionService: IClaudeCodeSessionService,
 		@IGitService private readonly gitService: IGitService,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-	) { }
+	) {}
 
-	async getRecentlyUsedFolders(token: CancellationToken): Promise<FolderRepositoryMRUEntry[]> {
+	async getRecentlyUsedFolders(
+		token: CancellationToken,
+	): Promise<FolderRepositoryMRUEntry[]> {
 		const cachedEntries = this.cachedEntries;
-		const entries = this.getRecentlyUsedFoldersImpl(token).then(entries => {
-			this.cachedEntries = entries;
-			return entries;
-		});
+		const entries = this.getRecentlyUsedFoldersImpl(token).then(
+			(entries) => {
+				this.cachedEntries = entries;
+				return entries;
+			},
+		);
 
-		return (cachedEntries ? cachedEntries : await entries).filter(e => !this.removedFolders.has(e.folder));
+		return (cachedEntries ? cachedEntries : await entries).filter(
+			(e) => !this.removedFolders.has(e.folder),
+		);
 	}
 
-	private async getRecentlyUsedFoldersImpl(token: CancellationToken): Promise<FolderRepositoryMRUEntry[]> {
+	private async getRecentlyUsedFoldersImpl(
+		token: CancellationToken,
+	): Promise<FolderRepositoryMRUEntry[]> {
 		const mruEntries = new ResourceMap<Mutable<FolderRepositoryMRUEntry>>();
 
 		// We're getting MRU, don't delay session retrieve by more than 5s
-		const sessions = await raceTimeout(this.sessionService.getAllSessions(token), 5_000);
+		const sessions = await raceTimeout(
+			this.sessionService.getAllSessions(token),
+			5_000,
+		);
 
-		for (const session of (sessions ?? [])) {
+		for (const session of sessions ?? []) {
 			if (!session.cwd) {
 				continue;
 			}
@@ -55,7 +73,11 @@ export class ClaudeCodeFolderMruService implements IChatFolderMruService {
 				continue;
 			}
 			const folderUri = URI.file(session.cwd);
-			const lastAccessed = session.lastRequestEnded ?? session.lastRequestStarted ?? session.created ?? 0;
+			const lastAccessed =
+				session.lastRequestEnded ??
+				session.lastRequestStarted ??
+				session.created ??
+				0;
 			mruEntries.set(folderUri, {
 				folder: folderUri,
 				repository: undefined,
@@ -70,7 +92,10 @@ export class ClaudeCodeFolderMruService implements IChatFolderMruService {
 			}
 			const existingEntry = mruEntries.get(repo.rootUri);
 			if (existingEntry) {
-				existingEntry.lastAccessed = Math.max(existingEntry.lastAccessed, repo.lastAccessTime);
+				existingEntry.lastAccessed = Math.max(
+					existingEntry.lastAccessed,
+					repo.lastAccessTime,
+				);
 				existingEntry.repository = repo.rootUri;
 				continue;
 			}
@@ -94,8 +119,9 @@ export class ClaudeCodeFolderMruService implements IChatFolderMruService {
 			});
 		}
 
-		return Array.from(mruEntries.values())
-			.sort((a, b) => b.lastAccessed - a.lastAccessed);
+		return Array.from(mruEntries.values()).sort(
+			(a, b) => b.lastAccessed - a.lastAccessed,
+		);
 	}
 
 	async deleteRecentlyUsedFolder(folder: URI): Promise<void> {

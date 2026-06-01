@@ -8,15 +8,19 @@ import { isBasicASCII } from '../../../util/vs/base/common/strings';
 export function looksLikeCode(text: string): boolean {
 	const lines = text.split(/\r?\n/);
 	const lineTypes = lines.map(guessLineType);
-	const codeLineCount = lineTypes.filter(type => type === GuessedLineType.Code).length;
-	const naturalLanguageLineCount = lineTypes.filter(type => type === GuessedLineType.NaturalLanguage).length;
+	const codeLineCount = lineTypes.filter(
+		(type) => type === GuessedLineType.Code,
+	).length;
+	const naturalLanguageLineCount = lineTypes.filter(
+		(type) => type === GuessedLineType.NaturalLanguage,
+	).length;
 	return codeLineCount > naturalLanguageLineCount;
 }
 
 const enum GuessedLineType {
 	Unknown,
 	Code,
-	NaturalLanguage
+	NaturalLanguage,
 }
 
 function guessLineType(line: string): GuessedLineType {
@@ -27,8 +31,37 @@ function guessLineType(line: string): GuessedLineType {
 	let codeScore = 0;
 
 	// There are some super strong low hanging hints that a line is code
-	const obviousCodeSyntax = ['==', '!=', '===', '!==', '>=', '<=', '&&', '||', '>>', '>>>', '<<', '<<<', '+=', '-=', '*=', '/=', '%=', '<<=', '<<<=', '>>=', '>>>=', '++', '--', '=>', '->', '...', '??', '??='];
-	if (obviousCodeSyntax.some(syntax => line.includes(syntax))) {
+	const obviousCodeSyntax = [
+		'==',
+		'!=',
+		'===',
+		'!==',
+		'>=',
+		'<=',
+		'&&',
+		'||',
+		'>>',
+		'>>>',
+		'<<',
+		'<<<',
+		'+=',
+		'-=',
+		'*=',
+		'/=',
+		'%=',
+		'<<=',
+		'<<<=',
+		'>>=',
+		'>>>=',
+		'++',
+		'--',
+		'=>',
+		'->',
+		'...',
+		'??',
+		'??=',
+	];
+	if (obviousCodeSyntax.some((syntax) => line.includes(syntax))) {
 		return GuessedLineType.Code;
 	}
 
@@ -64,8 +97,33 @@ function guessLineType(line: string): GuessedLineType {
 			codeScore += 1;
 		}
 		// if the line contains common characters used for programming
-		const commonCodeChars = [';', '{', '}', '(', ')', '[', ']', '`', '~', '#', '$', '%', '^', '&', '*', '_', '=', '+', '\\', '|', '<', '>'];
-		const commonCodeCharsCounts = commonCodeChars.map(char => (line.includes(char) ? 1 : 0)).filter(x => x).length;
+		const commonCodeChars = [
+			';',
+			'{',
+			'}',
+			'(',
+			')',
+			'[',
+			']',
+			'`',
+			'~',
+			'#',
+			'$',
+			'%',
+			'^',
+			'&',
+			'*',
+			'_',
+			'=',
+			'+',
+			'\\',
+			'|',
+			'<',
+			'>',
+		];
+		const commonCodeCharsCounts = commonCodeChars
+			.map((char) => (line.includes(char) ? 1 : 0))
+			.filter((x) => x).length;
 		codeScore += commonCodeCharsCounts;
 	}
 

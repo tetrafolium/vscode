@@ -16,7 +16,6 @@ import { PositionOffsetTransformer } from '../../../util/vs/editor/common/core/t
  * cursor sits at the end of a line.
  */
 export class CurrentDocument {
-
 	/** All lines of the document (split by line break). */
 	public readonly lines: string[];
 
@@ -46,7 +45,9 @@ export class CurrentDocument {
 	lineWithCursor(): string {
 		const line = this.lines.at(this.cursorLineOffset);
 		if (line === undefined) {
-			throw new BugIndicatingError(`CurrentDocument#lineWithCursor: cursor is out of bounds: cursor: ${this.cursorLineOffset}, doc line count: ${this.lines.length}`);
+			throw new BugIndicatingError(
+				`CurrentDocument#lineWithCursor: cursor is out of bounds: cursor: ${this.cursorLineOffset}, doc line count: ${this.lines.length}`,
+			);
 		}
 		return line;
 	}

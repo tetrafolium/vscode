@@ -7,7 +7,8 @@ import { createServiceIdentifier } from '../../../util/common/services';
 import type { Event } from '../../../util/vs/base/common/event';
 import type { OTelConfig } from './otelConfig';
 
-export const IOTelService = createServiceIdentifier<IOTelService>('IOTelService');
+export const IOTelService =
+	createServiceIdentifier<IOTelService>('IOTelService');
 
 /**
  * Serializable trace context for cross-boundary span propagation.
@@ -43,7 +44,11 @@ export interface IOTelService {
 	 * Start a span and set it as active context so child spans are parented.
 	 * Calls `fn` within the active span context.
 	 */
-	startActiveSpan<T>(name: string, options: SpanOptions, fn: (span: ISpanHandle) => Promise<T>): Promise<T>;
+	startActiveSpan<T>(
+		name: string,
+		options: SpanOptions,
+		fn: (span: ISpanHandle) => Promise<T>,
+	): Promise<T>;
 
 	/**
 	 * Get the trace context (traceId + spanId) of the currently active span.
@@ -66,17 +71,28 @@ export interface IOTelService {
 	 * Run a function with a remote trace context set as active, without creating a span.
 	 * Child spans created inside `fn` will be parented to the given trace context.
 	 */
-	runWithTraceContext<T>(traceContext: TraceContext, fn: () => Promise<T>): Promise<T>;
+	runWithTraceContext<T>(
+		traceContext: TraceContext,
+		fn: () => Promise<T>,
+	): Promise<T>;
 
 	/**
 	 * Record a histogram metric value.
 	 */
-	recordMetric(name: string, value: number, attributes?: Record<string, string | number | boolean>): void;
+	recordMetric(
+		name: string,
+		value: number,
+		attributes?: Record<string, string | number | boolean>,
+	): void;
 
 	/**
 	 * Increment a counter metric.
 	 */
-	incrementCounter(name: string, value?: number, attributes?: Record<string, string | number | boolean>): void;
+	incrementCounter(
+		name: string,
+		value?: number,
+		attributes?: Record<string, string | number | boolean>,
+	): void;
 
 	/**
 	 * Emit an OTel log record / event.
@@ -136,15 +152,23 @@ export interface SpanOptions {
  * Lightweight handle for a span, independent of the OTel SDK types.
  */
 export interface ISpanHandle {
-	setAttribute(key: string, value: string | number | boolean | string[]): void;
-	setAttributes(attrs: Record<string, string | number | boolean | string[] | undefined>): void;
+	setAttribute(
+		key: string,
+		value: string | number | boolean | string[],
+	): void;
+	setAttributes(
+		attrs: Record<string, string | number | boolean | string[] | undefined>,
+	): void;
 	setStatus(code: SpanStatusCode, message?: string): void;
 	recordException(error: unknown): void;
 	/**
 	 * Add a named event to this span with optional attributes.
 	 * This fires `IOTelService.onDidEmitSpanEvent` synchronously.
 	 */
-	addEvent(name: string, attributes?: Record<string, string | number | boolean | string[]>): void;
+	addEvent(
+		name: string,
+		attributes?: Record<string, string | number | boolean | string[]>,
+	): void;
 	/**
 	 * Get the trace context (traceId + spanId) of this span.
 	 * Used for cross-boundary propagation (e.g., linking subagent spans to their parent tool call).
@@ -173,8 +197,13 @@ export interface ICompletedSpanData {
 	readonly parentSpanId?: string;
 	readonly startTime: number; // milliseconds since epoch
 	readonly endTime: number; // milliseconds since epoch
-	readonly status: { readonly code: SpanStatusCode; readonly message?: string };
-	readonly attributes: Readonly<Record<string, string | number | boolean | string[]>>;
+	readonly status: {
+		readonly code: SpanStatusCode;
+		readonly message?: string;
+	};
+	readonly attributes: Readonly<
+		Record<string, string | number | boolean | string[]>
+	>;
 	readonly events: readonly ISpanEventRecord[];
 }
 
@@ -184,7 +213,9 @@ export interface ICompletedSpanData {
 export interface ISpanEventRecord {
 	readonly name: string;
 	readonly timestamp: number; // milliseconds since epoch
-	readonly attributes?: Readonly<Record<string, string | number | boolean | string[]>>;
+	readonly attributes?: Readonly<
+		Record<string, string | number | boolean | string[]>
+	>;
 }
 
 /**
@@ -196,6 +227,8 @@ export interface ISpanEventData {
 	readonly traceId: string;
 	readonly parentSpanId?: string;
 	readonly eventName: string;
-	readonly attributes: Readonly<Record<string, string | number | boolean | string[]>>;
+	readonly attributes: Readonly<
+		Record<string, string | number | boolean | string[]>
+	>;
 	readonly timestamp: number; // milliseconds since epoch
 }

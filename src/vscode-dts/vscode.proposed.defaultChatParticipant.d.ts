@@ -5,8 +5,7 @@
 
 // version: 4
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	export interface ChatWelcomeMessageContent {
 		icon: ThemeIcon;
 		title: string;
@@ -17,11 +16,17 @@ declare module 'vscode' {
 		/**
 		 * TODO@API Should this take a ChatResult like the followup provider, or just take a new ChatContext that includes the current message as history?
 		 */
-		provideChatTitle(context: ChatContext, token: CancellationToken): ProviderResult<string>;
+		provideChatTitle(
+			context: ChatContext,
+			token: CancellationToken,
+		): ProviderResult<string>;
 	}
 
 	export interface ChatSummarizer {
-		provideChatSummary(context: ChatContext, token: CancellationToken): ProviderResult<string>;
+		provideChatSummary(
+			context: ChatContext,
+			token: CancellationToken,
+		): ProviderResult<string>;
 	}
 
 	export interface ChatParticipant {

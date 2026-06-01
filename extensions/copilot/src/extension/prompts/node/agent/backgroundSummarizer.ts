@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken, CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../util/vs/base/common/cancellation';
 
 /**
  * State machine for background conversation summarization.
@@ -54,7 +57,7 @@ export const BackgroundSummarizationThresholds = {
 	 * Tuned low enough that long-running sessions stay ahead of the budget
 	 * without relying on foreground compaction.
 	 */
-	emergency: 0.90,
+	emergency: 0.9,
 	/**
 	 * Minimum context ratio for applying a previously-completed background
 	 * summary on the next render. Below this we discard the stale summary —
@@ -104,8 +107,8 @@ export function shouldKickOffBackgroundSummarization(
  * apply a background summary.
  */
 export class BackgroundSummarizer {
-
-	private _state: BackgroundSummarizationState = BackgroundSummarizationState.Idle;
+	private _state: BackgroundSummarizationState =
+		BackgroundSummarizationState.Idle;
 	private _result: IBackgroundSummarizationResult | undefined;
 	private _error: unknown;
 	private _promise: Promise<void> | undefined;
@@ -122,18 +125,32 @@ export class BackgroundSummarizer {
 	 */
 	readonly endpointId: string | undefined;
 
-	get state(): BackgroundSummarizationState { return this._state; }
-	get error(): unknown { return this._error; }
+	get state(): BackgroundSummarizationState {
+		return this._state;
+	}
+	get error(): unknown {
+		return this._error;
+	}
 
-	get token() { return this._cts?.token; }
+	get token() {
+		return this._cts?.token;
+	}
 
 	constructor(modelMaxPromptTokens: number, endpointId?: string) {
 		this.modelMaxPromptTokens = modelMaxPromptTokens;
 		this.endpointId = endpointId;
 	}
 
-	start(work: (token: CancellationToken) => Promise<IBackgroundSummarizationResult>, parentToken?: CancellationToken): void {
-		if (this._state !== BackgroundSummarizationState.Idle && this._state !== BackgroundSummarizationState.Failed) {
+	start(
+		work: (
+			token: CancellationToken,
+		) => Promise<IBackgroundSummarizationResult>,
+		parentToken?: CancellationToken,
+	): void {
+		if (
+			this._state !== BackgroundSummarizationState.Idle &&
+			this._state !== BackgroundSummarizationState.Failed
+		) {
 			return; // already running or completed
 		}
 
@@ -142,14 +159,14 @@ export class BackgroundSummarizer {
 		this._cts = new CancellationTokenSource(parentToken);
 		const token = this._cts.token;
 		this._promise = work(token).then(
-			result => {
+			(result) => {
 				if (this._state !== BackgroundSummarizationState.InProgress) {
 					return; // cancelled while in flight
 				}
 				this._result = result;
 				this._state = BackgroundSummarizationState.Completed;
 			},
-			err => {
+			(err) => {
 				if (this._state !== BackgroundSummarizationState.InProgress) {
 					return; // cancelled while in flight
 				}

@@ -21,13 +21,26 @@ export interface IPackageJson {
 	};
 }
 
-
 export interface IDebugConfigSchema {
 	type: string;
 	deprecated: boolean;
 	configurationAttributes: {
 		tags: string[];
-		attach: { properties: { [key: string]: { description?: string; markdownDescription?: string } } };
-		launch: { properties: { [key: string]: { description?: string; markdownDescription?: string } } };
+		attach: {
+			properties: {
+				[key: string]: {
+					description?: string;
+					markdownDescription?: string;
+				};
+			};
+		};
+		launch: {
+			properties: {
+				[key: string]: {
+					description?: string;
+					markdownDescription?: string;
+				};
+			};
+		};
 	};
 }

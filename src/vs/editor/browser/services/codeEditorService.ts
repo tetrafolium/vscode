@@ -3,16 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { ICodeEditor, IDiffEditor } from '../editorBrowser.js';
-import { IDecorationRenderOptions } from '../../common/editorCommon.js';
-import { IModelDecorationOptions, ITextModel } from '../../common/model.js';
-import { ITextResourceEditorInput } from '../../../platform/editor/common/editor.js';
-import { createDecorator } from '../../../platform/instantiation/common/instantiation.js';
-import { URI } from '../../../base/common/uri.js';
-import { IDisposable } from '../../../base/common/lifecycle.js';
+import { Event } from "../../../base/common/event.js";
+import { ICodeEditor, IDiffEditor } from "../editorBrowser.js";
+import { IDecorationRenderOptions } from "../../common/editorCommon.js";
+import { IModelDecorationOptions, ITextModel } from "../../common/model.js";
+import { ITextResourceEditorInput } from "../../../platform/editor/common/editor.js";
+import { createDecorator } from "../../../platform/instantiation/common/instantiation.js";
+import { URI } from "../../../base/common/uri.js";
+import { IDisposable } from "../../../base/common/lifecycle.js";
 
-export const ICodeEditorService = createDecorator<ICodeEditorService>('codeEditorService');
+export const ICodeEditorService =
+	createDecorator<ICodeEditorService>("codeEditorService");
 
 export interface ICodeEditorService {
 	readonly _serviceBrand: undefined;
@@ -43,24 +44,47 @@ export interface ICodeEditorService {
 	 */
 	getFocusedCodeEditor(): ICodeEditor | null;
 
-	registerDecorationType(description: string, key: string, options: IDecorationRenderOptions, parentTypeKey?: string, editor?: ICodeEditor): IDisposable;
+	registerDecorationType(
+		description: string,
+		key: string,
+		options: IDecorationRenderOptions,
+		parentTypeKey?: string,
+		editor?: ICodeEditor,
+	): IDisposable;
 	listDecorationTypes(): string[];
 	removeDecorationType(key: string): void;
-	resolveDecorationOptions(typeKey: string, writable: boolean): IModelDecorationOptions;
+	resolveDecorationOptions(
+		typeKey: string,
+		writable: boolean,
+	): IModelDecorationOptions;
 	resolveDecorationCSSRules(decorationTypeKey: string): CSSRuleList | null;
 
 	setModelProperty(resource: URI, key: string, value: unknown): void;
 	getModelProperty(resource: URI, key: string): unknown;
 
-	setTransientModelProperty(model: ITextModel, key: string, value: unknown): void;
+	setTransientModelProperty(
+		model: ITextModel,
+		key: string,
+		value: unknown,
+	): void;
 	getTransientModelProperty(model: ITextModel, key: string): unknown;
-	getTransientModelProperties(model: ITextModel): [string, unknown][] | undefined;
+	getTransientModelProperties(
+		model: ITextModel,
+	): [string, unknown][] | undefined;
 
 	getActiveCodeEditor(): ICodeEditor | null;
-	openCodeEditor(input: ITextResourceEditorInput, source: ICodeEditor | null, sideBySide?: boolean): Promise<ICodeEditor | null>;
+	openCodeEditor(
+		input: ITextResourceEditorInput,
+		source: ICodeEditor | null,
+		sideBySide?: boolean,
+	): Promise<ICodeEditor | null>;
 	registerCodeEditorOpenHandler(handler: ICodeEditorOpenHandler): IDisposable;
 }
 
 export interface ICodeEditorOpenHandler {
-	(input: ITextResourceEditorInput, source: ICodeEditor | null, sideBySide?: boolean): Promise<ICodeEditor | null>;
+	(
+		input: ITextResourceEditorInput,
+		source: ICodeEditor | null,
+		sideBySide?: boolean,
+	): Promise<ICodeEditor | null>;
 }

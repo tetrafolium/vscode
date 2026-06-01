@@ -41,4 +41,8 @@ export interface ISolutionHandler {
 export type SolutionsStream =
 	| { status: 'FinishedNormally' }
 	| { status: 'FinishedWithError'; error: string }
-	| { status: 'Solution'; solution: UnformattedSolution; next: Promise<SolutionsStream> };
+	| {
+			status: 'Solution';
+			solution: UnformattedSolution;
+			next: Promise<SolutionsStream>;
+	  };

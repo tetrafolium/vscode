@@ -22,18 +22,31 @@ import { isDocumentableNode } from './util';
  * @param language - The language identifier used to determine if a node is documentable.
  * @returns The most relevant node to document or undefined if no such node is found.
  */
-export function _getNodeMatchingSelection(parseTree: Tree, containerRange: TreeSitterOffsetRange, language: WASMLanguage, match: (node: SyntaxNode, language: WASMLanguage) => RegExpMatchArray | null = isDocumentableNode): SyntaxNode | undefined {
-
+export function _getNodeMatchingSelection(
+	parseTree: Tree,
+	containerRange: TreeSitterOffsetRange,
+	language: WASMLanguage,
+	match: (
+		node: SyntaxNode,
+		language: WASMLanguage,
+	) => RegExpMatchArray | null = isDocumentableNode,
+): SyntaxNode | undefined {
 	// nodes to explore
 	let frontier = [parseTree.rootNode];
 
 	// keeps documentable nodes that could be used to generate documentation for
-	const documentableNodes: [SyntaxNode, /* weight (higher better) */ number][] = [];
+	const documentableNodes: [
+		SyntaxNode,
+		/* weight (higher better) */ number,
+	][] = [];
 
 	while (true) {
 		// nodes that intersect with `containerRange`
 		const candidates = frontier
-			.map((node): [SyntaxNode, number] => [node, TreeSitterOffsetRange.intersectionSize(node, containerRange)])
+			.map((node): [SyntaxNode, number] => [
+				node,
+				TreeSitterOffsetRange.intersectionSize(node, containerRange),
+			])
 			.filter(([_, s]) => s > 0)
 			.sort(([_, s0], [__, s1]) => s1 - s0);
 
@@ -42,20 +55,29 @@ export function _getNodeMatchingSelection(parseTree: Tree, containerRange: TreeS
 				? undefined
 				: max(documentableNodes, ([_, s0], [__, s1]) => s0 - s1)![0];
 		} else {
-			const reweighedCandidates = candidates
-				.map(([n, overlapSize]): [SyntaxNode, number] => {
+			const reweighedCandidates = candidates.map(
+				([n, overlapSize]): [SyntaxNode, number] => {
 					const nLen = TreeSitterOffsetRange.len(n);
-					const nonOverlappingSize = Math.abs(TreeSitterOffsetRange.len(containerRange) - overlapSize);
+					const nonOverlappingSize = Math.abs(
+						TreeSitterOffsetRange.len(containerRange) - overlapSize,
+					);
 					// reward overlap size but penalize for non-overlapping range
 					const penalizedWeigth = overlapSize - nonOverlappingSize;
 					const normalizedPenalizedWeight = penalizedWeigth / nLen;
 					return [n, normalizedPenalizedWeight];
-				});
+				},
+			);
 
-			documentableNodes.push(...reweighedCandidates.filter(([node, _]) => match(node, language)));
+			documentableNodes.push(
+				...reweighedCandidates.filter(([node, _]) =>
+					match(node, language),
+				),
+			);
 
 			frontier = [];
-			frontier.push(...reweighedCandidates.flatMap(([n, s]) => n.children));
+			frontier.push(
+				...reweighedCandidates.flatMap(([n, s]) => n.children),
+			);
 		}
 	}
 }

@@ -11,30 +11,45 @@ import { promises as fs } from 'fs';
 import { outdent } from 'outdent';
 import * as path from 'path';
 import { assert, describe, expect, it } from 'vitest';
-import { CopilotToken, createTestExtendedTokenInfo } from '../../../platform/authentication/common/copilotToken';
+import {
+	CopilotToken,
+	createTestExtendedTokenInfo,
+} from '../../../platform/authentication/common/copilotToken';
 import { ICopilotTokenManager } from '../../../platform/authentication/common/copilotTokenManager';
 import { DocumentId } from '../../../platform/inlineEdits/common/dataTypes/documentId';
 import { MutableObservableWorkspace } from '../../../platform/inlineEdits/common/observableWorkspace';
 import { ILanguageDiagnosticsService } from '../../../platform/languages/common/languageDiagnosticsService';
 import { TestLanguageDiagnosticsService } from '../../../platform/languages/common/testLanguageDiagnosticsService';
-import { FetchOptions, IAbortController, IHeaders, PaginationOptions, Response } from '../../../platform/networking/common/fetcherService';
+import {
+	FetchOptions,
+	IAbortController,
+	IHeaders,
+	PaginationOptions,
+	Response,
+} from '../../../platform/networking/common/fetcherService';
 import { IFetcher } from '../../../platform/networking/common/networking';
 import { NullTerminalService } from '../../../platform/terminal/common/terminalService';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { Emitter } from '../../../util/vs/base/common/event';
 import { URI } from '../../../util/vs/base/common/uri';
-import { StringEdit, StringReplacement } from '../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRange';
 import { ensureDependenciesAreSet } from '../../../util/vs/editor/common/core/text/positionToOffset';
 import { DiagnosticSeverity, Range } from '../../../vscodeTypes';
-import { createNESProvider, ILogTarget, ITelemetrySender, LogLevel } from '../../node/chatLibMain';
-
+import {
+	createNESProvider,
+	ILogTarget,
+	ITelemetrySender,
+	LogLevel,
+} from '../../node/chatLibMain';
 
 class TestFetcher implements IFetcher {
-
 	requests: { url: string; options: FetchOptions }[] = [];
 
-	constructor(private readonly responses: Record<string, string>) { }
+	constructor(private readonly responses: Record<string, string>) {}
 
 	getUserAgentLibrary(): string {
 		return 'test-fetcher';
@@ -45,14 +60,14 @@ class TestFetcher implements IFetcher {
 		const uri = URI.parse(url);
 		const responseText = this.responses[uri.path];
 
-		const headers = new class implements IHeaders {
+		const headers = new (class implements IHeaders {
 			get(name: string): string | null {
 				return null;
 			}
 			*[Symbol.iterator](): Iterator<[string, string]> {
 				// Empty headers for test
 			}
-		};
+		})();
 
 		const found = typeof responseText === 'string';
 		const text = responseText || '';
@@ -61,11 +76,14 @@ class TestFetcher implements IFetcher {
 			found ? 'OK' : 'Not Found',
 			headers,
 			text,
-			'node-http'
+			'node-http',
 		);
 	}
 
-	fetchWithPagination<T>(baseUrl: string, options: PaginationOptions<T>): Promise<T[]> {
+	fetchWithPagination<T>(
+		baseUrl: string,
+		options: PaginationOptions<T>,
+	): Promise<T[]> {
 		throw new Error('Method not implemented.');
 	}
 
@@ -104,7 +122,9 @@ class TestCopilotTokenManager implements ICopilotTokenManager {
 	onDidCopilotTokenRefresh = new Emitter<void>().event;
 
 	async getCopilotToken(force?: boolean): Promise<CopilotToken> {
-		return new CopilotToken(createTestExtendedTokenInfo({ token: 'fixedToken' }));
+		return new CopilotToken(
+			createTestExtendedTokenInfo({ token: 'fixedToken' }),
+		);
 	}
 
 	resetCopilotToken(httpError?: number): void {
@@ -113,8 +133,16 @@ class TestCopilotTokenManager implements ICopilotTokenManager {
 }
 
 class TestTelemetrySender implements ITelemetrySender {
-	events: { eventName: string; properties?: Record<string, string | undefined>; measurements?: Record<string, number | undefined> }[] = [];
-	sendTelemetryEvent(eventName: string, properties?: Record<string, string | undefined>, measurements?: Record<string, number | undefined>): void {
+	events: {
+		eventName: string;
+		properties?: Record<string, string | undefined>;
+		measurements?: Record<string, number | undefined>;
+	}[] = [];
+	sendTelemetryEvent(
+		eventName: string,
+		properties?: Record<string, string | undefined>,
+		measurements?: Record<string, number | undefined>,
+	): void {
 		this.events.push({ eventName, properties, measurements });
 	}
 }
@@ -143,7 +171,7 @@ describe('NESProvider Facade', () => {
 				}
 			}
 
-			const myPoint = new Point(0, 1);`.trimStart()
+			const myPoint = new Point(0, 1);`.trimStart(),
 		});
 		doc.setSelection([new OffsetRange(1, 1)], undefined);
 		const telemetrySender = new TestTelemetrySender();
@@ -151,7 +179,10 @@ describe('NESProvider Facade', () => {
 		const logTarget = new TestLogTarget();
 		const fetcher = new TestFetcher({
 			'/models': JSON.stringify({ models: [] }),
-			'/chat/completions': await fs.readFile(path.join(__dirname, 'nesProvider.reply.txt'), 'utf8'),
+			'/chat/completions': await fs.readFile(
+				path.join(__dirname, 'nesProvider.reply.txt'),
+				'utf8',
+			),
 		});
 		const nextEditProvider = createNESProvider({
 			workspace,
@@ -162,16 +193,30 @@ describe('NESProvider Facade', () => {
 			logTarget,
 		});
 		nextEditProvider.updateTreatmentVariables({
-			'config.github.copilot.chat.advanced.inlineEdits.xtabProvider.defaultModelConfigurationString': '{ "modelName": "xtab-test", "promptingStrategy": "copilotNesXtab", "includeTagsInCurrentFile": false }',
+			'config.github.copilot.chat.advanced.inlineEdits.xtabProvider.defaultModelConfigurationString':
+				'{ "modelName": "xtab-test", "promptingStrategy": "copilotNesXtab", "includeTagsInCurrentFile": false }',
 		});
 
 		doc.applyEdit(StringEdit.insert(11, '3D'));
 
-		const result = await nextEditProvider.getNextEdit(doc.id.toUri(), CancellationToken.None);
+		const result = await nextEditProvider.getNextEdit(
+			doc.id.toUri(),
+			CancellationToken.None,
+		);
 
-		assert.strictEqual(fetcher.requests.length, 2, `Unexpected requests: ${JSON.stringify(fetcher.requests, null, 2)}`);
-		assert.ok(fetcher.requests[0].url.endsWith('/models'), `Unexpected URL: ${fetcher.requests[0].url}`);
-		assert.ok(fetcher.requests[1].url.endsWith('/chat/completions'), `Unexpected URL: ${fetcher.requests[1].url}`);
+		assert.strictEqual(
+			fetcher.requests.length,
+			2,
+			`Unexpected requests: ${JSON.stringify(fetcher.requests, null, 2)}`,
+		);
+		assert.ok(
+			fetcher.requests[0].url.endsWith('/models'),
+			`Unexpected URL: ${fetcher.requests[0].url}`,
+		);
+		assert.ok(
+			fetcher.requests[1].url.endsWith('/chat/completions'),
+			`Unexpected URL: ${fetcher.requests[1].url}`,
+		);
 
 		assert(fetcher.requests[1].options.json);
 		assert(typeof fetcher.requests[1].options.json === 'object');
@@ -201,23 +246,33 @@ describe('NESProvider Facade', () => {
 		`);
 
 		nextEditProvider.handleAcceptance(result);
-		await new Promise(resolve => setTimeout(resolve, 100)); // wait for async telemetry sending
-		const event = telemetrySender.events.find(e => e.eventName === 'copilot-nes/provideInlineEdit');
+		await new Promise((resolve) => setTimeout(resolve, 100)); // wait for async telemetry sending
+		const event = telemetrySender.events.find(
+			(e) => e.eventName === 'copilot-nes/provideInlineEdit',
+		);
 		expect(event).toBeDefined();
 		expect(event!.properties?.acceptance).toBe('accepted');
 
 		nextEditProvider.dispose();
 
 		expect(logTarget.logs.length).toBeGreaterThan(0);
-		const errorLogs = logTarget.logs.filter(l => l.level === LogLevel.Error);
-		assert.strictEqual(errorLogs.length, 0, `Unexpected error logs: ${JSON.stringify(errorLogs, null, 2)}`);
+		const errorLogs = logTarget.logs.filter(
+			(l) => l.level === LogLevel.Error,
+		);
+		assert.strictEqual(
+			errorLogs.length,
+			0,
+			`Unexpected error logs: ${JSON.stringify(errorLogs, null, 2)}`,
+		);
 	});
 
 	describe('languageDiagnosticsService injection', () => {
+		const sentinelMessage =
+			'INJECTED_DIAG_SENTINEL_DO_NOT_MATCH_ANYWHERE_ELSE';
 
-		const sentinelMessage = 'INJECTED_DIAG_SENTINEL_DO_NOT_MATCH_ANYWHERE_ELSE';
-
-		async function runNESRequest(diagnosticsService: ILanguageDiagnosticsService | undefined): Promise<{ payload: string }> {
+		async function runNESRequest(
+			diagnosticsService: ILanguageDiagnosticsService | undefined,
+		): Promise<{ payload: string }> {
 			const docUri = URI.file('/test/test.ts');
 			const workspace = new MutableObservableWorkspace();
 			const doc = workspace.addDocument({
@@ -233,13 +288,16 @@ describe('NESProvider Facade', () => {
 					}
 				}
 
-				const myPoint = new Point(0, 1);`.trimStart()
+				const myPoint = new Point(0, 1);`.trimStart(),
 			});
 			doc.setSelection([new OffsetRange(1, 1)], undefined);
 
 			const fetcher = new TestFetcher({
 				'/models': JSON.stringify({ models: [] }),
-				'/chat/completions': await fs.readFile(path.join(__dirname, 'nesProvider.reply.txt'), 'utf8'),
+				'/chat/completions': await fs.readFile(
+					path.join(__dirname, 'nesProvider.reply.txt'),
+					'utf8',
+				),
 			});
 
 			const nextEditProvider = createNESProvider({
@@ -253,27 +311,36 @@ describe('NESProvider Facade', () => {
 			});
 
 			nextEditProvider.updateTreatmentVariables({
-				'config.github.copilot.chat.advanced.inlineEdits.xtabProvider.defaultModelConfigurationString': JSON.stringify({
-					modelName: 'xtab-test',
-					promptingStrategy: 'copilotNesXtab',
-					includeTagsInCurrentFile: false,
-					lintOptions: {
-						tagName: 'linter diagnostics',
-						warnings: 'yes',
-						showCode: 'no',
-						maxLints: 5,
-						maxLineDistance: 1000,
-						nRecentFiles: 0,
-					},
-				}),
+				'config.github.copilot.chat.advanced.inlineEdits.xtabProvider.defaultModelConfigurationString':
+					JSON.stringify({
+						modelName: 'xtab-test',
+						promptingStrategy: 'copilotNesXtab',
+						includeTagsInCurrentFile: false,
+						lintOptions: {
+							tagName: 'linter diagnostics',
+							warnings: 'yes',
+							showCode: 'no',
+							maxLints: 5,
+							maxLineDistance: 1000,
+							nRecentFiles: 0,
+						},
+					}),
 			});
 
 			doc.applyEdit(StringEdit.insert(11, '3D'));
 
-			await nextEditProvider.getNextEdit(doc.id.toUri(), CancellationToken.None);
+			await nextEditProvider.getNextEdit(
+				doc.id.toUri(),
+				CancellationToken.None,
+			);
 
-			const chatRequest = fetcher.requests.find(r => r.url.endsWith('/chat/completions'));
-			assert.ok(chatRequest, `Expected a /chat/completions request, got: ${fetcher.requests.map(r => r.url).join(', ')}`);
+			const chatRequest = fetcher.requests.find((r) =>
+				r.url.endsWith('/chat/completions'),
+			);
+			assert.ok(
+				chatRequest,
+				`Expected a /chat/completions request, got: ${fetcher.requests.map((r) => r.url).join(', ')}`,
+			);
 
 			nextEditProvider.dispose();
 
@@ -284,11 +351,13 @@ describe('NESProvider Facade', () => {
 			ensureDependenciesAreSet();
 
 			const diagnosticsService = new TestLanguageDiagnosticsService();
-			diagnosticsService.setDiagnostics(URI.file('/test/test.ts'), [{
-				message: sentinelMessage,
-				range: new Range(0, 0, 0, 5),
-				severity: DiagnosticSeverity.Error,
-			}]);
+			diagnosticsService.setDiagnostics(URI.file('/test/test.ts'), [
+				{
+					message: sentinelMessage,
+					range: new Range(0, 0, 0, 5),
+					severity: DiagnosticSeverity.Error,
+				},
+			]);
 
 			const { payload } = await runNESRequest(diagnosticsService);
 

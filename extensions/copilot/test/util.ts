@@ -8,21 +8,23 @@ import { SimulationOptions } from './base/simulationOptions';
 
 export const REPO_ROOT = join(__dirname, '..'); // This must hold for both the esbuild bundle location and the source!
 
-export function createScoreRenderer(opts: SimulationOptions, canUseBaseline: boolean): (score: number) => string {
+export function createScoreRenderer(
+	opts: SimulationOptions,
+	canUseBaseline: boolean,
+): (score: number) => string {
 	// We can show pass count only when using the same number of runs as the baseline
 	const maxDigitCount = String(opts.nRuns).length;
-	return (
-		canUseBaseline
-			? (score: number) => `${String(score * opts.nRuns).padStart(maxDigitCount, ' ')}`
-			: (score: number) => `${String(score.toFixed(1)).padStart(3, ' ')}`
-	);
+	return canUseBaseline
+		? (score: number) =>
+				`${String(score * opts.nRuns).padStart(maxDigitCount, ' ')}`
+		: (score: number) => `${String(score.toFixed(1)).padStart(3, ' ')}`;
 }
 
 export function printTime(ms: number): string {
 	if (ms < 1000) {
 		return `${ms}ms`;
 	}
-	let seconds = (ms / 1000);
+	let seconds = ms / 1000;
 	if (seconds < 60) {
 		return `${seconds.toFixed(1)}s`;
 	}

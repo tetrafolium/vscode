@@ -43,7 +43,9 @@
 	border-radius: 50%;
 }
 
-.agent-sessions-workbench.phone-layout .sessions-chat-send-button .monaco-button {
+.agent-sessions-workbench.phone-layout
+	.sessions-chat-send-button
+	.monaco-button {
 	width: 36px;
 	height: 36px;
 	min-width: 36px;

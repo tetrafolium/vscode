@@ -3,29 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { IEntitlementsData } from '../../../../../base/common/defaultAccount.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { parseQuotas } from '../../../../services/chat/common/chatEntitlementService.js';
+import assert from "assert";
+import { IEntitlementsData } from "../../../../../base/common/defaultAccount.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../base/test/common/utils.js";
+import { parseQuotas } from "../../../../services/chat/common/chatEntitlementService.js";
 
-suite('parseQuotas', () => {
-
+suite("parseQuotas", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	function makeEntitlementsData(overrides: Partial<IEntitlementsData>): IEntitlementsData {
+	function makeEntitlementsData(
+		overrides: Partial<IEntitlementsData>,
+	): IEntitlementsData {
 		return {
-			access_type_sku: 'plus_monthly_subscriber_quota',
+			access_type_sku: "plus_monthly_subscriber_quota",
 			chat_enabled: true,
-			assigned_date: '2026-04-17T12:53:45-07:00',
+			assigned_date: "2026-04-17T12:53:45-07:00",
 			can_signup_for_limited: false,
-			copilot_plan: 'individual_pro',
+			copilot_plan: "individual_pro",
 			organization_login_list: [],
-			analytics_tracking_id: 'test',
+			analytics_tracking_id: "test",
 			...overrides,
 		};
 	}
 
-	test('reads token_based_billing from top-level, not from quota snapshot', () => {
+	test("reads token_based_billing from top-level, not from quota snapshot", () => {
 		const data = makeEntitlementsData({
 			token_based_billing: true,
 			quota_snapshots: {
@@ -43,7 +44,7 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.premiumChat?.usageBasedBilling, true);
 	});
 
-	test('usageBasedBilling is undefined when top-level token_based_billing is absent', () => {
+	test("usageBasedBilling is undefined when top-level token_based_billing is absent", () => {
 		const data = makeEntitlementsData({
 			quota_snapshots: {
 				premium_interactions: {
@@ -59,7 +60,7 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.premiumChat?.usageBasedBilling, undefined);
 	});
 
-	test('all quota types receive top-level token_based_billing', () => {
+	test("all quota types receive top-level token_based_billing", () => {
 		const data = makeEntitlementsData({
 			token_based_billing: true,
 			quota_snapshots: {
@@ -91,10 +92,10 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.premiumChat?.usageBasedBilling, true);
 	});
 
-	test('parses paid user response correctly (top-level token_based_billing only)', () => {
+	test("parses paid user response correctly (top-level token_based_billing only)", () => {
 		const data = makeEntitlementsData({
-			quota_reset_date: '2026-06-01',
-			quota_reset_date_utc: '2026-06-01T00:00:00.000Z',
+			quota_reset_date: "2026-06-01",
+			quota_reset_date_utc: "2026-06-01T00:00:00.000Z",
 			token_based_billing: true,
 			quota_snapshots: {
 				chat: {
@@ -102,28 +103,28 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 				},
 				completions: {
 					overage_count: 0,
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 				},
 				premium_interactions: {
 					overage_count: 0,
 					overage_permitted: true,
 					percent_remaining: 97.4,
 					unlimited: false,
-					entitlement: '3900',
+					entitlement: "3900",
 				},
 			},
 		});
 
 		const quotas = parseQuotas(data);
 		assert.deepStrictEqual(quotas, {
-			resetDate: '2026-06-01T00:00:00.000Z',
+			resetDate: "2026-06-01T00:00:00.000Z",
 			resetDateHasTime: true,
 			usageBasedBilling: true,
 			canUpgradePlan: undefined,
@@ -159,10 +160,10 @@ suite('parseQuotas', () => {
 		});
 	});
 
-	test('parses free user CFI response with per-snapshot token_based_billing', () => {
+	test("parses free user CFI response with per-snapshot token_based_billing", () => {
 		const data = makeEntitlementsData({
-			access_type_sku: 'free_limited_copilot',
-			copilot_plan: 'free',
+			access_type_sku: "free_limited_copilot",
+			copilot_plan: "free",
 			token_based_billing: true,
 			quota_snapshots: {
 				chat: {
@@ -194,10 +195,10 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.additionalUsageEnabled, false);
 	});
 
-	test('keeps TBB snapshots: unlimited with zero entitlement and finite with nonzero entitlement (has_quota is always false)', () => {
+	test("keeps TBB snapshots: unlimited with zero entitlement and finite with nonzero entitlement (has_quota is always false)", () => {
 		const data = makeEntitlementsData({
-			access_type_sku: 'monthly_subscriber_quota',
-			copilot_plan: 'individual',
+			access_type_sku: "monthly_subscriber_quota",
+			copilot_plan: "individual",
 			token_based_billing: true,
 			quota_snapshots: {
 				chat: {
@@ -205,7 +206,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 				completions: {
@@ -213,7 +214,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 				premium_interactions: {
@@ -221,7 +222,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 5.5,
 					unlimited: false,
-					entitlement: '1000',
+					entitlement: "1000",
 					has_quota: false,
 				},
 			},
@@ -236,10 +237,10 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.premiumChat?.entitlement, 1000);
 	});
 
-	test('keeps all snapshots for CB/CE users where all categories are unlimited', () => {
+	test("keeps all snapshots for CB/CE users where all categories are unlimited", () => {
 		const data = makeEntitlementsData({
-			access_type_sku: 'copilot_enterprise_seat_multi_quota',
-			copilot_plan: 'enterprise',
+			access_type_sku: "copilot_enterprise_seat_multi_quota",
+			copilot_plan: "enterprise",
 			token_based_billing: true,
 			quota_snapshots: {
 				chat: {
@@ -247,7 +248,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 				completions: {
@@ -255,7 +256,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 				premium_interactions: {
@@ -263,7 +264,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 			},
@@ -275,10 +276,10 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.premiumChat?.unlimited, true);
 	});
 
-	test('skips quota snapshots with zero entitlement and not unlimited (e.g. free tier premium_interactions)', () => {
+	test("skips quota snapshots with zero entitlement and not unlimited (e.g. free tier premium_interactions)", () => {
 		const data = makeEntitlementsData({
-			access_type_sku: 'free_limited_copilot',
-			copilot_plan: 'free',
+			access_type_sku: "free_limited_copilot",
+			copilot_plan: "free",
 			token_based_billing: true,
 			quota_snapshots: {
 				chat: {
@@ -286,7 +287,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 98.7,
 					unlimited: false,
-					entitlement: '200',
+					entitlement: "200",
 					has_quota: false,
 				},
 				completions: {
@@ -294,7 +295,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: false,
-					entitlement: '4000',
+					entitlement: "4000",
 					has_quota: false,
 				},
 				premium_interactions: {
@@ -302,7 +303,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 0,
 					unlimited: false,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 			},
@@ -316,10 +317,10 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.premiumChat, undefined);
 	});
 
-	test('pooled entitlements exhausted when has_quota is false and overages are disabled', () => {
+	test("pooled entitlements exhausted when has_quota is false and overages are disabled", () => {
 		const data = makeEntitlementsData({
-			access_type_sku: 'copilot_enterprise_seat_multi_quota',
-			copilot_plan: 'enterprise',
+			access_type_sku: "copilot_enterprise_seat_multi_quota",
+			copilot_plan: "enterprise",
 			token_based_billing: true,
 			quota_snapshots: {
 				chat: {
@@ -327,7 +328,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 				completions: {
@@ -335,7 +336,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 100,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 				premium_interactions: {
@@ -343,7 +344,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 0,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 			},
@@ -355,10 +356,10 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.additionalUsageEnabled, false);
 	});
 
-	test('pooled entitlements not exhausted when has_quota is true', () => {
+	test("pooled entitlements not exhausted when has_quota is true", () => {
 		const data = makeEntitlementsData({
-			access_type_sku: 'copilot_enterprise_seat_multi_quota',
-			copilot_plan: 'enterprise',
+			access_type_sku: "copilot_enterprise_seat_multi_quota",
+			copilot_plan: "enterprise",
 			token_based_billing: true,
 			quota_snapshots: {
 				premium_interactions: {
@@ -366,7 +367,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 50,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: true,
 				},
 			},
@@ -378,7 +379,7 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.additionalUsageEnabled, false);
 	});
 
-	test('parses quota_remaining from snapshot data', () => {
+	test("parses quota_remaining from snapshot data", () => {
 		const data = makeEntitlementsData({
 			token_based_billing: true,
 			quota_snapshots: {
@@ -387,7 +388,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 7.5,
 					unlimited: false,
-					entitlement: '20000',
+					entitlement: "20000",
 					quota_remaining: 1501,
 				},
 			},
@@ -398,7 +399,7 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.premiumChat?.entitlement, 20000);
 	});
 
-	test('quotaRemaining is undefined when not present in snapshot', () => {
+	test("quotaRemaining is undefined when not present in snapshot", () => {
 		const data = makeEntitlementsData({
 			quota_snapshots: {
 				premium_interactions: {
@@ -406,7 +407,7 @@ suite('parseQuotas', () => {
 					overage_permitted: false,
 					percent_remaining: 50,
 					unlimited: false,
-					entitlement: '1000',
+					entitlement: "1000",
 				},
 			},
 		});
@@ -415,10 +416,10 @@ suite('parseQuotas', () => {
 		assert.strictEqual(quotas.premiumChat?.quotaRemaining, undefined);
 	});
 
-	test('pooled entitlements not exhausted when overages are enabled even if has_quota is false', () => {
+	test("pooled entitlements not exhausted when overages are enabled even if has_quota is false", () => {
 		const data = makeEntitlementsData({
-			access_type_sku: 'copilot_enterprise_seat_multi_quota',
-			copilot_plan: 'enterprise',
+			access_type_sku: "copilot_enterprise_seat_multi_quota",
+			copilot_plan: "enterprise",
 			token_based_billing: true,
 			quota_snapshots: {
 				premium_interactions: {
@@ -426,7 +427,7 @@ suite('parseQuotas', () => {
 					overage_permitted: true,
 					percent_remaining: 0,
 					unlimited: true,
-					entitlement: '0',
+					entitlement: "0",
 					has_quota: false,
 				},
 			},

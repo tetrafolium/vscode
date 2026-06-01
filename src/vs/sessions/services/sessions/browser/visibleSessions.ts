@@ -3,13 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableMap, IDisposable } from '../../../../base/common/lifecycle.js';
-import { IObservable, ISettableObservable, ITransaction, autorun, observableValue, transaction } from '../../../../base/common/observable.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
-import { IAgentSessionsService } from '../../../../workbench/contrib/chat/browser/agentSessions/agentSessionsService.js';
-import { IActiveSession } from '../common/sessionsManagement.js';
-import { IChat, ISession, SessionStatus } from '../common/session.js';
+import {
+	Disposable,
+	DisposableMap,
+	IDisposable,
+} from "../../../../base/common/lifecycle.js";
+import {
+	IObservable,
+	ISettableObservable,
+	ITransaction,
+	autorun,
+	observableValue,
+	transaction,
+} from "../../../../base/common/observable.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IUriIdentityService } from "../../../../platform/uriIdentity/common/uriIdentity.js";
+import { IAgentSessionsService } from "../../../../workbench/contrib/chat/browser/agentSessions/agentSessionsService.js";
+import { IActiveSession } from "../common/sessionsManagement.js";
+import { IChat, ISession, SessionStatus } from "../common/session.js";
 
 /**
  * Wraps an {@link ISession} with an active chat observable to form an
@@ -23,11 +34,13 @@ import { IChat, ISession, SessionStatus } from '../common/session.js';
  * chat selection.
  */
 export class VisibleSession extends Disposable implements IActiveSession {
-
 	private readonly _isCreated;
 	readonly isCreated: IObservable<boolean>;
 
-	private readonly _sticky = observableValue<boolean>('activeSessionSticky', false);
+	private readonly _sticky = observableValue<boolean>(
+		"activeSessionSticky",
+		false,
+	);
 	readonly sticky: IObservable<boolean> = this._sticky;
 
 	private readonly _activeChat: ISettableObservable<IChat>;
@@ -38,10 +51,15 @@ export class VisibleSession extends Disposable implements IActiveSession {
 		initialChat: IChat,
 	) {
 		super();
-		this._activeChat = observableValue<IChat>(`activeChat-${_session.sessionId}`, initialChat);
+		this._activeChat = observableValue<IChat>(
+			`activeChat-${_session.sessionId}`,
+			initialChat,
+		);
 		this.activeChat = this._activeChat;
 
-		this._isCreated = _session.status.map(status => status !== SessionStatus.Untitled);
+		this._isCreated = _session.status.map(
+			(status) => status !== SessionStatus.Untitled,
+		);
 		this.isCreated = this._isCreated;
 	}
 
@@ -58,28 +76,72 @@ export class VisibleSession extends Disposable implements IActiveSession {
 		return this._register(disposable);
 	}
 
-	get sessionId() { return this._session.sessionId; }
-	get resource() { return this._session.resource; }
-	get providerId() { return this._session.providerId; }
-	get sessionType() { return this._session.sessionType; }
-	get icon() { return this._session.icon; }
-	get createdAt() { return this._session.createdAt; }
-	get workspace() { return this._session.workspace; }
-	get title() { return this._session.title; }
-	get updatedAt() { return this._session.updatedAt; }
-	get status() { return this._session.status; }
-	get changes() { return this._session.changes; }
-	get changesets() { return this._session.changesets; }
-	get modelId() { return this._session.modelId; }
-	get mode() { return this._session.mode; }
-	get loading() { return this._session.loading; }
-	get isArchived() { return this._session.isArchived; }
-	get isRead() { return this._session.isRead; }
-	get description() { return this._session.description; }
-	get lastTurnEnd() { return this._session.lastTurnEnd; }
-	get chats() { return this._session.chats; }
-	get mainChat() { return this._session.mainChat; }
-	get capabilities() { return this._session.capabilities; }
+	get sessionId() {
+		return this._session.sessionId;
+	}
+	get resource() {
+		return this._session.resource;
+	}
+	get providerId() {
+		return this._session.providerId;
+	}
+	get sessionType() {
+		return this._session.sessionType;
+	}
+	get icon() {
+		return this._session.icon;
+	}
+	get createdAt() {
+		return this._session.createdAt;
+	}
+	get workspace() {
+		return this._session.workspace;
+	}
+	get title() {
+		return this._session.title;
+	}
+	get updatedAt() {
+		return this._session.updatedAt;
+	}
+	get status() {
+		return this._session.status;
+	}
+	get changes() {
+		return this._session.changes;
+	}
+	get changesets() {
+		return this._session.changesets;
+	}
+	get modelId() {
+		return this._session.modelId;
+	}
+	get mode() {
+		return this._session.mode;
+	}
+	get loading() {
+		return this._session.loading;
+	}
+	get isArchived() {
+		return this._session.isArchived;
+	}
+	get isRead() {
+		return this._session.isRead;
+	}
+	get description() {
+		return this._session.description;
+	}
+	get lastTurnEnd() {
+		return this._session.lastTurnEnd;
+	}
+	get chats() {
+		return this._session.chats;
+	}
+	get mainChat() {
+		return this._session.mainChat;
+	}
+	get capabilities() {
+		return this._session.capabilities;
+	}
 }
 
 /**
@@ -91,40 +153,81 @@ export class VisibleSession extends Disposable implements IActiveSession {
  * the same grid slot before the provider has produced a final session.
  */
 class ResourceOverrideSession implements ISession {
-
 	constructor(
 		private readonly _session: ISession,
 		readonly resource: URI,
-	) { }
+	) {}
 
-	get sessionId() { return this._session.sessionId; }
-	get providerId() { return this._session.providerId; }
-	get sessionType() { return this._session.sessionType; }
-	get icon() { return this._session.icon; }
-	get createdAt() { return this._session.createdAt; }
-	get workspace() { return this._session.workspace; }
-	get title() { return this._session.title; }
-	get updatedAt() { return this._session.updatedAt; }
-	get status() { return this._session.status; }
-	get changes() { return this._session.changes; }
-	get changesets() { return this._session.changesets; }
-	get modelId() { return this._session.modelId; }
-	get mode() { return this._session.mode; }
-	get loading() { return this._session.loading; }
-	get isArchived() { return this._session.isArchived; }
-	get isRead() { return this._session.isRead; }
-	get description() { return this._session.description; }
-	get lastTurnEnd() { return this._session.lastTurnEnd; }
-	get chats() { return this._session.chats; }
-	get mainChat() { return this._session.mainChat; }
-	get capabilities() { return this._session.capabilities; }
+	get sessionId() {
+		return this._session.sessionId;
+	}
+	get providerId() {
+		return this._session.providerId;
+	}
+	get sessionType() {
+		return this._session.sessionType;
+	}
+	get icon() {
+		return this._session.icon;
+	}
+	get createdAt() {
+		return this._session.createdAt;
+	}
+	get workspace() {
+		return this._session.workspace;
+	}
+	get title() {
+		return this._session.title;
+	}
+	get updatedAt() {
+		return this._session.updatedAt;
+	}
+	get status() {
+		return this._session.status;
+	}
+	get changes() {
+		return this._session.changes;
+	}
+	get changesets() {
+		return this._session.changesets;
+	}
+	get modelId() {
+		return this._session.modelId;
+	}
+	get mode() {
+		return this._session.mode;
+	}
+	get loading() {
+		return this._session.loading;
+	}
+	get isArchived() {
+		return this._session.isArchived;
+	}
+	get isRead() {
+		return this._session.isRead;
+	}
+	get description() {
+		return this._session.description;
+	}
+	get lastTurnEnd() {
+		return this._session.lastTurnEnd;
+	}
+	get chats() {
+		return this._session.chats;
+	}
+	get mainChat() {
+		return this._session.mainChat;
+	}
+	get capabilities() {
+		return this._session.capabilities;
+	}
 }
 
 /**
  * Sentinel used to distinguish "no slot tracked" from the empty slot
  * (which is itself represented by `undefined` in the visible list).
  */
-const NO_RECENT = Symbol('no-recent');
+const NO_RECENT = Symbol("no-recent");
 
 /**
  * Encapsulates the visibility model used by the
@@ -144,14 +247,23 @@ const NO_RECENT = Symbol('no-recent');
  * the visibility model.
  */
 export class VisibleSessions extends Disposable {
+	private readonly _activeSession = observableValue<IActiveSession | undefined>(
+		this,
+		undefined,
+	);
+	readonly activeSession: IObservable<IActiveSession | undefined> =
+		this._activeSession;
 
-	private readonly _activeSession = observableValue<IActiveSession | undefined>(this, undefined);
-	readonly activeSession: IObservable<IActiveSession | undefined> = this._activeSession;
+	private readonly _visibleSessions = observableValue<
+		readonly (IActiveSession | undefined)[]
+	>(this, [undefined]);
+	readonly visibleSessions: IObservable<
+		readonly (IActiveSession | undefined)[]
+	> = this._visibleSessions;
 
-	private readonly _visibleSessions = observableValue<readonly (IActiveSession | undefined)[]>(this, [undefined]);
-	readonly visibleSessions: IObservable<readonly (IActiveSession | undefined)[]> = this._visibleSessions;
-
-	private readonly _wrappers = this._register(new DisposableMap<string, VisibleSession>());
+	private readonly _wrappers = this._register(
+		new DisposableMap<string, VisibleSession>(),
+	);
 	/**
 	 * Ordered slot ids in the grid (left-to-right). Each entry is either a
 	 * session id or `undefined` (the empty slot). The invariant is that at
@@ -168,7 +280,8 @@ export class VisibleSessions extends Disposable {
 	 * - `undefined` refers to the empty slot.
 	 * - A string refers to that session id.
 	 */
-	private _mostRecentNonStickySlot: string | undefined | typeof NO_RECENT = NO_RECENT;
+	private _mostRecentNonStickySlot: string | undefined | typeof NO_RECENT =
+		NO_RECENT;
 
 	constructor(
 		private readonly _resolveInitialChat: (session: ISession) => IChat,
@@ -200,14 +313,17 @@ export class VisibleSessions extends Disposable {
 
 		if (!this._visibleList.includes(targetId)) {
 			const activeSlot = this._currentActiveSlot();
-			const activeIsNonSticky = activeSlot !== NO_RECENT && !this._isStickySlot(activeSlot);
+			const activeIsNonSticky =
+				activeSlot !== NO_RECENT && !this._isStickySlot(activeSlot);
 
 			let replaceSlot: string | undefined | typeof NO_RECENT;
 			if (activeIsNonSticky) {
 				replaceSlot = activeSlot;
-			} else if (this._mostRecentNonStickySlot !== NO_RECENT
-				&& this._visibleList.includes(this._mostRecentNonStickySlot)
-				&& !this._isStickySlot(this._mostRecentNonStickySlot)) {
+			} else if (
+				this._mostRecentNonStickySlot !== NO_RECENT &&
+				this._visibleList.includes(this._mostRecentNonStickySlot) &&
+				!this._isStickySlot(this._mostRecentNonStickySlot)
+			) {
 				replaceSlot = this._mostRecentNonStickySlot;
 			} else {
 				replaceSlot = this._findLastNonSticky();
@@ -225,7 +341,9 @@ export class VisibleSessions extends Disposable {
 			this._mostRecentNonStickySlot = targetId;
 		}
 
-		const visibleSession = session ? this._getOrCreateVisibleSession(session) : undefined;
+		const visibleSession = session
+			? this._getOrCreateVisibleSession(session)
+			: undefined;
 		transaction((tsx) => {
 			this._activeSession.set(visibleSession, tsx);
 			this._refresh(tsx);
@@ -250,7 +368,12 @@ export class VisibleSessions extends Disposable {
 	 *
 	 * No-op if `targetSessionId` is not currently visible.
 	 */
-	insertAt(session: ISession | undefined, targetSessionId: string, side: 'left' | 'right', activate: boolean = true): void {
+	insertAt(
+		session: ISession | undefined,
+		targetSessionId: string,
+		side: "left" | "right",
+		activate: boolean = true,
+	): void {
 		const id: string | undefined = session?.sessionId;
 		const targetIdx = this._visibleList.indexOf(targetSessionId);
 		if (targetIdx < 0) {
@@ -263,7 +386,7 @@ export class VisibleSessions extends Disposable {
 			return;
 		}
 
-		let destIdx = side === 'left' ? targetIdx : targetIdx + 1;
+		let destIdx = side === "left" ? targetIdx : targetIdx + 1;
 
 		const currentIdx = this._visibleList.indexOf(id);
 		if (currentIdx >= 0) {
@@ -339,11 +462,13 @@ export class VisibleSessions extends Disposable {
 			const activeId = this._activeSession.get()?.sessionId;
 			// activeSession.get() is undefined both when the empty slot is active
 			// and when no slot is active; disambiguate via the visible list.
-			const emptySlotIsActive = activeId === undefined && this._visibleList.includes(undefined);
+			const emptySlotIsActive =
+				activeId === undefined && this._visibleList.includes(undefined);
 			const activeSlotId = emptySlotIsActive ? undefined : activeId;
-			const activeIdx = activeId !== undefined || emptySlotIsActive
-				? this._visibleList.indexOf(activeSlotId)
-				: -1;
+			const activeIdx =
+				activeId !== undefined || emptySlotIsActive
+					? this._visibleList.indexOf(activeSlotId)
+					: -1;
 			let activeRemoved = false;
 			for (const id of sessionIds) {
 				if (this._removeFromModel(id)) {
@@ -357,9 +482,15 @@ export class VisibleSessions extends Disposable {
 				if (this._visibleList.length === 0) {
 					this._activeSession.set(undefined, tsx);
 				} else {
-					const fallbackIdx = Math.max(0, Math.min(activeIdx - 1, this._visibleList.length - 1));
+					const fallbackIdx = Math.max(
+						0,
+						Math.min(activeIdx - 1, this._visibleList.length - 1),
+					);
 					const fallbackId = this._visibleList[fallbackIdx];
-					const fallbackWrapper = fallbackId !== undefined ? this._wrappers.get(fallbackId) : undefined;
+					const fallbackWrapper =
+						fallbackId !== undefined
+							? this._wrappers.get(fallbackId)
+							: undefined;
 					this._activeSession.set(fallbackWrapper, tsx);
 				}
 			}
@@ -531,25 +662,37 @@ export class VisibleSessions extends Disposable {
 		// data populated for rendering in the grid.
 		let observedSession = false;
 		const visibleSessionRef = visibleSession;
-		visibleSession.addDisposable(autorun(reader => {
-			if (observedSession || session.loading.read(reader)) {
-				return;
-			}
-			observedSession = true;
-			this._agentSessionsService.model.observeSession(session.resource);
-		}));
+		visibleSession.addDisposable(
+			autorun((reader) => {
+				if (observedSession || session.loading.read(reader)) {
+					return;
+				}
+				observedSession = true;
+				this._agentSessionsService.model.observeSession(session.resource);
+			}),
+		);
 
 		// Track chat list changes — if the active chat is removed, fall back to last.
-		visibleSession.addDisposable(autorun(reader => {
-			const chats = session.chats.read(reader);
-			const activeChat = visibleSessionRef.activeChat.read(reader);
-			if (activeChat && !chats.some(c => this._uriIdentityService.extUri.isEqual(c.resource, activeChat.resource))) {
-				const fallback = chats[chats.length - 1] ?? session.mainChat;
-				if (fallback) {
-					visibleSessionRef.setActiveChat(fallback);
+		visibleSession.addDisposable(
+			autorun((reader) => {
+				const chats = session.chats.read(reader);
+				const activeChat = visibleSessionRef.activeChat.read(reader);
+				if (
+					activeChat &&
+					!chats.some((c) =>
+						this._uriIdentityService.extUri.isEqual(
+							c.resource,
+							activeChat.resource,
+						),
+					)
+				) {
+					const fallback = chats[chats.length - 1] ?? session.mainChat;
+					if (fallback) {
+						visibleSessionRef.setActiveChat(fallback);
+					}
 				}
-			}
-		}));
+			}),
+		);
 
 		this._wrappers.set(session.sessionId, visibleSession);
 		return visibleSession;

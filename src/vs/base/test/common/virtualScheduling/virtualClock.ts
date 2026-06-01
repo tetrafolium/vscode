@@ -3,10 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { compareBy, numberComparator, tieBreakComparators } from '../../../common/arrays.js';
-import { Emitter } from '../../../common/event.js';
-import { IDisposable } from '../../../common/lifecycle.js';
-import { Trace } from './trace.js';
+import {
+	compareBy,
+	numberComparator,
+	tieBreakComparators,
+} from "../../../common/arrays.js";
+import { Emitter } from "../../../common/event.js";
+import { IDisposable } from "../../../common/lifecycle.js";
+import { Trace } from "./trace.js";
 
 export type VirtualTime = number;
 
@@ -36,11 +40,13 @@ export interface VirtualEvent {
 	run(): void;
 }
 
-interface QueuedEvent extends VirtualEvent { readonly id: number }
+interface QueuedEvent extends VirtualEvent {
+	readonly id: number;
+}
 
 const eventComparator = tieBreakComparators<QueuedEvent>(
-	compareBy(e => e.time, numberComparator),
-	compareBy(e => e.id, numberComparator),
+	compareBy((e) => e.time, numberComparator),
+	compareBy((e) => e.id, numberComparator),
 );
 
 /**
@@ -55,7 +61,9 @@ const eventComparator = tieBreakComparators<QueuedEvent>(
 export class VirtualClock {
 	private _now: VirtualTime;
 	private _idCounter = 0;
-	private readonly _queue = new SimplePriorityQueue<QueuedEvent>(eventComparator);
+	private readonly _queue = new SimplePriorityQueue<QueuedEvent>(
+		eventComparator,
+	);
 	private readonly _onEventScheduled = new Emitter<VirtualEvent>();
 
 	public readonly onEventScheduled = this._onEventScheduled.event;
@@ -64,12 +72,18 @@ export class VirtualClock {
 		this._now = startTime;
 	}
 
-	get now(): VirtualTime { return this._now; }
-	get hasEvents(): boolean { return this._queue.length > 0; }
+	get now(): VirtualTime {
+		return this._now;
+	}
+	get hasEvents(): boolean {
+		return this._queue.length > 0;
+	}
 
 	schedule(event: VirtualEvent): IDisposable {
 		if (event.time < this._now) {
-			throw new Error(`Scheduled time (${event.time}) must be >= now (${this._now}).`);
+			throw new Error(
+				`Scheduled time (${event.time}) must be >= now (${this._now}).`,
+			);
 		}
 		const queued: QueuedEvent = { ...event, id: this._idCounter++ };
 		this._queue.add(queued);
@@ -77,7 +91,9 @@ export class VirtualClock {
 		return { dispose: () => this._queue.remove(queued) };
 	}
 
-	peekNext(): VirtualEvent | undefined { return this._queue.getMin(); }
+	peekNext(): VirtualEvent | undefined {
+		return this._queue.getMin();
+	}
 
 	runNext(): VirtualEvent | undefined {
 		const e = this._queue.removeMin();
@@ -88,16 +104,20 @@ export class VirtualClock {
 		return e;
 	}
 
-	getEvents(): readonly VirtualEvent[] { return this._queue.toSortedArray(); }
+	getEvents(): readonly VirtualEvent[] {
+		return this._queue.toSortedArray();
+	}
 }
 
 class SimplePriorityQueue<T> {
 	private _items: T[] = [];
 	private _sorted = true;
 
-	constructor(private readonly _compare: (a: T, b: T) => number) { }
+	constructor(private readonly _compare: (a: T, b: T) => number) {}
 
-	get length(): number { return this._items.length; }
+	get length(): number {
+		return this._items.length;
+	}
 
 	add(value: T): void {
 		this._items.push(value);
@@ -106,15 +126,28 @@ class SimplePriorityQueue<T> {
 
 	remove(value: T): void {
 		const i = this._items.indexOf(value);
-		if (i !== -1) { this._items.splice(i, 1); }
+		if (i !== -1) {
+			this._items.splice(i, 1);
+		}
 	}
 
-	getMin(): T | undefined { this._ensureSorted(); return this._items[0]; }
-	removeMin(): T | undefined { this._ensureSorted(); return this._items.shift(); }
-	toSortedArray(): T[] { this._ensureSorted(); return [...this._items]; }
+	getMin(): T | undefined {
+		this._ensureSorted();
+		return this._items[0];
+	}
+	removeMin(): T | undefined {
+		this._ensureSorted();
+		return this._items.shift();
+	}
+	toSortedArray(): T[] {
+		this._ensureSorted();
+		return [...this._items];
+	}
 
 	private _ensureSorted(): void {
-		if (this._sorted) { return; }
+		if (this._sorted) {
+			return;
+		}
 		this._items.sort(this._compare);
 		this._sorted = true;
 	}

@@ -101,6 +101,7 @@ Your task is to predict and complete the changes the developer would have made n
 - Apologize with "Sorry, I can't assist with that." for requests that may breach Microsoft content guidelines.
 - Avoid undoing or reverting the developer's last change unless there are obvious typos or errors.`;
 
-export const simplifiedPrompt = 'Predict next code edit based on the context given by the user.';
+export const simplifiedPrompt =
+	'Predict next code edit based on the context given by the user.';
 
 export const xtab275SystemPrompt = `Predict the next code edit based on user context, following Microsoft content policies and avoiding copyright violations. If a request may breach guidelines, reply: "Sorry, I can't assist with that."`;

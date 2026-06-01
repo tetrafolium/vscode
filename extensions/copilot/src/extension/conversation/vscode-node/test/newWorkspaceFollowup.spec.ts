@@ -17,20 +17,28 @@ suite('isUriContained', () => {
 
 	test('accepts paths at or within the parent folder', () => {
 		expect(isUriContained(parent, parent)).toBe(true);
-		expect(isUriContained(parent, Uri.file('/home/u/proj/a.txt'))).toBe(true);
-		expect(isUriContained(parent, Uri.file('/home/u/proj/sub/dir/a.txt'))).toBe(true);
+		expect(isUriContained(parent, Uri.file('/home/u/proj/a.txt'))).toBe(
+			true,
+		);
+		expect(
+			isUriContained(parent, Uri.file('/home/u/proj/sub/dir/a.txt')),
+		).toBe(true);
 	});
 
 	test('rejects sibling paths with a shared name prefix', () => {
 		// Classic prefix-collision: /home/u/proj vs /home/u/proj-evil
-		expect(isUriContained(parent, Uri.file('/home/u/proj-evil/x'))).toBe(false);
+		expect(isUriContained(parent, Uri.file('/home/u/proj-evil/x'))).toBe(
+			false,
+		);
 		expect(isUriContained(parent, Uri.file('/home/u/projx'))).toBe(false);
 	});
 
 	test('rejects paths that escape the parent via traversal', () => {
 		// `Uri.joinPath` normalizes `..` before the comparison runs, so we
 		// supply the resolved URI that the production code would actually see.
-		expect(isUriContained(parent, Uri.file('/home/u/package.json'))).toBe(false);
+		expect(isUriContained(parent, Uri.file('/home/u/package.json'))).toBe(
+			false,
+		);
 		expect(isUriContained(parent, Uri.file('/etc/passwd'))).toBe(false);
 	});
 
@@ -48,8 +56,12 @@ suite('isUriContained', () => {
 
 	test('handles a parent path that already ends with a slash', () => {
 		const withSlash = parent.with({ path: parent.path + '/' });
-		expect(isUriContained(withSlash, Uri.file('/home/u/proj/a.txt'))).toBe(true);
-		expect(isUriContained(withSlash, Uri.file('/home/u/proj-evil/x'))).toBe(false);
+		expect(isUriContained(withSlash, Uri.file('/home/u/proj/a.txt'))).toBe(
+			true,
+		);
+		expect(isUriContained(withSlash, Uri.file('/home/u/proj-evil/x'))).toBe(
+			false,
+		);
 	});
 });
 
@@ -69,12 +81,20 @@ suite('resolveProjectFileUri', () => {
 	const workspaceUri = Uri.file('/home/u/parent/myrepo');
 
 	test('handles a `/`-prefixed file path (GitHub repo-template flow)', () => {
-		const fileUri = resolveProjectFileUri(workspaceUri, 'myrepo', '/src/index.ts');
+		const fileUri = resolveProjectFileUri(
+			workspaceUri,
+			'myrepo',
+			'/src/index.ts',
+		);
 		expect(fileUri.path).toBe('/home/u/parent/myrepo/src/index.ts');
 	});
 
 	test('handles a non-prefixed file path (copilot new-workspace flow)', () => {
-		const fileUri = resolveProjectFileUri(workspaceUri, 'myrepo', 'myrepo/src/index.ts');
+		const fileUri = resolveProjectFileUri(
+			workspaceUri,
+			'myrepo',
+			'myrepo/src/index.ts',
+		);
 		expect(fileUri.path).toBe('/home/u/parent/myrepo/src/index.ts');
 	});
 
@@ -82,7 +102,11 @@ suite('resolveProjectFileUri', () => {
 		// A bypass of the parser must still be caught downstream by `isUriContained`.
 		// `Uri.joinPath` normalizes `..`, so the resolved path escapes the workspace
 		// and `isUriContained(workspaceUri, fileUri)` will return false.
-		const fileUri = resolveProjectFileUri(workspaceUri, 'myrepo', 'myrepo/../package.json');
+		const fileUri = resolveProjectFileUri(
+			workspaceUri,
+			'myrepo',
+			'myrepo/../package.json',
+		);
 		expect(isUriContained(workspaceUri, fileUri)).toBe(false);
 	});
 
@@ -93,11 +117,19 @@ suite('resolveProjectFileUri', () => {
 		// as path segments (it does NOT drop `baseUri.path` when the next segment
 		// starts with `/`). Asserting this here so the source/destination URI
 		// shapes do not drift in the future.
-		const baseUri = Uri.parse('vscode-copilot-github-workspace://req/myrepo');
+		const baseUri = Uri.parse(
+			'vscode-copilot-github-workspace://req/myrepo',
+		);
 		// GitHub repo-template flow: emitted file = `/src/index.ts`.
-		expect(Uri.joinPath(baseUri, '/src/index.ts').path).toBe('/myrepo/src/index.ts');
+		expect(Uri.joinPath(baseUri, '/src/index.ts').path).toBe(
+			'/myrepo/src/index.ts',
+		);
 		// Copilot new-workspace flow: emitted file = `myproject/src/index.ts`.
-		const copilotBase = Uri.parse('vscode-copilot-workspace://req/myproject');
-		expect(Uri.joinPath(copilotBase, 'myproject/src/index.ts').path).toBe('/myproject/myproject/src/index.ts');
+		const copilotBase = Uri.parse(
+			'vscode-copilot-workspace://req/myproject',
+		);
+		expect(Uri.joinPath(copilotBase, 'myproject/src/index.ts').path).toBe(
+			'/myproject/myproject/src/index.ts',
+		);
 	});
 });

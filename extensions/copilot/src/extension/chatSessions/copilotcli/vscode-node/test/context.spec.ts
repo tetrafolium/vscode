@@ -26,15 +26,29 @@ class MockHttpServerWithEvents {
 
 	readonly onDidClientConnect = vi.fn((listener: Listener) => {
 		this._connectListeners.push(listener);
-		return { dispose: () => { this._connectListeners = this._connectListeners.filter(l => l !== listener); } };
+		return {
+			dispose: () => {
+				this._connectListeners = this._connectListeners.filter(
+					(l) => l !== listener,
+				);
+			},
+		};
 	});
 
 	readonly onDidClientDisconnect = vi.fn((listener: Listener) => {
 		this._disconnectListeners.push(listener);
-		return { dispose: () => { this._disconnectListeners = this._disconnectListeners.filter(l => l !== listener); } };
+		return {
+			dispose: () => {
+				this._disconnectListeners = this._disconnectListeners.filter(
+					(l) => l !== listener,
+				);
+			},
+		};
 	});
 
-	readonly getConnectedSessionIds = vi.fn((): readonly string[] => this._connectedSessionIds);
+	readonly getConnectedSessionIds = vi.fn(
+		(): readonly string[] => this._connectedSessionIds,
+	);
 
 	setConnectedSessionIds(ids: readonly string[]): void {
 		this._connectedSessionIds = ids;

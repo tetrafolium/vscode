@@ -9,7 +9,12 @@ import { ILogger } from '../../../../../platform/log/common/logService';
 import { ICopilotCLISessionTracker } from '../copilotCLISessionTracker';
 import { makeTextResult } from './utils';
 
-export function registerUpdateSessionNameTool(server: McpServer, logger: ILogger, sessionTracker: ICopilotCLISessionTracker, sessionId: string): void {
+export function registerUpdateSessionNameTool(
+	server: McpServer,
+	logger: ILogger,
+	sessionTracker: ICopilotCLISessionTracker,
+	sessionId: string,
+): void {
 	const schema = {
 		name: z.string().describe('The new session name'),
 	};
@@ -25,6 +30,6 @@ export function registerUpdateSessionNameTool(server: McpServer, logger: ILogger
 			logger.debug(`Updating session name for ${sessionId} to "${name}"`);
 			sessionTracker.setSessionName(sessionId, name);
 			return makeTextResult({ success: true });
-		}
+		},
 	);
 }

@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { IDisposable } from '../../../../base/common/lifecycle.js';
-import { IObservable } from '../../../../base/common/observable.js';
-import { URI } from '../../../../base/common/uri.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { IDisposable } from "../../../../base/common/lifecycle.js";
+import { IObservable } from "../../../../base/common/observable.js";
+import { URI } from "../../../../base/common/uri.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
 
 export enum GitRefType {
 	Head,
 	RemoteHead,
-	Tag
+	Tag,
 }
 
 export interface GitRef {
@@ -26,7 +26,7 @@ export interface GitRefQuery {
 	readonly contains?: string;
 	readonly count?: number;
 	readonly pattern?: string | string[];
-	readonly sort?: 'alphabetically' | 'committerdate' | 'creatordate';
+	readonly sort?: "alphabetically" | "committerdate" | "creatordate";
 }
 
 export interface GitChange {
@@ -80,7 +80,11 @@ export interface IGitRepository {
 	updateState(state: GitRepositoryState): void;
 
 	getRefs(query: GitRefQuery, token?: CancellationToken): Promise<GitRef[]>;
-	diffBetweenWithStats(ref1: string, ref2: string, path?: string): Promise<GitDiffChange[]>;
+	diffBetweenWithStats(
+		ref1: string,
+		ref2: string,
+		path?: string,
+	): Promise<GitDiffChange[]>;
 	diffBetweenWithStats2(ref: string, path?: string): Promise<GitDiffChange[]>;
 }
 
@@ -88,12 +92,25 @@ export interface IGitExtensionDelegate {
 	readonly repositories: Iterable<IGitRepository>;
 	openRepository(uri: URI): Promise<IGitRepository | undefined>;
 
-	getRefs(root: URI, query?: GitRefQuery, token?: CancellationToken): Promise<GitRef[]>;
-	diffBetweenWithStats(root: URI, ref1: string, ref2: string, path?: string): Promise<GitDiffChange[]>;
-	diffBetweenWithStats2(root: URI, ref: string, path?: string): Promise<GitDiffChange[]>;
+	getRefs(
+		root: URI,
+		query?: GitRefQuery,
+		token?: CancellationToken,
+	): Promise<GitRef[]>;
+	diffBetweenWithStats(
+		root: URI,
+		ref1: string,
+		ref2: string,
+		path?: string,
+	): Promise<GitDiffChange[]>;
+	diffBetweenWithStats2(
+		root: URI,
+		ref: string,
+		path?: string,
+	): Promise<GitDiffChange[]>;
 }
 
-export const IGitService = createDecorator<IGitService>('gitService');
+export const IGitService = createDecorator<IGitService>("gitService");
 
 export interface IGitService {
 	readonly _serviceBrand: undefined;

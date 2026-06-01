@@ -4,12 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it } from 'vitest';
-import { ContributedToolName, getContributedToolName, getToolName, mapContributedToolNamesInSchema, mapContributedToolNamesInString, ToolName } from '../toolNames';
+import {
+	ContributedToolName,
+	getContributedToolName,
+	getToolName,
+	mapContributedToolNamesInSchema,
+	mapContributedToolNamesInString,
+	ToolName,
+} from '../toolNames';
 
 describe('ToolNames', () => {
 	it('Can map tool names', async () => {
-		expect(getContributedToolName(ToolName.ApplyPatch)).toBe(ContributedToolName.ApplyPatch);
-		expect(getToolName(ContributedToolName.ApplyPatch)).toBe(ToolName.ApplyPatch);
+		expect(getContributedToolName(ToolName.ApplyPatch)).toBe(
+			ContributedToolName.ApplyPatch,
+		);
+		expect(getToolName(ContributedToolName.ApplyPatch)).toBe(
+			ToolName.ApplyPatch,
+		);
 	});
 
 	it('returns original name for unmapped core tools', () => {

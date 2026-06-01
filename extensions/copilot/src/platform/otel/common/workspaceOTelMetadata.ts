@@ -4,8 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { URI } from '../../../util/vs/base/common/uri';
-import { isEqualOrParent, relativePath } from '../../../util/vs/base/common/resources';
-import { getOrderedRepoInfosFromContext, type IGitService, normalizeFetchUrl, type RepoContext } from '../../git/common/gitService';
+import {
+	isEqualOrParent,
+	relativePath,
+} from '../../../util/vs/base/common/resources';
+import {
+	getOrderedRepoInfosFromContext,
+	type IGitService,
+	normalizeFetchUrl,
+	type RepoContext,
+} from '../../git/common/gitService';
 import { CopilotChatAttr, GitHubCopilotAttr } from './genAiAttributes';
 
 export interface WorkspaceOTelMetadata {
@@ -30,7 +38,10 @@ export function resolveWorkspaceOTelMetadata(
 	return buildWorkspaceMetadata(repoContext, fileUri);
 }
 
-function buildWorkspaceMetadata(repoContext: RepoContext, fileUri?: URI): WorkspaceOTelMetadata {
+function buildWorkspaceMetadata(
+	repoContext: RepoContext,
+	fileUri?: URI,
+): WorkspaceOTelMetadata {
 	let remoteUrl: string | undefined;
 	const repoInfo = Array.from(getOrderedRepoInfosFromContext(repoContext))[0];
 	if (repoInfo?.fetchUrl) {

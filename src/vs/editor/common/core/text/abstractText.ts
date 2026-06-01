@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { assert } from '../../../../base/common/assert.js';
-import { splitLines } from '../../../../base/common/strings.js';
-import { Position } from '../position.js';
-import { Range } from '../range.js';
-import { LineRange } from '../ranges/lineRange.js';
-import { OffsetRange } from '../ranges/offsetRange.js';
-import { TextLength } from '../text/textLength.js';
-import { PositionOffsetTransformer } from './positionToOffsetImpl.js';
+import { assert } from "../../../../base/common/assert.js";
+import { splitLines } from "../../../../base/common/strings.js";
+import { Position } from "../position.js";
+import { Range } from "../range.js";
+import { LineRange } from "../ranges/lineRange.js";
+import { OffsetRange } from "../ranges/offsetRange.js";
+import { TextLength } from "../text/textLength.js";
+import { PositionOffsetTransformer } from "./positionToOffsetImpl.js";
 
 export abstract class AbstractText {
 	abstract getValueOfRange(range: Range): string;
@@ -33,7 +33,9 @@ export abstract class AbstractText {
 	}
 
 	getLineLength(lineNumber: number): number {
-		return this.getValueOfRange(new Range(lineNumber, 1, lineNumber, Number.MAX_SAFE_INTEGER)).length;
+		return this.getValueOfRange(
+			new Range(lineNumber, 1, lineNumber, Number.MAX_SAFE_INTEGER),
+		).length;
 	}
 
 	private _transformer: PositionOffsetTransformer | undefined = undefined;
@@ -46,7 +48,9 @@ export abstract class AbstractText {
 	}
 
 	getLineAt(lineNumber: number): string {
-		return this.getValueOfRange(new Range(lineNumber, 1, lineNumber, Number.MAX_SAFE_INTEGER));
+		return this.getValueOfRange(
+			new Range(lineNumber, 1, lineNumber, Number.MAX_SAFE_INTEGER),
+		);
 	}
 
 	getLines(): string[] {
@@ -55,7 +59,7 @@ export abstract class AbstractText {
 	}
 
 	getLinesOfRange(range: LineRange): string[] {
-		return range.mapToLineArray(lineNumber => this.getLineAt(lineNumber));
+		return range.mapToLineArray((lineNumber) => this.getLineAt(lineNumber));
 	}
 
 	equals(other: AbstractText): boolean {
@@ -69,7 +73,7 @@ export abstract class AbstractText {
 export class LineBasedText extends AbstractText {
 	constructor(
 		private readonly _getLineContent: (lineNumber: number) => string,
-		private readonly _lineCount: number
+		private readonly _lineCount: number,
 	) {
 		assert(_lineCount >= 1);
 
@@ -78,13 +82,23 @@ export class LineBasedText extends AbstractText {
 
 	override getValueOfRange(range: Range): string {
 		if (range.startLineNumber === range.endLineNumber) {
-			return this._getLineContent(range.startLineNumber).substring(range.startColumn - 1, range.endColumn - 1);
+			return this._getLineContent(range.startLineNumber).substring(
+				range.startColumn - 1,
+				range.endColumn - 1,
+			);
 		}
-		let result = this._getLineContent(range.startLineNumber).substring(range.startColumn - 1);
+		let result = this._getLineContent(range.startLineNumber).substring(
+			range.startColumn - 1,
+		);
 		for (let i = range.startLineNumber + 1; i < range.endLineNumber; i++) {
-			result += '\n' + this._getLineContent(i);
+			result += "\n" + this._getLineContent(i);
 		}
-		result += '\n' + this._getLineContent(range.endLineNumber).substring(0, range.endColumn - 1);
+		result +=
+			"\n" +
+			this._getLineContent(range.endLineNumber).substring(
+				0,
+				range.endColumn - 1,
+			);
 		return result;
 	}
 
@@ -100,10 +114,7 @@ export class LineBasedText extends AbstractText {
 
 export class ArrayText extends LineBasedText {
 	constructor(lines: string[]) {
-		super(
-			lineNumber => lines[lineNumber - 1],
-			lines.length
-		);
+		super((lineNumber) => lines[lineNumber - 1], lines.length);
 	}
 }
 

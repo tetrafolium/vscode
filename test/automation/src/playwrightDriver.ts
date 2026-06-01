@@ -3,25 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as playwright from '@playwright/test';
-import type { Protocol } from 'playwright-core/types/protocol';
-import { dirname, join } from 'path';
-import { promises, readFileSync } from 'fs';
-import { IWindowDriver } from './driver';
-import { measureAndLog } from './logger';
-import { LaunchOptions } from './code';
-import { teardown } from './processes';
-import { ChildProcess } from 'child_process';
-import type { AxeResults, RunOptions } from 'axe-core';
+import * as playwright from "@playwright/test";
+import type { Protocol } from "playwright-core/types/protocol";
+import { dirname, join } from "path";
+import { promises, readFileSync } from "fs";
+import { IWindowDriver } from "./driver";
+import { measureAndLog } from "./logger";
+import { LaunchOptions } from "./code";
+import { teardown } from "./processes";
+import { ChildProcess } from "child_process";
+import type { AxeResults, RunOptions } from "axe-core";
 
 // Load axe-core source for injection into pages (works with Electron)
-let axeSource = '';
+let axeSource = "";
 try {
-	const axePath = require.resolve('axe-core/axe.min.js');
-	axeSource = readFileSync(axePath, 'utf-8');
+	const axePath = require.resolve("axe-core/axe.min.js");
+	axeSource = readFileSync(axePath, "utf-8");
 } catch {
 	// axe-core may not be installed; keep axeSource empty to avoid failing module initialization
-	axeSource = '';
+	axeSource = "";
 }
 
 type PageFunction<Arg, T> = (arg: Arg) => T | Promise<T>;
@@ -45,33 +45,33 @@ export interface AccessibilityScanOptions {
 }
 
 export class PlaywrightDriver {
-
 	private static traceCounter = 1;
 	private static screenShotCounter = 1;
 
 	private static readonly vscodeToPlaywrightKey: { [key: string]: string } = {
-		cmd: 'Meta',
-		ctrl: 'Control',
-		shift: 'Shift',
-		enter: 'Enter',
-		escape: 'Escape',
-		right: 'ArrowRight',
-		up: 'ArrowUp',
-		down: 'ArrowDown',
-		left: 'ArrowLeft',
-		home: 'Home',
-		esc: 'Escape'
+		cmd: "Meta",
+		ctrl: "Control",
+		shift: "Shift",
+		enter: "Enter",
+		escape: "Escape",
+		right: "ArrowRight",
+		up: "ArrowUp",
+		down: "ArrowDown",
+		left: "ArrowLeft",
+		home: "Home",
+		esc: "Escape",
 	};
 
 	constructor(
-		private readonly application: playwright.Browser | playwright.ElectronApplication,
+		private readonly application:
+			| playwright.Browser
+			| playwright.ElectronApplication,
 		private readonly context: playwright.BrowserContext,
 		private _currentPage: playwright.Page,
 		private readonly serverProcess: ChildProcess | undefined,
 		private readonly whenLoaded: Promise<unknown>,
-		private readonly options: LaunchOptions
-	) {
-	}
+		private readonly options: LaunchOptions,
+	) {}
 
 	get browserContext(): playwright.BrowserContext {
 		return this.context;
@@ -91,7 +91,7 @@ export class PlaywrightDriver {
 	 * For browser contexts, returns all pages.
 	 */
 	getAllWindows(): playwright.Page[] {
-		if ('windows' in this.application) {
+		if ("windows" in this.application) {
 			return (this.application as playwright.ElectronApplication).windows();
 		}
 		return this.context.pages();
@@ -108,7 +108,7 @@ export class PlaywrightDriver {
 	 */
 	switchToWindow(indexOrUrl: number | string): playwright.Page | undefined {
 		const windows = this.getAllWindows();
-		if (typeof indexOrUrl === 'number') {
+		if (typeof indexOrUrl === "number") {
 			if (indexOrUrl >= 0 && indexOrUrl < windows.length) {
 				this._currentPage = windows[indexOrUrl];
 				// Clear CDP session as it's attached to the previous page
@@ -117,9 +117,9 @@ export class PlaywrightDriver {
 			}
 		} else {
 			// First try exact match, then fall back to substring match
-			let found = windows.find(w => w.url() === indexOrUrl);
+			let found = windows.find((w) => w.url() === indexOrUrl);
 			if (!found) {
-				found = windows.find(w => w.url().includes(indexOrUrl));
+				found = windows.find((w) => w.url().includes(indexOrUrl));
 			}
 			if (found) {
 				this._currentPage = found;
@@ -139,7 +139,7 @@ export class PlaywrightDriver {
 		return windows.map((p, index) => ({
 			index,
 			url: p.url(),
-			isCurrent: p === this._currentPage
+			isCurrent: p === this._currentPage,
 		}));
 	}
 
@@ -150,25 +150,32 @@ export class PlaywrightDriver {
 	 */
 	async screenshotBuffer(fullPage: boolean = false): Promise<Buffer> {
 		return await this.page.screenshot({
-			type: 'png',
-			fullPage
+			type: "png",
+			fullPage,
 		});
 	}
 
 	/**
 	 * Get the accessibility snapshot of the current window.
 	 */
-	async getAccessibilitySnapshot(): Promise<playwright.Accessibility['snapshot'] extends () => Promise<infer T> ? T : never> {
+	async getAccessibilitySnapshot(): Promise<
+		playwright.Accessibility["snapshot"] extends () => Promise<infer T>
+			? T
+			: never
+	> {
 		return await this.page.accessibility.snapshot();
 	}
 
 	/**
 	 * Click on an element using CSS selector with options.
 	 */
-	async clickSelector(selector: string, options?: { button?: 'left' | 'right' | 'middle'; clickCount?: number }): Promise<void> {
+	async clickSelector(
+		selector: string,
+		options?: { button?: "left" | "right" | "middle"; clickCount?: number },
+	): Promise<void> {
 		await this.page.click(selector, {
-			button: options?.button ?? 'left',
-			clickCount: options?.clickCount ?? 1
+			button: options?.button ?? "left",
+			clickCount: options?.clickCount ?? 1,
 		});
 	}
 
@@ -178,7 +185,11 @@ export class PlaywrightDriver {
 	 * @param text - Text to type
 	 * @param slowly - Whether to type character by character (triggers key events)
 	 */
-	async typeText(selector: string, text: string, slowly: boolean = false): Promise<void> {
+	async typeText(
+		selector: string,
+		text: string,
+		slowly: boolean = false,
+	): Promise<void> {
 		if (slowly) {
 			await this.page.type(selector, text, { delay: 50 });
 		} else {
@@ -190,32 +201,48 @@ export class PlaywrightDriver {
 	 * Evaluate a JavaScript expression in the current window.
 	 */
 	async evaluateExpression<T = unknown>(expression: string): Promise<T> {
-		return await this.page.evaluate(expression) as T;
+		return (await this.page.evaluate(expression)) as T;
 	}
 
 	/**
 	 * Get information about elements matching a selector.
 	 */
-	async getLocatorInfo(selector: string, action?: 'count' | 'textContent' | 'innerHTML' | 'boundingBox' | 'isVisible'): Promise<
-		number | string[] | { x: number; y: number; width: number; height: number } | null | boolean | { count: number; firstVisible: boolean }
+	async getLocatorInfo(
+		selector: string,
+		action?:
+			| "count"
+			| "textContent"
+			| "innerHTML"
+			| "boundingBox"
+			| "isVisible",
+	): Promise<
+		| number
+		| string[]
+		| { x: number; y: number; width: number; height: number }
+		| null
+		| boolean
+		| { count: number; firstVisible: boolean }
 	> {
 		const locator = this.page.locator(selector);
 
 		switch (action) {
-			case 'count':
+			case "count":
 				return await locator.count();
-			case 'textContent':
+			case "textContent":
 				return await locator.allTextContents();
-			case 'innerHTML':
+			case "innerHTML":
 				return await locator.allInnerTexts();
-			case 'boundingBox':
+			case "boundingBox":
 				return await locator.first().boundingBox();
-			case 'isVisible':
+			case "isVisible":
 				return await locator.first().isVisible();
 			default:
 				return {
 					count: await locator.count(),
-					firstVisible: await locator.first().isVisible().catch(() => false)
+					firstVisible: await locator
+						.first()
+						.isVisible()
+						.catch(() => false),
 				};
 		}
 	}
@@ -223,10 +250,16 @@ export class PlaywrightDriver {
 	/**
 	 * Wait for an element to reach a specific state.
 	 */
-	async waitForElement(selector: string, options?: { state?: 'attached' | 'detached' | 'visible' | 'hidden'; timeout?: number }): Promise<void> {
+	async waitForElement(
+		selector: string,
+		options?: {
+			state?: "attached" | "detached" | "visible" | "hidden";
+			timeout?: number;
+		},
+	): Promise<void> {
 		await this.page.waitForSelector(selector, {
-			state: options?.state ?? 'visible',
-			timeout: options?.timeout ?? 30000
+			state: options?.state ?? "visible",
+			timeout: options?.timeout ?? 30000,
 		});
 	}
 
@@ -240,7 +273,10 @@ export class PlaywrightDriver {
 	/**
 	 * Drag from one element to another.
 	 */
-	async dragSelector(sourceSelector: string, targetSelector: string): Promise<void> {
+	async dragSelector(
+		sourceSelector: string,
+		targetSelector: string,
+	): Promise<void> {
 		await this.page.dragAndDrop(sourceSelector, targetSelector);
 	}
 
@@ -261,17 +297,26 @@ export class PlaywrightDriver {
 	/**
 	 * Click at a specific position.
 	 */
-	async mouseClick(x: number, y: number, options?: { button?: 'left' | 'right' | 'middle'; clickCount?: number }): Promise<void> {
+	async mouseClick(
+		x: number,
+		y: number,
+		options?: { button?: "left" | "right" | "middle"; clickCount?: number },
+	): Promise<void> {
 		await this.page.mouse.click(x, y, {
-			button: options?.button ?? 'left',
-			clickCount: options?.clickCount ?? 1
+			button: options?.button ?? "left",
+			clickCount: options?.clickCount ?? 1,
 		});
 	}
 
 	/**
 	 * Drag from one position to another.
 	 */
-	async mouseDrag(startX: number, startY: number, endX: number, endY: number): Promise<void> {
+	async mouseDrag(
+		startX: number,
+		startY: number,
+		endX: number,
+		endY: number,
+	): Promise<void> {
 		await this.page.mouse.move(startX, startY);
 		await this.page.mouse.down();
 		await this.page.mouse.move(endX, endY);
@@ -281,7 +326,10 @@ export class PlaywrightDriver {
 	/**
 	 * Select an option in a dropdown.
 	 */
-	async selectOption(selector: string, value: string | string[]): Promise<string[]> {
+	async selectOption(
+		selector: string,
+		value: string | string[],
+	): Promise<string[]> {
 		return await this.page.selectOption(selector, value);
 	}
 
@@ -299,23 +347,33 @@ export class PlaywrightDriver {
 	 */
 	async getConsoleMessages(): Promise<{ type: string; text: string }[]> {
 		const messages = await this.page.consoleMessages();
-		return messages.map(m => ({
+		return messages.map((m) => ({
 			type: m.type(),
-			text: m.text()
+			text: m.text(),
 		}));
 	}
 
 	/**
 	 * Wait for text to appear, disappear, or a specified time to pass.
 	 */
-	async waitForText(options: { text?: string; textGone?: string; timeout?: number }): Promise<void> {
+	async waitForText(options: {
+		text?: string;
+		textGone?: string;
+		timeout?: number;
+	}): Promise<void> {
 		const { text, textGone, timeout = 30000 } = options;
 
 		if (text) {
-			await this.page.getByText(text).first().waitFor({ state: 'visible', timeout });
+			await this.page
+				.getByText(text)
+				.first()
+				.waitFor({ state: "visible", timeout });
 		}
 		if (textGone) {
-			await this.page.getByText(textGone).first().waitFor({ state: 'hidden', timeout });
+			await this.page
+				.getByText(textGone)
+				.first()
+				.waitFor({ state: "hidden", timeout });
 		}
 	}
 
@@ -323,7 +381,7 @@ export class PlaywrightDriver {
 	 * Wait for a specified time in milliseconds.
 	 */
 	async waitForTime(ms: number): Promise<void> {
-		await new Promise(resolve => setTimeout(resolve, ms));
+		await new Promise((resolve) => setTimeout(resolve, ms));
 	}
 
 	/**
@@ -331,7 +389,10 @@ export class PlaywrightDriver {
 	 */
 	async verifyElementVisible(selector: string): Promise<boolean> {
 		try {
-			await this.page.locator(selector).first().waitFor({ state: 'visible', timeout: 5000 });
+			await this.page
+				.locator(selector)
+				.first()
+				.waitFor({ state: "visible", timeout: 5000 });
 			return true;
 		} catch {
 			return false;
@@ -343,7 +404,10 @@ export class PlaywrightDriver {
 	 */
 	async verifyTextVisible(text: string): Promise<boolean> {
 		try {
-			await this.page.getByText(text).first().waitFor({ state: 'visible', timeout: 5000 });
+			await this.page
+				.getByText(text)
+				.first()
+				.waitFor({ state: "visible", timeout: 5000 });
 			return true;
 		} catch {
 			return false;
@@ -363,7 +427,11 @@ export class PlaywrightDriver {
 		}
 
 		try {
-			await measureAndLog(() => this.context.tracing.startChunk({ title: name }), `startTracing${name ? ` for ${name}` : ''}`, this.options.logger);
+			await measureAndLog(
+				() => this.context.tracing.startChunk({ title: name }),
+				`startTracing${name ? ` for ${name}` : ""}`,
+				this.options.logger,
+			);
 		} catch (error) {
 			// Ignore
 		}
@@ -377,11 +445,18 @@ export class PlaywrightDriver {
 		try {
 			let persistPath: string | undefined = undefined;
 			if (persist) {
-				const nameSuffix = name ? `-${name.replace(/\s+/g, '-')}` : '';
-				persistPath = join(this.options.logsPath, `playwright-trace-${PlaywrightDriver.traceCounter++}${nameSuffix}.zip`);
+				const nameSuffix = name ? `-${name.replace(/\s+/g, "-")}` : "";
+				persistPath = join(
+					this.options.logsPath,
+					`playwright-trace-${PlaywrightDriver.traceCounter++}${nameSuffix}.zip`,
+				);
 			}
 
-			await measureAndLog(() => this.context.tracing.stopChunk({ path: persistPath }), `stopTracing${name ? ` for ${name}` : ''}`, this.options.logger);
+			await measureAndLog(
+				() => this.context.tracing.stopChunk({ path: persistPath }),
+				`stopTracing${name ? ` for ${name}` : ""}`,
+				this.options.logger,
+			);
 
 			// To ensure we have a screenshot at the end where
 			// it failed, also trigger one explicitly. Tracing
@@ -411,76 +486,96 @@ export class PlaywrightDriver {
 
 	async collectGarbage() {
 		if (!this._cdpSession) {
-			throw new Error('CDP not started');
+			throw new Error("CDP not started");
 		}
 
-		await this._cdpSession.send('HeapProfiler.collectGarbage');
+		await this._cdpSession.send("HeapProfiler.collectGarbage");
 	}
 
-	async evaluate(options: Protocol.Runtime.evaluateParameters): Promise<Protocol.Runtime.evaluateReturnValue> {
+	async evaluate(
+		options: Protocol.Runtime.evaluateParameters,
+	): Promise<Protocol.Runtime.evaluateReturnValue> {
 		if (!this._cdpSession) {
-			throw new Error('CDP not started');
+			throw new Error("CDP not started");
 		}
 
-		return await this._cdpSession.send('Runtime.evaluate', options);
+		return await this._cdpSession.send("Runtime.evaluate", options);
 	}
 
-	async releaseObjectGroup(parameters: Protocol.Runtime.releaseObjectGroupParameters): Promise<void> {
+	async releaseObjectGroup(
+		parameters: Protocol.Runtime.releaseObjectGroupParameters,
+	): Promise<void> {
 		if (!this._cdpSession) {
-			throw new Error('CDP not started');
+			throw new Error("CDP not started");
 		}
 
-		await this._cdpSession.send('Runtime.releaseObjectGroup', parameters);
+		await this._cdpSession.send("Runtime.releaseObjectGroup", parameters);
 	}
 
-	async queryObjects(parameters: Protocol.Runtime.queryObjectsParameters): Promise<Protocol.Runtime.queryObjectsReturnValue> {
+	async queryObjects(
+		parameters: Protocol.Runtime.queryObjectsParameters,
+	): Promise<Protocol.Runtime.queryObjectsReturnValue> {
 		if (!this._cdpSession) {
-			throw new Error('CDP not started');
+			throw new Error("CDP not started");
 		}
 
-		return await this._cdpSession.send('Runtime.queryObjects', parameters);
+		return await this._cdpSession.send("Runtime.queryObjects", parameters);
 	}
 
-	async callFunctionOn(parameters: Protocol.Runtime.callFunctionOnParameters): Promise<Protocol.Runtime.callFunctionOnReturnValue> {
+	async callFunctionOn(
+		parameters: Protocol.Runtime.callFunctionOnParameters,
+	): Promise<Protocol.Runtime.callFunctionOnReturnValue> {
 		if (!this._cdpSession) {
-			throw new Error('CDP not started');
+			throw new Error("CDP not started");
 		}
 
-		return await this._cdpSession.send('Runtime.callFunctionOn', parameters);
+		return await this._cdpSession.send("Runtime.callFunctionOn", parameters);
 	}
 
 	async takeHeapSnapshot(): Promise<string> {
 		if (!this._cdpSession) {
-			throw new Error('CDP not started');
+			throw new Error("CDP not started");
 		}
 
-		let snapshot = '';
+		let snapshot = "";
 		const listener = (c: { chunk: string }) => {
 			snapshot += c.chunk;
 		};
 
-		this._cdpSession.addListener('HeapProfiler.addHeapSnapshotChunk', listener);
+		this._cdpSession.addListener("HeapProfiler.addHeapSnapshotChunk", listener);
 
-		await this._cdpSession.send('HeapProfiler.takeHeapSnapshot');
+		await this._cdpSession.send("HeapProfiler.takeHeapSnapshot");
 
-		this._cdpSession.removeListener('HeapProfiler.addHeapSnapshotChunk', listener);
+		this._cdpSession.removeListener(
+			"HeapProfiler.addHeapSnapshotChunk",
+			listener,
+		);
 		return snapshot;
 	}
 
-	async getProperties(parameters: Protocol.Runtime.getPropertiesParameters): Promise<Protocol.Runtime.getPropertiesReturnValue> {
+	async getProperties(
+		parameters: Protocol.Runtime.getPropertiesParameters,
+	): Promise<Protocol.Runtime.getPropertiesReturnValue> {
 		if (!this._cdpSession) {
-			throw new Error('CDP not started');
+			throw new Error("CDP not started");
 		}
 
-		return await this._cdpSession.send('Runtime.getProperties', parameters);
+		return await this._cdpSession.send("Runtime.getProperties", parameters);
 	}
 
 	private async takeScreenshot(name?: string): Promise<void> {
 		try {
-			const nameSuffix = name ? `-${name.replace(/\s+/g, '-')}` : '';
-			const persistPath = join(this.options.logsPath, `playwright-screenshot-${PlaywrightDriver.screenShotCounter++}${nameSuffix}.png`);
+			const nameSuffix = name ? `-${name.replace(/\s+/g, "-")}` : "";
+			const persistPath = join(
+				this.options.logsPath,
+				`playwright-screenshot-${PlaywrightDriver.screenShotCounter++}${nameSuffix}.png`,
+			);
 
-			await measureAndLog(() => this.page.screenshot({ path: persistPath, type: 'png' }), 'takeScreenshot', this.options.logger);
+			await measureAndLog(
+				() => this.page.screenshot({ path: persistPath, type: "png" }),
+				"takeScreenshot",
+				this.options.logger,
+			);
 		} catch (error) {
 			// Ignore
 		}
@@ -491,11 +586,14 @@ export class PlaywrightDriver {
 	}
 
 	async close() {
-
 		// Stop tracing
 		try {
 			if (this.options.tracing) {
-				await measureAndLog(() => this.context.tracing.stop(), 'stop tracing', this.options.logger);
+				await measureAndLog(
+					() => this.context.tracing.stop(),
+					"stop tracing",
+					this.options.logger,
+				);
 			}
 		} catch (error) {
 			// Ignore
@@ -504,7 +602,11 @@ export class PlaywrightDriver {
 		// Web: Extract client logs
 		if (this.options.web) {
 			try {
-				await measureAndLog(() => this.saveWebClientLogs(), 'saveWebClientLogs()', this.options.logger);
+				await measureAndLog(
+					() => this.saveWebClientLogs(),
+					"saveWebClientLogs()",
+					this.options.logger,
+				);
 			} catch (error) {
 				this.options.logger.log(`Error saving web client logs (${error})`);
 			}
@@ -512,14 +614,22 @@ export class PlaywrightDriver {
 
 		//  exit via `close` method
 		try {
-			await measureAndLog(() => this.application.close(), 'playwright.close()', this.options.logger);
+			await measureAndLog(
+				() => this.application.close(),
+				"playwright.close()",
+				this.options.logger,
+			);
 		} catch (error) {
 			this.options.logger.log(`Error closing application (${error})`);
 		}
 
 		// Server: via `teardown`
 		if (this.serverProcess) {
-			await measureAndLog(() => teardown(this.serverProcess!, this.options.logger), 'teardown server process', this.options.logger);
+			await measureAndLog(
+				() => teardown(this.serverProcess!, this.options.logger),
+				"teardown server process",
+				this.options.logger,
+			);
 		}
 	}
 
@@ -534,20 +644,27 @@ export class PlaywrightDriver {
 		}
 	}
 
-	async sendKeybinding(keybinding: string, accept?: () => Promise<void> | void) {
-		const chords = keybinding.split(' ');
+	async sendKeybinding(
+		keybinding: string,
+		accept?: () => Promise<void> | void,
+	) {
+		const chords = keybinding.split(" ");
 		for (let i = 0; i < chords.length; i++) {
 			const chord = chords[i];
 			if (i > 0) {
 				await this.wait(100);
 			}
 
-			if (keybinding.startsWith('Alt') || keybinding.startsWith('Control') || keybinding.startsWith('Backspace')) {
+			if (
+				keybinding.startsWith("Alt") ||
+				keybinding.startsWith("Control") ||
+				keybinding.startsWith("Backspace")
+			) {
 				await this.page.keyboard.press(keybinding);
 				return;
 			}
 
-			const keys = chord.split('+');
+			const keys = chord.split("+");
 			const keysDown: string[] = [];
 			for (let i = 0; i < keys.length; i++) {
 				if (keys[i] in PlaywrightDriver.vscodeToPlaywrightKey) {
@@ -564,7 +681,11 @@ export class PlaywrightDriver {
 		await accept?.();
 	}
 
-	async click(selector: string, xoffset?: number | undefined, yoffset?: number | undefined) {
+	async click(
+		selector: string,
+		xoffset?: number | undefined,
+		yoffset?: number | undefined,
+	) {
 		const { x, y } = await this.getElementXY(selector, xoffset, yoffset);
 		// getElementXY already incorporates both offsets (relative to the element's
 		// top-left corner) when both are provided, so don't add them again.
@@ -601,8 +722,13 @@ export class PlaywrightDriver {
 				await this.clickAtStablePosition(selector);
 			} catch (fallbackErr) {
 				const orig = err instanceof Error ? err.message : String(err);
-				const fb = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-				throw new Error(`robustClick fallback failed for '${selector}'. Original page.click error: ${orig}. Fallback error: ${fb}`);
+				const fb =
+					fallbackErr instanceof Error
+						? fallbackErr.message
+						: String(fallbackErr);
+				throw new Error(
+					`robustClick fallback failed for '${selector}'. Original page.click error: ${orig}. Fallback error: ${fb}`,
+				);
 			}
 		}
 	}
@@ -614,7 +740,7 @@ export class PlaywrightDriver {
 	 */
 	private isPointerInterceptedError(err: unknown): boolean {
 		const message = err instanceof Error ? err.message : String(err);
-		return message.includes('intercepts pointer events');
+		return message.includes("intercepts pointer events");
 	}
 
 	/**
@@ -624,7 +750,11 @@ export class PlaywrightDriver {
 	 * coordinates. Clicking the already-sampled {x,y} eliminates the re-sample
 	 * window, making the race window as small as possible (just the CDP round-trip).
 	 */
-	private async clickAtStablePosition(selector: string, intervalMs: number = 100, timeoutMs: number = 5000): Promise<void> {
+	private async clickAtStablePosition(
+		selector: string,
+		intervalMs: number = 100,
+		timeoutMs: number = 5000,
+	): Promise<void> {
 		let last: { x: number; y: number } | undefined;
 		const start = Date.now();
 		while (true) {
@@ -635,14 +765,19 @@ export class PlaywrightDriver {
 			}
 			last = current;
 			if (Date.now() - start > timeoutMs) {
-				throw new Error(`Element position never stabilized for '${selector}' within ${timeoutMs}ms`);
+				throw new Error(
+					`Element position never stabilized for '${selector}' within ${timeoutMs}ms`,
+				);
 			}
 			await wait(intervalMs);
 		}
 	}
 
 	async setValue(selector: string, text: string) {
-		return this.page.evaluate(([driver, selector, text]) => driver.setValue(selector, text), [await this.getDriverHandle(), selector, text] as const);
+		return this.page.evaluate(
+			([driver, selector, text]) => driver.setValue(selector, text),
+			[await this.getDriverHandle(), selector, text] as const,
+		);
 	}
 
 	async getTitle() {
@@ -650,31 +785,54 @@ export class PlaywrightDriver {
 	}
 
 	async isActiveElement(selector: string) {
-		return this.page.evaluate(([driver, selector]) => driver.isActiveElement(selector), [await this.getDriverHandle(), selector] as const);
+		return this.page.evaluate(
+			([driver, selector]) => driver.isActiveElement(selector),
+			[await this.getDriverHandle(), selector] as const,
+		);
 	}
 
 	async getElements(selector: string, recursive: boolean = false) {
-		return this.page.evaluate(([driver, selector, recursive]) => driver.getElements(selector, recursive), [await this.getDriverHandle(), selector, recursive] as const);
+		return this.page.evaluate(
+			([driver, selector, recursive]) =>
+				driver.getElements(selector, recursive),
+			[await this.getDriverHandle(), selector, recursive] as const,
+		);
 	}
 
 	async getElementXY(selector: string, xoffset?: number, yoffset?: number) {
-		return this.page.evaluate(([driver, selector, xoffset, yoffset]) => driver.getElementXY(selector, xoffset, yoffset), [await this.getDriverHandle(), selector, xoffset, yoffset] as const);
+		return this.page.evaluate(
+			([driver, selector, xoffset, yoffset]) =>
+				driver.getElementXY(selector, xoffset, yoffset),
+			[await this.getDriverHandle(), selector, xoffset, yoffset] as const,
+		);
 	}
 
 	async typeInEditor(selector: string, text: string) {
-		return this.page.evaluate(([driver, selector, text]) => driver.typeInEditor(selector, text), [await this.getDriverHandle(), selector, text] as const);
+		return this.page.evaluate(
+			([driver, selector, text]) => driver.typeInEditor(selector, text),
+			[await this.getDriverHandle(), selector, text] as const,
+		);
 	}
 
 	async getEditorSelection(selector: string) {
-		return this.page.evaluate(([driver, selector]) => driver.getEditorSelection(selector), [await this.getDriverHandle(), selector] as const);
+		return this.page.evaluate(
+			([driver, selector]) => driver.getEditorSelection(selector),
+			[await this.getDriverHandle(), selector] as const,
+		);
 	}
 
 	async getTerminalBuffer(selector: string) {
-		return this.page.evaluate(([driver, selector]) => driver.getTerminalBuffer(selector), [await this.getDriverHandle(), selector] as const);
+		return this.page.evaluate(
+			([driver, selector]) => driver.getTerminalBuffer(selector),
+			[await this.getDriverHandle(), selector] as const,
+		);
 	}
 
 	async writeInTerminal(selector: string, text: string) {
-		return this.page.evaluate(([driver, selector, text]) => driver.writeInTerminal(selector, text), [await this.getDriverHandle(), selector, text] as const);
+		return this.page.evaluate(
+			([driver, selector, text]) => driver.writeInTerminal(selector, text),
+			[await this.getDriverHandle(), selector, text] as const,
+		);
 	}
 
 	async getLocaleInfo() {
@@ -686,10 +844,14 @@ export class PlaywrightDriver {
 	}
 
 	async getLogs() {
-		return this.page.evaluate(([driver]) => driver.getLogs(), [await this.getDriverHandle()] as const);
+		return this.page.evaluate(([driver]) => driver.getLogs(), [
+			await this.getDriverHandle(),
+		] as const);
 	}
 
-	private async evaluateWithDriver<T>(pageFunction: PageFunction<IWindowDriver[], T>) {
+	private async evaluateWithDriver<T>(
+		pageFunction: PageFunction<IWindowDriver[], T>,
+	) {
 		return this.page.evaluate(pageFunction, [await this.getDriverHandle()]);
 	}
 
@@ -698,11 +860,13 @@ export class PlaywrightDriver {
 	}
 
 	whenWorkbenchRestored(): Promise<void> {
-		return this.evaluateWithDriver(([driver]) => driver.whenWorkbenchRestored());
+		return this.evaluateWithDriver(([driver]) =>
+			driver.whenWorkbenchRestored(),
+		);
 	}
 
 	private async getDriverHandle(): Promise<playwright.JSHandle<IWindowDriver>> {
-		return this.page.evaluateHandle('window.driver');
+		return this.page.evaluateHandle("window.driver");
 	}
 
 	async isAlive(): Promise<boolean> {
@@ -720,16 +884,18 @@ export class PlaywrightDriver {
 	 * @param options Configuration options for the accessibility scan.
 	 * @returns The axe-core scan results including any violations found.
 	 */
-	async runAccessibilityScan(options?: AccessibilityScanOptions): Promise<AxeResults> {
+	async runAccessibilityScan(
+		options?: AccessibilityScanOptions,
+	): Promise<AxeResults> {
 		// Inject axe-core into the page if not already present
 		await this.page.evaluate(axeSource);
 
 		// Build axe-core run options
 		const runOptions: RunOptions = {
 			runOnly: {
-				type: 'tag',
-				values: options?.tags ?? ['wcag2a', 'wcag2aa', 'wcag21aa']
-			}
+				type: "tag",
+				values: options?.tags ?? ["wcag2a", "wcag2aa", "wcag21aa"],
+			},
 		};
 
 		// Disable specific rules if requested
@@ -749,21 +915,22 @@ export class PlaywrightDriver {
 
 		// Exclude known problematic areas
 		context.exclude = [
-			['.monaco-editor .view-lines'],
-			['.xterm-screen canvas']
+			[".monaco-editor .view-lines"],
+			[".xterm-screen canvas"],
 		];
 
 		// Run axe-core analysis
 		const results = await measureAndLog(
-			() => this.page.evaluate(
-				([ctx, opts]) => {
-					// @ts-expect-error axe is injected globally
-					return window.axe.run(ctx, opts);
-				},
-				[context, runOptions] as const
-			),
-			'runAccessibilityScan',
-			this.options.logger
+			() =>
+				this.page.evaluate(
+					([ctx, opts]) => {
+						// @ts-expect-error axe is injected globally
+						return window.axe.run(ctx, opts);
+					},
+					[context, runOptions] as const,
+				),
+			"runAccessibilityScan",
+			this.options.logger,
 		);
 
 		return results as AxeResults;
@@ -774,60 +941,75 @@ export class PlaywrightDriver {
 	 * @param options Configuration options for the accessibility scan.
 	 * @throws Error if accessibility violations are detected.
 	 */
-	async assertNoAccessibilityViolations(options?: AccessibilityScanOptions): Promise<void> {
+	async assertNoAccessibilityViolations(
+		options?: AccessibilityScanOptions,
+	): Promise<void> {
 		const results = await this.runAccessibilityScan(options);
 
 		// Filter out violations for specific elements based on excludeRules
 		let filteredViolations = results.violations;
 		if (options?.excludeRules) {
-			filteredViolations = results.violations.map((violation: AxeResults['violations'][number]) => {
-				const excludePatterns = options.excludeRules![violation.id];
-				if (!excludePatterns) {
-					return violation;
-				}
-				// Filter out nodes that match any of the exclude patterns
-				const filteredNodes = violation.nodes.filter((node: AxeResults['violations'][number]['nodes'][number]) => {
-					const target = node.target.join(' ');
-					const html = node.html || '';
-					// Check if any exclude pattern appears in target or HTML
-					return !excludePatterns.some(pattern => target.includes(pattern) || html.includes(pattern));
-				});
-				return { ...violation, nodes: filteredNodes };
-			}).filter((violation: AxeResults['violations'][number]) => violation.nodes.length > 0);
+			filteredViolations = results.violations
+				.map((violation: AxeResults["violations"][number]) => {
+					const excludePatterns = options.excludeRules![violation.id];
+					if (!excludePatterns) {
+						return violation;
+					}
+					// Filter out nodes that match any of the exclude patterns
+					const filteredNodes = violation.nodes.filter(
+						(node: AxeResults["violations"][number]["nodes"][number]) => {
+							const target = node.target.join(" ");
+							const html = node.html || "";
+							// Check if any exclude pattern appears in target or HTML
+							return !excludePatterns.some(
+								(pattern) => target.includes(pattern) || html.includes(pattern),
+							);
+						},
+					);
+					return { ...violation, nodes: filteredNodes };
+				})
+				.filter(
+					(violation: AxeResults["violations"][number]) =>
+						violation.nodes.length > 0,
+				);
 		}
 
 		if (filteredViolations.length > 0) {
-			const violationMessages = filteredViolations.map((violation: AxeResults['violations'][number]) => {
-				const nodes = violation.nodes.map((node: AxeResults['violations'][number]['nodes'][number]) => {
-					const target = node.target.join(' > ');
-					const html = node.html || 'N/A';
-					// Extract class from HTML for easier identification
-					const classMatch = html.match(/class="([^"]+)"/);
-					const className = classMatch ? classMatch[1] : 'no class';
+			const violationMessages = filteredViolations
+				.map((violation: AxeResults["violations"][number]) => {
+					const nodes = violation.nodes
+						.map((node: AxeResults["violations"][number]["nodes"][number]) => {
+							const target = node.target.join(" > ");
+							const html = node.html || "N/A";
+							// Extract class from HTML for easier identification
+							const classMatch = html.match(/class="([^"]+)"/);
+							const className = classMatch ? classMatch[1] : "no class";
+							return [
+								`  Element: ${target}`,
+								`    Class: ${className}`,
+								`    HTML: ${html}`,
+								`    Issue: ${node.failureSummary}`,
+							].join("\n");
+						})
+						.join("\n\n");
 					return [
-						`  Element: ${target}`,
-						`    Class: ${className}`,
-						`    HTML: ${html}`,
-						`    Issue: ${node.failureSummary}`
-					].join('\n');
-				}).join('\n\n');
-				return [
-					`[${violation.id}] ${violation.help} (${violation.impact})`,
-					`  Help URL: ${violation.helpUrl}`,
-					nodes
-				].join('\n');
-			}).join('\n\n---\n\n');
+						`[${violation.id}] ${violation.help} (${violation.impact})`,
+						`  Help URL: ${violation.helpUrl}`,
+						nodes,
+					].join("\n");
+				})
+				.join("\n\n---\n\n");
 
 			throw new Error(
 				`Accessibility violations found:\n\n${violationMessages}\n\n` +
-				`Total: ${filteredViolations.length} violation(s) affecting ${filteredViolations.reduce((sum: number, v: AxeResults['violations'][number]) => sum + v.nodes.length, 0)} element(s)`
+					`Total: ${filteredViolations.length} violation(s) affecting ${filteredViolations.reduce((sum: number, v: AxeResults["violations"][number]) => sum + v.nodes.length, 0)} element(s)`,
 			);
 		}
 	}
 }
 
 export function wait(ms: number): Promise<void> {
-	return new Promise<void>(resolve => setTimeout(resolve, ms));
+	return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 export type { AxeResults };

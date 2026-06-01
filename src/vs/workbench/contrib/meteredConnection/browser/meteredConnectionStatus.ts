@@ -3,29 +3,48 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, MutableDisposable } from '../../../../base/common/lifecycle.js';
-import { localize } from '../../../../nls.js';
-import { IMeteredConnectionService } from '../../../../platform/meteredConnection/common/meteredConnection.js';
-import { IStatusbarEntry, IStatusbarEntryAccessor, IStatusbarService, StatusbarAlignment } from '../../../services/statusbar/browser/statusbar.js';
-import { IWorkbenchContribution } from '../../../common/contributions.js';
+import {
+	Disposable,
+	MutableDisposable,
+} from "../../../../base/common/lifecycle.js";
+import { localize } from "../../../../nls.js";
+import { IMeteredConnectionService } from "../../../../platform/meteredConnection/common/meteredConnection.js";
+import {
+	IStatusbarEntry,
+	IStatusbarEntryAccessor,
+	IStatusbarService,
+	StatusbarAlignment,
+} from "../../../services/statusbar/browser/statusbar.js";
+import { IWorkbenchContribution } from "../../../common/contributions.js";
 
-export class MeteredConnectionStatusContribution extends Disposable implements IWorkbenchContribution {
+export class MeteredConnectionStatusContribution
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	static readonly ID = "workbench.contrib.meteredConnectionStatus";
 
-	static readonly ID = 'workbench.contrib.meteredConnectionStatus';
-
-	private readonly statusBarEntry = this._register(new MutableDisposable<IStatusbarEntryAccessor>());
+	private readonly statusBarEntry = this._register(
+		new MutableDisposable<IStatusbarEntryAccessor>(),
+	);
 
 	constructor(
-		@IMeteredConnectionService private readonly meteredConnectionService: IMeteredConnectionService,
+		@IMeteredConnectionService
+		private readonly meteredConnectionService: IMeteredConnectionService,
 		@IStatusbarService private readonly statusbarService: IStatusbarService,
 	) {
 		super();
 
-		this.updateStatusBarEntry(this.meteredConnectionService.isConnectionMetered);
+		this.updateStatusBarEntry(
+			this.meteredConnectionService.isConnectionMetered,
+		);
 
-		this._register(this.meteredConnectionService.onDidChangeIsConnectionMetered(isMetered => {
-			this.updateStatusBarEntry(isMetered);
-		}));
+		this._register(
+			this.meteredConnectionService.onDidChangeIsConnectionMetered(
+				(isMetered) => {
+					this.updateStatusBarEntry(isMetered);
+				},
+			),
+		);
 	}
 
 	private updateStatusBarEntry(isMetered: boolean): void {
@@ -35,7 +54,7 @@ export class MeteredConnectionStatusContribution extends Disposable implements I
 					this.getStatusBarEntry(),
 					MeteredConnectionStatusContribution.ID,
 					StatusbarAlignment.RIGHT,
-					-Number.MAX_VALUE // Show at the far right
+					-Number.MAX_VALUE, // Show at the far right
 				);
 			}
 		} else {
@@ -45,15 +64,21 @@ export class MeteredConnectionStatusContribution extends Disposable implements I
 
 	private getStatusBarEntry(): IStatusbarEntry {
 		return {
-			name: localize('status.meteredConnection', "Metered Connection"),
-			text: '$(radio-tower)',
-			ariaLabel: localize('status.meteredConnection.ariaLabel', "Metered Connection Enabled"),
-			tooltip: localize('status.meteredConnection.tooltip', "Metered connection enabled. Some automatic features like extension updates, Settings Sync, and automatic Git operations are paused to reduce data usage."),
+			name: localize("status.meteredConnection", "Metered Connection"),
+			text: "$(radio-tower)",
+			ariaLabel: localize(
+				"status.meteredConnection.ariaLabel",
+				"Metered Connection Enabled",
+			),
+			tooltip: localize(
+				"status.meteredConnection.tooltip",
+				"Metered connection enabled. Some automatic features like extension updates, Settings Sync, and automatic Git operations are paused to reduce data usage.",
+			),
 			command: {
-				id: 'workbench.action.configureMeteredConnection',
-				title: localize('status.meteredConnection.configure', "Configure")
+				id: "workbench.action.configureMeteredConnection",
+				title: localize("status.meteredConnection.configure", "Configure"),
 			},
-			showInAllWindows: true
+			showInAllWindows: true,
 		};
 	}
 }

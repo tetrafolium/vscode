@@ -12,13 +12,23 @@ export class MicrosoftTelemetrySender extends BaseMsftTelemetrySender {
 		internalAIKey: string,
 		externalAIKey: string,
 		tokenStore: ICopilotTokenStore,
-		customFetcher: CustomFetcher
+		customFetcher: CustomFetcher,
 	) {
 		const telemetryReporterFactory = (internal: boolean) => {
 			if (internal) {
-				return new TelemetryReporter(internalAIKey, undefined, undefined, customFetcher);
+				return new TelemetryReporter(
+					internalAIKey,
+					undefined,
+					undefined,
+					customFetcher,
+				);
 			} else {
-				return new TelemetryReporter(externalAIKey, undefined, undefined, customFetcher);
+				return new TelemetryReporter(
+					externalAIKey,
+					undefined,
+					undefined,
+					customFetcher,
+				);
 			}
 		};
 		super(tokenStore, telemetryReporterFactory);

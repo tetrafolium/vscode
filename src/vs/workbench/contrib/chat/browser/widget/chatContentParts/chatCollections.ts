@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDisposable } from '../../../../../../base/common/lifecycle.js';
+import { IDisposable } from "../../../../../../base/common/lifecycle.js";
 
 export interface IResourcePoolOptions {
 	/**
@@ -25,7 +25,7 @@ export class ResourcePool<T extends IDisposable> implements IDisposable {
 	private readonly pool: T[] = [];
 	private _trimTimer: ReturnType<typeof setTimeout> | undefined;
 
-	private _inUse = new Set<T>;
+	private _inUse = new Set<T>();
 	public get inUse(): ReadonlySet<T> {
 		return this._inUse;
 	}
@@ -33,7 +33,7 @@ export class ResourcePool<T extends IDisposable> implements IDisposable {
 	constructor(
 		private readonly _itemFactory: () => T,
 		private readonly _options?: IResourcePoolOptions,
-	) { }
+	) {}
 
 	get(): T {
 		if (this.pool.length > 0) {
@@ -127,7 +127,7 @@ export class KeyedResourcePool<T extends IDisposable> implements IDisposable {
 	constructor(
 		private readonly _itemFactory: () => T,
 		private readonly _options?: IResourcePoolOptions,
-	) { }
+	) {}
 
 	get(key: string): T {
 		const candidates = this._keyToItems.get(key);

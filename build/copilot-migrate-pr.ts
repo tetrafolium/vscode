@@ -15,16 +15,16 @@
 //   - `gh` CLI installed and authenticated with access to both repos
 //   - Local checkout of microsoft/vscode with `main` branch up to date
 
-import { execFileSync } from 'child_process';
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
-import { createInterface } from 'readline/promises';
-import { stdin as input, stdout as output } from 'process';
+import { execFileSync } from "child_process";
+import * as path from "path";
+import * as fs from "fs";
+import * as os from "os";
+import { createInterface } from "readline/promises";
+import { stdin as input, stdout as output } from "process";
 
-const SOURCE_REPO = 'microsoft/vscode-copilot-chat';
-const TARGET_REPO = 'microsoft/vscode';
-const PATH_PREFIX = 'extensions/copilot';
+const SOURCE_REPO = "microsoft/vscode-copilot-chat";
+const TARGET_REPO = "microsoft/vscode";
+const PATH_PREFIX = "extensions/copilot";
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -43,9 +43,9 @@ function parseArgs(): Options {
 	let verbose = false;
 
 	for (const arg of args) {
-		if (arg === '--dry-run') {
+		if (arg === "--dry-run") {
 			dryRun = true;
-		} else if (arg === '--verbose') {
+		} else if (arg === "--verbose") {
 			verbose = true;
 		} else if (!prNumber && /^\d+$/.test(arg)) {
 			prNumber = parseInt(arg, 10);
@@ -56,7 +56,9 @@ function parseArgs(): Options {
 	}
 
 	if (!prNumber) {
-		console.error('Usage: node build/copilot-migrate-pr.ts <PR_NUMBER> [--dry-run] [--verbose]');
+		console.error(
+			"Usage: node build/copilot-migrate-pr.ts <PR_NUMBER> [--dry-run] [--verbose]",
+		);
 		process.exit(1);
 	}
 
@@ -72,7 +74,11 @@ interface Logger {
 }
 
 function supportsColor(): boolean {
-	return Boolean(output.isTTY) && process.env.NO_COLOR === undefined && process.env.TERM !== 'dumb';
+	return (
+		Boolean(output.isTTY) &&
+		process.env.NO_COLOR === undefined &&
+		process.env.TERM !== "dumb"
+	);
 }
 
 function color(text: string, code: number, enabled: boolean): string {
@@ -86,37 +92,42 @@ function color(text: string, code: number, enabled: boolean): string {
 function createLogger(verbose: boolean): Logger {
 	const useColor = supportsColor();
 	const label = {
-		info: color('[INFO]', 36, useColor),
-		detail: color('[DETAIL]', 90, useColor),
-		step: color('[STEP]', 34, useColor),
-		warn: color('[WARN]', 33, useColor),
-		success: color('[DONE]', 32, useColor),
+		info: color("[INFO]", 36, useColor),
+		detail: color("[DETAIL]", 90, useColor),
+		step: color("[STEP]", 34, useColor),
+		warn: color("[WARN]", 33, useColor),
+		success: color("[DONE]", 32, useColor),
 	};
 
 	return {
-		info: message => console.log(`${label.info} ${message}`),
-		detail: message => {
+		info: (message) => console.log(`${label.info} ${message}`),
+		detail: (message) => {
 			if (verbose) {
 				console.log(`${label.detail} ${message}`);
 			}
 		},
-		step: message => console.log(`\n${label.step} ${message}`),
-		warn: message => console.log(`${label.warn} ${message}`),
-		success: message => console.log(`\n${label.success} ${message}`),
+		step: (message) => console.log(`\n${label.step} ${message}`),
+		warn: (message) => console.log(`${label.warn} ${message}`),
+		success: (message) => console.log(`\n${label.success} ${message}`),
 	};
 }
 
-async function promptYesNo(question: string, defaultNo = true): Promise<boolean> {
+async function promptYesNo(
+	question: string,
+	defaultNo = true,
+): Promise<boolean> {
 	const rl = createInterface({ input, output });
 	try {
-		const suffix = defaultNo ? ' [y/N]: ' : ' [Y/n]: ';
-		const answer = (await rl.question(`${question}${suffix}`)).trim().toLowerCase();
+		const suffix = defaultNo ? " [y/N]: " : " [Y/n]: ";
+		const answer = (await rl.question(`${question}${suffix}`))
+			.trim()
+			.toLowerCase();
 
 		if (!answer) {
 			return !defaultNo;
 		}
 
-		return answer === 'y' || answer === 'yes';
+		return answer === "y" || answer === "yes";
 	} finally {
 		rl.close();
 	}
@@ -136,37 +147,44 @@ async function waitForEnter(message: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function gh(args: string[]): string {
-	return execFileSync('gh', args, { encoding: 'utf-8', maxBuffer: 50 * 1024 * 1024 });
+	return execFileSync("gh", args, {
+		encoding: "utf-8",
+		maxBuffer: 50 * 1024 * 1024,
+	});
 }
 
 function git(args: string[], cwd?: string, env?: NodeJS.ProcessEnv): string {
-	return execFileSync('git', args, {
-		encoding: 'utf-8',
+	return execFileSync("git", args, {
+		encoding: "utf-8",
 		cwd,
 		env: env ? { ...process.env, ...env } : process.env,
-		maxBuffer: 50 * 1024 * 1024
+		maxBuffer: 50 * 1024 * 1024,
 	});
 }
 
 function getCurrentRef(repoRoot: string): string {
 	try {
-		return git(['symbolic-ref', '--quiet', '--short', 'HEAD'], repoRoot).trim();
+		return git(["symbolic-ref", "--quiet", "--short", "HEAD"], repoRoot).trim();
 	} catch {
-		return git(['rev-parse', 'HEAD'], repoRoot).trim();
+		return git(["rev-parse", "HEAD"], repoRoot).trim();
 	}
 }
 
 function checkoutRef(ref: string, repoRoot: string): void {
-	git(['checkout', ref], repoRoot);
+	git(["checkout", ref], repoRoot);
 }
 
 function getMigrationBranchName(prNumber: number): string {
 	return `vscode-copilot-chat/migrate-${prNumber}`;
 }
 
-function remoteBranchExists(remote: string, branchName: string, repoRoot: string): boolean {
+function remoteBranchExists(
+	remote: string,
+	branchName: string,
+	repoRoot: string,
+): boolean {
 	try {
-		git(['ls-remote', '--exit-code', '--heads', remote, branchName], repoRoot);
+		git(["ls-remote", "--exit-code", "--heads", remote, branchName], repoRoot);
 		return true;
 	} catch (error) {
 		const status = (error as { status?: number }).status;
@@ -198,18 +216,19 @@ interface PrMetadata {
 
 function fetchPrMetadata(prNumber: number): PrMetadata {
 	const json = gh([
-		'pr', 'view', String(prNumber),
-		'--repo', SOURCE_REPO,
-		'--json', 'title,body,baseRefName,headRefName,state,mergedAt,isDraft,number,author,labels,assignees',
+		"pr",
+		"view",
+		String(prNumber),
+		"--repo",
+		SOURCE_REPO,
+		"--json",
+		"title,body,baseRefName,headRefName,state,mergedAt,isDraft,number,author,labels,assignees",
 	]);
 	return JSON.parse(json);
 }
 
 function fetchPrDiff(prNumber: number): string {
-	return gh([
-		'pr', 'diff', String(prNumber),
-		'--repo', SOURCE_REPO,
-	]);
+	return gh(["pr", "diff", String(prNumber), "--repo", SOURCE_REPO]);
 }
 
 interface CommitPerson {
@@ -226,9 +245,9 @@ interface SourceCommit {
 
 function fetchPrCommits(prNumber: number): SourceCommit[] {
 	const json = gh([
-		'api',
+		"api",
 		`repos/${SOURCE_REPO}/pulls/${prNumber}/commits`,
-		'--paginate',
+		"--paginate",
 	]);
 
 	const commits = JSON.parse(json) as Array<{
@@ -239,7 +258,7 @@ function fetchPrCommits(prNumber: number): SourceCommit[] {
 		};
 	}>;
 
-	return commits.map(commit => ({
+	return commits.map((commit) => ({
 		sha: commit.sha,
 		author: commit.commit.author,
 		committer: commit.commit.committer,
@@ -248,9 +267,10 @@ function fetchPrCommits(prNumber: number): SourceCommit[] {
 
 function fetchCommitPatch(sha: string): string {
 	return gh([
-		'api',
+		"api",
 		`repos/${SOURCE_REPO}/commits/${sha}`,
-		'-H', 'Accept: application/vnd.github.patch',
+		"-H",
+		"Accept: application/vnd.github.patch",
 	]);
 }
 
@@ -265,12 +285,12 @@ function getDiffStats(diff: string): DiffStats {
 	let insertions = 0;
 	let deletions = 0;
 
-	for (const line of diff.split('\n')) {
-		if (line.startsWith('diff --git ')) {
+	for (const line of diff.split("\n")) {
+		if (line.startsWith("diff --git ")) {
 			filesChanged++;
-		} else if (line.startsWith('+') && !line.startsWith('+++')) {
+		} else if (line.startsWith("+") && !line.startsWith("+++")) {
 			insertions++;
-		} else if (line.startsWith('-') && !line.startsWith('---')) {
+		} else if (line.startsWith("-") && !line.startsWith("---")) {
 			deletions++;
 		}
 	}
@@ -297,14 +317,14 @@ function getDiffStats(diff: string): DiffStats {
  *   - `copy from path` / `copy to path`
  */
 function rewriteDiff(diff: string): string {
-	const lines = diff.split('\n');
+	const lines = diff.split("\n");
 	const result: string[] = [];
 
 	for (const line of lines) {
 		result.push(rewriteDiffLine(line));
 	}
 
-	return result.join('\n');
+	return result.join("\n");
 }
 
 function rewriteDiffLine(line: string): string {
@@ -357,29 +377,40 @@ function rewriteDiffLine(line: string): string {
 // ---------------------------------------------------------------------------
 
 function hasActiveRebaseApply(repoRoot: string): boolean {
-	return fs.existsSync(path.join(repoRoot, '.git', 'rebase-apply'));
+	return fs.existsSync(path.join(repoRoot, ".git", "rebase-apply"));
 }
 
 async function resolveAmConflicts(repoRoot: string): Promise<void> {
-	console.log('\nA commit patch could not be applied cleanly.');
-	console.log('Resolve merge conflicts in your working tree, stage the changes, and continue.');
-	for (; ;) {
-		await waitForEnter('After resolving conflicts and staging the changes, continue.');
-		const unresolved = git(['diff', '--name-only', '--diff-filter=U'], repoRoot).trim();
+	console.log("\nA commit patch could not be applied cleanly.");
+	console.log(
+		"Resolve merge conflicts in your working tree, stage the changes, and continue.",
+	);
+	for (;;) {
+		await waitForEnter(
+			"After resolving conflicts and staging the changes, continue.",
+		);
+		const unresolved = git(
+			["diff", "--name-only", "--diff-filter=U"],
+			repoRoot,
+		).trim();
 		if (unresolved) {
-			console.log('\nThese files still have unresolved conflicts:');
-			for (const file of unresolved.split('\n')) {
+			console.log("\nThese files still have unresolved conflicts:");
+			for (const file of unresolved.split("\n")) {
 				console.log(`  - ${file}`);
 			}
 			continue;
 		}
 
 		try {
-			git(['am', '--continue'], repoRoot);
+			git(["am", "--continue"], repoRoot);
 			break;
 		} catch (error) {
-			console.log(`\nCould not continue apply: ${error instanceof Error ? error.message : String(error)}`);
-			console.log('Fix any remaining issues, ensure all changes are staged, then try again.');
+			console.log(
+				`\nCould not continue apply: ${error instanceof Error ? error.message : String(error)}`,
+			);
+			console.log(
+				"Fix any remaining issues, ensure all changes are staged, then try again.",
+			);
 		}
 	}
 }
@@ -395,17 +426,23 @@ function amendHeadCommitMetadata(commit: SourceCommit, repoRoot: string): void {
 		return;
 	}
 
-	git([
-		'commit',
-		'--amend',
-		'--no-edit',
-		'--author', `${author.name} <${author.email}>`,
-		'--date', author.date,
-	], repoRoot, {
-		GIT_COMMITTER_NAME: committer.name,
-		GIT_COMMITTER_EMAIL: committer.email,
-		GIT_COMMITTER_DATE: committer.date,
-	});
+	git(
+		[
+			"commit",
+			"--amend",
+			"--no-edit",
+			"--author",
+			`${author.name} <${author.email}>`,
+			"--date",
+			author.date,
+		],
+		repoRoot,
+		{
+			GIT_COMMITTER_NAME: committer.name,
+			GIT_COMMITTER_EMAIL: committer.email,
+			GIT_COMMITTER_DATE: committer.date,
+		},
+	);
 }
 
 async function createBranchAndApplyCommits(
@@ -416,29 +453,32 @@ async function createBranchAndApplyCommits(
 	const branchName = getMigrationBranchName(prNumber);
 
 	// Ensure we're on a clean state based on main
-	git(['checkout', 'main'], repoRoot);
-	git(['pull', '--ff-only', 'origin', 'main'], repoRoot);
+	git(["checkout", "main"], repoRoot);
+	git(["pull", "--ff-only", "origin", "main"], repoRoot);
 
 	// Create and switch to the new branch
 	try {
-		git(['checkout', '-b', branchName], repoRoot);
+		git(["checkout", "-b", branchName], repoRoot);
 	} catch {
 		// Branch may already exist from a previous attempt
-		git(['checkout', branchName], repoRoot);
-		git(['reset', '--hard', 'main'], repoRoot);
+		git(["checkout", branchName], repoRoot);
+		git(["reset", "--hard", "main"], repoRoot);
 	}
 
 	for (let i = 0; i < commits.length; i++) {
 		const commit = commits[i];
 		const patch = fetchCommitPatch(commit.sha);
 		const rewrittenPatch = rewriteDiff(patch);
-		const tmpPatch = path.join(os.tmpdir(), `copilot-migrate-pr-${prNumber}-${i + 1}.patch`);
+		const tmpPatch = path.join(
+			os.tmpdir(),
+			`copilot-migrate-pr-${prNumber}-${i + 1}.patch`,
+		);
 
 		try {
 			fs.writeFileSync(tmpPatch, rewrittenPatch);
 
 			try {
-				git(['am', '--3way', tmpPatch], repoRoot);
+				git(["am", "--3way", tmpPatch], repoRoot);
 			} catch {
 				if (!hasActiveRebaseApply(repoRoot)) {
 					throw new Error(`Failed to apply commit ${commit.sha}.`);
@@ -454,11 +494,10 @@ async function createBranchAndApplyCommits(
 	}
 
 	if (!commits.length) {
-		git([
-			'commit',
-			'--allow-empty',
-			'-m', `Migrate ${SOURCE_REPO}#${prNumber}`,
-		], repoRoot);
+		git(
+			["commit", "--allow-empty", "-m", `Migrate ${SOURCE_REPO}#${prNumber}`],
+			repoRoot,
+		);
 	}
 
 	return branchName;
@@ -467,46 +506,56 @@ async function createBranchAndApplyCommits(
 function closeSourcePr(prNumber: number, targetPrUrl: string): void {
 	const comment = `Superseded by ${targetPrUrl}`;
 	gh([
-		'pr', 'close', String(prNumber),
-		'--repo', SOURCE_REPO,
-		'--comment', comment,
+		"pr",
+		"close",
+		String(prNumber),
+		"--repo",
+		SOURCE_REPO,
+		"--comment",
+		comment,
 	]);
 }
 
 function pushBranch(branchName: string, repoRoot: string): void {
-	git(['push', '-u', 'origin', branchName, '--force-with-lease'], repoRoot);
+	git(["push", "-u", "origin", branchName, "--force-with-lease"], repoRoot);
 }
 
 function createPr(meta: PrMetadata, branchName: string): string {
 	const migrationNote = [
 		`> Migrated from ${SOURCE_REPO}#${meta.number}`,
 		`> Original author: @${meta.author.login}`,
-		'',
-	].join('\n');
+		"",
+	].join("\n");
 
 	const body = meta.body
 		? `${migrationNote}\n---\n\n${meta.body}`
 		: migrationNote;
 
 	const args = [
-		'pr', 'create',
-		'--repo', TARGET_REPO,
-		'--head', branchName,
-		'--base', 'main',
-		'--title', meta.title,
-		'--body', body,
+		"pr",
+		"create",
+		"--repo",
+		TARGET_REPO,
+		"--head",
+		branchName,
+		"--base",
+		"main",
+		"--title",
+		meta.title,
+		"--body",
+		body,
 	];
 
 	if (meta.isDraft) {
-		args.push('--draft');
+		args.push("--draft");
 	}
 
 	for (const assignee of meta.assignees) {
-		args.push('--assignee', assignee.login);
+		args.push("--assignee", assignee.login);
 	}
 
 	for (const label of meta.labels) {
-		args.push('--label', label.name);
+		args.push("--label", label.name);
 	}
 
 	return gh(args).trim();
@@ -525,22 +574,28 @@ async function main() {
 	let shouldRestoreRef = false;
 
 	try {
-		logger.info(`Migrating PR #${prNumber} from ${SOURCE_REPO} to ${TARGET_REPO}`);
+		logger.info(
+			`Migrating PR #${prNumber} from ${SOURCE_REPO} to ${TARGET_REPO}`,
+		);
 		logger.detail(`Starting ref: ${originalRef}`);
 
 		if (!dryRun) {
-			logger.step('Checking whether target branch already exists on origin');
-			if (remoteBranchExists('origin', targetBranchName, repoRoot)) {
-				throw new Error(`Remote branch already exists: origin/${targetBranchName}. Delete it before rerunning.`);
+			logger.step("Checking whether target branch already exists on origin");
+			if (remoteBranchExists("origin", targetBranchName, repoRoot)) {
+				throw new Error(
+					`Remote branch already exists: origin/${targetBranchName}. Delete it before rerunning.`,
+				);
 			}
 			logger.detail(`Target branch is available: origin/${targetBranchName}`);
 		}
 
-		logger.step('Fetching source PR metadata');
+		logger.step("Fetching source PR metadata");
 		const meta = fetchPrMetadata(prNumber);
-		if (meta.state !== 'OPEN') {
-			const status = meta.mergedAt ? 'merged' : 'closed';
-			throw new Error(`Source PR #${prNumber} is ${status}. Only open PRs can be migrated.`);
+		if (meta.state !== "OPEN") {
+			const status = meta.mergedAt ? "merged" : "closed";
+			throw new Error(
+				`Source PR #${prNumber} is ${status}. Only open PRs can be migrated.`,
+			);
 		}
 
 		logger.info(`Title: ${meta.title}`);
@@ -548,43 +603,57 @@ async function main() {
 		logger.detail(`Base: ${meta.baseRefName} -> Head: ${meta.headRefName}`);
 		logger.detail(`State: ${meta.state}`);
 		logger.detail(`Draft: ${meta.isDraft}`);
-		logger.detail(`Labels: ${meta.labels.map(l => l.name).join(', ') || '(none)'}`);
-		logger.detail(`Assignees: ${meta.assignees.map(a => a.login).join(', ') || '(none)'}`);
+		logger.detail(
+			`Labels: ${meta.labels.map((l) => l.name).join(", ") || "(none)"}`,
+		);
+		logger.detail(
+			`Assignees: ${meta.assignees.map((a) => a.login).join(", ") || "(none)"}`,
+		);
 
-		logger.step('Fetching source PR commits');
+		logger.step("Fetching source PR commits");
 		const commits = fetchPrCommits(prNumber);
 		logger.info(`Commit count: ${commits.length}`);
 
-		logger.step('Fetching and rewriting diff');
+		logger.step("Fetching and rewriting diff");
 		const diff = fetchPrDiff(prNumber);
 		const diffStats = getDiffStats(diff);
 		logger.detail(`Diff size: ${diff.length} bytes`);
-		logger.info(`Diff stats: ${diffStats.filesChanged} files changed, ${diffStats.insertions} insertions(+), ${diffStats.deletions} deletions(-)`);
+		logger.info(
+			`Diff stats: ${diffStats.filesChanged} files changed, ${diffStats.insertions} insertions(+), ${diffStats.deletions} deletions(-)`,
+		);
 
 		if (dryRun) {
-			logger.info('Dry run: no changes were made.');
+			logger.info("Dry run: no changes were made.");
 			return;
 		}
 
-		logger.step('Creating branch and applying commit series');
-		const branchName = await createBranchAndApplyCommits(prNumber, commits, repoRoot);
+		logger.step("Creating branch and applying commit series");
+		const branchName = await createBranchAndApplyCommits(
+			prNumber,
+			commits,
+			repoRoot,
+		);
 		shouldRestoreRef = true;
 		logger.info(`Branch: ${branchName}`);
 
-		logger.step('Pushing branch');
+		logger.step("Pushing branch");
 		pushBranch(branchName, repoRoot);
 
 		logger.step(`Creating PR in ${TARGET_REPO}`);
 		const prUrl = createPr(meta, branchName);
 		logger.success(`PR created: ${prUrl}`);
 
-		const closeOldPr = await promptYesNo(`Close source PR #${prNumber} in ${SOURCE_REPO}?`);
+		const closeOldPr = await promptYesNo(
+			`Close source PR #${prNumber} in ${SOURCE_REPO}?`,
+		);
 		if (closeOldPr) {
 			try {
 				closeSourcePr(prNumber, prUrl);
 				logger.info(`Closed source PR #${prNumber}`);
 			} catch (error) {
-				logger.warn(`Failed to close source PR #${prNumber}: ${error instanceof Error ? error.message : String(error)}`);
+				logger.warn(
+					`Failed to close source PR #${prNumber}: ${error instanceof Error ? error.message : String(error)}`,
+				);
 			}
 		} else {
 			logger.info(`Left source PR #${prNumber} open`);
@@ -596,13 +665,15 @@ async function main() {
 				checkoutRef(originalRef, repoRoot);
 				logger.info(`Checked out ${originalRef}`);
 			} catch (error) {
-				logger.warn(`Failed to restore original ref ${originalRef}: ${error instanceof Error ? error.message : String(error)}`);
+				logger.warn(
+					`Failed to restore original ref ${originalRef}: ${error instanceof Error ? error.message : String(error)}`,
+				);
 			}
 		}
 	}
 }
 
-main().catch(error => {
+main().catch((error) => {
 	console.error(error instanceof Error ? error.message : String(error));
 	process.exit(1);
 });

@@ -40,7 +40,10 @@ describe('CircuitBreaker', () => {
 	});
 
 	it('transitions from OPEN to HALF_OPEN after reset timeout', () => {
-		const cb = new CircuitBreaker({ failureThreshold: 1, resetTimeoutMs: 10 });
+		const cb = new CircuitBreaker({
+			failureThreshold: 1,
+			resetTimeoutMs: 10,
+		});
 		cb.recordFailure();
 		expect(cb.getState()).toBe(CircuitState.OPEN);
 
@@ -49,7 +52,10 @@ describe('CircuitBreaker', () => {
 	});
 
 	it('allows one probe in HALF_OPEN state', () => {
-		const cb = new CircuitBreaker({ failureThreshold: 1, resetTimeoutMs: 0 });
+		const cb = new CircuitBreaker({
+			failureThreshold: 1,
+			resetTimeoutMs: 0,
+		});
 		cb.recordFailure();
 
 		// Should be HALF_OPEN immediately with resetTimeoutMs=0
@@ -59,7 +65,10 @@ describe('CircuitBreaker', () => {
 	});
 
 	it('closes on success after HALF_OPEN probe', () => {
-		const cb = new CircuitBreaker({ failureThreshold: 1, resetTimeoutMs: 0 });
+		const cb = new CircuitBreaker({
+			failureThreshold: 1,
+			resetTimeoutMs: 0,
+		});
 		cb.recordFailure();
 
 		expect(cb.canRequest()).toBe(true); // probe
@@ -69,7 +78,10 @@ describe('CircuitBreaker', () => {
 	});
 
 	it('re-opens on failure during HALF_OPEN probe', () => {
-		const cb = new CircuitBreaker({ failureThreshold: 1, resetTimeoutMs: 10 });
+		const cb = new CircuitBreaker({
+			failureThreshold: 1,
+			resetTimeoutMs: 10,
+		});
 		cb.recordFailure();
 		expect(cb.getState()).toBe(CircuitState.OPEN);
 
@@ -151,7 +163,10 @@ describe('CircuitBreaker', () => {
 	});
 
 	it('cancelProbe releases an unused probe slot without changing state', () => {
-		const cb = new CircuitBreaker({ failureThreshold: 1, resetTimeoutMs: 0 });
+		const cb = new CircuitBreaker({
+			failureThreshold: 1,
+			resetTimeoutMs: 0,
+		});
 		cb.recordFailure();
 		expect(cb.getState()).toBe(CircuitState.HALF_OPEN);
 

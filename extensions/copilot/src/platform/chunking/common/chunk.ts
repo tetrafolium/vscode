@@ -5,7 +5,10 @@
 
 import { URI } from '../../../util/vs/base/common/uri';
 import { Range } from '../../../util/vs/editor/common/core/range';
-import { Embedding, EmbeddingDistance } from '../../embeddings/common/embeddingsComputer';
+import {
+	Embedding,
+	EmbeddingDistance,
+} from '../../embeddings/common/embeddingsComputer';
 
 export interface Chunk {
 	/**
@@ -20,7 +23,6 @@ export interface Chunk {
  * File chunk {@linkcode Chunk.text text} may include `...` style markup for emitted and additional prefix and suffix text that provide context.
  */
 export interface FileChunk extends Chunk {
-
 	/**
 	 * Just the code in the chunk's range, without any additional prefix or suffix.
 	 */

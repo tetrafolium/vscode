@@ -24,7 +24,6 @@
 
 	.monaco-list:focus .monaco-list-row.selected .session-details-row {
 		.session-diff {
-
 			.session-diff-added,
 			.session-diff-removed {
 				color: unset;
@@ -197,7 +196,7 @@
 				display: inline;
 
 				&::before {
-					content: '\00B7';
+					content: "\00B7";
 				}
 			}
 		}
@@ -245,7 +244,8 @@
 		margin-left: -6px;
 		padding: 4px 4px 4px 6px;
 		box-sizing: border-box;
-		border: 1px solid var(--vscode-contrastBorder, var(--vscode-widget-border, transparent));
+		border: 1px solid
+			var(--vscode-contrastBorder, var(--vscode-widget-border, transparent));
 		border-radius: 8px;
 		background-color: var(--vscode-editor-background);
 		color: var(--vscode-editor-foreground);
@@ -309,7 +309,7 @@
 	/* Lines on both sides of the text */
 	&::before,
 	&::after {
-		content: '';
+		content: "";
 		flex: 1;
 		height: 1px;
 		background: var(--vscode-widget-border, var(--vscode-contrastBorder));
@@ -389,7 +389,6 @@
 }
 
 .sessions-list-control {
-
 	/* Workspace headers and folder toggles use label color changes instead of row background fills for hover/focus/selection. */
 	.monaco-list-row:has(.session-section):hover,
 	.monaco-list-row:has(.session-show-more-folders):hover,
@@ -416,7 +415,6 @@
 }
 
 @keyframes session-needs-input-pulse {
-
 	0%,
 	100% {
 		opacity: 1;
@@ -451,8 +449,14 @@
 			animation: session-title-shimmer 3s linear infinite;
 		}
 
-		.vs-dark .monaco-list-row:not(.selected) .session-item.in-progress .session-title,
-		.hc-black .monaco-list-row:not(.selected) .session-item.in-progress .session-title {
+		.vs-dark
+			.monaco-list-row:not(.selected)
+			.session-item.in-progress
+			.session-title,
+		.hc-black
+			.monaco-list-row:not(.selected)
+			.session-item.in-progress
+			.session-title {
 			background-image: linear-gradient(
 				90deg,
 				var(--vscode-strongForeground) 0%,
@@ -478,7 +482,10 @@
 /* ---- Mobile Layout: Touch Adaptations ---- */
 
 /* Always show inline toolbar on mobile (no hover dependency) */
-.agent-sessions-workbench.phone-layout .sessions-list .monaco-list-row .actions {
+.agent-sessions-workbench.phone-layout
+	.sessions-list
+	.monaco-list-row
+	.actions {
 	display: flex !important;
 	visibility: visible !important;
 	opacity: 1 !important;
@@ -579,7 +586,10 @@
 	/* Center the codicon inside the 44x44 tap target. The base
 	 * `.action-label` is a flex container that defaults to start
 	 * alignment, so the icon sticks to the top-left of the square. */
-	.monaco-list-row .session-title-toolbar .action-item.menu-entry > .action-label {
+	.monaco-list-row
+		.session-title-toolbar
+		.action-item.menu-entry
+		> .action-label {
 		display: flex;
 		align-items: center;
 		justify-content: center;

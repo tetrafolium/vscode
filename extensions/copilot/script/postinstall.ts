@@ -23,7 +23,7 @@ export interface ITreeSitterGrammar {
 const treeSitterGrammars: ITreeSitterGrammar[] = [
 	{
 		name: 'tree-sitter-c-sharp',
-		filename: 'tree-sitter-c_sharp.wasm' // non-standard filename
+		filename: 'tree-sitter-c_sharp.wasm', // non-standard filename
 	},
 	{
 		name: 'tree-sitter-cpp',
@@ -55,15 +55,23 @@ const treeSitterGrammars: ITreeSitterGrammar[] = [
 		name: 'tree-sitter-rust',
 	},
 	{
-		name: 'tree-sitter-php'
-	}
+		name: 'tree-sitter-php',
+	},
 ];
 
 const REPO_ROOT = path.join(__dirname, '..');
 
 async function removeCopilotCLIShim() {
-	const shimsPath = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'shims.txt');
-	await fs.promises.rm(shimsPath, { force: true }).catch(() => { /* ignore */ });
+	const shimsPath = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'shims.txt',
+	);
+	await fs.promises.rm(shimsPath, { force: true }).catch(() => {
+		/* ignore */
+	});
 }
 
 /**
@@ -71,67 +79,155 @@ async function removeCopilotCLIShim() {
  * We need to copy these files into the sdk directory to ensure they are available at runtime.
  */
 async function copyCopilotCliWorkerFiles() {
-	const sourceDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'worker');
-	const targetDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'sdk', 'worker');
+	const sourceDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'worker',
+	);
+	const targetDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'sdk',
+		'worker',
+	);
 
 	await copyCopilotCLIFolders(sourceDir, targetDir);
 }
 
 async function copyCopilotCliSharpFiles() {
-	const sourceDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'sharp');
-	const targetDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'sdk', 'sharp');
+	const sourceDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'sharp',
+	);
+	const targetDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'sdk',
+		'sharp',
+	);
 
 	await copyCopilotCLIFolders(sourceDir, targetDir);
 }
 
 async function copyCopilotCliDefinitionFiles() {
-	const sourceDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'definitions');
-	const targetDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'sdk', 'definitions');
+	const sourceDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'definitions',
+	);
+	const targetDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'sdk',
+		'definitions',
+	);
 
 	await copyCopilotCLIFolders(sourceDir, targetDir);
 }
 
 async function copyCopilotCliSkillsFiles() {
-	const sourceDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'builtin-skills');
-	const targetDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'sdk', 'builtin-skills');
+	const sourceDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'builtin-skills',
+	);
+	const targetDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'sdk',
+		'builtin-skills',
+	);
 
 	await copyCopilotCLIFolders(sourceDir, targetDir);
 }
 
 async function copyCopilotCliQueryFiles() {
-	const sourceDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'queries');
-	const targetDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'sdk', 'queries');
+	const sourceDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'queries',
+	);
+	const targetDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'sdk',
+		'queries',
+	);
 
 	await copyCopilotCLIFolders(sourceDir, targetDir);
 }
 
 async function copyCopilotCliPrebuildFiles() {
-	const sourceDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'prebuilds');
-	const targetDir = path.join(REPO_ROOT, 'node_modules', '@github', 'copilot', 'sdk', 'prebuilds');
+	const sourceDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'prebuilds',
+	);
+	const targetDir = path.join(
+		REPO_ROOT,
+		'node_modules',
+		'@github',
+		'copilot',
+		'sdk',
+		'prebuilds',
+	);
 	await fs.promises.rm(targetDir, { recursive: true, force: true });
 	await fs.promises.mkdir(targetDir, { recursive: true });
 	await fs.promises.cp(sourceDir, targetDir, {
-		recursive: true, force: true, filter: (src) => {
+		recursive: true,
+		force: true,
+		filter: (src) => {
 			try {
 				if (fs.statSync(src).isFile()) {
-					const normalizedSrc = src.split(path.sep).join(path.posix.sep);
+					const normalizedSrc = src
+						.split(path.sep)
+						.join(path.posix.sep);
 					if (normalizedSrc.includes('/prebuilds/linuxmusl-')) {
 						return false;
 					}
-					return src.endsWith('computer.node') || src.endsWith('runtime.node');
+					return (
+						src.endsWith('computer.node') ||
+						src.endsWith('runtime.node')
+					);
 				}
 				return true;
 			} catch {
 				return true;
 			}
-		}
+		},
 	});
 }
 
 async function copyCopilotCLIFolders(sourceDir: string, targetDir: string) {
 	await fs.promises.rm(targetDir, { recursive: true, force: true });
 	await fs.promises.mkdir(targetDir, { recursive: true });
-	await fs.promises.cp(sourceDir, targetDir, { recursive: true, force: true });
+	await fs.promises.cp(sourceDir, targetDir, {
+		recursive: true,
+		force: true,
+	});
 }
 
 /**
@@ -146,13 +242,21 @@ async function createClaudeSymlinks() {
 		return;
 	}
 
-	console.log('Creating symlinks for Claude session storage and instructions...');
+	console.log(
+		'Creating symlinks for Claude session storage and instructions...',
+	);
 	const claudeDir = path.join(REPO_ROOT, '.claude');
 	await fs.promises.mkdir(claudeDir, { recursive: true });
 
 	const symlinks: { link: string; target: string }[] = [
-		{ link: path.join(claudeDir, 'CLAUDE.md'), target: path.join('..', '.github', 'copilot-instructions.md') },
-		{ link: path.join(claudeDir, 'skills'), target: path.join('..', '.agents', 'skills') },
+		{
+			link: path.join(claudeDir, 'CLAUDE.md'),
+			target: path.join('..', '.github', 'copilot-instructions.md'),
+		},
+		{
+			link: path.join(claudeDir, 'skills'),
+			target: path.join('..', '.agents', 'skills'),
+		},
 	];
 
 	for (const { link, target } of symlinks) {
@@ -163,22 +267,33 @@ async function createClaudeSymlinks() {
 }
 
 async function main() {
-	await fs.promises.mkdir(path.join(REPO_ROOT, '.build'), { recursive: true });
+	await fs.promises.mkdir(path.join(REPO_ROOT, '.build'), {
+		recursive: true,
+	});
 
 	await createClaudeSymlinks();
 
-	const vendoredTiktokenFiles = ['src/platform/tokenizer/node/cl100k_base.tiktoken', 'src/platform/tokenizer/node/o200k_base.tiktoken'];
+	const vendoredTiktokenFiles = [
+		'src/platform/tokenizer/node/cl100k_base.tiktoken',
+		'src/platform/tokenizer/node/o200k_base.tiktoken',
+	];
 
 	for (const tokens of vendoredTiktokenFiles) {
 		await compressTikToken(tokens, `dist/${path.basename(tokens)}`);
 	}
 
 	// copy static assets to dist
-	await copyStaticAssets([
-		...treeSitterGrammars.map(grammar => `node_modules/@vscode/tree-sitter-wasm/wasm/${grammar.name}.wasm`),
-		'node_modules/@vscode/tree-sitter-wasm/wasm/tree-sitter.wasm',
-		'node_modules/@github/blackbird-external-ingest-utils/pkg/nodejs/external_ingest_utils_bg.wasm',
-	], 'dist');
+	await copyStaticAssets(
+		[
+			...treeSitterGrammars.map(
+				(grammar) =>
+					`node_modules/@vscode/tree-sitter-wasm/wasm/${grammar.name}.wasm`,
+			),
+			'node_modules/@vscode/tree-sitter-wasm/wasm/tree-sitter.wasm',
+			'node_modules/@github/blackbird-external-ingest-utils/pkg/nodejs/external_ingest_utils_bg.wasm',
+		],
+		'dist',
+	);
 
 	await removeCopilotCLIShim();
 	await copyCopilotCliWorkerFiles();
@@ -189,14 +304,22 @@ async function main() {
 	await copyCopilotCliPrebuildFiles();
 
 	// Check if the base cache file exists (dev-only sanity check, non-fatal in CI)
-	const baseCachePath = path.join('test', 'simulation', 'cache', 'base.sqlite');
+	const baseCachePath = path.join(
+		'test',
+		'simulation',
+		'cache',
+		'base.sqlite',
+	);
 	if (!fs.existsSync(baseCachePath)) {
-		console.warn(`Warning: Base cache file does not exist at ${baseCachePath}. Please ensure that you have git lfs installed and initialized before the repository is cloned.`);
+		console.warn(
+			`Warning: Base cache file does not exist at ${baseCachePath}. Please ensure that you have git lfs installed and initialized before the repository is cloned.`,
+		);
 	}
 
-	await copyStaticAssets([
-		`node_modules/@anthropic-ai/claude-agent-sdk/cli.js`,
-	], 'dist');
+	await copyStaticAssets(
+		[`node_modules/@anthropic-ai/claude-agent-sdk/cli.js`],
+		'dist',
+	);
 }
 
 main();

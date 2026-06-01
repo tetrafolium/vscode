@@ -3,29 +3,49 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeferredPromise, raceCancellation } from '../../../../base/common/async.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { Disposable, IDisposable } from '../../../../base/common/lifecycle.js';
-import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
-import { AiSettingsSearchResult, AiSettingsSearchResultKind, IAiSettingsSearchProvider, IAiSettingsSearchService } from './aiSettingsSearch.js';
+import {
+	DeferredPromise,
+	raceCancellation,
+} from "../../../../base/common/async.js";
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { Disposable, IDisposable } from "../../../../base/common/lifecycle.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../platform/instantiation/common/extensions.js";
+import {
+	AiSettingsSearchResult,
+	AiSettingsSearchResultKind,
+	IAiSettingsSearchProvider,
+	IAiSettingsSearchService,
+} from "./aiSettingsSearch.js";
 
-export class AiSettingsSearchService extends Disposable implements IAiSettingsSearchService {
+export class AiSettingsSearchService
+	extends Disposable
+	implements IAiSettingsSearchService
+{
 	readonly _serviceBrand: undefined;
 	private static readonly MAX_PICKS = 5;
 
 	private _providers: IAiSettingsSearchProvider[] = [];
-	private _llmRankedResultsPromises: Map<string, DeferredPromise<string[]>> = new Map();
-	private _embeddingsResultsPromises: Map<string, DeferredPromise<string[]>> = new Map();
+	private _llmRankedResultsPromises: Map<string, DeferredPromise<string[]>> =
+		new Map();
+	private _embeddingsResultsPromises: Map<string, DeferredPromise<string[]>> =
+		new Map();
 
-	private _onProviderRegistered: Emitter<void> = this._register(new Emitter<void>());
+	private _onProviderRegistered: Emitter<void> = this._register(
+		new Emitter<void>(),
+	);
 	readonly onProviderRegistered: Event<void> = this._onProviderRegistered.event;
 
 	isEnabled(): boolean {
 		return this._providers.length > 0;
 	}
 
-	registerSettingsSearchProvider(provider: IAiSettingsSearchProvider): IDisposable {
+	registerSettingsSearchProvider(
+		provider: IAiSettingsSearchProvider,
+	): IDisposable {
 		this._providers.push(provider);
 		this._onProviderRegistered.fire();
 		return {
@@ -34,24 +54,33 @@ export class AiSettingsSearchService extends Disposable implements IAiSettingsSe
 				if (index !== -1) {
 					this._providers.splice(index, 1);
 				}
-			}
+			},
 		};
 	}
 
 	startSearch(query: string, token: CancellationToken): void {
 		if (!this.isEnabled()) {
-			throw new Error('No settings search providers registered');
+			throw new Error("No settings search providers registered");
 		}
 
 		this._embeddingsResultsPromises.delete(query);
 		this._llmRankedResultsPromises.delete(query);
 
-		this._providers.forEach(provider => provider.searchSettings(query, { limit: AiSettingsSearchService.MAX_PICKS, embeddingsOnly: false }, token));
+		this._providers.forEach((provider) =>
+			provider.searchSettings(
+				query,
+				{ limit: AiSettingsSearchService.MAX_PICKS, embeddingsOnly: false },
+				token,
+			),
+		);
 	}
 
-	async getEmbeddingsResults(query: string, token: CancellationToken): Promise<string[] | null> {
+	async getEmbeddingsResults(
+		query: string,
+		token: CancellationToken,
+	): Promise<string[] | null> {
 		if (!this.isEnabled()) {
-			throw new Error('No settings search providers registered');
+			throw new Error("No settings search providers registered");
 		}
 
 		const existingPromise = this._embeddingsResultsPromises.get(query);
@@ -66,9 +95,12 @@ export class AiSettingsSearchService extends Disposable implements IAiSettingsSe
 		return result ?? null;
 	}
 
-	async getLLMRankedResults(query: string, token: CancellationToken): Promise<string[] | null> {
+	async getLLMRankedResults(
+		query: string,
+		token: CancellationToken,
+	): Promise<string[] | null> {
 		if (!this.isEnabled()) {
-			throw new Error('No settings search providers registered');
+			throw new Error("No settings search providers registered");
 		}
 
 		const existingPromise = this._llmRankedResultsPromises.get(query);
@@ -110,4 +142,8 @@ export class AiSettingsSearchService extends Disposable implements IAiSettingsSe
 	}
 }
 
-registerSingleton(IAiSettingsSearchService, AiSettingsSearchService, InstantiationType.Delayed);
+registerSingleton(
+	IAiSettingsSearchService,
+	AiSettingsSearchService,
+	InstantiationType.Delayed,
+);

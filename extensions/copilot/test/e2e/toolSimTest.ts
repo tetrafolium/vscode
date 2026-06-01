@@ -14,13 +14,17 @@ import { ITestingServicesAccessor } from '../../src/platform/test/node/services'
 import { SyncDescriptor } from '../../src/util/vs/platform/instantiation/common/descriptors';
 import { SimulationTestFunction } from '../base/stest';
 import { KeywordPredicate, validate } from '../base/validate';
-import { fetchConversationScenarios, IConversationTestCase, Scenario } from './scenarioLoader';
+import {
+	fetchConversationScenarios,
+	IConversationTestCase,
+	Scenario,
+} from './scenarioLoader';
 import { generateScenarioTestRunner } from './scenarioTest';
 
 export type ToolScenarioEvaluator = (
 	accessor: ITestingServicesAccessor,
 	question: string,
-	toolCalls: any[]
+	toolCalls: any[],
 ) => Promise<void>;
 
 export interface IParsedToolCall {
@@ -35,61 +39,105 @@ export interface IToolCallExpectation {
 	/**
 	 * Validate tool results with a callback.
 	 */
-	toolCallValidators?: Partial<Record<ToolName, (toolCall: IParsedToolCall[]) => void | Promise<void>>>;
+	toolCallValidators?: Partial<
+		Record<ToolName, (toolCall: IParsedToolCall[]) => void | Promise<void>>
+	>;
 }
 
-export function generateToolTestRunner(toolScenario: IConversationToolTestCase | ToolScenario, expectedToolCalls?: IToolCallExpectation): SimulationTestFunction {
+export function generateToolTestRunner(
+	toolScenario: IConversationToolTestCase | ToolScenario,
+	expectedToolCalls?: IToolCallExpectation,
+): SimulationTestFunction {
 	if (!Array.isArray(toolScenario)) {
 		toolScenario = [toolScenario];
 	}
 
 	return async (testingServiceCollection) => {
-		testingServiceCollection.define(IToolsService, new SyncDescriptor(NoopTestToolsService));
+		testingServiceCollection.define(
+			IToolsService,
+			new SyncDescriptor(NoopTestToolsService),
+		);
 
 		if (toolScenario.length !== 1) {
 			throw new Error('Tool test cases must only have one scenario');
 		}
 		const testCase = toolScenario[0];
 		testCase.question = ensureSlashEditAgent(testCase.question);
-		testCase.setupCase = accessor => {
-			(accessor.get(IConfigurationService) as InMemoryConfigurationService).setNonExtensionConfig('chat.agent.maxRequests', 0);
+		testCase.setupCase = (accessor) => {
+			(
+				accessor.get(
+					IConfigurationService,
+				) as InMemoryConfigurationService
+			).setNonExtensionConfig('chat.agent.maxRequests', 0);
 		};
 
 		// Apply default name
-		const scenario: Scenario = toolScenario.map(testCase => ({
+		const scenario: Scenario = toolScenario.map((testCase) => ({
 			...testCase,
 			name: testCase.name ?? testCase.question,
 		}));
 
-		return generateScenarioTestRunner(scenario, async (accessor, question, userVisibleAnswer, rawResponse, turn, scenarioIndex, commands) => {
-			const toolCalls = turn?.resultMetadata?.toolCallRounds;
-			if (!toolCalls || toolCalls.length === 0) {
-				return { success: false, errorMessage: 'No tool calls were made.' };
-			}
+		return generateScenarioTestRunner(
+			scenario,
+			async (
+				accessor,
+				question,
+				userVisibleAnswer,
+				rawResponse,
+				turn,
+				scenarioIndex,
+				commands,
+			) => {
+				const toolCalls = turn?.resultMetadata?.toolCallRounds;
+				if (!toolCalls || toolCalls.length === 0) {
+					return {
+						success: false,
+						errorMessage: 'No tool calls were made.',
+					};
+				}
 
-			if (toolCalls.length !== 1) {
-				return { success: false, errorMessage: `Multiple tool call rounds, this shouldn't've happened.` };
-			}
+				if (toolCalls.length !== 1) {
+					return {
+						success: false,
+						errorMessage: `Multiple tool call rounds, this shouldn't've happened.`,
+					};
+				}
 
-			await validateToolCallExpectation(accessor, testCase, expectedToolCalls, toolCalls[0].toolCalls);
-			return { success: true };
-		})(testingServiceCollection);
+				await validateToolCallExpectation(
+					accessor,
+					testCase,
+					expectedToolCalls,
+					toolCalls[0].toolCalls,
+				);
+				return { success: true };
+			},
+		)(testingServiceCollection);
 	};
 }
 
-async function validateToolCallExpectation(accessor: ITestingServicesAccessor, testCase: IConversationToolTestCase, expectation: IToolCallExpectation | undefined, toolCalls: IToolCall[]): Promise<void> {
+async function validateToolCallExpectation(
+	accessor: ITestingServicesAccessor,
+	testCase: IConversationToolTestCase,
+	expectation: IToolCallExpectation | undefined,
+	toolCalls: IToolCall[],
+): Promise<void> {
 	const toolsService = accessor.get(IToolsService);
 
-	const expectedAnyOfToolNames = testCase.expectedToolCalls && new Set(
-		typeof testCase.expectedToolCalls === 'string' ?
-			[testCase.expectedToolCalls] :
-			testCase.expectedToolCalls.anyOf);
+	const expectedAnyOfToolNames =
+		testCase.expectedToolCalls &&
+		new Set(
+			typeof testCase.expectedToolCalls === 'string'
+				? [testCase.expectedToolCalls]
+				: testCase.expectedToolCalls.anyOf,
+		);
 
 	const toolCallsByName = new Map<ToolName, IParsedToolCall[]>();
 	for (const toolCall of toolCalls) {
 		if (expectedAnyOfToolNames) {
 			if (!expectedAnyOfToolNames.has(toolCall.name as ToolName)) {
-				throw new Error(`Tool call name "${toolCall.name}" does not match expected tool call names (${Array.from(expectedAnyOfToolNames).join(', ')}).`);
+				throw new Error(
+					`Tool call name "${toolCall.name}" does not match expected tool call names (${Array.from(expectedAnyOfToolNames).join(', ')}).`,
+				);
 			}
 
 			if (!expectation?.allowParallelToolCalls) {
@@ -98,21 +146,26 @@ async function validateToolCallExpectation(accessor: ITestingServicesAccessor, t
 			}
 		}
 
-		const validationResult = toolsService.validateToolInput(toolCall.name, toolCall.arguments);
+		const validationResult = toolsService.validateToolInput(
+			toolCall.name,
+			toolCall.arguments,
+		);
 		if ('error' in validationResult) {
-			throw new Error(`Tool call input "${JSON.stringify(toolCall.arguments)}" is invalid: ${validationResult.error}`);
+			throw new Error(
+				`Tool call input "${JSON.stringify(toolCall.arguments)}" is invalid: ${validationResult.error}`,
+			);
 		}
 
 		const toolName = toolCall.name as ToolName;
 		const parsedToolCall: IParsedToolCall = {
 			...toolCall,
-			input: validationResult.inputObj as object
+			input: validationResult.inputObj as object,
 		};
 		toolCallsByName.set(toolName, toolCallsByName.get(toolName) ?? []);
 		toolCallsByName.get(toolName)?.push(parsedToolCall);
 
 		if (testCase.toolInputValues) {
-			Object.keys(testCase.toolInputValues).forEach(key => {
+			Object.keys(testCase.toolInputValues).forEach((key) => {
 				const argValue = (parsedToolCall.input as any)[key];
 				const keyword = testCase.toolInputValues![key]!;
 				if (typeof keyword === 'boolean') {
@@ -121,7 +174,9 @@ async function validateToolCallExpectation(accessor: ITestingServicesAccessor, t
 				}
 
 				if (typeof argValue !== 'string') {
-					throw new Error(`Tool call input arg "${key}" must be a string to use toolInputValues. Got: ${JSON.stringify(argValue)}`);
+					throw new Error(
+						`Tool call input arg "${key}" must be a string to use toolInputValues. Got: ${JSON.stringify(argValue)}`,
+					);
 				}
 
 				const err = validate(argValue, keyword);
@@ -143,7 +198,10 @@ async function validateToolCallExpectation(accessor: ITestingServicesAccessor, t
 /**
  * JSON extensions for tool test cases.
  */
-export interface IConversationToolTestCase extends Omit<IConversationTestCase, 'name'> {
+export interface IConversationToolTestCase extends Omit<
+	IConversationTestCase,
+	'name'
+> {
 	name?: string;
 	expectedToolCalls?: ToolName | { anyOf: ToolName[] };
 	toolInputValues?: Record<string, object | boolean | KeywordPredicate[]>;
@@ -153,10 +211,12 @@ export type ToolScenario = IConversationToolTestCase[];
 
 export function fetchToolScenarios(scenarioFolderPath: string): ToolScenario[] {
 	const scenarios = fetchConversationScenarios(scenarioFolderPath);
-	return scenarios.map(scenario => {
-		return scenario.map<IConversationToolTestCase>(testCase => {
+	return scenarios.map((scenario) => {
+		return scenario.map<IConversationToolTestCase>((testCase) => {
 			if (!testCase.json.expectedToolCalls) {
-				throw new Error(`Tool test case "${testCase.name}" must define expectedToolCalls.`);
+				throw new Error(
+					`Tool test case "${testCase.name}" must define expectedToolCalls.`,
+				);
 			}
 
 			return {

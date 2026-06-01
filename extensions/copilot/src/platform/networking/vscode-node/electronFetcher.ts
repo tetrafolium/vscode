@@ -13,15 +13,23 @@ export interface ElectronFetchError {
 }
 
 export class ElectronFetcher extends BaseFetchFetcher {
-
 	static readonly ID = 'electron-fetch' as const;
 
-	public static create(envService: IEnvService, reportEvent: ReportFetchEvent = () => { }, userAgentLibraryUpdate?: (original: string) => string): ElectronFetcher | null {
+	public static create(
+		envService: IEnvService,
+		reportEvent: ReportFetchEvent = () => {},
+		userAgentLibraryUpdate?: (original: string) => string,
+	): ElectronFetcher | null {
 		const net = loadNetModule();
 		if (!net) {
 			return null;
 		}
-		return new ElectronFetcher(net.fetch, envService, reportEvent, userAgentLibraryUpdate);
+		return new ElectronFetcher(
+			net.fetch,
+			envService,
+			reportEvent,
+			userAgentLibraryUpdate,
+		);
 	}
 
 	private constructor(
@@ -30,7 +38,13 @@ export class ElectronFetcher extends BaseFetchFetcher {
 		reportEvent: ReportFetchEvent,
 		userAgentLibraryUpdate?: (original: string) => string,
 	) {
-		super(fetchImpl, envService, ElectronFetcher.ID, reportEvent, userAgentLibraryUpdate);
+		super(
+			fetchImpl,
+			envService,
+			ElectronFetcher.ID,
+			reportEvent,
+			userAgentLibraryUpdate,
+		);
 	}
 
 	getUserAgentLibrary(): string {
@@ -38,20 +52,26 @@ export class ElectronFetcher extends BaseFetchFetcher {
 	}
 
 	isInternetDisconnectedError(e: any): boolean {
-		return ['net::ERR_INTERNET_DISCONNECTED', 'net::ERR_NETWORK_IO_SUSPENDED'].includes(e?.message);
+		return [
+			'net::ERR_INTERNET_DISCONNECTED',
+			'net::ERR_NETWORK_IO_SUSPENDED',
+		].includes(e?.message);
 	}
 	isFetcherError(e: any): boolean {
 		return e && e.message && e.message.startsWith('net::');
 	}
 	override isNetworkProcessCrashedError(e: unknown): boolean {
-		return (e as ElectronFetchError)?.chromiumDetails?.network_process_crashed === true;
+		return (
+			(e as ElectronFetchError)?.chromiumDetails
+				?.network_process_crashed === true
+		);
 	}
 }
 
 function loadNetModule(): typeof import('electron').net | undefined {
 	try {
 		return require('electron').net;
-	} catch (err) { }
+	} catch (err) {}
 
 	return undefined;
 }

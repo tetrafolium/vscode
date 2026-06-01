@@ -11,15 +11,23 @@ import { coalesce } from '../../../util/vs/base/common/arrays';
 import { ResourceSet } from '../../../util/vs/base/common/map';
 import { isEqual, relativePath } from '../../../util/vs/base/common/resources';
 
-export function parseGitChangesRaw(repositoryRoot: string, raw: string): DiffChange[] {
+export function parseGitChangesRaw(
+	repositoryRoot: string,
+	raw: string,
+): DiffChange[] {
 	const changes: Change[] = [];
-	const numStats = new Map<string, { insertions: number; deletions: number }>();
+	const numStats = new Map<
+		string,
+		{ insertions: number; deletions: number }
+	>();
 
 	let index = 0;
-	const segments = raw.trim().split('\x00').filter(s => s);
+	const segments = raw
+		.trim()
+		.split('\x00')
+		.filter((s) => s);
 
-	segmentsLoop:
-	while (index < segments.length) {
+	segmentsLoop: while (index < segments.length) {
 		const segment = segments[index++];
 		if (!segment) {
 			break;
@@ -29,7 +37,11 @@ export function parseGitChangesRaw(repositoryRoot: string, raw: string): DiffCha
 			// Parse --raw output
 			const [, , , , change] = segment.split(' ');
 			const filePath = segments[index++];
-			const originalUri = Uri.file(path.isAbsolute(filePath) ? filePath : path.join(repositoryRoot, filePath));
+			const originalUri = Uri.file(
+				path.isAbsolute(filePath)
+					? filePath
+					: path.join(repositoryRoot, filePath),
+			);
 
 			let uri = originalUri;
 			let renameUri = originalUri;
@@ -55,7 +67,11 @@ export function parseGitChangesRaw(repositoryRoot: string, raw: string): DiffCha
 					}
 
 					status = 3; /* Status.INDEX_RENAMED */
-					uri = renameUri = Uri.file(path.isAbsolute(newPath) ? newPath : path.join(repositoryRoot, newPath));
+					uri = renameUri = Uri.file(
+						path.isAbsolute(newPath)
+							? newPath
+							: path.join(repositoryRoot, newPath),
+					);
 					break;
 				}
 				default:
@@ -76,9 +92,13 @@ export function parseGitChangesRaw(repositoryRoot: string, raw: string): DiffCha
 				index++;
 
 				const renamePath = segments[index++];
-				numstatPath = path.isAbsolute(renamePath) ? renamePath : path.join(repositoryRoot, renamePath);
+				numstatPath = path.isAbsolute(renamePath)
+					? renamePath
+					: path.join(repositoryRoot, renamePath);
 			} else {
-				numstatPath = path.isAbsolute(filePath) ? filePath : path.join(repositoryRoot, filePath);
+				numstatPath = path.isAbsolute(filePath)
+					? filePath
+					: path.join(repositoryRoot, filePath);
 			}
 
 			numStats.set(numstatPath, {
@@ -88,7 +108,7 @@ export function parseGitChangesRaw(repositoryRoot: string, raw: string): DiffCha
 		}
 	}
 
-	return changes.map(change => ({
+	return changes.map((change) => ({
 		...change,
 		insertions: numStats.get(change.uri.fsPath)?.insertions ?? 0,
 		deletions: numStats.get(change.uri.fsPath)?.deletions ?? 0,
@@ -99,29 +119,32 @@ export function getUncommittedFilePaths(repository: RepoContext): string[] {
 	const resources = new ResourceSet();
 
 	const allChanges = [
-		...repository.changes?.indexChanges ?? [],
-		...repository.changes?.workingTree ?? [],
-		...repository.changes?.untrackedChanges ?? []
+		...(repository.changes?.indexChanges ?? []),
+		...(repository.changes?.workingTree ?? []),
+		...(repository.changes?.untrackedChanges ?? []),
 	];
 
 	for (const change of allChanges) {
 		resources.add(change.uri);
-		if (
-			change.originalUri &&
-			!isEqual(change.uri, change.originalUri)
-		) {
+		if (change.originalUri && !isEqual(change.uri, change.originalUri)) {
 			resources.add(change.originalUri);
 		}
 	}
 
-	const relativePaths = coalesce(Array.from(resources)
-		.map(uri => relativePath(repository.rootUri, uri)));
+	const relativePaths = coalesce(
+		Array.from(resources).map((uri) =>
+			relativePath(repository.rootUri, uri),
+		),
+	);
 
 	// Git expects forward slashes even on Windows
-	return relativePaths.map(p => p.replace(/\\/g, '/'));
+	return relativePaths.map((p) => p.replace(/\\/g, '/'));
 }
 
-export function buildTempIndexEnv(repository: RepoContext, indexFile: string): Record<string, string> {
+export function buildTempIndexEnv(
+	repository: RepoContext,
+	indexFile: string,
+): Record<string, string> {
 	if (!repository.isUsingVirtualFileSystem) {
 		return { GIT_INDEX_FILE: indexFile };
 	}
@@ -131,6 +154,6 @@ export function buildTempIndexEnv(repository: RepoContext, indexFile: string): R
 	// add, read-tree, write-tree, diff --cached) won't hold the main lock.
 	return {
 		COMMAND_HOOK_LOCK: '1',
-		GIT_INDEX_FILE: indexFile
+		GIT_INDEX_FILE: indexFile,
 	};
 }

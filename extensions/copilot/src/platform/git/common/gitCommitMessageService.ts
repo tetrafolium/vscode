@@ -7,11 +7,17 @@ import type { CancellationToken, Uri } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { Repository } from '../vscode/git';
 
-export const IGitCommitMessageService = createServiceIdentifier<IGitCommitMessageService>('IGitCommitMessageService');
+export const IGitCommitMessageService =
+	createServiceIdentifier<IGitCommitMessageService>(
+		'IGitCommitMessageService',
+	);
 
 export interface IGitCommitMessageService {
 	readonly _serviceBrand: undefined;
-	generateCommitMessage(repository: Repository, cancellationToken: CancellationToken | undefined): Promise<string | undefined>;
+	generateCommitMessage(
+		repository: Repository,
+		cancellationToken: CancellationToken | undefined,
+	): Promise<string | undefined>;
 	getRepository(uri: Uri | undefined): Promise<Repository | null>;
 }
 

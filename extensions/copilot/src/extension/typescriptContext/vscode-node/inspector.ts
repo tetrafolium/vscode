@@ -5,24 +5,50 @@
 
 import * as vscode from 'vscode';
 
-import { ContextKind, type ContextItem, type SnippetContext, type TraitContext } from '../../../platform/languageServer/common/languageContextService';
+import {
+	ContextKind,
+	type ContextItem,
+	type SnippetContext,
+	type TraitContext,
+} from '../../../platform/languageServer/common/languageContextService';
 import * as protocol from '../common/serverProtocol';
-import { type ContextItemSummary, type IInternalLanguageContextService, type OnCachePopulatedEvent, type OnContextComputedEvent, type OnContextComputedOnTimeoutEvent, type ResolvedRunnableResult } from './types';
+import {
+	type ContextItemSummary,
+	type IInternalLanguageContextService,
+	type OnCachePopulatedEvent,
+	type OnContextComputedEvent,
+	type OnContextComputedOnTimeoutEvent,
+	type ResolvedRunnableResult,
+} from './types';
 
 class TreePropertyItem {
-
-	private readonly parent: TreeContextItem | TreeYieldedContextItem | TreeCacheInfo | TreeRunnableResult;
+	private readonly parent:
+		| TreeContextItem
+		| TreeYieldedContextItem
+		| TreeCacheInfo
+		| TreeRunnableResult;
 	private readonly name: string;
 	private readonly value: string;
 
-	constructor(parent: TreeContextItem | TreeYieldedContextItem | TreeCacheInfo | TreeRunnableResult, name: string, value: string) {
+	constructor(
+		parent:
+			| TreeContextItem
+			| TreeYieldedContextItem
+			| TreeCacheInfo
+			| TreeRunnableResult,
+		name: string,
+		value: string,
+	) {
 		this.parent = parent;
 		this.name = name;
 		this.value = value;
 	}
 
 	public toTreeItem(): vscode.TreeItem {
-		const item = new vscode.TreeItem(`${this.name} = ${this.value}`, vscode.TreeItemCollapsibleState.None);
+		const item = new vscode.TreeItem(
+			`${this.name} = ${this.value}`,
+			vscode.TreeItemCollapsibleState.None,
+		);
 		item.tooltip = this.createTooltip();
 		item.id = this.id;
 		return item;
@@ -34,12 +60,13 @@ class TreePropertyItem {
 	}
 
 	private get id(): string | undefined {
-		return this.parent instanceof TreeContextItem ? `${this.parent.id}.${this.name}` : undefined;
+		return this.parent instanceof TreeContextItem
+			? `${this.parent.id}.${this.name}`
+			: undefined;
 	}
 }
 
 abstract class TreeContextItem {
-
 	protected parent: TreeRunnableResult;
 	protected abstract from: protocol.FullContextItem;
 	public abstract id: string;
@@ -49,8 +76,13 @@ abstract class TreeContextItem {
 	}
 
 	protected createTooltip(): vscode.MarkdownString {
-		const markdown = new vscode.MarkdownString(`**${this.getLabel()}**\n\n`);
-		markdown.appendCodeblock(JSON.stringify(this.from, undefined, 2), 'json');
+		const markdown = new vscode.MarkdownString(
+			`**${this.getLabel()}**\n\n`,
+		);
+		markdown.appendCodeblock(
+			JSON.stringify(this.from, undefined, 2),
+			'json',
+		);
 		return markdown;
 	}
 
@@ -58,7 +90,6 @@ abstract class TreeContextItem {
 }
 
 class TreeTrait extends TreeContextItem {
-
 	public readonly from: protocol.Trait;
 
 	constructor(parent: TreeRunnableResult, from: protocol.Trait) {
@@ -84,7 +115,10 @@ class TreeTrait extends TreeContextItem {
 
 	public toTreeItem(): vscode.TreeItem {
 		const label = `Trait: ${this.from.value}`;
-		const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
+		const item = new vscode.TreeItem(
+			label,
+			vscode.TreeItemCollapsibleState.Collapsed,
+		);
 		item.tooltip = this.createTooltip();
 		item.id = this.id;
 		return item;
@@ -92,7 +126,6 @@ class TreeTrait extends TreeContextItem {
 }
 
 class TreeSnippet extends TreeContextItem {
-
 	public readonly from: protocol.CodeSnippet;
 
 	constructor(parent: TreeRunnableResult, from: protocol.CodeSnippet) {
@@ -110,7 +143,9 @@ class TreeSnippet extends TreeContextItem {
 
 	public children(): TreePropertyItem[] {
 		const properties: TreePropertyItem[] = [];
-		properties.push(new TreePropertyItem(this, 'key', this.from.key ?? 'undefined'));
+		properties.push(
+			new TreePropertyItem(this, 'key', this.from.key ?? 'undefined'),
+		);
 		properties.push(new TreePropertyItem(this, 'value', this.from.value));
 		properties.push(new TreePropertyItem(this, 'path', this.from.fileName));
 		return properties;
@@ -118,16 +153,17 @@ class TreeSnippet extends TreeContextItem {
 
 	public toTreeItem(): vscode.TreeItem {
 		const label = `Snippet: ${this.from.value}`;
-		const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
+		const item = new vscode.TreeItem(
+			label,
+			vscode.TreeItemCollapsibleState.Collapsed,
+		);
 		item.tooltip = this.createTooltip();
 		item.id = this.id;
 		return item;
 	}
 }
 
-
 class TreeCacheInfo {
-
 	private readonly from: protocol.CacheInfo;
 
 	constructor(from: protocol.CacheInfo) {
@@ -136,7 +172,11 @@ class TreeCacheInfo {
 
 	public toTreeItem(): vscode.TreeItem {
 		const item = new vscode.TreeItem(this.getLabel());
-		item.collapsibleState = this.from.scope.kind === protocol.CacheScopeKind.OutsideRange || this.from.scope.kind === protocol.CacheScopeKind.WithinRange ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None;
+		item.collapsibleState =
+			this.from.scope.kind === protocol.CacheScopeKind.OutsideRange ||
+			this.from.scope.kind === protocol.CacheScopeKind.WithinRange
+				? vscode.TreeItemCollapsibleState.Collapsed
+				: vscode.TreeItemCollapsibleState.None;
 		return item;
 	}
 
@@ -144,10 +184,22 @@ class TreeCacheInfo {
 		const properties: TreePropertyItem[] = [];
 		const scope = this.from.scope;
 		if (scope.kind === protocol.CacheScopeKind.WithinRange) {
-			properties.push(new TreePropertyItem(this, '0', this.getRangeString(scope.range)));
+			properties.push(
+				new TreePropertyItem(
+					this,
+					'0',
+					this.getRangeString(scope.range),
+				),
+			);
 		} else if (scope.kind === protocol.CacheScopeKind.OutsideRange) {
 			for (let i = 0; i < scope.ranges.length; i++) {
-				properties.push(new TreePropertyItem(this, `${i}`, this.getRangeString(scope.ranges[i])));
+				properties.push(
+					new TreePropertyItem(
+						this,
+						`${i}`,
+						this.getRangeString(scope.ranges[i]),
+					),
+				);
 			}
 		}
 		return properties;
@@ -189,7 +241,6 @@ class TreeCacheInfo {
 }
 
 class TreeRunnableResult {
-
 	private readonly parent: TreeContextRequest;
 	private readonly from: ResolvedRunnableResult;
 	private readonly items: (TreeTrait | TreeSnippet)[];
@@ -197,7 +248,7 @@ class TreeRunnableResult {
 	constructor(parent: TreeContextRequest, from: ResolvedRunnableResult) {
 		this.parent = parent;
 		this.from = from;
-		this.items = from.items.map(item => {
+		this.items = from.items.map((item) => {
 			if (item.kind === protocol.ContextKind.Trait) {
 				return new TreeTrait(this, item);
 			} else if (item.kind === protocol.ContextKind.Snippet) {
@@ -212,14 +263,32 @@ class TreeRunnableResult {
 		return `${this.parent.id}.${this.from.id}`;
 	}
 
-	public children(): (TreeTrait | TreeSnippet | TreeCacheInfo | TreePropertyItem)[] {
-		const result: (TreeTrait | TreeSnippet | TreeCacheInfo | TreePropertyItem)[] = this.items;
+	public children(): (
+		| TreeTrait
+		| TreeSnippet
+		| TreeCacheInfo
+		| TreePropertyItem
+	)[] {
+		const result: (
+			| TreeTrait
+			| TreeSnippet
+			| TreeCacheInfo
+			| TreePropertyItem
+		)[] = this.items;
 		if (this.from.cache !== undefined) {
 			result.push(new TreeCacheInfo(this.from.cache));
 		}
-		result.push(new TreePropertyItem(this, 'priority', this.from.priority.toString()));
+		result.push(
+			new TreePropertyItem(
+				this,
+				'priority',
+				this.from.priority.toString(),
+			),
+		);
 		if (this.from.debugPath !== undefined) {
-			result.push(new TreePropertyItem(this, 'debugPath', this.from.debugPath));
+			result.push(
+				new TreePropertyItem(this, 'debugPath', this.from.debugPath),
+			);
 		}
 
 		return result;
@@ -235,11 +304,15 @@ class TreeRunnableResult {
 		if (this.parent.summary.serverComputed?.has(this.from.id)) {
 			label += ' - ⏳';
 		}
-		const item = new vscode.TreeItem(label, this.items.length + cacheInfo > 0 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+		const item = new vscode.TreeItem(
+			label,
+			this.items.length + cacheInfo > 0
+				? vscode.TreeItemCollapsibleState.Collapsed
+				: vscode.TreeItemCollapsibleState.None,
+		);
 		item.id = this.id;
 		item.tooltip = this.createTooltip();
 		return item;
-
 	}
 
 	private createTooltip(): vscode.MarkdownString {
@@ -247,14 +320,18 @@ class TreeRunnableResult {
 		if (id.startsWith('_')) {
 			id = id.substring(1);
 		}
-		const markdown = new vscode.MarkdownString(`**${id}** - ${this.items.length} items\n\n`);
-		markdown.appendCodeblock(JSON.stringify(this.from, undefined, 2), 'json');
+		const markdown = new vscode.MarkdownString(
+			`**${id}** - ${this.items.length} items\n\n`,
+		);
+		markdown.appendCodeblock(
+			JSON.stringify(this.from, undefined, 2),
+			'json',
+		);
 		return markdown;
 	}
 }
 
 class TreeYieldedSnippet {
-
 	protected readonly from: SnippetContext;
 
 	constructor(from: SnippetContext) {
@@ -262,7 +339,10 @@ class TreeYieldedSnippet {
 	}
 
 	public toTreeItem(): vscode.TreeItem {
-		const item = new vscode.TreeItem(`${this.getLabel()}: ${this.from.value}`, vscode.TreeItemCollapsibleState.Collapsed);
+		const item = new vscode.TreeItem(
+			`${this.getLabel()}: ${this.from.value}`,
+			vscode.TreeItemCollapsibleState.Collapsed,
+		);
 		item.tooltip = this.createTooltip();
 		return item;
 	}
@@ -275,18 +355,24 @@ class TreeYieldedSnippet {
 		return [
 			new TreePropertyItem(this, 'kind', this.from.kind),
 			new TreePropertyItem(this, 'value', this.from.value),
-			new TreePropertyItem(this, 'priority', this.from.priority.toString()),
-			new TreePropertyItem(this, 'uri', this.from.uri.toString())
+			new TreePropertyItem(
+				this,
+				'priority',
+				this.from.priority.toString(),
+			),
+			new TreePropertyItem(this, 'uri', this.from.uri.toString()),
 		];
 	}
 
 	protected createTooltip(): vscode.MarkdownString {
-		const markdown = new vscode.MarkdownString(`**${this.getLabel()}**\n\n`);
+		const markdown = new vscode.MarkdownString(
+			`**${this.getLabel()}**\n\n`,
+		);
 		const json = {
 			kind: this.from.kind,
 			priority: this.from.priority,
 			uri: this.from.uri.toString(),
-			value: this.from.value
+			value: this.from.value,
 		};
 		markdown.appendCodeblock(JSON.stringify(json, undefined, 2), 'json');
 		return markdown;
@@ -294,7 +380,6 @@ class TreeYieldedSnippet {
 }
 
 class TreeYieldedTrait {
-
 	protected readonly from: TraitContext;
 
 	constructor(from: TraitContext) {
@@ -302,7 +387,10 @@ class TreeYieldedTrait {
 	}
 
 	public toTreeItem(): vscode.TreeItem {
-		const item = new vscode.TreeItem(`${this.getLabel()}: ${this.from.value}`, vscode.TreeItemCollapsibleState.Collapsed);
+		const item = new vscode.TreeItem(
+			`${this.getLabel()}: ${this.from.value}`,
+			vscode.TreeItemCollapsibleState.Collapsed,
+		);
 		item.tooltip = this.createTooltip();
 		return item;
 	}
@@ -316,17 +404,23 @@ class TreeYieldedTrait {
 			new TreePropertyItem(this, 'kind', this.from.kind),
 			new TreePropertyItem(this, 'name', this.from.name),
 			new TreePropertyItem(this, 'value', this.from.value),
-			new TreePropertyItem(this, 'priority', this.from.priority.toString())
+			new TreePropertyItem(
+				this,
+				'priority',
+				this.from.priority.toString(),
+			),
 		];
 	}
 
 	protected createTooltip(): vscode.MarkdownString {
-		const markdown = new vscode.MarkdownString(`**${this.getLabel()}**\n\n`);
+		const markdown = new vscode.MarkdownString(
+			`**${this.getLabel()}**\n\n`,
+		);
 		const json = {
 			kind: this.from.kind,
 			priority: this.from.priority,
 			name: this.from.name,
-			value: this.from.value
+			value: this.from.value,
 		};
 		markdown.appendCodeblock(JSON.stringify(json, undefined, 2), 'json');
 		return markdown;
@@ -336,7 +430,6 @@ class TreeYieldedTrait {
 type TreeYieldedContextItem = TreeYieldedSnippet | TreeYieldedTrait;
 
 class TreeYielded {
-
 	private readonly parent: TreeContextRequest;
 	private readonly items: ReadonlyArray<ContextItem>;
 
@@ -359,7 +452,10 @@ class TreeYielded {
 
 	public toTreeItem(): vscode.TreeItem {
 		const label = `Yielded: ${this.items.length} items`;
-		const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Collapsed);
+		const item = new vscode.TreeItem(
+			label,
+			vscode.TreeItemCollapsibleState.Collapsed,
+		);
 		item.id = this.id;
 		return item;
 	}
@@ -370,7 +466,6 @@ class TreeYielded {
 }
 
 abstract class TreeContextRequest {
-
 	protected readonly label: string;
 	protected readonly document: string;
 	protected readonly position: vscode.Position;
@@ -378,14 +473,23 @@ abstract class TreeContextRequest {
 
 	private static counter = 1;
 
-	constructor(label: string, event: OnCachePopulatedEvent | OnContextComputedEvent | OnContextComputedOnTimeoutEvent) {
+	constructor(
+		label: string,
+		event:
+			| OnCachePopulatedEvent
+			| OnContextComputedEvent
+			| OnContextComputedOnTimeoutEvent,
+	) {
 		this.document = event.document.uri.toString();
 		this.position = event.position;
 		this.summary = event.summary;
 		const start = new Date(Date.now() - this.summary.totalTime);
 		const timeString = `${start.getMinutes().toString().padStart(2, '0')}:${start.getSeconds().toString().padStart(2, '0')}.${start.getMilliseconds().toString().padStart(3, '0')}`;
 		this.label = `[${timeString}] - [${this.position.line + 1}:${this.position.character + 1}] ${event.source ?? label} - ${this.summary.stats.yielded} items`;
-		if (this.summary.serverComputed && this.summary.serverComputed.size > 0) {
+		if (
+			this.summary.serverComputed &&
+			this.summary.serverComputed.size > 0
+		) {
 			this.label += ` - ⏳ ${this.summary.totalTime}ms`;
 		} else {
 			this.label += ` - ${this.summary.totalTime}ms`;
@@ -393,7 +497,10 @@ abstract class TreeContextRequest {
 	}
 
 	public toTreeItem(): vscode.TreeItem {
-		const item = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
+		const item = new vscode.TreeItem(
+			this.label,
+			vscode.TreeItemCollapsibleState.Collapsed,
+		);
 		item.tooltip = this.createTooltip();
 		return item;
 	}
@@ -415,7 +522,6 @@ abstract class TreeContextRequest {
 }
 
 class TreeCachePopulateContextRequest extends TreeContextRequest {
-
 	private readonly items: ReadonlyArray<ResolvedRunnableResult>;
 
 	constructor(label: string, event: OnCachePopulatedEvent) {
@@ -428,7 +534,7 @@ class TreeCachePopulateContextRequest extends TreeContextRequest {
 			document: this.document,
 			position: {
 				line: this.position.line + 1,
-				character: this.position.character + 1
+				character: this.position.character + 1,
 			},
 			runnables: this.items.length,
 			cached: `${this.summary.cachedItems}/${this.summary.stats.total} cached`,
@@ -440,7 +546,10 @@ class TreeCachePopulateContextRequest extends TreeContextRequest {
 		};
 	}
 
-	public override children(): (TreeRunnableResult | TreeYieldedContextItem)[] {
+	public override children(): (
+		| TreeRunnableResult
+		| TreeYieldedContextItem
+	)[] {
 		const result: (TreeRunnableResult | TreeYieldedContextItem)[] = [];
 		for (const item of this.items) {
 			result.push(new TreeRunnableResult(this, item));
@@ -450,10 +559,12 @@ class TreeCachePopulateContextRequest extends TreeContextRequest {
 }
 
 class TreeYieldContextRequest extends TreeContextRequest {
-
 	private readonly items: ReadonlyArray<ContextItem>;
 
-	constructor(label: string, event: OnContextComputedEvent | OnContextComputedOnTimeoutEvent) {
+	constructor(
+		label: string,
+		event: OnContextComputedEvent | OnContextComputedOnTimeoutEvent,
+	) {
 		super(label, event);
 		this.items = event.items;
 	}
@@ -463,7 +574,7 @@ class TreeYieldContextRequest extends TreeContextRequest {
 			document: this.document,
 			position: {
 				line: this.position.line + 1,
-				character: this.position.character + 1
+				character: this.position.character + 1,
 			},
 			items: this.items.length,
 			cached: `${this.summary.cachedItems}/${this.summary.stats.total} cached`,
@@ -488,35 +599,58 @@ class TreeYieldContextRequest extends TreeContextRequest {
 	}
 
 	public override toTreeItem(): vscode.TreeItem {
-		const item = new vscode.TreeItem(this.label, vscode.TreeItemCollapsibleState.Collapsed);
+		const item = new vscode.TreeItem(
+			this.label,
+			vscode.TreeItemCollapsibleState.Collapsed,
+		);
 		item.id = this.id;
 		return item;
 	}
 }
 
-type InspectorItems = TreeContextRequest | TreeRunnableResult | TreeTrait | TreeSnippet | TreePropertyItem | TreeYielded | TreeYieldedSnippet | TreeYieldedTrait | TreeCacheInfo;
+type InspectorItems =
+	| TreeContextRequest
+	| TreeRunnableResult
+	| TreeTrait
+	| TreeSnippet
+	| TreePropertyItem
+	| TreeYielded
+	| TreeYieldedSnippet
+	| TreeYieldedTrait
+	| TreeCacheInfo;
 export class InspectorDataProvider implements vscode.TreeDataProvider<InspectorItems> {
-
 	private readonly languageContextService: IInternalLanguageContextService;
 
-	private readonly _onDidChangeTreeData: vscode.EventEmitter<InspectorItems | InspectorItems[] | undefined | null | void>;
-	public readonly onDidChangeTreeData: vscode.Event<InspectorItems | InspectorItems[] | undefined | null | void>;
+	private readonly _onDidChangeTreeData: vscode.EventEmitter<
+		InspectorItems | InspectorItems[] | undefined | null | void
+	>;
+	public readonly onDidChangeTreeData: vscode.Event<
+		InspectorItems | InspectorItems[] | undefined | null | void
+	>;
 
 	private items: TreeContextRequest[];
 
 	constructor(languageContextService: IInternalLanguageContextService) {
 		this.languageContextService = languageContextService;
-		this._onDidChangeTreeData = new vscode.EventEmitter<InspectorItems | InspectorItems[] | undefined | null | void>();
+		this._onDidChangeTreeData = new vscode.EventEmitter<
+			InspectorItems | InspectorItems[] | undefined | null | void
+		>();
 		this.onDidChangeTreeData = this._onDidChangeTreeData.event;
 		this.items = [];
 		this.languageContextService.onCachePopulated((event) => {
-			this.addContextRequest(new TreeCachePopulateContextRequest(`Cache`, event));
+			this.addContextRequest(
+				new TreeCachePopulateContextRequest(`Cache`, event),
+			);
 		});
 		this.languageContextService.onContextComputed((event) => {
-			this.addContextRequest(new TreeYieldContextRequest(`Context`, event));
+			this.addContextRequest(
+				new TreeYieldContextRequest(`Context`, event),
+			);
 		});
 		this.languageContextService.onContextComputedOnTimeout((event) => {
-			this.addContextRequest(new TreeYieldContextRequest(`OnTimeout`, event));
+			this.addContextRequest(
+				new TreeYieldContextRequest(`OnTimeout`, event),
+			);
 		});
 	}
 
@@ -529,7 +663,9 @@ export class InspectorDataProvider implements vscode.TreeDataProvider<InspectorI
 		this._onDidChangeTreeData.fire(undefined);
 	}
 
-	public getTreeItem(element: InspectorItems): vscode.TreeItem | Thenable<vscode.TreeItem> {
+	public getTreeItem(
+		element: InspectorItems,
+	): vscode.TreeItem | Thenable<vscode.TreeItem> {
 		return element.toTreeItem();
 	}
 
@@ -541,9 +677,15 @@ export class InspectorDataProvider implements vscode.TreeDataProvider<InspectorI
 		if (element === undefined) {
 			return this.items;
 		} else if (
-			element instanceof TreeRunnableResult || element instanceof TreeTrait || element instanceof TreeSnippet || element instanceof TreeYielded ||
-			element instanceof TreeYieldedSnippet || element instanceof TreeYieldedTrait || element instanceof TreeCacheInfo || element instanceof TreeContextRequest) {
-
+			element instanceof TreeRunnableResult ||
+			element instanceof TreeTrait ||
+			element instanceof TreeSnippet ||
+			element instanceof TreeYielded ||
+			element instanceof TreeYieldedSnippet ||
+			element instanceof TreeYieldedTrait ||
+			element instanceof TreeCacheInfo ||
+			element instanceof TreeContextRequest
+		) {
 			return element.children();
 		}
 		return [];

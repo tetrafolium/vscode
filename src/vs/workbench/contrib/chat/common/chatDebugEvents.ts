@@ -3,42 +3,60 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IChatDebugEvent } from './chatDebugService.js';
+import { IChatDebugEvent } from "./chatDebugService.js";
 
 /**
  * Checks whether a debug event matches a single text search term.
  * Used by both the debug panel filter and the listDebugEvents tool.
  */
-export function debugEventMatchesText(event: IChatDebugEvent, term: string): boolean {
+export function debugEventMatchesText(
+	event: IChatDebugEvent,
+	term: string,
+): boolean {
 	if (event.kind.toLowerCase().includes(term)) {
 		return true;
 	}
 	switch (event.kind) {
-		case 'toolCall':
-			return event.toolName.toLowerCase().includes(term)
-				|| (event.input?.toLowerCase().includes(term) ?? false)
-				|| (event.output?.toLowerCase().includes(term) ?? false);
-		case 'modelTurn':
-			return (event.model?.toLowerCase().includes(term) ?? false)
-				|| (event.requestName?.toLowerCase().includes(term) ?? false);
-		case 'generic':
-			return event.name.toLowerCase().includes(term)
-				|| (event.details?.toLowerCase().includes(term) ?? false)
-				|| (event.category?.toLowerCase().includes(term) ?? false);
-		case 'subagentInvocation':
-			return event.agentName.toLowerCase().includes(term)
-				|| (event.description?.toLowerCase().includes(term) ?? false);
-		case 'userMessage':
-		case 'agentResponse':
-			return event.message.toLowerCase().includes(term)
-				|| event.sections.some(s => s.name.toLowerCase().includes(term) || s.content.toLowerCase().includes(term));
+		case "toolCall":
+			return (
+				event.toolName.toLowerCase().includes(term) ||
+				(event.input?.toLowerCase().includes(term) ?? false) ||
+				(event.output?.toLowerCase().includes(term) ?? false)
+			);
+		case "modelTurn":
+			return (
+				(event.model?.toLowerCase().includes(term) ?? false) ||
+				(event.requestName?.toLowerCase().includes(term) ?? false)
+			);
+		case "generic":
+			return (
+				event.name.toLowerCase().includes(term) ||
+				(event.details?.toLowerCase().includes(term) ?? false) ||
+				(event.category?.toLowerCase().includes(term) ?? false)
+			);
+		case "subagentInvocation":
+			return (
+				event.agentName.toLowerCase().includes(term) ||
+				(event.description?.toLowerCase().includes(term) ?? false)
+			);
+		case "userMessage":
+		case "agentResponse":
+			return (
+				event.message.toLowerCase().includes(term) ||
+				event.sections.some(
+					(s) =>
+						s.name.toLowerCase().includes(term) ||
+						s.content.toLowerCase().includes(term),
+				)
+			);
 	}
 }
 
 /**
  * Regex used to match `before:` and `after:` timestamp tokens inside filter text.
  */
-const timestampTokenPattern = /\b(?:before|after):\d{4}(?:-\d{2}(?:-\d{2}(?:t\d{1,2}(?::\d{2}(?::\d{2})?)?)?)?)?(\b|$)/g;
+const timestampTokenPattern =
+	/\b(?:before|after):\d{4}(?:-\d{2}(?:-\d{2}(?:t\d{1,2}(?::\d{2}(?::\d{2})?)?)?)?)?(\b|$)/g;
 
 /**
  * Parse a `before:YYYY[-MM[-DD[THH[:MM[:SS]]]]]` or `after:…` token from
@@ -48,8 +66,13 @@ const timestampTokenPattern = /\b(?:before|after):\d{4}(?:-\d{2}(?:-\d{2}(?:t\d{
  * specific unit given (e.g. `before:2026-03` → end-of-March).
  * For `after:`, the timestamp is the **start** of the most specific unit.
  */
-export function parseTimeToken(text: string, prefix: string): number | undefined {
-	const regex = new RegExp(`${prefix}:(\\d{4})(?:-(\\d{2})(?:-(\\d{2})(?:t(\\d{1,2})(?::(\\d{2})(?::(\\d{2}))?)?)?)?)?(?!\\w)`);
+export function parseTimeToken(
+	text: string,
+	prefix: string,
+): number | undefined {
+	const regex = new RegExp(
+		`${prefix}:(\\d{4})(?:-(\\d{2})(?:-(\\d{2})(?:t(\\d{1,2})(?::(\\d{2})(?::(\\d{2}))?)?)?)?)?(?!\\w)`,
+	);
 	const m = regex.exec(text);
 	if (!m) {
 		return undefined;
@@ -62,9 +85,17 @@ export function parseTimeToken(text: string, prefix: string): number | undefined
 	const minute = m[5] !== undefined ? parseInt(m[5], 10) : undefined;
 	const second = m[6] !== undefined ? parseInt(m[6], 10) : undefined;
 
-	if (prefix === 'before') {
+	if (prefix === "before") {
 		if (second !== undefined) {
-			return new Date(year, month!, day!, hour!, minute!, second, 999).getTime();
+			return new Date(
+				year,
+				month!,
+				day!,
+				hour!,
+				minute!,
+				second,
+				999,
+			).getTime();
 		} else if (minute !== undefined) {
 			return new Date(year, month!, day!, hour!, minute, 59, 999).getTime();
 		} else if (hour !== undefined) {
@@ -94,7 +125,7 @@ export function parseTimeToken(text: string, prefix: string): number | undefined
  * returning only the plain text search portion.
  */
 export function stripTimestampTokens(text: string): string {
-	return text.replace(timestampTokenPattern, '').trim();
+	return text.replace(timestampTokenPattern, "").trim();
 }
 
 /**
@@ -106,17 +137,25 @@ export function stripTimestampTokens(text: string): string {
  * Timestamp tokens are parsed and applied as date-range bounds, then
  * stripped before text matching.
  */
-export function filterDebugEventsByText(events: readonly IChatDebugEvent[], filterText: string): readonly IChatDebugEvent[] {
-	const beforeTimestamp = parseTimeToken(filterText, 'before');
-	const afterTimestamp = parseTimeToken(filterText, 'after');
+export function filterDebugEventsByText(
+	events: readonly IChatDebugEvent[],
+	filterText: string,
+): readonly IChatDebugEvent[] {
+	const beforeTimestamp = parseTimeToken(filterText, "before");
+	const afterTimestamp = parseTimeToken(filterText, "after");
 
 	// Strip timestamp tokens before splitting into text search terms
 	const textOnly = stripTimestampTokens(filterText);
-	const terms = textOnly.split(/\s*,\s*/).filter(t => t.length > 0);
-	const includeTerms = terms.filter(t => !t.startsWith('!')).map(t => t.trim());
-	const excludeTerms = terms.filter(t => t.startsWith('!')).map(t => t.slice(1).trim()).filter(t => t.length > 0);
+	const terms = textOnly.split(/\s*,\s*/).filter((t) => t.length > 0);
+	const includeTerms = terms
+		.filter((t) => !t.startsWith("!"))
+		.map((t) => t.trim());
+	const excludeTerms = terms
+		.filter((t) => t.startsWith("!"))
+		.map((t) => t.slice(1).trim())
+		.filter((t) => t.length > 0);
 
-	return events.filter(e => {
+	return events.filter((e) => {
 		// Timestamp bounds
 		const time = e.created.getTime();
 		if (beforeTimestamp !== undefined && time > beforeTimestamp) {
@@ -126,11 +165,11 @@ export function filterDebugEventsByText(events: readonly IChatDebugEvent[], filt
 			return false;
 		}
 		// Text matching
-		if (excludeTerms.some(term => debugEventMatchesText(e, term))) {
+		if (excludeTerms.some((term) => debugEventMatchesText(e, term))) {
 			return false;
 		}
 		if (includeTerms.length > 0) {
-			return includeTerms.some(term => debugEventMatchesText(e, term));
+			return includeTerms.some((term) => debugEventMatchesText(e, term));
 		}
 		return true;
 	});
@@ -146,18 +185,25 @@ export interface DebugEventFilterOptions {
  * Applies kind, text, and limit filters to debug events.
  * Used by the listDebugEvents tool to consolidate all filtering in one place.
  */
-export function filterDebugEvents(events: readonly IChatDebugEvent[], options: DebugEventFilterOptions): readonly IChatDebugEvent[] {
+export function filterDebugEvents(
+	events: readonly IChatDebugEvent[],
+	options: DebugEventFilterOptions,
+): readonly IChatDebugEvent[] {
 	let result = events;
 
 	if (options.kind) {
-		result = result.filter(e => e.kind === options.kind);
+		result = result.filter((e) => e.kind === options.kind);
 	}
 
 	if (options.filter) {
 		result = filterDebugEventsByText(result, options.filter);
 	}
 
-	if (options.limit !== undefined && options.limit > 0 && result.length > options.limit) {
+	if (
+		options.limit !== undefined &&
+		options.limit > 0 &&
+		result.length > options.limit
+	) {
 		result = result.slice(result.length - options.limit);
 	}
 

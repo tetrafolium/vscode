@@ -5,14 +5,33 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { Event } from '../../../../util/vs/base/common/event';
-import { CopilotChatAttr, GenAiAttr, GenAiOperationName, StdAttr } from '../genAiAttributes';
-import { emitAgentTurnEvent, emitEditFeedbackEvent, emitEditSurvivalEvent, emitInferenceDetailsEvent, emitSessionStartEvent, emitToolCallEvent } from '../genAiEvents';
+import {
+	CopilotChatAttr,
+	GenAiAttr,
+	GenAiOperationName,
+	StdAttr,
+} from '../genAiAttributes';
+import {
+	emitAgentTurnEvent,
+	emitEditFeedbackEvent,
+	emitEditSurvivalEvent,
+	emitInferenceDetailsEvent,
+	emitSessionStartEvent,
+	emitToolCallEvent,
+} from '../genAiEvents';
 import { resolveOTelConfig } from '../otelConfig';
 import type { IOTelService } from '../otelService';
 
-function createMockOTel(captureContent = false): IOTelService & { emitLogRecord: ReturnType<typeof vi.fn> } {
+function createMockOTel(
+	captureContent = false,
+): IOTelService & { emitLogRecord: ReturnType<typeof vi.fn> } {
 	const config = resolveOTelConfig({
-		env: captureContent ? { 'COPILOT_OTEL_ENABLED': 'true', 'COPILOT_OTEL_CAPTURE_CONTENT': 'true' } : { 'COPILOT_OTEL_ENABLED': 'true' },
+		env: captureContent
+			? {
+					COPILOT_OTEL_ENABLED: 'true',
+					COPILOT_OTEL_CAPTURE_CONTENT: 'true',
+				}
+			: { COPILOT_OTEL_ENABLED: 'true' },
 		extensionVersion: '1.0.0',
 		sessionId: 'test',
 	});
@@ -39,15 +58,24 @@ function createMockOTel(captureContent = false): IOTelService & { emitLogRecord:
 describe('emitInferenceDetailsEvent', () => {
 	it('emits event with standard attributes', () => {
 		const otel = createMockOTel();
-		emitInferenceDetailsEvent(otel,
+		emitInferenceDetailsEvent(
+			otel,
 			{ model: 'gpt-4o', temperature: 0.7, maxTokens: 4096 },
-			{ id: 'resp-1', model: 'gpt-4o', finishReasons: ['stop'], inputTokens: 100, outputTokens: 50 },
+			{
+				id: 'resp-1',
+				model: 'gpt-4o',
+				finishReasons: ['stop'],
+				inputTokens: 100,
+				outputTokens: 50,
+			},
 		);
 
 		expect(otel.emitLogRecord).toHaveBeenCalledOnce();
 		const [body, attrs] = otel.emitLogRecord.mock.calls[0];
 		expect(body).toContain('gpt-4o');
-		expect(attrs['event.name']).toBe('gen_ai.client.inference.operation.details');
+		expect(attrs['event.name']).toBe(
+			'gen_ai.client.inference.operation.details',
+		);
 		expect(attrs[GenAiAttr.OPERATION_NAME]).toBe(GenAiOperationName.CHAT);
 		expect(attrs[GenAiAttr.REQUEST_MODEL]).toBe('gpt-4o');
 		expect(attrs[GenAiAttr.RESPONSE_MODEL]).toBe('gpt-4o');
@@ -60,7 +88,8 @@ describe('emitInferenceDetailsEvent', () => {
 
 	it('does not include content attributes when captureContent is false', () => {
 		const otel = createMockOTel(false);
-		emitInferenceDetailsEvent(otel,
+		emitInferenceDetailsEvent(
+			otel,
 			{ model: 'gpt-4o', messages: [{ role: 'user', text: 'secret' }] },
 			{ id: 'resp-1' },
 		);
@@ -77,26 +106,32 @@ describe('emitInferenceDetailsEvent', () => {
 		const systemMsg = 'You are helpful';
 		const tools = [{ name: 'readFile' }];
 
-		emitInferenceDetailsEvent(otel,
+		emitInferenceDetailsEvent(
+			otel,
 			{ model: 'gpt-4o', messages, systemMessage: systemMsg, tools },
 			undefined,
 		);
 
 		const attrs = otel.emitLogRecord.mock.calls[0][1];
 		// Messages should be normalized to OTel GenAI format
-		expect(attrs[GenAiAttr.INPUT_MESSAGES]).toBe(JSON.stringify([{ role: 'user', parts: [{ type: 'text', content: 'hello' }] }]));
+		expect(attrs[GenAiAttr.INPUT_MESSAGES]).toBe(
+			JSON.stringify([
+				{ role: 'user', parts: [{ type: 'text', content: 'hello' }] },
+			]),
+		);
 		// System instructions should be wrapped in OTel format
-		expect(attrs[GenAiAttr.SYSTEM_INSTRUCTIONS]).toBe(JSON.stringify([{ type: 'text', content: 'You are helpful' }]));
+		expect(attrs[GenAiAttr.SYSTEM_INSTRUCTIONS]).toBe(
+			JSON.stringify([{ type: 'text', content: 'You are helpful' }]),
+		);
 		expect(attrs[GenAiAttr.TOOL_DEFINITIONS]).toBe(JSON.stringify(tools));
 	});
 
 	it('includes error.type when error is provided', () => {
 		const otel = createMockOTel();
-		emitInferenceDetailsEvent(otel,
-			{ model: 'gpt-4o' },
-			undefined,
-			{ type: 'TimeoutError', message: 'request timed out' },
-		);
+		emitInferenceDetailsEvent(otel, { model: 'gpt-4o' }, undefined, {
+			type: 'TimeoutError',
+			message: 'request timed out',
+		});
 
 		const attrs = otel.emitLogRecord.mock.calls[0][1];
 		expect(attrs[StdAttr.ERROR_TYPE]).toBe('TimeoutError');
@@ -117,12 +152,15 @@ describe('emitSessionStartEvent', () => {
 		const otel = createMockOTel();
 		emitSessionStartEvent(otel, 'sess-123', 'gpt-4o', 'copilot');
 
-		expect(otel.emitLogRecord).toHaveBeenCalledWith('copilot_chat.session.start', {
-			'event.name': 'copilot_chat.session.start',
-			'session.id': 'sess-123',
-			[GenAiAttr.REQUEST_MODEL]: 'gpt-4o',
-			[GenAiAttr.AGENT_NAME]: 'copilot',
-		});
+		expect(otel.emitLogRecord).toHaveBeenCalledWith(
+			'copilot_chat.session.start',
+			{
+				'event.name': 'copilot_chat.session.start',
+				'session.id': 'sess-123',
+				[GenAiAttr.REQUEST_MODEL]: 'gpt-4o',
+				[GenAiAttr.AGENT_NAME]: 'copilot',
+			},
+		);
 	});
 });
 
@@ -168,17 +206,29 @@ describe('emitAgentTurnEvent', () => {
 describe('emitEditFeedbackEvent', () => {
 	it('includes workspace metadata when provided', () => {
 		const otel = createMockOTel();
-		emitEditFeedbackEvent(otel, 'accepted', 'typescript', 'copilot', 'req-1', 'agent', false, false, {
-			headBranchName: 'main',
-			headCommitHash: 'abc123',
-			remoteUrl: 'github.com/org/repo',
-			fileRelativePath: 'src/app.ts',
-		});
+		emitEditFeedbackEvent(
+			otel,
+			'accepted',
+			'typescript',
+			'copilot',
+			'req-1',
+			'agent',
+			false,
+			false,
+			{
+				headBranchName: 'main',
+				headCommitHash: 'abc123',
+				remoteUrl: 'github.com/org/repo',
+				fileRelativePath: 'src/app.ts',
+			},
+		);
 
 		const attrs = otel.emitLogRecord.mock.calls[0][1];
 		expect(attrs[CopilotChatAttr.REPO_HEAD_BRANCH_NAME]).toBe('main');
 		expect(attrs[CopilotChatAttr.REPO_HEAD_COMMIT_HASH]).toBe('abc123');
-		expect(attrs[CopilotChatAttr.REPO_REMOTE_URL]).toBe('github.com/org/repo');
+		expect(attrs[CopilotChatAttr.REPO_REMOTE_URL]).toBe(
+			'github.com/org/repo',
+		);
 		expect(attrs[CopilotChatAttr.FILE_RELATIVE_PATH]).toBe('src/app.ts');
 	});
 });
@@ -186,10 +236,19 @@ describe('emitEditFeedbackEvent', () => {
 describe('emitEditSurvivalEvent', () => {
 	it('includes workspace metadata alongside survival data', () => {
 		const otel = createMockOTel();
-		emitEditSurvivalEvent(otel, 'apply_patch', 0.95, 0.88, 30000, false, 'req-1', {
-			headBranchName: 'feature/x',
-			headCommitHash: 'deadbeef',
-		});
+		emitEditSurvivalEvent(
+			otel,
+			'apply_patch',
+			0.95,
+			0.88,
+			30000,
+			false,
+			'req-1',
+			{
+				headBranchName: 'feature/x',
+				headCommitHash: 'deadbeef',
+			},
+		);
 
 		const attrs = otel.emitLogRecord.mock.calls[0][1];
 		expect(attrs['event.name']).toBe('copilot_chat.edit.survival');

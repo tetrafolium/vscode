@@ -29,7 +29,10 @@ export interface ToolParameterAttributes {
  * paths, commands, MCP server names) and emit only when `captureContent` is
  * enabled; `attrs` are always safe (hashes, fixed enums).
  */
-export function extractToolParameters(toolName: string, input: unknown): ToolParameterAttributes {
+export function extractToolParameters(
+	toolName: string,
+	input: unknown,
+): ToolParameterAttributes {
 	const attrs: Record<string, string> = {};
 	const gatedAttrs: Record<string, string> = {};
 
@@ -49,7 +52,12 @@ export function extractToolParameters(toolName: string, input: unknown): ToolPar
 	}
 
 	if (FILE_TOOL_NAMES.has(toolName)) {
-		const filePath = pickFirstString(obj, ['file_path', 'filePath', 'path', 'uri']);
+		const filePath = pickFirstString(obj, [
+			'file_path',
+			'filePath',
+			'path',
+			'uri',
+		]);
 		if (filePath) {
 			gatedAttrs[GitHubCopilotAttr.TOOL_PARAM_FILE_PATH] = filePath;
 		}
@@ -59,7 +67,11 @@ export function extractToolParameters(toolName: string, input: unknown): ToolPar
 		}
 	}
 
-	const skillName = pickFirstString(obj, ['skill_name', 'skillName', 'skill']);
+	const skillName = pickFirstString(obj, [
+		'skill_name',
+		'skillName',
+		'skill',
+	]);
 	if (skillName) {
 		attrs[GitHubCopilotAttr.TOOL_PARAM_SKILL_NAME] = skillName;
 	}
@@ -72,9 +84,11 @@ export function extractToolParameters(toolName: string, input: unknown): ToolPar
 		if (sep > 0) {
 			const serverName = rest.slice(0, sep);
 			const mcpToolName = rest.slice(sep + 2);
-			attrs[GitHubCopilotAttr.TOOL_PARAM_MCP_SERVER_NAME_HASH] = hashTelemetryValue(serverName);
+			attrs[GitHubCopilotAttr.TOOL_PARAM_MCP_SERVER_NAME_HASH] =
+				hashTelemetryValue(serverName);
 			attrs[GitHubCopilotAttr.TOOL_PARAM_MCP_TOOL_NAME] = mcpToolName;
-			gatedAttrs[GitHubCopilotAttr.TOOL_PARAM_MCP_SERVER_NAME] = serverName;
+			gatedAttrs[GitHubCopilotAttr.TOOL_PARAM_MCP_SERVER_NAME] =
+				serverName;
 		}
 	} else if (toolName.startsWith('mcp_')) {
 		const rest = toolName.slice('mcp_'.length);
@@ -82,16 +96,21 @@ export function extractToolParameters(toolName: string, input: unknown): ToolPar
 		if (underscore > 0) {
 			const serverName = rest.slice(0, underscore);
 			const mcpToolName = rest.slice(underscore + 1);
-			attrs[GitHubCopilotAttr.TOOL_PARAM_MCP_SERVER_NAME_HASH] = hashTelemetryValue(serverName);
+			attrs[GitHubCopilotAttr.TOOL_PARAM_MCP_SERVER_NAME_HASH] =
+				hashTelemetryValue(serverName);
 			attrs[GitHubCopilotAttr.TOOL_PARAM_MCP_TOOL_NAME] = mcpToolName;
-			gatedAttrs[GitHubCopilotAttr.TOOL_PARAM_MCP_SERVER_NAME] = serverName;
+			gatedAttrs[GitHubCopilotAttr.TOOL_PARAM_MCP_SERVER_NAME] =
+				serverName;
 		}
 	}
 
 	return { attrs, gatedAttrs };
 }
 
-function pickFirstString(obj: Record<string, unknown>, keys: readonly string[]): string | undefined {
+function pickFirstString(
+	obj: Record<string, unknown>,
+	keys: readonly string[],
+): string | undefined {
 	for (const k of keys) {
 		const v = obj[k];
 		if (typeof v === 'string' && v.length > 0) {
@@ -101,8 +120,16 @@ function pickFirstString(obj: Record<string, unknown>, keys: readonly string[]):
 	return undefined;
 }
 
-function classifyEditType(toolName: string, obj: Record<string, unknown>): EditOperationType | undefined {
-	if (toolName === 'create' || toolName === 'createFile' || toolName === 'create_file' || toolName === 'Write') {
+function classifyEditType(
+	toolName: string,
+	obj: Record<string, unknown>,
+): EditOperationType | undefined {
+	if (
+		toolName === 'create' ||
+		toolName === 'createFile' ||
+		toolName === 'create_file' ||
+		toolName === 'Write'
+	) {
 		return 'create';
 	}
 	if (toolName === 'insert') {
@@ -130,14 +157,22 @@ function classifyEditType(toolName: string, obj: Record<string, unknown>): EditO
 		return 'update';
 	}
 	// `view`/`readFile`/`read_file`/`Read` have no edit_type.
-	if (toolName === 'view' || toolName === 'readFile' || toolName === 'read_file' || toolName === 'Read') {
+	if (
+		toolName === 'view' ||
+		toolName === 'readFile' ||
+		toolName === 'read_file' ||
+		toolName === 'Read'
+	) {
 		return undefined;
 	}
 	// Fallback: heuristic on common arg names.
 	if (typeof obj.old_str === 'string' || typeof obj.oldString === 'string') {
 		return 'str_replace';
 	}
-	if (typeof obj.content === 'string' && typeof obj.file_text === 'undefined') {
+	if (
+		typeof obj.content === 'string' &&
+		typeof obj.file_text === 'undefined'
+	) {
 		return 'update';
 	}
 	return undefined;

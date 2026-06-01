@@ -10,44 +10,67 @@ import { OpenAiFunctionTool } from '../../../../platform/networking/common/fetch
 import { normalizeToolSchema } from '../../common/toolSchemaNormalizer';
 
 describe('ToolSchemaNormalizer', () => {
-	const makeTool = (properties: Record<string, JsonSchema>): OpenAiFunctionTool[] => [{
-		type: 'function',
-		function: {
-			name: 'test',
-			description: 'test',
-			parameters: {
-				type: 'object',
-				properties,
-			}
-		}
-	}];
+	const makeTool = (
+		properties: Record<string, JsonSchema>,
+	): OpenAiFunctionTool[] => [
+		{
+			type: 'function',
+			function: {
+				name: 'test',
+				description: 'test',
+				parameters: {
+					type: 'object',
+					properties,
+				},
+			},
+		},
+	];
 
 	test('throws an invalid primitive types', () => {
-		assert.throws(() => normalizeToolSchema(CHAT_MODEL.GPT41, makeTool({
-			foo: {
-				type: 'text',
-				description: 'foo',
-			}
-		})), Error, /do not match JSON schema/);
+		assert.throws(
+			() =>
+				normalizeToolSchema(
+					CHAT_MODEL.GPT41,
+					makeTool({
+						foo: {
+							type: 'text',
+							description: 'foo',
+						},
+					}),
+				),
+			Error,
+			/do not match JSON schema/,
+		);
 	});
 
 	test('fails on array without item specs', () => {
-		assert.throws(() => normalizeToolSchema(CHAT_MODEL.GPT41, makeTool({
-			foo: {
-				type: 'array',
-			}
-		})), Error, /array type must have items/);
+		assert.throws(
+			() =>
+				normalizeToolSchema(
+					CHAT_MODEL.GPT41,
+					makeTool({
+						foo: {
+							type: 'array',
+						},
+					}),
+				),
+			Error,
+			/array type must have items/,
+		);
 	});
 
 	test('trims extra properties', () => {
-		const schema = normalizeToolSchema(CHAT_MODEL.GPT41, makeTool({
-			foo: {
-				type: 'array',
-				items: { type: 'string' },
-				minItems: 2,
-				maxItems: 2,
-			}
-		}));
+		const schema = normalizeToolSchema(
+			CHAT_MODEL.GPT41,
+			makeTool({
+				foo: {
+					type: 'array',
+					items: { type: 'string' },
+					minItems: 2,
+					maxItems: 2,
+				},
+			}),
+		);
 
 		expect(schema![0].function.parameters).toMatchInlineSnapshot(`
 			{
@@ -65,30 +88,38 @@ describe('ToolSchemaNormalizer', () => {
 	});
 
 	test('does not fail on "in true""', () => {
-		normalizeToolSchema(CHAT_MODEL.GPT41, makeTool({
-			foo: {
-				type: 'array',
-				items: true
-			}
-		}));
+		normalizeToolSchema(
+			CHAT_MODEL.GPT41,
+			makeTool({
+				foo: {
+					type: 'array',
+					items: true,
+				},
+			}),
+		);
 	});
 
 	test('removes undefined required properties', () => {
-		const schema = normalizeToolSchema(CHAT_MODEL.GPT41, makeTool({
-			foo1: {
-				type: 'object',
-			},
-			foo2: {
-				type: 'object',
-				properties: { a: { type: 'string' } },
-			},
-			foo3: {
-				type: 'object',
-				properties: { a: { type: 'string' }, b: { type: 'string' } },
-				required: ['a', 'b', 'c'],
-			}
-		}));
-
+		const schema = normalizeToolSchema(
+			CHAT_MODEL.GPT41,
+			makeTool({
+				foo1: {
+					type: 'object',
+				},
+				foo2: {
+					type: 'object',
+					properties: { a: { type: 'string' } },
+				},
+				foo3: {
+					type: 'object',
+					properties: {
+						a: { type: 'string' },
+						b: { type: 'string' },
+					},
+					required: ['a', 'b', 'c'],
+				},
+			}),
+		);
 
 		expect(schema![0].function.parameters).toMatchInlineSnapshot(`
 			{
@@ -125,29 +156,32 @@ describe('ToolSchemaNormalizer', () => {
 		`);
 	});
 
-
 	test('ensures object parameters', () => {
-		const n1: any = normalizeToolSchema(CHAT_MODEL.GPT41, [{
-			type: 'function',
-			function: {
-				name: 'noParams',
-				description: 'test',
-			}
-		}, {
-			type: 'function',
-			function: {
-				name: 'wrongType',
-				description: 'test',
-				parameters: { type: 'string' },
-			}
-		}, {
-			type: 'function',
-			function: {
-				name: 'missingProps',
-				description: 'test',
-				parameters: { type: 'object' },
-			}
-		}]);
+		const n1: any = normalizeToolSchema(CHAT_MODEL.GPT41, [
+			{
+				type: 'function',
+				function: {
+					name: 'noParams',
+					description: 'test',
+				},
+			},
+			{
+				type: 'function',
+				function: {
+					name: 'wrongType',
+					description: 'test',
+					parameters: { type: 'string' },
+				},
+			},
+			{
+				type: 'function',
+				function: {
+					name: 'missingProps',
+					description: 'test',
+					parameters: { type: 'object' },
+				},
+			},
+		]);
 
 		expect(n1).toMatchInlineSnapshot(`
 			[
@@ -185,20 +219,23 @@ describe('ToolSchemaNormalizer', () => {
 	});
 
 	test('normalizes arrays for draft 2020-12', () => {
-		const schema = normalizeToolSchema(CHAT_MODEL.CLAUDE_37_SONNET, makeTool({
-			foo: {
-				type: 'array',
-				items: [{ type: 'string' }, { type: 'number' }],
-				minItems: 2,
-				maxItems: 2,
-			},
-			bar: {
-				type: 'array',
-				items: { type: 'string' },
-				minItems: 2,
-				maxItems: 2,
-			}
-		}));
+		const schema = normalizeToolSchema(
+			CHAT_MODEL.CLAUDE_37_SONNET,
+			makeTool({
+				foo: {
+					type: 'array',
+					items: [{ type: 'string' }, { type: 'number' }],
+					minItems: 2,
+					maxItems: 2,
+				},
+				bar: {
+					type: 'array',
+					items: { type: 'string' },
+					minItems: 2,
+					maxItems: 2,
+				},
+			}),
+		);
 
 		expect(schema![0]).toMatchInlineSnapshot(`
 			{
@@ -240,20 +277,23 @@ describe('ToolSchemaNormalizer', () => {
 	});
 
 	test('converts nullable types to OpenAPI format for Gemini models', () => {
-		const schema = normalizeToolSchema(CHAT_MODEL.GEMINI_FLASH, makeTool({
-			nullableString: {
-				type: ['string', 'null'] as any,
-				description: 'A nullable string',
-			},
-			nullableNumber: {
-				type: ['number', 'null'] as any,
-				description: 'A nullable number',
-			},
-			regularString: {
-				type: 'string',
-				description: 'A regular string',
-			}
-		}));
+		const schema = normalizeToolSchema(
+			CHAT_MODEL.GEMINI_FLASH,
+			makeTool({
+				nullableString: {
+					type: ['string', 'null'] as any,
+					description: 'A nullable string',
+				},
+				nullableNumber: {
+					type: ['number', 'null'] as any,
+					description: 'A nullable number',
+				},
+				regularString: {
+					type: 'string',
+					description: 'A regular string',
+				},
+			}),
+		);
 
 		expect(schema![0].function.parameters).toMatchInlineSnapshot(`
 			{
@@ -279,25 +319,29 @@ describe('ToolSchemaNormalizer', () => {
 	});
 
 	test('converts nullable types in nested objects for Gemini models', () => {
-		const schema = normalizeToolSchema(CHAT_MODEL.GEMINI_25_PRO, makeTool({
-			person: {
-				type: 'object',
-				properties: {
-					name: {
-						type: 'string',
+		const schema = normalizeToolSchema(
+			CHAT_MODEL.GEMINI_25_PRO,
+			makeTool({
+				person: {
+					type: 'object',
+					properties: {
+						name: {
+							type: 'string',
+						},
+						email: {
+							type: ['string', 'null'] as any,
+							description: 'Optional email',
+						},
+						age: {
+							type: ['integer', 'null'] as any,
+						},
 					},
-					email: {
-						type: ['string', 'null'] as any,
-						description: 'Optional email',
-					},
-					age: {
-						type: ['integer', 'null'] as any,
-					}
-				}
-			}
-		}));
+				},
+			}),
+		);
 
-		const personProp = (schema![0].function.parameters as any).properties.person;
+		const personProp = (schema![0].function.parameters as any).properties
+			.person;
 		expect(personProp.properties.email).toEqual({
 			type: 'string',
 			nullable: true,
@@ -313,17 +357,21 @@ describe('ToolSchemaNormalizer', () => {
 	});
 
 	test('converts nullable types in array items for Gemini models', () => {
-		const schema = normalizeToolSchema(CHAT_MODEL.GEMINI_20_PRO, makeTool({
-			items: {
-				type: 'array',
+		const schema = normalizeToolSchema(
+			CHAT_MODEL.GEMINI_20_PRO,
+			makeTool({
 				items: {
-					type: ['string', 'null'] as any,
-					description: 'Nullable array items',
-				}
-			}
-		}));
+					type: 'array',
+					items: {
+						type: ['string', 'null'] as any,
+						description: 'Nullable array items',
+					},
+				},
+			}),
+		);
 
-		const itemsProp = (schema![0].function.parameters as any).properties.items;
+		const itemsProp = (schema![0].function.parameters as any).properties
+			.items;
 		expect(itemsProp.items).toEqual({
 			type: 'string',
 			nullable: true,
@@ -332,29 +380,46 @@ describe('ToolSchemaNormalizer', () => {
 	});
 
 	test('does not convert nullable types for non-Gemini models', () => {
-		const schema = normalizeToolSchema(CHAT_MODEL.GPT41, makeTool({
-			nullableString: {
-				type: ['string', 'null'] as any,
-				description: 'A nullable string',
-			}
-		}));
+		const schema = normalizeToolSchema(
+			CHAT_MODEL.GPT41,
+			makeTool({
+				nullableString: {
+					type: ['string', 'null'] as any,
+					description: 'A nullable string',
+				},
+			}),
+		);
 
 		// For non-Gemini models, the type array should remain unchanged
-		expect((schema![0].function.parameters as any).properties.nullableString.type).toEqual(['string', 'null']);
-		expect((schema![0].function.parameters as any).properties.nullableString.nullable).toBeUndefined();
+		expect(
+			(schema![0].function.parameters as any).properties.nullableString
+				.type,
+		).toEqual(['string', 'null']);
+		expect(
+			(schema![0].function.parameters as any).properties.nullableString
+				.nullable,
+		).toBeUndefined();
 	});
 
 	test('handles multi-type union with null for Gemini models', () => {
-		const schema = normalizeToolSchema(CHAT_MODEL.GEMINI_FLASH, makeTool({
-			multiType: {
-				type: ['string', 'number', 'null'] as any,
-				description: 'Multi-type with null',
-			}
-		}));
+		const schema = normalizeToolSchema(
+			CHAT_MODEL.GEMINI_FLASH,
+			makeTool({
+				multiType: {
+					type: ['string', 'number', 'null'] as any,
+					description: 'Multi-type with null',
+				},
+			}),
+		);
 
 		// When there are multiple non-null types, we can't use nullable keyword
 		// so we just remove null from the union
-		expect((schema![0].function.parameters as any).properties.multiType.type).toEqual(['string', 'number']);
-		expect((schema![0].function.parameters as any).properties.multiType.nullable).toBeUndefined();
+		expect(
+			(schema![0].function.parameters as any).properties.multiType.type,
+		).toEqual(['string', 'number']);
+		expect(
+			(schema![0].function.parameters as any).properties.multiType
+				.nullable,
+		).toBeUndefined();
 	});
 });

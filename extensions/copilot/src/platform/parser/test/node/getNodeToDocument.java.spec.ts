@@ -5,31 +5,22 @@
 
 import { outdent } from 'outdent';
 import { afterAll, expect, suite, test } from 'vitest';
-import {
-	_dispose
-} from '../../node/parserImpl';
+import { _dispose } from '../../node/parserImpl';
 import { WASMLanguage } from '../../node/treeSitterLanguages';
 import { srcWithAnnotatedNodeToDoc } from './getNodeToDocument.util';
 
-
 suite('getNodeToDocument - java', () => {
-
 	afterAll(() => _dispose());
 
 	async function run(annotatedSrc: string) {
-		return srcWithAnnotatedNodeToDoc(
-			WASMLanguage.Java,
-			annotatedSrc,
-		);
+		return srcWithAnnotatedNodeToDoc(WASMLanguage.Java, annotatedSrc);
 	}
 
 	test('should return root node for empty source', async () => {
-
 		const result = await run('<<>>');
 
 		expect(result).toMatchInlineSnapshot(`"<PROGRAM></PROGRAM>"`);
 	});
-
 
 	test('use correct identifier name for a method', async () => {
 		const result = await run(

@@ -3,19 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { McpSdkServerConfigWithInstance, Options } from '@anthropic-ai/claude-agent-sdk';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { delimiter, dirname } from '../../../../base/common/path.js';
-import { URI } from '../../../../base/common/uri.js';
-import { rgDiskPath } from '../../../../base/node/ripgrep.js';
-import { ClaudePermissionMode } from '../../common/claudeSessionConfigKeys.js';
-import { resolveClaudeEffort } from '../../common/claudeModelConfig.js';
-import { PendingRequestRegistry } from '../../common/pendingRequestRegistry.js';
-import type { ModelSelection } from '../../common/state/protocol/state.js';
-import { IClaudeAgentSdkService } from './claudeAgentSdkService.js';
-import { buildClientToolMcpServer } from './clientTools/claudeClientToolMcpServer.js';
-import { IClaudeProxyHandle } from './claudeProxyService.js';
-import { SessionClientToolsDiff } from './clientTools/claudeSessionClientToolsModel.js';
+import type {
+	McpSdkServerConfigWithInstance,
+	Options,
+} from "@anthropic-ai/claude-agent-sdk";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { delimiter, dirname } from "../../../../base/common/path.js";
+import { URI } from "../../../../base/common/uri.js";
+import { rgDiskPath } from "../../../../base/node/ripgrep.js";
+import { ClaudePermissionMode } from "../../common/claudeSessionConfigKeys.js";
+import { resolveClaudeEffort } from "../../common/claudeModelConfig.js";
+import { PendingRequestRegistry } from "../../common/pendingRequestRegistry.js";
+import type { ModelSelection } from "../../common/state/protocol/state.js";
+import { IClaudeAgentSdkService } from "./claudeAgentSdkService.js";
+import { buildClientToolMcpServer } from "./clientTools/claudeClientToolMcpServer.js";
+import { IClaudeProxyHandle } from "./claudeProxyService.js";
+import { SessionClientToolsDiff } from "./clientTools/claudeSessionClientToolsModel.js";
 
 /**
  * Inputs to {@link buildOptions} that vary per startup. Pure-data: no
@@ -29,9 +32,11 @@ export interface IBuildOptionsInput {
 	readonly model: ModelSelection | undefined;
 	readonly abortController: AbortController;
 	readonly permissionMode: ClaudePermissionMode;
-	readonly canUseTool: NonNullable<Options['canUseTool']>;
+	readonly canUseTool: NonNullable<Options["canUseTool"]>;
 	readonly isResume: boolean;
-	readonly mcpServers: Record<string, McpSdkServerConfigWithInstance> | undefined;
+	readonly mcpServers:
+		| Record<string, McpSdkServerConfigWithInstance>
+		| undefined;
 	/**
 	 * Local plugin directories to load at SDK startup. Projected onto
 	 * `Options.plugins` as `{ type: 'local', path }`. Omitted from the
@@ -78,23 +83,23 @@ export async function buildOptions(
 	const settingsEnv: Record<string, string> = {
 		ANTHROPIC_BASE_URL: proxyHandle.baseUrl,
 		ANTHROPIC_AUTH_TOKEN: `${proxyHandle.nonce}.${input.sessionId}`,
-		CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
-		USE_BUILTIN_RIPGREP: '0',
-		PATH: `${dirname(resolvedRgDiskPath)}${delimiter}${process.env.PATH ?? ''}`,
+		CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
+		USE_BUILTIN_RIPGREP: "0",
+		PATH: `${dirname(resolvedRgDiskPath)}${delimiter}${process.env.PATH ?? ""}`,
 	};
 
 	return {
 		cwd: input.workingDirectory.fsPath,
-		executable: process.execPath as 'node',
+		executable: process.execPath as "node",
 		env: subprocessEnv,
 		abortController: input.abortController,
 		allowDangerouslySkipPermissions: true,
 		canUseTool: input.canUseTool,
-		onElicitation: async req => {
-			logElicitation(req.message ?? '');
-			return { action: 'cancel' };
+		onElicitation: async (req) => {
+			logElicitation(req.message ?? "");
+			return { action: "cancel" };
 		},
-		disallowedTools: ['WebSearch'],
+		disallowedTools: ["WebSearch"],
 		includePartialMessages: true,
 		forwardSubagentText: true,
 		enableFileCheckpointing: true,
@@ -106,12 +111,17 @@ export async function buildOptions(
 			: { sessionId: input.sessionId }),
 		...(input.mcpServers ? { mcpServers: input.mcpServers } : {}),
 		...(input.plugins && input.plugins.length > 0
-			? { plugins: input.plugins.map(p => ({ type: 'local' as const, path: p.fsPath })) }
+			? {
+					plugins: input.plugins.map((p) => ({
+						type: "local" as const,
+						path: p.fsPath,
+					})),
+				}
 			: {}),
 		...(input.agent ? { agent: input.agent } : {}),
-		settingSources: ['user', 'project', 'local'],
+		settingSources: ["user", "project", "local"],
 		settings: { env: settingsEnv },
-		systemPrompt: { type: 'preset', preset: 'claude_code' },
+		systemPrompt: { type: "preset", preset: "claude_code" },
 		stderr: logStderr,
 	};
 }
@@ -135,7 +145,11 @@ export async function buildClientMcpServers(
 	if (!tools || tools.length === 0) {
 		return undefined;
 	}
-	const server = await buildClientToolMcpServer(tools, id => registry.register(id), sdkService);
+	const server = await buildClientToolMcpServer(
+		tools,
+		(id) => registry.register(id),
+		sdkService,
+	);
 	return { client: server };
 }
 
@@ -156,13 +170,15 @@ export async function buildClientMcpServers(
  */
 export function buildSubprocessEnv(): Record<string, string | undefined> {
 	const env: Record<string, string | undefined> = {
-		ELECTRON_RUN_AS_NODE: '1',
+		ELECTRON_RUN_AS_NODE: "1",
 		NODE_OPTIONS: undefined,
 		ANTHROPIC_API_KEY: undefined,
 	};
 	for (const key of Object.keys(process.env)) {
-		if (key === 'ELECTRON_RUN_AS_NODE') { continue; }
-		if (key.startsWith('VSCODE_') || key.startsWith('ELECTRON_')) {
+		if (key === "ELECTRON_RUN_AS_NODE") {
+			continue;
+		}
+		if (key.startsWith("VSCODE_") || key.startsWith("ELECTRON_")) {
 			env[key] = undefined;
 		}
 	}

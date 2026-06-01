@@ -13,7 +13,7 @@ export interface IMobileMultiDiffVirtualizerMetrics {
 
 export interface IMobileMultiDiffVirtualItem {
 	readonly collapsed?: boolean;
-	readonly state: 'unloaded' | 'loading' | 'loaded' | 'empty' | 'error';
+	readonly state: "unloaded" | "loading" | "loaded" | "empty" | "error";
 	readonly estimatedHunkCount?: number;
 	readonly estimatedRowCount?: number;
 	readonly hunkCount?: number;
@@ -41,14 +41,21 @@ export interface IMobileMultiDiffVirtualLayout {
 	readonly items: readonly IMobileMultiDiffVirtualItemLayout[];
 }
 
-export function computeMobileMultiDiffItemHeight(item: IMobileMultiDiffVirtualItem, metrics: IMobileMultiDiffVirtualizerMetrics): number {
+export function computeMobileMultiDiffItemHeight(
+	item: IMobileMultiDiffVirtualItem,
+	metrics: IMobileMultiDiffVirtualizerMetrics,
+): number {
 	if (item.collapsed) {
 		return metrics.fileHeaderHeight;
 	}
 
-	if (item.state !== 'loaded') {
-		if (item.state === 'unloaded' || item.state === 'loading') {
-			const estimatedHeight = computeDiffBodyHeight(item.estimatedHunkCount, item.estimatedRowCount, metrics);
+	if (item.state !== "loaded") {
+		if (item.state === "unloaded" || item.state === "loading") {
+			const estimatedHeight = computeDiffBodyHeight(
+				item.estimatedHunkCount,
+				item.estimatedRowCount,
+				metrics,
+			);
 			if (estimatedHeight !== undefined) {
 				return metrics.fileHeaderHeight + estimatedHeight;
 			}
@@ -56,7 +63,11 @@ export function computeMobileMultiDiffItemHeight(item: IMobileMultiDiffVirtualIt
 		return metrics.fileHeaderHeight + metrics.placeholderHeight;
 	}
 
-	const bodyHeight = computeDiffBodyHeight(item.hunkCount, item.rowCount, metrics);
+	const bodyHeight = computeDiffBodyHeight(
+		item.hunkCount,
+		item.rowCount,
+		metrics,
+	);
 	if (bodyHeight === undefined) {
 		return metrics.fileHeaderHeight + metrics.placeholderHeight;
 	}
@@ -75,9 +86,11 @@ function computeDiffBodyHeight(
 		return undefined;
 	}
 
-	return metrics.bodyVerticalPadding
-		+ normalizedHunkCount * metrics.hunkHeaderHeight
-		+ normalizedRowCount * metrics.rowHeight;
+	return (
+		metrics.bodyVerticalPadding +
+		normalizedHunkCount * metrics.hunkHeaderHeight +
+		normalizedRowCount * metrics.rowHeight
+	);
 }
 
 export function computeMobileMultiDiffVirtualLayout(
@@ -95,11 +108,18 @@ export function computeMobileMultiDiffVirtualLayout(
 
 	for (let index = 0; index < items.length; index++) {
 		const virtualTop = totalHeight;
-		const virtualHeight = computeMobileMultiDiffItemHeight(items[index], options.metrics);
+		const virtualHeight = computeMobileMultiDiffItemHeight(
+			items[index],
+			options.metrics,
+		);
 		const virtualBottom = virtualTop + virtualHeight;
 		totalHeight = virtualBottom;
 
-		if (virtualHeight <= 0 || virtualTop >= visibleEnd || virtualBottom <= visibleStart) {
+		if (
+			virtualHeight <= 0 ||
+			virtualTop >= visibleEnd ||
+			virtualBottom <= visibleStart
+		) {
 			continue;
 		}
 

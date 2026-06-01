@@ -13,7 +13,8 @@ export interface ICommandExecutor {
 		cwd: string,
 		timeoutMs?: number,
 		expectZeroExitCode?: boolean,
-		cancellationToken?: CancellationToken): Promise<{ stdout: string; stderr: string; exitCode: number }>;
+		cancellationToken?: CancellationToken,
+	): Promise<{ stdout: string; stderr: string; exitCode: number }>;
 }
 
 export class CommandExecutor implements ICommandExecutor {
@@ -23,7 +24,7 @@ export class CommandExecutor implements ICommandExecutor {
 		cwd: string,
 		timeoutMs?: number,
 		expectZeroExitCode?: boolean,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<{ stdout: string; stderr: string; exitCode: number }> {
 		return await executeWithTimeout(
 			command,
@@ -31,7 +32,7 @@ export class CommandExecutor implements ICommandExecutor {
 			cwd,
 			timeoutMs,
 			expectZeroExitCode,
-			cancellationToken
+			cancellationToken,
 		);
 	}
 }
@@ -44,18 +45,26 @@ async function executeWithTimeout(
 	cwd: string,
 	timeoutMs: number = 60000,
 	expectZeroExitCode: boolean = true,
-	cancellationToken?: CancellationToken) {
-
-	return await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve, reject) => {
+	cancellationToken?: CancellationToken,
+) {
+	return await new Promise<{
+		stdout: string;
+		stderr: string;
+		exitCode: number;
+	}>((resolve, reject) => {
 		const stdout: string[] = [];
 		const stderr: string[] = [];
 		let settled = false;
 
-		const child: cp.ChildProcessWithoutNullStreams = cp.spawn(command, args, {
-			stdio: 'pipe',
-			env: { ...process.env },
-			cwd: cwd,
-		});
+		const child: cp.ChildProcessWithoutNullStreams = cp.spawn(
+			command,
+			args,
+			{
+				stdio: 'pipe',
+				env: { ...process.env },
+				cwd: cwd,
+			},
+		);
 
 		child.stdout.setEncoding('utf8');
 		child.stderr.setEncoding('utf8');
@@ -76,19 +85,21 @@ async function executeWithTimeout(
 			}
 		}, timeoutMs);
 
-		const cancellationHandler = cancellationToken?.onCancellationRequested(() => {
-			if (!settled) {
-				settled = true;
-				clearTimeout(timeoutHandler);
-				child.kill('SIGTERM');
-				setTimeout(() => {
-					if (!child.killed) {
-						child.kill('SIGKILL');
-					}
-				}, GRACEFUL_SHUTDOWN_TIMEOUT_MS);
-				reject(new Error(`Process cancelled`));
-			}
-		});
+		const cancellationHandler = cancellationToken?.onCancellationRequested(
+			() => {
+				if (!settled) {
+					settled = true;
+					clearTimeout(timeoutHandler);
+					child.kill('SIGTERM');
+					setTimeout(() => {
+						if (!child.killed) {
+							child.kill('SIGKILL');
+						}
+					}, GRACEFUL_SHUTDOWN_TIMEOUT_MS);
+					reject(new Error(`Process cancelled`));
+				}
+			},
+		);
 
 		child.on('error', (error) => {
 			if (!settled) {
@@ -106,9 +117,11 @@ async function executeWithTimeout(
 				cancellationHandler?.dispose();
 
 				if (expectZeroExitCode && code !== 0) {
-					reject(new Error(`Process ${child.pid} (${command}) failed with code ${code}.
+					reject(
+						new Error(`Process ${child.pid} (${command}) failed with code ${code}.
 stdout: ${stdout.join('')}
-stderr: ${stderr.join('')}`));
+stderr: ${stderr.join('')}`),
+					);
 				} else {
 					resolve({
 						stdout: stdout.join(''),

@@ -3,9 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { NlsString, LanguageTranslations, Category, Policy, Translations, ProductJson } from './types.ts';
+import type {
+	NlsString,
+	LanguageTranslations,
+	Category,
+	Policy,
+	Translations,
+	ProductJson,
+} from "./types.ts";
 
-export function renderADMLString(prefix: string, moduleName: string, nlsString: NlsString, translations?: LanguageTranslations): string {
+export function renderADMLString(
+	prefix: string,
+	moduleName: string,
+	nlsString: NlsString,
+	translations?: LanguageTranslations,
+): string {
 	let value: string | undefined;
 
 	if (translations) {
@@ -20,10 +32,15 @@ export function renderADMLString(prefix: string, moduleName: string, nlsString: 
 		value = nlsString.value;
 	}
 
-	return `<string id="${prefix}_${nlsString.nlsKey.replace(/\./g, '_')}">${value}</string>`;
+	return `<string id="${prefix}_${nlsString.nlsKey.replace(/\./g, "_")}">${value}</string>`;
 }
 
-export function renderProfileString(_prefix: string, moduleName: string, nlsString: NlsString, translations?: LanguageTranslations): string {
+export function renderProfileString(
+	_prefix: string,
+	moduleName: string,
+	nlsString: NlsString,
+	translations?: LanguageTranslations,
+): string {
 	let value: string | undefined;
 
 	if (translations) {
@@ -41,8 +58,13 @@ export function renderProfileString(_prefix: string, moduleName: string, nlsStri
 	return value;
 }
 
-export function renderADMX(regKey: string, versions: string[], categories: Category[], policies: Policy[]) {
-	versions = versions.map(v => v.replace(/\./g, '_'));
+export function renderADMX(
+	regKey: string,
+	versions: string[],
+	categories: Category[],
+	policies: Policy[],
+) {
+	versions = versions.map((v) => v.replace(/\./g, "_"));
 
 	return `<?xml version="1.0" encoding="utf-8"?>
 <policyDefinitions revision="1.1" schemaVersion="1.0">
@@ -52,21 +74,30 @@ export function renderADMX(regKey: string, versions: string[], categories: Categ
 	<resources minRequiredRevision="1.0" />
 	<supportedOn>
 		<definitions>
-			${versions.map(v => `<definition name="Supported_${v}" displayName="$(string.Supported_${v})" />`).join(`\n			`)}
+			${versions.map((v) => `<definition name="Supported_${v}" displayName="$(string.Supported_${v})" />`).join(`\n			`)}
 		</definitions>
 	</supportedOn>
 	<categories>
 		<category displayName="$(string.Application)" name="Application" />
-		${categories.map(c => `<category displayName="$(string.Category_${c.name.nlsKey})" name="${c.name.nlsKey}"><parentCategory ref="Application" /></category>`).join(`\n		`)}
+		${categories.map((c) => `<category displayName="$(string.Category_${c.name.nlsKey})" name="${c.name.nlsKey}"><parentCategory ref="Application" /></category>`).join(`\n		`)}
 	</categories>
 	<policies>
-		${policies.map(p => p.renderADMX(regKey)).flat().join(`\n		`)}
+		${policies
+			.map((p) => p.renderADMX(regKey))
+			.flat()
+			.join(`\n		`)}
 	</policies>
 </policyDefinitions>
 `;
 }
 
-export function renderADML(appName: string, versions: string[], categories: Category[], policies: Policy[], translations?: LanguageTranslations) {
+export function renderADML(
+	appName: string,
+	versions: string[],
+	categories: Category[],
+	policies: Policy[],
+	translations?: LanguageTranslations,
+) {
 	return `<?xml version="1.0" encoding="utf-8"?>
 <policyDefinitionResources revision="1.0" schemaVersion="1.0">
 	<displayName />
@@ -74,20 +105,29 @@ export function renderADML(appName: string, versions: string[], categories: Cate
 	<resources>
 		<stringTable>
 			<string id="Application">${appName}</string>
-			${versions.map(v => `<string id="Supported_${v.replace(/\./g, '_')}">${appName} &gt;= ${v}</string>`).join(`\n			`)}
-			${categories.map(c => renderADMLString('Category', c.moduleName, c.name, translations)).join(`\n			`)}
-			${policies.map(p => p.renderADMLStrings(translations)).flat().join(`\n			`)}
+			${versions.map((v) => `<string id="Supported_${v.replace(/\./g, "_")}">${appName} &gt;= ${v}</string>`).join(`\n			`)}
+			${categories.map((c) => renderADMLString("Category", c.moduleName, c.name, translations)).join(`\n			`)}
+			${policies
+				.map((p) => p.renderADMLStrings(translations))
+				.flat()
+				.join(`\n			`)}
 		</stringTable>
 		<presentationTable>
-			${policies.map(p => p.renderADMLPresentation()).join(`\n			`)}
+			${policies.map((p) => p.renderADMLPresentation()).join(`\n			`)}
 		</presentationTable>
 	</resources>
 </policyDefinitionResources>
 `;
 }
 
-export function renderProfileManifest(appName: string, bundleIdentifier: string, _versions: string[], _categories: Category[], policies: Policy[], translations?: LanguageTranslations) {
-
+export function renderProfileManifest(
+	appName: string,
+	bundleIdentifier: string,
+	_versions: string[],
+	_categories: Category[],
+	policies: Policy[],
+	translations?: LanguageTranslations,
+) {
 	const requiredPayloadFields = `
 		<dict>
 			<key>pfm_default</key>
@@ -174,9 +214,11 @@ export function renderProfileManifest(appName: string, bundleIdentifier: string,
 			<string>string</string>
 		</dict>`;
 
-	const profileManifestSubkeys = policies.map(policy => {
-		return policy.renderProfileManifest(translations);
-	}).join('');
+	const profileManifestSubkeys = policies
+		.map((policy) => {
+			return policy.renderProfileManifest(translations);
+		})
+		.join("");
 
 	return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -195,7 +237,7 @@ export function renderProfileManifest(appName: string, bundleIdentifier: string,
     <key>pfm_interaction</key>
     <string>combined</string>
     <key>pfm_last_modified</key>
-    <date>${new Date().toISOString().replace(/\.\d+Z$/, 'Z')}</date>
+    <date>${new Date().toISOString().replace(/\.\d+Z$/, "Z")}</date>
     <key>pfm_platforms</key>
     <array>
         <string>macOS</string>
@@ -215,21 +257,26 @@ export function renderProfileManifest(appName: string, bundleIdentifier: string,
 </plist>`;
 }
 
-export function renderMacOSPolicy(product: ProductJson, policies: Policy[], translations: Translations) {
+export function renderMacOSPolicy(
+	product: ProductJson,
+	policies: Policy[],
+	translations: Translations,
+) {
 	const appName = product.nameLong;
 	const bundleIdentifier = product.darwinBundleIdentifier;
 	const payloadUUID = product.darwinProfilePayloadUUID;
 	const UUID = product.darwinProfileUUID;
 
-	const versions = [...new Set(policies.map(p => p.minimumVersion)).values()].sort();
-	const categories = [...new Set(policies.map(p => p.category))];
+	const versions = [
+		...new Set(policies.map((p) => p.minimumVersion)).values(),
+	].sort();
+	const categories = [...new Set(policies.map((p) => p.category))];
 
-	const policyEntries =
-		policies.map(policy => policy.renderProfile())
-			.flat()
-			.map(entry => `\t\t\t\t${entry}`)
-			.join('\n');
-
+	const policyEntries = policies
+		.map((policy) => policy.renderProfile())
+		.flat()
+		.map((entry) => `\t\t\t\t${entry}`)
+		.join("\n");
 
 	return {
 		profile: `<?xml version="1.0" encoding="UTF-8"?>
@@ -270,32 +317,77 @@ ${policyEntries}
 		<integer>5</integer>
 	</dict>
 </plist>`,
-		manifests: [{ languageId: 'en-us', contents: renderProfileManifest(appName, bundleIdentifier, versions, categories, policies) },
-		...translations.map(({ languageId, languageTranslations }) =>
-			({ languageId, contents: renderProfileManifest(appName, bundleIdentifier, versions, categories, policies, languageTranslations) }))
-		]
+		manifests: [
+			{
+				languageId: "en-us",
+				contents: renderProfileManifest(
+					appName,
+					bundleIdentifier,
+					versions,
+					categories,
+					policies,
+				),
+			},
+			...translations.map(({ languageId, languageTranslations }) => ({
+				languageId,
+				contents: renderProfileManifest(
+					appName,
+					bundleIdentifier,
+					versions,
+					categories,
+					policies,
+					languageTranslations,
+				),
+			})),
+		],
 	};
 }
 
-export function renderGP(product: ProductJson, policies: Policy[], translations: Translations) {
+export function renderGP(
+	product: ProductJson,
+	policies: Policy[],
+	translations: Translations,
+) {
 	const appName = product.nameLong;
 	const regKey = product.win32RegValueName;
 
-	const versions = [...new Set(policies.map(p => p.minimumVersion)).values()].sort();
-	const categories = [...Object.values(policies.reduce((acc, p) => ({ ...acc, [p.category.name.nlsKey]: p.category }), {}))] as Category[];
+	const versions = [
+		...new Set(policies.map((p) => p.minimumVersion)).values(),
+	].sort();
+	const categories = [
+		...Object.values(
+			policies.reduce(
+				(acc, p) => ({ ...acc, [p.category.name.nlsKey]: p.category }),
+				{},
+			),
+		),
+	] as Category[];
 
 	return {
 		admx: renderADMX(regKey, versions, categories, policies),
 		adml: [
-			{ languageId: 'en-us', contents: renderADML(appName, versions, categories, policies) },
-			...translations.map(({ languageId, languageTranslations }) =>
-				({ languageId, contents: renderADML(appName, versions, categories, policies, languageTranslations) }))
-		]
+			{
+				languageId: "en-us",
+				contents: renderADML(appName, versions, categories, policies),
+			},
+			...translations.map(({ languageId, languageTranslations }) => ({
+				languageId,
+				contents: renderADML(
+					appName,
+					versions,
+					categories,
+					policies,
+					languageTranslations,
+				),
+			})),
+		],
 	};
 }
 
 export function renderJsonPolicies(policies: Policy[]) {
-	const policyObject: { [key: string]: string | number | boolean | object | null } = {};
+	const policyObject: {
+		[key: string]: string | number | boolean | object | null;
+	} = {};
 	for (const policy of policies) {
 		policyObject[policy.name] = policy.renderJsonValue();
 	}

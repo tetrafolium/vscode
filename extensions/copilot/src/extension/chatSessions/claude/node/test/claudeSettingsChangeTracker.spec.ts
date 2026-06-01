@@ -26,7 +26,9 @@ describe('ClaudeSettingsChangeTracker', () => {
 
 	beforeEach(() => {
 		mockFs = new MockFileSystemService();
-		testingServiceCollection = store.add(createExtensionUnitTestingServices(store));
+		testingServiceCollection = store.add(
+			createExtensionUnitTestingServices(store),
+		);
 		testingServiceCollection.set(IFileSystemService, mockFs);
 
 		const accessor = testingServiceCollection.createTestingAccessor();
@@ -249,15 +251,31 @@ describe('ClaudeSettingsChangeTracker', () => {
 				['readme.txt', FileType.File],
 				['config.json', FileType.File],
 			]);
-			mockFs.mockFile(URI.file('/project/.claude/agents/test-runner.md'), '# Test', 1000);
-			mockFs.mockFile(URI.file('/project/.claude/agents/readme.txt'), 'readme', 1000);
-			mockFs.mockFile(URI.file('/project/.claude/agents/config.json'), '{}', 1000);
+			mockFs.mockFile(
+				URI.file('/project/.claude/agents/test-runner.md'),
+				'# Test',
+				1000,
+			);
+			mockFs.mockFile(
+				URI.file('/project/.claude/agents/readme.txt'),
+				'readme',
+				1000,
+			);
+			mockFs.mockFile(
+				URI.file('/project/.claude/agents/config.json'),
+				'{}',
+				1000,
+			);
 
 			tracker.registerDirectoryResolver(() => [agentsDir], '.md');
 			await tracker.takeSnapshot();
 
 			// Modify the txt file - should NOT trigger change since we only track .md
-			mockFs.mockFile(URI.file('/project/.claude/agents/readme.txt'), 'updated readme', 2000);
+			mockFs.mockFile(
+				URI.file('/project/.claude/agents/readme.txt'),
+				'updated readme',
+				2000,
+			);
 
 			const hasChanges = await tracker.hasChanges();
 			expect(hasChanges).toBe(false);
@@ -268,14 +286,26 @@ describe('ClaudeSettingsChangeTracker', () => {
 				['test-runner.md', FileType.File],
 				['readme.txt', FileType.File],
 			]);
-			mockFs.mockFile(URI.file('/project/.claude/agents/test-runner.md'), '# Test', 1000);
-			mockFs.mockFile(URI.file('/project/.claude/agents/readme.txt'), 'readme', 1000);
+			mockFs.mockFile(
+				URI.file('/project/.claude/agents/test-runner.md'),
+				'# Test',
+				1000,
+			);
+			mockFs.mockFile(
+				URI.file('/project/.claude/agents/readme.txt'),
+				'readme',
+				1000,
+			);
 
 			tracker.registerDirectoryResolver(() => [agentsDir], '.md');
 			await tracker.takeSnapshot();
 
 			// Modify the .md file - should trigger change
-			mockFs.mockFile(URI.file('/project/.claude/agents/test-runner.md'), '# Updated', 2000);
+			mockFs.mockFile(
+				URI.file('/project/.claude/agents/test-runner.md'),
+				'# Updated',
+				2000,
+			);
 
 			const hasChanges = await tracker.hasChanges();
 			expect(hasChanges).toBe(true);

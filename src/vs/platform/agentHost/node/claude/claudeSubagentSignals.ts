@@ -3,22 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
-import type { URI } from '../../../../base/common/uri.js';
-import type { AgentSignal, IAgentSubagentStartedSignal } from '../../common/agentService.js';
-import { ActionType } from '../../common/state/sessionActions.js';
-import { ResponsePartKind, ToolCallConfirmationReason } from '../../common/state/sessionState.js';
-import type { ClaudeMapperState } from './claudeMapSessionEvents.js';
-import { SUBAGENT_TOOL_NAMES, type SubagentRegistry } from './claudeSubagentRegistry.js';
-import { buildClaudeToolMeta, getClaudeInvocationMessage, getClaudeToolDisplayName, getClaudeToolInputString } from './claudeToolDisplay.js';
-import { stripClientToolNamePrefix } from './clientTools/claudeClientToolMcpServer.js';
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { URI } from "../../../../base/common/uri.js";
+import type {
+	AgentSignal,
+	IAgentSubagentStartedSignal,
+} from "../../common/agentService.js";
+import { ActionType } from "../../common/state/sessionActions.js";
+import {
+	ResponsePartKind,
+	ToolCallConfirmationReason,
+} from "../../common/state/sessionState.js";
+import type { ClaudeMapperState } from "./claudeMapSessionEvents.js";
+import {
+	SUBAGENT_TOOL_NAMES,
+	type SubagentRegistry,
+} from "./claudeSubagentRegistry.js";
+import {
+	buildClaudeToolMeta,
+	getClaudeInvocationMessage,
+	getClaudeToolDisplayName,
+	getClaudeToolInputString,
+} from "./claudeToolDisplay.js";
+import { stripClientToolNamePrefix } from "./clientTools/claudeClientToolMcpServer.js";
 
 /**
  * Phase 12 — SDK tool names that spawn subagent sessions. Re-exported
  * from the registry's canonical set so callers can keep importing it
  * from this signals module (the live mapper, replay handling, etc.).
  */
-export const SUBAGENT_SPAWNING_TOOL_NAMES: ReadonlySet<string> = SUBAGENT_TOOL_NAMES;
+export const SUBAGENT_SPAWNING_TOOL_NAMES: ReadonlySet<string> =
+	SUBAGENT_TOOL_NAMES;
 
 /**
  * Phase 12 — post-process the signals produced from a single SDK
@@ -44,11 +59,11 @@ export function tagWithParent(
 	if (!parentToolUseId) {
 		return signals;
 	}
-	const tagged: AgentSignal[] = signals.map(s => {
-		if (s.kind === 'action') {
+	const tagged: AgentSignal[] = signals.map((s) => {
+		if (s.kind === "action") {
 			return { ...s, parentToolCallId: parentToolUseId };
 		}
-		if (s.kind === 'pending_confirmation') {
+		if (s.kind === "pending_confirmation") {
 			return { ...s, parentToolCallId: parentToolUseId };
 		}
 		return s;
@@ -58,11 +73,11 @@ export function tagWithParent(
 		return tagged;
 	}
 	const started: IAgentSubagentStartedSignal = {
-		kind: 'subagent_started',
+		kind: "subagent_started",
 		session,
 		toolCallId: parentToolUseId,
-		agentName: spawn.subagentType ?? 'subagent',
-		agentDisplayName: spawn.subagentType ?? 'Subagent',
+		agentName: spawn.subagentType ?? "subagent",
+		agentDisplayName: spawn.subagentType ?? "Subagent",
 		agentDescription: spawn.description,
 	};
 	return [started, ...tagged];
@@ -81,12 +96,12 @@ export function tagWithParent(
  * system handling stays in the mapper proper.
  */
 export function mapSubagentSystemMessage(
-	message: Extract<SDKMessage, { type: 'system' }>,
+	message: Extract<SDKMessage, { type: "system" }>,
 	session: URI,
 	registry: SubagentRegistry,
 ): AgentSignal[] {
 	const sub = (message as { subtype?: string }).subtype;
-	if (sub === 'task_started') {
+	if (sub === "task_started") {
 		const toolUseId = (message as { tool_use_id?: string }).tool_use_id;
 		const spawn = toolUseId ? registry.getSpawn(toolUseId) : undefined;
 		if (spawn) {
@@ -94,13 +109,13 @@ export function mapSubagentSystemMessage(
 		}
 		return [];
 	}
-	if (sub === 'task_notification') {
+	if (sub === "task_notification") {
 		const m = message as { tool_use_id?: string; status?: string };
 		if (!m.tool_use_id) {
 			return [];
 		}
 		const status = m.status;
-		if (status !== 'completed' && status !== 'failed' && status !== 'stopped') {
+		if (status !== "completed" && status !== "failed" && status !== "stopped") {
 			return [];
 		}
 		const spawn = registry.getSpawn(m.tool_use_id);
@@ -109,7 +124,7 @@ export function mapSubagentSystemMessage(
 		}
 		const toolUseId = m.tool_use_id;
 		registry.removeSpawn(toolUseId);
-		return [{ kind: 'subagent_completed', session, toolCallId: toolUseId }];
+		return [{ kind: "subagent_completed", session, toolCallId: toolUseId }];
 	}
 	return [];
 }
@@ -136,17 +151,25 @@ export function mapSubagentSystemMessage(
  *     `_meta.subagentAgentName`.
  */
 export function buildTopLevelSubagentReadyAction(
-	block: Extract<import('@anthropic-ai/claude-agent-sdk').SDKAssistantMessage['message']['content'][number], { type: 'tool_use' }>,
+	block: Extract<
+		import("@anthropic-ai/claude-agent-sdk").SDKAssistantMessage["message"]["content"][number],
+		{ type: "tool_use" }
+	>,
 	session: URI,
 	turnId: string,
 	registry: SubagentRegistry,
 ): AgentSignal {
 	const input = block.input as Record<string, unknown> | undefined;
-	const description = typeof input?.description === 'string' ? input.description : undefined;
-	const agentName = typeof input?.subagent_type === 'string' ? input.subagent_type : undefined;
-	const inputJson = block.input !== undefined ? safeStringify(block.input) : undefined;
+	const description =
+		typeof input?.description === "string" ? input.description : undefined;
+	const agentName =
+		typeof input?.subagent_type === "string" ? input.subagent_type : undefined;
+	const inputJson =
+		block.input !== undefined ? safeStringify(block.input) : undefined;
 	registry.recordSpawn(block.id, { subagentType: agentName, description });
-	const meta: Record<string, unknown> = { ...(buildClaudeToolMeta(block.name) ?? { toolKind: 'subagent' }) };
+	const meta: Record<string, unknown> = {
+		...(buildClaudeToolMeta(block.name) ?? { toolKind: "subagent" }),
+	};
 	if (description) {
 		meta.subagentDescription = description;
 	}
@@ -154,13 +177,17 @@ export function buildTopLevelSubagentReadyAction(
 		meta.subagentAgentName = agentName;
 	}
 	return {
-		kind: 'action',
+		kind: "action",
 		session,
 		action: {
 			type: ActionType.SessionToolCallReady,
 			turnId,
 			toolCallId: block.id,
-			invocationMessage: getClaudeInvocationMessage(block.name, getClaudeToolDisplayName(block.name), block.input),
+			invocationMessage: getClaudeInvocationMessage(
+				block.name,
+				getClaudeToolDisplayName(block.name),
+				block.input,
+			),
 			...(inputJson !== undefined ? { toolInput: inputJson } : {}),
 			confirmed: ToolCallConfirmationReason.NotNeeded,
 			_meta: meta,
@@ -189,7 +216,7 @@ export function buildTopLevelSubagentReadyAction(
  * responsible for stamping `parentToolCallId` on every action.
  */
 export function emitInnerAssistantSignals(
-	message: Extract<SDKMessage, { type: 'assistant' }>,
+	message: Extract<SDKMessage, { type: "assistant" }>,
 	session: URI,
 	turnId: string,
 	state: ClaudeMapperState,
@@ -200,9 +227,9 @@ export function emitInnerAssistantSignals(
 	const signals: AgentSignal[] = [];
 	for (let index = 0; index < message.message.content.length; index++) {
 		const block = message.message.content[index];
-		if (block.type === 'text') {
+		if (block.type === "text") {
 			signals.push({
-				kind: 'action',
+				kind: "action",
 				session,
 				action: {
 					type: ActionType.SessionResponsePart,
@@ -216,9 +243,9 @@ export function emitInnerAssistantSignals(
 			});
 			continue;
 		}
-		if (block.type === 'thinking') {
+		if (block.type === "thinking") {
 			signals.push({
-				kind: 'action',
+				kind: "action",
 				session,
 				action: {
 					type: ActionType.SessionResponsePart,
@@ -232,7 +259,7 @@ export function emitInnerAssistantSignals(
 			});
 			continue;
 		}
-		if (block.type === 'tool_use') {
+		if (block.type === "tool_use") {
 			// Strip the in-process MCP server prefix so subagent client-tool
 			// calls render with their real name (matches the top-level stream
 			// mapper). SDK-owned tools and Task/Agent passes through unchanged.
@@ -250,7 +277,7 @@ export function emitInnerAssistantSignals(
 			const meta = buildClaudeToolMeta(toolName);
 			const toolInputStr = getClaudeToolInputString(toolName, block.input);
 			signals.push({
-				kind: 'action',
+				kind: "action",
 				session,
 				action: {
 					type: ActionType.SessionToolCallStart,
@@ -262,13 +289,17 @@ export function emitInnerAssistantSignals(
 				},
 			});
 			signals.push({
-				kind: 'action',
+				kind: "action",
 				session,
 				action: {
 					type: ActionType.SessionToolCallReady,
 					turnId,
 					toolCallId: block.id,
-					invocationMessage: getClaudeInvocationMessage(toolName, displayName, block.input),
+					invocationMessage: getClaudeInvocationMessage(
+						toolName,
+						displayName,
+						block.input,
+					),
 					...(toolInputStr !== undefined ? { toolInput: toolInputStr } : {}),
 					confirmed: ToolCallConfirmationReason.NotNeeded,
 				},

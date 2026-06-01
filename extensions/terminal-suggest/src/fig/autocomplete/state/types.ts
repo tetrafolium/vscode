@@ -3,28 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GeneratorState } from '../generators/helpers';
-import type { ArgumentParserResult } from '../../autocomplete-parser/parseArguments';
-import type { Suggestion } from '../../shared/internal';
-import type { Command } from '../../shell-parser';
-import type { FigState } from '../fig/hooks';
+import { GeneratorState } from "../generators/helpers";
+import type { ArgumentParserResult } from "../../autocomplete-parser/parseArguments";
+import type { Suggestion } from "../../shared/internal";
+import type { Command } from "../../shell-parser";
+import type { FigState } from "../fig/hooks";
 
 export enum Visibility {
-	VISIBLE = 'visible',
+	VISIBLE = "visible",
 	// Can happen in several cases:
 	// 1. We've just inserted text
 	// 2. User has backspaced to new token
 	// 3. A large buffer change (scrolling through history, or pasting text)
 	// 4. An error occurs
-	HIDDEN_UNTIL_KEYPRESS = 'hidden_until_keypress',
+	HIDDEN_UNTIL_KEYPRESS = "hidden_until_keypress",
 	// Hide until explicitly shown (or we enter a new line), can happen when:
 	// 1. The escape key is pressed
 	// 2. A keybinding to hide autocomplete is pressed
 	// 3. User enters a new token with onlyShowOnTab set
-	HIDDEN_UNTIL_SHOWN = 'hidden_until_shown',
+	HIDDEN_UNTIL_SHOWN = "hidden_until_shown",
 	// User inserted full suggestion. Wait until text is rendered, then hide
 	// until keypress (2 state updates).
-	HIDDEN_BY_INSERTION = 'insertion',
+	HIDDEN_BY_INSERTION = "insertion",
 }
 
 // type AutocompleteActions = {

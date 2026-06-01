@@ -3,19 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SequencerByKey } from '../../../../base/common/async.js';
-import { Disposable, DisposableMap, DisposableStore, IDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
-import { IObservable, observableValue, transaction } from '../../../../base/common/observable.js';
-import { URI } from '../../../../base/common/uri.js';
-import { generateUuid } from '../../../../base/common/uuid.js';
-import { localize } from '../../../../nls.js';
-import { IAgentConnection } from '../../../../platform/agentHost/common/agentService.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { IQuickInputService, IQuickPickItem } from '../../../../platform/quickinput/common/quickInput.js';
-import { AgentHostPty } from './agentHostPty.js';
-import { AhpTerminalCommandSource } from './ahpTerminalCommandSource.js';
-import { ITerminalChatService, ITerminalInstance, ITerminalLocationOptions, ITerminalService } from './terminal.js';
-import { ITerminalProfileProvider, ITerminalProfileService } from '../common/terminal.js';
+import { SequencerByKey } from "../../../../base/common/async.js";
+import {
+	Disposable,
+	DisposableMap,
+	DisposableStore,
+	IDisposable,
+	toDisposable,
+} from "../../../../base/common/lifecycle.js";
+import {
+	IObservable,
+	observableValue,
+	transaction,
+} from "../../../../base/common/observable.js";
+import { URI } from "../../../../base/common/uri.js";
+import { generateUuid } from "../../../../base/common/uuid.js";
+import { localize } from "../../../../nls.js";
+import { IAgentConnection } from "../../../../platform/agentHost/common/agentService.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import {
+	IQuickInputService,
+	IQuickPickItem,
+} from "../../../../platform/quickinput/common/quickInput.js";
+import { AgentHostPty } from "./agentHostPty.js";
+import { AhpTerminalCommandSource } from "./ahpTerminalCommandSource.js";
+import {
+	ITerminalChatService,
+	ITerminalInstance,
+	ITerminalLocationOptions,
+	ITerminalService,
+} from "./terminal.js";
+import {
+	ITerminalProfileProvider,
+	ITerminalProfileService,
+} from "../common/terminal.js";
 
 export interface IAgentHostTerminalCreateOptions {
 	/** Human-readable terminal name. */
@@ -42,9 +63,10 @@ export interface IAgentHostTerminalProfileInfo {
 	readonly address: string;
 }
 
-const AGENT_HOST_PROFILE_EXT_ID = 'vscode.agent-host-terminal';
+const AGENT_HOST_PROFILE_EXT_ID = "vscode.agent-host-terminal";
 
-export const IAgentHostTerminalService = createDecorator<IAgentHostTerminalService>('agentHostTerminalService');
+export const IAgentHostTerminalService =
+	createDecorator<IAgentHostTerminalService>("agentHostTerminalService");
 
 export interface IAgentHostTerminalService {
 	readonly _serviceBrand: undefined;
@@ -57,7 +79,9 @@ export interface IAgentHostTerminalService {
 	 * collapsed quickpick profile if needed. Returns the profile info, or
 	 * `undefined` if no entry is registered for the address.
 	 */
-	getProfileForConnection(address: string): IAgentHostTerminalProfileInfo | undefined;
+	getProfileForConnection(
+		address: string,
+	): IAgentHostTerminalProfileInfo | undefined;
 
 	/**
 	 * Registers an agent host entry. The service reconciles entries into
@@ -69,27 +93,40 @@ export interface IAgentHostTerminalService {
 	/**
 	 * Creates a new interactive terminal on the given agent host connection.
 	 */
-	createTerminal(connection: IAgentConnection, options?: IAgentHostTerminalCreateOptions): Promise<ITerminalInstance>;
+	createTerminal(
+		connection: IAgentConnection,
+		options?: IAgentHostTerminalCreateOptions,
+	): Promise<ITerminalInstance>;
 
 	/**
 	 * Creates a terminal for the agent host registered at the given address,
 	 * resolving the connection from the registered entry. Returns `undefined`
 	 * if no entry is registered for the address.
 	 */
-	createTerminalForEntry(address: string, options?: IAgentHostTerminalCreateOptions): Promise<ITerminalInstance | undefined>;
+	createTerminalForEntry(
+		address: string,
+		options?: IAgentHostTerminalCreateOptions,
+	): Promise<ITerminalInstance | undefined>;
 
 	/**
 	 * Reconnects all active terminals that belonged to {@link oldClientId}
 	 * to a new agent host connection. Only terminals matching the old
 	 * client are touched — terminals from other hosts are left alone.
 	 */
-	reconnectTerminals(newConnection: IAgentConnection, oldClientId: string): Promise<{ recovered: number; total: number }>;
+	reconnectTerminals(
+		newConnection: IAgentConnection,
+		oldClientId: string,
+	): Promise<{ recovered: number; total: number }>;
 
 	/**
 	 * Attaches to an existing server-side terminal by subscribing to its
 	 * state without creating a new process.
 	 */
-	reviveTerminal(connection: IAgentConnection, terminalUri: URI, terminalToolSessionId: string): Promise<ITerminalInstance>;
+	reviveTerminal(
+		connection: IAgentConnection,
+		terminalUri: URI,
+		terminalToolSessionId: string,
+	): Promise<ITerminalInstance>;
 
 	/**
 	 * Sets the default cwd used by profile providers when no explicit cwd
@@ -98,14 +135,22 @@ export interface IAgentHostTerminalService {
 	setDefaultCwd(cwd: URI | undefined): void;
 }
 
-export class AgentHostTerminalService extends Disposable implements IAgentHostTerminalService {
+export class AgentHostTerminalService
+	extends Disposable
+	implements IAgentHostTerminalService
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _entries: IAgentHostEntry[] = [];
 	private readonly _usedHosts = new Set<string>();
-	private readonly _profileRegistrations = this._register(new DisposableMap<string>());
-	private readonly _profiles = observableValue<readonly IAgentHostTerminalProfileInfo[]>('agentHostTerminalProfiles', []);
-	readonly profiles: IObservable<readonly IAgentHostTerminalProfileInfo[]> = this._profiles;
+	private readonly _profileRegistrations = this._register(
+		new DisposableMap<string>(),
+	);
+	private readonly _profiles = observableValue<
+		readonly IAgentHostTerminalProfileInfo[]
+	>("agentHostTerminalProfiles", []);
+	readonly profiles: IObservable<readonly IAgentHostTerminalProfileInfo[]> =
+		this._profiles;
 
 	private _defaultCwd: URI | undefined;
 
@@ -115,13 +160,18 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 	 * Active AgentHostPty instances with their owning connection clientId,
 	 * keyed by terminal URI string. Used for reconnection scoping.
 	 */
-	private readonly _activePtys = new Map<string, { pty: AgentHostPty; clientId: string }>();
+	private readonly _activePtys = new Map<
+		string,
+		{ pty: AgentHostPty; clientId: string }
+	>();
 	private readonly _reviveSequencer = new SequencerByKey<string>();
 
 	constructor(
 		@ITerminalService private readonly _terminalService: ITerminalService,
-		@ITerminalChatService private readonly _terminalChatService: ITerminalChatService,
-		@ITerminalProfileService private readonly _terminalProfileService: ITerminalProfileService,
+		@ITerminalChatService
+		private readonly _terminalChatService: ITerminalChatService,
+		@ITerminalProfileService
+		private readonly _terminalProfileService: ITerminalProfileService,
 		@IQuickInputService private readonly _quickInputService: IQuickInputService,
 	) {
 		super();
@@ -141,8 +191,10 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 		});
 	}
 
-	getProfileForConnection(address: string): IAgentHostTerminalProfileInfo | undefined {
-		const entry = this._entries.find(e => e.address === address);
+	getProfileForConnection(
+		address: string,
+	): IAgentHostTerminalProfileInfo | undefined {
+		const entry = this._entries.find((e) => e.address === address);
 		if (!entry) {
 			return undefined;
 		}
@@ -151,7 +203,7 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 			this._usedHosts.add(address);
 			this._reconcile();
 		}
-		return this._profiles.get().find(p => p.address === address);
+		return this._profiles.get().find((p) => p.address === address);
 	}
 
 	setDefaultCwd(cwd: URI | undefined): void {
@@ -170,21 +222,21 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 			// Multiple hosts — show named profiles for used ones
 			let displaying = 0;
 			for (const address of this._usedHosts) {
-				const entry = entries.find(e => e.address === address);
+				const entry = entries.find((e) => e.address === address);
 				if (entry) {
 					displaying++;
 					desiredProfiles.set(entry.address, entry);
 				}
 			}
 			if (displaying === entries.length - 1) {
-				const missing = entries.find(e => !this._usedHosts.has(e.address));
+				const missing = entries.find((e) => !this._usedHosts.has(e.address));
 				if (missing) {
 					desiredProfiles.set(missing.address, missing);
 				}
 			} else if (displaying < entries.length) {
-				desiredProfiles.set('__quickpick__', {
-					name: localize('agentHostTerminal.pick', "Agent Host\u2026"),
-					address: '__quickpick__',
+				desiredProfiles.set("__quickpick__", {
+					name: localize("agentHostTerminal.pick", "Agent Host\u2026"),
+					address: "__quickpick__",
 					getConnection: () => undefined,
 				});
 			}
@@ -208,29 +260,50 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 			infos.push({
 				extensionIdentifier: AGENT_HOST_PROFILE_EXT_ID,
 				profileId: key,
-				title: key === '__quickpick__'
-					? localize('agentHostTerminal.pick', "Agent Host\u2026")
-					: localize('agentHostTerminal.profileName', "Agent Host ({0})", desiredProfiles.get(key)!.name),
+				title:
+					key === "__quickpick__"
+						? localize("agentHostTerminal.pick", "Agent Host\u2026")
+						: localize(
+								"agentHostTerminal.profileName",
+								"Agent Host ({0})",
+								desiredProfiles.get(key)!.name,
+							),
 				address: key,
 			});
 		}
-		transaction(tx => { this._profiles.set(infos, tx); });
+		transaction((tx) => {
+			this._profiles.set(infos, tx);
+		});
 	}
 
-	private _registerProfile(key: string, entry: IAgentHostEntry, allEntries: IAgentHostEntry[]): void {
+	private _registerProfile(
+		key: string,
+		entry: IAgentHostEntry,
+		allEntries: IAgentHostEntry[],
+	): void {
 		const provider: ITerminalProfileProvider = {
 			createContributedTerminalProfile: async (options) => {
 				let connection: IAgentConnection | undefined;
 				let displayName = entry.name;
 
-				if (key === '__quickpick__') {
-					const picks: (IQuickPickItem & { address: string; hostName: string })[] = allEntries.map(e => ({
-						label: localize('agentHostTerminal.profileName', "Agent Host ({0})", e.name),
+				if (key === "__quickpick__") {
+					const picks: (IQuickPickItem & {
+						address: string;
+						hostName: string;
+					})[] = allEntries.map((e) => ({
+						label: localize(
+							"agentHostTerminal.profileName",
+							"Agent Host ({0})",
+							e.name,
+						),
 						address: e.address,
 						hostName: e.name,
 					}));
 					const pick = await this._quickInputService.pick(picks, {
-						placeHolder: localize('agentHostTerminal.pickHost', "Select an agent host to open a terminal on"),
+						placeHolder: localize(
+							"agentHostTerminal.pickHost",
+							"Select an agent host to open a terminal on",
+						),
 					});
 					if (!pick) {
 						return;
@@ -238,7 +311,9 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 					this._usedHosts.add(pick.address);
 					this._reconcile();
 					displayName = pick.hostName;
-					connection = allEntries.find(e => e.address === pick.address)?.getConnection();
+					connection = allEntries
+						.find((e) => e.address === pick.address)
+						?.getConnection();
 				} else {
 					connection = entry.getConnection();
 				}
@@ -248,36 +323,56 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 				}
 
 				await this.createTerminal(connection, {
-					name: localize('agentHostTerminal.profileName', "Agent Host ({0})", displayName),
-					cwd: options.cwd ? (typeof options.cwd === 'string' ? URI.file(options.cwd) : options.cwd) : this._defaultCwd,
+					name: localize(
+						"agentHostTerminal.profileName",
+						"Agent Host ({0})",
+						displayName,
+					),
+					cwd: options.cwd
+						? typeof options.cwd === "string"
+							? URI.file(options.cwd)
+							: options.cwd
+						: this._defaultCwd,
 					location: options.location,
 				});
 			},
 		};
 
-		const title = key === '__quickpick__'
-			? localize('agentHostTerminal.pick', "Agent Host\u2026")
-			: localize('agentHostTerminal.profileName', "Agent Host ({0})", entry.name);
+		const title =
+			key === "__quickpick__"
+				? localize("agentHostTerminal.pick", "Agent Host\u2026")
+				: localize(
+						"agentHostTerminal.profileName",
+						"Agent Host ({0})",
+						entry.name,
+					);
 
 		const store = new DisposableStore();
-		store.add(this._terminalProfileService.registerTerminalProfileProvider(
-			AGENT_HOST_PROFILE_EXT_ID,
-			key,
-			provider,
-		));
-		store.add(this._terminalProfileService.registerInternalContributedProfile({
-			extensionIdentifier: AGENT_HOST_PROFILE_EXT_ID,
-			id: key,
-			title,
-			icon: 'remote',
-		}));
+		store.add(
+			this._terminalProfileService.registerTerminalProfileProvider(
+				AGENT_HOST_PROFILE_EXT_ID,
+				key,
+				provider,
+			),
+		);
+		store.add(
+			this._terminalProfileService.registerInternalContributedProfile({
+				extensionIdentifier: AGENT_HOST_PROFILE_EXT_ID,
+				id: key,
+				title,
+				icon: "remote",
+			}),
+		);
 		this._profileRegistrations.set(key, store);
 	}
 
 	// #endregion
 
-	async createTerminalForEntry(address: string, options?: IAgentHostTerminalCreateOptions): Promise<ITerminalInstance | undefined> {
-		const entry = this._entries.find(e => e.address === address);
+	async createTerminalForEntry(
+		address: string,
+		options?: IAgentHostTerminalCreateOptions,
+	): Promise<ITerminalInstance | undefined> {
+		const entry = this._entries.find((e) => e.address === address);
 		if (!entry) {
 			return undefined;
 		}
@@ -288,9 +383,17 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 		return this.createTerminal(connection, options);
 	}
 
-	async createTerminal(connection: IAgentConnection, options?: IAgentHostTerminalCreateOptions): Promise<ITerminalInstance> {
-		const terminalUri = URI.from({ scheme: 'agenthost-terminal', path: `/${generateUuid()}` });
-		const name = options?.name ?? localize('agentHostTerminal.default', "Agent Host Terminal");
+	async createTerminal(
+		connection: IAgentConnection,
+		options?: IAgentHostTerminalCreateOptions,
+	): Promise<ITerminalInstance> {
+		const terminalUri = URI.from({
+			scheme: "agenthost-terminal",
+			path: `/${generateUuid()}`,
+		});
+		const name =
+			options?.name ??
+			localize("agentHostTerminal.default", "Agent Host Terminal");
 		const key = terminalUri.toString();
 
 		const instance = await this._terminalService.createTerminal({
@@ -307,32 +410,55 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 					return pty;
 				},
 				name,
-				icon: { id: 'remote' },
+				icon: { id: "remote" },
 				isFeatureTerminal: false,
 			},
 			location: options?.location,
 		});
 
-		this._register(instance.onDisposed(() => {
-			this._activePtys.delete(key);
-		}));
+		this._register(
+			instance.onDisposed(() => {
+				this._activePtys.delete(key);
+			}),
+		);
 
 		return instance;
 	}
 
-	async reviveTerminal(connection: IAgentConnection, terminalUri: URI, terminalToolSessionId: string): Promise<ITerminalInstance> {
+	async reviveTerminal(
+		connection: IAgentConnection,
+		terminalUri: URI,
+		terminalToolSessionId: string,
+	): Promise<ITerminalInstance> {
 		const key = terminalUri.toString();
-		return this._reviveSequencer.queue(key, () => this._doReviveTerminal(connection, terminalUri, terminalToolSessionId, key));
+		return this._reviveSequencer.queue(key, () =>
+			this._doReviveTerminal(
+				connection,
+				terminalUri,
+				terminalToolSessionId,
+				key,
+			),
+		);
 	}
 
-	private async _doReviveTerminal(connection: IAgentConnection, terminalUri: URI, terminalToolSessionId: string, key: string): Promise<ITerminalInstance> {
+	private async _doReviveTerminal(
+		connection: IAgentConnection,
+		terminalUri: URI,
+		terminalToolSessionId: string,
+		key: string,
+	): Promise<ITerminalInstance> {
 		const existing = this._revivedInstances.get(key);
 		if (existing) {
 			return existing;
 		}
 		const store = new DisposableStore();
 		const commandSource = store.add(new AhpTerminalCommandSource());
-		store.add(this._terminalChatService.registerAhpCommandSource(terminalToolSessionId, commandSource));
+		store.add(
+			this._terminalChatService.registerAhpCommandSource(
+				terminalToolSessionId,
+				commandSource,
+			),
+		);
 
 		const instance = await this._terminalService.createTerminal({
 			config: {
@@ -351,44 +477,54 @@ export class AgentHostTerminalService extends Disposable implements IAgentHostTe
 					this._activePtys.set(key, { pty, clientId: connection.clientId });
 					return pty;
 				},
-				name: localize('agentHostTerminal.tool', "Agent Host Terminal"),
+				name: localize("agentHostTerminal.tool", "Agent Host Terminal"),
 				isFeatureTerminal: true,
 				hideFromUser: true,
 			},
 		});
-		this._terminalChatService.registerTerminalInstanceWithToolSession(terminalToolSessionId, instance);
+		this._terminalChatService.registerTerminalInstanceWithToolSession(
+			terminalToolSessionId,
+			instance,
+		);
 
 		this._revivedInstances.set(key, instance);
 		instance.store.add(store);
-		this._register(instance.onDisposed(() => {
-			this._revivedInstances.delete(key);
-			this._activePtys.delete(key);
-		}));
+		this._register(
+			instance.onDisposed(() => {
+				this._revivedInstances.delete(key);
+				this._activePtys.delete(key);
+			}),
+		);
 
 		return instance;
 	}
 
-	async reconnectTerminals(newConnection: IAgentConnection, oldClientId: string): Promise<{ recovered: number; total: number }> {
+	async reconnectTerminals(
+		newConnection: IAgentConnection,
+		oldClientId: string,
+	): Promise<{ recovered: number; total: number }> {
 		// Only reconnect terminals that belonged to the old connection
 		// identified by oldClientId. In multi-host setups, other hosts'
 		// terminals are left untouched.
 		const entries = [...this._activePtys.entries()].filter(
-			([, entry]) => entry.clientId === oldClientId
+			([, entry]) => entry.clientId === oldClientId,
 		);
 		const total = entries.length;
 		let recovered = 0;
 		const promises: Promise<void>[] = [];
 		for (const [key, entry] of entries) {
 			promises.push(
-				entry.pty.reconnect(newConnection).then(success => {
+				entry.pty.reconnect(newConnection).then((success) => {
 					if (success) {
 						recovered++;
 						// Update the clientId to the new connection
 						entry.clientId = newConnection.clientId;
 					} else {
-						console.warn(`[AgentHostTerminalService] Failed to reconnect terminal: ${key}`);
+						console.warn(
+							`[AgentHostTerminalService] Failed to reconnect terminal: ${key}`,
+						);
 					}
-				})
+				}),
 			);
 		}
 		await Promise.all(promises);

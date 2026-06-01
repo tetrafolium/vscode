@@ -5,18 +5,23 @@
 
 import { suite, test } from 'vitest';
 import type { NotebookCell, NotebookDocument, TextDocument } from 'vscode';
-import { ILogger, ILogService } from '../../../../platform/log/common/logService';
+import {
+	ILogger,
+	ILogService,
+} from '../../../../platform/log/common/logService';
 import { TestWorkspaceService } from '../../../../platform/test/node/testWorkspaceService';
 import { IWorkspaceService } from '../../../../platform/workspace/common/workspaceService';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { StringSHA1 } from '../../../../util/vs/base/common/hash';
 import { NotebookCellKind, Uri } from '../../../../vscodeTypes';
-import { LinkifiedPart, LinkifyLocationAnchor } from '../../common/linkifiedText';
+import {
+	LinkifiedPart,
+	LinkifyLocationAnchor,
+} from '../../common/linkifiedText';
 import { NotebookCellLinkifier } from '../../vscode-node/notebookCellLinkifier';
 import { assertPartsEqual } from '../node/util';
 
 suite('Notebook Cell Linkifier', () => {
-
 	// The cell ID prefix from helpers.ts
 	const CELL_ID_PREFIX = '#VSC-';
 
@@ -28,15 +33,17 @@ suite('Notebook Cell Linkifier', () => {
 				uri,
 				lineCount: 1,
 				lineAt: () => ({ text: 'print("hello")' }),
-				languageId: 'python'
+				languageId: 'python',
 			} as unknown as TextDocument,
 			metadata: {},
 			outputs: [],
-			executionSummary: undefined
+			executionSummary: undefined,
 		} as unknown as NotebookCell;
 	}
 
-	function createMockNotebookDocument(cells: NotebookCell[]): NotebookDocument {
+	function createMockNotebookDocument(
+		cells: NotebookCell[],
+	): NotebookDocument {
 		return {
 			uri: Uri.file('/test/notebook.ipynb'),
 			getCells: () => cells,
@@ -48,11 +55,13 @@ suite('Notebook Cell Linkifier', () => {
 			isClosed: false,
 			metadata: {},
 			version: 1,
-			save: () => Promise.resolve(true)
+			save: () => Promise.resolve(true),
 		} as NotebookDocument;
 	}
 
-	function createMockWorkspaceService(notebooks: NotebookDocument[]): IWorkspaceService {
+	function createMockWorkspaceService(
+		notebooks: NotebookDocument[],
+	): IWorkspaceService {
 		return new TestWorkspaceService([], [], notebooks);
 	}
 
@@ -63,16 +72,32 @@ suite('Notebook Cell Linkifier', () => {
 	}
 
 	const logger: ILogger = {
-		error: () => { /* no-op */ },
-		warn: () => { /* no-op */ },
-		info: () => { /* no-op */ },
-		debug: () => { /* no-op */ },
-		trace: () => { /* no-op */ },
-		show: () => { /* no-op */ },
-		createSubLogger(): ILogger { return logger; },
-		withExtraTarget(): ILogger { return logger; }
+		error: () => {
+			/* no-op */
+		},
+		warn: () => {
+			/* no-op */
+		},
+		info: () => {
+			/* no-op */
+		},
+		debug: () => {
+			/* no-op */
+		},
+		trace: () => {
+			/* no-op */
+		},
+		show: () => {
+			/* no-op */
+		},
+		createSubLogger(): ILogger {
+			return logger;
+		},
+		withExtraTarget(): ILogger {
+			return logger;
+		},
 	};
-	const mockLogger = new class implements ILogService {
+	const mockLogger = new (class implements ILogService {
 		_serviceBrand: undefined;
 		internal = logger;
 		logger = logger;
@@ -90,12 +115,16 @@ suite('Notebook Cell Linkifier', () => {
 		withExtraTarget(): ILogger {
 			return this;
 		}
-	}();
+	})();
 
 	function normalizeParts(parts: readonly LinkifiedPart[]): LinkifiedPart[] {
 		const normalized: LinkifiedPart[] = [];
 		for (const part of parts) {
-			if (typeof part === 'string' && normalized.length && typeof normalized[normalized.length - 1] === 'string') {
+			if (
+				typeof part === 'string' &&
+				normalized.length &&
+				typeof normalized[normalized.length - 1] === 'string'
+			) {
 				normalized[normalized.length - 1] += part; // Concatenate strings
 			} else {
 				normalized.push(part);
@@ -105,8 +134,12 @@ suite('Notebook Cell Linkifier', () => {
 	}
 	test('Should linkify actual cell IDs', async () => {
 		// Create mock cells with specific URIs
-		const cellUri1 = Uri.parse('vscode-notebook-cell:/test/notebook.ipynb#cell1');
-		const cellUri2 = Uri.parse('vscode-notebook-cell:/test/notebook.ipynb#cell2');
+		const cellUri1 = Uri.parse(
+			'vscode-notebook-cell:/test/notebook.ipynb#cell1',
+		);
+		const cellUri2 = Uri.parse(
+			'vscode-notebook-cell:/test/notebook.ipynb#cell2',
+		);
 
 		const cell1 = createMockNotebookCell(cellUri1, 0);
 		const cell2 = createMockNotebookCell(cellUri2, 1);
@@ -118,26 +151,30 @@ suite('Notebook Cell Linkifier', () => {
 		const cellId1 = generateCellId(cellUri1);
 		const cellId2 = generateCellId(cellUri2);
 
-		const linkifier = new NotebookCellLinkifier(workspaceService, mockLogger);
+		const linkifier = new NotebookCellLinkifier(
+			workspaceService,
+			mockLogger,
+		);
 
 		const testText = `Below is a list of the cells that were executed\n* Cell Id ${cellId1}\n* Cell Id ${cellId2}\n Cell 1: code cell, id=${cellId1}, nor markdown, language=Python\n Cell 2(${cellId2}), nor markdown, language=Python`;
 
-		const result = await linkifier.linkify(testText, { requestId: undefined, references: [] }, CancellationToken.None);
+		const result = await linkifier.linkify(
+			testText,
+			{ requestId: undefined, references: [] },
+			CancellationToken.None,
+		);
 
 		// Should have linkified both cell IDs
-		assertPartsEqual(
-			normalizeParts(result.parts),
-			[
-				`Below is a list of the cells that were executed\n* Cell Id ${cellId1} `,
-				new LinkifyLocationAnchor(cellUri1, 'Cell 1'),
-				`\n* Cell Id ${cellId2} `,
-				new LinkifyLocationAnchor(cellUri2, 'Cell 2'),
-				`\n Cell 1: code cell, id=#VSC-c6b3ce64 `,
-				new LinkifyLocationAnchor(cellUri1, 'Cell 1'),
-				`, nor markdown, language=Python\n Cell 2(#VSC-f9c1928a `,
-				new LinkifyLocationAnchor(cellUri2, 'Cell 2'),
-				`), nor markdown, language=Python`
-			]
-		);
+		assertPartsEqual(normalizeParts(result.parts), [
+			`Below is a list of the cells that were executed\n* Cell Id ${cellId1} `,
+			new LinkifyLocationAnchor(cellUri1, 'Cell 1'),
+			`\n* Cell Id ${cellId2} `,
+			new LinkifyLocationAnchor(cellUri2, 'Cell 2'),
+			`\n Cell 1: code cell, id=#VSC-c6b3ce64 `,
+			new LinkifyLocationAnchor(cellUri1, 'Cell 1'),
+			`, nor markdown, language=Python\n Cell 2(#VSC-f9c1928a `,
+			new LinkifyLocationAnchor(cellUri2, 'Cell 2'),
+			`), nor markdown, language=Python`,
+		]);
 	});
 });

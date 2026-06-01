@@ -3,21 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../base/common/uri.js';
-import { localize, localize2 } from '../../../../../nls.js';
-import { Categories } from '../../../../../platform/action/common/actionCommonCategories.js';
-import { Action2 } from '../../../../../platform/actions/common/actions.js';
-import { agentHostAuthority } from '../../../../../platform/agentHost/common/agentHostUri.js';
-import { IRemoteAgentHostService } from '../../../../../platform/agentHost/common/remoteAgentHostService.js';
-import { ContextKeyExpr } from '../../../../../platform/contextkey/common/contextkey.js';
-import { ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
-import { INotificationService } from '../../../../../platform/notification/common/notification.js';
-import { IsSessionsWindowContext } from '../../../../common/contextkeys.js';
-import { IEditorService } from '../../../../services/editor/common/editorService.js';
-import { IPathService } from '../../../../services/path/common/pathService.js';
-import { IChatWidgetService } from '../chat.js';
-import { ChatContextKeys } from '../../common/actions/chatContextKeys.js';
-import { resolveEventsUri } from '../copilotCliEventsUri.js';
+import { URI } from "../../../../../base/common/uri.js";
+import { localize, localize2 } from "../../../../../nls.js";
+import { Categories } from "../../../../../platform/action/common/actionCommonCategories.js";
+import { Action2 } from "../../../../../platform/actions/common/actions.js";
+import { agentHostAuthority } from "../../../../../platform/agentHost/common/agentHostUri.js";
+import { IRemoteAgentHostService } from "../../../../../platform/agentHost/common/remoteAgentHostService.js";
+import { ContextKeyExpr } from "../../../../../platform/contextkey/common/contextkey.js";
+import { ServicesAccessor } from "../../../../../platform/instantiation/common/instantiation.js";
+import { INotificationService } from "../../../../../platform/notification/common/notification.js";
+import { IsSessionsWindowContext } from "../../../../common/contextkeys.js";
+import { IEditorService } from "../../../../services/editor/common/editorService.js";
+import { IPathService } from "../../../../services/path/common/pathService.js";
+import { IChatWidgetService } from "../chat.js";
+import { ChatContextKeys } from "../../common/actions/chatContextKeys.js";
+import { resolveEventsUri } from "../copilotCliEventsUri.js";
 
 /**
  * Shared implementation of "Open Copilot CLI State File". Resolves the
@@ -40,27 +40,49 @@ export async function openCopilotCliStateFile(
 
 	const userHome = pathService.userHome({ preferLocal: true });
 
-	const result = resolveEventsUri(
-		sessionResource,
-		userHome,
-		authority => remoteAgentHostService.connections.find(c => agentHostAuthority(c.address) === authority),
+	const result = resolveEventsUri(sessionResource, userHome, (authority) =>
+		remoteAgentHostService.connections.find(
+			(c) => agentHostAuthority(c.address) === authority,
+		),
 	);
 
 	switch (result.kind) {
-		case 'ok':
+		case "ok":
 			await editorService.openEditor({ resource: result.resource });
 			return;
-		case 'no-session':
-			notificationService.info(localize('openSessionEventsFile.noSession', "No Copilot CLI session is active."));
+		case "no-session":
+			notificationService.info(
+				localize(
+					"openSessionEventsFile.noSession",
+					"No Copilot CLI session is active.",
+				),
+			);
 			return;
-		case 'unsupported-scheme':
-			notificationService.info(localize('openSessionEventsFile.unsupported', "The active chat session is not a Copilot CLI session."));
+		case "unsupported-scheme":
+			notificationService.info(
+				localize(
+					"openSessionEventsFile.unsupported",
+					"The active chat session is not a Copilot CLI session.",
+				),
+			);
 			return;
-		case 'remote-not-connected':
-			notificationService.warn(localize('openSessionEventsFile.notConnected', "No active connection found for remote agent host '{0}'.", result.authority));
+		case "remote-not-connected":
+			notificationService.warn(
+				localize(
+					"openSessionEventsFile.notConnected",
+					"No active connection found for remote agent host '{0}'.",
+					result.authority,
+				),
+			);
 			return;
-		case 'remote-no-home':
-			notificationService.warn(localize('openSessionEventsFile.noHome', "Remote agent host '{0}' did not report a home directory.", result.authority));
+		case "remote-no-home":
+			notificationService.warn(
+				localize(
+					"openSessionEventsFile.noHome",
+					"Remote agent host '{0}' did not report a home directory.",
+					result.authority,
+				),
+			);
 			return;
 	}
 }
@@ -71,13 +93,12 @@ export async function openCopilotCliStateFile(
  * agents-window-specific `ISessionsManagementService` is not present.
  */
 export class OpenCopilotCliStateFileAction extends Action2 {
-
-	static readonly ID = 'workbench.action.chat.openCopilotCliStateFile';
+	static readonly ID = "workbench.action.chat.openCopilotCliStateFile";
 
 	constructor() {
 		super({
 			id: OpenCopilotCliStateFileAction.ID,
-			title: localize2('openSessionEventsFile', "Open Copilot CLI State File"),
+			title: localize2("openSessionEventsFile", "Open Copilot CLI State File"),
 			f1: true,
 			category: Categories.Developer,
 			precondition: ContextKeyExpr.and(
@@ -89,7 +110,8 @@ export class OpenCopilotCliStateFileAction extends Action2 {
 
 	override async run(accessor: ServicesAccessor): Promise<void> {
 		const chatWidgetService = accessor.get(IChatWidgetService);
-		const sessionResource = chatWidgetService.lastFocusedWidget?.viewModel?.sessionResource;
+		const sessionResource =
+			chatWidgetService.lastFocusedWidget?.viewModel?.sessionResource;
 		await openCopilotCliStateFile(accessor, sessionResource);
 	}
 }

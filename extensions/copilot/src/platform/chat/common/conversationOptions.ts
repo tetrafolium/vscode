@@ -5,7 +5,8 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IConversationOptions = createServiceIdentifier<IConversationOptions>('ConversationOptions');
+export const IConversationOptions =
+	createServiceIdentifier<IConversationOptions>('ConversationOptions');
 
 export interface IConversationOptions {
 	readonly _serviceBrand: undefined;

@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { beforeEach, describe, expect, test } from 'vitest';
-import { ILogTarget, LogLevel, LogServiceImpl, LogTarget } from '../../common/logService';
+import {
+	ILogTarget,
+	LogLevel,
+	LogServiceImpl,
+	LogTarget,
+} from '../../common/logService';
 import { TestLogTarget } from './loggerHelpers';
 
 describe('SubLogger', () => {
@@ -26,7 +31,10 @@ describe('SubLogger', () => {
 		test('prefixes messages with array of topics', () => {
 			const subLogger = logService.createSubLogger(['NES', 'Feature']);
 			subLogger.info('test message');
-			logTarget.assertHasMessage(LogLevel.Info, '[NES][Feature] test message');
+			logTarget.assertHasMessage(
+				LogLevel.Info,
+				'[NES][Feature] test message',
+			);
 		});
 
 		test('handles empty array of topics', () => {
@@ -41,7 +49,10 @@ describe('SubLogger', () => {
 			const parentLogger = logService.createSubLogger('Parent');
 			const childLogger = parentLogger.createSubLogger('Child');
 			childLogger.info('nested message');
-			logTarget.assertHasMessage(LogLevel.Info, '[Parent][Child] nested message');
+			logTarget.assertHasMessage(
+				LogLevel.Info,
+				'[Parent][Child] nested message',
+			);
 		});
 
 		test('supports multiple levels of nesting', () => {
@@ -49,7 +60,10 @@ describe('SubLogger', () => {
 			const level2 = level1.createSubLogger('L2');
 			const level3 = level2.createSubLogger('L3');
 			level3.info('deeply nested');
-			logTarget.assertHasMessage(LogLevel.Info, '[L1][L2][L3] deeply nested');
+			logTarget.assertHasMessage(
+				LogLevel.Info,
+				'[L1][L2][L3] deeply nested',
+			);
 		});
 
 		test('accumulates array topics when nesting', () => {
@@ -91,7 +105,12 @@ describe('SubLogger', () => {
 			subLogger.error(error, 'error context');
 			// The error method formats as: collectErrorMessages(error) + ': ' + prefixedMessage
 			// The 's' flag makes '.' match newlines
-			expect(logTarget.hasMessageMatching(LogLevel.Error, /test error.*\[Test\] error context/s)).toBe(true);
+			expect(
+				logTarget.hasMessageMatching(
+					LogLevel.Error,
+					/test error.*\[Test\] error context/s,
+				),
+			).toBe(true);
 		});
 
 		test('error method without message uses prefix only', () => {
@@ -99,14 +118,24 @@ describe('SubLogger', () => {
 			const error = new Error('test error');
 			subLogger.error(error);
 			// The error method formats as: collectErrorMessages(error) + ': ' + prefix
-			expect(logTarget.hasMessageMatching(LogLevel.Error, /test error.*\[Test\]/s)).toBe(true);
+			expect(
+				logTarget.hasMessageMatching(
+					LogLevel.Error,
+					/test error.*\[Test\]/s,
+				),
+			).toBe(true);
 		});
 
 		test('error method with string error and message', () => {
 			const subLogger = logService.createSubLogger('Test');
 			subLogger.error('string error', 'error context');
 			// The error method formats as: error + ': ' + prefixedMessage
-			expect(logTarget.hasMessageMatching(LogLevel.Error, /string error.*\[Test\] error context/s)).toBe(true);
+			expect(
+				logTarget.hasMessageMatching(
+					LogLevel.Error,
+					/string error.*\[Test\] error context/s,
+				),
+			).toBe(true);
 		});
 	});
 
@@ -115,15 +144,14 @@ describe('SubLogger', () => {
 			let showCalled = false;
 			let preserveFocusValue: boolean | undefined = undefined;
 
-			const mockTarget: TestLogTarget & { show: (preserveFocus?: boolean) => void } = Object.assign(
-				new TestLogTarget(),
-				{
-					show(preserveFocus?: boolean) {
-						showCalled = true;
-						preserveFocusValue = preserveFocus;
-					}
-				}
-			);
+			const mockTarget: TestLogTarget & {
+				show: (preserveFocus?: boolean) => void;
+			} = Object.assign(new TestLogTarget(), {
+				show(preserveFocus?: boolean) {
+					showCalled = true;
+					preserveFocusValue = preserveFocus;
+				},
+			});
 
 			const service = new LogServiceImpl([mockTarget]);
 			const subLogger = service.createSubLogger('Test');
@@ -142,8 +170,14 @@ describe('SubLogger', () => {
 			logger1.info('message from 1');
 			logger2.info('message from 2');
 
-			logTarget.assertHasMessage(LogLevel.Info, '[Logger1] message from 1');
-			logTarget.assertHasMessage(LogLevel.Info, '[Logger2] message from 2');
+			logTarget.assertHasMessage(
+				LogLevel.Info,
+				'[Logger1] message from 1',
+			);
+			logTarget.assertHasMessage(
+				LogLevel.Info,
+				'[Logger2] message from 2',
+			);
 		});
 
 		test('parent and child sub-loggers work independently', () => {
@@ -153,8 +187,14 @@ describe('SubLogger', () => {
 			parent.info('parent message');
 			child.info('child message');
 
-			logTarget.assertHasMessage(LogLevel.Info, '[Parent] parent message');
-			logTarget.assertHasMessage(LogLevel.Info, '[Parent][Child] child message');
+			logTarget.assertHasMessage(
+				LogLevel.Info,
+				'[Parent] parent message',
+			);
+			logTarget.assertHasMessage(
+				LogLevel.Info,
+				'[Parent][Child] child message',
+			);
 		});
 	});
 
@@ -170,7 +210,10 @@ describe('SubLogger', () => {
 			// Primary target receives prefixed message
 			logTarget.assertHasMessage(LogLevel.Info, '[Feature] test message');
 			// Extra target also receives prefixed message
-			extraTarget.assertHasMessage(LogLevel.Info, '[Feature] test message');
+			extraTarget.assertHasMessage(
+				LogLevel.Info,
+				'[Feature] test message',
+			);
 		});
 
 		test('withExtraTarget returns new immutable logger', () => {
@@ -182,7 +225,12 @@ describe('SubLogger', () => {
 			withExtra.info('with extra');
 
 			// Extra target only receives from withExtra logger
-			expect(extraTarget.hasMessage(LogLevel.Info, '[Feature] original only')).toBe(false);
+			expect(
+				extraTarget.hasMessage(
+					LogLevel.Info,
+					'[Feature] original only',
+				),
+			).toBe(false);
 			extraTarget.assertHasMessage(LogLevel.Info, '[Feature] with extra');
 		});
 
@@ -195,7 +243,10 @@ describe('SubLogger', () => {
 
 			child.info('child message');
 
-			extraTarget.assertHasMessage(LogLevel.Info, '[Parent][Child] child message');
+			extraTarget.assertHasMessage(
+				LogLevel.Info,
+				'[Parent][Child] child message',
+			);
 		});
 
 		test('can chain multiple extra targets', () => {
@@ -214,7 +265,9 @@ describe('SubLogger', () => {
 
 		test('extra target errors do not affect primary logging', () => {
 			const throwingTarget: ILogTarget = {
-				logIt: () => { throw new Error('Target error'); }
+				logIt: () => {
+					throw new Error('Target error');
+				},
 			};
 			const logger = logService
 				.createSubLogger('Feature')
@@ -250,11 +303,11 @@ describe('SubLogger', () => {
 			let showCalled = false;
 			let preserveFocusValue: boolean | undefined;
 			const extraTarget: ILogTarget = {
-				logIt: () => { },
+				logIt: () => {},
 				show: (preserveFocus) => {
 					showCalled = true;
 					preserveFocusValue = preserveFocus;
-				}
+				},
 			};
 			const logger = logService
 				.createSubLogger('Test')
@@ -282,25 +335,28 @@ describe('SubLogger', () => {
 			const messages: Array<{ level: LogLevel; msg: string }> = [];
 			const logger = logService
 				.createSubLogger('Feature')
-				.withExtraTarget(LogTarget.fromCallback((level, msg) => {
-					messages.push({ level, msg });
-				}));
+				.withExtraTarget(
+					LogTarget.fromCallback((level, msg) => {
+						messages.push({ level, msg });
+					}),
+				);
 
 			logger.warn('warning message');
 
 			expect(messages).toHaveLength(1);
 			expect(messages[0]).toEqual({
 				level: LogLevel.Warning,
-				msg: '[Feature] warning message'
+				msg: '[Feature] warning message',
 			});
 		});
 
 		test('callback receives correct log levels', () => {
 			const levels: LogLevel[] = [];
-			const logger = logService
-				.withExtraTarget(LogTarget.fromCallback((level) => {
+			const logger = logService.withExtraTarget(
+				LogTarget.fromCallback((level) => {
 					levels.push(level);
-				}));
+				}),
+			);
 
 			logger.trace('');
 			logger.debug('');
@@ -313,7 +369,7 @@ describe('SubLogger', () => {
 				LogLevel.Debug,
 				LogLevel.Info,
 				LogLevel.Warning,
-				LogLevel.Error
+				LogLevel.Error,
 			]);
 		});
 	});

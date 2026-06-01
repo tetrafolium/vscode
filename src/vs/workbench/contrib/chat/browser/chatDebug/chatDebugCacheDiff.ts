@@ -32,15 +32,15 @@ export interface INormalizedMessage {
 /** Classification of a single signature token when comparing A and B. */
 export const enum CacheDiffKind {
 	/** Same role+name and same charLength in both A and B. */
-	Identical = 'identical',
+	Identical = "identical",
 	/** Same role+name and same charLength but different content. */
-	ContentDrift = 'contentDrift',
+	ContentDrift = "contentDrift",
 	/** Same role+name but different charLength. */
-	LengthChange = 'lengthChange',
+	LengthChange = "lengthChange",
 	/** Position exists only in A. */
-	OnlyInA = 'onlyInA',
+	OnlyInA = "onlyInA",
 	/** Position exists only in B. */
-	OnlyInB = 'onlyInB',
+	OnlyInB = "onlyInB",
 }
 
 /**
@@ -129,7 +129,9 @@ interface IRawMessage {
  * Returns an empty array on any parse error so callers can render a clear
  * empty-state without try/catch boilerplate.
  */
-export function parseInputMessages(inputMessagesJson: string | undefined): readonly INormalizedMessage[] {
+export function parseInputMessages(
+	inputMessagesJson: string | undefined,
+): readonly INormalizedMessage[] {
 	if (!inputMessagesJson) {
 		return [];
 	}
@@ -145,52 +147,56 @@ export function parseInputMessages(inputMessagesJson: string | undefined): reado
 
 	const out: INormalizedMessage[] = [];
 	for (const m of raw as readonly IRawMessage[]) {
-		if (!m || typeof m !== 'object') {
+		if (!m || typeof m !== "object") {
 			continue;
 		}
-		let role = typeof m.role === 'string' ? m.role : 'unknown';
-		const name = typeof m.name === 'string' ? m.name : undefined;
-		let text = '';
+		let role = typeof m.role === "string" ? m.role : "unknown";
+		const name = typeof m.name === "string" ? m.name : undefined;
+		let text = "";
 		let hasToolResponse = false;
 		let hasToolCall = false;
 		let hasToolSearchOutput = false;
 		let hasText = false;
 		if (Array.isArray(m.parts)) {
 			for (const p of m.parts) {
-				if (!p || typeof p !== 'object') {
+				if (!p || typeof p !== "object") {
 					continue;
 				}
 				switch (p.type) {
 					case undefined:
-					case 'text':
-					case 'reasoning':
-						if (typeof p.content === 'string') {
+					case "text":
+					case "reasoning":
+						if (typeof p.content === "string") {
 							text += p.content;
 							hasText = true;
 						}
 						break;
-					case 'tool_call_response':
-					case 'tool_result':
-						if (typeof p.response === 'string') {
+					case "tool_call_response":
+					case "tool_result":
+						if (typeof p.response === "string") {
 							text += p.response;
 						} else if (p.response !== undefined) {
 							text += stableStringify(p.response);
-						} else if (typeof p.content === 'string') {
+						} else if (typeof p.content === "string") {
 							text += p.content;
 						} else if (p.content !== undefined) {
 							text += stableStringify(p.content);
 						}
 						hasToolResponse = true;
 						break;
-					case 'tool_call':
+					case "tool_call":
 						// Tool calls live on assistant messages; include their
 						// stringified arguments so a tool-call argument change
 						// (e.g. file path) shows up as drift.
-						if (p.name) { text += `call:${p.name}`; }
-						if (p.arguments !== undefined) { text += stableStringify(p.arguments); }
+						if (p.name) {
+							text += `call:${p.name}`;
+						}
+						if (p.arguments !== undefined) {
+							text += stableStringify(p.arguments);
+						}
 						hasToolCall = true;
 						break;
-					case 'tool_search_output':
+					case "tool_search_output":
 						text += stableStringify({
 							id: p.id,
 							status: p.status,
@@ -205,11 +211,11 @@ export function parseInputMessages(inputMessagesJson: string | undefined): reado
 		// so the visualization labels it as `tool` rather than as a `user`
 		// or `assistant` message with mysterious empty content.
 		if (hasToolSearchOutput && !hasText) {
-			role = 'tool_search';
+			role = "tool_search";
 		} else if (hasToolResponse && !hasText) {
-			role = 'tool';
-		} else if (hasToolCall && !hasText && role === 'assistant') {
-			role = 'assistant';
+			role = "tool";
+		} else if (hasToolCall && !hasText && role === "assistant") {
+			role = "assistant";
 		}
 		// Defensive fallback: if we recognized neither a role nor any
 		// content, dump the whole raw message as text so the diff still
@@ -219,7 +225,7 @@ export function parseInputMessages(inputMessagesJson: string | undefined): reado
 		// Responses API). Without this fallback the message reads as
 		// `unknown / 0 chars` and silently matches every other empty
 		// message, hiding real drift from the user.
-		if (text.length === 0 && role === 'unknown') {
+		if (text.length === 0 && role === "unknown") {
 			text = stableStringify(m);
 		}
 		out.push({ role, name, text, charLength: text.length });
@@ -257,7 +263,12 @@ function stableStringify(value: unknown): string {
  * in length is wasted work.
  */
 function messagesEqual(a: INormalizedMessage, b: INormalizedMessage): boolean {
-	return a.role === b.role && a.name === b.name && a.charLength === b.charLength && a.text === b.text;
+	return (
+		a.role === b.role &&
+		a.name === b.name &&
+		a.charLength === b.charLength &&
+		a.text === b.text
+	);
 }
 
 /**
@@ -269,10 +280,19 @@ function messagesEqual(a: INormalizedMessage, b: INormalizedMessage): boolean {
  * Reporting that first divergence is far more useful than computing a
  * minimum edit script.
  */
-export function diffPromptSignature(a: readonly INormalizedMessage[], b: readonly INormalizedMessage[]): ICacheDiffResult {
+export function diffPromptSignature(
+	a: readonly INormalizedMessage[],
+	b: readonly INormalizedMessage[],
+): ICacheDiffResult {
 	const signature: ICacheSignatureToken[] = [];
 	const drift: IComponentDrift[] = [];
-	const counts = { identical: 0, contentDrift: 0, lengthChange: 0, onlyInA: 0, onlyInB: 0 };
+	const counts = {
+		identical: 0,
+		contentDrift: 0,
+		lengthChange: 0,
+		onlyInA: 0,
+		onlyInB: 0,
+	};
 	let breakResult: ICacheBreak | undefined;
 	let broken = false;
 
@@ -283,8 +303,20 @@ export function diffPromptSignature(a: readonly INormalizedMessage[], b: readonl
 
 		if (ai && !bi) {
 			counts.onlyInA++;
-			signature.push({ index: i, kind: CacheDiffKind.OnlyInA, aRole: ai.role, aName: ai.name, aCharLength: ai.charLength });
-			drift.push({ name: `messages[${i}]`, role: ai.role, status: CacheDiffKind.OnlyInA, aSize: ai.charLength, bSize: 0 });
+			signature.push({
+				index: i,
+				kind: CacheDiffKind.OnlyInA,
+				aRole: ai.role,
+				aName: ai.name,
+				aCharLength: ai.charLength,
+			});
+			drift.push({
+				name: `messages[${i}]`,
+				role: ai.role,
+				status: CacheDiffKind.OnlyInA,
+				aSize: ai.charLength,
+				bSize: 0,
+			});
 			if (!broken) {
 				broken = true;
 				breakResult = { index: i, kind: CacheDiffKind.OnlyInA };
@@ -293,8 +325,20 @@ export function diffPromptSignature(a: readonly INormalizedMessage[], b: readonl
 		}
 		if (bi && !ai) {
 			counts.onlyInB++;
-			signature.push({ index: i, kind: CacheDiffKind.OnlyInB, bRole: bi.role, bName: bi.name, bCharLength: bi.charLength });
-			drift.push({ name: `messages[${i}]`, role: bi.role, status: CacheDiffKind.OnlyInB, aSize: 0, bSize: bi.charLength });
+			signature.push({
+				index: i,
+				kind: CacheDiffKind.OnlyInB,
+				bRole: bi.role,
+				bName: bi.name,
+				bCharLength: bi.charLength,
+			});
+			drift.push({
+				name: `messages[${i}]`,
+				role: bi.role,
+				status: CacheDiffKind.OnlyInB,
+				aSize: 0,
+				bSize: bi.charLength,
+			});
 			if (!broken) {
 				broken = true;
 				breakResult = { index: i, kind: CacheDiffKind.OnlyInB };
@@ -308,25 +352,44 @@ export function diffPromptSignature(a: readonly INormalizedMessage[], b: readonl
 		if (messagesEqual(ai, bi)) {
 			counts.identical++;
 			signature.push({
-				index: i, kind: CacheDiffKind.Identical,
-				aRole: ai.role, aName: ai.name, aCharLength: ai.charLength,
-				bRole: bi.role, bName: bi.name, bCharLength: bi.charLength,
+				index: i,
+				kind: CacheDiffKind.Identical,
+				aRole: ai.role,
+				aName: ai.name,
+				aCharLength: ai.charLength,
+				bRole: bi.role,
+				bName: bi.name,
+				bCharLength: bi.charLength,
 			});
 			continue;
 		}
 		// Diverged
-		const kind = ai.charLength === bi.charLength ? CacheDiffKind.ContentDrift : CacheDiffKind.LengthChange;
+		const kind =
+			ai.charLength === bi.charLength
+				? CacheDiffKind.ContentDrift
+				: CacheDiffKind.LengthChange;
 		if (kind === CacheDiffKind.ContentDrift) {
 			counts.contentDrift++;
 		} else {
 			counts.lengthChange++;
 		}
 		signature.push({
-			index: i, kind,
-			aRole: ai.role, aName: ai.name, aCharLength: ai.charLength,
-			bRole: bi.role, bName: bi.name, bCharLength: bi.charLength,
+			index: i,
+			kind,
+			aRole: ai.role,
+			aName: ai.name,
+			aCharLength: ai.charLength,
+			bRole: bi.role,
+			bName: bi.name,
+			bCharLength: bi.charLength,
 		});
-		drift.push({ name: `messages[${i}]`, role: ai.role, status: kind, aSize: ai.charLength, bSize: bi.charLength });
+		drift.push({
+			name: `messages[${i}]`,
+			role: ai.role,
+			status: kind,
+			aSize: ai.charLength,
+			bSize: bi.charLength,
+		});
 		if (!broken) {
 			broken = true;
 			breakResult = { index: i, kind };
@@ -347,7 +410,7 @@ export function diffPromptSignature(a: readonly INormalizedMessage[], b: readonl
  * regardless of which helper was called first or whether other entries
  * were inserted in between.
  */
-const PREFIX_COMPONENT_ORDER: readonly string[] = ['system', 'tools'];
+const PREFIX_COMPONENT_ORDER: readonly string[] = ["system", "tools"];
 
 /**
  * Insert a single prefix-component drift entry into a drift list while
@@ -358,7 +421,10 @@ const PREFIX_COMPONENT_ORDER: readonly string[] = ['system', 'tools'];
  * entry, sorts the prefix bucket by its declared order, and concatenates.
  * This means callers can append in any order and still get the same shape.
  */
-function insertPrefixComponent(drift: readonly IComponentDrift[], entry: IComponentDrift): IComponentDrift[] {
+function insertPrefixComponent(
+	drift: readonly IComponentDrift[],
+	entry: IComponentDrift,
+): IComponentDrift[] {
 	const prefixEntries: IComponentDrift[] = [];
 	const rest: IComponentDrift[] = [];
 	for (const d of drift) {
@@ -375,7 +441,11 @@ function insertPrefixComponent(drift: readonly IComponentDrift[], entry: ICompon
 		}
 	}
 	prefixEntries.push(entry);
-	prefixEntries.sort((a, b) => PREFIX_COMPONENT_ORDER.indexOf(a.name) - PREFIX_COMPONENT_ORDER.indexOf(b.name));
+	prefixEntries.sort(
+		(a, b) =>
+			PREFIX_COMPONENT_ORDER.indexOf(a.name) -
+			PREFIX_COMPONENT_ORDER.indexOf(b.name),
+	);
 	return [...prefixEntries, ...rest];
 }
 
@@ -383,7 +453,10 @@ function insertPrefixComponent(drift: readonly IComponentDrift[], entry: ICompon
  * Classify a string-pair drift. Returns `undefined` when both sides match
  * (caller should skip emitting an entry).
  */
-function classifyStringDrift(a: string | undefined, b: string | undefined): CacheDiffKind | undefined {
+function classifyStringDrift(
+	a: string | undefined,
+	b: string | undefined,
+): CacheDiffKind | undefined {
 	if (a === b) {
 		return undefined;
 	}
@@ -393,7 +466,9 @@ function classifyStringDrift(a: string | undefined, b: string | undefined): Cach
 	if (!b) {
 		return CacheDiffKind.OnlyInA;
 	}
-	return a.length === b.length ? CacheDiffKind.ContentDrift : CacheDiffKind.LengthChange;
+	return a.length === b.length
+		? CacheDiffKind.ContentDrift
+		: CacheDiffKind.LengthChange;
 }
 
 /**
@@ -411,7 +486,12 @@ export function appendSystemDrift(
 	if (status === undefined) {
 		return drift;
 	}
-	return insertPrefixComponent(drift, { name: 'system', status, aSize: aSystem?.length ?? 0, bSize: bSystem?.length ?? 0 });
+	return insertPrefixComponent(drift, {
+		name: "system",
+		status,
+		aSize: aSystem?.length ?? 0,
+		bSize: bSystem?.length ?? 0,
+	});
 }
 
 /**
@@ -435,7 +515,12 @@ export function appendToolsDrift(
 	if (status === undefined) {
 		return drift;
 	}
-	return insertPrefixComponent(drift, { name: 'tools', status, aSize: aTools?.length ?? 0, bSize: bTools?.length ?? 0 });
+	return insertPrefixComponent(drift, {
+		name: "tools",
+		status,
+		aSize: aTools?.length ?? 0,
+		bSize: bTools?.length ?? 0,
+	});
 }
 
 /**
@@ -443,16 +528,17 @@ export function appendToolsDrift(
  * matching the convention used by the existing `promptTypes` telemetry.
  */
 export function formatSignatureToken(token: ICacheSignatureToken): string {
-	const role = token.bRole ?? token.aRole ?? 'unknown';
+	const role = token.bRole ?? token.aRole ?? "unknown";
 	const name = token.bName ?? token.aName;
 	const a = token.aCharLength;
 	const b = token.bCharLength;
-	const sizeText = a !== undefined && b !== undefined && a !== b
-		? `${a}\u2192${b}`
-		: a !== undefined && b === undefined
-			? `${a}\u21920`
-			: a === undefined && b !== undefined
-				? `0\u2192${b}`
-				: `${b ?? a ?? 0}`;
+	const sizeText =
+		a !== undefined && b !== undefined && a !== b
+			? `${a}\u2192${b}`
+			: a !== undefined && b === undefined
+				? `${a}\u21920`
+				: a === undefined && b !== undefined
+					? `0\u2192${b}`
+					: `${b ?? a ?? 0}`;
 	return name ? `${role}-${name}:${sizeText}` : `${role}:${sizeText}`;
 }

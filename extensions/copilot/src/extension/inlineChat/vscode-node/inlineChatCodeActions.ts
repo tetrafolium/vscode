@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { IIgnoreService } from '../../../platform/ignore/common/ignoreService';
 import { IReviewService } from '../../../platform/review/common/reviewService';
 import { extractImageAttributes } from '../../../util/common/imageUtils';
@@ -22,17 +25,21 @@ export interface ImageCodeAction extends AICodeAction {
 }
 
 export class QuickFixesProvider implements vscode.CodeActionProvider {
-
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 		@IIgnoreService private readonly ignoreService: IIgnoreService,
 		@IReviewService private readonly reviewService: IReviewService,
-	) {
-	}
+	) {}
 
-	private static readonly fixKind = vscode.CodeActionKind.QuickFix.append('copilot');
-	private static readonly explainKind = vscode.CodeActionKind.QuickFix.append('explain').append('copilot');
-	private static readonly reviewKind = vscode.CodeActionKind.RefactorRewrite.append('review').append('copilot');
+	private static readonly fixKind =
+		vscode.CodeActionKind.QuickFix.append('copilot');
+	private static readonly explainKind =
+		vscode.CodeActionKind.QuickFix.append('explain').append('copilot');
+	private static readonly reviewKind =
+		vscode.CodeActionKind.RefactorRewrite.append('review').append(
+			'copilot',
+		);
 
 	static readonly providedCodeActionKinds = [
 		this.fixKind,
@@ -40,17 +47,29 @@ export class QuickFixesProvider implements vscode.CodeActionProvider {
 		this.reviewKind,
 	];
 
-	static getWarningOrErrorDiagnostics(diagnostics: ReadonlyArray<vscode.Diagnostic>): vscode.Diagnostic[] {
-		return diagnostics.filter(d => d.severity <= vscode.DiagnosticSeverity.Warning);
+	static getWarningOrErrorDiagnostics(
+		diagnostics: ReadonlyArray<vscode.Diagnostic>,
+	): vscode.Diagnostic[] {
+		return diagnostics.filter(
+			(d) => d.severity <= vscode.DiagnosticSeverity.Warning,
+		);
 	}
 
-	static getDiagnosticsAsText(diagnostics: ReadonlyArray<vscode.Diagnostic>): string {
-		return diagnostics.map(d => d.message).join(', ');
+	static getDiagnosticsAsText(
+		diagnostics: ReadonlyArray<vscode.Diagnostic>,
+	): string {
+		return diagnostics.map((d) => d.message).join(', ');
 	}
 
-	async provideCodeActions(doc: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext, cancellationToken: vscode.CancellationToken): Promise<vscode.CodeAction[] | undefined> {
-
-		const copilotCodeActionsEnabled = this.configurationService.getConfig(ConfigKey.EnableCodeActions);
+	async provideCodeActions(
+		doc: vscode.TextDocument,
+		range: vscode.Range,
+		context: vscode.CodeActionContext,
+		cancellationToken: vscode.CancellationToken,
+	): Promise<vscode.CodeAction[] | undefined> {
+		const copilotCodeActionsEnabled = this.configurationService.getConfig(
+			ConfigKey.EnableCodeActions,
+		);
 		if (!copilotCodeActionsEnabled) {
 			return;
 		}
@@ -78,18 +97,28 @@ export class QuickFixesProvider implements vscode.CodeActionProvider {
 						type: altTextQuickFixes.type,
 						resolvedImagePath: altTextQuickFixes.resolvedImagePath,
 						isUrl: altTextQuickFixes.isUrl,
-					}
+					},
 				],
 			};
 			codeActions.push(altTextQuickFixes);
 		}
 
-		if (vscode.workspace.getConfiguration('inlineChat').get('affordance') !== 'off') {
+		if (
+			vscode.workspace
+				.getConfiguration('inlineChat')
+				.get('affordance') !== 'off'
+		) {
 			return codeActions;
 		}
 
-		if (this.reviewService.isCodeFeedbackEnabled() && !activeTextEditor.selection.isEmpty) {
-			const reviewAction = new AICodeAction(vscode.l10n.t('Review'), QuickFixesProvider.reviewKind);
+		if (
+			this.reviewService.isCodeFeedbackEnabled() &&
+			!activeTextEditor.selection.isEmpty
+		) {
+			const reviewAction = new AICodeAction(
+				vscode.l10n.t('Review'),
+				QuickFixesProvider.reviewKind,
+			);
 			reviewAction.command = {
 				title: reviewAction.title,
 				command: 'github.copilot.chat.review',
@@ -97,16 +126,28 @@ export class QuickFixesProvider implements vscode.CodeActionProvider {
 			codeActions.push(reviewAction);
 		}
 
-		const severeDiagnostics = QuickFixesProvider.getWarningOrErrorDiagnostics(context.diagnostics);
+		const severeDiagnostics =
+			QuickFixesProvider.getWarningOrErrorDiagnostics(
+				context.diagnostics,
+			);
 		if (severeDiagnostics.length === 0) {
 			return codeActions;
 		}
 
-		const initialRange = severeDiagnostics.map(d => d.range).reduce((a, b) => a.union(b));
-		const initialSelection = new vscode.Selection(initialRange.start, initialRange.end);
-		const diagnostics = QuickFixesProvider.getDiagnosticsAsText(severeDiagnostics);
+		const initialRange = severeDiagnostics
+			.map((d) => d.range)
+			.reduce((a, b) => a.union(b));
+		const initialSelection = new vscode.Selection(
+			initialRange.start,
+			initialRange.end,
+		);
+		const diagnostics =
+			QuickFixesProvider.getDiagnosticsAsText(severeDiagnostics);
 
-		const fixAction = new AICodeAction(vscode.l10n.t('Fix'), QuickFixesProvider.fixKind);
+		const fixAction = new AICodeAction(
+			vscode.l10n.t('Fix'),
+			QuickFixesProvider.fixKind,
+		);
 		fixAction.diagnostics = severeDiagnostics;
 		fixAction.command = {
 			title: fixAction.title,
@@ -117,12 +158,15 @@ export class QuickFixesProvider implements vscode.CodeActionProvider {
 					message: `/fix ${diagnostics}`,
 					position: initialRange.start,
 					initialSelection: initialSelection,
-					initialRange: initialRange
+					initialRange: initialRange,
 				},
 			],
 		};
 
-		const explainAction = new AICodeAction(vscode.l10n.t('Explain'), QuickFixesProvider.explainKind);
+		const explainAction = new AICodeAction(
+			vscode.l10n.t('Explain'),
+			QuickFixesProvider.explainKind,
+		);
 		explainAction.diagnostics = severeDiagnostics;
 		const query = `/${Intent.Explain} ${diagnostics}`;
 		explainAction.command = {
@@ -135,7 +179,10 @@ export class QuickFixesProvider implements vscode.CodeActionProvider {
 		return codeActions;
 	}
 
-	private provideAltTextQuickFix(document: vscode.TextDocument, range: vscode.Range): ImageCodeAction | undefined {
+	private provideAltTextQuickFix(
+		document: vscode.TextDocument,
+		range: vscode.Range,
+	): ImageCodeAction | undefined {
 		if (range.start.line < 0 || range.start.line >= document.lineCount) {
 			return;
 		}
@@ -148,7 +195,12 @@ export class QuickFixesProvider implements vscode.CodeActionProvider {
 
 		if (generateImagePath) {
 			const isUrl = this.isValidUrl(generateImagePath);
-			const resolvedImagePath = isUrl ? generateImagePath : path.resolve(path.dirname(document.uri.fsPath), generateImagePath);
+			const resolvedImagePath = isUrl
+				? generateImagePath
+				: path.resolve(
+						path.dirname(document.uri.fsPath),
+						generateImagePath,
+					);
 			return {
 				title: vscode.l10n.t('Generate alt text'),
 				kind: vscode.CodeActionKind.QuickFix,
@@ -159,7 +211,12 @@ export class QuickFixesProvider implements vscode.CodeActionProvider {
 			};
 		} else if (refineImagePath) {
 			const isUrl = this.isValidUrl(refineImagePath);
-			const resolvedImagePath = isUrl ? refineImagePath : path.resolve(path.dirname(document.uri.fsPath), refineImagePath);
+			const resolvedImagePath = isUrl
+				? refineImagePath
+				: path.resolve(
+						path.dirname(document.uri.fsPath),
+						refineImagePath,
+					);
 			return {
 				title: vscode.l10n.t('Refine alt text'),
 				kind: vscode.CodeActionKind.QuickFix,
@@ -169,7 +226,6 @@ export class QuickFixesProvider implements vscode.CodeActionProvider {
 				isAI: true,
 			};
 		}
-
 	}
 
 	private isValidUrl(imagePath: string): boolean {
@@ -180,32 +236,29 @@ export class QuickFixesProvider implements vscode.CodeActionProvider {
 			return false;
 		}
 	}
-
-
 }
 
 export class RefactorsProvider implements vscode.CodeActionProvider {
+	private static readonly generateOrModifyKind =
+		vscode.CodeActionKind.RefactorRewrite.append('copilot');
 
-
-	private static readonly generateOrModifyKind = vscode.CodeActionKind.RefactorRewrite.append('copilot');
-
-	static readonly providedCodeActionKinds = [
-		this.generateOrModifyKind,
-	];
+	static readonly providedCodeActionKinds = [this.generateOrModifyKind];
 
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 		@IIgnoreService private readonly ignoreService: IIgnoreService,
-	) { }
+	) {}
 
 	async provideCodeActions(
 		doc: vscode.TextDocument,
 		range: vscode.Range,
 		_ctx: vscode.CodeActionContext,
-		cancellationToken: vscode.CancellationToken
+		cancellationToken: vscode.CancellationToken,
 	): Promise<vscode.CodeAction[] | undefined> {
-
-		const copilotCodeActionsEnabled = this.configurationService.getConfig(ConfigKey.EnableCodeActions);
+		const copilotCodeActionsEnabled = this.configurationService.getConfig(
+			ConfigKey.EnableCodeActions,
+		);
 		if (!copilotCodeActionsEnabled) {
 			return;
 		}
@@ -226,9 +279,15 @@ export class RefactorsProvider implements vscode.CodeActionProvider {
 	 * - `Generate using Copilot` is shown when the selection is empty and the line of the selection contains only white-space characters or tabs.
 	 * - `Modify using Copilot` is shown when the selection is not empty and the selection does not contain only white-space characters or tabs.
 	 */
-	private provideGenerateUsingCopilotCodeAction(doc: vscode.TextDocument, range: vscode.Range): vscode.CodeAction[] | undefined {
-
-		if (vscode.workspace.getConfiguration('inlineChat').get('affordance') !== 'off') {
+	private provideGenerateUsingCopilotCodeAction(
+		doc: vscode.TextDocument,
+		range: vscode.Range,
+	): vscode.CodeAction[] | undefined {
+		if (
+			vscode.workspace
+				.getConfiguration('inlineChat')
+				.get('affordance') !== 'off'
+		) {
 			return undefined;
 		}
 
@@ -236,7 +295,10 @@ export class RefactorsProvider implements vscode.CodeActionProvider {
 
 		if (range.isEmpty) {
 			const textAtLine = doc.lineAt(range.start.line).text;
-			if (range.end.character === textAtLine.length && /^\s*$/g.test(textAtLine)) {
+			if (
+				range.end.character === textAtLine.length &&
+				/^\s*$/g.test(textAtLine)
+			) {
 				codeActionTitle = vscode.l10n.t('Generate');
 			}
 		} else {
@@ -250,7 +312,10 @@ export class RefactorsProvider implements vscode.CodeActionProvider {
 			return undefined;
 		}
 
-		const codeAction = new AICodeAction(codeActionTitle, RefactorsProvider.generateOrModifyKind);
+		const codeAction = new AICodeAction(
+			codeActionTitle,
+			RefactorsProvider.generateOrModifyKind,
+		);
 
 		codeAction.command = {
 			title: codeAction.title,
@@ -258,8 +323,11 @@ export class RefactorsProvider implements vscode.CodeActionProvider {
 			arguments: [
 				{
 					position: range.start,
-					initialSelection: new vscode.Selection(range.start, range.end),
-					initialRange: range
+					initialSelection: new vscode.Selection(
+						range.start,
+						range.end,
+					),
+					initialRange: range,
 				},
 			],
 		};

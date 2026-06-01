@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as event from '../../../../../base/common/event.js';
-import { IDisposable } from '../../../../../base/common/lifecycle.js';
-import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IChatRequestVariableEntry } from '../../common/attachments/chatVariableEntries.js';
+import * as event from "../../../../../base/common/event.js";
+import { IDisposable } from "../../../../../base/common/lifecycle.js";
+import { createDecorator } from "../../../../../platform/instantiation/common/instantiation.js";
+import { IChatRequestVariableEntry } from "../../common/attachments/chatVariableEntries.js";
 
 /**
  * Interface for a contributed attachment widget instance.
@@ -28,7 +28,10 @@ export type ChatAttachmentWidgetFactory = (
 	container: HTMLElement,
 ) => IChatAttachmentWidgetInstance;
 
-export const IChatAttachmentWidgetRegistry = createDecorator<IChatAttachmentWidgetRegistry>('chatAttachmentWidgetRegistry');
+export const IChatAttachmentWidgetRegistry =
+	createDecorator<IChatAttachmentWidgetRegistry>(
+		"chatAttachmentWidgetRegistry",
+	);
 
 export interface IChatAttachmentWidgetRegistry {
 	readonly _serviceBrand: undefined;
@@ -36,7 +39,10 @@ export interface IChatAttachmentWidgetRegistry {
 	/**
 	 * Register a widget factory for a specific attachment kind.
 	 */
-	registerFactory(kind: string, factory: ChatAttachmentWidgetFactory): IDisposable;
+	registerFactory(
+		kind: string,
+		factory: ChatAttachmentWidgetFactory,
+	): IDisposable;
 
 	/**
 	 * Try to create a widget for the given attachment using a registered factory.
@@ -50,19 +56,21 @@ export interface IChatAttachmentWidgetRegistry {
 }
 
 export class ChatAttachmentWidgetRegistry implements IChatAttachmentWidgetRegistry {
-
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _factories = new Map<string, ChatAttachmentWidgetFactory>();
 
-	registerFactory(kind: string, factory: ChatAttachmentWidgetFactory): IDisposable {
+	registerFactory(
+		kind: string,
+		factory: ChatAttachmentWidgetFactory,
+	): IDisposable {
 		this._factories.set(kind, factory);
 		return {
 			dispose: () => {
 				if (this._factories.get(kind) === factory) {
 					this._factories.delete(kind);
 				}
-			}
+			},
 		};
 	}
 

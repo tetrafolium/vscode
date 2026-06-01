@@ -31,7 +31,11 @@ export enum BlockMode {
 }
 
 export function shouldDoParsingTrimming(blockMode: BlockMode): boolean {
-	return [BlockMode.Parsing, BlockMode.ParsingAndServer, BlockMode.MoreMultiline].includes(blockMode);
+	return [
+		BlockMode.Parsing,
+		BlockMode.ParsingAndServer,
+		BlockMode.MoreMultiline,
+	].includes(blockMode);
 }
 
 export function shouldDoServerTrimming(blockMode: BlockMode): boolean {

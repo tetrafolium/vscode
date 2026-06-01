@@ -20,9 +20,11 @@ export class EmbeddingEndpoint implements IEmbeddingsEndpoint {
 
 	constructor(
 		private _modelInfo: IEmbeddingModelInformation,
-		@ITokenizerProvider private readonly _tokenizerProvider: ITokenizerProvider
+		@ITokenizerProvider
+		private readonly _tokenizerProvider: ITokenizerProvider,
 	) {
-		this.maxBatchSize = this._modelInfo.capabilities.limits?.max_inputs ?? 256;
+		this.maxBatchSize =
+			this._modelInfo.capabilities.limits?.max_inputs ?? 256;
 		this.modelMaxPromptTokens = 8192;
 	}
 

@@ -6,10 +6,17 @@
 import assert from 'assert';
 import { SinonSandbox, createSandbox } from 'sinon';
 import { LanguageModelChat, lm } from 'vscode';
-import { CHAT_MODEL, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	CHAT_MODEL,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { InMemoryConfigurationService } from '../../../platform/configuration/test/common/inMemoryConfigurationService';
 import { DefaultsOnlyConfigurationService } from '../../../platform/configuration/common/defaultsOnlyConfigurationService';
-import { IChatModelInformation, ICompletionModelInformation, IEmbeddingModelInformation } from '../../../platform/endpoint/common/endpointProvider';
+import {
+	IChatModelInformation,
+	ICompletionModelInformation,
+	IEmbeddingModelInformation,
+} from '../../../platform/endpoint/common/endpointProvider';
 import { IModelMetadataFetcher } from '../../../platform/endpoint/node/modelMetadataFetcher';
 import { CopilotChatEndpoint } from '../../../platform/endpoint/node/copilotChatEndpoint';
 import { ExtensionContributedChatEndpoint } from '../../../platform/endpoint/vscode-node/extChatEndpoint';
@@ -25,16 +32,22 @@ class FakeModelMetadataFetcher implements IModelMetadataFetcher {
 	async getAllChatModels(): Promise<IChatModelInformation[]> {
 		return [];
 	}
-	async getAllCompletionModels(forceRefresh: boolean): Promise<ICompletionModelInformation[]> {
+	async getAllCompletionModels(
+		forceRefresh: boolean,
+	): Promise<ICompletionModelInformation[]> {
 		return [];
 	}
-	async getChatModelFromApiModel(model: LanguageModelChat): Promise<IChatModelInformation | undefined> {
+	async getChatModelFromApiModel(
+		model: LanguageModelChat,
+	): Promise<IChatModelInformation | undefined> {
 		return undefined;
 	}
 	async getCopilotUtilityModel(): Promise<IChatModelInformation> {
 		return this._fakeChatModel('copilot-utility');
 	}
-	async getChatModelFromCapiFamily(family: string): Promise<IChatModelInformation> {
+	async getChatModelFromCapiFamily(
+		family: string,
+	): Promise<IChatModelInformation> {
 		return this._fakeChatModel(family);
 	}
 
@@ -51,8 +64,8 @@ class FakeModelMetadataFetcher implements IModelMetadataFetcher {
 				supports: { streaming: true },
 				type: 'chat',
 				tokenizer: TokenizerType.O200K,
-				family: 'fake-family'
-			}
+				family: 'fake-family',
+			},
 		};
 	}
 
@@ -69,8 +82,8 @@ class FakeModelMetadataFetcher implements IModelMetadataFetcher {
 				type: 'embeddings',
 				tokenizer: TokenizerType.O200K,
 				family: 'text-embedding-3-small',
-				limits: { max_inputs: 256 }
-			}
+				limits: { max_inputs: 256 },
+			},
 		};
 	}
 }
@@ -82,10 +95,16 @@ suite('Endpoint Class Test', function () {
 
 	setup(() => {
 		accessor = createExtensionTestingServices().createTestingAccessor();
-		endpointProvider = accessor.get(IInstantiationService).createInstance(ProductionEndpointProvider);
+		endpointProvider = accessor
+			.get(IInstantiationService)
+			.createInstance(ProductionEndpointProvider);
 		sandbox = createSandbox();
 		//@ts-expect-error
-		sandbox.replace(endpointProvider, '_modelFetcher', new FakeModelMetadataFetcher());
+		sandbox.replace(
+			endpointProvider,
+			'_modelFetcher',
+			new FakeModelMetadataFetcher(),
+		);
 	});
 
 	teardown(() => {
@@ -93,27 +112,39 @@ suite('Endpoint Class Test', function () {
 	});
 
 	test('Model names have proper casing', async function () {
-		assert.strictEqual(CHAT_MODEL.GPT41, 'gpt-4.1-2025-04-14', 'Incorrect GPT 41 model name, changing this will break requests.');
-		assert.strictEqual(CHAT_MODEL.GPT4OMINI, 'gpt-4o-mini', 'Incorrect GPT 4o mini model name, changing this will break requests.');
+		assert.strictEqual(
+			CHAT_MODEL.GPT41,
+			'gpt-4.1-2025-04-14',
+			'Incorrect GPT 41 model name, changing this will break requests.',
+		);
+		assert.strictEqual(
+			CHAT_MODEL.GPT4OMINI,
+			'gpt-4o-mini',
+			'Incorrect GPT 4o mini model name, changing this will break requests.',
+		);
 	});
 });
 
 class CopilotMatchableModelMetadataFetcher implements IModelMetadataFetcher {
 	public onDidModelsRefresh = Event.None;
-	constructor(private readonly _models: IChatModelInformation[]) { }
+	constructor(private readonly _models: IChatModelInformation[]) {}
 	async getAllChatModels(): Promise<IChatModelInformation[]> {
 		return this._models;
 	}
 	async getAllCompletionModels(): Promise<ICompletionModelInformation[]> {
 		return [];
 	}
-	async getChatModelFromApiModel(): Promise<IChatModelInformation | undefined> {
+	async getChatModelFromApiModel(): Promise<
+		IChatModelInformation | undefined
+	> {
 		return undefined;
 	}
 	async getCopilotUtilityModel(): Promise<IChatModelInformation> {
 		return makeChatModel('copilot-utility');
 	}
-	async getChatModelFromCapiFamily(family: string): Promise<IChatModelInformation> {
+	async getChatModelFromCapiFamily(
+		family: string,
+	): Promise<IChatModelInformation> {
 		return makeChatModel(family);
 	}
 	async getEmbeddingsModel(): Promise<IEmbeddingModelInformation> {
@@ -129,13 +160,16 @@ class CopilotMatchableModelMetadataFetcher implements IModelMetadataFetcher {
 				type: 'embeddings',
 				tokenizer: TokenizerType.O200K,
 				family: 'text-embedding-3-small',
-				limits: { max_inputs: 256 }
-			}
+				limits: { max_inputs: 256 },
+			},
 		};
 	}
 }
 
-function makeChatModel(modelId: string, overrides: Partial<IChatModelInformation> = {}): IChatModelInformation {
+function makeChatModel(
+	modelId: string,
+	overrides: Partial<IChatModelInformation> = {},
+): IChatModelInformation {
 	return {
 		id: modelId,
 		vendor: 'copilot',
@@ -161,10 +195,14 @@ suite('ProductionEndpointProvider — utility model overrides', () => {
 
 	setup(() => {
 		const collection = createExtensionTestingServices();
-		configService = new InMemoryConfigurationService(new DefaultsOnlyConfigurationService());
+		configService = new InMemoryConfigurationService(
+			new DefaultsOnlyConfigurationService(),
+		);
 		collection.define(IConfigurationService, configService);
 		const accessor = collection.createTestingAccessor();
-		endpointProvider = accessor.get(IInstantiationService).createInstance(ProductionEndpointProvider);
+		endpointProvider = accessor
+			.get(IInstantiationService)
+			.createInstance(ProductionEndpointProvider);
 		sandbox = createSandbox();
 	});
 
@@ -174,10 +212,13 @@ suite('ProductionEndpointProvider — utility model overrides', () => {
 
 	function setFetcher(models: IChatModelInformation[]): void {
 		// @ts-expect-error — replacing private member for the test.
-		endpointProvider._modelFetcher = new CopilotMatchableModelMetadataFetcher(models);
+		endpointProvider._modelFetcher =
+			new CopilotMatchableModelMetadataFetcher(models);
 	}
 
-	function makeFakeLanguageModelChat(overrides: Partial<LanguageModelChat>): LanguageModelChat {
+	function makeFakeLanguageModelChat(
+		overrides: Partial<LanguageModelChat>,
+	): LanguageModelChat {
 		return {
 			id: 'fake-id',
 			vendor: 'fake-vendor',
@@ -185,31 +226,46 @@ suite('ProductionEndpointProvider — utility model overrides', () => {
 			family: 'fake-family',
 			version: 'fake-version',
 			maxInputTokens: 100_000,
-			capabilities: { supportsToolCalling: false, supportsImageToText: false },
+			capabilities: {
+				supportsToolCalling: false,
+				supportsImageToText: false,
+			},
 			...overrides,
 		} as LanguageModelChat;
 	}
 
 	test('no override configured — falls through to default copilot-utility resolution', async () => {
 		setFetcher([makeChatModel('copilot-utility')]);
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.strictEqual(endpoint.model, 'copilot-utility');
 	});
 
 	test('copilot-vendor override resolves to the matching model from the model fetcher', async () => {
-		setFetcher([makeChatModel('copilot-utility'), makeChatModel('gpt-4o-mini')]);
-		await configService.setNonExtensionConfig('chat.utilityModel', 'copilot/gpt-4o-mini');
+		setFetcher([
+			makeChatModel('copilot-utility'),
+			makeChatModel('gpt-4o-mini'),
+		]);
+		await configService.setNonExtensionConfig(
+			'chat.utilityModel',
+			'copilot/gpt-4o-mini',
+		);
 
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.ok(endpoint instanceof CopilotChatEndpoint);
 		assert.strictEqual(endpoint.model, 'gpt-4o-mini');
 	});
 
 	test('copilot-vendor override falls back to default when no copilot model matches', async () => {
 		setFetcher([makeChatModel('copilot-utility')]);
-		await configService.setNonExtensionConfig('chat.utilityModel', 'copilot/gpt-4o-mini');
+		await configService.setNonExtensionConfig(
+			'chat.utilityModel',
+			'copilot/gpt-4o-mini',
+		);
 
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.strictEqual(endpoint.model, 'copilot-utility');
 	});
 
@@ -219,17 +275,25 @@ suite('ProductionEndpointProvider — utility model overrides', () => {
 			makeChatModel('gpt-4o-mini'),
 			makeChatModel('gpt-4o-mini'),
 		]);
-		await configService.setNonExtensionConfig('chat.utilityModel', 'copilot/gpt-4o-mini');
+		await configService.setNonExtensionConfig(
+			'chat.utilityModel',
+			'copilot/gpt-4o-mini',
+		);
 
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.strictEqual(endpoint.model, 'copilot-utility');
 	});
 
 	test('malformed override falls back to default', async () => {
 		setFetcher([makeChatModel('copilot-utility')]);
-		await configService.setNonExtensionConfig('chat.utilityModel', 'no-slash');
+		await configService.setNonExtensionConfig(
+			'chat.utilityModel',
+			'no-slash',
+		);
 
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.strictEqual(endpoint.model, 'copilot-utility');
 	});
 
@@ -237,9 +301,13 @@ suite('ProductionEndpointProvider — utility model overrides', () => {
 		setFetcher([makeChatModel('copilot-utility')]);
 		// Users can hand-edit settings.json with arbitrary JSON; the
 		// `getNonExtensionConfig<string>` API is only a TS cast.
-		await configService.setNonExtensionConfig('chat.utilityModel', 42 as unknown as string);
+		await configService.setNonExtensionConfig(
+			'chat.utilityModel',
+			42 as unknown as string,
+		);
 
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.strictEqual(endpoint.model, 'copilot-utility');
 	});
 
@@ -248,8 +316,14 @@ suite('ProductionEndpointProvider — utility model overrides', () => {
 		let refreshCount = 0;
 		const sub = endpointProvider.onDidModelsRefresh(() => refreshCount++);
 		try {
-			await configService.setNonExtensionConfig('chat.utilityModel', 'copilot/gpt-4o-mini');
-			await configService.setNonExtensionConfig('chat.utilitySmallModel', 'copilot/gpt-4o-mini');
+			await configService.setNonExtensionConfig(
+				'chat.utilityModel',
+				'copilot/gpt-4o-mini',
+			);
+			await configService.setNonExtensionConfig(
+				'chat.utilitySmallModel',
+				'copilot/gpt-4o-mini',
+			);
 			assert.strictEqual(refreshCount, 2);
 		} finally {
 			sub.dispose();
@@ -258,11 +332,18 @@ suite('ProductionEndpointProvider — utility model overrides', () => {
 
 	test('non-copilot vendor override resolves to an extension-contributed endpoint', async () => {
 		setFetcher([makeChatModel('copilot-utility')]);
-		const fakeModel = makeFakeLanguageModelChat({ vendor: 'anthropic', id: 'claude-haiku-4.5' });
+		const fakeModel = makeFakeLanguageModelChat({
+			vendor: 'anthropic',
+			id: 'claude-haiku-4.5',
+		});
 		sandbox.stub(lm, 'selectChatModels').resolves([fakeModel]);
-		await configService.setNonExtensionConfig('chat.utilityModel', 'anthropic/claude-haiku-4.5');
+		await configService.setNonExtensionConfig(
+			'chat.utilityModel',
+			'anthropic/claude-haiku-4.5',
+		);
 
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.ok(endpoint instanceof ExtensionContributedChatEndpoint);
 		assert.strictEqual(endpoint.model, 'claude-haiku-4.5');
 	});
@@ -270,29 +351,47 @@ suite('ProductionEndpointProvider — utility model overrides', () => {
 	test('non-copilot vendor override falls back when lm.selectChatModels returns no matches', async () => {
 		setFetcher([makeChatModel('copilot-utility')]);
 		sandbox.stub(lm, 'selectChatModels').resolves([]);
-		await configService.setNonExtensionConfig('chat.utilityModel', 'anthropic/claude-haiku-4.5');
+		await configService.setNonExtensionConfig(
+			'chat.utilityModel',
+			'anthropic/claude-haiku-4.5',
+		);
 
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.strictEqual(endpoint.model, 'copilot-utility');
 	});
 
 	test('non-copilot vendor override falls back when lm.selectChatModels returns multiple matches (ambiguous)', async () => {
 		setFetcher([makeChatModel('copilot-utility')]);
-		const m1 = makeFakeLanguageModelChat({ vendor: 'anthropic', id: 'claude-haiku-4.5' });
-		const m2 = makeFakeLanguageModelChat({ vendor: 'anthropic', id: 'claude-haiku-4.5' });
+		const m1 = makeFakeLanguageModelChat({
+			vendor: 'anthropic',
+			id: 'claude-haiku-4.5',
+		});
+		const m2 = makeFakeLanguageModelChat({
+			vendor: 'anthropic',
+			id: 'claude-haiku-4.5',
+		});
 		sandbox.stub(lm, 'selectChatModels').resolves([m1, m2]);
-		await configService.setNonExtensionConfig('chat.utilityModel', 'anthropic/claude-haiku-4.5');
+		await configService.setNonExtensionConfig(
+			'chat.utilityModel',
+			'anthropic/claude-haiku-4.5',
+		);
 
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.strictEqual(endpoint.model, 'copilot-utility');
 	});
 
 	test('non-copilot vendor override falls back when lm.selectChatModels throws', async () => {
 		setFetcher([makeChatModel('copilot-utility')]);
 		sandbox.stub(lm, 'selectChatModels').rejects(new Error('boom'));
-		await configService.setNonExtensionConfig('chat.utilityModel', 'anthropic/claude-haiku-4.5');
+		await configService.setNonExtensionConfig(
+			'chat.utilityModel',
+			'anthropic/claude-haiku-4.5',
+		);
 
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		assert.strictEqual(endpoint.model, 'copilot-utility');
 	});
 });

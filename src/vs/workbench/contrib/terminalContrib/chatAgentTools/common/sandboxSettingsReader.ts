@@ -3,11 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { AgentNetworkDomainSettingId } from '../../../../../platform/networkFilter/common/settings.js';
-import { AgentSandboxEnabledValue, AgentSandboxSettingId } from '../../../../../platform/sandbox/common/settings.js';
-import { sandboxSettingIdToAgentHostKey } from '../../../../../platform/agentHost/common/sandboxConfigSchema.js';
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import { AgentNetworkDomainSettingId } from "../../../../../platform/networkFilter/common/settings.js";
+import {
+	AgentSandboxEnabledValue,
+	AgentSandboxSettingId,
+} from "../../../../../platform/sandbox/common/settings.js";
+import { sandboxSettingIdToAgentHostKey } from "../../../../../platform/agentHost/common/sandboxConfigSchema.js";
 
 /** Setting IDs that affect the engine's sandbox configuration (modern + deprecated). */
 export const SANDBOX_SETTING_KEYS: readonly string[] = [
@@ -37,12 +40,26 @@ export const SANDBOX_SETTING_KEYS: readonly string[] = [
  * been configured by the user. Consumers (engine adapter, agent-host
  * forwarder) only ever resolve values by modern key.
  */
-const DEPRECATED_SANDBOX_FALLBACKS: Readonly<Record<string, readonly string[]>> = {
-	[AgentSandboxSettingId.AgentSandboxEnabled]: [AgentSandboxSettingId.DeprecatedAgentSandboxEnabled],
-	[AgentSandboxSettingId.AgentSandboxLinuxFileSystem]: [AgentSandboxSettingId.DeprecatedAgentSandboxLinuxFileSystem],
-	[AgentSandboxSettingId.AgentSandboxMacFileSystem]: [AgentSandboxSettingId.DeprecatedAgentSandboxMacFileSystem],
-	[AgentNetworkDomainSettingId.AllowedNetworkDomains]: [AgentNetworkDomainSettingId.DeprecatedSandboxAllowedNetworkDomains, AgentNetworkDomainSettingId.DeprecatedOldAllowedNetworkDomains],
-	[AgentNetworkDomainSettingId.DeniedNetworkDomains]: [AgentNetworkDomainSettingId.DeprecatedSandboxDeniedNetworkDomains, AgentNetworkDomainSettingId.DeprecatedOldDeniedNetworkDomains],
+const DEPRECATED_SANDBOX_FALLBACKS: Readonly<
+	Record<string, readonly string[]>
+> = {
+	[AgentSandboxSettingId.AgentSandboxEnabled]: [
+		AgentSandboxSettingId.DeprecatedAgentSandboxEnabled,
+	],
+	[AgentSandboxSettingId.AgentSandboxLinuxFileSystem]: [
+		AgentSandboxSettingId.DeprecatedAgentSandboxLinuxFileSystem,
+	],
+	[AgentSandboxSettingId.AgentSandboxMacFileSystem]: [
+		AgentSandboxSettingId.DeprecatedAgentSandboxMacFileSystem,
+	],
+	[AgentNetworkDomainSettingId.AllowedNetworkDomains]: [
+		AgentNetworkDomainSettingId.DeprecatedSandboxAllowedNetworkDomains,
+		AgentNetworkDomainSettingId.DeprecatedOldAllowedNetworkDomains,
+	],
+	[AgentNetworkDomainSettingId.DeniedNetworkDomains]: [
+		AgentNetworkDomainSettingId.DeprecatedSandboxDeniedNetworkDomains,
+		AgentNetworkDomainSettingId.DeprecatedOldDeniedNetworkDomains,
+	],
 };
 
 /**
@@ -52,7 +69,11 @@ const DEPRECATED_SANDBOX_FALLBACKS: Readonly<Record<string, readonly string[]>> 
  * normalized to the modern `'on' | 'off'` enum. Returns `undefined` when
  * no user value is configured.
  */
-export function readSandboxSetting<T>(configurationService: IConfigurationService, logService: ILogService, settingId: string): T | undefined {
+export function readSandboxSetting<T>(
+	configurationService: IConfigurationService,
+	logService: ILogService,
+	settingId: string,
+): T | undefined {
 	const modern = configurationService.inspect<T>(settingId);
 	if (modern.userValue !== undefined) {
 		return normalizeSandboxSettingValue<T>(settingId, modern.value);
@@ -68,8 +89,13 @@ export function readSandboxSetting<T>(configurationService: IConfigurationServic
 		const userConfiguredKeys = configurationService.keys().user;
 		for (const deprecatedId of deprecatedFallbacks) {
 			const deprecated = configurationService.inspect<T>(deprecatedId);
-			if (deprecated.userValue !== undefined && userConfiguredKeys.includes(deprecatedId)) {
-				logService.warn(`SandboxSettingsReader: Using deprecated setting ${deprecatedId} because ${settingId} is not set. Please update your settings to use ${settingId} instead.`);
+			if (
+				deprecated.userValue !== undefined &&
+				userConfiguredKeys.includes(deprecatedId)
+			) {
+				logService.warn(
+					`SandboxSettingsReader: Using deprecated setting ${deprecatedId} because ${settingId} is not set. Please update your settings to use ${settingId} instead.`,
+				);
 				return normalizeSandboxSettingValue<T>(settingId, deprecated.value);
 			}
 		}
@@ -84,10 +110,19 @@ export function readSandboxSetting<T>(configurationService: IConfigurationServic
  * omitted entirely. Callers should nest this under the agent host's
  * top-level `sandbox` config key when dispatching a `RootConfigChanged`.
  */
-export function readAgentHostSandboxValues(configurationService: IConfigurationService, logService: ILogService): Record<string, unknown> {
+export function readAgentHostSandboxValues(
+	configurationService: IConfigurationService,
+	logService: ILogService,
+): Record<string, unknown> {
 	const values: Record<string, unknown> = {};
-	for (const [settingId, sandboxKey] of Object.entries(sandboxSettingIdToAgentHostKey)) {
-		const value = readSandboxSetting<unknown>(configurationService, logService, settingId);
+	for (const [settingId, sandboxKey] of Object.entries(
+		sandboxSettingIdToAgentHostKey,
+	)) {
+		const value = readSandboxSetting<unknown>(
+			configurationService,
+			logService,
+			settingId,
+		);
 		if (value !== undefined) {
 			values[sandboxKey] = value;
 		}
@@ -101,8 +136,14 @@ export function readAgentHostSandboxValues(configurationService: IConfigurationS
  * historically accepted a boolean and now uses the `'on' | 'off' | 'allowNetwork'`
  * enum.
  */
-function normalizeSandboxSettingValue<T>(settingId: string, value: T | undefined): T | undefined {
-	if (settingId === AgentSandboxSettingId.AgentSandboxEnabled || settingId === AgentSandboxSettingId.DeprecatedAgentSandboxEnabled) {
+function normalizeSandboxSettingValue<T>(
+	settingId: string,
+	value: T | undefined,
+): T | undefined {
+	if (
+		settingId === AgentSandboxSettingId.AgentSandboxEnabled ||
+		settingId === AgentSandboxSettingId.DeprecatedAgentSandboxEnabled
+	) {
 		if (value === true) {
 			return AgentSandboxEnabledValue.On as unknown as T;
 		}

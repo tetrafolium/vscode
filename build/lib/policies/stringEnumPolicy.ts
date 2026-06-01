@@ -3,17 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BasePolicy } from './basePolicy.ts';
-import type { CategoryDto, PolicyDto } from './policyDto.ts';
-import { renderProfileString } from './render.ts';
-import { type Category, type NlsString, PolicyType, type LanguageTranslations } from './types.ts';
+import { BasePolicy } from "./basePolicy.ts";
+import type { CategoryDto, PolicyDto } from "./policyDto.ts";
+import { renderProfileString } from "./render.ts";
+import {
+	type Category,
+	type NlsString,
+	PolicyType,
+	type LanguageTranslations,
+} from "./types.ts";
 
 export class StringEnumPolicy extends BasePolicy {
+	static from(
+		category: CategoryDto,
+		policy: PolicyDto,
+	): StringEnumPolicy | undefined {
+		const {
+			type,
+			name,
+			minimumVersion,
+			enum: enumValue,
+			localization,
+		} = policy;
 
-	static from(category: CategoryDto, policy: PolicyDto): StringEnumPolicy | undefined {
-		const { type, name, minimumVersion, enum: enumValue, localization } = policy;
-
-		if (type !== 'string') {
+		if (type !== "string") {
 			return undefined;
 		}
 
@@ -23,18 +36,33 @@ export class StringEnumPolicy extends BasePolicy {
 			return undefined;
 		}
 
-		if (!localization.enumDescriptions || !Array.isArray(localization.enumDescriptions) || localization.enumDescriptions.length !== enum_.length) {
-			throw new Error(`Invalid policy data: enumDescriptions must exist and have the same length as enum_ for policy "${name}".`);
+		if (
+			!localization.enumDescriptions ||
+			!Array.isArray(localization.enumDescriptions) ||
+			localization.enumDescriptions.length !== enum_.length
+		) {
+			throw new Error(
+				`Invalid policy data: enumDescriptions must exist and have the same length as enum_ for policy "${name}".`,
+			);
 		}
-		const enumDescriptions = localization.enumDescriptions.map((e) => ({ nlsKey: e.key, value: e.value }));
+		const enumDescriptions = localization.enumDescriptions.map((e) => ({
+			nlsKey: e.key,
+			value: e.value,
+		}));
 		return new StringEnumPolicy(
 			name,
-			{ moduleName: '', name: { nlsKey: category.name.key, value: category.name.value } },
+			{
+				moduleName: "",
+				name: { nlsKey: category.name.key, value: category.name.value },
+			},
 			minimumVersion,
-			{ nlsKey: localization.description.key, value: localization.description.value },
-			'',
+			{
+				nlsKey: localization.description.key,
+				value: localization.description.value,
+			},
+			"",
 			enum_,
-			enumDescriptions
+			enumDescriptions,
 		);
 	}
 
@@ -50,7 +78,14 @@ export class StringEnumPolicy extends BasePolicy {
 		enum_: string[],
 		enumDescriptions: NlsString[],
 	) {
-		super(PolicyType.StringEnum, name, category, minimumVersion, description, moduleName);
+		super(
+			PolicyType.StringEnum,
+			name,
+			category,
+			minimumVersion,
+			description,
+			moduleName,
+		);
 		this.enum_ = enum_;
 		this.enumDescriptions = enumDescriptions;
 	}
@@ -58,15 +93,20 @@ export class StringEnumPolicy extends BasePolicy {
 	protected renderADMXElements(): string[] {
 		return [
 			`<enum id="${this.name}" valueName="${this.name}">`,
-			...this.enum_.map((value, index) => `	<item displayName="$(string.${this.name}_${this.enumDescriptions[index].nlsKey.replace(/\./g, '_')})"><value><string>${value}</string></value></item>`),
-			`</enum>`
+			...this.enum_.map(
+				(value, index) =>
+					`	<item displayName="$(string.${this.name}_${this.enumDescriptions[index].nlsKey.replace(/\./g, "_")})"><value><string>${value}</string></value></item>`,
+			),
+			`</enum>`,
 		];
 	}
 
 	renderADMLStrings(translations?: LanguageTranslations) {
 		return [
 			...super.renderADMLStrings(translations),
-			...this.enumDescriptions.map(e => this.renderADMLString(e, translations))
+			...this.enumDescriptions.map((e) =>
+				this.renderADMLString(e, translations),
+			),
 		];
 	}
 
@@ -95,7 +135,7 @@ export class StringEnumPolicy extends BasePolicy {
 <string>string</string>
 <key>pfm_range_list</key>
 <array>
-	${this.enum_.map(e => `<string>${e}</string>`).join('\n	')}
+	${this.enum_.map((e) => `<string>${e}</string>`).join("\n	")}
 </array>`;
 	}
 }

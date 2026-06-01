@@ -7,18 +7,28 @@ import * as Sinon from 'sinon';
 import { ServicesAccessor } from '../../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ICompletionsCopilotTokenManager } from '../../auth/copilotTokenManager';
 import {
-	ConfigKey, ICompletionsConfigProvider, InMemoryConfigProvider
+	ConfigKey,
+	ICompletionsConfigProvider,
+	InMemoryConfigProvider,
 } from '../../config';
 import { ICompletionsFetcherService, Response } from '../../networking';
 import { ConnectionState } from '../../snippy/connectionState';
-import { ErrorMessages, ErrorReasons, FormattedSnippyError } from '../../snippy/errorCreator';
+import {
+	ErrorMessages,
+	ErrorReasons,
+	FormattedSnippyError,
+} from '../../snippy/errorCreator';
 import * as Network from '../../snippy/network';
 import { createLibTestingContext } from '../../test/context';
 import { FakeFetcher, createFakeJsonResponse } from '../../test/fetcher';
 
 const testEndpoints: Record<
 	string,
-	{ response: Record<string, string>; status: number; expected: Record<string, string> }
+	{
+		response: Record<string, string>;
+		status: number;
+		expected: Record<string, string>;
+	}
 > = {
 	'400': {
 		status: 400,
@@ -87,7 +97,9 @@ class SnippyFetcher extends FakeFetcher {
 		const endpoint = url.split('/').pop()!;
 		const testCase = testEndpoints[endpoint] || testEndpoints['404'];
 
-		return Promise.resolve(createFakeJsonResponse(testCase.status, testCase.response));
+		return Promise.resolve(
+			createFakeJsonResponse(testCase.status, testCase.response),
+		);
 	}
 }
 
@@ -97,9 +109,14 @@ suite('snippy network primitive', function () {
 
 	setup(function () {
 		const serviceCollection = createLibTestingContext();
-		serviceCollection.define(ICompletionsFetcherService, new SnippyFetcher());
+		serviceCollection.define(
+			ICompletionsFetcherService,
+			new SnippyFetcher(),
+		);
 		accessor = serviceCollection.createTestingAccessor();
-		originalConfigProvider = accessor.get(ICompletionsConfigProvider) as InMemoryConfigProvider;
+		originalConfigProvider = accessor.get(
+			ICompletionsConfigProvider,
+		) as InMemoryConfigProvider;
 	});
 
 	teardown(function () {
@@ -113,42 +130,69 @@ suite('snippy network primitive', function () {
 			const tokenManager = accessor.get(ICompletionsCopilotTokenManager);
 			tokenManager.resetToken();
 
-			const response: FormattedSnippyError = await Network.call(accessor, '', { method: 'GET' });
+			const response: FormattedSnippyError = await Network.call(
+				accessor,
+				'',
+				{ method: 'GET' },
+			);
 
 			assert.strictEqual(response.kind, 'failure');
 			assert.strictEqual(response.code, 401);
 			assert.strictEqual(response.reason, ErrorReasons.Unauthorized);
-			assert.strictEqual(response.msg, ErrorMessages[ErrorReasons.Unauthorized]);
+			assert.strictEqual(
+				response.msg,
+				ErrorMessages[ErrorReasons.Unauthorized],
+			);
 		});
 		test('should return a 600 error object when connection is retrying', async function () {
 			ConnectionState.setRetrying();
 
-			const response: FormattedSnippyError = await Network.call(accessor, '', { method: 'GET' });
+			const response: FormattedSnippyError = await Network.call(
+				accessor,
+				'',
+				{ method: 'GET' },
+			);
 
 			assert.strictEqual(response.kind, 'failure');
 			assert.strictEqual(response.code, 600);
 			assert.strictEqual(response.reason, ErrorReasons.ConnectionError);
-			assert.strictEqual(response.msg, 'Attempting to reconnect to the public code matching service.');
+			assert.strictEqual(
+				response.msg,
+				'Attempting to reconnect to the public code matching service.',
+			);
 		});
 
 		test('should return a 601 error object when connection is offline', async function () {
 			ConnectionState.setDisconnected();
 
-			const response: FormattedSnippyError = await Network.call(accessor, '', { method: 'GET' });
+			const response: FormattedSnippyError = await Network.call(
+				accessor,
+				'',
+				{ method: 'GET' },
+			);
 
 			assert.strictEqual(response.kind, 'failure');
 			assert.strictEqual(response.code, 601);
 			assert.strictEqual(response.reason, ErrorReasons.ConnectionError);
-			assert.strictEqual(response.msg, 'The public code matching service is offline.');
+			assert.strictEqual(
+				response.msg,
+				'The public code matching service is offline.',
+			);
 		});
 
 		test('should return the expect payload for various error codes', async function () {
 			const testCases = Object.entries(testEndpoints);
 			// Internal errors put CodeQuote into retry mode, so we need to stub that behavior out.
-			const stub = Sinon.stub(ConnectionState, 'enableRetry').callsFake(() => { });
+			const stub = Sinon.stub(ConnectionState, 'enableRetry').callsFake(
+				() => {},
+			);
 
 			for (const [endpoint, data] of testCases) {
-				const response: FormattedSnippyError = await Network.call(accessor, endpoint, { method: 'GET' });
+				const response: FormattedSnippyError = await Network.call(
+					accessor,
+					endpoint,
+					{ method: 'GET' },
+				);
 
 				assert.strictEqual(response.kind, 'failure');
 				assert.strictEqual(response.code, data.status);
@@ -162,11 +206,18 @@ suite('snippy network primitive', function () {
 
 	suite('`call` behavior', function () {
 		const sandbox = Sinon.createSandbox();
-		let networkStub: Sinon.SinonStub<Parameters<ICompletionsFetcherService['fetch']>>;
+		let networkStub: Sinon.SinonStub<
+			Parameters<ICompletionsFetcherService['fetch']>
+		>;
 
 		setup(function () {
-			networkStub = Sinon.stub(accessor.get(ICompletionsFetcherService), 'fetch');
-			networkStub.returns(Promise.resolve(createFakeJsonResponse(200, '{}')));
+			networkStub = Sinon.stub(
+				accessor.get(ICompletionsFetcherService),
+				'fetch',
+			);
+			networkStub.returns(
+				Promise.resolve(createFakeJsonResponse(200, '{}')),
+			);
 		});
 
 		teardown(function () {
@@ -182,7 +233,9 @@ suite('snippy network primitive', function () {
 
 			await Network.call(accessor, '', { method: 'GET' });
 
-			assert.ok(networkStub.getCall(0).args[0].startsWith(domainOverride));
+			assert.ok(
+				networkStub.getCall(0).args[0].startsWith(domainOverride),
+			);
 		});
 
 		test('uses the correct snippy twirp endpoint', async function () {

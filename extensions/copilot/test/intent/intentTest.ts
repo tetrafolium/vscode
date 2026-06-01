@@ -6,13 +6,19 @@
 import assert from 'assert';
 import * as fs from 'fs';
 import path from 'path';
-import type { ChatParticipantDetectionResult, ChatParticipantMetadata } from 'vscode';
+import type {
+	ChatParticipantDetectionResult,
+	ChatParticipantMetadata,
+} from 'vscode';
 import '../../src/extension/intents/node/allIntents';
 import { IIntentService } from '../../src/extension/intents/node/intentService';
 import { ChatVariablesCollection } from '../../src/extension/prompt/common/chatVariablesCollection';
 import { IntentDetector } from '../../src/extension/prompt/node/intentDetector';
 import { createTelemetryWithId } from '../../src/extension/prompt/node/telemetry';
-import { editingSessionAgentEditorName, editsAgentName } from '../../src/platform/chat/common/chatAgents';
+import {
+	editingSessionAgentEditorName,
+	editsAgentName,
+} from '../../src/platform/chat/common/chatAgents';
 import { ChatLocation } from '../../src/platform/chat/common/commonTypes';
 import { ITabsAndEditorsService } from '../../src/platform/tabs/common/tabsAndEditorsService';
 import { TestingServiceCollection } from '../../src/platform/test/node/services';
@@ -34,26 +40,52 @@ export function generateIntentTest(scenario: IIntentScenario) {
 	});
 }
 
-export async function executeIntentTest(testingServiceCollection: TestingServiceCollection, scenario: IIntentScenario) {
-	testingServiceCollection.define(ITabsAndEditorsService, new TestingTabsAndEditorsService({
-		getActiveTextEditor: () => undefined,
-		getVisibleTextEditors: () => [],
-		getActiveNotebookEditor: () => undefined
-	}));
+export async function executeIntentTest(
+	testingServiceCollection: TestingServiceCollection,
+	scenario: IIntentScenario,
+) {
+	testingServiceCollection.define(
+		ITabsAndEditorsService,
+		new TestingTabsAndEditorsService({
+			getActiveTextEditor: () => undefined,
+			getVisibleTextEditors: () => [],
+			getActiveNotebookEditor: () => undefined,
+		}),
+	);
 	const accessor = testingServiceCollection.createTestingAccessor();
 	const intentService = accessor.get(IIntentService);
 	const instaService = accessor.get(IInstantiationService);
 	const intentDetector = instaService.createInstance(IntentDetector);
 	const query = scenario.query;
 	const builtinIntents = readBuiltinIntents(scenario.location);
-	const detectedIntent = await intentDetector.detectIntent(scenario.location, undefined, query, CancellationToken.None, createTelemetryWithId(), new ChatVariablesCollection([]), builtinIntents);
+	const detectedIntent = await intentDetector.detectIntent(
+		scenario.location,
+		undefined,
+		query,
+		CancellationToken.None,
+		createTelemetryWithId(),
+		new ChatVariablesCollection([]),
+		builtinIntents,
+	);
 	const intent = detectedIntent ?? intentService.unknownIntent;
 
-	const expectedIntents = Array.isArray(scenario.expectedIntent) ? scenario.expectedIntent : [scenario.expectedIntent];
-	assert.ok(intent && expectedIntents.includes('participant' in intent ? detectedParticipantToIntentId(intent) : intent.id), `Expected intent [${expectedIntents.join(',')}] but got ${'participant' in intent ? intent.participant : intent.id}`);
+	const expectedIntents = Array.isArray(scenario.expectedIntent)
+		? scenario.expectedIntent
+		: [scenario.expectedIntent];
+	assert.ok(
+		intent &&
+			expectedIntents.includes(
+				'participant' in intent
+					? detectedParticipantToIntentId(intent)
+					: intent.id,
+			),
+		`Expected intent [${expectedIntents.join(',')}] but got ${'participant' in intent ? intent.participant : intent.id}`,
+	);
 }
 
-function detectedParticipantToIntentId(detected: ChatParticipantDetectionResult) {
+function detectedParticipantToIntentId(
+	detected: ChatParticipantDetectionResult,
+) {
 	switch (detected.participant) {
 		case 'github.copilot.default':
 			return 'unknown';
@@ -82,27 +114,48 @@ function detectedParticipantToIntentId(detected: ChatParticipantDetectionResult)
 		case 'github.copilot-dynamic.platform':
 			return 'github.copilot-dynamic.platform';
 	}
-	throw new Error(`Unknown participant ${detected.participant} with command ${detected.command}`);
+	throw new Error(
+		`Unknown participant ${detected.participant} with command ${detected.command}`,
+	);
 }
 
 export function readBuiltinIntents(location: ChatLocation) {
-	const packageJson = JSON.parse(fs.readFileSync(path.resolve(path.join(__dirname, '..', 'package.json'))).toString(), undefined);
+	const packageJson = JSON.parse(
+		fs
+			.readFileSync(
+				path.resolve(path.join(__dirname, '..', 'package.json')),
+			)
+			.toString(),
+		undefined,
+	);
 	const participantMetadata: ChatParticipantMetadata[] = [];
 	for (const participant of packageJson['contributes']['chatParticipants']) {
-		const locationName = location === ChatLocation.Panel ? 'panel' : location === ChatLocation.Editor ? 'editor' : undefined;
-		if (!locationName || !participant.locations || !participant.locations.includes(locationName)) {
+		const locationName =
+			location === ChatLocation.Panel
+				? 'panel'
+				: location === ChatLocation.Editor
+					? 'editor'
+					: undefined;
+		if (
+			!locationName ||
+			!participant.locations ||
+			!participant.locations.includes(locationName)
+		) {
 			continue;
 		}
 		if (participant.disambiguation?.length) {
 			participantMetadata.push({
-				participant: participant.id, disambiguation: participant.disambiguation
+				participant: participant.id,
+				disambiguation: participant.disambiguation,
 			});
 		}
 		if (participant.commands) {
 			for (const command of participant.commands) {
 				if (command.disambiguation?.length) {
 					participantMetadata.push({
-						participant: participant.id, command: command.name, disambiguation: command.disambiguation
+						participant: participant.id,
+						command: command.name,
+						disambiguation: command.disambiguation,
 					});
 				}
 			}

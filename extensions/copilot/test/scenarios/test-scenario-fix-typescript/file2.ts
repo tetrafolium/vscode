@@ -2,5 +2,5 @@
  *  Copyright (c) Microsoft Corporation and GitHub. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 export interface B {
-    name: string;
+	name: string;
 }

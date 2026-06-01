@@ -9,7 +9,9 @@ import * as fs from 'fs';
  *
  * @throws if reading the file fails for any reason other than the file not existing
  */
-export async function readFileIfExists(filePath: string): Promise<string | undefined> {
+export async function readFileIfExists(
+	filePath: string,
+): Promise<string | undefined> {
 	try {
 		const fileContents = await fs.promises.readFile(filePath, 'utf8');
 		return fileContents;

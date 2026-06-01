@@ -26,10 +26,10 @@ export {
 	realTimeApi as originalGlobalValues,
 	runWithFakedTimers,
 	VirtualClock as TimeTravelScheduler,
-} from './virtualScheduling/index.js';
+} from "./virtualScheduling/index.js";
 
 export type {
 	CreateVirtualTimeApiOptions,
 	RunWithFakedTimersOptions,
 	TimeApi,
-} from './virtualScheduling/index.js';
+} from "./virtualScheduling/index.js";

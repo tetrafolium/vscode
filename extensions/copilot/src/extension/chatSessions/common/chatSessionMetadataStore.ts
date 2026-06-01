@@ -128,43 +128,83 @@ export interface WorktreeSessionEntry {
 	readonly created: number;
 }
 
-export const IChatSessionMetadataStore = createServiceIdentifier<IChatSessionMetadataStore>('IChatSessionMetadataStore');
+export const IChatSessionMetadataStore =
+	createServiceIdentifier<IChatSessionMetadataStore>(
+		'IChatSessionMetadataStore',
+	);
 
 export interface IChatSessionMetadataStore {
 	readonly _serviceBrand: undefined;
 	getMetadataFileUri(sessionId: string): vscode.Uri;
 	deleteSessionMetadata(sessionId: string): Promise<void>;
-	storeWorktreeInfo(sessionId: string, properties: ChatSessionWorktreeProperties): Promise<void>;
-	storeWorkspaceFolderInfo(sessionId: string, entry: WorkspaceFolderEntry): Promise<void>;
-	storeRepositoryProperties(sessionId: string, properties: RepositoryProperties): Promise<void>;
-	getRepositoryProperties(sessionId: string): Promise<RepositoryProperties | undefined>;
-	getWorktreeProperties(sessionId: string): Promise<ChatSessionWorktreeProperties | undefined>;
-	getSessionWorkspaceFolder(sessionId: string): Promise<vscode.Uri | undefined>;
-	getSessionWorkspaceFolderEntry(sessionId: string): Promise<WorkspaceFolderEntry | undefined>;
+	storeWorktreeInfo(
+		sessionId: string,
+		properties: ChatSessionWorktreeProperties,
+	): Promise<void>;
+	storeWorkspaceFolderInfo(
+		sessionId: string,
+		entry: WorkspaceFolderEntry,
+	): Promise<void>;
+	storeRepositoryProperties(
+		sessionId: string,
+		properties: RepositoryProperties,
+	): Promise<void>;
+	getRepositoryProperties(
+		sessionId: string,
+	): Promise<RepositoryProperties | undefined>;
+	getWorktreeProperties(
+		sessionId: string,
+	): Promise<ChatSessionWorktreeProperties | undefined>;
+	getSessionWorkspaceFolder(
+		sessionId: string,
+	): Promise<vscode.Uri | undefined>;
+	getSessionWorkspaceFolderEntry(
+		sessionId: string,
+	): Promise<WorkspaceFolderEntry | undefined>;
 	getAdditionalWorkspaces(sessionId: string): Promise<IWorkspaceInfo[]>;
-	setAdditionalWorkspaces(sessionId: string, workspaces: IWorkspaceInfo[]): Promise<void>;
+	setAdditionalWorkspaces(
+		sessionId: string,
+		workspaces: IWorkspaceInfo[],
+	): Promise<void>;
 	getSessionFirstUserMessage(sessionId: string): Promise<string | undefined>;
-	setSessionFirstUserMessage(sessionId: string, message: string): Promise<void>;
+	setSessionFirstUserMessage(
+		sessionId: string,
+		message: string,
+	): Promise<void>;
 	getCustomTitle(sessionId: string): Promise<string | undefined>;
 	setCustomTitle(sessionId: string, title: string): Promise<void>;
 	getRequestDetails(sessionId: string): Promise<RequestDetails[]>;
-	updateRequestDetails(sessionId: string, details: (Partial<RequestDetails> & { vscodeRequestId: string })[]): Promise<void>;
+	updateRequestDetails(
+		sessionId: string,
+		details: (Partial<RequestDetails> & { vscodeRequestId: string })[],
+	): Promise<void>;
 	getSessionAgent(sessionId: string): Promise<string | undefined>;
 	/**
 	 * Copy all VS Code-specific metadata (workspace info, request details, etc.) from
 	 * an existing session to a newly forked session, overriding the custom title.
 	 */
-	storeForkedSessionMetadata(sourceSessionId: string, targetSessionId: string, customTitle: string): Promise<void>;
+	storeForkedSessionMetadata(
+		sourceSessionId: string,
+		targetSessionId: string,
+		customTitle: string,
+	): Promise<void>;
 	setSessionOrigin(sessionId: string): Promise<void>;
 	getSessionOrigin(sessionId: string): Promise<'vscode' | 'other'>;
-	setSessionParentId(sessionId: string, parentSessionId: string): Promise<void>;
+	setSessionParentId(
+		sessionId: string,
+		parentSessionId: string,
+	): Promise<void>;
 	/**
 	 * Returns the parent lineage info for a session, distinguishing forked sessions
 	 * (created via the fork action) from sub-sessions (spawned by a parent session
 	 * to do work on its behalf). Returns `undefined` for top-level sessions with no
 	 * stored parent.
 	 */
-	getSessionParentId(sessionId: string): Promise<{ parentSessionId: string; kind: 'forked' | 'sub-session' } | undefined>;
+	getSessionParentId(
+		sessionId: string,
+	): Promise<
+		{ parentSessionId: string; kind: 'forked' | 'sub-session' } | undefined
+	>;
 	/**
 	 * Persist the archived state of a session. Called from the chat session item state
 	 * change handler so worktree-sharing checks can later ignore archived siblings.

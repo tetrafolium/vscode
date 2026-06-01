@@ -13,11 +13,10 @@ interface Item<K, V> {
 export const enum Touch {
 	None = 0,
 	AsOld = 1,
-	AsNew = 2
+	AsNew = 2,
 }
 
 export class LinkedMap<K, V> implements Map<K, V> {
-
 	readonly [Symbol.toStringTag] = 'LinkedMap';
 
 	private _map: Map<K, Item<K, V>>;
@@ -132,7 +131,10 @@ export class LinkedMap<K, V> implements Map<K, V> {
 		return item.value;
 	}
 
-	forEach(callbackfn: (value: V, key: K, map: LinkedMap<K, V>) => void, thisArg?: unknown): void {
+	forEach(
+		callbackfn: (value: V, key: K, map: LinkedMap<K, V>) => void,
+		thisArg?: unknown,
+	): void {
 		const state = this._state;
 		let current = this._head;
 		while (current) {
@@ -167,7 +169,7 @@ export class LinkedMap<K, V> implements Map<K, V> {
 				} else {
 					return { value: undefined, done: true };
 				}
-			}
+			},
 		};
 		return iterator;
 	}
@@ -191,7 +193,7 @@ export class LinkedMap<K, V> implements Map<K, V> {
 				} else {
 					return { value: undefined, done: true };
 				}
-			}
+			},
 		};
 		return iterator;
 	}
@@ -209,13 +211,16 @@ export class LinkedMap<K, V> implements Map<K, V> {
 					throw new Error(`LinkedMap got modified during iteration.`);
 				}
 				if (current) {
-					const result: IteratorResult<[K, V]> = { value: [current.key, current.value], done: false };
+					const result: IteratorResult<[K, V]> = {
+						value: [current.key, current.value],
+						done: false,
+					};
 					current = current.next;
 					return result;
 				} else {
 					return { value: undefined, done: true };
 				}
-			}
+			},
 		};
 		return iterator;
 	}
@@ -302,8 +307,7 @@ export class LinkedMap<K, V> implements Map<K, V> {
 		if (item === this._head && item === this._tail) {
 			this._head = undefined;
 			this._tail = undefined;
-		}
-		else if (item === this._head) {
+		} else if (item === this._head) {
 			// This can only happen if size === 1 which is handled
 			// by the case above.
 			if (!item.next) {
@@ -311,8 +315,7 @@ export class LinkedMap<K, V> implements Map<K, V> {
 			}
 			item.next.previous = undefined;
 			this._head = item.next;
-		}
-		else if (item === this._tail) {
+		} else if (item === this._tail) {
 			// This can only happen if size === 1 which is handled
 			// by the case above.
 			if (!item.previous) {
@@ -320,8 +323,7 @@ export class LinkedMap<K, V> implements Map<K, V> {
 			}
 			item.previous.next = undefined;
 			this._tail = item.previous;
-		}
-		else {
+		} else {
 			const next = item.next;
 			const previous = item.previous;
 			if (!next || !previous) {
@@ -339,7 +341,7 @@ export class LinkedMap<K, V> implements Map<K, V> {
 		if (!this._head || !this._tail) {
 			throw new Error('Invalid list');
 		}
-		if ((touch !== Touch.AsOld && touch !== Touch.AsNew)) {
+		if (touch !== Touch.AsOld && touch !== Touch.AsNew) {
 			return;
 		}
 
@@ -357,8 +359,7 @@ export class LinkedMap<K, V> implements Map<K, V> {
 				// So there are more than on item in the map
 				previous!.next = undefined;
 				this._tail = previous;
-			}
-			else {
+			} else {
 				// Both next and previous are not undefined since item was neither head nor tail.
 				next!.previous = previous;
 				previous!.next = next;
@@ -417,7 +418,6 @@ export class LinkedMap<K, V> implements Map<K, V> {
 }
 
 abstract class Cache<K, V> extends LinkedMap<K, V> {
-
 	protected _limit: number;
 	protected _ratio: number;
 
@@ -468,7 +468,6 @@ abstract class Cache<K, V> extends LinkedMap<K, V> {
 }
 
 export class LRUCache<K, V> extends Cache<K, V> {
-
 	constructor(limit: number, ratio: number = 1) {
 		super(limit, ratio);
 	}
@@ -485,7 +484,6 @@ export class LRUCache<K, V> extends Cache<K, V> {
 }
 
 export class MRUCache<K, V> extends Cache<K, V> {
-
 	constructor(limit: number, ratio: number = 1) {
 		super(limit, ratio);
 	}

@@ -8,7 +8,6 @@ export interface ITask<T> {
 }
 
 export class Delayer<T> {
-
 	public defaultDelay: number;
 	#timeout: ReturnType<typeof setTimeout> | null;
 	#cancelTimeout: Promise<T | null> | null;
@@ -27,7 +26,10 @@ export class Delayer<T> {
 		this.#doCancelTimeout();
 	}
 
-	public trigger(task: ITask<T>, delay: number = this.defaultDelay): Promise<T | null> {
+	public trigger(
+		task: ITask<T>,
+		delay: number = this.defaultDelay,
+	): Promise<T | null> {
 		this.#task = task;
 		if (delay >= 0) {
 			this.#doCancelTimeout();
@@ -46,10 +48,13 @@ export class Delayer<T> {
 		}
 
 		if (delay >= 0 || this.#timeout === null) {
-			this.#timeout = setTimeout(() => {
-				this.#timeout = null;
-				this.#onSuccess?.(undefined);
-			}, delay >= 0 ? delay : this.defaultDelay);
+			this.#timeout = setTimeout(
+				() => {
+					this.#timeout = null;
+					this.#onSuccess?.(undefined);
+				},
+				delay >= 0 ? delay : this.defaultDelay,
+			);
 		}
 
 		return this.#cancelTimeout;

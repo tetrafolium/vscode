@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createDecorator } from '../../instantiation/common/instantiation.js';
+import { createDecorator } from "../../instantiation/common/instantiation.js";
 
 export interface IDiffCountResult {
 	added: number;
 	removed: number;
 }
 
-export const IDiffComputeService = createDecorator<IDiffComputeService>('diffComputeService');
+export const IDiffComputeService =
+	createDecorator<IDiffComputeService>("diffComputeService");
 
 /** Default timeout for diff computation in milliseconds. */
 export const DEFAULT_DIFF_TIMEOUT_MS = 5000;
@@ -29,5 +30,9 @@ export interface IDiffComputeService {
 	 * @param modified - The modified text to compare against the original.
 	 * @param timeoutMs - Maximum time in milliseconds before aborting. Defaults to {@link DEFAULT_DIFF_TIMEOUT_MS}.
 	 */
-	computeDiffCounts(original: string, modified: string, timeoutMs?: number): Promise<IDiffCountResult>;
+	computeDiffCounts(
+		original: string,
+		modified: string,
+		timeoutMs?: number,
+	): Promise<IDiffCountResult>;
 }

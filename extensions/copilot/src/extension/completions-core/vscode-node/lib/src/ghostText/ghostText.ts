@@ -3,16 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { CopilotNamedAnnotationList } from '../../../../../../platform/completions-core/common/openai/copilotAnnotations';
-import { ILogService, ILogger } from '../../../../../../platform/log/common/logService';
+import {
+	ILogService,
+	ILogger,
+} from '../../../../../../platform/log/common/logService';
 import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry';
 import { createSha256Hash } from '../../../../../../util/common/crypto';
 import { generateUuid } from '../../../../../../util/vs/base/common/uuid';
-import { IInstantiationService, ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { LlmNESTelemetryBuilder } from '../../../../../inlineEdits/node/nextEditProviderTelemetry';
 import { isInlineSuggestionFromTextAfterCursor } from '../../../../../xtab/common/inlineSuggestion';
 import { GhostTextLogContext } from '../../../../common/ghostTextContext';
 import { initializeTokenizers } from '../../../prompt/src/tokenization';
-import { CancellationTokenSource, CancellationToken as ICancellationToken } from '../../../types/src';
+import {
+	CancellationTokenSource,
+	CancellationToken as ICancellationToken,
+} from '../../../types/src';
 import { ICompletionsNotifierService } from '../completionNotifier';
 import { CompletionState } from '../completionState';
 import { BlockMode, ConfigKey, getConfig } from '../config';
@@ -20,19 +29,28 @@ import { ICompletionsFeaturesService } from '../experiments/featuresService';
 import { ICompletionsLogTargetService } from '../logger';
 import { isAbortError } from '../networking';
 import { EngineRequestInfo, getEngineRequestInfo } from '../openai/config';
-import {
-	FinishedCallback
-} from '../openai/fetch';
+import { FinishedCallback } from '../openai/fetch';
 import { APIChoice } from '../openai/openai';
 import { ICompletionsStatusReporter } from '../progress';
 import { ICompletionsContextProviderBridgeService } from '../prompt/components/contextProviderBridge';
 import { ICompletionsContextProviderService } from '../prompt/contextProviderStatistics';
+import { contextIndentation } from '../prompt/parseBlock';
 import {
-	contextIndentation,
-} from '../prompt/parseBlock';
-import { ExtractPromptOptions, Prompt, PromptResponse, PromptResponsePresent, extractPrompt, trimLastLine } from '../prompt/prompt';
-import { ComputationStatus, extractRepoInfoInBackground } from '../prompt/repository';
-import { checkSuffix, postProcessChoiceInContext } from '../suggestions/suggestions';
+	ExtractPromptOptions,
+	Prompt,
+	PromptResponse,
+	PromptResponsePresent,
+	extractPrompt,
+	trimLastLine,
+} from '../prompt/prompt';
+import {
+	ComputationStatus,
+	extractRepoInfoInBackground,
+} from '../prompt/repository';
+import {
+	checkSuffix,
+	postProcessChoiceInContext,
+} from '../suggestions/suggestions';
 import {
 	TelemetryData,
 	TelemetryMeasurements,
@@ -42,12 +60,19 @@ import {
 	telemetrizePromptLength,
 	telemetry,
 } from '../telemetry';
-import { IPosition, LocationFactory, TextDocumentContents } from '../textDocument';
+import {
+	IPosition,
+	LocationFactory,
+	TextDocumentContents,
+} from '../textDocument';
 import { delay } from '../util/async';
 import { ICompletionsAsyncManagerService } from './asyncCompletions';
 import { BlockTrimmer } from './blockTrimmer';
 import { ICompletionsCacheService } from './completionsCache';
-import { CompletionsFromNetwork, makeGhostAPIChoice } from './completionsFromNetwork';
+import {
+	CompletionsFromNetwork,
+	makeGhostAPIChoice,
+} from './completionsFromNetwork';
 import { ICompletionsCurrentGhostText } from './current';
 import { getGhostTextStrategy } from './ghostTextStrategy';
 import { RequestContext } from './requestContext';
@@ -103,13 +128,22 @@ const defaultOptions: GetGhostTextOptions = {
 	isSpeculative: false,
 };
 
-function getRemainingDebounceMs(accessor: ServicesAccessor, opts: GetGhostTextOptions, telemetry: TelemetryWithExp): number {
+function getRemainingDebounceMs(
+	accessor: ServicesAccessor,
+	opts: GetGhostTextOptions,
+	telemetry: TelemetryWithExp,
+): number {
 	const featuresService = accessor.get(ICompletionsFeaturesService);
 	const debounce =
-		getConfig<number | undefined>(accessor, ConfigKey.CompletionsDebounce) ??
+		getConfig<number | undefined>(
+			accessor,
+			ConfigKey.CompletionsDebounce,
+		) ??
 		featuresService.completionsDebounce(telemetry) ??
 		opts.debounceMs;
-	if (debounce === undefined) { return 0; }
+	if (debounce === undefined) {
+		return 0;
+	}
 	const elapsed = now() - telemetry.issuedTime;
 	return Math.max(0, debounce - elapsed);
 }
@@ -117,27 +151,37 @@ function getRemainingDebounceMs(accessor: ServicesAccessor, opts: GetGhostTextOp
 function isCompletionRequestCancelled(
 	currentGhostText: ICompletionsCurrentGhostText,
 	requestId: string,
-	cancellationToken?: ICancellationToken
+	cancellationToken?: ICancellationToken,
 ): boolean {
-	return cancellationToken?.isCancellationRequested || requestId !== currentGhostText.currentRequestId;
+	return (
+		cancellationToken?.isCancellationRequested ||
+		requestId !== currentGhostText.currentRequestId
+	);
 }
 
 export class GhostTextComputer {
-
 	constructor(
-		@IInstantiationService public readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		public readonly instantiationService: IInstantiationService,
 		@ITelemetryService public readonly telemetryService: ITelemetryService,
-		@ICompletionsNotifierService public readonly notifierService: ICompletionsNotifierService,
-		@ICompletionsContextProviderBridgeService public readonly contextProviderBridge: ICompletionsContextProviderBridgeService,
-		@ICompletionsCurrentGhostText public readonly currentGhostText: ICompletionsCurrentGhostText,
-		@ICompletionsContextProviderService public readonly contextproviderStatistics: ICompletionsContextProviderService,
-		@ICompletionsAsyncManagerService public readonly asyncCompletionManager: ICompletionsAsyncManagerService,
-		@ICompletionsFeaturesService public readonly completionsFeaturesService: ICompletionsFeaturesService,
-		@ICompletionsLogTargetService public readonly logTarget: ICompletionsLogTargetService,
-		@ICompletionsStatusReporter public readonly statusReporter: ICompletionsStatusReporter,
+		@ICompletionsNotifierService
+		public readonly notifierService: ICompletionsNotifierService,
+		@ICompletionsContextProviderBridgeService
+		public readonly contextProviderBridge: ICompletionsContextProviderBridgeService,
+		@ICompletionsCurrentGhostText
+		public readonly currentGhostText: ICompletionsCurrentGhostText,
+		@ICompletionsContextProviderService
+		public readonly contextproviderStatistics: ICompletionsContextProviderService,
+		@ICompletionsAsyncManagerService
+		public readonly asyncCompletionManager: ICompletionsAsyncManagerService,
+		@ICompletionsFeaturesService
+		public readonly completionsFeaturesService: ICompletionsFeaturesService,
+		@ICompletionsLogTargetService
+		public readonly logTarget: ICompletionsLogTargetService,
+		@ICompletionsStatusReporter
+		public readonly statusReporter: ICompletionsStatusReporter,
 		@ILogService public readonly logService: ILogService,
-	) {
-	}
+	) {}
 
 	public async getGhostText(
 		completionState: CompletionState,
@@ -149,14 +193,21 @@ export class GhostTextComputer {
 	): Promise<GhostTextResultWithTelemetry<[CompletionResult[], ResultType]>> {
 		const id = generateUuid();
 		telemetryBuilder.setHeaderRequestId(id);
-		const logger = parentLogger.createSubLogger(['GhostTextComputer#getGhostText']);
+		const logger = parentLogger.createSubLogger([
+			'GhostTextComputer#getGhostText',
+		]);
 		this.currentGhostText.currentRequestId = id;
-		const telemetryData = await this.instantiationService.invokeFunction(createTelemetryWithExp, completionState.textDocument, id, options);
+		const telemetryData = await this.instantiationService.invokeFunction(
+			createTelemetryWithExp,
+			completionState.textDocument,
+			id,
+			options,
+		);
 		// A CLS consumer has an LSP bug where it erroneously makes method requests before `initialize` has returned, which
 		// means we can't use `initialize` to actually initialize anything expensive.  This the primary user of the
 		// tokenizer, so settle for initializing here instead.  We don't use waitForTokenizers() because in the event of a
 		// tokenizer load failure, that would spam handleException() on every request.
-		await initializeTokenizers.catch(() => { });
+		await initializeTokenizers.catch(() => {});
 		try {
 			this.contextProviderBridge.schedule(
 				completionState,
@@ -164,13 +215,32 @@ export class GhostTextComputer {
 				options?.opportunityId ?? '',
 				telemetryData,
 				token,
-				options
+				options,
 			);
-			this.notifierService.notifyRequest(completionState, id, telemetryData, token, options);
-			const result = await this.getGhostTextWithoutAbortHandling(completionState, id, telemetryData, token, options, logContext, telemetryBuilder, logger);
-			const statistics = this.contextproviderStatistics.getStatisticsForCompletion(id);
+			this.notifierService.notifyRequest(
+				completionState,
+				id,
+				telemetryData,
+				token,
+				options,
+			);
+			const result = await this.getGhostTextWithoutAbortHandling(
+				completionState,
+				id,
+				telemetryData,
+				token,
+				options,
+				logContext,
+				telemetryBuilder,
+				logger,
+			);
+			const statistics =
+				this.contextproviderStatistics.getStatisticsForCompletion(id);
 			const opportunityId = options?.opportunityId ?? 'unknown';
-			for (const [providerId, statistic] of statistics.getAllUsageStatistics()) {
+			for (const [
+				providerId,
+				statistic,
+			] of statistics.getAllUsageStatistics()) {
 				/* __GDPR__
 					"context-provider.completion-stats" : {
 						"owner": "dirkb",
@@ -193,8 +263,7 @@ export class GhostTextComputer {
 						usage: statistic.usage,
 						usageDetails: JSON.stringify(statistic.usageDetails),
 					},
-					{
-					}
+					{},
 				);
 			}
 			return result;
@@ -225,7 +294,9 @@ export class GhostTextComputer {
 		telemetryBuilder: LlmNESTelemetryBuilder,
 		parentLogger: ILogger,
 	): Promise<GhostTextResultWithTelemetry<[CompletionResult[], ResultType]>> {
-		const logger = parentLogger.createSubLogger(['GhostTextComputer#getGhostTextWithoutAbortHandling']);
+		const logger = parentLogger.createSubLogger([
+			'GhostTextComputer#getGhostTextWithoutAbortHandling',
+		]);
 		let start = preIssuedTelemetryDataWithExp.issuedTime; // Start before getting exp assignments
 		const performanceMetrics: [string, number][] = [];
 		/** Internal helper to record performance measurements. Mutates performanceMetrics and start. */
@@ -235,27 +306,50 @@ export class GhostTextComputer {
 			start = next;
 		}
 		recordPerformance('telemetry');
-		if (isCompletionRequestCancelled(this.currentGhostText, ourRequestId, cancellationToken)) {
+		if (
+			isCompletionRequestCancelled(
+				this.currentGhostText,
+				ourRequestId,
+				cancellationToken,
+			)
+		) {
 			return {
 				type: 'abortedBeforeIssued',
 				reason: 'cancelled before extractPrompt',
-				telemetryData: mkBasicResultTelemetry(preIssuedTelemetryDataWithExp),
+				telemetryData: mkBasicResultTelemetry(
+					preIssuedTelemetryDataWithExp,
+				),
 			};
 		}
 
-		const inlineSuggestion = isInlineSuggestion(completionState.textDocument, completionState.position);
+		const inlineSuggestion = isInlineSuggestion(
+			completionState.textDocument,
+			completionState.position,
+		);
 		if (inlineSuggestion === undefined) {
-			logger.debug('Completions do not trigger in the middle of the line');
+			logger.debug(
+				'Completions do not trigger in the middle of the line',
+			);
 			return {
 				type: 'abortedBeforeIssued',
 				reason: 'Invalid middle of the line',
-				telemetryData: mkBasicResultTelemetry(preIssuedTelemetryDataWithExp),
+				telemetryData: mkBasicResultTelemetry(
+					preIssuedTelemetryDataWithExp,
+				),
 			};
 		}
 
-		const engineInfo = this.instantiationService.invokeFunction(getEngineRequestInfo, preIssuedTelemetryDataWithExp);
-		const ghostTextOptions = { ...defaultOptions, ...options, tokenizer: engineInfo.tokenizer };
-		const prompt = await this.instantiationService.invokeFunction(extractPrompt,
+		const engineInfo = this.instantiationService.invokeFunction(
+			getEngineRequestInfo,
+			preIssuedTelemetryDataWithExp,
+		);
+		const ghostTextOptions = {
+			...defaultOptions,
+			...options,
+			tokenizer: engineInfo.tokenizer,
+		};
+		const prompt = await this.instantiationService.invokeFunction(
+			extractPrompt,
 			ourRequestId,
 			completionState,
 			preIssuedTelemetryDataWithExp,
@@ -271,7 +365,9 @@ export class GhostTextComputer {
 			return {
 				type: 'abortedBeforeIssued',
 				reason: 'Copilot not available due to content exclusion',
-				telemetryData: mkBasicResultTelemetry(preIssuedTelemetryDataWithExp),
+				telemetryData: mkBasicResultTelemetry(
+					preIssuedTelemetryDataWithExp,
+				),
 			};
 		}
 
@@ -280,7 +376,9 @@ export class GhostTextComputer {
 			return {
 				type: 'abortedBeforeIssued',
 				reason: 'Not enough context',
-				telemetryData: mkBasicResultTelemetry(preIssuedTelemetryDataWithExp),
+				telemetryData: mkBasicResultTelemetry(
+					preIssuedTelemetryDataWithExp,
+				),
 			};
 		}
 
@@ -289,12 +387,18 @@ export class GhostTextComputer {
 			return {
 				type: 'abortedBeforeIssued',
 				reason: 'Error while building the prompt',
-				telemetryData: mkBasicResultTelemetry(preIssuedTelemetryDataWithExp),
+				telemetryData: mkBasicResultTelemetry(
+					preIssuedTelemetryDataWithExp,
+				),
 			};
 		}
 
 		if (ghostTextOptions.promptOnly) {
-			return { type: 'promptOnly', reason: 'Breaking, promptOnly set to true', prompt: prompt };
+			return {
+				type: 'promptOnly',
+				reason: 'Breaking, promptOnly set to true',
+				prompt: prompt,
+			};
 		}
 
 		if (prompt.type === 'promptCancelled') {
@@ -302,7 +406,9 @@ export class GhostTextComputer {
 			return {
 				type: 'abortedBeforeIssued',
 				reason: 'Cancelled during extractPrompt',
-				telemetryData: mkBasicResultTelemetry(preIssuedTelemetryDataWithExp),
+				telemetryData: mkBasicResultTelemetry(
+					preIssuedTelemetryDataWithExp,
+				),
 			};
 		}
 
@@ -311,28 +417,47 @@ export class GhostTextComputer {
 			return {
 				type: 'abortedBeforeIssued',
 				reason: 'Timeout',
-				telemetryData: mkBasicResultTelemetry(preIssuedTelemetryDataWithExp),
+				telemetryData: mkBasicResultTelemetry(
+					preIssuedTelemetryDataWithExp,
+				),
 			};
 		}
 
-		if (prompt.prompt.prefix.length === 0 && prompt.prompt.suffix.length === 0) {
+		if (
+			prompt.prompt.prefix.length === 0 &&
+			prompt.prompt.suffix.length === 0
+		) {
 			logger.debug('Error empty prompt');
 			return {
 				type: 'abortedBeforeIssued',
 				reason: 'Empty prompt',
-				telemetryData: mkBasicResultTelemetry(preIssuedTelemetryDataWithExp),
+				telemetryData: mkBasicResultTelemetry(
+					preIssuedTelemetryDataWithExp,
+				),
 			};
 		}
 
-		const debounce = this.instantiationService.invokeFunction(getRemainingDebounceMs, ghostTextOptions, preIssuedTelemetryDataWithExp);
+		const debounce = this.instantiationService.invokeFunction(
+			getRemainingDebounceMs,
+			ghostTextOptions,
+			preIssuedTelemetryDataWithExp,
+		);
 		if (debounce > 0) {
 			logger.debug(`Debouncing ghost text request for ${debounce}ms`);
 			await delay(debounce);
-			if (isCompletionRequestCancelled(this.currentGhostText, ourRequestId, cancellationToken)) {
+			if (
+				isCompletionRequestCancelled(
+					this.currentGhostText,
+					ourRequestId,
+					cancellationToken,
+				)
+			) {
 				return {
 					type: 'abortedBeforeIssued',
 					reason: 'cancelled after debounce',
-					telemetryData: mkBasicResultTelemetry(preIssuedTelemetryDataWithExp),
+					telemetryData: mkBasicResultTelemetry(
+						preIssuedTelemetryDataWithExp,
+					),
 				};
 			}
 		}
@@ -340,29 +465,54 @@ export class GhostTextComputer {
 		return this.statusReporter.withProgress(async () => {
 			const [prefix] = trimLastLine(
 				completionState.textDocument.getText(
-					LocationFactory.range(LocationFactory.position(0, 0), completionState.position)
-				)
+					LocationFactory.range(
+						LocationFactory.position(0, 0),
+						completionState.position,
+					),
+				),
 			);
-			logger.trace(`Starting ghost text computation, prefix length: ${prefix.length}`);
+			logger.trace(
+				`Starting ghost text computation, prefix length: ${prefix.length}`,
+			);
 
-			const hasAcceptedCurrentCompletion = this.currentGhostText.hasAcceptedCurrentCompletion(prefix, prompt.prompt.suffix);
-			logger.trace(`hasAcceptedCurrentCompletion: ${hasAcceptedCurrentCompletion}`);
+			const hasAcceptedCurrentCompletion =
+				this.currentGhostText.hasAcceptedCurrentCompletion(
+					prefix,
+					prompt.prompt.suffix,
+				);
+			logger.trace(
+				`hasAcceptedCurrentCompletion: ${hasAcceptedCurrentCompletion}`,
+			);
 			const originalPrompt = prompt.prompt;
-			const ghostTextStrategy = await this.instantiationService.invokeFunction(getGhostTextStrategy,
-				completionState,
-				prefix,
-				prompt,
-				inlineSuggestion,
-				hasAcceptedCurrentCompletion,
-				preIssuedTelemetryDataWithExp
-			);
+			const ghostTextStrategy =
+				await this.instantiationService.invokeFunction(
+					getGhostTextStrategy,
+					completionState,
+					prefix,
+					prompt,
+					inlineSuggestion,
+					hasAcceptedCurrentCompletion,
+					preIssuedTelemetryDataWithExp,
+				);
 			recordPerformance('strategy');
-			logger.trace(`Ghost text strategy: blockMode=${ghostTextStrategy.blockMode}, requestMultiline=${ghostTextStrategy.requestMultiline}, stop=${ghostTextStrategy.stop}, maxTokens=${ghostTextStrategy.maxTokens}`);
+			logger.trace(
+				`Ghost text strategy: blockMode=${ghostTextStrategy.blockMode}, requestMultiline=${ghostTextStrategy.requestMultiline}, stop=${ghostTextStrategy.stop}, maxTokens=${ghostTextStrategy.maxTokens}`,
+			);
 
-			let choices = this.instantiationService.invokeFunction(getLocalInlineSuggestion, prefix, originalPrompt, ghostTextStrategy.requestMultiline);
-			logger.trace(`Local cache lookup: ${choices ? `found ${choices[0].length} choices` : 'no cached choices'}`);
+			let choices = this.instantiationService.invokeFunction(
+				getLocalInlineSuggestion,
+				prefix,
+				originalPrompt,
+				ghostTextStrategy.requestMultiline,
+			);
+			logger.trace(
+				`Local cache lookup: ${choices ? `found ${choices[0].length} choices` : 'no cached choices'}`,
+			);
 			recordPerformance('cache');
-			const repoInfo = this.instantiationService.invokeFunction(extractRepoInfoInBackground, completionState.textDocument.uri);
+			const repoInfo = this.instantiationService.invokeFunction(
+				extractRepoInfoInBackground,
+				completionState.textDocument.uri,
+			);
 			const requestContext: RequestContext = {
 				blockMode: ghostTextStrategy.blockMode,
 				languageId: completionState.textDocument.detectedLanguageId,
@@ -372,7 +522,10 @@ export class GhostTextComputer {
 				prefix,
 				prompt: prompt.prompt,
 				multiline: ghostTextStrategy.requestMultiline,
-				indentation: contextIndentation(completionState.textDocument, completionState.position),
+				indentation: contextIndentation(
+					completionState.textDocument,
+					completionState.position,
+				),
 				isCycling: ghostTextOptions.isCycling,
 				headers: engineInfo.headers,
 				stop: ghostTextStrategy.stop,
@@ -383,18 +536,21 @@ export class GhostTextComputer {
 			requestContext.headers = {
 				...requestContext.headers,
 				'X-Copilot-Async': 'true',
-				'X-Copilot-Speculative': ghostTextOptions.isSpeculative ? 'true' : 'false',
+				'X-Copilot-Speculative': ghostTextOptions.isSpeculative
+					? 'true'
+					: 'false',
 			};
 
 			// this will be used as basis for the choice telemetry data
-			const telemetryData = this.instantiationService.invokeFunction(telemetryIssued,
+			const telemetryData = this.instantiationService.invokeFunction(
+				telemetryIssued,
 				completionState.textDocument,
 				requestContext,
 				completionState.position,
 				prompt,
 				preIssuedTelemetryDataWithExp,
 				engineInfo,
-				ghostTextOptions
+				ghostTextOptions,
 			);
 
 			// Wait before requesting more completions if there is a candidate
@@ -403,27 +559,45 @@ export class GhostTextComputer {
 			if (
 				choices === undefined &&
 				!ghostTextOptions.isCycling &&
-				this.asyncCompletionManager.shouldWaitForAsyncCompletions(prefix, prompt.prompt)
-			) {
-				logger.trace('No cached choices, waiting for async completions from in-flight request');
-				const choice = await this.asyncCompletionManager.getFirstMatchingRequestWithTimeout(
-					ourRequestId,
+				this.asyncCompletionManager.shouldWaitForAsyncCompletions(
 					prefix,
 					prompt.prompt,
-					ghostTextOptions.isSpeculative,
-					telemetryData
+				)
+			) {
+				logger.trace(
+					'No cached choices, waiting for async completions from in-flight request',
 				);
+				const choice =
+					await this.asyncCompletionManager.getFirstMatchingRequestWithTimeout(
+						ourRequestId,
+						prefix,
+						prompt.prompt,
+						ghostTextOptions.isSpeculative,
+						telemetryData,
+					);
 				recordPerformance('asyncWait');
 				if (choice) {
 					logger.trace('Received choice from async completion');
 					const forceSingleLine = !ghostTextStrategy.requestMultiline;
-					const trimmedChoice = makeGhostAPIChoice(choice[0], { forceSingleLine });
+					const trimmedChoice = makeGhostAPIChoice(choice[0], {
+						forceSingleLine,
+					});
 					choices = [[trimmedChoice], ResultType.Async];
 				} else {
-					logger.trace('No matching async completion found within timeout');
+					logger.trace(
+						'No matching async completion found within timeout',
+					);
 				}
-				if (isCompletionRequestCancelled(this.currentGhostText, ourRequestId, cancellationToken)) {
-					logger.debug('Cancelled before requesting a new completion');
+				if (
+					isCompletionRequestCancelled(
+						this.currentGhostText,
+						ourRequestId,
+						cancellationToken,
+					)
+				) {
+					logger.debug(
+						'Cancelled before requesting a new completion',
+					);
 					return {
 						type: 'abortedBeforeIssued',
 						reason: 'Cancelled after waiting for async completion',
@@ -436,30 +610,41 @@ export class GhostTextComputer {
 
 			const isMoreMultiline =
 				ghostTextStrategy.blockMode === BlockMode.MoreMultiline &&
-				BlockTrimmer.isSupported(completionState.textDocument.detectedLanguageId);
+				BlockTrimmer.isSupported(
+					completionState.textDocument.detectedLanguageId,
+				);
 			if (choices !== undefined) {
-				logger.trace(`Post-processing ${choices[0].length} cached choices, isMoreMultiline=${isMoreMultiline}`);
+				logger.trace(
+					`Post-processing ${choices[0].length} cached choices, isMoreMultiline=${isMoreMultiline}`,
+				);
 				// Post-process any cached choices before deciding whether to issue a network request
 				choices[0] = choices[0]
-					.map(c =>
-						this.instantiationService.invokeFunction(postProcessChoiceInContext,
+					.map((c) =>
+						this.instantiationService.invokeFunction(
+							postProcessChoiceInContext,
 							completionState.textDocument,
 							completionState.position,
 							c,
 							isMoreMultiline,
 							logger,
-						)
+						),
 					)
-					.filter(c => c !== undefined);
+					.filter((c) => c !== undefined);
 			}
 
-			if (choices && (choices[1] === ResultType.Cache || choices[1] === ResultType.TypingAsSuggested)) {
+			if (
+				choices &&
+				(choices[1] === ResultType.Cache ||
+					choices[1] === ResultType.TypingAsSuggested)
+			) {
 				telemetryBuilder.setIsFromCache();
 				logContext.markAsFromCache();
 			}
 
 			if (choices !== undefined && choices[0].length === 0) {
-				logger.trace(`Found empty inline suggestions locally via ${resultTypeToString(choices[1])}`);
+				logger.trace(
+					`Found empty inline suggestions locally via ${resultTypeToString(choices[1])}`,
+				);
 				return {
 					type: 'empty',
 					reason: 'cached results empty after post-processing',
@@ -472,20 +657,30 @@ export class GhostTextComputer {
 				// If it's a cycling request, need to show multiple choices
 				(!ghostTextOptions.isCycling || choices[0].length > 1)
 			) {
-				logger.trace(`Found inline suggestions locally via ${resultTypeToString(choices[1])}`);
+				logger.trace(
+					`Found inline suggestions locally via ${resultTypeToString(choices[1])}`,
+				);
 			} else {
 				// No local choices, go to network
-				logger.trace(`Going to network, isCycling=${ghostTextOptions.isCycling}`);
-				const completionsFromNetwork = this.instantiationService.createInstance(CompletionsFromNetwork);
-				if (ghostTextOptions.isCycling) {
-					logger.trace('Fetching all completions for cycling request');
-					const networkChoices = await completionsFromNetwork.getAllCompletionsFromNetwork(
-						requestContext,
-						telemetryData,
-						cancellationToken,
-						ghostTextStrategy.finishedCb,
-						telemetryBuilder,
+				logger.trace(
+					`Going to network, isCycling=${ghostTextOptions.isCycling}`,
+				);
+				const completionsFromNetwork =
+					this.instantiationService.createInstance(
+						CompletionsFromNetwork,
 					);
+				if (ghostTextOptions.isCycling) {
+					logger.trace(
+						'Fetching all completions for cycling request',
+					);
+					const networkChoices =
+						await completionsFromNetwork.getAllCompletionsFromNetwork(
+							requestContext,
+							telemetryData,
+							cancellationToken,
+							ghostTextStrategy.finishedCb,
+							telemetryBuilder,
+						);
 
 					// TODO: if we already had some choices cached from the initial non-cycling request,
 					// and then the cycling request returns no results for some reason, we need to still
@@ -497,16 +692,26 @@ export class GhostTextComputer {
 					// returning `ghostText.produced` instead. Cycling is a manual action and hence uncommon,
 					// so this shouldn't cause much inaccuracy, but we still should fix this.
 					if (networkChoices.type === 'success') {
-						logger.trace(`Cycling network request returned ${networkChoices.value[0].length} choices`);
+						logger.trace(
+							`Cycling network request returned ${networkChoices.value[0].length} choices`,
+						);
 						const resultChoices = choices?.[0] ?? [];
-						networkChoices.value[0].forEach(c => {
+						networkChoices.value[0].forEach((c) => {
 							// Collect only unique displayTexts
-							if (resultChoices.findIndex(v => v.completionText.trim() === c.completionText.trim()) !== -1) {
+							if (
+								resultChoices.findIndex(
+									(v) =>
+										v.completionText.trim() ===
+										c.completionText.trim(),
+								) !== -1
+							) {
 								return;
 							}
 							resultChoices.push(c);
 						});
-						logger.trace(`After deduplication: ${resultChoices.length} unique choices`);
+						logger.trace(
+							`After deduplication: ${resultChoices.length} unique choices`,
+						);
 						choices = [resultChoices, ResultType.Cycling];
 					} else {
 						if (choices === undefined) {
@@ -518,32 +723,44 @@ export class GhostTextComputer {
 					// Wrap an observer around the finished callback to update the
 					// async manager as the request streams in.
 					const finishedCb: FinishedCallback = (text, delta) => {
-						this.asyncCompletionManager.updateCompletion(ourRequestId, text);
+						this.asyncCompletionManager.updateCompletion(
+							ourRequestId,
+							text,
+						);
 						return ghostTextStrategy.finishedCb(text, delta);
 					};
 
-					const asyncCancellationTokenSource = new CancellationTokenSource();
-					const requestPromise = completionsFromNetwork.getCompletionsFromNetwork(
-						requestContext,
-						telemetryData,
-						asyncCancellationTokenSource.token,
-						finishedCb,
-						telemetryBuilder,
-					);
+					const asyncCancellationTokenSource =
+						new CancellationTokenSource();
+					const requestPromise =
+						completionsFromNetwork.getCompletionsFromNetwork(
+							requestContext,
+							telemetryData,
+							asyncCancellationTokenSource.token,
+							finishedCb,
+							telemetryBuilder,
+						);
 					void this.asyncCompletionManager.queueCompletionRequest(
 						ourRequestId,
 						prefix,
 						prompt.prompt,
 						asyncCancellationTokenSource,
-						requestPromise
+						requestPromise,
 					);
-					const c = await this.asyncCompletionManager.getFirstMatchingRequest(ourRequestId, prefix, prompt.prompt, ghostTextOptions.isSpeculative);
+					const c =
+						await this.asyncCompletionManager.getFirstMatchingRequest(
+							ourRequestId,
+							prefix,
+							prompt.prompt,
+							ghostTextOptions.isSpeculative,
+						);
 					if (c === undefined) {
 						logger.trace('Network request returned no results');
 						return {
 							type: 'empty',
 							reason: 'received no results from async completions',
-							telemetryData: mkBasicResultTelemetry(telemetryData),
+							telemetryData:
+								mkBasicResultTelemetry(telemetryData),
 						};
 					}
 					logger.trace('Received completion from network request');
@@ -559,33 +776,55 @@ export class GhostTextComputer {
 				};
 			}
 			const [choicesArray, resultType] = choices;
-			logger.trace(`Final choices: ${choicesArray.length} from ${resultTypeToString(resultType)}`);
+			logger.trace(
+				`Final choices: ${choicesArray.length} from ${resultTypeToString(resultType)}`,
+			);
 
 			const postProcessedChoicesArray = choicesArray
-				.map(c =>
-					this.instantiationService.invokeFunction(postProcessChoiceInContext,
+				.map((c) =>
+					this.instantiationService.invokeFunction(
+						postProcessChoiceInContext,
 						completionState.textDocument,
 						completionState.position,
 						c,
 						isMoreMultiline,
-						logger
-					)
+						logger,
+					),
 				)
-				.filter(c => c !== undefined);
-			logger.trace(`Post-processed to ${postProcessedChoicesArray.length} choices`);
+				.filter((c) => c !== undefined);
+			logger.trace(
+				`Post-processed to ${postProcessedChoicesArray.length} choices`,
+			);
 
 			// Delay response if needed. Note, this must come before the
 			// telemetryWithAddData call since the time_to_produce_ms is computed
 			// there
 			const completionsDelay =
-				this.instantiationService.invokeFunction((getConfig<number>), ConfigKey.CompletionsDelay) ??
-				this.completionsFeaturesService.completionsDelay(preIssuedTelemetryDataWithExp);
+				this.instantiationService.invokeFunction(
+					getConfig<number>,
+					ConfigKey.CompletionsDelay,
+				) ??
+				this.completionsFeaturesService.completionsDelay(
+					preIssuedTelemetryDataWithExp,
+				);
 			const elapsed = now() - preIssuedTelemetryDataWithExp.issuedTime;
 			const remainingDelay = Math.max(completionsDelay - elapsed, 0);
-			if (resultType !== ResultType.TypingAsSuggested && !ghostTextOptions.isCycling && remainingDelay > 0) {
-				logger.debug(`Waiting ${remainingDelay}ms before returning completion`);
+			if (
+				resultType !== ResultType.TypingAsSuggested &&
+				!ghostTextOptions.isCycling &&
+				remainingDelay > 0
+			) {
+				logger.debug(
+					`Waiting ${remainingDelay}ms before returning completion`,
+				);
 				await delay(remainingDelay);
-				if (isCompletionRequestCancelled(this.currentGhostText, ourRequestId, cancellationToken)) {
+				if (
+					isCompletionRequestCancelled(
+						this.currentGhostText,
+						ourRequestId,
+						cancellationToken,
+					)
+				) {
 					logger.debug('Cancelled after completions delay');
 					return {
 						type: 'canceled',
@@ -602,18 +841,22 @@ export class GhostTextComputer {
 					completionState.textDocument,
 					requestContext,
 					choice,
-					telemetryData
+					telemetryData,
 				);
 
 				const suffixCoverage = inlineSuggestion
-					? checkSuffix(completionState.textDocument, completionState.position, choice)
+					? checkSuffix(
+							completionState.textDocument,
+							completionState.position,
+							choice,
+						)
 					: 0;
 
 				// We want to use `newTrailingWs` as the trailing whitespace
 				const ghostCompletion = adjustLeadingWhitespace(
 					choice.choiceIndex,
 					choice.completionText,
-					prompt.trailingWs
+					prompt.trailingWs,
 				);
 				const res: CompletionResult = {
 					completion: ghostCompletion,
@@ -627,12 +870,22 @@ export class GhostTextComputer {
 			}
 
 			// Lift clientCompletionId out of the result in order to include it in the telemetry payload computed by mkBasicResultTelemetry.
-			telemetryData.properties.clientCompletionId = results[0]?.clientCompletionId;
+			telemetryData.properties.clientCompletionId =
+				results[0]?.clientCompletionId;
 			// If reading from the cache or async, capture the look back offset used
-			telemetryData.measurements.foundOffset = results?.[0]?.telemetry?.measurements?.foundOffset ?? -1;
-			logger.debug(`Produced ${results.length} results from ${resultTypeToString(resultType)} at ${telemetryData.measurements.foundOffset} offset`);
+			telemetryData.measurements.foundOffset =
+				results?.[0]?.telemetry?.measurements?.foundOffset ?? -1;
+			logger.debug(
+				`Produced ${results.length} results from ${resultTypeToString(resultType)} at ${telemetryData.measurements.foundOffset} offset`,
+			);
 
-			if (isCompletionRequestCancelled(this.currentGhostText, ourRequestId, cancellationToken)) {
+			if (
+				isCompletionRequestCancelled(
+					this.currentGhostText,
+					ourRequestId,
+					cancellationToken,
+				)
+			) {
 				return {
 					type: 'canceled',
 					reason: 'after post processing completions',
@@ -641,18 +894,30 @@ export class GhostTextComputer {
 			}
 
 			if (!ghostTextOptions.isSpeculative) {
-				logger.trace('Updating current ghost text as request is not speculative');
+				logger.trace(
+					'Updating current ghost text as request is not speculative',
+				);
 				// Update the current ghost text with the new response before returning for the "typing as suggested" UX
-				this.currentGhostText.setGhostText(prefix, prompt.prompt.suffix, postProcessedChoicesArray, resultType);
+				this.currentGhostText.setGhostText(
+					prefix,
+					prompt.prompt.suffix,
+					postProcessedChoicesArray,
+					resultType,
+				);
 			}
 
 			// Overwrite the early fallback `headerRequestId` (set to `id` at the top) with the
 			// winning choice's actual `headerRequestId`. They differ when the result came from
 			// a local cache hit or an in-flight async request produced by a different invocation.
-			telemetryBuilder.setHeaderRequestId(postProcessedChoicesArray[0]?.requestId.headerRequestId ?? ourRequestId);
+			telemetryBuilder.setHeaderRequestId(
+				postProcessedChoicesArray[0]?.requestId.headerRequestId ??
+					ourRequestId,
+			);
 
 			recordPerformance('complete');
-			logger.trace(`Ghost text computation complete, returning ${results.length} results`);
+			logger.trace(
+				`Ghost text computation complete, returning ${results.length} results`,
+			);
 
 			return {
 				type: 'success',
@@ -677,7 +942,14 @@ export async function getGhostText(
 ): Promise<GhostTextResultWithTelemetry<[CompletionResult[], ResultType]>> {
 	const instaService = accessor.get(IInstantiationService);
 	const ghostTextComputer = instaService.createInstance(GhostTextComputer);
-	return ghostTextComputer.getGhostText(completionState, token, options, logContext, telemetryBuilder, logger);
+	return ghostTextComputer.getGhostText(
+		completionState,
+		token,
+		options,
+		logContext,
+		telemetryBuilder,
+		logger,
+	);
 }
 
 /**
@@ -689,20 +961,34 @@ function getLocalInlineSuggestion(
 	accessor: ServicesAccessor,
 	prefix: string,
 	prompt: Prompt,
-	requestMultiline: boolean
+	requestMultiline: boolean,
 ): [APIChoice[], ResultType] | undefined {
 	const currentGhostText = accessor.get(ICompletionsCurrentGhostText);
-	const choicesTyping = currentGhostText.getCompletionsForUserTyping(prefix, prompt.suffix);
-	const choicesCache = getCompletionsFromCache(accessor, prefix, prompt.suffix, requestMultiline);
+	const choicesTyping = currentGhostText.getCompletionsForUserTyping(
+		prefix,
+		prompt.suffix,
+	);
+	const choicesCache = getCompletionsFromCache(
+		accessor,
+		prefix,
+		prompt.suffix,
+		requestMultiline,
+	);
 
 	if (choicesTyping && choicesTyping.length > 0) {
 		// Append cached choices to choicesTyping, if any. Ensure typing choices
 		// are first so that the shown completion doesn't disappear.
 		// Filter duplicates by completionText
 		const choicesCacheDeduped = (choicesCache ?? []).filter(
-			c => !choicesTyping.some(t => t.completionText === c.completionText)
+			(c) =>
+				!choicesTyping.some(
+					(t) => t.completionText === c.completionText,
+				),
 		);
-		return [choicesTyping.concat(choicesCacheDeduped), ResultType.TypingAsSuggested];
+		return [
+			choicesTyping.concat(choicesCacheDeduped),
+			ResultType.TypingAsSuggested,
+		];
 	}
 
 	if (choicesCache && choicesCache.length > 0) {
@@ -711,7 +997,10 @@ function getLocalInlineSuggestion(
 }
 
 /** Checks if the position is valid inline suggestion position. Returns `undefined` if it's position where ghost text shouldn't be displayed */
-function isInlineSuggestion(document: TextDocumentContents, position: IPosition) {
+function isInlineSuggestion(
+	document: TextDocumentContents,
+	position: IPosition,
+) {
 	const line = document.lineAt(position);
 	const textAfterCursor = line.text.substring(position.character);
 	return isInlineSuggestionFromTextAfterCursor(textAfterCursor);
@@ -721,10 +1010,14 @@ function isInlineSuggestion(document: TextDocumentContents, position: IPosition)
 export class ForceMultiLine {
 	static readonly default = new ForceMultiLine();
 
-	constructor(readonly requestMultilineOverride = false) { }
+	constructor(readonly requestMultilineOverride = false) {}
 }
 
-function adjustLeadingWhitespace(index: number, text: string, ws: string): GhostCompletion {
+function adjustLeadingWhitespace(
+	index: number,
+	text: string,
+	ws: string,
+): GhostCompletion {
 	if (ws.length > 0) {
 		if (text.startsWith(ws)) {
 			// Remove common prefix so that it can display in the correct position
@@ -736,7 +1029,10 @@ function adjustLeadingWhitespace(index: number, text: string, ws: string): Ghost
 			};
 		} else {
 			// The idea here is that we do want the display to be as close to the final position as possible
-			const textLeftWs = text.substring(0, text.length - text.trimStart().length);
+			const textLeftWs = text.substring(
+				0,
+				text.length - text.trimStart().length,
+			);
 			if (ws.startsWith(textLeftWs)) {
 				// NOTE: It's possible that `ws` is a bit too over-indented. Example:
 				// def foo(n):
@@ -753,12 +1049,22 @@ function adjustLeadingWhitespace(index: number, text: string, ws: string): Ghost
 				};
 			} else {
 				// We don't know any better so just send `text` back
-				return { completionIndex: index, completionText: text, displayText: text, displayNeedsWsOffset: false };
+				return {
+					completionIndex: index,
+					completionText: text,
+					displayText: text,
+					displayNeedsWsOffset: false,
+				};
 			}
 		}
 	} else {
 		// If we do not know leading whitespace or if it is an empty string, just return input text
-		return { completionIndex: index, completionText: text, displayText: text, displayNeedsWsOffset: false };
+		return {
+			completionIndex: index,
+			completionText: text,
+			displayText: text,
+			displayNeedsWsOffset: false,
+		};
 	}
 }
 
@@ -772,16 +1078,22 @@ function getCompletionsFromCache(
 	accessor: ServicesAccessor,
 	prefix: string,
 	suffix: string,
-	multiline: boolean
+	multiline: boolean,
 ): APIChoice[] | undefined {
-	const logger = accessor.get(ILogService).createSubLogger(['getCompletionsFromCache']);
-	const choices = accessor.get(ICompletionsCacheService).findAll(prefix, suffix);
+	const logger = accessor
+		.get(ILogService)
+		.createSubLogger(['getCompletionsFromCache']);
+	const choices = accessor
+		.get(ICompletionsCacheService)
+		.findAll(prefix, suffix);
 	if (choices.length === 0) {
 		logger.debug('Found no completions in cache');
 		return [];
 	}
 	logger.debug(`Found ${choices.length} completions in cache`);
-	return choices.map(choice => makeGhostAPIChoice(choice, { forceSingleLine: !multiline }));
+	return choices.map((choice) =>
+		makeGhostAPIChoice(choice, { forceSingleLine: !multiline }),
+	);
 }
 
 /** Create a TelemetryWithExp instance for a ghost text request. */
@@ -789,18 +1101,25 @@ async function createTelemetryWithExp(
 	accessor: ServicesAccessor,
 	document: TextDocumentContents,
 	headerRequestId: string,
-	options?: Partial<GetGhostTextOptions>
+	options?: Partial<GetGhostTextOptions>,
 ): Promise<TelemetryWithExp> {
 	const featuresService = accessor.get(ICompletionsFeaturesService);
 	const properties: TelemetryProperties = { headerRequestId };
-	if (options?.opportunityId) { properties.opportunityId = options.opportunityId; }
-	if (options?.selectedCompletionInfo?.text) { properties.completionsActive = 'true'; }
-	if (options?.isSpeculative) { properties.reason = 'speculative'; }
+	if (options?.opportunityId) {
+		properties.opportunityId = options.opportunityId;
+	}
+	if (options?.selectedCompletionInfo?.text) {
+		properties.completionsActive = 'true';
+	}
+	if (options?.isSpeculative) {
+		properties.reason = 'speculative';
+	}
 	const telemetryData = TelemetryData.createAndMarkAsIssued(properties);
-	const telemetryWithExp = await featuresService.updateExPValuesAndAssignments(
-		{ uri: document.uri, languageId: document.detectedLanguageId },
-		telemetryData
-	);
+	const telemetryWithExp =
+		await featuresService.updateExPValuesAndAssignments(
+			{ uri: document.uri, languageId: document.detectedLanguageId },
+			telemetryData,
+		);
 	return telemetryWithExp;
 }
 
@@ -809,7 +1128,7 @@ function telemetryWithAddData(
 	document: TextDocumentContents,
 	requestContext: RequestContext,
 	choice: APIChoice,
-	issuedTelemetryData: TelemetryWithExp
+	issuedTelemetryData: TelemetryWithExp,
 ): TelemetryWithExp {
 	const requestId = choice.requestId;
 	const properties: { [key: string]: string } = {
@@ -818,7 +1137,10 @@ function telemetryWithAddData(
 	};
 	if (choice.generatedChoiceIndex !== undefined) {
 		properties.originalChoiceIndex = properties.choiceIndex;
-		properties.choiceIndex = (10_000 * (choice.generatedChoiceIndex + 1) + choice.choiceIndex).toString();
+		properties.choiceIndex = (
+			10_000 * (choice.generatedChoiceIndex + 1) +
+			choice.choiceIndex
+		).toString();
 	}
 	const measurements: { [key: string]: number } = {
 		compCharLen: choice.completionText.length,
@@ -832,9 +1154,13 @@ function telemetryWithAddData(
 		measurements.meanAlternativeLogProb = choice.meanAlternativeLogProb;
 	}
 
-	const extendedTelemetry = choice.telemetryData.extendedBy(properties, measurements);
+	const extendedTelemetry = choice.telemetryData.extendedBy(
+		properties,
+		measurements,
+	);
 	extendedTelemetry.issuedTime = issuedTelemetryData.issuedTime;
-	extendedTelemetry.measurements.timeToProduceMs = performance.now() - issuedTelemetryData.issuedTime;
+	extendedTelemetry.measurements.timeToProduceMs =
+		performance.now() - issuedTelemetryData.issuedTime;
 	addDocumentTelemetry(extendedTelemetry, document);
 	extendedTelemetry.extendWithRequestId(requestId);
 	return extendedTelemetry;
@@ -849,7 +1175,7 @@ function telemetryIssued(
 	prompt: PromptResponsePresent,
 	baseTelemetryData: TelemetryWithExp,
 	requestInfo: EngineRequestInfo,
-	ghostTextOptions: GetGhostTextOptions
+	ghostTextOptions: GetGhostTextOptions,
 ): TelemetryWithExp {
 	// base ghostText telemetry data
 	const properties: { [key: string]: string } = {
@@ -863,7 +1189,11 @@ function telemetryIssued(
 	// Add repository information
 	const repoInfo = requestContext.repoInfo;
 	telemetryData.properties.gitRepoInformation =
-		repoInfo === undefined ? 'unavailable' : repoInfo === ComputationStatus.PENDING ? 'pending' : 'available';
+		repoInfo === undefined
+			? 'unavailable'
+			: repoInfo === ComputationStatus.PENDING
+				? 'pending'
+				: 'available';
 	if (repoInfo !== undefined && repoInfo !== ComputationStatus.PENDING) {
 		telemetryData.properties.gitRepoUrl = repoInfo.url;
 		telemetryData.properties.gitRepoHost = repoInfo.hostname;
@@ -880,21 +1210,32 @@ function telemetryIssued(
 	}
 
 	telemetryData.properties.engineName = requestInfo.modelId;
-	telemetryData.properties.engineChoiceSource = requestInfo.engineChoiceSource;
+	telemetryData.properties.engineChoiceSource =
+		requestInfo.engineChoiceSource;
 
 	// Add requestMultiline information
-	telemetryData.properties.isMultiline = JSON.stringify(requestContext.multiline);
-	telemetryData.properties.isCycling = JSON.stringify(requestContext.isCycling);
+	telemetryData.properties.isMultiline = JSON.stringify(
+		requestContext.multiline,
+	);
+	telemetryData.properties.isCycling = JSON.stringify(
+		requestContext.isCycling,
+	);
 
 	// calculated values for the issued event
 	const currentLine = document.lineAt(position.line);
-	const lineBeforeCursor = document.getText(LocationFactory.range(currentLine.range.start, position));
-	const restOfLine = document.getText(LocationFactory.range(position, currentLine.range.end));
+	const lineBeforeCursor = document.getText(
+		LocationFactory.range(currentLine.range.start, position),
+	);
+	const restOfLine = document.getText(
+		LocationFactory.range(position, currentLine.range.end),
+	);
 
-	const typeFileHashCode = Array.from(prompt.neighborSource.entries()).map(typeFiles => [
-		typeFiles[0],
-		typeFiles[1].map(f => createSha256Hash(f).toString()), // file name is sensitive. We just keep SHA256 of the file name.
-	]);
+	const typeFileHashCode = Array.from(prompt.neighborSource.entries()).map(
+		(typeFiles) => [
+			typeFiles[0],
+			typeFiles[1].map((f) => createSha256Hash(f).toString()), // file name is sensitive. We just keep SHA256 of the file name.
+		],
+	);
 
 	// Properties that we only want to include in the issued event
 	const extendedProperties: TelemetryProperties = {
@@ -912,9 +1253,14 @@ function telemetryIssued(
 		extendedProperties.promptMetadata = JSON.stringify(prompt.metadata);
 	}
 	if (prompt.contextProvidersTelemetry) {
-		extendedProperties.contextProviders = JSON.stringify(prompt.contextProvidersTelemetry);
+		extendedProperties.contextProviders = JSON.stringify(
+			prompt.contextProvidersTelemetry,
+		);
 	}
-	const telemetryDataToSend = telemetryData.extendedBy(extendedProperties, extendedMeasurements);
+	const telemetryDataToSend = telemetryData.extendedBy(
+		extendedProperties,
+		extendedMeasurements,
+	);
 
 	// telemetrize the issued event
 	telemetry(accessor, 'ghostText.issued', telemetryDataToSend);
@@ -922,7 +1268,10 @@ function telemetryIssued(
 	return telemetryData;
 }
 
-function addDocumentTelemetry(telemetry: TelemetryWithExp, document: TextDocumentContents): void {
+function addDocumentTelemetry(
+	telemetry: TelemetryWithExp,
+	document: TextDocumentContents,
+): void {
 	telemetry.measurements.documentLength = document.getText().length;
 	telemetry.measurements.documentLineCount = document.lineCount;
 }

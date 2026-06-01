@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ICustomInstructionsService, ISkillInfo } from '../../../platform/customInstructions/common/customInstructionsService';
+import {
+	ICustomInstructionsService,
+	ISkillInfo,
+} from '../../../platform/customInstructions/common/customInstructionsService';
 import { IExtensionsService } from '../../../platform/extensions/common/extensionsService';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
 import { hash } from '../../../util/vs/base/common/hash';
@@ -25,9 +28,13 @@ export function sendSkillContentReadTelemetry(
 	skillInfo: ISkillInfo,
 	content: string,
 ): void {
-	const extensionSkillInfo = customInstructionsService.getExtensionSkillInfo(uri);
+	const extensionSkillInfo =
+		customInstructionsService.getExtensionSkillInfo(uri);
 	const extensionId = extensionSkillInfo?.extensionId ?? '';
-	const extensionVersion = extensionId ? extensionsService.getExtension(extensionId)?.packageJSON?.version ?? '' : '';
+	const extensionVersion = extensionId
+		? (extensionsService.getExtension(extensionId)?.packageJSON?.version ??
+			'')
+		: '';
 	const contentHash = content ? String(hash(content)) : '';
 
 	const plaintextProps = {
@@ -39,16 +46,20 @@ export function sendSkillContentReadTelemetry(
 		skillContentHash: contentHash,
 	};
 
-	telemetryService.sendGHTelemetryEvent('skillContentRead',
-		{
-			skillNameHash: String(hash(skillInfo.skillName)),
-			skillExtensionIdHash: extensionId ? String(hash(extensionId)) : '',
-			skillExtensionVersion: plaintextProps.skillExtensionVersion,
-			skillStorage: plaintextProps.skillStorage,
-			skillContentHash: contentHash,
-		}
-	);
+	telemetryService.sendGHTelemetryEvent('skillContentRead', {
+		skillNameHash: String(hash(skillInfo.skillName)),
+		skillExtensionIdHash: extensionId ? String(hash(extensionId)) : '',
+		skillExtensionVersion: plaintextProps.skillExtensionVersion,
+		skillStorage: plaintextProps.skillStorage,
+		skillContentHash: contentHash,
+	});
 
-	telemetryService.sendEnhancedGHTelemetryEvent('skillContentRead', plaintextProps);
-	telemetryService.sendInternalMSFTTelemetryEvent('skillContentRead', plaintextProps);
+	telemetryService.sendEnhancedGHTelemetryEvent(
+		'skillContentRead',
+		plaintextProps,
+	);
+	telemetryService.sendInternalMSFTTelemetryEvent(
+		'skillContentRead',
+		plaintextProps,
+	);
 }

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BugIndicatingError } from '../../../../base/common/errors.js';
-import { OffsetRange } from '../ranges/offsetRange.js';
-import { Point } from './point.js';
-import { Size2D } from './size.js';
+import { BugIndicatingError } from "../../../../base/common/errors.js";
+import { OffsetRange } from "../ranges/offsetRange.js";
+import { Point } from "./point.js";
+import { Size2D } from "./size.js";
 
 export class Rect {
 	public static fromPoint(point: Point): Rect {
@@ -21,16 +21,34 @@ export class Rect {
 		return new Rect(point.x, point.y, point.x + size.x, point.y + size.y);
 	}
 
-	public static fromLeftTopRightBottom(left: number, top: number, right: number, bottom: number): Rect {
+	public static fromLeftTopRightBottom(
+		left: number,
+		top: number,
+		right: number,
+		bottom: number,
+	): Rect {
 		return new Rect(left, top, right, bottom);
 	}
 
-	public static fromLeftTopWidthHeight(left: number, top: number, width: number, height: number): Rect {
+	public static fromLeftTopWidthHeight(
+		left: number,
+		top: number,
+		width: number,
+		height: number,
+	): Rect {
 		return new Rect(left, top, left + width, top + height);
 	}
 
-	public static fromRanges(leftRight: OffsetRange, topBottom: OffsetRange): Rect {
-		return new Rect(leftRight.start, topBottom.start, leftRight.endExclusive, topBottom.endExclusive);
+	public static fromRanges(
+		leftRight: OffsetRange,
+		topBottom: OffsetRange,
+	): Rect {
+		return new Rect(
+			leftRight.start,
+			topBottom.start,
+			leftRight.endExclusive,
+			topBottom.endExclusive,
+		);
 	}
 
 	public static hull(rects: Rect[]): Rect {
@@ -49,8 +67,12 @@ export class Rect {
 		return new Rect(left, top, right, bottom);
 	}
 
-	public get width() { return this.right - this.left; }
-	public get height() { return this.bottom - this.top; }
+	public get width() {
+		return this.right - this.left;
+	}
+	public get height() {
+		return this.bottom - this.top;
+	}
 
 	constructor(
 		public readonly left: number,
@@ -59,22 +81,44 @@ export class Rect {
 		public readonly bottom: number,
 	) {
 		if (left > right) {
-			throw new BugIndicatingError('Invalid arguments: Horizontally offset by ' + (left - right));
+			throw new BugIndicatingError(
+				"Invalid arguments: Horizontally offset by " + (left - right),
+			);
 		}
 		if (top > bottom) {
-			throw new BugIndicatingError('Invalid arguments: Vertically offset by ' + (top - bottom));
+			throw new BugIndicatingError(
+				"Invalid arguments: Vertically offset by " + (top - bottom),
+			);
 		}
 	}
 
 	withMargin(margin: number): Rect;
 	withMargin(marginVertical: number, marginHorizontal: number): Rect;
-	withMargin(marginTop: number, marginRight: number, marginBottom: number, marginLeft: number): Rect;
-	withMargin(marginOrVerticalOrTop: number, rightOrHorizontal?: number, bottom?: number, left?: number): Rect {
+	withMargin(
+		marginTop: number,
+		marginRight: number,
+		marginBottom: number,
+		marginLeft: number,
+	): Rect;
+	withMargin(
+		marginOrVerticalOrTop: number,
+		rightOrHorizontal?: number,
+		bottom?: number,
+		left?: number,
+	): Rect {
 		let marginLeft, marginRight, marginTop, marginBottom;
 
 		// Single margin value
-		if (rightOrHorizontal === undefined && bottom === undefined && left === undefined) {
-			marginLeft = marginRight = marginTop = marginBottom = marginOrVerticalOrTop;
+		if (
+			rightOrHorizontal === undefined &&
+			bottom === undefined &&
+			left === undefined
+		) {
+			marginLeft =
+				marginRight =
+				marginTop =
+				marginBottom =
+					marginOrVerticalOrTop;
 		}
 		// Vertical and horizontal margins
 		else if (bottom === undefined && left === undefined) {
@@ -100,12 +144,7 @@ export class Rect {
 	intersectVertical(range: OffsetRange): Rect {
 		const newTop = Math.max(this.top, range.start);
 		const newBottom = Math.min(this.bottom, range.endExclusive);
-		return new Rect(
-			this.left,
-			newTop,
-			this.right,
-			Math.max(newTop, newBottom),
-		);
+		return new Rect(this.left, newTop, this.right, Math.max(newTop, newBottom));
 	}
 
 	intersectHorizontal(range: OffsetRange): Rect {
@@ -146,17 +185,21 @@ export class Rect {
 	}
 
 	containsRect(other: Rect): boolean {
-		return this.left <= other.left
-			&& this.top <= other.top
-			&& this.right >= other.right
-			&& this.bottom >= other.bottom;
+		return (
+			this.left <= other.left &&
+			this.top <= other.top &&
+			this.right >= other.right &&
+			this.bottom >= other.bottom
+		);
 	}
 
 	containsPoint(point: Point): boolean {
-		return this.left <= point.x
-			&& this.top <= point.y
-			&& this.right >= point.x
-			&& this.bottom >= point.y;
+		return (
+			this.left <= point.x &&
+			this.top <= point.y &&
+			this.right >= point.x &&
+			this.bottom >= point.y
+		);
 	}
 
 	moveToBeContainedIn(parent: Rect): Rect {
@@ -198,15 +241,30 @@ export class Rect {
 	}
 
 	translateX(delta: number): Rect {
-		return new Rect(this.left + delta, this.top, this.right + delta, this.bottom);
+		return new Rect(
+			this.left + delta,
+			this.top,
+			this.right + delta,
+			this.bottom,
+		);
 	}
 
 	translateY(delta: number): Rect {
-		return new Rect(this.left, this.top + delta, this.right, this.bottom + delta);
+		return new Rect(
+			this.left,
+			this.top + delta,
+			this.right,
+			this.bottom + delta,
+		);
 	}
 
 	translate(point: Point): Rect {
-		return new Rect(this.left + point.x, this.top + point.y, this.right + point.x, this.bottom + point.y);
+		return new Rect(
+			this.left + point.x,
+			this.top + point.y,
+			this.right + point.x,
+			this.bottom + point.y,
+		);
 	}
 
 	deltaRight(delta: number): Rect {
@@ -243,7 +301,7 @@ export class Rect {
 
 	toStyles() {
 		return {
-			position: 'absolute',
+			position: "absolute",
 			left: `${this.left}px`,
 			top: `${this.top}px`,
 			width: `${this.width}px`,

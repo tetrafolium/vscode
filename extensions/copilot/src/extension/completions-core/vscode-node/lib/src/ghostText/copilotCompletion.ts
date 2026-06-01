@@ -5,9 +5,17 @@
 import { CopilotNamedAnnotationList } from '../../../../../../platform/completions-core/common/openai/copilotAnnotations';
 import { generateUuid } from '../../../../../../util/vs/base/common/uuid';
 import { TelemetryWithExp } from '../telemetry';
-import { IPosition, IRange, LocationFactory, TextDocumentContents } from '../textDocument';
+import {
+	IPosition,
+	IRange,
+	LocationFactory,
+	TextDocumentContents,
+} from '../textDocument';
 import { CompletionResult } from './ghostText';
-import { ITextEditorOptions, normalizeIndentCharacter } from './normalizeIndent';
+import {
+	ITextEditorOptions,
+	normalizeIndentCharacter,
+} from './normalizeIndent';
 import { ResultType } from './resultType';
 
 export interface CopilotCompletion {
@@ -31,20 +39,23 @@ export function completionsFromGhostTextResults(
 	document: TextDocumentContents,
 	position: IPosition,
 	textEditorOptions?: ITextEditorOptions,
-	lastShownCompletionIndex?: number
+	lastShownCompletionIndex?: number,
 ): CopilotCompletion[] {
 	const currentLine = document.lineAt(position);
-	let completions = completionResults.map(result => {
+	let completions = completionResults.map((result) => {
 		const range = LocationFactory.range(
 			LocationFactory.position(position.line, 0),
-			LocationFactory.position(position.line, position.character + result.suffixCoverage)
+			LocationFactory.position(
+				position.line,
+				position.character + result.suffixCoverage,
+			),
 		);
 		let insertText = '';
 		if (textEditorOptions) {
 			result.completion = normalizeIndentCharacter(
 				textEditorOptions,
 				result.completion,
-				currentLine.isEmptyOrWhitespace
+				currentLine.isEmptyOrWhitespace,
 			);
 		}
 		if (
@@ -56,7 +67,9 @@ export function completionsFromGhostTextResults(
 			insertText = result.completion.completionText;
 		} else {
 			const rangeFromStart = LocationFactory.range(range.start, position);
-			insertText = document.getText(rangeFromStart) + result.completion.displayText;
+			insertText =
+				document.getText(rangeFromStart) +
+				result.completion.displayText;
 		}
 
 		const completion: CopilotCompletion = {
@@ -76,10 +89,17 @@ export function completionsFromGhostTextResults(
 		return completion;
 	});
 	//If we are in typing as suggested flow, we want to put the last displayed completion at the top of the list to keep it selected
-	if (resultType === ResultType.TypingAsSuggested && lastShownCompletionIndex !== undefined) {
-		const lastShownCompletion = completions.find(predicate => predicate.index === lastShownCompletionIndex);
+	if (
+		resultType === ResultType.TypingAsSuggested &&
+		lastShownCompletionIndex !== undefined
+	) {
+		const lastShownCompletion = completions.find(
+			(predicate) => predicate.index === lastShownCompletionIndex,
+		);
 		if (lastShownCompletion) {
-			const restCompletions = completions.filter(predicate => predicate.index !== lastShownCompletionIndex);
+			const restCompletions = completions.filter(
+				(predicate) => predicate.index !== lastShownCompletionIndex,
+			);
 			completions = [lastShownCompletion, ...restCompletions];
 		}
 	}

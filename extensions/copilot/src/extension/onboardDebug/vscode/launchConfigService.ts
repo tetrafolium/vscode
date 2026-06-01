@@ -8,17 +8,30 @@ import * as vscode from 'vscode';
 import { OffsetLineColumnConverter } from '../../../platform/editing/common/offsetLineColumnConverter';
 import { cloneAndChange } from '../../../util/vs/base/common/objects';
 import { URI } from '../../../util/vs/base/common/uri';
-import { ICommandInteractor, ILaunchConfigService, ILaunchJSON } from '../common/launchConfigService';
+import {
+	ICommandInteractor,
+	ILaunchConfigService,
+	ILaunchJSON,
+} from '../common/launchConfigService';
 
 export class LaunchConfigService implements ILaunchConfigService {
 	declare readonly _serviceBrand: undefined;
 
-
 	/** @inheritdoc */
-	async add(workspaceFolder: URI | undefined, toAdd: { configurations: vscode.DebugConfiguration[]; inputs?: unknown[] }): Promise<void> {
-		const config = vscode.workspace.getConfiguration('launch', workspaceFolder);
+	async add(
+		workspaceFolder: URI | undefined,
+		toAdd: {
+			configurations: vscode.DebugConfiguration[];
+			inputs?: unknown[];
+		},
+	): Promise<void> {
+		const config = vscode.workspace.getConfiguration(
+			'launch',
+			workspaceFolder,
+		);
 
-		const existingConfigs = config.get<vscode.DebugConfiguration[]>('configurations');
+		const existingConfigs =
+			config.get<vscode.DebugConfiguration[]>('configurations');
 		if (toAdd.configurations.length) {
 			await config.update(
 				'configurations',
@@ -64,11 +77,25 @@ export class LaunchConfigService implements ILaunchConfigService {
 
 							const convert = new OffsetLineColumnConverter(text);
 							const start = convert.offsetToPosition(startOffset);
-							const end = convert.offsetToPosition(endOffset + length);
-							range = new vscode.Range(start.lineNumber - 1, start.column - 1, end.lineNumber - 1, end.column - 1);
+							const end = convert.offsetToPosition(
+								endOffset + length,
+							);
+							range = new vscode.Range(
+								start.lineNumber - 1,
+								start.column - 1,
+								end.lineNumber - 1,
+								end.column - 1,
+							);
 						}
 					},
-					onLiteralValue(value, _offset, _length, _startLine, _startCharacter, pathSupplier) {
+					onLiteralValue(
+						value,
+						_offset,
+						_length,
+						_startLine,
+						_startCharacter,
+						pathSupplier,
+					) {
 						if (value === showConfigName) {
 							const path = pathSupplier();
 							if (path[path.length - 1] === 'name') {
@@ -86,18 +113,27 @@ export class LaunchConfigService implements ILaunchConfigService {
 	}
 
 	/** @inheritdoc */
-	async launch(config: vscode.DebugConfiguration | ILaunchJSON): Promise<void> {
-		const debugConfig: vscode.DebugConfiguration | undefined = 'configurations' in config && config.configurations.length ? config.configurations[0] : config;
+	async launch(
+		config: vscode.DebugConfiguration | ILaunchJSON,
+	): Promise<void> {
+		const debugConfig: vscode.DebugConfiguration | undefined =
+			'configurations' in config && config.configurations.length
+				? config.configurations[0]
+				: config;
 		if (!debugConfig) {
 			return;
 		}
 		await vscode.debug.startDebugging(undefined, debugConfig);
 	}
 
-	async resolveConfigurationInputs(launchJson: ILaunchJSON, defaults?: Map<string, string>, interactor?: ICommandInteractor) {
+	async resolveConfigurationInputs(
+		launchJson: ILaunchJSON,
+		defaults?: Map<string, string>,
+		interactor?: ICommandInteractor,
+	) {
 		if (!interactor) {
 			interactor = {
-				isGenerating: () => { },
+				isGenerating: () => {},
 				ensureTask: () => Promise.resolve(true),
 				prompt: async (text: string, defaultValue?: string) => {
 					return await vscode.window.showInputBox({
@@ -112,7 +148,10 @@ export class LaunchConfigService implements ILaunchConfigService {
 		const inputs = new Map<string, string>();
 		for (const input of launchJson.inputs || []) {
 			const key = `\${input:${input.id}}`;
-			const value = await interactor.prompt(input.description, defaults?.get(key));
+			const value = await interactor.prompt(
+				input.description,
+				defaults?.get(key),
+			);
 			if (value === undefined) {
 				return undefined;
 			}
@@ -120,14 +159,17 @@ export class LaunchConfigService implements ILaunchConfigService {
 			inputs.set(key, value);
 		}
 
-		const config: vscode.DebugConfiguration = cloneAndChange(launchJson.configurations[0], orig => {
-			if (typeof orig === 'string') {
-				for (const [key, value] of inputs) {
-					orig = orig.replaceAll(key, value);
+		const config: vscode.DebugConfiguration = cloneAndChange(
+			launchJson.configurations[0],
+			(orig) => {
+				if (typeof orig === 'string') {
+					for (const [key, value] of inputs) {
+						orig = orig.replaceAll(key, value);
+					}
+					return orig;
 				}
-				return orig;
-			}
-		});
+			},
+		);
 
 		return { config, inputs };
 	}

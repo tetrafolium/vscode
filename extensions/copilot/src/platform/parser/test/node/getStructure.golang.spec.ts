@@ -16,7 +16,6 @@ describe('getStructure - golang', () => {
 	}
 
 	test('source with different syntax constructs', async () => {
-
 		const source = await fromFixture('test.go');
 
 		expect(await golangStruct(source)).toMatchSnapshot();

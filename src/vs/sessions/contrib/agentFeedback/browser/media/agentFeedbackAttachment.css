@@ -40,7 +40,9 @@
 	padding-right: 4px;
 }
 
-.agent-feedback-hover-tree .monaco-list-row:hover .agent-feedback-hover-action-bar {
+.agent-feedback-hover-tree
+	.monaco-list-row:hover
+	.agent-feedback-hover-action-bar {
 	display: flex;
 }
 

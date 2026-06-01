@@ -3,11 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDisposable } from '../../../../base/common/lifecycle.js';
-import { IObservable } from '../../../../base/common/observable.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { IDisposable } from "../../../../base/common/lifecycle.js";
+import { IObservable } from "../../../../base/common/observable.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
 
-export const IUserAttentionService = createDecorator<IUserAttentionService>('userAttentionService');
+export const IUserAttentionService = createDecorator<IUserAttentionService>(
+	"userAttentionService",
+);
 
 /**
  * Service that tracks whether the user is actively paying attention to VS Code.
@@ -50,5 +52,8 @@ export interface IUserAttentionService {
 	 * @param callback The callback to fire once the focus time has been accumulated.
 	 * @returns A disposable that cancels the callback when disposed.
 	 */
-	fireAfterGivenFocusTimePassed(focusTimeMs: number, callback: () => void): IDisposable;
+	fireAfterGivenFocusTimePassed(
+		focusTimeMs: number,
+		callback: () => void,
+	): IDisposable;
 }

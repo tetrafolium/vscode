@@ -5,7 +5,10 @@
 
 import * as fs from 'fs/promises';
 import { IVSCodeExtensionContext } from '../../../../platform/extContext/common/extensionContext';
-import { createDirectoryIfNotExists, IFileSystemService } from '../../../../platform/filesystem/common/fileSystemService';
+import {
+	createDirectoryIfNotExists,
+	IFileSystemService,
+} from '../../../../platform/filesystem/common/fileSystemService';
 import { ILogService } from '../../../../platform/log/common/logService';
 import { createServiceIdentifier } from '../../../../util/common/services';
 import { Lazy } from '../../../../util/vs/base/common/lazy';
@@ -30,7 +33,8 @@ export function isImageMimeType(mimeType: string): boolean {
 	return mimeType.toLowerCase() in map;
 }
 
-export const ICopilotCLIImageSupport = createServiceIdentifier<ICopilotCLIImageSupport>('ICopilotCLIImageSupport');
+export const ICopilotCLIImageSupport =
+	createServiceIdentifier<ICopilotCLIImageSupport>('ICopilotCLIImageSupport');
 
 export class CopilotCLIImageSupport implements ICopilotCLIImageSupport {
 	readonly _serviceBrand: undefined;
@@ -38,21 +42,32 @@ export class CopilotCLIImageSupport implements ICopilotCLIImageSupport {
 	private readonly initialized: Lazy<Promise<void>>;
 	private readonly trustedImages = new ResourceSet();
 	constructor(
-		@IVSCodeExtensionContext private readonly context: IVSCodeExtensionContext,
+		@IVSCodeExtensionContext
+		private readonly context: IVSCodeExtensionContext,
 		@ILogService private readonly logService: ILogService,
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
 	) {
-		this.storageDir = URI.joinPath(this.context.globalStorageUri, 'copilot-cli-images');
+		this.storageDir = URI.joinPath(
+			this.context.globalStorageUri,
+			'copilot-cli-images',
+		);
 		this.initialized = new Lazy<Promise<void>>(() => this.initialize());
 		void this.initialized.value;
 	}
 
 	private async initialize(): Promise<void> {
 		try {
-			await createDirectoryIfNotExists(this.fileSystemService, this.storageDir);
+			await createDirectoryIfNotExists(
+				this.fileSystemService,
+				this.storageDir,
+			);
 			void this.cleanupOldImages();
 		} catch (error) {
-			this.logService.error(`[CopilotCLISession] ImageStorage: Failed to initialize`, error);
+			this.logService.error(
+				`[CopilotCLISession] ImageStorage: Failed to initialize`,
+				error,
+			);
 		}
 	}
 
@@ -66,16 +81,22 @@ export class CopilotCLIImageSupport implements ICopilotCLIImageSupport {
 		const randomId = Math.random().toString(36).substring(2, 10);
 		const extension = this.getExtension(mimeType);
 		const filename = `${timestamp}-${randomId}${extension}`;
-		const imageUri = URI.file(URI.joinPath(this.storageDir, filename).fsPath);
+		const imageUri = URI.file(
+			URI.joinPath(this.storageDir, filename).fsPath,
+		);
 
 		await fs.writeFile(imageUri.fsPath, imageData);
 		this.trustedImages.add(imageUri);
 		return imageUri;
 	}
 
-	async cleanupOldImages(maxAgeMs: number = 7 * 24 * 60 * 60 * 1000): Promise<void> {
+	async cleanupOldImages(
+		maxAgeMs: number = 7 * 24 * 60 * 60 * 1000,
+	): Promise<void> {
 		try {
-			const entries = await fs.readdir(this.storageDir.fsPath, { withFileTypes: true });
+			const entries = await fs.readdir(this.storageDir.fsPath, {
+				withFileTypes: true,
+			});
 			const now = Date.now();
 			const cutoff = now - maxAgeMs;
 

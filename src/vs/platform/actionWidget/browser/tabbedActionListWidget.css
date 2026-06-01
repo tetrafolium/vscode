@@ -18,11 +18,17 @@
 	gap: 4px;
 }
 
-.action-widget .tabbed-action-list-tabbar .monaco-custom-radio > .monaco-button {
+.action-widget
+	.tabbed-action-list-tabbar
+	.monaco-custom-radio
+	> .monaco-button {
 	border: none;
 	border-radius: 4px;
 }
 
-.action-widget .tabbed-action-list-tabbar .monaco-custom-radio > .monaco-button:not(.active) {
+.action-widget
+	.tabbed-action-list-tabbar
+	.monaco-custom-radio
+	> .monaco-button:not(.active) {
 	color: var(--vscode-descriptionForeground);
 }

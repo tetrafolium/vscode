@@ -12,17 +12,33 @@ import { ProgramContext, RecoverableError, SnippetProvider } from './types';
 import { Symbols } from './typescripts';
 
 namespace Nodes {
-
-	export function getLines(node: tt.Node, includeJSDocComment: boolean, sourceFile?: tt.SourceFile | undefined): string[] {
+	export function getLines(
+		node: tt.Node,
+		includeJSDocComment: boolean,
+		sourceFile?: tt.SourceFile | undefined,
+	): string[] {
 		sourceFile ??= node.getSourceFile();
-		const textStartPosition = node.getStart(sourceFile, includeJSDocComment);
-		const startRange = sourceFile.getLineAndCharacterOfPosition(textStartPosition);
-		const text = sourceFile.text.substring(textStartPosition, node.getEnd());
+		const textStartPosition = node.getStart(
+			sourceFile,
+			includeJSDocComment,
+		);
+		const startRange =
+			sourceFile.getLineAndCharacterOfPosition(textStartPosition);
+		const text = sourceFile.text.substring(
+			textStartPosition,
+			node.getEnd(),
+		);
 		const lines = text.split(/\r?\n/g);
 		// We have an indentation on the start line
 		if (startRange.character > 0) {
-			const lineStartPosition = sourceFile.getPositionOfLineAndCharacter(startRange.line, 0);
-			const indent = sourceFile.text.substring(lineStartPosition, textStartPosition);
+			const lineStartPosition = sourceFile.getPositionOfLineAndCharacter(
+				startRange.line,
+				0,
+			);
+			const indent = sourceFile.text.substring(
+				lineStartPosition,
+				textStartPosition,
+			);
 			stripIndent(lines, indent);
 		}
 		trimLines(lines);
@@ -50,7 +66,11 @@ namespace Nodes {
 		return undefined;
 	}
 
-	function stripIndent(lines: string[], indent: string, start: number = 1): void {
+	function stripIndent(
+		lines: string[],
+		indent: string,
+		start: number = 1,
+	): void {
 		let allHaveIndent: boolean = true;
 		for (let index = start; index < lines.length; index++) {
 			if (!lines[index].startsWith(indent)) {
@@ -76,7 +96,6 @@ namespace Nodes {
 }
 
 abstract class AbstractEmitter {
-
 	protected readonly context: RequestContext;
 
 	private indent: number;
@@ -85,8 +104,11 @@ abstract class AbstractEmitter {
 	public readonly source: string;
 	protected readonly additionalSources: Set<string>;
 
-
-	constructor(context: RequestContext, source: tt.SourceFile, indent: number = 0) {
+	constructor(
+		context: RequestContext,
+		source: tt.SourceFile,
+		indent: number = 0,
+	) {
 		this.context = context;
 		this.indent = indent;
 		this.source = source.fileName;
@@ -104,7 +126,10 @@ abstract class AbstractEmitter {
 			}
 			let keys: string[] | undefined = [];
 			for (const symbol of symbols) {
-				const key = Symbols.createVersionedKey(symbol, this.context.session);
+				const key = Symbols.createVersionedKey(
+					symbol,
+					this.context.session,
+				);
 				if (key !== undefined) {
 					keys.push(key);
 				} else {
@@ -149,11 +174,15 @@ abstract class AbstractEmitter {
 		}
 	}
 
-	protected addConstructorDeclaration(declaration: tt.ConstructorDeclaration): void {
+	protected addConstructorDeclaration(
+		declaration: tt.ConstructorDeclaration,
+	): void {
 		this.addDocumentation(declaration);
 		const elements: string[] = [];
 		if (declaration.modifiers !== undefined) {
-			elements.push(declaration.modifiers.map(m => m.getText()).join(' '));
+			elements.push(
+				declaration.modifiers.map((m) => m.getText()).join(' '),
+			);
 			elements.push(' ');
 		}
 		elements.push('constructor');
@@ -163,26 +192,38 @@ abstract class AbstractEmitter {
 		this.addLine(elements.join(''));
 	}
 
-	protected addPropertyDeclaration(declaration: tt.PropertyDeclaration | tt.PropertySignature): void {
-		this.addLines(Nodes.getLines(declaration, this.context.includeDocumentation));
+	protected addPropertyDeclaration(
+		declaration: tt.PropertyDeclaration | tt.PropertySignature,
+	): void {
+		this.addLines(
+			Nodes.getLines(declaration, this.context.includeDocumentation),
+		);
 	}
 
-	protected addMethodDeclaration(declaration: tt.MethodDeclaration | tt.MethodSignature): void {
+	protected addMethodDeclaration(
+		declaration: tt.MethodDeclaration | tt.MethodSignature,
+	): void {
 		this.addDocumentation(declaration);
 		const elements: string[] = [];
 		if (declaration.modifiers !== undefined) {
-			elements.push(declaration.modifiers.map(m => m.getText()).join(' '));
+			elements.push(
+				declaration.modifiers.map((m) => m.getText()).join(' '),
+			);
 			elements.push(' ');
 		}
 		elements.push(declaration.name.getText());
 		if (declaration.typeParameters !== undefined) {
 			elements.push('<');
-			elements.push(declaration.typeParameters.map(p => p.getText()).join(', '));
+			elements.push(
+				declaration.typeParameters.map((p) => p.getText()).join(', '),
+			);
 			elements.push('>');
 		}
 		elements.push('(');
 		if (declaration.parameters !== undefined) {
-			elements.push(declaration.parameters.map(p => p.getText()).join(', '));
+			elements.push(
+				declaration.parameters.map((p) => p.getText()).join(', '),
+			);
 		}
 		elements.push(')');
 		if (declaration.type !== undefined) {
@@ -193,17 +234,23 @@ abstract class AbstractEmitter {
 		this.addLine(elements.join(''));
 	}
 
-	protected addCallSignatureDeclaration(declaration: tt.CallSignatureDeclaration): void {
+	protected addCallSignatureDeclaration(
+		declaration: tt.CallSignatureDeclaration,
+	): void {
 		this.addDocumentation(declaration);
 		const elements: string[] = [];
 		if (declaration.typeParameters !== undefined) {
 			elements.push('<');
-			elements.push(declaration.typeParameters.map(p => p.getText()).join(', '));
+			elements.push(
+				declaration.typeParameters.map((p) => p.getText()).join(', '),
+			);
 			elements.push('>');
 		}
 		elements.push('(');
 		if (declaration.parameters !== undefined) {
-			elements.push(declaration.parameters.map(p => p.getText()).join(', '));
+			elements.push(
+				declaration.parameters.map((p) => p.getText()).join(', '),
+			);
 		}
 		elements.push(')');
 		if (declaration.type !== undefined) {
@@ -214,19 +261,28 @@ abstract class AbstractEmitter {
 		this.addLine(elements.join(''));
 	}
 
-	protected addGetAccessorDeclaration(declaration: tt.GetAccessorDeclaration): void {
+	protected addGetAccessorDeclaration(
+		declaration: tt.GetAccessorDeclaration,
+	): void {
 		this.addAccessorDeclaration(declaration, 'get');
 	}
 
-	protected addSetAccessorDeclaration(declaration: tt.SetAccessorDeclaration): void {
+	protected addSetAccessorDeclaration(
+		declaration: tt.SetAccessorDeclaration,
+	): void {
 		this.addAccessorDeclaration(declaration, 'set');
 	}
 
-	private addAccessorDeclaration(declaration: tt.GetAccessorDeclaration | tt.SetAccessorDeclaration, prefix: 'get' | 'set'): void {
+	private addAccessorDeclaration(
+		declaration: tt.GetAccessorDeclaration | tt.SetAccessorDeclaration,
+		prefix: 'get' | 'set',
+	): void {
 		this.addDocumentation(declaration);
 		const elements: string[] = [];
 		if (declaration.modifiers !== undefined) {
-			elements.push(declaration.modifiers.map(m => m.getText()).join(' '));
+			elements.push(
+				declaration.modifiers.map((m) => m.getText()).join(' '),
+			);
 			elements.push(' ');
 		}
 		elements.push(`${prefix} `);
@@ -239,7 +295,11 @@ abstract class AbstractEmitter {
 		this.addLine(elements.join(''));
 	}
 
-	protected addFunctionDeclaration(declaration: tt.FunctionDeclaration, name?: string, ensureModifier?: string): void {
+	protected addFunctionDeclaration(
+		declaration: tt.FunctionDeclaration,
+		name?: string,
+		ensureModifier?: string,
+	): void {
 		name ??= declaration.name?.getText() ?? '';
 		this.addDocumentation(declaration);
 		const elements: string[] = [];
@@ -265,7 +325,10 @@ abstract class AbstractEmitter {
 		}
 	}
 
-	protected getModifiers(modifiers: tt.NodeArray<tt.ModifierLike> | undefined, prefix?: string): string {
+	protected getModifiers(
+		modifiers: tt.NodeArray<tt.ModifierLike> | undefined,
+		prefix?: string,
+	): string {
 		if (modifiers === undefined) {
 			return '';
 		}
@@ -274,7 +337,11 @@ abstract class AbstractEmitter {
 			result.push(prefix);
 		}
 		for (const modifier of modifiers) {
-			if (modifier.kind === ts.SyntaxKind.AsyncKeyword || modifier.kind === ts.SyntaxKind.DeclareKeyword || modifier.kind === ts.SyntaxKind.ExportKeyword) {
+			if (
+				modifier.kind === ts.SyntaxKind.AsyncKeyword ||
+				modifier.kind === ts.SyntaxKind.DeclareKeyword ||
+				modifier.kind === ts.SyntaxKind.ExportKeyword
+			) {
 				continue;
 			}
 			result.push(modifier.getText());
@@ -282,25 +349,31 @@ abstract class AbstractEmitter {
 		return result.join(' ');
 	}
 
-	protected getTypeParameters(typeParameters: tt.NodeArray<tt.TypeParameterDeclaration> | undefined): string {
+	protected getTypeParameters(
+		typeParameters: tt.NodeArray<tt.TypeParameterDeclaration> | undefined,
+	): string {
 		if (typeParameters === undefined) {
 			return '';
 		}
 		const result: string[] = [];
 		result.push('<');
-		result.push(typeParameters.map(p => p.getText()).join(', '));
+		result.push(typeParameters.map((p) => p.getText()).join(', '));
 		result.push('>');
 		return result.join('');
 	}
 
-	private getParameters(parameters: tt.NodeArray<tt.ParameterDeclaration> | undefined): string {
+	private getParameters(
+		parameters: tt.NodeArray<tt.ParameterDeclaration> | undefined,
+	): string {
 		if (parameters === undefined) {
 			return '';
 		}
-		return parameters.map(p => p.getText()).join(', ');
+		return parameters.map((p) => p.getText()).join(', ');
 	}
 
-	private getReturnTypes(declaration: tt.MethodDeclaration | tt.FunctionDeclaration): string {
+	private getReturnTypes(
+		declaration: tt.MethodDeclaration | tt.FunctionDeclaration,
+	): string {
 		if (declaration.type === undefined) {
 			return '';
 		}
@@ -309,13 +382,17 @@ abstract class AbstractEmitter {
 }
 
 abstract class TypeEmitter extends AbstractEmitter {
-
 	protected readonly type: tt.Symbol;
 	protected readonly name: string;
 
 	private readonly seen: Set<tt.__String>;
 
-	constructor(context: RequestContext, source: tt.SourceFile, type: tt.Symbol, name: string) {
+	constructor(
+		context: RequestContext,
+		source: tt.SourceFile,
+		type: tt.Symbol,
+		name: string,
+	) {
 		super(context, source);
 		this.type = type;
 		this.name = name;
@@ -338,16 +415,25 @@ abstract class TypeEmitter extends AbstractEmitter {
 		}
 		if (Symbols.isProperty(member)) {
 			const declaration = declarations[0];
-			if (ts.isPropertyDeclaration(declaration) || ts.isPropertySignature(declaration)) {
+			if (
+				ts.isPropertyDeclaration(declaration) ||
+				ts.isPropertySignature(declaration)
+			) {
 				this.addPropertyDeclaration(declaration);
 			}
 		} else if (Symbols.isMethod(member)) {
 			for (const declaration of declarations) {
-				if (ts.isMethodDeclaration(declaration) || ts.isMethodSignature(declaration)) {
+				if (
+					ts.isMethodDeclaration(declaration) ||
+					ts.isMethodSignature(declaration)
+				) {
 					this.addMethodDeclaration(declaration);
 				}
 			}
-		} else if (Symbols.isSetAccessor(member) || Symbols.isGetAccessor(member)) {
+		} else if (
+			Symbols.isSetAccessor(member) ||
+			Symbols.isGetAccessor(member)
+		) {
 			for (const declaration of declarations) {
 				if (ts.isGetAccessorDeclaration(declaration)) {
 					this.addGetAccessorDeclaration(declaration);
@@ -376,7 +462,11 @@ abstract class TypeEmitter extends AbstractEmitter {
 			return '';
 		}
 		const declaration = declarations[0];
-		if (ts.isClassDeclaration(declaration) || ts.isInterfaceDeclaration(declaration) || ts.isTypeAliasDeclaration(declaration)) {
+		if (
+			ts.isClassDeclaration(declaration) ||
+			ts.isInterfaceDeclaration(declaration) ||
+			ts.isTypeAliasDeclaration(declaration)
+		) {
 			if (declaration.typeParameters !== undefined) {
 				return super.getTypeParameters(declaration.typeParameters);
 			}
@@ -386,18 +476,27 @@ abstract class TypeEmitter extends AbstractEmitter {
 }
 
 class ClassEmitter extends TypeEmitter {
-
 	private readonly superClasses: tt.Symbol[] | undefined;
 	private readonly includePrivates: boolean;
 
 	public readonly key: string | undefined;
 
-	constructor(context: RequestContext, symbols: Symbols, source: tt.SourceFile, clazz: tt.Symbol, name: string, includeSuperClasses: boolean, includePrivates: boolean) {
+	constructor(
+		context: RequestContext,
+		symbols: Symbols,
+		source: tt.SourceFile,
+		clazz: tt.Symbol,
+		name: string,
+		includeSuperClasses: boolean,
+		includePrivates: boolean,
+	) {
 		super(context, source, clazz, name);
 		this.includePrivates = includePrivates;
 		this.key = undefined;
 		if (includeSuperClasses) {
-			this.superClasses = new Array<tt.Symbol>(...symbols.getAllSuperClasses(clazz));
+			this.superClasses = new Array<tt.Symbol>(
+				...symbols.getAllSuperClasses(clazz),
+			);
 			this.key = this.makeKey([clazz, ...this.superClasses]);
 		} else {
 			this.key = this.makeKey(clazz);
@@ -434,14 +533,21 @@ class ClassEmitter extends TypeEmitter {
 }
 
 class InterfaceEmitter extends TypeEmitter {
-
 	private readonly superTypes: tt.Symbol[];
 
 	public readonly key: string | undefined;
 
-	constructor(context: RequestContext, symbols: Symbols, source: tt.SourceFile, type: tt.Symbol, name: string) {
+	constructor(
+		context: RequestContext,
+		symbols: Symbols,
+		source: tt.SourceFile,
+		type: tt.Symbol,
+		name: string,
+	) {
 		super(context, source, type, name);
-		this.superTypes = new Array<tt.Symbol>(...symbols.getAllSuperTypes(type)).filter(t => Symbols.isInterface(t));
+		this.superTypes = new Array<tt.Symbol>(
+			...symbols.getAllSuperTypes(type),
+		).filter((t) => Symbols.isInterface(t));
 		if (this.superTypes.length === 0) {
 			this.key = this.makeKey(type);
 		} else {
@@ -469,13 +575,17 @@ class InterfaceEmitter extends TypeEmitter {
 }
 
 class EnumEmitter extends AbstractEmitter {
-
 	private readonly type: tt.Symbol;
 	private readonly name: string;
 
 	public readonly key: string | undefined;
 
-	constructor(context: RequestContext, source: tt.SourceFile, type: tt.Symbol, name: string) {
+	constructor(
+		context: RequestContext,
+		source: tt.SourceFile,
+		type: tt.Symbol,
+		name: string,
+	) {
 		super(context, source);
 		this.type = type;
 		this.name = name;
@@ -483,7 +593,9 @@ class EnumEmitter extends AbstractEmitter {
 	}
 
 	public emit(): void {
-		this.addLine(`${Symbols.isConstEnum(this.type) ? 'const ' : ''}enum ${this.name} {`);
+		this.addLine(
+			`${Symbols.isConstEnum(this.type) ? 'const ' : ''}enum ${this.name} {`,
+		);
 		this.increaseIndent();
 		if (this.type.exports !== undefined) {
 			let index = 0;
@@ -495,7 +607,10 @@ class EnumEmitter extends AbstractEmitter {
 				}
 				const declaration = declarations[0];
 				if (ts.isEnumMember(declaration)) {
-					const lines = Nodes.getLines(declaration, this.context.includeDocumentation);
+					const lines = Nodes.getLines(
+						declaration,
+						this.context.includeDocumentation,
+					);
 					if (index < last) {
 						lines[lines.length - 1] += ',';
 					}
@@ -510,10 +625,14 @@ class EnumEmitter extends AbstractEmitter {
 }
 
 class TypeLiteralEmitter extends TypeEmitter {
-
 	public readonly key: string | undefined;
 
-	constructor(context: RequestContext, source: tt.SourceFile, type: tt.Symbol, name: string) {
+	constructor(
+		context: RequestContext,
+		source: tt.SourceFile,
+		type: tt.Symbol,
+		name: string,
+	) {
 		super(context, source, type, name);
 	}
 
@@ -529,11 +648,15 @@ class TypeLiteralEmitter extends TypeEmitter {
 }
 
 class FunctionEmitter extends AbstractEmitter {
-
 	private readonly func: tt.Symbol;
 	private readonly name: string;
 
-	constructor(context: RequestContext, source: tt.SourceFile, func: tt.Symbol, name?: string) {
+	constructor(
+		context: RequestContext,
+		source: tt.SourceFile,
+		func: tt.Symbol,
+		name?: string,
+	) {
 		super(context, source);
 		this.func = func;
 		this.name = name ?? func.getName();
@@ -552,7 +675,11 @@ class FunctionEmitter extends AbstractEmitter {
 					continue;
 				}
 				if (ts.isFunctionDeclaration(declaration)) {
-					this.addFunctionDeclaration(declaration, this.name, 'declare');
+					this.addFunctionDeclaration(
+						declaration,
+						this.name,
+						'declare',
+					);
 					this.additionalSources.add(fileName);
 				}
 			}
@@ -560,13 +687,16 @@ class FunctionEmitter extends AbstractEmitter {
 	}
 }
 
-
 class ModuleEmitter extends AbstractEmitter {
-
 	private readonly module: tt.Symbol;
 	private readonly name: string;
 
-	constructor(context: RequestContext, source: tt.SourceFile, module: tt.Symbol, name?: string) {
+	constructor(
+		context: RequestContext,
+		source: tt.SourceFile,
+		module: tt.Symbol,
+		name?: string,
+	) {
 		super(context, source);
 		this.module = module;
 		this.name = name ?? module.getName();
@@ -587,7 +717,10 @@ class ModuleEmitter extends AbstractEmitter {
 		this.addLine('}');
 	}
 
-	private addExports(members: tt.SymbolTable, currentSourceFile: tt.SourceFile): void {
+	private addExports(
+		members: tt.SymbolTable,
+		currentSourceFile: tt.SourceFile,
+	): void {
 		for (const [_name, member] of members) {
 			const declarations = member.declarations;
 			if (declarations === undefined) {
@@ -601,7 +734,11 @@ class ModuleEmitter extends AbstractEmitter {
 						continue;
 					}
 					if (ts.isFunctionDeclaration(declaration)) {
-						this.addFunctionDeclaration(declaration, undefined, 'declare');
+						this.addFunctionDeclaration(
+							declaration,
+							undefined,
+							'declare',
+						);
 						this.additionalSources.add(fileName);
 					}
 				}
@@ -610,8 +747,10 @@ class ModuleEmitter extends AbstractEmitter {
 	}
 }
 
-export class CodeSnippetBuilder extends ProgramContext implements SnippetProvider {
-
+export class CodeSnippetBuilder
+	extends ProgramContext
+	implements SnippetProvider
+{
 	private readonly lines: string[];
 	private source: string | undefined;
 	private readonly additionalSources: Set<string>;
@@ -621,7 +760,11 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 	private readonly symbols: Symbols;
 	private readonly currentSourceFile: tt.SourceFile;
 
-	constructor(context: RequestContext, symbols: Symbols, currentSourceFile: tt.SourceFile) {
+	constructor(
+		context: RequestContext,
+		symbols: Symbols,
+		currentSourceFile: tt.SourceFile,
+	) {
 		super();
 		this.lines = [];
 		this.source = undefined;
@@ -631,14 +774,18 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 		this.currentSourceFile = currentSourceFile;
 	}
 
-	protected override getSymbolInfo(symbol: tt.Symbol): { skip: true } | { skip: false; primary: tt.SourceFile } {
+	protected override getSymbolInfo(
+		symbol: tt.Symbol,
+	): { skip: true } | { skip: false; primary: tt.SourceFile } {
 		const result = super.getSymbolInfo(symbol);
-		if (result.skip === false && result.primary.fileName === this.currentSourceFile.fileName) {
+		if (
+			result.skip === false &&
+			result.primary.fileName === this.currentSourceFile.fileName
+		) {
 			return { skip: true };
 		}
 		return result;
 	}
-
 
 	protected increaseIndent(): void {
 		this.indent++;
@@ -675,18 +822,37 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 
 	public snippet(key: string | undefined): CodeSnippet {
 		if (this.source === undefined) {
-			throw new RecoverableError('No source', RecoverableError.NoSourceFile);
+			throw new RecoverableError(
+				'No source',
+				RecoverableError.NoSourceFile,
+			);
 		}
 		this.additionalSources.delete(this.source);
-		return CodeSnippet.create(key, this.source, this.additionalSources.size === 0 ? undefined : [...this.additionalSources], this.lines.join('\n'));
+		return CodeSnippet.create(
+			key,
+			this.source,
+			this.additionalSources.size === 0
+				? undefined
+				: [...this.additionalSources],
+			this.lines.join('\n'),
+		);
 	}
 
 	public addDeclaration(declaration: tt.Declaration): void {
 		const sourceFile = declaration.getSourceFile();
-		if (sourceFile.fileName === this.currentSourceFile.fileName || this.skipDeclaration(declaration, sourceFile)) {
+		if (
+			sourceFile.fileName === this.currentSourceFile.fileName ||
+			this.skipDeclaration(declaration, sourceFile)
+		) {
 			return;
 		}
-		this.addLines(Nodes.getLines(declaration, this.context.includeDocumentation, sourceFile));
+		this.addLines(
+			Nodes.getLines(
+				declaration,
+				this.context.includeDocumentation,
+				sourceFile,
+			),
+		);
 		this.addSource(sourceFile.fileName);
 	}
 
@@ -697,11 +863,18 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 		if (this.indent === 0) {
 			this.lines.push(...lines);
 		} else {
-			this.lines.push(...lines.map(line => `${'\t'.repeat(this.indent)}${line}`));
+			this.lines.push(
+				...lines.map((line) => `${'\t'.repeat(this.indent)}${line}`),
+			);
 		}
 	}
 
-	public addClassSymbol(clazz: tt.Symbol, name: string, includeSuperClasses: boolean = true, includePrivates: boolean = false): void {
+	public addClassSymbol(
+		clazz: tt.Symbol,
+		name: string,
+		includeSuperClasses: boolean = true,
+		includePrivates: boolean = false,
+	): void {
 		if (!Symbols.isClass(clazz)) {
 			return;
 		}
@@ -709,7 +882,17 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 		if (info.skip) {
 			return;
 		}
-		this.addEmitter(new ClassEmitter(this.context, this.symbols, info.primary, clazz, name, includeSuperClasses, includePrivates));
+		this.addEmitter(
+			new ClassEmitter(
+				this.context,
+				this.symbols,
+				info.primary,
+				clazz,
+				name,
+				includeSuperClasses,
+				includePrivates,
+			),
+		);
 	}
 
 	public addTypeLiteralSymbol(type: tt.Symbol, name: string): void {
@@ -720,7 +903,9 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 		if (info.skip) {
 			return;
 		}
-		this.addEmitter(new TypeLiteralEmitter(this.context, info.primary, type, name));
+		this.addEmitter(
+			new TypeLiteralEmitter(this.context, info.primary, type, name),
+		);
 	}
 
 	public addInterfaceSymbol(iface: tt.Symbol, name: string): void {
@@ -731,7 +916,15 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 		if (info.skip) {
 			return;
 		}
-		this.addEmitter(new InterfaceEmitter(this.context, this.symbols, info.primary, iface, name));
+		this.addEmitter(
+			new InterfaceEmitter(
+				this.context,
+				this.symbols,
+				info.primary,
+				iface,
+				name,
+			),
+		);
 	}
 
 	public addTypeAliasSymbol(symbol: tt.Symbol, _name: string): void {
@@ -760,7 +953,9 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 		if (info.skip) {
 			return;
 		}
-		this.addEmitter(new FunctionEmitter(this.context, info.primary, func, name));
+		this.addEmitter(
+			new FunctionEmitter(this.context, info.primary, func, name),
+		);
 	}
 
 	public addModuleSymbol(module: tt.Symbol, name?: string): void {
@@ -771,7 +966,9 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 		if (info.skip) {
 			return;
 		}
-		this.addEmitter(new ModuleEmitter(this.context, info.primary, module, name));
+		this.addEmitter(
+			new ModuleEmitter(this.context, info.primary, module, name),
+		);
 	}
 
 	public addTypeSymbol(type: tt.Symbol, name?: string): void {
@@ -815,13 +1012,19 @@ export class CodeSnippetBuilder extends ProgramContext implements SnippetProvide
 			uri = emitter.source;
 			additionalUris = emitter.getAdditionalSources();
 			if (emitter.key !== undefined) {
-				session.cacheCode(emitter.key, { value: lines, uri, additionalUris });
+				session.cacheCode(emitter.key, {
+					value: lines,
+					uri,
+					additionalUris,
+				});
 			}
 		}
 		if (this.indent === 0) {
 			this.lines.push(...lines);
 		} else {
-			this.lines.push(...lines.map(line => `${'\t'.repeat(this.indent)}${line}`));
+			this.lines.push(
+				...lines.map((line) => `${'\t'.repeat(this.indent)}${line}`),
+			);
 		}
 		this.addSource(uri);
 		this.addAdditionalSource(additionalUris);

@@ -3,22 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDiffChange } from '../../../../base/common/diff/diff.js';
-import { CellKind, INotebookDiffResult } from './notebookCommon.js';
+import { IDiffChange } from "../../../../base/common/diff/diff.js";
+import { CellKind, INotebookDiffResult } from "./notebookCommon.js";
 
-export type CellDiffInfo = {
-	originalCellIndex: number;
-	modifiedCellIndex: number;
-	type: 'unchanged' | 'modified';
-} |
-{
-	originalCellIndex: number;
-	type: 'delete';
-} |
-{
-	modifiedCellIndex: number;
-	type: 'insert';
-};
+export type CellDiffInfo =
+	| {
+			originalCellIndex: number;
+			modifiedCellIndex: number;
+			type: "unchanged" | "modified";
+	  }
+	| {
+			originalCellIndex: number;
+			type: "delete";
+	  }
+	| {
+			modifiedCellIndex: number;
+			type: "insert";
+	  };
 
 interface ICell {
 	cellKind: CellKind;
@@ -30,7 +31,11 @@ interface ICell {
 // 	metadataChanged: boolean;
 // }
 
-export function computeDiff(originalModel: { readonly cells: readonly ICell[] }, modifiedModel: { readonly cells: readonly ICell[] }, diffResult: INotebookDiffResult) {
+export function computeDiff(
+	originalModel: { readonly cells: readonly ICell[] },
+	modifiedModel: { readonly cells: readonly ICell[] },
+	diffResult: INotebookDiffResult,
+) {
 	const cellChanges = diffResult.cellsDiff.changes;
 	const cellDiffInfo: CellDiffInfo[] = [];
 	let originalCellIndex = 0;
@@ -49,7 +54,7 @@ export function computeDiff(originalModel: { readonly cells: readonly ICell[] },
 				cellDiffInfo.push({
 					originalCellIndex: originalCellIndex + j,
 					modifiedCellIndex: modifiedCellIndex + j,
-					type: 'unchanged'
+					type: "unchanged",
 				});
 			} else {
 				if (firstChangeIndex === -1) {
@@ -58,12 +63,16 @@ export function computeDiff(originalModel: { readonly cells: readonly ICell[] },
 				cellDiffInfo.push({
 					originalCellIndex: originalCellIndex + j,
 					modifiedCellIndex: modifiedCellIndex + j,
-					type: 'modified'
+					type: "modified",
 				});
 			}
 		}
 
-		const modifiedLCS = computeModifiedLCS(change, originalModel, modifiedModel);
+		const modifiedLCS = computeModifiedLCS(
+			change,
+			originalModel,
+			modifiedModel,
+		);
 		if (modifiedLCS.length && firstChangeIndex === -1) {
 			firstChangeIndex = cellDiffInfo.length;
 		}
@@ -77,17 +86,21 @@ export function computeDiff(originalModel: { readonly cells: readonly ICell[] },
 		cellDiffInfo.push({
 			originalCellIndex: i,
 			modifiedCellIndex: i - originalCellIndex + modifiedCellIndex,
-			type: 'unchanged'
+			type: "unchanged",
 		});
 	}
 
 	return {
 		cellDiffInfo,
-		firstChangeIndex
+		firstChangeIndex,
 	};
 }
 
-function computeModifiedLCS(change: IDiffChange, originalModel: { readonly cells: readonly ICell[] }, modifiedModel: { readonly cells: readonly ICell[] }) {
+function computeModifiedLCS(
+	change: IDiffChange,
+	originalModel: { readonly cells: readonly ICell[] },
+	modifiedModel: { readonly cells: readonly ICell[] },
+) {
 	const result: CellDiffInfo[] = [];
 	// modified cells
 	const modifiedLen = Math.min(change.originalLength, change.modifiedLength);
@@ -98,18 +111,18 @@ function computeModifiedLCS(change: IDiffChange, originalModel: { readonly cells
 		if (originalCell.cellKind !== modifiedCell.cellKind) {
 			result.push({
 				originalCellIndex: change.originalStart + j,
-				type: 'delete'
+				type: "delete",
 			});
 			result.push({
 				modifiedCellIndex: change.modifiedStart + j,
-				type: 'insert'
+				type: "insert",
 			});
 		} else {
 			const isTheSame = originalCell.equal(modifiedCell);
 			result.push({
 				originalCellIndex: change.originalStart + j,
 				modifiedCellIndex: change.modifiedStart + j,
-				type: isTheSame ? 'unchanged' : 'modified'
+				type: isTheSame ? "unchanged" : "modified",
 			});
 		}
 	}
@@ -118,14 +131,14 @@ function computeModifiedLCS(change: IDiffChange, originalModel: { readonly cells
 		// deletion
 		result.push({
 			originalCellIndex: change.originalStart + j,
-			type: 'delete'
+			type: "delete",
 		});
 	}
 
 	for (let j = modifiedLen; j < change.modifiedLength; j++) {
 		result.push({
 			modifiedCellIndex: change.modifiedStart + j,
-			type: 'insert'
+			type: "insert",
 		});
 	}
 

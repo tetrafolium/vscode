@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import * as sinon from 'sinon';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { DomActivityTracker } from '../../browser/domActivityTracker.js';
-import { UserActivityService } from '../../common/userActivityService.js';
+import assert from "assert";
+import * as sinon from "sinon";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../base/test/common/utils.js";
+import { TestInstantiationService } from "../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import { DomActivityTracker } from "../../browser/domActivityTracker.js";
+import { UserActivityService } from "../../common/userActivityService.js";
 
-suite('DomActivityTracker', () => {
+suite("DomActivityTracker", () => {
 	let uas: UserActivityService;
 	let insta: TestInstantiationService;
 	let clock: sinon.SinonFakeTimers;
@@ -28,31 +28,30 @@ suite('DomActivityTracker', () => {
 		clock.restore();
 	});
 
-
-	test('marks inactive on no input', () => {
+	test("marks inactive on no input", () => {
 		assert.equal(uas.isActive, true);
 		clock.tick(maxTimeToBecomeIdle);
 		assert.equal(uas.isActive, false);
 	});
 
-	test('preserves activity state when active', () => {
+	test("preserves activity state when active", () => {
 		assert.equal(uas.isActive, true);
 
 		const div = 10;
 		for (let i = 0; i < div; i++) {
-			document.dispatchEvent(new MouseEvent('keydown'));
+			document.dispatchEvent(new MouseEvent("keydown"));
 			clock.tick(maxTimeToBecomeIdle / div);
 		}
 
 		assert.equal(uas.isActive, true);
 	});
 
-	test('restores active state', () => {
+	test("restores active state", () => {
 		assert.equal(uas.isActive, true);
 		clock.tick(maxTimeToBecomeIdle);
 		assert.equal(uas.isActive, false);
 
-		document.dispatchEvent(new MouseEvent('keydown'));
+		document.dispatchEvent(new MouseEvent("keydown"));
 		assert.equal(uas.isActive, true);
 
 		clock.tick(maxTimeToBecomeIdle);

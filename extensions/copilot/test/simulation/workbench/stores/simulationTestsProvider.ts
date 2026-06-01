@@ -32,7 +32,6 @@ export interface ISimulationTest {
 }
 
 export class SimulationTestsProvider extends Disposable {
-
 	private readonly detectedTests: DetectedTests;
 	private readonly nesDetectedTests: DetectedTests;
 	private readonly resolvedBaseline: ResolvedSimulationRun;
@@ -41,7 +40,9 @@ export class SimulationTestsProvider extends Disposable {
 	readonly baselineJSONProvider: BaselineJSONProvider;
 
 	@mobx.observable
-	public comparedBaselineJSON: 'workingTreeBaselineJSON' | 'beforeRunBaselineJSON' = 'workingTreeBaselineJSON';
+	public comparedBaselineJSON:
+		| 'workingTreeBaselineJSON'
+		| 'beforeRunBaselineJSON' = 'workingTreeBaselineJSON';
 
 	@mobx.computed
 	public get allLanguageIds(): readonly string[] {
@@ -59,13 +60,24 @@ export class SimulationTestsProvider extends Disposable {
 		switch (this.testSource.value) {
 			case TestSource.External: {
 				const runs = this.resolvedAMLRun.tests;
-				const compareAgainstRun = this.resolvedAMLRun.testsToCompareAgainst;
+				const compareAgainstRun =
+					this.resolvedAMLRun.testsToCompareAgainst;
 
-				const compareAgainstRunMap = new Map<string /* test name */, TestRuns>();
-				compareAgainstRun.value.forEach(testRun => compareAgainstRunMap.set(testRun.name, testRun));
+				const compareAgainstRunMap = new Map<
+					string /* test name */,
+					TestRuns
+				>();
+				compareAgainstRun.value.forEach((testRun) =>
+					compareAgainstRunMap.set(testRun.name, testRun),
+				);
 
 				return runs.value.map((el): ISimulationTest => {
-					const runnerStatus = new RunnerTestStatus(el.name, el.runs.length, el.runs, 0);
+					const runnerStatus = new RunnerTestStatus(
+						el.name,
+						el.runs.length,
+						el.runs,
+						0,
+					);
 					return {
 						name: el.name,
 						suiteName: '',
@@ -73,9 +85,11 @@ export class SimulationTestsProvider extends Disposable {
 						baseline: compareAgainstRunMap.get(el.name),
 						runnerStatus,
 						activeEditorLangId: el.activeEditorLanguageId,
-						errorsOnlyInBefore: el.runs[el.runs.length - 1].errorsOnlyInBefore,
-						errorsOnlyInAfter: el.runs[el.runs.length - 1].errorsOnlyInAfter,
-						simulationInputPath: el.simulationInputPath
+						errorsOnlyInBefore:
+							el.runs[el.runs.length - 1].errorsOnlyInBefore,
+						errorsOnlyInAfter:
+							el.runs[el.runs.length - 1].errorsOnlyInAfter,
+						simulationInputPath: el.simulationInputPath,
 					};
 				});
 			}
@@ -94,19 +108,22 @@ export class SimulationTestsProvider extends Disposable {
 					statusMap.set(el.name, el);
 				}
 
-				return nesTests.map((el): ISimulationTest => ({
-					name: el.name,
-					suiteName: el.suiteName,
-					baselineJSON: undefined,
-					baseline: baselineRunsMap.get(el.name),
-					runnerStatus: statusMap.get(el.name),
-				}));
+				return nesTests.map(
+					(el): ISimulationTest => ({
+						name: el.name,
+						suiteName: el.suiteName,
+						baselineJSON: undefined,
+						baseline: baselineRunsMap.get(el.name),
+						runnerStatus: statusMap.get(el.name),
+					}),
+				);
 			}
 			case TestSource.Local: {
 				const detectedTests = this.detectedTests.tests;
-				const baselineJSONArr = this.comparedBaselineJSON === 'beforeRunBaselineJSON'
-					? this.baselineJSONProvider.baselineJSONBeforeCurrentRun
-					: this.baselineJSONProvider.workingTreeBaselineJSON;
+				const baselineJSONArr =
+					this.comparedBaselineJSON === 'beforeRunBaselineJSON'
+						? this.baselineJSONProvider.baselineJSONBeforeCurrentRun
+						: this.baselineJSONProvider.workingTreeBaselineJSON;
 				const baselineRunsArr = this.resolvedBaseline.runs.value;
 				const statusArr = this.runner.testStatus;
 
@@ -125,13 +142,15 @@ export class SimulationTestsProvider extends Disposable {
 					statusMap.set(el.name, el);
 				}
 
-				return detectedTests.map((el): ISimulationTest => ({
-					name: el.name,
-					suiteName: el.suiteName,
-					baselineJSON: baselineJSONMap.get(el.name),
-					baseline: baselineRunsMap.get(el.name),
-					runnerStatus: statusMap.get(el.name),
-				}));
+				return detectedTests.map(
+					(el): ISimulationTest => ({
+						name: el.name,
+						suiteName: el.suiteName,
+						baselineJSON: baselineJSONMap.get(el.name),
+						baseline: baselineRunsMap.get(el.name),
+						runnerStatus: statusMap.get(el.name),
+					}),
+				);
 			}
 		}
 	}
@@ -148,15 +167,25 @@ export class SimulationTestsProvider extends Disposable {
 		mobx.makeObservable(this);
 
 		this.detectedTests = this._register(new DetectedTests());
-		this.nesDetectedTests = this._register(new DetectedTests(() => {
-			const scenariosPath = nesExternalOptions.externalScenariosPath.value;
-			if (!scenariosPath) {
-				return [];
-			}
-			const devNull = process.platform === 'win32' ? 'NUL' : '/dev/null';
-			return ['--nes=external', `--external-scenarios=${scenariosPath}`, `--output=${devNull}`];
-		}));
-		this.baselineJSONProvider = this._register(new BaselineJSONProvider(runner));
+		this.nesDetectedTests = this._register(
+			new DetectedTests(() => {
+				const scenariosPath =
+					nesExternalOptions.externalScenariosPath.value;
+				if (!scenariosPath) {
+					return [];
+				}
+				const devNull =
+					process.platform === 'win32' ? 'NUL' : '/dev/null';
+				return [
+					'--nes=external',
+					`--external-scenarios=${scenariosPath}`,
+					`--output=${devNull}`,
+				];
+			}),
+		);
+		this.baselineJSONProvider = this._register(
+			new BaselineJSONProvider(runner),
+		);
 		this.resolvedBaseline = new ResolvedSimulationRun(baselineProvider);
 		this.resolvedAMLRun = new ResolvedAMLRun(amlProvider);
 	}

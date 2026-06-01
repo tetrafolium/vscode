@@ -16,5 +16,8 @@ export interface CopilotExtensionApi {
 	 * @param options.reason - The reason for selecting the scope. Will be used in the placeholder hint.
 	 * @returns A promise that resolves to the selected scope as a `Selection` object, or `undefined` if no scope was selected.
 	 */
-	selectScope: (editor?: TextEditor, options?: { reason?: string }) => Promise<Selection | undefined>;
+	selectScope: (
+		editor?: TextEditor,
+		options?: { reason?: string },
+	) => Promise<Selection | undefined>;
 }

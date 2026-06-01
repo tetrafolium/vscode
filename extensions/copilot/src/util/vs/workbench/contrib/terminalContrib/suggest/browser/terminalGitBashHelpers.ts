@@ -13,7 +13,10 @@
  *   "/c/Users/foo" => "C:\\Users\\foo"
  *   "/d/bar" => "D:\\bar"
  */
-export function gitBashToWindowsPath(path: string, driveLetter?: string): string {
+export function gitBashToWindowsPath(
+	path: string,
+	driveLetter?: string,
+): string {
 	// Dynamically determine the system drive (default to 'C:' if not set)
 	const systemDrive = (driveLetter || 'C:').toUpperCase();
 	// Handle root "/"
@@ -39,6 +42,6 @@ export function gitBashToWindowsPath(path: string, driveLetter?: string): string
 export function windowsToGitBashPath(path: string): string {
 	// Convert Windows path (e.g. C:\Users\foo) to Git Bash path (e.g. /c/Users/foo)
 	return path
-		.replace(/^[a-zA-Z]:\\/, match => `/${match[0].toLowerCase()}/`)
+		.replace(/^[a-zA-Z]:\\/, (match) => `/${match[0].toLowerCase()}/`)
 		.replace(/\\/g, '/');
 }

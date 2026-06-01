@@ -5,7 +5,11 @@
 
 import { ServicesAccessor } from '../../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { Trait } from '../../../../types/src';
-import { telemetry, TelemetryProperties, TelemetryWithExp } from '../../telemetry';
+import {
+	telemetry,
+	TelemetryProperties,
+	TelemetryWithExp,
+} from '../../telemetry';
 import { ResolvedContextItem } from '../contextProviderRegistry';
 import { ICompletionsContextProviderService } from '../contextProviderStatistics';
 import { filterContextItemsByType, TraitWithId } from './contextItemSchemas';
@@ -13,25 +17,40 @@ import { filterContextItemsByType, TraitWithId } from './contextItemSchemas';
 export function getTraitsFromContextItems(
 	accessor: ServicesAccessor,
 	completionId: string,
-	resolvedContextItems: ResolvedContextItem[]
+	resolvedContextItems: ResolvedContextItem[],
 ): TraitWithId[] {
-	const traitsContextItems = filterContextItemsByType(resolvedContextItems, 'Trait');
+	const traitsContextItems = filterContextItemsByType(
+		resolvedContextItems,
+		'Trait',
+	);
 
 	// Set expectations for the traits
 	for (const item of traitsContextItems) {
-		setupExpectationsForTraits(accessor, completionId, item.data, item.providerId);
+		setupExpectationsForTraits(
+			accessor,
+			completionId,
+			item.data,
+			item.providerId,
+		);
 	}
 
 	// Flatten and sort the traits by importance.
 	// TODO: once we deprecate the old API, importance should also dictate elision.
-	const traits: TraitWithId[] = traitsContextItems.flatMap(p => p.data);
+	const traits: TraitWithId[] = traitsContextItems.flatMap((p) => p.data);
 	return traits.sort((a, b) => (a.importance ?? 0) - (b.importance ?? 0));
 }
 
-function setupExpectationsForTraits(accessor: ServicesAccessor, completionId: string, traits: TraitWithId[], providerId: string) {
-	const statistics = accessor.get(ICompletionsContextProviderService).getStatisticsForCompletion(completionId);
+function setupExpectationsForTraits(
+	accessor: ServicesAccessor,
+	completionId: string,
+	traits: TraitWithId[],
+	providerId: string,
+) {
+	const statistics = accessor
+		.get(ICompletionsContextProviderService)
+		.getStatisticsForCompletion(completionId);
 
-	traits.forEach(t => {
+	traits.forEach((t) => {
 		statistics.addExpectations(providerId, [[t, 'included']]);
 	});
 }
@@ -49,7 +68,7 @@ export function ReportTraitsTelemetry(
 	traits: Trait[],
 	detectedLanguageId: string,
 	clientLanguageId: string,
-	telemetryData: TelemetryWithExp
+	telemetryData: TelemetryWithExp,
 ) {
 	if (traits.length > 0) {
 		const properties: TelemetryProperties = {};

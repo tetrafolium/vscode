@@ -4,12 +4,31 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { composeFetchMiddleware, createAdvancedFetch } from '../advancedFetcher';
-import type { FetchMiddleware, HttpFetchFn, HttpHeaders, HttpRequest, HttpResponse, WindowStateProvider } from '../fetchTypes';
-import { AuthBlockedError, authBlockedMiddleware } from '../middleware/authBlockedMiddleware';
+import {
+	composeFetchMiddleware,
+	createAdvancedFetch,
+} from '../advancedFetcher';
+import type {
+	FetchMiddleware,
+	HttpFetchFn,
+	HttpHeaders,
+	HttpRequest,
+	HttpResponse,
+	WindowStateProvider,
+} from '../fetchTypes';
+import {
+	AuthBlockedError,
+	authBlockedMiddleware,
+} from '../middleware/authBlockedMiddleware';
 import { etagMiddleware } from '../middleware/etagMiddleware';
-import { ServerBackoffError, serverErrorBackoffMiddleware } from '../middleware/serverErrorBackoffMiddleware';
-import { WindowInactiveError, windowActiveMiddleware } from '../middleware/windowActiveMiddleware';
+import {
+	ServerBackoffError,
+	serverErrorBackoffMiddleware,
+} from '../middleware/serverErrorBackoffMiddleware';
+import {
+	WindowInactiveError,
+	windowActiveMiddleware,
+} from '../middleware/windowActiveMiddleware';
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -18,27 +37,38 @@ function makeHeaders(entries: Record<string, string> = {}): HttpHeaders {
 	return { get: (name: string) => map.get(name.toLowerCase()) ?? null };
 }
 
-function makeResponse(status: number, headers: Record<string, string> = {}, body: unknown = null): HttpResponse {
+function makeResponse(
+	status: number,
+	headers: Record<string, string> = {},
+	body: unknown = null,
+): HttpResponse {
 	// Normalise header keys to lowercase for realistic behaviour
 	const lower: Record<string, string> = {};
 	for (const [k, v] of Object.entries(headers)) {
 		lower[k.toLowerCase()] = v;
 	}
 	const serialized = body !== null ? JSON.stringify(body) : null;
-	const bodyStream = serialized !== null
-		? new ReadableStream<Uint8Array>({
-			start(controller) {
-				controller.enqueue(new TextEncoder().encode(serialized));
-				controller.close();
-			},
-		})
-		: null;
+	const bodyStream =
+		serialized !== null
+			? new ReadableStream<Uint8Array>({
+					start(controller) {
+						controller.enqueue(
+							new TextEncoder().encode(serialized),
+						);
+						controller.close();
+					},
+				})
+			: null;
 	return {
 		status,
 		headers: makeHeaders(lower),
 		body: bodyStream,
-		async text() { return serialized ?? ''; },
-		async json() { return JSON.parse(await this.text()); },
+		async text() {
+			return serialized ?? '';
+		},
+		async json() {
+			return JSON.parse(await this.text());
+		},
 	};
 }
 
@@ -46,51 +76,69 @@ function stubFetch(response: HttpResponse): HttpFetchFn {
 	return vi.fn<HttpFetchFn>().mockResolvedValue(response);
 }
 
-const defaultRequest: HttpRequest = { url: 'https://api.test/data', headers: {} };
+const defaultRequest: HttpRequest = {
+	url: 'https://api.test/data',
+	headers: {},
+};
 
 // ── etagMiddleware ──────────────────────────────────────────────────────
 
 describe('etagMiddleware', () => {
 	it('does not add conditional headers on first request', async () => {
-		const inner = stubFetch(makeResponse(200, { 'ETag': '"abc"' }));
+		const inner = stubFetch(makeResponse(200, { ETag: '"abc"' }));
 		const fetch = etagMiddleware()(inner);
 
 		await fetch(defaultRequest);
 
-		expect(inner).toHaveBeenCalledWith(expect.objectContaining({
-			headers: expect.not.objectContaining({ 'If-None-Match': expect.anything() }),
-		}));
+		expect(inner).toHaveBeenCalledWith(
+			expect.objectContaining({
+				headers: expect.not.objectContaining({
+					'If-None-Match': expect.anything(),
+				}),
+			}),
+		);
 	});
 
 	it('adds If-None-Match on subsequent requests', async () => {
-		const inner = stubFetch(makeResponse(200, { 'ETag': '"abc"' }));
+		const inner = stubFetch(makeResponse(200, { ETag: '"abc"' }));
 		const fetch = etagMiddleware()(inner);
 
 		await fetch(defaultRequest);
 
 		// Second call should include conditional header
 		await fetch(defaultRequest);
-		expect(inner).toHaveBeenLastCalledWith(expect.objectContaining({
-			headers: expect.objectContaining({ 'If-None-Match': '"abc"' }),
-		}));
+		expect(inner).toHaveBeenLastCalledWith(
+			expect.objectContaining({
+				headers: expect.objectContaining({ 'If-None-Match': '"abc"' }),
+			}),
+		);
 	});
 
 	it('adds If-Modified-Since on subsequent requests', async () => {
-		const inner = stubFetch(makeResponse(200, { 'Last-Modified': 'Wed, 01 Jan 2025 00:00:00 GMT' }));
+		const inner = stubFetch(
+			makeResponse(200, {
+				'Last-Modified': 'Wed, 01 Jan 2025 00:00:00 GMT',
+			}),
+		);
 		const fetch = etagMiddleware()(inner);
 
 		await fetch(defaultRequest);
 		await fetch(defaultRequest);
 
-		expect(inner).toHaveBeenLastCalledWith(expect.objectContaining({
-			headers: expect.objectContaining({ 'If-Modified-Since': 'Wed, 01 Jan 2025 00:00:00 GMT' }),
-		}));
+		expect(inner).toHaveBeenLastCalledWith(
+			expect.objectContaining({
+				headers: expect.objectContaining({
+					'If-Modified-Since': 'Wed, 01 Jan 2025 00:00:00 GMT',
+				}),
+			}),
+		);
 	});
 
 	it('returns cached response on 304', async () => {
-		const original = makeResponse(200, { 'ETag': '"v1"' });
+		const original = makeResponse(200, { ETag: '"v1"' });
 		const notModified = makeResponse(304);
-		const inner = vi.fn<HttpFetchFn>()
+		const inner = vi
+			.fn<HttpFetchFn>()
 			.mockResolvedValueOnce(original)
 			.mockResolvedValueOnce(notModified);
 
@@ -104,9 +152,10 @@ describe('etagMiddleware', () => {
 	});
 
 	it('updates cache on new 200 response', async () => {
-		const v1 = makeResponse(200, { 'ETag': '"v1"' });
-		const v2 = makeResponse(200, { 'ETag': '"v2"' });
-		const inner = vi.fn<HttpFetchFn>()
+		const v1 = makeResponse(200, { ETag: '"v1"' });
+		const v2 = makeResponse(200, { ETag: '"v2"' });
+		const inner = vi
+			.fn<HttpFetchFn>()
 			.mockResolvedValueOnce(v1)
 			.mockResolvedValueOnce(v2);
 
@@ -122,7 +171,10 @@ describe('etagMiddleware', () => {
 // ── authBlockedMiddleware ─────────────────────────────────────────────
 
 describe('authBlockedMiddleware', () => {
-	const authedRequest: HttpRequest = { url: 'https://api.test/data', headers: { 'Authorization': 'Bearer token-a' } };
+	const authedRequest: HttpRequest = {
+		url: 'https://api.test/data',
+		headers: { Authorization: 'Bearer token-a' },
+	};
 
 	it('allows requests normally', async () => {
 		const inner = stubFetch(makeResponse(200));
@@ -147,7 +199,8 @@ describe('authBlockedMiddleware', () => {
 	});
 
 	it('blocks subsequent requests with same token after blocking', async () => {
-		const inner = vi.fn<HttpFetchFn>()
+		const inner = vi
+			.fn<HttpFetchFn>()
 			.mockResolvedValueOnce(makeResponse(401))
 			.mockResolvedValueOnce(makeResponse(200));
 		const fetch = authBlockedMiddleware(60_000)(inner);
@@ -160,7 +213,8 @@ describe('authBlockedMiddleware', () => {
 	});
 
 	it('clears block when token changes', async () => {
-		const inner = vi.fn<HttpFetchFn>()
+		const inner = vi
+			.fn<HttpFetchFn>()
 			.mockResolvedValueOnce(makeResponse(401))
 			.mockResolvedValueOnce(makeResponse(200));
 		const fetch = authBlockedMiddleware(60_000)(inner);
@@ -168,14 +222,18 @@ describe('authBlockedMiddleware', () => {
 		await expect(fetch(authedRequest)).rejects.toThrow(AuthBlockedError);
 
 		// Change token → block should clear
-		const newTokenRequest: HttpRequest = { url: 'https://api.test/data', headers: { 'Authorization': 'Bearer token-new' } };
+		const newTokenRequest: HttpRequest = {
+			url: 'https://api.test/data',
+			headers: { Authorization: 'Bearer token-new' },
+		};
 		const result = await fetch(newTokenRequest);
 		expect(result.status).toBe(200);
 		expect(inner).toHaveBeenCalledTimes(2);
 	});
 
 	it('clears block after duration expires', async () => {
-		const inner = vi.fn<HttpFetchFn>()
+		const inner = vi
+			.fn<HttpFetchFn>()
 			.mockResolvedValueOnce(makeResponse(401))
 			.mockResolvedValueOnce(makeResponse(200));
 		const fetch = authBlockedMiddleware(100)(inner);
@@ -216,16 +274,21 @@ describe('serverErrorBackoffMiddleware', () => {
 
 	it('throws ServerBackoffError on 500', async () => {
 		const inner = stubFetch(makeResponse(500));
-		const fetch = serverErrorBackoffMiddleware({ initialDelayMs: 100 })(inner);
+		const fetch = serverErrorBackoffMiddleware({ initialDelayMs: 100 })(
+			inner,
+		);
 
 		await expect(fetch(defaultRequest)).rejects.toThrow(ServerBackoffError);
 	});
 
 	it('blocks subsequent requests during backoff window', async () => {
-		const inner = vi.fn<HttpFetchFn>()
+		const inner = vi
+			.fn<HttpFetchFn>()
 			.mockResolvedValueOnce(makeResponse(503))
 			.mockResolvedValueOnce(makeResponse(200));
-		const fetch = serverErrorBackoffMiddleware({ initialDelayMs: 60_000 })(inner);
+		const fetch = serverErrorBackoffMiddleware({ initialDelayMs: 60_000 })(
+			inner,
+		);
 
 		await expect(fetch(defaultRequest)).rejects.toThrow(ServerBackoffError);
 
@@ -236,16 +299,23 @@ describe('serverErrorBackoffMiddleware', () => {
 
 	it('applies exponential backoff on consecutive failures', async () => {
 		const inner = vi.fn<HttpFetchFn>().mockResolvedValue(makeResponse(500));
-		const fetch = serverErrorBackoffMiddleware({ initialDelayMs: 100, multiplier: 2 })(inner);
+		const fetch = serverErrorBackoffMiddleware({
+			initialDelayMs: 100,
+			multiplier: 2,
+		})(inner);
 
 		vi.useFakeTimers();
 		try {
 			// First failure → 100ms backoff
-			await expect(fetch(defaultRequest)).rejects.toThrow(ServerBackoffError);
+			await expect(fetch(defaultRequest)).rejects.toThrow(
+				ServerBackoffError,
+			);
 			vi.advanceTimersByTime(110);
 
 			// Second failure → 200ms backoff
-			await expect(fetch(defaultRequest)).rejects.toThrow(ServerBackoffError);
+			await expect(fetch(defaultRequest)).rejects.toThrow(
+				ServerBackoffError,
+			);
 			vi.advanceTimersByTime(210);
 
 			// Third failure → 400ms backoff
@@ -259,11 +329,17 @@ describe('serverErrorBackoffMiddleware', () => {
 
 	it('caps backoff at maxDelayMs', async () => {
 		const inner = vi.fn<HttpFetchFn>().mockResolvedValue(makeResponse(500));
-		const fetch = serverErrorBackoffMiddleware({ initialDelayMs: 100, maxDelayMs: 300, multiplier: 10 })(inner);
+		const fetch = serverErrorBackoffMiddleware({
+			initialDelayMs: 100,
+			maxDelayMs: 300,
+			multiplier: 10,
+		})(inner);
 
 		vi.useFakeTimers();
 		try {
-			await expect(fetch(defaultRequest)).rejects.toThrow(ServerBackoffError);
+			await expect(fetch(defaultRequest)).rejects.toThrow(
+				ServerBackoffError,
+			);
 			vi.advanceTimersByTime(110);
 
 			// Second failure → min(100*10, 300) = 300
@@ -276,15 +352,20 @@ describe('serverErrorBackoffMiddleware', () => {
 	});
 
 	it('resets backoff on success', async () => {
-		const inner = vi.fn<HttpFetchFn>()
+		const inner = vi
+			.fn<HttpFetchFn>()
 			.mockResolvedValueOnce(makeResponse(500))
 			.mockResolvedValueOnce(makeResponse(200))
 			.mockResolvedValueOnce(makeResponse(500));
-		const fetch = serverErrorBackoffMiddleware({ initialDelayMs: 100 })(inner);
+		const fetch = serverErrorBackoffMiddleware({ initialDelayMs: 100 })(
+			inner,
+		);
 
 		vi.useFakeTimers();
 		try {
-			await expect(fetch(defaultRequest)).rejects.toThrow(ServerBackoffError);
+			await expect(fetch(defaultRequest)).rejects.toThrow(
+				ServerBackoffError,
+			);
 			vi.advanceTimersByTime(110);
 
 			// Success → resets
@@ -319,7 +400,9 @@ describe('windowActiveMiddleware', () => {
 		const inner = stubFetch(makeResponse(200));
 		const fetch = windowActiveMiddleware(provider)(inner);
 
-		await expect(fetch(defaultRequest)).rejects.toThrow(WindowInactiveError);
+		await expect(fetch(defaultRequest)).rejects.toThrow(
+			WindowInactiveError,
+		);
 		expect(inner).not.toHaveBeenCalled();
 	});
 });
@@ -367,7 +450,8 @@ describe('createAdvancedFetch', () => {
 		const fetchFn = createAdvancedFetch({
 			request: defaultRequest,
 			httpFetch: async () => makeResponse(200, {}, { name: 'test' }),
-			parseResponse: async (res) => ((await res.json()) as { name: string }).name,
+			parseResponse: async (res) =>
+				((await res.json()) as { name: string }).name,
 		});
 
 		const result = await fetchFn();
@@ -379,10 +463,14 @@ describe('createAdvancedFetch', () => {
 		const fetchFn = createAdvancedFetch({
 			request: () => {
 				callCount++;
-				return { url: `https://api.test/${callCount}`, headers: { 'X-Count': String(callCount) } };
+				return {
+					url: `https://api.test/${callCount}`,
+					headers: { 'X-Count': String(callCount) },
+				};
 			},
 			httpFetch: async (req) => makeResponse(200, {}, { url: req.url }),
-			parseResponse: async (res) => ((await res.json()) as { url: string }).url,
+			parseResponse: async (res) =>
+				((await res.json()) as { url: string }).url,
 		});
 
 		expect(await fetchFn()).toBe('https://api.test/1');
@@ -438,8 +526,13 @@ describe('full middleware stack', () => {
 
 	beforeEach(() => {
 		provider = { isActive: true };
-		authedRequest = { url: 'https://api.test/data', headers: { 'Authorization': 'Bearer tok-1' } };
-		inner = vi.fn<HttpFetchFn>().mockResolvedValue(makeResponse(200, { 'ETag': '"v1"' }));
+		authedRequest = {
+			url: 'https://api.test/data',
+			headers: { Authorization: 'Bearer tok-1' },
+		};
+		inner = vi
+			.fn<HttpFetchFn>()
+			.mockResolvedValue(makeResponse(200, { ETag: '"v1"' }));
 
 		const composed = composeFetchMiddleware(
 			windowActiveMiddleware(provider),
@@ -473,7 +566,10 @@ describe('full middleware stack', () => {
 		await expect(fetch(authedRequest)).rejects.toThrow(AuthBlockedError);
 		await expect(fetch(authedRequest)).rejects.toThrow(AuthBlockedError);
 
-		const newTokenRequest: HttpRequest = { url: 'https://api.test/data', headers: { 'Authorization': 'Bearer tok-2' } };
+		const newTokenRequest: HttpRequest = {
+			url: 'https://api.test/data',
+			headers: { Authorization: 'Bearer tok-2' },
+		};
 		inner.mockResolvedValueOnce(makeResponse(200));
 		const res = await fetch(newTokenRequest);
 		expect(res.status).toBe(200);

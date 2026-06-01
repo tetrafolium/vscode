@@ -12,7 +12,6 @@ export const ILogService = createServiceIdentifier<ILogService>('ILogService');
  * Log levels (taken from vscode.d.ts)
  */
 export enum LogLevel {
-
 	/**
 	 * No messages are logged with this level.
 	 */
@@ -41,7 +40,7 @@ export enum LogLevel {
 	/**
 	 * Only error messages are logged with this level.
 	 */
-	Error = 5
+	Error = 5,
 }
 
 export interface ILogTarget {
@@ -61,14 +60,19 @@ export namespace LogTarget {
 	 *     console.log(`[${LogLevel[level]}] ${msg}`);
 	 * }));
 	 */
-	export function fromCallback(fn: (level: LogLevel, message: string) => void): ILogTarget {
+	export function fromCallback(
+		fn: (level: LogLevel, message: string) => void,
+	): ILogTarget {
 		return { logIt: fn };
 	}
 }
 
 // Simple implementation of a log targe used for logging to the console.
 export class ConsoleLog implements ILogTarget {
-	constructor(private readonly prefix?: string, private readonly minLogLevel: LogLevel = LogLevel.Warning) { }
+	constructor(
+		private readonly prefix?: string,
+		private readonly minLogLevel: LogLevel = LogLevel.Warning,
+	) {}
 
 	logIt(level: LogLevel, metadataStr: string, ...extra: any[]) {
 		if (this.prefix) {
@@ -105,7 +109,7 @@ export interface ILogger {
 	 *
 	 * @param error The Error object that was thrown
 	 * @param message An optional message for context (e.g. "Request error"). Must not contain customer data. **Do not include stack trace or messages from the error object.**
-	*/
+	 */
 	error(error: string | Error, message?: string): void;
 	show(preserveFocus?: boolean): void;
 
@@ -149,9 +153,7 @@ export class LogServiceImpl extends Disposable implements ILogService {
 
 	readonly logger: LoggerImpl;
 
-	constructor(
-		logTargets: ILogTarget[],
-	) {
+	constructor(logTargets: ILogTarget[]) {
 		super();
 		this.logger = new LoggerImpl(logTargets);
 	}
@@ -191,13 +193,11 @@ export class LogServiceImpl extends Disposable implements ILogService {
 }
 
 class LoggerImpl implements ILogger {
-	constructor(
-		private readonly _logTargets: ILogTarget[],
-	) { }
+	constructor(private readonly _logTargets: ILogTarget[]) {}
 
 	private _logIt(level: LogLevel, message: string): void {
 		LogMemory.addLog(LogLevel[level], message);
-		this._logTargets.forEach(t => t.logIt(level, message));
+		this._logTargets.forEach((t) => t.logIt(level, message));
 	}
 
 	trace(message: string): void {
@@ -217,11 +217,14 @@ class LoggerImpl implements ILogger {
 	}
 
 	error(error: string | Error, message?: string): void {
-		this._logIt(LogLevel.Error, collectErrorMessages(error) + (message ? `: ${message}` : ''));
+		this._logIt(
+			LogLevel.Error,
+			collectErrorMessages(error) + (message ? `: ${message}` : ''),
+		);
 	}
 
 	show(preserveFocus?: boolean): void {
-		this._logTargets.forEach(t => t.show?.(preserveFocus));
+		this._logTargets.forEach((t) => t.show?.(preserveFocus));
 	}
 
 	createSubLogger(topic: string | readonly string[]): ILogger {
@@ -242,7 +245,7 @@ class SubLogger implements ILogger {
 		existingPrefix?: string,
 	) {
 		const topics = Array.isArray(topic) ? topic : [topic];
-		const newPrefix = topics.map(t => `[${t}]`).join('');
+		const newPrefix = topics.map((t) => `[${t}]`).join('');
 		this._prefix = existingPrefix ? existingPrefix + newPrefix : newPrefix;
 	}
 
@@ -267,7 +270,9 @@ class SubLogger implements ILogger {
 	}
 
 	error(error: string | Error, message?: string): void {
-		const prefixedMessage = message ? this._prefixMessage(message) : this._prefix;
+		const prefixedMessage = message
+			? this._prefixMessage(message)
+			: this._prefix;
 		this._parent.error(error, prefixedMessage);
 	}
 
@@ -289,10 +294,12 @@ class LoggerWithExtraTargets implements ILogger {
 		private readonly _parent: ILogger,
 		private readonly _extraTargets: readonly ILogTarget[],
 		private readonly _prefix: string = '',
-	) { }
+	) {}
 
 	private _notifyExtraTargets(level: LogLevel, message: string): void {
-		const prefixedMessage = this._prefix ? `${this._prefix} ${message}` : message;
+		const prefixedMessage = this._prefix
+			? `${this._prefix} ${message}`
+			: message;
 		for (const target of this._extraTargets) {
 			try {
 				target.logIt(level, prefixedMessage);
@@ -324,7 +331,8 @@ class LoggerWithExtraTargets implements ILogger {
 
 	error(error: string | Error, message?: string): void {
 		// For extra targets, format a simple message
-		const errorStr = typeof error === 'string' ? error : (error.message || 'Error');
+		const errorStr =
+			typeof error === 'string' ? error : error.message || 'Error';
 		const fullMessage = message ? `${errorStr}: ${message}` : errorStr;
 		this._notifyExtraTargets(LogLevel.Error, fullMessage);
 		this._parent.error(error, message);
@@ -344,11 +352,11 @@ class LoggerWithExtraTargets implements ILogger {
 	createSubLogger(topic: string | readonly string[]): ILogger {
 		// Sub-logger inherits extra targets with updated prefix
 		const topics = Array.isArray(topic) ? topic : [topic];
-		const newPrefix = this._prefix + topics.map(t => `[${t}]`).join('');
+		const newPrefix = this._prefix + topics.map((t) => `[${t}]`).join('');
 		return new LoggerWithExtraTargets(
 			this._parent.createSubLogger(topic),
 			this._extraTargets,
-			newPrefix
+			newPrefix,
 		);
 	}
 
@@ -356,7 +364,7 @@ class LoggerWithExtraTargets implements ILogger {
 		return new LoggerWithExtraTargets(
 			this._parent,
 			[...this._extraTargets, target],
-			this._prefix
+			this._prefix,
 		);
 	}
 }
@@ -369,20 +377,32 @@ export function collectErrorMessages(e: any): string {
 			return '';
 		}
 		seen.add(e);
-		const message = typeof e === 'string' ? e : (e.stack || e.message || e.code || '');
-		const messageStr = message.toString?.() as (string | undefined) || '';
+		const message =
+			typeof e === 'string' ? e : e.stack || e.message || e.code || '';
+		const messageStr = (message.toString?.() as string | undefined) || '';
 		return [
-			messageStr ? `${messageStr.split('\n').map(line => `${indent}${line}`).join('\n')}\n` : '',
-			e.chromiumDetails ? `${indent}${JSON.stringify(extractChromiumDetails(e.chromiumDetails))}\n` : '',
+			messageStr
+				? `${messageStr
+						.split('\n')
+						.map((line) => `${indent}${line}`)
+						.join('\n')}\n`
+				: '',
+			e.chromiumDetails
+				? `${indent}${JSON.stringify(extractChromiumDetails(e.chromiumDetails))}\n`
+				: '',
 			collect(e.cause, indent + '  '),
-			...(Array.isArray(e.errors) ? e.errors.map((e: any) => collect(e, indent + '  ')) : []),
+			...(Array.isArray(e.errors)
+				? e.errors.map((e: any) => collect(e, indent + '  '))
+				: []),
 		].join('');
 	}
-	return collect(e, '')
-		.trim();
+	return collect(e, '').trim();
 }
 
-export function collectSingleLineErrorMessage(e: any, includeDetails = false): string {
+export function collectSingleLineErrorMessage(
+	e: any,
+	includeDetails = false,
+): string {
 	// Collect error messages from nested errors as seen with Node's `fetch`.
 	const seen = new Set<any>();
 	function collect(e: any): string {
@@ -390,13 +410,17 @@ export function collectSingleLineErrorMessage(e: any, includeDetails = false): s
 			return '';
 		}
 		seen.add(e);
-		const message = typeof e === 'string' ? e : (e.message || e.code || '');
-		const messageStr = message.toString?.() as (string | undefined) || '';
+		const message = typeof e === 'string' ? e : e.message || e.code || '';
+		const messageStr = (message.toString?.() as string | undefined) || '';
 		const messageLine = messageStr.trim().split('\n').join(' ');
 		const details = [
-			...(includeDetails && e.chromiumDetails ? [JSON.stringify(extractChromiumDetails(e.chromiumDetails))] : []),
+			...(includeDetails && e.chromiumDetails
+				? [JSON.stringify(extractChromiumDetails(e.chromiumDetails))]
+				: []),
 			...(e.cause ? [collect(e.cause)] : []),
-			...(Array.isArray(e.errors) ? e.errors.map((e: any) => collect(e)) : []),
+			...(Array.isArray(e.errors)
+				? e.errors.map((e: any) => collect(e))
+				: []),
 		].join(', ');
 		return details ? `${messageLine}: ${details}` : messageLine;
 	}
@@ -409,19 +433,40 @@ export function collectSingleLineErrorMessage(e: any, includeDetails = false): s
  */
 export function sanitizeNetworkErrorForTelemetry(message: string): string {
 	// Strip credentials and host from proxy result strings (e.g., "PROXY user:pass@host" → "PROXY <credentials>@<host>")
-	message = message.replace(/(\b(?:PROXY|HTTPS?|SOCKS[45]?)\s+)[^\s]+@([^\s:\/]+)/gi, '$1<credentials>@<host>');
+	message = message.replace(
+		/(\b(?:PROXY|HTTPS?|SOCKS[45]?)\s+)[^\s]+@([^\s:\/]+)/gi,
+		'$1<credentials>@<host>',
+	);
 	// Strip host from proxy result strings without credentials (e.g., "PROXY host:8080" → "PROXY <host>:8080")
-	message = message.replace(/(\b(?:PROXY|HTTPS?|SOCKS[45]?)\s+)([a-zA-Z0-9][-a-zA-Z0-9.]*)/gi, '$1<host>');
+	message = message.replace(
+		/(\b(?:PROXY|HTTPS?|SOCKS[45]?)\s+)([a-zA-Z0-9][-a-zA-Z0-9.]*)/gi,
+		'$1<host>',
+	);
 	// Strip credentials and host from URLs (e.g., "://user:pass@host" → "://<credentials>@<host>")
-	message = message.replace(/(\/\/)[^\s/]+@([^\s:\/]+)/g, '$1<credentials>@<host>');
+	message = message.replace(
+		/(\/\/)[^\s/]+@([^\s:\/]+)/g,
+		'$1<credentials>@<host>',
+	);
 	// Replace IPv4 addresses, preserving the port if present
-	message = message.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '<ip>');
+	message = message.replace(
+		/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
+		'<ip>',
+	);
 	// Replace IPv6 addresses (full form, e.g., "2001:db8:85a3:0:0:8a2e:370:7334")
-	message = message.replace(/(?<![a-zA-Z_:])(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?![a-zA-Z_])/g, '<ip>');
+	message = message.replace(
+		/(?<![a-zA-Z_:])(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(?![a-zA-Z_])/g,
+		'<ip>',
+	);
 	// Replace IPv6 addresses (compressed form with ::, e.g., "2001:db8::1" or "::1")
-	message = message.replace(/(?<![a-zA-Z_:])(?:(?:[0-9a-fA-F]{1,4}:){1,7}|:):[0-9a-fA-F:]*[0-9a-fA-F](?![a-zA-Z_])/g, '<ip>');
+	message = message.replace(
+		/(?<![a-zA-Z_:])(?:(?:[0-9a-fA-F]{1,4}:){1,7}|:):[0-9a-fA-F:]*[0-9a-fA-F](?![a-zA-Z_])/g,
+		'<ip>',
+	);
 	// Replace FQDNs (at least one dot, TLD of 2+ alpha chars), preserving the port if present
-	message = message.replace(/\b([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}\b/g, '<host>');
+	message = message.replace(
+		/\b([a-zA-Z0-9][-a-zA-Z0-9]*\.)+[a-zA-Z]{2,}\b/g,
+		'<host>',
+	);
 	return message;
 }
 
@@ -456,12 +501,17 @@ export interface ElectronFetchErrorChromiumDetails {
 	readonly closed_stream_details?: any;
 }
 
-function extractChromiumDetails(details: ElectronFetchErrorChromiumDetails): any {
+function extractChromiumDetails(
+	details: ElectronFetchErrorChromiumDetails,
+): any {
 	if (!details || typeof details !== 'object') {
 		return {};
 	}
 
-	if (details.is_request_error !== undefined && details.session_state === undefined) {
+	if (
+		details.is_request_error !== undefined &&
+		details.session_state === undefined
+	) {
 		return {
 			is_request_error: details.is_request_error,
 			network_process_crashed: details.network_process_crashed,
@@ -480,18 +530,25 @@ function extractChromiumDetails(details: ElectronFetchErrorChromiumDetails): any
 		last_framer_error: details.last_framer_error,
 		last_framer_error_details: details.last_framer_error_details,
 		error_source: details.error_source,
-		aliases_length: Array.isArray(details.aliases) ? details.aliases.length : undefined,
+		aliases_length: Array.isArray(details.aliases)
+			? details.aliases.length
+			: undefined,
 	};
 
 	if (details.proxy) {
 		const proxyString = String(details.proxy);
-		const proxySchemes = [...proxyString.matchAll(/([a-z][a-z0-9+.-]*):\/\//gi)].map(match => match[1]);
+		const proxySchemes = [
+			...proxyString.matchAll(/([a-z][a-z0-9+.-]*):\/\//gi),
+		].map((match) => match[1]);
 		if (proxySchemes.length > 0) {
 			extracted.proxy_schemes = proxySchemes;
 		}
 	}
 
-	if (details.in_flight_write && typeof details.in_flight_write === 'object') {
+	if (
+		details.in_flight_write &&
+		typeof details.in_flight_write === 'object'
+	) {
 		extracted.in_flight_write = {
 			frame_type: details.in_flight_write.frame_type,
 			frame_size: details.in_flight_write.frame_size,
@@ -499,7 +556,10 @@ function extractChromiumDetails(details: ElectronFetchErrorChromiumDetails): any
 		};
 	}
 
-	if (details.buffered_spdy_framer && typeof details.buffered_spdy_framer === 'object') {
+	if (
+		details.buffered_spdy_framer &&
+		typeof details.buffered_spdy_framer === 'object'
+	) {
 		extracted.buffered_spdy_framer = {
 			frames_received: details.buffered_spdy_framer.frames_received,
 			has_error: details.buffered_spdy_framer.has_error,
@@ -515,7 +575,8 @@ function extractChromiumDetails(details: ElectronFetchErrorChromiumDetails): any
 			session_recv_window: state.session_recv_window,
 			stream_initial_send_window: state.stream_initial_send_window,
 			stream_initial_recv_window: state.stream_initial_recv_window,
-			send_stalled_by_session_window: state.send_stalled_by_session_window,
+			send_stalled_by_session_window:
+				state.send_stalled_by_session_window,
 			active_stream_count: state.active_stream_count,
 			created_stream_count: state.created_stream_count,
 			max_concurrent_streams: state.max_concurrent_streams,
@@ -532,25 +593,31 @@ function extractChromiumDetails(details: ElectronFetchErrorChromiumDetails): any
 			streams_abandoned_count: state.streams_abandoned_count,
 			read_state: state.read_state,
 			write_state: state.write_state,
-			pending_create_stream_request_count: state.pending_create_stream_request_count,
+			pending_create_stream_request_count:
+				state.pending_create_stream_request_count,
 			error: state.error,
 			error_on_unavailable: state.error_on_unavailable,
 			unacked_recv_window_bytes: state.unacked_recv_window_bytes,
 			last_good_stream_id: state.last_good_stream_id,
 			debug_stream_id: state.debug_stream_id,
-			has_ping_based_connection_checking: state.has_ping_based_connection_checking,
-			num_broken_connection_detection_requests: state.num_broken_connection_detection_requests,
-			session_max_queued_capped_frames: state.session_max_queued_capped_frames,
+			has_ping_based_connection_checking:
+				state.has_ping_based_connection_checking,
+			num_broken_connection_detection_requests:
+				state.num_broken_connection_detection_requests,
+			session_max_queued_capped_frames:
+				state.session_max_queued_capped_frames,
 			num_queued_capped_frames: state.num_queued_capped_frames,
 			check_ping_status_pending: state.check_ping_status_pending,
 			in_confirm_handshake: state.in_confirm_handshake,
-			http2_end_stream_with_data_frame: state.http2_end_stream_with_data_frame,
+			http2_end_stream_with_data_frame:
+				state.http2_end_stream_with_data_frame,
 			reused: state.reused,
 			session_max_recv_window_size: state.session_max_recv_window_size,
 			max_header_table_size: state.max_header_table_size,
 			time_since_last_read_ms: state.time_since_last_read_ms,
 			time_since_last_write_ms: state.time_since_last_write_ms,
-			time_since_last_recv_window_update_ms: state.time_since_last_recv_window_update_ms,
+			time_since_last_recv_window_update_ms:
+				state.time_since_last_recv_window_update_ms,
 		};
 	}
 
@@ -584,55 +651,65 @@ function extractChromiumDetails(details: ElectronFetchErrorChromiumDetails): any
 		};
 	}
 
-	if (details.url_loader_error && typeof details.url_loader_error === 'object') {
+	if (
+		details.url_loader_error &&
+		typeof details.url_loader_error === 'object'
+	) {
 		extracted.url_loader_error = {
 			is_request_error: details.url_loader_error.is_request_error,
-			network_process_crashed: details.url_loader_error.network_process_crashed,
+			network_process_crashed:
+				details.url_loader_error.network_process_crashed,
 		};
 	}
 
 	if (Array.isArray(details.active_stream_details)) {
-		extracted.active_stream_details = details.active_stream_details.map((stream: any) => ({
-			stream_id: stream.stream_id,
-			io_state: stream.io_state,
-			type: stream.type,
-			priority: stream.priority,
-			send_window_size: stream.send_window_size,
-			recv_window_size: stream.recv_window_size,
-			max_recv_window_size: stream.max_recv_window_size,
-			unacked_recv_window_bytes: stream.unacked_recv_window_bytes,
-			send_stalled_by_flow_control: stream.send_stalled_by_flow_control,
-			raw_sent_bytes: stream.raw_sent_bytes,
-			raw_received_bytes: stream.raw_received_bytes,
-			recv_bytes: stream.recv_bytes,
-			pending_send_status: stream.pending_send_status,
-			response_state: stream.response_state,
-			pending_send_data_remaining: stream.pending_send_data_remaining,
-			request_time_ms: stream.request_time_ms,
-			response_time_ms: stream.response_time_ms,
-		}));
+		extracted.active_stream_details = details.active_stream_details.map(
+			(stream: any) => ({
+				stream_id: stream.stream_id,
+				io_state: stream.io_state,
+				type: stream.type,
+				priority: stream.priority,
+				send_window_size: stream.send_window_size,
+				recv_window_size: stream.recv_window_size,
+				max_recv_window_size: stream.max_recv_window_size,
+				unacked_recv_window_bytes: stream.unacked_recv_window_bytes,
+				send_stalled_by_flow_control:
+					stream.send_stalled_by_flow_control,
+				raw_sent_bytes: stream.raw_sent_bytes,
+				raw_received_bytes: stream.raw_received_bytes,
+				recv_bytes: stream.recv_bytes,
+				pending_send_status: stream.pending_send_status,
+				response_state: stream.response_state,
+				pending_send_data_remaining: stream.pending_send_data_remaining,
+				request_time_ms: stream.request_time_ms,
+				response_time_ms: stream.response_time_ms,
+			}),
+		);
 	}
 
 	if (Array.isArray(details.closed_stream_details)) {
-		extracted.closed_stream_details = details.closed_stream_details.map((stream: any) => ({
-			stream_id: stream.stream_id,
-			io_state: stream.io_state,
-			type: stream.type,
-			priority: stream.priority,
-			send_window_size: stream.send_window_size,
-			recv_window_size: stream.recv_window_size,
-			max_recv_window_size: stream.max_recv_window_size,
-			unacked_recv_window_bytes: stream.unacked_recv_window_bytes,
-			send_stalled_by_flow_control: stream.send_stalled_by_flow_control,
-			raw_sent_bytes: stream.raw_sent_bytes,
-			raw_received_bytes: stream.raw_received_bytes,
-			recv_bytes: stream.recv_bytes,
-			pending_send_status: stream.pending_send_status,
-			response_state: stream.response_state,
-			pending_send_data_remaining: stream.pending_send_data_remaining,
-			request_time_ms: stream.request_time_ms,
-			response_time_ms: stream.response_time_ms,
-		}));
+		extracted.closed_stream_details = details.closed_stream_details.map(
+			(stream: any) => ({
+				stream_id: stream.stream_id,
+				io_state: stream.io_state,
+				type: stream.type,
+				priority: stream.priority,
+				send_window_size: stream.send_window_size,
+				recv_window_size: stream.recv_window_size,
+				max_recv_window_size: stream.max_recv_window_size,
+				unacked_recv_window_bytes: stream.unacked_recv_window_bytes,
+				send_stalled_by_flow_control:
+					stream.send_stalled_by_flow_control,
+				raw_sent_bytes: stream.raw_sent_bytes,
+				raw_received_bytes: stream.raw_received_bytes,
+				recv_bytes: stream.recv_bytes,
+				pending_send_status: stream.pending_send_status,
+				response_state: stream.response_state,
+				pending_send_data_remaining: stream.pending_send_data_remaining,
+				request_time_ms: stream.request_time_ms,
+				response_time_ms: stream.response_time_ms,
+			}),
+		);
 	}
 
 	return extracted;
@@ -647,8 +724,12 @@ export class LogMemory {
 	 * Extracts the requestId from a log message if it matches the expected pattern.
 	 * Returns a string in the format 'requestId: {string}' or undefined if not found.
 	 */
-	private static extractRequestIdFromMessage(message: string): string | undefined {
-		const match = message.match(/request done: requestId: \[([0-9a-fA-F-]+)\] model deployment ID: \[/);
+	private static extractRequestIdFromMessage(
+		message: string,
+	): string | undefined {
+		const match = message.match(
+			/request done: requestId: \[([0-9a-fA-F-]+)\] model deployment ID: \[/,
+		);
 		if (match) {
 			const requestId = match[1];
 			if (!this._requestIds.includes(requestId)) {

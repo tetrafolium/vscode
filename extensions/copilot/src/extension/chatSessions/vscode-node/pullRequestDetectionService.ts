@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getGitHubRepoInfoFromContext, IGitService } from '../../../platform/git/common/gitService';
+import {
+	getGitHubRepoInfoFromContext,
+	IGitService,
+} from '../../../platform/git/common/gitService';
 import { derivePullRequestState } from '../../../platform/github/common/githubAPI';
 import { IOctoKitService } from '../../../platform/github/common/githubService';
 import { ILogService } from '../../../platform/log/common/logService';
@@ -36,9 +39,15 @@ export interface IPullRequestDetectionService {
 	 * If a PR URL is provided, uses that; otherwise attempts detection
 	 * via the GitHub API with exponential-backoff retry.
 	 */
-	handlePullRequestCreated(sessionId: string, createdPullRequestUrl: string | undefined): void;
+	handlePullRequestCreated(
+		sessionId: string,
+		createdPullRequestUrl: string | undefined,
+	): void;
 }
-export const IPullRequestDetectionService = createServiceIdentifier<IPullRequestDetectionService>('IPullRequestDetectionService');
+export const IPullRequestDetectionService =
+	createServiceIdentifier<IPullRequestDetectionService>(
+		'IPullRequestDetectionService',
+	);
 
 /**
  * Queries the GitHub API to find a pull request whose head branch matches the
@@ -52,19 +61,27 @@ async function detectPullRequestFromGitHubAPI(
 	octoKitService: IOctoKitService,
 	logService: ILogService,
 ): Promise<{ url: string; state: string } | undefined> {
-	const repoContext = await gitService.getRepository(URI.file(repositoryPath));
+	const repoContext = await gitService.getRepository(
+		URI.file(repositoryPath),
+	);
 	if (!repoContext) {
-		logService.debug(`[detectPullRequestFromGitHubAPI] No git repository found for path: ${repositoryPath}`);
+		logService.debug(
+			`[detectPullRequestFromGitHubAPI] No git repository found for path: ${repositoryPath}`,
+		);
 		return undefined;
 	}
 
 	const repoInfo = getGitHubRepoInfoFromContext(repoContext);
 	if (!repoInfo) {
-		logService.debug(`[detectPullRequestFromGitHubAPI] Could not extract GitHub repo info from repository at: ${repositoryPath}`);
+		logService.debug(
+			`[detectPullRequestFromGitHubAPI] Could not extract GitHub repo info from repository at: ${repositoryPath}`,
+		);
 		return undefined;
 	}
 
-	logService.debug(`[detectPullRequestFromGitHubAPI] Querying GitHub API for PR on ${repoInfo.id.org}/${repoInfo.id.repo}, branch=${branchName}`);
+	logService.debug(
+		`[detectPullRequestFromGitHubAPI] Querying GitHub API for PR on ${repoInfo.id.org}/${repoInfo.id.repo}, branch=${branchName}`,
+	);
 
 	const pr = await octoKitService.findPullRequestByHeadBranch(
 		repoInfo.id.org,
@@ -75,25 +92,36 @@ async function detectPullRequestFromGitHubAPI(
 
 	if (pr?.url) {
 		const prState = derivePullRequestState(pr);
-		logService.trace(`[detectPullRequestFromGitHubAPI] Detected pull request via GitHub API: ${pr.url} ${prState}`);
+		logService.trace(
+			`[detectPullRequestFromGitHubAPI] Detected pull request via GitHub API: ${pr.url} ${prState}`,
+		);
 		return { url: pr.url, state: prState };
 	}
 
-	logService.debug(`[detectPullRequestFromGitHubAPI] No PR found for ${repoInfo.id.org}/${repoInfo.id.repo}, branch=${branchName}`);
+	logService.debug(
+		`[detectPullRequestFromGitHubAPI] No PR found for ${repoInfo.id.org}/${repoInfo.id.repo}, branch=${branchName}`,
+	);
 	return undefined;
 }
 
 /**
  * Encapsulates all pull-request detection and persistence logic for chat sessions.
  */
-export class PullRequestDetectionService extends Disposable implements IPullRequestDetectionService {
+export class PullRequestDetectionService
+	extends Disposable
+	implements IPullRequestDetectionService
+{
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidDetectPullRequest = this._register(new Emitter<string>());
-	readonly onDidDetectPullRequest: Event<string> = this._onDidDetectPullRequest.event;
+	private readonly _onDidDetectPullRequest = this._register(
+		new Emitter<string>(),
+	);
+	readonly onDidDetectPullRequest: Event<string> =
+		this._onDidDetectPullRequest.event;
 
 	constructor(
-		@IChatSessionWorktreeService private readonly chatSessionWorktreeService: IChatSessionWorktreeService,
+		@IChatSessionWorktreeService
+		private readonly chatSessionWorktreeService: IChatSessionWorktreeService,
 		@IGitService private readonly gitService: IGitService,
 		@IOctoKitService private readonly octoKitService: IOctoKitService,
 		@ILogService private readonly logService: ILogService,
@@ -106,41 +134,69 @@ export class PullRequestDetectionService extends Disposable implements IPullRequ
 	 * If a PR is found, persists the URL and notifies the UI.
 	 */
 	detectPullRequest(sessionId: string): void {
-		this.doDetectPullRequestOnSessionOpen(sessionId).catch(ex =>
-			this.logService.error(ex instanceof Error ? ex : new Error(String(ex)), `Failed to detect pull request on session open for ${sessionId}`));
+		this.doDetectPullRequestOnSessionOpen(sessionId).catch((ex) =>
+			this.logService.error(
+				ex instanceof Error ? ex : new Error(String(ex)),
+				`Failed to detect pull request on session open for ${sessionId}`,
+			),
+		);
 	}
 
-	private async doDetectPullRequestOnSessionOpen(sessionId: string): Promise<void> {
-		const worktreeProperties = await this.chatSessionWorktreeService.getWorktreeProperties(sessionId);
-		if (worktreeProperties?.version !== 2
-			|| worktreeProperties.pullRequestState === 'merged'
-			|| !worktreeProperties.branchName
-			|| !worktreeProperties.repositoryPath) {
-			this.logService.debug(`[PullRequestDetectionService] Skipping PR detection on session open for ${sessionId}: version=${worktreeProperties?.version}, prState=${worktreeProperties?.version === 2 ? worktreeProperties.pullRequestState : 'n/a'}, branch=${!!worktreeProperties?.branchName}, repoPath=${!!worktreeProperties?.repositoryPath}`);
+	private async doDetectPullRequestOnSessionOpen(
+		sessionId: string,
+	): Promise<void> {
+		const worktreeProperties =
+			await this.chatSessionWorktreeService.getWorktreeProperties(
+				sessionId,
+			);
+		if (
+			worktreeProperties?.version !== 2 ||
+			worktreeProperties.pullRequestState === 'merged' ||
+			!worktreeProperties.branchName ||
+			!worktreeProperties.repositoryPath
+		) {
+			this.logService.debug(
+				`[PullRequestDetectionService] Skipping PR detection on session open for ${sessionId}: version=${worktreeProperties?.version}, prState=${worktreeProperties?.version === 2 ? worktreeProperties.pullRequestState : 'n/a'}, branch=${!!worktreeProperties?.branchName}, repoPath=${!!worktreeProperties?.repositoryPath}`,
+			);
 			return;
 		}
 
-		this.logService.debug(`[PullRequestDetectionService] Detecting PR on session open for ${sessionId}, branch=${worktreeProperties.branchName}, existingPrUrl=${worktreeProperties.pullRequestUrl ?? 'none'}`);
+		this.logService.debug(
+			`[PullRequestDetectionService] Detecting PR on session open for ${sessionId}, branch=${worktreeProperties.branchName}, existingPrUrl=${worktreeProperties.pullRequestUrl ?? 'none'}`,
+		);
 
 		const prResult = await this.detectPullRequestForSession(sessionId);
 
 		if (prResult) {
 			// Re-read to get the latest information.
-			const currentProperties = await this.chatSessionWorktreeService.getWorktreeProperties(sessionId);
-			if (currentProperties?.version === 2
-				&& (currentProperties.pullRequestUrl !== prResult.url || currentProperties.pullRequestState !== prResult.state)) {
-				await this.chatSessionWorktreeService.setWorktreeProperties(sessionId, {
-					...currentProperties,  // use fresh copy
-					pullRequestUrl: prResult.url,
-					pullRequestState: prResult.state,
-					changes: undefined,
-				});
+			const currentProperties =
+				await this.chatSessionWorktreeService.getWorktreeProperties(
+					sessionId,
+				);
+			if (
+				currentProperties?.version === 2 &&
+				(currentProperties.pullRequestUrl !== prResult.url ||
+					currentProperties.pullRequestState !== prResult.state)
+			) {
+				await this.chatSessionWorktreeService.setWorktreeProperties(
+					sessionId,
+					{
+						...currentProperties, // use fresh copy
+						pullRequestUrl: prResult.url,
+						pullRequestState: prResult.state,
+						changes: undefined,
+					},
+				);
 				this._onDidDetectPullRequest.fire(sessionId);
 			} else {
-				this.logService.debug(`[PullRequestDetectionService] PR metadata unchanged for ${sessionId}, skipping update`);
+				this.logService.debug(
+					`[PullRequestDetectionService] PR metadata unchanged for ${sessionId}, skipping update`,
+				);
 			}
 		} else {
-			this.logService.debug(`[PullRequestDetectionService] No PR found via GitHub API for ${sessionId}`);
+			this.logService.debug(
+				`[PullRequestDetectionService] No PR found via GitHub API for ${sessionId}`,
+			);
 		}
 	}
 
@@ -150,48 +206,80 @@ export class PullRequestDetectionService extends Disposable implements IPullRequ
 	 * via the GitHub API with exponential-backoff retry.
 	 * Fires {@link onDidDetectPullRequest} if a PR is detected and persisted.
 	 */
-	handlePullRequestCreated(sessionId: string, createdPullRequestUrl: string | undefined): void {
-		this.doHandlePullRequestCreated(sessionId, createdPullRequestUrl).catch(ex =>
-			this.logService.error(ex instanceof Error ? ex : new Error(String(ex)), `Failed to handle pull request creation for session ${sessionId}`));
+	handlePullRequestCreated(
+		sessionId: string,
+		createdPullRequestUrl: string | undefined,
+	): void {
+		this.doHandlePullRequestCreated(sessionId, createdPullRequestUrl).catch(
+			(ex) =>
+				this.logService.error(
+					ex instanceof Error ? ex : new Error(String(ex)),
+					`Failed to handle pull request creation for session ${sessionId}`,
+				),
+		);
 	}
 
-	private async doHandlePullRequestCreated(sessionId: string, createdPullRequestUrl: string | undefined): Promise<void> {
+	private async doHandlePullRequestCreated(
+		sessionId: string,
+		createdPullRequestUrl: string | undefined,
+	): Promise<void> {
 		let prUrl = createdPullRequestUrl;
 		let prState = '';
 
-		this.logService.debug(`[PullRequestDetectionService] handlePullRequestCreated for ${sessionId}: createdPullRequestUrl=${prUrl ?? 'none'}`);
+		this.logService.debug(
+			`[PullRequestDetectionService] handlePullRequestCreated for ${sessionId}: createdPullRequestUrl=${prUrl ?? 'none'}`,
+		);
 
-		const worktreeProperties = await this.chatSessionWorktreeService.getWorktreeProperties(sessionId);
+		const worktreeProperties =
+			await this.chatSessionWorktreeService.getWorktreeProperties(
+				sessionId,
+			);
 		if (!worktreeProperties || worktreeProperties.version !== 2) {
 			return;
 		}
 
 		if (!prUrl) {
-			if (worktreeProperties.branchName && worktreeProperties.repositoryPath) {
-				this.logService.debug(`[PullRequestDetectionService] No PR URL from session, attempting retry detection for ${sessionId}, branch=${worktreeProperties.branchName}`);
-				const prResult = await this.detectPullRequestWithRetry(sessionId);
+			if (
+				worktreeProperties.branchName &&
+				worktreeProperties.repositoryPath
+			) {
+				this.logService.debug(
+					`[PullRequestDetectionService] No PR URL from session, attempting retry detection for ${sessionId}, branch=${worktreeProperties.branchName}`,
+				);
+				const prResult =
+					await this.detectPullRequestWithRetry(sessionId);
 				prUrl = prResult?.url;
 				prState = prResult?.state ?? (prResult?.url ? 'open' : '');
 			} else {
-				this.logService.debug(`[PullRequestDetectionService] Skipping retry detection for ${sessionId}: branch=${worktreeProperties.branchName ?? 'none'}, repoPath=${!!worktreeProperties.repositoryPath}`);
+				this.logService.debug(
+					`[PullRequestDetectionService] Skipping retry detection for ${sessionId}: branch=${worktreeProperties.branchName ?? 'none'}, repoPath=${!!worktreeProperties.repositoryPath}`,
+				);
 			}
 		}
 
 		if (!prUrl) {
-			this.logService.debug(`[PullRequestDetectionService] No PR detected for ${sessionId} after all attempts`);
+			this.logService.debug(
+				`[PullRequestDetectionService] No PR detected for ${sessionId} after all attempts`,
+			);
 			return;
 		}
 
 		try {
-			await this.chatSessionWorktreeService.setWorktreeProperties(sessionId, {
-				...worktreeProperties,
-				pullRequestUrl: prUrl,
-				pullRequestState: prState,
-				changes: undefined,
-			});
+			await this.chatSessionWorktreeService.setWorktreeProperties(
+				sessionId,
+				{
+					...worktreeProperties,
+					pullRequestUrl: prUrl,
+					pullRequestState: prState,
+					changes: undefined,
+				},
+			);
 			this._onDidDetectPullRequest.fire(sessionId);
 		} catch (error) {
-			this.logService.error(error instanceof Error ? error : new Error(String(error)), `Failed to persist pull request metadata for session ${sessionId}`);
+			this.logService.error(
+				error instanceof Error ? error : new Error(String(error)),
+				`Failed to persist pull request metadata for session ${sessionId}`,
+			);
 		}
 	}
 
@@ -201,20 +289,28 @@ export class PullRequestDetectionService extends Disposable implements IPullRequ
 	 * after `gh pr create` returns, so we retry with increasing delays:
 	 * attempt 1: 2s, attempt 2: 4s, attempt 3: 8s, ...
 	 */
-	private async detectPullRequestWithRetry(sessionId: string): Promise<{ url: string; state: string } | undefined> {
+	private async detectPullRequestWithRetry(
+		sessionId: string,
+	): Promise<{ url: string; state: string } | undefined> {
 		for (let attempt = 0; attempt < PR_DETECTION_RETRY_COUNT; attempt++) {
 			const delay = PR_DETECTION_INITIAL_DELAY_MS * Math.pow(2, attempt);
-			this.logService.debug(`[PullRequestDetectionService] PR detection retry for ${sessionId}: attempt ${attempt + 1}/${PR_DETECTION_RETRY_COUNT}, waiting ${delay}ms`);
-			await new Promise<void>(resolve => setTimeout(resolve, delay));
+			this.logService.debug(
+				`[PullRequestDetectionService] PR detection retry for ${sessionId}: attempt ${attempt + 1}/${PR_DETECTION_RETRY_COUNT}, waiting ${delay}ms`,
+			);
+			await new Promise<void>((resolve) => setTimeout(resolve, delay));
 
 			const prResult = await this.detectPullRequestForSession(sessionId);
 			if (prResult) {
-				this.logService.debug(`[PullRequestDetectionService] PR detected on attempt ${attempt + 1} for ${sessionId}: url=${prResult.url}, state=${prResult.state}`);
+				this.logService.debug(
+					`[PullRequestDetectionService] PR detected on attempt ${attempt + 1} for ${sessionId}: url=${prResult.url}, state=${prResult.state}`,
+				);
 				return prResult;
 			}
 		}
 
-		this.logService.debug(`[PullRequestDetectionService] PR detection exhausted all ${PR_DETECTION_RETRY_COUNT} retries for ${sessionId}`);
+		this.logService.debug(
+			`[PullRequestDetectionService] PR detection exhausted all ${PR_DETECTION_RETRY_COUNT} retries for ${sessionId}`,
+		);
 		return undefined;
 	}
 
@@ -222,11 +318,21 @@ export class PullRequestDetectionService extends Disposable implements IPullRequ
 	 * Queries the GitHub API to find a pull request whose head branch matches the
 	 * session's worktree branch.
 	 */
-	private async detectPullRequestForSession(sessionId: string): Promise<{ url: string; state: string } | undefined> {
+	private async detectPullRequestForSession(
+		sessionId: string,
+	): Promise<{ url: string; state: string } | undefined> {
 		try {
-			const worktreeProperties = await this.chatSessionWorktreeService.getWorktreeProperties(sessionId);
-			if (!worktreeProperties?.branchName || !worktreeProperties.repositoryPath) {
-				this.logService.debug(`[PullRequestDetectionService] detectPullRequestForSession: missing worktree info for ${sessionId}, branch=${worktreeProperties?.branchName ?? 'none'}, repoPath=${!!worktreeProperties?.repositoryPath}`);
+			const worktreeProperties =
+				await this.chatSessionWorktreeService.getWorktreeProperties(
+					sessionId,
+				);
+			if (
+				!worktreeProperties?.branchName ||
+				!worktreeProperties.repositoryPath
+			) {
+				this.logService.debug(
+					`[PullRequestDetectionService] detectPullRequestForSession: missing worktree info for ${sessionId}, branch=${worktreeProperties?.branchName ?? 'none'}, repoPath=${!!worktreeProperties?.repositoryPath}`,
+				);
 				return undefined;
 			}
 
@@ -238,7 +344,9 @@ export class PullRequestDetectionService extends Disposable implements IPullRequ
 				this.logService,
 			);
 		} catch (error) {
-			this.logService.debug(`[PullRequestDetectionService] Failed to detect pull request via GitHub API: ${error instanceof Error ? error.message : String(error)}`);
+			this.logService.debug(
+				`[PullRequestDetectionService] Failed to detect pull request via GitHub API: ${error instanceof Error ? error.message : String(error)}`,
+			);
 			return undefined;
 		}
 	}

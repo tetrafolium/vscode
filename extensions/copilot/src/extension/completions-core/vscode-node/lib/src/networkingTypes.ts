@@ -2,7 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-export { FetchOptions, Response } from '../../../../../platform/networking/common/fetcherService';
+export {
+	FetchOptions,
+	Response,
+} from '../../../../../platform/networking/common/fetcherService';
 
 /**
  * NETWORKING TYPES, INTERFACES AND ERROR CLASSES
@@ -49,7 +52,10 @@ export interface IHeaders extends Iterable<[string, string]> {
 	[Symbol.iterator](): Iterator<[string, string]>;
 }
 
-export interface IAbortSignal extends Pick<EventTarget, 'addEventListener' | 'removeEventListener'> {
+export interface IAbortSignal extends Pick<
+	EventTarget,
+	'addEventListener' | 'removeEventListener'
+> {
 	readonly aborted: boolean;
 }
 

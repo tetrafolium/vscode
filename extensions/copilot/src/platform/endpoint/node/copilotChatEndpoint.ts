@@ -6,7 +6,10 @@
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { IAuthenticationService } from '../../authentication/common/authentication';
 import { IChatMLFetcher } from '../../chat/common/chatMLFetcher';
-import { CHAT_MODEL, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	CHAT_MODEL,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { IEnvService } from '../../env/common/envService';
 import { ILogService } from '../../log/common/logService';
 import { IFetcherService } from '../../networking/common/fetcherService';
@@ -37,7 +40,7 @@ export class CopilotChatEndpoint extends ChatEndpoint {
 		@IConfigurationService configurationService: IConfigurationService,
 		@IExperimentationService experimentService: IExperimentationService,
 		@IChatWebSocketManager chatWebSocketService: IChatWebSocketManager,
-		@ILogService logService: ILogService
+		@ILogService logService: ILogService,
 	) {
 		super(
 			modelMetadata,
@@ -48,15 +51,19 @@ export class CopilotChatEndpoint extends ChatEndpoint {
 			configurationService,
 			experimentService,
 			chatWebSocketService,
-			logService
+			logService,
 		);
 	}
 
-	protected override getCompletionsCallback(): RawMessageConversionCallback | undefined {
+	protected override getCompletionsCallback():
+		| RawMessageConversionCallback
+		| undefined {
 		return (out, data) => {
 			if (data && data.id) {
 				out.reasoning_opaque = data.id;
-				out.reasoning_text = Array.isArray(data.text) ? data.text.join('') : data.text;
+				out.reasoning_text = Array.isArray(data.text)
+					? data.text.join('')
+					: data.text;
 			}
 		};
 	}
@@ -74,9 +81,17 @@ export class CopilotChatEndpoint extends ChatEndpoint {
 export class CopilotUtilitySmallChatEndpoint {
 	static readonly capiFamily: string = CHAT_MODEL.GPT4OMINI;
 
-	static async resolve(modelFetcher: IModelMetadataFetcher, instantiationService: IInstantiationService): Promise<IChatEndpoint> {
-		const modelMetadata = await modelFetcher.getChatModelFromCapiFamily(CopilotUtilitySmallChatEndpoint.capiFamily);
-		return instantiationService.createInstance(CopilotChatEndpoint, modelMetadata);
+	static async resolve(
+		modelFetcher: IModelMetadataFetcher,
+		instantiationService: IInstantiationService,
+	): Promise<IChatEndpoint> {
+		const modelMetadata = await modelFetcher.getChatModelFromCapiFamily(
+			CopilotUtilitySmallChatEndpoint.capiFamily,
+		);
+		return instantiationService.createInstance(
+			CopilotChatEndpoint,
+			modelMetadata,
+		);
 	}
 }
 
@@ -87,8 +102,14 @@ export class CopilotUtilitySmallChatEndpoint {
  * flags with `is_chat_fallback === true`.
  */
 export class CopilotUtilityChatEndpoint {
-	static async resolve(modelFetcher: IModelMetadataFetcher, instantiationService: IInstantiationService): Promise<IChatEndpoint> {
+	static async resolve(
+		modelFetcher: IModelMetadataFetcher,
+		instantiationService: IInstantiationService,
+	): Promise<IChatEndpoint> {
 		const modelMetadata = await modelFetcher.getCopilotUtilityModel();
-		return instantiationService.createInstance(CopilotChatEndpoint, modelMetadata);
+		return instantiationService.createInstance(
+			CopilotChatEndpoint,
+			modelMetadata,
+		);
 	}
 }

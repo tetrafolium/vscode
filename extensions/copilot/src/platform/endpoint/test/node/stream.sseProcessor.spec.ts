@@ -8,7 +8,10 @@ import { CancellationTokenSource } from '../../../../util/vs/base/common/cancell
 import { ILogService } from '../../../log/common/logService';
 import { IResponseDelta } from '../../../networking/common/fetch';
 import { FinishedCompletionReason } from '../../../networking/common/openai';
-import { FinishedCompletion, SSEProcessor } from '../../../networking/node/stream';
+import {
+	FinishedCompletion,
+	SSEProcessor,
+} from '../../../networking/node/stream';
 import { ITelemetryService } from '../../../telemetry/common/telemetry';
 import { createFakeStreamResponse } from '../../../test/node/fetcher';
 import { createPlatformServices } from '../../../test/node/services';
@@ -23,17 +26,22 @@ async function getAll<T>(iter: AsyncIterable<T>): Promise<T[]> {
 }
 
 const createSpyingFinishedCb = () => {
-	const collection: { text: string; index: number; delta: IResponseDelta }[] = [];
+	const collection: { text: string; index: number; delta: IResponseDelta }[] =
+		[];
 	return {
 		collection,
-		finishedCb: async (text: string, index: number, delta: IResponseDelta): Promise<number | undefined> => {
+		finishedCb: async (
+			text: string,
+			index: number,
+			delta: IResponseDelta,
+		): Promise<number | undefined> => {
 			collection.push({
 				text,
 				index,
 				delta,
 			});
 			return undefined;
-		}
+		},
 	};
 };
 
@@ -54,16 +62,16 @@ suite('SSEProcessor', () => {
 
 	function assertSimplifiedResultsEqual(
 		actual: FinishedCompletion[],
-		splifiedExpected: Record<number, SimpleResult>
+		splifiedExpected: Record<number, SimpleResult>,
 	) {
 		const simplifiedActual = Object.fromEntries(
-			actual.map(c => [
+			actual.map((c) => [
 				c.index,
 				{
 					finishReason: c.reason,
 					chunks: c.solution.text,
 				},
-			])
+			]),
 		);
 		assert.deepStrictEqual(simplifiedActual, splifiedExpected);
 	}
@@ -176,7 +184,7 @@ data: [DONE]
 		// include a finish_reason, but we handle it anyway.
 		const response = [
 			`data: {"choices":[{"delta":{"content":"foo"},"index":0,"finish_reason":null}]}\n`,
-			`data: [DONE]\n`
+			`data: [DONE]\n`,
 		];
 		const processor = await SSEProcessor.create(
 			logService,
@@ -467,7 +475,7 @@ data: [DONE]
 			`data: {"choices":[{"delta":{"content":"baz"},"index":1,"finish_reason":null}]}\n`,
 			`data: {"choices":[{"delta":{"content":"bar"},"index":0,"finish_reason":"stop"}]}\n`,
 			`data: {"choices":[{"delta":{"content":"quux"},"index":1,"finish_reason":"stop"}]}\n`,
-			`data: [DONE]\n`
+			`data: [DONE]\n`,
 		];
 		let callCount = 0;
 		const processor = await SSEProcessor.create(
@@ -476,10 +484,12 @@ data: [DONE]
 			2,
 			createFakeStreamResponse(response),
 		);
-		const results = await getAll(processor.processSSE(async () => {
-			callCount++;
-			return undefined;
-		}));
+		const results = await getAll(
+			processor.processSSE(async () => {
+				callCount++;
+				return undefined;
+			}),
+		);
 		assert.deepStrictEqual(callCount, 4);
 		assertSimplifiedResultsEqual(results, {
 			0: {
@@ -514,10 +524,22 @@ data: [DONE]
 
 	test('gracefully handle cancellation - do not emit completion without its usage', async function () {
 		const response = [
-			{ shouldCancelStream: false, chunk: 'data: {"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"delta":{"content":"hello"},"finish_reason":null,"index":0,"logprobs":null}],"created":1749821284,"id":"chatcmpl-BhyjslTwN48eOEj3LT3jsieMDRgRl","model":"gpt-4o-mini-2024-07-18","object":"chat.completion.chunk","system_fingerprint":"fp_57db37749c","usage":null}\n' },
-			{ shouldCancelStream: false, chunk: 'data: {"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"delta":{"content":"world"},"finish_reason":null,"index":0,"logprobs":null}],"created":1749821284,"id":"chatcmpl-BhyjslTwN48eOEj3LT3jsieMDRgRl","model":"gpt-4o-mini-2024-07-18","object":"chat.completion.chunk","system_fingerprint":"fp_57db37749c","usage":null}\n' },
-			{ shouldCancelStream: true, chunk: 'data: {"choices":[{"content_filter_results":{},"delta":{},"finish_reason":"stop","index":0,"logprobs":null}],"created":1749821284,"id":"chatcmpl-BhyjslTwN48eOEj3LT3jsieMDRgRl","model":"gpt-4o-mini-2024-07-18","object":"chat.completion.chunk","system_fingerprint":"fp_57db37749c","usage":null}\n' },
-			{ shouldCancelStream: false, chunk: 'data: {"choices":[],"created":1749821284,"id":"chatcmpl-BhyjslTwN48eOEj3LT3jsieMDRgRl","model":"gpt-4o-mini-2024-07-18","object":"chat.completion.chunk","system_fingerprint":"fp_57db37749c","usage":{"completion_tokens":93,"completion_tokens_details":{"accepted_prediction_tokens":89,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":965,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":1058}}\n' },
+			{
+				shouldCancelStream: false,
+				chunk: 'data: {"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"delta":{"content":"hello"},"finish_reason":null,"index":0,"logprobs":null}],"created":1749821284,"id":"chatcmpl-BhyjslTwN48eOEj3LT3jsieMDRgRl","model":"gpt-4o-mini-2024-07-18","object":"chat.completion.chunk","system_fingerprint":"fp_57db37749c","usage":null}\n',
+			},
+			{
+				shouldCancelStream: false,
+				chunk: 'data: {"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"delta":{"content":"world"},"finish_reason":null,"index":0,"logprobs":null}],"created":1749821284,"id":"chatcmpl-BhyjslTwN48eOEj3LT3jsieMDRgRl","model":"gpt-4o-mini-2024-07-18","object":"chat.completion.chunk","system_fingerprint":"fp_57db37749c","usage":null}\n',
+			},
+			{
+				shouldCancelStream: true,
+				chunk: 'data: {"choices":[{"content_filter_results":{},"delta":{},"finish_reason":"stop","index":0,"logprobs":null}],"created":1749821284,"id":"chatcmpl-BhyjslTwN48eOEj3LT3jsieMDRgRl","model":"gpt-4o-mini-2024-07-18","object":"chat.completion.chunk","system_fingerprint":"fp_57db37749c","usage":null}\n',
+			},
+			{
+				shouldCancelStream: false,
+				chunk: 'data: {"choices":[],"created":1749821284,"id":"chatcmpl-BhyjslTwN48eOEj3LT3jsieMDRgRl","model":"gpt-4o-mini-2024-07-18","object":"chat.completion.chunk","system_fingerprint":"fp_57db37749c","usage":{"completion_tokens":93,"completion_tokens_details":{"accepted_prediction_tokens":89,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":965,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":1058}}\n',
+			},
 			{ shouldCancelStream: true, chunk: 'data: [DONE]\n' },
 		];
 		const cts = new CancellationTokenSource();
@@ -527,7 +549,7 @@ data: [DONE]
 			telemetryService,
 			1,
 			responseStream,
-			cts.token
+			cts.token,
 		);
 		const results = await getAll(processor.processSSE());
 		expect(results).toMatchInlineSnapshot(`[]`);
@@ -577,24 +599,32 @@ data: [DONE]
 		let thinkingId: string | undefined = undefined;
 		let metadata: { [key: string]: any } | undefined = undefined;
 
-
-		await getAll(processor.processSSE((text: string, index: number, delta: IResponseDelta) => {
-			if (delta.thinking && !isEncryptedThinkingDelta(delta.thinking)) {
-				if (delta.thinking.text) {
-					if (thinkingText === undefined) {
-						thinkingText = '';
+		await getAll(
+			processor.processSSE(
+				(text: string, index: number, delta: IResponseDelta) => {
+					if (
+						delta.thinking &&
+						!isEncryptedThinkingDelta(delta.thinking)
+					) {
+						if (delta.thinking.text) {
+							if (thinkingText === undefined) {
+								thinkingText = '';
+							}
+							thinkingText += Array.isArray(delta.thinking.text)
+								? delta.thinking.text.join('')
+								: delta.thinking.text;
+						}
+						if (delta.thinking.id) {
+							thinkingId = delta.thinking.id;
+						}
+						if (delta.thinking.metadata) {
+							metadata = delta.thinking.metadata;
+						}
 					}
-					thinkingText += Array.isArray(delta.thinking.text) ? delta.thinking.text.join('') : delta.thinking.text;
-				}
-				if (delta.thinking.id) {
-					thinkingId = delta.thinking.id;
-				}
-				if (delta.thinking.metadata) {
-					metadata = delta.thinking.metadata;
-				}
-			}
-			return Promise.resolve(undefined);
-		}));
+					return Promise.resolve(undefined);
+				},
+			),
+		);
 
 		expect(thinkingText).toBeDefined();
 		expect(thinkingText).toBe(' Analyzing');
@@ -617,31 +647,38 @@ data: [DONE]
 			telemetryService,
 			1,
 			createFakeStreamResponse(response),
-
 		);
 
 		let thinkingText: string | string[] | undefined = undefined;
 		let thinkingId: string | undefined = undefined;
 		let metadata: { [key: string]: any } | undefined = undefined;
 
-
-		await getAll(processor.processSSE((text: string, index: number, delta: IResponseDelta) => {
-			if (delta.thinking && !isEncryptedThinkingDelta(delta.thinking)) {
-				if (delta.thinking.text) {
-					if (thinkingText === undefined) {
-						thinkingText = '';
+		await getAll(
+			processor.processSSE(
+				(text: string, index: number, delta: IResponseDelta) => {
+					if (
+						delta.thinking &&
+						!isEncryptedThinkingDelta(delta.thinking)
+					) {
+						if (delta.thinking.text) {
+							if (thinkingText === undefined) {
+								thinkingText = '';
+							}
+							thinkingText += Array.isArray(delta.thinking.text)
+								? delta.thinking.text.join('')
+								: delta.thinking.text;
+						}
+						if (delta.thinking.id) {
+							thinkingId = delta.thinking.id;
+						}
+						if (delta.thinking.metadata) {
+							metadata = delta.thinking.metadata;
+						}
 					}
-					thinkingText += Array.isArray(delta.thinking.text) ? delta.thinking.text.join('') : delta.thinking.text;
-				}
-				if (delta.thinking.id) {
-					thinkingId = delta.thinking.id;
-				}
-				if (delta.thinking.metadata) {
-					metadata = delta.thinking.metadata;
-				}
-			}
-			return Promise.resolve(undefined);
-		}));
+					return Promise.resolve(undefined);
+				},
+			),
+		);
 
 		expect(thinkingText).toBeUndefined();
 		expect(thinkingId).toBe('cot_a3074ac0-a8e8-4a55-bb5b-65cbb1648dcf');
@@ -665,15 +702,25 @@ data: [DONE]
 
 		let thinkingText: string | string[] | undefined = undefined;
 
-		await getAll(processor.processSSE((text: string, index: number, delta: IResponseDelta) => {
-			if (delta.thinking && !isEncryptedThinkingDelta(delta.thinking) && delta.thinking.text) {
-				if (thinkingText === undefined) {
-					thinkingText = '';
-				}
-				thinkingText += Array.isArray(delta.thinking.text) ? delta.thinking.text.join('') : delta.thinking.text;
-			}
-			return Promise.resolve(undefined);
-		}));
+		await getAll(
+			processor.processSSE(
+				(text: string, index: number, delta: IResponseDelta) => {
+					if (
+						delta.thinking &&
+						!isEncryptedThinkingDelta(delta.thinking) &&
+						delta.thinking.text
+					) {
+						if (thinkingText === undefined) {
+							thinkingText = '';
+						}
+						thinkingText += Array.isArray(delta.thinking.text)
+							? delta.thinking.text.join('')
+							: delta.thinking.text;
+					}
+					return Promise.resolve(undefined);
+				},
+			),
+		);
 
 		expect(thinkingText).toBe('Analyzing');
 	});
@@ -695,29 +742,40 @@ data: [DONE]
 
 		let thinkingText: string | string[] | undefined = undefined;
 
-		await getAll(processor.processSSE((text: string, index: number, delta: IResponseDelta) => {
-			if (delta.thinking && !isEncryptedThinkingDelta(delta.thinking) && delta.thinking.text) {
-				if (thinkingText === undefined) {
-					thinkingText = '';
-				}
-				thinkingText += Array.isArray(delta.thinking.text) ? delta.thinking.text.join('') : delta.thinking.text;
-			}
-			return Promise.resolve(undefined);
-		}));
+		await getAll(
+			processor.processSSE(
+				(text: string, index: number, delta: IResponseDelta) => {
+					if (
+						delta.thinking &&
+						!isEncryptedThinkingDelta(delta.thinking) &&
+						delta.thinking.text
+					) {
+						if (thinkingText === undefined) {
+							thinkingText = '';
+						}
+						thinkingText += Array.isArray(delta.thinking.text)
+							? delta.thinking.text.join('')
+							: delta.thinking.text;
+					}
+					return Promise.resolve(undefined);
+				},
+			),
+		);
 
 		expect(thinkingText).toBe('Analyzing');
 	});
 
 	suite('real world snapshots', () => {
-
-		async function processResponse(response: string[], expectedNumChoices = 1) {
+		async function processResponse(
+			response: string[],
+			expectedNumChoices = 1,
+		) {
 			const { collection, finishedCb } = createSpyingFinishedCb();
 			const processor = await SSEProcessor.create(
 				logService,
 				telemetryService,
 				expectedNumChoices,
 				createFakeStreamResponse(response),
-
 			);
 			const results = await getAll(processor.processSSE(finishedCb));
 			return { collection, results };
@@ -746,8 +804,12 @@ data: [DONE]
 
 			const { collection, results } = await processResponse(response);
 
-			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot('finishedCallback chunks');
-			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot('completion results');
+			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot(
+				'finishedCallback chunks',
+			);
+			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot(
+				'completion results',
+			);
 		});
 
 		test('n > 1 - intent detector', async () => {
@@ -767,8 +829,12 @@ data: [DONE]
 
 			const { collection, results } = await processResponse(response, 3);
 
-			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot('finishedCallback chunks');
-			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot('completion results');
+			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot(
+				'finishedCallback chunks',
+			);
+			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot(
+				'completion results',
+			);
 		});
 
 		test('single function call', async function () {
@@ -785,12 +851,16 @@ data: [DONE]
 				`data: {"choices":[{"index":0,"delta":{"content":null,"role":null,"function_call":{"arguments":"\\"\\n"}}}],"created":1717591770,"id":"chatcmpl-9WkN0MexQZVb1yEgTn8jqMX24oHej"}\n`,
 				`data: {"choices":[{"index":0,"delta":{"content":null,"role":null,"function_call":{"arguments":"}"}}}],"created":1717591770,"id":"chatcmpl-9WkN0MexQZVb1yEgTn8jqMX24oHej"}\n`,
 				`data: {"choices":[{"finish_reason":"function_call","index":0,"delta":{"content":null,"role":null}}],"created":1717591770,"id":"chatcmpl-9WkN0MexQZVb1yEgTn8jqMX24oHej"}\n`,
-				`data: [DONE]\n`
+				`data: [DONE]\n`,
 			];
 			const { collection, results } = await processResponse(response);
 
-			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot('finishedCallback chunks');
-			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot('completion results');
+			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot(
+				'finishedCallback chunks',
+			);
+			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot(
+				'completion results',
+			);
 		});
 
 		test('single tool call', async function () {
@@ -808,8 +878,12 @@ data: [DONE]
 			];
 			const { collection, results } = await processResponse(response);
 
-			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot('finishedCallback chunks');
-			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot('completion results');
+			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot(
+				'finishedCallback chunks',
+			);
+			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot(
+				'completion results',
+			);
 		});
 
 		test('single tool call with annotations attached', async function () {
@@ -868,8 +942,12 @@ data: [DONE]
 			];
 			const { collection, results } = await processResponse(response);
 
-			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot('finishedCallback chunks');
-			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot('completion results');
+			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot(
+				'finishedCallback chunks',
+			);
+			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot(
+				'completion results',
+			);
 		});
 
 		test('multiple tool calls', async function () {
@@ -1020,8 +1098,12 @@ data: [DONE]
 			];
 			const { collection, results } = await processResponse(response);
 
-			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot('finishedCallback chunks');
-			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot('completion results');
+			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot(
+				'finishedCallback chunks',
+			);
+			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot(
+				'completion results',
+			);
 		});
 
 		test('stream from @github (bing-search skill)', async function () {
@@ -1150,8 +1232,12 @@ data: [DONE]
 			];
 			const { collection, results } = await processResponse(response, 2);
 
-			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot('finishedCallback chunks');
-			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot('completion results');
+			expect(JSON.stringify(collection, null, '\t')).toMatchSnapshot(
+				'finishedCallback chunks',
+			);
+			expect(JSON.stringify(results, null, '\t')).toMatchSnapshot(
+				'completion results',
+			);
 		});
 	});
 
@@ -1168,10 +1254,15 @@ data: [DONE]
 			createFakeStreamResponse(response),
 		);
 		const results = await getAll(processor.processSSE());
-		const completions = results.filter((r): r is FinishedCompletion => 'solution' in r);
+		const completions = results.filter(
+			(r): r is FinishedCompletion => 'solution' in r,
+		);
 		expect(completions).toHaveLength(1);
 		expect(completions[0].usage).toBeDefined();
-		expect(completions[0].usage!.copilot_usage).toEqual({ total_nano_aiu: 500000000, token_details: [] });
+		expect(completions[0].usage!.copilot_usage).toEqual({
+			total_nano_aiu: 500000000,
+			token_details: [],
+		});
 	});
 
 	test('copilot_usage is undefined when not present in response', async function () {
@@ -1186,7 +1277,9 @@ data: [DONE]
 			createFakeStreamResponse(response),
 		);
 		const results = await getAll(processor.processSSE());
-		const completions = results.filter((r): r is FinishedCompletion => 'solution' in r);
+		const completions = results.filter(
+			(r): r is FinishedCompletion => 'solution' in r,
+		);
 		expect(completions).toHaveLength(1);
 		expect(completions[0].usage).toBeDefined();
 		expect(completions[0].usage!.copilot_usage).toBeUndefined();

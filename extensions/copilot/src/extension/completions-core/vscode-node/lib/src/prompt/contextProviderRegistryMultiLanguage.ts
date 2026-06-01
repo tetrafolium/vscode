@@ -36,30 +36,41 @@ interface MultiLanguageContextProviderParams {
 	mlcpEnableImports: boolean;
 }
 
-export const multiLanguageContextProviderParamsDefault: MultiLanguageContextProviderParams = {
-	mlcpMaxContextItems: 20,
-	mlcpMaxSymbolMatches: 20,
-	mlcpEnableImports: false,
-};
+export const multiLanguageContextProviderParamsDefault: MultiLanguageContextProviderParams =
+	{
+		mlcpMaxContextItems: 20,
+		mlcpMaxSymbolMatches: 20,
+		mlcpEnableImports: false,
+	};
 
 export function fillInMultiLanguageActiveExperiments(
 	accessor: ServicesAccessor,
 	matchedContextProviders: string[],
 	activeExperiments: ActiveExperiments,
-	telemetryData: TelemetryWithExp
+	telemetryData: TelemetryWithExp,
 ): void {
 	if (
-		(matchedContextProviders.length === 1 && matchedContextProviders[0] === '*') ||
+		(matchedContextProviders.length === 1 &&
+			matchedContextProviders[0] === '*') ||
 		matchedContextProviders.includes(MULTI_LANGUAGE_CONTEXT_PROVIDER_ID)
 	) {
 		addActiveExperiments(accessor, activeExperiments, telemetryData);
 	}
 }
 
-function addActiveExperiments(accessor: ServicesAccessor, activeExperiments: ActiveExperiments, telemetryData: TelemetryWithExp) {
+function addActiveExperiments(
+	accessor: ServicesAccessor,
+	activeExperiments: ActiveExperiments,
+	telemetryData: TelemetryWithExp,
+) {
 	try {
-		const params = getMultiLanguageContextProviderParamsFromExp(accessor, telemetryData);
-		for (const [key, value] of Object.entries(params)) { activeExperiments.set(key, value as number); }
+		const params = getMultiLanguageContextProviderParamsFromExp(
+			accessor,
+			telemetryData,
+		);
+		for (const [key, value] of Object.entries(params)) {
+			activeExperiments.set(key, value as number);
+		}
 	} catch (e) {
 		logger.exception(accessor, e, 'fillInMultiLanguageActiveExperiments');
 	}
@@ -67,19 +78,26 @@ function addActiveExperiments(accessor: ServicesAccessor, activeExperiments: Act
 
 function getMultiLanguageContextProviderParamsFromExp(
 	accessor: ServicesAccessor,
-	telemetryData: TelemetryWithExp
+	telemetryData: TelemetryWithExp,
 ): MultiLanguageContextProviderParams {
 	let params = multiLanguageContextProviderParamsDefault;
 
 	const logTarget = accessor.get(ICompletionsLogTargetService);
 	const featuresService = accessor.get(ICompletionsFeaturesService);
-	const multiLanguageContextProviderParams = featuresService.multiLanguageContextProviderParams(telemetryData);
+	const multiLanguageContextProviderParams =
+		featuresService.multiLanguageContextProviderParams(telemetryData);
 
 	if (multiLanguageContextProviderParams) {
 		try {
-			params = JSON.parse(multiLanguageContextProviderParams) as MultiLanguageContextProviderParams;
+			params = JSON.parse(
+				multiLanguageContextProviderParams,
+			) as MultiLanguageContextProviderParams;
 		} catch (e) {
-			logger.error(logTarget, 'Failed to parse multiLanguageContextProviderParams', e);
+			logger.error(
+				logTarget,
+				'Failed to parse multiLanguageContextProviderParams',
+				e,
+			);
 		}
 	}
 
@@ -87,20 +105,25 @@ function getMultiLanguageContextProviderParamsFromExp(
 }
 
 export function getMultiLanguageContextProviderParamsFromActiveExperiments(
-	activeExperiments: Map<string, string | number | boolean | string[]>
+	activeExperiments: Map<string, string | number | boolean | string[]>,
 ): MultiLanguageContextProviderParams {
 	const params = { ...multiLanguageContextProviderParamsDefault };
 
 	if (activeExperiments.has('mlcpMaxContextItems')) {
-		params.mlcpMaxContextItems = Number(activeExperiments.get('mlcpMaxContextItems'));
+		params.mlcpMaxContextItems = Number(
+			activeExperiments.get('mlcpMaxContextItems'),
+		);
 	}
 
 	if (activeExperiments.has('mlcpMaxSymbolMatches')) {
-		params.mlcpMaxSymbolMatches = Number(activeExperiments.get('mlcpMaxSymbolMatches'));
+		params.mlcpMaxSymbolMatches = Number(
+			activeExperiments.get('mlcpMaxSymbolMatches'),
+		);
 	}
 
 	if (activeExperiments.has('mlcpEnableImports')) {
-		params.mlcpEnableImports = String(activeExperiments.get('mlcpEnableImports')) === 'true';
+		params.mlcpEnableImports =
+			String(activeExperiments.get('mlcpEnableImports')) === 'true';
 	}
 
 	return params;

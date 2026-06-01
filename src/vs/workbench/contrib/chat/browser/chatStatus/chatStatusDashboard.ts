@@ -3,48 +3,99 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { $, append, EventType, addDisposableListener, EventHelper, disposableWindowInterval, getWindow } from '../../../../../base/browser/dom.js';
-import { Gesture, EventType as TouchEventType } from '../../../../../base/browser/touch.js';
-import { ActionBar } from '../../../../../base/browser/ui/actionbar/actionbar.js';
-import { renderLabelWithIcons } from '../../../../../base/browser/ui/iconLabel/iconLabels.js';
-import { Button } from '../../../../../base/browser/ui/button/button.js';
-import { SelectBox } from '../../../../../base/browser/ui/selectBox/selectBox.js';
-import { Checkbox, TriStateCheckbox } from '../../../../../base/browser/ui/toggle/toggle.js';
-import { IAction, toAction, WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification } from '../../../../../base/common/actions.js';
-import { CancellationToken, cancelOnDispose } from '../../../../../base/common/cancellation.js';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { safeIntl } from '../../../../../base/common/date.js';
-import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { MutableDisposable, DisposableStore } from '../../../../../base/common/lifecycle.js';
-import { parseLinkedText } from '../../../../../base/common/linkedText.js';
-import { language } from '../../../../../base/common/platform.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { isObject } from '../../../../../base/common/types.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { IInlineCompletionsService } from '../../../../../editor/browser/services/inlineCompletionsService.js';
-import { ILanguageService } from '../../../../../editor/common/languages/language.js';
-import { ITextResourceConfigurationService } from '../../../../../editor/common/services/textResourceConfiguration.js';
-import { ILanguageFeaturesService } from '../../../../../editor/common/services/languageFeatures.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
-import { localize } from '../../../../../nls.js';
-import { ICommandService } from '../../../../../platform/commands/common/commands.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { IHoverService, nativeHoverDelegate } from '../../../../../platform/hover/browser/hover.js';
-import { IMarkdownRendererService } from '../../../../../platform/markdown/browser/markdownRenderer.js';
-import { Link } from '../../../../../platform/opener/browser/link.js';
-import { IOpenerService } from '../../../../../platform/opener/common/opener.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { defaultButtonStyles, defaultCheckboxStyles, defaultSelectBoxStyles } from '../../../../../platform/theme/browser/defaultStyles.js';
-import { DomWidget } from '../../../../../platform/domWidget/browser/domWidget.js';
-import { EditorResourceAccessor, SideBySideEditor } from '../../../../common/editor.js';
-import { IChatEntitlementService, ChatEntitlementService, ChatEntitlement, IQuotaSnapshot, getChatPlanName } from '../../../../services/chat/common/chatEntitlementService.js';
-import { IEditorService } from '../../../../services/editor/common/editorService.js';
-import { IContextViewService } from '../../../../../platform/contextview/browser/contextView.js';
-import { isNewUser } from './chatStatus.js';
-import { IChatStatusItemService, ChatStatusEntry } from './chatStatusItemService.js';
-import { GitHubPaths, IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
-import product from '../../../../../platform/product/common/product.js';
-import { isCompletionsEnabled } from '../../../../../editor/common/services/completionsEnablement.js';
+import {
+	$,
+	append,
+	EventType,
+	addDisposableListener,
+	EventHelper,
+	disposableWindowInterval,
+	getWindow,
+} from "../../../../../base/browser/dom.js";
+import {
+	Gesture,
+	EventType as TouchEventType,
+} from "../../../../../base/browser/touch.js";
+import { ActionBar } from "../../../../../base/browser/ui/actionbar/actionbar.js";
+import { renderLabelWithIcons } from "../../../../../base/browser/ui/iconLabel/iconLabels.js";
+import { Button } from "../../../../../base/browser/ui/button/button.js";
+import { SelectBox } from "../../../../../base/browser/ui/selectBox/selectBox.js";
+import {
+	Checkbox,
+	TriStateCheckbox,
+} from "../../../../../base/browser/ui/toggle/toggle.js";
+import {
+	IAction,
+	toAction,
+	WorkbenchActionExecutedEvent,
+	WorkbenchActionExecutedClassification,
+} from "../../../../../base/common/actions.js";
+import {
+	CancellationToken,
+	cancelOnDispose,
+} from "../../../../../base/common/cancellation.js";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { safeIntl } from "../../../../../base/common/date.js";
+import { MarkdownString } from "../../../../../base/common/htmlContent.js";
+import {
+	MutableDisposable,
+	DisposableStore,
+} from "../../../../../base/common/lifecycle.js";
+import { parseLinkedText } from "../../../../../base/common/linkedText.js";
+import { language } from "../../../../../base/common/platform.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { isObject } from "../../../../../base/common/types.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { IInlineCompletionsService } from "../../../../../editor/browser/services/inlineCompletionsService.js";
+import { ILanguageService } from "../../../../../editor/common/languages/language.js";
+import { ITextResourceConfigurationService } from "../../../../../editor/common/services/textResourceConfiguration.js";
+import { ILanguageFeaturesService } from "../../../../../editor/common/services/languageFeatures.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../../platform/storage/common/storage.js";
+import { localize } from "../../../../../nls.js";
+import { ICommandService } from "../../../../../platform/commands/common/commands.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import {
+	IHoverService,
+	nativeHoverDelegate,
+} from "../../../../../platform/hover/browser/hover.js";
+import { IMarkdownRendererService } from "../../../../../platform/markdown/browser/markdownRenderer.js";
+import { Link } from "../../../../../platform/opener/browser/link.js";
+import { IOpenerService } from "../../../../../platform/opener/common/opener.js";
+import { ITelemetryService } from "../../../../../platform/telemetry/common/telemetry.js";
+import {
+	defaultButtonStyles,
+	defaultCheckboxStyles,
+	defaultSelectBoxStyles,
+} from "../../../../../platform/theme/browser/defaultStyles.js";
+import { DomWidget } from "../../../../../platform/domWidget/browser/domWidget.js";
+import {
+	EditorResourceAccessor,
+	SideBySideEditor,
+} from "../../../../common/editor.js";
+import {
+	IChatEntitlementService,
+	ChatEntitlementService,
+	ChatEntitlement,
+	IQuotaSnapshot,
+	getChatPlanName,
+} from "../../../../services/chat/common/chatEntitlementService.js";
+import { IEditorService } from "../../../../services/editor/common/editorService.js";
+import { IContextViewService } from "../../../../../platform/contextview/browser/contextView.js";
+import { isNewUser } from "./chatStatus.js";
+import {
+	IChatStatusItemService,
+	ChatStatusEntry,
+} from "./chatStatusItemService.js";
+import {
+	GitHubPaths,
+	IDefaultAccountService,
+} from "../../../../../platform/defaultAccount/common/defaultAccount.js";
+import product from "../../../../../platform/product/common/product.js";
+import { isCompletionsEnabled } from "../../../../../editor/common/services/completionsEnablement.js";
 
 const defaultChat = product.defaultChatAgent;
 
@@ -53,16 +104,28 @@ interface ISettingsAccessor {
 	writeSetting: (value: boolean) => Promise<void>;
 }
 type ChatSettingChangedClassification = {
-	owner: 'bpasero';
-	comment: 'Provides insight into chat settings changed from the chat status entry.';
-	settingIdentifier: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The identifier of the setting that changed.' };
-	settingMode?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The optional editor language for which the setting changed.' };
-	settingEnablement: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Whether the setting got enabled or disabled.' };
+	owner: "bpasero";
+	comment: "Provides insight into chat settings changed from the chat status entry.";
+	settingIdentifier: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The identifier of the setting that changed.";
+	};
+	settingMode?: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The optional editor language for which the setting changed.";
+	};
+	settingEnablement: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "Whether the setting got enabled or disabled.";
+	};
 };
 type ChatSettingChangedEvent = {
 	settingIdentifier: string;
 	settingMode?: string;
-	settingEnablement: 'enabled' | 'disabled';
+	settingEnablement: "enabled" | "disabled";
 };
 
 export interface IChatStatusDashboardOptions {
@@ -99,35 +162,55 @@ export interface IChatStatusDashboardOptions {
 }
 
 export class ChatStatusDashboard extends DomWidget {
+	private static readonly QUICK_SETTINGS_COLLAPSED_KEY =
+		"chatStatusDashboard.quickSettingsCollapsed";
 
-	private static readonly QUICK_SETTINGS_COLLAPSED_KEY = 'chatStatusDashboard.quickSettingsCollapsed';
+	readonly element = $("div.chat-status-bar-entry-tooltip");
 
-	readonly element = $('div.chat-status-bar-entry-tooltip');
-
-	private readonly dateFormatter = safeIntl.DateTimeFormat(language, { month: 'short', day: 'numeric' });
-	private readonly timeFormatter = safeIntl.DateTimeFormat(language, { hour: 'numeric', minute: 'numeric' });
-	private readonly quotaPercentageFormatter = safeIntl.NumberFormat(undefined, { maximumFractionDigits: 0, minimumFractionDigits: 0 });
-	private readonly quotaCreditsFormatter = safeIntl.NumberFormat(language, { maximumFractionDigits: 2, minimumFractionDigits: 0 });
-
+	private readonly dateFormatter = safeIntl.DateTimeFormat(language, {
+		month: "short",
+		day: "numeric",
+	});
+	private readonly timeFormatter = safeIntl.DateTimeFormat(language, {
+		hour: "numeric",
+		minute: "numeric",
+	});
+	private readonly quotaPercentageFormatter = safeIntl.NumberFormat(undefined, {
+		maximumFractionDigits: 0,
+		minimumFractionDigits: 0,
+	});
+	private readonly quotaCreditsFormatter = safeIntl.NumberFormat(language, {
+		maximumFractionDigits: 2,
+		minimumFractionDigits: 0,
+	});
 
 	constructor(
 		private readonly options: IChatStatusDashboardOptions | undefined,
-		@IChatEntitlementService private readonly chatEntitlementService: ChatEntitlementService,
-		@IChatStatusItemService private readonly chatStatusItemService: IChatStatusItemService,
+		@IChatEntitlementService
+		private readonly chatEntitlementService: ChatEntitlementService,
+		@IChatStatusItemService
+		private readonly chatStatusItemService: IChatStatusItemService,
 		@ICommandService private readonly commandService: ICommandService,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 		@IEditorService private readonly editorService: IEditorService,
 		@IHoverService private readonly hoverService: IHoverService,
 		@ILanguageService private readonly languageService: ILanguageService,
 		@IOpenerService private readonly openerService: IOpenerService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
-		@ITextResourceConfigurationService private readonly textResourceConfigurationService: ITextResourceConfigurationService,
-		@IInlineCompletionsService private readonly inlineCompletionsService: IInlineCompletionsService,
-		@IMarkdownRendererService private readonly markdownRendererService: IMarkdownRendererService,
-		@ILanguageFeaturesService private readonly languageFeaturesService: ILanguageFeaturesService,
-		@IContextViewService private readonly contextViewService: IContextViewService,
+		@ITextResourceConfigurationService
+		private readonly textResourceConfigurationService: ITextResourceConfigurationService,
+		@IInlineCompletionsService
+		private readonly inlineCompletionsService: IInlineCompletionsService,
+		@IMarkdownRendererService
+		private readonly markdownRendererService: IMarkdownRendererService,
+		@ILanguageFeaturesService
+		private readonly languageFeaturesService: ILanguageFeaturesService,
+		@IContextViewService
+		private readonly contextViewService: IContextViewService,
 		@IStorageService private readonly storageService: IStorageService,
-		@IDefaultAccountService private readonly defaultAccountService: IDefaultAccountService,
+		@IDefaultAccountService
+		private readonly defaultAccountService: IDefaultAccountService,
 	) {
 		super();
 
@@ -137,12 +220,17 @@ export class ChatStatusDashboard extends DomWidget {
 	private render(): void {
 		const token = cancelOnDispose(this._store);
 
-		const { chat, premiumChat, completions } = this.chatEntitlementService.quotas;
+		const { chat, premiumChat, completions } =
+			this.chatEntitlementService.quotas;
 		const hasQuotas = !!(chat || premiumChat);
-		const isAnonymousWithSentiment = this.chatEntitlementService.anonymous && this.chatEntitlementService.sentiment.completed;
-		const isPooledQuotaDepleted = premiumChat?.unlimited && premiumChat.hasQuota === false;
+		const isAnonymousWithSentiment =
+			this.chatEntitlementService.anonymous &&
+			this.chatEntitlementService.sentiment.completed;
+		const isPooledQuotaDepleted =
+			premiumChat?.unlimited && premiumChat.hasQuota === false;
 		const hasUsageSection = hasQuotas || isAnonymousWithSentiment;
-		const hasVisibleUsageContent = chat?.unlimited === false ||
+		const hasVisibleUsageContent =
+			chat?.unlimited === false ||
 			premiumChat?.unlimited === false ||
 			(!this.options?.compactQuotaLayout && completions?.unlimited === false) ||
 			isAnonymousWithSentiment ||
@@ -160,38 +248,94 @@ export class ChatStatusDashboard extends DomWidget {
 		if (hasUsageSection && !this.options?.compactQuotaLayout) {
 			const planName = getChatPlanName(this.chatEntitlementService.entitlement);
 			const headerHost = this.options?.titleHeaderContainer ?? this.element;
-			const header = this.renderHeader(headerHost, this._store, planName, toAction({
-				id: 'workbench.action.manageCopilot',
-				label: localize('quotaLabel', "Manage Copilot Settings"),
-				tooltip: localize('quotaTooltip', "Manage Copilot Settings"),
-				class: ThemeIcon.asClassName(Codicon.settings),
-				run: () => this.runCommandAndClose(() => this.openerService.open(URI.parse(this.defaultAccountService.resolveGitHubUrl(GitHubPaths.copilotSettings)))),
-			}));
+			const header = this.renderHeader(
+				headerHost,
+				this._store,
+				planName,
+				toAction({
+					id: "workbench.action.manageCopilot",
+					label: localize("quotaLabel", "Manage Copilot Settings"),
+					tooltip: localize("quotaTooltip", "Manage Copilot Settings"),
+					class: ThemeIcon.asClassName(Codicon.settings),
+					run: () =>
+						this.runCommandAndClose(() =>
+							this.openerService.open(
+								URI.parse(
+									this.defaultAccountService.resolveGitHubUrl(
+										GitHubPaths.copilotSettings,
+									),
+								),
+							),
+						),
+				}),
+			);
 
 			// Add Additional Spend / Upgrade buttons to the header
-			const canConfigureAdditionalSpend = this.chatEntitlementService.entitlement === ChatEntitlement.EDU || this.chatEntitlementService.entitlement === ChatEntitlement.Pro || this.chatEntitlementService.entitlement === ChatEntitlement.ProPlus || this.chatEntitlementService.entitlement === ChatEntitlement.Max;
-			const showUpgrade = this.chatEntitlementService.quotas.canUpgradePlan ?? false;
+			const canConfigureAdditionalSpend =
+				this.chatEntitlementService.entitlement === ChatEntitlement.EDU ||
+				this.chatEntitlementService.entitlement === ChatEntitlement.Pro ||
+				this.chatEntitlementService.entitlement === ChatEntitlement.ProPlus ||
+				this.chatEntitlementService.entitlement === ChatEntitlement.Max;
+			const showUpgrade =
+				this.chatEntitlementService.quotas.canUpgradePlan ?? false;
 
 			const actionBarElement = header.lastElementChild;
 
 			if (canConfigureAdditionalSpend) {
-				headerAdditionalSpendButton = this._store.add(new Button(header, { ...defaultButtonStyles, hoverDelegate: nativeHoverDelegate, secondary: true }));
-				headerAdditionalSpendButton.element.classList.add('header-cta-button');
-				headerAdditionalSpendButton.label = localize('manageBudget', "Manage Budget");
-				this._store.add(headerAdditionalSpendButton.onDidClick(() => {
-					this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: 'workbench.action.chat.manageAdditionalSpend', from: 'chat-status' });
-					this.runCommandAndClose(() => this.openerService.open(URI.parse(this.defaultAccountService.resolveGitHubUrl(GitHubPaths.billingBudgets))));
-				}));
+				headerAdditionalSpendButton = this._store.add(
+					new Button(header, {
+						...defaultButtonStyles,
+						hoverDelegate: nativeHoverDelegate,
+						secondary: true,
+					}),
+				);
+				headerAdditionalSpendButton.element.classList.add("header-cta-button");
+				headerAdditionalSpendButton.label = localize(
+					"manageBudget",
+					"Manage Budget",
+				);
+				this._store.add(
+					headerAdditionalSpendButton.onDidClick(() => {
+						this.telemetryService.publicLog2<
+							WorkbenchActionExecutedEvent,
+							WorkbenchActionExecutedClassification
+						>("workbenchActionExecuted", {
+							id: "workbench.action.chat.manageAdditionalSpend",
+							from: "chat-status",
+						});
+						this.runCommandAndClose(() =>
+							this.openerService.open(
+								URI.parse(
+									this.defaultAccountService.resolveGitHubUrl(
+										GitHubPaths.billingBudgets,
+									),
+								),
+							),
+						);
+					}),
+				);
 				if (actionBarElement) {
-					header.insertBefore(headerAdditionalSpendButton.element, actionBarElement);
+					header.insertBefore(
+						headerAdditionalSpendButton.element,
+						actionBarElement,
+					);
 				}
 			}
 
 			if (showUpgrade) {
-				headerUpgradeButton = this._store.add(new Button(header, { ...defaultButtonStyles, hoverDelegate: nativeHoverDelegate }));
-				headerUpgradeButton.element.classList.add('header-cta-button');
-				headerUpgradeButton.label = localize('upgrade', "Upgrade");
-				this._store.add(headerUpgradeButton.onDidClick(() => this.runCommandAndClose('workbench.action.chat.upgradePlan')));
+				headerUpgradeButton = this._store.add(
+					new Button(header, {
+						...defaultButtonStyles,
+						hoverDelegate: nativeHoverDelegate,
+					}),
+				);
+				headerUpgradeButton.element.classList.add("header-cta-button");
+				headerUpgradeButton.label = localize("upgrade", "Upgrade");
+				this._store.add(
+					headerUpgradeButton.onDidClick(() =>
+						this.runCommandAndClose("workbench.action.chat.upgradePlan"),
+					),
+				);
 				if (actionBarElement) {
 					header.insertBefore(headerUpgradeButton.element, actionBarElement);
 				}
@@ -199,30 +343,73 @@ export class ChatStatusDashboard extends DomWidget {
 		}
 
 		// CTA buttons for compact mode — rendered into a caller-provided container
-		if (hasUsageSection && this.options?.compactQuotaLayout && this.options.ctaButtonsContainer) {
+		if (
+			hasUsageSection &&
+			this.options?.compactQuotaLayout &&
+			this.options.ctaButtonsContainer
+		) {
 			const ctaContainer = this.options.ctaButtonsContainer;
-			const canConfigureAdditionalSpend = this.chatEntitlementService.entitlement === ChatEntitlement.EDU || this.chatEntitlementService.entitlement === ChatEntitlement.Pro || this.chatEntitlementService.entitlement === ChatEntitlement.ProPlus || this.chatEntitlementService.entitlement === ChatEntitlement.Max;
-			const showUpgrade = this.chatEntitlementService.quotas.canUpgradePlan ?? false;
+			const canConfigureAdditionalSpend =
+				this.chatEntitlementService.entitlement === ChatEntitlement.EDU ||
+				this.chatEntitlementService.entitlement === ChatEntitlement.Pro ||
+				this.chatEntitlementService.entitlement === ChatEntitlement.ProPlus ||
+				this.chatEntitlementService.entitlement === ChatEntitlement.Max;
+			const showUpgrade =
+				this.chatEntitlementService.quotas.canUpgradePlan ?? false;
 
 			if (canConfigureAdditionalSpend) {
-				headerAdditionalSpendButton = this._store.add(new Button(ctaContainer, { ...defaultButtonStyles, hoverDelegate: nativeHoverDelegate, secondary: true }));
-				headerAdditionalSpendButton.label = localize('manageBudget', "Manage Budget");
-				this._store.add(headerAdditionalSpendButton.onDidClick(() => {
-					this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: 'workbench.action.chat.manageAdditionalSpend', from: 'chat-status' });
-					this.runCommandAndClose(() => this.openerService.open(URI.parse(this.defaultAccountService.resolveGitHubUrl(GitHubPaths.billingBudgets))));
-				}));
+				headerAdditionalSpendButton = this._store.add(
+					new Button(ctaContainer, {
+						...defaultButtonStyles,
+						hoverDelegate: nativeHoverDelegate,
+						secondary: true,
+					}),
+				);
+				headerAdditionalSpendButton.label = localize(
+					"manageBudget",
+					"Manage Budget",
+				);
+				this._store.add(
+					headerAdditionalSpendButton.onDidClick(() => {
+						this.telemetryService.publicLog2<
+							WorkbenchActionExecutedEvent,
+							WorkbenchActionExecutedClassification
+						>("workbenchActionExecuted", {
+							id: "workbench.action.chat.manageAdditionalSpend",
+							from: "chat-status",
+						});
+						this.runCommandAndClose(() =>
+							this.openerService.open(
+								URI.parse(
+									this.defaultAccountService.resolveGitHubUrl(
+										GitHubPaths.billingBudgets,
+									),
+								),
+							),
+						);
+					}),
+				);
 			}
 
 			if (showUpgrade) {
-				headerUpgradeButton = this._store.add(new Button(ctaContainer, { ...defaultButtonStyles, hoverDelegate: nativeHoverDelegate }));
-				headerUpgradeButton.label = localize('upgrade', "Upgrade");
-				this._store.add(headerUpgradeButton.onDidClick(() => this.runCommandAndClose('workbench.action.chat.upgradePlan')));
+				headerUpgradeButton = this._store.add(
+					new Button(ctaContainer, {
+						...defaultButtonStyles,
+						hoverDelegate: nativeHoverDelegate,
+					}),
+				);
+				headerUpgradeButton.label = localize("upgrade", "Upgrade");
+				this._store.add(
+					headerUpgradeButton.onDidClick(() =>
+						this.runCommandAndClose("workbench.action.chat.upgradePlan"),
+					),
+				);
 			}
 		}
 
 		// Compact mode class for CSS targeting
 		if (this.options?.compactQuotaLayout) {
-			this.element.classList.add('compact');
+			this.element.classList.add("compact");
 		}
 
 		// Always trigger a fresh quota fetch when the dashboard opens
@@ -230,34 +417,72 @@ export class ChatStatusDashboard extends DomWidget {
 
 		// Usage section — always shown inline
 		if (hasVisibleUsageContent) {
-			this.renderUsageContent(this.element, token, headerAdditionalSpendButton, headerUpgradeButton, updatePromise);
+			this.renderUsageContent(
+				this.element,
+				token,
+				headerAdditionalSpendButton,
+				headerUpgradeButton,
+				updatePromise,
+			);
 		}
 
 		// Premium chat included indicator (shown when premium chat is unlimited)
 		const hasPremiumUnlimited = !!premiumChat?.unlimited;
 		if (hasPremiumUnlimited) {
 			const includedTitle = this.chatEntitlementService.quotas.usageBasedBilling
-				? localize('includedTitleTBB', "Credits")
-				: localize('includedTitle', "Premium Requests");
-			const includedContainer = this.element.appendChild($('div.quota-indicator.included'));
+				? localize("includedTitleTBB", "Credits")
+				: localize("includedTitle", "Premium Requests");
+			const includedContainer = this.element.appendChild(
+				$("div.quota-indicator.included"),
+			);
 			if (this.options?.compactQuotaLayout) {
-				const planName = getChatPlanName(this.chatEntitlementService.entitlement);
-				includedContainer.classList.add('compact');
-				includedContainer.appendChild($('div.quota-title', undefined, planName));
-				includedContainer.appendChild($('div.description', undefined, isPooledQuotaDepleted
-					? localize('premiumLimitReachedCompact', "{0} limit reached.", includedTitle)
-					: localize('premiumIncludedCompact', "{0} included with your organization's plan.", includedTitle)));
+				const planName = getChatPlanName(
+					this.chatEntitlementService.entitlement,
+				);
+				includedContainer.classList.add("compact");
+				includedContainer.appendChild(
+					$("div.quota-title", undefined, planName),
+				);
+				includedContainer.appendChild(
+					$(
+						"div.description",
+						undefined,
+						isPooledQuotaDepleted
+							? localize(
+									"premiumLimitReachedCompact",
+									"{0} limit reached.",
+									includedTitle,
+								)
+							: localize(
+									"premiumIncludedCompact",
+									"{0} included with your organization's plan.",
+									includedTitle,
+								),
+					),
+				);
 			} else {
-				includedContainer.appendChild($('div.quota-title', undefined, includedTitle));
-				includedContainer.appendChild($('div.description', undefined, isPooledQuotaDepleted
-					? localize('premiumLimitReached', "Organization limit reached.")
-					: localize('premiumIncluded', "Included with your organization's plan.")));
+				includedContainer.appendChild(
+					$("div.quota-title", undefined, includedTitle),
+				);
+				includedContainer.appendChild(
+					$(
+						"div.description",
+						undefined,
+						isPooledQuotaDepleted
+							? localize("premiumLimitReached", "Organization limit reached.")
+							: localize(
+									"premiumIncluded",
+									"Included with your organization's plan.",
+								),
+					),
+				);
 			}
 		}
 
 		// Next Edit Suggestions — collapsible region
 		if (hasQuickSettingsContent) {
-			const hasContentAbove = hasUsageSection || hasVisibleUsageContent || hasPremiumUnlimited;
+			const hasContentAbove =
+				hasUsageSection || hasVisibleUsageContent || hasPremiumUnlimited;
 			this.renderInlineSuggestionsSection(hasContentAbove);
 		}
 
@@ -270,13 +495,40 @@ export class ChatStatusDashboard extends DomWidget {
 		this.renderSetupSection();
 	}
 
-	private renderUsageContent(container: HTMLElement, token: CancellationToken, headerAdditionalSpendButton: Button | undefined, headerUpgradeButton: Button | undefined, updatePromise: Promise<void>): void {
-		const { chat: chatQuota, completions: completionsQuota, premiumChat: premiumChatQuota, resetDate, resetDateHasTime } = this.chatEntitlementService.quotas;
+	private renderUsageContent(
+		container: HTMLElement,
+		token: CancellationToken,
+		headerAdditionalSpendButton: Button | undefined,
+		headerUpgradeButton: Button | undefined,
+		updatePromise: Promise<void>,
+	): void {
+		const {
+			chat: chatQuota,
+			completions: completionsQuota,
+			premiumChat: premiumChatQuota,
+			resetDate,
+			resetDateHasTime,
+		} = this.chatEntitlementService.quotas;
 		const compact = !!this.options?.compactQuotaLayout;
-		const planName = compact ? getChatPlanName(this.chatEntitlementService.entitlement) : undefined;
+		const planName = compact
+			? getChatPlanName(this.chatEntitlementService.entitlement)
+			: undefined;
 
 		if (chatQuota || premiumChatQuota || completionsQuota) {
-			const resetLabel = resetDate ? (resetDateHasTime ? localize('quotaResetsAt', "Resets {0} at {1}", this.dateFormatter.value.format(new Date(resetDate)), this.timeFormatter.value.format(new Date(resetDate))) : localize('quotaResets', "Resets {0}", this.dateFormatter.value.format(new Date(resetDate)))) : undefined;
+			const resetLabel = resetDate
+				? resetDateHasTime
+					? localize(
+							"quotaResetsAt",
+							"Resets {0} at {1}",
+							this.dateFormatter.value.format(new Date(resetDate)),
+							this.timeFormatter.value.format(new Date(resetDate)),
+						)
+					: localize(
+							"quotaResets",
+							"Resets {0}",
+							this.dateFormatter.value.format(new Date(resetDate)),
+						)
+				: undefined;
 
 			// Global quota callout (shown at the top, before quota indicators)
 			const globalCalloutUpdater = this.createGlobalQuotaCallout(container);
@@ -284,42 +536,92 @@ export class ChatStatusDashboard extends DomWidget {
 
 			// Update header additional spend button visibility based on callout
 			if (headerAdditionalSpendButton) {
-				headerAdditionalSpendButton.element.style.display = initialCalloutVisible ? '' : 'none';
+				headerAdditionalSpendButton.element.style.display =
+					initialCalloutVisible ? "" : "none";
 			}
 
 			// Update header upgrade button visibility: hide when manage budget button is visible
 			if (headerUpgradeButton) {
-				headerUpgradeButton.element.style.display = (headerAdditionalSpendButton && initialCalloutVisible) ? 'none' : '';
+				headerUpgradeButton.element.style.display =
+					headerAdditionalSpendButton && initialCalloutVisible ? "none" : "";
 			}
 
-			let chatQuotaIndicator: ((quota: IQuotaSnapshot | string) => void) | undefined;
-			if (chatQuota && !chatQuota.unlimited && (!this.chatEntitlementService.quotas.usageBasedBilling || this.chatEntitlementService.entitlement === ChatEntitlement.Free)) {
-				const chatLabel = this.chatEntitlementService.quotas.usageBasedBilling && this.chatEntitlementService.entitlement === ChatEntitlement.Free
-					? localize('creditsLabel', "Credits")
-					: localize('chatsLabel', "Chat messages");
-				chatQuotaIndicator = this.createQuotaIndicator(container, chatQuota, chatLabel, resetLabel, compact ? planName : undefined);
+			let chatQuotaIndicator:
+				| ((quota: IQuotaSnapshot | string) => void)
+				| undefined;
+			if (
+				chatQuota &&
+				!chatQuota.unlimited &&
+				(!this.chatEntitlementService.quotas.usageBasedBilling ||
+					this.chatEntitlementService.entitlement === ChatEntitlement.Free)
+			) {
+				const chatLabel =
+					this.chatEntitlementService.quotas.usageBasedBilling &&
+					this.chatEntitlementService.entitlement === ChatEntitlement.Free
+						? localize("creditsLabel", "Credits")
+						: localize("chatsLabel", "Chat messages");
+				chatQuotaIndicator = this.createQuotaIndicator(
+					container,
+					chatQuota,
+					chatLabel,
+					resetLabel,
+					compact ? planName : undefined,
+				);
 			}
 
-			let premiumChatQuotaIndicator: ((quota: IQuotaSnapshot | string) => void) | undefined;
-			if (premiumChatQuota && !premiumChatQuota.unlimited && premiumChatQuota.percentRemaining >= 0) {
+			let premiumChatQuotaIndicator:
+				| ((quota: IQuotaSnapshot | string) => void)
+				| undefined;
+			if (
+				premiumChatQuota &&
+				!premiumChatQuota.unlimited &&
+				premiumChatQuota.percentRemaining >= 0
+			) {
 				const isUBB = this.chatEntitlementService.quotas.usageBasedBilling;
 				const premiumChatLabel = isUBB
-					? localize('creditsLabel', "Credits")
-					: this.chatEntitlementService.quotas.additionalUsageEnabled ? localize('includedPremiumChatsLabel', "Included premium requests") : localize('premiumChatsLabel', "Premium requests");
-				const premiumChatResetLabel = isUBB ? this.formatResetAtLabel(premiumChatQuota.resetAt) ?? resetLabel : resetLabel;
-				premiumChatQuotaIndicator = this.createQuotaIndicator(container, premiumChatQuota, premiumChatLabel, premiumChatResetLabel, compact ? planName : undefined);
+					? localize("creditsLabel", "Credits")
+					: this.chatEntitlementService.quotas.additionalUsageEnabled
+						? localize("includedPremiumChatsLabel", "Included premium requests")
+						: localize("premiumChatsLabel", "Premium requests");
+				const premiumChatResetLabel = isUBB
+					? (this.formatResetAtLabel(premiumChatQuota.resetAt) ?? resetLabel)
+					: resetLabel;
+				premiumChatQuotaIndicator = this.createQuotaIndicator(
+					container,
+					premiumChatQuota,
+					premiumChatLabel,
+					premiumChatResetLabel,
+					compact ? planName : undefined,
+				);
 			}
 
-			let completionsQuotaIndicator: ((quota: IQuotaSnapshot | string) => void) | undefined;
-			const showCompletions = !compact && completionsQuota && !completionsQuota.unlimited && completionsQuota.percentRemaining >= 0
-				&& (!this.chatEntitlementService.quotas.usageBasedBilling || this.chatEntitlementService.entitlement === ChatEntitlement.Free);
+			let completionsQuotaIndicator:
+				| ((quota: IQuotaSnapshot | string) => void)
+				| undefined;
+			const showCompletions =
+				!compact &&
+				completionsQuota &&
+				!completionsQuota.unlimited &&
+				completionsQuota.percentRemaining >= 0 &&
+				(!this.chatEntitlementService.quotas.usageBasedBilling ||
+					this.chatEntitlementService.entitlement === ChatEntitlement.Free);
 			if (showCompletions) {
-				completionsQuotaIndicator = this.createQuotaIndicator(container, completionsQuota, localize('completionsLabel', "Inline Suggestions"), resetLabel, compact ? planName : undefined);
+				completionsQuotaIndicator = this.createQuotaIndicator(
+					container,
+					completionsQuota,
+					localize("completionsLabel", "Inline Suggestions"),
+					resetLabel,
+					compact ? planName : undefined,
+				);
 			}
 
 			// Update indicators from current quota state
 			const updateIndicators = () => {
-				const { chat: chatQuota, premiumChat: premiumChatQuota, completions: completionsQuota } = this.chatEntitlementService.quotas;
+				const {
+					chat: chatQuota,
+					premiumChat: premiumChatQuota,
+					completions: completionsQuota,
+				} = this.chatEntitlementService.quotas;
 				if (chatQuota) {
 					chatQuotaIndicator?.(chatQuota);
 				}
@@ -331,11 +633,17 @@ export class ChatStatusDashboard extends DomWidget {
 				}
 				const { calloutVisible } = globalCalloutUpdater();
 				if (headerAdditionalSpendButton) {
-					headerAdditionalSpendButton.element.style.display = calloutVisible ? '' : 'none';
-					headerAdditionalSpendButton.label = localize('manageBudget', "Manage Budget");
+					headerAdditionalSpendButton.element.style.display = calloutVisible
+						? ""
+						: "none";
+					headerAdditionalSpendButton.label = localize(
+						"manageBudget",
+						"Manage Budget",
+					);
 				}
 				if (headerUpgradeButton) {
-					headerUpgradeButton.element.style.display = (headerAdditionalSpendButton && calloutVisible) ? 'none' : '';
+					headerUpgradeButton.element.style.display =
+						headerAdditionalSpendButton && calloutVisible ? "none" : "";
 				}
 			};
 
@@ -349,118 +657,191 @@ export class ChatStatusDashboard extends DomWidget {
 			})();
 
 			// Update dynamically when quota data changes while the dashboard is open
-			this._store.add(this.chatEntitlementService.onDidChangeQuotaRemaining(() => updateIndicators()));
-			this._store.add(this.chatEntitlementService.onDidChangeQuotaExceeded(() => updateIndicators()));
+			this._store.add(
+				this.chatEntitlementService.onDidChangeQuotaRemaining(() =>
+					updateIndicators(),
+				),
+			);
+			this._store.add(
+				this.chatEntitlementService.onDidChangeQuotaExceeded(() =>
+					updateIndicators(),
+				),
+			);
 		}
 
 		// Anonymous Indicator
-		else if (this.chatEntitlementService.anonymous && this.chatEntitlementService.sentiment.completed) {
-			this.createQuotaIndicator(container, localize('quotaLimited', "Limited"), localize('chatsLabel', "Chat messages"));
+		else if (
+			this.chatEntitlementService.anonymous &&
+			this.chatEntitlementService.sentiment.completed
+		) {
+			this.createQuotaIndicator(
+				container,
+				localize("quotaLimited", "Limited"),
+				localize("chatsLabel", "Chat messages"),
+			);
 		}
 	}
 
 	private renderInlineSuggestionsSection(hasContentAbove: boolean): void {
 		const nonCollapsible = !!this.options?.disableQuickSettingsCollapsible;
-		const collapsed = !nonCollapsible && this.storageService.getBoolean(ChatStatusDashboard.QUICK_SETTINGS_COLLAPSED_KEY, StorageScope.PROFILE, true);
+		const collapsed =
+			!nonCollapsible &&
+			this.storageService.getBoolean(
+				ChatStatusDashboard.QUICK_SETTINGS_COLLAPSED_KEY,
+				StorageScope.PROFILE,
+				true,
+			);
 
 		// Compute status based on effective enablement for the active editor's language
 		const activeLanguageId = this.editorService.activeTextEditorLanguageId;
 		const getStatusText = () => {
 			if (!this.canUseChat()) {
-				return localize('inlineSuggestionsDisabled', "Disabled");
+				return localize("inlineSuggestionsDisabled", "Disabled");
 			}
 			const enabled = activeLanguageId
 				? isCompletionsEnabled(this.configurationService, activeLanguageId)
 				: isCompletionsEnabled(this.configurationService);
 			return enabled
-				? localize('inlineSuggestionsEnabled', "Enabled")
-				: localize('inlineSuggestionsDisabled', "Disabled");
+				? localize("inlineSuggestionsEnabled", "Enabled")
+				: localize("inlineSuggestionsDisabled", "Disabled");
 		};
 
 		let disclosureHeader: HTMLElement | undefined;
 		let chevron: HTMLElement | undefined;
 		let statusEl: HTMLElement | undefined;
 		if (!nonCollapsible) {
-			disclosureHeader = this.element.appendChild($('button.collapsible-header'));
+			disclosureHeader = this.element.appendChild(
+				$("button.collapsible-header"),
+			);
 			if (!hasContentAbove) {
-				disclosureHeader.classList.add('no-border');
+				disclosureHeader.classList.add("no-border");
 			}
-			disclosureHeader.setAttribute('aria-expanded', String(!collapsed));
+			disclosureHeader.setAttribute("aria-expanded", String(!collapsed));
 
-			disclosureHeader.appendChild($('span.collapsible-label', undefined, localize('inlineSuggestionsTab', "Inline Suggestions")));
+			disclosureHeader.appendChild(
+				$(
+					"span.collapsible-label",
+					undefined,
+					localize("inlineSuggestionsTab", "Inline Suggestions"),
+				),
+			);
 
-			chevron = disclosureHeader.appendChild($('span.collapsible-chevron'));
-			chevron.classList.add(...ThemeIcon.asClassNameArray(collapsed ? Codicon.chevronRight : Codicon.chevronDown));
+			chevron = disclosureHeader.appendChild($("span.collapsible-chevron"));
+			chevron.classList.add(
+				...ThemeIcon.asClassNameArray(
+					collapsed ? Codicon.chevronRight : Codicon.chevronDown,
+				),
+			);
 
-			statusEl = disclosureHeader.appendChild($('span.collapsible-status', undefined, getStatusText()));
+			statusEl = disclosureHeader.appendChild(
+				$("span.collapsible-status", undefined, getStatusText()),
+			);
 		}
 
-		const collapsibleContent = this.element.appendChild($('div.collapsible-content'));
-		const collapsibleInner = collapsibleContent.appendChild($('div.collapsible-inner'));
+		const collapsibleContent = this.element.appendChild(
+			$("div.collapsible-content"),
+		);
+		const collapsibleInner = collapsibleContent.appendChild(
+			$("div.collapsible-inner"),
+		);
 		if (collapsed) {
-			collapsibleContent.classList.add('collapsed');
+			collapsibleContent.classList.add("collapsed");
 			collapsibleInner.inert = true;
 		}
 
 		if (disclosureHeader && chevron) {
 			const toggle = () => {
-				const isCollapsed = collapsibleContent.classList.toggle('collapsed');
+				const isCollapsed = collapsibleContent.classList.toggle("collapsed");
 				collapsibleInner.inert = isCollapsed;
-				disclosureHeader!.setAttribute('aria-expanded', String(!isCollapsed));
-				chevron!.className = 'collapsible-chevron';
-				chevron!.classList.add(...ThemeIcon.asClassNameArray(isCollapsed ? Codicon.chevronRight : Codicon.chevronDown));
-				this.storageService.store(ChatStatusDashboard.QUICK_SETTINGS_COLLAPSED_KEY, isCollapsed, StorageScope.PROFILE, StorageTarget.USER);
+				disclosureHeader!.setAttribute("aria-expanded", String(!isCollapsed));
+				chevron!.className = "collapsible-chevron";
+				chevron!.classList.add(
+					...ThemeIcon.asClassNameArray(
+						isCollapsed ? Codicon.chevronRight : Codicon.chevronDown,
+					),
+				);
+				this.storageService.store(
+					ChatStatusDashboard.QUICK_SETTINGS_COLLAPSED_KEY,
+					isCollapsed,
+					StorageScope.PROFILE,
+					StorageTarget.USER,
+				);
 			};
 
-			this._store.add(addDisposableListener(disclosureHeader, EventType.CLICK, () => toggle()));
+			this._store.add(
+				addDisposableListener(disclosureHeader, EventType.CLICK, () =>
+					toggle(),
+				),
+			);
 		}
 
 		// Update status text when completions setting changes
 		if (statusEl) {
-			this._store.add(this.configurationService.onDidChangeConfiguration(e => {
-				if (e.affectsConfiguration(defaultChat.completionsEnablementSetting)) {
-					statusEl!.textContent = getStatusText();
-				}
-			}));
+			this._store.add(
+				this.configurationService.onDidChangeConfiguration((e) => {
+					if (
+						e.affectsConfiguration(defaultChat.completionsEnablementSetting)
+					) {
+						statusEl!.textContent = getStatusText();
+					}
+				}),
+			);
 		}
 
 		this.renderInlineSuggestionsContent(collapsibleInner);
 	}
 
-	private renderContributedSections(contributedEntries: ChatStatusEntry[]): void {
+	private renderContributedSections(
+		contributedEntries: ChatStatusEntry[],
+	): void {
 		for (const item of contributedEntries) {
-			const headerLabel = typeof item.label === 'string' ? item.label : item.label.label;
-			let headerLink = typeof item.label === 'string' ? undefined : item.label.link;
-			let linkDescription = typeof item.label === 'string' ? undefined : item.label.helpText;
-			const section = this.element.appendChild($('div.contributed-section'));
+			const headerLabel =
+				typeof item.label === "string" ? item.label : item.label.label;
+			let headerLink =
+				typeof item.label === "string" ? undefined : item.label.link;
+			let linkDescription =
+				typeof item.label === "string" ? undefined : item.label.helpText;
+			const section = this.element.appendChild($("div.contributed-section"));
 
 			// Single non-collapsible header row
-			const header = section.appendChild($('div.collapsible-header.non-collapsible'));
-			header.appendChild($('span.collapsible-label', undefined, headerLabel));
+			const header = section.appendChild(
+				$("div.collapsible-header.non-collapsible"),
+			);
+			header.appendChild($("span.collapsible-label", undefined, headerLabel));
 
 			// Info icon (replaces chevron) — shows helpText in a nested hover
 			if (linkDescription || headerLink) {
-				const infoIcon = header.appendChild($('span.contributed-info-icon'));
+				const infoIcon = header.appendChild($("span.contributed-info-icon"));
 				infoIcon.classList.add(...ThemeIcon.asClassNameArray(Codicon.info));
 
-				this._store.add(this.hoverService.setupDelayedHover(infoIcon, () => {
-					const hoverContent = new MarkdownString('', { isTrusted: true });
-					if (linkDescription) {
-						hoverContent.appendText(linkDescription);
-					}
-					if (headerLink) {
-						if (linkDescription) {
-							hoverContent.appendText(' ');
-						}
-						hoverContent.appendMarkdown(`[${localize('learnMore', "Learn More")}](${headerLink})`);
-					}
-					return { content: hoverContent };
-				}, { reducedDelay: true }));
+				this._store.add(
+					this.hoverService.setupDelayedHover(
+						infoIcon,
+						() => {
+							const hoverContent = new MarkdownString("", { isTrusted: true });
+							if (linkDescription) {
+								hoverContent.appendText(linkDescription);
+							}
+							if (headerLink) {
+								if (linkDescription) {
+									hoverContent.appendText(" ");
+								}
+								hoverContent.appendMarkdown(
+									`[${localize("learnMore", "Learn More")}](${headerLink})`,
+								);
+							}
+							return { content: hoverContent };
+						},
+						{ reducedDelay: true },
+					),
+				);
 			}
 
 			// Status text (right-aligned via margin-left: auto)
-			const statusEl = header.appendChild($('span.collapsible-status'));
-			const statusDisposables = this._store.add(new MutableDisposable<DisposableStore>());
+			const statusEl = header.appendChild($("span.collapsible-status"));
+			const statusDisposables = this._store.add(
+				new MutableDisposable<DisposableStore>(),
+			);
 			const renderStatus = (text: string): void => {
 				const newStore = new DisposableStore();
 				statusDisposables.value = newStore;
@@ -471,9 +852,15 @@ export class ChatStatusDashboard extends DomWidget {
 			// Show tooltip on hover of the status text
 			let currentTooltip = item.tooltip;
 			if (currentTooltip) {
-				this._store.add(this.hoverService.setupDelayedHover(statusEl, () => ({
-					content: currentTooltip ?? '',
-				}), { reducedDelay: true }));
+				this._store.add(
+					this.hoverService.setupDelayedHover(
+						statusEl,
+						() => ({
+							content: currentTooltip ?? "",
+						}),
+						{ reducedDelay: true },
+					),
+				);
 			}
 
 			// Detail (action link) rendered inline
@@ -483,40 +870,48 @@ export class ChatStatusDashboard extends DomWidget {
 
 			let detailEl: HTMLElement | undefined;
 			if (item.detail) {
-				detailEl = section.appendChild($('div.contributed-detail'));
+				detailEl = section.appendChild($("div.contributed-detail"));
 				this.renderTextPlus(detailEl, item.detail, sectionStore);
 			}
 
 			// Listen for updates to re-render status and detail
-			this._store.add(this.chatStatusItemService.onDidChange(e => {
-				if (e.entry.id === item.id) {
-					// Update status in header
-					statusEl.textContent = '';
-					renderStatus(e.entry.description);
-					currentTooltip = e.entry.tooltip;
+			this._store.add(
+				this.chatStatusItemService.onDidChange((e) => {
+					if (e.entry.id === item.id) {
+						// Update status in header
+						statusEl.textContent = "";
+						renderStatus(e.entry.description);
+						currentTooltip = e.entry.tooltip;
 
-					// Update mutable hover content references
-					headerLink = typeof e.entry.label === 'string' ? undefined : e.entry.label.link;
-					linkDescription = typeof e.entry.label === 'string' ? undefined : e.entry.label.helpText;
+						// Update mutable hover content references
+						headerLink =
+							typeof e.entry.label === "string"
+								? undefined
+								: e.entry.label.link;
+						linkDescription =
+							typeof e.entry.label === "string"
+								? undefined
+								: e.entry.label.helpText;
 
-					// Re-render detail content
-					const newStore = new DisposableStore();
-					sectionDisposables.value = newStore;
+						// Re-render detail content
+						const newStore = new DisposableStore();
+						sectionDisposables.value = newStore;
 
-					if (detailEl) {
-						if (e.entry.detail) {
-							detailEl.textContent = '';
+						if (detailEl) {
+							if (e.entry.detail) {
+								detailEl.textContent = "";
+								this.renderTextPlus(detailEl, e.entry.detail, newStore);
+							} else {
+								detailEl.remove();
+								detailEl = undefined;
+							}
+						} else if (e.entry.detail) {
+							detailEl = section.appendChild($("div.contributed-detail"));
 							this.renderTextPlus(detailEl, e.entry.detail, newStore);
-						} else {
-							detailEl.remove();
-							detailEl = undefined;
 						}
-					} else if (e.entry.detail) {
-						detailEl = section.appendChild($('div.contributed-detail'));
-						this.renderTextPlus(detailEl, e.entry.detail, newStore);
 					}
-				}
-			}));
+				}),
+			);
 		}
 	}
 
@@ -524,58 +919,105 @@ export class ChatStatusDashboard extends DomWidget {
 		const hasByokModels = this.chatEntitlementService.hasByokModels;
 		const newUser = isNewUser(this.chatEntitlementService) && !hasByokModels;
 		const anonymousUser = this.chatEntitlementService.anonymous;
-		const disabled = this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted;
+		const disabled =
+			this.chatEntitlementService.sentiment.disabled ||
+			this.chatEntitlementService.sentiment.untrusted;
 		// Keep the Sign-in entry visible even when BYOK models are present so air-gapped
 		// users can still authenticate to unlock the full Copilot experience.
-		const signedOut = this.chatEntitlementService.entitlement === ChatEntitlement.Unknown;
+		const signedOut =
+			this.chatEntitlementService.entitlement === ChatEntitlement.Unknown;
 		if (!(newUser || signedOut || disabled)) {
 			return;
 		}
 
-		this.element.appendChild($('hr'));
+		this.element.appendChild($("hr"));
 
 		let descriptionText: string | MarkdownString;
-		let descriptionClass = '.description';
+		let descriptionClass = ".description";
 		if (newUser && anonymousUser) {
-			descriptionText = new MarkdownString(localize({ key: 'activeDescriptionAnonymous', comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'] }, "By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})", defaultChat.provider.default.name, defaultChat.provider.default.name, defaultChat.termsStatementUrl, defaultChat.privacyStatementUrl), { isTrusted: true });
+			descriptionText = new MarkdownString(
+				localize(
+					{
+						key: "activeDescriptionAnonymous",
+						comment: ['{Locked="]({2})"}', '{Locked="]({3})"}'],
+					},
+					"By continuing with {0} Copilot, you agree to {1}'s [Terms]({2}) and [Privacy Statement]({3})",
+					defaultChat.provider.default.name,
+					defaultChat.provider.default.name,
+					defaultChat.termsStatementUrl,
+					defaultChat.privacyStatementUrl,
+				),
+				{ isTrusted: true },
+			);
 			descriptionClass = `${descriptionClass}.terms`;
 		} else if (newUser) {
-			descriptionText = localize('activateDescription', "Set up Copilot to use AI features.");
+			descriptionText = localize(
+				"activateDescription",
+				"Set up Copilot to use AI features.",
+			);
 		} else if (anonymousUser) {
-			descriptionText = localize('enableMoreDescription', "Sign in to enable more Copilot AI features.");
+			descriptionText = localize(
+				"enableMoreDescription",
+				"Sign in to enable more Copilot AI features.",
+			);
 		} else if (disabled) {
-			descriptionText = localize('enableDescription', "Enable Copilot to use AI features.");
+			descriptionText = localize(
+				"enableDescription",
+				"Enable Copilot to use AI features.",
+			);
 		} else {
-			descriptionText = localize('signInDescription', "Sign in to use GitHub Copilot AI features.");
+			descriptionText = localize(
+				"signInDescription",
+				"Sign in to use GitHub Copilot AI features.",
+			);
 		}
 
 		let buttonLabel: string;
 		if (newUser) {
-			buttonLabel = localize('enableAIFeatures', "Use AI Features");
+			buttonLabel = localize("enableAIFeatures", "Use AI Features");
 		} else if (anonymousUser) {
-			buttonLabel = localize('enableMoreAIFeatures', "Enable more AI Features");
+			buttonLabel = localize("enableMoreAIFeatures", "Enable more AI Features");
 		} else if (disabled) {
-			buttonLabel = localize('enableCopilotButton', "Enable AI Features");
+			buttonLabel = localize("enableCopilotButton", "Enable AI Features");
 		} else {
-			buttonLabel = localize('signInToUseAIFeatures', "Sign in to use GitHub Copilot");
+			buttonLabel = localize(
+				"signInToUseAIFeatures",
+				"Sign in to use GitHub Copilot",
+			);
 		}
 
 		let commandId: string;
 		if (newUser && anonymousUser) {
-			commandId = 'workbench.action.chat.triggerSetupAnonymousWithoutDialog';
+			commandId = "workbench.action.chat.triggerSetupAnonymousWithoutDialog";
 		} else {
-			commandId = 'workbench.action.chat.triggerSetup';
+			commandId = "workbench.action.chat.triggerSetup";
 		}
 
-		if (typeof descriptionText === 'string') {
-			this.element.appendChild($(`div${descriptionClass}`, undefined, descriptionText));
+		if (typeof descriptionText === "string") {
+			this.element.appendChild(
+				$(`div${descriptionClass}`, undefined, descriptionText),
+			);
 		} else {
-			this.element.appendChild($(`div${descriptionClass}`, undefined, this._store.add(this.markdownRendererService.render(descriptionText)).element));
+			this.element.appendChild(
+				$(
+					`div${descriptionClass}`,
+					undefined,
+					this._store.add(this.markdownRendererService.render(descriptionText))
+						.element,
+				),
+			);
 		}
 
-		const button = this._store.add(new Button(this.element, { ...defaultButtonStyles, hoverDelegate: nativeHoverDelegate }));
+		const button = this._store.add(
+			new Button(this.element, {
+				...defaultButtonStyles,
+				hoverDelegate: nativeHoverDelegate,
+			}),
+		);
 		button.label = buttonLabel;
-		this._store.add(button.onDidClick(() => this.runCommandAndClose(commandId)));
+		this._store.add(
+			button.onDidClick(() => this.runCommandAndClose(commandId)),
+		);
 	}
 
 	private renderInlineSuggestionsContent(container: HTMLElement): void {
@@ -584,32 +1026,65 @@ export class ChatStatusDashboard extends DomWidget {
 			this.createSettings(container);
 		}
 
-		const providers = (!this.options?.disableModelSelection || !this.options?.disableProviderOptions) ? this.languageFeaturesService.inlineCompletionsProvider.allNoModel() : undefined;
+		const providers =
+			!this.options?.disableModelSelection ||
+			!this.options?.disableProviderOptions
+				? this.languageFeaturesService.inlineCompletionsProvider.allNoModel()
+				: undefined;
 
 		// Model Selection (editor-specific)
 		if (!this.options?.disableModelSelection && providers) {
-			const provider = providers.find(p => p.modelInfo && p.modelInfo.models.length > 0);
+			const provider = providers.find(
+				(p) => p.modelInfo && p.modelInfo.models.length > 0,
+			);
 
 			if (provider) {
 				const modelInfo = provider.modelInfo!;
-				const currentModel = modelInfo.models.find(m => m.id === modelInfo.currentModelId);
+				const currentModel = modelInfo.models.find(
+					(m) => m.id === modelInfo.currentModelId,
+				);
 
 				if (currentModel) {
-					const modelContainer = container.appendChild($('div.model-selection'));
+					const modelContainer = container.appendChild(
+						$("div.model-selection"),
+					);
 
-					modelContainer.appendChild($('span.model-text', undefined, localize('modelLabel', "Model")));
+					modelContainer.appendChild(
+						$("span.model-text", undefined, localize("modelLabel", "Model")),
+					);
 
-					const selectOptions = modelInfo.models.map(m => ({ text: m.name }));
-					const selectedIndex = modelInfo.models.findIndex(m => m.id === modelInfo.currentModelId);
-					const selectBox = this._store.add(new SelectBox(selectOptions, Math.max(0, selectedIndex), this.contextViewService, defaultSelectBoxStyles, { ariaLabel: localize('selectModel', "Select Model"), optionsAsChildren: true }));
-					const selectContainer = modelContainer.appendChild($('div.model-select-container'));
+					const selectOptions = modelInfo.models.map((m) => ({ text: m.name }));
+					const selectedIndex = modelInfo.models.findIndex(
+						(m) => m.id === modelInfo.currentModelId,
+					);
+					const selectBox = this._store.add(
+						new SelectBox(
+							selectOptions,
+							Math.max(0, selectedIndex),
+							this.contextViewService,
+							defaultSelectBoxStyles,
+							{
+								ariaLabel: localize("selectModel", "Select Model"),
+								optionsAsChildren: true,
+							},
+						),
+					);
+					const selectContainer = modelContainer.appendChild(
+						$("div.model-select-container"),
+					);
 					selectBox.render(selectContainer);
-					this._store.add(selectBox.onDidSelect(async e => {
-						const selectedModel = modelInfo.models[e.index];
-						if (selectedModel && selectedModel.id !== modelInfo.currentModelId && provider.setModelId) {
-							await provider.setModelId(selectedModel.id);
-						}
-					}));
+					this._store.add(
+						selectBox.onDidSelect(async (e) => {
+							const selectedModel = modelInfo.models[e.index];
+							if (
+								selectedModel &&
+								selectedModel.id !== modelInfo.currentModelId &&
+								provider.setModelId
+							) {
+								await provider.setModelId(selectedModel.id);
+							}
+						}),
+					);
 				}
 			}
 		}
@@ -619,23 +1094,59 @@ export class ChatStatusDashboard extends DomWidget {
 			for (const provider of providers) {
 				if (provider.providerOptions && provider.providerOptions.length > 0) {
 					for (const option of provider.providerOptions) {
-						const currentValue = option.values.find(v => v.id === option.currentValueId);
+						const currentValue = option.values.find(
+							(v) => v.id === option.currentValueId,
+						);
 						if (currentValue) {
-							const optionContainer = container.appendChild($('div.suggest-option-selection'));
+							const optionContainer = container.appendChild(
+								$("div.suggest-option-selection"),
+							);
 
-							optionContainer.appendChild($('span.suggest-option-text', undefined, option.label));
+							optionContainer.appendChild(
+								$("span.suggest-option-text", undefined, option.label),
+							);
 
-							const selectOptions = option.values.map(v => ({ text: v.label }));
-							const selectedIndex = option.values.findIndex(v => v.id === option.currentValueId);
-							const selectBox = this._store.add(new SelectBox(selectOptions, Math.max(0, selectedIndex), this.contextViewService, defaultSelectBoxStyles, { ariaLabel: localize('selectOption', "Select {0}", option.label), optionsAsChildren: true }));
-							const selectContainer = optionContainer.appendChild($('div.suggest-option-select-container'));
-							selectBox.render(selectContainer);
-							this._store.add(selectBox.onDidSelect(async e => {
-								const selectedValue = option.values[e.index];
-								if (selectedValue && selectedValue.id !== option.currentValueId && provider.setProviderOption) {
-									await provider.setProviderOption(option.id, selectedValue.id);
-								}
+							const selectOptions = option.values.map((v) => ({
+								text: v.label,
 							}));
+							const selectedIndex = option.values.findIndex(
+								(v) => v.id === option.currentValueId,
+							);
+							const selectBox = this._store.add(
+								new SelectBox(
+									selectOptions,
+									Math.max(0, selectedIndex),
+									this.contextViewService,
+									defaultSelectBoxStyles,
+									{
+										ariaLabel: localize(
+											"selectOption",
+											"Select {0}",
+											option.label,
+										),
+										optionsAsChildren: true,
+									},
+								),
+							);
+							const selectContainer = optionContainer.appendChild(
+								$("div.suggest-option-select-container"),
+							);
+							selectBox.render(selectContainer);
+							this._store.add(
+								selectBox.onDidSelect(async (e) => {
+									const selectedValue = option.values[e.index];
+									if (
+										selectedValue &&
+										selectedValue.id !== option.currentValueId &&
+										provider.setProviderOption
+									) {
+										await provider.setProviderOption(
+											option.id,
+											selectedValue.id,
+										);
+									}
+								}),
+							);
 						}
 					}
 				}
@@ -644,55 +1155,94 @@ export class ChatStatusDashboard extends DomWidget {
 
 		// Completions Snooze (editor-specific)
 		if (!this.options?.disableCompletionsSnooze && this.canUseChat()) {
-			const snooze = append(container, $('div.snooze-completions'));
-			this.createCompletionsSnooze(snooze, localize('settings.snooze', "Snooze"));
+			const snooze = append(container, $("div.snooze-completions"));
+			this.createCompletionsSnooze(
+				snooze,
+				localize("settings.snooze", "Snooze"),
+			);
 		}
 	}
 
 	private canUseChat(): boolean {
-		if (!this.chatEntitlementService.sentiment.completed || this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted) {
+		if (
+			!this.chatEntitlementService.sentiment.completed ||
+			this.chatEntitlementService.sentiment.disabled ||
+			this.chatEntitlementService.sentiment.untrusted
+		) {
 			return false; // chat not completed or not enabled
 		}
 
-		if (this.chatEntitlementService.entitlement === ChatEntitlement.Unknown || this.chatEntitlementService.entitlement === ChatEntitlement.Available) {
+		if (
+			this.chatEntitlementService.entitlement === ChatEntitlement.Unknown ||
+			this.chatEntitlementService.entitlement === ChatEntitlement.Available
+		) {
 			return this.chatEntitlementService.anonymous; // signed out or not-yet-signed-up users can only use Chat if anonymous access is allowed
 		}
 
-		if (this.chatEntitlementService.entitlement === ChatEntitlement.Free && this.chatEntitlementService.quotas.chat?.percentRemaining === 0 && this.chatEntitlementService.quotas.completions?.percentRemaining === 0) {
+		if (
+			this.chatEntitlementService.entitlement === ChatEntitlement.Free &&
+			this.chatEntitlementService.quotas.chat?.percentRemaining === 0 &&
+			this.chatEntitlementService.quotas.completions?.percentRemaining === 0
+		) {
 			return false; // free user with no quota left
 		}
 
 		return true;
 	}
 
-	private renderHeader(container: HTMLElement, disposables: DisposableStore, label: string, action?: IAction): HTMLElement {
-		const header = container.appendChild($('div.header'));
-		header.appendChild($('span.header-label', undefined, label));
+	private renderHeader(
+		container: HTMLElement,
+		disposables: DisposableStore,
+		label: string,
+		action?: IAction,
+	): HTMLElement {
+		const header = container.appendChild($("div.header"));
+		header.appendChild($("span.header-label", undefined, label));
 
 		if (action) {
-			const toolbar = disposables.add(new ActionBar(header, { hoverDelegate: nativeHoverDelegate }));
+			const toolbar = disposables.add(
+				new ActionBar(header, { hoverDelegate: nativeHoverDelegate }),
+			);
 			toolbar.push([action], { icon: true, label: false });
 		}
 
 		return header;
 	}
 
-	private renderTextPlus(target: HTMLElement, text: string, store: DisposableStore): void {
+	private renderTextPlus(
+		target: HTMLElement,
+		text: string,
+		store: DisposableStore,
+	): void {
 		for (const node of parseLinkedText(text).nodes) {
-			if (typeof node === 'string') {
+			if (typeof node === "string") {
 				const parts = renderLabelWithIcons(node);
 				target.append(...parts);
 			} else {
-				store.add(new Link(target, node, undefined, this.hoverService, this.openerService));
+				store.add(
+					new Link(
+						target,
+						node,
+						undefined,
+						this.hoverService,
+						this.openerService,
+					),
+				);
 			}
 		}
 	}
 
-	private runCommandAndClose(commandOrFn: string | ((...args: unknown[]) => void), ...args: unknown[]): void {
-		if (typeof commandOrFn === 'function') {
+	private runCommandAndClose(
+		commandOrFn: string | ((...args: unknown[]) => void),
+		...args: unknown[]
+	): void {
+		if (typeof commandOrFn === "function") {
 			commandOrFn(...args);
 		} else {
-			this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: commandOrFn, from: 'chat-status' });
+			this.telemetryService.publicLog2<
+				WorkbenchActionExecutedEvent,
+				WorkbenchActionExecutedClassification
+			>("workbenchActionExecuted", { id: commandOrFn, from: "chat-status" });
 			this.commandService.executeCommand(commandOrFn, ...args);
 		}
 
@@ -704,40 +1254,61 @@ export class ChatStatusDashboard extends DomWidget {
 			return undefined;
 		}
 		const resetDate = new Date(resetAt * 1000);
-		return localize('quotaResetsAt', "Resets {0} at {1}", this.dateFormatter.value.format(resetDate), this.timeFormatter.value.format(resetDate));
+		return localize(
+			"quotaResetsAt",
+			"Resets {0} at {1}",
+			this.dateFormatter.value.format(resetDate),
+			this.timeFormatter.value.format(resetDate),
+		);
 	}
 
-	private createQuotaIndicator(container: HTMLElement, quota: IQuotaSnapshot | string, label: string, resetLabel?: string, compactTitle?: string): (quota: IQuotaSnapshot | string) => void {
+	private createQuotaIndicator(
+		container: HTMLElement,
+		quota: IQuotaSnapshot | string,
+		label: string,
+		resetLabel?: string,
+		compactTitle?: string,
+	): (quota: IQuotaSnapshot | string) => void {
 		const isCompact = !!compactTitle;
-		const quotaValue = $('span.quota-value');
-		const quotaValueText = isCompact ? quotaValue.appendChild($('span.quota-value-text')) : quotaValue;
-		const quotaValueSuffix = $('span.quota-value-suffix');
-		const quotaBit = $('div.quota-bit');
-		const resetValue = $('span.quota-reset');
+		const quotaValue = $("span.quota-value");
+		const quotaValueText = isCompact
+			? quotaValue.appendChild($("span.quota-value-text"))
+			: quotaValue;
+		const quotaValueSuffix = $("span.quota-value-suffix");
+		const quotaBit = $("div.quota-bit");
+		const resetValue = $("span.quota-reset");
 
 		if (resetLabel) {
 			resetValue.textContent = resetLabel;
 		}
 
-		const quotaPercentage = $('div.quota-percentage', undefined,
+		const quotaPercentage = $(
+			"div.quota-percentage",
+			undefined,
 			quotaValue,
-			quotaValueSuffix
+			quotaValueSuffix,
 		);
 		quotaPercentage.tabIndex = isCompact ? -1 : 0;
 
-		const indicatorElement = $('div.quota-indicator', undefined,
-			$('div.quota-title', undefined,
-				$('span', undefined, isCompact ? compactTitle : label),
-				...isCompact ? [] : [resetValue]
+		const indicatorElement = $(
+			"div.quota-indicator",
+			undefined,
+			$(
+				"div.quota-title",
+				undefined,
+				$("span", undefined, isCompact ? compactTitle : label),
+				...(isCompact ? [] : [resetValue]),
 			),
-			$('div.quota-details', undefined,
+			$(
+				"div.quota-details",
+				undefined,
 				quotaPercentage,
-				...isCompact ? [resetValue] : []
+				...(isCompact ? [resetValue] : []),
 			),
-			...isCompact ? [] : [$('div.quota-bar', undefined, quotaBit)]
+			...(isCompact ? [] : [$("div.quota-bar", undefined, quotaBit)]),
 		);
 		if (isCompact) {
-			indicatorElement.classList.add('compact');
+			indicatorElement.classList.add("compact");
 		}
 		container.appendChild(indicatorElement);
 
@@ -745,44 +1316,76 @@ export class ChatStatusDashboard extends DomWidget {
 		let isHovered = false;
 
 		const showPercentage = () => {
-			if (typeof currentQuota === 'string') {
+			if (typeof currentQuota === "string") {
 				quotaValueText.textContent = currentQuota;
-				quotaValueSuffix.textContent = '';
+				quotaValueSuffix.textContent = "";
 			} else {
 				const usedPercentage = Math.max(0, 100 - currentQuota.percentRemaining);
-				quotaValueText.textContent = localize('quotaDisplay', "{0}%", this.quotaPercentageFormatter.value.format(Math.floor(usedPercentage)));
+				quotaValueText.textContent = localize(
+					"quotaDisplay",
+					"{0}%",
+					this.quotaPercentageFormatter.value.format(
+						Math.floor(usedPercentage),
+					),
+				);
 				quotaValueSuffix.textContent = isCompact
-					? localize('quotaLabelUsed', "{0} used", label)
-					: ` ${localize('quotaUsed', "used")}`;
+					? localize("quotaLabelUsed", "{0} used", label)
+					: ` ${localize("quotaUsed", "used")}`;
 			}
 		};
 
 		const showCredits = () => {
-			if (typeof currentQuota !== 'string' && currentQuota.entitlement) {
+			if (typeof currentQuota !== "string" && currentQuota.entitlement) {
 				const total = currentQuota.entitlement;
-				const used = currentQuota.quotaRemaining !== undefined
-					? total - currentQuota.quotaRemaining
-					: total * (100 - currentQuota.percentRemaining) / 100;
+				const used =
+					currentQuota.quotaRemaining !== undefined
+						? total - currentQuota.quotaRemaining
+						: (total * (100 - currentQuota.percentRemaining)) / 100;
 				const usedFormatted = this.quotaCreditsFormatter.value.format(used);
 				const totalFormatted = this.quotaCreditsFormatter.value.format(total);
-				quotaValueText.textContent = localize('quotaCreditsDisplay', "{0} / {1}", usedFormatted, totalFormatted);
+				quotaValueText.textContent = localize(
+					"quotaCreditsDisplay",
+					"{0} / {1}",
+					usedFormatted,
+					totalFormatted,
+				);
 				quotaValueSuffix.textContent = isCompact
-					? localize('quotaLabelUsed', "{0} used", label)
-					: ` ${localize('quotaUsed', "used")}`;
+					? localize("quotaLabelUsed", "{0} used", label)
+					: ` ${localize("quotaUsed", "used")}`;
 			}
 		};
 
 		const hoverTarget = isCompact ? quotaValueText : quotaPercentage;
-		this._store.add(addDisposableListener(hoverTarget, EventType.MOUSE_ENTER, () => { isHovered = true; showCredits(); }));
-		this._store.add(addDisposableListener(hoverTarget, EventType.MOUSE_LEAVE, () => { isHovered = false; showPercentage(); }));
-		this._store.add(addDisposableListener(hoverTarget, EventType.FOCUS, () => { isHovered = true; showCredits(); }));
-		this._store.add(addDisposableListener(hoverTarget, EventType.BLUR, () => { isHovered = false; showPercentage(); }));
+		this._store.add(
+			addDisposableListener(hoverTarget, EventType.MOUSE_ENTER, () => {
+				isHovered = true;
+				showCredits();
+			}),
+		);
+		this._store.add(
+			addDisposableListener(hoverTarget, EventType.MOUSE_LEAVE, () => {
+				isHovered = false;
+				showPercentage();
+			}),
+		);
+		this._store.add(
+			addDisposableListener(hoverTarget, EventType.FOCUS, () => {
+				isHovered = true;
+				showCredits();
+			}),
+		);
+		this._store.add(
+			addDisposableListener(hoverTarget, EventType.BLUR, () => {
+				isHovered = false;
+				showPercentage();
+			}),
+		);
 
 		const update = (quota: IQuotaSnapshot | string) => {
 			currentQuota = quota;
 
 			let usedPercentage: number;
-			if (typeof quota === 'string') {
+			if (typeof quota === "string") {
 				usedPercentage = 0;
 			} else {
 				usedPercentage = Math.max(0, 100 - quota.percentRemaining);
@@ -801,70 +1404,132 @@ export class ChatStatusDashboard extends DomWidget {
 		return update;
 	}
 
-	private createGlobalQuotaCallout(container: HTMLElement): () => { calloutVisible: boolean; additionalUsageEnabled: boolean } {
-		const calloutIcon = $('span.callout-icon');
-		const calloutText = $('span.callout-text');
-		const quotaCallout = container.appendChild($('div.quota-callout', undefined, calloutIcon, calloutText));
-		quotaCallout.style.display = 'none';
+	private createGlobalQuotaCallout(
+		container: HTMLElement,
+	): () => { calloutVisible: boolean; additionalUsageEnabled: boolean } {
+		const calloutIcon = $("span.callout-icon");
+		const calloutText = $("span.callout-text");
+		const quotaCallout = container.appendChild(
+			$("div.quota-callout", undefined, calloutIcon, calloutText),
+		);
+		quotaCallout.style.display = "none";
 
 		const update = () => {
 			const quotas = this.chatEntitlementService.quotas;
 			const additionalUsageEnabled = quotas.additionalUsageEnabled ?? false;
-			const isEnterpriseUser = this.chatEntitlementService.entitlement === ChatEntitlement.Enterprise || this.chatEntitlementService.entitlement === ChatEntitlement.Business;
+			const isEnterpriseUser =
+				this.chatEntitlementService.entitlement ===
+					ChatEntitlement.Enterprise ||
+				this.chatEntitlementService.entitlement === ChatEntitlement.Business;
 			const isUsageBasedBilling = quotas.usageBasedBilling === true;
 
 			const allQuotas: IQuotaSnapshot[] = [];
-			if (quotas.chat && !quotas.chat.unlimited) { allQuotas.push(quotas.chat); }
-			if (quotas.premiumChat && !quotas.premiumChat.unlimited) { allQuotas.push(quotas.premiumChat); }
-			if (quotas.completions && !quotas.completions.unlimited) { allQuotas.push(quotas.completions); }
+			if (quotas.chat && !quotas.chat.unlimited) {
+				allQuotas.push(quotas.chat);
+			}
+			if (quotas.premiumChat && !quotas.premiumChat.unlimited) {
+				allQuotas.push(quotas.premiumChat);
+			}
+			if (quotas.completions && !quotas.completions.unlimited) {
+				allQuotas.push(quotas.completions);
+			}
 
-			const maxUsedPercentage = allQuotas.length > 0 ? Math.max(...allQuotas.map(q => Math.max(0, 100 - q.percentRemaining))) : 0;
-			const isPooledQuotaExhausted = quotas.premiumChat?.unlimited && quotas.premiumChat.hasQuota === false;
+			const maxUsedPercentage =
+				allQuotas.length > 0
+					? Math.max(
+							...allQuotas.map((q) => Math.max(0, 100 - q.percentRemaining)),
+						)
+					: 0;
+			const isPooledQuotaExhausted =
+				quotas.premiumChat?.unlimited && quotas.premiumChat.hasQuota === false;
 
 			// Business/Enterprise: hasQuota === false is the authoritative signal
 			// that the org has blocked usage, regardless of overages or remaining quota.
 			if (isEnterpriseUser && isPooledQuotaExhausted) {
-				quotaCallout.style.display = '';
-				quotaCallout.className = 'quota-callout info';
+				quotaCallout.style.display = "";
+				quotaCallout.className = "quota-callout info";
 				calloutIcon.className = `callout-icon ${ThemeIcon.asClassName(Codicon.info)}`;
-				calloutText.textContent = localize('quotaBudgetExceededEnterprise', "Your organization or enterprise has exceeded its Copilot budget. Contact your admin to resume usage.");
+				calloutText.textContent = localize(
+					"quotaBudgetExceededEnterprise",
+					"Your organization or enterprise has exceeded its Copilot budget. Contact your admin to resume usage.",
+				);
 			} else if (maxUsedPercentage >= 100 && additionalUsageEnabled) {
-				quotaCallout.style.display = '';
-				quotaCallout.className = 'quota-callout info';
+				quotaCallout.style.display = "";
+				quotaCallout.className = "quota-callout info";
 				calloutIcon.className = `callout-icon ${ThemeIcon.asClassName(Codicon.info)}`;
 				calloutText.textContent = isEnterpriseUser
-					? localize('quotaAdditionalUsageActiveEnterprise', "You've used your included credits. Your organization covers additional usage, so you can keep working.")
+					? localize(
+							"quotaAdditionalUsageActiveEnterprise",
+							"You've used your included credits. Your organization covers additional usage, so you can keep working.",
+						)
 					: isUsageBasedBilling
-						? localize('quotaAdditionalUsageActive', "Additional budget is configured. Usage will continue until limits reset.")
-						: localize('quotaBudgetActive', "Premium request budget is configured. Usage will continue until limits reset.");
-			} else if (maxUsedPercentage >= 75 && maxUsedPercentage < 100 && additionalUsageEnabled) {
-				quotaCallout.style.display = '';
-				quotaCallout.className = 'quota-callout info';
+						? localize(
+								"quotaAdditionalUsageActive",
+								"Additional budget is configured. Usage will continue until limits reset.",
+							)
+						: localize(
+								"quotaBudgetActive",
+								"Premium request budget is configured. Usage will continue until limits reset.",
+							);
+			} else if (
+				maxUsedPercentage >= 75 &&
+				maxUsedPercentage < 100 &&
+				additionalUsageEnabled
+			) {
+				quotaCallout.style.display = "";
+				quotaCallout.className = "quota-callout info";
 				calloutIcon.className = `callout-icon ${ThemeIcon.asClassName(Codicon.info)}`;
 				calloutText.textContent = isEnterpriseUser
-					? localize('quotaAdditionalUsageApproachingEnterprise', "You're approaching your included credits. Your organization covers additional usage, so there's no interruption.")
+					? localize(
+							"quotaAdditionalUsageApproachingEnterprise",
+							"You're approaching your included credits. Your organization covers additional usage, so there's no interruption.",
+						)
 					: isUsageBasedBilling
-						? localize('quotaAdditionalUsageApproaching', "Once the limit is reached, additional budget will be used.")
-						: localize('quotaBudgetApproaching', "Once the limit is reached, premium request budget will be used.");
-			} else if ((maxUsedPercentage >= 100 || isPooledQuotaExhausted) && !additionalUsageEnabled) {
-				quotaCallout.style.display = '';
-				quotaCallout.className = 'quota-callout info';
+						? localize(
+								"quotaAdditionalUsageApproaching",
+								"Once the limit is reached, additional budget will be used.",
+							)
+						: localize(
+								"quotaBudgetApproaching",
+								"Once the limit is reached, premium request budget will be used.",
+							);
+			} else if (
+				(maxUsedPercentage >= 100 || isPooledQuotaExhausted) &&
+				!additionalUsageEnabled
+			) {
+				quotaCallout.style.display = "";
+				quotaCallout.className = "quota-callout info";
 				calloutIcon.className = `callout-icon ${ThemeIcon.asClassName(Codicon.info)}`;
 				calloutText.textContent = isEnterpriseUser
-					? localize('quotaPausedEnterprise', "Copilot is paused until the limit resets. Contact your administrator for more information.")
-					: localize('quotaPaused', "Copilot is paused until the limit resets.");
+					? localize(
+							"quotaPausedEnterprise",
+							"Copilot is paused until the limit resets. Contact your administrator for more information.",
+						)
+					: localize(
+							"quotaPaused",
+							"Copilot is paused until the limit resets.",
+						);
 			} else if (maxUsedPercentage >= 75 && !additionalUsageEnabled) {
-				quotaCallout.style.display = '';
-				quotaCallout.className = 'quota-callout info';
+				quotaCallout.style.display = "";
+				quotaCallout.className = "quota-callout info";
 				calloutIcon.className = `callout-icon ${ThemeIcon.asClassName(Codicon.info)}`;
 				calloutText.textContent = isEnterpriseUser
-					? localize('quotaWarningEnterprise', "Copilot will pause when the limit is reached. Contact your administrator for more information.")
-					: localize('quotaWarning', "Copilot will pause when the limit is reached.");
+					? localize(
+							"quotaWarningEnterprise",
+							"Copilot will pause when the limit is reached. Contact your administrator for more information.",
+						)
+					: localize(
+							"quotaWarning",
+							"Copilot will pause when the limit is reached.",
+						);
 			} else {
-				quotaCallout.style.display = 'none';
+				quotaCallout.style.display = "none";
 			}
 
-			return { calloutVisible: quotaCallout.style.display !== 'none', additionalUsageEnabled };
+			return {
+				calloutVisible: quotaCallout.style.display !== "none",
+				additionalUsageEnabled,
+			};
 		};
 
 		update();
@@ -874,65 +1539,111 @@ export class ChatStatusDashboard extends DomWidget {
 
 	private createSettings(container: HTMLElement): void {
 		const modeId = this.editorService.activeTextEditorLanguageId;
-		const settings = container.appendChild($('div.settings'));
+		const settings = container.appendChild($("div.settings"));
 
 		// --- Inline Suggestions
 		{
-			const globalSetting = append(settings, $('div.setting'));
-			this.createInlineSuggestionsSetting(globalSetting, localize('settings.codeCompletions.allFiles', "Ghost text suggestions"), '*');
+			const globalSetting = append(settings, $("div.setting"));
+			this.createInlineSuggestionsSetting(
+				globalSetting,
+				localize("settings.codeCompletions.allFiles", "Ghost text suggestions"),
+				"*",
+			);
 
-			const overriddenHint = globalSetting.appendChild($('span.setting-overridden'));
+			const overriddenHint = globalSetting.appendChild(
+				$("span.setting-overridden"),
+			);
 			const updateOverriddenHint = () => {
-				const obj = this.configurationService.getValue<Record<string, boolean>>(defaultChat.completionsEnablementSetting);
-				const hasOverride = modeId && isObject(obj) && typeof obj[modeId] !== 'undefined' && Boolean(obj[modeId]) !== Boolean(obj['*']);
-				overriddenHint.textContent = hasOverride ? localize('settings.overridden', "(overridden)") : '';
+				const obj = this.configurationService.getValue<Record<string, boolean>>(
+					defaultChat.completionsEnablementSetting,
+				);
+				const hasOverride =
+					modeId &&
+					isObject(obj) &&
+					typeof obj[modeId] !== "undefined" &&
+					Boolean(obj[modeId]) !== Boolean(obj["*"]);
+				overriddenHint.textContent = hasOverride
+					? localize("settings.overridden", "(overridden)")
+					: "";
 			};
 			updateOverriddenHint();
 
 			if (modeId) {
-				const languageSetting = append(settings, $('div.setting'));
-				const languageName = this.languageService.getLanguageName(modeId) ?? modeId;
-				this.createTriStateLanguageSetting(languageSetting, localize('settings.codeCompletions.language', "Ghost text suggestions for {0}", languageName), modeId, updateOverriddenHint);
+				const languageSetting = append(settings, $("div.setting"));
+				const languageName =
+					this.languageService.getLanguageName(modeId) ?? modeId;
+				this.createTriStateLanguageSetting(
+					languageSetting,
+					localize(
+						"settings.codeCompletions.language",
+						"Ghost text suggestions for {0}",
+						languageName,
+					),
+					modeId,
+					updateOverriddenHint,
+				);
 			}
 		}
 
 		// --- Next edit suggestions
 		{
-			const setting = append(settings, $('div.setting'));
-			this.createNextEditSuggestionsSetting(setting, localize('settings.nextEditSuggestions', "Next edit suggestions"), this.getCompletionsSettingAccessor(modeId));
+			const setting = append(settings, $("div.setting"));
+			this.createNextEditSuggestionsSetting(
+				setting,
+				localize("settings.nextEditSuggestions", "Next edit suggestions"),
+				this.getCompletionsSettingAccessor(modeId),
+			);
 		}
 	}
 
-	private createSetting(container: HTMLElement, settingIdsToReEvaluate: string[], label: string, accessor: ISettingsAccessor): Checkbox {
-		const checkbox = this._store.add(new Checkbox(label, Boolean(accessor.readSetting()), { ...defaultCheckboxStyles }));
+	private createSetting(
+		container: HTMLElement,
+		settingIdsToReEvaluate: string[],
+		label: string,
+		accessor: ISettingsAccessor,
+	): Checkbox {
+		const checkbox = this._store.add(
+			new Checkbox(label, Boolean(accessor.readSetting()), {
+				...defaultCheckboxStyles,
+			}),
+		);
 		container.appendChild(checkbox.domNode);
 
-		const settingLabel = append(container, $('span.setting-label', undefined, label));
+		const settingLabel = append(
+			container,
+			$("span.setting-label", undefined, label),
+		);
 		this._store.add(Gesture.addTarget(settingLabel));
-		[EventType.CLICK, TouchEventType.Tap].forEach(eventType => {
-			this._store.add(addDisposableListener(settingLabel, eventType, e => {
-				if (checkbox?.enabled) {
-					EventHelper.stop(e, true);
+		[EventType.CLICK, TouchEventType.Tap].forEach((eventType) => {
+			this._store.add(
+				addDisposableListener(settingLabel, eventType, (e) => {
+					if (checkbox?.enabled) {
+						EventHelper.stop(e, true);
 
-					checkbox.checked = !checkbox.checked;
-					accessor.writeSetting(checkbox.checked);
-					checkbox.focus();
-				}
-			}));
+						checkbox.checked = !checkbox.checked;
+						accessor.writeSetting(checkbox.checked);
+						checkbox.focus();
+					}
+				}),
+			);
 		});
 
-		this._store.add(checkbox.onChange(() => {
-			accessor.writeSetting(checkbox.checked);
-		}));
+		this._store.add(
+			checkbox.onChange(() => {
+				accessor.writeSetting(checkbox.checked);
+			}),
+		);
 
-		this._store.add(this.configurationService.onDidChangeConfiguration(e => {
-			if (settingIdsToReEvaluate.some(id => e.affectsConfiguration(id))) {
-				checkbox.checked = Boolean(accessor.readSetting());
-			}
-		}));
+		this._store.add(
+			this.configurationService.onDidChangeConfiguration((e) => {
+				if (settingIdsToReEvaluate.some((id) => e.affectsConfiguration(id))) {
+					checkbox.checked = Boolean(accessor.readSetting());
+				}
+			}),
+		);
 
 		if (!this.canUseChat()) {
-			container.classList.add('disabled');
+			container.classList.add("disabled");
 			checkbox.disable();
 			checkbox.checked = false;
 		}
@@ -940,25 +1651,45 @@ export class ChatStatusDashboard extends DomWidget {
 		return checkbox;
 	}
 
-	private createInlineSuggestionsSetting(container: HTMLElement, label: string, modeId: string | undefined): void {
-		this.createSetting(container, [defaultChat.completionsEnablementSetting], label, this.getCompletionsSettingAccessor(modeId));
+	private createInlineSuggestionsSetting(
+		container: HTMLElement,
+		label: string,
+		modeId: string | undefined,
+	): void {
+		this.createSetting(
+			container,
+			[defaultChat.completionsEnablementSetting],
+			label,
+			this.getCompletionsSettingAccessor(modeId),
+		);
 	}
 
-	private createTriStateLanguageSetting(container: HTMLElement, label: string, modeId: string, onStateChange: () => void): void {
+	private createTriStateLanguageSetting(
+		container: HTMLElement,
+		label: string,
+		modeId: string,
+		onStateChange: () => void,
+	): void {
 		const settingId = defaultChat.completionsEnablementSetting;
 
-		const getState = (): boolean | 'mixed' => {
-			const obj = this.configurationService.getValue<Record<string, boolean>>(settingId);
-			if (!isObject(obj) || typeof obj[modeId] === 'undefined') {
-				return 'mixed'; // no override — inherits from *
+		const getState = (): boolean | "mixed" => {
+			const obj =
+				this.configurationService.getValue<Record<string, boolean>>(settingId);
+			if (!isObject(obj) || typeof obj[modeId] === "undefined") {
+				return "mixed"; // no override — inherits from *
 			}
 			return Boolean(obj[modeId]);
 		};
 
-		const checkbox = this._store.add(new TriStateCheckbox(label, getState(), { ...defaultCheckboxStyles }));
+		const checkbox = this._store.add(
+			new TriStateCheckbox(label, getState(), { ...defaultCheckboxStyles }),
+		);
 		container.appendChild(checkbox.domNode);
 
-		const settingLabel = append(container, $('span.setting-label', undefined, label));
+		const settingLabel = append(
+			container,
+			$("span.setting-label", undefined, label),
+		);
 		this._store.add(Gesture.addTarget(settingLabel));
 
 		const cycleState = () => {
@@ -967,35 +1698,50 @@ export class ChatStatusDashboard extends DomWidget {
 			if (current === true) {
 				checkbox.checked = false;
 			} else if (current === false) {
-				checkbox.checked = 'mixed';
+				checkbox.checked = "mixed";
 			} else {
 				checkbox.checked = true;
 			}
 		};
 
-		const writeState = (state: boolean | 'mixed') => {
-			let result = this.configurationService.getValue<Record<string, boolean>>(settingId);
+		const writeState = (state: boolean | "mixed") => {
+			let result =
+				this.configurationService.getValue<Record<string, boolean>>(settingId);
 			if (!isObject(result)) {
 				result = Object.create(null);
 			}
 
-			if (state === 'mixed') {
+			if (state === "mixed") {
 				// Remove the language key to inherit from *
 				const { [modeId]: _, ...rest } = result;
-				const inheritedEnablement = typeof rest['*'] === 'boolean' ? (rest['*'] ? 'enabled' : 'disabled') : 'enabled';
-				this.telemetryService.publicLog2<ChatSettingChangedEvent, ChatSettingChangedClassification>('chatStatus.settingChanged', {
+				const inheritedEnablement =
+					typeof rest["*"] === "boolean"
+						? rest["*"]
+							? "enabled"
+							: "disabled"
+						: "enabled";
+				this.telemetryService.publicLog2<
+					ChatSettingChangedEvent,
+					ChatSettingChangedClassification
+				>("chatStatus.settingChanged", {
 					settingIdentifier: settingId,
 					settingMode: modeId,
-					settingEnablement: inheritedEnablement
+					settingEnablement: inheritedEnablement,
 				});
 				this.configurationService.updateValue(settingId, rest);
 			} else {
-				this.telemetryService.publicLog2<ChatSettingChangedEvent, ChatSettingChangedClassification>('chatStatus.settingChanged', {
+				this.telemetryService.publicLog2<
+					ChatSettingChangedEvent,
+					ChatSettingChangedClassification
+				>("chatStatus.settingChanged", {
 					settingIdentifier: settingId,
 					settingMode: modeId,
-					settingEnablement: state ? 'enabled' : 'disabled'
+					settingEnablement: state ? "enabled" : "disabled",
 				});
-				this.configurationService.updateValue(settingId, { ...result, [modeId]: state });
+				this.configurationService.updateValue(settingId, {
+					...result,
+					[modeId]: state,
+				});
 			}
 			onStateChange();
 		};
@@ -1009,126 +1755,190 @@ export class ChatStatusDashboard extends DomWidget {
 			writeState(checkbox.checked);
 		};
 
-		[EventType.CLICK, TouchEventType.Tap].forEach(eventType => {
-			this._store.add(addDisposableListener(settingLabel, eventType, e => {
-				if (checkbox?.enabled) {
-					EventHelper.stop(e, true);
-					cycleAndWrite();
-					checkbox.focus();
-				}
-			}));
+		[EventType.CLICK, TouchEventType.Tap].forEach((eventType) => {
+			this._store.add(
+				addDisposableListener(settingLabel, eventType, (e) => {
+					if (checkbox?.enabled) {
+						EventHelper.stop(e, true);
+						cycleAndWrite();
+						checkbox.focus();
+					}
+				}),
+			);
 		});
 
-		this._store.add(checkbox.onChange(() => {
-			// The internal Toggle only cycles true↔false; revert and apply our tri-state cycle
-			checkbox.checked = previousState; // undo internal toggle
-			cycleAndWrite();
-		}));
+		this._store.add(
+			checkbox.onChange(() => {
+				// The internal Toggle only cycles true↔false; revert and apply our tri-state cycle
+				checkbox.checked = previousState; // undo internal toggle
+				cycleAndWrite();
+			}),
+		);
 
-		this._store.add(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(settingId)) {
-				checkbox.checked = getState();
-				previousState = checkbox.checked;
-				onStateChange();
-			}
-		}));
+		this._store.add(
+			this.configurationService.onDidChangeConfiguration((e) => {
+				if (e.affectsConfiguration(settingId)) {
+					checkbox.checked = getState();
+					previousState = checkbox.checked;
+					onStateChange();
+				}
+			}),
+		);
 
 		if (!this.canUseChat()) {
-			container.classList.add('disabled');
+			container.classList.add("disabled");
 			checkbox.disable();
 			checkbox.checked = false;
 		}
 	}
 
-	private getCompletionsSettingAccessor(modeId = '*'): ISettingsAccessor {
+	private getCompletionsSettingAccessor(modeId = "*"): ISettingsAccessor {
 		const settingId = defaultChat.completionsEnablementSetting;
 
 		return {
-			readSetting: () => isCompletionsEnabled(this.configurationService, modeId),
+			readSetting: () =>
+				isCompletionsEnabled(this.configurationService, modeId),
 			writeSetting: (value: boolean) => {
-				this.telemetryService.publicLog2<ChatSettingChangedEvent, ChatSettingChangedClassification>('chatStatus.settingChanged', {
+				this.telemetryService.publicLog2<
+					ChatSettingChangedEvent,
+					ChatSettingChangedClassification
+				>("chatStatus.settingChanged", {
 					settingIdentifier: settingId,
 					settingMode: modeId,
-					settingEnablement: value ? 'enabled' : 'disabled'
+					settingEnablement: value ? "enabled" : "disabled",
 				});
 
-				let result = this.configurationService.getValue<Record<string, boolean>>(settingId);
+				let result =
+					this.configurationService.getValue<Record<string, boolean>>(
+						settingId,
+					);
 				if (!isObject(result)) {
 					result = Object.create(null);
 				}
 
-				return this.configurationService.updateValue(settingId, { ...result, [modeId]: value });
-			}
+				return this.configurationService.updateValue(settingId, {
+					...result,
+					[modeId]: value,
+				});
+			},
 		};
 	}
 
-	private createNextEditSuggestionsSetting(container: HTMLElement, label: string, completionsSettingAccessor: ISettingsAccessor): void {
+	private createNextEditSuggestionsSetting(
+		container: HTMLElement,
+		label: string,
+		completionsSettingAccessor: ISettingsAccessor,
+	): void {
 		const nesSettingId = defaultChat.nextEditSuggestionsSetting;
 		const completionsSettingId = defaultChat.completionsEnablementSetting;
-		const resource = EditorResourceAccessor.getOriginalUri(this.editorService.activeEditor, { supportSideBySide: SideBySideEditor.PRIMARY });
+		const resource = EditorResourceAccessor.getOriginalUri(
+			this.editorService.activeEditor,
+			{ supportSideBySide: SideBySideEditor.PRIMARY },
+		);
 
-		const checkbox = this.createSetting(container, [nesSettingId, completionsSettingId], label, {
-			readSetting: () => completionsSettingAccessor.readSetting() && this.textResourceConfigurationService.getValue<boolean>(resource, nesSettingId),
-			writeSetting: (value: boolean) => {
-				this.telemetryService.publicLog2<ChatSettingChangedEvent, ChatSettingChangedClassification>('chatStatus.settingChanged', {
-					settingIdentifier: nesSettingId,
-					settingEnablement: value ? 'enabled' : 'disabled'
-				});
+		const checkbox = this.createSetting(
+			container,
+			[nesSettingId, completionsSettingId],
+			label,
+			{
+				readSetting: () =>
+					completionsSettingAccessor.readSetting() &&
+					this.textResourceConfigurationService.getValue<boolean>(
+						resource,
+						nesSettingId,
+					),
+				writeSetting: (value: boolean) => {
+					this.telemetryService.publicLog2<
+						ChatSettingChangedEvent,
+						ChatSettingChangedClassification
+					>("chatStatus.settingChanged", {
+						settingIdentifier: nesSettingId,
+						settingEnablement: value ? "enabled" : "disabled",
+					});
 
-				return this.textResourceConfigurationService.updateValue(resource, nesSettingId, value);
-			}
-		});
+					return this.textResourceConfigurationService.updateValue(
+						resource,
+						nesSettingId,
+						value,
+					);
+				},
+			},
+		);
 
 		// enablement of NES depends on completions setting
 		// so we have to update our checkbox state accordingly
 		if (!completionsSettingAccessor.readSetting()) {
-			container.classList.add('disabled');
+			container.classList.add("disabled");
 			checkbox.disable();
 		}
 
-		this._store.add(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(completionsSettingId)) {
-				if (completionsSettingAccessor.readSetting() && this.canUseChat()) {
-					checkbox.enable();
-					container.classList.remove('disabled');
-				} else {
-					checkbox.disable();
-					container.classList.add('disabled');
+		this._store.add(
+			this.configurationService.onDidChangeConfiguration((e) => {
+				if (e.affectsConfiguration(completionsSettingId)) {
+					if (completionsSettingAccessor.readSetting() && this.canUseChat()) {
+						checkbox.enable();
+						container.classList.remove("disabled");
+					} else {
+						checkbox.disable();
+						container.classList.add("disabled");
+					}
 				}
-			}
-		}));
+			}),
+		);
 	}
 
 	private createCompletionsSnooze(container: HTMLElement, label: string): void {
 		const isEnabled = () => {
-			const completionsEnabled = isCompletionsEnabled(this.configurationService);
-			const completionsEnabledActiveLanguage = isCompletionsEnabled(this.configurationService, this.editorService.activeTextEditorLanguageId);
+			const completionsEnabled = isCompletionsEnabled(
+				this.configurationService,
+			);
+			const completionsEnabledActiveLanguage = isCompletionsEnabled(
+				this.configurationService,
+				this.editorService.activeTextEditorLanguageId,
+			);
 			return completionsEnabled || completionsEnabledActiveLanguage;
 		};
 
-		const button = this._store.add(new Button(container, { disabled: !isEnabled(), ...defaultButtonStyles, hoverDelegate: nativeHoverDelegate, secondary: true }));
+		const button = this._store.add(
+			new Button(container, {
+				disabled: !isEnabled(),
+				...defaultButtonStyles,
+				hoverDelegate: nativeHoverDelegate,
+				secondary: true,
+			}),
+		);
 
-		const timerDisplay = container.appendChild($('span.snooze-label'));
+		const timerDisplay = container.appendChild($("span.snooze-label"));
 
-		const actionBar = container.appendChild($('div.snooze-action-bar'));
-		const toolbar = this._store.add(new ActionBar(actionBar, { hoverDelegate: nativeHoverDelegate }));
+		const actionBar = container.appendChild($("div.snooze-action-bar"));
+		const toolbar = this._store.add(
+			new ActionBar(actionBar, { hoverDelegate: nativeHoverDelegate }),
+		);
 		const cancelAction = toAction({
-			id: 'workbench.action.cancelSnoozeStatusBarLink',
-			label: localize('cancelSnooze', "Cancel Snooze"),
+			id: "workbench.action.cancelSnoozeStatusBarLink",
+			label: localize("cancelSnooze", "Cancel Snooze"),
 			run: () => this.inlineCompletionsService.cancelSnooze(),
-			class: ThemeIcon.asClassName(Codicon.stopCircle)
+			class: ThemeIcon.asClassName(Codicon.stopCircle),
 		});
 
 		const update = (isEnabled: boolean) => {
-			container.classList.toggle('disabled', !isEnabled);
+			container.classList.toggle("disabled", !isEnabled);
 			toolbar.clear();
 
 			const timeLeftMs = this.inlineCompletionsService.snoozeTimeLeft;
 			if (!isEnabled || timeLeftMs <= 0) {
-				timerDisplay.textContent = localize('completions.snooze5minutesTitle', "Hide suggestions for 5 min");
-				timerDisplay.title = '';
+				timerDisplay.textContent = localize(
+					"completions.snooze5minutesTitle",
+					"Hide suggestions for 5 min",
+				);
+				timerDisplay.title = "";
 				button.label = label;
-				button.setTitle(localize('completions.snooze5minutes', "Hide inline suggestions for 5 min"));
+				button.setTitle(
+					localize(
+						"completions.snooze5minutes",
+						"Hide inline suggestions for 5 min",
+					),
+				);
 				return true;
 			}
 
@@ -1136,10 +1946,18 @@ export class ChatStatusDashboard extends DomWidget {
 			const minutes = Math.floor(timeLeftSeconds / 60);
 			const seconds = timeLeftSeconds % 60;
 
-			timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds} ${localize('completions.remainingTime', "remaining")}`;
-			timerDisplay.title = localize('completions.snoozeTimeDescription', "Inline suggestions are hidden for the remaining duration");
-			button.label = localize('completions.plus5min', "+5 min");
-			button.setTitle(localize('completions.snoozeAdditional5minutes', "Snooze additional 5 min"));
+			timerDisplay.textContent = `${minutes}:${seconds < 10 ? "0" : ""}${seconds} ${localize("completions.remainingTime", "remaining")}`;
+			timerDisplay.title = localize(
+				"completions.snoozeTimeDescription",
+				"Inline suggestions are hidden for the remaining duration",
+			);
+			button.label = localize("completions.plus5min", "+5 min");
+			button.setTitle(
+				localize(
+					"completions.snoozeAdditional5minutes",
+					"Snooze additional 5 min",
+				),
+			);
 			toolbar.push([cancelAction], { icon: true, label: false });
 
 			return false;
@@ -1155,28 +1973,36 @@ export class ChatStatusDashboard extends DomWidget {
 				return;
 			}
 
-			timerDisposables.add(disposableWindowInterval(
-				getWindow(container),
-				() => update(enabled),
-				1000
-			));
+			timerDisposables.add(
+				disposableWindowInterval(
+					getWindow(container),
+					() => update(enabled),
+					1000,
+				),
+			);
 		}
 		updateIntervalTimer();
 
-		this._store.add(button.onDidClick(() => {
-			this.inlineCompletionsService.snooze();
-			update(isEnabled());
-		}));
+		this._store.add(
+			button.onDidClick(() => {
+				this.inlineCompletionsService.snooze();
+				update(isEnabled());
+			}),
+		);
 
-		this._store.add(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(defaultChat.completionsEnablementSetting)) {
-				button.enabled = isEnabled();
-			}
-			updateIntervalTimer();
-		}));
+		this._store.add(
+			this.configurationService.onDidChangeConfiguration((e) => {
+				if (e.affectsConfiguration(defaultChat.completionsEnablementSetting)) {
+					button.enabled = isEnabled();
+				}
+				updateIntervalTimer();
+			}),
+		);
 
-		this._store.add(this.inlineCompletionsService.onDidChangeIsSnoozing(() => {
-			updateIntervalTimer();
-		}));
+		this._store.add(
+			this.inlineCompletionsService.onDidChangeIsSnoozing(() => {
+				updateIntervalTimer();
+			}),
+		);
 	}
 }

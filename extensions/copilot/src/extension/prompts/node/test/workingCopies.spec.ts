@@ -5,12 +5,14 @@
 
 import assert from 'assert';
 import { suite, test } from 'vitest';
-import { StringEdit, StringReplacement } from '../../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { WorkingCopyOriginalDocument } from '../inline/workingCopies';
 
 suite('WorkingCopyOriginalDocument', () => {
-
 	test('should initialize with correct text and EOL sequence', () => {
 		const text = 'Hello\nWorld';
 		const doc = new WorkingCopyOriginalDocument(text);
@@ -32,7 +34,9 @@ suite('WorkingCopyOriginalDocument', () => {
 		const doc = new WorkingCopyOriginalDocument(text);
 		assert.strictEqual(doc.transformer.getText(), doc.text);
 
-		const edits = new StringEdit([new StringReplacement(new OffsetRange(5, 5), ' Beautiful')]);
+		const edits = new StringEdit([
+			new StringReplacement(new OffsetRange(5, 5), ' Beautiful'),
+		]);
 		doc.applyOffsetEdits(edits);
 		assert.strictEqual(doc.text, 'Hello Beautiful\nWorld');
 		assert.strictEqual(doc.transformer.getText(), doc.text);
@@ -45,7 +49,7 @@ suite('WorkingCopyOriginalDocument', () => {
 
 		const edits = new StringEdit([
 			new StringReplacement(new OffsetRange(5, 5), ' Beautiful'),
-			new StringReplacement(new OffsetRange(18, 18), '!')
+			new StringReplacement(new OffsetRange(18, 18), '!'),
 		]);
 		doc.applyOffsetEdits(edits);
 		assert.strictEqual(doc.text, 'Hello Beautiful\nWorld!');
@@ -57,7 +61,9 @@ suite('WorkingCopyOriginalDocument', () => {
 		const doc = new WorkingCopyOriginalDocument(text);
 		assert.strictEqual(doc.transformer.getText(), doc.text);
 
-		const edits = new StringEdit([new StringReplacement(new OffsetRange(5, 5), ' Beautiful')]);
+		const edits = new StringEdit([
+			new StringReplacement(new OffsetRange(5, 5), ' Beautiful'),
+		]);
 		doc.applyOffsetEdits(edits);
 		assert.strictEqual(doc.transformer.getText(), doc.text);
 	});
@@ -67,8 +73,12 @@ suite('WorkingCopyOriginalDocument', () => {
 		const doc = new WorkingCopyOriginalDocument(text);
 		assert.strictEqual(doc.transformer.getText(), doc.text);
 
-		const edits1 = new StringEdit([new StringReplacement(new OffsetRange(5, 5), ' Beautiful')]);
-		const edits2 = new StringEdit([new StringReplacement(new OffsetRange(21, 21), '!')]);
+		const edits1 = new StringEdit([
+			new StringReplacement(new OffsetRange(5, 5), ' Beautiful'),
+		]);
+		const edits2 = new StringEdit([
+			new StringReplacement(new OffsetRange(21, 21), '!'),
+		]);
 		doc.applyOffsetEdits(edits1);
 		doc.applyOffsetEdits(edits2);
 		assert.strictEqual(doc.text, 'Hello Beautiful\nWorld!');
@@ -81,7 +91,9 @@ suite('WorkingCopyOriginalDocument', () => {
 		const doc = new WorkingCopyOriginalDocument(text);
 		assert.strictEqual(doc.transformer.getText(), doc.text);
 
-		const edits = new StringEdit([new StringReplacement(new OffsetRange(5, 5), ' Beautiful\n')]);
+		const edits = new StringEdit([
+			new StringReplacement(new OffsetRange(5, 5), ' Beautiful\n'),
+		]);
 		doc.applyOffsetEdits(edits);
 		assert.strictEqual(doc.text, 'Hello Beautiful\r\n\r\nWorld');
 		assert.strictEqual(doc.transformer.getText(), doc.text);

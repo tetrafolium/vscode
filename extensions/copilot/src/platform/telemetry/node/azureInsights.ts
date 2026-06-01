@@ -20,7 +20,7 @@ export async function setupGHTelemetry(
 	envService: IEnvService,
 	tokenStore: ICopilotTokenStore,
 	telemetryNamespace: string,
-	telemetryEnabled: boolean
+	telemetryEnabled: boolean,
 ): Promise<IDisposable | undefined> {
 	const container = telemetryService;
 	await container.deactivate();
@@ -28,8 +28,20 @@ export async function setupGHTelemetry(
 		return;
 	}
 
-	const reporter = new AzureInsightReporter(capiClientService, envService, tokenStore, telemetryNamespace, APP_INSIGHTS_KEY_STANDARD);
-	const reporterSecure = new AzureInsightReporter(capiClientService, envService, tokenStore, telemetryNamespace, APP_INSIGHTS_KEY_ENHANCED);
+	const reporter = new AzureInsightReporter(
+		capiClientService,
+		envService,
+		tokenStore,
+		telemetryNamespace,
+		APP_INSIGHTS_KEY_STANDARD,
+	);
+	const reporterSecure = new AzureInsightReporter(
+		capiClientService,
+		envService,
+		tokenStore,
+		telemetryNamespace,
+		APP_INSIGHTS_KEY_ENHANCED,
+	);
 
 	container.setReporter(reporter);
 	container.setSecureReporter(reporterSecure);
@@ -40,6 +52,6 @@ export async function setupGHTelemetry(
 			container.setSecureReporter(undefined);
 			reporter.flush();
 			reporterSecure.flush();
-		}
+		},
 	};
 }

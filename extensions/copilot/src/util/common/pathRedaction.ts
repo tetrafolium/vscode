@@ -9,6 +9,9 @@
 export function redactPaths(input: string): string {
 	return input
 		.replace(/([\s|(]|file:\/\/)(\/[^\s]+)/g, '$1[redacted]') // unix path
-		.replace(/([\s|(]|file:\/\/)([a-zA-Z]:[(\\|/){1,2}][^\s]+)/gi, '$1[redacted]') // windows path
+		.replace(
+			/([\s|(]|file:\/\/)([a-zA-Z]:[(\\|/){1,2}][^\s]+)/gi,
+			'$1[redacted]',
+		) // windows path
 		.replace(/([\s|(]|file:\/\/)(\\[^\s]+)/gi, '$1[redacted]'); // unc path
 }

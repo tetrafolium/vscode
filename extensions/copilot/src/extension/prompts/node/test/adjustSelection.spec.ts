@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import { describe, expect, it } from 'vitest';
 import { StringTextDocument } from '../../../../platform/editing/common/abstractText';
 import { getStructureUsingIndentation } from '../../../../platform/parser/node/indentationStructure';
@@ -11,9 +10,7 @@ import { Position, Range } from '../../../../vscodeTypes';
 import { getAdjustedSelection } from '../inline/adjustSelection';
 
 describe('adjustSelection', () => {
-
 	it('should adjust selection in Swift code', async () => {
-
 		const code = `import Foundation\nimport CoreMotion\n\n`;
 
 		const doc = new StringTextDocument(code);

@@ -3,18 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BrowserWindow } from 'electron';
-import { Limiter } from '../../../base/common/async.js';
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { URI } from '../../../base/common/uri.js';
-import { ILogService } from '../../log/common/log.js';
-import { IAgentNetworkFilterService } from '../../networkFilter/common/networkFilterService.js';
-import { isURLDomainTrusted } from '../../url/common/trustedDomains.js';
-import { IWebContentExtractorOptions, IWebContentExtractorService, WebContentExtractResult } from '../common/webContentExtractor.js';
-import { WebContentCache } from './webContentCache.js';
-import { WebPageLoader } from './webPageLoader.js';
+import { BrowserWindow } from "electron";
+import { Limiter } from "../../../base/common/async.js";
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { URI } from "../../../base/common/uri.js";
+import { ILogService } from "../../log/common/log.js";
+import { IAgentNetworkFilterService } from "../../networkFilter/common/networkFilterService.js";
+import { isURLDomainTrusted } from "../../url/common/trustedDomains.js";
+import {
+	IWebContentExtractorOptions,
+	IWebContentExtractorService,
+	WebContentExtractResult,
+} from "../common/webContentExtractor.js";
+import { WebContentCache } from "./webContentCache.js";
+import { WebPageLoader } from "./webPageLoader.js";
 
-export class NativeWebContentExtractorService extends Disposable implements IWebContentExtractorService {
+export class NativeWebContentExtractorService
+	extends Disposable
+	implements IWebContentExtractorService
+{
 	_serviceBrand: undefined;
 
 	// Only allow 3 windows to be opened at a time
@@ -24,22 +31,37 @@ export class NativeWebContentExtractorService extends Disposable implements IWeb
 
 	constructor(
 		@ILogService private readonly _logger: ILogService,
-		@IAgentNetworkFilterService private readonly _agentNetworkFilterService: IAgentNetworkFilterService,
+		@IAgentNetworkFilterService
+		private readonly _agentNetworkFilterService: IAgentNetworkFilterService,
 	) {
 		super();
-		this._register(this._agentNetworkFilterService.onDidChange(() => this._webContentsCache.clear()));
+		this._register(
+			this._agentNetworkFilterService.onDidChange(() =>
+				this._webContentsCache.clear(),
+			),
+		);
 	}
 
-	extract(uris: URI[], options?: IWebContentExtractorOptions): Promise<WebContentExtractResult[]> {
+	extract(
+		uris: URI[],
+		options?: IWebContentExtractorOptions,
+	): Promise<WebContentExtractResult[]> {
 		if (uris.length === 0) {
-			this._logger.info('No URIs provided for extraction');
+			this._logger.info("No URIs provided for extraction");
 			return Promise.resolve([]);
 		}
 		this._logger.info(`Extracting content from ${uris.length} URIs`);
-		return Promise.all(uris.map((uri) => this._limiter.queue(() => this.doExtract(uri, options))));
+		return Promise.all(
+			uris.map((uri) =>
+				this._limiter.queue(() => this.doExtract(uri, options)),
+			),
+		);
 	}
 
-	async doExtract(uri: URI, options: IWebContentExtractorOptions | undefined): Promise<WebContentExtractResult> {
+	async doExtract(
+		uri: URI,
+		options: IWebContentExtractorOptions | undefined,
+	): Promise<WebContentExtractResult> {
 		const cached = this._webContentsCache.tryGet(uri, options);
 		if (cached !== undefined) {
 			this._logger.info(`Found cached content for ${uri.toString()}`);
@@ -52,7 +74,8 @@ export class NativeWebContentExtractorService extends Disposable implements IWeb
 			uri,
 			options,
 			(uri) => isURLDomainTrusted(uri, options?.trustedDomains || []),
-			this._agentNetworkFilterService);
+			this._agentNetworkFilterService,
+		);
 
 		try {
 			const result = await loader.load();

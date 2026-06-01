@@ -3,32 +3,50 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { Queue } from '../../../../base/common/async.js';
-import { removeTrailingPathSeparator } from '../../../../base/common/resources.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
-import { Workspace, WorkspaceFolder, IWorkspace, IWorkspaceContextService, IWorkspaceFoldersChangeEvent, IWorkspaceFoldersWillChangeEvent, IWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, IWorkspaceFolder, WorkbenchState } from '../../../../platform/workspace/common/workspace.js';
-import { IWorkspaceFolderCreationData } from '../../../../platform/workspaces/common/workspaces.js';
-import { getWorkspaceIdentifier } from '../../../../platform/workspaces/common/workspaceIdentifier.js';
-import { IWorkspaceEditingService } from '../../../../workbench/services/workspaces/common/workspaceEditing.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { Queue } from "../../../../base/common/async.js";
+import { removeTrailingPathSeparator } from "../../../../base/common/resources.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IUriIdentityService } from "../../../../platform/uriIdentity/common/uriIdentity.js";
+import {
+	Workspace,
+	WorkspaceFolder,
+	IWorkspace,
+	IWorkspaceContextService,
+	IWorkspaceFoldersChangeEvent,
+	IWorkspaceFoldersWillChangeEvent,
+	IWorkspaceIdentifier,
+	ISingleFolderWorkspaceIdentifier,
+	IWorkspaceFolder,
+	WorkbenchState,
+} from "../../../../platform/workspace/common/workspace.js";
+import { IWorkspaceFolderCreationData } from "../../../../platform/workspaces/common/workspaces.js";
+import { getWorkspaceIdentifier } from "../../../../platform/workspaces/common/workspaceIdentifier.js";
+import { IWorkspaceEditingService } from "../../../../workbench/services/workspaces/common/workspaceEditing.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
 
-import { localize } from '../../../../nls.js';
+import { localize } from "../../../../nls.js";
 
-export class SessionsWorkspaceContextService extends Disposable implements IWorkspaceContextService, IWorkspaceEditingService {
-
+export class SessionsWorkspaceContextService
+	extends Disposable
+	implements IWorkspaceContextService, IWorkspaceEditingService
+{
 	declare readonly _serviceBrand: undefined;
 
 	readonly onDidChangeWorkbenchState = Event.None;
 	readonly onDidChangeWorkspaceName = Event.None;
 	readonly onDidEnterWorkspace = Event.None;
 
-	private readonly _onWillChangeWorkspaceFolders = new Emitter<IWorkspaceFoldersWillChangeEvent>();
-	readonly onWillChangeWorkspaceFolders = this._onWillChangeWorkspaceFolders.event;
+	private readonly _onWillChangeWorkspaceFolders =
+		new Emitter<IWorkspaceFoldersWillChangeEvent>();
+	readonly onWillChangeWorkspaceFolders =
+		this._onWillChangeWorkspaceFolders.event;
 
-	private readonly _onDidChangeWorkspaceFolders = this._register(new Emitter<IWorkspaceFoldersChangeEvent>());
-	readonly onDidChangeWorkspaceFolders = this._onDidChangeWorkspaceFolders.event;
+	private readonly _onDidChangeWorkspaceFolders = this._register(
+		new Emitter<IWorkspaceFoldersChangeEvent>(),
+	);
+	readonly onDidChangeWorkspaceFolders =
+		this._onDidChangeWorkspaceFolders.event;
 
 	private workspace: Workspace;
 	private readonly _updateFoldersQueue = this._register(new Queue<void>());
@@ -38,7 +56,14 @@ export class SessionsWorkspaceContextService extends Disposable implements IWork
 		private readonly uriIdentityService: IUriIdentityService,
 	) {
 		super();
-		this.workspace = new Workspace(workspaceIdentifier.id, [], false, workspaceIdentifier.configPath, uri => uriIdentityService.extUri.ignorePathCasing(uri), localize('agentsWindow', "Agents Window"));
+		this.workspace = new Workspace(
+			workspaceIdentifier.id,
+			[],
+			false,
+			workspaceIdentifier.configPath,
+			(uri) => uriIdentityService.extUri.ignorePathCasing(uri),
+			localize("agentsWindow", "Agents Window"),
+		);
 	}
 
 	getCompleteWorkspace(): Promise<IWorkspace> {
@@ -65,11 +90,18 @@ export class SessionsWorkspaceContextService extends Disposable implements IWork
 		return !!this.getWorkspaceFolder(resource);
 	}
 
-	public isCurrentWorkspace(workspaceIdOrFolder: IWorkspaceIdentifier | ISingleFolderWorkspaceIdentifier | URI): boolean {
+	public isCurrentWorkspace(
+		workspaceIdOrFolder:
+			| IWorkspaceIdentifier
+			| ISingleFolderWorkspaceIdentifier
+			| URI,
+	): boolean {
 		return false;
 	}
 
-	public addFolders(foldersToAdd: IWorkspaceFolderCreationData[]): Promise<void> {
+	public addFolders(
+		foldersToAdd: IWorkspaceFolderCreationData[],
+	): Promise<void> {
 		return this.doUpdateFolders(foldersToAdd, []);
 	}
 
@@ -77,37 +109,63 @@ export class SessionsWorkspaceContextService extends Disposable implements IWork
 		return this.doUpdateFolders([], foldersToRemove);
 	}
 
-	public async updateFolders(index: number, deleteCount?: number, foldersToAddCandidates?: IWorkspaceFolderCreationData[]): Promise<void> {
+	public async updateFolders(
+		index: number,
+		deleteCount?: number,
+		foldersToAddCandidates?: IWorkspaceFolderCreationData[],
+	): Promise<void> {
 		const folders = this.workspace.folders;
 
 		let foldersToDelete: URI[] = [];
-		if (typeof deleteCount === 'number') {
-			foldersToDelete = folders.slice(index, index + deleteCount).map(folder => folder.uri);
+		if (typeof deleteCount === "number") {
+			foldersToDelete = folders
+				.slice(index, index + deleteCount)
+				.map((folder) => folder.uri);
 		}
 
 		let foldersToAdd: IWorkspaceFolderCreationData[] = [];
 		if (Array.isArray(foldersToAddCandidates)) {
-			foldersToAdd = foldersToAddCandidates.map(folderToAdd => ({ uri: removeTrailingPathSeparator(folderToAdd.uri), name: folderToAdd.name }));
+			foldersToAdd = foldersToAddCandidates.map((folderToAdd) => ({
+				uri: removeTrailingPathSeparator(folderToAdd.uri),
+				name: folderToAdd.name,
+			}));
 		}
 
 		return this.doUpdateFolders(foldersToAdd, foldersToDelete, index);
 	}
 
-	async enterWorkspace(_path: URI): Promise<void> { }
+	async enterWorkspace(_path: URI): Promise<void> {}
 
-	async createAndEnterWorkspace(_folders: IWorkspaceFolderCreationData[], _path?: URI): Promise<void> { }
+	async createAndEnterWorkspace(
+		_folders: IWorkspaceFolderCreationData[],
+		_path?: URI,
+	): Promise<void> {}
 
-	async saveAndEnterWorkspace(_path: URI): Promise<void> { }
+	async saveAndEnterWorkspace(_path: URI): Promise<void> {}
 
-	async copyWorkspaceSettings(_toWorkspace: IWorkspaceIdentifier): Promise<void> { }
+	async copyWorkspaceSettings(
+		_toWorkspace: IWorkspaceIdentifier,
+	): Promise<void> {}
 
-	async pickNewWorkspacePath(): Promise<URI | undefined> { return undefined; }
-
-	private doUpdateFolders(foldersToAdd: IWorkspaceFolderCreationData[], foldersToRemove: URI[], index?: number): Promise<void> {
-		return this._updateFoldersQueue.queue(() => this._doUpdateFolders(foldersToAdd, foldersToRemove, index));
+	async pickNewWorkspacePath(): Promise<URI | undefined> {
+		return undefined;
 	}
 
-	private async _doUpdateFolders(foldersToAdd: IWorkspaceFolderCreationData[], foldersToRemove: URI[], index?: number): Promise<void> {
+	private doUpdateFolders(
+		foldersToAdd: IWorkspaceFolderCreationData[],
+		foldersToRemove: URI[],
+		index?: number,
+	): Promise<void> {
+		return this._updateFoldersQueue.queue(() =>
+			this._doUpdateFolders(foldersToAdd, foldersToRemove, index),
+		);
+	}
+
+	private async _doUpdateFolders(
+		foldersToAdd: IWorkspaceFolderCreationData[],
+		foldersToRemove: URI[],
+		index?: number,
+	): Promise<void> {
 		if (foldersToAdd.length === 0 && foldersToRemove.length === 0) {
 			return;
 		}
@@ -115,32 +173,75 @@ export class SessionsWorkspaceContextService extends Disposable implements IWork
 		const currentFolders = this.workspace.folders;
 
 		// Remove folders
-		let newFolders = currentFolders.filter(folder =>
-			!foldersToRemove.some(toRemove => this.uriIdentityService.extUri.isEqual(folder.uri, toRemove))
+		let newFolders = currentFolders.filter(
+			(folder) =>
+				!foldersToRemove.some((toRemove) =>
+					this.uriIdentityService.extUri.isEqual(folder.uri, toRemove),
+				),
 		);
 
 		// Add folders
 		const foldersToAddWorkspaceFolders = foldersToAdd
-			.filter(folderToAdd => !newFolders.some(existing => this.uriIdentityService.extUri.isEqual(existing.uri, folderToAdd.uri)))
-			.map(folderToAdd => new WorkspaceFolder(
-				{ uri: folderToAdd.uri, name: folderToAdd.name || this.uriIdentityService.extUri.basenameOrAuthority(folderToAdd.uri), index: 0 },
-				{ uri: folderToAdd.uri.toString() }
-			));
+			.filter(
+				(folderToAdd) =>
+					!newFolders.some((existing) =>
+						this.uriIdentityService.extUri.isEqual(
+							existing.uri,
+							folderToAdd.uri,
+						),
+					),
+			)
+			.map(
+				(folderToAdd) =>
+					new WorkspaceFolder(
+						{
+							uri: folderToAdd.uri,
+							name:
+								folderToAdd.name ||
+								this.uriIdentityService.extUri.basenameOrAuthority(
+									folderToAdd.uri,
+								),
+							index: 0,
+						},
+						{ uri: folderToAdd.uri.toString() },
+					),
+			);
 
 		if (foldersToAddWorkspaceFolders.length > 0) {
-			if (typeof index === 'number' && index >= 0 && index < newFolders.length) {
-				newFolders = [...newFolders.slice(0, index), ...foldersToAddWorkspaceFolders, ...newFolders.slice(index)];
+			if (
+				typeof index === "number" &&
+				index >= 0 &&
+				index < newFolders.length
+			) {
+				newFolders = [
+					...newFolders.slice(0, index),
+					...foldersToAddWorkspaceFolders,
+					...newFolders.slice(index),
+				];
 			} else {
 				newFolders = [...newFolders, ...foldersToAddWorkspaceFolders];
 			}
 		}
 
 		// Recompute indices
-		newFolders = newFolders.map((f, i) => new WorkspaceFolder({ uri: f.uri, name: f.name, index: i }, f.raw));
+		newFolders = newFolders.map(
+			(f, i) =>
+				new WorkspaceFolder({ uri: f.uri, name: f.name, index: i }, f.raw),
+		);
 
 		// Compute change event
-		const added = newFolders.filter(folder => !currentFolders.some(existing => this.uriIdentityService.extUri.isEqual(existing.uri, folder.uri)));
-		const removed = currentFolders.filter(folder => !newFolders.some(existing => this.uriIdentityService.extUri.isEqual(existing.uri, folder.uri)));
+		const added = newFolders.filter(
+			(folder) =>
+				!currentFolders.some((existing) =>
+					this.uriIdentityService.extUri.isEqual(existing.uri, folder.uri),
+				),
+		);
+		const removed = currentFolders.filter(
+			(folder) =>
+				!newFolders.some((existing) =>
+					this.uriIdentityService.extUri.isEqual(existing.uri, folder.uri),
+				),
+		);
 		const changed: IWorkspaceFolder[] = [];
 		const changes: IWorkspaceFoldersChangeEvent = { added, removed, changed };
 
@@ -153,13 +254,24 @@ export class SessionsWorkspaceContextService extends Disposable implements IWork
 		this._onWillChangeWorkspaceFolders.fire({
 			changes,
 			fromCache: false,
-			join(promise: Promise<void>) { joinPromises.push(promise); }
+			join(promise: Promise<void>) {
+				joinPromises.push(promise);
+			},
 		});
 		await Promise.allSettled(joinPromises);
 
 		// Update workspace
-		const workspaceIdentifier = getWorkspaceIdentifier(this.workspace.configuration!);
-		const workspace = new Workspace(workspaceIdentifier.id, newFolders, false, workspaceIdentifier.configPath, uri => this.uriIdentityService.extUri.ignorePathCasing(uri), this.workspace.name);
+		const workspaceIdentifier = getWorkspaceIdentifier(
+			this.workspace.configuration!,
+		);
+		const workspace = new Workspace(
+			workspaceIdentifier.id,
+			newFolders,
+			false,
+			workspaceIdentifier.configPath,
+			(uri) => this.uriIdentityService.extUri.ignorePathCasing(uri),
+			this.workspace.name,
+		);
 		this.workspace.update(workspace);
 
 		// Fire did change event

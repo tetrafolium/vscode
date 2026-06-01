@@ -3,9 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ITokenizer as ITsxTokenizer, OutputMode, Raw } from '@vscode/prompt-tsx';
+import type {
+	ITokenizer as ITsxTokenizer,
+	OutputMode,
+	Raw,
+} from '@vscode/prompt-tsx';
 import type { LanguageModelChatTool } from 'vscode';
-
 
 export enum TokenizerType {
 	CL100K = 'cl100k_base',
@@ -14,7 +17,6 @@ export enum TokenizerType {
 }
 
 export interface ITokenizer extends ITsxTokenizer<OutputMode.Raw> {
-
 	/**
 	 * Return the length of `text` in number of tokens.
 	 *

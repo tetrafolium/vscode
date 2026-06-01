@@ -117,19 +117,23 @@
 
 	.inlineCompletions-char-delete.diff-range-empty {
 		margin-left: -1px;
-		border-left: solid var(--vscode-inlineEdit-originalChangedTextBackground) 3px;
+		border-left: solid var(--vscode-inlineEdit-originalChangedTextBackground)
+			3px;
 	}
 
 	.inlineCompletions-char-insert.diff-range-empty {
-		border-left: solid var(--vscode-inlineEdit-modifiedChangedTextBackground) 3px;
+		border-left: solid var(--vscode-inlineEdit-modifiedChangedTextBackground)
+			3px;
 	}
 
-	.inlineCompletions-char-delete.single-line-inline { /* Editor Decoration */
+	.inlineCompletions-char-delete.single-line-inline {
+		/* Editor Decoration */
 		border: 1px solid var(--vscode-editorHoverWidget-border);
 		margin: -2px 0 0 -2px;
 	}
 
-	.inlineCompletions-char-insert.single-line-inline { /* Inline Decoration */
+	.inlineCompletions-char-insert.single-line-inline {
+		/* Inline Decoration */
 		border-top: 1px solid var(--vscode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
 		border-bottom: 1px solid var(--vscode-inlineEdit-modifiedBorder); /* TODO: Do not set border inline but create overlaywidget (like deletion view) */
 	}
@@ -183,7 +187,9 @@
 	.inline-edit.modified-background.ghost-text-decoration,
 	.inline-edit.modified-background.ghost-text-decoration-preview,
 	.inline-edit.modified-background.suggest-preview-text .ghost-text {
-		background: var(--vscode-inlineEdit-modifiedChangedTextBackground) !important;
+		background: var(
+			--vscode-inlineEdit-modifiedChangedTextBackground
+		) !important;
 		display: inline-block !important;
 	}
 
@@ -192,8 +198,6 @@
 	}
 
 	.inline-edit-jump-to-widget {
-
-
 		.monaco-keybinding {
 			.monaco-keybinding-key {
 				font-size: 11px;
@@ -236,13 +240,17 @@
 }
 
 .inline-edits-long-distance-hint-widget .go-to-label::before {
-	content: '';
+	content: "";
 	position: absolute;
 	left: -12px;
 	top: 0;
 	width: 12px;
 	height: 100%;
-	background: linear-gradient(to left, var(--vscode-editorWidget-background) 0, transparent 12px);
+	background: linear-gradient(
+		to left,
+		var(--vscode-editorWidget-background) 0,
+		transparent 12px
+	);
 }
 
 .hc-black .inline-edits-long-distance-hint-widget .go-to-label::before,
@@ -260,12 +268,15 @@
 	padding: 2px 3px;
 }
 
-.inline-edit-alternative-action-label .inline-edit-alternative-action-label-separator {
+.inline-edit-alternative-action-label
+	.inline-edit-alternative-action-label-separator {
 	width: 4px;
 }
 
 /* File icon in long distance hint widget */
-.inline-edits-long-distance-hint-widget.show-file-icons .target-file .file-icon::before {
+.inline-edits-long-distance-hint-widget.show-file-icons
+	.target-file
+	.file-icon::before {
 	display: inline-block;
 	width: 16px;
 	height: 16px;

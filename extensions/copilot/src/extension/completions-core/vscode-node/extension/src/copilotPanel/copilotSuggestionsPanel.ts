@@ -5,7 +5,11 @@
 
 import { TextDocument, WebviewPanel } from 'vscode';
 import { IVSCodeExtensionContext } from '../../../../../../platform/extContext/common/extensionContext';
-import { BaseSuggestionsPanel, SolutionContent, WebviewMessage } from '../panelShared/baseSuggestionsPanel';
+import {
+	BaseSuggestionsPanel,
+	SolutionContent,
+	WebviewMessage,
+} from '../panelShared/baseSuggestionsPanel';
 import { PanelCompletion } from './common';
 import { CopilotSuggestionsPanelManager } from './copilotSuggestionsPanelManager';
 import { copilotPanelConfig } from './panelConfig';
@@ -23,15 +27,27 @@ export class CopilotSuggestionsPanel extends BaseSuggestionsPanel<PanelCompletio
 		suggestionsPanelManager: CopilotSuggestionsPanelManager,
 		@IVSCodeExtensionContext contextService: IVSCodeExtensionContext,
 	) {
-		super(webviewPanel, document, suggestionsPanelManager, copilotPanelConfig, contextService);
+		super(
+			webviewPanel,
+			document,
+			suggestionsPanelManager,
+			copilotPanelConfig,
+			contextService,
+		);
 	}
 
-	protected renderSolutionContent(item: PanelCompletion, baseContent: SolutionContent): SolutionContent {
+	protected renderSolutionContent(
+		item: PanelCompletion,
+		baseContent: SolutionContent,
+	): SolutionContent {
 		// Copilot panel just returns the base content without modifications
 		return baseContent;
 	}
 
-	protected createSolutionsMessage(content: SolutionContent[], percentage: number): CopilotSolutionsMessage {
+	protected createSolutionsMessage(
+		content: SolutionContent[],
+		percentage: number,
+	): CopilotSolutionsMessage {
 		return {
 			command: 'solutionsUpdated',
 			solutions: content,
@@ -39,7 +55,9 @@ export class CopilotSuggestionsPanel extends BaseSuggestionsPanel<PanelCompletio
 		};
 	}
 
-	protected override async handleCustomMessage(message: WebviewMessage): Promise<boolean> {
+	protected override async handleCustomMessage(
+		message: WebviewMessage,
+	): Promise<boolean> {
 		switch (message.command) {
 			case 'acceptSolution': {
 				const solution = this.items()[message.solutionIndex];

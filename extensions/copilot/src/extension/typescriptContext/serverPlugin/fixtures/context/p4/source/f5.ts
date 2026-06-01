@@ -1,5 +1,3 @@
 import { Both } from './f1';
 
-export class Y implements Both {
-
-}
+export class Y implements Both {}

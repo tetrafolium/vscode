@@ -88,7 +88,17 @@ export interface IChatWebSocketMessageParseErrorTelemetryProperties extends ICha
 	totalReceivedCharacters: number;
 }
 
-export type ChatWebSocketRequestOutcome = 'completed' | 'response_failed' | 'response_incomplete' | 'response_cancelled' | 'upstream_error' | 'canceled' | 'superseded' | 'connection_closed' | 'connection_disposed' | 'error_response';
+export type ChatWebSocketRequestOutcome =
+	| 'completed'
+	| 'response_failed'
+	| 'response_incomplete'
+	| 'response_cancelled'
+	| 'upstream_error'
+	| 'canceled'
+	| 'superseded'
+	| 'connection_closed'
+	| 'connection_disposed'
+	| 'error_response';
 
 export interface IChatWebSocketRequestOutcomeTelemetryProperties extends IChatWebSocketRequestTelemetryProperties {
 	requestOutcome: ChatWebSocketRequestOutcome;
@@ -119,7 +129,6 @@ export interface IChatWebSocketRequestOutcomeTelemetryProperties extends IChatWe
 }
 
 export class ChatWebSocketTelemetrySender {
-
 	public static sendConnectedTelemetry(
 		telemetryService: ITelemetryService,
 		properties: IChatWebSocketConnectedTelemetryProperties,
@@ -134,13 +143,18 @@ export class ChatWebSocketTelemetrySender {
 				"connectDurationMs": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "comment": "Time to establish the WebSocket connection in milliseconds", "isMeasurement": true }
 			}
 		*/
-		telemetryService.sendTelemetryEvent('websocket.connected', { github: true, microsoft: true }, {
-			conversationId: properties.conversationId,
-			initiatingRequestId: properties.initiatingRequestId,
-			gitHubRequestId: properties.gitHubRequestId,
-		}, {
-			connectDurationMs: properties.connectDurationMs,
-		});
+		telemetryService.sendTelemetryEvent(
+			'websocket.connected',
+			{ github: true, microsoft: true },
+			{
+				conversationId: properties.conversationId,
+				initiatingRequestId: properties.initiatingRequestId,
+				gitHubRequestId: properties.gitHubRequestId,
+			},
+			{
+				connectDurationMs: properties.connectDurationMs,
+			},
+		);
 	}
 
 	public static sendConnectErrorTelemetry(
@@ -161,17 +175,22 @@ export class ChatWebSocketTelemetrySender {
 				"networkError": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "comment": "The underlying network error code and message from the dispatch layer" }
 			}
 		*/
-		telemetryService.sendTelemetryErrorEvent('websocket.connectError', { github: true, microsoft: true }, {
-			conversationId: properties.conversationId,
-			initiatingRequestId: properties.initiatingRequestId,
-			gitHubRequestId: properties.gitHubRequestId,
-			error: properties.error,
-			responseStatusText: properties.responseStatusText,
-			networkError: properties.networkError,
-		}, {
-			connectDurationMs: properties.connectDurationMs,
-			responseStatusCode: properties.responseStatusCode,
-		});
+		telemetryService.sendTelemetryErrorEvent(
+			'websocket.connectError',
+			{ github: true, microsoft: true },
+			{
+				conversationId: properties.conversationId,
+				initiatingRequestId: properties.initiatingRequestId,
+				gitHubRequestId: properties.gitHubRequestId,
+				error: properties.error,
+				responseStatusText: properties.responseStatusText,
+				networkError: properties.networkError,
+			},
+			{
+				connectDurationMs: properties.connectDurationMs,
+				responseStatusCode: properties.responseStatusCode,
+			},
+		);
 	}
 
 	public static sendCloseTelemetry(
@@ -201,26 +220,31 @@ export class ChatWebSocketTelemetrySender {
 				"connectionDurationMs": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "comment": "How long the connection was open in milliseconds", "isMeasurement": true }
 			}
 		*/
-		telemetryService.sendTelemetryEvent('websocket.close', { github: true, microsoft: true }, {
-			conversationId: properties.conversationId,
-			initiatingRequestId: properties.initiatingRequestId,
-			turnId: properties.turnId,
-			previousTurnId: properties.previousTurnId,
-			requestId: properties.requestId,
-			gitHubRequestId: properties.gitHubRequestId,
-			modelId: properties.modelId,
-			closeReason: properties.closeReason,
-			closeEventReason: properties.closeEventReason,
-			closeEventWasClean: properties.closeEventWasClean,
-		}, {
-			hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
-			closeCode: properties.closeCode,
-			totalSentMessageCount: properties.totalSentMessageCount,
-			totalReceivedMessageCount: properties.totalReceivedMessageCount,
-			totalSentCharacters: properties.totalSentCharacters,
-			totalReceivedCharacters: properties.totalReceivedCharacters,
-			connectionDurationMs: properties.connectionDurationMs,
-		});
+		telemetryService.sendTelemetryEvent(
+			'websocket.close',
+			{ github: true, microsoft: true },
+			{
+				conversationId: properties.conversationId,
+				initiatingRequestId: properties.initiatingRequestId,
+				turnId: properties.turnId,
+				previousTurnId: properties.previousTurnId,
+				requestId: properties.requestId,
+				gitHubRequestId: properties.gitHubRequestId,
+				modelId: properties.modelId,
+				closeReason: properties.closeReason,
+				closeEventReason: properties.closeEventReason,
+				closeEventWasClean: properties.closeEventWasClean,
+			},
+			{
+				hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
+				closeCode: properties.closeCode,
+				totalSentMessageCount: properties.totalSentMessageCount,
+				totalReceivedMessageCount: properties.totalReceivedMessageCount,
+				totalSentCharacters: properties.totalSentCharacters,
+				totalReceivedCharacters: properties.totalReceivedCharacters,
+				connectionDurationMs: properties.connectionDurationMs,
+			},
+		);
 	}
 
 	public static sendErrorTelemetry(
@@ -247,23 +271,28 @@ export class ChatWebSocketTelemetrySender {
 				"connectionDurationMs": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "comment": "How long the connection was open before the error in milliseconds", "isMeasurement": true }
 			}
 		*/
-		telemetryService.sendTelemetryErrorEvent('websocket.error', { github: true, microsoft: true }, {
-			conversationId: properties.conversationId,
-			initiatingRequestId: properties.initiatingRequestId,
-			turnId: properties.turnId,
-			previousTurnId: properties.previousTurnId,
-			requestId: properties.requestId,
-			gitHubRequestId: properties.gitHubRequestId,
-			modelId: properties.modelId,
-			error: properties.error,
-		}, {
-			hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
-			totalSentMessageCount: properties.totalSentMessageCount,
-			totalReceivedMessageCount: properties.totalReceivedMessageCount,
-			totalSentCharacters: properties.totalSentCharacters,
-			totalReceivedCharacters: properties.totalReceivedCharacters,
-			connectionDurationMs: properties.connectionDurationMs,
-		});
+		telemetryService.sendTelemetryErrorEvent(
+			'websocket.error',
+			{ github: true, microsoft: true },
+			{
+				conversationId: properties.conversationId,
+				initiatingRequestId: properties.initiatingRequestId,
+				turnId: properties.turnId,
+				previousTurnId: properties.previousTurnId,
+				requestId: properties.requestId,
+				gitHubRequestId: properties.gitHubRequestId,
+				modelId: properties.modelId,
+				error: properties.error,
+			},
+			{
+				hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
+				totalSentMessageCount: properties.totalSentMessageCount,
+				totalReceivedMessageCount: properties.totalReceivedMessageCount,
+				totalSentCharacters: properties.totalSentCharacters,
+				totalReceivedCharacters: properties.totalReceivedCharacters,
+				connectionDurationMs: properties.connectionDurationMs,
+			},
+		);
 	}
 
 	public static sendCloseDuringSetupTelemetry(
@@ -284,17 +313,22 @@ export class ChatWebSocketTelemetrySender {
 				"connectDurationMs": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "comment": "Time until the connection was closed during setup in milliseconds", "isMeasurement": true }
 			}
 		*/
-		telemetryService.sendTelemetryErrorEvent('websocket.closeDuringSetup', { github: true, microsoft: true }, {
-			conversationId: properties.conversationId,
-			initiatingRequestId: properties.initiatingRequestId,
-			gitHubRequestId: properties.gitHubRequestId,
-			closeReason: properties.closeReason,
-			closeEventReason: properties.closeEventReason,
-			closeEventWasClean: properties.closeEventWasClean,
-		}, {
-			closeCode: properties.closeCode,
-			connectDurationMs: properties.connectDurationMs,
-		});
+		telemetryService.sendTelemetryErrorEvent(
+			'websocket.closeDuringSetup',
+			{ github: true, microsoft: true },
+			{
+				conversationId: properties.conversationId,
+				initiatingRequestId: properties.initiatingRequestId,
+				gitHubRequestId: properties.gitHubRequestId,
+				closeReason: properties.closeReason,
+				closeEventReason: properties.closeEventReason,
+				closeEventWasClean: properties.closeEventWasClean,
+			},
+			{
+				closeCode: properties.closeCode,
+				connectDurationMs: properties.connectDurationMs,
+			},
+		);
 	}
 
 	public static sendRequestSentTelemetry(
@@ -330,32 +364,47 @@ export class ChatWebSocketTelemetrySender {
 				"connectionDurationMs": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "comment": "How long the connection has been open when the request is sent in milliseconds", "isMeasurement": true }
 			}
 		*/
-		telemetryService.sendTelemetryEvent('websocket.requestSent', { github: true, microsoft: true }, {
-			conversationId: properties.conversationId,
-			initiatingRequestId: properties.initiatingRequestId,
-			turnId: properties.turnId,
-			previousTurnId: properties.previousTurnId,
-			requestId: properties.requestId,
-			gitHubRequestId: properties.gitHubRequestId,
-			modelId: properties.modelId,
-		}, {
-			hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
-			statefulMarkerMatched: properties.statefulMarkerMatched ? 1 : 0,
-			previousResponseIdUnset: properties.previousResponseIdUnset ? 1 : 0,
-			hasCompactionData: properties.hasCompactionData ? 1 : 0,
-			summarizedAtRoundIdSet: properties.summarizedAtRoundIdSet ? 1 : 0,
-			summarizedAtRoundIdMatched: properties.summarizedAtRoundIdMatched ? 1 : 0,
-			modeChanged: properties.modeChanged === undefined ? -1 : properties.modeChanged ? 1 : 0,
-			compactionThreshold: properties.compactionThreshold,
-			tokenCountMax: properties.tokenCountMax,
-			modelMaxPromptTokens: properties.modelMaxPromptTokens,
-			totalSentMessageCount: properties.totalSentMessageCount,
-			totalReceivedMessageCount: properties.totalReceivedMessageCount,
-			sentMessageCharacters: properties.sentMessageCharacters,
-			totalSentCharacters: properties.totalSentCharacters,
-			totalReceivedCharacters: properties.totalReceivedCharacters,
-			connectionDurationMs: properties.connectionDurationMs,
-		});
+		telemetryService.sendTelemetryEvent(
+			'websocket.requestSent',
+			{ github: true, microsoft: true },
+			{
+				conversationId: properties.conversationId,
+				initiatingRequestId: properties.initiatingRequestId,
+				turnId: properties.turnId,
+				previousTurnId: properties.previousTurnId,
+				requestId: properties.requestId,
+				gitHubRequestId: properties.gitHubRequestId,
+				modelId: properties.modelId,
+			},
+			{
+				hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
+				statefulMarkerMatched: properties.statefulMarkerMatched ? 1 : 0,
+				previousResponseIdUnset: properties.previousResponseIdUnset
+					? 1
+					: 0,
+				hasCompactionData: properties.hasCompactionData ? 1 : 0,
+				summarizedAtRoundIdSet: properties.summarizedAtRoundIdSet
+					? 1
+					: 0,
+				summarizedAtRoundIdMatched:
+					properties.summarizedAtRoundIdMatched ? 1 : 0,
+				modeChanged:
+					properties.modeChanged === undefined
+						? -1
+						: properties.modeChanged
+							? 1
+							: 0,
+				compactionThreshold: properties.compactionThreshold,
+				tokenCountMax: properties.tokenCountMax,
+				modelMaxPromptTokens: properties.modelMaxPromptTokens,
+				totalSentMessageCount: properties.totalSentMessageCount,
+				totalReceivedMessageCount: properties.totalReceivedMessageCount,
+				sentMessageCharacters: properties.sentMessageCharacters,
+				totalSentCharacters: properties.totalSentCharacters,
+				totalReceivedCharacters: properties.totalReceivedCharacters,
+				connectionDurationMs: properties.connectionDurationMs,
+			},
+		);
 	}
 
 	public static sendMessageParseErrorTelemetry(
@@ -383,24 +432,29 @@ export class ChatWebSocketTelemetrySender {
 				"connectionDurationMs": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "comment": "How long the connection has been open when parsing fails in milliseconds", "isMeasurement": true }
 			}
 		*/
-		telemetryService.sendTelemetryErrorEvent('websocket.messageParseError', { github: true, microsoft: true }, {
-			conversationId: properties.conversationId,
-			initiatingRequestId: properties.initiatingRequestId,
-			turnId: properties.turnId,
-			previousTurnId: properties.previousTurnId,
-			requestId: properties.requestId,
-			gitHubRequestId: properties.gitHubRequestId,
-			modelId: properties.modelId,
-			error: properties.error,
-		}, {
-			hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
-			totalSentMessageCount: properties.totalSentMessageCount,
-			totalReceivedMessageCount: properties.totalReceivedMessageCount,
-			receivedMessageCharacters: properties.receivedMessageCharacters,
-			totalSentCharacters: properties.totalSentCharacters,
-			totalReceivedCharacters: properties.totalReceivedCharacters,
-			connectionDurationMs: properties.connectionDurationMs,
-		});
+		telemetryService.sendTelemetryErrorEvent(
+			'websocket.messageParseError',
+			{ github: true, microsoft: true },
+			{
+				conversationId: properties.conversationId,
+				initiatingRequestId: properties.initiatingRequestId,
+				turnId: properties.turnId,
+				previousTurnId: properties.previousTurnId,
+				requestId: properties.requestId,
+				gitHubRequestId: properties.gitHubRequestId,
+				modelId: properties.modelId,
+				error: properties.error,
+			},
+			{
+				hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
+				totalSentMessageCount: properties.totalSentMessageCount,
+				totalReceivedMessageCount: properties.totalReceivedMessageCount,
+				receivedMessageCharacters: properties.receivedMessageCharacters,
+				totalSentCharacters: properties.totalSentCharacters,
+				totalReceivedCharacters: properties.totalReceivedCharacters,
+				connectionDurationMs: properties.connectionDurationMs,
+			},
+		);
 	}
 
 	public static sendRequestOutcomeTelemetry(
@@ -446,41 +500,57 @@ export class ChatWebSocketTelemetrySender {
 				"serverErrorCode": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "comment": "Error code from server error event when outcome is error_response" }
 			}
 		*/
-		telemetryService.sendTelemetryEvent('websocket.requestOutcome', { github: true, microsoft: true }, {
-			conversationId: properties.conversationId,
-			initiatingRequestId: properties.initiatingRequestId,
-			turnId: properties.turnId,
-			previousTurnId: properties.previousTurnId,
-			requestId: properties.requestId,
-			gitHubRequestId: properties.gitHubRequestId,
-			modelId: properties.modelId,
-			requestOutcome: properties.requestOutcome,
-			closeReason: properties.closeReason,
-			serverErrorMessage: properties.serverErrorMessage,
-			serverErrorCode: properties.serverErrorCode,
-		}, {
-			hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
-			statefulMarkerMatched: properties.statefulMarkerMatched ? 1 : 0,
-			previousResponseIdUnset: properties.previousResponseIdUnset ? 1 : 0,
-			hasCompactionData: properties.hasCompactionData ? 1 : 0,
-			summarizedAtRoundIdSet: properties.summarizedAtRoundIdSet ? 1 : 0,
-			summarizedAtRoundIdMatched: properties.summarizedAtRoundIdMatched ? 1 : 0,
-			modeChanged: properties.modeChanged === undefined ? -1 : properties.modeChanged ? 1 : 0,
-			compactionThreshold: properties.compactionThreshold,
-			promptTokenCount: properties.promptTokenCount,
-			tokenCountMax: properties.tokenCountMax,
-			modelMaxPromptTokens: properties.modelMaxPromptTokens,
-			totalSentMessageCount: properties.totalSentMessageCount,
-			totalReceivedMessageCount: properties.totalReceivedMessageCount,
-			totalSentCharacters: properties.totalSentCharacters,
-			totalReceivedCharacters: properties.totalReceivedCharacters,
-			requestSentMessageCount: properties.requestSentMessageCount,
-			requestReceivedMessageCount: properties.requestReceivedMessageCount,
-			requestSentCharacters: properties.requestSentCharacters,
-			requestReceivedCharacters: properties.requestReceivedCharacters,
-			connectionDurationMs: properties.connectionDurationMs,
-			requestDurationMs: properties.requestDurationMs,
-			closeCode: properties.closeCode,
-		});
+		telemetryService.sendTelemetryEvent(
+			'websocket.requestOutcome',
+			{ github: true, microsoft: true },
+			{
+				conversationId: properties.conversationId,
+				initiatingRequestId: properties.initiatingRequestId,
+				turnId: properties.turnId,
+				previousTurnId: properties.previousTurnId,
+				requestId: properties.requestId,
+				gitHubRequestId: properties.gitHubRequestId,
+				modelId: properties.modelId,
+				requestOutcome: properties.requestOutcome,
+				closeReason: properties.closeReason,
+				serverErrorMessage: properties.serverErrorMessage,
+				serverErrorCode: properties.serverErrorCode,
+			},
+			{
+				hadActiveRequest: properties.hadActiveRequest ? 1 : 0,
+				statefulMarkerMatched: properties.statefulMarkerMatched ? 1 : 0,
+				previousResponseIdUnset: properties.previousResponseIdUnset
+					? 1
+					: 0,
+				hasCompactionData: properties.hasCompactionData ? 1 : 0,
+				summarizedAtRoundIdSet: properties.summarizedAtRoundIdSet
+					? 1
+					: 0,
+				summarizedAtRoundIdMatched:
+					properties.summarizedAtRoundIdMatched ? 1 : 0,
+				modeChanged:
+					properties.modeChanged === undefined
+						? -1
+						: properties.modeChanged
+							? 1
+							: 0,
+				compactionThreshold: properties.compactionThreshold,
+				promptTokenCount: properties.promptTokenCount,
+				tokenCountMax: properties.tokenCountMax,
+				modelMaxPromptTokens: properties.modelMaxPromptTokens,
+				totalSentMessageCount: properties.totalSentMessageCount,
+				totalReceivedMessageCount: properties.totalReceivedMessageCount,
+				totalSentCharacters: properties.totalSentCharacters,
+				totalReceivedCharacters: properties.totalReceivedCharacters,
+				requestSentMessageCount: properties.requestSentMessageCount,
+				requestReceivedMessageCount:
+					properties.requestReceivedMessageCount,
+				requestSentCharacters: properties.requestSentCharacters,
+				requestReceivedCharacters: properties.requestReceivedCharacters,
+				connectionDurationMs: properties.connectionDurationMs,
+				requestDurationMs: properties.requestDurationMs,
+				closeCode: properties.closeCode,
+			},
+		);
 	}
 }

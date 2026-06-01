@@ -4,6 +4,6 @@ export interface Name {
 
 export type NameLength = {
 	length(): number;
-}
+};
 
 export type Both = Name & NameLength;

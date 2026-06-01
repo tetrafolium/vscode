@@ -3,16 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { strictEqual } from 'assert';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { BufferDirtyTracker } from '../../../browser/gpu/bufferDirtyTracker.js';
+import { strictEqual } from "assert";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../base/test/common/utils.js";
+import { BufferDirtyTracker } from "../../../browser/gpu/bufferDirtyTracker.js";
 
-suite('BufferDirtyTracker', () => {
+suite("BufferDirtyTracker", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
 	let bdt: BufferDirtyTracker;
 
-	function assertState(dataOffset: number | undefined, dirtySize: number | undefined) {
+	function assertState(
+		dataOffset: number | undefined,
+		dirtySize: number | undefined,
+	) {
 		strictEqual(bdt.dataOffset, dataOffset);
 		strictEqual(bdt.dirtySize, dirtySize);
 		strictEqual(bdt.isDirty, dataOffset !== undefined);
@@ -22,7 +25,7 @@ suite('BufferDirtyTracker', () => {
 		bdt = new BufferDirtyTracker();
 	});
 
-	test('flag(index)', () => {
+	test("flag(index)", () => {
 		strictEqual(bdt.flag(0), 0);
 		assertState(0, 1);
 		strictEqual(bdt.flag(31), 31);
@@ -35,7 +38,7 @@ suite('BufferDirtyTracker', () => {
 		assertState(10, 6);
 	});
 
-	test('flag(index, length)', () => {
+	test("flag(index, length)", () => {
 		bdt.flag(0, 32);
 		assertState(0, 32);
 		bdt.clear();

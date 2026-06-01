@@ -38,6 +38,9 @@ export class ToolDeferralService implements IToolDeferralService {
 	readonly _serviceBrand: undefined;
 
 	isNonDeferredTool(name: string): boolean {
-		return ToolRegistry.nonDeferredToolNames.has(name) || additionalNonDeferredToolNames.has(name);
+		return (
+			ToolRegistry.nonDeferredToolNames.has(name) ||
+			additionalNonDeferredToolNames.has(name)
+		);
 	}
 }

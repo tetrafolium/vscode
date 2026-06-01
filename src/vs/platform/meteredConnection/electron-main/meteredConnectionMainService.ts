@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IConfigurationService } from '../../configuration/common/configuration.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
-import { AbstractMeteredConnectionService } from '../common/meteredConnection.js';
+import { IConfigurationService } from "../../configuration/common/configuration.js";
+import { ITelemetryService } from "../../telemetry/common/telemetry.js";
+import { AbstractMeteredConnectionService } from "../common/meteredConnection.js";
 
 /**
  * Electron-main implementation of the metered connection service.
@@ -14,7 +14,9 @@ import { AbstractMeteredConnectionService } from '../common/meteredConnection.js
 export class MeteredConnectionMainService extends AbstractMeteredConnectionService {
 	private telemetryService: ITelemetryService | undefined;
 
-	constructor(@IConfigurationService configurationService: IConfigurationService) {
+	constructor(
+		@IConfigurationService configurationService: IConfigurationService,
+	) {
 		super(configurationService, false);
 	}
 
@@ -33,11 +35,18 @@ export class MeteredConnectionMainService extends AbstractMeteredConnectionServi
 			connectionState: boolean;
 		};
 		type MeteredConnectionStateChangeClassification = {
-			owner: 'dmitrivMS';
-			comment: 'Tracks metered network connection state changes to understand usage patterns.';
-			connectionState: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Whether the underlying network connection is metered according to the OS.' };
+			owner: "dmitrivMS";
+			comment: "Tracks metered network connection state changes to understand usage patterns.";
+			connectionState: {
+				classification: "SystemMetaData";
+				purpose: "FeatureInsight";
+				comment: "Whether the underlying network connection is metered according to the OS.";
+			};
 		};
-		this.telemetryService?.publicLog2<MeteredConnectionStateChangeEvent, MeteredConnectionStateChangeClassification>('meteredConnectionStateChange', {
+		this.telemetryService?.publicLog2<
+			MeteredConnectionStateChangeEvent,
+			MeteredConnectionStateChangeClassification
+		>("meteredConnectionStateChange", {
 			connectionState: this.isBrowserConnectionMetered,
 		});
 

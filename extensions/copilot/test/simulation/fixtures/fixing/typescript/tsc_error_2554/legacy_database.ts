@@ -1,9 +1,8 @@
 import { connectLegacy } from './database_mock';
 export class LegacyDatabaseAdapter {
-
 	height: number | undefined;
 
-	constructor() { }
+	constructor() {}
 
 	setup() {
 		this._storeHeight(0);

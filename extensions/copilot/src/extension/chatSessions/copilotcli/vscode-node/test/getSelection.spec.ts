@@ -5,7 +5,11 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestLogService } from '../../../../../platform/testing/common/testLogService';
-import { MockMcpServer, parseToolResult, createMockEditor } from './testHelpers';
+import {
+	MockMcpServer,
+	parseToolResult,
+	createMockEditor,
+} from './testHelpers';
 
 const { mockActiveTextEditor } = vi.hoisted(() => ({
 	mockActiveTextEditor: { value: null as unknown },
@@ -13,11 +17,17 @@ const { mockActiveTextEditor } = vi.hoisted(() => ({
 
 vi.mock('vscode', () => ({
 	window: {
-		get activeTextEditor() { return mockActiveTextEditor.value; },
+		get activeTextEditor() {
+			return mockActiveTextEditor.value;
+		},
 	},
 }));
 
-import { registerGetSelectionTool, SelectionState, getSelectionInfo } from '../tools/getSelection';
+import {
+	registerGetSelectionTool,
+	SelectionState,
+	getSelectionInfo,
+} from '../tools/getSelection';
 
 interface SelectionResult {
 	text: string;
@@ -33,8 +43,17 @@ interface SelectionResult {
 
 describe('getSelectionInfo', () => {
 	it('should return selection info for a text selection', () => {
-		const editor = createMockEditor('/test/file.ts', 'Hello World', 0, 6, 0, 11);
-		const info = getSelectionInfo(editor as unknown as import('vscode').TextEditor);
+		const editor = createMockEditor(
+			'/test/file.ts',
+			'Hello World',
+			0,
+			6,
+			0,
+			11,
+		);
+		const info = getSelectionInfo(
+			editor as unknown as import('vscode').TextEditor,
+		);
 
 		expect(info.text).toBe('World');
 		expect(info.filePath).toBe('/test/file.ts');
@@ -47,16 +66,34 @@ describe('getSelectionInfo', () => {
 	});
 
 	it('should return empty text for cursor position', () => {
-		const editor = createMockEditor('/test/file.ts', 'Hello World', 0, 5, 0, 5);
-		const info = getSelectionInfo(editor as unknown as import('vscode').TextEditor);
+		const editor = createMockEditor(
+			'/test/file.ts',
+			'Hello World',
+			0,
+			5,
+			0,
+			5,
+		);
+		const info = getSelectionInfo(
+			editor as unknown as import('vscode').TextEditor,
+		);
 
 		expect(info.text).toBe('');
 		expect(info.selection.isEmpty).toBe(true);
 	});
 
 	it('should handle multi-line selection', () => {
-		const editor = createMockEditor('/test/file.ts', 'Line one\nLine two\nLine three', 0, 5, 2, 4);
-		const info = getSelectionInfo(editor as unknown as import('vscode').TextEditor);
+		const editor = createMockEditor(
+			'/test/file.ts',
+			'Line one\nLine two\nLine three',
+			0,
+			5,
+			2,
+			4,
+		);
+		const info = getSelectionInfo(
+			editor as unknown as import('vscode').TextEditor,
+		);
 
 		expect(info.text).toBe('one\nLine two\nLine');
 		expect(info.selection.start.line).toBe(0);
@@ -113,7 +150,11 @@ describe('get_selection tool', () => {
 		selectionState = new SelectionState();
 		server = new MockMcpServer();
 		mockActiveTextEditor.value = null;
-		registerGetSelectionTool(server as unknown as import('@modelcontextprotocol/sdk/server/mcp.js').McpServer, logger, selectionState);
+		registerGetSelectionTool(
+			server as unknown as import('@modelcontextprotocol/sdk/server/mcp.js').McpServer,
+			logger,
+			selectionState,
+		);
 	});
 
 	it('should register the get_selection tool', () => {
@@ -147,7 +188,14 @@ describe('get_selection tool', () => {
 	});
 
 	it('should return current selection with current=true when editor is active', async () => {
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'Hello World', 0, 0, 0, 5);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'Hello World',
+			0,
+			0,
+			0,
+			5,
+		);
 
 		const handler = server.getToolHandler('get_selection')!;
 		const result = parseToolResult<SelectionResult>(await handler({}));
@@ -157,7 +205,14 @@ describe('get_selection tool', () => {
 	});
 
 	it('should return empty text for cursor position with current=true', async () => {
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'Hello World', 0, 5, 0, 5);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'Hello World',
+			0,
+			5,
+			0,
+			5,
+		);
 
 		const handler = server.getToolHandler('get_selection')!;
 		const result = parseToolResult<SelectionResult>(await handler({}));

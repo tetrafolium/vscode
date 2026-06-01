@@ -26,14 +26,22 @@ suite('getConfigKeyRecursively', function () {
 		const config = {
 			'a.b.c': { 'd.e': 'value' },
 		};
-		assert.strictEqual(getConfigKeyRecursively(config, 'a.b.c.d.e'), 'value');
+		assert.strictEqual(
+			getConfigKeyRecursively(config, 'a.b.c.d.e'),
+			'value',
+		);
 	});
 });
 
 suite('InMemoryConfigProvider', function () {
 	test('allows setting and getting config values', function () {
-		const configProvider = new InMemoryConfigProvider(new DefaultsOnlyConfigProvider());
+		const configProvider = new InMemoryConfigProvider(
+			new DefaultsOnlyConfigProvider(),
+		);
 		configProvider.setConfig(ConfigKey.DebugOverrideEngine, 'test');
-		assert.strictEqual(configProvider.getConfig(ConfigKey.DebugOverrideEngine), 'test');
+		assert.strictEqual(
+			configProvider.getConfig(ConfigKey.DebugOverrideEngine),
+			'test',
+		);
 	});
 });

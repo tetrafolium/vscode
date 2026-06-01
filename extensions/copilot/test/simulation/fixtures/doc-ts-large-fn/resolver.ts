@@ -1,6 +1,11 @@
-function handleRemovals(rules: ResolvedKeybindingItem[]): ResolvedKeybindingItem[] {
+function handleRemovals(
+	rules: ResolvedKeybindingItem[],
+): ResolvedKeybindingItem[] {
 	// Do a first pass and construct a hash-map for removals
-	const removals = new Map</* commandId */ string, ResolvedKeybindingItem[]>();
+	const removals = new Map<
+		/* commandId */ string,
+		ResolvedKeybindingItem[]
+	>();
 	for (let i = 0, len = rules.length; i < len; i++) {
 		const rule = rules[i];
 		if (rule.command && rule.command.charAt(0) === '-') {

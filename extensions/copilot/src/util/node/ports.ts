@@ -18,7 +18,11 @@ function dispose(socket: net.Socket): void {
 	}
 }
 
-export async function waitForListenerOnPort(port: number, host: string | undefined, token: CancellationToken) {
+export async function waitForListenerOnPort(
+	port: number,
+	host: string | undefined,
+	token: CancellationToken,
+) {
 	while (!token.isCancellationRequested) {
 		try {
 			await new Promise<void>((resolve, reject) => {
@@ -44,7 +48,7 @@ export async function waitForListenerOnPort(port: number, host: string | undefin
 			return; // Successfully connected
 		} catch {
 			// Ignore errors and retry
-			await new Promise(resolve => setTimeout(resolve, 100)); // Wait before retrying
+			await new Promise((resolve) => setTimeout(resolve, 100)); // Wait before retrying
 		}
 	}
 

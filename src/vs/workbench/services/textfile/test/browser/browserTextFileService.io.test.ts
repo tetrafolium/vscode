@@ -3,53 +3,88 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { workbenchInstantiationService, TestInMemoryFileSystemProvider, TestBrowserTextFileServiceWithEncodingOverrides } from '../../../../test/browser/workbenchTestServices.js';
-import { NullLogService } from '../../../../../platform/log/common/log.js';
-import { FileService } from '../../../../../platform/files/common/fileService.js';
-import { Schemas } from '../../../../../base/common/network.js';
-import { ITextFileService } from '../../common/textfiles.js';
-import { TextFileEditorModelManager } from '../../common/textFileEditorModelManager.js';
-import { DisposableStore } from '../../../../../base/common/lifecycle.js';
-import { ServiceCollection } from '../../../../../platform/instantiation/common/serviceCollection.js';
-import { IFileService, IStat } from '../../../../../platform/files/common/files.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { join } from '../../../../../base/common/path.js';
-import { UTF16le, detectEncodingByBOMFromBuffer, UTF8_with_bom, UTF16be, toCanonicalName } from '../../common/encoding.js';
-import { VSBuffer } from '../../../../../base/common/buffer.js';
-import files from '../common/fixtures/files.js';
-import createSuite from '../common/textFileService.io.test.js';
-import { isWeb } from '../../../../../base/common/platform.js';
-import { IWorkingCopyFileService, WorkingCopyFileService } from '../../../workingCopy/common/workingCopyFileService.js';
-import { WorkingCopyService } from '../../../workingCopy/common/workingCopyService.js';
-import { UriIdentityService } from '../../../../../platform/uriIdentity/common/uriIdentityService.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
+import {
+	workbenchInstantiationService,
+	TestInMemoryFileSystemProvider,
+	TestBrowserTextFileServiceWithEncodingOverrides,
+} from "../../../../test/browser/workbenchTestServices.js";
+import { NullLogService } from "../../../../../platform/log/common/log.js";
+import { FileService } from "../../../../../platform/files/common/fileService.js";
+import { Schemas } from "../../../../../base/common/network.js";
+import { ITextFileService } from "../../common/textfiles.js";
+import { TextFileEditorModelManager } from "../../common/textFileEditorModelManager.js";
+import { DisposableStore } from "../../../../../base/common/lifecycle.js";
+import { ServiceCollection } from "../../../../../platform/instantiation/common/serviceCollection.js";
+import {
+	IFileService,
+	IStat,
+} from "../../../../../platform/files/common/files.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { join } from "../../../../../base/common/path.js";
+import {
+	UTF16le,
+	detectEncodingByBOMFromBuffer,
+	UTF8_with_bom,
+	UTF16be,
+	toCanonicalName,
+} from "../../common/encoding.js";
+import { VSBuffer } from "../../../../../base/common/buffer.js";
+import files from "../common/fixtures/files.js";
+import createSuite from "../common/textFileService.io.test.js";
+import { isWeb } from "../../../../../base/common/platform.js";
+import {
+	IWorkingCopyFileService,
+	WorkingCopyFileService,
+} from "../../../workingCopy/common/workingCopyFileService.js";
+import { WorkingCopyService } from "../../../workingCopy/common/workingCopyService.js";
+import { UriIdentityService } from "../../../../../platform/uriIdentity/common/uriIdentityService.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../base/test/common/utils.js";
 
 // optimization: we don't need to run this suite in native environment,
 // because we have nativeTextFileService.io.test.ts for it,
 // so our tests run faster
 if (isWeb) {
-	suite('Files - BrowserTextFileService i/o', function () {
+	suite("Files - BrowserTextFileService i/o", function () {
 		const disposables = new DisposableStore();
 
 		let service: ITextFileService;
 		let fileProvider: TestInMemoryFileSystemProvider;
-		const testDir = 'test';
+		const testDir = "test";
 
 		createSuite({
 			setup: async () => {
-				const instantiationService = workbenchInstantiationService(undefined, disposables);
+				const instantiationService = workbenchInstantiationService(
+					undefined,
+					disposables,
+				);
 
 				const logService = new NullLogService();
 				const fileService = disposables.add(new FileService(logService));
 
 				fileProvider = disposables.add(new TestInMemoryFileSystemProvider());
-				disposables.add(fileService.registerProvider(Schemas.file, fileProvider));
+				disposables.add(
+					fileService.registerProvider(Schemas.file, fileProvider),
+				);
 
 				const collection = new ServiceCollection();
 				collection.set(IFileService, fileService);
-				collection.set(IWorkingCopyFileService, disposables.add(new WorkingCopyFileService(fileService, disposables.add(new WorkingCopyService()), instantiationService, disposables.add(new UriIdentityService(fileService)))));
+				collection.set(
+					IWorkingCopyFileService,
+					disposables.add(
+						new WorkingCopyFileService(
+							fileService,
+							disposables.add(new WorkingCopyService()),
+							instantiationService,
+							disposables.add(new UriIdentityService(fileService)),
+						),
+					),
+				);
 
-				service = disposables.add(instantiationService.createChild(collection).createInstance(TestBrowserTextFileServiceWithEncodingOverrides));
+				service = disposables.add(
+					instantiationService
+						.createChild(collection)
+						.createInstance(TestBrowserTextFileServiceWithEncodingOverrides),
+				);
 				disposables.add(<TextFileEditorModelManager>service.files);
 
 				await fileProvider.mkdir(URI.file(testDir));
@@ -57,7 +92,7 @@ if (isWeb) {
 					await fileProvider.writeFile(
 						URI.file(join(testDir, fileName)),
 						files[fileName],
-						{ create: true, overwrite: false, unlock: false, atomic: false }
+						{ create: true, overwrite: false, unlock: false, atomic: false },
 					);
 				}
 
@@ -71,22 +106,24 @@ if (isWeb) {
 			exists,
 			stat,
 			readFile,
-			detectEncodingByBOM
+			detectEncodingByBOM,
 		});
 
 		async function exists(fsPath: string): Promise<boolean> {
 			try {
 				await fileProvider.readFile(URI.file(fsPath));
 				return true;
-			}
-			catch (e) {
+			} catch (e) {
 				return false;
 			}
 		}
 
 		async function readFile(fsPath: string): Promise<VSBuffer>;
 		async function readFile(fsPath: string, encoding: string): Promise<string>;
-		async function readFile(fsPath: string, encoding?: string): Promise<VSBuffer | string> {
+		async function readFile(
+			fsPath: string,
+			encoding?: string,
+		): Promise<VSBuffer | string> {
 			const file = await fileProvider.readFile(URI.file(fsPath));
 
 			if (!encoding) {
@@ -100,7 +137,9 @@ if (isWeb) {
 			return fileProvider.stat(URI.file(fsPath));
 		}
 
-		async function detectEncodingByBOM(fsPath: string): Promise<typeof UTF16be | typeof UTF16le | typeof UTF8_with_bom | null> {
+		async function detectEncodingByBOM(
+			fsPath: string,
+		): Promise<typeof UTF16be | typeof UTF16le | typeof UTF8_with_bom | null> {
 			try {
 				const buffer = await readFile(fsPath);
 

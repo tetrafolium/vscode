@@ -3,17 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { VSBuffer } from '../../../base/common/buffer.js';
-import { Event } from '../../../base/common/event.js';
-import { URI, UriComponents } from '../../../base/common/uri.js';
-import { MessageBoxOptions, MessageBoxReturnValue, OpenDevToolsOptions, OpenDialogOptions, OpenDialogReturnValue, SaveDialogOptions, SaveDialogReturnValue } from '../../../base/parts/sandbox/common/electronTypes.js';
-import { ISerializableCommandAction } from '../../action/common/action.js';
-import { INativeOpenDialogOptions } from '../../dialogs/common/dialogs.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { IV8Profile } from '../../profiling/common/profiling.js';
-import { AuthInfo, Credentials } from '../../request/common/request.js';
-import { IPartsSplash } from '../../theme/common/themeService.js';
-import { IColorScheme, IOpenedAuxiliaryWindow, IOpenedMainWindow, IOpenEmptyWindowOptions, IOpenWindowOptions, IPoint, IRectangle, IWindowOpenable } from '../../window/common/window.js';
+import { VSBuffer } from "../../../base/common/buffer.js";
+import { Event } from "../../../base/common/event.js";
+import { URI, UriComponents } from "../../../base/common/uri.js";
+import {
+	MessageBoxOptions,
+	MessageBoxReturnValue,
+	OpenDevToolsOptions,
+	OpenDialogOptions,
+	OpenDialogReturnValue,
+	SaveDialogOptions,
+	SaveDialogReturnValue,
+} from "../../../base/parts/sandbox/common/electronTypes.js";
+import { ISerializableCommandAction } from "../../action/common/action.js";
+import { INativeOpenDialogOptions } from "../../dialogs/common/dialogs.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import { IV8Profile } from "../../profiling/common/profiling.js";
+import { AuthInfo, Credentials } from "../../request/common/request.js";
+import { IPartsSplash } from "../../theme/common/themeService.js";
+import {
+	IColorScheme,
+	IOpenedAuxiliaryWindow,
+	IOpenedMainWindow,
+	IOpenEmptyWindowOptions,
+	IOpenWindowOptions,
+	IPoint,
+	IRectangle,
+	IWindowOpenable,
+} from "../../window/common/window.js";
 
 export interface IToastOptions {
 	readonly id: string;
@@ -57,7 +74,6 @@ export interface INativeHostOptions {
 }
 
 export const enum FocusMode {
-
 	/**
 	 * (Default) Transfer focus to the target window
 	 * when the editor is focused.
@@ -79,7 +95,6 @@ export const enum FocusMode {
 }
 
 export interface ICommonNativeHostService {
-
 	readonly _serviceBrand: undefined;
 
 	// Properties
@@ -94,8 +109,14 @@ export interface ICommonNativeHostService {
 	readonly onDidFocusMainWindow: Event<number>;
 	readonly onDidBlurMainWindow: Event<number>;
 
-	readonly onDidChangeWindowFullScreen: Event<{ windowId: number; fullscreen: boolean }>;
-	readonly onDidChangeWindowAlwaysOnTop: Event<{ windowId: number; alwaysOnTop: boolean }>;
+	readonly onDidChangeWindowFullScreen: Event<{
+		windowId: number;
+		fullscreen: boolean;
+	}>;
+	readonly onDidChangeWindowAlwaysOnTop: Event<{
+		windowId: number;
+		alwaysOnTop: boolean;
+	}>;
 
 	readonly onDidFocusMainOrAuxiliaryWindow: Event<number>;
 	readonly onDidBlurMainOrAuxiliaryWindow: Event<number>;
@@ -114,44 +135,85 @@ export interface ICommonNativeHostService {
 
 	readonly onDidChangeColorScheme: Event<IColorScheme>;
 
-	readonly onDidChangePassword: Event<{ readonly service: string; readonly account: string }>;
+	readonly onDidChangePassword: Event<{
+		readonly service: string;
+		readonly account: string;
+	}>;
 
-	readonly onDidTriggerWindowSystemContextMenu: Event<{ readonly windowId: number; readonly x: number; readonly y: number }>;
+	readonly onDidTriggerWindowSystemContextMenu: Event<{
+		readonly windowId: number;
+		readonly x: number;
+		readonly y: number;
+	}>;
 
 	// Window
-	getWindows(options: { includeAuxiliaryWindows: true }): Promise<Array<IOpenedMainWindow | IOpenedAuxiliaryWindow>>;
-	getWindows(options: { includeAuxiliaryWindows: false }): Promise<Array<IOpenedMainWindow>>;
+	getWindows(options: {
+		includeAuxiliaryWindows: true;
+	}): Promise<Array<IOpenedMainWindow | IOpenedAuxiliaryWindow>>;
+	getWindows(options: {
+		includeAuxiliaryWindows: false;
+	}): Promise<Array<IOpenedMainWindow>>;
 	getWindowCount(): Promise<number>;
 	getActiveWindowId(): Promise<number | undefined>;
 	getActiveWindowPosition(): Promise<IRectangle | undefined>;
 	getNativeWindowHandle(windowId: number): Promise<VSBuffer | undefined>;
 
 	openWindow(options?: IOpenEmptyWindowOptions): Promise<void>;
-	openWindow(toOpen: IWindowOpenable[], options?: IOpenWindowOptions): Promise<void>;
+	openWindow(
+		toOpen: IWindowOpenable[],
+		options?: IOpenWindowOptions,
+	): Promise<void>;
 
-	openAgentsWindow(options?: { folderUri?: UriComponents; initialQuery?: string; sessionResource?: UriComponents; preferredSessionType?: { providerId?: string; sessionTypeId: string } }): Promise<void>;
+	openAgentsWindow(options?: {
+		folderUri?: UriComponents;
+		initialQuery?: string;
+		sessionResource?: UriComponents;
+		preferredSessionType?: { providerId?: string; sessionTypeId: string };
+	}): Promise<void>;
 
 	isFullScreen(options?: INativeHostOptions): Promise<boolean>;
 	toggleFullScreen(options?: INativeHostOptions): Promise<void>;
 
-	getCursorScreenPoint(): Promise<{ readonly point: IPoint; readonly display: IRectangle }>;
+	getCursorScreenPoint(): Promise<{
+		readonly point: IPoint;
+		readonly display: IRectangle;
+	}>;
 
 	isMaximized(options?: INativeHostOptions): Promise<boolean>;
 	maximizeWindow(options?: INativeHostOptions): Promise<void>;
 	unmaximizeWindow(options?: INativeHostOptions): Promise<void>;
 	minimizeWindow(options?: INativeHostOptions): Promise<void>;
 	moveWindowTop(options?: INativeHostOptions): Promise<void>;
-	positionWindow(position: IRectangle, options?: INativeHostOptions): Promise<void>;
+	positionWindow(
+		position: IRectangle,
+		options?: INativeHostOptions,
+	): Promise<void>;
 
 	isWindowAlwaysOnTop(options?: INativeHostOptions): Promise<boolean>;
 	toggleWindowAlwaysOnTop(options?: INativeHostOptions): Promise<void>;
-	setWindowAlwaysOnTop(alwaysOnTop: boolean, options?: INativeHostOptions): Promise<void>;
+	setWindowAlwaysOnTop(
+		alwaysOnTop: boolean,
+		options?: INativeHostOptions,
+	): Promise<void>;
 
-	updateWindowControls(options: INativeHostOptions & { height?: number; backgroundColor?: string; foregroundColor?: string; dimmed?: boolean }): Promise<void>;
+	updateWindowControls(
+		options: INativeHostOptions & {
+			height?: number;
+			backgroundColor?: string;
+			foregroundColor?: string;
+			dimmed?: boolean;
+		},
+	): Promise<void>;
 
-	updateWindowAccentColor(color: 'default' | 'off' | string, inactiveColor: string | undefined): Promise<void>;
+	updateWindowAccentColor(
+		color: "default" | "off" | string,
+		inactiveColor: string | undefined,
+	): Promise<void>;
 
-	setMinimumSize(width: number | undefined, height: number | undefined): Promise<void>;
+	setMinimumSize(
+		width: number | undefined,
+		height: number | undefined,
+	): Promise<void>;
 
 	saveWindowSplash(splash: IPartsSplash): Promise<void>;
 
@@ -162,12 +224,20 @@ export interface ICommonNativeHostService {
 	 * @param options specify the specific window to focus and the focus mode.
 	 * Defaults to {@link FocusMode.Transfer}.
 	 */
-	focusWindow(options?: INativeHostOptions & { mode?: FocusMode }): Promise<void>;
+	focusWindow(
+		options?: INativeHostOptions & { mode?: FocusMode },
+	): Promise<void>;
 
 	// Dialogs
-	showMessageBox(options: MessageBoxOptions & INativeHostOptions): Promise<MessageBoxReturnValue>;
-	showSaveDialog(options: SaveDialogOptions & INativeHostOptions): Promise<SaveDialogReturnValue>;
-	showOpenDialog(options: OpenDialogOptions & INativeHostOptions): Promise<OpenDialogReturnValue>;
+	showMessageBox(
+		options: MessageBoxOptions & INativeHostOptions,
+	): Promise<MessageBoxReturnValue>;
+	showSaveDialog(
+		options: SaveDialogOptions & INativeHostOptions,
+	): Promise<SaveDialogReturnValue>;
+	showOpenDialog(
+		options: OpenDialogOptions & INativeHostOptions,
+	): Promise<OpenDialogReturnValue>;
 
 	pickFileFolderAndOpen(options: INativeOpenDialogOptions): Promise<void>;
 	pickFileAndOpen(options: INativeOpenDialogOptions): Promise<void>;
@@ -176,15 +246,29 @@ export interface ICommonNativeHostService {
 
 	// OS
 	showItemInFolder(path: string): Promise<void>;
-	setRepresentedFilename(path: string, options?: INativeHostOptions): Promise<void>;
-	setDocumentEdited(edited: boolean, options?: INativeHostOptions): Promise<void>;
+	setRepresentedFilename(
+		path: string,
+		options?: INativeHostOptions,
+	): Promise<void>;
+	setDocumentEdited(
+		edited: boolean,
+		options?: INativeHostOptions,
+	): Promise<void>;
 	openExternal(url: string, defaultApplication?: string): Promise<boolean>;
 	moveItemToTrash(fullPath: string): Promise<void>;
 
-	getMediaAccessStatus(mediaType: 'microphone' | 'camera' | 'screen'): Promise<'not-determined' | 'granted' | 'denied' | 'restricted' | 'unknown'>;
+	getMediaAccessStatus(
+		mediaType: "microphone" | "camera" | "screen",
+	): Promise<
+		"not-determined" | "granted" | "denied" | "restricted" | "unknown"
+	>;
 
 	isAdmin(): Promise<boolean>;
-	writeElevated(source: URI, target: URI, options?: { unlock?: boolean }): Promise<void>;
+	writeElevated(
+		source: URI,
+		target: URI,
+		options?: { unlock?: boolean },
+	): Promise<void>;
 	isRunningUnderARM64Translation(): Promise<boolean>;
 
 	getOSProperties(): Promise<IOSProperties>;
@@ -199,7 +283,13 @@ export interface ICommonNativeHostService {
 	getScreenshot(rect?: IRectangle): Promise<VSBuffer | undefined>;
 
 	// GitHub mobile upload API (runs in main process to avoid CORS)
-	uploadFileViaMobileApi(token: string, repoId: string, fileName: string, fileBytes: VSBuffer, contentType: string): Promise<{ fileName: string; assetUrl: string; contentType: string }>;
+	uploadFileViaMobileApi(
+		token: string,
+		repoId: string,
+		fileName: string,
+		fileBytes: VSBuffer,
+		contentType: string,
+	): Promise<{ fileName: string; assetUrl: string; contentType: string }>;
 
 	// Process
 	getProcessId(): Promise<number | undefined>;
@@ -207,13 +297,23 @@ export interface ICommonNativeHostService {
 
 	// Clipboard
 	triggerPaste(options?: INativeHostOptions): Promise<void>;
-	readClipboardText(type?: 'selection' | 'clipboard'): Promise<string>;
-	writeClipboardText(text: string, type?: 'selection' | 'clipboard'): Promise<void>;
+	readClipboardText(type?: "selection" | "clipboard"): Promise<string>;
+	writeClipboardText(
+		text: string,
+		type?: "selection" | "clipboard",
+	): Promise<void>;
 	readClipboardFindText(): Promise<string>;
 	writeClipboardFindText(text: string): Promise<void>;
-	writeClipboardBuffer(format: string, buffer: VSBuffer, type?: 'selection' | 'clipboard'): Promise<void>;
+	writeClipboardBuffer(
+		format: string,
+		buffer: VSBuffer,
+		type?: "selection" | "clipboard",
+	): Promise<void>;
 	readClipboardBuffer(format: string): Promise<VSBuffer>;
-	hasClipboard(format: string, type?: 'selection' | 'clipboard'): Promise<boolean>;
+	hasClipboard(
+		format: string,
+		type?: "selection" | "clipboard",
+	): Promise<boolean>;
 	readImage(): Promise<Uint8Array>;
 
 	// macOS Touchbar
@@ -231,14 +331,19 @@ export interface ICommonNativeHostService {
 
 	// Lifecycle
 	notifyReady(): Promise<void>;
-	relaunch(options?: { addArgs?: string[]; removeArgs?: string[] }): Promise<void>;
+	relaunch(options?: {
+		addArgs?: string[];
+		removeArgs?: string[];
+	}): Promise<void>;
 	reload(options?: { disableExtensions?: boolean }): Promise<void>;
 	closeWindow(options?: INativeHostOptions): Promise<void>;
 	quit(): Promise<void>;
 	exit(code: number): Promise<void>;
 
 	// Development
-	openDevTools(options?: Partial<OpenDevToolsOptions> & INativeHostOptions): Promise<void>;
+	openDevTools(
+		options?: Partial<OpenDevToolsOptions> & INativeHostOptions,
+	): Promise<void>;
 	toggleDevTools(options?: INativeHostOptions): Promise<void>;
 	openGPUInfoWindow(): Promise<void>;
 	openDevToolsWindow(url: string): Promise<void>;
@@ -255,10 +360,24 @@ export interface ICommonNativeHostService {
 	lookupKerberosAuthorization(url: string): Promise<string | undefined>;
 	loadCertificates(): Promise<string[]>;
 	isPortFree(port: number): Promise<boolean>;
-	findFreePort(startPort: number, giveUpAfter: number, timeout: number, stride?: number): Promise<number>;
+	findFreePort(
+		startPort: number,
+		giveUpAfter: number,
+		timeout: number,
+		stride?: number,
+	): Promise<number>;
 
 	// Registry (Windows only)
-	windowsGetStringRegKey(hive: 'HKEY_CURRENT_USER' | 'HKEY_LOCAL_MACHINE' | 'HKEY_CLASSES_ROOT' | 'HKEY_USERS' | 'HKEY_CURRENT_CONFIG', path: string, name: string): Promise<string | undefined>;
+	windowsGetStringRegKey(
+		hive:
+			| "HKEY_CURRENT_USER"
+			| "HKEY_LOCAL_MACHINE"
+			| "HKEY_CLASSES_ROOT"
+			| "HKEY_USERS"
+			| "HKEY_CURRENT_CONFIG",
+		path: string,
+		name: string,
+	): Promise<string | undefined>;
 
 	// Toast Notifications
 	showToast(options: IToastOptions): Promise<IToastResult>;
@@ -272,7 +391,10 @@ export interface ICommonNativeHostService {
 	 * @param zipPath The URI where the zip file should be created.
 	 * @param files An array of file entries to include in the zip, each with a relative path and string contents.
 	 */
-	createZipFile(zipPath: URI, files: { path: string; contents: string }[]): Promise<void>;
+	createZipFile(
+		zipPath: URI,
+		files: { path: string; contents: string }[],
+	): Promise<void>;
 
 	// Power
 	getSystemIdleState(idleThreshold: number): Promise<SystemIdleState>;
@@ -287,19 +409,27 @@ export interface ICommonNativeHostService {
 /**
  * Represents the system's idle state.
  */
-export type SystemIdleState = 'active' | 'idle' | 'locked' | 'unknown';
+export type SystemIdleState = "active" | "idle" | "locked" | "unknown";
 
 /**
  * Represents the system's thermal state.
  */
-export type ThermalState = 'unknown' | 'nominal' | 'fair' | 'serious' | 'critical';
+export type ThermalState =
+	| "unknown"
+	| "nominal"
+	| "fair"
+	| "serious"
+	| "critical";
 
 /**
  * The type of power save blocker.
  */
-export type PowerSaveBlockerType = 'prevent-app-suspension' | 'prevent-display-sleep';
+export type PowerSaveBlockerType =
+	| "prevent-app-suspension"
+	| "prevent-display-sleep";
 
-export const INativeHostService = createDecorator<INativeHostService>('nativeHostService');
+export const INativeHostService =
+	createDecorator<INativeHostService>("nativeHostService");
 
 /**
  * A set of methods specific to a native host, i.e. unsupported in web
@@ -308,4 +438,4 @@ export const INativeHostService = createDecorator<INativeHostService>('nativeHos
  * @see {@link IHostService} for methods that can be used in native and web
  * hosts.
  */
-export interface INativeHostService extends ICommonNativeHostService { }
+export interface INativeHostService extends ICommonNativeHostService {}

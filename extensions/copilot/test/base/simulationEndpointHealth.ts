@@ -7,7 +7,10 @@ import { ChatFetchError } from '../../src/platform/chat/common/commonTypes';
 import { createServiceIdentifier } from '../../src/util/common/services';
 import { CachedTestInfo } from './cachingChatMLFetcher';
 
-export const ISimulationEndpointHealth = createServiceIdentifier<ISimulationEndpointHealth>('ISimulationEndpointHealth');
+export const ISimulationEndpointHealth =
+	createServiceIdentifier<ISimulationEndpointHealth>(
+		'ISimulationEndpointHealth',
+	);
 
 export interface ISimulationEndpointHealth {
 	readonly _serviceBrand: undefined;
@@ -16,12 +19,14 @@ export interface ISimulationEndpointHealth {
 }
 
 export class SimulationEndpointHealthImpl implements ISimulationEndpointHealth {
-
 	declare readonly _serviceBrand: undefined;
 
-	public readonly failures: { testInfo: CachedTestInfo; request: ChatFetchError }[] = [];
+	public readonly failures: {
+		testInfo: CachedTestInfo;
+		request: ChatFetchError;
+	}[] = [];
 
-	constructor() { }
+	constructor() {}
 
 	markFailure(testInfo: CachedTestInfo, request: ChatFetchError) {
 		this.failures.push({ testInfo, request });
@@ -31,21 +36,31 @@ export class SimulationEndpointHealthImpl implements ISimulationEndpointHealth {
 export class ProxiedSimulationEndpointHealth implements ISimulationEndpointHealth {
 	declare readonly _serviceBrand: undefined;
 
-	public readonly failures: { testInfo: CachedTestInfo; request: ChatFetchError }[] = [];
+	public readonly failures: {
+		testInfo: CachedTestInfo;
+		request: ChatFetchError;
+	}[] = [];
 
-	public static registerTo(instance: ISimulationEndpointHealth, rpc: SimpleRPC): ISimulationEndpointHealth {
-		rpc.registerMethod('ProxiedSimulationEndpointHealth.markFailure', ({ testInfo, request }) => {
-			instance.markFailure(testInfo, request);
-		});
+	public static registerTo(
+		instance: ISimulationEndpointHealth,
+		rpc: SimpleRPC,
+	): ISimulationEndpointHealth {
+		rpc.registerMethod(
+			'ProxiedSimulationEndpointHealth.markFailure',
+			({ testInfo, request }) => {
+				instance.markFailure(testInfo, request);
+			},
+		);
 		return instance;
 	}
 
-	constructor(
-		private readonly rpc: SimpleRPC,
-	) { }
+	constructor(private readonly rpc: SimpleRPC) {}
 
 	markFailure(testInfo: CachedTestInfo, request: ChatFetchError): void {
 		this.failures.push({ testInfo, request });
-		this.rpc.callMethod('ProxiedSimulationEndpointHealth.markFailure', { testInfo, request });
+		this.rpc.callMethod('ProxiedSimulationEndpointHealth.markFailure', {
+			testInfo,
+			request,
+		});
 	}
 }

@@ -27,7 +27,7 @@ class AsyncIterableTestHelper {
 		yield Promise.resolve(3);
 		this.state = 4;
 	}
-	constructor() { }
+	constructor() {}
 }
 
 suite('Async Iterable utilities', function () {
@@ -37,76 +37,139 @@ suite('Async Iterable utilities', function () {
 		const asyncIterable = asyncIterableIn;
 		const asyncIterator = asyncIterable[Symbol.asyncIterator]();
 		assert.deepStrictEqual(asyncIterableIn.state, 0);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 1, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 1,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 1);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 2, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 2,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 2);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 3, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 3,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 3);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: undefined, done: true });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: undefined,
+			done: true,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 4);
 	});
 
 	test('map', async function () {
 		const asyncIterableIn = new AsyncIterableTestHelper();
-		const asyncIterable = asyncIterableMap(asyncIterableIn, v => Promise.resolve(v * 2));
+		const asyncIterable = asyncIterableMap(asyncIterableIn, (v) =>
+			Promise.resolve(v * 2),
+		);
 		const asyncIterator = asyncIterable[Symbol.asyncIterator]();
 		assert.deepStrictEqual(asyncIterableIn.state, 0);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 2, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 2,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 1);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 4, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 4,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 2);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 6, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 6,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 3);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: undefined, done: true });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: undefined,
+			done: true,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 4);
 	});
 
 	test('filter', async function () {
 		const asyncIterableIn = new AsyncIterableTestHelper();
-		const asyncIterable = asyncIterableFilter(asyncIterableIn, v => Promise.resolve(v % 2 === 0));
+		const asyncIterable = asyncIterableFilter(asyncIterableIn, (v) =>
+			Promise.resolve(v % 2 === 0),
+		);
 		const asyncIterator = asyncIterable[Symbol.asyncIterator]();
 		assert.deepStrictEqual(asyncIterableIn.state, 0);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 2, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 2,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 2);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: undefined, done: true });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: undefined,
+			done: true,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 4);
 	});
 
 	test('mapFilter', async function () {
 		const asyncIterableIn = new AsyncIterableTestHelper();
-		const asyncIterable = asyncIterableMapFilter(asyncIterableIn, v =>
-			Promise.resolve(v % 2 === 0 ? v / 2 : undefined)
+		const asyncIterable = asyncIterableMapFilter(asyncIterableIn, (v) =>
+			Promise.resolve(v % 2 === 0 ? v / 2 : undefined),
 		);
 		const asyncIterator = asyncIterable[Symbol.asyncIterator]();
 		assert.deepStrictEqual(asyncIterableIn.state, 0);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 1, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 1,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 2);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: undefined, done: true });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: undefined,
+			done: true,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 4);
 	});
 
 	test('mapFilter keeps non-undefined falsy values', async function () {
 		const asyncIterableIn = new AsyncIterableTestHelper();
-		const asyncIterable = asyncIterableMapFilter(asyncIterableIn, v => Promise.resolve(v % 2 === 0 ? v / 2 : 0));
+		const asyncIterable = asyncIterableMapFilter(asyncIterableIn, (v) =>
+			Promise.resolve(v % 2 === 0 ? v / 2 : 0),
+		);
 		const asyncIterator = asyncIterable[Symbol.asyncIterator]();
 		assert.deepStrictEqual(asyncIterableIn.state, 0);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 0, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 0,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 1);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 1, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 1,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 2);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 0, done: false });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 0,
+			done: false,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 3);
-		assert.deepStrictEqual(await asyncIterator.next(), { value: undefined, done: true });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: undefined,
+			done: true,
+		});
 		assert.deepStrictEqual(asyncIterableIn.state, 4);
 	});
 
 	test('fromArray', async function () {
 		const asyncIterable = asyncIterableFromArray([1, 2]);
 		const asyncIterator = asyncIterable[Symbol.asyncIterator]();
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 1, done: false });
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 2, done: false });
-		assert.deepStrictEqual(await asyncIterator.next(), { value: undefined, done: true });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 1,
+			done: false,
+		});
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 2,
+			done: false,
+		});
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: undefined,
+			done: true,
+		});
 	});
 
 	test('toArray', async function () {
@@ -119,13 +182,31 @@ suite('Async Iterable utilities', function () {
 	test('concat', async function () {
 		const asyncIterable1 = asyncIterableFromArray([1, 2]);
 		const asyncIterable2 = asyncIterableFromArray([3, 4]);
-		const asyncIterable = asyncIterableConcat(asyncIterable1, asyncIterable2);
+		const asyncIterable = asyncIterableConcat(
+			asyncIterable1,
+			asyncIterable2,
+		);
 		const asyncIterator = asyncIterable[Symbol.asyncIterator]();
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 1, done: false });
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 2, done: false });
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 3, done: false });
-		assert.deepStrictEqual(await asyncIterator.next(), { value: 4, done: false });
-		assert.deepStrictEqual(await asyncIterator.next(), { value: undefined, done: true });
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 1,
+			done: false,
+		});
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 2,
+			done: false,
+		});
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 3,
+			done: false,
+		});
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: 4,
+			done: false,
+		});
+		assert.deepStrictEqual(await asyncIterator.next(), {
+			value: undefined,
+			done: true,
+		});
 	});
 
 	test('count', async function () {
@@ -135,13 +216,15 @@ suite('Async Iterable utilities', function () {
 
 	test('iterableMap', function () {
 		const source = [1, 2, 3][Symbol.iterator]();
-		const actual = iterableMap(source, v => v * 2);
+		const actual = iterableMap(source, (v) => v * 2);
 		assert.deepStrictEqual(Array.from(actual), [2, 4, 6]);
 	});
 
 	test('iterableMapFilter', function () {
 		const source = [1, 2, 3][Symbol.iterator]();
-		const actual = iterableMapFilter(source, v => (v % 2 !== 0 ? v * 2 : undefined));
+		const actual = iterableMapFilter(source, (v) =>
+			v % 2 !== 0 ? v * 2 : undefined,
+		);
 		assert.deepStrictEqual(Array.from(actual), [2, 6]);
 	});
 });

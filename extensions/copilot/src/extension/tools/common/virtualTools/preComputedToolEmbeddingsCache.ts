@@ -3,8 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Embedding, EmbeddingType } from '../../../../platform/embeddings/common/embeddingsComputer';
-import { EmbeddingCacheType, IEmbeddingsCache, RemoteCacheType, RemoteEmbeddingsCache } from '../../../../platform/embeddings/common/embeddingsIndex';
+import {
+	Embedding,
+	EmbeddingType,
+} from '../../../../platform/embeddings/common/embeddingsComputer';
+import {
+	EmbeddingCacheType,
+	IEmbeddingsCache,
+	RemoteCacheType,
+	RemoteEmbeddingsCache,
+} from '../../../../platform/embeddings/common/embeddingsIndex';
 import { IEnvService } from '../../../../platform/env/common/envService';
 import { ILogService } from '../../../../platform/log/common/logService';
 import { sanitizeVSCodeVersion } from '../../../../util/common/vscodeVersion';
@@ -20,10 +28,19 @@ export class PreComputedToolEmbeddingsCache implements IToolEmbeddingsCache {
 	constructor(
 		@ILogService private readonly _logService: ILogService,
 		@IInstantiationService instantiationService: IInstantiationService,
-		@IEnvService envService: IEnvService
+		@IEnvService envService: IEnvService,
 	) {
-		const cacheVersion = sanitizeVSCodeVersion(envService.getEditorInfo().version);
-		this.cache = instantiationService.createInstance(RemoteEmbeddingsCache, EmbeddingCacheType.GLOBAL, 'toolEmbeddings', cacheVersion, EMBEDDING_TYPE_FOR_TOOL_GROUPING, RemoteCacheType.Tools);
+		const cacheVersion = sanitizeVSCodeVersion(
+			envService.getEditorInfo().version,
+		);
+		this.cache = instantiationService.createInstance(
+			RemoteEmbeddingsCache,
+			EmbeddingCacheType.GLOBAL,
+			'toolEmbeddings',
+			cacheVersion,
+			EMBEDDING_TYPE_FOR_TOOL_GROUPING,
+			RemoteCacheType.Tools,
+		);
 	}
 
 	public get embeddingType(): EmbeddingType {
@@ -48,24 +65,29 @@ export class PreComputedToolEmbeddingsCache implements IToolEmbeddingsCache {
 			const embeddingsMap = new Map<string, Embedding>();
 
 			if (embeddingsData) {
-				for (const [key, embeddingVector] of Object.entries(embeddingsData)) {
+				for (const [key, embeddingVector] of Object.entries(
+					embeddingsData,
+				)) {
 					if (embeddingVector === undefined) {
-						this._logService.warn(`Tool embedding missing for key: ${key}`);
+						this._logService.warn(
+							`Tool embedding missing for key: ${key}`,
+						);
 						continue;
 					}
 					embeddingsMap.set(key, {
 						type: this.embeddingType,
-						value: embeddingVector.embedding
+						value: embeddingVector.embedding,
 					});
 				}
 			}
 
 			return embeddingsMap;
 		} catch (e) {
-			this._logService.error('Failed to load pre-computed tool embeddings', e);
+			this._logService.error(
+				'Failed to load pre-computed tool embeddings',
+				e,
+			);
 			return new Map<string, Embedding>();
 		}
 	}
 }
-
-

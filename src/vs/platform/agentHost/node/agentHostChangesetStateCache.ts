@@ -3,8 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LinkedMap, Touch } from '../../../base/common/map.js';
-import { ChangesetStatus, type ChangesetState, type URI } from '../common/state/sessionState.js';
+import { LinkedMap, Touch } from "../../../base/common/map.js";
+import {
+	ChangesetStatus,
+	type ChangesetState,
+	type URI,
+} from "../common/state/sessionState.js";
 
 /**
  * Default number of expanded changeset states kept hot in memory.
@@ -46,14 +50,16 @@ export interface IAgentHostChangesetStateRetentionOptions {
  * `ChangesetCleared` before removing state.
  */
 export class AgentHostChangesetStateCache {
-
 	private readonly _states = new Map<string, ChangesetState>();
 	private readonly _lru = new LinkedMap<string, true>();
 	private readonly _softLimit: number;
 	private readonly _canEvict: (changeset: URI) => boolean;
 
 	constructor(options: IAgentHostChangesetStateRetentionOptions = {}) {
-		this._softLimit = Math.max(0, options.softLimit ?? DEFAULT_CHANGESET_STATE_SOFT_LIMIT);
+		this._softLimit = Math.max(
+			0,
+			options.softLimit ?? DEFAULT_CHANGESET_STATE_SOFT_LIMIT,
+		);
 		this._canEvict = options.canEvict ?? (() => true);
 	}
 
@@ -81,7 +87,10 @@ export class AgentHostChangesetStateCache {
 		this._lru.delete(changeset);
 	}
 
-	register(changeset: URI, initialStatus: ChangesetStatus = ChangesetStatus.Computing): void {
+	register(
+		changeset: URI,
+		initialStatus: ChangesetStatus = ChangesetStatus.Computing,
+	): void {
 		if (this._states.has(changeset)) {
 			this._touch(changeset);
 			return;

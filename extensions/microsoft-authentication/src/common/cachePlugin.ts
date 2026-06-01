@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ICachePlugin, TokenCacheContext } from '@azure/msal-node';
-import { Disposable, EventEmitter, SecretStorage } from 'vscode';
+import { ICachePlugin, TokenCacheContext } from "@azure/msal-node";
+import { Disposable, EventEmitter, SecretStorage } from "vscode";
 
 export class SecretStorageCachePlugin implements ICachePlugin, Disposable {
 	private readonly _onDidChange: EventEmitter<void> = new EventEmitter<void>();
@@ -16,16 +16,16 @@ export class SecretStorageCachePlugin implements ICachePlugin, Disposable {
 
 	constructor(
 		private readonly _secretStorage: SecretStorage,
-		private readonly _key: string
+		private readonly _key: string,
 	) {
 		this._disposable = Disposable.from(
 			this._onDidChange,
-			this._registerChangeHandler()
+			this._registerChangeHandler(),
 		);
 	}
 
 	private _registerChangeHandler() {
-		return this._secretStorage.onDidChange(e => {
+		return this._secretStorage.onDidChange((e) => {
 			if (e.key === this._key) {
 				this._onDidChange.fire();
 			}

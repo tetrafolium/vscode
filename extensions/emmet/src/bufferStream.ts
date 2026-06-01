@@ -5,7 +5,7 @@
 
 /* Based on @sergeche's work in his emmet plugin */
 
-import { TextDocument } from 'vscode';
+import { TextDocument } from "vscode";
 
 /**
  * A stream reader for VSCode's `TextDocument`
@@ -120,7 +120,7 @@ export class DocumentStreamReader {
 	 */
 	eat(match: number | Function): boolean {
 		const ch = this.peek();
-		const ok = typeof match === 'function' ? match(ch) : ch === match;
+		const ok = typeof match === "function" ? match(ch) : ch === match;
 
 		if (ok) {
 			this.next();
@@ -135,7 +135,7 @@ export class DocumentStreamReader {
 	 */
 	eatWhile(match: number | Function): boolean {
 		const start = this.pos;
-		while (!this.eof() && this.eat(match)) { }
+		while (!this.eof() && this.eat(match)) {}
 		return this.pos !== start;
 	}
 }

@@ -3,9 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getImageDimensions, getImageDimensionsFromBytes as readImageDimensionsFromBytes } from '../../../util/common/imageUtils';
+import {
+	getImageDimensions,
+	getImageDimensionsFromBytes as readImageDimensionsFromBytes,
+} from '../../../util/common/imageUtils';
 
-type ImageTelemetrySource = 'clipboard' | 'screenshot' | 'file' | 'url' | 'unknown';
+type ImageTelemetrySource =
+	| 'clipboard'
+	| 'screenshot'
+	| 'file'
+	| 'url'
+	| 'unknown';
 
 export interface ImageTelemetryMeasurements {
 	imageCount: number;
@@ -72,11 +80,15 @@ function createEmptyImageTelemetryMeasurements(): ImageTelemetryMeasurements {
 	};
 }
 
-export function getImageTelemetryEventMeasurements(measurements: ImageTelemetryMeasurements): Partial<ImageTelemetryMeasurements> {
+export function getImageTelemetryEventMeasurements(
+	measurements: ImageTelemetryMeasurements,
+): Partial<ImageTelemetryMeasurements> {
 	return measurements.imageCount > 0 ? measurements : {};
 }
 
-export function getImageTelemetryMeasurementsFromMessages(messages: readonly MessageWithContent[] | undefined): ImageTelemetryMeasurements {
+export function getImageTelemetryMeasurementsFromMessages(
+	messages: readonly MessageWithContent[] | undefined,
+): ImageTelemetryMeasurements {
 	const measurements = createEmptyImageTelemetryMeasurements();
 
 	for (const message of messages ?? []) {
@@ -91,7 +103,10 @@ export function getImageTelemetryMeasurementsFromMessages(messages: readonly Mes
 				continue;
 			}
 
-			const input = getImageTelemetryInputFromUrl(url, getStringProperty(imageUrl, 'mediaType'));
+			const input = getImageTelemetryInputFromUrl(
+				url,
+				getStringProperty(imageUrl, 'mediaType'),
+			);
 			if (input) {
 				addImageTelemetryInput(measurements, input);
 			}
@@ -101,7 +116,9 @@ export function getImageTelemetryMeasurementsFromMessages(messages: readonly Mes
 	return measurements;
 }
 
-export function getImageTelemetryMeasurementsFromReferences(references: readonly ReferenceWithValue[] | undefined): ImageTelemetryMeasurements {
+export function getImageTelemetryMeasurementsFromReferences(
+	references: readonly ReferenceWithValue[] | undefined,
+): ImageTelemetryMeasurements {
 	const measurements = createEmptyImageTelemetryMeasurements();
 
 	for (const reference of references ?? []) {
@@ -118,7 +135,10 @@ export function getImageTelemetryMeasurementsFromReferences(references: readonly
 		const data = getByteData(value.data) ?? getByteData(value.value);
 		addImageTelemetryInput(measurements, {
 			mimeType,
-			byteLength: data?.byteLength ?? getByteLength(value.data) ?? getByteLength(value.value),
+			byteLength:
+				data?.byteLength ??
+				getByteLength(value.data) ??
+				getByteLength(value.value),
 			dimensions: getImageDimensionsFromBytes(data, mimeType),
 			source: getImageSourceFromReference(reference, value),
 		});
@@ -127,12 +147,18 @@ export function getImageTelemetryMeasurementsFromReferences(references: readonly
 	return measurements;
 }
 
-function addImageTelemetryInput(measurements: ImageTelemetryMeasurements, input: ImageTelemetryInput): void {
+function addImageTelemetryInput(
+	measurements: ImageTelemetryMeasurements,
+	input: ImageTelemetryInput,
+): void {
 	measurements.imageCount++;
 
 	const byteLength = input.byteLength ?? 0;
 	measurements.totalImageBytes += byteLength;
-	measurements.maxImageBytes = Math.max(measurements.maxImageBytes, byteLength);
+	measurements.maxImageBytes = Math.max(
+		measurements.maxImageBytes,
+		byteLength,
+	);
 	addImageDimensions(measurements, input.dimensions);
 
 	switch (normalizeMimeType(input.mimeType)) {
@@ -170,9 +196,14 @@ function addImageTelemetryInput(measurements: ImageTelemetryMeasurements, input:
 	}
 }
 
-function getImageTelemetryInputFromUrl(url: string, mediaType: string | undefined): ImageTelemetryInput | undefined {
+function getImageTelemetryInputFromUrl(
+	url: string,
+	mediaType: string | undefined,
+): ImageTelemetryInput | undefined {
 	if (!url.startsWith('data:')) {
-		return url.startsWith('https://') ? { mimeType: mediaType, source: 'url' } : undefined;
+		return url.startsWith('https://')
+			? { mimeType: mediaType, source: 'url' }
+			: undefined;
 	}
 
 	const match = /^data:(image\/(?:jpeg|png|gif|webp));base64,(.+)$/.exec(url);
@@ -188,8 +219,15 @@ function getImageTelemetryInputFromUrl(url: string, mediaType: string | undefine
 	};
 }
 
-function addImageDimensions(measurements: ImageTelemetryMeasurements, dimensions: ImageTelemetryDimensions | undefined): void {
-	if (!dimensions || !isValidDimension(dimensions.width) || !isValidDimension(dimensions.height)) {
+function addImageDimensions(
+	measurements: ImageTelemetryMeasurements,
+	dimensions: ImageTelemetryDimensions | undefined,
+): void {
+	if (
+		!dimensions ||
+		!isValidDimension(dimensions.width) ||
+		!isValidDimension(dimensions.height)
+	) {
 		return;
 	}
 
@@ -198,8 +236,14 @@ function addImageDimensions(measurements: ImageTelemetryMeasurements, dimensions
 		return;
 	}
 
-	measurements.maxImageWidth = Math.max(measurements.maxImageWidth, dimensions.width);
-	measurements.maxImageHeight = Math.max(measurements.maxImageHeight, dimensions.height);
+	measurements.maxImageWidth = Math.max(
+		measurements.maxImageWidth,
+		dimensions.width,
+	);
+	measurements.maxImageHeight = Math.max(
+		measurements.maxImageHeight,
+		dimensions.height,
+	);
 	measurements.maxImagePixels = Math.max(measurements.maxImagePixels, pixels);
 	measurements.totalImagePixels += pixels;
 }
@@ -208,7 +252,9 @@ function isValidDimension(value: number): boolean {
 	return Number.isFinite(value) && value > 0;
 }
 
-function getImageDimensionsFromDataUrl(url: string): ImageTelemetryDimensions | undefined {
+function getImageDimensionsFromDataUrl(
+	url: string,
+): ImageTelemetryDimensions | undefined {
 	try {
 		return getImageDimensions(url);
 	} catch {
@@ -216,7 +262,10 @@ function getImageDimensionsFromDataUrl(url: string): ImageTelemetryDimensions | 
 	}
 }
 
-function getImageDimensionsFromBytes(data: Uint8Array | undefined, mimeType: string | undefined): ImageTelemetryDimensions | undefined {
+function getImageDimensionsFromBytes(
+	data: Uint8Array | undefined,
+	mimeType: string | undefined,
+): ImageTelemetryDimensions | undefined {
 	const normalizedMimeType = mimeType?.toLowerCase().split(';')[0].trim();
 	if (!data || normalizeMimeType(normalizedMimeType) === 'unknown') {
 		return undefined;
@@ -229,7 +278,9 @@ function getImageDimensionsFromBytes(data: Uint8Array | undefined, mimeType: str
 	}
 }
 
-function normalizeMimeType(mimeType: string | undefined): 'png' | 'jpeg' | 'gif' | 'webp' | 'unknown' {
+function normalizeMimeType(
+	mimeType: string | undefined,
+): 'png' | 'jpeg' | 'gif' | 'webp' | 'unknown' {
 	const normalized = mimeType?.toLowerCase().split(';')[0].trim();
 	switch (normalized) {
 		case 'image/png':
@@ -246,14 +297,20 @@ function normalizeMimeType(mimeType: string | undefined): 'png' | 'jpeg' | 'gif'
 	}
 }
 
-function getImageSourceFromReference(reference: ReferenceWithValue, value: Record<string, unknown>): ImageTelemetrySource {
+function getImageSourceFromReference(
+	reference: ReferenceWithValue,
+	value: Record<string, unknown>,
+): ImageTelemetrySource {
 	if (value.isPasted === true) {
 		return 'clipboard';
 	}
 	if (value.isURL === true) {
 		return 'url';
 	}
-	if (reference.id === screenshotVariableId || value.id === screenshotVariableId) {
+	if (
+		reference.id === screenshotVariableId ||
+		value.id === screenshotVariableId
+	) {
 		return 'screenshot';
 	}
 	if (value.isURL === false) {
@@ -270,7 +327,7 @@ function getBase64ByteLength(base64Data: string): number {
 	} else if (trimmed.endsWith('=')) {
 		padding = 1;
 	}
-	return Math.max(0, Math.floor(trimmed.length * 3 / 4) - padding);
+	return Math.max(0, Math.floor((trimmed.length * 3) / 4) - padding);
 }
 
 function getByteData(value: unknown): Uint8Array | undefined {
@@ -293,7 +350,7 @@ function getByteData(value: unknown): Uint8Array | undefined {
 
 	const sortedKeys = [...keys];
 	sortedKeys.sort((left, right) => Number(left) - Number(right));
-	const byteValues = sortedKeys.map(key => objectValue[key]);
+	const byteValues = sortedKeys.map((key) => objectValue[key]);
 	if (!byteValues.every(isByteValue)) {
 		return undefined;
 	}
@@ -306,7 +363,12 @@ function isArrayIndexKey(key: string): boolean {
 }
 
 function isByteValue(value: unknown): value is number {
-	return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 255;
+	return (
+		typeof value === 'number' &&
+		Number.isInteger(value) &&
+		value >= 0 &&
+		value <= 255
+	);
 }
 
 function getByteLength(value: unknown): number | undefined {
@@ -319,18 +381,30 @@ function getByteLength(value: unknown): number | undefined {
 
 	const objectValue = asRecord(value);
 	const byteLength = objectValue?.byteLength;
-	return typeof byteLength === 'number' && Number.isFinite(byteLength) && byteLength >= 0 ? byteLength : undefined;
+	return typeof byteLength === 'number' &&
+		Number.isFinite(byteLength) &&
+		byteLength >= 0
+		? byteLength
+		: undefined;
 }
 
-function getObjectProperty(value: unknown, property: string): Record<string, unknown> | undefined {
+function getObjectProperty(
+	value: unknown,
+	property: string,
+): Record<string, unknown> | undefined {
 	return asRecord(asRecord(value)?.[property]);
 }
 
-function getStringProperty(value: unknown, property: string): string | undefined {
+function getStringProperty(
+	value: unknown,
+	property: string,
+): string | undefined {
 	const propertyValue = asRecord(value)?.[property];
 	return typeof propertyValue === 'string' ? propertyValue : undefined;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
-	return typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined;
+	return typeof value === 'object' && value !== null
+		? (value as Record<string, unknown>)
+		: undefined;
 }

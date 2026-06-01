@@ -6,7 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import { TestWorkspaceService } from '../../../../../platform/test/node/testWorkspaceService';
 import { URI } from '../../../../../util/vs/base/common/uri';
-import { FolderRepositoryMRUEntry, IFolderRepositoryManager } from '../../../../chatSessions/common/folderRepositoryManager';
+import {
+	FolderRepositoryMRUEntry,
+	IFolderRepositoryManager,
+} from '../../../../chatSessions/common/folderRepositoryManager';
 import { computeFolderSlug, getProjectFolders } from '../claudeProjectFolders';
 
 // #region MockFolderRepositoryManager
@@ -19,13 +22,65 @@ class MockFolderRepositoryManager implements IFolderRepositoryManager {
 		this._mruEntries = entries;
 	}
 
-	setNewSessionFolder(): void { }
-	deleteNewSessionFolder(): void { }
-	async getFolderRepository(): Promise<{ folder: undefined; repository: undefined; worktree: undefined; worktreeProperties: undefined; trusted: undefined }> { return { folder: undefined, repository: undefined, worktree: undefined, worktreeProperties: undefined, trusted: undefined }; }
-	async initializeFolderRepository(): Promise<{ folder: undefined; repository: undefined; worktree: undefined; worktreeProperties: undefined; trusted: undefined }> { return { folder: undefined, repository: undefined, worktree: undefined, worktreeProperties: undefined, trusted: undefined }; }
-	async initializeMultiRootFolderRepositories(): Promise<{ primary: { folder: undefined; repository: undefined; worktree: undefined; worktreeProperties: undefined; trusted: undefined }; additional: never[] }> { return { primary: { folder: undefined, repository: undefined, worktree: undefined, worktreeProperties: undefined, trusted: undefined }, additional: [] }; }
-	async getRepositoryInfo(): Promise<any> { return undefined; }
-	async getFolderMRU(): Promise<FolderRepositoryMRUEntry[]> { return this._mruEntries; }
+	setNewSessionFolder(): void {}
+	deleteNewSessionFolder(): void {}
+	async getFolderRepository(): Promise<{
+		folder: undefined;
+		repository: undefined;
+		worktree: undefined;
+		worktreeProperties: undefined;
+		trusted: undefined;
+	}> {
+		return {
+			folder: undefined,
+			repository: undefined,
+			worktree: undefined,
+			worktreeProperties: undefined,
+			trusted: undefined,
+		};
+	}
+	async initializeFolderRepository(): Promise<{
+		folder: undefined;
+		repository: undefined;
+		worktree: undefined;
+		worktreeProperties: undefined;
+		trusted: undefined;
+	}> {
+		return {
+			folder: undefined,
+			repository: undefined,
+			worktree: undefined,
+			worktreeProperties: undefined,
+			trusted: undefined,
+		};
+	}
+	async initializeMultiRootFolderRepositories(): Promise<{
+		primary: {
+			folder: undefined;
+			repository: undefined;
+			worktree: undefined;
+			worktreeProperties: undefined;
+			trusted: undefined;
+		};
+		additional: never[];
+	}> {
+		return {
+			primary: {
+				folder: undefined,
+				repository: undefined,
+				worktree: undefined,
+				worktreeProperties: undefined,
+				trusted: undefined,
+			},
+			additional: [],
+		};
+	}
+	async getRepositoryInfo(): Promise<any> {
+		return undefined;
+	}
+	async getFolderMRU(): Promise<FolderRepositoryMRUEntry[]> {
+		return this._mruEntries;
+	}
 }
 
 // #endregion
@@ -48,7 +103,10 @@ describe('computeFolderSlug', () => {
 
 	it('converts a Windows-style drive letter path', () => {
 		// On Windows, URI.file('C:/Users/test/project') produces path '/c:/Users/test/project'
-		const uri = URI.from({ scheme: 'file', path: '/c:/Users/test/project' });
+		const uri = URI.from({
+			scheme: 'file',
+			path: '/c:/Users/test/project',
+		});
 		expect(computeFolderSlug(uri)).toBe('C--Users-test-project');
 	});
 
@@ -90,7 +148,13 @@ describe('getProjectFolders', () => {
 		const mruFolder = URI.file('/Users/test/recent-project');
 		const workspace = new TestWorkspaceService([]);
 		const folderManager = new MockFolderRepositoryManager();
-		folderManager.setMRUEntries([{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() }]);
+		folderManager.setMRUEntries([
+			{
+				folder: mruFolder,
+				repository: undefined,
+				lastAccessed: Date.now(),
+			},
+		]);
 
 		const result = await getProjectFolders(workspace, folderManager);
 
@@ -113,7 +177,13 @@ describe('getProjectFolders', () => {
 		const mruFolder = URI.file('/Users/test/mru-folder');
 		const workspace = new TestWorkspaceService([workspaceFolder]);
 		const folderManager = new MockFolderRepositoryManager();
-		folderManager.setMRUEntries([{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() }]);
+		folderManager.setMRUEntries([
+			{
+				folder: mruFolder,
+				repository: undefined,
+				lastAccessed: Date.now(),
+			},
+		]);
 
 		const result = await getProjectFolders(workspace, folderManager);
 

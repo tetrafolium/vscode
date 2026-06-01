@@ -16,33 +16,43 @@ vi.mock('vscode', () => ({
 				activeTab: null,
 			},
 			all: [],
-			onDidChangeTabGroups: () => ({ dispose: () => { } }),
-			onDidChangeTabs: () => ({ dispose: () => { } }),
+			onDidChangeTabGroups: () => ({ dispose: () => {} }),
+			onDidChangeTabs: () => ({ dispose: () => {} }),
 		},
 	},
 	commands: {
 		executeCommand: vi.fn().mockResolvedValue(undefined),
 	},
 	TabInputTextDiff: class TabInputTextDiff {
-		constructor(public original: any, public modified: any) { }
+		constructor(
+			public original: any,
+			public modified: any,
+		) {}
 	},
 }));
 
-import {
-	DiffStateManager,
-	type ActiveDiff,
-} from '../diffState';
+import { DiffStateManager, type ActiveDiff } from '../diffState';
 
 describe('DiffStateManager.closeAllForSession', () => {
 	const logger = new TestLogService();
 	let diffState: DiffStateManager;
 
-	const createMockDiff = (tabName: string, sessionId?: string, diffIdSuffix?: string): ActiveDiff => ({
+	const createMockDiff = (
+		tabName: string,
+		sessionId?: string,
+		diffIdSuffix?: string,
+	): ActiveDiff => ({
 		diffId: `/tmp/modified-${diffIdSuffix ?? tabName}.ts`,
 		sessionId,
 		tabName: tabName,
-		originalUri: { fsPath: `/path/to/original-${tabName}.ts`, scheme: 'file' } as any,
-		modifiedUri: { fsPath: `/tmp/modified-${diffIdSuffix ?? tabName}.ts`, scheme: 'file' } as any,
+		originalUri: {
+			fsPath: `/path/to/original-${tabName}.ts`,
+			scheme: 'file',
+		} as any,
+		modifiedUri: {
+			fsPath: `/tmp/modified-${diffIdSuffix ?? tabName}.ts`,
+			scheme: 'file',
+		} as any,
 		newContents: `// new contents for ${tabName}`,
 		cleanup: vi.fn(),
 		resolve: vi.fn(),
@@ -60,8 +70,14 @@ describe('DiffStateManager.closeAllForSession', () => {
 
 		diffState.closeAllForSession('session-1');
 
-		expect(diff1.resolve).toHaveBeenCalledWith({ status: 'REJECTED', trigger: 'client_disconnected' });
-		expect(diff2.resolve).toHaveBeenCalledWith({ status: 'REJECTED', trigger: 'client_disconnected' });
+		expect(diff1.resolve).toHaveBeenCalledWith({
+			status: 'REJECTED',
+			trigger: 'client_disconnected',
+		});
+		expect(diff2.resolve).toHaveBeenCalledWith({
+			status: 'REJECTED',
+			trigger: 'client_disconnected',
+		});
 	});
 
 	it('should not close diffs belonging to other sessions', () => {
@@ -72,7 +88,10 @@ describe('DiffStateManager.closeAllForSession', () => {
 
 		diffState.closeAllForSession('session-1');
 
-		expect(diff1.resolve).toHaveBeenCalledWith({ status: 'REJECTED', trigger: 'client_disconnected' });
+		expect(diff1.resolve).toHaveBeenCalledWith({
+			status: 'REJECTED',
+			trigger: 'client_disconnected',
+		});
 		expect(diff2.resolve).not.toHaveBeenCalled();
 	});
 

@@ -3,20 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IMessagePassingProtocol } from '../../../base/parts/ipc/common/ipc.js';
-import { VSBuffer } from '../../../base/common/buffer.js';
-import { Emitter } from '../../../base/common/event.js';
-import { isMessageOfType, MessageType, createMessageOfType, IExtensionHostInitData } from '../../services/extensions/common/extensionHostProtocol.js';
-import { ExtensionHostMain } from '../common/extensionHostMain.js';
-import { IHostUtils } from '../common/extHostExtensionService.js';
-import { NestedWorker } from '../../services/extensions/worker/polyfillNestedWorker.js';
-import * as path from '../../../base/common/path.js';
-import * as performance from '../../../base/common/performance.js';
+import { IMessagePassingProtocol } from "../../../base/parts/ipc/common/ipc.js";
+import { VSBuffer } from "../../../base/common/buffer.js";
+import { Emitter } from "../../../base/common/event.js";
+import {
+	isMessageOfType,
+	MessageType,
+	createMessageOfType,
+	IExtensionHostInitData,
+} from "../../services/extensions/common/extensionHostProtocol.js";
+import { ExtensionHostMain } from "../common/extensionHostMain.js";
+import { IHostUtils } from "../common/extHostExtensionService.js";
+import { NestedWorker } from "../../services/extensions/worker/polyfillNestedWorker.js";
+import * as path from "../../../base/common/path.js";
+import * as performance from "../../../base/common/performance.js";
 
-import '../common/extHost.common.services.js';
-import './extHost.worker.services.js';
-import { FileAccess } from '../../../base/common/network.js';
-import { URI } from '../../../base/common/uri.js';
+import "../common/extHost.common.services.js";
+import "./extHost.worker.services.js";
+import { FileAccess } from "../../../base/common/network.js";
+import { URI } from "../../../base/common/uri.js";
 
 //#region --- Define, capture, and override some globals
 
@@ -30,8 +35,8 @@ declare namespace self {
 	let addEventListener: any;
 	let removeEventListener: any;
 	let dispatchEvent: any;
-	let indexedDB: { open: any;[k: string]: any };
-	let caches: { open: any;[k: string]: any };
+	let indexedDB: { open: any; [k: string]: any };
+	let caches: { open: any; [k: string]: any };
 	let importScripts: any;
 	let fetch: _Fetch;
 	let XMLHttpRequest: any;
@@ -64,7 +69,13 @@ function patchFetching(asBrowserUri: (uri: URI) => Promise<URI>) {
 	};
 
 	self.XMLHttpRequest = class extends XMLHttpRequest {
-		override open(method: string, url: string | URL, async?: boolean, username?: string | null, password?: string | null): void {
+		override open(
+			method: string,
+			url: string | URL,
+			async?: boolean,
+			username?: string | null,
+			password?: string | null,
+		): void {
 			(async () => {
 				if (shouldTransformUri(url.toString())) {
 					url = (await asBrowserUri(URI.parse(url.toString()))).toString(true);
@@ -75,52 +86,58 @@ function patchFetching(asBrowserUri: (uri: URI) => Promise<URI>) {
 	};
 }
 
-self.importScripts = () => { throw new Error(`'importScripts' has been blocked`); };
+self.importScripts = () => {
+	throw new Error(`'importScripts' has been blocked`);
+};
 
 // const nativeAddEventListener = addEventListener.bind(self);
-self.addEventListener = () => console.trace(`'addEventListener' has been blocked`);
+self.addEventListener = () =>
+	console.trace(`'addEventListener' has been blocked`);
 
 // eslint-disable-next-line local/code-no-any-casts
-(<any>self)['AMDLoader'] = undefined;
+(<any>self)["AMDLoader"] = undefined;
 // eslint-disable-next-line local/code-no-any-casts
-(<any>self)['NLSLoaderPlugin'] = undefined;
+(<any>self)["NLSLoaderPlugin"] = undefined;
 // eslint-disable-next-line local/code-no-any-casts
-(<any>self)['define'] = undefined;
+(<any>self)["define"] = undefined;
 // eslint-disable-next-line local/code-no-any-casts
-(<any>self)['require'] = undefined;
+(<any>self)["require"] = undefined;
 // eslint-disable-next-line local/code-no-any-casts
-(<any>self)['webkitRequestFileSystem'] = undefined;
+(<any>self)["webkitRequestFileSystem"] = undefined;
 // eslint-disable-next-line local/code-no-any-casts
-(<any>self)['webkitRequestFileSystemSync'] = undefined;
+(<any>self)["webkitRequestFileSystemSync"] = undefined;
 // eslint-disable-next-line local/code-no-any-casts
-(<any>self)['webkitResolveLocalFileSystemSyncURL'] = undefined;
+(<any>self)["webkitResolveLocalFileSystemSyncURL"] = undefined;
 // eslint-disable-next-line local/code-no-any-casts
-(<any>self)['webkitResolveLocalFileSystemURL'] = undefined;
+(<any>self)["webkitResolveLocalFileSystemURL"] = undefined;
 
 // eslint-disable-next-line local/code-no-any-casts
 if ((<any>self).Worker) {
-
 	// make sure new Worker(...) always uses blob: (to maintain current origin)
 	// eslint-disable-next-line local/code-no-any-casts
 	const _Worker = (<any>self).Worker;
 	// eslint-disable-next-line local/code-no-any-casts
 	Worker = <any>function (stringUrl: string | URL, options?: WorkerOptions) {
 		if (/^file:/i.test(stringUrl.toString())) {
-			stringUrl = FileAccess.uriToBrowserUri(URI.parse(stringUrl.toString())).toString(true);
+			stringUrl = FileAccess.uriToBrowserUri(
+				URI.parse(stringUrl.toString()),
+			).toString(true);
 		} else if (/^vscode-remote:/i.test(stringUrl.toString())) {
 			// Supporting transformation of vscode-remote URIs requires an async call to the main thread,
 			// but we cannot do this call from within the embedded Worker, and the only way out would be
 			// to use templating instead of a function in the web api (`resourceUriProvider`)
-			throw new Error(`Creating workers from remote extensions is currently not supported.`);
+			throw new Error(
+				`Creating workers from remote extensions is currently not supported.`,
+			);
 		}
 
 		// IMPORTANT: bootstrapFn is stringified and injected as worker blob-url. Because of that it CANNOT
 		// have dependencies on other functions or variables. Only constant values are supported. Due to
 		// that logic of FileAccess.asBrowserUri had to be copied, see `asWorkerBrowserUrl` (below).
-		const bootstrapFnSource = (function bootstrapFn(workerUrl: string) {
+		const bootstrapFnSource = function bootstrapFn(workerUrl: string) {
 			function asWorkerBrowserUrl(url: string | URL | TrustedScriptURL): any {
-				if (typeof url === 'string' || url instanceof URL) {
-					return String(url).replace(/^file:\/\//i, 'vscode-file://vscode-app');
+				if (typeof url === "string" || url instanceof URL) {
+					return String(url).replace(/^file:\/\//i, "vscode-file://vscode-app");
 				}
 				return url;
 			}
@@ -134,8 +151,20 @@ if ((<any>self).Worker) {
 				return nativeFetch(asWorkerBrowserUrl(input), init);
 			};
 			self.XMLHttpRequest = class extends XMLHttpRequest {
-				override open(method: string, url: string | URL, async?: boolean, username?: string | null, password?: string | null): void {
-					return super.open(method, asWorkerBrowserUrl(url), async ?? true, username, password);
+				override open(
+					method: string,
+					url: string | URL,
+					async?: boolean,
+					username?: string | null,
+					password?: string | null,
+				): void {
+					return super.open(
+						method,
+						asWorkerBrowserUrl(url),
+						async ?? true,
+						username,
+						password,
+					);
 				}
 			};
 			const nativeImportScripts = importScripts.bind(self);
@@ -144,43 +173,42 @@ if ((<any>self).Worker) {
 			};
 
 			nativeImportScripts(workerUrl);
-		}).toString();
+		}.toString();
 
 		const js = `(${bootstrapFnSource}('${stringUrl}'))`;
 		options = options || {};
 		options.name = `${name} -> ${options.name || path.basename(stringUrl.toString())}`;
-		const blob = new Blob([js], { type: 'application/javascript' });
+		const blob = new Blob([js], { type: "application/javascript" });
 		const blobUrl = URL.createObjectURL(blob);
 		return new _Worker(blobUrl, options);
 	};
-
 } else {
 	// eslint-disable-next-line local/code-no-any-casts
 	(<any>self).Worker = class extends NestedWorker {
 		constructor(stringOrUrl: string | URL, options?: WorkerOptions) {
-			super(nativePostMessage, stringOrUrl, { name: path.basename(stringOrUrl.toString()), ...options });
+			super(nativePostMessage, stringOrUrl, {
+				name: path.basename(stringOrUrl.toString()),
+				...options,
+			});
 		}
 	};
 }
 
 //#endregion ---
 
-const hostUtil = new class implements IHostUtils {
+const hostUtil = new (class implements IHostUtils {
 	declare readonly _serviceBrand: undefined;
 	public readonly pid = undefined;
 	exit(_code?: number | undefined): void {
 		nativeClose();
 	}
-};
-
+})();
 
 class ExtensionWorker {
-
 	// protocol
 	readonly protocol: IMessagePassingProtocol;
 
 	constructor() {
-
 		const channel = new MessageChannel();
 		const emitter = new Emitter<VSBuffer>();
 		let terminating = false;
@@ -188,10 +216,10 @@ class ExtensionWorker {
 		// send over port2, keep port1
 		nativePostMessage(channel.port2, [channel.port2]);
 
-		channel.port1.onmessage = event => {
+		channel.port1.onmessage = (event) => {
 			const { data } = event;
 			if (!(data instanceof ArrayBuffer)) {
-				console.warn('UNKNOWN data received', data);
+				console.warn("UNKNOWN data received", data);
 				return;
 			}
 
@@ -199,7 +227,7 @@ class ExtensionWorker {
 			if (isMessageOfType(msg, MessageType.Terminate)) {
 				// handle terminate-message right here
 				terminating = true;
-				onTerminate('received terminate message from renderer');
+				onTerminate("received terminate message from renderer");
 				return;
 			}
 
@@ -209,12 +237,15 @@ class ExtensionWorker {
 
 		this.protocol = {
 			onMessage: emitter.event,
-			send: vsbuf => {
+			send: (vsbuf) => {
 				if (!terminating) {
-					const data = vsbuf.buffer.buffer.slice(vsbuf.buffer.byteOffset, vsbuf.buffer.byteOffset + vsbuf.buffer.byteLength);
+					const data = vsbuf.buffer.buffer.slice(
+						vsbuf.buffer.byteOffset,
+						vsbuf.buffer.byteOffset + vsbuf.buffer.byteLength,
+					);
 					channel.port1.postMessage(data, [data]);
 				}
-			}
+			},
 		};
 	}
 }
@@ -223,9 +254,11 @@ interface IRendererConnection {
 	protocol: IMessagePassingProtocol;
 	initData: IExtensionHostInitData;
 }
-function connectToRenderer(protocol: IMessagePassingProtocol): Promise<IRendererConnection> {
-	return new Promise<IRendererConnection>(resolve => {
-		const once = protocol.onMessage(raw => {
+function connectToRenderer(
+	protocol: IMessagePassingProtocol,
+): Promise<IRendererConnection> {
+	return new Promise<IRendererConnection>((resolve) => {
+		const once = protocol.onMessage((raw) => {
 			once.dispose();
 			const initData = <IExtensionHostInitData>JSON.parse(raw.toString());
 			protocol.send(createMessageOfType(MessageType.Initialized));
@@ -238,12 +271,17 @@ function connectToRenderer(protocol: IMessagePassingProtocol): Promise<IRenderer
 let onTerminate = (reason: string) => nativeClose();
 
 interface IInitMessage {
-	readonly type: 'vscode.init';
+	readonly type: "vscode.init";
 	readonly data: ReadonlyMap<string, MessagePort>;
 }
 
 function isInitMessage(a: any): a is IInitMessage {
-	return !!a && typeof a === 'object' && a.type === 'vscode.init' && a.data instanceof Map;
+	return (
+		!!a &&
+		typeof a === "object" &&
+		a.type === "vscode.init" &&
+		a.data instanceof Map
+	);
 }
 
 export function create(): { onmessage: (message: any) => void } {
@@ -256,20 +294,20 @@ export function create(): { onmessage: (message: any) => void } {
 				return; // silently ignore foreign messages
 			}
 
-			connectToRenderer(res.protocol).then(data => {
+			connectToRenderer(res.protocol).then((data) => {
 				performance.mark(`code/extHost/didWaitForInitData`);
 				const extHostMain = new ExtensionHostMain(
 					data.protocol,
 					data.initData,
 					hostUtil,
 					null,
-					message.data
+					message.data,
 				);
 
-				patchFetching(uri => extHostMain.asBrowserUri(uri));
+				patchFetching((uri) => extHostMain.asBrowserUri(uri));
 
 				onTerminate = (reason: string) => extHostMain.terminate(reason);
 			});
-		}
+		},
 	};
 }

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationError } from 'vscode';
+import { CancellationError } from "vscode";
 
 export function deepClone<T>(obj: T): T {
-	if (obj === null || typeof obj !== 'object') {
+	if (obj === null || typeof obj !== "object") {
 		return obj;
 	}
 	if (obj instanceof RegExp) {
@@ -14,12 +14,12 @@ export function deepClone<T>(obj: T): T {
 		return obj;
 	}
 	if (Array.isArray(obj)) {
-		return obj.map(item => deepClone(item)) as unknown as T;
+		return obj.map((item) => deepClone(item)) as unknown as T;
 	}
 	const result = {};
 	for (const key of Object.keys(obj as object) as Array<keyof T>) {
 		const value = obj[key];
-		if (value && typeof value === 'object') {
+		if (value && typeof value === "object") {
 			(result as T)[key] = deepClone(value);
 		} else {
 			(result as T)[key] = value;
@@ -33,16 +33,21 @@ export function objectEquals(one: any, other: any) {
 	if (one === other) {
 		return true;
 	}
-	if (one === null || one === undefined || other === null || other === undefined) {
+	if (
+		one === null ||
+		one === undefined ||
+		other === null ||
+		other === undefined
+	) {
 		return false;
 	}
 	if (typeof one !== typeof other) {
 		return false;
 	}
-	if (typeof one !== 'object') {
+	if (typeof one !== "object") {
 		return false;
 	}
-	if ((Array.isArray(one)) !== (Array.isArray(other))) {
+	if (Array.isArray(one) !== Array.isArray(other)) {
 		return false;
 	}
 
@@ -88,7 +93,6 @@ export function objectEquals(one: any, other: any) {
  * Pulled from https://github.com/microsoft/vscode/blob/3059063b805ed0ac10a6d9539e213386bfcfb852/extensions/markdown-language-features/src/util/async.ts
  */
 export class Delayer<T> {
-
 	public defaultDelay: number;
 	private _timeout: any; // Timer
 	private _cancelTimeout: Promise<T | null> | null;
@@ -107,7 +111,10 @@ export class Delayer<T> {
 		this._doCancelTimeout();
 	}
 
-	public trigger(task: ITask<T>, delay: number = this.defaultDelay): Promise<T | null> {
+	public trigger(
+		task: ITask<T>,
+		delay: number = this.defaultDelay,
+	): Promise<T | null> {
 		this._task = task;
 		if (delay >= 0) {
 			this._doCancelTimeout();
@@ -126,10 +133,13 @@ export class Delayer<T> {
 		}
 
 		if (delay >= 0 || this._timeout === null) {
-			this._timeout = setTimeout(() => {
-				this._timeout = null;
-				this._onSuccess?.(undefined);
-			}, delay >= 0 ? delay : this.defaultDelay);
+			this._timeout = setTimeout(
+				() => {
+					this._timeout = null;
+					this._onSuccess?.(undefined);
+				},
+				delay >= 0 ? delay : this.defaultDelay,
+			);
 		}
 
 		return this._cancelTimeout;
@@ -147,13 +157,12 @@ export interface ITask<T> {
 	(): T;
 }
 
-
 /**
  * Copied from src/vs/base/common/uuid.ts
  */
 export function generateUuid(): string {
 	// use `randomUUID` if possible
-	if (typeof crypto.randomUUID === 'function') {
+	if (typeof crypto.randomUUID === "function") {
 		// see https://developer.mozilla.org/en-US/docs/Web/API/Window/crypto
 		// > Although crypto is available on all windows, the returned Crypto object only has one
 		// > usable feature in insecure contexts: the getRandomValues() method.
@@ -166,7 +175,7 @@ export function generateUuid(): string {
 	const _data = new Uint8Array(16);
 	const _hex: string[] = [];
 	for (let i = 0; i < 256; i++) {
-		_hex.push(i.toString(16).padStart(2, '0'));
+		_hex.push(i.toString(16).padStart(2, "0"));
 	}
 
 	// get data
@@ -178,21 +187,21 @@ export function generateUuid(): string {
 
 	// print as string
 	let i = 0;
-	let result = '';
+	let result = "";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
@@ -206,18 +215,18 @@ export type ValueCallback<T = unknown> = (value: T | Promise<T>) => void;
 
 const enum DeferredOutcome {
 	Resolved,
-	Rejected
+	Rejected,
 }
-
 
 /**
  * Creates a promise whose resolution or rejection can be controlled imperatively.
  */
 export class DeferredPromise<T> {
-
 	private completeCallback!: ValueCallback<T>;
 	private errorCallback!: (err: unknown) => void;
-	private outcome?: { outcome: DeferredOutcome.Rejected; value: any } | { outcome: DeferredOutcome.Resolved; value: T };
+	private outcome?:
+		| { outcome: DeferredOutcome.Rejected; value: any }
+		| { outcome: DeferredOutcome.Resolved; value: T };
 
 	public get isRejected() {
 		return this.outcome?.outcome === DeferredOutcome.Rejected;
@@ -232,7 +241,9 @@ export class DeferredPromise<T> {
 	}
 
 	public get value() {
-		return this.outcome?.outcome === DeferredOutcome.Resolved ? this.outcome?.value : undefined;
+		return this.outcome?.outcome === DeferredOutcome.Resolved
+			? this.outcome?.value
+			: undefined;
 	}
 
 	public readonly p: Promise<T>;
@@ -245,7 +256,7 @@ export class DeferredPromise<T> {
 	}
 
 	public complete(value: T) {
-		return new Promise<void>(resolve => {
+		return new Promise<void>((resolve) => {
 			this.completeCallback(value);
 			this.outcome = { outcome: DeferredOutcome.Resolved, value };
 			resolve();
@@ -253,7 +264,7 @@ export class DeferredPromise<T> {
 	}
 
 	public error(err: unknown) {
-		return new Promise<void>(resolve => {
+		return new Promise<void>((resolve) => {
 			this.errorCallback(err);
 			this.outcome = { outcome: DeferredOutcome.Rejected, value: err };
 			resolve();

@@ -38,7 +38,9 @@ function validateScheme(logger: ILogger, uri: vscode.Uri): boolean {
 		return true;
 	}
 	logger.debug(`Unsupported URI scheme: ${uri.scheme}`);
-	vscode.window.showWarningMessage(l10n.t('Cannot send virtual files to Copilot CLI.'));
+	vscode.window.showWarningMessage(
+		l10n.t('Cannot send virtual files to Copilot CLI.'),
+	);
 	return false;
 }
 
@@ -56,8 +58,14 @@ export async function sendToSession(
 		return;
 	}
 
-	logger.info(`Sending context to session ${sessionId}: ${fileReferenceInfo.filePath}`);
-	httpServer.sendNotification(sessionId, ADD_FILE_REFERENCE_NOTIFICATION, fileReferenceInfo as unknown as Record<string, unknown>);
+	logger.info(
+		`Sending context to session ${sessionId}: ${fileReferenceInfo.filePath}`,
+	);
+	httpServer.sendNotification(
+		sessionId,
+		ADD_FILE_REFERENCE_NOTIFICATION,
+		fileReferenceInfo as unknown as Record<string, unknown>,
+	);
 }
 
 /**
@@ -92,7 +100,9 @@ export async function sendEditorContextToSession(
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
 		logger.debug('No active editor');
-		vscode.window.showWarningMessage(l10n.t('No active editor. Open a file to add a reference.'));
+		vscode.window.showWarningMessage(
+			l10n.t('No active editor. Open a file to add a reference.'),
+		);
 		return;
 	}
 
@@ -108,9 +118,11 @@ export async function sendEditorContextToSession(
 		selection: selectionInfo.selection.isEmpty
 			? null
 			: {
-				start: selectionInfo.selection.start,
-				end: selectionInfo.selection.end,
-			},
-		selectedText: selectionInfo.selection.isEmpty ? null : selectionInfo.text,
+					start: selectionInfo.selection.start,
+					end: selectionInfo.selection.end,
+				},
+		selectedText: selectionInfo.selection.isEmpty
+			? null
+			: selectionInfo.text,
 	});
 }

@@ -4,8 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { type ExportResult, ExportResultCode } from '@opentelemetry/core';
-import type { LogRecordExporter, ReadableLogRecord } from '@opentelemetry/sdk-logs';
-import { type PushMetricExporter, type ResourceMetrics, AggregationTemporality } from '@opentelemetry/sdk-metrics';
+import type {
+	LogRecordExporter,
+	ReadableLogRecord,
+} from '@opentelemetry/sdk-logs';
+import {
+	type PushMetricExporter,
+	type ResourceMetrics,
+	AggregationTemporality,
+} from '@opentelemetry/sdk-metrics';
 import type { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node';
 import * as fs from 'node:fs';
 
@@ -25,7 +32,7 @@ abstract class BaseFileExporter {
 	}
 
 	shutdown(): Promise<void> {
-		return new Promise(resolve => this.writeStream.end(resolve));
+		return new Promise((resolve) => this.writeStream.end(resolve));
 	}
 
 	forceFlush(): Promise<void> {
@@ -34,28 +41,52 @@ abstract class BaseFileExporter {
 }
 
 export class FileSpanExporter extends BaseFileExporter implements SpanExporter {
-	export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
-		const data = spans.map(s => safeStringify(s) + '\n').join('');
-		this.writeStream.write(data, err => {
-			resultCallback({ code: err ? ExportResultCode.FAILED : ExportResultCode.SUCCESS, error: err ?? undefined });
+	export(
+		spans: ReadableSpan[],
+		resultCallback: (result: ExportResult) => void,
+	): void {
+		const data = spans.map((s) => safeStringify(s) + '\n').join('');
+		this.writeStream.write(data, (err) => {
+			resultCallback({
+				code: err ? ExportResultCode.FAILED : ExportResultCode.SUCCESS,
+				error: err ?? undefined,
+			});
 		});
 	}
 }
 
-export class FileLogExporter extends BaseFileExporter implements LogRecordExporter {
-	export(logs: ReadableLogRecord[], resultCallback: (result: ExportResult) => void): void {
-		const data = logs.map(l => safeStringify(l) + '\n').join('');
-		this.writeStream.write(data, err => {
-			resultCallback({ code: err ? ExportResultCode.FAILED : ExportResultCode.SUCCESS, error: err ?? undefined });
+export class FileLogExporter
+	extends BaseFileExporter
+	implements LogRecordExporter
+{
+	export(
+		logs: ReadableLogRecord[],
+		resultCallback: (result: ExportResult) => void,
+	): void {
+		const data = logs.map((l) => safeStringify(l) + '\n').join('');
+		this.writeStream.write(data, (err) => {
+			resultCallback({
+				code: err ? ExportResultCode.FAILED : ExportResultCode.SUCCESS,
+				error: err ?? undefined,
+			});
 		});
 	}
 }
 
-export class FileMetricExporter extends BaseFileExporter implements PushMetricExporter {
-	export(metrics: ResourceMetrics, resultCallback: (result: ExportResult) => void): void {
+export class FileMetricExporter
+	extends BaseFileExporter
+	implements PushMetricExporter
+{
+	export(
+		metrics: ResourceMetrics,
+		resultCallback: (result: ExportResult) => void,
+	): void {
 		const data = safeStringify(metrics) + '\n';
-		this.writeStream.write(data, err => {
-			resultCallback({ code: err ? ExportResultCode.FAILED : ExportResultCode.SUCCESS, error: err ?? undefined });
+		this.writeStream.write(data, (err) => {
+			resultCallback({
+				code: err ? ExportResultCode.FAILED : ExportResultCode.SUCCESS,
+				error: err ?? undefined,
+			});
 		});
 	}
 

@@ -6,7 +6,10 @@
 import { EventEmitter } from 'events';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import type { ChatHookCommand } from 'vscode';
-import { CancellationToken, CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../util/vs/base/common/cancellation';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { TestLogService } from '../../../testing/common/testLogService';
 import { HookCommandResultKind } from '../../common/hookExecutor';
@@ -39,7 +42,10 @@ function createMockChild(): MockChildProcess {
 /**
  * Simulates a child process completing with the given stdout, stderr, and exit code.
  */
-function completeChild(child: MockChildProcess, opts: { stdout?: string; stderr?: string; exitCode?: number }): void {
+function completeChild(
+	child: MockChildProcess,
+	opts: { stdout?: string; stderr?: string; exitCode?: number },
+): void {
 	if (opts.stdout) {
 		child.stdout.emit('data', Buffer.from(opts.stdout));
 	}
@@ -50,7 +56,10 @@ function completeChild(child: MockChildProcess, opts: { stdout?: string; stderr?
 	child.emit('close');
 }
 
-function cmd(command: string, options?: Partial<Omit<ChatHookCommand, 'command'>>): ChatHookCommand {
+function cmd(
+	command: string,
+	options?: Partial<Omit<ChatHookCommand, 'command'>>,
+): ChatHookCommand {
 	return { command, ...options } as ChatHookCommand;
 }
 
@@ -59,14 +68,24 @@ describe('NodeHookExecutor', () => {
 	let child: MockChildProcess;
 
 	beforeEach(() => {
-		const mockOutputChannel: IHooksOutputChannel = { _serviceBrand: undefined, appendLine: vi.fn() };
-		executor = new NodeHookExecutor(new TestLogService(), mockOutputChannel);
+		const mockOutputChannel: IHooksOutputChannel = {
+			_serviceBrand: undefined,
+			appendLine: vi.fn(),
+		};
+		executor = new NodeHookExecutor(
+			new TestLogService(),
+			mockOutputChannel,
+		);
 		child = createMockChild();
 		mockChild = child;
 	});
 
 	test('returns success with string output for exit code 0', async () => {
-		const promise = executor.executeCommand(cmd('test'), undefined, CancellationToken.None);
+		const promise = executor.executeCommand(
+			cmd('test'),
+			undefined,
+			CancellationToken.None,
+		);
 		completeChild(child, { stdout: 'hello world', exitCode: 0 });
 		const result = await promise;
 
@@ -75,7 +94,11 @@ describe('NodeHookExecutor', () => {
 	});
 
 	test('parses JSON stdout', async () => {
-		const promise = executor.executeCommand(cmd('test'), undefined, CancellationToken.None);
+		const promise = executor.executeCommand(
+			cmd('test'),
+			undefined,
+			CancellationToken.None,
+		);
 		completeChild(child, { stdout: '{"key": "value"}', exitCode: 0 });
 		const result = await promise;
 
@@ -84,7 +107,11 @@ describe('NodeHookExecutor', () => {
 	});
 
 	test('returns empty string for no output', async () => {
-		const promise = executor.executeCommand(cmd('test'), undefined, CancellationToken.None);
+		const promise = executor.executeCommand(
+			cmd('test'),
+			undefined,
+			CancellationToken.None,
+		);
 		completeChild(child, { exitCode: 0 });
 		const result = await promise;
 
@@ -93,7 +120,11 @@ describe('NodeHookExecutor', () => {
 	});
 
 	test('returns non-blocking error for exit code 1', async () => {
-		const promise = executor.executeCommand(cmd('test'), undefined, CancellationToken.None);
+		const promise = executor.executeCommand(
+			cmd('test'),
+			undefined,
+			CancellationToken.None,
+		);
 		completeChild(child, { stderr: 'warning', exitCode: 1 });
 		const result = await promise;
 
@@ -102,7 +133,11 @@ describe('NodeHookExecutor', () => {
 	});
 
 	test('returns blocking error for exit code 2', async () => {
-		const promise = executor.executeCommand(cmd('test'), undefined, CancellationToken.None);
+		const promise = executor.executeCommand(
+			cmd('test'),
+			undefined,
+			CancellationToken.None,
+		);
 		completeChild(child, { stderr: 'fatal error', exitCode: 2 });
 		const result = await promise;
 
@@ -112,7 +147,11 @@ describe('NodeHookExecutor', () => {
 
 	test('writes JSON input to stdin', async () => {
 		const input = { tool: 'bash', args: { command: 'ls' } };
-		const promise = executor.executeCommand(cmd('test'), input, CancellationToken.None);
+		const promise = executor.executeCommand(
+			cmd('test'),
+			input,
+			CancellationToken.None,
+		);
 		completeChild(child, { exitCode: 0 });
 		await promise;
 
@@ -123,7 +162,11 @@ describe('NodeHookExecutor', () => {
 	});
 
 	test('does not write to stdin when input is undefined', async () => {
-		const promise = executor.executeCommand(cmd('test'), undefined, CancellationToken.None);
+		const promise = executor.executeCommand(
+			cmd('test'),
+			undefined,
+			CancellationToken.None,
+		);
 		completeChild(child, { exitCode: 0 });
 		await promise;
 
@@ -134,9 +177,13 @@ describe('NodeHookExecutor', () => {
 	test('converts URI-like objects in input to filesystem paths', async () => {
 		const input = {
 			cwd: { scheme: 'file', path: '/test/path', fsPath: '/test/path' },
-			other: 'value'
+			other: 'value',
 		};
-		const promise = executor.executeCommand(cmd('test'), input, CancellationToken.None);
+		const promise = executor.executeCommand(
+			cmd('test'),
+			input,
+			CancellationToken.None,
+		);
 		completeChild(child, { exitCode: 0 });
 		await promise;
 
@@ -148,7 +195,8 @@ describe('NodeHookExecutor', () => {
 	test('passes custom environment variables to spawn', async () => {
 		const promise = executor.executeCommand(
 			cmd('test', { env: { MY_VAR: 'custom_value' } }),
-			undefined, CancellationToken.None
+			undefined,
+			CancellationToken.None,
 		);
 		completeChild(child, { stdout: 'ok', exitCode: 0 });
 		const result = await promise;
@@ -160,7 +208,8 @@ describe('NodeHookExecutor', () => {
 	test('passes custom cwd from hook command to spawn', async () => {
 		const promise = executor.executeCommand(
 			cmd('test', { cwd: URI.file('/my/project') }),
-			undefined, CancellationToken.None
+			undefined,
+			CancellationToken.None,
 		);
 		completeChild(child, { stdout: 'ok', exitCode: 0 });
 		const result = await promise;
@@ -170,7 +219,11 @@ describe('NodeHookExecutor', () => {
 	});
 
 	test('handles spawn error as non-blocking error', async () => {
-		const promise = executor.executeCommand(cmd('badcmd'), undefined, CancellationToken.None);
+		const promise = executor.executeCommand(
+			cmd('badcmd'),
+			undefined,
+			CancellationToken.None,
+		);
 		child.emit('error', new Error('spawn ENOENT'));
 		const result = await promise;
 
@@ -180,7 +233,11 @@ describe('NodeHookExecutor', () => {
 
 	test('kills process on cancellation', async () => {
 		const cts = new CancellationTokenSource();
-		const promise = executor.executeCommand(cmd('test'), undefined, cts.token);
+		const promise = executor.executeCommand(
+			cmd('test'),
+			undefined,
+			cts.token,
+		);
 
 		cts.cancel();
 		expect(child.kill).toHaveBeenCalledWith('SIGTERM');
@@ -196,7 +253,7 @@ describe('NodeHookExecutor', () => {
 			const promise = executor.executeCommand(
 				cmd('test', { timeout: 5 }),
 				undefined,
-				CancellationToken.None
+				CancellationToken.None,
 			);
 
 			vi.advanceTimersByTime(5000);
@@ -211,10 +268,13 @@ describe('NodeHookExecutor', () => {
 	});
 
 	describe('getShellCommand', () => {
-
 		test('uses shell: true on non-Windows', () => {
 			const result = getShellCommand('echo hello', false);
-			expect(result).toEqual({ command: 'echo hello', args: [], shell: true });
+			expect(result).toEqual({
+				command: 'echo hello',
+				args: [],
+				shell: true,
+			});
 		});
 
 		test('uses PowerShell with -ExecutionPolicy Bypass on Windows when ComSpec is cmd.exe', () => {
@@ -226,7 +286,14 @@ describe('NodeHookExecutor', () => {
 
 				const result = getShellCommand('echo hello', true);
 				expect(result.command).toContain('powershell.exe');
-				expect(result.args).toEqual(['-ExecutionPolicy', 'Bypass', '-NoProfile', '-NoLogo', '-Command', 'echo hello']);
+				expect(result.args).toEqual([
+					'-ExecutionPolicy',
+					'Bypass',
+					'-NoProfile',
+					'-NoLogo',
+					'-Command',
+					'echo hello',
+				]);
 				expect(result.env).toEqual({ POWERSHELL_UPDATECHECK: 'Off' });
 				expect(result.shell).toBeUndefined();
 			} finally {
@@ -238,10 +305,15 @@ describe('NodeHookExecutor', () => {
 		test('uses shell: true on Windows when ComSpec is not cmd.exe', () => {
 			const origComSpec = process.env.ComSpec;
 			try {
-				process.env.ComSpec = 'C:\\Program Files\\PowerShell\\7\\pwsh.exe';
+				process.env.ComSpec =
+					'C:\\Program Files\\PowerShell\\7\\pwsh.exe';
 
 				const result = getShellCommand('echo hello', true);
-				expect(result).toEqual({ command: 'echo hello', args: [], shell: true });
+				expect(result).toEqual({
+					command: 'echo hello',
+					args: [],
+					shell: true,
+				});
 			} finally {
 				process.env.ComSpec = origComSpec;
 			}

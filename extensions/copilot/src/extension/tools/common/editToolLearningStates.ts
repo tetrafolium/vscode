@@ -5,8 +5,11 @@
 
 import { ToolName } from './toolNames';
 
-export type EditTools = ToolName.ApplyPatch | ToolName.ReplaceString | ToolName.EditFile | ToolName.MultiReplaceString;
-
+export type EditTools =
+	| ToolName.ApplyPatch
+	| ToolName.ReplaceString
+	| ToolName.EditFile
+	| ToolName.MultiReplaceString;
 
 export interface IEditToolLearningData {
 	state: State;
@@ -39,12 +42,10 @@ export const enum State {
 	ReplaceStringWithMulti,
 }
 
-
 interface StateConfig {
 	allowedTools: EditTools[];
 	transitions?: { [K in State]?: (data: IEditToolLearningData) => boolean };
 }
-
 
 interface ToolLearningData {
 	successBitset: bigint;
@@ -69,14 +70,18 @@ function getSuccessRate(successBitset: bigint, totalAttempts: number): number {
 	return successCount / actualBits;
 }
 
-
 function sampleSize(data: IEditToolLearningData, tool: EditTools): number {
-	return Math.min(data.tools[tool]?.attempts || 0, LearningConfig.WINDOW_SIZE);
+	return Math.min(
+		data.tools[tool]?.attempts || 0,
+		LearningConfig.WINDOW_SIZE,
+	);
 }
 
 function successRate(data: IEditToolLearningData, tool: EditTools): number {
 	const toolData = data.tools[tool];
-	if (!toolData) { return 0; }
+	if (!toolData) {
+		return 0;
+	}
 	return getSuccessRate(toolData.successBitset, toolData.attempts);
 }
 
@@ -84,42 +89,62 @@ export const EDIT_TOOL_LEARNING_STATES: Record<State, StateConfig> = {
 	[State.Initial]: {
 		allowedTools: [ToolName.EditFile, ToolName.ReplaceString],
 		transitions: {
-			[State.ReplaceStringMaybeMulti]: d =>
-				sampleSize(d, ToolName.ReplaceString) > LearningConfig.MIN_SAMPLE_SIZE &&
-				successRate(d, ToolName.ReplaceString) > LearningConfig.SR_SUCCESS_THRESHOLD,
-			[State.EditFileOnly]: d =>
-				sampleSize(d, ToolName.ReplaceString) > LearningConfig.MIN_SAMPLE_SIZE &&
-				successRate(d, ToolName.ReplaceString) < LearningConfig.SR_FAILURE_THRESHOLD,
-			[State.ReplaceStringForced]: d => {
+			[State.ReplaceStringMaybeMulti]: (d) =>
+				sampleSize(d, ToolName.ReplaceString) >
+					LearningConfig.MIN_SAMPLE_SIZE &&
+				successRate(d, ToolName.ReplaceString) >
+					LearningConfig.SR_SUCCESS_THRESHOLD,
+			[State.EditFileOnly]: (d) =>
+				sampleSize(d, ToolName.ReplaceString) >
+					LearningConfig.MIN_SAMPLE_SIZE &&
+				successRate(d, ToolName.ReplaceString) <
+					LearningConfig.SR_FAILURE_THRESHOLD,
+			[State.ReplaceStringForced]: (d) => {
 				// Models are instructed to prefer replace_string to insert_edit. If
 				// this model is not doing that (more than 70% of edits are insert_edit),
 				// force it to so we can get more data.
 				const editFileAttempts = sampleSize(d, ToolName.EditFile);
-				const replaceStringAttempts = sampleSize(d, ToolName.ReplaceString);
-				return editFileAttempts > LearningConfig.MIN_SAMPLE_SIZE && editFileAttempts / (editFileAttempts + replaceStringAttempts) > 0.7;
+				const replaceStringAttempts = sampleSize(
+					d,
+					ToolName.ReplaceString,
+				);
+				return (
+					editFileAttempts > LearningConfig.MIN_SAMPLE_SIZE &&
+					editFileAttempts /
+						(editFileAttempts + replaceStringAttempts) >
+						0.7
+				);
 			},
 		},
 	},
 	[State.ReplaceStringForced]: {
 		allowedTools: [ToolName.ReplaceString],
 		transitions: {
-			[State.ReplaceStringMaybeMulti]: d =>
-				sampleSize(d, ToolName.ReplaceString) > LearningConfig.MIN_SAMPLE_SIZE &&
-				successRate(d, ToolName.ReplaceString) > LearningConfig.SR_SUCCESS_THRESHOLD,
-			[State.EditFileOnly]: d =>
-				sampleSize(d, ToolName.ReplaceString) > LearningConfig.MIN_SAMPLE_SIZE &&
-				successRate(d, ToolName.ReplaceString) < LearningConfig.SR_FAILURE_THRESHOLD,
+			[State.ReplaceStringMaybeMulti]: (d) =>
+				sampleSize(d, ToolName.ReplaceString) >
+					LearningConfig.MIN_SAMPLE_SIZE &&
+				successRate(d, ToolName.ReplaceString) >
+					LearningConfig.SR_SUCCESS_THRESHOLD,
+			[State.EditFileOnly]: (d) =>
+				sampleSize(d, ToolName.ReplaceString) >
+					LearningConfig.MIN_SAMPLE_SIZE &&
+				successRate(d, ToolName.ReplaceString) <
+					LearningConfig.SR_FAILURE_THRESHOLD,
 		},
 	},
 	[State.ReplaceStringMaybeMulti]: {
 		allowedTools: [ToolName.ReplaceString, ToolName.MultiReplaceString],
 		transitions: {
-			[State.ReplaceStringWithMulti]: d =>
-				sampleSize(d, ToolName.MultiReplaceString) > LearningConfig.MIN_SAMPLE_SIZE &&
-				successRate(d, ToolName.MultiReplaceString) > LearningConfig.MULTISR_SUCCESS_THRESHOLD,
-			[State.ReplaceStringOnly]: d =>
-				sampleSize(d, ToolName.MultiReplaceString) > LearningConfig.MIN_SAMPLE_SIZE &&
-				successRate(d, ToolName.MultiReplaceString) < LearningConfig.MULTISR_FAILURE_THRESHOLD,
+			[State.ReplaceStringWithMulti]: (d) =>
+				sampleSize(d, ToolName.MultiReplaceString) >
+					LearningConfig.MIN_SAMPLE_SIZE &&
+				successRate(d, ToolName.MultiReplaceString) >
+					LearningConfig.MULTISR_SUCCESS_THRESHOLD,
+			[State.ReplaceStringOnly]: (d) =>
+				sampleSize(d, ToolName.MultiReplaceString) >
+					LearningConfig.MIN_SAMPLE_SIZE &&
+				successRate(d, ToolName.MultiReplaceString) <
+					LearningConfig.MULTISR_FAILURE_THRESHOLD,
 		},
 	},
 

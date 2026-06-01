@@ -32,7 +32,10 @@ const emptyEnv: Record<string, string | undefined> = {};
 
 describe('deriveCopilotCliOTelEnv', () => {
 	it('returns empty when disabled', () => {
-		const result = deriveCopilotCliOTelEnv(makeConfig({ enabled: false }), emptyEnv);
+		const result = deriveCopilotCliOTelEnv(
+			makeConfig({ enabled: false }),
+			emptyEnv,
+		);
 		expect(result).toEqual({});
 	});
 
@@ -45,18 +48,34 @@ describe('deriveCopilotCliOTelEnv', () => {
 	});
 
 	it('includes capture content var when captureContent is true', () => {
-		const result = deriveCopilotCliOTelEnv(makeConfig({ captureContent: true }), emptyEnv);
-		expect(result['OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT']).toBe('true');
+		const result = deriveCopilotCliOTelEnv(
+			makeConfig({ captureContent: true }),
+			emptyEnv,
+		);
+		expect(
+			result['OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT'],
+		).toBe('true');
 	});
 
 	it('includes file exporter path when set', () => {
-		const result = deriveCopilotCliOTelEnv(makeConfig({ fileExporterPath: '/tmp/otel.jsonl', exporterType: 'file' }), emptyEnv);
-		expect(result['COPILOT_OTEL_FILE_EXPORTER_PATH']).toBe('/tmp/otel.jsonl');
+		const result = deriveCopilotCliOTelEnv(
+			makeConfig({
+				fileExporterPath: '/tmp/otel.jsonl',
+				exporterType: 'file',
+			}),
+			emptyEnv,
+		);
+		expect(result['COPILOT_OTEL_FILE_EXPORTER_PATH']).toBe(
+			'/tmp/otel.jsonl',
+		);
 		expect(result['COPILOT_OTEL_EXPORTER_TYPE']).toBe('file');
 	});
 
 	it('does not set exporter type for non-file exporters', () => {
-		const result = deriveCopilotCliOTelEnv(makeConfig({ exporterType: 'otlp-http' }), emptyEnv);
+		const result = deriveCopilotCliOTelEnv(
+			makeConfig({ exporterType: 'otlp-http' }),
+			emptyEnv,
+		);
 		expect(result['COPILOT_OTEL_EXPORTER_TYPE']).toBeUndefined();
 	});
 
@@ -71,14 +90,22 @@ describe('deriveCopilotCliOTelEnv', () => {
 	});
 
 	it('does not include capture content when captureContent is false', () => {
-		const result = deriveCopilotCliOTelEnv(makeConfig({ captureContent: false }), emptyEnv);
-		expect(result['OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT']).toBeUndefined();
+		const result = deriveCopilotCliOTelEnv(
+			makeConfig({ captureContent: false }),
+			emptyEnv,
+		);
+		expect(
+			result['OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT'],
+		).toBeUndefined();
 	});
 });
 
 describe('deriveClaudeOTelEnv', () => {
 	it('returns empty when disabled', () => {
-		const result = deriveClaudeOTelEnv(makeConfig({ enabled: false }), emptyEnv);
+		const result = deriveClaudeOTelEnv(
+			makeConfig({ enabled: false }),
+			emptyEnv,
+		);
 		expect(result).toEqual({});
 	});
 
@@ -94,18 +121,27 @@ describe('deriveClaudeOTelEnv', () => {
 	});
 
 	it('uses gRPC protocol when configured', () => {
-		const result = deriveClaudeOTelEnv(makeConfig({ otlpProtocol: 'grpc' }), emptyEnv);
+		const result = deriveClaudeOTelEnv(
+			makeConfig({ otlpProtocol: 'grpc' }),
+			emptyEnv,
+		);
 		expect(result['OTEL_EXPORTER_OTLP_PROTOCOL']).toBe('grpc');
 	});
 
 	it('includes content capture vars when captureContent is true', () => {
-		const result = deriveClaudeOTelEnv(makeConfig({ captureContent: true }), emptyEnv);
+		const result = deriveClaudeOTelEnv(
+			makeConfig({ captureContent: true }),
+			emptyEnv,
+		);
 		expect(result['OTEL_LOG_USER_PROMPTS']).toBe('1');
 		expect(result['OTEL_LOG_TOOL_DETAILS']).toBe('1');
 	});
 
 	it('does not include content capture vars when captureContent is false', () => {
-		const result = deriveClaudeOTelEnv(makeConfig({ captureContent: false }), emptyEnv);
+		const result = deriveClaudeOTelEnv(
+			makeConfig({ captureContent: false }),
+			emptyEnv,
+		);
 		expect(result['OTEL_LOG_USER_PROMPTS']).toBeUndefined();
 		expect(result['OTEL_LOG_TOOL_DETAILS']).toBeUndefined();
 	});
@@ -123,7 +159,10 @@ describe('deriveClaudeOTelEnv', () => {
 	});
 
 	it('does not include file exporter path (not supported by Claude SDK)', () => {
-		const result = deriveClaudeOTelEnv(makeConfig({ fileExporterPath: '/tmp/otel.jsonl' }), emptyEnv);
+		const result = deriveClaudeOTelEnv(
+			makeConfig({ fileExporterPath: '/tmp/otel.jsonl' }),
+			emptyEnv,
+		);
 		expect(result['COPILOT_OTEL_FILE_EXPORTER_PATH']).toBeUndefined();
 	});
 });

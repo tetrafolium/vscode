@@ -5,7 +5,10 @@
 
 import Sinon from 'sinon';
 import { ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
-import { ICompletionsCitationManager, IPDocumentCitation } from '../citationManager';
+import {
+	ICompletionsCitationManager,
+	IPDocumentCitation,
+} from '../citationManager';
 import { CopilotCompletion } from '../ghostText/copilotCompletion';
 import { ResultType } from '../ghostText/resultType';
 import { postInsertionTasks } from '../postInsertion';
@@ -19,7 +22,10 @@ import { TestTextDocumentManager } from './textDocument';
 
 suite('postInsertionTasks', function () {
 	let accessor: ServicesAccessor;
-	let handleIPCodeCitation: Sinon.SinonSpy<[citation: IPDocumentCitation], Promise<void>>;
+	let handleIPCodeCitation: Sinon.SinonSpy<
+		[citation: IPDocumentCitation],
+		Promise<void>
+	>;
 	let docMgr: TestTextDocumentManager;
 	let doc: ITextDocument;
 	const uri = 'file:///hello.js';
@@ -30,9 +36,18 @@ suite('postInsertionTasks', function () {
 	setup(function () {
 		accessor = createLibTestingContext().createTestingAccessor();
 		const citationManager = accessor.get(ICompletionsCitationManager);
-		handleIPCodeCitation = Sinon.spy(citationManager, 'handleIPCodeCitation');
-		docMgr = accessor.get(ICompletionsTextDocumentManagerService) as TestTextDocumentManager;
-		doc = docMgr.setTextDocument(uri, 'javascript', 'function main() {\n\n\n}');
+		handleIPCodeCitation = Sinon.spy(
+			citationManager,
+			'handleIPCodeCitation',
+		);
+		docMgr = accessor.get(
+			ICompletionsTextDocumentManagerService,
+		) as TestTextDocumentManager;
+		doc = docMgr.setTextDocument(
+			uri,
+			'javascript',
+			'function main() {\n\n\n}',
+		);
 		completion = {
 			uuid: '1234-5678-9abc',
 			insertText: completionText,
@@ -49,12 +64,20 @@ suite('postInsertionTasks', function () {
 	});
 
 	test('invokes CitationManager when code references are present in the completion', async function () {
-		completion.copilotAnnotations = fakeCodeReference(0, completionText.length);
+		completion.copilotAnnotations = fakeCodeReference(
+			0,
+			completionText.length,
+		);
 		const citations = (
-			completion.copilotAnnotations.ip_code_citations[0].details as { citations: { license: string; url: string }[] }
+			completion.copilotAnnotations.ip_code_citations[0].details as {
+				citations: { license: string; url: string }[];
+			}
 		).citations;
 
-		docMgr.updateTextDocument(doc.uri, `function main() {\n${completionText}\n\n}`);
+		docMgr.updateTextDocument(
+			doc.uri,
+			`function main() {\n${completionText}\n\n}`,
+		);
 		postInsertionTasks(
 			accessor,
 			'ghostText',
@@ -62,8 +85,12 @@ suite('postInsertionTasks', function () {
 			completion.offset,
 			doc.uri,
 			completion.telemetry,
-			{ compType: 'full', acceptedLength: completionText.length, acceptedLines: 0 },
-			completion.copilotAnnotations
+			{
+				compType: 'full',
+				acceptedLength: completionText.length,
+				acceptedLines: 0,
+			},
+			completion.copilotAnnotations,
 		);
 		const promiseQueue = accessor.get(ICompletionsPromiseQueueService);
 		await promiseQueue.flush();
@@ -73,20 +100,31 @@ suite('postInsertionTasks', function () {
 			offsetStart: completion.offset,
 			offsetEnd: completion.offset + completionText.length,
 			version: doc.version + 1,
-			location: { start: pos, end: { line: pos.line, character: completionText.length } },
+			location: {
+				start: pos,
+				end: { line: pos.line, character: completionText.length },
+			},
 			matchingText: completionText,
 			details: citations,
 		});
 	});
 
 	test('adjusts code reference offsets for partial acceptance', async function () {
-		completion.copilotAnnotations = fakeCodeReference(0, completionText.length);
+		completion.copilotAnnotations = fakeCodeReference(
+			0,
+			completionText.length,
+		);
 		const citations = (
-			completion.copilotAnnotations.ip_code_citations[0].details as { citations: { license: string; url: string }[] }
+			completion.copilotAnnotations.ip_code_citations[0].details as {
+				citations: { license: string; url: string }[];
+			}
 		).citations;
 		const partial = completionText.slice(0, 11);
 
-		docMgr.updateTextDocument(doc.uri, `function main() {\n${partial}\n\n}`);
+		docMgr.updateTextDocument(
+			doc.uri,
+			`function main() {\n${partial}\n\n}`,
+		);
 		postInsertionTasks(
 			accessor,
 			'ghostText',
@@ -94,8 +132,12 @@ suite('postInsertionTasks', function () {
 			completion.offset,
 			doc.uri,
 			completion.telemetry,
-			{ compType: 'partial', acceptedLength: partial.length, acceptedLines: 0 },
-			completion.copilotAnnotations
+			{
+				compType: 'partial',
+				acceptedLength: partial.length,
+				acceptedLines: 0,
+			},
+			completion.copilotAnnotations,
 		);
 		const promiseQueue = accessor.get(ICompletionsPromiseQueueService);
 		await promiseQueue.flush();
@@ -105,7 +147,10 @@ suite('postInsertionTasks', function () {
 			offsetStart: completion.offset,
 			offsetEnd: completion.offset + partial.length,
 			version: doc.version + 1,
-			location: { start: pos, end: { line: pos.line, character: partial.length } },
+			location: {
+				start: pos,
+				end: { line: pos.line, character: partial.length },
+			},
 			matchingText: partial,
 			details: citations,
 		});
@@ -115,7 +160,10 @@ suite('postInsertionTasks', function () {
 		completion.copilotAnnotations = fakeCodeReference(12, 14); // "Hello, world!"
 		const partial = completionText.slice(0, 11);
 
-		docMgr.updateTextDocument(doc.uri, `function main() {\n${partial}\n\n}`);
+		docMgr.updateTextDocument(
+			doc.uri,
+			`function main() {\n${partial}\n\n}`,
+		);
 		postInsertionTasks(
 			accessor,
 			'ghostText',
@@ -123,8 +171,12 @@ suite('postInsertionTasks', function () {
 			completion.offset,
 			doc.uri,
 			completion.telemetry,
-			{ compType: 'partial', acceptedLength: partial.length, acceptedLines: 0 },
-			completion.copilotAnnotations
+			{
+				compType: 'partial',
+				acceptedLength: partial.length,
+				acceptedLines: 0,
+			},
+			completion.copilotAnnotations,
 		);
 		const promiseQueue = accessor.get(ICompletionsPromiseQueueService);
 		await promiseQueue.flush();
@@ -133,15 +185,23 @@ suite('postInsertionTasks', function () {
 	});
 
 	test('adjusts code reference range when additional document edits have been made since completion insertion', async function () {
-		completion.copilotAnnotations = fakeCodeReference(0, completionText.length);
+		completion.copilotAnnotations = fakeCodeReference(
+			0,
+			completionText.length,
+		);
 		const citations = (
-			completion.copilotAnnotations.ip_code_citations[0].details as { citations: { license: string; url: string }[] }
+			completion.copilotAnnotations.ip_code_citations[0].details as {
+				citations: { license: string; url: string }[];
+			}
 		).citations;
 
 		// when we'd like the editor to notify us of acceptance:
 		// docMgr.updateTextDocument(doc.uri, `function main() {\n${completionText}\n\n}`);
 		// when it might:
-		docMgr.updateTextDocument(doc.uri, `function main() {\n    ${completionText};\n\n}`);
+		docMgr.updateTextDocument(
+			doc.uri,
+			`function main() {\n    ${completionText};\n\n}`,
+		);
 		postInsertionTasks(
 			accessor,
 			'ghostText',
@@ -149,8 +209,12 @@ suite('postInsertionTasks', function () {
 			completion.offset,
 			doc.uri,
 			completion.telemetry,
-			{ compType: 'full', acceptedLength: completionText.length, acceptedLines: 3 },
-			completion.copilotAnnotations
+			{
+				compType: 'full',
+				acceptedLength: completionText.length,
+				acceptedLines: 3,
+			},
+			completion.copilotAnnotations,
 		);
 		const promiseQueue = accessor.get(ICompletionsPromiseQueueService);
 		await promiseQueue.flush();

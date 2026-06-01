@@ -17,13 +17,19 @@
 	width: 100%;
 }
 
-.agent-host-toolbar .agent-host-toolbar-content .monaco-action-bar .actions-container {
+.agent-host-toolbar
+	.agent-host-toolbar-content
+	.monaco-action-bar
+	.actions-container {
 	display: flex;
 	flex-direction: column;
 	width: 100%;
 }
 
-.agent-host-toolbar .agent-host-toolbar-content .monaco-action-bar .action-item {
+.agent-host-toolbar
+	.agent-host-toolbar-content
+	.monaco-action-bar
+	.action-item {
 	width: 100%;
 	max-width: 100%;
 }

@@ -8,7 +8,10 @@ import { INativeEnvService } from '../common/envService';
 import { EnvServiceImpl } from '../vscode/envServiceImpl';
 import { URI } from '../../../util/vs/base/common/uri';
 
-export class NativeEnvServiceImpl extends EnvServiceImpl implements INativeEnvService {
+export class NativeEnvServiceImpl
+	extends EnvServiceImpl
+	implements INativeEnvService
+{
 	declare readonly _serviceBrand: undefined;
 
 	get userHome() {

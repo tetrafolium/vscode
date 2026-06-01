@@ -2,14 +2,18 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { TimeoutTimer } from '../../../../../base/common/async.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { IObservableWithChange, IObservable, runOnChange } from '../../../../../base/common/observable.js';
-import { BaseStringEdit } from '../../../../../editor/common/core/edits/stringEdit.js';
-import { StringText } from '../../../../../editor/common/core/text/abstractText.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { ArcTracker } from '../../common/arcTracker.js';
-import type { ScmRepoAdapter } from './scmAdapter.js';
+import { TimeoutTimer } from "../../../../../base/common/async.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import {
+	IObservableWithChange,
+	IObservable,
+	runOnChange,
+} from "../../../../../base/common/observable.js";
+import { BaseStringEdit } from "../../../../../editor/common/core/edits/stringEdit.js";
+import { StringText } from "../../../../../editor/common/core/text/abstractText.js";
+import { ITelemetryService } from "../../../../../platform/telemetry/common/telemetry.js";
+import { ArcTracker } from "../../common/arcTracker.js";
+import type { ScmRepoAdapter } from "./scmAdapter.js";
 
 export class ArcTelemetryReporter extends Disposable {
 	private readonly _arcTracker;
@@ -20,24 +24,35 @@ export class ArcTelemetryReporter extends Disposable {
 	constructor(
 		private readonly _timesMs: number[],
 		private readonly _documentValueBeforeTrackedEdit: StringText,
-		private readonly _document: { value: IObservableWithChange<StringText, { edit: BaseStringEdit }> },
+		private readonly _document: {
+			value: IObservableWithChange<StringText, { edit: BaseStringEdit }>;
+		},
 		// _markedEdits -> document.value
 		private readonly _gitRepo: IObservable<ScmRepoAdapter | undefined>,
 		private readonly _trackedEdit: BaseStringEdit,
-		private readonly _sendTelemetryEvent: (res: ArcTelemetryReporterData) => void,
+		private readonly _sendTelemetryEvent: (
+			res: ArcTelemetryReporterData,
+		) => void,
 		private readonly _dispose: () => void,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService
+		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 	) {
 		super();
 
-		this._arcTracker = new ArcTracker(this._documentValueBeforeTrackedEdit, this._trackedEdit);
+		this._arcTracker = new ArcTracker(
+			this._documentValueBeforeTrackedEdit,
+			this._trackedEdit,
+		);
 
-		this._store.add(runOnChange(this._document.value, (_val, _prevVal, changes) => {
-			const edit = BaseStringEdit.composeOrUndefined(changes.map(c => c.edit));
-			if (edit) {
-				this._arcTracker.handleEdits(edit);
-			}
-		}));
+		this._store.add(
+			runOnChange(this._document.value, (_val, _prevVal, changes) => {
+				const edit = BaseStringEdit.composeOrUndefined(
+					changes.map((c) => c.edit),
+				);
+				if (edit) {
+					this._arcTracker.handleEdits(edit);
+				}
+			}),
+		);
 
 		this._initialLineCounts = this._arcTracker.getLineCountInfo();
 
@@ -49,9 +64,14 @@ export class ArcTelemetryReporter extends Disposable {
 			if (timeMs <= 0) {
 				this._report(timeMs);
 			} else {
-				this._reportAfter(timeMs, i === this._timesMs.length - 1 ? () => {
-					this._dispose();
-				} : undefined);
+				this._reportAfter(
+					timeMs,
+					i === this._timesMs.length - 1
+						? () => {
+								this._dispose();
+							}
+						: undefined,
+				);
 			}
 		}
 	}

@@ -6,7 +6,10 @@
 import * as l10n from '@vscode/l10n';
 import { env, Uri, window, workspace } from 'vscode';
 import { IAuthenticationService } from '../../../../platform/authentication/common/authentication';
-import { ILogger, ILogService } from '../../../../platform/log/common/logService';
+import {
+	ILogger,
+	ILogService,
+} from '../../../../platform/log/common/logService';
 import { IFetcherService } from '../../../../platform/networking/common/fetcherService';
 import { LogEntry } from '../../../../platform/workspaceRecorder/common/workspaceLog';
 import { encodeBase64, VSBuffer } from '../../../../util/vs/base/common/buffer';
@@ -33,11 +36,10 @@ interface FeedbackRepoConfig {
  * Responsible for file collection, user confirmation, filtering, and upload.
  */
 export class NesFeedbackSubmitter {
-
 	private static readonly DEFAULT_REPO_CONFIG: FeedbackRepoConfig = {
 		owner: 'microsoft',
 		name: 'copilot-nes-feedback',
-		apiUrl: 'https://api.github.com'
+		apiUrl: 'https://api.github.com',
 	};
 
 	private readonly _logger: ILogger;
@@ -46,7 +48,7 @@ export class NesFeedbackSubmitter {
 		logService: ILogService,
 		private readonly _authenticationService: IAuthenticationService,
 		private readonly _fetcherService: IFetcherService,
-		private readonly _repoConfig: FeedbackRepoConfig = NesFeedbackSubmitter.DEFAULT_REPO_CONFIG
+		private readonly _repoConfig: FeedbackRepoConfig = NesFeedbackSubmitter.DEFAULT_REPO_CONFIG,
 	) {
 		this._logger = logService.createSubLogger(['NES', 'FeedbackSubmitter']);
 	}
@@ -60,54 +62,89 @@ export class NesFeedbackSubmitter {
 			// Check if feedback folder exists and has files
 			const files = await this._collectFeedbackFiles(feedbackFolderUri);
 			if (files.length === 0) {
-				window.showInformationMessage('No NES feedback captures found to submit. Use "Copilot: Record Expected Edit (NES)" to capture feedback first.');
+				window.showInformationMessage(
+					'No NES feedback captures found to submit. Use "Copilot: Record Expected Edit (NES)" to capture feedback first.',
+				);
 				return;
 			}
 
 			// Read file contents
-			const fileContents = await this._readFeedbackFiles(files, feedbackFolderUri);
+			const fileContents = await this._readFeedbackFiles(
+				files,
+				feedbackFolderUri,
+			);
 			if (fileContents.length === 0) {
 				window.showErrorMessage('Failed to read feedback files.');
 				return;
 			}
 
 			// Extract unique document paths from the recordings to show the user
-			const documentPaths = this._extractDocumentPathsFromRecordings(fileContents);
+			const documentPaths =
+				this._extractDocumentPathsFromRecordings(fileContents);
 
 			// Extract nextUserEdit paths to calculate accurate recording counts
-			const nextUserEditPaths = this._extractNextUserEditPaths(fileContents);
+			const nextUserEditPaths =
+				this._extractNextUserEditPaths(fileContents);
 
 			// Show confirmation with file preview and allow filtering
 			// Returns excluded paths for efficiency (empty in the default case when all files are selected)
-			const excludedPaths = await this._showFilePreviewAndConfirm(documentPaths, nextUserEditPaths);
+			const excludedPaths = await this._showFilePreviewAndConfirm(
+				documentPaths,
+				nextUserEditPaths,
+			);
 			if (!excludedPaths) {
 				return;
 			}
 
 			// Filter recordings to remove excluded documents
-			const filteredContents = this._filterRecordingsByExcludedPaths(fileContents, excludedPaths, nextUserEditPaths);
+			const filteredContents = this._filterRecordingsByExcludedPaths(
+				fileContents,
+				excludedPaths,
+				nextUserEditPaths,
+			);
 			if (filteredContents.length === 0) {
-				window.showInformationMessage('No files to submit after filtering.');
+				window.showInformationMessage(
+					'No files to submit after filtering.',
+				);
 				return;
 			}
 
 			// Get GitHub auth token - need permissive session for repo access
-			const session = await this._authenticationService.getGitHubSession('permissive', { createIfNone: { detail: l10n.t('Sign in to GitHub to submit feedback.') } });
+			const session = await this._authenticationService.getGitHubSession(
+				'permissive',
+				{
+					createIfNone: {
+						detail: l10n.t('Sign in to GitHub to submit feedback.'),
+					},
+				},
+			);
 			if (!session) {
-				window.showErrorMessage('GitHub authentication required with repo access. Please sign in to GitHub.');
+				window.showErrorMessage(
+					'GitHub authentication required with repo access. Please sign in to GitHub.',
+				);
 				return;
 			}
 
 			// Upload files to the private repo
-			const folderUrl = await this._uploadToPrivateRepo(filteredContents, session.accessToken);
+			const folderUrl = await this._uploadToPrivateRepo(
+				filteredContents,
+				session.accessToken,
+			);
 
 			if (folderUrl) {
 				await this._showSuccessDialog(folderUrl);
-				this._logger.info(`Uploaded feedback to private repo: ${folderUrl}`);
+				this._logger.info(
+					`Uploaded feedback to private repo: ${folderUrl}`,
+				);
 			}
 		} catch (error) {
-			this._logger.error(error instanceof Error ? error : String(error), 'Error submitting feedback');
-			window.showErrorMessage(`Failed to submit NES feedback: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			this._logger.error(
+				error instanceof Error ? error : String(error),
+				'Error submitting feedback',
+			);
+			window.showErrorMessage(
+				`Failed to submit NES feedback: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			);
 		}
 	}
 
@@ -118,14 +155,16 @@ export class NesFeedbackSubmitter {
 		const result = await window.showInformationMessage(
 			'Feedback submitted! A pull request has been created.',
 			'Open Pull Request',
-			'Copy Link'
+			'Copy Link',
 		);
 
 		if (result === 'Open Pull Request') {
 			await env.openExternal(Uri.parse(prUrl));
 		} else if (result === 'Copy Link') {
 			await env.clipboard.writeText(prUrl);
-			window.showInformationMessage('Pull request URL copied to clipboard!');
+			window.showInformationMessage(
+				'Pull request URL copied to clipboard!',
+			);
 		}
 	}
 
@@ -146,20 +185,28 @@ export class NesFeedbackSubmitter {
 	/**
 	 * Read contents of feedback files.
 	 */
-	private async _readFeedbackFiles(fileUris: Uri[], folderUri: Uri): Promise<FeedbackFile[]> {
+	private async _readFeedbackFiles(
+		fileUris: Uri[],
+		folderUri: Uri,
+	): Promise<FeedbackFile[]> {
 		const results: FeedbackFile[] = [];
 
 		for (const fileUri of fileUris) {
 			try {
 				const content = await workspace.fs.readFile(fileUri);
 				const textContent = new TextDecoder().decode(content);
-				const relativeName = fileUri.path.replace(folderUri.path + '/', '');
+				const relativeName = fileUri.path.replace(
+					folderUri.path + '/',
+					'',
+				);
 				results.push({
 					name: relativeName,
-					content: textContent
+					content: textContent,
 				});
 			} catch (e) {
-				this._logger.warn(`Failed to read file: ${fileUri.fsPath}: ${e}`);
+				this._logger.warn(
+					`Failed to read file: ${fileUri.fsPath}: ${e}`,
+				);
 			}
 		}
 
@@ -170,7 +217,9 @@ export class NesFeedbackSubmitter {
 	 * Extract unique document paths from recording files.
 	 * Parses the log entries to find all documentEncountered events.
 	 */
-	private _extractDocumentPathsFromRecordings(files: FeedbackFile[]): string[] {
+	private _extractDocumentPathsFromRecordings(
+		files: FeedbackFile[],
+	): string[] {
 		const paths = new Set<string>();
 
 		for (const file of files) {
@@ -180,7 +229,9 @@ export class NesFeedbackSubmitter {
 			}
 
 			try {
-				const recording = JSON.parse(file.content) as { log?: LogEntry[] };
+				const recording = JSON.parse(file.content) as {
+					log?: LogEntry[];
+				};
 				if (recording.log) {
 					for (const entry of recording.log) {
 						if (entry.kind === 'documentEncountered') {
@@ -200,7 +251,9 @@ export class NesFeedbackSubmitter {
 	 * Extract the nextUserEdit path for each recording.
 	 * Returns a map from recording name to its nextUserEdit relativePath (or undefined if none).
 	 */
-	private _extractNextUserEditPaths(files: FeedbackFile[]): Map<string, string | undefined> {
+	private _extractNextUserEditPaths(
+		files: FeedbackFile[],
+	): Map<string, string | undefined> {
 		const result = new Map<string, string | undefined>();
 
 		for (const file of files) {
@@ -226,10 +279,16 @@ export class NesFeedbackSubmitter {
 	 * Count how many recordings will be included after excluding certain paths.
 	 * A recording is included only if its nextUserEdit path is not excluded.
 	 */
-	private _countIncludedRecordings(nextUserEditPaths: Map<string, string | undefined>, excludedPaths: Set<string>): number {
+	private _countIncludedRecordings(
+		nextUserEditPaths: Map<string, string | undefined>,
+		excludedPaths: Set<string>,
+	): number {
 		let count = 0;
 		for (const [, nextUserEditPath] of nextUserEditPaths) {
-			if (nextUserEditPath !== undefined && !excludedPaths.has(nextUserEditPath)) {
+			if (
+				nextUserEditPath !== undefined &&
+				!excludedPaths.has(nextUserEditPath)
+			) {
 				count++;
 			}
 		}
@@ -256,17 +315,20 @@ export class NesFeedbackSubmitter {
 	 */
 	private async _showFilePreviewAndConfirm(
 		documentPaths: string[],
-		nextUserEditPaths: Map<string, string | undefined>
+		nextUserEditPaths: Map<string, string | undefined>,
 	): Promise<string[] | undefined> {
-		const totalRecordingCount = this._countIncludedRecordings(nextUserEditPaths, new Set());
+		const totalRecordingCount = this._countIncludedRecordings(
+			nextUserEditPaths,
+			new Set(),
+		);
 
 		if (documentPaths.length === 0) {
 			// No document paths found, just show basic confirmation
 			const result = await window.showInformationMessage(
 				`Found ${totalRecordingCount} feedback recording(s). This will upload your NES feedback to the internal feedback repository.\n\n` +
-				`Only team members with access to the private repo can view this data.`,
+					`Only team members with access to the private repo can view this data.`,
 				{ modal: true },
-				'Submit Feedback'
+				'Submit Feedback',
 			);
 			return result === 'Submit Feedback' ? [] : undefined; // Empty array = no exclusions
 		}
@@ -276,10 +338,10 @@ export class NesFeedbackSubmitter {
 
 		const result = await window.showInformationMessage(
 			`Found ${totalRecordingCount} recording(s) containing ${documentPaths.length} file(s):\n${filesSummary}\n\n` +
-			`This will upload your NES feedback to the internal feedback repository.`,
+				`This will upload your NES feedback to the internal feedback repository.`,
 			{ modal: true },
 			'Submit Feedback',
-			'Select Files to Include'
+			'Select Files to Include',
 		);
 
 		if (result === 'Submit Feedback') {
@@ -287,7 +349,10 @@ export class NesFeedbackSubmitter {
 		}
 
 		if (result === 'Select Files to Include') {
-			return this._showFileSelectionQuickPick(documentPaths, nextUserEditPaths);
+			return this._showFileSelectionQuickPick(
+				documentPaths,
+				nextUserEditPaths,
+			);
 		}
 
 		return undefined;
@@ -300,22 +365,23 @@ export class NesFeedbackSubmitter {
 	 */
 	private async _showFileSelectionQuickPick(
 		documentPaths: string[],
-		nextUserEditPaths: Map<string, string | undefined>
+		nextUserEditPaths: Map<string, string | undefined>,
 	): Promise<string[] | undefined> {
 		let currentSelection = new Set(documentPaths); // Start with all selected
 
 		while (true) {
-			const items = documentPaths.map(path => ({
+			const items = documentPaths.map((path) => ({
 				label: path,
 				description: '',
-				picked: currentSelection.has(path)
+				picked: currentSelection.has(path),
 			}));
 
 			const selected = await window.showQuickPick(items, {
 				title: 'Select files to include in the upload',
-				placeHolder: 'Deselect files you want to exclude, then press Enter to confirm',
+				placeHolder:
+					'Deselect files you want to exclude, then press Enter to confirm',
 				canPickMany: true,
-				ignoreFocusOut: true
+				ignoreFocusOut: true,
 			});
 
 			if (!selected) {
@@ -323,23 +389,30 @@ export class NesFeedbackSubmitter {
 				return undefined;
 			}
 
-			const selectedPaths = new Set(selected.map(item => item.label));
-			const excludedPaths = documentPaths.filter(path => !selectedPaths.has(path));
+			const selectedPaths = new Set(selected.map((item) => item.label));
+			const excludedPaths = documentPaths.filter(
+				(path) => !selectedPaths.has(path),
+			);
 
 			if (selectedPaths.size === 0) {
-				window.showInformationMessage('No files selected. Upload cancelled.');
+				window.showInformationMessage(
+					'No files selected. Upload cancelled.',
+				);
 				return undefined;
 			}
 
 			// Calculate how many recordings will actually be included
 			const excludedPathSet = new Set(excludedPaths);
-			const includedRecordingCount = this._countIncludedRecordings(nextUserEditPaths, excludedPathSet);
+			const includedRecordingCount = this._countIncludedRecordings(
+				nextUserEditPaths,
+				excludedPathSet,
+			);
 
 			if (includedRecordingCount === 0) {
 				const tryAgain = await window.showInformationMessage(
 					'No recordings would be included with this selection (all nextUserEdit files are excluded).',
 					{ modal: true },
-					'Edit Selection'
+					'Edit Selection',
 				);
 				if (tryAgain === 'Edit Selection') {
 					currentSelection = selectedPaths;
@@ -352,15 +425,16 @@ export class NesFeedbackSubmitter {
 			const selectedPathsArray = Array.from(selectedPaths);
 			const filesSummary = this._createFilesSummary(selectedPathsArray);
 
-			const confirmMessage = excludedPaths.length > 0
-				? `Submit ${includedRecordingCount} recording(s) with ${selectedPaths.size} file(s)? (${excludedPaths.length} excluded)\n\nIncluded: ${filesSummary}`
-				: `Submit ${includedRecordingCount} recording(s) containing ${selectedPaths.size} file(s)?\n\n${filesSummary}`;
+			const confirmMessage =
+				excludedPaths.length > 0
+					? `Submit ${includedRecordingCount} recording(s) with ${selectedPaths.size} file(s)? (${excludedPaths.length} excluded)\n\nIncluded: ${filesSummary}`
+					: `Submit ${includedRecordingCount} recording(s) containing ${selectedPaths.size} file(s)?\n\n${filesSummary}`;
 
 			const finalResult = await window.showInformationMessage(
 				confirmMessage,
 				{ modal: true },
 				'Submit Feedback',
-				'Edit Selection'
+				'Edit Selection',
 			);
 
 			if (finalResult === 'Submit Feedback') {
@@ -388,7 +462,7 @@ export class NesFeedbackSubmitter {
 	private _filterRecordingsByExcludedPaths(
 		files: FeedbackFile[],
 		excludedPaths: string[],
-		nextUserEditPaths: Map<string, string | undefined>
+		nextUserEditPaths: Map<string, string | undefined>,
 	): FeedbackFile[] {
 		// Fast path: no exclusions, return files as-is
 		if (excludedPaths.length === 0) {
@@ -407,16 +481,24 @@ export class NesFeedbackSubmitter {
 
 			// Use precomputed nextUserEditPaths to quickly skip recordings
 			const nextUserEditPath = nextUserEditPaths.get(file.name);
-			if (nextUserEditPath === undefined || excludedPathSet.has(nextUserEditPath)) {
+			if (
+				nextUserEditPath === undefined ||
+				excludedPathSet.has(nextUserEditPath)
+			) {
 				// Skip this recording - no nextUserEdit or it's excluded
 				const prefix = file.name.replace('.recording.w.json', '');
 				skippedRecordingPrefixes.add(prefix);
-				this._logger.debug(`Skipping recording ${file.name}: nextUserEdit excluded or missing`);
+				this._logger.debug(
+					`Skipping recording ${file.name}: nextUserEdit excluded or missing`,
+				);
 				continue;
 			}
 
 			try {
-				const filteredFile = this._filterSingleRecording(file, excludedPathSet);
+				const filteredFile = this._filterSingleRecording(
+					file,
+					excludedPathSet,
+				);
 				filteredRecordings.push(filteredFile);
 			} catch {
 				// If parsing fails, include the file as-is
@@ -432,7 +514,9 @@ export class NesFeedbackSubmitter {
 				if (!skippedRecordingPrefixes.has(prefix)) {
 					result.push(file);
 				} else {
-					this._logger.debug(`Skipping metadata ${file.name}: associated recording was skipped`);
+					this._logger.debug(
+						`Skipping metadata ${file.name}: associated recording was skipped`,
+					);
 				}
 			}
 		}
@@ -444,7 +528,10 @@ export class NesFeedbackSubmitter {
 	 * Filter a single recording file based on excluded document paths.
 	 * Assumes the recording will be included (nextUserEdit already checked).
 	 */
-	private _filterSingleRecording(file: FeedbackFile, excludedPathSet: Set<string>): FeedbackFile {
+	private _filterSingleRecording(
+		file: FeedbackFile,
+		excludedPathSet: Set<string>,
+	): FeedbackFile {
 		const recording = JSON.parse(file.content) as {
 			log?: LogEntry[];
 			nextUserEdit?: { relativePath: string; edit: unknown };
@@ -457,13 +544,16 @@ export class NesFeedbackSubmitter {
 		// Find document IDs that should be excluded
 		const excludedDocIds = new Set<number>();
 		for (const entry of recording.log) {
-			if (entry.kind === 'documentEncountered' && excludedPathSet.has(entry.relativePath)) {
+			if (
+				entry.kind === 'documentEncountered' &&
+				excludedPathSet.has(entry.relativePath)
+			) {
 				excludedDocIds.add(entry.id);
 			}
 		}
 
 		// Filter log entries to remove excluded documents
-		const filteredLog = recording.log.filter(entry => {
+		const filteredLog = recording.log.filter((entry) => {
 			if (entry.kind === 'header') {
 				return true;
 			}
@@ -476,12 +566,12 @@ export class NesFeedbackSubmitter {
 		// Create filtered recording (nextUserEdit is preserved - we already checked it's not excluded)
 		const filteredRecording = {
 			...recording,
-			log: filteredLog
+			log: filteredLog,
 		};
 
 		return {
 			name: file.name,
-			content: JSON.stringify(filteredRecording, null, 2)
+			content: JSON.stringify(filteredRecording, null, 2),
 		};
 	}
 
@@ -490,8 +580,14 @@ export class NesFeedbackSubmitter {
 	 * Creates a new branch, uploads files to a timestamped folder, and opens a PR.
 	 * @returns The URL to the pull request, or undefined on failure.
 	 */
-	private async _uploadToPrivateRepo(files: FeedbackFile[], token: string): Promise<string | undefined> {
-		const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+	private async _uploadToPrivateRepo(
+		files: FeedbackFile[],
+		token: string,
+	): Promise<string | undefined> {
+		const timestamp = new Date()
+			.toISOString()
+			.replace(/[:.]/g, '-')
+			.slice(0, -5);
 		const folderPath = `feedback/${timestamp}`;
 
 		// Get the current user for commit attribution
@@ -513,11 +609,24 @@ export class NesFeedbackSubmitter {
 		// Upload each file to the new branch
 		for (const file of files) {
 			const filePath = `${folderPath}/${file.name}`;
-			await this._createFileInRepo(filePath, file.content, token, username, timestamp, branchName);
+			await this._createFileInRepo(
+				filePath,
+				file.content,
+				token,
+				username,
+				timestamp,
+				branchName,
+			);
 		}
 
 		// Create the pull request
-		const prUrl = await this._createPullRequest(token, branchName, username, timestamp, files.length);
+		const prUrl = await this._createPullRequest(
+			token,
+			branchName,
+			username,
+			timestamp,
+			files.length,
+		);
 
 		return prUrl;
 	}
@@ -525,7 +634,10 @@ export class NesFeedbackSubmitter {
 	/**
 	 * Get the SHA of a branch.
 	 */
-	private async _getBranchSha(token: string, branch: string): Promise<string | undefined> {
+	private async _getBranchSha(
+		token: string,
+		branch: string,
+	): Promise<string | undefined> {
 		try {
 			const response = await this._fetcherService.fetch(
 				`${this._repoConfig.apiUrl}/repos/${this._repoConfig.owner}/${this._repoConfig.name}/git/ref/heads/${branch}`,
@@ -533,20 +645,26 @@ export class NesFeedbackSubmitter {
 					method: 'GET',
 					callSite: 'nes-feedback-branch-sha',
 					headers: {
-						'Authorization': `Bearer ${token}`,
-						'Accept': 'application/vnd.github+json',
+						Authorization: `Bearer ${token}`,
+						Accept: 'application/vnd.github+json',
 						'X-GitHub-Api-Version': '2022-11-28',
-						'User-Agent': this._fetcherService.getUserAgentLibrary()
-					}
-				}
+						'User-Agent':
+							this._fetcherService.getUserAgentLibrary(),
+					},
+				},
 			);
 
 			if (response.ok) {
-				const data = await response.json() as { object: { sha: string } };
+				const data = (await response.json()) as {
+					object: { sha: string };
+				};
 				return data.object.sha;
 			}
 		} catch (e) {
-			this._logger.error(e instanceof Error ? e : String(e), 'Failed to get branch SHA');
+			this._logger.error(
+				e instanceof Error ? e : String(e),
+				'Failed to get branch SHA',
+			);
 		}
 		return undefined;
 	}
@@ -554,29 +672,35 @@ export class NesFeedbackSubmitter {
 	/**
 	 * Create a new branch in the repository.
 	 */
-	private async _createBranch(token: string, branchName: string, sha: string): Promise<void> {
+	private async _createBranch(
+		token: string,
+		branchName: string,
+		sha: string,
+	): Promise<void> {
 		const url = `${this._repoConfig.apiUrl}/repos/${this._repoConfig.owner}/${this._repoConfig.name}/git/refs`;
 
 		const payload = {
 			ref: `refs/heads/${branchName}`,
-			sha: sha
+			sha: sha,
 		};
 
 		const response = await fetch(url, {
 			method: 'POST',
 			headers: {
-				'Authorization': `Bearer ${token}`,
-				'Accept': 'application/vnd.github+json',
+				Authorization: `Bearer ${token}`,
+				Accept: 'application/vnd.github+json',
 				'Content-Type': 'application/json',
 				'X-GitHub-Api-Version': '2022-11-28',
-				'User-Agent': this._fetcherService.getUserAgentLibrary()
+				'User-Agent': this._fetcherService.getUserAgentLibrary(),
 			},
-			body: JSON.stringify(payload)
+			body: JSON.stringify(payload),
 		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			this._logger.error(`Failed to create branch ${branchName}: ${response.status} ${response.statusText} - ${errorText}`);
+			this._logger.error(
+				`Failed to create branch ${branchName}: ${response.status} ${response.statusText} - ${errorText}`,
+			);
 			throw new Error(`Failed to create branch: ${response.statusText}`);
 		}
 	}
@@ -590,7 +714,7 @@ export class NesFeedbackSubmitter {
 		branchName: string,
 		username: string,
 		timestamp: string,
-		fileCount: number
+		fileCount: number,
 	): Promise<string | undefined> {
 		const url = `${this._repoConfig.apiUrl}/repos/${this._repoConfig.owner}/${this._repoConfig.name}/pulls`;
 
@@ -598,32 +722,37 @@ export class NesFeedbackSubmitter {
 			title: `NES Feedback from ${username} (${timestamp})`,
 			head: branchName,
 			base: 'main',
-			body: `## NES Feedback Submission\n\n` +
+			body:
+				`## NES Feedback Submission\n\n` +
 				`- **Submitted by:** ${username}\n` +
 				`- **Timestamp:** ${timestamp}\n` +
 				`- **Files:** ${fileCount} file(s)\n\n` +
-				`This feedback was automatically submitted via the "Copilot: Submit NES Feedback" command.`
+				`This feedback was automatically submitted via the "Copilot: Submit NES Feedback" command.`,
 		};
 
 		const response = await fetch(url, {
 			method: 'POST',
 			headers: {
-				'Authorization': `Bearer ${token}`,
-				'Accept': 'application/vnd.github+json',
+				Authorization: `Bearer ${token}`,
+				Accept: 'application/vnd.github+json',
 				'Content-Type': 'application/json',
 				'X-GitHub-Api-Version': '2022-11-28',
-				'User-Agent': this._fetcherService.getUserAgentLibrary()
+				'User-Agent': this._fetcherService.getUserAgentLibrary(),
 			},
-			body: JSON.stringify(payload)
+			body: JSON.stringify(payload),
 		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			this._logger.error(`Failed to create pull request: ${response.status} ${response.statusText} - ${errorText}`);
-			throw new Error(`Failed to create pull request: ${response.statusText}`);
+			this._logger.error(
+				`Failed to create pull request: ${response.status} ${response.statusText} - ${errorText}`,
+			);
+			throw new Error(
+				`Failed to create pull request: ${response.statusText}`,
+			);
 		}
 
-		const prData = await response.json() as { html_url: string };
+		const prData = (await response.json()) as { html_url: string };
 		return prData.html_url;
 	}
 
@@ -638,32 +767,34 @@ export class NesFeedbackSubmitter {
 		token: string,
 		username: string,
 		timestamp: string,
-		branch: string
+		branch: string,
 	): Promise<void> {
 		const url = `${this._repoConfig.apiUrl}/repos/${this._repoConfig.owner}/${this._repoConfig.name}/contents/${path}`;
 
 		const payload = {
 			message: `NES feedback from ${username} at ${timestamp}`,
 			content: encodeBase64(VSBuffer.fromString(content)),
-			branch: branch
+			branch: branch,
 		};
 
 		// Use native fetch for PUT request (IFetcherService only supports GET/POST)
 		const response = await fetch(url, {
 			method: 'PUT',
 			headers: {
-				'Authorization': `Bearer ${token}`,
-				'Accept': 'application/vnd.github+json',
+				Authorization: `Bearer ${token}`,
+				Accept: 'application/vnd.github+json',
 				'Content-Type': 'application/json',
 				'X-GitHub-Api-Version': '2022-11-28',
-				'User-Agent': this._fetcherService.getUserAgentLibrary()
+				'User-Agent': this._fetcherService.getUserAgentLibrary(),
 			},
-			body: JSON.stringify(payload)
+			body: JSON.stringify(payload),
 		});
 
 		if (!response.ok) {
 			const errorText = await response.text();
-			this._logger.error(`Failed to create file ${path}: ${response.status} ${response.statusText} - ${errorText}`);
+			this._logger.error(
+				`Failed to create file ${path}: ${response.status} ${response.statusText} - ${errorText}`,
+			);
 			throw new Error(`Failed to upload file: ${response.statusText}`);
 		}
 	}
@@ -671,7 +802,9 @@ export class NesFeedbackSubmitter {
 	/**
 	 * Get the current authenticated GitHub user.
 	 */
-	private async _getCurrentUser(token: string): Promise<{ login: string } | undefined> {
+	private async _getCurrentUser(
+		token: string,
+	): Promise<{ login: string } | undefined> {
 		try {
 			const response = await this._fetcherService.fetch(
 				`${this._repoConfig.apiUrl}/user`,
@@ -679,12 +812,13 @@ export class NesFeedbackSubmitter {
 					method: 'GET',
 					callSite: 'nes-feedback-current-user',
 					headers: {
-						'Authorization': `Bearer ${token}`,
-						'Accept': 'application/vnd.github+json',
+						Authorization: `Bearer ${token}`,
+						Accept: 'application/vnd.github+json',
 						'X-GitHub-Api-Version': '2022-11-28',
-						'User-Agent': this._fetcherService.getUserAgentLibrary()
-					}
-				}
+						'User-Agent':
+							this._fetcherService.getUserAgentLibrary(),
+					},
+				},
 			);
 
 			if (response.ok) {

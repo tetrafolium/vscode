@@ -3,10 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { equals } from '../../../../../base/common/objects.js';
-import { autorun, IObservable, ISettableObservable, observableValueOpts } from '../../../../../base/common/observable.js';
-import type { ToolDefinition } from '../../../common/state/protocol/state.js';
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { equals } from "../../../../../base/common/objects.js";
+import {
+	autorun,
+	IObservable,
+	ISettableObservable,
+	observableValueOpts,
+} from "../../../../../base/common/observable.js";
+import type { ToolDefinition } from "../../../common/state/protocol/state.js";
 
 /**
  * Combined snapshot of the workbench-registered client-tool definitions
@@ -19,7 +24,10 @@ export interface ISessionClientToolsState {
 	readonly clientId: string | undefined;
 }
 
-const INITIAL_STATE: ISessionClientToolsState = { tools: undefined, clientId: undefined };
+const INITIAL_STATE: ISessionClientToolsState = {
+	tools: undefined,
+	clientId: undefined,
+};
 
 /**
  * Pure state holder for the workbench-registered client-tool snapshot
@@ -38,19 +46,22 @@ const INITIAL_STATE: ISessionClientToolsState = { tools: undefined, clientId: un
  * since the last successful SDK build".
  */
 export class SessionClientToolsModel {
-
-	private readonly _state: ISettableObservable<ISessionClientToolsState> = observableValueOpts(
-		{ owner: this, equalsFn: stateEqual },
-		INITIAL_STATE,
-	);
+	private readonly _state: ISettableObservable<ISessionClientToolsState> =
+		observableValueOpts({ owner: this, equalsFn: stateEqual }, INITIAL_STATE);
 	readonly state: IObservable<ISessionClientToolsState> = this._state;
 
-	setTools(tools: readonly ToolDefinition[] | undefined, clientId?: string): void {
+	setTools(
+		tools: readonly ToolDefinition[] | undefined,
+		clientId?: string,
+	): void {
 		const current = this._state.get();
-		this._state.set({
-			tools,
-			clientId: clientId ?? current.clientId,
-		}, undefined);
+		this._state.set(
+			{
+				tools,
+				clientId: clientId ?? current.clientId,
+			},
+			undefined,
+		);
 	}
 }
 
@@ -68,7 +79,6 @@ export class SessionClientToolsModel {
  * the previous snapshot, so the next sendMessage should retry.
  */
 export class SessionClientToolsDiff extends Disposable {
-
 	readonly model: SessionClientToolsModel = new SessionClientToolsModel();
 
 	private _dirty = false;
@@ -79,14 +89,16 @@ export class SessionClientToolsDiff extends Disposable {
 
 	constructor() {
 		super();
-		this._register(autorun(reader => {
-			this.model.state.read(reader);
-			if (this._ignoreNextFire) {
-				this._ignoreNextFire = false;
-				return;
-			}
-			this._dirty = true;
-		}));
+		this._register(
+			autorun((reader) => {
+				this.model.state.read(reader);
+				if (this._ignoreNextFire) {
+					this._ignoreNextFire = false;
+					return;
+				}
+				this._dirty = true;
+			}),
+		);
 	}
 
 	get hasDifference(): boolean {
@@ -117,7 +129,10 @@ export class SessionClientToolsDiff extends Disposable {
 	}
 }
 
-function stateEqual(a: ISessionClientToolsState, b: ISessionClientToolsState): boolean {
+function stateEqual(
+	a: ISessionClientToolsState,
+	b: ISessionClientToolsState,
+): boolean {
 	return a.clientId === b.clientId && snapshotsEqual(a.tools, b.tools);
 }
 
@@ -127,7 +142,7 @@ function stateEqual(a: ISessionClientToolsState, b: ISessionClientToolsState): b
  */
 function snapshotsEqual(
 	a: readonly ToolDefinition[] | undefined,
-	b: readonly ToolDefinition[] | undefined
+	b: readonly ToolDefinition[] | undefined,
 ): boolean {
 	const aa = a ?? [];
 	const bb = b ?? [];

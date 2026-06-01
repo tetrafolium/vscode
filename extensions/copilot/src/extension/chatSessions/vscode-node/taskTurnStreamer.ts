@@ -3,7 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AgentTaskGetResponse, AgentTaskSessionEvent, AgentTaskState } from '@vscode/copilot-api';
+import type {
+	AgentTaskGetResponse,
+	AgentTaskSessionEvent,
+	AgentTaskState,
+} from '@vscode/copilot-api';
 import * as vscode from 'vscode';
 import { ILogService } from '../../../platform/log/common/logService';
 import { CLI_TOOL_EVENT_HANDLERS } from '../copilotcli/common/copilotCLITools';
@@ -19,7 +23,12 @@ import { ChatSessionContentBuilder } from './copilotCloudSessionContentBuilder';
  * Phase of a single Task turn. The Task API uses `queued | in_progress | idle |
  * waiting_for_user` to mean "the agent still owns the turn"; the rest are terminal.
  */
-const ACTIVE_STATES = new Set<AgentTaskState>(['queued', 'in_progress', 'idle', 'waiting_for_user']);
+const ACTIVE_STATES = new Set<AgentTaskState>([
+	'queued',
+	'in_progress',
+	'idle',
+	'waiting_for_user',
+]);
 function isActiveState(state: AgentTaskState | undefined): boolean {
 	return state !== undefined && ACTIVE_STATES.has(state);
 }
@@ -40,7 +49,11 @@ function isActiveState(state: AgentTaskState | undefined): boolean {
  */
 export type StreamBaseline =
 	| { readonly mode: 'current'; readonly seedEventIds: ReadonlySet<string> }
-	| { readonly mode: 'next'; readonly seedEventIds: ReadonlySet<string>; readonly priorTurnCount: number };
+	| {
+			readonly mode: 'next';
+			readonly seedEventIds: ReadonlySet<string>;
+			readonly priorTurnCount: number;
+	  };
 
 /**
  * Streams the currently active (or upcoming) Task turn into a `vscode.ChatResponseStream`.
@@ -70,7 +83,6 @@ export type StreamBaseline =
  * - Always returns control once the turn settles or the token cancels; never throws.
  */
 export class TaskTurnStreamer {
-
 	/** Default poll interval for both phases. */
 	public static readonly DEFAULT_POLL_INTERVAL_MS = 2_000;
 
@@ -89,7 +101,7 @@ export class TaskTurnStreamer {
 		private readonly _contentBuilder: ChatSessionContentBuilder,
 		private readonly _logService: ILogService,
 		private readonly _pollIntervalMs: number = TaskTurnStreamer.DEFAULT_POLL_INTERVAL_MS,
-	) { }
+	) {}
 
 	async stream(
 		stream: vscode.ChatResponseStream,
@@ -97,7 +109,10 @@ export class TaskTurnStreamer {
 		baseline: StreamBaseline,
 		token: vscode.CancellationToken,
 	): Promise<void> {
-		const ctx = createResponseEventRenderContext(this._logService, CLI_TOOL_EVENT_HANDLERS);
+		const ctx = createResponseEventRenderContext(
+			this._logService,
+			CLI_TOOL_EVENT_HANDLERS,
+		);
 		const sink = new StreamSink(stream, ctx, this._logService, taskId);
 		const state: IngestState = {
 			seen: new Set<string>(baseline.seedEventIds),
@@ -119,7 +134,12 @@ export class TaskTurnStreamer {
 
 		try {
 			if (baseline.mode === 'next') {
-				const observed = await this._waitForTurnStart(taskId, baseline.priorTurnCount, state.seen, token);
+				const observed = await this._waitForTurnStart(
+					taskId,
+					baseline.priorTurnCount,
+					state.seen,
+					token,
+				);
 				if (!observed) {
 					// Server never produced the new turn within the wait budget. Bail without
 					// emitting anything; the caller's `stream.markdown('begun work…')` stays.
@@ -132,12 +152,20 @@ export class TaskTurnStreamer {
 
 			let consecutiveFetchFailures = 0;
 			while (!token.isCancellationRequested) {
-				const [task, events] = await Promise.all([this._fetchTask(taskId), this._fetchEvents(taskId)]);
+				const [task, events] = await Promise.all([
+					this._fetchTask(taskId),
+					this._fetchEvents(taskId),
+				]);
 
 				if (task === undefined) {
 					consecutiveFetchFailures++;
-					if (consecutiveFetchFailures >= TaskTurnStreamer.MAX_CONSECUTIVE_FETCH_FAILURES) {
-						this._logService.warn(`[TaskTurnStreamer] Giving up on task ${taskId} after ${consecutiveFetchFailures} consecutive fetchTaskContent failures.`);
+					if (
+						consecutiveFetchFailures >=
+						TaskTurnStreamer.MAX_CONSECUTIVE_FETCH_FAILURES
+					) {
+						this._logService.warn(
+							`[TaskTurnStreamer] Giving up on task ${taskId} after ${consecutiveFetchFailures} consecutive fetchTaskContent failures.`,
+						);
 						return;
 					}
 				} else {
@@ -163,7 +191,9 @@ export class TaskTurnStreamer {
 				await delay(this._pollIntervalMs, token);
 			}
 		} catch (err) {
-			this._logService.warn(`[TaskTurnStreamer] Unexpected error streaming task ${taskId}: ${err}`);
+			this._logService.warn(
+				`[TaskTurnStreamer] Unexpected error streaming task ${taskId}: ${err}`,
+			);
 		}
 	}
 
@@ -179,12 +209,20 @@ export class TaskTurnStreamer {
 	): Promise<{ events: readonly AgentTaskSessionEvent[] } | undefined> {
 		const startedAt = Date.now();
 		while (!token.isCancellationRequested) {
-			if (Date.now() - startedAt > TaskTurnStreamer.MAX_WAIT_FOR_TURN_START_MS) {
-				this._logService.warn(`[TaskTurnStreamer] Timed out waiting for new turn on task ${taskId}.`);
+			if (
+				Date.now() - startedAt >
+				TaskTurnStreamer.MAX_WAIT_FOR_TURN_START_MS
+			) {
+				this._logService.warn(
+					`[TaskTurnStreamer] Timed out waiting for new turn on task ${taskId}.`,
+				);
 				return undefined;
 			}
 
-			const [task, events] = await Promise.all([this._fetchTask(taskId), this._fetchEvents(taskId)]);
+			const [task, events] = await Promise.all([
+				this._fetchTask(taskId),
+				this._fetchEvents(taskId),
+			]);
 			const turnCount = task?.sessions?.length ?? 0;
 
 			// Only `turnCount > priorTurnCount` is reliable evidence the new turn exists.
@@ -201,10 +239,16 @@ export class TaskTurnStreamer {
 		return undefined;
 	}
 
-	private _ingestBatch<TToolCall>(events: readonly AgentTaskSessionEvent[], ctx: ResponseEventRenderContext<TToolCall>, state: IngestState): void {
-		const fresh = events.filter(e => !state.seen.has(e.id));
+	private _ingestBatch<TToolCall>(
+		events: readonly AgentTaskSessionEvent[],
+		ctx: ResponseEventRenderContext<TToolCall>,
+		state: IngestState,
+	): void {
+		const fresh = events.filter((e) => !state.seen.has(e.id));
 		if (fresh.length > 0) {
-			this._logService.trace(`[TaskTurnStreamer] ingesting ${fresh.length} new event(s): ${fresh.map(e => `${e.type}#${e.id.slice(0, 8)}`).join(', ')}`);
+			this._logService.trace(
+				`[TaskTurnStreamer] ingesting ${fresh.length} new event(s): ${fresh.map((e) => `${e.type}#${e.id.slice(0, 8)}`).join(', ')}`,
+			);
 		}
 		for (const event of fresh) {
 			state.seen.add(event.id);
@@ -212,7 +256,11 @@ export class TaskTurnStreamer {
 		}
 	}
 
-	private _ingestEvent<TToolCall>(event: AgentTaskSessionEvent, ctx: ResponseEventRenderContext<TToolCall>, state: IngestState): void {
+	private _ingestEvent<TToolCall>(
+		event: AgentTaskSessionEvent,
+		ctx: ResponseEventRenderContext<TToolCall>,
+		state: IngestState,
+	): void {
 		// Working-state transitions.
 		switch (event.type) {
 			case 'assistant.turn_start':
@@ -243,9 +291,12 @@ export class TaskTurnStreamer {
 		// twice. The complete event's result payload is lost here; that's the trade-off
 		// for showing tools as soon as they're requested rather than when they finish.
 		if (event.type === 'tool.execution_complete') {
-			const toolCallId = (event.data as { toolCallId?: string }).toolCallId;
+			const toolCallId = (event.data as { toolCallId?: string })
+				.toolCallId;
 			if (toolCallId && state.renderedToolCallIds.has(toolCallId)) {
-				this._logService.trace(`[TaskTurnStreamer] dedup tool.execution_complete ${toolCallId.slice(0, 12)}`);
+				this._logService.trace(
+					`[TaskTurnStreamer] dedup tool.execution_complete ${toolCallId.slice(0, 12)}`,
+				);
 				return;
 			}
 		}
@@ -268,13 +319,26 @@ export class TaskTurnStreamer {
 		const partsAfter = ctx.currentResponseParts.length;
 		if (partsAfter > partsBefore) {
 			const added = ctx.currentResponseParts.slice(partsBefore);
-			this._logService.trace(`[TaskTurnStreamer] ${event.type} produced ${added.length} part(s): ${added.map(p => (p as { constructor: { name: string } }).constructor.name).join(', ')}`);
+			this._logService.trace(
+				`[TaskTurnStreamer] ${event.type} produced ${added.length} part(s): ${added.map((p) => (p as { constructor: { name: string } }).constructor.name).join(', ')}`,
+			);
 		}
 	}
 
-	private _ingestAssistantMessage<TToolCall>(event: AgentTaskSessionEvent, ctx: ResponseEventRenderContext<TToolCall>, state: IngestState): void {
-		const data = event.data as { parentToolCallId?: string; toolRequests?: ToolRequest[]; content?: string; messageId?: string };
-		this._logService.trace(`[TaskTurnStreamer] assistant.message messageId=${data.messageId?.slice(0, 12)} parentToolCallId=${data.parentToolCallId ? 'yes' : 'no'} contentLen=${data.content?.length ?? 0} toolRequests=${data.toolRequests?.length ?? 0}`);
+	private _ingestAssistantMessage<TToolCall>(
+		event: AgentTaskSessionEvent,
+		ctx: ResponseEventRenderContext<TToolCall>,
+		state: IngestState,
+	): void {
+		const data = event.data as {
+			parentToolCallId?: string;
+			toolRequests?: ToolRequest[];
+			content?: string;
+			messageId?: string;
+		};
+		this._logService.trace(
+			`[TaskTurnStreamer] assistant.message messageId=${data.messageId?.slice(0, 12)} parentToolCallId=${data.parentToolCallId ? 'yes' : 'no'} contentLen=${data.content?.length ?? 0} toolRequests=${data.toolRequests?.length ?? 0}`,
+		);
 
 		if (data.parentToolCallId) {
 			// Child message of a tool call — render via default path (tool result text).
@@ -292,7 +356,8 @@ export class TaskTurnStreamer {
 		//    Dedupe per messageId by feeding only the suffix as a delta.
 		const content = data.content ?? '';
 		const messageId = data.messageId;
-		const hasToolRequests = !!data.toolRequests && data.toolRequests.length > 0;
+		const hasToolRequests =
+			!!data.toolRequests && data.toolRequests.length > 0;
 		if (content && messageId && !hasToolRequests) {
 			if (state.activeMessageId && state.activeMessageId !== messageId) {
 				flushPendingAssistantMessage(ctx);
@@ -310,11 +375,18 @@ export class TaskTurnStreamer {
 						type: 'assistant.message_delta',
 						data: { messageId, deltaContent: suffix },
 					} as unknown as AgentTaskSessionEvent;
-					ChatSessionContentBuilder.appendTaskEventToContext(deltaEvent, ctx);
+					ChatSessionContentBuilder.appendTaskEventToContext(
+						deltaEvent,
+						ctx,
+					);
 					flushPendingAssistantMessage(ctx);
-					this._logService.trace(`[TaskTurnStreamer] assistant.message ${messageId.slice(0, 12)} +${suffix.length} chars (flushed)`);
+					this._logService.trace(
+						`[TaskTurnStreamer] assistant.message ${messageId.slice(0, 12)} +${suffix.length} chars (flushed)`,
+					);
 				} else {
-					this._logService.warn(`[TaskTurnStreamer] assistant.message ${messageId} content diverges from prior snapshot (prior=${prior.length}c, new=${content.length}c); skipping to avoid duplication.`);
+					this._logService.warn(
+						`[TaskTurnStreamer] assistant.message ${messageId} content diverges from prior snapshot (prior=${prior.length}c, new=${content.length}c); skipping to avoid duplication.`,
+					);
 				}
 			}
 		}
@@ -325,20 +397,30 @@ export class TaskTurnStreamer {
 		//    invisible. The matching `tool.execution_complete` (if any) is deduped in the caller.
 		if (data.toolRequests) {
 			for (const req of data.toolRequests) {
-				if (!req?.toolCallId || state.renderedToolCallIds.has(req.toolCallId)) {
+				if (
+					!req?.toolCallId ||
+					state.renderedToolCallIds.has(req.toolCallId)
+				) {
 					continue;
 				}
 				state.renderedToolCallIds.add(req.toolCallId);
 				const part = this._renderToolRequest(req);
 				if (part) {
 					ctx.currentResponseParts.push(part);
-					this._logService.trace(`[TaskTurnStreamer] eager-rendered tool ${req.name}#${req.toolCallId.slice(0, 12)} as ${part.constructor.name}`);
+					this._logService.trace(
+						`[TaskTurnStreamer] eager-rendered tool ${req.name}#${req.toolCallId.slice(0, 12)} as ${part.constructor.name}`,
+					);
 				}
 			}
 		}
 	}
 
-	private _renderToolRequest(req: ToolRequest): vscode.ChatToolInvocationPart | vscode.ChatResponseThinkingProgressPart | undefined {
+	private _renderToolRequest(
+		req: ToolRequest,
+	):
+		| vscode.ChatToolInvocationPart
+		| vscode.ChatResponseThinkingProgressPart
+		| undefined {
 		return this._contentBuilder.createToolPartFromRequest(req);
 	}
 
@@ -351,21 +433,29 @@ export class TaskTurnStreamer {
 		return state.currentIntent;
 	}
 
-	private async _fetchTask(taskId: string): Promise<AgentTaskGetResponse | undefined> {
+	private async _fetchTask(
+		taskId: string,
+	): Promise<AgentTaskGetResponse | undefined> {
 		try {
 			const content = await this._backend.fetchTaskContent(taskId);
 			return content?.task;
 		} catch (e) {
-			this._logService.warn(`[TaskTurnStreamer] fetchTaskContent failed for ${taskId}: ${e}`);
+			this._logService.warn(
+				`[TaskTurnStreamer] fetchTaskContent failed for ${taskId}: ${e}`,
+			);
 			return undefined;
 		}
 	}
 
-	private async _fetchEvents(taskId: string): Promise<readonly AgentTaskSessionEvent[]> {
+	private async _fetchEvents(
+		taskId: string,
+	): Promise<readonly AgentTaskSessionEvent[]> {
 		try {
 			return await this._backend.fetchTaskEvents(taskId);
 		} catch (e) {
-			this._logService.warn(`[TaskTurnStreamer] fetchTaskEvents failed for ${taskId}: ${e}`);
+			this._logService.warn(
+				`[TaskTurnStreamer] fetchTaskEvents failed for ${taskId}: ${e}`,
+			);
 			return [];
 		}
 	}
@@ -395,7 +485,6 @@ interface ToolRequest {
 
 /** Pushes newly-produced render-context parts into a chat response stream, tracking the watermark. */
 class StreamSink<TToolCall> {
-
 	private _emittedPartsCount = 0;
 
 	constructor(
@@ -403,16 +492,20 @@ class StreamSink<TToolCall> {
 		private readonly _ctx: ResponseEventRenderContext<TToolCall>,
 		private readonly _logService: ILogService,
 		private readonly _taskId: string,
-	) { }
+	) {}
 
 	flush(): void {
 		flushPendingAssistantMessage(this._ctx);
 		const parts = this._ctx.currentResponseParts;
 		for (let i = this._emittedPartsCount; i < parts.length; i++) {
 			try {
-				this._stream.push(parts[i] as unknown as vscode.ChatResponsePart);
+				this._stream.push(
+					parts[i] as unknown as vscode.ChatResponsePart,
+				);
 			} catch (e) {
-				this._logService.warn(`[TaskTurnStreamer] stream.push failed for task ${this._taskId}: ${e}`);
+				this._logService.warn(
+					`[TaskTurnStreamer] stream.push failed for task ${this._taskId}: ${e}`,
+				);
 			}
 		}
 		this._emittedPartsCount = parts.length;
@@ -420,7 +513,7 @@ class StreamSink<TToolCall> {
 }
 
 function delay(ms: number, token: vscode.CancellationToken): Promise<void> {
-	return new Promise<void>(resolve => {
+	return new Promise<void>((resolve) => {
 		const handle = setTimeout(() => {
 			disposable.dispose();
 			resolve();

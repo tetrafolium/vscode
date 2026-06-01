@@ -6,7 +6,14 @@
 import assert from 'assert';
 import { platform } from 'os';
 import * as path from 'path';
-import { basename, dirname, fsPath, getFsPath, makeFsUri, normalizeUri } from '../uri';
+import {
+	basename,
+	dirname,
+	fsPath,
+	getFsPath,
+	makeFsUri,
+	normalizeUri,
+} from '../uri';
 
 suite('normalizeUri tests', function () {
 	test('returns the canonical form of a URI as a string', function () {
@@ -37,33 +44,53 @@ suite('normalizeUri tests', function () {
 suite('URI file system tests', function () {
 	test('getFsPath returns the file path for file system URIs', function () {
 		// Drive letter will get normalized to lowercase by makeFsUri
-		assert.strictEqual(getFsPath(makeFsUri(__filename))?.toLowerCase(), __filename.toLowerCase());
+		assert.strictEqual(
+			getFsPath(makeFsUri(__filename))?.toLowerCase(),
+			__filename.toLowerCase(),
+		);
 	});
 
 	test('getFsPath uses the platform-specific file separator', function () {
-		assert.strictEqual(getFsPath('file:///some/path'), path.join(path.sep, 'some', 'path'));
+		assert.strictEqual(
+			getFsPath('file:///some/path'),
+			path.join(path.sep, 'some', 'path'),
+		);
 	});
 
 	test('getFsPath recognizes platform-specific absolute paths', function () {
 		if (platform() === 'win32') {
-			assert.strictEqual(getFsPath('file:///C:/Some/Path'), 'C:\\Some\\Path');
+			assert.strictEqual(
+				getFsPath('file:///C:/Some/Path'),
+				'C:\\Some\\Path',
+			);
 		} else {
-			assert.strictEqual(getFsPath('file:///C:/Some/Path'), '/C:/Some/Path');
+			assert.strictEqual(
+				getFsPath('file:///C:/Some/Path'),
+				'/C:/Some/Path',
+			);
 		}
 	});
 
 	test('getFsPath supports UNC paths on Windows', function () {
 		if (platform() === 'win32') {
-			assert.strictEqual(getFsPath('file://Server/Share/Some/Path'), '\\\\Server\\Share\\Some\\Path');
+			assert.strictEqual(
+				getFsPath('file://Server/Share/Some/Path'),
+				'\\\\Server\\Share\\Some\\Path',
+			);
 		} else {
 			// on other platforms, this is the equivalent to smb://Server/Share/Some/Path,
 			// which is not a file system path
-			assert.strictEqual(getFsPath('file://Server/Share/Some/Path'), undefined);
+			assert.strictEqual(
+				getFsPath('file://Server/Share/Some/Path'),
+				undefined,
+			);
 		}
 	});
 
 	test('getFsPath supports device paths on Windows', function () {
-		if (platform() !== 'win32') { this.skip(); }
+		if (platform() !== 'win32') {
+			this.skip();
+		}
 
 		const devicePath = '\\\\.\\c:\\Some\\Path';
 
@@ -71,8 +98,14 @@ suite('URI file system tests', function () {
 	});
 
 	test('fsPath throws when the scheme does not represent a local file', function () {
-		assert.throws(() => fsPath('https://host.example/path'), /Copilot currently does not support URI with scheme/);
-		assert.throws(() => fsPath('untitled:Untitled-1'), /Copilot currently does not support URI with scheme/);
+		assert.throws(
+			() => fsPath('https://host.example/path'),
+			/Copilot currently does not support URI with scheme/,
+		);
+		assert.throws(
+			() => fsPath('untitled:Untitled-1'),
+			/Copilot currently does not support URI with scheme/,
+		);
 		assert.ok(fsPath('vscode-notebook-cell:///path/to/file'));
 		assert.ok(fsPath('vscode-notebook:///path/to/file'));
 		assert.ok(fsPath('notebook:///path/to/file'));
@@ -101,7 +134,9 @@ suite('dirname tests', function () {
 	});
 
 	test('returns {uri: string} for {uri: string}', function () {
-		assert.deepStrictEqual(dirname({ uri: 'file:///path/to/file' }), { uri: 'file:///path/to' });
+		assert.deepStrictEqual(dirname({ uri: 'file:///path/to/file' }), {
+			uri: 'file:///path/to',
+		});
 	});
 });
 
@@ -113,13 +148,13 @@ suite('basename tests', function () {
 		assert.equal(
 			actual,
 			pathExpected,
-			`basename() returned '${actual}' but path.basename() returned '${pathExpected}'`
+			`basename() returned '${actual}' but path.basename() returned '${pathExpected}'`,
 		);
 		const utilsExpected = basename(absolute);
 		assert.equal(
 			actual,
 			utilsExpected,
-			`basename() returned '${actual}' but Utils.basename() returned '${utilsExpected}'`
+			`basename() returned '${actual}' but Utils.basename() returned '${utilsExpected}'`,
 		);
 	}
 
@@ -139,7 +174,7 @@ suite('basename tests', function () {
 		'/?query',
 		'/#anchor',
 		'/?query#anchor',
-	].forEach(fsPath => {
+	].forEach((fsPath) => {
 		test(fsPath, function () {
 			verifyBasename(fsPath);
 		});

@@ -5,7 +5,7 @@
 
 //#region Types
 
-import { URI } from '../../../base/common/uri.js';
+import { URI } from "../../../base/common/uri.js";
 
 export interface AXValue {
 	type: AXValueType;
@@ -45,13 +45,85 @@ export interface AXProperty {
 	value: AXValue;
 }
 
-export type AXValueType = 'boolean' | 'tristate' | 'booleanOrUndefined' | 'idref' | 'idrefList' | 'integer' | 'node' | 'nodeList' | 'number' | 'string' | 'computedString' | 'token' | 'tokenList' | 'domRelation' | 'role' | 'internalRole' | 'valueUndefined';
+export type AXValueType =
+	| "boolean"
+	| "tristate"
+	| "booleanOrUndefined"
+	| "idref"
+	| "idrefList"
+	| "integer"
+	| "node"
+	| "nodeList"
+	| "number"
+	| "string"
+	| "computedString"
+	| "token"
+	| "tokenList"
+	| "domRelation"
+	| "role"
+	| "internalRole"
+	| "valueUndefined";
 
-export type AXValueSourceType = 'attribute' | 'implicit' | 'style' | 'contents' | 'placeholder' | 'relatedElement';
+export type AXValueSourceType =
+	| "attribute"
+	| "implicit"
+	| "style"
+	| "contents"
+	| "placeholder"
+	| "relatedElement";
 
-export type AXValueNativeSourceType = 'description' | 'figcaption' | 'label' | 'labelfor' | 'labelwrapped' | 'legend' | 'rubyannotation' | 'tablecaption' | 'title' | 'other';
+export type AXValueNativeSourceType =
+	| "description"
+	| "figcaption"
+	| "label"
+	| "labelfor"
+	| "labelwrapped"
+	| "legend"
+	| "rubyannotation"
+	| "tablecaption"
+	| "title"
+	| "other";
 
-export type AXPropertyName = 'url' | 'busy' | 'disabled' | 'editable' | 'focusable' | 'focused' | 'hidden' | 'hiddenRoot' | 'invalid' | 'keyshortcuts' | 'settable' | 'roledescription' | 'live' | 'atomic' | 'relevant' | 'root' | 'autocomplete' | 'hasPopup' | 'level' | 'multiselectable' | 'orientation' | 'multiline' | 'readonly' | 'required' | 'valuemin' | 'valuemax' | 'valuetext' | 'checked' | 'expanded' | 'pressed' | 'selected' | 'activedescendant' | 'controls' | 'describedby' | 'details' | 'errormessage' | 'flowto' | 'labelledby' | 'owns';
+export type AXPropertyName =
+	| "url"
+	| "busy"
+	| "disabled"
+	| "editable"
+	| "focusable"
+	| "focused"
+	| "hidden"
+	| "hiddenRoot"
+	| "invalid"
+	| "keyshortcuts"
+	| "settable"
+	| "roledescription"
+	| "live"
+	| "atomic"
+	| "relevant"
+	| "root"
+	| "autocomplete"
+	| "hasPopup"
+	| "level"
+	| "multiselectable"
+	| "orientation"
+	| "multiline"
+	| "readonly"
+	| "required"
+	| "valuemin"
+	| "valuemax"
+	| "valuetext"
+	| "checked"
+	| "expanded"
+	| "pressed"
+	| "selected"
+	| "activedescendant"
+	| "controls"
+	| "describedby"
+	| "details"
+	| "errormessage"
+	| "flowto"
+	| "labelledby"
+	| "owns";
 
 //#endregion
 
@@ -176,7 +248,7 @@ const LINE_MAX_LENGTH = 80;
 export function convertAXTreeToMarkdown(uri: URI, axNodes: AXNode[]): string {
 	const trees = createNodeTrees(axNodes);
 	if (trees.length === 0) {
-		return ''; // Return empty string for empty tree
+		return ""; // Return empty string for empty tree
 	}
 
 	// Process each tree and collect main content and navigation links
@@ -194,58 +266,70 @@ export function convertAXTreeToMarkdown(uri: URI, axNodes: AXNode[]): string {
 	}
 
 	// Combine all main content from all trees
-	const combinedMainContent = allMainContent.join('\n\n');
+	const combinedMainContent = allMainContent.join("\n\n");
 
 	// Combine main content and navigation links
-	return combinedMainContent + (allNavLinks.length > 0 ? '\n\n## Additional Links\n' + allNavLinks.join('\n') : '');
+	return (
+		combinedMainContent +
+		(allNavLinks.length > 0
+			? "\n\n## Additional Links\n" + allNavLinks.join("\n")
+			: "")
+	);
 }
 
 function extractMainContent(uri: URI, tree: AXNodeTree): string {
 	const contentBuffer: string[] = [];
 	processNode(uri, tree, contentBuffer, 0, true);
-	return contentBuffer.join('');
+	return contentBuffer.join("");
 }
 
-function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number, allowWrap: boolean): void {
+function processNode(
+	uri: URI,
+	node: AXNodeTree,
+	buffer: string[],
+	depth: number,
+	allowWrap: boolean,
+): void {
 	const role = getNodeRole(node.node);
 
 	switch (role) {
-		case 'navigation':
+		case "navigation":
 			return; // Skip navigation nodes
 
-		case 'heading':
+		case "heading":
 			processHeadingNode(uri, node, buffer, depth);
 			return;
 
-		case 'paragraph':
+		case "paragraph":
 			processParagraphNode(uri, node, buffer, depth, allowWrap);
 			return;
 
-		case 'list':
-			buffer.push('\n');
+		case "list":
+			buffer.push("\n");
 			for (const descChild of node.children) {
 				processNode(uri, descChild, buffer, depth + 1, true);
 			}
-			buffer.push('\n');
+			buffer.push("\n");
 			return;
 
-		case 'ListMarker':
+		case "ListMarker":
 			// TODO: Should we normalize these ListMarkers to `-` and normal lists?
 			buffer.push(getNodeText(node.node, allowWrap));
 			return;
 
-		case 'listitem': {
+		case "listitem": {
 			const tempBuffer: string[] = [];
 			// Process the children of the list item
 			for (const descChild of node.children) {
 				processNode(uri, descChild, tempBuffer, depth + 1, true);
 			}
-			const indent = getLevel(node.node) > 1 ? ' '.repeat(getLevel(node.node)) : '';
-			buffer.push(`${indent}${tempBuffer.join('').trim()}\n`);
+			const indent =
+				getLevel(node.node) > 1 ? " ".repeat(getLevel(node.node)) : "";
+			buffer.push(`${indent}${tempBuffer.join("").trim()}\n`);
 			return;
 		}
 
-		case 'link':
+		case "link":
 			if (!isNavigationLink(node)) {
 				const linkText = getNodeText(node.node, allowWrap);
 				const url = getLinkUrl(node.node);
@@ -256,15 +340,15 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 				}
 			}
 			return;
-		case 'StaticText': {
+		case "StaticText": {
 			const staticText = getNodeText(node.node, allowWrap);
 			if (staticText) {
 				buffer.push(staticText);
 			}
 			break;
 		}
-		case 'image': {
-			const altText = getNodeText(node.node, allowWrap) || 'Image';
+		case "image": {
+			const altText = getNodeText(node.node, allowWrap) || "Image";
 			const imageUrl = getImageUrl(node.node);
 			if (imageUrl) {
 				buffer.push(`![${altText}](${imageUrl})\n\n`);
@@ -274,29 +358,33 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 			break;
 		}
 
-		case 'DescriptionList':
+		case "DescriptionList":
 			processDescriptionListNode(uri, node, buffer, depth);
 			return;
 
-		case 'blockquote':
-			buffer.push('> ' + getNodeText(node.node, allowWrap).replace(/\n/g, '\n> ') + '\n\n');
+		case "blockquote":
+			buffer.push(
+				"> " +
+					getNodeText(node.node, allowWrap).replace(/\n/g, "\n> ") +
+					"\n\n",
+			);
 			break;
 
 		// TODO: Is this the correct way to handle the generic role?
-		case 'generic':
-			buffer.push(' ');
+		case "generic":
+			buffer.push(" ");
 			break;
 
-		case 'code': {
+		case "code": {
 			processCodeNode(uri, node, buffer, depth);
 			return;
 		}
 
-		case 'pre':
-			buffer.push('```\n' + getNodeText(node.node, false) + '\n```\n\n');
+		case "pre":
+			buffer.push("```\n" + getNodeText(node.node, false) + "\n```\n\n");
 			break;
 
-		case 'table':
+		case "table":
 			processTableNode(node, buffer);
 			return;
 	}
@@ -308,11 +396,12 @@ function processNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number
 }
 
 function getNodeRole(node: AXNode): string {
-	return node.role?.value as string || '';
+	return (node.role?.value as string) || "";
 }
 
 function getNodeText(node: AXNode, allowWrap: boolean): string {
-	const text = node.name?.value as string || node.value?.value as string || '';
+	const text =
+		(node.name?.value as string) || (node.value?.value as string) || "";
 	if (!allowWrap) {
 		return text;
 	}
@@ -321,38 +410,38 @@ function getNodeText(node: AXNode, allowWrap: boolean): string {
 		return text;
 	}
 
-	const chars = text.split('');
+	const chars = text.split("");
 	let lastSpaceIndex = -1;
 	for (let i = 1; i < chars.length; i++) {
-		if (chars[i] === ' ') {
+		if (chars[i] === " ") {
 			lastSpaceIndex = i;
 		}
 		// Check if we reached the line max length, try to break at the last space
 		// before the line max length
 		if (i % LINE_MAX_LENGTH === 0 && lastSpaceIndex !== -1) {
 			// replace the space with a new line
-			chars[lastSpaceIndex] = '\n';
+			chars[lastSpaceIndex] = "\n";
 			lastSpaceIndex = i;
 		}
 	}
-	return chars.join('');
+	return chars.join("");
 }
 
 function getLevel(node: AXNode): number {
-	const levelProp = node.properties?.find(p => p.name === 'level');
+	const levelProp = node.properties?.find((p) => p.name === "level");
 	return levelProp ? Math.min(Number(levelProp.value.value) || 1, 6) : 1;
 }
 
 function getLinkUrl(node: AXNode): string {
 	// Find URL in properties
-	const urlProp = node.properties?.find(p => p.name === 'url');
-	return urlProp?.value.value as string || '#';
+	const urlProp = node.properties?.find((p) => p.name === "url");
+	return (urlProp?.value.value as string) || "#";
 }
 
 function getImageUrl(node: AXNode): string | null {
 	// Find URL in properties
-	const urlProp = node.properties?.find(p => p.name === 'url');
-	return urlProp?.value.value as string || null;
+	const urlProp = node.properties?.find((p) => p.name === "url");
+	return (urlProp?.value.value as string) || null;
 }
 
 function isNavigationLink(node: AXNodeTree): boolean {
@@ -360,7 +449,7 @@ function isNavigationLink(node: AXNodeTree): boolean {
 	let current: AXNodeTree | null = node;
 	while (current) {
 		const role = getNodeRole(current.node);
-		if (['navigation', 'menu', 'menubar'].includes(role)) {
+		if (["navigation", "menu", "menubar"].includes(role)) {
 			return true;
 		}
 		current = current.parent;
@@ -373,117 +462,157 @@ function isSameUriIgnoringQueryAndFragment(uri: URI, node: AXNode): boolean {
 	const link = getLinkUrl(node);
 	try {
 		const parsed = URI.parse(link);
-		return parsed.scheme === uri.scheme && parsed.authority === uri.authority && parsed.path === uri.path;
+		return (
+			parsed.scheme === uri.scheme &&
+			parsed.authority === uri.authority &&
+			parsed.path === uri.path
+		);
 	} catch (e) {
 		return false;
 	}
 }
 
-function processParagraphNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number, allowWrap: boolean): void {
-	buffer.push('\n');
+function processParagraphNode(
+	uri: URI,
+	node: AXNodeTree,
+	buffer: string[],
+	depth: number,
+	allowWrap: boolean,
+): void {
+	buffer.push("\n");
 	// Process the children of the paragraph
 	for (const child of node.children) {
 		processNode(uri, child, buffer, depth + 1, allowWrap);
 	}
-	buffer.push('\n\n');
+	buffer.push("\n\n");
 }
 
-function processHeadingNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number): void {
-	buffer.push('\n');
+function processHeadingNode(
+	uri: URI,
+	node: AXNodeTree,
+	buffer: string[],
+	depth: number,
+): void {
+	buffer.push("\n");
 	const level = getLevel(node.node);
-	buffer.push(`${'#'.repeat(level)} `);
+	buffer.push(`${"#".repeat(level)} `);
 	// Process children nodes of the heading
 	for (const child of node.children) {
-		if (getNodeRole(child.node) === 'StaticText') {
+		if (getNodeRole(child.node) === "StaticText") {
 			buffer.push(getNodeText(child.node, false));
 		} else {
 			processNode(uri, child, buffer, depth + 1, false);
 		}
 	}
-	buffer.push('\n\n');
+	buffer.push("\n\n");
 }
 
-function processDescriptionListNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number): void {
-	buffer.push('\n');
+function processDescriptionListNode(
+	uri: URI,
+	node: AXNodeTree,
+	buffer: string[],
+	depth: number,
+): void {
+	buffer.push("\n");
 
 	// Process each child of the description list
 	for (const child of node.children) {
-		if (getNodeRole(child.node) === 'term') {
-			buffer.push('- **');
+		if (getNodeRole(child.node) === "term") {
+			buffer.push("- **");
 			// Process term nodes
 			for (const termChild of child.children) {
 				processNode(uri, termChild, buffer, depth + 1, true);
 			}
-			buffer.push('** ');
-		} else if (getNodeRole(child.node) === 'definition') {
+			buffer.push("** ");
+		} else if (getNodeRole(child.node) === "definition") {
 			// Process description nodes
 			for (const descChild of child.children) {
 				processNode(uri, descChild, buffer, depth + 1, true);
 			}
-			buffer.push('\n');
+			buffer.push("\n");
 		}
 	}
 
-	buffer.push('\n');
+	buffer.push("\n");
 }
 
 function isTableCell(role: string): boolean {
 	// Match cell, gridcell, columnheader, rowheader roles
-	return role === 'cell' || role === 'gridcell' || role === 'columnheader' || role === 'rowheader';
+	return (
+		role === "cell" ||
+		role === "gridcell" ||
+		role === "columnheader" ||
+		role === "rowheader"
+	);
 }
 
 function processTableNode(node: AXNodeTree, buffer: string[]): void {
-	buffer.push('\n');
+	buffer.push("\n");
 
 	// Find rows
-	const rows = node.children.filter(child => getNodeRole(child.node).includes('row'));
+	const rows = node.children.filter((child) =>
+		getNodeRole(child.node).includes("row"),
+	);
 
 	if (rows.length > 0) {
 		// First row as header
-		const headerCells = rows[0].children.filter(cell => isTableCell(getNodeRole(cell.node)));
+		const headerCells = rows[0].children.filter((cell) =>
+			isTableCell(getNodeRole(cell.node)),
+		);
 
 		// Generate header row
-		const headerContent = headerCells.map(cell => getNodeText(cell.node, false) || ' ');
-		buffer.push('| ' + headerContent.join(' | ') + ' |\n');
+		const headerContent = headerCells.map(
+			(cell) => getNodeText(cell.node, false) || " ",
+		);
+		buffer.push("| " + headerContent.join(" | ") + " |\n");
 
 		// Generate separator row
-		buffer.push('| ' + headerCells.map(() => '---').join(' | ') + ' |\n');
+		buffer.push("| " + headerCells.map(() => "---").join(" | ") + " |\n");
 
 		// Generate data rows
 		for (let i = 1; i < rows.length; i++) {
-			const dataCells = rows[i].children.filter(cell => isTableCell(getNodeRole(cell.node)));
-			const rowContent = dataCells.map(cell => getNodeText(cell.node, false) || ' ');
-			buffer.push('| ' + rowContent.join(' | ') + ' |\n');
+			const dataCells = rows[i].children.filter((cell) =>
+				isTableCell(getNodeRole(cell.node)),
+			);
+			const rowContent = dataCells.map(
+				(cell) => getNodeText(cell.node, false) || " ",
+			);
+			buffer.push("| " + rowContent.join(" | ") + " |\n");
 		}
 	}
 
-	buffer.push('\n');
+	buffer.push("\n");
 }
 
-function processCodeNode(uri: URI, node: AXNodeTree, buffer: string[], depth: number): void {
+function processCodeNode(
+	uri: URI,
+	node: AXNodeTree,
+	buffer: string[],
+	depth: number,
+): void {
 	const tempBuffer: string[] = [];
 	// Process the children of the code node
 	for (const child of node.children) {
 		processNode(uri, child, tempBuffer, depth + 1, false);
 	}
-	const isCodeblock = tempBuffer.some(text => text.includes('\n'));
+	const isCodeblock = tempBuffer.some((text) => text.includes("\n"));
 	if (isCodeblock) {
-		buffer.push('\n```\n');
+		buffer.push("\n```\n");
 		// Append the processed text to the buffer
-		buffer.push(tempBuffer.join(''));
-		buffer.push('\n```\n');
+		buffer.push(tempBuffer.join(""));
+		buffer.push("\n```\n");
 	} else {
-		buffer.push('`');
+		buffer.push("`");
 		let characterCount = 0;
 		// Append the processed text to the buffer
 		for (const tempItem of tempBuffer) {
 			characterCount += tempItem.length;
 			if (characterCount > LINE_MAX_LENGTH) {
-				buffer.push('\n');
+				buffer.push("\n");
 				characterCount = 0;
 			}
 			buffer.push(tempItem);
-			buffer.push('`');
+			buffer.push("`");
 		}
 	}
 }
@@ -497,12 +626,14 @@ function collectNavigationLinks(tree: AXNodeTree): string[] {
 function collectLinks(node: AXNodeTree, links: string[]): void {
 	const role = getNodeRole(node.node);
 
-	if (role === 'link' && isNavigationLink(node)) {
+	if (role === "link" && isNavigationLink(node)) {
 		const linkText = getNodeText(node.node, true);
 		const url = getLinkUrl(node.node);
-		const description = node.node.description?.value as string || '';
+		const description = (node.node.description?.value as string) || "";
 
-		links.push(`- [${linkText}](${url})${description ? ' - ' + description : ''}`);
+		links.push(
+			`- [${linkText}](${url})${description ? " - " + description : ""}`,
+		);
 	}
 
 	// Process children

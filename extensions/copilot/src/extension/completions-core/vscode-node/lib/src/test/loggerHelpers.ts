@@ -22,14 +22,14 @@ export class TestLogTarget implements ICompletionsLogTargetService {
 
 	hasMessage(level: LogLevel, ...extra: unknown[]) {
 		return this._messages.some(
-			m =>
+			(m) =>
 				m.level === level &&
 				m.extra.length === extra.length &&
 				m.extra
-					.filter(e => !(e instanceof Error))
+					.filter((e) => !(e instanceof Error))
 					.every((e, i) => {
 						return util.isDeepStrictEqual(e, extra[i]);
-					})
+					}),
 		);
 	}
 
@@ -37,10 +37,16 @@ export class TestLogTarget implements ICompletionsLogTargetService {
 		if (!this.hasMessage(level, ...extra)) {
 			throw new Error(
 				`Expected message not found: ${LogLevel[level]} ${JSON.stringify(
-					extra
+					extra,
 				)}. Actual messages: ${this._messages
-					.map(m => '\n- ' + LogLevel[m.level] + ': ' + JSON.stringify(m.extra))
-					.join('')}`
+					.map(
+						(m) =>
+							'\n- ' +
+							LogLevel[m.level] +
+							': ' +
+							JSON.stringify(m.extra),
+					)
+					.join('')}`,
 			);
 		}
 	}
@@ -51,7 +57,11 @@ export class TestLogTarget implements ICompletionsLogTargetService {
 	 */
 	hasMessageMatching(level: LogLevel, test: RegExp) {
 		return this._messages.some(
-			m => m.level === level && test.test(`[${m.category}] ${m.extra.map(toPlainText).join(',')}`)
+			(m) =>
+				m.level === level &&
+				test.test(
+					`[${m.category}] ${m.extra.map(toPlainText).join(',')}`,
+				),
 		);
 	}
 
@@ -59,8 +69,14 @@ export class TestLogTarget implements ICompletionsLogTargetService {
 		if (!this.hasMessageMatching(level, test)) {
 			throw new Error(
 				`Expected message not found: ${LogLevel[level]} ${test}. Actual messages: ${this._messages
-					.map(m => '\n- ' + LogLevel[m.level] + ': ' + JSON.stringify(m.extra))
-					.join('')}`
+					.map(
+						(m) =>
+							'\n- ' +
+							LogLevel[m.level] +
+							': ' +
+							JSON.stringify(m.extra),
+					)
+					.join('')}`,
 			);
 		}
 	}

@@ -3,20 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDialogHandler, IDialogResult, IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
-import { IProductService } from '../../../../platform/product/common/productService.js';
-import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../common/contributions.js';
-import { IDialogsModel, IDialogViewItem } from '../../../common/dialogs.js';
-import { BrowserDialogHandler } from './dialogHandler.js';
-import { DialogService } from '../../../services/dialogs/common/dialogService.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { Lazy } from '../../../../base/common/lazy.js';
-import { createBrowserAboutDialogDetails } from './dialog.js';
+import {
+	IDialogHandler,
+	IDialogResult,
+	IDialogService,
+} from "../../../../platform/dialogs/common/dialogs.js";
+import { IProductService } from "../../../../platform/product/common/productService.js";
+import {
+	IWorkbenchContribution,
+	WorkbenchPhase,
+	registerWorkbenchContribution2,
+} from "../../../common/contributions.js";
+import { IDialogsModel, IDialogViewItem } from "../../../common/dialogs.js";
+import { BrowserDialogHandler } from "./dialogHandler.js";
+import { DialogService } from "../../../services/dialogs/common/dialogService.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import { Lazy } from "../../../../base/common/lazy.js";
+import { createBrowserAboutDialogDetails } from "./dialog.js";
 
-export class DialogHandlerContribution extends Disposable implements IWorkbenchContribution {
-
-	static readonly ID = 'workbench.contrib.dialogHandler';
+export class DialogHandlerContribution
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	static readonly ID = "workbench.contrib.dialogHandler";
 
 	private readonly model: IDialogsModel;
 	private readonly impl: Lazy<IDialogHandler>;
@@ -30,14 +40,18 @@ export class DialogHandlerContribution extends Disposable implements IWorkbenchC
 	) {
 		super();
 
-		this.impl = new Lazy(() => instantiationService.createInstance(BrowserDialogHandler));
+		this.impl = new Lazy(() =>
+			instantiationService.createInstance(BrowserDialogHandler),
+		);
 		this.model = (this.dialogService as DialogService).model;
 
-		this._register(this.model.onWillShowDialog(() => {
-			if (!this.currentDialog) {
-				this.processDialogs();
-			}
-		}));
+		this._register(
+			this.model.onWillShowDialog(() => {
+				if (!this.currentDialog) {
+					this.processDialogs();
+				}
+			}),
+		);
 
 		this.processDialogs();
 	}
@@ -58,8 +72,14 @@ export class DialogHandlerContribution extends Disposable implements IWorkbenchC
 					const args = this.currentDialog.args.promptArgs;
 					result = await this.impl.value.prompt(args.prompt);
 				} else {
-					const aboutDialogDetails = createBrowserAboutDialogDetails(this.productService);
-					await this.impl.value.about(aboutDialogDetails.title, aboutDialogDetails.details, aboutDialogDetails.detailsToCopy);
+					const aboutDialogDetails = createBrowserAboutDialogDetails(
+						this.productService,
+					);
+					await this.impl.value.about(
+						aboutDialogDetails.title,
+						aboutDialogDetails.details,
+						aboutDialogDetails.detailsToCopy,
+					);
 				}
 			} catch (error) {
 				result = error;
@@ -74,5 +94,5 @@ export class DialogHandlerContribution extends Disposable implements IWorkbenchC
 registerWorkbenchContribution2(
 	DialogHandlerContribution.ID,
 	DialogHandlerContribution,
-	WorkbenchPhase.BlockStartup // Block to allow for dialogs to show before restore finished
+	WorkbenchPhase.BlockStartup, // Block to allow for dialogs to show before restore finished
 );

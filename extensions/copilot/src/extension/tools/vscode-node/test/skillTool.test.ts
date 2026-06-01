@@ -6,11 +6,20 @@
 import * as assert from 'assert';
 import { FileType } from '../../../../platform/filesystem/common/fileTypes';
 import { URI } from '../../../../util/vs/base/common/uri';
-import { listRelatedFiles, listRelatedFilesRecursive, parseSkillContext, ReadDirectoryFn, resolveSkillUri } from '../../node/skillTool';
+import {
+	listRelatedFiles,
+	listRelatedFilesRecursive,
+	parseSkillContext,
+	ReadDirectoryFn,
+	resolveSkillUri,
+} from '../../node/skillTool';
 
 suite('parseSkillContext', () => {
 	test('returns inline when no frontmatter', () => {
-		assert.strictEqual(parseSkillContext('# My Skill\nSome content'), 'inline');
+		assert.strictEqual(
+			parseSkillContext('# My Skill\nSome content'),
+			'inline',
+		);
 	});
 
 	test('returns inline when frontmatter has no context field', () => {
@@ -38,7 +47,8 @@ suite('parseSkillContext', () => {
 	});
 
 	test('handles context field among other frontmatter fields', () => {
-		const content = '---\nname: my-skill\ncontext: fork\ndescription: A skill\n---\n# My Skill';
+		const content =
+			'---\nname: my-skill\ncontext: fork\ndescription: A skill\n---\n# My Skill';
 		assert.strictEqual(parseSkillContext(content), 'fork');
 	});
 
@@ -58,7 +68,8 @@ suite('parseSkillContext', () => {
 	});
 
 	test('returns inline when context field is in body not frontmatter', () => {
-		const content = '---\nname: test\n---\ncontext: fork\n# Not in frontmatter';
+		const content =
+			'---\nname: test\n---\ncontext: fork\n# Not in frontmatter';
 		assert.strictEqual(parseSkillContext(content), 'inline');
 	});
 
@@ -83,7 +94,8 @@ suite('parseSkillContext', () => {
 	});
 
 	test('handles context as last field in frontmatter', () => {
-		const content = '---\nname: test\ndescription: A skill\ncontext: fork\n---\n# My Skill';
+		const content =
+			'---\nname: test\ndescription: A skill\ncontext: fork\n---\n# My Skill';
 		assert.strictEqual(parseSkillContext(content), 'fork');
 	});
 
@@ -98,7 +110,8 @@ suite('parseSkillContext', () => {
 	});
 
 	test('returns inline when --- appears in body after valid frontmatter', () => {
-		const content = '---\nname: test\n---\nSome body\n---\ncontext: fork\n---';
+		const content =
+			'---\nname: test\n---\nSome body\n---\ncontext: fork\n---';
 		assert.strictEqual(parseSkillContext(content), 'inline');
 	});
 
@@ -108,7 +121,8 @@ suite('parseSkillContext', () => {
 	});
 
 	test('handles multiline frontmatter values before context', () => {
-		const content = '---\ndescription: |\n  This is a long\n  multiline description\ncontext: fork\n---\n# My Skill';
+		const content =
+			'---\ndescription: |\n  This is a long\n  multiline description\ncontext: fork\n---\n# My Skill';
 		assert.strictEqual(parseSkillContext(content), 'fork');
 	});
 
@@ -124,7 +138,9 @@ suite('parseSkillContext', () => {
 });
 
 suite('listRelatedFilesRecursive', () => {
-	function makeReadDirectory(tree: Record<string, [string, FileType][]>): ReadDirectoryFn {
+	function makeReadDirectory(
+		tree: Record<string, [string, FileType][]>,
+	): ReadDirectoryFn {
 		return async (uri: URI) => {
 			return tree[uri.path] ?? [];
 		};
@@ -166,9 +182,7 @@ suite('listRelatedFilesRecursive', () => {
 				['SKILL.md', FileType.File],
 				['lib', FileType.Directory],
 			],
-			'/skills/my-skill/lib': [
-				['utils.ts', FileType.File],
-			],
+			'/skills/my-skill/lib': [['utils.ts', FileType.File]],
 		});
 
 		const files: string[] = [];
@@ -184,15 +198,9 @@ suite('listRelatedFilesRecursive', () => {
 				['.git', FileType.Directory],
 				['src', FileType.Directory],
 			],
-			'/skills/my-skill/node_modules': [
-				['pkg.json', FileType.File],
-			],
-			'/skills/my-skill/.git': [
-				['HEAD', FileType.File],
-			],
-			'/skills/my-skill/src': [
-				['main.ts', FileType.File],
-			],
+			'/skills/my-skill/node_modules': [['pkg.json', FileType.File]],
+			'/skills/my-skill/.git': [['HEAD', FileType.File]],
+			'/skills/my-skill/src': [['main.ts', FileType.File]],
 		});
 
 		const files: string[] = [];
@@ -223,7 +231,7 @@ suite('listRelatedFilesRecursive', () => {
 		assert.strictEqual(files.length, 6);
 		assert.ok(files.includes('file0.txt'));
 		assert.ok(files.includes('d/d/d/d/d/file5.txt'));
-		assert.ok(!files.some(f => f.includes('file6.txt')));
+		assert.ok(!files.some((f) => f.includes('file6.txt')));
 	});
 
 	test('stops at MAX_RELATED_FILES (50)', async () => {
@@ -248,7 +256,10 @@ suite('listRelatedFiles', () => {
 			throw new Error('ENOENT');
 		};
 
-		const result = await listRelatedFiles(URI.file('/nonexistent'), readDir);
+		const result = await listRelatedFiles(
+			URI.file('/nonexistent'),
+			readDir,
+		);
 		assert.deepStrictEqual(result, []);
 	});
 
@@ -258,7 +269,10 @@ suite('listRelatedFiles', () => {
 			['template.txt', FileType.File],
 		];
 
-		const result = await listRelatedFiles(URI.file('/skills/test'), readDir);
+		const result = await listRelatedFiles(
+			URI.file('/skills/test'),
+			readDir,
+		);
 		assert.deepStrictEqual(result, ['template.txt']);
 	});
 });
@@ -268,11 +282,15 @@ suite('resolveSkillUri', () => {
 	const skillB = URI.file('/skills/beta/SKILL.md');
 	const skillC = URI.file('/skills/gamma/SKILL.md');
 
-	function makeSkillIndex(...uris: URI[]): { readonly skills: Iterable<URI> } {
+	function makeSkillIndex(...uris: URI[]): {
+		readonly skills: Iterable<URI>;
+	} {
 		return { skills: uris };
 	}
 
-	function makeGetSkillInfo(map: Map<string, string>): (uri: URI) => { readonly skillName: string } | undefined {
+	function makeGetSkillInfo(
+		map: Map<string, string>,
+	): (uri: URI) => { readonly skillName: string } | undefined {
 		return (uri: URI) => {
 			const name = map.get(uri.toString());
 			return name ? { skillName: name } : undefined;
@@ -311,70 +329,76 @@ suite('resolveSkillUri', () => {
 			[skillC.toString(), 'gamma'],
 		]);
 		assert.throws(
-			() => resolveSkillUri(
-				'nonexistent',
-				'index-content',
-				() => makeSkillIndex(skillA, skillB, skillC),
-				makeGetSkillInfo(infoMap),
-			),
+			() =>
+				resolveSkillUri(
+					'nonexistent',
+					'index-content',
+					() => makeSkillIndex(skillA, skillB, skillC),
+					makeGetSkillInfo(infoMap),
+				),
 			(err: Error) => {
 				assert.ok(err.message.includes('"nonexistent"'));
-				assert.ok(err.message.includes('Available skills: alpha, beta, gamma'));
+				assert.ok(
+					err.message.includes(
+						'Available skills: alpha, beta, gamma',
+					),
+				);
 				return true;
-			}
+			},
 		);
 	});
 
 	test('throws when indexValue is undefined', () => {
 		assert.throws(
-			() => resolveSkillUri(
-				'any-skill',
-				undefined,
-				() => makeSkillIndex(),
-				() => undefined,
-			),
+			() =>
+				resolveSkillUri(
+					'any-skill',
+					undefined,
+					() => makeSkillIndex(),
+					() => undefined,
+				),
 			(err: Error) => {
 				assert.ok(err.message.includes('"any-skill" not found'));
 				assert.ok(!err.message.includes('Available skills'));
 				return true;
-			}
+			},
 		);
 	});
 
 	test('throws with no available skills when index has no skills', () => {
 		assert.throws(
-			() => resolveSkillUri(
-				'missing',
-				'index-content',
-				() => makeSkillIndex(),
-				() => undefined,
-			),
+			() =>
+				resolveSkillUri(
+					'missing',
+					'index-content',
+					() => makeSkillIndex(),
+					() => undefined,
+				),
 			(err: Error) => {
 				assert.ok(err.message.includes('"missing" not found'));
 				assert.ok(!err.message.includes('Available skills'));
 				return true;
-			}
+			},
 		);
 	});
 
 	test('skips skills where getSkillInfo returns undefined', () => {
-		const infoMap = new Map([
-			[skillB.toString(), 'beta'],
-		]);
+		const infoMap = new Map([[skillB.toString(), 'beta']]);
 		// skillA has no info, only skillB does
 		assert.throws(
-			() => resolveSkillUri(
-				'nonexistent',
-				'index-content',
-				() => makeSkillIndex(skillA, skillB),
-				makeGetSkillInfo(infoMap),
-			),
+			() =>
+				resolveSkillUri(
+					'nonexistent',
+					'index-content',
+					() => makeSkillIndex(skillA, skillB),
+					makeGetSkillInfo(infoMap),
+				),
 			(err: Error) => {
 				// Only beta should appear in available skills
 				assert.ok(err.message.includes('Available skills: beta'));
 				assert.ok(!err.message.includes('alpha'));
 				return true;
-			}
+			},
 		);
 	});
 
@@ -396,7 +420,10 @@ suite('resolveSkillUri', () => {
 		resolveSkillUri(
 			'alpha',
 			'my-special-index-content',
-			(text) => { receivedText = text; return makeSkillIndex(skillA); },
+			(text) => {
+				receivedText = text;
+				return makeSkillIndex(skillA);
+			},
 			makeGetSkillInfo(infoMap),
 		);
 		assert.strictEqual(receivedText, 'my-special-index-content');
@@ -404,11 +431,14 @@ suite('resolveSkillUri', () => {
 
 	test('does not call parseInstructionIndexFile when indexValue is undefined', () => {
 		let wasCalled = false;
-		assert.throws(
-			() => resolveSkillUri(
+		assert.throws(() =>
+			resolveSkillUri(
 				'skill',
 				undefined,
-				() => { wasCalled = true; return makeSkillIndex(); },
+				() => {
+					wasCalled = true;
+					return makeSkillIndex();
+				},
 				() => undefined,
 			),
 		);
@@ -418,16 +448,17 @@ suite('resolveSkillUri', () => {
 	test('matches skill name exactly (case-sensitive)', () => {
 		const infoMap = new Map([[skillA.toString(), 'Alpha']]);
 		assert.throws(
-			() => resolveSkillUri(
-				'alpha',
-				'index-content',
-				() => makeSkillIndex(skillA),
-				makeGetSkillInfo(infoMap),
-			),
+			() =>
+				resolveSkillUri(
+					'alpha',
+					'index-content',
+					() => makeSkillIndex(skillA),
+					makeGetSkillInfo(infoMap),
+				),
 			(err: Error) => {
 				assert.ok(err.message.includes('Available skills: Alpha'));
 				return true;
-			}
+			},
 		);
 	});
 });

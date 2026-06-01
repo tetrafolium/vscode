@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import type { CancellationToken } from 'vscode';
-import { ChatFetchResponseType, ChatLocation } from '../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+} from '../../../platform/chat/common/commonTypes';
 import { IInteractionService } from '../../../platform/chat/common/interactionService';
 import { SettingListItem } from '../../../platform/embeddings/common/vscodeIndex';
 import { IChatEndpoint } from '../../../platform/networking/common/networking';
@@ -16,30 +19,36 @@ export class SettingsEditorSearchResultsSelector {
 	private static readonly DEFAULT_TIMEOUT = 10000; // 10 seconds
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@IInteractionService private readonly interactionService: IInteractionService,
-	) { }
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+		@IInteractionService
+		private readonly interactionService: IInteractionService,
+	) {}
 
-	async selectTopSearchResults(endpoint: IChatEndpoint, query: string, settings: SettingListItem[], token: CancellationToken): Promise<string[]> {
+	async selectTopSearchResults(
+		endpoint: IChatEndpoint,
+		query: string,
+		settings: SettingListItem[],
+		token: CancellationToken,
+	): Promise<string[]> {
 		if (token.isCancellationRequested) {
 			return [];
 		}
 
-		const promptRenderer = PromptRenderer
-			.create(
-				this.instantiationService,
-				endpoint,
-				SettingsEditorSuggestQueryPrompt,
-				{
-					query,
-					settings
-				}
-			);
+		const promptRenderer = PromptRenderer.create(
+			this.instantiationService,
+			endpoint,
+			SettingsEditorSuggestQueryPrompt,
+			{
+				query,
+				settings,
+			},
+		);
 		const prompt = await promptRenderer.render(undefined, token);
 
 		this.interactionService.startInteraction();
-		const fetchResult = await raceTimeout(endpoint
-			.makeChatRequest(
+		const fetchResult = await raceTimeout(
+			endpoint.makeChatRequest(
 				'settingsEditorSearchSuggestions',
 				prompt.messages,
 				undefined,
@@ -47,15 +56,21 @@ export class SettingsEditorSearchResultsSelector {
 				ChatLocation.Other,
 				undefined,
 				{
-					temperature: 0.1
-				}
-			), SettingsEditorSearchResultsSelector.DEFAULT_TIMEOUT);
+					temperature: 0.1,
+				},
+			),
+			SettingsEditorSearchResultsSelector.DEFAULT_TIMEOUT,
+		);
 
-		if (token.isCancellationRequested || fetchResult === undefined || fetchResult.type !== ChatFetchResponseType.Success) {
+		if (
+			token.isCancellationRequested ||
+			fetchResult === undefined ||
+			fetchResult.type !== ChatFetchResponseType.Success
+		) {
 			return [];
 		}
 
 		const rawSuggestions = fetchResult.value;
-		return rawSuggestions.split('\n').map(setting => setting.trim());
+		return rawSuggestions.split('\n').map((setting) => setting.trim());
 	}
 }

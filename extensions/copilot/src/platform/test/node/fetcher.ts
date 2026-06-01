@@ -4,8 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CancellationTokenSource } from '../../../util/vs/base/common/cancellation';
-import { IHeaders, ReportFetchEvent, Response } from '../../networking/common/fetcherService';
-
+import {
+	IHeaders,
+	ReportFetchEvent,
+	Response,
+} from '../../networking/common/fetcherService';
 
 export function createFakeResponse(statusCode: number, response: any = 'body') {
 	return Response.fromText(
@@ -13,11 +16,15 @@ export function createFakeResponse(statusCode: number, response: any = 'body') {
 		'status text',
 		new FakeHeaders(),
 		JSON.stringify(response),
-		'test-stub'
+		'test-stub',
 	);
 }
 
-export function createFakeStreamResponse(body: string | string[] | { chunk: string; shouldCancelStream: boolean }[], cts?: CancellationTokenSource, reportEvent: ReportFetchEvent = () => { }): Response {
+export function createFakeStreamResponse(
+	body: string | string[] | { chunk: string; shouldCancelStream: boolean }[],
+	cts?: CancellationTokenSource,
+	reportEvent: ReportFetchEvent = () => {},
+): Response {
 	const chunks = Array.isArray(body) ? body : [body];
 	return new Response(
 		200,
@@ -31,7 +38,10 @@ export function createFakeStreamResponse(body: string | string[] | { chunk: stri
 	);
 }
 
-function toStream(strings: string[] | { chunk: string; shouldCancelStream: boolean }[], cts?: CancellationTokenSource): ReadableStream<Uint8Array> {
+function toStream(
+	strings: string[] | { chunk: string; shouldCancelStream: boolean }[],
+	cts?: CancellationTokenSource,
+): ReadableStream<Uint8Array> {
 	const encoder = new TextEncoder();
 	if (strings.length === 0 || typeof strings[0] === 'string') {
 		return new ReadableStream({
@@ -40,7 +50,7 @@ function toStream(strings: string[] | { chunk: string; shouldCancelStream: boole
 					controller.enqueue(encoder.encode(s as string));
 				}
 				controller.close();
-			}
+			},
 		});
 	} else {
 		return new ReadableStream({
@@ -56,7 +66,7 @@ function toStream(strings: string[] | { chunk: string; shouldCancelStream: boole
 					}
 				}
 				controller.close();
-			}
+			},
 		});
 	}
 }

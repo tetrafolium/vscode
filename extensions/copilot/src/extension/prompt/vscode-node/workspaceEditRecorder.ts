@@ -11,30 +11,38 @@ import { IInstantiationService } from '../../../util/vs/platform/instantiation/c
 import { VSCodeWorkspace } from '../../inlineEdits/vscode-node/parts/vscodeWorkspace';
 
 export class WorkspaceEditRecorder extends Disposable {
-
 	private readonly _workspaceDocumentEditHistory: WorkspaceDocumentEditHistory;
 	private readonly _workspace: VSCodeWorkspace;
 
 	constructor(
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 	) {
 		super();
 
-		this._workspace = this._instantiationService.createInstance(VSCodeWorkspace);
+		this._workspace =
+			this._instantiationService.createInstance(VSCodeWorkspace);
 		const git = this._instantiationService.createInstance(ObservableGit);
-		this._workspaceDocumentEditHistory = this._register(new WorkspaceDocumentEditHistory(this._workspace, git, 100));
+		this._workspaceDocumentEditHistory = this._register(
+			new WorkspaceDocumentEditHistory(this._workspace, git, 100),
+		);
 	}
 
 	public getEditsAndReset() {
 		const serializedEdits: { path: string; edits: string }[] = [];
-		this._workspace.openDocuments.get().forEach(doc => {
-			const edits = this._workspaceDocumentEditHistory.getRecentEdits(doc.id);
+		this._workspace.openDocuments.get().forEach((doc) => {
+			const edits = this._workspaceDocumentEditHistory.getRecentEdits(
+				doc.id,
+			);
 			if (edits && edits.edits.replacements.length > 0) {
 				const docUri = vscode.Uri.parse(doc.id.path);
-				const relativePath = vscode.workspace.asRelativePath(docUri, false);
+				const relativePath = vscode.workspace.asRelativePath(
+					docUri,
+					false,
+				);
 				serializedEdits.push({
 					path: relativePath,
-					edits: JSON.stringify(edits.edits)
+					edits: JSON.stringify(edits.edits),
 				});
 			}
 		});

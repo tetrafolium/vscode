@@ -16,14 +16,12 @@ describe('getStructure - tsx', () => {
 	}
 
 	test('tsx source with different syntax constructs', async () => {
-
 		const source = await fromFixture('test.tsx');
 
 		expect(await tsxSrcWithStructure(source)).toMatchSnapshot();
 	});
 
 	test('issue #7487', async () => {
-
 		const source = await fromFixture('EditForm.tsx');
 
 		expect(await tsxSrcWithStructure(source)).toMatchSnapshot();

@@ -3,26 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../../base/browser/dom.js';
-import { CancellationTokenSource } from '../../../../../../base/common/cancellation.js';
-import { Disposable, DisposableMap, IDisposable, MutableDisposable } from '../../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import { IInstantiationService } from '../../../../../../platform/instantiation/common/instantiation.js';
-import { IAgentHostService } from '../../../../../../platform/agentHost/common/agentService.js';
-import type { ResolveSessionConfigResult, SessionConfigPropertySchema } from '../../../../../../platform/agentHost/common/state/protocol/commands.js';
-import type { SessionState } from '../../../../../../platform/agentHost/common/state/protocol/state.js';
-import { StateComponents } from '../../../../../../platform/agentHost/common/state/sessionState.js';
-import { type IAgentSubscription } from '../../../../../../platform/agentHost/common/state/agentSubscription.js';
-import { isUntitledChatSession } from '../../../common/model/chatUri.js';
-import type { IChatWidget } from '../../chat.js';
-import { AgentHostChatInputPicker, isClaimedByDedicatedPicker } from './agentHostChatInputPicker.js';
-import { IAgentHostSessionWorkingDirectoryResolver } from './agentHostSessionWorkingDirectoryResolver.js';
-import { IAgentHostUntitledProvisionalSessionService } from './agentHostUntitledProvisionalSessionService.js';
-import { IWorkspaceContextService } from '../../../../../../platform/workspace/common/workspace.js';
+import * as dom from "../../../../../../base/browser/dom.js";
+import { CancellationTokenSource } from "../../../../../../base/common/cancellation.js";
+import {
+	Disposable,
+	DisposableMap,
+	IDisposable,
+	MutableDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import { IInstantiationService } from "../../../../../../platform/instantiation/common/instantiation.js";
+import { IAgentHostService } from "../../../../../../platform/agentHost/common/agentService.js";
+import type {
+	ResolveSessionConfigResult,
+	SessionConfigPropertySchema,
+} from "../../../../../../platform/agentHost/common/state/protocol/commands.js";
+import type { SessionState } from "../../../../../../platform/agentHost/common/state/protocol/state.js";
+import { StateComponents } from "../../../../../../platform/agentHost/common/state/sessionState.js";
+import { type IAgentSubscription } from "../../../../../../platform/agentHost/common/state/agentSubscription.js";
+import { isUntitledChatSession } from "../../../common/model/chatUri.js";
+import type { IChatWidget } from "../../chat.js";
+import {
+	AgentHostChatInputPicker,
+	isClaimedByDedicatedPicker,
+} from "./agentHostChatInputPicker.js";
+import { IAgentHostSessionWorkingDirectoryResolver } from "./agentHostSessionWorkingDirectoryResolver.js";
+import { IAgentHostUntitledProvisionalSessionService } from "./agentHostUntitledProvisionalSessionService.js";
+import { IWorkspaceContextService } from "../../../../../../platform/workspace/common/workspace.js";
 
 function toBackendSessionUri(sessionResource: URI): URI | undefined {
 	const scheme = sessionResource.scheme;
-	const prefix = 'agent-host-';
+	const prefix = "agent-host-";
 	if (!scheme.startsWith(prefix)) {
 		return undefined;
 	}
@@ -30,7 +41,7 @@ function toBackendSessionUri(sessionResource: URI): URI | undefined {
 	if (!provider) {
 		return undefined;
 	}
-	const rawId = sessionResource.path.replace(/^\//, '');
+	const rawId = sessionResource.path.replace(/^\//, "");
 	return URI.from({ scheme: provider, path: `/${rawId}` });
 }
 
@@ -45,7 +56,6 @@ function toBackendSessionUri(sessionResource: URI): URI | undefined {
  * set of chips whenever the active session's schema changes.
  */
 export class AgentHostGenericConfigChips extends Disposable {
-
 	private _container: HTMLElement | undefined;
 
 	private readonly _chips = this._register(new DisposableMap<string>());
@@ -55,30 +65,47 @@ export class AgentHostGenericConfigChips extends Disposable {
 	 * lifetime of any one (sessionResource, backendSession) pair; replaced
 	 * via {@link _reattach} when the active session changes.
 	 */
-	private readonly _subRef = this._register(new MutableDisposable<IDisposable & {
-		readonly sub: IAgentSubscription<SessionState>;
-		readonly backendSession: URI;
-	}>());
+	private readonly _subRef = this._register(
+		new MutableDisposable<
+			IDisposable & {
+				readonly sub: IAgentSubscription<SessionState>;
+				readonly backendSession: URI;
+			}
+		>(),
+	);
 
-	private _initialResolved: { readonly sessionResource: URI; readonly result: ResolveSessionConfigResult } | undefined;
-	private readonly _initialResolveCts = this._register(new MutableDisposable<CancellationTokenSource>());
+	private _initialResolved:
+		| {
+				readonly sessionResource: URI;
+				readonly result: ResolveSessionConfigResult;
+		  }
+		| undefined;
+	private readonly _initialResolveCts = this._register(
+		new MutableDisposable<CancellationTokenSource>(),
+	);
 
 	constructor(
 		private readonly _widget: IChatWidget,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 		@IAgentHostService private readonly _agentHostService: IAgentHostService,
-		@IAgentHostUntitledProvisionalSessionService private readonly _provisional: IAgentHostUntitledProvisionalSessionService,
-		@IAgentHostSessionWorkingDirectoryResolver private readonly _workingDirectoryResolver: IAgentHostSessionWorkingDirectoryResolver,
-		@IWorkspaceContextService private readonly _workspaceContextService: IWorkspaceContextService,
+		@IAgentHostUntitledProvisionalSessionService
+		private readonly _provisional: IAgentHostUntitledProvisionalSessionService,
+		@IAgentHostSessionWorkingDirectoryResolver
+		private readonly _workingDirectoryResolver: IAgentHostSessionWorkingDirectoryResolver,
+		@IWorkspaceContextService
+		private readonly _workspaceContextService: IWorkspaceContextService,
 	) {
 		super();
 		this._register(this._widget.onDidChangeViewModel(() => this._reattach()));
-		this._register(this._provisional.onDidChange((sessionResource: URI) => {
-			const current = this._widget.viewModel?.sessionResource;
-			if (current && current.toString() === sessionResource.toString()) {
-				this._reattach();
-			}
-		}));
+		this._register(
+			this._provisional.onDidChange((sessionResource: URI) => {
+				const current = this._widget.viewModel?.sessionResource;
+				if (current && current.toString() === sessionResource.toString()) {
+					this._reattach();
+				}
+			}),
+		);
 		this._reattach();
 	}
 
@@ -89,9 +116,12 @@ export class AgentHostGenericConfigChips extends Disposable {
 
 	private _reattach(): void {
 		const sessionResource = this._widget.viewModel?.sessionResource;
-		const provisionalBackend = sessionResource ? this._provisional.get(sessionResource) : undefined;
-		const backendSession = provisionalBackend
-			?? (sessionResource ? toBackendSessionUri(sessionResource) : undefined);
+		const provisionalBackend = sessionResource
+			? this._provisional.get(sessionResource)
+			: undefined;
+		const backendSession =
+			provisionalBackend ??
+			(sessionResource ? toBackendSessionUri(sessionResource) : undefined);
 
 		if (!sessionResource || !backendSession) {
 			this._subRef.clear();
@@ -103,7 +133,11 @@ export class AgentHostGenericConfigChips extends Disposable {
 
 		if (isUntitledChatSession(sessionResource) && !provisionalBackend) {
 			this._subRef.clear();
-			if (!this._initialResolved || this._initialResolved.sessionResource.toString() !== sessionResource.toString()) {
+			if (
+				!this._initialResolved ||
+				this._initialResolved.sessionResource.toString() !==
+					sessionResource.toString()
+			) {
 				this._initialResolved = undefined;
 				void this._refreshInitialResolved(sessionResource, backendSession);
 			}
@@ -113,13 +147,19 @@ export class AgentHostGenericConfigChips extends Disposable {
 
 		this._initialResolved = undefined;
 		this._cancelInitialResolve();
-		const ref = this._agentHostService.getSubscription(StateComponents.Session, backendSession);
+		const ref = this._agentHostService.getSubscription(
+			StateComponents.Session,
+			backendSession,
+		);
 		const sub = ref.object;
 		const listener = sub.onDidChange(() => this._sync());
 		this._subRef.value = {
 			sub,
 			backendSession,
-			dispose: () => { listener.dispose(); ref.dispose(); },
+			dispose: () => {
+				listener.dispose();
+				ref.dispose();
+			},
 		};
 		this._sync();
 	}
@@ -129,7 +169,10 @@ export class AgentHostGenericConfigChips extends Disposable {
 		this._initialResolveCts.clear();
 	}
 
-	private async _refreshInitialResolved(sessionResource: URI, backendSession: URI): Promise<void> {
+	private async _refreshInitialResolved(
+		sessionResource: URI,
+		backendSession: URI,
+	): Promise<void> {
 		this._initialResolveCts.value?.cancel();
 		const cts = new CancellationTokenSource();
 		this._initialResolveCts.value = cts;
@@ -138,7 +181,11 @@ export class AgentHostGenericConfigChips extends Disposable {
 				provider: backendSession.scheme,
 				workingDirectory: this._readWorkingDirectory(),
 			});
-			if (cts.token.isCancellationRequested || this._widget.viewModel?.sessionResource?.toString() !== sessionResource.toString()) {
+			if (
+				cts.token.isCancellationRequested ||
+				this._widget.viewModel?.sessionResource?.toString() !==
+					sessionResource.toString()
+			) {
 				return;
 			}
 			this._initialResolved = { sessionResource, result };
@@ -152,24 +199,38 @@ export class AgentHostGenericConfigChips extends Disposable {
 		const state = this._subRef.value?.sub.value;
 		if (state && !(state instanceof Error)) {
 			const cwd = state.summary.workingDirectory;
-			return typeof cwd === 'string' ? URI.parse(cwd) : cwd;
+			return typeof cwd === "string" ? URI.parse(cwd) : cwd;
 		}
 		const sessionResource = this._widget.viewModel?.sessionResource;
-		return (sessionResource && this._workingDirectoryResolver.resolve(sessionResource))
-			?? this._workspaceContextService.getWorkspace().folders[0]?.uri;
+		return (
+			(sessionResource &&
+				this._workingDirectoryResolver.resolve(sessionResource)) ??
+			this._workspaceContextService.getWorkspace().folders[0]?.uri
+		);
 	}
 
-	private _readSchemaProperties(): readonly [string, SessionConfigPropertySchema][] | undefined {
+	private _readSchemaProperties():
+		| readonly [string, SessionConfigPropertySchema][]
+		| undefined {
 		const sessionResource = this._widget.viewModel?.sessionResource;
 		if (this._subRef.value) {
 			const state = this._subRef.value.sub.value;
 			if (!state || state instanceof Error || !state.config) {
 				return undefined;
 			}
-			const overlay = sessionResource ? this._provisional.getResolvedConfig(sessionResource) : undefined;
-			return Object.entries((overlay?.schema ?? state.config.schema).properties);
+			const overlay = sessionResource
+				? this._provisional.getResolvedConfig(sessionResource)
+				: undefined;
+			return Object.entries(
+				(overlay?.schema ?? state.config.schema).properties,
+			);
 		}
-		if (this._initialResolved && sessionResource && this._initialResolved.sessionResource.toString() === sessionResource.toString()) {
+		if (
+			this._initialResolved &&
+			sessionResource &&
+			this._initialResolved.sessionResource.toString() ===
+				sessionResource.toString()
+		) {
 			return Object.entries(this._initialResolved.result.schema.properties);
 		}
 		return undefined;
@@ -203,12 +264,19 @@ export class AgentHostGenericConfigChips extends Disposable {
 			if (this._chips.has(property)) {
 				continue;
 			}
-			const chip = this._instantiationService.createInstance(AgentHostChatInputPicker, this._widget, property);
+			const chip = this._instantiationService.createInstance(
+				AgentHostChatInputPicker,
+				this._widget,
+				property,
+			);
 			// `chat-input-picker-item` matches the class that
 			// `ChatInputPickerActionViewItem` applies to the dedicated
 			// chips' container — required so the secondary-toolbar styling
 			// in `chat.css` (height, padding, chevron) applies here too.
-			const slot = dom.append(this._container, dom.$('.agent-host-generic-chip-slot.chat-input-picker-item'));
+			const slot = dom.append(
+				this._container,
+				dom.$(".agent-host-generic-chip-slot.chat-input-picker-item"),
+			);
 			chip.render(slot);
 			this._chips.set(property, {
 				dispose: () => {

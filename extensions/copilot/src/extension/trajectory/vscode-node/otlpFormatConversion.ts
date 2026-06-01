@@ -3,7 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ICompletedSpanData, ISpanEventRecord, SpanStatusCode } from '../../../platform/otel/common/otelService';
+import type {
+	ICompletedSpanData,
+	ISpanEventRecord,
+	SpanStatusCode,
+} from '../../../platform/otel/common/otelService';
 
 // ── OTLP JSON Types (matching OTLP JSON Protobuf encoding) ──
 
@@ -79,7 +83,10 @@ export function completedSpanToOtlpSpan(span: ICompletedSpanData): OtlpSpan {
 		endTimeUnixNano: msToNanoString(span.endTime),
 		attributes: recordToOtlpAttributes(span.attributes),
 		events: span.events.map(spanEventToOtlp),
-		status: { code: span.status.code, ...(span.status.message ? { message: span.status.message } : {}) },
+		status: {
+			code: span.status.code,
+			...(span.status.message ? { message: span.status.message } : {}),
+		},
 	};
 }
 
@@ -91,18 +98,24 @@ export function wrapInResourceSpans(
 	resource: Record<string, string>,
 ): OtlpExport {
 	return {
-		resourceSpans: [{
-			resource: {
-				attributes: Object.entries(resource).map(([key, value]) => ({
-					key,
-					value: { stringValue: value },
-				})),
+		resourceSpans: [
+			{
+				resource: {
+					attributes: Object.entries(resource).map(
+						([key, value]) => ({
+							key,
+							value: { stringValue: value },
+						}),
+					),
+				},
+				scopeSpans: [
+					{
+						scope: { name: 'copilot-chat' },
+						spans: spans.map(completedSpanToOtlpSpan),
+					},
+				],
 			},
-			scopeSpans: [{
-				scope: { name: 'copilot-chat' },
-				spans: spans.map(completedSpanToOtlpSpan),
-			}],
-		}],
+		],
 	};
 }
 
@@ -120,17 +133,21 @@ export function parseResourceSpans(jsonStr: string): ICompletedSpanData[] {
 		if (parsed.resourceSpans) {
 			return extractSpansFromOtlp(parsed as OtlpExport);
 		}
-	} catch { /* not a single object, try jsonl */ }
+	} catch {
+		/* not a single object, try jsonl */
+	}
 
 	// Try as JSON lines (.jsonl format)
-	const lines = jsonStr.split('\n').filter(l => l.trim());
+	const lines = jsonStr.split('\n').filter((l) => l.trim());
 	for (const line of lines) {
 		try {
 			const parsed = JSON.parse(line);
 			if (parsed.resourceSpans) {
 				spans.push(...extractSpansFromOtlp(parsed as OtlpExport));
 			}
-		} catch { /* skip invalid lines */ }
+		} catch {
+			/* skip invalid lines */
+		}
 	}
 
 	return spans;
@@ -151,7 +168,9 @@ function extractSpansFromOtlp(otlp: OtlpExport): ICompletedSpanData[] {
 /**
  * Convert an OTLP JSON span back into an ICompletedSpanData.
  */
-export function otlpSpanToCompletedSpan(otlpSpan: OtlpSpan): ICompletedSpanData {
+export function otlpSpanToCompletedSpan(
+	otlpSpan: OtlpSpan,
+): ICompletedSpanData {
 	return {
 		name: otlpSpan.name,
 		spanId: otlpSpan.spanId,
@@ -170,26 +189,40 @@ export function otlpSpanToCompletedSpan(otlpSpan: OtlpSpan): ICompletedSpanData 
 
 // ── Utility converters ──
 
-function recordToOtlpAttributes(attrs: Readonly<Record<string, string | number | boolean | string[]>>): OtlpAttribute[] {
+function recordToOtlpAttributes(
+	attrs: Readonly<Record<string, string | number | boolean | string[]>>,
+): OtlpAttribute[] {
 	return Object.entries(attrs).map(([key, value]) => ({
 		key,
 		value: valueToOtlpAnyValue(value),
 	}));
 }
 
-function valueToOtlpAnyValue(value: string | number | boolean | string[]): OtlpAnyValue {
-	if (typeof value === 'string') { return { stringValue: value }; }
-	if (typeof value === 'number') {
-		return Number.isInteger(value) ? { intValue: String(value) } : { stringValue: String(value) };
+function valueToOtlpAnyValue(
+	value: string | number | boolean | string[],
+): OtlpAnyValue {
+	if (typeof value === 'string') {
+		return { stringValue: value };
 	}
-	if (typeof value === 'boolean') { return { boolValue: value }; }
+	if (typeof value === 'number') {
+		return Number.isInteger(value)
+			? { intValue: String(value) }
+			: { stringValue: String(value) };
+	}
+	if (typeof value === 'boolean') {
+		return { boolValue: value };
+	}
 	if (Array.isArray(value)) {
-		return { arrayValue: { values: value.map(v => ({ stringValue: v })) } };
+		return {
+			arrayValue: { values: value.map((v) => ({ stringValue: v })) },
+		};
 	}
 	return { stringValue: String(value) };
 }
 
-function otlpAttributesToRecord(attrs: OtlpAttribute[]): Record<string, string | number | boolean | string[]> {
+function otlpAttributesToRecord(
+	attrs: OtlpAttribute[],
+): Record<string, string | number | boolean | string[]> {
 	const result: Record<string, string | number | boolean | string[]> = {};
 	for (const attr of attrs) {
 		result[attr.key] = otlpAnyValueToValue(attr.value);
@@ -197,15 +230,24 @@ function otlpAttributesToRecord(attrs: OtlpAttribute[]): Record<string, string |
 	return result;
 }
 
-function otlpAnyValueToValue(v: OtlpAnyValue): string | number | boolean | string[] {
-	if (v.stringValue !== undefined) { return v.stringValue; }
+function otlpAnyValueToValue(
+	v: OtlpAnyValue,
+): string | number | boolean | string[] {
+	if (v.stringValue !== undefined) {
+		return v.stringValue;
+	}
 	if (v.intValue !== undefined) {
 		const n = Number(v.intValue);
 		return Number.isFinite(n) ? n : v.intValue;
 	}
-	if (v.boolValue !== undefined) { return v.boolValue; }
+	if (v.boolValue !== undefined) {
+		return v.boolValue;
+	}
 	if (v.arrayValue) {
-		return v.arrayValue.values.map(val => val.stringValue ?? String(val.intValue ?? val.boolValue ?? ''));
+		return v.arrayValue.values.map(
+			(val) =>
+				val.stringValue ?? String(val.intValue ?? val.boolValue ?? ''),
+		);
 	}
 	return '';
 }
@@ -214,7 +256,9 @@ function spanEventToOtlp(event: ISpanEventRecord): OtlpSpanEvent {
 	return {
 		timeUnixNano: msToNanoString(event.timestamp),
 		name: event.name,
-		...(event.attributes ? { attributes: recordToOtlpAttributes(event.attributes) } : {}),
+		...(event.attributes
+			? { attributes: recordToOtlpAttributes(event.attributes) }
+			: {}),
 	};
 }
 
@@ -222,7 +266,9 @@ function otlpEventToSpanEvent(otlpEvent: OtlpSpanEvent): ISpanEventRecord {
 	return {
 		name: otlpEvent.name,
 		timestamp: nanoStringToMs(otlpEvent.timeUnixNano),
-		attributes: otlpEvent.attributes ? otlpAttributesToRecord(otlpEvent.attributes) : undefined,
+		attributes: otlpEvent.attributes
+			? otlpAttributesToRecord(otlpEvent.attributes)
+			: undefined,
 	};
 }
 

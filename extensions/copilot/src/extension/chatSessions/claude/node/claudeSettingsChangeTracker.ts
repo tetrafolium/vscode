@@ -38,9 +38,10 @@ export class ClaudeSettingsChangeTracker {
 	private _snapshot: Map<string, number> = new Map();
 
 	constructor(
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
 		@ILogService private readonly logService: ILogService,
-	) { }
+	) {}
 
 	/**
 	 * Registers a path resolver that provides URIs to track.
@@ -66,7 +67,10 @@ export class ClaudeSettingsChangeTracker {
 	/**
 	 * Enumerates files in a directory, optionally filtering by extension.
 	 */
-	private async _enumerateDirectory(dir: URI, extension?: string): Promise<URI[]> {
+	private async _enumerateDirectory(
+		dir: URI,
+		extension?: string,
+	): Promise<URI[]> {
 		const files: URI[] = [];
 		try {
 			const entries = await this.fileSystemService.readDirectory(dir);
@@ -87,14 +91,17 @@ export class ClaudeSettingsChangeTracker {
 	 * Resolves all paths from path resolvers and directory resolvers.
 	 */
 	private async _getAllPaths(): Promise<URI[]> {
-		const syncPaths = this._pathResolvers.flatMap(resolver => resolver());
+		const syncPaths = this._pathResolvers.flatMap((resolver) => resolver());
 
 		// Enumerate all directories
 		const directoryFiles: URI[] = [];
 		for (const config of this._directoryResolvers) {
 			const dirs = config.resolver();
 			for (const dir of dirs) {
-				const files = await this._enumerateDirectory(dir, config.extension);
+				const files = await this._enumerateDirectory(
+					dir,
+					config.extension,
+				);
 				directoryFiles.push(...files);
 			}
 		}
@@ -115,11 +122,15 @@ export class ClaudeSettingsChangeTracker {
 			try {
 				const stat = await this.fileSystemService.stat(uri);
 				this._snapshot.set(uri.toString(), stat.mtime);
-				this.logService.trace(`[ClaudeSettingsChangeTracker] Snapshot: ${uri.fsPath} mtime=${stat.mtime}`);
+				this.logService.trace(
+					`[ClaudeSettingsChangeTracker] Snapshot: ${uri.fsPath} mtime=${stat.mtime}`,
+				);
 			} catch {
 				// File doesn't exist yet - record as 0 so we detect if it's created
 				this._snapshot.set(uri.toString(), 0);
-				this.logService.trace(`[ClaudeSettingsChangeTracker] Snapshot: ${uri.fsPath} (does not exist)`);
+				this.logService.trace(
+					`[ClaudeSettingsChangeTracker] Snapshot: ${uri.fsPath} (does not exist)`,
+				);
 			}
 		}
 	}
@@ -136,16 +147,22 @@ export class ClaudeSettingsChangeTracker {
 			const stat = await this.fileSystemService.stat(uri);
 			if (snapshotMtime === undefined) {
 				// New file that wasn't in snapshot - treat as changed
-				this.logService.trace(`[ClaudeSettingsChangeTracker] New file detected: ${uri.fsPath}`);
+				this.logService.trace(
+					`[ClaudeSettingsChangeTracker] New file detected: ${uri.fsPath}`,
+				);
 				return uri;
 			} else if (stat.mtime > snapshotMtime) {
-				this.logService.trace(`[ClaudeSettingsChangeTracker] Changed: ${uri.fsPath} (${snapshotMtime} -> ${stat.mtime})`);
+				this.logService.trace(
+					`[ClaudeSettingsChangeTracker] Changed: ${uri.fsPath} (${snapshotMtime} -> ${stat.mtime})`,
+				);
 				return uri;
 			}
 		} catch {
 			// File doesn't exist now but was expected - treat as changed
 			if (snapshotMtime !== undefined && snapshotMtime > 0) {
-				this.logService.trace(`[ClaudeSettingsChangeTracker] Deleted: ${uri.fsPath}`);
+				this.logService.trace(
+					`[ClaudeSettingsChangeTracker] Deleted: ${uri.fsPath}`,
+				);
 				return uri;
 			}
 		}
@@ -173,7 +190,10 @@ export class ClaudeSettingsChangeTracker {
 		// Lazily iterate through directory resolvers
 		for (const config of this._directoryResolvers) {
 			for (const dir of config.resolver()) {
-				const files = await this._enumerateDirectory(dir, config.extension);
+				const files = await this._enumerateDirectory(
+					dir,
+					config.extension,
+				);
 				for (const uri of files) {
 					seenPaths.add(uri.toString());
 					const changed = await this._checkUri(uri);
@@ -190,7 +210,9 @@ export class ClaudeSettingsChangeTracker {
 			if (!seenPaths.has(uriString) && mtime > 0) {
 				// File was in snapshot but not in current paths - it was deleted
 				const uri = URI.parse(uriString);
-				this.logService.trace(`[ClaudeSettingsChangeTracker] Deleted (not in current paths): ${uri.fsPath}`);
+				this.logService.trace(
+					`[ClaudeSettingsChangeTracker] Deleted (not in current paths): ${uri.fsPath}`,
+				);
 				yield uri;
 			}
 		}

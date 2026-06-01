@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	// #region Customization Provider Types
 
 	/**
@@ -65,7 +64,12 @@ declare module 'vscode' {
 		readonly supportedTypes?: readonly ChatSessionCustomizationType[];
 	}
 
-	export type ChatSessionCustomizationSource = 'local' | 'user' | 'extension' | 'plugin' | 'builtin';
+	export type ChatSessionCustomizationSource =
+		| "local"
+		| "user"
+		| "extension"
+		| "plugin"
+		| "builtin";
 
 	/**
 	 * Represents a single customization item reported by a provider.
@@ -168,7 +172,10 @@ declare module 'vscode' {
 		 * @param token A cancellation token.
 		 * @returns The list of customization items, or `undefined` if unavailable.
 		 */
-		provideChatSessionCustomizations(sessionResource: Uri, token: CancellationToken): ProviderResult<ChatSessionCustomizationItem[]>;
+		provideChatSessionCustomizations(
+			sessionResource: Uri,
+			token: CancellationToken,
+		): ProviderResult<ChatSessionCustomizationItem[]>;
 	}
 
 	// #endregion
@@ -187,7 +194,11 @@ declare module 'vscode' {
 		 * @param provider The customization provider implementation.
 		 * @returns A disposable that unregisters the provider when disposed.
 		 */
-		export function registerChatSessionCustomizationProvider(chatSessionType: string, metadata: ChatSessionCustomizationProviderMetadata, provider: ChatSessionCustomizationProvider): Disposable;
+		export function registerChatSessionCustomizationProvider(
+			chatSessionType: string,
+			metadata: ChatSessionCustomizationProviderMetadata,
+			provider: ChatSessionCustomizationProvider,
+		): Disposable;
 	}
 
 	// #endregion

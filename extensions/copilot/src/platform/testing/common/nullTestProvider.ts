@@ -16,7 +16,10 @@ export class NullTestProvider implements ITestProvider {
 		return [];
 	}
 
-	getFailureAtPosition(uri: Uri, position: Position): ITestFailure | undefined {
+	getFailureAtPosition(
+		uri: Uri,
+		position: Position,
+	): ITestFailure | undefined {
 		return undefined;
 	}
 

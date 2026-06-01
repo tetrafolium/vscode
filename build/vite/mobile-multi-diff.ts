@@ -6,22 +6,28 @@
 /* eslint-disable local/code-no-dangerous-type-assertions */
 
 // Import the mobile diff view CSS
-import '../../src/vs/sessions/browser/parts/mobile/contributions/media/mobileOverlayViews.css';
-import '../../src/vs/sessions/browser/parts/mobile/contributions/media/mobileMultiDiffView.css';
+import "../../src/vs/sessions/browser/parts/mobile/contributions/media/mobileOverlayViews.css";
+import "../../src/vs/sessions/browser/parts/mobile/contributions/media/mobileMultiDiffView.css";
 
-import { URI } from '../../src/vs/base/common/uri.js';
-import { MobileMultiDiffView, IMobileMultiDiffViewData } from '../../src/vs/sessions/browser/parts/mobile/contributions/mobileMultiDiffView.js';
-import { IFileDiffViewData } from '../../src/vs/sessions/browser/parts/mobile/contributions/mobileDiffView.js';
-import { computeUnifiedDiff, type IDiffHunk } from '../../src/vs/sessions/browser/parts/mobile/contributions/mobileDiffHelpers.js';
-import { ITextFileService } from '../../src/vs/workbench/services/textfile/common/textfiles.js';
-import { ILanguageService } from '../../src/vs/editor/common/languages/language.js';
-import { IFileService } from '../../src/vs/platform/files/common/files.js';
-import { VSBuffer } from '../../src/vs/base/common/buffer.js';
+import { URI } from "../../src/vs/base/common/uri.js";
+import {
+	MobileMultiDiffView,
+	IMobileMultiDiffViewData,
+} from "../../src/vs/sessions/browser/parts/mobile/contributions/mobileMultiDiffView.js";
+import { IFileDiffViewData } from "../../src/vs/sessions/browser/parts/mobile/contributions/mobileDiffView.js";
+import {
+	computeUnifiedDiff,
+	type IDiffHunk,
+} from "../../src/vs/sessions/browser/parts/mobile/contributions/mobileDiffHelpers.js";
+import { ITextFileService } from "../../src/vs/workbench/services/textfile/common/textfiles.js";
+import { ILanguageService } from "../../src/vs/editor/common/languages/language.js";
+import { IFileService } from "../../src/vs/platform/files/common/files.js";
+import { VSBuffer } from "../../src/vs/base/common/buffer.js";
 
 // --- Sample file contents ---
 
 const FILES: Record<string, string> = {
-	'inmemory://original/src/greet.ts': `function greet(name: string): string {
+	"inmemory://original/src/greet.ts": `function greet(name: string): string {
 	return 'Hello, ' + name;
 }
 
@@ -29,7 +35,7 @@ function main() {
 	console.log(greet('World'));
 }`,
 
-	'inmemory://modified/src/greet.ts': `function greet(name: string, greeting = 'Hello'): string {
+	"inmemory://modified/src/greet.ts": `function greet(name: string, greeting = 'Hello'): string {
 	return \`\${greeting}, \${name}!\`;
 }
 
@@ -42,7 +48,7 @@ function main() {
 	console.log(farewell('World'));
 }`,
 
-	'inmemory://original/src/config.ts': `export interface Config {
+	"inmemory://original/src/config.ts": `export interface Config {
 	host: string;
 	port: number;
 }
@@ -66,7 +72,7 @@ export function mergeConfig(base: Config, overrides: Partial<Config>): Config {
 	return { ...base, ...overrides };
 }`,
 
-	'inmemory://modified/src/config.ts': `export interface Config {
+	"inmemory://modified/src/config.ts": `export interface Config {
 	host: string;
 	port: number;
 	secure: boolean;
@@ -99,13 +105,13 @@ export function mergeConfig(base: Config, overrides: Partial<Config>): Config {
 	return merged;
 }`,
 
-	'inmemory://original/src/server.ts': `import { Config } from './config';
+	"inmemory://original/src/server.ts": `import { Config } from './config';
 
 export function createServer(config: Config) {
 	return { config };
 }`,
 
-	'inmemory://modified/src/server.ts': `import { Config } from './config';
+	"inmemory://modified/src/server.ts": `import { Config } from './config';
 
 export function createServer(config: Config) {
 	const { host, port, secure } = config;
@@ -114,14 +120,14 @@ export function createServer(config: Config) {
 	return { config, url: \`\${protocol}://\${host}:\${port}\` };
 }`,
 
-	'inmemory://original/src/middleware.ts': `import { Request, Response, NextFunction } from 'express';
+	"inmemory://original/src/middleware.ts": `import { Request, Response, NextFunction } from 'express';
 
 export function logMiddleware(req: Request, res: Response, next: NextFunction) {
 	console.log(\`\${req.method} \${req.url}\`);
 	next();
 }`,
 
-	'inmemory://modified/src/middleware.ts': `import { Request, Response, NextFunction } from 'express';
+	"inmemory://modified/src/middleware.ts": `import { Request, Response, NextFunction } from 'express';
 
 export interface LogOptions {
 	verbose: boolean;
@@ -158,7 +164,7 @@ export function errorMiddleware(err: Error, req: Request, res: Response, next: N
 	res.status(500).json({ error: err.message });
 }`,
 
-	'inmemory://original/src/utils.ts': `export function sleep(ms: number): Promise<void> {
+	"inmemory://original/src/utils.ts": `export function sleep(ms: number): Promise<void> {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -169,7 +175,7 @@ export function retry<T>(fn: () => Promise<T>, attempts: number): Promise<T> {
 	});
 }`,
 
-	'inmemory://modified/src/utils.ts': `export function sleep(ms: number): Promise<void> {
+	"inmemory://modified/src/utils.ts": `export function sleep(ms: number): Promise<void> {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -219,7 +225,7 @@ export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number):
 
 interface IWorkerDiffResponse {
 	readonly id?: number;
-	readonly type?: 'ready';
+	readonly type?: "ready";
 	readonly hunks?: readonly IDiffHunk[];
 	readonly error?: string;
 }
@@ -241,31 +247,52 @@ const workerDiffStats = {
 	timeoutCount: 0,
 };
 
-const workerPrewarmOriginal = 'export const mobileDiffWorkerWarmup = 1;\n';
-const workerPrewarmModified = 'export const mobileDiffWorkerWarmup = 2;\n';
+const workerPrewarmOriginal = "export const mobileDiffWorkerWarmup = 1;\n";
+const workerPrewarmModified = "export const mobileDiffWorkerWarmup = 2;\n";
 
 function updateWorkerDiffStatsDataset(): void {
 	const dataset = document.documentElement.dataset;
-	dataset.mobileMultiDiffWorkerRequestCount = String(workerDiffStats.requestCount);
-	dataset.mobileMultiDiffWorkerCompletedCount = String(workerDiffStats.completedCount);
-	dataset.mobileMultiDiffWorkerPrewarmRequestCount = String(workerDiffStats.prewarmRequestCount);
-	dataset.mobileMultiDiffWorkerPrewarmCompletedCount = String(workerDiffStats.prewarmCompletedCount);
+	dataset.mobileMultiDiffWorkerRequestCount = String(
+		workerDiffStats.requestCount,
+	);
+	dataset.mobileMultiDiffWorkerCompletedCount = String(
+		workerDiffStats.completedCount,
+	);
+	dataset.mobileMultiDiffWorkerPrewarmRequestCount = String(
+		workerDiffStats.prewarmRequestCount,
+	);
+	dataset.mobileMultiDiffWorkerPrewarmCompletedCount = String(
+		workerDiffStats.prewarmCompletedCount,
+	);
 	dataset.mobileMultiDiffWorkerErrorCount = String(workerDiffStats.errorCount);
-	dataset.mobileMultiDiffWorkerFallbackCount = String(workerDiffStats.fallbackCount);
-	dataset.mobileMultiDiffWorkerTimeoutCount = String(workerDiffStats.timeoutCount);
+	dataset.mobileMultiDiffWorkerFallbackCount = String(
+		workerDiffStats.fallbackCount,
+	);
+	dataset.mobileMultiDiffWorkerTimeoutCount = String(
+		workerDiffStats.timeoutCount,
+	);
 }
 
-function createWorkerDiffComputer(): ((originalText: string, modifiedText: string) => Promise<readonly IDiffHunk[]>) | undefined {
+function createWorkerDiffComputer():
+	| ((
+			originalText: string,
+			modifiedText: string,
+	  ) => Promise<readonly IDiffHunk[]>)
+	| undefined {
 	updateWorkerDiffStatsDataset();
-	if (typeof Worker === 'undefined') {
+	if (typeof Worker === "undefined") {
 		return undefined;
 	}
 
 	let worker: Worker;
 	try {
-		worker = new Worker(new URL('./mobile-multi-diff-worker.ts', import.meta.url), { type: 'module' });
+		worker = new Worker(
+			new URL("./mobile-multi-diff-worker.ts", import.meta.url),
+			{ type: "module" },
+		);
 	} catch {
-		return (originalText: string, modifiedText: string) => fallbackComputeDiff(originalText, modifiedText);
+		return (originalText: string, modifiedText: string) =>
+			fallbackComputeDiff(originalText, modifiedText);
 	}
 
 	const pending = new Map<number, IWorkerDiffPending>();
@@ -274,7 +301,7 @@ function createWorkerDiffComputer(): ((originalText: string, modifiedText: strin
 	let resolveReady!: () => void;
 	let rejectReady!: (error: Error) => void;
 	const readyTimeout = window.setTimeout(() => {
-		failWorker(new Error('Mobile multi-diff worker did not become ready.'));
+		failWorker(new Error("Mobile multi-diff worker did not become ready."));
 	}, 2000);
 	const workerReady = new Promise<void>((resolve, reject) => {
 		resolveReady = resolve;
@@ -282,45 +309,52 @@ function createWorkerDiffComputer(): ((originalText: string, modifiedText: strin
 	});
 	workerReady.catch(() => undefined);
 
-	worker.addEventListener('message', (event: MessageEvent<IWorkerDiffResponse>) => {
-		const { id, hunks, error } = event.data;
-		if (event.data.type === 'ready') {
-			window.clearTimeout(readyTimeout);
-			resolveReady();
-			return;
-		}
+	worker.addEventListener(
+		"message",
+		(event: MessageEvent<IWorkerDiffResponse>) => {
+			const { id, hunks, error } = event.data;
+			if (event.data.type === "ready") {
+				window.clearTimeout(readyTimeout);
+				resolveReady();
+				return;
+			}
 
-		if (id === undefined) {
-			return;
-		}
+			if (id === undefined) {
+				return;
+			}
 
-		const request = pending.get(id);
-		if (!request) {
-			return;
-		}
-		pending.delete(id);
-		window.clearTimeout(request.timeout);
-		workerDiffStats.completedCount++;
-		if (request.prewarm) {
-			workerDiffStats.prewarmCompletedCount++;
-		}
-		updateWorkerDiffStatsDataset();
-		if (error) {
-			request.reject(new Error(error));
-		} else {
-			request.resolve(hunks ?? []);
-		}
+			const request = pending.get(id);
+			if (!request) {
+				return;
+			}
+			pending.delete(id);
+			window.clearTimeout(request.timeout);
+			workerDiffStats.completedCount++;
+			if (request.prewarm) {
+				workerDiffStats.prewarmCompletedCount++;
+			}
+			updateWorkerDiffStatsDataset();
+			if (error) {
+				request.reject(new Error(error));
+			} else {
+				request.resolve(hunks ?? []);
+			}
+		},
+	);
+
+	worker.addEventListener("error", (event) => {
+		failWorker(new Error(event.message || "Mobile multi-diff worker failed."));
 	});
 
-	worker.addEventListener('error', event => {
-		failWorker(new Error(event.message || 'Mobile multi-diff worker failed.'));
+	worker.addEventListener("messageerror", () => {
+		failWorker(
+			new Error("Mobile multi-diff worker could not deserialize a message."),
+		);
 	});
 
-	worker.addEventListener('messageerror', () => {
-		failWorker(new Error('Mobile multi-diff worker could not deserialize a message.'));
+	window.addEventListener("beforeunload", () => worker.terminate(), {
+		once: true,
 	});
-
-	window.addEventListener('beforeunload', () => worker.terminate(), { once: true });
 
 	function failWorker(error: Error): void {
 		if (workerFailed) {
@@ -340,13 +374,22 @@ function createWorkerDiffComputer(): ((originalText: string, modifiedText: strin
 		worker.terminate();
 	}
 
-	function fallbackComputeDiff(originalText: string, modifiedText: string): Promise<readonly IDiffHunk[]> {
+	function fallbackComputeDiff(
+		originalText: string,
+		modifiedText: string,
+	): Promise<readonly IDiffHunk[]> {
 		workerDiffStats.fallbackCount++;
 		updateWorkerDiffStatsDataset();
-		return Promise.resolve().then(() => computeUnifiedDiff(originalText, modifiedText));
+		return Promise.resolve().then(() =>
+			computeUnifiedDiff(originalText, modifiedText),
+		);
 	}
 
-	function requestWorkerDiff(originalText: string, modifiedText: string, prewarm: boolean): Promise<readonly IDiffHunk[]> {
+	function requestWorkerDiff(
+		originalText: string,
+		modifiedText: string,
+		prewarm: boolean,
+	): Promise<readonly IDiffHunk[]> {
 		const id = nextId++;
 		workerDiffStats.requestCount++;
 		if (prewarm) {
@@ -372,24 +415,33 @@ function createWorkerDiffComputer(): ((originalText: string, modifiedText: strin
 				pending.delete(id);
 				fallbackComputeDiff(originalText, modifiedText).then(resolve, reject);
 			}
-		}).catch(() => {
-			return fallbackComputeDiff(originalText, modifiedText);
-		}).finally(() => {
-			const request = pending.get(id);
-			if (request) {
-				window.clearTimeout(request.timeout);
-				pending.delete(id);
-			}
-		});
+		})
+			.catch(() => {
+				return fallbackComputeDiff(originalText, modifiedText);
+			})
+			.finally(() => {
+				const request = pending.get(id);
+				if (request) {
+					window.clearTimeout(request.timeout);
+					pending.delete(id);
+				}
+			});
 	}
 
-	void workerReady.then(() => {
-		window.setTimeout(() => {
-			if (!workerFailed) {
-				void requestWorkerDiff(workerPrewarmOriginal, workerPrewarmModified, true);
-			}
-		}, 0);
-	}, () => undefined);
+	void workerReady.then(
+		() => {
+			window.setTimeout(() => {
+				if (!workerFailed) {
+					void requestWorkerDiff(
+						workerPrewarmOriginal,
+						workerPrewarmModified,
+						true,
+					);
+				}
+			}, 0);
+		},
+		() => undefined,
+	);
 
 	return async (originalText: string, modifiedText: string) => {
 		if (workerFailed) {
@@ -412,92 +464,123 @@ const readLog: string[] = [];
 
 function recordRead(uri: URI): void {
 	readLog.push(uri.toString());
-	document.documentElement.dataset.mobileMultiDiffReadCount = String(readLog.length);
+	document.documentElement.dataset.mobileMultiDiffReadCount = String(
+		readLog.length,
+	);
 }
 
 const mockTextFileService = {
 	read(uri: URI) {
 		recordRead(uri);
-		const content = FILES[uri.toString()] ?? '';
+		const content = FILES[uri.toString()] ?? "";
 		return Promise.resolve({ value: content });
-	}
+	},
 } as unknown as ITextFileService;
 
 const mockFileService = {
 	readFile(uri: URI) {
-		const content = FILES[uri.toString()] ?? '';
+		const content = FILES[uri.toString()] ?? "";
 		return Promise.resolve({ value: VSBuffer.fromString(content) });
-	}
+	},
 } as unknown as IFileService;
 
 const mockLanguageService = {
 	guessLanguageIdByFilepathOrFirstLine(uri: URI): string {
 		const path = uri.path;
-		if (path.endsWith('.ts') || path.endsWith('.tsx')) { return 'typescript'; }
-		if (path.endsWith('.js') || path.endsWith('.jsx')) { return 'javascript'; }
-		if (path.endsWith('.py')) { return 'python'; }
-		if (path.endsWith('.css')) { return 'css'; }
-		if (path.endsWith('.html')) { return 'html'; }
-		if (path.endsWith('.json')) { return 'json'; }
-		return 'unknown';
-	}
+		if (path.endsWith(".ts") || path.endsWith(".tsx")) {
+			return "typescript";
+		}
+		if (path.endsWith(".js") || path.endsWith(".jsx")) {
+			return "javascript";
+		}
+		if (path.endsWith(".py")) {
+			return "python";
+		}
+		if (path.endsWith(".css")) {
+			return "css";
+		}
+		if (path.endsWith(".html")) {
+			return "html";
+		}
+		if (path.endsWith(".json")) {
+			return "json";
+		}
+		return "unknown";
+	},
 } as unknown as ILanguageService;
 
 Object.assign(globalThis, {
 	__mobileMultiDiffDebug: {
 		readLog,
 		workerDiffStats,
-		get readCount() { return readLog.length; },
-	}
+		get readCount() {
+			return readLog.length;
+		},
+	},
 });
 
 // --- Build diff data ---
 
 const diffs: IFileDiffViewData[] = [
 	{
-		originalURI: URI.parse('inmemory://original/src/greet.ts'),
-		modifiedURI: URI.parse('inmemory://modified/src/greet.ts'),
+		originalURI: URI.parse("inmemory://original/src/greet.ts"),
+		modifiedURI: URI.parse("inmemory://modified/src/greet.ts"),
 		identical: false,
 		added: 6,
 		removed: 2,
 	},
 	{
-		originalURI: URI.parse('inmemory://original/src/config.ts'),
-		modifiedURI: URI.parse('inmemory://modified/src/config.ts'),
+		originalURI: URI.parse("inmemory://original/src/config.ts"),
+		modifiedURI: URI.parse("inmemory://modified/src/config.ts"),
 		identical: false,
 		added: 12,
 		removed: 5,
 	},
 	{
-		originalURI: URI.parse('inmemory://original/src/server.ts'),
-		modifiedURI: URI.parse('inmemory://modified/src/server.ts'),
+		originalURI: URI.parse("inmemory://original/src/server.ts"),
+		modifiedURI: URI.parse("inmemory://modified/src/server.ts"),
 		identical: false,
 		added: 4,
 		removed: 1,
 	},
 	{
-		originalURI: URI.parse('inmemory://original/src/middleware.ts'),
-		modifiedURI: URI.parse('inmemory://modified/src/middleware.ts'),
+		originalURI: URI.parse("inmemory://original/src/middleware.ts"),
+		modifiedURI: URI.parse("inmemory://modified/src/middleware.ts"),
 		identical: false,
 		added: 30,
 		removed: 2,
 	},
 	{
-		originalURI: URI.parse('inmemory://original/src/utils.ts'),
-		modifiedURI: URI.parse('inmemory://modified/src/utils.ts'),
+		originalURI: URI.parse("inmemory://original/src/utils.ts"),
+		modifiedURI: URI.parse("inmemory://modified/src/utils.ts"),
 		identical: false,
 		added: 32,
 		removed: 5,
 	},
 ];
 
-function createLargeScenario(fileCount: number, lineCount: number): IFileDiffViewData[] {
+function createLargeScenario(
+	fileCount: number,
+	lineCount: number,
+): IFileDiffViewData[] {
 	const result: IFileDiffViewData[] = [];
 	for (let fileIndex = 0; fileIndex < fileCount; fileIndex++) {
-		const originalURI = URI.parse(`inmemory://original/large/file${fileIndex}.ts`);
-		const modifiedURI = URI.parse(`inmemory://modified/large/file${fileIndex}.ts`);
-		FILES[originalURI.toString()] = createLargeFileText(fileIndex, lineCount, false);
-		FILES[modifiedURI.toString()] = createLargeFileText(fileIndex, lineCount, true);
+		const originalURI = URI.parse(
+			`inmemory://original/large/file${fileIndex}.ts`,
+		);
+		const modifiedURI = URI.parse(
+			`inmemory://modified/large/file${fileIndex}.ts`,
+		);
+		FILES[originalURI.toString()] = createLargeFileText(
+			fileIndex,
+			lineCount,
+			false,
+		);
+		FILES[modifiedURI.toString()] = createLargeFileText(
+			fileIndex,
+			lineCount,
+			true,
+		);
 		result.push({
 			originalURI,
 			modifiedURI,
@@ -509,26 +592,35 @@ function createLargeScenario(fileCount: number, lineCount: number): IFileDiffVie
 	return result;
 }
 
-function createLargeFileText(fileIndex: number, lineCount: number, modified: boolean): string {
+function createLargeFileText(
+	fileIndex: number,
+	lineCount: number,
+	modified: boolean,
+): string {
 	const lines: string[] = [];
 	for (let lineIndex = 0; lineIndex < lineCount; lineIndex++) {
 		const value = modified ? lineIndex + 1000 : lineIndex;
 		lines.push(`export const file${fileIndex}Value${lineIndex} = ${value};`);
 	}
-	return lines.join('\n');
+	return lines.join("\n");
 }
 
 // --- Render ---
 
 function init() {
-	const container = document.getElementById('container')!;
+	const container = document.getElementById("container")!;
 	const params = new URLSearchParams(location.search);
-	const useLargeScenario = params.has('large');
-	const fileCount = Math.max(1, Number(params.get('files') ?? 50));
-	const lineCount = Math.max(1, Number(params.get('lines') ?? 500));
-	const scenarioDiffs = useLargeScenario ? createLargeScenario(fileCount, lineCount) : diffs;
-	const computeDiff = params.get('worker') === '0' ? undefined : createWorkerDiffComputer();
-	document.documentElement.dataset.mobileMultiDiffWorkerDiff = computeDiff ? 'true' : 'false';
+	const useLargeScenario = params.has("large");
+	const fileCount = Math.max(1, Number(params.get("files") ?? 50));
+	const lineCount = Math.max(1, Number(params.get("lines") ?? 500));
+	const scenarioDiffs = useLargeScenario
+		? createLargeScenario(fileCount, lineCount)
+		: diffs;
+	const computeDiff =
+		params.get("worker") === "0" ? undefined : createWorkerDiffComputer();
+	document.documentElement.dataset.mobileMultiDiffWorkerDiff = computeDiff
+		? "true"
+		: "false";
 
 	const data: IMobileMultiDiffViewData = {
 		diffs: scenarioDiffs,
@@ -536,14 +628,20 @@ function init() {
 		computeDiff,
 	};
 
-	const view = new MobileMultiDiffView(container, data, mockTextFileService, mockFileService, mockLanguageService);
+	const view = new MobileMultiDiffView(
+		container,
+		data,
+		mockTextFileService,
+		mockFileService,
+		mockLanguageService,
+	);
 
 	// Clean up on page unload
-	window.addEventListener('beforeunload', () => view.dispose());
+	window.addEventListener("beforeunload", () => view.dispose());
 }
 
-if (document.readyState === 'loading') {
-	document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === "loading") {
+	document.addEventListener("DOMContentLoaded", init);
 } else {
 	init();
 }

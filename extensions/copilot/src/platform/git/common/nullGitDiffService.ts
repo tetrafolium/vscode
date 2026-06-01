@@ -10,11 +10,20 @@ import { Diff, IGitDiffService } from './gitDiffService';
 export class NullGitDiffService implements IGitDiffService {
 	declare readonly _serviceBrand: undefined;
 
-	async getChangeDiffs(_repository: Repository | Uri, _changes: Change[], _token?: CancellationToken): Promise<Diff[]> {
+	async getChangeDiffs(
+		_repository: Repository | Uri,
+		_changes: Change[],
+		_token?: CancellationToken,
+	): Promise<Diff[]> {
 		return [];
 	}
 
-	async getWorkingTreeDiffsFromRef(_repository: Repository | Uri, _changes: Change[], _ref: string, _token?: CancellationToken): Promise<Diff[]> {
+	async getWorkingTreeDiffsFromRef(
+		_repository: Repository | Uri,
+		_changes: Change[],
+		_ref: string,
+		_token?: CancellationToken,
+	): Promise<Diff[]> {
 		return [];
 	}
 }

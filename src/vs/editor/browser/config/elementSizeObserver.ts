@@ -3,13 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { IDimension } from '../../common/core/2d/dimension.js';
-import { Emitter, Event } from '../../../base/common/event.js';
-import { getWindow, scheduleAtNextAnimationFrame } from '../../../base/browser/dom.js';
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { IDimension } from "../../common/core/2d/dimension.js";
+import { Emitter, Event } from "../../../base/common/event.js";
+import {
+	getWindow,
+	scheduleAtNextAnimationFrame,
+} from "../../../base/browser/dom.js";
 
 export class ElementSizeObserver extends Disposable {
-
 	private _onDidChange = this._register(new Emitter<void>());
 	public readonly onDidChange: Event<void> = this._onDidChange.event;
 
@@ -18,7 +20,10 @@ export class ElementSizeObserver extends Disposable {
 	private _height: number;
 	private _resizeObserver: ResizeObserver | null;
 
-	constructor(referenceDomElement: HTMLElement | null, dimension: IDimension | undefined) {
+	constructor(
+		referenceDomElement: HTMLElement | null,
+		dimension: IDimension | undefined,
+	) {
 		super();
 		this._referenceDomElement = referenceDomElement;
 		this._width = -1;
@@ -50,7 +55,10 @@ export class ElementSizeObserver extends Disposable {
 			let observedDimension: IDimension | null = null;
 			const observeNow = () => {
 				if (observedDimension) {
-					this.observe({ width: observedDimension.width, height: observedDimension.height });
+					this.observe({
+						width: observedDimension.width,
+						height: observedDimension.height,
+					});
 				} else {
 					this.observe();
 				}
@@ -66,17 +74,23 @@ export class ElementSizeObserver extends Disposable {
 						alreadyObservedThisAnimationFrame = true;
 						observeNow();
 					} finally {
-						scheduleAtNextAnimationFrame(getWindow(this._referenceDomElement), () => {
-							alreadyObservedThisAnimationFrame = false;
-							update();
-						});
+						scheduleAtNextAnimationFrame(
+							getWindow(this._referenceDomElement),
+							() => {
+								alreadyObservedThisAnimationFrame = false;
+								update();
+							},
+						);
 					}
 				}
 			};
 
 			this._resizeObserver = new ResizeObserver((entries) => {
 				if (entries && entries[0] && entries[0].contentRect) {
-					observedDimension = { width: entries[0].contentRect.width, height: entries[0].contentRect.height };
+					observedDimension = {
+						width: entries[0].contentRect.width,
+						height: entries[0].contentRect.height,
+					};
 				} else {
 					observedDimension = null;
 				}
@@ -98,7 +112,10 @@ export class ElementSizeObserver extends Disposable {
 		this.measureReferenceDomElement(true, dimension);
 	}
 
-	private measureReferenceDomElement(emitEvent: boolean, dimension?: IDimension): void {
+	private measureReferenceDomElement(
+		emitEvent: boolean,
+		dimension?: IDimension,
+	): void {
 		let observedWidth = 0;
 		let observedHeight = 0;
 		if (dimension) {

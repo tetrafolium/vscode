@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	export enum LanguageModelPartAudience {
 		/**
 		 * The part should be shown to the language model.
@@ -31,6 +30,10 @@ declare module 'vscode' {
 
 	export class LanguageModelDataPart2 extends LanguageModelDataPart {
 		audience: LanguageModelPartAudience[] | undefined;
-		constructor(data: Uint8Array, mimeType: string, audience?: LanguageModelPartAudience[]);
+		constructor(
+			data: Uint8Array,
+			mimeType: string,
+			audience?: LanguageModelPartAudience[],
+		);
 	}
 }

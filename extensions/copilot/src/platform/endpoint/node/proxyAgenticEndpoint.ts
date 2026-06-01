@@ -21,7 +21,6 @@ import { IChatModelInformation } from '../common/endpointProvider';
 import { ChatEndpoint } from './chatEndpoint';
 
 export class ProxyAgenticEndpoint extends ChatEndpoint {
-
 	constructor(
 		modelName: string,
 		@IDomainService domainService: IDomainService,
@@ -33,7 +32,8 @@ export class ProxyAgenticEndpoint extends ChatEndpoint {
 		@ITokenizerProvider tokenizerProvider: ITokenizerProvider,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IExperimentationService experimentationService: IExperimentationService,
+		@IExperimentationService
+		experimentationService: IExperimentationService,
 		@IChatWebSocketManager chatWebSocketService: IChatWebSocketManager,
 		@ILogService logService: ILogService,
 	) {
@@ -50,12 +50,17 @@ export class ProxyAgenticEndpoint extends ChatEndpoint {
 				type: 'chat',
 				family: model,
 				tokenizer: TokenizerType.O200K,
-				supports: { streaming: true, parallel_tool_calls: true, tool_calls: true, vision: false },
+				supports: {
+					streaming: true,
+					parallel_tool_calls: true,
+					tool_calls: true,
+					vision: false,
+				},
 				limits: {
 					max_prompt_tokens: 260000,
 					max_output_tokens: 16000,
-				}
-			}
+				},
+			},
 		};
 		super(
 			modelInfo,
@@ -66,7 +71,7 @@ export class ProxyAgenticEndpoint extends ChatEndpoint {
 			configurationService,
 			experimentationService,
 			chatWebSocketService,
-			logService
+			logService,
 		);
 	}
 

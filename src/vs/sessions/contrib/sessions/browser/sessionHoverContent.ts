@@ -3,19 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Codicon } from '../../../../base/common/codicons.js';
-import { IMarkdownString, MarkdownString } from '../../../../base/common/htmlContent.js';
-import { localize } from '../../../../nls.js';
-import { asCssVariable } from '../../../../platform/theme/common/colorUtils.js';
-import { chatLinesAddedForeground, chatLinesRemovedForeground } from '../../../../workbench/contrib/chat/common/widget/chatColors.js';
-import { ISessionsProvidersService } from '../../../services/sessions/browser/sessionsProvidersService.js';
-import { ISession } from '../../../services/sessions/common/session.js';
+import { Codicon } from "../../../../base/common/codicons.js";
+import {
+	IMarkdownString,
+	MarkdownString,
+} from "../../../../base/common/htmlContent.js";
+import { localize } from "../../../../nls.js";
+import { asCssVariable } from "../../../../platform/theme/common/colorUtils.js";
+import {
+	chatLinesAddedForeground,
+	chatLinesRemovedForeground,
+} from "../../../../workbench/contrib/chat/common/widget/chatColors.js";
+import { ISessionsProvidersService } from "../../../services/sessions/browser/sessionsProvidersService.js";
+import { ISession } from "../../../services/sessions/common/session.js";
 
 /**
  * Aggregated insertions/deletions across all of a session's changes,
  * or `undefined` when the session has no pending changes.
  */
-export function getSessionDiffStats(session: ISession): { files: number; insertions: number; deletions: number } | undefined {
+export function getSessionDiffStats(
+	session: ISession,
+): { files: number; insertions: number; deletions: number } | undefined {
 	const changes = session.changes.get();
 	if (changes.length === 0) {
 		return undefined;
@@ -49,17 +57,21 @@ export function buildSessionHoverContent(
 	// untrusted, workspace-derived values (folder paths, branch names, session
 	// titles), so it must not enable command-link execution. User-controlled
 	// text is always appended via `appendText` so markdown characters are escaped.
-	const md = new MarkdownString('', { supportThemeIcons: true, supportHtml: true });
+	const md = new MarkdownString("", {
+		supportThemeIcons: true,
+		supportHtml: true,
+	});
 
 	// Line 1: session icon + bold title
-	const title = session.title.get() || localize('agentSessions.newSession', "New Session");
+	const title =
+		session.title.get() || localize("agentSessions.newSession", "New Session");
 	if (session.icon) {
 		md.appendMarkdown(`$(${session.icon.id}) `);
 	}
 	md.appendMarkdown(`**`);
 	md.appendText(title);
 	md.appendMarkdown(`**`);
-	md.appendText('\n');
+	md.appendText("\n");
 
 	// Line 2: folder icon + folder path · git branch
 	const workspace = session.workspace.get();
@@ -68,8 +80,14 @@ export function buildSessionHoverContent(
 	let appendedDetails = false;
 
 	if (folder && workspace) {
-		const isWorkspaceSession = workspace.folders.length > 0 && workspace.folders[0]?.gitRepository?.workTreeUri === undefined;
-		const folderIcon = workspace.isVirtualWorkspace ? Codicon.cloud : isWorkspaceSession ? Codicon.folder : Codicon.worktree;
+		const isWorkspaceSession =
+			workspace.folders.length > 0 &&
+			workspace.folders[0]?.gitRepository?.workTreeUri === undefined;
+		const folderIcon = workspace.isVirtualWorkspace
+			? Codicon.cloud
+			: isWorkspaceSession
+				? Codicon.folder
+				: Codicon.worktree;
 		md.appendMarkdown(`$(${folderIcon.id}) `);
 		md.appendText(folder.root.fsPath);
 		appendedDetails = true;
@@ -77,25 +95,32 @@ export function buildSessionHoverContent(
 
 	if (branch) {
 		if (appendedDetails) {
-			md.appendMarkdown(' · ');
+			md.appendMarkdown(" · ");
 		}
-		md.appendMarkdown('$(git-branch) ');
+		md.appendMarkdown("$(git-branch) ");
 		md.appendText(branch);
 		appendedDetails = true;
 	}
 
 	if (appendedDetails) {
-		md.appendText('\n');
+		md.appendText("\n");
 	}
 
 	// Line 3: file count · diff stats
 	const diffStats = getSessionDiffStats(session);
 	if (diffStats) {
-		const fileText = diffStats.files === 1
-			? localize('agentSessions.fileChanged', "1 file changed")
-			: localize('agentSessions.filesChanged', "{0} files changed", diffStats.files);
-		md.appendMarkdown(`${fileText} · <span style="color:${asCssVariable(chatLinesAddedForeground)};">+${diffStats.insertions}</span> <span style="color:${asCssVariable(chatLinesRemovedForeground)};">-${diffStats.deletions}</span>`);
-		md.appendText('\n');
+		const fileText =
+			diffStats.files === 1
+				? localize("agentSessions.fileChanged", "1 file changed")
+				: localize(
+						"agentSessions.filesChanged",
+						"{0} files changed",
+						diffStats.files,
+					);
+		md.appendMarkdown(
+			`${fileText} · <span style="color:${asCssVariable(chatLinesAddedForeground)};">+${diffStats.insertions}</span> <span style="color:${asCssVariable(chatLinesRemovedForeground)};">-${diffStats.deletions}</span>`,
+		);
+		md.appendText("\n");
 	}
 
 	// Line 4: provider name

@@ -12,17 +12,23 @@ const SESSION_STATE_DIRECTORY = join(COPILOT_HOME_DIRECTORY, 'session-state');
 
 export function getCopilotHome(): string {
 	const xdgHome = process.env.XDG_STATE_HOME;
-	return xdgHome ? join(xdgHome, COPILOT_HOME_DIRECTORY) : join(homedir(), COPILOT_HOME_DIRECTORY);
+	return xdgHome
+		? join(xdgHome, COPILOT_HOME_DIRECTORY)
+		: join(homedir(), COPILOT_HOME_DIRECTORY);
 }
 
 export function getCopilotCliStateDir(): string {
 	const xdgHome = process.env.XDG_STATE_HOME;
-	return xdgHome ? join(xdgHome, APP_DIRECTORY) : join(homedir(), APP_DIRECTORY);
+	return xdgHome
+		? join(xdgHome, APP_DIRECTORY)
+		: join(homedir(), APP_DIRECTORY);
 }
 
 export function getCopilotCLISessionStateDir(): string {
 	const xdgHome = process.env.XDG_STATE_HOME;
-	return xdgHome ? join(xdgHome, SESSION_STATE_DIRECTORY) : join(homedir(), SESSION_STATE_DIRECTORY);
+	return xdgHome
+		? join(xdgHome, SESSION_STATE_DIRECTORY)
+		: join(homedir(), SESSION_STATE_DIRECTORY);
 }
 
 export function getCopilotCLISessionDir(sessionId: string): string {

@@ -3,30 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ApplicationService } from '../application';
-import { z } from 'zod';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ApplicationService } from "../application";
+import { z } from "zod";
 
 /**
  * Notebook Tools
  */
-export function applyNotebookTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applyNotebookTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	const tools: RegisteredTool[] = [];
 
-	tools.push(server.tool(
-		'vscode_automation_notebook_open',
-		'Open a notebook',
-		async () => {
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.notebook.openNotebook();
-			return {
-				content: [{
-					type: 'text' as const,
-					text: 'Opened notebook'
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_notebook_open",
+			"Open a notebook",
+			async () => {
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.notebook.openNotebook();
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: "Opened notebook",
+						},
+					],
+				};
+			},
+		),
+	);
 
 	// Playwright can probably figure this one out
 	// server.tool(
@@ -58,20 +68,24 @@ export function applyNotebookTools(server: McpServer, appService: ApplicationSer
 	// 	}
 	// );
 
-	tools.push(server.tool(
-		'vscode_automation_notebook_edit_cell',
-		'Enter edit mode for the current cell',
-		async () => {
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.notebook.editCell();
-			return {
-				content: [{
-					type: 'text' as const,
-					text: 'Entered cell edit mode'
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_notebook_edit_cell",
+			"Enter edit mode for the current cell",
+			async () => {
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.notebook.editCell();
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: "Entered cell edit mode",
+						},
+					],
+				};
+			},
+		),
+	);
 
 	// Seems too niche
 	// server.tool(
@@ -88,24 +102,28 @@ export function applyNotebookTools(server: McpServer, appService: ApplicationSer
 	// 	}
 	// );
 
-	tools.push(server.tool(
-		'vscode_automation_notebook_type_in_editor',
-		'Type text in the notebook cell editor',
-		{
-			text: z.string().describe('Text to type in the cell editor')
-		},
-		async (args) => {
-			const { text } = args;
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.notebook.waitForTypeInEditor(text);
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `Typed in notebook cell: "${text}"`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_notebook_type_in_editor",
+			"Type text in the notebook cell editor",
+			{
+				text: z.string().describe("Text to type in the cell editor"),
+			},
+			async (args) => {
+				const { text } = args;
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.notebook.waitForTypeInEditor(text);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Typed in notebook cell: "${text}"`,
+						},
+					],
+				};
+			},
+		),
+	);
 
 	// Playwright can probably figure this one out
 	// server.tool(

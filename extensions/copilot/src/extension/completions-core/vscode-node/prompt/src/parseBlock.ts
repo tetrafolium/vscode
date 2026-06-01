@@ -22,7 +22,11 @@ interface BlockParser {
 	 *
 	 * If there is no such block, or the completion doesn't close the block, returns undefined.
 	 */
-	isBlockBodyFinished: (prefix: string, completion: string, offset: number) => Promise<number | undefined>;
+	isBlockBodyFinished: (
+		prefix: string,
+		completion: string,
+		offset: number,
+	) => Promise<number | undefined>;
 
 	/**
 	 * Given a document text and offset, determines the beginning of current matching node.
@@ -43,13 +47,13 @@ abstract class BaseBlockParser implements BlockParser {
 		 * to the field label of the child node that is a block or statement.
 		 * For example, an if statement in a braced language.
 		 */
-		protected readonly nodeTypesWithBlockOrStmtChild: Map<string, string>
-	) { }
+		protected readonly nodeTypesWithBlockOrStmtChild: Map<string, string>,
+	) {}
 
 	protected async getNodeMatchAtPosition<T>(
 		text: string,
 		offset: number,
-		cb: (nd: Parser.SyntaxNode) => T
+		cb: (nd: Parser.SyntaxNode) => T,
 	): Promise<T | undefined> {
 		const tree = await parseTreeSitter(this.languageId, text);
 		try {
@@ -65,11 +69,17 @@ abstract class BaseBlockParser implements BlockParser {
 			while (nodeToComplete) {
 				const blockNodeType = this.nodeMatch[nodeToComplete.type];
 				if (blockNodeType) {
-					if (!this.nodeTypesWithBlockOrStmtChild.has(nodeToComplete.type)) {
+					if (
+						!this.nodeTypesWithBlockOrStmtChild.has(
+							nodeToComplete.type,
+						)
+					) {
 						break;
 					}
 
-					const fieldLabel = this.nodeTypesWithBlockOrStmtChild.get(nodeToComplete.type)!;
+					const fieldLabel = this.nodeTypesWithBlockOrStmtChild.get(
+						nodeToComplete.type,
+					)!;
 					const childToCheck =
 						fieldLabel === ''
 							? nodeToComplete.namedChildren[0]
@@ -94,16 +104,18 @@ abstract class BaseBlockParser implements BlockParser {
 	protected getNextBlockAtPosition<T>(
 		text: string,
 		offset: number,
-		cb: (nd: Parser.SyntaxNode) => T
+		cb: (nd: Parser.SyntaxNode) => T,
 	): Promise<T | undefined> {
-		return this.getNodeMatchAtPosition(text, offset, nodeToComplete => {
+		return this.getNodeMatchAtPosition(text, offset, (nodeToComplete) => {
 			// FIXME: childForFieldName always returns null
 			//   const block = nodeToComplete.childForFieldName(fieldToComplete);
 			// Instead, find child nodes of the langauge's nodeMatch type for
 			// nodeToComplete.
 			// Look in reverse order, in case of nodes with multiple blocks defined,
 			// such as try/catch/finally.
-			let block = nodeToComplete.children.reverse().find(x => x.type === this.nodeMatch[nodeToComplete.type]);
+			let block = nodeToComplete.children
+				.reverse()
+				.find((x) => x.type === this.nodeMatch[nodeToComplete.type]);
 			if (!block) {
 				// child of matching type isn't defined yet
 				return;
@@ -111,7 +123,10 @@ abstract class BaseBlockParser implements BlockParser {
 
 			if (this.languageId === 'python' && block.parent) {
 				// handle empty block's parent being the colon (!)
-				const parent = block.parent.type === ':' ? block.parent.parent : block.parent;
+				const parent =
+					block.parent.type === ':'
+						? block.parent.parent
+						: block.parent;
 
 				// tree-sitter handles comments in a weird way, so we need to
 				// consume them.
@@ -121,14 +136,18 @@ abstract class BaseBlockParser implements BlockParser {
 					// next comment is inline at the end of the block
 					// see issue: https://github.com/tree-sitter/tree-sitter-python/issues/113
 					const commentInline =
-						nextComment.startPosition.row === block.endPosition.row &&
-						nextComment.startPosition.column >= block.endPosition.column;
+						nextComment.startPosition.row ===
+							block.endPosition.row &&
+						nextComment.startPosition.column >=
+							block.endPosition.column;
 
 					// next comment is on subsequent line and indented > parent's indentation
 					// see issue: https://github.com/tree-sitter/tree-sitter-python/issues/112
 					const commentAtEnd =
-						nextComment.startPosition.row > parent!.endPosition.row &&
-						nextComment.startPosition.column > parent!.startPosition.column;
+						nextComment.startPosition.row >
+							parent!.endPosition.row &&
+						nextComment.startPosition.column >
+							parent!.startPosition.column;
 
 					if (commentInline || commentAtEnd) {
 						block = nextComment;
@@ -139,7 +158,10 @@ abstract class BaseBlockParser implements BlockParser {
 				}
 			}
 
-			if (block.endIndex >= block.tree.rootNode.endIndex - 1 && (block.hasError || block.parent!.hasError)) {
+			if (
+				block.endIndex >= block.tree.rootNode.endIndex - 1 &&
+				(block.hasError || block.parent!.hasError)
+			) {
 				// TODO:(hponde) improve this logic
 				// block is the whole document, and has errors, most likely doc has
 				// preceding errors.
@@ -151,9 +173,17 @@ abstract class BaseBlockParser implements BlockParser {
 		});
 	}
 
-	async isBlockBodyFinished(prefix: string, completion: string, offset: number): Promise<number | undefined> {
+	async isBlockBodyFinished(
+		prefix: string,
+		completion: string,
+		offset: number,
+	): Promise<number | undefined> {
 		const solution = (prefix + completion).trimEnd();
-		const endIndex = await this.getNextBlockAtPosition(solution, offset, block => block.endIndex);
+		const endIndex = await this.getNextBlockAtPosition(
+			solution,
+			offset,
+			(block) => block.endIndex,
+		);
 		if (endIndex === undefined) {
 			// no block, not finished yet
 			return;
@@ -167,7 +197,11 @@ abstract class BaseBlockParser implements BlockParser {
 
 	getNodeStart(text: string, offset: number): Promise<number | undefined> {
 		const solution = text.trimEnd();
-		return this.getNodeMatchAtPosition(solution, offset, block => block.startIndex);
+		return this.getNodeMatchAtPosition(
+			solution,
+			offset,
+			(block) => block.startIndex,
+		);
 	}
 }
 
@@ -177,7 +211,7 @@ class RegexBasedBlockParser extends BaseBlockParser {
 		protected readonly blockEmptyMatch: string,
 		private readonly lineMatch: RegExp,
 		nodeMatch: { [parent: string]: string },
-		nodeTypesWithBlockOrStmtChild: Map<string, string>
+		nodeTypesWithBlockOrStmtChild: Map<string, string>,
 	) {
 		super(languageId, nodeMatch, nodeTypesWithBlockOrStmtChild);
 	}
@@ -186,15 +220,23 @@ class RegexBasedBlockParser extends BaseBlockParser {
 		return this.lineMatch.test(line.trimStart());
 	}
 
-	private async isBlockBodyEmpty(text: string, offset: number): Promise<boolean> {
-		const res = await this.getNextBlockAtPosition(text, offset, block => {
+	private async isBlockBodyEmpty(
+		text: string,
+		offset: number,
+	): Promise<boolean> {
+		const res = await this.getNextBlockAtPosition(text, offset, (block) => {
 			// strip whitespace and compare with language-defined empty block
 			// Note that for Ruby, `block` is the closing `end` token, while for other
 			// languages it is the whole block, so we consider the text from the earlier of
 			// block.startIndex and offset, all the way up to block.endIndex.
-			if (block.startIndex < offset) { offset = block.startIndex; }
+			if (block.startIndex < offset) {
+				offset = block.startIndex;
+			}
 			const blockText = text.substring(offset, block.endIndex).trim();
-			if (blockText === '' || blockText.replace(/\s/g, '') === this.blockEmptyMatch) {
+			if (
+				blockText === '' ||
+				blockText.replace(/\s/g, '') === this.blockEmptyMatch
+			) {
 				// block is empty
 				return true;
 			}
@@ -205,7 +247,10 @@ class RegexBasedBlockParser extends BaseBlockParser {
 
 	async isEmptyBlockStart(text: string, offset: number): Promise<boolean> {
 		offset = rewindToNearestNonWs(text, offset);
-		return this.isBlockStart(getLineAtOffset(text, offset)) && this.isBlockBodyEmpty(text, offset);
+		return (
+			this.isBlockStart(getLineAtOffset(text, offset)) &&
+			this.isBlockBodyEmpty(text, offset)
+		);
 	}
 }
 
@@ -249,13 +294,21 @@ function indent(nd: Parser.SyntaxNode, source: string): string | undefined {
  * Check if `snd` is "outdented" with respect to `fst`, that is, it starts on a later line, and
  * its indentation is no greater than that of `fst`.
  */
-function outdented(fst: Parser.SyntaxNode, snd: Parser.SyntaxNode, source: string): boolean {
+function outdented(
+	fst: Parser.SyntaxNode,
+	snd: Parser.SyntaxNode,
+	source: string,
+): boolean {
 	if (snd.startPosition.row <= fst.startPosition.row) {
 		return false;
 	}
 	const fstIndent = indent(fst, source);
 	const sndIndent = indent(snd, source);
-	return fstIndent !== undefined && sndIndent !== undefined && fstIndent.startsWith(sndIndent);
+	return (
+		fstIndent !== undefined &&
+		sndIndent !== undefined &&
+		fstIndent.startsWith(sndIndent)
+	);
 }
 
 class TreeSitterBasedBlockParser extends BaseBlockParser {
@@ -272,7 +325,7 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 		 * `pass` is not in Python.
 		 */
 		private readonly emptyStatementType: string | null,
-		private readonly curlyBraceLanguage: boolean
+		private readonly curlyBraceLanguage: boolean,
 	) {
 		super(languageId, nodeMatch, nodeTypesWithBlockOrStmtChild);
 	}
@@ -297,7 +350,8 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 		// Python: Consider a block that contains only a docstring empty.
 		if (
 			this.languageId === 'python' &&
-			(block.parent?.type === 'class_definition' || block.parent?.type === 'function_definition') &&
+			(block.parent?.type === 'class_definition' ||
+				block.parent?.type === 'function_definition') &&
 			block.children.length === 1 &&
 			queryPythonIsDocstring(block.parent)
 		) {
@@ -324,7 +378,10 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 		// This lets e.g. "def foo():\nâ–ˆ" give a multiline suggestion.
 		offset = rewindToNearestNonWs(text, offset);
 
-		const [tree, version] = await parseTreeSitterIncludingVersion(this.languageId, text);
+		const [tree, version] = await parseTreeSitterIncludingVersion(
+			this.languageId,
+			text,
+		);
 		try {
 			// offset here is the cursor position immediately after a whitespace
 			// character, but tree-sitter expects the index of the node to search for.
@@ -342,7 +399,8 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 
 			// JS/TS: half open, empty blocks are sometimes parsed as objects
 			if (
-				(this.languageId === 'javascript' || this.languageId === 'typescript') &&
+				(this.languageId === 'javascript' ||
+					this.languageId === 'typescript') &&
 				nodeAtPos.parent &&
 				nodeAtPos.parent.type === 'object' &&
 				nodeAtPos.parent.text.trim() === '{'
@@ -356,18 +414,27 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 			if (this.languageId === 'typescript') {
 				let currNode = nodeAtPos;
 				while (currNode.parent) {
-					if (currNode.type === 'function_signature' || currNode.type === 'method_signature') {
+					if (
+						currNode.type === 'function_signature' ||
+						currNode.type === 'method_signature'
+					) {
 						// if the next node is outdented, the signature is probably incomplete and
 						// TreeSitter may just have done some fanciful error correction, so we'll
 						// assume that this is really meant to be an incomplete function
 						const next = nodeAtPos.nextSibling;
-						if (next && currNode.hasError && outdented(currNode, next, text)) {
+						if (
+							next &&
+							currNode.hasError &&
+							outdented(currNode, next, text)
+						) {
 							return true;
 						}
 
 						// if, on the other hand, there is a semicolon, then the signature is
 						// probably complete, and we should not show a multiline suggestion
-						const semicolon = currNode.children.find(c => c.type === ';');
+						const semicolon = currNode.children.find(
+							(c) => c.type === ';',
+						);
 						return !semicolon && currNode.endIndex <= offset;
 					}
 					currNode = currNode.parent;
@@ -404,7 +471,10 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 				currNode = currNode.parent;
 			}
 			if (blockNode !== null) {
-				if (!blockNode.parent || !this.nodeMatch[blockNode.parent.type]) {
+				if (
+					!blockNode.parent ||
+					!this.nodeMatch[blockNode.parent.type]
+				) {
 					return false;
 				}
 
@@ -428,7 +498,8 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 					if (
 						prevSibling !== null &&
 						prevSibling.hasError &&
-						(prevSibling.text.startsWith('"""') || prevSibling.text.startsWith(`'''`))
+						(prevSibling.text.startsWith('"""') ||
+							prevSibling.text.startsWith(`'''`))
 					) {
 						return true;
 					}
@@ -455,7 +526,11 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 				if (this.languageId === 'python' && version >= 14) {
 					// In version 14 and later, we need to account for the possibility of
 					// an unfinished docstring being represented as an ERROR node.
-					if (errorNode.hasError && (errorNode.text.startsWith('"') || errorNode.text.startsWith(`'`))) {
+					if (
+						errorNode.hasError &&
+						(errorNode.text.startsWith('"') ||
+							errorNode.text.startsWith(`'`))
+					) {
 						const parentType = errorNode.parent?.type;
 						if (
 							parentType === 'function_definition' ||
@@ -469,8 +544,12 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 
 				// Search in reverse order so we get the latest block or keyword node.
 				const children = [...errorNode.children].reverse();
-				const keyword = children.find(child => this.startKeywords.includes(child.type));
-				let block = children.find(child => child.type === this.blockNodeType);
+				const keyword = children.find((child) =>
+					this.startKeywords.includes(child.type),
+				);
+				let block = children.find(
+					(child) => child.type === this.blockNodeType,
+				);
 
 				if (keyword) {
 					switch (this.languageId) {
@@ -488,10 +567,16 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 							//     - identifier
 							//
 							// In this case, we have to special-case finding the right block to check whether it's empty.
-							if (keyword.type === 'try' && nodeAtPos.type === 'identifier' && nodeAtPos.text.length > 4) {
+							if (
+								keyword.type === 'try' &&
+								nodeAtPos.type === 'identifier' &&
+								nodeAtPos.text.length > 4
+							) {
 								block = children
-									.find(child => child.hasError)
-									?.children.find(child => child.type === 'block');
+									.find((child) => child.hasError)
+									?.children.find(
+										(child) => child.type === 'block',
+									);
 							}
 
 							// Python: sometimes nodes that are morally part of a block are parsed as statements
@@ -512,14 +597,25 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 									parenCount -= 1;
 								}
 							}
-							if (colonNode && keyword.endIndex <= colonNode.startIndex && colonNode.nextSibling) {
+							if (
+								colonNode &&
+								keyword.endIndex <= colonNode.startIndex &&
+								colonNode.nextSibling
+							) {
 								// horrible hack to handle unfinished docstrings :(
 								if (keyword.type === 'def') {
 									const sibling = colonNode.nextSibling;
-									if (sibling.type === '"' || sibling.type === `'`) {
+									if (
+										sibling.type === '"' ||
+										sibling.type === `'`
+									) {
 										return true;
 									}
-									if (sibling.type === 'ERROR' && (sibling.text === '"""' || sibling.text === `'''`)) {
+									if (
+										sibling.type === 'ERROR' &&
+										(sibling.text === '"""' ||
+											sibling.text === `'''`)
+									) {
 										return true;
 									}
 								}
@@ -532,7 +628,10 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 							// JS: method definition within a class, e.g. "class C { foo()"
 							if (keyword.type === 'class') {
 								if (version <= 13) {
-									const formalParameters = children.find(child => child.type === 'formal_parameters');
+									const formalParameters = children.find(
+										(child) =>
+											child.type === 'formal_parameters',
+									);
 									if (formalParameters) {
 										return true;
 									}
@@ -540,10 +639,14 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 									const children = errorNode.children;
 									for (let i = 0; i < children.length; i++) {
 										const child = children[i];
-										if (child.type === 'formal_parameters') {
+										if (
+											child.type === 'formal_parameters'
+										) {
 											return (
 												i + 1 === children.length ||
-												(children[i + 1]?.type === '{' && i + 2 === children.length)
+												(children[i + 1]?.type ===
+													'{' &&
+													i + 2 === children.length)
 											);
 										}
 									}
@@ -553,7 +656,9 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 							// JS: Don't mistake a half-open curly brace after a keyword under an error node for an empty
 							// block.  If it has a nextSibling, then it's not empty. e.g. in "do {\n\t;â–ˆ", the ";" is an
 							// empty_statement and the nextSibling of the "{".
-							const leftCurlyBrace = children.find(child => child.type === '{');
+							const leftCurlyBrace = children.find(
+								(child) => child.type === '{',
+							);
 							if (
 								leftCurlyBrace &&
 								leftCurlyBrace.startIndex > keyword.endIndex &&
@@ -563,14 +668,20 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 							}
 
 							// JS: do-while: don't give a multline suggestion after the "while" keyword
-							const doNode = children.find(child => child.type === 'do');
+							const doNode = children.find(
+								(child) => child.type === 'do',
+							);
 							if (doNode && keyword.type === 'while') {
 								return false;
 							}
 
 							// JS: In an arrow function, if there is a next sibling of the arrow and it's not an open brace, we're not in a
 							// block context and we should return false.
-							if (keyword.type === '=>' && keyword.nextSibling && keyword.nextSibling.type !== '{') {
+							if (
+								keyword.type === '=>' &&
+								keyword.nextSibling &&
+								keyword.nextSibling.type !== '{'
+							) {
 								return false;
 							}
 
@@ -580,7 +691,9 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 							// TS: Don't mistake a half-open curly brace after a keyword under an error node for an empty
 							// block.  If it has a nextSibling, then it's not empty. e.g. in "do {\n\t;â–ˆ", the ";" is an
 							// empty_statement and the nextSibling of the "{".
-							const leftCurlyBrace = children.find(child => child.type === '{');
+							const leftCurlyBrace = children.find(
+								(child) => child.type === '{',
+							);
 							if (
 								leftCurlyBrace &&
 								leftCurlyBrace.startIndex > keyword.endIndex &&
@@ -590,14 +703,20 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 							}
 
 							// TS: do-while: don't give a multline suggestion after the "while" keyword
-							const doNode = children.find(child => child.type === 'do');
+							const doNode = children.find(
+								(child) => child.type === 'do',
+							);
 							if (doNode && keyword.type === 'while') {
 								return false;
 							}
 
 							// TS: In an arrow function, if there is a next sibling of the arrow and it's not an open brace, we're not in a
 							// block context and we should return false.
-							if (keyword.type === '=>' && keyword.nextSibling && keyword.nextSibling.type !== '{') {
+							if (
+								keyword.type === '=>' &&
+								keyword.nextSibling &&
+								keyword.nextSibling.type !== '{'
+							) {
 								return false;
 							}
 
@@ -616,18 +735,29 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 				const block = blockParentNode.children
 					.slice()
 					.reverse()
-					.find(x => x.type === expectedType);
+					.find((x) => x.type === expectedType);
 				if (!block) {
 					// Some node types have a child that is either a block or a statement, e.g. "if (foo)".
 					// If the user has started typing a non-block statement, then this is not the start of an
 					// empty block.
-					if (this.nodeTypesWithBlockOrStmtChild.has(blockParentNode.type)) {
-						const fieldLabel = this.nodeTypesWithBlockOrStmtChild.get(blockParentNode.type)!;
+					if (
+						this.nodeTypesWithBlockOrStmtChild.has(
+							blockParentNode.type,
+						)
+					) {
+						const fieldLabel =
+							this.nodeTypesWithBlockOrStmtChild.get(
+								blockParentNode.type,
+							)!;
 						const child =
 							fieldLabel === ''
 								? blockParentNode.children[0]
 								: blockParentNode.childForFieldName(fieldLabel);
-						if (child && child.type !== this.blockNodeType && child.type !== this.emptyStatementType) {
+						if (
+							child &&
+							child.type !== this.blockNodeType &&
+							child.type !== this.emptyStatementType
+						) {
 							return false;
 						}
 					}
@@ -645,306 +775,319 @@ class TreeSitterBasedBlockParser extends BaseBlockParser {
 	}
 }
 
-const wasmLanguageToBlockParser: { [languageId in WASMLanguage]: BlockParser } = {
-	python: new TreeSitterBasedBlockParser(
-		/* languageId */ 'python',
-		/* nodeMatch */ {
-			// Generated with script/tree-sitter-super-types tree-sitter-python block
-			class_definition: 'block',
-			elif_clause: 'block',
-			else_clause: 'block',
-			except_clause: 'block',
-			finally_clause: 'block',
-			for_statement: 'block',
-			function_definition: 'block',
-			if_statement: 'block',
-			try_statement: 'block',
-			while_statement: 'block',
-			with_statement: 'block',
-		},
-		/* nodeTypesWithBlockOrStmtChild */ new Map(),
-		/* startKeywords */['def', 'class', 'if', 'elif', 'else', 'for', 'while', 'try', 'except', 'finally', 'with'],
-		/* blockNodeType */ 'block',
-		/* emptyStatementType */ null,
-		/* curlyBraceLanguage */ false
-	),
-	javascript: new TreeSitterBasedBlockParser(
-		/* languageId */ 'javascript',
-		/* nodeMatch */ {
-			// Generated with script/tree-sitter-super-types tree-sitter-javascript statement_block
-			arrow_function: 'statement_block',
-			catch_clause: 'statement_block',
-			do_statement: 'statement_block',
-			else_clause: 'statement_block',
-			finally_clause: 'statement_block',
-			for_in_statement: 'statement_block',
-			for_statement: 'statement_block',
-			function: 'statement_block',
-			function_expression: 'statement_block',
-			function_declaration: 'statement_block',
-			generator_function: 'statement_block',
-			generator_function_declaration: 'statement_block',
-			if_statement: 'statement_block',
-			method_definition: 'statement_block',
-			try_statement: 'statement_block',
-			while_statement: 'statement_block',
-			with_statement: 'statement_block',
-			// Generated with script/tree-sitter-super-types tree-sitter-javascript class_body
-			class: 'class_body',
-			class_declaration: 'class_body',
-		},
-		/* nodeTypesWithBlockOrStmtChild */ new Map([
-			['arrow_function', 'body'],
-			['do_statement', 'body'],
-			['else_clause', ''],
-			['for_in_statement', 'body'],
-			['for_statement', 'body'],
-			['if_statement', 'consequence'],
-			['while_statement', 'body'],
-			['with_statement', 'body'],
-		]),
-		/* startKeywords */[
-			'=>',
-			'try',
-			'catch',
-			'finally',
-			'do',
-			'for',
-			'if',
-			'else',
-			'while',
-			'with',
-			'function',
-			'function*',
-			'class',
-		],
-		/* blockNodeType */ 'statement_block',
-		/* emptyStatementType */ 'empty_statement',
-		/* curlyBraceLanguage */ true
-	),
-	typescript: new TreeSitterBasedBlockParser(
-		/* languageId */ 'typescript',
-		/* nodeMatch */ {
-			// Generated with script/tree-sitter-super-types tree-sitter-typescript/typescript statement_block
-			ambient_declaration: 'statement_block',
-			arrow_function: 'statement_block',
-			catch_clause: 'statement_block',
-			do_statement: 'statement_block',
-			else_clause: 'statement_block',
-			finally_clause: 'statement_block',
-			for_in_statement: 'statement_block',
-			for_statement: 'statement_block',
-			function: 'statement_block',
-			function_expression: 'statement_block',
-			function_declaration: 'statement_block',
-			generator_function: 'statement_block',
-			generator_function_declaration: 'statement_block',
-			if_statement: 'statement_block',
-			internal_module: 'statement_block',
-			method_definition: 'statement_block',
-			module: 'statement_block',
-			try_statement: 'statement_block',
-			while_statement: 'statement_block',
-			// Generated with script/tree-sitter-super-types tree-sitter-typescript/typescript class_body
-			abstract_class_declaration: 'class_body',
-			class: 'class_body',
-			class_declaration: 'class_body',
-		},
-		/* nodeTypesWithBlockOrStmtChild */ new Map([
-			['arrow_function', 'body'],
-			['do_statement', 'body'],
-			['else_clause', ''],
-			['for_in_statement', 'body'],
-			['for_statement', 'body'],
-			['if_statement', 'consequence'],
-			['while_statement', 'body'],
-			['with_statement', 'body'],
-		]),
-		/* startKeywords */[
-			'declare',
-			'=>',
-			'try',
-			'catch',
-			'finally',
-			'do',
-			'for',
-			'if',
-			'else',
-			'while',
-			'with',
-			'function',
-			'function*',
-			'class',
-		],
-		/* blockNodeType */ 'statement_block',
-		/* emptyStatementType */ 'empty_statement',
-		/* curlyBraceLanguage */ true
-	),
-	tsx: new TreeSitterBasedBlockParser(
-		/* languageId */ 'typescriptreact',
-		/* nodeMatch */ {
-			// Generated with script/tree-sitter-super-types tree-sitter-typescript/typescript statement_block
-			ambient_declaration: 'statement_block',
-			arrow_function: 'statement_block',
-			catch_clause: 'statement_block',
-			do_statement: 'statement_block',
-			else_clause: 'statement_block',
-			finally_clause: 'statement_block',
-			for_in_statement: 'statement_block',
-			for_statement: 'statement_block',
-			function: 'statement_block',
-			function_expression: 'statement_block',
-			function_declaration: 'statement_block',
-			generator_function: 'statement_block',
-			generator_function_declaration: 'statement_block',
-			if_statement: 'statement_block',
-			internal_module: 'statement_block',
-			method_definition: 'statement_block',
-			module: 'statement_block',
-			try_statement: 'statement_block',
-			while_statement: 'statement_block',
-			// Generated with script/tree-sitter-super-types tree-sitter-typescript/typescript class_body
-			abstract_class_declaration: 'class_body',
-			class: 'class_body',
-			class_declaration: 'class_body',
-		},
-		/* nodeTypesWithBlockOrStmtChild */ new Map([
-			['arrow_function', 'body'],
-			['do_statement', 'body'],
-			['else_clause', ''],
-			['for_in_statement', 'body'],
-			['for_statement', 'body'],
-			['if_statement', 'consequence'],
-			['while_statement', 'body'],
-			['with_statement', 'body'],
-		]),
-		/* startKeywords */[
-			'declare',
-			'=>',
-			'try',
-			'catch',
-			'finally',
-			'do',
-			'for',
-			'if',
-			'else',
-			'while',
-			'with',
-			'function',
-			'function*',
-			'class',
-		],
-		/* blockNodeType */ 'statement_block',
-		/* emptyStatementType */ 'empty_statement',
-		/* curlyBraceLanguage */ true
-	),
-	go: new RegexBasedBlockParser(
-		/* languageId */ 'go',
-		/* blockEmptyMatch */ '{}',
-		/* lineMatch */ /\b(func|if|else|for)\b/,
-		/* nodeMatch */ {
-			// Generated with script/tree-sitter-super-types tree-sitter-go block
-			communication_case: 'block',
-			default_case: 'block',
-			expression_case: 'block',
-			for_statement: 'block',
-			func_literal: 'block',
-			function_declaration: 'block',
-			if_statement: 'block',
-			labeled_statement: 'block',
-			method_declaration: 'block',
-			type_case: 'block',
-		},
-		/* nodeTypesWithBlockOrStmtChild */ new Map() // Go always requires braces
-	),
-	ruby: new RegexBasedBlockParser(
-		/* languageId */ 'ruby',
-		/* blockEmptyMatch */ 'end',
-		// Regex \b matches word boundaries - `->{}` has no word boundary.
-		/* lineMatch */ /\b(BEGIN|END|case|class|def|do|else|elsif|for|if|module|unless|until|while)\b|->/,
-		/* nodeMatch */ {
-			// Ruby works differently from other languages because there is no
-			// block-level node, instead we use the literal 'end' node to
-			// represent the end of a block.
-			begin_block: '}',
-			block: '}',
-			end_block: '}',
-			lambda: 'block',
-			for: 'do',
-			until: 'do',
-			while: 'do',
-			case: 'end',
-			do: 'end',
-			if: 'end',
-			method: 'end',
-			module: 'end',
-			unless: 'end',
-			do_block: 'end',
-		},
-		// TODO(eaftan): Scour Ruby grammar for these
-		/* nodeTypesWithBlockOrStmtChild */ new Map()
-	),
-	'c-sharp': new TreeSitterBasedBlockParser(
-		/* languageId */ 'csharp',
-		/* nodeMatch */ {
-			// TODO -- unused in the current usage.
-		},
-		/* nodeTypesWithBlockOrStmtChild */ new Map([
-			// TODO -- unused in the current usage.
-		]),
-		/* startKeywords */[
-			// TODO -- unused in the current usage.
-		],
-		/* blockNodeType */ 'block',
-		/* emptyStatementType */ null,
-		/* curlyBraceLanguage */ true
-	),
-	java: new TreeSitterBasedBlockParser(
-		/* languageId */ 'java',
-		/* nodeMatch */ {
-			// TODO -- unused in the current usage.
-		},
-		/* nodeTypesWithBlockOrStmtChild */ new Map([
-			// TODO -- unused in the current usage.
-		]),
-		/* startKeywords */[
-			// TODO -- unused in the current usage.
-		],
-		/* blockNodeType */ 'block',
-		/* emptyStatementType */ null,
-		/* curlyBraceLanguage */ true
-	),
-	php: new TreeSitterBasedBlockParser(
-		/* languageId */ 'php',
-		/* nodeMatch */ {
-			// TODO -- unused in the current usage.
-		},
-		/* nodeTypesWithBlockOrStmtChild */ new Map([
-			// TODO -- unused in the current usage.
-		]),
-		/* startKeywords */[
-			// TODO -- unused in the current usage.
-		],
-		/* blockNodeType */ 'block',
-		/* emptyStatementType */ null,
-		/* curlyBraceLanguage */ true
-	),
-	cpp: new TreeSitterBasedBlockParser(
-		/* languageId */ 'cpp',
-		/* nodeMatch */ {
-			// TODO -- unused in the current usage.
-		},
-		/* nodeTypesWithBlockOrStmtChild */ new Map([
-			// TODO -- unused in the current usage.
-		]),
-		/* startKeywords */[
-			// TODO -- unused in the current usage.
-		],
-		/* blockNodeType */ 'block',
-		/* emptyStatementType */ null,
-		/* curlyBraceLanguage */ true
-	),
-};
+const wasmLanguageToBlockParser: { [languageId in WASMLanguage]: BlockParser } =
+	{
+		python: new TreeSitterBasedBlockParser(
+			/* languageId */ 'python',
+			/* nodeMatch */ {
+				// Generated with script/tree-sitter-super-types tree-sitter-python block
+				class_definition: 'block',
+				elif_clause: 'block',
+				else_clause: 'block',
+				except_clause: 'block',
+				finally_clause: 'block',
+				for_statement: 'block',
+				function_definition: 'block',
+				if_statement: 'block',
+				try_statement: 'block',
+				while_statement: 'block',
+				with_statement: 'block',
+			},
+			/* nodeTypesWithBlockOrStmtChild */ new Map(),
+			/* startKeywords */ [
+				'def',
+				'class',
+				'if',
+				'elif',
+				'else',
+				'for',
+				'while',
+				'try',
+				'except',
+				'finally',
+				'with',
+			],
+			/* blockNodeType */ 'block',
+			/* emptyStatementType */ null,
+			/* curlyBraceLanguage */ false,
+		),
+		javascript: new TreeSitterBasedBlockParser(
+			/* languageId */ 'javascript',
+			/* nodeMatch */ {
+				// Generated with script/tree-sitter-super-types tree-sitter-javascript statement_block
+				arrow_function: 'statement_block',
+				catch_clause: 'statement_block',
+				do_statement: 'statement_block',
+				else_clause: 'statement_block',
+				finally_clause: 'statement_block',
+				for_in_statement: 'statement_block',
+				for_statement: 'statement_block',
+				function: 'statement_block',
+				function_expression: 'statement_block',
+				function_declaration: 'statement_block',
+				generator_function: 'statement_block',
+				generator_function_declaration: 'statement_block',
+				if_statement: 'statement_block',
+				method_definition: 'statement_block',
+				try_statement: 'statement_block',
+				while_statement: 'statement_block',
+				with_statement: 'statement_block',
+				// Generated with script/tree-sitter-super-types tree-sitter-javascript class_body
+				class: 'class_body',
+				class_declaration: 'class_body',
+			},
+			/* nodeTypesWithBlockOrStmtChild */ new Map([
+				['arrow_function', 'body'],
+				['do_statement', 'body'],
+				['else_clause', ''],
+				['for_in_statement', 'body'],
+				['for_statement', 'body'],
+				['if_statement', 'consequence'],
+				['while_statement', 'body'],
+				['with_statement', 'body'],
+			]),
+			/* startKeywords */ [
+				'=>',
+				'try',
+				'catch',
+				'finally',
+				'do',
+				'for',
+				'if',
+				'else',
+				'while',
+				'with',
+				'function',
+				'function*',
+				'class',
+			],
+			/* blockNodeType */ 'statement_block',
+			/* emptyStatementType */ 'empty_statement',
+			/* curlyBraceLanguage */ true,
+		),
+		typescript: new TreeSitterBasedBlockParser(
+			/* languageId */ 'typescript',
+			/* nodeMatch */ {
+				// Generated with script/tree-sitter-super-types tree-sitter-typescript/typescript statement_block
+				ambient_declaration: 'statement_block',
+				arrow_function: 'statement_block',
+				catch_clause: 'statement_block',
+				do_statement: 'statement_block',
+				else_clause: 'statement_block',
+				finally_clause: 'statement_block',
+				for_in_statement: 'statement_block',
+				for_statement: 'statement_block',
+				function: 'statement_block',
+				function_expression: 'statement_block',
+				function_declaration: 'statement_block',
+				generator_function: 'statement_block',
+				generator_function_declaration: 'statement_block',
+				if_statement: 'statement_block',
+				internal_module: 'statement_block',
+				method_definition: 'statement_block',
+				module: 'statement_block',
+				try_statement: 'statement_block',
+				while_statement: 'statement_block',
+				// Generated with script/tree-sitter-super-types tree-sitter-typescript/typescript class_body
+				abstract_class_declaration: 'class_body',
+				class: 'class_body',
+				class_declaration: 'class_body',
+			},
+			/* nodeTypesWithBlockOrStmtChild */ new Map([
+				['arrow_function', 'body'],
+				['do_statement', 'body'],
+				['else_clause', ''],
+				['for_in_statement', 'body'],
+				['for_statement', 'body'],
+				['if_statement', 'consequence'],
+				['while_statement', 'body'],
+				['with_statement', 'body'],
+			]),
+			/* startKeywords */ [
+				'declare',
+				'=>',
+				'try',
+				'catch',
+				'finally',
+				'do',
+				'for',
+				'if',
+				'else',
+				'while',
+				'with',
+				'function',
+				'function*',
+				'class',
+			],
+			/* blockNodeType */ 'statement_block',
+			/* emptyStatementType */ 'empty_statement',
+			/* curlyBraceLanguage */ true,
+		),
+		tsx: new TreeSitterBasedBlockParser(
+			/* languageId */ 'typescriptreact',
+			/* nodeMatch */ {
+				// Generated with script/tree-sitter-super-types tree-sitter-typescript/typescript statement_block
+				ambient_declaration: 'statement_block',
+				arrow_function: 'statement_block',
+				catch_clause: 'statement_block',
+				do_statement: 'statement_block',
+				else_clause: 'statement_block',
+				finally_clause: 'statement_block',
+				for_in_statement: 'statement_block',
+				for_statement: 'statement_block',
+				function: 'statement_block',
+				function_expression: 'statement_block',
+				function_declaration: 'statement_block',
+				generator_function: 'statement_block',
+				generator_function_declaration: 'statement_block',
+				if_statement: 'statement_block',
+				internal_module: 'statement_block',
+				method_definition: 'statement_block',
+				module: 'statement_block',
+				try_statement: 'statement_block',
+				while_statement: 'statement_block',
+				// Generated with script/tree-sitter-super-types tree-sitter-typescript/typescript class_body
+				abstract_class_declaration: 'class_body',
+				class: 'class_body',
+				class_declaration: 'class_body',
+			},
+			/* nodeTypesWithBlockOrStmtChild */ new Map([
+				['arrow_function', 'body'],
+				['do_statement', 'body'],
+				['else_clause', ''],
+				['for_in_statement', 'body'],
+				['for_statement', 'body'],
+				['if_statement', 'consequence'],
+				['while_statement', 'body'],
+				['with_statement', 'body'],
+			]),
+			/* startKeywords */ [
+				'declare',
+				'=>',
+				'try',
+				'catch',
+				'finally',
+				'do',
+				'for',
+				'if',
+				'else',
+				'while',
+				'with',
+				'function',
+				'function*',
+				'class',
+			],
+			/* blockNodeType */ 'statement_block',
+			/* emptyStatementType */ 'empty_statement',
+			/* curlyBraceLanguage */ true,
+		),
+		go: new RegexBasedBlockParser(
+			/* languageId */ 'go',
+			/* blockEmptyMatch */ '{}',
+			/* lineMatch */ /\b(func|if|else|for)\b/,
+			/* nodeMatch */ {
+				// Generated with script/tree-sitter-super-types tree-sitter-go block
+				communication_case: 'block',
+				default_case: 'block',
+				expression_case: 'block',
+				for_statement: 'block',
+				func_literal: 'block',
+				function_declaration: 'block',
+				if_statement: 'block',
+				labeled_statement: 'block',
+				method_declaration: 'block',
+				type_case: 'block',
+			},
+			/* nodeTypesWithBlockOrStmtChild */ new Map(), // Go always requires braces
+		),
+		ruby: new RegexBasedBlockParser(
+			/* languageId */ 'ruby',
+			/* blockEmptyMatch */ 'end',
+			// Regex \b matches word boundaries - `->{}` has no word boundary.
+			/* lineMatch */ /\b(BEGIN|END|case|class|def|do|else|elsif|for|if|module|unless|until|while)\b|->/,
+			/* nodeMatch */ {
+				// Ruby works differently from other languages because there is no
+				// block-level node, instead we use the literal 'end' node to
+				// represent the end of a block.
+				begin_block: '}',
+				block: '}',
+				end_block: '}',
+				lambda: 'block',
+				for: 'do',
+				until: 'do',
+				while: 'do',
+				case: 'end',
+				do: 'end',
+				if: 'end',
+				method: 'end',
+				module: 'end',
+				unless: 'end',
+				do_block: 'end',
+			},
+			// TODO(eaftan): Scour Ruby grammar for these
+			/* nodeTypesWithBlockOrStmtChild */ new Map(),
+		),
+		'c-sharp': new TreeSitterBasedBlockParser(
+			/* languageId */ 'csharp',
+			/* nodeMatch */ {
+				// TODO -- unused in the current usage.
+			},
+			/* nodeTypesWithBlockOrStmtChild */ new Map([
+				// TODO -- unused in the current usage.
+			]),
+			/* startKeywords */ [
+				// TODO -- unused in the current usage.
+			],
+			/* blockNodeType */ 'block',
+			/* emptyStatementType */ null,
+			/* curlyBraceLanguage */ true,
+		),
+		java: new TreeSitterBasedBlockParser(
+			/* languageId */ 'java',
+			/* nodeMatch */ {
+				// TODO -- unused in the current usage.
+			},
+			/* nodeTypesWithBlockOrStmtChild */ new Map([
+				// TODO -- unused in the current usage.
+			]),
+			/* startKeywords */ [
+				// TODO -- unused in the current usage.
+			],
+			/* blockNodeType */ 'block',
+			/* emptyStatementType */ null,
+			/* curlyBraceLanguage */ true,
+		),
+		php: new TreeSitterBasedBlockParser(
+			/* languageId */ 'php',
+			/* nodeMatch */ {
+				// TODO -- unused in the current usage.
+			},
+			/* nodeTypesWithBlockOrStmtChild */ new Map([
+				// TODO -- unused in the current usage.
+			]),
+			/* startKeywords */ [
+				// TODO -- unused in the current usage.
+			],
+			/* blockNodeType */ 'block',
+			/* emptyStatementType */ null,
+			/* curlyBraceLanguage */ true,
+		),
+		cpp: new TreeSitterBasedBlockParser(
+			/* languageId */ 'cpp',
+			/* nodeMatch */ {
+				// TODO -- unused in the current usage.
+			},
+			/* nodeTypesWithBlockOrStmtChild */ new Map([
+				// TODO -- unused in the current usage.
+			]),
+			/* startKeywords */ [
+				// TODO -- unused in the current usage.
+			],
+			/* blockNodeType */ 'block',
+			/* emptyStatementType */ null,
+			/* curlyBraceLanguage */ true,
+		),
+	};
 
 export function getBlockParser(languageId: string): BlockParser {
 	if (!isSupportedLanguageId(languageId)) {
@@ -953,21 +1096,38 @@ export function getBlockParser(languageId: string): BlockParser {
 	return wasmLanguageToBlockParser[languageIdToWasmLanguage(languageId)];
 }
 
-export async function isEmptyBlockStart(languageId: string, text: string, offset: number) {
+export async function isEmptyBlockStart(
+	languageId: string,
+	text: string,
+	offset: number,
+) {
 	if (!isSupportedLanguageId(languageId)) {
 		return false;
 	}
 	return getBlockParser(languageId).isEmptyBlockStart(text, offset);
 }
 
-export async function isBlockBodyFinished(languageId: string, prefix: string, completion: string, offset: number) {
+export async function isBlockBodyFinished(
+	languageId: string,
+	prefix: string,
+	completion: string,
+	offset: number,
+) {
 	if (!isSupportedLanguageId(languageId)) {
 		return undefined;
 	}
-	return getBlockParser(languageId).isBlockBodyFinished(prefix, completion, offset);
+	return getBlockParser(languageId).isBlockBodyFinished(
+		prefix,
+		completion,
+		offset,
+	);
 }
 
-export async function getNodeStart(languageId: string, text: string, offset: number) {
+export async function getNodeStart(
+	languageId: string,
+	text: string,
+	offset: number,
+) {
 	if (!isSupportedLanguageId(languageId)) {
 		return;
 	}

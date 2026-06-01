@@ -3,399 +3,443 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { $, h, trackAttributes, copyAttributes, disposableWindowInterval, getWindows, getWindowsCount, getWindowId, getWindowById, hasWindow, getWindow, getDocument, isHTMLElement, SafeTriangle, AnimationFrameScheduler, DisposableResizeObserver, getRecentDisposableResizeObserverAttributionForLoopError } from '../../browser/dom.js';
-import { asCssValueWithDefault } from '../../../base/browser/cssValue.js';
-import { ensureCodeWindow, isAuxiliaryWindow, mainWindow } from '../../browser/window.js';
-import { DeferredPromise, timeout } from '../../common/async.js';
-import { errorHandler, setUnexpectedErrorHandler } from '../../common/errors.js';
-import { runWithFakedTimers } from '../common/timeTravelScheduler.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../common/utils.js';
+import assert from "assert";
+import {
+	$,
+	h,
+	trackAttributes,
+	copyAttributes,
+	disposableWindowInterval,
+	getWindows,
+	getWindowsCount,
+	getWindowId,
+	getWindowById,
+	hasWindow,
+	getWindow,
+	getDocument,
+	isHTMLElement,
+	SafeTriangle,
+	AnimationFrameScheduler,
+	DisposableResizeObserver,
+	getRecentDisposableResizeObserverAttributionForLoopError,
+} from "../../browser/dom.js";
+import { asCssValueWithDefault } from "../../../base/browser/cssValue.js";
+import {
+	ensureCodeWindow,
+	isAuxiliaryWindow,
+	mainWindow,
+} from "../../browser/window.js";
+import { DeferredPromise, timeout } from "../../common/async.js";
+import {
+	errorHandler,
+	setUnexpectedErrorHandler,
+} from "../../common/errors.js";
+import { runWithFakedTimers } from "../common/timeTravelScheduler.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../common/utils.js";
 
-suite('dom', () => {
-	test('hasClass', () => {
+suite("dom", () => {
+	test("hasClass", () => {
+		const element = document.createElement("div");
+		element.className = "foobar boo far";
 
-		const element = document.createElement('div');
-		element.className = 'foobar boo far';
-
-		assert(element.classList.contains('foobar'));
-		assert(element.classList.contains('boo'));
-		assert(element.classList.contains('far'));
-		assert(!element.classList.contains('bar'));
-		assert(!element.classList.contains('foo'));
-		assert(!element.classList.contains(''));
+		assert(element.classList.contains("foobar"));
+		assert(element.classList.contains("boo"));
+		assert(element.classList.contains("far"));
+		assert(!element.classList.contains("bar"));
+		assert(!element.classList.contains("foo"));
+		assert(!element.classList.contains(""));
 	});
 
-	test('removeClass', () => {
+	test("removeClass", () => {
+		let element = document.createElement("div");
+		element.className = "foobar boo far";
 
-		let element = document.createElement('div');
-		element.className = 'foobar boo far';
+		element.classList.remove("boo");
+		assert(element.classList.contains("far"));
+		assert(!element.classList.contains("boo"));
+		assert(element.classList.contains("foobar"));
+		assert.strictEqual(element.className, "foobar far");
 
-		element.classList.remove('boo');
-		assert(element.classList.contains('far'));
-		assert(!element.classList.contains('boo'));
-		assert(element.classList.contains('foobar'));
-		assert.strictEqual(element.className, 'foobar far');
+		element = document.createElement("div");
+		element.className = "foobar boo far";
 
-		element = document.createElement('div');
-		element.className = 'foobar boo far';
+		element.classList.remove("far");
+		assert(!element.classList.contains("far"));
+		assert(element.classList.contains("boo"));
+		assert(element.classList.contains("foobar"));
+		assert.strictEqual(element.className, "foobar boo");
 
-		element.classList.remove('far');
-		assert(!element.classList.contains('far'));
-		assert(element.classList.contains('boo'));
-		assert(element.classList.contains('foobar'));
-		assert.strictEqual(element.className, 'foobar boo');
+		element.classList.remove("boo");
+		assert(!element.classList.contains("far"));
+		assert(!element.classList.contains("boo"));
+		assert(element.classList.contains("foobar"));
+		assert.strictEqual(element.className, "foobar");
 
-		element.classList.remove('boo');
-		assert(!element.classList.contains('far'));
-		assert(!element.classList.contains('boo'));
-		assert(element.classList.contains('foobar'));
-		assert.strictEqual(element.className, 'foobar');
-
-		element.classList.remove('foobar');
-		assert(!element.classList.contains('far'));
-		assert(!element.classList.contains('boo'));
-		assert(!element.classList.contains('foobar'));
-		assert.strictEqual(element.className, '');
+		element.classList.remove("foobar");
+		assert(!element.classList.contains("far"));
+		assert(!element.classList.contains("boo"));
+		assert(!element.classList.contains("foobar"));
+		assert.strictEqual(element.className, "");
 	});
 
-	test('removeClass should consider hyphens', function () {
-		const element = document.createElement('div');
+	test("removeClass should consider hyphens", function () {
+		const element = document.createElement("div");
 
-		element.classList.add('foo-bar');
-		element.classList.add('bar');
+		element.classList.add("foo-bar");
+		element.classList.add("bar");
 
-		assert(element.classList.contains('foo-bar'));
-		assert(element.classList.contains('bar'));
+		assert(element.classList.contains("foo-bar"));
+		assert(element.classList.contains("bar"));
 
-		element.classList.remove('bar');
-		assert(element.classList.contains('foo-bar'));
-		assert(!element.classList.contains('bar'));
+		element.classList.remove("bar");
+		assert(element.classList.contains("foo-bar"));
+		assert(!element.classList.contains("bar"));
 
-		element.classList.remove('foo-bar');
-		assert(!element.classList.contains('foo-bar'));
-		assert(!element.classList.contains('bar'));
+		element.classList.remove("foo-bar");
+		assert(!element.classList.contains("foo-bar"));
+		assert(!element.classList.contains("bar"));
 	});
 
-	suite('$', () => {
-		test('should build simple nodes', () => {
-			const div = $('div');
+	suite("$", () => {
+		test("should build simple nodes", () => {
+			const div = $("div");
 			assert(div);
 			assert(isHTMLElement(div));
-			assert.strictEqual(div.tagName, 'DIV');
+			assert.strictEqual(div.tagName, "DIV");
 			assert(!div.firstChild);
 		});
 
-		test('should build nodes with id', () => {
-			const div = $('div#foo');
+		test("should build nodes with id", () => {
+			const div = $("div#foo");
 			assert(div);
 			assert(isHTMLElement(div));
-			assert.strictEqual(div.tagName, 'DIV');
-			assert.strictEqual(div.id, 'foo');
+			assert.strictEqual(div.tagName, "DIV");
+			assert.strictEqual(div.id, "foo");
 		});
 
-		test('should build nodes with class-name', () => {
-			const div = $('div.foo');
+		test("should build nodes with class-name", () => {
+			const div = $("div.foo");
 			assert(div);
 			assert(isHTMLElement(div));
-			assert.strictEqual(div.tagName, 'DIV');
-			assert.strictEqual(div.className, 'foo');
+			assert.strictEqual(div.tagName, "DIV");
+			assert.strictEqual(div.className, "foo");
 		});
 
-		test('should build nodes with attributes', () => {
-			let div = $('div', { class: 'test' });
-			assert.strictEqual(div.className, 'test');
+		test("should build nodes with attributes", () => {
+			let div = $("div", { class: "test" });
+			assert.strictEqual(div.className, "test");
 
-			div = $('div', undefined);
-			assert.strictEqual(div.className, '');
+			div = $("div", undefined);
+			assert.strictEqual(div.className, "");
 		});
 
-		test('should build nodes with children', () => {
-			let div = $('div', undefined, $('span', { id: 'demospan' }));
+		test("should build nodes with children", () => {
+			let div = $("div", undefined, $("span", { id: "demospan" }));
 			const firstChild = div.firstChild as HTMLElement;
-			assert.strictEqual(firstChild.tagName, 'SPAN');
-			assert.strictEqual(firstChild.id, 'demospan');
+			assert.strictEqual(firstChild.tagName, "SPAN");
+			assert.strictEqual(firstChild.id, "demospan");
 
-			div = $('div', undefined, 'hello');
+			div = $("div", undefined, "hello");
 
-			assert.strictEqual(div.firstChild && div.firstChild.textContent, 'hello');
+			assert.strictEqual(div.firstChild && div.firstChild.textContent, "hello");
 		});
 
-		test('should build nodes with text children', () => {
-			const div = $('div', undefined, 'foobar');
+		test("should build nodes with text children", () => {
+			const div = $("div", undefined, "foobar");
 			const firstChild = div.firstChild as HTMLElement;
 			assert.strictEqual(firstChild.tagName, undefined);
-			assert.strictEqual(firstChild.textContent, 'foobar');
+			assert.strictEqual(firstChild.textContent, "foobar");
 		});
 	});
 
-	suite('h', () => {
-		test('should build simple nodes', () => {
-			const div = h('div');
+	suite("h", () => {
+		test("should build simple nodes", () => {
+			const div = h("div");
 			assert(isHTMLElement(div.root));
-			assert.strictEqual(div.root.tagName, 'DIV');
+			assert.strictEqual(div.root.tagName, "DIV");
 
-			const span = h('span');
+			const span = h("span");
 			assert(isHTMLElement(span.root));
-			assert.strictEqual(span.root.tagName, 'SPAN');
+			assert.strictEqual(span.root.tagName, "SPAN");
 
-			const img = h('img');
+			const img = h("img");
 			assert(isHTMLElement(img.root));
-			assert.strictEqual(img.root.tagName, 'IMG');
+			assert.strictEqual(img.root.tagName, "IMG");
 		});
 
-		test('should handle ids and classes', () => {
-			const divId = h('div#myid');
-			assert.strictEqual(divId.root.tagName, 'DIV');
-			assert.strictEqual(divId.root.id, 'myid');
+		test("should handle ids and classes", () => {
+			const divId = h("div#myid");
+			assert.strictEqual(divId.root.tagName, "DIV");
+			assert.strictEqual(divId.root.id, "myid");
 
-			const divClass = h('div.a');
-			assert.strictEqual(divClass.root.tagName, 'DIV');
+			const divClass = h("div.a");
+			assert.strictEqual(divClass.root.tagName, "DIV");
 			assert.strictEqual(divClass.root.classList.length, 1);
-			assert(divClass.root.classList.contains('a'));
+			assert(divClass.root.classList.contains("a"));
 
-			const divClasses = h('div.a.b.c');
-			assert.strictEqual(divClasses.root.tagName, 'DIV');
+			const divClasses = h("div.a.b.c");
+			assert.strictEqual(divClasses.root.tagName, "DIV");
 			assert.strictEqual(divClasses.root.classList.length, 3);
-			assert(divClasses.root.classList.contains('a'));
-			assert(divClasses.root.classList.contains('b'));
-			assert(divClasses.root.classList.contains('c'));
+			assert(divClasses.root.classList.contains("a"));
+			assert(divClasses.root.classList.contains("b"));
+			assert(divClasses.root.classList.contains("c"));
 
-			const divAll = h('div#myid.a.b.c');
-			assert.strictEqual(divAll.root.tagName, 'DIV');
-			assert.strictEqual(divAll.root.id, 'myid');
+			const divAll = h("div#myid.a.b.c");
+			assert.strictEqual(divAll.root.tagName, "DIV");
+			assert.strictEqual(divAll.root.id, "myid");
 			assert.strictEqual(divAll.root.classList.length, 3);
-			assert(divAll.root.classList.contains('a'));
-			assert(divAll.root.classList.contains('b'));
-			assert(divAll.root.classList.contains('c'));
+			assert(divAll.root.classList.contains("a"));
+			assert(divAll.root.classList.contains("b"));
+			assert(divAll.root.classList.contains("c"));
 
-			const spanId = h('span#myid');
-			assert.strictEqual(spanId.root.tagName, 'SPAN');
-			assert.strictEqual(spanId.root.id, 'myid');
+			const spanId = h("span#myid");
+			assert.strictEqual(spanId.root.tagName, "SPAN");
+			assert.strictEqual(spanId.root.id, "myid");
 
-			const spanClass = h('span.a');
-			assert.strictEqual(spanClass.root.tagName, 'SPAN');
+			const spanClass = h("span.a");
+			assert.strictEqual(spanClass.root.tagName, "SPAN");
 			assert.strictEqual(spanClass.root.classList.length, 1);
-			assert(spanClass.root.classList.contains('a'));
+			assert(spanClass.root.classList.contains("a"));
 
-			const spanClasses = h('span.a.b.c');
-			assert.strictEqual(spanClasses.root.tagName, 'SPAN');
+			const spanClasses = h("span.a.b.c");
+			assert.strictEqual(spanClasses.root.tagName, "SPAN");
 			assert.strictEqual(spanClasses.root.classList.length, 3);
-			assert(spanClasses.root.classList.contains('a'));
-			assert(spanClasses.root.classList.contains('b'));
-			assert(spanClasses.root.classList.contains('c'));
+			assert(spanClasses.root.classList.contains("a"));
+			assert(spanClasses.root.classList.contains("b"));
+			assert(spanClasses.root.classList.contains("c"));
 
-			const spanAll = h('span#myid.a.b.c');
-			assert.strictEqual(spanAll.root.tagName, 'SPAN');
-			assert.strictEqual(spanAll.root.id, 'myid');
+			const spanAll = h("span#myid.a.b.c");
+			assert.strictEqual(spanAll.root.tagName, "SPAN");
+			assert.strictEqual(spanAll.root.id, "myid");
 			assert.strictEqual(spanAll.root.classList.length, 3);
-			assert(spanAll.root.classList.contains('a'));
-			assert(spanAll.root.classList.contains('b'));
-			assert(spanAll.root.classList.contains('c'));
+			assert(spanAll.root.classList.contains("a"));
+			assert(spanAll.root.classList.contains("b"));
+			assert(spanAll.root.classList.contains("c"));
 		});
 
-		test('should implicitly handle ids and classes', () => {
-			const divId = h('#myid');
-			assert.strictEqual(divId.root.tagName, 'DIV');
-			assert.strictEqual(divId.root.id, 'myid');
+		test("should implicitly handle ids and classes", () => {
+			const divId = h("#myid");
+			assert.strictEqual(divId.root.tagName, "DIV");
+			assert.strictEqual(divId.root.id, "myid");
 
-			const divClass = h('.a');
-			assert.strictEqual(divClass.root.tagName, 'DIV');
+			const divClass = h(".a");
+			assert.strictEqual(divClass.root.tagName, "DIV");
 			assert.strictEqual(divClass.root.classList.length, 1);
-			assert(divClass.root.classList.contains('a'));
+			assert(divClass.root.classList.contains("a"));
 
-			const divClasses = h('.a.b.c');
-			assert.strictEqual(divClasses.root.tagName, 'DIV');
+			const divClasses = h(".a.b.c");
+			assert.strictEqual(divClasses.root.tagName, "DIV");
 			assert.strictEqual(divClasses.root.classList.length, 3);
-			assert(divClasses.root.classList.contains('a'));
-			assert(divClasses.root.classList.contains('b'));
-			assert(divClasses.root.classList.contains('c'));
+			assert(divClasses.root.classList.contains("a"));
+			assert(divClasses.root.classList.contains("b"));
+			assert(divClasses.root.classList.contains("c"));
 
-			const divAll = h('#myid.a.b.c');
-			assert.strictEqual(divAll.root.tagName, 'DIV');
-			assert.strictEqual(divAll.root.id, 'myid');
+			const divAll = h("#myid.a.b.c");
+			assert.strictEqual(divAll.root.tagName, "DIV");
+			assert.strictEqual(divAll.root.id, "myid");
 			assert.strictEqual(divAll.root.classList.length, 3);
-			assert(divAll.root.classList.contains('a'));
-			assert(divAll.root.classList.contains('b'));
-			assert(divAll.root.classList.contains('c'));
+			assert(divAll.root.classList.contains("a"));
+			assert(divAll.root.classList.contains("b"));
+			assert(divAll.root.classList.contains("c"));
 		});
 
-		test('should handle @ identifiers', () => {
-			const implicit = h('@el');
+		test("should handle @ identifiers", () => {
+			const implicit = h("@el");
 			assert.strictEqual(implicit.root, implicit.el);
-			assert.strictEqual(implicit.el.tagName, 'DIV');
+			assert.strictEqual(implicit.el.tagName, "DIV");
 
-			const explicit = h('div@el');
+			const explicit = h("div@el");
 			assert.strictEqual(explicit.root, explicit.el);
-			assert.strictEqual(explicit.el.tagName, 'DIV');
+			assert.strictEqual(explicit.el.tagName, "DIV");
 
-			const implicitId = h('#myid@el');
+			const implicitId = h("#myid@el");
 			assert.strictEqual(implicitId.root, implicitId.el);
-			assert.strictEqual(implicitId.el.tagName, 'DIV');
-			assert.strictEqual(implicitId.root.id, 'myid');
+			assert.strictEqual(implicitId.el.tagName, "DIV");
+			assert.strictEqual(implicitId.root.id, "myid");
 
-			const explicitId = h('div#myid@el');
+			const explicitId = h("div#myid@el");
 			assert.strictEqual(explicitId.root, explicitId.el);
-			assert.strictEqual(explicitId.el.tagName, 'DIV');
-			assert.strictEqual(explicitId.root.id, 'myid');
+			assert.strictEqual(explicitId.el.tagName, "DIV");
+			assert.strictEqual(explicitId.root.id, "myid");
 
-			const implicitClass = h('.a@el');
+			const implicitClass = h(".a@el");
 			assert.strictEqual(implicitClass.root, implicitClass.el);
-			assert.strictEqual(implicitClass.el.tagName, 'DIV');
+			assert.strictEqual(implicitClass.el.tagName, "DIV");
 			assert.strictEqual(implicitClass.root.classList.length, 1);
-			assert(implicitClass.root.classList.contains('a'));
+			assert(implicitClass.root.classList.contains("a"));
 
-			const explicitClass = h('div.a@el');
+			const explicitClass = h("div.a@el");
 			assert.strictEqual(explicitClass.root, explicitClass.el);
-			assert.strictEqual(explicitClass.el.tagName, 'DIV');
+			assert.strictEqual(explicitClass.el.tagName, "DIV");
 			assert.strictEqual(explicitClass.root.classList.length, 1);
-			assert(explicitClass.root.classList.contains('a'));
+			assert(explicitClass.root.classList.contains("a"));
 		});
 	});
 
-	test('should recurse', () => {
-		const result = h('div.code-view', [
-			h('div.title@title'),
-			h('div.container', [
-				h('div.gutter@gutterDiv'),
-				h('span@editor'),
-			]),
+	test("should recurse", () => {
+		const result = h("div.code-view", [
+			h("div.title@title"),
+			h("div.container", [h("div.gutter@gutterDiv"), h("span@editor")]),
 		]);
 
-		assert.strictEqual(result.root.tagName, 'DIV');
-		assert.strictEqual(result.root.className, 'code-view');
+		assert.strictEqual(result.root.tagName, "DIV");
+		assert.strictEqual(result.root.className, "code-view");
 		assert.strictEqual(result.root.childElementCount, 2);
 		assert.strictEqual(result.root.firstElementChild, result.title);
-		assert.strictEqual(result.title.tagName, 'DIV');
-		assert.strictEqual(result.title.className, 'title');
+		assert.strictEqual(result.title.tagName, "DIV");
+		assert.strictEqual(result.title.className, "title");
 		assert.strictEqual(result.title.childElementCount, 0);
-		assert.strictEqual(result.gutterDiv.tagName, 'DIV');
-		assert.strictEqual(result.gutterDiv.className, 'gutter');
+		assert.strictEqual(result.gutterDiv.tagName, "DIV");
+		assert.strictEqual(result.gutterDiv.className, "gutter");
 		assert.strictEqual(result.gutterDiv.childElementCount, 0);
-		assert.strictEqual(result.editor.tagName, 'SPAN');
-		assert.strictEqual(result.editor.className, '');
+		assert.strictEqual(result.editor.tagName, "SPAN");
+		assert.strictEqual(result.editor.className, "");
 		assert.strictEqual(result.editor.childElementCount, 0);
 	});
 
-	test('cssValueWithDefault', () => {
-		assert.strictEqual(asCssValueWithDefault('red', 'blue'), 'red');
-		assert.strictEqual(asCssValueWithDefault(undefined, 'blue'), 'blue');
-		assert.strictEqual(asCssValueWithDefault('var(--my-var)', 'blue'), 'var(--my-var, blue)');
-		assert.strictEqual(asCssValueWithDefault('var(--my-var, red)', 'blue'), 'var(--my-var, red)');
-		assert.strictEqual(asCssValueWithDefault('var(--my-var, var(--my-var2))', 'blue'), 'var(--my-var, var(--my-var2, blue))');
+	test("cssValueWithDefault", () => {
+		assert.strictEqual(asCssValueWithDefault("red", "blue"), "red");
+		assert.strictEqual(asCssValueWithDefault(undefined, "blue"), "blue");
+		assert.strictEqual(
+			asCssValueWithDefault("var(--my-var)", "blue"),
+			"var(--my-var, blue)",
+		);
+		assert.strictEqual(
+			asCssValueWithDefault("var(--my-var, red)", "blue"),
+			"var(--my-var, red)",
+		);
+		assert.strictEqual(
+			asCssValueWithDefault("var(--my-var, var(--my-var2))", "blue"),
+			"var(--my-var, var(--my-var2, blue))",
+		);
 	});
 
-	test('copyAttributes', () => {
-		const elementSource = document.createElement('div');
-		elementSource.setAttribute('foo', 'bar');
-		elementSource.setAttribute('bar', 'foo');
+	test("copyAttributes", () => {
+		const elementSource = document.createElement("div");
+		elementSource.setAttribute("foo", "bar");
+		elementSource.setAttribute("bar", "foo");
 
-		const elementTarget = document.createElement('div');
+		const elementTarget = document.createElement("div");
 		copyAttributes(elementSource, elementTarget);
 
-		assert.strictEqual(elementTarget.getAttribute('foo'), 'bar');
-		assert.strictEqual(elementTarget.getAttribute('bar'), 'foo');
+		assert.strictEqual(elementTarget.getAttribute("foo"), "bar");
+		assert.strictEqual(elementTarget.getAttribute("bar"), "foo");
 	});
 
-	test('trackAttributes (unfiltered)', async () => {
+	test("trackAttributes (unfiltered)", async () => {
 		return runWithFakedTimers({ useFakeTimers: true }, async () => {
-			const elementSource = document.createElement('div');
-			const elementTarget = document.createElement('div');
+			const elementSource = document.createElement("div");
+			const elementTarget = document.createElement("div");
 
 			const disposable = trackAttributes(elementSource, elementTarget);
 
-			elementSource.setAttribute('foo', 'bar');
-			elementSource.setAttribute('bar', 'foo');
+			elementSource.setAttribute("foo", "bar");
+			elementSource.setAttribute("bar", "foo");
 
 			await timeout(1);
 
-			assert.strictEqual(elementTarget.getAttribute('foo'), 'bar');
-			assert.strictEqual(elementTarget.getAttribute('bar'), 'foo');
+			assert.strictEqual(elementTarget.getAttribute("foo"), "bar");
+			assert.strictEqual(elementTarget.getAttribute("bar"), "foo");
 
 			disposable.dispose();
 		});
 	});
 
-	test('trackAttributes (filtered)', async () => {
+	test("trackAttributes (filtered)", async () => {
 		return runWithFakedTimers({ useFakeTimers: true }, async () => {
-			const elementSource = document.createElement('div');
-			const elementTarget = document.createElement('div');
+			const elementSource = document.createElement("div");
+			const elementTarget = document.createElement("div");
 
-			const disposable = trackAttributes(elementSource, elementTarget, ['foo']);
+			const disposable = trackAttributes(elementSource, elementTarget, ["foo"]);
 
-			elementSource.setAttribute('foo', 'bar');
-			elementSource.setAttribute('bar', 'foo');
+			elementSource.setAttribute("foo", "bar");
+			elementSource.setAttribute("bar", "foo");
 
 			await timeout(1);
 
-			assert.strictEqual(elementTarget.getAttribute('foo'), 'bar');
-			assert.strictEqual(elementTarget.getAttribute('bar'), null);
+			assert.strictEqual(elementTarget.getAttribute("foo"), "bar");
+			assert.strictEqual(elementTarget.getAttribute("bar"), null);
 
 			disposable.dispose();
 		});
 	});
 
-	test('window utilities', () => {
+	test("window utilities", () => {
 		const windows = Array.from(getWindows());
 		assert.strictEqual(windows.length, 1);
 		assert.strictEqual(getWindowsCount(), 1);
 		const windowId = getWindowId(mainWindow);
-		assert.ok(typeof windowId === 'number');
+		assert.ok(typeof windowId === "number");
 		assert.strictEqual(getWindowById(windowId)?.window, mainWindow);
 		assert.strictEqual(getWindowById(undefined, true).window, mainWindow);
 		assert.strictEqual(hasWindow(windowId), true);
 		assert.strictEqual(isAuxiliaryWindow(mainWindow), false);
 		ensureCodeWindow(mainWindow, 1);
-		assert.ok(typeof mainWindow.vscodeWindowId === 'number');
+		assert.ok(typeof mainWindow.vscodeWindowId === "number");
 
-		const div = document.createElement('div');
+		const div = document.createElement("div");
 		assert.strictEqual(getWindow(div), mainWindow);
 		assert.strictEqual(getDocument(div), mainWindow.document);
 
-		const event = document.createEvent('MouseEvent');
+		const event = document.createEvent("MouseEvent");
 		assert.strictEqual(getWindow(event), mainWindow);
 		assert.strictEqual(getDocument(event), mainWindow.document);
 	});
 
-	suite('disposableWindowInterval', () => {
-		test('basics', async () => {
+	suite("disposableWindowInterval", () => {
+		test("basics", async () => {
 			let count = 0;
 			const promise = new DeferredPromise<void>();
-			const interval = disposableWindowInterval(mainWindow, () => {
-				count++;
-				if (count === 3) {
-					promise.complete(undefined);
-					return true;
-				} else {
-					return false;
-				}
-			}, 0, 10);
+			const interval = disposableWindowInterval(
+				mainWindow,
+				() => {
+					count++;
+					if (count === 3) {
+						promise.complete(undefined);
+						return true;
+					} else {
+						return false;
+					}
+				},
+				0,
+				10,
+			);
 
 			await promise.p;
 			assert.strictEqual(count, 3);
 			interval.dispose();
 		});
 
-		test('iterations', async () => {
+		test("iterations", async () => {
 			let count = 0;
-			const interval = disposableWindowInterval(mainWindow, () => {
-				count++;
+			const interval = disposableWindowInterval(
+				mainWindow,
+				() => {
+					count++;
 
-				return false;
-			}, 0, 0);
+					return false;
+				},
+				0,
+				0,
+			);
 
 			await timeout(5);
 			assert.strictEqual(count, 0);
 			interval.dispose();
 		});
 
-		test('dispose', async () => {
+		test("dispose", async () => {
 			let count = 0;
-			const interval = disposableWindowInterval(mainWindow, () => {
-				count++;
+			const interval = disposableWindowInterval(
+				mainWindow,
+				() => {
+					count++;
 
-				return false;
-			}, 0, 10);
+					return false;
+				},
+				0,
+				10,
+			);
 
 			interval.dispose();
 			await timeout(5);
@@ -403,12 +447,19 @@ suite('dom', () => {
 		});
 	});
 
-	suite('SafeTriangle', () => {
-		const fakeElement = (left: number, right: number, top: number, bottom: number): HTMLElement => {
-			return { getBoundingClientRect: () => ({ left, right, top, bottom }) } as HTMLElement;
+	suite("SafeTriangle", () => {
+		const fakeElement = (
+			left: number,
+			right: number,
+			top: number,
+			bottom: number,
+		): HTMLElement => {
+			return {
+				getBoundingClientRect: () => ({ left, right, top, bottom }),
+			} as HTMLElement;
 		};
 
-		test('works', () => {
+		test("works", () => {
 			const safeTriangle = new SafeTriangle(0, 0, fakeElement(10, 20, 10, 20));
 
 			assert.strictEqual(safeTriangle.contains(5, 5), true); // in triangle region
@@ -424,7 +475,7 @@ suite('dom', () => {
 			assert.strictEqual(safeTriangle.contains(25, 25), false);
 		});
 
-		test('other dirations', () => {
+		test("other dirations", () => {
 			const a = new SafeTriangle(30, 30, fakeElement(10, 20, 10, 20));
 			assert.strictEqual(a.contains(25, 25), true);
 
@@ -436,12 +487,15 @@ suite('dom', () => {
 		});
 	});
 
-	suite('AnimationFrameScheduler', () => {
+	suite("AnimationFrameScheduler", () => {
 		// Helper to wait for an animation frame
-		const waitForAnimationFrame = () => new Promise<void>(resolve => mainWindow.requestAnimationFrame(() => resolve()));
+		const waitForAnimationFrame = () =>
+			new Promise<void>((resolve) =>
+				mainWindow.requestAnimationFrame(() => resolve()),
+			);
 
-		test('schedules and runs the callback', async () => {
-			const node = document.createElement('div');
+		test("schedules and runs the callback", async () => {
+			const node = document.createElement("div");
 			let callCount = 0;
 			const scheduler = new AnimationFrameScheduler(node, () => {
 				callCount++;
@@ -459,8 +513,8 @@ suite('dom', () => {
 			scheduler.dispose();
 		});
 
-		test('coalesces multiple schedule calls', async () => {
-			const node = document.createElement('div');
+		test("coalesces multiple schedule calls", async () => {
+			const node = document.createElement("div");
 			let callCount = 0;
 			const scheduler = new AnimationFrameScheduler(node, () => {
 				callCount++;
@@ -479,8 +533,8 @@ suite('dom', () => {
 			scheduler.dispose();
 		});
 
-		test('cancel prevents execution', async () => {
-			const node = document.createElement('div');
+		test("cancel prevents execution", async () => {
+			const node = document.createElement("div");
 			let callCount = 0;
 			const scheduler = new AnimationFrameScheduler(node, () => {
 				callCount++;
@@ -498,8 +552,8 @@ suite('dom', () => {
 			scheduler.dispose();
 		});
 
-		test('dispose prevents execution', async () => {
-			const node = document.createElement('div');
+		test("dispose prevents execution", async () => {
+			const node = document.createElement("div");
 			let callCount = 0;
 			const scheduler = new AnimationFrameScheduler(node, () => {
 				callCount++;
@@ -514,8 +568,8 @@ suite('dom', () => {
 			assert.strictEqual(callCount, 0);
 		});
 
-		test('can schedule again after execution', async () => {
-			const node = document.createElement('div');
+		test("can schedule again after execution", async () => {
+			const node = document.createElement("div");
 			let callCount = 0;
 			const scheduler = new AnimationFrameScheduler(node, () => {
 				callCount++;
@@ -533,7 +587,7 @@ suite('dom', () => {
 		});
 	});
 
-	suite('DisposableResizeObserver', () => {
+	suite("DisposableResizeObserver", () => {
 		// Captures the callback handed to a `ResizeObserver` so tests can fire
 		// deliveries synthetically. Returned via dependency injection — no
 		// global mutation, no `any` casts.
@@ -546,22 +600,32 @@ suite('dom', () => {
 		function createFakeResizeObserverCtor(): FakeResizeObserverHandle {
 			const handle: FakeResizeObserverHandle = {
 				ctor: undefined!,
-				fire: () => { throw new Error('observer not constructed'); },
+				fire: () => {
+					throw new Error("observer not constructed");
+				},
 				disconnects: 0,
 			};
 			class FakeResizeObserver implements ResizeObserver {
 				constructor(callback: ResizeObserverCallback) {
-					handle.fire = entries => callback(entries, this);
+					handle.fire = (entries) => callback(entries, this);
 				}
-				observe(_target: Element, _options?: ResizeObserverOptions): void { /* no-op */ }
-				unobserve(_target: Element): void { /* no-op */ }
-				disconnect(): void { handle.disconnects++; }
+				observe(_target: Element, _options?: ResizeObserverOptions): void {
+					/* no-op */
+				}
+				unobserve(_target: Element): void {
+					/* no-op */
+				}
+				disconnect(): void {
+					handle.disconnects++;
+				}
 			}
 			handle.ctor = FakeResizeObserver;
 			return handle;
 		}
 
-		function fakeEntry(target: Element = document.createElement('div')): ResizeObserverEntry {
+		function fakeEntry(
+			target: Element = document.createElement("div"),
+		): ResizeObserverEntry {
 			const size: ResizeObserverSize = { blockSize: 0, inlineSize: 0 };
 			return {
 				target,
@@ -572,49 +636,81 @@ suite('dom', () => {
 			};
 		}
 
-		test('callback runs synchronously with the entries the browser delivered', () => {
+		test("callback runs synchronously with the entries the browser delivered", () => {
 			const fake = createFakeResizeObserverCtor();
 			let calls = 0;
 			let received: ResizeObserverEntry[] | undefined;
-			const observer = new DisposableResizeObserver('test.sync', (entries) => {
-				calls++;
-				received = entries;
-			}, mainWindow, { resizeObserverCtor: fake.ctor });
+			const observer = new DisposableResizeObserver(
+				"test.sync",
+				(entries) => {
+					calls++;
+					received = entries;
+				},
+				mainWindow,
+				{ resizeObserverCtor: fake.ctor },
+			);
 			const a = fakeEntry();
 			const b = fakeEntry();
 			fake.fire([a, b]);
-			assert.strictEqual(calls, 1, 'callback runs synchronously inside the resize-observation phase');
-			assert.deepStrictEqual(received, [a, b], 'entries are forwarded as-is');
+			assert.strictEqual(
+				calls,
+				1,
+				"callback runs synchronously inside the resize-observation phase",
+			);
+			assert.deepStrictEqual(received, [a, b], "entries are forwarded as-is");
 			observer.dispose();
 		});
 
-		test('each native delivery invokes the callback once (no batching)', () => {
+		test("each native delivery invokes the callback once (no batching)", () => {
 			const fake = createFakeResizeObserverCtor();
 			let calls = 0;
-			const observer = new DisposableResizeObserver('test.noBatch', () => { calls++; }, mainWindow, { resizeObserverCtor: fake.ctor });
+			const observer = new DisposableResizeObserver(
+				"test.noBatch",
+				() => {
+					calls++;
+				},
+				mainWindow,
+				{ resizeObserverCtor: fake.ctor },
+			);
 			fake.fire([fakeEntry()]);
 			fake.fire([fakeEntry()]);
-			assert.strictEqual(calls, 2, 'wrapper does not coalesce deliveries');
+			assert.strictEqual(calls, 2, "wrapper does not coalesce deliveries");
 			observer.dispose();
 		});
 
-		test('dispose disconnects the underlying observer', () => {
+		test("dispose disconnects the underlying observer", () => {
 			const fake = createFakeResizeObserverCtor();
-			const observer = new DisposableResizeObserver('test.dispose', () => { /* noop */ }, mainWindow, { resizeObserverCtor: fake.ctor });
+			const observer = new DisposableResizeObserver(
+				"test.dispose",
+				() => {
+					/* noop */
+				},
+				mainWindow,
+				{ resizeObserverCtor: fake.ctor },
+			);
 			observer.dispose();
 			assert.strictEqual(fake.disconnects, 1);
 		});
 
-		test('exceptions in the user callback do not propagate', () => {
+		test("exceptions in the user callback do not propagate", () => {
 			const fake = createFakeResizeObserverCtor();
-			const observer = new DisposableResizeObserver('test.throw', () => { throw new Error('boom'); }, mainWindow, { resizeObserverCtor: fake.ctor });
+			const observer = new DisposableResizeObserver(
+				"test.throw",
+				() => {
+					throw new Error("boom");
+				},
+				mainWindow,
+				{ resizeObserverCtor: fake.ctor },
+			);
 			// Browser would not catch a throw out of the native callback; we
 			// must guard so a single bad consumer does not break delivery for
 			// every other observer in the realm. The wrapper routes the throw
 			// to onUnexpectedError, so swap the handler for the duration of
 			// this test so the test runner does not flag it as a failure.
 			const originalErrorHandler = errorHandler.getUnexpectedErrorHandler();
-			setUnexpectedErrorHandler(() => { /* swallow expected */ });
+			setUnexpectedErrorHandler(() => {
+				/* swallow expected */
+			});
 			try {
 				assert.doesNotThrow(() => fake.fire([fakeEntry()]));
 			} finally {
@@ -623,54 +719,98 @@ suite('dom', () => {
 			observer.dispose();
 		});
 
-		test('exposes the configured name for attribution', () => {
+		test("exposes the configured name for attribution", () => {
 			const fake = createFakeResizeObserverCtor();
 			const observer = new DisposableResizeObserver(
-				'my-observer',
-				() => { /* noop */ },
+				"my-observer",
+				() => {
+					/* noop */
+				},
 				mainWindow,
 				{ resizeObserverCtor: fake.ctor },
 			);
-			assert.strictEqual(observer.name, 'my-observer');
+			assert.strictEqual(observer.name, "my-observer");
 			observer.dispose();
 		});
 
-		test('getRecentDisposableResizeObserverAttributionForLoopError returns undefined for unrelated messages', () => {
-			assert.strictEqual(getRecentDisposableResizeObserverAttributionForLoopError(undefined), undefined);
-			assert.strictEqual(getRecentDisposableResizeObserverAttributionForLoopError('Uncaught TypeError: foo'), undefined);
+		test("getRecentDisposableResizeObserverAttributionForLoopError returns undefined for unrelated messages", () => {
+			assert.strictEqual(
+				getRecentDisposableResizeObserverAttributionForLoopError(undefined),
+				undefined,
+			);
+			assert.strictEqual(
+				getRecentDisposableResizeObserverAttributionForLoopError(
+					"Uncaught TypeError: foo",
+				),
+				undefined,
+			);
 		});
 
-		test('getRecentDisposableResizeObserverAttributionForLoopError returns last invoked observer name for the loop warning', () => {
+		test("getRecentDisposableResizeObserverAttributionForLoopError returns last invoked observer name for the loop warning", () => {
 			const fake = createFakeResizeObserverCtor();
-			const a = new DisposableResizeObserver('a', () => { /* noop */ }, mainWindow, { resizeObserverCtor: fake.ctor });
+			const a = new DisposableResizeObserver(
+				"a",
+				() => {
+					/* noop */
+				},
+				mainWindow,
+				{ resizeObserverCtor: fake.ctor },
+			);
 			fake.fire([fakeEntry()]);
 			const fakeB = createFakeResizeObserverCtor();
-			const b = new DisposableResizeObserver('b', () => { /* noop */ }, mainWindow, { resizeObserverCtor: fakeB.ctor });
-			fakeB.fire([fakeEntry()]);
-			const attribution = getRecentDisposableResizeObserverAttributionForLoopError(
-				'ResizeObserver loop completed with undelivered notifications.',
+			const b = new DisposableResizeObserver(
+				"b",
+				() => {
+					/* noop */
+				},
+				mainWindow,
+				{ resizeObserverCtor: fakeB.ctor },
 			);
-			assert.ok(attribution, 'attribution string must be produced for the loop warning');
-			assert.ok(attribution!.startsWith('[DisposableResizeObserver(b)] '), 'attribution prefixes the message with the most recently invoked observer name');
+			fakeB.fire([fakeEntry()]);
+			const attribution =
+				getRecentDisposableResizeObserverAttributionForLoopError(
+					"ResizeObserver loop completed with undelivered notifications.",
+				);
+			assert.ok(
+				attribution,
+				"attribution string must be produced for the loop warning",
+			);
+			assert.ok(
+				attribution!.startsWith("[DisposableResizeObserver(b)] "),
+				"attribution prefixes the message with the most recently invoked observer name",
+			);
 			a.dispose();
 			b.dispose();
 		});
 
-		test('getRecentDisposableResizeObserverAttributionForLoopError clears after the current task so unrelated later errors are not mis-attributed', async () => {
+		test("getRecentDisposableResizeObserverAttributionForLoopError clears after the current task so unrelated later errors are not mis-attributed", async () => {
 			const fake = createFakeResizeObserverCtor();
-			const observer = new DisposableResizeObserver('scoped', () => { /* noop */ }, mainWindow, { resizeObserverCtor: fake.ctor });
+			const observer = new DisposableResizeObserver(
+				"scoped",
+				() => {
+					/* noop */
+				},
+				mainWindow,
+				{ resizeObserverCtor: fake.ctor },
+			);
 			fake.fire([fakeEntry()]);
 			// Slot is set synchronously and survives microtasks (so it is
 			// still set when Chromium dispatches the loop warning at the end
 			// of the resize-observation phase).
 			await Promise.resolve();
-			assert.ok(getRecentDisposableResizeObserverAttributionForLoopError('ResizeObserver loop completed with undelivered notifications.'));
+			assert.ok(
+				getRecentDisposableResizeObserverAttributionForLoopError(
+					"ResizeObserver loop completed with undelivered notifications.",
+				),
+			);
 			// A 0-ms timer (next macrotask) clears the slot.
-			await new Promise(resolve => setTimeout(resolve, 0));
+			await new Promise((resolve) => setTimeout(resolve, 0));
 			assert.strictEqual(
-				getRecentDisposableResizeObserverAttributionForLoopError('ResizeObserver loop completed with undelivered notifications.'),
+				getRecentDisposableResizeObserverAttributionForLoopError(
+					"ResizeObserver loop completed with undelivered notifications.",
+				),
 				undefined,
-				'slot must be cleared by the next task so an unrelated later error does not inherit a stale observer name',
+				"slot must be cleared by the next task so an unrelated later error does not inherit a stale observer name",
 			);
 			observer.dispose();
 		});

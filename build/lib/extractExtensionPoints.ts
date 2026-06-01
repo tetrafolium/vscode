@@ -16,15 +16,17 @@
  * to regenerate the extension points file, or imported for use in gulp build tasks.
  */
 
-import ts from 'typescript';
-import path from 'path';
-import fs from 'fs';
+import ts from "typescript";
+import path from "path";
+import fs from "fs";
 
 /**
  * Extract extension point names registered via `registerExtensionPoint` from
  * a single TypeScript source file's AST. No type checker is needed.
  */
-export function extractExtensionPointNamesFromFile(sourceFile: ts.SourceFile): string[] {
+export function extractExtensionPointNamesFromFile(
+	sourceFile: ts.SourceFile,
+): string[] {
 	const results: string[] = [];
 	visit(sourceFile);
 	return results;
@@ -32,7 +34,10 @@ export function extractExtensionPointNamesFromFile(sourceFile: ts.SourceFile): s
 	function visit(node: ts.Node): void {
 		if (ts.isCallExpression(node)) {
 			const expr = node.expression;
-			if (ts.isPropertyAccessExpression(expr) && expr.name.text === 'registerExtensionPoint') {
+			if (
+				ts.isPropertyAccessExpression(expr) &&
+				expr.name.text === "registerExtensionPoint"
+			) {
 				handleRegisterCall(node);
 			}
 		}
@@ -51,7 +56,10 @@ export function extractExtensionPointNamesFromFile(sourceFile: ts.SourceFile): s
 		}
 	}
 
-	function handleInlineDescriptor(call: ts.CallExpression, obj: ts.ObjectLiteralExpression): void {
+	function handleInlineDescriptor(
+		call: ts.CallExpression,
+		obj: ts.ObjectLiteralExpression,
+	): void {
 		const epProp = findExtensionPointProperty(obj);
 		if (!epProp) {
 			return;
@@ -64,34 +72,50 @@ export function extractExtensionPointNamesFromFile(sourceFile: ts.SourceFile): s
 		}
 	}
 
-	function handleParameterReference(registerCall: ts.CallExpression, paramName: string): void {
+	function handleParameterReference(
+		registerCall: ts.CallExpression,
+		paramName: string,
+	): void {
 		// Walk up to find the containing function
 		let current: ts.Node | undefined = registerCall.parent;
-		while (current && !ts.isFunctionDeclaration(current) && !ts.isFunctionExpression(current) && !ts.isArrowFunction(current)) {
+		while (
+			current &&
+			!ts.isFunctionDeclaration(current) &&
+			!ts.isFunctionExpression(current) &&
+			!ts.isArrowFunction(current)
+		) {
 			current = current.parent;
 		}
 		if (!current) {
 			return;
 		}
-		const fn = current as ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction;
+		const fn = current as
+			| ts.FunctionDeclaration
+			| ts.FunctionExpression
+			| ts.ArrowFunction;
 
 		// Find which parameter position matches paramName
 		const paramIndex = fn.parameters.findIndex(
-			p => ts.isIdentifier(p.name) && p.name.text === paramName
+			(p) => ts.isIdentifier(p.name) && p.name.text === paramName,
 		);
 		if (paramIndex < 0) {
 			return;
 		}
 
 		// Find the function name to locate call sites
-		const fnName = ts.isFunctionDeclaration(fn) && fn.name ? fn.name.text : undefined;
+		const fnName =
+			ts.isFunctionDeclaration(fn) && fn.name ? fn.name.text : undefined;
 		if (!fnName) {
 			return;
 		}
 
 		// Find all call sites of this function in the same file
 		ts.forEachChild(sourceFile, function findCalls(node) {
-			if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === fnName) {
+			if (
+				ts.isCallExpression(node) &&
+				ts.isIdentifier(node.expression) &&
+				node.expression.text === fnName
+			) {
 				const callArg = node.arguments[paramIndex];
 				if (callArg) {
 					const value = resolveStringValue(callArg);
@@ -114,19 +138,30 @@ export function extractExtensionPointNamesFromFile(sourceFile: ts.SourceFile): s
 				continue;
 			}
 			for (const element of stmt.importClause.namedBindings.elements) {
-				if (element.name.text !== name || !ts.isStringLiteral(stmt.moduleSpecifier)) {
+				if (
+					element.name.text !== name ||
+					!ts.isStringLiteral(stmt.moduleSpecifier)
+				) {
 					continue;
 				}
 				const modulePath = stmt.moduleSpecifier.text;
 				const resolvedPath = path.resolve(
 					path.dirname(sourceFile.fileName),
-					modulePath.replace(/\.js$/, '.ts')
+					modulePath.replace(/\.js$/, ".ts"),
 				);
 				try {
-					const content = fs.readFileSync(resolvedPath, 'utf-8');
-					const importedFile = ts.createSourceFile(resolvedPath, content, ts.ScriptTarget.Latest, true);
+					const content = fs.readFileSync(resolvedPath, "utf-8");
+					const importedFile = ts.createSourceFile(
+						resolvedPath,
+						content,
+						ts.ScriptTarget.Latest,
+						true,
+					);
 					const originalName = element.propertyName?.text || element.name.text;
-					const value = findExtensionPointInVariable(importedFile, originalName);
+					const value = findExtensionPointInVariable(
+						importedFile,
+						originalName,
+					);
 					if (value) {
 						results.push(value);
 					}
@@ -143,14 +178,21 @@ export function extractExtensionPointNamesFromFile(sourceFile: ts.SourceFile): s
 			return node.text;
 		}
 		// Property access: Enum.Member
-		if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression)) {
+		if (
+			ts.isPropertyAccessExpression(node) &&
+			ts.isIdentifier(node.expression)
+		) {
 			const enumName = node.expression.text;
 			const memberName = node.name.text;
 			for (const stmt of sourceFile.statements) {
 				if (ts.isEnumDeclaration(stmt) && stmt.name.text === enumName) {
 					for (const member of stmt.members) {
-						if (ts.isIdentifier(member.name) && member.name.text === memberName
-							&& member.initializer && ts.isStringLiteral(member.initializer)) {
+						if (
+							ts.isIdentifier(member.name) &&
+							member.name.text === memberName &&
+							member.initializer &&
+							ts.isStringLiteral(member.initializer)
+						) {
 							return member.initializer.text;
 						}
 					}
@@ -161,23 +203,36 @@ export function extractExtensionPointNamesFromFile(sourceFile: ts.SourceFile): s
 	}
 }
 
-function findExtensionPointProperty(obj: ts.ObjectLiteralExpression): ts.PropertyAssignment | undefined {
+function findExtensionPointProperty(
+	obj: ts.ObjectLiteralExpression,
+): ts.PropertyAssignment | undefined {
 	for (const prop of obj.properties) {
-		if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name) && prop.name.text === 'extensionPoint') {
+		if (
+			ts.isPropertyAssignment(prop) &&
+			ts.isIdentifier(prop.name) &&
+			prop.name.text === "extensionPoint"
+		) {
 			return prop;
 		}
 	}
 	return undefined;
 }
 
-function findExtensionPointInVariable(sourceFile: ts.SourceFile, varName: string): string | undefined {
+function findExtensionPointInVariable(
+	sourceFile: ts.SourceFile,
+	varName: string,
+): string | undefined {
 	for (const stmt of sourceFile.statements) {
 		if (!ts.isVariableStatement(stmt)) {
 			continue;
 		}
 		for (const decl of stmt.declarationList.declarations) {
-			if (ts.isIdentifier(decl.name) && decl.name.text === varName
-				&& decl.initializer && ts.isObjectLiteralExpression(decl.initializer)) {
+			if (
+				ts.isIdentifier(decl.name) &&
+				decl.name.text === varName &&
+				decl.initializer &&
+				ts.isObjectLiteralExpression(decl.initializer)
+			) {
 				const epProp = findExtensionPointProperty(decl.initializer);
 				if (epProp && ts.isStringLiteral(epProp.initializer)) {
 					return epProp.initializer.text;
@@ -190,9 +245,17 @@ function findExtensionPointInVariable(sourceFile: ts.SourceFile, varName: string
 
 // --- Standalone CLI ---
 
-const rootDir = path.resolve(import.meta.dirname, '..', '..');
-const srcDir = path.join(rootDir, 'src');
-const outputPath = path.join(srcDir, 'vs', 'workbench', 'services', 'extensions', 'common', 'extensionPoints.json');
+const rootDir = path.resolve(import.meta.dirname, "..", "..");
+const srcDir = path.join(rootDir, "src");
+const outputPath = path.join(
+	srcDir,
+	"vs",
+	"workbench",
+	"services",
+	"extensions",
+	"common",
+	"extensionPoints.json",
+);
 
 function scanDirectory(dir: string): string[] {
 	const names: string[] = [];
@@ -200,10 +263,15 @@ function scanDirectory(dir: string): string[] {
 		const fullPath = path.join(dir, entry.name);
 		if (entry.isDirectory()) {
 			names.push(...scanDirectory(fullPath));
-		} else if (entry.name.endsWith('.ts')) {
-			const content = fs.readFileSync(fullPath, 'utf-8');
-			if (content.includes('registerExtensionPoint')) {
-				const sourceFile = ts.createSourceFile(fullPath, content, ts.ScriptTarget.Latest, true);
+		} else if (entry.name.endsWith(".ts")) {
+			const content = fs.readFileSync(fullPath, "utf-8");
+			if (content.includes("registerExtensionPoint")) {
+				const sourceFile = ts.createSourceFile(
+					fullPath,
+					content,
+					ts.ScriptTarget.Latest,
+					true,
+				);
 				names.push(...extractExtensionPointNamesFromFile(sourceFile));
 			}
 		}
@@ -212,15 +280,15 @@ function scanDirectory(dir: string): string[] {
 }
 
 function normalize(s: string): string {
-	return s.replace(/\r\n/g, '\n');
+	return s.replace(/\r\n/g, "\n");
 }
 
 function main(): void {
-	const names = scanDirectory(path.join(srcDir, 'vs', 'workbench'));
+	const names = scanDirectory(path.join(srcDir, "vs", "workbench"));
 	names.sort();
-	const output = JSON.stringify(names, undefined, '\t') + '\n';
+	const output = JSON.stringify(names, undefined, "\t") + "\n";
 	try {
-		const existing = fs.readFileSync(outputPath, 'utf-8');
+		const existing = fs.readFileSync(outputPath, "utf-8");
 		if (normalize(existing) === normalize(output)) {
 			console.log(`No changes to ${path.relative(rootDir, outputPath)}`);
 			return;
@@ -228,8 +296,10 @@ function main(): void {
 	} catch {
 		// File doesn't exist yet, write it
 	}
-	fs.writeFileSync(outputPath, output, 'utf-8');
-	console.log(`Wrote ${names.length} extension points to ${path.relative(rootDir, outputPath)}`);
+	fs.writeFileSync(outputPath, output, "utf-8");
+	console.log(
+		`Wrote ${names.length} extension points to ${path.relative(rootDir, outputPath)}`,
+	);
 }
 
 if (import.meta.main) {

@@ -3,9 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ILogService } from '../../../log/common/log.js';
-import type { StringOrMarkdown } from '../../common/state/protocol/state.js';
-import { getClaudeInvocationMessage, getClaudeToolDisplayName, getClaudeToolInputString } from './claudeToolDisplay.js';
+import type { ILogService } from "../../../log/common/log.js";
+import type { StringOrMarkdown } from "../../common/state/protocol/state.js";
+import {
+	getClaudeInvocationMessage,
+	getClaudeToolDisplayName,
+	getClaudeToolInputString,
+} from "./claudeToolDisplay.js";
 
 /**
  * Phase 8.5 — per-tool-call info computed at `content_block_stop` and
@@ -72,7 +76,7 @@ export class ClaudeToolCallRegistry {
 		this._entries.set(toolUseId, {
 			toolName,
 			turnId,
-			inputBuffer: '',
+			inputBuffer: "",
 			info: undefined,
 		});
 	}
@@ -105,7 +109,7 @@ export class ClaudeToolCallRegistry {
 		if (entry.inputBuffer.length > 0) {
 			try {
 				const parsed: unknown = JSON.parse(entry.inputBuffer);
-				if (parsed !== null && typeof parsed === 'object') {
+				if (parsed !== null && typeof parsed === "object") {
 					parsedInput = parsed as Record<string, unknown>;
 				}
 			} catch {
@@ -115,10 +119,11 @@ export class ClaudeToolCallRegistry {
 		// Preserve the raw buffer as a fallback `toolInput` so a malformed
 		// or non-object payload still surfaces SOMETHING in the UI rather
 		// than leaving the input section empty.
-		const rawFallback = entry.inputBuffer.length > 0 ? entry.inputBuffer : undefined;
+		const rawFallback =
+			entry.inputBuffer.length > 0 ? entry.inputBuffer : undefined;
 		this._writeInfo(entry, parsedInput, rawFallback);
 		// Buffer is no longer needed once parsed.
-		entry.inputBuffer = '';
+		entry.inputBuffer = "";
 	}
 
 	/**
@@ -136,20 +141,30 @@ export class ClaudeToolCallRegistry {
 		if (!entry) {
 			return;
 		}
-		const normalized = (parsedInput !== null && typeof parsedInput === 'object')
-			? parsedInput as Record<string, unknown>
-			: undefined;
+		const normalized =
+			parsedInput !== null && typeof parsedInput === "object"
+				? (parsedInput as Record<string, unknown>)
+				: undefined;
 		this._writeInfo(entry, normalized);
 	}
 
-	private _writeInfo(entry: IRegistryEntry, parsedInput: Record<string, unknown> | undefined, rawFallback?: string): void {
+	private _writeInfo(
+		entry: IRegistryEntry,
+		parsedInput: Record<string, unknown> | undefined,
+		rawFallback?: string,
+	): void {
 		const displayName = getClaudeToolDisplayName(entry.toolName);
 		entry.info = {
 			toolName: entry.toolName,
 			displayName,
 			parsedInput,
-			invocationMessage: getClaudeInvocationMessage(entry.toolName, displayName, parsedInput),
-			toolInput: getClaudeToolInputString(entry.toolName, parsedInput) ?? rawFallback,
+			invocationMessage: getClaudeInvocationMessage(
+				entry.toolName,
+				displayName,
+				parsedInput,
+			),
+			toolInput:
+				getClaudeToolInputString(entry.toolName, parsedInput) ?? rawFallback,
 		};
 	}
 
@@ -159,7 +174,15 @@ export class ClaudeToolCallRegistry {
 	 * drift / replay). The `info` field may be `undefined` if the
 	 * tool block never reached `content_block_stop`.
 	 */
-	lookup(toolUseId: string): { readonly turnId: string; readonly toolName: string; readonly info: IClaudeToolStartInfo | undefined } | undefined {
+	lookup(
+		toolUseId: string,
+	):
+		| {
+				readonly turnId: string;
+				readonly toolName: string;
+				readonly info: IClaudeToolStartInfo | undefined;
+		  }
+		| undefined {
 		const entry = this._entries.get(toolUseId);
 		if (!entry) {
 			return undefined;
@@ -188,7 +211,9 @@ export class ClaudeToolCallRegistry {
 			return;
 		}
 		for (const [toolUseId, entry] of this._entries) {
-			logService.warn(`[claudeToolCallRegistry] turn ${entry.turnId} ended with pending tool_use ${toolUseId} (${entry.toolName}); dropping cross-message state`);
+			logService.warn(
+				`[claudeToolCallRegistry] turn ${entry.turnId} ended with pending tool_use ${toolUseId} (${entry.toolName}); dropping cross-message state`,
+			);
 		}
 		this._entries.clear();
 	}

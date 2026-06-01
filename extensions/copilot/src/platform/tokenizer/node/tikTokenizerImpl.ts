@@ -3,15 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createTokenizer, getRegexByEncoder, getSpecialTokensByEncoder, TikTokenizer } from '@microsoft/tiktokenizer';
+import {
+	createTokenizer,
+	getRegexByEncoder,
+	getSpecialTokensByEncoder,
+	TikTokenizer,
+} from '@microsoft/tiktokenizer';
 import { MovingAverage } from '../../../util/vs/base/common/numbers';
 import { StopWatch } from '../../../util/vs/base/common/stopwatch';
 import { parseTikTokenBinary } from './parseTikTokens';
 
-export type TokenDictionaryParser = (file: string) => string | Map<Uint8Array, number>;
+export type TokenDictionaryParser = (
+	file: string,
+) => string | Map<Uint8Array, number>;
 
 export class TikTokenImpl {
-
 	private static _instance: TikTokenImpl | undefined;
 
 	private _values: (TikTokenizer | undefined)[] = [];
@@ -21,7 +27,7 @@ export class TikTokenImpl {
 		callCount: 0,
 	};
 
-	private constructor() { }
+	private constructor() {}
 
 	static get instance(): TikTokenImpl {
 		if (!this._instance) {
@@ -30,21 +36,33 @@ export class TikTokenImpl {
 		return this._instance;
 	}
 
-	init(tokenFilePath: string, encoderName: string, useBinaryTokens: boolean): number {
+	init(
+		tokenFilePath: string,
+		encoderName: string,
+		useBinaryTokens: boolean,
+	): number {
 		const handle = this._values.length;
-		const parser: TokenDictionaryParser = useBinaryTokens ? parseTikTokenBinary : f => f;
+		const parser: TokenDictionaryParser = useBinaryTokens
+			? parseTikTokenBinary
+			: (f) => f;
 
-		this._values.push(createTokenizer(
-			parser(tokenFilePath),
-			getSpecialTokensByEncoder(encoderName),
-			getRegexByEncoder(encoderName),
-			64000
-		));
+		this._values.push(
+			createTokenizer(
+				parser(tokenFilePath),
+				getSpecialTokensByEncoder(encoderName),
+				getRegexByEncoder(encoderName),
+				64000,
+			),
+		);
 
 		return handle;
 	}
 
-	encode(handle: number, text: string, allowedSpecial?: readonly string[]): number[] {
+	encode(
+		handle: number,
+		text: string,
+		allowedSpecial?: readonly string[],
+	): number[] {
 		const sw = StopWatch.create(true);
 		const result = this._values[handle]!.encode(text, allowedSpecial);
 
@@ -64,7 +82,7 @@ export class TikTokenImpl {
 		const result = {
 			callCount: oldValue.callCount,
 			encodeDuration: oldValue.encodeDuration.value,
-			textLength: oldValue.textLength.value
+			textLength: oldValue.textLength.value,
 		};
 		this._stats.encodeDuration = new MovingAverage();
 		this._stats.textLength = new MovingAverage();

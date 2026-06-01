@@ -15,9 +15,7 @@ import { BaseSearchServiceImpl } from '../../search/vscode/baseSearchServiceImpl
 import { IWorkspaceService } from '../../workspace/common/workspaceService';
 import { BaseIgnoreService } from '../node/ignoreServiceImpl';
 
-
 export class VsCodeIgnoreService extends BaseIgnoreService {
-
 	constructor(
 		@IGitService _gitService: IGitService,
 		@IGitExtensionService _gitExtensionService: IGitExtensionService,
@@ -25,7 +23,7 @@ export class VsCodeIgnoreService extends BaseIgnoreService {
 		@IAuthenticationService _authService: IAuthenticationService,
 		@IWorkspaceService _workspaceService: IWorkspaceService,
 		@ICAPIClientService _capiClientService: ICAPIClientService,
-		@IRequestLogger _requestLogger: IRequestLogger
+		@IRequestLogger _requestLogger: IRequestLogger,
 	) {
 		super(
 			_gitService,
@@ -35,46 +33,51 @@ export class VsCodeIgnoreService extends BaseIgnoreService {
 			_capiClientService,
 			new BaseSearchServiceImpl(),
 			new VSCodeFileSystemService(),
-			_requestLogger
+			_requestLogger,
 		);
 		this.installListeners();
 	}
 
 	private installListeners() {
-		this._disposables.push(workspace.onDidChangeWorkspaceFolders(e => {
-			for (const folder of e.removed) {
-				this.removeWorkspace(folder.uri);
-			}
-			for (const folder of e.added) {
-				this.addWorkspace(folder.uri);
-			}
-		}));
+		this._disposables.push(
+			workspace.onDidChangeWorkspaceFolders((e) => {
+				for (const folder of e.removed) {
+					this.removeWorkspace(folder.uri);
+				}
+				for (const folder of e.added) {
+					this.addWorkspace(folder.uri);
+				}
+			}),
+		);
 
 		// Lets watch for changed .copilotignore files
 		this._disposables.push(
-			workspace.onDidSaveTextDocument(async doc => {
+			workspace.onDidSaveTextDocument(async (doc) => {
 				if (this.isIgnoreFile(doc.uri)) {
-					const contents = (await workspace.fs.readFile(doc.uri)).toString();
+					const contents = (
+						await workspace.fs.readFile(doc.uri)
+					).toString();
 					const folder = workspace.getWorkspaceFolder(doc.uri);
 					this.trackIgnoreFile(folder?.uri, doc.uri, contents);
 				}
 			}),
-			workspace.onDidDeleteFiles(e => {
+			workspace.onDidDeleteFiles((e) => {
 				for (const f of e.files) {
 					this.removeIgnoreFile(f);
 				}
 			}),
-			workspace.onDidRenameFiles(async e => {
+			workspace.onDidRenameFiles(async (e) => {
 				for (const f of e.files) {
 					if (this.isIgnoreFile(f.newUri)) {
-						const contents = (await workspace.fs.readFile(f.newUri)).toString();
+						const contents = (
+							await workspace.fs.readFile(f.newUri)
+						).toString();
 						this.removeIgnoreFile(f.oldUri);
 						const folder = workspace.getWorkspaceFolder(f.newUri);
 						this.trackIgnoreFile(folder?.uri, f.newUri, contents);
 					}
 				}
-			})
+			}),
 		);
 	}
-
 }

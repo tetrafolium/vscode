@@ -14,7 +14,10 @@ export interface ICopilotInlineCompletionItemProviderService {
 	getOrCreateProvider(): InlineCompletionItemProvider;
 }
 
-export const ICopilotInlineCompletionItemProviderService = createServiceIdentifier<ICopilotInlineCompletionItemProviderService>('ICopilotInlineCompletionItemProviderService');
+export const ICopilotInlineCompletionItemProviderService =
+	createServiceIdentifier<ICopilotInlineCompletionItemProviderService>(
+		'ICopilotInlineCompletionItemProviderService',
+	);
 
 export class NullCopilotInlineCompletionItemProviderService implements ICopilotInlineCompletionItemProviderService {
 	readonly _serviceBrand: undefined;

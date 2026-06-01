@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 // This should be kept in sync with snippy at /pkg/fingerprint/compute.go#L20
-const SnippyLexemeRegex = new RegExp('[_\\p{L}\\p{Nd}]+|====+|----+|####+|////+|\\*\\*\\*\\*+|[\\p{P}\\p{S}]', 'gu');
+const SnippyLexemeRegex = new RegExp(
+	'[_\\p{L}\\p{Nd}]+|====+|----+|####+|////+|\\*\\*\\*\\*+|[\\p{P}\\p{S}]',
+	'gu',
+);
 // This should be kept in sync with snippy at /pkg/fingerprint/settings.go#L108
 export const MinTokenLength = 65;
 

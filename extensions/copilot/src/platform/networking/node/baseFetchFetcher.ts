@@ -3,11 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { IEnvService } from '../../env/common/envService';
 import { collectSingleLineErrorMessage } from '../../log/common/logService';
-import { CacheStatus, FetcherId, FetchOptions, IAbortController, isAbortError, PaginationOptions, ReportFetchEvent, Response, safeGetHostname } from '../common/fetcherService';
+import {
+	CacheStatus,
+	FetcherId,
+	FetchOptions,
+	IAbortController,
+	isAbortError,
+	PaginationOptions,
+	ReportFetchEvent,
+	Response,
+	safeGetHostname,
+} from '../common/fetcherService';
 import { IFetcher, userAgentLibraryHeader } from '../common/networking';
 import { VSCODE_CACHE_STATUS_HEADER } from './taggedCacheInterceptor';
 
@@ -18,59 +27,102 @@ export type FetchImpl = (
 ) => Promise<globalThis.Response>;
 
 export abstract class BaseFetchFetcher implements IFetcher {
-
 	constructor(
 		private readonly _fetchImpl: FetchImpl,
 		private readonly _envService: IEnvService,
 		private readonly _fetcherId: FetcherId,
 		private readonly _reportEvent: ReportFetchEvent,
 		private readonly userAgentLibraryUpdate?: (original: string) => string,
-	) {
-	}
+	) {}
 
 	abstract getUserAgentLibrary(): string;
 
 	async fetch(url: string, options: FetchOptions): Promise<Response> {
 		const headers = { ...options.headers };
 		if (!headers['User-Agent']) {
-			headers['User-Agent'] = `GitHubCopilotChat/${this._envService.getVersion()}`;
+			headers['User-Agent'] =
+				`GitHubCopilotChat/${this._envService.getVersion()}`;
 		}
-		headers[userAgentLibraryHeader] = this.userAgentLibraryUpdate ? this.userAgentLibraryUpdate(this.getUserAgentLibrary()) : this.getUserAgentLibrary();
+		headers[userAgentLibraryHeader] = this.userAgentLibraryUpdate
+			? this.userAgentLibraryUpdate(this.getUserAgentLibrary())
+			: this.getUserAgentLibrary();
 
 		let body = options.body;
 		if (options.json) {
 			if (options.body) {
-				throw new Error(`Illegal arguments! Cannot pass in both 'body' and 'json'!`);
+				throw new Error(
+					`Illegal arguments! Cannot pass in both 'body' and 'json'!`,
+				);
 			}
 			headers['Content-Type'] = 'application/json';
 			body = JSON.stringify(options.json);
 		}
 
 		const method = options.method || 'GET';
-		if (method !== 'GET' && method !== 'POST' && method !== 'PUT' && method !== 'DELETE') {
-			throw new Error(`Illegal arguments! 'method' must be 'GET', 'POST', 'PUT', or 'DELETE'!`);
+		if (
+			method !== 'GET' &&
+			method !== 'POST' &&
+			method !== 'PUT' &&
+			method !== 'DELETE'
+		) {
+			throw new Error(
+				`Illegal arguments! 'method' must be 'GET', 'POST', 'PUT', or 'DELETE'!`,
+			);
 		}
 
 		const signal = options.signal ?? new AbortController().signal;
 		if (signal && !(signal instanceof AbortSignal)) {
-			throw new Error(`Illegal arguments! 'signal' must be an instance of AbortSignal!`);
+			throw new Error(
+				`Illegal arguments! 'signal' must be an instance of AbortSignal!`,
+			);
 		}
 
 		const internalId = generateUuid();
 		const hostname = safeGetHostname(url);
 		try {
-			const response = await this._fetch(url, method, headers, body, signal, internalId, hostname, options);
-			this._reportEvent({ internalId, timestamp: Date.now(), outcome: 'success', phase: 'requestResponse', fetcher: this._fetcherId, hostname, statusCode: response.status });
+			const response = await this._fetch(
+				url,
+				method,
+				headers,
+				body,
+				signal,
+				internalId,
+				hostname,
+				options,
+			);
+			this._reportEvent({
+				internalId,
+				timestamp: Date.now(),
+				outcome: 'success',
+				phase: 'requestResponse',
+				fetcher: this._fetcherId,
+				hostname,
+				statusCode: response.status,
+			});
 			return response;
 		} catch (e) {
 			e.fetcherId = this._fetcherId;
-			const outcome = e && !isAbortError(e) ? 'error' as const : 'cancel' as const;
-			this._reportEvent({ internalId, timestamp: Date.now(), outcome, phase: 'requestResponse', fetcher: this._fetcherId, hostname, reason: e });
+			const outcome =
+				e && !isAbortError(e)
+					? ('error' as const)
+					: ('cancel' as const);
+			this._reportEvent({
+				internalId,
+				timestamp: Date.now(),
+				outcome,
+				phase: 'requestResponse',
+				fetcher: this._fetcherId,
+				hostname,
+				reason: e,
+			});
 			throw e;
 		}
 	}
 
-	async fetchWithPagination<T>(baseUrl: string, options: PaginationOptions<T>): Promise<T[]> {
+	async fetchWithPagination<T>(
+		baseUrl: string,
+		options: PaginationOptions<T>,
+	): Promise<T[]> {
 		const items: T[] = [];
 		const pageSize = options.pageSize ?? 20;
 		let page = options.startPage ?? 1;
@@ -96,8 +148,21 @@ export abstract class BaseFetchFetcher implements IFetcher {
 		return items;
 	}
 
-	private async _fetch(url: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', headers: { [name: string]: string }, body: string | undefined, signal: AbortSignal, internalId: string, hostname: string, options: FetchOptions): Promise<Response> {
-		const resp = await this._fetchImpl(url, { method, headers, body, signal }, !!options.cache);
+	private async _fetch(
+		url: string,
+		method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+		headers: { [name: string]: string },
+		body: string | undefined,
+		signal: AbortSignal,
+		internalId: string,
+		hostname: string,
+		options: FetchOptions,
+	): Promise<Response> {
+		const resp = await this._fetchImpl(
+			url,
+			{ method, headers, body, signal },
+			!!options.cache,
+		);
 		return new Response(
 			resp.status,
 			resp.statusText,
@@ -111,12 +176,20 @@ export abstract class BaseFetchFetcher implements IFetcher {
 		);
 	}
 
-	private _readCacheStatus(headers: { get(name: string): string | null }, options: FetchOptions): CacheStatus | undefined {
+	private _readCacheStatus(
+		headers: { get(name: string): string | null },
+		options: FetchOptions,
+	): CacheStatus | undefined {
 		if (!options.cache) {
 			return undefined;
 		}
 		const stamped = headers.get(VSCODE_CACHE_STATUS_HEADER);
-		if (stamped === 'hit' || stamped === 'stale-hit' || stamped === 'revalidated' || stamped === 'miss') {
+		if (
+			stamped === 'hit' ||
+			stamped === 'stale-hit' ||
+			stamped === 'revalidated' ||
+			stamped === 'miss'
+		) {
 			return stamped;
 		}
 		// Caller opted in but the response carried no marker — either the

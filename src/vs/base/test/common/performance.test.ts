@@ -2,9 +2,9 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import assert from 'assert';
-import { clearMarks, getMarks, mark } from '../../common/performance.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from './utils.js';
+import assert from "assert";
+import { clearMarks, getMarks, mark } from "../../common/performance.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "./utils.js";
 
 // Each test uses a unique prefix via a counter to avoid singleton state leaking between tests.
 let testCounter = 0;
@@ -12,8 +12,7 @@ function uniquePrefix(): string {
 	return `test/perf/${testCounter++}/`;
 }
 
-suite('clearMarks', () => {
-
+suite("clearMarks", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
 	let prefix: string;
@@ -26,7 +25,7 @@ suite('clearMarks', () => {
 		clearMarks();
 	});
 
-	test('clears a specific mark by exact name', () => {
+	test("clears a specific mark by exact name", () => {
 		const nameA = `${prefix}a`;
 		const nameB = `${prefix}b`;
 		mark(nameA);
@@ -34,11 +33,14 @@ suite('clearMarks', () => {
 
 		clearMarks(nameA);
 
-		const remaining = getMarks().filter(m => m.name.startsWith(prefix));
-		assert.deepStrictEqual(remaining.map(m => m.name), [nameB]);
+		const remaining = getMarks().filter((m) => m.name.startsWith(prefix));
+		assert.deepStrictEqual(
+			remaining.map((m) => m.name),
+			[nameB],
+		);
 	});
 
-	test('does not clear marks with a different name', () => {
+	test("does not clear marks with a different name", () => {
 		const name1 = `${prefix}a`;
 		const name2 = `${uniquePrefix()}b`;
 		mark(name1);
@@ -46,7 +48,7 @@ suite('clearMarks', () => {
 
 		clearMarks(name1);
 
-		assert.strictEqual(getMarks().filter(m => m.name === name1).length, 0);
-		assert.strictEqual(getMarks().filter(m => m.name === name2).length, 1);
+		assert.strictEqual(getMarks().filter((m) => m.name === name1).length, 0);
+		assert.strictEqual(getMarks().filter((m) => m.name === name2).length, 1);
 	});
 });

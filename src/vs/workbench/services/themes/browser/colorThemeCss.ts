@@ -3,10 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IColorTheme, ICssStyleCollector, IThemingParticipant } from '../../../../platform/theme/common/themeService.js';
-import { asCssVariableName, getColorRegistry } from '../../../../platform/theme/common/colorRegistry.js';
-import { asCssVariableName as asSizeCssVariableName, getSizeRegistry, sizeValueToCss } from '../../../../platform/theme/common/sizeRegistry.js';
-import { IEnvironmentService } from '../../../../platform/environment/common/environment.js';
+import {
+	IColorTheme,
+	ICssStyleCollector,
+	IThemingParticipant,
+} from "../../../../platform/theme/common/themeService.js";
+import {
+	asCssVariableName,
+	getColorRegistry,
+} from "../../../../platform/theme/common/colorRegistry.js";
+import {
+	asCssVariableName as asSizeCssVariableName,
+	getSizeRegistry,
+	sizeValueToCss,
+} from "../../../../platform/theme/common/sizeRegistry.js";
+import { IEnvironmentService } from "../../../../platform/environment/common/environment.js";
 
 /**
  * Generates CSS content (variables + theming participant rules) for a color theme.
@@ -21,7 +32,7 @@ export function generateColorThemeCSS(
 	theme: IColorTheme,
 	scopeSelector: string,
 	themingParticipants?: readonly IThemingParticipant[],
-	environmentService?: IEnvironmentService
+	environmentService?: IEnvironmentService,
 ): CSSValue {
 	const cssRules = new Set<string>();
 	const ruleCollector: ICssStyleCollector = {
@@ -29,7 +40,7 @@ export function generateColorThemeCSS(
 			if (!cssRules.has(rule)) {
 				cssRules.add(rule);
 			}
-		}
+		},
 	};
 
 	// Base rule
@@ -55,18 +66,20 @@ export function generateColorThemeCSS(
 	for (const item of getSizeRegistry().getSizes()) {
 		const sizeValue = getSizeRegistry().resolveDefaultSize(item.id, theme);
 		if (sizeValue) {
-			variables.push(`${asSizeCssVariableName(item.id)}: ${sizeValueToCss(sizeValue)};`);
+			variables.push(
+				`${asSizeCssVariableName(item.id)}: ${sizeValueToCss(sizeValue)};`,
+			);
 		}
 	}
 
-	ruleCollector.addRule(`${scopeSelector} { ${variables.join('\n')} }`);
+	ruleCollector.addRule(`${scopeSelector} { ${variables.join("\n")} }`);
 
-	return new CSSValue([...cssRules].join('\n'));
+	return new CSSValue([...cssRules].join("\n"));
 }
 
 /**
  * A typed wrapper for CSS content
  */
 export class CSSValue {
-	constructor(readonly code: string) { }
+	constructor(readonly code: string) {}
 }

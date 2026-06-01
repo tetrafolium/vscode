@@ -18,50 +18,71 @@ class TestableNesFeedbackSubmitter extends NesFeedbackSubmitter {
 		const mockAuthService = {
 			_serviceBrand: undefined,
 			isMinimalMode: false,
-			onDidAuthenticationChange: { dispose: () => { } },
-			onDidAccessTokenChange: { dispose: () => { } },
-			onDidAdoAuthenticationChange: { dispose: () => { } },
+			onDidAuthenticationChange: { dispose: () => {} },
+			onDidAccessTokenChange: { dispose: () => {} },
+			onDidAdoAuthenticationChange: { dispose: () => {} },
 			anyGitHubSession: undefined,
 			permissiveGitHubSession: undefined,
 			getGitHubSession: async () => undefined,
 			getCopilotToken: async () => undefined,
 			copilotToken: undefined,
-			resetCopilotToken: () => { },
+			resetCopilotToken: () => {},
 			speculativeDecodingEndpointToken: undefined,
-			getAdoAccessTokenBase64: async () => undefined
+			getAdoAccessTokenBase64: async () => undefined,
 		};
 
 		const mockFetcherService = {
 			_serviceBrand: undefined,
 			fetch: async () => new Response(),
-			getUserAgentLibrary: () => 'test-agent'
+			getUserAgentLibrary: () => 'test-agent',
 		};
 
-		super(new TestLogService(), mockAuthService as any, mockFetcherService as any);
+		super(
+			new TestLogService(),
+			mockAuthService as any,
+			mockFetcherService as any,
+		);
 	}
 
 	// Expose private methods for testing
-	public testExtractDocumentPathsFromRecordings(files: FeedbackFile[]): string[] {
+	public testExtractDocumentPathsFromRecordings(
+		files: FeedbackFile[],
+	): string[] {
 		return (this as any)._extractDocumentPathsFromRecordings(files);
 	}
 
-	public testFilterRecordingsByExcludedPaths(files: FeedbackFile[], excludedPaths: string[]): FeedbackFile[] {
+	public testFilterRecordingsByExcludedPaths(
+		files: FeedbackFile[],
+		excludedPaths: string[],
+	): FeedbackFile[] {
 		// Compute nextUserEditPaths for the test (mimics what submitFromFolder does)
 		const nextUserEditPaths = new Map<string, string | undefined>();
 		for (const file of files) {
 			if (file.name.endsWith('.recording.w.json')) {
 				try {
-					const recording = JSON.parse(file.content) as { nextUserEdit?: { relativePath: string } };
-					nextUserEditPaths.set(file.name, recording.nextUserEdit?.relativePath);
+					const recording = JSON.parse(file.content) as {
+						nextUserEdit?: { relativePath: string };
+					};
+					nextUserEditPaths.set(
+						file.name,
+						recording.nextUserEdit?.relativePath,
+					);
 				} catch {
 					nextUserEditPaths.set(file.name, undefined);
 				}
 			}
 		}
-		return (this as any)._filterRecordingsByExcludedPaths(files, excludedPaths, nextUserEditPaths);
+		return (this as any)._filterRecordingsByExcludedPaths(
+			files,
+			excludedPaths,
+			nextUserEditPaths,
+		);
 	}
 
-	public testFilterSingleRecording(file: FeedbackFile, excludedPathSet: Set<string>): FeedbackFile {
+	public testFilterSingleRecording(
+		file: FeedbackFile,
+		excludedPathSet: Set<string>,
+	): FeedbackFile {
 		return (this as any)._filterSingleRecording(file, excludedPathSet);
 	}
 }
@@ -80,27 +101,64 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/index.ts', time: 0 },
-							{ kind: 'documentEncountered', id: 2, relativePath: 'src/utils.ts', time: 0 },
-						] satisfies LogEntry[]
-					})
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/index.ts',
+								time: 0,
+							},
+							{
+								kind: 'documentEncountered',
+								id: 2,
+								relativePath: 'src/utils.ts',
+								time: 0,
+							},
+						] satisfies LogEntry[],
+					}),
 				},
 				{
 					name: 'capture-2.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test2' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/index.ts', time: 0 },
-							{ kind: 'documentEncountered', id: 2, relativePath: 'src/other.ts', time: 0 },
-						] satisfies LogEntry[]
-					})
-				}
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test2',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/index.ts',
+								time: 0,
+							},
+							{
+								kind: 'documentEncountered',
+								id: 2,
+								relativePath: 'src/other.ts',
+								time: 0,
+							},
+						] satisfies LogEntry[],
+					}),
+				},
 			];
 
-			const result = submitter.testExtractDocumentPathsFromRecordings(files);
+			const result =
+				submitter.testExtractDocumentPathsFromRecordings(files);
 
-			expect(result).toEqual(['src/index.ts', 'src/other.ts', 'src/utils.ts']);
+			expect(result).toEqual([
+				'src/index.ts',
+				'src/other.ts',
+				'src/utils.ts',
+			]);
 		});
 
 		test('should skip metadata files', () => {
@@ -109,21 +167,33 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/index.ts', time: 0 },
-						] satisfies LogEntry[]
-					})
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/index.ts',
+								time: 0,
+							},
+						] satisfies LogEntry[],
+					}),
 				},
 				{
 					name: 'capture-1.metadata.json',
 					content: JSON.stringify({
 						captureTimestamp: '2025-01-01T00:00:00Z',
-						trigger: 'manual'
-					})
-				}
+						trigger: 'manual',
+					}),
+				},
 			];
 
-			const result = submitter.testExtractDocumentPathsFromRecordings(files);
+			const result =
+				submitter.testExtractDocumentPathsFromRecordings(files);
 
 			expect(result).toEqual(['src/index.ts']);
 		});
@@ -132,20 +202,32 @@ describe('NesFeedbackSubmitter', () => {
 			const files: FeedbackFile[] = [
 				{
 					name: 'capture-1.recording.w.json',
-					content: 'invalid json {'
+					content: 'invalid json {',
 				},
 				{
 					name: 'capture-2.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/valid.ts', time: 0 },
-						] satisfies LogEntry[]
-					})
-				}
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/valid.ts',
+								time: 0,
+							},
+						] satisfies LogEntry[],
+					}),
+				},
 			];
 
-			const result = submitter.testExtractDocumentPathsFromRecordings(files);
+			const result =
+				submitter.testExtractDocumentPathsFromRecordings(files);
 
 			expect(result).toEqual(['src/valid.ts']);
 		});
@@ -154,11 +236,12 @@ describe('NesFeedbackSubmitter', () => {
 			const files: FeedbackFile[] = [
 				{
 					name: 'capture-1.recording.w.json',
-					content: JSON.stringify({ someOtherData: true })
-				}
+					content: JSON.stringify({ someOtherData: true }),
+				},
 			];
 
-			const result = submitter.testExtractDocumentPathsFromRecordings(files);
+			const result =
+				submitter.testExtractDocumentPathsFromRecordings(files);
 
 			expect(result).toEqual([]);
 		});
@@ -169,16 +252,38 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'z-file.ts', time: 0 },
-							{ kind: 'documentEncountered', id: 2, relativePath: 'a-file.ts', time: 0 },
-							{ kind: 'documentEncountered', id: 3, relativePath: 'm-file.ts', time: 0 },
-						] satisfies LogEntry[]
-					})
-				}
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'z-file.ts',
+								time: 0,
+							},
+							{
+								kind: 'documentEncountered',
+								id: 2,
+								relativePath: 'a-file.ts',
+								time: 0,
+							},
+							{
+								kind: 'documentEncountered',
+								id: 3,
+								relativePath: 'm-file.ts',
+								time: 0,
+							},
+						] satisfies LogEntry[],
+					}),
+				},
 			];
 
-			const result = submitter.testExtractDocumentPathsFromRecordings(files);
+			const result =
+				submitter.testExtractDocumentPathsFromRecordings(files);
 
 			expect(result).toEqual(['a-file.ts', 'm-file.ts', 'z-file.ts']);
 		});
@@ -191,17 +296,36 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/keep.ts', time: 0 },
-							{ kind: 'documentEncountered', id: 2, relativePath: 'src/also-keep.ts', time: 0 },
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/keep.ts',
+								time: 0,
+							},
+							{
+								kind: 'documentEncountered',
+								id: 2,
+								relativePath: 'src/also-keep.ts',
+								time: 0,
+							},
 							{ kind: 'changed', id: 1, edit: [], v: 1, time: 1 },
 							{ kind: 'changed', id: 2, edit: [], v: 1, time: 2 },
-						] satisfies LogEntry[]
-					})
-				}
+						] satisfies LogEntry[],
+					}),
+				},
 			];
 
-			const result = submitter.testFilterRecordingsByExcludedPaths(files, []);
+			const result = submitter.testFilterRecordingsByExcludedPaths(
+				files,
+				[],
+			);
 
 			// Should return exact same array reference (fast path)
 			expect(result).toBe(files);
@@ -213,18 +337,37 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/keep.ts', time: 0 },
-							{ kind: 'documentEncountered', id: 2, relativePath: 'src/exclude.ts', time: 0 },
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/keep.ts',
+								time: 0,
+							},
+							{
+								kind: 'documentEncountered',
+								id: 2,
+								relativePath: 'src/exclude.ts',
+								time: 0,
+							},
 							{ kind: 'changed', id: 1, edit: [], v: 1, time: 1 },
 							{ kind: 'changed', id: 2, edit: [], v: 1, time: 2 },
 						] satisfies LogEntry[],
-						nextUserEdit: { relativePath: 'src/keep.ts', edit: [] }
-					})
-				}
+						nextUserEdit: { relativePath: 'src/keep.ts', edit: [] },
+					}),
+				},
 			];
 
-			const result = submitter.testFilterRecordingsByExcludedPaths(files, ['src/exclude.ts']);
+			const result = submitter.testFilterRecordingsByExcludedPaths(
+				files,
+				['src/exclude.ts'],
+			);
 
 			const parsed = JSON.parse(result[0].content);
 			expect(parsed.log).toHaveLength(3); // header + documentEncountered + changed for id 1
@@ -239,7 +382,7 @@ describe('NesFeedbackSubmitter', () => {
 			const metadataContent = JSON.stringify({
 				captureTimestamp: '2025-01-01T00:00:00Z',
 				trigger: 'manual',
-				durationMs: 5000
+				durationMs: 5000,
 			});
 
 			const files: FeedbackFile[] = [
@@ -247,22 +390,39 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/file.ts', time: 0 },
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/file.ts',
+								time: 0,
+							},
 						] satisfies LogEntry[],
-						nextUserEdit: { relativePath: 'src/file.ts', edit: [] }
-					})
+						nextUserEdit: { relativePath: 'src/file.ts', edit: [] },
+					}),
 				},
 				{
 					name: 'capture-1.metadata.json',
-					content: metadataContent
-				}
+					content: metadataContent,
+				},
 			];
 
-			const result = submitter.testFilterRecordingsByExcludedPaths(files, []);
+			const result = submitter.testFilterRecordingsByExcludedPaths(
+				files,
+				[],
+			);
 
 			expect(result).toHaveLength(2);
-			expect(result.find(f => f.name === 'capture-1.metadata.json')?.content).toBe(metadataContent);
+			expect(
+				result.find((f) => f.name === 'capture-1.metadata.json')
+					?.content,
+			).toBe(metadataContent);
 		});
 
 		test('should skip recording and metadata when nextUserEdit is excluded', () => {
@@ -271,23 +431,44 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/keep.ts', time: 0 },
-							{ kind: 'documentEncountered', id: 2, relativePath: 'src/exclude.ts', time: 0 },
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/keep.ts',
+								time: 0,
+							},
+							{
+								kind: 'documentEncountered',
+								id: 2,
+								relativePath: 'src/exclude.ts',
+								time: 0,
+							},
 						] satisfies LogEntry[],
 						nextUserEdit: {
 							relativePath: 'src/exclude.ts',
-							edit: []
-						}
-					})
+							edit: [],
+						},
+					}),
 				},
 				{
 					name: 'capture-1.metadata.json',
-					content: JSON.stringify({ captureTimestamp: '2025-01-01T00:00:00Z' })
-				}
+					content: JSON.stringify({
+						captureTimestamp: '2025-01-01T00:00:00Z',
+					}),
+				},
 			];
 
-			const result = submitter.testFilterRecordingsByExcludedPaths(files, ['src/exclude.ts']);
+			const result = submitter.testFilterRecordingsByExcludedPaths(
+				files,
+				['src/exclude.ts'],
+			);
 
 			// Both recording and metadata should be skipped
 			expect(result).toHaveLength(0);
@@ -299,25 +480,45 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/keep.ts', time: 0 },
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/keep.ts',
+								time: 0,
+							},
 						] satisfies LogEntry[],
 						nextUserEdit: {
 							relativePath: 'src/keep.ts',
-							edit: [{ offset: 0, oldLength: 0, newText: 'hello' }]
-						}
-					})
+							edit: [
+								{ offset: 0, oldLength: 0, newText: 'hello' },
+							],
+						},
+					}),
 				},
 				{
 					name: 'capture-1.metadata.json',
-					content: JSON.stringify({ captureTimestamp: '2025-01-01T00:00:00Z' })
-				}
+					content: JSON.stringify({
+						captureTimestamp: '2025-01-01T00:00:00Z',
+					}),
+				},
 			];
 
-			const result = submitter.testFilterRecordingsByExcludedPaths(files, []);
+			const result = submitter.testFilterRecordingsByExcludedPaths(
+				files,
+				[],
+			);
 
 			expect(result).toHaveLength(2);
-			const recording = result.find(f => f.name === 'capture-1.recording.w.json');
+			const recording = result.find(
+				(f) => f.name === 'capture-1.recording.w.json',
+			);
 			const parsed = JSON.parse(recording!.content);
 			expect(parsed.nextUserEdit).toBeDefined();
 			expect(parsed.nextUserEdit.relativePath).toBe('src/keep.ts');
@@ -329,37 +530,72 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/file.ts', time: 0 },
-						] satisfies LogEntry[]
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/file.ts',
+								time: 0,
+							},
+						] satisfies LogEntry[],
 						// No nextUserEdit
-					})
+					}),
 				},
 				{
 					name: 'capture-1.metadata.json',
-					content: JSON.stringify({ captureTimestamp: '2025-01-01T00:00:00Z' })
+					content: JSON.stringify({
+						captureTimestamp: '2025-01-01T00:00:00Z',
+					}),
 				},
 				{
 					name: 'capture-2.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test2' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/other.ts', time: 0 },
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test2',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/other.ts',
+								time: 0,
+							},
 						] satisfies LogEntry[],
-						nextUserEdit: { relativePath: 'src/other.ts', edit: [] }
-					})
+						nextUserEdit: {
+							relativePath: 'src/other.ts',
+							edit: [],
+						},
+					}),
 				},
 				{
 					name: 'capture-2.metadata.json',
-					content: JSON.stringify({ captureTimestamp: '2025-01-01T00:00:01Z' })
-				}
+					content: JSON.stringify({
+						captureTimestamp: '2025-01-01T00:00:01Z',
+					}),
+				},
 			];
 
-			const result = submitter.testFilterRecordingsByExcludedPaths(files, ['src/file.ts']);
+			const result = submitter.testFilterRecordingsByExcludedPaths(
+				files,
+				['src/file.ts'],
+			);
 
 			// Only capture-2 should be included (both recording and metadata)
 			expect(result).toHaveLength(2);
-			expect(result.map(f => f.name).sort()).toEqual(['capture-2.metadata.json', 'capture-2.recording.w.json']);
+			expect(result.map((f) => f.name).sort()).toEqual([
+				'capture-2.metadata.json',
+				'capture-2.recording.w.json',
+			]);
 		});
 
 		test('should always preserve header entries in included recordings', () => {
@@ -368,16 +604,35 @@ describe('NesFeedbackSubmitter', () => {
 					name: 'capture-1.recording.w.json',
 					content: JSON.stringify({
 						log: [
-							{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test-uuid' },
-							{ kind: 'documentEncountered', id: 1, relativePath: 'src/exclude.ts', time: 0 },
-							{ kind: 'documentEncountered', id: 2, relativePath: 'src/keep.ts', time: 0 },
+							{
+								kind: 'header',
+								documentType: 'workspaceRecording@1.0',
+								repoRootUri: 'file:///repo',
+								time: 0,
+								uuid: 'test-uuid',
+							},
+							{
+								kind: 'documentEncountered',
+								id: 1,
+								relativePath: 'src/exclude.ts',
+								time: 0,
+							},
+							{
+								kind: 'documentEncountered',
+								id: 2,
+								relativePath: 'src/keep.ts',
+								time: 0,
+							},
 						] satisfies LogEntry[],
-						nextUserEdit: { relativePath: 'src/keep.ts', edit: [] }
-					})
-				}
+						nextUserEdit: { relativePath: 'src/keep.ts', edit: [] },
+					}),
+				},
 			];
 
-			const result = submitter.testFilterRecordingsByExcludedPaths(files, ['src/exclude.ts']);
+			const result = submitter.testFilterRecordingsByExcludedPaths(
+				files,
+				['src/exclude.ts'],
+			);
 
 			expect(result).toHaveLength(1);
 			const parsed = JSON.parse(result[0].content);
@@ -391,11 +646,14 @@ describe('NesFeedbackSubmitter', () => {
 			const files: FeedbackFile[] = [
 				{
 					name: 'capture-1.recording.w.json',
-					content: invalidContent
-				}
+					content: invalidContent,
+				},
 			];
 
-			const result = submitter.testFilterRecordingsByExcludedPaths(files, ['anything']);
+			const result = submitter.testFilterRecordingsByExcludedPaths(
+				files,
+				['anything'],
+			);
 
 			// Files with invalid JSON are skipped because nextUserEdit cannot be determined
 			expect(result).toHaveLength(0);
@@ -408,21 +666,62 @@ describe('NesFeedbackSubmitter', () => {
 				name: 'test.recording.w.json',
 				content: JSON.stringify({
 					log: [
-						{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-						{ kind: 'documentEncountered', id: 1, relativePath: 'src/keep.ts', time: 0 },
-						{ kind: 'documentEncountered', id: 2, relativePath: 'src/exclude.ts', time: 0 },
-						{ kind: 'setContent', id: 1, v: 1, content: 'keep content', time: 1 },
-						{ kind: 'setContent', id: 2, v: 1, content: 'exclude content', time: 2 },
+						{
+							kind: 'header',
+							documentType: 'workspaceRecording@1.0',
+							repoRootUri: 'file:///repo',
+							time: 0,
+							uuid: 'test',
+						},
+						{
+							kind: 'documentEncountered',
+							id: 1,
+							relativePath: 'src/keep.ts',
+							time: 0,
+						},
+						{
+							kind: 'documentEncountered',
+							id: 2,
+							relativePath: 'src/exclude.ts',
+							time: 0,
+						},
+						{
+							kind: 'setContent',
+							id: 1,
+							v: 1,
+							content: 'keep content',
+							time: 1,
+						},
+						{
+							kind: 'setContent',
+							id: 2,
+							v: 1,
+							content: 'exclude content',
+							time: 2,
+						},
 						{ kind: 'changed', id: 1, edit: [], v: 1, time: 3 },
 						{ kind: 'changed', id: 2, edit: [], v: 1, time: 4 },
-						{ kind: 'selectionChanged', id: 1, selection: [[0, 0]], time: 5 },
-						{ kind: 'selectionChanged', id: 2, selection: [[0, 0]], time: 6 },
+						{
+							kind: 'selectionChanged',
+							id: 1,
+							selection: [[0, 0]],
+							time: 5,
+						},
+						{
+							kind: 'selectionChanged',
+							id: 2,
+							selection: [[0, 0]],
+							time: 6,
+						},
 					] satisfies LogEntry[],
-					nextUserEdit: { relativePath: 'src/keep.ts', edit: [] }
-				})
+					nextUserEdit: { relativePath: 'src/keep.ts', edit: [] },
+				}),
 			};
 
-			const result = submitter.testFilterSingleRecording(file, new Set(['src/exclude.ts']));
+			const result = submitter.testFilterSingleRecording(
+				file,
+				new Set(['src/exclude.ts']),
+			);
 
 			const parsed = JSON.parse(result.content);
 
@@ -445,10 +744,13 @@ describe('NesFeedbackSubmitter', () => {
 		test('should return original file if no log property', () => {
 			const file: FeedbackFile = {
 				name: 'test.recording.w.json',
-				content: JSON.stringify({ someOtherProperty: 'value' })
+				content: JSON.stringify({ someOtherProperty: 'value' }),
 			};
 
-			const result = submitter.testFilterSingleRecording(file, new Set(['anything']));
+			const result = submitter.testFilterSingleRecording(
+				file,
+				new Set(['anything']),
+			);
 
 			expect(result).toBe(file);
 		});
@@ -458,22 +760,40 @@ describe('NesFeedbackSubmitter', () => {
 				name: 'test.recording.w.json',
 				content: JSON.stringify({
 					log: [
-						{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
+						{
+							kind: 'header',
+							documentType: 'workspaceRecording@1.0',
+							repoRootUri: 'file:///repo',
+							time: 0,
+							uuid: 'test',
+						},
 						{ kind: 'meta', data: { customKey: 'customValue' } },
 						{ kind: 'bookmark', time: 100 },
-						{ kind: 'documentEncountered', id: 1, relativePath: 'src/excluded.ts', time: 0 },
+						{
+							kind: 'documentEncountered',
+							id: 1,
+							relativePath: 'src/excluded.ts',
+							time: 0,
+						},
 					] satisfies LogEntry[],
-					nextUserEdit: { relativePath: 'src/other.ts', edit: [] }
-				})
+					nextUserEdit: { relativePath: 'src/other.ts', edit: [] },
+				}),
 			};
 
-			const result = submitter.testFilterSingleRecording(file, new Set(['src/excluded.ts']));
+			const result = submitter.testFilterSingleRecording(
+				file,
+				new Set(['src/excluded.ts']),
+			);
 
 			const parsed = JSON.parse(result.content);
 
 			// Should have header, meta, bookmark (but not documentEncountered)
 			expect(parsed.log).toHaveLength(3);
-			expect(parsed.log.map((e: any) => e.kind)).toEqual(['header', 'meta', 'bookmark']);
+			expect(parsed.log.map((e: any) => e.kind)).toEqual([
+				'header',
+				'meta',
+				'bookmark',
+			]);
 			// nextUserEdit is preserved (its path is not excluded)
 			expect(parsed.nextUserEdit).toBeDefined();
 		});
@@ -485,15 +805,34 @@ describe('NesFeedbackSubmitter', () => {
 				name: 'test.recording.w.json',
 				content: JSON.stringify({
 					log: [
-						{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'test' },
-						{ kind: 'documentEncountered', id: 1, relativePath: 'src/keep.ts', time: 0 },
-						{ kind: 'documentEncountered', id: 2, relativePath: 'src/exclude.ts', time: 0 },
+						{
+							kind: 'header',
+							documentType: 'workspaceRecording@1.0',
+							repoRootUri: 'file:///repo',
+							time: 0,
+							uuid: 'test',
+						},
+						{
+							kind: 'documentEncountered',
+							id: 1,
+							relativePath: 'src/keep.ts',
+							time: 0,
+						},
+						{
+							kind: 'documentEncountered',
+							id: 2,
+							relativePath: 'src/exclude.ts',
+							time: 0,
+						},
 					] satisfies LogEntry[],
-					nextUserEdit: { relativePath: 'src/keep.ts', edit: [] }
-				})
+					nextUserEdit: { relativePath: 'src/keep.ts', edit: [] },
+				}),
 			};
 
-			const result = submitter.testFilterSingleRecording(file, new Set(['src/exclude.ts']));
+			const result = submitter.testFilterSingleRecording(
+				file,
+				new Set(['src/exclude.ts']),
+			);
 
 			const parsed = JSON.parse(result.content);
 			// nextUserEdit is preserved (filtering happens at a higher level)
@@ -513,22 +852,50 @@ describe('NesFeedbackSubmitter', () => {
 			const documentCount = 100;
 			const entriesPerDocument = 100; // Total: 10,000 entries
 			const log: LogEntry[] = [
-				{ kind: 'header', documentType: 'workspaceRecording@1.0', repoRootUri: 'file:///repo', time: 0, uuid: 'perf-test' }
+				{
+					kind: 'header',
+					documentType: 'workspaceRecording@1.0',
+					repoRootUri: 'file:///repo',
+					time: 0,
+					uuid: 'perf-test',
+				},
 			];
 
 			// Add document encounters and their events
 			for (let docId = 1; docId <= documentCount; docId++) {
-				log.push({ kind: 'documentEncountered', id: docId, relativePath: `src/file${docId}.ts`, time: docId });
+				log.push({
+					kind: 'documentEncountered',
+					id: docId,
+					relativePath: `src/file${docId}.ts`,
+					time: docId,
+				});
 
 				// Add multiple events per document
 				for (let i = 0; i < entriesPerDocument - 1; i++) {
 					const time = docId * 1000 + i;
 					if (i % 3 === 0) {
-						log.push({ kind: 'changed', id: docId, edit: [[i, i + 1, 'x']], v: i + 1, time });
+						log.push({
+							kind: 'changed',
+							id: docId,
+							edit: [[i, i + 1, 'x']],
+							v: i + 1,
+							time,
+						});
 					} else if (i % 3 === 1) {
-						log.push({ kind: 'setContent', id: docId, v: i + 1, content: `content ${i}`, time });
+						log.push({
+							kind: 'setContent',
+							id: docId,
+							v: i + 1,
+							content: `content ${i}`,
+							time,
+						});
 					} else {
-						log.push({ kind: 'selectionChanged', id: docId, selection: [[i, i + 1]], time });
+						log.push({
+							kind: 'selectionChanged',
+							id: docId,
+							selection: [[i, i + 1]],
+							time,
+						});
 					}
 				}
 			}
@@ -536,28 +903,38 @@ describe('NesFeedbackSubmitter', () => {
 			const largeFile: FeedbackFile = {
 				name: 'large-capture.recording.w.json',
 				// nextUserEdit points to an even file so it won't be excluded
-				content: JSON.stringify({ log, nextUserEdit: { relativePath: 'src/file2.ts', edit: [] } })
+				content: JSON.stringify({
+					log,
+					nextUserEdit: { relativePath: 'src/file2.ts', edit: [] },
+				}),
 			};
 
 			// Exclude half the documents (odd-numbered files)
-			const excludedPaths = Array.from({ length: documentCount / 2 }, (_, i) => `src/file${i * 2 + 1}.ts`);
+			const excludedPaths = Array.from(
+				{ length: documentCount / 2 },
+				(_, i) => `src/file${i * 2 + 1}.ts`,
+			);
 
 			// Measure filtering time
 			const startTime = performance.now();
-			const result = submitter.testFilterRecordingsByExcludedPaths([largeFile], excludedPaths);
+			const result = submitter.testFilterRecordingsByExcludedPaths(
+				[largeFile],
+				excludedPaths,
+			);
 			const endTime = performance.now();
 			const durationMs = endTime - startTime;
 
 			// Verify correctness - recording should be included since nextUserEdit is not excluded
 			expect(result).toHaveLength(1);
 			const parsed = JSON.parse(result[0].content);
-			const remainingDocCount = parsed.log.filter((e: any) => e.kind === 'documentEncountered').length;
+			const remainingDocCount = parsed.log.filter(
+				(e: any) => e.kind === 'documentEncountered',
+			).length;
 			expect(remainingDocCount).toBe(documentCount / 2);
 
 			// Performance assertion: should complete within 100ms even for large files
 			// This threshold is conservative to avoid flaky tests on slower CI machines
 			expect(durationMs).toBeLessThan(100);
 		});
-
 	});
 });

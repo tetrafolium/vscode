@@ -28,7 +28,10 @@ export interface IMockFileEntry {
  * useful for marker files like `.git/HEAD` whose existence (rather than
  * contents) is what the test cares about.
  */
-export async function mockFiles(fileSystem: MockFileSystemService, entries: readonly IMockFileEntry[]): Promise<void> {
+export async function mockFiles(
+	fileSystem: MockFileSystemService,
+	entries: readonly IMockFileEntry[],
+): Promise<void> {
 	for (const entry of entries) {
 		const uri = URI.file(entry.path);
 		// Recursively register all ancestor directories so each

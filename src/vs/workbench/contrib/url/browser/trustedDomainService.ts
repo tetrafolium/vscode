@@ -3,48 +3,65 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WindowIdleValue } from '../../../../base/browser/dom.js';
-import { mainWindow } from '../../../../base/browser/window.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { IStorageService, StorageScope } from '../../../../platform/storage/common/storage.js';
-import { TRUSTED_DOMAINS_STORAGE_KEY, readStaticTrustedDomains } from './trustedDomains.js';
-import { isURLDomainTrusted } from '../../../../platform/url/common/trustedDomains.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { ITrustedDomainService } from '../common/trustedDomainService.js';
+import { WindowIdleValue } from "../../../../base/browser/dom.js";
+import { mainWindow } from "../../../../base/browser/window.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import {
+	IStorageService,
+	StorageScope,
+} from "../../../../platform/storage/common/storage.js";
+import {
+	TRUSTED_DOMAINS_STORAGE_KEY,
+	readStaticTrustedDomains,
+} from "./trustedDomains.js";
+import { isURLDomainTrusted } from "../../../../platform/url/common/trustedDomains.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { ITrustedDomainService } from "../common/trustedDomainService.js";
 
 export { ITrustedDomainService };
 
-export class TrustedDomainService extends Disposable implements ITrustedDomainService {
+export class TrustedDomainService
+	extends Disposable
+	implements ITrustedDomainService
+{
 	_serviceBrand: undefined;
 
 	private _staticTrustedDomainsResult!: WindowIdleValue<string[]>;
 
-	private _onDidChangeTrustedDomains: Emitter<void> = this._register(new Emitter<void>());
-	readonly onDidChangeTrustedDomains: Event<void> = this._onDidChangeTrustedDomains.event;
+	private _onDidChangeTrustedDomains: Emitter<void> = this._register(
+		new Emitter<void>(),
+	);
+	readonly onDidChangeTrustedDomains: Event<void> =
+		this._onDidChangeTrustedDomains.event;
 
 	constructor(
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 		@IStorageService private readonly _storageService: IStorageService,
 	) {
 		super();
 
 		const initStaticDomainsResult = () => {
 			return new WindowIdleValue(mainWindow, () => {
-				const { defaultTrustedDomains, trustedDomains, } = this._instantiationService.invokeFunction(readStaticTrustedDomains);
-				return [
-					...defaultTrustedDomains,
-					...trustedDomains
-				];
+				const { defaultTrustedDomains, trustedDomains } =
+					this._instantiationService.invokeFunction(readStaticTrustedDomains);
+				return [...defaultTrustedDomains, ...trustedDomains];
 			});
 		};
 		this._staticTrustedDomainsResult = initStaticDomainsResult();
-		this._register(this._storageService.onDidChangeValue(StorageScope.APPLICATION, TRUSTED_DOMAINS_STORAGE_KEY, this._store)(() => {
-			this._staticTrustedDomainsResult?.dispose();
-			this._staticTrustedDomainsResult = initStaticDomainsResult();
-			this._onDidChangeTrustedDomains.fire();
-		}));
+		this._register(
+			this._storageService.onDidChangeValue(
+				StorageScope.APPLICATION,
+				TRUSTED_DOMAINS_STORAGE_KEY,
+				this._store,
+			)(() => {
+				this._staticTrustedDomainsResult?.dispose();
+				this._staticTrustedDomainsResult = initStaticDomainsResult();
+				this._onDidChangeTrustedDomains.fire();
+			}),
+		);
 	}
 
 	get trustedDomains(): string[] {
@@ -52,7 +69,8 @@ export class TrustedDomainService extends Disposable implements ITrustedDomainSe
 	}
 
 	isValid(resource: URI): boolean {
-		const { defaultTrustedDomains, trustedDomains, } = this._instantiationService.invokeFunction(readStaticTrustedDomains);
+		const { defaultTrustedDomains, trustedDomains } =
+			this._instantiationService.invokeFunction(readStaticTrustedDomains);
 		const allTrustedDomains = [...defaultTrustedDomains, ...trustedDomains];
 
 		return isURLDomainTrusted(resource, allTrustedDomains);

@@ -3,11 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { commands, extensions, window } from 'vscode';
-import { IAuthenticationService, MinimalModeError } from '../../../platform/authentication/common/authentication';
+import {
+	IAuthenticationService,
+	MinimalModeError,
+} from '../../../platform/authentication/common/authentication';
 import { TokenErrorReason } from '../../../platform/authentication/common/copilotToken';
-import { ContactSupportError, EnterpriseManagedError, GitHubLoginFailedError, InvalidTokenError, NotSignedUpError, RateLimitedError, SubscriptionExpiredError } from '../../../platform/authentication/vscode-node/copilotTokenManager';
+import {
+	ContactSupportError,
+	EnterpriseManagedError,
+	GitHubLoginFailedError,
+	InvalidTokenError,
+	NotSignedUpError,
+	RateLimitedError,
+	SubscriptionExpiredError,
+} from '../../../platform/authentication/vscode-node/copilotTokenManager';
 import { SESSION_LOGIN_MESSAGE } from '../../../platform/authentication/vscode-node/session';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { IExperimentationService } from '../../../platform/telemetry/common/nullExperimentationService';
 import { IEnvService } from '../../../platform/env/common/envService';
 import { ILogService } from '../../../platform/log/common/logService';
@@ -36,73 +50,124 @@ const chatQuotaExceededContextKey = 'github.copilot.chat.quotaExceeded';
 const showLogViewContextKey = `github.copilot.chat.showLogView`;
 const debugReportFeedbackContextKey = 'github.copilot.debugReportFeedback';
 
-const previewFeaturesDisabledContextKey = 'github.copilot.previewFeaturesDisabled';
-const blackbirdExternalIndexingDisabledContextKey = 'github.copilot.blackbirdExternalIndexingDisabled';
+const previewFeaturesDisabledContextKey =
+	'github.copilot.previewFeaturesDisabled';
+const blackbirdExternalIndexingDisabledContextKey =
+	'github.copilot.blackbirdExternalIndexingDisabled';
 
 const clientByokEnabledContextKey = 'github.copilot.clientByokEnabled';
 
 const debugContextKey = 'github.copilot.chat.debug';
 
-const missingPermissiveSessionContextKey = 'github.copilot.auth.missingPermissiveSession';
+const missingPermissiveSessionContextKey =
+	'github.copilot.auth.missingPermissiveSession';
 
-export const prExtensionInstalledContextKey = 'github.copilot.prExtensionInstalled';
+export const prExtensionInstalledContextKey =
+	'github.copilot.prExtensionInstalled';
 
 const sessionSearchEnabledContextKey = 'github.copilot.sessionSearch.enabled';
 
 export class ContextKeysContribution extends Disposable {
-
 	private _needsOfflineCheck = false;
 	private _scheduledOfflineCheck: TimeoutHandle | undefined;
 	private _showLogView = false;
 	private _lastContextKey: string | undefined;
 
 	constructor(
-		@IAuthenticationService private readonly _authenticationService: IAuthenticationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
+		@IAuthenticationService
+		private readonly _authenticationService: IAuthenticationService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
 		@ILogService private readonly _logService: ILogService,
-		@IConfigurationService private readonly _configService: IConfigurationService,
+		@IConfigurationService
+		private readonly _configService: IConfigurationService,
 		@IEnvService private readonly _envService: IEnvService,
-		@IExperimentationService private readonly _expService: IExperimentationService
+		@IExperimentationService
+		private readonly _expService: IExperimentationService,
 	) {
 		super();
 
 		void this._inspectContext().catch(console.error);
 		void this._updatePermissiveSessionContext().catch(console.error);
 		void this._updateClientByokEnabledContext().catch(console.error);
-		this._register(_authenticationService.onDidAuthenticationChange(async () => await this._onAuthenticationChange()));
-		this._register(commands.registerCommand('github.copilot.refreshToken', async () => await this._inspectContext()));
-		this._register(commands.registerCommand('github.copilot.debug.showChatLogView', async () => {
-			this._showLogView = true;
-			await commands.executeCommand('setContext', showLogViewContextKey, true);
-			await commands.executeCommand('copilot-chat.focus');
-		}));
+		this._register(
+			_authenticationService.onDidAuthenticationChange(
+				async () => await this._onAuthenticationChange(),
+			),
+		);
+		this._register(
+			commands.registerCommand(
+				'github.copilot.refreshToken',
+				async () => await this._inspectContext(),
+			),
+		);
+		this._register(
+			commands.registerCommand(
+				'github.copilot.debug.showChatLogView',
+				async () => {
+					this._showLogView = true;
+					await commands.executeCommand(
+						'setContext',
+						showLogViewContextKey,
+						true,
+					);
+					await commands.executeCommand('copilot-chat.focus');
+				},
+			),
+		);
 		this._register({ dispose: () => this._cancelPendingOfflineCheck() });
-		this._register(window.onDidChangeWindowState(() => this._runOfflineCheck('Window state change')));
+		this._register(
+			window.onDidChangeWindowState(() =>
+				this._runOfflineCheck('Window state change'),
+			),
+		);
 
 		this._updateShowLogViewContext();
 		this._updateDebugContext();
 		this._updatePrExtensionInstalledContext();
 
-		const debugReportFeedback = this._configService.getConfigObservable(ConfigKey.TeamInternal.DebugReportFeedback);
-		this._register(autorun(reader => {
-			commands.executeCommand('setContext', debugReportFeedbackContextKey, debugReportFeedback.read(reader));
-		}));
+		const debugReportFeedback = this._configService.getConfigObservable(
+			ConfigKey.TeamInternal.DebugReportFeedback,
+		);
+		this._register(
+			autorun((reader) => {
+				commands.executeCommand(
+					'setContext',
+					debugReportFeedbackContextKey,
+					debugReportFeedback.read(reader),
+				);
+			}),
+		);
 
-		const sessionSearchEnabled = this._configService.getExperimentBasedConfigObservable(ConfigKey.LocalIndexEnabled, this._expService);
-		this._register(autorun(reader => {
-			commands.executeCommand('setContext', sessionSearchEnabledContextKey, sessionSearchEnabled.read(reader));
-		}));
+		const sessionSearchEnabled =
+			this._configService.getExperimentBasedConfigObservable(
+				ConfigKey.LocalIndexEnabled,
+				this._expService,
+			);
+		this._register(
+			autorun((reader) => {
+				commands.executeCommand(
+					'setContext',
+					sessionSearchEnabledContextKey,
+					sessionSearchEnabled.read(reader),
+				);
+			}),
+		);
 
 		// Listen for extension changes to update PR extension installed context
-		this._register(extensions.onDidChange(() => {
-			this._updatePrExtensionInstalledContext();
-		}));
+		this._register(
+			extensions.onDidChange(() => {
+				this._updatePrExtensionInstalledContext();
+			}),
+		);
 	}
 
 	private _scheduleOfflineCheck() {
 		this._cancelPendingOfflineCheck();
 		this._needsOfflineCheck = true;
-		this._logService.debug(`[context keys] Scheduling offline check. Active: ${window.state.active}, focused: ${window.state.focused}.`);
+		this._logService.debug(
+			`[context keys] Scheduling offline check. Active: ${window.state.active}, focused: ${window.state.focused}.`,
+		);
 		if (window.state.active && window.state.focused) {
 			const delayInSeconds = 60;
 			this._scheduledOfflineCheck = setTimeout(() => {
@@ -113,10 +178,15 @@ export class ContextKeysContribution extends Disposable {
 	}
 
 	private _runOfflineCheck(trigger: string) {
-		this._logService.debug(`[context keys] ${trigger}. Needs offline check: ${this._needsOfflineCheck}, active: ${window.state.active}, focused: ${window.state.focused}.`);
-		if (this._needsOfflineCheck && window.state.active && window.state.focused) {
-			this._inspectContext()
-				.catch(err => this._logService.error(err));
+		this._logService.debug(
+			`[context keys] ${trigger}. Needs offline check: ${this._needsOfflineCheck}, active: ${window.state.active}, focused: ${window.state.focused}.`,
+		);
+		if (
+			this._needsOfflineCheck &&
+			window.state.active &&
+			window.state.focused
+		) {
+			this._inspectContext().catch((err) => this._logService.error(err));
 		}
 	}
 
@@ -141,12 +211,18 @@ export class ContextKeysContribution extends Disposable {
 			error = e;
 			const reason = e.message || e;
 			const data = TelemetryData.createAndMarkAsIssued({ reason });
-			this._telemetryService.sendGHTelemetryErrorEvent('activationFailed', data.properties, data.measurements);
+			this._telemetryService.sendGHTelemetryErrorEvent(
+				'activationFailed',
+				data.properties,
+				data.measurements,
+			);
 			if (reason === ('GitHubLoginFailed' satisfies TokenErrorReason)) {
 				// Expected in BYOK / air-gapped flows where the user is not signed in to GitHub.
 				this._logService.debug(SESSION_LOGIN_MESSAGE);
 			} else {
-				this._logService.error(`GitHub Copilot could not connect to server. Extension activation failed: "${reason}"`);
+				this._logService.error(
+					`GitHub Copilot could not connect to server. Extension activation failed: "${reason}"`,
+				);
 			}
 		}
 
@@ -175,7 +251,9 @@ export class ContextKeysContribution extends Disposable {
 
 		if (key) {
 			if (key !== this._lastContextKey) {
-				this._logService.info(`[context keys] Setting context key: ${key}`);
+				this._logService.info(
+					`[context keys] Setting context key: ${key}`,
+				);
 				this._lastContextKey = key;
 			}
 			commands.executeCommand('setContext', key, true);
@@ -193,42 +271,80 @@ export class ContextKeysContribution extends Disposable {
 
 	private async _updateQuotaExceededContext() {
 		try {
-			const copilotToken = await this._authenticationService.getCopilotToken();
-			commands.executeCommand('setContext', chatQuotaExceededContextKey, copilotToken.isChatQuotaExceeded);
+			const copilotToken =
+				await this._authenticationService.getCopilotToken();
+			commands.executeCommand(
+				'setContext',
+				chatQuotaExceededContextKey,
+				copilotToken.isChatQuotaExceeded,
+			);
 		} catch (e) {
-			commands.executeCommand('setContext', chatQuotaExceededContextKey, false);
+			commands.executeCommand(
+				'setContext',
+				chatQuotaExceededContextKey,
+				false,
+			);
 		}
 	}
 
 	private async _updatePreviewFeaturesDisabledContext() {
 		try {
-			const copilotToken = await this._authenticationService.getCopilotToken();
+			const copilotToken =
+				await this._authenticationService.getCopilotToken();
 			const disabled = !copilotToken.isEditorPreviewFeaturesEnabled();
 			if (disabled) {
-				this._logService.warn(`Copilot preview features are disabled by organizational policy. Learn more: https://aka.ms/github-copilot-org-enable-features`);
+				this._logService.warn(
+					`Copilot preview features are disabled by organizational policy. Learn more: https://aka.ms/github-copilot-org-enable-features`,
+				);
 			}
-			commands.executeCommand('setContext', previewFeaturesDisabledContextKey, disabled);
+			commands.executeCommand(
+				'setContext',
+				previewFeaturesDisabledContextKey,
+				disabled,
+			);
 		} catch (e) {
-			commands.executeCommand('setContext', previewFeaturesDisabledContextKey, undefined);
+			commands.executeCommand(
+				'setContext',
+				previewFeaturesDisabledContextKey,
+				undefined,
+			);
 		}
 	}
 
 	private async _updateBlackbirdExternalIndexingDisabledContext() {
 		try {
-			const copilotToken = await this._authenticationService.getCopilotToken();
-			commands.executeCommand('setContext', blackbirdExternalIndexingDisabledContextKey, !copilotToken.isBlackbirdExternalIndexingEnabled());
+			const copilotToken =
+				await this._authenticationService.getCopilotToken();
+			commands.executeCommand(
+				'setContext',
+				blackbirdExternalIndexingDisabledContextKey,
+				!copilotToken.isBlackbirdExternalIndexingEnabled(),
+			);
 		} catch (e) {
-			commands.executeCommand('setContext', blackbirdExternalIndexingDisabledContextKey, undefined);
+			commands.executeCommand(
+				'setContext',
+				blackbirdExternalIndexingDisabledContextKey,
+				undefined,
+			);
 		}
 	}
 
 	private async _updateClientByokEnabledContext() {
 		const hasGitHubSession = !!this._authenticationService.anyGitHubSession;
 		try {
-			const copilotToken = await this._authenticationService.getCopilotToken();
-			commands.executeCommand('setContext', clientByokEnabledContextKey, isClientBYOKAllowed(hasGitHubSession, copilotToken));
+			const copilotToken =
+				await this._authenticationService.getCopilotToken();
+			commands.executeCommand(
+				'setContext',
+				clientByokEnabledContextKey,
+				isClientBYOKAllowed(hasGitHubSession, copilotToken),
+			);
 		} catch (e) {
-			commands.executeCommand('setContext', clientByokEnabledContextKey, isClientBYOKAllowed(hasGitHubSession, undefined));
+			commands.executeCommand(
+				'setContext',
+				clientByokEnabledContextKey,
+				isClientBYOKAllowed(hasGitHubSession, undefined),
+			);
 		}
 	}
 
@@ -237,19 +353,34 @@ export class ContextKeysContribution extends Disposable {
 			return;
 		}
 
-		this._showLogView = !!this._authenticationService.copilotToken?.isInternal || !this._envService.isProduction();
+		this._showLogView =
+			!!this._authenticationService.copilotToken?.isInternal ||
+			!this._envService.isProduction();
 		if (this._showLogView) {
-			commands.executeCommand('setContext', showLogViewContextKey, this._showLogView);
+			commands.executeCommand(
+				'setContext',
+				showLogViewContextKey,
+				this._showLogView,
+			);
 		}
 	}
 
 	private _updateDebugContext() {
-		commands.executeCommand('setContext', debugContextKey, !this._envService.isProduction());
+		commands.executeCommand(
+			'setContext',
+			debugContextKey,
+			!this._envService.isProduction(),
+		);
 	}
 
 	private _updatePrExtensionInstalledContext() {
-		const isPrExtensionInstalled = !!extensions.getExtension(GHPR_EXTENSION_ID);
-		commands.executeCommand('setContext', prExtensionInstalledContextKey, isPrExtensionInstalled);
+		const isPrExtensionInstalled =
+			!!extensions.getExtension(GHPR_EXTENSION_ID);
+		commands.executeCommand(
+			'setContext',
+			prExtensionInstalledContextKey,
+			isPrExtensionInstalled,
+		);
 	}
 
 	private async _onAuthenticationChange() {
@@ -267,15 +398,26 @@ export class ContextKeysContribution extends Disposable {
 		let missingPermissiveSession = false;
 		if (!this._authenticationService.isMinimalMode) {
 			try {
-				hasPermissiveSession = !!(await this._authenticationService.getGitHubSession('permissive', { silent: true }));
+				hasPermissiveSession =
+					!!(await this._authenticationService.getGitHubSession(
+						'permissive',
+						{ silent: true },
+					));
 			} catch (error) {
 				if (!(error instanceof MinimalModeError)) {
-					this._logService.trace(`[context keys] Failed to resolve permissive session: ${error instanceof Error ? error.message : String(error)}`);
-					hasPermissiveSession = !!this._authenticationService.permissiveGitHubSession;
+					this._logService.trace(
+						`[context keys] Failed to resolve permissive session: ${error instanceof Error ? error.message : String(error)}`,
+					);
+					hasPermissiveSession =
+						!!this._authenticationService.permissiveGitHubSession;
 				}
 			}
 			missingPermissiveSession = !hasPermissiveSession;
 		}
-		commands.executeCommand('setContext', missingPermissiveSessionContextKey, missingPermissiveSession);
+		commands.executeCommand(
+			'setContext',
+			missingPermissiveSessionContextKey,
+			missingPermissiveSession,
+		);
 	}
 }

@@ -3,25 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { Disposable } from '../../common/lifecycle.js';
-import { CancellationToken } from '../../common/cancellation.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from './utils.js';
-import { cancelPreviousCalls } from '../../common/decorators/cancelPreviousCalls.js';
+import assert from "assert";
+import { Disposable } from "../../common/lifecycle.js";
+import { CancellationToken } from "../../common/cancellation.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "./utils.js";
+import { cancelPreviousCalls } from "../../common/decorators/cancelPreviousCalls.js";
 
-suite('cancelPreviousCalls decorator', () => {
+suite("cancelPreviousCalls decorator", () => {
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
 
 	class MockDisposable extends Disposable {
 		/**
 		 * Arguments that the {@linkcode doSomethingAsync} method was called with.
 		 */
-		private readonly callArgs1: ([number, string, CancellationToken | undefined])[] = [];
+		private readonly callArgs1: [
+			number,
+			string,
+			CancellationToken | undefined,
+		][] = [];
 
 		/**
 		 * Arguments that the {@linkcode doSomethingElseAsync} method was called with.
 		 */
-		private readonly callArgs2: ([number, string, CancellationToken | undefined])[] = [];
+		private readonly callArgs2: [
+			number,
+			string,
+			CancellationToken | undefined,
+		][] = [];
 
 		/**
 		 * Returns the arguments that the {@linkcode doSomethingAsync} method was called with.
@@ -38,24 +46,32 @@ suite('cancelPreviousCalls decorator', () => {
 		}
 
 		@cancelPreviousCalls
-		async doSomethingAsync(arg1: number, arg2: string, cancellationToken?: CancellationToken): Promise<void> {
+		async doSomethingAsync(
+			arg1: number,
+			arg2: string,
+			cancellationToken?: CancellationToken,
+		): Promise<void> {
 			this.callArgs1.push([arg1, arg2, cancellationToken]);
 
-			await new Promise(resolve => setTimeout(resolve, 25));
+			await new Promise((resolve) => setTimeout(resolve, 25));
 		}
 
 		@cancelPreviousCalls
-		async doSomethingElseAsync(arg1: number, arg2: string, cancellationToken?: CancellationToken): Promise<void> {
+		async doSomethingElseAsync(
+			arg1: number,
+			arg2: string,
+			cancellationToken?: CancellationToken,
+		): Promise<void> {
 			this.callArgs2.push([arg1, arg2, cancellationToken]);
 
-			await new Promise(resolve => setTimeout(resolve, 25));
+			await new Promise((resolve) => setTimeout(resolve, 25));
 		}
 	}
 
-	test('should call method with CancellationToken', async () => {
+	test("should call method with CancellationToken", async () => {
 		const instance = disposables.add(new MockDisposable());
 
-		await instance.doSomethingAsync(1, 'foo');
+		await instance.doSomethingAsync(1, "foo");
 
 		const callArguments = instance.callArguments1;
 		assert.strictEqual(
@@ -82,7 +98,7 @@ suite('cancelPreviousCalls decorator', () => {
 
 		assert.strictEqual(
 			arg2,
-			'foo',
+			"foo",
 			`The 'doSomethingAsync' method call must have the correct 2nd argument.`,
 		);
 
@@ -102,12 +118,12 @@ suite('cancelPreviousCalls decorator', () => {
 		);
 	});
 
-	test('cancel token of the previous call when method is called again', async () => {
+	test("cancel token of the previous call when method is called again", async () => {
 		const instance = disposables.add(new MockDisposable());
 
-		instance.doSomethingAsync(1, 'foo');
-		await new Promise(resolve => setTimeout(resolve, 10));
-		instance.doSomethingAsync(2, 'bar');
+		instance.doSomethingAsync(1, "foo");
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		instance.doSomethingAsync(2, "bar");
 
 		const callArguments = instance.callArguments1;
 		assert.strictEqual(
@@ -130,7 +146,7 @@ suite('cancelPreviousCalls decorator', () => {
 
 		assert.strictEqual(
 			call1Args[1],
-			'foo',
+			"foo",
 			`The first call of the 'doSomethingAsync' method must have the correct 2nd argument.`,
 		);
 
@@ -158,7 +174,7 @@ suite('cancelPreviousCalls decorator', () => {
 
 		assert.strictEqual(
 			call2Args[1],
-			'bar',
+			"bar",
 			`The second call of the 'doSomethingAsync' method must have the correct 2nd argument.`,
 		);
 
@@ -178,12 +194,12 @@ suite('cancelPreviousCalls decorator', () => {
 		);
 	});
 
-	test('different method calls must not interfere with each other', async () => {
+	test("different method calls must not interfere with each other", async () => {
 		const instance = disposables.add(new MockDisposable());
 
-		instance.doSomethingAsync(10, 'baz');
-		await new Promise(resolve => setTimeout(resolve, 10));
-		instance.doSomethingElseAsync(25, 'qux');
+		instance.doSomethingAsync(10, "baz");
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		instance.doSomethingElseAsync(25, "qux");
 
 		assert.strictEqual(
 			instance.callArguments1.length,
@@ -205,7 +221,7 @@ suite('cancelPreviousCalls decorator', () => {
 
 		assert.strictEqual(
 			call1Args[1],
-			'baz',
+			"baz",
 			`The first call of the 'doSomethingAsync' method must have the correct 2nd argument.`,
 		);
 
@@ -239,7 +255,7 @@ suite('cancelPreviousCalls decorator', () => {
 
 		assert.strictEqual(
 			call2Args[1],
-			'qux',
+			"qux",
 			`The first call of the 'doSomethingElseAsync' method must have the correct 2nd argument.`,
 		);
 
@@ -253,7 +269,7 @@ suite('cancelPreviousCalls decorator', () => {
 			`The 'CancellationToken' of the second call must be cancelled.`,
 		);
 
-		instance.doSomethingElseAsync(105, 'uxi');
+		instance.doSomethingElseAsync(105, "uxi");
 
 		assert.strictEqual(
 			instance.callArguments1.length,
@@ -296,7 +312,7 @@ suite('cancelPreviousCalls decorator', () => {
 
 		assert.strictEqual(
 			call3Args[1],
-			'uxi',
+			"uxi",
 			`The second call of the 'doSomethingElseAsync' method must have the correct 2nd argument.`,
 		);
 	});

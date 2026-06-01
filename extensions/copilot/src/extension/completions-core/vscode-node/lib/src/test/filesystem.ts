@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { dirname, join, normalize } from 'path';
-import { FileIdentifier, FileStat, FileType, ICompletionsFileSystemService } from '../fileSystem';
+import {
+	FileIdentifier,
+	FileStat,
+	FileType,
+	ICompletionsFileSystemService,
+} from '../fileSystem';
 import { getFsPath } from '../util/uri';
 
 interface Exception extends Error {
@@ -27,7 +32,7 @@ class FakeFile extends FakeFileNode {
 	readonly isDir = false;
 	constructor(
 		readonly content: string,
-		readonly stats: FileStat
+		readonly stats: FileStat,
 	) {
 		super();
 	}
@@ -41,7 +46,9 @@ class FakeDir extends FakeFileNode {
 	}
 }
 
-export type FakeFileSystemConfig = { [key: string]: string | FakeFileNode | FakeFileSystemConfig };
+export type FakeFileSystemConfig = {
+	[key: string]: string | FakeFileNode | FakeFileSystemConfig;
+};
 
 /**
  * A fake for FileSystem that returns content and stats for a set of files
@@ -78,7 +85,12 @@ export class FakeFileSystem implements ICompletionsFileSystemService {
 	private root: FakeDir;
 
 	constructor(fileConfig: FakeFileSystemConfig) {
-		this.root = new FakeDir({ ctime: 0, mtime: 0, size: 0, type: FileType.Directory });
+		this.root = new FakeDir({
+			ctime: 0,
+			mtime: 0,
+			size: 0,
+			type: FileType.Directory,
+		});
 		this.createFiles('', fileConfig);
 	}
 
@@ -100,13 +112,23 @@ export class FakeFileSystem implements ICompletionsFileSystemService {
 
 	/** Recursively creates directories in path */
 	mkdir(path: string): void {
-		if (!this.getNode(this.root, this.pathParts(path), true, 'mkdir').isDir) {
+		if (
+			!this.getNode(this.root, this.pathParts(path), true, 'mkdir').isDir
+		) {
 			throw this.noEntryError(`mkdir '${path}'`);
 		}
 	}
 
 	writeFile(path: string, data: string): void {
-		this.writeNode(path, new FakeFile(data, { ctime: 0, mtime: 0, size: data.length, type: FileType.File }));
+		this.writeNode(
+			path,
+			new FakeFile(data, {
+				ctime: 0,
+				mtime: 0,
+				size: data.length,
+				type: FileType.File,
+			}),
+		);
 	}
 
 	private writeNode(path: string, node: FakeFileNode): void {
@@ -123,7 +145,12 @@ export class FakeFileSystem implements ICompletionsFileSystemService {
 
 	async readFileString(uri: FileIdentifier): Promise<string> {
 		const fsPath = getFsPath(uri) ?? '<invalid file URI>';
-		const file = this.getNode(this.root, this.pathParts(fsPath), false, 'open');
+		const file = this.getNode(
+			this.root,
+			this.pathParts(fsPath),
+			false,
+			'open',
+		);
 		if (file.isDir) {
 			throw this.isDirectoryError(`open '${fsPath}'`);
 		}
@@ -131,12 +158,24 @@ export class FakeFileSystem implements ICompletionsFileSystemService {
 	}
 
 	stat(uri: FileIdentifier): Promise<FileStat> {
-		return Promise.resolve(this.getNode(this.root, this.pathParts(getFsPath(uri)!), false, 'stat').stats);
+		return Promise.resolve(
+			this.getNode(
+				this.root,
+				this.pathParts(getFsPath(uri)!),
+				false,
+				'stat',
+			).stats,
+		);
 	}
 
 	async readDirectory(uri: FileIdentifier): Promise<[string, FileType][]> {
 		const fsPath = getFsPath(uri) ?? '<invalid file URI>';
-		const node = this.getNode(this.root, this.pathParts(fsPath), false, 'readDirectory');
+		const node = this.getNode(
+			this.root,
+			this.pathParts(fsPath),
+			false,
+			'readDirectory',
+		);
 		if (!(node instanceof FakeDir)) {
 			throw this.noEntryError(`readDirectory '${fsPath}'`);
 		}
@@ -144,17 +183,30 @@ export class FakeFileSystem implements ICompletionsFileSystemService {
 			Object.entries(node.entries).map(([name, entry]) => [
 				name,
 				entry.isDir ? FileType.Directory : FileType.File,
-			])
+			]),
 		);
 	}
 
-	private getNode(parent: FakeDir, parts: string[], createPath: boolean, command: string): FakeFileNode {
+	private getNode(
+		parent: FakeDir,
+		parts: string[],
+		createPath: boolean,
+		command: string,
+	): FakeFileNode {
 		let current: FakeFileNode = parent;
 		for (let i = 0; i < parts.length; i++) {
 			const part = parts[i];
-			if (!(current instanceof FakeDir) || current.entries[part] === undefined) {
+			if (
+				!(current instanceof FakeDir) ||
+				current.entries[part] === undefined
+			) {
 				if (createPath && current instanceof FakeDir) {
-					current.entries[part] = new FakeDir({ ctime: 0, mtime: 0, size: 0, type: FileType.Directory });
+					current.entries[part] = new FakeDir({
+						ctime: 0,
+						mtime: 0,
+						size: 0,
+						type: FileType.Directory,
+					});
 				} else {
 					throw this.noEntryError(`${command} '${parts.join('/')}'`);
 				}
@@ -176,14 +228,18 @@ export class FakeFileSystem implements ICompletionsFileSystemService {
 	}
 
 	private noEntryError(description: string): Error {
-		const err: Exception = new Error(`ENOENT: no such file or directory, ${description}`);
+		const err: Exception = new Error(
+			`ENOENT: no such file or directory, ${description}`,
+		);
 		err.errno = -2;
 		err.code = 'ENOENT';
 		return err;
 	}
 
 	private isDirectoryError(description: string): Error {
-		const err: Exception = new Error(`EISDIR: illegal operation on a directory, ${description}`);
+		const err: Exception = new Error(
+			`EISDIR: illegal operation on a directory, ${description}`,
+		);
 		err.errno = -21;
 		err.code = 'EISDIR';
 		return err;
@@ -192,11 +248,24 @@ export class FakeFileSystem implements ICompletionsFileSystemService {
 	static file(content = '', stats?: Partial<FileStat>) {
 		return new FakeFile(
 			content,
-			Object.assign({ ctime: 0, mtime: 0, size: content.length, type: FileType.File }, stats)
+			Object.assign(
+				{
+					ctime: 0,
+					mtime: 0,
+					size: content.length,
+					type: FileType.File,
+				},
+				stats,
+			),
 		);
 	}
 
 	static directory(stats?: Partial<FileStat>) {
-		return new FakeDir(Object.assign({ ctime: 0, mtime: 0, size: 0, type: FileType.Directory }, stats));
+		return new FakeDir(
+			Object.assign(
+				{ ctime: 0, mtime: 0, size: 0, type: FileType.Directory },
+				stats,
+			),
+		);
 	}
 }

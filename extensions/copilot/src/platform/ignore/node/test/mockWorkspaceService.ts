@@ -3,7 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { FileSystem, NotebookData, NotebookDocument, NotebookDocumentChangeEvent, ResourceTrustRequestOptions, TextDocument, TextDocumentChangeEvent, TextEditorSelectionChangeEvent, Uri, WorkspaceEdit, WorkspaceFolder, WorkspaceFoldersChangeEvent, WorkspaceTrustRequestOptions } from 'vscode';
+import type {
+	FileSystem,
+	NotebookData,
+	NotebookDocument,
+	NotebookDocumentChangeEvent,
+	ResourceTrustRequestOptions,
+	TextDocument,
+	TextDocumentChangeEvent,
+	TextEditorSelectionChangeEvent,
+	Uri,
+	WorkspaceEdit,
+	WorkspaceFolder,
+	WorkspaceFoldersChangeEvent,
+	WorkspaceTrustRequestOptions,
+} from 'vscode';
 import { Event } from '../../../../util/vs/base/common/event';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { NotebookDocumentSnapshot } from '../../../editing/common/notebookDocumentSnapshot';
@@ -23,10 +37,14 @@ export class MockWorkspaceService implements IWorkspaceService {
 	readonly onDidCloseTextDocument: Event<TextDocument> = Event.None;
 	readonly onDidOpenNotebookDocument: Event<NotebookDocument> = Event.None;
 	readonly onDidCloseNotebookDocument: Event<NotebookDocument> = Event.None;
-	readonly onDidChangeTextDocument: Event<TextDocumentChangeEvent> = Event.None;
-	readonly onDidChangeNotebookDocument: Event<NotebookDocumentChangeEvent> = Event.None;
-	readonly onDidChangeWorkspaceFolders: Event<WorkspaceFoldersChangeEvent> = Event.None;
-	readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent> = Event.None;
+	readonly onDidChangeTextDocument: Event<TextDocumentChangeEvent> =
+		Event.None;
+	readonly onDidChangeNotebookDocument: Event<NotebookDocumentChangeEvent> =
+		Event.None;
+	readonly onDidChangeWorkspaceFolders: Event<WorkspaceFoldersChangeEvent> =
+		Event.None;
+	readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent> =
+		Event.None;
 
 	private _workspaceFolders: URI[] = [];
 
@@ -63,11 +81,17 @@ export class MockWorkspaceService implements IWorkspaceService {
 		return Promise.reject(new Error('Not implemented'));
 	}
 
-	openNotebookDocumentAndSnapshot(_uri: URI, _format: 'xml' | 'json' | 'text'): Promise<NotebookDocumentSnapshot> {
+	openNotebookDocumentAndSnapshot(
+		_uri: URI,
+		_format: 'xml' | 'json' | 'text',
+	): Promise<NotebookDocumentSnapshot> {
 		return Promise.reject(new Error('Not implemented'));
 	}
 
-	openNotebookDocument(_uriOrType: URI | string, _content?: NotebookData): Promise<NotebookDocument> {
+	openNotebookDocument(
+		_uriOrType: URI | string,
+		_content?: NotebookData,
+	): Promise<NotebookDocument> {
 		return Promise.reject(new Error('Not implemented'));
 	}
 
@@ -75,7 +99,10 @@ export class MockWorkspaceService implements IWorkspaceService {
 		return Promise.resolve(undefined);
 	}
 
-	asRelativePath(_pathOrUri: string | URI, _includeWorkspaceFolder?: boolean): string {
+	asRelativePath(
+		_pathOrUri: string | URI,
+		_includeWorkspaceFolder?: boolean,
+	): string {
 		return '';
 	}
 
@@ -91,11 +118,15 @@ export class MockWorkspaceService implements IWorkspaceService {
 		return Promise.resolve(true);
 	}
 
-	requestResourceTrust(_options: ResourceTrustRequestOptions): Thenable<boolean | undefined> {
+	requestResourceTrust(
+		_options: ResourceTrustRequestOptions,
+	): Thenable<boolean | undefined> {
 		return Promise.resolve(true);
 	}
 
-	requestWorkspaceTrust(_options?: WorkspaceTrustRequestOptions): Thenable<boolean | undefined> {
+	requestWorkspaceTrust(
+		_options?: WorkspaceTrustRequestOptions,
+	): Thenable<boolean | undefined> {
 		return Promise.resolve(true);
 	}
 }

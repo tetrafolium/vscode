@@ -7,7 +7,9 @@ import { PromptRenderer } from '@vscode/prompt-tsx';
 import { IDebugValueEditorGlobals } from '../../../util/common/debugValueEditorGlobals';
 
 export class RendererVisualizations {
-	public static getIfVisualizationTestIsRunning(): RendererVisualizations | undefined {
+	public static getIfVisualizationTestIsRunning():
+		| RendererVisualizations
+		| undefined {
 		if (VisualizationTestRun.instance) {
 			return new RendererVisualizations();
 		}
@@ -17,11 +19,17 @@ export class RendererVisualizations {
 	/**
 	 * Exposes the rendering to the visualization extension.
 	 * Also overrides the render method so that we can show the tree once rendering is done.
-	*/
-	public decorateAndRegister<T extends PromptRenderer<any, any>>(renderer: T, label: string): T {
+	 */
+	public decorateAndRegister<T extends PromptRenderer<any, any>>(
+		renderer: T,
+		label: string,
+	): T {
 		let first = false;
 		renderer.render = async function (this: unknown, ...args: any[]) {
-			const result = await Object.getPrototypeOf(renderer).render.apply(this, ...args);
+			const result = await Object.getPrototypeOf(renderer).render.apply(
+				this,
+				...args,
+			);
 			if (!first) {
 				first = true;
 				new RendererVisualization(renderer, label);
@@ -37,13 +45,15 @@ export class RendererVisualizations {
 /**
  * Describes the visualization of a prompt renderer.
  * Only used for debugging.
-*/
+ */
 class RendererVisualization {
 	constructor(
 		private readonly _renderer: PromptRenderer<any, any>,
 		label: string,
 	) {
-		VisualizationTestRun.instance?.addData(`Prompt ${label}`, () => this.getData());
+		VisualizationTestRun.instance?.addData(`Prompt ${label}`, () =>
+			this.getData(),
+		);
 	}
 
 	getData() {
@@ -54,7 +64,9 @@ class RendererVisualization {
 				private readonly range: [number, number] | undefined,
 			) {
 				if (!range) {
-					const childrenRanges = children.map(c => c.range).filter(r => !!r);
+					const childrenRanges = children
+						.map((c) => c.range)
+						.filter((r) => !!r);
 					if (childrenRanges.length > 0) {
 						range = [Number.MAX_SAFE_INTEGER, 0];
 						for (const crange of childrenRanges) {
@@ -69,9 +81,12 @@ class RendererVisualization {
 			toObj(): unknown {
 				return {
 					label: this.label,
-					codicon: (this.label === 'Text' || this.label === 'LineBreak') ? 'text-size' : 'symbol-class',
+					codicon:
+						this.label === 'Text' || this.label === 'LineBreak'
+							? 'text-size'
+							: 'symbol-class',
 					range: this.range,
-					children: this.children.map(c => c.toObj()),
+					children: this.children.map((c) => c.toObj()),
 				};
 			}
 		}
@@ -88,22 +103,31 @@ class RendererVisualization {
 				];
 				const ctorName = item['_obj'].constructor.name;
 
-				if (messageClasses.some(c => ctorName.indexOf(c) !== -1)) {
+				if (messageClasses.some((c) => ctorName.indexOf(c) !== -1)) {
 					promptResult += `\n======== ${ctorName} ========\n`;
 				}
 
-				const children = (item['_children'] as any[]).map(c => walk(c)).filter(c => c.label !== 'LineBreak');
+				const children = (item['_children'] as any[])
+					.map((c) => walk(c))
+					.filter((c) => c.label !== 'LineBreak');
 
 				return new RenderedNode(ctorName, children, undefined);
-
 			} else if (item.kind === 1 /* Text */) {
 				const start = promptResult.length;
 				promptResult = promptResult + item.text;
-				return new RenderedNode('Text', [], [start, promptResult.length]);
+				return new RenderedNode(
+					'Text',
+					[],
+					[start, promptResult.length],
+				);
 			} else if (item.kind === 2 /* LineBreak */) {
 				const start = promptResult.length;
 				promptResult = promptResult + '\n';
-				return new RenderedNode('LineBreak', [], [start, promptResult.length]);
+				return new RenderedNode(
+					'LineBreak',
+					[],
+					[start, promptResult.length],
+				);
 			}
 			throw new Error();
 		}
@@ -122,7 +146,9 @@ class RendererVisualization {
 
 export class VisualizationTestRun {
 	private static _instance: VisualizationTestRun | undefined = undefined;
-	public static get instance() { return this._instance; }
+	public static get instance() {
+		return this._instance;
+	}
 
 	public static startRun() {
 		this._instance = new VisualizationTestRun();
@@ -137,7 +163,12 @@ export class VisualizationTestRun {
 		this.g.$$debugValueEditor_properties = [];
 	}
 
-	public addData(label: string, getData: () => unknown, suffix?: string, property?: string): void {
+	public addData(
+		label: string,
+		getData: () => unknown,
+		suffix?: string,
+		property?: string,
+	): void {
 		const propertyName = 'debugValueProperty###' + label;
 		(globalThis as any)[propertyName] = () => {
 			const data = getData();
@@ -150,7 +181,13 @@ export class VisualizationTestRun {
 		if (!this._knownLabels.has(propertyName)) {
 			this._knownLabels.add(propertyName);
 			const suffixStr = suffix ? `.${suffix}` : '';
-			this._data = [...this._data, { label, expression: `globalThis[${JSON.stringify(propertyName)}]()${suffixStr}${property ?? ''}` }];
+			this._data = [
+				...this._data,
+				{
+					label,
+					expression: `globalThis[${JSON.stringify(propertyName)}]()${suffixStr}${property ?? ''}`,
+				},
+			];
 			this.g.$$debugValueEditor_properties = this._data;
 		} else {
 			this.g.$$debugValueEditor_refresh?.('{}');

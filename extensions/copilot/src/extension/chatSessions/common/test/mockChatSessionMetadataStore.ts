@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type * as vscode from 'vscode';
-import { IChatSessionMetadataStore, RepositoryProperties, RequestDetails, WorkspaceFolderEntry } from '../chatSessionMetadataStore';
+import {
+	IChatSessionMetadataStore,
+	RepositoryProperties,
+	RequestDetails,
+	WorkspaceFolderEntry,
+} from '../chatSessionMetadataStore';
 import { ChatSessionWorktreeProperties } from '../chatSessionWorktreeService';
 import { IWorkspaceInfo } from '../workspaceInfo';
 
@@ -14,9 +19,18 @@ export class MockChatSessionMetadataStore implements IChatSessionMetadataStore {
 	}
 	declare _serviceBrand: undefined;
 
-	private readonly _worktreeProperties = new Map<string, ChatSessionWorktreeProperties>();
-	private readonly _workspaceFolders = new Map<string, WorkspaceFolderEntry>();
-	private readonly _additionalWorkspaces = new Map<string, IWorkspaceInfo[]>();
+	private readonly _worktreeProperties = new Map<
+		string,
+		ChatSessionWorktreeProperties
+	>();
+	private readonly _workspaceFolders = new Map<
+		string,
+		WorkspaceFolderEntry
+	>();
+	private readonly _additionalWorkspaces = new Map<
+		string,
+		IWorkspaceInfo[]
+	>();
 	private readonly _firstUserMessages = new Map<string, string>();
 	private readonly _customTitles = new Map<string, string>();
 	private readonly _requestDetails = new Map<string, RequestDetails[]>();
@@ -35,50 +49,78 @@ export class MockChatSessionMetadataStore implements IChatSessionMetadataStore {
 		// no-op in mock — there is no on-disk state to reload.
 	}
 
-	async storeWorktreeInfo(sessionId: string, properties: ChatSessionWorktreeProperties): Promise<void> {
+	async storeWorktreeInfo(
+		sessionId: string,
+		properties: ChatSessionWorktreeProperties,
+	): Promise<void> {
 		this._worktreeProperties.set(sessionId, properties);
 	}
 
-	async storeWorkspaceFolderInfo(sessionId: string, entry: WorkspaceFolderEntry): Promise<void> {
+	async storeWorkspaceFolderInfo(
+		sessionId: string,
+		entry: WorkspaceFolderEntry,
+	): Promise<void> {
 		this._workspaceFolders.set(sessionId, entry);
 	}
 
-	async storeRepositoryProperties(_sessionId: string, _properties: RepositoryProperties): Promise<void> {
-	}
+	async storeRepositoryProperties(
+		_sessionId: string,
+		_properties: RepositoryProperties,
+	): Promise<void> {}
 
-	async getRepositoryProperties(_sessionId: string): Promise<RepositoryProperties | undefined> {
+	async getRepositoryProperties(
+		_sessionId: string,
+	): Promise<RepositoryProperties | undefined> {
 		return undefined;
 	}
 
-	async getSessionIdForWorktree(_folder: vscode.Uri): Promise<string | undefined> {
+	async getSessionIdForWorktree(
+		_folder: vscode.Uri,
+	): Promise<string | undefined> {
 		return undefined;
 	}
 
-	async getWorktreeProperties(sessionId: string): Promise<ChatSessionWorktreeProperties | undefined> {
+	async getWorktreeProperties(
+		sessionId: string,
+	): Promise<ChatSessionWorktreeProperties | undefined> {
 		return this._worktreeProperties.get(sessionId);
 	}
 
-	async getSessionWorkspaceFolder(_sessionId: string): Promise<vscode.Uri | undefined> {
+	async getSessionWorkspaceFolder(
+		_sessionId: string,
+	): Promise<vscode.Uri | undefined> {
 		return undefined;
 	}
 
-	async getSessionWorkspaceFolderEntry(sessionId: string): Promise<WorkspaceFolderEntry | undefined> {
+	async getSessionWorkspaceFolderEntry(
+		sessionId: string,
+	): Promise<WorkspaceFolderEntry | undefined> {
 		return undefined;
 	}
 
-	async getAdditionalWorkspaces(sessionId: string): Promise<IWorkspaceInfo[]> {
+	async getAdditionalWorkspaces(
+		sessionId: string,
+	): Promise<IWorkspaceInfo[]> {
 		return this._additionalWorkspaces.get(sessionId) ?? [];
 	}
 
-	async setAdditionalWorkspaces(sessionId: string, workspaces: IWorkspaceInfo[]): Promise<void> {
+	async setAdditionalWorkspaces(
+		sessionId: string,
+		workspaces: IWorkspaceInfo[],
+	): Promise<void> {
 		this._additionalWorkspaces.set(sessionId, workspaces);
 	}
 
-	async getSessionFirstUserMessage(sessionId: string): Promise<string | undefined> {
+	async getSessionFirstUserMessage(
+		sessionId: string,
+	): Promise<string | undefined> {
 		return this._firstUserMessages.get(sessionId);
 	}
 
-	async setSessionFirstUserMessage(sessionId: string, message: string): Promise<void> {
+	async setSessionFirstUserMessage(
+		sessionId: string,
+		message: string,
+	): Promise<void> {
 		this._firstUserMessages.set(sessionId, message);
 	}
 
@@ -94,14 +136,22 @@ export class MockChatSessionMetadataStore implements IChatSessionMetadataStore {
 		return this._requestDetails.get(sessionId) ?? [];
 	}
 
-	async updateRequestDetails(sessionId: string, details: (Partial<RequestDetails> & { vscodeRequestId: string })[]): Promise<void> {
+	async updateRequestDetails(
+		sessionId: string,
+		details: (Partial<RequestDetails> & { vscodeRequestId: string })[],
+	): Promise<void> {
 		const existing = this._requestDetails.get(sessionId) ?? [];
 		for (const item of details) {
-			const entry = existing.find(e => e.vscodeRequestId === item.vscodeRequestId);
+			const entry = existing.find(
+				(e) => e.vscodeRequestId === item.vscodeRequestId,
+			);
 			if (entry) {
 				Object.assign(entry, item);
 			} else {
-				existing.push({ ...item, toolIdEditMap: item.toolIdEditMap ?? {} } as RequestDetails);
+				existing.push({
+					...item,
+					toolIdEditMap: item.toolIdEditMap ?? {},
+				} as RequestDetails);
 			}
 		}
 		this._requestDetails.set(sessionId, existing);
@@ -117,7 +167,11 @@ export class MockChatSessionMetadataStore implements IChatSessionMetadataStore {
 		return undefined;
 	}
 
-	async storeForkedSessionMetadata(sourceSessionId: string, targetSessionId: string, customTitle: string): Promise<void> {
+	async storeForkedSessionMetadata(
+		sourceSessionId: string,
+		targetSessionId: string,
+		customTitle: string,
+	): Promise<void> {
 		await this.setCustomTitle(targetSessionId, customTitle);
 		const worktree = this._worktreeProperties.get(sourceSessionId);
 		if (worktree) {
@@ -145,17 +199,27 @@ export class MockChatSessionMetadataStore implements IChatSessionMetadataStore {
 		return this._sessionOrigins.get(sessionId) ?? 'vscode';
 	}
 
-	setSessionParentId(_sessionId: string, _parentSessionId: string): Promise<void> {
+	setSessionParentId(
+		_sessionId: string,
+		_parentSessionId: string,
+	): Promise<void> {
 		return Promise.resolve();
 	}
 
-	getSessionParentId(_sessionId: string): Promise<{ parentSessionId: string; kind: 'forked' | 'sub-session' } | undefined> {
+	getSessionParentId(
+		_sessionId: string,
+	): Promise<
+		{ parentSessionId: string; kind: 'forked' | 'sub-session' } | undefined
+	> {
 		return Promise.resolve(undefined);
 	}
 
 	private readonly _archived = new Set<string>();
 
-	async setSessionArchived(sessionId: string, archived: boolean): Promise<void> {
+	async setSessionArchived(
+		sessionId: string,
+		archived: boolean,
+	): Promise<void> {
 		if (archived) {
 			this._archived.add(sessionId);
 		} else {
@@ -176,7 +240,10 @@ export class MockChatSessionMetadataStore implements IChatSessionMetadataStore {
 			}
 		}
 		for (const [sessionId, entry] of this._workspaceFolders) {
-			if (entry.folderPath === folderPath && !sessionIds.includes(sessionId)) {
+			if (
+				entry.folderPath === folderPath &&
+				!sessionIds.includes(sessionId)
+			) {
 				sessionIds.push(sessionId);
 			}
 		}

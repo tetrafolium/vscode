@@ -5,7 +5,12 @@
 
 import { describe, expect, it } from 'vitest';
 import { CopilotToken } from '../../../../platform/authentication/common/copilotToken';
-import { byokKnownModelToAPIInfo, BYOKModelCapabilities, isClientBYOKAllowed, resolveModelInfo } from '../byokProvider';
+import {
+	byokKnownModelToAPIInfo,
+	BYOKModelCapabilities,
+	isClientBYOKAllowed,
+	resolveModelInfo,
+} from '../byokProvider';
 
 describe('byokKnownModelToAPIInfo', () => {
 	const baseCapabilities: BYOKModelCapabilities = {
@@ -35,11 +40,18 @@ describe('byokKnownModelToAPIInfo', () => {
 			editTools: ['find-replace', 'multi-find-replace'],
 		});
 
-		expect(info.capabilities.editTools).toEqual(['find-replace', 'multi-find-replace']);
+		expect(info.capabilities.editTools).toEqual([
+			'find-replace',
+			'multi-find-replace',
+		]);
 	});
 
 	it('omits editTools when not configured', () => {
-		const info = byokKnownModelToAPIInfo('TestProvider', 'm1', baseCapabilities);
+		const info = byokKnownModelToAPIInfo(
+			'TestProvider',
+			'm1',
+			baseCapabilities,
+		);
 
 		expect(info.capabilities.editTools).toBeUndefined();
 	});
@@ -61,12 +73,21 @@ describe('resolveModelInfo', () => {
 			reasoningEffortFormat: 'responses',
 		});
 
-		expect(info.capabilities.supports.reasoning_effort).toEqual(['low', 'medium', 'high']);
+		expect(info.capabilities.supports.reasoning_effort).toEqual([
+			'low',
+			'medium',
+			'high',
+		]);
 		expect(info.reasoningEffortFormat).toBe('responses');
 	});
 
 	it('omits the reasoning effort capability when the model does not declare it', () => {
-		const info = resolveModelInfo('m1', 'TestProvider', undefined, baseCapabilities);
+		const info = resolveModelInfo(
+			'm1',
+			'TestProvider',
+			undefined,
+			baseCapabilities,
+		);
 
 		expect(info.capabilities.supports.reasoning_effort).toBeUndefined();
 		expect(info.reasoningEffortFormat).toBeUndefined();
@@ -74,7 +95,11 @@ describe('resolveModelInfo', () => {
 });
 
 describe('isClientBYOKAllowed', () => {
-	function mockToken(props: { isInternal?: boolean; isIndividual?: boolean; isClientBYOKEnabled?: boolean }): Omit<CopilotToken, 'token'> {
+	function mockToken(props: {
+		isInternal?: boolean;
+		isIndividual?: boolean;
+		isClientBYOKEnabled?: boolean;
+	}): Omit<CopilotToken, 'token'> {
 		return {
 			isInternal: props.isInternal ?? false,
 			isIndividual: props.isIndividual ?? false,
@@ -91,15 +116,21 @@ describe('isClientBYOKAllowed', () => {
 	});
 
 	it('allows BYOK for internal users', () => {
-		expect(isClientBYOKAllowed(true, mockToken({ isInternal: true }))).toBe(true);
+		expect(isClientBYOKAllowed(true, mockToken({ isInternal: true }))).toBe(
+			true,
+		);
 	});
 
 	it('allows BYOK for individual users', () => {
-		expect(isClientBYOKAllowed(true, mockToken({ isIndividual: true }))).toBe(true);
+		expect(
+			isClientBYOKAllowed(true, mockToken({ isIndividual: true })),
+		).toBe(true);
 	});
 
 	it('allows BYOK when the token explicitly enables it (e.g. enterprise org opt-in)', () => {
-		expect(isClientBYOKAllowed(true, mockToken({ isClientBYOKEnabled: true }))).toBe(true);
+		expect(
+			isClientBYOKAllowed(true, mockToken({ isClientBYOKEnabled: true })),
+		).toBe(true);
 	});
 
 	it('denies BYOK for signed-in managed users when no policy flag is set', () => {

@@ -16,26 +16,29 @@ import { IChatSessionWorktreeCheckpointService } from '../../common/chatSessionW
 import { IChatSessionWorktreeService } from '../../common/chatSessionWorktreeService';
 import { IWorkspaceInfo } from '../../common/workspaceInfo';
 import { IPullRequestDetectionService } from '../pullRequestDetectionService';
-import { SessionCompletionInfo, SessionRequestLifecycle } from '../sessionRequestLifecycle';
+import {
+	SessionCompletionInfo,
+	SessionRequestLifecycle,
+} from '../sessionRequestLifecycle';
 
 // ─── Test Helpers ────────────────────────────────────────────────
 
 class TestWorktreeService extends mock<IChatSessionWorktreeService>() {
 	declare readonly _serviceBrand: undefined;
-	override handleRequestCompleted = vi.fn(async () => { });
-	override setWorktreeProperties = vi.fn(async () => { });
+	override handleRequestCompleted = vi.fn(async () => {});
+	override setWorktreeProperties = vi.fn(async () => {});
 }
 
 class TestCheckpointService extends mock<IChatSessionWorktreeCheckpointService>() {
 	declare readonly _serviceBrand: undefined;
-	override handleRequest = vi.fn(async () => { });
-	override handleRequestCompleted = vi.fn(async () => { });
+	override handleRequest = vi.fn(async () => {});
+	override handleRequestCompleted = vi.fn(async () => {});
 }
 
 class TestWorkspaceFolderService extends mock<IChatSessionWorkspaceFolderService>() {
 	declare readonly _serviceBrand: undefined;
-	override handleRequestCompleted = vi.fn(async () => { });
-	override trackSessionWorkspaceFolder = vi.fn(async () => { });
+	override handleRequestCompleted = vi.fn(async () => {});
+	override trackSessionWorkspaceFolder = vi.fn(async () => {});
 }
 
 class TestPrDetectionService extends mock<IPullRequestDetectionService>() {
@@ -46,7 +49,7 @@ class TestPrDetectionService extends mock<IPullRequestDetectionService>() {
 
 class TestMetadataStore extends mock<IChatSessionMetadataStore>() {
 	declare readonly _serviceBrand: undefined;
-	override updateRequestDetails = vi.fn(async () => { });
+	override updateRequestDetails = vi.fn(async () => {});
 }
 
 class TestLogService extends mock<ILogService>() {
@@ -58,7 +61,9 @@ function makeRequest(id: string = 'req-1'): vscode.ChatRequest {
 	return { id } as unknown as vscode.ChatRequest;
 }
 
-function makeSession(overrides?: Partial<SessionCompletionInfo>): SessionCompletionInfo {
+function makeSession(
+	overrides?: Partial<SessionCompletionInfo>,
+): SessionCompletionInfo {
 	return {
 		status: ChatSessionStatus.Completed,
 		workspace: {
@@ -73,7 +78,9 @@ function makeSession(overrides?: Partial<SessionCompletionInfo>): SessionComplet
 	};
 }
 
-function makeIsolatedSession(overrides?: Partial<SessionCompletionInfo>): SessionCompletionInfo {
+function makeIsolatedSession(
+	overrides?: Partial<SessionCompletionInfo>,
+): SessionCompletionInfo {
 	return makeSession({
 		workspace: {
 			folder: URI.file('/workspace') as unknown as vscode.Uri,
@@ -94,7 +101,10 @@ function makeIsolatedSession(overrides?: Partial<SessionCompletionInfo>): Sessio
 }
 
 function makeToken(cancelled: boolean = false): vscode.CancellationToken {
-	return { isCancellationRequested: cancelled, onCancellationRequested: vi.fn() } as unknown as vscode.CancellationToken;
+	return {
+		isCancellationRequested: cancelled,
+		onCancellationRequested: vi.fn(),
+	} as unknown as vscode.CancellationToken;
 }
 
 function makeWorkspace(overrides?: Partial<IWorkspaceInfo>): IWorkspaceInfo {
@@ -155,13 +165,25 @@ describe('SessionRequestLifecycle', () => {
 	describe('startRequest', () => {
 		it('creates baseline checkpoint on first request', async () => {
 			const request = makeRequest();
-			await handler.startRequest('session-1', request, true, makeWorkspace());
-			expect(checkpointService.handleRequest).toHaveBeenCalledWith('session-1');
+			await handler.startRequest(
+				'session-1',
+				request,
+				true,
+				makeWorkspace(),
+			);
+			expect(checkpointService.handleRequest).toHaveBeenCalledWith(
+				'session-1',
+			);
 		});
 
 		it('skips baseline checkpoint on subsequent requests', async () => {
 			const request = makeRequest();
-			await handler.startRequest('session-1', request, false, makeWorkspace());
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+			);
 			expect(checkpointService.handleRequest).not.toHaveBeenCalled();
 		});
 
@@ -171,61 +193,106 @@ describe('SessionRequestLifecycle', () => {
 				name: 'test',
 				content: 'instructions',
 			};
-			await handler.startRequest('session-1', request, false, makeWorkspace(), 'test-agent');
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+				'test-agent',
+			);
 
 			expect(metadataStore.updateRequestDetails).toHaveBeenCalledWith(
 				'session-1',
-				[{
-					vscodeRequestId: 'req-1',
-					agentId: 'test-agent',
-					modeInstructions: expect.objectContaining({ name: 'test', content: 'instructions' }),
-				}]
+				[
+					{
+						vscodeRequestId: 'req-1',
+						agentId: 'test-agent',
+						modeInstructions: expect.objectContaining({
+							name: 'test',
+							content: 'instructions',
+						}),
+					},
+				],
 			);
 		});
 
 		it('records metadata without modeInstructions when request has no modeInstructions2', async () => {
 			const request = makeRequest();
-			await handler.startRequest('session-1', request, false, makeWorkspace(), 'test-agent');
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+				'test-agent',
+			);
 
 			expect(metadataStore.updateRequestDetails).toHaveBeenCalledWith(
 				'session-1',
-				[{
-					vscodeRequestId: 'req-1',
-					agentId: 'test-agent',
-					modeInstructions: undefined,
-				}]
+				[
+					{
+						vscodeRequestId: 'req-1',
+						agentId: 'test-agent',
+						modeInstructions: undefined,
+					},
+				],
 			);
 		});
 
 		it('sets worktree properties on first request with worktree', async () => {
 			const workspace = makeIsolatedWorkspace();
-			await handler.startRequest('session-1', makeRequest(), true, workspace);
+			await handler.startRequest(
+				'session-1',
+				makeRequest(),
+				true,
+				workspace,
+			);
 
 			expect(worktreeService.setWorktreeProperties).toHaveBeenCalledWith(
 				'session-1',
-				expect.objectContaining({ branchName: 'copilot/test' })
+				expect.objectContaining({ branchName: 'copilot/test' }),
 			);
 		});
 
 		it('does not set worktree properties on subsequent requests', async () => {
 			const workspace = makeIsolatedWorkspace();
-			await handler.startRequest('session-1', makeRequest(), false, workspace);
+			await handler.startRequest(
+				'session-1',
+				makeRequest(),
+				false,
+				workspace,
+			);
 
-			expect(worktreeService.setWorktreeProperties).not.toHaveBeenCalled();
+			expect(
+				worktreeService.setWorktreeProperties,
+			).not.toHaveBeenCalled();
 		});
 
 		it('tracks workspace folder for non-isolated session on first request', async () => {
 			const workspace = makeWorkspace();
-			await handler.startRequest('session-1', makeRequest(), true, workspace);
+			await handler.startRequest(
+				'session-1',
+				makeRequest(),
+				true,
+				workspace,
+			);
 
-			expect(workspaceFolderService.trackSessionWorkspaceFolder).toHaveBeenCalled();
+			expect(
+				workspaceFolderService.trackSessionWorkspaceFolder,
+			).toHaveBeenCalled();
 		});
 
 		it('does not track workspace folder for isolated session', async () => {
 			const workspace = makeIsolatedWorkspace();
-			await handler.startRequest('session-1', makeRequest(), true, workspace);
+			await handler.startRequest(
+				'session-1',
+				makeRequest(),
+				true,
+				workspace,
+			);
 
-			expect(workspaceFolderService.trackSessionWorkspaceFolder).not.toHaveBeenCalled();
+			expect(
+				workspaceFolderService.trackSessionWorkspaceFolder,
+			).not.toHaveBeenCalled();
 		});
 	});
 
@@ -234,47 +301,111 @@ describe('SessionRequestLifecycle', () => {
 			const request = makeRequest();
 			const session = makeIsolatedSession();
 
-			await handler.startRequest('session-1', request, false, makeWorkspace());
-			await handler.endRequest('session-1', request, session, makeToken());
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+			);
+			await handler.endRequest(
+				'session-1',
+				request,
+				session,
+				makeToken(),
+			);
 
-			expect(worktreeService.handleRequestCompleted).toHaveBeenCalledWith('session-1');
-			expect(workspaceFolderService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(checkpointService.handleRequestCompleted).toHaveBeenCalledWith('session-1', 'req-1');
+			expect(worktreeService.handleRequestCompleted).toHaveBeenCalledWith(
+				'session-1',
+			);
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				checkpointService.handleRequestCompleted,
+			).toHaveBeenCalledWith('session-1', 'req-1');
 		});
 
 		it('stages workspace changes for non-isolated session with working directory', async () => {
 			const request = makeRequest();
 			const session = makeSession(); // non-isolated, has folder
 
-			await handler.startRequest('session-1', request, false, makeWorkspace());
-			await handler.endRequest('session-1', request, session, makeToken());
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+			);
+			await handler.endRequest(
+				'session-1',
+				request,
+				session,
+				makeToken(),
+			);
 
-			expect(workspaceFolderService.handleRequestCompleted).toHaveBeenCalledWith('session-1');
-			expect(worktreeService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(checkpointService.handleRequestCompleted).toHaveBeenCalledWith('session-1', 'req-1');
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).toHaveBeenCalledWith('session-1');
+			expect(
+				worktreeService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				checkpointService.handleRequestCompleted,
+			).toHaveBeenCalledWith('session-1', 'req-1');
 		});
 
 		it('skips commit/stage when session status is not Completed', async () => {
 			const request = makeRequest();
-			const session = makeSession({ status: ChatSessionStatus.InProgress });
+			const session = makeSession({
+				status: ChatSessionStatus.InProgress,
+			});
 
-			await handler.startRequest('session-1', request, false, makeWorkspace());
-			await handler.endRequest('session-1', request, session, makeToken());
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+			);
+			await handler.endRequest(
+				'session-1',
+				request,
+				session,
+				makeToken(),
+			);
 
-			expect(worktreeService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(workspaceFolderService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(checkpointService.handleRequestCompleted).not.toHaveBeenCalled();
+			expect(
+				worktreeService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				checkpointService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
 		});
 
 		it('skips commit/stage when session status is undefined', async () => {
 			const request = makeRequest();
 			const session = makeSession({ status: undefined });
 
-			await handler.startRequest('session-1', request, false, makeWorkspace());
-			await handler.endRequest('session-1', request, session, makeToken());
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+			);
+			await handler.endRequest(
+				'session-1',
+				request,
+				session,
+				makeToken(),
+			);
 
-			expect(worktreeService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(workspaceFolderService.handleRequestCompleted).not.toHaveBeenCalled();
+			expect(
+				worktreeService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
 		});
 
 		it('skips workspace commit when no working directory', async () => {
@@ -289,11 +420,25 @@ describe('SessionRequestLifecycle', () => {
 				},
 			});
 
-			await handler.startRequest('session-1', request, false, makeWorkspace());
-			await handler.endRequest('session-1', request, session, makeToken());
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+			);
+			await handler.endRequest(
+				'session-1',
+				request,
+				session,
+				makeToken(),
+			);
 
-			expect(worktreeService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(workspaceFolderService.handleRequestCompleted).not.toHaveBeenCalled();
+			expect(
+				worktreeService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
 			// Checkpoint should still be created
 			expect(checkpointService.handleRequestCompleted).toHaveBeenCalled();
 		});
@@ -303,59 +448,123 @@ describe('SessionRequestLifecycle', () => {
 			const req2 = makeRequest('req-2');
 			const session = makeSession();
 
-			await handler.startRequest('session-1', req1, false, makeWorkspace());
-			await handler.startRequest('session-1', req2, false, makeWorkspace());
+			await handler.startRequest(
+				'session-1',
+				req1,
+				false,
+				makeWorkspace(),
+			);
+			await handler.startRequest(
+				'session-1',
+				req2,
+				false,
+				makeWorkspace(),
+			);
 
 			// First request completes — should defer (2 pending)
 			await handler.endRequest('session-1', req1, session, makeToken());
-			expect(worktreeService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(workspaceFolderService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(checkpointService.handleRequestCompleted).not.toHaveBeenCalled();
+			expect(
+				worktreeService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				checkpointService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
 
 			// Second (last) request completes — should proceed
 			await handler.endRequest('session-1', req2, session, makeToken());
-			expect(workspaceFolderService.handleRequestCompleted).toHaveBeenCalledWith('session-1');
-			expect(checkpointService.handleRequestCompleted).toHaveBeenCalledWith('session-1', 'req-2');
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).toHaveBeenCalledWith('session-1');
+			expect(
+				checkpointService.handleRequestCompleted,
+			).toHaveBeenCalledWith('session-1', 'req-2');
 		});
 
 		it('skips everything when token is cancelled', async () => {
 			const request = makeRequest();
 			const session = makeSession();
 
-			await handler.startRequest('session-1', request, false, makeWorkspace());
-			await handler.endRequest('session-1', request, session, makeToken(true));
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+			);
+			await handler.endRequest(
+				'session-1',
+				request,
+				session,
+				makeToken(true),
+			);
 
-			expect(worktreeService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(workspaceFolderService.handleRequestCompleted).not.toHaveBeenCalled();
-			expect(checkpointService.handleRequestCompleted).not.toHaveBeenCalled();
+			expect(
+				worktreeService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
+			expect(
+				checkpointService.handleRequestCompleted,
+			).not.toHaveBeenCalled();
 		});
 
 		it('calls PR detection service on completion', async () => {
 			const request = makeRequest();
 			const session = makeSession();
 
-			await handler.startRequest('session-1', request, false, makeWorkspace());
-			await handler.endRequest('session-1', request, session, makeToken());
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+			);
+			await handler.endRequest(
+				'session-1',
+				request,
+				session,
+				makeToken(),
+			);
 
 			// PR detection is fire-and-forget; wait for microtask
-			await new Promise(resolve => setTimeout(resolve, 10));
-			expect(prDetectionService.handlePullRequestCreated).toHaveBeenCalledWith('session-1', undefined);
+			await new Promise((resolve) => setTimeout(resolve, 10));
+			expect(
+				prDetectionService.handlePullRequestCreated,
+			).toHaveBeenCalledWith('session-1', undefined);
 		});
 
 		it('cleans up tracked request even when commit throws', async () => {
-			workspaceFolderService.handleRequestCompleted.mockRejectedValue(new Error('commit failed'));
+			workspaceFolderService.handleRequestCompleted.mockRejectedValue(
+				new Error('commit failed'),
+			);
 			const request = makeRequest();
 			const session = makeSession();
 
-			await handler.startRequest('session-1', request, false, makeWorkspace());
-			await expect(handler.endRequest('session-1', request, session, makeToken())).rejects.toThrow('commit failed');
+			await handler.startRequest(
+				'session-1',
+				request,
+				false,
+				makeWorkspace(),
+			);
+			await expect(
+				handler.endRequest('session-1', request, session, makeToken()),
+			).rejects.toThrow('commit failed');
 
 			// After the error, a new request for the same session should proceed normally
 			workspaceFolderService.handleRequestCompleted.mockResolvedValue();
 			const req2 = makeRequest('req-2');
-			await handler.startRequest('session-1', req2, false, makeWorkspace());
+			await handler.startRequest(
+				'session-1',
+				req2,
+				false,
+				makeWorkspace(),
+			);
 			await handler.endRequest('session-1', req2, session, makeToken());
-			expect(workspaceFolderService.handleRequestCompleted).toHaveBeenCalledTimes(2);
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).toHaveBeenCalledTimes(2);
 		});
 
 		it('handles request without prior tracking gracefully', async () => {
@@ -363,8 +572,15 @@ describe('SessionRequestLifecycle', () => {
 			const session = makeSession();
 
 			// Not tracked, but should still work (pendingRequests is undefined → size check skipped)
-			await handler.endRequest('session-1', request, session, makeToken());
-			expect(workspaceFolderService.handleRequestCompleted).toHaveBeenCalled();
+			await handler.endRequest(
+				'session-1',
+				request,
+				session,
+				makeToken(),
+			);
+			expect(
+				workspaceFolderService.handleRequestCompleted,
+			).toHaveBeenCalled();
 		});
 	});
 });

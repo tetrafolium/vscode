@@ -11,13 +11,16 @@ import { FailingTelemetryReporter } from './failingTelemetryReporter';
 import { IGHTelemetryService, ITelemetryUserConfig } from './telemetry';
 import { TelemetryData } from './telemetryData';
 
-
 // A container for the secure and insecure reporters
 class TelemetryReporters {
 	private reporter: TelemetrySender | undefined;
 	private reporterSecure: TelemetrySender | undefined;
 
-	public getReporter(telemetryUserConfig: ITelemetryUserConfig, isTest: boolean, secure: boolean): TelemetrySender | undefined {
+	public getReporter(
+		telemetryUserConfig: ITelemetryUserConfig,
+		isTest: boolean,
+		secure: boolean,
+	): TelemetrySender | undefined {
 		if (!secure) {
 			return this.reporter;
 		}
@@ -41,14 +44,20 @@ class TelemetryReporters {
 	}
 	async deactivate(): Promise<void> {
 		// This will ensure all pending events get flushed
-		let disposeReporter: Thenable<void> | void | undefined = Promise.resolve();
+		let disposeReporter: Thenable<void> | void | undefined =
+			Promise.resolve();
 		if (this.reporter) {
-			disposeReporter = this.reporter.flush ? this.reporter.flush() : undefined;
+			disposeReporter = this.reporter.flush
+				? this.reporter.flush()
+				: undefined;
 			this.reporter = undefined;
 		}
-		let disposeReporterSecure: Thenable<void> | void | undefined = Promise.resolve();
+		let disposeReporterSecure: Thenable<void> | void | undefined =
+			Promise.resolve();
 		if (this.reporterSecure) {
-			disposeReporterSecure = this.reporterSecure.flush ? this.reporterSecure.flush() : undefined;
+			disposeReporterSecure = this.reporterSecure.flush
+				? this.reporterSecure.flush()
+				: undefined;
 			this.reporterSecure = undefined;
 		}
 		await Promise.all([disposeReporter, disposeReporterSecure]);
@@ -56,7 +65,6 @@ class TelemetryReporters {
 }
 
 export class GHTelemetryService implements IGHTelemetryService {
-
 	declare readonly _serviceBrand: undefined;
 
 	private readonly reporters = new TelemetryReporters();
@@ -64,15 +72,17 @@ export class GHTelemetryService implements IGHTelemetryService {
 
 	constructor(
 		private readonly _isRunningTests: boolean,
-		@IConfigurationService private readonly _configService: IConfigurationService,
+		@IConfigurationService
+		private readonly _configService: IConfigurationService,
 		@IEnvService private readonly _envService: IEnvService,
-		@ITelemetryUserConfig private readonly _telemetryUserConfig: ITelemetryUserConfig,
-	) { }
+		@ITelemetryUserConfig
+		private readonly _telemetryUserConfig: ITelemetryUserConfig,
+	) {}
 
 	private withPromise(promise: Promise<void>): Promise<void> {
 		if (this.openPromises) {
 			this.openPromises.add(promise);
-			return promise.then(_ => {
+			return promise.then((_) => {
 				this.openPromises?.delete(promise);
 			});
 		}
@@ -89,35 +99,59 @@ export class GHTelemetryService implements IGHTelemetryService {
 		}
 	}
 
-	public setSecureReporter(reporterSecure: TelemetrySender | undefined): void {
+	public setSecureReporter(
+		reporterSecure: TelemetrySender | undefined,
+	): void {
 		this.reporters.setSecureReporter(reporterSecure);
 	}
 	public setReporter(reporter: TelemetrySender | undefined): void {
 		this.reporters.setReporter(reporter);
 	}
 
-	public async sendTelemetry(name: string, telemetryData?: TelemetryData): Promise<void> {
+	public async sendTelemetry(
+		name: string,
+		telemetryData?: TelemetryData,
+	): Promise<void> {
 		await this.withPromise(this._sendTelemetry(name, telemetryData, false));
 	}
 
-	public async sendErrorTelemetry(name: string, telemetryData?: TelemetryData) {
-		await this.withPromise(this._sendErrorTelemetry(name, telemetryData, false));
+	public async sendErrorTelemetry(
+		name: string,
+		telemetryData?: TelemetryData,
+	) {
+		await this.withPromise(
+			this._sendErrorTelemetry(name, telemetryData, false),
+		);
 	}
 
-	public async sendEnhancedTelemetry(name: string, telemetryData?: TelemetryData): Promise<void> {
+	public async sendEnhancedTelemetry(
+		name: string,
+		telemetryData?: TelemetryData,
+	): Promise<void> {
 		await this.withPromise(this._sendTelemetry(name, telemetryData, true));
 	}
 
-	public async sendEnhancedErrorTelemetry(name: string, telemetryData?: TelemetryData) {
-		await this.withPromise(this._sendErrorTelemetry(name, telemetryData, true));
+	public async sendEnhancedErrorTelemetry(
+		name: string,
+		telemetryData?: TelemetryData,
+	) {
+		await this.withPromise(
+			this._sendErrorTelemetry(name, telemetryData, true),
+		);
 	}
 
-	public async sendExpProblemTelemetry(telemetryProperties: { reason: string }) {
-		await this.withPromise(this._sendExpProblemTelemetry(telemetryProperties));
+	public async sendExpProblemTelemetry(telemetryProperties: {
+		reason: string;
+	}) {
+		await this.withPromise(
+			this._sendExpProblemTelemetry(telemetryProperties),
+		);
 	}
 
 	public async sendExceptionTelemetry(maybeError: unknown, origin: string) {
-		await this.withPromise(this._sendExceptionTelemetry(maybeError, origin));
+		await this.withPromise(
+			this._sendExceptionTelemetry(maybeError, origin),
+		);
 	}
 
 	public async deactivate() {
@@ -133,116 +167,192 @@ export class GHTelemetryService implements IGHTelemetryService {
 		}
 	}
 
-	private async _sendTelemetry(name: string, telemetryData: TelemetryData | undefined, secure: boolean) {
+	private async _sendTelemetry(
+		name: string,
+		telemetryData: TelemetryData | undefined,
+		secure: boolean,
+	) {
 		if (secure && !shouldSendEnhancedTelemetry(this._telemetryUserConfig)) {
 			return;
 		}
 		// if telemetry data isn't given, make a new one to hold at least the config
-		const definedTelemetryData = telemetryData || TelemetryData.createAndMarkAsIssued({}, {});
-		definedTelemetryData.makeReadyForSending(this._configService, this._envService, this._telemetryUserConfig);
+		const definedTelemetryData =
+			telemetryData || TelemetryData.createAndMarkAsIssued({}, {});
+		definedTelemetryData.makeReadyForSending(
+			this._configService,
+			this._envService,
+			this._telemetryUserConfig,
+		);
 		this.sendTelemetryEvent(secure ?? false, name, definedTelemetryData);
 	}
 
-
-	private async _sendExpProblemTelemetry(telemetryProperties: { reason: string }) {
+	private async _sendExpProblemTelemetry(telemetryProperties: {
+		reason: string;
+	}) {
 		const name = 'expProblem';
-		const definedTelemetryData = TelemetryData.createAndMarkAsIssued(telemetryProperties, {});
-		definedTelemetryData.makeReadyForSending(this._configService, this._envService, this._telemetryUserConfig);
-		this.sendTelemetryEvent(false /* not secure */, name, definedTelemetryData);
+		const definedTelemetryData = TelemetryData.createAndMarkAsIssued(
+			telemetryProperties,
+			{},
+		);
+		definedTelemetryData.makeReadyForSending(
+			this._configService,
+			this._envService,
+			this._telemetryUserConfig,
+		);
+		this.sendTelemetryEvent(
+			false /* not secure */,
+			name,
+			definedTelemetryData,
+		);
 	}
 
+	private async _sendExceptionTelemetry(maybeError: unknown, origin: string) {
+		const error =
+			maybeError instanceof Error
+				? maybeError
+				: new Error('Non-error thrown: ' + maybeError);
 
-	private async _sendExceptionTelemetry(
-		maybeError: unknown,
-		origin: string,
-	) {
-		const error = maybeError instanceof Error ? maybeError : new Error('Non-error thrown: ' + maybeError);
-
-		const sendEnhanced = shouldSendEnhancedTelemetry(this._telemetryUserConfig);
+		const sendEnhanced = shouldSendEnhancedTelemetry(
+			this._telemetryUserConfig,
+		);
 
 		const definedTelemetryDataStub = TelemetryData.createAndMarkAsIssued({
 			origin: redactPaths(origin),
-			reason: sendEnhanced ? 'Exception logged to enhanced telemetry' : 'Exception, not logged due to opt-out',
+			reason: sendEnhanced
+				? 'Exception logged to enhanced telemetry'
+				: 'Exception, not logged due to opt-out',
 		});
 
-		definedTelemetryDataStub.makeReadyForSending(this._configService, this._envService, this._telemetryUserConfig);
+		definedTelemetryDataStub.makeReadyForSending(
+			this._configService,
+			this._envService,
+			this._telemetryUserConfig,
+		);
 
 		// send a placeholder to standard ("insecure") telemetry
-		this.sendTelemetryEvent(false /* not secure */, 'exception', definedTelemetryDataStub);
+		this.sendTelemetryEvent(
+			false /* not secure */,
+			'exception',
+			definedTelemetryDataStub,
+		);
 
-		if (!sendEnhanced) { return; }
+		if (!sendEnhanced) {
+			return;
+		}
 
-		const definedTelemetryDataSecure = TelemetryData.createAndMarkAsIssued({ origin });
-		definedTelemetryDataSecure.makeReadyForSending(this._configService, this._envService, this._telemetryUserConfig);
+		const definedTelemetryDataSecure = TelemetryData.createAndMarkAsIssued({
+			origin,
+		});
+		definedTelemetryDataSecure.makeReadyForSending(
+			this._configService,
+			this._envService,
+			this._telemetryUserConfig,
+		);
 
 		// and the real error, which might contain arbitrary data, to enhanced telemetry.
 		// We have previously observed paths and other potential PII in
 		//  - arbitrary unhandled exceptions coming from other extensions in the VSCode extension
 		//  - fields inserted into the data sent by `sendTelemetryException` in `vscode-extension-telementry` like `Assembly`,
-		this.sendTelemetryException(true /* secure */, error, definedTelemetryDataSecure);
+		this.sendTelemetryException(
+			true /* secure */,
+			error,
+			definedTelemetryDataSecure,
+		);
 	}
 
-
-
-	private async _sendErrorTelemetry(name: string, telemetryData: TelemetryData | undefined, secure: boolean) {
+	private async _sendErrorTelemetry(
+		name: string,
+		telemetryData: TelemetryData | undefined,
+		secure: boolean,
+	) {
 		if (secure && !shouldSendEnhancedTelemetry(this._telemetryUserConfig)) {
 			return;
 		}
-		const definedTelemetryData = telemetryData || TelemetryData.createAndMarkAsIssued({}, {});
-		definedTelemetryData.makeReadyForSending(this._configService, this._envService, this._telemetryUserConfig);
-		this.sendTelemetryErrorEvent(secure ?? false, name, definedTelemetryData);
+		const definedTelemetryData =
+			telemetryData || TelemetryData.createAndMarkAsIssued({}, {});
+		definedTelemetryData.makeReadyForSending(
+			this._configService,
+			this._envService,
+			this._telemetryUserConfig,
+		);
+		this.sendTelemetryErrorEvent(
+			secure ?? false,
+			name,
+			definedTelemetryData,
+		);
 	}
-
 
 	// helpers
 
 	private sendTelemetryEvent(
 		secure: boolean,
 		name: string,
-		data: { properties: { [key: string]: string }; measurements: { [key: string]: number | undefined } }
+		data: {
+			properties: { [key: string]: string };
+			measurements: { [key: string]: number | undefined };
+		},
 	): void {
-		const reporter = this.reporters.getReporter(this._telemetryUserConfig, this._isRunningTests, secure);
+		const reporter = this.reporters.getReporter(
+			this._telemetryUserConfig,
+			this._isRunningTests,
+			secure,
+		);
 		if (reporter) {
-			const props = TelemetryData.maybeRemoveRepoInfoFromPropertiesHack(secure, data.properties);
-			reporter.sendEventData(
-				name,
-				{ ...props, ...data.measurements }
+			const props = TelemetryData.maybeRemoveRepoInfoFromPropertiesHack(
+				secure,
+				data.properties,
 			);
+			reporter.sendEventData(name, { ...props, ...data.measurements });
 		}
 	}
-
 
 	private sendTelemetryException(
 		secure: true,
 		error: Error,
-		data: { properties: { [key: string]: string }; measurements: { [key: string]: number | undefined } }
+		data: {
+			properties: { [key: string]: string };
+			measurements: { [key: string]: number | undefined };
+		},
 	): void {
-		const reporter = this.reporters.getReporter(this._telemetryUserConfig, this._isRunningTests, secure);
+		const reporter = this.reporters.getReporter(
+			this._telemetryUserConfig,
+			this._isRunningTests,
+			secure,
+		);
 		if (reporter) {
-			const props = TelemetryData.maybeRemoveRepoInfoFromPropertiesHack(secure, data.properties);
-			reporter.sendErrorData(
-				error,
-				{ ...props, ...data.measurements }
+			const props = TelemetryData.maybeRemoveRepoInfoFromPropertiesHack(
+				secure,
+				data.properties,
 			);
+			reporter.sendErrorData(error, { ...props, ...data.measurements });
 		}
 	}
 
 	private sendTelemetryErrorEvent(
 		secure: boolean,
 		name: string,
-		data: { properties: { [key: string]: string }; measurements: { [key: string]: number | undefined } }
+		data: {
+			properties: { [key: string]: string };
+			measurements: { [key: string]: number | undefined };
+		},
 	): void {
-		const reporter = this.reporters.getReporter(this._telemetryUserConfig, this._isRunningTests, secure);
+		const reporter = this.reporters.getReporter(
+			this._telemetryUserConfig,
+			this._isRunningTests,
+			secure,
+		);
 		if (reporter) {
-			const props = TelemetryData.maybeRemoveRepoInfoFromPropertiesHack(secure, data.properties);
-			reporter.sendEventData(
-				name,
-				{ ...props, ...data.measurements }
+			const props = TelemetryData.maybeRemoveRepoInfoFromPropertiesHack(
+				secure,
+				data.properties,
 			);
+			reporter.sendEventData(name, { ...props, ...data.measurements });
 		}
 	}
 }
 
-function shouldSendEnhancedTelemetry(telemetryUserConfig: ITelemetryUserConfig): boolean {
+function shouldSendEnhancedTelemetry(
+	telemetryUserConfig: ITelemetryUserConfig,
+): boolean {
 	return telemetryUserConfig.optedIn;
 }

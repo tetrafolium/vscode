@@ -21,7 +21,10 @@ export type CompletionRequestedEvent = {
 
 const requestEventName = 'CompletionRequested';
 
-export const ICompletionsNotifierService = createServiceIdentifier<ICompletionsNotifierService>('ICompletionsNotifierService');
+export const ICompletionsNotifierService =
+	createServiceIdentifier<ICompletionsNotifierService>(
+		'ICompletionsNotifierService',
+	);
 export interface ICompletionsNotifierService {
 	readonly _serviceBrand: undefined;
 	notifyRequest(
@@ -29,7 +32,7 @@ export interface ICompletionsNotifierService {
 		completionId: string,
 		telemetryData: TelemetryWithExp,
 		cancellationToken?: CancellationToken,
-		options?: Partial<GetGhostTextOptions>
+		options?: Partial<GetGhostTextOptions>,
 	): void;
 
 	onRequest(listener: (event: CompletionRequestedEvent) => void): Disposable;
@@ -39,16 +42,18 @@ export class CompletionNotifier implements ICompletionsNotifierService {
 	declare _serviceBrand: undefined;
 	#emitter = new EventEmitter();
 	constructor(
-		@ICompletionsPromiseQueueService protected completionsPromiseQueue: ICompletionsPromiseQueueService,
-		@ICompletionsTelemetryService protected completionsTelemetryService: ICompletionsTelemetryService,
-	) { }
+		@ICompletionsPromiseQueueService
+		protected completionsPromiseQueue: ICompletionsPromiseQueueService,
+		@ICompletionsTelemetryService
+		protected completionsTelemetryService: ICompletionsTelemetryService,
+	) {}
 
 	notifyRequest(
 		completionState: CompletionState,
 		completionId: string,
 		telemetryData: TelemetryWithExp,
 		cancellationToken?: CancellationToken,
-		options?: Partial<GetGhostTextOptions>
+		options?: Partial<GetGhostTextOptions>,
 	) {
 		return this.#emitter.emit(requestEventName, {
 			completionId,
@@ -60,8 +65,15 @@ export class CompletionNotifier implements ICompletionsNotifierService {
 	}
 
 	onRequest(listener: (event: CompletionRequestedEvent) => void): Disposable {
-		const wrapper = telemetryCatch(this.completionsTelemetryService, this.completionsPromiseQueue, listener, `event.${requestEventName}`);
+		const wrapper = telemetryCatch(
+			this.completionsTelemetryService,
+			this.completionsPromiseQueue,
+			listener,
+			`event.${requestEventName}`,
+		);
 		this.#emitter.on(requestEventName, wrapper);
-		return Disposable.create(() => this.#emitter.off(requestEventName, wrapper));
+		return Disposable.create(() =>
+			this.#emitter.off(requestEventName, wrapper),
+		);
 	}
 }

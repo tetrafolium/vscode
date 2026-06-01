@@ -4,8 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type * as nbformat from '@jupyterlab/nbformat';
-import { NotebookCell, NotebookCellData, NotebookCellKind, NotebookCellOutput } from 'vscode';
-import { CellOutputMetadata, useCustomPropertyInMetadata, type CellMetadata } from './common';
+import {
+	NotebookCell,
+	NotebookCellData,
+	NotebookCellKind,
+	NotebookCellOutput,
+} from 'vscode';
+import {
+	CellOutputMetadata,
+	useCustomPropertyInMetadata,
+	type CellMetadata,
+} from './common';
 import { textMimeTypes } from './deserializers';
 
 const textDecoder = new TextDecoder();
@@ -13,12 +22,12 @@ const textDecoder = new TextDecoder();
 enum CellOutputMimeTypes {
 	error = 'application/vnd.code.notebook.error',
 	stderr = 'application/vnd.code.notebook.stderr',
-	stdout = 'application/vnd.code.notebook.stdout'
+	stdout = 'application/vnd.code.notebook.stdout',
 }
 
 export function createJupyterCellFromNotebookCell(
 	vscCell: NotebookCellData,
-	preferredLanguage: string | undefined
+	preferredLanguage: string | undefined,
 ): nbformat.IRawCell | nbformat.IMarkdownCell | nbformat.ICodeCell {
 	let cell: nbformat.IRawCell | nbformat.IMarkdownCell | nbformat.ICodeCell;
 	if (vscCell.kind === NotebookCellKind.Markup) {
@@ -31,7 +40,6 @@ export function createJupyterCellFromNotebookCell(
 	return cell;
 }
 
-
 /**
  * Sort the JSON to minimize unnecessary SCM changes.
  * Jupyter notbeooks/labs sorts the JSON keys in alphabetical order.
@@ -41,29 +49,38 @@ export function sortObjectPropertiesRecursively(obj: any): any {
 	if (Array.isArray(obj)) {
 		return obj.map(sortObjectPropertiesRecursively);
 	}
-	if (obj !== undefined && obj !== null && typeof obj === 'object' && Object.keys(obj).length > 0) {
-		return (
-			Object.keys(obj)
-				.sort()
-				.reduce<Record<string, any>>((sortedObj, prop) => {
-					sortedObj[prop] = sortObjectPropertiesRecursively(obj[prop]);
-					return sortedObj;
-				}, {}) as any
-		);
+	if (
+		obj !== undefined &&
+		obj !== null &&
+		typeof obj === 'object' &&
+		Object.keys(obj).length > 0
+	) {
+		return Object.keys(obj)
+			.sort()
+			.reduce<Record<string, any>>((sortedObj, prop) => {
+				sortedObj[prop] = sortObjectPropertiesRecursively(obj[prop]);
+				return sortedObj;
+			}, {}) as any;
 	}
 	return obj;
 }
 
-export function getCellMetadata(options: { cell: NotebookCell | NotebookCellData } | { metadata?: { [key: string]: any } }): CellMetadata {
+export function getCellMetadata(
+	options:
+		| { cell: NotebookCell | NotebookCellData }
+		| { metadata?: { [key: string]: any } },
+): CellMetadata {
 	if ('cell' in options) {
 		const cell = options.cell;
 		if (useCustomPropertyInMetadata()) {
 			const metadata: CellMetadata = {
 				// it contains the cell id, and the cell metadata, along with other nb cell metadata
-				...(cell.metadata?.custom ?? {})
+				...(cell.metadata?.custom ?? {}),
 			};
 			// promote the cell attachments to the top level
-			const attachments = cell.metadata?.custom?.attachments ?? cell.metadata?.attachments;
+			const attachments =
+				cell.metadata?.custom?.attachments ??
+				cell.metadata?.attachments;
 			if (attachments) {
 				metadata.attachments = attachments;
 			}
@@ -71,7 +88,7 @@ export function getCellMetadata(options: { cell: NotebookCell | NotebookCellData
 		}
 		const metadata = {
 			// it contains the cell id, and the cell metadata, along with other nb cell metadata
-			...(cell.metadata ?? {})
+			...(cell.metadata ?? {}),
 		};
 
 		return metadata;
@@ -80,10 +97,12 @@ export function getCellMetadata(options: { cell: NotebookCell | NotebookCellData
 		if (useCustomPropertyInMetadata()) {
 			const metadata: CellMetadata = {
 				// it contains the cell id, and the cell metadata, along with other nb cell metadata
-				...(cell.metadata?.custom ?? {})
+				...(cell.metadata?.custom ?? {}),
 			};
 			// promote the cell attachments to the top level
-			const attachments = cell.metadata?.custom?.attachments ?? cell.metadata?.attachments;
+			const attachments =
+				cell.metadata?.custom?.attachments ??
+				cell.metadata?.attachments;
 			if (attachments) {
 				metadata.attachments = attachments;
 			}
@@ -91,17 +110,22 @@ export function getCellMetadata(options: { cell: NotebookCell | NotebookCellData
 		}
 		const metadata = {
 			// it contains the cell id, and the cell metadata, along with other nb cell metadata
-			...(cell.metadata ?? {})
+			...(cell.metadata ?? {}),
 		};
 
 		return metadata;
 	}
 }
 
-export function getVSCodeCellLanguageId(metadata: CellMetadata): string | undefined {
+export function getVSCodeCellLanguageId(
+	metadata: CellMetadata,
+): string | undefined {
 	return metadata.metadata?.vscode?.languageId;
 }
-export function setVSCodeCellLanguageId(metadata: CellMetadata, languageId: string) {
+export function setVSCodeCellLanguageId(
+	metadata: CellMetadata,
+	languageId: string,
+) {
 	metadata.metadata = metadata.metadata || {};
 	metadata.metadata.vscode = { languageId };
 }
@@ -111,8 +135,13 @@ export function removeVSCodeCellLanguageId(metadata: CellMetadata) {
 	}
 }
 
-function createCodeCellFromNotebookCell(cell: NotebookCellData, preferredLanguage: string | undefined): nbformat.ICodeCell {
-	const cellMetadata: CellMetadata = JSON.parse(JSON.stringify(getCellMetadata({ cell })));
+function createCodeCellFromNotebookCell(
+	cell: NotebookCellData,
+	preferredLanguage: string | undefined,
+): nbformat.ICodeCell {
+	const cellMetadata: CellMetadata = JSON.parse(
+		JSON.stringify(getCellMetadata({ cell })),
+	);
 	cellMetadata.metadata = cellMetadata.metadata || {}; // This cannot be empty.
 	if (cell.languageId !== preferredLanguage) {
 		setVSCodeCellLanguageId(cellMetadata, cell.languageId);
@@ -126,10 +155,13 @@ function createCodeCellFromNotebookCell(cell: NotebookCellData, preferredLanguag
 		// Possible the metadata was edited as part of diff view
 		// In diff view we display execution_count as part of metadata, hence when execution count changes in metadata,
 		// We need to change that here as well, i.e. give preference to any execution_count value in metadata.
-		execution_count: cellMetadata.execution_count ?? cell.executionSummary?.executionOrder ?? null,
+		execution_count:
+			cellMetadata.execution_count ??
+			cell.executionSummary?.executionOrder ??
+			null,
 		source: splitMultilineString(cell.value.replace(/\r\n/g, '\n')),
 		outputs: (cell.outputs || []).map(translateCellDisplayOutput),
-		metadata: cellMetadata.metadata
+		metadata: cellMetadata.metadata,
 	};
 	if (cellMetadata?.id) {
 		codeCell.id = cellMetadata.id;
@@ -137,12 +169,14 @@ function createCodeCellFromNotebookCell(cell: NotebookCellData, preferredLanguag
 	return codeCell;
 }
 
-function createRawCellFromNotebookCell(cell: NotebookCellData): nbformat.IRawCell {
+function createRawCellFromNotebookCell(
+	cell: NotebookCellData,
+): nbformat.IRawCell {
 	const cellMetadata = getCellMetadata({ cell });
 	const rawCell: any = {
 		cell_type: 'raw',
 		source: splitMultilineString(cell.value.replace(/\r\n/g, '\n')),
-		metadata: cellMetadata?.metadata || {} // This cannot be empty.
+		metadata: cellMetadata?.metadata || {}, // This cannot be empty.
 	};
 	if (cellMetadata?.attachments) {
 		rawCell.attachments = cellMetadata.attachments;
@@ -168,7 +202,7 @@ function splitMultilineString(source: nbformat.MultilineString): string[] {
 				}
 				return s;
 			})
-			.filter(s => s.length > 0); // Skip last one if empty (it's the only one that could be length 0)
+			.filter((s) => s.length > 0); // Skip last one if empty (it's the only one that could be length 0)
 	}
 	return [];
 }
@@ -192,10 +226,13 @@ function translateCellDisplayOutput(output: NotebookCellOutput): JupyterOutput {
 			result = {
 				output_type: 'display_data',
 				data: output.items.reduce((prev: any, curr) => {
-					prev[curr.mime] = convertOutputMimeToJupyterOutput(curr.mime, curr.data as Uint8Array);
+					prev[curr.mime] = convertOutputMimeToJupyterOutput(
+						curr.mime,
+						curr.data as Uint8Array,
+					);
 					return prev;
 				}, {}),
-				metadata: customMetadata?.metadata || {} // This can never be undefined.
+				metadata: customMetadata?.metadata || {}, // This can never be undefined.
 			};
 			break;
 		}
@@ -203,12 +240,17 @@ function translateCellDisplayOutput(output: NotebookCellOutput): JupyterOutput {
 			result = {
 				output_type: 'execute_result',
 				data: output.items.reduce((prev: any, curr) => {
-					prev[curr.mime] = convertOutputMimeToJupyterOutput(curr.mime, curr.data as Uint8Array);
+					prev[curr.mime] = convertOutputMimeToJupyterOutput(
+						curr.mime,
+						curr.data as Uint8Array,
+					);
 					return prev;
 				}, {}),
 				metadata: customMetadata?.metadata || {}, // This can never be undefined.
 				execution_count:
-					typeof customMetadata?.executionCount === 'number' ? customMetadata?.executionCount : null // This can never be undefined, only a number or `null`.
+					typeof customMetadata?.executionCount === 'number'
+						? customMetadata?.executionCount
+						: null, // This can never be undefined, only a number or `null`.
 			};
 			break;
 		}
@@ -216,18 +258,26 @@ function translateCellDisplayOutput(output: NotebookCellOutput): JupyterOutput {
 			result = {
 				output_type: 'update_display_data',
 				data: output.items.reduce((prev: any, curr) => {
-					prev[curr.mime] = convertOutputMimeToJupyterOutput(curr.mime, curr.data as Uint8Array);
+					prev[curr.mime] = convertOutputMimeToJupyterOutput(
+						curr.mime,
+						curr.data as Uint8Array,
+					);
 					return prev;
 				}, {}),
-				metadata: customMetadata?.metadata || {} // This can never be undefined.
+				metadata: customMetadata?.metadata || {}, // This can never be undefined.
 			};
 			break;
 		}
 		default: {
 			const isError =
-				output.items.length === 1 && output.items.every((item) => item.mime === CellOutputMimeTypes.error);
+				output.items.length === 1 &&
+				output.items.every(
+					(item) => item.mime === CellOutputMimeTypes.error,
+				);
 			const isStream = output.items.every(
-				(item) => item.mime === CellOutputMimeTypes.stderr || item.mime === CellOutputMimeTypes.stdout
+				(item) =>
+					item.mime === CellOutputMimeTypes.stderr ||
+					item.mime === CellOutputMimeTypes.stdout,
 			);
 
 			if (isError) {
@@ -238,8 +288,12 @@ function translateCellDisplayOutput(output: NotebookCellOutput): JupyterOutput {
 			// Hence if we have stream output, save the output as Jupyter `stream` else `display_data`
 			// Unless we already know its an unknown output type.
 			const outputType: nbformat.OutputType =
-				<nbformat.OutputType>customMetadata?.outputType || (isStream ? 'stream' : 'display_data');
-			let unknownOutput: nbformat.IUnrecognizedOutput | nbformat.IDisplayData | nbformat.IStream;
+				<nbformat.OutputType>customMetadata?.outputType ||
+				(isStream ? 'stream' : 'display_data');
+			let unknownOutput:
+				| nbformat.IUnrecognizedOutput
+				| nbformat.IDisplayData
+				| nbformat.IStream;
 			if (outputType === 'stream') {
 				// If saving as `stream` ensure the mandatory properties are set.
 				unknownOutput = convertStreamOutput(output);
@@ -248,12 +302,12 @@ function translateCellDisplayOutput(output: NotebookCellOutput): JupyterOutput {
 				const displayData: nbformat.IDisplayData = {
 					data: {},
 					metadata: {},
-					output_type: 'display_data'
+					output_type: 'display_data',
 				};
 				unknownOutput = displayData;
 			} else {
 				unknownOutput = {
-					output_type: outputType
+					output_type: outputType,
 				};
 			}
 			if (customMetadata?.metadata) {
@@ -261,7 +315,10 @@ function translateCellDisplayOutput(output: NotebookCellOutput): JupyterOutput {
 			}
 			if (output.items.length > 0) {
 				unknownOutput.data = output.items.reduce((prev: any, curr) => {
-					prev[curr.mime] = convertOutputMimeToJupyterOutput(curr.mime, curr.data as Uint8Array);
+					prev[curr.mime] = convertOutputMimeToJupyterOutput(
+						curr.mime,
+						curr.data as Uint8Array,
+					);
 					return prev;
 				}, {});
 			}
@@ -287,10 +344,11 @@ function translateCellErrorOutput(output: NotebookCellOutput): nbformat.IError {
 			output_type: 'error',
 			ename: '',
 			evalue: '',
-			traceback: []
+			traceback: [],
 		};
 	}
-	const originalError: undefined | nbformat.IError = output.metadata?.originalError;
+	const originalError: undefined | nbformat.IError =
+		output.metadata?.originalError;
 	const value: Error = JSON.parse(textDecoder.decode(firstItem.data));
 	return {
 		output_type: 'error',
@@ -300,14 +358,17 @@ function translateCellErrorOutput(output: NotebookCellOutput): nbformat.IError {
 		// Its possible the format could change when converting from `traceback` to `string` and back again to `string`
 		// When .NET stores errors in output (with their .NET kernel),
 		// stack is empty, hence store the message instead of stack (so that somethign gets displayed in ipynb).
-		traceback: originalError?.traceback || splitMultilineString(value.stack || value.message || '')
+		traceback:
+			originalError?.traceback ||
+			splitMultilineString(value.stack || value.message || ''),
 	};
 }
 
-
 function getOutputStreamType(output: NotebookCellOutput): string | undefined {
 	if (output.items.length > 0) {
-		return output.items[0].mime === CellOutputMimeTypes.stderr ? 'stderr' : 'stdout';
+		return output.items[0].mime === CellOutputMimeTypes.stderr
+			? 'stderr'
+			: 'stdout';
 	}
 
 	return;
@@ -323,22 +384,27 @@ type JupyterOutput =
 function convertStreamOutput(output: NotebookCellOutput): JupyterOutput {
 	const outputs: string[] = [];
 	output.items
-		.filter((opit) => opit.mime === CellOutputMimeTypes.stderr || opit.mime === CellOutputMimeTypes.stdout)
+		.filter(
+			(opit) =>
+				opit.mime === CellOutputMimeTypes.stderr ||
+				opit.mime === CellOutputMimeTypes.stdout,
+		)
 		.map((opit) => textDecoder.decode(opit.data))
-		.forEach(value => {
+		.forEach((value) => {
 			// Ensure each line is a separate entry in an array (ending with \n).
 			const lines = value.split('\n');
 			// If the last item in `outputs` is not empty and the first item in `lines` is not empty, then concate them.
 			// As they are part of the same line.
 			if (outputs.length && lines.length && lines[0].length > 0) {
-				outputs[outputs.length - 1] = `${outputs[outputs.length - 1]}${lines.shift()!}`;
+				outputs[outputs.length - 1] =
+					`${outputs[outputs.length - 1]}${lines.shift()!}`;
 			}
 			for (const line of lines) {
 				outputs.push(line);
 			}
 		});
 
-	for (let index = 0; index < (outputs.length - 1); index++) {
+	for (let index = 0; index < outputs.length - 1; index++) {
 		outputs[index] = `${outputs[index]}\n`;
 	}
 
@@ -352,7 +418,7 @@ function convertStreamOutput(output: NotebookCellOutput): JupyterOutput {
 	return {
 		output_type: 'stream',
 		name: streamType,
-		text: outputs
+		text: outputs,
 	};
 }
 
@@ -370,14 +436,24 @@ function convertOutputMimeToJupyterOutput(mime: string, value: Uint8Array) {
 		} else if (mime.startsWith('image/') && mime !== 'image/svg+xml') {
 			// Images in Jupyter are stored in base64 encoded format.
 			// VS Code expects bytes when rendering images.
-			if (typeof Buffer !== 'undefined' && typeof Buffer.from === 'function') {
+			if (
+				typeof Buffer !== 'undefined' &&
+				typeof Buffer.from === 'function'
+			) {
 				return Buffer.from(value).toString('base64');
 			} else {
-				return btoa(value.reduce((s: string, b: number) => s + String.fromCharCode(b), ''));
+				return btoa(
+					value.reduce(
+						(s: string, b: number) => s + String.fromCharCode(b),
+						'',
+					),
+				);
 			}
 		} else if (mime.toLowerCase().includes('json')) {
 			const stringValue = textDecoder.decode(value);
-			return stringValue.length > 0 ? JSON.parse(stringValue) : stringValue;
+			return stringValue.length > 0
+				? JSON.parse(stringValue)
+				: stringValue;
 		} else if (mime === 'image/svg+xml') {
 			return splitMultilineString(textDecoder.decode(value));
 		} else {
@@ -388,12 +464,14 @@ function convertOutputMimeToJupyterOutput(mime: string, value: Uint8Array) {
 	}
 }
 
-export function createMarkdownCellFromNotebookCell(cell: NotebookCellData): nbformat.IMarkdownCell {
+export function createMarkdownCellFromNotebookCell(
+	cell: NotebookCellData,
+): nbformat.IMarkdownCell {
 	const cellMetadata = getCellMetadata({ cell });
 	const markdownCell: any = {
 		cell_type: 'markdown',
 		source: splitMultilineString(cell.value.replace(/\r\n/g, '\n')),
-		metadata: cellMetadata?.metadata || {} // This cannot be empty.
+		metadata: cellMetadata?.metadata || {}, // This cannot be empty.
 	};
 	if (cellMetadata?.attachments) {
 		markdownCell.attachments = cellMetadata.attachments;
@@ -408,7 +486,7 @@ export function pruneCell(cell: nbformat.ICell): nbformat.ICell {
 	// Source is usually a single string on input. Convert back to an array
 	const result = {
 		...cell,
-		source: splitMultilineString(cell.source)
+		source: splitMultilineString(cell.source),
 	} as nbformat.ICell;
 
 	// Remove outputs and execution_count from non code cells
@@ -417,7 +495,9 @@ export function pruneCell(cell: nbformat.ICell): nbformat.ICell {
 		delete (<any>result).execution_count;
 	} else {
 		// Clean outputs from code cells
-		result.outputs = result.outputs ? (result.outputs as nbformat.IOutput[]).map(fixupOutput) : [];
+		result.outputs = result.outputs
+			? (result.outputs as nbformat.IOutput[]).map(fixupOutput)
+			: [];
 	}
 
 	return result;
@@ -425,31 +505,31 @@ export function pruneCell(cell: nbformat.ICell): nbformat.ICell {
 const dummyStreamObj: nbformat.IStream = {
 	output_type: 'stream',
 	name: 'stdout',
-	text: ''
+	text: '',
 };
 const dummyErrorObj: nbformat.IError = {
 	output_type: 'error',
 	ename: '',
 	evalue: '',
-	traceback: ['']
+	traceback: [''],
 };
 const dummyDisplayObj: nbformat.IDisplayData = {
 	output_type: 'display_data',
 	data: {},
-	metadata: {}
+	metadata: {},
 };
 const dummyExecuteResultObj: nbformat.IExecuteResult = {
 	output_type: 'execute_result',
 	name: '',
 	execution_count: 0,
 	data: {},
-	metadata: {}
+	metadata: {},
 };
 const AllowedCellOutputKeys = {
 	['stream']: new Set(Object.keys(dummyStreamObj)),
 	['error']: new Set(Object.keys(dummyErrorObj)),
 	['display_data']: new Set(Object.keys(dummyDisplayObj)),
-	['execute_result']: new Set(Object.keys(dummyExecuteResultObj))
+	['execute_result']: new Set(Object.keys(dummyExecuteResultObj)),
 };
 
 function fixupOutput(output: nbformat.IOutput): nbformat.IOutput {

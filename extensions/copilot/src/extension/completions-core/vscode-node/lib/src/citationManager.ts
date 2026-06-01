@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { createServiceIdentifier } from '../../../../../util/common/services';
-import { Disposable, IDisposable } from '../../../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	IDisposable,
+} from '../../../../../util/vs/base/common/lifecycle';
 import { IRange } from './textDocument';
 
 export interface IPCitationDetail {
@@ -21,7 +24,10 @@ export interface IPDocumentCitation {
 	details: IPCitationDetail[];
 }
 
-export const ICompletionsCitationManager = createServiceIdentifier<ICompletionsCitationManager>('ICompletionsCitationManager');
+export const ICompletionsCitationManager =
+	createServiceIdentifier<ICompletionsCitationManager>(
+		'ICompletionsCitationManager',
+	);
 export interface ICompletionsCitationManager {
 	readonly _serviceBrand: undefined;
 
@@ -32,7 +38,9 @@ export interface ICompletionsCitationManager {
 export class NoOpCitationManager implements ICompletionsCitationManager {
 	declare _serviceBrand: undefined;
 
-	register() { return Disposable.None; }
+	register() {
+		return Disposable.None;
+	}
 
 	async handleIPCodeCitation(citation: IPDocumentCitation): Promise<void> {
 		// Do nothing

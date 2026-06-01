@@ -45,9 +45,11 @@ It looks like you build your project using Cargo, so let's add a \`tasks.json\` 
 
 suite('parseLaunchConfigFromResponse', () => {
 	test('works', () => {
-		expect(parseLaunchConfigFromResponse(input, {
-			allAcrossExtensionHosts: [],
-		} as any)).toMatchInlineSnapshot(`
+		expect(
+			parseLaunchConfigFromResponse(input, {
+				allAcrossExtensionHosts: [],
+			} as any),
+		).toMatchInlineSnapshot(`
 			{
 			  "configurations": [
 			    {

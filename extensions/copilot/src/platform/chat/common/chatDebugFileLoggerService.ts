@@ -8,7 +8,10 @@ import { decodeBase64 } from '../../../util/vs/base/common/buffer';
 import { Event } from '../../../util/vs/base/common/event';
 import { URI } from '../../../util/vs/base/common/uri';
 
-export const IChatDebugFileLoggerService = createServiceIdentifier<IChatDebugFileLoggerService>('IChatDebugFileLoggerService');
+export const IChatDebugFileLoggerService =
+	createServiceIdentifier<IChatDebugFileLoggerService>(
+		'IChatDebugFileLoggerService',
+	);
 
 /**
  * Extract the chat session ID string from a session resource URI.
@@ -17,7 +20,8 @@ export const IChatDebugFileLoggerService = createServiceIdentifier<IChatDebugFil
  * - `copilotcli:///<sessionId>` and `claude-code:///<sessionId>` — uses raw path segment
  */
 export function sessionResourceToId(sessionResource: URI): string {
-	const pathSegment = sessionResource.path.replace(/^\//, '').split('/').pop() || '';
+	const pathSegment =
+		sessionResource.path.replace(/^\//, '').split('/').pop() || '';
 	if (!pathSegment) {
 		return pathSegment;
 	}
@@ -52,7 +56,12 @@ export interface IChatDebugFileLoggerService {
 	 * correct routing of all events (including tool calls that may arrive
 	 * before the child's invoke_agent span completes).
 	 */
-	startChildSession(childSessionId: string, parentSessionId: string, label: string, parentToolSpanId?: string): void;
+	startChildSession(
+		childSessionId: string,
+		parentSessionId: string,
+		label: string,
+		parentToolSpanId?: string,
+	): void;
 
 	/**
 	 * Register a span ID → session ID mapping so that child spans
@@ -119,7 +128,10 @@ export interface IChatDebugFileLoggerService {
 	 * Fired synchronously when an entry is buffered, before it is flushed to disk.
 	 * Subscribers receive the entry in real-time for live streaming.
 	 */
-	readonly onDidEmitEntry: Event<{ sessionId: string; entry: IDebugLogEntry }>;
+	readonly onDidEmitEntry: Event<{
+		sessionId: string;
+		entry: IDebugLogEntry;
+	}>;
 
 	/**
 	 * Read all entries for a session from disk + unflushed buffer.
@@ -131,14 +143,20 @@ export interface IChatDebugFileLoggerService {
 	 * Read the last `count` entries from a session's JSONL file + unflushed buffer.
 	 * Reads only the tail of the file for performance on large files.
 	 */
-	readTailEntries(sessionId: string, count: number): Promise<IDebugLogEntry[]>;
+	readTailEntries(
+		sessionId: string,
+		count: number,
+	): Promise<IDebugLogEntry[]>;
 
 	/**
 	 * Stream entries from a session's JSONL file line by line.
 	 * Calls `onEntry` for each parsed entry. Returns when all entries have been streamed.
 	 * Uses a streaming parser to avoid loading the entire file into memory.
 	 */
-	streamEntries(sessionId: string, onEntry: (entry: IDebugLogEntry) => void): Promise<void>;
+	streamEntries(
+		sessionId: string,
+		onEntry: (entry: IDebugLogEntry) => void,
+	): Promise<void>;
 
 	/**
 	 * List session IDs that have debug log directories on disk.
@@ -162,7 +180,20 @@ export interface IDebugLogEntry {
 	/** Chat session ID */
 	readonly sid: string;
 	/** Event type */
-	readonly type: 'session_start' | 'tool_call' | 'llm_request' | 'user_message' | 'agent_response' | 'subagent' | 'discovery' | 'error' | 'generic' | 'child_session_ref' | 'hook' | 'turn_start' | 'turn_end';
+	readonly type:
+		| 'session_start'
+		| 'tool_call'
+		| 'llm_request'
+		| 'user_message'
+		| 'agent_response'
+		| 'subagent'
+		| 'discovery'
+		| 'error'
+		| 'generic'
+		| 'child_session_ref'
+		| 'hook'
+		| 'turn_start'
+		| 'turn_end';
 	/** Descriptive name */
 	readonly name: string;
 	/** Span or event ID */
@@ -181,21 +212,40 @@ export interface IDebugLogEntry {
 export class NullChatDebugFileLoggerService implements IChatDebugFileLoggerService {
 	declare readonly _serviceBrand: undefined;
 
-	async startSession(): Promise<void> { }
-	startChildSession(): void { }
-	registerSpanSession(): void { }
-	async endSession(): Promise<void> { }
-	async flush(): Promise<void> { }
-	getLogPath(_sessionId?: string): URI | undefined { return undefined; }
-	getSessionDir(_sessionId?: string): URI | undefined { return undefined; }
-	getActiveSessionIds(): string[] { return []; }
-	isDebugLogUri(): boolean { return false; }
-	getSessionDirForResource(): URI | undefined { return undefined; }
-	setModelSnapshot(): void { }
+	async startSession(): Promise<void> {}
+	startChildSession(): void {}
+	registerSpanSession(): void {}
+	async endSession(): Promise<void> {}
+	async flush(): Promise<void> {}
+	getLogPath(_sessionId?: string): URI | undefined {
+		return undefined;
+	}
+	getSessionDir(_sessionId?: string): URI | undefined {
+		return undefined;
+	}
+	getActiveSessionIds(): string[] {
+		return [];
+	}
+	isDebugLogUri(): boolean {
+		return false;
+	}
+	getSessionDirForResource(): URI | undefined {
+		return undefined;
+	}
+	setModelSnapshot(): void {}
 	readonly debugLogsDir: URI | undefined = undefined;
-	readonly onDidEmitEntry: Event<{ sessionId: string; entry: IDebugLogEntry }> = Event.None;
-	async readEntries(): Promise<IDebugLogEntry[]> { return []; }
-	async readTailEntries(): Promise<IDebugLogEntry[]> { return []; }
-	async streamEntries(): Promise<void> { }
-	async listSessionIds(): Promise<string[]> { return []; }
+	readonly onDidEmitEntry: Event<{
+		sessionId: string;
+		entry: IDebugLogEntry;
+	}> = Event.None;
+	async readEntries(): Promise<IDebugLogEntry[]> {
+		return [];
+	}
+	async readTailEntries(): Promise<IDebugLogEntry[]> {
+		return [];
+	}
+	async streamEntries(): Promise<void> {}
+	async listSessionIds(): Promise<string[]> {
+		return [];
+	}
 }

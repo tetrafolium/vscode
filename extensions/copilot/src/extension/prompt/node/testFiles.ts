@@ -21,7 +21,17 @@ type TestHint = {
 const nullTestHint: Required<TestHint> = {
 	location: 'sameFolder',
 	prefix: 'test_',
-	suffixes: ['.test', '.spec', '_test', 'Test', '_spec', '_test', 'Tests', '.Tests', 'Spec'],
+	suffixes: [
+		'.test',
+		'.spec',
+		'_test',
+		'Test',
+		'_spec',
+		'_test',
+		'Tests',
+		'.Tests',
+		'Spec',
+	],
 };
 
 const testHintsByLanguage: Record<string, TestHint> = {
@@ -42,22 +52,23 @@ const testHintsByLanguage: Record<string, TestHint> = {
 	typescriptreact: { suffixes: ['.test', '.spec'], location: 'sameFolder' },
 };
 
-export const suffix2Language: Record<string, keyof typeof testHintsByLanguage> = {
-	cs: 'csharp',
-	dart: 'dart',
-	go: 'go',
-	java: 'java',
-	js: 'javascriptreact',
-	kt: 'kotlin',
-	php: 'php',
-	ps1: 'powershell',
-	py: 'python',
-	rb: 'ruby',
-	rs: 'rust',
-	swift: 'swift',
-	ts: 'typescript',
-	tsx: 'typescriptreact',
-};
+export const suffix2Language: Record<string, keyof typeof testHintsByLanguage> =
+	{
+		cs: 'csharp',
+		dart: 'dart',
+		go: 'go',
+		java: 'java',
+		js: 'javascriptreact',
+		kt: 'kotlin',
+		php: 'php',
+		ps1: 'powershell',
+		py: 'python',
+		rb: 'ruby',
+		rs: 'rust',
+		swift: 'swift',
+		ts: 'typescript',
+		tsx: 'typescriptreact',
+	};
 
 const testHintsBySuffix: { [key: string]: TestHint } = (function () {
 	const result: { [key: string]: TestHint } = {};
@@ -71,18 +82,19 @@ const testHintsBySuffix: { [key: string]: TestHint } = (function () {
  * @remark does NOT respect copilot-ignore
  */
 export class TestFileFinder {
-
 	constructor(
 		@ISearchService private readonly _search: ISearchService,
-		@ITabsAndEditorsService private readonly _tabs: ITabsAndEditorsService
-	) {
-	}
+		@ITabsAndEditorsService private readonly _tabs: ITabsAndEditorsService,
+	) {}
 
 	private _findTabMatchingPattern(pattern: string): URI | undefined {
-
-		const tab = this._tabs.tabs.find(info => {
+		const tab = this._tabs.tabs.find((info) => {
 			// return a tab which uri matches the pattern
-			return info.uri && info.uri.scheme !== Schemas.untitled && isMatch(info.uri, pattern);
+			return (
+				info.uri &&
+				info.uri.scheme !== Schemas.untitled &&
+				isMatch(info.uri, pattern)
+			);
 		});
 
 		return tab?.uri;
@@ -91,8 +103,10 @@ export class TestFileFinder {
 	/**
 	 * Given a source file, find the corresponding test file.
 	 */
-	async findTestFileForSourceFile(document: TextDocumentSnapshot, token: CancellationToken): Promise<URI | undefined> {
-
+	async findTestFileForSourceFile(
+		document: TextDocumentSnapshot,
+		token: CancellationToken,
+	): Promise<URI | undefined> {
 		if (document.isUntitled) {
 			return undefined;
 		}
@@ -100,7 +114,8 @@ export class TestFileFinder {
 		const basename = resources.basename(document.uri);
 		const ext = resources.extname(document.uri);
 
-		const testHint = testHintsByLanguage[document.languageId] ?? nullTestHint;
+		const testHint =
+			testHintsByLanguage[document.languageId] ?? nullTestHint;
 
 		const testNameCandidates: string[] = [];
 		if (testHint.prefix) {
@@ -125,9 +140,18 @@ export class TestFileFinder {
 
 		if (!result) {
 			if (document.languageId === 'python') {
-				result = await this._search.findFilesWithExcludes(pattern, '**/*.pyc', 1, token);
+				result = await this._search.findFilesWithExcludes(
+					pattern,
+					'**/*.pyc',
+					1,
+					token,
+				);
 			} else {
-				result = await this._search.findFilesWithDefaultExcludes(pattern, 1, token);
+				result = await this._search.findFilesWithDefaultExcludes(
+					pattern,
+					1,
+					token,
+				);
 			}
 		}
 
@@ -137,9 +161,12 @@ export class TestFileFinder {
 	/**
 	 * Given a source file, find any test file (for the same language)
 	 */
-	async findAnyTestFileForSourceFile(document: TextDocumentSnapshot, token: CancellationToken): Promise<URI | undefined> {
-
-		const testHint = testHintsByLanguage[document.languageId] ?? nullTestHint;
+	async findAnyTestFileForSourceFile(
+		document: TextDocumentSnapshot,
+		token: CancellationToken,
+	): Promise<URI | undefined> {
+		const testHint =
+			testHintsByLanguage[document.languageId] ?? nullTestHint;
 
 		const patterns: string[] = [];
 		if (testHint.prefix) {
@@ -162,11 +189,19 @@ export class TestFileFinder {
 		let result = this._findTabMatchingPattern(pattern);
 		if (!result) {
 			if (document.languageId === 'python') {
-				result = await this._search.findFilesWithExcludes(pattern, '**/*.pyc', 1, token);
+				result = await this._search.findFilesWithExcludes(
+					pattern,
+					'**/*.pyc',
+					1,
+					token,
+				);
 			} else {
-				result = await this._search.findFilesWithDefaultExcludes(pattern, 1, token);
+				result = await this._search.findFilesWithDefaultExcludes(
+					pattern,
+					1,
+					token,
+				);
 			}
-
 		}
 		return result;
 	}
@@ -174,9 +209,12 @@ export class TestFileFinder {
 	/**
 	 * Given a test file, find the corresponding source file.
 	 */
-	async findFileForTestFile(document: TextDocumentSnapshot, token: CancellationToken): Promise<URI | undefined> {
-
-		const testHint = testHintsByLanguage[document.languageId] ?? nullTestHint;
+	async findFileForTestFile(
+		document: TextDocumentSnapshot,
+		token: CancellationToken,
+	): Promise<URI | undefined> {
+		const testHint =
+			testHintsByLanguage[document.languageId] ?? nullTestHint;
 
 		const basename = resources.basename(document.uri);
 		const parts: string[] = [];
@@ -196,7 +234,11 @@ export class TestFileFinder {
 
 				let result = this._findTabMatchingPattern(pattern);
 				if (!result) {
-					result = await this._search.findFilesWithDefaultExcludes(pattern, 1, token);
+					result = await this._search.findFilesWithDefaultExcludes(
+						pattern,
+						1,
+						token,
+					);
 				}
 				if (result) {
 					return result;
@@ -209,7 +251,6 @@ export class TestFileFinder {
 }
 
 export function isTestFile(candidate: URI | TextDocumentSnapshot): boolean {
-
 	let testHint: TestHint | undefined;
 	if (candidate instanceof TextDocumentSnapshot) {
 		testHint = testHintsByLanguage[candidate.languageId];
@@ -221,10 +262,9 @@ export function isTestFile(candidate: URI | TextDocumentSnapshot): boolean {
 	testHint ??= testHintsBySuffix[sourceFileExtension.replace('.', '')];
 
 	if (testHint) {
-
 		if (testHint.suffixes) {
-			const foundSuffixMatch = testHint.suffixes.some(suffix =>
-				sourceFileName.endsWith(suffix + sourceFileExtension)
+			const foundSuffixMatch = testHint.suffixes.some((suffix) =>
+				sourceFileName.endsWith(suffix + sourceFileExtension),
 			);
 			if (foundSuffixMatch) {
 				return true;
@@ -233,9 +273,10 @@ export function isTestFile(candidate: URI | TextDocumentSnapshot): boolean {
 		if (testHint.prefix && sourceFileName.startsWith(testHint.prefix)) {
 			return true;
 		}
-
 	} else {
-		const foundSuffixMatch = nullTestHint.suffixes.some(suffix => sourceFileName.endsWith(suffix + sourceFileExtension));
+		const foundSuffixMatch = nullTestHint.suffixes.some((suffix) =>
+			sourceFileName.endsWith(suffix + sourceFileExtension),
+		);
 		if (foundSuffixMatch) {
 			return true;
 		}
@@ -246,7 +287,9 @@ export function isTestFile(candidate: URI | TextDocumentSnapshot): boolean {
 	return false;
 }
 
-export function suggestTestFileBasename(document: TextDocumentSnapshot): string {
+export function suggestTestFileBasename(
+	document: TextDocumentSnapshot,
+): string {
 	const testHint = testHintsByLanguage[document.languageId] ?? nullTestHint;
 	const basename = resources.basename(document.uri);
 
@@ -255,17 +298,18 @@ export function suggestTestFileBasename(document: TextDocumentSnapshot): string 
 	}
 
 	const ext = resources.extname(document.uri);
-	const suffix = testHint.suffixes && testHint.suffixes.length > 0
-		? testHint.suffixes[0]
-		: '.test';
+	const suffix =
+		testHint.suffixes && testHint.suffixes.length > 0
+			? testHint.suffixes[0]
+			: '.test';
 
 	return basename.replace(`${ext}`, `${suffix}${ext}`);
 }
 
-
 export function suggestTestFileDir(document: TextDocumentSnapshot): URI {
 	const srcFileLocation = resources.joinPath(document.uri, '..'); // same folder
-	if (document.languageId === 'java') { // Java
+	if (document.languageId === 'java') {
+		// Java
 		/*
 		 * According to the standard project structure of Maven, the corresponding test file for
 		 * `$module/src/main/java/...$packages/$Class.java` is usually `$module/src/test/java/...$packages/${Class}Test.java`.
@@ -276,16 +320,23 @@ export function suggestTestFileDir(document: TextDocumentSnapshot): URI {
 		 */
 		const srcFilePath = srcFileLocation.path;
 		if (srcFilePath.includes('/src/main/')) {
-			const testFilePath = srcFilePath.replace('/src/main/', '/src/test/');
+			const testFilePath = srcFilePath.replace(
+				'/src/main/',
+				'/src/test/',
+			);
 			return srcFileLocation.with({ path: testFilePath });
 		}
 	}
 	return srcFileLocation; // same folder
 }
 
-export function suggestUntitledTestFileLocation(document: TextDocumentSnapshot): URI {
+export function suggestUntitledTestFileLocation(
+	document: TextDocumentSnapshot,
+): URI {
 	const newBasename = suggestTestFileBasename(document);
 	const newLocation = suggestTestFileDir(document);
-	const testFileUri = URI.joinPath(newLocation, newBasename).with({ scheme: Schemas.untitled });
+	const testFileUri = URI.joinPath(newLocation, newBasename).with({
+		scheme: Schemas.untitled,
+	});
 	return testFileUri;
 }

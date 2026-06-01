@@ -25,7 +25,9 @@
 }
 
 /* Badge-only mode - compact layout next to command center */
-.agent-status-enabled:not(.unified-agents-bar) .command-center .action-item.agent-status-container {
+.agent-status-enabled:not(.unified-agents-bar)
+	.command-center
+	.action-item.agent-status-container {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: nowrap;
@@ -160,8 +162,14 @@
 }
 
 @keyframes agentStatusFadeIn {
-	from { opacity: 0; transform: translateY(2px); }
-	to { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(2px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 /* Icons and indicators */
@@ -182,9 +190,17 @@
 	flex-shrink: 0;
 }
 
-.agent-status-indicator { gap: 4px; }
-.agent-status-left-icon { gap: 3px; justify-content: center; }
-.agent-status-search { justify-content: center; -webkit-app-region: no-drag; }
+.agent-status-indicator {
+	gap: 4px;
+}
+.agent-status-left-icon {
+	gap: 3px;
+	justify-content: center;
+}
+.agent-status-search {
+	justify-content: center;
+	-webkit-app-region: no-drag;
+}
 
 .agent-status-pill.has-active .agent-status-indicator,
 .agent-status-pill.has-active .agent-status-send,
@@ -192,9 +208,16 @@
 	opacity: 1;
 }
 
-.agent-status-send.hidden { display: none; }
-.agent-status-search:hover { opacity: 1; }
-.agent-status-search:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+.agent-status-send.hidden {
+	display: none;
+}
+.agent-status-search:hover {
+	opacity: 1;
+}
+.agent-status-search:focus {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: -1px;
+}
 
 /* Text elements */
 .agent-status-text,
@@ -224,7 +247,8 @@
 	align-items: center;
 	justify-content: center;
 	box-sizing: border-box;
-	border: 1px solid color-mix(in srgb, var(--vscode-descriptionForeground) 50%, transparent);
+	border: 1px solid
+		color-mix(in srgb, var(--vscode-descriptionForeground) 50%, transparent);
 	border-radius: 3px;
 	height: 16px;
 	line-height: 14px;
@@ -240,7 +264,11 @@
 .agent-status-esc-button:hover,
 .agent-status-enter-button:hover {
 	color: var(--vscode-commandCenter-foreground);
-	border-color: color-mix(in srgb, var(--vscode-commandCenter-foreground) 60%, transparent);
+	border-color: color-mix(
+		in srgb,
+		var(--vscode-commandCenter-foreground) 60%,
+		transparent
+	);
 }
 
 .agent-status-esc-button:focus,
@@ -271,7 +299,10 @@
 	width: 1px;
 	align-self: stretch;
 	margin: 4px 0;
-	background-color: var(--vscode-commandCenter-border, rgba(128, 128, 128, 0.35));
+	background-color: var(
+		--vscode-commandCenter-border,
+		rgba(128, 128, 128, 0.35)
+	);
 	flex-shrink: 0;
 	pointer-events: none;
 }
@@ -302,10 +333,18 @@
 	background-color: var(--vscode-agentStatusIndicator-background);
 }
 
-.agent-status-badge-section:first-child { border-radius: 5px 0 0 5px; }
-.agent-status-badge-section:last-child { border-radius: 0 5px 5px 0; }
-.agent-status-badge-section:only-child { border-radius: 5px; }
-.agent-status-badge-section:hover { background-color: var(--vscode-commandCenter-activeBackground); }
+.agent-status-badge-section:first-child {
+	border-radius: 5px 0 0 5px;
+}
+.agent-status-badge-section:last-child {
+	border-radius: 0 5px 5px 0;
+}
+.agent-status-badge-section:only-child {
+	border-radius: 5px;
+}
+.agent-status-badge-section:hover {
+	background-color: var(--vscode-commandCenter-activeBackground);
+}
 .agent-status-badge-section:focus {
 	outline: 1px solid var(--vscode-focusBorder);
 	outline-offset: -1px;
@@ -348,13 +387,16 @@
 /* Separator between sections */
 .agent-status-badge-section + .agent-status-badge-section::before,
 .agent-status-input-area + .agent-status-badge-section::before {
-	content: '';
+	content: "";
 	position: absolute;
 	left: 0;
 	top: 4px;
 	bottom: 4px;
 	width: 1px;
-	background-color: var(--vscode-commandCenter-border, rgba(128, 128, 128, 0.35));
+	background-color: var(
+		--vscode-commandCenter-border,
+		rgba(128, 128, 128, 0.35)
+	);
 }
 
 /* Sparkle section */
@@ -388,7 +430,9 @@
 }
 
 /* In compact mode, no left radius on sparkle - it sits flush next to other sections */
-.agent-status-pill.compact-mode .agent-status-badge-section.sparkle .action-container {
+.agent-status-pill.compact-mode
+	.agent-status-badge-section.sparkle
+	.action-container {
 	border-radius: 0;
 	padding: 0 5px 0 6px;
 }

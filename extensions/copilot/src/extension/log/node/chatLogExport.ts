@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LoggedInfo, LoggedInfoKind } from '../../../platform/requestLogger/common/requestLogger';
+import {
+	LoggedInfo,
+	LoggedInfoKind,
+} from '../../../platform/requestLogger/common/requestLogger';
 
 /**
  * Type for a log entry in an exported chat log file.
@@ -127,18 +130,18 @@ async function entryToJson(entry: LoggedInfo): Promise<object> {
 export async function createExportedPrompt(
 	label: string,
 	entries: LoggedInfo[],
-	options?: { promptId?: string; hasSeen?: boolean }
+	options?: { promptId?: string; hasSeen?: boolean },
 ): Promise<ExportedPrompt> {
 	const logs: ExportedLogEntry[] = [];
 	for (const entry of entries) {
 		try {
-			logs.push(await entryToJson(entry) as ExportedLogEntry);
+			logs.push((await entryToJson(entry)) as ExportedLogEntry);
 		} catch (error) {
 			logs.push({
 				id: entry.id,
 				kind: 'error',
 				error: error?.toString() || 'Unknown error',
-				timestamp: new Date().toISOString()
+				timestamp: new Date().toISOString(),
 			});
 		}
 	}
@@ -148,7 +151,7 @@ export async function createExportedPrompt(
 		promptId: options?.promptId,
 		hasSeen: options?.hasSeen,
 		logCount: logs.length,
-		logs
+		logs,
 	};
 }
 
@@ -161,7 +164,7 @@ export async function createExportedPrompt(
  */
 export function assembleChatLogExport(
 	prompts: ExportedPrompt[],
-	mcpServers?: object[]
+	mcpServers?: object[],
 ): ChatLogExport {
 	const totalLogEntries = prompts.reduce((sum, p) => sum + p.logCount, 0);
 
@@ -170,7 +173,7 @@ export function assembleChatLogExport(
 		totalPrompts: prompts.length,
 		totalLogEntries,
 		prompts,
-		mcpServers
+		mcpServers,
 	};
 }
 

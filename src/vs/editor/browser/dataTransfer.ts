@@ -3,21 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DataTransfers } from '../../base/browser/dnd.js';
-import { createFileDataTransferItem, createStringDataTransferItem, IDataTransferItem, UriList, VSDataTransfer } from '../../base/common/dataTransfer.js';
-import { Mimes } from '../../base/common/mime.js';
-import { URI } from '../../base/common/uri.js';
-import { CodeDataTransfers, getPathForFile } from '../../platform/dnd/browser/dnd.js';
-
+import { DataTransfers } from "../../base/browser/dnd.js";
+import {
+	createFileDataTransferItem,
+	createStringDataTransferItem,
+	IDataTransferItem,
+	UriList,
+	VSDataTransfer,
+} from "../../base/common/dataTransfer.js";
+import { Mimes } from "../../base/common/mime.js";
+import { URI } from "../../base/common/uri.js";
+import {
+	CodeDataTransfers,
+	getPathForFile,
+} from "../../platform/dnd/browser/dnd.js";
 
 export function toVSDataTransfer(dataTransfer: DataTransfer): VSDataTransfer {
 	const vsDataTransfer = new VSDataTransfer();
 	for (const item of dataTransfer.items) {
 		const type = item.type;
-		if (item.kind === 'string') {
-			const asStringValue = new Promise<string>(resolve => item.getAsString(resolve));
+		if (item.kind === "string") {
+			const asStringValue = new Promise<string>((resolve) =>
+				item.getAsString(resolve),
+			);
 			vsDataTransfer.append(type, createStringDataTransferItem(asStringValue));
-		} else if (item.kind === 'file') {
+		} else if (item.kind === "file") {
 			const file = item.getAsFile();
 			if (file) {
 				vsDataTransfer.append(type, createFileDataTransferItemFromFile(file));
@@ -42,7 +52,10 @@ const INTERNAL_DND_MIME_TYPES = Object.freeze([
 	DataTransfers.INTERNAL_URI_LIST,
 ]);
 
-export function toExternalVSDataTransfer(sourceDataTransfer: DataTransfer, overwriteUriList = false): VSDataTransfer {
+export function toExternalVSDataTransfer(
+	sourceDataTransfer: DataTransfer,
+	overwriteUriList = false,
+): VSDataTransfer {
 	const vsDataTransfer = toVSDataTransfer(sourceDataTransfer);
 
 	// Try to expose the internal uri-list type as the standard type
@@ -70,7 +83,10 @@ export function toExternalVSDataTransfer(sourceDataTransfer: DataTransfer, overw
 			}
 
 			if (editorData.length) {
-				vsDataTransfer.replace(Mimes.uriList, createStringDataTransferItem(UriList.create(editorData)));
+				vsDataTransfer.replace(
+					Mimes.uriList,
+					createStringDataTransferItem(UriList.create(editorData)),
+				);
 			}
 		}
 	}

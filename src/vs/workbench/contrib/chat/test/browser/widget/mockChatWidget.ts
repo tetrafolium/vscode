@@ -3,16 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../../../base/common/event.js';
-import { Disposable, IDisposable } from '../../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import { IChatWidget, IChatWidgetService } from '../../../browser/chat.js';
-import { ChatAgentLocation } from '../../../common/constants.js';
+import { Event } from "../../../../../../base/common/event.js";
+import {
+	Disposable,
+	IDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import { IChatWidget, IChatWidgetService } from "../../../browser/chat.js";
+import { ChatAgentLocation } from "../../../common/constants.js";
 
 export class MockChatWidgetService implements IChatWidgetService {
 	readonly onDidAddWidget: Event<IChatWidget> = Event.None;
 	readonly onDidBackgroundSession: Event<URI> = Event.None;
-	readonly onDidChangeFocusedWidget: Event<IChatWidget | undefined> = Event.None;
+	readonly onDidChangeFocusedWidget: Event<IChatWidget | undefined> =
+		Event.None;
 	readonly onDidChangeFocusedSession: Event<void> = Event.None;
 
 	readonly _serviceBrand: undefined;
@@ -30,7 +34,9 @@ export class MockChatWidgetService implements IChatWidgetService {
 		return undefined;
 	}
 
-	getWidgetsByLocations(location: ChatAgentLocation): ReadonlyArray<IChatWidget> {
+	getWidgetsByLocations(
+		location: ChatAgentLocation,
+	): ReadonlyArray<IChatWidget> {
 		return [];
 	}
 
@@ -43,11 +49,11 @@ export class MockChatWidgetService implements IChatWidgetService {
 	}
 
 	getAllWidgets(): ReadonlyArray<IChatWidget> {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	openSession(sessionResource: URI): Promise<IChatWidget | undefined> {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	register(newWidget: IChatWidget): IDisposable {

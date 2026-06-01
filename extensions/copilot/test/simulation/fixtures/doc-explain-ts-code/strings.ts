@@ -28,7 +28,7 @@ export function getNLines(str: string, n = 1): string {
 }
 
 export function singleLetterHash(n: number): string {
-	const LETTERS_CNT = (CharCode.Z - CharCode.A + 1);
+	const LETTERS_CNT = CharCode.Z - CharCode.A + 1;
 
 	n = n % (2 * LETTERS_CNT);
 

@@ -3,28 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { localize } from '../../../../../nls.js';
-import { BrowserViewUri } from '../../../../../platform/browserView/common/browserViewUri.js';
-import { IInvokeFunctionResult, IPlaywrightService } from '../../../../../platform/browserView/common/playwrightService.js';
-import { IAgentNetworkFilterService } from '../../../../../platform/networkFilter/common/networkFilterService.js';
-import { IEditorService } from '../../../../services/editor/common/editorService.js';
-import { IToolInvocation, IToolResult } from '../../../chat/common/tools/languageModelToolsService.js';
-import { BrowserEditorInput } from '../../common/browserEditorInput.js';
-import { BrowserViewSharingState, IBrowserViewWorkbenchService } from '../../common/browserView.js';
+import { MarkdownString } from "../../../../../base/common/htmlContent.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { localize } from "../../../../../nls.js";
+import { BrowserViewUri } from "../../../../../platform/browserView/common/browserViewUri.js";
+import {
+	IInvokeFunctionResult,
+	IPlaywrightService,
+} from "../../../../../platform/browserView/common/playwrightService.js";
+import { IAgentNetworkFilterService } from "../../../../../platform/networkFilter/common/networkFilterService.js";
+import { IEditorService } from "../../../../services/editor/common/editorService.js";
+import {
+	IToolInvocation,
+	IToolResult,
+} from "../../../chat/common/tools/languageModelToolsService.js";
+import { BrowserEditorInput } from "../../common/browserEditorInput.js";
+import {
+	BrowserViewSharingState,
+	IBrowserViewWorkbenchService,
+} from "../../common/browserView.js";
 
 // eslint-disable-next-line local/code-import-patterns
-import type { Page } from 'playwright-core';
+import type { Page } from "playwright-core";
 
-export const DEFAULT_ELEMENT_LABEL = localize('browser.element', 'element');
+export const DEFAULT_ELEMENT_LABEL = localize("browser.element", "element");
 
 /**
  * Extracts the session ID from a tool invocation context.
  * Falls back to a default string when no session context is available.
  */
 export function getSessionId(invocation: IToolInvocation): string {
-	return invocation.context?.sessionResource?.toString() ?? '<default>';
+	return invocation.context?.sessionResource?.toString() ?? "<default>";
 }
 
 export interface FormatBrowserEditorLinesOptions {
@@ -43,36 +52,55 @@ export interface FormatBrowserEditorLinesOptions {
  * provided, pages whose URL is blocked by network policy are masked to avoid
  * leaking title or URL to the model.
  */
-export function formatBrowserEditorList(editorService: IEditorService, editors: readonly BrowserEditorInput[], options?: FormatBrowserEditorLinesOptions): string {
+export function formatBrowserEditorList(
+	editorService: IEditorService,
+	editors: readonly BrowserEditorInput[],
+	options?: FormatBrowserEditorLinesOptions,
+): string {
 	const activeEditor = editorService.activeEditor;
 	const visibleEditors = new Set(editorService.visibleEditors);
-	const indent = options?.indent ?? '';
+	const indent = options?.indent ?? "";
 	const filterService = options?.agentNetworkFilterService;
-	return editors.map((editor, index) => {
-		const url = editor.url || 'about:blank';
+	return editors
+		.map((editor, index) => {
+			const url = editor.url || "about:blank";
 
-		// If the page URL is blocked by network policy, mask its details.
-		let blocked = false;
-		if (filterService && url !== 'about:blank') {
-			try { blocked = !filterService.isUriAllowed(URI.parse(url)); } catch { }
-		}
+			// If the page URL is blocked by network policy, mask its details.
+			let blocked = false;
+			if (filterService && url !== "about:blank") {
+				try {
+					blocked = !filterService.isUriAllowed(URI.parse(url));
+				} catch {}
+			}
 
-		const title = blocked ? localize('browser.blockedByPolicy', "Blocked by network domain policy") : (editor.title || 'Untitled');
-		const displayUrl = blocked ? '' : ` (${url})`;
-		const hint = editor === activeEditor ? ' (active)' : visibleEditors.has(editor) ? ' (visible)' : ' (not visible)';
-		const id = options?.excludeIds ? '' : `[${editor.id}] `;
+			const title = blocked
+				? localize(
+						"browser.blockedByPolicy",
+						"Blocked by network domain policy",
+					)
+				: editor.title || "Untitled";
+			const displayUrl = blocked ? "" : ` (${url})`;
+			const hint =
+				editor === activeEditor
+					? " (active)"
+					: visibleEditors.has(editor)
+						? " (visible)"
+						: " (not visible)";
+			const id = options?.excludeIds ? "" : `[${editor.id}] `;
 
-		// By default, use numbers only if we're excluding IDs, so models don't get confused about which ID to use.
-		const bullet = (options?.numbered ?? options?.excludeIds) ? `${index + 1}. ` : '- ';
-		return `${indent}${bullet}${id}${title}${displayUrl}${hint}`;
-	}).join('\n');
+			// By default, use numbers only if we're excluding IDs, so models don't get confused about which ID to use.
+			const bullet =
+				(options?.numbered ?? options?.excludeIds) ? `${index + 1}. ` : "- ";
+			return `${indent}${bullet}${id}${title}${displayUrl}${hint}`;
+		})
+		.join("\n");
 }
 
 /**
  * Creates a markdown link to a browser page.
  */
 export function createBrowserPageLink(pageId: string | URI): string {
-	if (typeof pageId === 'string') {
+	if (typeof pageId === "string") {
 		pageId = BrowserViewUri.forId(pageId);
 	}
 	return `[${BrowserEditorInput.DEFAULT_LABEL}](${pageId.toString()}?vscodeLinkType=browser)`;
@@ -88,7 +116,12 @@ export async function playwrightInvokeRaw<TArgs extends unknown[], TReturn>(
 	fn: (page: Page, ...args: TArgs) => Promise<TReturn>,
 	...args: TArgs
 ): Promise<TReturn> {
-	return playwrightService.invokeFunctionRaw(sessionId, pageId, fn.toString(), ...args);
+	return playwrightService.invokeFunctionRaw(
+		sessionId,
+		pageId,
+		fn.toString(),
+		...args,
+	);
 }
 
 /**
@@ -106,7 +139,12 @@ export async function playwrightInvoke<TArgs extends unknown[], TReturn>(
 	...args: TArgs
 ): Promise<IToolResult> {
 	try {
-		const result = await playwrightService.invokeFunction(sessionId, pageId, fn.toString(), args);
+		const result = await playwrightService.invokeFunction(
+			sessionId,
+			pageId,
+			fn.toString(),
+			args,
+		);
 		return invokeFunctionResultToToolResult(result);
 	} catch (e) {
 		return errorResult(e instanceof Error ? e.message : String(e));
@@ -117,36 +155,58 @@ export async function playwrightInvoke<TArgs extends unknown[], TReturn>(
  * Convert an {@link IInvokeFunctionResult} to an {@link IToolResult},
  * including any {@link IInvokeFunctionResult.deferredResultId}.
  */
-export function invokeFunctionResultToToolResult(result: IInvokeFunctionResult, code?: string): IToolResult {
-	const content: IToolResult['content'] = [];
+export function invokeFunctionResultToToolResult(
+	result: IInvokeFunctionResult,
+	code?: string,
+): IToolResult {
+	const content: IToolResult["content"] = [];
 	if (result.result !== undefined) {
-		content.push({ kind: 'text', value: `Result: ${JSON.stringify(result.result)}` });
+		content.push({
+			kind: "text",
+			value: `Result: ${JSON.stringify(result.result)}`,
+		});
 	}
 	if (result.error) {
-		content.push({ kind: 'text', value: result.error });
+		content.push({ kind: "text", value: result.error });
 	}
 	if (result.deferredResultId) {
-		content.push({ kind: 'text', value: `[deferredResultId=${result.deferredResultId}] The code has not finished executing yet. Call run_playwright_code again with this deferredResultId and the same pageId (no code) to continue waiting.` });
+		content.push({
+			kind: "text",
+			value: `[deferredResultId=${result.deferredResultId}] The code has not finished executing yet. Call run_playwright_code again with this deferredResultId and the same pageId (no code) to continue waiting.`,
+		});
 	}
-	content.push({ kind: 'text', value: result.summary });
+	content.push({ kind: "text", value: result.summary });
 	return {
 		content,
-		...(code ? {
-			toolResultDetails: {
-				input: code,
-				inputLanguage: 'javascript',
-				output: result.result || result.error
-					? [{ type: 'embed' as const, isText: true, value: JSON.stringify(result.result ?? result.error, null, 2) }]
-					: [],
-				isError: !!result.error,
-			},
-		} : {}),
+		...(code
+			? {
+					toolResultDetails: {
+						input: code,
+						inputLanguage: "javascript",
+						output:
+							result.result || result.error
+								? [
+										{
+											type: "embed" as const,
+											isText: true,
+											value: JSON.stringify(
+												result.result ?? result.error,
+												null,
+												2,
+											),
+										},
+									]
+								: [],
+						isError: !!result.error,
+					},
+				}
+			: {}),
 	};
 }
 
 export function errorResult(message: string): IToolResult {
 	return {
-		content: [{ kind: 'text', value: message }],
+		content: [{ kind: "text", value: message }],
 		toolResultError: message,
 	};
 }
@@ -162,10 +222,10 @@ export function findExistingPagesByHost(
 	options?: {
 		includeBlank?: boolean;
 		sharingState?: BrowserViewSharingState;
-	}
+	},
 ): BrowserEditorInput[] {
 	const parsed = URL.parse(url);
-	if (!parsed || (parsed.protocol !== 'file:' && !parsed.host)) {
+	if (!parsed || (parsed.protocol !== "file:" && !parsed.host)) {
 		return [];
 	}
 
@@ -174,18 +234,22 @@ export function findExistingPagesByHost(
 		if (!(editor instanceof BrowserEditorInput)) {
 			continue;
 		}
-		if (options?.sharingState && editor.model?.sharingState !== options.sharingState) {
+		if (
+			options?.sharingState &&
+			editor.model?.sharingState !== options.sharingState
+		) {
 			continue;
 		}
-		const editorUrl = URL.parse(editor.url || '');
+		const editorUrl = URL.parse(editor.url || "");
 		if (
-			options?.includeBlank && (!editor.url || editor.url === 'about:blank') ||
+			(options?.includeBlank &&
+				(!editor.url || editor.url === "about:blank")) ||
 			editorUrl?.host === parsed.host ||
-			(parsed.protocol === 'file:' && editorUrl?.protocol === 'file:') ||
-			(editorUrl?.host && parsed.host && (
-				editorUrl.host.endsWith('.' + parsed.host) ||
-				parsed.host.endsWith('.' + editorUrl.host)
-			))
+			(parsed.protocol === "file:" && editorUrl?.protocol === "file:") ||
+			(editorUrl?.host &&
+				parsed.host &&
+				(editorUrl.host.endsWith("." + parsed.host) ||
+					parsed.host.endsWith("." + editorUrl.host)))
 		) {
 			results.push(editor);
 		}
@@ -200,19 +264,30 @@ export function findExistingPagesByHost(
 export async function getExistingPagesResult(
 	editorService: IEditorService,
 	existing: BrowserEditorInput[],
-	formatOptions?: FormatBrowserEditorLinesOptions
+	formatOptions?: FormatBrowserEditorLinesOptions,
 ): Promise<IToolResult | undefined> {
 	if (existing.length === 0) {
 		return undefined;
 	}
 
-	const list = formatBrowserEditorList(editorService, existing, { indent: '  ', ...formatOptions });
-	const links = existing.map(e => createBrowserPageLink(e.id));
+	const list = formatBrowserEditorList(editorService, existing, {
+		indent: "  ",
+		...formatOptions,
+	});
+	const links = existing.map((e) => createBrowserPageLink(e.id));
 	return {
-		content: [{
-			kind: 'text',
-			value: `At least one similar page is already open:\n${list}\n\nUse an existing page or pass \`forceNew: true\` to open a new one.`
-		}],
-		toolResultMessage: new MarkdownString(localize('browser.open.alreadyOpen', "Already open: {0}", links.join(', '))),
+		content: [
+			{
+				kind: "text",
+				value: `At least one similar page is already open:\n${list}\n\nUse an existing page or pass \`forceNew: true\` to open a new one.`,
+			},
+		],
+		toolResultMessage: new MarkdownString(
+			localize(
+				"browser.open.alreadyOpen",
+				"Already open: {0}",
+				links.join(", "),
+			),
+		),
 	};
 }

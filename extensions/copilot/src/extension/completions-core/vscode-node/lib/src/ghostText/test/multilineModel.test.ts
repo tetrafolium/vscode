@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { MultilineModelFeatures, PromptFeatures, hasComment, requestMultilineScore } from '../multilineModel';
+import {
+	MultilineModelFeatures,
+	PromptFeatures,
+	hasComment,
+	requestMultilineScore,
+} from '../multilineModel';
 
 suite('multilineModel tests', function () {
 	this.timeout(10000);
@@ -57,7 +62,10 @@ suite('multilineModel tests', function () {
 
 		for (const testCase of testCases) {
 			const { string, language, lineNumber, expected } = testCase;
-			assert.strictEqual(hasComment(string, lineNumber, language), expected);
+			assert.strictEqual(
+				hasComment(string, lineNumber, language),
+				expected,
+			);
 		}
 	});
 
@@ -150,15 +158,36 @@ suite('multilineModel tests', function () {
 			assert.strictEqual(promptFeatures.length, length);
 			assert.strictEqual(promptFeatures.firstLineLength, firstLineLength);
 			assert.strictEqual(promptFeatures.lastLineLength, lastLineLength);
-			assert.strictEqual(promptFeatures.lastLineRstripLength, lastLineRstripLength);
-			assert.strictEqual(promptFeatures.lastLineStripLength, lastLineStripLength);
+			assert.strictEqual(
+				promptFeatures.lastLineRstripLength,
+				lastLineRstripLength,
+			);
+			assert.strictEqual(
+				promptFeatures.lastLineStripLength,
+				lastLineStripLength,
+			);
 			assert.strictEqual(promptFeatures.rstripLength, rstripLength);
 			assert.strictEqual(promptFeatures.stripLength, stripLength);
-			assert.strictEqual(promptFeatures.rstripLastLineLength, rstripLastLineLength);
-			assert.strictEqual(promptFeatures.rstripLastLineStripLength, rstripLastLineStripLength);
-			assert.strictEqual(promptFeatures.secondToLastLineHasComment, secondToLastLineHasComment);
-			assert.strictEqual(promptFeatures.rstripSecondToLastLineHasComment, rstripSecondToLastLineHasComment);
-			assert.strictEqual(promptFeatures.prefixEndsWithNewline, prefixEndsWithNewline);
+			assert.strictEqual(
+				promptFeatures.rstripLastLineLength,
+				rstripLastLineLength,
+			);
+			assert.strictEqual(
+				promptFeatures.rstripLastLineStripLength,
+				rstripLastLineStripLength,
+			);
+			assert.strictEqual(
+				promptFeatures.secondToLastLineHasComment,
+				secondToLastLineHasComment,
+			);
+			assert.strictEqual(
+				promptFeatures.rstripSecondToLastLineHasComment,
+				rstripSecondToLastLineHasComment,
+			);
+			assert.strictEqual(
+				promptFeatures.prefixEndsWithNewline,
+				prefixEndsWithNewline,
+			);
 			assert.strictEqual(promptFeatures.lastChar, lastChar);
 			assert.strictEqual(promptFeatures.rstripLastChar, rstripLastChar);
 			assert.strictEqual(promptFeatures.firstChar, firstChar);
@@ -210,62 +239,132 @@ suite('multilineModel tests', function () {
 			firstChar: ' ',
 			lstripFirstChar: '',
 		};
-		const multilineFeatures = new MultilineModelFeatures(prefix, suffix, language);
+		const multilineFeatures = new MultilineModelFeatures(
+			prefix,
+			suffix,
+			language,
+		);
 		assert.strictEqual(multilineFeatures.language, language);
-		assert.strictEqual(multilineFeatures.prefixFeatures.firstLineLength, prefixFeatures.firstLineLength);
-		assert.strictEqual(multilineFeatures.prefixFeatures.lastLineLength, prefixFeatures.lastLineLength);
-		assert.strictEqual(multilineFeatures.prefixFeatures.lastLineRstripLength, prefixFeatures.lastLineRstripLength);
-		assert.strictEqual(multilineFeatures.prefixFeatures.lastLineStripLength, prefixFeatures.lastLineStripLength);
-		assert.strictEqual(multilineFeatures.prefixFeatures.rstripLength, prefixFeatures.rstripLength);
-		assert.strictEqual(multilineFeatures.prefixFeatures.stripLength, prefixFeatures.stripLength);
-		assert.strictEqual(multilineFeatures.prefixFeatures.rstripLastLineLength, prefixFeatures.rstripLastLineLength);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.firstLineLength,
+			prefixFeatures.firstLineLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.lastLineLength,
+			prefixFeatures.lastLineLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.lastLineRstripLength,
+			prefixFeatures.lastLineRstripLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.lastLineStripLength,
+			prefixFeatures.lastLineStripLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.rstripLength,
+			prefixFeatures.rstripLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.stripLength,
+			prefixFeatures.stripLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.rstripLastLineLength,
+			prefixFeatures.rstripLastLineLength,
+		);
 		assert.strictEqual(
 			multilineFeatures.prefixFeatures.rstripLastLineStripLength,
-			prefixFeatures.rstripLastLineStripLength
+			prefixFeatures.rstripLastLineStripLength,
 		);
 		assert.strictEqual(
 			multilineFeatures.prefixFeatures.secondToLastLineHasComment,
-			prefixFeatures.secondToLastLineHasComment
+			prefixFeatures.secondToLastLineHasComment,
 		);
 		assert.strictEqual(
 			multilineFeatures.prefixFeatures.rstripSecondToLastLineHasComment,
-			prefixFeatures.rstripSecondToLastLineHasComment
+			prefixFeatures.rstripSecondToLastLineHasComment,
 		);
 		assert.strictEqual(
 			multilineFeatures.prefixFeatures.prefixEndsWithNewline,
-			prefixFeatures.prefixEndsWithNewline
+			prefixFeatures.prefixEndsWithNewline,
 		);
-		assert.strictEqual(multilineFeatures.prefixFeatures.lastChar, prefixFeatures.lastChar);
-		assert.strictEqual(multilineFeatures.prefixFeatures.rstripLastChar, prefixFeatures.rstripLastChar);
-		assert.strictEqual(multilineFeatures.prefixFeatures.firstChar, prefixFeatures.firstChar);
-		assert.strictEqual(multilineFeatures.prefixFeatures.lstripFirstChar, prefixFeatures.lstripFirstChar);
-		assert.strictEqual(multilineFeatures.suffixFeatures.firstLineLength, suffixFeatures.firstLineLength);
-		assert.strictEqual(multilineFeatures.suffixFeatures.lastLineLength, suffixFeatures.lastLineLength);
-		assert.strictEqual(multilineFeatures.suffixFeatures.lastLineRstripLength, suffixFeatures.lastLineRstripLength);
-		assert.strictEqual(multilineFeatures.suffixFeatures.lastLineStripLength, suffixFeatures.lastLineStripLength);
-		assert.strictEqual(multilineFeatures.suffixFeatures.rstripLength, suffixFeatures.rstripLength);
-		assert.strictEqual(multilineFeatures.suffixFeatures.stripLength, suffixFeatures.stripLength);
-		assert.strictEqual(multilineFeatures.suffixFeatures.rstripLastLineLength, suffixFeatures.rstripLastLineLength);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.lastChar,
+			prefixFeatures.lastChar,
+		);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.rstripLastChar,
+			prefixFeatures.rstripLastChar,
+		);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.firstChar,
+			prefixFeatures.firstChar,
+		);
+		assert.strictEqual(
+			multilineFeatures.prefixFeatures.lstripFirstChar,
+			prefixFeatures.lstripFirstChar,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.firstLineLength,
+			suffixFeatures.firstLineLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.lastLineLength,
+			suffixFeatures.lastLineLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.lastLineRstripLength,
+			suffixFeatures.lastLineRstripLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.lastLineStripLength,
+			suffixFeatures.lastLineStripLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.rstripLength,
+			suffixFeatures.rstripLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.stripLength,
+			suffixFeatures.stripLength,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.rstripLastLineLength,
+			suffixFeatures.rstripLastLineLength,
+		);
 		assert.strictEqual(
 			multilineFeatures.suffixFeatures.rstripLastLineStripLength,
-			suffixFeatures.rstripLastLineStripLength
+			suffixFeatures.rstripLastLineStripLength,
 		);
 		assert.strictEqual(
 			multilineFeatures.suffixFeatures.secondToLastLineHasComment,
-			suffixFeatures.secondToLastLineHasComment
+			suffixFeatures.secondToLastLineHasComment,
 		);
 		assert.strictEqual(
 			multilineFeatures.suffixFeatures.rstripSecondToLastLineHasComment,
-			suffixFeatures.rstripSecondToLastLineHasComment
+			suffixFeatures.rstripSecondToLastLineHasComment,
 		);
 		assert.strictEqual(
 			multilineFeatures.suffixFeatures.prefixEndsWithNewline,
-			suffixFeatures.prefixEndsWithNewline
+			suffixFeatures.prefixEndsWithNewline,
 		);
-		assert.strictEqual(multilineFeatures.suffixFeatures.lastChar, suffixFeatures.lastChar);
-		assert.strictEqual(multilineFeatures.suffixFeatures.rstripLastChar, suffixFeatures.rstripLastChar);
-		assert.strictEqual(multilineFeatures.suffixFeatures.firstChar, suffixFeatures.firstChar);
-		assert.strictEqual(multilineFeatures.suffixFeatures.lstripFirstChar, suffixFeatures.lstripFirstChar);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.lastChar,
+			suffixFeatures.lastChar,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.rstripLastChar,
+			suffixFeatures.rstripLastChar,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.firstChar,
+			suffixFeatures.firstChar,
+		);
+		assert.strictEqual(
+			multilineFeatures.suffixFeatures.lstripFirstChar,
+			suffixFeatures.lstripFirstChar,
+		);
 	});
 
 	test('MultilineModelFeatures.constructFeatures() returns correct feature array', function () {
@@ -330,52 +429,72 @@ suite('multilineModel tests', function () {
 		];
 		const expectedLangFeatures: number[] = new Array<number>(8).fill(0);
 		expectedLangFeatures[5] = 1;
-		const expectedPrefixLastCharFeatures: number[] = new Array<number>(96).fill(0);
+		const expectedPrefixLastCharFeatures: number[] = new Array<number>(
+			96,
+		).fill(0);
 		expectedPrefixLastCharFeatures[10] = 1;
-		const expectedPrefiRstripLastCharFeatures: number[] = new Array<number>(96).fill(0);
+		const expectedPrefiRstripLastCharFeatures: number[] = new Array<number>(
+			96,
+		).fill(0);
 		expectedPrefiRstripLastCharFeatures[10] = 1;
-		const expectedSuffixFirstCharFeatures: number[] = new Array<number>(96).fill(0);
+		const expectedSuffixFirstCharFeatures: number[] = new Array<number>(
+			96,
+		).fill(0);
 		expectedSuffixFirstCharFeatures[1] = 1;
-		const expectedSuffixLstripFirstCharFeatures: number[] = new Array<number>(96).fill(0);
+		const expectedSuffixLstripFirstCharFeatures: number[] =
+			new Array<number>(96).fill(0);
 		expectedSuffixLstripFirstCharFeatures[0] = 1;
 
-		const multilineFeatures = new MultilineModelFeatures(prefix, suffix, language);
+		const multilineFeatures = new MultilineModelFeatures(
+			prefix,
+			suffix,
+			language,
+		);
 		const multilineFeatureArray = multilineFeatures.constructFeatures();
 		// Numeric features match
-		assert.deepStrictEqual(multilineFeatureArray.slice(0, expectedNumericFeatures.length), expectedNumericFeatures);
+		assert.deepStrictEqual(
+			multilineFeatureArray.slice(0, expectedNumericFeatures.length),
+			expectedNumericFeatures,
+		);
 		// Language features match
 		assert.deepStrictEqual(
-			multilineFeatureArray.slice(expectedNumericFeatures.length, expectedNumericFeatures.length + 8),
-			expectedLangFeatures
+			multilineFeatureArray.slice(
+				expectedNumericFeatures.length,
+				expectedNumericFeatures.length + 8,
+			),
+			expectedLangFeatures,
 		);
 		// Prefix last char features match
 		assert.deepStrictEqual(
-			multilineFeatureArray.slice(expectedNumericFeatures.length + 8, expectedNumericFeatures.length + 8 + 96),
-			expectedPrefixLastCharFeatures
+			multilineFeatureArray.slice(
+				expectedNumericFeatures.length + 8,
+				expectedNumericFeatures.length + 8 + 96,
+			),
+			expectedPrefixLastCharFeatures,
 		);
 		// Prefix rstrip last char features match
 		assert.deepStrictEqual(
 			multilineFeatureArray.slice(
 				expectedNumericFeatures.length + 8 + 96,
-				expectedNumericFeatures.length + 8 + 96 * 2
+				expectedNumericFeatures.length + 8 + 96 * 2,
 			),
-			expectedPrefiRstripLastCharFeatures
+			expectedPrefiRstripLastCharFeatures,
 		);
 		// Suffix first char features match
 		assert.deepStrictEqual(
 			multilineFeatureArray.slice(
 				expectedNumericFeatures.length + 8 + 96 * 2,
-				expectedNumericFeatures.length + 8 + 96 * 3
+				expectedNumericFeatures.length + 8 + 96 * 3,
 			),
-			expectedSuffixFirstCharFeatures
+			expectedSuffixFirstCharFeatures,
 		);
 		// Suffix lstrip first char features match
 		assert.deepStrictEqual(
 			multilineFeatureArray.slice(
 				expectedNumericFeatures.length + 8 + 96 * 3,
-				expectedNumericFeatures.length + 8 + 96 * 4
+				expectedNumericFeatures.length + 8 + 96 * 4,
 			),
-			expectedSuffixLstripFirstCharFeatures
+			expectedSuffixLstripFirstCharFeatures,
 		);
 		// All features match
 		assert.deepStrictEqual(
@@ -385,8 +504,8 @@ suite('multilineModel tests', function () {
 				expectedPrefixLastCharFeatures,
 				expectedPrefiRstripLastCharFeatures,
 				expectedSuffixFirstCharFeatures,
-				expectedSuffixLstripFirstCharFeatures
-			)
+				expectedSuffixLstripFirstCharFeatures,
+			),
 		);
 	});
 
@@ -450,7 +569,10 @@ suite('multilineModel tests', function () {
 
 		for (const testCase of testCases) {
 			const { prompt, language, score } = testCase;
-			assert.strictEqual(requestMultilineScore(prompt, language).toFixed(4), score.toFixed(4));
+			assert.strictEqual(
+				requestMultilineScore(prompt, language).toFixed(4),
+				score.toFixed(4),
+			);
 		}
 	});
 });

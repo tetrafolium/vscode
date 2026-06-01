@@ -48,13 +48,16 @@ export interface IToolCallRound {
 	modelId?: string;
 }
 
-export interface InternalToolReference extends vscode.ChatLanguageModelToolReference {
+export interface InternalToolReference
+	extends vscode.ChatLanguageModelToolReference {
 	readonly id: string;
 	readonly input?: Object; // Allows to pass input to tool invocations internally
 }
 
 export namespace InternalToolReference {
-	export function from(base: vscode.ChatLanguageModelToolReference): InternalToolReference {
+	export function from(
+		base: vscode.ChatLanguageModelToolReference,
+	): InternalToolReference {
 		return {
 			...base,
 			id: generateUuid(),
@@ -95,7 +98,9 @@ export interface IBuildPromptContext {
 	 * an edit turn, and will try to reuse a previous tool's version of the
 	 * document when available. The map is created anew each turn.
 	 */
-	turnEditedDocuments?: ResourceMap<NotebookDocumentSnapshot | TextDocumentSnapshot>;
+	turnEditedDocuments?: ResourceMap<
+		NotebookDocumentSnapshot | TextDocumentSnapshot
+	>;
 
 	/**
 	 * URIs that are explicitly allowed for editing without user confirmation.
@@ -132,7 +137,9 @@ export interface IBuildPromptContext {
 	readonly parentModelCallId?: string;
 }
 
-export const IBuildPromptContext = createServiceIdentifier<IBuildPromptContext>('IBuildPromptContext');
+export const IBuildPromptContext = createServiceIdentifier<IBuildPromptContext>(
+	'IBuildPromptContext',
+);
 
 export enum WorkingSetEntryState {
 	Initial = 0,
@@ -155,15 +162,20 @@ export interface INotebookWorkingSetEntry {
 	readonly isMarkedReadonly: boolean | undefined;
 }
 
-
-export type IWorkingSetEntry = ITextDocumentWorkingSetEntry | INotebookWorkingSetEntry;
+export type IWorkingSetEntry =
+	| ITextDocumentWorkingSetEntry
+	| INotebookWorkingSetEntry;
 
 export type IWorkingSet = readonly IWorkingSetEntry[];
 
-export function isTextDocumentWorkingSetEntry(entry: IWorkingSetEntry): entry is ITextDocumentWorkingSetEntry {
-	return (entry.document instanceof TextDocumentSnapshot);
+export function isTextDocumentWorkingSetEntry(
+	entry: IWorkingSetEntry,
+): entry is ITextDocumentWorkingSetEntry {
+	return entry.document instanceof TextDocumentSnapshot;
 }
 
-export function isNotebookWorkingSetEntry(entry: IWorkingSetEntry): entry is INotebookWorkingSetEntry {
-	return (entry.document instanceof NotebookDocumentSnapshot);
+export function isNotebookWorkingSetEntry(
+	entry: IWorkingSetEntry,
+): entry is INotebookWorkingSetEntry {
+	return entry.document instanceof NotebookDocumentSnapshot;
 }

@@ -31,7 +31,7 @@ export function fakeAPIChoice(
 	headerRequestId: string,
 	choiceIndex: number,
 	completionText: string,
-	telemetryData: TelemetryWithExp = TelemetryWithExp.createEmptyConfigForTesting()
+	telemetryData: TelemetryWithExp = TelemetryWithExp.createEmptyConfigForTesting(),
 ): APIChoice {
 	const tokenizer = getTokenizer();
 
@@ -47,14 +47,14 @@ export function fakeAPIChoice(
 			deploymentId: 'dummy',
 			gitHubRequestId: 'dummy',
 			completionId: 'dummy',
-			created: 0
+			created: 0,
 		},
 		telemetryData,
 		// This slightly convoluted way of getting the tokens as a string array is an
 		// alternative to exporting a way to do it directly from the tokenizer module.
 		tokens: tokenizer
 			.tokenize(completionText)
-			.map(token => tokenizer.detokenize([token]))
+			.map((token) => tokenizer.detokenize([token]))
 			.concat(),
 		blockFinished: false,
 		clientCompletionId: generateUuid(),
@@ -70,7 +70,7 @@ export async function* fakeAPIChoices(
 	postOptions: PostOptions | undefined,
 	finishedCb: FinishedCallback,
 	completions: string[],
-	telemetryData?: TelemetryWithExp
+	telemetryData?: TelemetryWithExp,
 ): AsyncIterable<APIChoice> {
 	const fakeHeaderRequestId = generateUuid();
 	let choiceIndex = 0;
@@ -79,7 +79,10 @@ export async function* fakeAPIChoices(
 		if (postOptions?.stop !== undefined) {
 			for (const stopToken of postOptions.stop) {
 				const thisStopOffset = completion.indexOf(stopToken);
-				if (thisStopOffset !== -1 && (stopOffset === -1 || thisStopOffset < stopOffset)) {
+				if (
+					thisStopOffset !== -1 &&
+					(stopOffset === -1 || thisStopOffset < stopOffset)
+				) {
 					stopOffset = thisStopOffset;
 				}
 			}
@@ -89,17 +92,26 @@ export async function* fakeAPIChoices(
 		}
 		// This logic for using the finishedCb mirrors what happens in the live streamChoices function,
 		// but it doesn't try to stop reading the completion early as there's no point.
-		const finishOffset = asNumericOffset(await finishedCb(completion, { text: completion }));
+		const finishOffset = asNumericOffset(
+			await finishedCb(completion, { text: completion }),
+		);
 		if (finishOffset !== undefined) {
 			completion = completion.substring(0, finishOffset);
 		}
-		const choice = fakeAPIChoice(fakeHeaderRequestId, choiceIndex++, completion, telemetryData);
+		const choice = fakeAPIChoice(
+			fakeHeaderRequestId,
+			choiceIndex++,
+			completion,
+			telemetryData,
+		);
 		choice.blockFinished = finishOffset === undefined ? false : true;
 		yield choice;
 	}
 }
 
-function asNumericOffset(result: SolutionDecision | number | undefined): number | undefined {
+function asNumericOffset(
+	result: SolutionDecision | number | undefined,
+): number | undefined {
 	if (typeof result === 'number' || result === undefined) {
 		return result;
 	}
@@ -110,10 +122,16 @@ function fakeResponse(
 	completions: string[],
 	finishedCb: FinishedCallback,
 	postOptions?: PostOptions,
-	telemetryData?: TelemetryWithExp
+	telemetryData?: TelemetryWithExp,
 ): Promise<CompletionResults> {
-	const choices = postProcessChoices(fakeAPIChoices(postOptions, finishedCb, completions, telemetryData));
-	return Promise.resolve({ type: 'success', choices, getProcessingTime: () => 0 });
+	const choices = postProcessChoices(
+		fakeAPIChoices(postOptions, finishedCb, completions, telemetryData),
+	);
+	return Promise.resolve({
+		type: 'success',
+		choices,
+		getProcessingTime: () => 0,
+	});
 }
 
 export class SyntheticCompletions extends OpenAIFetcher {
@@ -121,7 +139,8 @@ export class SyntheticCompletions extends OpenAIFetcher {
 
 	constructor(
 		private readonly _completions: string[],
-		@ICompletionsCopilotTokenManager private readonly copilotTokenManager: ICompletionsCopilotTokenManager,
+		@ICompletionsCopilotTokenManager
+		private readonly copilotTokenManager: ICompletionsCopilotTokenManager,
 	) {
 		super();
 	}
@@ -131,7 +150,7 @@ export class SyntheticCompletions extends OpenAIFetcher {
 		baseTelemetryData: TelemetryWithExp,
 		finishedCb: FinishedCallback,
 		cancel?: CancellationToken,
-		teletryProperties?: { [key: string]: string }
+		teletryProperties?: { [key: string]: string },
 	): Promise<CompletionResults | CompletionError> {
 		// check we have a valid token - ignore the result
 		void this.copilotTokenManager.getToken();
@@ -141,13 +160,23 @@ export class SyntheticCompletions extends OpenAIFetcher {
 
 		if (!this._wasCalled) {
 			this._wasCalled = true;
-			return fakeResponse(this._completions, finishedCb, params.postOptions, baseTelemetryData);
+			return fakeResponse(
+				this._completions,
+				finishedCb,
+				params.postOptions,
+				baseTelemetryData,
+			);
 		} else {
 			// In indentation mode, if the preview completion isn't enough to finish the completion,
 			// a second call will be made with the first prompt+preview completion as the prompt.
 			// As we've already returned everything we have, the second completion should be empty.
-			const emptyCompletions = this._completions.map(completion => '');
-			return fakeResponse(emptyCompletions, finishedCb, params.postOptions, baseTelemetryData);
+			const emptyCompletions = this._completions.map((completion) => '');
+			return fakeResponse(
+				emptyCompletions,
+				finishedCb,
+				params.postOptions,
+				baseTelemetryData,
+			);
 		}
 	}
 }

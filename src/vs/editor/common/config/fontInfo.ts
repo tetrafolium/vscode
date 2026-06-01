@@ -3,9 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as platform from '../../../base/common/platform.js';
-import { EditorOption, FindComputedEditorOptionValueById } from './editorOptions.js';
-import { EditorZoom } from './editorZoom.js';
+import * as platform from "../../../base/common/platform.js";
+import {
+	EditorOption,
+	FindComputedEditorOptionValueById,
+} from "./editorOptions.js";
+import { EditorZoom } from "./editorZoom.js";
 
 /**
  * Determined from empirical observations.
@@ -31,7 +34,17 @@ export class BareFontInfo {
 	/**
 	 * @internal
 	 */
-	public static _create(fontFamily: string, fontWeight: string, fontSize: number, fontFeatureSettings: string, fontVariationSettings: string, lineHeight: number, letterSpacing: number, pixelRatio: number, ignoreEditorZoom: boolean): BareFontInfo {
+	public static _create(
+		fontFamily: string,
+		fontWeight: string,
+		fontSize: number,
+		fontFeatureSettings: string,
+		fontVariationSettings: string,
+		lineHeight: number,
+		letterSpacing: number,
+		pixelRatio: number,
+		ignoreEditorZoom: boolean,
+	): BareFontInfo {
 		if (lineHeight === 0) {
 			lineHeight = GOLDEN_LINE_HEIGHT_RATIO * fontSize;
 		} else if (lineHeight < MINIMUM_LINE_HEIGHT) {
@@ -45,17 +58,18 @@ export class BareFontInfo {
 			lineHeight = MINIMUM_LINE_HEIGHT;
 		}
 
-		const editorZoomLevelMultiplier = 1 + (ignoreEditorZoom ? 0 : EditorZoom.getZoomLevel() * 0.1);
+		const editorZoomLevelMultiplier =
+			1 + (ignoreEditorZoom ? 0 : EditorZoom.getZoomLevel() * 0.1);
 		fontSize *= editorZoomLevelMultiplier;
 		lineHeight *= editorZoomLevelMultiplier;
 
 		if (fontVariationSettings === FONT_VARIATION_TRANSLATE) {
-			if (fontWeight === 'normal' || fontWeight === 'bold') {
+			if (fontWeight === "normal" || fontWeight === "bold") {
 				fontVariationSettings = FONT_VARIATION_OFF;
 			} else {
 				const fontWeightAsNumber = parseInt(fontWeight, 10);
 				fontVariationSettings = `'wght' ${fontWeightAsNumber}`;
-				fontWeight = 'normal';
+				fontWeight = "normal";
 			}
 		}
 
@@ -67,7 +81,7 @@ export class BareFontInfo {
 			fontFeatureSettings: fontFeatureSettings,
 			fontVariationSettings,
 			lineHeight: lineHeight,
-			letterSpacing: letterSpacing
+			letterSpacing: letterSpacing,
 		});
 	}
 
@@ -155,24 +169,27 @@ export class FontInfo extends BareFontInfo {
 	/**
 	 * @internal
 	 */
-	constructor(opts: {
-		pixelRatio: number;
-		fontFamily: string;
-		fontWeight: string;
-		fontSize: number;
-		fontFeatureSettings: string;
-		fontVariationSettings: string;
-		lineHeight: number;
-		letterSpacing: number;
-		isMonospace: boolean;
-		typicalHalfwidthCharacterWidth: number;
-		typicalFullwidthCharacterWidth: number;
-		canUseHalfwidthRightwardsArrow: boolean;
-		spaceWidth: number;
-		middotWidth: number;
-		wsmiddotWidth: number;
-		maxDigitWidth: number;
-	}, isTrusted: boolean) {
+	constructor(
+		opts: {
+			pixelRatio: number;
+			fontFamily: string;
+			fontWeight: string;
+			fontSize: number;
+			fontFeatureSettings: string;
+			fontVariationSettings: string;
+			lineHeight: number;
+			letterSpacing: number;
+			isMonospace: boolean;
+			typicalHalfwidthCharacterWidth: number;
+			typicalFullwidthCharacterWidth: number;
+			canUseHalfwidthRightwardsArrow: boolean;
+			spaceWidth: number;
+			middotWidth: number;
+			wsmiddotWidth: number;
+			maxDigitWidth: number;
+		},
+		isTrusted: boolean,
+	) {
 		super(opts);
 		this.isTrusted = isTrusted;
 		this.isMonospace = opts.isMonospace;
@@ -190,55 +207,59 @@ export class FontInfo extends BareFontInfo {
 	 */
 	public equals(other: FontInfo): boolean {
 		return (
-			this.fontFamily === other.fontFamily
-			&& this.fontWeight === other.fontWeight
-			&& this.fontSize === other.fontSize
-			&& this.fontFeatureSettings === other.fontFeatureSettings
-			&& this.fontVariationSettings === other.fontVariationSettings
-			&& this.lineHeight === other.lineHeight
-			&& this.letterSpacing === other.letterSpacing
-			&& this.typicalHalfwidthCharacterWidth === other.typicalHalfwidthCharacterWidth
-			&& this.typicalFullwidthCharacterWidth === other.typicalFullwidthCharacterWidth
-			&& this.canUseHalfwidthRightwardsArrow === other.canUseHalfwidthRightwardsArrow
-			&& this.spaceWidth === other.spaceWidth
-			&& this.middotWidth === other.middotWidth
-			&& this.wsmiddotWidth === other.wsmiddotWidth
-			&& this.maxDigitWidth === other.maxDigitWidth
+			this.fontFamily === other.fontFamily &&
+			this.fontWeight === other.fontWeight &&
+			this.fontSize === other.fontSize &&
+			this.fontFeatureSettings === other.fontFeatureSettings &&
+			this.fontVariationSettings === other.fontVariationSettings &&
+			this.lineHeight === other.lineHeight &&
+			this.letterSpacing === other.letterSpacing &&
+			this.typicalHalfwidthCharacterWidth ===
+				other.typicalHalfwidthCharacterWidth &&
+			this.typicalFullwidthCharacterWidth ===
+				other.typicalFullwidthCharacterWidth &&
+			this.canUseHalfwidthRightwardsArrow ===
+				other.canUseHalfwidthRightwardsArrow &&
+			this.spaceWidth === other.spaceWidth &&
+			this.middotWidth === other.middotWidth &&
+			this.wsmiddotWidth === other.wsmiddotWidth &&
+			this.maxDigitWidth === other.maxDigitWidth
 		);
 	}
 }
 /**
  * @internal
  */
-export const FONT_VARIATION_OFF = 'normal';
+export const FONT_VARIATION_OFF = "normal";
 /**
  * @internal
  */
-export const FONT_VARIATION_TRANSLATE = 'translate';
+export const FONT_VARIATION_TRANSLATE = "translate";
 
 /**
  * @internal
  */
-export const DEFAULT_WINDOWS_FONT_FAMILY = 'Consolas, \'Courier New\', monospace';
+export const DEFAULT_WINDOWS_FONT_FAMILY = "Consolas, 'Courier New', monospace";
 /**
  * @internal
  */
-export const DEFAULT_MAC_FONT_FAMILY = 'Menlo, Monaco, \'Courier New\', monospace';
+export const DEFAULT_MAC_FONT_FAMILY =
+	"Menlo, Monaco, 'Courier New', monospace";
 /**
  * @internal
  */
-export const DEFAULT_LINUX_FONT_FAMILY = '\'Droid Sans Mono\', monospace';
+export const DEFAULT_LINUX_FONT_FAMILY = "'Droid Sans Mono', monospace";
 /**
  * @internal
  */
 export const EDITOR_FONT_DEFAULTS = {
-	fontFamily: (
-		platform.isMacintosh ? DEFAULT_MAC_FONT_FAMILY : (platform.isWindows ? DEFAULT_WINDOWS_FONT_FAMILY : DEFAULT_LINUX_FONT_FAMILY)
-	),
-	fontWeight: 'normal',
-	fontSize: (
-		platform.isMacintosh ? 12 : 14
-	),
+	fontFamily: platform.isMacintosh
+		? DEFAULT_MAC_FONT_FAMILY
+		: platform.isWindows
+			? DEFAULT_WINDOWS_FONT_FAMILY
+			: DEFAULT_LINUX_FONT_FAMILY,
+	fontWeight: "normal",
+	fontSize: platform.isMacintosh ? 12 : 14,
 	lineHeight: 0,
 	letterSpacing: 0,
 };

@@ -3,23 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { relativePath } from '../../../../base/common/resources.js';
-import { URI } from '../../../../base/common/uri.js';
-import { linesDiffComputers } from '../../../../editor/common/diff/linesDiffComputers.js';
-import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { Extensions as ConfigurationExtensions, IConfigurationRegistry } from '../../../../platform/configuration/common/configurationRegistry.js';
-import { IFileService, FileOperationError, FileOperationResult } from '../../../../platform/files/common/files.js';
-import { detectEncodingFromBuffer } from '../../../services/textfile/common/encoding.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { Registry } from '../../../../platform/registry/common/platform.js';
-import { IWorkbenchContribution } from '../../../common/contributions.js';
-import { IChatEntitlementService } from '../../../services/chat/common/chatEntitlementService.js';
-import { ISCMService, ISCMResource } from '../../scm/common/scm.js';
-import { IChatService } from '../common/chatService/chatService.js';
-import { ChatConfiguration } from '../common/constants.js';
-import { IChatModel, IExportableRepoData, IExportableRepoDiff } from '../common/model/chatModel.js';
-import * as nls from '../../../../nls.js';
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { relativePath } from "../../../../base/common/resources.js";
+import { URI } from "../../../../base/common/uri.js";
+import { linesDiffComputers } from "../../../../editor/common/diff/linesDiffComputers.js";
+import { IConfigurationService } from "../../../../platform/configuration/common/configuration.js";
+import {
+	Extensions as ConfigurationExtensions,
+	IConfigurationRegistry,
+} from "../../../../platform/configuration/common/configurationRegistry.js";
+import {
+	IFileService,
+	FileOperationError,
+	FileOperationResult,
+} from "../../../../platform/files/common/files.js";
+import { detectEncodingFromBuffer } from "../../../services/textfile/common/encoding.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { Registry } from "../../../../platform/registry/common/platform.js";
+import { IWorkbenchContribution } from "../../../common/contributions.js";
+import { IChatEntitlementService } from "../../../services/chat/common/chatEntitlementService.js";
+import { ISCMService, ISCMResource } from "../../scm/common/scm.js";
+import { IChatService } from "../common/chatService/chatService.js";
+import { ChatConfiguration } from "../common/constants.js";
+import {
+	IChatModel,
+	IExportableRepoData,
+	IExportableRepoDiff,
+} from "../common/model/chatModel.js";
+import * as nls from "../../../../nls.js";
 
 const MAX_CHANGES = 100;
 const MAX_DIFFS_SIZE_BYTES = 900 * 1024;
@@ -27,7 +38,7 @@ const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB per file
 /**
  * Regex to match `url = <remote-url>` lines in git config.
  */
-const RemoteMatcher = /^\s*url\s*=\s*(.+\S)\s*$/mg;
+const RemoteMatcher = /^\s*url\s*=\s*(.+\S)\s*$/gm;
 
 /**
  * Extracts raw remote URLs from git config content.
@@ -35,7 +46,7 @@ const RemoteMatcher = /^\s*url\s*=\s*(.+\S)\s*$/mg;
 function getRawRemotes(text: string): string[] {
 	const remotes: string[] = [];
 	let match: RegExpExecArray | null;
-	while (match = RemoteMatcher.exec(text)) {
+	while ((match = RemoteMatcher.exec(text))) {
 		remotes.push(match[1]);
 	}
 	return remotes;
@@ -55,16 +66,17 @@ function getRemoteHost(remoteUrl: string): string | undefined {
 		return url.hostname.toLowerCase();
 	} catch {
 		// Fallback for SCP-like syntax: [user@]host:path
-		const atIndex = remoteUrl.lastIndexOf('@');
-		const hostAndPath = atIndex !== -1 ? remoteUrl.slice(atIndex + 1) : remoteUrl;
-		const colonIndex = hostAndPath.indexOf(':');
+		const atIndex = remoteUrl.lastIndexOf("@");
+		const hostAndPath =
+			atIndex !== -1 ? remoteUrl.slice(atIndex + 1) : remoteUrl;
+		const colonIndex = hostAndPath.indexOf(":");
 		if (colonIndex !== -1) {
 			const host = hostAndPath.slice(0, colonIndex);
 			return host ? host.toLowerCase() : undefined;
 		}
 
 		// Fallback for hostname/path format without scheme (e.g., devdiv.visualstudio.com/...)
-		const slashIndex = hostAndPath.indexOf('/');
+		const slashIndex = hostAndPath.indexOf("/");
 		if (slashIndex !== -1) {
 			const host = hostAndPath.slice(0, slashIndex);
 			return host ? host.toLowerCase() : undefined;
@@ -77,29 +89,32 @@ function getRemoteHost(remoteUrl: string): string | undefined {
 /**
  * Determines the change type based on SCM resource properties.
  */
-function determineChangeType(resource: ISCMResource, groupId: string): 'added' | 'modified' | 'deleted' | 'renamed' {
-	const contextValue = resource.contextValue?.toLowerCase() ?? '';
+function determineChangeType(
+	resource: ISCMResource,
+	groupId: string,
+): "added" | "modified" | "deleted" | "renamed" {
+	const contextValue = resource.contextValue?.toLowerCase() ?? "";
 	const groupIdLower = groupId.toLowerCase();
 
-	if (contextValue.includes('untracked') || contextValue.includes('add')) {
-		return 'added';
+	if (contextValue.includes("untracked") || contextValue.includes("add")) {
+		return "added";
 	}
-	if (contextValue.includes('delete')) {
-		return 'deleted';
+	if (contextValue.includes("delete")) {
+		return "deleted";
 	}
-	if (contextValue.includes('rename')) {
-		return 'renamed';
+	if (contextValue.includes("rename")) {
+		return "renamed";
 	}
-	if (groupIdLower.includes('untracked')) {
-		return 'added';
+	if (groupIdLower.includes("untracked")) {
+		return "added";
 	}
 	if (resource.decorations.strikeThrough) {
-		return 'deleted';
+		return "deleted";
 	}
 	if (!resource.multiDiffEditorOriginalUri) {
-		return 'added';
+		return "added";
 	}
-	return 'modified';
+	return "modified";
 }
 
 /**
@@ -114,98 +129,129 @@ export async function generateUnifiedDiff(
 	relPath: string,
 	originalUri: URI | undefined,
 	modifiedUri: URI,
-	changeType: 'added' | 'modified' | 'deleted' | 'renamed'
+	changeType: "added" | "modified" | "deleted" | "renamed",
 ): Promise<string | undefined> {
 	try {
-		let originalContent = '';
-		let modifiedContent = '';
+		let originalContent = "";
+		let modifiedContent = "";
 
-		if (originalUri && changeType !== 'added') {
+		if (originalUri && changeType !== "added") {
 			try {
-				const originalFile = await fileService.readFile(originalUri, { limits: { size: MAX_FILE_SIZE_BYTES } });
-				const detected = detectEncodingFromBuffer({ buffer: originalFile.value, bytesRead: originalFile.value.byteLength });
+				const originalFile = await fileService.readFile(originalUri, {
+					limits: { size: MAX_FILE_SIZE_BYTES },
+				});
+				const detected = detectEncodingFromBuffer({
+					buffer: originalFile.value,
+					bytesRead: originalFile.value.byteLength,
+				});
 				if (detected.seemsBinary) {
 					return undefined; // skip binary files
 				}
 				originalContent = originalFile.value.toString();
 			} catch (e) {
-				if (e instanceof FileOperationError && e.fileOperationResult === FileOperationResult.FILE_TOO_LARGE) {
+				if (
+					e instanceof FileOperationError &&
+					e.fileOperationResult === FileOperationResult.FILE_TOO_LARGE
+				) {
 					return undefined; // skip files exceeding size limit
 				}
-				if (changeType === 'modified') {
+				if (changeType === "modified") {
 					return undefined;
 				}
 			}
 		}
 
-		if (changeType !== 'deleted') {
+		if (changeType !== "deleted") {
 			try {
-				const modifiedFile = await fileService.readFile(modifiedUri, { limits: { size: MAX_FILE_SIZE_BYTES } });
-				const detected = detectEncodingFromBuffer({ buffer: modifiedFile.value, bytesRead: modifiedFile.value.byteLength });
+				const modifiedFile = await fileService.readFile(modifiedUri, {
+					limits: { size: MAX_FILE_SIZE_BYTES },
+				});
+				const detected = detectEncodingFromBuffer({
+					buffer: modifiedFile.value,
+					bytesRead: modifiedFile.value.byteLength,
+				});
 				if (detected.seemsBinary) {
 					return undefined; // skip binary files
 				}
 				modifiedContent = modifiedFile.value.toString();
 			} catch (e) {
-				if (e instanceof FileOperationError && e.fileOperationResult === FileOperationResult.FILE_TOO_LARGE) {
+				if (
+					e instanceof FileOperationError &&
+					e.fileOperationResult === FileOperationResult.FILE_TOO_LARGE
+				) {
 					return undefined; // skip files exceeding size limit
 				}
 				return undefined;
 			}
 		}
 
-		const originalLines = originalContent.split('\n');
-		const modifiedLines = modifiedContent.split('\n');
+		const originalLines = originalContent.split("\n");
+		const modifiedLines = modifiedContent.split("\n");
 
 		// Track whether files end with newline for git apply compatibility
 		// split('\n') on "line1\nline2\n" gives ["line1", "line2", ""]
 		// split('\n') on "line1\nline2" gives ["line1", "line2"]
-		const originalEndsWithNewline = originalContent.length > 0 && originalContent.endsWith('\n');
-		const modifiedEndsWithNewline = modifiedContent.length > 0 && modifiedContent.endsWith('\n');
+		const originalEndsWithNewline =
+			originalContent.length > 0 && originalContent.endsWith("\n");
+		const modifiedEndsWithNewline =
+			modifiedContent.length > 0 && modifiedContent.endsWith("\n");
 
 		// Remove trailing empty element if file ends with newline
-		if (originalEndsWithNewline && originalLines.length > 0 && originalLines[originalLines.length - 1] === '') {
+		if (
+			originalEndsWithNewline &&
+			originalLines.length > 0 &&
+			originalLines[originalLines.length - 1] === ""
+		) {
 			originalLines.pop();
 		}
-		if (modifiedEndsWithNewline && modifiedLines.length > 0 && modifiedLines[modifiedLines.length - 1] === '') {
+		if (
+			modifiedEndsWithNewline &&
+			modifiedLines.length > 0 &&
+			modifiedLines[modifiedLines.length - 1] === ""
+		) {
 			modifiedLines.pop();
 		}
 
 		const diffLines: string[] = [];
-		const aPath = changeType === 'added' ? '/dev/null' : `a/${relPath}`;
-		const bPath = changeType === 'deleted' ? '/dev/null' : `b/${relPath}`;
+		const aPath = changeType === "added" ? "/dev/null" : `a/${relPath}`;
+		const bPath = changeType === "deleted" ? "/dev/null" : `b/${relPath}`;
 
 		diffLines.push(`--- ${aPath}`);
 		diffLines.push(`+++ ${bPath}`);
 
-		if (changeType === 'added') {
+		if (changeType === "added") {
 			if (modifiedLines.length > 0) {
 				diffLines.push(`@@ -0,0 +1,${modifiedLines.length} @@`);
 				for (const line of modifiedLines) {
 					diffLines.push(`+${line}`);
 				}
 				if (!modifiedEndsWithNewline) {
-					diffLines.push('\\ No newline at end of file');
+					diffLines.push("\\ No newline at end of file");
 				}
 			}
-		} else if (changeType === 'deleted') {
+		} else if (changeType === "deleted") {
 			if (originalLines.length > 0) {
 				diffLines.push(`@@ -1,${originalLines.length} +0,0 @@`);
 				for (const line of originalLines) {
 					diffLines.push(`-${line}`);
 				}
 				if (!originalEndsWithNewline) {
-					diffLines.push('\\ No newline at end of file');
+					diffLines.push("\\ No newline at end of file");
 				}
 			}
 		} else {
-			const hunks = computeDiffHunks(originalLines, modifiedLines, originalEndsWithNewline, modifiedEndsWithNewline);
+			const hunks = computeDiffHunks(
+				originalLines,
+				modifiedLines,
+				originalEndsWithNewline,
+				modifiedEndsWithNewline,
+			);
 			for (const hunk of hunks) {
 				diffLines.push(hunk);
 			}
 		}
 
-		return diffLines.join('\n');
+		return diffLines.join("\n");
 	} catch {
 		return undefined;
 	}
@@ -219,7 +265,7 @@ function computeDiffHunks(
 	originalLines: string[],
 	modifiedLines: string[],
 	originalEndsWithNewline: boolean,
-	modifiedEndsWithNewline: boolean
+	modifiedEndsWithNewline: boolean,
 ): string[] {
 	const contextSize = 3;
 	const result: string[] = [];
@@ -228,7 +274,7 @@ function computeDiffHunks(
 	const diffResult = diffComputer.computeDiff(originalLines, modifiedLines, {
 		ignoreTrimWhitespace: false,
 		maxComputationTimeMs: 1000,
-		computeMoves: false
+		computeMoves: false,
 	});
 
 	if (diffResult.changes.length === 0) {
@@ -237,7 +283,7 @@ function computeDiffHunks(
 
 	// Group changes that should be merged into the same hunk
 	// Changes are merged if their context regions would overlap
-	type Change = typeof diffResult.changes[number];
+	type Change = (typeof diffResult.changes)[number];
 	const hunkGroups: Change[][] = [];
 	let currentGroup: Change[] = [];
 
@@ -246,7 +292,8 @@ function computeDiffHunks(
 			currentGroup.push(change);
 		} else {
 			const lastChange = currentGroup[currentGroup.length - 1];
-			const lastContextEnd = lastChange.original.endLineNumberExclusive - 1 + contextSize;
+			const lastContextEnd =
+				lastChange.original.endLineNumberExclusive - 1 + contextSize;
 			const currentContextStart = change.original.startLineNumber - contextSize;
 
 			// Merge if context regions overlap or are adjacent
@@ -267,9 +314,18 @@ function computeDiffHunks(
 		const firstChange = group[0];
 		const lastChange = group[group.length - 1];
 
-		const hunkOrigStart = Math.max(1, firstChange.original.startLineNumber - contextSize);
-		const hunkOrigEnd = Math.min(originalLines.length, lastChange.original.endLineNumberExclusive - 1 + contextSize);
-		const hunkModStart = Math.max(1, firstChange.modified.startLineNumber - contextSize);
+		const hunkOrigStart = Math.max(
+			1,
+			firstChange.original.startLineNumber - contextSize,
+		);
+		const hunkOrigEnd = Math.min(
+			originalLines.length,
+			lastChange.original.endLineNumberExclusive - 1 + contextSize,
+		);
+		const hunkModStart = Math.max(
+			1,
+			firstChange.modified.startLineNumber - contextSize,
+		);
 
 		const hunkLines: string[] = [];
 		// Track which line in hunkLines corresponds to the last line of each file
@@ -343,7 +399,9 @@ function computeDiffHunks(
 			modCount++;
 		}
 
-		result.push(`@@ -${hunkOrigStart},${origCount} +${hunkModStart},${modCount} @@`);
+		result.push(
+			`@@ -${hunkOrigStart},${origCount} +${hunkModStart},${modCount} @@`,
+		);
 
 		// Add "No newline at end of file" markers for git apply compatibility
 		// The marker must appear immediately after the line that lacks a newline
@@ -357,14 +415,14 @@ function computeDiffHunks(
 				// Context line is the last line of both files
 				// If either lacks newline, we need a marker (but only one)
 				if (!originalEndsWithNewline || !modifiedEndsWithNewline) {
-					result.push('\\ No newline at end of file');
+					result.push("\\ No newline at end of file");
 				}
 			} else if (isLastOriginal && !originalEndsWithNewline) {
 				// Deletion or context line that's only the last of original
-				result.push('\\ No newline at end of file');
+				result.push("\\ No newline at end of file");
 			} else if (isLastModified && !modifiedEndsWithNewline) {
 				// Addition or context line that's only the last of modified
-				result.push('\\ No newline at end of file');
+				result.push("\\ No newline at end of file");
 			}
 		}
 	}
@@ -377,7 +435,9 @@ function computeDiffHunks(
  * No file I/O or diff computation - reads only from already-loaded SCM observables.
  * Used on chat message submission to record the point-in-time commit state.
  */
-export function captureRepoMetadata(scmService: ISCMService): IExportableRepoData | undefined {
+export function captureRepoMetadata(
+	scmService: ISCMService,
+): IExportableRepoData | undefined {
 	const repositories = [...scmService.repositories];
 	if (repositories.length === 0) {
 		return undefined;
@@ -416,23 +476,27 @@ export function captureRepoMetadata(scmService: ISCMService): IExportableRepoDat
 	// Determine workspace type and sync status without file I/O.
 	// Cannot determine remoteUrl/remoteVendor or detect plain-folder here (requires reading .git/config).
 	// The full captureRepoInfo at export time will produce accurate classification.
-	let workspaceType: IExportableRepoData['workspaceType'];
-	let syncStatus: IExportableRepoData['syncStatus'];
+	let workspaceType: IExportableRepoData["workspaceType"];
+	let syncStatus: IExportableRepoData["syncStatus"];
 
 	if (remoteTrackingBranch || remoteHeadCommit || remoteBaseBranch) {
-		workspaceType = 'remote-git';
+		workspaceType = "remote-git";
 
 		if (!remoteTrackingBranch) {
-			syncStatus = 'unpublished';
-		} else if (localHeadCommit && remoteHeadCommit && localHeadCommit === remoteHeadCommit) {
-			syncStatus = 'synced';
+			syncStatus = "unpublished";
+		} else if (
+			localHeadCommit &&
+			remoteHeadCommit &&
+			localHeadCommit === remoteHeadCommit
+		) {
+			syncStatus = "synced";
 		} else {
-			syncStatus = 'unpushed';
+			syncStatus = "unpushed";
 		}
 	} else {
 		// No remote refs available; conservatively classify as local-git
-		workspaceType = 'local-git';
-		syncStatus = 'local-only';
+		workspaceType = "local-git";
+		syncStatus = "local-only";
 	}
 
 	return {
@@ -443,7 +507,7 @@ export function captureRepoMetadata(scmService: ISCMService): IExportableRepoDat
 		remoteBaseBranch,
 		localHeadCommit,
 		remoteHeadCommit,
-		diffsStatus: 'notCaptured',
+		diffsStatus: "notCaptured",
 	};
 }
 
@@ -451,7 +515,10 @@ export function captureRepoMetadata(scmService: ISCMService): IExportableRepoDat
  * Captures full repository state including working tree diffs.
  * Performs file I/O and diff computation - should only be called on explicit user action (e.g., export).
  */
-export async function captureRepoInfo(scmService: ISCMService, fileService: IFileService): Promise<IExportableRepoData | undefined> {
+export async function captureRepoInfo(
+	scmService: ISCMService,
+	fileService: IFileService,
+): Promise<IExportableRepoData | undefined> {
 	const repositories = [...scmService.repositories];
 	if (repositories.length === 0) {
 		return undefined;
@@ -473,9 +540,9 @@ export async function captureRepoInfo(scmService: ISCMService, fileService: IFil
 
 	if (!hasGit) {
 		return {
-			workspaceType: 'plain-folder',
-			syncStatus: 'no-git',
-			diffs: undefined
+			workspaceType: "plain-folder",
+			syncStatus: "no-git",
+			diffs: undefined,
 		};
 	}
 
@@ -517,33 +584,36 @@ export async function captureRepoInfo(scmService: ISCMService, fileService: IFil
 		}
 	}
 
-	let workspaceType: IExportableRepoData['workspaceType'];
-	let syncStatus: IExportableRepoData['syncStatus'];
+	let workspaceType: IExportableRepoData["workspaceType"];
+	let syncStatus: IExportableRepoData["syncStatus"];
 
 	if (!remoteUrl) {
-		workspaceType = 'local-git';
-		syncStatus = 'local-only';
+		workspaceType = "local-git";
+		syncStatus = "local-only";
 	} else {
-		workspaceType = 'remote-git';
+		workspaceType = "remote-git";
 
 		if (!remoteTrackingBranch) {
-			syncStatus = 'unpublished';
+			syncStatus = "unpublished";
 		} else if (localHeadCommit === remoteHeadCommit) {
-			syncStatus = 'synced';
+			syncStatus = "synced";
 		} else {
-			syncStatus = 'unpushed';
+			syncStatus = "unpushed";
 		}
 	}
 
-	let remoteVendor: IExportableRepoData['remoteVendor'];
+	let remoteVendor: IExportableRepoData["remoteVendor"];
 	if (remoteUrl) {
 		const host = getRemoteHost(remoteUrl);
-		if (host === 'github.com') {
-			remoteVendor = 'github';
-		} else if (host === 'dev.azure.com' || (host && host.endsWith('.visualstudio.com'))) {
-			remoteVendor = 'ado';
+		if (host === "github.com") {
+			remoteVendor = "github";
+		} else if (
+			host === "dev.azure.com" ||
+			(host && host.endsWith(".visualstudio.com"))
+		) {
+			remoteVendor = "ado";
 		} else {
-			remoteVendor = 'other';
+			remoteVendor = "other";
 		}
 	}
 
@@ -552,7 +622,10 @@ export async function captureRepoInfo(scmService: ISCMService, fileService: IFil
 		totalChangeCount += group.resources.length;
 	}
 
-	const baseRepoData: Omit<IExportableRepoData, 'diffs' | 'diffsStatus' | 'changedFileCount'> = {
+	const baseRepoData: Omit<
+		IExportableRepoData,
+		"diffs" | "diffsStatus" | "changedFileCount"
+	> = {
 		workspaceType,
 		syncStatus,
 		remoteUrl,
@@ -568,8 +641,8 @@ export async function captureRepoInfo(scmService: ISCMService, fileService: IFil
 		return {
 			...baseRepoData,
 			diffs: undefined,
-			diffsStatus: 'noChanges',
-			changedFileCount: 0
+			diffsStatus: "noChanges",
+			changedFileCount: 0,
 		};
 	}
 
@@ -577,8 +650,8 @@ export async function captureRepoInfo(scmService: ISCMService, fileService: IFil
 		return {
 			...baseRepoData,
 			diffs: undefined,
-			diffsStatus: 'tooManyChanges',
-			changedFileCount: totalChangeCount
+			diffsStatus: "tooManyChanges",
+			changedFileCount: totalChangeCount,
 		};
 	}
 
@@ -587,23 +660,26 @@ export async function captureRepoInfo(scmService: ISCMService, fileService: IFil
 
 	for (const group of repository.provider.groups) {
 		for (const resource of group.resources) {
-			const relPath = relativePath(rootUri, resource.sourceUri) ?? resource.sourceUri.path;
+			const relPath =
+				relativePath(rootUri, resource.sourceUri) ?? resource.sourceUri.path;
 			const changeType = determineChangeType(resource, group.id);
 
-			const diffPromise = (async (): Promise<IExportableRepoDiff | undefined> => {
+			const diffPromise = (async (): Promise<
+				IExportableRepoDiff | undefined
+			> => {
 				const unifiedDiff = await generateUnifiedDiff(
 					fileService,
 					relPath,
 					resource.multiDiffEditorOriginalUri,
 					resource.sourceUri,
-					changeType
+					changeType,
 				);
 
 				return {
 					relativePath: relPath,
 					changeType,
 					status: group.label || group.id,
-					unifiedDiff
+					unifiedDiff,
 				};
 			})();
 
@@ -625,16 +701,16 @@ export async function captureRepoInfo(scmService: ISCMService, fileService: IFil
 		return {
 			...baseRepoData,
 			diffs: undefined,
-			diffsStatus: 'tooLarge',
-			changedFileCount: totalChangeCount
+			diffsStatus: "tooLarge",
+			changedFileCount: totalChangeCount,
 		};
 	}
 
 	return {
 		...baseRepoData,
 		diffs,
-		diffsStatus: 'included',
-		changedFileCount: totalChangeCount
+		diffsStatus: "included",
+		changedFileCount: totalChangeCount,
 	};
 }
 
@@ -643,32 +719,40 @@ export async function captureRepoInfo(scmService: ISCMService, fileService: IFil
  * Only reads from already-loaded SCM provider observables, no file I/O.
  * Full diff capture is deferred to export time (see chatExportZip.ts).
  */
-export class ChatRepoInfoContribution extends Disposable implements IWorkbenchContribution {
-
-	static readonly ID = 'workbench.contrib.chatRepoInfo';
+export class ChatRepoInfoContribution
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	static readonly ID = "workbench.contrib.chatRepoInfo";
 
 	private _configurationRegistered = false;
 
 	constructor(
 		@IChatService private readonly chatService: IChatService,
-		@IChatEntitlementService private readonly chatEntitlementService: IChatEntitlementService,
+		@IChatEntitlementService
+		private readonly chatEntitlementService: IChatEntitlementService,
 		@ISCMService private readonly scmService: ISCMService,
 		@ILogService private readonly logService: ILogService,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 	) {
 		super();
 		this.registerConfigurationIfInternal();
-		this._register(this.chatEntitlementService.onDidChangeEntitlement(() => {
-			this.registerConfigurationIfInternal();
-		}));
+		this._register(
+			this.chatEntitlementService.onDidChangeEntitlement(() => {
+				this.registerConfigurationIfInternal();
+			}),
+		);
 
-		this._register(this.chatService.onDidSubmitRequest(({ chatSessionResource }) => {
-			const model = this.chatService.getSession(chatSessionResource);
-			if (!model) {
-				return;
-			}
-			this.captureAndSetRepoMetadata(model);
-		}));
+		this._register(
+			this.chatService.onDidSubmitRequest(({ chatSessionResource }) => {
+				const model = this.chatService.getSession(chatSessionResource);
+				if (!model) {
+					return;
+				}
+				this.captureAndSetRepoMetadata(model);
+			}),
+		);
 	}
 
 	private registerConfigurationIfInternal(): void {
@@ -680,22 +764,32 @@ export class ChatRepoInfoContribution extends Disposable implements IWorkbenchCo
 			return;
 		}
 
-		const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
+		const registry = Registry.as<IConfigurationRegistry>(
+			ConfigurationExtensions.Configuration,
+		);
 		registry.registerConfiguration({
-			id: 'chatRepoInfo',
-			title: nls.localize('chatRepoInfoConfigurationTitle', "Chat Repository Info"),
-			type: 'object',
+			id: "chatRepoInfo",
+			title: nls.localize(
+				"chatRepoInfoConfigurationTitle",
+				"Chat Repository Info",
+			),
+			type: "object",
 			properties: {
 				[ChatConfiguration.RepoInfoEnabled]: {
-					type: 'boolean',
-					description: nls.localize('chat.repoInfo.enabled', "Controls whether lightweight repository metadata (branch, commit, remotes) is captured when a chat request is submitted for internal diagnostics."),
+					type: "boolean",
+					description: nls.localize(
+						"chat.repoInfo.enabled",
+						"Controls whether lightweight repository metadata (branch, commit, remotes) is captured when a chat request is submitted for internal diagnostics.",
+					),
 					default: false,
-				}
-			}
+				},
+			},
 		});
 
 		this._configurationRegistered = true;
-		this.logService.debug('[ChatRepoInfo] Configuration registered for internal user');
+		this.logService.debug(
+			"[ChatRepoInfo] Configuration registered for internal user",
+		);
 	}
 
 	/**
@@ -707,7 +801,11 @@ export class ChatRepoInfoContribution extends Disposable implements IWorkbenchCo
 			return;
 		}
 
-		if (!this.configurationService.getValue<boolean>(ChatConfiguration.RepoInfoEnabled)) {
+		if (
+			!this.configurationService.getValue<boolean>(
+				ChatConfiguration.RepoInfoEnabled,
+			)
+		) {
 			return;
 		}
 
@@ -720,13 +818,20 @@ export class ChatRepoInfoContribution extends Disposable implements IWorkbenchCo
 			if (metadata) {
 				model.setRepoData(metadata);
 				if (!metadata.localHeadCommit) {
-					this.logService.warn('[ChatRepoInfo] Captured repo metadata without commit hash - git history may not be ready');
+					this.logService.warn(
+						"[ChatRepoInfo] Captured repo metadata without commit hash - git history may not be ready",
+					);
 				}
 			} else {
-				this.logService.debug('[ChatRepoInfo] No SCM repository available for chat session');
+				this.logService.debug(
+					"[ChatRepoInfo] No SCM repository available for chat session",
+				);
 			}
 		} catch (error) {
-			this.logService.warn('[ChatRepoInfo] Failed to capture repo metadata:', error);
+			this.logService.warn(
+				"[ChatRepoInfo] Failed to capture repo metadata:",
+				error,
+			);
 		}
 	}
 }

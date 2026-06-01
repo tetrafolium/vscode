@@ -19,7 +19,7 @@ export type {
 	JsonRpcRequest,
 	JsonRpcResponse,
 	JsonRpcSuccessResponse,
-} from './protocol/messages.js';
+} from "./protocol/messages.js";
 
 // Typed message unions
 export type {
@@ -33,7 +33,7 @@ export type {
 	ClientNotificationMap,
 	ProtocolMessage,
 	ServerNotificationMap,
-} from './protocol/messages.js';
+} from "./protocol/messages.js";
 
 // Command params and results
 export type {
@@ -69,23 +69,31 @@ export type {
 	ResourceWriteResult,
 	SubscribeParams,
 	UnsubscribeParams,
-} from './protocol/commands.js';
+} from "./protocol/commands.js";
 
 export type {
 	CreateResourceWatchParams,
 	CreateResourceWatchResult,
-} from './protocol/channels-resource-watch/commands.js';
+} from "./protocol/channels-resource-watch/commands.js";
 
-export { ContentEncoding, ReconnectResultType, ResourceType, ResourceWriteMode } from './protocol/commands.js';
-export { ResourceChangeType } from './protocol/channels-resource-watch/state.js';
-export type { ResourceChange, ResourceWatchState } from './protocol/channels-resource-watch/state.js';
+export {
+	ContentEncoding,
+	ReconnectResultType,
+	ResourceType,
+	ResourceWriteMode,
+} from "./protocol/commands.js";
+export { ResourceChangeType } from "./protocol/channels-resource-watch/state.js";
+export type {
+	ResourceChange,
+	ResourceWatchState,
+} from "./protocol/channels-resource-watch/state.js";
 
 // Error codes
-export { AhpErrorCodes, JsonRpcErrorCodes } from './protocol/errors.js';
-export type { AhpErrorCode, JsonRpcErrorCode } from './protocol/errors.js';
+export { AhpErrorCodes, JsonRpcErrorCodes } from "./protocol/errors.js";
+export type { AhpErrorCode, JsonRpcErrorCode } from "./protocol/errors.js";
 
 // Snapshot type (re-exported from state)
-export type { Snapshot as IStateSnapshot } from './protocol/state.js';
+export type { Snapshot as IStateSnapshot } from "./protocol/state.js";
 
 // ---- Backward-compatible error code aliases ---------------------------------
 
@@ -101,18 +109,28 @@ export const AHP_AUTH_REQUIRED = -32007 as const;
 
 // ---- Type guards -----------------------------------------------------------
 
-import type { AhpRequest, AhpNotification, AhpSuccessResponse, ProtocolMessage, JsonRpcErrorResponse } from './protocol/messages.js';
+import type {
+	AhpRequest,
+	AhpNotification,
+	AhpSuccessResponse,
+	ProtocolMessage,
+	JsonRpcErrorResponse,
+} from "./protocol/messages.js";
 
 export function isJsonRpcRequest(msg: ProtocolMessage): msg is AhpRequest {
-	return 'method' in msg && 'id' in msg;
+	return "method" in msg && "id" in msg;
 }
 
-export function isJsonRpcNotification(msg: ProtocolMessage): msg is AhpNotification {
-	return 'method' in msg && !('id' in msg);
+export function isJsonRpcNotification(
+	msg: ProtocolMessage,
+): msg is AhpNotification {
+	return "method" in msg && !("id" in msg);
 }
 
-export function isJsonRpcResponse(msg: ProtocolMessage): msg is AhpSuccessResponse | JsonRpcErrorResponse {
-	return 'id' in msg && !('method' in msg);
+export function isJsonRpcResponse(
+	msg: ProtocolMessage,
+): msg is AhpSuccessResponse | JsonRpcErrorResponse {
+	return "id" in msg && !("method" in msg);
 }
 
 // ---- VS Code-specific types ------------------------------------------------
@@ -122,7 +140,11 @@ export function isJsonRpcResponse(msg: ProtocolMessage): msg is AhpSuccessRespon
  * Optionally carries a `data` payload for structured error details.
  */
 export class ProtocolError extends Error {
-	constructor(readonly code: number, message: string, readonly data?: unknown) {
+	constructor(
+		readonly code: number,
+		message: string,
+		readonly data?: unknown,
+	) {
 		super(message);
 	}
 }
@@ -137,7 +159,7 @@ export interface ISetAuthTokenParams {
 
 // ---- Server → Client notification param aliases (backward compat) -----------
 
-import type { INotification } from './sessionActions.js';
+import type { INotification } from "./sessionActions.js";
 
 export interface INotificationBroadcastParams {
 	readonly notification: INotification;

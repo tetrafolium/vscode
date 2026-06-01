@@ -3,23 +3,39 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { derived, IObservable, observableValue, ISettableObservable } from '../../../../base/common/observable.js';
-import { relativePath } from '../../../../base/common/resources.js';
-import { URI } from '../../../../base/common/uri.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { IAICustomizationWorkspaceService, AICustomizationManagementSection, IStorageSourceFilter, applyStorageSourceFilter } from '../../../../workbench/contrib/chat/common/aiCustomizationWorkspaceService.js';
-import { IChatPromptSlashCommand, IPromptsService } from '../../../../workbench/contrib/chat/common/promptSyntax/service/promptsService.js';
-import { ICustomizationHarnessService } from '../../../../workbench/contrib/chat/common/customizationHarnessService.js';
-import { ISessionsManagementService } from '../../../services/sessions/common/sessionsManagement.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { CustomizationCreatorService } from '../../../../workbench/contrib/chat/browser/aiCustomization/customizationCreatorService.js';
-import { PromptsType } from '../../../../workbench/contrib/chat/common/promptSyntax/promptTypes.js';
-import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { IFileService } from '../../../../platform/files/common/files.js';
-import { INotificationService, Severity } from '../../../../platform/notification/common/notification.js';
-import { localize } from '../../../../nls.js';
-import { AGENT_HOST_SCHEME } from '../../../../platform/agentHost/common/agentHostUri.js';
+import {
+	derived,
+	IObservable,
+	observableValue,
+	ISettableObservable,
+} from "../../../../base/common/observable.js";
+import { relativePath } from "../../../../base/common/resources.js";
+import { URI } from "../../../../base/common/uri.js";
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import {
+	IAICustomizationWorkspaceService,
+	AICustomizationManagementSection,
+	IStorageSourceFilter,
+	applyStorageSourceFilter,
+} from "../../../../workbench/contrib/chat/common/aiCustomizationWorkspaceService.js";
+import {
+	IChatPromptSlashCommand,
+	IPromptsService,
+} from "../../../../workbench/contrib/chat/common/promptSyntax/service/promptsService.js";
+import { ICustomizationHarnessService } from "../../../../workbench/contrib/chat/common/customizationHarnessService.js";
+import { ISessionsManagementService } from "../../../services/sessions/common/sessionsManagement.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import { CustomizationCreatorService } from "../../../../workbench/contrib/chat/browser/aiCustomization/customizationCreatorService.js";
+import { PromptsType } from "../../../../workbench/contrib/chat/common/promptSyntax/promptTypes.js";
+import { ICommandService } from "../../../../platform/commands/common/commands.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { IFileService } from "../../../../platform/files/common/files.js";
+import {
+	INotificationService,
+	Severity,
+} from "../../../../platform/notification/common/notification.js";
+import { localize } from "../../../../nls.js";
+import { AGENT_HOST_SCHEME } from "../../../../platform/agentHost/common/agentHostUri.js";
 
 /**
  * Agent Sessions override of IAICustomizationWorkspaceService.
@@ -44,18 +60,22 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 	private readonly _overrideRoot: ISettableObservable<URI | undefined>;
 
 	constructor(
-		@ISessionsManagementService private readonly sessionsService: ISessionsManagementService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@ISessionsManagementService
+		private readonly sessionsService: ISessionsManagementService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IPromptsService private readonly promptsService: IPromptsService,
-		@ICustomizationHarnessService private readonly harnessService: ICustomizationHarnessService,
+		@ICustomizationHarnessService
+		private readonly harnessService: ICustomizationHarnessService,
 		@ICommandService private readonly commandService: ICommandService,
 		@ILogService private readonly logService: ILogService,
 		@IFileService private readonly fileService: IFileService,
-		@INotificationService private readonly notificationService: INotificationService,
+		@INotificationService
+		private readonly notificationService: INotificationService,
 	) {
 		this._overrideRoot = observableValue(this, undefined);
 
-		this.activeProjectRoot = derived(reader => {
+		this.activeProjectRoot = derived((reader) => {
 			const override = this._overrideRoot.read(reader);
 			if (override) {
 				return override;
@@ -69,7 +89,7 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 			return root;
 		});
 
-		this.hasOverrideProjectRoot = derived(reader => {
+		this.hasOverrideProjectRoot = derived((reader) => {
 			return this._overrideRoot.read(reader) !== undefined;
 		});
 	}
@@ -128,7 +148,11 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 		}
 
 		for (const fileUri of fileUris) {
-			await this.commitFileToRepos(fileUri, folder.root, folder.workingDirectory);
+			await this.commitFileToRepos(
+				fileUri,
+				folder.root,
+				folder.workingDirectory,
+			);
 		}
 	}
 
@@ -145,7 +169,11 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 		}
 
 		for (const fileUri of fileUris) {
-			await this.commitDeletionToRepos(fileUri, folder.root, folder.workingDirectory);
+			await this.commitDeletionToRepos(
+				fileUri,
+				folder.root,
+				folder.workingDirectory,
+			);
 		}
 	}
 
@@ -153,7 +181,11 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 	 * Computes the repository-relative path for a file. The file may be
 	 * located under the worktree or the repository root.
 	 */
-	private getRelativePath(fileUri: URI, repositoryUri: URI, worktreeUri: URI | undefined): string | undefined {
+	private getRelativePath(
+		fileUri: URI,
+		repositoryUri: URI,
+		worktreeUri: URI | undefined,
+	): string | undefined {
 		// Try worktree first (when active, files are written under it)
 		if (worktreeUri) {
 			const rel = relativePath(worktreeUri, fileUri);
@@ -168,7 +200,11 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 	 * Commits a single file to the main repository and optionally the worktree.
 	 * Copies the file content between trees when needed.
 	 */
-	private async commitFileToRepos(fileUri: URI, repositoryUri: URI, worktreeUri: URI | undefined): Promise<void> {
+	private async commitFileToRepos(
+		fileUri: URI,
+		repositoryUri: URI,
+		worktreeUri: URI | undefined,
+	): Promise<void> {
 		const relPath = this.getRelativePath(fileUri, repositoryUri, worktreeUri);
 		if (!relPath) {
 			return;
@@ -183,15 +219,21 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 				await this.fileService.writeFile(repoFileUri, content.value);
 			}
 			await this.commandService.executeCommand(
-				'github.copilot.cli.sessions.commitToRepository',
-				{ repositoryUri, fileUri: repoFileUri }
+				"github.copilot.cli.sessions.commitToRepository",
+				{ repositoryUri, fileUri: repoFileUri },
 			);
 		} catch (error) {
-			this.logService.error('[SessionsAICustomizationWorkspaceService] Failed to commit to repository:', error);
+			this.logService.error(
+				"[SessionsAICustomizationWorkspaceService] Failed to commit to repository:",
+				error,
+			);
 			if (worktreeUri) {
 				this.notificationService.notify({
 					severity: Severity.Warning,
-					message: localize('commitToRepoFailed', "Your customization was saved to this session's worktree, but we couldn't apply it to the default branch. You may need to apply it manually."),
+					message: localize(
+						"commitToRepoFailed",
+						"Your customization was saved to this session's worktree, but we couldn't apply it to the default branch. You may need to apply it manually.",
+					),
 				});
 			}
 		}
@@ -205,11 +247,14 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 					await this.fileService.writeFile(worktreeFileUri, content.value);
 				}
 				await this.commandService.executeCommand(
-					'github.copilot.cli.sessions.commitToWorktree',
-					{ worktreeUri, fileUri: worktreeFileUri }
+					"github.copilot.cli.sessions.commitToWorktree",
+					{ worktreeUri, fileUri: worktreeFileUri },
 				);
 			} catch (error) {
-				this.logService.error('[SessionsAICustomizationWorkspaceService] Failed to commit to worktree:', error);
+				this.logService.error(
+					"[SessionsAICustomizationWorkspaceService] Failed to commit to worktree:",
+					error,
+				);
 			}
 		}
 	}
@@ -219,7 +264,11 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 	 * the worktree. The file is already deleted from disk before this is called;
 	 * `git add` on a deleted path stages the removal.
 	 */
-	private async commitDeletionToRepos(fileUri: URI, repositoryUri: URI, worktreeUri: URI | undefined): Promise<void> {
+	private async commitDeletionToRepos(
+		fileUri: URI,
+		repositoryUri: URI,
+		worktreeUri: URI | undefined,
+	): Promise<void> {
 		const relPath = this.getRelativePath(fileUri, repositoryUri, worktreeUri);
 		if (!relPath) {
 			return;
@@ -230,18 +279,27 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 		// 1. Delete from main repository if it exists there, then commit
 		try {
 			if (await this.fileService.exists(repoFileUri)) {
-				await this.fileService.del(repoFileUri, { useTrash: true, recursive: true });
+				await this.fileService.del(repoFileUri, {
+					useTrash: true,
+					recursive: true,
+				});
 			}
 			await this.commandService.executeCommand(
-				'github.copilot.cli.sessions.commitToRepository',
-				{ repositoryUri, fileUri: repoFileUri }
+				"github.copilot.cli.sessions.commitToRepository",
+				{ repositoryUri, fileUri: repoFileUri },
 			);
 		} catch (error) {
-			this.logService.error('[SessionsAICustomizationWorkspaceService] Failed to commit deletion to repository:', error);
+			this.logService.error(
+				"[SessionsAICustomizationWorkspaceService] Failed to commit deletion to repository:",
+				error,
+			);
 			if (worktreeUri) {
 				this.notificationService.notify({
 					severity: Severity.Warning,
-					message: localize('deleteFromRepoFailed', "Your customization was removed from this session's worktree, but we couldn't apply the change to the default branch. You may need to remove it manually."),
+					message: localize(
+						"deleteFromRepoFailed",
+						"Your customization was removed from this session's worktree, but we couldn't apply the change to the default branch. You may need to remove it manually.",
+					),
 				});
 			}
 		}
@@ -252,37 +310,87 @@ export class SessionsAICustomizationWorkspaceService implements IAICustomization
 			try {
 				// The file may already be deleted from the worktree by the caller
 				await this.commandService.executeCommand(
-					'github.copilot.cli.sessions.commitToWorktree',
-					{ worktreeUri, fileUri: worktreeFileUri }
+					"github.copilot.cli.sessions.commitToWorktree",
+					{ worktreeUri, fileUri: worktreeFileUri },
 				);
 			} catch (error) {
-				this.logService.error('[SessionsAICustomizationWorkspaceService] Failed to commit deletion to worktree:', error);
+				this.logService.error(
+					"[SessionsAICustomizationWorkspaceService] Failed to commit deletion to worktree:",
+					error,
+				);
 			}
 		}
 	}
 
 	async generateCustomization(type: PromptsType): Promise<void> {
-		const creator = this.instantiationService.createInstance(CustomizationCreatorService);
+		const creator = this.instantiationService.createInstance(
+			CustomizationCreatorService,
+		);
 		await creator.createWithAI(type);
 	}
 
-	async getFilteredPromptSlashCommands(token: CancellationToken): Promise<readonly IChatPromptSlashCommand[]> {
+	async getFilteredPromptSlashCommands(
+		token: CancellationToken,
+	): Promise<readonly IChatPromptSlashCommand[]> {
 		const allCommands = await this.promptsService.getPromptSlashCommands(token);
-		return allCommands.filter(cmd => {
+		return allCommands.filter((cmd) => {
 			const filter = this.getStorageSourceFilter(cmd.type);
 			return applyStorageSourceFilter([cmd], filter).length > 0;
 		});
 	}
 
-	private static readonly _skillUIIntegrations: ReadonlyMap<string, string> = new Map([
-		['act-on-feedback', localize('skillUI.actOnFeedback', "Used by the Submit Feedback button in the Changes toolbar")],
-		['generate-run-commands', localize('skillUI.generateRunCommands', "Used by the Run button in the title bar")],
-		['create-pr', localize('skillUI.createPr', "Used by the Create Pull Request button in the Changes toolbar")],
-		['create-draft-pr', localize('skillUI.createDraftPr', "Used by the Create Draft Pull Request button in the Changes toolbar")],
-		['update-pr', localize('skillUI.updatePr', "Used by the Update Pull Request button in the Changes toolbar")],
-		['merge-changes', localize('skillUI.mergeChanges', "Used by the Merge button in the Changes toolbar")],
-		['commit', localize('skillUI.commit', "Used by the Commit button in the Changes toolbar")],
-	]);
+	private static readonly _skillUIIntegrations: ReadonlyMap<string, string> =
+		new Map([
+			[
+				"act-on-feedback",
+				localize(
+					"skillUI.actOnFeedback",
+					"Used by the Submit Feedback button in the Changes toolbar",
+				),
+			],
+			[
+				"generate-run-commands",
+				localize(
+					"skillUI.generateRunCommands",
+					"Used by the Run button in the title bar",
+				),
+			],
+			[
+				"create-pr",
+				localize(
+					"skillUI.createPr",
+					"Used by the Create Pull Request button in the Changes toolbar",
+				),
+			],
+			[
+				"create-draft-pr",
+				localize(
+					"skillUI.createDraftPr",
+					"Used by the Create Draft Pull Request button in the Changes toolbar",
+				),
+			],
+			[
+				"update-pr",
+				localize(
+					"skillUI.updatePr",
+					"Used by the Update Pull Request button in the Changes toolbar",
+				),
+			],
+			[
+				"merge-changes",
+				localize(
+					"skillUI.mergeChanges",
+					"Used by the Merge button in the Changes toolbar",
+				),
+			],
+			[
+				"commit",
+				localize(
+					"skillUI.commit",
+					"Used by the Commit button in the Changes toolbar",
+				),
+			],
+		]);
 
 	getSkillUIIntegrations(): ReadonlyMap<string, string> {
 		return SessionsAICustomizationWorkspaceService._skillUIIntegrations;

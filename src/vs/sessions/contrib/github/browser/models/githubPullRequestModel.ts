@@ -3,15 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { RunOnceScheduler } from '../../../../../base/common/async.js';
-import { Disposable, DisposableSet, IDisposable, ReferenceCollection, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { IObservable, observableValue, transaction } from '../../../../../base/common/observable.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { IGitHubPRComment, IGitHubPullRequest, IGitHubPullRequestMergeability, IGitHubPullRequestReview } from '../../common/types.js';
-import { computeMergeability, GitHubPRFetcher } from '../fetchers/githubPRFetcher.js';
-import { GitHubApiClient } from '../githubApiClient.js';
+import { RunOnceScheduler } from "../../../../../base/common/async.js";
+import {
+	Disposable,
+	DisposableSet,
+	IDisposable,
+	ReferenceCollection,
+	toDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import {
+	IObservable,
+	observableValue,
+	transaction,
+} from "../../../../../base/common/observable.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import {
+	IGitHubPRComment,
+	IGitHubPullRequest,
+	IGitHubPullRequestMergeability,
+	IGitHubPullRequestReview,
+} from "../../common/types.js";
+import {
+	computeMergeability,
+	GitHubPRFetcher,
+} from "../fetchers/githubPRFetcher.js";
+import { GitHubApiClient } from "../githubApiClient.js";
 
-const LOG_PREFIX = '[GitHubPullRequestModel]';
+const LOG_PREFIX = "[GitHubPullRequestModel]";
 const DEFAULT_POLL_INTERVAL_MS = 60_000;
 
 export class GitHubPullRequestModelReferenceCollection extends ReferenceCollection<GitHubPullRequestModel> {
@@ -19,19 +37,37 @@ export class GitHubPullRequestModelReferenceCollection extends ReferenceCollecti
 
 	constructor(
 		apiClient: GitHubApiClient,
-		@ILogService private readonly _logService: ILogService
+		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
 		this._fetcher = new GitHubPRFetcher(apiClient);
 	}
 
-	protected override createReferencedObject(key: string, owner: string, repo: string, prNumber: number): GitHubPullRequestModel {
-		this._logService.trace(`[GitHubPullRequestModelReferenceCollection][createReferencedObject] Creating PR model for ${key}`);
-		return new GitHubPullRequestModel(owner, repo, prNumber, this._fetcher, this._logService);
+	protected override createReferencedObject(
+		key: string,
+		owner: string,
+		repo: string,
+		prNumber: number,
+	): GitHubPullRequestModel {
+		this._logService.trace(
+			`[GitHubPullRequestModelReferenceCollection][createReferencedObject] Creating PR model for ${key}`,
+		);
+		return new GitHubPullRequestModel(
+			owner,
+			repo,
+			prNumber,
+			this._fetcher,
+			this._logService,
+		);
 	}
 
-	protected override destroyReferencedObject(key: string, object: GitHubPullRequestModel): void {
-		this._logService.trace(`[GitHubPullRequestModelReferenceCollection][destroyReferencedObject] Disposing PR model for ${key}`);
+	protected override destroyReferencedObject(
+		key: string,
+		object: GitHubPullRequestModel,
+	): void {
+		this._logService.trace(
+			`[GitHubPullRequestModelReferenceCollection][destroyReferencedObject] Disposing PR model for ${key}`,
+		);
 		object.dispose();
 	}
 }
@@ -41,17 +77,27 @@ export class GitHubPullRequestModelReferenceCollection extends ReferenceCollecti
  * observables, supports on-demand refresh, and can poll periodically.
  */
 export class GitHubPullRequestModel extends Disposable {
-
 	private _pullRequestEtag: string | undefined = undefined;
-	private readonly _pullRequest = observableValue<IGitHubPullRequest | undefined>(this, undefined);
-	readonly pullRequest: IObservable<IGitHubPullRequest | undefined> = this._pullRequest;
+	private readonly _pullRequest = observableValue<
+		IGitHubPullRequest | undefined
+	>(this, undefined);
+	readonly pullRequest: IObservable<IGitHubPullRequest | undefined> =
+		this._pullRequest;
 
 	private _reviewsEtag: string | undefined = undefined;
-	private readonly _reviews = observableValue<readonly IGitHubPullRequestReview[] | undefined>(this, undefined);
-	readonly reviews: IObservable<readonly IGitHubPullRequestReview[] | undefined> = this._reviews;
+	private readonly _reviews = observableValue<
+		readonly IGitHubPullRequestReview[] | undefined
+	>(this, undefined);
+	readonly reviews: IObservable<
+		readonly IGitHubPullRequestReview[] | undefined
+	> = this._reviews;
 
-	private readonly _mergeability = observableValue<IGitHubPullRequestMergeability | undefined>(this, undefined);
-	readonly mergeability: IObservable<IGitHubPullRequestMergeability | undefined> = this._mergeability;
+	private readonly _mergeability = observableValue<
+		IGitHubPullRequestMergeability | undefined
+	>(this, undefined);
+	readonly mergeability: IObservable<
+		IGitHubPullRequestMergeability | undefined
+	> = this._mergeability;
 
 	private _refreshPromise: Promise<void> | undefined = undefined;
 
@@ -67,7 +113,9 @@ export class GitHubPullRequestModel extends Disposable {
 	) {
 		super();
 
-		this._pollScheduler = this._register(new RunOnceScheduler(() => this._poll(), DEFAULT_POLL_INTERVAL_MS));
+		this._pollScheduler = this._register(
+			new RunOnceScheduler(() => this._poll(), DEFAULT_POLL_INTERVAL_MS),
+		);
 	}
 
 	/**
@@ -75,10 +123,9 @@ export class GitHubPullRequestModel extends Disposable {
 	 */
 	refresh(): Promise<void> {
 		if (!this._refreshPromise) {
-			this._refreshPromise = this._refresh()
-				.finally(() => {
-					this._refreshPromise = undefined;
-				});
+			this._refreshPromise = this._refresh().finally(() => {
+				this._refreshPromise = undefined;
+			});
 		}
 
 		return this._refreshPromise;
@@ -88,7 +135,12 @@ export class GitHubPullRequestModel extends Disposable {
 	 * Post a top-level issue comment on the PR.
 	 */
 	async postIssueComment(body: string): Promise<IGitHubPRComment> {
-		return this._fetcher.postIssueComment(this.owner, this.repo, this.prNumber, body);
+		return this._fetcher.postIssueComment(
+			this.owner,
+			this.repo,
+			this.prNumber,
+			body,
+		);
 	}
 
 	/**
@@ -122,11 +174,21 @@ export class GitHubPullRequestModel extends Disposable {
 	private async _refresh(): Promise<void> {
 		try {
 			const [pr, reviews] = await Promise.all([
-				this._fetcher.getPullRequest(this.owner, this.repo, this.prNumber, this._pullRequestEtag),
-				this._fetcher.getReviews(this.owner, this.repo, this.prNumber, this._reviewsEtag),
+				this._fetcher.getPullRequest(
+					this.owner,
+					this.repo,
+					this.prNumber,
+					this._pullRequestEtag,
+				),
+				this._fetcher.getReviews(
+					this.owner,
+					this.repo,
+					this.prNumber,
+					this._reviewsEtag,
+				),
 			]);
 
-			transaction(tx => {
+			transaction((tx) => {
 				if (pr.statusCode === 200 && pr.data) {
 					this._pullRequestEtag = pr.etag;
 					this._pullRequest.set(pr.data, tx);
@@ -151,7 +213,10 @@ export class GitHubPullRequestModel extends Disposable {
 				}
 			});
 		} catch (err) {
-			this._logService.error(`${LOG_PREFIX} Failed to refresh PR #${this.prNumber}:`, err);
+			this._logService.error(
+				`${LOG_PREFIX} Failed to refresh PR #${this.prNumber}:`,
+				err,
+			);
 		}
 	}
 

@@ -3,10 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeferredPromise } from '../../../../../../base/common/async.js';
-import { IMarkdownString } from '../../../../../../base/common/htmlContent.js';
-import { IChatQuestion, IChatQuestionAnswers, IChatQuestionCarousel } from '../../chatService/chatService.js';
-import { ToolDataSource } from '../../tools/languageModelToolsService.js';
+import { DeferredPromise } from "../../../../../../base/common/async.js";
+import { IMarkdownString } from "../../../../../../base/common/htmlContent.js";
+import {
+	IChatQuestion,
+	IChatQuestionAnswers,
+	IChatQuestionCarousel,
+} from "../../chatService/chatService.js";
+import { ToolDataSource } from "../../tools/languageModelToolsService.js";
 
 /**
  * Runtime representation of a question carousel with a {@link DeferredPromise}
@@ -14,8 +18,10 @@ import { ToolDataSource } from '../../tools/languageModelToolsService.js';
  * completion so only serialisable data is persisted.
  */
 export class ChatQuestionCarouselData implements IChatQuestionCarousel {
-	public readonly kind = 'questionCarousel' as const;
-	public readonly completion = new DeferredPromise<{ answers: IChatQuestionAnswers | undefined }>();
+	public readonly kind = "questionCarousel" as const;
+	public readonly completion = new DeferredPromise<{
+		answers: IChatQuestionAnswers | undefined;
+	}>();
 	public draftAnswers: IChatQuestionAnswers | undefined;
 	public draftCurrentIndex: number | undefined;
 	public draftCollapsed: boolean | undefined;
@@ -50,7 +56,7 @@ export class ChatQuestionCarouselData implements IChatQuestionCarousel {
 		public message?: string | IMarkdownString,
 		public source?: ToolDataSource,
 		public terminalId?: string,
-	) { }
+	) {}
 
 	toJSON(): IChatQuestionCarousel {
 		return {

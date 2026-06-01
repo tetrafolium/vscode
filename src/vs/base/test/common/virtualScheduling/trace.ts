@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BugIndicatingError } from '../../../common/errors.js';
+import { BugIndicatingError } from "../../../common/errors.js";
 
 /**
  * # Trace — causal-chain attribution for scheduled work
@@ -41,14 +41,16 @@ export class Trace {
 		for (let t: Trace | undefined = this; t; t = t.parent) {
 			parts.push(`#${t.id} ${t.label}`);
 		}
-		return parts.join(' ← ');
+		return parts.join(" ← ");
 	}
 
-	toString(): string { return this.describe(); }
+	toString(): string {
+		return this.describe();
+	}
 }
 
 /** Sentinel for "no known causal predecessor". */
-export const ROOT_TRACE: Trace = new Trace(undefined, '<root>');
+export const ROOT_TRACE: Trace = new Trace(undefined, "<root>");
 
 export function createTraceRoot(label: string, stack?: string): Trace {
 	return new Trace(undefined, label, stack);
@@ -107,7 +109,9 @@ export class TraceContext {
 	private _current: Frame = ROOT_FRAME;
 	private _isHandlerRunning = false;
 
-	currentTrace(): Trace { return this._current.trace; }
+	currentTrace(): Trace {
+		return this._current.trace;
+	}
 
 	/**
 	 * Install `t` as current for the synchronous duration of `fn`, then
@@ -125,7 +129,7 @@ export class TraceContext {
 			if (this._current !== next) {
 				// eslint-disable-next-line no-unsafe-finally
 				throw new BugIndicatingError(
-					`runWithTrace: unexpected mutation of current frame.`
+					`runWithTrace: unexpected mutation of current frame.`,
 				);
 			}
 			this._current = prev;
@@ -145,7 +149,7 @@ export class TraceContext {
 		if (this._isHandlerRunning) {
 			throw new Error(
 				`runAsHandler: re-entrant invocation. ` +
-				`current=${this._current.trace.describe()}, incoming=${t.describe()}`
+					`current=${this._current.trace.describe()}, incoming=${t.describe()}`,
 			);
 		}
 		const prev = this._current;
@@ -160,7 +164,9 @@ export class TraceContext {
 				// Identity guard: another handler may have run between us
 				// queuing this reset and it firing. Each runAsHandler mints
 				// a fresh frame, so reference-equality detects staleness.
-				if (this._current === next) { this._current = prev; }
+				if (this._current === next) {
+					this._current = prev;
+				}
 			});
 		}
 	}

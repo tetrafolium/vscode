@@ -5,10 +5,8 @@
 
 import * as eslint from 'eslint';
 
-export default new class NoBadGDPRComment implements eslint.Rule.RuleModule {
-
+export default new (class NoBadGDPRComment implements eslint.Rule.RuleModule {
 	create(context: eslint.Rule.RuleContext): eslint.Rule.RuleListener {
-
 		return {
 			['Program'](node) {
 				for (const comment of (node as eslint.AST.Program).comments) {
@@ -20,17 +18,20 @@ export default new class NoBadGDPRComment implements eslint.Rule.RuleModule {
 					}
 
 					const dataStart = comment.value.indexOf('\n');
-					const data = comment.value.substring(dataStart)
+					const data = comment.value.substring(dataStart);
 
-					let gdprData: { [key: string]: object } | undefined
+					let gdprData: { [key: string]: object } | undefined;
 
 					try {
-						const jsonRaw = `{ ${data} }`
+						const jsonRaw = `{ ${data} }`;
 						gdprData = JSON.parse(jsonRaw);
 					} catch (e) {
 						context.report({
-							loc: { start: comment.loc.start, end: comment.loc.end },
-							message: 'GDPR comment is not valid JSON'
+							loc: {
+								start: comment.loc.start,
+								end: comment.loc.end,
+							},
+							message: 'GDPR comment is not valid JSON',
 						});
 					}
 
@@ -38,13 +39,16 @@ export default new class NoBadGDPRComment implements eslint.Rule.RuleModule {
 						const len = Object.keys(gdprData).length;
 						if (len !== 1) {
 							context.report({
-								loc: { start: comment.loc.start, end: comment.loc.end },
-								message: `GDPR comment must contain exactly one key, not ${Object.keys(gdprData).join(', ')}`
+								loc: {
+									start: comment.loc.start,
+									end: comment.loc.end,
+								},
+								message: `GDPR comment must contain exactly one key, not ${Object.keys(gdprData).join(', ')}`,
 							});
 						}
 					}
 				}
-			}
+			},
 		};
 	}
-};
+})();

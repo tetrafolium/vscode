@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
+declare module "vscode" {
 	// https://github.com/microsoft/vscode/issues/185269
 
 	export interface SourceControl {
@@ -12,7 +12,9 @@ declare module 'vscode' {
 
 	export interface SourceControlHistoryProvider {
 		readonly currentHistoryItemRef: SourceControlHistoryItemRef | undefined;
-		readonly currentHistoryItemRemoteRef: SourceControlHistoryItemRef | undefined;
+		readonly currentHistoryItemRemoteRef:
+			| SourceControlHistoryItemRef
+			| undefined;
 		readonly currentHistoryItemBaseRef: SourceControlHistoryItemRef | undefined;
 
 		/**
@@ -26,14 +28,38 @@ declare module 'vscode' {
 		 */
 		readonly onDidChangeHistoryItemRefs: Event<SourceControlHistoryItemRefsChangeEvent>;
 
-		provideHistoryItemRefs(historyItemRefs: string[] | undefined, token: CancellationToken): ProviderResult<SourceControlHistoryItemRef[]>;
-		provideHistoryItems(options: SourceControlHistoryOptions, token: CancellationToken): ProviderResult<SourceControlHistoryItem[]>;
-		provideHistoryItemChanges(historyItemId: string, historyItemParentId: string | undefined, token: CancellationToken): ProviderResult<SourceControlHistoryItemChange[]>;
+		provideHistoryItemRefs(
+			historyItemRefs: string[] | undefined,
+			token: CancellationToken,
+		): ProviderResult<SourceControlHistoryItemRef[]>;
+		provideHistoryItems(
+			options: SourceControlHistoryOptions,
+			token: CancellationToken,
+		): ProviderResult<SourceControlHistoryItem[]>;
+		provideHistoryItemChanges(
+			historyItemId: string,
+			historyItemParentId: string | undefined,
+			token: CancellationToken,
+		): ProviderResult<SourceControlHistoryItemChange[]>;
 
-		resolveHistoryItem(historyItemId: string, token: CancellationToken): ProviderResult<SourceControlHistoryItem>;
-		resolveHistoryItemChatContext(historyItemId: string, token: CancellationToken): ProviderResult<string>;
-		resolveHistoryItemChangeRangeChatContext(historyItemId: string, historyItemParentId: string, path: string, token: CancellationToken): ProviderResult<string>;
-		resolveHistoryItemRefsCommonAncestor(historyItemRefs: string[], token: CancellationToken): ProviderResult<string>;
+		resolveHistoryItem(
+			historyItemId: string,
+			token: CancellationToken,
+		): ProviderResult<SourceControlHistoryItem>;
+		resolveHistoryItemChatContext(
+			historyItemId: string,
+			token: CancellationToken,
+		): ProviderResult<string>;
+		resolveHistoryItemChangeRangeChatContext(
+			historyItemId: string,
+			historyItemParentId: string,
+			path: string,
+			token: CancellationToken,
+		): ProviderResult<string>;
+		resolveHistoryItemRefsCommonAncestor(
+			historyItemRefs: string[],
+			token: CancellationToken,
+		): ProviderResult<string>;
 	}
 
 	export interface SourceControlHistoryOptions {

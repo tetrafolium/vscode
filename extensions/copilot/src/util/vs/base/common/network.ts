@@ -12,7 +12,6 @@ import { URI } from './uri';
 import * as paths from './path';
 
 export namespace Schemas {
-
 	/**
 	 * A schema that is used for models that exist in memory
 	 * only and that have no correspondence on a server or such.
@@ -65,9 +64,11 @@ export namespace Schemas {
 
 	export const vscodeNotebookCell = 'vscode-notebook-cell';
 	export const vscodeNotebookCellMetadata = 'vscode-notebook-cell-metadata';
-	export const vscodeNotebookCellMetadataDiff = 'vscode-notebook-cell-metadata-diff';
+	export const vscodeNotebookCellMetadataDiff =
+		'vscode-notebook-cell-metadata-diff';
 	export const vscodeNotebookCellOutput = 'vscode-notebook-cell-output';
-	export const vscodeNotebookCellOutputDiff = 'vscode-notebook-cell-output-diff';
+	export const vscodeNotebookCellOutputDiff =
+		'vscode-notebook-cell-output-diff';
 	export const vscodeNotebookMetadata = 'vscode-notebook-metadata';
 	export const vscodeInteractiveInput = 'vscode-interactive-input';
 
@@ -176,17 +177,24 @@ export function matchesScheme(target: URI | string, scheme: string): boolean {
 	}
 }
 
-export function matchesSomeScheme(target: URI | string, ...schemes: string[]): boolean {
-	return schemes.some(scheme => matchesScheme(target, scheme));
+export function matchesSomeScheme(
+	target: URI | string,
+	...schemes: string[]
+): boolean {
+	return schemes.some((scheme) => matchesScheme(target, scheme));
 }
 
 export const connectionTokenCookieName = 'vscode-tkn';
 export const connectionTokenQueryName = 'tkn';
 
 class RemoteAuthoritiesImpl {
-	private readonly _hosts: { [authority: string]: string | undefined } = Object.create(null);
-	private readonly _ports: { [authority: string]: number | undefined } = Object.create(null);
-	private readonly _connectionTokens: { [authority: string]: string | undefined } = Object.create(null);
+	private readonly _hosts: { [authority: string]: string | undefined } =
+		Object.create(null);
+	private readonly _ports: { [authority: string]: number | undefined } =
+		Object.create(null);
+	private readonly _connectionTokens: {
+		[authority: string]: string | undefined;
+	} = Object.create(null);
 	private _preferredWebSchema: 'http' | 'https' = 'http';
 	private _delegate: ((uri: URI) => URI) | null = null;
 	private _serverRootPath: string = '/';
@@ -199,8 +207,14 @@ class RemoteAuthoritiesImpl {
 		this._delegate = delegate;
 	}
 
-	setServerRootPath(product: { quality?: string; commit?: string }, serverBasePath: string | undefined): void {
-		this._serverRootPath = paths.posix.join(serverBasePath ?? '/', getServerProductSegment(product));
+	setServerRootPath(
+		product: { quality?: string; commit?: string },
+		serverBasePath: string | undefined,
+	): void {
+		this._serverRootPath = paths.posix.join(
+			serverBasePath ?? '/',
+			getServerProductSegment(product),
+		);
 	}
 
 	getServerRootPath(): string {
@@ -208,7 +222,10 @@ class RemoteAuthoritiesImpl {
 	}
 
 	private get _remoteResourcesPath(): string {
-		return paths.posix.join(this._serverRootPath, Schemas.vscodeRemoteResource);
+		return paths.posix.join(
+			this._serverRootPath,
+			Schemas.vscodeRemoteResource,
+		);
 	}
 
 	set(authority: string, host: string, port: number): void {
@@ -245,40 +262,66 @@ class RemoteAuthoritiesImpl {
 			query += `&${connectionTokenQueryName}=${encodeURIComponent(connectionToken)}`;
 		}
 		return URI.from({
-			scheme: platform.isWeb ? this._preferredWebSchema : Schemas.vscodeRemoteResource,
+			scheme: platform.isWeb
+				? this._preferredWebSchema
+				: Schemas.vscodeRemoteResource,
 			authority: `${host}:${port}`,
 			path: this._remoteResourcesPath,
-			query
+			query,
 		});
 	}
 }
 
 export const RemoteAuthorities = new RemoteAuthoritiesImpl();
 
-export function getServerProductSegment(product: { quality?: string; commit?: string }) {
+export function getServerProductSegment(product: {
+	quality?: string;
+	commit?: string;
+}) {
 	return `${product.quality ?? 'oss'}-${product.commit ?? 'dev'}`;
 }
 
 /**
  * A string pointing to a path inside the app. It should not begin with ./ or ../
  */
-export type AppResourcePath = (
-	`a${string}` | `b${string}` | `c${string}` | `d${string}` | `e${string}` | `f${string}`
-	| `g${string}` | `h${string}` | `i${string}` | `j${string}` | `k${string}` | `l${string}`
-	| `m${string}` | `n${string}` | `o${string}` | `p${string}` | `q${string}` | `r${string}`
-	| `s${string}` | `t${string}` | `u${string}` | `v${string}` | `w${string}` | `x${string}`
-	| `y${string}` | `z${string}`
-);
+export type AppResourcePath =
+	| `a${string}`
+	| `b${string}`
+	| `c${string}`
+	| `d${string}`
+	| `e${string}`
+	| `f${string}`
+	| `g${string}`
+	| `h${string}`
+	| `i${string}`
+	| `j${string}`
+	| `k${string}`
+	| `l${string}`
+	| `m${string}`
+	| `n${string}`
+	| `o${string}`
+	| `p${string}`
+	| `q${string}`
+	| `r${string}`
+	| `s${string}`
+	| `t${string}`
+	| `u${string}`
+	| `v${string}`
+	| `w${string}`
+	| `x${string}`
+	| `y${string}`
+	| `z${string}`;
 
 export const builtinExtensionsPath: AppResourcePath = 'vs/../../extensions';
 export const nodeModulesPath: AppResourcePath = 'vs/../../node_modules';
-export const nodeModulesAsarPath: AppResourcePath = 'vs/../../node_modules.asar';
-export const nodeModulesAsarUnpackedPath: AppResourcePath = 'vs/../../node_modules.asar.unpacked';
+export const nodeModulesAsarPath: AppResourcePath =
+	'vs/../../node_modules.asar';
+export const nodeModulesAsarUnpackedPath: AppResourcePath =
+	'vs/../../node_modules.asar.unpacked';
 
 export const VSCODE_AUTHORITY = 'vscode-app';
 
 class FileAccessImpl {
-
 	private static readonly FALLBACK_AUTHORITY = VSCODE_AUTHORITY;
 
 	/**
@@ -308,12 +351,11 @@ class FileAccessImpl {
 		if (
 			// ...only ever for `file` resources
 			uri.scheme === Schemas.file &&
-			(
-				// ...and we run in native environments
-				platform.isNative ||
+			// ...and we run in native environments
+			(platform.isNative ||
 				// ...or web worker extensions on desktop
-				(platform.webWorkerOrigin === `${Schemas.vscodeFileResource}://${FileAccessImpl.FALLBACK_AUTHORITY}`)
-			)
+				platform.webWorkerOrigin ===
+					`${Schemas.vscodeFileResource}://${FileAccessImpl.FALLBACK_AUTHORITY}`)
 		) {
 			return uri.with({
 				scheme: Schemas.vscodeFileResource,
@@ -323,7 +365,7 @@ class FileAccessImpl {
 				// add our own
 				authority: uri.authority || FileAccessImpl.FALLBACK_AUTHORITY,
 				query: null,
-				fragment: null
+				fragment: null,
 			});
 		}
 
@@ -351,9 +393,12 @@ class FileAccessImpl {
 				// Only preserve the `authority` if it is different from
 				// our fallback authority. This ensures we properly preserve
 				// Windows UNC paths that come with their own authority.
-				authority: uri.authority !== FileAccessImpl.FALLBACK_AUTHORITY ? uri.authority : null,
+				authority:
+					uri.authority !== FileAccessImpl.FALLBACK_AUTHORITY
+						? uri.authority
+						: null,
 				query: null,
-				fragment: null
+				fragment: null,
 			});
 		}
 
@@ -370,7 +415,10 @@ class FileAccessImpl {
 
 			// File URL (with scheme)
 			if (/^\w[\w\d+.-]*:\/\//.test(rootUriOrPath)) {
-				return URI.joinPath(URI.parse(rootUriOrPath, true), uriOrModule);
+				return URI.joinPath(
+					URI.parse(rootUriOrPath, true),
+					uriOrModule,
+				);
 			}
 
 			// File Path (no scheme)
@@ -385,19 +433,27 @@ class FileAccessImpl {
 export const FileAccess = new FileAccessImpl();
 
 export const CacheControlheaders: Record<string, string> = Object.freeze({
-	'Cache-Control': 'no-cache, no-store'
+	'Cache-Control': 'no-cache, no-store',
 });
 
 export const DocumentPolicyheaders: Record<string, string> = Object.freeze({
-	'Document-Policy': 'include-js-call-stacks-in-crash-reports'
+	'Document-Policy': 'include-js-call-stacks-in-crash-reports',
 });
 
 export namespace COI {
-
-	const coiHeaders = new Map<'3' | '2' | '1' | string, Record<string, string>>([
+	const coiHeaders = new Map<
+		'3' | '2' | '1' | string,
+		Record<string, string>
+	>([
 		['1', { 'Cross-Origin-Opener-Policy': 'same-origin' }],
 		['2', { 'Cross-Origin-Embedder-Policy': 'require-corp' }],
-		['3', { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' }],
+		[
+			'3',
+			{
+				'Cross-Origin-Opener-Policy': 'same-origin',
+				'Cross-Origin-Embedder-Policy': 'require-corp',
+			},
+		],
 	]);
 
 	export const CoopAndCoep = Object.freeze(coiHeaders.get('3'));
@@ -407,7 +463,9 @@ export namespace COI {
 	/**
 	 * Extract desired headers from `vscode-coi` invocation
 	 */
-	export function getHeadersFromQuery(url: string | URI | URL): Record<string, string> | undefined {
+	export function getHeadersFromQuery(
+		url: string | URI | URL,
+	): Record<string, string> | undefined {
 		let params: URLSearchParams | undefined;
 		if (typeof url === 'string') {
 			params = new URL(url).searchParams;
@@ -427,8 +485,18 @@ export namespace COI {
 	 * Add the `vscode-coi` query attribute based on wanting `COOP` and `COEP`. Will be a noop when `crossOriginIsolated`
 	 * isn't enabled the current context
 	 */
-	export function addSearchParam(urlOrSearch: URLSearchParams | Record<string, string>, coop: boolean, coep: boolean): void {
-		if (!(globalThis as typeof globalThis & { crossOriginIsolated?: boolean }).crossOriginIsolated) {
+	export function addSearchParam(
+		urlOrSearch: URLSearchParams | Record<string, string>,
+		coop: boolean,
+		coep: boolean,
+	): void {
+		if (
+			!(
+				globalThis as typeof globalThis & {
+					crossOriginIsolated?: boolean;
+				}
+			).crossOriginIsolated
+		) {
 			// depends on the current context being COI
 			return;
 		}

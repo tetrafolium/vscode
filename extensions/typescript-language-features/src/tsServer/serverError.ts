@@ -3,18 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type * as Proto from './protocol/protocol';
-import { TypeScriptVersion } from './versionProvider';
-
+import type * as Proto from "./protocol/protocol";
+import { TypeScriptVersion } from "./versionProvider";
 
 export class TypeScriptServerError extends Error {
 	public static create(
 		serverId: string,
 		version: TypeScriptVersion,
-		response: Proto.Response
+		response: Proto.Response,
 	): TypeScriptServerError {
 		const parsedResult = TypeScriptServerError.parseErrorText(response);
-		return new TypeScriptServerError(serverId, version, response, parsedResult?.message, parsedResult?.stack, parsedResult?.sanitizedStack);
+		return new TypeScriptServerError(
+			serverId,
+			version,
+			response,
+			parsedResult?.message,
+			parsedResult?.stack,
+			parsedResult?.sanitizedStack,
+		);
 	}
 
 	private constructor(
@@ -23,18 +29,26 @@ export class TypeScriptServerError extends Error {
 		private readonly response: Proto.Response,
 		public readonly serverMessage: string | undefined,
 		public readonly serverStack: string | undefined,
-		private readonly sanitizedStack: string | undefined
+		private readonly sanitizedStack: string | undefined,
 	) {
-		super([
-			`<${serverId}> TypeScript Server Error (${version.displayName})`,
-			serverMessage,
-			serverStack
-		].filter(Boolean).join('\n'));
+		super(
+			[
+				`<${serverId}> TypeScript Server Error (${version.displayName})`,
+				serverMessage,
+				serverStack,
+			]
+				.filter(Boolean)
+				.join("\n"),
+		);
 	}
 
-	public get serverErrorText() { return this.response.message; }
+	public get serverErrorText() {
+		return this.response.message;
+	}
 
-	public get serverCommand() { return this.response.command; }
+	public get serverCommand() {
+		return this.response.command;
+	}
 
 	public get telemetry() {
 		// The "sanitizedstack" has been purged of error messages, paths, and file names (other than tsserver)
@@ -50,8 +64,8 @@ export class TypeScriptServerError extends Error {
 		return {
 			command: this.serverCommand,
 			serverid: this.serverId,
-			sanitizedstack: this.sanitizedStack || '',
-			badclient: /\bBADCLIENT\b/.test(this.stack || ''),
+			sanitizedstack: this.sanitizedStack || "",
+			badclient: /\bBADCLIENT\b/.test(this.stack || ""),
 		} as const;
 	}
 
@@ -62,17 +76,17 @@ export class TypeScriptServerError extends Error {
 	private static parseErrorText(response: Proto.Response) {
 		const errorText = response.message;
 		if (errorText) {
-			const errorPrefix = 'Error processing request. ';
+			const errorPrefix = "Error processing request. ";
 			if (errorText.startsWith(errorPrefix)) {
 				const prefixFreeErrorText = errorText.substr(errorPrefix.length);
-				const newlineIndex = prefixFreeErrorText.indexOf('\n');
+				const newlineIndex = prefixFreeErrorText.indexOf("\n");
 				if (newlineIndex >= 0) {
 					// Newline expected between message and stack.
 					const stack = prefixFreeErrorText.substring(newlineIndex + 1);
 					return {
 						message: prefixFreeErrorText.substring(0, newlineIndex),
 						stack,
-						sanitizedStack: TypeScriptServerError.sanitizeStack(stack)
+						sanitizedStack: TypeScriptServerError.sanitizeStack(stack),
 					};
 				}
 			}
@@ -85,10 +99,10 @@ export class TypeScriptServerError extends Error {
 	 */
 	private static sanitizeStack(message: string | undefined) {
 		if (!message) {
-			return '';
+			return "";
 		}
-		const regex = /(\btsserver)?(\.(?:ts|tsx|js|jsx)(?::\d+(?::\d+)?)?)\)?$/igm;
-		let serverStack = '';
+		const regex = /(\btsserver)?(\.(?:ts|tsx|js|jsx)(?::\d+(?::\d+)?)?)\)?$/gim;
+		let serverStack = "";
 		while (true) {
 			const match = regex.exec(message);
 			if (!match) {
@@ -96,7 +110,7 @@ export class TypeScriptServerError extends Error {
 			}
 			// [1] is 'tsserver' or undefined
 			// [2] is '.js:{line_number}:{column_number}'
-			serverStack += `${match[1] || 'suppressed'}${match[2]}\n`;
+			serverStack += `${match[1] || "suppressed"}${match[2]}\n`;
 		}
 		return serverStack;
 	}

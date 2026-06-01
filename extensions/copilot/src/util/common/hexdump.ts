@@ -17,8 +17,15 @@
  * 00000010  b8 00 00 00 00 00 00 00  40 00 00 00 00 00 00 00  |........@.......|
  * ```
  */
-export function formatHexdump(data: Uint8Array, startOffset: number = 0, maxBytes?: number): string {
-	const bytesToFormat = maxBytes !== undefined ? Math.min(data.length - startOffset, maxBytes) : data.length - startOffset;
+export function formatHexdump(
+	data: Uint8Array,
+	startOffset: number = 0,
+	maxBytes?: number,
+): string {
+	const bytesToFormat =
+		maxBytes !== undefined
+			? Math.min(data.length - startOffset, maxBytes)
+			: data.length - startOffset;
 	if (bytesToFormat <= 0) {
 		return '';
 	}
@@ -29,7 +36,10 @@ export function formatHexdump(data: Uint8Array, startOffset: number = 0, maxByte
 	for (let i = 0; i < bytesToFormat; i += bytesPerLine) {
 		const offset = startOffset + i;
 		const lineBytes = Math.min(bytesPerLine, bytesToFormat - i);
-		const slice = data.subarray(startOffset + i, startOffset + i + lineBytes);
+		const slice = data.subarray(
+			startOffset + i,
+			startOffset + i + lineBytes,
+		);
 
 		// Offset column
 		const offsetStr = offset.toString(16).padStart(8, '0');
@@ -52,7 +62,8 @@ export function formatHexdump(data: Uint8Array, startOffset: number = 0, maxByte
 		let ascii = '';
 		for (let j = 0; j < lineBytes; j++) {
 			const byte = slice[j];
-			ascii += (byte >= 0x20 && byte <= 0x7e) ? String.fromCharCode(byte) : '.';
+			ascii +=
+				byte >= 0x20 && byte <= 0x7e ? String.fromCharCode(byte) : '.';
 		}
 
 		lines.push(`${offsetStr}  ${hexStr}  |${ascii}|`);

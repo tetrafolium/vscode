@@ -10,11 +10,14 @@ import { IInstantiationService } from '../../../util/vs/platform/instantiation/c
 import { Intent } from '../../common/constants';
 import { GenericInlineIntentInvocation } from '../../context/node/resolvers/genericInlineIntentInvocation';
 import { EditStrategy } from '../../prompt/node/editGeneration';
-import { IIntent, IIntentInvocation, IIntentInvocationContext, IIntentSlashCommandInfo } from '../../prompt/node/intents';
-
+import {
+	IIntent,
+	IIntentInvocation,
+	IIntentInvocationContext,
+	IIntentSlashCommandInfo,
+} from '../../prompt/node/intents';
 
 export class GenerateCodeIntent implements IIntent {
-
 	static readonly ID = Intent.Generate;
 
 	readonly id = GenerateCodeIntent.ID;
@@ -23,16 +26,26 @@ export class GenerateCodeIntent implements IIntent {
 	readonly commandInfo: IIntentSlashCommandInfo = { hiddenFromUser: true };
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
-	) { }
+	) {}
 
-	async invoke(invocationContext: IIntentInvocationContext): Promise<IIntentInvocation> {
+	async invoke(
+		invocationContext: IIntentInvocationContext,
+	): Promise<IIntentInvocation> {
 		const { location, documentContext, request } = invocationContext;
 		if (!documentContext) {
 			throw new Error('Open a file to add code.');
 		}
 		const endpoint = await this.endpointProvider.getChatEndpoint(request);
-		return this.instantiationService.createInstance(GenericInlineIntentInvocation, this, location, endpoint, documentContext, EditStrategy.ForceInsertion);
+		return this.instantiationService.createInstance(
+			GenericInlineIntentInvocation,
+			this,
+			location,
+			endpoint,
+			documentContext,
+			EditStrategy.ForceInsertion,
+		);
 	}
 }

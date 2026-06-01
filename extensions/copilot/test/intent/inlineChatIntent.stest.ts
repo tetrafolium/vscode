@@ -122,12 +122,25 @@ ssuite({ title: 'intent', location: 'inline' }, () => {
 		expectedIntent: [GenerateCodeIntent.ID],
 	});
 
-	const additionalCases = JSON.parse(fs.readFileSync(join(__dirname, '../test/intent/inline-chat.json'), { encoding: 'utf8' }));
+	const additionalCases = JSON.parse(
+		fs.readFileSync(join(__dirname, '../test/intent/inline-chat.json'), {
+			encoding: 'utf8',
+		}),
+	);
 	if (additionalCases && Array.isArray(additionalCases)) {
 		additionalCases.forEach((testCase: any) => {
-			if (typeof testCase === 'object' && !!testCase && testCase['Location'] === 'inline') {
+			if (
+				typeof testCase === 'object' &&
+				!!testCase &&
+				testCase['Location'] === 'inline'
+			) {
 				const query: string = testCase['Request'];
-				generateIntentTest({ location: ChatLocation.Editor, name: query.split('\n')[0], query, expectedIntent: testCase['Intent'] });
+				generateIntentTest({
+					location: ChatLocation.Editor,
+					name: query.split('\n')[0],
+					query,
+					expectedIntent: testCase['Intent'],
+				});
 			}
 		});
 	}
@@ -144,10 +157,9 @@ ssuite({ title: 'intent', location: 'inline' }, () => {
 					expectedIntent: 'generate',
 					validate: async (outcome, workspace, accessor) => {
 						// @ulugbekna: left empty on purpose
-					}
-				}
-			]
+					},
+				},
+			],
 		});
 	});
-
 });

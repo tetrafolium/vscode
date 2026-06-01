@@ -34,11 +34,17 @@
 	color: var(--vscode-button-foreground);
 }
 
-.monaco-workbench .agent-feedback-editor-overlay-widget .monaco-action-bar .action-item.primary > .action-label:hover {
+.monaco-workbench
+	.agent-feedback-editor-overlay-widget
+	.monaco-action-bar
+	.action-item.primary
+	> .action-label:hover {
 	background-color: var(--vscode-button-hoverBackground);
 }
 
-.agent-feedback-editor-overlay-widget .action-item > .action-label.codicon:not(.separator) {
+.agent-feedback-editor-overlay-widget
+	.action-item
+	> .action-label.codicon:not(.separator) {
 	color: var(--vscode-foreground);
 	width: 22px;
 	height: 22px;
@@ -51,7 +57,6 @@
 }
 
 .agent-feedback-editor-overlay-widget .monaco-action-bar .action-item.disabled {
-
 	> .action-label.codicon::before,
 	> .action-label.codicon,
 	> .action-label,
@@ -65,8 +70,14 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.agent-feedback-editor-overlay-widget .monaco-action-bar .action-item.label-item > .action-label,
-.agent-feedback-editor-overlay-widget .monaco-action-bar .action-item.label-item > .action-label:hover {
+.agent-feedback-editor-overlay-widget
+	.monaco-action-bar
+	.action-item.label-item
+	> .action-label,
+.agent-feedback-editor-overlay-widget
+	.monaco-action-bar
+	.action-item.label-item
+	> .action-label:hover {
 	color: var(--vscode-foreground);
 	opacity: 1;
 }

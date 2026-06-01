@@ -7,29 +7,39 @@ import { languages } from 'vscode';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
 import { Event } from '../../../util/vs/base/common/event';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
-import { autorun, DebugOwner, observableFromEvent } from '../../../util/vs/base/common/observableInternal';
+import {
+	autorun,
+	DebugOwner,
+	observableFromEvent,
+} from '../../../util/vs/base/common/observableInternal';
 
 export class CompletionsUnificationContribution extends Disposable {
-
-	constructor(
-		@ITelemetryService telemetryService: ITelemetryService,
-	) {
+	constructor(@ITelemetryService telemetryService: ITelemetryService) {
 		super();
 
 		const unificationState = unificationStateObservable(this);
 
-		this._register(autorun(reader => {
-			const state = unificationState.read(reader);
-			telemetryService.setAdditionalExpAssignments(state?.expAssignments ?? []);
-		}));
+		this._register(
+			autorun((reader) => {
+				const state = unificationState.read(reader);
+				telemetryService.setAdditionalExpAssignments(
+					state?.expAssignments ?? [],
+				);
+			}),
+		);
 	}
 }
 
 export function unificationStateObservable(owner: DebugOwner) {
 	return observableFromEvent(
 		owner,
-		l => (languages as languagesMaybeWithUnification).onDidChangeCompletionsUnificationState?.(l) ?? Disposable.None,
-		() => (languages as languagesMaybeWithUnification).inlineCompletionsUnificationState
+		(l) =>
+			(
+				languages as languagesMaybeWithUnification
+			).onDidChangeCompletionsUnificationState?.(l) ?? Disposable.None,
+		() =>
+			(languages as languagesMaybeWithUnification)
+				.inlineCompletionsUnificationState,
 	);
 }
 

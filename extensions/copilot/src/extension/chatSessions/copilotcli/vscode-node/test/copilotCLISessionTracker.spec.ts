@@ -7,22 +7,32 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type MockTerminal = { processId: Promise<number | undefined>; name: string };
 
-const { mockTerminals, terminalCloseListeners, mockExecFile, mockIsWindows } = vi.hoisted(() => ({
-	mockTerminals: { value: [] as Array<MockTerminal> },
-	terminalCloseListeners: [] as Array<(terminal: MockTerminal) => void>,
-	mockExecFile: vi.fn(),
-	mockIsWindows: { value: false },
-}));
+const { mockTerminals, terminalCloseListeners, mockExecFile, mockIsWindows } =
+	vi.hoisted(() => ({
+		mockTerminals: { value: [] as Array<MockTerminal> },
+		terminalCloseListeners: [] as Array<(terminal: MockTerminal) => void>,
+		mockExecFile: vi.fn(),
+		mockIsWindows: { value: false },
+	}));
 
 vi.mock('vscode', async (importOriginal) => {
-	const actual = await importOriginal() as Record<string, unknown>;
+	const actual = (await importOriginal()) as Record<string, unknown>;
 	return {
 		...actual,
 		window: {
-			get terminals() { return mockTerminals.value; },
+			get terminals() {
+				return mockTerminals.value;
+			},
 			onDidCloseTerminal(listener: (terminal: MockTerminal) => void) {
 				terminalCloseListeners.push(listener);
-				return { dispose: () => { const idx = terminalCloseListeners.indexOf(listener); if (idx >= 0) { terminalCloseListeners.splice(idx, 1); } } };
+				return {
+					dispose: () => {
+						const idx = terminalCloseListeners.indexOf(listener);
+						if (idx >= 0) {
+							terminalCloseListeners.splice(idx, 1);
+						}
+					},
+				};
 			},
 		},
 	};
@@ -33,10 +43,15 @@ vi.mock('child_process', () => ({
 }));
 
 vi.mock('../../../../../util/vs/base/common/platform', () => ({
-	get isWindows() { return mockIsWindows.value; },
+	get isWindows() {
+		return mockIsWindows.value;
+	},
 }));
 
-import { CopilotCLISessionTracker, getParentPid } from '../copilotCLISessionTracker';
+import {
+	CopilotCLISessionTracker,
+	getParentPid,
+} from '../copilotCLISessionTracker';
 
 function fireTerminalClose(terminal: MockTerminal): void {
 	for (const listener of terminalCloseListeners) {
@@ -53,20 +68,37 @@ describe('CopilotCLISessionTracker', () => {
 		mockTerminals.value = [];
 		mockIsWindows.value = false;
 		// Default: getParentPid fails (process not found), so grandparent fallback is a no-op
-		mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-			callback(new Error('process not found'), '', '');
-		});
+		mockExecFile.mockImplementation(
+			(
+				_cmd: string,
+				_args: string[],
+				_opts: unknown,
+				callback: (
+					err: Error | null,
+					stdout: string,
+					stderr: string,
+				) => void,
+			) => {
+				callback(new Error('process not found'), '', '');
+			},
+		);
 	});
 
 	describe('registerSession', () => {
 		it('should register a session with pid and ppid', () => {
-			const disposable = tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
+			const disposable = tracker.registerSession('session-1', {
+				pid: 1234,
+				ppid: 5678,
+			});
 			expect(disposable).toBeDefined();
 			expect(disposable.dispose).toBeInstanceOf(Function);
 		});
 
 		it('should remove session on dispose', async () => {
-			const disposable = tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
+			const disposable = tracker.registerSession('session-1', {
+				pid: 1234,
+				ppid: 5678,
+			});
 			mockTerminals.value = [
 				{ processId: Promise.resolve(5678), name: 'terminal-1' },
 			];
@@ -114,7 +146,10 @@ describe('CopilotCLISessionTracker', () => {
 
 		it('should find terminal matching session ppid', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			const expectedTerminal = { processId: Promise.resolve(5678), name: 'matching-terminal' };
+			const expectedTerminal = {
+				processId: Promise.resolve(5678),
+				name: 'matching-terminal',
+			};
 			mockTerminals.value = [
 				{ processId: Promise.resolve(1111), name: 'other-terminal' },
 				expectedTerminal,
@@ -139,19 +174,30 @@ describe('CopilotCLISessionTracker', () => {
 		it('should handle terminals with undefined processId', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
 			mockTerminals.value = [
-				{ processId: Promise.resolve(undefined as unknown as number), name: 'no-pid-terminal' },
+				{
+					processId: Promise.resolve(undefined as unknown as number),
+					name: 'no-pid-terminal',
+				},
 				{ processId: Promise.resolve(5678), name: 'matching-terminal' },
 			];
 
 			const terminal = await tracker.getTerminal('session-1');
 			expect(terminal).toBeDefined();
-			expect((terminal as { name: string }).name).toBe('matching-terminal');
+			expect((terminal as { name: string }).name).toBe(
+				'matching-terminal',
+			);
 		});
 
 		it('should return first matching terminal when multiple match', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			const firstMatch = { processId: Promise.resolve(5678), name: 'first-match' };
-			const secondMatch = { processId: Promise.resolve(5678), name: 'second-match' };
+			const firstMatch = {
+				processId: Promise.resolve(5678),
+				name: 'first-match',
+			};
+			const secondMatch = {
+				processId: Promise.resolve(5678),
+				name: 'second-match',
+			};
 			mockTerminals.value = [firstMatch, secondMatch];
 
 			const terminal = await tracker.getTerminal('session-1');
@@ -162,8 +208,14 @@ describe('CopilotCLISessionTracker', () => {
 			tracker.registerSession('session-1', { pid: 1000, ppid: 2000 });
 			tracker.registerSession('session-2', { pid: 3000, ppid: 4000 });
 
-			const terminal1 = { processId: Promise.resolve(2000), name: 'terminal-for-session-1' };
-			const terminal2 = { processId: Promise.resolve(4000), name: 'terminal-for-session-2' };
+			const terminal1 = {
+				processId: Promise.resolve(2000),
+				name: 'terminal-for-session-1',
+			};
+			const terminal2 = {
+				processId: Promise.resolve(4000),
+				name: 'terminal-for-session-2',
+			};
 			mockTerminals.value = [terminal1, terminal2];
 
 			const result1 = await tracker.getTerminal('session-1');
@@ -176,35 +228,50 @@ describe('CopilotCLISessionTracker', () => {
 	describe('setSessionName and getSessionDisplayName', () => {
 		it('should return sessionId when no name is set', () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			expect(tracker.getSessionDisplayName('session-1')).toBe('Copilot CLI Session');
+			expect(tracker.getSessionDisplayName('session-1')).toBe(
+				'Copilot CLI Session',
+			);
 		});
 
 		it('should return sessionId when name is empty string', () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
 			tracker.setSessionName('session-1', '');
-			expect(tracker.getSessionDisplayName('session-1')).toBe('Copilot CLI Session');
+			expect(tracker.getSessionDisplayName('session-1')).toBe(
+				'Copilot CLI Session',
+			);
 		});
 
 		it('should return custom name after setSessionName', () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
 			tracker.setSessionName('session-1', 'Fix Login Bug');
-			expect(tracker.getSessionDisplayName('session-1')).toBe('Fix Login Bug');
+			expect(tracker.getSessionDisplayName('session-1')).toBe(
+				'Fix Login Bug',
+			);
 		});
 
 		it('should update name when setSessionName called multiple times', () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
 			tracker.setSessionName('session-1', 'First Name');
 			tracker.setSessionName('session-1', 'Second Name');
-			expect(tracker.getSessionDisplayName('session-1')).toBe('Second Name');
+			expect(tracker.getSessionDisplayName('session-1')).toBe(
+				'Second Name',
+			);
 		});
 
 		it('should clear name when session is disposed', () => {
-			const disposable = tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
+			const disposable = tracker.registerSession('session-1', {
+				pid: 1234,
+				ppid: 5678,
+			});
 			tracker.setSessionName('session-1', 'My Session');
-			expect(tracker.getSessionDisplayName('session-1')).toBe('My Session');
+			expect(tracker.getSessionDisplayName('session-1')).toBe(
+				'My Session',
+			);
 
 			disposable.dispose();
-			expect(tracker.getSessionDisplayName('session-1')).toBe('Copilot CLI Session');
+			expect(tracker.getSessionDisplayName('session-1')).toBe(
+				'Copilot CLI Session',
+			);
 		});
 
 		it('should track names independently for different sessions', () => {
@@ -214,14 +281,21 @@ describe('CopilotCLISessionTracker', () => {
 			tracker.setSessionName('session-1', 'Session One');
 			tracker.setSessionName('session-2', 'Session Two');
 
-			expect(tracker.getSessionDisplayName('session-1')).toBe('Session One');
-			expect(tracker.getSessionDisplayName('session-2')).toBe('Session Two');
+			expect(tracker.getSessionDisplayName('session-1')).toBe(
+				'Session One',
+			);
+			expect(tracker.getSessionDisplayName('session-2')).toBe(
+				'Session Two',
+			);
 		});
 	});
 
 	describe('dispose lifecycle', () => {
 		it('disposing first registration does not affect second registration with different id', async () => {
-			const disposable1 = tracker.registerSession('session-1', { pid: 1000, ppid: 2000 });
+			const disposable1 = tracker.registerSession('session-1', {
+				pid: 1000,
+				ppid: 2000,
+			});
 			tracker.registerSession('session-2', { pid: 3000, ppid: 4000 });
 
 			disposable1.dispose();
@@ -240,8 +314,14 @@ describe('CopilotCLISessionTracker', () => {
 		});
 
 		it('disposing overwritten registration removes the session', async () => {
-			const disposable1 = tracker.registerSession('session-1', { pid: 1000, ppid: 2000 });
-			const disposable2 = tracker.registerSession('session-1', { pid: 3000, ppid: 4000 });
+			const disposable1 = tracker.registerSession('session-1', {
+				pid: 1000,
+				ppid: 2000,
+			});
+			const disposable2 = tracker.registerSession('session-1', {
+				pid: 3000,
+				ppid: 4000,
+			});
 
 			// Disposing the second registration should remove the session
 			disposable2.dispose();
@@ -261,7 +341,10 @@ describe('CopilotCLISessionTracker', () => {
 	describe('setSessionTerminal', () => {
 		it('should return directly-set terminal from getTerminal', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			const directTerminal = { processId: Promise.resolve(9999), name: 'direct-terminal' } as MockTerminal;
+			const directTerminal = {
+				processId: Promise.resolve(9999),
+				name: 'direct-terminal',
+			} as MockTerminal;
 			tracker.setSessionTerminal('session-1', directTerminal as any);
 
 			const result = await tracker.getTerminal('session-1');
@@ -270,8 +353,14 @@ describe('CopilotCLISessionTracker', () => {
 
 		it('should take priority over PID matching', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			const pidTerminal = { processId: Promise.resolve(5678), name: 'pid-terminal' };
-			const directTerminal = { processId: Promise.resolve(9999), name: 'direct-terminal' } as MockTerminal;
+			const pidTerminal = {
+				processId: Promise.resolve(5678),
+				name: 'pid-terminal',
+			};
+			const directTerminal = {
+				processId: Promise.resolve(9999),
+				name: 'direct-terminal',
+			} as MockTerminal;
 			mockTerminals.value = [pidTerminal];
 
 			tracker.setSessionTerminal('session-1', directTerminal as any);
@@ -282,7 +371,10 @@ describe('CopilotCLISessionTracker', () => {
 
 		it('should remove mapping when terminal is closed', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			const directTerminal = { processId: Promise.resolve(9999), name: 'direct-terminal' } as MockTerminal;
+			const directTerminal = {
+				processId: Promise.resolve(9999),
+				name: 'direct-terminal',
+			} as MockTerminal;
 			tracker.setSessionTerminal('session-1', directTerminal as any);
 
 			// Verify it's set
@@ -298,8 +390,14 @@ describe('CopilotCLISessionTracker', () => {
 
 		it('should fall back to PID matching after terminal close', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			const directTerminal = { processId: Promise.resolve(9999), name: 'direct-terminal' } as MockTerminal;
-			const pidTerminal = { processId: Promise.resolve(5678), name: 'pid-terminal' };
+			const directTerminal = {
+				processId: Promise.resolve(9999),
+				name: 'direct-terminal',
+			} as MockTerminal;
+			const pidTerminal = {
+				processId: Promise.resolve(5678),
+				name: 'pid-terminal',
+			};
 			tracker.setSessionTerminal('session-1', directTerminal as any);
 			mockTerminals.value = [pidTerminal];
 
@@ -312,8 +410,14 @@ describe('CopilotCLISessionTracker', () => {
 		});
 
 		it('should remove mapping when session is disposed', async () => {
-			const disposable = tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			const directTerminal = { processId: Promise.resolve(9999), name: 'direct-terminal' } as MockTerminal;
+			const disposable = tracker.registerSession('session-1', {
+				pid: 1234,
+				ppid: 5678,
+			});
+			const directTerminal = {
+				processId: Promise.resolve(9999),
+				name: 'direct-terminal',
+			} as MockTerminal;
 			tracker.setSessionTerminal('session-1', directTerminal as any);
 
 			expect(await tracker.getTerminal('session-1')).toBe(directTerminal);
@@ -327,8 +431,14 @@ describe('CopilotCLISessionTracker', () => {
 			tracker.registerSession('session-1', { pid: 1000, ppid: 2000 });
 			tracker.registerSession('session-2', { pid: 3000, ppid: 4000 });
 
-			const terminal1 = { processId: Promise.resolve(9991), name: 'terminal-1' } as MockTerminal;
-			const terminal2 = { processId: Promise.resolve(9992), name: 'terminal-2' } as MockTerminal;
+			const terminal1 = {
+				processId: Promise.resolve(9991),
+				name: 'terminal-1',
+			} as MockTerminal;
+			const terminal2 = {
+				processId: Promise.resolve(9992),
+				name: 'terminal-2',
+			} as MockTerminal;
 
 			tracker.setSessionTerminal('session-1', terminal1 as any);
 			tracker.setSessionTerminal('session-2', terminal2 as any);
@@ -341,8 +451,14 @@ describe('CopilotCLISessionTracker', () => {
 			tracker.registerSession('session-1', { pid: 1000, ppid: 2000 });
 			tracker.registerSession('session-2', { pid: 3000, ppid: 4000 });
 
-			const terminal1 = { processId: Promise.resolve(9991), name: 'terminal-1' } as MockTerminal;
-			const terminal2 = { processId: Promise.resolve(9992), name: 'terminal-2' } as MockTerminal;
+			const terminal1 = {
+				processId: Promise.resolve(9991),
+				name: 'terminal-1',
+			} as MockTerminal;
+			const terminal2 = {
+				processId: Promise.resolve(9992),
+				name: 'terminal-2',
+			} as MockTerminal;
 
 			tracker.setSessionTerminal('session-1', terminal1 as any);
 			tracker.setSessionTerminal('session-2', terminal2 as any);
@@ -360,8 +476,14 @@ describe('CopilotCLISessionTracker', () => {
 		it('should overwrite previous terminal for same session', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
 
-			const terminal1 = { processId: Promise.resolve(9991), name: 'terminal-1' } as MockTerminal;
-			const terminal2 = { processId: Promise.resolve(9992), name: 'terminal-2' } as MockTerminal;
+			const terminal1 = {
+				processId: Promise.resolve(9991),
+				name: 'terminal-1',
+			} as MockTerminal;
+			const terminal2 = {
+				processId: Promise.resolve(9992),
+				name: 'terminal-2',
+			} as MockTerminal;
 
 			tracker.setSessionTerminal('session-1', terminal1 as any);
 			tracker.setSessionTerminal('session-1', terminal2 as any);
@@ -379,13 +501,27 @@ describe('CopilotCLISessionTracker', () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
 
 			// No terminal matches ppid 5678, but grandparent is 9999
-			const grandparentTerminal = { processId: Promise.resolve(9999), name: 'grandparent-terminal' };
+			const grandparentTerminal = {
+				processId: Promise.resolve(9999),
+				name: 'grandparent-terminal',
+			};
 			mockTerminals.value = [grandparentTerminal];
 
 			// Mock getParentPid(5678) -> 9999
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(null, '  9999\n', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(null, '  9999\n', '');
+				},
+			);
 
 			const result = await tracker.getTerminal('session-1');
 			expect(result).toBe(grandparentTerminal);
@@ -394,13 +530,27 @@ describe('CopilotCLISessionTracker', () => {
 		it('should return undefined when both PPID and grandparent fail', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
 			mockTerminals.value = [
-				{ processId: Promise.resolve(1111), name: 'unrelated-terminal' },
+				{
+					processId: Promise.resolve(1111),
+					name: 'unrelated-terminal',
+				},
 			];
 
 			// getParentPid fails
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(new Error('process not found'), '', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(new Error('process not found'), '', '');
+				},
+			);
 
 			const result = await tracker.getTerminal('session-1');
 			expect(result).toBeUndefined();
@@ -408,7 +558,10 @@ describe('CopilotCLISessionTracker', () => {
 
 		it('should not call getParentPid when direct PPID match succeeds', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			const ppidTerminal = { processId: Promise.resolve(5678), name: 'ppid-terminal' };
+			const ppidTerminal = {
+				processId: Promise.resolve(5678),
+				name: 'ppid-terminal',
+			};
 			mockTerminals.value = [ppidTerminal];
 
 			const result = await tracker.getTerminal('session-1');
@@ -419,7 +572,10 @@ describe('CopilotCLISessionTracker', () => {
 
 		it('should not call getParentPid when direct terminal mapping exists', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
-			const directTerminal = { processId: Promise.resolve(7777), name: 'direct' } as MockTerminal;
+			const directTerminal = {
+				processId: Promise.resolve(7777),
+				name: 'direct',
+			} as MockTerminal;
 			tracker.setSessionTerminal('session-1', directTerminal as any);
 
 			const result = await tracker.getTerminal('session-1');
@@ -430,13 +586,27 @@ describe('CopilotCLISessionTracker', () => {
 		it('should return undefined when grandparent PID matches no terminal', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 5678 });
 			mockTerminals.value = [
-				{ processId: Promise.resolve(1111), name: 'unrelated-terminal' },
+				{
+					processId: Promise.resolve(1111),
+					name: 'unrelated-terminal',
+				},
 			];
 
 			// getParentPid returns a PID that no terminal matches
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(null, '2222\n', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(null, '2222\n', '');
+				},
+			);
 
 			const result = await tracker.getTerminal('session-1');
 			expect(result).toBeUndefined();
@@ -446,19 +616,37 @@ describe('CopilotCLISessionTracker', () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 100 });
 
 			// Terminal has PID 400 (great-great-grandparent)
-			const ancestorTerminal = { processId: Promise.resolve(400), name: 'ancestor-terminal' };
+			const ancestorTerminal = {
+				processId: Promise.resolve(400),
+				name: 'ancestor-terminal',
+			};
 			mockTerminals.value = [ancestorTerminal];
 
 			// Chain: 100 -> 200 -> 300 -> 400
-			mockExecFile.mockImplementation((_cmd: string, args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				const pid = args[args.length - 1];
-				const chain: Record<string, string> = { '100': '200', '200': '300', '300': '400' };
-				if (chain[pid]) {
-					callback(null, `${chain[pid]}\n`, '');
-				} else {
-					callback(new Error('not found'), '', '');
-				}
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					const pid = args[args.length - 1];
+					const chain: Record<string, string> = {
+						'100': '200',
+						'200': '300',
+						'300': '400',
+					};
+					if (chain[pid]) {
+						callback(null, `${chain[pid]}\n`, '');
+					} else {
+						callback(new Error('not found'), '', '');
+					}
+				},
+			);
 
 			const result = await tracker.getTerminal('session-1');
 			expect(result).toBe(ancestorTerminal);
@@ -468,19 +656,39 @@ describe('CopilotCLISessionTracker', () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 100 });
 
 			// Terminal has PID 600 (5th generation — too far)
-			const farTerminal = { processId: Promise.resolve(600), name: 'far-terminal' };
+			const farTerminal = {
+				processId: Promise.resolve(600),
+				name: 'far-terminal',
+			};
 			mockTerminals.value = [farTerminal];
 
 			// Chain: 100 -> 200 -> 300 -> 400 -> 500 -> 600
-			mockExecFile.mockImplementation((_cmd: string, args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				const pid = args[args.length - 1];
-				const chain: Record<string, string> = { '100': '200', '200': '300', '300': '400', '400': '500', '500': '600' };
-				if (chain[pid]) {
-					callback(null, `${chain[pid]}\n`, '');
-				} else {
-					callback(new Error('not found'), '', '');
-				}
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					const pid = args[args.length - 1];
+					const chain: Record<string, string> = {
+						'100': '200',
+						'200': '300',
+						'300': '400',
+						'400': '500',
+						'500': '600',
+					};
+					if (chain[pid]) {
+						callback(null, `${chain[pid]}\n`, '');
+					} else {
+						callback(new Error('not found'), '', '');
+					}
+				},
+			);
 
 			const result = await tracker.getTerminal('session-1');
 			expect(result).toBeUndefined();
@@ -493,15 +701,29 @@ describe('CopilotCLISessionTracker', () => {
 
 			// First call: no terminal matches anything
 			mockTerminals.value = [];
-			mockExecFile.mockImplementation((_cmd: string, args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				const pid = args[args.length - 1];
-				const chain: Record<string, string> = { '100': '200', '200': '300' };
-				if (chain[pid]) {
-					callback(null, `${chain[pid]}\n`, '');
-				} else {
-					callback(new Error('not found'), '', '');
-				}
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					const pid = args[args.length - 1];
+					const chain: Record<string, string> = {
+						'100': '200',
+						'200': '300',
+					};
+					if (chain[pid]) {
+						callback(null, `${chain[pid]}\n`, '');
+					} else {
+						callback(new Error('not found'), '', '');
+					}
+				},
+			);
 
 			await tracker.getTerminal('session-1');
 			const firstCallCount = mockExecFile.mock.calls.length;
@@ -509,7 +731,10 @@ describe('CopilotCLISessionTracker', () => {
 
 			// Second call: terminal now matches grandparent PID 200
 			mockExecFile.mockClear();
-			const terminal = { processId: Promise.resolve(200), name: 'grandparent-terminal' };
+			const terminal = {
+				processId: Promise.resolve(200),
+				name: 'grandparent-terminal',
+			};
 			mockTerminals.value = [terminal];
 
 			const result = await tracker.getTerminal('session-1');
@@ -521,12 +746,26 @@ describe('CopilotCLISessionTracker', () => {
 		it('should store found terminal in _sessionTerminals for faster future lookups', async () => {
 			tracker.registerSession('session-1', { pid: 1234, ppid: 100 });
 
-			const ancestorTerminal = { processId: Promise.resolve(200), name: 'ancestor-terminal' };
+			const ancestorTerminal = {
+				processId: Promise.resolve(200),
+				name: 'ancestor-terminal',
+			};
 			mockTerminals.value = [ancestorTerminal];
 
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(null, '200\n', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(null, '200\n', '');
+				},
+			);
 
 			// First call: finds terminal via ancestor walk
 			const result1 = await tracker.getTerminal('session-1');
@@ -546,14 +785,25 @@ describe('CopilotCLISessionTracker', () => {
 			mockTerminals.value = [];
 
 			// Only one generation available: 100 -> 200, then fails
-			mockExecFile.mockImplementation((_cmd: string, args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				const pid = args[args.length - 1];
-				if (pid === '100') {
-					callback(null, '200\n', '');
-				} else {
-					callback(new Error('not found'), '', '');
-				}
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					const pid = args[args.length - 1];
+					if (pid === '100') {
+						callback(null, '200\n', '');
+					} else {
+						callback(new Error('not found'), '', '');
+					}
+				},
+			);
 
 			const result = await tracker.getTerminal('session-1');
 			expect(result).toBeUndefined();
@@ -562,12 +812,26 @@ describe('CopilotCLISessionTracker', () => {
 		});
 
 		it('should clear cached ancestor PIDs when session is disposed', async () => {
-			const disposable = tracker.registerSession('session-1', { pid: 1234, ppid: 100 });
+			const disposable = tracker.registerSession('session-1', {
+				pid: 1234,
+				ppid: 100,
+			});
 			mockTerminals.value = [];
 
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(null, '200\n', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(null, '200\n', '');
+				},
+			);
 
 			// Populate cache
 			await tracker.getTerminal('session-1');
@@ -591,28 +855,66 @@ describe('getParentPid', () => {
 
 	describe('on Linux/macOS', () => {
 		it('should return the parent PID from ps output', async () => {
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(null, '  1234\n', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(null, '  1234\n', '');
+				},
+			);
 
 			const result = await getParentPid(5678);
 			expect(result).toBe(1234);
-			expect(mockExecFile).toHaveBeenCalledWith('ps', ['-o', 'ppid=', '-p', '5678'], { windowsHide: true }, expect.any(Function));
+			expect(mockExecFile).toHaveBeenCalledWith(
+				'ps',
+				['-o', 'ppid=', '-p', '5678'],
+				{ windowsHide: true },
+				expect.any(Function),
+			);
 		});
 
 		it('should return undefined when ps fails', async () => {
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(new Error('No such process'), '', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(new Error('No such process'), '', '');
+				},
+			);
 
 			const result = await getParentPid(99999);
 			expect(result).toBeUndefined();
 		});
 
 		it('should return undefined when ps returns non-numeric output', async () => {
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(null, '', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(null, '', '');
+				},
+			);
 
 			const result = await getParentPid(5678);
 			expect(result).toBeUndefined();
@@ -625,33 +927,70 @@ describe('getParentPid', () => {
 		});
 
 		it('should return the parent PID from PowerShell output', async () => {
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(null, '5678\r\n', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(null, '5678\r\n', '');
+				},
+			);
 
 			const result = await getParentPid(1234);
 			expect(result).toBe(5678);
 			expect(mockExecFile).toHaveBeenCalledWith(
 				'powershell.exe',
-				['-NoProfile', '-Command', '(Get-CimInstance Win32_Process -Filter \"ProcessId=1234\").ParentProcessId'],
+				[
+					'-NoProfile',
+					'-Command',
+					'(Get-CimInstance Win32_Process -Filter \"ProcessId=1234\").ParentProcessId',
+				],
 				{ windowsHide: true },
-				expect.any(Function)
+				expect.any(Function),
 			);
 		});
 
 		it('should return undefined when PowerShell fails', async () => {
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(new Error('PowerShell error'), '', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(new Error('PowerShell error'), '', '');
+				},
+			);
 
 			const result = await getParentPid(1234);
 			expect(result).toBeUndefined();
 		});
 
 		it('should return undefined when PowerShell returns empty output', async () => {
-			mockExecFile.mockImplementation((_cmd: string, _args: string[], _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-				callback(null, '\r\n', '');
-			});
+			mockExecFile.mockImplementation(
+				(
+					_cmd: string,
+					_args: string[],
+					_opts: unknown,
+					callback: (
+						err: Error | null,
+						stdout: string,
+						stderr: string,
+					) => void,
+				) => {
+					callback(null, '\r\n', '');
+				},
+			);
 
 			const result = await getParentPid(1234);
 			expect(result).toBeUndefined();

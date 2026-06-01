@@ -13,11 +13,11 @@ export enum Character {
 export function sillyQuote(c: Character) {
 	switch (c) {
 		case Character.Hamlet:
-			return "There is nothing either good or bad, but thinking makes it so.";
+			return 'There is nothing either good or bad, but thinking makes it so.';
 		case Character.Ophelia:
-			return "Lord, we know what we are, but know not what we may be.";
+			return 'Lord, we know what we are, but know not what we may be.';
 		case Character.Polonius:
-			return "To thine own self be true, and it must follow, as the night the day, thou canst not then be false to any one.";
+			return 'To thine own self be true, and it must follow, as the night the day, thou canst not then be false to any one.';
 		case Character.Hamlet:
 			return "Rightly to be great is not to stir without great argument, but greatly to find quarrel in a straw when honor's at the stake.";
 		case Character.Guildenstern:
@@ -25,6 +25,6 @@ export function sillyQuote(c: Character) {
 		case Character.Rosencrantz:
 			return "Though this be madness, yet there is method in't.";
 		default:
-			return "none available";
+			return 'none available';
 	}
 }

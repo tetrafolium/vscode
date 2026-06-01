@@ -4,8 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { IInstantiationService, ServicesAccessor } from '../../../../../../../../util/vs/platform/instantiation/common/instantiation';
-import { CodeSnippet, ContextProvider, ContextResolver, SupportedContextItem, Trait, type DiagnosticBag } from '../../../../../types/src';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	CodeSnippet,
+	ContextProvider,
+	ContextResolver,
+	SupportedContextItem,
+	Trait,
+	type DiagnosticBag,
+} from '../../../../../types/src';
 import { createCompletionState } from '../../../completionState';
 import { ICompletionsFeaturesService } from '../../../experiments/featuresService';
 import { TelemetryWithExp } from '../../../telemetry';
@@ -22,15 +32,24 @@ suite('Context Provider Bridge', function () {
 	setup(function () {
 		accessor = createLibTestingContext().createTestingAccessor();
 		const featuresService = accessor.get(ICompletionsFeaturesService);
-		accessor.get(ICompletionsContextProviderRegistryService).registerContextProvider(new TestContextProvider());
+		accessor
+			.get(ICompletionsContextProviderRegistryService)
+			.registerContextProvider(new TestContextProvider());
 		featuresService.contextProviders = () => ['testContextProvider'];
-		bridge = accessor.get(IInstantiationService).createInstance(ContextProviderBridge);
+		bridge = accessor
+			.get(IInstantiationService)
+			.createInstance(ContextProviderBridge);
 	});
 
 	test('await context resolution by id', async function () {
 		const state = testCompletionState();
 
-		bridge.schedule(state, 'id', 'opId', TelemetryWithExp.createEmptyConfigForTesting());
+		bridge.schedule(
+			state,
+			'id',
+			'opId',
+			TelemetryWithExp.createEmptyConfigForTesting(),
+		);
 		const items = await bridge.resolution('id');
 
 		assert.deepStrictEqual(items.length, 1);
@@ -41,7 +60,12 @@ suite('Context Provider Bridge', function () {
 
 	test('await context resolution by id twice', async function () {
 		const state = testCompletionState();
-		bridge.schedule(state, 'id', 'opId', TelemetryWithExp.createEmptyConfigForTesting());
+		bridge.schedule(
+			state,
+			'id',
+			'opId',
+			TelemetryWithExp.createEmptyConfigForTesting(),
+		);
 
 		const items1 = await bridge.resolution('id');
 		const items2 = await bridge.resolution('id');
@@ -61,17 +85,29 @@ suite('Context Provider Bridge', function () {
 
 	test('error in context resolution', async function () {
 		const featuresService = accessor.get(ICompletionsFeaturesService);
-		accessor.get(ICompletionsContextProviderRegistryService).registerContextProvider(
-			new TestContextProvider({ shouldThrow: true, id: 'errorProvider' })
-		);
+		accessor
+			.get(ICompletionsContextProviderRegistryService)
+			.registerContextProvider(
+				new TestContextProvider({
+					shouldThrow: true,
+					id: 'errorProvider',
+				}),
+			);
 		featuresService.contextProviders = () => ['errorProvider'];
-		const errorBridge = accessor.get(IInstantiationService).createInstance(ContextProviderBridge);
+		const errorBridge = accessor
+			.get(IInstantiationService)
+			.createInstance(ContextProviderBridge);
 		const state = testCompletionState();
 
-		errorBridge.schedule(state, 'err-id', 'opId', TelemetryWithExp.createEmptyConfigForTesting());
+		errorBridge.schedule(
+			state,
+			'err-id',
+			'opId',
+			TelemetryWithExp.createEmptyConfigForTesting(),
+		);
 		const items = await errorBridge.resolution('err-id');
 
-		const errorItem = items.find(i => i.providerId === 'errorProvider');
+		const errorItem = items.find((i) => i.providerId === 'errorProvider');
 		assert.deepStrictEqual(errorItem?.resolution, 'error');
 	});
 
@@ -79,8 +115,18 @@ suite('Context Provider Bridge', function () {
 		const state1 = testCompletionState();
 		const state2 = testCompletionState();
 
-		bridge.schedule(state1, 'id1', 'opId', TelemetryWithExp.createEmptyConfigForTesting());
-		bridge.schedule(state2, 'id2', 'opId', TelemetryWithExp.createEmptyConfigForTesting());
+		bridge.schedule(
+			state1,
+			'id1',
+			'opId',
+			TelemetryWithExp.createEmptyConfigForTesting(),
+		);
+		bridge.schedule(
+			state2,
+			'id2',
+			'opId',
+			TelemetryWithExp.createEmptyConfigForTesting(),
+		);
 
 		const items1 = await bridge.resolution('id1');
 		const items2 = await bridge.resolution('id2');
@@ -92,11 +138,18 @@ suite('Context Provider Bridge', function () {
 	test('empty provider list returns empty array', async function () {
 		const featuresService = accessor.get(ICompletionsFeaturesService);
 		featuresService.contextProviders = () => [];
-		const instantiationService = createLibTestingContext().createTestingAccessor().get(IInstantiationService);
+		const instantiationService = createLibTestingContext()
+			.createTestingAccessor()
+			.get(IInstantiationService);
 		bridge = instantiationService.createInstance(ContextProviderBridge);
 		const state = testCompletionState();
 
-		bridge.schedule(state, 'empty-id', 'opId', TelemetryWithExp.createEmptyConfigForTesting());
+		bridge.schedule(
+			state,
+			'empty-id',
+			'opId',
+			TelemetryWithExp.createEmptyConfigForTesting(),
+		);
 		const items = await bridge.resolution('empty-id');
 
 		assert.deepStrictEqual(items, []);
@@ -123,7 +176,9 @@ class TestContextResolver implements ContextResolver<SupportedContextItem> {
 	}
 }
 
-class TestContextProvider implements ContextProvider<Trait | CodeSnippet | DiagnosticBag> {
+class TestContextProvider implements ContextProvider<
+	Trait | CodeSnippet | DiagnosticBag
+> {
 	id: string;
 	selector: string[];
 	resolver: ContextResolver<CodeSnippet | Trait | DiagnosticBag>;
@@ -131,6 +186,8 @@ class TestContextProvider implements ContextProvider<Trait | CodeSnippet | Diagn
 	constructor(opts?: { shouldThrow?: boolean; id?: string }) {
 		this.id = opts?.id ?? 'testContextProvider';
 		this.selector = ['*'];
-		this.resolver = new TestContextResolver({ shouldThrow: opts?.shouldThrow });
+		this.resolver = new TestContextResolver({
+			shouldThrow: opts?.shouldThrow,
+		});
 	}
 }

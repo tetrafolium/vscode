@@ -13,8 +13,9 @@ export type InitArgs = {
 /**
  * See {@link script/electron/simulationWorkbenchMain.js} for CLI args available.
  */
-export function parseInitEventArgs(processArgv: string[]): InitArgs | undefined {
-
+export function parseInitEventArgs(
+	processArgv: string[],
+): InitArgs | undefined {
 	const parsedArgs = minimist(processArgv);
 
 	let runOutputDirName: string | undefined;

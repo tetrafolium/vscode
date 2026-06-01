@@ -3,13 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../base/common/event.js';
-import { IJSONSchema } from '../../../base/common/jsonSchema.js';
-import { IJSONContributionRegistry, Extensions as JSONExtensions } from '../../jsonschemas/common/jsonContributionRegistry.js';
-import * as platform from '../../registry/common/platform.js';
-import { IColorTheme } from './themeService.js';
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { RunOnceScheduler } from '../../../base/common/async.js';
+import { Emitter, Event } from "../../../base/common/event.js";
+import { IJSONSchema } from "../../../base/common/jsonSchema.js";
+import {
+	IJSONContributionRegistry,
+	Extensions as JSONExtensions,
+} from "../../jsonschemas/common/jsonContributionRegistry.js";
+import * as platform from "../../registry/common/platform.js";
+import { IColorTheme } from "./themeService.js";
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { RunOnceScheduler } from "../../../base/common/async.js";
 
 //  ------ API types
 
@@ -19,7 +22,7 @@ export type SizeIdentifier = string;
  * Size value unit types supported by the registry.
  * Use `''` for unitless values such as font weights.
  */
-export type SizeUnit = 'px' | 'rem' | 'em' | '%' | '';
+export type SizeUnit = "px" | "rem" | "em" | "%" | "";
 
 /**
  * A size value with a numeric amount and unit
@@ -43,14 +46,17 @@ export interface SizeContribution {
  * @sample `editor.fontSize` is `--vscode-editor-fontSize`.
  */
 export function asCssVariableName(sizeIdent: SizeIdentifier): string {
-	return `--vscode-${sizeIdent.replace(/\./g, '-')}`;
+	return `--vscode-${sizeIdent.replace(/\./g, "-")}`;
 }
 
 export function asCssVariable(size: SizeIdentifier): string {
 	return `var(${asCssVariableName(size)})`;
 }
 
-export function asCssVariableWithDefault(size: SizeIdentifier, defaultCssValue: string): string {
+export function asCssVariableWithDefault(
+	size: SizeIdentifier,
+	defaultCssValue: string,
+): string {
 	return `var(${asCssVariableName(size)}, ${defaultCssValue})`;
 }
 
@@ -62,26 +68,34 @@ export interface SizeDefaults {
 }
 
 export function isSizeDefaults(value: unknown): value is SizeDefaults {
-	return value !== null && typeof value === 'object' && 'light' in value && 'dark' in value;
+	return (
+		value !== null &&
+		typeof value === "object" &&
+		"light" in value &&
+		"dark" in value
+	);
 }
 
 /**
  * Helper function to create a size value
  */
-export function size(value: number, unit: SizeUnit = 'px'): SizeValue {
+export function size(value: number, unit: SizeUnit = "px"): SizeValue {
 	return { value, unit };
 }
 
 /**
  * Helper function to create size defaults that use the same value for all themes
  */
-export function sizeForAllThemes(value: number, unit: SizeUnit = 'px'): SizeDefaults {
+export function sizeForAllThemes(
+	value: number,
+	unit: SizeUnit = "px",
+): SizeDefaults {
 	const sizeValue = size(value, unit);
 	return {
 		light: sizeValue,
 		dark: sizeValue,
 		hcDark: sizeValue,
-		hcLight: sizeValue
+		hcLight: sizeValue,
 	};
 }
 
@@ -90,18 +104,19 @@ export function sizeForAllThemes(value: number, unit: SizeUnit = 'px'): SizeDefa
  * When the unit is `''` the raw numeric value is returned (e.g. font weights).
  */
 export function sizeValueToCss(sizeValue: SizeValue): string {
-	return sizeValue.unit === '' ? `${sizeValue.value}` : `${sizeValue.value}${sizeValue.unit}`;
+	return sizeValue.unit === ""
+		? `${sizeValue.value}`
+		: `${sizeValue.value}${sizeValue.unit}`;
 }
 
 // size registry
 export const Extensions = {
-	SizeContribution: 'base.contributions.sizes'
+	SizeContribution: "base.contributions.sizes",
 };
 
-export const DEFAULT_SIZE_CONFIG_VALUE = 'default';
+export const DEFAULT_SIZE_CONFIG_VALUE = "default";
 
 export interface ISizeRegistry {
-
 	readonly onDidChangeSchema: Event<void>;
 
 	/**
@@ -110,7 +125,11 @@ export interface ISizeRegistry {
 	 * @param defaults The default values
 	 * @param description the description
 	 */
-	registerSize(id: string, defaults: SizeDefaults | SizeValue | null, description: string): SizeIdentifier;
+	registerSize(
+		id: string,
+		defaults: SizeDefaults | SizeValue | null,
+		description: string,
+	): SizeIdentifier;
 
 	/**
 	 * Deregister a size from the registry.
@@ -125,7 +144,10 @@ export interface ISizeRegistry {
 	/**
 	 * Gets the default size of the given id
 	 */
-	resolveDefaultSize(id: SizeIdentifier, theme: IColorTheme): SizeValue | undefined;
+	resolveDefaultSize(
+		id: SizeIdentifier,
+		theme: IColorTheme,
+	): SizeValue | undefined;
 
 	/**
 	 * JSON schema for an object to assign size values to one of the size contributions.
@@ -141,19 +163,22 @@ export interface ISizeRegistry {
 	 * Notify when the color theme or settings change.
 	 */
 	notifyThemeUpdate(theme: IColorTheme): void;
-
 }
 
-type IJSONSchemaForSizes = IJSONSchema & { properties: { [name: string]: IJSONSchema } };
+type IJSONSchemaForSizes = IJSONSchema & {
+	properties: { [name: string]: IJSONSchema };
+};
 
 class SizeRegistry extends Disposable implements ISizeRegistry {
-
 	private readonly _onDidChangeSchema = this._register(new Emitter<void>());
 	readonly onDidChangeSchema: Event<void> = this._onDidChangeSchema.event;
 
 	private sizesById: { [key: string]: SizeContribution };
-	private sizeSchema: IJSONSchemaForSizes = { type: 'object', properties: {} };
-	private sizeReferenceSchema: IJSONSchema & { enum: string[]; enumDescriptions: string[] } = { type: 'string', enum: [], enumDescriptions: [] };
+	private sizeSchema: IJSONSchemaForSizes = { type: "object", properties: {} };
+	private sizeReferenceSchema: IJSONSchema & {
+		enum: string[];
+		enumDescriptions: string[];
+	} = { type: "string", enum: [], enumDescriptions: [] };
 
 	constructor() {
 		super();
@@ -170,32 +195,50 @@ class SizeRegistry extends Disposable implements ISizeRegistry {
 		this._onDidChangeSchema.fire();
 	}
 
-	public registerSize(id: string, defaults: SizeDefaults | SizeValue | null, description: string, deprecationMessage?: string): SizeIdentifier {
-		const sizeContribution: SizeContribution = { id, description, defaults, deprecationMessage };
+	public registerSize(
+		id: string,
+		defaults: SizeDefaults | SizeValue | null,
+		description: string,
+		deprecationMessage?: string,
+	): SizeIdentifier {
+		const sizeContribution: SizeContribution = {
+			id,
+			description,
+			defaults,
+			deprecationMessage,
+		};
 		this.sizesById[id] = sizeContribution;
 
 		// Determine whether this token uses unitless values (e.g. font weights).
 		// The pattern is chosen per-token so that length tokens still require a unit.
 		const isUnitless = (() => {
-			if (!defaults) { return false; }
-			if (isSizeDefaults(defaults)) {
-				const sample = defaults.dark ?? defaults.light ?? defaults.hcDark ?? defaults.hcLight;
-				return sample?.unit === '';
+			if (!defaults) {
+				return false;
 			}
-			return defaults.unit === '';
+			if (isSizeDefaults(defaults)) {
+				const sample =
+					defaults.dark ??
+					defaults.light ??
+					defaults.hcDark ??
+					defaults.hcLight;
+				return sample?.unit === "";
+			}
+			return defaults.unit === "";
 		})();
 
 		const propertySchema: IJSONSchema = isUnitless
 			? {
-				type: 'string',
-				pattern: '^(?:\\d+|default)$',
-				patternErrorMessage: 'Value must be an integer (e.g., "400") or "default"'
-			}
+					type: "string",
+					pattern: "^(?:\\d+|default)$",
+					patternErrorMessage:
+						'Value must be an integer (e.g., "400") or "default"',
+				}
 			: {
-				type: 'string',
-				pattern: '^(?:\\d+(\\.\\d+)?(px|rem|em|%)|default)$',
-				patternErrorMessage: 'Size must be a number followed by px, rem, em, or % (e.g., "12px", "1.5rem") or "default"'
-			};
+					type: "string",
+					pattern: "^(?:\\d+(\\.\\d+)?(px|rem|em|%)|default)$",
+					patternErrorMessage:
+						'Size must be a number followed by px, rem, em, or % (e.g., "12px", "1.5rem") or "default"',
+				};
 
 		if (deprecationMessage) {
 			propertySchema.deprecationMessage = deprecationMessage;
@@ -203,7 +246,7 @@ class SizeRegistry extends Disposable implements ISizeRegistry {
 
 		this.sizeSchema.properties[id] = {
 			description,
-			...propertySchema
+			...propertySchema,
 		};
 
 		this.sizeReferenceSchema.enum.push(id);
@@ -225,13 +268,18 @@ class SizeRegistry extends Disposable implements ISizeRegistry {
 	}
 
 	public getSizes(): SizeContribution[] {
-		return Object.keys(this.sizesById).map(id => this.sizesById[id]);
+		return Object.keys(this.sizesById).map((id) => this.sizesById[id]);
 	}
 
-	public resolveDefaultSize(id: SizeIdentifier, theme: IColorTheme): SizeValue | undefined {
+	public resolveDefaultSize(
+		id: SizeIdentifier,
+		theme: IColorTheme,
+	): SizeValue | undefined {
 		const sizeDesc = this.sizesById[id];
 		if (sizeDesc?.defaults) {
-			const sizeValue = isSizeDefaults(sizeDesc.defaults) ? sizeDesc.defaults[theme.type] : sizeDesc.defaults;
+			const sizeValue = isSizeDefaults(sizeDesc.defaults)
+				? sizeDesc.defaults[theme.type]
+				: sizeDesc.defaults;
 			return sizeValue ?? undefined;
 		}
 		return undefined;
@@ -247,36 +295,56 @@ class SizeRegistry extends Disposable implements ISizeRegistry {
 
 	public override toString() {
 		const sorter = (a: string, b: string) => {
-			const cat1 = a.indexOf('.') === -1 ? 0 : 1;
-			const cat2 = b.indexOf('.') === -1 ? 0 : 1;
+			const cat1 = a.indexOf(".") === -1 ? 0 : 1;
+			const cat2 = b.indexOf(".") === -1 ? 0 : 1;
 			if (cat1 !== cat2) {
 				return cat1 - cat2;
 			}
 			return a.localeCompare(b);
 		};
 
-		return Object.keys(this.sizesById).sort(sorter).map(k => `- \`${k}\`: ${this.sizesById[k].description}`).join('\n');
+		return Object.keys(this.sizesById)
+			.sort(sorter)
+			.map((k) => `- \`${k}\`: ${this.sizesById[k].description}`)
+			.join("\n");
 	}
-
 }
 
 const sizeRegistry = new SizeRegistry();
 platform.Registry.add(Extensions.SizeContribution, sizeRegistry);
 
-export function registerSize(id: string, defaults: SizeDefaults | SizeValue | null, description: string, deprecationMessage?: string): SizeIdentifier {
-	return sizeRegistry.registerSize(id, defaults, description, deprecationMessage);
+export function registerSize(
+	id: string,
+	defaults: SizeDefaults | SizeValue | null,
+	description: string,
+	deprecationMessage?: string,
+): SizeIdentifier {
+	return sizeRegistry.registerSize(
+		id,
+		defaults,
+		description,
+		deprecationMessage,
+	);
 }
 
 export function getSizeRegistry(): ISizeRegistry {
 	return sizeRegistry;
 }
 
-export const workbenchSizesSchemaId = 'vscode://schemas/workbench-sizes';
+export const workbenchSizesSchemaId = "vscode://schemas/workbench-sizes";
 
-const schemaRegistry = platform.Registry.as<IJSONContributionRegistry>(JSONExtensions.JSONContribution);
-schemaRegistry.registerSchema(workbenchSizesSchemaId, sizeRegistry.getSizeSchema());
+const schemaRegistry = platform.Registry.as<IJSONContributionRegistry>(
+	JSONExtensions.JSONContribution,
+);
+schemaRegistry.registerSchema(
+	workbenchSizesSchemaId,
+	sizeRegistry.getSizeSchema(),
+);
 
-const delayer = new RunOnceScheduler(() => schemaRegistry.notifySchemaChanged(workbenchSizesSchemaId), 200);
+const delayer = new RunOnceScheduler(
+	() => schemaRegistry.notifySchemaChanged(workbenchSizesSchemaId),
+	200,
+);
 
 sizeRegistry.onDidChangeSchema(() => {
 	if (!delayer.isScheduled()) {

@@ -4,12 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 /* Container - button style hover */
-.agent-sessions-workbench .command-center .monaco-action-bar .actions-container {
+.agent-sessions-workbench
+	.command-center
+	.monaco-action-bar
+	.actions-container {
 	display: flex;
 	align-items: center;
 }
 
-.agent-sessions-workbench .command-center .monaco-action-bar .actions-container > .action-item.agent-sessions-titlebar-container + .action-item {
+.agent-sessions-workbench
+	.command-center
+	.monaco-action-bar
+	.actions-container
+	> .action-item.agent-sessions-titlebar-container
+	+ .action-item {
 	margin-left: 0;
 }
 
@@ -33,11 +41,14 @@
 	transition: opacity 120ms ease-out;
 }
 
-.agent-sessions-workbench:not(.nosidebar) .command-center .agent-sessions-titlebar-container {
+.agent-sessions-workbench:not(.nosidebar)
+	.command-center
+	.agent-sessions-titlebar-container {
 	margin-left: 0;
 }
 
-.command-center .agent-sessions-titlebar-container.agent-sessions-titlebar-hidden {
+.command-center
+	.agent-sessions-titlebar-container.agent-sessions-titlebar-hidden {
 	flex: 0 1 0;
 	width: 0;
 	margin-left: 0;
@@ -46,7 +57,9 @@
 }
 
 /* Session pill - clickable area for session picker */
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-pill {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-pill {
 	display: flex;
 	align-items: center;
 	padding: 0 4px;
@@ -57,7 +70,9 @@
 	touch-action: manipulation;
 }
 
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-pill:hover {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-pill:hover {
 	background-color: var(--vscode-toolbar-hoverBackground);
 }
 
@@ -67,7 +82,9 @@
 }
 
 /* Center group: icon + label + folder */
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-center {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-center {
 	display: flex;
 	align-items: center;
 	gap: 6px;
@@ -77,19 +94,28 @@
 	cursor: pointer;
 	overflow: hidden;
 }
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-icon {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-icon {
 	display: flex;
 	align-items: center;
 	flex-shrink: 0;
 	font-size: 14px;
 }
 
-.command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item:not(.disabled) > .action-label {
+.command-center
+	> .monaco-toolbar
+	> .monaco-action-bar
+	> .actions-container
+	> .action-item:not(.disabled)
+	> .action-label {
 	color: var(--vscode-icon-foreground);
 }
 
 /* Label (title) — shrinks first so folder/branch/diff stats stay visible. */
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-label {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-label {
 	flex: 0 999 auto;
 	min-width: 0;
 	max-width: 400px;
@@ -100,7 +126,9 @@
 }
 
 /* Repository/worktree metadata shrinks after the primary title. */
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-details {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-details {
 	display: flex;
 	align-items: center;
 	flex: 0 1 auto;
@@ -110,7 +138,9 @@
 	opacity: 0.7;
 }
 
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-repo {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-repo {
 	flex: 1 1 auto;
 	min-width: 0;
 	overflow: hidden;
@@ -118,13 +148,17 @@
 	white-space: nowrap;
 }
 
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-separator {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-separator {
 	&::before {
-		content: '\00B7';
+		content: "\00B7";
 	}
 }
 
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-branch {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-branch {
 	display: flex;
 	align-items: center;
 	gap: 2px;
@@ -139,7 +173,9 @@
 }
 
 /* Diff stats (+insertions -deletions) shown for sessions with pending changes. */
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-diff {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-diff {
 	display: flex;
 	align-items: center;
 	gap: 2px;
@@ -148,11 +184,15 @@
 	white-space: nowrap;
 }
 
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-diff-added {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-diff-added {
 	color: var(--vscode-chat-linesAddedForeground);
 }
 
-.command-center .agent-sessions-titlebar-container .agent-sessions-titlebar-diff-removed {
+.command-center
+	.agent-sessions-titlebar-container
+	.agent-sessions-titlebar-diff-removed {
 	color: var(--vscode-chat-linesRemovedForeground);
 }
 
@@ -161,7 +201,9 @@
 	position: relative;
 }
 
-.agent-sessions-workbench .action-item.sidebar-toggle-action .sidebar-toggle-badge {
+.agent-sessions-workbench
+	.action-item.sidebar-toggle-action
+	.sidebar-toggle-badge {
 	position: absolute;
 	top: 0;
 	right: -4px;

@@ -3,23 +3,50 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { Emitter, Event } from '../../../../../base/common/event.js';
-import { Disposable, DisposableStore, IDisposable } from '../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { ServicesAccessor } from '../../../../../editor/browser/editorExtensions.js';
-import { localize, localize2 } from '../../../../../nls.js';
-import { Action2, registerAction2 } from '../../../../../platform/actions/common/actions.js';
-import { ICommandService } from '../../../../../platform/commands/common/commands.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
-import { ILifecycleService, LifecyclePhase } from '../../../../services/lifecycle/common/lifecycle.js';
-import { ChatSessionStatus, IChatSessionItem, IChatSessionItemController, IChatSessionItemsDelta, IChatSessionsService } from '../../common/chatSessionsService.js';
-import { AgentSessionProviders } from '../agentSessions/agentSessions.js';
-import { IAgentSession } from '../agentSessions/agentSessionsModel.js';
-import { ISessionOpenerParticipant, ISessionOpenOptions, sessionOpenerRegistry } from '../agentSessions/agentSessionsOpener.js';
-import { IChatWidgetService } from '../chat.js';
-import { CHAT_OPEN_ACTION_ID, IChatViewOpenOptions } from '../actions/chatActions.js';
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { Emitter, Event } from "../../../../../base/common/event.js";
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { ServicesAccessor } from "../../../../../editor/browser/editorExtensions.js";
+import { localize, localize2 } from "../../../../../nls.js";
+import {
+	Action2,
+	registerAction2,
+} from "../../../../../platform/actions/common/actions.js";
+import { ICommandService } from "../../../../../platform/commands/common/commands.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../../platform/storage/common/storage.js";
+import {
+	ILifecycleService,
+	LifecyclePhase,
+} from "../../../../services/lifecycle/common/lifecycle.js";
+import {
+	ChatSessionStatus,
+	IChatSessionItem,
+	IChatSessionItemController,
+	IChatSessionItemsDelta,
+	IChatSessionsService,
+} from "../../common/chatSessionsService.js";
+import { AgentSessionProviders } from "../agentSessions/agentSessions.js";
+import { IAgentSession } from "../agentSessions/agentSessionsModel.js";
+import {
+	ISessionOpenerParticipant,
+	ISessionOpenOptions,
+	sessionOpenerRegistry,
+} from "../agentSessions/agentSessionsOpener.js";
+import { IChatWidgetService } from "../chat.js";
+import {
+	CHAT_OPEN_ACTION_ID,
+	IChatViewOpenOptions,
+} from "../actions/chatActions.js";
 
 /**
  * Core-side growth session controller that shows a single "attention needed"
@@ -30,14 +57,22 @@ import { CHAT_OPEN_ACTION_ID, IChatViewOpenOptions } from '../actions/chatAction
  *
  * The session is shown at most once, tracked via a storage flag.
  */
-export class GrowthSessionController extends Disposable implements IChatSessionItemController {
+export class GrowthSessionController
+	extends Disposable
+	implements IChatSessionItemController
+{
+	static readonly STORAGE_KEY = "chat.growthSession.dismissed";
 
-	static readonly STORAGE_KEY = 'chat.growthSession.dismissed';
+	private static readonly SESSION_URI = URI.from({
+		scheme: AgentSessionProviders.Growth,
+		path: "/growth-welcome",
+	});
 
-	private static readonly SESSION_URI = URI.from({ scheme: AgentSessionProviders.Growth, path: '/growth-welcome' });
-
-	private readonly _onDidChangeChatSessionItems = this._register(new Emitter<IChatSessionItemsDelta>());
-	readonly onDidChangeChatSessionItems = this._onDidChangeChatSessionItems.event;
+	private readonly _onDidChangeChatSessionItems = this._register(
+		new Emitter<IChatSessionItemsDelta>(),
+	);
+	readonly onDidChangeChatSessionItems =
+		this._onDidChangeChatSessionItems.event;
 
 	private readonly _onDidDismiss = this._register(new Emitter<void>());
 	readonly onDidDismiss: Event<void> = this._onDidDismiss.event;
@@ -45,7 +80,9 @@ export class GrowthSessionController extends Disposable implements IChatSessionI
 	private readonly _created = Date.now();
 
 	private _dismissed: boolean;
-	get isDismissed(): boolean { return this._dismissed; }
+	get isDismissed(): boolean {
+		return this._dismissed;
+	}
 
 	constructor(
 		@IStorageService private readonly storageService: IStorageService,
@@ -55,7 +92,11 @@ export class GrowthSessionController extends Disposable implements IChatSessionI
 	) {
 		super();
 
-		this._dismissed = this.storageService.getBoolean(GrowthSessionController.STORAGE_KEY, StorageScope.APPLICATION, false);
+		this._dismissed = this.storageService.getBoolean(
+			GrowthSessionController.STORAGE_KEY,
+			StorageScope.APPLICATION,
+			false,
+		);
 
 		// Dismiss the growth session when the user opens chat.
 		// Wait until the workbench is fully restored so we skip widgets
@@ -64,9 +105,11 @@ export class GrowthSessionController extends Disposable implements IChatSessionI
 			if (this._store.isDisposed || this._dismissed) {
 				return;
 			}
-			this._register(this.chatWidgetService.onDidAddWidget(() => {
-				this.dismiss();
-			}));
+			this._register(
+				this.chatWidgetService.onDidAddWidget(() => {
+					this.dismiss();
+				}),
+			);
 		});
 	}
 
@@ -75,18 +118,23 @@ export class GrowthSessionController extends Disposable implements IChatSessionI
 			return [];
 		}
 
-		return [{
-			resource: GrowthSessionController.SESSION_URI,
-			label: localize('growthSession.label', "Try Copilot"),
-			description: localize('growthSession.description', "GitHub Copilot is available. Try it for free."),
-			status: ChatSessionStatus.NeedsInput,
-			iconPath: Codicon.lightbulb,
-			timing: {
-				created: this._created,
-				lastRequestStarted: undefined,
-				lastRequestEnded: undefined,
+		return [
+			{
+				resource: GrowthSessionController.SESSION_URI,
+				label: localize("growthSession.label", "Try Copilot"),
+				description: localize(
+					"growthSession.description",
+					"GitHub Copilot is available. Try it for free.",
+				),
+				status: ChatSessionStatus.NeedsInput,
+				iconPath: Codicon.lightbulb,
+				timing: {
+					created: this._created,
+					lastRequestStarted: undefined,
+					lastRequestEnded: undefined,
+				},
 			},
-		}];
+		];
 	}
 
 	async refresh(): Promise<void> {
@@ -98,9 +146,14 @@ export class GrowthSessionController extends Disposable implements IChatSessionI
 			return;
 		}
 
-		this.logService.trace('[GrowthSession] Dismissing growth session');
+		this.logService.trace("[GrowthSession] Dismissing growth session");
 		this._dismissed = true;
-		this.storageService.store(GrowthSessionController.STORAGE_KEY, true, StorageScope.APPLICATION, StorageTarget.USER);
+		this.storageService.store(
+			GrowthSessionController.STORAGE_KEY,
+			true,
+			StorageScope.APPLICATION,
+			StorageTarget.USER,
+		);
 
 		// Fire change event first so that listeners (like the model) see empty items
 		this._onDidChangeChatSessionItems.fire({
@@ -117,21 +170,32 @@ export class GrowthSessionController extends Disposable implements IChatSessionI
  * The user can then send messages that go through the normal agent.
  */
 export class GrowthSessionOpenerParticipant implements ISessionOpenerParticipant {
-
-	async handleOpenSession(accessor: ServicesAccessor, session: IAgentSession, _openOptions?: ISessionOpenOptions): Promise<boolean> {
+	async handleOpenSession(
+		accessor: ServicesAccessor,
+		session: IAgentSession,
+		_openOptions?: ISessionOpenOptions,
+	): Promise<boolean> {
 		if (session.providerType !== AgentSessionProviders.Growth) {
 			return false;
 		}
 
 		const commandService = accessor.get(ICommandService);
 		const opts: IChatViewOpenOptions = {
-			query: '',
+			query: "",
 			isPartialQuery: true,
-			previousRequests: [{
-				request: localize('growthSession.previousRequest', "Tell me about GitHub Copilot!"),
-				// allow-any-unicode-next-line
-				response: localize('growthSession.previousResponse', "Welcome to GitHub Copilot, your AI coding assistant! Here are some things you can try:\n\n- 🐛 *\"Help me debug this error\"* — paste an error message and get a fix\n- 🧪 *\"Write tests for my function\"* — select code and ask for unit tests\n- 💡 *\"Explain this code\"* — highlight something unfamiliar and ask what it does\n- 🚀 *\"Scaffold a REST API\"* — describe what you want and let Agent mode build it\n- 🎨 *\"Refactor this to be more readable\"* — select messy code and clean it up\n\nType anything below to get started!"),
-			}],
+			previousRequests: [
+				{
+					request: localize(
+						"growthSession.previousRequest",
+						"Tell me about GitHub Copilot!",
+					),
+					// allow-any-unicode-next-line
+					response: localize(
+						"growthSession.previousResponse",
+						'Welcome to GitHub Copilot, your AI coding assistant! Here are some things you can try:\n\n- 🐛 *"Help me debug this error"* — paste an error message and get a fix\n- 🧪 *"Write tests for my function"* — select code and ask for unit tests\n- 💡 *"Explain this code"* — highlight something unfamiliar and ask what it does\n- 🚀 *"Scaffold a REST API"* — describe what you want and let Agent mode build it\n- 🎨 *"Refactor this to be more readable"* — select messy code and clean it up\n\nType anything below to get started!',
+					),
+				},
+			],
 		};
 		await commandService.executeCommand(CHAT_OPEN_ACTION_ID, opts);
 		return true;
@@ -142,34 +206,54 @@ export class GrowthSessionOpenerParticipant implements ISessionOpenerParticipant
  * Registers the growth session controller and opener participant.
  * Returns a disposable that cleans up all registrations.
  */
-export function registerGrowthSession(chatSessionsService: IChatSessionsService, growthController: GrowthSessionController): IDisposable {
+export function registerGrowthSession(
+	chatSessionsService: IChatSessionsService,
+	growthController: GrowthSessionController,
+): IDisposable {
 	const disposables = new DisposableStore();
 
 	// Register as session item controller so it appears in the sessions view
-	disposables.add(chatSessionsService.registerChatSessionItemController(AgentSessionProviders.Growth, growthController));
+	disposables.add(
+		chatSessionsService.registerChatSessionItemController(
+			AgentSessionProviders.Growth,
+			growthController,
+		),
+	);
 
 	// Register opener participant so clicking the growth session opens chat
-	disposables.add(sessionOpenerRegistry.registerParticipant(new GrowthSessionOpenerParticipant()));
+	disposables.add(
+		sessionOpenerRegistry.registerParticipant(
+			new GrowthSessionOpenerParticipant(),
+		),
+	);
 
 	return disposables;
 }
 
 // #region Developer Actions
 
-registerAction2(class ResetGrowthSessionAction extends Action2 {
-	constructor() {
-		super({
-			id: 'workbench.action.chat.resetGrowthSession',
-			title: localize2('resetGrowthSession', "Reset Growth Session Notification"),
-			category: localize2('developer', "Developer"),
-			f1: true,
-		});
-	}
+registerAction2(
+	class ResetGrowthSessionAction extends Action2 {
+		constructor() {
+			super({
+				id: "workbench.action.chat.resetGrowthSession",
+				title: localize2(
+					"resetGrowthSession",
+					"Reset Growth Session Notification",
+				),
+				category: localize2("developer", "Developer"),
+				f1: true,
+			});
+		}
 
-	run(accessor: ServicesAccessor): void {
-		const storageService = accessor.get(IStorageService);
-		storageService.remove(GrowthSessionController.STORAGE_KEY, StorageScope.APPLICATION);
-	}
-});
+		run(accessor: ServicesAccessor): void {
+			const storageService = accessor.get(IStorageService);
+			storageService.remove(
+				GrowthSessionController.STORAGE_KEY,
+				StorageScope.APPLICATION,
+			);
+		}
+	},
+);
 
 // #endregion

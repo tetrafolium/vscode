@@ -5,26 +5,33 @@
 
 import type { RequestMetadata } from '@vscode/copilot-api';
 import type { LanguageModelToolResult2 } from 'vscode';
-import { ILoggedRequestInfo, LoggedRequest } from '../../../platform/requestLogger/common/requestLogger';
+import {
+	ILoggedRequestInfo,
+	LoggedRequest,
+} from '../../../platform/requestLogger/common/requestLogger';
 import { AbstractRequestLogger } from '../../../platform/requestLogger/node/requestLogger';
 import { Event } from '../../../util/vs/base/common/event';
 import { IModelAPIResponse } from '../../endpoint/common/endpointProvider';
 
 export class NullRequestLogger extends AbstractRequestLogger {
-	public override addPromptTrace(): void {
-	}
-	public addEntry(entry: LoggedRequest): void {
-	}
+	public override addPromptTrace(): void {}
+	public addEntry(entry: LoggedRequest): void {}
 	public override getRequests(): ILoggedRequestInfo[] {
 		return [];
 	}
 	public override getRequestById(_id: string): undefined {
 		return undefined;
 	}
-	public override logModelListCall(id: string, requestMetadata: RequestMetadata, models: IModelAPIResponse[]): void {
-
-	}
-	public override logToolCall(_id: string, _name: string | undefined, _args: unknown, _response: LanguageModelToolResult2): void {
-	}
+	public override logModelListCall(
+		id: string,
+		requestMetadata: RequestMetadata,
+		models: IModelAPIResponse[],
+	): void {}
+	public override logToolCall(
+		_id: string,
+		_name: string | undefined,
+		_args: unknown,
+		_response: LanguageModelToolResult2,
+	): void {}
 	override onDidChangeRequests: Event<void> = Event.None;
 }

@@ -11,7 +11,14 @@
 /* ===== Modern action label styling for sessions panel ===== */
 
 /* Base label: lowercase text + heavier weight + pill padding */
-.agent-sessions-workbench .part.panel > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:not(.icon) .action-label {
+.agent-sessions-workbench
+	.part.panel
+	> .title
+	> .composite-bar-container
+	> .composite-bar
+	> .monaco-action-bar
+	.action-item:not(.icon)
+	.action-label {
 	text-transform: capitalize;
 	font-weight: 500;
 	border-radius: 4px;
@@ -20,21 +27,47 @@
 	line-height: 22px;
 }
 
-.agent-sessions-workbench .part.panel > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item {
+.agent-sessions-workbench
+	.part.panel
+	> .title
+	> .composite-bar-container
+	> .composite-bar
+	> .monaco-action-bar
+	.action-item {
 	padding-left: 0;
 	padding-right: 0;
 }
 
 /* Hide the underline indicator for non-focused items, but keep it for keyboard focus */
-.agent-sessions-workbench .part.panel > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:not(:focus-visible) .active-item-indicator:before {
+.agent-sessions-workbench
+	.part.panel
+	> .title
+	> .composite-bar-container
+	> .composite-bar
+	> .monaco-action-bar
+	.action-item:not(:focus-visible)
+	.active-item-indicator:before {
 	display: none !important;
 }
-.agent-sessions-workbench .part.panel > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item:focus-visible .active-item-indicator:before {
+.agent-sessions-workbench
+	.part.panel
+	> .title
+	> .composite-bar-container
+	> .composite-bar
+	> .monaco-action-bar
+	.action-item:focus-visible
+	.active-item-indicator:before {
 	display: block !important;
 }
 
 /* Make icon action items 24px tall */
-.agent-sessions-workbench .part.panel > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item.icon {
+.agent-sessions-workbench
+	.part.panel
+	> .title
+	> .composite-bar-container
+	> .composite-bar
+	> .monaco-action-bar
+	.action-item.icon {
 	height: 24px;
 }
 
@@ -45,15 +78,29 @@
 }
 
 /* Active/checked state: background container instead of underline */
-.agent-sessions-workbench .part.panel > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item.checked {
-	background-color: color-mix(in srgb, var(--vscode-agentsPanel-foreground, var(--vscode-foreground)) 5%, transparent) !important;
+.agent-sessions-workbench
+	.part.panel
+	> .title
+	> .composite-bar-container
+	> .composite-bar
+	> .monaco-action-bar
+	.action-item.checked {
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-agentsPanel-foreground, var(--vscode-foreground)) 5%,
+		transparent
+	) !important;
 	border-radius: 4px;
 }
 
 /* Override base workbench panel content background for terminal */
 .agent-sessions-workbench .part.panel > .content .monaco-editor,
 .agent-sessions-workbench .part.panel > .content .monaco-editor .margin,
-.agent-sessions-workbench .part.panel > .content .monaco-editor .monaco-editor-background {
+.agent-sessions-workbench
+	.part.panel
+	> .content
+	.monaco-editor
+	.monaco-editor-background {
 	background-color: var(--vscode-agentsPanel-background);
 }
 
@@ -66,15 +113,30 @@
 	background-color: var(--vscode-agentsPanel-background);
 }
 
-.monaco-workbench.vs.agent-sessions-workbench .part.panel > .content #workbench\.sessions\.panel\.chatDebugContainer {
+.monaco-workbench.vs.agent-sessions-workbench
+	.part.panel
+	> .content
+	#workbench\.sessions\.panel\.chatDebugContainer {
 	--vscode-panel-background: var(--vscode-agentsPanel-background);
 }
 
-.monaco-workbench.vs.agent-sessions-workbench .part.panel > .content #workbench\.sessions\.panel\.chatDebugContainer .monaco-list-rows {
+.monaco-workbench.vs.agent-sessions-workbench
+	.part.panel
+	> .content
+	#workbench\.sessions\.panel\.chatDebugContainer
+	.monaco-list-rows {
 	background: var(--vscode-agentsPanel-background) !important;
 }
 
-.agent-sessions-workbench .part.panel > .title > .composite-bar-container > .composite-bar > .monaco-action-bar .action-item.icon .badge.compact .badge-content {
+.agent-sessions-workbench
+	.part.panel
+	> .title
+	> .composite-bar-container
+	> .composite-bar
+	> .monaco-action-bar
+	.action-item.icon
+	.badge.compact
+	.badge-content {
 	top: 11px;
 }
 

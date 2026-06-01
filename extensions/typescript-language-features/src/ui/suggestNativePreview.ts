@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { tsNativeExtensionId } from '../commands/useTsgo';
-import { ExperimentationService } from '../experimentationService';
+import * as vscode from "vscode";
+import { tsNativeExtensionId } from "../commands/useTsgo";
+import { ExperimentationService } from "../experimentationService";
 
-const suggestNativePreviewStorageKey = 'typescript.suggestNativePreview.dismissed';
+const suggestNativePreviewStorageKey =
+	"typescript.suggestNativePreview.dismissed";
 
 export async function suggestNativePreview(
 	context: vscode.ExtensionContext,
@@ -23,7 +24,7 @@ export async function suggestNativePreview(
 	}
 
 	// Only show when the nightly extension is installed
-	if (!vscode.extensions.getExtension('ms-vscode.vscode-typescript-next')) {
+	if (!vscode.extensions.getExtension("ms-vscode.vscode-typescript-next")) {
 		return;
 	}
 
@@ -34,17 +35,24 @@ export async function suggestNativePreview(
 		return;
 	}
 
-	const inExperiment = await experimentationService.getTreatmentVariable('suggestNativePreview', false);
+	const inExperiment = await experimentationService.getTreatmentVariable(
+		"suggestNativePreview",
+		false,
+	);
 	if (!inExperiment) {
 		return;
 	}
 
 	const install: vscode.MessageItem = { title: vscode.l10n.t("Install") };
 	const learnMore: vscode.MessageItem = { title: vscode.l10n.t("Learn More") };
-	const dismiss: vscode.MessageItem = { title: vscode.l10n.t("Don't Show Again") };
+	const dismiss: vscode.MessageItem = {
+		title: vscode.l10n.t("Don't Show Again"),
+	};
 
 	const selection = await vscode.window.showInformationMessage(
-		vscode.l10n.t("Try TypeScript 7 Native Preview for significantly faster type checking and language features."),
+		vscode.l10n.t(
+			"Try TypeScript 7 Native Preview for significantly faster type checking and language features.",
+		),
 		{},
 		install,
 		learnMore,
@@ -54,8 +62,13 @@ export async function suggestNativePreview(
 	await context.globalState.update(suggestNativePreviewStorageKey, true);
 
 	if (selection === install) {
-		await vscode.commands.executeCommand('workbench.extensions.installExtension', tsNativeExtensionId);
+		await vscode.commands.executeCommand(
+			"workbench.extensions.installExtension",
+			tsNativeExtensionId,
+		);
 	} else if (selection === learnMore) {
-		await vscode.env.openExternal(vscode.Uri.parse('https://aka.ms/vscode-try-ts-7-learn-more'));
+		await vscode.env.openExternal(
+			vscode.Uri.parse("https://aka.ms/vscode-try-ts-7-learn-more"),
+		);
 	}
 }

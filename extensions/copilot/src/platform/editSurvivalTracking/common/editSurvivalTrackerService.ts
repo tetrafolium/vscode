@@ -4,13 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type * as vscode from 'vscode';
-import { createDecorator as createServiceIdentifier, IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	createDecorator as createServiceIdentifier,
+	IInstantiationService,
+} from '../../../util/vs/platform/instantiation/common/instantiation';
 import { ILogService } from '../../log/common/logService';
 import { EditCollector } from './editCollector';
 import { EditComputer } from './editComputer';
-import { EditSurvivalReporter, EditSurvivalResult } from './editSurvivalReporter';
+import {
+	EditSurvivalReporter,
+	EditSurvivalResult,
+} from './editSurvivalReporter';
 
-export const IEditSurvivalTrackerService = createServiceIdentifier<IEditSurvivalTrackerService>('IEditSurvivalTrackerService');
+export const IEditSurvivalTrackerService =
+	createServiceIdentifier<IEditSurvivalTrackerService>(
+		'IEditSurvivalTrackerService',
+	);
 
 export interface IEditSurvivalTrackingSession {
 	collectAIEdits(textEdit: vscode.TextEdit | vscode.TextEdit[]): void;
@@ -24,9 +33,9 @@ export interface IEditSurvivalTrackerService {
 }
 
 export class NullEditSurvivalTrackingSession implements IEditSurvivalTrackingSession {
-	collectAIEdits() { }
-	startReporter() { }
-	cancel() { }
+	collectAIEdits() {}
+	startReporter() {}
+	cancel() {}
 }
 
 export class NullEditSurvivalTrackerService implements IEditSurvivalTrackerService {
@@ -41,29 +50,56 @@ export class EditSurvivalTrackerService implements IEditSurvivalTrackerService {
 	readonly _serviceBrand: undefined;
 
 	constructor(
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@ILogService private readonly _logService: ILogService
-	) {
-	}
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
+		@ILogService private readonly _logService: ILogService,
+	) {}
 
 	initialize(document: vscode.TextDocument): IEditSurvivalTrackingSession {
-		const editCollector = this._instantiationService.createInstance(EditCollector, document.getText());
+		const editCollector = this._instantiationService.createInstance(
+			EditCollector,
+			document.getText(),
+		);
 		let reporter: EditSurvivalReporter | undefined;
 		return {
 			collectAIEdits: (edits: vscode.TextEdit | vscode.TextEdit[]) => {
 				try {
-					editCollector.addEdits(Array.isArray(edits) ? edits : [edits]);
+					editCollector.addEdits(
+						Array.isArray(edits) ? edits : [edits],
+					);
 				} catch (error) {
-					this._logService.error('[EditSurvivalTrackerService] Error while collecting edits', error);
+					this._logService.error(
+						'[EditSurvivalTrackerService] Error while collecting edits',
+						error,
+					);
 				}
 			},
-			startReporter: (sendTelemetryEvent: (res: EditSurvivalResult) => void) => {
-				const userEditComputer = this._instantiationService.createInstance(EditComputer, editCollector.getText(), document);
+			startReporter: (
+				sendTelemetryEvent: (res: EditSurvivalResult) => void,
+			) => {
+				const userEditComputer =
+					this._instantiationService.createInstance(
+						EditComputer,
+						editCollector.getText(),
+						document,
+					);
 				(async () => {
 					try {
-						const [aiEdits, userEditsResult] = await Promise.all([editCollector.getEdits(), userEditComputer.compute()]);
-						const userEdits = userEditsResult.getEditsSinceInitial();
-						reporter = this._instantiationService.createInstance(EditSurvivalReporter, document, editCollector.initialText, aiEdits, userEdits, {}, sendTelemetryEvent);
+						const [aiEdits, userEditsResult] = await Promise.all([
+							editCollector.getEdits(),
+							userEditComputer.compute(),
+						]);
+						const userEdits =
+							userEditsResult.getEditsSinceInitial();
+						reporter = this._instantiationService.createInstance(
+							EditSurvivalReporter,
+							document,
+							editCollector.initialText,
+							aiEdits,
+							userEdits,
+							{},
+							sendTelemetryEvent,
+						);
 					} finally {
 						userEditComputer.dispose();
 					}
@@ -71,7 +107,7 @@ export class EditSurvivalTrackerService implements IEditSurvivalTrackerService {
 			},
 			cancel: () => {
 				reporter?.cancel();
-			}
+			},
 		};
 	}
 }

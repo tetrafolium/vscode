@@ -7,7 +7,10 @@ import { Raw } from '@vscode/prompt-tsx';
 import { beforeEach, describe, expect, test } from 'vitest';
 import { IChatMLFetcher } from '../../../../../platform/chat/common/chatMLFetcher';
 import { StaticChatMLFetcher } from '../../../../../platform/chat/test/common/staticChatMLFetcher';
-import { ConfigKey, IConfigurationService } from '../../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../../platform/configuration/common/configurationService';
 import { MockEndpoint } from '../../../../../platform/endpoint/test/node/mockEndpoint';
 import { ITestingServicesAccessor } from '../../../../../platform/test/node/services';
 import { IInstantiationService } from '../../../../../util/vs/platform/instantiation/common/instantiation';
@@ -17,15 +20,22 @@ import { TitlePrompt } from '../title';
 
 function messageText(message: Raw.ChatMessage | undefined): string | undefined {
 	return message?.content
-		.filter(part => part.type === Raw.ChatCompletionContentPartKind.Text)
-		.map(part => (part as Raw.ChatCompletionContentPartText).text)
+		.filter((part) => part.type === Raw.ChatCompletionContentPartKind.Text)
+		.map((part) => (part as Raw.ChatCompletionContentPartText).text)
 		.join('\n');
 }
 
-function promptText(messages: Raw.ChatMessage[]): { system: string | undefined; user: string | undefined } {
+function promptText(messages: Raw.ChatMessage[]): {
+	system: string | undefined;
+	user: string | undefined;
+} {
 	return {
-		system: messageText(messages.find(msg => msg.role === Raw.ChatRole.System)),
-		user: messageText(messages.find(msg => msg.role === Raw.ChatRole.User)),
+		system: messageText(
+			messages.find((msg) => msg.role === Raw.ChatRole.System),
+		),
+		user: messageText(
+			messages.find((msg) => msg.role === Raw.ChatRole.User),
+		),
 	};
 }
 
@@ -39,27 +49,37 @@ describe('TitlePrompt', () => {
 	});
 
 	test('includes locale instructions', async () => {
-		await accessor.get(IConfigurationService).setConfig(ConfigKey.LocaleOverride, 'zh-CN');
+		await accessor
+			.get(IConfigurationService)
+			.setConfig(ConfigKey.LocaleOverride, 'zh-CN');
 
-		const endpoint = accessor.get(IInstantiationService).createInstance(MockEndpoint, 'gpt-4.1');
+		const endpoint = accessor
+			.get(IInstantiationService)
+			.createInstance(MockEndpoint, 'gpt-4.1');
 		const { messages } = await renderPromptElement(
 			accessor.get(IInstantiationService),
 			endpoint,
 			TitlePrompt,
-			{ userRequest: '请你分析该脚本有何优化空间' });
+			{ userRequest: '请你分析该脚本有何优化空间' },
+		);
 
 		expect(promptText(messages)).toMatchSnapshot();
 	});
 
 	test('does not include locale instruction when language is en', async () => {
-		await accessor.get(IConfigurationService).setConfig(ConfigKey.LocaleOverride, 'en');
+		await accessor
+			.get(IConfigurationService)
+			.setConfig(ConfigKey.LocaleOverride, 'en');
 
-		const endpoint = accessor.get(IInstantiationService).createInstance(MockEndpoint, 'gpt-4.1');
+		const endpoint = accessor
+			.get(IInstantiationService)
+			.createInstance(MockEndpoint, 'gpt-4.1');
 		const { messages } = await renderPromptElement(
 			accessor.get(IInstantiationService),
 			endpoint,
 			TitlePrompt,
-			{ userRequest: 'How do I sort an array?' });
+			{ userRequest: 'How do I sort an array?' },
+		);
 
 		expect(promptText(messages)).toMatchSnapshot();
 	});

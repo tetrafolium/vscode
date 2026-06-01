@@ -12,29 +12,81 @@ import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { IAuthenticationService } from '../../authentication/common/authentication';
 import { IChatMLFetcher, Source } from '../../chat/common/chatMLFetcher';
-import { ChatFetchResponseType, ChatLocation, ChatResponse } from '../../chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+	ChatResponse,
+} from '../../chat/common/commonTypes';
 import { getTextPart } from '../../chat/common/globalStringUtils';
-import { CHAT_MODEL, ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	CHAT_MODEL,
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { ILogService } from '../../log/common/logService';
-import { isAnthropicContextEditingEnabled, isExtendedCacheTtlEnabled } from '../../networking/common/anthropic';
-import { FinishedCallback, getRequestId, ICopilotToolCall, OptionalChatRequestParams } from '../../networking/common/fetch';
-import { IFetcherService, Response } from '../../networking/common/fetcherService';
-import { createCapiRequestBody, IChatEndpoint, IChatEndpointTokenPricing, ICreateEndpointBodyOptions, IEndpointBody, IMakeChatRequestOptions, InteractionTypeOverride } from '../../networking/common/networking';
-import { CAPIChatMessage, ChatCompletion, FinishedCompletionReason, RawMessageConversionCallback } from '../../networking/common/openai';
+import {
+	isAnthropicContextEditingEnabled,
+	isExtendedCacheTtlEnabled,
+} from '../../networking/common/anthropic';
+import {
+	FinishedCallback,
+	getRequestId,
+	ICopilotToolCall,
+	OptionalChatRequestParams,
+} from '../../networking/common/fetch';
+import {
+	IFetcherService,
+	Response,
+} from '../../networking/common/fetcherService';
+import {
+	createCapiRequestBody,
+	IChatEndpoint,
+	IChatEndpointTokenPricing,
+	ICreateEndpointBodyOptions,
+	IEndpointBody,
+	IMakeChatRequestOptions,
+	InteractionTypeOverride,
+} from '../../networking/common/networking';
+import {
+	CAPIChatMessage,
+	ChatCompletion,
+	FinishedCompletionReason,
+	RawMessageConversionCallback,
+} from '../../networking/common/openai';
 import { prepareChatCompletionForReturn } from '../../networking/node/chatStream';
 import { IChatWebSocketManager } from '../../networking/node/chatWebSocketManager';
 import { SSEProcessor } from '../../networking/node/stream';
 import { IExperimentationService } from '../../telemetry/common/nullExperimentationService';
-import { ITelemetryService, TelemetryProperties } from '../../telemetry/common/telemetry';
+import {
+	ITelemetryService,
+	TelemetryProperties,
+} from '../../telemetry/common/telemetry';
 import { TelemetryData } from '../../telemetry/common/telemetryData';
 import { ITokenizerProvider } from '../../tokenizer/node/tokenizer';
 import { ICAPIClientService } from '../common/capiClient';
-import { getModelCapabilityOverride, isAnthropicFamily, isGeminiFamily, modelSupportsContextEditing, modelSupportsToolSearch } from '../common/chatModelCapabilities';
+import {
+	getModelCapabilityOverride,
+	isAnthropicFamily,
+	isGeminiFamily,
+	modelSupportsContextEditing,
+	modelSupportsToolSearch,
+} from '../common/chatModelCapabilities';
 import { IDomainService } from '../common/domainService';
-import { CustomModel, IChatModelInformation, ModelSupportedEndpoint } from '../common/endpointProvider';
+import {
+	CustomModel,
+	IChatModelInformation,
+	ModelSupportedEndpoint,
+} from '../common/endpointProvider';
 import { normalizeTokenPrices } from '../../../extension/conversation/common/languageModelAccess';
-import { createMessagesRequestBody, processResponseFromMessagesEndpoint } from './messagesApi';
-import { createResponsesRequestBody, getResponsesApiCompactionThreshold, processResponseFromChatEndpoint } from './responsesApi';
+import {
+	createMessagesRequestBody,
+	processResponseFromMessagesEndpoint,
+} from './messagesApi';
+import {
+	createResponsesRequestBody,
+	getResponsesApiCompactionThreshold,
+	processResponseFromChatEndpoint,
+} from './responsesApi';
 import { filterHistoryImages } from './imageLimits';
 
 /**
@@ -47,23 +99,45 @@ export async function defaultChatResponseProcessor(
 	expectedNumChoices: number,
 	finishCallback: FinishedCallback,
 	telemetryData: TelemetryData,
-	cancellationToken?: CancellationToken | undefined
+	cancellationToken?: CancellationToken | undefined,
 ) {
-	const processor = await SSEProcessor.create(logService, telemetryService, expectedNumChoices, response, cancellationToken);
+	const processor = await SSEProcessor.create(
+		logService,
+		telemetryService,
+		expectedNumChoices,
+		response,
+		cancellationToken,
+	);
 	const finishedCompletions = processor.processSSE(finishCallback);
-	const chatCompletions = AsyncIterableObject.map(finishedCompletions, (solution) => {
-		const loggedReason = solution.reason ?? 'client-trimmed';
-		const dataToSendToTelemetry = telemetryData.extendedBy({
-			completionChoiceFinishReason: loggedReason,
-			headerRequestId: solution.requestId.headerRequestId
-		});
-		telemetryService.sendGHTelemetryEvent('completion.finishReason', dataToSendToTelemetry.properties, dataToSendToTelemetry.measurements);
-		return prepareChatCompletionForReturn(telemetryService, logService, solution, telemetryData);
-	});
+	const chatCompletions = AsyncIterableObject.map(
+		finishedCompletions,
+		(solution) => {
+			const loggedReason = solution.reason ?? 'client-trimmed';
+			const dataToSendToTelemetry = telemetryData.extendedBy({
+				completionChoiceFinishReason: loggedReason,
+				headerRequestId: solution.requestId.headerRequestId,
+			});
+			telemetryService.sendGHTelemetryEvent(
+				'completion.finishReason',
+				dataToSendToTelemetry.properties,
+				dataToSendToTelemetry.measurements,
+			);
+			return prepareChatCompletionForReturn(
+				telemetryService,
+				logService,
+				solution,
+				telemetryData,
+			);
+		},
+	);
 	return chatCompletions;
 }
 
-export async function defaultNonStreamChatResponseProcessor(response: Response, finishCallback: FinishedCallback, telemetryData: TelemetryData) {
+export async function defaultNonStreamChatResponseProcessor(
+	response: Response,
+	finishCallback: FinishedCallback,
+	telemetryData: TelemetryData,
+) {
 	const textResponse = await response.text();
 	const jsonResponse = JSON.parse(textResponse);
 	const completions: ChatCompletion[] = [];
@@ -78,10 +152,10 @@ export async function defaultNonStreamChatResponseProcessor(response: Response, 
 			toolCalls: choice.message.toolCalls ?? choice.message.tool_calls,
 		};
 		const messageText = getTextPart(message.content);
-		const requestId = response.headers.get('X-Request-ID') ?? generateUuid();
+		const requestId =
+			response.headers.get('X-Request-ID') ?? generateUuid();
 		const ghRequestId = response.headers.get('x-github-request-id') ?? '';
 		const { serverExperiments } = getRequestId(response.headers);
-
 
 		const completion: ChatCompletion = {
 			blockFinished: false,
@@ -92,8 +166,15 @@ export async function defaultNonStreamChatResponseProcessor(response: Response, 
 			message: message,
 			usage: jsonResponse.usage,
 			tokens: [], // This is used for repetition detection so not super important to be accurate
-			requestId: { headerRequestId: requestId, gitHubRequestId: ghRequestId, completionId: jsonResponse.id, created: jsonResponse.created, deploymentId: '', serverExperiments },
-			telemetryData: telemetryData
+			requestId: {
+				headerRequestId: requestId,
+				gitHubRequestId: ghRequestId,
+				completionId: jsonResponse.id,
+				created: jsonResponse.created,
+				deploymentId: '',
+				serverExperiments,
+			},
+			telemetryData: telemetryData,
 		};
 		const functionCall: ICopilotToolCall[] = [];
 		for (const tool of message.toolCalls ?? []) {
@@ -147,69 +228,124 @@ export class ChatEndpoint implements IChatEndpoint {
 		public readonly modelMetadata: IChatModelInformation,
 		@IDomainService protected readonly _domainService: IDomainService,
 		@IChatMLFetcher private readonly _chatMLFetcher: IChatMLFetcher,
-		@ITokenizerProvider private readonly _tokenizerProvider: ITokenizerProvider,
-		@IInstantiationService protected readonly _instantiationService: IInstantiationService,
-		@IConfigurationService protected readonly _configurationService: IConfigurationService,
-		@IExperimentationService private readonly _expService: IExperimentationService,
-		@IChatWebSocketManager private readonly _chatWebSocketService: IChatWebSocketManager,
+		@ITokenizerProvider
+		private readonly _tokenizerProvider: ITokenizerProvider,
+		@IInstantiationService
+		protected readonly _instantiationService: IInstantiationService,
+		@IConfigurationService
+		protected readonly _configurationService: IConfigurationService,
+		@IExperimentationService
+		private readonly _expService: IExperimentationService,
+		@IChatWebSocketManager
+		private readonly _chatWebSocketService: IChatWebSocketManager,
 		@ILogService _logService: ILogService,
 	) {
 		// This metadata should always be present, but if not we will default to 8192 tokens
-		this._maxTokens = modelMetadata.capabilities.limits?.max_prompt_tokens ?? 8192;
+		this._maxTokens =
+			modelMetadata.capabilities.limits?.max_prompt_tokens ?? 8192;
 		// This metadata should always be present, but if not we will default to 4096 tokens
-		this._maxOutputTokens = modelMetadata.capabilities.limits?.max_output_tokens ?? 4096;
+		this._maxOutputTokens =
+			modelMetadata.capabilities.limits?.max_output_tokens ?? 4096;
 		this.model = modelMetadata.id;
 		this.modelProvider = modelMetadata.vendor;
 		this.name = modelMetadata.name;
 		this.version = modelMetadata.version;
-		const capabilityOverride = getModelCapabilityOverride(this.model, this._configurationService);
-		this.family = capabilityOverride?.family ?? modelMetadata.capabilities.family;
+		const capabilityOverride = getModelCapabilityOverride(
+			this.model,
+			this._configurationService,
+		);
+		this.family =
+			capabilityOverride?.family ?? modelMetadata.capabilities.family;
 		this.tokenizer = modelMetadata.capabilities.tokenizer;
 		this.showInModelPicker = modelMetadata.model_picker_enabled;
 		this.isPremium = modelMetadata.billing?.is_premium;
 		this.multiplier = modelMetadata.billing?.multiplier;
 		this.restrictedToSkus = modelMetadata.billing?.restricted_to;
-		const normalized = normalizeTokenPrices(modelMetadata.billing?.token_prices);
-		this.tokenPricing = normalized ? {
-			default: { inputPrice: normalized.default.inputPrice, outputPrice: normalized.default.outputPrice, cacheReadTokenPrice: normalized.default.cachePrice ?? 0, contextMax: normalized.default.contextMax },
-			longContext: normalized.longContext ? { inputPrice: normalized.longContext.inputPrice, outputPrice: normalized.longContext.outputPrice, cacheReadTokenPrice: normalized.longContext.cachePrice ?? 0, contextMax: normalized.longContext.contextMax } : undefined,
-		} : undefined;
+		const normalized = normalizeTokenPrices(
+			modelMetadata.billing?.token_prices,
+		);
+		this.tokenPricing = normalized
+			? {
+					default: {
+						inputPrice: normalized.default.inputPrice,
+						outputPrice: normalized.default.outputPrice,
+						cacheReadTokenPrice: normalized.default.cachePrice ?? 0,
+						contextMax: normalized.default.contextMax,
+					},
+					longContext: normalized.longContext
+						? {
+								inputPrice: normalized.longContext.inputPrice,
+								outputPrice: normalized.longContext.outputPrice,
+								cacheReadTokenPrice:
+									normalized.longContext.cachePrice ?? 0,
+								contextMax: normalized.longContext.contextMax,
+							}
+						: undefined,
+				}
+			: undefined;
 		this.priceCategory = modelMetadata.model_picker_price_category;
 		this.isFallback = modelMetadata.is_chat_fallback;
-		this.supportsToolCalls = !!modelMetadata.capabilities.supports.tool_calls;
+		this.supportsToolCalls =
+			!!modelMetadata.capabilities.supports.tool_calls;
 		this.supportsVision = !!modelMetadata.capabilities.supports.vision;
-		this.supportsPrediction = !!modelMetadata.capabilities.supports.prediction;
-		this.supportsAdaptiveThinking = modelMetadata.capabilities.supports.adaptive_thinking;
-		this.minThinkingBudget = modelMetadata.capabilities.supports.min_thinking_budget;
-		this.maxThinkingBudget = modelMetadata.capabilities.supports.max_thinking_budget;
-		this.supportsReasoningEffort = modelMetadata.capabilities.supports.reasoning_effort;
-		this.supportsToolSearch = modelMetadata.capabilities.supports.tool_search ?? modelSupportsToolSearch(this);
-		this.supportsContextEditing = modelMetadata.capabilities.supports.context_editing ?? modelSupportsContextEditing(this);
-		this._supportsStreaming = !!modelMetadata.capabilities.supports.streaming;
+		this.supportsPrediction =
+			!!modelMetadata.capabilities.supports.prediction;
+		this.supportsAdaptiveThinking =
+			modelMetadata.capabilities.supports.adaptive_thinking;
+		this.minThinkingBudget =
+			modelMetadata.capabilities.supports.min_thinking_budget;
+		this.maxThinkingBudget =
+			modelMetadata.capabilities.supports.max_thinking_budget;
+		this.supportsReasoningEffort =
+			modelMetadata.capabilities.supports.reasoning_effort;
+		this.supportsToolSearch =
+			modelMetadata.capabilities.supports.tool_search ??
+			modelSupportsToolSearch(this);
+		this.supportsContextEditing =
+			modelMetadata.capabilities.supports.context_editing ??
+			modelSupportsContextEditing(this);
+		this._supportsStreaming =
+			!!modelMetadata.capabilities.supports.streaming;
 		this.customModel = modelMetadata.custom_model;
-		this.maxPromptImages = modelMetadata.capabilities.limits?.vision?.max_prompt_images;
+		this.maxPromptImages =
+			modelMetadata.capabilities.limits?.vision?.max_prompt_images;
 	}
 
 	// TODO: Thread enableThinking through the fetch pipeline (INetworkRequestOptions / chatMLFetcher positional params)
 	// so getExtraHeaders can gate the interleaved-thinking header on whether thinking is actually enabled for the
 	// request, rather than using the location check. Once plumbed, replace isAllowedConversationAgentModel with
 	// an enableThinking check for the thinking header (keep location gate for context management / tool search).
-	public getExtraHeaders(location?: ChatLocation, interactionTypeOverride?: InteractionTypeOverride): Record<string, string> {
-		const headers: Record<string, string> = { ...this.modelMetadata.requestHeaders };
+	public getExtraHeaders(
+		location?: ChatLocation,
+		interactionTypeOverride?: InteractionTypeOverride,
+	): Record<string, string> {
+		const headers: Record<string, string> = {
+			...this.modelMetadata.requestHeaders,
+		};
 
 		if (this.useMessagesApi) {
-			const modelProviderPreference = this._configurationService.getConfig(ConfigKey.TeamInternal.ModelProviderPreference);
+			const modelProviderPreference =
+				this._configurationService.getConfig(
+					ConfigKey.TeamInternal.ModelProviderPreference,
+				);
 			if (modelProviderPreference) {
-				headers['X-Model-Provider-Preference'] = modelProviderPreference;
+				headers['X-Model-Provider-Preference'] =
+					modelProviderPreference;
 			}
 		}
 
-		Object.assign(headers, this.getAnthropicBetaHeader(location, interactionTypeOverride));
+		Object.assign(
+			headers,
+			this.getAnthropicBetaHeader(location, interactionTypeOverride),
+		);
 
 		return headers;
 	}
 
-	protected getAnthropicBetaHeader(location?: ChatLocation, interactionTypeOverride?: InteractionTypeOverride): Record<string, string> {
+	protected getAnthropicBetaHeader(
+		location?: ChatLocation,
+		interactionTypeOverride?: InteractionTypeOverride,
+	): Record<string, string> {
 		if (!this.useMessagesApi) {
 			return {};
 		}
@@ -220,13 +356,27 @@ export class ChatEndpoint implements IChatEndpoint {
 		if (this.supportsToolSearch) {
 			betas.push('advanced-tool-use-2025-11-20');
 		}
-		if (isAnthropicContextEditingEnabled(this, this._configurationService, this._expService)) {
+		if (
+			isAnthropicContextEditingEnabled(
+				this,
+				this._configurationService,
+				this._expService,
+			)
+		) {
 			betas.push('context-management-2025-06-27');
 		}
 		// Mirror the body-side gate from messagesApi.ts so the beta header is never sent for
 		// requests that won't actually emit `ttl: '1h'` (subagents, non-Agent locations, etc.).
 		const isSubagent = interactionTypeOverride === 'conversation-subagent';
-		if (isExtendedCacheTtlEnabled(this, this._configurationService, this._expService, location, isSubagent)) {
+		if (
+			isExtendedCacheTtlEnabled(
+				this,
+				this._configurationService,
+				this._expService,
+				location,
+				isSubagent,
+			)
+		) {
 			betas.push('extended-cache-ttl-2025-04-11');
 		}
 		return betas.length > 0 ? { 'anthropic-beta': betas.join(',') } : {};
@@ -243,38 +393,67 @@ export class ChatEndpoint implements IChatEndpoint {
 	public get urlOrRequestMetadata(): string | RequestMetadata {
 		// Use override or respect setting.
 		// TODO unlikely but would break if it changes in the middle of a request being constructed
-		return this.modelMetadata.urlOrRequestMetadata ??
-			(this.useResponsesApi ? { type: RequestType.ChatResponses } :
-				this.useMessagesApi ? { type: RequestType.ChatMessages } : { type: RequestType.ChatCompletions });
+		return (
+			this.modelMetadata.urlOrRequestMetadata ??
+			(this.useResponsesApi
+				? { type: RequestType.ChatResponses }
+				: this.useMessagesApi
+					? { type: RequestType.ChatMessages }
+					: { type: RequestType.ChatCompletions })
+		);
 	}
 
 	protected get useResponsesApi(): boolean {
-		if (this.modelMetadata.supported_endpoints
-			&& !this.modelMetadata.supported_endpoints.includes(ModelSupportedEndpoint.ChatCompletions)
-			&& this.modelMetadata.supported_endpoints.includes(ModelSupportedEndpoint.Responses)
+		if (
+			this.modelMetadata.supported_endpoints &&
+			!this.modelMetadata.supported_endpoints.includes(
+				ModelSupportedEndpoint.ChatCompletions,
+			) &&
+			this.modelMetadata.supported_endpoints.includes(
+				ModelSupportedEndpoint.Responses,
+			)
 		) {
 			return true;
 		}
 
-		return !!this.modelMetadata.supported_endpoints?.includes(ModelSupportedEndpoint.Responses);
+		return !!this.modelMetadata.supported_endpoints?.includes(
+			ModelSupportedEndpoint.Responses,
+		);
 	}
 
 	protected get useWebSocketResponsesApi(): boolean {
-		return !!this.modelMetadata.supported_endpoints?.includes(ModelSupportedEndpoint.WebSocketResponses);
+		return !!this.modelMetadata.supported_endpoints?.includes(
+			ModelSupportedEndpoint.WebSocketResponses,
+		);
 	}
 
 	protected get useMessagesApi(): boolean {
-		const enableMessagesApi = this._configurationService.getExperimentBasedConfig(ConfigKey.UseAnthropicMessagesApi, this._expService);
-		return !!(enableMessagesApi && this.modelMetadata.supported_endpoints?.includes(ModelSupportedEndpoint.Messages));
+		const enableMessagesApi =
+			this._configurationService.getExperimentBasedConfig(
+				ConfigKey.UseAnthropicMessagesApi,
+				this._expService,
+			);
+		return !!(
+			enableMessagesApi &&
+			this.modelMetadata.supported_endpoints?.includes(
+				ModelSupportedEndpoint.Messages,
+			)
+		);
 	}
 
 	public get degradationReason(): string | undefined {
-		return this.modelMetadata.warning_messages?.at(0)?.message ?? this.modelMetadata.info_messages?.at(0)?.message;
+		return (
+			this.modelMetadata.warning_messages?.at(0)?.message ??
+			this.modelMetadata.info_messages?.at(0)?.message
+		);
 	}
 
 	public get apiType(): string {
-		return this.useResponsesApi ? 'responses' :
-			this.useMessagesApi ? 'messages' : 'chatCompletions';
+		return this.useResponsesApi
+			? 'responses'
+			: this.useMessagesApi
+				? 'messages'
+				: 'chatCompletions';
 	}
 
 	interceptBody(body: IEndpointBody | undefined): void {
@@ -290,17 +469,24 @@ export class ChatEndpoint implements IChatEndpoint {
 		}
 
 		// If it's o1 we must modify the body significantly as the request is very different
-		if (body?.messages && (this.family.startsWith('o1') || this.model === CHAT_MODEL.O1 || this.model === CHAT_MODEL.O1MINI)) {
-			const newMessages: CAPIChatMessage[] = body.messages.map((message: CAPIChatMessage): CAPIChatMessage => {
-				if (message.role === OpenAI.ChatRole.System) {
-					return {
-						role: OpenAI.ChatRole.User,
-						content: message.content,
-					};
-				} else {
-					return message;
-				}
-			});
+		if (
+			body?.messages &&
+			(this.family.startsWith('o1') ||
+				this.model === CHAT_MODEL.O1 ||
+				this.model === CHAT_MODEL.O1MINI)
+		) {
+			const newMessages: CAPIChatMessage[] = body.messages.map(
+				(message: CAPIChatMessage): CAPIChatMessage => {
+					if (message.role === OpenAI.ChatRole.System) {
+						return {
+							role: OpenAI.ChatRole.User,
+							content: message.content,
+						};
+					} else {
+						return message;
+					}
+				},
+			);
 			// Add the messages & model back
 			body['messages'] = newMessages;
 		}
@@ -310,17 +496,37 @@ export class ChatEndpoint implements IChatEndpoint {
 		// Determine per-model image limit for APIs with known restrictions
 		const imageLimit = this.getImageLimit();
 		if (imageLimit !== undefined) {
-			options = { ...options, messages: this.validateAndFilterImages(options.messages, imageLimit) };
+			options = {
+				...options,
+				messages: this.validateAndFilterImages(
+					options.messages,
+					imageLimit,
+				),
+			};
 		}
 
 		if (this.useResponsesApi) {
-			const body = this._instantiationService.invokeFunction(createResponsesRequestBody, options, this.model, this);
+			const body = this._instantiationService.invokeFunction(
+				createResponsesRequestBody,
+				options,
+				this.model,
+				this,
+			);
 			return this.customizeResponsesBody(body);
 		} else if (this.useMessagesApi) {
-			const body = this._instantiationService.invokeFunction(createMessagesRequestBody, options, this.model, this);
+			const body = this._instantiationService.invokeFunction(
+				createMessagesRequestBody,
+				options,
+				this.model,
+				this,
+			);
 			return this.customizeMessagesBody(body);
 		} else {
-			const body = createCapiRequestBody(options, this.model, this.getCompletionsCallback());
+			const body = createCapiRequestBody(
+				options,
+				this.model,
+				this.getCompletionsCallback(),
+			);
 			return this.customizeCapiBody(body, options);
 		}
 	}
@@ -344,11 +550,16 @@ export class ChatEndpoint implements IChatEndpoint {
 	/**
 	 * Thin wrapper around {@link filterHistoryImages} retained for test ergonomics.
 	 */
-	private validateAndFilterImages(messages: Raw.ChatMessage[], maxImages: number): Raw.ChatMessage[] {
+	private validateAndFilterImages(
+		messages: Raw.ChatMessage[],
+		maxImages: number,
+	): Raw.ChatMessage[] {
 		return filterHistoryImages(messages, maxImages);
 	}
 
-	protected getCompletionsCallback(): RawMessageConversionCallback | undefined {
+	protected getCompletionsCallback():
+		| RawMessageConversionCallback
+		| undefined {
 		return undefined;
 	}
 
@@ -360,17 +571,23 @@ export class ChatEndpoint implements IChatEndpoint {
 		return body;
 	}
 
-	protected customizeCapiBody(body: IEndpointBody, options: ICreateEndpointBodyOptions): IEndpointBody {
-
+	protected customizeCapiBody(
+		body: IEndpointBody,
+		options: ICreateEndpointBodyOptions,
+	): IEndpointBody {
 		// Apply Gemini function calling mode if configured
 		const hasTools = !!options.requestOptions?.tools?.length;
 		if (hasTools && this.family.toLowerCase().includes('gemini-3')) {
-			const geminiFunctionCallingMode = this._configurationService.getExperimentBasedConfig(
-				ConfigKey.TeamInternal.GeminiFunctionCallingMode,
-				this._expService
-			);
+			const geminiFunctionCallingMode =
+				this._configurationService.getExperimentBasedConfig(
+					ConfigKey.TeamInternal.GeminiFunctionCallingMode,
+					this._expService,
+				);
 			// Only override tool_choice if experiment provides a value and user hasn't specified a function call
-			if (geminiFunctionCallingMode && typeof body.tool_choice !== 'object') {
+			if (
+				geminiFunctionCallingMode &&
+				typeof body.tool_choice !== 'object'
+			) {
 				body.tool_choice = geminiFunctionCallingMode;
 			}
 		}
@@ -385,17 +602,49 @@ export class ChatEndpoint implements IChatEndpoint {
 		expectedNumChoices: number,
 		finishCallback: FinishedCallback,
 		telemetryData: TelemetryData,
-		cancellationToken?: CancellationToken | undefined
+		cancellationToken?: CancellationToken | undefined,
 	): Promise<AsyncIterableObject<ChatCompletion>> {
 		if (this.useResponsesApi) {
-			const compactionThreshold = getResponsesApiCompactionThreshold(this._configurationService, this._expService, this);
-			return processResponseFromChatEndpoint(this._instantiationService, telemetryService, logService, response, expectedNumChoices, finishCallback, telemetryData, compactionThreshold);
+			const compactionThreshold = getResponsesApiCompactionThreshold(
+				this._configurationService,
+				this._expService,
+				this,
+			);
+			return processResponseFromChatEndpoint(
+				this._instantiationService,
+				telemetryService,
+				logService,
+				response,
+				expectedNumChoices,
+				finishCallback,
+				telemetryData,
+				compactionThreshold,
+			);
 		} else if (this.useMessagesApi) {
-			return processResponseFromMessagesEndpoint(this._instantiationService, telemetryService, logService, response, finishCallback, telemetryData);
+			return processResponseFromMessagesEndpoint(
+				this._instantiationService,
+				telemetryService,
+				logService,
+				response,
+				finishCallback,
+				telemetryData,
+			);
 		} else if (!this._supportsStreaming) {
-			return defaultNonStreamChatResponseProcessor(response, finishCallback, telemetryData);
+			return defaultNonStreamChatResponseProcessor(
+				response,
+				finishCallback,
+				telemetryData,
+			);
 		} else {
-			return defaultChatResponseProcessor(telemetryService, logService, response, expectedNumChoices, finishCallback, telemetryData, cancellationToken);
+			return defaultChatResponseProcessor(
+				telemetryService,
+				logService,
+				response,
+				expectedNumChoices,
+				finishCallback,
+				telemetryData,
+				cancellationToken,
+			);
 		}
 	}
 
@@ -403,40 +652,64 @@ export class ChatEndpoint implements IChatEndpoint {
 		return this._tokenizerProvider.acquireTokenizer(this);
 	}
 
-	public async makeChatRequest2(options: IMakeChatRequestOptions, token: CancellationToken): Promise<ChatResponse> {
-		const useWebSocket = options.useWebSocket ?? !!(
-			options.turnId
-			&& options.conversationId
-			&& this.useWebSocketResponsesApi
-			&& this._configurationService.getExperimentBasedConfig(ConfigKey.TeamInternal.ResponsesApiWebSocketEnabled, this._expService)
-		);
-		const ignoreStatefulMarker = options.ignoreStatefulMarker ?? !(
-			useWebSocket
-			&& options.conversationId
-			&& options.turnId
-			&& this._chatWebSocketService.hasActiveConnection(options.conversationId)
-		);
-		const response = await this._makeChatRequest2({
-			...options,
-			useWebSocket,
-			ignoreStatefulMarker,
-		}, token);
-		if (response.type === ChatFetchResponseType.InvalidStatefulMarker) {
-			return this._makeChatRequest2({
+	public async makeChatRequest2(
+		options: IMakeChatRequestOptions,
+		token: CancellationToken,
+	): Promise<ChatResponse> {
+		const useWebSocket =
+			options.useWebSocket ??
+			!!(
+				options.turnId &&
+				options.conversationId &&
+				this.useWebSocketResponsesApi &&
+				this._configurationService.getExperimentBasedConfig(
+					ConfigKey.TeamInternal.ResponsesApiWebSocketEnabled,
+					this._expService,
+				)
+			);
+		const ignoreStatefulMarker =
+			options.ignoreStatefulMarker ??
+			!(
+				useWebSocket &&
+				options.conversationId &&
+				options.turnId &&
+				this._chatWebSocketService.hasActiveConnection(
+					options.conversationId,
+				)
+			);
+		const response = await this._makeChatRequest2(
+			{
 				...options,
 				useWebSocket,
-				ignoreStatefulMarker: true
-			}, token);
+				ignoreStatefulMarker,
+			},
+			token,
+		);
+		if (response.type === ChatFetchResponseType.InvalidStatefulMarker) {
+			return this._makeChatRequest2(
+				{
+					...options,
+					useWebSocket,
+					ignoreStatefulMarker: true,
+				},
+				token,
+			);
 		}
 		return response;
 	}
 
-	protected async _makeChatRequest2(options: IMakeChatRequestOptions, token: CancellationToken) {
-		return this._chatMLFetcher.fetchOne({
-			requestOptions: {},
-			...options,
-			endpoint: this,
-		}, token);
+	protected async _makeChatRequest2(
+		options: IMakeChatRequestOptions,
+		token: CancellationToken,
+	) {
+		return this._chatMLFetcher.fetchOne(
+			{
+				requestOptions: {},
+				...options,
+				endpoint: this,
+			},
+			token,
+		);
 	}
 
 	public async makeChatRequest(
@@ -450,22 +723,30 @@ export class ChatEndpoint implements IChatEndpoint {
 		userInitiatedRequest?: boolean,
 		telemetryProperties?: TelemetryProperties,
 	): Promise<ChatResponse> {
-		return this.makeChatRequest2({
-			debugName,
-			messages,
-			finishedCb,
-			location,
-			source,
-			requestOptions,
-			userInitiatedRequest,
-			telemetryProperties,
-		}, token);
+		return this.makeChatRequest2(
+			{
+				debugName,
+				messages,
+				finishedCb,
+				location,
+				source,
+				requestOptions,
+				userInitiatedRequest,
+				telemetryProperties,
+			},
+			token,
+		);
 	}
 
 	public cloneWithTokenOverride(modelMaxPromptTokens: number): IChatEndpoint {
 		return this._instantiationService.createInstance(
 			ChatEndpoint,
-			mixin(deepClone(this.modelMetadata), { capabilities: { limits: { max_prompt_tokens: modelMaxPromptTokens } } }));
+			mixin(deepClone(this.modelMetadata), {
+				capabilities: {
+					limits: { max_prompt_tokens: modelMaxPromptTokens },
+				},
+			}),
+		);
 	}
 }
 
@@ -484,7 +765,7 @@ export class RemoteAgentChatEndpoint extends ChatEndpoint {
 		@IConfigurationService configService: IConfigurationService,
 		@IExperimentationService experimentService: IExperimentationService,
 		@IChatWebSocketManager chatWebSocketService: IChatWebSocketManager,
-		@ILogService logService: ILogService
+		@ILogService logService: ILogService,
 	) {
 		super(
 			modelMetadata,
@@ -495,7 +776,7 @@ export class RemoteAgentChatEndpoint extends ChatEndpoint {
 			configService,
 			experimentService,
 			chatWebSocketService,
-			logService
+			logService,
 		);
 	}
 
@@ -511,7 +792,15 @@ export class RemoteAgentChatEndpoint extends ChatEndpoint {
 	): Promise<AsyncIterableObject<ChatCompletion>> {
 		// We must override this to a num choices > 1 because remote agents can do internal function calls which emit multiple completions even when N > 1
 		// It's awful that they do this, but we have to support it
-		return defaultChatResponseProcessor(telemetryService, logService, response, 2, finishCallback, telemetryData, cancellationToken);
+		return defaultChatResponseProcessor(
+			telemetryService,
+			logService,
+			response,
+			2,
+			finishCallback,
+			telemetryData,
+			cancellationToken,
+		);
 	}
 
 	public override get urlOrRequestMetadata() {

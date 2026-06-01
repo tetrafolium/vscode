@@ -7,18 +7,11 @@
 // It mirrors workbench.web.main.internal.ts but loads the sessions entry
 // point and factory instead of the standard workbench ones.
 
-import './sessions.web.main.js';
-import { create } from './browser/web.factory.js';
-import { URI } from '../base/common/uri.js';
-import { Event, Emitter } from '../base/common/event.js';
-import { Disposable } from '../base/common/lifecycle.js';
-import { LogLevel } from '../platform/log/common/log.js';
+import "./sessions.web.main.js";
+import { create } from "./browser/web.factory.js";
+import { URI } from "../base/common/uri.js";
+import { Event, Emitter } from "../base/common/event.js";
+import { Disposable } from "../base/common/lifecycle.js";
+import { LogLevel } from "../platform/log/common/log.js";
 
-export {
-	create,
-	URI,
-	Event,
-	Emitter,
-	Disposable,
-	LogLevel,
-};
+export { create, URI, Event, Emitter, Disposable, LogLevel };

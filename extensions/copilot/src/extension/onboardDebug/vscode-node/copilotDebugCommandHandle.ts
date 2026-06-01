@@ -14,7 +14,7 @@ export class CopilotDebugCommandHandle {
 		return this.rpc.ended;
 	}
 
-	constructor(private readonly rpc: SimpleRPC) { }
+	constructor(private readonly rpc: SimpleRPC) {}
 
 	output(category: string, output: string): Promise<void> {
 		return this.rpc.callMethod('output', { category, output });
@@ -24,27 +24,70 @@ export class CopilotDebugCommandHandle {
 		return this.rpc.callMethod('exit', { code, error });
 	}
 
-	question(message: string, defaultValue?: string, singleKey = false): Promise<string | undefined> {
-		return this.rpc.callMethod('question', { message: withLabel('blue', CopilotDebugCommandHandle.COPILOT_LABEL, message), defaultValue, singleKey });
+	question(
+		message: string,
+		defaultValue?: string,
+		singleKey = false,
+	): Promise<string | undefined> {
+		return this.rpc.callMethod('question', {
+			message: withLabel(
+				'blue',
+				CopilotDebugCommandHandle.COPILOT_LABEL,
+				message,
+			),
+			defaultValue,
+			singleKey,
+		});
 	}
 
-	confirm(message: string, defaultValue?: boolean): Promise<boolean | undefined> {
-		return this.rpc.callMethod('confirm', { message: withLabel('blue', CopilotDebugCommandHandle.COPILOT_LABEL, message), defaultValue });
+	confirm(
+		message: string,
+		defaultValue?: boolean,
+	): Promise<boolean | undefined> {
+		return this.rpc.callMethod('confirm', {
+			message: withLabel(
+				'blue',
+				CopilotDebugCommandHandle.COPILOT_LABEL,
+				message,
+			),
+			defaultValue,
+		});
 	}
 
 	printLabel(color: KnownColors, message: string): Promise<void> {
-		return this.output('stdout', withLabel(color, CopilotDebugCommandHandle.COPILOT_LABEL, message) + '\r\n');
+		return this.output(
+			'stdout',
+			withLabel(color, CopilotDebugCommandHandle.COPILOT_LABEL, message) +
+				'\r\n',
+		);
 	}
 
 	printJson(data: any): Promise<void> {
-		return this.output('stdout', (util.inspect(data, { colors: true }) + '\n').replaceAll('\n', '\r\n'));
+		return this.output(
+			'stdout',
+			(util.inspect(data, { colors: true }) + '\n').replaceAll(
+				'\n',
+				'\r\n',
+			),
+		);
 	}
 
-	getFollowupKeys(padStart: number): Promise<'Enter' | 'Q' | 'R' | 'V' | 'S'> {
-		const keys = ['enter', 'r', 's', 'v', 'q'].map(p => `${Style.Reset}${Style.Bold}${p}${Style.Reset}${Style.Dim}`);
-		const loc = l10n.t('press {0} to re-run, {1} to regenerate, {2} to save config, {3} to view it, {4} to quit', ...keys);
-		const str = ' '.repeat(padStart) + Style.Dim + loc + Style.Reset + '\r\n';
-		return this.rpc.callMethod('question', { message: str, singleKey: true });
+	getFollowupKeys(
+		padStart: number,
+	): Promise<'Enter' | 'Q' | 'R' | 'V' | 'S'> {
+		const keys = ['enter', 'r', 's', 'v', 'q'].map(
+			(p) => `${Style.Reset}${Style.Bold}${p}${Style.Reset}${Style.Dim}`,
+		);
+		const loc = l10n.t(
+			'press {0} to re-run, {1} to regenerate, {2} to save config, {3} to view it, {4} to quit',
+			...keys,
+		);
+		const str =
+			' '.repeat(padStart) + Style.Dim + loc + Style.Reset + '\r\n';
+		return this.rpc.callMethod('question', {
+			message: str,
+			singleKey: true,
+		});
 	}
 }
 

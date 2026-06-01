@@ -12,12 +12,11 @@ import { Range } from './range';
 
 export enum EndOfLine {
 	LF = 1,
-	CRLF = 2
+	CRLF = 2,
 }
 
 @es5ClassCompat
 export class TextEdit {
-
 	static isTextEdit(thing: unknown): thing is TextEdit {
 		if (thing instanceof TextEdit) {
 			return true;
@@ -25,8 +24,10 @@ export class TextEdit {
 		if (!thing || typeof thing !== 'object') {
 			return false;
 		}
-		return Range.isRange((<TextEdit>thing))
-			&& typeof (<TextEdit>thing).newText === 'string';
+		return (
+			Range.isRange(<TextEdit>thing) &&
+			typeof (<TextEdit>thing).newText === 'string'
+		);
 	}
 
 	static replace(range: Range, newText: string): TextEdit {
@@ -42,7 +43,10 @@ export class TextEdit {
 	}
 
 	static setEndOfLine(eol: EndOfLine): TextEdit {
-		const ret = new TextEdit(new Range(new Position(0, 0), new Position(0, 0)), '');
+		const ret = new TextEdit(
+			new Range(new Position(0, 0), new Position(0, 0)),
+			'',
+		);
 		ret.newEol = eol;
 		return ret;
 	}
@@ -93,7 +97,7 @@ export class TextEdit {
 		return {
 			range: this.range,
 			newText: this.newText,
-			newEol: this._newEol
+			newEol: this._newEol,
 		};
 	}
 }

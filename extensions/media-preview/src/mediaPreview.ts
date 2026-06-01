@@ -3,19 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { Utils } from 'vscode-uri';
-import { BinarySizeStatusBarEntry } from './binarySizeStatusBarEntry';
-import { Disposable } from './util/dispose';
+import * as vscode from "vscode";
+import { Utils } from "vscode-uri";
+import { BinarySizeStatusBarEntry } from "./binarySizeStatusBarEntry";
+import { Disposable } from "./util/dispose";
 
-export async function reopenAsText(resource: vscode.Uri, viewColumn: vscode.ViewColumn | undefined): Promise<void> {
-	await vscode.commands.executeCommand('vscode.openWith', resource, 'default', viewColumn);
+export async function reopenAsText(
+	resource: vscode.Uri,
+	viewColumn: vscode.ViewColumn | undefined,
+): Promise<void> {
+	await vscode.commands.executeCommand(
+		"vscode.openWith",
+		resource,
+		"default",
+		viewColumn,
+	);
 }
 
-const gitLfsPointerPrefix = 'version https://git-lfs.github.com/spec/v1';
+const gitLfsPointerPrefix = "version https://git-lfs.github.com/spec/v1";
 
 export async function isGitLfsPointer(resource: vscode.Uri): Promise<boolean> {
-	if (resource.scheme !== 'git') {
+	if (resource.scheme !== "git") {
 		return false;
 	}
 
@@ -40,7 +48,6 @@ export const enum PreviewState {
 }
 
 export abstract class MediaPreview extends Disposable {
-
 	protected previewState = PreviewState.Visible;
 	private _binarySize: number | undefined;
 
@@ -52,39 +59,51 @@ export abstract class MediaPreview extends Disposable {
 	) {
 		super();
 
-		const resourceRoot = Utils.dirname(_resource).with({ query: '', fragment: '' });
+		const resourceRoot = Utils.dirname(_resource).with({
+			query: "",
+			fragment: "",
+		});
 
 		_webviewEditor.webview.options = {
 			enableScripts: true,
 			enableForms: false,
-			localResourceRoots: [
-				resourceRoot,
-				extensionRoot,
-			]
+			localResourceRoots: [resourceRoot, extensionRoot],
 		};
 
-		this._register(_webviewEditor.onDidChangeViewState(() => {
-			this.updateState();
-		}));
+		this._register(
+			_webviewEditor.onDidChangeViewState(() => {
+				this.updateState();
+			}),
+		);
 
-		this._register(_webviewEditor.onDidDispose(() => {
-			this.previewState = PreviewState.Disposed;
-			this.dispose();
-		}));
+		this._register(
+			_webviewEditor.onDidDispose(() => {
+				this.previewState = PreviewState.Disposed;
+				this.dispose();
+			}),
+		);
 
-		const watcher = this._register(vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(_resource, '*')));
-		this._register(watcher.onDidChange(e => {
-			if (e.toString() === this._resource.toString()) {
-				this.updateBinarySize();
-				this.render();
-			}
-		}));
+		const watcher = this._register(
+			vscode.workspace.createFileSystemWatcher(
+				new vscode.RelativePattern(_resource, "*"),
+			),
+		);
+		this._register(
+			watcher.onDidChange((e) => {
+				if (e.toString() === this._resource.toString()) {
+					this.updateBinarySize();
+					this.render();
+				}
+			}),
+		);
 
-		this._register(watcher.onDidDelete(e => {
-			if (e.toString() === this._resource.toString()) {
-				this._webviewEditor.dispose();
-			}
-		}));
+		this._register(
+			watcher.onDidDelete((e) => {
+				if (e.toString() === this._resource.toString()) {
+					this._webviewEditor.dispose();
+				}
+			}),
+		);
 	}
 
 	public override dispose() {
@@ -109,7 +128,7 @@ export abstract class MediaPreview extends Disposable {
 		}
 
 		const content = await this.getWebviewContents();
-		if (this.previewState as PreviewState === PreviewState.Disposed) {
+		if ((this.previewState as PreviewState) === PreviewState.Disposed) {
 			return;
 		}
 

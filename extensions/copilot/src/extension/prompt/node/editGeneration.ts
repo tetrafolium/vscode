@@ -8,14 +8,28 @@ import { Range, TextEdit } from '../../../vscodeTypes';
 
 export type Lines = readonly string[];
 
-export type LineRange = { readonly firstLineIndex: number; readonly endLineIndex: number };
+export type LineRange = {
+	readonly firstLineIndex: number;
+	readonly endLineIndex: number;
+};
 
 export class LinesEdit {
-	constructor(public readonly firstLineIndex: number, readonly endLineIndex: number, public readonly lines: Lines, public readonly prefix = '', public readonly suffix = '\n') {
-	}
+	constructor(
+		public readonly firstLineIndex: number,
+		readonly endLineIndex: number,
+		public readonly lines: Lines,
+		public readonly prefix = '',
+		public readonly suffix = '\n',
+	) {}
 	toTextEdit(): TextEdit {
-		const text = this.lines.length > 0 ? (this.prefix + this.lines.join('\n') + this.suffix) : '';
-		return TextEdit.replace(new Range(this.firstLineIndex, 0, this.endLineIndex, 0), text);
+		const text =
+			this.lines.length > 0
+				? this.prefix + this.lines.join('\n') + this.suffix
+				: '';
+		return TextEdit.replace(
+			new Range(this.firstLineIndex, 0, this.endLineIndex, 0),
+			text,
+		);
 	}
 	apply(lines: Lines): Lines {
 		const before = lines.slice(0, this.firstLineIndex);
@@ -25,7 +39,12 @@ export class LinesEdit {
 	static insert(line: number, lines: Lines) {
 		return new LinesEdit(line, line, lines);
 	}
-	static replace(firstLineIndex: number, endLineIndex: number, lines: Lines, isLastLine = false) {
+	static replace(
+		firstLineIndex: number,
+		endLineIndex: number,
+		lines: Lines,
+		isLastLine = false,
+	) {
 		if (isLastLine) {
 			return new LinesEdit(firstLineIndex, endLineIndex, lines, '', '');
 		}
@@ -75,10 +94,9 @@ export const enum EditStrategy {
 	/**
 	 * Code Generation: always insert at the cursor location.
 	 */
-	ForceInsertion = 4
+	ForceInsertion = 4,
 }
 
 export function trimLeadingWhitespace(str: string): string {
 	return str.replace(/^\s+/g, '');
 }
-

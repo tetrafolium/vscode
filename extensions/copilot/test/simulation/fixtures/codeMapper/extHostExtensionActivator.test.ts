@@ -4,18 +4,36 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
-import { promiseWithResolvers, timeout } from '../../../../base/common/async.js';
+import {
+	promiseWithResolvers,
+	timeout,
+} from '../../../../base/common/async.js';
 import { Mutable } from '../../../../base/common/types.js';
 import { URI } from '../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { ExtensionIdentifier, IExtensionDescription, TargetPlatform } from '../../../../platform/extensions/common/extensions.js';
+import {
+	ExtensionIdentifier,
+	IExtensionDescription,
+	TargetPlatform,
+} from '../../../../platform/extensions/common/extensions.js';
 import { NullLogService } from '../../../../platform/log/common/log.js';
-import { ActivatedExtension, EmptyExtension, ExtensionActivationTimes, ExtensionsActivator, IExtensionsActivatorHost } from '../../common/extHostExtensionActivator.js';
-import { ExtensionDescriptionRegistry, IActivationEventsReader } from '../../../services/extensions/common/extensionDescriptionRegistry.js';
-import { ExtensionActivationReason, MissingExtensionDependency } from '../../../services/extensions/common/extensions.js';
+import {
+	ActivatedExtension,
+	EmptyExtension,
+	ExtensionActivationTimes,
+	ExtensionsActivator,
+	IExtensionsActivatorHost,
+} from '../../common/extHostExtensionActivator.js';
+import {
+	ExtensionDescriptionRegistry,
+	IActivationEventsReader,
+} from '../../../services/extensions/common/extensionDescriptionRegistry.js';
+import {
+	ExtensionActivationReason,
+	MissingExtensionDependency,
+} from '../../../services/extensions/common/extensions.js';
 
 suite('ExtensionsActivator', () => {
-
 	ensureNoDisposablesAreLeakedInTestSuite();
 
 	const idA = new ExtensionIdentifier(`a`);
@@ -24,9 +42,7 @@ suite('ExtensionsActivator', () => {
 
 	test('calls activate only once with sequential activations', async () => {
 		const host = new SimpleExtensionsActivatorHost();
-		const activator = createActivator(host, [
-			desc(idA)
-		]);
+		const activator = createActivator(host, [desc(idA)]);
 
 		await activator.activateByEvent('*', false);
 		assert.deepStrictEqual(host.activateCalls, [idA]);
@@ -37,11 +53,9 @@ suite('ExtensionsActivator', () => {
 
 	test('calls activate only once with parallel activations', async () => {
 		const extActivation = new ExtensionActivationPromiseSource();
-		const host = new PromiseExtensionsActivatorHost([
-			[idA, extActivation]
-		]);
+		const host = new PromiseExtensionsActivatorHost([[idA, extActivation]]);
 		const activator = createActivator(host, [
-			desc(idA, [], ['evt1', 'evt2'])
+			desc(idA, [], ['evt1', 'evt2']),
 		]);
 
 		const activate1 = activator.activateByEvent('evt1', false);
@@ -60,7 +74,7 @@ suite('ExtensionsActivator', () => {
 		const extActivationB = new ExtensionActivationPromiseSource();
 		const host = new PromiseExtensionsActivatorHost([
 			[idA, extActivationA],
-			[idB, extActivationB]
+			[idB, extActivationB],
 		]);
 		const activator = createActivator(host, [
 			desc(idA, [idB], ['evt1']),
@@ -88,9 +102,7 @@ suite('ExtensionsActivator', () => {
 		const bExt = desc(idB);
 		delete (<Mutable<IExtensionDescription>>bExt).main;
 		delete (<Mutable<IExtensionDescription>>bExt).browser;
-		const activator = createActivator(host, [
-			desc(idA, [idB])
-		], [bExt]);
+		const activator = createActivator(host, [desc(idA, [idB])], [bExt]);
 
 		await activator.activateByEvent('*', false);
 		assert.deepStrictEqual(host.activateCalls, [idA]);
@@ -101,13 +113,11 @@ suite('ExtensionsActivator', () => {
 		const extActivationB = new ExtensionActivationPromiseSource();
 		const host = new PromiseExtensionsActivatorHost([
 			[idA, extActivationA],
-			[idB, extActivationB]
+			[idB, extActivationB],
 		]);
 		const bExt = desc(idB);
 		(<Mutable<IExtensionDescription>>bExt).api = 'none';
-		const activator = createActivator(host, [
-			desc(idA, [idB])
-		], [bExt]);
+		const activator = createActivator(host, [desc(idA, [idB])], [bExt]);
 
 		const activate = activator.activateByEvent('*', false);
 
@@ -125,14 +135,15 @@ suite('ExtensionsActivator', () => {
 
 	test('Error: activateById with missing extension', async () => {
 		const host = new SimpleExtensionsActivatorHost();
-		const activator = createActivator(host, [
-			desc(idA),
-			desc(idB),
-		]);
+		const activator = createActivator(host, [desc(idA), desc(idB)]);
 
 		let error: Error | undefined = undefined;
 		try {
-			await activator.activateById(idC, { startup: false, extensionId: idC, activationEvent: 'none' });
+			await activator.activateById(idC, {
+				startup: false,
+				extensionId: idC,
+				activationEvent: 'none',
+			});
 		} catch (err) {
 			error = err;
 		}
@@ -142,9 +153,7 @@ suite('ExtensionsActivator', () => {
 
 	test('Error: dependency missing', async () => {
 		const host = new SimpleExtensionsActivatorHost();
-		const activator = createActivator(host, [
-			desc(idA, [idB]),
-		]);
+		const activator = createActivator(host, [desc(idA, [idB])]);
 
 		await activator.activateByEvent('*', false);
 
@@ -157,12 +166,9 @@ suite('ExtensionsActivator', () => {
 		const extActivationB = new ExtensionActivationPromiseSource();
 		const host = new PromiseExtensionsActivatorHost([
 			[idA, extActivationA],
-			[idB, extActivationB]
+			[idB, extActivationB],
 		]);
-		const activator = createActivator(host, [
-			desc(idA, [idB]),
-			desc(idB)
-		]);
+		const activator = createActivator(host, [desc(idA, [idB]), desc(idB)]);
 
 		const activate = activator.activateByEvent('*', false);
 		extActivationB.reject(new Error(`b fails!`));
@@ -180,7 +186,7 @@ suite('ExtensionsActivator', () => {
 		const host = new PromiseExtensionsActivatorHost([
 			[idA, extActivationA],
 			[idB, extActivationB],
-			[idC, extActivationC]
+			[idC, extActivationC],
 		]);
 		const activator = createActivator(host, [
 			desc(idA, [idB]),
@@ -200,27 +206,45 @@ suite('ExtensionsActivator', () => {
 
 	class SimpleExtensionsActivatorHost implements IExtensionsActivatorHost {
 		public readonly activateCalls: ExtensionIdentifier[] = [];
-		public readonly errors: [ExtensionIdentifier, Error | null, MissingExtensionDependency | null][] = [];
+		public readonly errors: [
+			ExtensionIdentifier,
+			Error | null,
+			MissingExtensionDependency | null,
+		][] = [];
 
-		onExtensionActivationError(extensionId: ExtensionIdentifier, error: Error | null, missingExtensionDependency: MissingExtensionDependency | null): void {
+		onExtensionActivationError(
+			extensionId: ExtensionIdentifier,
+			error: Error | null,
+			missingExtensionDependency: MissingExtensionDependency | null,
+		): void {
 			this.errors.push([extensionId, error, missingExtensionDependency]);
 		}
 
-		actualActivateExtension(extensionId: ExtensionIdentifier, reason: ExtensionActivationReason): Promise<ActivatedExtension> {
+		actualActivateExtension(
+			extensionId: ExtensionIdentifier,
+			reason: ExtensionActivationReason,
+		): Promise<ActivatedExtension> {
 			this.activateCalls.push(extensionId);
-			return Promise.resolve(new EmptyExtension(ExtensionActivationTimes.NONE));
+			return Promise.resolve(
+				new EmptyExtension(ExtensionActivationTimes.NONE),
+			);
 		}
 	}
 
 	class PromiseExtensionsActivatorHost extends SimpleExtensionsActivatorHost {
-
 		constructor(
-			private readonly _promises: [ExtensionIdentifier, ExtensionActivationPromiseSource][]
+			private readonly _promises: [
+				ExtensionIdentifier,
+				ExtensionActivationPromiseSource,
+			][],
 		) {
 			super();
 		}
 
-		override actualActivateExtension(extensionId: ExtensionIdentifier, reason: ExtensionActivationReason): Promise<ActivatedExtension> {
+		override actualActivateExtension(
+			extensionId: ExtensionIdentifier,
+			reason: ExtensionActivationReason,
+		): Promise<ActivatedExtension> {
 			this.activateCalls.push(extensionId);
 			for (const [id, promiseSource] of this._promises) {
 				if (id.value === extensionId.value) {
@@ -237,7 +261,11 @@ suite('ExtensionsActivator', () => {
 		public readonly promise: Promise<ActivatedExtension>;
 
 		constructor() {
-			({ promise: this.promise, resolve: this._resolve, reject: this._reject } = promiseWithResolvers<ActivatedExtension>());
+			({
+				promise: this.promise,
+				resolve: this._resolve,
+				reject: this._reject,
+			} = promiseWithResolvers<ActivatedExtension>());
 		}
 
 		public resolve(): void {
@@ -250,18 +278,39 @@ suite('ExtensionsActivator', () => {
 	}
 
 	const basicActivationEventsReader: IActivationEventsReader = {
-		readActivationEvents: (extensionDescription: IExtensionDescription): string[] => {
+		readActivationEvents: (
+			extensionDescription: IExtensionDescription,
+		): string[] => {
 			return extensionDescription.activationEvents ?? [];
-		}
+		},
 	};
 
-	function createActivator(host: IExtensionsActivatorHost, extensionDescriptions: IExtensionDescription[], otherHostExtensionDescriptions: IExtensionDescription[] = []): ExtensionsActivator {
-		const registry = new ExtensionDescriptionRegistry(basicActivationEventsReader, extensionDescriptions);
-		const globalRegistry = new ExtensionDescriptionRegistry(basicActivationEventsReader, extensionDescriptions.concat(otherHostExtensionDescriptions));
-		return new ExtensionsActivator(registry, globalRegistry, host, new NullLogService());
+	function createActivator(
+		host: IExtensionsActivatorHost,
+		extensionDescriptions: IExtensionDescription[],
+		otherHostExtensionDescriptions: IExtensionDescription[] = [],
+	): ExtensionsActivator {
+		const registry = new ExtensionDescriptionRegistry(
+			basicActivationEventsReader,
+			extensionDescriptions,
+		);
+		const globalRegistry = new ExtensionDescriptionRegistry(
+			basicActivationEventsReader,
+			extensionDescriptions.concat(otherHostExtensionDescriptions),
+		);
+		return new ExtensionsActivator(
+			registry,
+			globalRegistry,
+			host,
+			new NullLogService(),
+		);
 	}
 
-	function desc(id: ExtensionIdentifier, deps: ExtensionIdentifier[] = [], activationEvents: string[] = ['*']): IExtensionDescription {
+	function desc(
+		id: ExtensionIdentifier,
+		deps: ExtensionIdentifier[] = [],
+		activationEvents: string[] = ['*'],
+	): IExtensionDescription {
 		return {
 			name: id.value,
 			publisher: 'test',
@@ -275,10 +324,9 @@ suite('ExtensionsActivator', () => {
 			activationEvents,
 			main: 'index.js',
 			targetPlatform: TargetPlatform.UNDEFINED,
-			extensionDependencies: deps.map(d => d.value),
+			extensionDependencies: deps.map((d) => d.value),
 			enabledApiProposals: undefined,
 			preRelease: false,
 		};
 	}
-
 });

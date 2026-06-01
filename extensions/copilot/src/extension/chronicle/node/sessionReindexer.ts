@@ -4,13 +4,26 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as l10n from '@vscode/l10n';
-import type { IChatDebugFileLoggerService, IDebugLogEntry } from '../../../platform/chat/common/chatDebugFileLoggerService';
-import type { ISessionStore, SessionRow, TurnRow, FileRow, RefRow } from '../../../platform/chronicle/common/sessionStore';
+import type {
+	IChatDebugFileLoggerService,
+	IDebugLogEntry,
+} from '../../../platform/chat/common/chatDebugFileLoggerService';
+import type {
+	ISessionStore,
+	SessionRow,
+	TurnRow,
+	FileRow,
+	RefRow,
+} from '../../../platform/chronicle/common/sessionStore';
 import type { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import type { SessionEvent } from '../common/cloudSessionTypes';
 import type { CloudSessionApiClient } from './cloudSessionApiClient';
 import type { CloudSessionIdStore } from './cloudSessionIdStore';
-import { createSessionTranslationState, translateDebugLogEntry, makeShutdownEvent } from '../common/eventTranslator';
+import {
+	createSessionTranslationState,
+	translateDebugLogEntry,
+	makeShutdownEvent,
+} from '../common/eventTranslator';
 import { filterSecretsFromObj } from '../common/secretFilter';
 import {
 	MAX_ASSISTANT_RESPONSE_LENGTH,
@@ -92,7 +105,13 @@ export async function reindexSessions(
 			continue;
 		}
 
-		reportProgress(l10n.t('Reindexing session {0} of {1}...', i + 1, sessionIds.length));
+		reportProgress(
+			l10n.t(
+				'Reindexing session {0} of {1}...',
+				i + 1,
+				sessionIds.length,
+			),
+		);
 
 		try {
 			await reindexOneSession(store, debugLogService, sessionId);
@@ -103,7 +122,7 @@ export async function reindexSessions(
 		}
 
 		// Yield to event loop between sessions to avoid blocking the extension host
-		await new Promise<void>(resolve => setTimeout(resolve, 0));
+		await new Promise<void>((resolve) => setTimeout(resolve, 0));
 	}
 
 	return { processed, skipped, cancelled: false };
@@ -132,12 +151,24 @@ async function reindexOneSession(
 
 	await debugLogService.streamEntries(sessionId, (entry: IDebugLogEntry) => {
 		processEntry(entry, sessionId, buffer, {
-			get pendingUserMessage() { return pendingUserMessage; },
-			set pendingUserMessage(v) { pendingUserMessage = v; },
-			get pendingUserTimestamp() { return pendingUserTimestamp; },
-			set pendingUserTimestamp(v) { pendingUserTimestamp = v; },
-			get turnIndex() { return turnIndex; },
-			set turnIndex(v) { turnIndex = v; },
+			get pendingUserMessage() {
+				return pendingUserMessage;
+			},
+			set pendingUserMessage(v) {
+				pendingUserMessage = v;
+			},
+			get pendingUserTimestamp() {
+				return pendingUserTimestamp;
+			},
+			set pendingUserTimestamp(v) {
+				pendingUserTimestamp = v;
+			},
+			get turnIndex() {
+				return turnIndex;
+			},
+			set turnIndex(v) {
+				turnIndex = v;
+			},
 		});
 	});
 
@@ -146,7 +177,10 @@ async function reindexOneSession(
 		buffer.turns.push({
 			session_id: sessionId,
 			turn_index: turnIndex,
-			user_message: truncateForStore(pendingUserMessage, MAX_USER_MESSAGE_LENGTH),
+			user_message: truncateForStore(
+				pendingUserMessage,
+				MAX_USER_MESSAGE_LENGTH,
+			),
 			timestamp: pendingUserTimestamp,
 		});
 	}
@@ -221,7 +255,8 @@ function processSessionStart(
 		id: sessionId,
 		host_type: 'vscode',
 		cwd: typeof attrs.cwd === 'string' ? attrs.cwd : undefined,
-		repository: typeof attrs.repository === 'string' ? attrs.repository : undefined,
+		repository:
+			typeof attrs.repository === 'string' ? attrs.repository : undefined,
 		branch: typeof attrs.branch === 'string' ? attrs.branch : undefined,
 		created_at: new Date(entry.ts).toISOString(),
 	};
@@ -231,11 +266,12 @@ function processUserMessage(
 	entry: IDebugLogEntry,
 	state: TurnPairingState,
 ): void {
-	const content = typeof entry.attrs.content === 'string'
-		? entry.attrs.content
-		: typeof entry.attrs.userRequest === 'string'
-			? entry.attrs.userRequest
-			: undefined;
+	const content =
+		typeof entry.attrs.content === 'string'
+			? entry.attrs.content
+			: typeof entry.attrs.userRequest === 'string'
+				? entry.attrs.userRequest
+				: undefined;
 	if (content) {
 		state.pendingUserMessage = content;
 		state.pendingUserTimestamp = new Date(entry.ts).toISOString();
@@ -260,14 +296,24 @@ function processAssistantResponse(
 	buffer.turns.push({
 		session_id: sessionId,
 		turn_index: state.turnIndex,
-		user_message: truncateForStore(state.pendingUserMessage, MAX_USER_MESSAGE_LENGTH),
-		assistant_response: truncateForStore(assistantResponse, MAX_ASSISTANT_RESPONSE_LENGTH),
-		timestamp: state.pendingUserTimestamp ?? new Date(entry.ts).toISOString(),
+		user_message: truncateForStore(
+			state.pendingUserMessage,
+			MAX_USER_MESSAGE_LENGTH,
+		),
+		assistant_response: truncateForStore(
+			assistantResponse,
+			MAX_ASSISTANT_RESPONSE_LENGTH,
+		),
+		timestamp:
+			state.pendingUserTimestamp ?? new Date(entry.ts).toISOString(),
 	});
 
 	// Use first user message as summary if not yet set
 	if (!buffer.session?.summary && state.pendingUserMessage) {
-		const summary = truncateForStore(extractPlainTextFromContent(state.pendingUserMessage), MAX_SUMMARY_LENGTH);
+		const summary = truncateForStore(
+			extractPlainTextFromContent(state.pendingUserMessage),
+			MAX_SUMMARY_LENGTH,
+		);
 		if (!buffer.session) {
 			buffer.session = { id: sessionId, host_type: 'vscode' };
 		}
@@ -287,7 +333,8 @@ function processToolCall(
 ): void {
 	const toolName = entry.name;
 	const toolArgs = tryParseArgs(entry.attrs.args);
-	const resultText = typeof entry.attrs.result === 'string' ? entry.attrs.result : undefined;
+	const resultText =
+		typeof entry.attrs.result === 'string' ? entry.attrs.result : undefined;
 
 	// Extract file path
 	const filePath = extractFilePath(toolName, toolArgs);
@@ -304,7 +351,11 @@ function processToolCall(
 	if (isGitHubMcpTool(toolName)) {
 		const refs = extractRefsFromMcpTool(toolName, toolArgs);
 		for (const ref of refs) {
-			buffer.refs.push({ session_id: sessionId, ...ref, turn_index: state.turnIndex });
+			buffer.refs.push({
+				session_id: sessionId,
+				...ref,
+				turn_index: state.turnIndex,
+			});
 		}
 
 		const repo = extractRepoFromMcpTool(toolArgs);
@@ -320,7 +371,11 @@ function processToolCall(
 	if (isTerminalTool(toolName)) {
 		const refs = extractRefsFromTerminal(toolArgs, resultText);
 		for (const ref of refs) {
-			buffer.refs.push({ session_id: sessionId, ...ref, turn_index: state.turnIndex });
+			buffer.refs.push({
+				session_id: sessionId,
+				...ref,
+				turn_index: state.turnIndex,
+			});
 		}
 	}
 }
@@ -393,22 +448,40 @@ export async function reindexCloudSessions(
 
 		processed++;
 		if (processed % 10 === 0) {
-			reportProgress(l10n.t('Cloud sync: {0}/{1} sessions scanned, {2} created...', processed, sessionIds.length, result.created));
+			reportProgress(
+				l10n.t(
+					'Cloud sync: {0}/{1} sessions scanned, {2} created...',
+					processed,
+					sessionIds.length,
+					result.created,
+				),
+			);
 		}
 
 		try {
-			await reindexOneCloudSession(sessionId, cloudClient, cloudSessionIds, debugLogService, ownerId, repoId, indexingLevel, result, isRepoExcluded);
+			await reindexOneCloudSession(
+				sessionId,
+				cloudClient,
+				cloudSessionIds,
+				debugLogService,
+				ownerId,
+				repoId,
+				indexingLevel,
+				result,
+				isRepoExcluded,
+			);
 		} catch {
 			result.failed++;
 		}
 
 		// Yield to event loop between sessions
-		await new Promise<void>(resolve => setTimeout(resolve, 0));
+		await new Promise<void>((resolve) => setTimeout(resolve, 0));
 	}
 
 	// Single bulk backfill call for all remote sessions
 	if (!token.isCancellationRequested) {
-		const backfillResult = await cloudClient.backfillAnalytics(indexingLevel);
+		const backfillResult =
+			await cloudClient.backfillAnalytics(indexingLevel);
 		if (backfillResult.ok) {
 			result.backfillQueued = backfillResult.sessionsQueued;
 		} else {
@@ -442,7 +515,10 @@ async function reindexOneCloudSession(
 
 	await debugLogService.streamEntries(sessionId, (entry: IDebugLogEntry) => {
 		// Extract repo from session_start for exclusion check
-		if (entry.type === 'session_start' && typeof entry.attrs.repository === 'string') {
+		if (
+			entry.type === 'session_start' &&
+			typeof entry.attrs.repository === 'string'
+		) {
 			sessionRepo = entry.attrs.repository;
 			if (isRepoExcluded) {
 				const nwo = extractNwoFromRepoString(sessionRepo);
@@ -467,7 +543,12 @@ async function reindexOneCloudSession(
 	}
 
 	// Create cloud session
-	const createResult = await cloudClient.createSession(ownerId, repoId, sessionId, indexingLevel);
+	const createResult = await cloudClient.createSession(
+		ownerId,
+		repoId,
+		sessionId,
+		indexingLevel,
+	);
 	if (!createResult.ok || !createResult.response.task_id) {
 		result.failed++;
 		batch.length = 0;
@@ -487,8 +568,11 @@ async function reindexOneCloudSession(
 	let uploadFailed = false;
 	for (let i = 0; i < batch.length; i += MAX_EVENTS_PER_UPLOAD) {
 		const chunk = batch.slice(i, i + MAX_EVENTS_PER_UPLOAD);
-		const filtered = chunk.map(e => filterSecretsFromObj(e));
-		const success = await cloudClient.submitSessionEvents(cloudSessionId, filtered);
+		const filtered = chunk.map((e) => filterSecretsFromObj(e));
+		const success = await cloudClient.submitSessionEvents(
+			cloudSessionId,
+			filtered,
+		);
 		if (success.ok) {
 			uploaded += chunk.length;
 		} else {
@@ -523,7 +607,10 @@ function extractNwoFromRepoString(repo: string): string | undefined {
 	// URL format: extract from path
 	try {
 		const url = new URL(repo);
-		const parts = url.pathname.replace(/\.git$/, '').split('/').filter(Boolean);
+		const parts = url.pathname
+			.replace(/\.git$/, '')
+			.split('/')
+			.filter(Boolean);
 		if (parts.length >= 2) {
 			return `${parts[0]}/${parts[1]}`;
 		}

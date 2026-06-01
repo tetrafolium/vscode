@@ -3,15 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import type { ICompletionResource } from '../types';
-import { type ExecOptionsWithStringEncoding } from 'node:child_process';
-import { execHelper } from './common';
+import * as vscode from "vscode";
+import type { ICompletionResource } from "../types";
+import { type ExecOptionsWithStringEncoding } from "node:child_process";
+import { execHelper } from "./common";
 
-export async function getPwshGlobals(options: ExecOptionsWithStringEncoding, existingCommands?: Set<string>): Promise<(string | ICompletionResource)[]> {
+export async function getPwshGlobals(
+	options: ExecOptionsWithStringEncoding,
+	existingCommands?: Set<string>,
+): Promise<(string | ICompletionResource)[]> {
 	return [
-		...await getAliases(options, existingCommands),
-		...await getCommands(options, existingCommands),
+		...(await getAliases(options, existingCommands)),
+		...(await getCommands(options, existingCommands)),
 	];
 }
 
@@ -43,7 +46,10 @@ const enum PwshCommandType {
 	// All = 383,
 }
 
-const pwshCommandTypeToCompletionKind: Map<PwshCommandType, vscode.TerminalCompletionItemKind> = new Map([
+const pwshCommandTypeToCompletionKind: Map<
+	PwshCommandType,
+	vscode.TerminalCompletionItemKind
+> = new Map([
 	[PwshCommandType.Alias, vscode.TerminalCompletionItemKind.Alias],
 	[PwshCommandType.Function, vscode.TerminalCompletionItemKind.Method],
 	[PwshCommandType.Filter, vscode.TerminalCompletionItemKind.Method],
@@ -54,16 +60,72 @@ const pwshCommandTypeToCompletionKind: Map<PwshCommandType, vscode.TerminalCompl
 	[PwshCommandType.Configuration, vscode.TerminalCompletionItemKind.Argument],
 ]);
 
-async function getAliases(options: ExecOptionsWithStringEncoding, existingCommands?: Set<string>): Promise<ICompletionResource[]> {
-	const output = await execHelper('Get-Command -CommandType Alias | Select-Object Name, CommandType, Definition, DisplayName, ModuleName, @{Name="Version";Expression={$_.Version.ToString()}} | ConvertTo-Json', {
-		...options,
-		maxBuffer: 1024 * 1024 * 100 // This is a lot of content, increase buffer size
-	});
+async function getAliases(
+	options: ExecOptionsWithStringEncoding,
+	existingCommands?: Set<string>,
+): Promise<ICompletionResource[]> {
+	const output = await execHelper(
+		'Get-Command -CommandType Alias | Select-Object Name, CommandType, Definition, DisplayName, ModuleName, @{Name="Version";Expression={$_.Version.ToString()}} | ConvertTo-Json',
+		{
+			...options,
+			maxBuffer: 1024 * 1024 * 100, // This is a lot of content, increase buffer size
+		},
+	);
 	let json: any;
 	try {
 		json = JSON.parse(output);
 	} catch (e) {
-		console.error('Error parsing output:', e);
+		console.error("Error parsing output:", e);
+		return [];
+	}
+	if (!Array.isArray(json)) {
+		return [];
+	}
+	return (json as unknown[]).filter(isPwshGetCommandEntry).map((e) => {
+		// Aliases sometimes use the same Name and DisplayName, show them as methods in this case.
+		const isAlias = e.Name !== e.DisplayName;
+		const detailParts: string[] = [];
+		if (e.Definition) {
+			detailParts.push(e.Definition);
+		}
+		if (e.ModuleName && e.Version) {
+			detailParts.push(`${e.ModuleName} v${e.Version}`);
+		}
+		let definitionCommand = undefined;
+		if (e.Definition) {
+			let definitionIndex = e.Definition.indexOf(" ");
+			if (definitionIndex === -1) {
+				definitionIndex = e.Definition.length;
+				definitionCommand = e.Definition.substring(0, definitionIndex);
+			}
+		}
+		return {
+			label: e.Name,
+			detail: detailParts.join("\n\n"),
+			kind: isAlias
+				? vscode.TerminalCompletionItemKind.Alias
+				: vscode.TerminalCompletionItemKind.Method,
+			definitionCommand,
+		};
+	});
+}
+
+async function getCommands(
+	options: ExecOptionsWithStringEncoding,
+	existingCommands?: Set<string>,
+): Promise<ICompletionResource[]> {
+	const output = await execHelper(
+		'Get-Command -All | Select-Object Name, CommandType, Definition, ModuleName, @{Name="Version";Expression={$_.Version.ToString()}} | ConvertTo-Json',
+		{
+			...options,
+			maxBuffer: 1024 * 1024 * 100, // This is a lot of content, increase buffer size
+		},
+	);
+	let json: unknown;
+	try {
+		json = JSON.parse(output);
+	} catch (e) {
+		console.error("Error parsing pwsh output:", e);
 		return [];
 	}
 	if (!Array.isArray(json)) {
@@ -71,69 +133,21 @@ async function getAliases(options: ExecOptionsWithStringEncoding, existingComman
 	}
 	return (json as unknown[])
 		.filter(isPwshGetCommandEntry)
-		.map(e => {
-			// Aliases sometimes use the same Name and DisplayName, show them as methods in this case.
-			const isAlias = e.Name !== e.DisplayName;
+		.filter((e) => e.CommandType !== PwshCommandType.Alias)
+		.map((e) => {
 			const detailParts: string[] = [];
 			if (e.Definition) {
-				detailParts.push(e.Definition);
+				detailParts.push(e.Definition.trim());
 			}
 			if (e.ModuleName && e.Version) {
 				detailParts.push(`${e.ModuleName} v${e.Version}`);
 			}
-			let definitionCommand = undefined;
-			if (e.Definition) {
-				let definitionIndex = e.Definition.indexOf(' ');
-				if (definitionIndex === -1) {
-					definitionIndex = e.Definition.length;
-					definitionCommand = e.Definition.substring(0, definitionIndex);
-				}
-			}
 			return {
 				label: e.Name,
-				detail: detailParts.join('\n\n'),
-				kind: (isAlias
-					? vscode.TerminalCompletionItemKind.Alias
-					: vscode.TerminalCompletionItemKind.Method),
-				definitionCommand,
+				detail: detailParts.join("\n\n"),
+				kind: pwshCommandTypeToCompletionKind.get(e.CommandType),
 			};
 		});
-}
-
-async function getCommands(options: ExecOptionsWithStringEncoding, existingCommands?: Set<string>): Promise<ICompletionResource[]> {
-	const output = await execHelper('Get-Command -All | Select-Object Name, CommandType, Definition, ModuleName, @{Name="Version";Expression={$_.Version.ToString()}} | ConvertTo-Json', {
-		...options,
-		maxBuffer: 1024 * 1024 * 100 // This is a lot of content, increase buffer size
-	});
-	let json: unknown;
-	try {
-		json = JSON.parse(output);
-	} catch (e) {
-		console.error('Error parsing pwsh output:', e);
-		return [];
-	}
-	if (!Array.isArray(json)) {
-		return [];
-	}
-	return (
-		(json as unknown[])
-			.filter(isPwshGetCommandEntry)
-			.filter(e => e.CommandType !== PwshCommandType.Alias)
-			.map(e => {
-				const detailParts: string[] = [];
-				if (e.Definition) {
-					detailParts.push(e.Definition.trim());
-				}
-				if (e.ModuleName && e.Version) {
-					detailParts.push(`${e.ModuleName} v${e.Version}`);
-				}
-				return {
-					label: e.Name,
-					detail: detailParts.join('\n\n'),
-					kind: pwshCommandTypeToCompletionKind.get(e.CommandType)
-				};
-			})
-	);
 }
 
 interface IPwshGetCommandEntry {
@@ -148,12 +162,22 @@ interface IPwshGetCommandEntry {
 function isPwshGetCommandEntry(entry: unknown): entry is IPwshGetCommandEntry {
 	return (
 		isObject(entry) &&
-		'Name' in entry && typeof entry.Name === 'string' &&
-		'CommandType' in entry && typeof entry.CommandType === 'number' &&
-		(!('DisplayName' in entry) || typeof entry.DisplayName === 'string' || entry.DisplayName === null) &&
-		(!('Definition' in entry) || typeof entry.Definition === 'string' || entry.Definition === null) &&
-		(!('ModuleName' in entry) || typeof entry.ModuleName === 'string' || entry.ModuleName === null) &&
-		(!('Version' in entry) || typeof entry.Version === 'string' || entry.Version === null)
+		"Name" in entry &&
+		typeof entry.Name === "string" &&
+		"CommandType" in entry &&
+		typeof entry.CommandType === "number" &&
+		(!("DisplayName" in entry) ||
+			typeof entry.DisplayName === "string" ||
+			entry.DisplayName === null) &&
+		(!("Definition" in entry) ||
+			typeof entry.Definition === "string" ||
+			entry.Definition === null) &&
+		(!("ModuleName" in entry) ||
+			typeof entry.ModuleName === "string" ||
+			entry.ModuleName === null) &&
+		(!("Version" in entry) ||
+			typeof entry.Version === "string" ||
+			entry.Version === null)
 	);
 }
 
@@ -165,9 +189,11 @@ export function isObject(obj: unknown): obj is Object {
 	// The method can't do a type cast since there are type (like strings) which
 	// are subclasses of any put not positvely matched by the function. Hence type
 	// narrowing results in wrong results.
-	return typeof obj === 'object'
-		&& obj !== null
-		&& !Array.isArray(obj)
-		&& !(obj instanceof RegExp)
-		&& !(obj instanceof Date);
+	return (
+		typeof obj === "object" &&
+		obj !== null &&
+		!Array.isArray(obj) &&
+		!(obj instanceof RegExp) &&
+		!(obj instanceof Date)
+	);
 }

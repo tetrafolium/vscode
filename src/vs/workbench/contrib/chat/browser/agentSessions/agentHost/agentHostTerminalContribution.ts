@@ -3,20 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OS } from '../../../../../../base/common/platform.js';
-import { Disposable, DisposableStore, MutableDisposable } from '../../../../../../base/common/lifecycle.js';
-import { localize } from '../../../../../../nls.js';
-import { AgentHostCustomTerminalToolEnabledSettingId, AgentHostEnabledSettingId, IAgentHostService } from '../../../../../../platform/agentHost/common/agentService.js';
-import { AgentHostConfigKey } from '../../../../../../platform/agentHost/common/agentHostCustomizationConfig.js';
-import { ActionType } from '../../../../../../platform/agentHost/common/state/protocol/actions.js';
-import { ROOT_STATE_URI } from '../../../../../../platform/agentHost/common/state/sessionState.js';
-import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
-import { IInstantiationService } from '../../../../../../platform/instantiation/common/instantiation.js';
-import { TerminalSettingId } from '../../../../../../platform/terminal/common/terminal.js';
-import { IWorkbenchContribution } from '../../../../../../workbench/common/contributions.js';
-import { LoggingAgentConnection } from '../../../../../../workbench/contrib/chat/browser/agentSessions/agentHost/loggingAgentConnection.js';
-import { ITerminalProfileResolverService, ITerminalProfileService } from '../../../../../../workbench/contrib/terminal/common/terminal.js';
-import { IAgentHostTerminalService } from '../../../../../../workbench/contrib/terminal/browser/agentHostTerminalService.js';
+import { OS } from "../../../../../../base/common/platform.js";
+import {
+	Disposable,
+	DisposableStore,
+	MutableDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import { localize } from "../../../../../../nls.js";
+import {
+	AgentHostCustomTerminalToolEnabledSettingId,
+	AgentHostEnabledSettingId,
+	IAgentHostService,
+} from "../../../../../../platform/agentHost/common/agentService.js";
+import { AgentHostConfigKey } from "../../../../../../platform/agentHost/common/agentHostCustomizationConfig.js";
+import { ActionType } from "../../../../../../platform/agentHost/common/state/protocol/actions.js";
+import { ROOT_STATE_URI } from "../../../../../../platform/agentHost/common/state/sessionState.js";
+import { IConfigurationService } from "../../../../../../platform/configuration/common/configuration.js";
+import { IInstantiationService } from "../../../../../../platform/instantiation/common/instantiation.js";
+import { TerminalSettingId } from "../../../../../../platform/terminal/common/terminal.js";
+import { IWorkbenchContribution } from "../../../../../../workbench/common/contributions.js";
+import { LoggingAgentConnection } from "../../../../../../workbench/contrib/chat/browser/agentSessions/agentHost/loggingAgentConnection.js";
+import {
+	ITerminalProfileResolverService,
+	ITerminalProfileService,
+} from "../../../../../../workbench/contrib/terminal/common/terminal.js";
+import { IAgentHostTerminalService } from "../../../../../../workbench/contrib/terminal/browser/agentHostTerminalService.js";
 
 /** Terminal settings whose change should re-resolve the agent host shell. */
 const AGENT_HOST_SHELL_DEPENDENT_SETTINGS = [
@@ -37,53 +48,85 @@ const AGENT_HOST_SHELL_DEPENDENT_SETTINGS = [
  *
  * Gated on the `chat.agentHost.enabled` setting.
  */
-export class AgentHostTerminalContribution extends Disposable implements IWorkbenchContribution {
-	static readonly ID = 'workbench.contrib.agentHostTerminal';
+export class AgentHostTerminalContribution
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	static readonly ID = "workbench.contrib.agentHostTerminal";
 
 	private readonly _localEntry = this._register(new MutableDisposable());
-	private readonly _conditionalListeners = this._register(new MutableDisposable<DisposableStore>());
+	private readonly _conditionalListeners = this._register(
+		new MutableDisposable<DisposableStore>(),
+	);
 
 	constructor(
 		@IAgentHostService private readonly _agentHostService: IAgentHostService,
-		@IAgentHostTerminalService private readonly _agentHostTerminalService: IAgentHostTerminalService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@ITerminalProfileService private readonly _terminalProfileService: ITerminalProfileService,
-		@ITerminalProfileResolverService private readonly _terminalProfileResolverService: ITerminalProfileResolverService,
+		@IAgentHostTerminalService
+		private readonly _agentHostTerminalService: IAgentHostTerminalService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@ITerminalProfileService
+		private readonly _terminalProfileService: ITerminalProfileService,
+		@ITerminalProfileResolverService
+		private readonly _terminalProfileResolverService: ITerminalProfileResolverService,
 	) {
 		super();
 
-		this._register(this._configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(AgentHostEnabledSettingId)) {
-				this._updateEnabled();
-			}
-		}));
+		this._register(
+			this._configurationService.onDidChangeConfiguration((e) => {
+				if (e.affectsConfiguration(AgentHostEnabledSettingId)) {
+					this._updateEnabled();
+				}
+			}),
+		);
 
 		this._updateEnabled();
 	}
 
 	private _updateEnabled(): void {
-		if (this._configurationService.getValue<boolean>(AgentHostEnabledSettingId)) {
+		if (
+			this._configurationService.getValue<boolean>(AgentHostEnabledSettingId)
+		) {
 			if (!this._conditionalListeners.value) {
 				const store = new DisposableStore();
-				store.add(this._agentHostService.onAgentHostStart(() => this._reconcile()));
-				store.add(this._configurationService.onDidChangeConfiguration(e => {
-					if (AGENT_HOST_SHELL_DEPENDENT_SETTINGS.some(s => e.affectsConfiguration(s))) {
-						this._pushDefaultShell();
-					}
-					if (e.affectsConfiguration(AgentHostCustomTerminalToolEnabledSettingId)) {
-						this._pushCustomTerminalToolEnabled();
-					}
-				}));
-				store.add(this._terminalProfileService.onDidChangeAvailableProfiles(() => this._pushDefaultShell()));
+				store.add(
+					this._agentHostService.onAgentHostStart(() => this._reconcile()),
+				);
+				store.add(
+					this._configurationService.onDidChangeConfiguration((e) => {
+						if (
+							AGENT_HOST_SHELL_DEPENDENT_SETTINGS.some((s) =>
+								e.affectsConfiguration(s),
+							)
+						) {
+							this._pushDefaultShell();
+						}
+						if (
+							e.affectsConfiguration(
+								AgentHostCustomTerminalToolEnabledSettingId,
+							)
+						) {
+							this._pushCustomTerminalToolEnabled();
+						}
+					}),
+				);
+				store.add(
+					this._terminalProfileService.onDidChangeAvailableProfiles(() =>
+						this._pushDefaultShell(),
+					),
+				);
 				// Retry the push when the host's root state hydrates or its schema
 				// changes - the initial push from `_reconcile()` may have raced an
 				// undefined `rootState.value`, in which case the schema gate below
 				// in `_pushDefaultShell` returned early.
-				store.add(this._agentHostService.rootState.onDidChange(() => {
-					this._pushDefaultShell();
-					this._pushCustomTerminalToolEnabled();
-				}));
+				store.add(
+					this._agentHostService.rootState.onDidChange(() => {
+						this._pushDefaultShell();
+						this._pushCustomTerminalToolEnabled();
+					}),
+				);
 				this._conditionalListeners.value = store;
 				this._reconcile();
 			}
@@ -96,14 +139,18 @@ export class AgentHostTerminalContribution extends Disposable implements IWorkbe
 	private _reconcile(): void {
 		if (!this._localEntry.value) {
 			this._localEntry.value = this._agentHostTerminalService.registerEntry({
-				name: localize('agentHostTerminal.local', "Local"),
-				address: '__local__',
-				getConnection: () => this._instantiationService.createInstance(
-					LoggingAgentConnection,
-					this._agentHostService,
-					`agenthost.${this._agentHostService.clientId}`,
-					localize('agentHostTerminal.channelLocal', "Agent Host Terminal (Local)"),
-				),
+				name: localize("agentHostTerminal.local", "Local"),
+				address: "__local__",
+				getConnection: () =>
+					this._instantiationService.createInstance(
+						LoggingAgentConnection,
+						this._agentHostService,
+						`agenthost.${this._agentHostService.clientId}`,
+						localize(
+							"agentHostTerminal.channelLocal",
+							"Agent Host Terminal (Local)",
+						),
+					),
 			});
 		}
 		this._pushDefaultShell();
@@ -157,7 +204,9 @@ export class AgentHostTerminalContribution extends Disposable implements IWorkbe
 		}
 
 		// Fix #314385
-		if (rootState.config.values[AgentHostConfigKey.DefaultShell] === profile.path) {
+		if (
+			rootState.config.values[AgentHostConfigKey.DefaultShell] === profile.path
+		) {
 			return;
 		}
 
@@ -172,18 +221,31 @@ export class AgentHostTerminalContribution extends Disposable implements IWorkbe
 		if (!rootState || rootState instanceof Error) {
 			return;
 		}
-		if (!rootState.config?.schema.properties[AgentHostConfigKey.DisableCustomTerminalTool]) {
+		if (
+			!rootState.config?.schema.properties[
+				AgentHostConfigKey.DisableCustomTerminalTool
+			]
+		) {
 			return;
 		}
 
-		const disableCustomTerminalTool = !this._configurationService.getValue<boolean>(AgentHostCustomTerminalToolEnabledSettingId);
-		if (rootState.config.values[AgentHostConfigKey.DisableCustomTerminalTool] === disableCustomTerminalTool) {
+		const disableCustomTerminalTool =
+			!this._configurationService.getValue<boolean>(
+				AgentHostCustomTerminalToolEnabledSettingId,
+			);
+		if (
+			rootState.config.values[AgentHostConfigKey.DisableCustomTerminalTool] ===
+			disableCustomTerminalTool
+		) {
 			return;
 		}
 
 		this._agentHostService.dispatch(ROOT_STATE_URI, {
 			type: ActionType.RootConfigChanged,
-			config: { [AgentHostConfigKey.DisableCustomTerminalTool]: disableCustomTerminalTool },
+			config: {
+				[AgentHostConfigKey.DisableCustomTerminalTool]:
+					disableCustomTerminalTool,
+			},
 		});
 	}
 }

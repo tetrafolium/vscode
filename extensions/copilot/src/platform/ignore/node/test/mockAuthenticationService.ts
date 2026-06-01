@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AuthenticationGetSessionOptions, AuthenticationSession } from 'vscode';
+import type {
+	AuthenticationGetSessionOptions,
+	AuthenticationSession,
+} from 'vscode';
 import { Event } from '../../../../util/vs/base/common/event';
 import { IAuthenticationService } from '../../../authentication/common/authentication';
 import { CopilotToken } from '../../../authentication/common/copilotToken';
@@ -20,15 +23,25 @@ export class MockAuthenticationService implements IAuthenticationService {
 	readonly onDidAccessTokenChange: Event<void> = Event.None;
 	readonly onDidAdoAuthenticationChange: Event<void> = Event.None;
 	readonly anyGitHubSession: AuthenticationSession | undefined = undefined;
-	readonly permissiveGitHubSession: AuthenticationSession | undefined = undefined;
+	readonly permissiveGitHubSession: AuthenticationSession | undefined =
+		undefined;
 	readonly hasCopilotTokenSource: boolean = false;
 
 	copilotToken: Omit<CopilotToken, 'token'> | undefined = undefined;
 	speculativeDecodingEndpointToken: string | undefined = undefined;
 
-	getGitHubSession(_kind: 'permissive' | 'any', _options?: AuthenticationGetSessionOptions): Promise<AuthenticationSession | undefined>;
-	getGitHubSession(_kind: 'permissive' | 'any', _options?: AuthenticationGetSessionOptions): Promise<AuthenticationSession>;
-	getGitHubSession(_kind: 'permissive' | 'any', _options?: AuthenticationGetSessionOptions): Promise<AuthenticationSession | undefined> {
+	getGitHubSession(
+		_kind: 'permissive' | 'any',
+		_options?: AuthenticationGetSessionOptions,
+	): Promise<AuthenticationSession | undefined>;
+	getGitHubSession(
+		_kind: 'permissive' | 'any',
+		_options?: AuthenticationGetSessionOptions,
+	): Promise<AuthenticationSession>;
+	getGitHubSession(
+		_kind: 'permissive' | 'any',
+		_options?: AuthenticationGetSessionOptions,
+	): Promise<AuthenticationSession | undefined> {
 		return Promise.resolve(undefined);
 	}
 
@@ -36,11 +49,13 @@ export class MockAuthenticationService implements IAuthenticationService {
 		return Promise.reject(new Error('No copilot token available in mock'));
 	}
 
-	resetCopilotToken(_httpError?: number): void { }
+	resetCopilotToken(_httpError?: number): void {}
 
-	getAdoAccessTokenBase64(_options?: AuthenticationGetSessionOptions): Promise<string | undefined> {
+	getAdoAccessTokenBase64(
+		_options?: AuthenticationGetSessionOptions,
+	): Promise<string | undefined> {
 		return Promise.resolve(undefined);
 	}
 
-	dispose(): void { }
+	dispose(): void {}
 }

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeferredPromise } from '../../../base/common/async.js';
-import { CancellationError } from '../../../base/common/errors.js';
+import { DeferredPromise } from "../../../base/common/async.js";
+import { CancellationError } from "../../../base/common/errors.js";
 
 /**
  * Registry of parked deferred promises keyed by string id. Used to

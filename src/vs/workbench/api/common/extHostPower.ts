@@ -3,14 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../base/common/event.js';
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { createDecorator } from '../../../platform/instantiation/common/instantiation.js';
-import { IExtHostRpcService } from './extHostRpcService.js';
-import { ExtHostPowerShape, MainContext, MainThreadPowerShape, PowerSaveBlockerType, PowerSystemIdleState, PowerThermalState } from './extHost.protocol.js';
+import { Emitter, Event } from "../../../base/common/event.js";
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { createDecorator } from "../../../platform/instantiation/common/instantiation.js";
+import { IExtHostRpcService } from "./extHostRpcService.js";
+import {
+	ExtHostPowerShape,
+	MainContext,
+	MainThreadPowerShape,
+	PowerSaveBlockerType,
+	PowerSystemIdleState,
+	PowerThermalState,
+} from "./extHost.protocol.js";
 
 export class ExtHostPower extends Disposable implements ExtHostPowerShape {
-
 	declare _serviceBrand: undefined;
 
 	private readonly _proxy: MainThreadPowerShape;
@@ -22,14 +28,23 @@ export class ExtHostPower extends Disposable implements ExtHostPowerShape {
 	private readonly _onDidResume = this._register(new Emitter<void>());
 	readonly onDidResume: Event<void> = this._onDidResume.event;
 
-	private readonly _onDidChangeOnBatteryPower = this._register(new Emitter<boolean>());
-	readonly onDidChangeOnBatteryPower: Event<boolean> = this._onDidChangeOnBatteryPower.event;
+	private readonly _onDidChangeOnBatteryPower = this._register(
+		new Emitter<boolean>(),
+	);
+	readonly onDidChangeOnBatteryPower: Event<boolean> =
+		this._onDidChangeOnBatteryPower.event;
 
-	private readonly _onDidChangeThermalState = this._register(new Emitter<PowerThermalState>());
-	readonly onDidChangeThermalState: Event<PowerThermalState> = this._onDidChangeThermalState.event;
+	private readonly _onDidChangeThermalState = this._register(
+		new Emitter<PowerThermalState>(),
+	);
+	readonly onDidChangeThermalState: Event<PowerThermalState> =
+		this._onDidChangeThermalState.event;
 
-	private readonly _onDidChangeSpeedLimit = this._register(new Emitter<number>());
-	readonly onDidChangeSpeedLimit: Event<number> = this._onDidChangeSpeedLimit.event;
+	private readonly _onDidChangeSpeedLimit = this._register(
+		new Emitter<number>(),
+	);
+	readonly onDidChangeSpeedLimit: Event<number> =
+		this._onDidChangeSpeedLimit.event;
 
 	private readonly _onWillShutdown = this._register(new Emitter<void>());
 	readonly onWillShutdown: Event<void> = this._onWillShutdown.event;
@@ -40,9 +55,7 @@ export class ExtHostPower extends Disposable implements ExtHostPowerShape {
 	private readonly _onDidUnlockScreen = this._register(new Emitter<void>());
 	readonly onDidUnlockScreen: Event<void> = this._onDidUnlockScreen.event;
 
-	constructor(
-		@IExtHostRpcService extHostRpc: IExtHostRpcService,
-	) {
+	constructor(@IExtHostRpcService extHostRpc: IExtHostRpcService) {
 		super();
 		this._proxy = extHostRpc.getProxy(MainContext.MainThreadPower);
 	}
@@ -83,7 +96,9 @@ export class ExtHostPower extends Disposable implements ExtHostPowerShape {
 
 	// === API for extensions ===
 
-	getSystemIdleState(idleThresholdSeconds: number): Promise<PowerSystemIdleState> {
+	getSystemIdleState(
+		idleThresholdSeconds: number,
+	): Promise<PowerSystemIdleState> {
 		return this._proxy.$getSystemIdleState(idleThresholdSeconds);
 	}
 
@@ -99,7 +114,9 @@ export class ExtHostPower extends Disposable implements ExtHostPowerShape {
 		return this._proxy.$isOnBatteryPower();
 	}
 
-	async startPowerSaveBlocker(type: PowerSaveBlockerType): Promise<{ id: number; isStarted: boolean; dispose: () => void }> {
+	async startPowerSaveBlocker(
+		type: PowerSaveBlockerType,
+	): Promise<{ id: number; isStarted: boolean; dispose: () => void }> {
 		const id = await this._proxy.$startPowerSaveBlocker(type);
 		const proxy = this._proxy;
 		const isSupported = id >= 0;
@@ -115,10 +132,10 @@ export class ExtHostPower extends Disposable implements ExtHostPowerShape {
 					disposed = true;
 					proxy.$stopPowerSaveBlocker(id);
 				}
-			}
+			},
 		};
 	}
 }
 
-export const IExtHostPower = createDecorator<IExtHostPower>('IExtHostPower');
-export interface IExtHostPower extends ExtHostPower, ExtHostPowerShape { }
+export const IExtHostPower = createDecorator<IExtHostPower>("IExtHostPower");
+export interface IExtHostPower extends ExtHostPower, ExtHostPowerShape {}

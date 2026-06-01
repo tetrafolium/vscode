@@ -7,25 +7,33 @@ import { describe, expect, it } from 'vitest';
 import { URI } from '../../../../util/vs/base/common/uri';
 import type { IGitService, RepoContext } from '../../../git/common/gitService';
 import { CopilotChatAttr, GitHubCopilotAttr } from '../genAiAttributes';
-import { resolveWorkspaceOTelMetadata, workspaceMetadataToOTelAttributes } from '../workspaceOTelMetadata';
+import {
+	resolveWorkspaceOTelMetadata,
+	workspaceMetadataToOTelAttributes,
+} from '../workspaceOTelMetadata';
 
 function createMockGitService(repoContext?: Partial<RepoContext>): IGitService {
 	return {
 		activeRepository: {
-			get: () => repoContext ? {
-				rootUri: URI.file('/workspace/repo'),
-				kind: 'github',
-				headBranchName: 'main',
-				headCommitHash: 'abc123',
-				upstreamBranchName: undefined,
-				upstreamRemote: undefined,
-				isRebasing: false,
-				remoteFetchUrls: ['https://github.com/microsoft/vscode.git'],
-				remotes: ['origin'],
-				worktrees: [],
-				changes: undefined,
-				...repoContext,
-			} as RepoContext : undefined,
+			get: () =>
+				repoContext
+					? ({
+							rootUri: URI.file('/workspace/repo'),
+							kind: 'github',
+							headBranchName: 'main',
+							headCommitHash: 'abc123',
+							upstreamBranchName: undefined,
+							upstreamRemote: undefined,
+							isRebasing: false,
+							remoteFetchUrls: [
+								'https://github.com/microsoft/vscode.git',
+							],
+							remotes: ['origin'],
+							worktrees: [],
+							changes: undefined,
+							...repoContext,
+						} as RepoContext)
+					: undefined,
 		},
 	} as unknown as IGitService;
 }
@@ -105,7 +113,9 @@ describe('workspaceMetadataToOTelAttributes', () => {
 		});
 		expect(attrs[CopilotChatAttr.REPO_HEAD_BRANCH_NAME]).toBe('main');
 		expect(attrs[CopilotChatAttr.REPO_HEAD_COMMIT_HASH]).toBe('abc123');
-		expect(attrs[CopilotChatAttr.REPO_REMOTE_URL]).toBe('github.com/org/repo');
+		expect(attrs[CopilotChatAttr.REPO_REMOTE_URL]).toBe(
+			'github.com/org/repo',
+		);
 		expect(attrs[CopilotChatAttr.FILE_RELATIVE_PATH]).toBe('src/index.ts');
 	});
 
@@ -117,7 +127,9 @@ describe('workspaceMetadataToOTelAttributes', () => {
 		});
 		expect(attrs[GitHubCopilotAttr.GIT_BRANCH]).toBe('feature/x');
 		expect(attrs[GitHubCopilotAttr.GIT_COMMIT_SHA]).toBe('cafef00d');
-		expect(attrs[GitHubCopilotAttr.GIT_REPOSITORY]).toBe('https://github.com/microsoft/vscode.git');
+		expect(attrs[GitHubCopilotAttr.GIT_REPOSITORY]).toBe(
+			'https://github.com/microsoft/vscode.git',
+		);
 		expect(attrs[GitHubCopilotAttr.GITHUB_ORG]).toBe('microsoft');
 		// Legacy keys must still be present.
 		expect(attrs[CopilotChatAttr.REPO_HEAD_BRANCH_NAME]).toBe('feature/x');
@@ -127,7 +139,9 @@ describe('workspaceMetadataToOTelAttributes', () => {
 		const attrs = workspaceMetadataToOTelAttributes({
 			remoteUrl: 'https://gitlab.com/org/repo.git',
 		});
-		expect(attrs[GitHubCopilotAttr.GIT_REPOSITORY]).toBe('https://gitlab.com/org/repo.git');
+		expect(attrs[GitHubCopilotAttr.GIT_REPOSITORY]).toBe(
+			'https://gitlab.com/org/repo.git',
+		);
 		expect(attrs[GitHubCopilotAttr.GITHUB_ORG]).toBeUndefined();
 	});
 });

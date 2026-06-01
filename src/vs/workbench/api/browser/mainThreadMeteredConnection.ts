@@ -3,30 +3,49 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { IMeteredConnectionService } from '../../../platform/meteredConnection/common/meteredConnection.js';
-import { extHostNamedCustomer, IExtHostContext } from '../../services/extensions/common/extHostCustomers.js';
-import { ExtHostContext, ExtHostMeteredConnectionShape, MainContext, MainThreadMeteredConnectionShape } from '../common/extHost.protocol.js';
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { IMeteredConnectionService } from "../../../platform/meteredConnection/common/meteredConnection.js";
+import {
+	extHostNamedCustomer,
+	IExtHostContext,
+} from "../../services/extensions/common/extHostCustomers.js";
+import {
+	ExtHostContext,
+	ExtHostMeteredConnectionShape,
+	MainContext,
+	MainThreadMeteredConnectionShape,
+} from "../common/extHost.protocol.js";
 
 @extHostNamedCustomer(MainContext.MainThreadMeteredConnection)
-export class MainThreadMeteredConnection extends Disposable implements MainThreadMeteredConnectionShape {
-
+export class MainThreadMeteredConnection
+	extends Disposable
+	implements MainThreadMeteredConnectionShape
+{
 	private readonly _proxy: ExtHostMeteredConnectionShape;
 
 	constructor(
 		extHostContext: IExtHostContext,
-		@IMeteredConnectionService private readonly meteredConnectionService: IMeteredConnectionService
+		@IMeteredConnectionService
+		private readonly meteredConnectionService: IMeteredConnectionService,
 	) {
 		super();
 
-		this._proxy = extHostContext.getProxy(ExtHostContext.ExtHostMeteredConnection);
+		this._proxy = extHostContext.getProxy(
+			ExtHostContext.ExtHostMeteredConnection,
+		);
 
 		// Send initial value
-		this._proxy.$initializeIsConnectionMetered(this.meteredConnectionService.isConnectionMetered);
+		this._proxy.$initializeIsConnectionMetered(
+			this.meteredConnectionService.isConnectionMetered,
+		);
 
 		// Listen for changes and forward to extension host
-		this._register(this.meteredConnectionService.onDidChangeIsConnectionMetered(isMetered => {
-			this._proxy.$onDidChangeIsConnectionMetered(isMetered);
-		}));
+		this._register(
+			this.meteredConnectionService.onDidChangeIsConnectionMetered(
+				(isMetered) => {
+					this._proxy.$onDidChangeIsConnectionMetered(isMetered);
+				},
+			),
+		);
 	}
 }

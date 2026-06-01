@@ -4,38 +4,69 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it } from 'vitest';
-import { buildSandboxConfigForCLI, IAgentSandboxFileSystemSetting } from '../copilotcliSessionService';
+import {
+	buildSandboxConfigForCLI,
+	IAgentSandboxFileSystemSetting,
+} from '../copilotcliSessionService';
 
-function fsFor(platform: NodeJS.Platform, setting: IAgentSandboxFileSystemSetting) {
-	return platform === 'win32' ? { windows: setting } : platform === 'darwin' ? { mac: setting } : { linux: setting };
+function fsFor(
+	platform: NodeJS.Platform,
+	setting: IAgentSandboxFileSystemSetting,
+) {
+	return platform === 'win32'
+		? { windows: setting }
+		: platform === 'darwin'
+			? { mac: setting }
+			: { linux: setting };
 }
 
 describe('buildSandboxConfigForCLI', () => {
-
 	describe('enablement', () => {
 		it('returns undefined when no setting is set', () => {
-			expect(buildSandboxConfigForCLI('darwin', undefined, undefined)).toBeUndefined();
-			expect(buildSandboxConfigForCLI('win32', undefined, undefined)).toBeUndefined();
+			expect(
+				buildSandboxConfigForCLI('darwin', undefined, undefined),
+			).toBeUndefined();
+			expect(
+				buildSandboxConfigForCLI('win32', undefined, undefined),
+			).toBeUndefined();
 		});
 
 		it('returns undefined for `off`', () => {
-			expect(buildSandboxConfigForCLI('darwin', 'off', undefined)).toBeUndefined();
-			expect(buildSandboxConfigForCLI('win32', 'off', undefined)).toBeUndefined();
+			expect(
+				buildSandboxConfigForCLI('darwin', 'off', undefined),
+			).toBeUndefined();
+			expect(
+				buildSandboxConfigForCLI('win32', 'off', undefined),
+			).toBeUndefined();
 		});
 
 		it('enables sandbox for `on` on non-Windows but not on Windows', () => {
 			expect(buildSandboxConfigForCLI('linux', 'on', undefined)).toEqual({
 				enabled: true,
-				userPolicy: { filesystem: {}, network: { allowOutbound: false } },
+				userPolicy: {
+					filesystem: {},
+					network: { allowOutbound: false },
+				},
 			});
-			expect(buildSandboxConfigForCLI('win32', 'on', undefined)).toBeUndefined();
+			expect(
+				buildSandboxConfigForCLI('win32', 'on', undefined),
+			).toBeUndefined();
 		});
 
 		it('enables sandbox and outbound network for `allowNetwork` on every platform', () => {
 			for (const platform of ['darwin', 'linux', 'win32'] as const) {
-				expect(buildSandboxConfigForCLI(platform, 'allowNetwork', undefined)).toEqual({
+				expect(
+					buildSandboxConfigForCLI(
+						platform,
+						'allowNetwork',
+						undefined,
+					),
+				).toEqual({
 					enabled: true,
-					userPolicy: { filesystem: {}, network: { allowOutbound: true } },
+					userPolicy: {
+						filesystem: {},
+						network: { allowOutbound: true },
+					},
 				});
 			}
 		});
@@ -48,9 +79,18 @@ describe('buildSandboxConfigForCLI', () => {
 				mac: { allowWrite: ['/mac'] },
 				windows: { allowWrite: ['C:\\win'] },
 			};
-			expect(buildSandboxConfigForCLI('linux', 'on', setting)?.userPolicy?.filesystem).toEqual({ readwritePaths: ['/linux'] });
-			expect(buildSandboxConfigForCLI('darwin', 'on', setting)?.userPolicy?.filesystem).toEqual({ readwritePaths: ['/mac'] });
-			expect(buildSandboxConfigForCLI('win32', 'allowNetwork', setting)?.userPolicy?.filesystem).toEqual({ readwritePaths: ['C:\\win'] });
+			expect(
+				buildSandboxConfigForCLI('linux', 'on', setting)?.userPolicy
+					?.filesystem,
+			).toEqual({ readwritePaths: ['/linux'] });
+			expect(
+				buildSandboxConfigForCLI('darwin', 'on', setting)?.userPolicy
+					?.filesystem,
+			).toEqual({ readwritePaths: ['/mac'] });
+			expect(
+				buildSandboxConfigForCLI('win32', 'allowNetwork', setting)
+					?.userPolicy?.filesystem,
+			).toEqual({ readwritePaths: ['C:\\win'] });
 		});
 
 		it('maps each setting to the corresponding SDK list', () => {
@@ -60,7 +100,9 @@ describe('buildSandboxConfigForCLI', () => {
 				denyWrite: ['/readonly'],
 				denyRead: ['/secret'],
 			};
-			expect(buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs))).toEqual({
+			expect(
+				buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs)),
+			).toEqual({
 				enabled: true,
 				userPolicy: {
 					filesystem: {
@@ -74,9 +116,14 @@ describe('buildSandboxConfigForCLI', () => {
 		});
 
 		it('omits filesystem lists that are empty', () => {
-			expect(buildSandboxConfigForCLI('darwin', 'on', { mac: {} })).toEqual({
+			expect(
+				buildSandboxConfigForCLI('darwin', 'on', { mac: {} }),
+			).toEqual({
 				enabled: true,
-				userPolicy: { filesystem: {}, network: { allowOutbound: false } },
+				userPolicy: {
+					filesystem: {},
+					network: { allowOutbound: false },
+				},
 			});
 		});
 
@@ -87,7 +134,10 @@ describe('buildSandboxConfigForCLI', () => {
 				denyWrite: ['/p'],
 				denyRead: ['/p'],
 			};
-			expect(buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs))?.userPolicy?.filesystem).toEqual({
+			expect(
+				buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs))
+					?.userPolicy?.filesystem,
+			).toEqual({
 				deniedPaths: ['/p'],
 			});
 		});
@@ -98,7 +148,10 @@ describe('buildSandboxConfigForCLI', () => {
 				allowWrite: ['/p'],
 				denyWrite: ['/p'],
 			};
-			expect(buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs))?.userPolicy?.filesystem).toEqual({
+			expect(
+				buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs))
+					?.userPolicy?.filesystem,
+			).toEqual({
 				readonlyPaths: ['/p'],
 			});
 		});
@@ -108,7 +161,10 @@ describe('buildSandboxConfigForCLI', () => {
 				allowRead: ['/p'],
 				allowWrite: ['/p'],
 			};
-			expect(buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs))?.userPolicy?.filesystem).toEqual({
+			expect(
+				buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs))
+					?.userPolicy?.filesystem,
+			).toEqual({
 				readwritePaths: ['/p'],
 			});
 		});
@@ -118,7 +174,10 @@ describe('buildSandboxConfigForCLI', () => {
 				allowWrite: ['/work', '/shared'],
 				denyWrite: ['/shared'],
 			};
-			expect(buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs))?.userPolicy?.filesystem).toEqual({
+			expect(
+				buildSandboxConfigForCLI('darwin', 'on', fsFor('darwin', fs))
+					?.userPolicy?.filesystem,
+			).toEqual({
 				readwritePaths: ['/work'],
 				readonlyPaths: ['/shared'],
 			});
@@ -127,27 +186,45 @@ describe('buildSandboxConfigForCLI', () => {
 
 	describe('network hosts', () => {
 		it('forwards allowedHosts and opens outbound even when sandbox is `on`', () => {
-			expect(buildSandboxConfigForCLI('linux', 'on', undefined, { allowedHosts: ['github.com'] })?.userPolicy?.network).toEqual({
+			expect(
+				buildSandboxConfigForCLI('linux', 'on', undefined, {
+					allowedHosts: ['github.com'],
+				})?.userPolicy?.network,
+			).toEqual({
 				allowOutbound: true,
 				allowedHosts: ['github.com'],
 			});
 		});
 
 		it('ignores host lists when sandbox is `allowNetwork` (allow all)', () => {
-			expect(buildSandboxConfigForCLI('linux', 'allowNetwork', undefined, { allowedHosts: ['a.example'], blockedHosts: ['b.example'] })?.userPolicy?.network).toEqual({
+			expect(
+				buildSandboxConfigForCLI('linux', 'allowNetwork', undefined, {
+					allowedHosts: ['a.example'],
+					blockedHosts: ['b.example'],
+				})?.userPolicy?.network,
+			).toEqual({
 				allowOutbound: true,
 			});
 		});
 
 		it('forwards blockedHosts and opens outbound when only blockedHosts is set (deny-list-only allows non-denied domains)', () => {
-			expect(buildSandboxConfigForCLI('linux', 'on', undefined, { blockedHosts: ['evil.example'] })?.userPolicy?.network).toEqual({
+			expect(
+				buildSandboxConfigForCLI('linux', 'on', undefined, {
+					blockedHosts: ['evil.example'],
+				})?.userPolicy?.network,
+			).toEqual({
 				allowOutbound: true,
 				blockedHosts: ['evil.example'],
 			});
 		});
 
 		it('forwards both allowedHosts and blockedHosts together when sandbox is `on`', () => {
-			expect(buildSandboxConfigForCLI('linux', 'on', undefined, { allowedHosts: ['a.example'], blockedHosts: ['b.example'] })?.userPolicy?.network).toEqual({
+			expect(
+				buildSandboxConfigForCLI('linux', 'on', undefined, {
+					allowedHosts: ['a.example'],
+					blockedHosts: ['b.example'],
+				})?.userPolicy?.network,
+			).toEqual({
 				allowOutbound: true,
 				allowedHosts: ['a.example'],
 				blockedHosts: ['b.example'],
@@ -155,10 +232,14 @@ describe('buildSandboxConfigForCLI', () => {
 		});
 
 		it('ignores empty host lists', () => {
-			expect(buildSandboxConfigForCLI('linux', 'on', undefined, { allowedHosts: [], blockedHosts: [] })?.userPolicy?.network).toEqual({
+			expect(
+				buildSandboxConfigForCLI('linux', 'on', undefined, {
+					allowedHosts: [],
+					blockedHosts: [],
+				})?.userPolicy?.network,
+			).toEqual({
 				allowOutbound: false,
 			});
 		});
 	});
 });
-

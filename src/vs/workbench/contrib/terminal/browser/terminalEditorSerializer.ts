@@ -3,20 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isNumber, isObject } from '../../../../base/common/types.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { IEditorSerializer } from '../../../common/editor.js';
-import { EditorInput } from '../../../common/editor/editorInput.js';
-import { ISerializedTerminalEditorInput, ITerminalEditorService, ITerminalInstance, type IDeserializedTerminalEditorInput } from './terminal.js';
-import { TerminalEditorInput } from './terminalEditorInput.js';
+import { isNumber, isObject } from "../../../../base/common/types.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import { IEditorSerializer } from "../../../common/editor.js";
+import { EditorInput } from "../../../common/editor/editorInput.js";
+import {
+	ISerializedTerminalEditorInput,
+	ITerminalEditorService,
+	ITerminalInstance,
+	type IDeserializedTerminalEditorInput,
+} from "./terminal.js";
+import { TerminalEditorInput } from "./terminalEditorInput.js";
 
 export class TerminalInputSerializer implements IEditorSerializer {
 	constructor(
-		@ITerminalEditorService private readonly _terminalEditorService: ITerminalEditorService
-	) { }
+		@ITerminalEditorService
+		private readonly _terminalEditorService: ITerminalEditorService,
+	) {}
 
-	public canSerialize(editorInput: TerminalEditorInput): editorInput is TerminalEditorInput & { readonly terminalInstance: ITerminalInstance } {
-		return isNumber(editorInput.terminalInstance?.persistentProcessId) && editorInput.terminalInstance.shouldPersist;
+	public canSerialize(
+		editorInput: TerminalEditorInput,
+	): editorInput is TerminalEditorInput & {
+		readonly terminalInstance: ITerminalInstance;
+	} {
+		return (
+			isNumber(editorInput.terminalInstance?.persistentProcessId) &&
+			editorInput.terminalInstance.shouldPersist
+		);
 	}
 
 	public serialize(editorInput: TerminalEditorInput): string | undefined {
@@ -26,7 +39,10 @@ export class TerminalInputSerializer implements IEditorSerializer {
 		return JSON.stringify(this._toJson(editorInput.terminalInstance));
 	}
 
-	public deserialize(instantiationService: IInstantiationService, serializedEditorInput: string): EditorInput | undefined {
+	public deserialize(
+		instantiationService: IInstantiationService,
+		serializedEditorInput: string,
+	): EditorInput | undefined {
 		const editorInput = JSON.parse(serializedEditorInput) as unknown;
 		if (!isDeserializedTerminalEditorInput(editorInput)) {
 			throw new Error(`Could not revive terminal editor input, ${editorInput}`);
@@ -40,18 +56,20 @@ export class TerminalInputSerializer implements IEditorSerializer {
 			pid: instance.processId || 0,
 			title: instance.title,
 			titleSource: instance.titleSource,
-			cwd: '',
+			cwd: "",
 			icon: instance.icon,
 			color: instance.color,
 			hasChildProcesses: instance.hasChildProcesses,
 			isFeatureTerminal: instance.shellLaunchConfig.isFeatureTerminal,
 			hideFromUser: instance.shellLaunchConfig.hideFromUser,
 			reconnectionProperties: instance.shellLaunchConfig.reconnectionProperties,
-			shellIntegrationNonce: instance.shellIntegrationNonce
+			shellIntegrationNonce: instance.shellIntegrationNonce,
 		};
 	}
 }
 
-function isDeserializedTerminalEditorInput(obj: unknown): obj is IDeserializedTerminalEditorInput {
-	return isObject(obj) && 'id' in obj && 'pid' in obj;
+function isDeserializedTerminalEditorInput(
+	obj: unknown,
+): obj is IDeserializedTerminalEditorInput {
+	return isObject(obj) && "id" in obj && "pid" in obj;
 }

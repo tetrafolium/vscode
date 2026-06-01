@@ -12,35 +12,55 @@ import * as fetch from '../../networking/common/fetcherService';
 import { IFetcherService } from '../../networking/common/fetcherService';
 import * as types from './snippyTypes';
 
-
 export class SnippyFetchService {
-
 	constructor(
 		@IFetcherService private readonly fetcherService: IFetcherService,
-		@ICAPIClientService private readonly capiClientService: ICAPIClientService,
-		@IAuthenticationService private readonly authService: IAuthenticationService,
-	) {
-	}
+		@ICAPIClientService
+		private readonly capiClientService: ICAPIClientService,
+		@IAuthenticationService
+		private readonly authService: IAuthenticationService,
+	) {}
 
-	public async fetchMatch(source: string, cancellationToken: CancellationToken): Promise<types.MatchResponse.t | undefined> {
+	public async fetchMatch(
+		source: string,
+		cancellationToken: CancellationToken,
+	): Promise<types.MatchResponse.t | undefined> {
 		const body: types.MatchRequest = {
-			source
+			source,
 		};
-		return this.fetch({ type: RequestType.SnippyMatch }, body, types.MatchResponse.to, cancellationToken);
+		return this.fetch(
+			{ type: RequestType.SnippyMatch },
+			body,
+			types.MatchResponse.to,
+			cancellationToken,
+		);
 	}
 
-	public async fetchFilesForMatch(cursor: string, cancellationToken: CancellationToken): Promise<types.FileMatchResponse.t | undefined> {
+	public async fetchFilesForMatch(
+		cursor: string,
+		cancellationToken: CancellationToken,
+	): Promise<types.FileMatchResponse.t | undefined> {
 		const body: types.FileMatchRequest = {
 			cursor,
 		};
-		return this.fetch({ type: RequestType.SnippyFilesForMatch }, body, types.FileMatchResponse.to, cancellationToken);
+		return this.fetch(
+			{ type: RequestType.SnippyFilesForMatch },
+			body,
+			types.FileMatchResponse.to,
+			cancellationToken,
+		);
 	}
 
 	/**
 	 * @throws {CancellationError} if the request is cancelled
 	 * @throws {Error} if the request fails
 	 */
-	public async fetch<T>(requestMetadata: RequestMetadata, requestBody: Record<string, string>, processResponse: (resp: fetch.Response) => T, cancellationToken: CancellationToken): Promise<T> {
+	public async fetch<T>(
+		requestMetadata: RequestMetadata,
+		requestBody: Record<string, string>,
+		processResponse: (resp: fetch.Response) => T,
+		cancellationToken: CancellationToken,
+	): Promise<T> {
 		const abortController = this.fetcherService.makeAbortController();
 		const disposable = cancellationToken.onCancellationRequested(() => {
 			abortController.abort();
@@ -57,7 +77,11 @@ export class SnippyFetchService {
 
 		let fetchResponse: fetch.Response | undefined;
 		try {
-			fetchResponse = await this.capiClientService.makeRequest<fetch.Response>(options, requestMetadata);
+			fetchResponse =
+				await this.capiClientService.makeRequest<fetch.Response>(
+					options,
+					requestMetadata,
+				);
 		} catch (e: unknown) {
 			if (this.fetcherService.isAbortError(e)) {
 				throw new CancellationError();
@@ -68,18 +92,19 @@ export class SnippyFetchService {
 			disposable.dispose();
 		}
 		if (fetchResponse.status !== 200) {
-			throw new Error(`Failed with status ${fetchResponse.status} and body: ${await fetchResponse.text()}`);
+			throw new Error(
+				`Failed with status ${fetchResponse.status} and body: ${await fetchResponse.text()}`,
+			);
 		}
 		const responseBody = await fetchResponse.json();
 		return processResponse(responseBody);
 	}
 
 	private async getHeaders() {
-
 		const token = (await this.authService.getCopilotToken()).token;
 
 		return {
-			authorization: `Bearer ${token}`
+			authorization: `Bearer ${token}`,
 		};
 	}
 }

@@ -63,7 +63,10 @@ export const defaultCppSimilarFilesOptions: SimilarFilesOptions = {
 	maxSnippetsPerFile: 4,
 };
 
-function getMatcher(doc: DocumentInfoWithOffset, selection: SimilarFilesOptions) {
+function getMatcher(
+	doc: DocumentInfoWithOffset,
+	selection: SimilarFilesOptions,
+) {
 	const matcherFactory = selection.useSubsetMatching
 		? BlockTokenSubsetMatcher.FACTORY(selection.snippetLength)
 		: FixedWindowSizeJaccardMatcher.FACTORY(selection.snippetLength);
@@ -76,7 +79,7 @@ function getMatcher(doc: DocumentInfoWithOffset, selection: SimilarFilesOptions)
 export async function getSimilarSnippets(
 	doc: DocumentInfoWithOffset,
 	similarFiles: SimilarFileInfo[],
-	options: SimilarFilesOptions
+	options: SimilarFilesOptions,
 ): Promise<SnippetWithProviderInfo[]> {
 	const matcher = getMatcher(doc, options);
 	if (options.maxTopSnippets === 0) {
@@ -86,30 +89,39 @@ export async function getSimilarSnippets(
 	const snippets = (
 		await similarFiles
 			// filter out absurdly long or absurdly many open files
-			.filter(similarFile => similarFile.source.length < options.maxCharPerFile && similarFile.source.length > 0)
+			.filter(
+				(similarFile) =>
+					similarFile.source.length < options.maxCharPerFile &&
+					similarFile.source.length > 0,
+			)
 			// slice(0) duplicates an array
 			.slice(0, options.maxNumberOfFiles)
 			.reduce(
 				async (
 					acc,
-					similarFile // accumulator of all snippets from all similarFiles
+					similarFile, // accumulator of all snippets from all similarFiles
 				) =>
 					(await acc).concat(
-						(await matcher.findMatches(similarFile, options.maxSnippetsPerFile)).map(snippet => ({
+						(
+							await matcher.findMatches(
+								similarFile,
+								options.maxSnippetsPerFile,
+							)
+						).map((snippet) => ({
 							relativePath: similarFile.relativePath,
 							...snippet,
-						}))
+						})),
 					),
-				Promise.resolve([] as SnippetWithProviderInfo[])
+				Promise.resolve([] as SnippetWithProviderInfo[]),
 			)
 	)
 		.filter(
-			similarFile =>
+			(similarFile) =>
 				// remove files that had no match at all
 				similarFile.score &&
 				similarFile.snippet &&
 				// remove files that had a low score
-				similarFile.score > options.threshold
+				similarFile.score > options.threshold,
 		)
 		// order them with best (highest scores) last
 		.sort((a, b) => a.score - b.score)

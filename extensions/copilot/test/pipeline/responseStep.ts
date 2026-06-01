@@ -45,7 +45,11 @@ export function applyEditsToContent(
  * and groups consecutive changed lines into `filename:linenum\n-old\n+new` patches.
  */
 export function formatAsCustomDiffPatch(
-	oracleEdits: readonly (readonly [start: number, endEx: number, text: string])[],
+	oracleEdits: readonly (readonly [
+		start: number,
+		endEx: number,
+		text: string,
+	])[],
 	docContent: string,
 	filePath: string,
 ): string {
@@ -91,26 +95,32 @@ export function formatAsCustomDiffPatch(
 
 		// PatchBased02 handler requires both removed and added lines
 		if (removedLines.length > 0 && addedLines.length > 0) {
-			patches.push([
-				`${filePath}:${startLine}`,
-				...removedLines.map(l => `-${l}`),
-				...addedLines.map(l => `+${l}`),
-			].join('\n'));
+			patches.push(
+				[
+					`${filePath}:${startLine}`,
+					...removedLines.map((l) => `-${l}`),
+					...addedLines.map((l) => `+${l}`),
+				].join('\n'),
+			);
 		} else if (removedLines.length > 0) {
-			patches.push([
-				`${filePath}:${startLine}`,
-				...removedLines.map(l => `-${l}`),
-				`+`,
-			].join('\n'));
+			patches.push(
+				[
+					`${filePath}:${startLine}`,
+					...removedLines.map((l) => `-${l}`),
+					`+`,
+				].join('\n'),
+			);
 		} else if (addedLines.length > 0) {
 			// Pure insertion — use previous line as anchor
 			const anchorLine = startLine > 0 ? oldLines[startLine - 1] : '';
-			patches.push([
-				`${filePath}:${Math.max(0, startLine - 1)}`,
-				`-${anchorLine}`,
-				`+${anchorLine}`,
-				...addedLines.map(l => `+${l}`),
-			].join('\n'));
+			patches.push(
+				[
+					`${filePath}:${Math.max(0, startLine - 1)}`,
+					`-${anchorLine}`,
+					`+${anchorLine}`,
+					...addedLines.map((l) => `+${l}`),
+				].join('\n'),
+			);
 		}
 	}
 
@@ -121,12 +131,14 @@ export function formatAsCustomDiffPatch(
  * Parse the edit window content from a generated user prompt.
  * Looks for content between `<|code_to_edit|>` and `<|/code_to_edit|>` tags.
  */
-export function parseEditWindowFromPrompt(userPrompt: string): {
-	/** The raw lines between the tags (may include line numbers) */
-	lines: string[];
-	/** Number of lines in the edit window */
-	lineCount: number;
-} | undefined {
+export function parseEditWindowFromPrompt(userPrompt: string):
+	| {
+			/** The raw lines between the tags (may include line numbers) */
+			lines: string[];
+			/** Number of lines in the edit window */
+			lineCount: number;
+	  }
+	| undefined {
 	const startTag = '<|code_to_edit|>';
 	const endTag = '<|/code_to_edit|>';
 
@@ -137,7 +149,10 @@ export function parseEditWindowFromPrompt(userPrompt: string): {
 		return undefined;
 	}
 
-	const windowContent = userPrompt.substring(startIdx + startTag.length, endIdx);
+	const windowContent = userPrompt.substring(
+		startIdx + startTag.length,
+		endIdx,
+	);
 	const lines = windowContent.split('\n');
 
 	// Trim leading/trailing empty lines from tag placement
@@ -187,7 +202,11 @@ function countNewlines(s: string, start: number, endEx: number): number {
  * dropped without affecting the in-window ones around them.
  */
 export function filterEditsInsideEditWindow(
-	oracleEdits: readonly (readonly [start: number, endEx: number, text: string])[],
+	oracleEdits: readonly (readonly [
+		start: number,
+		endEx: number,
+		text: string,
+	])[],
 	docContent: string,
 	windowStart: number,
 	windowEnd: number,
@@ -199,8 +218,12 @@ export function filterEditsInsideEditWindow(
 	const kept: (readonly [start: number, endEx: number, text: string])[] = [];
 	let droppedCount = 0;
 	for (const edit of oracleEdits) {
-		const [editStartLine, editEndLine] = getEditLineRange(transformer, edit);
-		const fullyInside = editStartLine >= windowStart && editEndLine < windowEnd;
+		const [editStartLine, editEndLine] = getEditLineRange(
+			transformer,
+			edit,
+		);
+		const fullyInside =
+			editStartLine >= windowStart && editEndLine < windowEnd;
 		if (fullyInside) {
 			kept.push(edit);
 		} else {
@@ -228,7 +251,11 @@ export function filterEditsInsideEditWindow(
  *     can spot silent data loss.
  */
 export function formatAsEditWindowOnly(
-	oracleEdits: readonly (readonly [start: number, endEx: number, text: string])[],
+	oracleEdits: readonly (readonly [
+		start: number,
+		endEx: number,
+		text: string,
+	])[],
 	docContent: string,
 	editWindowStartLine: number,
 	editWindowLineCount: number,
@@ -237,7 +264,10 @@ export function formatAsEditWindowOnly(
 	const windowEnd = editWindowStartLine + editWindowLineCount;
 
 	const { kept, droppedCount } = filterEditsInsideEditWindow(
-		oracleEdits, docContent, windowStart, windowEnd,
+		oracleEdits,
+		docContent,
+		windowStart,
+		windowEnd,
 	);
 
 	const modifiedContent = applyEditsToContent(docContent, kept);
@@ -254,7 +284,10 @@ export function formatAsEditWindowOnly(
 		netLineChange += newNewlines - oldNewlines;
 	}
 
-	const newEndLine = Math.min(windowEnd + netLineChange, modifiedLines.length);
+	const newEndLine = Math.min(
+		windowEnd + netLineChange,
+		modifiedLines.length,
+	);
 	const windowLines = modifiedLines.slice(windowStart, newEndLine);
 
 	return { assistant: windowLines.join('\n'), droppedCount };
@@ -277,7 +310,7 @@ export function findEditWindowStartLine(
 	// Strip line numbers and <|cursor|> tags for matching against document content
 	const cleanedWindowLines = editWindowLines.map(stripLineNumber);
 	const cursorTag = '<|cursor|>';
-	const matchLines = cleanedWindowLines.map(l => l.replace(cursorTag, ''));
+	const matchLines = cleanedWindowLines.map((l) => l.replace(cursorTag, ''));
 
 	const firstWindowLine = matchLines[0];
 	for (let i = 0; i <= docLines.length - matchLines.length; i++) {
@@ -320,7 +353,9 @@ function stripLineNumber(line: string): string {
  */
 export function generateResponse(
 	responseFormat: ResponseFormat,
-	edits: readonly (readonly [start: number, endEx: number, text: string])[] | undefined,
+	edits:
+		| readonly (readonly [start: number, endEx: number, text: string])[]
+		| undefined,
 	docContent: string,
 	filePath: string,
 	userPrompt: string,
@@ -334,7 +369,13 @@ export function generateResponse(
 		case ResponseFormat.CustomDiffPatch:
 			return generateCustomDiffPatchResponse(edits, docContent, filePath);
 		case ResponseFormat.EditWindowOnly:
-			return generateEditWindowOnlyResponse(edits, docContent, filePath, userPrompt, log);
+			return generateEditWindowOnlyResponse(
+				edits,
+				docContent,
+				filePath,
+				userPrompt,
+				log,
+			);
 		case ResponseFormat.UnifiedWithXml:
 		case ResponseFormat.CodeBlock:
 		case ResponseFormat.EditWindowWithEditIntent:
@@ -352,7 +393,9 @@ function generateCustomDiffPatchResponse(
 ): IGeneratedResponse | { error: string } {
 	const assistant = formatAsCustomDiffPatch(edits, docContent, filePath);
 	if (!assistant) {
-		return { error: `formatAsCustomDiffPatch produced empty result (file: ${filePath}, ${edits.length} edits)` };
+		return {
+			error: `formatAsCustomDiffPatch produced empty result (file: ${filePath}, ${edits.length} edits)`,
+		};
 	}
 	return { assistant };
 }
@@ -374,31 +417,46 @@ function generateEditWindowOnlyResponse(
 		lineCount = editWindow.lineCount;
 	} else {
 		const transformer = new StringText(docContent).getTransformer();
-		const editStartLine = transformer.getPosition(edits[0][0]).lineNumber - 1;
+		const editStartLine =
+			transformer.getPosition(edits[0][0]).lineNumber - 1;
 		const lastEdit = edits[edits.length - 1];
 		const editEndLine = transformer.getPosition(lastEdit[1]).lineNumber - 1;
 		const editSpan = editEndLine - editStartLine + 1;
 		const padding = Math.max(10, Math.floor(editSpan * 0.5));
 		const docLines = splitLines(docContent);
 		startLine = Math.max(0, editStartLine - padding);
-		lineCount = Math.min(editSpan + padding * 2, docLines.length - startLine);
+		lineCount = Math.min(
+			editSpan + padding * 2,
+			docLines.length - startLine,
+		);
 	}
 
-	const { assistant, droppedCount } = formatAsEditWindowOnly(edits, docContent, startLine, lineCount);
+	const { assistant, droppedCount } = formatAsEditWindowOnly(
+		edits,
+		docContent,
+		startLine,
+		lineCount,
+	);
 
 	if (droppedCount > 0) {
-		log?.(`[${filePath}] dropped ${droppedCount}/${edits.length} oracle edit(s) outside edit window [${startLine}, ${startLine + lineCount})`);
+		log?.(
+			`[${filePath}] dropped ${droppedCount}/${edits.length} oracle edit(s) outside edit window [${startLine}, ${startLine + lineCount})`,
+		);
 	}
 
 	if (!assistant || !assistant.trim()) {
-		return { error: `formatAsEditWindowOnly produced empty result (file: ${filePath}, ${edits.length} edits, ${droppedCount} dropped, window: ${startLine}+${lineCount})` };
+		return {
+			error: `formatAsEditWindowOnly produced empty result (file: ${filePath}, ${edits.length} edits, ${droppedCount} dropped, window: ${startLine}+${lineCount})`,
+		};
 	}
 	return { assistant, droppedEditCount: droppedCount };
 }
 
 export interface IResponseGenerationInput {
 	readonly index: number;
-	readonly oracleEdits: readonly (readonly [start: number, endEx: number, text: string])[] | undefined;
+	readonly oracleEdits:
+		| readonly (readonly [start: number, endEx: number, text: string])[]
+		| undefined;
 	readonly docContent: string;
 	readonly filePath: string;
 	readonly userPrompt: string;
@@ -418,7 +476,9 @@ export function generateAllResponses(
 	for (const input of inputs) {
 		const result = generateResponse(
 			responseFormat,
-			input.oracleEdits, input.docContent, input.filePath,
+			input.oracleEdits,
+			input.docContent,
+			input.filePath,
 			input.userPrompt,
 			log,
 		);

@@ -12,18 +12,31 @@ import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 
 import { IAuthenticationService } from '../../authentication/common/authentication';
-import { ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { IEnvService } from '../../env/common/envService';
-import { GitHubOutageStatus, IOctoKitService } from '../../github/common/githubService';
+import {
+	GitHubOutageStatus,
+	IOctoKitService,
+} from '../../github/common/githubService';
 import { ILogService } from '../../log/common/logService';
 import { getRequest } from '../../networking/common/networking';
 import { IRequestLogger } from '../../requestLogger/common/requestLogger';
 import { IExperimentationService } from '../../telemetry/common/nullExperimentationService';
 import { getModelCapabilityOverride } from '../common/chatModelCapabilities';
-import { IChatModelInformation, ICompletionModelInformation, IEmbeddingModelInformation, IModelAPIResponse, isChatModelInformation, isCompletionModelInformation, isEmbeddingModelInformation } from '../common/endpointProvider';
+import {
+	IChatModelInformation,
+	ICompletionModelInformation,
+	IEmbeddingModelInformation,
+	IModelAPIResponse,
+	isChatModelInformation,
+	isCompletionModelInformation,
+	isEmbeddingModelInformation,
+} from '../common/endpointProvider';
 
 export interface IModelMetadataFetcher {
-
 	/**
 	 * Fires whenever we refresh the models from the server.
 	 * Does not always indicate there is a change, just that the data is fresh
@@ -33,7 +46,9 @@ export interface IModelMetadataFetcher {
 	/**
 	 * Gets all the completion models known by the model fetcher endpoint
 	 */
-	getAllCompletionModels(forceRefresh: boolean): Promise<ICompletionModelInformation[]>;
+	getAllCompletionModels(
+		forceRefresh: boolean,
+	): Promise<ICompletionModelInformation[]>;
 
 	/**
 	 * Gets all the chat models known by the model fetcher endpoint
@@ -61,13 +76,17 @@ export interface IModelMetadataFetcher {
 	 * @param id The id of the chat model you want to get
 	 * @returns The chat model information if found, otherwise undefined
 	 */
-	getChatModelFromApiModel(model: LanguageModelChat): Promise<IChatModelInformation | undefined>;
+	getChatModelFromApiModel(
+		model: LanguageModelChat,
+	): Promise<IChatModelInformation | undefined>;
 
 	/**
 	 * Retrieves an embeddings model by its family name
 	 * @param family The family of the model to fetch
 	 */
-	getEmbeddingsModel(family: 'text-embedding-3-small'): Promise<IEmbeddingModelInformation>;
+	getEmbeddingsModel(
+		family: 'text-embedding-3-small',
+	): Promise<IEmbeddingModelInformation>;
 }
 
 /**
@@ -75,15 +94,19 @@ export interface IModelMetadataFetcher {
  * This is solely owned by the EndpointProvider (and TestEndpointProvider) which uses this service to power server side rollout of models
  * All model acquisition should be done through the EndpointProvider
  */
-export class ModelMetadataFetcher extends Disposable implements IModelMetadataFetcher {
-
+export class ModelMetadataFetcher
+	extends Disposable
+	implements IModelMetadataFetcher
+{
 	private static readonly ALL_MODEL_KEY = 'allModels';
 
 	private _familyMap: Map<string, IModelAPIResponse[]> = new Map();
 	private _completionsFamilyMap: Map<string, IModelAPIResponse[]> = new Map();
 	private _copilotUtilityModel: IModelAPIResponse | undefined;
 	private _lastFetchTime: number = 0;
-	private readonly _taskSingler = new TaskSingler<IModelAPIResponse | undefined | void>();
+	private readonly _taskSingler = new TaskSingler<
+		IModelAPIResponse | undefined | void
+	>();
 	private _lastFetchError: any;
 
 	private readonly _onDidModelRefresh = new Emitter<void>();
@@ -93,29 +116,40 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 		protected readonly _isModelLab: boolean,
 		@IOctoKitService private readonly _octoKitService: IOctoKitService,
 		@IRequestLogger private readonly _requestLogger: IRequestLogger,
-		@IConfigurationService private readonly _configService: IConfigurationService,
-		@IExperimentationService private readonly _expService: IExperimentationService,
+		@IConfigurationService
+		private readonly _configService: IConfigurationService,
+		@IExperimentationService
+		private readonly _expService: IExperimentationService,
 		@IEnvService private readonly _envService: IEnvService,
-		@IAuthenticationService private readonly _authService: IAuthenticationService,
+		@IAuthenticationService
+		private readonly _authService: IAuthenticationService,
 		@ILogService private readonly _logService: ILogService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 	) {
 		super();
-		this._register(this._authService.onDidAuthenticationChange(() => {
-			// Auth changed so next fetch should be forced to get a new list
+		this._register(
+			this._authService.onDidAuthenticationChange(() => {
+				// Auth changed so next fetch should be forced to get a new list
 
-			// Only clear the family map if the copilot token is undefined, as this means the user has logged out and we should clear the models, otherwise we want to keep the old models around until we get a new list
-			if (this._authService.copilotToken === undefined) {
-				this._familyMap.clear();
-			}
+				// Only clear the family map if the copilot token is undefined, as this means the user has logged out and we should clear the models, otherwise we want to keep the old models around until we get a new list
+				if (this._authService.copilotToken === undefined) {
+					this._familyMap.clear();
+				}
 
-			this._completionsFamilyMap.clear();
-			this._lastFetchTime = 0;
-		}));
+				this._completionsFamilyMap.clear();
+				this._lastFetchTime = 0;
+			}),
+		);
 	}
 
-	public async getAllCompletionModels(forceRefresh: boolean): Promise<ICompletionModelInformation[]> {
-		await this._taskSingler.getOrCreate(ModelMetadataFetcher.ALL_MODEL_KEY, () => this._fetchModels(forceRefresh));
+	public async getAllCompletionModels(
+		forceRefresh: boolean,
+	): Promise<ICompletionModelInformation[]> {
+		await this._taskSingler.getOrCreate(
+			ModelMetadataFetcher.ALL_MODEL_KEY,
+			() => this._fetchModels(forceRefresh),
+		);
 		const completionModels: ICompletionModelInformation[] = [];
 		for (const [, models] of this._completionsFamilyMap) {
 			for (const model of models) {
@@ -128,7 +162,10 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 	}
 
 	public async getAllChatModels(): Promise<IChatModelInformation[]> {
-		await this._taskSingler.getOrCreate(ModelMetadataFetcher.ALL_MODEL_KEY, this._fetchModels.bind(this));
+		await this._taskSingler.getOrCreate(
+			ModelMetadataFetcher.ALL_MODEL_KEY,
+			this._fetchModels.bind(this),
+		);
 		const chatModels: IChatModelInformation[] = [];
 		for (const [, models] of this._familyMap) {
 			for (const model of models) {
@@ -145,26 +182,52 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 	 * @param resolvedModel The resolved model to hydrate
 	 * @returns The resolved model with proper exp overrides and token counts
 	 */
-	private async _hydrateResolvedModel(resolvedModel: IModelAPIResponse | undefined): Promise<IModelAPIResponse> {
+	private async _hydrateResolvedModel(
+		resolvedModel: IModelAPIResponse | undefined,
+	): Promise<IModelAPIResponse> {
 		if (!resolvedModel) {
-			throw this._lastFetchError ?? new Error(await this._getErrorMessage('Unable to resolve model'));
+			throw (
+				this._lastFetchError ??
+				new Error(
+					await this._getErrorMessage('Unable to resolve model'),
+				)
+			);
 		}
 
 		// If it's a chat model, update max prompt tokens based on settings + exp
-		if (isChatModelInformation(resolvedModel) && (resolvedModel.capabilities.limits)) {
-			resolvedModel.capabilities.limits.max_prompt_tokens = this._getMaxPromptTokensOverride(resolvedModel);
+		if (
+			isChatModelInformation(resolvedModel) &&
+			resolvedModel.capabilities.limits
+		) {
+			resolvedModel.capabilities.limits.max_prompt_tokens =
+				this._getMaxPromptTokensOverride(resolvedModel);
 			// Also ensure prompt tokens + output tokens <= context window. Output tokens is capped to max 15% input tokens
-			const outputTokens = Math.floor(Math.min(resolvedModel.capabilities.limits.max_output_tokens ?? 4096, resolvedModel.capabilities.limits.max_prompt_tokens * 0.15));
-			const contextWindow = resolvedModel.capabilities.limits.max_context_window_tokens ?? (outputTokens + resolvedModel.capabilities.limits.max_prompt_tokens);
-			resolvedModel.capabilities.limits.max_prompt_tokens = Math.min(resolvedModel.capabilities.limits.max_prompt_tokens, contextWindow - outputTokens);
+			const outputTokens = Math.floor(
+				Math.min(
+					resolvedModel.capabilities.limits.max_output_tokens ?? 4096,
+					resolvedModel.capabilities.limits.max_prompt_tokens * 0.15,
+				),
+			);
+			const contextWindow =
+				resolvedModel.capabilities.limits.max_context_window_tokens ??
+				outputTokens +
+					resolvedModel.capabilities.limits.max_prompt_tokens;
+			resolvedModel.capabilities.limits.max_prompt_tokens = Math.min(
+				resolvedModel.capabilities.limits.max_prompt_tokens,
+				contextWindow - outputTokens,
+			);
 		}
 
 		// If it's a chat model, update showInModelPicker based on experiment overrides
 		if (isChatModelInformation(resolvedModel)) {
-			resolvedModel.model_picker_enabled = this._getShowInModelPickerOverride(resolvedModel);
+			resolvedModel.model_picker_enabled =
+				this._getShowInModelPickerOverride(resolvedModel);
 		}
 
-		if (resolvedModel.preview && !resolvedModel.name.endsWith('(Preview)')) {
+		if (
+			resolvedModel.preview &&
+			!resolvedModel.name.endsWith('(Preview)')
+		) {
 			// If the model is a preview model, we append (Preview) to the name
 			resolvedModel.name = `${resolvedModel.name} (Preview)`;
 		}
@@ -172,37 +235,63 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 	}
 
 	public async getCopilotUtilityModel(): Promise<IChatModelInformation> {
-		await this._taskSingler.getOrCreate(ModelMetadataFetcher.ALL_MODEL_KEY, this._fetchModels.bind(this));
+		await this._taskSingler.getOrCreate(
+			ModelMetadataFetcher.ALL_MODEL_KEY,
+			this._fetchModels.bind(this),
+		);
 		const resolvedModel = this._copilotUtilityModel;
 		if (!resolvedModel || !isChatModelInformation(resolvedModel)) {
-			throw new Error(await this._getErrorMessage('Unable to resolve Copilot utility chat model (server did not mark a chat fallback model)'));
+			throw new Error(
+				await this._getErrorMessage(
+					'Unable to resolve Copilot utility chat model (server did not mark a chat fallback model)',
+				),
+			);
 		}
 		return resolvedModel;
 	}
 
-	public async getChatModelFromCapiFamily(family: string): Promise<IChatModelInformation> {
-		await this._taskSingler.getOrCreate(ModelMetadataFetcher.ALL_MODEL_KEY, this._fetchModels.bind(this));
+	public async getChatModelFromCapiFamily(
+		family: string,
+	): Promise<IChatModelInformation> {
+		await this._taskSingler.getOrCreate(
+			ModelMetadataFetcher.ALL_MODEL_KEY,
+			this._fetchModels.bind(this),
+		);
 		const resolvedModel = this._familyMap.get(family)?.[0];
 		if (!resolvedModel || !isChatModelInformation(resolvedModel)) {
-			throw new Error(await this._getErrorMessage(`Unable to resolve chat model with CAPI family selection: ${family}`));
+			throw new Error(
+				await this._getErrorMessage(
+					`Unable to resolve chat model with CAPI family selection: ${family}`,
+				),
+			);
 		}
 		return resolvedModel;
 	}
 
-	public async getChatModelFromApiModel(apiModel: LanguageModelChat): Promise<IChatModelInformation | undefined> {
-		await this._taskSingler.getOrCreate(ModelMetadataFetcher.ALL_MODEL_KEY, this._fetchModels.bind(this));
+	public async getChatModelFromApiModel(
+		apiModel: LanguageModelChat,
+	): Promise<IChatModelInformation | undefined> {
+		await this._taskSingler.getOrCreate(
+			ModelMetadataFetcher.ALL_MODEL_KEY,
+			this._fetchModels.bind(this),
+		);
 		// `apiModel.family` may have been rewritten by a configured capability
 		// override (see `chat.modelCapabilityOverrides`). When an override is
 		// configured for this model id, drop the family check entirely and rely
 		// on id + version to uniquely identify the CAPI model (the picker would
 		// otherwise carry the overridden family and never re-match the real one).
-		const hasOverride = getModelCapabilityOverride(apiModel.id, this._configService)?.family !== undefined;
+		const hasOverride =
+			getModelCapabilityOverride(apiModel.id, this._configService)
+				?.family !== undefined;
 		let resolvedModel: IModelAPIResponse | undefined;
 		for (const models of this._familyMap.values()) {
-			resolvedModel = models.find(model =>
-				model.id === apiModel.id &&
-				model.version === apiModel.version &&
-				(hasOverride || model.capabilities.family === apiModel.family));
+			resolvedModel = models.find(
+				(model) =>
+					model.id === apiModel.id &&
+					model.version === apiModel.version &&
+					(hasOverride ||
+						model.capabilities.family === apiModel.family),
+			);
 			if (resolvedModel) {
 				break;
 			}
@@ -211,16 +300,29 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 			return;
 		}
 		if (!isChatModelInformation(resolvedModel)) {
-			throw new Error(await this._getErrorMessage(`Unable to resolve chat model: ${apiModel.id},${apiModel.name},${apiModel.version},${apiModel.family}`));
+			throw new Error(
+				await this._getErrorMessage(
+					`Unable to resolve chat model: ${apiModel.id},${apiModel.name},${apiModel.version},${apiModel.family}`,
+				),
+			);
 		}
 		return resolvedModel;
 	}
 
-	public async getEmbeddingsModel(family: 'text-embedding-3-small'): Promise<IEmbeddingModelInformation> {
-		await this._taskSingler.getOrCreate(ModelMetadataFetcher.ALL_MODEL_KEY, this._fetchModels.bind(this));
+	public async getEmbeddingsModel(
+		family: 'text-embedding-3-small',
+	): Promise<IEmbeddingModelInformation> {
+		await this._taskSingler.getOrCreate(
+			ModelMetadataFetcher.ALL_MODEL_KEY,
+			this._fetchModels.bind(this),
+		);
 		const resolvedModel = this._familyMap.get(family)?.[0];
 		if (!resolvedModel || !isEmbeddingModelInformation(resolvedModel)) {
-			throw new Error(await this._getErrorMessage(`Unable to resolve embeddings model with family selection: ${family}`));
+			throw new Error(
+				await this._getErrorMessage(
+					`Unable to resolve embeddings model with family selection: ${family}`,
+				),
+			);
 		}
 		return resolvedModel;
 	}
@@ -265,32 +367,50 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 		}
 
 		const requestId = generateUuid();
-		const requestMetadata: RequestMetadata = { type: RequestType.Models, isModelLab: this._isModelLab };
+		const requestMetadata: RequestMetadata = {
+			type: RequestType.Models,
+			isModelLab: this._isModelLab,
+		};
 
 		try {
-			const response = await this._instantiationService.invokeFunction(getRequest, {
-				endpointOrUrl: requestMetadata,
-				secretKey: copilotToken,
-				intent: 'model-access',
-				requestId,
-			});
+			const response = await this._instantiationService.invokeFunction(
+				getRequest,
+				{
+					endpointOrUrl: requestMetadata,
+					secretKey: copilotToken,
+					intent: 'model-access',
+					requestId,
+				},
+			);
 
 			this._lastFetchTime = Date.now();
-			this._logService.info(`Fetched model metadata in ${Date.now() - requestStartTime}ms ${requestId}`);
+			this._logService.info(
+				`Fetched model metadata in ${Date.now() - requestStartTime}ms ${requestId}`,
+			);
 
 			if (response.status < 200 || response.status >= 300) {
 				// If we're rate limited and have models, we should just return
 				if (response.status === 429 && this._familyMap.size > 0) {
-					this._logService.warn(`Rate limited while fetching models ${requestId}`);
+					this._logService.warn(
+						`Rate limited while fetching models ${requestId}`,
+					);
 					return;
 				}
-				throw new Error(await this._getErrorMessage(`Failed to fetch models (${requestId}): ${(await response.text()) || response.statusText || `HTTP ${response.status}`}`));
+				throw new Error(
+					await this._getErrorMessage(
+						`Failed to fetch models (${requestId}): ${(await response.text()) || response.statusText || `HTTP ${response.status}`}`,
+					),
+				);
 			}
 
 			this._familyMap.clear();
 
 			const data: IModelAPIResponse[] = (await response.json()).data;
-			this._requestLogger.logModelListCall(requestId, requestMetadata, data);
+			this._requestLogger.logModelListCall(
+				requestId,
+				requestMetadata,
+				data,
+			);
 			for (let model of data) {
 				model = await this._hydrateResolvedModel(model);
 				const isCompletionModel = isCompletionModelInformation(model);
@@ -299,7 +419,9 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 					this._copilotUtilityModel = model;
 				}
 				const family = model.capabilities.family;
-				const familyMap = isCompletionModel ? this._completionsFamilyMap : this._familyMap;
+				const familyMap = isCompletionModel
+					? this._completionsFamilyMap
+					: this._familyMap;
 				if (!familyMap.has(family)) {
 					familyMap.set(family, []);
 				}
@@ -315,9 +437,13 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 	}
 
 	// get ChatMaxNumTokens from config for experimentation
-	private _getMaxPromptTokensOverride(chatModelInfo: IChatModelInformation): number {
+	private _getMaxPromptTokensOverride(
+		chatModelInfo: IChatModelInformation,
+	): number {
 		// check debug override ChatMaxTokenNum
-		const chatMaxTokenNumOverride = this._configService.getConfig(ConfigKey.TeamInternal.DebugOverrideChatMaxTokenNum); // can only be set by internal users
+		const chatMaxTokenNumOverride = this._configService.getConfig(
+			ConfigKey.TeamInternal.DebugOverrideChatMaxTokenNum,
+		); // can only be set by internal users
 		// Base 3 tokens for each OpenAI completion
 		let modelLimit = -3;
 		// if option is set, takes precedence over any other logic
@@ -328,7 +454,9 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 
 		let experimentalOverrides: Record<string, number> = {};
 		try {
-			const expValue = this._expService.getTreatmentVariable<string>('copilotchat.contextWindows');
+			const expValue = this._expService.getTreatmentVariable<string>(
+				'copilotchat.contextWindows',
+			);
 			experimentalOverrides = JSON.parse(expValue ?? '{}');
 		} catch {
 			// If the experiment service either is not available or returns a bad value we ignore the overrides
@@ -344,8 +472,12 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 		// prompt token basis so users can opt into the full context window via
 		// the model picker. The configurationSchema default (defaultContextMax)
 		// ensures users aren't billed at the long-context rate without explicit opt-in.
-		if (chatModelInfo.billing?.token_prices?.long_context && chatModelInfo.capabilities?.limits?.max_context_window_tokens) {
-			modelLimit += chatModelInfo.capabilities.limits.max_context_window_tokens;
+		if (
+			chatModelInfo.billing?.token_prices?.long_context &&
+			chatModelInfo.capabilities?.limits?.max_context_window_tokens
+		) {
+			modelLimit +=
+				chatModelInfo.capabilities.limits.max_context_window_tokens;
 			return modelLimit;
 		}
 
@@ -353,9 +485,12 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 		if (chatModelInfo.capabilities?.limits?.max_prompt_tokens) {
 			modelLimit += chatModelInfo.capabilities.limits.max_prompt_tokens;
 			return modelLimit;
-		} else if (chatModelInfo.capabilities.limits?.max_context_window_tokens) {
+		} else if (
+			chatModelInfo.capabilities.limits?.max_context_window_tokens
+		) {
 			// Otherwise return the context window as the prompt tokens for cases where CAPI doesn't configure the prompt tokens
-			modelLimit += chatModelInfo.capabilities.limits.max_context_window_tokens;
+			modelLimit +=
+				chatModelInfo.capabilities.limits.max_context_window_tokens;
 			return modelLimit;
 		}
 
@@ -374,16 +509,23 @@ export class ModelMetadataFetcher extends Disposable implements IModelMetadataFe
 		return fallback;
 	}
 
-	private _getShowInModelPickerOverride(resolvedModel: IModelAPIResponse): boolean {
+	private _getShowInModelPickerOverride(
+		resolvedModel: IModelAPIResponse,
+	): boolean {
 		let modelPickerOverrides: Record<string, boolean> = {};
-		const expResult = this._expService.getTreatmentVariable<string>('copilotchat.showInModelPicker');
+		const expResult = this._expService.getTreatmentVariable<string>(
+			'copilotchat.showInModelPicker',
+		);
 		try {
 			modelPickerOverrides = JSON.parse(expResult || '{}');
 		} catch {
 			// No-op if parsing experiment fails
 		}
 
-		return modelPickerOverrides[resolvedModel.id] ?? resolvedModel.model_picker_enabled;
+		return (
+			modelPickerOverrides[resolvedModel.id] ??
+			resolvedModel.model_picker_enabled
+		);
 	}
 }
 

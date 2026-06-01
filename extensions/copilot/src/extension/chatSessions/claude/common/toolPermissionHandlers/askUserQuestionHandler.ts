@@ -12,7 +12,7 @@ import { IToolsService } from '../../../../tools/common/toolsService';
 import {
 	ClaudeToolPermissionContext,
 	ClaudeToolPermissionResult,
-	IClaudeToolPermissionHandler
+	IClaudeToolPermissionHandler,
 } from '../claudeToolPermission';
 import { registerToolPermissionHandler } from '../claudeToolPermissionRegistry';
 import { ClaudeToolNames } from '../claudeTools';
@@ -25,38 +25,42 @@ import { ClaudeToolNames } from '../claudeTools';
 export class AskUserQuestionHandler implements IClaudeToolPermissionHandler<ClaudeToolNames.AskUserQuestion> {
 	public readonly toolNames = [ClaudeToolNames.AskUserQuestion] as const;
 
-	constructor(
-		@IToolsService private readonly toolsService: IToolsService,
-	) { }
+	constructor(@IToolsService private readonly toolsService: IToolsService) {}
 
 	public async handle(
 		_toolName: ClaudeToolNames.AskUserQuestion,
 		input: AskUserQuestionInput,
-		context: ClaudeToolPermissionContext
+		context: ClaudeToolPermissionContext,
 	): Promise<ClaudeToolPermissionResult> {
 		try {
-			const result = await this.toolsService.invokeTool(ToolName.CoreAskQuestions, {
-				input,
-				toolInvocationToken: context.toolInvocationToken,
-			}, CancellationToken.None);
+			const result = await this.toolsService.invokeTool(
+				ToolName.CoreAskQuestions,
+				{
+					input,
+					toolInvocationToken: context.toolInvocationToken,
+				},
+				CancellationToken.None,
+			);
 
 			// Parse the result
 			const firstPart = result.content.at(0);
 			if (!(firstPart instanceof LanguageModelTextPart)) {
 				return {
 					behavior: 'deny',
-					message: 'The user cancelled the question'
+					message: 'The user cancelled the question',
 				};
 			}
 
 			const toolResult: IAnswerResult = JSON.parse(firstPart.value);
 
 			// Check if all questions were skipped
-			const allSkipped = Object.values(toolResult.answers).every(a => a.skipped);
+			const allSkipped = Object.values(toolResult.answers).every(
+				(a) => a.skipped,
+			);
 			if (allSkipped) {
 				return {
 					behavior: 'deny',
-					message: 'The user cancelled the question'
+					message: 'The user cancelled the question',
 				};
 			}
 
@@ -78,13 +82,13 @@ export class AskUserQuestionHandler implements IClaudeToolPermissionHandler<Clau
 				behavior: 'allow',
 				updatedInput: {
 					...input,
-					answers
-				}
+					answers,
+				},
 			};
 		} catch {
 			return {
 				behavior: 'deny',
-				message: 'The user cancelled the question'
+				message: 'The user cancelled the question',
 			};
 		}
 	}
@@ -93,5 +97,5 @@ export class AskUserQuestionHandler implements IClaudeToolPermissionHandler<Clau
 // Self-register the handler
 registerToolPermissionHandler(
 	[ClaudeToolNames.AskUserQuestion],
-	AskUserQuestionHandler
+	AskUserQuestionHandler,
 );

@@ -3,26 +3,44 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../base/browser/dom.js';
-import { Gesture, EventType as TouchEventType } from '../../../../../base/browser/touch.js';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { Emitter, Event } from '../../../../../base/common/event.js';
-import { Disposable, DisposableStore } from '../../../../../base/common/lifecycle.js';
-import { autorun } from '../../../../../base/common/observable.js';
-import { localize } from '../../../../../nls.js';
-import { IActionWidgetService } from '../../../../../platform/actionWidget/browser/actionWidget.js';
-import { ActionListItemKind, IActionListDelegate, IActionListItem, IActionListItemHover } from '../../../../../platform/actionWidget/browser/actionList.js';
-import { IOpenerService } from '../../../../../platform/opener/common/opener.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { ExtensionIdentifier } from '../../../../../platform/extensions/common/extensions.js';
-import { IChatSessionProviderOptionItem, IChatSessionProviderOptionModelMetadata, IChatSessionsService } from '../../../../../workbench/contrib/chat/common/chatSessionsService.js';
-import { getModelHoverContent } from '../../../../../workbench/contrib/chat/browser/widget/input/chatModelPicker.js';
-import { IChatEntitlementService } from '../../../../../workbench/services/chat/common/chatEntitlementService.js';
-import { ISessionsManagementService } from '../../../../services/sessions/common/sessionsManagement.js';
-import { ISessionsProvidersService } from '../../../../services/sessions/browser/sessionsProvidersService.js';
-import { CopilotChatSessionsProvider, RemoteNewSession } from './copilotChatSessionsProvider.js';
-import { INewChatModelPickerService } from '../../../chat/browser/newChatModelPicker.js';
-import { reportNewChatPickerClosed } from '../../../chat/browser/newChatPickerTelemetry.js';
+import * as dom from "../../../../../base/browser/dom.js";
+import {
+	Gesture,
+	EventType as TouchEventType,
+} from "../../../../../base/browser/touch.js";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { Emitter, Event } from "../../../../../base/common/event.js";
+import {
+	Disposable,
+	DisposableStore,
+} from "../../../../../base/common/lifecycle.js";
+import { autorun } from "../../../../../base/common/observable.js";
+import { localize } from "../../../../../nls.js";
+import { IActionWidgetService } from "../../../../../platform/actionWidget/browser/actionWidget.js";
+import {
+	ActionListItemKind,
+	IActionListDelegate,
+	IActionListItem,
+	IActionListItemHover,
+} from "../../../../../platform/actionWidget/browser/actionList.js";
+import { IOpenerService } from "../../../../../platform/opener/common/opener.js";
+import { ITelemetryService } from "../../../../../platform/telemetry/common/telemetry.js";
+import { ExtensionIdentifier } from "../../../../../platform/extensions/common/extensions.js";
+import {
+	IChatSessionProviderOptionItem,
+	IChatSessionProviderOptionModelMetadata,
+	IChatSessionsService,
+} from "../../../../../workbench/contrib/chat/common/chatSessionsService.js";
+import { getModelHoverContent } from "../../../../../workbench/contrib/chat/browser/widget/input/chatModelPicker.js";
+import { IChatEntitlementService } from "../../../../../workbench/services/chat/common/chatEntitlementService.js";
+import { ISessionsManagementService } from "../../../../services/sessions/common/sessionsManagement.js";
+import { ISessionsProvidersService } from "../../../../services/sessions/browser/sessionsProvidersService.js";
+import {
+	CopilotChatSessionsProvider,
+	RemoteNewSession,
+} from "./copilotChatSessionsProvider.js";
+import { INewChatModelPickerService } from "../../../chat/browser/newChatModelPicker.js";
+import { reportNewChatPickerClosed } from "../../../chat/browser/newChatPickerTelemetry.js";
 
 const FILTER_THRESHOLD = 10;
 
@@ -40,9 +58,11 @@ interface IModelItem {
  * renders an action list dropdown with the available models.
  */
 export class CloudModelPicker extends Disposable {
-
-	private readonly _onDidChange = this._register(new Emitter<IChatSessionProviderOptionItem>());
-	readonly onDidChange: Event<IChatSessionProviderOptionItem> = this._onDidChange.event;
+	private readonly _onDidChange = this._register(
+		new Emitter<IChatSessionProviderOptionItem>(),
+	);
+	readonly onDidChange: Event<IChatSessionProviderOptionItem> =
+		this._onDidChange.event;
 
 	private _triggerElement: HTMLElement | undefined;
 	private _slotElement: HTMLElement | undefined;
@@ -58,34 +78,52 @@ export class CloudModelPicker extends Disposable {
 	}
 
 	constructor(
-		@IActionWidgetService private readonly actionWidgetService: IActionWidgetService,
-		@ISessionsManagementService sessionsManagementService: ISessionsManagementService,
-		@ISessionsProvidersService sessionsProvidersService: ISessionsProvidersService,
+		@IActionWidgetService
+		private readonly actionWidgetService: IActionWidgetService,
+		@ISessionsManagementService
+		sessionsManagementService: ISessionsManagementService,
+		@ISessionsProvidersService
+		sessionsProvidersService: ISessionsProvidersService,
 		@IChatSessionsService chatSessionsService: IChatSessionsService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
-		@INewChatModelPickerService private readonly newChatModelPickerService: INewChatModelPickerService,
+		@INewChatModelPickerService
+		private readonly newChatModelPickerService: INewChatModelPickerService,
 		@IOpenerService private readonly openerService: IOpenerService,
-		@IChatEntitlementService private readonly chatEntitlementService: IChatEntitlementService,
+		@IChatEntitlementService
+		private readonly chatEntitlementService: IChatEntitlementService,
 	) {
 		super();
-		this._register(this.newChatModelPickerService.registerModelPicker(() => this._showPicker()));
+		this._register(
+			this.newChatModelPickerService.registerModelPicker(() =>
+				this._showPicker(),
+			),
+		);
 
-		this._register(autorun(reader => {
-			const session = sessionsManagementService.activeSession.read(reader);
-			const provider = session ? sessionsProvidersService.getProvider(session.providerId) : undefined;
-			const providerSession = provider instanceof CopilotChatSessionsProvider ? provider.getSession(session!.sessionId) : undefined;
-			if (providerSession instanceof RemoteNewSession) {
-				this._setSession(providerSession);
-			}
-		}));
+		this._register(
+			autorun((reader) => {
+				const session = sessionsManagementService.activeSession.read(reader);
+				const provider = session
+					? sessionsProvidersService.getProvider(session.providerId)
+					: undefined;
+				const providerSession =
+					provider instanceof CopilotChatSessionsProvider
+						? provider.getSession(session!.sessionId)
+						: undefined;
+				if (providerSession instanceof RemoteNewSession) {
+					this._setSession(providerSession);
+				}
+			}),
+		);
 
 		// Also listen directly for option group changes from the extension host,
 		// in case they arrive before the RemoteNewSession relays the event.
-		this._register(chatSessionsService.onDidChangeOptionGroups(() => {
-			if (this._session) {
-				this._loadModels(this._session);
-			}
-		}));
+		this._register(
+			chatSessionsService.onDidChangeOptionGroups(() => {
+				if (this._session) {
+					this._loadModels(this._session);
+				}
+			}),
+		);
 	}
 
 	private _setSession(session: RemoteNewSession): void {
@@ -96,13 +134,18 @@ export class CloudModelPicker extends Disposable {
 		// Sync selected model to the new session
 		if (this._selectedModel) {
 			session.setModelId(this._selectedModel.id);
-			session.setOptionValue('models', { id: this._selectedModel.id, name: this._selectedModel.name });
+			session.setOptionValue("models", {
+				id: this._selectedModel.id,
+				name: this._selectedModel.name,
+			});
 		}
 
 		// Re-load models when option groups change
-		this._sessionDisposables.add(session.onDidChangeOptionGroups(() => {
-			this._loadModels(session);
-		}));
+		this._sessionDisposables.add(
+			session.onDidChangeOptionGroups(() => {
+				this._loadModels(session);
+			}),
+		);
 	}
 
 	/**
@@ -111,31 +154,35 @@ export class CloudModelPicker extends Disposable {
 	render(container: HTMLElement): HTMLElement {
 		this._renderDisposables.clear();
 
-		const slot = dom.append(container, dom.$('.sessions-chat-picker-slot'));
+		const slot = dom.append(container, dom.$(".sessions-chat-picker-slot"));
 		this._slotElement = slot;
 		this._renderDisposables.add({ dispose: () => slot.remove() });
 
-		const trigger = dom.append(slot, dom.$('a.action-label'));
+		const trigger = dom.append(slot, dom.$("a.action-label"));
 		trigger.tabIndex = 0;
-		trigger.role = 'button';
+		trigger.role = "button";
 		this._triggerElement = trigger;
 
 		this._updateTriggerLabel();
 
 		this._renderDisposables.add(Gesture.addTarget(trigger));
 		for (const eventType of [dom.EventType.CLICK, TouchEventType.Tap]) {
-			this._renderDisposables.add(dom.addDisposableListener(trigger, eventType, (e) => {
-				dom.EventHelper.stop(e, true);
-				this._showPicker();
-			}));
+			this._renderDisposables.add(
+				dom.addDisposableListener(trigger, eventType, (e) => {
+					dom.EventHelper.stop(e, true);
+					this._showPicker();
+				}),
+			);
 		}
 
-		this._renderDisposables.add(dom.addDisposableListener(trigger, dom.EventType.KEY_DOWN, (e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				dom.EventHelper.stop(e, true);
-				this._showPicker();
-			}
-		}));
+		this._renderDisposables.add(
+			dom.addDisposableListener(trigger, dom.EventType.KEY_DOWN, (e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					dom.EventHelper.stop(e, true);
+					this._showPicker();
+				}
+			}),
+		);
 
 		return slot;
 	}
@@ -143,7 +190,7 @@ export class CloudModelPicker extends Disposable {
 	private _loadModels(session: RemoteNewSession): void {
 		const modelOption = session.getModelOptionGroup();
 		if (modelOption?.group.items.length) {
-			this._models = modelOption.group.items.map(item => ({
+			this._models = modelOption.group.items.map((item) => ({
 				id: item.id,
 				name: item.name,
 				description: item.description,
@@ -152,7 +199,10 @@ export class CloudModelPicker extends Disposable {
 			}));
 
 			// Select the session's current value, or the default, or the first
-			if (!this._selectedModel || !this._models.some(m => m.id === this._selectedModel!.id)) {
+			if (
+				!this._selectedModel ||
+				!this._models.some((m) => m.id === this._selectedModel!.id)
+			) {
 				const value = modelOption.value;
 				this._selectedModel = value
 					? { id: value.id, name: value.name, description: value.description }
@@ -165,12 +215,18 @@ export class CloudModelPicker extends Disposable {
 	}
 
 	private _showPicker(): void {
-		if (!this._triggerElement || this.actionWidgetService.isVisible || this._models.length === 0) {
+		if (
+			!this._triggerElement ||
+			this.actionWidgetService.isVisible ||
+			this._models.length === 0
+		) {
 			return;
 		}
 
 		const items = this._buildItems();
-		const showFilter = items.filter(i => i.kind === ActionListItemKind.Action).length > FILTER_THRESHOLD;
+		const showFilter =
+			items.filter((i) => i.kind === ActionListItemKind.Action).length >
+			FILTER_THRESHOLD;
 
 		const triggerElement = this._triggerElement;
 		const previousModel = this._selectedModel;
@@ -178,7 +234,7 @@ export class CloudModelPicker extends Disposable {
 			onSelect: (item) => {
 				this.actionWidgetService.hide();
 				reportNewChatPickerClosed(this.telemetryService, {
-					id: 'NewChatCloudModelPicker',
+					id: "NewChatCloudModelPicker",
 					optionIdBefore: previousModel?.id,
 					optionIdAfter: item.id,
 					optionLabelBefore: previousModel?.name,
@@ -187,11 +243,13 @@ export class CloudModelPicker extends Disposable {
 				});
 				this._selectModel(item);
 			},
-			onHide: () => { triggerElement.focus(); },
+			onHide: () => {
+				triggerElement.focus();
+			},
 		};
 
 		this.actionWidgetService.show<IModelItem>(
-			'remoteModelPicker',
+			"remoteModelPicker",
 			false,
 			items,
 			delegate,
@@ -199,35 +257,50 @@ export class CloudModelPicker extends Disposable {
 			undefined,
 			[],
 			{
-				getAriaLabel: (item) => item.label ?? '',
-				getWidgetAriaLabel: () => localize('modelPicker.ariaLabel', "Model Picker"),
+				getAriaLabel: (item) => item.label ?? "",
+				getWidgetAriaLabel: () =>
+					localize("modelPicker.ariaLabel", "Model Picker"),
 			},
-			showFilter ? { showFilter: true, filterPlaceholder: localize('modelPicker.filter', "Filter models...") } : undefined,
+			showFilter
+				? {
+						showFilter: true,
+						filterPlaceholder: localize(
+							"modelPicker.filter",
+							"Filter models...",
+						),
+					}
+				: undefined,
 		);
 	}
 
 	private _buildItems(): IActionListItem<IModelItem>[] {
-		return this._models.map(model => ({
+		return this._models.map((model) => ({
 			kind: ActionListItemKind.Action,
 			label: model.name,
-			group: { title: '', icon: this._selectedModel?.id === model.id ? Codicon.check : Codicon.blank },
+			group: {
+				title: "",
+				icon:
+					this._selectedModel?.id === model.id ? Codicon.check : Codicon.blank,
+			},
 			item: model,
 			hover: this._buildModelHover(model),
 		}));
 	}
 
-	private _buildModelHover(model: IModelItem): IActionListItemHover | undefined {
+	private _buildModelHover(
+		model: IModelItem,
+	): IActionListItemHover | undefined {
 		if (model.modelMetadata) {
 			const isUBB = !!this.chatEntitlementService.quotas.usageBasedBilling;
 			const syntheticModel = {
 				identifier: model.id,
 				metadata: {
-					extension: new ExtensionIdentifier(''),
+					extension: new ExtensionIdentifier(""),
 					name: model.modelMetadata.name,
 					id: model.modelMetadata.id,
-					vendor: model.modelMetadata.vendor ?? '',
-					version: model.modelMetadata.version ?? '',
-					family: model.modelMetadata.family ?? '',
+					vendor: model.modelMetadata.vendor ?? "",
+					version: model.modelMetadata.version ?? "",
+					family: model.modelMetadata.family ?? "",
 					tooltip: model.modelMetadata.tooltip,
 					pricing: model.modelMetadata.pricing,
 					multiplierNumeric: model.modelMetadata.multiplierNumeric,
@@ -240,14 +313,20 @@ export class CloudModelPicker extends Disposable {
 					priceCategory: model.modelMetadata.priceCategory,
 					maxInputTokens: model.modelMetadata.maxInputTokens ?? 0,
 					maxOutputTokens: model.modelMetadata.maxOutputTokens ?? 0,
-					capabilities: model.modelMetadata.capabilities ? {
-						vision: model.modelMetadata.capabilities.vision,
-						toolCalling: model.modelMetadata.capabilities.toolCalling,
-					} : undefined,
+					capabilities: model.modelMetadata.capabilities
+						? {
+								vision: model.modelMetadata.capabilities.vision,
+								toolCalling: model.modelMetadata.capabilities.toolCalling,
+							}
+						: undefined,
 					isDefaultForLocation: {},
 				},
 			};
-			const hover = getModelHoverContent(syntheticModel, this.openerService, isUBB);
+			const hover = getModelHoverContent(
+				syntheticModel,
+				this.openerService,
+				isUBB,
+			);
 			if (hover) {
 				return { content: hover.element, disposable: hover.disposable };
 			}
@@ -264,9 +343,13 @@ export class CloudModelPicker extends Disposable {
 
 		if (this._session) {
 			this._session.setModelId(item.id);
-			this._session.setOptionValue('models', { id: item.id, name: item.name });
+			this._session.setOptionValue("models", { id: item.id, name: item.name });
 		}
-		this._onDidChange.fire({ id: item.id, name: item.name, description: item.description });
+		this._onDidChange.fire({
+			id: item.id,
+			name: item.name,
+			description: item.description,
+		});
 	}
 
 	private _updateTriggerLabel(): void {
@@ -275,14 +358,25 @@ export class CloudModelPicker extends Disposable {
 		}
 
 		dom.clearNode(this._triggerElement);
-		const label = this._selectedModel?.name ?? localize('modelPicker.auto', "Auto");
+		const label =
+			this._selectedModel?.name ?? localize("modelPicker.auto", "Auto");
 
-		const labelSpan = dom.append(this._triggerElement, dom.$('span.sessions-chat-dropdown-label'));
+		const labelSpan = dom.append(
+			this._triggerElement,
+			dom.$("span.sessions-chat-dropdown-label"),
+		);
 		labelSpan.textContent = label;
 
-		this._triggerElement.ariaLabel = localize('modelPicker.triggerAriaLabel', "Pick Model, {0}", label);
+		this._triggerElement.ariaLabel = localize(
+			"modelPicker.triggerAriaLabel",
+			"Pick Model, {0}",
+			label,
+		);
 
-		this._slotElement?.classList.toggle('disabled', this._models.length === 0);
-		this._triggerElement.setAttribute('aria-disabled', String(this._models.length === 0));
+		this._slotElement?.classList.toggle("disabled", this._models.length === 0);
+		this._triggerElement.setAttribute(
+			"aria-disabled",
+			String(this._models.length === 0),
+		);
 	}
 }

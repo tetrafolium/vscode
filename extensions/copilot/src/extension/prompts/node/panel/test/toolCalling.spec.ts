@@ -5,8 +5,14 @@
 
 import { describe, expect, test } from 'vitest';
 import type * as vscode from 'vscode';
-import { IChatHookService, type IPreToolUseHookResult } from '../../../../../platform/chat/common/chatHookService';
-import { ConfigKey, IConfigurationService } from '../../../../../platform/configuration/common/configurationService';
+import {
+	IChatHookService,
+	type IPreToolUseHookResult,
+} from '../../../../../platform/chat/common/chatHookService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../../platform/configuration/common/configurationService';
 import { IEndpointProvider } from '../../../../../platform/endpoint/common/endpointProvider';
 import type { IChatEndpoint } from '../../../../../platform/networking/common/networking';
 import { DeferredPromise } from '../../../../../util/vs/base/common/async';
@@ -16,35 +22,47 @@ import { constObservable } from '../../../../../util/vs/base/common/observable';
 import { IInstantiationService } from '../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry';
 import { SpyingTelemetryService } from '../../../../../platform/telemetry/node/spyingTelemetryService';
-import { LanguageModelDataPart, LanguageModelTextPart, LanguageModelToolResult } from '../../../../../vscodeTypes';
+import {
+	LanguageModelDataPart,
+	LanguageModelTextPart,
+	LanguageModelToolResult,
+} from '../../../../../vscodeTypes';
 import { ChatVariablesCollection } from '../../../../prompt/common/chatVariablesCollection';
 import type { Conversation } from '../../../../prompt/common/conversation';
-import type { IBuildPromptContext, IToolCallRound } from '../../../../prompt/common/intents';
+import type {
+	IBuildPromptContext,
+	IToolCallRound,
+} from '../../../../prompt/common/intents';
 import { createExtensionUnitTestingServices } from '../../../../test/node/services';
 import { ToolName } from '../../../../tools/common/toolNames';
-import { IToolsService, type IToolValidationResult } from '../../../../tools/common/toolsService';
+import {
+	IToolsService,
+	type IToolValidationResult,
+} from '../../../../tools/common/toolsService';
 import { renderPromptElement } from '../../base/promptRenderer';
 import { ChatToolCalls } from '../toolCalling';
 
 class CapturingChatHookService implements IChatHookService {
 	declare readonly _serviceBrand: undefined;
 
-	public lastPreToolUseCall: {
-		readonly toolName: string;
-		readonly toolInput: unknown;
-		readonly toolCallId: string;
-		readonly hooks: vscode.ChatRequestHooks | undefined;
-		readonly sessionId: string | undefined;
-		readonly token: vscode.CancellationToken | undefined;
-	} | undefined;
+	public lastPreToolUseCall:
+		| {
+				readonly toolName: string;
+				readonly toolInput: unknown;
+				readonly toolCallId: string;
+				readonly hooks: vscode.ChatRequestHooks | undefined;
+				readonly sessionId: string | undefined;
+				readonly token: vscode.CancellationToken | undefined;
+		  }
+		| undefined;
 
 	public postToolUseCalled = false;
 
 	constructor(
 		private readonly hookResult: IPreToolUseHookResult | undefined,
-	) { }
+	) {}
 
-	logConfiguredHooks(): void { }
+	logConfiguredHooks(): void {}
 
 	async executeHook(): Promise<never[]> {
 		return [];
@@ -58,7 +76,14 @@ class CapturingChatHookService implements IChatHookService {
 		sessionId?: string,
 		token?: vscode.CancellationToken,
 	): Promise<IPreToolUseHookResult | undefined> {
-		this.lastPreToolUseCall = { toolName, toolInput, toolCallId, hooks, sessionId, token };
+		this.lastPreToolUseCall = {
+			toolName,
+			toolInput,
+			toolCallId,
+			hooks,
+			sessionId,
+			token,
+		};
 		return this.hookResult;
 	}
 
@@ -77,12 +102,14 @@ class CapturingToolsService implements IToolsService {
 	readonly copilotTools = new Map();
 	readonly modelSpecificTools = constObservable([]);
 
-	public lastInvocation: {
-		readonly name: string;
-		readonly options: vscode.LanguageModelToolInvocationOptions<unknown>;
-		readonly endpointModel: string | undefined;
-		readonly token: vscode.CancellationToken;
-	} | undefined;
+	public lastInvocation:
+		| {
+				readonly name: string;
+				readonly options: vscode.LanguageModelToolInvocationOptions<unknown>;
+				readonly endpointModel: string | undefined;
+				readonly token: vscode.CancellationToken;
+		  }
+		| undefined;
 
 	public lastToolResult: vscode.LanguageModelToolResult2 | undefined;
 
@@ -104,14 +131,21 @@ class CapturingToolsService implements IToolsService {
 		endpoint: { model: string } | undefined,
 		token: vscode.CancellationToken,
 	): Promise<vscode.LanguageModelToolResult2> {
-		this.lastInvocation = { name, options, endpointModel: endpoint?.model, token };
-		const result = new LanguageModelToolResult([new LanguageModelTextPart('tool-ok')]);
+		this.lastInvocation = {
+			name,
+			options,
+			endpointModel: endpoint?.model,
+			token,
+		};
+		const result = new LanguageModelToolResult([
+			new LanguageModelTextPart('tool-ok'),
+		]);
 		this.lastToolResult = result;
 		return result;
 	}
 
 	getTool(name: string): vscode.LanguageModelToolInformation | undefined {
-		return this.tools.find(t => t.name === name);
+		return this.tools.find((t) => t.name === name);
 	}
 
 	getToolByToolReferenceName(): undefined {
@@ -141,8 +175,14 @@ class ParallelAwareToolsService implements IToolsService {
 	readonly modelSpecificTools = constObservable([]);
 
 	public readonly startedCallIds: string[] = [];
-	private readonly pendingCalls = new Map<string, DeferredPromise<vscode.LanguageModelToolResult2>>();
-	private readonly startedWaiters: Array<{ expectedCount: number; deferred: DeferredPromise<void> }> = [];
+	private readonly pendingCalls = new Map<
+		string,
+		DeferredPromise<vscode.LanguageModelToolResult2>
+	>();
+	private readonly startedWaiters: Array<{
+		expectedCount: number;
+		deferred: DeferredPromise<void>;
+	}> = [];
 
 	constructor(tool: vscode.LanguageModelToolInformation) {
 		this.tools = [tool];
@@ -162,7 +202,9 @@ class ParallelAwareToolsService implements IToolsService {
 		_endpoint: { model: string } | undefined,
 		_token: vscode.CancellationToken,
 	): Promise<vscode.LanguageModelToolResult2> {
-		const callId = options.chatStreamToolCallId ?? `missing-${this.startedCallIds.length}`;
+		const callId =
+			options.chatStreamToolCallId ??
+			`missing-${this.startedCallIds.length}`;
 		this.startedCallIds.push(callId);
 		this.resolveStartedWaiters();
 		const deferred = new DeferredPromise<vscode.LanguageModelToolResult2>();
@@ -196,12 +238,14 @@ class ParallelAwareToolsService implements IToolsService {
 			throw new Error(`Missing pending call: ${callId}`);
 		}
 
-		void pending.complete(new LanguageModelToolResult([new LanguageModelTextPart(value)]));
+		void pending.complete(
+			new LanguageModelToolResult([new LanguageModelTextPart(value)]),
+		);
 		this.pendingCalls.delete(callId);
 	}
 
 	getTool(name: string): vscode.LanguageModelToolInformation | undefined {
-		return this.tools.find(t => t.name === name);
+		return this.tools.find((t) => t.name === name);
 	}
 
 	getToolByToolReferenceName(): undefined {
@@ -242,15 +286,24 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 		const accessor = testingServiceCollection.createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
 		const endpointProvider = accessor.get(IEndpointProvider);
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 
 		const round: IToolCallRound = {
 			id: 'round-1',
 			response: 'calling sub-agents',
 			toolInputRetry: 0,
 			toolCalls: [
-				{ name: toolName, arguments: JSON.stringify({ query: 'one' }), id: firstCallId },
-				{ name: toolName, arguments: JSON.stringify({ query: 'two' }), id: secondCallId },
+				{
+					name: toolName,
+					arguments: JSON.stringify({ query: 'one' }),
+					id: firstCallId,
+				},
+				{
+					name: toolName,
+					arguments: JSON.stringify({ query: 'two' }),
+					id: secondCallId,
+				},
 			],
 		};
 
@@ -258,7 +311,9 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 			query: 'test',
 			history: [],
 			chatVariables: new ChatVariablesCollection(),
-			conversation: { sessionId: 'session-123' } as unknown as Conversation,
+			conversation: {
+				sessionId: 'session-123',
+			} as unknown as Conversation,
 			request: {} as vscode.ChatRequest,
 			tools: {
 				toolReferences: [],
@@ -267,15 +322,23 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 			},
 		};
 
-		const renderPromise = renderPromptElement(instantiationService, endpoint, ChatToolCalls, {
-			promptContext,
-			toolCallRounds: [round],
-			toolCallResults: undefined,
-		});
+		const renderPromise = renderPromptElement(
+			instantiationService,
+			endpoint,
+			ChatToolCalls,
+			{
+				promptContext,
+				toolCallRounds: [round],
+				toolCallResults: undefined,
+			},
+		);
 
 		await toolsService.waitForStartedCalls(2);
 
-		expect(toolsService.startedCallIds).toEqual([firstCallId, secondCallId]);
+		expect(toolsService.startedCallIds).toEqual([
+			firstCallId,
+			secondCallId,
+		]);
 
 		toolsService.resolveCall(firstCallId);
 		toolsService.resolveCall(secondCallId);
@@ -316,16 +379,21 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 		const accessor = testingServiceCollection.createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
 		const endpointProvider = accessor.get(IEndpointProvider);
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 
 		const round: IToolCallRound = {
 			id: 'round-1',
 			response: 'calling tool',
 			toolInputRetry: 0,
-			toolCalls: [{ name: toolName, arguments: toolArgs, id: toolCallId }],
+			toolCalls: [
+				{ name: toolName, arguments: toolArgs, id: toolCallId },
+			],
 		};
 
-		const conversation = { sessionId: 'session-123' } as unknown as Conversation;
+		const conversation = {
+			sessionId: 'session-123',
+		} as unknown as Conversation;
 		const promptContext: IBuildPromptContext = {
 			query: 'test',
 			history: [],
@@ -339,11 +407,16 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 			},
 		};
 
-		await renderPromptElement(instantiationService, endpoint, ChatToolCalls, {
-			promptContext,
-			toolCallRounds: [round],
-			toolCallResults: undefined,
-		});
+		await renderPromptElement(
+			instantiationService,
+			endpoint,
+			ChatToolCalls,
+			{
+				promptContext,
+				toolCallRounds: [round],
+				toolCallResults: undefined,
+			},
+		);
 
 		// Hook called with validated (original) input
 		expect(hookService.lastPreToolUseCall).toEqual({
@@ -357,7 +430,9 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 
 		// Tool invoked with updatedInput from hook
 		expect(toolsService.lastInvocation?.name).toBe(toolName);
-		expect(toolsService.lastInvocation?.options.input).toEqual(updatedInput);
+		expect(toolsService.lastInvocation?.options.input).toEqual(
+			updatedInput,
+		);
 		expect(toolsService.lastInvocation?.options.preToolUseResult).toEqual({
 			permissionDecision: 'ask',
 			permissionDecisionReason: 'Needs confirmation',
@@ -366,8 +441,11 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 
 		// Hook additionalContext is appended to the tool result content
 		const contentText = (toolsService.lastToolResult?.content ?? [])
-			.filter((p): p is LanguageModelTextPart => p instanceof LanguageModelTextPart)
-			.map(p => p.value)
+			.filter(
+				(p): p is LanguageModelTextPart =>
+					p instanceof LanguageModelTextPart,
+			)
+			.map((p) => p.value)
 			.join('\n');
 		expect(contentText).toContain('<PreToolUse-context>');
 		expect(contentText).toContain(hookContext);
@@ -402,13 +480,16 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 		const accessor = testingServiceCollection.createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
 		const endpointProvider = accessor.get(IEndpointProvider);
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 
 		const round: IToolCallRound = {
 			id: 'round-1',
 			response: 'calling tool',
 			toolInputRetry: 0,
-			toolCalls: [{ name: toolName, arguments: toolArgs, id: toolCallId }],
+			toolCalls: [
+				{ name: toolName, arguments: toolArgs, id: toolCallId },
+			],
 		};
 
 		const hooks: vscode.ChatRequestHooks = { PreToolUse: [] };
@@ -416,7 +497,9 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 			query: 'test',
 			history: [],
 			chatVariables: new ChatVariablesCollection(),
-			conversation: { sessionId: 'session-deny' } as unknown as Conversation,
+			conversation: {
+				sessionId: 'session-deny',
+			} as unknown as Conversation,
 			request: { hooks } as unknown as vscode.ChatRequest,
 			tools: {
 				toolReferences: [],
@@ -425,11 +508,16 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 			},
 		};
 
-		await renderPromptElement(instantiationService, endpoint, ChatToolCalls, {
-			promptContext,
-			toolCallRounds: [round],
-			toolCallResults: undefined,
-		});
+		await renderPromptElement(
+			instantiationService,
+			endpoint,
+			ChatToolCalls,
+			{
+				promptContext,
+				toolCallRounds: [round],
+				toolCallResults: undefined,
+			},
+		);
 
 		// PreToolUse hook was called
 		expect(hookService.lastPreToolUseCall).toBeDefined();
@@ -447,8 +535,11 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 		});
 		// PreToolUse context should still be appended to the tool result
 		const contentText = (toolsService.lastToolResult?.content ?? [])
-			.filter((p): p is LanguageModelTextPart => p instanceof LanguageModelTextPart)
-			.map(p => p.value)
+			.filter(
+				(p): p is LanguageModelTextPart =>
+					p instanceof LanguageModelTextPart,
+			)
+			.map((p) => p.value)
 			.join('\n');
 		expect(contentText).toContain('<PreToolUse-context>');
 		expect(contentText).toContain(denyContext);
@@ -474,15 +565,17 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 		const accessor = testingServiceCollection.createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
 		const endpointProvider = accessor.get(IEndpointProvider);
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 
 		const imageData = new Uint8Array(1024);
-		const toolCallResults: Record<string, vscode.LanguageModelToolResult> = {
-			[toolCallId]: new LanguageModelToolResult([
-				new LanguageModelTextPart('some text result'),
-				LanguageModelDataPart.image(imageData, 'image/png'),
-			]),
-		};
+		const toolCallResults: Record<string, vscode.LanguageModelToolResult> =
+			{
+				[toolCallId]: new LanguageModelToolResult([
+					new LanguageModelTextPart('some text result'),
+					LanguageModelDataPart.image(imageData, 'image/png'),
+				]),
+			};
 
 		const round: IToolCallRound = {
 			id: 'round-1',
@@ -495,7 +588,9 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 			query: 'test',
 			history: [],
 			chatVariables: new ChatVariablesCollection(),
-			conversation: { sessionId: 'session-img' } as unknown as Conversation,
+			conversation: {
+				sessionId: 'session-img',
+			} as unknown as Conversation,
 			request: {} as vscode.ChatRequest,
 			tools: {
 				toolReferences: [],
@@ -504,12 +599,17 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 			},
 		};
 
-		const { messages } = await renderPromptElement(instantiationService, endpoint, ChatToolCalls, {
-			promptContext,
-			toolCallRounds: [round],
-			toolCallResults,
-			isHistorical: true,
-		});
+		const { messages } = await renderPromptElement(
+			instantiationService,
+			endpoint,
+			ChatToolCalls,
+			{
+				promptContext,
+				toolCallRounds: [round],
+				toolCallResults,
+				isHistorical: true,
+			},
+		);
 
 		const serialized = JSON.stringify(messages);
 		expect(serialized).toContain('Image was previously shown to you');
@@ -538,7 +638,8 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 		const accessor = testingServiceCollection.createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
 		const endpointProvider = accessor.get(IEndpointProvider);
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 
 		// Disable image uploads so images go through the base64 path where the budget applies
 		const configService = accessor.get(IConfigurationService);
@@ -546,14 +647,15 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 
 		// Each image is 3MB — individually exceeds the 2.5MB shared budget (half of 5MB CAPI limit)
 		const bigImage = new Uint8Array(3 * 1024 * 1024);
-		const toolCallResults: Record<string, vscode.LanguageModelToolResult> = {
-			[firstCallId]: new LanguageModelToolResult([
-				LanguageModelDataPart.image(bigImage, 'image/png'),
-			]),
-			[secondCallId]: new LanguageModelToolResult([
-				LanguageModelDataPart.image(bigImage, 'image/png'),
-			]),
-		};
+		const toolCallResults: Record<string, vscode.LanguageModelToolResult> =
+			{
+				[firstCallId]: new LanguageModelToolResult([
+					LanguageModelDataPart.image(bigImage, 'image/png'),
+				]),
+				[secondCallId]: new LanguageModelToolResult([
+					LanguageModelDataPart.image(bigImage, 'image/png'),
+				]),
+			};
 
 		const round: IToolCallRound = {
 			id: 'round-1',
@@ -569,7 +671,9 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 			query: 'test',
 			history: [],
 			chatVariables: new ChatVariablesCollection(),
-			conversation: { sessionId: 'session-budget' } as unknown as Conversation,
+			conversation: {
+				sessionId: 'session-budget',
+			} as unknown as Conversation,
 			request: {} as vscode.ChatRequest,
 			tools: {
 				toolReferences: [],
@@ -578,11 +682,16 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 			},
 		};
 
-		const { messages } = await renderPromptElement(instantiationService, endpoint, ChatToolCalls, {
-			promptContext,
-			toolCallRounds: [round],
-			toolCallResults,
-		});
+		const { messages } = await renderPromptElement(
+			instantiationService,
+			endpoint,
+			ChatToolCalls,
+			{
+				promptContext,
+				toolCallRounds: [round],
+				toolCallResults,
+			},
+		);
 
 		const serialized = JSON.stringify(messages);
 		// Both images exceed the 2.5MB shared budget and should be replaced with placeholders
@@ -598,11 +707,15 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 
 		const testingServiceCollection = createExtensionUnitTestingServices();
 		const spyingTelemetryService = new SpyingTelemetryService();
-		testingServiceCollection.define(ITelemetryService, spyingTelemetryService);
+		testingServiceCollection.define(
+			ITelemetryService,
+			spyingTelemetryService,
+		);
 		const accessor = testingServiceCollection.createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
 		const endpointProvider = accessor.get(IEndpointProvider);
-		const endpoint = await endpointProvider.getChatEndpoint('copilot-utility');
+		const endpoint =
+			await endpointProvider.getChatEndpoint('copilot-utility');
 		const telemetryService = accessor.get(ITelemetryService);
 		const configService = accessor.get(IConfigurationService);
 
@@ -634,9 +747,13 @@ describe('ChatToolCalls (toolCalling.tsx)', () => {
 		}).not.toThrow();
 
 		// Give async rendering a moment to complete without unhandled rejection
-		await new Promise(resolve => setTimeout(resolve, 100));
+		await new Promise((resolve) => setTimeout(resolve, 100));
 
-		const telemetryEvent = spyingTelemetryService.getEvents().telemetryServiceEvents.find(event => event.eventName === 'agent.tool.responseLength');
+		const telemetryEvent = spyingTelemetryService
+			.getEvents()
+			.telemetryServiceEvents.find(
+				(event) => event.eventName === 'agent.tool.responseLength',
+			);
 		expect(telemetryEvent).toMatchObject({
 			properties: {
 				conversationId: 'conversation-id',

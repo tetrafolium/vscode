@@ -40,4 +40,3 @@ export interface RequestContext {
 	/** Whether the current request is following an accepted completion. */
 	afterAccept: boolean;
 }
-

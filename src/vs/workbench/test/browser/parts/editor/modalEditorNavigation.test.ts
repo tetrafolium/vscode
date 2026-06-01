@@ -3,23 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { Emitter } from '../../../../../base/common/event.js';
-import { DisposableStore } from '../../../../../base/common/lifecycle.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { IModalEditorNavigation, IModalEditorPartOptions } from '../../../../../platform/editor/common/editor.js';
+import assert from "assert";
+import { Emitter } from "../../../../../base/common/event.js";
+import { DisposableStore } from "../../../../../base/common/lifecycle.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../base/test/common/utils.js";
+import {
+	IModalEditorNavigation,
+	IModalEditorPartOptions,
+} from "../../../../../platform/editor/common/editor.js";
 
 /**
  * Simple test harness that mimics the ModalEditorPartImpl navigation behavior
  * without requiring the full editor part infrastructure.
  */
 class TestModalEditorNavigationHost {
-
-	private readonly _onDidChangeNavigation = new Emitter<IModalEditorNavigation | undefined>();
+	private readonly _onDidChangeNavigation = new Emitter<
+		IModalEditorNavigation | undefined
+	>();
 	readonly onDidChangeNavigation = this._onDidChangeNavigation.event;
 
 	private _navigation: IModalEditorNavigation | undefined;
-	get navigation(): IModalEditorNavigation | undefined { return this._navigation; }
+	get navigation(): IModalEditorNavigation | undefined {
+		return this._navigation;
+	}
 
 	updateOptions(options: IModalEditorPartOptions): void {
 		this._navigation = options.navigation;
@@ -31,25 +37,24 @@ class TestModalEditorNavigationHost {
 	}
 }
 
-suite('Modal Editor Navigation', () => {
-
+suite("Modal Editor Navigation", () => {
 	const disposables = new DisposableStore();
 
 	teardown(() => disposables.clear());
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('updateOptions sets navigation and fires event', () => {
+	test("updateOptions sets navigation and fires event", () => {
 		const host = new TestModalEditorNavigationHost();
 		disposables.add({ dispose: () => host.dispose() });
 
 		const events: (IModalEditorNavigation | undefined)[] = [];
-		disposables.add(host.onDidChangeNavigation(ctx => events.push(ctx)));
+		disposables.add(host.onDidChangeNavigation((ctx) => events.push(ctx)));
 
 		const nav: IModalEditorNavigation = {
 			total: 10,
 			current: 3,
-			navigate: () => { }
+			navigate: () => {},
 		};
 
 		host.updateOptions({ navigation: nav });
@@ -58,17 +63,17 @@ suite('Modal Editor Navigation', () => {
 		assert.deepStrictEqual(events, [nav]);
 	});
 
-	test('updateOptions with undefined navigation clears navigation', () => {
+	test("updateOptions with undefined navigation clears navigation", () => {
 		const host = new TestModalEditorNavigationHost();
 		disposables.add({ dispose: () => host.dispose() });
 
 		const events: (IModalEditorNavigation | undefined)[] = [];
-		disposables.add(host.onDidChangeNavigation(ctx => events.push(ctx)));
+		disposables.add(host.onDidChangeNavigation((ctx) => events.push(ctx)));
 
 		const nav: IModalEditorNavigation = {
 			total: 5,
 			current: 0,
-			navigate: () => { }
+			navigate: () => {},
 		};
 
 		host.updateOptions({ navigation: nav });
@@ -78,7 +83,7 @@ suite('Modal Editor Navigation', () => {
 		assert.deepStrictEqual(events, [nav, undefined]);
 	});
 
-	test('navigate callback updates context', () => {
+	test("navigate callback updates context", () => {
 		const host = new TestModalEditorNavigationHost();
 		disposables.add({ dispose: () => host.dispose() });
 
@@ -87,7 +92,9 @@ suite('Modal Editor Navigation', () => {
 		const navigate = (index: number) => {
 			navigatedIndices.push(index);
 			// Simulates what real navigation does: update the context with new index
-			host.updateOptions({ navigation: { total: 10, current: index, navigate } });
+			host.updateOptions({
+				navigation: { total: 10, current: index, navigate },
+			});
 		};
 
 		host.updateOptions({ navigation: { total: 10, current: 0, navigate } });
@@ -102,13 +109,15 @@ suite('Modal Editor Navigation', () => {
 		assert.deepStrictEqual(navigatedIndices, [1, 5]);
 	});
 
-	test('navigation boundary conditions', () => {
+	test("navigation boundary conditions", () => {
 		const host = new TestModalEditorNavigationHost();
 		disposables.add({ dispose: () => host.dispose() });
 
 		const navigate = (index: number) => {
 			if (index >= 0 && index < 3) {
-				host.updateOptions({ navigation: { total: 3, current: index, navigate } });
+				host.updateOptions({
+					navigation: { total: 3, current: index, navigate },
+				});
 			}
 		};
 
@@ -128,7 +137,7 @@ suite('Modal Editor Navigation', () => {
 		assert.strictEqual(host.navigation!.current, 1);
 	});
 
-	test('navigation context fires multiple events', () => {
+	test("navigation context fires multiple events", () => {
 		const host = new TestModalEditorNavigationHost();
 		disposables.add({ dispose: () => host.dispose() });
 
@@ -136,7 +145,9 @@ suite('Modal Editor Navigation', () => {
 		disposables.add(host.onDidChangeNavigation(() => eventCount++));
 
 		const navigate = (index: number) => {
-			host.updateOptions({ navigation: { total: 5, current: index, navigate } });
+			host.updateOptions({
+				navigation: { total: 5, current: index, navigate },
+			});
 		};
 
 		host.updateOptions({ navigation: { total: 5, current: 0, navigate } });

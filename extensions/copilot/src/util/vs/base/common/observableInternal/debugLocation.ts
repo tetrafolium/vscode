@@ -30,7 +30,10 @@ export namespace DebugLocation {
 }
 
 class DebugLocationImpl implements ILocation {
-	public static fromStack(stack: string, parentIdx: number): DebugLocationImpl | undefined {
+	public static fromStack(
+		stack: string,
+		parentIdx: number,
+	): DebugLocationImpl | undefined {
 		const lines = stack.split('\n');
 		const location = parseLine(lines[parentIdx + 1]);
 		if (location) {
@@ -38,7 +41,7 @@ class DebugLocationImpl implements ILocation {
 				location.fileName,
 				location.line,
 				location.column,
-				location.id
+				location.id,
 			);
 		} else {
 			return undefined;
@@ -50,10 +53,8 @@ class DebugLocationImpl implements ILocation {
 		public readonly line: number,
 		public readonly column: number,
 		public readonly id: string,
-	) {
-	}
+	) {}
 }
-
 
 export interface ILocation {
 	fileName: string;

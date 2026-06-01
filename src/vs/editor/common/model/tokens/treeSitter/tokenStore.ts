@@ -3,19 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDisposable } from '../../../../../base/common/lifecycle.js';
-import { ITextModel } from '../../../model.js';
+import { IDisposable } from "../../../../../base/common/lifecycle.js";
+import { ITextModel } from "../../../model.js";
 
 // Exported for tests
 export class ListNode implements IDisposable {
 	parent?: ListNode;
 	private readonly _children: Node[] = [];
-	get children(): ReadonlyArray<Node> { return this._children; }
+	get children(): ReadonlyArray<Node> {
+		return this._children;
+	}
 
 	private _length: number = 0;
-	get length(): number { return this._length; }
+	get length(): number {
+		return this._length;
+	}
 
-	constructor(public readonly height: number) { }
+	constructor(public readonly height: number) {}
 
 	static create(node1: Node, node2: Node) {
 		const list = new ListNode(node1.height + 1);
@@ -30,7 +34,7 @@ export class ListNode implements IDisposable {
 
 	appendChild(node: Node) {
 		if (!this.canAppendChild()) {
-			throw new Error('Cannot insert more than 3 children in a ListNode');
+			throw new Error("Cannot insert more than 3 children in a ListNode");
 		}
 		this._children.push(node);
 
@@ -58,7 +62,7 @@ export class ListNode implements IDisposable {
 
 	prependChild(node: Node) {
 		if (this._children.length >= 3) {
-			throw new Error('Cannot prepend more than 3 children in a ListNode');
+			throw new Error("Cannot prepend more than 3 children in a ListNode");
 		}
 		this._children.unshift(node);
 
@@ -89,7 +93,7 @@ export enum TokenQuality {
 	None = 0,
 	ViewportGuess = 1,
 	EditGuess = 2,
-	Accurate = 3
+	Accurate = 3,
 }
 
 type Node = ListNode | LeafNode;
@@ -124,7 +128,7 @@ function append(node: Node, nodeToAppend: Node): Node {
 		}
 
 		if (isLeaf(curNode)) {
-			throw new Error('unexpected');
+			throw new Error("unexpected");
 		}
 		parents.push(curNode);
 		curNode = curNode.lastChild();
@@ -136,7 +140,10 @@ function append(node: Node, nodeToAppend: Node): Node {
 			if (parent.children.length >= 3) {
 				// we need to split to maintain (2,3)-tree property.
 				// Send the third element + the new element to the parent.
-				const newList = ListNode.create(parent.unappendChild(), nodeToAppendOfCorrectHeight);
+				const newList = ListNode.create(
+					parent.unappendChild(),
+					nodeToAppendOfCorrectHeight,
+				);
 				nodeToAppendOfCorrectHeight = newList;
 			} else {
 				parent.appendChild(nodeToAppendOfCorrectHeight);
@@ -159,7 +166,7 @@ function prepend(list: Node, nodeToAppend: Node): Node {
 	const parents: ListNode[] = [];
 	while (nodeToAppend.height !== curNode.height) {
 		if (isLeaf(curNode)) {
-			throw new Error('unexpected');
+			throw new Error("unexpected");
 		}
 		parents.push(curNode);
 		// assert 2 <= curNode.childrenFast.length <= 3
@@ -174,7 +181,10 @@ function prepend(list: Node, nodeToAppend: Node): Node {
 			if (parent.children.length >= 3) {
 				// we need to split to maintain (2,3)-tree property.
 				// Send the third element + the new element to the parent.
-				nodeToPrependOfCorrectHeight = ListNode.create(nodeToPrependOfCorrectHeight, parent.unprependChild());
+				nodeToPrependOfCorrectHeight = ListNode.create(
+					nodeToPrependOfCorrectHeight,
+					parent.unprependChild(),
+				);
 			} else {
 				parent.prependChild(nodeToPrependOfCorrectHeight);
 				nodeToPrependOfCorrectHeight = undefined;
@@ -191,8 +201,7 @@ function prepend(list: Node, nodeToAppend: Node): Node {
 function concat(node1: Node, node2: Node): Node {
 	if (node1.height === node2.height) {
 		return ListNode.create(node1, node2);
-	}
-	else if (node1.height > node2.height) {
+	} else if (node1.height > node2.height) {
 		// node1 is the tree we want to insert into
 		return append(node1, node2);
 	} else {
@@ -215,7 +224,7 @@ export class TokenStore implements IDisposable {
 			length: this._textModel.getValueLength(),
 			token: 0,
 			height: 0,
-			tokenQuality: TokenQuality.None
+			tokenQuality: TokenQuality.None,
 		};
 	}
 
@@ -227,7 +236,10 @@ export class TokenStore implements IDisposable {
 		this._root = this.createFromUpdates(tokens, tokenQuality);
 	}
 
-	private createFromUpdates(tokens: TokenUpdate[], tokenQuality: TokenQuality): Node {
+	private createFromUpdates(
+		tokens: TokenUpdate[],
+		tokenQuality: TokenQuality,
+	): Node {
 		if (tokens.length === 0) {
 			return this.createEmptyRoot();
 		}
@@ -235,10 +247,15 @@ export class TokenStore implements IDisposable {
 			length: tokens[0].length,
 			token: tokens[0].token,
 			height: 0,
-			tokenQuality
+			tokenQuality,
 		};
 		for (let j = 1; j < tokens.length; j++) {
-			newRoot = append(newRoot, { length: tokens[j].length, token: tokens[j].token, height: 0, tokenQuality });
+			newRoot = append(newRoot, {
+				length: tokens[j].length,
+				token: tokens[j].token,
+				height: 0,
+				tokenQuality,
+			});
 		}
 		return newRoot;
 	}
@@ -262,31 +279,49 @@ export class TokenStore implements IDisposable {
 	 *
 	 * @param tokens tokens are in sequence in the document.
 	 */
-	private replace(length: number, updateOffsetStart: number, tokens: TokenUpdate[], tokenQuality: TokenQuality) {
+	private replace(
+		length: number,
+		updateOffsetStart: number,
+		tokens: TokenUpdate[],
+		tokenQuality: TokenQuality,
+	) {
 		const firstUnchangedOffsetAfterUpdate = updateOffsetStart + length;
 		// Find the last unchanged node preceding the update
 		const precedingNodes: Node[] = [];
 		// Find the first unchanged node after the update
 		const postcedingNodes: Node[] = [];
-		const stack: { node: Node; offset: number }[] = [{ node: this._root, offset: 0 }];
+		const stack: { node: Node; offset: number }[] = [
+			{ node: this._root, offset: 0 },
+		];
 
 		while (stack.length > 0) {
 			const node = stack.pop()!;
 			const currentOffset = node.offset;
 
-			if (currentOffset < updateOffsetStart && currentOffset + node.node.length <= updateOffsetStart) {
+			if (
+				currentOffset < updateOffsetStart &&
+				currentOffset + node.node.length <= updateOffsetStart
+			) {
 				if (!isLeaf(node.node)) {
 					node.node.parent = undefined;
 				}
 				precedingNodes.push(node.node);
 				continue;
-			} else if (isLeaf(node.node) && (currentOffset < updateOffsetStart)) {
+			} else if (isLeaf(node.node) && currentOffset < updateOffsetStart) {
 				// We have a partial preceding node
-				precedingNodes.push({ length: updateOffsetStart - currentOffset, token: node.node.token, height: 0, tokenQuality: node.node.tokenQuality });
+				precedingNodes.push({
+					length: updateOffsetStart - currentOffset,
+					token: node.node.token,
+					height: 0,
+					tokenQuality: node.node.tokenQuality,
+				});
 				// Node could also be postceeding, so don't continue
 			}
 
-			if ((updateOffsetStart <= currentOffset) && (currentOffset + node.node.length <= firstUnchangedOffsetAfterUpdate)) {
+			if (
+				updateOffsetStart <= currentOffset &&
+				currentOffset + node.node.length <= firstUnchangedOffsetAfterUpdate
+			) {
 				continue;
 			}
 
@@ -296,9 +331,18 @@ export class TokenStore implements IDisposable {
 				}
 				postcedingNodes.push(node.node);
 				continue;
-			} else if (isLeaf(node.node) && (currentOffset + node.node.length > firstUnchangedOffsetAfterUpdate)) {
+			} else if (
+				isLeaf(node.node) &&
+				currentOffset + node.node.length > firstUnchangedOffsetAfterUpdate
+			) {
 				// we have a partial postceeding node
-				postcedingNodes.push({ length: currentOffset + node.node.length - firstUnchangedOffsetAfterUpdate, token: node.node.token, height: 0, tokenQuality: node.node.tokenQuality });
+				postcedingNodes.push({
+					length:
+						currentOffset + node.node.length - firstUnchangedOffsetAfterUpdate,
+					token: node.node.token,
+					height: 0,
+					tokenQuality: node.node.tokenQuality,
+				});
 				continue;
 			}
 
@@ -314,7 +358,10 @@ export class TokenStore implements IDisposable {
 
 		let allNodes: Node[];
 		if (tokens.length > 0) {
-			allNodes = precedingNodes.concat(this.createFromUpdates(tokens, tokenQuality), postcedingNodes);
+			allNodes = precedingNodes.concat(
+				this.createFromUpdates(tokens, tokenQuality),
+				postcedingNodes,
+			);
 		} else {
 			allNodes = precedingNodes.concat(postcedingNodes);
 		}
@@ -333,8 +380,14 @@ export class TokenStore implements IDisposable {
 	 * @param visitor Return true from visitor to exit early
 	 * @returns
 	 */
-	private traverseInOrderInRange(startOffsetInclusive: number, endOffsetExclusive: number, visitor: (node: Node, offset: number) => boolean): void {
-		const stack: { node: Node; offset: number }[] = [{ node: this._root, offset: 0 }];
+	private traverseInOrderInRange(
+		startOffsetInclusive: number,
+		endOffsetExclusive: number,
+		visitor: (node: Node, offset: number) => boolean,
+	): void {
+		const stack: { node: Node; offset: number }[] = [
+			{ node: this._root, offset: 0 },
+		];
 
 		while (stack.length > 0) {
 			const { node, offset } = stack.pop()!;
@@ -364,7 +417,11 @@ export class TokenStore implements IDisposable {
 		let result: TokenUpdate | undefined;
 		this.traverseInOrderInRange(offset, this._root.length, (node, offset) => {
 			if (isLeaf(node)) {
-				result = { token: node.token, startOffsetInclusive: offset, length: node.length };
+				result = {
+					token: node.token,
+					startOffsetInclusive: offset,
+					length: node.length,
+				};
 				return true;
 			}
 			return false;
@@ -372,72 +429,122 @@ export class TokenStore implements IDisposable {
 		return result;
 	}
 
-	getTokensInRange(startOffsetInclusive: number, endOffsetExclusive: number): TokenUpdate[] {
-		const result: { token: number; startOffsetInclusive: number; length: number }[] = [];
-		this.traverseInOrderInRange(startOffsetInclusive, endOffsetExclusive, (node, offset) => {
-			if (isLeaf(node)) {
-				let clippedLength = node.length;
-				let clippedOffset = offset;
-				if ((offset < startOffsetInclusive) && (offset + node.length > endOffsetExclusive)) {
-					clippedOffset = startOffsetInclusive;
-					clippedLength = endOffsetExclusive - startOffsetInclusive;
-				} else if (offset < startOffsetInclusive) {
-					clippedLength -= (startOffsetInclusive - offset);
-					clippedOffset = startOffsetInclusive;
-				} else if (offset + node.length > endOffsetExclusive) {
-					clippedLength -= (offset + node.length - endOffsetExclusive);
+	getTokensInRange(
+		startOffsetInclusive: number,
+		endOffsetExclusive: number,
+	): TokenUpdate[] {
+		const result: {
+			token: number;
+			startOffsetInclusive: number;
+			length: number;
+		}[] = [];
+		this.traverseInOrderInRange(
+			startOffsetInclusive,
+			endOffsetExclusive,
+			(node, offset) => {
+				if (isLeaf(node)) {
+					let clippedLength = node.length;
+					let clippedOffset = offset;
+					if (
+						offset < startOffsetInclusive &&
+						offset + node.length > endOffsetExclusive
+					) {
+						clippedOffset = startOffsetInclusive;
+						clippedLength = endOffsetExclusive - startOffsetInclusive;
+					} else if (offset < startOffsetInclusive) {
+						clippedLength -= startOffsetInclusive - offset;
+						clippedOffset = startOffsetInclusive;
+					} else if (offset + node.length > endOffsetExclusive) {
+						clippedLength -= offset + node.length - endOffsetExclusive;
+					}
+					result.push({
+						token: node.token,
+						startOffsetInclusive: clippedOffset,
+						length: clippedLength,
+					});
 				}
-				result.push({ token: node.token, startOffsetInclusive: clippedOffset, length: clippedLength });
-			}
-			return false;
-		});
+				return false;
+			},
+		);
 		return result;
 	}
 
-	markForRefresh(startOffsetInclusive: number, endOffsetExclusive: number): void {
-		this.traverseInOrderInRange(startOffsetInclusive, endOffsetExclusive, (node) => {
-			if (isLeaf(node)) {
-				node.tokenQuality = TokenQuality.None;
-			}
-			return false;
-		});
+	markForRefresh(
+		startOffsetInclusive: number,
+		endOffsetExclusive: number,
+	): void {
+		this.traverseInOrderInRange(
+			startOffsetInclusive,
+			endOffsetExclusive,
+			(node) => {
+				if (isLeaf(node)) {
+					node.tokenQuality = TokenQuality.None;
+				}
+				return false;
+			},
+		);
 	}
 
-	rangeHasTokens(startOffsetInclusive: number, endOffsetExclusive: number, minimumTokenQuality: TokenQuality): boolean {
+	rangeHasTokens(
+		startOffsetInclusive: number,
+		endOffsetExclusive: number,
+		minimumTokenQuality: TokenQuality,
+	): boolean {
 		let hasAny = true;
-		this.traverseInOrderInRange(startOffsetInclusive, endOffsetExclusive, (node) => {
-			if (isLeaf(node) && (node.tokenQuality < minimumTokenQuality)) {
-				hasAny = false;
-			}
-			return false;
-		});
+		this.traverseInOrderInRange(
+			startOffsetInclusive,
+			endOffsetExclusive,
+			(node) => {
+				if (isLeaf(node) && node.tokenQuality < minimumTokenQuality) {
+					hasAny = false;
+				}
+				return false;
+			},
+		);
 		return hasAny;
 	}
 
-	rangeNeedsRefresh(startOffsetInclusive: number, endOffsetExclusive: number): boolean {
+	rangeNeedsRefresh(
+		startOffsetInclusive: number,
+		endOffsetExclusive: number,
+	): boolean {
 		let needsRefresh = false;
-		this.traverseInOrderInRange(startOffsetInclusive, endOffsetExclusive, (node) => {
-			if (isLeaf(node) && (node.tokenQuality !== TokenQuality.Accurate)) {
-				needsRefresh = true;
-			}
-			return false;
-		});
+		this.traverseInOrderInRange(
+			startOffsetInclusive,
+			endOffsetExclusive,
+			(node) => {
+				if (isLeaf(node) && node.tokenQuality !== TokenQuality.Accurate) {
+					needsRefresh = true;
+				}
+				return false;
+			},
+		);
 		return needsRefresh;
 	}
 
 	getNeedsRefresh(): { startOffset: number; endOffset: number }[] {
 		const result: { startOffset: number; endOffset: number }[] = [];
 
-		this.traverseInOrderInRange(0, this._textModel.getValueLength(), (node, offset) => {
-			if (isLeaf(node) && (node.tokenQuality !== TokenQuality.Accurate)) {
-				if ((result.length > 0) && (result[result.length - 1].endOffset === offset)) {
-					result[result.length - 1].endOffset += node.length;
-				} else {
-					result.push({ startOffset: offset, endOffset: offset + node.length });
+		this.traverseInOrderInRange(
+			0,
+			this._textModel.getValueLength(),
+			(node, offset) => {
+				if (isLeaf(node) && node.tokenQuality !== TokenQuality.Accurate) {
+					if (
+						result.length > 0 &&
+						result[result.length - 1].endOffset === offset
+					) {
+						result[result.length - 1].endOffset += node.length;
+					} else {
+						result.push({
+							startOffset: offset,
+							endOffset: offset + node.length,
+						});
+					}
 				}
-			}
-			return false;
-		});
+				return false;
+			},
+		);
 		return result;
 	}
 
@@ -449,7 +556,12 @@ export class TokenStore implements IDisposable {
 
 	private _copyNodeIterative(root: Node): Node {
 		const newRoot = isLeaf(root)
-			? { length: root.length, token: root.token, tokenQuality: root.tokenQuality, height: root.height }
+			? {
+					length: root.length,
+					token: root.token,
+					tokenQuality: root.tokenQuality,
+					height: root.height,
+				}
 			: new ListNode(root.height);
 
 		const stack: Array<[Node, Node]> = [[root, newRoot]];
@@ -459,7 +571,12 @@ export class TokenStore implements IDisposable {
 			if (!isLeaf(oldNode)) {
 				for (const child of oldNode.children) {
 					const childCopy = isLeaf(child)
-						? { length: child.length, token: child.token, tokenQuality: child.tokenQuality, height: child.height }
+						? {
+								length: child.length,
+								token: child.token,
+								tokenQuality: child.tokenQuality,
+								height: child.height,
+							}
 						: new ListNode(child.height);
 
 					(clonedNode as ListNode).appendChild(childCopy);
@@ -480,10 +597,12 @@ export class TokenStore implements IDisposable {
 
 		while (stack.length > 0) {
 			const [node, depth] = stack.pop()!;
-			const indent = '  '.repeat(depth);
+			const indent = "  ".repeat(depth);
 
 			if (isLeaf(node)) {
-				result.push(`${indent}Leaf(length: ${node.length}, token: ${node.token}, refresh: ${node.tokenQuality})\n`);
+				result.push(
+					`${indent}Leaf(length: ${node.length}, token: ${node.token}, refresh: ${node.tokenQuality})\n`,
+				);
 			} else {
 				result.push(`${indent}List(length: ${node.length})\n`);
 				// Push children in reverse order so they get processed left-to-right
@@ -493,7 +612,7 @@ export class TokenStore implements IDisposable {
 			}
 		}
 
-		return result.join('');
+		return result.join("");
 	}
 
 	dispose(): void {

@@ -18,7 +18,9 @@ suite('generated languages', function () {
 			test(`'${marker}' is generated`, function () {
 				assert.ok(
 					marker in knownLanguages,
-					'language for comment marker ' + marker + ' has not been generated'
+					'language for comment marker ' +
+						marker +
+						' has not been generated',
 				);
 			});
 		}

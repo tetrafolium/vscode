@@ -6,17 +6,24 @@
 import { DocumentId } from '../dataTypes/documentId';
 import { Edits, RootedEdit } from '../dataTypes/edit';
 import { LanguageId } from '../dataTypes/languageId';
-import { DocumentHistory, HistoryContext, IHistoryContextProvider } from './historyContextProvider';
+import {
+	DocumentHistory,
+	HistoryContext,
+	IHistoryContextProvider,
+} from './historyContextProvider';
 
 export class SingleFileStaticWorkspaceTracker implements IHistoryContextProvider {
-	constructor(
-		private readonly recentEdit: RootedEdit,
-	) {
-	}
+	constructor(private readonly recentEdit: RootedEdit) {}
 
 	getHistoryContext(docId: DocumentId): HistoryContext | undefined {
 		return new HistoryContext([
-			new DocumentHistory(docId, LanguageId.PlainText, this.recentEdit.base, Edits.single(this.recentEdit.edit), undefined)
+			new DocumentHistory(
+				docId,
+				LanguageId.PlainText,
+				this.recentEdit.base,
+				Edits.single(this.recentEdit.edit),
+				undefined,
+			),
 		]);
 	}
 }

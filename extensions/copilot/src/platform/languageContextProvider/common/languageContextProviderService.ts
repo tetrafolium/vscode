@@ -13,18 +13,36 @@ export enum ProviderTarget {
 	Completions = 'completions',
 }
 
-export const ILanguageContextProviderService = createServiceIdentifier<ILanguageContextProviderService>('ILanguageContextProviderService');
+export const ILanguageContextProviderService =
+	createServiceIdentifier<ILanguageContextProviderService>(
+		'ILanguageContextProviderService',
+	);
 
 export interface ILanguageContextProviderService {
 	readonly _serviceBrand: undefined;
 
-	registerContextProvider<T extends Copilot.SupportedContextItem>(provider: Copilot.ContextProvider<T>, targets: ProviderTarget[]): Disposable;
+	registerContextProvider<T extends Copilot.SupportedContextItem>(
+		provider: Copilot.ContextProvider<T>,
+		targets: ProviderTarget[],
+	): Disposable;
 
-	getAllProviders(target: ProviderTarget[]): readonly Copilot.ContextProvider<Copilot.SupportedContextItem>[];
+	getAllProviders(
+		target: ProviderTarget[],
+	): readonly Copilot.ContextProvider<Copilot.SupportedContextItem>[];
 
-	getContextProviders(doc: TextDocument, target: ProviderTarget): Copilot.ContextProvider<Copilot.SupportedContextItem>[];
+	getContextProviders(
+		doc: TextDocument,
+		target: ProviderTarget,
+	): Copilot.ContextProvider<Copilot.SupportedContextItem>[];
 
-	getContextItems(doc: TextDocument, request: Copilot.ResolveRequest, cancellationToken: CancellationToken): AsyncIterable<ContextItem>;
+	getContextItems(
+		doc: TextDocument,
+		request: Copilot.ResolveRequest,
+		cancellationToken: CancellationToken,
+	): AsyncIterable<ContextItem>;
 
-	getContextItemsOnTimeout(doc: TextDocument, request: Copilot.ResolveRequest): ContextItem[];
+	getContextItemsOnTimeout(
+		doc: TextDocument,
+		request: Copilot.ResolveRequest,
+	): ContextItem[];
 }

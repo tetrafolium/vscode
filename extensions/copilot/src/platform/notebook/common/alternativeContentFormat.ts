@@ -6,5 +6,5 @@
 export enum AlternativeNotebookFormat {
 	json = 'json',
 	xml = 'xml',
-	text = 'text'
+	text = 'text',
 }

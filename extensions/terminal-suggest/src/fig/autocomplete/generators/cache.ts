@@ -53,10 +53,10 @@ class CacheEntry<T> {
 		if (!this.isInitialized) {
 			return this.fetchAsync(run);
 		}
-		switch (cache.strategy || 'stale-while-revalidate') {
-			case 'max-age':
+		switch (cache.strategy || "stale-while-revalidate") {
+			case "max-age":
 				return this.maxAgeCache(run, cache.ttl!);
-			case 'stale-while-revalidate':
+			case "stale-while-revalidate":
 				// cache.ttl must be defined when no strategy is specified
 				return this.swrCache(run, cache.ttl!);
 			default:

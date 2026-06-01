@@ -2,7 +2,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-export async function findParentFolder(relativeFilePath: string): Promise<string | null> {
+export async function findParentFolder(
+	relativeFilePath: string,
+): Promise<string | null> {
 	const workspaceFolders = vscode.workspace.workspaceFolders;
 
 	if (!workspaceFolders) {

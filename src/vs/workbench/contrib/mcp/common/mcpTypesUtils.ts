@@ -3,44 +3,62 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { disposableTimeout, timeout } from '../../../../base/common/async.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { CancellationError } from '../../../../base/common/errors.js';
-import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { autorun, autorunSelfDisposable, IReader } from '../../../../base/common/observable.js';
-import { ILogger } from '../../../../platform/log/common/log.js';
-import { ToolDataSource } from '../../chat/common/tools/languageModelToolsService.js';
-import { IMcpServer, IMcpServerStartOpts, IMcpService, McpConnectionState, McpServerCacheState, McpServerTransportType } from './mcpTypes.js';
-import { MCP } from './modelContextProtocol.js';
-
+import { disposableTimeout, timeout } from "../../../../base/common/async.js";
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { CancellationError } from "../../../../base/common/errors.js";
+import { DisposableStore } from "../../../../base/common/lifecycle.js";
+import {
+	autorun,
+	autorunSelfDisposable,
+	IReader,
+} from "../../../../base/common/observable.js";
+import { ILogger } from "../../../../platform/log/common/log.js";
+import { ToolDataSource } from "../../chat/common/tools/languageModelToolsService.js";
+import {
+	IMcpServer,
+	IMcpServerStartOpts,
+	IMcpService,
+	McpConnectionState,
+	McpServerCacheState,
+	McpServerTransportType,
+} from "./mcpTypes.js";
+import { MCP } from "./modelContextProtocol.js";
 
 /**
  * Waits up to `timeout` for a server passing the filter to be discovered,
  * and then starts it.
  */
-export function startServerByFilter(mcpService: IMcpService, filter: (s: IMcpServer) => boolean, timeout = 5000) {
+export function startServerByFilter(
+	mcpService: IMcpService,
+	filter: (s: IMcpServer) => boolean,
+	timeout = 5000,
+) {
 	return new Promise<void>((resolve, reject) => {
 		const store = new DisposableStore();
-		store.add(autorun(reader => {
-			const servers = mcpService.servers.read(reader);
-			const server = servers.find(filter);
+		store.add(
+			autorun((reader) => {
+				const servers = mcpService.servers.read(reader);
+				const server = servers.find(filter);
 
-			if (server) {
-				server.start({ promptType: 'all-untrusted' }).then(state => {
-					if (state.state === McpConnectionState.Kind.Error) {
-						server.showOutput();
-					}
-				});
+				if (server) {
+					server.start({ promptType: "all-untrusted" }).then((state) => {
+						if (state.state === McpConnectionState.Kind.Error) {
+							server.showOutput();
+						}
+					});
 
-				resolve();
+					resolve();
+					store.dispose();
+				}
+			}),
+		);
+
+		store.add(
+			disposableTimeout(() => {
 				store.dispose();
-			}
-		}));
-
-		store.add(disposableTimeout(() => {
-			store.dispose();
-			reject(new CancellationError());
-		}, timeout));
+				reject(new CancellationError());
+			}, timeout),
+		);
 	});
 }
 
@@ -48,32 +66,47 @@ export function startServerByFilter(mcpService: IMcpService, filter: (s: IMcpSer
  * Starts a server (if needed) and waits for its tools to be live. Returns
  * true/false whether this happened successfully.
  */
-export async function startServerAndWaitForLiveTools(server: IMcpServer, opts?: IMcpServerStartOpts, token?: CancellationToken): Promise<boolean> {
+export async function startServerAndWaitForLiveTools(
+	server: IMcpServer,
+	opts?: IMcpServerStartOpts,
+	token?: CancellationToken,
+): Promise<boolean> {
 	const r = await server.start(opts);
 
 	const store = new DisposableStore();
-	const ok = await new Promise<boolean>(resolve => {
-		if (token?.isCancellationRequested || r.state === McpConnectionState.Kind.Error || r.state === McpConnectionState.Kind.Stopped) {
+	const ok = await new Promise<boolean>((resolve) => {
+		if (
+			token?.isCancellationRequested ||
+			r.state === McpConnectionState.Kind.Error ||
+			r.state === McpConnectionState.Kind.Stopped
+		) {
 			return resolve(false);
 		}
 
 		if (token) {
-			store.add(token.onCancellationRequested(() => {
-				resolve(false);
-			}));
+			store.add(
+				token.onCancellationRequested(() => {
+					resolve(false);
+				}),
+			);
 		}
 
-		store.add(autorun(reader => {
-			const connState = server.connectionState.read(reader).state;
-			if (connState === McpConnectionState.Kind.Error || connState === McpConnectionState.Kind.Stopped) {
-				resolve(false); // some error, don't block the request
-			}
+		store.add(
+			autorun((reader) => {
+				const connState = server.connectionState.read(reader).state;
+				if (
+					connState === McpConnectionState.Kind.Error ||
+					connState === McpConnectionState.Kind.Stopped
+				) {
+					resolve(false); // some error, don't block the request
+				}
 
-			const toolState = server.cacheState.read(reader);
-			if (toolState === McpServerCacheState.Live) {
-				resolve(true); // got tools, all done
-			}
-		}));
+				const toolState = server.cacheState.read(reader);
+				if (toolState === McpServerCacheState.Live) {
+					resolve(true); // got tools, all done
+				}
+			}),
+		);
 	});
 	store.dispose();
 
@@ -84,18 +117,20 @@ export async function startServerAndWaitForLiveTools(server: IMcpServer, opts?: 
 	return ok;
 }
 
-export function mcpServerToSourceData(server: IMcpServer, reader?: IReader): ToolDataSource {
+export function mcpServerToSourceData(
+	server: IMcpServer,
+	reader?: IReader,
+): ToolDataSource {
 	const metadata = server.serverMetadata.read(reader);
 	return {
-		type: 'mcp',
+		type: "mcp",
 		serverLabel: metadata?.serverName,
 		instructions: metadata?.serverInstructions,
 		label: server.definition.label,
 		collectionId: server.collection.id,
-		definitionId: server.definition.id
+		definitionId: server.definition.id,
 	};
 }
-
 
 /**
  * Validates whether the given HTTP or HTTPS resource is allowed for the specified MCP server.
@@ -104,26 +139,39 @@ export function mcpServerToSourceData(server: IMcpServer, reader?: IReader): Too
  * @param server The MCP server instance to validate against, or undefined.
  * @returns True if the resource request is valid for the server, false otherwise.
  */
-export function canLoadMcpNetworkResourceDirectly(resource: URL, server: IMcpServer | undefined) {
+export function canLoadMcpNetworkResourceDirectly(
+	resource: URL,
+	server: IMcpServer | undefined,
+) {
 	let isResourceRequestValid = false;
-	if (resource.protocol === 'http:') {
+	if (resource.protocol === "http:") {
 		const launch = server?.connection.get()?.launchDefinition;
-		if (launch && launch.type === McpServerTransportType.HTTP && launch.uri.authority.toLowerCase() === resource.host.toLowerCase()) {
+		if (
+			launch &&
+			launch.type === McpServerTransportType.HTTP &&
+			launch.uri.authority.toLowerCase() === resource.host.toLowerCase()
+		) {
 			isResourceRequestValid = true;
 		}
-	} else if (resource.protocol === 'https:') {
+	} else if (resource.protocol === "https:") {
 		isResourceRequestValid = true;
 	}
 	return isResourceRequestValid;
 }
 
-export function isTaskResult(obj: MCP.Result | MCP.CreateTaskResult): obj is MCP.CreateTaskResult {
+export function isTaskResult(
+	obj: MCP.Result | MCP.CreateTaskResult,
+): obj is MCP.CreateTaskResult {
 	return (obj as MCP.CreateTaskResult).task !== undefined;
 }
 
-export function findMcpServer(mcpService: IMcpService, filter: (s: IMcpServer) => boolean, token?: CancellationToken) {
+export function findMcpServer(
+	mcpService: IMcpService,
+	filter: (s: IMcpServer) => boolean,
+	token?: CancellationToken,
+) {
 	return new Promise<IMcpServer | undefined>((resolve) => {
-		autorunSelfDisposable(reader => {
+		autorunSelfDisposable((reader) => {
 			if (token) {
 				if (token.isCancellationRequested) {
 					reader.dispose();
@@ -131,10 +179,12 @@ export function findMcpServer(mcpService: IMcpService, filter: (s: IMcpServer) =
 					return;
 				}
 
-				reader.store.add(token.onCancellationRequested(() => {
-					reader.dispose();
-					resolve(undefined);
-				}));
+				reader.store.add(
+					token.onCancellationRequested(() => {
+						reader.dispose();
+						resolve(undefined);
+					}),
+				);
 			}
 
 			const servers = mcpService.servers.read(reader);
@@ -147,8 +197,13 @@ export function findMcpServer(mcpService: IMcpService, filter: (s: IMcpServer) =
 	});
 }
 
-export function translateMcpLogMessage(logger: ILogger, params: MCP.LoggingMessageNotificationParams, prefix = '') {
-	let contents = typeof params.data === 'string' ? params.data : JSON.stringify(params.data);
+export function translateMcpLogMessage(
+	logger: ILogger,
+	params: MCP.LoggingMessageNotificationParams,
+	prefix = "",
+) {
+	let contents =
+		typeof params.data === "string" ? params.data : JSON.stringify(params.data);
 	if (params.logger) {
 		contents = `${params.logger}: ${contents}`;
 	}
@@ -157,20 +212,20 @@ export function translateMcpLogMessage(logger: ILogger, params: MCP.LoggingMessa
 	}
 
 	switch (params?.level) {
-		case 'debug':
+		case "debug":
 			logger.debug(contents);
 			break;
-		case 'info':
-		case 'notice':
+		case "info":
+		case "notice":
 			logger.info(contents);
 			break;
-		case 'warning':
+		case "warning":
 			logger.warn(contents);
 			break;
-		case 'error':
-		case 'critical':
-		case 'alert':
-		case 'emergency':
+		case "error":
+		case "critical":
+		case "alert":
+		case "emergency":
 			logger.error(contents);
 			break;
 		default:

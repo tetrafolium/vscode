@@ -12,9 +12,18 @@ import { getEnterpriseUri } from '../github/utils';
 import { HostHelper } from './configuration';
 
 export class GitHubManager {
-	private static readonly _githubDotComServers = new Set<string>().add('github.com').add('ssh.github.com');
-	private static readonly _neverGitHubServers = new Set<string>().add('bitbucket.org').add('gitlab.com');
-	private _servers: Map<string, GitHubServerType> = new Map(Array.from(GitHubManager._githubDotComServers.keys()).map(key => [key, GitHubServerType.GitHubDotCom]));
+	private static readonly _githubDotComServers = new Set<string>()
+		.add('github.com')
+		.add('ssh.github.com');
+	private static readonly _neverGitHubServers = new Set<string>()
+		.add('bitbucket.org')
+		.add('gitlab.com');
+	private _servers: Map<string, GitHubServerType> = new Map(
+		Array.from(GitHubManager._githubDotComServers.keys()).map((key) => [
+			key,
+			GitHubServerType.GitHubDotCom,
+		]),
+	);
 
 	public static isGithubDotCom(host: string): boolean {
 		return this._githubDotComServers.has(host);
@@ -30,7 +39,10 @@ export class GitHubManager {
 		}
 
 		// .wiki/.git repos are not supported
-		if (host.path.endsWith('.wiki') || host.authority.match(/gist[.]github[.]com/)) {
+		if (
+			host.path.endsWith('.wiki') ||
+			host.authority.match(/gist[.]github[.]com/)
+		) {
 			return GitHubServerType.None;
 		}
 
@@ -39,7 +51,12 @@ export class GitHubManager {
 		}
 
 		const knownEnterprise = getEnterpriseUri();
-		if ((host.authority.toLowerCase() === knownEnterprise?.authority.toLowerCase()) && (!this._servers.has(host.authority) || (this._servers.get(host.authority) === GitHubServerType.None))) {
+		if (
+			host.authority.toLowerCase() ===
+				knownEnterprise?.authority.toLowerCase() &&
+			(!this._servers.has(host.authority) ||
+				this._servers.get(host.authority) === GitHubServerType.None)
+		) {
 			return GitHubServerType.Enterprise;
 		}
 
@@ -47,7 +64,11 @@ export class GitHubManager {
 			return this._servers.get(host.authority) ?? GitHubServerType.None;
 		}
 
-		const [uri, options] = await GitHubManager.getOptions(host, 'HEAD', '/rate_limit');
+		const [uri, options] = await GitHubManager.getOptions(
+			host,
+			'HEAD',
+			'/rate_limit',
+		);
 
 		let isGitHub = GitHubServerType.None;
 		try {
@@ -56,11 +77,20 @@ export class GitHubManager {
 			response.headers.forEach((_value, header) => {
 				otherGitHubHeaders.push(header);
 			});
-			Logger.debug(`All headers: ${otherGitHubHeaders.join(', ')}`, 'GitHubServer');
+			Logger.debug(
+				`All headers: ${otherGitHubHeaders.join(', ')}`,
+				'GitHubServer',
+			);
 			const gitHubHeader = response.headers.get('x-github-request-id');
-			const gitHubEnterpriseHeader = response.headers.get('x-github-enterprise-version');
+			const gitHubEnterpriseHeader = response.headers.get(
+				'x-github-enterprise-version',
+			);
 			if (!gitHubHeader && !gitHubEnterpriseHeader) {
-				const [uriFallBack] = await GitHubManager.getOptions(host, 'HEAD', '/status');
+				const [uriFallBack] = await GitHubManager.getOptions(
+					host,
+					'HEAD',
+					'/status',
+				);
 				const response = await fetch(uriFallBack.toString());
 				const responseText = await response.text();
 				if (responseText.startsWith('GitHub lives!')) {
@@ -70,21 +100,40 @@ export class GitHubManager {
 				} else {
 					// Check if we got an enterprise-looking needs auth response:
 					// { message: 'Must authenticate to access this API.', documentation_url: 'https://docs.github.com/enterprise/3.3/rest'}
-					Logger.appendLine(`Received fallback response from the server: ${responseText}`, 'GitHubServer');
+					Logger.appendLine(
+						`Received fallback response from the server: ${responseText}`,
+						'GitHubServer',
+					);
 					const parsedResponse = JSON.parse(responseText);
-					if (parsedResponse.documentation_url && (parsedResponse.documentation_url as string).startsWith('https://docs.github.com/enterprise')) {
+					if (
+						parsedResponse.documentation_url &&
+						(parsedResponse.documentation_url as string).startsWith(
+							'https://docs.github.com/enterprise',
+						)
+					) {
 						isGitHub = GitHubServerType.Enterprise;
 					}
 				}
 			} else {
-				isGitHub = ((gitHubHeader !== undefined) && (gitHubHeader !== null)) ? (gitHubEnterpriseHeader ? GitHubServerType.Enterprise : GitHubServerType.GitHubDotCom) : GitHubServerType.None;
+				isGitHub =
+					gitHubHeader !== undefined && gitHubHeader !== null
+						? gitHubEnterpriseHeader
+							? GitHubServerType.Enterprise
+							: GitHubServerType.GitHubDotCom
+						: GitHubServerType.None;
 			}
 			return isGitHub;
 		} catch (ex) {
-			Logger.warn(`No response from host ${host}: ${ex.message}`, 'GitHubServer');
+			Logger.warn(
+				`No response from host ${host}: ${ex.message}`,
+				'GitHubServer',
+			);
 			return isGitHub;
 		} finally {
-			Logger.debug(`Host ${host} is associated with GitHub: ${isGitHub}`, 'GitHubServer');
+			Logger.debug(
+				`Host ${host} is associated with GitHub: ${isGitHub}`,
+				'GitHubServer',
+			);
 			this._servers.set(host.authority, isGitHub);
 		}
 	}
@@ -105,18 +154,18 @@ export class GitHubManager {
 			headers.authorization = `token ${token}`;
 		}
 
-		const uri = vscode.Uri.joinPath(await HostHelper.getApiHost(hostUri), HostHelper.getApiPath(hostUri, path));
+		const uri = vscode.Uri.joinPath(
+			await HostHelper.getApiHost(hostUri),
+			HostHelper.getApiPath(hostUri, path),
+		);
 		const requestInit = {
 			hostname: uri.authority,
 			port: 443,
 			method,
 			headers,
-			agent
+			agent,
 		};
 
-		return [
-			uri,
-			requestInit as RequestInit,
-		];
+		return [uri, requestInit as RequestInit];
 	}
 }

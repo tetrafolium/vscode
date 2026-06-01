@@ -3,23 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { autorun, derived, IObservable } from '../../../../../base/common/observable.js';
-import { MenuItemAction } from '../../../../../platform/actions/common/actions.js';
-import { IActionWidgetService } from '../../../../../platform/actionWidget/browser/actionWidget.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
-import { IDialogService } from '../../../../../platform/dialogs/common/dialogs.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IKeybindingService } from '../../../../../platform/keybinding/common/keybinding.js';
-import { IOpenerService } from '../../../../../platform/opener/common/opener.js';
-import { IStorageService } from '../../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { IChatInputPickerOptions } from '../../../../../workbench/contrib/chat/browser/widget/input/chatInputPickerActionItem.js';
-import { PermissionPickerActionItem } from '../../../../../workbench/contrib/chat/browser/widget/input/permissionPickerActionItem.js';
-import { isAgentHostProvider } from '../../../../common/agentHostSessionsProvider.js';
-import { ISessionsProvidersService } from '../../../../services/sessions/browser/sessionsProvidersService.js';
-import { ISessionsManagementService } from '../../../../services/sessions/common/sessionsManagement.js';
-import { AgentHostPermissionPickerDelegate } from './agentHostPermissionPickerDelegate.js';
+import {
+	autorun,
+	derived,
+	IObservable,
+} from "../../../../../base/common/observable.js";
+import { MenuItemAction } from "../../../../../platform/actions/common/actions.js";
+import { IActionWidgetService } from "../../../../../platform/actionWidget/browser/actionWidget.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { IContextKeyService } from "../../../../../platform/contextkey/common/contextkey.js";
+import { IDialogService } from "../../../../../platform/dialogs/common/dialogs.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { IKeybindingService } from "../../../../../platform/keybinding/common/keybinding.js";
+import { IOpenerService } from "../../../../../platform/opener/common/opener.js";
+import { IStorageService } from "../../../../../platform/storage/common/storage.js";
+import { ITelemetryService } from "../../../../../platform/telemetry/common/telemetry.js";
+import { IChatInputPickerOptions } from "../../../../../workbench/contrib/chat/browser/widget/input/chatInputPickerActionItem.js";
+import { PermissionPickerActionItem } from "../../../../../workbench/contrib/chat/browser/widget/input/permissionPickerActionItem.js";
+import { isAgentHostProvider } from "../../../../common/agentHostSessionsProvider.js";
+import { ISessionsProvidersService } from "../../../../services/sessions/browser/sessionsProvidersService.js";
+import { ISessionsManagementService } from "../../../../services/sessions/common/sessionsManagement.js";
+import { AgentHostPermissionPickerDelegate } from "./agentHostPermissionPickerDelegate.js";
 
 /**
  * Agent host wrapper around the workbench {@link PermissionPickerActionItem}
@@ -30,7 +34,6 @@ import { AgentHostPermissionPickerDelegate } from './agentHostPermissionPickerDe
  * shape.
  */
 export class AgentHostPermissionPickerActionItem extends PermissionPickerActionItem {
-
 	private readonly _delegate: AgentHostPermissionPickerDelegate;
 	/** Active session's `isSessionConfigResolving`. */
 	private readonly _isResolvingActiveSessionConfig: IObservable<boolean>;
@@ -47,10 +50,14 @@ export class AgentHostPermissionPickerActionItem extends PermissionPickerActionI
 		@IDialogService dialogService: IDialogService,
 		@IOpenerService openerService: IOpenerService,
 		@IStorageService storageService: IStorageService,
-		@ISessionsManagementService private readonly _sessionsManagementService: ISessionsManagementService,
-		@ISessionsProvidersService private readonly _sessionsProvidersService: ISessionsProvidersService,
+		@ISessionsManagementService
+		private readonly _sessionsManagementService: ISessionsManagementService,
+		@ISessionsProvidersService
+		private readonly _sessionsProvidersService: ISessionsProvidersService,
 	) {
-		const delegate = instantiationService.createInstance(AgentHostPermissionPickerDelegate);
+		const delegate = instantiationService.createInstance(
+			AgentHostPermissionPickerDelegate,
+		);
 		super(
 			action,
 			delegate,
@@ -67,12 +74,15 @@ export class AgentHostPermissionPickerActionItem extends PermissionPickerActionI
 		this._delegate = this._register(delegate);
 		// Initialized here (not as a class field) so the `derived` body can
 		// safely close over the parameter-property service references.
-		this._isResolvingActiveSessionConfig = derived(this, reader => {
-			const session = this._sessionsManagementService.activeSession.read(reader);
+		this._isResolvingActiveSessionConfig = derived(this, (reader) => {
+			const session =
+				this._sessionsManagementService.activeSession.read(reader);
 			if (!session) {
 				return false;
 			}
-			const provider = this._sessionsProvidersService.getProvider(session.providerId);
+			const provider = this._sessionsProvidersService.getProvider(
+				session.providerId,
+			);
 			if (!provider || !isAgentHostProvider(provider)) {
 				return false;
 			}
@@ -81,10 +91,12 @@ export class AgentHostPermissionPickerActionItem extends PermissionPickerActionI
 
 		// The base widget's label is rendered on demand via `refresh()`. Keep it
 		// in sync with the delegate's level observable.
-		this._register(autorun(reader => {
-			delegate.currentPermissionLevel.read(reader);
-			this.refresh();
-		}));
+		this._register(
+			autorun((reader) => {
+				delegate.currentPermissionLevel.read(reader);
+				this.refresh();
+			}),
+		);
 	}
 
 	override render(container: HTMLElement): void {
@@ -92,27 +104,31 @@ export class AgentHostPermissionPickerActionItem extends PermissionPickerActionI
 		// The active session can change while this view item is alive (the
 		// `IActionViewItemService` factory only runs once per render), so gate
 		// visibility reactively rather than at construction time.
-		this._register(autorun(reader => {
-			const visible = this._delegate.isApplicable.read(reader);
-			container.style.display = visible ? '' : 'none';
-		}));
+		this._register(
+			autorun((reader) => {
+				const visible = this._delegate.isApplicable.read(reader);
+				container.style.display = visible ? "" : "none";
+			}),
+		);
 
 		// Reflect the resolving state. The underlying ActionWidgetDropdown
 		// still handles Enter/Space on its label and pointer-events: none
 		// doesn't block keyboard, so the delegate also bails at the
 		// provider boundary.
-		this._register(autorun(reader => {
-			const isResolving = this._isResolvingActiveSessionConfig.read(reader);
-			const element = this.element;
-			if (!element) {
-				return;
-			}
-			element.classList.toggle('disabled', isResolving);
-			if (isResolving) {
-				element.setAttribute('aria-disabled', 'true');
-			} else {
-				element.removeAttribute('aria-disabled');
-			}
-		}));
+		this._register(
+			autorun((reader) => {
+				const isResolving = this._isResolvingActiveSessionConfig.read(reader);
+				const element = this.element;
+				if (!element) {
+					return;
+				}
+				element.classList.toggle("disabled", isResolving);
+				if (isResolving) {
+					element.setAttribute("aria-disabled", "true");
+				} else {
+					element.removeAttribute("aria-disabled");
+				}
+			}),
+		);
 	}
 }

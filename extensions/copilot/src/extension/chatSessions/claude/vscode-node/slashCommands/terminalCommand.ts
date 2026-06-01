@@ -14,7 +14,10 @@ import { generateUuid } from '../../../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ClaudeLanguageModelServer } from '../../node/claudeLanguageModelServer';
 import { IClaudeSessionStateService } from '../../common/claudeSessionStateService';
-import { IClaudeSlashCommandHandler, registerClaudeSlashCommand } from './claudeSlashCommandRegistry';
+import {
+	IClaudeSlashCommandHandler,
+	registerClaudeSlashCommand,
+} from './claudeSlashCommandRegistry';
 
 const execFileAsync = promisify(execFile);
 
@@ -39,7 +42,9 @@ const execFileAsync = promisify(execFile);
  */
 export class TerminalSlashCommand implements IClaudeSlashCommandHandler {
 	readonly commandName = 'terminal';
-	readonly description = vscode.l10n.t('Launch Claude Code CLI using your GitHub Copilot subscription');
+	readonly description = vscode.l10n.t(
+		'Launch Claude Code CLI using your GitHub Copilot subscription',
+	);
 	readonly commandId = 'copilot.claude.terminal';
 
 	private _langModelServer: ClaudeLanguageModelServer | undefined;
@@ -47,14 +52,16 @@ export class TerminalSlashCommand implements IClaudeSlashCommandHandler {
 	constructor(
 		@ILogService private readonly logService: ILogService,
 		@ITerminalService private readonly terminalService: ITerminalService,
-		@IClaudeSessionStateService private readonly sessionStateService: IClaudeSessionStateService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-	) { }
+		@IClaudeSessionStateService
+		private readonly sessionStateService: IClaudeSessionStateService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+	) {}
 
 	async handle(
 		_args: string,
 		stream: vscode.ChatResponseStream | undefined,
-		_token: CancellationToken
+		_token: CancellationToken,
 	): Promise<vscode.ChatResult> {
 		stream?.markdown(vscode.l10n.t('Creating Claude CLI instance...'));
 
@@ -65,17 +72,29 @@ export class TerminalSlashCommand implements IClaudeSlashCommandHandler {
 				const installUrl = 'https://code.claude.com';
 				const downloadLabel = vscode.l10n.t('Download Claude CLI');
 				if (stream) {
-					stream.markdown(vscode.l10n.t('Claude CLI is not installed. Download Claude CLI to get started.'));
-					stream.button({ command: 'vscode.open', arguments: [vscode.Uri.parse(installUrl)], title: downloadLabel });
-				} else {
-					vscode.window.showErrorMessage(
-						vscode.l10n.t('Claude CLI is not installed.'),
-						downloadLabel
-					).then(selection => {
-						if (selection === downloadLabel) {
-							vscode.env.openExternal(vscode.Uri.parse(installUrl));
-						}
+					stream.markdown(
+						vscode.l10n.t(
+							'Claude CLI is not installed. Download Claude CLI to get started.',
+						),
+					);
+					stream.button({
+						command: 'vscode.open',
+						arguments: [vscode.Uri.parse(installUrl)],
+						title: downloadLabel,
 					});
+				} else {
+					vscode.window
+						.showErrorMessage(
+							vscode.l10n.t('Claude CLI is not installed.'),
+							downloadLabel,
+						)
+						.then((selection) => {
+							if (selection === downloadLabel) {
+								vscode.env.openExternal(
+									vscode.Uri.parse(installUrl),
+								);
+							}
+						});
 				}
 				return {};
 			}
@@ -90,13 +109,18 @@ export class TerminalSlashCommand implements IClaudeSlashCommandHandler {
 			// Create terminal with environment variables configured
 			const terminal = this.terminalService.createTerminal({
 				name: 'Claude',
-				message: formatMessageForTerminal(vscode.l10n.t('This instance of Claude CLI is configured to use your GitHub Copilot subscription.'), { loudFormatting: true }),
+				message: formatMessageForTerminal(
+					vscode.l10n.t(
+						'This instance of Claude CLI is configured to use your GitHub Copilot subscription.',
+					),
+					{ loudFormatting: true },
+				),
 				env: {
 					ANTHROPIC_BASE_URL: `http://localhost:${config.port}`,
 					ANTHROPIC_AUTH_TOKEN: `${config.nonce}.${sessionId}`,
 					// Hide account info banner in CLI since it's redundant with the message above
 					CLAUDE_CODE_HIDE_ACCOUNT_INFO: '1',
-				}
+				},
 			});
 
 			// Show the terminal
@@ -108,17 +132,27 @@ export class TerminalSlashCommand implements IClaudeSlashCommandHandler {
 			// Set capturing token only after terminal is successfully created to avoid leaking stale session state
 			this.sessionStateService.setCapturingTokenForSession(
 				sessionId,
-				new CapturingToken(`Claude CLI (${sessionId})`, 'claude')
+				new CapturingToken(`Claude CLI (${sessionId})`, 'claude'),
 			);
 
-			this.logService.info(`[TerminalSlashCommand] Created terminal with Claude CLI configured on port ${config.port}, command: ${cliCommand}, sessionId: ${sessionId}`);
+			this.logService.info(
+				`[TerminalSlashCommand] Created terminal with Claude CLI configured on port ${config.port}, command: ${cliCommand}, sessionId: ${sessionId}`,
+			);
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error);
-			this.logService.error('[TerminalSlashCommand] Error creating terminal:', error);
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			this.logService.error(
+				'[TerminalSlashCommand] Error creating terminal:',
+				error,
+			);
 			if (stream) {
-				stream.markdown(vscode.l10n.t('Error creating terminal: {0}', errorMessage));
+				stream.markdown(
+					vscode.l10n.t('Error creating terminal: {0}', errorMessage),
+				);
 			} else {
-				vscode.window.showErrorMessage(vscode.l10n.t('Error creating terminal: {0}', errorMessage));
+				vscode.window.showErrorMessage(
+					vscode.l10n.t('Error creating terminal: {0}', errorMessage),
+				);
 			}
 		}
 
@@ -149,7 +183,10 @@ export class TerminalSlashCommand implements IClaudeSlashCommandHandler {
 	/**
 	 * Check if a command is available in PATH
 	 */
-	private async _isCommandAvailable(whichCommand: string, command: string): Promise<boolean> {
+	private async _isCommandAvailable(
+		whichCommand: string,
+		command: string,
+	): Promise<boolean> {
 		try {
 			await execFileAsync(whichCommand, [command]);
 			return true;
@@ -160,7 +197,9 @@ export class TerminalSlashCommand implements IClaudeSlashCommandHandler {
 
 	private async _getLanguageModelServer(): Promise<ClaudeLanguageModelServer> {
 		if (!this._langModelServer) {
-			this._langModelServer = this.instantiationService.createInstance(ClaudeLanguageModelServer);
+			this._langModelServer = this.instantiationService.createInstance(
+				ClaudeLanguageModelServer,
+			);
 			await this._langModelServer.start();
 		}
 
@@ -186,7 +225,10 @@ export interface ITerminalFormatMessageOptions {
 /**
  * Formats a message from the product to be written to the terminal.
  */
-export function formatMessageForTerminal(message: string, options: ITerminalFormatMessageOptions = {}): string {
+export function formatMessageForTerminal(
+	message: string,
+	options: ITerminalFormatMessageOptions = {},
+): string {
 	let result = '';
 	if (!options.excludeLeadingNewLine) {
 		result += '\r\n';

@@ -5,7 +5,10 @@
 
 import type vscode from 'vscode';
 import { IGitService } from '../../../platform/git/common/gitService';
-import { resolveWorkspaceOTelMetadata, type WorkspaceOTelMetadata } from '../../../platform/otel/common/workspaceOTelMetadata';
+import {
+	resolveWorkspaceOTelMetadata,
+	type WorkspaceOTelMetadata,
+} from '../../../platform/otel/common/workspaceOTelMetadata';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
 import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
 import { TimeoutTimer } from '../../../util/vs/base/common/async';
@@ -27,7 +30,7 @@ export interface EditSurvivalResult {
 	/**
 	 * Set includeArc to get this!
 	 * See ArcTracker.
-	*/
+	 */
 	readonly arc?: number;
 
 	/**
@@ -40,8 +43,17 @@ export interface EditSurvivalResult {
 
 export class EditSurvivalReporter {
 	private readonly _store = new DisposableStore();
-	private readonly _editSurvivalTracker = new EditSurvivalTracker(this._documentTextBeforeMarkedEdits, this._markedEdits);
-	private readonly _arcTracker = this._options.includeArc === true ? new ArcTracker(this._documentTextBeforeMarkedEdits, this._markedEdits) : undefined;
+	private readonly _editSurvivalTracker = new EditSurvivalTracker(
+		this._documentTextBeforeMarkedEdits,
+		this._markedEdits,
+	);
+	private readonly _arcTracker =
+		this._options.includeArc === true
+			? new ArcTracker(
+					this._documentTextBeforeMarkedEdits,
+					this._markedEdits,
+				)
+			: undefined;
 	private readonly _initialBranchName: string | undefined;
 
 	/**
@@ -56,7 +68,7 @@ export class EditSurvivalReporter {
 	 * 		[5min] -> ...
 	 * 		[10min] -> ...
 	 * ```
-	*/
+	 */
 	constructor(
 		private readonly _document: vscode.TextDocument,
 		private readonly _documentTextBeforeMarkedEdits: string,
@@ -66,21 +78,25 @@ export class EditSurvivalReporter {
 		private readonly _sendTelemetryEvent: (res: EditSurvivalResult) => void,
 		@IWorkspaceService workspaceService: IWorkspaceService,
 		@IGitService private readonly _gitService: IGitService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
 	) {
-		this._store.add(workspaceService.onDidChangeTextDocument(e => {
-			if (e.document !== this._document) {
-				return;
-			}
-			const edits = stringEditFromTextContentChange(e.contentChanges);
-			this._editSurvivalTracker.handleEdits(edits);
-			this._arcTracker?.handleEdits(edits);
-		}));
+		this._store.add(
+			workspaceService.onDidChangeTextDocument((e) => {
+				if (e.document !== this._document) {
+					return;
+				}
+				const edits = stringEditFromTextContentChange(e.contentChanges);
+				this._editSurvivalTracker.handleEdits(edits);
+				this._arcTracker?.handleEdits(edits);
+			}),
+		);
 
 		this._editSurvivalTracker.handleEdits(editsOnTop);
 		this._arcTracker?.handleEdits(editsOnTop);
 
-		this._initialBranchName = this._gitService.activeRepository.get()?.headBranchName;
+		this._initialBranchName =
+			this._gitService.activeRepository.get()?.headBranchName;
 
 		// This aligns with github inline completions
 		this._reportAfter(0);
@@ -111,11 +127,15 @@ export class EditSurvivalReporter {
 	}
 
 	private _report(timeMs: number): void {
-		const survivalRate = this._editSurvivalTracker.computeTrackedEditsSurvivalScore();
+		const survivalRate =
+			this._editSurvivalTracker.computeTrackedEditsSurvivalScore();
 
 		const currentBranch = this._getCurrentBranchName();
 		const didBranchChange = currentBranch !== this._initialBranchName;
-		const workspace = resolveWorkspaceOTelMetadata(this._gitService, this._document.uri);
+		const workspace = resolveWorkspaceOTelMetadata(
+			this._gitService,
+			this._document.uri,
+		);
 		this._sendTelemetryEvent({
 			telemetryService: this._telemetryService,
 			fourGram: survivalRate.fourGram,

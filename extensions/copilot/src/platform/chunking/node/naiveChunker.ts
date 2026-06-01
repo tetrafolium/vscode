@@ -5,10 +5,17 @@
 
 import { ITokenizer } from '../../../util/common/tokenizer';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
-import { commonPrefixLength, isFalsyOrWhitespace, splitLines } from '../../../util/vs/base/common/strings';
+import {
+	commonPrefixLength,
+	isFalsyOrWhitespace,
+	splitLines,
+} from '../../../util/vs/base/common/strings';
 import { URI } from '../../../util/vs/base/common/uri';
 import { Range } from '../../../util/vs/editor/common/core/range';
-import { ITokenizerProvider, TokenizationEndpoint } from '../../tokenizer/node/tokenizer';
+import {
+	ITokenizerProvider,
+	TokenizationEndpoint,
+} from '../../tokenizer/node/tokenizer';
 import { FileChunk } from '../common/chunk';
 
 export const MAX_CHUNK_SIZE_TOKENS = 250;
@@ -23,31 +30,40 @@ export class NaiveChunker {
 
 	constructor(
 		endpoint: TokenizationEndpoint,
-		@ITokenizerProvider tokenizerProvider: ITokenizerProvider
+		@ITokenizerProvider tokenizerProvider: ITokenizerProvider,
 	) {
 		this.tokenizer = tokenizerProvider.acquireTokenizer(endpoint);
 	}
 
-	async chunkFile(uri: URI, text: string, {
-		maxTokenLength = MAX_CHUNK_SIZE_TOKENS,
-		removeEmptyLines = true,
-	}: {
-		maxTokenLength?: number;
-		removeEmptyLines?: boolean;
-	}, token: CancellationToken): Promise<FileChunk[]> {
+	async chunkFile(
+		uri: URI,
+		text: string,
+		{
+			maxTokenLength = MAX_CHUNK_SIZE_TOKENS,
+			removeEmptyLines = true,
+		}: {
+			maxTokenLength?: number;
+			removeEmptyLines?: boolean;
+		},
+		token: CancellationToken,
+	): Promise<FileChunk[]> {
 		const chunks: FileChunk[] = [];
 		for await (const chunk of this._processLinesIntoChunks(
-			uri, text,
+			uri,
+			text,
 			maxTokenLength,
 			true,
 			removeEmptyLines,
-			token
+			token,
 		)) {
 			if (token.isCancellationRequested) {
 				return [];
 			}
 
-			if (!removeEmptyLines || (!!chunk.text.length && /[\w\d]{2}/.test(chunk.text))) {
+			if (
+				!removeEmptyLines ||
+				(!!chunk.text.length && /[\w\d]{2}/.test(chunk.text))
+			) {
 				chunks.push(chunk);
 			}
 		}
@@ -80,18 +96,32 @@ export class NaiveChunker {
 				return;
 			}
 
-			if (longestCommonWhitespaceInChunk === undefined || longestCommonWhitespaceInChunk.length > 0) {
+			if (
+				longestCommonWhitespaceInChunk === undefined ||
+				longestCommonWhitespaceInChunk.length > 0
+			) {
 				const leadingWhitespaceMatches = line.match(/^\s+/);
-				const currentLeadingWhitespace = leadingWhitespaceMatches ? leadingWhitespaceMatches[0] : '';
+				const currentLeadingWhitespace = leadingWhitespaceMatches
+					? leadingWhitespaceMatches[0]
+					: '';
 
 				longestCommonWhitespaceInChunk = longestCommonWhitespaceInChunk
-					? commonLeadingStr(longestCommonWhitespaceInChunk, currentLeadingWhitespace)
+					? commonLeadingStr(
+							longestCommonWhitespaceInChunk,
+							currentLeadingWhitespace,
+						)
 					: currentLeadingWhitespace;
 			}
 
 			if (usedTokensInChunk + lineTokenCount > maxTokenLength) {
 				// Emit previous chunk and reset state
-				const chunk = this.finalizeChunk(uri, accumulatingChunk, shouldDedent, longestCommonWhitespaceInChunk ?? '', false);
+				const chunk = this.finalizeChunk(
+					uri,
+					accumulatingChunk,
+					shouldDedent,
+					longestCommonWhitespaceInChunk ?? '',
+					false,
+				);
 				if (chunk) {
 					yield chunk;
 				}
@@ -108,20 +138,34 @@ export class NaiveChunker {
 			usedTokensInChunk += lineTokenCount;
 		}
 
-		const finalChunk = this.finalizeChunk(uri, accumulatingChunk, shouldDedent, longestCommonWhitespaceInChunk ?? '', true);
+		const finalChunk = this.finalizeChunk(
+			uri,
+			accumulatingChunk,
+			shouldDedent,
+			longestCommonWhitespaceInChunk ?? '',
+			true,
+		);
 		if (finalChunk) {
 			yield finalChunk;
 		}
 	}
 
-	private finalizeChunk(file: URI, chunkLines: readonly IChunkedLine[], shouldDedent: boolean, leadingWhitespace: string, isLastChunk: boolean): FileChunk | undefined {
+	private finalizeChunk(
+		file: URI,
+		chunkLines: readonly IChunkedLine[],
+		shouldDedent: boolean,
+		leadingWhitespace: string,
+		isLastChunk: boolean,
+	): FileChunk | undefined {
 		if (!chunkLines.length) {
 			return undefined;
 		}
 
 		const finalizedChunkText = shouldDedent
-			? chunkLines.map(x => x.text.substring(leadingWhitespace.length)).join('\n')
-			: chunkLines.map(x => x.text).join('\n');
+			? chunkLines
+					.map((x) => x.text.substring(leadingWhitespace.length))
+					.join('\n')
+			: chunkLines.map((x) => x.text).join('\n');
 
 		const lastLine = chunkLines[chunkLines.length - 1];
 		return {
@@ -140,16 +184,24 @@ export class NaiveChunker {
 	}
 }
 
-export function trimCommonLeadingWhitespace(lines: string[]): { trimmedLines: string[]; shortestLeadingCommonWhitespace: string } {
+export function trimCommonLeadingWhitespace(lines: string[]): {
+	trimmedLines: string[];
+	shortestLeadingCommonWhitespace: string;
+} {
 	let longestCommonWhitespace: string | undefined;
 	for (const line of lines) {
 		const leadingWhitespaceMatches = line.match(/^\s+/);
-		const currentLeadingWhitespace = leadingWhitespaceMatches ? leadingWhitespaceMatches[0] : '';
+		const currentLeadingWhitespace = leadingWhitespaceMatches
+			? leadingWhitespaceMatches[0]
+			: '';
 
 		if (longestCommonWhitespace === undefined) {
 			longestCommonWhitespace = currentLeadingWhitespace;
 		} else {
-			longestCommonWhitespace = commonLeadingStr(longestCommonWhitespace, currentLeadingWhitespace);
+			longestCommonWhitespace = commonLeadingStr(
+				longestCommonWhitespace,
+				currentLeadingWhitespace,
+			);
 		}
 
 		if (!longestCommonWhitespace || longestCommonWhitespace.length === 0) {
@@ -163,7 +215,7 @@ export function trimCommonLeadingWhitespace(lines: string[]): { trimmedLines: st
 
 	const dedentLength = (longestCommonWhitespace ?? '').length;
 	return {
-		trimmedLines: lines.map(e => e.substring(dedentLength)),
+		trimmedLines: lines.map((e) => e.substring(dedentLength)),
 		shortestLeadingCommonWhitespace: longestCommonWhitespace ?? '',
 	};
 }

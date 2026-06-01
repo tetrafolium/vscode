@@ -7,14 +7,29 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import { ConfigKey } from '../../../../platform/configuration/common/configurationService';
 import { DefaultsOnlyConfigurationService } from '../../../../platform/configuration/common/defaultsOnlyConfigurationService';
 import { InMemoryConfigurationService } from '../../../../platform/configuration/test/common/inMemoryConfigurationService';
-import { AggressivenessLevel, DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION, UserHappinessScoreConfiguration } from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	AggressivenessLevel,
+	DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION,
+	UserHappinessScoreConfiguration,
+} from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { ILogService } from '../../../../platform/log/common/logService';
-import { IExperimentationService, NullExperimentationService } from '../../../../platform/telemetry/common/nullExperimentationService';
+import {
+	IExperimentationService,
+	NullExperimentationService,
+} from '../../../../platform/telemetry/common/nullExperimentationService';
 import { NullTelemetryService } from '../../../../platform/telemetry/common/nullTelemetryService';
-import { ITelemetryService, TelemetryEventMeasurements, TelemetryEventProperties } from '../../../../platform/telemetry/common/telemetry';
+import {
+	ITelemetryService,
+	TelemetryEventMeasurements,
+	TelemetryEventProperties,
+} from '../../../../platform/telemetry/common/telemetry';
 import { TestLogService } from '../../../../platform/testing/common/testLogService';
-import { ActionKind, MAX_INTERACTIONS_CONSIDERED, MAX_INTERACTIONS_STORED, UserInteractionMonitor } from '../../common/userInteractionMonitor';
-
+import {
+	ActionKind,
+	MAX_INTERACTIONS_CONSIDERED,
+	MAX_INTERACTIONS_STORED,
+	UserInteractionMonitor,
+} from '../../common/userInteractionMonitor';
 
 /**
  * Test-friendly subclass of UserInteractionMonitor that exposes internal state for verification.
@@ -31,7 +46,10 @@ class TestUserInteractionMonitor extends UserInteractionMonitor {
 	/**
 	 * Get a copy of the recent user actions for timing calculation.
 	 */
-	getActionsForTiming(): { time: number; kind: ActionKind.Accepted | ActionKind.Rejected }[] {
+	getActionsForTiming(): {
+		time: number;
+		kind: ActionKind.Accepted | ActionKind.Rejected;
+	}[] {
 		return [...this._recentUserActionsForTiming];
 	}
 
@@ -64,7 +82,11 @@ interface TelemetryCall {
 class MockTelemetryService extends NullTelemetryService {
 	readonly msftEvents: TelemetryCall[] = [];
 
-	override sendMSFTTelemetryEvent(eventName: string, properties?: TelemetryEventProperties, measurements?: TelemetryEventMeasurements): void {
+	override sendMSFTTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties,
+		measurements?: TelemetryEventMeasurements,
+	): void {
 		this.msftEvents.push({ eventName, properties, measurements });
 	}
 
@@ -85,7 +107,12 @@ describe('UserInteractionMonitor', () => {
 		experimentationService = new NullExperimentationService();
 		logService = new TestLogService();
 		telemetryService = new NullTelemetryService();
-		monitor = new TestUserInteractionMonitor(configurationService, experimentationService, logService, telemetryService);
+		monitor = new TestUserInteractionMonitor(
+			configurationService,
+			experimentationService,
+			logService,
+			telemetryService,
+		);
 	});
 
 	describe('history logging', () => {
@@ -226,7 +253,7 @@ describe('UserInteractionMonitor', () => {
 		test('respects configured aggressiveness level override', () => {
 			configurationService.setConfig(
 				ConfigKey.TeamInternal.InlineEditsXtabAggressivenessLevel,
-				AggressivenessLevel.Low
+				AggressivenessLevel.Low,
 			);
 
 			// Even with many acceptances, should return configured level
@@ -247,10 +274,16 @@ describe('UserInteractionMonitor', () => {
 				monitor.handleRejection();
 			}
 
-			const levelRejectionsRecent = monitor.getAggressivenessLevel().aggressivenessLevel;
+			const levelRejectionsRecent =
+				monitor.getAggressivenessLevel().aggressivenessLevel;
 
 			// Reset and do opposite order
-			monitor = new TestUserInteractionMonitor(configurationService, experimentationService, logService, telemetryService);
+			monitor = new TestUserInteractionMonitor(
+				configurationService,
+				experimentationService,
+				logService,
+				telemetryService,
+			);
 			for (let i = 0; i < 5; i++) {
 				monitor.handleRejection();
 			}
@@ -258,12 +291,19 @@ describe('UserInteractionMonitor', () => {
 				monitor.handleAcceptance();
 			}
 
-			const levelAcceptancesRecent = monitor.getAggressivenessLevel().aggressivenessLevel;
+			const levelAcceptancesRecent =
+				monitor.getAggressivenessLevel().aggressivenessLevel;
 
 			// When acceptances are more recent, aggressiveness should be higher
-			const aggressivenessOrder = [AggressivenessLevel.Low, AggressivenessLevel.Medium, AggressivenessLevel.High];
-			expect(aggressivenessOrder.indexOf(levelAcceptancesRecent)).toBeGreaterThanOrEqual(
-				aggressivenessOrder.indexOf(levelRejectionsRecent)
+			const aggressivenessOrder = [
+				AggressivenessLevel.Low,
+				AggressivenessLevel.Medium,
+				AggressivenessLevel.High,
+			];
+			expect(
+				aggressivenessOrder.indexOf(levelAcceptancesRecent),
+			).toBeGreaterThanOrEqual(
+				aggressivenessOrder.indexOf(levelRejectionsRecent),
 			);
 		});
 	});
@@ -278,8 +318,9 @@ describe('UserInteractionMonitor', () => {
 				limitConsecutiveIgnored: false,
 			};
 			configurationService.setConfig(
-				ConfigKey.TeamInternal.InlineEditsUserHappinessScoreConfigurationString,
-				JSON.stringify(customConfig)
+				ConfigKey.TeamInternal
+					.InlineEditsUserHappinessScoreConfigurationString,
+				JSON.stringify(customConfig),
 			);
 
 			// Mix of actions
@@ -302,8 +343,9 @@ describe('UserInteractionMonitor', () => {
 				ignoredLimit: 2,
 			};
 			configurationService.setConfig(
-				ConfigKey.TeamInternal.InlineEditsUserHappinessScoreConfigurationString,
-				JSON.stringify(customConfig)
+				ConfigKey.TeamInternal
+					.InlineEditsUserHappinessScoreConfigurationString,
+				JSON.stringify(customConfig),
 			);
 
 			// Add many ignored actions scattered between accepts
@@ -317,7 +359,10 @@ describe('UserInteractionMonitor', () => {
 
 			// Only 2 ignored should be counted due to limit
 			const level = monitor.getAggressivenessLevel().aggressivenessLevel;
-			expect([AggressivenessLevel.Medium, AggressivenessLevel.High]).toContain(level);
+			expect([
+				AggressivenessLevel.Medium,
+				AggressivenessLevel.High,
+			]).toContain(level);
 		});
 	});
 
@@ -326,24 +371,39 @@ describe('UserInteractionMonitor', () => {
 
 		beforeEach(() => {
 			mockTelemetryService = new MockTelemetryService();
-			monitor = new TestUserInteractionMonitor(configurationService, experimentationService, logService, mockTelemetryService);
+			monitor = new TestUserInteractionMonitor(
+				configurationService,
+				experimentationService,
+				logService,
+				mockTelemetryService,
+			);
 		});
 
 		test('emits telemetry event when config is invalid JSON', () => {
 			configurationService.setConfig(
-				ConfigKey.TeamInternal.InlineEditsUserHappinessScoreConfigurationString,
-				'not valid json'
+				ConfigKey.TeamInternal
+					.InlineEditsUserHappinessScoreConfigurationString,
+				'not valid json',
 			);
 
 			monitor.getAggressivenessLevel();
 
 			expect(mockTelemetryService.msftEvents).toHaveLength(1);
-			expect(mockTelemetryService.msftEvents[0].eventName).toBe('incorrectNesAdaptiveAggressivenessConfig');
-			expect(mockTelemetryService.msftEvents[0].properties).toMatchObject({
-				configName: ConfigKey.TeamInternal.InlineEditsUserHappinessScoreConfigurationString.id,
-				configValue: 'not valid json',
-			});
-			expect(mockTelemetryService.msftEvents[0].properties?.errorMessage).toBeDefined();
+			expect(mockTelemetryService.msftEvents[0].eventName).toBe(
+				'incorrectNesAdaptiveAggressivenessConfig',
+			);
+			expect(mockTelemetryService.msftEvents[0].properties).toMatchObject(
+				{
+					configName:
+						ConfigKey.TeamInternal
+							.InlineEditsUserHappinessScoreConfigurationString
+							.id,
+					configValue: 'not valid json',
+				},
+			);
+			expect(
+				mockTelemetryService.msftEvents[0].properties?.errorMessage,
+			).toBeDefined();
 		});
 
 		test('emits telemetry event when config has missing required fields', () => {
@@ -353,15 +413,20 @@ describe('UserInteractionMonitor', () => {
 				rejectedScore: 0,
 			});
 			configurationService.setConfig(
-				ConfigKey.TeamInternal.InlineEditsUserHappinessScoreConfigurationString,
-				incompleteConfig
+				ConfigKey.TeamInternal
+					.InlineEditsUserHappinessScoreConfigurationString,
+				incompleteConfig,
 			);
 
 			monitor.getAggressivenessLevel();
 
 			expect(mockTelemetryService.msftEvents).toHaveLength(1);
-			expect(mockTelemetryService.msftEvents[0].eventName).toBe('incorrectNesAdaptiveAggressivenessConfig');
-			expect(mockTelemetryService.msftEvents[0].properties?.configValue).toBe(incompleteConfig);
+			expect(mockTelemetryService.msftEvents[0].eventName).toBe(
+				'incorrectNesAdaptiveAggressivenessConfig',
+			);
+			expect(
+				mockTelemetryService.msftEvents[0].properties?.configValue,
+			).toBe(incompleteConfig);
 		});
 
 		test('emits telemetry event when config has invalid score relationships', () => {
@@ -378,28 +443,36 @@ describe('UserInteractionMonitor', () => {
 				limitTotalIgnored: true,
 			});
 			configurationService.setConfig(
-				ConfigKey.TeamInternal.InlineEditsUserHappinessScoreConfigurationString,
-				invalidConfig
+				ConfigKey.TeamInternal
+					.InlineEditsUserHappinessScoreConfigurationString,
+				invalidConfig,
 			);
 
 			monitor.getAggressivenessLevel();
 
 			expect(mockTelemetryService.msftEvents).toHaveLength(1);
-			expect(mockTelemetryService.msftEvents[0].eventName).toBe('incorrectNesAdaptiveAggressivenessConfig');
-			expect(mockTelemetryService.msftEvents[0].properties?.errorMessage).toContain('acceptedScore must be greater than rejectedScore');
+			expect(mockTelemetryService.msftEvents[0].eventName).toBe(
+				'incorrectNesAdaptiveAggressivenessConfig',
+			);
+			expect(
+				mockTelemetryService.msftEvents[0].properties?.errorMessage,
+			).toContain('acceptedScore must be greater than rejectedScore');
 		});
 
 		test('returns default config when parse fails', () => {
 			configurationService.setConfig(
-				ConfigKey.TeamInternal.InlineEditsUserHappinessScoreConfigurationString,
-				'invalid'
+				ConfigKey.TeamInternal
+					.InlineEditsUserHappinessScoreConfigurationString,
+				'invalid',
 			);
 
 			// Get the config that was parsed (should fall back to default)
 			const parsedConfig = monitor.getUserHappinessScoreConfiguration();
 
 			// Should be exactly equal to the default config
-			expect(parsedConfig).toEqual(DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION);
+			expect(parsedConfig).toEqual(
+				DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION,
+			);
 		});
 
 		test('does not emit telemetry for valid config', () => {
@@ -409,8 +482,9 @@ describe('UserInteractionMonitor', () => {
 				rejectedScore: 0.1,
 			};
 			configurationService.setConfig(
-				ConfigKey.TeamInternal.InlineEditsUserHappinessScoreConfigurationString,
-				JSON.stringify(validConfig)
+				ConfigKey.TeamInternal
+					.InlineEditsUserHappinessScoreConfigurationString,
+				JSON.stringify(validConfig),
 			);
 
 			// Get the config that was parsed
@@ -418,7 +492,9 @@ describe('UserInteractionMonitor', () => {
 
 			// Should be exactly equal to the custom config (not the default)
 			expect(parsedConfig).toEqual(validConfig);
-			expect(parsedConfig).not.toEqual(DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION);
+			expect(parsedConfig).not.toEqual(
+				DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION,
+			);
 
 			// No telemetry should be emitted
 			expect(mockTelemetryService.msftEvents).toHaveLength(0);

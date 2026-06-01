@@ -10,17 +10,19 @@ import { IAuthenticationChatUpgradeService } from '../../authentication/common/a
 import { ResolvedRepoRemoteInfo } from '../../git/common/gitService';
 import { ICodeSearchAuthenticationService } from '../node/codeSearchRepoAuth';
 
-
 export class VsCodeCodeSearchAuthenticationService implements ICodeSearchAuthenticationService {
-
 	declare readonly _serviceBrand: undefined;
 
 	constructor(
-		@IAuthenticationService private readonly _authService: IAuthenticationService,
-		@IAuthenticationChatUpgradeService private readonly _authUpgradeService: IAuthenticationChatUpgradeService,
-	) { }
+		@IAuthenticationService
+		private readonly _authService: IAuthenticationService,
+		@IAuthenticationChatUpgradeService
+		private readonly _authUpgradeService: IAuthenticationChatUpgradeService,
+	) {}
 
-	async tryAuthenticating(repo: ResolvedRepoRemoteInfo | undefined): Promise<void> {
+	async tryAuthenticating(
+		repo: ResolvedRepoRemoteInfo | undefined,
+	): Promise<void> {
 		const fetchUrl = repo?.fetchUrl;
 
 		const signInButton: vscode.MessageItem = {
@@ -28,37 +30,57 @@ export class VsCodeCodeSearchAuthenticationService implements ICodeSearchAuthent
 		};
 		const cancelButton: vscode.MessageItem = {
 			title: t`Cancel`,
-			isCloseAffordance: true
+			isCloseAffordance: true,
 		};
 
 		if (repo?.repoId.type === 'ado') {
-			const result = await vscode.window.showWarningMessage(t`Sign in to use remote index`, {
-				modal: true,
-				detail: fetchUrl
-					? t`Sign in to Azure DevOps to use remote workspace index for: ${fetchUrl.toString()}`
-					: t`Sign in to Azure DevOps to use remote workspace index for a repo in this workspace`
-			}, signInButton, cancelButton);
+			const result = await vscode.window.showWarningMessage(
+				t`Sign in to use remote index`,
+				{
+					modal: true,
+					detail: fetchUrl
+						? t`Sign in to Azure DevOps to use remote workspace index for: ${fetchUrl.toString()}`
+						: t`Sign in to Azure DevOps to use remote workspace index for a repo in this workspace`,
+				},
+				signInButton,
+				cancelButton,
+			);
 
 			if (result === signInButton) {
-				await this._authService.getAdoAccessTokenBase64({ createIfNone: true });
+				await this._authService.getAdoAccessTokenBase64({
+					createIfNone: true,
+				});
 				return;
 			}
 		} else {
-			const result = await vscode.window.showWarningMessage(t`Sign in to use remote index`, {
-				modal: true,
-				detail: fetchUrl
-					? t`Sign in to GitHub to use remote workspace index for: ${fetchUrl.toString()}`
-					: t`Sign in to GitHub to use remote workspace index for a repo in this workspace`
-			}, signInButton, cancelButton);
+			const result = await vscode.window.showWarningMessage(
+				t`Sign in to use remote index`,
+				{
+					modal: true,
+					detail: fetchUrl
+						? t`Sign in to GitHub to use remote workspace index for: ${fetchUrl.toString()}`
+						: t`Sign in to GitHub to use remote workspace index for a repo in this workspace`,
+				},
+				signInButton,
+				cancelButton,
+			);
 
 			if (result === signInButton) {
-				await this._authService.getGitHubSession('any', { createIfNone: { detail: t('Sign in to GitHub to use remote workspace index.') } });
+				await this._authService.getGitHubSession('any', {
+					createIfNone: {
+						detail: t(
+							'Sign in to GitHub to use remote workspace index.',
+						),
+					},
+				});
 				return;
 			}
 		}
 	}
 
-	async tryReauthenticating(repo: ResolvedRepoRemoteInfo | undefined): Promise<void> {
+	async tryReauthenticating(
+		repo: ResolvedRepoRemoteInfo | undefined,
+	): Promise<void> {
 		const fetchUrl = repo?.fetchUrl;
 
 		const signInButton: vscode.MessageItem = {
@@ -66,28 +88,40 @@ export class VsCodeCodeSearchAuthenticationService implements ICodeSearchAuthent
 		};
 		const cancelButton: vscode.MessageItem = {
 			title: t`Cancel`,
-			isCloseAffordance: true
+			isCloseAffordance: true,
 		};
 
 		if (repo?.repoId.type === 'ado') {
-			const result = await vscode.window.showWarningMessage(t`Reauthenticate to use remote workspace index`, {
-				modal: true,
-				detail: fetchUrl
-					? t`Sign in to Azure DevOps again to use remote workspace index for: ${fetchUrl}`
-					: t`Sign in to Azure DevOps again to use remote workspace index for a repo in this workspace`
-			}, signInButton, cancelButton);
+			const result = await vscode.window.showWarningMessage(
+				t`Reauthenticate to use remote workspace index`,
+				{
+					modal: true,
+					detail: fetchUrl
+						? t`Sign in to Azure DevOps again to use remote workspace index for: ${fetchUrl}`
+						: t`Sign in to Azure DevOps again to use remote workspace index for a repo in this workspace`,
+				},
+				signInButton,
+				cancelButton,
+			);
 
 			if (result === signInButton) {
-				await this._authService.getAdoAccessTokenBase64({ createIfNone: true });
+				await this._authService.getAdoAccessTokenBase64({
+					createIfNone: true,
+				});
 				return;
 			}
 		} else {
-			const result = await vscode.window.showWarningMessage(t`Reauthenticate to use remote workspace index`, {
-				modal: true,
-				detail: fetchUrl
-					? t`Sign in to GitHub again to use remote workspace index for: ${fetchUrl}`
-					: t`Sign in to GitHub again to use remote workspace index for a repo in this workspace`
-			}, signInButton, cancelButton);
+			const result = await vscode.window.showWarningMessage(
+				t`Reauthenticate to use remote workspace index`,
+				{
+					modal: true,
+					detail: fetchUrl
+						? t`Sign in to GitHub again to use remote workspace index for: ${fetchUrl}`
+						: t`Sign in to GitHub again to use remote workspace index for a repo in this workspace`,
+				},
+				signInButton,
+				cancelButton,
+			);
 
 			if (result === signInButton) {
 				await this._authUpgradeService.showPermissiveSessionModal();
@@ -102,7 +136,7 @@ export class VsCodeCodeSearchAuthenticationService implements ICodeSearchAuthent
 		};
 		const cancelButton: vscode.MessageItem = {
 			title: t`Cancel`,
-			isCloseAffordance: true
+			isCloseAffordance: true,
 		};
 
 		const result = await vscode.window.showWarningMessage(
@@ -112,7 +146,7 @@ export class VsCodeCodeSearchAuthenticationService implements ICodeSearchAuthent
 				detail: t`This workspace contains ${fileCount} files. Building a local index may take a while but will improve search performance.`,
 			},
 			confirmButton,
-			cancelButton
+			cancelButton,
 		);
 
 		return result === confirmButton;

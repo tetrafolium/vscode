@@ -8,8 +8,10 @@ import { CallTracker } from '../../../util/common/telemetryCorrelationId';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { URI } from '../../../util/vs/base/common/uri';
 import { EmbeddingType } from '../../embeddings/common/embeddingsComputer';
-import { FileChunkWithEmbedding, FileChunkWithOptionalEmbedding } from './chunk';
-
+import {
+	FileChunkWithEmbedding,
+	FileChunkWithOptionalEmbedding,
+} from './chunk';
 
 export class ComputeBatchInfo {
 	recomputedFileCount = 0;
@@ -21,7 +23,8 @@ export enum EmbeddingsComputeQos {
 	Online = 'Online',
 }
 
-export const IChunkingEndpointClient = createServiceIdentifier<IChunkingEndpointClient>('IChunkingEndpointClient');
+export const IChunkingEndpointClient =
+	createServiceIdentifier<IChunkingEndpointClient>('IChunkingEndpointClient');
 
 export interface ChunkableContent {
 	readonly uri: URI;
@@ -38,7 +41,6 @@ export interface ChunkableContent {
 	getText(): Promise<string>;
 }
 
-
 /**
  * The chunking and embedding endpoint client.
  */
@@ -51,7 +53,9 @@ export interface IChunkingEndpointClient {
 		content: ChunkableContent,
 		batchInfo: ComputeBatchInfo,
 		qos: EmbeddingsComputeQos,
-		cache: ReadonlyMap</* hash */string, FileChunkWithEmbedding> | undefined,
+		cache:
+			| ReadonlyMap</* hash */ string, FileChunkWithEmbedding>
+			| undefined,
 		telemetryInfo: CallTracker,
 		token: CancellationToken,
 	): Promise<readonly FileChunkWithOptionalEmbedding[] | undefined>;
@@ -62,7 +66,9 @@ export interface IChunkingEndpointClient {
 		content: ChunkableContent,
 		batchInfo: ComputeBatchInfo,
 		qos: EmbeddingsComputeQos,
-		cache: ReadonlyMap</* hash */string, FileChunkWithEmbedding> | undefined,
+		cache:
+			| ReadonlyMap</* hash */ string, FileChunkWithEmbedding>
+			| undefined,
 		telemetryInfo: CallTracker,
 		token: CancellationToken,
 	): Promise<readonly FileChunkWithEmbedding[] | undefined>;

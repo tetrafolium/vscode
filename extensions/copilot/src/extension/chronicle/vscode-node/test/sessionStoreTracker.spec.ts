@@ -6,7 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import { GenAiAttr } from '../../../../platform/otel/common/genAiAttributes';
 import type { ICompletedSpanData } from '../../../../platform/otel/common/otelService';
-import { extractFilePath, extractToolArgs } from '../../common/sessionStoreTracking';
+import {
+	extractFilePath,
+	extractToolArgs,
+} from '../../common/sessionStoreTracking';
 
 /**
  * These tests verify the span data processing logic used by SessionStoreTracker.
@@ -21,7 +24,9 @@ import { extractFilePath, extractToolArgs } from '../../common/sessionStoreTrack
  */
 
 // Create a minimal mock span for testing
-function makeSpan(overrides: Partial<ICompletedSpanData> = {}): ICompletedSpanData {
+function makeSpan(
+	overrides: Partial<ICompletedSpanData> = {},
+): ICompletedSpanData {
 	return {
 		name: 'test',
 		traceId: 'trace-1',
@@ -122,10 +127,13 @@ describe('SessionStoreTracker span processing', () => {
 		});
 
 		it('extracts file from apply_patch span using input field', () => {
-			const patchInput = '*** Begin Patch\n*** Update File: /lib/helpers.ts\n@@export\n-old\n+new\n*** End Patch';
+			const patchInput =
+				'*** Begin Patch\n*** Update File: /lib/helpers.ts\n@@export\n-old\n+new\n*** End Patch';
 			const span = makeSpan({
 				attributes: {
-					[GenAiAttr.TOOL_CALL_ARGUMENTS]: JSON.stringify({ input: patchInput }),
+					[GenAiAttr.TOOL_CALL_ARGUMENTS]: JSON.stringify({
+						input: patchInput,
+					}),
 				},
 			});
 
@@ -141,15 +149,26 @@ describe('SessionStoreTracker span processing', () => {
 					[GenAiAttr.TOOL_CALL_ARGUMENTS]: JSON.stringify({
 						explanation: 'fix imports',
 						replacements: [
-							{ filePath: '/src/a.ts', oldString: 'x', newString: 'y' },
-							{ filePath: '/src/b.ts', oldString: 'x', newString: 'y' },
+							{
+								filePath: '/src/a.ts',
+								oldString: 'x',
+								newString: 'y',
+							},
+							{
+								filePath: '/src/b.ts',
+								oldString: 'x',
+								newString: 'y',
+							},
 						],
 					}),
 				},
 			});
 
 			const args = extractToolArgs(span);
-			const filePath = extractFilePath('multi_replace_string_in_file', args);
+			const filePath = extractFilePath(
+				'multi_replace_string_in_file',
+				args,
+			);
 
 			// extractFilePath returns first file from replacements array
 			expect(filePath).toBe('/src/a.ts');
@@ -158,7 +177,9 @@ describe('SessionStoreTracker span processing', () => {
 		it('returns undefined for non-file tools', () => {
 			const span = makeSpan({
 				attributes: {
-					[GenAiAttr.TOOL_CALL_ARGUMENTS]: JSON.stringify({ command: 'ls -la' }),
+					[GenAiAttr.TOOL_CALL_ARGUMENTS]: JSON.stringify({
+						command: 'ls -la',
+					}),
 				},
 			});
 
@@ -171,7 +192,9 @@ describe('SessionStoreTracker span processing', () => {
 		it('returns undefined when args are missing filePath', () => {
 			const span = makeSpan({
 				attributes: {
-					[GenAiAttr.TOOL_CALL_ARGUMENTS]: JSON.stringify({ content: 'no path' }),
+					[GenAiAttr.TOOL_CALL_ARGUMENTS]: JSON.stringify({
+						content: 'no path',
+					}),
 				},
 			});
 

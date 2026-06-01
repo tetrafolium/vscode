@@ -8,11 +8,22 @@ import { VSBuffer } from '../../../util/vs/base/common/buffer';
 import { URI } from '../../../util/vs/base/common/uri';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { IVSCodeExtensionContext } from '../../extContext/common/extensionContext';
-import { fileSystemServiceReadAsJSON, IFileSystemService } from '../../filesystem/common/fileSystemService';
+import {
+	fileSystemServiceReadAsJSON,
+	IFileSystemService,
+} from '../../filesystem/common/fileSystemService';
 import { ILogService } from '../../log/common/logService';
 import { IFetcherService } from '../../networking/common/fetcherService';
 import { IWorkbenchService } from '../../workbench/common/workbenchService';
-import { Embedding, EmbeddingType, EmbeddingVector, getWellKnownEmbeddingTypeInfo, IEmbeddingsComputer, LEGACY_EMBEDDING_MODEL_ID, rankEmbeddings } from './embeddingsComputer';
+import {
+	Embedding,
+	EmbeddingType,
+	EmbeddingVector,
+	getWellKnownEmbeddingTypeInfo,
+	IEmbeddingsComputer,
+	LEGACY_EMBEDDING_MODEL_ID,
+	rankEmbeddings,
+} from './embeddingsComputer';
 
 interface EmbeddingsIndex<K, V> {
 	hasItem(value: K): boolean;
@@ -32,16 +43,18 @@ export enum RemoteCacheType {
 	Api = 'api',
 	Extensions = 'extensions',
 	ProjectTemplates = 'project-templates',
-	Tools = 'tools'
+	Tools = 'tools',
 }
 
 // These values are the blob storage container names where we publish computed embeddings
 enum RemoteEmbeddingsContainer {
 	TEXT3SMALL = 'text-3-small',
-	METIS_1024_I16_BINARY = 'metis-1024-I16-Binary'
+	METIS_1024_I16_BINARY = 'metis-1024-I16-Binary',
 }
 
-function embeddingsModelToRemoteContainer(embeddingType: EmbeddingType): RemoteEmbeddingsContainer {
+function embeddingsModelToRemoteContainer(
+	embeddingType: EmbeddingType,
+): RemoteEmbeddingsContainer {
 	switch (getWellKnownEmbeddingTypeInfo(embeddingType)?.model) {
 		case LEGACY_EMBEDDING_MODEL_ID.Metis_I16_Binary:
 			return RemoteEmbeddingsContainer.METIS_1024_I16_BINARY;
@@ -57,7 +70,6 @@ export enum EmbeddingCacheType {
 	WORKSPACE = 2,
 }
 
-
 class EmbeddingsCache {
 	private readonly cacheVersionKey: string;
 
@@ -65,8 +77,10 @@ class EmbeddingsCache {
 		private readonly cacheType: EmbeddingCacheType,
 		private readonly cacheKey: string,
 		protected readonly cacheVersion: string,
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
-		@IVSCodeExtensionContext private readonly extensionContext: IVSCodeExtensionContext
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
+		@IVSCodeExtensionContext
+		private readonly extensionContext: IVSCodeExtensionContext,
 	) {
 		this.cacheVersionKey = `${cacheKey}-version`;
 	}
@@ -88,7 +102,11 @@ class EmbeddingsCache {
 			return;
 		}
 		// Cannot write to readonly file system
-		if (!this.fileSystemService.isWritableFileSystem(this.cacheStorageUri.scheme)) {
+		if (
+			!this.fileSystemService.isWritableFileSystem(
+				this.cacheStorageUri.scheme,
+			)
+		) {
 			return;
 		}
 		// Create directory at stoageUri if it doesn't exist
@@ -97,17 +115,30 @@ class EmbeddingsCache {
 		} catch (e) {
 			if (e.code === 'ENOENT') {
 				// Directory doesn't exist we should create it
-				await this.fileSystemService.createDirectory(this.cacheStorageUri);
+				await this.fileSystemService.createDirectory(
+					this.cacheStorageUri,
+				);
 			}
 		}
 		// Update cache version
-		await this.cacheVersionMementoStorage.update(this.cacheVersionKey, this.cacheVersion);
-		const cacheFile = URI.joinPath(this.cacheStorageUri, `${this.cacheKey}.json`);
+		await this.cacheVersionMementoStorage.update(
+			this.cacheVersionKey,
+			this.cacheVersion,
+		);
+		const cacheFile = URI.joinPath(
+			this.cacheStorageUri,
+			`${this.cacheKey}.json`,
+		);
 		try {
-			await this.fileSystemService.writeFile(cacheFile, VSBuffer.fromString(JSON.stringify(value)).buffer);
+			await this.fileSystemService.writeFile(
+				cacheFile,
+				VSBuffer.fromString(JSON.stringify(value)).buffer,
+			);
 		} catch (e) {
 			if (value !== undefined) {
-				console.error(`Failed to write embeddings cache to ${cacheFile}`);
+				console.error(
+					`Failed to write embeddings cache to ${cacheFile}`,
+				);
 			}
 		}
 	}
@@ -116,20 +147,27 @@ class EmbeddingsCache {
 		if (!this.cacheStorageUri) {
 			return;
 		}
-		const cacheVersion = this.cacheVersionMementoStorage.get<string>(this.cacheVersionKey);
+		const cacheVersion = this.cacheVersionMementoStorage.get<string>(
+			this.cacheVersionKey,
+		);
 
 		if (cacheVersion !== this.cacheVersion) {
 			return undefined;
 		}
 		try {
-			const cacheEntries: any = await fileSystemServiceReadAsJSON.readJSON<T>(this.fileSystemService, URI.joinPath(this.cacheStorageUri, `${this.cacheKey}.json`));
+			const cacheEntries: any =
+				await fileSystemServiceReadAsJSON.readJSON<T>(
+					this.fileSystemService,
+					URI.joinPath(this.cacheStorageUri, `${this.cacheKey}.json`),
+				);
 			if (this.isEmbeddingCacheEntriesType(cacheEntries)) {
 				// If the cache is of the type EmbeddingCacheEntriesWithExtensions (during tests), we need to flatten it
-				return this.constructExposedCache(cacheEntries as EmbeddingCacheEntriesWithExtensions) as T;
+				return this.constructExposedCache(
+					cacheEntries as EmbeddingCacheEntriesWithExtensions,
+				) as T;
 			}
 
 			return cacheEntries as T;
-
 		} catch {
 			return undefined;
 		}
@@ -142,10 +180,16 @@ class EmbeddingsCache {
 
 		const hasOldCache = this.cacheVersionMementoStorage.get(this.cacheKey);
 		if (hasOldCache) {
-			await this.cacheVersionMementoStorage.update(this.cacheKey, undefined);
+			await this.cacheVersionMementoStorage.update(
+				this.cacheKey,
+				undefined,
+			);
 		}
 
-		const cacheFile = URI.joinPath(this.cacheStorageUri, `${this.cacheKey}.json`);
+		const cacheFile = URI.joinPath(
+			this.cacheStorageUri,
+			`${this.cacheKey}.json`,
+		);
 		try {
 			await this.fileSystemService.stat(this.cacheStorageUri);
 			await this.fileSystemService.delete(cacheFile, { useTrash: false });
@@ -156,11 +200,15 @@ class EmbeddingsCache {
 		}
 	}
 
-	private isEmbeddingCacheEntriesType(cache: EmbeddingCacheEntries | EmbeddingCacheEntriesWithExtensions) {
+	private isEmbeddingCacheEntriesType(
+		cache: EmbeddingCacheEntries | EmbeddingCacheEntriesWithExtensions,
+	) {
 		return cache.core !== undefined && cache.extensions !== undefined;
 	}
 
-	private constructExposedCache(cache: EmbeddingCacheEntriesWithExtensions): EmbeddingCacheEntries | undefined {
+	private constructExposedCache(
+		cache: EmbeddingCacheEntriesWithExtensions,
+	): EmbeddingCacheEntries | undefined {
 		const flattenedCache: EmbeddingCacheEntries = { ...cache.core };
 		for (const extensionId in cache.extensions) {
 			const extensionCache = cache.extensions[extensionId];
@@ -170,7 +218,6 @@ class EmbeddingsCache {
 		}
 		return flattenedCache;
 	}
-
 }
 
 export interface IEmbeddingsCache {
@@ -184,27 +231,28 @@ export interface IEmbeddingsCache {
  * A local cache which caches information on disk.
  */
 export class LocalEmbeddingsCache implements IEmbeddingsCache {
-
 	private readonly _embeddingsCache: EmbeddingsCache;
 	constructor(
 		cacheType: EmbeddingCacheType,
 		private readonly cacheKey: string,
 		private readonly cacheVersion: string,
 		public readonly embeddingType: EmbeddingType,
-		@IInstantiationService instantiationService: IInstantiationService
+		@IInstantiationService instantiationService: IInstantiationService,
 	) {
 		this._embeddingsCache = instantiationService.createInstance(
 			EmbeddingsCache,
 			cacheType,
 			cacheKey,
-			cacheVersion
+			cacheVersion,
 		);
 	}
 
 	public async getCache<T = EmbeddingCacheEntries>(): Promise<T | undefined> {
 		const cacheEntries: any = await this._embeddingsCache.getCache();
 		if (cacheEntries === undefined) {
-			throw new Error(`Failed to get cache for ${this.cacheKey}, version ${this.cacheVersion}`);
+			throw new Error(
+				`Failed to get cache for ${this.cacheKey}, version ${this.cacheVersion}`,
+			);
 		}
 		return cacheEntries;
 	}
@@ -233,13 +281,13 @@ export class RemoteEmbeddingsCache implements IEmbeddingsCache {
 		public readonly embeddingType: EmbeddingType,
 		protected readonly remoteCacheType: RemoteCacheType,
 		@IFetcherService protected readonly fetcherService: IFetcherService,
-		@IInstantiationService instantiationService: IInstantiationService
+		@IInstantiationService instantiationService: IInstantiationService,
 	) {
 		this.embeddingsCache = instantiationService.createInstance(
 			EmbeddingsCache,
 			cacheType,
 			cacheKey,
-			cacheVersion
+			cacheVersion,
 		);
 		this.remoteCacheVersionKey = `${cacheKey}-version-remote`;
 	}
@@ -255,7 +303,11 @@ export class RemoteEmbeddingsCache implements IEmbeddingsCache {
 	private async getRemoteCacheURL(): Promise<string> {
 		if (!this._remoteCacheURL) {
 			const remoteCacheContainer = await this.getRemoteContainer();
-			this._remoteCacheURL = RemoteEmbeddingsCache.calculateRemoteCDNURL(remoteCacheContainer, this.remoteCacheType, this.cacheVersion);
+			this._remoteCacheURL = RemoteEmbeddingsCache.calculateRemoteCDNURL(
+				remoteCacheContainer,
+				this.remoteCacheType,
+				this.cacheVersion,
+			);
 		}
 		return this._remoteCacheURL!;
 	}
@@ -263,47 +315,74 @@ export class RemoteEmbeddingsCache implements IEmbeddingsCache {
 	private async getRemoteCacheLatestUpdateURL(): Promise<string> {
 		if (!this._remoteCacheLatestUpdateURL) {
 			const remoteCacheContainer = await this.getRemoteContainer();
-			this._remoteCacheLatestUpdateURL = RemoteEmbeddingsCache.calculateRemoteCDNLatestURL(remoteCacheContainer, this.remoteCacheType, this.cacheVersion);
+			this._remoteCacheLatestUpdateURL =
+				RemoteEmbeddingsCache.calculateRemoteCDNLatestURL(
+					remoteCacheContainer,
+					this.remoteCacheType,
+					this.cacheVersion,
+				);
 		}
 		return this._remoteCacheLatestUpdateURL!;
 	}
 
-	protected async fetchRemoteCache(): Promise<EmbeddingCacheEntries | undefined> {
+	protected async fetchRemoteCache(): Promise<
+		EmbeddingCacheEntries | undefined
+	> {
 		if (this._remoteCacheEntries) {
 			return this._remoteCacheEntries;
 		}
 		const remoteCacheURL = await this.getRemoteCacheURL();
 		try {
 			const remoteCacheURL = await this.getRemoteCacheURL();
-			const response = await this.fetcherService.fetch(remoteCacheURL, { method: 'GET', callSite: 'embeddings-remote-cache' });
+			const response = await this.fetcherService.fetch(remoteCacheURL, {
+				method: 'GET',
+				callSite: 'embeddings-remote-cache',
+			});
 			if (response.ok) {
-				this._remoteCacheEntries = (await response.json()) as EmbeddingCacheEntries;
+				this._remoteCacheEntries =
+					(await response.json()) as EmbeddingCacheEntries;
 				return this._remoteCacheEntries;
 			} else {
-				console.error(`Failed to fetch remote embeddings cache from ${remoteCacheURL}`);
-				console.error(`Response status: ${response.status}, status text: ${response.statusText}`);
+				console.error(
+					`Failed to fetch remote embeddings cache from ${remoteCacheURL}`,
+				);
+				console.error(
+					`Response status: ${response.status}, status text: ${response.statusText}`,
+				);
 				return;
 			}
 		} catch (err) {
-			console.error(`Failed to fetch remote embeddings cache from ${remoteCacheURL}`);
+			console.error(
+				`Failed to fetch remote embeddings cache from ${remoteCacheURL}`,
+			);
 			console.error(err);
 			return;
 		}
 	}
 
 	protected async fetchRemoteCacheLatest(): Promise<string | undefined> {
-		const remoteCacheLatestUpdateURL = await this.getRemoteCacheLatestUpdateURL();
+		const remoteCacheLatestUpdateURL =
+			await this.getRemoteCacheLatestUpdateURL();
 		try {
-			const response = await this.fetcherService.fetch(remoteCacheLatestUpdateURL, { method: 'GET', callSite: 'embeddings-remote-cache-latest' });
+			const response = await this.fetcherService.fetch(
+				remoteCacheLatestUpdateURL,
+				{ method: 'GET', callSite: 'embeddings-remote-cache-latest' },
+			);
 			if (response.ok) {
 				return response.text();
 			} else {
-				console.error(`Failed to fetch remote embeddings cache from ${remoteCacheLatestUpdateURL}`);
-				console.error(`Response status: ${response.status}, status text: ${response.statusText}`);
+				console.error(
+					`Failed to fetch remote embeddings cache from ${remoteCacheLatestUpdateURL}`,
+				);
+				console.error(
+					`Response status: ${response.status}, status text: ${response.statusText}`,
+				);
 				return;
 			}
 		} catch (err) {
-			console.error(`Failed to fetch remote embeddings cache from ${remoteCacheLatestUpdateURL}`);
+			console.error(
+				`Failed to fetch remote embeddings cache from ${remoteCacheLatestUpdateURL}`,
+			);
 			console.error(err);
 			return;
 		}
@@ -315,7 +394,13 @@ export class RemoteEmbeddingsCache implements IEmbeddingsCache {
 		// If the cache exists and the remote cache version is a match,
 		// it means it is the latest version and we can return it,
 		// otherwise we will fetch again the remote cache
-		if (cache && remoteCacheLatest === this.embeddingsCache.cacheVersionMementoStorage.get<string>(this.remoteCacheVersionKey)) {
+		if (
+			cache &&
+			remoteCacheLatest ===
+				this.embeddingsCache.cacheVersionMementoStorage.get<string>(
+					this.remoteCacheVersionKey,
+				)
+		) {
 			return cache as T;
 		}
 		const remoteCache = await this.fetchRemoteCache();
@@ -325,16 +410,27 @@ export class RemoteEmbeddingsCache implements IEmbeddingsCache {
 		}
 
 		await this.embeddingsCache.clearCache();
-		await this.embeddingsCache.cacheVersionMementoStorage.update(this.remoteCacheVersionKey, remoteCacheLatest);
+		await this.embeddingsCache.cacheVersionMementoStorage.update(
+			this.remoteCacheVersionKey,
+			remoteCacheLatest,
+		);
 		await this.embeddingsCache.updateCache(remoteCache);
 		return remoteCache as T;
 	}
 
-	static calculateRemoteCDNURL(cacheContainer: RemoteEmbeddingsContainer, embeddingsType: RemoteCacheType, cacheVersion: string): string {
+	static calculateRemoteCDNURL(
+		cacheContainer: RemoteEmbeddingsContainer,
+		embeddingsType: RemoteCacheType,
+		cacheVersion: string,
+	): string {
 		return `https://embeddings.vscode-cdn.net/${cacheContainer}/v${cacheVersion}/${embeddingsType}/core.json`;
 	}
 
-	static calculateRemoteCDNLatestURL(cacheContainer: RemoteEmbeddingsContainer, embeddingsType: RemoteCacheType, cacheVersion: string): string {
+	static calculateRemoteCDNLatestURL(
+		cacheContainer: RemoteEmbeddingsContainer,
+		embeddingsType: RemoteCacheType,
+		cacheVersion: string,
+	): string {
 		return `https://embeddings.vscode-cdn.net/${cacheContainer}/v${cacheVersion}/${embeddingsType}/latest.txt`;
 	}
 }
@@ -347,7 +443,9 @@ export class RemoteEmbeddingsCache implements IEmbeddingsCache {
  */
 export class RemoteEmbeddingsExtensionCache extends RemoteEmbeddingsCache {
 	// This is a nested structure used to help us do just patching of updated extensions
-	private _remoteExtensionCache: EmbeddingCacheEntriesWithExtensions | undefined;
+	private _remoteExtensionCache:
+		| EmbeddingCacheEntriesWithExtensions
+		| undefined;
 	private _baseExtensionCDNURL: string | undefined;
 
 	constructor(
@@ -360,13 +458,26 @@ export class RemoteEmbeddingsExtensionCache extends RemoteEmbeddingsCache {
 		@IWorkbenchService private readonly workbenchService: IWorkbenchService,
 		@IInstantiationService instantiationService: IInstantiationService,
 	) {
-		super(cacheType, cacheKey, cacheVersion, embeddingType, remoteCacheType, fetcher, instantiationService);
+		super(
+			cacheType,
+			cacheKey,
+			cacheVersion,
+			embeddingType,
+			remoteCacheType,
+			fetcher,
+			instantiationService,
+		);
 	}
 
 	private async getBaseExtensionCDNURL(): Promise<string> {
 		if (!this._baseExtensionCDNURL) {
 			const remoteCacheContainer = await this.getRemoteContainer();
-			this._baseExtensionCDNURL = RemoteEmbeddingsExtensionCache.calculateBaseRemoteExtensionCDNURL(remoteCacheContainer, this.remoteCacheType, this.cacheVersion);
+			this._baseExtensionCDNURL =
+				RemoteEmbeddingsExtensionCache.calculateBaseRemoteExtensionCDNURL(
+					remoteCacheContainer,
+					this.remoteCacheType,
+					this.cacheVersion,
+				);
 		}
 		return this._baseExtensionCDNURL!;
 	}
@@ -375,9 +486,12 @@ export class RemoteEmbeddingsExtensionCache extends RemoteEmbeddingsCache {
 		if (!this._remoteExtensionCache) {
 			return;
 		}
-		const flattenedCache: EmbeddingCacheEntries = { ...this._remoteExtensionCache.core };
+		const flattenedCache: EmbeddingCacheEntries = {
+			...this._remoteExtensionCache.core,
+		};
 		for (const extensionId in this._remoteExtensionCache.extensions) {
-			const extensionCache = this._remoteExtensionCache.extensions[extensionId];
+			const extensionCache =
+				this._remoteExtensionCache.extensions[extensionId];
 			for (const key in extensionCache) {
 				flattenedCache[key] = extensionCache[key];
 			}
@@ -385,11 +499,16 @@ export class RemoteEmbeddingsExtensionCache extends RemoteEmbeddingsCache {
 		return flattenedCache;
 	}
 
-	private async fetchRemoteExtensionCache(extensionId: string): Promise<EmbeddingCacheEntries | undefined> {
+	private async fetchRemoteExtensionCache(
+		extensionId: string,
+	): Promise<EmbeddingCacheEntries | undefined> {
 		const baseExtensionCDNURL = await this.getBaseExtensionCDNURL();
 		const extensionUrl = `${baseExtensionCDNURL}/${extensionId}.json`;
 		try {
-			const response = await this.fetcherService.fetch(extensionUrl, { method: 'GET', callSite: 'embeddings-extension-cache' });
+			const response = await this.fetcherService.fetch(extensionUrl, {
+				method: 'GET',
+				callSite: 'embeddings-extension-cache',
+			});
 			if (response.ok) {
 				return (await response.json()) as EmbeddingCacheEntries;
 			} else {
@@ -397,35 +516,53 @@ export class RemoteEmbeddingsExtensionCache extends RemoteEmbeddingsCache {
 					// The file doesn't exist on our CDN return an empty object so we don't try to fetch it again
 					return {};
 				}
-				console.error(`Failed to fetch remote embeddings cache from ${extensionUrl}`);
-				console.error(`Response status: ${response.status}, status text: ${response.statusText}`);
+				console.error(
+					`Failed to fetch remote embeddings cache from ${extensionUrl}`,
+				);
+				console.error(
+					`Response status: ${response.status}, status text: ${response.statusText}`,
+				);
 				return;
 			}
 		} catch (err) {
-			console.error(`Failed to fetch remote embeddings cache from ${extensionUrl}`);
+			console.error(
+				`Failed to fetch remote embeddings cache from ${extensionUrl}`,
+			);
 			console.error(err);
 			return;
 		}
 	}
 
-	public override async getCache<T = EmbeddingCacheEntries>(): Promise<T | undefined> {
-		const coreOrLocalCache = await super.getCache<EmbeddingCacheEntries | EmbeddingCacheEntriesWithExtensions>();
+	public override async getCache<T = EmbeddingCacheEntries>(): Promise<
+		T | undefined
+	> {
+		const coreOrLocalCache = await super.getCache<
+			EmbeddingCacheEntries | EmbeddingCacheEntriesWithExtensions
+		>();
 		// The remote cache for core coming back unavaiable indicates request problems so we cannot continue with fetching extensions
 		if (coreOrLocalCache === undefined) {
 			return;
 		}
-		let currentCache: EmbeddingCacheEntriesWithExtensions = { core: {}, extensions: {} };
+		let currentCache: EmbeddingCacheEntriesWithExtensions = {
+			core: {},
+			extensions: {},
+		};
 		// Check if the cache has a property 'core' as the RemoteCachewithExtensions has it
 		if (
 			coreOrLocalCache &&
-			RemoteEmbeddingsExtensionCache.isEmbeddingsCacheEntriesWithExtensions(coreOrLocalCache)
+			RemoteEmbeddingsExtensionCache.isEmbeddingsCacheEntriesWithExtensions(
+				coreOrLocalCache,
+			)
 		) {
 			currentCache = coreOrLocalCache;
 		} else {
 			currentCache = { core: coreOrLocalCache, extensions: {} };
 		}
 
-		const activatedExtensionIds = RemoteEmbeddingsExtensionCache.getInstalledExtensionIds(this.workbenchService);
+		const activatedExtensionIds =
+			RemoteEmbeddingsExtensionCache.getInstalledExtensionIds(
+				this.workbenchService,
+			);
 		let removedExtensions = false;
 		// Remove any extensions from currentCache which aren't in activatedExtensionIds
 		for (const extensionId in currentCache.extensions) {
@@ -435,11 +572,14 @@ export class RemoteEmbeddingsExtensionCache extends RemoteEmbeddingsCache {
 			}
 		}
 		const extensionIdsToFetch = activatedExtensionIds.filter(
-			id => !(id in currentCache.extensions) || currentCache.extensions[id] === undefined
+			(id) =>
+				!(id in currentCache.extensions) ||
+				currentCache.extensions[id] === undefined,
 		);
 
 		for (const extensionId of extensionIdsToFetch) {
-			const extensionCache = await this.fetchRemoteExtensionCache(extensionId);
+			const extensionCache =
+				await this.fetchRemoteExtensionCache(extensionId);
 			if (extensionCache) {
 				currentCache.extensions[extensionId] = extensionCache;
 			}
@@ -454,21 +594,33 @@ export class RemoteEmbeddingsExtensionCache extends RemoteEmbeddingsCache {
 		return this.constructExposedCache() as T;
 	}
 
-	static isEmbeddingsCacheEntriesWithExtensions(obj: any): obj is EmbeddingCacheEntriesWithExtensions {
+	static isEmbeddingsCacheEntriesWithExtensions(
+		obj: any,
+	): obj is EmbeddingCacheEntriesWithExtensions {
 		return 'core' in obj && 'extensions' in obj;
 	}
 
-	static getInstalledExtensionIds(workbenchService: IWorkbenchService): string[] {
-		return workbenchService.getAllExtensions().filter(e => !e.id.startsWith('vscode')).map(e => e.id);
+	static getInstalledExtensionIds(
+		workbenchService: IWorkbenchService,
+	): string[] {
+		return workbenchService
+			.getAllExtensions()
+			.filter((e) => !e.id.startsWith('vscode'))
+			.map((e) => e.id);
 	}
 
-	static calculateBaseRemoteExtensionCDNURL(cacheContainer: RemoteEmbeddingsContainer, embeddingsType: RemoteCacheType, cacheVersion: string): string {
+	static calculateBaseRemoteExtensionCDNURL(
+		cacheContainer: RemoteEmbeddingsContainer,
+		embeddingsType: RemoteCacheType,
+		cacheVersion: string,
+	): string {
 		return `https://embeddings.vscode-cdn.net/${cacheContainer}/v${cacheVersion}/${embeddingsType}`;
 	}
 }
 
-export abstract class BaseEmbeddingsIndex<V extends { key: string; embedding?: EmbeddingVector }>
-	implements EmbeddingsIndex<string, V> {
+export abstract class BaseEmbeddingsIndex<
+	V extends { key: string; embedding?: EmbeddingVector },
+> implements EmbeddingsIndex<string, V> {
 	protected _items: Map<string, V>;
 	private _isIndexLoaded = false;
 	private _calculationPromise: Promise<void> | undefined;
@@ -505,8 +657,22 @@ export abstract class BaseEmbeddingsIndex<V extends { key: string; embedding?: E
 	 * @returns The n closest values to the embedding, sorted by similarity. Could be less than n if there are less than n items indexed
 	 */
 	public nClosestValues(queryEmbedding: Embedding, n: number): V[] {
-		return rankEmbeddings(queryEmbedding, Array.from(this._items.values()).filter(x => x.embedding).map(x => [x, { value: x.embedding!, type: this.embeddingType } satisfies Embedding] as const), n)
-			.map(x => x.value);
+		return rankEmbeddings(
+			queryEmbedding,
+			Array.from(this._items.values())
+				.filter((x) => x.embedding)
+				.map(
+					(x) =>
+						[
+							x,
+							{
+								value: x.embedding!,
+								type: this.embeddingType,
+							} satisfies Embedding,
+						] as const,
+				),
+			n,
+		).map((x) => x.value);
 	}
 
 	public hasItem(key: string): boolean {
@@ -523,7 +689,9 @@ export abstract class BaseEmbeddingsIndex<V extends { key: string; embedding?: E
 			return this._calculationPromise;
 		}
 		this._calculationPromise = this._calculateEmbeddings();
-		return this._calculationPromise.then(() => (this._calculationPromise = undefined));
+		return this._calculationPromise.then(
+			() => (this._calculationPromise = undefined),
+		);
 	}
 
 	private async _calculateEmbeddings(): Promise<void> {
@@ -549,7 +717,9 @@ export abstract class BaseEmbeddingsIndex<V extends { key: string; embedding?: E
 
 		this._items = latestEmbeddingsIndex;
 
-		this.logService.debug(`Embeddings for ${this.cacheKey} calculated in ${Date.now() - startTime}ms`);
+		this.logService.debug(
+			`Embeddings for ${this.cacheKey} calculated in ${Date.now() - startTime}ms`,
+		);
 		this.isIndexLoaded = true;
 	}
 

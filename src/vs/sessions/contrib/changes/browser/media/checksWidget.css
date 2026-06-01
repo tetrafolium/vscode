@@ -89,7 +89,8 @@
 	padding-right: 8px;
 }
 
-.ci-status-widget-header:hover .ci-status-widget-counts, .ci-status-widget-header:focus .ci-status-widget-counts {
+.ci-status-widget-header:hover .ci-status-widget-counts,
+.ci-status-widget-header:focus .ci-status-widget-counts {
 	visibility: hidden;
 }
 
@@ -114,7 +115,10 @@
 }
 
 .ci-status-widget-count-badge.ci-status-running .codicon {
-	color: var(--vscode-testing-iconQueued, var(--vscode-editorWarning-foreground));
+	color: var(
+		--vscode-testing-iconQueued,
+		var(--vscode-editorWarning-foreground)
+	);
 }
 
 .ci-status-widget-count-badge.ci-status-pending .codicon {
@@ -214,7 +218,10 @@
 }
 
 .ci-status-widget-check.ci-status-running .monaco-icon-label::before {
-	color: var(--vscode-testing-iconQueued, var(--vscode-editorWarning-foreground));
+	color: var(
+		--vscode-testing-iconQueued,
+		var(--vscode-editorWarning-foreground)
+	);
 }
 
 .ci-status-widget-check.ci-status-pending .monaco-icon-label::before {
@@ -236,7 +243,9 @@
 
 .ci-status-widget-list .monaco-list-row:hover .ci-status-widget-check-actions,
 .ci-status-widget-list .monaco-list-row.focused .ci-status-widget-check-actions,
-.ci-status-widget-list .monaco-list-row.selected .ci-status-widget-check-actions,
+.ci-status-widget-list
+	.monaco-list-row.selected
+	.ci-status-widget-check-actions,
 .ci-status-widget-check:hover .ci-status-widget-check-actions {
 	display: flex;
 }

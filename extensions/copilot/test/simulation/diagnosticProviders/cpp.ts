@@ -9,7 +9,11 @@ import { CacheScope } from '../../base/simulationContext';
 import { CLANG_DIAGNOSTICS_PROVIDER_CACHE_SALT } from '../../cacheSalt';
 import { createTempDir } from '../stestUtil';
 import { IFile, ITestDiagnostic } from './diagnosticsProvider';
-import { CachingDiagnosticsProvider, findIfInstalled, setupTemporaryWorkspace } from './utils';
+import {
+	CachingDiagnosticsProvider,
+	findIfInstalled,
+	setupTemporaryWorkspace,
+} from './utils';
 
 /**
  * Class which finds clang diagnostics after compilation of C++ files
@@ -32,9 +36,19 @@ export class CppDiagnosticsProvider extends CachingDiagnosticsProvider {
 
 	override isInstalled(): boolean {
 		if (this._isInstalled === undefined) {
-			if (findIfInstalled({ command: 'clang', arguments: ['-v'] }, /\d+\.\d+\.\d+/)) {
+			if (
+				findIfInstalled(
+					{ command: 'clang', arguments: ['-v'] },
+					/\d+\.\d+\.\d+/,
+				)
+			) {
 				this._isInstalled = 'local';
-			} else if (findIfInstalled({ command: 'docker', arguments: ['--version'] }, /\d+\.\d+\.\d+/)) {
+			} else if (
+				findIfInstalled(
+					{ command: 'docker', arguments: ['--version'] },
+					/\d+\.\d+\.\d+/,
+				)
+			) {
 				this._isInstalled = 'docker';
 			} else {
 				this._isInstalled = false;
@@ -43,9 +57,14 @@ export class CppDiagnosticsProvider extends CachingDiagnosticsProvider {
 		return this._isInstalled !== false;
 	}
 
-	override async computeDiagnostics(_files: IFile[]): Promise<ITestDiagnostic[]> {
+	override async computeDiagnostics(
+		_files: IFile[],
+	): Promise<ITestDiagnostic[]> {
 		const temporaryDirectory = await this.setupWorkspace(_files);
-		const diagnostics = await this.processDiagnostics(temporaryDirectory, _files);
+		const diagnostics = await this.processDiagnostics(
+			temporaryDirectory,
+			_files,
+		);
 		//await cleanTempDir(temporaryDirectory);
 		return diagnostics;
 	}
@@ -56,23 +75,40 @@ export class CppDiagnosticsProvider extends CachingDiagnosticsProvider {
 		return temporaryDirectory;
 	}
 
-	async processDiagnostics(temporaryDirectory: string, _files: IFile[]): Promise<ITestDiagnostic[]> {
+	async processDiagnostics(
+		temporaryDirectory: string,
+		_files: IFile[],
+	): Promise<ITestDiagnostic[]> {
 		// Validate that the diagnostics provider is installed
 		if (!this.isInstalled()) {
-			throw new Error('clang or docker must be available in this environment for c++ diagnostics.');
+			throw new Error(
+				'clang or docker must be available in this environment for c++ diagnostics.',
+			);
 		}
 
 		const diagnostics: ITestDiagnostic[] = [];
 		const basename = 'workspaceFolder_' + new Date().getTime();
 		for (const file of _files) {
-
 			let spawnResult;
 			if (this._isInstalled === 'docker') {
-				const args = ['run', '--rm', '-v', `${temporaryDirectory}:/${basename}`, 'mcr.microsoft.com/devcontainers/cpp:latest', 'clang++', `/${basename}/${file.fileName}`];
+				const args = [
+					'run',
+					'--rm',
+					'-v',
+					`${temporaryDirectory}:/${basename}`,
+					'mcr.microsoft.com/devcontainers/cpp:latest',
+					'clang++',
+					`/${basename}/${file.fileName}`,
+				];
 				//console.log('docker ' + args.map(arg => `'${arg}'`).join(' '));
-				spawnResult = cp.spawnSync('docker', args, { shell: true, encoding: 'utf-8' });
+				spawnResult = cp.spawnSync('docker', args, {
+					shell: true,
+					encoding: 'utf-8',
+				});
 			} else {
-				spawnResult = cp.spawnSync('clang++', [`${temporaryDirectory}/${file.fileName}`]);
+				spawnResult = cp.spawnSync('clang++', [
+					`${temporaryDirectory}/${file.fileName}`,
+				]);
 			}
 
 			// If compilation was successful, no diagnostics are needed.
@@ -87,7 +123,9 @@ export class CppDiagnosticsProvider extends CachingDiagnosticsProvider {
 			// /workspaceFolder/LyraHealthComponent.cpp:3:10: fatal error: 'LyraHealthComponent.h' file not found
 			// Format:
 			// /${filePath}:${line}:${col}: ${code}: ${message}
-			const regexp = new RegExp(`^\/${basename}\/([A-Za-z_\\-\\s0-9\\.]+):(\\d+):(\\d+): ([^:]+): (.*)`);
+			const regexp = new RegExp(
+				`^\/${basename}\/([A-Za-z_\\-\\s0-9\\.]+):(\\d+):(\\d+): ([^:]+): (.*)`,
+			);
 			let hasErrors = false;
 			const lines = spawnResult.stderr.toString().split('\n');
 			for (const line of lines) {
@@ -104,13 +142,18 @@ export class CppDiagnosticsProvider extends CachingDiagnosticsProvider {
 						message: message,
 						code: code,
 						relatedInformation: undefined,
-						source: this.id
+						source: this.id,
 					});
 					hasErrors = true;
 				}
 			}
 			if (!hasErrors || spawnResult.error) {
-				throw new Error(`Error while running 'clang' \n\nstderr : ` + spawnResult.stderr + '\n\nerr : ' + spawnResult.error);
+				throw new Error(
+					`Error while running 'clang' \n\nstderr : ` +
+						spawnResult.stderr +
+						'\n\nerr : ' +
+						spawnResult.error,
+				);
 			}
 		}
 

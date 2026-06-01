@@ -9,8 +9,8 @@ import { createServiceIdentifier } from '../../src/util/common/services';
 import { ITestRunResult } from '../testExecutor';
 import { SimulationTest, toDirname } from './stest';
 
-
-export const ISimulationOutcome = createServiceIdentifier<ISimulationOutcome>('ISimulationOutcome');
+export const ISimulationOutcome =
+	createServiceIdentifier<ISimulationOutcome>('ISimulationOutcome');
 
 export interface ISimulationOutcome {
 	readonly _serviceBrand: undefined;
@@ -21,47 +21,59 @@ export interface ISimulationOutcome {
 type TestSubset = Pick<SimulationTest, 'outcomeCategory' | 'fullName'>;
 
 export class ProxiedSimulationOutcome implements ISimulationOutcome {
-
 	declare readonly _serviceBrand: undefined;
 
-	public static registerTo(instance: ISimulationOutcome, rpc: SimpleRPC): ISimulationOutcome {
-		rpc.registerMethod('ProxiedSimulationOutcome.get', (test) => instance.get(test));
-		rpc.registerMethod('ProxiedSimulationOutcome.set', ({ test, results }) => instance.set(test, results));
+	public static registerTo(
+		instance: ISimulationOutcome,
+		rpc: SimpleRPC,
+	): ISimulationOutcome {
+		rpc.registerMethod('ProxiedSimulationOutcome.get', (test) =>
+			instance.get(test),
+		);
+		rpc.registerMethod(
+			'ProxiedSimulationOutcome.set',
+			({ test, results }) => instance.set(test, results),
+		);
 		return instance;
 	}
 
-	constructor(
-		private readonly rpc: SimpleRPC,
-	) {
-	}
+	constructor(private readonly rpc: SimpleRPC) {}
 
 	get(test: TestSubset): Promise<OutcomeEntry | undefined> {
-		return this.rpc.callMethod('ProxiedSimulationOutcome.get', { fullName: test.fullName, outcomeCategory: test.outcomeCategory } satisfies TestSubset);
+		return this.rpc.callMethod('ProxiedSimulationOutcome.get', {
+			fullName: test.fullName,
+			outcomeCategory: test.outcomeCategory,
+		} satisfies TestSubset);
 	}
 
 	set(test: TestSubset, results: ITestRunResult[]): Promise<void> {
-		return this.rpc.callMethod('ProxiedSimulationOutcome.set', { test: { fullName: test.fullName, outcomeCategory: test.outcomeCategory } satisfies TestSubset, results });
+		return this.rpc.callMethod('ProxiedSimulationOutcome.set', {
+			test: {
+				fullName: test.fullName,
+				outcomeCategory: test.outcomeCategory,
+			} satisfies TestSubset,
+			results,
+		});
 	}
 }
 
 export const outcomePath = path.join(__dirname, '../test/outcome');
 
 export class SimulationOutcomeImpl implements ISimulationOutcome {
-
 	declare readonly _serviceBrand: undefined;
 
 	private readonly outcome: Map<string, OutcomeEntry[]> = new Map();
 
-	constructor(
-		private readonly _runningAllTests: boolean
-	) {
-	}
+	constructor(private readonly _runningAllTests: boolean) {}
 
 	async get(test: TestSubset): Promise<OutcomeEntry | undefined> {
-		const filePath = path.join(outcomePath, this._getCategoryFilename(test.outcomeCategory));
+		const filePath = path.join(
+			outcomePath,
+			this._getCategoryFilename(test.outcomeCategory),
+		);
 		const entriesBuffer = await fs.promises.readFile(filePath, 'utf8');
 		const entries = JSON.parse(entriesBuffer) as OutcomeEntry[];
-		return entries.find(entry => entry.name === test.fullName);
+		return entries.find((entry) => entry.name === test.fullName);
 	}
 
 	set(test: TestSubset, results: ITestRunResult[]): Promise<void> {
@@ -86,7 +98,7 @@ export class SimulationOutcomeImpl implements ISimulationOutcome {
 
 		entries.push({
 			name: test.fullName,
-			requests
+			requests,
 		});
 
 		return Promise.resolve();
@@ -95,18 +107,26 @@ export class SimulationOutcomeImpl implements ISimulationOutcome {
 	public async write(): Promise<void> {
 		for (const [category, entries] of this.outcome) {
 			// When running a subset of tests, we will copy over the old existing test results for tests that were not executed
-			const filePath = path.join(outcomePath, this._getCategoryFilename(category));
+			const filePath = path.join(
+				outcomePath,
+				this._getCategoryFilename(category),
+			);
 
 			if (!this._runningAllTests) {
 				let prevEntriesBuffer: string | undefined;
 				try {
-					prevEntriesBuffer = await fs.promises.readFile(filePath, 'utf8');
-				} catch (err) {
-				}
+					prevEntriesBuffer = await fs.promises.readFile(
+						filePath,
+						'utf8',
+					);
+				} catch (err) {}
 				if (prevEntriesBuffer) {
 					try {
-						const prevEntries: OutcomeEntry[] = JSON.parse(prevEntriesBuffer);
-						const currentEntries = new Set<string>(entries.map(el => el.name));
+						const prevEntries: OutcomeEntry[] =
+							JSON.parse(prevEntriesBuffer);
+						const currentEntries = new Set<string>(
+							entries.map((el) => el.name),
+						);
 						for (const prevEntry of prevEntries) {
 							if (!currentEntries.has(prevEntry.name)) {
 								entries.push(prevEntry);
@@ -119,7 +139,10 @@ export class SimulationOutcomeImpl implements ISimulationOutcome {
 			}
 
 			entries.sort((a, b) => a.name.localeCompare(b.name));
-			await fs.promises.writeFile(filePath, JSON.stringify(entries, undefined, '\t'));
+			await fs.promises.writeFile(
+				filePath,
+				JSON.stringify(entries, undefined, '\t'),
+			);
 		}
 		// console.log(this.outcome);
 	}
@@ -131,13 +154,15 @@ export class SimulationOutcomeImpl implements ISimulationOutcome {
 	public async cleanFolder(): Promise<void> {
 		// Clean the outcome folder
 		const names = await fs.promises.readdir(outcomePath);
-		const entries = new Set(names.filter(name => name.endsWith('.json')));
+		const entries = new Set(names.filter((name) => name.endsWith('.json')));
 		for (const [category, _] of this.outcome) {
 			entries.delete(this._getCategoryFilename(category));
 		}
 		if (entries.size > 0) {
 			await Promise.all(
-				Array.from(entries.values()).map(entry => fs.promises.unlink(path.join(outcomePath, entry)))
+				Array.from(entries.values()).map((entry) =>
+					fs.promises.unlink(path.join(outcomePath, entry)),
+				),
 			);
 		}
 	}

@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ChatFetchResponseType, ChatLocation } from '../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+} from '../../../platform/chat/common/commonTypes';
 import { IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
 import { IEnvService } from '../../../platform/env/common/envService';
 import { ILogService } from '../../../platform/log/common/logService';
@@ -12,7 +15,13 @@ import { basename } from '../../../util/vs/base/common/resources';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { IDocumentContext } from '../../prompt/node/documentContext';
 import { renderPromptElement } from '../../prompts/node/base/promptRenderer';
-import { ContextualProgressMessagePrompt, ContextualProgressMessagePromptProps, ProgressMessageScenario, ProgressMessagesPrompt, ProgressMessagesPromptProps } from './progressMessagesPrompt';
+import {
+	ContextualProgressMessagePrompt,
+	ContextualProgressMessagePromptProps,
+	ProgressMessageScenario,
+	ProgressMessagesPrompt,
+	ProgressMessagesPromptProps,
+} from './progressMessagesPrompt';
 
 const MESSAGES_PER_FETCH = 10;
 const REFETCH_THRESHOLD = 3;
@@ -27,19 +36,29 @@ interface MessageCache {
  * Pre-fetches messages and automatically replenishes when running low.
  */
 export class InlineChatProgressMessages {
-
 	private readonly _caches = new Map<ProgressMessageScenario, MessageCache>();
-	private readonly _pendingFetches = new Map<ProgressMessageScenario, Promise<void>>();
+	private readonly _pendingFetches = new Map<
+		ProgressMessageScenario,
+		Promise<void>
+	>();
 
 	constructor(
 		@ILogService private readonly _logService: ILogService,
-		@IEndpointProvider private readonly _endpointProvider: IEndpointProvider,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IEndpointProvider
+		private readonly _endpointProvider: IEndpointProvider,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 		@IEnvService private readonly _envService: IEnvService,
 	) {
 		// Initialize caches with fallback messages
-		this._caches.set('generate', { messages: [...InlineChatProgressMessages._FALLBACK_GENERATE], fetchInProgress: false });
-		this._caches.set('edit', { messages: [...InlineChatProgressMessages._FALLBACK_EDIT], fetchInProgress: false });
+		this._caches.set('generate', {
+			messages: [...InlineChatProgressMessages._FALLBACK_GENERATE],
+			fetchInProgress: false,
+		});
+		this._caches.set('edit', {
+			messages: [...InlineChatProgressMessages._FALLBACK_EDIT],
+			fetchInProgress: false,
+		});
 
 		this.prewarm();
 	}
@@ -48,9 +67,7 @@ export class InlineChatProgressMessages {
 		'Working...',
 	];
 
-	private static readonly _FALLBACK_EDIT: readonly string[] = [
-		'Working...',
-	];
+	private static readonly _FALLBACK_EDIT: readonly string[] = ['Working...'];
 
 	/**
 	 * Gets the next progress message for the given scenario.
@@ -60,9 +77,10 @@ export class InlineChatProgressMessages {
 		const cache = this._caches.get(scenario);
 		if (!cache || cache.messages.length === 0) {
 			// Should never happen, but use fallback
-			const fallbacks = scenario === 'generate'
-				? InlineChatProgressMessages._FALLBACK_GENERATE
-				: InlineChatProgressMessages._FALLBACK_EDIT;
+			const fallbacks =
+				scenario === 'generate'
+					? InlineChatProgressMessages._FALLBACK_GENERATE
+					: InlineChatProgressMessages._FALLBACK_EDIT;
 			return fallbacks[Math.floor(Math.random() * fallbacks.length)];
 		}
 
@@ -72,7 +90,10 @@ export class InlineChatProgressMessages {
 		const newMessages = [...cache.messages];
 		newMessages.splice(index, 1);
 
-		this._caches.set(scenario, { messages: newMessages, fetchInProgress: cache.fetchInProgress });
+		this._caches.set(scenario, {
+			messages: newMessages,
+			fetchInProgress: cache.fetchInProgress,
+		});
 
 		// Trigger background fetch if running low
 		if (newMessages.length < REFETCH_THRESHOLD && !cache.fetchInProgress) {
@@ -86,15 +107,24 @@ export class InlineChatProgressMessages {
 	 * Gets a contextual progress message based on the user's prompt and document context.
 	 * Falls back to generic messages if contextual generation fails or times out.
 	 */
-	async getContextualMessage(prompt: string, documentContext: IDocumentContext, token: CancellationToken): Promise<string> {
-		const scenario: ProgressMessageScenario = documentContext.selection.isEmpty ? 'generate' : 'edit';
+	async getContextualMessage(
+		prompt: string,
+		documentContext: IDocumentContext,
+		token: CancellationToken,
+	): Promise<string> {
+		const scenario: ProgressMessageScenario = documentContext.selection
+			.isEmpty
+			? 'generate'
+			: 'edit';
 
 		if (this._envService.isSimulation()) {
 			return this.getNextMessage(scenario);
 		}
 
 		try {
-			const endpoint = await this._endpointProvider.getChatEndpoint('copilot-utility-small');
+			const endpoint = await this._endpointProvider.getChatEndpoint(
+				'copilot-utility-small',
+			);
 
 			const selectedCode = documentContext.selection.isEmpty
 				? undefined
@@ -112,28 +142,35 @@ export class InlineChatProgressMessages {
 				this._instantiationService,
 				endpoint,
 				ContextualProgressMessagePrompt,
-				props
+				props,
 			);
 
-			const response = await endpoint.makeChatRequest2({
-				debugName: 'contextualProgressMessage',
-				messages: promptMessages,
-				finishedCb: undefined,
-				location: ChatLocation.Editor,
-				userInitiatedRequest: false,
-				isConversationRequest: false,
-				interactionTypeOverride: 'conversation-background',
-			}, token);
+			const response = await endpoint.makeChatRequest2(
+				{
+					debugName: 'contextualProgressMessage',
+					messages: promptMessages,
+					finishedCb: undefined,
+					location: ChatLocation.Editor,
+					userInitiatedRequest: false,
+					isConversationRequest: false,
+					interactionTypeOverride: 'conversation-background',
+				},
+				token,
+			);
 
 			if (response.type === ChatFetchResponseType.Success) {
 				const message = this._parseContextualMessage(response.value);
 				if (message) {
-					this._logService.trace(`[InlineChatProgressMessages] Generated contextual message: ${message}`);
+					this._logService.trace(
+						`[InlineChatProgressMessages] Generated contextual message: ${message}`,
+					);
 					return message;
 				}
 			}
 		} catch (err) {
-			this._logService.trace(`[InlineChatProgressMessages] Contextual message generation failed, using fallback: ${err}`);
+			this._logService.trace(
+				`[InlineChatProgressMessages] Contextual message generation failed, using fallback: ${err}`,
+			);
 		}
 
 		// Fall back to generic message
@@ -171,41 +208,57 @@ export class InlineChatProgressMessages {
 
 		const currentCache = this._caches.get(scenario);
 		if (currentCache) {
-			this._caches.set(scenario, { messages: currentCache.messages, fetchInProgress: true });
+			this._caches.set(scenario, {
+				messages: currentCache.messages,
+				fetchInProgress: true,
+			});
 		}
 
 		const fetchPromise = this._fetchMessages(scenario).finally(() => {
 			this._pendingFetches.delete(scenario);
 			const cache = this._caches.get(scenario);
 			if (cache) {
-				this._caches.set(scenario, { messages: cache.messages, fetchInProgress: false });
+				this._caches.set(scenario, {
+					messages: cache.messages,
+					fetchInProgress: false,
+				});
 			}
 		});
 
 		this._pendingFetches.set(scenario, fetchPromise);
 	}
 
-	private async _fetchMessages(scenario: ProgressMessageScenario): Promise<void> {
+	private async _fetchMessages(
+		scenario: ProgressMessageScenario,
+	): Promise<void> {
 		try {
-			const endpoint = await this._endpointProvider.getChatEndpoint('copilot-utility-small');
+			const endpoint = await this._endpointProvider.getChatEndpoint(
+				'copilot-utility-small',
+			);
 
-			const props: ProgressMessagesPromptProps = { scenario, count: MESSAGES_PER_FETCH };
+			const props: ProgressMessagesPromptProps = {
+				scenario,
+				count: MESSAGES_PER_FETCH,
+			};
 			const { messages: promptMessages } = await renderPromptElement(
 				this._instantiationService,
 				endpoint,
 				ProgressMessagesPrompt,
-				props
+				props,
 			);
 
-			const response = await endpoint.makeChatRequest2({
-				debugName: 'progressMessages',
-				messages: promptMessages,
-				finishedCb: undefined,
-				location: ChatLocation.Editor,
-				userInitiatedRequest: false,
-				isConversationRequest: false,
-				interactionTypeOverride: 'conversation-background',
-			}, CancellationToken.None);
+			const response = await endpoint.makeChatRequest2(
+				{
+					debugName: 'progressMessages',
+					messages: promptMessages,
+					finishedCb: undefined,
+					location: ChatLocation.Editor,
+					userInitiatedRequest: false,
+					isConversationRequest: false,
+					interactionTypeOverride: 'conversation-background',
+				},
+				CancellationToken.None,
+			);
 
 			if (response.type === ChatFetchResponseType.Success) {
 				const newMessages = this._parseMessages(response.value);
@@ -214,15 +267,22 @@ export class InlineChatProgressMessages {
 					const existingMessages = currentCache?.messages ?? [];
 					this._caches.set(scenario, {
 						messages: [...existingMessages, ...newMessages],
-						fetchInProgress: false
+						fetchInProgress: false,
 					});
-					this._logService.trace(`[InlineChatProgressMessages] Fetched ${newMessages.length} messages for ${scenario}`);
+					this._logService.trace(
+						`[InlineChatProgressMessages] Fetched ${newMessages.length} messages for ${scenario}`,
+					);
 				}
 			} else {
-				this._logService.warn(`[InlineChatProgressMessages] Failed to fetch messages for ${scenario}: ${response.reason}`);
+				this._logService.warn(
+					`[InlineChatProgressMessages] Failed to fetch messages for ${scenario}: ${response.reason}`,
+				);
 			}
 		} catch (err) {
-			this._logService.error(`[InlineChatProgressMessages] Error fetching messages for ${scenario}`, err);
+			this._logService.error(
+				`[InlineChatProgressMessages] Error fetching messages for ${scenario}`,
+				err,
+			);
 		}
 	}
 
@@ -239,11 +299,19 @@ export class InlineChatProgressMessages {
 			}
 
 			const parsed = JSON.parse(jsonStr);
-			if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
-				return parsed.filter(msg => msg.length > 0 && msg.length < 50);
+			if (
+				Array.isArray(parsed) &&
+				parsed.every((item) => typeof item === 'string')
+			) {
+				return parsed.filter(
+					(msg) => msg.length > 0 && msg.length < 50,
+				);
 			}
 		} catch (err) {
-			this._logService.error('[InlineChatProgressMessages] Failed to parse response as JSON', err);
+			this._logService.error(
+				'[InlineChatProgressMessages] Failed to parse response as JSON',
+				err,
+			);
 		}
 
 		return [];

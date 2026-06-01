@@ -5,7 +5,7 @@
 
 import {
 	ClaudeToolPermissionContext,
-	ClaudeToolPermissionResult
+	ClaudeToolPermissionResult,
 } from '../../common/claudeToolPermission';
 import { IClaudeToolPermissionService } from '../../common/claudeToolPermissionService';
 
@@ -21,17 +21,17 @@ export class MockClaudeToolPermissionService implements IClaudeToolPermissionSer
 	public async canUseTool(
 		_toolName: string,
 		input: Record<string, unknown>,
-		_context: ClaudeToolPermissionContext
+		_context: ClaudeToolPermissionContext,
 	): Promise<ClaudeToolPermissionResult> {
 		if (this.allowAll) {
 			return {
 				behavior: 'allow',
-				updatedInput: input
+				updatedInput: input,
 			};
 		}
 		return {
 			behavior: 'deny',
-			message: 'Mock denied'
+			message: 'Mock denied',
 		};
 	}
 }

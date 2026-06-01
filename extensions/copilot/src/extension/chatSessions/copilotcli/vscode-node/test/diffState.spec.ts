@@ -5,10 +5,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestLogService } from '../../../../../platform/testing/common/testLogService';
-import {
-	DiffStateManager,
-	type ActiveDiff,
-} from '../diffState';
+import { DiffStateManager, type ActiveDiff } from '../diffState';
 
 vi.mock('vscode', () => ({
 	Uri: {
@@ -20,26 +17,38 @@ vi.mock('vscode', () => ({
 				activeTab: null,
 			},
 			all: [],
-			onDidChangeTabGroups: () => ({ dispose: () => { } }),
-			onDidChangeTabs: () => ({ dispose: () => { } }),
+			onDidChangeTabGroups: () => ({ dispose: () => {} }),
+			onDidChangeTabs: () => ({ dispose: () => {} }),
 		},
 	},
 	commands: {
 		executeCommand: vi.fn().mockResolvedValue(undefined),
 	},
 	TabInputTextDiff: class TabInputTextDiff {
-		constructor(public original: any, public modified: any) { }
+		constructor(
+			public original: any,
+			public modified: any,
+		) {}
 	},
 }));
 
 describe('diffState', () => {
 	let diffState: DiffStateManager;
 
-	const createMockDiff = (tabName: string, diffIdSuffix?: string): ActiveDiff => ({
+	const createMockDiff = (
+		tabName: string,
+		diffIdSuffix?: string,
+	): ActiveDiff => ({
 		diffId: `/tmp/modified-${diffIdSuffix ?? tabName}.ts`,
 		tabName: tabName,
-		originalUri: { fsPath: `/path/to/original-${tabName}.ts`, scheme: 'file' } as any,
-		modifiedUri: { fsPath: `/tmp/modified-${diffIdSuffix ?? tabName}.ts`, scheme: 'file' } as any,
+		originalUri: {
+			fsPath: `/path/to/original-${tabName}.ts`,
+			scheme: 'file',
+		} as any,
+		modifiedUri: {
+			fsPath: `/tmp/modified-${diffIdSuffix ?? tabName}.ts`,
+			scheme: 'file',
+		} as any,
 		newContents: `// new contents for ${tabName}`,
 		cleanup: vi.fn(),
 		resolve: vi.fn(),
@@ -75,7 +84,9 @@ describe('diffState', () => {
 		});
 
 		it('should not throw when unregistering non-existent diff', () => {
-			expect(() => diffState.unregister('/tmp/non-existent.ts')).not.toThrow();
+			expect(() =>
+				diffState.unregister('/tmp/non-existent.ts'),
+			).not.toThrow();
 		});
 	});
 
@@ -142,8 +153,14 @@ describe('diffState', () => {
 			const diff1: ActiveDiff = {
 				diffId: '/tmp/modified-v1.ts',
 				tabName: 'file.ts (version 1)',
-				originalUri: { fsPath: '/path/to/file.ts', scheme: 'file' } as any,
-				modifiedUri: { fsPath: '/tmp/modified-v1.ts', scheme: 'file' } as any,
+				originalUri: {
+					fsPath: '/path/to/file.ts',
+					scheme: 'file',
+				} as any,
+				modifiedUri: {
+					fsPath: '/tmp/modified-v1.ts',
+					scheme: 'file',
+				} as any,
 				newContents: '// version 1',
 				cleanup: vi.fn(),
 				resolve: vi.fn(),
@@ -151,8 +168,14 @@ describe('diffState', () => {
 			const diff2: ActiveDiff = {
 				diffId: '/tmp/modified-v2.ts',
 				tabName: 'file.ts (version 2)',
-				originalUri: { fsPath: '/path/to/file.ts', scheme: 'file' } as any,
-				modifiedUri: { fsPath: '/tmp/modified-v2.ts', scheme: 'file' } as any,
+				originalUri: {
+					fsPath: '/path/to/file.ts',
+					scheme: 'file',
+				} as any,
+				modifiedUri: {
+					fsPath: '/tmp/modified-v2.ts',
+					scheme: 'file',
+				} as any,
 				newContents: '// version 2',
 				cleanup: vi.fn(),
 				resolve: vi.fn(),
@@ -173,8 +196,14 @@ describe('diffState', () => {
 			const diff2: ActiveDiff = {
 				diffId: diff1.diffId,
 				tabName: 'New Tab',
-				originalUri: { fsPath: '/path/to/new.ts', scheme: 'file' } as any,
-				modifiedUri: { fsPath: '/tmp/new-modified.ts', scheme: 'file' } as any,
+				originalUri: {
+					fsPath: '/path/to/new.ts',
+					scheme: 'file',
+				} as any,
+				modifiedUri: {
+					fsPath: '/tmp/new-modified.ts',
+					scheme: 'file',
+				} as any,
 				newContents: '// new content',
 				cleanup: vi.fn(),
 				resolve: vi.fn(),
@@ -190,16 +219,18 @@ describe('diffState', () => {
 
 		it('should handle concurrent registrations', () => {
 			const diffs = Array.from({ length: 10 }, (_, i) =>
-				createMockDiff(`Concurrent Tab ${i}`)
+				createMockDiff(`Concurrent Tab ${i}`),
 			);
 
-			diffs.forEach(diff => diffState.register(diff));
+			diffs.forEach((diff) => diffState.register(diff));
 
 			diffs.forEach((diff, i) => {
-				expect(diffState.getByTabName(`Concurrent Tab ${i}`)).toBe(diff);
+				expect(diffState.getByTabName(`Concurrent Tab ${i}`)).toBe(
+					diff,
+				);
 			});
 
-			diffs.forEach(diff => diffState.unregister(diff.diffId));
+			diffs.forEach((diff) => diffState.unregister(diff.diffId));
 		});
 	});
 });

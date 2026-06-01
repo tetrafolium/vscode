@@ -3,7 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { NotebookCell, NotebookDocument, NotebookDocumentContentChange, TextDocument, TextDocumentContentChangeEvent } from 'vscode';
+import type {
+	NotebookCell,
+	NotebookDocument,
+	NotebookDocumentContentChange,
+	TextDocument,
+	TextDocumentContentChangeEvent,
+} from 'vscode';
 import { coalesce } from '../../../util/vs/base/common/arrays';
 import { findLastIdxMonotonous } from '../../../util/vs/base/common/arraysFind';
 import { StringEdit } from '../../../util/vs/editor/common/core/edits/stringEdit';
@@ -11,10 +17,13 @@ import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRa
 import { NotebookCellKind, Position, Range } from '../../../vscodeTypes';
 import { stringEditFromTextContentChange } from '../../editing/common/edit';
 import { PositionOffsetTransformer } from '../../editing/common/positionOffsetTransformer';
-import { generateCellTextMarker, getBlockComment, getLineCommentStart } from './alternativeContentProvider.text';
+import {
+	generateCellTextMarker,
+	getBlockComment,
+	getLineCommentStart,
+} from './alternativeContentProvider.text';
 import { EOL, summarize } from './helpers';
 import { CrLfOffsetTranslator } from './offsetTranslator';
-
 
 class AlternativeNotebookCellSnapshot {
 	private readonly positionTransformer: PositionOffsetTransformer;
@@ -24,13 +33,30 @@ class AlternativeNotebookCellSnapshot {
 	public readonly altRange: Range;
 	/** Last line in the actual cell code */
 	private readonly lastLineLength: number;
-	public static fromNotebookCell(cell: NotebookCell, blockComment: [string, string], lineCommentStart: string): AlternativeNotebookCellSnapshot {
+	public static fromNotebookCell(
+		cell: NotebookCell,
+		blockComment: [string, string],
+		lineCommentStart: string,
+	): AlternativeNotebookCellSnapshot {
 		const summary = summarize(cell);
 		const cellMarker = generateCellTextMarker(summary, lineCommentStart);
 		const code = cell.document.getText().replace(/\r\n|\n/g, EOL);
-		const prefix = cell.kind === NotebookCellKind.Markup ? `${cellMarker}${EOL}${blockComment[0]}${EOL}` : `${cellMarker}${EOL}`;
-		const suffix = cell.kind === NotebookCellKind.Markup ? `${EOL}${blockComment[1]}` : '';
-		return new AlternativeNotebookCellSnapshot(cell, blockComment, lineCommentStart, code, prefix, suffix);
+		const prefix =
+			cell.kind === NotebookCellKind.Markup
+				? `${cellMarker}${EOL}${blockComment[0]}${EOL}`
+				: `${cellMarker}${EOL}`;
+		const suffix =
+			cell.kind === NotebookCellKind.Markup
+				? `${EOL}${blockComment[1]}`
+				: '';
+		return new AlternativeNotebookCellSnapshot(
+			cell,
+			blockComment,
+			lineCommentStart,
+			code,
+			prefix,
+			suffix,
+		);
 	}
 	constructor(
 		public readonly cell: NotebookCell,
@@ -38,21 +64,43 @@ class AlternativeNotebookCellSnapshot {
 		private readonly lineCommentStart: string,
 		private readonly code: string,
 		private readonly prefix: string,
-		private readonly suffix: string
+		private readonly suffix: string,
 	) {
-		this.crlfTranslator = new CrLfOffsetTranslator(cell.document.getText(), cell.document.eol);
-		this.positionTransformer = new PositionOffsetTransformer(`${prefix}${code}${suffix}`);
-		const lastPosition = this.positionTransformer.getPosition(this.positionTransformer.getText().length);
-		this.altRange = new Range(0, 0, lastPosition.line, lastPosition.character);
+		this.crlfTranslator = new CrLfOffsetTranslator(
+			cell.document.getText(),
+			cell.document.eol,
+		);
+		this.positionTransformer = new PositionOffsetTransformer(
+			`${prefix}${code}${suffix}`,
+		);
+		const lastPosition = this.positionTransformer.getPosition(
+			this.positionTransformer.getText().length,
+		);
+		this.altRange = new Range(
+			0,
+			0,
+			lastPosition.line,
+			lastPosition.character,
+		);
 		this.lineCount = this.altRange.end.line + 1;
-		this.lastLineLength = this.suffix.length === 0 ? this.altRange.end.character : this.positionTransformer.getPosition(this.positionTransformer.getText().length - this.suffix.length).character;
+		this.lastLineLength =
+			this.suffix.length === 0
+				? this.altRange.end.character
+				: this.positionTransformer.getPosition(
+						this.positionTransformer.getText().length -
+							this.suffix.length,
+					).character;
 	}
 
-	public normalizeEdits(edits: readonly TextDocumentContentChangeEvent[]): TextDocumentContentChangeEvent[] {
-		return edits.map(e => {
+	public normalizeEdits(
+		edits: readonly TextDocumentContentChangeEvent[],
+	): TextDocumentContentChangeEvent[] {
+		return edits.map((e) => {
 			const range = this.toAltRange(e.range);
 			const rangeOffset = this.crlfTranslator.translate(e.rangeOffset);
-			const endOffset = this.crlfTranslator.translate(e.rangeOffset + e.rangeLength);
+			const endOffset = this.crlfTranslator.translate(
+				e.rangeOffset + e.rangeLength,
+			);
 			return {
 				range,
 				rangeLength: endOffset - rangeOffset,
@@ -64,7 +112,14 @@ class AlternativeNotebookCellSnapshot {
 
 	public withTextEdit(edit: StringEdit): AlternativeNotebookCellSnapshot {
 		const newCode = edit.apply(this.code);
-		return new AlternativeNotebookCellSnapshot(this.cell, this.blockComment, this.lineCommentStart, newCode, this.prefix, this.suffix);
+		return new AlternativeNotebookCellSnapshot(
+			this.cell,
+			this.blockComment,
+			this.lineCommentStart,
+			newCode,
+			this.prefix,
+			this.suffix,
+		);
 	}
 
 	public get altText(): string {
@@ -79,14 +134,23 @@ class AlternativeNotebookCellSnapshot {
 
 	public toAltOffset(position: Position): number {
 		// Remove the lines we've added for the cell marker and block comments
-		const extraLinesAdded = this.cell.kind === NotebookCellKind.Markup ? 2 : 1;
-		return this.positionTransformer.getOffset(new Position(position.line + extraLinesAdded, position.character));
+		const extraLinesAdded =
+			this.cell.kind === NotebookCellKind.Markup ? 2 : 1;
+		return this.positionTransformer.getOffset(
+			new Position(position.line + extraLinesAdded, position.character),
+		);
 	}
 
 	public toAltRange(range: Range): Range {
 		// Remove the lines we've added for the cell marker and block comments
-		const extraLinesAdded = this.cell.kind === NotebookCellKind.Markup ? 2 : 1;
-		return new Range(range.start.line + extraLinesAdded, range.start.character, range.end.line + extraLinesAdded, range.end.character);
+		const extraLinesAdded =
+			this.cell.kind === NotebookCellKind.Markup ? 2 : 1;
+		return new Range(
+			range.start.line + extraLinesAdded,
+			range.start.character,
+			range.end.line + extraLinesAdded,
+			range.end.character,
+		);
 	}
 
 	public fromAltOffsetRange(offsetRange: OffsetRange): Range {
@@ -96,11 +160,16 @@ class AlternativeNotebookCellSnapshot {
 		const endPosition = this.positionTransformer.getPosition(endOffset);
 
 		// Remove the lines we've added for the cell marker and block comments
-		const extraLinesAddedAtStart = this.cell.kind === NotebookCellKind.Markup ? 2 : 1;
-		const extraLinesAddedAtEnd = this.cell.kind === NotebookCellKind.Markup ? 1 : 0;
+		const extraLinesAddedAtStart =
+			this.cell.kind === NotebookCellKind.Markup ? 2 : 1;
+		const extraLinesAddedAtEnd =
+			this.cell.kind === NotebookCellKind.Markup ? 1 : 0;
 
-		const startLine = Math.max(startPosition.line - extraLinesAddedAtStart, 0);
-		const lastLineIndex = (this.lineCount - extraLinesAddedAtEnd) - 1;
+		const startLine = Math.max(
+			startPosition.line - extraLinesAddedAtStart,
+			0,
+		);
+		const lastLineIndex = this.lineCount - extraLinesAddedAtEnd - 1;
 		let endLine = endPosition.line;
 		let endLineEndColumn = endPosition.character;
 		if (endLine > lastLineIndex) {
@@ -109,35 +178,56 @@ class AlternativeNotebookCellSnapshot {
 		} else {
 			endLine = Math.max(endPosition.line - extraLinesAddedAtStart, 0);
 		}
-		if (endLine === (lastLineIndex - extraLinesAddedAtStart)) {
-			if (endLineEndColumn !== 0 && endLineEndColumn === -1 || this.lastLineLength < endLineEndColumn) {
+		if (endLine === lastLineIndex - extraLinesAddedAtStart) {
+			if (
+				(endLineEndColumn !== 0 && endLineEndColumn === -1) ||
+				this.lastLineLength < endLineEndColumn
+			) {
 				endLineEndColumn = this.lastLineLength;
 			}
 		}
 		// If the original start was in a line that part of the prefix, then we need to start from line 0, character 0.
-		const startCharacter = startPosition.line - extraLinesAddedAtStart >= 0 ? startPosition.character : 0;
+		const startCharacter =
+			startPosition.line - extraLinesAddedAtStart >= 0
+				? startPosition.character
+				: 0;
 		return new Range(startLine, startCharacter, endLine, endLineEndColumn);
 	}
 	public fromAltRange(range: Range): Range {
 		// Remove the lines we've added for the cell marker and block comments
-		const extraLinesAdded = this.cell.kind === NotebookCellKind.Markup ? 2 : 1;
-		const extraLinesAddedAtEnd = this.cell.kind === NotebookCellKind.Markup ? 1 : 0;
+		const extraLinesAdded =
+			this.cell.kind === NotebookCellKind.Markup ? 2 : 1;
+		const extraLinesAddedAtEnd =
+			this.cell.kind === NotebookCellKind.Markup ? 1 : 0;
 
 		const startLine = Math.max(range.start.line - extraLinesAdded, 0);
-		const isInvalidStartLine = extraLinesAdded ? (range.start.line + 1) <= extraLinesAdded : false;
+		const isInvalidStartLine = extraLinesAdded
+			? range.start.line + 1 <= extraLinesAdded
+			: false;
 		const startCharacter = isInvalidStartLine ? 0 : range.start.character;
-		const isEndLineInvalid = extraLinesAddedAtEnd > 0 && (range.end.line === this.lineCount - 1);
-		const endLine = isEndLineInvalid ? (this.lineCount - extraLinesAdded - extraLinesAddedAtEnd - 1) : Math.max(range.end.line - extraLinesAdded, 0);
-		const lastLineIndex = (this.lineCount - extraLinesAdded - extraLinesAddedAtEnd) - 1;
-		const endLineCharacter = isEndLineInvalid ? this.lastLineLength : (endLine === lastLineIndex) ? Math.min(range.end.character, this.lastLineLength) : range.end.character;
+		const isEndLineInvalid =
+			extraLinesAddedAtEnd > 0 && range.end.line === this.lineCount - 1;
+		const endLine = isEndLineInvalid
+			? this.lineCount - extraLinesAdded - extraLinesAddedAtEnd - 1
+			: Math.max(range.end.line - extraLinesAdded, 0);
+		const lastLineIndex =
+			this.lineCount - extraLinesAdded - extraLinesAddedAtEnd - 1;
+		const endLineCharacter = isEndLineInvalid
+			? this.lastLineLength
+			: endLine === lastLineIndex
+				? Math.min(range.end.character, this.lastLineLength)
+				: range.end.character;
 		return new Range(startLine, startCharacter, endLine, endLineCharacter);
 	}
 }
 
-function buildAlternativeCells<T>(cellItems: readonly T[], altCelBuilder: (cellItem: T) => AlternativeNotebookCellSnapshot) {
+function buildAlternativeCells<T>(
+	cellItems: readonly T[],
+	altCelBuilder: (cellItem: T) => AlternativeNotebookCellSnapshot,
+) {
 	let lineCount = 0;
 	let offset = 0;
-	return cellItems.map(item => {
+	return cellItems.map((item) => {
 		const altCell = altCelBuilder(item);
 		const startLine = lineCount;
 		const startOffset = offset;
@@ -157,11 +247,13 @@ type AltCellInfo = {
 
 abstract class AbstractAlternativeNotebookDocument {
 	private readonly cellTextDocuments = new Map<TextDocument, NotebookCell>();
-	public constructor(public readonly notebook: NotebookDocument,
+	public constructor(
+		public readonly notebook: NotebookDocument,
 		public readonly excludeMarkdownCells: boolean,
 		public readonly blockComment: [string, string],
 		public readonly lineCommentStart: string,
-		public readonly cells: readonly AltCellInfo[]) {
+		public readonly cells: readonly AltCellInfo[],
+	) {
 		for (const { altCell } of this.cells) {
 			this.cellTextDocuments.set(altCell.cell.document, altCell.cell);
 		}
@@ -178,12 +270,17 @@ abstract class AbstractAlternativeNotebookDocument {
 	}
 
 	public getText(range?: OffsetRange): string {
-		const altText = this.cells.map(cell => cell.altCell.altText).join(EOL);
+		const altText = this.cells
+			.map((cell) => cell.altCell.altText)
+			.join(EOL);
 		return range ? range.substring(altText) : altText;
 	}
 
 	public fromAltRange(range: Range): [NotebookCell, Range][] {
-		const firstIdx = findLastIdxMonotonous(this.cells, c => c.startLine <= range.start.line);
+		const firstIdx = findLastIdxMonotonous(
+			this.cells,
+			(c) => c.startLine <= range.start.line,
+		);
 		if (firstIdx === -1) {
 			return [];
 		}
@@ -194,18 +291,36 @@ abstract class AbstractAlternativeNotebookDocument {
 			if (i === firstIdx) {
 				const cellStartLine = range.start.line - startLine;
 				const cellEndLine = range.end.line - startLine;
-				const cellEnd = cellEndLine <= (altCell.lineCount - 1) ? cellEndLine : altCell.lineCount - 1;
+				const cellEnd =
+					cellEndLine <= altCell.lineCount - 1
+						? cellEndLine
+						: altCell.lineCount - 1;
 				let cellEndChar = range.end.character;
 				if (cellEnd !== cellEndLine) {
 					cellEndChar = altCell.altRange.end.character;
 				}
-				const cellRange = new Range(cellStartLine, range.start.character, cellEnd, cellEndChar);
+				const cellRange = new Range(
+					cellStartLine,
+					range.start.character,
+					cellEnd,
+					cellEndChar,
+				);
 				cells.push([altCell.cell, altCell.fromAltRange(cellRange)]);
 			} else if (startLine + altCell.lineCount <= range.end.line) {
-				const cellRange = new Range(0, 0, altCell.altRange.end.line, altCell.altRange.end.character);
+				const cellRange = new Range(
+					0,
+					0,
+					altCell.altRange.end.line,
+					altCell.altRange.end.character,
+				);
 				cells.push([altCell.cell, altCell.fromAltRange(cellRange)]);
 			} else if (startLine < range.end.line) {
-				const cellRange = new Range(0, 0, range.end.line - startLine, range.end.character);
+				const cellRange = new Range(
+					0,
+					0,
+					range.end.line - startLine,
+					range.end.character,
+				);
 				cells.push([altCell.cell, altCell.fromAltRange(cellRange)]);
 			}
 		}
@@ -213,8 +328,13 @@ abstract class AbstractAlternativeNotebookDocument {
 		return cells;
 	}
 
-	public fromAltOffsetRange(offsetRange: OffsetRange): [NotebookCell, Range][] {
-		const firstIdx = findLastIdxMonotonous(this.cells, c => c.startOffset <= offsetRange.start);
+	public fromAltOffsetRange(
+		offsetRange: OffsetRange,
+	): [NotebookCell, Range][] {
+		const firstIdx = findLastIdxMonotonous(
+			this.cells,
+			(c) => c.startOffset <= offsetRange.start,
+		);
 		if (firstIdx === -1) {
 			return [];
 		}
@@ -223,14 +343,27 @@ abstract class AbstractAlternativeNotebookDocument {
 		for (let i = firstIdx; i < this.cells.length; i++) {
 			const { altCell, startOffset } = this.cells[i];
 			if (i === firstIdx) {
-				const endOffset = offsetRange.endExclusive > (startOffset + altCell.altText.length) ? (startOffset + altCell.altText.length) : offsetRange.endExclusive;
-				const offset = new OffsetRange(offsetRange.start - startOffset, endOffset - startOffset);
+				const endOffset =
+					offsetRange.endExclusive >
+					startOffset + altCell.altText.length
+						? startOffset + altCell.altText.length
+						: offsetRange.endExclusive;
+				const offset = new OffsetRange(
+					offsetRange.start - startOffset,
+					endOffset - startOffset,
+				);
 				cells.push([altCell.cell, altCell.fromAltOffsetRange(offset)]);
-			} else if ((startOffset + altCell.altText.length) < offsetRange.endExclusive) {
+			} else if (
+				startOffset + altCell.altText.length <
+				offsetRange.endExclusive
+			) {
 				const offset = new OffsetRange(0, altCell.altText.length);
 				cells.push([altCell.cell, altCell.fromAltOffsetRange(offset)]);
 			} else if (startOffset < offsetRange.endExclusive) {
-				const offset = new OffsetRange(0, offsetRange.endExclusive - startOffset);
+				const offset = new OffsetRange(
+					0,
+					offsetRange.endExclusive - startOffset,
+				);
 				cells.push([altCell.cell, altCell.fromAltOffsetRange(offset)]);
 			}
 		}
@@ -238,8 +371,11 @@ abstract class AbstractAlternativeNotebookDocument {
 		return cells;
 	}
 
-	public toAltOffset(cell: NotebookCell, position: Position): number | undefined {
-		const altCell = this.cells.find(c => c.altCell.cell === cell);
+	public toAltOffset(
+		cell: NotebookCell,
+		position: Position,
+	): number | undefined {
+		const altCell = this.cells.find((c) => c.altCell.cell === cell);
 		if (altCell) {
 			return altCell.altCell.toAltOffset(position);
 		} else {
@@ -247,13 +383,19 @@ abstract class AbstractAlternativeNotebookDocument {
 		}
 	}
 
-	public toAltOffsetRange(cell: NotebookCell, ranges: readonly Range[]): OffsetRange[] {
+	public toAltOffsetRange(
+		cell: NotebookCell,
+		ranges: readonly Range[],
+	): OffsetRange[] {
 		let offset = 0;
 		for (const { altCell } of this.cells) {
 			if (altCell.cell === cell) {
-				return ranges.map(range => {
+				return ranges.map((range) => {
 					const offsetRange = altCell.toAltOffsetRange(range);
-					const adjustedRange = new OffsetRange(offset + offsetRange.start, offset + offsetRange.endExclusive);
+					const adjustedRange = new OffsetRange(
+						offset + offsetRange.start,
+						offset + offsetRange.endExclusive,
+					);
 					return adjustedRange;
 				});
 			} else {
@@ -267,9 +409,14 @@ abstract class AbstractAlternativeNotebookDocument {
 		let offset = 0;
 		for (const { altCell, startLine } of this.cells) {
 			if (altCell.cell === cell) {
-				return ranges.map(range => {
+				return ranges.map((range) => {
 					const altCellRange = altCell.toAltRange(range);
-					const adjustedRange = new Range(altCellRange.start.line + startLine, altCellRange.start.character, altCellRange.end.line + startLine, altCellRange.end.character);
+					const adjustedRange = new Range(
+						altCellRange.start.line + startLine,
+						altCellRange.start.character,
+						altCellRange.end.line + startLine,
+						altCellRange.end.character,
+					);
 					return adjustedRange;
 				});
 			} else {
@@ -281,80 +428,191 @@ abstract class AbstractAlternativeNotebookDocument {
 }
 
 export interface IAlternativeNotebookDocumentSnapshot extends AbstractAlternativeNotebookDocument {
-	withNotebookChanges(events: readonly NotebookDocumentContentChange[]): AlternativeNotebookDocumentSnapshot;
-	withCellChanges(cellTextDoc: TextDocument, edit: readonly TextDocumentContentChangeEvent[]): AlternativeNotebookDocumentSnapshot;
+	withNotebookChanges(
+		events: readonly NotebookDocumentContentChange[],
+	): AlternativeNotebookDocumentSnapshot;
+	withCellChanges(
+		cellTextDoc: TextDocument,
+		edit: readonly TextDocumentContentChangeEvent[],
+	): AlternativeNotebookDocumentSnapshot;
 }
 
-class AlternativeNotebookDocumentSnapshot extends AbstractAlternativeNotebookDocument implements IAlternativeNotebookDocumentSnapshot {
-	public static create(notebook: NotebookDocument, excludeMarkdownCells: boolean): AlternativeNotebookDocumentSnapshot {
+class AlternativeNotebookDocumentSnapshot
+	extends AbstractAlternativeNotebookDocument
+	implements IAlternativeNotebookDocumentSnapshot
+{
+	public static create(
+		notebook: NotebookDocument,
+		excludeMarkdownCells: boolean,
+	): AlternativeNotebookDocumentSnapshot {
 		const blockComment = getBlockComment(notebook);
 		const lineCommentStart = getLineCommentStart(notebook);
-		const notebookCells = notebook.getCells().filter(cell => !excludeMarkdownCells || cell.kind !== NotebookCellKind.Markup);
-		const altCells = buildAlternativeCells(notebookCells, cell => AlternativeNotebookCellSnapshot.fromNotebookCell(cell, blockComment, lineCommentStart));
+		const notebookCells = notebook
+			.getCells()
+			.filter(
+				(cell) =>
+					!excludeMarkdownCells ||
+					cell.kind !== NotebookCellKind.Markup,
+			);
+		const altCells = buildAlternativeCells(notebookCells, (cell) =>
+			AlternativeNotebookCellSnapshot.fromNotebookCell(
+				cell,
+				blockComment,
+				lineCommentStart,
+			),
+		);
 
-		return new AlternativeNotebookDocumentSnapshot(notebook, excludeMarkdownCells, blockComment, lineCommentStart, altCells);
+		return new AlternativeNotebookDocumentSnapshot(
+			notebook,
+			excludeMarkdownCells,
+			blockComment,
+			lineCommentStart,
+			altCells,
+		);
 	}
-	constructor(notebook: NotebookDocument,
+	constructor(
+		notebook: NotebookDocument,
 		excludeMarkdownCells: boolean,
 		blockComment: [string, string],
 		lineCommentStart: string,
-		altCells: readonly AltCellInfo[]) {
-		super(notebook, excludeMarkdownCells, blockComment, lineCommentStart, altCells);
+		altCells: readonly AltCellInfo[],
+	) {
+		super(
+			notebook,
+			excludeMarkdownCells,
+			blockComment,
+			lineCommentStart,
+			altCells,
+		);
 	}
 
-	public withNotebookChanges(events: readonly NotebookDocumentContentChange[]): AlternativeNotebookDocumentSnapshot {
-		const cells = withNotebookChangesAndEdit(this.cells, this.blockComment, this.lineCommentStart, events, this.excludeMarkdownCells)[0];
-		return new AlternativeNotebookDocumentSnapshot(this.notebook, this.excludeMarkdownCells, this.blockComment, this.lineCommentStart, cells);
+	public withNotebookChanges(
+		events: readonly NotebookDocumentContentChange[],
+	): AlternativeNotebookDocumentSnapshot {
+		const cells = withNotebookChangesAndEdit(
+			this.cells,
+			this.blockComment,
+			this.lineCommentStart,
+			events,
+			this.excludeMarkdownCells,
+		)[0];
+		return new AlternativeNotebookDocumentSnapshot(
+			this.notebook,
+			this.excludeMarkdownCells,
+			this.blockComment,
+			this.lineCommentStart,
+			cells,
+		);
 	}
 
-	public withCellChanges(cellTextDoc: TextDocument, edit: readonly TextDocumentContentChangeEvent[]): AlternativeNotebookDocumentSnapshot {
+	public withCellChanges(
+		cellTextDoc: TextDocument,
+		edit: readonly TextDocumentContentChangeEvent[],
+	): AlternativeNotebookDocumentSnapshot {
 		if (edit instanceof StringEdit ? edit.isEmpty() : edit.length === 0) {
 			return this;
 		}
-		const [altCells,] = withCellChangesAndEdit(this.cells, cellTextDoc, edit) || [undefined, undefined] as const;
+		const [altCells] =
+			withCellChangesAndEdit(this.cells, cellTextDoc, edit) ||
+			([undefined, undefined] as const);
 		if (!altCells) {
 			return this;
 		}
-		return new AlternativeNotebookDocumentSnapshot(this.notebook, this.excludeMarkdownCells, this.blockComment, this.lineCommentStart, altCells);
+		return new AlternativeNotebookDocumentSnapshot(
+			this.notebook,
+			this.excludeMarkdownCells,
+			this.blockComment,
+			this.lineCommentStart,
+			altCells,
+		);
 	}
 }
 
 export interface IAlternativeNotebookDocument extends AbstractAlternativeNotebookDocument {
-	applyNotebookChanges(events: readonly NotebookDocumentContentChange[]): void;
-	applyCellChanges(cellTextDoc: TextDocument, edit: readonly TextDocumentContentChangeEvent[]): void;
+	applyNotebookChanges(
+		events: readonly NotebookDocumentContentChange[],
+	): void;
+	applyCellChanges(
+		cellTextDoc: TextDocument,
+		edit: readonly TextDocumentContentChangeEvent[],
+	): void;
 }
 
-
-class AlternativeNotebookDocument extends AbstractAlternativeNotebookDocument implements IAlternativeNotebookDocument {
-	public static create(notebook: NotebookDocument, excludeMarkdownCells: boolean): AlternativeNotebookDocument {
+class AlternativeNotebookDocument
+	extends AbstractAlternativeNotebookDocument
+	implements IAlternativeNotebookDocument
+{
+	public static create(
+		notebook: NotebookDocument,
+		excludeMarkdownCells: boolean,
+	): AlternativeNotebookDocument {
 		const blockComment = getBlockComment(notebook);
 		const lineCommentStart = getLineCommentStart(notebook);
-		const notebookCells = notebook.getCells().filter(cell => !excludeMarkdownCells || cell.kind !== NotebookCellKind.Markup);
-		const altCells = buildAlternativeCells(notebookCells, cell => AlternativeNotebookCellSnapshot.fromNotebookCell(cell, blockComment, lineCommentStart));
+		const notebookCells = notebook
+			.getCells()
+			.filter(
+				(cell) =>
+					!excludeMarkdownCells ||
+					cell.kind !== NotebookCellKind.Markup,
+			);
+		const altCells = buildAlternativeCells(notebookCells, (cell) =>
+			AlternativeNotebookCellSnapshot.fromNotebookCell(
+				cell,
+				blockComment,
+				lineCommentStart,
+			),
+		);
 
-		return new AlternativeNotebookDocument(notebook, excludeMarkdownCells, blockComment, lineCommentStart, altCells);
+		return new AlternativeNotebookDocument(
+			notebook,
+			excludeMarkdownCells,
+			blockComment,
+			lineCommentStart,
+			altCells,
+		);
 	}
-	constructor(notebook: NotebookDocument,
+	constructor(
+		notebook: NotebookDocument,
 		excludeMarkdownCells: boolean,
 		blockComment: [string, string],
 		lineCommentStart: string,
-		public override cells: AltCellInfo[]) {
-		super(notebook, excludeMarkdownCells, blockComment, lineCommentStart, cells);
+		public override cells: AltCellInfo[],
+	) {
+		super(
+			notebook,
+			excludeMarkdownCells,
+			blockComment,
+			lineCommentStart,
+			cells,
+		);
 	}
 
 	private updateCells(cells: readonly AltCellInfo[]) {
 		this.cells.splice(0, this.cells.length, ...cells);
 	}
-	public applyNotebookChanges(events: readonly NotebookDocumentContentChange[]) {
-		const cells = withNotebookChangesAndEdit(this.cells, this.blockComment, this.lineCommentStart, events, this.excludeMarkdownCells)[0];
+	public applyNotebookChanges(
+		events: readonly NotebookDocumentContentChange[],
+	) {
+		const cells = withNotebookChangesAndEdit(
+			this.cells,
+			this.blockComment,
+			this.lineCommentStart,
+			events,
+			this.excludeMarkdownCells,
+		)[0];
 		this.updateCells(cells);
 	}
 
-	public applyCellChanges(cellTextDoc: TextDocument, edit: readonly TextDocumentContentChangeEvent[]) {
+	public applyCellChanges(
+		cellTextDoc: TextDocument,
+		edit: readonly TextDocumentContentChangeEvent[],
+	) {
 		if (edit instanceof StringEdit ? edit.isEmpty() : edit.length === 0) {
 			return;
 		}
-		const [cells,] = withCellChangesAndEdit(this.cells, cellTextDoc, edit) || [undefined, undefined] as const;
+		const [cells] =
+			withCellChangesAndEdit(this.cells, cellTextDoc, edit) ||
+			([undefined, undefined] as const);
 		if (!cells) {
 			return;
 		}
@@ -362,42 +620,90 @@ class AlternativeNotebookDocument extends AbstractAlternativeNotebookDocument im
 	}
 }
 
-function withCellChangesAndEdit(cells: readonly AltCellInfo[], cellTextDoc: TextDocument, edit: readonly TextDocumentContentChangeEvent[]) {
+function withCellChangesAndEdit(
+	cells: readonly AltCellInfo[],
+	cellTextDoc: TextDocument,
+	edit: readonly TextDocumentContentChangeEvent[],
+) {
 	if (edit instanceof StringEdit ? edit.isEmpty() : edit.length === 0) {
 		return undefined;
 	}
-	const cell = cells.find(c => c.altCell.cell.document === cellTextDoc);
+	const cell = cells.find((c) => c.altCell.cell.document === cellTextDoc);
 	if (!cell) {
 		return undefined;
 	}
-	const cellEdit = edit instanceof StringEdit ? edit : stringEditFromTextContentChange(cell.altCell.normalizeEdits(edit));
-	const altCells = buildAlternativeCells(cells, cell => cell.altCell.cell.document === cellTextDoc ? cell.altCell.withTextEdit(cellEdit) : cell.altCell);
+	const cellEdit =
+		edit instanceof StringEdit
+			? edit
+			: stringEditFromTextContentChange(
+					cell.altCell.normalizeEdits(edit),
+				);
+	const altCells = buildAlternativeCells(cells, (cell) =>
+		cell.altCell.cell.document === cellTextDoc
+			? cell.altCell.withTextEdit(cellEdit)
+			: cell.altCell,
+	);
 	return [altCells, edit] as const;
 }
 
-function withNotebookChangesAndEdit(cells: readonly AltCellInfo[], blockComment: [string, string], lineCommentStart: string, events: readonly NotebookDocumentContentChange[], excludeMarkdownCells: boolean): [readonly AltCellInfo[], StringEdit | undefined] {
+function withNotebookChangesAndEdit(
+	cells: readonly AltCellInfo[],
+	blockComment: [string, string],
+	lineCommentStart: string,
+	events: readonly NotebookDocumentContentChange[],
+	excludeMarkdownCells: boolean,
+): [readonly AltCellInfo[], StringEdit | undefined] {
 	if (!events.length) {
 		return [cells, undefined];
 	}
 	// If we've only added md cells, then its a noop.
-	if (events.every(e => e.removedCells.length === 0 && e.addedCells.every(c => c.kind === NotebookCellKind.Markup))) {
+	if (
+		events.every(
+			(e) =>
+				e.removedCells.length === 0 &&
+				e.addedCells.every((c) => c.kind === NotebookCellKind.Markup),
+		)
+	) {
 		return [cells, undefined];
 	}
 	let altCells = cells.slice();
 	let edit = StringEdit.empty;
 	for (const event of events) {
-		const newCells = event.addedCells.filter(c => excludeMarkdownCells ? c.kind === NotebookCellKind.Code : true).map(cell => ({ altCell: AlternativeNotebookCellSnapshot.fromNotebookCell(cell, blockComment, lineCommentStart), startLine: 0, startOffset: 0 }));
+		const newCells = event.addedCells
+			.filter((c) =>
+				excludeMarkdownCells ? c.kind === NotebookCellKind.Code : true,
+			)
+			.map((cell) => ({
+				altCell: AlternativeNotebookCellSnapshot.fromNotebookCell(
+					cell,
+					blockComment,
+					lineCommentStart,
+				),
+				startLine: 0,
+				startOffset: 0,
+			}));
 
 		const removedCells = altCells.slice(event.range.start, event.range.end);
 		let firstUnChangedCellIndex = -1;
 		if (event.range.isEmpty) {
-			firstUnChangedCellIndex = event.range.start === 0 ? -1 : event.range.start - 1;
+			firstUnChangedCellIndex =
+				event.range.start === 0 ? -1 : event.range.start - 1;
 		} else {
-			firstUnChangedCellIndex = event.range.start === 0 ? -1 : event.range.start - 1;
+			firstUnChangedCellIndex =
+				event.range.start === 0 ? -1 : event.range.start - 1;
 		}
-		const startOffset = firstUnChangedCellIndex === -1 ? 0 : altCells[firstUnChangedCellIndex].startOffset + altCells[firstUnChangedCellIndex].altCell.altText.length + EOL.length;
-		let offsetLength = removedCells.map((cell) => cell.altCell.altText).join(EOL).length;
-		let newCellsContent = newCells.map((cell) => cell.altCell.altText).join(EOL);
+		const startOffset =
+			firstUnChangedCellIndex === -1
+				? 0
+				: altCells[firstUnChangedCellIndex].startOffset +
+					altCells[firstUnChangedCellIndex].altCell.altText.length +
+					EOL.length;
+		let offsetLength = removedCells
+			.map((cell) => cell.altCell.altText)
+			.join(EOL).length;
+		let newCellsContent = newCells
+			.map((cell) => cell.altCell.altText)
+			.join(EOL);
 		if (startOffset !== 0) {
 			if (!(event.range.end < altCells.length)) {
 				newCellsContent = `${EOL}${newCellsContent}`;
@@ -412,10 +718,19 @@ function withNotebookChangesAndEdit(cells: readonly AltCellInfo[], blockComment:
 				offsetLength += EOL.length;
 			}
 		}
-		edit = edit.compose(StringEdit.replace(new OffsetRange(startOffset, startOffset + offsetLength), newCellsContent));
+		edit = edit.compose(
+			StringEdit.replace(
+				new OffsetRange(startOffset, startOffset + offsetLength),
+				newCellsContent,
+			),
+		);
 
-		altCells.splice(event.range.start, event.range.end - event.range.start, ...newCells);
-		altCells = buildAlternativeCells(altCells, cell => cell.altCell);
+		altCells.splice(
+			event.range.start,
+			event.range.end - event.range.start,
+			...newCells,
+		);
+		altCells = buildAlternativeCells(altCells, (cell) => cell.altCell);
 	}
 
 	return [altCells, edit];
@@ -426,7 +741,10 @@ function withNotebookChangesAndEdit(cells: readonly AltCellInfo[], blockComment:
  * Not to be used when dealing with agents for editing or reading notebooks.
  * Use only with NES or other exceptional cases.
  */
-export function createAlternativeNotebookDocument(notebook: NotebookDocument, excludeMarkdownCells: boolean = true): IAlternativeNotebookDocument {
+export function createAlternativeNotebookDocument(
+	notebook: NotebookDocument,
+	excludeMarkdownCells: boolean = true,
+): IAlternativeNotebookDocument {
 	return AlternativeNotebookDocument.create(notebook, excludeMarkdownCells);
 }
 
@@ -435,37 +753,67 @@ export function createAlternativeNotebookDocument(notebook: NotebookDocument, ex
  * Not to be used when dealing with agents for editing or reading notebooks.
  * Use only with NES or other exceptional cases.
  */
-export function createAlternativeNotebookDocumentSnapshot(notebook: NotebookDocument, excludeMarkdownCells: boolean = true): IAlternativeNotebookDocumentSnapshot {
-	return AlternativeNotebookDocumentSnapshot.create(notebook, excludeMarkdownCells);
+export function createAlternativeNotebookDocumentSnapshot(
+	notebook: NotebookDocument,
+	excludeMarkdownCells: boolean = true,
+): IAlternativeNotebookDocumentSnapshot {
+	return AlternativeNotebookDocumentSnapshot.create(
+		notebook,
+		excludeMarkdownCells,
+	);
 }
 
-export function toAltNotebookCellChangeEdit(notebook: AbstractAlternativeNotebookDocument, cellTextDocument: TextDocument, events: readonly TextDocumentContentChangeEvent[]): StringEdit {
-	const replacementsInApplicationOrder = toAltCellTextDocumentContentChangeEvents(notebook, cellTextDocument, events);
+export function toAltNotebookCellChangeEdit(
+	notebook: AbstractAlternativeNotebookDocument,
+	cellTextDocument: TextDocument,
+	events: readonly TextDocumentContentChangeEvent[],
+): StringEdit {
+	const replacementsInApplicationOrder =
+		toAltCellTextDocumentContentChangeEvents(
+			notebook,
+			cellTextDocument,
+			events,
+		);
 	return stringEditFromTextContentChange(replacementsInApplicationOrder);
 }
 
-export function toAltNotebookChangeEdit(notebook: AbstractAlternativeNotebookDocument, events: readonly NotebookDocumentContentChange[]): StringEdit | undefined {
-	return withNotebookChangesAndEdit(notebook.cells, notebook.blockComment, notebook.lineCommentStart, events, notebook.excludeMarkdownCells)[1];
+export function toAltNotebookChangeEdit(
+	notebook: AbstractAlternativeNotebookDocument,
+	events: readonly NotebookDocumentContentChange[],
+): StringEdit | undefined {
+	return withNotebookChangesAndEdit(
+		notebook.cells,
+		notebook.blockComment,
+		notebook.lineCommentStart,
+		events,
+		notebook.excludeMarkdownCells,
+	)[1];
 }
 
-function toAltCellTextDocumentContentChangeEvents(notebook: AbstractAlternativeNotebookDocument, cellTextDocument: TextDocument, events: readonly TextDocumentContentChangeEvent[]): TextDocumentContentChangeEvent[] {
-	return coalesce(events.map(e => {
-		const cell = notebook.getCell(cellTextDocument);
-		if (!cell) {
-			return undefined;
-		}
-		const ranges = notebook.toAltRange(cell, [e.range]);
-		const rangeOffsets = notebook.toAltOffsetRange(cell, [e.range]);
-		if (!ranges.length || !rangeOffsets.length) {
-			return undefined;
-		}
-		const range = ranges[0];
-		const rangeOffset = rangeOffsets[0];
-		return {
-			range,
-			rangeLength: rangeOffset.endExclusive - rangeOffset.start,
-			rangeOffset: rangeOffset.start,
-			text: e.text.replace(/\r\n|\n/g, EOL), // Normalize line endings to EOL
-		} as typeof e;
-	}));
+function toAltCellTextDocumentContentChangeEvents(
+	notebook: AbstractAlternativeNotebookDocument,
+	cellTextDocument: TextDocument,
+	events: readonly TextDocumentContentChangeEvent[],
+): TextDocumentContentChangeEvent[] {
+	return coalesce(
+		events.map((e) => {
+			const cell = notebook.getCell(cellTextDocument);
+			if (!cell) {
+				return undefined;
+			}
+			const ranges = notebook.toAltRange(cell, [e.range]);
+			const rangeOffsets = notebook.toAltOffsetRange(cell, [e.range]);
+			if (!ranges.length || !rangeOffsets.length) {
+				return undefined;
+			}
+			const range = ranges[0];
+			const rangeOffset = rangeOffsets[0];
+			return {
+				range,
+				rangeLength: rangeOffset.endExclusive - rangeOffset.start,
+				rangeOffset: rangeOffset.start,
+				text: e.text.replace(/\r\n|\n/g, EOL), // Normalize line endings to EOL
+			} as typeof e;
+		}),
+	);
 }

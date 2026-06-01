@@ -1,7 +1,6 @@
 import { Age, Street } from './f1';
 
 export class Person {
-
 	private age: Age;
 
 	constructor(age: Age = { value: 10 }) {
@@ -12,7 +11,5 @@ export class Person {
 		return new Street('Main Street');
 	}
 
-	public print(): void {
-		
-	}
+	public print(): void {}
 }

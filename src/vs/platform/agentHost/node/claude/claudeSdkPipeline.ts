@@ -3,21 +3,36 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AgentInfo, McpServerStatus, PermissionMode, Query, SDKUserMessage, SlashCommand, WarmQuery } from '@anthropic-ai/claude-agent-sdk';
-import { CancellationError, isCancellationError } from '../../../../base/common/errors.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { Disposable, IReference, toDisposable } from '../../../../base/common/lifecycle.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IInstantiationService } from '../../../instantiation/common/instantiation.js';
-import { ILogService } from '../../../log/common/log.js';
-import { ClaudeRuntimeEffortLevel } from '../../common/claudeModelConfig.js';
-import { AgentSignal } from '../../common/agentService.js';
-import { ISessionDatabase } from '../../common/sessionDataService.js';
-import { ActionType } from '../../common/state/sessionActions.js';
-import { DeferredPromise } from '../../../../base/common/async.js';
-import { ClaudePromptQueue, IPendingSdkMessage } from './claudePromptQueue.js';
-import { ClaudeSdkMessageRouter } from './claudeSdkMessageRouter.js';
-import type { SubagentRegistry } from './claudeSubagentRegistry.js';
+import type {
+	AgentInfo,
+	McpServerStatus,
+	PermissionMode,
+	Query,
+	SDKUserMessage,
+	SlashCommand,
+	WarmQuery,
+} from "@anthropic-ai/claude-agent-sdk";
+import {
+	CancellationError,
+	isCancellationError,
+} from "../../../../base/common/errors.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import {
+	Disposable,
+	IReference,
+	toDisposable,
+} from "../../../../base/common/lifecycle.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IInstantiationService } from "../../../instantiation/common/instantiation.js";
+import { ILogService } from "../../../log/common/log.js";
+import { ClaudeRuntimeEffortLevel } from "../../common/claudeModelConfig.js";
+import { AgentSignal } from "../../common/agentService.js";
+import { ISessionDatabase } from "../../common/sessionDataService.js";
+import { ActionType } from "../../common/state/sessionActions.js";
+import { DeferredPromise } from "../../../../base/common/async.js";
+import { ClaudePromptQueue, IPendingSdkMessage } from "./claudePromptQueue.js";
+import { ClaudeSdkMessageRouter } from "./claudeSdkMessageRouter.js";
+import type { SubagentRegistry } from "./claudeSubagentRegistry.js";
 
 /**
  * Callback the agent supplies via {@link ClaudeSdkPipeline.attachRematerializer}
@@ -30,7 +45,12 @@ import type { SubagentRegistry } from './claudeSubagentRegistry.js';
  * promotion (see `claudeAgent.ts` materialize path).
  */
 export interface IRematerializer {
-	(reason: 'restart' | 'recover'): Promise<{ readonly warm: WarmQuery; readonly abortController: AbortController }>;
+	(
+		reason: "restart" | "recover",
+	): Promise<{
+		readonly warm: WarmQuery;
+		readonly abortController: AbortController;
+	}>;
 }
 
 /**
@@ -143,7 +163,9 @@ export class ClaudeSdkPipeline extends Disposable {
 	/** Tracks whether the consumer loop is currently draining {@link _query}. */
 	private _consumerLoopRunning = false;
 
-	private readonly _onDidProduceSignal = this._register(new Emitter<AgentSignal>());
+	private readonly _onDidProduceSignal = this._register(
+		new Emitter<AgentSignal>(),
+	);
 	/**
 	 * Single fan-out for every {@link AgentSignal} this session produces:
 	 *   • Router-mapped per-message signals (response parts, tool calls,
@@ -154,7 +176,8 @@ export class ClaudeSdkPipeline extends Disposable {
 	 *   • `steering_consumed` signal, fired the moment the iterable yields
 	 *     a steering entry to the SDK.
 	 */
-	readonly onDidProduceSignal: Event<AgentSignal> = this._onDidProduceSignal.event;
+	readonly onDidProduceSignal: Event<AgentSignal> =
+		this._onDidProduceSignal.event;
 
 	private readonly _router: ClaudeSdkMessageRouter;
 
@@ -173,32 +196,53 @@ export class ClaudeSdkPipeline extends Disposable {
 		this._warm = warm;
 		this._abortController = abortController;
 		this._wireAbortHandler(abortController);
-		this._queue = this._register(instantiationService.createInstance(
-			ClaudePromptQueue,
-			sessionId,
-			() => this._abortController.signal,
-			(pendingId: string) => this._onDidProduceSignal.fire({
-				kind: 'steering_consumed',
-				session: this.sessionUri,
-				id: pendingId,
-			}),
-		));
-		this._router = this._register(instantiationService.createInstance(
-			ClaudeSdkMessageRouter, sessionUri, dbRef, subagents, clientId,
-		));
-		this._register(this._router.onDidProduceSignal(s => this._onDidProduceSignal.fire(s)));
+		this._queue = this._register(
+			instantiationService.createInstance(
+				ClaudePromptQueue,
+				sessionId,
+				() => this._abortController.signal,
+				(pendingId: string) =>
+					this._onDidProduceSignal.fire({
+						kind: "steering_consumed",
+						session: this.sessionUri,
+						id: pendingId,
+					}),
+			),
+		);
+		this._router = this._register(
+			instantiationService.createInstance(
+				ClaudeSdkMessageRouter,
+				sessionUri,
+				dbRef,
+				subagents,
+				clientId,
+			),
+		);
+		this._register(
+			this._router.onDidProduceSignal((s) => this._onDidProduceSignal.fire(s)),
+		);
 		// Dispose chain → abort → SDK cleanup. Reads the *current*
 		// `_abortController` so a swap aborts the live subprocess.
 		this._register(toDisposable(() => this._abortController.abort()));
-		this._register(toDisposable(() => {
-			void Promise.resolve(this._warm[Symbol.asyncDispose]()).catch((err: unknown) =>
-				this._logService.warn(`[ClaudeSdkPipeline] WarmQuery dispose failed: ${err}`));
-		}));
+		this._register(
+			toDisposable(() => {
+				void Promise.resolve(this._warm[Symbol.asyncDispose]()).catch(
+					(err: unknown) =>
+						this._logService.warn(
+							`[ClaudeSdkPipeline] WarmQuery dispose failed: ${err}`,
+						),
+				);
+			}),
+		);
 	}
 
-	get isResumed(): boolean { return this._isResumed; }
+	get isResumed(): boolean {
+		return this._isResumed;
+	}
 
-	get isAborted(): boolean { return this._abortController.signal.aborted; }
+	get isAborted(): boolean {
+		return this._abortController.signal.aborted;
+	}
 
 	/**
 	 * Phase 10 \u2014 narrow public wrapper around the internal
@@ -207,7 +251,7 @@ export class ClaudeSdkPipeline extends Disposable {
 	 * machinery to every collaborator.
 	 */
 	rebindForRestart(): Promise<void> {
-		return this._rebindQuery('restart');
+		return this._rebindQuery("restart");
 	}
 
 	/**
@@ -231,7 +275,11 @@ export class ClaudeSdkPipeline extends Disposable {
 	 * "current" (what the consumer wants) and "applied" (what the SDK has)
 	 * to avoid a redundant `setModel` / `applyFlagSettings` on first use.
 	 */
-	seedCurrentConfig(model: string | undefined, effort: ClaudeRuntimeEffortLevel | undefined, permissionMode: PermissionMode | undefined): void {
+	seedCurrentConfig(
+		model: string | undefined,
+		effort: ClaudeRuntimeEffortLevel | undefined,
+		permissionMode: PermissionMode | undefined,
+	): void {
 		this._currentModel = model;
 		this._currentEffort = effort;
 		this._currentPermissionMode = permissionMode;
@@ -253,7 +301,9 @@ export class ClaudeSdkPipeline extends Disposable {
 				await this._query.setModel(model);
 				this._appliedModel = model;
 			} catch (err) {
-				this._logService.warn(`[ClaudeSdkPipeline:${this.sessionId}] setModel failed: ${err}`);
+				this._logService.warn(
+					`[ClaudeSdkPipeline:${this.sessionId}] setModel failed: ${err}`,
+				);
 			}
 		}
 	}
@@ -270,7 +320,9 @@ export class ClaudeSdkPipeline extends Disposable {
 				await this._query.applyFlagSettings({ effortLevel: effort });
 				this._appliedEffort = effort;
 			} catch (err) {
-				this._logService.warn(`[ClaudeSdkPipeline:${this.sessionId}] setEffort failed: ${err}`);
+				this._logService.warn(
+					`[ClaudeSdkPipeline:${this.sessionId}] setEffort failed: ${err}`,
+				);
 			}
 		}
 	}
@@ -284,7 +336,7 @@ export class ClaudeSdkPipeline extends Disposable {
 	 */
 	async send(prompt: SDKUserMessage, turnId: string): Promise<void> {
 		if (this._needsRebind) {
-			await this._rebindQuery('recover');
+			await this._rebindQuery("recover");
 		}
 		if (this._abortController.signal.aborted) {
 			throw new CancellationError();
@@ -296,7 +348,7 @@ export class ClaudeSdkPipeline extends Disposable {
 		this._ensureConsumerLoop();
 		const entry: IPendingSdkMessage = {
 			sdkMessage: prompt,
-			sdkUuid: typeof prompt.uuid === 'string' ? prompt.uuid : turnId,
+			sdkUuid: typeof prompt.uuid === "string" ? prompt.uuid : turnId,
 			turnId,
 			deferred: new DeferredPromise<void>(),
 		};
@@ -316,27 +368,38 @@ export class ClaudeSdkPipeline extends Disposable {
 	 */
 	injectSteering(prompt: SDKUserMessage, pendingMessageId: string): void {
 		if (this._abortController.signal.aborted) {
-			this._logService.warn(`[Claude:${this.sessionId}] injectSteering: dropped (controller aborted) id=${pendingMessageId}`);
+			this._logService.warn(
+				`[Claude:${this.sessionId}] injectSteering: dropped (controller aborted) id=${pendingMessageId}`,
+			);
 			return;
 		}
 		const parent = this._queue.peekParent();
 		if (!parent) {
-			this._logService.warn(`[Claude:${this.sessionId}] injectSteering: dropped (no in-flight turn) id=${pendingMessageId}`);
+			this._logService.warn(
+				`[Claude:${this.sessionId}] injectSteering: dropped (no in-flight turn) id=${pendingMessageId}`,
+			);
 			return;
 		}
-		const sdkUuid = typeof prompt.uuid === 'string' ? prompt.uuid : pendingMessageId;
+		const sdkUuid =
+			typeof prompt.uuid === "string" ? prompt.uuid : pendingMessageId;
 		// Steering deferreds aren't observed by anyone (the agent's send
 		// promise is the original entry's deferred); attach a no-op catch
 		// so a `failAll` rejection on abort/crash doesn't surface as an
 		// unhandled rejection.
-		this._queue.push({
-			sdkMessage: prompt,
-			sdkUuid,
-			turnId: parent.turnId,
-			deferred: new DeferredPromise<void>(),
-			steeringPendingId: pendingMessageId,
-		}).catch(() => { /* expected on abort/crash */ });
-		this._logService.info(`[Claude:${this.sessionId}] injectSteering: enqueued id=${pendingMessageId} sdkUuid=${sdkUuid}`);
+		this._queue
+			.push({
+				sdkMessage: prompt,
+				sdkUuid,
+				turnId: parent.turnId,
+				deferred: new DeferredPromise<void>(),
+				steeringPendingId: pendingMessageId,
+			})
+			.catch(() => {
+				/* expected on abort/crash */
+			});
+		this._logService.info(
+			`[Claude:${this.sessionId}] injectSteering: enqueued id=${pendingMessageId} sdkUuid=${sdkUuid}`,
+		);
 	}
 
 	/**
@@ -375,9 +438,13 @@ export class ClaudeSdkPipeline extends Disposable {
 	}
 
 	private _wireAbortHandler(controller: AbortController): void {
-		controller.signal.addEventListener('abort', () => {
-			this._queue.notifyAborted();
-		}, { once: true });
+		controller.signal.addEventListener(
+			"abort",
+			() => {
+				this._queue.notifyAborted();
+			},
+			{ once: true },
+		);
 	}
 
 	private _ensureConsumerLoop(): void {
@@ -386,8 +453,14 @@ export class ClaudeSdkPipeline extends Disposable {
 		}
 		this._consumerLoopRunning = true;
 		void this._processMessages()
-			.catch(err => this._logService.error(`[ClaudeSdkPipeline:${this.sessionId}] _processMessages crashed: ${err}`))
-			.finally(() => { this._consumerLoopRunning = false; });
+			.catch((err) =>
+				this._logService.error(
+					`[ClaudeSdkPipeline:${this.sessionId}] _processMessages crashed: ${err}`,
+				),
+			)
+			.finally(() => {
+				this._consumerLoopRunning = false;
+			});
 	}
 
 	/**
@@ -397,20 +470,33 @@ export class ClaudeSdkPipeline extends Disposable {
 	 */
 	private async _replayCurrentConfig(): Promise<void> {
 		try {
-			if (this._currentModel !== undefined && this._currentModel !== this._appliedModel) {
+			if (
+				this._currentModel !== undefined &&
+				this._currentModel !== this._appliedModel
+			) {
 				await this._query?.setModel(this._currentModel);
 				this._appliedModel = this._currentModel;
 			}
-			if (this._currentEffort !== undefined && this._currentEffort !== this._appliedEffort) {
-				await this._query?.applyFlagSettings({ effortLevel: this._currentEffort });
+			if (
+				this._currentEffort !== undefined &&
+				this._currentEffort !== this._appliedEffort
+			) {
+				await this._query?.applyFlagSettings({
+					effortLevel: this._currentEffort,
+				});
 				this._appliedEffort = this._currentEffort;
 			}
-			if (this._currentPermissionMode !== undefined && this._currentPermissionMode !== this._appliedPermissionMode) {
+			if (
+				this._currentPermissionMode !== undefined &&
+				this._currentPermissionMode !== this._appliedPermissionMode
+			) {
 				await this._query?.setPermissionMode(this._currentPermissionMode);
 				this._appliedPermissionMode = this._currentPermissionMode;
 			}
 		} catch (err) {
-			this._logService.warn(`[ClaudeSdkPipeline:${this.sessionId}] _replayCurrentConfig failed: ${err}`);
+			this._logService.warn(
+				`[ClaudeSdkPipeline:${this.sessionId}] _replayCurrentConfig failed: ${err}`,
+			);
 		}
 	}
 
@@ -419,9 +505,11 @@ export class ClaudeSdkPipeline extends Disposable {
 	 * rematerializer in `resume` mode. Re-applies the current model /
 	 * effort / permission mode to the fresh Query.
 	 */
-	private async _rebindQuery(reason: 'restart' | 'recover'): Promise<void> {
+	private async _rebindQuery(reason: "restart" | "recover"): Promise<void> {
 		if (!this._rematerializer) {
-			throw new Error(`ClaudeSdkPipeline.rebind: no rematerializer attached (reason=${reason})`);
+			throw new Error(
+				`ClaudeSdkPipeline.rebind: no rematerializer attached (reason=${reason})`,
+			);
 		}
 		const oldWarm = this._warm;
 		// Install a placeholder controller BEFORE awaiting the
@@ -437,8 +525,12 @@ export class ClaudeSdkPipeline extends Disposable {
 		// the post-await abort gate in `_materializeProvisional`.
 		if (this._store.isDisposed) {
 			built.abortController.abort();
-			void Promise.resolve(built.warm[Symbol.asyncDispose]()).catch((err: unknown) =>
-				this._logService.warn(`[ClaudeSdkPipeline:${this.sessionId}] rebind-after-dispose: warm dispose failed: ${err}`));
+			void Promise.resolve(built.warm[Symbol.asyncDispose]()).catch(
+				(err: unknown) =>
+					this._logService.warn(
+						`[ClaudeSdkPipeline:${this.sessionId}] rebind-after-dispose: warm dispose failed: ${err}`,
+					),
+			);
 			throw new CancellationError();
 		}
 		// Abort issued while we were awaiting the rematerializer landed on
@@ -446,17 +538,28 @@ export class ClaudeSdkPipeline extends Disposable {
 		// cancellation to the in-flight `send`.
 		if (placeholder.signal.aborted) {
 			built.abortController.abort();
-			void Promise.resolve(built.warm[Symbol.asyncDispose]()).catch((err: unknown) =>
-				this._logService.warn(`[ClaudeSdkPipeline:${this.sessionId}] rebind-aborted: warm dispose failed: ${err}`));
-			void Promise.resolve(oldWarm[Symbol.asyncDispose]()).catch((err: unknown) =>
-				this._logService.warn(`[ClaudeSdkPipeline:${this.sessionId}] previous WarmQuery dispose failed during aborted rebind: ${err}`));
+			void Promise.resolve(built.warm[Symbol.asyncDispose]()).catch(
+				(err: unknown) =>
+					this._logService.warn(
+						`[ClaudeSdkPipeline:${this.sessionId}] rebind-aborted: warm dispose failed: ${err}`,
+					),
+			);
+			void Promise.resolve(oldWarm[Symbol.asyncDispose]()).catch(
+				(err: unknown) =>
+					this._logService.warn(
+						`[ClaudeSdkPipeline:${this.sessionId}] previous WarmQuery dispose failed during aborted rebind: ${err}`,
+					),
+			);
 			this._queue.failAll(new CancellationError());
 			this._query = undefined;
 			this._needsRebind = true;
 			throw new CancellationError();
 		}
 		void Promise.resolve(oldWarm[Symbol.asyncDispose]()).catch((err: unknown) =>
-			this._logService.warn(`[ClaudeSdkPipeline:${this.sessionId}] previous WarmQuery dispose failed during rebind: ${err}`));
+			this._logService.warn(
+				`[ClaudeSdkPipeline:${this.sessionId}] previous WarmQuery dispose failed during rebind: ${err}`,
+			),
+		);
 		this._warm = built.warm;
 		this._abortController = built.abortController;
 		this._wireAbortHandler(built.abortController);
@@ -490,31 +593,41 @@ export class ClaudeSdkPipeline extends Disposable {
 	private async _processMessages(): Promise<void> {
 		const query = this._query;
 		if (!query) {
-			throw new Error('ClaudeSdkPipeline._processMessages called before query was bound');
+			throw new Error(
+				"ClaudeSdkPipeline._processMessages called before query was bound",
+			);
 		}
 		try {
 			for await (const message of query) {
 				if (this._abortController.signal.aborted) {
 					throw new CancellationError();
 				}
-				if (message.type === 'system' && message.subtype === 'init' && !this._isResumed) {
+				if (
+					message.type === "system" &&
+					message.subtype === "init" &&
+					!this._isResumed
+				) {
 					this._isResumed = true;
 				}
 				const turnId = this._queue.peekParent()?.turnId;
 				try {
 					await this._router.handle(message, turnId);
 				} catch (handlerErr) {
-					this._logService.warn(`[ClaudeSdkPipeline:${this.sessionId}] router threw, skipping: ${handlerErr}`);
+					this._logService.warn(
+						`[ClaudeSdkPipeline:${this.sessionId}] router threw, skipping: ${handlerErr}`,
+					);
 				}
-				if (message.type === 'result') {
+				if (message.type === "result") {
 					const completed = this._queue.settleHead();
-					this._logService.info(`[Claude:${this.sessionId}] result for sdkUuid=${completed?.sdkUuid}`);
+					this._logService.info(
+						`[Claude:${this.sessionId}] result for sdkUuid=${completed?.sdkUuid}`,
+					);
 					// Final result: queue fully drained → protocol turn done.
 					// Intermediate result (still pending entries from a
 					// steering preempt) does NOT fire SessionTurnComplete.
 					if (completed && this._queue.isEmpty) {
 						this._onDidProduceSignal.fire({
-							kind: 'action',
+							kind: "action",
 							session: this.sessionUri,
 							action: {
 								type: ActionType.SessionTurnComplete,
@@ -527,7 +640,7 @@ export class ClaudeSdkPipeline extends Disposable {
 			if (this._abortController.signal.aborted) {
 				throw new CancellationError();
 			}
-			throw new Error('Claude SDK stream ended without a result message');
+			throw new Error("Claude SDK stream ended without a result message");
 		} catch (err) {
 			const fatal = err instanceof Error ? err : new Error(String(err));
 			// A previous unwinding loop must NOT clobber a freshly

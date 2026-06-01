@@ -15,7 +15,10 @@ export const enum SearchErrorType {
 }
 
 export class CodeOrDocsSearchRepoError extends Error {
-	constructor(readonly repo: string, message?: string) {
+	constructor(
+		readonly repo: string,
+		message?: string,
+	) {
 		super(message);
 	}
 }
@@ -59,7 +62,15 @@ export class NoAccessToEndpointError extends Error {
 	override name = SearchErrorType.noAccessToEndpoint;
 }
 
-export function constructSearchRepoError({ error, message, repo }: { error: string; message: string; repo: string }): CodeOrDocsSearchRepoError {
+export function constructSearchRepoError({
+	error,
+	message,
+	repo,
+}: {
+	error: string;
+	message: string;
+	repo: string;
+}): CodeOrDocsSearchRepoError {
 	switch (error) {
 		case SearchRepoErrorType.missingInaccessibleRepoOrg:
 			return new InaccessibleRepoOrgError(repo, message);
@@ -72,7 +83,13 @@ export function constructSearchRepoError({ error, message, repo }: { error: stri
 	}
 }
 
-export function constructSearchError({ error, message }: { error: string; message: string }): Error {
+export function constructSearchError({
+	error,
+	message,
+}: {
+	error: string;
+	message: string;
+}): Error {
 	switch (error) {
 		case SearchErrorType.maxRetriesExceeded:
 			return new MaxRetriesExceededError(message);

@@ -16,23 +16,35 @@ interface ContextProviderParams {
 export function fillInCSharpActiveExperiments(
 	accessor: ServicesAccessor,
 	activeExperiments: ActiveExperiments,
-	telemetryData: TelemetryWithExp
+	telemetryData: TelemetryWithExp,
 ): boolean {
 	const featuresService = accessor.get(ICompletionsFeaturesService);
 	const logTarget = accessor.get(ICompletionsLogTargetService);
 	try {
-		const csharpContextProviderParams = featuresService.csharpContextProviderParams(telemetryData);
+		const csharpContextProviderParams =
+			featuresService.csharpContextProviderParams(telemetryData);
 		if (csharpContextProviderParams) {
-			const params = JSON.parse(csharpContextProviderParams) as ContextProviderParams;
-			for (const [key, value] of Object.entries(params)) { activeExperiments.set(key, value); }
+			const params = JSON.parse(
+				csharpContextProviderParams,
+			) as ContextProviderParams;
+			for (const [key, value] of Object.entries(params)) {
+				activeExperiments.set(key, value);
+			}
 		} else {
-			const params = featuresService.getContextProviderExpSettings('csharp')?.params;
+			const params =
+				featuresService.getContextProviderExpSettings('csharp')?.params;
 			if (params) {
-				for (const [key, value] of Object.entries(params)) { activeExperiments.set(key, value); }
+				for (const [key, value] of Object.entries(params)) {
+					activeExperiments.set(key, value);
+				}
 			}
 		}
 	} catch (e) {
-		logger.debug(logTarget, `Failed to get the active C# experiments for the Context Provider API`, e);
+		logger.debug(
+			logTarget,
+			`Failed to get the active C# experiments for the Context Provider API`,
+			e,
+		);
 		return false;
 	}
 	return true;

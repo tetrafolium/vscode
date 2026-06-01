@@ -8,7 +8,10 @@ import { ChatCompletionContentPartImage } from '@vscode/prompt-tsx/dist/base/out
 import { ChatCompletionContentPartKind } from '@vscode/prompt-tsx/dist/base/output/rawTypes';
 import { rawPartAsThinkingData } from '../../endpoint/common/thinkingDataContainer';
 import { TelemetryData } from '../../telemetry/common/telemetryData';
-import { ThinkingData, ThinkingDataInMessage } from '../../thinking/common/thinking';
+import {
+	ThinkingData,
+	ThinkingDataInMessage,
+} from '../../thinking/common/thinking';
 import { ICopilotReference, RequestId } from './fetch';
 
 /**
@@ -87,11 +90,12 @@ export interface APIUsage {
 }
 
 export function isApiUsage(obj: unknown): obj is APIUsage {
-	return typeof (obj as APIUsage).prompt_tokens === 'number' &&
+	return (
+		typeof (obj as APIUsage).prompt_tokens === 'number' &&
 		typeof (obj as APIUsage).completion_tokens === 'number' &&
-		typeof (obj as APIUsage).total_tokens === 'number';
+		typeof (obj as APIUsage).total_tokens === 'number'
+	);
 }
-
 
 export interface APIJsonData {
 	text: string;
@@ -109,15 +113,16 @@ export interface APIErrorResponse {
 
 export const openAIContextManagementCompactionType = 'compaction';
 
-export const modelsWithoutResponsesContextManagement = new Set(['gpt-5', 'gpt-5.1', 'gpt-5.2']);
-
-
+export const modelsWithoutResponsesContextManagement = new Set([
+	'gpt-5',
+	'gpt-5.1',
+	'gpt-5.2',
+]);
 
 export interface OpenAIContextManagement {
 	type: typeof openAIContextManagementCompactionType;
 	compact_threshold: number;
 }
-
 
 export interface OpenAIContextManagementResponse {
 	encrypted_content: string;
@@ -125,15 +130,13 @@ export interface OpenAIContextManagementResponse {
 	id: string;
 }
 
-
 export enum ChatRole {
 	System = 'system',
 	User = 'user',
 	Assistant = 'assistant',
 	Function = 'function',
-	Tool = 'tool'
+	Tool = 'tool',
 }
-
 
 export type CAPIChatMessage = OpenAI.ChatMessage & {
 	/**
@@ -146,11 +149,16 @@ export type CAPIChatMessage = OpenAI.ChatMessage & {
 	copilot_confirmations?: { state: string; confirmation: any }[];
 
 	copilot_cache_control?: {
-		'type': 'ephemeral';
+		type: 'ephemeral';
 	};
 } & ThinkingDataInMessage;
 
-export function getCAPITextPart(content: string | OpenAI.ChatCompletionContentPart[] | OpenAI.ChatCompletionContentPart): string {
+export function getCAPITextPart(
+	content:
+		| string
+		| OpenAI.ChatCompletionContentPart[]
+		| OpenAI.ChatCompletionContentPart,
+): string {
 	if (Array.isArray(content)) {
 		return content.map((part) => getCAPITextPart(part)).join('');
 	} else if (typeof content === 'string') {
@@ -162,18 +170,30 @@ export function getCAPITextPart(content: string | OpenAI.ChatCompletionContentPa
 	}
 }
 
-export type RawMessageConversionCallback = (message: CAPIChatMessage, thinkingData?: ThinkingData) => void;
+export type RawMessageConversionCallback = (
+	message: CAPIChatMessage,
+	thinkingData?: ThinkingData,
+) => void;
 /**
  * Converts a raw TSX chat message to CAPI's format.
  *
  * **Extra:** the raw message can have `copilot_references` and
  * `copilot_confirmations` properties, which are copied to the CAPI message.
  */
-export function rawMessageToCAPI(message: Raw.ChatMessage, callback?: RawMessageConversionCallback): CAPIChatMessage;
-export function rawMessageToCAPI(message: Raw.ChatMessage[], callback?: RawMessageConversionCallback): CAPIChatMessage[];
-export function rawMessageToCAPI(message: Raw.ChatMessage[] | Raw.ChatMessage, callback?: RawMessageConversionCallback): CAPIChatMessage | CAPIChatMessage[] {
+export function rawMessageToCAPI(
+	message: Raw.ChatMessage,
+	callback?: RawMessageConversionCallback,
+): CAPIChatMessage;
+export function rawMessageToCAPI(
+	message: Raw.ChatMessage[],
+	callback?: RawMessageConversionCallback,
+): CAPIChatMessage[];
+export function rawMessageToCAPI(
+	message: Raw.ChatMessage[] | Raw.ChatMessage,
+	callback?: RawMessageConversionCallback,
+): CAPIChatMessage | CAPIChatMessage[] {
 	if (Array.isArray(message)) {
-		return message.map(m => rawMessageToCAPI(m, callback));
+		return message.map((m) => rawMessageToCAPI(m, callback));
 	}
 
 	const out: CAPIChatMessage = toMode(OutputMode.OpenAI, message);
@@ -190,21 +210,37 @@ export function rawMessageToCAPI(message: Raw.ChatMessage[] | Raw.ChatMessage, c
 			const part = out.content[i];
 			if (part.type === 'text') {
 				part.text = part.text.trimEnd();
-			} else if (part.type === 'image_url' && Array.isArray(message.content) && i < message.content.length) {
-				const rawPart = message.content[i] as Raw.ChatCompletionContentPart;
-				if (rawPart?.type === Raw.ChatCompletionContentPartKind.Image && rawPart.imageUrl?.mediaType) {
+			} else if (
+				part.type === 'image_url' &&
+				Array.isArray(message.content) &&
+				i < message.content.length
+			) {
+				const rawPart = message.content[
+					i
+				] as Raw.ChatCompletionContentPart;
+				if (
+					rawPart?.type === Raw.ChatCompletionContentPartKind.Image &&
+					rawPart.imageUrl?.mediaType
+				) {
 					// CAPI expects `media_type` instead of `mediaType`. This is only used for CAPI and not OpenAI.
 					const { mediaType, ...rawImageUrl } = rawPart.imageUrl;
-					(part.image_url as ChatCompletionContentPartImage.ImageURL & { media_type: string }) = {
+					(part.image_url as ChatCompletionContentPartImage.ImageURL & {
+						media_type: string;
+					}) = {
 						...rawImageUrl,
-						media_type: mediaType
+						media_type: mediaType,
 					};
 				}
 			}
 		}
 	}
 
-	if (message.content.find(part => part.type === ChatCompletionContentPartKind.CacheBreakpoint)) {
+	if (
+		message.content.find(
+			(part) =>
+				part.type === ChatCompletionContentPartKind.CacheBreakpoint,
+		)
+	) {
 		out.copilot_cache_control = { type: 'ephemeral' };
 	}
 
@@ -292,7 +328,7 @@ export enum FilterReason {
 	/**
 	 * The prompt was filtered, the reason was not provided
 	 */
-	Prompt = 'prompt'
+	Prompt = 'prompt',
 }
 
 export interface ChatCompletion {

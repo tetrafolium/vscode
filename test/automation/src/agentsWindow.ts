@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Code } from './code';
-import { QuickAccess } from './quickaccess';
+import { Code } from "./code";
+import { QuickAccess } from "./quickaccess";
 
-const AGENTS_WORKBENCH = '.agent-sessions-workbench';
-const NEW_SESSION_VIEW = '.sessions-chat-widget .new-chat-widget-container';
-const SESSION_TYPE_PICKER = '.sessions-chat-session-type-picker .action-label';
+const AGENTS_WORKBENCH = ".agent-sessions-workbench";
+const NEW_SESSION_VIEW = ".sessions-chat-widget .new-chat-widget-container";
+const SESSION_TYPE_PICKER = ".sessions-chat-session-type-picker .action-label";
 const SESSION_TYPE_PICKER_VISIBLE = `${SESSION_TYPE_PICKER}:not(.hidden)`;
 const NEW_CHAT_EDITOR = `${NEW_SESSION_VIEW} .sessions-chat-editor .monaco-editor[role="code"]`;
 const SEND_BUTTON_ENABLED = `${NEW_SESSION_VIEW} .sessions-chat-send-button .monaco-button:not(.disabled)`;
@@ -16,11 +16,13 @@ const RESPONSE = `${AGENTS_WORKBENCH} .interactive-item-container.interactive-re
 const RESPONSE_COMPLETE = `${RESPONSE}:not(.chat-response-loading)`;
 
 export class AgentsWindow {
-
-	constructor(private code: Code, private quickaccess: QuickAccess) { }
+	constructor(
+		private code: Code,
+		private quickaccess: QuickAccess,
+	) {}
 
 	private get newChatEditorInputSelector(): string {
-		return `${NEW_CHAT_EDITOR} ${this.code.editContextEnabled ? '.native-edit-context' : 'textarea'}`;
+		return `${NEW_CHAT_EDITOR} ${this.code.editContextEnabled ? ".native-edit-context" : "textarea"}`;
 	}
 
 	/**
@@ -32,7 +34,9 @@ export class AgentsWindow {
 	 * driver focus to the newly opened Agents Window.
 	 */
 	async openCurrentFolderInAgentsWindow(): Promise<void> {
-		await this.quickaccess.runCommand('workbench.action.openWorkspaceInAgentsWindow');
+		await this.quickaccess.runCommand(
+			"workbench.action.openWorkspaceInAgentsWindow",
+		);
 	}
 
 	/**
@@ -43,7 +47,9 @@ export class AgentsWindow {
 	 * secondary binding, which maps to plain Ctrl+L).
 	 */
 	async startNewSession(): Promise<void> {
-		await this.code.dispatchKeybinding('ctrl+l', async () => this.waitForNewSessionView());
+		await this.code.dispatchKeybinding("ctrl+l", async () =>
+			this.waitForNewSessionView(),
+		);
 	}
 
 	/**
@@ -51,7 +57,10 @@ export class AgentsWindow {
 	 * then switch the driver to it. Returns once the Agents Window's
 	 * workbench DOM is present so the caller can immediately drive UI.
 	 */
-	async switchToAgentsWindow(previousWindowCount: number, timeoutMs: number = 30_000): Promise<void> {
+	async switchToAgentsWindow(
+		previousWindowCount: number,
+		timeoutMs: number = 30_000,
+	): Promise<void> {
 		const deadline = Date.now() + timeoutMs;
 		while (Date.now() < deadline) {
 			const windows = this.code.driver.getAllWindows();
@@ -63,9 +72,11 @@ export class AgentsWindow {
 				await this.code.waitForElement(AGENTS_WORKBENCH);
 				return;
 			}
-			await new Promise(r => setTimeout(r, 300));
+			await new Promise((r) => setTimeout(r, 300));
 		}
-		throw new Error(`Timed out waiting for Agents Window to open (${previousWindowCount} → more windows)`);
+		throw new Error(
+			`Timed out waiting for Agents Window to open (${previousWindowCount} → more windows)`,
+		);
 	}
 
 	/**
@@ -76,7 +87,11 @@ export class AgentsWindow {
 	 */
 	async waitForNewSessionView(retryCount: number = 600): Promise<void> {
 		await this.code.waitForElement(NEW_SESSION_VIEW, undefined, retryCount);
-		await this.code.waitForElement(SESSION_TYPE_PICKER_VISIBLE, undefined, retryCount);
+		await this.code.waitForElement(
+			SESSION_TYPE_PICKER_VISIBLE,
+			undefined,
+			retryCount,
+		);
 	}
 
 	/**
@@ -100,22 +115,37 @@ export class AgentsWindow {
 		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 			await this.code.waitAndClick(SESSION_TYPE_PICKER_VISIBLE);
 			try {
-				await this.code.waitForElement(itemSel, el => !!el && (el.textContent ?? '').trim().length > 0, 30 /* ~3 seconds */);
+				await this.code.waitForElement(
+					itemSel,
+					(el) => !!el && (el.textContent ?? "").trim().length > 0,
+					30 /* ~3 seconds */,
+				);
 				break;
 			} catch {
 				if (attempt === maxAttempts) {
-					throw new Error(`Session type picker did not populate after ${maxAttempts} attempts`);
+					throw new Error(
+						`Session type picker did not populate after ${maxAttempts} attempts`,
+					);
 				}
-				await new Promise(r => setTimeout(r, 2000));
+				await new Promise((r) => setTimeout(r, 2000));
 			}
 		}
 
-		const items = await this.code.waitForElements(itemSel, /* recursive */ true);
-		const matchIndex = items.findIndex(el => (el.textContent ?? '').trim().toLowerCase().includes(label.toLowerCase()));
+		const items = await this.code.waitForElements(
+			itemSel,
+			/* recursive */ true,
+		);
+		const matchIndex = items.findIndex((el) =>
+			(el.textContent ?? "").trim().toLowerCase().includes(label.toLowerCase()),
+		);
 		if (matchIndex < 0) {
-			throw new Error(`Session type "${label}" not found in picker. Available: ${items.map(i => (i.textContent ?? '').trim()).join(', ')}`);
+			throw new Error(
+				`Session type "${label}" not found in picker. Available: ${items.map((i) => (i.textContent ?? "").trim()).join(", ")}`,
+			);
 		}
-		await this.code.waitAndClick(`.action-widget .monaco-list-row[data-index="${matchIndex}"]`);
+		await this.code.waitAndClick(
+			`.action-widget .monaco-list-row[data-index="${matchIndex}"]`,
+		);
 	}
 
 	/**
@@ -128,23 +158,37 @@ export class AgentsWindow {
 	 * still visible (the first click can silently fail if the button
 	 * moved or an overlay intercepted the event).
 	 */
-	async submitNewSessionPrompt(prompt: string, sendButtonRetryCount: number = 600): Promise<void> {
+	async submitNewSessionPrompt(
+		prompt: string,
+		sendButtonRetryCount: number = 600,
+	): Promise<void> {
 		await this.code.waitForElement(NEW_CHAT_EDITOR);
 		await this.code.waitAndClick(NEW_CHAT_EDITOR);
-		await this.code.waitForTypeInEditor(this.newChatEditorInputSelector, prompt);
-		await this.code.waitForElement(SEND_BUTTON_ENABLED, undefined, sendButtonRetryCount);
+		await this.code.waitForTypeInEditor(
+			this.newChatEditorInputSelector,
+			prompt,
+		);
+		await this.code.waitForElement(
+			SEND_BUTTON_ENABLED,
+			undefined,
+			sendButtonRetryCount,
+		);
 
 		const maxClickAttempts = 3;
 		for (let attempt = 1; attempt <= maxClickAttempts; attempt++) {
 			await this.code.waitAndClick(SEND_BUTTON_ENABLED);
 			// Verify the new-session view disappeared (confirms send took effect).
 			try {
-				await this.code.waitForElement(NEW_SESSION_VIEW, result => !result, 30 /* ~3 seconds */);
+				await this.code.waitForElement(
+					NEW_SESSION_VIEW,
+					(result) => !result,
+					30 /* ~3 seconds */,
+				);
 				return; // View gone — send succeeded
 			} catch {
 				// View still present — click may not have fired; retry
 				if (attempt < maxClickAttempts) {
-					await new Promise(r => setTimeout(r, 1000));
+					await new Promise((r) => setTimeout(r, 1000));
 				}
 			}
 		}
@@ -157,7 +201,10 @@ export class AgentsWindow {
 	 * matching the predicate. Returns the matched element's full text
 	 * content.
 	 */
-	async waitForAssistantText(predicate: RegExp | string, timeoutMs: number = 60_000): Promise<string> {
+	async waitForAssistantText(
+		predicate: RegExp | string,
+		timeoutMs: number = 60_000,
+	): Promise<string> {
 		const retryCount = Math.ceil(timeoutMs / 100);
 		await this.code.waitForElement(RESPONSE, undefined, retryCount);
 		await this.code.waitForElement(RESPONSE_COMPLETE, undefined, retryCount);
@@ -165,15 +212,24 @@ export class AgentsWindow {
 		const responseSelector = `${RESPONSE_COMPLETE} .rendered-markdown`;
 		const deadline = Date.now() + timeoutMs;
 		while (Date.now() < deadline) {
-			const elements = await this.code.getElements(responseSelector, /* recursive */ true);
-			for (const el of (elements ?? [])) {
-				const text = el.textContent || '';
-				if (typeof predicate === 'string' ? text.includes(predicate) : predicate.test(text)) {
+			const elements = await this.code.getElements(
+				responseSelector,
+				/* recursive */ true,
+			);
+			for (const el of elements ?? []) {
+				const text = el.textContent || "";
+				if (
+					typeof predicate === "string"
+						? text.includes(predicate)
+						: predicate.test(text)
+				) {
 					return text;
 				}
 			}
-			await new Promise(r => setTimeout(r, 500));
+			await new Promise((r) => setTimeout(r, 500));
 		}
-		throw new Error(`Timed out waiting for assistant text matching ${predicate}`);
+		throw new Error(
+			`Timed out waiting for assistant text matching ${predicate}`,
+		);
 	}
 }

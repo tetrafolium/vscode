@@ -2,14 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 export interface MermaidWebviewInfo {
 	readonly id: string;
 	readonly webview: vscode.Webview;
 	readonly mermaidSource: string;
 	readonly title: string | undefined;
-	readonly type: 'chat' | 'editor';
+	readonly type: "chat" | "editor";
 }
 
 export interface MermaidCommandContext {
@@ -23,7 +23,6 @@ export interface MermaidCommandContext {
  * Tracks the active webview and provides methods for interacting with webviews.
  */
 export class MermaidWebviewManager {
-
 	private _activeWebviewId: string | undefined;
 	private readonly _webviews = new Map<string, MermaidWebviewInfo>();
 
@@ -31,10 +30,18 @@ export class MermaidWebviewManager {
 	 * Gets the currently active webview info.
 	 */
 	public get activeWebview(): MermaidWebviewInfo | undefined {
-		return this._activeWebviewId ? this._webviews.get(this._activeWebviewId) : undefined;
+		return this._activeWebviewId
+			? this._webviews.get(this._activeWebviewId)
+			: undefined;
 	}
 
-	public registerWebview(id: string, webview: vscode.Webview, mermaidSource: string, title: string | undefined, type: 'chat' | 'editor'): vscode.Disposable {
+	public registerWebview(
+		id: string,
+		webview: vscode.Webview,
+		mermaidSource: string,
+		title: string | undefined,
+		type: "chat" | "editor",
+	): vscode.Disposable {
 		if (this._webviews.has(id)) {
 			throw new Error(`Webview with id ${id} is already registered.`);
 		}
@@ -44,7 +51,7 @@ export class MermaidWebviewManager {
 			webview,
 			mermaidSource,
 			title,
-			type
+			type,
 		};
 		this._webviews.set(id, info);
 		return { dispose: () => this.unregisterWebview(id) };
@@ -74,6 +81,6 @@ export class MermaidWebviewManager {
 	 */
 	public resetPanZoom(id: string | undefined): void {
 		const target = id ? this._webviews.get(id) : this.activeWebview;
-		target?.webview.postMessage({ type: 'resetPanZoom' });
+		target?.webview.postMessage({ type: "resetPanZoom" });
 	}
 }

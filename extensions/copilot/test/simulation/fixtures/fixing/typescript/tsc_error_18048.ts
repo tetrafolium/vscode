@@ -1,4 +1,4 @@
-const array: number[] = []
+const array: number[] = [];
 let ceiling = 10;
 const poppedElement = array.pop();
 const n = ceiling - poppedElement - 1;

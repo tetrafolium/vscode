@@ -32,12 +32,13 @@ export interface EmitterContext extends KeyComputationContext {
 }
 
 export abstract class ProgramContext {
-
 	/**
 	 * The symbol is skipped if it has no declarations or if one declaration
 	 * comes from a default or external library.
 	 */
-	protected getSymbolInfo(symbol: tt.Symbol): { skip: true } | { skip: false; primary: tt.SourceFile } {
+	protected getSymbolInfo(
+		symbol: tt.Symbol,
+	): { skip: true } | { skip: false; primary: tt.SourceFile } {
 		const declarations = symbol.declarations;
 		if (declarations === undefined || declarations.length === 0) {
 			return { skip: true };
@@ -50,24 +51,33 @@ export abstract class ProgramContext {
 			if (primary === undefined) {
 				primary = sourceFile;
 			}
-			if (program.isSourceFileDefaultLibrary(sourceFile) || program.isSourceFileFromExternalLibrary(sourceFile)) {
+			if (
+				program.isSourceFileDefaultLibrary(sourceFile) ||
+				program.isSourceFileFromExternalLibrary(sourceFile)
+			) {
 				skipCount++;
 			}
 		}
-		return skipCount > 0 ? { skip: true } : { skip: false, primary: primary! };
+		return skipCount > 0
+			? { skip: true }
+			: { skip: false, primary: primary! };
 	}
 
-	protected skipDeclaration(declaration: tt.Declaration, sourceFile: tt.SourceFile = declaration.getSourceFile()): boolean {
+	protected skipDeclaration(
+		declaration: tt.Declaration,
+		sourceFile: tt.SourceFile = declaration.getSourceFile(),
+	): boolean {
 		const program = this.getProgram();
-		return program.isSourceFileDefaultLibrary(sourceFile) || program.isSourceFileFromExternalLibrary(sourceFile);
+		return (
+			program.isSourceFileDefaultLibrary(sourceFile) ||
+			program.isSourceFileFromExternalLibrary(sourceFile)
+		);
 	}
 
 	protected abstract getProgram(): tt.Program;
-
 }
 
 export class RecoverableError extends Error {
-
 	public static readonly SourceFileNotFound: number = 1;
 	public static readonly NodeNotFound: number = 2;
 	public static readonly NodeKindMismatch: number = 3;

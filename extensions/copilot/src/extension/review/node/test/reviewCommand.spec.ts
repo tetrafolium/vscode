@@ -7,16 +7,26 @@ import assert from 'assert';
 import { describe, suite, test } from 'vitest';
 import { TextDocumentSnapshot } from '../../../../platform/editing/common/textDocumentSnapshot';
 import { toCodeReviewResult } from '../../../../platform/review/common/reviewCommand';
-import { ReviewComment, ReviewSuggestion } from '../../../../platform/review/common/reviewService';
+import {
+	ReviewComment,
+	ReviewSuggestion,
+} from '../../../../platform/review/common/reviewService';
 import { createTextDocumentData } from '../../../../util/common/test/shims/textDocument';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { Range } from '../../../../vscodeTypes';
 
-function createMockDocument(uri = URI.file('/test.ts'), content = 'test content') {
-	return TextDocumentSnapshot.create(createTextDocumentData(uri, content, 'typescript').document);
+function createMockDocument(
+	uri = URI.file('/test.ts'),
+	content = 'test content',
+) {
+	return TextDocumentSnapshot.create(
+		createTextDocumentData(uri, content, 'typescript').document,
+	);
 }
 
-function createTestComment(overrides: Partial<ReviewComment> = {}): ReviewComment {
+function createTestComment(
+	overrides: Partial<ReviewComment> = {},
+): ReviewComment {
 	return {
 		request: {
 			source: 'githubReviewAgent',
@@ -39,9 +49,7 @@ function createTestComment(overrides: Partial<ReviewComment> = {}): ReviewCommen
 }
 
 suite('reviewCommand', () => {
-
 	describe('toCodeReviewResult', () => {
-
 		test('maps empty comments array to empty result', async () => {
 			const result = await toCodeReviewResult([]);
 
@@ -62,7 +70,9 @@ suite('reviewCommand', () => {
 
 		test('maps MarkdownString body to its value', async () => {
 			const { MarkdownString } = await import('../../../../vscodeTypes');
-			const comment = createTestComment({ body: new MarkdownString('**bold** text') });
+			const comment = createTestComment({
+				body: new MarkdownString('**bold** text'),
+			});
 
 			const result = await toCodeReviewResult([comment]);
 
@@ -73,7 +83,12 @@ suite('reviewCommand', () => {
 		test('preserves uri, range, kind, severity', async () => {
 			const uri = URI.file('/foo/bar.ts');
 			const range = new Range(5, 2, 5, 20);
-			const comment = createTestComment({ uri, range, kind: 'style', severity: 'high' });
+			const comment = createTestComment({
+				uri,
+				range,
+				kind: 'style',
+				severity: 'high',
+			});
 
 			const result = await toCodeReviewResult([comment]);
 
@@ -103,11 +118,13 @@ suite('reviewCommand', () => {
 		test('maps sync suggestion with edits', async () => {
 			const suggestion: ReviewSuggestion = {
 				markdown: '',
-				edits: [{
-					range: new Range(1, 0, 2, 0),
-					newText: 'fixed code\n',
-					oldText: 'broken code\n',
-				}],
+				edits: [
+					{
+						range: new Range(1, 0, 2, 0),
+						newText: 'fixed code\n',
+						oldText: 'broken code\n',
+					},
+				],
 			};
 			const comment = createTestComment({ suggestion });
 
@@ -143,13 +160,17 @@ suite('reviewCommand', () => {
 		test('resolves promise-based suggestion', async () => {
 			const suggestion: ReviewSuggestion = {
 				markdown: '',
-				edits: [{
-					range: new Range(0, 0, 1, 0),
-					newText: 'new\n',
-					oldText: 'old\n',
-				}],
+				edits: [
+					{
+						range: new Range(0, 0, 1, 0),
+						newText: 'new\n',
+						oldText: 'old\n',
+					},
+				],
 			};
-			const comment = createTestComment({ suggestion: Promise.resolve(suggestion) });
+			const comment = createTestComment({
+				suggestion: Promise.resolve(suggestion),
+			});
 
 			const result = await toCodeReviewResult([comment]);
 
@@ -162,7 +183,11 @@ suite('reviewCommand', () => {
 		test('maps multiple comments', async () => {
 			const comments = [
 				createTestComment({ body: 'first', kind: 'bug' }),
-				createTestComment({ body: 'second', kind: 'style', uri: URI.file('/other.ts') }),
+				createTestComment({
+					body: 'second',
+					kind: 'style',
+					uri: URI.file('/other.ts'),
+				}),
 			];
 
 			const result = await toCodeReviewResult(comments);

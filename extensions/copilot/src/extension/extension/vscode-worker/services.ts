@@ -15,6 +15,9 @@ import { registerServices as registerCommonServices } from '../vscode/services';
 // ###                                                                                     ###
 // ###########################################################################################
 
-export function registerServices(builder: IInstantiationServiceBuilder, extensionContext: ExtensionContext): void {
+export function registerServices(
+	builder: IInstantiationServiceBuilder,
+	extensionContext: ExtensionContext,
+): void {
 	registerCommonServices(builder, extensionContext);
 }

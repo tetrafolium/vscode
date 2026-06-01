@@ -13,13 +13,19 @@ import { ITestFailure, ITestProvider } from '../common/testProvider';
 export class TestProvider extends Disposable implements ITestProvider {
 	public readonly _serviceBrand: undefined;
 	/** Position then status-ordered arrays of tests in the document for the last test result */
-	private readonly resultsDocs = new ResourceMap<Readonly<vscode.TestResultSnapshot>[]>();
+	private readonly resultsDocs = new ResourceMap<
+		Readonly<vscode.TestResultSnapshot>[]
+	>();
 	private resultsDocsAreForTestRun: vscode.TestRunResult | undefined;
 
 	constructor() {
 		super();
 
-		this._register(vscode.tests.onDidChangeTestResults(() => this.setHasFailureContextKey()));
+		this._register(
+			vscode.tests.onDidChangeTestResults(() =>
+				this.setHasFailureContextKey(),
+			),
+		);
 		this.setHasFailureContextKey();
 	}
 
@@ -36,12 +42,14 @@ export class TestProvider extends Disposable implements ITestProvider {
 	}
 
 	get lastResultsFrom() {
-		return vscode.tests.testResults.find(r => r.completedAt && r.results.length)?.completedAt;
+		return vscode.tests.testResults.find(
+			(r) => r.completedAt && r.results.length,
+		)?.completedAt;
 	}
 
 	/** @inheritdoc */
 	public getAllFailures(): Iterable<ITestFailure> {
-		const r = vscode.tests.testResults.find(r => r.results.length);
+		const r = vscode.tests.testResults.find((r) => r.results.length);
 		if (!r) {
 			return Iterable.empty();
 		}
@@ -50,7 +58,9 @@ export class TestProvider extends Disposable implements ITestProvider {
 	}
 
 	/** @inheritdoc */
-	public getLastFailureFor(testItem: vscode.TestItem): ITestFailure | undefined {
+	public getLastFailureFor(
+		testItem: vscode.TestItem,
+	): ITestFailure | undefined {
 		const chain: string[] = [];
 		for (let i: vscode.TestItem | undefined = testItem; i; i = i.parent) {
 			chain.push(i.id);
@@ -59,15 +69,20 @@ export class TestProvider extends Disposable implements ITestProvider {
 
 		for (const testRun of vscode.tests.testResults) {
 			for (const _node of testRun.results) {
-				let node: Readonly<vscode.TestResultSnapshot> | undefined = _node;
+				let node: Readonly<vscode.TestResultSnapshot> | undefined =
+					_node;
 				for (const path of chain) {
-					node = node.children.find(c => c.id === path);
+					node = node.children.find((c) => c.id === path);
 					if (!node) {
 						break;
 					}
 				}
 
-				const failingTask = node?.taskStates.find(t => t.state === vscode.TestResultState.Failed || t.state === vscode.TestResultState.Errored);
+				const failingTask = node?.taskStates.find(
+					(t) =>
+						t.state === vscode.TestResultState.Failed ||
+						t.state === vscode.TestResultState.Errored,
+				);
 				if (failingTask && node) {
 					return { snapshot: node, task: failingTask };
 				}
@@ -76,8 +91,11 @@ export class TestProvider extends Disposable implements ITestProvider {
 	}
 
 	/** @inheritdoc */
-	public getFailureAtPosition(uri: vscode.Uri, position: vscode.Position): ITestFailure | undefined {
-		const r = vscode.tests.testResults.find(r => r.results.length);
+	public getFailureAtPosition(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): ITestFailure | undefined {
+		const r = vscode.tests.testResults.find((r) => r.results.length);
 		if (this.resultsDocsAreForTestRun !== r) {
 			this.makeResultsDocs(r);
 		}
@@ -91,13 +109,19 @@ export class TestProvider extends Disposable implements ITestProvider {
 		// unless there's another passed test below it and before the cursor.
 		// Only compare the line numbers for #5292
 		const results = this.resultsDocs.get(uri) || [];
-		const test = findLast(results, i => !!i.range && i.range.start.line <= position.line);
+		const test = findLast(
+			results,
+			(i) => !!i.range && i.range.start.line <= position.line,
+		);
 		if (!test) {
 			return undefined;
 		}
 
 		for (const task of test.taskStates) {
-			if (task.state === vscode.TestResultState.Failed || task.state === vscode.TestResultState.Errored) {
+			if (
+				task.state === vscode.TestResultState.Failed ||
+				task.state === vscode.TestResultState.Errored
+			) {
 				return { snapshot: test, task };
 			}
 		}
@@ -108,7 +132,11 @@ export class TestProvider extends Disposable implements ITestProvider {
 	/** @inheritdoc */
 	public async hasAnyTests(): Promise<boolean> {
 		try {
-			return !!(await vscode.commands.executeCommand<string[]>('vscode.testing.getControllersWithTests')).length;
+			return !!(
+				await vscode.commands.executeCommand<string[]>(
+					'vscode.testing.getControllersWithTests',
+				)
+			).length;
 		} catch {
 			return false;
 		}
@@ -117,7 +145,10 @@ export class TestProvider extends Disposable implements ITestProvider {
 	/** @inheritdoc */
 	public async hasTestsInUri(uri: vscode.Uri): Promise<boolean> {
 		try {
-			const r = await vscode.commands.executeCommand<string[][]>('vscode.testing.getTestsInFile', uri);
+			const r = await vscode.commands.executeCommand<string[][]>(
+				'vscode.testing.getTestsInFile',
+				uri,
+			);
 			return !!r.length;
 		} catch {
 			return false;
@@ -128,11 +159,16 @@ export class TestProvider extends Disposable implements ITestProvider {
 	 * DFS is important because we want to get the most-granular tests possible
 	 * rather then e.g. suites that would be less relevant.
 	 */
-	private *dfsFailures(tests: readonly Readonly<vscode.TestResultSnapshot>[]): Iterable<ITestFailure> {
+	private *dfsFailures(
+		tests: readonly Readonly<vscode.TestResultSnapshot>[],
+	): Iterable<ITestFailure> {
 		for (const test of tests) {
 			yield* this.dfsFailures(test.children);
 			for (const task of test.taskStates) {
-				if (task.state === vscode.TestResultState.Failed || task.state === vscode.TestResultState.Errored) {
+				if (
+					task.state === vscode.TestResultState.Failed ||
+					task.state === vscode.TestResultState.Errored
+				) {
 					yield { snapshot: test, task };
 				}
 			}
@@ -165,17 +201,23 @@ export class TestProvider extends Disposable implements ITestProvider {
 
 		const zeroRange = new vscode.Range(0, 0, 0, 0);
 		for (const results of this.resultsDocs.values()) {
-			results.sort((a, b) =>
-				// sort by location  (ascending)
-				(a.range || zeroRange).start.compareTo((b.range || zeroRange).start)
-				// sort by test status (passed first)
-				|| compareTaskStates(a.taskStates, b.taskStates)
+			results.sort(
+				(a, b) =>
+					// sort by location  (ascending)
+					(a.range || zeroRange).start.compareTo(
+						(b.range || zeroRange).start,
+					) ||
+					// sort by test status (passed first)
+					compareTaskStates(a.taskStates, b.taskStates),
 			);
 		}
 	}
 }
 
-const compareTaskStates = (a: readonly vscode.TestSnapshotTaskState[], b: readonly vscode.TestSnapshotTaskState[]) => {
+const compareTaskStates = (
+	a: readonly vscode.TestSnapshotTaskState[],
+	b: readonly vscode.TestSnapshotTaskState[],
+) => {
 	let maxA = 0;
 	let maxB = 0;
 	for (const ta of a) {

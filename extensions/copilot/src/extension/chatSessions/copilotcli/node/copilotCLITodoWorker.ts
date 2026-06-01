@@ -6,7 +6,11 @@
 import { existsSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { parentPort } from 'worker_threads';
-import { RcpResponseHandler, RpcRequest, RpcResponse } from '../../../../util/node/worker';
+import {
+	RcpResponseHandler,
+	RpcRequest,
+	RpcResponse,
+} from '../../../../util/node/worker';
 
 export interface TodoItem {
 	id: string;
@@ -25,7 +29,10 @@ parentPort!.on('message', (msg: RpcRequest | RpcResponse) => {
 	if ('fn' in msg) {
 		try {
 			const result = handleRequest(msg.fn, msg.args);
-			parentPort!.postMessage({ id: msg.id, res: result } satisfies RpcResponse);
+			parentPort!.postMessage({
+				id: msg.id,
+				res: result,
+			} satisfies RpcResponse);
 		} catch (err) {
 			parentPort!.postMessage({ id: msg.id, err } satisfies RpcResponse);
 		}
@@ -53,16 +60,18 @@ function queryTodos(dbPath: string): TodoItem[] {
 		db.exec('PRAGMA busy_timeout = 2000');
 		// Check if the todos table exists
 		const tableCheck = db.prepare(
-			'SELECT name FROM sqlite_master WHERE type=\'table\' AND name=\'todos\''
+			"SELECT name FROM sqlite_master WHERE type='table' AND name='todos'",
 		);
 		const tables = tableCheck.all() as Record<string, unknown>[];
 		if (tables.length === 0) {
 			return [];
 		}
 
-		const stmt = db.prepare('SELECT id, title, description, status FROM todos ORDER BY created_at ASC');
+		const stmt = db.prepare(
+			'SELECT id, title, description, status FROM todos ORDER BY created_at ASC',
+		);
 		const rows = stmt.all() as Record<string, unknown>[];
-		return rows.map(row => ({
+		return rows.map((row) => ({
 			id: String(row.id ?? ''),
 			title: String(row.title ?? ''),
 			description: String(row.description ?? ''),

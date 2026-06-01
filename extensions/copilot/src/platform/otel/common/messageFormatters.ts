@@ -47,7 +47,12 @@ export type OTelMessagePart =
 	| { type: 'text'; content: string }
 	| { type: 'tool_call'; id: string; name: string; arguments: unknown }
 	| { type: 'tool_call_response'; id: string; response: unknown }
-	| { type: 'tool_search_output'; id: string; tools?: unknown; status?: string }
+	| {
+			type: 'tool_search_output';
+			id: string;
+			tools?: unknown;
+			status?: string;
+	  }
 	| { type: 'reasoning'; content: string };
 
 export type OTelSystemInstruction = Array<{ type: 'text'; content: string }>;
@@ -63,13 +68,27 @@ export interface OTelToolDefinition {
  * Convert an array of internal messages to OTel input message format.
  * Handles OpenAI format (tool_calls, tool_call_id) natively.
  */
-export function toInputMessages(messages: ReadonlyArray<{ role?: string; content?: string; tool_calls?: ReadonlyArray<{ id: string; function: { name: string; arguments: string } }>; tool_call_id?: string }>): OTelChatMessage[] {
-	return messages.map(msg => {
+export function toInputMessages(
+	messages: ReadonlyArray<{
+		role?: string;
+		content?: string;
+		tool_calls?: ReadonlyArray<{
+			id: string;
+			function: { name: string; arguments: string };
+		}>;
+		tool_call_id?: string;
+	}>,
+): OTelChatMessage[] {
+	return messages.map((msg) => {
 		const parts: OTelMessagePart[] = [];
 
 		// OpenAI tool-result message (role=tool): map to tool_call_response
 		if (msg.role === 'tool' && msg.tool_call_id) {
-			parts.push({ type: 'tool_call_response', id: msg.tool_call_id, response: msg.content ?? '' });
+			parts.push({
+				type: 'tool_call_response',
+				id: msg.tool_call_id,
+				response: msg.content ?? '',
+			});
 			return { role: msg.role, parts };
 		}
 
@@ -80,7 +99,11 @@ export function toInputMessages(messages: ReadonlyArray<{ role?: string; content
 		if (msg.tool_calls) {
 			for (const tc of msg.tool_calls) {
 				let args: unknown;
-				try { args = JSON.parse(tc.function.arguments); } catch { args = tc.function.arguments; }
+				try {
+					args = JSON.parse(tc.function.arguments);
+				} catch {
+					args = tc.function.arguments;
+				}
 				parts.push({
 					type: 'tool_call',
 					id: tc.id,
@@ -97,11 +120,20 @@ export function toInputMessages(messages: ReadonlyArray<{ role?: string; content
 /**
  * Convert model response choices to OTel output message format.
  */
-export function toOutputMessages(choices: ReadonlyArray<{
-	message?: { role?: string; content?: string; tool_calls?: ReadonlyArray<{ id: string; function: { name: string; arguments: string } }> };
-	finish_reason?: string;
-}>): OTelOutputMessage[] {
-	return choices.map(choice => {
+export function toOutputMessages(
+	choices: ReadonlyArray<{
+		message?: {
+			role?: string;
+			content?: string;
+			tool_calls?: ReadonlyArray<{
+				id: string;
+				function: { name: string; arguments: string };
+			}>;
+		};
+		finish_reason?: string;
+	}>,
+): OTelOutputMessage[] {
+	return choices.map((choice) => {
 		const parts: OTelMessagePart[] = [];
 		const msg = choice.message;
 
@@ -112,7 +144,11 @@ export function toOutputMessages(choices: ReadonlyArray<{
 		if (msg?.tool_calls) {
 			for (const tc of msg.tool_calls) {
 				let args: unknown;
-				try { args = JSON.parse(tc.function.arguments); } catch { args = tc.function.arguments; }
+				try {
+					args = JSON.parse(tc.function.arguments);
+				} catch {
+					args = tc.function.arguments;
+				}
 				parts.push({
 					type: 'tool_call',
 					id: tc.id,
@@ -135,14 +171,18 @@ export function toOutputMessages(choices: ReadonlyArray<{
  * Accepts a single string or an array (one block per entry). Returns
  * `undefined` when no non-empty text is available.
  */
-export function toSystemInstructions(systemMessage: string | ReadonlyArray<string> | undefined): OTelSystemInstruction | undefined {
+export function toSystemInstructions(
+	systemMessage: string | ReadonlyArray<string> | undefined,
+): OTelSystemInstruction | undefined {
 	if (systemMessage === undefined) {
 		return undefined;
 	}
-	const inputs = Array.isArray(systemMessage) ? systemMessage : [systemMessage as string];
+	const inputs = Array.isArray(systemMessage)
+		? systemMessage
+		: [systemMessage as string];
 	const blocks = inputs
-		.filter(s => typeof s === 'string' && s.length > 0)
-		.map(content => ({ type: 'text' as const, content }));
+		.filter((s) => typeof s === 'string' && s.length > 0)
+		.map((content) => ({ type: 'text' as const, content }));
 	return blocks.length > 0 ? blocks : undefined;
 }
 
@@ -156,16 +196,22 @@ export function extractTextFromContent(content: unknown): string {
 	}
 	if (Array.isArray(content)) {
 		return content
-			.map(block => {
-				if (typeof block === 'string') { return block; }
+			.map((block) => {
+				if (typeof block === 'string') {
+					return block;
+				}
 				if (block && typeof block === 'object') {
 					const b = block as { text?: unknown; content?: unknown };
-					if (typeof b.text === 'string') { return b.text; }
-					if (typeof b.content === 'string') { return b.content; }
+					if (typeof b.text === 'string') {
+						return b.text;
+					}
+					if (typeof b.content === 'string') {
+						return b.content;
+					}
 				}
 				return '';
 			})
-			.filter(s => s.length > 0)
+			.filter((s) => s.length > 0)
 			.join('\n');
 	}
 	return '';
@@ -188,13 +234,19 @@ export function collectSystemTextsFromRequestBody(requestBody: {
 		for (const m of capiMessages) {
 			if (m.role === 'system') {
 				const t = extractTextFromContent(m.content);
-				if (t) { systemTexts.push(t); }
+				if (t) {
+					systemTexts.push(t);
+				}
 			}
 		}
 	}
 	if (systemTexts.length === 0) {
-		const topLevelSystem = extractTextFromContent(requestBody.system ?? requestBody.instructions);
-		if (topLevelSystem) { systemTexts.push(topLevelSystem); }
+		const topLevelSystem = extractTextFromContent(
+			requestBody.system ?? requestBody.instructions,
+		);
+		if (topLevelSystem) {
+			systemTexts.push(topLevelSystem);
+		}
 	}
 	return systemTexts;
 }
@@ -215,8 +267,10 @@ export function collectSystemTextsFromRequestBody(requestBody: {
  *   role=assistant + reasoning part
  * - Plain string content
  */
-export function normalizeProviderMessages(messages: ReadonlyArray<Record<string, unknown>>): OTelChatMessage[] {
-	return messages.map(msg => {
+export function normalizeProviderMessages(
+	messages: ReadonlyArray<Record<string, unknown>>,
+): OTelChatMessage[] {
+	return messages.map((msg) => {
 		// OpenAI Responses API items use `type` rather than (or in addition
 		// to) `role` to distinguish item kinds. Handle them up front so we
 		// always emit a populated `role` and `parts` array — otherwise the
@@ -243,7 +297,11 @@ export function normalizeProviderMessages(messages: ReadonlyArray<Record<string,
 
 		// OpenAI tool-result message
 		if (role === 'tool' && typeof msg.tool_call_id === 'string') {
-			parts.push({ type: 'tool_call_response', id: msg.tool_call_id, response: content ?? '' });
+			parts.push({
+				type: 'tool_call_response',
+				id: msg.tool_call_id,
+				response: content ?? '',
+			});
 			return { role, parts };
 		}
 
@@ -254,7 +312,9 @@ export function normalizeProviderMessages(messages: ReadonlyArray<Record<string,
 			// `message` content arrays, which use `input_text` / `output_text`
 			// instead of `text` for the block type.
 			for (const block of content) {
-				if (!block || typeof block !== 'object') { continue; }
+				if (!block || typeof block !== 'object') {
+					continue;
+				}
 				const b = block as Record<string, unknown>;
 				switch (b.type) {
 					case 'text':
@@ -281,12 +341,18 @@ export function normalizeProviderMessages(messages: ReadonlyArray<Record<string,
 						break;
 					case 'thinking':
 						if (typeof b.thinking === 'string') {
-							parts.push({ type: 'reasoning', content: b.thinking });
+							parts.push({
+								type: 'reasoning',
+								content: b.thinking,
+							});
 						}
 						break;
 					default:
 						// Unknown block type — include as text fallback
-						parts.push({ type: 'text', content: JSON.stringify(b) });
+						parts.push({
+							type: 'text',
+							content: JSON.stringify(b),
+						});
 						break;
 				}
 			}
@@ -296,12 +362,21 @@ export function normalizeProviderMessages(messages: ReadonlyArray<Record<string,
 		const toolCalls = msg.tool_calls;
 		if (Array.isArray(toolCalls)) {
 			for (const tc of toolCalls) {
-				if (!tc || typeof tc !== 'object') { continue; }
+				if (!tc || typeof tc !== 'object') {
+					continue;
+				}
 				const call = tc as Record<string, unknown>;
 				const fn = call.function as Record<string, unknown> | undefined;
 				if (fn) {
 					let args: unknown;
-					try { args = typeof fn.arguments === 'string' ? JSON.parse(fn.arguments) : fn.arguments; } catch { args = fn.arguments; }
+					try {
+						args =
+							typeof fn.arguments === 'string'
+								? JSON.parse(fn.arguments)
+								: fn.arguments;
+					} catch {
+						args = fn.arguments;
+					}
 					parts.push({
 						type: 'tool_call',
 						id: String(call.id ?? ''),
@@ -323,19 +398,27 @@ export function normalizeProviderMessages(messages: ReadonlyArray<Record<string,
  * to a synthetic role so downstream consumers (cache explorer, telemetry
  * viewers) can treat them uniformly with Chat Completions tool calls.
  */
-function normalizeResponsesFunctionCall(msg: Record<string, unknown>): OTelChatMessage {
+function normalizeResponsesFunctionCall(
+	msg: Record<string, unknown>,
+): OTelChatMessage {
 	let args: unknown = msg.arguments;
 	if (typeof args === 'string') {
-		try { args = JSON.parse(args); } catch { /* keep raw string */ }
+		try {
+			args = JSON.parse(args);
+		} catch {
+			/* keep raw string */
+		}
 	}
 	return {
 		role: 'assistant',
-		parts: [{
-			type: 'tool_call',
-			id: String(msg.call_id ?? msg.id ?? ''),
-			name: String(msg.name ?? ''),
-			arguments: args,
-		}],
+		parts: [
+			{
+				type: 'tool_call',
+				id: String(msg.call_id ?? msg.id ?? ''),
+				name: String(msg.name ?? ''),
+				arguments: args,
+			},
+		],
 	};
 }
 
@@ -344,7 +427,9 @@ function normalizeResponsesFunctionCall(msg: Record<string, unknown>): OTelChatM
  * synthetic tool message carrying a `tool_call_response` part. Mirrors how
  * Chat Completions surfaces tool results via `role: 'tool'` messages.
  */
-function normalizeResponsesFunctionCallOutput(msg: Record<string, unknown>): OTelChatMessage {
+function normalizeResponsesFunctionCallOutput(
+	msg: Record<string, unknown>,
+): OTelChatMessage {
 	const output = msg.output;
 	let response: unknown;
 	if (typeof output === 'string') {
@@ -352,18 +437,26 @@ function normalizeResponsesFunctionCallOutput(msg: Record<string, unknown>): OTe
 	} else if (Array.isArray(output)) {
 		// Output may be an array of `{ type: 'output_text', text }` blocks.
 		response = output
-			.map(b => (b && typeof b === 'object' && typeof (b as Record<string, unknown>).text === 'string') ? (b as Record<string, unknown>).text as string : JSON.stringify(b))
+			.map((b) =>
+				b &&
+				typeof b === 'object' &&
+				typeof (b as Record<string, unknown>).text === 'string'
+					? ((b as Record<string, unknown>).text as string)
+					: JSON.stringify(b),
+			)
 			.join('');
 	} else {
 		response = output ?? '';
 	}
 	return {
 		role: 'tool',
-		parts: [{
-			type: 'tool_call_response',
-			id: String(msg.call_id ?? msg.id ?? ''),
-			response,
-		}],
+		parts: [
+			{
+				type: 'tool_call_response',
+				id: String(msg.call_id ?? msg.id ?? ''),
+				response,
+			},
+		],
 	};
 }
 
@@ -374,13 +467,22 @@ function normalizeResponsesFunctionCallOutput(msg: Record<string, unknown>): OTe
  * prior conversation from `previous_response_id`. Keep it distinct from a
  * normal tool result so the Cache Explorer can label this request shape.
  */
-function normalizeResponsesToolSearchOutput(msg: Record<string, unknown>): OTelChatMessage {
+function normalizeResponsesToolSearchOutput(
+	msg: Record<string, unknown>,
+): OTelChatMessage {
 	// Preserve the absent-vs-empty distinction: a request that omits `tools`
 	// is byte-different from one that sends `tools: []`, and that distinction
 	// can affect cache-key matching downstream. Build the part conditionally
 	// so the `tools` key is fully absent when the source request omits it.
-	const hasTools = Object.prototype.hasOwnProperty.call(msg, 'tools') && msg.tools !== undefined;
-	const part: { type: 'tool_search_output'; id: string; tools?: unknown; status?: string } = {
+	const hasTools =
+		Object.prototype.hasOwnProperty.call(msg, 'tools') &&
+		msg.tools !== undefined;
+	const part: {
+		type: 'tool_search_output';
+		id: string;
+		tools?: unknown;
+		status?: string;
+	} = {
 		type: 'tool_search_output',
 		id: String(msg.call_id ?? msg.id ?? ''),
 		status: typeof msg.status === 'string' ? msg.status : undefined,
@@ -398,13 +500,22 @@ function normalizeResponsesToolSearchOutput(msg: Record<string, unknown>): OTelC
  * carrying the encrypted blob so the cache-explorer prefix diff includes
  * its byte length (which IS part of the cache key).
  */
-function normalizeResponsesReasoning(msg: Record<string, unknown>): OTelChatMessage {
+function normalizeResponsesReasoning(
+	msg: Record<string, unknown>,
+): OTelChatMessage {
 	const parts: OTelMessagePart[] = [];
 	const summary = msg.summary;
 	if (Array.isArray(summary)) {
 		for (const s of summary) {
-			if (s && typeof s === 'object' && typeof (s as Record<string, unknown>).text === 'string') {
-				parts.push({ type: 'reasoning', content: (s as Record<string, unknown>).text as string });
+			if (
+				s &&
+				typeof s === 'object' &&
+				typeof (s as Record<string, unknown>).text === 'string'
+			) {
+				parts.push({
+					type: 'reasoning',
+					content: (s as Record<string, unknown>).text as string,
+				});
 			}
 		}
 	} else if (typeof summary === 'string') {
@@ -430,15 +541,23 @@ function normalizeResponsesReasoning(msg: Record<string, unknown>): OTelChatMess
  *
  * @see https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/#gen-ai-tool-definitions
  */
-export function toToolDefinitions(tools: ReadonlyArray<{
-	type?: string;
-	name?: string;
-	description?: string;
-	parameters?: unknown;
-	input_schema?: unknown;
-	inputSchema?: unknown;
-	function?: { name?: string; description?: string; parameters?: unknown };
-}> | undefined): OTelToolDefinition[] | undefined {
+export function toToolDefinitions(
+	tools:
+		| ReadonlyArray<{
+				type?: string;
+				name?: string;
+				description?: string;
+				parameters?: unknown;
+				input_schema?: unknown;
+				inputSchema?: unknown;
+				function?: {
+					name?: string;
+					description?: string;
+					parameters?: unknown;
+				};
+		  }>
+		| undefined,
+): OTelToolDefinition[] | undefined {
 	if (!tools || tools.length === 0) {
 		return undefined;
 	}
@@ -449,7 +568,11 @@ export function toToolDefinitions(tools: ReadonlyArray<{
 			continue;
 		}
 		const description = t.function?.description ?? t.description;
-		const parameters = t.function?.parameters ?? t.parameters ?? t.input_schema ?? t.inputSchema;
+		const parameters =
+			t.function?.parameters ??
+			t.parameters ??
+			t.input_schema ??
+			t.inputSchema;
 		out.push({
 			type: 'function',
 			name,
@@ -492,7 +615,9 @@ function internToolsRawString(s: string): string {
  * LLM call share a single string instance. Returns `undefined` if no
  * normalized tools would be emitted.
  */
-export function stringifyToolDefinitionsForOTel(tools: Parameters<typeof toToolDefinitions>[0]): string | undefined {
+export function stringifyToolDefinitionsForOTel(
+	tools: Parameters<typeof toToolDefinitions>[0],
+): string | undefined {
 	if (!tools || tools.length === 0) {
 		return undefined;
 	}
@@ -517,7 +642,9 @@ export function stringifyToolDefinitionsForOTel(tools: Parameters<typeof toToolD
  * exactly: returns `'[]'` for an empty array and `undefined` only when
  * `tools` itself is `undefined`.
  */
-export function stringifyToolsRawForTelemetry(tools: ReadonlyArray<unknown> | undefined): string | undefined {
+export function stringifyToolsRawForTelemetry(
+	tools: ReadonlyArray<unknown> | undefined,
+): string | undefined {
 	if (!tools) {
 		return undefined;
 	}

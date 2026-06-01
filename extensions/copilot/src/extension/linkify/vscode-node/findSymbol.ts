@@ -11,7 +11,7 @@ type FoundSymbol = {
 
 function findBestSymbol(
 	symbols: ReadonlyArray<vscode.SymbolInformation | vscode.DocumentSymbol>,
-	symbolParts: readonly string[]
+	symbolParts: readonly string[],
 ): FoundSymbol | undefined {
 	if (!symbolParts.length) {
 		return;
@@ -22,26 +22,47 @@ function findBestSymbol(
 		// TODO: vscode.executeDocumentSymbolProvider doesn't return a real instance of
 		// vscode.DocumentSymbol so use cast to check for children
 		if ((symbol as vscode.DocumentSymbol).children) {
-			let partMatch = symbol.name === symbolParts[0] ? { symbol, matchCount: 1 } : undefined;
+			let partMatch =
+				symbol.name === symbolParts[0]
+					? { symbol, matchCount: 1 }
+					: undefined;
 			if (partMatch) {
-				const remainingPartMatch = findBestSymbol((symbol as vscode.DocumentSymbol).children, symbolParts.slice(1));
+				const remainingPartMatch = findBestSymbol(
+					(symbol as vscode.DocumentSymbol).children,
+					symbolParts.slice(1),
+				);
 				if (remainingPartMatch) {
-					partMatch = { symbol: remainingPartMatch.symbol, matchCount: partMatch.matchCount + remainingPartMatch.matchCount };
+					partMatch = {
+						symbol: remainingPartMatch.symbol,
+						matchCount:
+							partMatch.matchCount +
+							remainingPartMatch.matchCount,
+					};
 				}
 			}
 
-			const restMatch = findBestSymbol((symbol as vscode.DocumentSymbol).children, symbolParts);
+			const restMatch = findBestSymbol(
+				(symbol as vscode.DocumentSymbol).children,
+				symbolParts,
+			);
 			let match: FoundSymbol | undefined;
 			if (partMatch && restMatch) {
-				match = partMatch.matchCount >= restMatch.matchCount ? partMatch : restMatch;
+				match =
+					partMatch.matchCount >= restMatch.matchCount
+						? partMatch
+						: restMatch;
 			} else {
 				match = partMatch ?? restMatch;
 			}
 
-			if (match && (!bestMatch || match.matchCount > bestMatch?.matchCount)) {
+			if (
+				match &&
+				(!bestMatch || match.matchCount > bestMatch?.matchCount)
+			) {
 				bestMatch = match;
 			}
-		} else { // Is a vscode.SymbolInformation
+		} else {
+			// Is a vscode.SymbolInformation
 			// For flat symbol information, try to match against symbol parts
 			// Prefer symbols that appear more to the right (higher index) in the qualified name
 			// This prioritizes members over classes (e.g., in `TextModel.undo()`, prefer `undo`)
@@ -69,12 +90,12 @@ function findBestSymbol(
  */
 export function findBestSymbolByPath(
 	symbols: ReadonlyArray<vscode.SymbolInformation | vscode.DocumentSymbol>,
-	symbolPath: string
+	symbolPath: string,
 ): vscode.SymbolInformation | vscode.DocumentSymbol | undefined {
-
 	// Prefer an exact match but fallback to breaking up the symbol into parts
 	return (
-		findBestSymbol(symbols, [symbolPath]) ?? findBestSymbol(symbols, extractSymbolNamesInCode(symbolPath))
+		findBestSymbol(symbols, [symbolPath]) ??
+		findBestSymbol(symbols, extractSymbolNamesInCode(symbolPath))
 	)?.symbol;
 }
 
@@ -89,5 +110,5 @@ export function findBestSymbolByPath(
 export function extractSymbolNamesInCode(inlineCode: string): string[] {
 	// TODO: this assumes the language is JS like.
 	// It won't handle symbol parts that include spaces or special characters
-	return Array.from(inlineCode.matchAll(/[#\w$][\w\d$]*/g), x => x[0]);
+	return Array.from(inlineCode.matchAll(/[#\w$][\w\d$]*/g), (x) => x[0]);
 }

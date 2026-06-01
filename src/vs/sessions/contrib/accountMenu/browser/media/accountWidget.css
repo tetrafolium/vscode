@@ -126,38 +126,58 @@
 	padding: 2px 0 4px 0;
 }
 
-.sessions-account-titlebar-panel-content .chat-status-bar-entry-tooltip div.header {
+.sessions-account-titlebar-panel-content
+	.chat-status-bar-entry-tooltip
+	div.header {
 	padding: 8px 10px 8px 8px;
 }
 
-.sessions-account-titlebar-panel-content .chat-status-bar-entry-tooltip .quota-indicator .quota-title {
+.sessions-account-titlebar-panel-content
+	.chat-status-bar-entry-tooltip
+	.quota-indicator
+	.quota-title {
 	font-size: 14px;
 	margin-bottom: 0;
 	color: var(--vscode-foreground);
 }
 
-.sessions-account-titlebar-panel-content .chat-status-bar-entry-tooltip .collapsible-inner {
+.sessions-account-titlebar-panel-content
+	.chat-status-bar-entry-tooltip
+	.collapsible-inner {
 	padding-top: 0;
 }
 
-.sessions-account-titlebar-panel-content .chat-status-bar-entry-tooltip .contribution .header {
+.sessions-account-titlebar-panel-content
+	.chat-status-bar-entry-tooltip
+	.contribution
+	.header {
 	padding: 0 10px 0 8px;
 	margin-bottom: 0;
 	line-height: 18px;
 	color: var(--vscode-descriptionForeground);
 }
 
-.sessions-account-titlebar-panel-content .chat-status-bar-entry-tooltip div.header .monaco-action-bar {
+.sessions-account-titlebar-panel-content
+	.chat-status-bar-entry-tooltip
+	div.header
+	.monaco-action-bar {
 	color: var(--vscode-foreground);
 }
 
-.sessions-account-titlebar-panel-content .chat-status-bar-entry-tooltip .contribution .body {
+.sessions-account-titlebar-panel-content
+	.chat-status-bar-entry-tooltip
+	.contribution
+	.body {
 	padding: 0 10px 0 8px;
 	line-height: 16px;
 	color: var(--vscode-descriptionForeground);
 }
 
-.monaco-workbench .part.sidebar > .sidebar-footer .account-widget-update .account-widget-update-button {
+.monaco-workbench
+	.part.sidebar
+	> .sidebar-footer
+	.account-widget-update
+	.account-widget-update-button {
 	width: auto;
 	max-width: none;
 }
@@ -167,44 +187,69 @@
 	max-width: none;
 }
 
-.monaco-workbench .part.sidebar > .sidebar-footer .account-widget-update .account-widget-update-button.account-widget-update-button-ready {
+.monaco-workbench
+	.part.sidebar
+	> .sidebar-footer
+	.account-widget-update
+	.account-widget-update-button.account-widget-update-button-ready {
 	background-color: var(--vscode-button-background) !important;
 	color: var(--vscode-button-foreground) !important;
 }
 
-.account-widget-update .account-widget-update-button.account-widget-update-button-ready {
+.account-widget-update
+	.account-widget-update-button.account-widget-update-button-ready {
 	background-color: var(--vscode-button-background) !important;
 	color: var(--vscode-button-foreground) !important;
 }
 
 /* Boxed hint style for embedded app update indicator — outlined, no fill */
-.account-widget-update .account-widget-update-button.account-widget-update-button-hint {
+.account-widget-update
+	.account-widget-update-button.account-widget-update-button-hint {
 	background-color: transparent !important;
 	color: var(--vscode-button-background) !important;
 	border: 1px solid var(--vscode-button-background) !important;
 }
 
-.account-widget-update .account-widget-update-button.account-widget-update-button-hint:hover {
-	background-color: color-mix(in srgb, var(--vscode-button-background) 20%, transparent) !important;
+.account-widget-update
+	.account-widget-update-button.account-widget-update-button-hint:hover {
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-button-background) 20%,
+		transparent
+	) !important;
 }
 
-.monaco-workbench .part.sidebar > .sidebar-footer .account-widget-update .account-widget-update-button.account-widget-update-button-ready:hover {
+.monaco-workbench
+	.part.sidebar
+	> .sidebar-footer
+	.account-widget-update
+	.account-widget-update-button.account-widget-update-button-ready:hover {
 	background-color: var(--vscode-button-background) !important;
 }
 
-.account-widget-update .account-widget-update-button.account-widget-update-button-ready:hover {
+.account-widget-update
+	.account-widget-update-button.account-widget-update-button-ready:hover {
 	background-color: var(--vscode-button-background) !important;
 }
 
-.monaco-workbench .part.sidebar > .sidebar-footer .account-widget-update .account-widget-update-button.account-widget-update-button-ready:focus {
+.monaco-workbench
+	.part.sidebar
+	> .sidebar-footer
+	.account-widget-update
+	.account-widget-update-button.account-widget-update-button-ready:focus {
 	background-color: var(--vscode-button-background) !important;
 }
 
-.account-widget-update .account-widget-update-button.account-widget-update-button-ready:focus {
+.account-widget-update
+	.account-widget-update-button.account-widget-update-button-ready:focus {
 	background-color: var(--vscode-button-background) !important;
 }
 
-.monaco-workbench .part.sidebar > .sidebar-footer .account-widget-update .account-widget-update-button.hidden {
+.monaco-workbench
+	.part.sidebar
+	> .sidebar-footer
+	.account-widget-update
+	.account-widget-update-button.hidden {
 	display: none;
 }
 
@@ -212,7 +257,11 @@
 	display: none;
 }
 
-.monaco-workbench .part.sidebar > .sidebar-footer .account-widget-account .account-widget-account-button {
+.monaco-workbench
+	.part.sidebar
+	> .sidebar-footer
+	.account-widget-account
+	.account-widget-account-button {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	min-width: 0;
@@ -225,7 +274,12 @@
 	min-width: 0;
 }
 
-.monaco-workbench .part.sidebar > .sidebar-footer .account-widget-account .account-widget-account-button > .codicon {
+.monaco-workbench
+	.part.sidebar
+	> .sidebar-footer
+	.account-widget-account
+	.account-widget-account-button
+	> .codicon {
 	flex: 0 0 auto;
 }
 
@@ -233,7 +287,12 @@
 	flex: 0 0 auto;
 }
 
-.monaco-workbench .part.sidebar > .sidebar-footer .account-widget-account .account-widget-account-button > span:last-child {
+.monaco-workbench
+	.part.sidebar
+	> .sidebar-footer
+	.account-widget-account
+	.account-widget-account-button
+	> span:last-child {
 	flex: 1;
 	min-width: 0;
 	overflow: hidden;
@@ -249,7 +308,12 @@
 	white-space: nowrap;
 }
 
-.monaco-workbench .part.sidebar > .sidebar-footer .account-widget-account .account-widget-account-button > .monaco-button-label {
+.monaco-workbench
+	.part.sidebar
+	> .sidebar-footer
+	.account-widget-account
+	.account-widget-account-button
+	> .monaco-button-label {
 	display: block;
 	width: 100%;
 	overflow: hidden;

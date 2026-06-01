@@ -4,13 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type * as vscode from 'vscode';
-import { IPostToolUseHookResult, IPreToolUseHookResult } from '../../../platform/chat/common/chatHookService';
+import {
+	IPostToolUseHookResult,
+	IPreToolUseHookResult,
+} from '../../../platform/chat/common/chatHookService';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
 
 export class ChatHookTelemetry {
-	constructor(
-		private readonly _telemetryService: ITelemetryService,
-	) { }
+	constructor(private readonly _telemetryService: ITelemetryService) {}
 
 	logConfiguredHooks(hooks: vscode.ChatRequestHooks): void {
 		const hookTypeCounts: Record<string, number> = {};
@@ -35,14 +36,24 @@ export class ChatHookTelemetry {
 				"totalHookCount": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Total number of hook commands configured across all types" }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('hooks.configured', {
-			hookTypes: JSON.stringify(hookTypeCounts),
-		}, {
-			totalHookCount,
-		});
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'hooks.configured',
+			{
+				hookTypes: JSON.stringify(hookTypeCounts),
+			},
+			{
+				totalHookCount,
+			},
+		);
 	}
 
-	logHookExecuted(hookType: string, hookCount: number, durationMs: number, hasError: boolean, hasCaughtException: boolean): void {
+	logHookExecuted(
+		hookType: string,
+		hookCount: number,
+		durationMs: number,
+		hasError: boolean,
+		hasCaughtException: boolean,
+	): void {
 		/* __GDPR__
 			"hooks.executed" : {
 				"owner": "roblourens",
@@ -54,14 +65,18 @@ export class ChatHookTelemetry {
 				"durationMs": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true, "comment": "Total duration of all hook executions in milliseconds" }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('hooks.executed', {
-			hookType,
-			hasError: String(hasError),
-			hasCaughtException: String(hasCaughtException),
-		}, {
-			hookCount,
-			durationMs,
-		});
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'hooks.executed',
+			{
+				hookType,
+				hasError: String(hasError),
+				hasCaughtException: String(hasCaughtException),
+			},
+			{
+				hookCount,
+				durationMs,
+			},
+		);
 	}
 
 	logPreToolUseResult(result: IPreToolUseHookResult): void {
@@ -74,11 +89,16 @@ export class ChatHookTelemetry {
 				"hasAdditionalContext": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "Whether hooks provided additional context" }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('hooks.preToolUse.result', {
-			permissionDecision: result.permissionDecision,
-			hasUpdatedInput: result.updatedInput ? 'true' : undefined,
-			hasAdditionalContext: result.additionalContext ? 'true' : undefined,
-		});
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'hooks.preToolUse.result',
+			{
+				permissionDecision: result.permissionDecision,
+				hasUpdatedInput: result.updatedInput ? 'true' : undefined,
+				hasAdditionalContext: result.additionalContext
+					? 'true'
+					: undefined,
+			},
+		);
 	}
 
 	logPostToolUseResult(result: IPostToolUseHookResult): void {
@@ -90,9 +110,14 @@ export class ChatHookTelemetry {
 				"hasAdditionalContext": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "Whether hooks provided additional context" }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('hooks.postToolUse.result', {
-			didBlock: result.decision === 'block' ? 'true' : undefined,
-			hasAdditionalContext: result.additionalContext ? 'true' : undefined,
-		});
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'hooks.postToolUse.result',
+			{
+				didBlock: result.decision === 'block' ? 'true' : undefined,
+				hasAdditionalContext: result.additionalContext
+					? 'true'
+					: undefined,
+			},
+		);
 	}
 }

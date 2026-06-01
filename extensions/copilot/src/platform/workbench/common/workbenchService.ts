@@ -7,11 +7,14 @@ import type * as vscode from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { SettingListItem } from '../../embeddings/common/vscodeIndex';
 
-export const IWorkbenchService = createServiceIdentifier<IWorkbenchService>('IWorkbenchService');
+export const IWorkbenchService =
+	createServiceIdentifier<IWorkbenchService>('IWorkbenchService');
 
 export interface IWorkbenchService {
 	_serviceBrand: undefined;
 	getAllExtensions(): readonly vscode.Extension<any>[];
-	getAllCommands(filterByPreCondition?: boolean): Promise<{ label: string; command: string; keybinding: string }[]>;
+	getAllCommands(
+		filterByPreCondition?: boolean,
+	): Promise<{ label: string; command: string; keybinding: string }[]>;
 	getAllSettings(): Promise<{ [key: string]: SettingListItem }>;
 }

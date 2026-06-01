@@ -4,15 +4,28 @@
  *--------------------------------------------------------------------------------------------*/
 import { VisualizationTestRun } from '../src/extension/inlineChat/node/rendererVisualization';
 import '../src/extension/intents/node/allIntents';
-import { ISimulationTestContext, NulSimulationTestContext } from '../src/platform/simulationTestContext/common/simulationTestContext';
+import {
+	ISimulationTestContext,
+	NulSimulationTestContext,
+} from '../src/platform/simulationTestContext/common/simulationTestContext';
 import { NullTestProvider } from '../src/platform/testing/common/nullTestProvider';
 import { ITestProvider } from '../src/platform/testing/common/testProvider';
 import { IDebugValueEditorGlobals } from '../src/util/common/debugValueEditorGlobals';
 import { ChatMLSQLiteCache } from './base/chatMLCache';
 import { TestingCacheSalts } from './base/salts';
-import { CacheMode, createSimulationAccessor, createSimulationChatModelThrottlingTaskLaunchers, CurrentTestRunInfo, SimulationServicesOptions } from './base/simulationContext';
+import {
+	CacheMode,
+	createSimulationAccessor,
+	createSimulationChatModelThrottlingTaskLaunchers,
+	CurrentTestRunInfo,
+	SimulationServicesOptions,
+} from './base/simulationContext';
 import { FetchRequestCollector } from './base/spyingChatMLFetcher';
-import { ISimulationTestRuntime, SimulationTestRuntime, SimulationTestsRegistry } from './base/stest';
+import {
+	ISimulationTestRuntime,
+	SimulationTestRuntime,
+	SimulationTestsRegistry,
+} from './base/stest';
 import { IJSONOutputPrinter } from './jsonOutputPrinter';
 
 const g = globalThis as any as IDebugValueEditorGlobals;
@@ -24,7 +37,7 @@ export async function run(fullPath: string, testFullName: string) {
 	require(fullPath);
 
 	const tests = SimulationTestsRegistry.getAllTests();
-	const test = tests.find(t => t.fullName === testFullName)!;
+	const test = tests.find((t) => t.fullName === testFullName)!;
 
 	if (!test) {
 		console.error('Test not found', testFullName);
@@ -38,8 +51,10 @@ export async function run(fullPath: string, testFullName: string) {
 		isInRealExtensionHost: false,
 	};
 	const simulationServicesOptions: SimulationServicesOptions = {
-		chatModelThrottlingTaskLaunchers: createSimulationChatModelThrottlingTaskLaunchers(false),
-		createChatMLCache: (info: CurrentTestRunInfo) => new ChatMLSQLiteCache(TestingCacheSalts.requestCacheSalt, info),
+		chatModelThrottlingTaskLaunchers:
+			createSimulationChatModelThrottlingTaskLaunchers(false),
+		createChatMLCache: (info: CurrentTestRunInfo) =>
+			new ChatMLSQLiteCache(TestingCacheSalts.requestCacheSalt, info),
 		isNoFetchModeEnabled: false,
 		languageModelCacheMode: CacheMode.Default,
 		resourcesCacheMode: CacheMode.Default,
@@ -52,7 +67,7 @@ export async function run(fullPath: string, testFullName: string) {
 	const testingServiceCollection = await createSimulationAccessor(
 		{ chatModel: test.model, embeddingType: test.embeddingType },
 		simulationServicesOptions,
-		currentTestRunInfo
+		currentTestRunInfo,
 	);
 	testingServiceCollection.define(IJSONOutputPrinter, {
 		print(obj: any) {
@@ -61,8 +76,14 @@ export async function run(fullPath: string, testFullName: string) {
 		_serviceBrand: undefined,
 	});
 	testingServiceCollection.define(ITestProvider, new NullTestProvider());
-	testingServiceCollection.define(ISimulationTestRuntime, new SimulationTestRuntime('./', './.simulation/visualization-out', 1));
-	testingServiceCollection.define(ISimulationTestContext, new NulSimulationTestContext());
+	testingServiceCollection.define(
+		ISimulationTestRuntime,
+		new SimulationTestRuntime('./', './.simulation/visualization-out', 1),
+	);
+	testingServiceCollection.define(
+		ISimulationTestContext,
+		new NulSimulationTestContext(),
+	);
 
 	try {
 		const startTime = Date.now();

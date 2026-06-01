@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { ITypeScriptServiceClient } from '../typescriptService';
-import { readUnifiedConfig } from '../utils/configuration';
-import { Disposable } from '../utils/dispose';
-
+import * as vscode from "vscode";
+import { ITypeScriptServiceClient } from "../typescriptService";
+import { readUnifiedConfig } from "../utils/configuration";
+import { Disposable } from "../utils/dispose";
 
 const typingsInstallTimeout = 30 * 1000;
 
@@ -20,10 +19,16 @@ export default class TypingsStatus extends Disposable {
 		this._client = client;
 
 		this._register(
-			this._client.onDidBeginInstallTypings(event => this.onBeginInstallTypings(event.eventId)));
+			this._client.onDidBeginInstallTypings((event) =>
+				this.onBeginInstallTypings(event.eventId),
+			),
+		);
 
 		this._register(
-			this._client.onDidEndInstallTypings(event => this.onEndInstallTypings(event.eventId)));
+			this._client.onDidEndInstallTypings((event) =>
+				this.onEndInstallTypings(event.eventId),
+			),
+		);
 	}
 
 	public override dispose(): void {
@@ -42,9 +47,12 @@ export default class TypingsStatus extends Disposable {
 		if (this._acquiringTypings.has(eventId)) {
 			return;
 		}
-		this._acquiringTypings.set(eventId, setTimeout(() => {
-			this.onEndInstallTypings(eventId);
-		}, typingsInstallTimeout));
+		this._acquiringTypings.set(
+			eventId,
+			setTimeout(() => {
+				this.onEndInstallTypings(eventId);
+			}, typingsInstallTimeout),
+		);
 	}
 
 	private onEndInstallTypings(eventId: number): void {
@@ -57,34 +65,49 @@ export default class TypingsStatus extends Disposable {
 }
 
 export class AtaProgressReporter extends Disposable {
-
 	private readonly _promises = new Map<number, Function>();
 
 	constructor(client: ITypeScriptServiceClient) {
 		super();
-		this._register(client.onDidBeginInstallTypings(e => this._onBegin(e.eventId)));
-		this._register(client.onDidEndInstallTypings(e => this._onEndOrTimeout(e.eventId)));
-		this._register(client.onTypesInstallerInitializationFailed(_ => this.onTypesInstallerInitializationFailed()));
+		this._register(
+			client.onDidBeginInstallTypings((e) => this._onBegin(e.eventId)),
+		);
+		this._register(
+			client.onDidEndInstallTypings((e) => this._onEndOrTimeout(e.eventId)),
+		);
+		this._register(
+			client.onTypesInstallerInitializationFailed((_) =>
+				this.onTypesInstallerInitializationFailed(),
+			),
+		);
 	}
 
 	override dispose(): void {
 		super.dispose();
-		this._promises.forEach(value => value());
+		this._promises.forEach((value) => value());
 	}
 
 	private _onBegin(eventId: number): void {
-		const handle = setTimeout(() => this._onEndOrTimeout(eventId), typingsInstallTimeout);
-		const promise = new Promise<void>(resolve => {
+		const handle = setTimeout(
+			() => this._onEndOrTimeout(eventId),
+			typingsInstallTimeout,
+		);
+		const promise = new Promise<void>((resolve) => {
 			this._promises.set(eventId, () => {
 				clearTimeout(handle);
 				resolve();
 			});
 		});
 
-		vscode.window.withProgress({
-			location: vscode.ProgressLocation.Window,
-			title: vscode.l10n.t("Fetching data for better TypeScript IntelliSense")
-		}, () => promise);
+		vscode.window.withProgress(
+			{
+				location: vscode.ProgressLocation.Window,
+				title: vscode.l10n.t(
+					"Fetching data for better TypeScript IntelliSense",
+				),
+			},
+			() => promise,
+		);
 	}
 
 	private _onEndOrTimeout(eventId: number): void {
@@ -96,19 +119,27 @@ export class AtaProgressReporter extends Disposable {
 	}
 
 	private async onTypesInstallerInitializationFailed() {
-		if (readUnifiedConfig<boolean>('tsserver.checkNpmIsInstalled', true, { fallbackSection: 'typescript', fallbackSubSectionNameOverride: 'check.npmIsInstalled' })) {
+		if (
+			readUnifiedConfig<boolean>("tsserver.checkNpmIsInstalled", true, {
+				fallbackSection: "typescript",
+				fallbackSubSectionNameOverride: "check.npmIsInstalled",
+			})
+		) {
 			const dontShowAgain: vscode.MessageItem = {
 				title: vscode.l10n.t("Don't Show Again"),
 			};
 			const selected = await vscode.window.showWarningMessage(
 				vscode.l10n.t(
 					"Could not install typings files for JavaScript language features. Please ensure that NPM is installed, or configure 'js/ts.tsserver.npm.path' in your user settings. Alternatively, check the [documentation]({0}) to learn more.",
-					'https://go.microsoft.com/fwlink/?linkid=847635'
+					"https://go.microsoft.com/fwlink/?linkid=847635",
 				),
-				dontShowAgain);
+				dontShowAgain,
+			);
 
 			if (selected === dontShowAgain) {
-				vscode.workspace.getConfiguration('js/ts').update('tsserver.checkNpmIsInstalled', false, true);
+				vscode.workspace
+					.getConfiguration("js/ts")
+					.update("tsserver.checkNpmIsInstalled", false, true);
 			}
 		}
 	}

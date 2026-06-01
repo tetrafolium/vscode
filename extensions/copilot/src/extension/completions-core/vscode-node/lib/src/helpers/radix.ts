@@ -17,7 +17,7 @@ export class LRURadixTrie<T> {
 	/** Set of all leaf nodes with values, tracked for evicting LRU values. */
 	private readonly leafNodes: Set<LRURadixNode<T>> = new Set();
 
-	constructor(private readonly maxSize: number) { }
+	constructor(private readonly maxSize: number) {}
 
 	/**
 	 * Traverses the trie to insert a new value. If an existing exact match is
@@ -40,7 +40,10 @@ export class LRURadixTrie<T> {
 					const intermediate = new LRURadixNode<T>();
 					node.removeChild(edge);
 					node.addChild(commonPrefix, intermediate);
-					intermediate.addChild(edge.slice(commonPrefix.length), child);
+					intermediate.addChild(
+						edge.slice(commonPrefix.length),
+						child,
+					);
 					node = intermediate;
 					remainingKey = remainingKey.slice(commonPrefix.length);
 					break;
@@ -70,16 +73,20 @@ export class LRURadixTrie<T> {
 	findAll(key: string): Array<{ remainingKey: string; value: T }> {
 		return this.findClosestNode(key)
 			.stack.map(({ node, remainingKey }) =>
-				node.value !== undefined ? { remainingKey, value: node.value } : undefined
+				node.value !== undefined
+					? { remainingKey, value: node.value }
+					: undefined,
 			)
-			.filter(x => x !== undefined);
+			.filter((x) => x !== undefined);
 	}
 
 	/** Removes the value at a given key if any from the trie. */
 	delete(key: string): void {
 		const { node, remainingKey } = this.findClosestNode(key);
 		// If no exact match is found, do nothing.
-		if (remainingKey.length > 0) { return; }
+		if (remainingKey.length > 0) {
+			return;
+		}
 		// Exact match found, remove the value.
 		this.deleteNode(node);
 	}
@@ -88,7 +95,9 @@ export class LRURadixTrie<T> {
 	private findClosestNode(key: string) {
 		let hasNext = true;
 		let node: LRURadixNode<T> = this.root;
-		const stack: { node: LRURadixNode<T>; remainingKey: string }[] = [{ node, remainingKey: key }];
+		const stack: { node: LRURadixNode<T>; remainingKey: string }[] = [
+			{ node, remainingKey: key },
+		];
 		while (key.length > 0 && hasNext) {
 			hasNext = false;
 			for (const [edge, child] of node.children) {
@@ -117,9 +126,13 @@ export class LRURadixTrie<T> {
 		node.value = undefined;
 		this.leafNodes.delete(node);
 		// If the node has no parent, it is the root. Done.
-		if (node.parent === undefined) { return; }
+		if (node.parent === undefined) {
+			return;
+		}
 		// If more than one child, keep the node as an intermediary node. Done.
-		if (node.childCount > 1) { return; }
+		if (node.childCount > 1) {
+			return;
+		}
 		const { node: parent, edge } = node.parent;
 		// If exactly one child, replace the node with the child in the parent.
 		if (node.childCount === 1) {
@@ -132,7 +145,9 @@ export class LRURadixTrie<T> {
 		// If the node has no children, remove it from the parent.
 		parent.removeChild(edge);
 		// If the parent node is the root, no further action is needed.
-		if (parent.parent === undefined) { return; }
+		if (parent.parent === undefined) {
+			return;
+		}
 		const grandparent = parent.parent;
 		// If the parent node has only one child remaining and no value, merge
 		// the parent and remaining child together.
@@ -150,7 +165,9 @@ export class LRURadixTrie<T> {
 	 */
 	private evictLeastRecentlyUsed(): void {
 		const node = this.findLeastRecentlyUsed();
-		if (node) { this.deleteNode(node); }
+		if (node) {
+			this.deleteNode(node);
+		}
 	}
 
 	/** Iterate through the set of leaf nodes to find the least recently used.
@@ -205,7 +222,9 @@ class LRURadixNode<T> {
 	/** Removes a child node from this node and clears its parent reference. */
 	removeChild(edge: string): void {
 		const child = this._children.get(edge);
-		if (child) { child.parent = undefined; }
+		if (child) {
+			child.parent = undefined;
+		}
 		this._children.delete(edge);
 	}
 

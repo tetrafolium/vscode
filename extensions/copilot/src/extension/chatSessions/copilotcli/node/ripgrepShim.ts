@@ -26,72 +26,142 @@ const MATERIALIZATION_POLL_INTERVAL_MS = 100;
  * @param extensionPath The extension's path (where to create the shim)
  * @param vscodeAppRoot VS Code's installation path (where ripgrep is located)
  */
-export async function ensureRipgrepShim(extensionPath: string, vscodeAppRoot: string, logService: ILogService): Promise<void> {
+export async function ensureRipgrepShim(
+	extensionPath: string,
+	vscodeAppRoot: string,
+	logService: ILogService,
+): Promise<void> {
 	if (shimCreated) {
 		return shimCreated;
 	}
 
-	const creation = _ensureRipgrepShim(extensionPath, vscodeAppRoot, logService);
-	shimCreated = creation.catch(error => {
+	const creation = _ensureRipgrepShim(
+		extensionPath,
+		vscodeAppRoot,
+		logService,
+	);
+	shimCreated = creation.catch((error) => {
 		shimCreated = undefined;
 		throw error;
 	});
 	return shimCreated;
 }
 
-async function _ensureRipgrepShim(extensionPath: string, vscodeAppRoot: string, logService: ILogService): Promise<void> {
-	const vscodeRipgrepPath = path.join(vscodeAppRoot, 'node_modules', '@vscode', 'ripgrep-universal', 'bin', process.platform + '-' + process.arch);
+async function _ensureRipgrepShim(
+	extensionPath: string,
+	vscodeAppRoot: string,
+	logService: ILogService,
+): Promise<void> {
+	const vscodeRipgrepPath = path.join(
+		vscodeAppRoot,
+		'node_modules',
+		'@vscode',
+		'ripgrep-universal',
+		'bin',
+		process.platform + '-' + process.arch,
+	);
 
 	await copyRipgrepShim(extensionPath, vscodeRipgrepPath, logService);
 }
 
-export async function copyRipgrepShim(extensionPath: string, vscodeRipgrepPath: string, logService: ILogService): Promise<void> {
-	const ripgrepDir = path.join(extensionPath, 'node_modules', '@github', 'copilot', 'sdk', 'ripgrep', 'bin', process.platform + '-' + process.arch);
+export async function copyRipgrepShim(
+	extensionPath: string,
+	vscodeRipgrepPath: string,
+	logService: ILogService,
+): Promise<void> {
+	const ripgrepDir = path.join(
+		extensionPath,
+		'node_modules',
+		'@github',
+		'copilot',
+		'sdk',
+		'ripgrep',
+		'bin',
+		process.platform + '-' + process.arch,
+	);
 
-	logService.info(`Creating ripgrep shim: source=${vscodeRipgrepPath}, dest=${ripgrepDir}`);
+	logService.info(
+		`Creating ripgrep shim: source=${vscodeRipgrepPath}, dest=${ripgrepDir}`,
+	);
 	try {
 		await fs.mkdir(ripgrepDir, { recursive: true });
 		const entries = await fs.readdir(vscodeRipgrepPath);
 		const uniqueEntries = [...new Set(entries)];
-		logService.info(`Found ${uniqueEntries.length} entries to copy${uniqueEntries.length !== entries.length ? ` (${entries.length - uniqueEntries.length} duplicates ignored)` : ''}: ${uniqueEntries.join(', ')}`);
+		logService.info(
+			`Found ${uniqueEntries.length} entries to copy${uniqueEntries.length !== entries.length ? ` (${entries.length - uniqueEntries.length} duplicates ignored)` : ''}: ${uniqueEntries.join(', ')}`,
+		);
 
-		await copyRipgrepWithRetries(vscodeRipgrepPath, ripgrepDir, uniqueEntries, logService);
+		await copyRipgrepWithRetries(
+			vscodeRipgrepPath,
+			ripgrepDir,
+			uniqueEntries,
+			logService,
+		);
 	} catch (error) {
-		logService.error(`Failed to create ripgrep shim (vscode dir: ${vscodeRipgrepPath}, extension dir: ${ripgrepDir})`, error);
+		logService.error(
+			`Failed to create ripgrep shim (vscode dir: ${vscodeRipgrepPath}, extension dir: ${ripgrepDir})`,
+			error,
+		);
 		throw error;
 	}
 }
 
-async function copyRipgrepWithRetries(sourceDir: string, destDir: string, entries: string[], logService: ILogService): Promise<void> {
-	const primaryBinary = entries.find(entry => entry.endsWith('.node'));
+async function copyRipgrepWithRetries(
+	sourceDir: string,
+	destDir: string,
+	entries: string[],
+	logService: ILogService,
+): Promise<void> {
+	const primaryBinary = entries.find((entry) => entry.endsWith('.node'));
 	for (let attempt = 1; attempt <= MAX_COPY_ATTEMPTS; attempt++) {
 		try {
 			await fs.cp(sourceDir, destDir, {
 				recursive: true,
 				dereference: true,
 				force: true,
-				filter: async (srcPath) => shouldCopyEntry(srcPath, logService)
+				filter: async (srcPath) => shouldCopyEntry(srcPath, logService),
 			});
-			logService.trace(`Copied ripgrep prebuilds to ${destDir} (attempt ${attempt})`);
+			logService.trace(
+				`Copied ripgrep prebuilds to ${destDir} (attempt ${attempt})`,
+			);
 			return;
 		} catch (error) {
-			if (await waitForMaterializedShim(destDir, primaryBinary, logService)) {
-				logService.trace(`Detected ripgrep shim materialized at ${destDir} by another extension host`);
+			if (
+				await waitForMaterializedShim(
+					destDir,
+					primaryBinary,
+					logService,
+				)
+			) {
+				logService.trace(
+					`Detected ripgrep shim materialized at ${destDir} by another extension host`,
+				);
 				return;
 			}
 
-			if (!RETRIABLE_COPY_ERROR_CODES.has(error?.code) || attempt === MAX_COPY_ATTEMPTS) {
+			if (
+				!RETRIABLE_COPY_ERROR_CODES.has(error?.code) ||
+				attempt === MAX_COPY_ATTEMPTS
+			) {
 				throw error;
 			}
 
-			const delayMs = Math.min(RETRY_DELAY_BASE_MS * Math.pow(2, attempt - 1), RETRY_DELAY_CAP_MS);
-			logService.warn(`Retryable error (${error.code}) copying ripgrep shim. Retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_COPY_ATTEMPTS})`);
-			await new Promise(resolve => setTimeout(resolve, delayMs));
+			const delayMs = Math.min(
+				RETRY_DELAY_BASE_MS * Math.pow(2, attempt - 1),
+				RETRY_DELAY_CAP_MS,
+			);
+			logService.warn(
+				`Retryable error (${error.code}) copying ripgrep shim. Retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_COPY_ATTEMPTS})`,
+			);
+			await new Promise((resolve) => setTimeout(resolve, delayMs));
 		}
 	}
 }
 
-async function shouldCopyEntry(srcPath: string, logService: ILogService): Promise<boolean> {
+async function shouldCopyEntry(
+	srcPath: string,
+	logService: ILogService,
+): Promise<boolean> {
 	try {
 		const stat = await fs.stat(srcPath);
 		if (stat.isDirectory()) {
@@ -99,34 +169,51 @@ async function shouldCopyEntry(srcPath: string, logService: ILogService): Promis
 		}
 
 		if (stat.size === 0) {
-			logService.trace(`Skipping ${path.basename(srcPath)}: zero-byte file (likely symlink or special file)`);
+			logService.trace(
+				`Skipping ${path.basename(srcPath)}: zero-byte file (likely symlink or special file)`,
+			);
 			return false;
 		}
 
 		return true;
 	} catch (error) {
-		logService.warn(`Failed to stat ${srcPath}: ${error?.message ?? error}`);
+		logService.warn(
+			`Failed to stat ${srcPath}: ${error?.message ?? error}`,
+		);
 		return false;
 	}
 }
 
-async function waitForMaterializedShim(destDir: string, primaryBinary: string | undefined, logService: ILogService): Promise<boolean> {
+async function waitForMaterializedShim(
+	destDir: string,
+	primaryBinary: string | undefined,
+	logService: ILogService,
+): Promise<boolean> {
 	const deadline = Date.now() + MATERIALIZATION_TIMEOUT_MS;
 	while (Date.now() <= deadline) {
 		if (await isShimMaterialized(destDir, primaryBinary)) {
-			logService.trace(`Reusing ripgrep shim that materialized at ${destDir}`);
+			logService.trace(
+				`Reusing ripgrep shim that materialized at ${destDir}`,
+			);
 			return true;
 		}
 
-		await new Promise(resolve => setTimeout(resolve, MATERIALIZATION_POLL_INTERVAL_MS));
+		await new Promise((resolve) =>
+			setTimeout(resolve, MATERIALIZATION_POLL_INTERVAL_MS),
+		);
 	}
 
 	return false;
 }
 
-async function isShimMaterialized(destDir: string, primaryBinary: string | undefined): Promise<boolean> {
+async function isShimMaterialized(
+	destDir: string,
+	primaryBinary: string | undefined,
+): Promise<boolean> {
 	if (primaryBinary) {
-		const binaryStat = await fs.stat(path.join(destDir, primaryBinary)).catch(() => undefined);
+		const binaryStat = await fs
+			.stat(path.join(destDir, primaryBinary))
+			.catch(() => undefined);
 		if (binaryStat && binaryStat.isFile() && binaryStat.size > 0) {
 			return true;
 		}
@@ -134,7 +221,9 @@ async function isShimMaterialized(destDir: string, primaryBinary: string | undef
 
 	const entries = await fs.readdir(destDir).catch(() => []);
 	for (const entry of entries) {
-		const stat = await fs.stat(path.join(destDir, entry)).catch(() => undefined);
+		const stat = await fs
+			.stat(path.join(destDir, entry))
+			.catch(() => undefined);
 		if (stat && stat.isFile() && stat.size > 0) {
 			return true;
 		}

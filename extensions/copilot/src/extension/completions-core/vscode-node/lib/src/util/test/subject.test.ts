@@ -78,8 +78,8 @@ suite('Subject', function () {
 				nextCount2++;
 				lastValue2 = value;
 			},
-			error: () => { },
-			complete: () => { },
+			error: () => {},
+			complete: () => {},
 		};
 
 		subject.subscribe(observer);

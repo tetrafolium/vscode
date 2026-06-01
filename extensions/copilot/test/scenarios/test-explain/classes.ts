@@ -8,7 +8,8 @@ export class Foo {
 	}
 }
 
-export class Baz { // This class declaration is irrelevant to the implementation of quuz
+export class Baz {
+	// This class declaration is irrelevant to the implementation of quuz
 	qux() {
 		return 2;
 	}

@@ -41,27 +41,36 @@ function parseAsIfVirtual(sourceParsedAsIf: string) {
 	const treeExpected = parseRaw(sourceParsedAsIf);
 	visitTree(
 		treeExpected,
-		node => {
+		(node) => {
 			if (isLine(node) && node.sourceLine.trim() === '-> virtual') {
 				node = node as unknown as VirtualNode<never>;
 				node.type = 'virtual';
 			}
 		},
-		'topDown'
+		'topDown',
 	);
 	return treeExpected;
 }
 
 suite('Test core parsing elements', function () {
 	test('flattenVirtual 1', function () {
-		const before = topNode([virtualNode(0, []), virtualNode(0, [lineNode(0, 0, 'lonely node', [])])]);
+		const before = topNode([
+			virtualNode(0, []),
+			virtualNode(0, [lineNode(0, 0, 'lonely node', [])]),
+		]);
 		const after = topNode([lineNode(0, 0, 'lonely node', [])]);
 		compareTreeWithSpec(flattenVirtual(before), after);
 	});
 
 	test('flattenVirtual 2', function () {
-		const before = topNode([lineNode(0, 0, 'A', [virtualNode(2, [lineNode(2, 1, 'lonely node', [])])])]);
-		const after = topNode([lineNode(0, 0, 'A', [lineNode(2, 1, 'lonely node', [])])]);
+		const before = topNode([
+			lineNode(0, 0, 'A', [
+				virtualNode(2, [lineNode(2, 1, 'lonely node', [])]),
+			]),
+		]);
+		const after = topNode([
+			lineNode(0, 0, 'A', [lineNode(2, 1, 'lonely node', [])]),
+		]);
 		compareTreeWithSpec(flattenVirtual(before), after);
 	});
 
@@ -83,19 +92,41 @@ H`;
 		function assertChildrenAreTheFollowingLines(
 			tree: IndentationTree<never>,
 			children: (string | number)[],
-			message: string = ''
+			message: string = '',
 		) {
 			assert.deepStrictEqual(
-				tree.subs.map((node: IndentationSubTree<string>) => (isVirtual(node) ? 'v' : node.lineNumber)),
+				tree.subs.map((node: IndentationSubTree<string>) =>
+					isVirtual(node) ? 'v' : node.lineNumber,
+				),
 				children,
-				message
+				message,
 			);
 		}
-		assertChildrenAreTheFollowingLines(blockTree, ['v', 'v', 'v', 'v'], 'wrong topline blocks');
-		assertChildrenAreTheFollowingLines(blockTree.subs[0], [0, 1], 'wrong zeroth block');
-		assertChildrenAreTheFollowingLines(blockTree.subs[1], [2, 3, 4, 5], 'wrong first block');
-		assertChildrenAreTheFollowingLines(blockTree.subs[2], [6, 7, 8], 'wrong second block');
-		assertChildrenAreTheFollowingLines(blockTree.subs[3], [9, 10], 'wrong fourth block');
+		assertChildrenAreTheFollowingLines(
+			blockTree,
+			['v', 'v', 'v', 'v'],
+			'wrong topline blocks',
+		);
+		assertChildrenAreTheFollowingLines(
+			blockTree.subs[0],
+			[0, 1],
+			'wrong zeroth block',
+		);
+		assertChildrenAreTheFollowingLines(
+			blockTree.subs[1],
+			[2, 3, 4, 5],
+			'wrong first block',
+		);
+		assertChildrenAreTheFollowingLines(
+			blockTree.subs[2],
+			[6, 7, 8],
+			'wrong second block',
+		);
+		assertChildrenAreTheFollowingLines(
+			blockTree.subs[3],
+			[9, 10],
+			'wrong fourth block',
+		);
 	});
 
 	test('groupBlocks advanced cases', function () {
@@ -133,7 +164,11 @@ G
 							lineNode(2, 3, 'C', [lineNode(4, 4, 'D', [])]),
 							blankNode(5),
 						]),
-						virtualNode(2, [lineNode(2, 6, 'E', []), blankNode(7), blankNode(8)]),
+						virtualNode(2, [
+							lineNode(2, 6, 'E', []),
+							blankNode(7),
+							blankNode(8),
+						]),
 						virtualNode(2, [lineNode(2, 9, 'F', [])]),
 					]),
 					blankNode(10),
@@ -149,7 +184,7 @@ G
 						virtualNode(4, [lineNode(2, 16, 'K', [])]),
 					]),
 				]),
-			])
+			]),
 		);
 	});
 
@@ -169,10 +204,13 @@ C
 				lineNode(0, 0, 'A', [
 					blankNode(1),
 					blankNode(2),
-					virtualNode(4, [lineNode(4, 3, 'B1', []), lineNode(4, 4, 'B2', [])]),
+					virtualNode(4, [
+						lineNode(4, 3, 'B1', []),
+						lineNode(4, 4, 'B2', []),
+					]),
 				]),
 				lineNode(0, 5, 'C', []),
-			])
+			]),
 		);
 	});
 
@@ -193,7 +231,7 @@ C
 					blankNode(5),
 				]),
 				virtualNode(0, [lineNode(0, 6, 'C', [])]),
-			])
+			]),
 		);
 	});
 
@@ -206,15 +244,22 @@ D
 E
 `) as IndentationTree<string>;
 		const isDelimiter = (node: IndentationTree<string>) =>
-			isLine(node) && (node.sourceLine.trim() === 'B' || node.sourceLine.trim() === 'D');
+			isLine(node) &&
+			(node.sourceLine.trim() === 'B' || node.sourceLine.trim() === 'D');
 		tree = groupBlocks(tree, isDelimiter);
 		compareTreeWithSpec(
 			tree,
 			topNode([
-				virtualNode(0, [lineNode(0, 0, 'A', []), lineNode(0, 1, 'B', [])]),
-				virtualNode(0, [lineNode(0, 2, 'C', []), lineNode(0, 3, 'D', [])]),
+				virtualNode(0, [
+					lineNode(0, 0, 'A', []),
+					lineNode(0, 1, 'B', []),
+				]),
+				virtualNode(0, [
+					lineNode(0, 2, 'C', []),
+					lineNode(0, 3, 'D', []),
+				]),
 				virtualNode(0, [lineNode(0, 4, 'E ', [])]),
-			])
+			]),
 		);
 	});
 });
@@ -238,10 +283,19 @@ D
 `),
 			topNode([
 				lineNode(0, 0, 'A', [lineNode(2, 1, 'a', [])]),
-				lineNode(0, 2, 'B', [lineNode(2, 3, 'b1', []), lineNode(2, 4, 'b2', [])]),
-				lineNode(0, 5, 'C', [lineNode(4, 6, 'c1', []), lineNode(4, 7, 'c2', []), lineNode(2, 8, 'c3', [])]),
-				lineNode(0, 9, 'D', [lineNode(2, 10, 'd1', [lineNode(4, 11, 'd2', [])])]),
-			])
+				lineNode(0, 2, 'B', [
+					lineNode(2, 3, 'b1', []),
+					lineNode(2, 4, 'b2', []),
+				]),
+				lineNode(0, 5, 'C', [
+					lineNode(4, 6, 'c1', []),
+					lineNode(4, 7, 'c2', []),
+					lineNode(2, 8, 'c3', []),
+				]),
+				lineNode(0, 9, 'D', [
+					lineNode(2, 10, 'd1', [lineNode(4, 11, 'd2', [])]),
+				]),
+			]),
 		);
 	});
 
@@ -262,13 +316,17 @@ H
 
 `),
 			topNode([
-				lineNode(0, 0, 'E', [lineNode(2, 1, 'e1', []), blankNode(2), lineNode(2, 3, 'e2', [])]),
+				lineNode(0, 0, 'E', [
+					lineNode(2, 1, 'e1', []),
+					blankNode(2),
+					lineNode(2, 3, 'e2', []),
+				]),
 				lineNode(0, 4, 'F', [blankNode(5), lineNode(2, 6, 'f1', [])]),
 				lineNode(0, 7, 'G', [lineNode(2, 8, 'g1', [])]),
 				blankNode(9),
 				lineNode(0, 10, 'H', []),
 				blankNode(11),
-			])
+			]),
 		);
 	});
 
@@ -297,7 +355,10 @@ C {
 			topNode([
 				lineNode(0, 0, 'A {', [lineNode(0, 1, '}', [], 'closer')]),
 				lineNode(0, 2, 'B', [
-					lineNode(2, 3, 'b1 {', [lineNode(4, 4, 'bb1', []), lineNode(2, 5, '}', [], 'closer')]),
+					lineNode(2, 3, 'b1 {', [
+						lineNode(4, 4, 'bb1', []),
+						lineNode(2, 5, '}', [], 'closer'),
+					]),
 					lineNode(2, 6, 'b2 {', [
 						lineNode(4, 7, 'bb2', []),
 						blankNode(8),
@@ -312,7 +373,7 @@ C {
 					lineNode(2, 15, 'c4', []),
 					lineNode(0, 16, '}', [], 'closer'),
 				]),
-			])
+			]),
 		);
 		// Running the optimisation twice doesn't change the result
 		let newTree = <IndentationTree<string>>JSON.parse(JSON.stringify(tree));
@@ -338,7 +399,13 @@ A
 		// the raw indentation indicates line 1 is the parent of the following lines
 		compareTreeWithSpec(
 			treeRaw,
-			topNode([lineNode(0, 0, 'A', []), lineNode(0, 1, '(', [lineNode(4, 2, 'B', []), lineNode(4, 3, 'C', [])])])
+			topNode([
+				lineNode(0, 0, 'A', []),
+				lineNode(0, 1, '(', [
+					lineNode(4, 2, 'B', []),
+					lineNode(4, 3, 'C', []),
+				]),
+			]),
 		);
 
 		// the bracket parsing indicates line 0 is the parent
@@ -350,7 +417,7 @@ A
 					lineNode(4, 2, 'B', []),
 					lineNode(4, 3, 'C', []),
 				]),
-			])
+			]),
 		);
 	});
 
@@ -365,13 +432,21 @@ A
 		// the raw indentation indicates line 2 is the sibling of 0
 		compareTreeWithSpec(
 			treeRaw,
-			topNode([lineNode(0, 0, 'A', [lineNode(4, 1, 'B', [])]), lineNode(0, 2, ')', [])])
+			topNode([
+				lineNode(0, 0, 'A', [lineNode(4, 1, 'B', [])]),
+				lineNode(0, 2, ')', []),
+			]),
 		);
 
 		// the bracket parsing indicates line 2 actually another child
 		compareTreeWithSpec(
 			treeCode,
-			topNode([lineNode(0, 0, 'A', [lineNode(4, 1, 'B', []), lineNode(0, 2, ')', [], 'closer')])])
+			topNode([
+				lineNode(0, 0, 'A', [
+					lineNode(4, 1, 'B', []),
+					lineNode(0, 2, ')', [], 'closer'),
+				]),
+			]),
 		);
 	});
 
@@ -389,13 +464,17 @@ A
 
 		// before bracket parsing, A had two children, B and C
 		assert.strictEqual(
-			treeRaw.subs[0].subs.map(x => (x.type === 'line' ? x.sourceLine.trim() : 'v')).join(),
-			'B,C'
+			treeRaw.subs[0].subs
+				.map((x) => (x.type === 'line' ? x.sourceLine.trim() : 'v'))
+				.join(),
+			'B,C',
 		);
 		// after, it had three children, a virtual node, line node 3 and the closer 6
 		assert.strictEqual(
-			treeCode.subs[0].subs.map(x => (x.type === 'line' ? x.sourceLine.trim() : 'v')).join(),
-			'v,) + (,)'
+			treeCode.subs[0].subs
+				.map((x) => (x.type === 'line' ? x.sourceLine.trim() : 'v'))
+				.join(),
+			'v,) + (,)',
 		);
 	});
 
@@ -427,19 +506,26 @@ A
 					lineNode(4, 1, 'print(“hello”)', []),
 					lineNode(4, 2, 'print(“world”)', []),
 				]),
-				lineNode(0, 3, '} else {', [lineNode(4, 4, 'print(“goodbye”)', [])]),
+				lineNode(0, 3, '} else {', [
+					lineNode(4, 4, 'print(“goodbye”)', []),
+				]),
 				lineNode(0, 5, '}', []),
-			])
+			]),
 		);
 		compareTreeWithSpec(
 			treeCode,
 			topNode([
 				lineNode(0, 0, 'if (new) {', [
-					virtualNode(0, [lineNode(4, 1, 'print(“hello”)', []), lineNode(4, 2, 'print(“world”)', [])]),
-					lineNode(0, 3, '} else {', [lineNode(4, 4, 'print(“goodbye”)', [])]),
+					virtualNode(0, [
+						lineNode(4, 1, 'print(“hello”)', []),
+						lineNode(4, 2, 'print(“world”)', []),
+					]),
+					lineNode(0, 3, '} else {', [
+						lineNode(4, 4, 'print(“goodbye”)', []),
+					]),
 					lineNode(0, 5, '}', []),
 				]),
-			])
+			]),
 		);
 		compareTreeWithSpec(treeCode, treeExpected, 'structure');
 	});
@@ -467,7 +553,7 @@ suite('Special indentation styles', function () {
 					lineNode(4, 3, 'print(“world”)', []),
 					lineNode(0, 4, '}', [], 'closer'),
 				]),
-			])
+			]),
 		);
 
 		// the next line is also moved, but by the closing partof the spec, so not tested here
@@ -475,9 +561,12 @@ suite('Special indentation styles', function () {
 			treeRaw,
 			topNode([
 				lineNode(0, 0, 'function test()', []),
-				lineNode(0, 1, '{', [lineNode(4, 2, 'print(“hello”)', []), lineNode(4, 3, 'print(“world”)', [])]),
+				lineNode(0, 1, '{', [
+					lineNode(4, 2, 'print(“hello”)', []),
+					lineNode(4, 3, 'print(“world”)', []),
+				]),
 				lineNode(0, 4, '}', []),
-			])
+			]),
 		);
 	});
 
@@ -515,7 +604,7 @@ suite('Special indentation styles', function () {
 					lineNode(4, 8, 'print(“phone”)', []),
 					lineNode(0, 9, '}', [], 'closer'),
 				]),
-			])
+			]),
 		);
 	});
 
@@ -538,17 +627,23 @@ suite('Special indentation styles', function () {
 			treeCode,
 			topNode([
 				lineNode(0, 0, 'if (condition) {', [
-					virtualNode(0, [lineNode(4, 2, 'print(“hello”)', []), lineNode(4, 3, 'print(“world”)', [])]),
+					virtualNode(0, [
+						lineNode(4, 2, 'print(“hello”)', []),
+						lineNode(4, 3, 'print(“world”)', []),
+					]),
 					lineNode(
 						0,
 						4,
 						'} else {',
-						[lineNode(4, 5, 'print(“goodbye”)', []), lineNode(4, 6, 'print(“phone”)', [])],
-						'closer'
+						[
+							lineNode(4, 5, 'print(“goodbye”)', []),
+							lineNode(4, 6, 'print(“phone”)', []),
+						],
+						'closer',
 					),
 					lineNode(0, 7, '}', [], 'closer'),
 				]),
-			])
+			]),
 		);
 	});
 
@@ -565,9 +660,18 @@ A
 			tree,
 			topNode([
 				lineNode(0, 0, 'A', [
-					lineNode(2, 1, '{', [lineNode(4, 2, 'stmt', []), lineNode(2, 3, '}', [], 'closer')], 'opener'),
+					lineNode(
+						2,
+						1,
+						'{',
+						[
+							lineNode(4, 2, 'stmt', []),
+							lineNode(2, 3, '}', [], 'closer'),
+						],
+						'opener',
+					),
 				]),
-			])
+			]),
 		);
 	});
 
@@ -597,7 +701,7 @@ end
 				blankNode(5),
 				blankNode(6),
 				lineNode(0, 7, 'end', []),
-			])
+			]),
 		);
 	});
 
@@ -619,7 +723,7 @@ C
 					blankNode(2),
 					lineNode(0, 3, '}', [], 'closer'),
 				]),
-			])
+			]),
 		);
 	});
 
@@ -650,7 +754,7 @@ D
 					]),
 					lineNode(0, 7, '}', [], 'closer'),
 				]),
-			])
+			]),
 		);
 	});
 });

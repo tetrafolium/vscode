@@ -10,7 +10,9 @@ import { Conversation, Turn } from '../../prompt/common/conversation';
 import { ConversationStore } from './conversationStore';
 
 function createConversation(sessionId: string): Conversation {
-	return new Conversation(sessionId, [new Turn('turn-1', { message: 'test', type: 'user' })]);
+	return new Conversation(sessionId, [
+		new Turn('turn-1', { message: 'test', type: 'user' }),
+	]);
 }
 
 describe('ConversationStore', () => {

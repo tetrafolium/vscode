@@ -4,9 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { AgentTaskGetResponse, AgentTaskSessionEvent } from '@vscode/copilot-api';
+import {
+	AgentTaskGetResponse,
+	AgentTaskSessionEvent,
+} from '@vscode/copilot-api';
 import { GithubRepoId } from '../../../platform/git/common/gitService';
-import { PullRequestSearchItem, SessionInfo } from '../../../platform/github/common/githubAPI';
+import {
+	PullRequestSearchItem,
+	SessionInfo,
+} from '../../../platform/github/common/githubAPI';
 
 /**
  * Identifies a cloud session from a VS Code URI. Two shapes are supported so the
@@ -44,7 +50,14 @@ export interface PullArtifactRef {
  */
 export type CloudDelegationResult =
 	| { kind: 'pullRequest'; prNumber: number; sessionId: string }
-	| { kind: 'task'; taskId: string; taskUrl: string; title: string; sessionId: string; pullArtifact?: PullArtifactRef };
+	| {
+			kind: 'task';
+			taskId: string;
+			taskUrl: string;
+			title: string;
+			sessionId: string;
+			pullArtifact?: PullArtifactRef;
+	  };
 
 /**
  * Parameters for creating a new cloud session. The provider resolves UI sentinels
@@ -154,7 +167,9 @@ export interface PrCloudAgentBackend extends CloudAgentBackendCommon {
 	): Promise<CloudSessionContent>;
 
 	/** Fetch the per-PR thread of session iterations. */
-	fetchSessionsForPullRequest(pr: PullRequestSearchItem): Promise<SessionInfo[]>;
+	fetchSessionsForPullRequest(
+		pr: PullRequestSearchItem,
+	): Promise<SessionInfo[]>;
 
 	/**
 	 * Post a follow-up `@copilot` comment to an existing PR-keyed session.

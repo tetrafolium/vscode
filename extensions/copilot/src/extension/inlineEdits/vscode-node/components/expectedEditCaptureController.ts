@@ -3,14 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, MarkdownString, StatusBarAlignment, StatusBarItem, ThemeColor, Uri, window, workspace } from 'vscode';
+import {
+	commands,
+	MarkdownString,
+	StatusBarAlignment,
+	StatusBarItem,
+	ThemeColor,
+	Uri,
+	window,
+	workspace,
+} from 'vscode';
 import { IAuthenticationService } from '../../../../platform/authentication/common/authentication';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { DocumentId } from '../../../../platform/inlineEdits/common/dataTypes/documentId';
 import { DebugRecorderBookmark } from '../../../../platform/inlineEdits/common/debugRecorderBookmark';
-import { ILogger, ILogService } from '../../../../platform/log/common/logService';
+import {
+	ILogger,
+	ILogService,
+} from '../../../../platform/log/common/logService';
 import { IFetcherService } from '../../../../platform/networking/common/fetcherService';
-import { deserializeEdit, ISerializedEdit, LogEntry, serializeEdit } from '../../../../platform/workspaceRecorder/common/workspaceLog';
+import {
+	deserializeEdit,
+	ISerializedEdit,
+	LogEntry,
+	serializeEdit,
+} from '../../../../platform/workspaceRecorder/common/workspaceLog';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
 import { DebugRecorder } from '../../node/debugRecorder';
 import { filterLogForSensitiveFiles } from './inlineEditDebugComponent';
@@ -41,20 +61,23 @@ interface CaptureState {
  * are rejected or don't appear. Leverages DebugRecorder's automatic edit tracking.
  */
 export class ExpectedEditCaptureController extends Disposable {
-
 	private static readonly CAPTURE_FOLDER = '.copilot/nes-feedback';
 
 	private _state: CaptureState | undefined;
 	private _statusBarItem: StatusBarItem | undefined;
-	private _statusBarAnimationInterval: ReturnType<typeof setInterval> | undefined;
+	private _statusBarAnimationInterval:
+		| ReturnType<typeof setInterval>
+		| undefined;
 	private readonly _feedbackSubmitter: NesFeedbackSubmitter;
 	private readonly _logger: ILogger;
 
 	constructor(
 		private readonly _debugRecorder: DebugRecorder,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
 		@ILogService private readonly _logService: ILogService,
-		@IAuthenticationService private readonly _authenticationService: IAuthenticationService,
+		@IAuthenticationService
+		private readonly _authenticationService: IAuthenticationService,
 		@IFetcherService private readonly _fetcherService: IFetcherService,
 	) {
 		super();
@@ -62,7 +85,7 @@ export class ExpectedEditCaptureController extends Disposable {
 		this._feedbackSubmitter = new NesFeedbackSubmitter(
 			this._logService,
 			this._authenticationService,
-			this._fetcherService
+			this._fetcherService,
 		);
 	}
 
@@ -70,14 +93,22 @@ export class ExpectedEditCaptureController extends Disposable {
 	 * Check if the feature is enabled in settings.
 	 */
 	public get isEnabled(): boolean {
-		return this._configurationService.getConfig(ConfigKey.TeamInternal.RecordExpectedEditEnabled) ?? false;
+		return (
+			this._configurationService.getConfig(
+				ConfigKey.TeamInternal.RecordExpectedEditEnabled,
+			) ?? false
+		);
 	}
 
 	/**
 	 * Check if automatic capture on rejection is enabled.
 	 */
 	public get captureOnReject(): boolean {
-		return this._configurationService.getConfig(ConfigKey.TeamInternal.RecordExpectedEditOnReject) ?? true;
+		return (
+			this._configurationService.getConfig(
+				ConfigKey.TeamInternal.RecordExpectedEditOnReject,
+			) ?? true
+		);
 	}
 
 	/**
@@ -94,7 +125,7 @@ export class ExpectedEditCaptureController extends Disposable {
 	 */
 	public async startCapture(
 		trigger: 'rejection' | 'manual',
-		nesMetadata?: CaptureState['originalNesMetadata']
+		nesMetadata?: CaptureState['originalNesMetadata'],
 	): Promise<void> {
 		if (!this.isEnabled) {
 			this._logger.trace('Feature disabled, ignoring start request');
@@ -102,7 +133,9 @@ export class ExpectedEditCaptureController extends Disposable {
 		}
 
 		if (this._state?.active) {
-			this._logger.trace('Capture already active, ignoring start request');
+			this._logger.trace(
+				'Capture already active, ignoring start request',
+			);
 			return;
 		}
 
@@ -122,16 +155,22 @@ export class ExpectedEditCaptureController extends Disposable {
 			startDocumentId: documentId,
 			startTime: Date.now(),
 			trigger,
-			originalNesMetadata: nesMetadata
+			originalNesMetadata: nesMetadata,
 		};
 
 		// Set context key to enable keybindings
-		await commands.executeCommand('setContext', copilotNesCaptureMode, true);
+		await commands.executeCommand(
+			'setContext',
+			copilotNesCaptureMode,
+			true,
+		);
 
 		// Show status bar message
 		this._createStatusBarItem();
 
-		this._logger.info(`Started capture session: trigger=${trigger}, documentUri=${editor.document.uri.toString()}, hasMetadata=${!!nesMetadata}`);
+		this._logger.info(
+			`Started capture session: trigger=${trigger}, documentUri=${editor.document.uri.toString()}, hasMetadata=${!!nesMetadata}`,
+		);
 	}
 
 	/**
@@ -149,11 +188,15 @@ export class ExpectedEditCaptureController extends Disposable {
 			this._state.endBookmark = endBookmark;
 
 			// Get log slices
-			const logUpToStart = this._debugRecorder.getRecentLog(this._state.startBookmark);
+			const logUpToStart = this._debugRecorder.getRecentLog(
+				this._state.startBookmark,
+			);
 			const logUpToEnd = this._debugRecorder.getRecentLog(endBookmark);
 
 			if (!logUpToStart || !logUpToEnd) {
-				this._logger.warn('Failed to retrieve logs from debug recorder');
+				this._logger.warn(
+					'Failed to retrieve logs from debug recorder',
+				);
 				await this.abortCapture();
 				return;
 			}
@@ -162,31 +205,46 @@ export class ExpectedEditCaptureController extends Disposable {
 			const nextUserEdit = this._extractEditsBetweenBookmarks(
 				logUpToStart,
 				logUpToEnd,
-				this._state.startDocumentId
+				this._state.startDocumentId,
 			);
 
 			// Build recording
 			// Filter out both non-interacted documents and sensitive files (settings.json, .env)
-			const filteredLog = filterLogForSensitiveFiles(this._filterLogForNonInteractedDocuments(logUpToStart));
+			const filteredLog = filterLogForSensitiveFiles(
+				this._filterLogForNonInteractedDocuments(logUpToStart),
+			);
 			const recording = {
 				log: filteredLog,
-				nextUserEdit: nextUserEdit
+				nextUserEdit: nextUserEdit,
 			};
 
 			// Save to disk
-			const noEditExpected = nextUserEdit?.edit && typeof nextUserEdit.edit === 'object' && '__marker__' in nextUserEdit.edit && nextUserEdit.edit.__marker__ === 'NO_EDIT_EXPECTED';
+			const noEditExpected =
+				nextUserEdit?.edit &&
+				typeof nextUserEdit.edit === 'object' &&
+				'__marker__' in nextUserEdit.edit &&
+				nextUserEdit.edit.__marker__ === 'NO_EDIT_EXPECTED';
 			await this._saveRecording(recording, this._state, noEditExpected);
 
 			const durationMs = Date.now() - this._state.startTime;
-			this._logger.info(`Capture confirmed and saved: durationMs=${durationMs}, hasEdit=${!noEditExpected}, noEditExpected=${noEditExpected}, trigger=${this._state.trigger}`);
+			this._logger.info(
+				`Capture confirmed and saved: durationMs=${durationMs}, hasEdit=${!noEditExpected}, noEditExpected=${noEditExpected}, trigger=${this._state.trigger}`,
+			);
 
 			if (noEditExpected) {
-				window.showInformationMessage('Captured: No edit expected (this is valid feedback!).');
+				window.showInformationMessage(
+					'Captured: No edit expected (this is valid feedback!).',
+				);
 			} else {
-				window.showInformationMessage('Expected edit captured successfully!');
+				window.showInformationMessage(
+					'Expected edit captured successfully!',
+				);
 			}
 		} catch (error) {
-			this._logger.error(error instanceof Error ? error : String(error), 'Error confirming capture');
+			this._logger.error(
+				error instanceof Error ? error : String(error),
+				'Error confirming capture',
+			);
 			window.showErrorMessage('Failed to save expected edit capture');
 		} finally {
 			await this.cleanup();
@@ -210,7 +268,11 @@ export class ExpectedEditCaptureController extends Disposable {
 	 */
 	private async cleanup(): Promise<void> {
 		this._state = undefined;
-		await commands.executeCommand('setContext', copilotNesCaptureMode, false);
+		await commands.executeCommand(
+			'setContext',
+			copilotNesCaptureMode,
+			false,
+		);
 		this._disposeStatusBarItem();
 	}
 
@@ -225,8 +287,13 @@ export class ExpectedEditCaptureController extends Disposable {
 			clearInterval(this._statusBarAnimationInterval);
 		}
 
-		this._statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left, 10000); // High priority for visibility
-		this._statusBarItem.backgroundColor = new ThemeColor('statusBarItem.errorBackground');
+		this._statusBarItem = window.createStatusBarItem(
+			StatusBarAlignment.Left,
+			10000,
+		); // High priority for visibility
+		this._statusBarItem.backgroundColor = new ThemeColor(
+			'statusBarItem.errorBackground',
+		);
 
 		// Rich markdown tooltip
 		const ctrlOrCmd = process.platform === 'darwin' ? 'Cmd' : 'Ctrl';
@@ -234,7 +301,9 @@ export class ExpectedEditCaptureController extends Disposable {
 		tooltip.appendMarkdown('### 🔴 NES CAPTURE MODE ACTIVE\n\n');
 		tooltip.appendMarkdown('Type your expected edit, then:\n\n');
 		tooltip.appendMarkdown(`- **${ctrlOrCmd}+Enter** — Save your edits\n`);
-		tooltip.appendMarkdown(`- **${ctrlOrCmd}+Enter (empty)** — No edit expected\n`);
+		tooltip.appendMarkdown(
+			`- **${ctrlOrCmd}+Enter (empty)** — No edit expected\n`,
+		);
 		tooltip.appendMarkdown('- **Esc** — Cancel capture\n');
 		tooltip.isTrusted = true;
 		this._statusBarItem.tooltip = tooltip;
@@ -285,8 +354,13 @@ export class ExpectedEditCaptureController extends Disposable {
 	private _extractEditsBetweenBookmarks(
 		logBefore: LogEntry[],
 		logAfter: LogEntry[],
-		targetDocId: DocumentId
-	): { relativePath: string; edit: ISerializedEdit | { __marker__: 'NO_EDIT_EXPECTED' } } | undefined {
+		targetDocId: DocumentId,
+	):
+		| {
+				relativePath: string;
+				edit: ISerializedEdit | { __marker__: 'NO_EDIT_EXPECTED' };
+		  }
+		| undefined {
 		// Find the numeric ID for our target document
 		let docNumericId: number | undefined;
 		let relativePath: string | undefined;
@@ -295,7 +369,10 @@ export class ExpectedEditCaptureController extends Disposable {
 			if (entry.kind === 'documentEncountered') {
 				const entryPath = entry.relativePath;
 				// Check if this is our document by comparing paths
-				if (entryPath && this._pathMatchesDocument(entryPath, targetDocId)) {
+				if (
+					entryPath &&
+					this._pathMatchesDocument(entryPath, targetDocId)
+				) {
 					docNumericId = entry.id;
 					relativePath = entry.relativePath;
 					break;
@@ -312,15 +389,17 @@ export class ExpectedEditCaptureController extends Disposable {
 		const newEntries = logAfter.slice(logBefore.length);
 
 		// Filter for 'changed' entries on target document
-		const editEntries = newEntries.filter(e =>
-			e.kind === 'changed' && e.id === docNumericId
+		const editEntries = newEntries.filter(
+			(e) => e.kind === 'changed' && e.id === docNumericId,
 		);
 
 		if (editEntries.length === 0) {
-			this._logger.trace('No edits found between bookmarks - marking as NO_EDIT_EXPECTED');
+			this._logger.trace(
+				'No edits found between bookmarks - marking as NO_EDIT_EXPECTED',
+			);
 			return {
 				relativePath,
-				edit: { __marker__: 'NO_EDIT_EXPECTED' as const }
+				edit: { __marker__: 'NO_EDIT_EXPECTED' as const },
 			};
 		}
 
@@ -328,20 +407,26 @@ export class ExpectedEditCaptureController extends Disposable {
 		let composedEdit: ISerializedEdit = [];
 		for (const entry of editEntries) {
 			if (entry.kind === 'changed') {
-				composedEdit = this._composeSerializedEdits(composedEdit, entry.edit);
+				composedEdit = this._composeSerializedEdits(
+					composedEdit,
+					entry.edit,
+				);
 			}
 		}
 
 		return {
 			relativePath,
-			edit: composedEdit
+			edit: composedEdit,
 		};
 	}
 
 	/**
 	 * Check if a relative path from the log matches a DocumentId.
 	 */
-	private _pathMatchesDocument(logPath: string, documentId: DocumentId): boolean {
+	private _pathMatchesDocument(
+		logPath: string,
+		documentId: DocumentId,
+	): boolean {
 		// Simple comparison - both should be relative paths
 		// For notebook cells, the log path includes the fragment (e.g., "file.ipynb#cell0")
 		const docPath = documentId.path;
@@ -353,7 +438,7 @@ export class ExpectedEditCaptureController extends Disposable {
 	 */
 	private _composeSerializedEdits(
 		first: ISerializedEdit,
-		second: ISerializedEdit
+		second: ISerializedEdit,
 	): ISerializedEdit {
 		const firstEdit = deserializeEdit(first);
 		const secondEdit = deserializeEdit(second);
@@ -373,8 +458,7 @@ export class ExpectedEditCaptureController extends Disposable {
 
 		for (const entry of log) {
 			// Documents with these events are "real" documents that the user interacted with
-			if (entry.kind === 'selectionChanged' ||
-				entry.kind === 'changed') {
+			if (entry.kind === 'selectionChanged' || entry.kind === 'changed') {
 				if ('id' in entry && typeof entry.id === 'number') {
 					interactedDocIds.add(entry.id);
 				}
@@ -387,13 +471,15 @@ export class ExpectedEditCaptureController extends Disposable {
 			if (entry.kind === 'documentEncountered') {
 				if (!interactedDocIds.has(entry.id)) {
 					excludedDocIds.add(entry.id);
-					this._logger.trace(`Filtering out background document: ${entry.relativePath}`);
+					this._logger.trace(
+						`Filtering out background document: ${entry.relativePath}`,
+					);
 				}
 			}
 		}
 
 		// Filter the log to exclude non-interactive documents
-		return log.filter(entry => {
+		return log.filter((entry) => {
 			if (entry.kind === 'header') {
 				return true;
 			}
@@ -408,9 +494,15 @@ export class ExpectedEditCaptureController extends Disposable {
 	 * Save the recording to disk in .recording.w.json format.
 	 */
 	private async _saveRecording(
-		recording: { log: LogEntry[]; nextUserEdit?: { relativePath: string; edit: ISerializedEdit | { __marker__: 'NO_EDIT_EXPECTED' } } },
+		recording: {
+			log: LogEntry[];
+			nextUserEdit?: {
+				relativePath: string;
+				edit: ISerializedEdit | { __marker__: 'NO_EDIT_EXPECTED' };
+			};
+		},
 		state: CaptureState,
-		noEditExpected: boolean = false
+		noEditExpected: boolean = false,
 	): Promise<void> {
 		const workspaceFolder = workspace.workspaceFolders?.[0];
 		if (!workspaceFolder) {
@@ -418,7 +510,10 @@ export class ExpectedEditCaptureController extends Disposable {
 		}
 
 		// Create folder if it doesn't exist
-		const folderUri = Uri.joinPath(workspaceFolder.uri, ExpectedEditCaptureController.CAPTURE_FOLDER);
+		const folderUri = Uri.joinPath(
+			workspaceFolder.uri,
+			ExpectedEditCaptureController.CAPTURE_FOLDER,
+		);
 		try {
 			await workspace.fs.createDirectory(folderUri);
 		} catch (error) {
@@ -426,7 +521,10 @@ export class ExpectedEditCaptureController extends Disposable {
 		}
 
 		// Generate filename with timestamp
-		const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+		const timestamp = new Date()
+			.toISOString()
+			.replace(/[:.]/g, '-')
+			.slice(0, -5);
 		const filename = `capture-${timestamp}.recording.w.json`;
 		const fileUri = Uri.joinPath(folderUri, filename);
 
@@ -437,7 +535,9 @@ export class ExpectedEditCaptureController extends Disposable {
 		// Optionally save metadata
 		await this._saveMetadata(folderUri, filename, state, noEditExpected);
 
-		this._logger.info(`Saved recording: path=${fileUri.fsPath}, noEditExpected=${noEditExpected}`);
+		this._logger.info(
+			`Saved recording: path=${fileUri.fsPath}, noEditExpected=${noEditExpected}`,
+		);
 	}
 
 	/**
@@ -447,9 +547,12 @@ export class ExpectedEditCaptureController extends Disposable {
 		folderUri: Uri,
 		recordingFilename: string,
 		state: CaptureState,
-		noEditExpected: boolean = false
+		noEditExpected: boolean = false,
 	): Promise<void> {
-		const metadataFilename = recordingFilename.replace('.recording.w.json', '.metadata.json');
+		const metadataFilename = recordingFilename.replace(
+			'.recording.w.json',
+			'.metadata.json',
+		);
 		const metadataUri = Uri.joinPath(folderUri, metadataFilename);
 
 		const metadata = {
@@ -457,7 +560,7 @@ export class ExpectedEditCaptureController extends Disposable {
 			trigger: state.trigger,
 			durationMs: Date.now() - state.startTime,
 			noEditExpected,
-			originalNesContext: state.originalNesMetadata
+			originalNesContext: state.originalNesMetadata,
 		};
 
 		const content = JSON.stringify(metadata, null, 2);
@@ -475,7 +578,10 @@ export class ExpectedEditCaptureController extends Disposable {
 			return;
 		}
 
-		const feedbackFolderUri = Uri.joinPath(workspaceFolder.uri, ExpectedEditCaptureController.CAPTURE_FOLDER);
+		const feedbackFolderUri = Uri.joinPath(
+			workspaceFolder.uri,
+			ExpectedEditCaptureController.CAPTURE_FOLDER,
+		);
 		await this._feedbackSubmitter.submitFromFolder(feedbackFolderUri);
 	}
 
@@ -484,7 +590,11 @@ export class ExpectedEditCaptureController extends Disposable {
 		if (this._state?.active) {
 			this._state = undefined;
 			// Note: Can't await in dispose, but this is best-effort cleanup
-			void commands.executeCommand('setContext', copilotNesCaptureMode, false);
+			void commands.executeCommand(
+				'setContext',
+				copilotNesCaptureMode,
+				false,
+			);
 		}
 		this._disposeStatusBarItem();
 		super.dispose();

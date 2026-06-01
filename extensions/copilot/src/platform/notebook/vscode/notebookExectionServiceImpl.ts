@@ -15,7 +15,7 @@ export enum NotebookCellExecutionState {
 	/**
 	 * The cell is currently executing.
 	 */
-	Executing = 2
+	Executing = 2,
 }
 
 /**
@@ -32,38 +32,51 @@ export interface NotebookCellExecutionStateChangeEvent {
 	readonly state: NotebookCellExecutionState;
 }
 
-
 export class NotebookExecutionServiceImpl implements IDisposable {
-	private readonly _onDidChangeNotebookCellExecutionStateEmitter = new Emitter<NotebookCellExecutionStateChangeEvent>();
-	readonly onDidChangeNotebookCellExecutionState = this._onDidChangeNotebookCellExecutionStateEmitter.event;
+	private readonly _onDidChangeNotebookCellExecutionStateEmitter =
+		new Emitter<NotebookCellExecutionStateChangeEvent>();
+	readonly onDidChangeNotebookCellExecutionState =
+		this._onDidChangeNotebookCellExecutionStateEmitter.event;
 
 	private _disposables: IDisposable[] = [];
 	// track cell in execution
 	private _cellExecution = new WeakMap<NotebookCell, boolean>();
 
 	constructor() {
-		this._disposables.push(workspace.onDidChangeNotebookDocument(e => {
-			for (const cellChange of e.cellChanges) {
-				if (cellChange.executionSummary) {
-					const executionSummary = cellChange.executionSummary;
+		this._disposables.push(
+			workspace.onDidChangeNotebookDocument((e) => {
+				for (const cellChange of e.cellChanges) {
+					if (cellChange.executionSummary) {
+						const executionSummary = cellChange.executionSummary;
 
-					if (executionSummary.success === undefined) {
-						// in execution
-						if (!this._cellExecution.has(cellChange.cell)) {
-							this._cellExecution.set(cellChange.cell, true);
-							this._onDidChangeNotebookCellExecutionStateEmitter.fire({ cell: cellChange.cell, state: NotebookCellExecutionState.Executing });
+						if (executionSummary.success === undefined) {
+							// in execution
+							if (!this._cellExecution.has(cellChange.cell)) {
+								this._cellExecution.set(cellChange.cell, true);
+								this._onDidChangeNotebookCellExecutionStateEmitter.fire(
+									{
+										cell: cellChange.cell,
+										state: NotebookCellExecutionState.Executing,
+									},
+								);
+							}
+						} else {
+							// finished execution
+							this._cellExecution.delete(cellChange.cell);
+							this._onDidChangeNotebookCellExecutionStateEmitter.fire(
+								{
+									cell: cellChange.cell,
+									state: NotebookCellExecutionState.Idle,
+								},
+							);
 						}
-					} else {
-						// finished execution
-						this._cellExecution.delete(cellChange.cell);
-						this._onDidChangeNotebookCellExecutionStateEmitter.fire({ cell: cellChange.cell, state: NotebookCellExecutionState.Idle });
 					}
 				}
-			}
-		}));
+			}),
+		);
 	}
 
 	dispose() {
-		this._disposables.forEach(d => d.dispose());
+		this._disposables.forEach((d) => d.dispose());
 	}
 }

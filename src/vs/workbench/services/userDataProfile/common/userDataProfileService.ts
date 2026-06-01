@@ -3,26 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Promises } from '../../../../base/common/async.js';
-import { Emitter } from '../../../../base/common/event.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { equals } from '../../../../base/common/objects.js';
-import { IUserDataProfile } from '../../../../platform/userDataProfile/common/userDataProfile.js';
-import { DidChangeUserDataProfileEvent, IUserDataProfileService } from './userDataProfile.js';
+import { Promises } from "../../../../base/common/async.js";
+import { Emitter } from "../../../../base/common/event.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { equals } from "../../../../base/common/objects.js";
+import { IUserDataProfile } from "../../../../platform/userDataProfile/common/userDataProfile.js";
+import {
+	DidChangeUserDataProfileEvent,
+	IUserDataProfileService,
+} from "./userDataProfile.js";
 
-export class UserDataProfileService extends Disposable implements IUserDataProfileService {
-
+export class UserDataProfileService
+	extends Disposable
+	implements IUserDataProfileService
+{
 	readonly _serviceBrand: undefined;
 
-	private readonly _onDidChangeCurrentProfile = this._register(new Emitter<DidChangeUserDataProfileEvent>());
+	private readonly _onDidChangeCurrentProfile = this._register(
+		new Emitter<DidChangeUserDataProfileEvent>(),
+	);
 	readonly onDidChangeCurrentProfile = this._onDidChangeCurrentProfile.event;
 
 	private _currentProfile: IUserDataProfile;
-	get currentProfile(): IUserDataProfile { return this._currentProfile; }
+	get currentProfile(): IUserDataProfile {
+		return this._currentProfile;
+	}
 
-	constructor(
-		currentProfile: IUserDataProfile
-	) {
+	constructor(currentProfile: IUserDataProfile) {
 		super();
 		this._currentProfile = currentProfile;
 	}
@@ -39,7 +46,7 @@ export class UserDataProfileService extends Disposable implements IUserDataProfi
 			profile: userDataProfile,
 			join(promise) {
 				joiners.push(promise);
-			}
+			},
 		});
 		await Promises.settled(joiners);
 	}

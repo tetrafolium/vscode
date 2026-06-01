@@ -5,7 +5,12 @@
 
 export type OTelExporterType = 'otlp-grpc' | 'otlp-http' | 'console' | 'file';
 
-export type OTelEnabledVia = 'envVar' | 'setting' | 'otlpEndpointEnvVar' | 'dbSpanExporterOnly' | 'disabled';
+export type OTelEnabledVia =
+	| 'envVar'
+	| 'setting'
+	| 'otlpEndpointEnvVar'
+	| 'dbSpanExporterOnly'
+	| 'disabled';
 
 /** Default OTLP endpoint used when no env var or setting overrides it. */
 export const DEFAULT_OTLP_ENDPOINT = 'http://localhost:4318';
@@ -42,7 +47,9 @@ export interface OTelConfig {
 /**
  * Parse `OTEL_RESOURCE_ATTRIBUTES` format: "key1=val1,key2=val2"
  */
-function parseResourceAttributes(raw: string | undefined): Record<string, string> {
+function parseResourceAttributes(
+	raw: string | undefined,
+): Record<string, string> {
 	if (!raw) {
 		return {};
 	}
@@ -65,7 +72,10 @@ function parseResourceAttributes(raw: string | undefined): Record<string, string
  * For gRPC: returns origin (scheme://host:port).
  * For HTTP: returns full href.
  */
-function parseOtlpEndpoint(raw: string | undefined, protocol: 'grpc' | 'http'): string | undefined {
+function parseOtlpEndpoint(
+	raw: string | undefined,
+	protocol: 'grpc' | 'http',
+): string | undefined {
 	if (!raw) {
 		return undefined;
 	}
@@ -112,15 +122,17 @@ export function resolveOTelConfig(input: OTelConfigInput): OTelConfig {
 
 	// Determine if enabled: env > setting > dbSpanExporter > default(false)
 	// When dbSpanExporter is on, OTel must be enabled for the SDK pipeline to work.
-	const enabled = (envBool(env['COPILOT_OTEL_ENABLED'])
-		?? input.settingEnabled
-		?? (!!env['OTEL_EXPORTER_OTLP_ENDPOINT']))
-		|| dbSpanExporter;
+	const enabled =
+		(envBool(env['COPILOT_OTEL_ENABLED']) ??
+			input.settingEnabled ??
+			!!env['OTEL_EXPORTER_OTLP_ENDPOINT']) ||
+		dbSpanExporter;
 
 	// OTel was explicitly enabled if the user/env turned it on, not just dbSpanExporter
-	const enabledExplicitly = (envBool(env['COPILOT_OTEL_ENABLED'])
-		?? input.settingEnabled
-		?? (!!env['OTEL_EXPORTER_OTLP_ENDPOINT'])) === true;
+	const enabledExplicitly =
+		(envBool(env['COPILOT_OTEL_ENABLED']) ??
+			input.settingEnabled ??
+			!!env['OTEL_EXPORTER_OTLP_ENDPOINT']) === true;
 
 	if (!enabled) {
 		return createDisabledConfig(input);
@@ -139,18 +151,22 @@ export function resolveOTelConfig(input: OTelConfigInput): OTelConfig {
 	}
 
 	// Protocol: env > inferred from exporter type > default
-	const rawProtocol = env['OTEL_EXPORTER_OTLP_PROTOCOL'] ?? env['COPILOT_OTEL_PROTOCOL'];
+	const rawProtocol =
+		env['OTEL_EXPORTER_OTLP_PROTOCOL'] ?? env['COPILOT_OTEL_PROTOCOL'];
 	const protocol: 'grpc' | 'http' = rawProtocol === 'grpc' ? 'grpc' : 'http';
 
 	// Endpoint: COPILOT_OTEL env > OTEL env > setting > default
-	const rawEndpoint = env['COPILOT_OTEL_ENDPOINT']
-		?? env['OTEL_EXPORTER_OTLP_ENDPOINT']
-		?? input.settingOtlpEndpoint
-		?? DEFAULT_OTLP_ENDPOINT;
-	const otlpEndpoint = parseOtlpEndpoint(rawEndpoint, protocol) ?? DEFAULT_OTLP_ENDPOINT;
+	const rawEndpoint =
+		env['COPILOT_OTEL_ENDPOINT'] ??
+		env['OTEL_EXPORTER_OTLP_ENDPOINT'] ??
+		input.settingOtlpEndpoint ??
+		DEFAULT_OTLP_ENDPOINT;
+	const otlpEndpoint =
+		parseOtlpEndpoint(rawEndpoint, protocol) ?? DEFAULT_OTLP_ENDPOINT;
 
 	// File exporter path
-	const fileExporterPath = env['COPILOT_OTEL_FILE_EXPORTER_PATH'] ?? input.settingOutfile;
+	const fileExporterPath =
+		env['COPILOT_OTEL_FILE_EXPORTER_PATH'] ?? input.settingOutfile;
 
 	// Exporter type
 	let exporterType: OTelExporterType;
@@ -163,30 +179,44 @@ export function resolveOTelConfig(input: OTelConfigInput): OTelConfig {
 	}
 
 	// Content capture
-	const captureContent = envBool(env['COPILOT_OTEL_CAPTURE_CONTENT'])
-		?? input.settingCaptureContent
-		?? false;
+	const captureContent =
+		envBool(env['COPILOT_OTEL_CAPTURE_CONTENT']) ??
+		input.settingCaptureContent ??
+		false;
 
 	// Max attribute size in characters: env > setting > default(0 = unlimited).
-	const maxAttributeSizeChars = parseMaxAttributeSizeChars(env['COPILOT_OTEL_MAX_ATTRIBUTE_SIZE_CHARS'])
-		?? input.settingMaxAttributeSizeChars
-		?? 0;
+	const maxAttributeSizeChars =
+		parseMaxAttributeSizeChars(
+			env['COPILOT_OTEL_MAX_ATTRIBUTE_SIZE_CHARS'],
+		) ??
+		input.settingMaxAttributeSizeChars ??
+		0;
 
 	// Log level
-	const validLogLevels = new Set<OTelConfig['logLevel']>(['trace', 'debug', 'info', 'warn', 'error']);
+	const validLogLevels = new Set<OTelConfig['logLevel']>([
+		'trace',
+		'debug',
+		'info',
+		'warn',
+		'error',
+	]);
 	const rawLogLevel = env['COPILOT_OTEL_LOG_LEVEL'];
-	const logLevel: OTelConfig['logLevel'] = rawLogLevel && validLogLevels.has(rawLogLevel as OTelConfig['logLevel'])
-		? rawLogLevel as OTelConfig['logLevel']
-		: 'info';
+	const logLevel: OTelConfig['logLevel'] =
+		rawLogLevel && validLogLevels.has(rawLogLevel as OTelConfig['logLevel'])
+			? (rawLogLevel as OTelConfig['logLevel'])
+			: 'info';
 
 	// HTTP instrumentation
-	const httpInstrumentation = envBool(env['COPILOT_OTEL_HTTP_INSTRUMENTATION']) ?? false;
+	const httpInstrumentation =
+		envBool(env['COPILOT_OTEL_HTTP_INSTRUMENTATION']) ?? false;
 
 	// Service name
 	const serviceName = env['OTEL_SERVICE_NAME'] ?? 'copilot-chat';
 
 	// Resource attributes
-	const resourceAttributes = parseResourceAttributes(env['OTEL_RESOURCE_ATTRIBUTES']);
+	const resourceAttributes = parseResourceAttributes(
+		env['OTEL_RESOURCE_ATTRIBUTES'],
+	);
 
 	return Object.freeze({
 		enabled: true,
@@ -196,7 +226,8 @@ export function resolveOTelConfig(input: OTelConfigInput): OTelConfig {
 		otlpEndpoint,
 		otlpProtocol: protocol,
 		captureContent,
-		maxAttributeSizeChars: maxAttributeSizeChars < 0 ? 0 : maxAttributeSizeChars,
+		maxAttributeSizeChars:
+			maxAttributeSizeChars < 0 ? 0 : maxAttributeSizeChars,
 		fileExporterPath,
 		dbSpanExporter,
 		logLevel,
@@ -241,7 +272,9 @@ function envBool(val: string | undefined): boolean | undefined {
  * returns `undefined` so the caller can fall back to the next config layer.
  * Negative values are clamped to `0` (no truncation) by the caller.
  */
-function parseMaxAttributeSizeChars(val: string | undefined): number | undefined {
+function parseMaxAttributeSizeChars(
+	val: string | undefined,
+): number | undefined {
 	if (val === undefined || val === '') {
 		return undefined;
 	}

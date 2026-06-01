@@ -3,23 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type * as vscode from 'vscode';
-import * as extHostProtocol from './extHost.protocol.js';
-import { ExtensionIdentifier, IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
+import type * as vscode from "vscode";
+import * as extHostProtocol from "./extHost.protocol.js";
+import {
+	ExtensionIdentifier,
+	IExtensionDescription,
+} from "../../../platform/extensions/common/extensions.js";
 
 export class ExtHostChatInputNotification {
-
 	private readonly _proxy: extHostProtocol.MainThreadChatInputNotificationShape;
 
 	private readonly _items = new Map<string, vscode.ChatInputNotification>();
 
-	constructor(
-		mainContext: extHostProtocol.IMainContext
-	) {
-		this._proxy = mainContext.getProxy(extHostProtocol.MainContext.MainThreadChatInputNotification);
+	constructor(mainContext: extHostProtocol.IMainContext) {
+		this._proxy = mainContext.getProxy(
+			extHostProtocol.MainContext.MainThreadChatInputNotification,
+		);
 	}
 
-	createInputNotification(extension: IExtensionDescription, id: string): vscode.ChatInputNotification {
+	createInputNotification(
+		extension: IExtensionDescription,
+		id: string,
+	): vscode.ChatInputNotification {
 		const internalId = asNotificationIdentifier(extension.identifier, id);
 		if (this._items.has(internalId)) {
 			throw new Error(`Chat input notification '${id}' already exists`);
@@ -28,7 +33,7 @@ export class ExtHostChatInputNotification {
 		const state: extHostProtocol.ChatInputNotificationDto = {
 			id: internalId,
 			severity: extHostProtocol.ChatInputNotificationSeverityDto.Info,
-			message: '',
+			message: "",
 			description: undefined,
 			actions: [],
 			dismissible: true,
@@ -39,7 +44,7 @@ export class ExtHostChatInputNotification {
 		let visible = false;
 		const syncState = () => {
 			if (disposed) {
-				throw new Error('Chat input notification is disposed');
+				throw new Error("Chat input notification is disposed");
 			}
 
 			if (!visible) {
@@ -56,7 +61,8 @@ export class ExtHostChatInputNotification {
 				return state.severity as number as vscode.ChatInputNotificationSeverity;
 			},
 			set severity(value: vscode.ChatInputNotificationSeverity) {
-				state.severity = value as number as extHostProtocol.ChatInputNotificationSeverityDto;
+				state.severity =
+					value as number as extHostProtocol.ChatInputNotificationSeverityDto;
 				syncState();
 			},
 
@@ -80,7 +86,11 @@ export class ExtHostChatInputNotification {
 				return state.actions;
 			},
 			set actions(value: vscode.ChatInputNotificationAction[]) {
-				state.actions = value.map(a => ({ label: a.label, commandId: a.commandId, commandArgs: a.commandArgs }));
+				state.actions = value.map((a) => ({
+					label: a.label,
+					commandId: a.commandId,
+					commandArgs: a.commandArgs,
+				}));
 				syncState();
 			},
 
@@ -127,6 +137,9 @@ export class ExtHostChatInputNotification {
 	}
 }
 
-function asNotificationIdentifier(extension: ExtensionIdentifier, id: string): string {
+function asNotificationIdentifier(
+	extension: ExtensionIdentifier,
+	id: string,
+): string {
 	return `${ExtensionIdentifier.toKey(extension)}.${id}`;
 }

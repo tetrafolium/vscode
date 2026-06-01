@@ -3,63 +3,81 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ApplicationService } from '../application';
-import { z } from 'zod';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ApplicationService } from "../application";
+import { z } from "zod";
 
 /**
  * Debug Tools
  */
-export function applyDebugTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applyDebugTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	const tools: RegisteredTool[] = [];
-	tools.push(server.tool(
-		'vscode_automation_debug_open',
-		'Open the debug viewlet',
-		async () => {
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.debug.openDebugViewlet();
-			return {
-				content: [{
-					type: 'text' as const,
-					text: 'Opened debug viewlet'
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_debug_open",
+			"Open the debug viewlet",
+			async () => {
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.debug.openDebugViewlet();
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: "Opened debug viewlet",
+						},
+					],
+				};
+			},
+		),
+	);
 
-	tools.push(server.tool(
-		'vscode_automation_debug_set_breakpoint',
-		'Set a breakpoint on a specific line',
-		{
-			lineNumber: z.number().describe('Line number to set breakpoint on')
-		},
-		async (args) => {
-			const { lineNumber } = args;
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.debug.setBreakpointOnLine(lineNumber);
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `Set breakpoint on line ${lineNumber}`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_debug_set_breakpoint",
+			"Set a breakpoint on a specific line",
+			{
+				lineNumber: z.number().describe("Line number to set breakpoint on"),
+			},
+			async (args) => {
+				const { lineNumber } = args;
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.debug.setBreakpointOnLine(lineNumber);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Set breakpoint on line ${lineNumber}`,
+						},
+					],
+				};
+			},
+		),
+	);
 
-	tools.push(server.tool(
-		'vscode_automation_debug_start',
-		'Start debugging',
-		async () => {
-			const app = await appService.getOrCreateApplication();
-			const result = await app.workbench.debug.startDebugging();
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `Started debugging (result: ${result})`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_debug_start",
+			"Start debugging",
+			async () => {
+				const app = await appService.getOrCreateApplication();
+				const result = await app.workbench.debug.startDebugging();
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Started debugging (result: ${result})`,
+						},
+					],
+				};
+			},
+		),
+	);
 
 	// Playwright can probably figure this out
 	// server.tool(

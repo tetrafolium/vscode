@@ -7,11 +7,12 @@ import { Raw } from '@vscode/prompt-tsx';
 import { toTextParts } from '../../../platform/chat/common/globalStringUtils';
 import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRange';
 
-
 /**
  * Remove backticks on the first and last lines.
  */
-export async function* linesWithBackticksRemoved(linesStream: AsyncIterable<string>): AsyncIterable<string> {
+export async function* linesWithBackticksRemoved(
+	linesStream: AsyncIterable<string>,
+): AsyncIterable<string> {
 	let lineN = -1;
 
 	let bufferedBacktickLine: string | undefined;
@@ -41,21 +42,39 @@ export async function* linesWithBackticksRemoved(linesStream: AsyncIterable<stri
 	// ignore bufferedLine
 }
 
-export function constructMessages({ systemMsg, userMsg }: { systemMsg: string; userMsg: string }): Raw.ChatMessage[] {
+export function constructMessages({
+	systemMsg,
+	userMsg,
+}: {
+	systemMsg: string;
+	userMsg: string;
+}): Raw.ChatMessage[] {
 	return [
 		{
 			role: Raw.ChatRole.System,
-			content: toTextParts(systemMsg)
+			content: toTextParts(systemMsg),
 		},
 		{
 			role: Raw.ChatRole.User,
-			content: toTextParts(userMsg)
-		}
+			content: toTextParts(userMsg),
+		},
 	] satisfies Raw.ChatMessage[];
 }
 
 export function charCount(messages: Raw.ChatMessage[]): number {
-	const promptCharCount = messages.reduce((total, msg) => total + msg.content.reduce((subtotal, part) => subtotal + (part.type === Raw.ChatCompletionContentPartKind.Text ? part.text.length : 0), 0), 0);
+	const promptCharCount = messages.reduce(
+		(total, msg) =>
+			total +
+			msg.content.reduce(
+				(subtotal, part) =>
+					subtotal +
+					(part.type === Raw.ChatCompletionContentPartKind.Text
+						? part.text.length
+						: 0),
+				0,
+			),
+		0,
+	);
 	return promptCharCount;
 }
 /**
@@ -67,14 +86,26 @@ export function charCount(messages: Raw.ChatMessage[]): number {
  * @returns An OffsetRange object representing the start and end of the conflict markers, or undefined if not found
  */
 
-export function findMergeConflictMarkersRange(lines: string[], editWindowRange: OffsetRange, maxMergeConflictLines: number): OffsetRange | undefined {
-	for (let i = editWindowRange.start; i < Math.min(lines.length, editWindowRange.endExclusive); ++i) {
+export function findMergeConflictMarkersRange(
+	lines: string[],
+	editWindowRange: OffsetRange,
+	maxMergeConflictLines: number,
+): OffsetRange | undefined {
+	for (
+		let i = editWindowRange.start;
+		i < Math.min(lines.length, editWindowRange.endExclusive);
+		++i
+	) {
 		if (!lines[i].startsWith('<<<<<<<')) {
 			continue;
 		}
 
 		// found start of merge conflict markers -- now find the end
-		for (let j = i + 1; j < lines.length && (j - i) < maxMergeConflictLines; ++j) {
+		for (
+			let j = i + 1;
+			j < lines.length && j - i < maxMergeConflictLines;
+			++j
+		) {
 			if (lines[j].startsWith('>>>>>>>')) {
 				return new OffsetRange(i, j + 1 /* because endExclusive */);
 			}

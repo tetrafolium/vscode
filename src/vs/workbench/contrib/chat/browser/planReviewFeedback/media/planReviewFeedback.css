@@ -7,7 +7,8 @@
 	position: absolute;
 	z-index: 10000;
 	background-color: var(--vscode-panel-background);
-	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-contrastBorder));
+	border: 1px solid
+		var(--vscode-editorWidget-border, var(--vscode-contrastBorder));
 	box-shadow: var(--vscode-shadow-lg);
 	border-radius: 8px;
 	padding: 4px;
@@ -80,7 +81,11 @@
 	flex-shrink: 0;
 }
 
-.plan-review-feedback-input-widget .plan-review-feedback-input-actions .action-bar .action-item .action-label {
+.plan-review-feedback-input-widget
+	.plan-review-feedback-input-actions
+	.action-bar
+	.action-item
+	.action-label {
 	width: 16px;
 	height: 16px;
 }
@@ -117,11 +122,17 @@
 	color: var(--vscode-button-foreground);
 }
 
-.monaco-workbench .plan-review-feedback-overlay-widget .monaco-action-bar .action-item.primary > .action-label:hover {
+.monaco-workbench
+	.plan-review-feedback-overlay-widget
+	.monaco-action-bar
+	.action-item.primary
+	> .action-label:hover {
 	background-color: var(--vscode-button-hoverBackground);
 }
 
-.plan-review-feedback-overlay-widget .action-item > .action-label.codicon:not(.separator) {
+.plan-review-feedback-overlay-widget
+	.action-item
+	> .action-label.codicon:not(.separator) {
 	color: var(--vscode-foreground);
 	width: 22px;
 	height: 22px;
@@ -134,7 +145,6 @@
 }
 
 .plan-review-feedback-overlay-widget .monaco-action-bar .action-item.disabled {
-
 	> .action-label.codicon::before,
 	> .action-label.codicon,
 	> .action-label,
@@ -148,8 +158,14 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.plan-review-feedback-overlay-widget .monaco-action-bar .action-item.label-item > .action-label,
-.plan-review-feedback-overlay-widget .monaco-action-bar .action-item.label-item > .action-label:hover {
+.plan-review-feedback-overlay-widget
+	.monaco-action-bar
+	.action-item.label-item
+	> .action-label,
+.plan-review-feedback-overlay-widget
+	.monaco-action-bar
+	.action-item.label-item
+	> .action-label:hover {
 	color: var(--vscode-foreground);
 	opacity: 1;
 }

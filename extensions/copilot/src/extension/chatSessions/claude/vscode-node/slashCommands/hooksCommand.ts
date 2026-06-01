@@ -5,12 +5,18 @@
 
 import * as vscode from 'vscode';
 import { INativeEnvService } from '../../../../../platform/env/common/envService';
-import { createDirectoryIfNotExists, IFileSystemService } from '../../../../../platform/filesystem/common/fileSystemService';
+import {
+	createDirectoryIfNotExists,
+	IFileSystemService,
+} from '../../../../../platform/filesystem/common/fileSystemService';
 import { ILogService } from '../../../../../platform/log/common/logService';
 import { IWorkspaceService } from '../../../../../platform/workspace/common/workspaceService';
 import { CancellationToken } from '../../../../../util/vs/base/common/cancellation';
 import { URI } from '../../../../../util/vs/base/common/uri';
-import { IClaudeSlashCommandHandler, registerClaudeSlashCommand } from './claudeSlashCommandRegistry';
+import {
+	IClaudeSlashCommandHandler,
+	registerClaudeSlashCommand,
+} from './claudeSlashCommandRegistry';
 
 /**
  * HOOKS CONFIGURATION WIZARD
@@ -61,43 +67,58 @@ const HOOK_EVENTS = [
 		id: 'PreToolUse',
 		label: vscode.l10n.t('Before tool execution'),
 		needsMatcher: true,
-		inputDescription: vscode.l10n.t('Exit 0: allow, Exit 2: block with stderr to model.'),
+		inputDescription: vscode.l10n.t(
+			'Exit 0: allow, Exit 2: block with stderr to model.',
+		),
 		jsonSchema: '{ "tool_name": string, "tool_input": object }',
 	},
 	{
 		id: 'PostToolUse',
 		label: vscode.l10n.t('After tool execution'),
 		needsMatcher: true,
-		inputDescription: vscode.l10n.t('Runs after tool completes successfully.'),
-		jsonSchema: '{ "tool_name": string, "tool_input": object, "tool_response": string }',
+		inputDescription: vscode.l10n.t(
+			'Runs after tool completes successfully.',
+		),
+		jsonSchema:
+			'{ "tool_name": string, "tool_input": object, "tool_response": string }',
 	},
 	{
 		id: 'PostToolUseFailure',
 		label: vscode.l10n.t('After tool execution fails'),
 		needsMatcher: true,
-		inputDescription: vscode.l10n.t('Runs when a tool fails or is interrupted.'),
-		jsonSchema: '{ "tool_name": string, "tool_input": object, "error": string, "is_interrupt": boolean }',
+		inputDescription: vscode.l10n.t(
+			'Runs when a tool fails or is interrupted.',
+		),
+		jsonSchema:
+			'{ "tool_name": string, "tool_input": object, "error": string, "is_interrupt": boolean }',
 	},
 	{
 		id: 'PermissionRequest',
 		label: vscode.l10n.t('When permission dialog would be displayed'),
 		needsMatcher: true,
-		inputDescription: vscode.l10n.t('Custom permission handling. Exit 0: allow, Exit 2: deny.'),
-		jsonSchema: '{ "tool_name": string, "tool_input": object, "permission_suggestions": string[] }',
+		inputDescription: vscode.l10n.t(
+			'Custom permission handling. Exit 0: allow, Exit 2: deny.',
+		),
+		jsonSchema:
+			'{ "tool_name": string, "tool_input": object, "permission_suggestions": string[] }',
 	},
 	// Lifecycle hooks (matchers ignored, fires for all events of this type)
 	{
 		id: 'UserPromptSubmit',
 		label: vscode.l10n.t('When the user submits a prompt'),
 		needsMatcher: false,
-		inputDescription: vscode.l10n.t('Exit 0: allow, Exit 2: block with stderr to model.'),
+		inputDescription: vscode.l10n.t(
+			'Exit 0: allow, Exit 2: block with stderr to model.',
+		),
 		jsonSchema: '{ "prompt": string }',
 	},
 	{
 		id: 'Stop',
 		label: vscode.l10n.t('When agent execution stops'),
 		needsMatcher: false,
-		inputDescription: vscode.l10n.t('Use to save state or clean up resources.'),
+		inputDescription: vscode.l10n.t(
+			'Use to save state or clean up resources.',
+		),
 		jsonSchema: '{ "stop_hook_active": boolean }',
 	},
 	{
@@ -111,15 +132,21 @@ const HOOK_EVENTS = [
 		id: 'SubagentStop',
 		label: vscode.l10n.t('When a subagent completes'),
 		needsMatcher: false,
-		inputDescription: vscode.l10n.t('Aggregate results from parallel tasks.'),
-		jsonSchema: '{ "agent_id": string, "agent_transcript_path": string, "stop_hook_active": boolean }',
+		inputDescription: vscode.l10n.t(
+			'Aggregate results from parallel tasks.',
+		),
+		jsonSchema:
+			'{ "agent_id": string, "agent_transcript_path": string, "stop_hook_active": boolean }',
 	},
 	{
 		id: 'PreCompact',
 		label: vscode.l10n.t('Before conversation compaction'),
 		needsMatcher: false,
-		inputDescription: vscode.l10n.t('Archive transcript before summarizing.'),
-		jsonSchema: '{ "trigger": "manual" | "auto", "custom_instructions": string }',
+		inputDescription: vscode.l10n.t(
+			'Archive transcript before summarizing.',
+		),
+		jsonSchema:
+			'{ "trigger": "manual" | "auto", "custom_instructions": string }',
 	},
 	{
 		id: 'SessionStart',
@@ -133,19 +160,21 @@ const HOOK_EVENTS = [
 		label: vscode.l10n.t('When a session terminates'),
 		needsMatcher: false,
 		inputDescription: vscode.l10n.t('Clean up temporary resources.'),
-		jsonSchema: '{ "reason": "clear" | "logout" | "prompt_input_exit" | "other" }',
+		jsonSchema:
+			'{ "reason": "clear" | "logout" | "prompt_input_exit" | "other" }',
 	},
 	{
 		id: 'Notification',
 		label: vscode.l10n.t('When agent status messages are sent'),
 		needsMatcher: false,
 		inputDescription: vscode.l10n.t('Send updates to Slack or dashboards.'),
-		jsonSchema: '{ "message": string, "notification_type": string, "title": string }',
+		jsonSchema:
+			'{ "message": string, "notification_type": string, "title": string }',
 	},
 ] as const;
 
-type HookEventId = typeof HOOK_EVENTS[number]['id'];
-type HookEvent = typeof HOOK_EVENTS[number];
+type HookEventId = (typeof HOOK_EVENTS)[number]['id'];
+type HookEvent = (typeof HOOK_EVENTS)[number];
 
 /**
  * Settings location type: 'local' or 'shared' for workspace, 'user' for global
@@ -215,28 +244,36 @@ interface IHooksWizardResult {
  */
 export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 	readonly commandName = 'hooks';
-	readonly description = 'Configure Claude Code hooks for tool execution and events';
+	readonly description =
+		'Configure Claude Code hooks for tool execution and events';
 	readonly commandId = 'copilot.claude.hooks';
 
 	constructor(
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
 		@INativeEnvService private readonly envService: INativeEnvService,
 		@ILogService private readonly logService: ILogService,
-	) { }
+	) {}
 
 	async handle(
 		_args: string,
 		stream: vscode.ChatResponseStream | undefined,
-		_token: CancellationToken
+		_token: CancellationToken,
 	): Promise<vscode.ChatResult> {
 		stream?.markdown(vscode.l10n.t('Opening hooks configuration...'));
 
 		// Fire and forget - wizard runs in background
-		this._runWizard().catch(error => {
-			this.logService.error('[HooksSlashCommand] Error running hooks wizard:', error);
+		this._runWizard().catch((error) => {
+			this.logService.error(
+				'[HooksSlashCommand] Error running hooks wizard:',
+				error,
+			);
 			vscode.window.showErrorMessage(
-				vscode.l10n.t('Error configuring hook: {0}', error instanceof Error ? error.message : String(error))
+				vscode.l10n.t(
+					'Error configuring hook: {0}',
+					error instanceof Error ? error.message : String(error),
+				),
 			);
 		});
 
@@ -257,7 +294,8 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 
 		if (eventConfig.needsMatcher) {
 			// Tool-based hook: show matchers with source locations
-			const matcherResult = await this._selectOrCreateMatcher(eventConfig);
+			const matcherResult =
+				await this._selectOrCreateMatcher(eventConfig);
 			if (!matcherResult) {
 				return undefined;
 			}
@@ -269,18 +307,34 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 				targetLocation = matcherResult.location!;
 
 				// Show existing hooks for this matcher and allow edit/add
-				const hookResult = await this._selectOrAddHookForEdit(eventConfig, matcher, targetLocation);
+				const hookResult = await this._selectOrAddHookForEdit(
+					eventConfig,
+					matcher,
+					targetLocation,
+				);
 				if (!hookResult) {
 					return undefined;
 				}
 
 				// Save to the original location
-				await this._saveHookConfig(eventConfig.id, matcher, hookResult.command, targetLocation, hookResult.originalCommand);
+				await this._saveHookConfig(
+					eventConfig.id,
+					matcher,
+					hookResult.command,
+					targetLocation,
+					hookResult.originalCommand,
+				);
 
 				// Open the file at the hook position
 				await this._openFileAtHook(targetLocation, hookResult.command);
 
-				return this._showSuccessAndReturn(eventConfig, matcher, hookResult.command, targetLocation, mode);
+				return this._showSuccessAndReturn(
+					eventConfig,
+					matcher,
+					hookResult.command,
+					targetLocation,
+					mode,
+				);
 			} else {
 				// Create mode: enter command, then pick location
 				const command = await this._enterCommand(eventConfig, matcher);
@@ -293,41 +347,85 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 					return undefined;
 				}
 
-				await this._saveHookConfig(eventConfig.id, matcher, command, location);
+				await this._saveHookConfig(
+					eventConfig.id,
+					matcher,
+					command,
+					location,
+				);
 
 				// Open the file at the hook position
 				await this._openFileAtHook(location, command);
 
-				return this._showSuccessAndReturn(eventConfig, matcher, command, location, mode);
+				return this._showSuccessAndReturn(
+					eventConfig,
+					matcher,
+					command,
+					location,
+					mode,
+				);
 			}
 		} else {
 			// Lifecycle hook: matcher is always "*"
 			matcher = '*';
 
 			// Check if hooks already exist for this event
-			const existingHooks = await this._getExistingHooksWithSource(eventConfig.id, matcher);
+			const existingHooks = await this._getExistingHooksWithSource(
+				eventConfig.id,
+				matcher,
+			);
 
 			if (existingHooks.length > 0) {
 				// Edit mode: show existing hooks
-				const hookResult = await this._selectOrAddHookFromList(eventConfig, matcher, existingHooks);
+				const hookResult = await this._selectOrAddHookFromList(
+					eventConfig,
+					matcher,
+					existingHooks,
+				);
 				if (!hookResult) {
 					return undefined;
 				}
 
 				if (hookResult.mode === 'edit') {
 					// Editing existing hook - save to its original location
-					await this._saveHookConfig(eventConfig.id, matcher, hookResult.command, hookResult.location!, hookResult.originalCommand);
-					await this._openFileAtHook(hookResult.location!, hookResult.command);
-					return this._showSuccessAndReturn(eventConfig, matcher, hookResult.command, hookResult.location!, 'edit');
+					await this._saveHookConfig(
+						eventConfig.id,
+						matcher,
+						hookResult.command,
+						hookResult.location!,
+						hookResult.originalCommand,
+					);
+					await this._openFileAtHook(
+						hookResult.location!,
+						hookResult.command,
+					);
+					return this._showSuccessAndReturn(
+						eventConfig,
+						matcher,
+						hookResult.command,
+						hookResult.location!,
+						'edit',
+					);
 				} else {
 					// Adding new hook - ask where to save
 					const location = await this._selectSaveLocation();
 					if (!location) {
 						return undefined;
 					}
-					await this._saveHookConfig(eventConfig.id, matcher, hookResult.command, location);
+					await this._saveHookConfig(
+						eventConfig.id,
+						matcher,
+						hookResult.command,
+						location,
+					);
 					await this._openFileAtHook(location, hookResult.command);
-					return this._showSuccessAndReturn(eventConfig, matcher, hookResult.command, location, 'create');
+					return this._showSuccessAndReturn(
+						eventConfig,
+						matcher,
+						hookResult.command,
+						location,
+						'create',
+					);
 				}
 			} else {
 				// Create mode: no existing hooks
@@ -341,9 +439,20 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 					return undefined;
 				}
 
-				await this._saveHookConfig(eventConfig.id, matcher, command, location);
+				await this._saveHookConfig(
+					eventConfig.id,
+					matcher,
+					command,
+					location,
+				);
 				await this._openFileAtHook(location, command);
-				return this._showSuccessAndReturn(eventConfig, matcher, command, location, 'create');
+				return this._showSuccessAndReturn(
+					eventConfig,
+					matcher,
+					command,
+					location,
+					'create',
+				);
 			}
 		}
 	}
@@ -351,13 +460,21 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 	/**
 	 * Opens the settings file and positions cursor at the hook command.
 	 */
-	private async _openFileAtHook(location: SettingsLocation, command: string): Promise<void> {
+	private async _openFileAtHook(
+		location: SettingsLocation,
+		command: string,
+	): Promise<void> {
 		try {
-			const document = await vscode.workspace.openTextDocument(vscode.Uri.file(location.settingsPath.fsPath));
+			const document = await vscode.workspace.openTextDocument(
+				vscode.Uri.file(location.settingsPath.fsPath),
+			);
 			const text = document.getText();
 
 			// Find the line containing the command
-			const commandEscaped = command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			const commandEscaped = command.replace(
+				/[.*+?^${}()|[\]\\]/g,
+				'\\$&',
+			);
 			const regex = new RegExp(`"command"\\s*:\\s*"${commandEscaped}"`);
 			const match = regex.exec(text);
 
@@ -366,7 +483,8 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 				const beforeMatch = text.substring(0, match.index);
 				const lineNumber = (beforeMatch.match(/\n/g) || []).length;
 				const lastNewline = beforeMatch.lastIndexOf('\n');
-				const column = match.index - lastNewline - 1 + match[0].indexOf(command);
+				const column =
+					match.index - lastNewline - 1 + match[0].indexOf(command);
 				position = new vscode.Position(lineNumber, column);
 			}
 
@@ -376,9 +494,14 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 			});
 
 			// Reveal the line in center of editor
-			editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter);
+			editor.revealRange(
+				new vscode.Range(position, position),
+				vscode.TextEditorRevealType.InCenter,
+			);
 		} catch (error) {
-			this.logService.warn(`[HooksSlashCommand] Failed to open file at hook position: ${error}`);
+			this.logService.warn(
+				`[HooksSlashCommand] Failed to open file at hook position: ${error}`,
+			);
 		}
 	}
 
@@ -387,7 +510,7 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 		matcher: string,
 		command: string,
 		location: SettingsLocation,
-		mode: 'create' | 'edit'
+		mode: 'create' | 'edit',
 	): IHooksWizardResult {
 		return {
 			event: eventConfig.label,
@@ -407,9 +530,11 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 
 		const selected = await vscode.window.showQuickPick(items, {
 			title: vscode.l10n.t('Configure Hook'),
-			placeHolder: vscode.l10n.t('Which hook would you like to configure?'),
+			placeHolder: vscode.l10n.t(
+				'Which hook would you like to configure?',
+			),
 			matchOnDetail: true,
-			ignoreFocusOut: true
+			ignoreFocusOut: true,
 		});
 
 		return selected?.event;
@@ -419,12 +544,17 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 	 * Shows existing matchers with their source locations (grouped by location label), plus option to add new.
 	 * Returns the selected matcher and whether we're in create or edit mode.
 	 */
-	private async _selectOrCreateMatcher(eventConfig: HookEvent): Promise<{
-		matcher: string;
-		mode: 'create' | 'edit';
-		location?: SettingsLocation;
-	} | undefined> {
-		const existingMatchers = await this._getExistingMatchersWithSource(eventConfig.id);
+	private async _selectOrCreateMatcher(eventConfig: HookEvent): Promise<
+		| {
+				matcher: string;
+				mode: 'create' | 'edit';
+				location?: SettingsLocation;
+		  }
+		| undefined
+	> {
+		const existingMatchers = await this._getExistingMatchersWithSource(
+			eventConfig.id,
+		);
 
 		type MatcherItem = vscode.QuickPickItem & {
 			isAddNew: boolean;
@@ -466,11 +596,11 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 			}
 		}
 
-		const selected = await vscode.window.showQuickPick(items, {
+		const selected = (await vscode.window.showQuickPick(items, {
 			title: vscode.l10n.t('Configure Hook: {0}', eventConfig.id),
 			placeHolder: vscode.l10n.t('Which tool should trigger this hook?'),
 			ignoreFocusOut: true,
-		}) as MatcherItem | undefined;
+		})) as MatcherItem | undefined;
 
 		if (!selected) {
 			return undefined;
@@ -480,8 +610,12 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 			// Create mode: prompt for new matcher
 			const newMatcher = await vscode.window.showInputBox({
 				title: vscode.l10n.t('Configure Hook: {0}', eventConfig.id),
-				prompt: vscode.l10n.t('Enter a tool name or pattern (e.g., "Bash", "Edit", or "*" for all)'),
-				placeHolder: vscode.l10n.t('Which tool should trigger this hook?'),
+				prompt: vscode.l10n.t(
+					'Enter a tool name or pattern (e.g., "Bash", "Edit", or "*" for all)',
+				),
+				placeHolder: vscode.l10n.t(
+					'Which tool should trigger this hook?',
+				),
 				ignoreFocusOut: true,
 			});
 
@@ -507,9 +641,13 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 	private async _selectOrAddHookForEdit(
 		eventConfig: HookEvent,
 		matcher: string,
-		location: SettingsLocation
+		location: SettingsLocation,
 	): Promise<{ command: string; originalCommand?: string } | undefined> {
-		const existingHooks = await this._getHooksAtLocation(eventConfig.id, matcher, location);
+		const existingHooks = await this._getHooksAtLocation(
+			eventConfig.id,
+			matcher,
+			location,
+		);
 
 		type HookItem = vscode.QuickPickItem & {
 			isAddNew: boolean;
@@ -539,11 +677,17 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 			}
 		}
 
-		const selected = await vscode.window.showQuickPick(items, {
-			title: vscode.l10n.t('Configure Hook: {0} → {1}', eventConfig.id, matcher),
-			placeHolder: vscode.l10n.t('Select a hook to edit or add a new one'),
+		const selected = (await vscode.window.showQuickPick(items, {
+			title: vscode.l10n.t(
+				'Configure Hook: {0} → {1}',
+				eventConfig.id,
+				matcher,
+			),
+			placeHolder: vscode.l10n.t(
+				'Select a hook to edit or add a new one',
+			),
 			ignoreFocusOut: true,
-		}) as HookItem | undefined;
+		})) as HookItem | undefined;
 
 		if (!selected) {
 			return undefined;
@@ -551,7 +695,11 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 
 		if (selected.isAddNew) {
 			// Add new hook to this location
-			const command = await this._enterCommand(eventConfig, matcher, location.label);
+			const command = await this._enterCommand(
+				eventConfig,
+				matcher,
+				location.label,
+			);
 			if (!command) {
 				return undefined;
 			}
@@ -560,9 +708,17 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 
 		// Edit existing hook
 		const editedCommand = await vscode.window.showInputBox({
-			title: vscode.l10n.t('Edit Hook: {0} → {1}', eventConfig.id, matcher),
+			title: vscode.l10n.t(
+				'Edit Hook: {0} → {1}',
+				eventConfig.id,
+				matcher,
+			),
 			value: selected.command,
-			prompt: vscode.l10n.t('Modifying {0}. Stdin Input: {1}', location.label, eventConfig.jsonSchema),
+			prompt: vscode.l10n.t(
+				'Modifying {0}. Stdin Input: {1}',
+				location.label,
+				eventConfig.jsonSchema,
+			),
 			placeHolder: './my-hook-script.sh',
 			ignoreFocusOut: true,
 		});
@@ -580,13 +736,16 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 	private async _selectOrAddHookFromList(
 		eventConfig: HookEvent,
 		matcher: string,
-		existingHooks: HookWithSource[]
-	): Promise<{
-		command: string;
-		mode: 'create' | 'edit';
-		location?: SettingsLocation;
-		originalCommand?: string;
-	} | undefined> {
+		existingHooks: HookWithSource[],
+	): Promise<
+		| {
+				command: string;
+				mode: 'create' | 'edit';
+				location?: SettingsLocation;
+				originalCommand?: string;
+		  }
+		| undefined
+	> {
 		type HookItem = vscode.QuickPickItem & {
 			isAddNew: boolean;
 			command?: string;
@@ -625,11 +784,13 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 			}
 		}
 
-		const selected = await vscode.window.showQuickPick(items, {
+		const selected = (await vscode.window.showQuickPick(items, {
 			title: vscode.l10n.t('Configure Hook: {0}', eventConfig.id),
-			placeHolder: vscode.l10n.t('Select a hook to edit or add a new one'),
+			placeHolder: vscode.l10n.t(
+				'Select a hook to edit or add a new one',
+			),
 			ignoreFocusOut: true,
-		}) as HookItem | undefined;
+		})) as HookItem | undefined;
 
 		if (!selected) {
 			return undefined;
@@ -648,7 +809,11 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 		const editedCommand = await vscode.window.showInputBox({
 			title: vscode.l10n.t('Edit Hook: {0}', eventConfig.id),
 			value: selected.command,
-			prompt: vscode.l10n.t('Modifying {0}. Stdin Input: {1}', selected.location!.label, eventConfig.jsonSchema),
+			prompt: vscode.l10n.t(
+				'Modifying {0}. Stdin Input: {1}',
+				selected.location!.label,
+				eventConfig.jsonSchema,
+			),
 			placeHolder: './my-hook-script.sh',
 			ignoreFocusOut: true,
 		});
@@ -665,14 +830,29 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 		};
 	}
 
-	private async _enterCommand(eventConfig: HookEvent, matcher: string, locationLabel?: string): Promise<string | undefined> {
+	private async _enterCommand(
+		eventConfig: HookEvent,
+		matcher: string,
+		locationLabel?: string,
+	): Promise<string | undefined> {
 		const promptText = locationLabel
-			? vscode.l10n.t('Modifying {0}. Stdin Input: {1}', locationLabel, eventConfig.jsonSchema)
-			: vscode.l10n.t('What shell command should run? Stdin Input: {0}', eventConfig.jsonSchema);
+			? vscode.l10n.t(
+					'Modifying {0}. Stdin Input: {1}',
+					locationLabel,
+					eventConfig.jsonSchema,
+				)
+			: vscode.l10n.t(
+					'What shell command should run? Stdin Input: {0}',
+					eventConfig.jsonSchema,
+				);
 
 		return vscode.window.showInputBox({
 			title: eventConfig.needsMatcher
-				? vscode.l10n.t('Configure Hook: {0} → {1}', eventConfig.id, matcher)
+				? vscode.l10n.t(
+						'Configure Hook: {0} → {1}',
+						eventConfig.id,
+						matcher,
+					)
 				: vscode.l10n.t('Configure Hook: {0}', eventConfig.id),
 			placeHolder: './my-hook-script.sh',
 			prompt: promptText,
@@ -691,33 +871,53 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 
 		// Add workspace-level locations for each workspace folder
 		for (const folderUri of workspaceFolders) {
-			const folderName = this.workspaceService.getWorkspaceFolderName(folderUri);
+			const folderName =
+				this.workspaceService.getWorkspaceFolderName(folderUri);
 
 			// Workspace (local)
-			const localPath = URI.joinPath(folderUri, '.claude', 'settings.local.json');
+			const localPath = URI.joinPath(
+				folderUri,
+				'.claude',
+				'settings.local.json',
+			);
 			items.push({
-				label: workspaceFolders.length > 1
-					? vscode.l10n.t('Workspace (local) - {0}', folderName)
-					: vscode.l10n.t('Workspace (local)'),
+				label:
+					workspaceFolders.length > 1
+						? vscode.l10n.t('Workspace (local) - {0}', folderName)
+						: vscode.l10n.t('Workspace (local)'),
 				description: `${folderName}/.claude/settings.local.json`,
 				location: {
 					type: 'local',
-					label: workspaceFolders.length > 1 ? vscode.l10n.t('Workspace (local) - {0}', folderName) : vscode.l10n.t('Workspace (local)'),
+					label:
+						workspaceFolders.length > 1
+							? vscode.l10n.t(
+									'Workspace (local) - {0}',
+									folderName,
+								)
+							: vscode.l10n.t('Workspace (local)'),
 					workspaceFolder: folderUri,
 					settingsPath: localPath,
 				},
 			});
 
 			// Workspace (shared)
-			const sharedPath = URI.joinPath(folderUri, '.claude', 'settings.json');
+			const sharedPath = URI.joinPath(
+				folderUri,
+				'.claude',
+				'settings.json',
+			);
 			items.push({
-				label: workspaceFolders.length > 1
-					? vscode.l10n.t('Workspace - {0}', folderName)
-					: vscode.l10n.t('Workspace'),
+				label:
+					workspaceFolders.length > 1
+						? vscode.l10n.t('Workspace - {0}', folderName)
+						: vscode.l10n.t('Workspace'),
 				description: `${folderName}/.claude/settings.json`,
 				location: {
 					type: 'shared',
-					label: workspaceFolders.length > 1 ? vscode.l10n.t('Workspace - {0}', folderName) : vscode.l10n.t('Workspace'),
+					label:
+						workspaceFolders.length > 1
+							? vscode.l10n.t('Workspace - {0}', folderName)
+							: vscode.l10n.t('Workspace'),
 					workspaceFolder: folderUri,
 					settingsPath: sharedPath,
 				},
@@ -725,7 +925,11 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 		}
 
 		// Add user-level location
-		const userPath = URI.joinPath(this.envService.userHome, '.claude', 'settings.json');
+		const userPath = URI.joinPath(
+			this.envService.userHome,
+			'.claude',
+			'settings.json',
+		);
 		let userDisplayPath = userPath.fsPath;
 		if (homeDir && userDisplayPath.startsWith(homeDir)) {
 			userDisplayPath = '~' + userDisplayPath.slice(homeDir.length);
@@ -758,22 +962,37 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 
 		// Add workspace-level locations for each workspace folder
 		for (const folderUri of workspaceFolders) {
-			const folderName = this.workspaceService.getWorkspaceFolderName(folderUri);
+			const folderName =
+				this.workspaceService.getWorkspaceFolderName(folderUri);
 
 			// Workspace (local)
 			locations.push({
 				type: 'local',
-				label: workspaceFolders.length > 1 ? vscode.l10n.t('Workspace (local) - {0}', folderName) : vscode.l10n.t('Workspace (local)'),
+				label:
+					workspaceFolders.length > 1
+						? vscode.l10n.t('Workspace (local) - {0}', folderName)
+						: vscode.l10n.t('Workspace (local)'),
 				workspaceFolder: folderUri,
-				settingsPath: URI.joinPath(folderUri, '.claude', 'settings.local.json'),
+				settingsPath: URI.joinPath(
+					folderUri,
+					'.claude',
+					'settings.local.json',
+				),
 			});
 
 			// Workspace (shared)
 			locations.push({
 				type: 'shared',
-				label: workspaceFolders.length > 1 ? vscode.l10n.t('Workspace - {0}', folderName) : vscode.l10n.t('Workspace'),
+				label:
+					workspaceFolders.length > 1
+						? vscode.l10n.t('Workspace - {0}', folderName)
+						: vscode.l10n.t('Workspace'),
 				workspaceFolder: folderUri,
-				settingsPath: URI.joinPath(folderUri, '.claude', 'settings.json'),
+				settingsPath: URI.joinPath(
+					folderUri,
+					'.claude',
+					'settings.json',
+				),
 			});
 		}
 
@@ -781,7 +1000,11 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 		locations.push({
 			type: 'user',
 			label: vscode.l10n.t('User'),
-			settingsPath: URI.joinPath(this.envService.userHome, '.claude', 'settings.json'),
+			settingsPath: URI.joinPath(
+				this.envService.userHome,
+				'.claude',
+				'settings.json',
+			),
 		});
 
 		return locations;
@@ -790,18 +1013,26 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 	private async _loadSettings(settingsPath: URI): Promise<HooksSettings> {
 		try {
 			const content = await this.fileSystemService.readFile(settingsPath);
-			return JSON.parse(new TextDecoder().decode(content)) as HooksSettings;
+			return JSON.parse(
+				new TextDecoder().decode(content),
+			) as HooksSettings;
 		} catch {
 			return {};
 		}
 	}
 
-	private async _saveSettings(settingsPath: URI, settings: HooksSettings): Promise<void> {
+	private async _saveSettings(
+		settingsPath: URI,
+		settings: HooksSettings,
+	): Promise<void> {
 		const dirPath = URI.joinPath(settingsPath, '..');
 		await createDirectoryIfNotExists(this.fileSystemService, dirPath);
 
 		const content = JSON.stringify(settings, null, '  ');
-		await this.fileSystemService.writeFile(settingsPath, new TextEncoder().encode(content));
+		await this.fileSystemService.writeFile(
+			settingsPath,
+			new TextEncoder().encode(content),
+		);
 	}
 
 	/**
@@ -813,7 +1044,7 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 		matcher: string,
 		command: string,
 		location: SettingsLocation,
-		originalCommand?: string
+		originalCommand?: string,
 	): Promise<void> {
 		const settingsPath = location.settingsPath;
 		const settings = await this._loadSettings(settingsPath);
@@ -826,7 +1057,9 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 			settings.hooks[event] = [];
 		}
 
-		let matcherConfig = settings.hooks[event]!.find(m => m.matcher === matcher);
+		let matcherConfig = settings.hooks[event]!.find(
+			(m) => m.matcher === matcher,
+		);
 		if (!matcherConfig) {
 			matcherConfig = { matcher, hooks: [] };
 			settings.hooks[event]!.push(matcherConfig);
@@ -834,7 +1067,9 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 
 		if (originalCommand) {
 			// Edit mode: replace the original command
-			const hookIndex = matcherConfig.hooks.findIndex(h => h.command === originalCommand);
+			const hookIndex = matcherConfig.hooks.findIndex(
+				(h) => h.command === originalCommand,
+			);
 			if (hookIndex >= 0) {
 				matcherConfig.hooks[hookIndex] = { type: 'command', command };
 			} else {
@@ -843,7 +1078,9 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 			}
 		} else {
 			// Create mode: add if not already present
-			const existingHook = matcherConfig.hooks.find(h => h.command === command);
+			const existingHook = matcherConfig.hooks.find(
+				(h) => h.command === command,
+			);
 			if (!existingHook) {
 				matcherConfig.hooks.push({ type: 'command', command });
 			}
@@ -855,17 +1092,23 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 	/**
 	 * Gets all matchers for an event, tracking which settings file each came from.
 	 */
-	private async _getExistingMatchersWithSource(event: HookEventId): Promise<MatcherWithSource[]> {
+	private async _getExistingMatchersWithSource(
+		event: HookEventId,
+	): Promise<MatcherWithSource[]> {
 		const matchers: MatcherWithSource[] = [];
 		const allLocations = this._getAllSettingsLocations();
 
 		for (const location of allLocations) {
 			try {
-				const settings = await this._loadSettings(location.settingsPath);
+				const settings = await this._loadSettings(
+					location.settingsPath,
+				);
 				if (settings.hooks?.[event]) {
 					for (const matcherConfig of settings.hooks[event]!) {
 						// Check if we already have this matcher from a higher-priority location
-						const existing = matchers.find(m => m.matcher === matcherConfig.matcher);
+						const existing = matchers.find(
+							(m) => m.matcher === matcherConfig.matcher,
+						);
 						if (!existing) {
 							matchers.push({
 								matcher: matcherConfig.matcher,
@@ -885,15 +1128,22 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 	/**
 	 * Gets all hooks for an event/matcher, tracking which settings file each came from.
 	 */
-	private async _getExistingHooksWithSource(event: HookEventId, matcher: string): Promise<HookWithSource[]> {
+	private async _getExistingHooksWithSource(
+		event: HookEventId,
+		matcher: string,
+	): Promise<HookWithSource[]> {
 		const hooks: HookWithSource[] = [];
 		const allLocations = this._getAllSettingsLocations();
 
 		for (const location of allLocations) {
 			try {
-				const settings = await this._loadSettings(location.settingsPath);
+				const settings = await this._loadSettings(
+					location.settingsPath,
+				);
 				if (settings.hooks?.[event]) {
-					const matcherConfig = settings.hooks[event]!.find(m => m.matcher === matcher);
+					const matcherConfig = settings.hooks[event]!.find(
+						(m) => m.matcher === matcher,
+					);
 					if (matcherConfig) {
 						for (const hook of matcherConfig.hooks) {
 							hooks.push({
@@ -914,13 +1164,19 @@ export class HooksSlashCommand implements IClaudeSlashCommandHandler {
 	/**
 	 * Gets hooks for a specific matcher at a specific location only.
 	 */
-	private async _getHooksAtLocation(event: HookEventId, matcher: string, location: SettingsLocation): Promise<string[]> {
+	private async _getHooksAtLocation(
+		event: HookEventId,
+		matcher: string,
+		location: SettingsLocation,
+	): Promise<string[]> {
 		try {
 			const settings = await this._loadSettings(location.settingsPath);
 			if (settings.hooks?.[event]) {
-				const matcherConfig = settings.hooks[event]!.find(m => m.matcher === matcher);
+				const matcherConfig = settings.hooks[event]!.find(
+					(m) => m.matcher === matcher,
+				);
 				if (matcherConfig) {
-					return matcherConfig.hooks.map(h => h.command);
+					return matcherConfig.hooks.map((h) => h.command);
 				}
 			}
 		} catch {

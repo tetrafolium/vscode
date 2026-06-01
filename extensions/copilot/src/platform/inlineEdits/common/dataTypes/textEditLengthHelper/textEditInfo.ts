@@ -22,9 +22,8 @@ export class TextEditInfo {
 	constructor(
 		public readonly startOffset: Length,
 		public readonly endOffset: Length,
-		public readonly newLength: Length
-	) {
-	}
+		public readonly newLength: Length,
+	) {}
 
 	toString(): string {
 		return `[${lengthToObj(this.startOffset)}...${lengthToObj(this.endOffset)}) -> ${lengthToObj(this.newLength)}`;

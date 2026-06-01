@@ -13,7 +13,10 @@ import { ICreateEndpointBodyOptions } from '../../networking/common/networking';
 /**
  * Creates a test message with thinking content (opaque part)
  */
-export function createThinkingMessage(thinkingId: string, thinkingText: string): Raw.ChatMessage {
+export function createThinkingMessage(
+	thinkingId: string,
+	thinkingText: string,
+): Raw.ChatMessage {
 	return {
 		role: Raw.ChatRole.Assistant,
 		content: [
@@ -23,11 +26,11 @@ export function createThinkingMessage(thinkingId: string, thinkingText: string):
 					type: 'thinking',
 					thinking: {
 						id: thinkingId,
-						text: thinkingText
-					}
-				}
-			}
-		]
+						text: thinkingText,
+					},
+				},
+			},
+		],
 	};
 }
 
@@ -37,7 +40,7 @@ export function createThinkingMessage(thinkingId: string, thinkingText: string):
 export function createUserMessage(text: string): Raw.ChatMessage {
 	return {
 		role: Raw.ChatRole.User,
-		content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }]
+		content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }],
 	};
 }
 
@@ -47,21 +50,23 @@ export function createUserMessage(text: string): Raw.ChatMessage {
 export function createAssistantMessage(text: string): Raw.ChatMessage {
 	return {
 		role: Raw.ChatRole.Assistant,
-		content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }]
+		content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }],
 	};
 }
 
 /**
  * Creates test options for endpoint createRequestBody calls
  */
-export function createTestOptions(messages: Raw.ChatMessage[]): ICreateEndpointBodyOptions {
+export function createTestOptions(
+	messages: Raw.ChatMessage[],
+): ICreateEndpointBodyOptions {
 	return {
 		debugName: 'test',
 		messages,
 		requestId: 'test-req-123',
 		postOptions: {},
 		finishedCb: undefined,
-		location: undefined as any
+		location: undefined as any,
 	};
 }
 
@@ -72,15 +77,29 @@ export const ReasoningPropertyVerifiers = {
 	/**
 	 * Verifies that a message has OpenAI-style CoT (Chain of Thought) properties
 	 */
-	hasOpenAICoTProperties(message: any, expectedId: string, expectedText: string): boolean {
-		return message.cot_id === expectedId && message.cot_summary === expectedText;
+	hasOpenAICoTProperties(
+		message: any,
+		expectedId: string,
+		expectedText: string,
+	): boolean {
+		return (
+			message.cot_id === expectedId &&
+			message.cot_summary === expectedText
+		);
 	},
 
 	/**
 	 * Verifies that a message has Copilot-style reasoning properties
 	 */
-	hasCopilotReasoningProperties(message: any, expectedId: string, expectedText: string): boolean {
-		return message.reasoning_opaque === expectedId && message.reasoning_text === expectedText;
+	hasCopilotReasoningProperties(
+		message: any,
+		expectedId: string,
+		expectedText: string,
+	): boolean {
+		return (
+			message.reasoning_opaque === expectedId &&
+			message.reasoning_text === expectedText
+		);
 	},
 
 	/**
@@ -93,7 +112,7 @@ export const ReasoningPropertyVerifiers = {
 			message.reasoning_opaque === undefined &&
 			message.reasoning_text === undefined
 		);
-	}
+	},
 };
 
 /**
@@ -102,18 +121,18 @@ export const ReasoningPropertyVerifiers = {
 export const TestThinkingData = {
 	openai: {
 		id: 'openai-thinking-123',
-		text: 'OpenAI-style reasoning process'
+		text: 'OpenAI-style reasoning process',
 	},
 	copilot: {
 		id: 'copilot-reasoning-456',
-		text: 'Copilot-style reasoning analysis'
+		text: 'Copilot-style reasoning analysis',
 	},
 	azure: {
 		id: 'azure-thinking-789',
-		text: 'Azure OpenAI reasoning content'
+		text: 'Azure OpenAI reasoning content',
 	},
 	generic: {
 		id: 'test-thinking-abc',
-		text: 'Generic test reasoning text'
-	}
+		text: 'Generic test reasoning text',
+	},
 } as const;

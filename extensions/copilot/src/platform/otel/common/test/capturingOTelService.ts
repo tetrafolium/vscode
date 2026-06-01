@@ -5,7 +5,16 @@
 
 import { Emitter, type Event } from '../../../../util/vs/base/common/event';
 import { resolveOTelConfig, type OTelConfig } from '../otelConfig';
-import { SpanStatusCode, type ICompletedSpanData, type IOTelService, type ISpanEventData, type ISpanEventRecord, type ISpanHandle, type SpanOptions, type TraceContext } from '../otelService';
+import {
+	SpanStatusCode,
+	type ICompletedSpanData,
+	type IOTelService,
+	type ISpanEventData,
+	type ISpanEventRecord,
+	type ISpanHandle,
+	type SpanOptions,
+	type TraceContext,
+} from '../otelService';
 
 /**
  * Captured span record for test assertions.
@@ -13,7 +22,10 @@ import { SpanStatusCode, type ICompletedSpanData, type IOTelService, type ISpanE
 export interface CapturedSpan {
 	name: string;
 	kind?: number;
-	attributes: Record<string, string | number | boolean | string[] | undefined>;
+	attributes: Record<
+		string,
+		string | number | boolean | string[] | undefined
+	>;
 	statusCode?: SpanStatusCode;
 	statusMessage?: string;
 	exceptions: unknown[];
@@ -54,9 +66,11 @@ export class CapturingOTelService implements IOTelService {
 	readonly logRecords: CapturedLogRecord[] = [];
 	private readonly _traceContextStore = new Map<string, TraceContext>();
 	private readonly _onDidCompleteSpan = new Emitter<ICompletedSpanData>();
-	readonly onDidCompleteSpan: Event<ICompletedSpanData> = this._onDidCompleteSpan.event;
+	readonly onDidCompleteSpan: Event<ICompletedSpanData> =
+		this._onDidCompleteSpan.event;
 	private readonly _onDidEmitSpanEvent = new Emitter<ISpanEventData>();
-	readonly onDidEmitSpanEvent: Event<ISpanEventData> = this._onDidEmitSpanEvent.event;
+	readonly onDidEmitSpanEvent: Event<ISpanEventData> =
+		this._onDidEmitSpanEvent.event;
 
 	injectCompletedSpan(span: ICompletedSpanData): void {
 		this._onDidCompleteSpan.fire(span);
@@ -64,7 +78,11 @@ export class CapturingOTelService implements IOTelService {
 
 	constructor(config?: Partial<OTelConfig>) {
 		this.config = {
-			...resolveOTelConfig({ env: { 'COPILOT_OTEL_ENABLED': 'true' }, extensionVersion: '1.0.0', sessionId: 'test' }),
+			...resolveOTelConfig({
+				env: { COPILOT_OTEL_ENABLED: 'true' },
+				extensionVersion: '1.0.0',
+				sessionId: 'test',
+			}),
 			...config,
 		};
 	}
@@ -80,10 +98,18 @@ export class CapturingOTelService implements IOTelService {
 			events: [],
 		};
 		this.spans.push(captured);
-		return new CapturingSpanHandle(captured, this._onDidCompleteSpan, this._onDidEmitSpanEvent);
+		return new CapturingSpanHandle(
+			captured,
+			this._onDidCompleteSpan,
+			this._onDidEmitSpanEvent,
+		);
 	}
 
-	async startActiveSpan<T>(name: string, options: SpanOptions, fn: (span: ISpanHandle) => Promise<T>): Promise<T> {
+	async startActiveSpan<T>(
+		name: string,
+		options: SpanOptions,
+		fn: (span: ISpanHandle) => Promise<T>,
+	): Promise<T> {
 		const span = this.startSpan(name, options);
 		try {
 			return await fn(span);
@@ -108,15 +134,26 @@ export class CapturingOTelService implements IOTelService {
 		return ctx;
 	}
 
-	async runWithTraceContext<T>(_traceContext: TraceContext, fn: () => Promise<T>): Promise<T> {
+	async runWithTraceContext<T>(
+		_traceContext: TraceContext,
+		fn: () => Promise<T>,
+	): Promise<T> {
 		return fn();
 	}
 
-	recordMetric(name: string, value: number, attributes?: Record<string, string | number | boolean>): void {
+	recordMetric(
+		name: string,
+		value: number,
+		attributes?: Record<string, string | number | boolean>,
+	): void {
 		this.metrics.push({ name, value, attributes });
 	}
 
-	incrementCounter(name: string, value = 1, attributes?: Record<string, string | number | boolean>): void {
+	incrementCounter(
+		name: string,
+		value = 1,
+		attributes?: Record<string, string | number | boolean>,
+	): void {
 		this.counters.push({ name, value, attributes });
 	}
 
@@ -124,12 +161,12 @@ export class CapturingOTelService implements IOTelService {
 		this.logRecords.push({ body, attributes });
 	}
 
-	async flush(): Promise<void> { }
-	async shutdown(): Promise<void> { }
+	async flush(): Promise<void> {}
+	async shutdown(): Promise<void> {}
 
 	/** Find spans by name prefix. */
 	findSpans(namePrefix: string): CapturedSpan[] {
-		return this.spans.filter(s => s.name.startsWith(namePrefix));
+		return this.spans.filter((s) => s.name.startsWith(namePrefix));
 	}
 
 	/** Reset all captured data. */
@@ -150,14 +187,22 @@ class CapturingSpanHandle implements ISpanHandle {
 		private readonly _onDidCompleteSpan: Emitter<ICompletedSpanData>,
 		private readonly _onDidEmitSpanEvent: Emitter<ISpanEventData>,
 	) {
-		this._spanId = String(CapturingSpanHandle._nextSpanId++).padStart(16, '0');
+		this._spanId = String(CapturingSpanHandle._nextSpanId++).padStart(
+			16,
+			'0',
+		);
 	}
 
-	setAttribute(key: string, value: string | number | boolean | string[]): void {
+	setAttribute(
+		key: string,
+		value: string | number | boolean | string[],
+	): void {
 		this._captured.attributes[key] = value;
 	}
 
-	setAttributes(attrs: Record<string, string | number | boolean | string[] | undefined>): void {
+	setAttributes(
+		attrs: Record<string, string | number | boolean | string[] | undefined>,
+	): void {
 		for (const k in attrs) {
 			if (Object.prototype.hasOwnProperty.call(attrs, k)) {
 				this._captured.attributes[k] = attrs[k];
@@ -174,7 +219,10 @@ class CapturingSpanHandle implements ISpanHandle {
 		this._captured.exceptions.push(error);
 	}
 
-	addEvent(name: string, attributes?: Record<string, string | number | boolean | string[]>): void {
+	addEvent(
+		name: string,
+		attributes?: Record<string, string | number | boolean | string[]>,
+	): void {
 		const timestamp = Date.now();
 		const record: ISpanEventRecord = { name, timestamp, attributes };
 		this._captured.events.push(record);
@@ -188,7 +236,10 @@ class CapturingSpanHandle implements ISpanHandle {
 	}
 
 	getSpanContext(): TraceContext | undefined {
-		return { spanId: this._spanId, traceId: '00000000000000000000000000000000' };
+		return {
+			spanId: this._spanId,
+			traceId: '00000000000000000000000000000000',
+		};
 	}
 
 	end(): void {
@@ -205,7 +256,10 @@ class CapturingSpanHandle implements ISpanHandle {
 			traceId: '00000000000000000000000000000000',
 			startTime: Date.now(),
 			endTime: Date.now(),
-			status: { code: this._captured.statusCode ?? SpanStatusCode.UNSET, message: this._captured.statusMessage },
+			status: {
+				code: this._captured.statusCode ?? SpanStatusCode.UNSET,
+				message: this._captured.statusMessage,
+			},
 			attributes: attrs,
 			events: [...this._captured.events],
 		});

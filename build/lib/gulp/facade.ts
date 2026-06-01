@@ -11,26 +11,26 @@
 
 /* eslint-disable local/code-no-direct-gulp-import */
 
-import filter_ from 'gulp-filter';
-import rename_ from 'gulp-rename';
-import replace_ from 'gulp-replace';
-import plumber_ from 'gulp-plumber';
-import sourcemaps_ from 'gulp-sourcemaps';
-import flatmap_ from 'gulp-flatmap';
-import gunzip_ from 'gulp-gunzip';
-import gzip_ from 'gulp-gzip';
-import jsonEditor_ from 'gulp-json-editor';
-import mergeJson_ from 'gulp-merge-json';
-import azureStorage_ from 'gulp-azure-storage';
-import bom_ from 'gulp-bom';
-import buffer_ from 'gulp-buffer';
-import vinylZip_ from 'gulp-vinyl-zip';
-import svgmin_ from 'gulp-svgmin';
-import sort_ from 'gulp-sort';
-import g from 'gulp';
+import filter_ from "gulp-filter";
+import rename_ from "gulp-rename";
+import replace_ from "gulp-replace";
+import plumber_ from "gulp-plumber";
+import sourcemaps_ from "gulp-sourcemaps";
+import flatmap_ from "gulp-flatmap";
+import gunzip_ from "gulp-gunzip";
+import gzip_ from "gulp-gzip";
+import jsonEditor_ from "gulp-json-editor";
+import mergeJson_ from "gulp-merge-json";
+import azureStorage_ from "gulp-azure-storage";
+import bom_ from "gulp-bom";
+import buffer_ from "gulp-buffer";
+import vinylZip_ from "gulp-vinyl-zip";
+import svgmin_ from "gulp-svgmin";
+import sort_ from "gulp-sort";
+import g from "gulp";
 
 export const filter = filter_;
-export type { FileFunction } from 'gulp-filter';
+export type { FileFunction } from "gulp-filter";
 export const rename = rename_;
 export const replace = replace_;
 export const plumber = plumber_;
@@ -50,5 +50,5 @@ export const sort = sort_;
 export const gulp = {
 	// Import task, sequence and parallel from "../lib/task"!
 	src: g.src,
-	dest: g.dest
+	dest: g.dest,
 };

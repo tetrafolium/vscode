@@ -27,7 +27,8 @@ describe('claudeSessionParser', () => {
 		});
 
 		it('should parse queue operation (no uuid, skipped)', () => {
-			const content = '{"type":"queue-operation","operation":"dequeue","timestamp":"2026-01-31T00:34:50.025Z","sessionId":"6762c0b9-ee55-42cc-8998-180da7f37462"}';
+			const content =
+				'{"type":"queue-operation","operation":"dequeue","timestamp":"2026-01-31T00:34:50.025Z","sessionId":"6762c0b9-ee55-42cc-8998-180da7f37462"}';
 			const result = parseSessionFileContent(content);
 
 			expect(result.nodes.size).toBe(0);
@@ -57,7 +58,9 @@ describe('claudeSessionParser', () => {
 			expect(result.stats.chainNodes).toBe(1);
 			expect(result.errors.length).toBe(0);
 
-			const node = result.nodes.get('8d4dcda5-3984-42c4-9b9e-d57f64a924dc');
+			const node = result.nodes.get(
+				'8d4dcda5-3984-42c4-9b9e-d57f64a924dc',
+			);
 			expect(node).toBeDefined();
 			expect(node?.raw.type).toBe('user');
 			expect(node?.parentUuid).toBeNull();
@@ -156,7 +159,11 @@ describe('claudeSessionParser', () => {
 				JSON.stringify({
 					parentUuid: 'uuid-1',
 					type: 'user',
-					message: { role: 'user', content: 'This is a compaction summary of the conversation...' },
+					message: {
+						role: 'user',
+						content:
+							'This is a compaction summary of the conversation...',
+					},
 					uuid: 'uuid-summary',
 					sessionId: 'session-1',
 					timestamp: '2026-01-31T00:02:00.000Z',
@@ -165,7 +172,12 @@ describe('claudeSessionParser', () => {
 				JSON.stringify({
 					parentUuid: 'uuid-summary',
 					type: 'assistant',
-					message: { role: 'assistant', content: [{ type: 'text', text: 'After compaction' }], stop_reason: 'end_turn', stop_sequence: null },
+					message: {
+						role: 'assistant',
+						content: [{ type: 'text', text: 'After compaction' }],
+						stop_reason: 'end_turn',
+						stop_sequence: null,
+					},
 					uuid: 'uuid-2',
 					sessionId: 'session-1',
 					timestamp: '2026-01-31T00:03:00.000Z',
@@ -194,7 +206,9 @@ describe('claudeSessionParser', () => {
 
 			expect(result.stats.chainNodes).toBe(1);
 			expect(result.errors.length).toBe(0);
-			expect(result.nodes.get('micro-uuid')?.parentUuid).toBe('parent-uuid');
+			expect(result.nodes.get('micro-uuid')?.parentUuid).toBe(
+				'parent-uuid',
+			);
 		});
 
 		it('should parse summary entry', () => {
@@ -208,7 +222,10 @@ describe('claudeSessionParser', () => {
 
 			expect(result.summaries.size).toBe(1);
 			expect(result.stats.summaries).toBe(1);
-			expect(result.summaries.get('8d4dcda5-3984-42c4-9b9e-d57f64a924dc')?.summary).toBe('Implementing dark mode');
+			expect(
+				result.summaries.get('8d4dcda5-3984-42c4-9b9e-d57f64a924dc')
+					?.summary,
+			).toBe('Implementing dark mode');
 		});
 
 		it('should parse custom-title entry', () => {
@@ -222,7 +239,9 @@ describe('claudeSessionParser', () => {
 
 			expect(result.customTitle).toBeDefined();
 			expect(result.customTitle!.customTitle).toBe('omega-3');
-			expect(result.customTitle!.sessionId).toBe('6762c0b9-ee55-42cc-8998-180da7f37462');
+			expect(result.customTitle!.sessionId).toBe(
+				'6762c0b9-ee55-42cc-8998-180da7f37462',
+			);
 			expect(result.stats.customTitles).toBe(1);
 		});
 
@@ -242,8 +261,16 @@ describe('claudeSessionParser', () => {
 
 		it('should use last custom-title entry when multiple exist', () => {
 			const lines = [
-				JSON.stringify({ type: 'custom-title', customTitle: 'first-name', sessionId: 'session-1' }),
-				JSON.stringify({ type: 'custom-title', customTitle: 'renamed-again', sessionId: 'session-1' }),
+				JSON.stringify({
+					type: 'custom-title',
+					customTitle: 'first-name',
+					sessionId: 'session-1',
+				}),
+				JSON.stringify({
+					type: 'custom-title',
+					customTitle: 'renamed-again',
+					sessionId: 'session-1',
+				}),
 			];
 
 			const result = parseSessionFileContent(lines.join('\n'));
@@ -280,7 +307,12 @@ describe('claudeSessionParser', () => {
 				JSON.stringify({
 					parentUuid: 'uuid-1234-5678-9012-123456789abc',
 					type: 'assistant',
-					message: { role: 'assistant', content: [{ type: 'text', text: 'Hi!' }], stop_reason: 'end_turn', stop_sequence: null },
+					message: {
+						role: 'assistant',
+						content: [{ type: 'text', text: 'Hi!' }],
+						stop_reason: 'end_turn',
+						stop_sequence: null,
+					},
 					uuid: 'uuid-aaaa-bbbb-cccc-ddddeeeeeeee',
 					sessionId: '6762c0b9-ee55-42cc-8998-180da7f37462',
 					timestamp: '2026-01-31T00:35:00.000Z',
@@ -305,7 +337,8 @@ describe('claudeSessionParser', () => {
 		});
 
 		it('should skip empty lines', () => {
-			const content = '\n\n{"type":"queue-operation","operation":"dequeue","timestamp":"2026-01-31T00:34:50.025Z","sessionId":"6762c0b9-ee55-42cc-8998-180da7f37462"}\n\n';
+			const content =
+				'\n\n{"type":"queue-operation","operation":"dequeue","timestamp":"2026-01-31T00:34:50.025Z","sessionId":"6762c0b9-ee55-42cc-8998-180da7f37462"}\n\n';
 			const result = parseSessionFileContent(content);
 
 			expect(result.stats.skippedEmpty).toBe(4);
@@ -324,7 +357,9 @@ describe('claudeSessionParser', () => {
 			const result = parseSessionFileContent(content);
 
 			expect(result.nodes.size).toBe(1);
-			expect(result.nodes.get('progress-uuid')?.parentUuid).toBe('msg-uuid');
+			expect(result.nodes.get('progress-uuid')?.parentUuid).toBe(
+				'msg-uuid',
+			);
 		});
 	});
 
@@ -342,17 +377,33 @@ describe('claudeSessionParser', () => {
 		});
 
 		it('should return false for array with only tool_result blocks', () => {
-			expect(isUserRequest([
-				{ type: 'tool_result', tool_use_id: 'tool-1', content: 'result' },
-				{ type: 'tool_result', tool_use_id: 'tool-2', content: 'result' },
-			])).toBe(false);
+			expect(
+				isUserRequest([
+					{
+						type: 'tool_result',
+						tool_use_id: 'tool-1',
+						content: 'result',
+					},
+					{
+						type: 'tool_result',
+						tool_use_id: 'tool-2',
+						content: 'result',
+					},
+				]),
+			).toBe(false);
 		});
 
 		it('should return true for mixed array with tool_result and text', () => {
-			expect(isUserRequest([
-				{ type: 'tool_result', tool_use_id: 'tool-1', content: 'result' },
-				{ type: 'text', text: 'Follow-up question' },
-			])).toBe(true);
+			expect(
+				isUserRequest([
+					{
+						type: 'tool_result',
+						tool_use_id: 'tool-1',
+						content: 'result',
+					},
+					{ type: 'text', text: 'Follow-up question' },
+				]),
+			).toBe(true);
 		});
 
 		it('should return false for empty array', () => {
@@ -377,7 +428,12 @@ describe('claudeSessionParser', () => {
 				JSON.stringify({
 					parentUuid: 'uuid-1',
 					type: 'assistant',
-					message: { role: 'assistant', content: [{ type: 'text', text: 'Done' }], stop_reason: 'end_turn', stop_sequence: null },
+					message: {
+						role: 'assistant',
+						content: [{ type: 'text', text: 'Done' }],
+						stop_reason: 'end_turn',
+						stop_sequence: null,
+					},
 					uuid: 'uuid-2',
 					sessionId: 'session-1',
 					timestamp: '2026-01-31T00:35:00.000Z',
@@ -393,7 +449,9 @@ describe('claudeSessionParser', () => {
 			expect(subagent!.messages.length).toBe(2);
 			expect(subagent!.messages[0].uuid).toBe('uuid-1');
 			expect(subagent!.messages[1].uuid).toBe('uuid-2');
-			expect(subagent!.timestamp).toEqual(new Date('2026-01-31T00:35:00.000Z'));
+			expect(subagent!.timestamp).toEqual(
+				new Date('2026-01-31T00:35:00.000Z'),
+			);
 		});
 
 		it('should return null for empty content', () => {
@@ -440,7 +498,12 @@ describe('claudeSessionParser', () => {
 				JSON.stringify({
 					parentUuid: 'uuid-1',
 					type: 'assistant',
-					message: { role: 'assistant', content: [{ type: 'text', text: 'Response' }], stop_reason: 'end_turn', stop_sequence: null },
+					message: {
+						role: 'assistant',
+						content: [{ type: 'text', text: 'Response' }],
+						stop_reason: 'end_turn',
+						stop_sequence: null,
+					},
 					uuid: 'uuid-2',
 					sessionId: 'session-1',
 					timestamp: '2026-01-31T00:35:00.000Z',
@@ -475,4 +538,3 @@ describe('claudeSessionParser', () => {
 
 	// #endregion
 });
-

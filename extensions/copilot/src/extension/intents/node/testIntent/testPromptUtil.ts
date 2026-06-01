@@ -9,7 +9,6 @@ import { URI } from '../../../../util/vs/base/common/uri';
 import { ChatVariablesCollection } from '../../../prompt/common/chatVariablesCollection';
 import { IDocumentContext } from '../../../prompt/node/documentContext';
 
-
 interface TestGenUserQueryParams {
 	workspaceService: IWorkspaceService;
 	chatVariables: ChatVariablesCollection;
@@ -19,13 +18,25 @@ interface TestGenUserQueryParams {
 	context: IDocumentContext;
 }
 
-export function formatRequestAndUserQuery({ workspaceService, chatVariables, userQuery, testFileToWriteTo, testedSymbolIdentifier, context }: TestGenUserQueryParams) {
+export function formatRequestAndUserQuery({
+	workspaceService,
+	chatVariables,
+	userQuery,
+	testFileToWriteTo,
+	testedSymbolIdentifier,
+	context,
+}: TestGenUserQueryParams) {
+	const testTarget = testedSymbolIdentifier
+		? `\`${testedSymbolIdentifier}\``
+		: `my code`;
 
-	const testTarget = testedSymbolIdentifier ? `\`${testedSymbolIdentifier}\`` : `my code`;
+	const rewrittenMessage =
+		chatVariables.substituteVariablesWithReferences(userQuery);
 
-	const rewrittenMessage = chatVariables.substituteVariablesWithReferences(userQuery);
-
-	const pathToTestFile = relativeToWorkspace(workspaceService, testFileToWriteTo.path);
+	const pathToTestFile = relativeToWorkspace(
+		workspaceService,
+		testFileToWriteTo.path,
+	);
 
 	const requestAndUserQueryParts: string[] = [];
 
@@ -33,17 +44,19 @@ export function formatRequestAndUserQuery({ workspaceService, chatVariables, use
 
 	if (pathToTestFile !== null) {
 		let locationMessage = `The tests will be placed in \`${pathToTestFile}\``;
-		locationMessage += (pathToTestFile.includes('/')
+		locationMessage += pathToTestFile.includes('/')
 			? '.'
-			: ` located in the same directory as \`${relativeToWorkspace(workspaceService, context.document.uri.path)}\`.`
-		);
+			: ` located in the same directory as \`${relativeToWorkspace(workspaceService, context.document.uri.path)}\`.`;
 		requestAndUserQueryParts.push(locationMessage);
 		requestAndUserQueryParts.push('Generate tests accordingly.');
 	}
 
 	requestAndUserQueryParts.push(rewrittenMessage);
 
-	const requestAndUserQuery = requestAndUserQueryParts.filter(s => s !== '').join(' ').trim();
+	const requestAndUserQuery = requestAndUserQueryParts
+		.filter((s) => s !== '')
+		.join(' ')
+		.trim();
 
 	return requestAndUserQuery;
 }
@@ -51,9 +64,13 @@ export function formatRequestAndUserQuery({ workspaceService, chatVariables, use
 /**
  * @return undefined if no workspace contains given path
  */
-export function relativeToWorkspace(workspaceService: IWorkspaceService, absPath: string): string | null {
-
-	const workspaceOfTestFile = workspaceService.getWorkspaceFolders().find(folder => absPath.startsWith(folder.path));
+export function relativeToWorkspace(
+	workspaceService: IWorkspaceService,
+	absPath: string,
+): string | null {
+	const workspaceOfTestFile = workspaceService
+		.getWorkspaceFolders()
+		.find((folder) => absPath.startsWith(folder.path));
 
 	if (workspaceOfTestFile === undefined) {
 		return null;

@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { basename, extUriBiasedIgnorePathCase } from '../../../util/vs/base/common/resources';
+import {
+	basename,
+	extUriBiasedIgnorePathCase,
+} from '../../../util/vs/base/common/resources';
 import { URI } from '../../../util/vs/base/common/uri';
 import { IWorkspaceService } from './workspaceService';
 
@@ -15,11 +18,11 @@ import { IWorkspaceService } from './workspaceService';
  * delegates to the underlying {@link IWorkspaceService}.
  */
 export class WorkingDirectory {
-
 	constructor(
 		private readonly _uri: URI | undefined,
-		@IWorkspaceService private readonly _workspaceService: IWorkspaceService,
-	) { }
+		@IWorkspaceService
+		private readonly _workspaceService: IWorkspaceService,
+	) {}
 
 	/** The explicit working directory URI, if set. */
 	get uri(): URI | undefined {
@@ -38,7 +41,10 @@ export class WorkingDirectory {
 	 */
 	getFolder(resource: URI): URI | undefined {
 		if (this._uri) {
-			return extUriBiasedIgnorePathCase.isEqualOrParent(resource, this._uri)
+			return extUriBiasedIgnorePathCase.isEqualOrParent(
+				resource,
+				this._uri,
+			)
 				? this._uri
 				: undefined;
 		}

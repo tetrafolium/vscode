@@ -12,14 +12,20 @@ interface IMonacoPerformanceMarks {
 function _getNativePolyfill(): IMonacoPerformanceMarks {
 	return {
 		mark: (name, markOptions) => performance.mark(name, markOptions),
-		getMarks: () => performance.getEntries().filter(e => e.entryType === 'mark').map(e => ({ name: e.name, startTime: e.startTime })),
-		clearMarks: name => {
+		getMarks: () =>
+			performance
+				.getEntries()
+				.filter((e) => e.entryType === 'mark')
+				.map((e) => ({ name: e.name, startTime: e.startTime })),
+		clearMarks: (name) => {
 			performance.clearMarks(name);
 		},
 	};
 }
 
-const perf: IMonacoPerformanceMarks = (globalThis as { MonacoPerformanceMarks?: IMonacoPerformanceMarks }).MonacoPerformanceMarks ?? _getNativePolyfill();
+const perf: IMonacoPerformanceMarks =
+	(globalThis as { MonacoPerformanceMarks?: IMonacoPerformanceMarks })
+		.MonacoPerformanceMarks ?? _getNativePolyfill();
 
 const chatExtPrefix = 'code/chat/ext/';
 
@@ -71,7 +77,8 @@ export const ChatExtPerfMark = {
 	DidFetch: 'didFetch',
 } as const;
 
-export type ChatExtPerfMarkName = typeof ChatExtPerfMark[keyof typeof ChatExtPerfMark];
+export type ChatExtPerfMarkName =
+	(typeof ChatExtPerfMark)[keyof typeof ChatExtPerfMark];
 
 /**
  * Emits a performance mark scoped to a chat session:
@@ -80,7 +87,10 @@ export type ChatExtPerfMarkName = typeof ChatExtPerfMark[keyof typeof ChatExtPer
  * Marks persist in the extension host process until explicitly cleared
  * via {@link clearChatExtMarks}.
  */
-export function markChatExt(sessionId: string | undefined, name: ChatExtPerfMarkName): void {
+export function markChatExt(
+	sessionId: string | undefined,
+	name: ChatExtPerfMarkName,
+): void {
 	if (sessionId) {
 		const fullName = `${chatExtPrefix}${sessionId}/${name}`;
 		let names = chatExtMarksBySession.get(sessionId);
@@ -117,7 +127,8 @@ export const ChatExtGlobalPerfMark = {
 	DidWaitForCopilotToken: 'didWaitForCopilotToken',
 } as const;
 
-export type ChatExtGlobalPerfMarkName = typeof ChatExtGlobalPerfMark[keyof typeof ChatExtGlobalPerfMark];
+export type ChatExtGlobalPerfMarkName =
+	(typeof ChatExtGlobalPerfMark)[keyof typeof ChatExtGlobalPerfMark];
 
 /**
  * Emits a global (non-session-scoped) performance mark:

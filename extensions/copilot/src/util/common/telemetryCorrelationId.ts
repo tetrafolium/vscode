@@ -36,17 +36,26 @@ export class TelemetryCorrelationId {
 	public readonly callTracker: CallTracker;
 	public readonly correlationId: string;
 
-	constructor(caller: CallTracker | string | readonly string[], correlationId?: string) {
+	constructor(
+		caller: CallTracker | string | readonly string[],
+		correlationId?: string,
+	) {
 		if (caller instanceof CallTracker) {
 			this.callTracker = caller;
 		} else {
-			this.callTracker = typeof caller === 'string' ? new CallTracker(caller) : new CallTracker(...caller);
+			this.callTracker =
+				typeof caller === 'string'
+					? new CallTracker(caller)
+					: new CallTracker(...caller);
 		}
 
 		this.correlationId = correlationId || generateUuid();
 	}
 
 	public addCaller(...parts: string[]): TelemetryCorrelationId {
-		return new TelemetryCorrelationId(this.callTracker.add(...parts), this.correlationId);
+		return new TelemetryCorrelationId(
+			this.callTracker.add(...parts),
+			this.correlationId,
+		);
 	}
 }

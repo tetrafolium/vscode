@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { assert } from './assert.js';
+import { assert } from "./assert.js";
 
 export function clamp(value: number, min: number, max: number): number {
 	return Math.min(Math.max(value, min), max);
@@ -22,7 +22,6 @@ export class Counter {
 }
 
 export class MovingAverage {
-
 	private _n = 1;
 	private _val = 0;
 
@@ -38,7 +37,6 @@ export class MovingAverage {
 }
 
 export class SlidingWindowAverage {
-
 	private _n: number = 0;
 	private _val = 0;
 
@@ -74,10 +72,14 @@ export class SlidingWindowAverage {
 
 /** Returns whether the point is within the triangle formed by the following 6 x/y point pairs */
 export function isPointWithinTriangle(
-	x: number, y: number,
-	ax: number, ay: number,
-	bx: number, by: number,
-	cx: number, cy: number
+	x: number,
+	y: number,
+	ax: number,
+	ay: number,
+	bx: number,
+	by: number,
+	cx: number,
+	cy: number,
 ) {
 	const v0x = cx - ax;
 	const v0y = cy - ay;
@@ -100,6 +102,6 @@ export function isPointWithinTriangle(
 }
 
 export function randomChance(p: number): boolean {
-	assert(p >= 0 && p <= 1, 'p must be between 0 and 1');
+	assert(p >= 0 && p <= 1, "p must be between 0 and 1");
 	return Math.random() < p;
 }

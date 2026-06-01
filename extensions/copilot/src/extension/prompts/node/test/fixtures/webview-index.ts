@@ -8,14 +8,14 @@ import { ICellRange } from 'vs/workbench/contrib/notebook/common/notebookRange';
 
 const enum CellEditorRevealType {
 	Line,
-	Range
+	Range,
 }
 
 const enum CellRevealPosition {
 	Top,
 	Center,
 	Bottom,
-	NearTop
+	NearTop,
 }
 
 function getVisibleCells(cells: CellViewModel[], hiddenRanges: ICellRange[]) {
@@ -29,7 +29,9 @@ function getVisibleCells(cells: CellViewModel[], hiddenRanges: ICellRange[]) {
 
 	while (start < cells.length && hiddenRangeIndex < hiddenRanges.length) {
 		if (start < hiddenRanges[hiddenRangeIndex].start) {
-			result.push(...cells.slice(start, hiddenRanges[hiddenRangeIndex].start));
+			result.push(
+				...cells.slice(start, hiddenRanges[hiddenRangeIndex].start),
+			);
 		}
 
 		start = hiddenRanges[hiddenRangeIndex].end + 1;

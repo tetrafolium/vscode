@@ -2,21 +2,25 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import elkLayouts from '@mermaid-js/layout-elk';
-import tidyTreeLayouts from '@mermaid-js/layout-tidy-tree';
-import zenuml from '@mermaid-js/mermaid-zenuml';
-import mermaid, { MermaidConfig } from 'mermaid';
-import { iconPacks } from './iconPackConfig';
-import { ClickDragMode, MermaidExtensionConfig, ShowControlsMode } from './config';
-import { vsCodeMermaidTheme, VsCodeMermaidThemeTracker } from './vsCodeTheme';
+import elkLayouts from "@mermaid-js/layout-elk";
+import tidyTreeLayouts from "@mermaid-js/layout-tidy-tree";
+import zenuml from "@mermaid-js/mermaid-zenuml";
+import mermaid, { MermaidConfig } from "mermaid";
+import { iconPacks } from "./iconPackConfig";
+import {
+	ClickDragMode,
+	MermaidExtensionConfig,
+	ShowControlsMode,
+} from "./config";
+import { vsCodeMermaidTheme, VsCodeMermaidThemeTracker } from "./vsCodeTheme";
 
 /**
  * Creates the `<pre class="mermaid-error">` node shown when a diagram fails to render.
  */
 export function createMermaidErrorElement(error: unknown): HTMLElement {
 	const message = error instanceof Error ? error.message : String(error);
-	const errorMessageNode = document.createElement('pre');
-	errorMessageNode.className = 'mermaid-error';
+	const errorMessageNode = document.createElement("pre");
+	errorMessageNode.className = "mermaid-error";
 	errorMessageNode.innerText = message;
 	return errorMessageNode;
 }
@@ -29,7 +33,7 @@ export function createMermaidErrorElement(error: unknown): HTMLElement {
 export function markVsCodeContextAsError(el: HTMLElement): void {
 	let context: Record<string, unknown>;
 	try {
-		context = JSON.parse(el.dataset.vscodeContext || '{}');
+		context = JSON.parse(el.dataset.vscodeContext || "{}");
 	} catch {
 		context = {};
 	}
@@ -39,14 +43,20 @@ export function markVsCodeContextAsError(el: HTMLElement): void {
 function renderMermaidElement(
 	mermaidContainer: HTMLElement,
 	usedIds: Set<string>,
-	writeOut: (mermaidContainer: HTMLElement, content: string, isError: boolean) => void,
+	writeOut: (
+		mermaidContainer: HTMLElement,
+		content: string,
+		isError: boolean,
+	) => void,
 	signal: AbortSignal,
-): {
-	containerId: string;
-	contentHash: string;
-	p: Promise<void>;
-} | undefined {
-	const source = (mermaidContainer.textContent ?? '').trim();
+):
+	| {
+			containerId: string;
+			contentHash: string;
+			p: Promise<void>;
+	  }
+	| undefined {
+	const source = (mermaidContainer.textContent ?? "").trim();
 	if (!source) {
 		return;
 	}
@@ -57,11 +67,11 @@ function renderMermaidElement(
 
 	mermaidContainer.id = containerId;
 	mermaidContainer.dataset.vscodeContext = JSON.stringify({
-		webviewSection: 'mermaid',
+		webviewSection: "mermaid",
 		mermaidSource: source,
 		preventDefaultContextMenuItems: true,
 	});
-	mermaidContainer.innerHTML = '';
+	mermaidContainer.innerHTML = "";
 
 	return {
 		containerId,
@@ -71,53 +81,69 @@ function renderMermaidElement(
 				// Catch any parsing errors
 				await mermaid.parse(source);
 				if (signal.aborted) {
-					throw new DOMException('Aborted', 'AbortError');
+					throw new DOMException("Aborted", "AbortError");
 				}
 
 				//  Render the diagram
 				const renderResult = await mermaid.render(diagramId, source);
 				if (signal.aborted) {
-					throw new DOMException('Aborted', 'AbortError');
+					throw new DOMException("Aborted", "AbortError");
 				}
 
 				writeOut(mermaidContainer, renderResult.svg, false);
 				renderResult.bindFunctions?.(mermaidContainer);
 			} catch (error) {
-				if (error instanceof Error && error.name !== 'AbortError') {
+				if (error instanceof Error && error.name !== "AbortError") {
 					markVsCodeContextAsError(mermaidContainer);
-					writeOut(mermaidContainer, createMermaidErrorElement(error).outerHTML, true);
+					writeOut(
+						mermaidContainer,
+						createMermaidErrorElement(error).outerHTML,
+						true,
+					);
 				}
 
 				throw error;
 			}
-		})()
+		})(),
 	};
 }
 
 export async function renderMermaidBlocksInElement(
 	root: HTMLElement,
-	writeOut: (mermaidContainer: HTMLElement, content: string, contentHash: string, isError: boolean) => void,
+	writeOut: (
+		mermaidContainer: HTMLElement,
+		content: string,
+		contentHash: string,
+		isError: boolean,
+	) => void,
 	signal: AbortSignal,
 ): Promise<void> {
 	// Track used IDs for this render pass
 	const usedIds = new Set<string>();
 
 	// Delete existing mermaid outputs
-	for (const el of root.querySelectorAll('.mermaid > svg')) {
+	for (const el of root.querySelectorAll(".mermaid > svg")) {
 		el.remove();
 	}
-	for (const svg of root.querySelectorAll('svg')) {
-		if (svg.parentElement?.id.startsWith('dmermaid')) {
+	for (const svg of root.querySelectorAll("svg")) {
+		if (svg.parentElement?.id.startsWith("dmermaid")) {
 			svg.parentElement.remove();
 		}
 	}
 
 	// We need to generate all the container ids sync, but then do the actual rendering async
 	const renderPromises: Array<Promise<void>> = [];
-	for (const mermaidContainer of root.querySelectorAll<HTMLElement>('.mermaid')) {
-		const result = renderMermaidElement(mermaidContainer, usedIds, (container, content, isError) => {
-			writeOut(container, content, result!.contentHash, isError);
-		}, signal);
+	for (const mermaidContainer of root.querySelectorAll<HTMLElement>(
+		".mermaid",
+	)) {
+		const result = renderMermaidElement(
+			mermaidContainer,
+			usedIds,
+			(container, content, isError) => {
+				writeOut(container, content, result!.contentHash, isError);
+			},
+			signal,
+		);
 		if (result) {
 			renderPromises.push(result.p);
 		}
@@ -140,11 +166,11 @@ export const defaultExtensionConfig: MermaidExtensionConfig = {
 	clickDrag: ClickDragMode.Alt,
 	showControls: ShowControlsMode.OnHoverOrFocus,
 	resizable: true,
-	maxHeight: '',
+	maxHeight: "",
 };
 
 export function loadExtensionConfig(): MermaidExtensionConfig {
-	const configSpan = document.getElementById('markdown-mermaid');
+	const configSpan = document.getElementById("markdown-mermaid");
 	const configAttr = configSpan?.dataset.config;
 	if (!configAttr) {
 		return defaultExtensionConfig;
@@ -175,11 +201,11 @@ function hashString(str: string): string {
 	let hash = 0;
 	for (let i = 0; i < str.length; i++) {
 		const char = str.charCodeAt(i);
-		hash = ((hash << 5) - hash) + char;
+		hash = (hash << 5) - hash + char;
 		hash = hash & hash; // Convert to 32bit integer
 	}
 	// Convert to hex and ensure positive
-	return (hash >>> 0).toString(16).padStart(8, '0');
+	return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 function generateContentId(source: string, usedIds: Set<string>): string {

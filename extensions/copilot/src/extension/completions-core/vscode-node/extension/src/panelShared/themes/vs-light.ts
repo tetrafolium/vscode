@@ -188,7 +188,10 @@ export const vsLight: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['punctuation.definition.quote.begin.markdown', 'punctuation.definition.list.begin.markdown'],
+			scope: [
+				'punctuation.definition.quote.begin.markdown',
+				'punctuation.definition.list.begin.markdown',
+			],
 			settings: {
 				foreground: '#0451A5',
 			},
@@ -372,7 +375,10 @@ export const vsLight: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['punctuation.section.embedded.begin.php', 'punctuation.section.embedded.end.php'],
+			scope: [
+				'punctuation.section.embedded.begin.php',
+				'punctuation.section.embedded.end.php',
+			],
 			settings: {
 				foreground: '#800000',
 			},
@@ -390,7 +396,11 @@ export const vsLight: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['storage.modifier.import.java', 'variable.language.wildcard.java', 'storage.modifier.package.java'],
+			scope: [
+				'storage.modifier.import.java',
+				'variable.language.wildcard.java',
+				'storage.modifier.package.java',
+			],
 			settings: {
 				foreground: '#000000',
 			},

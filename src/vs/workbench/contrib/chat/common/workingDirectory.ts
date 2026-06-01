@@ -3,9 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { extUriBiasedIgnorePathCase, joinPath } from '../../../../base/common/resources.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
+import {
+	extUriBiasedIgnorePathCase,
+	joinPath,
+} from "../../../../base/common/resources.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IWorkspaceContextService } from "../../../../platform/workspace/common/workspace.js";
 
 /**
  * Encapsulates workspace folder resolution with an optional working directory override.
@@ -15,11 +18,10 @@ import { IWorkspaceContextService } from '../../../../platform/workspace/common/
  * delegates to the underlying {@link IWorkspaceContextService}.
  */
 export class WorkingDirectory {
-
 	constructor(
 		private readonly _workspaceContextService: IWorkspaceContextService,
 		private readonly _uri?: URI,
-	) { }
+	) {}
 
 	/** The explicit working directory URI, if set. */
 	get uri(): URI | undefined {

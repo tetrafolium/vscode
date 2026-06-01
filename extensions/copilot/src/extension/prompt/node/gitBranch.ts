@@ -5,7 +5,10 @@
 
 import type * as vscode from 'vscode';
 import { sessionResourceToId } from '../../../platform/chat/common/chatDebugFileLoggerService';
-import { ChatFetchResponseType, ChatLocation } from '../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+} from '../../../platform/chat/common/commonTypes';
 import { IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
 import { ILogService } from '../../../platform/log/common/logService';
 import { CapturingToken } from '../../../platform/requestLogger/common/capturingToken';
@@ -17,35 +20,46 @@ import { renderPromptElement } from '../../prompts/node/base/promptRenderer';
 import { GitBranchPrompt } from '../../prompts/node/panel/gitBranch';
 
 export class GitBranchNameGenerator {
-
 	constructor(
 		@ILogService private readonly logService: ILogService,
 		@IEndpointProvider private endpointProvider: IEndpointProvider,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IRequestLogger private readonly requestLogger: IRequestLogger,
-	) { }
+	) {}
 
 	async generateBranchName(
 		context: vscode.ChatContext,
 		token: vscode.CancellationToken,
 	): Promise<string | undefined> {
-
 		// Get the first user message directly from the context
 		// Use instanceof to properly check if the first item is a ChatRequestTurn
-		const firstRequest = context.history.find(item => item instanceof ChatRequestTurn);
+		const firstRequest = context.history.find(
+			(item) => item instanceof ChatRequestTurn,
+		);
 		if (!firstRequest) {
 			return '';
 		}
 
 		// Extract the parent session ID from the context's sessionResource (provided by VS Code)
 		const sessionResource = context.sessionResource;
-		const parentChatSessionId = sessionResource ? sessionResourceToId(URI.from(sessionResource)) : undefined;
+		const parentChatSessionId = sessionResource
+			? sessionResourceToId(URI.from(sessionResource))
+			: undefined;
 
-		const endpoint = await this.endpointProvider.getChatEndpoint('copilot-utility-small');
-		const normalizedCommand = firstRequest.command?.trim().replace(/^\/+/, '') ?? '';
+		const endpoint = await this.endpointProvider.getChatEndpoint(
+			'copilot-utility-small',
+		);
+		const normalizedCommand =
+			firstRequest.command?.trim().replace(/^\/+/, '') ?? '';
 		const command = normalizedCommand ? `/${normalizedCommand} ` : '';
 		const userRequest = `${command}${firstRequest.prompt}`;
-		const { messages } = await renderPromptElement(this.instantiationService, endpoint, GitBranchPrompt, { userRequest });
+		const { messages } = await renderPromptElement(
+			this.instantiationService,
+			endpoint,
+			GitBranchPrompt,
+			{ userRequest },
+		);
 
 		const capturingToken = new CapturingToken(
 			'git-branch',
@@ -58,19 +72,25 @@ export class GitBranchNameGenerator {
 		);
 
 		const doRequest = async () => {
-			const response = await endpoint.makeChatRequest2({
-				debugName: 'git-branch',
-				messages,
-				finishedCb: undefined,
-				location: ChatLocation.Panel,
-				userInitiatedRequest: false,
-				isConversationRequest: false,
-				interactionTypeOverride: 'conversation-background',
-			}, token);
+			const response = await endpoint.makeChatRequest2(
+				{
+					debugName: 'git-branch',
+					messages,
+					finishedCb: undefined,
+					location: ChatLocation.Panel,
+					userInitiatedRequest: false,
+					isConversationRequest: false,
+					interactionTypeOverride: 'conversation-background',
+				},
+				token,
+			);
 			return response;
 		};
 
-		const response = await this.requestLogger.captureInvocation(capturingToken, doRequest);
+		const response = await this.requestLogger.captureInvocation(
+			capturingToken,
+			doRequest,
+		);
 		if (token.isCancellationRequested) {
 			return '';
 		}
@@ -80,19 +100,23 @@ export class GitBranchNameGenerator {
 			if (branchName.match(/^".*"$/)) {
 				branchName = branchName.slice(1, -1);
 			}
-			if (branchName.includes('can\'t assist with that')) {
+			if (branchName.includes("can't assist with that")) {
 				return undefined;
 			}
 
 			branchName = normalizeBranchName(branchName);
 			if (branchName.length < 8) {
-				this.logService.warn('Generated branch name is too short after normalization, discarding.');
+				this.logService.warn(
+					'Generated branch name is too short after normalization, discarding.',
+				);
 				return undefined;
 			}
 
 			return branchName;
 		} else {
-			this.logService.error(`Failed to fetch git branch name because of response type (${response.type}) and reason (${response.reason})`);
+			this.logService.error(
+				`Failed to fetch git branch name because of response type (${response.type}) and reason (${response.reason})`,
+			);
 			return '';
 		}
 	}

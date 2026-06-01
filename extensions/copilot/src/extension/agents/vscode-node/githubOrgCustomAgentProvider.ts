@@ -5,8 +5,15 @@
 
 import * as vscode from 'vscode';
 import YAML, { Scalar } from 'yaml';
-import { AGENT_FILE_EXTENSION, PromptsType } from '../../../platform/customInstructions/common/promptTypes';
-import { CustomAgentDetails, CustomAgentListOptions, IOctoKitService } from '../../../platform/github/common/githubService';
+import {
+	AGENT_FILE_EXTENSION,
+	PromptsType,
+} from '../../../platform/customInstructions/common/promptTypes';
+import {
+	CustomAgentDetails,
+	CustomAgentListOptions,
+	IOctoKitService,
+} from '../../../platform/github/common/githubService';
 import { ILogService } from '../../../platform/log/common/logService';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
 import { IGitHubOrgChatResourcesService } from './githubOrgChatResourcesService';
@@ -17,37 +24,61 @@ import { IGitHubOrgChatResourcesService } from './githubOrgChatResourcesService'
  */
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
-export class GitHubOrgCustomAgentProvider extends Disposable implements vscode.ChatCustomAgentProvider {
-	private readonly _onDidChangeCustomAgents = this._register(new vscode.EventEmitter<void>());
+export class GitHubOrgCustomAgentProvider
+	extends Disposable
+	implements vscode.ChatCustomAgentProvider
+{
+	private readonly _onDidChangeCustomAgents = this._register(
+		new vscode.EventEmitter<void>(),
+	);
 	readonly onDidChangeCustomAgents = this._onDidChangeCustomAgents.event;
 
 	constructor(
 		@IOctoKitService private readonly octoKitService: IOctoKitService,
 		@ILogService private readonly logService: ILogService,
-		@IGitHubOrgChatResourcesService private readonly githubOrgChatResourcesService: IGitHubOrgChatResourcesService,
+		@IGitHubOrgChatResourcesService
+		private readonly githubOrgChatResourcesService: IGitHubOrgChatResourcesService,
 	) {
 		super();
 
 		// Set up polling with provider-specific interval
-		this._register(this.githubOrgChatResourcesService.startPolling(REFRESH_INTERVAL_MS, this.pollAgents.bind(this)));
+		this._register(
+			this.githubOrgChatResourcesService.startPolling(
+				REFRESH_INTERVAL_MS,
+				this.pollAgents.bind(this),
+			),
+		);
 	}
 
-	async provideCustomAgents(_context: unknown, token: vscode.CancellationToken): Promise<vscode.ChatResource[]> {
+	async provideCustomAgents(
+		_context: unknown,
+		token: vscode.CancellationToken,
+	): Promise<vscode.ChatResource[]> {
 		try {
-			const orgId = await this.githubOrgChatResourcesService.getPreferredOrganizationName();
+			const orgId =
+				await this.githubOrgChatResourcesService.getPreferredOrganizationName();
 			if (!orgId) {
-				this.logService.trace('[GitHubOrgCustomAgentProvider] No organization available for providing agents');
+				this.logService.trace(
+					'[GitHubOrgCustomAgentProvider] No organization available for providing agents',
+				);
 				return [];
 			}
 
 			if (token.isCancellationRequested) {
-				this.logService.trace('[GitHubOrgCustomAgentProvider] provideCustomAgents was cancelled');
+				this.logService.trace(
+					'[GitHubOrgCustomAgentProvider] provideCustomAgents was cancelled',
+				);
 				return [];
 			}
 
-			return await this.githubOrgChatResourcesService.listCachedFiles(PromptsType.agent, orgId);
+			return await this.githubOrgChatResourcesService.listCachedFiles(
+				PromptsType.agent,
+				orgId,
+			);
 		} catch (error) {
-			this.logService.error(`[GitHubOrgCustomAgentProvider] Error reading from cache: ${error}`);
+			this.logService.error(
+				`[GitHubOrgCustomAgentProvider] Error reading from cache: ${error}`,
+			);
 			return [];
 		}
 	}
@@ -56,62 +87,88 @@ export class GitHubOrgCustomAgentProvider extends Disposable implements vscode.C
 		try {
 			// Convert VS Code API options to internal options
 			// It's okay to include enterprise agents here which may take from other orgs, as we only retrieve per org
-			const internalOptions = { includeSources: ['org', 'enterprise'] } satisfies CustomAgentListOptions;
+			const internalOptions = {
+				includeSources: ['org', 'enterprise'],
+			} satisfies CustomAgentListOptions;
 
 			// Note: we need to fetch an arbitrary visible/accessible repository, in case user does not have access to .github-private
-			const repos = await this.octoKitService.getOrganizationRepositories(orgId, {}, 1);
+			const repos = await this.octoKitService.getOrganizationRepositories(
+				orgId,
+				{},
+				1,
+			);
 			if (repos.length === 0) {
-				this.logService.trace(`[GitHubOrgCustomAgentProvider] No repositories found for org ${orgId}`);
+				this.logService.trace(
+					`[GitHubOrgCustomAgentProvider] No repositories found for org ${orgId}`,
+				);
 				return;
 			}
 
 			// Fetch custom agents from GitHub and compare with existing agents in cache
 			const repoName = repos[0];
 			const [agents, existingAgents] = await Promise.all([
-				this.octoKitService.getCustomAgents(orgId, repoName, internalOptions, {}),
-				this.githubOrgChatResourcesService.listCachedFiles(PromptsType.agent, orgId)
+				this.octoKitService.getCustomAgents(
+					orgId,
+					repoName,
+					internalOptions,
+					{},
+				),
+				this.githubOrgChatResourcesService.listCachedFiles(
+					PromptsType.agent,
+					orgId,
+				),
 			]);
 
 			let hasChanges: boolean = existingAgents.length !== agents.length;
 			const newFiles = new Set<string>();
 			for (const agent of agents) {
 				// Fetch full agent details including prompt content
-				const agentDetails = await this.octoKitService.getCustomAgentDetails(
-					agent.repo_owner,
-					agent.repo_name,
-					agent.name,
-					agent.version,
-					{},
-				);
+				const agentDetails =
+					await this.octoKitService.getCustomAgentDetails(
+						agent.repo_owner,
+						agent.repo_name,
+						agent.name,
+						agent.version,
+						{},
+					);
 
 				// Generate agent markdown file content
 				if (agentDetails) {
 					const filename = `${agent.name}${AGENT_FILE_EXTENSION}`;
 					const content = this.generateAgentMarkdown(agentDetails);
-					const result = await this.githubOrgChatResourcesService.writeCacheFile(
-						PromptsType.agent,
-						orgId,
-						filename,
-						content,
-						{ checkForChanges: !hasChanges }
-					);
+					const result =
+						await this.githubOrgChatResourcesService.writeCacheFile(
+							PromptsType.agent,
+							orgId,
+							filename,
+							content,
+							{ checkForChanges: !hasChanges },
+						);
 					hasChanges ||= result;
 					newFiles.add(filename);
 				}
 			}
 
 			if (!hasChanges) {
-				this.logService.trace('[GitHubOrgCustomAgentProvider] No changes detected in cache');
+				this.logService.trace(
+					'[GitHubOrgCustomAgentProvider] No changes detected in cache',
+				);
 				return;
 			}
 
 			// Remove all cached agents that are no longer present
-			await this.githubOrgChatResourcesService.clearCache(PromptsType.agent, orgId, newFiles);
+			await this.githubOrgChatResourcesService.clearCache(
+				PromptsType.agent,
+				orgId,
+				newFiles,
+			);
 
 			// Fire event to notify consumers that agents have changed
 			this._onDidChangeCustomAgents.fire();
 		} catch (error) {
-			this.logService.error(`[GitHubOrgCustomAgentProvider] Error polling for agents: ${error}`);
+			this.logService.error(
+				`[GitHubOrgCustomAgentProvider] Error polling for agents: ${error}`,
+			);
 		}
 	}
 
@@ -137,7 +194,8 @@ export class GitHubOrgCustomAgentProvider extends Disposable implements vscode.C
 			frontmatterObj.model = agent.model;
 		}
 		if (agent.disable_model_invocation !== undefined) {
-			frontmatterObj['disable-model-invocation'] = agent.disable_model_invocation;
+			frontmatterObj['disable-model-invocation'] =
+				agent.disable_model_invocation;
 		}
 		if (agent.user_invocable !== undefined) {
 			frontmatterObj['user-invocable'] = agent.user_invocable;
@@ -173,7 +231,7 @@ export function yamlString(value: string): string | Scalar {
 	// - Single quotes in value require double quotes (parser doesn't handle escapes)
 	const needsQuoting =
 		/[#:\[\]{},\n\r]/.test(value) ||
-		value.startsWith('\'') ||
+		value.startsWith("'") ||
 		value.startsWith('"') ||
 		value !== value.trim() ||
 		value === 'true' ||
@@ -189,9 +247,10 @@ export function yamlString(value: string): string | Scalar {
 		// - Newlines in single-quoted strings become multi-line blocks, but the custom
 		//   YAML parser doesn't support multi-line strings. Double quotes preserve
 		//   newlines as \n escape sequences.
-		scalar.type = (value.includes('\'') || value.includes('\n') || value.includes('\r'))
-			? Scalar.QUOTE_DOUBLE
-			: Scalar.QUOTE_SINGLE;
+		scalar.type =
+			value.includes("'") || value.includes('\n') || value.includes('\r')
+				? Scalar.QUOTE_DOUBLE
+				: Scalar.QUOTE_SINGLE;
 		return scalar;
 	}
 	return value;

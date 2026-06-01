@@ -5,7 +5,6 @@
 
 import type { Progress } from 'vscode';
 
-
 /**
  * Sends the progress to report to the progress option if promise takes longer than time to wait
  * @param progress The progress object which receives the progressToReport item
@@ -14,7 +13,12 @@ import type { Progress } from 'vscode';
  * @param timeToWait The time to allow that promise to execute before firing off the progress
  * @returns The promise so that it may be externally awaited
  */
-export async function reportProgressOnSlowPromise<T, P extends Promise<any>>(progress: Progress<T>, progressToReport: T, promise: P, timeToWait: number): Promise<Awaited<P>> {
+export async function reportProgressOnSlowPromise<T, P extends Promise<any>>(
+	progress: Progress<T>,
+	progressToReport: T,
+	promise: P,
+	timeToWait: number,
+): Promise<Awaited<P>> {
 	let timeoutId: any | null = null;
 	let promiseResolved = false;
 

@@ -10,7 +10,6 @@ import type { Disposable } from 'vscode';
  * the debounce time for subsequent events until reaching a maximum threshold.
  */
 export class ThrottledDebouncer implements Disposable {
-
 	private static readonly INITIAL_DELAY = 100;
 	private static readonly DELAY_INCREMENT = 10;
 	private static readonly MAX_DELAY = 500;
@@ -21,7 +20,11 @@ export class ThrottledDebouncer implements Disposable {
 	private readonly increment: number;
 	private readonly maxDelay: number;
 
-	constructor(initialDelay: number = ThrottledDebouncer.INITIAL_DELAY, increment: number = ThrottledDebouncer.DELAY_INCREMENT, maxDelay: number = ThrottledDebouncer.MAX_DELAY) {
+	constructor(
+		initialDelay: number = ThrottledDebouncer.INITIAL_DELAY,
+		increment: number = ThrottledDebouncer.DELAY_INCREMENT,
+		maxDelay: number = ThrottledDebouncer.MAX_DELAY,
+	) {
 		this.currentDelay = initialDelay;
 		this.initialDelay = initialDelay;
 		this.increment = increment;
@@ -36,14 +39,17 @@ export class ThrottledDebouncer implements Disposable {
 	 * @param fn The function to execute after the debounce period
 	 * @param args The arguments to pass to the function
 	 */
-	public trigger<T extends unknown[]>(fn: (...args: T) => void, ...args: T): void {
+	public trigger<T extends unknown[]>(
+		fn: (...args: T) => void,
+		...args: T
+	): void {
 		// Cancel any existing timeout
 		if (this.timeoutId !== undefined) {
 			clearTimeout(this.timeoutId);
 			// Increase delay for subsequent events, up to the maximum
 			this.currentDelay = Math.min(
 				this.currentDelay + this.increment,
-				this.maxDelay
+				this.maxDelay,
 			);
 		}
 

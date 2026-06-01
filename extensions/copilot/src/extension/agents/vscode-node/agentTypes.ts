@@ -46,7 +46,7 @@ export const DEFAULT_READ_TOOLS: readonly string[] = [
 	'github.vscode-pull-request-github/issue_fetch',
 	'github.vscode-pull-request-github/activePullRequest',
 	'execute/getTerminalOutput',
-	'execute/testFailure'
+	'execute/testFailure',
 ];
 
 /**
@@ -64,7 +64,9 @@ export function buildAgentMarkdown(config: AgentConfig): string {
 	// Model (optional) — supports a single string or a priority list of models
 	if (config.model) {
 		if (Array.isArray(config.model)) {
-			const quoted = config.model.map(m => `'${m.replace(/'/g, '\'\'')}'`).join(', ');
+			const quoted = config.model
+				.map((m) => `'${m.replace(/'/g, "''")}'`)
+				.join(', ');
 			lines.push(`model: [${quoted}]`);
 		} else {
 			lines.push(`model: ${config.model}`);
@@ -83,13 +85,17 @@ export function buildAgentMarkdown(config: AgentConfig): string {
 	// Tools array - flow style for readability
 	// Escape single quotes by doubling them (YAML spec)
 	if (config.tools.length > 0) {
-		const quotedTools = config.tools.map(t => `'${t.replace(/'/g, '\'\'')}'`).join(', ');
+		const quotedTools = config.tools
+			.map((t) => `'${t.replace(/'/g, "''")}'`)
+			.join(', ');
 		lines.push(`tools: [${quotedTools}]`);
 	}
 
 	// Agents array - same format as tools (empty array = no subagents allowed)
 	if (config.agents) {
-		const quotedAgents = config.agents.map(a => `'${a.replace(/'/g, '\'\'')}'`).join(', ');
+		const quotedAgents = config.agents
+			.map((a) => `'${a.replace(/'/g, "''")}'`)
+			.join(', ');
 		lines.push(`agents: [${quotedAgents}]`);
 	}
 
@@ -100,7 +106,7 @@ export function buildAgentMarkdown(config: AgentConfig): string {
 		for (const handoff of config.handoffs) {
 			lines.push(`  - label: ${handoff.label}`);
 			lines.push(`    agent: ${handoff.agent}`);
-			lines.push(`    prompt: '${handoff.prompt.replace(/'/g, '\'\'')}'`);
+			lines.push(`    prompt: '${handoff.prompt.replace(/'/g, "''")}'`);
 			if (handoff.send !== undefined) {
 				lines.push(`    send: ${handoff.send}`);
 			}

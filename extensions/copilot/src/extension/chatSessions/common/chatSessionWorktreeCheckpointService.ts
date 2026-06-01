@@ -5,7 +5,10 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IChatSessionWorktreeCheckpointService = createServiceIdentifier<IChatSessionWorktreeCheckpointService>('IChatSessionWorktreeCheckpointService');
+export const IChatSessionWorktreeCheckpointService =
+	createServiceIdentifier<IChatSessionWorktreeCheckpointService>(
+		'IChatSessionWorktreeCheckpointService',
+	);
 
 export interface IChatSessionWorktreeCheckpointService {
 	readonly _serviceBrand: undefined;
@@ -17,7 +20,10 @@ export interface IChatSessionWorktreeCheckpointService {
 	handleAdditionalWorktreesRequest(sessionId: string): Promise<void>;
 
 	/** Create post-turn checkpoints for additional worktrees at request completion. */
-	handleAdditionalWorktreesRequestCompleted(sessionId: string, requestId: string): Promise<void>;
+	handleAdditionalWorktreesRequestCompleted(
+		sessionId: string,
+		requestId: string,
+	): Promise<void>;
 
 	/**
 	 * Rewrite the session's last checkpoint so it reflects the current state of the worktree.

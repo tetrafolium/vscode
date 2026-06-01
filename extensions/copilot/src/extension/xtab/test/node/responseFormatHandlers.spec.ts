@@ -6,7 +6,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DocumentId } from '../../../../platform/inlineEdits/common/dataTypes/documentId';
 import { EditIntent } from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
-import { NoNextEditReason, StreamedEdit } from '../../../../platform/inlineEdits/common/statelessNextEditProvider';
+import {
+	NoNextEditReason,
+	StreamedEdit,
+} from '../../../../platform/inlineEdits/common/statelessNextEditProvider';
 import { ILogger } from '../../../../platform/log/common/logService';
 import { AsyncIterUtils } from '../../../../util/common/asyncIterableUtils';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
@@ -40,7 +43,9 @@ function createMockLogger(): ILogger {
 	} as unknown as ILogger;
 }
 
-function makeInsertContext(overrides?: Partial<UnifiedXmlInsertContext>): UnifiedXmlInsertContext {
+function makeInsertContext(
+	overrides?: Partial<UnifiedXmlInsertContext>,
+): UnifiedXmlInsertContext {
 	return {
 		editWindowLines: ['line0', 'cursor_line', 'line2'],
 		editWindowLineRange: new OffsetRange(10, 13),
@@ -65,7 +70,10 @@ async function collectLines(iter: AsyncIterable<string>): Promise<string[]> {
 /**
  * Creates an async iterable that yields `items` and then throws `error`.
  */
-async function* asyncIterableWithError(items: string[], error: Error): AsyncGenerator<string> {
+async function* asyncIterableWithError(
+	items: string[],
+	error: Error,
+): AsyncGenerator<string> {
 	for (const item of items) {
 		yield item;
 	}
@@ -76,7 +84,7 @@ async function consumeDirectEdits(
 	stream: AsyncGenerator<StreamedEdit, NoNextEditReason, void>,
 ): Promise<{ edits: StreamedEdit[]; returnValue: NoNextEditReason }> {
 	const edits: StreamedEdit[] = [];
-	for (; ;) {
+	for (;;) {
 		const result = await stream.next();
 		if (result.done) {
 			return { edits, returnValue: result.value };
@@ -115,7 +123,10 @@ describe('handleCodeBlock', () => {
 		const result = handleCodeBlock(AsyncIterUtils.fromArray(input));
 
 		expect(result).toBeInstanceOf(ResponseParseResult.EditWindowLines);
-		expect(await collectLines(result.lines)).toEqual(['const x = 1;', 'const y = 2;']);
+		expect(await collectLines(result.lines)).toEqual([
+			'const x = 1;',
+			'const y = 2;',
+		]);
 	});
 
 	it('passes through when no backticks', async () => {
@@ -193,7 +204,10 @@ describe('handleEditWindowWithEditIntent', () => {
 		expect(ewl.editIntentMetadata?.parseError).toBeDefined();
 		// Default to High on parse error — first line is re-emitted as content
 		expect(ewl.editIntentMetadata?.intent).toBe(EditIntent.High);
-		expect(await collectLines(ewl.lines)).toEqual(['no intent here', 'line1']);
+		expect(await collectLines(ewl.lines)).toEqual([
+			'no intent here',
+			'line1',
+		]);
 	});
 });
 
@@ -211,7 +225,9 @@ describe('handleUnifiedWithXml', () => {
 		);
 
 		expect(result).toBeInstanceOf(ResponseParseResult.Done);
-		expect((result as ResponseParseResult.Done).reason).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+		expect((result as ResponseParseResult.Done).reason).toBeInstanceOf(
+			NoNextEditReason.NoSuggestions,
+		);
 	});
 
 	it('empty response returns Done(NoSuggestions)', async () => {
@@ -223,7 +239,9 @@ describe('handleUnifiedWithXml', () => {
 		);
 
 		expect(result).toBeInstanceOf(ResponseParseResult.Done);
-		expect((result as ResponseParseResult.Done).reason).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+		expect((result as ResponseParseResult.Done).reason).toBeInstanceOf(
+			NoNextEditReason.NoSuggestions,
+		);
 	});
 
 	it('unknown tag returns Done(Unexpected)', async () => {
@@ -235,23 +253,33 @@ describe('handleUnifiedWithXml', () => {
 		);
 
 		expect(result).toBeInstanceOf(ResponseParseResult.Done);
-		expect((result as ResponseParseResult.Done).reason).toBeInstanceOf(NoNextEditReason.Unexpected);
+		expect((result as ResponseParseResult.Done).reason).toBeInstanceOf(
+			NoNextEditReason.Unexpected,
+		);
 	});
 
 	it('FetchStreamError on first line read rejects handleUnifiedWithXml', async () => {
 		const failureReason = new NoNextEditReason.GotCancelled('test');
-		await expect(handleUnifiedWithXml(
-			asyncIterableWithError([], new FetchStreamError(failureReason)),
-			makeInsertContext(),
-			makeDocBeforeEdits(),
-			createMockLogger(),
-		)).rejects.toThrow(FetchStreamError);
+		await expect(
+			handleUnifiedWithXml(
+				asyncIterableWithError([], new FetchStreamError(failureReason)),
+				makeInsertContext(),
+				makeDocBeforeEdits(),
+				createMockLogger(),
+			),
+		).rejects.toThrow(FetchStreamError);
 	});
 
 	describe('<EDIT>', () => {
 		it('returns EditWindowLines with correct lines, stops at </EDIT>', async () => {
 			const result = await handleUnifiedWithXml(
-				AsyncIterUtils.fromArray(['<EDIT>', 'edited_line0', 'edited_cursor_line', 'edited_line2', '</EDIT>']),
+				AsyncIterUtils.fromArray([
+					'<EDIT>',
+					'edited_line0',
+					'edited_cursor_line',
+					'edited_line2',
+					'</EDIT>',
+				]),
 				makeInsertContext(),
 				makeDocBeforeEdits(),
 				createMockLogger(),
@@ -259,7 +287,11 @@ describe('handleUnifiedWithXml', () => {
 
 			expect(result).toBeInstanceOf(ResponseParseResult.EditWindowLines);
 			const ewl = result as ResponseParseResult.EditWindowLines;
-			expect(await collectLines(ewl.lines)).toEqual(['edited_line0', 'edited_cursor_line', 'edited_line2']);
+			expect(await collectLines(ewl.lines)).toEqual([
+				'edited_line0',
+				'edited_cursor_line',
+				'edited_line2',
+			]);
 		});
 
 		it('handles stream ending without </EDIT> tag', async () => {
@@ -290,7 +322,9 @@ describe('handleUnifiedWithXml', () => {
 
 			expect(result).toBeInstanceOf(ResponseParseResult.EditWindowLines);
 			const ewl = result as ResponseParseResult.EditWindowLines;
-			await expect(collectLines(ewl.lines)).rejects.toThrow(FetchStreamError);
+			await expect(collectLines(ewl.lines)).rejects.toThrow(
+				FetchStreamError,
+			);
 		});
 	});
 
@@ -298,19 +332,27 @@ describe('handleUnifiedWithXml', () => {
 		it('returns DirectEdits yielding correct edits', async () => {
 			const ctx = makeInsertContext();
 			const result = await handleUnifiedWithXml(
-				AsyncIterUtils.fromArray(['<INSERT>', 'inserted_text', '</INSERT>']),
+				AsyncIterUtils.fromArray([
+					'<INSERT>',
+					'inserted_text',
+					'</INSERT>',
+				]),
 				ctx,
 				makeDocBeforeEdits(),
 				createMockLogger(),
 			);
 
 			expect(result).toBeInstanceOf(ResponseParseResult.DirectEdits);
-			const { edits, returnValue } = await consumeDirectEdits((result as ResponseParseResult.DirectEdits).stream);
+			const { edits, returnValue } = await consumeDirectEdits(
+				(result as ResponseParseResult.DirectEdits).stream,
+			);
 
 			// First edit: cursor line replacement with inserted text spliced in
 			// cursor_line with cursorColumnZeroBased=6: 'cursor' + 'inserted_text' + '_line'
 			expect(edits.length).toBeGreaterThanOrEqual(1);
-			expect(edits[0].edit.newLines).toEqual(['cursorinserted_text_line']);
+			expect(edits[0].edit.newLines).toEqual([
+				'cursorinserted_text_line',
+			]);
 
 			// Second edit: empty insertion (no additional lines between INSERT tags)
 			expect(edits[1].edit.newLines).toEqual([]);
@@ -321,14 +363,22 @@ describe('handleUnifiedWithXml', () => {
 		it('returns DirectEdits with multi-line insert', async () => {
 			const ctx = makeInsertContext();
 			const result = await handleUnifiedWithXml(
-				AsyncIterUtils.fromArray(['<INSERT>', 'first', 'second', 'third', '</INSERT>']),
+				AsyncIterUtils.fromArray([
+					'<INSERT>',
+					'first',
+					'second',
+					'third',
+					'</INSERT>',
+				]),
 				ctx,
 				makeDocBeforeEdits(),
 				createMockLogger(),
 			);
 
 			expect(result).toBeInstanceOf(ResponseParseResult.DirectEdits);
-			const { edits } = await consumeDirectEdits((result as ResponseParseResult.DirectEdits).stream);
+			const { edits } = await consumeDirectEdits(
+				(result as ResponseParseResult.DirectEdits).stream,
+			);
 
 			expect(edits).toHaveLength(2);
 			// First edit splices 'first' into cursor line: 'cursor' + 'first' + '_line'
@@ -346,7 +396,9 @@ describe('handleUnifiedWithXml', () => {
 			);
 
 			expect(result).toBeInstanceOf(ResponseParseResult.DirectEdits);
-			const { edits, returnValue } = await consumeDirectEdits((result as ResponseParseResult.DirectEdits).stream);
+			const { edits, returnValue } = await consumeDirectEdits(
+				(result as ResponseParseResult.DirectEdits).stream,
+			);
 			expect(edits).toHaveLength(0);
 			expect(returnValue).toBeInstanceOf(NoNextEditReason.NoSuggestions);
 		});
@@ -366,7 +418,11 @@ describe('handleUnifiedWithXml', () => {
 
 			expect(result).toBeInstanceOf(ResponseParseResult.DirectEdits);
 			// The stream should throw FetchStreamError when trying to read after the second item
-			await expect(consumeDirectEdits((result as ResponseParseResult.DirectEdits).stream)).rejects.toThrow(FetchStreamError);
+			await expect(
+				consumeDirectEdits(
+					(result as ResponseParseResult.DirectEdits).stream,
+				),
+			).rejects.toThrow(FetchStreamError);
 		});
 	});
 });

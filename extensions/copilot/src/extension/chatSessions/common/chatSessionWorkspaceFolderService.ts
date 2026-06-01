@@ -5,10 +5,16 @@
 
 import type * as vscode from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
-import { RepositoryProperties, WorkspaceFolderEntry } from './chatSessionMetadataStore';
+import {
+	RepositoryProperties,
+	WorkspaceFolderEntry,
+} from './chatSessionMetadataStore';
 import { ChatSessionWorktreeFile } from './chatSessionWorktreeService';
 
-export const IChatSessionWorkspaceFolderService = createServiceIdentifier<IChatSessionWorkspaceFolderService>('IChatSessionWorkspaceFolderService');
+export const IChatSessionWorkspaceFolderService =
+	createServiceIdentifier<IChatSessionWorkspaceFolderService>(
+		'IChatSessionWorkspaceFolderService',
+	);
 
 /**
  * Service for tracking workspace folder selections for chat sessions.
@@ -25,27 +31,40 @@ export interface IChatSessionWorkspaceFolderService {
 	/**
 	 * Track workspace folder selection for a session (for folders without git repos in multi-root workspaces)
 	 */
-	trackSessionWorkspaceFolder(sessionId: string, workspaceFolderUri: string, repositoryProperties?: RepositoryProperties): Promise<void>;
+	trackSessionWorkspaceFolder(
+		sessionId: string,
+		workspaceFolderUri: string,
+		repositoryProperties?: RepositoryProperties,
+	): Promise<void>;
 
 	/**
 	 * Get the workspace folder associated with a session (if a workspace folder without git repo was selected)
 	 */
-	getSessionWorkspaceFolder(sessionId: string): Promise<vscode.Uri | undefined>;
+	getSessionWorkspaceFolder(
+		sessionId: string,
+	): Promise<vscode.Uri | undefined>;
 
 	/**
 	 * Get the workspace folder entry associated with a session (if a workspace folder without git repo was selected)
 	 */
-	getSessionWorkspaceFolderEntry(sessionId: string): Promise<WorkspaceFolderEntry | undefined>;
+	getSessionWorkspaceFolderEntry(
+		sessionId: string,
+	): Promise<WorkspaceFolderEntry | undefined>;
 
 	/**
 	 * Get the repository properties associated with a session.
 	 */
-	getRepositoryProperties(sessionId: string): Promise<RepositoryProperties | undefined>;
+	getRepositoryProperties(
+		sessionId: string,
+	): Promise<RepositoryProperties | undefined>;
 
 	/**
 	 * Set the repository properties associated with a session.
 	 */
-	setRepositoryProperties(sessionId: string, repositoryProperties: RepositoryProperties): Promise<void>;
+	setRepositoryProperties(
+		sessionId: string,
+		repositoryProperties: RepositoryProperties,
+	): Promise<void>;
 
 	/**
 	 * Handle the completion of a request for a session.
@@ -60,7 +79,9 @@ export interface IChatSessionWorkspaceFolderService {
 	/**
 	 * Get the changes in the workspace folder for a session.
 	 */
-	getWorkspaceChanges(sessionId: string): Promise<readonly ChatSessionWorktreeFile[] | undefined>;
+	getWorkspaceChanges(
+		sessionId: string,
+	): Promise<readonly ChatSessionWorktreeFile[] | undefined>;
 
 	/**
 	 * Clear the cached changes for a session.

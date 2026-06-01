@@ -6,12 +6,16 @@ import { IEnvService } from '../../../../../platform/env/common/envService';
 import { RequestId } from '../../../../../platform/networking/common/fetch';
 import { createServiceIdentifier } from '../../../../../util/common/services';
 import { generateUuid } from '../../../../../util/vs/base/common/uuid';
-import { IInstantiationService, ServicesAccessor } from '../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ICompletionsTelemetryService } from '../../bridge/src/completionsTelemetryServiceBridge';
 import {
 	BuildInfo,
 	dumpForTelemetry,
-	formatNameAndVersion, ICompletionsEditorAndPluginInfo
+	formatNameAndVersion,
+	ICompletionsEditorAndPluginInfo,
 } from './config';
 import { ExpConfig } from './experiments/expConfig';
 import { ICompletionsFeaturesService } from './experiments/featuresService';
@@ -51,7 +55,6 @@ const MAX_CONCATENATED_PROPERTIES = 21;
 export type TelemetryProperties = { [key: string]: string };
 export type TelemetryMeasurements = { [key: string]: number };
 
-
 /**
  * A class holding the data we want send to telemetry,
  * {@link TelemetryData.properties} containing the strings
@@ -74,7 +77,11 @@ export class TelemetryData {
 		ExpServiceTelemetryNames.featuresTelemetryPropertyName,
 	];
 
-	protected constructor(properties: TelemetryProperties, measurements: TelemetryMeasurements, issuedTime: number) {
+	protected constructor(
+		properties: TelemetryProperties,
+		measurements: TelemetryMeasurements,
+		issuedTime: number,
+	) {
 		this.properties = properties;
 		this.measurements = measurements;
 		this.issuedTime = issuedTime;
@@ -82,7 +89,7 @@ export class TelemetryData {
 
 	static createAndMarkAsIssued(
 		properties?: TelemetryProperties,
-		measurements?: TelemetryMeasurements
+		measurements?: TelemetryMeasurements,
 	): TelemetryData {
 		return new TelemetryData(properties || {}, measurements || {}, now());
 	}
@@ -92,10 +99,17 @@ export class TelemetryData {
 	 * @param measurements new measurements, which will overwrite old ones in case of a clash
 	 * @returns a TelemetryData object whose contents extend (copies of) the current one's and whose creation date is not updated
 	 */
-	extendedBy(properties?: TelemetryProperties, measurements?: TelemetryMeasurements): TelemetryData {
+	extendedBy(
+		properties?: TelemetryProperties,
+		measurements?: TelemetryMeasurements,
+	): TelemetryData {
 		const newProperties = { ...this.properties, ...properties };
 		const newMeasurements = { ...this.measurements, ...measurements };
-		const newData = new TelemetryData(newProperties, newMeasurements, this.issuedTime);
+		const newData = new TelemetryData(
+			newProperties,
+			newMeasurements,
+			this.issuedTime,
+		);
 		newData.displayedTime = this.displayedTime;
 
 		return newData;
@@ -125,29 +139,41 @@ export class TelemetryData {
 	 * assignment list is necessary.
 	 */
 	async extendWithExpTelemetry(accessor: ServicesAccessor): Promise<void> {
-		const { filters, exp } = await accessor.get(ICompletionsFeaturesService).getFallbackExpAndFilters();
+		const { filters, exp } = await accessor
+			.get(ICompletionsFeaturesService)
+			.getFallbackExpAndFilters();
 		exp.addToTelemetry(this);
 		filters.addToTelemetry(this);
 	}
 
 	extendWithEditorAgnosticFields(accessor: ServicesAccessor): void {
 		const envService = accessor.get(IEnvService);
-		const editorAndPluginInfo = accessor.get(ICompletionsEditorAndPluginInfo);
+		const editorAndPluginInfo = accessor.get(
+			ICompletionsEditorAndPluginInfo,
+		);
 
-		this.properties['editor_version'] = formatNameAndVersion(editorAndPluginInfo.getEditorInfo());
+		this.properties['editor_version'] = formatNameAndVersion(
+			editorAndPluginInfo.getEditorInfo(),
+		);
 		this.properties['editor_plugin_version'] = formatNameAndVersion(
-			editorAndPluginInfo.getEditorPluginInfo()
+			editorAndPluginInfo.getEditorPluginInfo(),
 		);
 		this.properties['client_machineid'] = envService.machineId;
 		this.properties['client_sessionid'] = envService.sessionId;
-		this.properties['copilot_version'] = `copilot/${BuildInfo.getVersion()}`;
+		this.properties['copilot_version'] =
+			`copilot/${BuildInfo.getVersion()}`;
 		if (typeof process !== 'undefined') {
-			this.properties['runtime_version'] = `node/${process.versions.node}`;
+			this.properties['runtime_version'] =
+				`node/${process.versions.node}`;
 		}
 
-		this.properties['common_extname'] = editorAndPluginInfo.getEditorPluginInfo().name;
-		this.properties['common_extversion'] = editorAndPluginInfo.getEditorPluginInfo().version;
-		this.properties['common_vscodeversion'] = formatNameAndVersion(editorAndPluginInfo.getEditorInfo());
+		this.properties['common_extname'] =
+			editorAndPluginInfo.getEditorPluginInfo().name;
+		this.properties['common_extversion'] =
+			editorAndPluginInfo.getEditorPluginInfo().version;
+		this.properties['common_vscodeversion'] = formatNameAndVersion(
+			editorAndPluginInfo.getEditorInfo(),
+		);
 	}
 
 	/**
@@ -157,7 +183,8 @@ export class TelemetryData {
 	 * e.g. { 'copilot.autocompletion.count': 3 }
 	 */
 	extendWithConfigProperties(accessor: ServicesAccessor): void {
-		const configProperties: { [key: string]: string } = dumpForTelemetry(accessor);
+		const configProperties: { [key: string]: string } =
+			dumpForTelemetry(accessor);
 		configProperties['copilot.build'] = BuildInfo.getBuild();
 		configProperties['copilot.buildType'] = BuildInfo.getBuildType();
 
@@ -190,7 +217,7 @@ export class TelemetryData {
 	 */
 	static maybeRemoveRepoInfoFromProperties(
 		store: TelemetryStore,
-		map: { [key: string]: string }
+		map: { [key: string]: string },
 	): { [key: string]: string } {
 		if (isEnhanced(store)) {
 			// We want to keep including these properties in enhanced telemetry.
@@ -199,7 +226,9 @@ export class TelemetryData {
 		// deliberately written in the same style as `sanitizeKeys` to minimise risk
 		const returnValue: { [key: string]: string } = {};
 		for (const key in map) {
-			if (!TelemetryData.keysToRemoveFromStandardTelemetry.includes(key)) {
+			if (
+				!TelemetryData.keysToRemoveFromStandardTelemetry.includes(key)
+			) {
 				returnValue[key] = map[key];
 			}
 		}
@@ -227,13 +256,19 @@ export class TelemetryData {
 		const returnValue: { [key: string]: V } = {};
 		// Iterate over all keys in the map and replace dots with underscores
 		for (const key in map) {
-			const newKey = TelemetryData.keysExemptedFromSanitization.includes(key) ? key : key.replace(/\./g, '_');
+			const newKey = TelemetryData.keysExemptedFromSanitization.includes(
+				key,
+			)
+				? key
+				: key.replace(/\./g, '_');
 			returnValue[newKey] = map[key];
 		}
 		return returnValue;
 	}
 
-	static multiplexProperties(properties: TelemetryProperties): TelemetryProperties {
+	static multiplexProperties(
+		properties: TelemetryProperties,
+	): TelemetryProperties {
 		const newProperties = { ...properties };
 		for (const key in properties) {
 			const value = properties[key];
@@ -242,17 +277,28 @@ export class TelemetryData {
 			if (remainingValueCharactersLength > MAX_PROPERTY_LENGTH) {
 				let lastStartIndex = 0;
 				let newPropertiesCount = 0;
-				while (remainingValueCharactersLength > 0 && newPropertiesCount < MAX_CONCATENATED_PROPERTIES) {
+				while (
+					remainingValueCharactersLength > 0 &&
+					newPropertiesCount < MAX_CONCATENATED_PROPERTIES
+				) {
 					newPropertiesCount += 1;
 					let propertyName = key;
 					if (newPropertiesCount > 1) {
-						propertyName = key + '_' + (newPropertiesCount < 10 ? '0' : '') + newPropertiesCount;
+						propertyName =
+							key +
+							'_' +
+							(newPropertiesCount < 10 ? '0' : '') +
+							newPropertiesCount;
 					}
 					let offsetIndex = lastStartIndex + MAX_PROPERTY_LENGTH;
 					if (remainingValueCharactersLength < MAX_PROPERTY_LENGTH) {
-						offsetIndex = lastStartIndex + remainingValueCharactersLength;
+						offsetIndex =
+							lastStartIndex + remainingValueCharactersLength;
 					}
-					newProperties[propertyName] = value.slice(lastStartIndex, offsetIndex);
+					newProperties[propertyName] = value.slice(
+						lastStartIndex,
+						offsetIndex,
+					);
 					remainingValueCharactersLength -= MAX_PROPERTY_LENGTH;
 					lastStartIndex += MAX_PROPERTY_LENGTH;
 				}
@@ -283,7 +329,7 @@ export class TelemetryData {
 		accessor: ServicesAccessor,
 		store: TelemetryStore,
 		includeExp: 'IncludeExp' | 'SkipExp',
-		now: number
+		now: number,
 	): Promise<void> {
 		const instantiationService = accessor.get(IInstantiationService);
 		this.extendWithConfigProperties(accessor);
@@ -297,7 +343,10 @@ export class TelemetryData {
 			await this.extendWithExpTelemetry(accessor);
 		}
 		this.updateMeasurements(now);
-		Object.assign(this.properties, instantiationService.invokeFunction(createRequiredProperties));
+		Object.assign(
+			this.properties,
+			instantiationService.invokeFunction(createRequiredProperties),
+		);
 	}
 }
 
@@ -325,16 +374,24 @@ export class TelemetryWithExp extends TelemetryData {
 		properties: TelemetryProperties,
 		measurements: TelemetryMeasurements,
 		issuedTime: number,
-		filtersAndExp: { filters: FilterSettings; exp: ExpConfig }
+		filtersAndExp: { filters: FilterSettings; exp: ExpConfig },
 	) {
 		super(properties, measurements, issuedTime);
 		this.filtersAndExp = filtersAndExp;
 	}
 
-	override extendedBy(properties?: TelemetryProperties, measurements?: TelemetryMeasurements): TelemetryWithExp {
+	override extendedBy(
+		properties?: TelemetryProperties,
+		measurements?: TelemetryMeasurements,
+	): TelemetryWithExp {
 		const newProperties = { ...this.properties, ...properties };
 		const newMeasurements = { ...this.measurements, ...measurements };
-		const newData = new TelemetryWithExp(newProperties, newMeasurements, this.issuedTime, this.filtersAndExp);
+		const newData = new TelemetryWithExp(
+			newProperties,
+			newMeasurements,
+			this.issuedTime,
+			this.filtersAndExp,
+		);
 		newData.displayedTime = this.displayedTime;
 
 		return newData;
@@ -363,20 +420,26 @@ function sendTelemetryEvent(
 	completionsTelemetryService: ICompletionsTelemetryService,
 	store: TelemetryStore,
 	name: string,
-	data: { properties: TelemetryProperties; measurements: TelemetryMeasurements }
+	data: {
+		properties: TelemetryProperties;
+		measurements: TelemetryMeasurements;
+	},
 ): void {
-	const properties = TelemetryData.maybeRemoveRepoInfoFromProperties(store, data.properties);
+	const properties = TelemetryData.maybeRemoveRepoInfoFromProperties(
+		store,
+		data.properties,
+	);
 	if (!isEnhanced(store)) {
 		completionsTelemetryService.sendGHTelemetryEvent(
 			name,
 			properties,
-			data.measurements
+			data.measurements,
 		);
 	} else {
 		completionsTelemetryService.sendEnhancedGHTelemetryEvent(
 			name,
 			properties,
-			data.measurements
+			data.measurements,
 		);
 	}
 }
@@ -385,14 +448,20 @@ function sendTelemetryErrorEvent(
 	accessor: ServicesAccessor,
 	store: TelemetryStore,
 	name: string,
-	data: { properties: TelemetryProperties; measurements: TelemetryMeasurements }
+	data: {
+		properties: TelemetryProperties;
+		measurements: TelemetryMeasurements;
+	},
 ): void {
 	const telemetryService = accessor.get(ICompletionsTelemetryService);
-	const properties = TelemetryData.maybeRemoveRepoInfoFromProperties(store, data.properties);
+	const properties = TelemetryData.maybeRemoveRepoInfoFromProperties(
+		store,
+		data.properties,
+	);
 	telemetryService.sendGHTelemetryErrorEvent(
 		name,
 		properties,
-		data.measurements
+		data.measurements,
 	);
 }
 
@@ -400,7 +469,10 @@ function sendFTTelemetryEvent(
 	accessor: ServicesAccessor,
 	store: TelemetryStore,
 	name: string,
-	data: { properties: TelemetryProperties; measurements: TelemetryMeasurements }
+	data: {
+		properties: TelemetryProperties;
+		measurements: TelemetryMeasurements;
+	},
 ): void {
 	if (!shouldSendFinetuningTelemetry(accessor)) {
 		return;
@@ -418,10 +490,14 @@ function sendFTTelemetryEvent(
  * Creates an object containing info about the length of the prompt suitable
  * for saving in standard telemetry.
  */
-export function telemetrizePromptLength(prompt: Prompt): { [key: string]: number } {
+export function telemetrizePromptLength(prompt: Prompt): {
+	[key: string]: number;
+} {
 	return {
 		// prefix length + sum of context length
-		promptCharLen: prompt.prefix.length + (prompt.context?.reduce((sum, c) => sum + c.length, 0) ?? 0),
+		promptCharLen:
+			prompt.prefix.length +
+			(prompt.context?.reduce((sum, c) => sum + c.length, 0) ?? 0),
 		promptSuffixCharLen: prompt.suffix.length,
 	};
 }
@@ -442,8 +518,23 @@ function shouldSendFinetuningTelemetry(accessor: ServicesAccessor): boolean {
 	return accessor.get(ICompletionsTelemetryUserConfigService).ftFlag !== '';
 }
 
-export function telemetry(accessor: ServicesAccessor, name: string, telemetryData?: TelemetryData, store?: TelemetryStore) {
-	return accessor.get(ICompletionsPromiseQueueService).register(_telemetry(accessor, name, now(), telemetryData?.extendedBy(), store));
+export function telemetry(
+	accessor: ServicesAccessor,
+	name: string,
+	telemetryData?: TelemetryData,
+	store?: TelemetryStore,
+) {
+	return accessor
+		.get(ICompletionsPromiseQueueService)
+		.register(
+			_telemetry(
+				accessor,
+				name,
+				now(),
+				telemetryData?.extendedBy(),
+				store,
+			),
+		);
 }
 
 async function _telemetry(
@@ -451,33 +542,82 @@ async function _telemetry(
 	name: string,
 	now: number,
 	telemetryData?: TelemetryData,
-	store = TelemetryStore.Standard
+	store = TelemetryStore.Standard,
 ) {
-	const completionsTelemetryService = accessor.get(ICompletionsTelemetryService);
+	const completionsTelemetryService = accessor.get(
+		ICompletionsTelemetryService,
+	);
 	const instantiationService = accessor.get(IInstantiationService);
 
 	// if telemetry data isn't given, make a new one to hold at least the config
-	const definedTelemetryData = telemetryData || TelemetryData.createAndMarkAsIssued({}, {});
-	await definedTelemetryData.makeReadyForSending(accessor, store ?? false, 'IncludeExp', now);
-	if (!isEnhanced(store) || instantiationService.invokeFunction(shouldSendEnhanced)) {
-		sendTelemetryEvent(completionsTelemetryService, store, name, definedTelemetryData);
+	const definedTelemetryData =
+		telemetryData || TelemetryData.createAndMarkAsIssued({}, {});
+	await definedTelemetryData.makeReadyForSending(
+		accessor,
+		store ?? false,
+		'IncludeExp',
+		now,
+	);
+	if (
+		!isEnhanced(store) ||
+		instantiationService.invokeFunction(shouldSendEnhanced)
+	) {
+		sendTelemetryEvent(
+			completionsTelemetryService,
+			store,
+			name,
+			definedTelemetryData,
+		);
 	}
-	if (isEnhanced(store) && ftTelemetryEvents.includes(name) && instantiationService.invokeFunction(shouldSendFinetuningTelemetry)) {
-		instantiationService.invokeFunction(sendFTTelemetryEvent, store, name, definedTelemetryData);
+	if (
+		isEnhanced(store) &&
+		ftTelemetryEvents.includes(name) &&
+		instantiationService.invokeFunction(shouldSendFinetuningTelemetry)
+	) {
+		instantiationService.invokeFunction(
+			sendFTTelemetryEvent,
+			store,
+			name,
+			definedTelemetryData,
+		);
 	}
 }
 
-export function telemetryExpProblem(accessor: ServicesAccessor, telemetryProperties: { reason: string }) {
+export function telemetryExpProblem(
+	accessor: ServicesAccessor,
+	telemetryProperties: { reason: string },
+) {
 	const promiseQueueService = accessor.get(ICompletionsPromiseQueueService);
-	return promiseQueueService.register(_telemetryExpProblem(accessor, telemetryProperties, now()));
+	return promiseQueueService.register(
+		_telemetryExpProblem(accessor, telemetryProperties, now()),
+	);
 }
 
-async function _telemetryExpProblem(accessor: ServicesAccessor, telemetryProperties: { reason: string }, now: number) {
-	const completionsTelemetryService = accessor.get(ICompletionsTelemetryService);
+async function _telemetryExpProblem(
+	accessor: ServicesAccessor,
+	telemetryProperties: { reason: string },
+	now: number,
+) {
+	const completionsTelemetryService = accessor.get(
+		ICompletionsTelemetryService,
+	);
 	const name = 'expProblem';
-	const definedTelemetryData = TelemetryData.createAndMarkAsIssued(telemetryProperties, {});
-	await definedTelemetryData.makeReadyForSending(accessor, TelemetryStore.Standard, 'SkipExp', now);
-	sendTelemetryEvent(completionsTelemetryService, TelemetryStore.Standard, name, definedTelemetryData);
+	const definedTelemetryData = TelemetryData.createAndMarkAsIssued(
+		telemetryProperties,
+		{},
+	);
+	await definedTelemetryData.makeReadyForSending(
+		accessor,
+		TelemetryStore.Standard,
+		'SkipExp',
+		now,
+	);
+	sendTelemetryEvent(
+		completionsTelemetryService,
+		TelemetryStore.Standard,
+		name,
+		definedTelemetryData,
+	);
 }
 
 /**
@@ -491,11 +631,18 @@ export function telemetryRaw(
 	accessor: ServicesAccessor,
 	name: string,
 	props: TelemetryProperties,
-	measurements: TelemetryMeasurements
+	measurements: TelemetryMeasurements,
 ) {
-	const completionsTelemetryService = accessor.get(ICompletionsTelemetryService);
+	const completionsTelemetryService = accessor.get(
+		ICompletionsTelemetryService,
+	);
 	const properties = { ...props, ...createRequiredProperties(accessor) };
-	sendTelemetryEvent(completionsTelemetryService, TelemetryStore.Standard, name, { properties, measurements });
+	sendTelemetryEvent(
+		completionsTelemetryService,
+		TelemetryStore.Standard,
+		name,
+		{ properties, measurements },
+	);
 }
 
 function createRequiredProperties(accessor: ServicesAccessor) {
@@ -504,9 +651,13 @@ function createRequiredProperties(accessor: ServicesAccessor) {
 		unique_id: generateUuid(), // add a unique id to the telemetry event so copilot-foundations can correlate with duplicate events
 		common_extname: editorAndPluginInfo.getEditorPluginInfo().name,
 		common_extversion: editorAndPluginInfo.getEditorPluginInfo().version,
-		common_vscodeversion: formatNameAndVersion(editorAndPluginInfo.getEditorInfo()),
+		common_vscodeversion: formatNameAndVersion(
+			editorAndPluginInfo.getEditorInfo(),
+		),
 	};
-	const telemetryConfig = accessor.get(ICompletionsTelemetryUserConfigService);
+	const telemetryConfig = accessor.get(
+		ICompletionsTelemetryUserConfigService,
+	);
 	return { ...telemetryConfig.getProperties(), ...properties };
 }
 
@@ -515,7 +666,10 @@ export function telemetryException(
 	maybeError: unknown,
 	transaction: string,
 ) {
-	return telemetryService.sendGHTelemetryException(maybeError, transaction || '');
+	return telemetryService.sendGHTelemetryException(
+		maybeError,
+		transaction || '',
+	);
 }
 
 type TelemetryCatcher = (...args: never[]) => unknown;
@@ -533,11 +687,27 @@ export function telemetryCatch<F extends TelemetryCatcher>(
 			telemetryException(completionsTelemetryService, error, transaction);
 		}
 	};
-	return (...args) => completionsPromiseQueueService.register(wrapped(...args));
+	return (...args) =>
+		completionsPromiseQueueService.register(wrapped(...args));
 }
 
-export function telemetryError(accessor: ServicesAccessor, name: string, telemetryData?: TelemetryData, store?: TelemetryStore) {
-	return accessor.get(ICompletionsPromiseQueueService).register(_telemetryError(accessor, name, now(), telemetryData?.extendedBy(), store));
+export function telemetryError(
+	accessor: ServicesAccessor,
+	name: string,
+	telemetryData?: TelemetryData,
+	store?: TelemetryStore,
+) {
+	return accessor
+		.get(ICompletionsPromiseQueueService)
+		.register(
+			_telemetryError(
+				accessor,
+				name,
+				now(),
+				telemetryData?.extendedBy(),
+				store,
+			),
+		);
 }
 
 async function _telemetryError(
@@ -545,15 +715,26 @@ async function _telemetryError(
 	name: string,
 	now: number,
 	telemetryData?: TelemetryData,
-	store = TelemetryStore.Standard
+	store = TelemetryStore.Standard,
 ) {
 	if (isEnhanced(store) && !shouldSendEnhanced(accessor)) {
 		return;
 	}
 	const instantiationService = accessor.get(IInstantiationService);
-	const definedTelemetryData = telemetryData || TelemetryData.createAndMarkAsIssued({}, {});
-	await definedTelemetryData.makeReadyForSending(accessor, store, 'IncludeExp', now);
-	instantiationService.invokeFunction(sendTelemetryErrorEvent, store, name, definedTelemetryData);
+	const definedTelemetryData =
+		telemetryData || TelemetryData.createAndMarkAsIssued({}, {});
+	await definedTelemetryData.makeReadyForSending(
+		accessor,
+		store,
+		'IncludeExp',
+		now,
+	);
+	instantiationService.invokeFunction(
+		sendTelemetryErrorEvent,
+		store,
+		name,
+		definedTelemetryData,
+	);
 }
 
 export function logEngineCompletion(
@@ -561,7 +742,7 @@ export function logEngineCompletion(
 	completionText: string,
 	jsonData: APIJsonData,
 	requestId: RequestId,
-	choiceIndex: number
+	choiceIndex: number,
 ) {
 	const telemetryData = TelemetryData.createAndMarkAsIssued({
 		completionTextJson: JSON.stringify(completionText),
@@ -570,31 +751,51 @@ export function logEngineCompletion(
 
 	if (jsonData.logprobs) {
 		for (const [key, value] of Object.entries(jsonData.logprobs)) {
-			telemetryData.properties['logprobs_' + key] = JSON.stringify(value) ?? 'unset';
+			telemetryData.properties['logprobs_' + key] =
+				JSON.stringify(value) ?? 'unset';
 		}
 	}
 
 	telemetryData.extendWithRequestId(requestId);
-	return telemetry(accessor, 'engine.completion', telemetryData, TelemetryStore.Enhanced);
+	return telemetry(
+		accessor,
+		'engine.completion',
+		telemetryData,
+		TelemetryStore.Enhanced,
+	);
 }
 
-export function logEnginePrompt(accessor: ServicesAccessor, prompt: Prompt, telemetryData: TelemetryData) {
+export function logEnginePrompt(
+	accessor: ServicesAccessor,
+	prompt: Prompt,
+	telemetryData: TelemetryData,
+) {
 	const promptTelemetry: Record<string, string> = {
-		promptJson: JSON.stringify({ prefix: prompt.prefix, context: prompt.context }),
+		promptJson: JSON.stringify({
+			prefix: prompt.prefix,
+			context: prompt.context,
+		}),
 		promptSuffixJson: JSON.stringify(prompt.suffix),
 	};
 
 	// Re-add context to stringified request.option.extra if it exists
 	if (prompt.context) {
 		const optionExtra = telemetryData.properties['request.option.extra']
-			? (JSON.parse(telemetryData.properties['request.option.extra']) as Record<string, unknown>)
+			? (JSON.parse(
+					telemetryData.properties['request.option.extra'],
+				) as Record<string, unknown>)
 			: {};
 		optionExtra.context = prompt.context;
 		promptTelemetry['request.option.extra'] = JSON.stringify(optionExtra);
 	}
 
 	const telemetryDataWithPrompt = telemetryData.extendedBy(promptTelemetry);
-	return telemetry(accessor, 'engine.prompt', telemetryDataWithPrompt, TelemetryStore.Enhanced);
+	return telemetry(
+		accessor,
+		'engine.prompt',
+		telemetryDataWithPrompt,
+		TelemetryStore.Enhanced,
+	);
 }
 
 // Please don't delete these classes. They are needed for tests.
@@ -606,7 +807,7 @@ export abstract class CopilotTelemetryReporter {
 		},
 		measurements?: {
 			[key: string]: number;
-		}
+		},
 	): void;
 	abstract sendTelemetryErrorEvent(
 		eventName: string,
@@ -616,17 +817,27 @@ export abstract class CopilotTelemetryReporter {
 		measurements?: {
 			[key: string]: number;
 		},
-		errorProps?: string[]
+		errorProps?: string[],
 	): void;
 	abstract dispose(): Promise<void>;
 }
 
-export const ICompletionsTelemetryReporters = createServiceIdentifier<ICompletionsTelemetryReporters>('ICompletionsTelemetryReporters');
+export const ICompletionsTelemetryReporters =
+	createServiceIdentifier<ICompletionsTelemetryReporters>(
+		'ICompletionsTelemetryReporters',
+	);
 export interface ICompletionsTelemetryReporters {
 	readonly _serviceBrand: undefined;
-	getReporter(accessor: ServicesAccessor, store?: TelemetryStore): CopilotTelemetryReporter | undefined;
-	getEnhancedReporter(accessor: ServicesAccessor): CopilotTelemetryReporter | undefined;
-	getFTReporter(accessor: ServicesAccessor): CopilotTelemetryReporter | undefined;
+	getReporter(
+		accessor: ServicesAccessor,
+		store?: TelemetryStore,
+	): CopilotTelemetryReporter | undefined;
+	getEnhancedReporter(
+		accessor: ServicesAccessor,
+	): CopilotTelemetryReporter | undefined;
+	getFTReporter(
+		accessor: ServicesAccessor,
+	): CopilotTelemetryReporter | undefined;
 	setReporter(reporter: CopilotTelemetryReporter): void;
 	setEnhancedReporter(reporter: CopilotTelemetryReporter): void;
 	setFTReporter(reporter: CopilotTelemetryReporter): void;
@@ -640,10 +851,17 @@ export class TelemetryReporters implements ICompletionsTelemetryReporters {
 	private reporterEnhanced: CopilotTelemetryReporter | undefined;
 	private reporterFT: CopilotTelemetryReporter | undefined;
 
-	getReporter(accessor: ServicesAccessor, store = TelemetryStore.Standard): CopilotTelemetryReporter | undefined {
-		return isEnhanced(store) ? this.getEnhancedReporter(accessor) : this.reporter;
+	getReporter(
+		accessor: ServicesAccessor,
+		store = TelemetryStore.Standard,
+	): CopilotTelemetryReporter | undefined {
+		return isEnhanced(store)
+			? this.getEnhancedReporter(accessor)
+			: this.reporter;
 	}
-	getEnhancedReporter(accessor: ServicesAccessor): CopilotTelemetryReporter | undefined {
+	getEnhancedReporter(
+		accessor: ServicesAccessor,
+	): CopilotTelemetryReporter | undefined {
 		// Callers should do this check themselves as they may need to behave differently
 		// if we are not sending enhanced telemetry. The guard here is a backstop.
 		// Note: if the decision about what telemetry to send when the user is opted-out
@@ -654,7 +872,9 @@ export class TelemetryReporters implements ICompletionsTelemetryReporters {
 		return undefined;
 	}
 
-	getFTReporter(accessor: ServicesAccessor): CopilotTelemetryReporter | undefined {
+	getFTReporter(
+		accessor: ServicesAccessor,
+	): CopilotTelemetryReporter | undefined {
 		return undefined;
 	}
 
@@ -673,8 +893,12 @@ export class TelemetryReporters implements ICompletionsTelemetryReporters {
 	 * Synchronously unassign all reporters and asynchronously shut them down.
 	 */
 	async deactivate(): Promise<void> {
-		const reporters = [this.reporter, this.reporterEnhanced, this.reporterFT];
+		const reporters = [
+			this.reporter,
+			this.reporterEnhanced,
+			this.reporterFT,
+		];
 		this.reporter = this.reporterEnhanced = this.reporterFT = undefined;
-		await Promise.all(reporters.map(r => r?.dispose()));
+		await Promise.all(reporters.map((r) => r?.dispose()));
 	}
 }

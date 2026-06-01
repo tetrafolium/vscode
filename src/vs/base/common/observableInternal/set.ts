@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IObservable, ITransaction } from '../observable.js';
-import { observableValueOpts } from './observables/observableValueOpts.js';
+import { IObservable, ITransaction } from "../observable.js";
+import { observableValueOpts } from "./observables/observableValueOpts.js";
 
 export class ObservableSet<T> implements Set<T> {
-
 	private readonly _data = new Set<T>();
 
 	private _obs = observableValueOpts({ equalsFn: () => false }, this);
@@ -46,7 +45,10 @@ export class ObservableSet<T> implements Set<T> {
 		}
 	}
 
-	forEach(callbackfn: (value: T, value2: T, set: Set<T>) => void, thisArg?: unknown): void {
+	forEach(
+		callbackfn: (value: T, value2: T, set: Set<T>) => void,
+		thisArg?: unknown,
+	): void {
 		this._data.forEach((value, value2, _set) => {
 			callbackfn.call(thisArg, value, value2, this);
 		});
@@ -71,6 +73,6 @@ export class ObservableSet<T> implements Set<T> {
 	}
 
 	get [Symbol.toStringTag](): string {
-		return 'ObservableSet';
+		return "ObservableSet";
 	}
 }

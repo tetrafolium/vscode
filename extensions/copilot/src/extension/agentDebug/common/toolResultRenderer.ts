@@ -5,7 +5,10 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IToolResultContentRenderer = createServiceIdentifier<IToolResultContentRenderer>('IToolResultContentRenderer');
+export const IToolResultContentRenderer =
+	createServiceIdentifier<IToolResultContentRenderer>(
+		'IToolResultContentRenderer',
+	);
 
 /**
  * Renders tool result content parts into human-readable strings.

@@ -15,12 +15,15 @@ export namespace Snippet {
 	};
 
 	export function is(v: unknown): v is t {
-		return typeof v === 'object' && v !== null
-			&& typeof (v as t).matched_source === 'string'
-			&& typeof (v as t).occurrences === 'string'
-			&& typeof (v as t).capped === 'boolean'
-			&& typeof (v as t).cursor === 'string'
-			&& typeof (v as t).github_url === 'string';
+		return (
+			typeof v === 'object' &&
+			v !== null &&
+			typeof (v as t).matched_source === 'string' &&
+			typeof (v as t).occurrences === 'string' &&
+			typeof (v as t).capped === 'boolean' &&
+			typeof (v as t).cursor === 'string' &&
+			typeof (v as t).github_url === 'string'
+		);
 	}
 }
 
@@ -38,11 +41,14 @@ export namespace MatchError {
 	};
 
 	export function is(v: unknown): v is t {
-		return typeof v === 'object' && v !== null
-			&& typeof (v as t).kind === 'string'
-			&& typeof (v as t).reason === 'string'
-			&& typeof (v as t).code === 'number'
-			&& typeof (v as t).msg === 'string';
+		return (
+			typeof v === 'object' &&
+			v !== null &&
+			typeof (v as t).kind === 'string' &&
+			typeof (v as t).reason === 'string' &&
+			typeof (v as t).code === 'number' &&
+			typeof (v as t).msg === 'string'
+		);
 	}
 }
 
@@ -52,10 +58,13 @@ export namespace MatchSuccess {
 	};
 
 	export function is(v: unknown): v is t {
-		return typeof v === 'object' && v !== null
-			&& 'snippets' in v
-			&& Array.isArray(v.snippets)
-			&& v.snippets.every(Snippet.is);
+		return (
+			typeof v === 'object' &&
+			v !== null &&
+			'snippets' in v &&
+			Array.isArray(v.snippets) &&
+			v.snippets.every(Snippet.is)
+		);
 	}
 }
 
@@ -87,12 +96,15 @@ export namespace FileMatch {
 	};
 
 	export function is(v: unknown): v is t {
-		return typeof v === 'object' && v !== null
-			&& typeof (v as t).commit_id === 'string'
-			&& typeof (v as t).license === 'string'
-			&& typeof (v as t).nwo === 'string'
-			&& typeof (v as t).path === 'string'
-			&& typeof (v as t).url === 'string';
+		return (
+			typeof v === 'object' &&
+			v !== null &&
+			typeof (v as t).commit_id === 'string' &&
+			typeof (v as t).license === 'string' &&
+			typeof (v as t).nwo === 'string' &&
+			typeof (v as t).path === 'string' &&
+			typeof (v as t).url === 'string'
+		);
 	}
 }
 
@@ -103,9 +115,12 @@ export namespace PackageInformation {
 	};
 
 	export function is(v: unknown): v is t {
-		return typeof v === 'object' && v !== null
-			&& typeof (v as t).has_next_page === 'boolean'
-			&& typeof (v as t).cursor === 'string';
+		return (
+			typeof v === 'object' &&
+			v !== null &&
+			typeof (v as t).has_next_page === 'boolean' &&
+			typeof (v as t).cursor === 'string'
+		);
 	}
 }
 
@@ -115,9 +130,14 @@ export namespace LicenseStats {
 	};
 
 	export function is(v: unknown): v is t {
-		return typeof v === 'object' && v !== null
-			&& typeof (v as t).count === 'object'
-			&& Object.values((v as t).count).every(value => typeof value === 'string');
+		return (
+			typeof v === 'object' &&
+			v !== null &&
+			typeof (v as t).count === 'object' &&
+			Object.values((v as t).count).every(
+				(value) => typeof value === 'string',
+			)
+		);
 	}
 }
 
@@ -129,14 +149,17 @@ export namespace FileMatchSuccess {
 	};
 
 	export function is(v: unknown): v is t {
-		return typeof v === 'object' && v !== null
-			&& 'file_matches' in v
-			&& Array.isArray(v.file_matches)
-			&& v.file_matches.every(FileMatch.is)
-			&& 'page_info' in v
-			&& PackageInformation.is(v.page_info)
-			&& 'license_stats' in v
-			&& LicenseStats.is(v.license_stats);
+		return (
+			typeof v === 'object' &&
+			v !== null &&
+			'file_matches' in v &&
+			Array.isArray(v.file_matches) &&
+			v.file_matches.every(FileMatch.is) &&
+			'page_info' in v &&
+			PackageInformation.is(v.page_info) &&
+			'license_stats' in v &&
+			LicenseStats.is(v.license_stats)
+		);
 	}
 }
 

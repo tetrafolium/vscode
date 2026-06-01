@@ -5,7 +5,8 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IAgentSessionsWorkspace = createServiceIdentifier<IAgentSessionsWorkspace>('IAgentSessionsWorkspace');
+export const IAgentSessionsWorkspace =
+	createServiceIdentifier<IAgentSessionsWorkspace>('IAgentSessionsWorkspace');
 
 export interface IAgentSessionsWorkspace {
 	readonly _serviceBrand: undefined;

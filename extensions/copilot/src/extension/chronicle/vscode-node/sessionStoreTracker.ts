@@ -5,12 +5,31 @@
 
 import * as vscode from 'vscode';
 import { IChatSessionService } from '../../../platform/chat/common/chatSessionService';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
-import { type FileRow, type RefRow, type SessionRow, type TurnRow, ISessionStore } from '../../../platform/chronicle/common/sessionStore';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
+import {
+	type FileRow,
+	type RefRow,
+	type SessionRow,
+	type TurnRow,
+	ISessionStore,
+} from '../../../platform/chronicle/common/sessionStore';
 import { IExperimentationService } from '../../../platform/telemetry/common/nullExperimentationService';
-import { CopilotChatAttr, GenAiAttr, GenAiOperationName } from '../../../platform/otel/common/genAiAttributes';
-import { type ICompletedSpanData, IOTelService } from '../../../platform/otel/common/otelService';
-import { Disposable, DisposableStore } from '../../../util/vs/base/common/lifecycle';
+import {
+	CopilotChatAttr,
+	GenAiAttr,
+	GenAiOperationName,
+} from '../../../platform/otel/common/genAiAttributes';
+import {
+	type ICompletedSpanData,
+	IOTelService,
+} from '../../../platform/otel/common/otelService';
+import {
+	Disposable,
+	DisposableStore,
+} from '../../../util/vs/base/common/lifecycle';
 import { autorun } from '../../../util/vs/base/common/observableInternal';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
 import { IExtensionContribution } from '../../common/contributions';
@@ -55,8 +74,10 @@ interface WriteBuffer {
  * 2. **Deferred processing**: Span handling is deferred via queueMicrotask to avoid blocking.
  * 3. **Duplicate suppression**: Session upserts with no new data are skipped via cooldown cache.
  */
-export class SessionStoreTracker extends Disposable implements IExtensionContribution {
-
+export class SessionStoreTracker
+	extends Disposable
+	implements IExtensionContribution
+{
 	/** Track which sessions have been initialized in the store. */
 	private readonly _initializedSessions = new Set<string>();
 
@@ -78,33 +99,45 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 	private readonly _turnCounters = new Map<string, number>();
 
 	/** Tool spans received before session was initialized, keyed by session ID. */
-	private readonly _pendingToolSpans = new Map<string, ICompletedSpanData[]>();
+	private readonly _pendingToolSpans = new Map<
+		string,
+		ICompletedSpanData[]
+	>();
 
 	constructor(
 		@ISessionStore private readonly _sessionStore: ISessionStore,
 		@IOTelService private readonly _otelService: IOTelService,
-		@IChatSessionService private readonly _chatSessionService: IChatSessionService,
-		@IConfigurationService private readonly _configService: IConfigurationService,
-		@IExperimentationService private readonly _expService: IExperimentationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
+		@IChatSessionService
+		private readonly _chatSessionService: IChatSessionService,
+		@IConfigurationService
+		private readonly _configService: IConfigurationService,
+		@IExperimentationService
+		private readonly _expService: IExperimentationService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
 	) {
 		super();
 
 		// Only set up span listener and flush timer when the feature is enabled.
 		// Uses autorun to react if the setting changes at runtime.
-		const featureEnabled = this._configService.getExperimentBasedConfigObservable(ConfigKey.LocalIndexEnabled, this._expService);
+		const featureEnabled =
+			this._configService.getExperimentBasedConfigObservable(
+				ConfigKey.LocalIndexEnabled,
+				this._expService,
+			);
 		const spanListenerStore = this._register(new DisposableStore());
-		this._register(autorun(reader => {
-			spanListenerStore.clear();
-			if (!featureEnabled.read(reader)) {
-				return;
-			}
+		this._register(
+			autorun((reader) => {
+				spanListenerStore.clear();
+				if (!featureEnabled.read(reader)) {
+					return;
+				}
 
-			// Warm up the DB eagerly so schema issues surface early
-			try {
-				this._sessionStore.getStats();
-			} catch (err) {
-				/* __GDPR__
+				// Warm up the DB eagerly so schema issues surface early
+				try {
+					this._sessionStore.getStats();
+				} catch (err) {
+					/* __GDPR__
 "chronicle.localStore" : {
 "owner": "vijayu",
 "comment": "Tracks local session store operations (init, write, flush errors)",
@@ -118,30 +151,54 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 "pendingSpansProcessed": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true, "comment": "Number of pending tool spans processed on session init." }
 }
 */
-				this._telemetryService.sendMSFTTelemetryErrorEvent('chronicle.localStore', {
-					operation: 'dbInit',
-					success: 'false',
-					error: err instanceof Error ? err.message.substring(0, 100) : 'unknown',
-				}, {});
-			}
+					this._telemetryService.sendMSFTTelemetryErrorEvent(
+						'chronicle.localStore',
+						{
+							operation: 'dbInit',
+							success: 'false',
+							error:
+								err instanceof Error
+									? err.message.substring(0, 100)
+									: 'unknown',
+						},
+						{},
+					);
+				}
 
-			// Start periodic flush
-			this._flushTimer = setInterval(() => this._flush(), FLUSH_INTERVAL_MS);
-			spanListenerStore.add({ dispose: () => { if (this._flushTimer) { clearInterval(this._flushTimer); this._flushTimer = undefined; } } });
+				// Start periodic flush
+				this._flushTimer = setInterval(
+					() => this._flush(),
+					FLUSH_INTERVAL_MS,
+				);
+				spanListenerStore.add({
+					dispose: () => {
+						if (this._flushTimer) {
+							clearInterval(this._flushTimer);
+							this._flushTimer = undefined;
+						}
+					},
+				});
 
-			// Listen to completed OTel spans for tool calls and session activity
-			spanListenerStore.add(this._otelService.onDidCompleteSpan(span => {
-				queueMicrotask(() => this._handleSpan(span));
-			}));
+				// Listen to completed OTel spans for tool calls and session activity
+				spanListenerStore.add(
+					this._otelService.onDidCompleteSpan((span) => {
+						queueMicrotask(() => this._handleSpan(span));
+					}),
+				);
 
-			// Flush and clean up on session disposal
-			spanListenerStore.add(this._chatSessionService.onDidDisposeChatSession(sessionId => {
-				this._initializedSessions.delete(sessionId);
-				this._lastSessionTimestamp.delete(sessionId);
-				this._turnCounters.delete(sessionId);
-				this._pendingToolSpans.delete(sessionId);
-			}));
-		}));
+				// Flush and clean up on session disposal
+				spanListenerStore.add(
+					this._chatSessionService.onDidDisposeChatSession(
+						(sessionId) => {
+							this._initializedSessions.delete(sessionId);
+							this._lastSessionTimestamp.delete(sessionId);
+							this._turnCounters.delete(sessionId);
+							this._pendingToolSpans.delete(sessionId);
+						},
+					),
+				);
+			}),
+		);
 	}
 
 	override dispose(): void {
@@ -158,14 +215,21 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 
 	private _handleSpan(span: ICompletedSpanData): void {
 		try {
-			const operationName = span.attributes[GenAiAttr.OPERATION_NAME] as string | undefined;
+			const operationName = span.attributes[GenAiAttr.OPERATION_NAME] as
+				| string
+				| undefined;
 
 			// Sub-agent spans have no row of their own (schema has no sub-agent concept).
 			// Attribute their tool calls to the parent so we don't lose file/ref signal;
 			// drop their invoke_agent span — the parent's covers that turn.
-			const parentChatSessionId = span.attributes[CopilotChatAttr.PARENT_CHAT_SESSION_ID] as string | undefined;
+			const parentChatSessionId = span.attributes[
+				CopilotChatAttr.PARENT_CHAT_SESSION_ID
+			] as string | undefined;
 			if (parentChatSessionId) {
-				if (operationName === GenAiOperationName.EXECUTE_TOOL && this._initializedSessions.has(parentChatSessionId)) {
+				if (
+					operationName === GenAiOperationName.EXECUTE_TOOL &&
+					this._initializedSessions.has(parentChatSessionId)
+				) {
 					this._handleToolSpan(parentChatSessionId, span);
 				}
 				return;
@@ -217,9 +281,15 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 	}
 
 	private _getSessionId(span: ICompletedSpanData): string | undefined {
-		return (span.attributes[CopilotChatAttr.CHAT_SESSION_ID] as string | undefined)
-			?? (span.attributes[GenAiAttr.CONVERSATION_ID] as string | undefined)
-			?? (span.attributes[CopilotChatAttr.SESSION_ID] as string | undefined);
+		return (
+			(span.attributes[CopilotChatAttr.CHAT_SESSION_ID] as
+				| string
+				| undefined) ??
+			(span.attributes[GenAiAttr.CONVERSATION_ID] as
+				| string
+				| undefined) ??
+			(span.attributes[CopilotChatAttr.SESSION_ID] as string | undefined)
+		);
 	}
 
 	private _initSession(sessionId: string, span: ICompletedSpanData): void {
@@ -227,7 +297,12 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 
 		const sessionSource = extractAgentName(span);
 		const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-		this._bufferSessionUpsert({ id: sessionId, host_type: 'vscode', agent_name: sessionSource, ...(cwd ? { cwd } : {}) });
+		this._bufferSessionUpsert({
+			id: sessionId,
+			host_type: 'vscode',
+			agent_name: sessionSource,
+			...(cwd ? { cwd } : {}),
+		});
 
 		// Track the source of the very first session for firstWrite telemetry
 		if (!this._firstWriteSessionSource) {
@@ -244,21 +319,39 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 			}
 		}
 
-		this._telemetryService.sendMSFTTelemetryEvent('chronicle.localStore', {
-			operation: 'sessionInit',
-			sessionSource,
-		}, {
-			pendingSpansProcessed: pendingCount,
-		});
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'chronicle.localStore',
+			{
+				operation: 'sessionInit',
+				sessionSource,
+			},
+			{
+				pendingSpansProcessed: pendingCount,
+			},
+		);
 	}
 
-	private _backfillFromSpanAttributes(sessionId: string, span: ICompletedSpanData): void {
-		const branch = span.attributes[CopilotChatAttr.REPO_HEAD_BRANCH_NAME] as string | undefined;
-		const remoteUrl = span.attributes[CopilotChatAttr.REPO_REMOTE_URL] as string | undefined;
-		const userRequest = span.attributes[CopilotChatAttr.USER_REQUEST] as string | undefined;
+	private _backfillFromSpanAttributes(
+		sessionId: string,
+		span: ICompletedSpanData,
+	): void {
+		const branch = span.attributes[
+			CopilotChatAttr.REPO_HEAD_BRANCH_NAME
+		] as string | undefined;
+		const remoteUrl = span.attributes[CopilotChatAttr.REPO_REMOTE_URL] as
+			| string
+			| undefined;
+		const userRequest = span.attributes[CopilotChatAttr.USER_REQUEST] as
+			| string
+			| undefined;
 
 		if (branch || remoteUrl || userRequest) {
-			const summary = userRequest ? truncateForStore(extractPlainTextFromContent(userRequest), MAX_SUMMARY_LENGTH) : undefined;
+			const summary = userRequest
+				? truncateForStore(
+						extractPlainTextFromContent(userRequest),
+						MAX_SUMMARY_LENGTH,
+					)
+				: undefined;
 
 			this._bufferSessionUpsert({
 				id: sessionId,
@@ -275,12 +368,16 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 	}
 
 	private _handleToolSpan(sessionId: string, span: ICompletedSpanData): void {
-		const toolName = span.attributes[GenAiAttr.TOOL_NAME] as string | undefined;
+		const toolName = span.attributes[GenAiAttr.TOOL_NAME] as
+			| string
+			| undefined;
 		if (!toolName) {
 			return;
 		}
 
-		const turnIndex = span.attributes[CopilotChatAttr.TURN_INDEX] as number | undefined;
+		const turnIndex = span.attributes[CopilotChatAttr.TURN_INDEX] as
+			| number
+			| undefined;
 		const toolArgs = extractToolArgs(span);
 
 		// Extract file path
@@ -298,7 +395,11 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 		if (isGitHubMcpTool(toolName)) {
 			const refs = extractRefsFromMcpTool(toolName, toolArgs);
 			for (const ref of refs) {
-				this._buffer.refs.push({ session_id: sessionId, ...ref, turn_index: turnIndex });
+				this._buffer.refs.push({
+					session_id: sessionId,
+					...ref,
+					turn_index: turnIndex,
+				});
 			}
 
 			const repo = extractRepoFromMcpTool(toolArgs);
@@ -309,16 +410,27 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 
 		// Track refs from terminal/shell tool
 		if (isTerminalTool(toolName)) {
-			const resultText = span.attributes['gen_ai.tool.result'] as string | undefined;
+			const resultText = span.attributes['gen_ai.tool.result'] as
+				| string
+				| undefined;
 			const refs = extractRefsFromTerminal(toolArgs, resultText);
 			for (const ref of refs) {
-				this._buffer.refs.push({ session_id: sessionId, ...ref, turn_index: turnIndex });
+				this._buffer.refs.push({
+					session_id: sessionId,
+					...ref,
+					turn_index: turnIndex,
+				});
 			}
 		}
 	}
 
-	private _handleAgentSpan(sessionId: string, span: ICompletedSpanData): void {
-		const userRequest = span.attributes[CopilotChatAttr.USER_REQUEST] as string | undefined;
+	private _handleAgentSpan(
+		sessionId: string,
+		span: ICompletedSpanData,
+	): void {
+		const userRequest = span.attributes[CopilotChatAttr.USER_REQUEST] as
+			| string
+			| undefined;
 
 		// Extract user messages from span events
 		const userMessages: { turnIndex: number; content: string }[] = [];
@@ -326,7 +438,9 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 
 		for (const event of span.events) {
 			if (event.name === 'user_message') {
-				const content = event.attributes?.['content'] as string | undefined;
+				const content = event.attributes?.['content'] as
+					| string
+					| undefined;
 				if (content) {
 					userMessages.push({ turnIndex: turnCounter, content });
 				}
@@ -342,20 +456,33 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 		const existingSession = this._buffer.sessions.get(sessionId);
 		if (!existingSession?.summary) {
 			const rawFirst = userMessages[0]?.content ?? userRequest;
-			const summary = rawFirst ? truncateForStore(extractPlainTextFromContent(rawFirst), MAX_SUMMARY_LENGTH) : undefined;
+			const summary = rawFirst
+				? truncateForStore(
+						extractPlainTextFromContent(rawFirst),
+						MAX_SUMMARY_LENGTH,
+					)
+				: undefined;
 			if (summary) {
 				this._bufferSessionUpsert({ id: sessionId, summary });
 			}
 		}
 
 		// Extract assistant response from OUTPUT_MESSAGES attribute, truncated for storage
-		const fullResponse = extractAssistantResponse(span.attributes[GenAiAttr.OUTPUT_MESSAGES] as string | undefined);
-		const assistantResponse = truncateForStore(fullResponse, MAX_ASSISTANT_RESPONSE_LENGTH);
+		const fullResponse = extractAssistantResponse(
+			span.attributes[GenAiAttr.OUTPUT_MESSAGES] as string | undefined,
+		);
+		const assistantResponse = truncateForStore(
+			fullResponse,
+			MAX_ASSISTANT_RESPONSE_LENGTH,
+		);
 
 		// Use in-memory turn counter to avoid collisions with buffered-but-unflushed turns.
 		// Initialize from DB on first use, then increment in memory.
 		if (!this._turnCounters.has(sessionId)) {
-			this._turnCounters.set(sessionId, this._sessionStore.getMaxTurnIndex(sessionId) + 1);
+			this._turnCounters.set(
+				sessionId,
+				this._sessionStore.getMaxTurnIndex(sessionId) + 1,
+			);
 		}
 		for (let i = 0; i < userMessages.length; i++) {
 			const msg = userMessages[i];
@@ -386,11 +513,15 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 			this._buffer.sessions.set(session.id, {
 				...existing,
 				...(session.cwd ? { cwd: session.cwd } : {}),
-				...(session.repository ? { repository: session.repository } : {}),
+				...(session.repository
+					? { repository: session.repository }
+					: {}),
 				...(session.host_type ? { host_type: session.host_type } : {}),
 				...(session.branch ? { branch: session.branch } : {}),
 				...(session.summary ? { summary: session.summary } : {}),
-				...(session.agent_name && session.agent_name !== 'unknown' ? { agent_name: session.agent_name } : {}),
+				...(session.agent_name && session.agent_name !== 'unknown'
+					? { agent_name: session.agent_name }
+					: {}),
 			});
 		} else {
 			this._buffer.sessions.set(session.id, { ...session });
@@ -421,7 +552,8 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 
 	private _flush(): void {
 		const { sessions, files, refs, turns } = this._buffer;
-		const totalOps = sessions.size + files.length + refs.length + turns.length;
+		const totalOps =
+			sessions.size + files.length + refs.length + turns.length;
 		if (totalOps === 0) {
 			return;
 		}
@@ -455,21 +587,32 @@ export class SessionStoreTracker extends Disposable implements IExtensionContrib
 			if (!this._firstWriteLogged) {
 				this._firstWriteLogged = true;
 
-				this._telemetryService.sendMSFTTelemetryEvent('chronicle.localStore', {
-					operation: 'firstWrite',
-					sessionSource: this._firstWriteSessionSource ?? 'unknown',
-				}, {
-					filesCount: filesToFlush.length,
-					refsCount: refsToFlush.length,
-				});
+				this._telemetryService.sendMSFTTelemetryEvent(
+					'chronicle.localStore',
+					{
+						operation: 'firstWrite',
+						sessionSource:
+							this._firstWriteSessionSource ?? 'unknown',
+					},
+					{
+						filesCount: filesToFlush.length,
+						refsCount: refsToFlush.length,
+					},
+				);
 			}
 		} catch (err) {
-
-			this._telemetryService.sendMSFTTelemetryErrorEvent('chronicle.localStore', {
-				operation: 'flush',
-				success: 'false',
-				error: err instanceof Error ? err.message.substring(0, 100) : 'unknown',
-			}, { opsCount: totalOps });
+			this._telemetryService.sendMSFTTelemetryErrorEvent(
+				'chronicle.localStore',
+				{
+					operation: 'flush',
+					success: 'false',
+					error:
+						err instanceof Error
+							? err.message.substring(0, 100)
+							: 'unknown',
+				},
+				{ opsCount: totalOps },
+			);
 		}
 	}
 }

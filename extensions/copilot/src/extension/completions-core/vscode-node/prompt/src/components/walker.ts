@@ -28,7 +28,7 @@ interface WalkContext {
 export type WalkContextTransformer = (
 	node: PromptSnapshotNode,
 	parent: PromptSnapshotNode | undefined,
-	context: WalkContext
+	context: WalkContext,
 ) => WalkContext;
 
 /**
@@ -45,8 +45,8 @@ export class SnapshotWalker {
 	 */
 	constructor(
 		private readonly snapshot: PromptSnapshotNode,
-		private readonly transformers: WalkContextTransformer[] = defaultTransformers()
-	) { }
+		private readonly transformers: WalkContextTransformer[] = defaultTransformers(),
+	) {}
 
 	/**
 	 * Walks the snapshot tree and applies the visitor function to each node.
@@ -55,7 +55,11 @@ export class SnapshotWalker {
 	 * @param options - Optional configuration for the walk
 	 */
 	walkSnapshot(
-		visitor: (n: PromptSnapshotNode, parent: PromptSnapshotNode | undefined, context: WalkContext) => boolean
+		visitor: (
+			n: PromptSnapshotNode,
+			parent: PromptSnapshotNode | undefined,
+			context: WalkContext,
+		) => boolean,
 	) {
 		this.walkSnapshotNode(this.snapshot, undefined, visitor, {});
 	}
@@ -63,11 +67,18 @@ export class SnapshotWalker {
 	private walkSnapshotNode(
 		node: PromptSnapshotNode,
 		parent: PromptSnapshotNode | undefined,
-		visitor: (n: PromptSnapshotNode, parent: PromptSnapshotNode | undefined, context: WalkContext) => boolean,
-		context: WalkContext
+		visitor: (
+			n: PromptSnapshotNode,
+			parent: PromptSnapshotNode | undefined,
+			context: WalkContext,
+		) => boolean,
+		context: WalkContext,
 	) {
 		// Apply all transformers to create the new context for this node
-		const newContext = this.transformers.reduce((ctx, transformer) => transformer(node, parent, ctx), { ...context });
+		const newContext = this.transformers.reduce(
+			(ctx, transformer) => transformer(node, parent, ctx),
+			{ ...context },
+		);
 
 		// Visit the node with the transformed context
 		const accept = visitor(node, parent, newContext);
@@ -90,14 +101,22 @@ export function defaultTransformers(): WalkContextTransformer[] {
 				context.weight = 1;
 			}
 			const weight = node.props?.weight ?? 1;
-			const clampedWeight = typeof weight === 'number' ? Math.max(0, Math.min(1, weight)) : 1;
-			return { ...context, weight: clampedWeight * (context.weight as number) };
+			const clampedWeight =
+				typeof weight === 'number'
+					? Math.max(0, Math.min(1, weight))
+					: 1;
+			return {
+				...context,
+				weight: clampedWeight * (context.weight as number),
+			};
 		},
 		// Chunk transformer
 		(node, _, context) => {
 			if (node.name === Chunk.name) {
 				// Initialize chunk set if it doesn't exist
-				const chunks = context.chunks ? new Set<string>(context.chunks as Set<string>) : new Set<string>();
+				const chunks = context.chunks
+					? new Set<string>(context.chunks as Set<string>)
+					: new Set<string>();
 				// Add current node path to the set
 				chunks.add(node.path);
 				return { ...context, chunks };

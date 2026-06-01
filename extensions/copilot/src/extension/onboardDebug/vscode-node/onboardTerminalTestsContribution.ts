@@ -11,43 +11,73 @@ import { COPILOT_DEBUG_COMMAND } from './copilotDebugCommandContribution';
 const PROVIDER_ID = 'copilot-chat.terminalToDebugging';
 const PROVIDER_ID2 = 'copilot-chat.terminalToDebuggingSuccess';
 
-export class OnboardTerminalTestsContribution extends Disposable implements vscode.TerminalQuickFixProvider {
+export class OnboardTerminalTestsContribution
+	extends Disposable
+	implements vscode.TerminalQuickFixProvider
+{
 	/**
 	 * Execution end events for terminals. This is a hacky back door to get
 	 * output info into quick fixes.
 	 */
-	private lastExecutionFor = new Map<vscode.Terminal, vscode.TerminalShellExecutionStartEvent>();
+	private lastExecutionFor = new Map<
+		vscode.Terminal,
+		vscode.TerminalShellExecutionStartEvent
+	>();
 
 	constructor(
-		@IDebuggableCommandIdentifier private readonly debuggableCommandIdentifier: IDebuggableCommandIdentifier,
+		@IDebuggableCommandIdentifier
+		private readonly debuggableCommandIdentifier: IDebuggableCommandIdentifier,
 	) {
 		super();
-		this._register(vscode.window.registerTerminalQuickFixProvider(PROVIDER_ID, this));
-		this._register(vscode.window.registerTerminalQuickFixProvider(PROVIDER_ID2, this));
-		this._register(vscode.window.onDidCloseTerminal(e => {
-			this.lastExecutionFor.delete(e);
-		}));
-		this._register(vscode.window.onDidStartTerminalShellExecution(e => {
-			this.lastExecutionFor.set(e.terminal, e);
-		}));
-		this._register(vscode.commands.registerCommand('github.copilot.chat.rerunWithCopilotDebug', () => {
-			const terminal = vscode.window.activeTerminal;
-			const execution = terminal && this.lastExecutionFor.get(terminal);
-			if (!execution) {
-				return;
-			}
+		this._register(
+			vscode.window.registerTerminalQuickFixProvider(PROVIDER_ID, this),
+		);
+		this._register(
+			vscode.window.registerTerminalQuickFixProvider(PROVIDER_ID2, this),
+		);
+		this._register(
+			vscode.window.onDidCloseTerminal((e) => {
+				this.lastExecutionFor.delete(e);
+			}),
+		);
+		this._register(
+			vscode.window.onDidStartTerminalShellExecution((e) => {
+				this.lastExecutionFor.set(e.terminal, e);
+			}),
+		);
+		this._register(
+			vscode.commands.registerCommand(
+				'github.copilot.chat.rerunWithCopilotDebug',
+				() => {
+					const terminal = vscode.window.activeTerminal;
+					const execution =
+						terminal && this.lastExecutionFor.get(terminal);
+					if (!execution) {
+						return;
+					}
 
-			terminal.sendText(`${COPILOT_DEBUG_COMMAND} ${execution.execution.commandLine.value}`, true);
-		}));
+					terminal.sendText(
+						`${COPILOT_DEBUG_COMMAND} ${execution.execution.commandLine.value}`,
+						true,
+					);
+				},
+			),
+		);
 	}
 
 	async provideTerminalQuickFixes(
 		commandMatchResult: vscode.TerminalCommandMatchResult,
-		token: vscode.CancellationToken
+		token: vscode.CancellationToken,
 	): Promise<undefined | vscode.TerminalQuickFixTerminalCommand> {
 		const activeTerminal = vscode.window.activeTerminal?.shellIntegration;
 		const cwd = activeTerminal?.cwd;
-		if (!await this.debuggableCommandIdentifier.isDebuggable(cwd, commandMatchResult.commandLine, token)) {
+		if (
+			!(await this.debuggableCommandIdentifier.isDebuggable(
+				cwd,
+				commandMatchResult.commandLine,
+				token,
+			))
+		) {
 			return undefined;
 		}
 

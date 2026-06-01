@@ -3,19 +3,35 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/chatPhoneInputPresenter.css';
-import * as dom from '../../../../../../base/browser/dom.js';
-import { renderIcon } from '../../../../../../base/browser/ui/iconLabel/iconLabels.js';
-import { Gesture, EventType as TouchEventType } from '../../../../../../base/browser/touch.js';
-import { BaseActionViewItem } from '../../../../../../base/browser/ui/actionbar/actionViewItems.js';
-import { IAction } from '../../../../../../base/common/actions.js';
-import { Disposable, DisposableStore, IDisposable, toDisposable } from '../../../../../../base/common/lifecycle.js';
-import { autorun, derived, IObservable, observableValue } from '../../../../../../base/common/observable.js';
-import { localize } from '../../../../../../nls.js';
-import { InstantiationType, registerSingleton } from '../../../../../../platform/instantiation/common/extensions.js';
-import { createDecorator } from '../../../../../../platform/instantiation/common/instantiation.js';
-import { IModePickerDelegate } from './modePickerActionItem.js';
-import { IModelPickerDelegate } from './modelPickerActionItem.js';
+import "./media/chatPhoneInputPresenter.css";
+import * as dom from "../../../../../../base/browser/dom.js";
+import { renderIcon } from "../../../../../../base/browser/ui/iconLabel/iconLabels.js";
+import {
+	Gesture,
+	EventType as TouchEventType,
+} from "../../../../../../base/browser/touch.js";
+import { BaseActionViewItem } from "../../../../../../base/browser/ui/actionbar/actionViewItems.js";
+import { IAction } from "../../../../../../base/common/actions.js";
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+	toDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import {
+	autorun,
+	derived,
+	IObservable,
+	observableValue,
+} from "../../../../../../base/common/observable.js";
+import { localize } from "../../../../../../nls.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../../../platform/instantiation/common/extensions.js";
+import { createDecorator } from "../../../../../../platform/instantiation/common/instantiation.js";
+import { IModePickerDelegate } from "./modePickerActionItem.js";
+import { IModelPickerDelegate } from "./modelPickerActionItem.js";
 
 /**
  * Implementation of the phone-only chat-input picker presenter, registered
@@ -48,7 +64,8 @@ export interface IChatPhonePresenterImpl {
 	): Promise<void>;
 }
 
-export const IChatPhoneInputPresenter = createDecorator<IChatPhoneInputPresenter>('chatPhoneInputPresenter');
+export const IChatPhoneInputPresenter =
+	createDecorator<IChatPhoneInputPresenter>("chatPhoneInputPresenter");
 
 /**
  * Workbench-layer hook for phone-only chat-input picker presentation.
@@ -88,13 +105,18 @@ export interface IChatPhoneInputPresenter {
 	setImpl(impl: IChatPhonePresenterImpl): IDisposable;
 }
 
-class ChatPhoneInputPresenterService extends Disposable implements IChatPhoneInputPresenter {
-
+class ChatPhoneInputPresenterService
+	extends Disposable
+	implements IChatPhoneInputPresenter
+{
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _impl = observableValue<IChatPhonePresenterImpl | undefined>(this, undefined);
+	private readonly _impl = observableValue<IChatPhonePresenterImpl | undefined>(
+		this,
+		undefined,
+	);
 
-	readonly enabled: IObservable<boolean> = derived(this, reader => {
+	readonly enabled: IObservable<boolean> = derived(this, (reader) => {
 		const impl = this._impl.read(reader);
 		return impl ? impl.enabled.read(reader) : false;
 	});
@@ -105,7 +127,9 @@ class ChatPhoneInputPresenterService extends Disposable implements IChatPhoneInp
 		modelDelegate: IModelPickerDelegate | undefined,
 	): Promise<void> {
 		const impl = this._impl.get();
-		return impl ? impl.showCombinedModeAndModelSheet(target, modeDelegate, modelDelegate) : Promise.resolve();
+		return impl
+			? impl.showCombinedModeAndModelSheet(target, modeDelegate, modelDelegate)
+			: Promise.resolve();
 	}
 
 	setImpl(impl: IChatPhonePresenterImpl): IDisposable {
@@ -118,7 +142,11 @@ class ChatPhoneInputPresenterService extends Disposable implements IChatPhoneInp
 	}
 }
 
-registerSingleton(IChatPhoneInputPresenter, ChatPhoneInputPresenterService, InstantiationType.Delayed);
+registerSingleton(
+	IChatPhoneInputPresenter,
+	ChatPhoneInputPresenterService,
+	InstantiationType.Delayed,
+);
 
 /**
  * Phone-only action view item used in place of the desktop Model and Mode
@@ -131,7 +159,6 @@ registerSingleton(IChatPhoneInputPresenter, ChatPhoneInputPresenterService, Inst
  * surfaces present a consistent mobile experience.
  */
 export class MobileChatInputCombinedPickerActionItem extends BaseActionViewItem {
-
 	private readonly _renderDisposables = this._register(new DisposableStore());
 	private _triggerElement: HTMLElement | undefined;
 
@@ -139,7 +166,8 @@ export class MobileChatInputCombinedPickerActionItem extends BaseActionViewItem 
 		action: IAction,
 		private readonly _modeDelegate: IModePickerDelegate,
 		private readonly _modelDelegate: IModelPickerDelegate,
-		@IChatPhoneInputPresenter private readonly _presenter: IChatPhoneInputPresenter,
+		@IChatPhoneInputPresenter
+		private readonly _presenter: IChatPhoneInputPresenter,
 	) {
 		super(undefined, action);
 	}
@@ -149,37 +177,46 @@ export class MobileChatInputCombinedPickerActionItem extends BaseActionViewItem 
 		// own Gesture/Tap/CLICK on the container — that would dispatch
 		// each tap twice (container runs the action, trigger opens the sheet).
 		this.element = container;
-		container.classList.add('chat-input-picker-item');
+		container.classList.add("chat-input-picker-item");
 		this._renderDisposables.clear();
 
-		const trigger = dom.append(container, dom.$('a.action-label.chat-phone-input-chip'));
+		const trigger = dom.append(
+			container,
+			dom.$("a.action-label.chat-phone-input-chip"),
+		);
 		trigger.tabIndex = 0;
-		trigger.role = 'button';
+		trigger.role = "button";
 		this._triggerElement = trigger;
 
 		this._renderDisposables.add(Gesture.addTarget(trigger));
 		for (const eventType of [dom.EventType.CLICK, TouchEventType.Tap]) {
-			this._renderDisposables.add(dom.addDisposableListener(trigger, eventType, e => {
-				dom.EventHelper.stop(e, true);
-				this._showSheet();
-			}));
+			this._renderDisposables.add(
+				dom.addDisposableListener(trigger, eventType, (e) => {
+					dom.EventHelper.stop(e, true);
+					this._showSheet();
+				}),
+			);
 		}
-		this._renderDisposables.add(dom.addDisposableListener(trigger, dom.EventType.KEY_DOWN, e => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				dom.EventHelper.stop(e, true);
-				this._showSheet();
-			}
-		}));
+		this._renderDisposables.add(
+			dom.addDisposableListener(trigger, dom.EventType.KEY_DOWN, (e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					dom.EventHelper.stop(e, true);
+					this._showSheet();
+				}
+			}),
+		);
 
 		// Reactively re-render the chip when the active mode (label/icon)
 		// or the selected model changes.
-		this._renderDisposables.add(autorun(reader => {
-			const currentMode = this._modeDelegate.currentMode.read(reader);
-			currentMode.label.read(reader);
-			currentMode.icon.read(reader);
-			this._modelDelegate.currentModel.read(reader);
-			this._updateTrigger();
-		}));
+		this._renderDisposables.add(
+			autorun((reader) => {
+				const currentMode = this._modeDelegate.currentMode.read(reader);
+				currentMode.label.read(reader);
+				currentMode.icon.read(reader);
+				this._modelDelegate.currentModel.read(reader);
+				this._updateTrigger();
+			}),
+		);
 	}
 
 	private _updateTrigger(): void {
@@ -196,9 +233,13 @@ export class MobileChatInputCombinedPickerActionItem extends BaseActionViewItem 
 		}
 
 		const currentModel = this._modelDelegate.currentModel.get();
-		const labelText = currentModel?.metadata.name
-			?? localize('chatPhoneInput.autoLabel', "Auto");
-		const labelSpan = dom.append(trigger, dom.$('span.chat-input-picker-label'));
+		const labelText =
+			currentModel?.metadata.name ??
+			localize("chatPhoneInput.autoLabel", "Auto");
+		const labelSpan = dom.append(
+			trigger,
+			dom.$("span.chat-input-picker-label"),
+		);
 		labelSpan.textContent = labelText;
 
 		const ariaParts: string[] = [];
@@ -208,25 +249,31 @@ export class MobileChatInputCombinedPickerActionItem extends BaseActionViewItem 
 		}
 		ariaParts.push(labelText);
 		trigger.ariaLabel = localize(
-			'chatPhoneInput.triggerAriaLabel',
+			"chatPhoneInput.triggerAriaLabel",
 			"Pick Mode and Model, {0}",
-			ariaParts.join(', '),
+			ariaParts.join(", "),
 		);
 	}
 
 	/** Belt-and-braces: keep the action's `run()` suppressed even if `super.render` is reintroduced. */
-	override onClick(): void { /* handled by trigger */ }
+	override onClick(): void {
+		/* handled by trigger */
+	}
 
 	private async _showSheet(): Promise<void> {
 		const trigger = this._triggerElement;
 		if (!trigger) {
 			return;
 		}
-		trigger.setAttribute('aria-expanded', 'true');
+		trigger.setAttribute("aria-expanded", "true");
 		try {
-			await this._presenter.showCombinedModeAndModelSheet(trigger, this._modeDelegate, this._modelDelegate);
+			await this._presenter.showCombinedModeAndModelSheet(
+				trigger,
+				this._modeDelegate,
+				this._modelDelegate,
+			);
 		} finally {
-			trigger.setAttribute('aria-expanded', 'false');
+			trigger.setAttribute("aria-expanded", "false");
 			trigger.focus();
 		}
 	}

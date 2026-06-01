@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ILanguageModelToolsService } from '../../../chat/common/tools/languageModelToolsService.js';
+import type { ILanguageModelToolsService } from "../../../chat/common/tools/languageModelToolsService.js";
 
 let previouslyRecommededInSession = false;
 
@@ -13,7 +13,7 @@ const terminalCommands: { commands: RegExp[]; tags: string[] }[] = [
 			new RegExp(/^python3? -m pip install(\b)/),
 			new RegExp(/^pip3? install(\b)/),
 		],
-		tags: ['python environment'],
+		tags: ["python environment"],
 	},
 	{
 		commands: [
@@ -22,11 +22,14 @@ const terminalCommands: { commands: RegExp[]; tags: string[] }[] = [
 			new RegExp(/^pip3? install\b.*jupyter\b.*/),
 			new RegExp(/^jupyter(\b)/), // jupyter lab, jupyer notebook, jupyter nbconvert, etc.
 		],
-		tags: ['python environment', 'jupyter environment'],
-	}
+		tags: ["python environment", "jupyter environment"],
+	},
 ];
 
-export function getRecommendedToolsOverRunInTerminal(commandLine: string, languageModelToolsService: ILanguageModelToolsService): string | undefined {
+export function getRecommendedToolsOverRunInTerminal(
+	commandLine: string,
+	languageModelToolsService: ILanguageModelToolsService,
+): string | undefined {
 	const tools = languageModelToolsService.getTools(undefined);
 	if (!tools || previouslyRecommededInSession) {
 		return;
@@ -38,24 +41,25 @@ export function getRecommendedToolsOverRunInTerminal(commandLine: string, langua
 		`Try using some of the following tools instead of running a Terminal Command (if unable to use one of these tools as an alternative then run the same terminal command again):`,
 	];
 	for (const terminalCommand of terminalCommands) {
-		if (!terminalCommand.commands.some((condition) => condition.test(commandLine))) {
+		if (
+			!terminalCommand.commands.some((condition) => condition.test(commandLine))
+		) {
 			continue;
 		}
 		const tagsToSearchFor = terminalCommand.tags;
 		Array.from(tools)
-			.filter(t => tagsToSearchFor.some(tag => t.tags?.includes(tag)))
-			.forEach(tool => {
+			.filter((t) => tagsToSearchFor.some((tag) => t.tags?.includes(tag)))
+			.forEach((tool) => {
 				recommendedTools.add(tool.id);
 			});
-
 	}
-	recommendedTools.forEach(toolName => {
+	recommendedTools.forEach((toolName) => {
 		messages.push(`- ${toolName}`);
 	});
 
 	if (recommendedTools.size) {
 		previouslyRecommededInSession = true;
-		return messages.join('  \n');
+		return messages.join("  \n");
 	}
 
 	return undefined;

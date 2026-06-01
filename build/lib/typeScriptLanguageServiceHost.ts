@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import ts from 'typescript';
-import fs from 'node:fs';
-import { normalize } from 'node:path';
+import ts from "typescript";
+import fs from "node:fs";
+import { normalize } from "node:path";
 
 export type IFileMap = Map</*fileName*/ string, string>;
 
@@ -17,13 +17,12 @@ function normalizePath(filePath: string): string {
  * A TypeScript language service host
  */
 export class TypeScriptLanguageServiceHost implements ts.LanguageServiceHost {
-
-	private readonly ts: typeof import('typescript');
+	private readonly ts: typeof import("typescript");
 	private readonly topLevelFiles: IFileMap;
 	private readonly compilerOptions: ts.CompilerOptions;
 
 	constructor(
-		ts: typeof import('typescript'),
+		ts: typeof import("typescript"),
 		topLevelFiles: IFileMap,
 		compilerOptions: ts.CompilerOptions,
 	) {
@@ -39,20 +38,22 @@ export class TypeScriptLanguageServiceHost implements ts.LanguageServiceHost {
 	getScriptFileNames(): string[] {
 		return [
 			...this.topLevelFiles.keys(),
-			this.ts.getDefaultLibFilePath(this.compilerOptions)
+			this.ts.getDefaultLibFilePath(this.compilerOptions),
 		];
 	}
 	getScriptVersion(_fileName: string): string {
-		return '1';
+		return "1";
 	}
 	getProjectVersion(): string {
-		return '1';
+		return "1";
 	}
 	getScriptSnapshot(fileName: string): ts.IScriptSnapshot {
 		fileName = normalizePath(fileName);
 
 		if (this.topLevelFiles.has(fileName)) {
-			return this.ts.ScriptSnapshot.fromString(this.topLevelFiles.get(fileName)!);
+			return this.ts.ScriptSnapshot.fromString(
+				this.topLevelFiles.get(fileName)!,
+			);
 		} else {
 			return ts.ScriptSnapshot.fromString(fs.readFileSync(fileName).toString());
 		}
@@ -61,7 +62,7 @@ export class TypeScriptLanguageServiceHost implements ts.LanguageServiceHost {
 		return this.ts.ScriptKind.TS;
 	}
 	getCurrentDirectory(): string {
-		return '';
+		return "";
 	}
 	getDefaultLibFileName(options: ts.CompilerOptions): string {
 		return this.ts.getDefaultLibFilePath(options);

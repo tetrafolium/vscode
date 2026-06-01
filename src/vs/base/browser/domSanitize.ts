@@ -3,127 +3,130 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Schemas } from '../common/network.js';
-import { reset } from './dom.js';
+import { Schemas } from "../common/network.js";
+import { reset } from "./dom.js";
 // eslint-disable-next-line no-restricted-imports
-import dompurify, * as DomPurifyTypes from './dompurify/dompurify.js';
+import dompurify, * as DomPurifyTypes from "./dompurify/dompurify.js";
 
 /**
  * List of safe, non-input html tags.
  */
 export const basicMarkupHtmlTags = Object.freeze([
-	'a',
-	'abbr',
-	'b',
-	'bdo',
-	'blockquote',
-	'br',
-	'caption',
-	'cite',
-	'code',
-	'col',
-	'colgroup',
-	'dd',
-	'del',
-	'details',
-	'dfn',
-	'div',
-	'dl',
-	'dt',
-	'em',
-	'figcaption',
-	'figure',
-	'h1',
-	'h2',
-	'h3',
-	'h4',
-	'h5',
-	'h6',
-	'hr',
-	'i',
-	'img',
-	'ins',
-	'kbd',
-	'label',
-	'li',
-	'mark',
-	'ol',
-	'p',
-	'pre',
-	'q',
-	'rp',
-	'rt',
-	'ruby',
-	's',
-	'samp',
-	'small',
-	'small',
-	'source',
-	'span',
-	'strike',
-	'strong',
-	'sub',
-	'summary',
-	'sup',
-	'table',
-	'tbody',
-	'td',
-	'tfoot',
-	'th',
-	'thead',
-	'time',
-	'tr',
-	'tt',
-	'u',
-	'ul',
-	'var',
-	'video',
-	'wbr',
+	"a",
+	"abbr",
+	"b",
+	"bdo",
+	"blockquote",
+	"br",
+	"caption",
+	"cite",
+	"code",
+	"col",
+	"colgroup",
+	"dd",
+	"del",
+	"details",
+	"dfn",
+	"div",
+	"dl",
+	"dt",
+	"em",
+	"figcaption",
+	"figure",
+	"h1",
+	"h2",
+	"h3",
+	"h4",
+	"h5",
+	"h6",
+	"hr",
+	"i",
+	"img",
+	"ins",
+	"kbd",
+	"label",
+	"li",
+	"mark",
+	"ol",
+	"p",
+	"pre",
+	"q",
+	"rp",
+	"rt",
+	"ruby",
+	"s",
+	"samp",
+	"small",
+	"small",
+	"source",
+	"span",
+	"strike",
+	"strong",
+	"sub",
+	"summary",
+	"sup",
+	"table",
+	"tbody",
+	"td",
+	"tfoot",
+	"th",
+	"thead",
+	"time",
+	"tr",
+	"tt",
+	"u",
+	"ul",
+	"var",
+	"video",
+	"wbr",
 ]);
 
 export const defaultAllowedAttrs = Object.freeze([
-	'href',
-	'target',
-	'src',
-	'alt',
-	'title',
-	'for',
-	'name',
-	'role',
-	'tabindex',
-	'x-dispatch',
-	'required',
-	'checked',
-	'placeholder',
-	'type',
-	'start',
-	'width',
-	'height',
-	'align',
+	"href",
+	"target",
+	"src",
+	"alt",
+	"title",
+	"for",
+	"name",
+	"role",
+	"tabindex",
+	"x-dispatch",
+	"required",
+	"checked",
+	"placeholder",
+	"type",
+	"start",
+	"width",
+	"height",
+	"align",
 ]);
 
-
-const fakeRelativeUrlProtocol = 'vscode-relative-path';
+const fakeRelativeUrlProtocol = "vscode-relative-path";
 
 interface AllowedLinksConfig {
-	readonly override: readonly string[] | '*';
+	readonly override: readonly string[] | "*";
 	readonly allowRelativePaths: boolean;
 }
 
-function validateLink(value: string, allowedProtocols: AllowedLinksConfig): boolean {
-	if (allowedProtocols.override === '*') {
+function validateLink(
+	value: string,
+	allowedProtocols: AllowedLinksConfig,
+): boolean {
+	if (allowedProtocols.override === "*") {
 		return true; // allow all protocols
 	}
 
 	try {
-		const url = new URL(value, fakeRelativeUrlProtocol + '://');
-		if (allowedProtocols.override.includes(url.protocol.replace(/:$/, ''))) {
+		const url = new URL(value, fakeRelativeUrlProtocol + "://");
+		if (allowedProtocols.override.includes(url.protocol.replace(/:$/, ""))) {
 			return true;
 		}
 
-		if (allowedProtocols.allowRelativePaths
-			&& url.protocol === fakeRelativeUrlProtocol + ':'
-			&& !value.trim().toLowerCase().startsWith(fakeRelativeUrlProtocol)
+		if (
+			allowedProtocols.allowRelativePaths &&
+			url.protocol === fakeRelativeUrlProtocol + ":" &&
+			!value.trim().toLowerCase().startsWith(fakeRelativeUrlProtocol)
 		) {
 			return true;
 		}
@@ -138,17 +141,24 @@ function validateLink(value: string, allowedProtocols: AllowedLinksConfig): bool
  * Hooks dompurify using `afterSanitizeAttributes` to check that all `href` and `src`
  * attributes are valid.
  */
-function hookDomPurifyHrefAndSrcSanitizer(allowedLinkProtocols: AllowedLinksConfig, allowedMediaProtocols: AllowedLinksConfig) {
-	dompurify.addHook('afterSanitizeAttributes', (node) => {
+function hookDomPurifyHrefAndSrcSanitizer(
+	allowedLinkProtocols: AllowedLinksConfig,
+	allowedMediaProtocols: AllowedLinksConfig,
+) {
+	dompurify.addHook("afterSanitizeAttributes", (node) => {
 		// check all href/src attributes for validity
-		for (const attr of ['href', 'src']) {
+		for (const attr of ["href", "src"]) {
 			if (node.hasAttribute(attr)) {
 				const attrValue = node.getAttribute(attr) as string;
-				if (attr === 'href') {
-					if (!attrValue.startsWith('#') && !validateLink(attrValue, allowedLinkProtocols)) {
+				if (attr === "href") {
+					if (
+						!attrValue.startsWith("#") &&
+						!validateLink(attrValue, allowedLinkProtocols)
+					) {
 						node.removeAttribute(attr);
 					}
-				} else { // 'src'
+				} else {
+					// 'src'
 					if (!validateLink(attrValue, allowedMediaProtocols)) {
 						node.removeAttribute(attr);
 					}
@@ -163,13 +173,15 @@ function hookDomPurifyHrefAndSrcSanitizer(allowedLinkProtocols: AllowedLinksConf
  *
  * @returns A boolean indicating whether the attribute should be kept or a string with the sanitized value (which implicitly keeps the attribute)
  */
-export type SanitizeAttributePredicate = (node: Element, data: { readonly attrName: string; readonly attrValue: string }) => boolean | string;
+export type SanitizeAttributePredicate = (
+	node: Element,
+	data: { readonly attrName: string; readonly attrValue: string },
+) => boolean | string;
 
 export interface SanitizeAttributeRule {
 	readonly attributeName: string;
 	shouldKeep: SanitizeAttributePredicate;
 }
-
 
 export interface DomSanitizerConfig {
 	/**
@@ -192,7 +204,7 @@ export interface DomSanitizerConfig {
 	 * List of allowed protocols for `href` attributes.
 	 */
 	readonly allowedLinkProtocols?: {
-		readonly override?: readonly string[] | '*';
+		readonly override?: readonly string[] | "*";
 	};
 
 	/**
@@ -204,7 +216,7 @@ export interface DomSanitizerConfig {
 	 * List of allowed protocols for `src` attributes.
 	 */
 	readonly allowedMediaProtocols?: {
-		readonly override?: readonly string[] | '*';
+		readonly override?: readonly string[] | "*";
 	};
 
 	/**
@@ -235,13 +247,28 @@ const defaultDomPurifyConfig = Object.freeze({
  *
  * @returns A sanitized string of html.
  */
-export function sanitizeHtml(untrusted: string, config?: DomSanitizerConfig): TrustedHTML {
-	return doSanitizeHtml(untrusted, config, 'trusted');
+export function sanitizeHtml(
+	untrusted: string,
+	config?: DomSanitizerConfig,
+): TrustedHTML {
+	return doSanitizeHtml(untrusted, config, "trusted");
 }
 
-function doSanitizeHtml(untrusted: string, config: DomSanitizerConfig | undefined, outputType: 'dom'): DocumentFragment;
-function doSanitizeHtml(untrusted: string, config: DomSanitizerConfig | undefined, outputType: 'trusted'): TrustedHTML;
-function doSanitizeHtml(untrusted: string, config: DomSanitizerConfig | undefined, outputType: 'dom' | 'trusted'): TrustedHTML | DocumentFragment {
+function doSanitizeHtml(
+	untrusted: string,
+	config: DomSanitizerConfig | undefined,
+	outputType: "dom",
+): DocumentFragment;
+function doSanitizeHtml(
+	untrusted: string,
+	config: DomSanitizerConfig | undefined,
+	outputType: "trusted",
+): TrustedHTML;
+function doSanitizeHtml(
+	untrusted: string,
+	config: DomSanitizerConfig | undefined,
+	outputType: "dom" | "trusted",
+): TrustedHTML | DocumentFragment {
 	try {
 		const resolvedConfig: DomPurifyTypes.Config = { ...defaultDomPurifyConfig };
 
@@ -251,36 +278,50 @@ function doSanitizeHtml(untrusted: string, config: DomSanitizerConfig | undefine
 			}
 
 			if (config.allowedTags.augment) {
-				resolvedConfig.ALLOWED_TAGS = [...(resolvedConfig.ALLOWED_TAGS ?? []), ...config.allowedTags.augment];
+				resolvedConfig.ALLOWED_TAGS = [
+					...(resolvedConfig.ALLOWED_TAGS ?? []),
+					...config.allowedTags.augment,
+				];
 			}
 		}
 
-		let resolvedAttributes: Array<string | SanitizeAttributeRule> = [...defaultAllowedAttrs];
+		let resolvedAttributes: Array<string | SanitizeAttributeRule> = [
+			...defaultAllowedAttrs,
+		];
 		if (config?.allowedAttributes) {
 			if (config.allowedAttributes.override) {
 				resolvedAttributes = [...config.allowedAttributes.override];
 			}
 
 			if (config.allowedAttributes.augment) {
-				resolvedAttributes = [...resolvedAttributes, ...config.allowedAttributes.augment];
+				resolvedAttributes = [
+					...resolvedAttributes,
+					...config.allowedAttributes.augment,
+				];
 			}
 		}
 
 		// All attr names are lower-case in the sanitizer hooks
-		resolvedAttributes = resolvedAttributes.map((attr): string | SanitizeAttributeRule => {
-			if (typeof attr === 'string') {
-				return attr.toLowerCase();
-			}
-			return {
-				attributeName: attr.attributeName.toLowerCase(),
-				shouldKeep: attr.shouldKeep,
-			};
-		});
+		resolvedAttributes = resolvedAttributes.map(
+			(attr): string | SanitizeAttributeRule => {
+				if (typeof attr === "string") {
+					return attr.toLowerCase();
+				}
+				return {
+					attributeName: attr.attributeName.toLowerCase(),
+					shouldKeep: attr.shouldKeep,
+				};
+			},
+		);
 
-		const allowedAttrNames = new Set(resolvedAttributes.map(attr => typeof attr === 'string' ? attr : attr.attributeName));
+		const allowedAttrNames = new Set(
+			resolvedAttributes.map((attr) =>
+				typeof attr === "string" ? attr : attr.attributeName,
+			),
+		);
 		const allowedAttrPredicates = new Map<string, SanitizeAttributeRule>();
 		for (const attr of resolvedAttributes) {
-			if (typeof attr === 'string') {
+			if (typeof attr === "string") {
 				// New string attribute value clears previously set predicates
 				allowedAttrPredicates.delete(attr);
 			} else {
@@ -292,24 +333,31 @@ function doSanitizeHtml(untrusted: string, config: DomSanitizerConfig | undefine
 
 		hookDomPurifyHrefAndSrcSanitizer(
 			{
-				override: config?.allowedLinkProtocols?.override ?? [Schemas.http, Schemas.https],
-				allowRelativePaths: config?.allowRelativeLinkPaths ?? false
+				override: config?.allowedLinkProtocols?.override ?? [
+					Schemas.http,
+					Schemas.https,
+				],
+				allowRelativePaths: config?.allowRelativeLinkPaths ?? false,
 			},
 			{
-				override: config?.allowedMediaProtocols?.override ?? [Schemas.http, Schemas.https],
-				allowRelativePaths: config?.allowRelativeMediaPaths ?? false
-			});
+				override: config?.allowedMediaProtocols?.override ?? [
+					Schemas.http,
+					Schemas.https,
+				],
+				allowRelativePaths: config?.allowRelativeMediaPaths ?? false,
+			},
+		);
 
 		if (config?.replaceWithPlaintext) {
-			dompurify.addHook('uponSanitizeElement', replaceWithPlainTextHook);
+			dompurify.addHook("uponSanitizeElement", replaceWithPlainTextHook);
 		}
 
 		if (allowedAttrPredicates.size) {
-			dompurify.addHook('uponSanitizeAttribute', (node, e) => {
+			dompurify.addHook("uponSanitizeAttribute", (node, e) => {
 				const predicate = allowedAttrPredicates.get(e.attrName);
 				if (predicate) {
 					const result = predicate.shouldKeep(node, e);
-					if (typeof result === 'string') {
+					if (typeof result === "string") {
 						e.keepAttr = true;
 						e.attrValue = result;
 					} else {
@@ -321,15 +369,15 @@ function doSanitizeHtml(untrusted: string, config: DomSanitizerConfig | undefine
 			});
 		}
 
-		if (outputType === 'dom') {
+		if (outputType === "dom") {
 			return dompurify.sanitize(untrusted, {
 				...resolvedConfig,
-				RETURN_DOM_FRAGMENT: true
+				RETURN_DOM_FRAGMENT: true,
 			});
 		} else {
 			return dompurify.sanitize(untrusted, {
 				...resolvedConfig,
-				RETURN_TRUSTED_TYPE: true
+				RETURN_TRUSTED_TYPE: true,
 			}) as unknown as TrustedHTML; // Cast from lib TrustedHTML to global TrustedHTML
 		}
 	} finally {
@@ -337,10 +385,31 @@ function doSanitizeHtml(untrusted: string, config: DomSanitizerConfig | undefine
 	}
 }
 
-const selfClosingTags = ['area', 'base', 'br', 'col', 'command', 'embed', 'hr', 'img', 'input', 'keygen', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+const selfClosingTags = [
+	"area",
+	"base",
+	"br",
+	"col",
+	"command",
+	"embed",
+	"hr",
+	"img",
+	"input",
+	"keygen",
+	"link",
+	"meta",
+	"param",
+	"source",
+	"track",
+	"wbr",
+];
 
-const replaceWithPlainTextHook: DomPurifyTypes.UponSanitizeElementHook = (node, data, _config) => {
-	if (!data.allowedTags[data.tagName] && data.tagName !== 'body') {
+const replaceWithPlainTextHook: DomPurifyTypes.UponSanitizeElementHook = (
+	node,
+	data,
+	_config,
+) => {
+	if (!data.allowedTags[data.tagName] && data.tagName !== "body") {
 		const replacement = convertTagToPlaintext(node);
 		if (replacement) {
 			if (node.nodeType === Node.COMMENT_NODE) {
@@ -355,7 +424,9 @@ const replaceWithPlainTextHook: DomPurifyTypes.UponSanitizeElementHook = (node, 
 	}
 };
 
-export function convertTagToPlaintext(node: Node): DocumentFragment | undefined {
+export function convertTagToPlaintext(
+	node: Node,
+): DocumentFragment | undefined {
 	if (!node.ownerDocument) {
 		return;
 	}
@@ -367,11 +438,12 @@ export function convertTagToPlaintext(node: Node): DocumentFragment | undefined 
 	} else if (node instanceof Element) {
 		const tagName = node.tagName.toLowerCase();
 		const isSelfClosing = selfClosingTags.includes(tagName);
-		const attrString = node.attributes.length ?
-			' ' + Array.from(node.attributes)
-				.map(attr => `${attr.name}="${attr.value}"`)
-				.join(' ')
-			: '';
+		const attrString = node.attributes.length
+			? " " +
+				Array.from(node.attributes)
+					.map((attr) => `${attr.name}="${attr.value}"`)
+					.join(" ")
+			: "";
 		startTagText = `<${tagName}${attrString}>`;
 		if (!isSelfClosing) {
 			endTagText = `</${tagName}>`;
@@ -387,7 +459,9 @@ export function convertTagToPlaintext(node: Node): DocumentFragment | undefined 
 		fragment.appendChild(node.firstChild);
 	}
 
-	const endTagTextNode = endTagText ? node.ownerDocument.createTextNode(endTagText) : undefined;
+	const endTagTextNode = endTagText
+		? node.ownerDocument.createTextNode(endTagText)
+		: undefined;
 	if (endTagTextNode) {
 		fragment.appendChild(endTagTextNode);
 	}
@@ -398,7 +472,11 @@ export function convertTagToPlaintext(node: Node): DocumentFragment | undefined 
 /**
  * Sanitizes the given `value` and reset the given `node` with it.
  */
-export function safeSetInnerHtml(node: HTMLElement, untrusted: string, config?: DomSanitizerConfig): void {
-	const fragment = doSanitizeHtml(untrusted, config, 'dom');
+export function safeSetInnerHtml(
+	node: HTMLElement,
+	untrusted: string,
+	config?: DomSanitizerConfig,
+): void {
+	const fragment = doSanitizeHtml(untrusted, config, "dom");
 	reset(node, fragment);
 }

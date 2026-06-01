@@ -3,15 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { IJSONSchema } from '../../../base/common/jsonSchema.js';
-import { KeyCode } from '../../../base/common/keyCodes.js';
-import { ResolvedKeybinding, Keybinding } from '../../../base/common/keybindings.js';
-import { IDisposable } from '../../../base/common/lifecycle.js';
-import { IContextKeyService, IContextKeyServiceTarget } from '../../contextkey/common/contextkey.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { ResolutionResult } from './keybindingResolver.js';
-import { ResolvedKeybindingItem } from './resolvedKeybindingItem.js';
+import { Event } from "../../../base/common/event.js";
+import { IJSONSchema } from "../../../base/common/jsonSchema.js";
+import { KeyCode } from "../../../base/common/keyCodes.js";
+import {
+	ResolvedKeybinding,
+	Keybinding,
+} from "../../../base/common/keybindings.js";
+import { IDisposable } from "../../../base/common/lifecycle.js";
+import {
+	IContextKeyService,
+	IContextKeyServiceTarget,
+} from "../../contextkey/common/contextkey.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import { ResolutionResult } from "./keybindingResolver.js";
+import { ResolvedKeybindingItem } from "./resolvedKeybindingItem.js";
 
 export interface IUserFriendlyKeybinding {
 	key: string;
@@ -38,7 +44,8 @@ export interface KeybindingsSchemaContribution {
 	getSchemaAdditions(): IJSONSchema[];
 }
 
-export const IKeybindingService = createDecorator<IKeybindingService>('keybindingService');
+export const IKeybindingService =
+	createDecorator<IKeybindingService>("keybindingService");
 
 export interface IKeybindingService {
 	readonly _serviceBrand: undefined;
@@ -64,7 +71,10 @@ export interface IKeybindingService {
 	/**
 	 * Resolve and dispatch `keyboardEvent`, but do not invoke the command or change inner state.
 	 */
-	softDispatch(keyboardEvent: IKeyboardEvent, target: IContextKeyServiceTarget): ResolutionResult;
+	softDispatch(
+		keyboardEvent: IKeyboardEvent,
+		target: IContextKeyServiceTarget,
+	): ResolutionResult;
 
 	/**
 	 * Enable hold mode for this command. This is only possible if the command is current being dispatched, meaning
@@ -74,7 +84,10 @@ export interface IKeybindingService {
 	 */
 	enableKeybindingHoldMode(commandId: string): Promise<void> | undefined;
 
-	dispatchByUserSettingsLabel(userSettingsLabel: string, target: IContextKeyServiceTarget): void;
+	dispatchByUserSettingsLabel(
+		userSettingsLabel: string,
+		target: IContextKeyServiceTarget,
+	): void;
 
 	/**
 	 * Look up keybindings for a command.
@@ -86,7 +99,11 @@ export interface IKeybindingService {
 	 * Look up the preferred (last defined) keybinding for a command.
 	 * @returns The preferred keybinding or null if the command is not bound.
 	 */
-	lookupKeybinding(commandId: string, context?: IContextKeyService, enforceContextCheck?: boolean): ResolvedKeybinding | undefined;
+	lookupKeybinding(
+		commandId: string,
+		context?: IContextKeyService,
+		enforceContextCheck?: boolean,
+	): ResolvedKeybinding | undefined;
 
 	getDefaultKeybindingsContent(): string;
 
@@ -102,7 +119,9 @@ export interface IKeybindingService {
 	 */
 	mightProducePrintableCharacter(event: IKeyboardEvent): boolean;
 
-	registerSchemaContribution(contribution: KeybindingsSchemaContribution): IDisposable;
+	registerSchemaContribution(
+		contribution: KeybindingsSchemaContribution,
+	): IDisposable;
 
 	toggleLogging(): boolean;
 
@@ -110,7 +129,12 @@ export interface IKeybindingService {
 	 * Given a UI element label and a command ID, appends the keybinding label if any.
 	 * If the command is defined and has a keybinding, returns `${label} (keybinding label)`, otherwise just `label`.
 	 */
-	appendKeybinding(label: string, commandId: string | undefined | null, context?: IContextKeyService, enforceContextCheck?: boolean): string;
+	appendKeybinding(
+		label: string,
+		commandId: string | undefined | null,
+		context?: IContextKeyService,
+		enforceContextCheck?: boolean,
+	): string;
 
 	_dumpDebugInfo(): string;
 	_dumpDebugInfoJSON(): string;

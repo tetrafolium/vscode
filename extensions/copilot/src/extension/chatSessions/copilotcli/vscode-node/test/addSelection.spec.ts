@@ -6,17 +6,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestLogService } from '../../../../../platform/testing/common/testLogService';
 import type { InProcHttpServer } from '../inProcHttpServer';
-import { MockHttpServer, MockSessionTracker, createMockEditor, createMockEditorWithScheme } from './testHelpers';
+import {
+	MockHttpServer,
+	MockSessionTracker,
+	createMockEditor,
+	createMockEditorWithScheme,
+} from './testHelpers';
 
-const { mockRegisterCommand, mockActiveTextEditor, mockShowQuickPick } = vi.hoisted(() => ({
-	mockRegisterCommand: vi.fn(),
-	mockActiveTextEditor: { value: null as unknown },
-	mockShowQuickPick: vi.fn(),
-}));
+const { mockRegisterCommand, mockActiveTextEditor, mockShowQuickPick } =
+	vi.hoisted(() => ({
+		mockRegisterCommand: vi.fn(),
+		mockActiveTextEditor: { value: null as unknown },
+		mockShowQuickPick: vi.fn(),
+	}));
 
 vi.mock('vscode', () => ({
 	window: {
-		get activeTextEditor() { return mockActiveTextEditor.value; },
+		get activeTextEditor() {
+			return mockActiveTextEditor.value;
+		},
 		showWarningMessage: vi.fn(),
 		showQuickPick: (...args: unknown[]) => mockShowQuickPick(...args),
 	},
@@ -26,7 +34,10 @@ vi.mock('vscode', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { ADD_SELECTION_COMMAND, registerAddSelectionCommand } from '../commands/addSelection';
+import {
+	ADD_SELECTION_COMMAND,
+	registerAddSelectionCommand,
+} from '../commands/addSelection';
 import { ADD_FILE_REFERENCE_NOTIFICATION } from '../commands/sendContext';
 
 describe('addSelection command', () => {
@@ -45,21 +56,38 @@ describe('addSelection command', () => {
 		// Default: one connected session
 		httpServer.setConnectedSessionIds(['session-1']);
 
-		mockRegisterCommand.mockImplementation((name: string, callback: (...args: unknown[]) => unknown) => {
-			registeredCommands.set(name, callback);
-			return { dispose: () => { } };
-		});
+		mockRegisterCommand.mockImplementation(
+			(name: string, callback: (...args: unknown[]) => unknown) => {
+				registeredCommands.set(name, callback);
+				return { dispose: () => {} };
+			},
+		);
 	});
 
 	it('should register the command', () => {
-		registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddSelectionCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		expect(registeredCommands.has(ADD_SELECTION_COMMAND)).toBe(true);
 	});
 
 	it('should send selection notification from active editor with selection', async () => {
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'line 0\nline 1\nline 2', 1, 0, 1, 6);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'line 0\nline 1\nline 2',
+			1,
+			0,
+			1,
+			6,
+		);
 
-		registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddSelectionCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 		expect(httpServer.sendNotification).toHaveBeenCalledWith(
@@ -77,9 +105,20 @@ describe('addSelection command', () => {
 	});
 
 	it('should send context with null selection when no text is selected (fallback to file)', async () => {
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'Hello World', 0, 0, 0, 0);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'Hello World',
+			0,
+			0,
+			0,
+			0,
+		);
 
-		registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddSelectionCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 		expect(httpServer.sendNotification).toHaveBeenCalledWith(
@@ -94,7 +133,11 @@ describe('addSelection command', () => {
 	});
 
 	it('should show warning when no active editor', async () => {
-		registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddSelectionCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 		expect(httpServer.sendNotification).not.toHaveBeenCalled();
@@ -105,9 +148,20 @@ describe('addSelection command', () => {
 
 	it('should show warning when no sessions are connected', async () => {
 		httpServer.setConnectedSessionIds([]);
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'content', 0, 0, 0, 0);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'content',
+			0,
+			0,
+			0,
+			0,
+		);
 
-		registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddSelectionCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 		expect(httpServer.sendNotification).not.toHaveBeenCalled();
@@ -118,10 +172,24 @@ describe('addSelection command', () => {
 
 	it('should show picker when multiple sessions are connected', async () => {
 		httpServer.setConnectedSessionIds(['session-1', 'session-2']);
-		mockShowQuickPick.mockResolvedValue({ sessionId: 'session-2', label: 'session-2' });
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'content', 0, 0, 0, 7);
+		mockShowQuickPick.mockResolvedValue({
+			sessionId: 'session-2',
+			label: 'session-2',
+		});
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'content',
+			0,
+			0,
+			0,
+			7,
+		);
 
-		registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddSelectionCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 		expect(mockShowQuickPick).toHaveBeenCalled();
@@ -134,18 +202,42 @@ describe('addSelection command', () => {
 
 	describe('URI scheme validation', () => {
 		it('should allow file scheme', async () => {
-			mockActiveTextEditor.value = createMockEditorWithScheme('/test/file.ts', 'content', 0, 0, 0, 7, 'file');
+			mockActiveTextEditor.value = createMockEditorWithScheme(
+				'/test/file.ts',
+				'content',
+				0,
+				0,
+				0,
+				7,
+				'file',
+			);
 
-			registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+			registerAddSelectionCommand(
+				logger,
+				httpServer as unknown as InProcHttpServer,
+				sessionTracker.asTracker(),
+			);
 			await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 			expect(httpServer.sendNotification).toHaveBeenCalled();
 		});
 
 		it('should reject vscode-remote scheme with warning', async () => {
-			mockActiveTextEditor.value = createMockEditorWithScheme('/test/file.ts', 'content', 0, 0, 0, 7, 'vscode-remote');
+			mockActiveTextEditor.value = createMockEditorWithScheme(
+				'/test/file.ts',
+				'content',
+				0,
+				0,
+				0,
+				7,
+				'vscode-remote',
+			);
 
-			registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+			registerAddSelectionCommand(
+				logger,
+				httpServer as unknown as InProcHttpServer,
+				sessionTracker.asTracker(),
+			);
 			await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 			expect(httpServer.sendNotification).not.toHaveBeenCalled();
@@ -155,9 +247,21 @@ describe('addSelection command', () => {
 		});
 
 		it('should reject output scheme with warning', async () => {
-			mockActiveTextEditor.value = createMockEditorWithScheme('/Output', 'content', 0, 0, 0, 7, 'output');
+			mockActiveTextEditor.value = createMockEditorWithScheme(
+				'/Output',
+				'content',
+				0,
+				0,
+				0,
+				7,
+				'output',
+			);
 
-			registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+			registerAddSelectionCommand(
+				logger,
+				httpServer as unknown as InProcHttpServer,
+				sessionTracker.asTracker(),
+			);
 			await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 			expect(httpServer.sendNotification).not.toHaveBeenCalled();
@@ -167,9 +271,21 @@ describe('addSelection command', () => {
 		});
 
 		it('should reject untitled scheme with warning', async () => {
-			mockActiveTextEditor.value = createMockEditorWithScheme('/Untitled-1', 'content', 0, 0, 0, 7, 'untitled');
+			mockActiveTextEditor.value = createMockEditorWithScheme(
+				'/Untitled-1',
+				'content',
+				0,
+				0,
+				0,
+				7,
+				'untitled',
+			);
 
-			registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+			registerAddSelectionCommand(
+				logger,
+				httpServer as unknown as InProcHttpServer,
+				sessionTracker.asTracker(),
+			);
 			await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 			expect(httpServer.sendNotification).not.toHaveBeenCalled();
@@ -179,9 +295,21 @@ describe('addSelection command', () => {
 		});
 
 		it('should reject vscode-chat-code-block scheme with warning', async () => {
-			mockActiveTextEditor.value = createMockEditorWithScheme('/block', 'content', 0, 0, 0, 7, 'vscode-chat-code-block');
+			mockActiveTextEditor.value = createMockEditorWithScheme(
+				'/block',
+				'content',
+				0,
+				0,
+				0,
+				7,
+				'vscode-chat-code-block',
+			);
 
-			registerAddSelectionCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+			registerAddSelectionCommand(
+				logger,
+				httpServer as unknown as InProcHttpServer,
+				sessionTracker.asTracker(),
+			);
 			await registeredCommands.get(ADD_SELECTION_COMMAND)!();
 
 			expect(httpServer.sendNotification).not.toHaveBeenCalled();

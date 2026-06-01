@@ -23,22 +23,38 @@ interface RepoContext {
  */
 interface ISerializedWorkspaceState {
 	readonly workspaceFoldersFilePaths: string[] | undefined;
-	readonly activeTextEditor: {
-		selections: { anchor: vscode.Position; active: vscode.Position; isReversed: boolean }[];
-		documentFilePath: string;
-		visibleRanges: { start: vscode.Position; end: vscode.Position }[];
-		languageId: string;
-	} | undefined;
-	readonly symbols: {
-		name: string;
-		kind: vscode.SymbolKind;
-		containerName: string;
-		filePath: string;
+	readonly activeTextEditor:
+		| {
+				selections: {
+					anchor: vscode.Position;
+					active: vscode.Position;
+					isReversed: boolean;
+				}[];
+				documentFilePath: string;
+				visibleRanges: {
+					start: vscode.Position;
+					end: vscode.Position;
+				}[];
+				languageId: string;
+		  }
+		| undefined;
+	readonly symbols:
+		| {
+				name: string;
+				kind: vscode.SymbolKind;
+				containerName: string;
+				filePath: string;
+				start: vscode.Position;
+				end: vscode.Position;
+		  }[]
+		| undefined;
+	readonly notebookDocumentFilePaths: string[] | undefined;
+	readonly activeFileDiagnostics: {
 		start: vscode.Position;
 		end: vscode.Position;
-	}[] | undefined;
-	readonly notebookDocumentFilePaths: string[] | undefined;
-	readonly activeFileDiagnostics: { start: vscode.Position; end: vscode.Position; message: string; severity?: vscode.DiagnosticSeverity }[];
+		message: string;
+		severity?: vscode.DiagnosticSeverity;
+	}[];
 	readonly debugConsoleOutput: string;
 	readonly repoContext: RepoContext | undefined;
 	readonly terminalBuffer: string;
@@ -88,9 +104,11 @@ export type TestRunEvaluation = {
 };
 
 // parses each line in `<component>_scored_predictions.csv` into a TestRunEvaluation
-function _parseScoredPredictionsCsv(kind: AMLRunKind, fileContents: string[]): TestRunEvaluation[] {
+function _parseScoredPredictionsCsv(
+	kind: AMLRunKind,
+	fileContents: string[],
+): TestRunEvaluation[] {
 	return fileContents.map((line, i) => {
-
 		const json: any = JSON.parse(line); // may throw but not sure if we should have a way to recover
 
 		let stdout: string | undefined;
@@ -105,12 +123,20 @@ function _parseScoredPredictionsCsv(kind: AMLRunKind, fileContents: string[]): T
 		const extraDataJson = json.extra_data_json;
 
 		if (extraDataJson) {
-			({ errorsOnlyInBefore, errorsOnlyInAfter } = _parseFixEvaluationData(kind, extraDataJson));
+			({ errorsOnlyInBefore, errorsOnlyInAfter } =
+				_parseFixEvaluationData(kind, extraDataJson));
 
-			[generatedTestCaseCount, generatedAssertCount] = _parseTestEvaluationData(kind, extraDataJson);
+			[generatedTestCaseCount, generatedAssertCount] =
+				_parseTestEvaluationData(kind, extraDataJson);
 
-			stdout = extraDataJson.stdout && typeof extraDataJson.stdout === 'string' ? extraDataJson.stdout : undefined;
-			stderr = extraDataJson.stderr && typeof extraDataJson.stderr === 'string' ? extraDataJson.stderr : undefined;
+			stdout =
+				extraDataJson.stdout && typeof extraDataJson.stdout === 'string'
+					? extraDataJson.stdout
+					: undefined;
+			stderr =
+				extraDataJson.stderr && typeof extraDataJson.stderr === 'string'
+					? extraDataJson.stderr
+					: undefined;
 		}
 
 		if (json.score !== 1) {
@@ -119,12 +145,18 @@ function _parseScoredPredictionsCsv(kind: AMLRunKind, fileContents: string[]): T
 			if (statusCodes) {
 				for (const statusCode of statusCodes) {
 					if (statusCode !== 'SUCCESS') {
-						annotations.push({ message: `AML eval error: ${statusCode}`, label: statusCode, severity: 'error' } satisfies OutputAnnotation);
+						annotations.push({
+							message: `AML eval error: ${statusCode}`,
+							label: statusCode,
+							severity: 'error',
+						} satisfies OutputAnnotation);
 					}
 				}
 
 				if (json.status_message) {
-					evaluatorError = evaluatorError ? `${evaluatorError}\n${json.status_message}` : json.status_message;
+					evaluatorError = evaluatorError
+						? `${evaluatorError}\n${json.status_message}`
+						: json.status_message;
 				}
 			}
 		}
@@ -133,7 +165,8 @@ function _parseScoredPredictionsCsv(kind: AMLRunKind, fileContents: string[]): T
 			caseName: json.test_case_id,
 			nId: parseInt(json.n_id),
 			languageId: json.language,
-			isSuccess: typeof json.score === 'number' ? json.score === 1 : json.score,
+			isSuccess:
+				typeof json.score === 'number' ? json.score === 1 : json.score,
 			errorsOnlyInBefore,
 			errorsOnlyInAfter,
 			annotations,
@@ -152,14 +185,21 @@ function _parseFixEvaluationData(kind: AMLRunKind, json: unknown) {
 	let errorsOnlyInAfter: EvaluationError[] | undefined;
 
 	if (kind === AMLRunKind.Fix && typeof json === 'object' && json) {
-		errorsOnlyInAfter = (json as any).errors_only_in_after?.map(_toEvaluationError).sort(_evaluationErrorComparator);
-		errorsOnlyInBefore = (json as any).errors_only_in_before?.map(_toEvaluationError).sort(_evaluationErrorComparator);
+		errorsOnlyInAfter = (json as any).errors_only_in_after
+			?.map(_toEvaluationError)
+			.sort(_evaluationErrorComparator);
+		errorsOnlyInBefore = (json as any).errors_only_in_before
+			?.map(_toEvaluationError)
+			.sort(_evaluationErrorComparator);
 	}
 
 	return { errorsOnlyInBefore, errorsOnlyInAfter };
 }
 
-function _parseTestEvaluationData(kind: AMLRunKind, json: unknown): [number | undefined, number | undefined] {
+function _parseTestEvaluationData(
+	kind: AMLRunKind,
+	json: unknown,
+): [number | undefined, number | undefined] {
 	let generatedTestCaseCount: number | undefined = undefined;
 	let generatedAssertCount: number | undefined = undefined;
 
@@ -176,7 +216,6 @@ function _parseTestEvaluationData(kind: AMLRunKind, json: unknown): [number | un
 }
 
 function _toEvaluationError(error: any): EvaluationError {
-
 	return {
 		message: error.message,
 		rule: error.rule,
@@ -184,11 +223,14 @@ function _toEvaluationError(error: any): EvaluationError {
 		startLine: error.start_line_index,
 		startColumn: error.start_col_index,
 		endLine: error.end_line_index,
-		endColumn: error.end_col_index
+		endColumn: error.end_col_index,
 	};
 }
 
-function _evaluationErrorComparator(error1: EvaluationError, error2: EvaluationError) {
+function _evaluationErrorComparator(
+	error1: EvaluationError,
+	error2: EvaluationError,
+) {
 	if (error1.startLine !== error2.startLine) {
 		return error1.startLine - error2.startLine;
 	}
@@ -221,17 +263,34 @@ export type TestRunsEvaluation = {
 
 // parses lines in `<component>_scored_predictions.csv` and aggregates them into
 // a format that is easier to use for our purposes
-export function parseScoredPredictionsCsv(kind: AMLRunKind, fileContents: string[]): TestRunsEvaluation[] {
-
+export function parseScoredPredictionsCsv(
+	kind: AMLRunKind,
+	fileContents: string[],
+): TestRunsEvaluation[] {
 	const testRunEvals = _parseScoredPredictionsCsv(kind, fileContents);
 
 	const testRunsEvaluation: TestRunsEvaluation[] = [];
 
 	let ix = 0;
 	while (ix < testRunEvals.length) {
-		const { caseName, languageId, errorsOnlyInBefore, errorsOnlyInAfter, annotations, stdout, stderr, evaluatorError, generatedTestCaseCount, generatedAssertCount, expectedDiff } = testRunEvals[ix];
+		const {
+			caseName,
+			languageId,
+			errorsOnlyInBefore,
+			errorsOnlyInAfter,
+			annotations,
+			stdout,
+			stderr,
+			evaluatorError,
+			generatedTestCaseCount,
+			generatedAssertCount,
+			expectedDiff,
+		} = testRunEvals[ix];
 		const isEachTestRunSuccess: boolean[] = [];
-		while (ix < testRunEvals.length && testRunEvals[ix].caseName === caseName) {
+		while (
+			ix < testRunEvals.length &&
+			testRunEvals[ix].caseName === caseName
+		) {
 			isEachTestRunSuccess.push(testRunEvals[ix].isSuccess);
 			ix++;
 		}
@@ -263,31 +322,40 @@ export type ScoreCard = {
 };
 
 export function parseScoreCard(fileContents: string): ScoreCard {
-	const scoreCardRows: ScoreCard[] = csvParse.parse(
-		fileContents,
-		{
-			delimiter: ',',
-			columns: ['metric', 'mean', 'median', 'stdErr', 'confidenceInterval', 'count'],
-			cast: (value: string, context: csvParse.CastingContext) => {
-				switch (context.column) {
-					case 'metric':
-						return value;
-					case 'mean':
-						return `${(parseFloat(value) * 100).toFixed(2)}%`;
-					case 'confidenceInterval': {
-						const unparenthesized = value.substring(1, value.length - 1);
-						const [lower, upper] = unparenthesized.split(', ').map(parseFloat);
-						return [lower, upper];
-					}
-					case 'count':
-						return parseInt(value);
-					default:
-						return parseFloat(value).toFixed(2);
+	const scoreCardRows: ScoreCard[] = csvParse.parse(fileContents, {
+		delimiter: ',',
+		columns: [
+			'metric',
+			'mean',
+			'median',
+			'stdErr',
+			'confidenceInterval',
+			'count',
+		],
+		cast: (value: string, context: csvParse.CastingContext) => {
+			switch (context.column) {
+				case 'metric':
+					return value;
+				case 'mean':
+					return `${(parseFloat(value) * 100).toFixed(2)}%`;
+				case 'confidenceInterval': {
+					const unparenthesized = value.substring(
+						1,
+						value.length - 1,
+					);
+					const [lower, upper] = unparenthesized
+						.split(', ')
+						.map(parseFloat);
+					return [lower, upper];
 				}
-			},
-			fromLine: 2,
-		}
-	);
+				case 'count':
+					return parseInt(value);
+				default:
+					return parseFloat(value).toFixed(2);
+			}
+		},
+		fromLine: 2,
+	});
 	return scoreCardRows[0];
 }
 
@@ -299,12 +367,14 @@ export type ScoreCardByLanguage = {
 	meanScore: number;
 };
 
-export function parseScoreCardByLanguage(fileContents: string): ScoreCardByLanguage[] {
+export function parseScoreCardByLanguage(
+	fileContents: string,
+): ScoreCardByLanguage[] {
 	return JSON.parse(fileContents).map((entry: any) => ({
 		language: entry.Language,
 		testCasesCount: entry.nTestCases,
 		scoredCount: entry.nScored,
 		unscoredCount: entry.nUnscored,
-		meanScore: entry.MeanScore
+		meanScore: entry.MeanScore,
 	}));
 }

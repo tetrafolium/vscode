@@ -3,16 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../base/common/event.js';
-import { Disposable, DisposableMap } from '../../../base/common/lifecycle.js';
-import { URI } from '../../../base/common/uri.js';
-import { Codicon } from '../../../base/common/codicons.js';
-import type * as vscode from 'vscode';
-import { BrowserTabDto, ExtHostBrowsersShape, IMainContext, MainContext, MainThreadBrowsersShape } from './extHost.protocol.js';
-import { generateUuid } from '../../../base/common/uuid.js';
-import * as extHostTypes from './extHostTypes.js';
-import * as typeConverters from './extHostTypeConverters.js';
-import { CDPEvent, CDPRequest, CDPResponse } from '../../../platform/browserView/common/cdp/types.js';
+import { Emitter, Event } from "../../../base/common/event.js";
+import { Disposable, DisposableMap } from "../../../base/common/lifecycle.js";
+import { URI } from "../../../base/common/uri.js";
+import { Codicon } from "../../../base/common/codicons.js";
+import type * as vscode from "vscode";
+import {
+	BrowserTabDto,
+	ExtHostBrowsersShape,
+	IMainContext,
+	MainContext,
+	MainThreadBrowsersShape,
+} from "./extHost.protocol.js";
+import { generateUuid } from "../../../base/common/uuid.js";
+import * as extHostTypes from "./extHostTypes.js";
+import * as typeConverters from "./extHostTypeConverters.js";
+import {
+	CDPEvent,
+	CDPRequest,
+	CDPResponse,
+} from "../../../platform/browserView/common/cdp/types.js";
 
 // #region Internal browser tab object
 
@@ -35,19 +45,23 @@ class ExtHostBrowserTab {
 
 		const that = this;
 		this.value = {
-			get url(): string { return that._url; },
-			get title(): string { return that._title; },
+			get url(): string {
+				return that._url;
+			},
+			get title(): string {
+				return that._title;
+			},
 			get icon(): vscode.IconPath {
 				return that._favicon
 					? URI.parse(that._favicon)
-					: new extHostTypes.ThemeIcon(Codicon.globe.id) as vscode.ThemeIcon;
+					: (new extHostTypes.ThemeIcon(Codicon.globe.id) as vscode.ThemeIcon);
 			},
 			startCDPSession(): Promise<vscode.BrowserCDPSession> {
 				return that._startCDPSession();
 			},
 			close(): Promise<void> {
 				return that._close();
-			}
+			},
 		};
 	}
 
@@ -99,14 +113,18 @@ class ExtHostBrowserCDPSession {
 	) {
 		const that = this;
 		this.value = {
-			get onDidReceiveMessage(): Event<unknown> { return that._onDidReceiveMessage.event; },
-			get onDidClose(): Event<void> { return that._onDidClose.event; },
+			get onDidReceiveMessage(): Event<unknown> {
+				return that._onDidReceiveMessage.event;
+			},
+			get onDidClose(): Event<void> {
+				return that._onDidClose.event;
+			},
 			sendMessage(message: unknown): Promise<void> {
 				return that._sendMessage(message as CDPRequest);
 			},
 			close(): Promise<void> {
 				return that._close();
-			}
+			},
 		};
 	}
 
@@ -117,24 +135,32 @@ class ExtHostBrowserCDPSession {
 
 	private async _sendMessage(message: CDPRequest): Promise<void> {
 		if (this._closed) {
-			throw new Error('Session is closed');
+			throw new Error("Session is closed");
 		}
-		if (!message || typeof message !== 'object') {
-			throw new Error('Message must be an object');
+		if (!message || typeof message !== "object") {
+			throw new Error("Message must be an object");
 		}
-		if (typeof message.id !== 'number') {
-			throw new Error('Message must have a numeric id');
+		if (typeof message.id !== "number") {
+			throw new Error("Message must have a numeric id");
 		}
-		if (typeof message.method !== 'string') {
-			throw new Error('Message must have a method string');
+		if (typeof message.method !== "string") {
+			throw new Error("Message must have a method string");
 		}
-		if (message.params !== undefined && typeof message.params !== 'object') {
-			throw new Error('Message params must be an object');
+		if (message.params !== undefined && typeof message.params !== "object") {
+			throw new Error("Message params must be an object");
 		}
-		if (message.sessionId !== undefined && typeof message.sessionId !== 'string') {
-			throw new Error('Message sessionId must be a string');
+		if (
+			message.sessionId !== undefined &&
+			typeof message.sessionId !== "string"
+		) {
+			throw new Error("Message sessionId must be a string");
 		}
-		await this._proxy.$sendCDPMessage(this.id, { id: message.id, method: message.method, params: message.params, sessionId: message.sessionId });
+		await this._proxy.$sendCDPMessage(this.id, {
+			id: message.id,
+			method: message.method,
+			params: message.params,
+			sessionId: message.sessionId,
+		});
 	}
 
 	private async _close(): Promise<void> {
@@ -155,24 +181,41 @@ class ExtHostBrowserCDPSession {
 
 // #endregion
 
-export class ExtHostBrowsers extends Disposable implements ExtHostBrowsersShape {
+export class ExtHostBrowsers
+	extends Disposable
+	implements ExtHostBrowsersShape
+{
 	private readonly _proxy: MainThreadBrowsersShape;
 	private readonly _browserTabs = new Map<string, ExtHostBrowserTab>();
-	private readonly _sessions = this._register(new DisposableMap<string, ExtHostBrowserCDPSession>());
+	private readonly _sessions = this._register(
+		new DisposableMap<string, ExtHostBrowserCDPSession>(),
+	);
 
 	private _activeBrowserTabId: string | undefined;
 
-	private readonly _onDidOpenBrowserTab = this._register(new Emitter<vscode.BrowserTab>());
-	readonly onDidOpenBrowserTab: Event<vscode.BrowserTab> = this._onDidOpenBrowserTab.event;
+	private readonly _onDidOpenBrowserTab = this._register(
+		new Emitter<vscode.BrowserTab>(),
+	);
+	readonly onDidOpenBrowserTab: Event<vscode.BrowserTab> =
+		this._onDidOpenBrowserTab.event;
 
-	private readonly _onDidCloseBrowserTab = this._register(new Emitter<vscode.BrowserTab>());
-	readonly onDidCloseBrowserTab: Event<vscode.BrowserTab> = this._onDidCloseBrowserTab.event;
+	private readonly _onDidCloseBrowserTab = this._register(
+		new Emitter<vscode.BrowserTab>(),
+	);
+	readonly onDidCloseBrowserTab: Event<vscode.BrowserTab> =
+		this._onDidCloseBrowserTab.event;
 
-	private readonly _onDidChangeActiveBrowserTab = this._register(new Emitter<vscode.BrowserTab | undefined>());
-	readonly onDidChangeActiveBrowserTab: Event<vscode.BrowserTab | undefined> = this._onDidChangeActiveBrowserTab.event;
+	private readonly _onDidChangeActiveBrowserTab = this._register(
+		new Emitter<vscode.BrowserTab | undefined>(),
+	);
+	readonly onDidChangeActiveBrowserTab: Event<vscode.BrowserTab | undefined> =
+		this._onDidChangeActiveBrowserTab.event;
 
-	private readonly _onDidChangeBrowserTabState = this._register(new Emitter<vscode.BrowserTab>());
-	readonly onDidChangeBrowserTabState: Event<vscode.BrowserTab> = this._onDidChangeBrowserTabState.event;
+	private readonly _onDidChangeBrowserTabState = this._register(
+		new Emitter<vscode.BrowserTab>(),
+	);
+	readonly onDidChangeBrowserTabState: Event<vscode.BrowserTab> =
+		this._onDidChangeBrowserTabState.event;
 
 	constructor(mainContext: IMainContext) {
 		super();
@@ -182,7 +225,7 @@ export class ExtHostBrowsers extends Disposable implements ExtHostBrowsersShape 
 	// #region Public API (called from extension code)
 
 	get browserTabs(): readonly vscode.BrowserTab[] {
-		return [...this._browserTabs.values()].map(t => t.value);
+		return [...this._browserTabs.values()].map((t) => t.value);
 	}
 
 	get activeBrowserTab(): vscode.BrowserTab | undefined {
@@ -192,7 +235,10 @@ export class ExtHostBrowsers extends Disposable implements ExtHostBrowsersShape 
 		return undefined;
 	}
 
-	async openBrowserTab(url: string, options?: vscode.BrowserTabShowOptions): Promise<vscode.BrowserTab> {
+	async openBrowserTab(
+		url: string,
+		options?: vscode.BrowserTabShowOptions,
+	): Promise<vscode.BrowserTab> {
 		const viewColumn = typeConverters.ViewColumn.from(options?.viewColumn);
 		const dto = await this._proxy.$openBrowserTab(url, viewColumn, {
 			preserveFocus: options?.preserveFocus,
@@ -249,7 +295,10 @@ export class ExtHostBrowsers extends Disposable implements ExtHostBrowsersShape 
 		}
 	}
 
-	$onCDPSessionMessage(sessionId: string, message: CDPResponse | CDPEvent): void {
+	$onCDPSessionMessage(
+		sessionId: string,
+		message: CDPResponse | CDPEvent,
+	): void {
 		const session = this._sessions.get(sessionId);
 		if (session) {
 			session._acceptMessage(message);

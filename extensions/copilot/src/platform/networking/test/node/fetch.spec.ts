@@ -9,7 +9,6 @@ import { getRequestId } from '../../common/fetch';
 import { HeadersImpl } from '../../common/fetcherService';
 
 suite('getRequestId', () => {
-
 	test('only X-Copilot-Experiment header', () => {
 		const headers = new HeadersImpl({ 'X-Copilot-Experiment': 'exp1' });
 		const result = getRequestId(headers);
@@ -17,7 +16,9 @@ suite('getRequestId', () => {
 	});
 
 	test('only x-copilot-api-exp-assignment-context header', () => {
-		const headers = new HeadersImpl({ 'x-copilot-api-exp-assignment-context': 'ctx1' });
+		const headers = new HeadersImpl({
+			'x-copilot-api-exp-assignment-context': 'ctx1',
+		});
 		const result = getRequestId(headers);
 		assert.strictEqual(result.serverExperiments, 'ctx1');
 	});

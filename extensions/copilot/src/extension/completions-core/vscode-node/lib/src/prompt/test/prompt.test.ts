@@ -21,11 +21,19 @@ import { ExpTreatmentVariables } from '../../experiments/expConfig';
 import { TelemetryWithExp } from '../../telemetry';
 import { createLibTestingContext } from '../../test/context';
 import { MockIgnoreService } from '../../test/testContentExclusion';
-import { createTextDocument, InMemoryNotebookDocument, TestTextDocumentManager } from '../../test/textDocument';
+import {
+	createTextDocument,
+	InMemoryNotebookDocument,
+	TestTextDocumentManager,
+} from '../../test/textDocument';
 import { INotebookCell, IPosition } from '../../textDocument';
 import { ICompletionsTextDocumentManagerService } from '../../textDocumentManager';
 import { CompletionsPromptRenderer } from '../components/completionsPromptRenderer';
-import { _copilotContentExclusion, _promptError, getPromptOptions } from '../prompt';
+import {
+	_copilotContentExclusion,
+	_promptError,
+	getPromptOptions,
+} from '../prompt';
 import { extractPromptInternal } from './prompt';
 
 suite('Prompt unit tests', function () {
@@ -45,20 +53,27 @@ suite('Prompt unit tests', function () {
 
 	test('defaults to 8K max prompt length', async function () {
 		const content = 'function add()\n';
-		const sourceDoc = createTextDocument('file:///foo.js', 'javascript', 0, content);
+		const sourceDoc = createTextDocument(
+			'file:///foo.js',
+			'javascript',
+			0,
+			content,
+		);
 		const cursorPosition: IPosition = {
 			line: 0,
 			character: 13,
 		};
 
-		const rendererStub = sandbox.stub(CompletionsPromptRenderer.prototype, 'render').throws('unspecified error');
+		const rendererStub = sandbox
+			.stub(CompletionsPromptRenderer.prototype, 'render')
+			.throws('unspecified error');
 
 		const prompt = await extractPromptInternal(
 			accessor,
 			'COMPLETION_ID',
 			sourceDoc,
 			cursorPosition,
-			TelemetryWithExp.createEmptyConfigForTesting()
+			TelemetryWithExp.createEmptyConfigForTesting(),
 		);
 
 		assert.deepStrictEqual(prompt, _promptError);
@@ -66,12 +81,16 @@ suite('Prompt unit tests', function () {
 		assert.strictEqual(
 			rendererStub.firstCall.args[1].promptTokenLimit,
 			8192 - DEFAULT_MAX_COMPLETION_LENGTH,
-			'should default to 8192 max total tokens, 7692 max prompt tokens'
+			'should default to 8192 max total tokens, 7692 max prompt tokens',
 		);
 	});
 
 	test('default EXP prompt options are the same as default PromptOptions object', function () {
-		const promptOptionsFromExp = getPromptOptions(accessor, TelemetryWithExp.createEmptyConfigForTesting(), '');
+		const promptOptionsFromExp = getPromptOptions(
+			accessor,
+			TelemetryWithExp.createEmptyConfigForTesting(),
+			'',
+		);
 		const defaultPromptOptions: PromptOptions = {
 			maxPromptLength: DEFAULT_MAX_PROMPT_LENGTH,
 			numberOfSnippets: DEFAULT_NUM_SNIPPETS,
@@ -87,7 +106,7 @@ suite('Prompt unit tests', function () {
 		const promptOptionsFromExp: PromptOptions = getPromptOptions(
 			accessor,
 			TelemetryWithExp.createEmptyConfigForTesting(),
-			'cpp'
+			'cpp',
 		);
 
 		assert.deepStrictEqual(promptOptionsFromExp.similarFilesOptions, {
@@ -110,7 +129,11 @@ suite('Prompt unit tests', function () {
 			[ExpTreatmentVariables.UseSubsetMatching]: true,
 		});
 
-		const promptOptionsFromExp = getPromptOptions(accessor, telemetryWithExp, 'java');
+		const promptOptionsFromExp = getPromptOptions(
+			accessor,
+			telemetryWithExp,
+			'java',
+		);
 		assert.deepStrictEqual(promptOptionsFromExp.similarFilesOptions, {
 			snippetLength: 60,
 			threshold: 0.0,
@@ -127,7 +150,12 @@ suite('Prompt unit tests', function () {
 		(accessor.get(IIgnoreService) as MockIgnoreService).setAlwaysIgnore();
 
 		const content = 'function add()\n';
-		const sourceDoc = createTextDocument('file:///foo.js', 'javascript', 0, content);
+		const sourceDoc = createTextDocument(
+			'file:///foo.js',
+			'javascript',
+			0,
+			content,
+		);
 		const cursorPosition: IPosition = {
 			line: 0,
 			character: 13,
@@ -137,7 +165,7 @@ suite('Prompt unit tests', function () {
 			'COMPLETION_ID',
 			sourceDoc,
 			cursorPosition,
-			TelemetryWithExp.createEmptyConfigForTesting()
+			TelemetryWithExp.createEmptyConfigForTesting(),
 		);
 		assert.ok(response);
 		assert.strictEqual(response, _copilotContentExclusion);
@@ -153,9 +181,9 @@ suite('Prompt unit tests', function () {
 def add(a, b):
     return a + b
 
-def product(c, d):`
+def product(c, d):`,
 			),
-			['#!/usr/bin/env python3']
+			['#!/usr/bin/env python3'],
 		);
 	});
 
@@ -163,15 +191,15 @@ def product(c, d):`
 		await assertPromptForCell(
 			accessor,
 			cells[5],
-			dedent(
-				`def product(c, d):`
-			),
-			['Language: julia']
+			dedent(`def product(c, d):`),
+			['Language: julia'],
 		);
 	});
 
 	test('prompt for ipython notebooks, using only the current cell language for unknown language', async function () {
-		await assertPromptForCell(accessor, cells[6], dedent(`foo bar baz`), ['Language: unknown-great-language']);
+		await assertPromptForCell(accessor, cells[6], dedent(`foo bar baz`), [
+			'Language: unknown-great-language',
+		]);
 	});
 
 	test('exception telemetry', async function () {
@@ -215,11 +243,20 @@ def product(c, d):`
 	});
 });
 
-async function assertPromptForCell(accessor: ServicesAccessor, sourceCell: INotebookCell, expectedPrefix: string, expectedContext?: string[]) {
+async function assertPromptForCell(
+	accessor: ServicesAccessor,
+	sourceCell: INotebookCell,
+	expectedPrefix: string,
+	expectedContext?: string[],
+) {
 	const notebook = new InMemoryNotebookDocument(cells);
 	const sourceDoc = sourceCell.document;
 
-	(accessor.get(ICompletionsTextDocumentManagerService) as TestTextDocumentManager).setNotebookDocument(sourceDoc, notebook);
+	(
+		accessor.get(
+			ICompletionsTextDocumentManagerService,
+		) as TestTextDocumentManager
+	).setNotebookDocument(sourceDoc, notebook);
 
 	const cursorPosition: IPosition = {
 		line: 0,
@@ -230,7 +267,7 @@ async function assertPromptForCell(accessor: ServicesAccessor, sourceCell: INote
 		'COMPLETION_ID',
 		sourceDoc,
 		cursorPosition,
-		TelemetryWithExp.createEmptyConfigForTesting()
+		TelemetryWithExp.createEmptyConfigForTesting(),
 	);
 	assert.ok(response);
 	assert.strictEqual(response.type, 'prompt');
@@ -243,7 +280,12 @@ async function assertPromptForCell(accessor: ServicesAccessor, sourceCell: INote
 const cells: INotebookCell[] = [
 	{
 		index: 1,
-		document: createTextDocument('file:///test/a.ipynb#1', 'python', 1, 'import math'),
+		document: createTextDocument(
+			'file:///test/a.ipynb#1',
+			'python',
+			1,
+			'import math',
+		),
 		metadata: {},
 		kind: 2,
 	},
@@ -253,14 +295,19 @@ const cells: INotebookCell[] = [
 			'file:///test/a.ipynb#2',
 			'markdown',
 			1,
-			'This is an addition function\nIt is used to add two numbers'
+			'This is an addition function\nIt is used to add two numbers',
 		),
 		metadata: {},
 		kind: 1,
 	},
 	{
 		index: 3,
-		document: createTextDocument('file:///test/a.ipynb#3', 'python', 2, 'def add(a, b):\n    return a + b'),
+		document: createTextDocument(
+			'file:///test/a.ipynb#3',
+			'python',
+			2,
+			'def add(a, b):\n    return a + b',
+		),
 		metadata: {},
 		kind: 2,
 	},
@@ -270,26 +317,41 @@ const cells: INotebookCell[] = [
 			'file:///test/a.ipynb#4',
 			'markdown',
 			2,
-			'This is a product function\nYou guessed it: it multiplies two numbers'
+			'This is a product function\nYou guessed it: it multiplies two numbers',
 		),
 		metadata: {},
 		kind: 2,
 	},
 	{
 		index: 5,
-		document: createTextDocument('file:///test/a.ipynb#5', 'python', 3, 'def product(c, d):'),
+		document: createTextDocument(
+			'file:///test/a.ipynb#5',
+			'python',
+			3,
+			'def product(c, d):',
+		),
 		metadata: {},
 		kind: 2,
 	},
 	{
 		index: 6,
-		document: createTextDocument('file:///test/a.ipynb#6', 'julia', 3, 'def product(c, d):'),
+		document: createTextDocument(
+			'file:///test/a.ipynb#6',
+			'julia',
+			3,
+			'def product(c, d):',
+		),
 		metadata: {},
 		kind: 2,
 	},
 	{
 		index: 7,
-		document: createTextDocument('file:///test/a.ipynb#7', 'unknown-great-language', 3, 'foo bar baz'),
+		document: createTextDocument(
+			'file:///test/a.ipynb#7',
+			'unknown-great-language',
+			3,
+			'foo bar baz',
+		),
 		metadata: {},
 		kind: 2,
 	},

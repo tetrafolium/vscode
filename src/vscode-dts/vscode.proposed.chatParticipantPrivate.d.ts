@@ -5,8 +5,7 @@
 
 // version: 15
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	/**
 	 * The location at which the chat is happening.
 	 */
@@ -30,7 +29,6 @@ declare module 'vscode' {
 	}
 
 	export class ChatRequestEditorData {
-
 		readonly editor: TextEditor;
 
 		//TODO@API should be the editor
@@ -40,7 +38,12 @@ declare module 'vscode' {
 		/** @deprecated */
 		wholeRange: Range;
 
-		constructor(editor: TextEditor, document: TextDocument, selection: Selection, wholeRange: Range);
+		constructor(
+			editor: TextEditor,
+			document: TextDocument,
+			selection: Selection,
+			wholeRange: Range,
+		);
 	}
 
 	export class ChatRequestNotebookData {
@@ -93,7 +96,10 @@ declare module 'vscode' {
 		 * Information that is specific to the location at which chat is happening, e.g within a document, notebook,
 		 * or terminal. Will be `undefined` for the chat panel.
 		 */
-		readonly location2: ChatRequestEditorData | ChatRequestNotebookData | undefined;
+		readonly location2:
+			| ChatRequestEditorData
+			| ChatRequestNotebookData
+			| undefined;
 
 		/**
 		 * Events for edited files in this session collected since the last request.
@@ -204,7 +210,17 @@ declare module 'vscode' {
 		/**
 		 * @hidden
 		 */
-		constructor(prompt: string, command: string | undefined, references: ChatPromptReference[], participant: string, toolReferences: ChatLanguageModelToolReference[], editedFileEvents: ChatRequestEditedFileEvent[] | undefined, id: string | undefined, modelId: string | undefined, modeInstructions2: ChatRequestModeInstructions | undefined);
+		constructor(
+			prompt: string,
+			command: string | undefined,
+			references: ChatPromptReference[],
+			participant: string,
+			toolReferences: ChatLanguageModelToolReference[],
+			editedFileEvents: ChatRequestEditedFileEvent[] | undefined,
+			id: string | undefined,
+			modelId: string | undefined,
+			modeInstructions2: ChatRequestModeInstructions | undefined,
+		);
 	}
 
 	export class ChatResponseTurn2 {
@@ -216,7 +232,14 @@ declare module 'vscode' {
 		/**
 		 * The content that was received from the chat participant. Only the stream parts that represent actual content (not metadata) are represented.
 		 */
-		readonly response: ReadonlyArray<ChatResponseMarkdownPart | ChatResponseFileTreePart | ChatResponseAnchorPart | ChatResponseCommandButtonPart | ExtendedChatResponsePart | ChatToolInvocationPart>;
+		readonly response: ReadonlyArray<
+			| ChatResponseMarkdownPart
+			| ChatResponseFileTreePart
+			| ChatResponseAnchorPart
+			| ChatResponseCommandButtonPart
+			| ExtendedChatResponsePart
+			| ChatToolInvocationPart
+		>;
 
 		/**
 		 * The result that was received from the chat participant.
@@ -233,7 +256,17 @@ declare module 'vscode' {
 		 */
 		readonly command?: string;
 
-		constructor(response: ReadonlyArray<ChatResponseMarkdownPart | ChatResponseFileTreePart | ChatResponseAnchorPart | ChatResponseCommandButtonPart | ExtendedChatResponsePart>, result: ChatResult, participant: string);
+		constructor(
+			response: ReadonlyArray<
+				| ChatResponseMarkdownPart
+				| ChatResponseFileTreePart
+				| ChatResponseAnchorPart
+				| ChatResponseCommandButtonPart
+				| ExtendedChatResponsePart
+			>,
+			result: ChatResult,
+			participant: string,
+		);
 	}
 
 	export interface ChatParticipant {
@@ -271,7 +304,11 @@ declare module 'vscode' {
 	}
 
 	export namespace chat {
-		export function createDynamicChatParticipant(id: string, dynamicProps: DynamicChatParticipantProps, handler: ChatExtendedRequestHandler): ChatParticipant;
+		export function createDynamicChatParticipant(
+			id: string,
+			dynamicProps: DynamicChatParticipantProps,
+			handler: ChatExtendedRequestHandler,
+		): ChatParticipant;
 	}
 
 	/**
@@ -285,14 +322,19 @@ declare module 'vscode' {
 	}
 
 	export namespace lm {
-		export function registerIgnoredFileProvider(provider: LanguageModelIgnoredFileProvider): Disposable;
+		export function registerIgnoredFileProvider(
+			provider: LanguageModelIgnoredFileProvider,
+		): Disposable;
 	}
 
 	export interface LanguageModelIgnoredFileProvider {
-		provideFileIgnored(uri: Uri, token: CancellationToken): ProviderResult<boolean>;
+		provideFileIgnored(
+			uri: Uri,
+			token: CancellationToken,
+		): ProviderResult<boolean>;
 	}
 
-	export type PreToolUsePermissionDecision = 'allow' | 'deny' | 'ask';
+	export type PreToolUsePermissionDecision = "allow" | "deny" | "ask";
 
 	export interface LanguageModelToolInvocationOptions<T> {
 		chatRequestId?: string;
@@ -354,7 +396,7 @@ declare module 'vscode' {
 
 	export interface PreparedToolInvocation {
 		pastTenseMessage?: string | MarkdownString;
-		presentation?: 'hidden' | 'hiddenAfterComplete' | undefined;
+		presentation?: "hidden" | "hiddenAfterComplete" | undefined;
 	}
 
 	export class ExtendedLanguageModelToolResult extends LanguageModelToolResult {
@@ -370,7 +412,11 @@ declare module 'vscode' {
 	export interface ChatParticipantMetadata {
 		participant: string;
 		command?: string;
-		disambiguation: { category: string; description: string; examples: string[] }[];
+		disambiguation: {
+			category: string;
+			description: string;
+			examples: string[];
+		}[];
 	}
 
 	export interface ChatParticipantDetectionResult {
@@ -379,11 +425,21 @@ declare module 'vscode' {
 	}
 
 	export interface ChatParticipantDetectionProvider {
-		provideParticipantDetection(chatRequest: ChatRequest, context: ChatContext, options: { participants?: ChatParticipantMetadata[]; location: ChatLocation }, token: CancellationToken): ProviderResult<ChatParticipantDetectionResult>;
+		provideParticipantDetection(
+			chatRequest: ChatRequest,
+			context: ChatContext,
+			options: {
+				participants?: ChatParticipantMetadata[];
+				location: ChatLocation;
+			},
+			token: CancellationToken,
+		): ProviderResult<ChatParticipantDetectionResult>;
 	}
 
 	export namespace chat {
-		export function registerChatParticipantDetectionProvider(participantDetectionProvider: ChatParticipantDetectionProvider): Disposable;
+		export function registerChatParticipantDetectionProvider(
+			participantDetectionProvider: ChatParticipantDetectionProvider,
+		): Disposable;
 
 		export const onDidDisposeChatSession: Event<string>;
 	}
@@ -398,7 +454,9 @@ declare module 'vscode' {
 		/**
 		 * An event that fires when the active chat panel session resource changes.
 		 */
-		export const onDidChangeActiveChatPanelSessionResource: Event<Uri | undefined>;
+		export const onDidChangeActiveChatPanelSessionResource: Event<
+			Uri | undefined
+		>;
 	}
 
 	// #endregion
@@ -427,11 +485,16 @@ declare module 'vscode' {
 	}
 
 	export interface LanguageModelProxyProvider {
-		provideModelProxy(forExtensionId: string, token: CancellationToken): ProviderResult<LanguageModelProxy>;
+		provideModelProxy(
+			forExtensionId: string,
+			token: CancellationToken,
+		): ProviderResult<LanguageModelProxy>;
 	}
 
 	export namespace lm {
-		export function registerLanguageModelProxyProvider(provider: LanguageModelProxyProvider): Disposable;
+		export function registerLanguageModelProxyProvider(
+			provider: LanguageModelProxyProvider,
+		): Disposable;
 	}
 
 	// #endregion

@@ -9,7 +9,6 @@ import { IObservable, ITransaction } from '../observable';
 import { observableValueOpts } from './observables/observableValueOpts';
 
 export class ObservableSet<T> implements Set<T> {
-
 	private readonly _data = new Set<T>();
 
 	private _obs = observableValueOpts({ equalsFn: () => false }, this);
@@ -48,7 +47,10 @@ export class ObservableSet<T> implements Set<T> {
 		}
 	}
 
-	forEach(callbackfn: (value: T, value2: T, set: Set<T>) => void, thisArg?: any): void {
+	forEach(
+		callbackfn: (value: T, value2: T, set: Set<T>) => void,
+		thisArg?: any,
+	): void {
 		this._data.forEach((value, value2, _set) => {
 			// eslint-disable-next-line local/code-no-any-casts
 			callbackfn.call(thisArg, value, value2, this as any);

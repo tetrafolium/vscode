@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { PromptSizing } from '@vscode/prompt-tsx';
-import { ConfigKey, IConfigurationService } from '../../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../../platform/configuration/common/configurationService';
 import { IExperimentationService } from '../../../../../platform/telemetry/common/nullExperimentationService';
 import { DefaultAgentPromptProps } from '../defaultAgentInstructions';
 import { Gpt55PromptBase, Gpt55ReminderInstructions } from './gpt55BasePrompt';
@@ -14,11 +17,17 @@ export class Gpt55LargePromptSectionsExp extends Gpt55PromptBase {
 
 	constructor(
 		props: DefaultAgentPromptProps,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@IExperimentationService private readonly experimentationService: IExperimentationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
+		@IExperimentationService
+		private readonly experimentationService: IExperimentationService,
 	) {
 		super(props);
-		Gpt55LargePromptSectionsExp.isEnabled = this.configurationService.getExperimentBasedConfig(ConfigKey.EnableGpt55LargePromptSections, this.experimentationService);
+		Gpt55LargePromptSectionsExp.isEnabled =
+			this.configurationService.getExperimentBasedConfig(
+				ConfigKey.EnableGpt55LargePromptSections,
+				this.experimentationService,
+			);
 	}
 
 	protected override get includeLargePromptSections(): boolean {
@@ -40,13 +49,21 @@ export class Gpt55LargePromptSectionsWithEconomicalSearchAndEditExp extends Gpt5
 
 	constructor(
 		props: DefaultAgentPromptProps,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@IExperimentationService private readonly experimentationService: IExperimentationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
+		@IExperimentationService
+		private readonly experimentationService: IExperimentationService,
 	) {
 		super(props);
 		Gpt55LargePromptSectionsWithEconomicalSearchAndEditExp.isEnabled =
-			this.configurationService.getExperimentBasedConfig(ConfigKey.EnableGpt55LargePromptSections, this.experimentationService)
-			&& this.configurationService.getExperimentBasedConfig(ConfigKey.EnableGpt55EconomicalSearchAndEdit, this.experimentationService);
+			this.configurationService.getExperimentBasedConfig(
+				ConfigKey.EnableGpt55LargePromptSections,
+				this.experimentationService,
+			) &&
+			this.configurationService.getExperimentBasedConfig(
+				ConfigKey.EnableGpt55EconomicalSearchAndEdit,
+				this.experimentationService,
+			);
 	}
 
 	protected override get includeLargePromptSections(): boolean {
@@ -58,7 +75,8 @@ export class Gpt55LargePromptSectionsWithEconomicalSearchAndEditExp extends Gpt5
 	}
 
 	override async render(state: void, sizing: PromptSizing) {
-		const isEnabled = Gpt55LargePromptSectionsWithEconomicalSearchAndEditExp.isEnabled;
+		const isEnabled =
+			Gpt55LargePromptSectionsWithEconomicalSearchAndEditExp.isEnabled;
 		if (!isEnabled) {
 			return undefined;
 		}
@@ -67,6 +85,6 @@ export class Gpt55LargePromptSectionsWithEconomicalSearchAndEditExp extends Gpt5
 	}
 }
 
-export class Gpt55LargePromptSectionsExpReminderInstructions extends Gpt55ReminderInstructions { }
+export class Gpt55LargePromptSectionsExpReminderInstructions extends Gpt55ReminderInstructions {}
 
-export class Gpt55LargePromptSectionsWithEconomicalSearchAndEditExpReminderInstructions extends Gpt55ReminderInstructions { }
+export class Gpt55LargePromptSectionsWithEconomicalSearchAndEditExpReminderInstructions extends Gpt55ReminderInstructions {}

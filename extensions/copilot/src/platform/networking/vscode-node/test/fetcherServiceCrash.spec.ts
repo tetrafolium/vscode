@@ -10,7 +10,12 @@ import { InMemoryConfigurationService } from '../../../configuration/test/common
 import { NullExperimentationService } from '../../../telemetry/common/nullExperimentationService';
 import { FakeHeaders } from '../../../test/node/fetcher';
 import { TestLogService } from '../../../testing/common/testLogService';
-import { FetchOptions, IAbortController, PaginationOptions, Response } from '../../common/fetcherService';
+import {
+	FetchOptions,
+	IAbortController,
+	PaginationOptions,
+	Response,
+} from '../../common/fetcherService';
 import { IFetcher } from '../../common/networking';
 import { FetcherService } from '../fetcherServiceImpl';
 
@@ -21,7 +26,9 @@ describe('FetcherService network process crash handling', () => {
 
 	beforeEach(() => {
 		logService = new TestLogService();
-		configurationService = new InMemoryConfigurationService(new DefaultsOnlyConfigurationService());
+		configurationService = new InMemoryConfigurationService(
+			new DefaultsOnlyConfigurationService(),
+		);
 		experimentationService = new NullExperimentationService();
 	});
 
@@ -31,7 +38,14 @@ describe('FetcherService network process crash handling', () => {
 		const service = new FetcherService(
 			undefined,
 			logService,
-			{ machineId: '', sessionId: '', vscodeVersion: '', getName: () => 'test', getVersion: () => '0.0.0', getBuildType: () => 'development' as any } as any,
+			{
+				machineId: '',
+				sessionId: '',
+				vscodeVersion: '',
+				getName: () => 'test',
+				getVersion: () => '0.0.0',
+				getBuildType: () => 'development' as any,
+			} as any,
 			configurationService,
 			{ globalStorageUri: undefined } as any,
 		);
@@ -41,11 +55,14 @@ describe('FetcherService network process crash handling', () => {
 		return service;
 	}
 
-	function createMockFetcher(name: string, opts?: {
-		responses?: (Response | Error)[];
-		isNetworkProcessCrashedError?: (e: any) => boolean;
-		isFetcherError?: (e: any) => boolean;
-	}): IFetcher {
+	function createMockFetcher(
+		name: string,
+		opts?: {
+			responses?: (Response | Error)[];
+			isNetworkProcessCrashedError?: (e: any) => boolean;
+			isFetcherError?: (e: any) => boolean;
+		},
+	): IFetcher {
 		const queue = [...(opts?.responses ?? [])];
 		return {
 			getUserAgentLibrary: () => name,
@@ -59,32 +76,57 @@ describe('FetcherService network process crash handling', () => {
 				}
 				return next;
 			},
-			fetchWithPagination: async <T>(_baseUrl: string, _options: PaginationOptions<T>): Promise<T[]> => {
+			fetchWithPagination: async <T>(
+				_baseUrl: string,
+				_options: PaginationOptions<T>,
+			): Promise<T[]> => {
 				throw new Error('Method not implemented.');
 			},
-			disconnectAll: async () => { },
-			makeAbortController: () => ({ signal: new AbortController().signal, abort: () => { } }) as IAbortController,
+			disconnectAll: async () => {},
+			makeAbortController: () =>
+				({
+					signal: new AbortController().signal,
+					abort: () => {},
+				}) as IAbortController,
 			isAbortError: () => false,
 			isInternetDisconnectedError: () => false,
 			isFetcherError: opts?.isFetcherError ?? (() => false),
-			isNetworkProcessCrashedError: opts?.isNetworkProcessCrashedError ?? (() => false),
+			isNetworkProcessCrashedError:
+				opts?.isNetworkProcessCrashedError ?? (() => false),
 			getUserMessageForFetcherError: () => 'error',
 		};
 	}
 
 	function createOkResponse(): Response {
-		return Response.fromText(200, 'OK', new FakeHeaders(), '{}', 'test-stub');
+		return Response.fromText(
+			200,
+			'OK',
+			new FakeHeaders(),
+			'{}',
+			'test-stub',
+		);
 	}
 
-	function createCrashError(): Error & { chromiumDetails: { is_request_error: boolean; network_process_crashed: boolean } } {
+	function createCrashError(): Error & {
+		chromiumDetails: {
+			is_request_error: boolean;
+			network_process_crashed: boolean;
+		};
+	} {
 		const err = new Error('net::ERR_FAILED') as any;
-		err.chromiumDetails = { is_request_error: true, network_process_crashed: true };
+		err.chromiumDetails = {
+			is_request_error: true,
+			network_process_crashed: true,
+		};
 		return err;
 	}
 
 	describe('when FallbackNodeFetchOnNetworkProcessCrash is enabled', () => {
 		beforeEach(() => {
-			configurationService.setConfig(ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash, true);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash,
+				true,
+			);
 		});
 
 		it('retries once and demotes only if the retry also crashes', async () => {
@@ -98,10 +140,15 @@ describe('FetcherService network process crash handling', () => {
 				responses: [createOkResponse()],
 			});
 
-			const service = createFetcherService([electronFetcher, nodeFetcher]);
+			const service = createFetcherService([
+				electronFetcher,
+				nodeFetcher,
+			]);
 
 			// First request: crashes, retries once, retry also crashes => demotes
-			await expect(service.fetch('https://example.com', { callSite: 'test' })).rejects.toThrow('net::ERR_FAILED');
+			await expect(
+				service.fetch('https://example.com', { callSite: 'test' }),
+			).rejects.toThrow('net::ERR_FAILED');
 
 			// After both attempts fail, node-fetch should be the primary fetcher
 			expect(service.getUserAgentLibrary()).toBe('node-fetch');
@@ -118,10 +165,15 @@ describe('FetcherService network process crash handling', () => {
 				responses: [createOkResponse()],
 			});
 
-			const service = createFetcherService([electronFetcher, nodeFetcher]);
+			const service = createFetcherService([
+				electronFetcher,
+				nodeFetcher,
+			]);
 
 			// Request crashes, but retry succeeds
-			const response = await service.fetch('https://example.com', { callSite: 'test' });
+			const response = await service.fetch('https://example.com', {
+				callSite: 'test',
+			});
 			expect(response.status).toBe(200);
 
 			// electron-fetch should still be the primary fetcher (not demoted)
@@ -139,13 +191,20 @@ describe('FetcherService network process crash handling', () => {
 				responses: [createOkResponse(), createOkResponse()],
 			});
 
-			const service = createFetcherService([electronFetcher, nodeFetcher]);
+			const service = createFetcherService([
+				electronFetcher,
+				nodeFetcher,
+			]);
 
 			// First request: crashes, retry also crashes, demotes electron-fetch
-			await expect(service.fetch('https://example.com', { callSite: 'test' })).rejects.toThrow('net::ERR_FAILED');
+			await expect(
+				service.fetch('https://example.com', { callSite: 'test' }),
+			).rejects.toThrow('net::ERR_FAILED');
 
 			// Second request: should succeed via node-fetch
-			const response = await service.fetch('https://example.com', { callSite: 'test' });
+			const response = await service.fetch('https://example.com', {
+				callSite: 'test',
+			});
 			expect(response.status).toBe(200);
 		});
 
@@ -160,10 +219,15 @@ describe('FetcherService network process crash handling', () => {
 				responses: [createOkResponse()],
 			});
 
-			const service = createFetcherService([electronFetcher, nodeFetcher]);
+			const service = createFetcherService([
+				electronFetcher,
+				nodeFetcher,
+			]);
 
 			// Trigger crash + retry failure to demote electron-fetch
-			await expect(service.fetch('https://example.com', { callSite: 'test' })).rejects.toThrow();
+			await expect(
+				service.fetch('https://example.com', { callSite: 'test' }),
+			).rejects.toThrow();
 
 			// After demotion, the service should still classify the crash error correctly
 			// even though node-fetch is now the primary fetcher
@@ -174,7 +238,10 @@ describe('FetcherService network process crash handling', () => {
 
 	describe('when FallbackNodeFetchOnNetworkProcessCrash is disabled', () => {
 		beforeEach(() => {
-			configurationService.setConfig(ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash, false);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash,
+				false,
+			);
 		});
 
 		it('does NOT demote the crashed fetcher', async () => {
@@ -188,10 +255,15 @@ describe('FetcherService network process crash handling', () => {
 				responses: [createOkResponse()],
 			});
 
-			const service = createFetcherService([electronFetcher, nodeFetcher]);
+			const service = createFetcherService([
+				electronFetcher,
+				nodeFetcher,
+			]);
 
 			// Request crashes, retry also crashes, but flag is disabled so no demotion
-			await expect(service.fetch('https://example.com', { callSite: 'test' })).rejects.toThrow('net::ERR_FAILED');
+			await expect(
+				service.fetch('https://example.com', { callSite: 'test' }),
+			).rejects.toThrow('net::ERR_FAILED');
 
 			// electron-fetch should still be the primary fetcher (not demoted)
 			expect(service.getUserAgentLibrary()).toBe('electron-fetch');
@@ -214,14 +286,26 @@ describe('FetcherService network process crash handling', () => {
 			const service = new FetcherService(
 				undefined,
 				logService,
-				{ machineId: '', sessionId: '', vscodeVersion: '', getName: () => 'test', getVersion: () => '0.0.0', getBuildType: () => 'development' as any } as any,
+				{
+					machineId: '',
+					sessionId: '',
+					vscodeVersion: '',
+					getName: () => 'test',
+					getVersion: () => '0.0.0',
+					getBuildType: () => 'development' as any,
+				} as any,
 				configurationService,
 				{ globalStorageUri: undefined } as any,
 			);
-			(service as any)._availableFetchers = [electronFetcher, nodeFetcher];
+			(service as any)._availableFetchers = [
+				electronFetcher,
+				nodeFetcher,
+			];
 			// Explicitly do NOT call service.setExperimentationService()
 
-			await expect(service.fetch('https://example.com', { callSite: 'test' })).rejects.toThrow('net::ERR_FAILED');
+			await expect(
+				service.fetch('https://example.com', { callSite: 'test' }),
+			).rejects.toThrow('net::ERR_FAILED');
 
 			// Should not demote without experimentation service
 			expect(service.getUserAgentLibrary()).toBe('electron-fetch');

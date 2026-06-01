@@ -5,14 +5,20 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type * as vscode from 'vscode';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { IExperimentationService } from '../../../../platform/telemetry/common/nullExperimentationService';
 import { TestWorkspaceService } from '../../../../platform/test/node/testWorkspaceService';
 import { IWorkspaceService } from '../../../../platform/workspace/common/workspaceService';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { createExtensionUnitTestingServices } from '../../../test/node/services';
-import { FolderRepositoryMRUEntry, IChatFolderMruService } from '../../common/folderRepositoryManager';
+import {
+	FolderRepositoryMRUEntry,
+	IChatFolderMruService,
+} from '../../common/folderRepositoryManager';
 import { ClaudeSessionOptionBuilder } from '../claudeSessionOptionBuilder';
 
 class MockChatFolderMruService implements IChatFolderMruService {
@@ -28,7 +34,7 @@ class MockChatFolderMruService implements IChatFolderMruService {
 		return this._mruEntries;
 	}
 
-	async deleteRecentlyUsedFolder(): Promise<void> { }
+	async deleteRecentlyUsedFolder(): Promise<void> {}
 }
 
 describe('ClaudeSessionOptionBuilder', () => {
@@ -40,18 +46,31 @@ describe('ClaudeSessionOptionBuilder', () => {
 		store.clear();
 	});
 
-	function createBuilder(workspaceFolders: URI[], configOverrides?: { bypassPermissions?: boolean }): ClaudeSessionOptionBuilder {
+	function createBuilder(
+		workspaceFolders: URI[],
+		configOverrides?: { bypassPermissions?: boolean },
+	): ClaudeSessionOptionBuilder {
 		const workspaceService = new TestWorkspaceService(workspaceFolders);
 		mockFolderMruService = new MockChatFolderMruService();
-		const serviceCollection = store.add(createExtensionUnitTestingServices(store));
+		const serviceCollection = store.add(
+			createExtensionUnitTestingServices(store),
+		);
 		serviceCollection.set(IWorkspaceService, workspaceService);
 		const accessor = serviceCollection.createTestingAccessor();
 		const configService = accessor.get(IConfigurationService);
 		const experimentationService = accessor.get(IExperimentationService);
 		if (configOverrides?.bypassPermissions) {
-			configService.setConfig(ConfigKey.ClaudeAgentAllowDangerouslySkipPermissions, true);
+			configService.setConfig(
+				ConfigKey.ClaudeAgentAllowDangerouslySkipPermissions,
+				true,
+			);
 		}
-		return new ClaudeSessionOptionBuilder(configService, mockFolderMruService, workspaceService, experimentationService);
+		return new ClaudeSessionOptionBuilder(
+			configService,
+			mockFolderMruService,
+			workspaceService,
+			experimentationService,
+		);
 	}
 
 	describe('buildPermissionModeGroup', () => {
@@ -61,15 +80,21 @@ describe('ClaudeSessionOptionBuilder', () => {
 			const group = builder.buildPermissionModeGroup();
 
 			expect(group.id).toBe('permissionMode');
-			expect(group.items.map(i => i.id)).toEqual(['default', 'acceptEdits', 'plan']);
+			expect(group.items.map((i) => i.id)).toEqual([
+				'default',
+				'acceptEdits',
+				'plan',
+			]);
 		});
 
 		it('includes bypass when config enabled', () => {
-			builder = createBuilder([URI.file('/project')], { bypassPermissions: true });
+			builder = createBuilder([URI.file('/project')], {
+				bypassPermissions: true,
+			});
 
 			const group = builder.buildPermissionModeGroup();
 
-			expect(group.items.map(i => i.id)).toContain('bypassPermissions');
+			expect(group.items.map((i) => i.id)).toContain('bypassPermissions');
 		});
 	});
 
@@ -91,7 +116,10 @@ describe('ClaudeSessionOptionBuilder', () => {
 
 			expect(group).toBeDefined();
 			expect(group!.id).toBe('folder');
-			expect(group!.items.map(i => i.id)).toEqual([folderA.fsPath, folderB.fsPath]);
+			expect(group!.items.map((i) => i.id)).toEqual([
+				folderA.fsPath,
+				folderB.fsPath,
+			]);
 			expect(group!.selected?.id).toBe(folderA.fsPath);
 		});
 
@@ -99,7 +127,11 @@ describe('ClaudeSessionOptionBuilder', () => {
 			builder = createBuilder([]);
 			const mruFolder = URI.file('/recent');
 			mockFolderMruService.setMRUEntries([
-				{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() },
+				{
+					folder: mruFolder,
+					repository: undefined,
+					lastAccessed: Date.now(),
+				},
 			]);
 
 			const group = await builder.buildNewFolderGroup();
@@ -118,7 +150,7 @@ describe('ClaudeSessionOptionBuilder', () => {
 
 			expect(group.id).toBe('folder');
 			expect(group.selected?.locked).toBe(true);
-			expect(group.items.every(i => i.locked)).toBe(true);
+			expect(group.items.every((i) => i.locked)).toBe(true);
 		});
 	});
 
@@ -128,7 +160,7 @@ describe('ClaudeSessionOptionBuilder', () => {
 
 			const groups = await builder.buildNewSessionGroups();
 
-			const permGroup = groups.find(g => g.id === 'permissionMode');
+			const permGroup = groups.find((g) => g.id === 'permissionMode');
 			expect(permGroup).toBeDefined();
 			expect(permGroup!.selected?.id).toBe('acceptEdits');
 		});
@@ -138,7 +170,7 @@ describe('ClaudeSessionOptionBuilder', () => {
 
 			const groups = await builder.buildNewSessionGroups();
 
-			expect(groups.find(g => g.id === 'folder')).toBeUndefined();
+			expect(groups.find((g) => g.id === 'folder')).toBeUndefined();
 		});
 
 		it('includes folder group for multi-root workspace', async () => {
@@ -146,7 +178,7 @@ describe('ClaudeSessionOptionBuilder', () => {
 
 			const groups = await builder.buildNewSessionGroups();
 
-			expect(groups.find(g => g.id === 'folder')).toBeDefined();
+			expect(groups.find((g) => g.id === 'folder')).toBeDefined();
 		});
 	});
 
@@ -154,21 +186,27 @@ describe('ClaudeSessionOptionBuilder', () => {
 		it('does not lock permission mode items', async () => {
 			builder = createBuilder([URI.file('/project')]);
 
-			const groups = await builder.buildExistingSessionGroups('plan', undefined);
+			const groups = await builder.buildExistingSessionGroups(
+				'plan',
+				undefined,
+			);
 
-			const permGroup = groups.find(g => g.id === 'permissionMode');
+			const permGroup = groups.find((g) => g.id === 'permissionMode');
 			expect(permGroup!.selected?.id).toBe('plan');
 			expect(permGroup!.selected?.locked).toBeUndefined();
-			expect(permGroup!.items.every(i => !i.locked)).toBe(true);
+			expect(permGroup!.items.every((i) => !i.locked)).toBe(true);
 		});
 
 		it('includes locked folder group when folder URI provided', async () => {
 			builder = createBuilder([URI.file('/a'), URI.file('/b')]);
 			const folderUri = URI.file('/a');
 
-			const groups = await builder.buildExistingSessionGroups('acceptEdits', folderUri);
+			const groups = await builder.buildExistingSessionGroups(
+				'acceptEdits',
+				folderUri,
+			);
 
-			const folderGroup = groups.find(g => g.id === 'folder');
+			const folderGroup = groups.find((g) => g.id === 'folder');
 			expect(folderGroup).toBeDefined();
 			expect(folderGroup!.selected?.locked).toBe(true);
 		});
@@ -176,9 +214,12 @@ describe('ClaudeSessionOptionBuilder', () => {
 		it('excludes folder group when folder URI is undefined', async () => {
 			builder = createBuilder([URI.file('/project')]);
 
-			const groups = await builder.buildExistingSessionGroups('acceptEdits', undefined);
+			const groups = await builder.buildExistingSessionGroups(
+				'acceptEdits',
+				undefined,
+			);
 
-			expect(groups.find(g => g.id === 'folder')).toBeUndefined();
+			expect(groups.find((g) => g.id === 'folder')).toBeUndefined();
 		});
 	});
 
@@ -188,13 +229,15 @@ describe('ClaudeSessionOptionBuilder', () => {
 		});
 
 		it('extracts permission mode from groups', () => {
-			const groups: vscode.ChatSessionProviderOptionGroup[] = [{
-				id: 'permissionMode',
-				name: 'Permission Mode',
-				description: '',
-				items: [{ id: 'plan', name: 'Plan mode' }],
-				selected: { id: 'plan', name: 'Plan mode' },
-			}];
+			const groups: vscode.ChatSessionProviderOptionGroup[] = [
+				{
+					id: 'permissionMode',
+					name: 'Permission Mode',
+					description: '',
+					items: [{ id: 'plan', name: 'Plan mode' }],
+					selected: { id: 'plan', name: 'Plan mode' },
+				},
+			];
 
 			const { permissionMode } = builder.getSelections(groups);
 
@@ -202,13 +245,15 @@ describe('ClaudeSessionOptionBuilder', () => {
 		});
 
 		it('extracts folder URI from groups', () => {
-			const groups: vscode.ChatSessionProviderOptionGroup[] = [{
-				id: 'folder',
-				name: 'Folder',
-				description: '',
-				items: [{ id: '/some/path', name: 'path' }],
-				selected: { id: '/some/path', name: 'path' },
-			}];
+			const groups: vscode.ChatSessionProviderOptionGroup[] = [
+				{
+					id: 'folder',
+					name: 'Folder',
+					description: '',
+					items: [{ id: '/some/path', name: 'path' }],
+					selected: { id: '/some/path', name: 'path' },
+				},
+			];
 
 			const { folderUri } = builder.getSelections(groups);
 
@@ -218,25 +263,29 @@ describe('ClaudeSessionOptionBuilder', () => {
 		it('updates lastUsedPermissionMode as side effect', () => {
 			expect(builder.lastUsedPermissionMode).toBe('acceptEdits');
 
-			builder.getSelections([{
-				id: 'permissionMode',
-				name: 'Permission Mode',
-				description: '',
-				items: [{ id: 'plan', name: 'Plan mode' }],
-				selected: { id: 'plan', name: 'Plan mode' },
-			}]);
+			builder.getSelections([
+				{
+					id: 'permissionMode',
+					name: 'Permission Mode',
+					description: '',
+					items: [{ id: 'plan', name: 'Plan mode' }],
+					selected: { id: 'plan', name: 'Plan mode' },
+				},
+			]);
 
 			expect(builder.lastUsedPermissionMode).toBe('plan');
 		});
 
 		it('ignores invalid permission mode', () => {
-			const { permissionMode } = builder.getSelections([{
-				id: 'permissionMode',
-				name: 'Permission Mode',
-				description: '',
-				items: [{ id: 'garbage', name: 'Garbage' }],
-				selected: { id: 'garbage', name: 'Garbage' },
-			}]);
+			const { permissionMode } = builder.getSelections([
+				{
+					id: 'permissionMode',
+					name: 'Permission Mode',
+					description: '',
+					items: [{ id: 'garbage', name: 'Garbage' }],
+					selected: { id: 'garbage', name: 'Garbage' },
+				},
+			]);
 
 			expect(permissionMode).toBeUndefined();
 			expect(builder.lastUsedPermissionMode).toBe('acceptEdits');
@@ -257,7 +306,11 @@ describe('ClaudeSessionOptionBuilder', () => {
 			builder = createBuilder([]);
 			const mruFolder = URI.file('/recent');
 			mockFolderMruService.setMRUEntries([
-				{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() },
+				{
+					folder: mruFolder,
+					repository: undefined,
+					lastAccessed: Date.now(),
+				},
 			]);
 
 			const result = await builder.getDefaultFolder();

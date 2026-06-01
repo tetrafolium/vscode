@@ -24,14 +24,17 @@ export interface ICopilotCLISkills {
 	getSkillsLocations(token: CancellationToken): Promise<Uri[]>;
 }
 
-export const ICopilotCLISkills = createServiceIdentifier<ICopilotCLISkills>('ICopilotCLISkills');
+export const ICopilotCLISkills =
+	createServiceIdentifier<ICopilotCLISkills>('ICopilotCLISkills');
 
 export class CopilotCLISkills extends Disposable implements ICopilotCLISkills {
 	declare _serviceBrand: undefined;
 	constructor(
 		@ILogService protected readonly logService: ILogService,
-		@IInstantiationService protected readonly instantiationService: IInstantiationService,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IInstantiationService
+		protected readonly instantiationService: IInstantiationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 		@INativeEnvService private readonly envService: INativeEnvService,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
 		@IPromptsService private readonly promptsService: IPromptsService,
@@ -41,15 +44,19 @@ export class CopilotCLISkills extends Disposable implements ICopilotCLISkills {
 
 	public async getSkillsLocations(token: CancellationToken): Promise<Uri[]> {
 		const configSkillLocationUris = new ResourceSet();
-		for (const uri of resolveSkillConfigLocations(this.configurationService, this.envService, this.workspaceService)) {
+		for (const uri of resolveSkillConfigLocations(
+			this.configurationService,
+			this.envService,
+			this.workspaceService,
+		)) {
 			configSkillLocationUris.add(uri);
 		}
 		(await this.promptsService.getSkills(token))
 			.filter(isEnabledForCopilotCLI)
-			.filter(s => s.uri.scheme === Schemas.file)
-			.map(s => s.uri)
-			.map(uri => dirname(dirname(uri)))
-			.forEach(uri => configSkillLocationUris.add(uri));
+			.filter((s) => s.uri.scheme === Schemas.file)
+			.map((s) => s.uri)
+			.map((uri) => dirname(dirname(uri)))
+			.forEach((uri) => configSkillLocationUris.add(uri));
 
 		return Array.from(configSkillLocationUris);
 	}

@@ -5,7 +5,8 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const ISurveyService = createServiceIdentifier<ISurveyService>('ISurveyService');
+export const ISurveyService =
+	createServiceIdentifier<ISurveyService>('ISurveyService');
 
 export interface ISurveyService {
 	readonly _serviceBrand: undefined;
@@ -13,7 +14,6 @@ export interface ISurveyService {
 }
 
 export class NullSurveyService implements ISurveyService {
-
 	_serviceBrand: undefined;
 
 	async signalUsage(source: string, languageId?: string): Promise<void> {

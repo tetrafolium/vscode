@@ -21,20 +21,24 @@ describe('RouterDecisionFetcher', () => {
 
 		const mockResponse = {
 			ok: true,
-			text: vi.fn().mockResolvedValue(JSON.stringify({
-				predicted_label: 'no_reasoning',
-				confidence: 0.9,
-				latency_ms: 10,
-				candidate_models: ['gpt-4.1'],
-				scores: { needs_reasoning: 0.1, no_reasoning: 0.9 },
-			})),
+			text: vi.fn().mockResolvedValue(
+				JSON.stringify({
+					predicted_label: 'no_reasoning',
+					confidence: 0.9,
+					latency_ms: 10,
+					candidate_models: ['gpt-4.1'],
+					scores: { needs_reasoning: 0.1, no_reasoning: 0.9 },
+				}),
+			),
 		};
 
 		const mockCapiClient = {
-			makeRequest: vi.fn().mockImplementation((opts: { body?: string }) => {
-				capturedBody = opts.body;
-				return Promise.resolve(mockResponse);
-			}),
+			makeRequest: vi
+				.fn()
+				.mockImplementation((opts: { body?: string }) => {
+					capturedBody = opts.body;
+					return Promise.resolve(mockResponse);
+				}),
 		};
 
 		const mockLogService = {
@@ -61,16 +65,18 @@ describe('RouterDecisionFetcher', () => {
 			mockRequestLogger as any,
 		);
 
-		await fetcher.getRouterDecision(
-			'what is 2+2',
-			'session-token',
-			['gpt-4.1', 'claude-haiku-4.5'],
-		);
+		await fetcher.getRouterDecision('what is 2+2', 'session-token', [
+			'gpt-4.1',
+			'claude-haiku-4.5',
+		]);
 
 		expect(capturedBody).toBeDefined();
 		const parsed = JSON.parse(capturedBody!);
 		expect(parsed.copilot_plan).toBe('individual_edu');
 		expect(parsed.prompt).toBe('what is 2+2');
-		expect(parsed.available_models).toEqual(['gpt-4.1', 'claude-haiku-4.5']);
+		expect(parsed.available_models).toEqual([
+			'gpt-4.1',
+			'claude-haiku-4.5',
+		]);
 	});
 });

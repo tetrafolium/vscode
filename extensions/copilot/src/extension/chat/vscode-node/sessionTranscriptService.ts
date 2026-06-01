@@ -12,7 +12,10 @@ import {
 } from '../../../platform/chat/common/sessionTranscriptService';
 import { IEnvService } from '../../../platform/env/common/envService';
 import { IVSCodeExtensionContext } from '../../../platform/extContext/common/extensionContext';
-import { IFileSystemService, createDirectoryIfNotExists } from '../../../platform/filesystem/common/fileSystemService';
+import {
+	IFileSystemService,
+	createDirectoryIfNotExists,
+} from '../../../platform/filesystem/common/fileSystemService';
 import { ILogService } from '../../../platform/log/common/logService';
 import { extUriBiasedIgnorePathCase } from '../../../util/vs/base/common/resources';
 import { URI } from '../../../util/vs/base/common/uri';
@@ -49,11 +52,13 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 	private _transcriptsDirUri: URI | undefined;
 
 	constructor(
-		@IFileSystemService private readonly _fileSystemService: IFileSystemService,
-		@IVSCodeExtensionContext private readonly _extensionContext: IVSCodeExtensionContext,
+		@IFileSystemService
+		private readonly _fileSystemService: IFileSystemService,
+		@IVSCodeExtensionContext
+		private readonly _extensionContext: IVSCodeExtensionContext,
 		@IEnvService private readonly _envService: IEnvService,
 		@ILogService private readonly _logService: ILogService,
-	) { }
+	) {}
 
 	private _getTranscriptsDir(): URI | undefined {
 		if (this._transcriptsDirUri) {
@@ -67,21 +72,30 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 		return this._transcriptsDirUri;
 	}
 
-	async startSession(sessionId: string, context?: { cwd?: string }, history?: readonly IHistoricalTurn[]): Promise<void> {
+	async startSession(
+		sessionId: string,
+		context?: { cwd?: string },
+		history?: readonly IHistoricalTurn[],
+	): Promise<void> {
 		if (this._activeSessions.has(sessionId)) {
 			return;
 		}
 
 		const dir = this._getTranscriptsDir();
 		if (!dir) {
-			this._logService.warn('[SessionTranscript] No workspace storage available, transcript will not be written');
+			this._logService.warn(
+				'[SessionTranscript] No workspace storage available, transcript will not be written',
+			);
 			return;
 		}
 
 		try {
 			await createDirectoryIfNotExists(this._fileSystemService, dir);
 		} catch (err) {
-			this._logService.error('[SessionTranscript] Failed to create transcripts directory', err);
+			this._logService.error(
+				'[SessionTranscript] Failed to create transcripts directory',
+				err,
+			);
 			return;
 		}
 
@@ -107,16 +121,21 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 		if (fileAlreadyExists) {
 			// Session file exists — we're resuming; count existing lines so getLineCount stays accurate
 			try {
-				const content = await fs.promises.readFile(fileUri.fsPath, 'utf-8');
-				session.lineCount = content.split('\n').filter(l => l.length > 0).length;
-			} catch {
-			}
+				const content = await fs.promises.readFile(
+					fileUri.fsPath,
+					'utf-8',
+				);
+				session.lineCount = content
+					.split('\n')
+					.filter((l) => l.length > 0).length;
+			} catch {}
 			return;
 		}
 
-		const startTime = (history && history.length > 0)
-			? new Date(history[0].timestamp).toISOString()
-			: new Date().toISOString();
+		const startTime =
+			history && history.length > 0
+				? new Date(history[0].timestamp).toISOString()
+				: new Date().toISOString();
 
 		this._bufferEntry(sessionId, {
 			type: 'session.start',
@@ -137,10 +156,14 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 		}
 
 		// Fire-and-forget cleanup of old transcripts
-		this.cleanupOldTranscripts().catch(() => { });
+		this.cleanupOldTranscripts().catch(() => {});
 	}
 
-	logUserMessage(sessionId: string, content: string, attachments?: readonly unknown[]): void {
+	logUserMessage(
+		sessionId: string,
+		content: string,
+		attachments?: readonly unknown[],
+	): void {
 		this._bufferEntry(sessionId, {
 			type: 'user.message',
 			data: {
@@ -157,19 +180,32 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 		});
 	}
 
-	logAssistantMessage(sessionId: string, content: string, toolRequests: readonly ToolRequest[], reasoningText?: string): void {
+	logAssistantMessage(
+		sessionId: string,
+		content: string,
+		toolRequests: readonly ToolRequest[],
+		reasoningText?: string,
+	): void {
 		this._bufferEntry(sessionId, {
 			type: 'assistant.message',
 			data: {
 				messageId: generateUuid(),
 				content,
-				toolRequests: toolRequests.map(tr => ({ ...tr, toolCallId: stripInternalToolCallId(tr.toolCallId) })),
+				toolRequests: toolRequests.map((tr) => ({
+					...tr,
+					toolCallId: stripInternalToolCallId(tr.toolCallId),
+				})),
 				...(reasoningText !== undefined ? { reasoningText } : {}),
 			},
 		});
 	}
 
-	logToolExecutionStart(sessionId: string, toolCallId: string, toolName: string, args: unknown): void {
+	logToolExecutionStart(
+		sessionId: string,
+		toolCallId: string,
+		toolName: string,
+		args: unknown,
+	): void {
 		this._bufferEntry(sessionId, {
 			type: 'tool.execution_start',
 			data: {
@@ -180,13 +216,20 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 		});
 	}
 
-	logToolExecutionComplete(sessionId: string, toolCallId: string, success: boolean, resultContent?: string): void {
+	logToolExecutionComplete(
+		sessionId: string,
+		toolCallId: string,
+		success: boolean,
+		resultContent?: string,
+	): void {
 		this._bufferEntry(sessionId, {
 			type: 'tool.execution_complete',
 			data: {
 				toolCallId: stripInternalToolCallId(toolCallId),
 				success,
-				...(resultContent !== undefined ? { result: { content: resultContent } } : {}),
+				...(resultContent !== undefined
+					? { result: { content: resultContent } }
+					: {}),
 			},
 		});
 	}
@@ -236,7 +279,9 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 		return extUriBiasedIgnorePathCase.isEqualOrParent(uri, dir);
 	}
 
-	async cleanupOldTranscripts(maxRetained: number = DEFAULT_MAX_RETAINED): Promise<void> {
+	async cleanupOldTranscripts(
+		maxRetained: number = DEFAULT_MAX_RETAINED,
+	): Promise<void> {
 		const dir = this._getTranscriptsDir();
 		if (!dir) {
 			return;
@@ -244,8 +289,10 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 
 		try {
 			const entries = await this._fileSystemService.readDirectory(dir);
-			const jsonlFiles = entries
-				.filter(([name, type]) => name.endsWith('.jsonl') && type === 1 /* FileType.File */);
+			const jsonlFiles = entries.filter(
+				([name, type]) =>
+					name.endsWith('.jsonl') && type === 1 /* FileType.File */,
+			);
 
 			if (jsonlFiles.length <= maxRetained) {
 				return;
@@ -257,12 +304,23 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 					const fileUri = URI.joinPath(dir, name);
 					const sessionIdFromFile = name.replace('.jsonl', '');
 					try {
-						const stat = await this._fileSystemService.stat(fileUri);
-						return { name, uri: fileUri, mtime: stat.mtime, sessionId: sessionIdFromFile };
+						const stat =
+							await this._fileSystemService.stat(fileUri);
+						return {
+							name,
+							uri: fileUri,
+							mtime: stat.mtime,
+							sessionId: sessionIdFromFile,
+						};
 					} catch {
-						return { name, uri: fileUri, mtime: 0, sessionId: sessionIdFromFile };
+						return {
+							name,
+							uri: fileUri,
+							mtime: 0,
+							sessionId: sessionIdFromFile,
+						};
 					}
-				})
+				}),
 			);
 
 			// Sort oldest first
@@ -282,7 +340,9 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 					await this._fileSystemService.delete(file.uri);
 					deleted++;
 				} catch (err) {
-					this._logService.warn(`[SessionTranscript] Failed to delete old transcript: ${file.name}`);
+					this._logService.warn(
+						`[SessionTranscript] Failed to delete old transcript: ${file.name}`,
+					);
 				}
 			}
 		} catch {
@@ -294,17 +354,24 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 	 * Replay historical conversation turns into the session buffer.
 	 * Each turn produces: user.message → (assistant.turn_start → assistant.message → assistant.turn_end) × N rounds.
 	 */
-	private _replayHistory(sessionId: string, history: readonly IHistoricalTurn[]): void {
+	private _replayHistory(
+		sessionId: string,
+		history: readonly IHistoricalTurn[],
+	): void {
 		for (const [turnIndex, turn] of history.entries()) {
 			const turnTimestamp = new Date(turn.timestamp).toISOString();
 
-			this._bufferEntry(sessionId, {
-				type: 'user.message',
-				data: {
-					content: turn.userMessage,
-					attachments: [],
+			this._bufferEntry(
+				sessionId,
+				{
+					type: 'user.message',
+					data: {
+						content: turn.userMessage,
+						attachments: [],
+					},
 				},
-			}, turnTimestamp);
+				turnTimestamp,
+			);
 
 			for (const [roundIndex, round] of turn.rounds.entries()) {
 				const roundTimestamp = round.timestamp
@@ -312,32 +379,48 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 					: turnTimestamp;
 				const turnId = `${turnIndex}.${roundIndex}`;
 
-				this._bufferEntry(sessionId, {
-					type: 'assistant.turn_start',
-					data: { turnId },
-				}, roundTimestamp);
-
-				const toolRequests: ToolRequest[] = round.toolCalls.map(tc => ({
-					toolCallId: tc.id,
-					name: tc.name,
-					arguments: tc.arguments,
-					type: 'function' as const,
-				}));
-
-				this._bufferEntry(sessionId, {
-					type: 'assistant.message',
-					data: {
-						messageId: generateUuid(),
-						content: round.response,
-						toolRequests,
-						...(round.reasoningText !== undefined ? { reasoningText: round.reasoningText } : {}),
+				this._bufferEntry(
+					sessionId,
+					{
+						type: 'assistant.turn_start',
+						data: { turnId },
 					},
-				}, roundTimestamp);
+					roundTimestamp,
+				);
 
-				this._bufferEntry(sessionId, {
-					type: 'assistant.turn_end',
-					data: { turnId },
-				}, roundTimestamp);
+				const toolRequests: ToolRequest[] = round.toolCalls.map(
+					(tc) => ({
+						toolCallId: tc.id,
+						name: tc.name,
+						arguments: tc.arguments,
+						type: 'function' as const,
+					}),
+				);
+
+				this._bufferEntry(
+					sessionId,
+					{
+						type: 'assistant.message',
+						data: {
+							messageId: generateUuid(),
+							content: round.response,
+							toolRequests,
+							...(round.reasoningText !== undefined
+								? { reasoningText: round.reasoningText }
+								: {}),
+						},
+					},
+					roundTimestamp,
+				);
+
+				this._bufferEntry(
+					sessionId,
+					{
+						type: 'assistant.turn_end',
+						data: { turnId },
+					},
+					roundTimestamp,
+				);
 			}
 		}
 	}
@@ -349,7 +432,11 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 	 *
 	 * @param timestampOverride Optional ISO 8601 timestamp; defaults to now.
 	 */
-	private _bufferEntry(sessionId: string, entry: Omit<TranscriptEntry, 'id' | 'timestamp' | 'parentId'>, timestampOverride?: string): void {
+	private _bufferEntry(
+		sessionId: string,
+		entry: Omit<TranscriptEntry, 'id' | 'timestamp' | 'parentId'>,
+		timestampOverride?: string,
+	): void {
 		const session = this._activeSessions.get(sessionId);
 		if (!session) {
 			return;
@@ -371,11 +458,17 @@ export class SessionTranscriptService implements ISessionTranscriptService {
 	/**
 	 * Append pre-serialized JSONL content to the session's transcript file.
 	 */
-	private async _writeToFile(session: IActiveSession, content: string): Promise<void> {
+	private async _writeToFile(
+		session: IActiveSession,
+		content: string,
+	): Promise<void> {
 		try {
 			await fs.promises.appendFile(session.uri.fsPath, content, 'utf-8');
 		} catch (err) {
-			this._logService.error('[SessionTranscript] Failed to write transcript entries', err);
+			this._logService.error(
+				'[SessionTranscript] Failed to write transcript entries',
+				err,
+			);
 		}
 	}
 }

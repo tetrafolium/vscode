@@ -3,8 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import type { MarkdownPreviewChangeIndicator, MarkdownPreviewInnerChange, MarkdownPreviewLineChanges } from '../../types/previewMessaging';
+import * as vscode from "vscode";
+import type {
+	MarkdownPreviewChangeIndicator,
+	MarkdownPreviewInnerChange,
+	MarkdownPreviewLineChanges,
+} from "../../types/previewMessaging";
 
 interface LineChanges {
 	readonly added: readonly number[];
@@ -21,10 +25,12 @@ interface LineMappings {
 	readonly modifiedToOriginal: number[];
 }
 
-type ChangedLineRange = Pick<vscode.TextDiffChange, 'originalRange' | 'modifiedRange'>;
+type ChangedLineRange = Pick<
+	vscode.TextDiffChange,
+	"originalRange" | "modifiedRange"
+>;
 
 export class MarkdownPreviewLineDiffProvider {
-
 	readonly #originalDocument: vscode.TextDocument;
 	readonly #modifiedDocument: vscode.TextDocument;
 
@@ -40,27 +46,46 @@ export class MarkdownPreviewLineDiffProvider {
 		this.#modifiedDocument = modifiedDocument;
 	}
 
-	public async getOriginalLineChanges(): Promise<MarkdownPreviewLineChanges | undefined> {
+	public async getOriginalLineChanges(): Promise<
+		MarkdownPreviewLineChanges | undefined
+	> {
 		const changes = await this.#getLineChanges();
 		const deleted = changes.deleted;
 		const innerChanges = changes.originalInnerChanges;
-		return deleted.length || innerChanges.length ? { deleted, innerChanges } : undefined;
+		return deleted.length || innerChanges.length
+			? { deleted, innerChanges }
+			: undefined;
 	}
 
-	public async getModifiedLineChanges(options?: { includeChangeIndicators?: boolean }): Promise<MarkdownPreviewLineChanges | undefined> {
+	public async getModifiedLineChanges(options?: {
+		includeChangeIndicators?: boolean;
+	}): Promise<MarkdownPreviewLineChanges | undefined> {
 		const changes = await this.#getLineChanges();
 		const added = changes.added;
 		const innerChanges = changes.modifiedInnerChanges;
-		const changeIndicators = options?.includeChangeIndicators === false ? [] : changes.changeIndicators;
-		return added.length || innerChanges.length || changeIndicators.length ? { added, innerChanges, changeIndicators } : undefined;
+		const changeIndicators =
+			options?.includeChangeIndicators === false
+				? []
+				: changes.changeIndicators;
+		return added.length || innerChanges.length || changeIndicators.length
+			? { added, innerChanges, changeIndicators }
+			: undefined;
 	}
 
 	public async translateOriginalLineToModified(line: number): Promise<number> {
-		return translateLine(line, (await this.#getLineChanges()).originalToModified, this.#modifiedDocument.lineCount);
+		return translateLine(
+			line,
+			(await this.#getLineChanges()).originalToModified,
+			this.#modifiedDocument.lineCount,
+		);
 	}
 
 	public async translateModifiedLineToOriginal(line: number): Promise<number> {
-		return translateLine(line, (await this.#getLineChanges()).modifiedToOriginal, this.#originalDocument.lineCount);
+		return translateLine(
+			line,
+			(await this.#getLineChanges()).modifiedToOriginal,
+			this.#originalDocument.lineCount,
+		);
 	}
 
 	public async getOriginalToModifiedMappings(): Promise<readonly number[]> {
@@ -72,21 +97,35 @@ export class MarkdownPreviewLineDiffProvider {
 	}
 
 	#getLineChanges(): Promise<LineChanges> {
-		if (!this.#cachedLineChanges || this.#cachedOriginalVersion !== this.#originalDocument.version || this.#cachedModifiedVersion !== this.#modifiedDocument.version) {
+		if (
+			!this.#cachedLineChanges ||
+			this.#cachedOriginalVersion !== this.#originalDocument.version ||
+			this.#cachedModifiedVersion !== this.#modifiedDocument.version
+		) {
 			this.#cachedOriginalVersion = this.#originalDocument.version;
 			this.#cachedModifiedVersion = this.#modifiedDocument.version;
-			this.#cachedLineChanges = computeLineChanges(this.#originalDocument, this.#modifiedDocument);
+			this.#cachedLineChanges = computeLineChanges(
+				this.#originalDocument,
+				this.#modifiedDocument,
+			);
 		}
 
 		return this.#cachedLineChanges;
 	}
 }
 
-async function computeLineChanges(originalDocument: vscode.TextDocument, modifiedDocument: vscode.TextDocument): Promise<LineChanges> {
-	const diff = vscode.workspace.getTextDiff(originalDocument, modifiedDocument, {
-		ignoreTrimWhitespace: false,
-		maxComputationTimeMs: 5000,
-	});
+async function computeLineChanges(
+	originalDocument: vscode.TextDocument,
+	modifiedDocument: vscode.TextDocument,
+): Promise<LineChanges> {
+	const diff = vscode.workspace.getTextDiff(
+		originalDocument,
+		modifiedDocument,
+		{
+			ignoreTrimWhitespace: false,
+			maxComputationTimeMs: 5000,
+		},
+	);
 
 	const originalLineCount = originalDocument.lineCount;
 	const modifiedLineCount = modifiedDocument.lineCount;
@@ -95,7 +134,10 @@ async function computeLineChanges(originalDocument: vscode.TextDocument, modifie
 	const originalInnerChanges: MarkdownPreviewInnerChange[] = [];
 	const modifiedInnerChanges: MarkdownPreviewInnerChange[] = [];
 	const changedLineRanges: ChangedLineRange[] = [];
-	const mappings = createEmptyLineMappings(originalLineCount, modifiedLineCount);
+	const mappings = createEmptyLineMappings(
+		originalLineCount,
+		modifiedLineCount,
+	);
 
 	let lastOriginalEnd = 0;
 	let lastModifiedEnd = 0;
@@ -107,7 +149,13 @@ async function computeLineChanges(originalDocument: vscode.TextDocument, modifie
 		const modEnd = change.modifiedRange.end.line;
 
 		// Map unchanged lines before this change
-		fillUnchangedLineMappings(mappings, lastOriginalEnd, origStart, lastModifiedEnd, modStart);
+		fillUnchangedLineMappings(
+			mappings,
+			lastOriginalEnd,
+			origStart,
+			lastModifiedEnd,
+			modStart,
+		);
 
 		// Mark deleted and added lines within this change
 		for (let i = origStart; i < origEnd; ++i) {
@@ -138,31 +186,71 @@ async function computeLineChanges(originalDocument: vscode.TextDocument, modifie
 	}
 
 	// Map unchanged lines after the last change
-	fillUnchangedLineMappings(mappings, lastOriginalEnd, originalLineCount, lastModifiedEnd, modifiedLineCount);
+	fillUnchangedLineMappings(
+		mappings,
+		lastOriginalEnd,
+		originalLineCount,
+		lastModifiedEnd,
+		modifiedLineCount,
+	);
 	fillMissingLineMappings(mappings);
-	const splitChangedLineRanges = splitChangedLineRangesByMarkdownBlocks(changedLineRanges, originalDocument, modifiedDocument);
-	const changeIndicators = createChangeIndicators(splitChangedLineRanges, originalDocument, modifiedDocument, originalInnerChanges, modifiedInnerChanges);
+	const splitChangedLineRanges = splitChangedLineRangesByMarkdownBlocks(
+		changedLineRanges,
+		originalDocument,
+		modifiedDocument,
+	);
+	const changeIndicators = createChangeIndicators(
+		splitChangedLineRanges,
+		originalDocument,
+		modifiedDocument,
+		originalInnerChanges,
+		modifiedInnerChanges,
+	);
 
-	return { added, deleted, originalInnerChanges, modifiedInnerChanges, changeIndicators, ...mappings };
+	return {
+		added,
+		deleted,
+		originalInnerChanges,
+		modifiedInnerChanges,
+		changeIndicators,
+		...mappings,
+	};
 }
 
-function createChangeIndicators(ranges: readonly ChangedLineRange[], originalDocument: vscode.TextDocument, modifiedDocument: vscode.TextDocument, originalInnerChanges: readonly MarkdownPreviewInnerChange[], modifiedInnerChanges: readonly MarkdownPreviewInnerChange[]): MarkdownPreviewChangeIndicator[] {
-	return ranges.map(range => {
-		const modifiedLineCount = range.modifiedRange.end.line - range.modifiedRange.start.line;
+function createChangeIndicators(
+	ranges: readonly ChangedLineRange[],
+	originalDocument: vscode.TextDocument,
+	modifiedDocument: vscode.TextDocument,
+	originalInnerChanges: readonly MarkdownPreviewInnerChange[],
+	modifiedInnerChanges: readonly MarkdownPreviewInnerChange[],
+): MarkdownPreviewChangeIndicator[] {
+	return ranges.map((range) => {
+		const modifiedLineCount =
+			range.modifiedRange.end.line - range.modifiedRange.start.line;
 		return {
 			modifiedLine: range.modifiedRange.start.line,
 			modifiedLineCount,
-			originalLineCount: range.originalRange.end.line - range.originalRange.start.line,
+			originalLineCount:
+				range.originalRange.end.line - range.originalRange.start.line,
 			originalContent: getLineRangeText(originalDocument, range.originalRange),
-			originalInnerChanges: getRelativeInnerChanges(originalInnerChanges, range.originalRange),
+			originalInnerChanges: getRelativeInnerChanges(
+				originalInnerChanges,
+				range.originalRange,
+			),
 			modifiedContent: getLineRangeText(modifiedDocument, range.modifiedRange),
-			modifiedInnerChanges: getRelativeInnerChanges(modifiedInnerChanges, range.modifiedRange),
-			type: modifiedLineCount === 0 ? 'deletion' : 'modification',
+			modifiedInnerChanges: getRelativeInnerChanges(
+				modifiedInnerChanges,
+				range.modifiedRange,
+			),
+			type: modifiedLineCount === 0 ? "deletion" : "modification",
 		};
 	});
 }
 
-function getRelativeInnerChanges(innerChanges: readonly MarkdownPreviewInnerChange[], range: vscode.Range): MarkdownPreviewInnerChange[] | undefined {
+function getRelativeInnerChanges(
+	innerChanges: readonly MarkdownPreviewInnerChange[],
+	range: vscode.Range,
+): MarkdownPreviewInnerChange[] | undefined {
 	const relativeInnerChanges: MarkdownPreviewInnerChange[] = [];
 	for (const change of innerChanges) {
 		if (change.line >= range.start.line && change.line < range.end.line) {
@@ -176,12 +264,25 @@ function getRelativeInnerChanges(innerChanges: readonly MarkdownPreviewInnerChan
 	return relativeInnerChanges.length ? relativeInnerChanges : undefined;
 }
 
-function splitChangedLineRangesByMarkdownBlocks(ranges: readonly ChangedLineRange[], originalDocument: vscode.TextDocument, modifiedDocument: vscode.TextDocument): ChangedLineRange[] {
+function splitChangedLineRangesByMarkdownBlocks(
+	ranges: readonly ChangedLineRange[],
+	originalDocument: vscode.TextDocument,
+	modifiedDocument: vscode.TextDocument,
+): ChangedLineRange[] {
 	const splitRanges: ChangedLineRange[] = [];
 	for (const range of ranges) {
-		const originalBlocks = getNonBlankLineRanges(originalDocument, range.originalRange);
-		const modifiedBlocks = getNonBlankLineRanges(modifiedDocument, range.modifiedRange);
-		if (originalBlocks.length > 1 && originalBlocks.length === modifiedBlocks.length) {
+		const originalBlocks = getNonBlankLineRanges(
+			originalDocument,
+			range.originalRange,
+		);
+		const modifiedBlocks = getNonBlankLineRanges(
+			modifiedDocument,
+			range.modifiedRange,
+		);
+		if (
+			originalBlocks.length > 1 &&
+			originalBlocks.length === modifiedBlocks.length
+		) {
 			for (let i = 0; i < originalBlocks.length; ++i) {
 				splitRanges.push({
 					originalRange: originalBlocks[i],
@@ -195,7 +296,10 @@ function splitChangedLineRangesByMarkdownBlocks(ranges: readonly ChangedLineRang
 	return splitRanges;
 }
 
-function getNonBlankLineRanges(document: vscode.TextDocument, range: vscode.Range): vscode.Range[] {
+function getNonBlankLineRanges(
+	document: vscode.TextDocument,
+	range: vscode.Range,
+): vscode.Range[] {
 	const ranges: vscode.Range[] = [];
 	let blockStartLine: number | undefined;
 	for (let line = range.start.line; line < range.end.line; ++line) {
@@ -214,12 +318,15 @@ function getNonBlankLineRanges(document: vscode.TextDocument, range: vscode.Rang
 	return ranges;
 }
 
-function getLineRangeText(document: vscode.TextDocument, range: vscode.Range): string {
+function getLineRangeText(
+	document: vscode.TextDocument,
+	range: vscode.Range,
+): string {
 	const lines: string[] = [];
 	for (let line = range.start.line; line < range.end.line; ++line) {
 		lines.push(document.lineAt(line).text);
 	}
-	return lines.join('\n');
+	return lines.join("\n");
 }
 
 /**
@@ -229,55 +336,98 @@ function getLineRangeText(document: vscode.TextDocument, range: vscode.Range): s
  * middle lines are full-line, and the last line goes from column 0
  * to endColumn.
  */
-function collectInnerChangesForSide(range: vscode.Range, out: MarkdownPreviewInnerChange[]): void {
+function collectInnerChangesForSide(
+	range: vscode.Range,
+	out: MarkdownPreviewInnerChange[],
+): void {
 	if (range.isEmpty) {
 		return;
 	}
 	if (range.isSingleLine) {
-		out.push({ line: range.start.line, startColumn: range.start.character, endColumn: range.end.character });
+		out.push({
+			line: range.start.line,
+			startColumn: range.start.character,
+			endColumn: range.end.character,
+		});
 	} else {
 		// First line: from start column to end-of-line
-		out.push({ line: range.start.line, startColumn: range.start.character, endColumn: Number.MAX_SAFE_INTEGER });
+		out.push({
+			line: range.start.line,
+			startColumn: range.start.character,
+			endColumn: Number.MAX_SAFE_INTEGER,
+		});
 		// Middle lines: entire line
 		for (let line = range.start.line + 1; line < range.end.line; ++line) {
 			out.push({ line, startColumn: 0, endColumn: Number.MAX_SAFE_INTEGER });
 		}
 		// Last line: from start to end column (skip if endColumn is 0, meaning the range ended at the line boundary)
 		if (range.end.character > 0) {
-			out.push({ line: range.end.line, startColumn: 0, endColumn: range.end.character });
+			out.push({
+				line: range.end.line,
+				startColumn: 0,
+				endColumn: range.end.character,
+			});
 		}
 	}
 }
 
-function createEmptyLineMappings(originalLineCount: number, modifiedLineCount: number): LineMappings {
+function createEmptyLineMappings(
+	originalLineCount: number,
+	modifiedLineCount: number,
+): LineMappings {
 	return {
 		originalToModified: new Array<number>(originalLineCount),
 		modifiedToOriginal: new Array<number>(modifiedLineCount),
 	};
 }
 
-function fillUnchangedLineMappings(mappings: LineMappings, originalStart: number, originalEnd: number, modifiedStart: number, modifiedEnd: number): void {
-	const count = Math.min(originalEnd - originalStart, modifiedEnd - modifiedStart);
+function fillUnchangedLineMappings(
+	mappings: LineMappings,
+	originalStart: number,
+	originalEnd: number,
+	modifiedStart: number,
+	modifiedEnd: number,
+): void {
+	const count = Math.min(
+		originalEnd - originalStart,
+		modifiedEnd - modifiedStart,
+	);
 	for (let i = 0; i < count; ++i) {
-		mappings.originalToModified[originalStart + i] = clampLine(modifiedStart + i, mappings.modifiedToOriginal.length);
-		mappings.modifiedToOriginal[modifiedStart + i] = clampLine(originalStart + i, mappings.originalToModified.length);
+		mappings.originalToModified[originalStart + i] = clampLine(
+			modifiedStart + i,
+			mappings.modifiedToOriginal.length,
+		);
+		mappings.modifiedToOriginal[modifiedStart + i] = clampLine(
+			originalStart + i,
+			mappings.originalToModified.length,
+		);
 	}
 }
 
 function fillMissingLineMappings(mappings: LineMappings): void {
 	for (let i = 0; i < mappings.originalToModified.length; ++i) {
-		if (typeof mappings.originalToModified[i] !== 'number') {
-			mappings.originalToModified[i] = clampLine(i, mappings.modifiedToOriginal.length);
+		if (typeof mappings.originalToModified[i] !== "number") {
+			mappings.originalToModified[i] = clampLine(
+				i,
+				mappings.modifiedToOriginal.length,
+			);
 		}
 	}
 	for (let i = 0; i < mappings.modifiedToOriginal.length; ++i) {
-		if (typeof mappings.modifiedToOriginal[i] !== 'number') {
-			mappings.modifiedToOriginal[i] = clampLine(i, mappings.originalToModified.length);
+		if (typeof mappings.modifiedToOriginal[i] !== "number") {
+			mappings.modifiedToOriginal[i] = clampLine(
+				i,
+				mappings.originalToModified.length,
+			);
 		}
 	}
 }
 
-function translateLine(line: number, mappings: readonly number[], targetLineCount: number): number {
+function translateLine(
+	line: number,
+	mappings: readonly number[],
+	targetLineCount: number,
+): number {
 	const sourceLine = Math.floor(line);
 	const progress = line - sourceLine;
 	const mappedLine = mappings[sourceLine] ?? line;
@@ -286,11 +436,14 @@ function translateLine(line: number, mappings: readonly number[], targetLineCoun
 	}
 
 	const nextMappedLine = mappings[sourceLine + 1];
-	if (typeof nextMappedLine !== 'number') {
+	if (typeof nextMappedLine !== "number") {
 		return clampLine(mappedLine + progress, targetLineCount);
 	}
 
-	return clampLine(mappedLine + ((nextMappedLine - mappedLine) * progress), targetLineCount);
+	return clampLine(
+		mappedLine + (nextMappedLine - mappedLine) * progress,
+		targetLineCount,
+	);
 }
 
 function clampLine(line: number, lineCount: number): number {

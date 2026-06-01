@@ -10,25 +10,36 @@ import { filterHistoryImages } from '../imageLimits';
 const createUserImageMessage = (imageCount: number = 1): Raw.ChatMessage => ({
 	role: Raw.ChatRole.User,
 	content: [
-		{ type: Raw.ChatCompletionContentPartKind.Text, text: 'What is in this image?' },
+		{
+			type: Raw.ChatCompletionContentPartKind.Text,
+			text: 'What is in this image?',
+		},
 		...Array.from({ length: imageCount }, () => ({
 			type: Raw.ChatCompletionContentPartKind.Image as const,
-			imageUrl: { url: 'data:image/png;base64,test' }
-		}))
-	]
+			imageUrl: { url: 'data:image/png;base64,test' },
+		})),
+	],
 });
 
 const createAssistantMessage = (): Raw.ChatMessage => ({
 	role: Raw.ChatRole.Assistant,
-	content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'I see an image.' }]
+	content: [
+		{
+			type: Raw.ChatCompletionContentPartKind.Text,
+			text: 'I see an image.',
+		},
+	],
 });
 
 const createToolImageMessage = (): Raw.ChatMessage => ({
 	role: Raw.ChatRole.Tool,
 	toolCallId: 'tool-1',
 	content: [
-		{ type: Raw.ChatCompletionContentPartKind.Image, imageUrl: { url: 'https://example.com/tool.png' } }
-	]
+		{
+			type: Raw.ChatCompletionContentPartKind.Image,
+			imageUrl: { url: 'https://example.com/tool.png' },
+		},
+	],
 });
 
 const countImages = (messages: Raw.ChatMessage[]): number => {
@@ -79,7 +90,11 @@ describe('filterHistoryImages', () => {
 		if (!Array.isArray(droppedMessage.content)) {
 			throw new Error('expected array content');
 		}
-		const placeholder = droppedMessage.content.find(p => p.type === Raw.ChatCompletionContentPartKind.Text && p.text.includes('Image omitted'));
+		const placeholder = droppedMessage.content.find(
+			(p) =>
+				p.type === Raw.ChatCompletionContentPartKind.Text &&
+				p.text.includes('Image omitted'),
+		);
 		expect(placeholder).toBeDefined();
 	});
 
@@ -102,10 +117,14 @@ describe('filterHistoryImages', () => {
 		// Current user message has 11 images. The error must mention the exact
 		// model-scoped limit (10 for Gemini, 20 for Anthropic Messages API).
 		const messages = [createUserImageMessage(11)];
-		expect(() => filterHistoryImages(messages, 10)).toThrow(/11 images provided.*maximum of 10 images/);
+		expect(() => filterHistoryImages(messages, 10)).toThrow(
+			/11 images provided.*maximum of 10 images/,
+		);
 
 		const many = [createUserImageMessage(25)];
-		expect(() => filterHistoryImages(many, 20)).toThrow(/25 images provided.*maximum of 20 images/);
+		expect(() => filterHistoryImages(many, 20)).toThrow(
+			/25 images provided.*maximum of 20 images/,
+		);
 	});
 
 	it('handles conversations with no user message by treating the last message as current', () => {
@@ -136,7 +155,15 @@ describe('filterHistoryImages', () => {
 
 	it('passes through messages with non-array content', () => {
 		const messages: Raw.ChatMessage[] = [
-			{ role: Raw.ChatRole.System, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'system' }] },
+			{
+				role: Raw.ChatRole.System,
+				content: [
+					{
+						type: Raw.ChatCompletionContentPartKind.Text,
+						text: 'system',
+					},
+				],
+			},
 			createUserImageMessage(2),
 		];
 		// Total = 2 images, within limit of 2 → returned unchanged.

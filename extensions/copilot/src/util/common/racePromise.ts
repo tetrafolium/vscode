@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { raceCancellation, raceTimeout } from '../vs/base/common/async';
-import { CancellationToken, CancellationTokenSource } from '../vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../vs/base/common/cancellation';
 import { CancellationError } from '../vs/base/common/errors';
 
 // sentinel value to indicate cancellation
@@ -22,24 +25,33 @@ export async function raceTimeoutAndCancellationError<T>(
 	promiseGenerator: (cancellationToken: CancellationToken) => Promise<T>,
 	parentToken: CancellationToken,
 	timeoutInMs: number,
-	timeoutMessage: string): Promise<T> {
+	timeoutMessage: string,
+): Promise<T> {
 	const cancellationSource = new CancellationTokenSource(parentToken);
 	try {
-		const result = await raceTimeout(raceCancellation(promiseGenerator(cancellationSource.token), cancellationSource.token, CANCELLED as T), timeoutInMs);
+		const result = await raceTimeout(
+			raceCancellation(
+				promiseGenerator(cancellationSource.token),
+				cancellationSource.token,
+				CANCELLED as T,
+			),
+			timeoutInMs,
+		);
 
-		if (result === CANCELLED) { // cancelled sentinel from raceCancellation
+		if (result === CANCELLED) {
+			// cancelled sentinel from raceCancellation
 			throw new CancellationError();
 		}
 
-		if (result === undefined) { // timeout sentinel from raceTimeout
+		if (result === undefined) {
+			// timeout sentinel from raceTimeout
 			// signal ongoing work to cancel in the promise
 			cancellationSource.cancel();
 			throw new Error(timeoutMessage);
 		}
 
 		return result;
-	}
-	finally {
+	} finally {
 		cancellationSource.dispose();
 	}
 }

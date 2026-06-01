@@ -6,7 +6,10 @@
 import { createServiceIdentifier } from '../../../../../util/common/services';
 import { Command, StatusKind } from '../../types/src';
 
-export const ICompletionsExtensionStatus = createServiceIdentifier<ICompletionsExtensionStatus>('ICompletionsExtensionStatus');
+export const ICompletionsExtensionStatus =
+	createServiceIdentifier<ICompletionsExtensionStatus>(
+		'ICompletionsExtensionStatus',
+	);
 export interface ICompletionsExtensionStatus {
 	readonly _serviceBrand: undefined;
 
@@ -22,6 +25,6 @@ export class CopilotExtensionStatus implements ICompletionsExtensionStatus {
 		public kind: StatusKind = 'Normal',
 		public message?: string,
 		public busy = false,
-		public command?: Command
-	) { }
+		public command?: Command,
+	) {}
 }

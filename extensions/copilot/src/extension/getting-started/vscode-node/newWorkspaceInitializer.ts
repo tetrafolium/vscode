@@ -9,13 +9,18 @@ import { IVSCodeExtensionContext } from '../../../platform/extContext/common/ext
 import { IFileSystemService } from '../../../platform/filesystem/common/fileSystemService';
 import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
-import { INewWorkspaceStoredData, NEW_WORKSPACE_STORAGE_KEY } from '../common/newWorkspaceContext';
+import {
+	INewWorkspaceStoredData,
+	NEW_WORKSPACE_STORAGE_KEY,
+} from '../common/newWorkspaceContext';
 
 export class NewWorkspaceInitializer extends Disposable {
 	constructor(
-		@IVSCodeExtensionContext private readonly _extensionContext: IVSCodeExtensionContext,
+		@IVSCodeExtensionContext
+		private readonly _extensionContext: IVSCodeExtensionContext,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-		@IFileSystemService private readonly fileSystemService: IFileSystemService
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
 	) {
 		super();
 		this._updateWorkspace();
@@ -27,8 +32,12 @@ export class NewWorkspaceInitializer extends Disposable {
 			return;
 		}
 
-		const newWorkspaceContextsList = this._extensionContext.globalState.get<INewWorkspaceStoredData[]>(NEW_WORKSPACE_STORAGE_KEY, []);
-		const exactIndex = newWorkspaceContextsList.findIndex(c => c.workspaceURI === workspace[0].toString());
+		const newWorkspaceContextsList = this._extensionContext.globalState.get<
+			INewWorkspaceStoredData[]
+		>(NEW_WORKSPACE_STORAGE_KEY, []);
+		const exactIndex = newWorkspaceContextsList.findIndex(
+			(c) => c.workspaceURI === workspace[0].toString(),
+		);
 		if (exactIndex === -1) {
 			return;
 		}
@@ -36,38 +45,68 @@ export class NewWorkspaceInitializer extends Disposable {
 		const context = newWorkspaceContextsList[exactIndex];
 		const confirm = l10n.t('Continue Setup');
 		const message = l10n.t('Continue Workspace Setup?');
-		const detail = l10n.t('Copilot will resume setting up the workspace by creating the necessary files.');
+		const detail = l10n.t(
+			'Copilot will resume setting up the workspace by creating the necessary files.',
+		);
 
 		if (!context.initialized) {
 			context.initialized = true;
 			newWorkspaceContextsList[exactIndex] = context;
-			this._extensionContext.globalState.update(NEW_WORKSPACE_STORAGE_KEY, newWorkspaceContextsList);
+			this._extensionContext.globalState.update(
+				NEW_WORKSPACE_STORAGE_KEY,
+				newWorkspaceContextsList,
+			);
 
-			const result = await vscode.window.showInformationMessage(message, { modal: true, detail }, confirm);
+			const result = await vscode.window.showInformationMessage(
+				message,
+				{ modal: true, detail },
+				confirm,
+			);
 			if (result === confirm) {
-				vscode.commands.executeCommand('workbench.action.chat.open', { mode: 'agent', query: `${l10n.t('Continue with #new workspace setup')}` });
+				vscode.commands.executeCommand('workbench.action.chat.open', {
+					mode: 'agent',
+					query: `${l10n.t('Continue with #new workspace setup')}`,
+				});
 			} else {
 				newWorkspaceContextsList.splice(exactIndex, 1);
-				this._extensionContext.globalState.update(NEW_WORKSPACE_STORAGE_KEY, newWorkspaceContextsList);
+				this._extensionContext.globalState.update(
+					NEW_WORKSPACE_STORAGE_KEY,
+					newWorkspaceContextsList,
+				);
 			}
 
 			return;
 		}
 
-		const entries = await this.fileSystemService.readDirectory(workspace[0]);
+		const entries = await this.fileSystemService.readDirectory(
+			workspace[0],
+		);
 		const isEffectivelyEmpty = entries.every(([name]) => name === '.git');
 		if (!isEffectivelyEmpty) {
 			// workspace is not empty and we've already initialized it
 			newWorkspaceContextsList.splice(exactIndex, 1);
-			this._extensionContext.globalState.update(NEW_WORKSPACE_STORAGE_KEY, newWorkspaceContextsList);
+			this._extensionContext.globalState.update(
+				NEW_WORKSPACE_STORAGE_KEY,
+				newWorkspaceContextsList,
+			);
 		} else {
 			// workspace is still empty, so ask to setup again
-			const result = await vscode.window.showInformationMessage(message, { modal: true, detail }, confirm);
+			const result = await vscode.window.showInformationMessage(
+				message,
+				{ modal: true, detail },
+				confirm,
+			);
 			if (result === confirm) {
-				vscode.commands.executeCommand('workbench.action.chat.open', { mode: 'agent', query: context.userPrompt });
+				vscode.commands.executeCommand('workbench.action.chat.open', {
+					mode: 'agent',
+					query: context.userPrompt,
+				});
 			} else {
 				newWorkspaceContextsList.splice(exactIndex, 1);
-				this._extensionContext.globalState.update(NEW_WORKSPACE_STORAGE_KEY, newWorkspaceContextsList);
+				this._extensionContext.globalState.update(
+					NEW_WORKSPACE_STORAGE_KEY,
+					newWorkspaceContextsList,
+				);
 			}
 		}
 	}

@@ -7,12 +7,19 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { IChatMLFetcher } from '../../../../platform/chat/common/chatMLFetcher';
 import { ChatFetchResponseType } from '../../../../platform/chat/common/commonTypes';
 import { MockChatMLFetcher } from '../../../../platform/chat/test/common/mockChatMLFetcher';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { DocumentId } from '../../../../platform/inlineEdits/common/dataTypes/documentId';
 import { Edits } from '../../../../platform/inlineEdits/common/dataTypes/edit';
 import { LanguageId } from '../../../../platform/inlineEdits/common/dataTypes/languageId';
 import { NextCursorLinePrediction } from '../../../../platform/inlineEdits/common/dataTypes/nextCursorLinePrediction';
-import { AggressivenessLevel, DEFAULT_OPTIONS, PromptOptions } from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	AggressivenessLevel,
+	DEFAULT_OPTIONS,
+	PromptOptions,
+} from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { StatelessNextEditDocument } from '../../../../platform/inlineEdits/common/statelessNextEditProvider';
 import { TestLanguageDiagnosticsService } from '../../../../platform/languages/common/testLanguageDiagnosticsService';
 import { ILogger } from '../../../../platform/log/common/logService';
@@ -48,7 +55,7 @@ function createTestPromptPieces(): PromptPieces {
 	// Create a CurrentDocument with content and cursor position
 	const currentDocument = new CurrentDocument(
 		docText,
-		new Position(2, 1) // cursor at line 2
+		new Position(2, 1), // cursor at line 2
 	);
 
 	// Create a StatelessNextEditDocument for activeDoc
@@ -59,7 +66,7 @@ function createTestPromptPieces(): PromptPieces {
 		currentDocLines,
 		LineEdit.empty,
 		docText,
-		new Edits(StringEdit, [])
+		new Edits(StringEdit, []),
 	);
 
 	const opts: PromptOptions = {
@@ -67,7 +74,7 @@ function createTestPromptPieces(): PromptPieces {
 		currentFile: {
 			...DEFAULT_OPTIONS.currentFile,
 			maxTokens: 1000,
-		}
+		},
 	};
 
 	return new PromptPieces(
@@ -80,9 +87,13 @@ function createTestPromptPieces(): PromptPieces {
 		'<area_around_code_to_edit>\nline 2\nline 3\n</area_around_code_to_edit>', // areaAroundCodeToEdit
 		undefined, // langCtx - can be undefined
 		AggressivenessLevel.Medium,
-		new LintErrors(documentId, currentDocument, new TestLanguageDiagnosticsService()), // lintErrors
+		new LintErrors(
+			documentId,
+			currentDocument,
+			new TestLanguageDiagnosticsService(),
+		), // lintErrors
 		computeTokens,
-		opts
+		opts,
 	);
 }
 
@@ -93,19 +104,28 @@ describe('XtabNextCursorPredictor', () => {
 	let mockChatMLFetcher: MockChatMLFetcher;
 
 	beforeEach(() => {
-		const testingServiceCollection = createExtensionUnitTestingServices(disposables);
+		const testingServiceCollection =
+			createExtensionUnitTestingServices(disposables);
 
 		// Register our configurable mock
 		mockChatMLFetcher = new MockChatMLFetcher();
 		testingServiceCollection.set(IChatMLFetcher, mockChatMLFetcher);
 
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 		instaService = accessor.get(IInstantiationService);
 
 		// Enable the next cursor prediction feature
 		const configService = accessor.get(IConfigurationService);
-		configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, true);
-		configService.setConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName, 'test-model');
+		configService.setConfig(
+			ConfigKey.InlineEditsNextCursorPredictionEnabled,
+			true,
+		);
+		configService.setConfig(
+			ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName,
+			'test-model',
+		);
 	});
 
 	afterEach(() => {
@@ -114,23 +134,33 @@ describe('XtabNextCursorPredictor', () => {
 
 	describe('404 disabling behavior', () => {
 		it('should disable predictor after receiving NotFound response', async () => {
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
 			const tracer = createTestLogger();
 			const promptPieces = createTestPromptPieces();
 
 			// First verify predictor is enabled
-			expect(predictor.determineEnablement()).toBe(NextCursorLinePrediction.OnlyWithEdit);
+			expect(predictor.determineEnablement()).toBe(
+				NextCursorLinePrediction.OnlyWithEdit,
+			);
 
 			// Set up mock to return NotFound
 			mockChatMLFetcher.setNextResponse({
 				type: ChatFetchResponseType.NotFound,
 				reason: 'Model not found',
 				requestId: 'test-request-id',
-				serverRequestId: 'test-server-request-id'
+				serverRequestId: 'test-server-request-id',
 			});
 
 			// Make a prediction request - should fail with NotFound
-			const result = await predictor.predictNextCursorPosition(promptPieces, tracer, undefined, CancellationToken.None);
+			const result = await predictor.predictNextCursorPosition(
+				promptPieces,
+				tracer,
+				undefined,
+				CancellationToken.None,
+			);
 
 			expect(result.isError()).toBe(true);
 			if (result.isError()) {
@@ -142,7 +172,10 @@ describe('XtabNextCursorPredictor', () => {
 		});
 
 		it('should remain disabled for subsequent calls after 404', async () => {
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
 			const tracer = createTestLogger();
 			const promptPieces = createTestPromptPieces();
 
@@ -151,11 +184,16 @@ describe('XtabNextCursorPredictor', () => {
 				type: ChatFetchResponseType.NotFound,
 				reason: 'Model not found',
 				requestId: 'test-request-id',
-				serverRequestId: 'test-server-request-id'
+				serverRequestId: 'test-server-request-id',
 			});
 
 			// First call - triggers disabling
-			await predictor.predictNextCursorPosition(promptPieces, tracer, undefined, CancellationToken.None);
+			await predictor.predictNextCursorPosition(
+				promptPieces,
+				tracer,
+				undefined,
+				CancellationToken.None,
+			);
 
 			// Verify disabled
 			expect(predictor.determineEnablement()).toBeUndefined();
@@ -165,9 +203,14 @@ describe('XtabNextCursorPredictor', () => {
 				type: ChatFetchResponseType.Success,
 				requestId: 'test-request-id',
 				serverRequestId: 'test-server-request-id',
-				usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, prompt_tokens_details: { cached_tokens: 0 } },
+				usage: {
+					prompt_tokens: 0,
+					completion_tokens: 0,
+					total_tokens: 0,
+					prompt_tokens_details: { cached_tokens: 0 },
+				},
 				value: '42',
-				resolvedModel: 'test-model'
+				resolvedModel: 'test-model',
 			});
 
 			// determineEnablement should still return undefined (disabled)
@@ -175,23 +218,33 @@ describe('XtabNextCursorPredictor', () => {
 		});
 
 		it('should not disable predictor for other error types', async () => {
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
 			const tracer = createTestLogger();
 			const promptPieces = createTestPromptPieces();
 
 			// Verify predictor is enabled initially
-			expect(predictor.determineEnablement()).toBe(NextCursorLinePrediction.OnlyWithEdit);
+			expect(predictor.determineEnablement()).toBe(
+				NextCursorLinePrediction.OnlyWithEdit,
+			);
 
 			// Set up mock to return a different error type (e.g., NetworkError)
 			mockChatMLFetcher.setNextResponse({
 				type: ChatFetchResponseType.NetworkError,
 				reason: 'Network unavailable',
 				requestId: 'test-request-id',
-				serverRequestId: 'test-server-request-id'
+				serverRequestId: 'test-server-request-id',
 			});
 
 			// Make a prediction request - should fail but not disable
-			const result = await predictor.predictNextCursorPosition(promptPieces, tracer, undefined, CancellationToken.None);
+			const result = await predictor.predictNextCursorPosition(
+				promptPieces,
+				tracer,
+				undefined,
+				CancellationToken.None,
+			);
 
 			expect(result.isError()).toBe(true);
 			if (result.isError()) {
@@ -199,11 +252,16 @@ describe('XtabNextCursorPredictor', () => {
 			}
 
 			// Predictor should still be enabled after non-404 error
-			expect(predictor.determineEnablement()).toBe(NextCursorLinePrediction.OnlyWithEdit);
+			expect(predictor.determineEnablement()).toBe(
+				NextCursorLinePrediction.OnlyWithEdit,
+			);
 		});
 
 		it('should return success result when prediction succeeds', async () => {
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
 			const tracer = createTestLogger();
 			const promptPieces = createTestPromptPieces();
 
@@ -212,12 +270,22 @@ describe('XtabNextCursorPredictor', () => {
 				type: ChatFetchResponseType.Success,
 				requestId: 'test-request-id',
 				serverRequestId: 'test-server-request-id',
-				usage: { prompt_tokens: 100, completion_tokens: 10, total_tokens: 110, prompt_tokens_details: { cached_tokens: 0 } },
+				usage: {
+					prompt_tokens: 100,
+					completion_tokens: 10,
+					total_tokens: 110,
+					prompt_tokens_details: { cached_tokens: 0 },
+				},
 				value: '0',
-				resolvedModel: 'test-model'
+				resolvedModel: 'test-model',
 			});
 
-			const result = await predictor.predictNextCursorPosition(promptPieces, tracer, undefined, CancellationToken.None);
+			const result = await predictor.predictNextCursorPosition(
+				promptPieces,
+				tracer,
+				undefined,
+				CancellationToken.None,
+			);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
@@ -225,11 +293,16 @@ describe('XtabNextCursorPredictor', () => {
 			}
 
 			// Predictor should still be enabled
-			expect(predictor.determineEnablement()).toBe(NextCursorLinePrediction.OnlyWithEdit);
+			expect(predictor.determineEnablement()).toBe(
+				NextCursorLinePrediction.OnlyWithEdit,
+			);
 		});
 
 		it('should return cross-file result when prediction contains filepath:line', async () => {
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
 			const tracer = createTestLogger();
 			const promptPieces = createTestPromptPieces();
 
@@ -237,16 +310,30 @@ describe('XtabNextCursorPredictor', () => {
 				type: ChatFetchResponseType.Success,
 				requestId: 'test-request-id',
 				serverRequestId: 'test-server-request-id',
-				usage: { prompt_tokens: 100, completion_tokens: 10, total_tokens: 110, prompt_tokens_details: { cached_tokens: 0 } },
+				usage: {
+					prompt_tokens: 100,
+					completion_tokens: 10,
+					total_tokens: 110,
+					prompt_tokens_details: { cached_tokens: 0 },
+				},
 				value: 'src/utils/helpers.ts:42',
-				resolvedModel: 'test-model'
+				resolvedModel: 'test-model',
 			});
 
-			const result = await predictor.predictNextCursorPosition(promptPieces, tracer, undefined, CancellationToken.None);
+			const result = await predictor.predictNextCursorPosition(
+				promptPieces,
+				tracer,
+				undefined,
+				CancellationToken.None,
+			);
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.val).toEqual({ kind: 'differentFile', filePath: 'src/utils/helpers.ts', lineNumber: 42 });
+				expect(result.val).toEqual({
+					kind: 'differentFile',
+					filePath: 'src/utils/helpers.ts',
+					lineNumber: 42,
+				});
 			}
 		});
 	});
@@ -256,14 +343,20 @@ describe('XtabNextCursorPredictor', () => {
 		const keptRange = new OffsetRange(0, 100);
 
 		beforeEach(() => {
-			predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
+			predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
 		});
 
 		it('should parse a plain line number as sameFile', () => {
 			const result = predictor.parseResponse('42', keptRange);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.val).toEqual({ kind: 'sameFile', lineNumber: 42 });
+				expect(result.val).toEqual({
+					kind: 'sameFile',
+					lineNumber: 42,
+				});
 			}
 		});
 
@@ -276,18 +369,32 @@ describe('XtabNextCursorPredictor', () => {
 		});
 
 		it('should parse filepath:lineNumber as differentFile', () => {
-			const result = predictor.parseResponse('src/utils/helpers.ts:42', keptRange);
+			const result = predictor.parseResponse(
+				'src/utils/helpers.ts:42',
+				keptRange,
+			);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.val).toEqual({ kind: 'differentFile', filePath: 'src/utils/helpers.ts', lineNumber: 42 });
+				expect(result.val).toEqual({
+					kind: 'differentFile',
+					filePath: 'src/utils/helpers.ts',
+					lineNumber: 42,
+				});
 			}
 		});
 
 		it('should handle file paths with colons by splitting on last colon', () => {
-			const result = predictor.parseResponse('src/file:with:colons.ts:10', keptRange);
+			const result = predictor.parseResponse(
+				'src/file:with:colons.ts:10',
+				keptRange,
+			);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.val).toEqual({ kind: 'differentFile', filePath: 'src/file:with:colons.ts', lineNumber: 10 });
+				expect(result.val).toEqual({
+					kind: 'differentFile',
+					filePath: 'src/file:with:colons.ts',
+					lineNumber: 10,
+				});
 			}
 		});
 
@@ -308,10 +415,15 @@ describe('XtabNextCursorPredictor', () => {
 		});
 
 		it('should reject crossFileInvalidLineNumber for non-numeric line in filepath:line format', () => {
-			const result = predictor.parseResponse('src/file.ts:abc', keptRange);
+			const result = predictor.parseResponse(
+				'src/file.ts:abc',
+				keptRange,
+			);
 			expect(result.isError()).toBe(true);
 			if (result.isError()) {
-				expect(result.err.message).toContain('crossFileInvalidLineNumber');
+				expect(result.err.message).toContain(
+					'crossFileInvalidLineNumber',
+				);
 			}
 		});
 
@@ -327,7 +439,9 @@ describe('XtabNextCursorPredictor', () => {
 			const result = predictor.parseResponse('src/file.ts:-5', keptRange);
 			expect(result.isError()).toBe(true);
 			if (result.isError()) {
-				expect(result.err.message).toContain('crossFileInvalidLineNumber');
+				expect(result.err.message).toContain(
+					'crossFileInvalidLineNumber',
+				);
 			}
 		});
 
@@ -335,36 +449,62 @@ describe('XtabNextCursorPredictor', () => {
 			const result = predictor.parseResponse('src/file.ts:0', keptRange);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.val).toEqual({ kind: 'differentFile', filePath: 'src/file.ts', lineNumber: 0 });
+				expect(result.val).toEqual({
+					kind: 'differentFile',
+					filePath: 'src/file.ts',
+					lineNumber: 0,
+				});
 			}
 		});
 
 		it('should strip empty think tags before a same-file line number', () => {
-			const result = predictor.parseResponse('<think>\n\n</think>\n\n10', keptRange);
+			const result = predictor.parseResponse(
+				'<think>\n\n</think>\n\n10',
+				keptRange,
+			);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.val).toEqual({ kind: 'sameFile', lineNumber: 10 });
+				expect(result.val).toEqual({
+					kind: 'sameFile',
+					lineNumber: 10,
+				});
 			}
 		});
 
 		it('should strip think tags with reasoning content before a same-file line number', () => {
-			const result = predictor.parseResponse('<think>some reasoning\nacross lines</think>\n42', keptRange);
+			const result = predictor.parseResponse(
+				'<think>some reasoning\nacross lines</think>\n42',
+				keptRange,
+			);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.val).toEqual({ kind: 'sameFile', lineNumber: 42 });
+				expect(result.val).toEqual({
+					kind: 'sameFile',
+					lineNumber: 42,
+				});
 			}
 		});
 
 		it('should strip think tags before a cross-file path', () => {
-			const result = predictor.parseResponse('<think>\n\n</think>\nsrc/utils/helpers.ts:42', keptRange);
+			const result = predictor.parseResponse(
+				'<think>\n\n</think>\nsrc/utils/helpers.ts:42',
+				keptRange,
+			);
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.val).toEqual({ kind: 'differentFile', filePath: 'src/utils/helpers.ts', lineNumber: 42 });
+				expect(result.val).toEqual({
+					kind: 'differentFile',
+					filePath: 'src/utils/helpers.ts',
+					lineNumber: 42,
+				});
 			}
 		});
 
 		it('should not strip an unterminated leading think tag and should fail to parse', () => {
-			const result = predictor.parseResponse('<think>truncated reasoning never closed', keptRange);
+			const result = predictor.parseResponse(
+				'<think>truncated reasoning never closed',
+				keptRange,
+			);
 			expect(result.isError()).toBe(true);
 			if (result.isError()) {
 				expect(result.err.message).toContain('gotNaN');
@@ -374,29 +514,53 @@ describe('XtabNextCursorPredictor', () => {
 
 	describe('supportsNextCursorLinePrediction', () => {
 		it('should disable prediction when supportsNextCursorLinePrediction is false', () => {
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
 			expect(predictor.determineEnablement(false)).toBeUndefined();
 		});
 
 		it('should respect global experiment flag when supportsNextCursorLinePrediction is true', () => {
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
-			expect(predictor.determineEnablement(true)).toBe(NextCursorLinePrediction.OnlyWithEdit);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
+			expect(predictor.determineEnablement(true)).toBe(
+				NextCursorLinePrediction.OnlyWithEdit,
+			);
 		});
 
 		it('should respect global experiment flag when supportsNextCursorLinePrediction is undefined', () => {
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
-			expect(predictor.determineEnablement(undefined)).toBe(NextCursorLinePrediction.OnlyWithEdit);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
+			expect(predictor.determineEnablement(undefined)).toBe(
+				NextCursorLinePrediction.OnlyWithEdit,
+			);
 		});
 
 		it('should respect global experiment flag when supportsNextCursorLinePrediction is omitted', () => {
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
-			expect(predictor.determineEnablement()).toBe(NextCursorLinePrediction.OnlyWithEdit);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
+			expect(predictor.determineEnablement()).toBe(
+				NextCursorLinePrediction.OnlyWithEdit,
+			);
 		});
 
 		it('should return undefined when global flag is off even if supportsNextCursorLinePrediction is true', () => {
 			const configService = accessor.get(IConfigurationService);
-			configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, false);
-			const predictor = instaService.createInstance(XtabNextCursorPredictor, computeTokens);
+			configService.setConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				false,
+			);
+			const predictor = instaService.createInstance(
+				XtabNextCursorPredictor,
+				computeTokens,
+			);
 			expect(predictor.determineEnablement(true)).toBeUndefined();
 		});
 	});

@@ -13,7 +13,12 @@ import { StringEdit } from '../../../../../util/vs/editor/common/core/edits/stri
 import { OffsetRange } from '../../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { getStructure } from '../../../../context/node/resolvers/selectionContextHelpers';
 import { getAdjustedSelection } from '../adjustSelection';
-import { IDocumentSummarizationItem, ISummarizedDocumentSettings, ProjectedDocument, summarizeDocumentsSync } from './summarizeDocument';
+import {
+	IDocumentSummarizationItem,
+	ISummarizedDocumentSettings,
+	ProjectedDocument,
+	summarizeDocumentsSync,
+} from './summarizeDocument';
 
 export function getCharLimit(tokensBudget: number): number {
 	return tokensBudget * 4; // roughly 4 chars per token
@@ -21,18 +26,36 @@ export function getCharLimit(tokensBudget: number): number {
 
 /**
  * The selection is first adjusted {@link getAdjustedSelection} and then the document is summarized using the adjusted selection.
-*/
+ */
 export async function adjustSelectionAndSummarizeDocument(
 	parserService: IParserService,
 	document: TextDocumentSnapshot,
 	formattingOptions: vscode.FormattingOptions | undefined,
 	selection: Range,
 	tokensBudget: number,
-	settings?: ISummarizedDocumentSettings
-): Promise<{ document: ProjectedDocument; selection: OffsetRange; adjustedSelection: OffsetRange }> {
-	const structure = await getStructure(parserService, document, formattingOptions);
-	const result = getAdjustedSelection(structure, new VsCodeTextDocument(document), selection);
-	const doc = summarizeDocumentSync(getCharLimit(tokensBudget), document, selection, structure, settings);
+	settings?: ISummarizedDocumentSettings,
+): Promise<{
+	document: ProjectedDocument;
+	selection: OffsetRange;
+	adjustedSelection: OffsetRange;
+}> {
+	const structure = await getStructure(
+		parserService,
+		document,
+		formattingOptions,
+	);
+	const result = getAdjustedSelection(
+		structure,
+		new VsCodeTextDocument(document),
+		selection,
+	);
+	const doc = summarizeDocumentSync(
+		getCharLimit(tokensBudget),
+		document,
+		selection,
+		structure,
+		settings,
+	);
 	return {
 		document: doc,
 		adjustedSelection: doc.projectOffsetRange(result.adjusted),
@@ -41,33 +64,43 @@ export async function adjustSelectionAndSummarizeDocument(
 }
 
 export class NotebookDocumentSummarizer {
-	constructor(
-	) { }
+	constructor() {}
 
 	async summarizeDocument(
 		document: NotebookDocumentSnapshot,
 		_formattingOptions: vscode.FormattingOptions | undefined,
 		_selection: Range | undefined,
 		_tokensBudget: number,
-		_settings?: ISummarizedDocumentSettings
+		_settings?: ISummarizedDocumentSettings,
 	): Promise<ProjectedDocument> {
-		return new ProjectedDocument(document.getText(), StringEdit.empty, document.languageId);
+		return new ProjectedDocument(
+			document.getText(),
+			StringEdit.empty,
+			document.languageId,
+		);
 	}
 }
 
 export class DocumentSummarizer {
 	constructor(
-		@IParserService private readonly _parserService: IParserService
-	) { }
+		@IParserService private readonly _parserService: IParserService,
+	) {}
 
 	summarizeDocument(
 		document: TextDocumentSnapshot,
 		formattingOptions: vscode.FormattingOptions | undefined,
 		selection: Range | undefined,
 		tokensBudget: number,
-		settings?: ISummarizedDocumentSettings
+		settings?: ISummarizedDocumentSettings,
 	): Promise<ProjectedDocument> {
-		return summarizeDocument(this._parserService, document, formattingOptions, selection, tokensBudget, settings);
+		return summarizeDocument(
+			this._parserService,
+			document,
+			formattingOptions,
+			selection,
+			tokensBudget,
+			settings,
+		);
 	}
 }
 
@@ -77,10 +110,20 @@ export async function summarizeDocument(
 	formattingOptions: vscode.FormattingOptions | undefined,
 	selection: Range | undefined,
 	tokensBudget: number,
-	settings?: ISummarizedDocumentSettings
+	settings?: ISummarizedDocumentSettings,
 ): Promise<ProjectedDocument> {
-	const structure = await getStructure(parserService, document, formattingOptions);
-	return summarizeDocumentSync(getCharLimit(tokensBudget), document, selection, structure, settings);
+	const structure = await getStructure(
+		parserService,
+		document,
+		formattingOptions,
+	);
+	return summarizeDocumentSync(
+		getCharLimit(tokensBudget),
+		document,
+		selection,
+		structure,
+		settings,
+	);
 }
 
 export function summarizeDocumentSync(
@@ -88,9 +131,11 @@ export function summarizeDocumentSync(
 	document: TextDocumentSnapshot,
 	selection: Range | undefined,
 	overlayNodeRoot: OverlayNode,
-	settings: ISummarizedDocumentSettings = {}
+	settings: ISummarizedDocumentSettings = {},
 ): ProjectedDocument {
-	const result = summarizeDocumentsSync(charLimit, settings, [{ document, overlayNodeRoot, selection }]);
+	const result = summarizeDocumentsSync(charLimit, settings, [
+		{ document, overlayNodeRoot, selection },
+	]);
 	return result[0];
 }
 
@@ -107,19 +152,24 @@ export async function summarizeDocuments(
 	parserService: IParserService,
 	documentData: SummarizeDocumentsItem[],
 	tokensBudget: number,
-	settings?: ISummarizedDocumentSettings
+	settings?: ISummarizedDocumentSettings,
 ): Promise<ProjectedDocument[]> {
-
 	const items: IDocumentSummarizationItem[] = [];
 
-	await Promise.all(documentData.map(async (data) => {
-		const overlayNodeRoot = await getStructure(parserService, data.document, data.formattingOptions);
-		items.push({
-			document: data.document,
-			selection: data.selection,
-			overlayNodeRoot
-		});
-	}));
+	await Promise.all(
+		documentData.map(async (data) => {
+			const overlayNodeRoot = await getStructure(
+				parserService,
+				data.document,
+				data.formattingOptions,
+			);
+			items.push({
+				document: data.document,
+				selection: data.selection,
+				overlayNodeRoot,
+			});
+		}),
+	);
 
 	return summarizeDocumentsSync(tokensBudget, settings ?? {}, items);
 }

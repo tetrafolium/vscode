@@ -3,34 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDisposable } from '../../../base/common/lifecycle.js';
-import { IObservable } from '../../../base/common/observable.js';
-import { URI } from '../../../base/common/uri.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { ResourceRequestParams } from './state/protocol/commands.js';
+import { IDisposable } from "../../../base/common/lifecycle.js";
+import { IObservable } from "../../../base/common/observable.js";
+import { URI } from "../../../base/common/uri.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import { ResourceRequestParams } from "./state/protocol/commands.js";
 
 /** Configuration key for persisted per-host filesystem grants. */
-export const AgentHostLocalFilePermissionsSettingId = 'chat.agentHost.localFilePermissions';
+export const AgentHostLocalFilePermissionsSettingId =
+	"chat.agentHost.localFilePermissions";
 
 /** Persisted access mode for a granted URI. */
 export const enum AgentHostAccessMode {
-	Read = 'r',
-	ReadWrite = 'rw',
+	Read = "r",
+	ReadWrite = "rw",
 }
 
 /**
  * Persisted shape of {@link AgentHostLocalFilePermissionsSettingId}:
  * `{ [normalizedAddress]: { [uriString]: 'r' | 'rw' } }`.
  */
-export type AgentHostPermissionsSetting = Record<string, Record<string, AgentHostAccessMode>>;
+export type AgentHostPermissionsSetting = Record<
+	string,
+	Record<string, AgentHostAccessMode>
+>;
 
 /**
  * Capability a request needs from the user. The protocol-level `read` and
  * `write` flags are split into one or two of these requests.
  */
 export const enum AgentHostPermissionMode {
-	Read = 'read',
-	Write = 'write',
+	Read = "read",
+	Write = "write",
 }
 
 /** A single pending permission request awaiting user input. */
@@ -50,7 +54,8 @@ export interface IPendingResourceRequest {
 	deny(): void;
 }
 
-export const IAgentHostPermissionService = createDecorator<IAgentHostPermissionService>('agentHostPermissionService');
+export const IAgentHostPermissionService =
+	createDecorator<IAgentHostPermissionService>("agentHostPermissionService");
 
 export interface IAgentHostPermissionService {
 	readonly _serviceBrand: undefined;
@@ -62,7 +67,11 @@ export interface IAgentHostPermissionService {
 	 * the file service (realpath) before comparison so symlinks and `..`
 	 * traversal cannot bypass a grant.
 	 */
-	check(address: string, uri: URI, mode: AgentHostPermissionMode): Promise<boolean>;
+	check(
+		address: string,
+		uri: URI,
+		mode: AgentHostPermissionMode,
+	): Promise<boolean>;
 
 	/**
 	 * Handle an inbound `resourceRequest` from a host. Resolves once access

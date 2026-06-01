@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	/**
 	 * A progress update during an {@link LanguageModelTool.invoke} call.
 	 */
@@ -20,6 +19,10 @@ declare module 'vscode' {
 	}
 
 	export interface LanguageModelTool<T> {
-		invoke(options: LanguageModelToolInvocationOptions<T>, token: CancellationToken, progress: Progress<ToolProgressStep>): ProviderResult<LanguageModelToolResult>;
+		invoke(
+			options: LanguageModelToolInvocationOptions<T>,
+			token: CancellationToken,
+			progress: Progress<ToolProgressStep>,
+		): ProviderResult<LanguageModelToolResult>;
 	}
 }

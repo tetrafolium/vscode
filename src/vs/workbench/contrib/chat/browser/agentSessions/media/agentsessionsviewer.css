@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 .agent-sessions-viewer {
-
 	flex: 1 1 auto;
 	height: 100%;
 	min-height: 0;
@@ -54,7 +53,9 @@
 		color: unset;
 	}
 
-	.monaco-list:not(:focus) .monaco-list-row.selected .agent-session-details-row {
+	.monaco-list:not(:focus)
+		.monaco-list-row.selected
+		.agent-session-details-row {
 		color: var(--vscode-descriptionForeground);
 	}
 
@@ -88,7 +89,6 @@
 	/* On hover or keyboard focus: show toolbar, hide pinned indicator */
 	.monaco-list-row:hover,
 	.monaco-list-row.focused:not(.selected) {
-
 		.agent-session-pinned-indicator {
 			display: none;
 		}
@@ -222,13 +222,12 @@
 					display: inline;
 
 					&::before {
-						content: '\00B7';
+						content: "\00B7";
 					}
 				}
 			}
 
 			.agent-session-badge {
-
 				p {
 					overflow: hidden;
 				}
@@ -253,7 +252,7 @@
 		}
 
 		.agent-session-description.has-separator::before {
-			content: '\00B7';
+			content: "\00B7";
 			margin-right: 4px;
 		}
 
@@ -268,14 +267,13 @@
 			white-space: nowrap;
 
 			&.has-separator::before {
-				content: '\00B7';
+				content: "\00B7";
 				margin-right: 4px;
 			}
 
 			&.hidden {
 				display: none;
 			}
-
 		}
 		.agent-session-approval-row {
 			display: none;
@@ -284,7 +282,8 @@
 			margin-top: 4px;
 			padding: 4px 8px;
 			box-sizing: border-box;
-			border: 1px solid var(--vscode-contrastBorder, var(--vscode-widget-border, transparent));
+			border: 1px solid
+				var(--vscode-contrastBorder, var(--vscode-widget-border, transparent));
 			border-radius: 4px;
 			background-color: var(--vscode-editor-background);
 			color: var(--vscode-editor-foreground);
@@ -379,7 +378,9 @@
 	}
 
 	.monaco-list-row:hover .agent-session-section .agent-session-section-toolbar,
-	.monaco-list-row.focused:not(.selected) .agent-session-section .agent-session-section-toolbar {
+	.monaco-list-row.focused:not(.selected)
+		.agent-session-section
+		.agent-session-section-toolbar {
 		width: 22px;
 
 		.monaco-toolbar {
@@ -387,12 +388,16 @@
 		}
 	}
 
-	.monaco-list:focus .monaco-list-row.focused.selected .agent-session-section-label,
+	.monaco-list:focus
+		.monaco-list-row.focused.selected
+		.agent-session-section-label,
 	.monaco-list:focus .monaco-list-row.selected .agent-session-section-label {
 		color: var(--vscode-list-activeSelectionForeground);
 	}
 
-	.monaco-list:not(:focus) .monaco-list-row.selected .agent-session-section-label {
+	.monaco-list:not(:focus)
+		.monaco-list-row.selected
+		.agent-session-section-label {
 		color: var(--vscode-list-inactiveSelectionForeground);
 	}
 
@@ -420,7 +425,8 @@
 }
 
 @keyframes agent-session-needs-input-pulse {
-	0%, 100% {
+	0%,
+	100% {
 		opacity: 1;
 	}
 	50% {

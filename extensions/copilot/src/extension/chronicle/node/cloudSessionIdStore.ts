@@ -21,7 +21,6 @@ const FILE_NAME = 'cloudSessions.json';
  * Reads are cached in an in-memory Map for fast lookup.
  */
 export class CloudSessionIdStore {
-
 	private readonly _filePath: string;
 	private readonly _map = new Map<string, CloudSessionIds>();
 	private _loaded = false;
@@ -45,7 +44,11 @@ export class CloudSessionIdStore {
 			const raw = await fsp.readFile(this._filePath, 'utf-8');
 			const parsed = JSON.parse(raw) as Record<string, CloudSessionIds>;
 			for (const [key, value] of Object.entries(parsed)) {
-				if (value && typeof value.cloudSessionId === 'string' && typeof value.cloudTaskId === 'string') {
+				if (
+					value &&
+					typeof value.cloudSessionId === 'string' &&
+					typeof value.cloudTaskId === 'string'
+				) {
 					this._map.set(key, value);
 				}
 			}
@@ -93,7 +96,13 @@ export class CloudSessionIdStore {
 	 * entries that aren't in the cloud list, since those may be from other
 	 * windows that haven't synced yet).
 	 */
-	mergeFromCloud(entries: Array<{ id: string; task_id?: string; agent_task_id?: string }>): void {
+	mergeFromCloud(
+		entries: Array<{
+			id: string;
+			task_id?: string;
+			agent_task_id?: string;
+		}>,
+	): void {
 		let changed = false;
 		for (const entry of entries) {
 			if (!entry.agent_task_id) {
@@ -109,7 +118,10 @@ export class CloudSessionIdStore {
 					cloudTaskId: entry.task_id ?? entry.agent_task_id,
 				});
 				changed = true;
-			} else if (entry.task_id && existing.cloudTaskId !== entry.task_id) {
+			} else if (
+				entry.task_id &&
+				existing.cloudTaskId !== entry.task_id
+			) {
 				// Refresh stale entries that were reconciled before the cloud
 				// listing exposed `task_id` — without this, deletion (which
 				// targets `/agents/tasks/{cloudTaskId}`) would keep sending
@@ -138,7 +150,9 @@ export class CloudSessionIdStore {
 		this._persistScheduled = true;
 		queueMicrotask(() => {
 			this._persistScheduled = false;
-			this._persist().catch(() => { /* best effort */ });
+			this._persist().catch(() => {
+				/* best effort */
+			});
 		});
 	}
 

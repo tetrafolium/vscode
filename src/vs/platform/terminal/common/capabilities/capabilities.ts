@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import type { IPromptInputModel, ISerializedPromptInputModel } from './commandDetection/promptInputModel.js';
-import { ICurrentPartialCommand } from './commandDetection/terminalCommand.js';
-import { ITerminalOutputMatch, ITerminalOutputMatcher } from '../terminal.js';
-import { ReplayEntry } from '../terminalProcess.js';
-import type { IMarker } from '@xterm/headless';
+import { Event } from "../../../../base/common/event.js";
+import type {
+	IPromptInputModel,
+	ISerializedPromptInputModel,
+} from "./commandDetection/promptInputModel.js";
+import { ICurrentPartialCommand } from "./commandDetection/terminalCommand.js";
+import { ITerminalOutputMatch, ITerminalOutputMatcher } from "../terminal.js";
+import { ReplayEntry } from "../terminalProcess.js";
+import type { IMarker } from "@xterm/headless";
 
 /**
  * Primarily driven by the shell integration feature, a terminal capability is the mechanism for
@@ -70,7 +73,7 @@ export interface ITerminalCapabilityStore {
 
 	/**
 	 * Fired when a capability is removed.
-	*/
+	 */
 	readonly onDidRemoveCapability: Event<AnyTerminalCapabilityChangeEvent>;
 
 	/**
@@ -92,14 +95,18 @@ export interface ITerminalCapabilityStore {
 	 * {@link onDidAddCapability} when the generic type needs to be retained.
 	 * @param type The capability type.
 	 */
-	createOnDidAddCapabilityOfTypeEvent<T extends TerminalCapability>(type: T): Event<ITerminalCapabilityImplMap[T]>;
+	createOnDidAddCapabilityOfTypeEvent<T extends TerminalCapability>(
+		type: T,
+	): Event<ITerminalCapabilityImplMap[T]>;
 
 	/**
 	 * Create an event that's fired when a specific capability type is removed. Use this over
 	 * {@link onDidRemoveCapability} when the generic type needs to be retained.
 	 * @param type The capability type.
 	 */
-	createOnDidRemoveCapabilityOfTypeEvent<T extends TerminalCapability>(type: T): Event<ITerminalCapabilityImplMap[T]>;
+	createOnDidRemoveCapabilityOfTypeEvent<T extends TerminalCapability>(
+		type: T,
+	): Event<ITerminalCapabilityImplMap[T]>;
 
 	/**
 	 * Gets whether the capability exists in the store.
@@ -109,7 +116,9 @@ export interface ITerminalCapabilityStore {
 	/**
 	 * Gets the implementation of a capability if it has been added to the store.
 	 */
-	get<T extends TerminalCapability>(capability: T): ITerminalCapabilityImplMap[T] | undefined;
+	get<T extends TerminalCapability>(
+		capability: T,
+	): ITerminalCapabilityImplMap[T] | undefined;
 }
 
 export interface TerminalCapabilityChangeEvent<T extends TerminalCapability> {
@@ -118,7 +127,7 @@ export interface TerminalCapabilityChangeEvent<T extends TerminalCapability> {
 }
 
 export type AnyTerminalCapabilityChangeEvent = {
-	[K in TerminalCapability]: TerminalCapabilityChangeEvent<K>
+	[K in TerminalCapability]: TerminalCapabilityChangeEvent<K>;
 }[TerminalCapability];
 
 /**
@@ -153,10 +162,21 @@ export interface IShellEnvDetectionCapability {
 	readonly type: TerminalCapability.ShellEnvDetection;
 	readonly onDidChangeEnv: Event<TerminalShellIntegrationEnvironment>;
 	get env(): TerminalShellIntegrationEnvironment;
-	setEnvironment(envs: { [key: string]: string | undefined } | undefined, isTrusted: boolean): void;
+	setEnvironment(
+		envs: { [key: string]: string | undefined } | undefined,
+		isTrusted: boolean,
+	): void;
 	startEnvironmentSingleVar(clear: boolean, isTrusted: boolean): void;
-	setEnvironmentSingleVar(key: string, value: string | undefined, isTrusted: boolean): void;
-	deleteEnvironmentSingleVar(key: string, value: string | undefined, isTrusted: boolean): void;
+	setEnvironmentSingleVar(
+		key: string,
+		value: string | undefined,
+		isTrusted: boolean,
+	): void;
+	deleteEnvironmentSingleVar(
+		key: string,
+		value: string | undefined,
+		isTrusted: boolean,
+	): void;
 	endEnvironmentSingleVar(isTrusted: boolean): void;
 }
 
@@ -194,8 +214,8 @@ export interface TerminalShellIntegration {
 }
 
 export const enum CommandInvalidationReason {
-	Windows = 'windows',
-	NoProblemsReported = 'noProblemsReported'
+	Windows = "windows",
+	NoProblemsReported = "noProblemsReported",
 }
 
 export interface ICommandInvalidationRequest {
@@ -217,7 +237,7 @@ export interface ICommandDetectionCapability {
 	/** The command currently being executed, otherwise undefined. */
 	readonly executingCommand: string | undefined;
 	readonly executingCommandObject: ITerminalCommand | undefined;
-	readonly executingCommandConfidence: 'low' | 'medium' | 'high' | undefined;
+	readonly executingCommandConfidence: "low" | "medium" | "high" | undefined;
 	/** The current cwd at the cursor's position. */
 	readonly cwd: string | undefined;
 	readonly hasRichCommandDetection: boolean;
@@ -238,7 +258,9 @@ export interface ICommandDetectionCapability {
 	 * case the terminal's initial cwd should be used.
 	 */
 	getCwdForLine(line: number): string | undefined;
-	getCommandForLine(line: number): ITerminalCommand | ICurrentPartialCommand | undefined;
+	getCommandForLine(
+		line: number,
+	): ITerminalCommand | ICurrentPartialCommand | undefined;
 	handlePromptStart(options?: IHandleCommandOptions): void;
 	handleContinuationStart(): void;
 	handleContinuationEnd(): void;
@@ -246,7 +268,10 @@ export interface ICommandDetectionCapability {
 	handleRightPromptEnd(): void;
 	handleCommandStart(options?: IHandleCommandOptions): void;
 	handleCommandExecuted(options?: IHandleCommandOptions): void;
-	handleCommandFinished(exitCode?: number, options?: IHandleCommandOptions): void;
+	handleCommandFinished(
+		exitCode?: number,
+		options?: IHandleCommandOptions,
+	): void;
 	setHasRichCommandDetection(value: boolean): void;
 	/**
 	 * Set the command line explicitly.
@@ -299,7 +324,7 @@ export interface IPartialCommandDetectionCapability {
 interface IBaseTerminalCommand {
 	// Mandatory
 	command: string;
-	commandLineConfidence: 'low' | 'medium' | 'high';
+	commandLineConfidence: "low" | "medium" | "high";
 	isTrusted: boolean;
 	timestamp: number;
 	duration: number;
@@ -325,7 +350,9 @@ export interface ITerminalCommand extends IBaseTerminalCommand {
 
 	extractCommandLine(): string;
 	getOutput(): string | undefined;
-	getOutputMatch(outputMatcher: ITerminalOutputMatcher): ITerminalOutputMatch | undefined;
+	getOutputMatch(
+		outputMatcher: ITerminalOutputMatcher,
+	): ITerminalOutputMatch | undefined;
 	hasOutput(): boolean;
 	getPromptRowCount(): number;
 	getCommandRowCount(): number;

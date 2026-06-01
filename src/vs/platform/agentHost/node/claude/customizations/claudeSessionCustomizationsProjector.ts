@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ISyncedCustomization } from '../../../common/agentPluginManager.js';
-import type { Customization } from '../../../common/state/protocol/state.js';
+import type { ISyncedCustomization } from "../../../common/agentPluginManager.js";
+import type { Customization } from "../../../common/state/protocol/state.js";
 
 /**
  * Project the union of (a) client-pushed customizations and
@@ -27,7 +27,8 @@ export function projectSessionCustomizations(
 	const result: Customization[] = [];
 
 	for (const item of synced) {
-		const enabled = enablement.get(item.customization.id) ?? item.customization.enabled;
+		const enabled =
+			enablement.get(item.customization.id) ?? item.customization.enabled;
 		result.push({ ...item.customization, enabled });
 	}
 
@@ -37,4 +38,3 @@ export function projectSessionCustomizations(
 
 	return result;
 }
-

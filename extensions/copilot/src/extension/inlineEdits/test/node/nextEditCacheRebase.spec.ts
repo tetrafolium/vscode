@@ -13,7 +13,10 @@ import { LogServiceImpl } from '../../../../platform/log/common/logService';
 import { NullExperimentationService } from '../../../../platform/telemetry/common/nullExperimentationService';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { generateUuid } from '../../../../util/vs/base/common/uuid';
-import { StringEdit, StringReplacement } from '../../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { StringText } from '../../../../util/vs/editor/common/core/text/abstractText';
 import { NextEditCache } from '../../node/nextEditCache';
@@ -32,7 +35,6 @@ import { NextEditFetchRequest } from '../../node/nextEditProvider';
  * from request #18 (whose prediction matches the user's typing).
  */
 describe('NextEditCache rebase — Fibonacci scenario', () => {
-
 	let configService: InMemoryConfigurationService;
 	let obsWorkspace: MutableObservableWorkspace;
 	let logService: LogServiceImpl;
@@ -42,11 +44,11 @@ describe('NextEditCache rebase — Fibonacci scenario', () => {
 
 	// Common prefix of all document states — everything before the class declaration
 	const docPrefix =
-		'import * as vscode from \'vscode\';\n' +
-		'import { ASTNodeWithOffset } from \'./nodeTypes\';\n' +
-		'import { NodeTypesIndex } from \'./nodeTypesIndex\';\n' +
-		'import { Result } from \'./util/common/result\';\n' +
-		'import { LRUCache } from \'./util/vs/base/common/map\';\n' +
+		"import * as vscode from 'vscode';\n" +
+		"import { ASTNodeWithOffset } from './nodeTypes';\n" +
+		"import { NodeTypesIndex } from './nodeTypesIndex';\n" +
+		"import { Result } from './util/common/result';\n" +
+		"import { LRUCache } from './util/vs/base/common/map';\n" +
 		'\n' +
 		'export class NodeTypesDefinitionProvider implements vscode.DefinitionProvider {\n' +
 		'\n' +
@@ -112,30 +114,51 @@ describe('NextEditCache rebase — Fibonacci scenario', () => {
 		'\n';
 
 	// Document states at different points in time — offsets derived from docPrefix.length
-	const classStart = docPrefix.length;                                       // where "class " begins
-	const docAtRequest18 = docPrefix + 'class Fibonacci ';                     // "class Fibonacci " ends at classStart + 16
-	const classEndAtRequest18 = classStart + 'class Fibonacci '.length;        // = classStart + 16
-	const currentDoc = docPrefix + 'class Fibonacci {\n\t';                    // "class Fibonacci {\n\t" ends at classStart + 19
-	const cursorOffset = classStart + 'class Fibonacci {\n\t'.length;          // = classStart + 19
+	const classStart = docPrefix.length; // where "class " begins
+	const docAtRequest18 = docPrefix + 'class Fibonacci '; // "class Fibonacci " ends at classStart + 16
+	const classEndAtRequest18 = classStart + 'class Fibonacci '.length; // = classStart + 16
+	const currentDoc = docPrefix + 'class Fibonacci {\n\t'; // "class Fibonacci {\n\t" ends at classStart + 19
+	const cursorOffset = classStart + 'class Fibonacci {\n\t'.length; // = classStart + 19
 
 	function makeSource(): NextEditFetchRequest {
-		const logContext = new InlineEditRequestLogContext('test', 0, undefined);
-		return new NextEditFetchRequest(generateUuid(), logContext, undefined, false);
+		const logContext = new InlineEditRequestLogContext(
+			'test',
+			0,
+			undefined,
+		);
+		return new NextEditFetchRequest(
+			generateUuid(),
+			logContext,
+			undefined,
+			false,
+		);
 	}
 
 	beforeEach(async () => {
-		configService = new InMemoryConfigurationService(new DefaultsOnlyConfigurationService());
-		await configService.setConfig(ConfigKey.TeamInternal.InlineEditsReverseAgreement, true);
+		configService = new InMemoryConfigurationService(
+			new DefaultsOnlyConfigurationService(),
+		);
+		await configService.setConfig(
+			ConfigKey.TeamInternal.InlineEditsReverseAgreement,
+			true,
+		);
 		obsWorkspace = new MutableObservableWorkspace();
 		logService = new LogServiceImpl([]);
 		expService = new NullExperimentationService();
 
-		docId = DocumentId.create(URI.file('/test/nodeTypesDefinitionProvider.ts').toString());
+		docId = DocumentId.create(
+			URI.file('/test/nodeTypesDefinitionProvider.ts').toString(),
+		);
 		// Initialize workspace doc with the CURRENT document state
 		// (so checkEditConsistency(documentBeforeEdit + userEditSince = currentDoc) passes)
 		obsWorkspace.addDocument({ id: docId, initialValue: currentDoc });
 
-		cache = new NextEditCache(obsWorkspace, logService, configService, expService);
+		cache = new NextEditCache(
+			obsWorkspace,
+			logService,
+			configService,
+			expService,
+		);
 	});
 
 	it('rebases cached edit when model predicted class Fibonacci { and user typed the same', () => {
@@ -151,19 +174,41 @@ describe('NextEditCache rebase — Fibonacci scenario', () => {
 			docId,
 			new StringText(docAtRequest18),
 			new OffsetRange(classStart, classEndAtRequest18), // editWindow
-			new StringReplacement(new OffsetRange(classStart, classEndAtRequest18), 'class Fibonacci {'),
+			new StringReplacement(
+				new OffsetRange(classStart, classEndAtRequest18),
+				'class Fibonacci {',
+			),
 			0,
 			[
-				new StringReplacement(new OffsetRange(classStart, classEndAtRequest18), 'class Fibonacci {'),
-				new StringReplacement(OffsetRange.emptyAt(classStart + 'class Fibonacci {'.length), '\n\tprivate memo: Map<number, number>;\n\n\tconstructor() {\n\t\tthis.memo = new Map();\n\t}\n\n\tcalc(n: number): number {\n\t\tif (n <= 1) {\n\t\t\treturn n;\n\t\t}\n\t\tif (this.memo.has(n)) {\n\t\t\treturn this.memo.get(n)!;\n\t\t}\n\t\tconst result = this.calc(n - 1) + this.calc(n - 2);\n\t\tthis.memo.set(n, result);\n\t\treturn result;\n\t}\n}'),
+				new StringReplacement(
+					new OffsetRange(classStart, classEndAtRequest18),
+					'class Fibonacci {',
+				),
+				new StringReplacement(
+					OffsetRange.emptyAt(
+						classStart + 'class Fibonacci {'.length,
+					),
+					'\n\tprivate memo: Map<number, number>;\n\n\tconstructor() {\n\t\tthis.memo = new Map();\n\t}\n\n\tcalc(n: number): number {\n\t\tif (n <= 1) {\n\t\t\treturn n;\n\t\t}\n\t\tif (this.memo.has(n)) {\n\t\t\treturn this.memo.get(n)!;\n\t\t}\n\t\tconst result = this.calc(n - 1) + this.calc(n - 2);\n\t\tthis.memo.set(n, result);\n\t\treturn result;\n\t}\n}',
+				),
 			],
-			StringEdit.single(new StringReplacement(new OffsetRange(classStart, classEndAtRequest18), 'class Fibonacci {\n\t')),
+			StringEdit.single(
+				new StringReplacement(
+					new OffsetRange(classStart, classEndAtRequest18),
+					'class Fibonacci {\n\t',
+				),
+			),
 			makeSource(),
 			{ isFromCursorJump: false, cursorOffset: classEndAtRequest18 },
 		);
 
-		assert(cachedEdit !== undefined, 'setKthNextEdit should return the cached edit');
-		assert(cachedEdit.userEditSince !== undefined, 'userEditSince should be set');
+		assert(
+			cachedEdit !== undefined,
+			'setKthNextEdit should return the cached edit',
+		);
+		assert(
+			cachedEdit.userEditSince !== undefined,
+			'userEditSince should be set',
+		);
 
 		const rebaseResult = cache.tryRebaseCacheEntry(
 			cachedEdit,
@@ -172,6 +217,9 @@ describe('NextEditCache rebase — Fibonacci scenario', () => {
 		);
 
 		assert(rebaseResult.edit !== undefined, 'should rebase successfully');
-		assert(rebaseResult.edit.rebasedEdit !== undefined, 'should have a rebased edit for the class body');
+		assert(
+			rebaseResult.edit.rebasedEdit !== undefined,
+			'should have a rebased edit for the class body',
+		);
 	});
 });

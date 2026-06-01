@@ -6,4 +6,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 export { CancellationError } from '../../errors';
-export { CancellationToken, CancellationTokenSource, cancelOnDispose } from '../../cancellation';
+export {
+	CancellationToken,
+	CancellationTokenSource,
+	cancelOnDispose,
+} from '../../cancellation';

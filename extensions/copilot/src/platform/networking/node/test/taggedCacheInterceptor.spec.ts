@@ -13,13 +13,19 @@ vi.mock('undici', () => {
 	return { ...stub, default: stub };
 });
 
-type FakeDispatch = (opts: { headers?: Record<string, string> }, handler: undici.Dispatcher.DispatchHandler) => boolean;
+type FakeDispatch = (
+	opts: { headers?: Record<string, string> },
+	handler: undici.Dispatcher.DispatchHandler,
+) => boolean;
 type CacheMiddleware = (dispatch: FakeDispatch) => FakeDispatch;
 
 async function importTagger() {
 	vi.resetModules();
-	const { taggedCacheInterceptor, VSCODE_CACHE_STATUS_HEADER } = await import('../taggedCacheInterceptor');
-	const undiciMock = (await import('undici')) as unknown as { interceptors: { cache: ReturnType<typeof vi.fn> } };
+	const { taggedCacheInterceptor, VSCODE_CACHE_STATUS_HEADER } =
+		await import('../taggedCacheInterceptor');
+	const undiciMock = (await import('undici')) as unknown as {
+		interceptors: { cache: ReturnType<typeof vi.fn> };
+	};
 	return { taggedCacheInterceptor, VSCODE_CACHE_STATUS_HEADER, undiciMock };
 }
 
@@ -27,18 +33,35 @@ function makeController(): undici.Dispatcher.DispatchController {
 	return {} as undici.Dispatcher.DispatchController;
 }
 
-async function runTagger(middleware: CacheMiddleware): Promise<{ stamped: string | undefined; downstream: ReturnType<typeof vi.fn> }> {
-	const { taggedCacheInterceptor, VSCODE_CACHE_STATUS_HEADER, undiciMock } = await importTagger();
+async function runTagger(
+	middleware: CacheMiddleware,
+): Promise<{
+	stamped: string | undefined;
+	downstream: ReturnType<typeof vi.fn>;
+}> {
+	const { taggedCacheInterceptor, VSCODE_CACHE_STATUS_HEADER, undiciMock } =
+		await importTagger();
 	undiciMock.interceptors.cache.mockReturnValue(middleware);
 
-	const downstream = vi.fn(((_opts: { headers?: Record<string, string> }, _handler: undici.Dispatcher.DispatchHandler) => true) as FakeDispatch);
-	const tagger = taggedCacheInterceptor({} as Parameters<typeof undici.interceptors.cache>[0]);
-	const intercepted = tagger(downstream as unknown as undici.Dispatcher['dispatch']);
+	const downstream = vi.fn(
+		((
+			_opts: { headers?: Record<string, string> },
+			_handler: undici.Dispatcher.DispatchHandler,
+		) => true) as FakeDispatch,
+	);
+	const tagger = taggedCacheInterceptor(
+		{} as Parameters<typeof undici.interceptors.cache>[0],
+	);
+	const intercepted = tagger(
+		downstream as unknown as undici.Dispatcher['dispatch'],
+	);
 
 	let stamped: string | undefined;
 	intercepted({ headers: {} } as undici.Dispatcher.DispatchOptions, {
 		onResponseStart: (_c, _s, headers) => {
-			stamped = (headers as Record<string, string>)[VSCODE_CACHE_STATUS_HEADER];
+			stamped = (headers as Record<string, string>)[
+				VSCODE_CACHE_STATUS_HEADER
+			];
 		},
 	});
 	return { stamped, downstream };
@@ -50,10 +73,17 @@ describe('taggedCacheInterceptor', () => {
 	});
 
 	it('classifies a cache hit when the downstream dispatch is never invoked', async () => {
-		const { stamped, downstream } = await runTagger(() => (_opts, handler) => {
-			handler.onResponseStart?.(makeController(), 200, { age: '60' }, 'OK');
-			return true;
-		});
+		const { stamped, downstream } = await runTagger(
+			() => (_opts, handler) => {
+				handler.onResponseStart?.(
+					makeController(),
+					200,
+					{ age: '60' },
+					'OK',
+				);
+				return true;
+			},
+		);
 
 		expect(stamped).toBe('hit');
 		expect(downstream).not.toHaveBeenCalled();
@@ -61,7 +91,12 @@ describe('taggedCacheInterceptor', () => {
 
 	it('classifies a stale hit when the served response carries a 110 warning', async () => {
 		const { stamped } = await runTagger(() => (_opts, handler) => {
-			handler.onResponseStart?.(makeController(), 200, { age: '120', warning: '110 - "response is stale"' }, 'OK');
+			handler.onResponseStart?.(
+				makeController(),
+				200,
+				{ age: '120', warning: '110 - "response is stale"' },
+				'OK',
+			);
 			return true;
 		});
 
@@ -69,22 +104,29 @@ describe('taggedCacheInterceptor', () => {
 	});
 
 	it('classifies a revalidation when conditional headers reach the origin', async () => {
-		const { stamped, downstream } = await runTagger((dispatch) => (_opts, handler) => {
-			dispatch({ headers: { 'if-none-match': '"abc"' } }, {} as undici.Dispatcher.DispatchHandler);
-			handler.onResponseStart?.(makeController(), 200, {}, 'OK');
-			return true;
-		});
+		const { stamped, downstream } = await runTagger(
+			(dispatch) => (_opts, handler) => {
+				dispatch(
+					{ headers: { 'if-none-match': '"abc"' } },
+					{} as undici.Dispatcher.DispatchHandler,
+				);
+				handler.onResponseStart?.(makeController(), 200, {}, 'OK');
+				return true;
+			},
+		);
 
 		expect(stamped).toBe('revalidated');
 		expect(downstream).toHaveBeenCalledTimes(1);
 	});
 
 	it('classifies a miss when the cache passes the request through unchanged', async () => {
-		const { stamped, downstream } = await runTagger((dispatch) => (opts, handler) => {
-			dispatch(opts, {} as undici.Dispatcher.DispatchHandler);
-			handler.onResponseStart?.(makeController(), 200, {}, 'OK');
-			return true;
-		});
+		const { stamped, downstream } = await runTagger(
+			(dispatch) => (opts, handler) => {
+				dispatch(opts, {} as undici.Dispatcher.DispatchHandler);
+				handler.onResponseStart?.(makeController(), 200, {}, 'OK');
+				return true;
+			},
+		);
 
 		expect(stamped).toBe('miss');
 		expect(downstream).toHaveBeenCalledTimes(1);
@@ -93,14 +135,27 @@ describe('taggedCacheInterceptor', () => {
 	it('does not throw when response headers are an array (raw wire format)', async () => {
 		const { taggedCacheInterceptor, undiciMock } = await importTagger();
 		const middleware: CacheMiddleware = () => (_opts, handler) => {
-			handler.onResponseStart?.(makeController(), 200, ['age', '60'] as unknown as Record<string, string>, 'OK');
+			handler.onResponseStart?.(
+				makeController(),
+				200,
+				['age', '60'] as unknown as Record<string, string>,
+				'OK',
+			);
 			return true;
 		};
 		undiciMock.interceptors.cache.mockReturnValue(middleware);
 
-		const tagger = taggedCacheInterceptor({} as Parameters<typeof undici.interceptors.cache>[0]);
-		const intercepted = tagger((() => true) as unknown as undici.Dispatcher['dispatch']);
-		expect(() => intercepted({ headers: {} } as undici.Dispatcher.DispatchOptions, { onResponseStart: () => { } })).not.toThrow();
+		const tagger = taggedCacheInterceptor(
+			{} as Parameters<typeof undici.interceptors.cache>[0],
+		);
+		const intercepted = tagger(
+			(() => true) as unknown as undici.Dispatcher['dispatch'],
+		);
+		expect(() =>
+			intercepted({ headers: {} } as undici.Dispatcher.DispatchOptions, {
+				onResponseStart: () => {},
+			}),
+		).not.toThrow();
 	});
 
 	it('forwards prototype-defined handler methods through the tagging proxy', async () => {
@@ -115,14 +170,27 @@ describe('taggedCacheInterceptor', () => {
 
 		const calls: string[] = [];
 		class ProtoHandler {
-			onResponseStart() { calls.push('start'); }
-			onResponseData() { calls.push('data'); }
-			onResponseEnd() { calls.push('end'); }
+			onResponseStart() {
+				calls.push('start');
+			}
+			onResponseData() {
+				calls.push('data');
+			}
+			onResponseEnd() {
+				calls.push('end');
+			}
 		}
 
-		const tagger = taggedCacheInterceptor({} as Parameters<typeof undici.interceptors.cache>[0]);
-		const intercepted = tagger((() => true) as unknown as undici.Dispatcher['dispatch']);
-		intercepted({ headers: {} } as undici.Dispatcher.DispatchOptions, new ProtoHandler() as unknown as undici.Dispatcher.DispatchHandler);
+		const tagger = taggedCacheInterceptor(
+			{} as Parameters<typeof undici.interceptors.cache>[0],
+		);
+		const intercepted = tagger(
+			(() => true) as unknown as undici.Dispatcher['dispatch'],
+		);
+		intercepted(
+			{ headers: {} } as undici.Dispatcher.DispatchOptions,
+			new ProtoHandler() as unknown as undici.Dispatcher.DispatchHandler,
+		);
 
 		expect(calls).toEqual(['start', 'data', 'end']);
 	});

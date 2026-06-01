@@ -3,16 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { done } from './util';
+import { done } from "./util";
 
-function decorate(decorator: (fn: Function, key: string) => Function): Function {
+function decorate(
+	decorator: (fn: Function, key: string) => Function,
+): Function {
 	return (_target: any, key: string, descriptor: PropertyDescriptor): void => {
-		if (typeof descriptor.value === 'function') {
+		if (typeof descriptor.value === "function") {
 			descriptor.value = decorator(descriptor.value, key);
-		} else if (typeof descriptor.get === 'function') {
+		} else if (typeof descriptor.get === "function") {
 			descriptor.get = decorator(descriptor.get, key) as () => any;
 		} else {
-			throw new Error('not supported');
+			throw new Error("not supported");
 		}
 	};
 }
@@ -26,7 +28,7 @@ function _memoize(fn: Function, key: string): Function {
 				configurable: false,
 				enumerable: false,
 				writable: false,
-				value: fn.apply(this, args)
+				value: fn.apply(this, args),
 			});
 		}
 
@@ -56,7 +58,7 @@ function _throttle<T>(fn: Function, key: string): Function {
 
 		this[currentKey] = fn.apply(this, args) as Promise<T>;
 
-		const clear = () => this[currentKey] = undefined;
+		const clear = () => (this[currentKey] = undefined);
 		done(this[currentKey]).then(clear, clear);
 
 		return this[currentKey];
@@ -71,7 +73,8 @@ function _sequentialize(fn: Function, key: string): Function {
 	const currentKey = `__$sequence$${key}`;
 
 	return function (this: any, ...args: any[]) {
-		const currentPromise = this[currentKey] as Promise<any> || Promise.resolve(null);
+		const currentPromise =
+			(this[currentKey] as Promise<any>) || Promise.resolve(null);
 		const run = async () => await fn.apply(this, args);
 		this[currentKey] = currentPromise.then(run, run);
 		return this[currentKey];

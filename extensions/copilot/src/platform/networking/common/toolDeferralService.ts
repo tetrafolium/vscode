@@ -5,7 +5,8 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IToolDeferralService = createServiceIdentifier<IToolDeferralService>('IToolDeferralService');
+export const IToolDeferralService =
+	createServiceIdentifier<IToolDeferralService>('IToolDeferralService');
 
 export interface IToolDeferralService {
 	readonly _serviceBrand: undefined;

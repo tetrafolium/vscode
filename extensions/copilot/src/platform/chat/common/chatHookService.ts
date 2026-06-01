@@ -6,7 +6,8 @@
 import type * as vscode from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IChatHookService = createServiceIdentifier<IChatHookService>('IChatHookService');
+export const IChatHookService =
+	createServiceIdentifier<IChatHookService>('IChatHookService');
 
 export interface IChatHookService {
 	readonly _serviceBrand: undefined;
@@ -33,7 +34,13 @@ export interface IChatHookService {
 	 * @param token Optional cancellation token.
 	 * @returns A promise that resolves to an array of hook execution results.
 	 */
-	executeHook(hookType: vscode.ChatHookType, hooks: vscode.ChatRequestHooks | undefined, input: unknown, sessionId?: string, token?: vscode.CancellationToken): Promise<vscode.ChatHookResult[]>;
+	executeHook(
+		hookType: vscode.ChatHookType,
+		hooks: vscode.ChatRequestHooks | undefined,
+		input: unknown,
+		sessionId?: string,
+		token?: vscode.CancellationToken,
+	): Promise<vscode.ChatHookResult[]>;
 
 	/**
 	 * Execute the preToolUse hook and collapse results from all hooks into a single result.
@@ -50,7 +57,15 @@ export interface IChatHookService {
 	 * @param outputStream Optional output stream for displaying hook warnings/errors.
 	 * @returns The collapsed hook result, or undefined if no hooks are registered or none returned a result.
 	 */
-	executePreToolUseHook(toolName: string, toolInput: unknown, toolCallId: string, hooks: vscode.ChatRequestHooks | undefined, sessionId?: string, token?: vscode.CancellationToken, outputStream?: vscode.ChatResponseStream): Promise<IPreToolUseHookResult | undefined>;
+	executePreToolUseHook(
+		toolName: string,
+		toolInput: unknown,
+		toolCallId: string,
+		hooks: vscode.ChatRequestHooks | undefined,
+		sessionId?: string,
+		token?: vscode.CancellationToken,
+		outputStream?: vscode.ChatResponseStream,
+	): Promise<IPreToolUseHookResult | undefined>;
 
 	/**
 	 * Execute the postToolUse hook and collapse results from all hooks into a single result.
@@ -68,7 +83,16 @@ export interface IChatHookService {
 	 * @param outputStream Optional output stream for displaying hook warnings/errors.
 	 * @returns The collapsed hook result, or undefined if no hooks are registered or none returned a result.
 	 */
-	executePostToolUseHook(toolName: string, toolInput: unknown, toolResponseText: string, toolCallId: string, hooks: vscode.ChatRequestHooks | undefined, sessionId?: string, token?: vscode.CancellationToken, outputStream?: vscode.ChatResponseStream): Promise<IPostToolUseHookResult | undefined>;
+	executePostToolUseHook(
+		toolName: string,
+		toolInput: unknown,
+		toolResponseText: string,
+		toolCallId: string,
+		hooks: vscode.ChatRequestHooks | undefined,
+		sessionId?: string,
+		token?: vscode.CancellationToken,
+		outputStream?: vscode.ChatResponseStream,
+	): Promise<IPostToolUseHookResult | undefined>;
 }
 
 /**

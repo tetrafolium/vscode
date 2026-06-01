@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getWindow, h, onDidUnregisterWindow } from '../../dom.js';
-import { CodeWindow } from '../../window.js';
-import { IDisposable } from '../../../common/lifecycle.js';
-import './pixelSpinner.css';
+import { getWindow, h, onDidUnregisterWindow } from "../../dom.js";
+import { CodeWindow } from "../../window.js";
+import { IDisposable } from "../../../common/lifecycle.js";
+import "./pixelSpinner.css";
 
 export interface IPixelSpinnerOptions {
 	/**
@@ -23,7 +23,7 @@ export interface IPixelSpinnerOptions {
 	 *  - `'grid'` (default): six dots in a 2×3 grid that cascade vertically.
 	 *  - `'ring'`: six dots arranged in a circle with a highlight that orbits the ring.
 	 */
-	readonly variant?: 'grid' | 'ring';
+	readonly variant?: "grid" | "ring";
 }
 
 /**
@@ -37,36 +37,43 @@ export interface IPixelSpinnerOptions {
  * @param options Optional spinner configuration.
  * @returns The spinner root element.
  */
-export function createPixelSpinner(parent?: HTMLElement, options?: IPixelSpinnerOptions): HTMLElement {
-	const variant = options?.variant ?? 'grid';
-	const rootClass = variant === 'ring' ? 'span.monaco-pixel-spinner.monaco-pixel-spinner-ring' : 'span.monaco-pixel-spinner';
+export function createPixelSpinner(
+	parent?: HTMLElement,
+	options?: IPixelSpinnerOptions,
+): HTMLElement {
+	const variant = options?.variant ?? "grid";
+	const rootClass =
+		variant === "ring"
+			? "span.monaco-pixel-spinner.monaco-pixel-spinner-ring"
+			: "span.monaco-pixel-spinner";
 	const root = h(rootClass).root;
 	if (options?.ariaLabel) {
-		root.setAttribute('role', 'status');
-		root.setAttribute('aria-label', options.ariaLabel);
+		root.setAttribute("role", "status");
+		root.setAttribute("aria-label", options.ariaLabel);
 	} else {
-		root.setAttribute('aria-hidden', 'true');
+		root.setAttribute("aria-hidden", "true");
 	}
 	for (let i = 0; i < 6; i++) {
-		root.appendChild(h('span.monaco-pixel-spinner-dot').root);
+		root.appendChild(h("span.monaco-pixel-spinner-dot").root);
 	}
 	parent?.appendChild(root);
 	trackSpinner(root);
 	return root;
 }
 
-
-const PAUSED_CLASS = 'monaco-pixel-spinner-paused';
+const PAUSED_CLASS = "monaco-pixel-spinner-paused";
 const observersByWindow = new Map<CodeWindow, IntersectionObserver>();
 let unregisterWindowListener: IDisposable | undefined;
 
-function getObserverFor(targetWindow: CodeWindow): IntersectionObserver | undefined {
-	if (typeof targetWindow.IntersectionObserver !== 'function') {
+function getObserverFor(
+	targetWindow: CodeWindow,
+): IntersectionObserver | undefined {
+	if (typeof targetWindow.IntersectionObserver !== "function") {
 		return undefined;
 	}
 	let observer = observersByWindow.get(targetWindow);
 	if (!observer) {
-		observer = new targetWindow.IntersectionObserver(entries => {
+		observer = new targetWindow.IntersectionObserver((entries) => {
 			for (const entry of entries) {
 				const target = entry.target as HTMLElement;
 				if (!target.isConnected) {
@@ -79,7 +86,7 @@ function getObserverFor(targetWindow: CodeWindow): IntersectionObserver | undefi
 		observersByWindow.set(targetWindow, observer);
 
 		if (!unregisterWindowListener) {
-			unregisterWindowListener = onDidUnregisterWindow(window => {
+			unregisterWindowListener = onDidUnregisterWindow((window) => {
 				const obs = observersByWindow.get(window);
 				if (obs) {
 					obs.disconnect();
@@ -101,4 +108,3 @@ function trackSpinner(root: HTMLElement): void {
 	root.classList.add(PAUSED_CLASS);
 	observer.observe(root);
 }
-

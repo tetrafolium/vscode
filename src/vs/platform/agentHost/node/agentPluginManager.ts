@@ -3,14 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { VSBuffer } from '../../../base/common/buffer.js';
-import { SequencerByKey } from '../../../base/common/async.js';
-import { URI } from '../../../base/common/uri.js';
-import { IFileService } from '../../files/common/files.js';
-import { ILogService } from '../../log/common/log.js';
-import { IAgentPluginManager, type ISyncedCustomization } from '../common/agentPluginManager.js';
-import { CustomizationLoadStatus, type ClientPluginCustomization, type Customization } from '../common/state/sessionState.js';
-import { toAgentClientUri } from '../common/agentClientUri.js';
+import { VSBuffer } from "../../../base/common/buffer.js";
+import { SequencerByKey } from "../../../base/common/async.js";
+import { URI } from "../../../base/common/uri.js";
+import { IFileService } from "../../files/common/files.js";
+import { ILogService } from "../../log/common/log.js";
+import {
+	IAgentPluginManager,
+	type ISyncedCustomization,
+} from "../common/agentPluginManager.js";
+import {
+	CustomizationLoadStatus,
+	type ClientPluginCustomization,
+	type Customization,
+} from "../common/state/sessionState.js";
+import { toAgentClientUri } from "../common/agentClientUri.js";
 
 const DEFAULT_MAX_PLUGINS = 20;
 
@@ -56,8 +63,8 @@ export class AgentPluginManager implements IAgentPluginManager {
 		@ILogService private readonly _logService: ILogService,
 		maxPlugins: number = DEFAULT_MAX_PLUGINS,
 	) {
-		this._basePath = URI.joinPath(userDataPath, 'agentPlugins');
-		this._cachePath = URI.joinPath(this._basePath, 'cache.json');
+		this._basePath = URI.joinPath(userDataPath, "agentPlugins");
+		this._cachePath = URI.joinPath(this._basePath, "cache.json");
 		this._maxPlugins = maxPlugins;
 	}
 
@@ -73,22 +80,35 @@ export class AgentPluginManager implements IAgentPluginManager {
 		await this._ensureCacheLoaded();
 
 		// Sync each customization in parallel, serialized per URI
-		const results = await Promise.all(customizations.map(ref =>
-			this._sequencer.queue(ref.uri, async (): Promise<ISyncedCustomization> => {
-				try {
-					const pluginDir = await this._syncPlugin(clientId, ref);
-					const customization: Customization = { ...ref, load: { kind: CustomizationLoadStatus.Loaded } };
-					progress?.(customization);
-					return { customization, pluginDir };
-				} catch (err) {
-					const message = err instanceof Error ? err.message : String(err);
-					this._logService.error(`[AgentPluginManager] Failed to sync plugin ${ref.uri}: ${message}`);
-					const customization: Customization = { ...ref, load: { kind: CustomizationLoadStatus.Error, message } };
-					progress?.(customization);
-					return { customization };
-				}
-			})
-		));
+		const results = await Promise.all(
+			customizations.map((ref) =>
+				this._sequencer.queue(
+					ref.uri,
+					async (): Promise<ISyncedCustomization> => {
+						try {
+							const pluginDir = await this._syncPlugin(clientId, ref);
+							const customization: Customization = {
+								...ref,
+								load: { kind: CustomizationLoadStatus.Loaded },
+							};
+							progress?.(customization);
+							return { customization, pluginDir };
+						} catch (err) {
+							const message = err instanceof Error ? err.message : String(err);
+							this._logService.error(
+								`[AgentPluginManager] Failed to sync plugin ${ref.uri}: ${message}`,
+							);
+							const customization: Customization = {
+								...ref,
+								load: { kind: CustomizationLoadStatus.Error, message },
+							};
+							progress?.(customization);
+							return { customization };
+						}
+					},
+				),
+			),
+		);
 
 		return results;
 	}
@@ -99,7 +119,10 @@ export class AgentPluginManager implements IAgentPluginManager {
 	 * Syncs a single plugin to local storage. Skips the copy when the
 	 * nonce matches the cached value. Returns the local directory URI.
 	 */
-	private async _syncPlugin(clientId: string, ref: ClientPluginCustomization): Promise<URI> {
+	private async _syncPlugin(
+		clientId: string,
+		ref: ClientPluginCustomization,
+	): Promise<URI> {
 		const pluginUri = toAgentClientUri(URI.parse(ref.uri), clientId);
 		const key = this._keyForUri(ref.uri);
 		const destDir = URI.joinPath(this._basePath, key);
@@ -107,11 +130,15 @@ export class AgentPluginManager implements IAgentPluginManager {
 		// Nonce cache hit — skip copy
 		if (ref.nonce && this._cachedNonces.get(ref.uri) === ref.nonce) {
 			this._touchLru(ref.uri);
-			this._logService.trace(`[AgentPluginManager] Nonce match for ${ref.uri}, skipping copy`);
+			this._logService.trace(
+				`[AgentPluginManager] Nonce match for ${ref.uri}, skipping copy`,
+			);
 			return destDir;
 		}
 
-		this._logService.info(`[AgentPluginManager] Syncing plugin: ${ref.uri} → ${destDir.toString()}`);
+		this._logService.info(
+			`[AgentPluginManager] Syncing plugin: ${ref.uri} → ${destDir.toString()}`,
+		);
 
 		await this._fileService.copy(pluginUri, destDir, true);
 
@@ -126,7 +153,11 @@ export class AgentPluginManager implements IAgentPluginManager {
 	}
 
 	private _keyForUri(uri: string): string {
-		return uri.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 128);
+		return uri
+			.replace(/[^a-zA-Z0-9]/g, "-")
+			.replace(/-+/g, "-")
+			.replace(/^-|-$/g, "")
+			.substring(0, 128);
 	}
 
 	private _touchLru(uri: string): void {
@@ -146,11 +177,16 @@ export class AgentPluginManager implements IAgentPluginManager {
 			this._cachedNonces.delete(evictUri);
 			const evictKey = this._keyForUri(evictUri);
 			const evictDir = URI.joinPath(this._basePath, evictKey);
-			this._logService.info(`[AgentPluginManager] Evicting plugin: ${evictUri}`);
+			this._logService.info(
+				`[AgentPluginManager] Evicting plugin: ${evictUri}`,
+			);
 			try {
 				await this._fileService.del(evictDir, { recursive: true });
 			} catch (err) {
-				this._logService.warn(`[AgentPluginManager] Failed to evict plugin: ${evictUri}`, err);
+				this._logService.warn(
+					`[AgentPluginManager] Failed to evict plugin: ${evictUri}`,
+					err,
+				);
 			}
 		}
 	}
@@ -164,7 +200,7 @@ export class AgentPluginManager implements IAgentPluginManager {
 		this._cacheLoaded = true;
 
 		try {
-			if (!await this._fileService.exists(this._cachePath)) {
+			if (!(await this._fileService.exists(this._cachePath))) {
 				return;
 			}
 			const content = await this._fileService.readFile(this._cachePath);
@@ -175,14 +211,19 @@ export class AgentPluginManager implements IAgentPluginManager {
 
 			// Entries are stored in LRU order (oldest first)
 			for (const entry of entries) {
-				if (typeof entry.uri === 'string' && typeof entry.nonce === 'string') {
+				if (typeof entry.uri === "string" && typeof entry.nonce === "string") {
 					this._cachedNonces.set(entry.uri, entry.nonce);
 					this._lruOrder.push(entry.uri);
 				}
 			}
-			this._logService.trace(`[AgentPluginManager] Loaded ${entries.length} cache entries from disk`);
+			this._logService.trace(
+				`[AgentPluginManager] Loaded ${entries.length} cache entries from disk`,
+			);
 		} catch (err) {
-			this._logService.warn('[AgentPluginManager] Failed to load cache from disk', err);
+			this._logService.warn(
+				"[AgentPluginManager] Failed to load cache from disk",
+				err,
+			);
 		}
 	}
 
@@ -197,9 +238,15 @@ export class AgentPluginManager implements IAgentPluginManager {
 				}
 			}
 			await this._fileService.createFolder(this._basePath);
-			await this._fileService.writeFile(this._cachePath, VSBuffer.fromString(JSON.stringify(entries)));
+			await this._fileService.writeFile(
+				this._cachePath,
+				VSBuffer.fromString(JSON.stringify(entries)),
+			);
 		} catch (err) {
-			this._logService.warn('[AgentPluginManager] Failed to persist cache to disk', err);
+			this._logService.warn(
+				"[AgentPluginManager] Failed to persist cache to disk",
+				err,
+			);
 		}
 	}
 }

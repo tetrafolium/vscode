@@ -2,7 +2,10 @@
  *  Copyright (c) Microsoft Corporation and GitHub. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 /* eslint no-negated-condition: "error" */
-function init(address: string, options: { hot?: boolean, latency?: number } | null | undefined) {
+function init(
+	address: string,
+	options: { hot?: boolean; latency?: number } | null | undefined,
+) {
 	let hot = false;
 	let latency = 100;
 	if (options) {
@@ -10,6 +13,5 @@ function init(address: string, options: { hot?: boolean, latency?: number } | nu
 		latency = options.latency !== undefined ? options.latency : latency;
 	}
 	// TODO: Finish
-	return address
-
+	return address;
 }

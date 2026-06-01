@@ -34,7 +34,10 @@ export class MockCAPIClientService {
 		this._mockResponse = { ...this._mockResponse, ...response } as Response;
 	}
 
-	makeRequest<T>(_request: FetchOptions, _requestMetadata: RequestMetadata): Promise<T> {
+	makeRequest<T>(
+		_request: FetchOptions,
+		_requestMetadata: RequestMetadata,
+	): Promise<T> {
 		return Promise.resolve(this._mockResponse as unknown as T);
 	}
 }

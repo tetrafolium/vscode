@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { upcast } from '../../../base/common/types.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
+import { Event } from "../../../base/common/event.js";
+import { upcast } from "../../../base/common/types.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
 
 export interface IUpdate {
 	version: string; // Build commit ID
@@ -37,23 +37,23 @@ export interface IUpdate {
  */
 
 export const enum StateType {
-	Uninitialized = 'uninitialized',
-	Idle = 'idle',
-	Disabled = 'disabled',
-	CheckingForUpdates = 'checking for updates',
-	AvailableForDownload = 'available for download',
-	Downloading = 'downloading',
-	Downloaded = 'downloaded',
-	Updating = 'updating',
-	Ready = 'ready',
-	Overwriting = 'overwriting',
-	Restarting = 'restarting',
+	Uninitialized = "uninitialized",
+	Idle = "idle",
+	Disabled = "disabled",
+	CheckingForUpdates = "checking for updates",
+	AvailableForDownload = "available for download",
+	Downloading = "downloading",
+	Downloaded = "downloaded",
+	Updating = "updating",
+	Ready = "ready",
+	Overwriting = "overwriting",
+	Restarting = "restarting",
 }
 
 export const enum UpdateType {
 	Setup,
 	Archive,
-	Snap
+	Snap,
 }
 
 export const enum DisablementReason {
@@ -68,30 +68,145 @@ export const enum DisablementReason {
 
 export type Uninitialized = { type: StateType.Uninitialized };
 export type Disabled = { type: StateType.Disabled; reason: DisablementReason };
-export type Idle = { type: StateType.Idle; updateType: UpdateType; error?: string; notAvailable?: boolean };
-export type CheckingForUpdates = { type: StateType.CheckingForUpdates; explicit: boolean };
-export type AvailableForDownload = { type: StateType.AvailableForDownload; update: IUpdate; canInstall?: boolean };
-export type Downloading = { type: StateType.Downloading; update?: IUpdate; explicit: boolean; overwrite: boolean; downloadedBytes?: number; totalBytes?: number; startTime?: number };
-export type Downloaded = { type: StateType.Downloaded; update: IUpdate; explicit: boolean; overwrite: boolean };
-export type Updating = { type: StateType.Updating; update: IUpdate; currentProgress?: number; maxProgress?: number; explicit: boolean };
-export type Ready = { type: StateType.Ready; update: IUpdate; explicit: boolean; overwrite: boolean };
-export type Overwriting = { type: StateType.Overwriting; update: IUpdate; explicit: boolean };
+export type Idle = {
+	type: StateType.Idle;
+	updateType: UpdateType;
+	error?: string;
+	notAvailable?: boolean;
+};
+export type CheckingForUpdates = {
+	type: StateType.CheckingForUpdates;
+	explicit: boolean;
+};
+export type AvailableForDownload = {
+	type: StateType.AvailableForDownload;
+	update: IUpdate;
+	canInstall?: boolean;
+};
+export type Downloading = {
+	type: StateType.Downloading;
+	update?: IUpdate;
+	explicit: boolean;
+	overwrite: boolean;
+	downloadedBytes?: number;
+	totalBytes?: number;
+	startTime?: number;
+};
+export type Downloaded = {
+	type: StateType.Downloaded;
+	update: IUpdate;
+	explicit: boolean;
+	overwrite: boolean;
+};
+export type Updating = {
+	type: StateType.Updating;
+	update: IUpdate;
+	currentProgress?: number;
+	maxProgress?: number;
+	explicit: boolean;
+};
+export type Ready = {
+	type: StateType.Ready;
+	update: IUpdate;
+	explicit: boolean;
+	overwrite: boolean;
+};
+export type Overwriting = {
+	type: StateType.Overwriting;
+	update: IUpdate;
+	explicit: boolean;
+};
 export type Restarting = { type: StateType.Restarting; update: IUpdate };
 
-export type State = Uninitialized | Disabled | Idle | CheckingForUpdates | AvailableForDownload | Downloading | Downloaded | Updating | Ready | Overwriting | Restarting;
+export type State =
+	| Uninitialized
+	| Disabled
+	| Idle
+	| CheckingForUpdates
+	| AvailableForDownload
+	| Downloading
+	| Downloaded
+	| Updating
+	| Ready
+	| Overwriting
+	| Restarting;
 
 export const State = {
 	Uninitialized: upcast<Uninitialized>({ type: StateType.Uninitialized }),
-	Disabled: (reason: DisablementReason): Disabled => ({ type: StateType.Disabled, reason }),
-	Idle: (updateType: UpdateType, error?: string, notAvailable?: boolean): Idle => ({ type: StateType.Idle, updateType, error, notAvailable }),
-	CheckingForUpdates: (explicit: boolean): CheckingForUpdates => ({ type: StateType.CheckingForUpdates, explicit }),
-	AvailableForDownload: (update: IUpdate, canInstall?: boolean): AvailableForDownload => ({ type: StateType.AvailableForDownload, update, canInstall }),
-	Downloading: (update: IUpdate | undefined, explicit: boolean, overwrite: boolean, downloadedBytes?: number, totalBytes?: number, startTime?: number): Downloading => ({ type: StateType.Downloading, update, explicit, overwrite, downloadedBytes, totalBytes, startTime }),
-	Downloaded: (update: IUpdate, explicit: boolean, overwrite: boolean): Downloaded => ({ type: StateType.Downloaded, update, explicit, overwrite }),
-	Updating: (update: IUpdate, explicit: boolean, currentProgress?: number, maxProgress?: number): Updating => ({ type: StateType.Updating, update, explicit, currentProgress, maxProgress }),
-	Ready: (update: IUpdate, explicit: boolean, overwrite: boolean): Ready => ({ type: StateType.Ready, update, explicit, overwrite }),
-	Overwriting: (update: IUpdate, explicit: boolean): Overwriting => ({ type: StateType.Overwriting, update, explicit }),
-	Restarting: (update: IUpdate): Restarting => ({ type: StateType.Restarting, update }),
+	Disabled: (reason: DisablementReason): Disabled => ({
+		type: StateType.Disabled,
+		reason,
+	}),
+	Idle: (
+		updateType: UpdateType,
+		error?: string,
+		notAvailable?: boolean,
+	): Idle => ({ type: StateType.Idle, updateType, error, notAvailable }),
+	CheckingForUpdates: (explicit: boolean): CheckingForUpdates => ({
+		type: StateType.CheckingForUpdates,
+		explicit,
+	}),
+	AvailableForDownload: (
+		update: IUpdate,
+		canInstall?: boolean,
+	): AvailableForDownload => ({
+		type: StateType.AvailableForDownload,
+		update,
+		canInstall,
+	}),
+	Downloading: (
+		update: IUpdate | undefined,
+		explicit: boolean,
+		overwrite: boolean,
+		downloadedBytes?: number,
+		totalBytes?: number,
+		startTime?: number,
+	): Downloading => ({
+		type: StateType.Downloading,
+		update,
+		explicit,
+		overwrite,
+		downloadedBytes,
+		totalBytes,
+		startTime,
+	}),
+	Downloaded: (
+		update: IUpdate,
+		explicit: boolean,
+		overwrite: boolean,
+	): Downloaded => ({
+		type: StateType.Downloaded,
+		update,
+		explicit,
+		overwrite,
+	}),
+	Updating: (
+		update: IUpdate,
+		explicit: boolean,
+		currentProgress?: number,
+		maxProgress?: number,
+	): Updating => ({
+		type: StateType.Updating,
+		update,
+		explicit,
+		currentProgress,
+		maxProgress,
+	}),
+	Ready: (update: IUpdate, explicit: boolean, overwrite: boolean): Ready => ({
+		type: StateType.Ready,
+		update,
+		explicit,
+		overwrite,
+	}),
+	Overwriting: (update: IUpdate, explicit: boolean): Overwriting => ({
+		type: StateType.Overwriting,
+		update,
+		explicit,
+	}),
+	Restarting: (update: IUpdate): Restarting => ({
+		type: StateType.Restarting,
+		update,
+	}),
 };
 
 export interface IAutoUpdater extends Event.NodeEventEmitter {
@@ -101,7 +216,7 @@ export interface IAutoUpdater extends Event.NodeEventEmitter {
 	quitAndInstall(): void;
 }
 
-export const IUpdateService = createDecorator<IUpdateService>('updateService');
+export const IUpdateService = createDecorator<IUpdateService>("updateService");
 
 export interface IUpdateService {
 	readonly _serviceBrand: undefined;
@@ -116,7 +231,7 @@ export interface IUpdateService {
 
 	/**
 	 * @deprecated This method should not be used any more. It will be removed in a future release.
-	*/
+	 */
 	isLatestVersion(): Promise<boolean | undefined>;
 	_applySpecificUpdate(packagePath: string): Promise<void>;
 	setInternalOrg(internalOrg: string | undefined): Promise<void>;

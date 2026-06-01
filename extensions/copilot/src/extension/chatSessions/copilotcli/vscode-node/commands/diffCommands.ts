@@ -10,7 +10,10 @@ import { ILogger } from '../../../../../platform/log/common/logService';
 export const ACCEPT_DIFF_COMMAND = 'github.copilot.chat.copilotCLI.acceptDiff';
 export const REJECT_DIFF_COMMAND = 'github.copilot.chat.copilotCLI.rejectDiff';
 
-export function registerDiffCommands(logger: ILogger, diffState: DiffStateManager): vscode.Disposable[] {
+export function registerDiffCommands(
+	logger: ILogger,
+	diffState: DiffStateManager,
+): vscode.Disposable[] {
 	const disposables: vscode.Disposable[] = [];
 
 	disposables.push(
@@ -22,11 +25,13 @@ export function registerDiffCommands(logger: ILogger, diffState: DiffStateManage
 				return;
 			}
 
-			logger.info(`[DIFF] Accepting diff: ${diff.tabName}, diffId=${diff.diffId}`);
+			logger.info(
+				`[DIFF] Accepting diff: ${diff.tabName}, diffId=${diff.diffId}`,
+			);
 			diff.cleanup();
 			diff.resolve({ status: 'SAVED', trigger: 'accepted_via_button' });
 			logger.info('[DIFF] Accept command done');
-		})
+		}),
 	);
 
 	disposables.push(
@@ -37,11 +42,16 @@ export function registerDiffCommands(logger: ILogger, diffState: DiffStateManage
 				logger.info('[DIFF] No active diff found for reject');
 				return;
 			}
-			logger.info(`[DIFF] Rejecting diff: ${diff.tabName}, diffId=${diff.diffId}`);
+			logger.info(
+				`[DIFF] Rejecting diff: ${diff.tabName}, diffId=${diff.diffId}`,
+			);
 			diff.cleanup();
-			diff.resolve({ status: 'REJECTED', trigger: 'rejected_via_button' });
+			diff.resolve({
+				status: 'REJECTED',
+				trigger: 'rejected_via_button',
+			});
 			logger.info('[DIFF] Reject command done');
-		})
+		}),
 	);
 
 	return disposables;

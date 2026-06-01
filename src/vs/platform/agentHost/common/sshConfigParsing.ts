@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ISSHResolvedConfig } from './sshRemoteAgentHost.js';
+import type { ISSHResolvedConfig } from "./sshRemoteAgentHost.js";
 
 /** Strip inline comments from an SSH config value. */
 export function stripSSHComment(s: string): string {
-	const idx = s.indexOf(' #');
+	const idx = s.indexOf(" #");
 	return idx !== -1 ? s.substring(0, idx).trim() : s;
 }
 
@@ -16,16 +16,16 @@ export function stripSSHComment(s: string): string {
  */
 export function parseSSHConfigHostEntries(content: string): string[] {
 	const hosts: string[] = [];
-	for (const line of content.split('\n')) {
+	for (const line of content.split("\n")) {
 		const trimmed = line.trim();
-		if (!trimmed || trimmed.startsWith('#')) {
+		if (!trimmed || trimmed.startsWith("#")) {
 			continue;
 		}
 		const hostMatch = trimmed.match(/^Host\s+(.+)$/i);
 		if (hostMatch) {
 			const hostValue = stripSSHComment(hostMatch[1]);
 			for (const h of hostValue.split(/\s+/)) {
-				if (!h.includes('*') && !h.includes('?') && !h.startsWith('!')) {
+				if (!h.includes("*") && !h.includes("?") && !h.startsWith("!")) {
 					hosts.push(h);
 				}
 			}
@@ -40,14 +40,14 @@ export function parseSSHConfigHostEntries(content: string): string[] {
 export function parseSSHGOutput(stdout: string): ISSHResolvedConfig {
 	const map = new Map<string, string>();
 	const identityFiles: string[] = [];
-	for (const line of stdout.split('\n')) {
-		const spaceIdx = line.indexOf(' ');
+	for (const line of stdout.split("\n")) {
+		const spaceIdx = line.indexOf(" ");
 		if (spaceIdx === -1) {
 			continue;
 		}
 		const key = line.substring(0, spaceIdx).toLowerCase();
 		const value = line.substring(spaceIdx + 1).trim();
-		if (key === 'identityfile') {
+		if (key === "identityfile") {
 			identityFiles.push(value);
 		} else {
 			map.set(key, value);
@@ -55,11 +55,11 @@ export function parseSSHGOutput(stdout: string): ISSHResolvedConfig {
 	}
 
 	return {
-		hostname: map.get('hostname') ?? '',
-		user: map.get('user') || undefined,
-		port: parseInt(map.get('port') ?? '22', 10),
+		hostname: map.get("hostname") ?? "",
+		user: map.get("user") || undefined,
+		port: parseInt(map.get("port") ?? "22", 10),
 		identityFile: identityFiles,
-		identityAgent: map.get('identityagent') || undefined,
-		forwardAgent: map.get('forwardagent') === 'yes',
+		identityAgent: map.get("identityagent") || undefined,
+		forwardAgent: map.get("forwardagent") === "yes",
 	};
 }

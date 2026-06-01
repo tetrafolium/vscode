@@ -79,7 +79,7 @@ suite('Hooks', function () {
 			const [value, setValue] = state1.useState(1);
 			const state2 = new UseState(rawState);
 
-			setValue(prev => prev + 1);
+			setValue((prev) => prev + 1);
 			const [updatedValue] = state2.useState(0);
 
 			assert.deepStrictEqual(value, 1);
@@ -110,7 +110,7 @@ suite('Hooks', function () {
 
 	suite('Use Data', function () {
 		test('stores data callback for type', async function () {
-			const useData = new UseData(() => { });
+			const useData = new UseData(() => {});
 			let data = '';
 
 			useData.useData(isString, (value: string) => {
@@ -122,7 +122,7 @@ suite('Hooks', function () {
 		});
 
 		test('stores async data callback for type', async function () {
-			const useData = new UseData(() => { });
+			const useData = new UseData(() => {});
 			let data = '';
 
 			useData.useData(isString, async (value: string) => {
@@ -135,7 +135,7 @@ suite('Hooks', function () {
 		});
 
 		test('stores multiple data callbacks for type', async function () {
-			const useData = new UseData(() => { });
+			const useData = new UseData(() => {});
 			let data1 = '';
 			let data2 = '';
 
@@ -152,7 +152,7 @@ suite('Hooks', function () {
 		});
 
 		test('stores multiple async data callbacks for type', async function () {
-			const useData = new UseData(() => { });
+			const useData = new UseData(() => {});
 			let data1 = '';
 			let data2 = '';
 
@@ -171,7 +171,7 @@ suite('Hooks', function () {
 		});
 
 		test('stores multiple data callbacks for different types', async function () {
-			const useData = new UseData(() => { });
+			const useData = new UseData(() => {});
 			let data1 = '';
 			let data2 = 0;
 
@@ -189,7 +189,7 @@ suite('Hooks', function () {
 		});
 
 		test('updates data for subscribed types only', async function () {
-			const useData = new UseData(() => { });
+			const useData = new UseData(() => {});
 			let data = '';
 
 			useData.useData(isString, (value: string) => {
@@ -202,7 +202,7 @@ suite('Hooks', function () {
 
 		test('updates data measures time to update', async function () {
 			let time = 0;
-			const useData = new UseData(updateTimeMs => {
+			const useData = new UseData((updateTimeMs) => {
 				time = updateTimeMs;
 			});
 			let data = '';
@@ -217,7 +217,7 @@ suite('Hooks', function () {
 		});
 
 		test('updates data measures time only if data hooks are present', async function () {
-			const useData = new UseData(updateTimeMs => {
+			const useData = new UseData((updateTimeMs) => {
 				throw new Error('Should not be called');
 			});
 			await useData.updateData(23);

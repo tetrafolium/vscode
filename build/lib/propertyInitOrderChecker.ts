@@ -3,12 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as ts from "typescript";
+import * as path from "path";
+import * as fs from "fs";
 
-import * as ts from 'typescript';
-import * as path from 'path';
-import * as fs from 'fs';
-
-const TS_CONFIG_PATH = path.join(import.meta.dirname, '../../', 'src', 'tsconfig.json');
+const TS_CONFIG_PATH = path.join(
+	import.meta.dirname,
+	"../../",
+	"src",
+	"tsconfig.json",
+);
 
 //
 // #############################################################################################
@@ -23,34 +27,46 @@ const TS_CONFIG_PATH = path.join(import.meta.dirname, '../../', 'src', 'tsconfig
 //
 
 const EntryKind = Object.freeze({
-	Span: 'Span',
-	Node: 'Node',
-	StringLiteral: 'StringLiteral',
-	SearchedLocalFoundProperty: 'SearchedLocalFoundProperty',
-	SearchedPropertyFoundLocal: 'SearchedPropertyFoundLocal'
+	Span: "Span",
+	Node: "Node",
+	StringLiteral: "StringLiteral",
+	SearchedLocalFoundProperty: "SearchedLocalFoundProperty",
+	SearchedPropertyFoundLocal: "SearchedPropertyFoundLocal",
 });
 
-type EntryKind = typeof EntryKind[keyof typeof EntryKind];
+type EntryKind = (typeof EntryKind)[keyof typeof EntryKind];
 
 const cancellationToken: ts.CancellationToken = {
 	isCancellationRequested: () => false,
-	throwIfCancellationRequested: () => { },
+	throwIfCancellationRequested: () => {},
 };
 
 const seenFiles = new Set<ts.SourceFile>();
 let errorCount = 0;
 
-
-
 function createProgram(tsconfigPath: string): ts.Program {
 	const tsConfig = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
 
-	const configHostParser: ts.ParseConfigHost = { fileExists: fs.existsSync, readDirectory: ts.sys.readDirectory, readFile: file => fs.readFileSync(file, 'utf8'), useCaseSensitiveFileNames: process.platform === 'linux' };
-	const tsConfigParsed = ts.parseJsonConfigFileContent(tsConfig.config, configHostParser, path.resolve(path.dirname(tsconfigPath)), { noEmit: true });
+	const configHostParser: ts.ParseConfigHost = {
+		fileExists: fs.existsSync,
+		readDirectory: ts.sys.readDirectory,
+		readFile: (file) => fs.readFileSync(file, "utf8"),
+		useCaseSensitiveFileNames: process.platform === "linux",
+	};
+	const tsConfigParsed = ts.parseJsonConfigFileContent(
+		tsConfig.config,
+		configHostParser,
+		path.resolve(path.dirname(tsconfigPath)),
+		{ noEmit: true },
+	);
 
 	const compilerHost = ts.createCompilerHost(tsConfigParsed.options, true);
 
-	return ts.createProgram(tsConfigParsed.fileNames, tsConfigParsed.options, compilerHost);
+	return ts.createProgram(
+		tsConfigParsed.fileNames,
+		tsConfigParsed.options,
+		compilerHost,
+	);
 }
 
 const program = createProgram(TS_CONFIG_PATH);
@@ -66,19 +82,26 @@ for (const file of program.getSourceFiles()) {
 
 if (seenFiles.size) {
 	console.log();
-	console.log(`Found ${errorCount} error${errorCount === 1 ? '' : 's'} in ${seenFiles.size} file${seenFiles.size === 1 ? '' : 's'}.`);
+	console.log(
+		`Found ${errorCount} error${errorCount === 1 ? "" : "s"} in ${seenFiles.size} file${seenFiles.size === 1 ? "" : "s"}.`,
+	);
 	process.exit(errorCount);
 }
 
 function visit(node: ts.Node) {
-	if (ts.isParameter(node) && ts.isParameterPropertyDeclaration(node, node.parent)) {
+	if (
+		ts.isParameter(node) &&
+		ts.isParameterPropertyDeclaration(node, node.parent)
+	) {
 		checkParameterPropertyDeclaration(node);
 	}
 
 	ts.forEachChild(node, visit);
 }
 
-function checkParameterPropertyDeclaration(param: ts.ParameterPropertyDeclaration) {
+function checkParameterPropertyDeclaration(
+	param: ts.ParameterPropertyDeclaration,
+) {
 	const uses = [...collectReferences(param.name, [])];
 	if (!uses.length) {
 		return;
@@ -94,10 +117,14 @@ function checkParameterPropertyDeclaration(param: ts.ParameterPropertyDeclaratio
 	} else {
 		console.log(``);
 	}
-	console.log(`  Parameter property '${param.name.getText()}' is used before its declaration.`);
+	console.log(
+		`  Parameter property '${param.name.getText()}' is used before its declaration.`,
+	);
 	for (const { stack, container } of uses) {
 		const use = stack[stack.length - 1];
-		console.log(`    at ${formatLocation(use)}: ${formatMember(container)} -> ${formatStack(stack)}`);
+		console.log(
+			`    at ${formatLocation(use)}: ${formatMember(container)} -> ${formatStack(stack)}`,
+		);
 		errorCount++;
 	}
 }
@@ -107,10 +134,19 @@ interface InvalidUse {
 	container: ReferenceContainer;
 }
 
-function* collectReferences(node: ts.Node, stack: ts.Node[], requiresInvocationDepth: number = 0, seen = new Set<ReferenceContainer>()): Generator<InvalidUse> {
+function* collectReferences(
+	node: ts.Node,
+	stack: ts.Node[],
+	requiresInvocationDepth: number = 0,
+	seen = new Set<ReferenceContainer>(),
+): Generator<InvalidUse> {
 	for (const use of findAllReferencesInClass(node)) {
 		const container = findContainer(use);
-		if (!container || seen.has(container) || ts.isConstructorDeclaration(container)) {
+		if (
+			!container ||
+			seen.has(container) ||
+			ts.isConstructorDeclaration(container)
+		) {
 			continue;
 		}
 		seen.add(container);
@@ -122,31 +158,52 @@ function* collectReferences(node: ts.Node, stack: ts.Node[], requiresInvocationD
 			nextRequiresInvocationDepth--;
 		}
 
-		if (ts.isPropertyDeclaration(container) && nextRequiresInvocationDepth === 0) {
+		if (
+			ts.isPropertyDeclaration(container) &&
+			nextRequiresInvocationDepth === 0
+		) {
 			yield { stack: nextStack, container };
-		}
-		else if (requiresInvocation(container)) {
+		} else if (requiresInvocation(container)) {
 			nextRequiresInvocationDepth++;
 		}
 
-		yield* collectReferences(container.name ?? container, nextStack, nextRequiresInvocationDepth, seen);
+		yield* collectReferences(
+			container.name ?? container,
+			nextStack,
+			nextRequiresInvocationDepth,
+			seen,
+		);
 	}
 }
 
 function requiresInvocation(definition: ReferenceContainer): boolean {
-	return ts.isMethodDeclaration(definition) || ts.isFunctionDeclaration(definition) || ts.isFunctionExpression(definition) || ts.isArrowFunction(definition);
+	return (
+		ts.isMethodDeclaration(definition) ||
+		ts.isFunctionDeclaration(definition) ||
+		ts.isFunctionExpression(definition) ||
+		ts.isArrowFunction(definition)
+	);
 }
 
 function isInvocation(use: ts.Node): boolean {
 	let location = use;
-	if (ts.isPropertyAccessExpression(location.parent) && location.parent.name === location) {
+	if (
+		ts.isPropertyAccessExpression(location.parent) &&
+		location.parent.name === location
+	) {
+		location = location.parent;
+	} else if (
+		ts.isElementAccessExpression(location.parent) &&
+		location.parent.argumentExpression === location
+	) {
 		location = location.parent;
 	}
-	else if (ts.isElementAccessExpression(location.parent) && location.parent.argumentExpression === location) {
-		location = location.parent;
-	}
-	return ts.isCallExpression(location.parent) && location.parent.expression === location
-		|| ts.isTaggedTemplateExpression(location.parent) && location.parent.tag === location;
+	return (
+		(ts.isCallExpression(location.parent) &&
+			location.parent.expression === location) ||
+		(ts.isTaggedTemplateExpression(location.parent) &&
+			location.parent.tag === location)
+	);
 }
 
 function formatFileName(node: ts.Node): string {
@@ -156,12 +213,19 @@ function formatFileName(node: ts.Node): string {
 
 function formatLocation(node: ts.Node): string {
 	const sourceFile = node.getSourceFile();
-	const { line, character } = ts.getLineAndCharacterOfPosition(sourceFile, node.pos);
+	const { line, character } = ts.getLineAndCharacterOfPosition(
+		sourceFile,
+		node.pos,
+	);
 	return `${formatFileName(sourceFile)}(${line + 1},${character + 1})`;
 }
 
 function formatStack(stack: ts.Node[]): string {
-	return stack.slice().reverse().map((use) => formatUse(use)).join(' -> ');
+	return stack
+		.slice()
+		.reverse()
+		.map((use) => formatUse(use))
+		.join(" -> ");
 }
 
 function formatMember(container: ReferenceContainer): string {
@@ -173,18 +237,25 @@ function formatMember(container: ReferenceContainer): string {
 		}
 		return name;
 	}
-	return '<unknown>';
+	return "<unknown>";
 }
 
 function formatUse(use: ts.Node): string {
 	let text = use.getText();
-	if (use.parent && ts.isPropertyAccessExpression(use.parent) && use.parent.name === use) {
+	if (
+		use.parent &&
+		ts.isPropertyAccessExpression(use.parent) &&
+		use.parent.name === use
+	) {
 		if (use.parent.expression.kind === ts.SyntaxKind.ThisKeyword) {
 			text = `this.${text}`;
 		}
 		use = use.parent;
-	}
-	else if (use.parent && ts.isElementAccessExpression(use.parent) && use.parent.argumentExpression === use) {
+	} else if (
+		use.parent &&
+		ts.isElementAccessExpression(use.parent) &&
+		use.parent.argumentExpression === use
+	) {
 		if (use.parent.expression.kind === ts.SyntaxKind.ThisKeyword) {
 			text = `this['${text}']`;
 		}
@@ -209,7 +280,7 @@ type ReferenceContainer =
 	| ts.ParameterDeclaration;
 
 function findContainer(node: ts.Node): ReferenceContainer | undefined {
-	return ts.findAncestor(node, ancestor => {
+	return ts.findAncestor(node, (ancestor) => {
 		switch (ancestor.kind) {
 			case ts.SyntaxKind.PropertyDeclaration:
 			case ts.SyntaxKind.MethodDeclaration:
@@ -263,7 +334,7 @@ interface TypeScriptInternals {
 				program: ts.Program,
 				sourceFiles: readonly ts.SourceFile[],
 				cancellationToken: ts.CancellationToken,
-				options: { use: number }
+				options: { use: number },
 			): readonly SymbolAndEntries[] | undefined;
 		};
 	};
@@ -273,9 +344,23 @@ function findAllReferences(node: ts.Node): readonly SymbolAndEntries[] {
 	const sourceFile = node.getSourceFile();
 	const position = node.getStart();
 	const tsInternal = ts as unknown as TypeScriptInternals;
-	const name: ts.Node = tsInternal.getTouchingPropertyName(sourceFile, position);
-	const options = { use: tsInternal.FindAllReferences.FindReferencesUse.References };
-	return tsInternal.FindAllReferences.Core.getReferencedSymbolsForNode(position, name, program, [sourceFile], cancellationToken, options) ?? [];
+	const name: ts.Node = tsInternal.getTouchingPropertyName(
+		sourceFile,
+		position,
+	);
+	const options = {
+		use: tsInternal.FindAllReferences.FindReferencesUse.References,
+	};
+	return (
+		tsInternal.FindAllReferences.Core.getReferencedSymbolsForNode(
+			position,
+			name,
+			program,
+			[sourceFile],
+			cancellationToken,
+			options,
+		) ?? []
+	);
 }
 
 interface SymbolAndEntries {
@@ -291,7 +376,7 @@ const DefinitionKind = Object.freeze({
 	String: 4,
 	TripleSlashReference: 5,
 });
-type DefinitionKind = typeof DefinitionKind[keyof typeof DefinitionKind];
+type DefinitionKind = (typeof DefinitionKind)[keyof typeof DefinitionKind];
 
 type Definition =
 	| { readonly type: DefinitionKind; readonly symbol: ts.Symbol }
@@ -299,9 +384,17 @@ type Definition =
 	| { readonly type: DefinitionKind; readonly node: ts.Node }
 	| { readonly type: DefinitionKind; readonly node: ts.Node }
 	| { readonly type: DefinitionKind; readonly node: ts.StringLiteralLike }
-	| { readonly type: DefinitionKind; readonly reference: ts.FileReference; readonly file: ts.SourceFile };
+	| {
+			readonly type: DefinitionKind;
+			readonly reference: ts.FileReference;
+			readonly file: ts.SourceFile;
+	  };
 
-type NodeEntryKind = typeof EntryKind.Node | typeof EntryKind.StringLiteral | typeof EntryKind.SearchedLocalFoundProperty | typeof EntryKind.SearchedPropertyFoundLocal;
+type NodeEntryKind =
+	| typeof EntryKind.Node
+	| typeof EntryKind.StringLiteral
+	| typeof EntryKind.SearchedLocalFoundProperty
+	| typeof EntryKind.SearchedPropertyFoundLocal;
 type Entry = NodeEntry | SpanEntry;
 interface ContextWithStartAndEndNode {
 	start: ts.Node;

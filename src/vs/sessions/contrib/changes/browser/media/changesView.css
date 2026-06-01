@@ -93,7 +93,10 @@
 	align-items: center;
 }
 
-.changes-view-body .changes-files-header-right-toolbar .changes-diff-stats-action .action-label {
+.changes-view-body
+	.changes-files-header-right-toolbar
+	.changes-diff-stats-action
+	.action-label {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
@@ -134,11 +137,15 @@
 	font-weight: 500;
 }
 
-.changes-view-body .changes-files-header-right-toolbar .working-set-lines-added {
+.changes-view-body
+	.changes-files-header-right-toolbar
+	.working-set-lines-added {
 	color: var(--vscode-chat-linesAddedForeground);
 }
 
-.changes-view-body .changes-files-header-right-toolbar .working-set-lines-removed {
+.changes-view-body
+	.changes-files-header-right-toolbar
+	.working-set-lines-removed {
 	color: var(--vscode-chat-linesRemovedForeground);
 }
 
@@ -166,41 +173,61 @@
 }
 
 /* Primary button grows to fill available space */
-.changes-view-body .chat-editing-session-actions.outside-card .monaco-button:not(.secondary) {
+.changes-view-body
+	.chat-editing-session-actions.outside-card
+	.monaco-button:not(.secondary) {
 	flex: 1;
 	min-width: 0;
 }
 
-.changes-view-body .chat-editing-session-actions.outside-card .monaco-button:not(.secondary) > span:not(.codicon) {
+.changes-view-body
+	.chat-editing-session-actions.outside-card
+	.monaco-button:not(.secondary)
+	> span:not(.codicon) {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
 /* ButtonWithDropdown container grows to fill available space */
-.changes-view-body .chat-editing-session-actions.outside-card .monaco-button-dropdown {
+.changes-view-body
+	.chat-editing-session-actions.outside-card
+	.monaco-button-dropdown {
 	flex: 1;
 	min-width: 0;
 	display: flex;
 }
 
-.changes-view-body .chat-editing-session-actions.outside-card .monaco-button-dropdown > .monaco-button {
+.changes-view-body
+	.chat-editing-session-actions.outside-card
+	.monaco-button-dropdown
+	> .monaco-button {
 	flex: 1;
 	min-width: 0;
 	box-sizing: border-box;
 }
 
-.changes-view-body .chat-editing-session-actions.outside-card .monaco-button-dropdown > .monaco-button > span:not(.codicon) {
+.changes-view-body
+	.chat-editing-session-actions.outside-card
+	.monaco-button-dropdown
+	> .monaco-button
+	> span:not(.codicon) {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.changes-view-body .chat-editing-session-actions.outside-card .monaco-button-dropdown > .monaco-button-dropdown-separator {
+.changes-view-body
+	.chat-editing-session-actions.outside-card
+	.monaco-button-dropdown
+	> .monaco-button-dropdown-separator {
 	flex: 0;
 }
 
-.changes-view-body .chat-editing-session-actions.outside-card .monaco-button-dropdown > .monaco-button.monaco-dropdown-button {
+.changes-view-body
+	.chat-editing-session-actions.outside-card
+	.monaco-button-dropdown
+	> .monaco-button.monaco-dropdown-button {
 	flex: 0 0 auto;
 	padding: 4px;
 	width: auto;
@@ -208,7 +235,9 @@
 	border-radius: 0px 4px 4px 0px;
 }
 
-.changes-view-body .chat-editing-session-actions.outside-card .monaco-button.secondary.monaco-text-button.codicon {
+.changes-view-body
+	.chat-editing-session-actions.outside-card
+	.monaco-button.secondary.monaco-text-button.codicon {
 	padding: 4px 6px;
 	font-size: 16px !important;
 }
@@ -219,23 +248,32 @@
 	text-wrap: nowrap;
 }
 
-.changes-view-body .chat-editing-session-actions .monaco-button.secondary.monaco-text-button.codicon {
+.changes-view-body
+	.chat-editing-session-actions
+	.monaco-button.secondary.monaco-text-button.codicon {
 	cursor: pointer;
 	padding: 2px;
 	border-radius: 4px;
 	display: inline-flex;
 }
 
-.changes-view-body .chat-editing-session-actions .monaco-button.secondary.monaco-text-button {
+.changes-view-body
+	.chat-editing-session-actions
+	.monaco-button.secondary.monaco-text-button {
 	background-color: var(--vscode-button-secondaryBackground);
 	color: var(--vscode-button-secondaryForeground);
 }
 
-.changes-view-body .chat-editing-session-actions.outside-card .monaco-button-dropdown > .monaco-button.secondary.monaco-text-button {
+.changes-view-body
+	.chat-editing-session-actions.outside-card
+	.monaco-button-dropdown
+	> .monaco-button.secondary.monaco-text-button {
 	border-radius: 4px 0px 0px 4px;
 }
 
-.changes-view-body .chat-editing-session-actions .monaco-button.secondary:hover {
+.changes-view-body
+	.chat-editing-session-actions
+	.monaco-button.secondary:hover {
 	background-color: var(--vscode-button-secondaryHoverBackground);
 	color: var(--vscode-button-secondaryForeground);
 }
@@ -272,11 +310,18 @@
 }
 
 /* List rows */
-.changes-view-body .chat-editing-session-container:not(.has-file-icons) .monaco-list-row .monaco-icon-label {
+.changes-view-body
+	.chat-editing-session-container:not(.has-file-icons)
+	.monaco-list-row
+	.monaco-icon-label {
 	margin-left: 6px;
 }
 
-.changes-view-body .chat-editing-session-container.show-file-icons .monaco-scrollable-element .monaco-list-rows .monaco-list-row {
+.changes-view-body
+	.chat-editing-session-container.show-file-icons
+	.monaco-scrollable-element
+	.monaco-list-rows
+	.monaco-list-row {
 	border-radius: 4px;
 }
 
@@ -286,16 +331,31 @@
 	display: none;
 }
 
-.changes-file-list .monaco-list-row:hover .chat-collapsible-list-action-bar:not(.has-no-actions),
-.changes-file-list .monaco-list-row.focused .chat-collapsible-list-action-bar:not(.has-no-actions),
-.changes-file-list .monaco-list-row.selected .chat-collapsible-list-action-bar:not(.has-no-actions) {
+.changes-file-list
+	.monaco-list-row:hover
+	.chat-collapsible-list-action-bar:not(.has-no-actions),
+.changes-file-list
+	.monaco-list-row.focused
+	.chat-collapsible-list-action-bar:not(.has-no-actions),
+.changes-file-list
+	.monaco-list-row.selected
+	.chat-collapsible-list-action-bar:not(.has-no-actions) {
 	display: inherit;
 }
 
 /* Hide diff stats on hover/focus/select when toolbar has actions */
-.changes-file-list .monaco-list-row:hover .monaco-icon-label:has(.chat-collapsible-list-action-bar:not(.has-no-actions)) .working-set-line-counts,
-.changes-file-list .monaco-list-row.focused .monaco-icon-label:has(.chat-collapsible-list-action-bar:not(.has-no-actions)) .working-set-line-counts,
-.changes-file-list .monaco-list-row.selected .monaco-icon-label:has(.chat-collapsible-list-action-bar:not(.has-no-actions)) .working-set-line-counts {
+.changes-file-list
+	.monaco-list-row:hover
+	.monaco-icon-label:has(.chat-collapsible-list-action-bar:not(.has-no-actions))
+	.working-set-line-counts,
+.changes-file-list
+	.monaco-list-row.focused
+	.monaco-icon-label:has(.chat-collapsible-list-action-bar:not(.has-no-actions))
+	.working-set-line-counts,
+.changes-file-list
+	.monaco-list-row.selected
+	.monaco-icon-label:has(.chat-collapsible-list-action-bar:not(.has-no-actions))
+	.working-set-line-counts {
 	display: none;
 }
 
@@ -368,7 +428,9 @@
 }
 
 /* Primary action button */
-.changes-view-body .chat-editing-session-actions .monaco-button.monaco-text-button {
+.changes-view-body
+	.chat-editing-session-actions
+	.monaco-button.monaco-text-button {
 	gap: 2px;
 
 	.codicon {
@@ -377,22 +439,34 @@
 }
 
 /* Line counts in buttons */
-.changes-view-body .chat-editing-session-actions .monaco-button.working-set-diff-stats {
+.changes-view-body
+	.chat-editing-session-actions
+	.monaco-button.working-set-diff-stats {
 	flex-shrink: 0;
 	padding-left: 4px;
 	padding-right: 8px;
 }
 
-.changes-view-body .chat-editing-session-actions .monaco-button .working-set-lines-added {
+.changes-view-body
+	.chat-editing-session-actions
+	.monaco-button
+	.working-set-lines-added {
 	color: var(--vscode-chat-linesAddedForeground);
 }
 
-.changes-view-body .chat-editing-session-actions .monaco-button .working-set-lines-removed {
+.changes-view-body
+	.chat-editing-session-actions
+	.monaco-button
+	.working-set-lines-removed {
 	color: var(--vscode-chat-linesRemovedForeground);
 }
 
-.changes-view-body .chat-editing-session-actions .monaco-button.code-review-comments,
-.changes-view-body .chat-editing-session-actions .monaco-button.code-review-loading {
+.changes-view-body
+	.chat-editing-session-actions
+	.monaco-button.code-review-comments,
+.changes-view-body
+	.chat-editing-session-actions
+	.monaco-button.code-review-loading {
 	padding-left: 4px;
 	padding-right: 4px;
 }

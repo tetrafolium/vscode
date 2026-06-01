@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { mainWindow } from '../../../../../../base/browser/window.js';
-import { Emitter } from '../../../../../../base/common/event.js';
-import { Disposable } from '../../../../../../base/common/lifecycle.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
+import assert from "assert";
+import { mainWindow } from "../../../../../../base/browser/window.js";
+import { Emitter } from "../../../../../../base/common/event.js";
+import { Disposable } from "../../../../../../base/common/lifecycle.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import { TestInstantiationService } from "../../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
 import {
 	IQuickInput,
 	IQuickInputButton,
@@ -19,10 +19,17 @@ import {
 	IQuickPickItemButtonEvent,
 	IQuickPickSeparator,
 	QuickInputHideReason,
-} from '../../../../../../platform/quickinput/common/quickInput.js';
-import { BrowserEditorContribution, IBrowserUrlPickerActionProvider, IBrowserUrlSuggestionProvider } from '../../../electron-browser/browserEditor.js';
-import { BrowserEditorInput } from '../../../common/browserEditorInput.js';
-import { BrowserUrlBarWidget, IBrowserUrlBarHost } from '../../../electron-browser/widgets/browserUrlBarWidget.js';
+} from "../../../../../../platform/quickinput/common/quickInput.js";
+import {
+	BrowserEditorContribution,
+	IBrowserUrlPickerActionProvider,
+	IBrowserUrlSuggestionProvider,
+} from "../../../electron-browser/browserEditor.js";
+import { BrowserEditorInput } from "../../../common/browserEditorInput.js";
+import {
+	BrowserUrlBarWidget,
+	IBrowserUrlBarHost,
+} from "../../../electron-browser/widgets/browserUrlBarWidget.js";
 
 class FakeQuickPick<T extends IQuickPickItem> extends Disposable {
 	placeholder: string | undefined;
@@ -30,8 +37,8 @@ class FakeQuickPick<T extends IQuickPickItem> extends Disposable {
 	sortByLabel = true;
 	matchOnDescription = false;
 	anchor: HTMLElement | { x: number; y: number } | undefined;
-	anchorPosition: 'above' | 'below' | 'overlay' | undefined;
-	value = '';
+	anchorPosition: "above" | "below" | "overlay" | undefined;
+	value = "";
 	valueSelection: Readonly<[number, number]> | undefined;
 	items: ReadonlyArray<T | IQuickPickSeparator> = [];
 	activeItems: ReadonlyArray<T> = [];
@@ -39,20 +46,32 @@ class FakeQuickPick<T extends IQuickPickItem> extends Disposable {
 
 	visible = false;
 
-	private readonly _onWillHide = this._register(new Emitter<{ reason: QuickInputHideReason }>());
+	private readonly _onWillHide = this._register(
+		new Emitter<{ reason: QuickInputHideReason }>(),
+	);
 	readonly onWillHide = this._onWillHide.event;
 	private readonly _onDidChangeValue = this._register(new Emitter<string>());
 	readonly onDidChangeValue = this._onDidChangeValue.event;
-	private readonly _onDidTriggerButton = this._register(new Emitter<IQuickInputButton>());
+	private readonly _onDidTriggerButton = this._register(
+		new Emitter<IQuickInputButton>(),
+	);
 	readonly onDidTriggerButton = this._onDidTriggerButton.event;
-	private readonly _onDidTriggerItemButton = this._register(new Emitter<IQuickPickItemButtonEvent<T>>());
+	private readonly _onDidTriggerItemButton = this._register(
+		new Emitter<IQuickPickItemButtonEvent<T>>(),
+	);
 	readonly onDidTriggerItemButton = this._onDidTriggerItemButton.event;
-	private readonly _onDidAccept = this._register(new Emitter<IQuickPickDidAcceptEvent>());
+	private readonly _onDidAccept = this._register(
+		new Emitter<IQuickPickDidAcceptEvent>(),
+	);
 	readonly onDidAccept = this._onDidAccept.event;
-	private readonly _onDidHide = this._register(new Emitter<{ reason: QuickInputHideReason }>());
+	private readonly _onDidHide = this._register(
+		new Emitter<{ reason: QuickInputHideReason }>(),
+	);
 	readonly onDidHide = this._onDidHide.event;
 
-	show(): void { this.visible = true; }
+	show(): void {
+		this.visible = true;
+	}
 	hide(reason: QuickInputHideReason = QuickInputHideReason.Other): void {
 		if (!this.visible) {
 			return;
@@ -80,15 +99,20 @@ class FakeQuickPick<T extends IQuickPickItem> extends Disposable {
 	}
 }
 
-function asPicker<T extends IQuickPickItem>(fake: FakeQuickPick<T>): IQuickPick<T, { useSeparators: true }> {
+function asPicker<T extends IQuickPickItem>(
+	fake: FakeQuickPick<T>,
+): IQuickPick<T, { useSeparators: true }> {
 	return fake as unknown as IQuickPick<T, { useSeparators: true }>;
 }
 
-function asInput(state: { url: string; navigate(url: string): void }): BrowserEditorInput {
+function asInput(state: {
+	url: string;
+	navigate(url: string): void;
+}): BrowserEditorInput {
 	return state as unknown as BrowserEditorInput;
 }
 
-suite('BrowserUrlBarWidget', () => {
+suite("BrowserUrlBarWidget", () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
 	interface ITestHarness {
@@ -121,32 +145,45 @@ suite('BrowserUrlBarWidget', () => {
 				if (replacementActive) {
 					return {} as unknown as IQuickInput;
 				}
-				return picker.visible ? asPicker(picker) as unknown as IQuickInput : undefined;
+				return picker.visible
+					? (asPicker(picker) as unknown as IQuickInput)
+					: undefined;
 			},
-			createQuickPick: ((..._args: unknown[]) => asPicker(picker)) as IQuickInputService['createQuickPick'],
+			createQuickPick: ((..._args: unknown[]) =>
+				asPicker(picker)) as IQuickInputService["createQuickPick"],
 		};
 
 		const navigated: string[] = [];
 		const inputState = {
-			url: 'https://example.com/',
-			navigate(url: string) { navigated.push(url); },
+			url: "https://example.com/",
+			navigate(url: string) {
+				navigated.push(url);
+			},
 		};
 
 		let ensureBrowserFocusCalls = 0;
 		const host: IBrowserUrlBarHost = {
-			get input() { return asInput(inputState); },
-			ensureBrowserFocus() { ensureBrowserFocusCalls++; },
+			get input() {
+				return asInput(inputState);
+			},
+			ensureBrowserFocus() {
+				ensureBrowserFocusCalls++;
+			},
 		};
 
 		const instantiationService = store.add(new TestInstantiationService());
 		instantiationService.stub(IQuickInputService, quickInputService);
 
-		const widget = store.add(instantiationService.createInstance(BrowserUrlBarWidget, host));
+		const widget = store.add(
+			instantiationService.createInstance(BrowserUrlBarWidget, host),
+		);
 		widget.mountContributions([]);
 		mainWindow.document.body.appendChild(widget.element);
 		store.add({ dispose: () => widget.element.remove() });
 
-		const display = widget.element.querySelector('.browser-url-display') as HTMLElement;
+		const display = widget.element.querySelector(
+			".browser-url-display",
+		) as HTMLElement;
 
 		return {
 			widget,
@@ -155,11 +192,16 @@ suite('BrowserUrlBarWidget', () => {
 			inputState,
 			navigated,
 			ensureBrowserFocusCalls: () => ensureBrowserFocusCalls,
-			setReplaced: (active: boolean) => { replacementActive = active; },
+			setReplaced: (active: boolean) => {
+				replacementActive = active;
+			},
 		};
 	}
 
-	function mountSuggestionProvider(widget: BrowserUrlBarWidget, provider: IBrowserUrlSuggestionProvider): void {
+	function mountSuggestionProvider(
+		widget: BrowserUrlBarWidget,
+		provider: IBrowserUrlSuggestionProvider,
+	): void {
 		const contribution = {
 			widgets: [],
 			urlRenderers: [],
@@ -169,7 +211,10 @@ suite('BrowserUrlBarWidget', () => {
 		widget.mountContributions([contribution]);
 	}
 
-	function mountPickerActionProvider(widget: BrowserUrlBarWidget, provider: IBrowserUrlPickerActionProvider): void {
+	function mountPickerActionProvider(
+		widget: BrowserUrlBarWidget,
+		provider: IBrowserUrlPickerActionProvider,
+	): void {
 		const contribution = {
 			widgets: [],
 			urlRenderers: [],
@@ -179,32 +224,32 @@ suite('BrowserUrlBarWidget', () => {
 		widget.mountContributions([contribution]);
 	}
 
-	test('initial render shows the canonical URL', () => {
+	test("initial render shows the canonical URL", () => {
 		const { display } = makeHarness();
-		assert.strictEqual(display.textContent, 'https://example.com/');
+		assert.strictEqual(display.textContent, "https://example.com/");
 	});
 
-	test('refreshUrl updates the display when the input URL changes', () => {
+	test("refreshUrl updates the display when the input URL changes", () => {
 		const { widget, display, inputState } = makeHarness();
-		inputState.url = 'https://newsite.test/path';
+		inputState.url = "https://newsite.test/path";
 		widget.refreshUrl();
-		assert.strictEqual(display.textContent, 'https://newsite.test/path');
+		assert.strictEqual(display.textContent, "https://newsite.test/path");
 	});
 
-	test('previewUrl renders an override URL while not editing', () => {
+	test("previewUrl renders an override URL while not editing", () => {
 		const { widget, display } = makeHarness();
-		widget.previewUrl('https://preview.test/');
-		assert.strictEqual(display.textContent, 'https://preview.test/');
+		widget.previewUrl("https://preview.test/");
+		assert.strictEqual(display.textContent, "https://preview.test/");
 	});
 
-	test('previewUrl is a no-op while the picker is open', () => {
+	test("previewUrl is a no-op while the picker is open", () => {
 		const { widget, display } = makeHarness();
 		widget.openUrlPicker();
-		widget.previewUrl('https://should-not-show.test/');
-		assert.strictEqual(display.textContent, 'https://example.com/');
+		widget.previewUrl("https://should-not-show.test/");
+		assert.strictEqual(display.textContent, "https://example.com/");
 	});
 
-	test('openUrlPicker shows a picker pre-filled with the canonical URL', () => {
+	test("openUrlPicker shows a picker pre-filled with the canonical URL", () => {
 		const { widget, picker } = makeHarness();
 		widget.openUrlPicker();
 		assert.deepStrictEqual(
@@ -216,9 +261,9 @@ suite('BrowserUrlBarWidget', () => {
 			},
 			{
 				visible: true,
-				value: 'https://example.com/',
-				valueSelection: [0, 'https://example.com/'.length],
-				anchorPosition: 'overlay',
+				value: "https://example.com/",
+				valueSelection: [0, "https://example.com/".length],
+				anchorPosition: "overlay",
 			},
 		);
 	});
@@ -226,42 +271,50 @@ suite('BrowserUrlBarWidget', () => {
 	test('accepting the "Go to" item navigates to the typed value', () => {
 		const { widget, picker, navigated } = makeHarness();
 		widget.openUrlPicker();
-		picker.type('https://target.test/page');
-		picker.activeItems = [picker.items.find((i): i is IQuickPickItem => i.type !== 'separator')!];
+		picker.type("https://target.test/page");
+		picker.activeItems = [
+			picker.items.find((i): i is IQuickPickItem => i.type !== "separator")!,
+		];
 		picker.accept();
-		assert.deepStrictEqual(navigated, ['https://target.test/page']);
+		assert.deepStrictEqual(navigated, ["https://target.test/page"]);
 	});
 
-	test('accepting a contributed suggestion calls its apply with the input', async () => {
+	test("accepting a contributed suggestion calls its apply with the input", async () => {
 		const harness = makeHarness();
 		const { widget, picker, inputState } = harness;
 		const applyCalls: BrowserEditorInput[] = [];
 		mountSuggestionProvider(widget, {
 			async getSuggestions() {
-				return [{
-					id: 'sugg-1',
-					label: 'Suggestion',
-					apply(input) { applyCalls.push(input); },
-				}];
+				return [
+					{
+						id: "sugg-1",
+						label: "Suggestion",
+						apply(input) {
+							applyCalls.push(input);
+						},
+					},
+				];
 			},
 		});
 
 		widget.openUrlPicker();
 		// Let the async provider load run.
-		await new Promise(resolve => setTimeout(resolve, 0));
-		const suggestion = picker.items.find((i): i is IQuickPickItem => i.type !== 'separator' && i.id === 'sugg-1');
-		assert.ok(suggestion, 'suggestion item should be present');
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		const suggestion = picker.items.find(
+			(i): i is IQuickPickItem => i.type !== "separator" && i.id === "sugg-1",
+		);
+		assert.ok(suggestion, "suggestion item should be present");
 		picker.activeItems = [suggestion];
 		picker.accept();
 		assert.strictEqual(applyCalls.length, 1);
 		assert.strictEqual(applyCalls[0], asInput(inputState));
 	});
 
-	test('hiding after an accept reverts to canonical and releases focus to the page', () => {
+	test("hiding after an accept reverts to canonical and releases focus to the page", () => {
 		const harness = makeHarness();
 		const { widget, picker, display } = harness;
 		widget.openUrlPicker();
-		picker.type('https://typed.test/');
+		picker.type("https://typed.test/");
 		picker.accept(); // onDidAccept handler calls picker.hide() synchronously
 		assert.deepStrictEqual(
 			{
@@ -270,18 +323,18 @@ suite('BrowserUrlBarWidget', () => {
 				ensureBrowserFocusCalls: harness.ensureBrowserFocusCalls(),
 			},
 			{
-				display: 'https://example.com/',
+				display: "https://example.com/",
 				visible: false,
 				ensureBrowserFocusCalls: 1,
 			},
 		);
 	});
 
-	test('hiding on Blur reverts to canonical without releasing focus to the page', () => {
+	test("hiding on Blur reverts to canonical without releasing focus to the page", () => {
 		const harness = makeHarness();
 		const { widget, picker, display } = harness;
 		widget.openUrlPicker();
-		picker.type('https://abandoned.test/');
+		picker.type("https://abandoned.test/");
 		picker.hide(QuickInputHideReason.Blur);
 		assert.deepStrictEqual(
 			{
@@ -290,36 +343,36 @@ suite('BrowserUrlBarWidget', () => {
 				ensureBrowserFocusCalls: harness.ensureBrowserFocusCalls(),
 			},
 			{
-				display: 'https://example.com/',
+				display: "https://example.com/",
 				visible: false,
 				ensureBrowserFocusCalls: 0,
 			},
 		);
 	});
 
-	test('clear hides the picker and reverts the display', () => {
+	test("clear hides the picker and reverts the display", () => {
 		const { widget, picker, display } = makeHarness();
 		widget.openUrlPicker();
-		picker.type('https://wip.test/');
+		picker.type("https://wip.test/");
 		widget.clear();
 		assert.deepStrictEqual(
 			{ display: display.textContent, visible: picker.visible },
-			{ display: 'https://example.com/', visible: false },
+			{ display: "https://example.com/", visible: false },
 		);
 	});
 
-	test('typing in the picker mirrors into the display', () => {
+	test("typing in the picker mirrors into the display", () => {
 		const { widget, picker, display } = makeHarness();
 		widget.openUrlPicker();
-		picker.type('https://typing.test/');
-		assert.strictEqual(display.textContent, 'https://typing.test/');
+		picker.type("https://typing.test/");
+		assert.strictEqual(display.textContent, "https://typing.test/");
 	});
 
-	test('dismissal without action refocuses the display and preserves the typed text', () => {
+	test("dismissal without action refocuses the display and preserves the typed text", () => {
 		const harness = makeHarness();
 		const { widget, picker, display } = harness;
 		widget.openUrlPicker();
-		picker.type('https://in-progress.test/');
+		picker.type("https://in-progress.test/");
 		picker.hide(QuickInputHideReason.Other);
 		assert.deepStrictEqual(
 			{
@@ -328,17 +381,17 @@ suite('BrowserUrlBarWidget', () => {
 				ensureBrowserFocusCalls: harness.ensureBrowserFocusCalls(),
 			},
 			{
-				display: 'https://in-progress.test/',
+				display: "https://in-progress.test/",
 				active: true,
 				ensureBrowserFocusCalls: 0,
 			},
 		);
 	});
 
-	test('a replaced picker reverts the display and suppresses the next focus-open', () => {
+	test("a replaced picker reverts the display and suppresses the next focus-open", () => {
 		const { widget, picker, display, setReplaced } = makeHarness();
 		widget.openUrlPicker();
-		picker.type('https://abandoned.test/');
+		picker.type("https://abandoned.test/");
 		setReplaced(true);
 		picker.hide(QuickInputHideReason.Other);
 		// Display has reverted to canonical; refocusing the display (which is
@@ -347,36 +400,41 @@ suite('BrowserUrlBarWidget', () => {
 		display.focus();
 		assert.deepStrictEqual(
 			{ display: display.textContent, pickerVisible: picker.visible },
-			{ display: 'https://example.com/', pickerVisible: false },
+			{ display: "https://example.com/", pickerVisible: false },
 		);
 	});
 
-	test('accept with no active item navigates to the picker value', () => {
+	test("accept with no active item navigates to the picker value", () => {
 		const { widget, picker, navigated } = makeHarness();
 		widget.openUrlPicker();
-		picker.type('https://fallback.test/');
+		picker.type("https://fallback.test/");
 		picker.activeItems = [];
 		picker.accept();
-		assert.deepStrictEqual(navigated, ['https://fallback.test/']);
+		assert.deepStrictEqual(navigated, ["https://fallback.test/"]);
 	});
 
-	test('refreshUrl while the picker is open mirrors the canonical URL into the picker value', () => {
+	test("refreshUrl while the picker is open mirrors the canonical URL into the picker value", () => {
 		const { widget, picker, inputState } = makeHarness();
 		widget.openUrlPicker();
-		inputState.url = 'https://changed.test/';
+		inputState.url = "https://changed.test/";
 		widget.refreshUrl();
-		assert.strictEqual(picker.value, 'https://changed.test/');
+		assert.strictEqual(picker.value, "https://changed.test/");
 	});
 
-	test('triggering a picker chrome button runs the action and releases focus on hide', () => {
+	test("triggering a picker chrome button runs the action and releases focus on hide", () => {
 		const harness = makeHarness();
 		const { widget, picker } = harness;
 		const runCalls: BrowserEditorInput[] = [];
-		const action: IQuickInputButton & { id: string; run(input: BrowserEditorInput): void } = {
-			id: 'bookmark-toggle',
-			tooltip: 'Toggle bookmark',
-			iconClass: 'icon',
-			run(input) { runCalls.push(input); },
+		const action: IQuickInputButton & {
+			id: string;
+			run(input: BrowserEditorInput): void;
+		} = {
+			id: "bookmark-toggle",
+			tooltip: "Toggle bookmark",
+			iconClass: "icon",
+			run(input) {
+				runCalls.push(input);
+			},
 		};
 		mountPickerActionProvider(widget, { getActions: () => [action] });
 
@@ -393,29 +451,35 @@ suite('BrowserUrlBarWidget', () => {
 		);
 	});
 
-	test('triggering a per-item button runs the action without dismissing the picker', async () => {
+	test("triggering a per-item button runs the action without dismissing the picker", async () => {
 		const harness = makeHarness();
 		const { widget, picker, inputState } = harness;
 		const runCalls: BrowserEditorInput[] = [];
 		const itemAction = {
-			id: 'delete-bookmark',
-			tooltip: 'Delete bookmark',
-			iconClass: 'icon',
-			run(input: BrowserEditorInput) { runCalls.push(input); },
+			id: "delete-bookmark",
+			tooltip: "Delete bookmark",
+			iconClass: "icon",
+			run(input: BrowserEditorInput) {
+				runCalls.push(input);
+			},
 		};
 		mountSuggestionProvider(widget, {
 			async getSuggestions() {
-				return [{
-					id: 'sugg-2',
-					label: 'Bookmark',
-					apply() { },
-					actions: [itemAction],
-				}];
+				return [
+					{
+						id: "sugg-2",
+						label: "Bookmark",
+						apply() {},
+						actions: [itemAction],
+					},
+				];
 			},
 		});
 		widget.openUrlPicker();
-		await new Promise(resolve => setTimeout(resolve, 0));
-		const suggestion = picker.items.find((i): i is IQuickPickItem => i.type !== 'separator' && i.id === 'sugg-2')!;
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		const suggestion = picker.items.find(
+			(i): i is IQuickPickItem => i.type !== "separator" && i.id === "sugg-2",
+		)!;
 		picker.triggerItemButton(suggestion, itemAction);
 		assert.deepStrictEqual(
 			{
@@ -427,14 +491,21 @@ suite('BrowserUrlBarWidget', () => {
 		);
 	});
 
-	test('pressing Enter on the display navigates and preserves the typed text through the subsequent blur', () => {
+	test("pressing Enter on the display navigates and preserves the typed text through the subsequent blur", () => {
 		const harness = makeHarness();
 		const { widget, display, navigated } = harness;
 		widget.focusUrlInput();
-		display.textContent = 'https://typed-into-display.test/';
+		display.textContent = "https://typed-into-display.test/";
 		// `StandardKeyboardEvent` reads the (deprecated) numeric `keyCode`,
 		// so pass it explicitly (Enter == 13) rather than relying on `key`.
-		display.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 13, key: 'Enter', bubbles: true, cancelable: true } as KeyboardEventInit));
+		display.dispatchEvent(
+			new KeyboardEvent("keydown", {
+				keyCode: 13,
+				key: "Enter",
+				bubbles: true,
+				cancelable: true,
+			} as KeyboardEventInit),
+		);
 		display.blur();
 		// `model.url` (canonical) hasn't caught up to the typed URL yet, but
 		// the BLUR-revert should be suppressed for an Enter-commit so the
@@ -446,14 +517,14 @@ suite('BrowserUrlBarWidget', () => {
 				ensureBrowserFocusCalls: harness.ensureBrowserFocusCalls(),
 			},
 			{
-				navigated: ['https://typed-into-display.test/'],
-				display: 'https://typed-into-display.test/',
+				navigated: ["https://typed-into-display.test/"],
+				display: "https://typed-into-display.test/",
 				ensureBrowserFocusCalls: 1,
 			},
 		);
 	});
 
-	test('suggestion provider onDidChange reruns the load', async () => {
+	test("suggestion provider onDidChange reruns the load", async () => {
 		const { widget, picker } = makeHarness();
 		const refresh = new Emitter<void>();
 		store.add(refresh);
@@ -462,20 +533,28 @@ suite('BrowserUrlBarWidget', () => {
 			onDidChange: refresh.event,
 			async getSuggestions() {
 				counter++;
-				return [{
-					id: `sugg-${counter}`,
-					label: `Suggestion ${counter}`,
-					apply() { },
-				}];
+				return [
+					{
+						id: `sugg-${counter}`,
+						label: `Suggestion ${counter}`,
+						apply() {},
+					},
+				];
 			},
 		});
 
 		widget.openUrlPicker();
-		await new Promise(resolve => setTimeout(resolve, 0));
-		assert.ok(picker.items.some(i => i.type !== 'separator' && i.id === 'sugg-1'), 'initial suggestion present');
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		assert.ok(
+			picker.items.some((i) => i.type !== "separator" && i.id === "sugg-1"),
+			"initial suggestion present",
+		);
 
 		refresh.fire();
-		await new Promise(resolve => setTimeout(resolve, 0));
-		assert.ok(picker.items.some(i => i.type !== 'separator' && i.id === 'sugg-2'), 'refreshed suggestion present');
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		assert.ok(
+			picker.items.some((i) => i.type !== "separator" && i.id === "sugg-2"),
+			"refreshed suggestion present",
+		);
 	});
 });

@@ -2,16 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import assert from 'assert';
-import { CharCode } from '../../../../base/common/charCode.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { CharacterClassifier } from '../../../common/core/characterClassifier.js';
+import assert from "assert";
+import { CharCode } from "../../../../base/common/charCode.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../base/test/common/utils.js";
+import { CharacterClassifier } from "../../../common/core/characterClassifier.js";
 
-suite('CharacterClassifier', () => {
-
+suite("CharacterClassifier", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('works', () => {
+	test("works", () => {
 		const classifier = new CharacterClassifier<number>(0);
 
 		assert.strictEqual(classifier.get(-1), 0);
@@ -36,5 +35,4 @@ suite('CharacterClassifier', () => {
 		assert.strictEqual(classifier.get(1000), 3);
 		assert.strictEqual(classifier.get(2000), 0);
 	});
-
 });

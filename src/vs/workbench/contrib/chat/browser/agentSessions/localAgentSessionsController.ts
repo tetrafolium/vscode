@@ -3,46 +3,81 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { coalesce } from '../../../../../base/common/arrays.js';
-import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { Emitter } from '../../../../../base/common/event.js';
-import { Disposable, DisposableResourceMap } from '../../../../../base/common/lifecycle.js';
-import { ResourceMap, ResourceSet } from '../../../../../base/common/map.js';
-import { equals } from '../../../../../base/common/objects.js';
-import { autorun, observableSignalFromEvent } from '../../../../../base/common/observable.js';
-import { isEqual } from '../../../../../base/common/resources.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { IWorkbenchContribution } from '../../../../common/contributions.js';
-import { convertLegacyChatSessionTiming, IChatDetail, IChatService, IChatSessionTiming } from '../../common/chatService/chatService.js';
-import { chatModelToChatDetail } from '../../common/chatService/chatServiceImpl.js';
-import { ChatSessionStatus, IChatSessionItem, IChatSessionItemController, IChatSessionItemMetadata, IChatSessionItemsDelta, IChatSessionsService, localChatSessionType } from '../../common/chatSessionsService.js';
-import { IChatModel } from '../../common/model/chatModel.js';
-import { getChatSessionType } from '../../common/model/chatUri.js';
-import { getInProgressSessionDescription } from '../chatSessions/chatSessionDescription.js';
-import { chatResponseStateToSessionStatus, getSessionStatusForModel } from '../chatSessions/chatSessions.contribution.js';
-import { Schemas } from '../../../../../base/common/network.js';
+import { coalesce } from "../../../../../base/common/arrays.js";
+import { CancellationToken } from "../../../../../base/common/cancellation.js";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { Emitter } from "../../../../../base/common/event.js";
+import {
+	Disposable,
+	DisposableResourceMap,
+} from "../../../../../base/common/lifecycle.js";
+import { ResourceMap, ResourceSet } from "../../../../../base/common/map.js";
+import { equals } from "../../../../../base/common/objects.js";
+import {
+	autorun,
+	observableSignalFromEvent,
+} from "../../../../../base/common/observable.js";
+import { isEqual } from "../../../../../base/common/resources.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { IWorkbenchContribution } from "../../../../common/contributions.js";
+import {
+	convertLegacyChatSessionTiming,
+	IChatDetail,
+	IChatService,
+	IChatSessionTiming,
+} from "../../common/chatService/chatService.js";
+import { chatModelToChatDetail } from "../../common/chatService/chatServiceImpl.js";
+import {
+	ChatSessionStatus,
+	IChatSessionItem,
+	IChatSessionItemController,
+	IChatSessionItemMetadata,
+	IChatSessionItemsDelta,
+	IChatSessionsService,
+	localChatSessionType,
+} from "../../common/chatSessionsService.js";
+import { IChatModel } from "../../common/model/chatModel.js";
+import { getChatSessionType } from "../../common/model/chatUri.js";
+import { getInProgressSessionDescription } from "../chatSessions/chatSessionDescription.js";
+import {
+	chatResponseStateToSessionStatus,
+	getSessionStatusForModel,
+} from "../chatSessions/chatSessions.contribution.js";
+import { Schemas } from "../../../../../base/common/network.js";
 
-export class LocalAgentsSessionsController extends Disposable implements IChatSessionItemController, IWorkbenchContribution {
-
-	static readonly ID = 'workbench.contrib.localAgentsSessionsController';
+export class LocalAgentsSessionsController
+	extends Disposable
+	implements IChatSessionItemController, IWorkbenchContribution
+{
+	static readonly ID = "workbench.contrib.localAgentsSessionsController";
 
 	readonly chatSessionType = localChatSessionType;
 
-	readonly _onDidChangeChatSessionItems = this._register(new Emitter<IChatSessionItemsDelta>());
-	readonly onDidChangeChatSessionItems = this._onDidChangeChatSessionItems.event;
+	readonly _onDidChangeChatSessionItems = this._register(
+		new Emitter<IChatSessionItemsDelta>(),
+	);
+	readonly onDidChangeChatSessionItems =
+		this._onDidChangeChatSessionItems.event;
 
-	private readonly _modelListeners = this._register(new DisposableResourceMap());
+	private readonly _modelListeners = this._register(
+		new DisposableResourceMap(),
+	);
 
 	private _isDisposed = false;
 
 	constructor(
 		@IChatService private readonly chatService: IChatService,
-		@IChatSessionsService private readonly chatSessionsService: IChatSessionsService,
+		@IChatSessionsService
+		private readonly chatSessionsService: IChatSessionsService,
 	) {
 		super();
 
-		this._register(this.chatSessionsService.registerChatSessionItemController(this.chatSessionType, this));
+		this._register(
+			this.chatSessionsService.registerChatSessionItemController(
+				this.chatSessionType,
+				this,
+			),
+		);
 
 		this.registerListeners();
 	}
@@ -60,7 +95,7 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
 	async refresh(token: CancellationToken): Promise<void> {
 		const newItems = await this.provideChatSessionItems(token);
 
-		const newResources = new ResourceSet(newItems.map(i => i.resource));
+		const newResources = new ResourceSet(newItems.map((i) => i.resource));
 		const addedOrUpdated: LocalChatSessionItem[] = [];
 		const removed: URI[] = [];
 
@@ -101,34 +136,55 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
 
 			this.tryUpdateLiveSessionItem(model);
 
-			const requestChangeListener = model.lastRequestObs.map(last => last?.response && observableSignalFromEvent('chatSessions.modelRequestChangeListener', last.response.onDidChange));
-			const modelChangeListener = observableSignalFromEvent('chatSessions.modelChangeListener', model.onDidChange);
-			this._modelListeners.set(model.sessionResource, autorun(reader => {
-				requestChangeListener.read(reader)?.read(reader);
-				modelChangeListener.read(reader);
+			const requestChangeListener = model.lastRequestObs.map(
+				(last) =>
+					last?.response &&
+					observableSignalFromEvent(
+						"chatSessions.modelRequestChangeListener",
+						last.response.onDidChange,
+					),
+			);
+			const modelChangeListener = observableSignalFromEvent(
+				"chatSessions.modelChangeListener",
+				model.onDidChange,
+			);
+			this._modelListeners.set(
+				model.sessionResource,
+				autorun((reader) => {
+					requestChangeListener.read(reader)?.read(reader);
+					modelChangeListener.read(reader);
 
-				this.tryUpdateLiveSessionItem(model);
-			}));
+					this.tryUpdateLiveSessionItem(model);
+				}),
+			);
 		};
 
-		this._register(this.chatService.onDidCreateModel(model => addModelListeners(model)));
+		this._register(
+			this.chatService.onDidCreateModel((model) => addModelListeners(model)),
+		);
 		for (const model of this.chatService.chatModels.get()) {
 			addModelListeners(model);
 		}
 
-		this._register(this.chatService.onDidDisposeSession(e => {
-			for (const sessionResource of e.sessionResources) {
-				this._modelListeners.deleteAndDispose(sessionResource);
-			}
-
-			const removedSessionResources = e.sessionResources.filter(resource => getChatSessionType(resource) === this.chatSessionType);
-			if (removedSessionResources.length) {
-				for (const resource of removedSessionResources) {
-					this._items.delete(resource);
+		this._register(
+			this.chatService.onDidDisposeSession((e) => {
+				for (const sessionResource of e.sessionResources) {
+					this._modelListeners.deleteAndDispose(sessionResource);
 				}
-				this._onDidChangeChatSessionItems.fire({ removed: removedSessionResources });
-			}
-		}));
+
+				const removedSessionResources = e.sessionResources.filter(
+					(resource) => getChatSessionType(resource) === this.chatSessionType,
+				);
+				if (removedSessionResources.length) {
+					for (const resource of removedSessionResources) {
+						this._items.delete(resource);
+					}
+					this._onDidChangeChatSessionItems.fire({
+						removed: removedSessionResources,
+					});
+				}
+			}),
+		);
 	}
 
 	private async tryUpdateLiveSessionItem(model: IChatModel): Promise<void> {
@@ -137,7 +193,10 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
 			return;
 		}
 
-		const updated = new LocalChatSessionItem(await chatModelToChatDetail(model), model);
+		const updated = new LocalChatSessionItem(
+			await chatModelToChatDetail(model),
+			model,
+		);
 		if (existing.isEqual(updated)) {
 			return;
 		}
@@ -146,7 +205,9 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
 		this._onDidChangeChatSessionItems.fire({ addedOrUpdated: [updated] });
 	}
 
-	private async provideChatSessionItems(token: CancellationToken): Promise<LocalChatSessionItem[]> {
+	private async provideChatSessionItems(
+		token: CancellationToken,
+	): Promise<LocalChatSessionItem[]> {
 		const sessions: LocalChatSessionItem[] = [];
 		const sessionsByResource = new ResourceSet();
 
@@ -162,7 +223,11 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
 
 		if (!token.isCancellationRequested) {
 			const history = await this.getHistoryItems();
-			sessions.push(...history.filter(historyItem => !sessionsByResource.has(historyItem.resource)));
+			sessions.push(
+				...history.filter(
+					(historyItem) => !sessionsByResource.has(historyItem.resource),
+				),
+			);
 		}
 
 		return sessions;
@@ -172,13 +237,17 @@ export class LocalAgentsSessionsController extends Disposable implements IChatSe
 		try {
 			const historyItems = await this.chatService.getHistorySessionItems();
 
-			return coalesce(historyItems.map(history => this.toChatSessionItem(history)));
+			return coalesce(
+				historyItems.map((history) => this.toChatSessionItem(history)),
+			);
 		} catch (error) {
 			return [];
 		}
 	}
 
-	private toChatSessionItem(chat: IChatDetail): LocalChatSessionItem | undefined {
+	private toChatSessionItem(
+		chat: IChatDetail,
+	): LocalChatSessionItem | undefined {
 		const model = this.chatService.getSession(chat.sessionResource);
 
 		if (model) {
@@ -202,32 +271,45 @@ class LocalChatSessionItem implements IChatSessionItem {
 	readonly description: string | undefined;
 	readonly status: ChatSessionStatus | undefined;
 	readonly timing: IChatSessionTiming;
-	readonly changes: IChatSessionItem['changes'];
+	readonly changes: IChatSessionItem["changes"];
 	readonly metadata: IChatSessionItemMetadata | undefined;
 
 	constructor(chatDetail: IChatDetail, model: IChatModel | undefined) {
 		this.resource = chatDetail.sessionResource;
 		this.label = chatDetail.title;
-		this.description = model ? getInProgressSessionDescription(model) : undefined;
-		this.status = (model && getSessionStatusForModel(model)) ?? chatResponseStateToSessionStatus(chatDetail.lastResponseState);
+		this.description = model
+			? getInProgressSessionDescription(model)
+			: undefined;
+		this.status =
+			(model && getSessionStatusForModel(model)) ??
+			chatResponseStateToSessionStatus(chatDetail.lastResponseState);
 		this.timing = convertLegacyChatSessionTiming(chatDetail.timing);
-		this.changes = chatDetail.stats ? {
-			insertions: chatDetail.stats.added,
-			deletions: chatDetail.stats.removed,
-			files: chatDetail.stats.fileCount,
-		} : undefined;
-		const workingDirectoryPath = chatDetail.workingDirectory?.scheme === Schemas.file ? chatDetail.workingDirectory.fsPath : undefined;
-		this.metadata = workingDirectoryPath ? { workingDirectoryPath: workingDirectoryPath } : undefined;
+		this.changes = chatDetail.stats
+			? {
+					insertions: chatDetail.stats.added,
+					deletions: chatDetail.stats.removed,
+					files: chatDetail.stats.fileCount,
+				}
+			: undefined;
+		const workingDirectoryPath =
+			chatDetail.workingDirectory?.scheme === Schemas.file
+				? chatDetail.workingDirectory.fsPath
+				: undefined;
+		this.metadata = workingDirectoryPath
+			? { workingDirectoryPath: workingDirectoryPath }
+			: undefined;
 	}
 
 	isEqual(other: LocalChatSessionItem): boolean {
-		return isEqual(this.resource, other.resource)
-			&& this.label === other.label
-			&& this.description === other.description
-			&& this.status === other.status
-			&& this.timing.created === other.timing.created
-			&& this.timing.lastRequestStarted === other.timing.lastRequestStarted
-			&& this.timing.lastRequestEnded === other.timing.lastRequestEnded
-			&& equals(this.changes, other.changes);
+		return (
+			isEqual(this.resource, other.resource) &&
+			this.label === other.label &&
+			this.description === other.description &&
+			this.status === other.status &&
+			this.timing.created === other.timing.created &&
+			this.timing.lastRequestStarted === other.timing.lastRequestStarted &&
+			this.timing.lastRequestEnded === other.timing.lastRequestEnded &&
+			equals(this.changes, other.changes)
+		);
 	}
 }

@@ -7,7 +7,10 @@ import { RequestType } from '@vscode/copilot-api';
 import { minimatch } from 'minimatch';
 import { createSha256Hash } from '../../../util/common/crypto';
 import { coalesce } from '../../../util/vs/base/common/arrays';
-import { Limiter, raceCancellationError } from '../../../util/vs/base/common/async';
+import {
+	Limiter,
+	raceCancellationError,
+} from '../../../util/vs/base/common/async';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { IDisposable } from '../../../util/vs/base/common/lifecycle';
 import { ResourceMap } from '../../../util/vs/base/common/map';
@@ -16,7 +19,11 @@ import { IAuthenticationService } from '../../authentication/common/authenticati
 import { ICAPIClientService } from '../../endpoint/common/capiClient';
 import { IFileSystemService } from '../../filesystem/common/fileSystemService';
 import { readFileFromTextBufferOrFS } from '../../filesystem/node/fileSystemServiceImpl';
-import { IGitService, RepoContext, normalizeFetchUrl } from '../../git/common/gitService';
+import {
+	IGitService,
+	RepoContext,
+	normalizeFetchUrl,
+} from '../../git/common/gitService';
 import { ILogService } from '../../log/common/logService';
 import { Response } from '../../networking/common/fetcherService';
 import { IRequestLogger } from '../../requestLogger/common/requestLogger';
@@ -43,7 +50,10 @@ const NON_GIT_FILE_KEY = 'non-git-file';
  */
 export class RemoteContentExclusion implements IDisposable {
 	// The cache which maps remote fetch url to the minimatch patterns, order of patterns matters here
-	private _contentExclusionCache: Map<string, { patterns: string[]; ifAnyMatch: RegExp[]; ifNoneMatch: RegExp[] }> = new Map();
+	private _contentExclusionCache: Map<
+		string,
+		{ patterns: string[]; ifAnyMatch: RegExp[]; ifNoneMatch: RegExp[] }
+	> = new Map();
 	private _contentExclusionFetchPromise: Promise<void> | null = null;
 	// This caches the ignore results as they can be expensive to compute and a single render can request results 100s of times
 	private _ignoreGlobResultCache: ResourceMap<boolean> = new ResourceMap();
@@ -63,37 +73,53 @@ export class RemoteContentExclusion implements IDisposable {
 		private readonly _capiClientService: ICAPIClientService,
 		private readonly _fileSystemService: IFileSystemService,
 		private readonly _workspaceService: IWorkspaceService,
-		private readonly _requestLogger: IRequestLogger
+		private readonly _requestLogger: IRequestLogger,
 	) {
 		// This is a specialized entry to store the global rules that apply to files outside of any git repository
 		// The other option was to maintain a separate cache for non git files but that would be redundant
-		this._contentExclusionCache.set(NON_GIT_FILE_KEY, { patterns: [], ifAnyMatch: [], ifNoneMatch: [] });
-		this._disposables.push(this._gitService.onDidCloseRepository((r) => {
-			const repoInfo = this.getRepositoryInfo(r);
-			if (!repoInfo) {
-				return;
-			}
-			// Remove from repo root cache
-			this._repoRootCache.delete(repoInfo.repoRootPath);
-			for (const url of repoInfo.fetchUrls) {
-				this._contentExclusionCache.delete(url);
-			}
-		}));
+		this._contentExclusionCache.set(NON_GIT_FILE_KEY, {
+			patterns: [],
+			ifAnyMatch: [],
+			ifNoneMatch: [],
+		});
+		this._disposables.push(
+			this._gitService.onDidCloseRepository((r) => {
+				const repoInfo = this.getRepositoryInfo(r);
+				if (!repoInfo) {
+					return;
+				}
+				// Remove from repo root cache
+				this._repoRootCache.delete(repoInfo.repoRootPath);
+				for (const url of repoInfo.fetchUrls) {
+					this._contentExclusionCache.delete(url);
+				}
+			}),
+		);
 
 		this._fileReadLimiter = new Limiter<string | Uint8Array>(10);
 		this._disposables.push(this._fileReadLimiter);
 	}
 
-	public async isIgnored(file: URI, token: CancellationToken = CancellationToken.None): Promise<boolean> {
+	public async isIgnored(
+		file: URI,
+		token: CancellationToken = CancellationToken.None,
+	): Promise<boolean> {
 		// 1. If glob is not ignored, but there is no regex we can return false as the URI will not change
 		// 2. If glob is not ignored, but there are regex we need to read file content which will happen lower in the regex code.
 		// 3. If glob is ignored, it will return true despite regex since the most restrictive exclusion takes the cake
-		if ((this._ignoreGlobResultCache.has(file) && !this.isRegexContextExclusionsEnabled) || this._ignoreGlobResultCache.get(file)) {
+		if (
+			(this._ignoreGlobResultCache.has(file) &&
+				!this.isRegexContextExclusionsEnabled) ||
+			this._ignoreGlobResultCache.get(file)
+		) {
 			return this._ignoreGlobResultCache.get(file) ?? false;
 		}
 		// Any pending requests that may be in flight should be awaited before returning a result
 		if (this._contentExclusionFetchPromise) {
-			await raceCancellationError(this._contentExclusionFetchPromise, token);
+			await raceCancellationError(
+				this._contentExclusionFetchPromise,
+				token,
+			);
 		}
 
 		// Try to find the repository from the cache first to avoid expensive git extension calls
@@ -102,11 +128,17 @@ export class RemoteContentExclusion implements IDisposable {
 
 		// If not in cache, query the git extension (this is expensive for many files)
 		if (!repoMetadata) {
-			const repo = await raceCancellationError(this._gitService.getRepositoryFetchUrls(file), token);
+			const repo = await raceCancellationError(
+				this._gitService.getRepositoryFetchUrls(file),
+				token,
+			);
 			repoMetadata = this.getRepositoryInfo(repo);
 			// Cache the result for future lookups
 			if (repoMetadata) {
-				this._repoRootCache.set(repoMetadata.repoRootPath, repoMetadata);
+				this._repoRootCache.set(
+					repoMetadata.repoRootPath,
+					repoMetadata,
+				);
 			}
 		}
 
@@ -116,28 +148,42 @@ export class RemoteContentExclusion implements IDisposable {
 			repoMetadata = { repoRootPath: '', fetchUrls: [NON_GIT_FILE_KEY] };
 		}
 
-		const fileName = file.path.toLowerCase().replace(repoMetadata.repoRootPath.toLowerCase(), '');
+		const fileName = file.path
+			.toLowerCase()
+			.replace(repoMetadata.repoRootPath.toLowerCase(), '');
 
 		// We're missing entries for this repository in the cache, so we fetch it.
 		// Or it has been more than 30 minutes so the current rules are stale
-		if (this.shouldFetchContentExclusionRules(repoMetadata) || (Date.now() - this._lastRuleFetch > 30 * 60 * 1000)) {
-			this._logService.trace(`Fetching content exclusions, due to ${this.shouldFetchContentExclusionRules(repoMetadata) ? 'repository change' : 'stale cache'}.`);
+		if (
+			this.shouldFetchContentExclusionRules(repoMetadata) ||
+			Date.now() - this._lastRuleFetch > 30 * 60 * 1000
+		) {
+			this._logService.trace(
+				`Fetching content exclusions, due to ${this.shouldFetchContentExclusionRules(repoMetadata) ? 'repository change' : 'stale cache'}.`,
+			);
 			this._lastRuleFetch = Date.now();
-			await raceCancellationError(this.makeContentExclusionRequest(), token);
+			await raceCancellationError(
+				this.makeContentExclusionRequest(),
+				token,
+			);
 		}
 
 		const minimatchConfig = {
 			nocase: true,
 			matchBase: true,
 			nonegate: true,
-			dot: true
+			dot: true,
 		};
 
 		for (const { patterns } of this._contentExclusionCache.values()) {
 			for (const rule of patterns) {
-				const matchesPattern = minimatch(fileName, rule, minimatchConfig) || minimatch(file.path, rule, minimatchConfig);
+				const matchesPattern =
+					minimatch(fileName, rule, minimatchConfig) ||
+					minimatch(file.path, rule, minimatchConfig);
 				if (matchesPattern) {
-					this._logService.debug(`File ${file.path} is ignored by content exclusion rule ${rule}`);
+					this._logService.debug(
+						`File ${file.path} is ignored by content exclusion rule ${rule}`,
+					);
 					this._ignoreGlobResultCache.set(file, true);
 					return true;
 				}
@@ -146,19 +192,36 @@ export class RemoteContentExclusion implements IDisposable {
 		let fileContents: string = '';
 		let fileContentHash: string = '';
 		for (const fetchUrl of repoMetadata.fetchUrls) {
-			const { ifAnyMatch, ifNoneMatch } = this._contentExclusionCache.get(fetchUrl) ?? { ifAnyMatch: [], ifNoneMatch: [] };
+			const { ifAnyMatch, ifNoneMatch } = this._contentExclusionCache.get(
+				fetchUrl,
+			) ?? { ifAnyMatch: [], ifNoneMatch: [] };
 			// We only want to read the file if we absolutely must as it can be expensive
 			if (ifAnyMatch.length > 0 || ifNoneMatch.length > 0) {
 				if (!fileContents) {
 					try {
 						// Read the file contents and hash it so we can cache the result - Only reads up to 1KB of the file, as reading too much can be expensive and regex exclusions are normally header based
 						// Note: This feature is internal only so we can adapt the implementation as needed without breaking clients.
-						const fileContentOrBuffer = await this._fileReadLimiter.queue(() => readFileFromTextBufferOrFS(this._fileSystemService, this._workspaceService, file, 1024));
-						fileContents = typeof fileContentOrBuffer === 'string' ? fileContentOrBuffer : new TextDecoder().decode(fileContentOrBuffer);
+						const fileContentOrBuffer =
+							await this._fileReadLimiter.queue(() =>
+								readFileFromTextBufferOrFS(
+									this._fileSystemService,
+									this._workspaceService,
+									file,
+									1024,
+								),
+							);
+						fileContents =
+							typeof fileContentOrBuffer === 'string'
+								? fileContentOrBuffer
+								: new TextDecoder().decode(fileContentOrBuffer);
 						fileContentHash = await createSha256Hash(fileContents);
 						// Cache hit for these file contents, no need to run the regex patterns
 						if (this._ignoreRegexResultCache.has(fileContentHash)) {
-							return this._ignoreRegexResultCache.get(fileContentHash) ?? false;
+							return (
+								this._ignoreRegexResultCache.get(
+									fileContentHash,
+								) ?? false
+							);
 						}
 					} catch {
 						// We failed to read the file, so it should just be ignored as we have no idea what the contents are or if it exists
@@ -166,13 +229,25 @@ export class RemoteContentExclusion implements IDisposable {
 					}
 				}
 			}
-			if (ifAnyMatch.length > 0 && fileContents && ifAnyMatch.some(pattern => pattern.test(fileContents))) {
-				this._logService.debug(`File ${file.path} is ignored by content exclusion rule ifAnyMatch`);
+			if (
+				ifAnyMatch.length > 0 &&
+				fileContents &&
+				ifAnyMatch.some((pattern) => pattern.test(fileContents))
+			) {
+				this._logService.debug(
+					`File ${file.path} is ignored by content exclusion rule ifAnyMatch`,
+				);
 				this._ignoreRegexResultCache.set(fileContentHash, true);
 				return true;
 			}
-			if (ifNoneMatch.length > 0 && fileContents && !ifNoneMatch.some(pattern => pattern.test(fileContents))) {
-				this._logService.debug(`File ${file.path} is ignored by content exclusion rule ifNoneMatch`);
+			if (
+				ifNoneMatch.length > 0 &&
+				fileContents &&
+				!ifNoneMatch.some((pattern) => pattern.test(fileContents))
+			) {
+				this._logService.debug(
+					`File ${file.path} is ignored by content exclusion rule ifNoneMatch`,
+				);
 				this._ignoreRegexResultCache.set(fileContentHash, true);
 				return true;
 			}
@@ -187,15 +262,25 @@ export class RemoteContentExclusion implements IDisposable {
 	 * Returns whether or not there are regex context exclusions.
 	 */
 	public get isRegexContextExclusionsEnabled(): boolean {
-		return [...this._contentExclusionCache.values()].some(({ ifAnyMatch, ifNoneMatch }: { ifAnyMatch: RegExp[]; ifNoneMatch: RegExp[] }) => ifAnyMatch.length > 0 || ifNoneMatch.length > 0);
+		return [...this._contentExclusionCache.values()].some(
+			({
+				ifAnyMatch,
+				ifNoneMatch,
+			}: {
+				ifAnyMatch: RegExp[];
+				ifNoneMatch: RegExp[];
+			}) => ifAnyMatch.length > 0 || ifNoneMatch.length > 0,
+		);
 	}
 	/**
 	 * Loads the content exclusion rules for the given repositories. Primarily used to load a bunch of repos at once prior to a search for example.
 	 * @param repoUris The list of repository URIs to load the content exclusion rules for
 	 */
 	public async loadRepos(repoUris: URI[]) {
-		const repos = await Promise.all(repoUris.map(uri => this._gitService.getRepositoryFetchUrls(uri)));
-		const repoInfos = repos.map(repo => {
+		const repos = await Promise.all(
+			repoUris.map((uri) => this._gitService.getRepositoryFetchUrls(uri)),
+		);
+		const repoInfos = repos.map((repo) => {
 			const repoInfo = this.getRepositoryInfo(repo);
 			// Populate the repo root cache for future lookups
 			if (repoInfo) {
@@ -203,7 +288,7 @@ export class RemoteContentExclusion implements IDisposable {
 			}
 			return this.shouldFetchContentExclusionRules(repoInfo);
 		});
-		if (repoInfos.some(info => info)) {
+		if (repoInfos.some((info) => info)) {
 			this._lastRuleFetch = Date.now();
 			await this.makeContentExclusionRequest();
 		}
@@ -211,17 +296,21 @@ export class RemoteContentExclusion implements IDisposable {
 
 	public async asMinimatchPatterns() {
 		await this._contentExclusionFetchPromise;
-		const patterns: string[] = Array.from(this._contentExclusionCache.values()).flatMap(({ patterns }) => patterns);
+		const patterns: string[] = Array.from(
+			this._contentExclusionCache.values(),
+		).flatMap(({ patterns }) => patterns);
 		return patterns;
 	}
 
 	public dispose() {
-		this._disposables.forEach(d => d.dispose());
+		this._disposables.forEach((d) => d.dispose());
 		this._disposables = [];
 		this._contentExclusionCache.clear();
 	}
 
-	private shouldFetchContentExclusionRules(repoInfo: RepoMetadata | undefined): boolean {
+	private shouldFetchContentExclusionRules(
+		repoInfo: RepoMetadata | undefined,
+	): boolean {
 		if (!repoInfo) {
 			return false;
 		}
@@ -229,7 +318,11 @@ export class RemoteContentExclusion implements IDisposable {
 		for (const remoteRepoUrl of repoInfo?.fetchUrls ?? []) {
 			if (!this._contentExclusionCache.has(remoteRepoUrl)) {
 				shouldFetch = true;
-				this._contentExclusionCache.set(remoteRepoUrl, { patterns: [], ifAnyMatch: [], ifNoneMatch: [] });
+				this._contentExclusionCache.set(remoteRepoUrl, {
+					patterns: [],
+					ifAnyMatch: [],
+					ifNoneMatch: [],
+				});
 			}
 		}
 		return shouldFetch;
@@ -245,14 +338,14 @@ export class RemoteContentExclusion implements IDisposable {
 			await this._contentExclusionFetchPromise;
 		}
 		try {
-			this._contentExclusionFetchPromise = this._contentExclusionRequest();
+			this._contentExclusionFetchPromise =
+				this._contentExclusionRequest();
 			await this._contentExclusionFetchPromise;
 			this._contentExclusionFetchPromise = null;
 		} catch {
 			this._contentExclusionFetchPromise = null;
 		}
 	}
-
 
 	/**
 	 * The actual function that fetches the content exclusion rules from the GH API.
@@ -263,29 +356,41 @@ export class RemoteContentExclusion implements IDisposable {
 		this._ignoreGlobResultCache.clear();
 		const startTime = Date.now();
 		const capiClientService = this._capiClientService;
-		const ghToken = (await this._authService.getGitHubSession('any', { silent: true }))?.accessToken;
+		const ghToken = (
+			await this._authService.getGitHubSession('any', { silent: true })
+		)?.accessToken;
 		const remoteFetchUrls = Array.from(this._contentExclusionCache.keys());
 		const updateRulesForRepos = async (reposToFetch: string[]) => {
-
-			const response = await capiClientService.makeRequest<Response>({
-				headers: {
-					'Authorization': `token ${ghToken}`
+			const response = await capiClientService.makeRequest<Response>(
+				{
+					headers: {
+						Authorization: `token ${ghToken}`,
+					},
 				},
-			}, { type: RequestType.ContentExclusion, repos: reposToFetch });
+				{ type: RequestType.ContentExclusion, repos: reposToFetch },
+			);
 
 			if (!response.ok) {
-				this._logService.error(`Failed to fetch content exclusion rules: ${response?.statusText}`);
+				this._logService.error(
+					`Failed to fetch content exclusion rules: ${response?.statusText}`,
+				);
 				return;
 			}
 			const data: ContentExclusionResponse[] = await response.json();
 			for (let j = 0; j < data.length; j++) {
-				const patterns = data[j].rules.map(rule => rule.paths).flat();
-				const ifAnyMatch = coalesce(data[j].rules.map(rule => rule.ifAnyMatch).flat()).map(pattern => stringToRegex(pattern));
-				const ifNoneMatch = coalesce(data[j].rules.map(rule => rule.ifNoneMatch).flat()).map(pattern => stringToRegex(pattern));
+				const patterns = data[j].rules.map((rule) => rule.paths).flat();
+				const ifAnyMatch = coalesce(
+					data[j].rules.map((rule) => rule.ifAnyMatch).flat(),
+				).map((pattern) => stringToRegex(pattern));
+				const ifNoneMatch = coalesce(
+					data[j].rules.map((rule) => rule.ifNoneMatch).flat(),
+				).map((pattern) => stringToRegex(pattern));
 				const repo = reposToFetch[j];
 				const rulesForRepo = { patterns, ifAnyMatch, ifNoneMatch };
 				this._contentExclusionCache.set(repo, rulesForRepo);
-				this._logService.trace(`Fetched content exclusion rules for ${repo}: ${JSON.stringify(rulesForRepo)}`);
+				this._logService.trace(
+					`Fetched content exclusion rules for ${repo}: ${JSON.stringify(rulesForRepo)}`,
+				);
 			}
 		};
 
@@ -300,37 +405,46 @@ export class RemoteContentExclusion implements IDisposable {
 			await updateRulesForRepos(batch);
 		}
 		this._lastRuleFetch = Date.now();
-		this._logService.info(`Fetched content exclusion rules in ${Date.now() - startTime}ms`);
+		this._logService.info(
+			`Fetched content exclusion rules in ${Date.now() - startTime}ms`,
+		);
 
 		// Log the fetched rules to the request logger for debugging visibility
 		const repos = Array.from(this._contentExclusionCache.keys());
-		const rules = repos.map(repo => {
+		const rules = repos.map((repo) => {
 			const entry = this._contentExclusionCache.get(repo)!;
 			return {
 				patterns: entry.patterns,
-				ifAnyMatch: entry.ifAnyMatch.map(r => r.toString()),
-				ifNoneMatch: entry.ifNoneMatch.map(r => r.toString())
+				ifAnyMatch: entry.ifAnyMatch.map((r) => r.toString()),
+				ifNoneMatch: entry.ifNoneMatch.map((r) => r.toString()),
 			};
 		});
-		this._requestLogger.logContentExclusionRules(repos, rules, Date.now() - startTime);
+		this._requestLogger.logContentExclusionRules(
+			repos,
+			rules,
+			Date.now() - startTime,
+		);
 	}
 
-
-	private getRepositoryInfo(repo: Pick<RepoContext, 'rootUri' | 'remoteFetchUrls'> | undefined): RepoMetadata | undefined {
+	private getRepositoryInfo(
+		repo: Pick<RepoContext, 'rootUri' | 'remoteFetchUrls'> | undefined,
+	): RepoMetadata | undefined {
 		if (!repo || !repo.remoteFetchUrls) {
 			return undefined;
 		}
-		const fetchUrls = coalesce(repo.remoteFetchUrls.map(url => {
-			if (!url) {
-				return undefined;
-			}
-			// This can throw when the URL is something like a local file path which is a valid git remote
-			try {
-				return normalizeFetchUrl(url);
-			} catch {
-				return undefined;
-			}
-		}));
+		const fetchUrls = coalesce(
+			repo.remoteFetchUrls.map((url) => {
+				if (!url) {
+					return undefined;
+				}
+				// This can throw when the URL is something like a local file path which is a valid git remote
+				try {
+					return normalizeFetchUrl(url);
+				} catch {
+					return undefined;
+				}
+			}),
+		);
 		return { repoRootPath: repo.rootUri.path, fetchUrls: fetchUrls };
 	}
 
@@ -347,8 +461,11 @@ export class RemoteContentExclusion implements IDisposable {
 
 		for (const [repoRootPath, metadata] of this._repoRootCache.entries()) {
 			const normalizedRepoRoot = repoRootPath.toLowerCase();
-			if ((filePath.startsWith(normalizedRepoRoot + '/') || filePath === normalizedRepoRoot) &&
-				normalizedRepoRoot.length > bestMatchLength) {
+			if (
+				(filePath.startsWith(normalizedRepoRoot + '/') ||
+					filePath === normalizedRepoRoot) &&
+				normalizedRepoRoot.length > bestMatchLength
+			) {
 				bestMatch = metadata;
 				bestMatchLength = normalizedRepoRoot.length;
 			}

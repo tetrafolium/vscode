@@ -3,42 +3,45 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { decodeBase64 } from './buffer.js';
+import { decodeBase64 } from "./buffer.js";
 
-const WELL_KNOWN_ROUTE = '/.well-known';
+const WELL_KNOWN_ROUTE = "/.well-known";
 export const AUTH_PROTECTED_RESOURCE_METADATA_DISCOVERY_PATH = `${WELL_KNOWN_ROUTE}/oauth-protected-resource`;
 export const AUTH_SERVER_METADATA_DISCOVERY_PATH = `${WELL_KNOWN_ROUTE}/oauth-authorization-server`;
 export const OPENID_CONNECT_DISCOVERY_PATH = `${WELL_KNOWN_ROUTE}/openid-configuration`;
-export const AUTH_SCOPE_SEPARATOR = ' ';
+export const AUTH_SCOPE_SEPARATOR = " ";
 
 /**
  * RFC 8693 grant type for OAuth token exchange.
  */
-export const GRANT_TYPE_TOKEN_EXCHANGE = 'urn:ietf:params:oauth:grant-type:token-exchange';
+export const GRANT_TYPE_TOKEN_EXCHANGE =
+	"urn:ietf:params:oauth:grant-type:token-exchange";
 
 /**
  * RFC 8693 token type for an OAuth 2.0 access token used as the `subject_token`
  * during a token exchange.
  */
-export const TOKEN_TYPE_ACCESS_TOKEN = 'urn:ietf:params:oauth:token-type:access_token';
+export const TOKEN_TYPE_ACCESS_TOKEN =
+	"urn:ietf:params:oauth:token-type:access_token";
 
 /**
  * Token type for an OpenID Connect ID Token. Used as the `subject_token_type` in
  * the IdP-side token exchange that mints an ID-JAG.
  */
-export const TOKEN_TYPE_ID_TOKEN = 'urn:ietf:params:oauth:token-type:id_token';
+export const TOKEN_TYPE_ID_TOKEN = "urn:ietf:params:oauth:token-type:id_token";
 
 /**
  * Token type for an Identity Assertion Authorization Grant (ID-JAG) used in
  * Cross App Access (XAA) flows.
  */
-export const TOKEN_TYPE_ID_JAG = 'urn:ietf:params:oauth:token-type:id-jag';
+export const TOKEN_TYPE_ID_JAG = "urn:ietf:params:oauth:token-type:id-jag";
 
 /**
  * RFC 7523 grant type used to exchange a JWT assertion (e.g. an ID-JAG) for an
  * access token at the resource's authorization server.
  */
-export const GRANT_TYPE_JWT_BEARER = 'urn:ietf:params:oauth:grant-type:jwt-bearer';
+export const GRANT_TYPE_JWT_BEARER =
+	"urn:ietf:params:oauth:grant-type:jwt-bearer";
 
 /**
  * Build the request body for the IdP-side token exchange that mints an ID-JAG
@@ -57,22 +60,29 @@ export const GRANT_TYPE_JWT_BEARER = 'urn:ietf:params:oauth:grant-type:jwt-beare
  *   in practice.
  * @param scopes scopes the requesting app wants granted at the resource.
  */
-export function buildIdJagExchangeBody(clientId: string, clientSecret: string | undefined, idToken: string, audience: string, resource: string | undefined, scopes: readonly string[]): URLSearchParams {
+export function buildIdJagExchangeBody(
+	clientId: string,
+	clientSecret: string | undefined,
+	idToken: string,
+	audience: string,
+	resource: string | undefined,
+	scopes: readonly string[],
+): URLSearchParams {
 	const body = new URLSearchParams();
-	body.append('client_id', clientId);
+	body.append("client_id", clientId);
 	if (clientSecret) {
-		body.append('client_secret', clientSecret);
+		body.append("client_secret", clientSecret);
 	}
-	body.append('grant_type', GRANT_TYPE_TOKEN_EXCHANGE);
-	body.append('subject_token', idToken);
-	body.append('subject_token_type', TOKEN_TYPE_ID_TOKEN);
-	body.append('requested_token_type', TOKEN_TYPE_ID_JAG);
-	body.append('audience', audience);
+	body.append("grant_type", GRANT_TYPE_TOKEN_EXCHANGE);
+	body.append("subject_token", idToken);
+	body.append("subject_token_type", TOKEN_TYPE_ID_TOKEN);
+	body.append("requested_token_type", TOKEN_TYPE_ID_JAG);
+	body.append("audience", audience);
 	if (resource) {
-		body.append('resource', resource);
+		body.append("resource", resource);
 	}
 	if (scopes.length) {
-		body.append('scope', scopes.join(AUTH_SCOPE_SEPARATOR));
+		body.append("scope", scopes.join(AUTH_SCOPE_SEPARATOR));
 	}
 	return body;
 }
@@ -81,19 +91,25 @@ export function buildIdJagExchangeBody(clientId: string, clientSecret: string | 
  * Build the request body sent to a resource server's authorization server to
  * redeem an ID-JAG for a resource-scoped access token (RFC 7523 JWT-bearer grant).
  */
-export function buildResourceRedemptionBody(clientId: string, clientSecret: string | undefined, idJag: string, resource: string | undefined, scopes: readonly string[]): URLSearchParams {
+export function buildResourceRedemptionBody(
+	clientId: string,
+	clientSecret: string | undefined,
+	idJag: string,
+	resource: string | undefined,
+	scopes: readonly string[],
+): URLSearchParams {
 	const body = new URLSearchParams();
-	body.append('client_id', clientId);
+	body.append("client_id", clientId);
 	if (clientSecret) {
-		body.append('client_secret', clientSecret);
+		body.append("client_secret", clientSecret);
 	}
-	body.append('grant_type', GRANT_TYPE_JWT_BEARER);
-	body.append('assertion', idJag);
+	body.append("grant_type", GRANT_TYPE_JWT_BEARER);
+	body.append("assertion", idJag);
 	if (resource) {
-		body.append('resource', resource);
+		body.append("resource", resource);
 	}
 	if (scopes.length) {
-		body.append('scope', scopes.join(AUTH_SCOPE_SEPARATOR));
+		body.append("scope", scopes.join(AUTH_SCOPE_SEPARATOR));
 	}
 	return body;
 }
@@ -104,12 +120,12 @@ export function buildResourceRedemptionBody(clientId: string, clientSecret: stri
  * Base OAuth 2.0 error codes as specified in RFC 6749.
  */
 export const enum AuthorizationErrorType {
-	InvalidRequest = 'invalid_request',
-	InvalidClient = 'invalid_client',
-	InvalidGrant = 'invalid_grant',
-	UnauthorizedClient = 'unauthorized_client',
-	UnsupportedGrantType = 'unsupported_grant_type',
-	InvalidScope = 'invalid_scope'
+	InvalidRequest = "invalid_request",
+	InvalidClient = "invalid_client",
+	InvalidGrant = "invalid_grant",
+	UnauthorizedClient = "unauthorized_client",
+	UnsupportedGrantType = "unsupported_grant_type",
+	InvalidScope = "invalid_scope",
 }
 
 /**
@@ -119,19 +135,19 @@ export const enum AuthorizationDeviceCodeErrorType {
 	/**
 	 * The authorization request is still pending as the end user hasn't completed the user interaction steps.
 	 */
-	AuthorizationPending = 'authorization_pending',
+	AuthorizationPending = "authorization_pending",
 	/**
 	 * A variant of "authorization_pending", polling should continue but interval must be increased by 5 seconds.
 	 */
-	SlowDown = 'slow_down',
+	SlowDown = "slow_down",
 	/**
 	 * The authorization request was denied.
 	 */
-	AccessDenied = 'access_denied',
+	AccessDenied = "access_denied",
 	/**
 	 * The "device_code" has expired and the device authorization session has concluded.
 	 */
-	ExpiredToken = 'expired_token'
+	ExpiredToken = "expired_token",
 }
 
 /**
@@ -141,19 +157,19 @@ export const enum AuthorizationRegistrationErrorType {
 	/**
 	 * The value of one or more redirection URIs is invalid.
 	 */
-	InvalidRedirectUri = 'invalid_redirect_uri',
+	InvalidRedirectUri = "invalid_redirect_uri",
 	/**
 	 * The value of one of the client metadata fields is invalid and the server has rejected this request.
 	 */
-	InvalidClientMetadata = 'invalid_client_metadata',
+	InvalidClientMetadata = "invalid_client_metadata",
 	/**
 	 * The software statement presented is invalid.
 	 */
-	InvalidSoftwareStatement = 'invalid_software_statement',
+	InvalidSoftwareStatement = "invalid_software_statement",
 	/**
 	 * The software statement presented is not approved for use by this authorization server.
 	 */
-	UnapprovedSoftwareStatement = 'unapproved_software_statement'
+	UnapprovedSoftwareStatement = "unapproved_software_statement",
 }
 
 /**
@@ -447,7 +463,7 @@ export interface IAuthorizationDynamicClientRegistrationRequest {
 	 * OPTIONAL. Application type. Usually "native" for OAuth clients.
 	 * https://openid.net/specs/openid-connect-registration-1_0.html
 	 */
-	application_type?: 'native' | 'web' | string;
+	application_type?: "native" | "web" | string;
 
 	/**
 	 * OPTIONAL. Additional metadata fields as defined by extensions.
@@ -821,8 +837,10 @@ export interface IAuthorizationJWTClaims {
 
 //#region is functions
 
-export function isAuthorizationProtectedResourceMetadata(obj: unknown): obj is IAuthorizationProtectedResourceMetadata {
-	if (typeof obj !== 'object' || obj === null) {
+export function isAuthorizationProtectedResourceMetadata(
+	obj: unknown,
+): obj is IAuthorizationProtectedResourceMetadata {
+	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
 
@@ -830,84 +848,115 @@ export function isAuthorizationProtectedResourceMetadata(obj: unknown): obj is I
 	if (!metadata.resource) {
 		return false;
 	}
-	if (metadata.scopes_supported !== undefined && !Array.isArray(metadata.scopes_supported)) {
+	if (
+		metadata.scopes_supported !== undefined &&
+		!Array.isArray(metadata.scopes_supported)
+	) {
 		return false;
 	}
 	return true;
 }
 
 const urisToCheck: Array<keyof IAuthorizationServerMetadata> = [
-	'issuer',
-	'authorization_endpoint',
-	'token_endpoint',
-	'registration_endpoint',
-	'jwks_uri'
+	"issuer",
+	"authorization_endpoint",
+	"token_endpoint",
+	"registration_endpoint",
+	"jwks_uri",
 ];
-export function isAuthorizationServerMetadata(obj: unknown): obj is IAuthorizationServerMetadata {
-	if (typeof obj !== 'object' || obj === null) {
+export function isAuthorizationServerMetadata(
+	obj: unknown,
+): obj is IAuthorizationServerMetadata {
+	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
 	const metadata = obj as IAuthorizationServerMetadata;
 	if (!metadata.issuer) {
-		throw new Error('Authorization server metadata must have an issuer');
+		throw new Error("Authorization server metadata must have an issuer");
 	}
 
 	for (const uri of urisToCheck) {
 		if (!metadata[uri]) {
 			continue;
 		}
-		if (typeof metadata[uri] !== 'string') {
-			throw new Error(`Authorization server metadata '${uri}' must be a string`);
+		if (typeof metadata[uri] !== "string") {
+			throw new Error(
+				`Authorization server metadata '${uri}' must be a string`,
+			);
 		}
-		if (!metadata[uri].startsWith('https://') && !metadata[uri].startsWith('http://')) {
-			throw new Error(`Authorization server metadata '${uri}' must start with http:// or https://`);
+		if (
+			!metadata[uri].startsWith("https://") &&
+			!metadata[uri].startsWith("http://")
+		) {
+			throw new Error(
+				`Authorization server metadata '${uri}' must start with http:// or https://`,
+			);
 		}
 	}
 	return true;
 }
 
-export function isAuthorizationDynamicClientRegistrationResponse(obj: unknown): obj is IAuthorizationDynamicClientRegistrationResponse {
-	if (typeof obj !== 'object' || obj === null) {
+export function isAuthorizationDynamicClientRegistrationResponse(
+	obj: unknown,
+): obj is IAuthorizationDynamicClientRegistrationResponse {
+	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
 	const response = obj as IAuthorizationDynamicClientRegistrationResponse;
 	return response.client_id !== undefined;
 }
 
-export function isAuthorizationAuthorizeResponse(obj: unknown): obj is IAuthorizationAuthorizeResponse {
-	if (typeof obj !== 'object' || obj === null) {
+export function isAuthorizationAuthorizeResponse(
+	obj: unknown,
+): obj is IAuthorizationAuthorizeResponse {
+	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
 	const response = obj as IAuthorizationAuthorizeResponse;
 	return response.code !== undefined && response.state !== undefined;
 }
 
-export function isAuthorizationTokenResponse(obj: unknown): obj is IAuthorizationTokenResponse {
-	if (typeof obj !== 'object' || obj === null) {
+export function isAuthorizationTokenResponse(
+	obj: unknown,
+): obj is IAuthorizationTokenResponse {
+	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
 	const response = obj as IAuthorizationTokenResponse;
-	return response.access_token !== undefined && response.token_type !== undefined;
+	return (
+		response.access_token !== undefined && response.token_type !== undefined
+	);
 }
 
-export function isAuthorizationDeviceResponse(obj: unknown): obj is IAuthorizationDeviceResponse {
-	if (typeof obj !== 'object' || obj === null) {
+export function isAuthorizationDeviceResponse(
+	obj: unknown,
+): obj is IAuthorizationDeviceResponse {
+	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
 	const response = obj as IAuthorizationDeviceResponse;
-	return response.device_code !== undefined && response.user_code !== undefined && response.verification_uri !== undefined && response.expires_in !== undefined;
+	return (
+		response.device_code !== undefined &&
+		response.user_code !== undefined &&
+		response.verification_uri !== undefined &&
+		response.expires_in !== undefined
+	);
 }
 
-export function isAuthorizationErrorResponse(obj: unknown): obj is IAuthorizationErrorResponse {
-	if (typeof obj !== 'object' || obj === null) {
+export function isAuthorizationErrorResponse(
+	obj: unknown,
+): obj is IAuthorizationErrorResponse {
+	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
 	const response = obj as IAuthorizationErrorResponse;
 	return response.error !== undefined;
 }
 
-export function isAuthorizationRegistrationErrorResponse(obj: unknown): obj is IAuthorizationRegistrationErrorResponse {
-	if (typeof obj !== 'object' || obj === null) {
+export function isAuthorizationRegistrationErrorResponse(
+	obj: unknown,
+): obj is IAuthorizationRegistrationErrorResponse {
+	if (typeof obj !== "object" || obj === null) {
 		return false;
 	}
 	const response = obj as IAuthorizationRegistrationErrorResponse;
@@ -916,22 +965,31 @@ export function isAuthorizationRegistrationErrorResponse(obj: unknown): obj is I
 
 //#endregion
 
-export function getDefaultMetadataForUrl(authorizationServer: URL): IAuthorizationServerMetadata {
+export function getDefaultMetadataForUrl(
+	authorizationServer: URL,
+): IAuthorizationServerMetadata {
 	return {
 		issuer: authorizationServer.toString(),
-		authorization_endpoint: new URL('/authorize', authorizationServer).toString(),
-		token_endpoint: new URL('/token', authorizationServer).toString(),
-		registration_endpoint: new URL('/register', authorizationServer).toString(),
+		authorization_endpoint: new URL(
+			"/authorize",
+			authorizationServer,
+		).toString(),
+		token_endpoint: new URL("/token", authorizationServer).toString(),
+		registration_endpoint: new URL("/register", authorizationServer).toString(),
 		// Default values for Dynamic OpenID Providers
 		// https://openid.net/specs/openid-connect-discovery-1_0.html
-		response_types_supported: ['code', 'id_token', 'id_token token'],
+		response_types_supported: ["code", "id_token", "id_token token"],
 	};
 }
 
 /**
  * The grant types that we support
  */
-const grantTypesSupported = ['authorization_code', 'refresh_token', 'urn:ietf:params:oauth:grant-type:device_code'];
+const grantTypesSupported = [
+	"authorization_code",
+	"refresh_token",
+	"urn:ietf:params:oauth:grant-type:device_code",
+];
 
 /**
  * Default port for the authorization flow. We try to use this port so that
@@ -941,39 +999,45 @@ const grantTypesSupported = ['authorization_code', 'refresh_token', 'urn:ietf:pa
  * the spec and require an exact match.
  */
 export const DEFAULT_AUTH_FLOW_PORT = 33418;
-export async function fetchDynamicRegistration(serverMetadata: IAuthorizationServerMetadata, clientName: string, scopes?: string[]): Promise<IAuthorizationDynamicClientRegistrationResponse> {
+export async function fetchDynamicRegistration(
+	serverMetadata: IAuthorizationServerMetadata,
+	clientName: string,
+	scopes?: string[],
+): Promise<IAuthorizationDynamicClientRegistrationResponse> {
 	if (!serverMetadata.registration_endpoint) {
-		throw new Error('Server does not support dynamic registration');
+		throw new Error("Server does not support dynamic registration");
 	}
 
 	const requestBody: IAuthorizationDynamicClientRegistrationRequest = {
 		client_name: clientName,
-		client_uri: 'https://code.visualstudio.com',
+		client_uri: "https://code.visualstudio.com",
 		grant_types: serverMetadata.grant_types_supported
-			? serverMetadata.grant_types_supported.filter(gt => grantTypesSupported.includes(gt))
+			? serverMetadata.grant_types_supported.filter((gt) =>
+					grantTypesSupported.includes(gt),
+				)
 			: grantTypesSupported,
-		response_types: ['code'],
+		response_types: ["code"],
 		redirect_uris: [
-			'https://insiders.vscode.dev/redirect',
-			'https://vscode.dev/redirect',
-			'http://127.0.0.1/',
+			"https://insiders.vscode.dev/redirect",
+			"https://vscode.dev/redirect",
+			"http://127.0.0.1/",
 			// Added these for any server that might do
 			// only exact match on the redirect URI even
 			// though the spec says it should not care
 			// about the port.
-			`http://127.0.0.1:${DEFAULT_AUTH_FLOW_PORT}/`
+			`http://127.0.0.1:${DEFAULT_AUTH_FLOW_PORT}/`,
 		],
 		scope: scopes?.join(AUTH_SCOPE_SEPARATOR),
-		token_endpoint_auth_method: 'none',
-		application_type: 'native'
+		token_endpoint_auth_method: "none",
+		application_type: "native",
 	};
 
 	const response = await fetch(serverMetadata.registration_endpoint, {
-		method: 'POST',
+		method: "POST",
 		headers: {
-			'Content-Type': 'application/json'
+			"Content-Type": "application/json",
 		},
-		body: JSON.stringify(requestBody)
+		body: JSON.stringify(requestBody),
 	});
 
 	if (!response.ok) {
@@ -983,20 +1047,24 @@ export async function fetchDynamicRegistration(serverMetadata: IAuthorizationSer
 		try {
 			const errorResponse = JSON.parse(result);
 			if (isAuthorizationRegistrationErrorResponse(errorResponse)) {
-				errorDetails = `${errorResponse.error}${errorResponse.error_description ? `: ${errorResponse.error_description}` : ''}`;
+				errorDetails = `${errorResponse.error}${errorResponse.error_description ? `: ${errorResponse.error_description}` : ""}`;
 			}
 		} catch {
 			// JSON parsing failed, use raw text
 		}
 
-		throw new Error(`Registration to ${serverMetadata.registration_endpoint} failed: ${errorDetails}`);
+		throw new Error(
+			`Registration to ${serverMetadata.registration_endpoint} failed: ${errorDetails}`,
+		);
 	}
 
 	const registration = await response.json();
 	if (isAuthorizationDynamicClientRegistrationResponse(registration)) {
 		return registration;
 	}
-	throw new Error(`Invalid authorization dynamic client registration response: ${JSON.stringify(registration)}`);
+	throw new Error(
+		`Invalid authorization dynamic client registration response: ${JSON.stringify(registration)}`,
+	);
 }
 
 export interface IAuthenticationChallenge {
@@ -1004,7 +1072,9 @@ export interface IAuthenticationChallenge {
 	params: Record<string, string>;
 }
 
-export function parseWWWAuthenticateHeader(wwwAuthenticateHeaderValue: string): IAuthenticationChallenge[] {
+export function parseWWWAuthenticateHeader(
+	wwwAuthenticateHeaderValue: string,
+): IAuthenticationChallenge[] {
 	const challenges: IAuthenticationChallenge[] = [];
 
 	// According to RFC 7235, multiple challenges are separated by commas
@@ -1013,7 +1083,7 @@ export function parseWWWAuthenticateHeader(wwwAuthenticateHeaderValue: string): 
 
 	// First, split by commas while respecting quoted strings
 	const tokens: string[] = [];
-	let current = '';
+	let current = "";
 	let inQuotes = false;
 
 	for (let i = 0; i < wwwAuthenticateHeaderValue.length; i++) {
@@ -1022,11 +1092,11 @@ export function parseWWWAuthenticateHeader(wwwAuthenticateHeaderValue: string): 
 		if (char === '"') {
 			inQuotes = !inQuotes;
 			current += char;
-		} else if (char === ',' && !inQuotes) {
+		} else if (char === "," && !inQuotes) {
 			if (current.trim()) {
 				tokens.push(current.trim());
 			}
-			current = '';
+			current = "";
 		} else {
 			current += char;
 		}
@@ -1038,10 +1108,12 @@ export function parseWWWAuthenticateHeader(wwwAuthenticateHeaderValue: string): 
 
 	// Now process tokens to identify challenges
 	// A challenge starts with a scheme name (a token that doesn't contain '=' and is followed by parameters or is standalone)
-	let currentChallenge: { scheme: string; params: Record<string, string> } | undefined;
+	let currentChallenge:
+		| { scheme: string; params: Record<string, string> }
+		| undefined;
 
 	for (const token of tokens) {
-		const hasEquals = token.includes('=');
+		const hasEquals = token.includes("=");
 
 		if (!hasEquals) {
 			// This token doesn't have '=', so it's likely a scheme name
@@ -1054,13 +1126,13 @@ export function parseWWWAuthenticateHeader(wwwAuthenticateHeaderValue: string): 
 			// 1. A parameter for the current challenge
 			// 2. A new challenge that starts with "Scheme param=value"
 
-			const spaceIndex = token.indexOf(' ');
+			const spaceIndex = token.indexOf(" ");
 			if (spaceIndex > 0) {
 				const beforeSpace = token.substring(0, spaceIndex);
 				const afterSpace = token.substring(spaceIndex + 1);
 
 				// Check if what's before the space looks like a scheme name (no '=')
-				if (!beforeSpace.includes('=') && afterSpace.includes('=')) {
+				if (!beforeSpace.includes("=") && afterSpace.includes("=")) {
 					// This is a new challenge starting with "Scheme param=value"
 					if (currentChallenge) {
 						challenges.push(currentChallenge);
@@ -1068,10 +1140,13 @@ export function parseWWWAuthenticateHeader(wwwAuthenticateHeaderValue: string): 
 					currentChallenge = { scheme: beforeSpace.trim(), params: {} };
 
 					// Parse the parameter part
-					const equalIndex = afterSpace.indexOf('=');
+					const equalIndex = afterSpace.indexOf("=");
 					if (equalIndex > 0) {
 						const key = afterSpace.substring(0, equalIndex).trim();
-						const value = afterSpace.substring(equalIndex + 1).trim().replace(/^"|"$/g, '');
+						const value = afterSpace
+							.substring(equalIndex + 1)
+							.trim()
+							.replace(/^"|"$/g, "");
 						if (key && value !== undefined) {
 							currentChallenge.params[key] = value;
 						}
@@ -1082,10 +1157,13 @@ export function parseWWWAuthenticateHeader(wwwAuthenticateHeaderValue: string): 
 
 			// This is a parameter for the current challenge
 			if (currentChallenge) {
-				const equalIndex = token.indexOf('=');
+				const equalIndex = token.indexOf("=");
 				if (equalIndex > 0) {
 					const key = token.substring(0, equalIndex).trim();
-					const value = token.substring(equalIndex + 1).trim().replace(/^"|"$/g, '');
+					const value = token
+						.substring(equalIndex + 1)
+						.trim()
+						.replace(/^"|"$/g, "");
 					if (key && value !== undefined) {
 						currentChallenge.params[key] = value;
 					}
@@ -1103,22 +1181,24 @@ export function parseWWWAuthenticateHeader(wwwAuthenticateHeaderValue: string): 
 }
 
 export function getClaimsFromJWT(token: string): IAuthorizationJWTClaims {
-	const parts = token.split('.');
+	const parts = token.split(".");
 	if (parts.length !== 3) {
-		throw new Error('Invalid JWT token format: token must have three parts separated by dots');
+		throw new Error(
+			"Invalid JWT token format: token must have three parts separated by dots",
+		);
 	}
 
 	const [header, payload, _signature] = parts;
 
 	try {
 		const decodedHeader = JSON.parse(decodeBase64(header).toString());
-		if (typeof decodedHeader !== 'object') {
-			throw new Error('Invalid JWT token format: header is not a JSON object');
+		if (typeof decodedHeader !== "object") {
+			throw new Error("Invalid JWT token format: header is not a JSON object");
 		}
 
 		const decodedPayload = JSON.parse(decodeBase64(payload).toString());
-		if (typeof decodedPayload !== 'object') {
-			throw new Error('Invalid JWT token format: payload is not a JSON object');
+		if (typeof decodedPayload !== "object") {
+			throw new Error("Invalid JWT token format: payload is not a JSON object");
 		}
 
 		return decodedPayload;
@@ -1126,7 +1206,7 @@ export function getClaimsFromJWT(token: string): IAuthorizationJWTClaims {
 		if (e instanceof Error) {
 			throw new Error(`Failed to parse JWT token: ${e.message}`);
 		}
-		throw new Error('Failed to parse JWT token');
+		throw new Error("Failed to parse JWT token");
 	}
 }
 
@@ -1146,7 +1226,10 @@ export function getClaimsFromJWT(token: string): IAuthorizationJWTClaims {
  * scopesMatch(['read'], undefined) // Returns: false
  * ```
  */
-export function scopesMatch(scopes1: readonly string[] | undefined, scopes2: readonly string[] | undefined): boolean {
+export function scopesMatch(
+	scopes1: readonly string[] | undefined,
+	scopes2: readonly string[] | undefined,
+): boolean {
 	if (scopes1 === scopes2) {
 		return true;
 	}
@@ -1172,7 +1255,10 @@ interface CommonResponse {
 }
 
 interface IFetcher {
-	(input: string, init: { method: string; headers: Record<string, string> }): Promise<CommonResponse>;
+	(
+		input: string,
+		init: { method: string; headers: Record<string, string> },
+	): Promise<CommonResponse>;
 }
 
 export interface IFetchResourceMetadataOptions {
@@ -1198,30 +1284,31 @@ export interface IFetchResourceMetadataOptions {
 export async function fetchResourceMetadata(
 	targetResource: string,
 	resourceMetadataUrl: string | undefined,
-	options: IFetchResourceMetadataOptions = {}
-): Promise<{ metadata: IAuthorizationProtectedResourceMetadata; discoveryUrl: string; errors: Error[] }> {
-	const {
-		sameOriginHeaders = {},
-		fetch: fetchImpl = fetch
-	} = options;
+	options: IFetchResourceMetadataOptions = {},
+): Promise<{
+	metadata: IAuthorizationProtectedResourceMetadata;
+	discoveryUrl: string;
+	errors: Error[];
+}> {
+	const { sameOriginHeaders = {}, fetch: fetchImpl = fetch } = options;
 
 	const targetResourceUrlObj = new URL(targetResource);
 
 	const fetchPrm = async (prmUrl: string, validateUrl: string) => {
 		// Determine if we should include same-origin headers
 		let headers: Record<string, string> = {
-			'Accept': 'application/json'
+			Accept: "application/json",
 		};
 
 		const resourceMetadataUrlObj = new URL(prmUrl);
 		if (resourceMetadataUrlObj.origin === targetResourceUrlObj.origin) {
 			headers = {
 				...headers,
-				...sameOriginHeaders
+				...sameOriginHeaders,
 			};
 		}
 
-		const response = await fetchImpl(prmUrl, { method: 'GET', headers });
+		const response = await fetchImpl(prmUrl, { method: "GET", headers });
 		if (response.status !== 200) {
 			let errorText: string;
 			try {
@@ -1229,7 +1316,9 @@ export async function fetchResourceMetadata(
 			} catch {
 				errorText = response.statusText;
 			}
-			throw new Error(`Failed to fetch resource metadata from ${prmUrl}: ${response.status} ${errorText}`);
+			throw new Error(
+				`Failed to fetch resource metadata from ${prmUrl}: ${response.status} ${errorText}`,
+			);
 		}
 
 		const body = await response.json();
@@ -1239,11 +1328,15 @@ export async function fetchResourceMetadata(
 			const prmValue = new URL(body.resource).toString();
 			const expectedResource = new URL(validateUrl).toString();
 			if (prmValue !== expectedResource) {
-				throw new Error(`Protected Resource Metadata 'resource' property value "${prmValue}" does not match expected value "${expectedResource}" for URL ${prmUrl}. Per RFC 9728, these MUST match. See https://datatracker.ietf.org/doc/html/rfc9728#PRConfigurationValidation`);
+				throw new Error(
+					`Protected Resource Metadata 'resource' property value "${prmValue}" does not match expected value "${expectedResource}" for URL ${prmUrl}. Per RFC 9728, these MUST match. See https://datatracker.ietf.org/doc/html/rfc9728#PRConfigurationValidation`,
+				);
 			}
 			return body;
 		} else {
-			throw new Error(`Invalid resource metadata from ${prmUrl}. Expected to follow shape of https://datatracker.ietf.org/doc/html/rfc9728#name-protected-resource-metadata (Hints: is scopes_supported an array? Is resource a string?). Current payload: ${JSON.stringify(body)}`);
+			throw new Error(
+				`Invalid resource metadata from ${prmUrl}. Expected to follow shape of https://datatracker.ietf.org/doc/html/rfc9728#name-protected-resource-metadata (Hints: is scopes_supported an array? Is resource a string?). Current payload: ${JSON.stringify(body)}`,
+			);
 		}
 	};
 
@@ -1258,7 +1351,7 @@ export async function fetchResourceMetadata(
 	}
 
 	// Try well-known URIs starting with path-appended, then root
-	const hasPathComponent = targetResourceUrlObj.pathname !== '/';
+	const hasPathComponent = targetResourceUrlObj.pathname !== "/";
 	const rootUrl = `${targetResourceUrlObj.origin}${AUTH_PROTECTED_RESOURCE_METADATA_DISCOVERY_PATH}`;
 
 	if (hasPathComponent) {
@@ -1283,7 +1376,10 @@ export async function fetchResourceMetadata(
 	if (errors.length === 1) {
 		throw errors[0];
 	} else {
-		throw new AggregateError(errors, 'Failed to fetch resource metadata from all attempted URLs');
+		throw new AggregateError(
+			errors,
+			"Failed to fetch resource metadata from all attempted URLs",
+		);
 	}
 }
 
@@ -1299,7 +1395,9 @@ export interface IFetchAuthorizationServerMetadataOptions {
 }
 
 /** Helper to try parsing the response as authorization server metadata */
-async function tryParseAuthServerMetadata(response: CommonResponse): Promise<IAuthorizationServerMetadata | undefined> {
+async function tryParseAuthServerMetadata(
+	response: CommonResponse,
+): Promise<IAuthorizationServerMetadata | undefined> {
 	if (response.status !== 200) {
 		return undefined;
 	}
@@ -1347,33 +1445,43 @@ async function getErrText(res: CommonResponse): Promise<string> {
  */
 export async function fetchAuthorizationServerMetadata(
 	authorizationServer: string,
-	options: IFetchAuthorizationServerMetadataOptions = {}
-): Promise<{ metadata: IAuthorizationServerMetadata; discoveryUrl: string; errors: Error[] }> {
-	const {
-		additionalHeaders = {},
-		fetch: fetchImpl = fetch
-	} = options;
+	options: IFetchAuthorizationServerMetadataOptions = {},
+): Promise<{
+	metadata: IAuthorizationServerMetadata;
+	discoveryUrl: string;
+	errors: Error[];
+}> {
+	const { additionalHeaders = {}, fetch: fetchImpl = fetch } = options;
 
 	const authorizationServerUrl = new URL(authorizationServer);
-	const extraPath = authorizationServerUrl.pathname === '/' ? '' : authorizationServerUrl.pathname;
+	const extraPath =
+		authorizationServerUrl.pathname === "/"
+			? ""
+			: authorizationServerUrl.pathname;
 
 	const errors: Error[] = [];
 
-	const doFetch = async (url: string): Promise<IAuthorizationServerMetadata | undefined> => {
+	const doFetch = async (
+		url: string,
+	): Promise<IAuthorizationServerMetadata | undefined> => {
 		try {
 			const rawResponse = await fetchImpl(url, {
-				method: 'GET',
+				method: "GET",
 				headers: {
 					...additionalHeaders,
-					'Accept': 'application/json'
-				}
+					Accept: "application/json",
+				},
 			});
 			const metadata = await tryParseAuthServerMetadata(rawResponse);
 			if (metadata) {
 				return metadata;
 			}
 			// No metadata found, collect error from response
-			errors.push(new Error(`Failed to fetch authorization server metadata from ${url}: ${rawResponse.status} ${await getErrText(rawResponse)}`));
+			errors.push(
+				new Error(
+					`Failed to fetch authorization server metadata from ${url}: ${rawResponse.status} ${await getErrText(rawResponse)}`,
+				),
+			);
 			return undefined;
 		} catch (e) {
 			// Collect error from fetch failure
@@ -1385,7 +1493,11 @@ export async function fetchAuthorizationServerMetadata(
 	// For the oauth server metadata discovery path, we _INSERT_
 	// the well known path after the origin and before the path.
 	// https://datatracker.ietf.org/doc/html/rfc8414#section-3
-	const pathToFetch = new URL(AUTH_SERVER_METADATA_DISCOVERY_PATH, authorizationServer).toString() + extraPath;
+	const pathToFetch =
+		new URL(
+			AUTH_SERVER_METADATA_DISCOVERY_PATH,
+			authorizationServer,
+		).toString() + extraPath;
 	let metadata = await doFetch(pathToFetch);
 	if (metadata) {
 		return { metadata, discoveryUrl: pathToFetch, errors };
@@ -1394,7 +1506,9 @@ export async function fetchAuthorizationServerMetadata(
 	// Try fetching the OpenID Connect Discovery with path insertion.
 	// For issuer URLs with path components, this inserts the well-known path
 	// after the origin and before the path.
-	const openidPathInsertionUrl = new URL(OPENID_CONNECT_DISCOVERY_PATH, authorizationServer).toString() + extraPath;
+	const openidPathInsertionUrl =
+		new URL(OPENID_CONNECT_DISCOVERY_PATH, authorizationServer).toString() +
+		extraPath;
 	metadata = await doFetch(openidPathInsertionUrl);
 	if (metadata) {
 		return { metadata, discoveryUrl: openidPathInsertionUrl, errors };
@@ -1403,7 +1517,7 @@ export async function fetchAuthorizationServerMetadata(
 	// Try fetching the other discovery URL. For the openid metadata discovery
 	// path, we _ADD_ the well known path after the existing path.
 	// https://datatracker.ietf.org/doc/html/rfc8414#section-3
-	const openidPathAdditionUrl = authorizationServer.endsWith('/')
+	const openidPathAdditionUrl = authorizationServer.endsWith("/")
 		? authorizationServer + OPENID_CONNECT_DISCOVERY_PATH.substring(1) // Remove leading slash if authServer ends with slash
 		: authorizationServer + OPENID_CONNECT_DISCOVERY_PATH;
 	metadata = await doFetch(openidPathAdditionUrl);
@@ -1415,6 +1529,9 @@ export async function fetchAuthorizationServerMetadata(
 	if (errors.length === 1) {
 		throw errors[0];
 	} else {
-		throw new AggregateError(errors, 'Failed to fetch authorization server metadata from all attempted URLs');
+		throw new AggregateError(
+			errors,
+			"Failed to fetch authorization server metadata from all attempted URLs",
+		);
 	}
 }

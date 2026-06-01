@@ -3,7 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ICompletedSpanData, ISpanEventRecord, SpanStatusCode } from '../../common/spanData.js';
+import {
+	ICompletedSpanData,
+	ISpanEventRecord,
+	SpanStatusCode,
+} from "../../common/spanData.js";
 import {
 	IOtlpAnyValue,
 	IOtlpEvent,
@@ -11,13 +15,13 @@ import {
 	IOtlpKeyValue,
 	IOtlpSpan,
 	OtlpStatusCode,
-} from './otlpJsonTypes.js';
+} from "./otlpJsonTypes.js";
 
 type AttrValue = string | number | boolean | string[];
 
 const HEX_RE = /^[0-9a-fA-F]+$/;
-const ALL_ZERO_TRACE_ID = '00000000000000000000000000000000';
-const ALL_ZERO_SPAN_ID = '0000000000000000';
+const ALL_ZERO_TRACE_ID = "00000000000000000000000000000000";
+const ALL_ZERO_SPAN_ID = "0000000000000000";
 
 /**
  * Decode an OTLP/HTTP JSON `ExportTraceServiceRequest` into flat
@@ -40,7 +44,9 @@ export interface IDecodeResult {
 	readonly errors: readonly string[];
 }
 
-export function decodeExportTraceRequest(request: IOtlpExportTraceServiceRequest | undefined): IDecodeResult {
+export function decodeExportTraceRequest(
+	request: IOtlpExportTraceServiceRequest | undefined,
+): IDecodeResult {
 	if (!request || !Array.isArray(request.resourceSpans)) {
 		return { spans: [], rejected: 0, errors: [] };
 	}
@@ -78,13 +84,16 @@ export function decodeExportTraceRequest(request: IOtlpExportTraceServiceRequest
 	return { spans, rejected, errors };
 }
 
-function decodeSpan(span: IOtlpSpan | undefined, resourceAttrs: Record<string, AttrValue>): ICompletedSpanData | undefined {
+function decodeSpan(
+	span: IOtlpSpan | undefined,
+	resourceAttrs: Record<string, AttrValue>,
+): ICompletedSpanData | undefined {
 	if (!span) {
 		return undefined;
 	}
 
-	const traceId = (span.traceId ?? '').toLowerCase();
-	const spanId = (span.spanId ?? '').toLowerCase();
+	const traceId = (span.traceId ?? "").toLowerCase();
+	const spanId = (span.spanId ?? "").toLowerCase();
 	if (!isValidHex(traceId, 32) || traceId === ALL_ZERO_TRACE_ID) {
 		throw new Error(`invalid traceId: ${span.traceId}`);
 	}
@@ -122,7 +131,7 @@ function decodeSpan(span: IOtlpSpan | undefined, resourceAttrs: Record<string, A
 	const status = decodeStatus(span.status?.code, span.status?.message);
 
 	return {
-		name: span.name ?? '',
+		name: span.name ?? "",
 		traceId,
 		spanId,
 		parentSpanId,
@@ -147,13 +156,16 @@ function decodeEvent(ev: IOtlpEvent | undefined): ISpanEventRecord | undefined {
 		setAttribute(attributes, kv);
 	}
 	return {
-		name: ev.name ?? '',
+		name: ev.name ?? "",
 		timestamp,
 		attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
 	};
 }
 
-function decodeStatus(code: OtlpStatusCode | undefined, message: string | undefined): ICompletedSpanData['status'] {
+function decodeStatus(
+	code: OtlpStatusCode | undefined,
+	message: string | undefined,
+): ICompletedSpanData["status"] {
 	switch (code) {
 		case OtlpStatusCode.OK:
 			return { code: SpanStatusCode.OK, message };
@@ -165,7 +177,9 @@ function decodeStatus(code: OtlpStatusCode | undefined, message: string | undefi
 	}
 }
 
-function decodeAttributes(kvs: readonly IOtlpKeyValue[] | undefined): Record<string, AttrValue> {
+function decodeAttributes(
+	kvs: readonly IOtlpKeyValue[] | undefined,
+): Record<string, AttrValue> {
 	const out: Record<string, AttrValue> = {};
 	if (!kvs) {
 		return out;
@@ -176,8 +190,11 @@ function decodeAttributes(kvs: readonly IOtlpKeyValue[] | undefined): Record<str
 	return out;
 }
 
-function setAttribute(target: Record<string, AttrValue>, kv: IOtlpKeyValue | undefined): void {
-	if (!kv || typeof kv.key !== 'string' || kv.key.length === 0) {
+function setAttribute(
+	target: Record<string, AttrValue>,
+	kv: IOtlpKeyValue | undefined,
+): void {
+	if (!kv || typeof kv.key !== "string" || kv.key.length === 0) {
 		return;
 	}
 	const value = decodeAnyValue(kv.value);
@@ -190,25 +207,25 @@ function decodeAnyValue(v: IOtlpAnyValue | undefined): AttrValue | undefined {
 	if (!v) {
 		return undefined;
 	}
-	if (typeof v.stringValue === 'string') {
+	if (typeof v.stringValue === "string") {
 		return v.stringValue;
 	}
-	if (typeof v.boolValue === 'boolean') {
+	if (typeof v.boolValue === "boolean") {
 		return v.boolValue;
 	}
 	if (v.intValue !== undefined) {
 		// intValue is a stringified int64; precision beyond Number.MAX_SAFE_INTEGER is lost
-		const n = typeof v.intValue === 'string' ? Number(v.intValue) : v.intValue;
+		const n = typeof v.intValue === "string" ? Number(v.intValue) : v.intValue;
 		return Number.isFinite(n) ? n : undefined;
 	}
-	if (typeof v.doubleValue === 'number') {
+	if (typeof v.doubleValue === "number") {
 		return v.doubleValue;
 	}
 	if (v.arrayValue?.values) {
 		// Only flat arrays of strings are first-class in ICompletedSpanData.attributes.
 		// For mixed/numeric/nested arrays, fall back to JSON for fidelity.
 		const items = v.arrayValue.values.map(decodeAnyValue);
-		if (items.every((x): x is string => typeof x === 'string')) {
+		if (items.every((x): x is string => typeof x === "string")) {
 			return items;
 		}
 		return JSON.stringify(items);
@@ -217,25 +234,25 @@ function decodeAnyValue(v: IOtlpAnyValue | undefined): AttrValue | undefined {
 		// Rare; preserve as JSON.
 		const obj: Record<string, AttrValue | undefined> = {};
 		for (const kv of v.kvlistValue.values) {
-			if (kv && typeof kv.key === 'string') {
+			if (kv && typeof kv.key === "string") {
 				obj[kv.key] = decodeAnyValue(kv.value);
 			}
 		}
 		return JSON.stringify(obj);
 	}
-	if (typeof v.bytesValue === 'string') {
+	if (typeof v.bytesValue === "string") {
 		return v.bytesValue;
 	}
 	return undefined;
 }
 
 function nanosToMillis(s: string | undefined): number | undefined {
-	if (s === undefined || s === '' || s === '0') {
+	if (s === undefined || s === "" || s === "0") {
 		return undefined;
 	}
 	// Avoid BigInt churn: parse as decimal string, truncate the last 6 digits (ns → ms).
 	// `s` is a non-negative integer per the spec.
-	const trimmed = s.length <= 6 ? '0' : s.slice(0, -6);
+	const trimmed = s.length <= 6 ? "0" : s.slice(0, -6);
 	const n = Number(trimmed);
 	return Number.isFinite(n) ? n : undefined;
 }

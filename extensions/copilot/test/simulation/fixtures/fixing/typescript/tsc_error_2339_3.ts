@@ -1,23 +1,32 @@
 import { EventEmitter } from 'events';
 
-interface FilterNever<T> { }
-interface RendererEvents { }
+interface FilterNever<T> {}
+interface RendererEvents {}
 interface TypedEmitter<T> {
 	emit(emit: string): void;
 	removeAllListeners(): void;
-	removeListener(eventName: string | symbol, listener: (...args: any[]) => void): EventEmitter;
-	once(eventName: string | symbol, listener: (...args: any[]) => void): EventEmitter;
-	on(eventName: string | symbol, listener: (...args: any[]) => void): EventEmitter
+	removeListener(
+		eventName: string | symbol,
+		listener: (...args: any[]) => void,
+	): EventEmitter;
+	once(
+		eventName: string | symbol,
+		listener: (...args: any[]) => void,
+	): EventEmitter;
+	on(
+		eventName: string | symbol,
+		listener: (...args: any[]) => void,
+	): EventEmitter;
 }
 
 class IpcRendererWithCommands {
-	constructor() { }
+	constructor() {}
 
 	on(event: string, callback: (arg: any) => void) {
 		throw new Error('Method not implemented.');
 	}
 
-	removeAllListeners(id: string) { }
+	removeAllListeners(id: string) {}
 }
 
 export default class Client {
@@ -47,12 +56,18 @@ export default class Client {
 		}
 	}
 
-	on = <U extends keyof RendererEvents>(ev: U, fn: (arg0: string[]) => void) => {
+	on = <U extends keyof RendererEvents>(
+		ev: U,
+		fn: (arg0: string[]) => void,
+	) => {
 		this.emitter.on(ev, fn);
 		return this;
 	};
 
-	once = <U extends keyof RendererEvents>(ev: U, fn: (arg0: string[]) => void) => {
+	once = <U extends keyof RendererEvents>(
+		ev: U,
+		fn: (arg0: string[]) => void,
+	) => {
 		this.emitter.once(ev, fn);
 		return this;
 	};
@@ -67,7 +82,10 @@ export default class Client {
 		return true;
 	}
 
-	removeListener = <U extends keyof RendererEvents>(ev: U, fn: (arg0: string[]) => void) => {
+	removeListener = <U extends keyof RendererEvents>(
+		ev: U,
+		fn: (arg0: string[]) => void,
+	) => {
 		this.emitter.removeListener(ev, fn);
 		return this;
 	};

@@ -4,13 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { RequestType } from '@vscode/copilot-api';
-import { ChatFetchResponseType, ChatLocation } from '../../../platform/chat/common/commonTypes';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+} from '../../../platform/chat/common/commonTypes';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
 import { ChatEndpoint } from '../../../platform/endpoint/node/chatEndpoint';
 import { NextCursorLinePrediction } from '../../../platform/inlineEdits/common/dataTypes/nextCursorLinePrediction';
 import * as xtabPromptOptions from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
-import { DEFAULT_CURSOR_PREDICTION_LINT_OPTIONS, parseLintOptionString } from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	DEFAULT_CURSOR_PREDICTION_LINT_OPTIONS,
+	parseLintOptionString,
+} from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { StatelessNextEditTelemetryBuilder } from '../../../platform/inlineEdits/common/statelessNextEditProvider';
 import { ILanguageDiagnosticsService } from '../../../platform/languages/common/languageDiagnosticsService';
 import { ILogger } from '../../../platform/log/common/logService';
@@ -27,32 +36,46 @@ import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRange';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { LintErrors } from '../common/lintErrors';
-import { constructTaggedFile, getUserPrompt, PromptPieces } from '../common/promptCrafting';
+import {
+	constructTaggedFile,
+	getUserPrompt,
+	PromptPieces,
+} from '../common/promptCrafting';
 import { constructMessages } from './xtabUtils';
 
 export type CursorJumpPrediction =
 	| { readonly kind: 'sameFile'; readonly lineNumber: number }
-	| { readonly kind: 'differentFile'; readonly filePath: string; readonly lineNumber: number };
+	| {
+			readonly kind: 'differentFile';
+			readonly filePath: string;
+			readonly lineNumber: number;
+	  };
 
 const DEFAULT_CURSOR_JUMP_MODEL_NAME = 'copilot-suggestions-himalia-001';
 
 export class XtabNextCursorPredictor {
-
 	private isDisabled: boolean;
 
 	constructor(
 		private readonly computeTokens: (text: string) => number,
-		@IInstantiationService private readonly instaService: IInstantiationService,
-		@IConfigurationService private readonly configService: IConfigurationService,
-		@IExperimentationService private readonly expService: IExperimentationService,
-		@ILanguageDiagnosticsService private readonly langDiagService: ILanguageDiagnosticsService,
+		@IInstantiationService
+		private readonly instaService: IInstantiationService,
+		@IConfigurationService
+		private readonly configService: IConfigurationService,
+		@IExperimentationService
+		private readonly expService: IExperimentationService,
+		@ILanguageDiagnosticsService
+		private readonly langDiagService: ILanguageDiagnosticsService,
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
-		@IProxyModelsService private readonly proxyModelsService: IProxyModelsService,
+		@IProxyModelsService
+		private readonly proxyModelsService: IProxyModelsService,
 	) {
 		this.isDisabled = false;
 	}
 
-	public determineEnablement(supportsNextCursorLinePrediction?: boolean): NextCursorLinePrediction | undefined {
+	public determineEnablement(
+		supportsNextCursorLinePrediction?: boolean,
+	): NextCursorLinePrediction | undefined {
 		if (this.isDisabled) {
 			return undefined;
 		}
@@ -62,7 +85,11 @@ export class XtabNextCursorPredictor {
 		}
 
 		// the cast is for backward compatibility with older experiments
-		const originalNextCursorLinePrediction = this.configService.getExperimentBasedConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, this.expService) as (NextCursorLinePrediction | boolean | undefined);
+		const originalNextCursorLinePrediction =
+			this.configService.getExperimentBasedConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				this.expService,
+			) as NextCursorLinePrediction | boolean | undefined;
 
 		switch (originalNextCursorLinePrediction) {
 			case true:
@@ -82,14 +109,23 @@ export class XtabNextCursorPredictor {
 		}
 	}
 
-
-	public async predictNextCursorPosition(promptPieces: PromptPieces, parentTracer: ILogger, telemetryBuilder: StatelessNextEditTelemetryBuilder | undefined, cancellationToken: CancellationToken): Promise<Result<CursorJumpPrediction, Error>> {
-
-		const tracer = parentTracer.createSubLogger('predictNextCursorPosition');
+	public async predictNextCursorPosition(
+		promptPieces: PromptPieces,
+		parentTracer: ILogger,
+		telemetryBuilder: StatelessNextEditTelemetryBuilder | undefined,
+		cancellationToken: CancellationToken,
+	): Promise<Result<CursorJumpPrediction, Error>> {
+		const tracer = parentTracer.createSubLogger(
+			'predictNextCursorPosition',
+		);
 
 		const systemMessage = `Your task is to predict the line number where the developer is most likely to make their next edit. If you jump in the current file, just output the line number. If you want to jump to another file, output the filepath (relative to workspace root), colon, then line number. If you don't think anywhere is a good next line jump target, just output the current line number of the cursor. Make sure to output no explanation, reasoning, extra spaces, etc.`;
 
-		const maxTokens = this.configService.getExperimentBasedConfig(ConfigKey.Advanced.InlineEditsNextCursorPredictionCurrentFileMaxTokens, this.expService);
+		const maxTokens = this.configService.getExperimentBasedConfig(
+			ConfigKey.Advanced
+				.InlineEditsNextCursorPredictionCurrentFileMaxTokens,
+			this.expService,
+		);
 
 		const currentFileContentR = constructTaggedFile(
 			promptPieces.currentDocument,
@@ -101,36 +137,57 @@ export class XtabNextCursorPredictor {
 					...promptPieces.opts.currentFile,
 					maxTokens,
 					includeTags: false,
-				}
+				},
 			},
 			this.computeTokens,
 			{
 				includeLineNumbers: {
-					areaAroundCodeToEdit: xtabPromptOptions.IncludeLineNumbersOption.None,
-					currentFileContent: xtabPromptOptions.IncludeLineNumbersOption.WithSpaceAfter
-				}
-			}
+					areaAroundCodeToEdit:
+						xtabPromptOptions.IncludeLineNumbersOption.None,
+					currentFileContent:
+						xtabPromptOptions.IncludeLineNumbersOption
+							.WithSpaceAfter,
+				},
+			},
 		);
 
 		if (currentFileContentR.isError()) {
-			tracer.trace(`Failed to construct tagged file: ${currentFileContentR.err}`);
+			tracer.trace(
+				`Failed to construct tagged file: ${currentFileContentR.err}`,
+			);
 			return Result.fromString(currentFileContentR.err);
 		}
 
-		const { clippedTaggedCurrentDoc, areaAroundCodeToEdit } = currentFileContentR.val;
+		const { clippedTaggedCurrentDoc, areaAroundCodeToEdit } =
+			currentFileContentR.val;
 
 		// Get lint diagnostics if enabled for cursor prediction
 		const lintOptions = this.determineLintOptions();
-		const lintErrors = new LintErrors(promptPieces.activeDoc.id, promptPieces.currentDocument, this.langDiagService, promptPieces.xtabHistory);
+		const lintErrors = new LintErrors(
+			promptPieces.activeDoc.id,
+			promptPieces.currentDocument,
+			this.langDiagService,
+			promptPieces.xtabHistory,
+		);
 
-		const includeLineNumbersInRecentSnippets = backwardCompatSetting<boolean, xtabPromptOptions.IncludeLineNumbersOption>(
-			this.configService.getExperimentBasedConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionRecentSnippetsIncludeLineNumbers, this.expService),
+		const includeLineNumbersInRecentSnippets = backwardCompatSetting<
+			boolean,
+			xtabPromptOptions.IncludeLineNumbersOption
+		>(
+			this.configService.getExperimentBasedConfig(
+				ConfigKey.TeamInternal
+					.InlineEditsNextCursorPredictionRecentSnippetsIncludeLineNumbers,
+				this.expService,
+			),
 			(oldValue) => {
 				if (typeof oldValue === 'boolean') {
-					return oldValue ? xtabPromptOptions.IncludeLineNumbersOption.WithSpaceAfter : xtabPromptOptions.IncludeLineNumbersOption.None;
+					return oldValue
+						? xtabPromptOptions.IncludeLineNumbersOption
+								.WithSpaceAfter
+						: xtabPromptOptions.IncludeLineNumbersOption.None;
 				}
 				return oldValue;
-			}
+			},
 		);
 
 		const newPromptPieces = new PromptPieces(
@@ -160,7 +217,7 @@ export class XtabNextCursorPredictor {
 
 		const messages = constructMessages({
 			systemMsg: systemMessage,
-			userMsg: userMessage
+			userMsg: userMessage,
 		});
 
 		telemetryBuilder?.setCursorJumpPrompt(messages);
@@ -174,14 +231,22 @@ export class XtabNextCursorPredictor {
 		}
 		const { endpoint, usesResponsesApi } = resolvedEndpoint;
 
-		const secretKey = this.configService.getConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionApiKey);
+		const secretKey = this.configService.getConfig(
+			ConfigKey.TeamInternal.InlineEditsNextCursorPredictionApiKey,
+		);
 
-		const maxResponseTokens = this.configService.getExperimentBasedConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionMaxResponseTokens, this.expService);
+		const maxResponseTokens = this.configService.getExperimentBasedConfig(
+			ConfigKey.TeamInternal
+				.InlineEditsNextCursorPredictionMaxResponseTokens,
+			this.expService,
+		);
 
 		let requestOptions: OptionalChatRequestParams = {
 			// Responses API models include reasoning tokens in max_output_tokens,
 			// so we need a larger budget to leave room for actual output.
-			max_tokens: usesResponsesApi ? Math.max(maxResponseTokens, 2048) : maxResponseTokens,
+			max_tokens: usesResponsesApi
+				? Math.max(maxResponseTokens, 2048)
+				: maxResponseTokens,
 		};
 
 		if (secretKey) {
@@ -201,7 +266,9 @@ export class XtabNextCursorPredictor {
 
 		if (response.type !== ChatFetchResponseType.Success) {
 			if (response.type === ChatFetchResponseType.NotFound) {
-				tracer.trace('Next cursor position prediction endpoint not found; disabling predictor for current session.');
+				tracer.trace(
+					'Next cursor position prediction endpoint not found; disabling predictor for current session.',
+				);
 				this.isDisabled = true;
 			}
 			return Result.fromString(`fetchError:${response.type}`);
@@ -210,33 +277,57 @@ export class XtabNextCursorPredictor {
 		try {
 			telemetryBuilder?.setCursorJumpResponse(response.value);
 			const trimmed = response.value.trim();
-			return this.parseResponse(trimmed, clippedTaggedCurrentDoc.keptRange);
+			return this.parseResponse(
+				trimmed,
+				clippedTaggedCurrentDoc.keptRange,
+			);
 		} catch (err: unknown) {
-			tracer.trace(`Failed to parse predicted line number from response '${response.value}': ${err}`);
-			return Result.fromString(`failedToParseLine:"${response.value}". Error ${ErrorUtils.fromUnknown(err).message}`);
+			tracer.trace(
+				`Failed to parse predicted line number from response '${response.value}': ${err}`,
+			);
+			return Result.fromString(
+				`failedToParseLine:"${response.value}". Error ${ErrorUtils.fromUnknown(err).message}`,
+			);
 		}
 	}
 
-	private async resolveEndpoint(modelName: string, tracer: ILogger): Promise<{ endpoint: IChatEndpoint; usesResponsesApi: boolean } | undefined> {
-		const useEndpointProvider = this.configService.getConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionUseEndpointProvider);
+	private async resolveEndpoint(
+		modelName: string,
+		tracer: ILogger,
+	): Promise<
+		{ endpoint: IChatEndpoint; usesResponsesApi: boolean } | undefined
+	> {
+		const useEndpointProvider = this.configService.getConfig(
+			ConfigKey.TeamInternal
+				.InlineEditsNextCursorPredictionUseEndpointProvider,
+		);
 		if (useEndpointProvider) {
-			const allEndpoints = await this.endpointProvider.getAllChatEndpoints();
-			const endpoint = allEndpoints.find(e => e.model === modelName || e.family === modelName);
+			const allEndpoints =
+				await this.endpointProvider.getAllChatEndpoints();
+			const endpoint = allEndpoints.find(
+				(e) => e.model === modelName || e.family === modelName,
+			);
 			if (!endpoint) {
-				tracer.trace(`Could not find endpoint for model '${modelName}' via endpoint provider`);
+				tracer.trace(
+					`Could not find endpoint for model '${modelName}' via endpoint provider`,
+				);
 				return undefined;
 			}
 			const usesResponsesApi = endpoint.apiType === 'responses';
 			return { endpoint, usesResponsesApi };
 		}
 
-		const url = this.configService.getConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionUrl);
+		const url = this.configService.getConfig(
+			ConfigKey.TeamInternal.InlineEditsNextCursorPredictionUrl,
+		);
 		return {
 			endpoint: this.instaService.createInstance(ChatEndpoint, {
 				id: modelName,
 				name: 'nes.nextCursorPosition',
 				vendor: modelName,
-				urlOrRequestMetadata: url ? url : { type: RequestType.ProxyChatCompletions },
+				urlOrRequestMetadata: url
+					? url
+					: { type: RequestType.ProxyChatCompletions },
 				model_picker_enabled: false,
 				is_chat_default: false,
 				is_chat_fallback: false,
@@ -252,8 +343,8 @@ export class XtabNextCursorPredictor {
 						streaming: true,
 						vision: false,
 						prediction: false,
-						thinking: false
-					}
+						thinking: false,
+					},
 				},
 			}),
 			usesResponsesApi: false,
@@ -263,26 +354,46 @@ export class XtabNextCursorPredictor {
 	private determineModelName(): string {
 		// Priority: experiment-configured model name, then the first `CursorJumpChat`
 		// model advertised by the `/models` endpoint, then a hard-coded fallback.
-		return this.configService.getExperimentBasedConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName, this.expService)
-			?? this.proxyModelsService.cursorJumpModels?.[0]?.name
-			?? DEFAULT_CURSOR_JUMP_MODEL_NAME;
+		return (
+			this.configService.getExperimentBasedConfig(
+				ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName,
+				this.expService,
+			) ??
+			this.proxyModelsService.cursorJumpModels?.[0]?.name ??
+			DEFAULT_CURSOR_JUMP_MODEL_NAME
+		);
 	}
 
 	private determineLintOptions(): xtabPromptOptions.LintOptions | undefined {
-		const localLintOptions = this.configService.getConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionLintOptions);
+		const localLintOptions = this.configService.getConfig(
+			ConfigKey.TeamInternal.InlineEditsNextCursorPredictionLintOptions,
+		);
 		if (localLintOptions) {
-			return { ...DEFAULT_CURSOR_PREDICTION_LINT_OPTIONS, ...localLintOptions };
+			return {
+				...DEFAULT_CURSOR_PREDICTION_LINT_OPTIONS,
+				...localLintOptions,
+			};
 		}
 
-		const expLintOptions = this.configService.getExperimentBasedConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionLintOptionsString, this.expService);
+		const expLintOptions = this.configService.getExperimentBasedConfig(
+			ConfigKey.TeamInternal
+				.InlineEditsNextCursorPredictionLintOptionsString,
+			this.expService,
+		);
 		if (expLintOptions) {
-			return parseLintOptionString(expLintOptions, DEFAULT_CURSOR_PREDICTION_LINT_OPTIONS);
+			return parseLintOptionString(
+				expLintOptions,
+				DEFAULT_CURSOR_PREDICTION_LINT_OPTIONS,
+			);
 		}
 
 		return DEFAULT_CURSOR_PREDICTION_LINT_OPTIONS;
 	}
 
-	public parseResponse(rawResponse: string, keptRange: OffsetRange): Result<CursorJumpPrediction, Error> {
+	public parseResponse(
+		rawResponse: string,
+		keptRange: OffsetRange,
+	): Result<CursorJumpPrediction, Error> {
 		const trimmed = stripThinkTags(rawResponse);
 
 		// Try parsing as a plain line number (same-file jump)
@@ -309,14 +420,24 @@ export class XtabNextCursorPredictor {
 			return Result.fromString(`crossFileEmptyFilePath`);
 		}
 
-		return Result.ok({ kind: 'differentFile', filePath: filePath.trim(), lineNumber: crossFileLineNumber });
+		return Result.ok({
+			kind: 'differentFile',
+			filePath: filePath.trim(),
+			lineNumber: crossFileLineNumber,
+		});
 	}
 
-	private parseSameFileLineNumber(lineNumber: number, keptRange: OffsetRange): Result<CursorJumpPrediction, Error> {
+	private parseSameFileLineNumber(
+		lineNumber: number,
+		keptRange: OffsetRange,
+	): Result<CursorJumpPrediction, Error> {
 		if (lineNumber < 0) {
 			return Result.fromString(`negativeLineNumber`);
 		}
-		if (lineNumber < keptRange.start || keptRange.endExclusive <= lineNumber) {
+		if (
+			lineNumber < keptRange.start ||
+			keptRange.endExclusive <= lineNumber
+		) {
 			return Result.fromString(`modelNotSeenLineNumber`);
 		}
 		return Result.ok({ kind: 'sameFile', lineNumber });
@@ -336,4 +457,3 @@ function stripThinkTags(text: string): string {
 	}
 	return result.trim();
 }
-

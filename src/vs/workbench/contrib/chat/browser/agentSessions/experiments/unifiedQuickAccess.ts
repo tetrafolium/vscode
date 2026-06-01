@@ -3,29 +3,56 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/unifiedQuickAccess.css';
-import { $, addDisposableListener, EventType } from '../../../../../../base/browser/dom.js';
-import { Disposable, DisposableStore, isDisposable } from '../../../../../../base/common/lifecycle.js';
-import { IQuickInputService, IQuickPick, IQuickPickItem } from '../../../../../../platform/quickinput/common/quickInput.js';
-import { IInstantiationService } from '../../../../../../platform/instantiation/common/instantiation.js';
-import { localize } from '../../../../../../nls.js';
-import { Radio, IRadioOptionItem } from '../../../../../../base/browser/ui/radio/radio.js';
-import { CancellationTokenSource } from '../../../../../../base/common/cancellation.js';
-import { Extensions, IQuickAccessProvider, IQuickAccessProviderDescriptor, IQuickAccessRegistry } from '../../../../../../platform/quickinput/common/quickAccess.js';
-import { Registry } from '../../../../../../platform/registry/common/platform.js';
-import { IContextKeyService } from '../../../../../../platform/contextkey/common/contextkey.js';
-import { createInstantHoverDelegate, getDefaultHoverDelegate } from '../../../../../../base/browser/ui/hover/hoverDelegateFactory.js';
-import { IHoverService } from '../../../../../../platform/hover/browser/hover.js';
-import { Codicon } from '../../../../../../base/common/codicons.js';
-import { renderIcon } from '../../../../../../base/browser/ui/iconLabel/iconLabels.js';
-import { Event } from '../../../../../../base/common/event.js';
-import { ILayoutService } from '../../../../../../platform/layout/browser/layoutService.js';
-import { ICommandService } from '../../../../../../platform/commands/common/commands.js';
-import { IKeybindingService } from '../../../../../../platform/keybinding/common/keybinding.js';
-import { ACTION_ID_NEW_CHAT, CHAT_OPEN_ACTION_ID, IChatViewOpenOptions } from '../../actions/chatActions.js';
+import "./media/unifiedQuickAccess.css";
+import {
+	$,
+	addDisposableListener,
+	EventType,
+} from "../../../../../../base/browser/dom.js";
+import {
+	Disposable,
+	DisposableStore,
+	isDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import {
+	IQuickInputService,
+	IQuickPick,
+	IQuickPickItem,
+} from "../../../../../../platform/quickinput/common/quickInput.js";
+import { IInstantiationService } from "../../../../../../platform/instantiation/common/instantiation.js";
+import { localize } from "../../../../../../nls.js";
+import {
+	Radio,
+	IRadioOptionItem,
+} from "../../../../../../base/browser/ui/radio/radio.js";
+import { CancellationTokenSource } from "../../../../../../base/common/cancellation.js";
+import {
+	Extensions,
+	IQuickAccessProvider,
+	IQuickAccessProviderDescriptor,
+	IQuickAccessRegistry,
+} from "../../../../../../platform/quickinput/common/quickAccess.js";
+import { Registry } from "../../../../../../platform/registry/common/platform.js";
+import { IContextKeyService } from "../../../../../../platform/contextkey/common/contextkey.js";
+import {
+	createInstantHoverDelegate,
+	getDefaultHoverDelegate,
+} from "../../../../../../base/browser/ui/hover/hoverDelegateFactory.js";
+import { IHoverService } from "../../../../../../platform/hover/browser/hover.js";
+import { Codicon } from "../../../../../../base/common/codicons.js";
+import { renderIcon } from "../../../../../../base/browser/ui/iconLabel/iconLabels.js";
+import { Event } from "../../../../../../base/common/event.js";
+import { ILayoutService } from "../../../../../../platform/layout/browser/layoutService.js";
+import { ICommandService } from "../../../../../../platform/commands/common/commands.js";
+import { IKeybindingService } from "../../../../../../platform/keybinding/common/keybinding.js";
+import {
+	ACTION_ID_NEW_CHAT,
+	CHAT_OPEN_ACTION_ID,
+	IChatViewOpenOptions,
+} from "../../actions/chatActions.js";
 
 /** Marker ID for the "send to agent" quick pick item */
-const SEND_TO_AGENT_ID = 'unified-quick-access-send-to-agent';
+const SEND_TO_AGENT_ID = "unified-quick-access-send-to-agent";
 
 /**
  * Tab configuration for the unified quick access widget.
@@ -50,25 +77,31 @@ export interface IUnifiedQuickAccessTab {
  */
 export const DEFAULT_UNIFIED_QUICK_ACCESS_TABS: IUnifiedQuickAccessTab[] = [
 	{
-		id: 'agentSessions',
-		label: localize('agentSessionsTab', "Sessions"),
-		prefix: 'agent ',
-		placeholder: localize('agentSessionsPlaceholder', "Search sessions or type a message..."),
-		tooltip: localize('agentSessionsTooltip', "Search sessions or send a message to agent"),
+		id: "agentSessions",
+		label: localize("agentSessionsTab", "Sessions"),
+		prefix: "agent ",
+		placeholder: localize(
+			"agentSessionsPlaceholder",
+			"Search sessions or type a message...",
+		),
+		tooltip: localize(
+			"agentSessionsTooltip",
+			"Search sessions or send a message to agent",
+		),
 	},
 	{
-		id: 'commands',
-		label: localize('commandsTab', "Commands"),
-		prefix: '>',
-		placeholder: localize('commandsPlaceholder', "Search commands..."),
-		tooltip: localize('commandsTooltip', "Run commands"),
+		id: "commands",
+		label: localize("commandsTab", "Commands"),
+		prefix: ">",
+		placeholder: localize("commandsPlaceholder", "Search commands..."),
+		tooltip: localize("commandsTooltip", "Run commands"),
 	},
 	{
-		id: 'files',
-		label: localize('filesTab', "Files"),
-		prefix: '',
-		placeholder: localize('filesPlaceholder', "Search files..."),
-		tooltip: localize('filesTooltip', "Go to files"),
+		id: "files",
+		label: localize("filesTab", "Files"),
+		prefix: "",
+		placeholder: localize("filesPlaceholder", "Search files..."),
+		tooltip: localize("filesTooltip", "Go to files"),
 	},
 ];
 
@@ -77,11 +110,17 @@ export const DEFAULT_UNIFIED_QUICK_ACCESS_TABS: IUnifiedQuickAccessTab[] = [
  * Combines multiple QuickAccessProviders into a single tabbed interface.
  */
 export class UnifiedQuickAccess extends Disposable {
+	private readonly registry = Registry.as<IQuickAccessRegistry>(
+		Extensions.Quickaccess,
+	);
+	private readonly mapProviderToDescriptor = new Map<
+		IQuickAccessProviderDescriptor,
+		IQuickAccessProvider
+	>();
 
-	private readonly registry = Registry.as<IQuickAccessRegistry>(Extensions.Quickaccess);
-	private readonly mapProviderToDescriptor = new Map<IQuickAccessProviderDescriptor, IQuickAccessProvider>();
-
-	private _currentPicker: IQuickPick<IQuickPickItem, { useSeparators: true }> | undefined;
+	private _currentPicker:
+		| IQuickPick<IQuickPickItem, { useSeparators: true }>
+		| undefined;
 	private _currentDisposables = this._register(new DisposableStore());
 	private _providerDisposables = this._register(new DisposableStore());
 	private _currentTab: IUnifiedQuickAccessTab | undefined;
@@ -89,7 +128,7 @@ export class UnifiedQuickAccess extends Disposable {
 	private _tabBarContainer: HTMLElement | undefined;
 	private _isInternalValueChange = false; // Flag to prevent recursive tab detection
 	private _isUpdatingSendToAgent = false; // Guard to prevent infinite loop
-	private _arrivedViaShortcut: '<' | '>' | undefined; // Track if we arrived at current tab via shortcut key
+	private _arrivedViaShortcut: "<" | ">" | undefined; // Track if we arrived at current tab via shortcut key
 	private _sendToAgentTimeout: ReturnType<typeof setTimeout> | undefined;
 	private _sendButton: HTMLButtonElement | undefined;
 	private _sendButtonLabel: HTMLSpanElement | undefined;
@@ -101,7 +140,8 @@ export class UnifiedQuickAccess extends Disposable {
 	constructor(
 		tabs: IUnifiedQuickAccessTab[] | undefined,
 		@IQuickInputService private readonly quickInputService: IQuickInputService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@ILayoutService private readonly layoutService: ILayoutService,
 		@ICommandService private readonly commandService: ICommandService,
@@ -126,7 +166,12 @@ export class UnifiedQuickAccess extends Disposable {
 		this._currentDisposables.clear();
 
 		// Create picker
-		const picker: IQuickPick<IQuickPickItem, { useSeparators: true }> = this._currentDisposables.add(this.quickInputService.createQuickPick<IQuickPickItem>({ useSeparators: true }));
+		const picker: IQuickPick<IQuickPickItem, { useSeparators: true }> =
+			this._currentDisposables.add(
+				this.quickInputService.createQuickPick<IQuickPickItem>({
+					useSeparators: true,
+				}),
+			);
 		this._currentPicker = picker;
 
 		// Configure picker
@@ -137,7 +182,7 @@ export class UnifiedQuickAccess extends Disposable {
 
 		// Find initial tab
 		const initialTab = initialTabId
-			? this._tabs.find(t => t.id === initialTabId) ?? this._tabs[0]
+			? (this._tabs.find((t) => t.id === initialTabId) ?? this._tabs[0])
 			: this._tabs[0];
 		this._currentTab = initialTab;
 
@@ -147,7 +192,7 @@ export class UnifiedQuickAccess extends Disposable {
 		// Set initial value and activate tab
 		// Start with empty value (don't prefill prefix) so user can type naturally
 		this._isInternalValueChange = true;
-		picker.value = initialValue ?? '';
+		picker.value = initialValue ?? "";
 		picker.placeholder = initialTab.placeholder;
 		this._isInternalValueChange = false;
 
@@ -155,92 +200,109 @@ export class UnifiedQuickAccess extends Disposable {
 		this._activateProvider(initialTab, picker);
 
 		// Handle value changes - detect prefix changes to switch tabs
-		this._currentDisposables.add(picker.onDidChangeValue(value => {
-			if (this._isInternalValueChange) {
-				return;
-			}
+		this._currentDisposables.add(
+			picker.onDidChangeValue((value) => {
+				if (this._isInternalValueChange) {
+					return;
+				}
 
-			// Check if user removed the shortcut character (including when input is emptied) - switch back to Files
-			if (this._arrivedViaShortcut) {
-				const shortcut = this._arrivedViaShortcut;
-				if (!value.startsWith(shortcut)) {
-					const filesTab = this._tabs.find(t => t.id === 'files');
-					if (filesTab && filesTab !== this._currentTab) {
-						this._arrivedViaShortcut = undefined;
-						this._switchTab(filesTab, picker, false);
-						return;
+				// Check if user removed the shortcut character (including when input is emptied) - switch back to Files
+				if (this._arrivedViaShortcut) {
+					const shortcut = this._arrivedViaShortcut;
+					if (!value.startsWith(shortcut)) {
+						const filesTab = this._tabs.find((t) => t.id === "files");
+						if (filesTab && filesTab !== this._currentTab) {
+							this._arrivedViaShortcut = undefined;
+							this._switchTab(filesTab, picker, false);
+							return;
+						}
 					}
 				}
-			}
 
-			const matchingTab = this._detectTabFromValue(value);
-			if (matchingTab && matchingTab !== this._currentTab) {
-				this._switchTab(matchingTab, picker, true);
-			}
-			// Update send button state based on input
-			this._updateSendButtonState(value);
-			// Debounce send-to-agent check to let provider finish
-			if (this._sendToAgentTimeout) {
-				clearTimeout(this._sendToAgentTimeout);
-			}
-			this._sendToAgentTimeout = setTimeout(() => this._maybeShowSendToAgent(picker), 150);
-		}));
+				const matchingTab = this._detectTabFromValue(value);
+				if (matchingTab && matchingTab !== this._currentTab) {
+					this._switchTab(matchingTab, picker, true);
+				}
+				// Update send button state based on input
+				this._updateSendButtonState(value);
+				// Debounce send-to-agent check to let provider finish
+				if (this._sendToAgentTimeout) {
+					clearTimeout(this._sendToAgentTimeout);
+				}
+				this._sendToAgentTimeout = setTimeout(
+					() => this._maybeShowSendToAgent(picker),
+					150,
+				);
+			}),
+		);
 
 		// Handle accept - send to agent if no real items or send-to-agent is selected
-		this._currentDisposables.add(picker.onDidAccept(() => {
-			const selectedItems = picker.selectedItems;
-			const activeItems = picker.activeItems;
+		this._currentDisposables.add(
+			picker.onDidAccept(() => {
+				const selectedItems = picker.selectedItems;
+				const activeItems = picker.activeItems;
 
-			// Check if send-to-agent item is selected
-			const sendToAgentSelected = selectedItems.length > 0 &&
-				(selectedItems[0] as IQuickPickItem & { id?: string }).id === SEND_TO_AGENT_ID;
+				// Check if send-to-agent item is selected
+				const sendToAgentSelected =
+					selectedItems.length > 0 &&
+					(selectedItems[0] as IQuickPickItem & { id?: string }).id ===
+						SEND_TO_AGENT_ID;
 
-			// Check if there are any real items active (not send-to-agent)
-			const hasRealActiveItem = activeItems.some(item =>
-				(item as IQuickPickItem & { id?: string }).id !== SEND_TO_AGENT_ID
-			);
+				// Check if there are any real items active (not send-to-agent)
+				const hasRealActiveItem = activeItems.some(
+					(item) =>
+						(item as IQuickPickItem & { id?: string }).id !== SEND_TO_AGENT_ID,
+				);
 
-			// Get the filter text (without prefix or shortcut character)
-			let filterText: string;
-			if (this._arrivedViaShortcut && picker.value.startsWith(this._arrivedViaShortcut)) {
-				filterText = picker.value.substring(1).trim();
-			} else if (this._currentTab) {
-				filterText = picker.value.substring(this._currentTab.prefix.length).trim();
-			} else {
-				filterText = picker.value.trim();
-			}
+				// Get the filter text (without prefix or shortcut character)
+				let filterText: string;
+				if (
+					this._arrivedViaShortcut &&
+					picker.value.startsWith(this._arrivedViaShortcut)
+				) {
+					filterText = picker.value.substring(1).trim();
+				} else if (this._currentTab) {
+					filterText = picker.value
+						.substring(this._currentTab.prefix.length)
+						.trim();
+				} else {
+					filterText = picker.value.trim();
+				}
 
-			// Send to agent if:
-			// 1. Send-to-agent item is explicitly selected, OR
-			// 2. No real items are active AND user has typed something
-			if (sendToAgentSelected || (!hasRealActiveItem && filterText)) {
-				this._sendMessage(picker.value);
-			}
-		}));
+				// Send to agent if:
+				// 1. Send-to-agent item is explicitly selected, OR
+				// 2. No real items are active AND user has typed something
+				if (sendToAgentSelected || (!hasRealActiveItem && filterText)) {
+					this._sendMessage(picker.value);
+				}
+			}),
+		);
 
 		// Handle hide
-		this._currentDisposables.add(picker.onDidHide(() => {
-			this._providerDisposables.clear();
-			this._providerCts?.cancel();
-			this._providerCts = undefined;
-			this._currentPicker = undefined;
-			this._currentTab = undefined;
-			this._arrivedViaShortcut = undefined;
-			// Clear any pending timeout
-			if (this._sendToAgentTimeout) {
-				clearTimeout(this._sendToAgentTimeout);
-				this._sendToAgentTimeout = undefined;
-			}
-			// Remove the injected tab bar from DOM
-			this._tabBarContainer?.remove();
-			this._tabBarContainer = undefined;
-			// Clear button references
-			this._sendButton = undefined;
-			this._sendButtonLabel = undefined;
-			this._sendButtonIcon = undefined;
-			this._sendButtonHover = undefined;
-			this._currentDisposables.clear();
-		}));
+		this._currentDisposables.add(
+			picker.onDidHide(() => {
+				this._providerDisposables.clear();
+				this._providerCts?.cancel();
+				this._providerCts = undefined;
+				this._currentPicker = undefined;
+				this._currentTab = undefined;
+				this._arrivedViaShortcut = undefined;
+				// Clear any pending timeout
+				if (this._sendToAgentTimeout) {
+					clearTimeout(this._sendToAgentTimeout);
+					this._sendToAgentTimeout = undefined;
+				}
+				// Remove the injected tab bar from DOM
+				this._tabBarContainer?.remove();
+				this._tabBarContainer = undefined;
+				// Clear button references
+				this._sendButton = undefined;
+				this._sendButtonLabel = undefined;
+				this._sendButtonIcon = undefined;
+				this._sendButtonHover = undefined;
+				this._currentDisposables.clear();
+			}),
+		);
 
 		// Show picker
 		picker.show();
@@ -263,83 +325,98 @@ export class UnifiedQuickAccess extends Disposable {
 	/**
 	 * Inject the custom tab bar into the picker's header area.
 	 */
-	private _injectTabBar(picker: IQuickPick<IQuickPickItem, { useSeparators: true }>): void {
+	private _injectTabBar(
+		picker: IQuickPick<IQuickPickItem, { useSeparators: true }>,
+	): void {
 		// Wait for picker to be shown to access DOM
-		const showDisposable = this._currentDisposables.add(Event.once(this.quickInputService.onShow)(() => {
-			this._currentDisposables.delete(showDisposable);
+		const showDisposable = this._currentDisposables.add(
+			Event.once(this.quickInputService.onShow)(() => {
+				this._currentDisposables.delete(showDisposable);
 
-			// Find the quick input widget container via layout service
-			// eslint-disable-next-line no-restricted-syntax
-			const quickInputWidget = this.layoutService.activeContainer.querySelector('.quick-input-widget');
-			if (!quickInputWidget) {
-				return;
-			}
-
-			// Find the header element (contains input box) and list element
-			// eslint-disable-next-line no-restricted-syntax
-			const header = quickInputWidget.querySelector('.quick-input-header');
-			// eslint-disable-next-line no-restricted-syntax
-			const list = quickInputWidget.querySelector('.quick-input-list');
-			if (!header || !list) {
-				return;
-			}
-
-			// Create tab bar container
-			const tabBarContainer = $('div.unified-quick-access-tabs');
-			this._tabBarContainer = tabBarContainer;
-
-			// Create Radio widget for tabs
-			const hoverDelegate = this._currentDisposables.add(createInstantHoverDelegate());
-			const radioItems: IRadioOptionItem[] = this._tabs.map(tab => ({
-				text: tab.label,
-				tooltip: tab.tooltip,
-				isActive: tab === this._currentTab,
-			}));
-
-			const radio = this._currentDisposables.add(new Radio({
-				items: radioItems,
-				hoverDelegate,
-			}));
-
-			tabBarContainer.appendChild(radio.domNode);
-
-			// Handle tab selection
-			this._currentDisposables.add(radio.onDidSelect(index => {
-				const selectedTab = this._tabs[index];
-				if (selectedTab && selectedTab !== this._currentTab) {
-					this._switchTab(selectedTab, picker, false);
+				// Find the quick input widget container via layout service
+				// eslint-disable-next-line no-restricted-syntax
+				const quickInputWidget =
+					this.layoutService.activeContainer.querySelector(
+						".quick-input-widget",
+					);
+				if (!quickInputWidget) {
+					return;
 				}
-			}));
 
-			// Create send button (far right)
-			const sendButton = this._createSendButton(picker);
-			tabBarContainer.appendChild(sendButton);
+				// Find the header element (contains input box) and list element
+				// eslint-disable-next-line no-restricted-syntax
+				const header = quickInputWidget.querySelector(".quick-input-header");
+				// eslint-disable-next-line no-restricted-syntax
+				const list = quickInputWidget.querySelector(".quick-input-list");
+				if (!header || !list) {
+					return;
+				}
 
-			// Insert tab bar between the header (input box) and the list (results)
-			list.parentElement?.insertBefore(tabBarContainer, list);
+				// Create tab bar container
+				const tabBarContainer = $("div.unified-quick-access-tabs");
+				this._tabBarContainer = tabBarContainer;
 
-			// Store reference to radio for updates
-			(picker as unknown as { _unifiedRadio?: Radio })._unifiedRadio = radio;
-		}));
+				// Create Radio widget for tabs
+				const hoverDelegate = this._currentDisposables.add(
+					createInstantHoverDelegate(),
+				);
+				const radioItems: IRadioOptionItem[] = this._tabs.map((tab) => ({
+					text: tab.label,
+					tooltip: tab.tooltip,
+					isActive: tab === this._currentTab,
+				}));
+
+				const radio = this._currentDisposables.add(
+					new Radio({
+						items: radioItems,
+						hoverDelegate,
+					}),
+				);
+
+				tabBarContainer.appendChild(radio.domNode);
+
+				// Handle tab selection
+				this._currentDisposables.add(
+					radio.onDidSelect((index) => {
+						const selectedTab = this._tabs[index];
+						if (selectedTab && selectedTab !== this._currentTab) {
+							this._switchTab(selectedTab, picker, false);
+						}
+					}),
+				);
+
+				// Create send button (far right)
+				const sendButton = this._createSendButton(picker);
+				tabBarContainer.appendChild(sendButton);
+
+				// Insert tab bar between the header (input box) and the list (results)
+				list.parentElement?.insertBefore(tabBarContainer, list);
+
+				// Store reference to radio for updates
+				(picker as unknown as { _unifiedRadio?: Radio })._unifiedRadio = radio;
+			}),
+		);
 	}
 
 	/**
 	 * Create the send button.
 	 */
-	private _createSendButton(picker: IQuickPick<IQuickPickItem, { useSeparators: true }>): HTMLElement {
-		const container = $('div.unified-quick-access-send-container');
+	private _createSendButton(
+		picker: IQuickPick<IQuickPickItem, { useSeparators: true }>,
+	): HTMLElement {
+		const container = $("div.unified-quick-access-send-container");
 
 		// Create send button
-		const button = $('button.unified-send-button') as HTMLButtonElement;
-		button.setAttribute('type', 'button');
+		const button = $("button.unified-send-button") as HTMLButtonElement;
+		button.setAttribute("type", "button");
 		this._sendButton = button;
 
 		const icon = renderIcon(Codicon.send);
-		icon.classList.add('unified-send-icon');
+		icon.classList.add("unified-send-icon");
 		this._sendButtonIcon = icon;
 		button.appendChild(icon);
 
-		const labelSpan = $('span.unified-send-label');
+		const labelSpan = $("span.unified-send-label");
 		this._sendButtonLabel = labelSpan;
 		button.appendChild(labelSpan);
 
@@ -347,23 +424,29 @@ export class UnifiedQuickAccess extends Disposable {
 
 		// Set up managed hover for the button
 		this._sendButtonHover = this._currentDisposables.add(
-			this.hoverService.setupManagedHover(getDefaultHoverDelegate('mouse'), button, '')
+			this.hoverService.setupManagedHover(
+				getDefaultHoverDelegate("mouse"),
+				button,
+				"",
+			),
 		);
 
 		// Initialize button state
 		this._updateSendButtonState(picker.value);
 
 		// Click handler - behavior depends on input state
-		this._currentDisposables.add(addDisposableListener(button, EventType.CLICK, (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			const hasInput = picker.value.trim().length > 0;
-			if (hasInput) {
-				this._sendMessageRaw(picker.value);
-			} else {
-				this._openChat();
-			}
-		}));
+		this._currentDisposables.add(
+			addDisposableListener(button, EventType.CLICK, (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				const hasInput = picker.value.trim().length > 0;
+				if (hasInput) {
+					this._sendMessageRaw(picker.value);
+				} else {
+					this._openChat();
+				}
+			}),
+		);
 
 		return container;
 	}
@@ -380,19 +463,29 @@ export class UnifiedQuickAccess extends Disposable {
 
 		if (hasInput) {
 			// Show "Send" with no keybinding in tooltip (Enter is implied by quick pick)
-			this._sendButtonLabel.textContent = localize('send', "Send");
-			this._sendButtonHover?.update(localize('sendTooltipNoKeybinding', "Send message to new agent session"));
-			this._sendButtonIcon.style.display = '';
+			this._sendButtonLabel.textContent = localize("send", "Send");
+			this._sendButtonHover?.update(
+				localize(
+					"sendTooltipNoKeybinding",
+					"Send message to new agent session",
+				),
+			);
+			this._sendButtonIcon.style.display = "";
 		} else {
 			// Show "Open Chat" with open chat keybinding and hide icon
-			const openChatKeybinding = this.keybindingService.lookupKeybinding(CHAT_OPEN_ACTION_ID);
-			const openChatLabel = openChatKeybinding?.getLabel() ?? '';
-			this._sendButtonLabel.textContent = localize('openChat', "Open Chat");
+			const openChatKeybinding =
+				this.keybindingService.lookupKeybinding(CHAT_OPEN_ACTION_ID);
+			const openChatLabel = openChatKeybinding?.getLabel() ?? "";
+			this._sendButtonLabel.textContent = localize("openChat", "Open Chat");
 			const tooltip = openChatLabel
-				? localize('openChatTooltipWithKeybinding', "Open chat ({0})", openChatLabel)
-				: localize('openChatTooltipNoKeybinding', "Open chat");
+				? localize(
+						"openChatTooltipWithKeybinding",
+						"Open chat ({0})",
+						openChatLabel,
+					)
+				: localize("openChatTooltipNoKeybinding", "Open chat");
 			this._sendButtonHover?.update(tooltip);
-			this._sendButtonIcon.style.display = 'none';
+			this._sendButtonIcon.style.display = "none";
 		}
 	}
 
@@ -435,7 +528,10 @@ export class UnifiedQuickAccess extends Disposable {
 		let message = value;
 
 		// First, strip shortcut character if we arrived via shortcut
-		if (this._arrivedViaShortcut && message.startsWith(this._arrivedViaShortcut)) {
+		if (
+			this._arrivedViaShortcut &&
+			message.startsWith(this._arrivedViaShortcut)
+		) {
 			message = message.substring(1).trim();
 		} else if (this._currentTab) {
 			// Otherwise strip the normal prefix
@@ -466,7 +562,9 @@ export class UnifiedQuickAccess extends Disposable {
 	 * Check if we should show the "send to agent" item.
 	 * Always shows it as the first item when user has typed something.
 	 */
-	private _maybeShowSendToAgent(picker: IQuickPick<IQuickPickItem, { useSeparators: true }>): void {
+	private _maybeShowSendToAgent(
+		picker: IQuickPick<IQuickPickItem, { useSeparators: true }>,
+	): void {
 		// Guard against recursive calls
 		if (this._isUpdatingSendToAgent) {
 			return;
@@ -474,11 +572,16 @@ export class UnifiedQuickAccess extends Disposable {
 
 		// Get the filter text (without prefix or shortcut character)
 		let filterText: string;
-		if (this._arrivedViaShortcut && picker.value.startsWith(this._arrivedViaShortcut)) {
+		if (
+			this._arrivedViaShortcut &&
+			picker.value.startsWith(this._arrivedViaShortcut)
+		) {
 			// Strip shortcut character
 			filterText = picker.value.substring(1).trim();
 		} else if (this._currentTab) {
-			filterText = picker.value.substring(this._currentTab.prefix.length).trim();
+			filterText = picker.value
+				.substring(this._currentTab.prefix.length)
+				.trim();
 		} else {
 			filterText = picker.value.trim();
 		}
@@ -499,28 +602,36 @@ export class UnifiedQuickAccess extends Disposable {
 
 		// Check if send-to-agent is already the first item with same description
 		const firstItem = picker.items[0] as IQuickPickItem & { id?: string };
-		if (firstItem?.id === SEND_TO_AGENT_ID && firstItem.description === fullInput) {
+		if (
+			firstItem?.id === SEND_TO_AGENT_ID &&
+			firstItem.description === fullInput
+		) {
 			return; // Already showing correct send-to-agent item
 		}
 
 		// Create the send-to-agent item
 		const sendItem: IQuickPickItem & { id: string } = {
 			id: SEND_TO_AGENT_ID,
-			label: `$(send) ${localize('sendToAgentLabel', "Send to agent")}`,
+			label: `$(send) ${localize("sendToAgentLabel", "Send to agent")}`,
 			description: fullInput,
 			alwaysShow: true,
-			ariaLabel: localize('sendToAgentAria', "Send message to agent: {0}", fullInput),
+			ariaLabel: localize(
+				"sendToAgentAria",
+				"Send message to agent: {0}",
+				fullInput,
+			),
 		};
 
 		// Get current items, excluding any existing send-to-agent item
-		const currentItems = picker.items.filter(item =>
-			(item as IQuickPickItem & { id?: string }).id !== SEND_TO_AGENT_ID
+		const currentItems = picker.items.filter(
+			(item) =>
+				(item as IQuickPickItem & { id?: string }).id !== SEND_TO_AGENT_ID,
 		);
 
 		// Determine if we should show send-to-agent as first item:
 		// - Always on Sessions tab (agent sessions)
 		// - Only if no other items exist on Commands/Files tabs
-		const isSessionsTab = this._currentTab?.id === 'agentSessions';
+		const isSessionsTab = this._currentTab?.id === "agentSessions";
 		const hasOtherItems = currentItems.length > 0;
 		const showFirst = isSessionsTab || !hasOtherItems;
 
@@ -541,7 +652,11 @@ export class UnifiedQuickAccess extends Disposable {
 	/**
 	 * Switch to a different tab.
 	 */
-	private _switchTab(tab: IUnifiedQuickAccessTab, picker: IQuickPick<IQuickPickItem, { useSeparators: true }>, preserveFilterText: boolean): void {
+	private _switchTab(
+		tab: IUnifiedQuickAccessTab,
+		picker: IQuickPick<IQuickPickItem, { useSeparators: true }>,
+		preserveFilterText: boolean,
+	): void {
 		if (tab === this._currentTab) {
 			return;
 		}
@@ -550,7 +665,8 @@ export class UnifiedQuickAccess extends Disposable {
 		this._currentTab = tab;
 
 		// Update Radio selection
-		const radio = (picker as unknown as { _unifiedRadio?: Radio })._unifiedRadio;
+		const radio = (picker as unknown as { _unifiedRadio?: Radio })
+			._unifiedRadio;
 		if (radio) {
 			const index = this._tabs.indexOf(tab);
 			if (index >= 0) {
@@ -571,14 +687,14 @@ export class UnifiedQuickAccess extends Disposable {
 			}
 
 			// Handle shortcut transitions - ensure only one shortcut char is shown
-			if (this._arrivedViaShortcut === '<' && tab.id === 'agentSessions') {
+			if (this._arrivedViaShortcut === "<" && tab.id === "agentSessions") {
 				// Strip any leading "<" chars and set just one
-				filterText = filterText.replace(/^<+/, '');
-				picker.value = '<' + filterText;
-			} else if (this._arrivedViaShortcut === '>' && tab.id === 'commands') {
+				filterText = filterText.replace(/^<+/, "");
+				picker.value = "<" + filterText;
+			} else if (this._arrivedViaShortcut === ">" && tab.id === "commands") {
 				// Strip any leading ">" chars and set just one
-				filterText = filterText.replace(/^>+/, '');
-				picker.value = '>' + filterText;
+				filterText = filterText.replace(/^>+/, "");
+				picker.value = ">" + filterText;
 			} else {
 				// Normal prefix-based switching
 				picker.value = tab.prefix + filterText;
@@ -590,7 +706,7 @@ export class UnifiedQuickAccess extends Disposable {
 				picker.value = currentValue.substring(previousTab.prefix.length);
 			}
 			// Also strip shortcut character if present
-			if (picker.value.startsWith('<') || picker.value.startsWith('>')) {
+			if (picker.value.startsWith("<") || picker.value.startsWith(">")) {
 				picker.value = picker.value.substring(1);
 			}
 			// Clear shortcut tracking when switching via click
@@ -610,21 +726,23 @@ export class UnifiedQuickAccess extends Disposable {
 	 * Only switches away from current tab if user explicitly typed a different prefix.
 	 * Supports shortcut keys: ">" for Commands, "<" for Sessions.
 	 */
-	private _detectTabFromValue(value: string): IUnifiedQuickAccessTab | undefined {
+	private _detectTabFromValue(
+		value: string,
+	): IUnifiedQuickAccessTab | undefined {
 		// Check for "<" shortcut to switch to Sessions (from Files or Commands)
-		if (value === '<' || value.startsWith('<')) {
-			const sessionsTab = this._tabs.find(t => t.id === 'agentSessions');
-			if (sessionsTab && this._currentTab?.id !== 'agentSessions') {
-				this._arrivedViaShortcut = '<';
+		if (value === "<" || value.startsWith("<")) {
+			const sessionsTab = this._tabs.find((t) => t.id === "agentSessions");
+			if (sessionsTab && this._currentTab?.id !== "agentSessions") {
+				this._arrivedViaShortcut = "<";
 				return sessionsTab;
 			}
 		}
 
 		// Check for ">" shortcut to switch to Commands (from Files or Sessions)
-		if (value === '>' || value.startsWith('>')) {
-			const commandsTab = this._tabs.find(t => t.id === 'commands');
-			if (commandsTab && this._currentTab?.id !== 'commands') {
-				this._arrivedViaShortcut = '>';
+		if (value === ">" || value.startsWith(">")) {
+			const commandsTab = this._tabs.find((t) => t.id === "commands");
+			if (commandsTab && this._currentTab?.id !== "commands") {
+				this._arrivedViaShortcut = ">";
 				return commandsTab;
 			}
 		}
@@ -637,16 +755,19 @@ export class UnifiedQuickAccess extends Disposable {
 		// Sort by prefix length descending to match most specific first
 		// Skip empty prefix - it would match everything
 		const sortedTabs = [...this._tabs]
-			.filter(tab => tab.prefix.length > 0)
+			.filter((tab) => tab.prefix.length > 0)
 			.sort((a, b) => b.prefix.length - a.prefix.length);
 
-		return sortedTabs.find(tab => value.startsWith(tab.prefix));
+		return sortedTabs.find((tab) => value.startsWith(tab.prefix));
 	}
 
 	/**
 	 * Activate the provider for a given tab.
 	 */
-	private _activateProvider(tab: IUnifiedQuickAccessTab, picker: IQuickPick<IQuickPickItem, { useSeparators: true }>): void {
+	private _activateProvider(
+		tab: IUnifiedQuickAccessTab,
+		picker: IQuickPick<IQuickPickItem, { useSeparators: true }>,
+	): void {
 		// Clear previous provider resources
 		this._providerDisposables.clear();
 		this._providerCts?.cancel();
@@ -656,10 +777,15 @@ export class UnifiedQuickAccess extends Disposable {
 		// Special handling for Send tab - no provider needed
 		if (tab.isSendTab) {
 			picker.busy = false;
-			picker.items = [{
-				label: localize('pressSendOrEnter', "Press Enter or click Send to create a new agent session"),
-				alwaysShow: true,
-			}];
+			picker.items = [
+				{
+					label: localize(
+						"pressSendOrEnter",
+						"Press Enter or click Send to create a new agent session",
+					),
+					alwaysShow: true,
+				},
+			];
 			return;
 		}
 
@@ -687,23 +813,36 @@ export class UnifiedQuickAccess extends Disposable {
 			};
 
 			// Let provider populate the picker
-			const providerDisposable = provider.provide(picker, this._providerCts.token);
+			const providerDisposable = provider.provide(
+				picker,
+				this._providerCts.token,
+			);
 			this._providerDisposables.add(providerDisposable);
 		} else {
 			picker.busy = false;
-			picker.items = [{
-				label: localize('noProvider', "No provider available for this tab"),
-				alwaysShow: true,
-			}];
+			picker.items = [
+				{
+					label: localize("noProvider", "No provider available for this tab"),
+					alwaysShow: true,
+				},
+			];
 		}
 	}
 
 	/**
 	 * Get or create a provider instance for the given prefix.
 	 */
-	private _getOrInstantiateProvider(prefix: string): [IQuickAccessProvider | undefined, IQuickAccessProviderDescriptor | undefined] {
+	private _getOrInstantiateProvider(
+		prefix: string,
+	): [
+		IQuickAccessProvider | undefined,
+		IQuickAccessProviderDescriptor | undefined,
+	] {
 		// Try to find provider by exact prefix match first
-		const providerDescriptor = this.registry.getQuickAccessProvider(prefix, this.contextKeyService);
+		const providerDescriptor = this.registry.getQuickAccessProvider(
+			prefix,
+			this.contextKeyService,
+		);
 
 		if (!providerDescriptor) {
 			return [undefined, undefined];
@@ -711,7 +850,9 @@ export class UnifiedQuickAccess extends Disposable {
 
 		let provider = this.mapProviderToDescriptor.get(providerDescriptor);
 		if (!provider) {
-			provider = this.instantiationService.createInstance(providerDescriptor.ctor);
+			provider = this.instantiationService.createInstance(
+				providerDescriptor.ctor,
+			);
 			this.mapProviderToDescriptor.set(providerDescriptor, provider);
 		}
 

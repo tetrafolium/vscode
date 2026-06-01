@@ -19,7 +19,8 @@ suite('OpenAI Config Tests', function () {
 
 	test('getEngineRequestInfo() returns the model from AvailableModelManager', function () {
 		const telem = TelemetryWithExp.createEmptyConfigForTesting();
-		telem.filtersAndExp.exp.variables[ExpTreatmentVariables.CustomEngine] = 'model.override';
+		telem.filtersAndExp.exp.variables[ExpTreatmentVariables.CustomEngine] =
+			'model.override';
 
 		const info = getEngineRequestInfo(accessor, telem);
 

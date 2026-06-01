@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter } from '../../../../base/common/event.js';
-import { ISecretStorageService } from '../../common/secrets.js';
+import { Emitter } from "../../../../base/common/event.js";
+import { ISecretStorageService } from "../../common/secrets.js";
 
 export class TestSecretStorageService implements ISecretStorageService {
 	declare readonly _serviceBrand: undefined;
@@ -13,7 +13,7 @@ export class TestSecretStorageService implements ISecretStorageService {
 	private readonly _onDidChangeSecretEmitter = new Emitter<string>();
 	readonly onDidChangeSecret = this._onDidChangeSecretEmitter.event;
 
-	type = 'in-memory' as const;
+	type = "in-memory" as const;
 
 	async get(key: string): Promise<string | undefined> {
 		return this._storage.get(key);

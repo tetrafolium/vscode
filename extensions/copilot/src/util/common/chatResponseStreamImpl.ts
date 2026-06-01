@@ -4,18 +4,60 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ChatResponseReferencePartStatusKind } from '@vscode/prompt-tsx';
-import type { ChatQuestion, ChatResponseFileTree, ChatResponseStream, ChatResultUsage, ChatToolInvocationStreamData, ChatVulnerability, ChatWorkspaceFileEdit, Command, ExtendedChatResponsePart, Location, NotebookEdit, Progress, ThinkingDelta, Uri } from 'vscode';
-import { ChatHookType, ChatResponseAnchorPart, ChatResponseClearToPreviousToolInvocationReason, ChatResponseCodeblockUriPart, ChatResponseCodeCitationPart, ChatResponseCommandButtonPart, ChatResponseConfirmationPart, ChatResponseExternalEditPart, ChatResponseFileTreePart, ChatResponseHookPart, ChatResponseInfoPart, ChatResponseMarkdownPart, ChatResponseMarkdownWithVulnerabilitiesPart, ChatResponseNotebookEditPart, ChatResponseProgressPart, ChatResponseProgressPart2, ChatResponseReferencePart, ChatResponseReferencePart2, ChatResponseTextEditPart, ChatResponseThinkingProgressPart, ChatResponseWarningPart, ChatResponseWorkspaceEditPart, MarkdownString, TextEdit } from '../../vscodeTypes';
+import type {
+	ChatQuestion,
+	ChatResponseFileTree,
+	ChatResponseStream,
+	ChatResultUsage,
+	ChatToolInvocationStreamData,
+	ChatVulnerability,
+	ChatWorkspaceFileEdit,
+	Command,
+	ExtendedChatResponsePart,
+	Location,
+	NotebookEdit,
+	Progress,
+	ThinkingDelta,
+	Uri,
+} from 'vscode';
+import {
+	ChatHookType,
+	ChatResponseAnchorPart,
+	ChatResponseClearToPreviousToolInvocationReason,
+	ChatResponseCodeblockUriPart,
+	ChatResponseCodeCitationPart,
+	ChatResponseCommandButtonPart,
+	ChatResponseConfirmationPart,
+	ChatResponseExternalEditPart,
+	ChatResponseFileTreePart,
+	ChatResponseHookPart,
+	ChatResponseInfoPart,
+	ChatResponseMarkdownPart,
+	ChatResponseMarkdownWithVulnerabilitiesPart,
+	ChatResponseNotebookEditPart,
+	ChatResponseProgressPart,
+	ChatResponseProgressPart2,
+	ChatResponseReferencePart,
+	ChatResponseReferencePart2,
+	ChatResponseTextEditPart,
+	ChatResponseThinkingProgressPart,
+	ChatResponseWarningPart,
+	ChatResponseWorkspaceEditPart,
+	MarkdownString,
+	TextEdit,
+} from '../../vscodeTypes';
 import type { ThemeIcon } from '../vs/base/common/themables';
-
 
 export interface FinalizableChatResponseStream extends ChatResponseStream {
 	finalize(): Promise<void>;
 }
 
-
-export function tryFinalizeResponseStream(stream: ChatResponseStream | FinalizableChatResponseStream) {
-	if (typeof (stream as FinalizableChatResponseStream).finalize === 'function') {
+export function tryFinalizeResponseStream(
+	stream: ChatResponseStream | FinalizableChatResponseStream,
+) {
+	if (
+		typeof (stream as FinalizableChatResponseStream).finalize === 'function'
+	) {
 		return (stream as FinalizableChatResponseStream).finalize();
 	}
 }
@@ -23,15 +65,20 @@ export function tryFinalizeResponseStream(stream: ChatResponseStream | Finalizab
  * A `ChatResponseStream` that forwards all calls to a single callback.
  */
 export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
-
-	public static spy(stream: ChatResponseStream, callback: (part: ExtendedChatResponsePart) => void, finalize?: () => void): ChatResponseStreamImpl {
+	public static spy(
+		stream: ChatResponseStream,
+		callback: (part: ExtendedChatResponsePart) => void,
+		finalize?: () => void,
+	): ChatResponseStreamImpl {
 		return new ChatResponseStreamImpl(
 			(value) => {
 				callback(value);
 				stream.push(value);
-			}, (reason) => {
+			},
+			(reason) => {
 				stream.clearToPreviousToolInvocation(reason);
-			}, () => {
+			},
+			() => {
 				finalize?.();
 				return tryFinalizeResponseStream(stream);
 			},
@@ -46,21 +93,28 @@ export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
 			},
 			(usage) => {
 				stream.usage(usage);
-			}
+			},
 		);
 	}
 
-	public static filter(stream: ChatResponseStream, callback: (part: ExtendedChatResponsePart) => boolean, finalize?: () => void): ChatResponseStreamImpl {
-		return new ChatResponseStreamImpl((value) => {
-			if (callback(value)) {
-				stream.push(value);
-			}
-		}, (reason) => {
-			stream.clearToPreviousToolInvocation(reason);
-		}, () => {
-			finalize?.();
-			return tryFinalizeResponseStream(stream);
-		},
+	public static filter(
+		stream: ChatResponseStream,
+		callback: (part: ExtendedChatResponsePart) => boolean,
+		finalize?: () => void,
+	): ChatResponseStreamImpl {
+		return new ChatResponseStreamImpl(
+			(value) => {
+				if (callback(value)) {
+					stream.push(value);
+				}
+			},
+			(reason) => {
+				stream.clearToPreviousToolInvocation(reason);
+			},
+			() => {
+				finalize?.();
+				return tryFinalizeResponseStream(stream);
+			},
 			(toolCallId, toolName, streamData) => {
 				stream.beginToolInvocation(toolCallId, toolName, streamData);
 			},
@@ -72,21 +126,31 @@ export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
 			},
 			(usage) => {
 				stream.usage(usage);
-			});
+			},
+		);
 	}
 
-	public static map(stream: ChatResponseStream, callback: (part: ExtendedChatResponsePart) => ExtendedChatResponsePart | undefined, finalize?: () => void): ChatResponseStreamImpl {
-		return new ChatResponseStreamImpl((value) => {
-			const result = callback(value);
-			if (result) {
-				stream.push(result);
-			}
-		}, (reason) => {
-			stream.clearToPreviousToolInvocation(reason);
-		}, () => {
-			finalize?.();
-			return tryFinalizeResponseStream(stream);
-		},
+	public static map(
+		stream: ChatResponseStream,
+		callback: (
+			part: ExtendedChatResponsePart,
+		) => ExtendedChatResponsePart | undefined,
+		finalize?: () => void,
+	): ChatResponseStreamImpl {
+		return new ChatResponseStreamImpl(
+			(value) => {
+				const result = callback(value);
+				if (result) {
+					stream.push(result);
+				}
+			},
+			(reason) => {
+				stream.clearToPreviousToolInvocation(reason);
+			},
+			() => {
+				finalize?.();
+				return tryFinalizeResponseStream(stream);
+			},
 			(toolCallId, toolName, streamData) => {
 				stream.beginToolInvocation(toolCallId, toolName, streamData);
 			},
@@ -98,24 +162,39 @@ export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
 			},
 			(usage) => {
 				stream.usage(usage);
-			});
+			},
+		);
 	}
 
 	constructor(
 		private readonly _push: (part: ExtendedChatResponsePart) => void,
-		private readonly _clearToPreviousToolInvocation: (reason: ChatResponseClearToPreviousToolInvocationReason) => void,
+		private readonly _clearToPreviousToolInvocation: (
+			reason: ChatResponseClearToPreviousToolInvocationReason,
+		) => void,
 		private readonly _finalize?: () => void | Promise<void>,
-		private readonly _beginToolInvocation?: (toolCallId: string, toolName: string, streamData?: ChatToolInvocationStreamData) => void,
-		private readonly _updateToolInvocation?: (toolCallId: string, streamData: ChatToolInvocationStreamData) => void,
-		private readonly _questionCarousel?: (questions: ChatQuestion[], allowSkip?: boolean) => Thenable<Record<string, unknown> | undefined>,
+		private readonly _beginToolInvocation?: (
+			toolCallId: string,
+			toolName: string,
+			streamData?: ChatToolInvocationStreamData,
+		) => void,
+		private readonly _updateToolInvocation?: (
+			toolCallId: string,
+			streamData: ChatToolInvocationStreamData,
+		) => void,
+		private readonly _questionCarousel?: (
+			questions: ChatQuestion[],
+			allowSkip?: boolean,
+		) => Thenable<Record<string, unknown> | undefined>,
 		private readonly _usage?: (usage: ChatResultUsage) => void,
-	) { }
+	) {}
 
 	async finalize(): Promise<void> {
 		await this._finalize?.();
 	}
 
-	clearToPreviousToolInvocation(reason: ChatResponseClearToPreviousToolInvocationReason): void {
+	clearToPreviousToolInvocation(
+		reason: ChatResponseClearToPreviousToolInvocationReason,
+	): void {
 		this._clearToPreviousToolInvocation(reason);
 	}
 
@@ -128,11 +207,23 @@ export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
 	}
 
 	thinkingProgress(thinkingDelta: ThinkingDelta): void {
-		this._push(new ChatResponseThinkingProgressPart(thinkingDelta.text ?? '', thinkingDelta.id, thinkingDelta.metadata));
+		this._push(
+			new ChatResponseThinkingProgressPart(
+				thinkingDelta.text ?? '',
+				thinkingDelta.id,
+				thinkingDelta.metadata,
+			),
+		);
 	}
 
-	hookProgress(hookType: ChatHookType, stopReason?: string, systemMessage?: string): void {
-		this._push(new ChatResponseHookPart(hookType, stopReason, systemMessage));
+	hookProgress(
+		hookType: ChatHookType,
+		stopReason?: string,
+		systemMessage?: string,
+	): void {
+		this._push(
+			new ChatResponseHookPart(hookType, stopReason, systemMessage),
+		);
 	}
 
 	button(command: Command): void {
@@ -143,13 +234,26 @@ export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
 		this._push(new ChatResponseFileTreePart(value, baseUri));
 	}
 
-	async externalEdit(target: Uri | Uri[], callback: () => Thenable<unknown>): Promise<string> {
-		const part = new ChatResponseExternalEditPart(target instanceof Array ? target : [target], callback);
+	async externalEdit(
+		target: Uri | Uri[],
+		callback: () => Thenable<unknown>,
+	): Promise<string> {
+		const part = new ChatResponseExternalEditPart(
+			target instanceof Array ? target : [target],
+			callback,
+		);
 		this._push(part);
 		return part.applied;
 	}
 
-	progress(value: string, task?: (progress: Progress<ChatResponseWarningPart | ChatResponseReferencePart>) => Thenable<string | void>): void {
+	progress(
+		value: string,
+		task?: (
+			progress: Progress<
+				ChatResponseWarningPart | ChatResponseReferencePart
+			>,
+		) => Thenable<string | void>,
+	): void {
 		if (typeof task === 'undefined') {
 			this._push(new ChatResponseProgressPart(value));
 		} else {
@@ -157,12 +261,32 @@ export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
 		}
 	}
 
-	reference(value: Uri | Location | { variableName: string; value?: Uri | Location }, iconPath?: Uri | ThemeIcon | { light: Uri; dark: Uri }): void {
+	reference(
+		value:
+			| Uri
+			| Location
+			| { variableName: string; value?: Uri | Location },
+		iconPath?: Uri | ThemeIcon | { light: Uri; dark: Uri },
+	): void {
 		this._push(new ChatResponseReferencePart(value as any, iconPath));
 	}
 
-	reference2(value: Uri | Location | { variableName: string; value?: Uri | Location }, iconPath?: Uri | ThemeIcon | { light: Uri; dark: Uri }, options?: { status?: { description: string; kind: ChatResponseReferencePartStatusKind } }): void {
-		this._push(new ChatResponseReferencePart2(value as any, iconPath, options));
+	reference2(
+		value:
+			| Uri
+			| Location
+			| { variableName: string; value?: Uri | Location },
+		iconPath?: Uri | ThemeIcon | { light: Uri; dark: Uri },
+		options?: {
+			status?: {
+				description: string;
+				kind: ChatResponseReferencePartStatusKind;
+			};
+		},
+	): void {
+		this._push(
+			new ChatResponseReferencePart2(value as any, iconPath, options),
+		);
 	}
 
 	codeCitation(value: Uri, license: string, snippet: string): void {
@@ -183,7 +307,10 @@ export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
 		}
 	}
 
-	notebookEdit(target: Uri, editsOrDone: NotebookEdit | NotebookEdit[] | true): void {
+	notebookEdit(
+		target: Uri,
+		editsOrDone: NotebookEdit | NotebookEdit[] | true,
+	): void {
 		if (editsOrDone === true) {
 			this._push(new ChatResponseNotebookEditPart(target, true));
 		} else if (Array.isArray(editsOrDone)) {
@@ -197,18 +324,33 @@ export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
 		this._push(new ChatResponseWorkspaceEditPart(edits));
 	}
 
-	markdownWithVulnerabilities(value: string | MarkdownString, vulnerabilities: ChatVulnerability[]): void {
-		this._push(new ChatResponseMarkdownWithVulnerabilitiesPart(value, vulnerabilities));
+	markdownWithVulnerabilities(
+		value: string | MarkdownString,
+		vulnerabilities: ChatVulnerability[],
+	): void {
+		this._push(
+			new ChatResponseMarkdownWithVulnerabilitiesPart(
+				value,
+				vulnerabilities,
+			),
+		);
 	}
 
 	codeblockUri(value: Uri, isEdit?: boolean): void {
 		try {
 			this._push(new ChatResponseCodeblockUriPart(value, isEdit));
-		} catch { } // TODO@joyceerhl remove try/catch
+		} catch {} // TODO@joyceerhl remove try/catch
 	}
 
-	confirmation(title: string, message: string, data: any, buttons?: string[]): void {
-		this._push(new ChatResponseConfirmationPart(title, message, data, buttons));
+	confirmation(
+		title: string,
+		message: string,
+		data: any,
+		buttons?: string[],
+	): void {
+		this._push(
+			new ChatResponseConfirmationPart(title, message, data, buttons),
+		);
 	}
 
 	warning(value: string | MarkdownString): void {
@@ -219,19 +361,29 @@ export class ChatResponseStreamImpl implements FinalizableChatResponseStream {
 		this._push(new ChatResponseInfoPart(value));
 	}
 
-	beginToolInvocation(toolCallId: string, toolName: string, streamData?: ChatToolInvocationStreamData): void {
+	beginToolInvocation(
+		toolCallId: string,
+		toolName: string,
+		streamData?: ChatToolInvocationStreamData,
+	): void {
 		if (this._beginToolInvocation) {
 			this._beginToolInvocation(toolCallId, toolName, streamData);
 		}
 	}
 
-	updateToolInvocation(toolCallId: string, streamData: ChatToolInvocationStreamData): void {
+	updateToolInvocation(
+		toolCallId: string,
+		streamData: ChatToolInvocationStreamData,
+	): void {
 		if (this._updateToolInvocation) {
 			this._updateToolInvocation(toolCallId, streamData);
 		}
 	}
 
-	questionCarousel(questions: ChatQuestion[], allowSkip?: boolean): Thenable<Record<string, unknown> | undefined> {
+	questionCarousel(
+		questions: ChatQuestion[],
+		allowSkip?: boolean,
+	): Thenable<Record<string, unknown> | undefined> {
 		if (this._questionCarousel) {
 			return this._questionCarousel(questions, allowSkip);
 		}

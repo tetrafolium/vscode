@@ -24,10 +24,7 @@ export type SessionIndexingLevel = 'local' | 'user' | 'repo_and_user';
  *   cloud upload
  */
 export class SessionIndexingPreference {
-
-	constructor(
-		private readonly _configService: IConfigurationService,
-	) { }
+	constructor(private readonly _configService: IConfigurationService) {}
 
 	/**
 	 * Get the effective storage level for a given repo.
@@ -46,15 +43,26 @@ export class SessionIndexingPreference {
 	 * Returns true if `chat.sessionSync.enabled` is true AND the repo is not excluded.
 	 */
 	hasCloudConsent(repoNwo?: string): boolean {
-		if (!(this._configService.getNonExtensionConfig<boolean>('chat.sessionSync.enabled') ?? false)) {
+		if (
+			!(
+				this._configService.getNonExtensionConfig<boolean>(
+					'chat.sessionSync.enabled',
+				) ?? false
+			)
+		) {
 			return false;
 		}
 
 		if (repoNwo) {
-			const excludePatterns = this._configService.getNonExtensionConfig<string[]>('chat.sessionSync.excludeRepositories');
+			const excludePatterns = this._configService.getNonExtensionConfig<
+				string[]
+			>('chat.sessionSync.excludeRepositories');
 			if (excludePatterns && excludePatterns.length > 0) {
 				for (const pattern of excludePatterns) {
-					if (pattern === repoNwo || picomatch.isMatch(repoNwo, pattern)) {
+					if (
+						pattern === repoNwo ||
+						picomatch.isMatch(repoNwo, pattern)
+					) {
 						return false;
 					}
 				}

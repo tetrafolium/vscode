@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as Types from '../../api-bindings/types';
-import type { AliasMap } from '../../shell-parser';
+import * as Types from "../../api-bindings/types";
+import type { AliasMap } from "../../shell-parser";
 
 export type FigState = {
 	buffer: string;

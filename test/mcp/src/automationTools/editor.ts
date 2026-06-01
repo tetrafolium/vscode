@@ -3,14 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ApplicationService } from '../application';
-import { z } from 'zod';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ApplicationService } from "../application";
+import { z } from "zod";
 
 /**
  * Editor Management Tools
  */
-export function applyEditorTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applyEditorTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	const tools: RegisteredTool[] = [];
 	// Playwright can probably figure this one out
 	// server.tool(
@@ -32,25 +38,29 @@ export function applyEditorTools(server: McpServer, appService: ApplicationServi
 	// );
 
 	// This one is critical as Playwright had trouble typing in monaco
-	tools.push(server.tool(
-		'vscode_automation_editor_type_text',
-		'Type text in the currently active editor',
-		{
-			text: z.string().describe('The text to type'),
-			filename: z.string().describe('Filename to target specific editor')
-		},
-		async (args) => {
-			const { text, filename } = args;
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.editor.waitForTypeInEditor(filename, text);
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `Typed text: "${text}"`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_editor_type_text",
+			"Type text in the currently active editor",
+			{
+				text: z.string().describe("The text to type"),
+				filename: z.string().describe("Filename to target specific editor"),
+			},
+			async (args) => {
+				const { text, filename } = args;
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.editor.waitForTypeInEditor(filename, text);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Typed text: "${text}"`,
+						},
+					],
+				};
+			},
+		),
+	);
 
 	// Doesn't seem particularly useful
 	// server.tool(
@@ -163,35 +173,43 @@ export function applyEditorTools(server: McpServer, appService: ApplicationServi
 	// );
 
 	// Editor File Management Tools
-	tools.push(server.tool(
-		'vscode_automation_editor_new_untitled_file',
-		'Create a new untitled file',
-		async () => {
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.editors.newUntitledFile();
-			return {
-				content: [{
-					type: 'text' as const,
-					text: 'Created new untitled file'
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_editor_new_untitled_file",
+			"Create a new untitled file",
+			async () => {
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.editors.newUntitledFile();
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: "Created new untitled file",
+						},
+					],
+				};
+			},
+		),
+	);
 
-	tools.push(server.tool(
-		'vscode_automation_editor_save_file',
-		'Save the currently active file',
-		async () => {
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.editors.saveOpenedFile();
-			return {
-				content: [{
-					type: 'text' as const,
-					text: 'Saved active file'
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_editor_save_file",
+			"Save the currently active file",
+			async () => {
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.editors.saveOpenedFile();
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: "Saved active file",
+						},
+					],
+				};
+			},
+		),
+	);
 
 	// Playwright can probably figure this out
 	// server.tool(

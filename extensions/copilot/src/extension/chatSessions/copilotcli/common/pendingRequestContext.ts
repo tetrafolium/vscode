@@ -11,13 +11,21 @@ export interface ICopilotCLIPendingRequestContext {
 	readonly source?: SendOptions['source'];
 }
 
-const pendingRequestContextBySessionId = new Map<string, ICopilotCLIPendingRequestContext>();
+const pendingRequestContextBySessionId = new Map<
+	string,
+	ICopilotCLIPendingRequestContext
+>();
 
-export function setPendingCopilotCLIRequestContext(sessionId: string, context: ICopilotCLIPendingRequestContext): void {
+export function setPendingCopilotCLIRequestContext(
+	sessionId: string,
+	context: ICopilotCLIPendingRequestContext,
+): void {
 	pendingRequestContextBySessionId.set(sessionId, context);
 }
 
-export function takePendingCopilotCLIRequestContext(sessionId: string): ICopilotCLIPendingRequestContext | undefined {
+export function takePendingCopilotCLIRequestContext(
+	sessionId: string,
+): ICopilotCLIPendingRequestContext | undefined {
 	const context = pendingRequestContextBySessionId.get(sessionId);
 	if (context) {
 		pendingRequestContextBySessionId.delete(sessionId);

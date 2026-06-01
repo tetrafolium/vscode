@@ -37,7 +37,8 @@
 }
 
 @keyframes tunnel-host-pulse {
-	0%, 100% {
+	0%,
+	100% {
 		opacity: 1;
 	}
 	50% {
@@ -57,7 +58,9 @@
 	white-space: nowrap;
 	opacity: 0;
 	font-size: 11px;
-	transition: max-width 0.3s ease-out, opacity 0.3s ease-out;
+	transition:
+		max-width 0.3s ease-out,
+		opacity 0.3s ease-out;
 }
 
 .tunnel-host-toast.visible {

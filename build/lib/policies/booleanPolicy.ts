@@ -3,21 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BasePolicy } from './basePolicy.ts';
-import type { CategoryDto, PolicyDto } from './policyDto.ts';
-import { renderProfileString } from './render.ts';
-import { type Category, type NlsString, PolicyType, type LanguageTranslations } from './types.ts';
+import { BasePolicy } from "./basePolicy.ts";
+import type { CategoryDto, PolicyDto } from "./policyDto.ts";
+import { renderProfileString } from "./render.ts";
+import {
+	type Category,
+	type NlsString,
+	PolicyType,
+	type LanguageTranslations,
+} from "./types.ts";
 
 export class BooleanPolicy extends BasePolicy {
-
-	static from(category: CategoryDto, policy: PolicyDto): BooleanPolicy | undefined {
+	static from(
+		category: CategoryDto,
+		policy: PolicyDto,
+	): BooleanPolicy | undefined {
 		const { name, minimumVersion, localization, type } = policy;
 
-		if (type !== 'boolean') {
+		if (type !== "boolean") {
 			return undefined;
 		}
 
-		return new BooleanPolicy(name, { moduleName: '', name: { nlsKey: category.name.key, value: category.name.value } }, minimumVersion, { nlsKey: localization.description.key, value: localization.description.value }, '');
+		return new BooleanPolicy(
+			name,
+			{
+				moduleName: "",
+				name: { nlsKey: category.name.key, value: category.name.value },
+			},
+			minimumVersion,
+			{
+				nlsKey: localization.description.key,
+				value: localization.description.value,
+			},
+			"",
+		);
 	}
 
 	private constructor(
@@ -27,14 +46,21 @@ export class BooleanPolicy extends BasePolicy {
 		description: NlsString,
 		moduleName: string,
 	) {
-		super(PolicyType.Boolean, name, category, minimumVersion, description, moduleName);
+		super(
+			PolicyType.Boolean,
+			name,
+			category,
+			minimumVersion,
+			description,
+			moduleName,
+		);
 	}
 
 	protected renderADMXElements(): string[] {
 		return [
 			`<boolean id="${this.name}" valueName="${this.name}">`,
 			`	<trueValue><decimal value="1" /></trueValue><falseValue><decimal value="0" /></falseValue>`,
-			`</boolean>`
+			`</boolean>`,
 		];
 	}
 

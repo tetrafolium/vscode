@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import fs from 'fs';
-import path from 'path';
-import * as ts from 'typescript';
+import fs from "fs";
+import path from "path";
+import * as ts from "typescript";
 
 // --- Graph (extracted from build/lib/tsb/utils.ts) ---
 
@@ -57,7 +57,11 @@ export class Graph {
 		return result;
 	}
 
-	private _findCycle(node: Node, checked: Set<string>, seen: Set<string>): string[] | undefined {
+	private _findCycle(
+		node: Node,
+		checked: Set<string>,
+		seen: Set<string>,
+	): string[] | undefined {
 		if (checked.has(node.data)) {
 			return undefined;
 		}
@@ -83,7 +87,7 @@ export class Graph {
 // --- Dependency scanning & cycle detection ---
 
 export function normalize(p: string): string {
-	return p.replace(/\\/g, '/');
+	return p.replace(/\\/g, "/");
 }
 
 export function collectJsFiles(dir: string): string[] {
@@ -92,7 +96,7 @@ export function collectJsFiles(dir: string): string[] {
 		const full = path.join(dir, entry.name);
 		if (entry.isDirectory()) {
 			results.push(...collectJsFiles(full));
-		} else if (entry.isFile() && entry.name.endsWith('.js')) {
+		} else if (entry.isFile() && entry.name.endsWith(".js")) {
 			results.push(full);
 		}
 	}
@@ -100,28 +104,28 @@ export function collectJsFiles(dir: string): string[] {
 }
 
 export function processFile(filename: string, graph: Graph): void {
-	const content = fs.readFileSync(filename, 'utf-8');
+	const content = fs.readFileSync(filename, "utf-8");
 	const info = ts.preProcessFile(content, true);
 
 	for (const ref of info.importedFiles) {
-		if (!ref.fileName.startsWith('.')) {
+		if (!ref.fileName.startsWith(".")) {
 			continue; // skip node_modules
 		}
-		if (ref.fileName.endsWith('.css')) {
+		if (ref.fileName.endsWith(".css")) {
 			continue;
 		}
 
 		const dir = path.dirname(filename);
 		let resolvedPath = path.resolve(dir, ref.fileName);
-		if (resolvedPath.endsWith('.js')) {
+		if (resolvedPath.endsWith(".js")) {
 			resolvedPath = resolvedPath.slice(0, -3);
 		}
 		const normalizedResolved = normalize(resolvedPath);
 
-		if (fs.existsSync(normalizedResolved + '.js')) {
-			graph.inertEdge(normalize(filename), normalizedResolved + '.js');
-		} else if (fs.existsSync(normalizedResolved + '.ts')) {
-			graph.inertEdge(normalize(filename), normalizedResolved + '.ts');
+		if (fs.existsSync(normalizedResolved + ".js")) {
+			graph.inertEdge(normalize(filename), normalizedResolved + ".js");
+		} else if (fs.existsSync(normalizedResolved + ".ts")) {
+			graph.inertEdge(normalize(filename), normalizedResolved + ".ts");
 		}
 	}
 }
@@ -129,7 +133,7 @@ export function processFile(filename: string, graph: Graph): void {
 function main(): void {
 	const folder = process.argv[2];
 	if (!folder) {
-		console.error('Usage: node build/lib/checkCyclicDependencies.ts <folder>');
+		console.error("Usage: node build/lib/checkCyclicDependencies.ts <folder>");
 		process.exit(1);
 	}
 
@@ -152,7 +156,7 @@ function main(): void {
 	const cyclicPaths = new Set<string>();
 	for (const [_filename, cycle] of cycles) {
 		if (cycle) {
-			const path = cycle.join(' -> ');
+			const path = cycle.join(" -> ");
 			if (cyclicPaths.has(path)) {
 				continue;
 			}
@@ -168,6 +172,11 @@ function main(): void {
 	}
 }
 
-if (process.argv[1] && normalize(path.resolve(process.argv[1])).endsWith('checkCyclicDependencies.ts')) {
+if (
+	process.argv[1] &&
+	normalize(path.resolve(process.argv[1])).endsWith(
+		"checkCyclicDependencies.ts",
+	)
+) {
 	main();
 }

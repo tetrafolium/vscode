@@ -30,7 +30,11 @@ export interface IChatDiskSessionResources {
 	 * @param files Either a single file content string or a FileTree structure
 	 * @returns The URI of the created directory containing the files
 	 */
-	ensure(sessionId: string, subdir: string, files: string | FileTree): Promise<URI>;
+	ensure(
+		sessionId: string,
+		subdir: string,
+		files: string | FileTree,
+	): Promise<URI>;
 
 	/**
 	 * Checks if a URI is within the disk session resources storage.
@@ -39,4 +43,7 @@ export interface IChatDiskSessionResources {
 	isSessionResourceUri(uri: URI): boolean;
 }
 
-export const IChatDiskSessionResources = createServiceIdentifier<IChatDiskSessionResources>('IChatDiskSessionResources');
+export const IChatDiskSessionResources =
+	createServiceIdentifier<IChatDiskSessionResources>(
+		'IChatDiskSessionResources',
+	);

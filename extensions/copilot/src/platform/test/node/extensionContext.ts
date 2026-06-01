@@ -19,19 +19,25 @@ export function constructGlobalStateMemento(globalStatePath: string): Memento {
 
 	return {
 		get: (key: string, defaultValue?: any) => {
-			const globalState = JSON.parse(readFileSync(globalStatePath, 'utf8'));
+			const globalState = JSON.parse(
+				readFileSync(globalStatePath, 'utf8'),
+			);
 			return globalState[key] ?? defaultValue;
 		},
 		keys: () => {
-			const globalState = JSON.parse(readFileSync(globalStatePath, 'utf8'));
+			const globalState = JSON.parse(
+				readFileSync(globalStatePath, 'utf8'),
+			);
 			return Object.keys(globalState);
 		},
 		update: (key: string, value: any) => {
-			const globalState = JSON.parse(readFileSync(globalStatePath, 'utf8'));
+			const globalState = JSON.parse(
+				readFileSync(globalStatePath, 'utf8'),
+			);
 			globalState[key] = value;
 			writeFileSync(globalStatePath, JSON.stringify(globalState), 'utf8');
 			return Promise.resolve();
-		}
+		},
 	};
 }
 
@@ -48,12 +54,11 @@ function createInMemoryMemento(): Memento {
 		update: (key: string, value: any) => {
 			state.set(key, value);
 			return Promise.resolve();
-		}
+		},
 	};
 }
 
 function constructGlobalStoragePath(globalStoragePath: string): URI {
-
 	if (!existsSync(globalStoragePath)) {
 		// Create the folder if it doesn't exist
 		mkdirSync(globalStoragePath, { recursive: true });
@@ -76,7 +81,13 @@ export class MockExtensionContext implements BrandedService {
 		readonly globalState: Memento = createInMemoryMemento() as any,
 		storagePath?: string,
 	) {
-		this.globalStorageUri = globalStoragePath ? constructGlobalStoragePath(globalStoragePath) : undefined as any;
-		this.storageUri = storagePath ? URI.file(storagePath) : globalStoragePath ? constructGlobalStoragePath(globalStoragePath) : undefined;
+		this.globalStorageUri = globalStoragePath
+			? constructGlobalStoragePath(globalStoragePath)
+			: (undefined as any);
+		this.storageUri = storagePath
+			? URI.file(storagePath)
+			: globalStoragePath
+				? constructGlobalStoragePath(globalStoragePath)
+				: undefined;
 	}
 }

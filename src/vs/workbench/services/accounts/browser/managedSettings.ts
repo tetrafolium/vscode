@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IPolicyData } from '../../../../base/common/defaultAccount.js';
-import { IExtraKnownMarketplaceEntry } from '../../../../base/common/managedSettings.js';
-import { isObject, isString } from '../../../../base/common/types.js';
+import { IPolicyData } from "../../../../base/common/defaultAccount.js";
+import { IExtraKnownMarketplaceEntry } from "../../../../base/common/managedSettings.js";
+import { isObject, isString } from "../../../../base/common/types.js";
 
 /**
  * Response shape from the Copilot `/copilot_internal/managed_settings` endpoint.
@@ -20,11 +20,22 @@ import { isObject, isString } from '../../../../base/common/types.js';
  */
 export interface IManagedSettingsResponse {
 	readonly enabledPlugins?: Record<string, boolean>;
-	readonly extraKnownMarketplaces?: Record<string, {
-		readonly source:
-		| { readonly source: 'github'; readonly repo: string; readonly ref?: string }
-		| { readonly source: 'git'; readonly url: string; readonly ref?: string };
-	}>;
+	readonly extraKnownMarketplaces?: Record<
+		string,
+		{
+			readonly source:
+				| {
+						readonly source: "github";
+						readonly repo: string;
+						readonly ref?: string;
+				  }
+				| {
+						readonly source: "git";
+						readonly url: string;
+						readonly ref?: string;
+				  };
+		}
+	>;
 	readonly strictKnownMarketplaces?: boolean;
 	/** Any unknown keys in the response are silently ignored for forward compatibility. */
 	readonly [key: string]: unknown;
@@ -45,26 +56,58 @@ export interface IManagedSettingsResponse {
  *
  * Exported for unit-testing the shape transformation independently of network I/O.
  */
-export function adaptManagedSettings(response: IManagedSettingsResponse, onWarn?: (msg: string) => void): Partial<IPolicyData> {
-	let extraKnownMarketplaces: readonly IExtraKnownMarketplaceEntry[] | undefined;
+export function adaptManagedSettings(
+	response: IManagedSettingsResponse,
+	onWarn?: (msg: string) => void,
+): Partial<IPolicyData> {
+	let extraKnownMarketplaces:
+		| readonly IExtraKnownMarketplaceEntry[]
+		| undefined;
 	if (isObject(response.extraKnownMarketplaces)) {
 		const seen = new Set<string>();
 		const entries: IExtraKnownMarketplaceEntry[] = [];
-		for (const [name, entry] of Object.entries(response.extraKnownMarketplaces)) {
+		for (const [name, entry] of Object.entries(
+			response.extraKnownMarketplaces,
+		)) {
 			if (!isObject(entry) || !isObject(entry.source)) {
-				onWarn?.(`[DefaultAccount] Skipping malformed extraKnownMarketplaces entry "${name}": expected { source: { source, repo|url } }`);
+				onWarn?.(
+					`[DefaultAccount] Skipping malformed extraKnownMarketplaces entry "${name}": expected { source: { source, repo|url } }`,
+				);
 				continue;
 			}
-			const src = entry.source as { source?: string; repo?: string; url?: string; ref?: string };
+			const src = entry.source as {
+				source?: string;
+				repo?: string;
+				url?: string;
+				ref?: string;
+			};
 			let normalized: IExtraKnownMarketplaceEntry | undefined;
-			if (src.source === 'github' && isString(src.repo)) {
-				normalized = { name, source: { source: 'github', repo: src.repo, ...(src.ref ? { ref: src.ref } : {}) } };
-			} else if (src.source === 'git' && isString(src.url)) {
-				normalized = { name, source: { source: 'git', url: src.url, ...(src.ref ? { ref: src.ref } : {}) } };
-			} else if (src.source === 'github' || src.source === 'git') {
-				onWarn?.(`[DefaultAccount] Skipping extraKnownMarketplaces entry "${name}": source "${src.source}" requires ${src.source === 'github' ? '"repo"' : '"url"'}`);
+			if (src.source === "github" && isString(src.repo)) {
+				normalized = {
+					name,
+					source: {
+						source: "github",
+						repo: src.repo,
+						...(src.ref ? { ref: src.ref } : {}),
+					},
+				};
+			} else if (src.source === "git" && isString(src.url)) {
+				normalized = {
+					name,
+					source: {
+						source: "git",
+						url: src.url,
+						...(src.ref ? { ref: src.ref } : {}),
+					},
+				};
+			} else if (src.source === "github" || src.source === "git") {
+				onWarn?.(
+					`[DefaultAccount] Skipping extraKnownMarketplaces entry "${name}": source "${src.source}" requires ${src.source === "github" ? '"repo"' : '"url"'}`,
+				);
 			} else {
-				onWarn?.(`[DefaultAccount] Skipping extraKnownMarketplaces entry "${name}": unknown source type "${src.source}"`);
+				onWarn?.(
+					`[DefaultAccount] Skipping extraKnownMarketplaces entry "${name}": unknown source type "${src.source}"`,
+				);
 			}
 			if (normalized && !seen.has(name)) {
 				seen.add(name);
@@ -75,8 +118,13 @@ export function adaptManagedSettings(response: IManagedSettingsResponse, onWarn?
 	}
 
 	return {
-		enabledPlugins: isObject(response.enabledPlugins) ? response.enabledPlugins as Record<string, boolean> : undefined,
+		enabledPlugins: isObject(response.enabledPlugins)
+			? (response.enabledPlugins as Record<string, boolean>)
+			: undefined,
 		extraKnownMarketplaces,
-		strictKnownMarketplaces: typeof response.strictKnownMarketplaces === 'boolean' ? response.strictKnownMarketplaces : undefined,
+		strictKnownMarketplaces:
+			typeof response.strictKnownMarketplaces === "boolean"
+				? response.strictKnownMarketplaces
+				: undefined,
 	};
 }

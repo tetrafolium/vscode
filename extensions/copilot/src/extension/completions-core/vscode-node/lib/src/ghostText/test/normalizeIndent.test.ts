@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { GhostCompletion } from '../ghostText';
-import { ITextEditorOptions, normalizeIndentCharacter } from '../normalizeIndent';
+import {
+	ITextEditorOptions,
+	normalizeIndentCharacter,
+} from '../normalizeIndent';
 import * as assert from 'assert';
 
 suite('Leading whitespace normalization tests', function () {
@@ -23,8 +26,14 @@ suite('Leading whitespace normalization tests', function () {
 		const output = '\tfun()\n\tyeet()';
 		const result = normalizeIndentCharacter(teo, completion, false);
 
-		assert.ok(result.completionText === output, 'Leading whitespace normalization failed');
-		assert.ok(result.displayText === output, 'Leading whitespace normalization failed');
+		assert.ok(
+			result.completionText === output,
+			'Leading whitespace normalization failed',
+		);
+		assert.ok(
+			result.displayText === output,
+			'Leading whitespace normalization failed',
+		);
 	});
 
 	test('Leading tabs are replaces with spaces', function () {
@@ -43,8 +52,14 @@ suite('Leading whitespace normalization tests', function () {
 		const output = '    fun()\n    yeet()';
 
 		const result = normalizeIndentCharacter(teo, completion, false);
-		assert.ok(result.completionText === output, 'Leading whitespace normalization failed');
-		assert.ok(result.displayText === output, 'Leading whitespace normalization failed');
+		assert.ok(
+			result.completionText === output,
+			'Leading whitespace normalization failed',
+		);
+		assert.ok(
+			result.displayText === output,
+			'Leading whitespace normalization failed',
+		);
 	});
 
 	test('Leading tabs are replaces with spaces - multiple level of indents', function () {
@@ -63,8 +78,14 @@ suite('Leading whitespace normalization tests', function () {
 		const output = '  fun()\n    yeet()\n  boo()';
 		const result = normalizeIndentCharacter(teo, completion, false);
 
-		assert.ok(result.completionText === output, 'Leading whitespace normalization failed');
-		assert.ok(result.displayText === output, 'Leading whitespace normalization failed');
+		assert.ok(
+			result.completionText === output,
+			'Leading whitespace normalization failed',
+		);
+		assert.ok(
+			result.displayText === output,
+			'Leading whitespace normalization failed',
+		);
 	});
 
 	test('Leading spaces are replaces with tabs - multiple level of indents', function () {
@@ -83,8 +104,14 @@ suite('Leading whitespace normalization tests', function () {
 		const output = '\tfun()\n\t\tyeet()\n\tboo()';
 		const result = normalizeIndentCharacter(teo, completion, false);
 
-		assert.ok(result.completionText === output, 'Leading whitespace normalization failed');
-		assert.ok(result.displayText === output, 'Leading whitespace normalization failed');
+		assert.ok(
+			result.completionText === output,
+			'Leading whitespace normalization failed',
+		);
+		assert.ok(
+			result.displayText === output,
+			'Leading whitespace normalization failed',
+		);
 	});
 
 	test('Extra spaces are not dropped when replacing spaces with tabs', function () {
@@ -93,7 +120,13 @@ suite('Leading whitespace normalization tests', function () {
 			insertSpaces: false,
 		};
 
-		const input = ' '.repeat(6) + 'fun()\n' + ' '.repeat(6) + '  yeet()\n' + ' '.repeat(6) + 'boo()';
+		const input =
+			' '.repeat(6) +
+			'fun()\n' +
+			' '.repeat(6) +
+			'  yeet()\n' +
+			' '.repeat(6) +
+			'boo()';
 		const completion: GhostCompletion = {
 			completionIndex: 0,
 			completionText: input,
@@ -104,8 +137,16 @@ suite('Leading whitespace normalization tests', function () {
 		const output = '\t  fun()\n' + '\t\tyeet()\n' + '\t  boo()';
 		const result = normalizeIndentCharacter(teo, completion, false);
 
-		assert.strictEqual(result.completionText, output, 'Leading whitespace normalization failed');
-		assert.strictEqual(result.displayText, output, 'Leading whitespace normalization failed');
+		assert.strictEqual(
+			result.completionText,
+			output,
+			'Leading whitespace normalization failed',
+		);
+		assert.strictEqual(
+			result.displayText,
+			output,
+			'Leading whitespace normalization failed',
+		);
 	});
 
 	test('Leading spaces are normalized to the tab size expected in editor in case of empty line suggestion', function () {
@@ -124,8 +165,14 @@ suite('Leading whitespace normalization tests', function () {
 		const output = '    fun()\n        yeet()\n    boo()';
 		const result = normalizeIndentCharacter(teo, completion, true);
 
-		assert.ok(result.completionText === output, 'Leading whitespace normalization failed');
-		assert.ok(result.displayText === output, 'Leading whitespace normalization failed');
+		assert.ok(
+			result.completionText === output,
+			'Leading whitespace normalization failed',
+		);
+		assert.ok(
+			result.displayText === output,
+			'Leading whitespace normalization failed',
+		);
 	});
 
 	test('Leading spaces are normalized to the tab size expected in editor in case of empty line suggestion, lot of indentation case', function () {
@@ -144,8 +191,14 @@ suite('Leading whitespace normalization tests', function () {
 		const output = '        fun()\n            yeet()\n        boo()';
 		const result = normalizeIndentCharacter(teo, completion, true);
 
-		assert.ok(result.completionText === output, 'Leading whitespace normalization failed');
-		assert.ok(result.displayText === output, 'Leading whitespace normalization failed');
+		assert.ok(
+			result.completionText === output,
+			'Leading whitespace normalization failed',
+		);
+		assert.ok(
+			result.displayText === output,
+			'Leading whitespace normalization failed',
+		);
 	});
 
 	test('Leading spaces are not normalized if ident size is same as tab size', function () {
@@ -164,8 +217,14 @@ suite('Leading whitespace normalization tests', function () {
 		const output = '  fun()\n    yeet()\n  boo()';
 		const result = normalizeIndentCharacter(teo, completion, true);
 
-		assert.ok(result.completionText === output, 'Leading whitespace normalization failed');
-		assert.ok(result.displayText === output, 'Leading whitespace normalization failed');
+		assert.ok(
+			result.completionText === output,
+			'Leading whitespace normalization failed',
+		);
+		assert.ok(
+			result.displayText === output,
+			'Leading whitespace normalization failed',
+		);
 	});
 
 	test('Leading newlines do not trigger spurious extra indentation', function () {
@@ -184,7 +243,13 @@ suite('Leading whitespace normalization tests', function () {
 		const output = '\n  fun()\n    yeet()\n  boo()';
 		const result = normalizeIndentCharacter(teo, completion, true);
 
-		assert.ok(result.completionText === output, 'Leading whitespace normalization failed');
-		assert.ok(result.displayText === output, 'Leading whitespace normalization failed');
+		assert.ok(
+			result.completionText === output,
+			'Leading whitespace normalization failed',
+		);
+		assert.ok(
+			result.displayText === output,
+			'Leading whitespace normalization failed',
+		);
 	});
 });

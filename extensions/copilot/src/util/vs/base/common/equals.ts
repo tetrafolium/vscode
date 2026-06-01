@@ -12,8 +12,7 @@ import * as arrays from './arrays';
  * `*C` variant which returns an EqualityComparer function.
  *
  * The `*C` variant allows for easier composition of equality comparers and improved type-inference.
-*/
-
+ */
 
 /** Represents a function that decides if two values are equal. */
 export type EqualityComparer<T> = (a: T, b: T) => boolean;
@@ -24,7 +23,7 @@ export interface IEquatable<T> {
 
 /**
  * Compares two items for equality using strict equality.
-*/
+ */
 export function strictEquals<T>(a: T, b: T): boolean {
 	return a === b;
 }
@@ -37,7 +36,11 @@ export function strictEqualsC<T>(): EqualityComparer<T> {
  * Checks if the items of two arrays are equal.
  * By default, strict equality is used to compare elements, but a custom equality comparer can be provided.
  */
-export function arrayEquals<T>(a: readonly T[], b: readonly T[], itemEquals?: EqualityComparer<T>): boolean {
+export function arrayEquals<T>(
+	a: readonly T[],
+	b: readonly T[],
+	itemEquals?: EqualityComparer<T>,
+): boolean {
 	return arrays.equals(a, b, itemEquals ?? strictEquals);
 }
 
@@ -45,13 +48,15 @@ export function arrayEquals<T>(a: readonly T[], b: readonly T[], itemEquals?: Eq
  * Checks if the items of two arrays are equal.
  * By default, strict equality is used to compare elements, but a custom equality comparer can be provided.
  */
-export function arrayEqualsC<T>(itemEquals?: EqualityComparer<T>): EqualityComparer<readonly T[]> {
+export function arrayEqualsC<T>(
+	itemEquals?: EqualityComparer<T>,
+): EqualityComparer<readonly T[]> {
 	return (a, b) => arrays.equals(a, b, itemEquals ?? strictEquals);
 }
 
 /**
  * Drills into arrays (items ordered) and objects (keys unordered) and uses strict equality on everything else.
-*/
+ */
 export function structuralEquals<T>(a: T, b: T): boolean {
 	if (a === b) {
 		return true;
@@ -70,7 +75,10 @@ export function structuralEquals<T>(a: T, b: T): boolean {
 	}
 
 	if (a && typeof a === 'object' && b && typeof b === 'object') {
-		if (Object.getPrototypeOf(a) === Object.prototype && Object.getPrototypeOf(b) === Object.prototype) {
+		if (
+			Object.getPrototypeOf(a) === Object.prototype &&
+			Object.getPrototypeOf(b) === Object.prototype
+		) {
 			const aObj = a as Record<string, unknown>;
 			const bObj = b as Record<string, unknown>;
 			const keysA = Object.keys(aObj);
@@ -104,7 +112,7 @@ export function structuralEqualsC<T>(): EqualityComparer<T> {
 /**
  * `getStructuralKey(a) === getStructuralKey(b) <=> structuralEquals(a, b)`
  * (assuming that a and b are not cyclic structures and nothing extends globalThis Array).
-*/
+ */
 export function getStructuralKey(t: unknown): string {
 	return JSON.stringify(toNormalizedJsonStructure(t));
 }
@@ -138,17 +146,16 @@ function toNormalizedJsonStructure(t: unknown): unknown {
 	return t;
 }
 
-
 /**
  * Two items are considered equal, if their stringified representations are equal.
-*/
+ */
 export function jsonStringifyEquals<T>(a: T, b: T): boolean {
 	return JSON.stringify(a) === JSON.stringify(b);
 }
 
 /**
  * Two items are considered equal, if their stringified representations are equal.
-*/
+ */
 export function jsonStringifyEqualsC<T>(): EqualityComparer<T> {
 	return (a, b) => JSON.stringify(a) === JSON.stringify(b);
 }
@@ -162,8 +169,12 @@ export function thisEqualsC<T extends IEquatable<T>>(): EqualityComparer<T> {
 
 /**
  * Checks if two items are both null or undefined, or are equal according to the provided equality comparer.
-*/
-export function equalsIfDefined<T>(v1: T | undefined | null, v2: T | undefined | null, equals: EqualityComparer<T>): boolean {
+ */
+export function equalsIfDefined<T>(
+	v1: T | undefined | null,
+	v2: T | undefined | null,
+	equals: EqualityComparer<T>,
+): boolean {
 	if (v1 === undefined || v1 === null || v2 === undefined || v2 === null) {
 		return v2 === v1;
 	}
@@ -172,10 +183,17 @@ export function equalsIfDefined<T>(v1: T | undefined | null, v2: T | undefined |
 
 /**
  * Returns an equality comparer that checks if two items are both null or undefined, or are equal according to the provided equality comparer.
-*/
-export function equalsIfDefinedC<T>(equals: EqualityComparer<T>): EqualityComparer<T | undefined | null> {
+ */
+export function equalsIfDefinedC<T>(
+	equals: EqualityComparer<T>,
+): EqualityComparer<T | undefined | null> {
 	return (v1, v2) => {
-		if (v1 === undefined || v1 === null || v2 === undefined || v2 === null) {
+		if (
+			v1 === undefined ||
+			v1 === null ||
+			v2 === undefined ||
+			v2 === null
+		) {
 			return v2 === v1;
 		}
 		return equals(v1, v2);
@@ -187,7 +205,7 @@ export function equalsIfDefinedC<T>(equals: EqualityComparer<T>): EqualityCompar
  * `*C` variant which returns an EqualityComparer function.
  *
  * The `*C` variant allows for easier composition of equality comparers and improved type-inference.
-*/
+ */
 export namespace equals {
 	export const strict = strictEquals;
 	export const strictC = strictEqualsC;

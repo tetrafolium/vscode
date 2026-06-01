@@ -3,11 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, IDisposable, toDisposable } from '../../base/common/lifecycle.js';
-import { createDecorator } from '../../platform/instantiation/common/instantiation.js';
-import { ILogService } from '../../platform/log/common/log.js';
+import {
+	Disposable,
+	IDisposable,
+	toDisposable,
+} from "../../base/common/lifecycle.js";
+import { createDecorator } from "../../platform/instantiation/common/instantiation.js";
+import { ILogService } from "../../platform/log/common/log.js";
 
-export const IServerLifetimeService = createDecorator<IServerLifetimeService>('serverLifetimeService');
+export const IServerLifetimeService = createDecorator<IServerLifetimeService>(
+	"serverLifetimeService",
+);
 
 export const SHUTDOWN_TIMEOUT = 5 * 60 * 1000;
 
@@ -44,7 +50,10 @@ export interface IServerLifetimeService {
 	readonly hasActiveConsumers: boolean;
 }
 
-export class ServerLifetimeService extends Disposable implements IServerLifetimeService {
+export class ServerLifetimeService
+	extends Disposable
+	implements IServerLifetimeService
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _consumers = new Map<string, number>();
@@ -73,7 +82,9 @@ export class ServerLifetimeService extends Disposable implements IServerLifetime
 		this._consumers.set(consumer, current + 1);
 		this._totalCount++;
 
-		this._logService.debug(`ServerLifetime: consumer '${consumer}' active (total: ${this._totalCount})`);
+		this._logService.debug(
+			`ServerLifetime: consumer '${consumer}' active (total: ${this._totalCount})`,
+		);
 
 		if (wasEmpty) {
 			this._cancelShutdown();
@@ -96,7 +107,9 @@ export class ServerLifetimeService extends Disposable implements IServerLifetime
 			}
 			this._totalCount--;
 
-			this._logService.debug(`ServerLifetime: consumer '${consumer}' inactive (total: ${this._totalCount})`);
+			this._logService.debug(
+				`ServerLifetime: consumer '${consumer}' inactive (total: ${this._totalCount})`,
+			);
 
 			if (this._totalCount === 0 && this._options.enableAutoShutdown) {
 				this._scheduleShutdown(false);
@@ -106,7 +119,9 @@ export class ServerLifetimeService extends Disposable implements IServerLifetime
 
 	delay(): void {
 		if (this._shutdownTimer) {
-			this._logService.debug('ServerLifetime: delay requested, resetting shutdown timer');
+			this._logService.debug(
+				"ServerLifetime: delay requested, resetting shutdown timer",
+			);
 			this._cancelShutdown();
 			this._scheduleShutdown(false);
 		}
@@ -116,7 +131,7 @@ export class ServerLifetimeService extends Disposable implements IServerLifetime
 		if (this._options.shutdownWithoutDelay && !initial) {
 			this._tryShutdown();
 		} else {
-			this._logService.debug('ServerLifetime: scheduling shutdown timer');
+			this._logService.debug("ServerLifetime: scheduling shutdown timer");
 			this._shutdownTimer = setTimeout(() => {
 				this._shutdownTimer = undefined;
 				this._tryShutdown();
@@ -126,18 +141,22 @@ export class ServerLifetimeService extends Disposable implements IServerLifetime
 
 	private _tryShutdown(): void {
 		if (this._totalCount > 0) {
-			this._logService.debug('ServerLifetime: consumer became active, aborting shutdown');
+			this._logService.debug(
+				"ServerLifetime: consumer became active, aborting shutdown",
+			);
 			return;
 		}
-		console.log('All consumers inactive, shutting down');
-		this._logService.info('ServerLifetime: all consumers inactive, shutting down');
+		console.log("All consumers inactive, shutting down");
+		this._logService.info(
+			"ServerLifetime: all consumers inactive, shutting down",
+		);
 		this.dispose();
 		process.exit(0);
 	}
 
 	private _cancelShutdown(): void {
 		if (this._shutdownTimer) {
-			this._logService.debug('ServerLifetime: cancelling shutdown timer');
+			this._logService.debug("ServerLifetime: cancelling shutdown timer");
 			clearTimeout(this._shutdownTimer);
 			this._shutdownTimer = undefined;
 		}

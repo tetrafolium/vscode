@@ -41,7 +41,6 @@ export enum NamingConvention {
 // Regular expressions for each naming convention
 
 export function guessNamingConvention(ident: string): NamingConvention {
-
 	// lowercase
 	if (/^[a-z][a-z0-9]*$/.test(ident)) {
 		return NamingConvention.LowerCase;
@@ -91,29 +90,41 @@ export function guessNamingConvention(ident: string): NamingConvention {
 }
 
 function chunksToCamelCase(chunks: string[]): string {
-	return chunks.map((chunk, i) => {
-		if (i === 0) {
-			return chunk.toLowerCase();
-		}
+	return chunks
+		.map((chunk, i) => {
+			if (i === 0) {
+				return chunk.toLowerCase();
+			}
 
-		return chunk.charAt(0).toUpperCase() + chunk.substring(1).toLowerCase();
-	}).join('');
+			return (
+				chunk.charAt(0).toUpperCase() + chunk.substring(1).toLowerCase()
+			);
+		})
+		.join('');
 }
 
 function chunksToPascalCase(chunks: string[]): string {
-	return chunks.map(chunk => chunk.charAt(0).toUpperCase() + chunk.substring(1).toLowerCase()).join('');
+	return chunks
+		.map(
+			(chunk) =>
+				chunk.charAt(0).toUpperCase() +
+				chunk.substring(1).toLowerCase(),
+		)
+		.join('');
 }
 
 function chunksToSnakeCase(chunks: string[]): string {
-	return chunks.map(chunk => chunk.toLowerCase()).join('_');
+	return chunks.map((chunk) => chunk.toLowerCase()).join('_');
 }
 
 function chunksToKebabCase(chunks: string[]): string {
-	return chunks.map(chunk => chunk.toLowerCase()).join('-');
+	return chunks.map((chunk) => chunk.toLowerCase()).join('-');
 }
 
-export function enforceNamingConvention(givenIdent: string, targetConvention: NamingConvention): string {
-
+export function enforceNamingConvention(
+	givenIdent: string,
+	targetConvention: NamingConvention,
+): string {
 	const namingConvention = guessNamingConvention(givenIdent);
 
 	if (namingConvention === targetConvention) {
@@ -130,11 +141,17 @@ export function enforceNamingConvention(givenIdent: string, targetConvention: Na
 			case NamingConvention.ScreamingSnakeCase:
 				return chunksToSnakeCase(chunks).toUpperCase();
 			case NamingConvention.CapitalSnakeCase:
-				return chunksToSnakeCase(chunks).charAt(0).toUpperCase() + chunksToSnakeCase(chunks).substring(1);
+				return (
+					chunksToSnakeCase(chunks).charAt(0).toUpperCase() +
+					chunksToSnakeCase(chunks).substring(1)
+				);
 			case NamingConvention.KebabCase:
 				return chunksToKebabCase(chunks);
 			case NamingConvention.Capitalized:
-				return chunksToCamelCase(chunks).charAt(0).toUpperCase() + chunksToCamelCase(chunks).substring(1);
+				return (
+					chunksToCamelCase(chunks).charAt(0).toUpperCase() +
+					chunksToCamelCase(chunks).substring(1)
+				);
 			case NamingConvention.Uppercase:
 				return givenIdent.toUpperCase();
 			case NamingConvention.LowerCase:
@@ -145,7 +162,10 @@ export function enforceNamingConvention(givenIdent: string, targetConvention: Na
 	}
 }
 
-export function chunkUpIdentByConvention(ident: string, identConvention: NamingConvention): string[] {
+export function chunkUpIdentByConvention(
+	ident: string,
+	identConvention: NamingConvention,
+): string[] {
 	switch (identConvention) {
 		case NamingConvention.CamelCase:
 		case NamingConvention.PascalCase:
@@ -154,7 +174,7 @@ export function chunkUpIdentByConvention(ident: string, identConvention: NamingC
 		case NamingConvention.ScreamingSnakeCase:
 		case NamingConvention.CapitalSnakeCase:
 		case NamingConvention.KebabCase:
-			return ident.split(/[-_]/).map(chunk => chunk.toLowerCase());
+			return ident.split(/[-_]/).map((chunk) => chunk.toLowerCase());
 		case NamingConvention.Capitalized:
 		case NamingConvention.Uppercase:
 		case NamingConvention.LowerCase:

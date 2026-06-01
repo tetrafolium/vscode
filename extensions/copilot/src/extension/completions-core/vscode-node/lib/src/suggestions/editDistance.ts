@@ -39,10 +39,12 @@ export function editDistance<E, T extends string | E[]>(
 		haystackElem: (typeof haystack)[number],
 		needleElem: (typeof needle)[number],
 		haystackIndex: number,
-		needleIndex: number
-	) => number = (h, n) => (h === n ? 0 : 1)
+		needleIndex: number,
+	) => number = (h, n) => (h === n ? 0 : 1),
 ): Alignment {
-	if (needle.length === 0 || haystack.length === 0) { return { distance: needle.length, startOffset: 0, endOffset: 0 }; }
+	if (needle.length === 0 || haystack.length === 0) {
+		return { distance: needle.length, startOffset: 0, endOffset: 0 };
+	}
 	let curRow = new Array<number>(needle.length + 1).fill(0);
 	let curStart = new Array<number>(needle.length + 1).fill(0);
 	let prevRow = new Array<number>(haystack.length + 1).fill(0);
@@ -50,8 +52,11 @@ export function editDistance<E, T extends string | E[]>(
 	// Initialise the alignment of needle inside haystack
 	let c = needle[0];
 	for (let i = 0; i < haystack.length + 1; i++) {
-		if (i === 0) { curRow[i] = 1; }
-		else { curRow[i] = compare(haystack[i - 1], c, i - 1, 0); }
+		if (i === 0) {
+			curRow[i] = 1;
+		} else {
+			curRow[i] = compare(haystack[i - 1], c, i - 1, 0);
+		}
 		// We record the starting offset as 0 in two distinct cases:
 		//  - At least one char of needle is inserted left of haystack
 		//  - 0th char of needle = or subst. 0'th char of haystack
@@ -75,7 +80,8 @@ export function editDistance<E, T extends string | E[]>(
 			// What happens to the j'th char of needle
 			const inserted = 1 + prevRow[i]; // inserted after i'th char of haystack
 			const deleted = 1 + curRow[i - 1]; // deleted after i'th char of haystack
-			const substituted = compare(haystack[i - 1], c, i - 1, j) + prevRow[i - 1]; // substituted w. i'th char of haystack
+			const substituted =
+				compare(haystack[i - 1], c, i - 1, j) + prevRow[i - 1]; // substituted w. i'th char of haystack
 			curRow[i] = Math.min(deleted, inserted, substituted);
 			if (curRow[i] === substituted) {
 				curStart[i] = prevStart[i - 1];
@@ -90,9 +96,15 @@ export function editDistance<E, T extends string | E[]>(
 	// Find the best matching end-offset
 	let best = 0;
 	for (let i = 0; i < haystack.length + 1; i++) {
-		if (curRow[i] < curRow[best]) { best = i; }
+		if (curRow[i] < curRow[best]) {
+			best = i;
+		}
 	}
-	return { distance: curRow[best], startOffset: curStart[best], endOffset: best };
+	return {
+		distance: curRow[best],
+		startOffset: curStart[best],
+		endOffset: best,
+	};
 }
 
 type LexDictionary = Map<string, number>;
@@ -120,7 +132,9 @@ export function reverseLexDictionary(d: LexDictionary): string[] {
  *  2. A sequence of spaces
  *  3. Any other single Unicode code point
  */
-export function* lexGeneratorWords(s: string): Generator<string, void, unknown> {
+export function* lexGeneratorWords(
+	s: string,
+): Generator<string, void, unknown> {
 	let buffer = '';
 	enum State {
 		Word,
@@ -130,18 +144,26 @@ export function* lexGeneratorWords(s: string): Generator<string, void, unknown> 
 	let state: State = State.Word;
 	for (const c of s) {
 		let newState: State;
-		if (/(\p{L}|\p{Nd}|_)/u.test(c)) { newState = State.Word; }
-		else if (c === ' ') { newState = State.Space; }
-		else { newState = State.Other; }
+		if (/(\p{L}|\p{Nd}|_)/u.test(c)) {
+			newState = State.Word;
+		} else if (c === ' ') {
+			newState = State.Space;
+		} else {
+			newState = State.Other;
+		}
 		if (newState === state && newState !== State.Other) {
 			buffer += c;
 		} else {
-			if (buffer.length > 0) { yield buffer; }
+			if (buffer.length > 0) {
+				yield buffer;
+			}
 			buffer = c;
 			state = newState;
 		}
 	}
-	if (buffer.length > 0) { yield buffer; }
+	if (buffer.length > 0) {
+		yield buffer;
+	}
 }
 
 /**
@@ -164,13 +186,15 @@ export function lexicalAnalyzer(
 	s: string,
 	d: LexDictionary,
 	lexGenerator: LexGenerator,
-	lexFilter: (lexeme: string) => boolean
+	lexFilter: (lexeme: string) => boolean,
 ): [[number, number][], LexDictionary] {
 	const lexed = [] as [number, number][];
 	let offset = 0;
 	for (const lexeme of lexGenerator(s)) {
 		if (lexFilter(lexeme)) {
-			if (!d.has(lexeme)) { d.set(lexeme, d.size); }
+			if (!d.has(lexeme)) {
+				d.set(lexeme, d.size);
+			}
 			lexed.push([d.get(lexeme)!, offset]);
 		}
 		offset += lexeme.length;
@@ -210,10 +234,20 @@ interface LexAlignment {
 export function lexEditDistance(
 	haystack: string,
 	needle: string,
-	lexGenerator: LexGenerator = lexGeneratorWords
+	lexGenerator: LexGenerator = lexGeneratorWords,
 ): LexAlignment {
-	const [haystackLexed, d] = lexicalAnalyzer(haystack, emptyLexDictionary(), lexGenerator, notSingleSpace);
-	const [needleLexed, dBoth] = lexicalAnalyzer(needle, d, lexGenerator, notSingleSpace);
+	const [haystackLexed, d] = lexicalAnalyzer(
+		haystack,
+		emptyLexDictionary(),
+		lexGenerator,
+		notSingleSpace,
+	);
+	const [needleLexed, dBoth] = lexicalAnalyzer(
+		needle,
+		d,
+		lexGenerator,
+		notSingleSpace,
+	);
 	// Special case for empty haystack or needle (or either consisting of single space)
 	if (needleLexed.length === 0 || haystackLexed.length === 0) {
 		return {
@@ -232,11 +266,17 @@ export function lexEditDistance(
 	const needleLexedLength = needleLexed.length;
 	const needleFirst = lookupId[needleLexed[0][0]];
 	const needleLast = lookupId[needleLexed[needleLexedLength - 1][0]];
-	function compare(hLexId: number, nLexId: number, hIndex: number, nIndex: number) {
+	function compare(
+		hLexId: number,
+		nLexId: number,
+		hIndex: number,
+		nIndex: number,
+	) {
 		if (nIndex === 0 || nIndex === needleLexedLength - 1) {
 			const haystackLexeme = lookupId[haystackLexed[hIndex][0]];
 			return (nIndex === 0 && haystackLexeme.endsWith(needleFirst)) ||
-				(nIndex === needleLexedLength - 1 && haystackLexeme.startsWith(needleLast))
+				(nIndex === needleLexedLength - 1 &&
+					haystackLexeme.startsWith(needleLast))
 				? 0
 				: 1;
 		} else {
@@ -244,16 +284,20 @@ export function lexEditDistance(
 		}
 	}
 	const alignment = editDistance(
-		haystackLexed.map(x => x[0]),
-		needleLexed.map(x => x[0]),
-		compare
+		haystackLexed.map((x) => x[0]),
+		needleLexed.map((x) => x[0]),
+		compare,
 	);
 	// Convert the lexeme offsets in alignment to character offsets
 	const startOffset = haystackLexed[alignment.startOffset][1];
 	let endOffset =
-		alignment.endOffset < haystackLexed.length ? haystackLexed[alignment.endOffset][1] : haystack.length;
+		alignment.endOffset < haystackLexed.length
+			? haystackLexed[alignment.endOffset][1]
+			: haystack.length;
 	// Account for a possible filtered-out single-space lexeme at end of match
-	if (endOffset > 0 && haystack[endOffset - 1] === ' ') { --endOffset; }
+	if (endOffset > 0 && haystack[endOffset - 1] === ' ') {
+		--endOffset;
+	}
 
 	return {
 		lexDistance: alignment.distance,

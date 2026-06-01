@@ -6,9 +6,12 @@
 import { IConfigurationService } from '../../../platform/configuration/common/configurationService';
 import { ServicesAccessor } from '../../../util/vs/platform/instantiation/common/instantiation';
 
-
-export function getAgentMaxRequests(accessor: ServicesAccessor,): number {
+export function getAgentMaxRequests(accessor: ServicesAccessor): number {
 	const configurationService = accessor.get(IConfigurationService);
 
-	return configurationService.getNonExtensionConfig<number>('chat.agent.maxRequests') ?? 200; // Fallback for simulation tests
+	return (
+		configurationService.getNonExtensionConfig<number>(
+			'chat.agent.maxRequests',
+		) ?? 200
+	); // Fallback for simulation tests
 }

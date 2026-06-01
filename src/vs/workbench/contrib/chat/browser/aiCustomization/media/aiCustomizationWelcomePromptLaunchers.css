@@ -48,7 +48,8 @@
 	box-sizing: border-box;
 	padding: 12px 8px 8px;
 	margin: 16px 0;
-	border: 1px solid color-mix(in srgb, var(--vscode-editorWidget-border) 85%, transparent);
+	border: 1px solid
+		color-mix(in srgb, var(--vscode-editorWidget-border) 85%, transparent);
 	border-radius: 6px;
 }
 
@@ -70,13 +71,20 @@
 	height: 36px;
 	border-radius: 6px;
 	background: var(--vscode-agentsChatInput-background);
-	border: 1px solid var(--vscode-agentsChatInput-border, var(--vscode-input-border, transparent));
+	border: 1px solid
+		var(
+			--vscode-agentsChatInput-border,
+			var(--vscode-input-border, transparent)
+		);
 	padding: 0 4px 0 12px;
 	margin-top: 6px;
 }
 
 .ai-customization-management-editor .welcome-prompts-input-row:focus-within {
-	border-color: var(--vscode-agentsChatInput-focusBorder, var(--vscode-focusBorder));
+	border-color: var(
+		--vscode-agentsChatInput-focusBorder,
+		var(--vscode-focusBorder)
+	);
 }
 
 .ai-customization-management-editor .welcome-prompts-input {
@@ -97,10 +105,18 @@
 
 /* Override the global .monaco-workbench input[type="text"]:focus outline */
 .monaco-workbench .ai-customization-management-editor .welcome-prompts-input,
-.monaco-workbench .ai-customization-management-editor .welcome-prompts-input:focus,
-.monaco-workbench .ai-customization-management-editor .welcome-prompts-input:active,
-.monaco-workbench .ai-customization-management-editor .welcome-prompts-input:focus-visible,
-.monaco-workbench .ai-customization-management-editor input[type="text"].welcome-prompts-input:focus {
+.monaco-workbench
+	.ai-customization-management-editor
+	.welcome-prompts-input:focus,
+.monaco-workbench
+	.ai-customization-management-editor
+	.welcome-prompts-input:active,
+.monaco-workbench
+	.ai-customization-management-editor
+	.welcome-prompts-input:focus-visible,
+.monaco-workbench
+	.ai-customization-management-editor
+	input[type="text"].welcome-prompts-input:focus {
 	outline: none !important;
 	outline-width: 0 !important;
 	border: none !important;
@@ -123,20 +139,28 @@
 	background: transparent;
 	color: var(--vscode-descriptionForeground);
 	cursor: pointer;
-	transition: color 0.15s ease, background-color 0.15s ease;
+	transition:
+		color 0.15s ease,
+		background-color 0.15s ease;
 }
 
 .ai-customization-management-editor .welcome-prompts-input-submit:hover {
 	color: var(--vscode-foreground);
-	background: color-mix(in srgb, var(--vscode-list-hoverBackground) 75%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--vscode-list-hoverBackground) 75%,
+		transparent
+	);
 }
 
-.ai-customization-management-editor .welcome-prompts-input-submit:focus-visible {
+.ai-customization-management-editor
+	.welcome-prompts-input-submit:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
 	outline-offset: -1px;
 }
 
-.ai-customization-management-editor .welcome-prompts-input-submit.welcome-prompts-input-submit-disabled {
+.ai-customization-management-editor
+	.welcome-prompts-input-submit.welcome-prompts-input-submit-disabled {
 	opacity: 0.4;
 	cursor: default;
 	pointer-events: none;
@@ -146,7 +170,9 @@
 	justify-content: center;
 }
 
-.ai-customization-management-editor .welcome-prompts-input-row.sent .welcome-prompts-input {
+.ai-customization-management-editor
+	.welcome-prompts-input-row.sent
+	.welcome-prompts-input {
 	display: none;
 }
 
@@ -159,8 +185,14 @@
 }
 
 @keyframes welcomePromptsSentFadeIn {
-	from { opacity: 0; transform: translateY(2px); }
-	to { opacity: 1; transform: translateY(0); }
+	from {
+		opacity: 0;
+		transform: translateY(2px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .ai-customization-management-editor .welcome-prompts-input-helper {
@@ -240,7 +272,8 @@
 	padding: 4px 6px;
 	border-radius: 4px;
 	background: var(--vscode-button-secondaryBackground);
-	border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+	border: 1px solid
+		var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
 }
 
 .ai-customization-management-editor .welcome-prompts-card-action:hover {

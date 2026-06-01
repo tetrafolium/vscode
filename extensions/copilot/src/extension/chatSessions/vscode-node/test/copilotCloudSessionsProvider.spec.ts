@@ -5,14 +5,28 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
-import type { AgentTaskGetResponse, AgentTaskSessionEvent } from '@vscode/copilot-api';
+import type {
+	AgentTaskGetResponse,
+	AgentTaskSessionEvent,
+} from '@vscode/copilot-api';
 import { IGitService } from '../../../../platform/git/common/gitService';
-import { PullRequestSearchItem, SessionInfo } from '../../../../platform/github/common/githubAPI';
+import {
+	PullRequestSearchItem,
+	SessionInfo,
+} from '../../../../platform/github/common/githubAPI';
 import { TestLogService } from '../../../../platform/testing/common/testLogService';
 import { mock } from '../../../../util/common/test/simpleMock';
-import { ChatRequestTurn2, ChatResponseMarkdownPart, ChatResponseTurn2, ChatToolInvocationPart } from '../../../../vscodeTypes';
+import {
+	ChatRequestTurn2,
+	ChatResponseMarkdownPart,
+	ChatResponseTurn2,
+	ChatToolInvocationPart,
+} from '../../../../vscodeTypes';
 import { ChatSessionContentBuilder } from '../copilotCloudSessionContentBuilder';
-import { normalizeInitialSessionOptions, parseSessionLogChunksSafely } from '../copilotCloudSessionsProvider';
+import {
+	normalizeInitialSessionOptions,
+	parseSessionLogChunksSafely,
+} from '../copilotCloudSessionsProvider';
 
 vi.mock('vscode', async () => {
 	const actual = await import('../../../../vscodeTypes');
@@ -32,8 +46,10 @@ class RecordingLogService extends TestLogService {
 
 class TestGitService extends mock<IGitService>() {
 	declare readonly _serviceBrand: undefined;
-	override activeRepository = { get: () => undefined } as IGitService['activeRepository'];
-	override initialize = vi.fn(async () => { });
+	override activeRepository = {
+		get: () => undefined,
+	} as IGitService['activeRepository'];
+	override initialize = vi.fn(async () => {});
 	override repositories = [];
 }
 
@@ -91,44 +107,70 @@ describe('copilotCloudSessionsProvider helpers', () => {
 		const logService = new RecordingLogService();
 		const sessionResource = vscode.Uri.parse('copilot-cloud-agent:/1');
 
-		const result = normalizeInitialSessionOptions({
-			models: { id: 'gpt-4.1', name: 'GPT-4.1' },
-			repositories: 'microsoft/vscode',
-		}, logService, sessionResource);
+		const result = normalizeInitialSessionOptions(
+			{
+				models: { id: 'gpt-4.1', name: 'GPT-4.1' },
+				repositories: 'microsoft/vscode',
+			},
+			logService,
+			sessionResource,
+		);
 
 		expect(result).toEqual([
 			{ optionId: 'models', value: { id: 'gpt-4.1', name: 'GPT-4.1' } },
 			{ optionId: 'repositories', value: 'microsoft/vscode' },
 		]);
-		expect(logService.warn).toHaveBeenCalledWith(expect.stringContaining('Coerced object-shaped initialSessionOptions'));
+		expect(logService.warn).toHaveBeenCalledWith(
+			expect.stringContaining(
+				'Coerced object-shaped initialSessionOptions',
+			),
+		);
 	});
 
 	it('ignores unsupported initialSessionOptions payloads and logs a warning', () => {
 		const logService = new RecordingLogService();
 
-		const result = normalizeInitialSessionOptions({
-			models: { foo: 'bar' },
-		}, logService);
+		const result = normalizeInitialSessionOptions(
+			{
+				models: { foo: 'bar' },
+			},
+			logService,
+		);
 
 		expect(result).toEqual([]);
-		expect(logService.warn).toHaveBeenCalledWith(expect.stringContaining('Ignoring unsupported initialSessionOptions'));
+		expect(logService.warn).toHaveBeenCalledWith(
+			expect.stringContaining(
+				'Ignoring unsupported initialSessionOptions',
+			),
+		);
 	});
 
 	it('logs parse failures when streamed log content is malformed', () => {
 		const logService = new RecordingLogService();
 
-		const result = parseSessionLogChunksSafely('data: {not-json}', logService, () => {
-			throw new SyntaxError('Unexpected token');
-		});
+		const result = parseSessionLogChunksSafely(
+			'data: {not-json}',
+			logService,
+			() => {
+				throw new SyntaxError('Unexpected token');
+			},
+		);
 
 		expect(result).toEqual([]);
-		expect(logService.error).toHaveBeenCalledWith(expect.any(SyntaxError), expect.stringContaining('Failed to parse streamed log content'));
+		expect(logService.error).toHaveBeenCalledWith(
+			expect.any(SyntaxError),
+			expect.stringContaining('Failed to parse streamed log content'),
+		);
 	});
 });
 
 describe('ChatSessionContentBuilder', () => {
 	it('ignores malformed tool_calls payloads instead of throwing', async () => {
-		const builder = new ChatSessionContentBuilder('copilot-cloud-agent', new TestGitService(), new TestLogService());
+		const builder = new ChatSessionContentBuilder(
+			'copilot-cloud-agent',
+			new TestGitService(),
+			new TestLogService(),
+		);
 		const logs = [
 			'data: {"choices":[{"finish_reason":"stop","delta":{"role":"assistant","content":"Cloud reply","tool_calls":{"id":"not-an-array"}}}],"created":0,"id":"chunk-1","usage":{"completion_tokens":0,"prompt_tokens":0,"prompt_tokens_details":{"cached_tokens":0},"total_tokens":0},"model":"test-model","object":"chat.completion.chunk"}',
 		].join('\n');
@@ -149,7 +191,9 @@ describe('ChatSessionContentBuilder', () => {
 		}
 
 		expect(responseTurn.response).toHaveLength(1);
-		expect(responseTurn.response[0]).toBeInstanceOf(ChatResponseMarkdownPart);
+		expect(responseTurn.response[0]).toBeInstanceOf(
+			ChatResponseMarkdownPart,
+		);
 		if (!(responseTurn.response[0] instanceof ChatResponseMarkdownPart)) {
 			throw new Error('Expected markdown response content.');
 		}
@@ -166,7 +210,11 @@ interface MakeEventOpts {
 	readonly parentId?: string | null;
 }
 
-function evt(type: string, data: Record<string, unknown>, opts: MakeEventOpts = {}): AgentTaskSessionEvent {
+function evt(
+	type: string,
+	data: Record<string, unknown>,
+	opts: MakeEventOpts = {},
+): AgentTaskSessionEvent {
 	return {
 		id: opts.id ?? `${type}-${Math.random().toString(36).slice(2, 8)}`,
 		timestamp: '2026-03-27T00:00:00Z',
@@ -180,10 +228,15 @@ function evt(type: string, data: Record<string, unknown>, opts: MakeEventOpts = 
 function userMessage(content: string): AgentTaskSessionEvent {
 	// Real user input: agent host rewrites content into transformedContent (longer), so
 	// they differ. The builder uses this divergence to identify user-authored messages.
-	return evt('user.message', { content, transformedContent: `${content}\n\n<context>...</context>` });
+	return evt('user.message', {
+		content,
+		transformedContent: `${content}\n\n<context>...</context>`,
+	});
 }
 
-function makeTask(sessions: Array<{ state: string; prompt?: string }> = []): AgentTaskGetResponse {
+function makeTask(
+	sessions: Array<{ state: string; prompt?: string }> = [],
+): AgentTaskGetResponse {
 	return {
 		id: 'task-1',
 		state: 'completed',
@@ -198,20 +251,26 @@ function makeTask(sessions: Array<{ state: string; prompt?: string }> = []): Age
 }
 
 /** Summarise a chat history into a comparable shape: turn kind + content snippets. */
-function summarise(history: ReadonlyArray<vscode.ChatRequestTurn | ChatResponseTurn2>): unknown {
-	return history.map(turn => {
+function summarise(
+	history: ReadonlyArray<vscode.ChatRequestTurn | ChatResponseTurn2>,
+): unknown {
+	return history.map((turn) => {
 		if (turn instanceof ChatRequestTurn2) {
 			return { kind: 'request', prompt: turn.prompt };
 		}
 		if (turn instanceof ChatResponseTurn2) {
 			return {
 				kind: 'response',
-				parts: turn.response.map(p => {
+				parts: turn.response.map((p) => {
 					if (p instanceof ChatResponseMarkdownPart) {
 						return { type: 'markdown', value: p.value.value };
 					}
 					if (p instanceof ChatToolInvocationPart) {
-						return { type: 'tool', toolName: p.toolName, toolCallId: p.toolCallId };
+						return {
+							type: 'tool',
+							toolName: p.toolName,
+							toolCallId: p.toolCallId,
+						};
 					}
 					return { type: p.constructor.name };
 				}),
@@ -223,27 +282,54 @@ function summarise(history: ReadonlyArray<vscode.ChatRequestTurn | ChatResponseT
 
 describe('ChatSessionContentBuilder Task API history', () => {
 	const newBuilder = () =>
-		new ChatSessionContentBuilder('copilot-cloud-agent', new TestGitService(), new TestLogService());
+		new ChatSessionContentBuilder(
+			'copilot-cloud-agent',
+			new TestGitService(),
+			new TestLogService(),
+		);
 
 	it('suppresses bootstrap events before the first user-authored message and splits turns at user-authored boundaries', async () => {
 		const events: AgentTaskSessionEvent[] = [
 			evt('session.requested', {}),
 			evt('session.start', {}),
-			evt('assistant.message', { messageId: 'boot-1', content: 'Cloning repo…' }), // bootstrap — suppressed
-			evt('tool.execution_start', { toolCallId: 'tc-boot', name: 'clone_repo' }), // bootstrap — suppressed
+			evt('assistant.message', {
+				messageId: 'boot-1',
+				content: 'Cloning repo…',
+			}), // bootstrap — suppressed
+			evt('tool.execution_start', {
+				toolCallId: 'tc-boot',
+				name: 'clone_repo',
+			}), // bootstrap — suppressed
 			userMessage('First user prompt'),
-			evt('assistant.message', { messageId: 'turn-1', content: 'First reply' }),
+			evt('assistant.message', {
+				messageId: 'turn-1',
+				content: 'First reply',
+			}),
 			userMessage('Follow-up prompt'),
-			evt('assistant.message', { messageId: 'turn-2', content: 'Second reply' }),
+			evt('assistant.message', {
+				messageId: 'turn-2',
+				content: 'Second reply',
+			}),
 		];
 
-		const history = await newBuilder().buildTaskHistory(makeTask([{ state: 'completed' }]), events, undefined, Promise.resolve([]));
+		const history = await newBuilder().buildTaskHistory(
+			makeTask([{ state: 'completed' }]),
+			events,
+			undefined,
+			Promise.resolve([]),
+		);
 
 		expect(summarise(history)).toEqual([
 			{ kind: 'request', prompt: 'First user prompt' },
-			{ kind: 'response', parts: [{ type: 'markdown', value: 'First reply' }] },
+			{
+				kind: 'response',
+				parts: [{ type: 'markdown', value: 'First reply' }],
+			},
 			{ kind: 'request', prompt: 'Follow-up prompt' },
-			{ kind: 'response', parts: [{ type: 'markdown', value: 'Second reply' }] },
+			{
+				kind: 'response',
+				parts: [{ type: 'markdown', value: 'Second reply' }],
+			},
 		]);
 	});
 
@@ -253,13 +339,30 @@ describe('ChatSessionContentBuilder Task API history', () => {
 			evt('assistant.message', {
 				messageId: 'm-1',
 				content: 'Here is the raw diff the model would dump', // intermediate narration — suppressed
-				toolRequests: [{ toolCallId: 'tc-edit', name: 'edit', arguments: { path: '/tmp/workspace/owner/repo/src/foo.ts' } }],
+				toolRequests: [
+					{
+						toolCallId: 'tc-edit',
+						name: 'edit',
+						arguments: {
+							path: '/tmp/workspace/owner/repo/src/foo.ts',
+						},
+					},
+				],
 			}),
-			evt('tool.execution_complete', { toolCallId: 'tc-edit', success: true, result: '' }),
+			evt('tool.execution_complete', {
+				toolCallId: 'tc-edit',
+				success: true,
+				result: '',
+			}),
 			evt('assistant.message', { messageId: 'turn-1', content: 'Done.' }),
 		];
 
-		const history = await newBuilder().buildTaskHistory(makeTask([{ state: 'completed' }]), events, undefined, Promise.resolve([]));
+		const history = await newBuilder().buildTaskHistory(
+			makeTask([{ state: 'completed' }]),
+			events,
+			undefined,
+			Promise.resolve([]),
+		);
 
 		expect(summarise(history)).toEqual([
 			{ kind: 'request', prompt: 'Edit something' },
@@ -279,20 +382,38 @@ describe('ChatSessionContentBuilder Task API history', () => {
 			evt('assistant.message', {
 				messageId: 'm-1',
 				content: 'About to commit and push:', // intermediate (has toolRequests)
-				toolRequests: [{ toolCallId: 'tc-prog', name: 'report_progress', arguments: {} }],
+				toolRequests: [
+					{
+						toolCallId: 'tc-prog',
+						name: 'report_progress',
+						arguments: {},
+					},
+				],
 			}),
 			// Final reply: pure text, no toolRequests.
-			evt('assistant.message', { messageId: 'turn-1', content: 'All done!' }),
+			evt('assistant.message', {
+				messageId: 'turn-1',
+				content: 'All done!',
+			}),
 		];
 
-		const history = await newBuilder().buildTaskHistory(makeTask([{ state: 'completed' }]), events, undefined, Promise.resolve([]));
+		const history = await newBuilder().buildTaskHistory(
+			makeTask([{ state: 'completed' }]),
+			events,
+			undefined,
+			Promise.resolve([]),
+		);
 
 		expect(summarise(history)).toEqual([
 			{ kind: 'request', prompt: 'Run a tool' },
 			{
 				kind: 'response',
 				parts: [
-					{ type: 'tool', toolName: 'Progress Update', toolCallId: 'tc-prog' },
+					{
+						type: 'tool',
+						toolName: 'Progress Update',
+						toolCallId: 'tc-prog',
+					},
 					{ type: 'markdown', value: 'All done!' },
 				],
 			},
@@ -305,9 +426,16 @@ describe('ChatSessionContentBuilder Task API history', () => {
 			evt('session.start', {}),
 			// No user.message — task still bootstrapping.
 		];
-		const task = makeTask([{ state: 'in_progress', prompt: 'Original prompt from creation' }]);
+		const task = makeTask([
+			{ state: 'in_progress', prompt: 'Original prompt from creation' },
+		]);
 
-		const history = await newBuilder().buildTaskHistory(task, events, undefined, Promise.resolve([]));
+		const history = await newBuilder().buildTaskHistory(
+			task,
+			events,
+			undefined,
+			Promise.resolve([]),
+		);
 
 		// First turn uses the session prompt, not the AI-generated task title.
 		expect(history[0]).toBeInstanceOf(ChatRequestTurn2);

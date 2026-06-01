@@ -3,16 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IJSONSchema } from '../../../../../base/common/jsonSchema.js';
-import { DisposableStore, IDisposable } from '../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { localize } from '../../../../../nls.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { ResolveSessionConfigResult } from '../../../../../platform/agentHost/common/state/protocol/commands.js';
-import { SessionConfigPropertySchema } from '../../../../../platform/agentHost/common/state/protocol/state.js';
-import { IAgentHostSessionsProvider } from '../../../../common/agentHostSessionsProvider.js';
-import { ISessionsProvidersService } from '../../../../services/sessions/browser/sessionsProvidersService.js';
-import { ISession, toSessionId } from '../../../../services/sessions/common/session.js';
+import { IJSONSchema } from "../../../../../base/common/jsonSchema.js";
+import {
+	DisposableStore,
+	IDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { localize } from "../../../../../nls.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import { ResolveSessionConfigResult } from "../../../../../platform/agentHost/common/state/protocol/commands.js";
+import { SessionConfigPropertySchema } from "../../../../../platform/agentHost/common/state/protocol/state.js";
+import { IAgentHostSessionsProvider } from "../../../../common/agentHostSessionsProvider.js";
+import { ISessionsProvidersService } from "../../../../services/sessions/browser/sessionsProvidersService.js";
+import {
+	ISession,
+	toSessionId,
+} from "../../../../services/sessions/common/session.js";
 import {
 	AbstractAgentHostConfigFileSystemProvider,
 	AbstractAgentHostConfigSchemaRegistrar,
@@ -22,10 +28,10 @@ import {
 	IAgentHostSettingsContext,
 	IAgentHostSettingsLocale,
 	serializeAgentHostConfigDocument,
-} from './agentHostSettingsShared.js';
+} from "./agentHostSettingsShared.js";
 
 /** Scheme for the synthetic agent-host session settings files. */
-export const AGENT_SESSION_SETTINGS_SCHEME = 'agent-session-settings';
+export const AGENT_SESSION_SETTINGS_SCHEME = "agent-session-settings";
 
 /**
  * Build the URI used to open the settings file for an agent-host session.
@@ -51,7 +57,9 @@ interface ISessionSettingsContext extends IAgentHostSettingsContext {
 	readonly sessionId: string;
 }
 
-function parseSessionSettingsUri(uri: URI): ISessionSettingsContext | undefined {
+function parseSessionSettingsUri(
+	uri: URI,
+): ISessionSettingsContext | undefined {
 	if (uri.scheme !== AGENT_SESSION_SETTINGS_SCHEME) {
 		return undefined;
 	}
@@ -60,18 +68,18 @@ function parseSessionSettingsUri(uri: URI): ISessionSettingsContext | undefined 
 		return undefined;
 	}
 	// Path: /{resourceScheme}/{rawId}.jsonc
-	const path = uri.path.startsWith('/') ? uri.path.substring(1) : uri.path;
-	const firstSlash = path.indexOf('/');
+	const path = uri.path.startsWith("/") ? uri.path.substring(1) : uri.path;
+	const firstSlash = path.indexOf("/");
 	if (firstSlash <= 0) {
 		return undefined;
 	}
 	const resourceScheme = path.substring(0, firstSlash);
 	let rest = path.substring(firstSlash); // includes leading '/'
-	const lastDot = rest.lastIndexOf('.');
+	const lastDot = rest.lastIndexOf(".");
 	if (lastDot > 0) {
 		rest = rest.substring(0, lastDot);
 	}
-	if (!resourceScheme || rest === '/') {
+	if (!resourceScheme || rest === "/") {
 		return undefined;
 	}
 	const resource = URI.from({ scheme: resourceScheme, path: rest });
@@ -84,24 +92,54 @@ function parseSessionSettingsUri(uri: URI): ISessionSettingsContext | undefined 
  * are preserved in the underlying config and round-tripped on write — they
  * just aren't surfaced for editing.
  */
-const sessionSettingsPropertyFilter: AgentHostConfigPropertyFilter = (_key, schema) => {
+const sessionSettingsPropertyFilter: AgentHostConfigPropertyFilter = (
+	_key,
+	schema,
+) => {
 	const s = schema as SessionConfigPropertySchema;
 	return s.sessionMutable === true && s.readOnly !== true;
 };
 
 const sessionSettingsLocale: IAgentHostSettingsLocale = {
-	get header() { return localize('agentSessionSettings.header', "Session settings for this agent host session."); },
-	get saveHint() { return localize('agentSessionSettings.saveHint', "Edit values below and save to apply. Unknown or non-mutable properties are ignored."); },
-	get parseError() { return localize('agentSessionSettings.parseError', "Failed to parse agent session settings as JSON."); },
-	get notObject() { return localize('agentSessionSettings.notObject', "Agent session settings must be a JSON object."); },
+	get header() {
+		return localize(
+			"agentSessionSettings.header",
+			"Session settings for this agent host session.",
+		);
+	},
+	get saveHint() {
+		return localize(
+			"agentSessionSettings.saveHint",
+			"Edit values below and save to apply. Unknown or non-mutable properties are ignored.",
+		);
+	},
+	get parseError() {
+		return localize(
+			"agentSessionSettings.parseError",
+			"Failed to parse agent session settings as JSON.",
+		);
+	},
+	get notObject() {
+		return localize(
+			"agentSessionSettings.notObject",
+			"Agent session settings must be a JSON object.",
+		);
+	},
 };
 
 /**
  * Serialize the session-mutable config values for a session into a
  * commented, pretty-printed JSON document.
  */
-export function serializeSessionSettings(provider: IAgentHostSessionsProvider, sessionId: string): string {
-	return serializeAgentHostConfigDocument(provider.getSessionConfig(sessionId), sessionSettingsPropertyFilter, sessionSettingsLocale);
+export function serializeSessionSettings(
+	provider: IAgentHostSessionsProvider,
+	sessionId: string,
+): string {
+	return serializeAgentHostConfigDocument(
+		provider.getSessionConfig(sessionId),
+		sessionSettingsPropertyFilter,
+		sessionSettingsLocale,
+	);
 }
 
 /**
@@ -110,7 +148,9 @@ export function serializeSessionSettings(provider: IAgentHostSessionsProvider, s
  * used by {@link serializeSessionSettings} so validation matches the file
  * contents produced by this provider.
  */
-export function buildSessionSettingsJsonSchema(config: ResolveSessionConfigResult): IJSONSchema {
+export function buildSessionSettingsJsonSchema(
+	config: ResolveSessionConfigResult,
+): IJSONSchema {
 	return buildAgentHostConfigJsonSchema(config, sessionSettingsPropertyFilter);
 }
 
@@ -119,14 +159,14 @@ export function buildSessionSettingsJsonSchema(config: ResolveSessionConfigResul
  * session-mutable config values of agent-host sessions.
  */
 export class AgentSessionSettingsFileSystemProvider extends AbstractAgentHostConfigFileSystemProvider<ISessionSettingsContext> {
-
 	protected readonly _schemeLabel = AGENT_SESSION_SETTINGS_SCHEME;
-	protected readonly _traceTag = 'AgentSessionSettings';
+	protected readonly _traceTag = "AgentSessionSettings";
 	protected readonly _locale = sessionSettingsLocale;
 
 	constructor(
 		private readonly _schemaRegistrar: AgentSessionSettingsSchemaRegistrar,
-		@ISessionsProvidersService sessionsProvidersService: ISessionsProvidersService,
+		@ISessionsProvidersService
+		sessionsProvidersService: ISessionsProvidersService,
 		@ILogService logService: ILogService,
 	) {
 		super(sessionsProvidersService, logService);
@@ -136,26 +176,41 @@ export class AgentSessionSettingsFileSystemProvider extends AbstractAgentHostCon
 		return parseSessionSettingsUri(resource);
 	}
 
-	protected _serialize(provider: IAgentHostSessionsProvider, ctx: ISessionSettingsContext): string {
+	protected _serialize(
+		provider: IAgentHostSessionsProvider,
+		ctx: ISessionSettingsContext,
+	): string {
 		return serializeSessionSettings(provider, ctx.sessionId);
 	}
 
-	protected _watchChanges(provider: IAgentHostSessionsProvider, ctx: ISessionSettingsContext, fire: () => void): IDisposable {
-		return provider.onDidChangeSessionConfig(changedSessionId => {
+	protected _watchChanges(
+		provider: IAgentHostSessionsProvider,
+		ctx: ISessionSettingsContext,
+		fire: () => void,
+	): IDisposable {
+		return provider.onDidChangeSessionConfig((changedSessionId) => {
 			if (changedSessionId === ctx.sessionId) {
 				fire();
 			}
 		});
 	}
 
-	protected _ensureSchemaRegistered(provider: IAgentHostSessionsProvider, ctx: ISessionSettingsContext): void {
-		const session = provider.getSessions().find(s => s.sessionId === ctx.sessionId);
+	protected _ensureSchemaRegistered(
+		provider: IAgentHostSessionsProvider,
+		ctx: ISessionSettingsContext,
+	): void {
+		const session = provider
+			.getSessions()
+			.find((s) => s.sessionId === ctx.sessionId);
 		if (session) {
 			this._schemaRegistrar.ensureRegistered(provider, session);
 		}
 	}
 
-	protected _hasConfig(provider: IAgentHostSessionsProvider, ctx: ISessionSettingsContext): boolean {
+	protected _hasConfig(
+		provider: IAgentHostSessionsProvider,
+		ctx: ISessionSettingsContext,
+	): boolean {
 		return provider.getSessionConfig(ctx.sessionId) !== undefined;
 	}
 
@@ -163,7 +218,11 @@ export class AgentSessionSettingsFileSystemProvider extends AbstractAgentHostCon
 	// replace — `replaceSessionConfig` guarantees non-editable properties
 	// (non-mutable or readOnly) are preserved regardless of what we send,
 	// and unknown keys are ignored.
-	protected _replaceConfig(provider: IAgentHostSessionsProvider, ctx: ISessionSettingsContext, values: Record<string, unknown>): Promise<void> {
+	protected _replaceConfig(
+		provider: IAgentHostSessionsProvider,
+		ctx: ISessionSettingsContext,
+		values: Record<string, unknown>,
+	): Promise<void> {
 		return provider.replaceSessionConfig(ctx.sessionId, values);
 	}
 
@@ -177,7 +236,6 @@ export class AgentSessionSettingsFileSystemProvider extends AbstractAgentHostCon
  * `agent-session-settings://…` files get completions, hover, and validation.
  */
 export class AgentSessionSettingsSchemaRegistrar extends AbstractAgentHostConfigSchemaRegistrar<ISession> {
-
 	protected _propertyFilter(): AgentHostConfigPropertyFilter {
 		return sessionSettingsPropertyFilter;
 	}
@@ -195,11 +253,16 @@ export class AgentSessionSettingsSchemaRegistrar extends AbstractAgentHostConfig
 		return `vscode://schemas/agent-session-settings/${session.providerId}/${session.resource.scheme}/${session.resource.path}.jsonc`;
 	}
 
-	protected _getConfig(provider: IAgentHostSessionsProvider, session: ISession): IAgentHostConfigLike | undefined {
+	protected _getConfig(
+		provider: IAgentHostSessionsProvider,
+		session: ISession,
+	): IAgentHostConfigLike | undefined {
 		return provider.getSessionConfig(session.sessionId);
 	}
 
-	protected _targetsForProvider(provider: IAgentHostSessionsProvider): readonly ISession[] {
+	protected _targetsForProvider(
+		provider: IAgentHostSessionsProvider,
+	): readonly ISession[] {
 		return provider.getSessions();
 	}
 
@@ -209,17 +272,23 @@ export class AgentSessionSettingsSchemaRegistrar extends AbstractAgentHostConfig
 		onRemoved: (session: ISession) => void,
 	): IDisposable {
 		const store = new DisposableStore();
-		store.add(provider.onDidChangeSessionConfig(sessionId => {
-			const session = provider.getSessions().find(s => s.sessionId === sessionId);
-			if (session) {
-				onChanged(session);
-			}
-		}));
-		store.add(provider.onDidChangeSessions(e => {
-			for (const removed of e.removed) {
-				onRemoved(removed);
-			}
-		}));
+		store.add(
+			provider.onDidChangeSessionConfig((sessionId) => {
+				const session = provider
+					.getSessions()
+					.find((s) => s.sessionId === sessionId);
+				if (session) {
+					onChanged(session);
+				}
+			}),
+		);
+		store.add(
+			provider.onDidChangeSessions((e) => {
+				for (const removed of e.removed) {
+					onRemoved(removed);
+				}
+			}),
+		);
 		return store;
 	}
 }

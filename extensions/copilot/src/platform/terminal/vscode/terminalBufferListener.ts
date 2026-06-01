@@ -19,7 +19,10 @@ export function getActiveTerminalBuffer(): string {
 	return terminalBuffers.get(activeTerminal)?.join('') || '';
 }
 
-export function getBufferForTerminal(terminal?: Terminal, maxChars: number = 16000): string {
+export function getBufferForTerminal(
+	terminal?: Terminal,
+	maxChars: number = 16000,
+): string {
 	if (!terminal) {
 		return '';
 	}
@@ -33,11 +36,15 @@ export function getBufferForTerminal(terminal?: Terminal, maxChars: number = 160
 	return joined.slice(start);
 }
 
-export function getLastCommandForTerminal(terminal: Terminal): TerminalExecutedCommand | undefined {
+export function getLastCommandForTerminal(
+	terminal: Terminal,
+): TerminalExecutedCommand | undefined {
 	return terminalCommands.get(terminal)?.at(-1);
 }
 
-export function getActiveTerminalLastCommand(): TerminalExecutedCommand | undefined {
+export function getActiveTerminalLastCommand():
+	| TerminalExecutedCommand
+	| undefined {
 	const activeTerminal = window.activeTerminal;
 	if (activeTerminal === undefined) {
 		return undefined;
@@ -112,15 +119,18 @@ function appendLimitedWindow<T>(target: T[], data: T) {
 
 export function installTerminalBufferListeners(): Disposable[] {
 	return [
-		window.onDidChangeTerminalState(t => {
-			if (window.activeTerminal && t.processId === window.activeTerminal.processId) {
+		window.onDidChangeTerminalState((t) => {
+			if (
+				window.activeTerminal &&
+				t.processId === window.activeTerminal.processId
+			) {
 				const newShellType = t.state.shell;
 				if (newShellType && newShellType !== lastDetectedShellType) {
 					lastDetectedShellType = newShellType;
 				}
 			}
 		}),
-		window.onDidWriteTerminalData(e => {
+		window.onDidWriteTerminalData((e) => {
 			let dataBuffer = terminalBuffers.get(e.terminal);
 			if (!dataBuffer) {
 				dataBuffer = [];
@@ -128,7 +138,7 @@ export function installTerminalBufferListeners(): Disposable[] {
 			}
 			appendLimitedWindow(dataBuffer, removeAnsiEscapeCodes(e.data));
 		}),
-		window.onDidExecuteTerminalCommand(e => {
+		window.onDidExecuteTerminalCommand((e) => {
 			let commands = terminalCommands.get(e.terminal);
 			if (!commands) {
 				commands = [];
@@ -136,8 +146,8 @@ export function installTerminalBufferListeners(): Disposable[] {
 			}
 			appendLimitedWindow(commands, e);
 		}),
-		window.onDidCloseTerminal(e => {
+		window.onDidCloseTerminal((e) => {
 			terminalBuffers.delete(e);
-		})
+		}),
 	];
 }

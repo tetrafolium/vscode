@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Schemas } from '../../../../base/common/network.js';
-import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
-import { TaskRunSource } from '../../../../workbench/contrib/tasks/common/tasks.js';
-import { ITaskService } from '../../../../workbench/contrib/tasks/common/taskService.js';
-import { ISession } from '../../../services/sessions/common/session.js';
-import { ISessionTaskRunner } from './sessionTaskRunner.js';
-import { ITaskEntry } from './sessionsTasksService.js';
+import { Schemas } from "../../../../base/common/network.js";
+import { IWorkspaceContextService } from "../../../../platform/workspace/common/workspace.js";
+import { TaskRunSource } from "../../../../workbench/contrib/tasks/common/tasks.js";
+import { ITaskService } from "../../../../workbench/contrib/tasks/common/taskService.js";
+import { ISession } from "../../../services/sessions/common/session.js";
+import { ISessionTaskRunner } from "./sessionTaskRunner.js";
+import { ITaskEntry } from "./sessionsTasksService.js";
 
 /**
  * Default task runner that delegates to the workbench `ITaskService`. Used
@@ -19,14 +19,14 @@ import { ITaskEntry } from './sessionsTasksService.js';
  * session.
  */
 export class WorkbenchSessionTaskRunner implements ISessionTaskRunner {
-
-	readonly id = 'workbench';
+	readonly id = "workbench";
 	readonly priority = 0;
 
 	constructor(
 		@ITaskService private readonly _taskService: ITaskService,
-		@IWorkspaceContextService private readonly _workspaceContextService: IWorkspaceContextService,
-	) { }
+		@IWorkspaceContextService
+		private readonly _workspaceContextService: IWorkspaceContextService,
+	) {}
 
 	canRun(session: ISession): boolean {
 		const cwd = this._getCwd(session);
@@ -45,11 +45,15 @@ export class WorkbenchSessionTaskRunner implements ISessionTaskRunner {
 		if (!cwd) {
 			return;
 		}
-		const workspaceFolder = this._workspaceContextService.getWorkspaceFolder(cwd);
+		const workspaceFolder =
+			this._workspaceContextService.getWorkspaceFolder(cwd);
 		if (!workspaceFolder) {
 			return;
 		}
-		const resolved = await this._taskService.getTask(workspaceFolder, task.label);
+		const resolved = await this._taskService.getTask(
+			workspaceFolder,
+			task.label,
+		);
 		if (!resolved) {
 			return;
 		}

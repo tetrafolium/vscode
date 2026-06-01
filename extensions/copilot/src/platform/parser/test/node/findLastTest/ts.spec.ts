@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import { outdent } from 'outdent';
 import { afterAll, expect, suite, test } from 'vitest';
 import { _dispose } from '../../../node/parserWithCaching';
@@ -14,10 +13,7 @@ suite('findLastTest - ts', () => {
 	afterAll(() => _dispose());
 
 	function run(annotatedSrc: string) {
-		return srcWithAnnotatedLastTest(
-			WASMLanguage.TypeScript,
-			annotatedSrc,
-		);
+		return srcWithAnnotatedLastTest(WASMLanguage.TypeScript, annotatedSrc);
 	}
 
 	test('one test in suite', async () => {

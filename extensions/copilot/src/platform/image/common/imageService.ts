@@ -6,7 +6,8 @@
 import { createServiceIdentifier } from '../../../util/common/services';
 import { URI } from '../../../util/vs/base/common/uri';
 
-export const IImageService = createServiceIdentifier<IImageService>('IImageService');
+export const IImageService =
+	createServiceIdentifier<IImageService>('IImageService');
 
 export interface IImageService {
 	readonly _serviceBrand: undefined;
@@ -19,14 +20,22 @@ export interface IImageService {
 	 * @param token The authentication token for GitHub API
 	 * @returns Promise<URI> The URI of the uploaded image
 	 */
-	uploadChatImageAttachment(binaryData: Uint8Array, name: string, mimeType: string | undefined, token: string | undefined): Promise<URI>;
+	uploadChatImageAttachment(
+		binaryData: Uint8Array,
+		name: string,
+		mimeType: string | undefined,
+		token: string | undefined,
+	): Promise<URI>;
 
 	/**
 	 * Resize an image to reduce token consumption when sending to language models.
 	 * Returns the original data and MIME type unchanged if resizing is not available or fails.
 	 * The output MIME type may differ from the input (e.g. GIF/WebP inputs are re-encoded as PNG).
 	 */
-	resizeImage(data: Uint8Array, mimeType: string): Promise<{ data: Uint8Array; mimeType: string }>;
+	resizeImage(
+		data: Uint8Array,
+		mimeType: string,
+	): Promise<{ data: Uint8Array; mimeType: string }>;
 }
 
 export const nullImageService: IImageService = {
@@ -34,7 +43,10 @@ export const nullImageService: IImageService = {
 	async uploadChatImageAttachment(): Promise<URI> {
 		throw new Error('Image service not implemented');
 	},
-	async resizeImage(data: Uint8Array, mimeType: string): Promise<{ data: Uint8Array; mimeType: string }> {
+	async resizeImage(
+		data: Uint8Array,
+		mimeType: string,
+	): Promise<{ data: Uint8Array; mimeType: string }> {
 		return { data, mimeType };
-	}
+	},
 };

@@ -3,7 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import type { CancellationToken } from 'vscode';
-import { ICodeOrDocsSearchBaseScopingQuery, ICodeOrDocsSearchItem, ICodeOrDocsSearchMultiRepoScopingQuery, ICodeOrDocsSearchOptions, ICodeOrDocsSearchResult, ICodeOrDocsSearchSingleRepoScopingQuery, IDocsSearchClient } from '../../src/platform/remoteSearch/common/codeOrDocsSearchClient';
+import {
+	ICodeOrDocsSearchBaseScopingQuery,
+	ICodeOrDocsSearchItem,
+	ICodeOrDocsSearchMultiRepoScopingQuery,
+	ICodeOrDocsSearchOptions,
+	ICodeOrDocsSearchResult,
+	ICodeOrDocsSearchSingleRepoScopingQuery,
+	IDocsSearchClient,
+} from '../../src/platform/remoteSearch/common/codeOrDocsSearchClient';
 import { SyncDescriptor } from '../../src/util/vs/platform/instantiation/common/descriptors';
 import { IInstantiationService } from '../../src/util/vs/platform/instantiation/common/instantiation';
 import { CODE_SEARCH_CACHE_SALT } from '../cacheSalt';
@@ -12,7 +20,6 @@ import { computeSHA256 } from './hash';
 import { CurrentTestRunInfo } from './simulationContext';
 
 class CacheableCodeOrDocSearchRequest {
-
 	readonly hash: string;
 	readonly obj: unknown;
 
@@ -22,7 +29,9 @@ class CacheableCodeOrDocSearchRequest {
 		readonly requestOptions: ICodeOrDocsSearchOptions,
 	) {
 		this.obj = { query, scopingQuery, requestOptions };
-		this.hash = computeSHA256(CODE_SEARCH_CACHE_SALT + JSON.stringify(this.obj));
+		this.hash = computeSHA256(
+			CODE_SEARCH_CACHE_SALT + JSON.stringify(this.obj),
+		);
 	}
 
 	toJSON() {
@@ -31,12 +40,22 @@ class CacheableCodeOrDocSearchRequest {
 }
 
 interface ICodeOrDocSearchCache {
-	get(req: CacheableCodeOrDocSearchRequest): Promise<ICodeOrDocsSearchItem[] | ICodeOrDocsSearchResult | undefined>;
-	set(req: CacheableCodeOrDocSearchRequest, cachedResponse: ICodeOrDocsSearchItem[] | ICodeOrDocsSearchResult): Promise<void>;
+	get(
+		req: CacheableCodeOrDocSearchRequest,
+	): Promise<ICodeOrDocsSearchItem[] | ICodeOrDocsSearchResult | undefined>;
+	set(
+		req: CacheableCodeOrDocSearchRequest,
+		cachedResponse: ICodeOrDocsSearchItem[] | ICodeOrDocsSearchResult,
+	): Promise<void>;
 }
 
-export class CodeOrDocSearchSQLiteCache extends SQLiteCache<CacheableCodeOrDocSearchRequest, ICodeOrDocsSearchItem[] | ICodeOrDocsSearchResult> implements ICodeOrDocSearchCache {
-
+export class CodeOrDocSearchSQLiteCache
+	extends SQLiteCache<
+		CacheableCodeOrDocSearchRequest,
+		ICodeOrDocsSearchItem[] | ICodeOrDocsSearchResult
+	>
+	implements ICodeOrDocSearchCache
+{
 	constructor(salt: string, currentTestRunInfo: CurrentTestRunInfo) {
 		super('docs-search', salt, currentTestRunInfo);
 	}
@@ -51,20 +70,38 @@ export class CachingCodeOrDocSearchClient implements IDocsSearchClient {
 		private readonly cache: ICodeOrDocSearchCache,
 		@IInstantiationService instantiationService: IInstantiationService,
 	) {
-		this.searchClient = instantiationService.createInstance(searchClientDesc);
+		this.searchClient =
+			instantiationService.createInstance(searchClientDesc);
 	}
 
-	search(query: string, scopingQuery: ICodeOrDocsSearchSingleRepoScopingQuery, options?: ICodeOrDocsSearchOptions, cancellationToken?: CancellationToken | undefined): Promise<ICodeOrDocsSearchItem[]>;
-	search(query: string, scopingQuery: ICodeOrDocsSearchMultiRepoScopingQuery, options?: ICodeOrDocsSearchOptions, cancellationToken?: CancellationToken | undefined): Promise<ICodeOrDocsSearchResult>;
-	async search(query: string,
-		scopingQuery: ICodeOrDocsSearchSingleRepoScopingQuery | ICodeOrDocsSearchMultiRepoScopingQuery,
+	search(
+		query: string,
+		scopingQuery: ICodeOrDocsSearchSingleRepoScopingQuery,
+		options?: ICodeOrDocsSearchOptions,
+		cancellationToken?: CancellationToken | undefined,
+	): Promise<ICodeOrDocsSearchItem[]>;
+	search(
+		query: string,
+		scopingQuery: ICodeOrDocsSearchMultiRepoScopingQuery,
+		options?: ICodeOrDocsSearchOptions,
+		cancellationToken?: CancellationToken | undefined,
+	): Promise<ICodeOrDocsSearchResult>;
+	async search(
+		query: string,
+		scopingQuery:
+			| ICodeOrDocsSearchSingleRepoScopingQuery
+			| ICodeOrDocsSearchMultiRepoScopingQuery,
 		options: ICodeOrDocsSearchOptions = {},
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<ICodeOrDocsSearchItem[] | ICodeOrDocsSearchResult> {
 		options.limit ??= 6;
 		options.similarity ??= 0.766;
 
-		const req = new CacheableCodeOrDocSearchRequest(query, scopingQuery, options);
+		const req = new CacheableCodeOrDocSearchRequest(
+			query,
+			scopingQuery,
+			options,
+		);
 		const cacheValue = await this.cache.get(req);
 		if (cacheValue) {
 			return cacheValue;
@@ -76,14 +113,14 @@ export class CachingCodeOrDocSearchClient implements IDocsSearchClient {
 				query,
 				scopingQuery as ICodeOrDocsSearchMultiRepoScopingQuery,
 				options,
-				cancellationToken
+				cancellationToken,
 			);
 		} else {
 			result = await this.searchClient.search(
 				query,
 				scopingQuery as ICodeOrDocsSearchSingleRepoScopingQuery,
 				options,
-				cancellationToken
+				cancellationToken,
 			);
 		}
 		await this.cache.set(req, result);

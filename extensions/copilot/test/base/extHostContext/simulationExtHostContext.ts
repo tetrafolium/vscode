@@ -14,7 +14,10 @@ import { INotebookService } from '../../../src/platform/notebook/common/notebook
 import { INotebookSummaryTracker } from '../../../src/platform/notebook/common/notebookSummaryTracker';
 import { NotebookService } from '../../../src/platform/notebook/vscode/notebookServiceImpl';
 import { NotebookSummaryTrackerImpl } from '../../../src/platform/notebook/vscode/notebookSummaryTrackerImpl';
-import { IRemoteRepositoriesService, RemoteRepositoriesService } from '../../../src/platform/remoteRepositories/vscode/remoteRepositories';
+import {
+	IRemoteRepositoriesService,
+	RemoteRepositoriesService,
+} from '../../../src/platform/remoteRepositories/vscode/remoteRepositories';
 import { ISearchService } from '../../../src/platform/search/common/searchService';
 import { SearchServiceImpl } from '../../../src/platform/search/vscode-node/searchServiceImpl';
 import { ITabsAndEditorsService } from '../../../src/platform/tabs/common/tabsAndEditorsService';
@@ -28,16 +31,27 @@ import { SyncDescriptor } from '../../../src/util/vs/platform/instantiation/comm
  * Adds a select number of 'real' services to the stest when they're running
  * in a real extension.
  */
-export async function addExtensionHostSimulationServices(builder: TestingServiceCollection) {
+export async function addExtensionHostSimulationServices(
+	builder: TestingServiceCollection,
+) {
 	builder.define(IFileSystemService, new VSCodeFileSystemService());
 	builder.define(INotebookService, new SyncDescriptor(NotebookService));
-	builder.define(INotebookSummaryTracker, new SyncDescriptor(NotebookSummaryTrackerImpl));
+	builder.define(
+		INotebookSummaryTracker,
+		new SyncDescriptor(NotebookSummaryTrackerImpl),
+	);
 	builder.define(ITabsAndEditorsService, new TabsAndEditorsServiceImpl());
 	builder.define(ITerminalService, new SyncDescriptor(TerminalServiceImpl));
 	// builder.define(IWorkspaceService, new SyncDescriptor(ExtensionTextDocumentManager));
-	builder.define(IExtensionsService, new SyncDescriptor(VSCodeExtensionsService));
+	builder.define(
+		IExtensionsService,
+		new SyncDescriptor(VSCodeExtensionsService),
+	);
 	builder.define(IRemoteRepositoriesService, new RemoteRepositoriesService());
 	builder.define(IGitDiffService, new SyncDescriptor(GitDiffService));
-	builder.define(IGitExtensionService, new SyncDescriptor(GitExtensionServiceImpl));
+	builder.define(
+		IGitExtensionService,
+		new SyncDescriptor(GitExtensionServiceImpl),
+	);
 	builder.define(ISearchService, new SyncDescriptor(SearchServiceImpl));
 }

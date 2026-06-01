@@ -199,7 +199,12 @@ export const red: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['declaration.tag', 'declaration.tag entity', 'meta.tag', 'meta.tag entity'],
+			scope: [
+				'declaration.tag',
+				'declaration.tag entity',
+				'meta.tag',
+				'meta.tag entity',
+			],
 			settings: {
 				foreground: '#EC0D1E',
 				fontStyle: '',
@@ -243,7 +248,10 @@ export const red: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['meta.property-value support.constant.named-color.css', 'meta.property-value constant'],
+			scope: [
+				'meta.property-value support.constant.named-color.css',
+				'meta.property-value constant',
+			],
 			settings: {
 				foreground: '#FFE862',
 				fontStyle: '',
@@ -331,7 +339,12 @@ export const red: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['markup.heading', 'markup.heading.setext', 'punctuation.definition.heading', 'entity.name.section'],
+			scope: [
+				'markup.heading',
+				'markup.heading.setext',
+				'punctuation.definition.heading',
+				'entity.name.section',
+			],
 			settings: {
 				foreground: '#FEC758',
 				fontStyle: 'bold',

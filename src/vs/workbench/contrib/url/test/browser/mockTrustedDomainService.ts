@@ -3,16 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../../base/common/event.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { ITrustedDomainService } from '../../common/trustedDomainService.js';
-import { isURLDomainTrusted } from '../../../../../platform/url/common/trustedDomains.js';
+import { Event } from "../../../../../base/common/event.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { ITrustedDomainService } from "../../common/trustedDomainService.js";
+import { isURLDomainTrusted } from "../../../../../platform/url/common/trustedDomains.js";
 
 export class MockTrustedDomainService implements ITrustedDomainService {
 	_serviceBrand: undefined;
 
-	constructor(private readonly _trustedDomains: string[] = []) {
-	}
+	constructor(private readonly _trustedDomains: string[] = []) {}
 
 	readonly onDidChangeTrustedDomains: Event<void> = Event.None;
 

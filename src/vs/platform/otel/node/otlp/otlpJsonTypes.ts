@@ -26,7 +26,6 @@
  * fields are ignored by the decoder (forwards-compatible).
  */
 
-
 /** Status code as defined by the OTLP trace status enum. */
 export const enum OtlpStatusCode {
 	UNSET = 0,

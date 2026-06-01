@@ -11,17 +11,27 @@ import * as glob from '../../../util/common/glob';
 import { getLanguageForResource } from '../../../util/common/languages';
 import { createTextDocumentData } from '../../../util/common/test/shims/textDocument';
 import { asArray, coalesce } from '../../../util/vs/base/common/arrays';
-import { AsyncIterableSource, raceTimeout } from '../../../util/vs/base/common/async';
+import {
+	AsyncIterableSource,
+	raceTimeout,
+} from '../../../util/vs/base/common/async';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { Emitter, Event } from '../../../util/vs/base/common/event';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
 import { ResourceMap } from '../../../util/vs/base/common/map';
-import { constObservable, observableValue } from '../../../util/vs/base/common/observableInternal';
+import {
+	constObservable,
+	observableValue,
+} from '../../../util/vs/base/common/observableInternal';
 import { basename } from '../../../util/vs/base/common/resources';
 import { createRegExp } from '../../../util/vs/base/common/strings';
 import { URI } from '../../../util/vs/base/common/uri';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
-import { Position, Range, TerminalShellExecutionCommandLineConfidence } from '../../../vscodeTypes';
+import {
+	Position,
+	Range,
+	TerminalShellExecutionCommandLineConfidence,
+} from '../../../vscodeTypes';
 import { ConfigKey } from '../../configuration/common/configurationService';
 import { IDebugOutputService } from '../../debug/common/debugOutputService';
 import { IDialogService } from '../../dialog/common/dialogService';
@@ -29,18 +39,50 @@ import { IFileSystemService } from '../../filesystem/common/fileSystemService';
 import { FileType, RelativePattern } from '../../filesystem/common/fileTypes';
 import { NodeFileSystemService } from '../../filesystem/node/fileSystemServiceImpl';
 import { IGitService, RepoContext } from '../../git/common/gitService';
-import { Branch, Change, CommitOptions, CommitShortStat, DiffChange, Ref, RefQuery, Repository, RepositoryAccessDetails } from '../../git/vscode/git';
+import {
+	Branch,
+	Change,
+	CommitOptions,
+	CommitShortStat,
+	DiffChange,
+	Ref,
+	RefQuery,
+	Repository,
+	RepositoryAccessDetails,
+} from '../../git/vscode/git';
 import { AbstractLanguageDiagnosticsService } from '../../languages/common/languageDiagnosticsService';
 import { ILanguageFeaturesService } from '../../languages/common/languageFeaturesService';
 import { ILogService } from '../../log/common/logService';
-import { AlternativeContentFormat, getAlternativeNotebookDocumentProvider, IAlternativeNotebookContentService } from '../../notebook/common/alternativeContent';
-import { INotebookService, PipPackage, VariablesResult } from '../../notebook/common/notebookService';
+import {
+	AlternativeContentFormat,
+	getAlternativeNotebookDocumentProvider,
+	IAlternativeNotebookContentService,
+} from '../../notebook/common/alternativeContent';
+import {
+	INotebookService,
+	PipPackage,
+	VariablesResult,
+} from '../../notebook/common/notebookService';
 import { INotebookSummaryTracker } from '../../notebook/common/notebookSummaryTracker';
-import { IReviewService, ReviewComment, ReviewDiagnosticCollection } from '../../review/common/reviewService';
+import {
+	IReviewService,
+	ReviewComment,
+	ReviewDiagnosticCollection,
+} from '../../review/common/reviewService';
 import { AbstractSearchService } from '../../search/common/searchService';
-import { ITabsAndEditorsService, TabInfo } from '../../tabs/common/tabsAndEditorsService';
-import { IKnownTerminal, ITerminalService, ShellIntegrationQuality } from '../../terminal/common/terminalService';
-import { AbstractWorkspaceService, IWorkspaceService } from '../../workspace/common/workspaceService';
+import {
+	ITabsAndEditorsService,
+	TabInfo,
+} from '../../tabs/common/tabsAndEditorsService';
+import {
+	IKnownTerminal,
+	ITerminalService,
+	ShellIntegrationQuality,
+} from '../../terminal/common/terminalService';
+import {
+	AbstractWorkspaceService,
+	IWorkspaceService,
+} from '../../workspace/common/workspaceService';
 import { isNotebook, SimulationWorkspace } from './simulationWorkspace';
 
 export const WORKSPACE_PATH = `/Users/someone/Projects/proj01/`;
@@ -52,31 +94,48 @@ export class SimulationWorkspaceService extends AbstractWorkspaceService {
 	}
 
 	override get textDocuments(): readonly vscode.TextDocument[] {
-		return this.workspace.documents.map(d => d.document);
+		return this.workspace.documents.map((d) => d.document);
 	}
 
-	override onDidOpenTextDocument: vscode.Event<vscode.TextDocument> = Event.None;
-	override onDidCloseTextDocument: vscode.Event<vscode.TextDocument> = Event.None;
-	override onDidOpenNotebookDocument: vscode.Event<vscode.NotebookDocument> = Event.None;
-	override onDidCloseNotebookDocument: vscode.Event<vscode.NotebookDocument> = Event.None;
-	override onDidChangeTextDocument: vscode.Event<vscode.TextDocumentChangeEvent> = Event.None;
-	override onDidChangeWorkspaceFolders: vscode.Event<vscode.WorkspaceFoldersChangeEvent> = Event.None;
-	override onDidChangeNotebookDocument: vscode.Event<vscode.NotebookDocumentChangeEvent> = Event.None;
-	override onDidChangeTextEditorSelection: vscode.Event<vscode.TextEditorSelectionChangeEvent> = Event.None;
+	override onDidOpenTextDocument: vscode.Event<vscode.TextDocument> =
+		Event.None;
+	override onDidCloseTextDocument: vscode.Event<vscode.TextDocument> =
+		Event.None;
+	override onDidOpenNotebookDocument: vscode.Event<vscode.NotebookDocument> =
+		Event.None;
+	override onDidCloseNotebookDocument: vscode.Event<vscode.NotebookDocument> =
+		Event.None;
+	override onDidChangeTextDocument: vscode.Event<vscode.TextDocumentChangeEvent> =
+		Event.None;
+	override onDidChangeWorkspaceFolders: vscode.Event<vscode.WorkspaceFoldersChangeEvent> =
+		Event.None;
+	override onDidChangeNotebookDocument: vscode.Event<vscode.NotebookDocumentChangeEvent> =
+		Event.None;
+	override onDidChangeTextEditorSelection: vscode.Event<vscode.TextEditorSelectionChangeEvent> =
+		Event.None;
 
 	override showTextDocument(document: vscode.TextDocument): Promise<void> {
 		return Promise.resolve();
 	}
 
-	override async openTextDocument(uri: vscode.Uri): Promise<vscode.TextDocument> {
+	override async openTextDocument(
+		uri: vscode.Uri,
+	): Promise<vscode.TextDocument> {
 		if (this.workspace.hasDocument(uri)) {
 			return this.workspace.getDocument(uri).document;
 		}
 
 		if (uri.scheme === 'file') {
-			const fileContents = await fs.readFile(this.workspace.mapLocation(uri).fsPath, 'utf8');
+			const fileContents = await fs.readFile(
+				this.workspace.mapLocation(uri).fsPath,
+				'utf8',
+			);
 			const language = getLanguageForResource(uri);
-			const doc = createTextDocumentData(uri, fileContents, language.languageId);
+			const doc = createTextDocumentData(
+				uri,
+				fileContents,
+				language.languageId,
+			);
 			this.workspace.addDocument(doc);
 			return doc.document;
 		}
@@ -84,9 +143,17 @@ export class SimulationWorkspaceService extends AbstractWorkspaceService {
 		throw new Error(`File not found ${uri.fsPath}`);
 	}
 
-	override async openNotebookDocument(uri: vscode.Uri): Promise<vscode.NotebookDocument>;
-	override async openNotebookDocument(notebookType: string, content?: vscode.NotebookData): Promise<vscode.NotebookDocument>;
-	override async openNotebookDocument(arg1: vscode.Uri | string, arg2?: vscode.NotebookData): Promise<vscode.NotebookDocument> {
+	override async openNotebookDocument(
+		uri: vscode.Uri,
+	): Promise<vscode.NotebookDocument>;
+	override async openNotebookDocument(
+		notebookType: string,
+		content?: vscode.NotebookData,
+	): Promise<vscode.NotebookDocument>;
+	override async openNotebookDocument(
+		arg1: vscode.Uri | string,
+		arg2?: vscode.NotebookData,
+	): Promise<vscode.NotebookDocument> {
 		if (typeof arg1 === 'string') {
 			// Handle the overload for notebookType and content
 			throw new Error('Not implemented');
@@ -116,7 +183,9 @@ export class SimulationWorkspaceService extends AbstractWorkspaceService {
 		return Promise.resolve();
 	}
 
-	override async showWorkspaceFolderPicker(): Promise<vscode.WorkspaceFolder | undefined> {
+	override async showWorkspaceFolderPicker(): Promise<
+		vscode.WorkspaceFolder | undefined
+	> {
 		return undefined;
 	}
 
@@ -128,32 +197,34 @@ export class SimulationWorkspaceService extends AbstractWorkspaceService {
 		return Promise.resolve(true);
 	}
 
-	override requestResourceTrust(options: vscode.ResourceTrustRequestOptions): Thenable<boolean | undefined> {
+	override requestResourceTrust(
+		options: vscode.ResourceTrustRequestOptions,
+	): Thenable<boolean | undefined> {
 		return Promise.resolve(true);
 	}
 
-	override requestWorkspaceTrust(options?: vscode.WorkspaceTrustRequestOptions): Thenable<boolean | undefined> {
+	override requestWorkspaceTrust(
+		options?: vscode.WorkspaceTrustRequestOptions,
+	): Thenable<boolean | undefined> {
 		return Promise.resolve(true);
 	}
 }
 
 export class SimulationLanguageDiagnosticsService extends AbstractLanguageDiagnosticsService {
-
-	constructor(
-		private workspace: SimulationWorkspace,
-	) {
+	constructor(private workspace: SimulationWorkspace) {
 		super();
 	}
 
-	override onDidChangeDiagnostics: vscode.Event<vscode.DiagnosticChangeEvent> = this.workspace.onDidChangeDiagnostics;
-	override getDiagnostics: (resource: vscode.Uri) => vscode.Diagnostic[] = this.workspace.getDiagnostics.bind(this.workspace);
+	override onDidChangeDiagnostics: vscode.Event<vscode.DiagnosticChangeEvent> =
+		this.workspace.onDidChangeDiagnostics;
+	override getDiagnostics: (resource: vscode.Uri) => vscode.Diagnostic[] =
+		this.workspace.getDiagnostics.bind(this.workspace);
 	override getAllDiagnostics(): [vscode.Uri, vscode.Diagnostic[]][] {
 		return this.workspace.getAllDiagnostics();
 	}
 }
 
 export class SimulationFileSystemAdaptor implements IFileSystemService {
-
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _delegate: NodeFileSystemService;
@@ -174,7 +245,7 @@ export class SimulationFileSystemAdaptor implements IFileSystemService {
 					type: FileType.File,
 					ctime: this._time,
 					mtime: this._time,
-					size: new TextEncoder().encode(doc.getText()).byteLength
+					size: new TextEncoder().encode(doc.getText()).byteLength,
 				};
 			}
 			return await this._delegate.stat(this._workspace.mapLocation(uri));
@@ -184,7 +255,9 @@ export class SimulationFileSystemAdaptor implements IFileSystemService {
 	}
 
 	async readFile(uri: URI): Promise<Uint8Array> {
-		const containsDoc = this._workspaceService.textDocuments.some(d => d.uri.toString() === uri.toString());
+		const containsDoc = this._workspaceService.textDocuments.some(
+			(d) => d.uri.toString() === uri.toString(),
+		);
 		if (containsDoc) {
 			const doc = await this._workspaceService.openTextDocument(uri);
 			return new TextEncoder().encode(doc.getText());
@@ -200,10 +273,17 @@ export class SimulationFileSystemAdaptor implements IFileSystemService {
 			for (const document of this._workspaceService.textDocuments) {
 				const path = document.uri.path;
 				if (path.startsWith(uriPath)) {
-					const [first, remaining] = path.substring(uriPath.length).split('/', 2);
+					const [first, remaining] = path
+						.substring(uriPath.length)
+						.split('/', 2);
 					if (first && !seen.has(first)) {
 						seen.add(first);
-						result.push([first, remaining === undefined ? FileType.File : FileType.Directory]);
+						result.push([
+							first,
+							remaining === undefined
+								? FileType.File
+								: FileType.Directory,
+						]);
 					}
 				}
 			}
@@ -211,8 +291,14 @@ export class SimulationFileSystemAdaptor implements IFileSystemService {
 			const scenarioFolderLoc = this._workspace.mapLocation(uri);
 			if (scenarioFolderLoc) {
 				try {
-					const entries = await this._delegate.readDirectory(scenarioFolderLoc);
-					const filter = uriPath === WORKSPACE_PATH ? ((name: string) => (name.endsWith('.conversation.json') || name.endsWith('.state.json'))) : (() => false);
+					const entries =
+						await this._delegate.readDirectory(scenarioFolderLoc);
+					const filter =
+						uriPath === WORKSPACE_PATH
+							? (name: string) =>
+									name.endsWith('.conversation.json') ||
+									name.endsWith('.state.json')
+							: () => false;
 					for (const [name, type] of entries) {
 						if (!seen.has(name) && !filter(name)) {
 							seen.add(name);
@@ -229,30 +315,64 @@ export class SimulationFileSystemAdaptor implements IFileSystemService {
 	}
 
 	async createDirectory(uri: URI): Promise<void> {
-		return await this._delegate.createDirectory(this._workspace.mapLocation(uri, true));
+		return await this._delegate.createDirectory(
+			this._workspace.mapLocation(uri, true),
+		);
 	}
 
 	async writeFile(uri: URI, content: Uint8Array): Promise<void> {
-		return await this._delegate.writeFile(this._workspace.mapLocation(uri, true), content);
+		return await this._delegate.writeFile(
+			this._workspace.mapLocation(uri, true),
+			content,
+		);
 	}
 
-	async delete(uri: URI, options?: { recursive?: boolean | undefined; useTrash?: boolean | undefined } | undefined): Promise<void> {
-		return await this._delegate.delete(this._workspace.mapLocation(uri, true), options);
+	async delete(
+		uri: URI,
+		options?:
+			| {
+					recursive?: boolean | undefined;
+					useTrash?: boolean | undefined;
+			  }
+			| undefined,
+	): Promise<void> {
+		return await this._delegate.delete(
+			this._workspace.mapLocation(uri, true),
+			options,
+		);
 	}
 
-	async rename(oldURI: URI, newURI: URI, options?: { overwrite?: boolean | undefined } | undefined): Promise<void> {
-		return await this._delegate.rename(this._workspace.mapLocation(oldURI, true), this._workspace.mapLocation(newURI, true), options);
+	async rename(
+		oldURI: URI,
+		newURI: URI,
+		options?: { overwrite?: boolean | undefined } | undefined,
+	): Promise<void> {
+		return await this._delegate.rename(
+			this._workspace.mapLocation(oldURI, true),
+			this._workspace.mapLocation(newURI, true),
+			options,
+		);
 	}
 
-	async copy(source: URI, destination: URI, options?: { overwrite?: boolean | undefined } | undefined): Promise<void> {
-		return await this._delegate.copy(this._workspace.mapLocation(source), this._workspace.mapLocation(destination, true), options);
+	async copy(
+		source: URI,
+		destination: URI,
+		options?: { overwrite?: boolean | undefined } | undefined,
+	): Promise<void> {
+		return await this._delegate.copy(
+			this._workspace.mapLocation(source),
+			this._workspace.mapLocation(destination, true),
+			options,
+		);
 	}
 
 	isWritableFileSystem(scheme: string): boolean | undefined {
 		return this._delegate.isWritableFileSystem(scheme);
 	}
 
-	createFileSystemWatcher(glob: string | vscode.RelativePattern): vscode.FileSystemWatcher {
+	createFileSystemWatcher(
+		glob: string | vscode.RelativePattern,
+	): vscode.FileSystemWatcher {
 		return this._delegate.createFileSystemWatcher(glob);
 	}
 }
@@ -265,19 +385,21 @@ export class SimulationReviewService implements IReviewService {
 		get(uri: vscode.Uri) {
 			return this.diagnosticCollection.get(uri.toString());
 		},
-		set(uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[] | undefined) {
+		set(
+			uri: vscode.Uri,
+			diagnostics: readonly vscode.Diagnostic[] | undefined,
+		) {
 			if (diagnostics?.length) {
 				this.diagnosticCollection.set(uri.toString(), diagnostics);
 			} else {
 				this.diagnosticCollection.delete(uri.toString());
 			}
-		}
+		},
 	};
 
 	private _comments: ReviewComment[] = [];
 
-	updateContextValues(): void {
-	}
+	updateContextValues(): void {}
 
 	isCodeFeedbackEnabled(): boolean {
 		return ConfigKey.CodeFeedback.defaultValue;
@@ -303,8 +425,7 @@ export class SimulationReviewService implements IReviewService {
 		this._comments.push(...comments);
 	}
 
-	collapseReviewComment(_comment: ReviewComment): void {
-	}
+	collapseReviewComment(_comment: ReviewComment): void {}
 
 	removeReviewComments(comments: ReviewComment[]) {
 		for (const comment of comments) {
@@ -315,33 +436,38 @@ export class SimulationReviewService implements IReviewService {
 		}
 	}
 
-	updateReviewComment(_comment: ReviewComment) {
-	}
+	updateReviewComment(_comment: ReviewComment) {}
 
-	findReviewComment(_threadOrComment: vscode.CommentThread | vscode.Comment): ReviewComment | undefined {
+	findReviewComment(
+		_threadOrComment: vscode.CommentThread | vscode.Comment,
+	): ReviewComment | undefined {
 		return undefined;
 	}
 
-	findCommentThread(comment: ReviewComment): vscode.CommentThread | undefined {
+	findCommentThread(
+		comment: ReviewComment,
+	): vscode.CommentThread | undefined {
 		return undefined;
 	}
 }
 
 export class SimulationNotebookService implements INotebookService {
-
 	declare _serviceBrand: undefined;
-
 
 	constructor(
 		private _workspace: SimulationWorkspace,
-		private _variablesMap = new ResourceMap<VariablesResult[]>()
-	) { }
+		private _variablesMap = new ResourceMap<VariablesResult[]>(),
+	) {}
 
 	getCellExecutions(notebook: vscode.Uri): vscode.NotebookCell[] {
 		return [];
 	}
 
-	runCells(notebook: vscode.Uri, range: { start: number; end: number }, autoReveal: boolean): Promise<void> {
+	runCells(
+		notebook: vscode.Uri,
+		range: { start: number; end: number },
+		autoReveal: boolean,
+	): Promise<void> {
 		return Promise.resolve();
 	}
 
@@ -365,29 +491,25 @@ export class SimulationNotebookService implements INotebookService {
 		this._variablesMap.set(uri, variables);
 	}
 
-	populateNotebookProviders(): void { }
+	populateNotebookProviders(): void {}
 
 	hasSupportedNotebooks(uri: vscode.Uri): boolean {
 		if (isNotebook(uri)) {
 			return true;
 		}
 
-		const KNOWN_NOTEBOOK_TYPES = [
-			'.ipynb',
-			'.github-issues',
-			'.knb'
-		];
+		const KNOWN_NOTEBOOK_TYPES = ['.ipynb', '.github-issues', '.knb'];
 
-		if (KNOWN_NOTEBOOK_TYPES.some(type => uri.path.endsWith(type))) {
+		if (KNOWN_NOTEBOOK_TYPES.some((type) => uri.path.endsWith(type))) {
 			return true;
 		}
 
 		return false;
 	}
 
-	trackAgentUsage(): void { }
+	trackAgentUsage(): void {}
 
-	setFollowState(state: boolean): void { }
+	setFollowState(state: boolean): void {}
 
 	getFollowState(): boolean {
 		return false;
@@ -405,17 +527,15 @@ export class SimulationNotebookSummaryTracker implements INotebookSummaryTracker
 	listNotebooksWithChanges(): vscode.NotebookDocument[] {
 		return [];
 	}
-
 }
 
 export class SimulationAlternativeNotebookContentService implements IAlternativeNotebookContentService {
-
 	constructor(
 		/**
 		 * Allow tests to override the format of the alternative content provider.
 		 */
-		public format: 'xml' | 'json' | 'text' = 'json'
-	) { }
+		public format: 'xml' | 'json' | 'text' = 'json',
+	) {}
 	_serviceBrand: undefined;
 
 	getFormat() {
@@ -424,21 +544,31 @@ export class SimulationAlternativeNotebookContentService implements IAlternative
 	create(format: AlternativeContentFormat) {
 		return getAlternativeNotebookDocumentProvider(format);
 	}
-
 }
 
 export class SnapshotSearchService extends AbstractSearchService {
-
 	constructor(
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
 	) {
 		super();
 	}
 
-	override async findTextInFiles(query: vscode.TextSearchQuery, options: vscode.FindTextInFilesOptions, progress: vscode.Progress<vscode.TextSearchResult>, token: vscode.CancellationToken): Promise<vscode.TextSearchComplete> {
-
-		const uris = await this.findFiles(options.include ?? '**/*', { exclude: options.exclude ? [options.exclude] : undefined, maxResults: options.maxResults }, token);
+	override async findTextInFiles(
+		query: vscode.TextSearchQuery,
+		options: vscode.FindTextInFilesOptions,
+		progress: vscode.Progress<vscode.TextSearchResult>,
+		token: vscode.CancellationToken,
+	): Promise<vscode.TextSearchComplete> {
+		const uris = await this.findFiles(
+			options.include ?? '**/*',
+			{
+				exclude: options.exclude ? [options.exclude] : undefined,
+				maxResults: options.maxResults,
+			},
+			token,
+		);
 
 		const maxResults = options.maxResults ?? Number.MAX_SAFE_INTEGER;
 		let count = 0;
@@ -453,21 +583,31 @@ export class SnapshotSearchService extends AbstractSearchService {
 
 		return Promise.resolve({
 			limitHit: count >= maxResults,
-			message: undefined
+			message: undefined,
 		});
 	}
 
-	override findTextInFiles2(query: vscode.TextSearchQuery2, options?: vscode.FindTextInFilesOptions2, token?: vscode.CancellationToken): vscode.FindTextInFilesResponse {
-		const iterableSource = new AsyncIterableSource<vscode.TextSearchMatch2>();
+	override findTextInFiles2(
+		query: vscode.TextSearchQuery2,
+		options?: vscode.FindTextInFilesOptions2,
+		token?: vscode.CancellationToken,
+	): vscode.FindTextInFilesResponse {
+		const iterableSource =
+			new AsyncIterableSource<vscode.TextSearchMatch2>();
 		const doSearch = async (): Promise<vscode.TextSearchComplete2> => {
-			const uris = await this.findFiles(options?.include ?? ['**/*'], { exclude: options?.exclude, maxResults: options?.maxResults }, token);
+			const uris = await this.findFiles(
+				options?.include ?? ['**/*'],
+				{ exclude: options?.exclude, maxResults: options?.maxResults },
+				token,
+			);
 
 			const maxResults = options?.maxResults ?? Number.MAX_SAFE_INTEGER;
 			let count = 0;
 
 			try {
 				for (const uri of uris) {
-					const doc = await this.workspaceService.openTextDocument(uri);
+					const doc =
+						await this.workspaceService.openTextDocument(uri);
 					count += this._search2(query, doc, iterableSource);
 					if (count >= maxResults) {
 						break;
@@ -478,69 +618,91 @@ export class SnapshotSearchService extends AbstractSearchService {
 			}
 
 			return {
-				limitHit: count >= maxResults
+				limitHit: count >= maxResults,
 			};
 		};
 
 		const completePromise = doSearch();
-		completePromise.catch(() => { });
+		completePromise.catch(() => {});
 		completePromise.finally(() => iterableSource.resolve());
 		return {
 			complete: completePromise,
-			results: iterableSource.asyncIterable
+			results: iterableSource.asyncIterable,
 		};
 	}
 
-	private _search2(query: vscode.TextSearchQuery2, document: vscode.TextDocument, iterableSource: AsyncIterableSource<vscode.TextSearchMatch2>) {
+	private _search2(
+		query: vscode.TextSearchQuery2,
+		document: vscode.TextDocument,
+		iterableSource: AsyncIterableSource<vscode.TextSearchMatch2>,
+	) {
 		return this._search(query, document, {
-			report: match => {
+			report: (match) => {
 				iterableSource.emitOne({
 					uri: match.uri,
 					previewText: match.preview.text,
-					ranges: [{
-						previewRange: asArray(match.preview.matches)[0],
-						sourceRange: asArray(match.ranges)[0]
-					}]
+					ranges: [
+						{
+							previewRange: asArray(match.preview.matches)[0],
+							sourceRange: asArray(match.ranges)[0],
+						},
+					],
 				});
-			}
+			},
 		});
 	}
 
-	private _search(query: vscode.TextSearchQuery, document: vscode.TextDocument, progress: vscode.Progress<vscode.TextSearchMatch>) {
-
+	private _search(
+		query: vscode.TextSearchQuery,
+		document: vscode.TextDocument,
+		progress: vscode.Progress<vscode.TextSearchMatch>,
+	) {
 		let matches = 0;
 
 		const r = createRegExp(query.pattern, query.isRegExp ?? false, {
 			global: true,
 			matchCase: query.isCaseSensitive,
 			wholeWord: query.isWordMatch,
-			multiline: query.isMultiline
+			multiline: query.isMultiline,
 		});
 
 		const text = document.getText();
 
 		let m: RegExpExecArray | null;
-		while (m = r.exec(text)) {
+		while ((m = r.exec(text))) {
 			matches += 1;
 			const start = m.index;
 			const end = m.index + m[0].length;
-			const range = new Range(document.positionAt(start), document.positionAt(end));
+			const range = new Range(
+				document.positionAt(start),
+				document.positionAt(end),
+			);
 			const fullLine = document.lineAt(range.start.line).text;
-			const relativeRange = new Range(new Position(0, range.start.character), new Position(range.end.line - range.start.line, range.end.character));
+			const relativeRange = new Range(
+				new Position(0, range.start.character),
+				new Position(
+					range.end.line - range.start.line,
+					range.end.character,
+				),
+			);
 			progress.report({
 				uri: document.uri,
 				ranges: range,
 				preview: {
 					text: fullLine,
-					matches: [relativeRange]
-				}
+					matches: [relativeRange],
+				},
 			});
 		}
 
 		return matches;
 	}
 
-	override async findFiles(filePattern: vscode.GlobPattern | vscode.GlobPattern[], options?: vscode.FindFiles2Options | undefined, token?: vscode.CancellationToken | undefined): Promise<vscode.Uri[]> {
+	override async findFiles(
+		filePattern: vscode.GlobPattern | vscode.GlobPattern[],
+		options?: vscode.FindFiles2Options | undefined,
+		token?: vscode.CancellationToken | undefined,
+	): Promise<vscode.Uri[]> {
 		const filePatterns = asArray(filePattern);
 		const out: vscode.Uri[] = [];
 
@@ -568,8 +730,15 @@ export class SnapshotSearchService extends AbstractSearchService {
 			for (const [name, type] of entries) {
 				const uri = URI.joinPath(dir, name);
 				if (type === FileType.File) {
-					if (filePatterns.some(pattern => glob.isMatch(uri, toRelativePattern(pattern)))) {
-						if (!options?.exclude || !options.exclude.some(e => glob.isMatch(uri, e))) {
+					if (
+						filePatterns.some((pattern) =>
+							glob.isMatch(uri, toRelativePattern(pattern)),
+						)
+					) {
+						if (
+							!options?.exclude ||
+							!options.exclude.some((e) => glob.isMatch(uri, e))
+						) {
 							out.push(uri);
 						}
 					}
@@ -588,14 +757,19 @@ export class SnapshotSearchService extends AbstractSearchService {
 }
 
 export class TestingDialogService implements IDialogService {
-
 	declare _serviceBrand: undefined;
 
-	showQuickPick<T extends vscode.QuickPickItem>(items: readonly T[] | Thenable<readonly T[]>, options: vscode.QuickPickOptions, token?: vscode.CancellationToken | undefined): Thenable<T | undefined> {
+	showQuickPick<T extends vscode.QuickPickItem>(
+		items: readonly T[] | Thenable<readonly T[]>,
+		options: vscode.QuickPickOptions,
+		token?: vscode.CancellationToken | undefined,
+	): Thenable<T | undefined> {
 		throw new Error('Method not implemented.');
 	}
 
-	showOpenDialog(options: vscode.OpenDialogOptions): Thenable<vscode.Uri[] | undefined> {
+	showOpenDialog(
+		options: vscode.OpenDialogOptions,
+	): Thenable<vscode.Uri[] | undefined> {
 		throw new Error('Method not implemented.');
 	}
 }
@@ -607,7 +781,6 @@ export interface ITestingTabsAndEditorsServiceDelegate {
 }
 
 export class TestingTabsAndEditorsService implements ITabsAndEditorsService {
-
 	declare _serviceBrand: undefined;
 
 	readonly delegate: ITestingTabsAndEditorsServiceDelegate;
@@ -632,7 +805,6 @@ export class TestingTabsAndEditorsService implements ITabsAndEditorsService {
 	}
 
 	get tabs(): TabInfo[] {
-
 		if (!this.activeTextEditor) {
 			return [];
 		}
@@ -656,15 +828,16 @@ export class TestingDebugOutputService implements IDebugOutputService {
 	get consoleOutput(): string {
 		return this._workspace.debugConsoleOutput ?? '';
 	}
-	constructor(private readonly _workspace: SimulationWorkspace) {
-	}
+	constructor(private readonly _workspace: SimulationWorkspace) {}
 }
 
 export class TestingGitService implements IGitService {
-
 	declare readonly _serviceBrand: undefined;
 
-	activeRepository = observableValue<RepoContext | undefined>(this, undefined);
+	activeRepository = observableValue<RepoContext | undefined>(
+		this,
+		undefined,
+	);
 
 	onDidOpenRepository: Event<RepoContext> = Event.None;
 	onDidCloseRepository: Event<RepoContext> = Event.None;
@@ -674,14 +847,17 @@ export class TestingGitService implements IGitService {
 	constructor(
 		private readonly _workspace: SimulationWorkspace,
 		private readonly _createImplicitRepos = true,
-	) { }
+	) {}
 
 	dispose(): void {
 		return;
 	}
 
 	// TODO implement later if tests use this, only used by ignore service
-	getRepository(uri: URI, forceOpen?: boolean): Promise<RepoContext | undefined> {
+	getRepository(
+		uri: URI,
+		forceOpen?: boolean,
+	): Promise<RepoContext | undefined> {
 		return Promise.resolve(undefined);
 	}
 
@@ -693,7 +869,9 @@ export class TestingGitService implements IGitService {
 		return Promise.resolve(undefined);
 	}
 
-	getRepositoryFetchUrls(uri: URI): Promise<Pick<RepoContext, 'rootUri' | 'remoteFetchUrls'> | undefined> {
+	getRepositoryFetchUrls(
+		uri: URI,
+	): Promise<Pick<RepoContext, 'rootUri' | 'remoteFetchUrls'> | undefined> {
 		return Promise.resolve(undefined);
 	}
 
@@ -716,46 +894,50 @@ export class TestingGitService implements IGitService {
 
 		const workspaceStateRepos = this._workspace.repositories;
 		if (workspaceStateRepos) {
-			return coalesce(workspaceStateRepos.map((repo): RepoContext | undefined => {
-				if (!repo) {
-					return repo;
-				}
+			return coalesce(
+				workspaceStateRepos.map((repo): RepoContext | undefined => {
+					if (!repo) {
+						return repo;
+					}
 
-				return {
-					...repo,
-					// rootUri is not set on some serialized repos
-					rootUri: repo.rootUri
-						? URI.revive(repo.rootUri)
-						: workspaceFolderPath
-				};
-			}));
+					return {
+						...repo,
+						// rootUri is not set on some serialized repos
+						rootUri: repo.rootUri
+							? URI.revive(repo.rootUri)
+							: workspaceFolderPath,
+					};
+				}),
+			);
 		}
 
 		if (this._createImplicitRepos) {
-			return [{
-				rootUri: workspaceFolderPath,
-				kind: 'repository',
-				isUsingVirtualFileSystem: false,
-				headBranchName: undefined,
-				headCommitHash: undefined,
-				headIncomingChanges: 0,
-				headOutgoingChanges: 0,
-				upstreamBranchName: undefined,
-				upstreamRemote: undefined,
-				isRebasing: false,
-				remoteFetchUrls: [
-					`https://github.com/microsoft/simuluation-test-${basename(workspaceFolderPath)}`
-				],
-				remotes: [],
-				worktrees: [],
-				changes: undefined,
-				headBranchNameObs: constObservable(undefined),
-				headCommitHashObs: constObservable(undefined),
-				upstreamBranchNameObs: constObservable(undefined),
-				upstreamRemoteObs: constObservable(undefined),
-				isRebasingObs: constObservable(false),
-				isIgnored: async () => false,
-			}];
+			return [
+				{
+					rootUri: workspaceFolderPath,
+					kind: 'repository',
+					isUsingVirtualFileSystem: false,
+					headBranchName: undefined,
+					headCommitHash: undefined,
+					headIncomingChanges: 0,
+					headOutgoingChanges: 0,
+					upstreamBranchName: undefined,
+					upstreamRemote: undefined,
+					isRebasing: false,
+					remoteFetchUrls: [
+						`https://github.com/microsoft/simuluation-test-${basename(workspaceFolderPath)}`,
+					],
+					remotes: [],
+					worktrees: [],
+					changes: undefined,
+					headBranchNameObs: constObservable(undefined),
+					headCommitHashObs: constObservable(undefined),
+					upstreamBranchNameObs: constObservable(undefined),
+					upstreamRemoteObs: constObservable(undefined),
+					isRebasingObs: constObservable(false),
+					isIgnored: async () => false,
+				},
+			];
 		}
 
 		return [];
@@ -769,23 +951,42 @@ export class TestingGitService implements IGitService {
 		return Promise.resolve(undefined);
 	}
 
-	async diffBetweenWithStats(uri: URI, ref1: string, ref2: string, path?: string): Promise<DiffChange[] | undefined> {
+	async diffBetweenWithStats(
+		uri: URI,
+		ref1: string,
+		ref2: string,
+		path?: string,
+	): Promise<DiffChange[] | undefined> {
 		return [];
 	}
 
-	async diffBetweenPatch(uri: URI, ref1: string, ref2: string, path?: string): Promise<string | undefined> {
+	async diffBetweenPatch(
+		uri: URI,
+		ref1: string,
+		ref2: string,
+		path?: string,
+	): Promise<string | undefined> {
 		return undefined;
 	}
 
-	async diffWith(uri: vscode.Uri, ref: string): Promise<Change[] | undefined> {
+	async diffWith(
+		uri: vscode.Uri,
+		ref: string,
+	): Promise<Change[] | undefined> {
 		return undefined;
 	}
 
-	async diffIndexWithHEADShortStats(uri: URI): Promise<CommitShortStat | undefined> {
+	async diffIndexWithHEADShortStats(
+		uri: URI,
+	): Promise<CommitShortStat | undefined> {
 		return undefined;
 	}
 
-	async getMergeBase(uri: URI, ref1: string, ref2: string): Promise<string | undefined> {
+	async getMergeBase(
+		uri: URI,
+		ref1: string,
+		ref2: string,
+	): Promise<string | undefined> {
 		return undefined;
 	}
 
@@ -793,19 +994,43 @@ export class TestingGitService implements IGitService {
 		return;
 	}
 
-	async restore(_uri: URI, _paths: string[], _options?: { staged?: boolean; ref?: string }): Promise<void> {
+	async restore(
+		_uri: URI,
+		_paths: string[],
+		_options?: { staged?: boolean; ref?: string },
+	): Promise<void> {
 		return;
 	}
 
-	async createWorktree(uri: URI, options?: { path?: string; commitish?: string; branch?: string; noTrack?: boolean }): Promise<string | undefined> {
+	async createWorktree(
+		uri: URI,
+		options?: {
+			path?: string;
+			commitish?: string;
+			branch?: string;
+			noTrack?: boolean;
+		},
+	): Promise<string | undefined> {
 		return undefined;
 	}
 
-	async deleteWorktree(uri: URI, path: string, options?: { force?: boolean }): Promise<void> {
+	async deleteWorktree(
+		uri: URI,
+		path: string,
+		options?: { force?: boolean },
+	): Promise<void> {
 		return;
 	}
 
-	async migrateChanges(uri: URI, sourceRepositoryUri: URI, options?: { confirmation?: boolean; deleteFromSource?: boolean; untracked?: boolean }): Promise<void> {
+	async migrateChanges(
+		uri: URI,
+		sourceRepositoryUri: URI,
+		options?: {
+			confirmation?: boolean;
+			deleteFromSource?: boolean;
+			untracked?: boolean;
+		},
+	): Promise<void> {
 		return;
 	}
 
@@ -813,7 +1038,11 @@ export class TestingGitService implements IGitService {
 		return Promise.resolve();
 	}
 
-	async commit(uri: URI, message: string | undefined, opts?: CommitOptions): Promise<void> {
+	async commit(
+		uri: URI,
+		message: string | undefined,
+		opts?: CommitOptions,
+	): Promise<void> {
 		return;
 	}
 
@@ -821,11 +1050,18 @@ export class TestingGitService implements IGitService {
 		return undefined;
 	}
 
-	async getRefs(uri: URI, query: RefQuery, cancellationToken?: CancellationToken): Promise<Ref[]> {
+	async getRefs(
+		uri: URI,
+		query: RefQuery,
+		cancellationToken?: CancellationToken,
+	): Promise<Ref[]> {
 		return [];
 	}
 
-	async isBranchProtected(uri: URI, branch?: string | Branch): Promise<boolean | undefined> {
+	async isBranchProtected(
+		uri: URI,
+		branch?: string | Branch,
+	): Promise<boolean | undefined> {
 		return undefined;
 	}
 
@@ -833,18 +1069,25 @@ export class TestingGitService implements IGitService {
 		return undefined;
 	}
 
-	async exec(uri: URI, args: string[], env?: Record<string, string>): Promise<string> {
+	async exec(
+		uri: URI,
+		args: string[],
+		env?: Record<string, string>,
+	): Promise<string> {
 		return '';
 	}
 }
 
-export class TestingTerminalService extends Disposable implements ITerminalService {
-
+export class TestingTerminalService
+	extends Disposable
+	implements ITerminalService
+{
 	declare readonly _serviceBrand: undefined;
 
 	constructor(
 		private readonly _workspace: SimulationWorkspace,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super();
 	}
@@ -853,32 +1096,79 @@ export class TestingTerminalService extends Disposable implements ITerminalServi
 		return [];
 	}
 
-	private _onDidChangeTerminalShellIntegration = this._register(new Emitter<vscode.TerminalShellIntegrationChangeEvent>());
-	onDidChangeTerminalShellIntegration: vscode.Event<vscode.TerminalShellIntegrationChangeEvent> = this._onDidChangeTerminalShellIntegration.event;
+	private _onDidChangeTerminalShellIntegration = this._register(
+		new Emitter<vscode.TerminalShellIntegrationChangeEvent>(),
+	);
+	onDidChangeTerminalShellIntegration: vscode.Event<vscode.TerminalShellIntegrationChangeEvent> =
+		this._onDidChangeTerminalShellIntegration.event;
 
-	private _onDidEndTerminalShellExecution = this._register(new Emitter<vscode.TerminalShellExecutionEndEvent>());
-	onDidEndTerminalShellExecution: Event<vscode.TerminalShellExecutionEndEvent> = this._onDidEndTerminalShellExecution.event;
+	private _onDidEndTerminalShellExecution = this._register(
+		new Emitter<vscode.TerminalShellExecutionEndEvent>(),
+	);
+	onDidEndTerminalShellExecution: Event<vscode.TerminalShellExecutionEndEvent> =
+		this._onDidEndTerminalShellExecution.event;
 
 	onDidCloseTerminal: vscode.Event<vscode.Terminal> = Event.None;
-	onDidWriteTerminalData: vscode.Event<vscode.TerminalDataWriteEvent> = Event.None;
+	onDidWriteTerminalData: vscode.Event<vscode.TerminalDataWriteEvent> =
+		Event.None;
 
-	private readonly sessionTerminals = new Map<string, { terminal: vscode.Terminal; shellIntegrationQuality: ShellIntegrationQuality; id: string }[]>();
+	private readonly sessionTerminals = new Map<
+		string,
+		{
+			terminal: vscode.Terminal;
+			shellIntegrationQuality: ShellIntegrationQuality;
+			id: string;
+		}[]
+	>();
 
-	createTerminal(name?: string, shellPath?: string, shellArgs?: string[] | string): vscode.Terminal;
+	createTerminal(
+		name?: string,
+		shellPath?: string,
+		shellArgs?: string[] | string,
+	): vscode.Terminal;
 	createTerminal(options: vscode.TerminalOptions): vscode.Terminal;
 	createTerminal(options: vscode.ExtensionTerminalOptions): vscode.Terminal;
-	createTerminal(nameOrOpts?: string | vscode.TerminalOptions | vscode.ExtensionTerminalOptions, shellPath?: string, shellArgs?: string[] | string): vscode.Terminal {
-		const options: vscode.TerminalOptions | vscode.ExtensionTerminalOptions = typeof nameOrOpts === 'string' || nameOrOpts === undefined ?
-			{ name: nameOrOpts, shellPath, shellArgs } satisfies vscode.TerminalOptions :
-			nameOrOpts;
+	createTerminal(
+		nameOrOpts?:
+			| string
+			| vscode.TerminalOptions
+			| vscode.ExtensionTerminalOptions,
+		shellPath?: string,
+		shellArgs?: string[] | string,
+	): vscode.Terminal {
+		const options:
+			| vscode.TerminalOptions
+			| vscode.ExtensionTerminalOptions =
+			typeof nameOrOpts === 'string' || nameOrOpts === undefined
+				? ({
+						name: nameOrOpts,
+						shellPath,
+						shellArgs,
+					} satisfies vscode.TerminalOptions)
+				: nameOrOpts;
 		if ('pty' in options) {
 			throw new Error('Not implemented');
 		}
 
-		const terminal = this._register(this.instantiationService.createInstance(SimulationTerminal, options, this._workspace));
-		this._register((terminal.shellIntegration as SimulationTerminalShellIntegration).onDidEndTerminalShellExecution(e => this._onDidEndTerminalShellExecution.fire(e)));
+		const terminal = this._register(
+			this.instantiationService.createInstance(
+				SimulationTerminal,
+				options,
+				this._workspace,
+			),
+		);
+		this._register(
+			(
+				terminal.shellIntegration as SimulationTerminalShellIntegration
+			).onDidEndTerminalShellExecution((e) =>
+				this._onDidEndTerminalShellExecution.fire(e),
+			),
+		);
 		setTimeout(() => {
-			this._onDidChangeTerminalShellIntegration.fire({ terminal, shellIntegration: terminal.shellIntegration });
+			this._onDidChangeTerminalShellIntegration.fire({
+				terminal,
+				shellIntegration: terminal.shellIntegration,
+			});
 		});
 
 		return terminal;
@@ -888,25 +1178,46 @@ export class TestingTerminalService extends Disposable implements ITerminalServi
 		return Promise.resolve(undefined);
 	}
 
-	associateTerminalWithSession(terminal: vscode.Terminal, sessionId: string, id: string, shellIntegrationQuality: ShellIntegrationQuality): Promise<void> {
+	associateTerminalWithSession(
+		terminal: vscode.Terminal,
+		sessionId: string,
+		id: string,
+		shellIntegrationQuality: ShellIntegrationQuality,
+	): Promise<void> {
 		const terms = this.sessionTerminals.get(sessionId);
 		if (terms) {
 			terms.push({ terminal, shellIntegrationQuality, id });
 		} else {
-			this.sessionTerminals.set(sessionId, [{ terminal, shellIntegrationQuality, id }]);
+			this.sessionTerminals.set(sessionId, [
+				{ terminal, shellIntegrationQuality, id },
+			]);
 		}
 		return Promise.resolve();
 	}
 
 	getCopilotTerminals(sessionId: string): Promise<IKnownTerminal[]> {
-		return Promise.resolve(this.sessionTerminals.get(sessionId)?.map(t => { return { ...t.terminal, id: t.id }; }) || []);
+		return Promise.resolve(
+			this.sessionTerminals.get(sessionId)?.map((t) => {
+				return { ...t.terminal, id: t.id };
+			}) || [],
+		);
 	}
 
-	getToolTerminalForSession(sessionId: string): Promise<{ terminal: vscode.Terminal; shellIntegrationQuality: ShellIntegrationQuality } | undefined> {
+	getToolTerminalForSession(
+		sessionId: string,
+	): Promise<
+		| {
+				terminal: vscode.Terminal;
+				shellIntegrationQuality: ShellIntegrationQuality;
+		  }
+		| undefined
+	> {
 		return Promise.resolve(this.sessionTerminals.get(sessionId)?.at(0));
 	}
 
-	getLastCommandForTerminal(terminal: vscode.Terminal): vscode.TerminalExecutedCommand | undefined {
+	getLastCommandForTerminal(
+		terminal: vscode.Terminal,
+	): vscode.TerminalExecutedCommand | undefined {
 		return undefined;
 	}
 
@@ -928,7 +1239,11 @@ export class TestingTerminalService extends Disposable implements ITerminalServi
 	getBufferWithPid(pid: number, maxChars?: number): Promise<string> {
 		throw new Error('Method not implemented.');
 	}
-	contributePath(contributor: string, pathLocation: string, description?: string | { command: string }): void {
+	contributePath(
+		contributor: string,
+		pathLocation: string,
+		description?: string | { command: string },
+	): void {
 		// No-op for test service
 	}
 	removePathContribution(contributor: string): void {
@@ -949,7 +1264,8 @@ class SimulationTerminal extends Disposable implements vscode.Terminal {
 	constructor(
 		public readonly creationOptions: vscode.TerminalOptions,
 		workspace: SimulationWorkspace,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super();
 		this.name = creationOptions.name ?? '';
@@ -959,7 +1275,14 @@ class SimulationTerminal extends Disposable implements vscode.Terminal {
 			throw new Error('String cwd not implemented');
 		}
 
-		this.shellIntegration = this._register(this.instantiationService.createInstance(SimulationTerminalShellIntegration, cwd, workspace, this));
+		this.shellIntegration = this._register(
+			this.instantiationService.createInstance(
+				SimulationTerminalShellIntegration,
+				cwd,
+				workspace,
+				this,
+			),
+		);
 	}
 
 	sendText(text: string, shouldExecute: boolean = true): void {
@@ -975,36 +1298,69 @@ class SimulationTerminal extends Disposable implements vscode.Terminal {
 	}
 }
 
-class SimulationTerminalShellIntegration extends Disposable implements vscode.TerminalShellIntegration {
-	private readonly _onDidEndTerminalShellExecution = this._register(new Emitter<vscode.TerminalShellExecutionEndEvent>());
-	onDidEndTerminalShellExecution: Event<vscode.TerminalShellExecutionEndEvent> = this._onDidEndTerminalShellExecution.event;
+class SimulationTerminalShellIntegration
+	extends Disposable
+	implements vscode.TerminalShellIntegration
+{
+	private readonly _onDidEndTerminalShellExecution = this._register(
+		new Emitter<vscode.TerminalShellExecutionEndEvent>(),
+	);
+	onDidEndTerminalShellExecution: Event<vscode.TerminalShellExecutionEndEvent> =
+		this._onDidEndTerminalShellExecution.event;
 
 	constructor(
 		public readonly cwd: vscode.Uri | undefined,
 		private readonly workspace: SimulationWorkspace,
 		private readonly terminal: SimulationTerminal,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super();
 		this.cwd = cwd && workspace.mapLocation(cwd);
 	}
 
-	executeCommand(command: string, args?: string[]): vscode.TerminalShellExecution {
+	executeCommand(
+		command: string,
+		args?: string[],
+	): vscode.TerminalShellExecution {
 		if (args) {
 			command = `${command} ${args.join(' ')}`;
 		}
 
-		const exe = this._register(this.instantiationService.createInstance(SimulationTerminalShellExecution, { value: command, confidence: TerminalShellExecutionCommandLineConfidence.High, isTrusted: true }, this.cwd, this.workspace));
-		this._register(exe.onDidEndTerminalShellExecution(() => {
-			this._onDidEndTerminalShellExecution.fire({ terminal: this.terminal, shellIntegration: this, execution: exe, exitCode: undefined });
-		}));
+		const exe = this._register(
+			this.instantiationService.createInstance(
+				SimulationTerminalShellExecution,
+				{
+					value: command,
+					confidence:
+						TerminalShellExecutionCommandLineConfidence.High,
+					isTrusted: true,
+				},
+				this.cwd,
+				this.workspace,
+			),
+		);
+		this._register(
+			exe.onDidEndTerminalShellExecution(() => {
+				this._onDidEndTerminalShellExecution.fire({
+					terminal: this.terminal,
+					shellIntegration: this,
+					execution: exe,
+					exitCode: undefined,
+				});
+			}),
+		);
 		return exe;
 	}
 }
 
-class SimulationTerminalShellExecution extends Disposable implements vscode.TerminalShellExecution {
+class SimulationTerminalShellExecution
+	extends Disposable
+	implements vscode.TerminalShellExecution
+{
 	private _onDidEndTerminalShellExecution = new Emitter<void>();
-	onDidEndTerminalShellExecution: Event<void> = this._onDidEndTerminalShellExecution.event;
+	onDidEndTerminalShellExecution: Event<void> =
+		this._onDidEndTerminalShellExecution.event;
 
 	constructor(
 		public readonly commandLine: vscode.TerminalShellExecutionCommandLine,
@@ -1016,13 +1372,18 @@ class SimulationTerminalShellExecution extends Disposable implements vscode.Term
 	}
 
 	private async run(): Promise<string | undefined> {
-		const fakeWorkspacePath = this.workspace.workspaceFolders[0].fsPath.replace(/\/$/, '');
-		const realWorkspacePath = this.workspace.mapLocation(this.workspace.workspaceFolders[0]).fsPath.replace(/\/$/, '');
+		const fakeWorkspacePath =
+			this.workspace.workspaceFolders[0].fsPath.replace(/\/$/, '');
+		const realWorkspacePath = this.workspace
+			.mapLocation(this.workspace.workspaceFolders[0])
+			.fsPath.replace(/\/$/, '');
 		try {
 			let command = this.commandLine.value;
 			this.logService.trace(`Original command: ${command}`);
 			command = command.replaceAll(fakeWorkspacePath, realWorkspacePath);
-			this.logService.trace(`Command with replaced workspace path: ${command}`);
+			this.logService.trace(
+				`Command with replaced workspace path: ${command}`,
+			);
 
 			const execPromise = promisify(exec);
 			const execP = execPromise(command, { cwd: this.cwd?.fsPath });
@@ -1038,8 +1399,13 @@ class SimulationTerminalShellExecution extends Disposable implements vscode.Term
 			this.logService.trace(`Result: ${resultStr}`);
 			if (output) {
 				this.logService.trace(`Original output: ${output}`);
-				output = output.replaceAll(realWorkspacePath, fakeWorkspacePath);
-				this.logService.trace(`Output with replaced workspace path: ${output}`);
+				output = output.replaceAll(
+					realWorkspacePath,
+					fakeWorkspacePath,
+				);
+				this.logService.trace(
+					`Output with replaced workspace path: ${output}`,
+				);
 			}
 			return output;
 		} catch (e) {
@@ -1056,7 +1422,9 @@ class SimulationTerminalShellExecution extends Disposable implements vscode.Term
 
 			this.logService.trace(`Original error message: ${msg}`);
 			msg = msg.replaceAll(realWorkspacePath, fakeWorkspacePath);
-			this.logService.trace(`Error message with replaced workspace path: ${msg}`);
+			this.logService.trace(
+				`Error message with replaced workspace path: ${msg}`,
+			);
 			return msg;
 		}
 	}
@@ -1064,36 +1432,54 @@ class SimulationTerminalShellExecution extends Disposable implements vscode.Term
 	async *read(): AsyncIterable<string> {
 		this.logService.trace(`SimulationTerminalShellExecution: read()`);
 		const result = await this.run();
-		this.logService.trace(`SimulationTerminalShellExecution: result: ${result}`);
+		this.logService.trace(
+			`SimulationTerminalShellExecution: result: ${result}`,
+		);
 		if (result) {
 			yield result;
 		}
-		this.logService.trace(`SimulationTerminalShellExecution: firing end event`);
+		this.logService.trace(
+			`SimulationTerminalShellExecution: firing end event`,
+		);
 		this._onDidEndTerminalShellExecution.fire();
 	}
 }
 
 export class TestingLanguageService implements ILanguageFeaturesService {
-
 	declare readonly _serviceBrand: undefined;
 
-	constructor(private readonly _workspace: SimulationWorkspace) {
+	constructor(private readonly _workspace: SimulationWorkspace) {}
 
+	async getWorkspaceSymbols(
+		query: string,
+	): Promise<vscode.SymbolInformation[]> {
+		return (
+			this._workspace.workspaceSymbols?.filter((s) =>
+				s.name.includes(query),
+			) ?? []
+		);
 	}
-
-	async getWorkspaceSymbols(query: string): Promise<vscode.SymbolInformation[]> {
-		return this._workspace.workspaceSymbols?.filter(s => s.name.includes(query)) ?? [];
-	}
-	async getDefinitions(uri: vscode.Uri, position: vscode.Position): Promise<(vscode.Location | vscode.LocationLink)[]> {
+	async getDefinitions(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<(vscode.Location | vscode.LocationLink)[]> {
 		throw new Error('Method not implemented.');
 	}
-	async getImplementations(uri: vscode.Uri, position: vscode.Position): Promise<(vscode.Location | vscode.LocationLink)[]> {
+	async getImplementations(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<(vscode.Location | vscode.LocationLink)[]> {
 		throw new Error('Method not implemented.');
 	}
-	async getReferences(uri: vscode.Uri, position: vscode.Position): Promise<vscode.Location[]> {
+	async getReferences(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<vscode.Location[]> {
 		throw new Error('Method not implemented.');
 	}
-	async getDocumentSymbols(uri: vscode.Uri): Promise<vscode.DocumentSymbol[]> {
+	async getDocumentSymbols(
+		uri: vscode.Uri,
+	): Promise<vscode.DocumentSymbol[]> {
 		throw new Error('Method not implemented.');
 	}
 	getDiagnostics(uri: vscode.Uri): vscode.Diagnostic[] {

@@ -91,7 +91,10 @@ export interface WorkingDirectoryContext {
 }
 
 /** Reason why session creation failed. */
-export type CreateSessionFailureReason = 'policy_blocked' | 'rate_limited' | 'error';
+export type CreateSessionFailureReason =
+	| 'policy_blocked'
+	| 'rate_limited'
+	| 'error';
 
 /** Result of attempting to create a cloud session. */
 export type CreateSessionResult =

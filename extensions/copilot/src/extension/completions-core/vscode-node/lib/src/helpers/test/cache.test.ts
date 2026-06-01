@@ -14,7 +14,11 @@ suite('LRUCacheMap', function () {
 		cache.set('c', 3);
 		assert.equal(cache.get('b'), 2);
 		assert.equal(cache.get('c'), 3);
-		assert.equal(cache.get('a'), undefined, 'a should have been removed from the cache');
+		assert.equal(
+			cache.get('a'),
+			undefined,
+			'a should have been removed from the cache',
+		);
 		assert.equal(cache.size, 2);
 	});
 
@@ -36,8 +40,16 @@ suite('LRUCacheMap', function () {
 		assert.deepEqual([...cache.keys()], ['a', 'c']);
 		assert.deepEqual([...cache.values()], [1, 3]);
 		assert.ok(!cache.has('b')); // b should have been removed from the cache
-		assert.equal(cache.get('b'), undefined, 'b should have been removed from the cache');
-		assert.equal(cache.get('z'), undefined, 'z was never added to the cache');
+		assert.equal(
+			cache.get('b'),
+			undefined,
+			'b should have been removed from the cache',
+		);
+		assert.equal(
+			cache.get('z'),
+			undefined,
+			'z was never added to the cache',
+		);
 		assert.equal(cache.size, 2);
 	});
 

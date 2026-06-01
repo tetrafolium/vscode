@@ -22,7 +22,10 @@ import { IFolderRepositoryManager } from '../../../chatSessions/common/folderRep
  */
 export function computeFolderSlug(folderUri: URI): string {
 	return folderUri.path
-		.replace(/^\/([a-z]):/i, (_, driveLetter: string) => driveLetter.toUpperCase() + '-')
+		.replace(
+			/^\/([a-z]):/i,
+			(_, driveLetter: string) => driveLetter.toUpperCase() + '-',
+		)
 		.replace(/[\/ .]/g, '-');
 }
 
@@ -45,18 +48,24 @@ export interface ProjectFolder {
  */
 export async function getProjectFolders(
 	workspace: IWorkspaceService,
-	folderRepositoryManager: IFolderRepositoryManager
+	folderRepositoryManager: IFolderRepositoryManager,
 ): Promise<ProjectFolder[]> {
 	const folders = workspace.getWorkspaceFolders();
 
 	if (folders.length > 0) {
-		return folders.map(folder => ({ slug: computeFolderSlug(folder), folderUri: folder }));
+		return folders.map((folder) => ({
+			slug: computeFolderSlug(folder),
+			folderUri: folder,
+		}));
 	}
 
 	// Empty workspace: use all known folders from the folder repository manager
 	const mruEntries = await folderRepositoryManager.getFolderMRU();
 	if (mruEntries.length > 0) {
-		return mruEntries.map(entry => ({ slug: computeFolderSlug(entry.folder), folderUri: entry.folder }));
+		return mruEntries.map((entry) => ({
+			slug: computeFolderSlug(entry.folder),
+			folderUri: entry.folder,
+		}));
 	}
 
 	return [];

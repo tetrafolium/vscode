@@ -4,11 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, test } from 'vitest';
-import { ConfigKey, IConfigurationService } from '../../../configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../configuration/common/configurationService';
 import { DefaultsOnlyConfigurationService } from '../../../configuration/common/defaultsOnlyConfigurationService';
 import { InMemoryConfigurationService } from '../../../configuration/test/common/inMemoryConfigurationService';
 import type { IChatEndpoint } from '../../../networking/common/networking';
-import { getModelCapabilityOverride, modelSupportsContextEditing, modelSupportsPDFDocuments, modelSupportsToolSearch } from '../../common/chatModelCapabilities';
+import {
+	getModelCapabilityOverride,
+	modelSupportsContextEditing,
+	modelSupportsPDFDocuments,
+	modelSupportsToolSearch,
+} from '../../common/chatModelCapabilities';
 
 function fakeModel(family: string, model: string = family) {
 	return { family, model } as unknown as IChatEndpoint;
@@ -16,14 +24,22 @@ function fakeModel(family: string, model: string = family) {
 
 describe('modelSupportsPDFDocuments', () => {
 	test('returns true for claude family', () => {
-		expect(modelSupportsPDFDocuments(fakeModel('claude-3.5-sonnet'))).toBe(true);
-		expect(modelSupportsPDFDocuments(fakeModel('claude-3-opus'))).toBe(true);
-		expect(modelSupportsPDFDocuments(fakeModel('claude-4-sonnet'))).toBe(true);
+		expect(modelSupportsPDFDocuments(fakeModel('claude-3.5-sonnet'))).toBe(
+			true,
+		);
+		expect(modelSupportsPDFDocuments(fakeModel('claude-3-opus'))).toBe(
+			true,
+		);
+		expect(modelSupportsPDFDocuments(fakeModel('claude-4-sonnet'))).toBe(
+			true,
+		);
 	});
 
 	test('returns true for Anthropic family', () => {
 		expect(modelSupportsPDFDocuments(fakeModel('Anthropic'))).toBe(true);
-		expect(modelSupportsPDFDocuments(fakeModel('Anthropic-custom'))).toBe(true);
+		expect(modelSupportsPDFDocuments(fakeModel('Anthropic-custom'))).toBe(
+			true,
+		);
 	});
 
 	test('returns true for gpt-5 plus families', () => {
@@ -36,7 +52,9 @@ describe('modelSupportsPDFDocuments', () => {
 	});
 
 	test('returns false for other families', () => {
-		expect(modelSupportsPDFDocuments(fakeModel('gemini-2.0-flash'))).toBe(false);
+		expect(modelSupportsPDFDocuments(fakeModel('gemini-2.0-flash'))).toBe(
+			false,
+		);
 		expect(modelSupportsPDFDocuments(fakeModel('o4-mini'))).toBe(false);
 	});
 });
@@ -45,7 +63,9 @@ describe('modelSupportsToolSearch', () => {
 	test('supports Claude Sonnet/Opus 4.5 and up', () => {
 		expect(modelSupportsToolSearch('claude-sonnet-4-5')).toBe(true);
 		expect(modelSupportsToolSearch('claude-sonnet-4.5')).toBe(true);
-		expect(modelSupportsToolSearch('claude-sonnet-4-5-20250929')).toBe(true);
+		expect(modelSupportsToolSearch('claude-sonnet-4-5-20250929')).toBe(
+			true,
+		);
 		expect(modelSupportsToolSearch('claude-sonnet-4-6')).toBe(true);
 		expect(modelSupportsToolSearch('claude-sonnet-4.6')).toBe(true);
 		expect(modelSupportsToolSearch('claude-opus-4-5')).toBe(true);
@@ -70,7 +90,9 @@ describe('modelSupportsToolSearch', () => {
 
 	test('rejects non-Sonnet/Opus Claude families', () => {
 		expect(modelSupportsToolSearch('claude-haiku-4-5')).toBe(false);
-		expect(modelSupportsToolSearch('claude-3-5-sonnet-20241022')).toBe(false);
+		expect(modelSupportsToolSearch('claude-3-5-sonnet-20241022')).toBe(
+			false,
+		);
 		expect(modelSupportsToolSearch('claude-3-opus')).toBe(false);
 	});
 
@@ -95,10 +117,19 @@ describe('modelSupportsToolSearch', () => {
 	test('matches via endpoint.family when the model id is unknown', () => {
 		// An unknown preview id whose family has been aliased to a supported production family.
 		expect({
-			'preview-id + family=claude-opus-4.7': modelSupportsToolSearch(fakeModel('claude-opus-4.7', 'preview-anthropic')),
-			'preview-id + family=claude-sonnet-4.6': modelSupportsToolSearch(fakeModel('claude-sonnet-4.6', 'preview-sonnet-internal')),
-			'preview-id + family=claude-opus-4 (pre-4.5)': modelSupportsToolSearch(fakeModel('claude-opus-4', 'preview-opus-old')),
-			'known id + family=unknown': modelSupportsToolSearch(fakeModel('mystery-family', 'claude-opus-4.7')),
+			'preview-id + family=claude-opus-4.7': modelSupportsToolSearch(
+				fakeModel('claude-opus-4.7', 'preview-anthropic'),
+			),
+			'preview-id + family=claude-sonnet-4.6': modelSupportsToolSearch(
+				fakeModel('claude-sonnet-4.6', 'preview-sonnet-internal'),
+			),
+			'preview-id + family=claude-opus-4 (pre-4.5)':
+				modelSupportsToolSearch(
+					fakeModel('claude-opus-4', 'preview-opus-old'),
+				),
+			'known id + family=unknown': modelSupportsToolSearch(
+				fakeModel('mystery-family', 'claude-opus-4.7'),
+			),
 		}).toEqual({
 			'preview-id + family=claude-opus-4.7': true,
 			'preview-id + family=claude-sonnet-4.6': true,
@@ -112,9 +143,11 @@ describe('modelSupportsContextEditing', () => {
 	test('matches Claude id strings', () => {
 		expect({
 			'claude-opus-4.6': modelSupportsContextEditing('claude-opus-4.6'),
-			'claude-sonnet-4.5': modelSupportsContextEditing('claude-sonnet-4.5'),
+			'claude-sonnet-4.5':
+				modelSupportsContextEditing('claude-sonnet-4.5'),
 			'claude-haiku-4-5': modelSupportsContextEditing('claude-haiku-4-5'),
-			'claude-opus-4.6-1m': modelSupportsContextEditing('claude-opus-4.6-1m'),
+			'claude-opus-4.6-1m':
+				modelSupportsContextEditing('claude-opus-4.6-1m'),
 			'gpt-5': modelSupportsContextEditing('gpt-5'),
 		}).toEqual({
 			'claude-opus-4.6': true,
@@ -127,9 +160,15 @@ describe('modelSupportsContextEditing', () => {
 
 	test('matches via endpoint.family when the model id is unknown', () => {
 		expect({
-			'preview-id + family=claude-opus-4.6': modelSupportsContextEditing(fakeModel('claude-opus-4.6', 'preview-anthropic')),
-			'preview-id + family=claude-haiku-4-5': modelSupportsContextEditing(fakeModel('claude-haiku-4-5', 'preview-haiku-internal')),
-			'preview-id + family=mystery': modelSupportsContextEditing(fakeModel('mystery-family', 'preview-anything')),
+			'preview-id + family=claude-opus-4.6': modelSupportsContextEditing(
+				fakeModel('claude-opus-4.6', 'preview-anthropic'),
+			),
+			'preview-id + family=claude-haiku-4-5': modelSupportsContextEditing(
+				fakeModel('claude-haiku-4-5', 'preview-haiku-internal'),
+			),
+			'preview-id + family=mystery': modelSupportsContextEditing(
+				fakeModel('mystery-family', 'preview-anything'),
+			),
 		}).toEqual({
 			'preview-id + family=claude-opus-4.6': true,
 			'preview-id + family=claude-haiku-4-5': true,
@@ -140,8 +179,13 @@ describe('modelSupportsContextEditing', () => {
 
 describe('getModelCapabilityOverride', () => {
 	function makeConfig(map: Record<string, unknown>): IConfigurationService {
-		const service = new InMemoryConfigurationService(new DefaultsOnlyConfigurationService());
-		service.setConfig(ConfigKey.Advanced.ModelCapabilityOverrides, map as never);
+		const service = new InMemoryConfigurationService(
+			new DefaultsOnlyConfigurationService(),
+		);
+		service.setConfig(
+			ConfigKey.Advanced.ModelCapabilityOverrides,
+			map as never,
+		);
 		return service;
 	}
 
@@ -149,9 +193,11 @@ describe('getModelCapabilityOverride', () => {
 		const config = makeConfig({
 			'preview-anthropic': { family: 'claude-opus-4.7' },
 		});
-		expect(getModelCapabilityOverride('preview-anthropic', config)).toEqual({
-			family: 'claude-opus-4.7',
-		});
+		expect(getModelCapabilityOverride('preview-anthropic', config)).toEqual(
+			{
+				family: 'claude-opus-4.7',
+			},
+		);
 	});
 
 	test('returns undefined for unknown model ids and when nothing is configured', () => {
@@ -160,7 +206,10 @@ describe('getModelCapabilityOverride', () => {
 		});
 		expect({
 			unknown: getModelCapabilityOverride('something-else', config),
-			emptyMap: getModelCapabilityOverride('preview-anthropic', makeConfig({})),
+			emptyMap: getModelCapabilityOverride(
+				'preview-anthropic',
+				makeConfig({}),
+			),
 		}).toEqual({
 			unknown: undefined,
 			emptyMap: undefined,

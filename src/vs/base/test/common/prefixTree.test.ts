@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WellDefinedPrefixTree } from '../../common/prefixTree.js';
-import assert from 'assert';
-import { ensureNoDisposablesAreLeakedInTestSuite } from './utils.js';
+import { WellDefinedPrefixTree } from "../../common/prefixTree.js";
+import assert from "assert";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "./utils.js";
 
-suite('WellDefinedPrefixTree', () => {
+suite("WellDefinedPrefixTree", () => {
 	let tree: WellDefinedPrefixTree<number>;
 
 	ensureNoDisposablesAreLeakedInTestSuite();
@@ -16,51 +16,50 @@ suite('WellDefinedPrefixTree', () => {
 		tree = new WellDefinedPrefixTree<number>();
 	});
 
-	test('find', () => {
-		const key1 = ['foo', 'bar'];
-		const key2 = ['foo', 'baz'];
+	test("find", () => {
+		const key1 = ["foo", "bar"];
+		const key2 = ["foo", "baz"];
 		tree.insert(key1, 42);
 		tree.insert(key2, 43);
 		assert.strictEqual(tree.find(key1), 42);
 		assert.strictEqual(tree.find(key2), 43);
-		assert.strictEqual(tree.find(['foo', 'baz', 'bop']), undefined);
-		assert.strictEqual(tree.find(['foo']), undefined);
+		assert.strictEqual(tree.find(["foo", "baz", "bop"]), undefined);
+		assert.strictEqual(tree.find(["foo"]), undefined);
 	});
 
-	test('hasParentOfKey', () => {
-		const key = ['foo', 'bar'];
+	test("hasParentOfKey", () => {
+		const key = ["foo", "bar"];
 		tree.insert(key, 42);
 
-		assert.strictEqual(tree.hasKeyOrParent(['foo', 'bar', 'baz']), true);
-		assert.strictEqual(tree.hasKeyOrParent(['foo', 'bar']), true);
-		assert.strictEqual(tree.hasKeyOrParent(['foo']), false);
-		assert.strictEqual(tree.hasKeyOrParent(['baz']), false);
+		assert.strictEqual(tree.hasKeyOrParent(["foo", "bar", "baz"]), true);
+		assert.strictEqual(tree.hasKeyOrParent(["foo", "bar"]), true);
+		assert.strictEqual(tree.hasKeyOrParent(["foo"]), false);
+		assert.strictEqual(tree.hasKeyOrParent(["baz"]), false);
 	});
 
-
-	test('hasKeyOrChildren', () => {
-		const key = ['foo', 'bar'];
+	test("hasKeyOrChildren", () => {
+		const key = ["foo", "bar"];
 		tree.insert(key, 42);
 
 		assert.strictEqual(tree.hasKeyOrChildren([]), true);
-		assert.strictEqual(tree.hasKeyOrChildren(['foo']), true);
-		assert.strictEqual(tree.hasKeyOrChildren(['foo', 'bar']), true);
-		assert.strictEqual(tree.hasKeyOrChildren(['foo', 'bar', 'baz']), false);
+		assert.strictEqual(tree.hasKeyOrChildren(["foo"]), true);
+		assert.strictEqual(tree.hasKeyOrChildren(["foo", "bar"]), true);
+		assert.strictEqual(tree.hasKeyOrChildren(["foo", "bar", "baz"]), false);
 	});
 
-	test('hasKey', () => {
-		const key = ['foo', 'bar'];
+	test("hasKey", () => {
+		const key = ["foo", "bar"];
 		tree.insert(key, 42);
 
 		assert.strictEqual(tree.hasKey(key), true);
-		assert.strictEqual(tree.hasKey(['foo']), false);
-		assert.strictEqual(tree.hasKey(['baz']), false);
-		assert.strictEqual(tree.hasKey(['foo', 'bar', 'baz']), false);
+		assert.strictEqual(tree.hasKey(["foo"]), false);
+		assert.strictEqual(tree.hasKey(["baz"]), false);
+		assert.strictEqual(tree.hasKey(["foo", "bar", "baz"]), false);
 	});
 
-	test('size', () => {
-		const key1 = ['foo', 'bar'];
-		const key2 = ['foo', 'baz'];
+	test("size", () => {
+		const key1 = ["foo", "bar"];
+		const key2 = ["foo", "baz"];
 		assert.strictEqual(tree.size, 0);
 		tree.insert(key1, 42);
 		assert.strictEqual(tree.size, 1);
@@ -70,9 +69,9 @@ suite('WellDefinedPrefixTree', () => {
 		assert.strictEqual(tree.size, 2);
 	});
 
-	test('mutate', () => {
-		const key1 = ['foo', 'bar'];
-		const key2 = ['foo', 'baz'];
+	test("mutate", () => {
+		const key1 = ["foo", "bar"];
+		const key2 = ["foo", "baz"];
 		tree.insert(key1, 42);
 		tree.insert(key2, 43);
 		tree.mutate(key1, (value) => {
@@ -83,9 +82,9 @@ suite('WellDefinedPrefixTree', () => {
 		assert.strictEqual(tree.find(key2), 43);
 	});
 
-	test('delete', () => {
-		const key1 = ['foo', 'bar'];
-		const key2 = ['foo', 'baz'];
+	test("delete", () => {
+		const key1 = ["foo", "bar"];
+		const key2 = ["foo", "baz"];
 		tree.insert(key1, 42);
 		tree.insert(key2, 43);
 		assert.strictEqual(tree.size, 2);
@@ -104,9 +103,9 @@ suite('WellDefinedPrefixTree', () => {
 		assert.strictEqual(tree.size, 0);
 	});
 
-	test('delete child', () => {
-		const key1 = ['foo', 'bar'];
-		const key2 = ['foo', 'bar', 'baz'];
+	test("delete child", () => {
+		const key1 = ["foo", "bar"];
+		const key2 = ["foo", "bar", "baz"];
 		tree.insert(key1, 42);
 		tree.insert(key2, 43);
 		assert.strictEqual(tree.size, 2);
@@ -117,9 +116,9 @@ suite('WellDefinedPrefixTree', () => {
 		assert.strictEqual(tree.find(key2), undefined);
 	});
 
-	test('delete noops if deleting parent', () => {
-		const key1 = ['foo', 'bar'];
-		const key2 = ['foo', 'bar', 'baz'];
+	test("delete noops if deleting parent", () => {
+		const key1 = ["foo", "bar"];
+		const key2 = ["foo", "bar", "baz"];
 		tree.insert(key2, 43);
 		assert.strictEqual(tree.size, 1);
 
@@ -129,21 +128,20 @@ suite('WellDefinedPrefixTree', () => {
 		assert.strictEqual(tree.find(key1), undefined);
 	});
 
-	test('values', () => {
-		const key1 = ['foo', 'bar'];
-		const key2 = ['foo', 'baz'];
+	test("values", () => {
+		const key1 = ["foo", "bar"];
+		const key2 = ["foo", "baz"];
 		tree.insert(key1, 42);
 		tree.insert(key2, 43);
 
 		assert.deepStrictEqual([...tree.values()], [43, 42]);
 	});
 
-
-	test('delete recursive', () => {
-		const key1 = ['foo', 'bar'];
-		const key2 = ['foo', 'bar', 'baz'];
-		const key3 = ['foo', 'bar', 'baz2', 'baz3'];
-		const key4 = ['foo', 'bar2'];
+	test("delete recursive", () => {
+		const key1 = ["foo", "bar"];
+		const key2 = ["foo", "bar", "baz"];
+		const key3 = ["foo", "bar", "baz2", "baz3"];
+		const key4 = ["foo", "bar2"];
 		tree.insert(key1, 42);
 		tree.insert(key2, 43);
 		tree.insert(key3, 44);
@@ -160,7 +158,7 @@ suite('WellDefinedPrefixTree', () => {
 		assert.strictEqual(tree.size, 0);
 	});
 
-	test('insert and delete root', () => {
+	test("insert and delete root", () => {
 		assert.strictEqual(tree.size, 0);
 		tree.insert([], 1234);
 		assert.strictEqual(tree.size, 1);
@@ -173,10 +171,10 @@ suite('WellDefinedPrefixTree', () => {
 		assert.strictEqual(tree.size, 0);
 	});
 
-	test('insert and deleteRecursive root', () => {
+	test("insert and deleteRecursive root", () => {
 		assert.strictEqual(tree.size, 0);
 		tree.insert([], 1234);
-		tree.insert(['a'], 4567);
+		tree.insert(["a"], 4567);
 		assert.strictEqual(tree.size, 2);
 		assert.strictEqual(tree.find([]), 1234);
 		assert.deepStrictEqual([...tree.deleteRecursive([])], [1234, 4567]);

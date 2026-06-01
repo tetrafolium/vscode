@@ -9,7 +9,11 @@ import { resolveOTelConfig } from '../otelConfig';
 import { SpanStatusCode } from '../otelService';
 
 describe('NoopOTelService', () => {
-	const config = resolveOTelConfig({ env: {}, extensionVersion: '1.0.0', sessionId: 'test' });
+	const config = resolveOTelConfig({
+		env: {},
+		extensionVersion: '1.0.0',
+		sessionId: 'test',
+	});
 	const service = new NoopOTelService(config);
 
 	it('has disabled config', () => {
@@ -17,7 +21,9 @@ describe('NoopOTelService', () => {
 	});
 
 	it('startSpan returns a noop handle', () => {
-		const span = service.startSpan('test-span', { attributes: { foo: 'bar' } });
+		const span = service.startSpan('test-span', {
+			attributes: { foo: 'bar' },
+		});
 		// All methods should be callable without error
 		span.setAttribute('key', 'value');
 		span.setAttributes({ a: 1, b: 'c' });
@@ -28,10 +34,14 @@ describe('NoopOTelService', () => {
 	});
 
 	it('startActiveSpan runs the function and returns its result', async () => {
-		const result = await service.startActiveSpan('test', { attributes: {} }, async (span) => {
-			span.setAttribute('key', 'val');
-			return 42;
-		});
+		const result = await service.startActiveSpan(
+			'test',
+			{ attributes: {} },
+			async (span) => {
+				span.setAttribute('key', 'val');
+				return 42;
+			},
+		);
 		expect(result).toBe(42);
 	});
 

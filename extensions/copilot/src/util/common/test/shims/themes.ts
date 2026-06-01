@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 export class ThemeIcon {
-
 	static File: ThemeIcon;
 	static Folder: ThemeIcon;
 
@@ -23,7 +22,6 @@ export class ThemeIcon {
 		return true;
 	}
 }
-
 
 export class ThemeColor {
 	id: string;

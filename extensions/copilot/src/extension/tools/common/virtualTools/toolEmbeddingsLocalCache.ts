@@ -4,13 +4,26 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { LanguageModelToolInformation } from 'vscode';
-import { Embedding, EmbeddingType } from '../../../../platform/embeddings/common/embeddingsComputer';
-import { packEmbedding, unpackEmbedding } from '../../../../platform/embeddings/common/embeddingsStorage';
+import {
+	Embedding,
+	EmbeddingType,
+} from '../../../../platform/embeddings/common/embeddingsComputer';
+import {
+	packEmbedding,
+	unpackEmbedding,
+} from '../../../../platform/embeddings/common/embeddingsStorage';
 import { IVSCodeExtensionContext } from '../../../../platform/extContext/common/extensionContext';
 import { IFileSystemService } from '../../../../platform/filesystem/common/fileSystemService';
-import { readVariableLengthQuantity, writeVariableLengthQuantity } from '../../../../util/common/variableLengthQuantity';
+import {
+	readVariableLengthQuantity,
+	writeVariableLengthQuantity,
+} from '../../../../util/common/variableLengthQuantity';
 import { RunOnceScheduler } from '../../../../util/vs/base/common/async';
-import { VSBuffer, decodeHex, encodeHex } from '../../../../util/vs/base/common/buffer';
+import {
+	VSBuffer,
+	decodeHex,
+	encodeHex,
+} from '../../../../util/vs/base/common/buffer';
 import { StringSHA1 } from '../../../../util/vs/base/common/hash';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
 import { LRUCache } from '../../../../util/vs/base/common/map';
@@ -32,26 +45,40 @@ const SHA1_DIGEST_LENGTH = 20; // SHA-1 produces 20 bytes
  * ...
  * ```
  */
-export class ToolEmbeddingLocalCache extends Disposable implements IToolEmbeddingsCache {
+export class ToolEmbeddingLocalCache
+	extends Disposable
+	implements IToolEmbeddingsCache
+{
 	private readonly _storageUri: URI;
 	private readonly _lru = new LRUCache<string, Embedding>(1000);
-	private readonly _toolHashes = new WeakMap<LanguageModelToolInformation, string>();
-	private readonly _storageScheduler = this._register(new RunOnceScheduler(() => this.save(), 5000));
+	private readonly _toolHashes = new WeakMap<
+		LanguageModelToolInformation,
+		string
+	>();
+	private readonly _storageScheduler = this._register(
+		new RunOnceScheduler(() => this.save(), 5000),
+	);
 	private readonly _embeddingType: EmbeddingType;
 
 	constructor(
 		embeddingType: EmbeddingType,
-		@IFileSystemService private readonly _fileSystemService: IFileSystemService,
+		@IFileSystemService
+		private readonly _fileSystemService: IFileSystemService,
 		@IVSCodeExtensionContext _context: IVSCodeExtensionContext,
 	) {
 		super();
 		this._embeddingType = embeddingType;
-		this._storageUri = URI.joinPath(_context.globalStorageUri, EMBEDDING_CACHE_FILE_NAME);
+		this._storageUri = URI.joinPath(
+			_context.globalStorageUri,
+			EMBEDDING_CACHE_FILE_NAME,
+		);
 	}
 
 	public async initialize(): Promise<void> {
 		try {
-			const buffer = VSBuffer.wrap(await this._fileSystemService.readFile(this._storageUri, true));
+			const buffer = VSBuffer.wrap(
+				await this._fileSystemService.readFile(this._storageUri, true),
+			);
 			let offset = 0;
 
 			// Read version
@@ -68,8 +95,12 @@ export class ToolEmbeddingLocalCache extends Disposable implements IToolEmbeddin
 
 			const typeBytes = buffer.slice(offset, offset + typeLength);
 			offset += typeLength;
-			const storedEmbeddingTypeId = new TextDecoder().decode(typeBytes.buffer);
-			const storedEmbeddingType = new EmbeddingType(storedEmbeddingTypeId);
+			const storedEmbeddingTypeId = new TextDecoder().decode(
+				typeBytes.buffer,
+			);
+			const storedEmbeddingType = new EmbeddingType(
+				storedEmbeddingTypeId,
+			);
 
 			// If stored type doesn't match current type, discard the cache
 			if (!storedEmbeddingType.equals(this._embeddingType)) {
@@ -77,27 +108,42 @@ export class ToolEmbeddingLocalCache extends Disposable implements IToolEmbeddin
 			}
 
 			// Read number of entries
-			const entriesCountResult = readVariableLengthQuantity(buffer, offset);
+			const entriesCountResult = readVariableLengthQuantity(
+				buffer,
+				offset,
+			);
 			offset += entriesCountResult.consumed;
 			const entriesCount = entriesCountResult.value;
 
 			// Read each entry
 			for (let i = 0; i < entriesCount; i++) {
 				// Read key (fixed length SHA-1 digest)
-				const keyBytes = buffer.slice(offset, offset + SHA1_DIGEST_LENGTH);
+				const keyBytes = buffer.slice(
+					offset,
+					offset + SHA1_DIGEST_LENGTH,
+				);
 				offset += SHA1_DIGEST_LENGTH;
 				const key = encodeHex(keyBytes);
 
 				// Read embedding data length and data
-				const embeddingLengthResult = readVariableLengthQuantity(buffer, offset);
+				const embeddingLengthResult = readVariableLengthQuantity(
+					buffer,
+					offset,
+				);
 				offset += embeddingLengthResult.consumed;
 				const embeddingLength = embeddingLengthResult.value;
 
-				const embeddingBytes = buffer.slice(offset, offset + embeddingLength);
+				const embeddingBytes = buffer.slice(
+					offset,
+					offset + embeddingLength,
+				);
 				offset += embeddingLength;
 
 				// Unpack embedding and store in cache
-				const embedding = unpackEmbedding(this._embeddingType, new Uint8Array(embeddingBytes.buffer));
+				const embedding = unpackEmbedding(
+					this._embeddingType,
+					new Uint8Array(embeddingBytes.buffer),
+				);
 				this._lru.set(key, embedding);
 			}
 		} catch {
@@ -164,7 +210,9 @@ export class ToolEmbeddingLocalCache extends Disposable implements IToolEmbeddin
 
 		// Concatenate all buffers and write to file
 		const totalBuffer = VSBuffer.concat(buffers);
-		await this._fileSystemService.writeFile(this._storageUri, totalBuffer.buffer);
+		await this._fileSystemService.writeFile(
+			this._storageUri,
+			totalBuffer.buffer,
+		);
 	}
 }
-

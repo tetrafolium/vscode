@@ -5,7 +5,10 @@
 import { IChatMLFetcher } from '../../../platform/chat/common/chatMLFetcher';
 import { IConfigurationService } from '../../../platform/configuration/common/configurationService';
 import { IDomainService } from '../../../platform/endpoint/common/domainService';
-import { IChatModelInformation, ModelSupportedEndpoint } from '../../../platform/endpoint/common/endpointProvider';
+import {
+	IChatModelInformation,
+	ModelSupportedEndpoint,
+} from '../../../platform/endpoint/common/endpointProvider';
 import { ILogService } from '../../../platform/log/common/logService';
 import { IFetcherService } from '../../../platform/networking/common/fetcherService';
 
@@ -15,7 +18,11 @@ import { ITokenizerProvider } from '../../../platform/tokenizer/node/tokenizer';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { BYOKModelCapabilities } from '../common/byokProvider';
 import { OpenAIEndpoint } from '../node/openAIEndpoint';
-import { AbstractOpenAICompatibleLMProvider, LanguageModelChatConfiguration, OpenAICompatibleLanguageModelChatInformation } from './abstractLanguageModelChatProvider';
+import {
+	AbstractOpenAICompatibleLMProvider,
+	LanguageModelChatConfiguration,
+	OpenAICompatibleLanguageModelChatInformation,
+} from './abstractLanguageModelChatProvider';
 import { IBYOKStorageService } from './byokStorageService';
 
 interface OpenRouterModelData {
@@ -31,7 +38,6 @@ interface OpenRouterModelData {
 }
 
 export class OpenRouterLMProvider extends AbstractOpenAICompatibleLMProvider {
-
 	public static readonly providerName = 'OpenRouter';
 	public static readonly providerId = this.providerName.toLowerCase();
 
@@ -41,7 +47,7 @@ export class OpenRouterLMProvider extends AbstractOpenAICompatibleLMProvider {
 		@ILogService logService: ILogService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IExperimentationService expService: IExperimentationService
+		@IExperimentationService expService: IExperimentationService,
 	) {
 		super(
 			OpenRouterLMProvider.providerId,
@@ -52,7 +58,7 @@ export class OpenRouterLMProvider extends AbstractOpenAICompatibleLMProvider {
 			logService,
 			instantiationService,
 			configurationService,
-			expService
+			expService,
 		);
 	}
 
@@ -64,26 +70,37 @@ export class OpenRouterLMProvider extends AbstractOpenAICompatibleLMProvider {
 		return `${modelsBaseUrl}/models?supported_parameters=tools`;
 	}
 
-	protected override resolveModelCapabilities(modelData: unknown): BYOKModelCapabilities | undefined {
+	protected override resolveModelCapabilities(
+		modelData: unknown,
+	): BYOKModelCapabilities | undefined {
 		const openRouterModelData = modelData as OpenRouterModelData;
-		const supportedParameters = openRouterModelData.supported_parameters ?? [];
+		const supportedParameters =
+			openRouterModelData.supported_parameters ?? [];
 		// OpenRouter reports reasoning support per model via `supported_parameters`. The unified `reasoning` parameter and
 		// the OpenAI-style `reasoning_effort` alias both indicate the model accepts an effort level.
 		// See https://openrouter.ai/docs/use-cases/reasoning-tokens
-		const supportsReasoningEffort = supportedParameters.includes('reasoning') || supportedParameters.includes('reasoning_effort')
-			? ['low', 'medium', 'high']
-			: undefined;
+		const supportsReasoningEffort =
+			supportedParameters.includes('reasoning') ||
+			supportedParameters.includes('reasoning_effort')
+				? ['low', 'medium', 'high']
+				: undefined;
 		return {
 			name: openRouterModelData.name,
 			toolCalling: supportedParameters.includes('tools'),
-			vision: openRouterModelData.architecture?.input_modalities?.includes('image') ?? false,
-			maxInputTokens: openRouterModelData.top_provider.context_length - 16000,
+			vision:
+				openRouterModelData.architecture?.input_modalities?.includes(
+					'image',
+				) ?? false,
+			maxInputTokens:
+				openRouterModelData.top_provider.context_length - 16000,
 			maxOutputTokens: 16000,
-			supportsReasoningEffort
+			supportsReasoningEffort,
 		};
 	}
 
-	protected override async createOpenAIEndPoint(model: OpenAICompatibleLanguageModelChatInformation<LanguageModelChatConfiguration>): Promise<OpenAIEndpoint> {
+	protected override async createOpenAIEndPoint(
+		model: OpenAICompatibleLanguageModelChatInformation<LanguageModelChatConfiguration>,
+	): Promise<OpenAIEndpoint> {
 		const modelInfo = this.getModelInfo(model.id, model.url);
 		const isAnthropic = isAnthropicModelId(model.id);
 
@@ -98,7 +115,12 @@ export class OpenRouterLMProvider extends AbstractOpenAICompatibleLMProvider {
 			? `${model.url}/messages`
 			: `${model.url}/chat/completions`;
 
-		return this._instantiationService.createInstance(OpenRouterEndpoint, modelInfo, model.configuration?.apiKey ?? '', url);
+		return this._instantiationService.createInstance(
+			OpenRouterEndpoint,
+			modelInfo,
+			model.configuration?.apiKey ?? '',
+			url,
+		);
 	}
 }
 
@@ -132,7 +154,19 @@ export class OpenRouterEndpoint extends OpenAIEndpoint {
 		@IChatWebSocketManager chatWebSocketService: IChatWebSocketManager,
 		@ILogService logService: ILogService,
 	) {
-		super(modelMetadata, apiKey, modelUrl, domainService, chatMLFetcher, tokenizerProvider, instantiationService, configurationService, expService, chatWebSocketService, logService);
+		super(
+			modelMetadata,
+			apiKey,
+			modelUrl,
+			domainService,
+			chatMLFetcher,
+			tokenizerProvider,
+			instantiationService,
+			configurationService,
+			expService,
+			chatWebSocketService,
+			logService,
+		);
 	}
 
 	/**
@@ -142,7 +176,9 @@ export class OpenRouterEndpoint extends OpenAIEndpoint {
 	 * correctly by {@link OpenRouterLMProvider.createOpenAIEndPoint}.
 	 */
 	protected override get useMessagesApi(): boolean {
-		return !!this.modelMetadata.supported_endpoints?.includes(ModelSupportedEndpoint.Messages);
+		return !!this.modelMetadata.supported_endpoints?.includes(
+			ModelSupportedEndpoint.Messages,
+		);
 	}
 
 	public override getExtraHeaders(): Record<string, string> {

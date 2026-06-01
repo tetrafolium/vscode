@@ -5,7 +5,10 @@
 
 import assert from 'assert';
 import Sinon from 'sinon';
-import { CancellationToken, CancellationTokenSource } from 'vscode-languageserver-protocol';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from 'vscode-languageserver-protocol';
 import { TestingServiceCollection } from '../../../../../../../platform/test/node/services';
 import { SyncDescriptor } from '../../../../../../../util/vs/platform/instantiation/common/descriptors';
 import { ServicesAccessor } from '../../../../../../../util/vs/platform/instantiation/common/instantiation';
@@ -17,16 +20,29 @@ import {
 	SupportedContextItem,
 	Trait,
 } from '../../../../types/src/index';
-import { ConfigKey, ICompletionsConfigProvider, InMemoryConfigProvider } from '../../config';
+import {
+	ConfigKey,
+	ICompletionsConfigProvider,
+	InMemoryConfigProvider,
+} from '../../config';
 import { ICompletionsLogTargetService, LogLevel } from '../../logger';
 import { TelemetryWithExp } from '../../telemetry';
 import { createLibTestingContext } from '../../test/context';
 import { TestLogTarget } from '../../test/loggerHelpers';
 import { delay } from '../../util/async';
-import { ICompletionsRuntimeModeService, RuntimeMode } from '../../util/runtimeMode';
-import { ICompletionsContextProviderRegistryService, ResolvedContextItem } from '../contextProviderRegistry';
+import {
+	ICompletionsRuntimeModeService,
+	RuntimeMode,
+} from '../../util/runtimeMode';
+import {
+	ICompletionsContextProviderRegistryService,
+	ResolvedContextItem,
+} from '../contextProviderRegistry';
 import { TraitWithId } from '../contextProviders/contextItemSchemas';
-import { ContextProviderStatistics, ICompletionsContextProviderService } from '../contextProviderStatistics';
+import {
+	ContextProviderStatistics,
+	ICompletionsContextProviderService,
+} from '../contextProviderStatistics';
 import { TestContextProviderStatistics } from '../test/contextProviderStatistics';
 import { ICompletionsFeaturesService } from '../../experiments/featuresService';
 
@@ -68,7 +84,10 @@ suite('ContextProviderRegistry', function () {
 		testLogTarget = new TestLogTarget();
 		serviceCollection.define(ICompletionsLogTargetService, testLogTarget);
 		statistics = new TestContextProviderStatistics();
-		serviceCollection.define(ICompletionsContextProviderService, new ContextProviderStatistics(() => statistics));
+		serviceCollection.define(
+			ICompletionsContextProviderService,
+			new ContextProviderStatistics(() => statistics),
+		);
 		accessor = serviceCollection.createTestingAccessor();
 
 		telemetryData = TelemetryWithExp.createEmptyConfigForTesting();
@@ -121,7 +140,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems, []);
@@ -132,7 +151,8 @@ suite('ContextProviderRegistry', function () {
 			id: 'unmatchedProvider',
 			selector: [{ language: 'typescript' }],
 			resolver: {
-				resolve: () => Promise.resolve([{ name: 'trait', value: 'value' }]),
+				resolve: () =>
+					Promise.resolve([{ name: 'trait', value: 'value' }]),
 			},
 		};
 
@@ -142,7 +162,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems, [
@@ -160,11 +180,17 @@ suite('ContextProviderRegistry', function () {
 		for (const provider of ['enabledProvider', '*']) {
 			test(`enable ${provider} provider(s) via ${method}`, async function () {
 				if (method === 'feature_flag') {
-					telemetryData.filtersAndExp.exp.variables.copilotcontextproviders = provider;
+					telemetryData.filtersAndExp.exp.variables.copilotcontextproviders =
+						provider;
 				} else {
-					telemetryData.filtersAndExp.exp.variables.copilotcontextproviders = '';
-					const configProvider = accessor.get(ICompletionsConfigProvider) as InMemoryConfigProvider;
-					configProvider.setConfig(ConfigKey.ContextProviders, [provider]);
+					telemetryData.filtersAndExp.exp.variables.copilotcontextproviders =
+						'';
+					const configProvider = accessor.get(
+						ICompletionsConfigProvider,
+					) as InMemoryConfigProvider;
+					configProvider.setConfig(ConfigKey.ContextProviders, [
+						provider,
+					]);
 				}
 
 				const notEnabledProvider: ContextProvider<Trait> = {
@@ -203,43 +229,70 @@ suite('ContextProviderRegistry', function () {
 					'1234',
 					'opId',
 					defaultDocumentContext,
-					telemetryData
+					telemetryData,
 				);
 
 				if (provider === '*') {
-					assert.deepStrictEqual(removeResolutionTime(resolvedContextItems), [
-						{
-							providerId: 'notEnabledProvider',
-							matchScore: 1,
-							resolution: 'full',
-							resolutionTimeMs: -1,
-							data: [{ name: 'anothertrait', value: 'anothervalue', id: 'id1', type: 'Trait' }],
-						},
-						{
-							providerId: 'enabledProvider',
-							matchScore: 1,
-							resolution: 'full',
-							resolutionTimeMs: -1,
-							data: [{ name: 'trait', value: 'value', id: 'id2', type: 'Trait' }],
-						},
-					]);
+					assert.deepStrictEqual(
+						removeResolutionTime(resolvedContextItems),
+						[
+							{
+								providerId: 'notEnabledProvider',
+								matchScore: 1,
+								resolution: 'full',
+								resolutionTimeMs: -1,
+								data: [
+									{
+										name: 'anothertrait',
+										value: 'anothervalue',
+										id: 'id1',
+										type: 'Trait',
+									},
+								],
+							},
+							{
+								providerId: 'enabledProvider',
+								matchScore: 1,
+								resolution: 'full',
+								resolutionTimeMs: -1,
+								data: [
+									{
+										name: 'trait',
+										value: 'value',
+										id: 'id2',
+										type: 'Trait',
+									},
+								],
+							},
+						],
+					);
 				} else {
-					assert.deepStrictEqual(removeResolutionTime(resolvedContextItems), [
-						{
-							providerId: 'enabledProvider',
-							matchScore: 1,
-							resolution: 'full',
-							resolutionTimeMs: -1,
-							data: [{ name: 'trait', value: 'value', id: 'id2', type: 'Trait' }],
-						},
-						{
-							providerId: 'notEnabledProvider',
-							matchScore: 0,
-							resolution: 'none',
-							resolutionTimeMs: -1,
-							data: [],
-						},
-					]);
+					assert.deepStrictEqual(
+						removeResolutionTime(resolvedContextItems),
+						[
+							{
+								providerId: 'enabledProvider',
+								matchScore: 1,
+								resolution: 'full',
+								resolutionTimeMs: -1,
+								data: [
+									{
+										name: 'trait',
+										value: 'value',
+										id: 'id2',
+										type: 'Trait',
+									},
+								],
+							},
+							{
+								providerId: 'notEnabledProvider',
+								matchScore: 0,
+								resolution: 'none',
+								resolutionTimeMs: -1,
+								data: [],
+							},
+						],
+					);
 				}
 			});
 		}
@@ -267,7 +320,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 2);
@@ -277,14 +330,28 @@ suite('ContextProviderRegistry', function () {
 				matchScore: 1,
 				resolution: 'full',
 				resolutionTimeMs: -1,
-				data: [{ name: 'trait1', value: 'value1', id: 'id1', type: 'Trait' }],
+				data: [
+					{
+						name: 'trait1',
+						value: 'value1',
+						id: 'id1',
+						type: 'Trait',
+					},
+				],
 			},
 			{
 				providerId: 'anotherTraitProvider',
 				matchScore: 1,
 				resolution: 'full',
 				resolutionTimeMs: -1,
-				data: [{ name: 'anotherTrait1', value: 'anotherValue1', id: 'id2', type: 'Trait' }],
+				data: [
+					{
+						name: 'anotherTrait1',
+						value: 'anotherValue1',
+						id: 'id2',
+						type: 'Trait',
+					},
+				],
 			},
 		]);
 	});
@@ -304,7 +371,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems, [
@@ -335,7 +402,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -363,7 +430,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 2);
@@ -394,7 +461,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -426,7 +493,13 @@ suite('ContextProviderRegistry', function () {
 		const items: TraitWithId[] = [];
 
 		for (const [ix, importance] of importances.entries()) {
-			items.push({ name: `trait${ix}`, value: `value${ix}`, importance, id: `${ix}`, type: 'Trait' });
+			items.push({
+				name: `trait${ix}`,
+				value: `value${ix}`,
+				importance,
+				id: `${ix}`,
+				type: 'Trait',
+			});
 		}
 
 		const traitProviderWithBadId: ContextProvider<Trait> = {
@@ -448,15 +521,15 @@ suite('ContextProviderRegistry', function () {
 				offset: 0,
 				position: { line: 0, character: 0 },
 			},
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
 		const { data } = resolvedContextItems[0];
 
 		assert.deepStrictEqual(
-			data.map(d => d.importance),
-			[50, 0, 100, undefined]
+			data.map((d) => d.importance),
+			[50, 0, 100, undefined],
 		);
 	});
 
@@ -468,8 +541,18 @@ suite('ContextProviderRegistry', function () {
 				resolve: () =>
 					Promise.resolve([
 						'hello' as unknown as TraitWithId,
-						{ name: 'trait1', value: 'value1', id: '1', type: 'Trait' },
-						{ name: 'trait2', value: 'value2', id: '2', type: 'Trait' },
+						{
+							name: 'trait1',
+							value: 'value1',
+							id: '1',
+							type: 'Trait',
+						},
+						{
+							name: 'trait2',
+							value: 'value2',
+							id: '2',
+							type: 'Trait',
+						},
 					]),
 			},
 		};
@@ -485,7 +568,7 @@ suite('ContextProviderRegistry', function () {
 				offset: 0,
 				position: { line: 0, character: 0 },
 			},
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -520,7 +603,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -543,9 +626,16 @@ suite('ContextProviderRegistry', function () {
 
 		// Feature flag doesn't matter in debug mode
 		telemetryData.filtersAndExp.exp.variables.copilotcontextproviders = '';
-		serviceCollectionClone.define(ICompletionsRuntimeModeService, RuntimeMode.fromEnvironment(false, [], { GITHUB_COPILOT_DEBUG: 'true' }));
+		serviceCollectionClone.define(
+			ICompletionsRuntimeModeService,
+			RuntimeMode.fromEnvironment(false, [], {
+				GITHUB_COPILOT_DEBUG: 'true',
+			}),
+		);
 		const accessor = serviceCollectionClone.createTestingAccessor();
-		const registry = accessor.get(ICompletionsContextProviderRegistryService);
+		const registry = accessor.get(
+			ICompletionsContextProviderRegistryService,
+		);
 
 		const anotherTraitProvider: ContextProvider<Trait> = {
 			id: 'anotherTraitProvider',
@@ -568,7 +658,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 2);
@@ -584,7 +674,7 @@ suite('ContextProviderRegistry', function () {
 			'opId',
 			defaultDocumentContext,
 			telemetryData,
-			cts.token
+			cts.token,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 0);
@@ -609,7 +699,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -619,7 +709,14 @@ suite('ContextProviderRegistry', function () {
 				matchScore: 1,
 				resolution: 'full',
 				resolutionTimeMs: -1,
-				data: [{ name: 'flatTrait1', value: 'flatValue1', id: 'id', type: 'Trait' }],
+				data: [
+					{
+						name: 'flatTrait1',
+						value: 'flatValue1',
+						id: 'id',
+						type: 'Trait',
+					},
+				],
 			},
 		]);
 	});
@@ -627,9 +724,14 @@ suite('ContextProviderRegistry', function () {
 	test('provider rejects', async function () {
 		testLogTarget = new TestLogTarget();
 		const serviceCollectionClone = serviceCollection.clone();
-		serviceCollectionClone.define(ICompletionsLogTargetService, testLogTarget);
+		serviceCollectionClone.define(
+			ICompletionsLogTargetService,
+			testLogTarget,
+		);
 		const accessor = serviceCollectionClone.createTestingAccessor();
-		const registry = accessor.get(ICompletionsContextProviderRegistryService);
+		const registry = accessor.get(
+			ICompletionsContextProviderRegistryService,
+		);
 
 		const errorProvider: ContextProvider<SupportedContextItem> = {
 			id: 'errorProvider',
@@ -646,7 +748,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -660,15 +762,23 @@ suite('ContextProviderRegistry', function () {
 			},
 		]);
 		// Logs the error
-		testLogTarget.assertHasMessageMatching(LogLevel.ERROR, /Error resolving context/);
+		testLogTarget.assertHasMessageMatching(
+			LogLevel.ERROR,
+			/Error resolving context/,
+		);
 	});
 
 	test('provider cancels', async function () {
 		testLogTarget = new TestLogTarget();
 		const serviceCollectionClone = serviceCollection.clone();
-		serviceCollectionClone.define(ICompletionsLogTargetService, testLogTarget);
+		serviceCollectionClone.define(
+			ICompletionsLogTargetService,
+			testLogTarget,
+		);
 		const accessor = serviceCollectionClone.createTestingAccessor();
-		const registry = accessor.get(ICompletionsContextProviderRegistryService);
+		const registry = accessor.get(
+			ICompletionsContextProviderRegistryService,
+		);
 
 		const errorProvider: ContextProvider<SupportedContextItem> = {
 			id: 'errorProvider',
@@ -685,7 +795,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -721,7 +831,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -735,7 +845,10 @@ suite('ContextProviderRegistry', function () {
 			},
 		]);
 		// Logs the error
-		testLogTarget.assertHasMessageMatching(LogLevel.ERROR, /Error resolving context/);
+		testLogTarget.assertHasMessageMatching(
+			LogLevel.ERROR,
+			/Error resolving context/,
+		);
 	});
 
 	test('asynciterable provider cancels', async function () {
@@ -756,7 +869,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -775,9 +888,17 @@ suite('ContextProviderRegistry', function () {
 
 	test('sets resolution status of providers', async function () {
 		registry.registerContextProvider(traitProvider);
-		await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
-		assert.deepStrictEqual(statistics.lastResolution.get('traitProvider'), 'full');
+		assert.deepStrictEqual(
+			statistics.lastResolution.get('traitProvider'),
+			'full',
+		);
 	});
 
 	test('times out when a (promise-based) provider takes too long', async function () {
@@ -797,7 +918,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -810,12 +931,17 @@ suite('ContextProviderRegistry', function () {
 				data: [],
 			},
 		]);
-		assert.deepStrictEqual(statistics.lastResolution.get('slowProvider'), 'none');
+		assert.deepStrictEqual(
+			statistics.lastResolution.get('slowProvider'),
+			'none',
+		);
 	});
 
 	test('timeout is passed correctly', async function () {
 		clock.tick(1000);
-		const configProvider = accessor.get(ICompletionsConfigProvider) as InMemoryConfigProvider;
+		const configProvider = accessor.get(
+			ICompletionsConfigProvider,
+		) as InMemoryConfigProvider;
 		configProvider.setConfig(ConfigKey.ContextProviderTimeBudget, 100);
 
 		let providerRequest: ResolveRequest | undefined;
@@ -823,14 +949,19 @@ suite('ContextProviderRegistry', function () {
 			id: 'logOnlyProvider',
 			selector: ['*'],
 			resolver: {
-				resolve: r => {
+				resolve: (r) => {
 					providerRequest = r;
 					return Promise.resolve([]);
 				},
 			},
 		};
 		registry.registerContextProvider(logOnlyProvider);
-		await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(providerRequest);
 		assert.deepStrictEqual(providerRequest.timeoutEnd, 1100);
@@ -839,7 +970,9 @@ suite('ContextProviderRegistry', function () {
 
 	test('infinite timeout is passed correctly', async function () {
 		clock.tick(1000);
-		const configProvider = accessor.get(ICompletionsConfigProvider) as InMemoryConfigProvider;
+		const configProvider = accessor.get(
+			ICompletionsConfigProvider,
+		) as InMemoryConfigProvider;
 		configProvider.setConfig(ConfigKey.ContextProviderTimeBudget, 0);
 
 		let providerRequest: ResolveRequest | undefined;
@@ -847,17 +980,25 @@ suite('ContextProviderRegistry', function () {
 			id: 'logOnlyProvider',
 			selector: ['*'],
 			resolver: {
-				resolve: r => {
+				resolve: (r) => {
 					providerRequest = r;
 					return Promise.resolve([]);
 				},
 			},
 		};
 		registry.registerContextProvider(logOnlyProvider);
-		await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(providerRequest);
-		assert.deepStrictEqual(providerRequest.timeoutEnd, Number.MAX_SAFE_INTEGER);
+		assert.deepStrictEqual(
+			providerRequest.timeoutEnd,
+			Number.MAX_SAFE_INTEGER,
+		);
 		assert.deepEqual(providerRequest.timeBudget, 0);
 	});
 
@@ -868,16 +1009,28 @@ suite('ContextProviderRegistry', function () {
 			id: 'slowProvider',
 			selector: ['*'],
 			resolver: {
-				resolve: () => Promise.resolve([{ name: 'trait1', value: 'value1', id: 'id' }]),
+				resolve: () =>
+					Promise.resolve([
+						{ name: 'trait1', value: 'value1', id: 'id' },
+					]),
 			},
 		};
 
-		serviceCollectionClone.define(ICompletionsRuntimeModeService, RuntimeMode.fromEnvironment(false, [], { GITHUB_COPILOT_DEBUG: 'true' }));
+		serviceCollectionClone.define(
+			ICompletionsRuntimeModeService,
+			RuntimeMode.fromEnvironment(false, [], {
+				GITHUB_COPILOT_DEBUG: 'true',
+			}),
+		);
 		const accessor = serviceCollectionClone.createTestingAccessor();
 
-		const configProvider = accessor.get(ICompletionsConfigProvider) as InMemoryConfigProvider;
+		const configProvider = accessor.get(
+			ICompletionsConfigProvider,
+		) as InMemoryConfigProvider;
 		configProvider.setConfig(ConfigKey.ContextProviderTimeBudget, 0);
-		const registry = accessor.get(ICompletionsContextProviderRegistryService);
+		const registry = accessor.get(
+			ICompletionsContextProviderRegistryService,
+		);
 
 		registry.registerContextProvider(slowProvider);
 
@@ -885,7 +1038,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -895,10 +1048,20 @@ suite('ContextProviderRegistry', function () {
 				matchScore: 1,
 				resolution: 'full',
 				resolutionTimeMs: -1,
-				data: [{ name: 'trait1', value: 'value1', id: 'id', type: 'Trait' }],
+				data: [
+					{
+						name: 'trait1',
+						value: 'value1',
+						id: 'id',
+						type: 'Trait',
+					},
+				],
 			},
 		]);
-		assert.deepStrictEqual(statistics.lastResolution.get('slowProvider'), 'full');
+		assert.deepStrictEqual(
+			statistics.lastResolution.get('slowProvider'),
+			'full',
+		);
 	});
 
 	test('timeout cancels request to the provider (default)', async function () {
@@ -919,7 +1082,12 @@ suite('ContextProviderRegistry', function () {
 		};
 		registry.registerContextProvider(slowProvider);
 
-		await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(interceptedCancellation!);
 		assert.ok(interceptedCancellation!.isCancellationRequested);
@@ -950,7 +1118,12 @@ suite('ContextProviderRegistry', function () {
 			},
 		};
 		registry.registerContextProvider(slowProvider);
-		const result = await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		const result = await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(interceptedCancellation!);
 		assert.ok(interceptedCancellation!.isCancellationRequested);
@@ -964,7 +1137,9 @@ suite('ContextProviderRegistry', function () {
 		let interceptedRequest: ResolveRequest | undefined;
 		const featuresService = accessor.get(ICompletionsFeaturesService);
 		featuresService.contextProviderTimeBudget = () => 10;
-		const configProvider = accessor.get(ICompletionsConfigProvider) as InMemoryConfigProvider;
+		const configProvider = accessor.get(
+			ICompletionsConfigProvider,
+		) as InMemoryConfigProvider;
 		configProvider.setConfig(ConfigKey.ContextProviderTimeBudget, 20);
 
 		const slowProvider: ContextProvider<Trait> = {
@@ -984,7 +1159,12 @@ suite('ContextProviderRegistry', function () {
 			},
 		};
 		registry.registerContextProvider(slowProvider);
-		const result = await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		const result = await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(interceptedCancellation!);
 		assert.ok(interceptedCancellation!.isCancellationRequested);
@@ -1042,15 +1222,15 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 		await clock.runAllAsync();
 		const resolvedContextItems = await resolvedContextItemsPromise;
 
 		assert.deepStrictEqual(resolvedContextItems.length, 3);
 		assert.deepStrictEqual(
-			resolvedContextItems.map(c => c.providerId),
-			['secondProvider', 'firstProvider', 'thirdProvider']
+			resolvedContextItems.map((c) => c.providerId),
+			['secondProvider', 'firstProvider', 'thirdProvider'],
 		);
 		assert.deepStrictEqual(removeResolutionTime(resolvedContextItems), [
 			{
@@ -1059,8 +1239,18 @@ suite('ContextProviderRegistry', function () {
 				resolution: 'partial',
 				resolutionTimeMs: -1,
 				data: [
-					{ name: 'trait3', value: 'value3', id: 'id3', type: 'Trait' },
-					{ name: 'trait4', value: 'value4', id: 'id4', type: 'Trait' },
+					{
+						name: 'trait3',
+						value: 'value3',
+						id: 'id3',
+						type: 'Trait',
+					},
+					{
+						name: 'trait4',
+						value: 'value4',
+						id: 'id4',
+						type: 'Trait',
+					},
 				],
 			},
 			{
@@ -1069,8 +1259,18 @@ suite('ContextProviderRegistry', function () {
 				resolution: 'full',
 				resolutionTimeMs: -1,
 				data: [
-					{ name: 'trait1', value: 'value1', id: 'id1', type: 'Trait' },
-					{ name: 'trait2', value: 'value2', id: 'id2', type: 'Trait' },
+					{
+						name: 'trait1',
+						value: 'value1',
+						id: 'id1',
+						type: 'Trait',
+					},
+					{
+						name: 'trait2',
+						value: 'value2',
+						id: 'id2',
+						type: 'Trait',
+					},
 				],
 			},
 			{
@@ -1082,8 +1282,14 @@ suite('ContextProviderRegistry', function () {
 			},
 		]);
 
-		assert.deepStrictEqual(statistics.lastResolution.get('firstProvider'), 'full');
-		assert.deepStrictEqual(statistics.lastResolution.get('secondProvider'), 'partial');
+		assert.deepStrictEqual(
+			statistics.lastResolution.get('firstProvider'),
+			'full',
+		);
+		assert.deepStrictEqual(
+			statistics.lastResolution.get('secondProvider'),
+			'partial',
+		);
 	});
 
 	test('supports asynciterable resolvers', async function () {
@@ -1092,9 +1298,21 @@ suite('ContextProviderRegistry', function () {
 			selector: ['*'],
 			resolver: {
 				async *resolve() {
-					yield Promise.resolve({ name: 'asynctrait1', value: 'value1', id: 'id1' });
-					yield Promise.resolve({ name: 'asynctrait2', value: 'value2', id: 'id2' });
-					yield Promise.resolve({ name: 'asynctrait3', value: 'value3', id: 'id3' });
+					yield Promise.resolve({
+						name: 'asynctrait1',
+						value: 'value1',
+						id: 'id1',
+					});
+					yield Promise.resolve({
+						name: 'asynctrait2',
+						value: 'value2',
+						id: 'id2',
+					});
+					yield Promise.resolve({
+						name: 'asynctrait3',
+						value: 'value3',
+						id: 'id3',
+					});
 				},
 			},
 		};
@@ -1104,7 +1322,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -1115,9 +1333,24 @@ suite('ContextProviderRegistry', function () {
 				resolution: 'full',
 				resolutionTimeMs: -1,
 				data: [
-					{ name: 'asynctrait1', value: 'value1', id: 'id1', type: 'Trait' },
-					{ name: 'asynctrait2', value: 'value2', id: 'id2', type: 'Trait' },
-					{ name: 'asynctrait3', value: 'value3', id: 'id3', type: 'Trait' },
+					{
+						name: 'asynctrait1',
+						value: 'value1',
+						id: 'id1',
+						type: 'Trait',
+					},
+					{
+						name: 'asynctrait2',
+						value: 'value2',
+						id: 'id2',
+						type: 'Trait',
+					},
+					{
+						name: 'asynctrait3',
+						value: 'value3',
+						id: 'id3',
+						type: 'Trait',
+					},
 				],
 			},
 		]);
@@ -1131,14 +1364,32 @@ suite('ContextProviderRegistry', function () {
 			selector: ['*'],
 			resolver: {
 				async *resolve() {
-					yield Promise.resolve({ name: 'asynctrait1', value: 'value1', id: 'id1' });
-					yield Promise.resolve({ name: 'asynctrait2', value: 'value2', id: 'id2' });
+					yield Promise.resolve({
+						name: 'asynctrait1',
+						value: 'value1',
+						id: 'id1',
+					});
+					yield Promise.resolve({
+						name: 'asynctrait2',
+						value: 'value2',
+						id: 'id2',
+					});
 					await clock.tickAsync(1000); // Timeout
-					yield Promise.resolve({ name: 'asynctrait3', value: 'value3', id: 'id3' });
+					yield Promise.resolve({
+						name: 'asynctrait3',
+						value: 'value3',
+						id: 'id3',
+					});
 				},
 				resolveOnTimeout() {
 					called = true;
-					return [{ name: 'fallbacktrait', value: 'fallbackvalue', id: 'id4' }];
+					return [
+						{
+							name: 'fallbacktrait',
+							value: 'fallbackvalue',
+							id: 'id4',
+						},
+					];
 				},
 			},
 		};
@@ -1148,7 +1399,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.ok(called);
@@ -1160,9 +1411,24 @@ suite('ContextProviderRegistry', function () {
 				resolution: 'partial',
 				resolutionTimeMs: -1,
 				data: [
-					{ name: 'asynctrait1', value: 'value1', id: 'id1', type: 'Trait' },
-					{ name: 'asynctrait2', value: 'value2', id: 'id2', type: 'Trait' },
-					{ name: 'fallbacktrait', value: 'fallbackvalue', id: 'id4', type: 'Trait' },
+					{
+						name: 'asynctrait1',
+						value: 'value1',
+						id: 'id1',
+						type: 'Trait',
+					},
+					{
+						name: 'asynctrait2',
+						value: 'value2',
+						id: 'id2',
+						type: 'Trait',
+					},
+					{
+						name: 'fallbacktrait',
+						value: 'fallbackvalue',
+						id: 'id4',
+						type: 'Trait',
+					},
 				],
 			},
 		]);
@@ -1181,7 +1447,13 @@ suite('ContextProviderRegistry', function () {
 				},
 				resolveOnTimeout() {
 					called = true;
-					return [{ name: 'fallbacktrait', value: 'fallbackvalue', id: 'id2' }];
+					return [
+						{
+							name: 'fallbacktrait',
+							value: 'fallbackvalue',
+							id: 'id2',
+						},
+					];
 				},
 			},
 		};
@@ -1191,7 +1463,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.ok(called);
@@ -1202,7 +1474,14 @@ suite('ContextProviderRegistry', function () {
 				matchScore: 1,
 				resolution: 'partial',
 				resolutionTimeMs: -1,
-				data: [{ name: 'fallbacktrait', value: 'fallbackvalue', id: 'id2', type: 'Trait' }],
+				data: [
+					{
+						name: 'fallbacktrait',
+						value: 'fallbackvalue',
+						id: 'id2',
+						type: 'Trait',
+					},
+				],
 			},
 		]);
 	});
@@ -1227,7 +1506,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.deepStrictEqual(resolvedContextItems.length, 1);
@@ -1250,12 +1529,26 @@ suite('ContextProviderRegistry', function () {
 			selector: ['*'],
 			resolver: {
 				async *resolve() {
-					yield Promise.resolve({ name: 'asynctrait1', value: 'value1', id: 'id1' });
-					yield Promise.resolve({ name: 'asynctrait2', value: 'value2', id: 'id2' });
+					yield Promise.resolve({
+						name: 'asynctrait1',
+						value: 'value1',
+						id: 'id1',
+					});
+					yield Promise.resolve({
+						name: 'asynctrait2',
+						value: 'value2',
+						id: 'id2',
+					});
 				},
 				resolveOnTimeout() {
 					called = true;
-					return [{ name: 'fallbacktrait', value: 'fallbackvalue', id: 'id4' }];
+					return [
+						{
+							name: 'fallbacktrait',
+							value: 'fallbackvalue',
+							id: 'id4',
+						},
+					];
 				},
 			},
 		};
@@ -1265,7 +1558,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.ok(!called);
@@ -1277,8 +1570,18 @@ suite('ContextProviderRegistry', function () {
 				resolution: 'full',
 				resolutionTimeMs: -1,
 				data: [
-					{ name: 'asynctrait1', value: 'value1', id: 'id1', type: 'Trait' },
-					{ name: 'asynctrait2', value: 'value2', id: 'id2', type: 'Trait' },
+					{
+						name: 'asynctrait1',
+						value: 'value1',
+						id: 'id1',
+						type: 'Trait',
+					},
+					{
+						name: 'asynctrait2',
+						value: 'value2',
+						id: 'id2',
+						type: 'Trait',
+					},
 				],
 			},
 		]);
@@ -1294,7 +1597,13 @@ suite('ContextProviderRegistry', function () {
 				resolve: () => Promise.resolve([]),
 				resolveOnTimeout() {
 					called = true;
-					return [{ name: 'fallbacktrait', value: 'fallbackvalue', id: 'id4' }];
+					return [
+						{
+							name: 'fallbacktrait',
+							value: 'fallbackvalue',
+							id: 'id4',
+						},
+					];
 				},
 			},
 		};
@@ -1304,7 +1613,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		assert.ok(!called);
@@ -1338,7 +1647,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 		// Allowing for a small error, even though we're using fake timers
 		assert.ok(Date.now() - startTime < 151);
@@ -1352,7 +1661,10 @@ suite('ContextProviderRegistry', function () {
 				data: [],
 			},
 		]);
-		assert.deepStrictEqual(statistics.lastResolution.get('slowAsyncIterableProvider'), 'none');
+		assert.deepStrictEqual(
+			statistics.lastResolution.get('slowAsyncIterableProvider'),
+			'none',
+		);
 	});
 
 	test('times out when an (asynciterable-based) provider takes too long', async function () {
@@ -1375,7 +1687,7 @@ suite('ContextProviderRegistry', function () {
 			'1234',
 			'opId',
 			defaultDocumentContext,
-			telemetryData
+			telemetryData,
 		);
 
 		// Allowing for a small error, even though we're using fake timers
@@ -1388,16 +1700,29 @@ suite('ContextProviderRegistry', function () {
 				resolution: 'partial',
 				resolutionTimeMs: -1,
 				data: [
-					{ name: 'asynctrait1', value: 'value1', id: 'id1', type: 'Trait' },
-					{ name: 'asynctrait2', value: 'value2', id: 'id2', type: 'Trait' },
+					{
+						name: 'asynctrait1',
+						value: 'value1',
+						id: 'id1',
+						type: 'Trait',
+					},
+					{
+						name: 'asynctrait2',
+						value: 'value2',
+						id: 'id2',
+						type: 'Trait',
+					},
 				],
 			},
 		]);
 		testLogTarget.assertHasMessageMatching(
 			LogLevel.INFO,
-			/Context provider slowAsyncIterableProvider exceeded time budget/
+			/Context provider slowAsyncIterableProvider exceeded time budget/,
 		);
-		assert.deepStrictEqual(statistics.lastResolution.get('slowAsyncIterableProvider'), 'partial');
+		assert.deepStrictEqual(
+			statistics.lastResolution.get('slowAsyncIterableProvider'),
+			'partial',
+		);
 	});
 
 	test('timeout cancels request to the (asynciterable-based) provider', async function () {
@@ -1418,7 +1743,12 @@ suite('ContextProviderRegistry', function () {
 		};
 		registry.registerContextProvider(slowProvider);
 
-		await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(interceptedCancellation!);
 		assert.ok(interceptedCancellation!.isCancellationRequested);
@@ -1438,16 +1768,26 @@ suite('ContextProviderRegistry', function () {
 					interceptedCancellation = token;
 					await delay(15);
 					providerEndTime = Date.now();
-					return Promise.resolve([{ name: 'trait1', value: 'value1' }]);
+					return Promise.resolve([
+						{ name: 'trait1', value: 'value1' },
+					]);
 				},
 			},
 		};
 		registry.registerContextProvider(slowProvider);
 
 		// record the time that resolution finishes
-		void registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData, cts.token).then(() => {
-			resolverEndTime = Date.now();
-		});
+		void registry
+			.resolveAllProviders(
+				'1234',
+				'opId',
+				defaultDocumentContext,
+				telemetryData,
+				cts.token,
+			)
+			.then(() => {
+				resolverEndTime = Date.now();
+			});
 		// trigger the cancellation token after 5ms
 		void delay(2).then(() => {
 			cts.cancel();
@@ -1467,10 +1807,18 @@ suite('ContextProviderRegistry', function () {
 		registry.registerContextProvider(traitProvider);
 		const resolverSpy = Sinon.spy(traitProvider.resolver, 'resolve');
 
-		await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(resolverSpy.calledOnce);
-		assert.deepStrictEqual(resolverSpy.lastCall.args[0].completionId, '1234');
+		assert.deepStrictEqual(
+			resolverSpy.lastCall.args[0].completionId,
+			'1234',
+		);
 	});
 
 	test('passes data when resolving', async function () {
@@ -1479,7 +1827,14 @@ suite('ContextProviderRegistry', function () {
 		registry.registerContextProvider(traitProvider);
 		const resolverSpy = Sinon.spy(traitProvider.resolver, 'resolve');
 
-		await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData, undefined, data);
+		await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+			undefined,
+			data,
+		);
 
 		assert.ok(resolverSpy.calledOnce);
 		assert.deepStrictEqual(resolverSpy.lastCall.args[0].data, data);
@@ -1489,36 +1844,75 @@ suite('ContextProviderRegistry', function () {
 		registry.registerContextProvider(traitProvider);
 		const resolverSpy = Sinon.spy(traitProvider.resolver, 'resolve');
 
-		await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(resolverSpy.calledOnce);
-		assert.deepStrictEqual(resolverSpy.lastCall.args[0].previousUsageStatistics, undefined);
+		assert.deepStrictEqual(
+			resolverSpy.lastCall.args[0].previousUsageStatistics,
+			undefined,
+		);
 	});
 
 	test('augments provider context with statistics from last round', async function () {
 		const serviceCollectionClone = serviceCollection.clone();
 		const resolverSpy = Sinon.spy(traitProvider.resolver, 'resolve');
-		serviceCollectionClone.define(ICompletionsContextProviderService, new SyncDescriptor(ContextProviderStatistics, [() => new TestContextProviderStatistics()]));
+		serviceCollectionClone.define(
+			ICompletionsContextProviderService,
+			new SyncDescriptor(ContextProviderStatistics, [
+				() => new TestContextProviderStatistics(),
+			]),
+		);
 		const accessor = serviceCollectionClone.createTestingAccessor();
 
-		const registry = accessor.get(ICompletionsContextProviderRegistryService);
+		const registry = accessor.get(
+			ICompletionsContextProviderRegistryService,
+		);
 		registry.registerContextProvider(traitProvider);
 
 		const statistics = accessor.get(ICompletionsContextProviderService);
-		const previousStatistics: ContextUsageStatistics = { usage: 'partial', resolution: 'full' };
-		(statistics.getStatisticsForCompletion('previous_id') as TestContextProviderStatistics).statistics.set(
-			traitProvider.id,
-			previousStatistics
+		const previousStatistics: ContextUsageStatistics = {
+			usage: 'partial',
+			resolution: 'full',
+		};
+		(
+			statistics.getStatisticsForCompletion(
+				'previous_id',
+			) as TestContextProviderStatistics
+		).statistics.set(traitProvider.id, previousStatistics);
+		await registry.resolveAllProviders(
+			'previous_id',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
 		);
-		await registry.resolveAllProviders('previous_id', 'opId', defaultDocumentContext, telemetryData);
-		(statistics.getStatisticsForCompletion('current_id') as TestContextProviderStatistics).statistics.set(
-			traitProvider.id,
-			{ usage: 'none', resolution: 'none' }
+		(
+			statistics.getStatisticsForCompletion(
+				'current_id',
+			) as TestContextProviderStatistics
+		).statistics.set(traitProvider.id, {
+			usage: 'none',
+			resolution: 'none',
+		});
+		await registry.resolveAllProviders(
+			'current_id',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
 		);
-		await registry.resolveAllProviders('current_id', 'opId', defaultDocumentContext, telemetryData);
 
-		assert.deepStrictEqual(resolverSpy.firstCall.args[0].previousUsageStatistics, undefined);
-		assert.deepStrictEqual(resolverSpy.lastCall.args[0].previousUsageStatistics, previousStatistics);
+		assert.deepStrictEqual(
+			resolverSpy.firstCall.args[0].previousUsageStatistics,
+			undefined,
+		);
+		assert.deepStrictEqual(
+			resolverSpy.lastCall.args[0].previousUsageStatistics,
+			previousStatistics,
+		);
 	});
 
 	test('caches results', async function () {
@@ -1538,11 +1932,19 @@ suite('ContextProviderRegistry', function () {
 			},
 		};
 
-		const anotherResolverSpy = Sinon.spy(anotherTraitProvider.resolver, 'resolve');
+		const anotherResolverSpy = Sinon.spy(
+			anotherTraitProvider.resolver,
+			'resolve',
+		);
 
 		registry.registerContextProvider(traitProvider);
 
-		const firstCall = await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		const firstCall = await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(resolverSpy.calledOnce);
 		assert.ok(anotherResolverSpy.notCalled);
@@ -1551,14 +1953,24 @@ suite('ContextProviderRegistry', function () {
 		// Register another provider between calls to ensure more items are added.
 		registry.registerContextProvider(anotherTraitProvider);
 
-		const secondCall = await registry.resolveAllProviders('1234', 'opId', defaultDocumentContext, telemetryData);
+		const secondCall = await registry.resolveAllProviders(
+			'1234',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(resolverSpy.calledOnce);
 		assert.ok(anotherResolverSpy.notCalled);
 		assert.deepStrictEqual(secondCall.length, 1);
 		assert.deepStrictEqual(firstCall, secondCall);
 
-		const thirdCall = await registry.resolveAllProviders('5678', 'opId', defaultDocumentContext, telemetryData);
+		const thirdCall = await registry.resolveAllProviders(
+			'5678',
+			'opId',
+			defaultDocumentContext,
+			telemetryData,
+		);
 
 		assert.ok(resolverSpy.calledTwice);
 		assert.ok(anotherResolverSpy.calledOnce);
@@ -1568,7 +1980,7 @@ suite('ContextProviderRegistry', function () {
 
 // Utility function to test context items without worrying about non-deterministic fields
 function removeResolutionTime(resolvedContextItems: ResolvedContextItem[]) {
-	return resolvedContextItems.map(i => {
+	return resolvedContextItems.map((i) => {
 		i.resolutionTimeMs = -1;
 		return i;
 	});

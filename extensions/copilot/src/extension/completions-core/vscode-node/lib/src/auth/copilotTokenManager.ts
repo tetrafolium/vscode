@@ -10,7 +10,10 @@ import { ThrottledDelayer } from '../../../../../../util/vs/base/common/async';
 import { Disposable } from '../../../../../../util/vs/base/common/lifecycle';
 export { CopilotToken } from '../../../../../../platform/authentication/common/copilotToken';
 
-export const ICompletionsCopilotTokenManager = createServiceIdentifier<ICompletionsCopilotTokenManager>('ICompletionsCopilotTokenManager');
+export const ICompletionsCopilotTokenManager =
+	createServiceIdentifier<ICompletionsCopilotTokenManager>(
+		'ICompletionsCopilotTokenManager',
+	);
 export interface ICompletionsCopilotTokenManager {
 	readonly _serviceBrand: undefined;
 	get token(): CopilotToken | undefined;
@@ -20,7 +23,10 @@ export interface ICompletionsCopilotTokenManager {
 	getLastToken(): Omit<CopilotToken, 'token'> | undefined;
 }
 
-export class CopilotTokenManagerImpl extends Disposable implements ICompletionsCopilotTokenManager {
+export class CopilotTokenManagerImpl
+	extends Disposable
+	implements ICompletionsCopilotTokenManager
+{
 	declare _serviceBrand: undefined;
 	private tokenRefetcher = new ThrottledDelayer(5_000);
 	private _token: CopilotToken | undefined;
@@ -31,12 +37,17 @@ export class CopilotTokenManagerImpl extends Disposable implements ICompletionsC
 
 	constructor(
 		protected primed = false,
-		@IAuthenticationService private readonly authenticationService: IAuthenticationService
+		@IAuthenticationService
+		private readonly authenticationService: IAuthenticationService,
 	) {
 		super();
 
 		this.updateCachedToken();
-		this._register(this.authenticationService.onDidAuthenticationChange(() => this.updateCachedToken()));
+		this._register(
+			this.authenticationService.onDidAuthenticationChange(() =>
+				this.updateCachedToken(),
+			),
+		);
 	}
 
 	/**
@@ -46,7 +57,7 @@ export class CopilotTokenManagerImpl extends Disposable implements ICompletionsC
 		try {
 			return this.getToken().then(
 				() => true,
-				() => false
+				() => false,
 			);
 		} catch (e) {
 			return Promise.resolve(false);

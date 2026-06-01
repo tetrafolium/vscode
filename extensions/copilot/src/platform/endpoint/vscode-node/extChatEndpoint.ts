@@ -12,20 +12,47 @@ import { ITokenizer, TokenizerType } from '../../../util/common/tokenizer';
 import { AsyncIterableObject } from '../../../util/vs/base/common/async';
 import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
-import { ChatFetchResponseType, ChatLocation, ChatResponse } from '../../chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+	ChatResponse,
+} from '../../chat/common/commonTypes';
 import { ILogService } from '../../log/common/logService';
 import { ContextManagementResponse } from '../../networking/common/anthropic';
-import { FinishedCallback, OpenAiFunctionTool, OptionalChatRequestParams } from '../../networking/common/fetch';
+import {
+	FinishedCallback,
+	OpenAiFunctionTool,
+	OptionalChatRequestParams,
+} from '../../networking/common/fetch';
 import { Response } from '../../networking/common/fetcherService';
-import { IChatEndpoint, ICreateEndpointBodyOptions, IEndpointBody, IMakeChatRequestOptions } from '../../networking/common/networking';
-import { APIUsage, ChatCompletion, isApiUsage } from '../../networking/common/openai';
+import {
+	IChatEndpoint,
+	ICreateEndpointBodyOptions,
+	IEndpointBody,
+	IMakeChatRequestOptions,
+} from '../../networking/common/networking';
+import {
+	APIUsage,
+	ChatCompletion,
+	isApiUsage,
+} from '../../networking/common/openai';
 import { IOTelService } from '../../otel/common/otelService';
-import { retrieveCapturingTokenByCorrelation, storeCapturingTokenForCorrelation } from '../../requestLogger/node/requestLogger';
+import {
+	retrieveCapturingTokenByCorrelation,
+	storeCapturingTokenForCorrelation,
+} from '../../requestLogger/node/requestLogger';
 import { ITelemetryService } from '../../telemetry/common/telemetry';
 import { TelemetryData } from '../../telemetry/common/telemetryData';
-import { EndpointEditToolName, isEndpointEditToolName } from '../common/endpointProvider';
+import {
+	EndpointEditToolName,
+	isEndpointEditToolName,
+} from '../common/endpointProvider';
 import { CustomDataPartMimeTypes } from '../common/endpointTypes';
-import { decodeStatefulMarker, encodeStatefulMarker, rawPartAsStatefulMarker } from '../common/statefulMarkerContainer';
+import {
+	decodeStatefulMarker,
+	encodeStatefulMarker,
+	rawPartAsStatefulMarker,
+} from '../common/statefulMarkerContainer';
 import { rawPartAsThinkingData } from '../common/thinkingDataContainer';
 import { ExtensionContributedChatTokenizer } from './extChatTokenizer';
 
@@ -44,16 +71,22 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 	public readonly isPremium: boolean = false;
 	public readonly multiplier: number | undefined = undefined;
 	public readonly isExtensionContributed = true;
-	public readonly supportedEditTools?: readonly EndpointEditToolName[] | undefined;
+	public readonly supportedEditTools?:
+		| readonly EndpointEditToolName[]
+		| undefined;
 
 	constructor(
 		private readonly languageModel: vscode.LanguageModelChat,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 		@IOTelService private readonly _otelService: IOTelService,
 	) {
 		// Initialize with the model's max tokens
 		this._maxTokens = languageModel.maxInputTokens;
-		this.supportedEditTools = languageModel.capabilities.editToolsHint?.filter(isEndpointEditToolName);
+		this.supportedEditTools =
+			languageModel.capabilities.editToolsHint?.filter(
+				isEndpointEditToolName,
+			);
 	}
 
 	get modelProvider(): string {
@@ -123,9 +156,11 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 		expectedNumChoices: number,
 		finishCallback: FinishedCallback,
 		telemetryData: TelemetryData,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<AsyncIterableObject<ChatCompletion>> {
-		throw new Error('processResponseFromChatEndpoint not supported for extension contributed endpoints');
+		throw new Error(
+			'processResponseFromChatEndpoint not supported for extension contributed endpoints',
+		);
 	}
 
 	async acceptChatPolicy(): Promise<boolean> {
@@ -148,26 +183,32 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 		userInitiatedRequest?: boolean,
 		telemetryProperties?: Record<string, string>,
 	): Promise<ChatResponse> {
-		return this.makeChatRequest2({
+		return this.makeChatRequest2(
+			{
+				debugName,
+				messages,
+				finishedCb,
+				location,
+				source,
+				requestOptions,
+				userInitiatedRequest,
+				telemetryProperties,
+			},
+			token,
+		);
+	}
+
+	async makeChatRequest2(
+		{
 			debugName,
 			messages,
+			requestOptions,
 			finishedCb,
 			location,
 			source,
-			requestOptions,
-			userInitiatedRequest,
-			telemetryProperties,
-		}, token);
-	}
-
-	async makeChatRequest2({
-		debugName,
-		messages,
-		requestOptions,
-		finishedCb,
-		location,
-		source,
-	}: IMakeChatRequestOptions, token: CancellationToken): Promise<ChatResponse> {
+		}: IMakeChatRequestOptions,
+		token: CancellationToken,
+	): Promise<ChatResponse> {
 		const vscodeMessages = convertToApiChatMessage(messages);
 		const ourRequestId = generateUuid();
 
@@ -179,16 +220,18 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 		const activeTraceCtx = this._otelService.getActiveTraceContext();
 
 		const vscodeOptions: vscode.LanguageModelChatRequestOptions = {
-			tools: ((requestOptions?.tools ?? []) as OpenAiFunctionTool[]).map(tool => ({
-				name: tool.function.name,
-				description: tool.function.description,
-				inputSchema: tool.function.parameters,
-			})),
+			tools: ((requestOptions?.tools ?? []) as OpenAiFunctionTool[]).map(
+				(tool) => ({
+					name: tool.function.name,
+					description: tool.function.description,
+					inputSchema: tool.function.parameters,
+				}),
+			),
 			// Pass correlation ID and OTel trace context through modelOptions for cross-IPC restoration.
 			modelOptions: {
 				_capturingTokenCorrelationId: ourRequestId,
 				_otelTraceContext: activeTraceCtx ?? null,
-			}
+			},
 		};
 
 		// Store current CapturingToken for retrieval by BYOK providers after IPC crossing
@@ -201,7 +244,11 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 		const streamRecorder = new FetchStreamRecorder(finishedCb);
 
 		try {
-			const response = await this.languageModel.sendRequest(vscodeMessages, vscodeOptions, token);
+			const response = await this.languageModel.sendRequest(
+				vscodeMessages,
+				vscodeOptions,
+				token,
+			);
 			let text = '';
 			let numToolsCalled = 0;
 			let reportedUsage: APIUsage | undefined;
@@ -212,40 +259,76 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 				if (chunk instanceof vscode.LanguageModelTextPart) {
 					text += chunk.value;
 					if (streamRecorder.callback) {
-						await streamRecorder.callback(text, 0, { text: chunk.value });
+						await streamRecorder.callback(text, 0, {
+							text: chunk.value,
+						});
 					}
 				} else if (chunk instanceof vscode.LanguageModelToolCallPart) {
 					if (streamRecorder.callback) {
-						const functionCalls = [chunk].map(tool => ({
+						const functionCalls = [chunk].map((tool) => ({
 							name: tool.name ?? '',
 							arguments: JSON.stringify(tool.input) ?? '',
-							id: tool.callId
+							id: tool.callId,
 						}));
 						numToolsCalled++;
-						await streamRecorder.callback(text, 0, { text: '', copilotToolCalls: functionCalls });
+						await streamRecorder.callback(text, 0, {
+							text: '',
+							copilotToolCalls: functionCalls,
+						});
 					}
 				} else if (chunk instanceof vscode.LanguageModelDataPart) {
-					if (chunk.mimeType === CustomDataPartMimeTypes.StatefulMarker) {
+					if (
+						chunk.mimeType ===
+						CustomDataPartMimeTypes.StatefulMarker
+					) {
 						const decoded = decodeStatefulMarker(chunk.data);
-						await streamRecorder.callback?.(text, 0, { text: '', statefulMarker: decoded.marker });
-					} else if (chunk.mimeType === CustomDataPartMimeTypes.ContextManagement) {
-						const contextManagement = JSON.parse(new TextDecoder().decode(chunk.data)) as ContextManagementResponse;
-						await streamRecorder.callback?.(text, 0, { text: '', contextManagement });
-					} else if (chunk.mimeType === CustomDataPartMimeTypes.Usage) {
+						await streamRecorder.callback?.(text, 0, {
+							text: '',
+							statefulMarker: decoded.marker,
+						});
+					} else if (
+						chunk.mimeType ===
+						CustomDataPartMimeTypes.ContextManagement
+					) {
+						const contextManagement = JSON.parse(
+							new TextDecoder().decode(chunk.data),
+						) as ContextManagementResponse;
+						await streamRecorder.callback?.(text, 0, {
+							text: '',
+							contextManagement,
+						});
+					} else if (
+						chunk.mimeType === CustomDataPartMimeTypes.Usage
+					) {
 						try {
-							const parsed = JSON.parse(new TextDecoder().decode(chunk.data)) as APIUsage;
+							const parsed = JSON.parse(
+								new TextDecoder().decode(chunk.data),
+							) as APIUsage;
 							if (isApiUsage(parsed)) {
 								// Clamp sentinel negative values that some BYOK providers emit
 								// when the API hasn't reported a count yet (e.g. -1).
 								reportedUsage = {
 									...parsed,
-									prompt_tokens: Math.max(0, parsed.prompt_tokens),
-									completion_tokens: Math.max(0, parsed.completion_tokens),
-									total_tokens: Math.max(0, parsed.total_tokens),
+									prompt_tokens: Math.max(
+										0,
+										parsed.prompt_tokens,
+									),
+									completion_tokens: Math.max(
+										0,
+										parsed.completion_tokens,
+									),
+									total_tokens: Math.max(
+										0,
+										parsed.total_tokens,
+									),
 									prompt_tokens_details: {
 										...parsed.prompt_tokens_details,
-										cached_tokens: Math.max(0, parsed.prompt_tokens_details?.cached_tokens ?? 0)
-									}
+										cached_tokens: Math.max(
+											0,
+											parsed.prompt_tokens_details
+												?.cached_tokens ?? 0,
+										),
+									},
 								};
 							}
 						} catch {
@@ -259,8 +342,8 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 							thinking: {
 								text: chunk.value,
 								id: chunk.id || '',
-								metadata: chunk.metadata
-							}
+								metadata: chunk.metadata,
+							},
 						});
 					}
 				}
@@ -271,16 +354,21 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 					type: ChatFetchResponseType.Success,
 					requestId,
 					serverRequestId: requestId,
-					usage: reportedUsage ?? { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, prompt_tokens_details: { cached_tokens: 0 } },
+					usage: reportedUsage ?? {
+						prompt_tokens: 0,
+						completion_tokens: 0,
+						total_tokens: 0,
+						prompt_tokens_details: { cached_tokens: 0 },
+					},
 					value: text,
-					resolvedModel: this.languageModel.id
+					resolvedModel: this.languageModel.id,
 				};
 			} else {
 				return {
 					type: ChatFetchResponseType.Unknown,
 					reason: 'No response from language model',
 					requestId: requestId,
-					serverRequestId: undefined
+					serverRequestId: undefined,
 				};
 			}
 		} catch (e) {
@@ -288,7 +376,7 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 				type: ChatFetchResponseType.Failed,
 				reason: toErrorMessage(e, true),
 				requestId: generateUuid(),
-				serverRequestId: undefined
+				serverRequestId: undefined,
 			};
 		} finally {
 			retrieveCapturingTokenByCorrelation(ourRequestId);
@@ -300,22 +388,39 @@ export class ExtensionContributedChatEndpoint implements IChatEndpoint {
 	}
 
 	cloneWithTokenOverride(modelMaxPromptTokens: number): IChatEndpoint {
-		return this._instantiationService.createInstance(ExtensionContributedChatEndpoint, {
-			...this.languageModel,
-			maxInputTokens: modelMaxPromptTokens
-		});
+		return this._instantiationService.createInstance(
+			ExtensionContributedChatEndpoint,
+			{
+				...this.languageModel,
+				maxInputTokens: modelMaxPromptTokens,
+			},
+		);
 	}
 }
 
-export function convertToApiChatMessage(messages: Raw.ChatMessage[]): Array<vscode.LanguageModelChatMessage | vscode.LanguageModelChatMessage2> {
-	const apiMessages: Array<vscode.LanguageModelChatMessage | vscode.LanguageModelChatMessage2> = [];
+export function convertToApiChatMessage(
+	messages: Raw.ChatMessage[],
+): Array<vscode.LanguageModelChatMessage | vscode.LanguageModelChatMessage2> {
+	const apiMessages: Array<
+		vscode.LanguageModelChatMessage | vscode.LanguageModelChatMessage2
+	> = [];
 	for (const message of messages) {
-		const apiContent: Array<vscode.LanguageModelTextPart | vscode.LanguageModelToolResultPart2 | vscode.LanguageModelToolCallPart | vscode.LanguageModelDataPart | vscode.LanguageModelThinkingPart> = [];
+		const apiContent: Array<
+			| vscode.LanguageModelTextPart
+			| vscode.LanguageModelToolResultPart2
+			| vscode.LanguageModelToolCallPart
+			| vscode.LanguageModelDataPart
+			| vscode.LanguageModelThinkingPart
+		> = [];
 		// Easier to work with arrays everywhere, rather than string in some cases. So convert to a single text content part
 		for (const contentPart of message.content) {
 			if (contentPart.type === Raw.ChatCompletionContentPartKind.Text) {
-				apiContent.push(new vscode.LanguageModelTextPart(contentPart.text));
-			} else if (contentPart.type === Raw.ChatCompletionContentPartKind.Image) {
+				apiContent.push(
+					new vscode.LanguageModelTextPart(contentPart.text),
+				);
+			} else if (
+				contentPart.type === Raw.ChatCompletionContentPartKind.Image
+			) {
 				// Handle base64 encoded images
 				if (contentPart.imageUrl.url.startsWith('data:')) {
 					const dataUrlRegex = /^data:([^;]+);base64,(.*)$/;
@@ -323,52 +428,94 @@ export function convertToApiChatMessage(messages: Raw.ChatMessage[]): Array<vsco
 
 					if (match) {
 						const [, mimeType, base64Data] = match;
-						apiContent.push(new vscode.LanguageModelDataPart(Buffer.from(base64Data, 'base64'), mimeType as ChatImageMimeType));
+						apiContent.push(
+							new vscode.LanguageModelDataPart(
+								Buffer.from(base64Data, 'base64'),
+								mimeType as ChatImageMimeType,
+							),
+						);
 					}
 				} else {
 					// Not a base64 image
 					continue;
 				}
-			} else if (contentPart.type === Raw.ChatCompletionContentPartKind.CacheBreakpoint) {
-				apiContent.push(new vscode.LanguageModelDataPart(new TextEncoder().encode('ephemeral'), CustomDataPartMimeTypes.CacheControl));
-			} else if (contentPart.type === Raw.ChatCompletionContentPartKind.Opaque) {
+			} else if (
+				contentPart.type ===
+				Raw.ChatCompletionContentPartKind.CacheBreakpoint
+			) {
+				apiContent.push(
+					new vscode.LanguageModelDataPart(
+						new TextEncoder().encode('ephemeral'),
+						CustomDataPartMimeTypes.CacheControl,
+					),
+				);
+			} else if (
+				contentPart.type === Raw.ChatCompletionContentPartKind.Opaque
+			) {
 				const statefulMarker = rawPartAsStatefulMarker(contentPart);
 				if (statefulMarker) {
-					apiContent.push(new vscode.LanguageModelDataPart(encodeStatefulMarker(statefulMarker.modelId, statefulMarker.marker), CustomDataPartMimeTypes.StatefulMarker));
+					apiContent.push(
+						new vscode.LanguageModelDataPart(
+							encodeStatefulMarker(
+								statefulMarker.modelId,
+								statefulMarker.marker,
+							),
+							CustomDataPartMimeTypes.StatefulMarker,
+						),
+					);
 				}
 				const thinkingData = rawPartAsThinkingData(contentPart);
 				if (thinkingData) {
-					apiContent.push(new vscode.LanguageModelThinkingPart(thinkingData.text, thinkingData.id, thinkingData.metadata));
+					apiContent.push(
+						new vscode.LanguageModelThinkingPart(
+							thinkingData.text,
+							thinkingData.id,
+							thinkingData.metadata,
+						),
+					);
 				}
 			}
 		}
 
-		if (message.role === Raw.ChatRole.System || message.role === Raw.ChatRole.User) {
+		if (
+			message.role === Raw.ChatRole.System ||
+			message.role === Raw.ChatRole.User
+		) {
 			apiMessages.push({
-				role: message.role === Raw.ChatRole.System ? vscode.LanguageModelChatMessageRole.System : vscode.LanguageModelChatMessageRole.User,
+				role:
+					message.role === Raw.ChatRole.System
+						? vscode.LanguageModelChatMessageRole.System
+						: vscode.LanguageModelChatMessageRole.User,
 				name: message.name,
-				content: apiContent
+				content: apiContent,
 			});
 		} else if (message.role === Raw.ChatRole.Assistant) {
 			if (message.toolCalls) {
 				for (const toolCall of message.toolCalls) {
-					apiContent.push(new vscode.LanguageModelToolCallPart(toolCall.id, toolCall.function.name, JSON.parse(toolCall.function.arguments)));
+					apiContent.push(
+						new vscode.LanguageModelToolCallPart(
+							toolCall.id,
+							toolCall.function.name,
+							JSON.parse(toolCall.function.arguments),
+						),
+					);
 				}
 			}
 			apiMessages.push({
 				role: vscode.LanguageModelChatMessageRole.Assistant,
 				name: message.name,
-				content: apiContent
+				content: apiContent,
 			});
 		} else if (message.role === Raw.ChatRole.Tool) {
-			const toolResultPart: vscode.LanguageModelToolResultPart2 = new vscode.LanguageModelToolResultPart2(
-				message.toolCallId ?? '',
-				apiContent
-			);
+			const toolResultPart: vscode.LanguageModelToolResultPart2 =
+				new vscode.LanguageModelToolResultPart2(
+					message.toolCallId ?? '',
+					apiContent,
+				);
 			apiMessages.push({
 				role: vscode.LanguageModelChatMessageRole.User,
 				name: '',
-				content: [toolResultPart]
+				content: [toolResultPart],
 			});
 		}
 	}

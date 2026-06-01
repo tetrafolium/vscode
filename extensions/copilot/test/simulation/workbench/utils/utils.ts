@@ -12,14 +12,19 @@ export const REPO_ROOT: string = (globalThis as any).projectRoot;
 export const monacoModule: {
 	value: typeof import('monaco-editor');
 } = {
-	value: null! // @ulugbekna: this is initialized on workbench startup and must be non-null by the time it's used
+	value: null!, // @ulugbekna: this is initialized on workbench startup and must be non-null by the time it's used
 };
 
 export function genericEquals(one: any, other: any): boolean {
 	if (one === other) {
 		return true;
 	}
-	if (one === null || one === undefined || other === null || other === undefined) {
+	if (
+		one === null ||
+		one === undefined ||
+		other === null ||
+		other === undefined
+	) {
 		return false;
 	}
 	if (typeof one !== typeof other) {
@@ -28,7 +33,7 @@ export function genericEquals(one: any, other: any): boolean {
 	if (typeof one !== 'object') {
 		return false;
 	}
-	if ((Array.isArray(one)) !== (Array.isArray(other))) {
+	if (Array.isArray(one) !== Array.isArray(other)) {
 		return false;
 	}
 
@@ -100,7 +105,6 @@ function runInAction(fns: (() => void)[]) {
 }
 
 export class ObservablePromise<T> {
-
 	public static resolve<T>(value: T): ObservablePromise<T> {
 		return new ObservablePromise(Promise.resolve(value), value);
 	}
@@ -137,7 +141,7 @@ export class ObservablePromise<T> {
 					this.error = error;
 					this.resolved = true;
 				});
-			}
+			},
 		);
 	}
 }

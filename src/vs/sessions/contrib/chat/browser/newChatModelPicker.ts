@@ -3,10 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import {
+	IDisposable,
+	toDisposable,
+} from "../../../../base/common/lifecycle.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
 
-export const INewChatModelPickerService = createDecorator<INewChatModelPickerService>('newChatModelPickerService');
+export const INewChatModelPickerService =
+	createDecorator<INewChatModelPickerService>("newChatModelPickerService");
 
 export interface INewChatModelPickerService {
 	readonly _serviceBrand: undefined;

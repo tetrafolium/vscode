@@ -3,12 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	// @kycutler https://github.com/microsoft/vscode/issues/209652
 
 	export interface MarkdownString {
-
 		/**
 		 * Indicates that this markdown string can contain alert syntax. Defaults to `false`.
 		 *

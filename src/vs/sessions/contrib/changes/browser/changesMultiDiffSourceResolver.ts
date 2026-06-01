@@ -3,18 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { derivedObservableWithCache, derivedOpts, ValueWithChangeEventFromObservable } from '../../../../base/common/observable.js';
-import { equals as arraysEqual } from '../../../../base/common/arrays.js';
-import { isEqual } from '../../../../base/common/resources.js';
-import { URI } from '../../../../base/common/uri.js';
-import { comparePaths } from '../../../../base/common/comparers.js';
-import { isIChatSessionFileChange2 } from '../../../../workbench/contrib/chat/common/chatSessionsService.js';
-import { IMultiDiffSourceResolver, IMultiDiffSourceResolverService, IResolvedMultiDiffSource, MultiDiffEditorItem } from '../../../../workbench/contrib/multiDiffEditor/browser/multiDiffSourceResolverService.js';
-import { ISessionFileChange } from '../../../services/sessions/common/session.js';
-import { ChangesViewModel } from './changesViewModel.js';
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import {
+	derivedObservableWithCache,
+	derivedOpts,
+	ValueWithChangeEventFromObservable,
+} from "../../../../base/common/observable.js";
+import { equals as arraysEqual } from "../../../../base/common/arrays.js";
+import { isEqual } from "../../../../base/common/resources.js";
+import { URI } from "../../../../base/common/uri.js";
+import { comparePaths } from "../../../../base/common/comparers.js";
+import { isIChatSessionFileChange2 } from "../../../../workbench/contrib/chat/common/chatSessionsService.js";
+import {
+	IMultiDiffSourceResolver,
+	IMultiDiffSourceResolverService,
+	IResolvedMultiDiffSource,
+	MultiDiffEditorItem,
+} from "../../../../workbench/contrib/multiDiffEditor/browser/multiDiffSourceResolverService.js";
+import { ISessionFileChange } from "../../../services/sessions/common/session.js";
+import { ChangesViewModel } from "./changesViewModel.js";
 
-const CHANGES_MULTI_DIFF_SOURCE_SCHEME = 'changes-multi-diff-source';
+const CHANGES_MULTI_DIFF_SOURCE_SCHEME = "changes-multi-diff-source";
 
 interface ChangesMultiDiffUriFields {
 	readonly sessionResource: string;
@@ -28,7 +37,9 @@ interface ChangesMultiDiffUriFields {
 export function getChangesMultiDiffSourceUri(sessionResource: URI): URI {
 	return URI.from({
 		scheme: CHANGES_MULTI_DIFF_SOURCE_SCHEME,
-		query: JSON.stringify({ sessionResource: sessionResource.toString() } satisfies ChangesMultiDiffUriFields),
+		query: JSON.stringify({
+			sessionResource: sessionResource.toString(),
+		} satisfies ChangesMultiDiffUriFields),
 	});
 }
 
@@ -44,7 +55,11 @@ function parseUri(uri: URI): { sessionResource: URI } | undefined {
 		return undefined;
 	}
 
-	if (typeof query !== 'object' || query === null || typeof query.sessionResource !== 'string') {
+	if (
+		typeof query !== "object" ||
+		query === null ||
+		typeof query.sessionResource !== "string"
+	) {
 		return undefined;
 	}
 
@@ -52,16 +67,23 @@ function parseUri(uri: URI): { sessionResource: URI } | undefined {
 }
 
 function compareChanges(a: ISessionFileChange, b: ISessionFileChange): number {
-	const aPath = isIChatSessionFileChange2(a) ? a.uri.fsPath : a.modifiedUri.fsPath;
-	const bPath = isIChatSessionFileChange2(b) ? b.uri.fsPath : b.modifiedUri.fsPath;
+	const aPath = isIChatSessionFileChange2(a)
+		? a.uri.fsPath
+		: a.modifiedUri.fsPath;
+	const bPath = isIChatSessionFileChange2(b)
+		? b.uri.fsPath
+		: b.modifiedUri.fsPath;
 	return comparePaths(aPath, bPath);
 }
 
-export class ChangesMultiDiffSourceResolver extends Disposable implements IMultiDiffSourceResolver {
-
+export class ChangesMultiDiffSourceResolver
+	extends Disposable
+	implements IMultiDiffSourceResolver
+{
 	constructor(
 		private readonly _viewModel: ChangesViewModel,
-		@IMultiDiffSourceResolverService multiDiffSourceResolverService: IMultiDiffSourceResolverService
+		@IMultiDiffSourceResolverService
+		multiDiffSourceResolverService: IMultiDiffSourceResolverService,
 	) {
 		super();
 		this._register(multiDiffSourceResolverService.registerResolver(this));
@@ -74,31 +96,56 @@ export class ChangesMultiDiffSourceResolver extends Disposable implements IMulti
 	async resolveDiffSource(uri: URI): Promise<IResolvedMultiDiffSource> {
 		const parsed = parseUri(uri)!;
 
-		const changesObs = derivedObservableWithCache<readonly ISessionFileChange[]>({
-			owner: this,
-		}, (reader, lastValue) => {
-			if (this._viewModel.activeSessionIsLoadingObs.read(reader)) {
-				return lastValue ?? [];
-			}
+		const changesObs = derivedObservableWithCache<
+			readonly ISessionFileChange[]
+		>(
+			{
+				owner: this,
+			},
+			(reader, lastValue) => {
+				if (this._viewModel.activeSessionIsLoadingObs.read(reader)) {
+					return lastValue ?? [];
+				}
 
-			const activeSessionResource = this._viewModel.activeSessionResourceObs.read(reader);
-			if (!activeSessionResource || !isEqual(activeSessionResource, parsed.sessionResource)) {
-				return lastValue ?? [];
-			}
+				const activeSessionResource =
+					this._viewModel.activeSessionResourceObs.read(reader);
+				if (
+					!activeSessionResource ||
+					!isEqual(activeSessionResource, parsed.sessionResource)
+				) {
+					return lastValue ?? [];
+				}
 
-			return this._viewModel.activeSessionChangesObs.read(reader);
-		});
+				return this._viewModel.activeSessionChangesObs.read(reader);
+			},
+		);
 
-		const resourcesObs = derivedOpts<readonly MultiDiffEditorItem[]>({
-			owner: this,
-			equalsFn: (a, b) => arraysEqual(a, b, (x, y) =>
-				isEqual(x.originalUri, y.originalUri) &&
-				isEqual(x.modifiedUri, y.modifiedUri)),
-		}, reader => {
-			const changes = changesObs.read(reader);
-			return [...changes].sort(compareChanges).map(change =>
-				new MultiDiffEditorItem(change.originalUri, change.modifiedUri, change.modifiedUri));
-		});
+		const resourcesObs = derivedOpts<readonly MultiDiffEditorItem[]>(
+			{
+				owner: this,
+				equalsFn: (a, b) =>
+					arraysEqual(
+						a,
+						b,
+						(x, y) =>
+							isEqual(x.originalUri, y.originalUri) &&
+							isEqual(x.modifiedUri, y.modifiedUri),
+					),
+			},
+			(reader) => {
+				const changes = changesObs.read(reader);
+				return [...changes]
+					.sort(compareChanges)
+					.map(
+						(change) =>
+							new MultiDiffEditorItem(
+								change.originalUri,
+								change.modifiedUri,
+								change.modifiedUri,
+							),
+					);
+			},
+		);
 
 		return { resources: new ValueWithChangeEventFromObservable(resourcesObs) };
 	}

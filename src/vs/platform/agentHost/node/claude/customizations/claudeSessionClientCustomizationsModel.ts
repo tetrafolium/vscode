@@ -3,12 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../../base/common/event.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { equals as arraysEqual } from '../../../../../base/common/arrays.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { autorun, derivedOpts, IObservable, ISettableObservable, observableValueOpts } from '../../../../../base/common/observable.js';
-import type { ISyncedCustomization } from '../../../common/agentPluginManager.js';
+import { Event } from "../../../../../base/common/event.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { equals as arraysEqual } from "../../../../../base/common/arrays.js";
+import { URI } from "../../../../../base/common/uri.js";
+import {
+	autorun,
+	derivedOpts,
+	IObservable,
+	ISettableObservable,
+	observableValueOpts,
+} from "../../../../../base/common/observable.js";
+import type { ISyncedCustomization } from "../../../common/agentPluginManager.js";
 
 /**
  * Per-session **client-pushed** customization snapshot + enablement
@@ -24,7 +30,10 @@ export interface ISessionCustomizationsState {
 	readonly enablement: ReadonlyMap<string, boolean>;
 }
 
-const INITIAL_STATE: ISessionCustomizationsState = { synced: [], enablement: new Map() };
+const INITIAL_STATE: ISessionCustomizationsState = {
+	synced: [],
+	enablement: new Map(),
+};
 
 /**
  * Pure observable state holder for the **client-pushed**
@@ -44,11 +53,8 @@ const INITIAL_STATE: ISessionCustomizationsState = { synced: [], enablement: new
  * snapshot changed since the last successful SDK plugin reload".
  */
 export class SessionClientCustomizationsModel {
-
-	private readonly _state: ISettableObservable<ISessionCustomizationsState> = observableValueOpts(
-		{ owner: this, equalsFn: stateEqual },
-		INITIAL_STATE,
-	);
+	private readonly _state: ISettableObservable<ISessionCustomizationsState> =
+		observableValueOpts({ owner: this, equalsFn: stateEqual }, INITIAL_STATE);
 	readonly state: IObservable<ISessionCustomizationsState> = this._state;
 
 	/**
@@ -58,9 +64,15 @@ export class SessionClientCustomizationsModel {
 	 * Default enablement is `true` — an absent entry counts as
 	 * enabled. Server-side customizations contribute nothing here.
 	 */
-	readonly enabledPluginPaths: IObservable<readonly URI[]> = derivedOpts<readonly URI[]>(
-		{ owner: this, equalsFn: (a, b) => arraysEqual(a, b, (x, y) => x.toString() === y.toString()) },
-		reader => {
+	readonly enabledPluginPaths: IObservable<readonly URI[]> = derivedOpts<
+		readonly URI[]
+	>(
+		{
+			owner: this,
+			equalsFn: (a, b) =>
+				arraysEqual(a, b, (x, y) => x.toString() === y.toString()),
+		},
+		(reader) => {
 			const s = this._state.read(reader);
 			const paths: URI[] = [];
 			for (const synced of s.synced) {
@@ -127,8 +139,8 @@ export class SessionClientCustomizationsModel {
  * retry.
  */
 export class SessionClientCustomizationsDiff extends Disposable {
-
-	readonly model: SessionClientCustomizationsModel = new SessionClientCustomizationsModel();
+	readonly model: SessionClientCustomizationsModel =
+		new SessionClientCustomizationsModel();
 
 	private _dirty = false;
 	// `autorun` invokes its callback once at registration for dependency
@@ -142,18 +154,22 @@ export class SessionClientCustomizationsDiff extends Disposable {
 	 * (e.g. agent-level event aggregation) don't have to subscribe to
 	 * the observable directly.
 	 */
-	readonly onDidChange: Event<void> = Event.fromObservableLight(this.model.state);
+	readonly onDidChange: Event<void> = Event.fromObservableLight(
+		this.model.state,
+	);
 
 	constructor() {
 		super();
-		this._register(autorun(reader => {
-			this.model.state.read(reader);
-			if (this._ignoreNextFire) {
-				this._ignoreNextFire = false;
-				return;
-			}
-			this._dirty = true;
-		}));
+		this._register(
+			autorun((reader) => {
+				this.model.state.read(reader);
+				if (this._ignoreNextFire) {
+					this._ignoreNextFire = false;
+					return;
+				}
+				this._dirty = true;
+			}),
+		);
 	}
 
 	get hasDifference(): boolean {
@@ -183,11 +199,20 @@ export class SessionClientCustomizationsDiff extends Disposable {
 	}
 }
 
-function stateEqual(a: ISessionCustomizationsState, b: ISessionCustomizationsState): boolean {
-	return syncedListEqual(a.synced, b.synced) && enablementEqual(a.enablement, b.enablement);
+function stateEqual(
+	a: ISessionCustomizationsState,
+	b: ISessionCustomizationsState,
+): boolean {
+	return (
+		syncedListEqual(a.synced, b.synced) &&
+		enablementEqual(a.enablement, b.enablement)
+	);
 }
 
-function syncedListEqual(a: readonly ISyncedCustomization[], b: readonly ISyncedCustomization[]): boolean {
+function syncedListEqual(
+	a: readonly ISyncedCustomization[],
+	b: readonly ISyncedCustomization[],
+): boolean {
 	if (a.length !== b.length) {
 		return false;
 	}
@@ -225,11 +250,16 @@ function syncedListEqual(a: readonly ISyncedCustomization[], b: readonly ISynced
 	return true;
 }
 
-function loadMessageOf(load: { kind: string; message?: string } | undefined): string | undefined {
+function loadMessageOf(
+	load: { kind: string; message?: string } | undefined,
+): string | undefined {
 	return load && load.message ? load.message : undefined;
 }
 
-function childrenEqual(a: readonly { id: string; name: string }[] | undefined, b: readonly { id: string; name: string }[] | undefined): boolean {
+function childrenEqual(
+	a: readonly { id: string; name: string }[] | undefined,
+	b: readonly { id: string; name: string }[] | undefined,
+): boolean {
 	if (a === b) {
 		return true;
 	}
@@ -244,7 +274,10 @@ function childrenEqual(a: readonly { id: string; name: string }[] | undefined, b
 	return true;
 }
 
-function enablementEqual(a: ReadonlyMap<string, boolean>, b: ReadonlyMap<string, boolean>): boolean {
+function enablementEqual(
+	a: ReadonlyMap<string, boolean>,
+	b: ReadonlyMap<string, boolean>,
+): boolean {
 	if (a.size !== b.size) {
 		return false;
 	}

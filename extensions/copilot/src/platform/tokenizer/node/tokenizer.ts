@@ -12,12 +12,16 @@ import { ITokenizer, TokenizerType } from '../../../util/common/tokenizer';
 import { WorkerWithRpcProxy } from '../../../util/node/worker';
 import { assertNever } from '../../../util/vs/base/common/assert';
 import { Lazy } from '../../../util/vs/base/common/lazy';
-import { Disposable, toDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	toDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 import { basename, join } from '../../../util/vs/base/common/path';
 import { ITelemetryService } from '../../telemetry/common/telemetry';
 import { TikTokenImpl } from './tikTokenizerImpl';
 
-export const ITokenizerProvider = createServiceIdentifier<ITokenizerProvider>('ITokenizerProvider');
+export const ITokenizerProvider =
+	createServiceIdentifier<ITokenizerProvider>('ITokenizerProvider');
 
 export interface TokenizationEndpoint {
 	readonly tokenizer: TokenizerType;
@@ -44,7 +48,6 @@ export const BaseTokensPerMessage = 3;
  */
 export const BaseTokensPerName = 1;
 
-
 export class TokenizerProvider implements ITokenizerProvider {
 	declare readonly _serviceBrand: undefined;
 
@@ -54,13 +57,29 @@ export class TokenizerProvider implements ITokenizerProvider {
 
 	constructor(
 		useWorker: boolean,
-		@ITelemetryService telmetryService: ITelemetryService
+		@ITelemetryService telmetryService: ITelemetryService,
 	) {
 		// if we're running from dist, the dictionary is compressed, but if we're  running
 		// in e.g. a `spec` file we should load the dictionary using default behavior.
 		// todo: cleanup a bit, have an IS_BUILT constant?
-		this._cl100kTokenizer = new Lazy(() => new BPETokenizer(useWorker, join(__dirname, './cl100k_base.tiktoken'), 'cl100k_base', telmetryService));
-		this._o200kTokenizer = new Lazy(() => new BPETokenizer(useWorker, join(__dirname, './o200k_base.tiktoken'), 'o200k_base', telmetryService));
+		this._cl100kTokenizer = new Lazy(
+			() =>
+				new BPETokenizer(
+					useWorker,
+					join(__dirname, './cl100k_base.tiktoken'),
+					'cl100k_base',
+					telmetryService,
+				),
+		);
+		this._o200kTokenizer = new Lazy(
+			() =>
+				new BPETokenizer(
+					useWorker,
+					join(__dirname, './o200k_base.tiktoken'),
+					'o200k_base',
+					telmetryService,
+				),
+		);
 	}
 
 	dispose() {
@@ -85,11 +104,13 @@ export class TokenizerProvider implements ITokenizerProvider {
 }
 
 type TikTokenWorker = {
-	encode(text: string, allowedSpecial?: ReadonlyArray<string>): Promise<number[]>;
+	encode(
+		text: string,
+		allowedSpecial?: ReadonlyArray<string>,
+	): Promise<number[]>;
 };
 
 class BPETokenizer extends Disposable implements ITokenizer {
-
 	private _tokenizer?: Promise<TikTokenWorker>;
 
 	/**
@@ -108,7 +129,8 @@ class BPETokenizer extends Disposable implements ITokenizer {
 		private readonly _useWorker: boolean,
 		private readonly _tokenFilePath: string,
 		private readonly _encoderName: string,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
 	) {
 		super();
 	}
@@ -135,7 +157,9 @@ class BPETokenizer extends Disposable implements ITokenizer {
 	 * @param text The text to calculate the token length for.
 	 * @returns The number of tokens in the text.
 	 */
-	async tokenLength(text: string | Raw.ChatCompletionContentPart): Promise<number> {
+	async tokenLength(
+		text: string | Raw.ChatCompletionContentPart,
+	): Promise<number> {
 		if (typeof text === 'string') {
 			return this._textTokenLength(text);
 		}
@@ -148,7 +172,10 @@ class BPETokenizer extends Disposable implements ITokenizer {
 			case Raw.ChatCompletionContentPartKind.Image:
 				if (text.imageUrl.url.startsWith('data:image/')) {
 					try {
-						return calculateImageTokenCost(text.imageUrl.url, text.imageUrl.detail);
+						return calculateImageTokenCost(
+							text.imageUrl.url,
+							text.imageUrl.detail,
+						);
 					} catch {
 						return this._textTokenLength(text.imageUrl.url);
 					}
@@ -159,7 +186,10 @@ class BPETokenizer extends Disposable implements ITokenizer {
 			case Raw.ChatCompletionContentPartKind.Document:
 				return estimateDocumentTokenCost(text.documentData.data);
 			default:
-				assertNever(text, `unknown content part (${JSON.stringify(text)})`);
+				assertNever(
+					text,
+					`unknown content part (${JSON.stringify(text)})`,
+				);
 		}
 	}
 
@@ -183,7 +213,12 @@ class BPETokenizer extends Disposable implements ITokenizer {
 	 * **Note**: The result does not include base tokens for the completion itself.
 	 */
 	async countMessageTokens(message: Raw.ChatMessage): Promise<number> {
-		return this.baseTokensPerMessage + (await this.countMessageObjectTokens(toMode(OutputMode.OpenAI, message)));
+		return (
+			this.baseTokensPerMessage +
+			(await this.countMessageObjectTokens(
+				toMode(OutputMode.OpenAI, message),
+			))
+		);
 	}
 
 	async countToolTokens(tools: LanguageModelChatTool[]): Promise<number> {
@@ -196,7 +231,11 @@ class BPETokenizer extends Disposable implements ITokenizer {
 		const baseTokensPerTool = 8;
 		for (const tool of tools) {
 			numTokens += baseTokensPerTool;
-			numTokens += await this.countObjectTokens({ name: tool.name, description: tool.description, parameters: tool.inputSchema });
+			numTokens += await this.countObjectTokens({
+				name: tool.name,
+				description: tool.description,
+				parameters: tool.inputSchema,
+			});
 		}
 
 		// This is an estimate, so give a little safety margin
@@ -219,12 +258,19 @@ class BPETokenizer extends Disposable implements ITokenizer {
 				} else if (casted.type === 'image_url' && casted.image_url) {
 					if (casted.image_url.url.startsWith('data:image/')) {
 						try {
-							numTokens += calculateImageTokenCost(casted.image_url.url, casted.image_url.detail);
+							numTokens += calculateImageTokenCost(
+								casted.image_url.url,
+								casted.image_url.detail,
+							);
 						} catch {
-							numTokens += await this.tokenLength(casted.image_url.url);
+							numTokens += await this.tokenLength(
+								casted.image_url.url,
+							);
 						}
 					} else {
-						numTokens += await this.tokenLength(casted.image_url.url);
+						numTokens += await this.tokenLength(
+							casted.image_url.url,
+						);
 					}
 				} else {
 					let newTokens = await this.countMessageObjectTokens(value);
@@ -269,11 +315,14 @@ class BPETokenizer extends Disposable implements ITokenizer {
 	}
 
 	private async doInitTokenizer(): Promise<TikTokenWorker> {
-
 		const useBinaryTokens = basename(__dirname) === 'dist';
 
 		if (!this._useWorker) {
-			const handle = TikTokenImpl.instance.init(this._tokenFilePath, this._encoderName, useBinaryTokens);
+			const handle = TikTokenImpl.instance.init(
+				this._tokenFilePath,
+				this._encoderName,
+				useBinaryTokens,
+			);
 
 			const cleanup = toDisposable(() => {
 				TikTokenImpl.instance.destroy(handle);
@@ -284,14 +333,23 @@ class BPETokenizer extends Disposable implements ITokenizer {
 
 			return {
 				encode: async (text, allowedSpecial) => {
-					return TikTokenImpl.instance.encode(handle, text, allowedSpecial);
-				}
+					return TikTokenImpl.instance.encode(
+						handle,
+						text,
+						allowedSpecial,
+					);
+				},
 			};
 		} else {
-
 			const workerPath = join(__dirname, 'tikTokenizerWorker.js');
-			const worker = new WorkerWithRpcProxy<TikTokenImpl>(workerPath, { name: `TikToken worker (${this._encoderName})` });
-			const handle = await worker.proxy.init(this._tokenFilePath, this._encoderName, useBinaryTokens);
+			const worker = new WorkerWithRpcProxy<TikTokenImpl>(workerPath, {
+				name: `TikToken worker (${this._encoderName})`,
+			});
+			const handle = await worker.proxy.init(
+				this._tokenFilePath,
+				this._encoderName,
+				useBinaryTokens,
+			);
 
 			const cleanup = toDisposable(() => {
 				worker.terminate();
@@ -303,13 +361,17 @@ class BPETokenizer extends Disposable implements ITokenizer {
 
 			return {
 				encode: (text, allowedSpecial) => {
-					const result = worker.proxy.encode(handle, text, allowedSpecial);
+					const result = worker.proxy.encode(
+						handle,
+						text,
+						allowedSpecial,
+					);
 
 					clearTimeout(timeout);
 					timeout = setTimeout(() => cleanup.dispose(), 15000);
 
 					if (Math.random() < 1 / 1000) {
-						worker.proxy.resetStats().then(stats => {
+						worker.proxy.resetStats().then((stats) => {
 							/* __GDPR__
 								"tokenizer.stats" : {
 									"owner": "jrieken",
@@ -319,22 +381,28 @@ class BPETokenizer extends Disposable implements ITokenizer {
 									"textLength": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Average length of text that got encoded" }
 								}
 							*/
-							this._telemetryService.sendMSFTTelemetryEvent('tokenizer.stats', undefined, stats);
+							this._telemetryService.sendMSFTTelemetryEvent(
+								'tokenizer.stats',
+								undefined,
+								stats,
+							);
 						});
 					}
 
 					return result;
-				}
+				},
 			};
 		}
 	}
 }
 
-
 //#region Image tokenizer helpers
 
 // https://platform.openai.com/docs/guides/vision#calculating-costs
-export function calculateImageTokenCost(imageUrl: string, detail: 'low' | 'high' | 'auto' | undefined): number {
+export function calculateImageTokenCost(
+	imageUrl: string,
+	detail: 'low' | 'high' | 'auto' | undefined,
+): number {
 	let { width, height } = getImageDimensions(imageUrl);
 
 	if (detail === 'low') {
@@ -362,7 +430,9 @@ export function calculateImageTokenCost(imageUrl: string, detail: 'low' | 'high'
  * Uses a size-based heuristic to avoid tokenizing large binary payloads and polluting
  * the LRU cache. Intentionally conservative (overestimates) to avoid exceeding context limits.
  */
-export function estimateDocumentTokenCost(base64Data: string | undefined): number {
+export function estimateDocumentTokenCost(
+	base64Data: string | undefined,
+): number {
 	if (!base64Data) {
 		return 0;
 	}

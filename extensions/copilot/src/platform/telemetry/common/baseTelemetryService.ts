@@ -8,13 +8,22 @@ import { ICopilotTokenStore } from '../../authentication/common/copilotTokenStor
 import { ICAPIClientService } from '../../endpoint/common/capiClient';
 import { BaseGHTelemetrySender } from './ghTelemetrySender';
 import { BaseMsftTelemetrySender } from './msftTelemetrySender';
-import { ITelemetryService, TelemetryDestination, TelemetryEventMeasurements, TelemetryEventProperties, TelemetryTrustedValue } from './telemetry';
+import {
+	ITelemetryService,
+	TelemetryDestination,
+	TelemetryEventMeasurements,
+	TelemetryEventProperties,
+	TelemetryTrustedValue,
+} from './telemetry';
 
 export class BaseTelemetryService implements ITelemetryService {
 	declare readonly _serviceBrand: undefined;
 	// Properties that are applied to all telemetry events (currently only used by the exp service
 	// TODO @lramos15 extend further to include more
-	private _sharedProperties: Record<string, string | TelemetryTrustedValue<string>> = {};
+	private _sharedProperties: Record<
+		string,
+		string | TelemetryTrustedValue<string>
+	> = {};
 	private _originalExpAssignments: string | undefined;
 	private _additionalExpAssignments: string[] = [];
 	private _disposables: IDisposable[] = [];
@@ -24,13 +33,17 @@ export class BaseTelemetryService implements ITelemetryService {
 		protected readonly _microsoftTelemetrySender: BaseMsftTelemetrySender,
 		protected readonly _ghTelemetrySender: BaseGHTelemetrySender,
 	) {
-		this._disposables.push(this._microsoftTelemetrySender, this._ghTelemetrySender);
-		this._disposables.push(_tokenStore.onDidStoreUpdate(() => {
-			const token = _tokenStore.copilotToken;
-			if (!token) {
-				return;
-			}
-			/* __GDPR__
+		this._disposables.push(
+			this._microsoftTelemetrySender,
+			this._ghTelemetrySender,
+		);
+		this._disposables.push(
+			_tokenStore.onDidStoreUpdate(() => {
+				const token = _tokenStore.copilotToken;
+				if (!token) {
+					return;
+				}
+				/* __GDPR__
 				"token" : {
 					"owner": "digitarald",
 					"comment": "Copilot token received from the service.",
@@ -41,61 +54,127 @@ export class BaseTelemetryService implements ITelemetryService {
 					"reviewEnabled": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "If the token has Copilot code review features enabled." }
 				}
 			*/
-			this.sendMSFTTelemetryEvent('token', undefined, {
-				snippyEnabled: token.isPublicSuggestionsEnabled() ? 1 : 0,
-				telemetryEnabled: token.isTelemetryEnabled() ? 1 : 0,
-				mcpEnabled: token.isMcpEnabled() ? 1 : 0,
-				previewEnabled: token.isEditorPreviewFeaturesEnabled() ? 1 : 0,
-				reviewEnabled: token.isCopilotCodeReviewEnabled ? 1 : 0
-			});
-		}));
+				this.sendMSFTTelemetryEvent('token', undefined, {
+					snippyEnabled: token.isPublicSuggestionsEnabled() ? 1 : 0,
+					telemetryEnabled: token.isTelemetryEnabled() ? 1 : 0,
+					mcpEnabled: token.isMcpEnabled() ? 1 : 0,
+					previewEnabled: token.isEditorPreviewFeaturesEnabled()
+						? 1
+						: 0,
+					reviewEnabled: token.isCopilotCodeReviewEnabled ? 1 : 0,
+				});
+			}),
+		);
 	}
 
 	dispose(): void {
-		this._disposables.forEach(d => d.dispose());
+		this._disposables.forEach((d) => d.dispose());
 	}
 
-	sendMSFTTelemetryEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
-		this.sendTelemetryEvent(eventName, { github: false, microsoft: true }, properties, measurements);
+	sendMSFTTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
+		this.sendTelemetryEvent(
+			eventName,
+			{ github: false, microsoft: true },
+			properties,
+			measurements,
+		);
 	}
 
-	sendMSFTTelemetryErrorEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
-		this.sendTelemetryErrorEvent(eventName, { github: false, microsoft: true }, properties, measurements);
+	sendMSFTTelemetryErrorEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
+		this.sendTelemetryErrorEvent(
+			eventName,
+			{ github: false, microsoft: true },
+			properties,
+			measurements,
+		);
 	}
 
-	sendGHTelemetryEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendGHTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		// Add SKU to GitHub telemetry events specifically
 		const sku = this._tokenStore.copilotToken?.sku;
 		const enrichedProperties = {
 			...properties,
-			sku: sku ?? ''
+			sku: sku ?? '',
 		};
-		this.sendTelemetryEvent(eventName, { github: true, microsoft: false }, enrichedProperties, measurements);
+		this.sendTelemetryEvent(
+			eventName,
+			{ github: true, microsoft: false },
+			enrichedProperties,
+			measurements,
+		);
 	}
 
-	sendGHTelemetryErrorEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
-		this.sendTelemetryErrorEvent(eventName, { github: true, microsoft: false }, properties, measurements);
+	sendGHTelemetryErrorEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
+		this.sendTelemetryErrorEvent(
+			eventName,
+			{ github: true, microsoft: false },
+			properties,
+			measurements,
+		);
 	}
 
 	sendGHTelemetryException(maybeError: unknown, origin: string) {
 		this._ghTelemetrySender.sendExceptionTelemetry(maybeError, origin);
 	}
 
-	sendEnhancedGHTelemetryEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendEnhancedGHTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		properties = { ...properties, ...this._sharedProperties };
-		this._ghTelemetrySender.sendEnhancedTelemetryEvent(eventName, properties, measurements);
+		this._ghTelemetrySender.sendEnhancedTelemetryEvent(
+			eventName,
+			properties,
+			measurements,
+		);
 	}
-	sendEnhancedGHTelemetryErrorEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendEnhancedGHTelemetryErrorEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		properties = { ...properties, ...this._sharedProperties };
-		this._ghTelemetrySender.sendEnhancedTelemetryErrorEvent(eventName, properties, measurements);
+		this._ghTelemetrySender.sendEnhancedTelemetryErrorEvent(
+			eventName,
+			properties,
+			measurements,
+		);
 	}
 
-	sendInternalMSFTTelemetryEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendInternalMSFTTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		properties = { ...properties, ...this._sharedProperties };
-		this._microsoftTelemetrySender.sendInternalTelemetryEvent(eventName, properties, measurements);
+		this._microsoftTelemetrySender.sendInternalTelemetryEvent(
+			eventName,
+			properties,
+			measurements,
+		);
 	}
 
-	private _getEventName(eventName: string, github: boolean | { eventNamePrefix: string }): string {
+	private _getEventName(
+		eventName: string,
+		github: boolean | { eventNamePrefix: string },
+	): string {
 		let prefix = '';
 		if (typeof github === 'object') {
 			prefix = github.eventNamePrefix;
@@ -103,25 +182,51 @@ export class BaseTelemetryService implements ITelemetryService {
 		return prefix + eventName;
 	}
 
-	sendTelemetryEvent(eventName: string, destination: TelemetryDestination, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendTelemetryEvent(
+		eventName: string,
+		destination: TelemetryDestination,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		properties = { ...properties, ...this._sharedProperties };
 		if (destination.github) {
-			this._ghTelemetrySender.sendTelemetryEvent(this._getEventName(eventName, destination.github), properties, measurements);
+			this._ghTelemetrySender.sendTelemetryEvent(
+				this._getEventName(eventName, destination.github),
+				properties,
+				measurements,
+			);
 		}
 
 		if (destination.microsoft) {
-			this._microsoftTelemetrySender.sendTelemetryEvent(eventName, properties, measurements);
+			this._microsoftTelemetrySender.sendTelemetryEvent(
+				eventName,
+				properties,
+				measurements,
+			);
 		}
 	}
 
-	sendTelemetryErrorEvent(eventName: string, destination: TelemetryDestination, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendTelemetryErrorEvent(
+		eventName: string,
+		destination: TelemetryDestination,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		properties = { ...properties, ...this._sharedProperties };
 		if (destination.github) {
-			this._ghTelemetrySender.sendTelemetryErrorEvent(this._getEventName(eventName, destination.github), properties, measurements);
+			this._ghTelemetrySender.sendTelemetryErrorEvent(
+				this._getEventName(eventName, destination.github),
+				properties,
+				measurements,
+			);
 		}
 
 		if (destination.microsoft) {
-			this._microsoftTelemetrySender.sendTelemetryErrorEvent(eventName, properties, measurements);
+			this._microsoftTelemetrySender.sendTelemetryErrorEvent(
+				eventName,
+				properties,
+				measurements,
+			);
 		}
 	}
 
@@ -143,7 +248,8 @@ export class BaseTelemetryService implements ITelemetryService {
 			}
 		}
 		this._capiClientService.abExpContext = value;
-		this._sharedProperties['abexp.assignmentcontext'] = new TelemetryTrustedValue(value);
+		this._sharedProperties['abexp.assignmentcontext'] =
+			new TelemetryTrustedValue(value);
 	}
 
 	// __GDPR__COMMON__ "capi.assignmentcontext" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
@@ -166,11 +272,20 @@ export class BaseTelemetryService implements ITelemetryService {
 	}
 
 	postEvent(eventName: string, props: Map<string, string>): void {
-		const properties: Record<string, string | TelemetryTrustedValue<string>> = {
+		const properties: Record<
+			string,
+			string | TelemetryTrustedValue<string>
+		> = {
 			...Object.fromEntries(props),
-			...this._sharedProperties
+			...this._sharedProperties,
 		};
-		this._microsoftTelemetrySender.sendInternalTelemetryEvent(eventName, properties);
-		this._microsoftTelemetrySender.sendTelemetryEvent(eventName, properties);
+		this._microsoftTelemetrySender.sendInternalTelemetryEvent(
+			eventName,
+			properties,
+		);
+		this._microsoftTelemetrySender.sendTelemetryEvent(
+			eventName,
+			properties,
+		);
 	}
 }

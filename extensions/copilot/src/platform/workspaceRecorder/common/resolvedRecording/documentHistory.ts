@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import { findLastIdxMonotonous } from '../../../../util/vs/base/common/arraysFind';
 import { assertReturnsDefined } from '../../../../util/vs/base/common/types';
 import { StringEdit } from '../../../../util/vs/editor/common/core/edits/stringEdit';
@@ -11,14 +10,24 @@ import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offse
 import { deserializeStringEdit } from '../../../inlineEdits/common/dataTypes/editUtils';
 import { DocumentEventLogEntryData, LogEntry } from '../workspaceLog';
 import {
-	DocumentChangedOperation, DocumentClosedOperation, DocumentFocusChangedOperation, DocumentId,
-	DocumentOpenedOperation, DocumentRestoreContentOperation, DocumentSelectionChangedOperation, DocumentSetContentOperation, DocumentStateId, InlineCompletionFetchRequest, Operation
+	DocumentChangedOperation,
+	DocumentClosedOperation,
+	DocumentFocusChangedOperation,
+	DocumentId,
+	DocumentOpenedOperation,
+	DocumentRestoreContentOperation,
+	DocumentSelectionChangedOperation,
+	DocumentSetContentOperation,
+	DocumentStateId,
+	InlineCompletionFetchRequest,
+	Operation,
 } from './operation';
 
 export class DocumentRecording {
 	private readonly _docOperationsByStateIdBefore: DocumentChange[] = [];
 	private _currentState: DocumentState = DocumentState.empty;
-	private readonly _documentVersionAfterToOperation: Map<number, Operation> = new Map();
+	private readonly _documentVersionAfterToOperation: Map<number, Operation> =
+		new Map();
 
 	constructor(
 		public readonly documentId: DocumentId,
@@ -33,14 +42,28 @@ export class DocumentRecording {
 		return this._currentState;
 	}
 
-	addOperation(opIdx: number, e: LogEntry, logEntryIdx: number, createSyntheticSelectionEvents: boolean, fetchRequests: Map<number, InlineCompletionFetchRequest>): Operation[] {
+	addOperation(
+		opIdx: number,
+		e: LogEntry,
+		logEntryIdx: number,
+		createSyntheticSelectionEvents: boolean,
+		fetchRequests: Map<number, InlineCompletionFetchRequest>,
+	): Operation[] {
 		const prevStateId = this._currentState.stateId;
 		switch (e.kind) {
 			case 'setContent': {
 				const docOp = new SetValueEdit(opIdx, e.content);
 				this._docOperationsByStateIdBefore.push(docOp);
 				this._currentState = docOp.applyTo(this._currentState);
-				const op = new DocumentSetContentOperation(opIdx, e.time, this.documentId, prevStateId, this._currentState.stateId, logEntryIdx, e.content);
+				const op = new DocumentSetContentOperation(
+					opIdx,
+					e.time,
+					this.documentId,
+					prevStateId,
+					this._currentState.stateId,
+					logEntryIdx,
+					e.content,
+				);
 				if (e.v !== undefined) {
 					this._documentVersionAfterToOperation.set(e.v, op);
 				}
@@ -49,10 +72,28 @@ export class DocumentRecording {
 			}
 
 			case 'opened':
-				return [new DocumentOpenedOperation(opIdx, e.time, this.documentId, prevStateId, this._currentState.stateId, logEntryIdx)];
+				return [
+					new DocumentOpenedOperation(
+						opIdx,
+						e.time,
+						this.documentId,
+						prevStateId,
+						this._currentState.stateId,
+						logEntryIdx,
+					),
+				];
 
 			case 'closed':
-				return [new DocumentClosedOperation(opIdx, e.time, this.documentId, prevStateId, this._currentState.stateId, logEntryIdx)];
+				return [
+					new DocumentClosedOperation(
+						opIdx,
+						e.time,
+						this.documentId,
+						prevStateId,
+						this._currentState.stateId,
+						logEntryIdx,
+					),
+				];
 
 			case 'changed': {
 				const edit = deserializeStringEdit(e.edit);
@@ -60,12 +101,24 @@ export class DocumentRecording {
 				const ops: Operation[] = [];
 
 				if (createSyntheticSelectionEvents) {
-					const selection = edit.replacements.map(e => e.replaceRange);
+					const selection = edit.replacements.map(
+						(e) => e.replaceRange,
+					);
 					const op = new SetSelectionEdit(opIdx, selection);
 					this._docOperationsByStateIdBefore.push(op);
 					this._currentState = op.applyTo(this._currentState);
 
-					ops.push(new DocumentSelectionChangedOperation(opIdx, e.time, this.documentId, prevStateId, this._currentState.stateId, logEntryIdx, selection));
+					ops.push(
+						new DocumentSelectionChangedOperation(
+							opIdx,
+							e.time,
+							this.documentId,
+							prevStateId,
+							this._currentState.stateId,
+							logEntryIdx,
+							selection,
+						),
+					);
 					opIdx++;
 				}
 
@@ -80,9 +133,20 @@ export class DocumentRecording {
 					this._currentState = op.applyTo(this._currentState);
 				}
 
-				const documentChangedOperation = new DocumentChangedOperation(opIdx, e.time, this.documentId, prevStateId, this._currentState.stateId, logEntryIdx, edit);
+				const documentChangedOperation = new DocumentChangedOperation(
+					opIdx,
+					e.time,
+					this.documentId,
+					prevStateId,
+					this._currentState.stateId,
+					logEntryIdx,
+					edit,
+				);
 				if (e.v !== undefined) {
-					this._documentVersionAfterToOperation.set(e.v, documentChangedOperation);
+					this._documentVersionAfterToOperation.set(
+						e.v,
+						documentChangedOperation,
+					);
 				}
 				ops.push(documentChangedOperation);
 				return ops;
@@ -90,12 +154,18 @@ export class DocumentRecording {
 
 			case 'documentEvent': {
 				const data = e.data as DocumentEventLogEntryData;
-				const referencedOp = this._documentVersionAfterToOperation.get(data.v);
+				const referencedOp = this._documentVersionAfterToOperation.get(
+					data.v,
+				);
 				switch (data.sourceId) {
 					case 'InlineCompletions.fetch':
 						if (referencedOp) {
-							const req = new InlineCompletionFetchRequest(data.requestId);
-							referencedOp.inlineCompletionFetchRequests.push(req);
+							const req = new InlineCompletionFetchRequest(
+								data.requestId,
+							);
+							referencedOp.inlineCompletionFetchRequests.push(
+								req,
+							);
 							fetchRequests.set(req.requestId, req);
 						}
 						break;
@@ -110,24 +180,58 @@ export class DocumentRecording {
 				return [];
 			}
 			case 'focused':
-				return [new DocumentFocusChangedOperation(opIdx, e.time, this.documentId, prevStateId, this._currentState.stateId, logEntryIdx)];
+				return [
+					new DocumentFocusChangedOperation(
+						opIdx,
+						e.time,
+						this.documentId,
+						prevStateId,
+						this._currentState.stateId,
+						logEntryIdx,
+					),
+				];
 
 			case 'selectionChanged': {
-				const selection = e.selection.map(s => new OffsetRange(s[0], s[1]));
+				const selection = e.selection.map(
+					(s) => new OffsetRange(s[0], s[1]),
+				);
 				const op = new SetSelectionEdit(opIdx, selection);
 				this._docOperationsByStateIdBefore.push(op);
 				this._currentState = op.applyTo(this._currentState);
 
-				return [new DocumentSelectionChangedOperation(opIdx, e.time, this.documentId, prevStateId, this._currentState.stateId, logEntryIdx, selection)];
+				return [
+					new DocumentSelectionChangedOperation(
+						opIdx,
+						e.time,
+						this.documentId,
+						prevStateId,
+						this._currentState.stateId,
+						logEntryIdx,
+						selection,
+					),
+				];
 			}
 			case 'restoreContent': {
 				const content = this._contentsByHash.get(e.contentId);
-				if (content === undefined) { throw new Error(`No content with hash ${e.contentId} found`); }
+				if (content === undefined) {
+					throw new Error(
+						`No content with hash ${e.contentId} found`,
+					);
+				}
 				const op = new SetValueEdit(opIdx, content);
 				this._docOperationsByStateIdBefore.push(op);
 				this._currentState = op.applyTo(this._currentState);
 
-				return [new DocumentRestoreContentOperation(opIdx, e.time, this.documentId, prevStateId, this._currentState.stateId, logEntryIdx)];
+				return [
+					new DocumentRestoreContentOperation(
+						opIdx,
+						e.time,
+						this.documentId,
+						prevStateId,
+						this._currentState.stateId,
+						logEntryIdx,
+					),
+				];
 			}
 			default:
 				throw new Error(`Unknown entry type: ${e}`);
@@ -138,7 +242,9 @@ export class DocumentRecording {
 
 	private _previousState: DocumentState | undefined;
 
-	private _getLastStateEqualOrBefore(stateId: DocumentStateId): DocumentState {
+	private _getLastStateEqualOrBefore(
+		stateId: DocumentStateId,
+	): DocumentState {
 		if (this._previousState && this._previousState.stateId <= stateId) {
 			return this._previousState;
 		}
@@ -150,16 +256,22 @@ export class DocumentRecording {
 		if (this.statesByStateIdDiv100.length === 0) {
 			return DocumentState.empty;
 		}
-		return this.statesByStateIdDiv100[this.statesByStateIdDiv100.length - 1];
+		return this.statesByStateIdDiv100[
+			this.statesByStateIdDiv100.length - 1
+		];
 	}
 
 	getState(documentStateId: DocumentStateId): DocumentState {
 		let state = this._getLastStateEqualOrBefore(documentStateId);
 		while (state.stateId < documentStateId) {
-			if ((state.stateId % 100) === 0) {
-				this.statesByStateIdDiv100[Math.floor(state.stateId / 100)] = state;
+			if (state.stateId % 100 === 0) {
+				this.statesByStateIdDiv100[Math.floor(state.stateId / 100)] =
+					state;
 			}
-			state = this._docOperationsByStateIdBefore[state.stateId].applyTo(state);
+			state =
+				this._docOperationsByStateIdBefore[state.stateId].applyTo(
+					state,
+				);
 		}
 
 		this._previousState = state;
@@ -168,12 +280,20 @@ export class DocumentRecording {
 	}
 
 	getStateIdAfterOp(opIdx: number): DocumentStateId {
-		const idx = findLastIdxMonotonous(this._docOperationsByStateIdBefore, op => op.opIdx <= opIdx);
-		if (idx === -1) { return this._docOperationsByStateIdBefore.length; }
+		const idx = findLastIdxMonotonous(
+			this._docOperationsByStateIdBefore,
+			(op) => op.opIdx <= opIdx,
+		);
+		if (idx === -1) {
+			return this._docOperationsByStateIdBefore.length;
+		}
 		return idx + 1;
 	}
 
-	getEdit(initialState: DocumentStateId, lastState: DocumentStateId): StringEdit {
+	getEdit(
+		initialState: DocumentStateId,
+		lastState: DocumentStateId,
+	): StringEdit {
 		let edit: StringEdit = StringEdit.empty;
 		for (let i = initialState; i < lastState; i++) {
 			const op = this._docOperationsByStateIdBefore[i];
@@ -194,13 +314,11 @@ export class DocumentState {
 		public readonly value: string,
 		public readonly selection: OffsetRange[],
 		public readonly stateId: DocumentStateId,
-	) { }
+	) {}
 }
 
 abstract class DocumentChange {
-	constructor(
-		public readonly opIdx: number
-	) { }
+	constructor(public readonly opIdx: number) {}
 
 	abstract applyTo(state: DocumentState): DocumentState;
 }
@@ -214,7 +332,11 @@ class DocumentEdit extends DocumentChange {
 	}
 
 	override applyTo(state: DocumentState): DocumentState {
-		return new DocumentState(this.edit.apply(state.value), state.selection, state.stateId + 1);
+		return new DocumentState(
+			this.edit.apply(state.value),
+			state.selection,
+			state.stateId + 1,
+		);
 	}
 }
 
@@ -227,7 +349,11 @@ class SetValueEdit extends DocumentChange {
 	}
 
 	override applyTo(state: DocumentState): DocumentState {
-		return new DocumentState(this.value, state.selection, state.stateId + 1);
+		return new DocumentState(
+			this.value,
+			state.selection,
+			state.stateId + 1,
+		);
 	}
 }
 
@@ -240,6 +366,10 @@ class SetSelectionEdit extends DocumentChange {
 	}
 
 	override applyTo(state: DocumentState): DocumentState {
-		return new DocumentState(state.value, this.selection, state.stateId + 1);
+		return new DocumentState(
+			state.value,
+			this.selection,
+			state.stateId + 1,
+		);
 	}
 }

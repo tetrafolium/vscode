@@ -14,7 +14,10 @@ import { Range } from '../../../vscodeTypes';
  * @param edits edits to apply
  * @returns range after the transformation with the edits
  */
-export function computeUpdatedRange(initialRange: vscode.Range, edits: vscode.TextEdit[]) {
+export function computeUpdatedRange(
+	initialRange: vscode.Range,
+	edits: vscode.TextEdit[],
+) {
 	let range: vscode.Range = initialRange;
 	for (const edit of edits) {
 		const editStart = edit.range.start;
@@ -22,31 +25,35 @@ export function computeUpdatedRange(initialRange: vscode.Range, edits: vscode.Te
 		const rangeStart = range.start;
 		const rangeEnd = range.end;
 		const numnberOfLinesReplaced = edit.newText.split('\n').length;
-		const numberOfLinesAdded = numnberOfLinesReplaced - (editEnd.line - editStart.line) - 1;
+		const numberOfLinesAdded =
+			numnberOfLinesReplaced - (editEnd.line - editStart.line) - 1;
 
 		let startLine = rangeStart.line;
 		let endLine = rangeStart.line;
 		if (editEnd.isBefore(rangeStart)) {
 			startLine = rangeStart.line + numberOfLinesAdded;
 			endLine = rangeEnd.line + numberOfLinesAdded;
-		}
-		else if (editStart.isBefore(rangeStart) && editEnd.isAfterOrEqual(rangeStart) && editEnd.isBeforeOrEqual(rangeEnd)) {
+		} else if (
+			editStart.isBefore(rangeStart) &&
+			editEnd.isAfterOrEqual(rangeStart) &&
+			editEnd.isBeforeOrEqual(rangeEnd)
+		) {
 			startLine = editStart.line;
 			endLine = rangeEnd.line + numberOfLinesAdded;
-		}
-		else if (editStart.isAfterOrEqual(rangeStart) && editStart.isBeforeOrEqual(rangeEnd) && editEnd.isAfter(rangeEnd)) {
+		} else if (
+			editStart.isAfterOrEqual(rangeStart) &&
+			editStart.isBeforeOrEqual(rangeEnd) &&
+			editEnd.isAfter(rangeEnd)
+		) {
 			startLine = rangeStart.line;
 			endLine = editEnd.line + numberOfLinesAdded;
-		}
-		else if (editStart.isAfter(rangeEnd)) {
+		} else if (editStart.isAfter(rangeEnd)) {
 			startLine = rangeStart.line;
 			endLine = rangeEnd.line;
-		}
-		else if (range.contains(edit.range)) {
+		} else if (range.contains(edit.range)) {
 			startLine = rangeStart.line;
 			endLine = rangeEnd.line + numberOfLinesAdded;
-		}
-		else if (edit.range.contains(range)) {
+		} else if (edit.range.contains(range)) {
 			startLine = editStart.line;
 			endLine = editStart.line + numnberOfLinesReplaced - 1;
 		}

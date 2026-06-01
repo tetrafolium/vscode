@@ -16,14 +16,20 @@ import type { Uri } from 'vscode';
  * Used by the debug panel, span export, and other session-aware features.
  */
 export function decodeSessionId(sessionResource: Uri): string {
-	if (sessionResource.scheme === 'copilotcli' || sessionResource.scheme === 'claude-code') {
+	if (
+		sessionResource.scheme === 'copilotcli' ||
+		sessionResource.scheme === 'claude-code'
+	) {
 		return sessionResource.path.replace(/^\//, '');
 	}
-	const pathSegment = sessionResource.path.replace(/^\//, '').split('/').pop() || '';
+	const pathSegment =
+		sessionResource.path.replace(/^\//, '').split('/').pop() || '';
 	if (pathSegment) {
 		try {
 			return Buffer.from(pathSegment, 'base64').toString('utf-8');
-		} catch { /* not base64, use as-is */ }
+		} catch {
+			/* not base64, use as-is */
+		}
 	}
 	return sessionResource.toString();
 }

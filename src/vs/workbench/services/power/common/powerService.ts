@@ -3,32 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { Event } from "../../../../base/common/event.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
 
 /**
  * Represents the system's idle state.
  */
-export type SystemIdleState = 'active' | 'idle' | 'locked' | 'unknown';
+export type SystemIdleState = "active" | "idle" | "locked" | "unknown";
 
 /**
  * Represents the system's thermal state.
  */
-export type ThermalState = 'unknown' | 'nominal' | 'fair' | 'serious' | 'critical';
+export type ThermalState =
+	| "unknown"
+	| "nominal"
+	| "fair"
+	| "serious"
+	| "critical";
 
 /**
  * The type of power save blocker.
  */
-export type PowerSaveBlockerType = 'prevent-app-suspension' | 'prevent-display-sleep';
+export type PowerSaveBlockerType =
+	| "prevent-app-suspension"
+	| "prevent-display-sleep";
 
-export const IPowerService = createDecorator<IPowerService>('powerService');
+export const IPowerService = createDecorator<IPowerService>("powerService");
 
 /**
  * A service for monitoring power state and preventing system sleep.
  * Only fully functional in desktop environments. Web/remote returns stub values.
  */
 export interface IPowerService {
-
 	readonly _serviceBrand: undefined;
 
 	// Events

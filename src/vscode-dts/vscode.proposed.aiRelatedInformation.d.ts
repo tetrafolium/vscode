@@ -3,15 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	// https://github.com/microsoft/vscode/issues/190909
 
 	export enum RelatedInformationType {
 		SymbolInformation = 1,
 		CommandInformation = 2,
 		SearchInformation = 3,
-		SettingInformation = 4
+		SettingInformation = 4,
 	}
 
 	export interface RelatedInformationBaseResult {
@@ -31,19 +30,37 @@ declare module 'vscode' {
 		setting: string;
 	}
 
-	export type RelatedInformationResult = CommandInformationResult | SettingInformationResult;
+	export type RelatedInformationResult =
+		| CommandInformationResult
+		| SettingInformationResult;
 
 	export interface RelatedInformationProvider {
-		provideRelatedInformation(query: string, token: CancellationToken): ProviderResult<RelatedInformationResult[]>;
+		provideRelatedInformation(
+			query: string,
+			token: CancellationToken,
+		): ProviderResult<RelatedInformationResult[]>;
 	}
 
 	export interface EmbeddingVectorProvider {
-		provideEmbeddingVector(strings: string[], token: CancellationToken): ProviderResult<number[][]>;
+		provideEmbeddingVector(
+			strings: string[],
+			token: CancellationToken,
+		): ProviderResult<number[][]>;
 	}
 
 	export namespace ai {
-		export function getRelatedInformation(query: string, types: RelatedInformationType[], token: CancellationToken): Thenable<RelatedInformationResult[]>;
-		export function registerRelatedInformationProvider(type: RelatedInformationType, provider: RelatedInformationProvider): Disposable;
-		export function registerEmbeddingVectorProvider(model: string, provider: EmbeddingVectorProvider): Disposable;
+		export function getRelatedInformation(
+			query: string,
+			types: RelatedInformationType[],
+			token: CancellationToken,
+		): Thenable<RelatedInformationResult[]>;
+		export function registerRelatedInformationProvider(
+			type: RelatedInformationType,
+			provider: RelatedInformationProvider,
+		): Disposable;
+		export function registerEmbeddingVectorProvider(
+			model: string,
+			provider: EmbeddingVectorProvider,
+		): Disposable;
 	}
 }

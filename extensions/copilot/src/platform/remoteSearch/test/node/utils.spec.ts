@@ -21,15 +21,24 @@ suite('formatScopingQuery', () => {
 	});
 
 	test('should format a scoping query with a repo and a language', () => {
-		const query = { repo: 'owner/repo', lang: ['typescript', 'javascript'] };
+		const query = {
+			repo: 'owner/repo',
+			lang: ['typescript', 'javascript'],
+		};
 		const result = formatScopingQuery(query);
-		assert.strictEqual(result, '(repo:owner/repo) (lang:typescript OR lang:javascript)');
+		assert.strictEqual(
+			result,
+			'(repo:owner/repo) (lang:typescript OR lang:javascript)',
+		);
 	});
 
 	test('should format a scoping query with a repo and a notLang', () => {
 		const query = { repo: 'owner/repo', notLang: ['python', 'ruby'] };
 		const result = formatScopingQuery(query);
-		assert.strictEqual(result, '(repo:owner/repo) NOT (lang:python OR lang:ruby)');
+		assert.strictEqual(
+			result,
+			'(repo:owner/repo) NOT (lang:python OR lang:ruby)',
+		);
 	});
 
 	test('should format a scoping query with a repo and a path', () => {
@@ -41,7 +50,10 @@ suite('formatScopingQuery', () => {
 	test('should format a scoping query with a repo and a notPath', () => {
 		const query = { repo: 'owner/repo', notPath: ['node_modules', 'dist'] };
 		const result = formatScopingQuery(query);
-		assert.strictEqual(result, '(repo:owner/repo) NOT (path:node_modules OR path:dist)');
+		assert.strictEqual(
+			result,
+			'(repo:owner/repo) NOT (path:node_modules OR path:dist)',
+		);
 	});
 
 	test('should format a scoping query with all options', () => {
@@ -50,12 +62,12 @@ suite('formatScopingQuery', () => {
 			lang: ['typescript', 'javascript'],
 			notLang: ['python', 'ruby'],
 			path: ['src', 'test'],
-			notPath: ['node_modules', 'dist']
+			notPath: ['node_modules', 'dist'],
 		};
 		const result = formatScopingQuery(query);
 		assert.strictEqual(
 			result,
-			'(repo:owner/repo) (lang:typescript OR lang:javascript) NOT (lang:python OR lang:ruby) (path:src OR path:test) NOT (path:node_modules OR path:dist)'
+			'(repo:owner/repo) (lang:typescript OR lang:javascript) NOT (lang:python OR lang:ruby) (path:src OR path:test) NOT (path:node_modules OR path:dist)',
 		);
 	});
 });

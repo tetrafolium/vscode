@@ -9,23 +9,51 @@ const ts = TS();
 import type { Hash } from './host';
 import type { KeyComputationContext } from './types';
 
-const EmptyIterator = (function* () { })();
+const EmptyIterator = (function* () {})();
 namespace tss {
 	export type SymbolId = number;
 	type InternalTypeScript = {
-		getTokenAtPosition(sourceFile: tt.SourceFile, position: number): tt.Node;
-		getTouchingToken(sourceFile: tt.SourceFile, position: number, includePrecedingTokenAtEndPosition?: (n: tt.Node) => boolean): tt.Node;
+		getTokenAtPosition(
+			sourceFile: tt.SourceFile,
+			position: number,
+		): tt.Node;
+		getTouchingToken(
+			sourceFile: tt.SourceFile,
+			position: number,
+			includePrecedingTokenAtEndPosition?: (n: tt.Node) => boolean,
+		): tt.Node;
 		getNameTable(sourceFile: tt.SourceFile): Map<tt.__String, number>;
-		findReferencedSymbols(program: tt.Program, cancellationToken: tt.CancellationToken, sourceFiles: readonly tt.SourceFile[], sourceFile: tt.SourceFile, position: number): tt.ReferencedSymbol[] | undefined;
+		findReferencedSymbols(
+			program: tt.Program,
+			cancellationToken: tt.CancellationToken,
+			sourceFiles: readonly tt.SourceFile[],
+			sourceFile: tt.SourceFile,
+			position: number,
+		): tt.ReferencedSymbol[] | undefined;
 		getSymbolId(symbol: tt.Symbol): SymbolId;
 	} & typeof ts;
 
 	const its = ts as unknown as InternalTypeScript;
 
-	export const getTokenAtPosition: (sourceFile: tt.SourceFile, position: number) => tt.Node = its.getTokenAtPosition;
-	export const getTouchingToken: (sourceFile: tt.SourceFile, position: number, includePrecedingTokenAtEndPosition?: (n: tt.Node) => boolean) => tt.Node = its.getTouchingToken;
-	export const getNameTable: (sourceFile: tt.SourceFile) => Map<tt.__String, number> = its.getNameTable;
-	export const findReferencedSymbols: (program: tt.Program, cancellationToken: tt.CancellationToken, sourceFiles: readonly tt.SourceFile[], sourceFile: tt.SourceFile, position: number) => tt.ReferencedSymbol[] | undefined = its.findReferencedSymbols;
+	export const getTokenAtPosition: (
+		sourceFile: tt.SourceFile,
+		position: number,
+	) => tt.Node = its.getTokenAtPosition;
+	export const getTouchingToken: (
+		sourceFile: tt.SourceFile,
+		position: number,
+		includePrecedingTokenAtEndPosition?: (n: tt.Node) => boolean,
+	) => tt.Node = its.getTouchingToken;
+	export const getNameTable: (
+		sourceFile: tt.SourceFile,
+	) => Map<tt.__String, number> = its.getNameTable;
+	export const findReferencedSymbols: (
+		program: tt.Program,
+		cancellationToken: tt.CancellationToken,
+		sourceFiles: readonly tt.SourceFile[],
+		sourceFile: tt.SourceFile,
+		position: number,
+	) => tt.ReferencedSymbol[] | undefined = its.findReferencedSymbols;
 	export const getSymbolId: (symbol: tt.Symbol) => SymbolId = its.getSymbolId;
 
 	export type TokenInfo = {
@@ -34,7 +62,10 @@ namespace tss {
 		previous?: tt.Node;
 	};
 
-	export function getRelevantTokens(sourceFile: tt.SourceFile, position: number): TokenInfo {
+	export function getRelevantTokens(
+		sourceFile: tt.SourceFile,
+		position: number,
+	): TokenInfo {
 		// We first get the token at the position. This will be the leaf token even if
 		// position denotes a white space. In this case the next token after the while space
 		// will be considered.
@@ -77,14 +108,21 @@ namespace tss {
 				if (currentIndex > 0) {
 					// Found a previous sibling, now get its rightmost token
 					let previousNode = children[currentIndex - 1];
-					let previousChildren = Nodes.getChildren(previousNode, sourceFile);
+					let previousChildren = Nodes.getChildren(
+						previousNode,
+						sourceFile,
+					);
 					while (previousChildren.length > 0) {
-						const lastChild = previousChildren[previousChildren.length - 1];
+						const lastChild =
+							previousChildren[previousChildren.length - 1];
 						if (lastChild.kind === ts.SyntaxKind.EndOfFileToken) {
 							break;
 						}
 						previousNode = lastChild;
-						previousChildren = Nodes.getChildren(previousNode, sourceFile);
+						previousChildren = Nodes.getChildren(
+							previousNode,
+							sourceFile,
+						);
 					}
 					if (previousNode.kind !== ts.SyntaxKind.EndOfFileToken) {
 						result.previous = previousNode;
@@ -134,22 +172,36 @@ namespace tss {
 			if (typeof compilerOptions.project === 'string') {
 				return compilerOptions.project;
 			}
-			const configFilePath = (compilerOptions as InternalCompilerOptions).configFilePath;
-			return typeof configFilePath === 'string' ? configFilePath : undefined;
+			const configFilePath = (compilerOptions as InternalCompilerOptions)
+				.configFilePath;
+			return typeof configFilePath === 'string'
+				? configFilePath
+				: undefined;
 		}
 	}
 
 	export class CancellationTokenWithTimer implements tt.CancellationToken {
-
-		private readonly cancellationToken: tt.HostCancellationToken | undefined;
+		private readonly cancellationToken:
+			| tt.HostCancellationToken
+			| undefined;
 		private readonly end: number;
-		constructor(cancellationToken: tt.HostCancellationToken | undefined, startTime: number, budget: number, isDebugging: boolean = false) {
-			this.cancellationToken = isDebugging ? undefined : cancellationToken;
+		constructor(
+			cancellationToken: tt.HostCancellationToken | undefined,
+			startTime: number,
+			budget: number,
+			isDebugging: boolean = false,
+		) {
+			this.cancellationToken = isDebugging
+				? undefined
+				: cancellationToken;
 			this.end = isDebugging ? Number.MAX_VALUE : startTime + budget;
 		}
 
 		public isCancellationRequested(): boolean {
-			if (this.cancellationToken && this.cancellationToken.isCancellationRequested()) {
+			if (
+				this.cancellationToken &&
+				this.cancellationToken.isCancellationRequested()
+			) {
 				return true;
 			}
 			return Date.now() > this.end;
@@ -180,13 +232,18 @@ namespace tss {
 	}
 
 	export namespace Nodes {
-
-		export function getChildren(node: tt.Node, sourceFile: tt.SourceFile): readonly tt.Node[] {
+		export function getChildren(
+			node: tt.Node,
+			sourceFile: tt.SourceFile,
+		): readonly tt.Node[] {
 			// If you ask a source file for its children you get an array
 			// with [SyntaxList, EndOfFileToken]
 			if (ts.isSourceFile(node)) {
 				const children = node.getChildren(sourceFile);
-				if (children.length > 0 && children[0].kind === ts.SyntaxKind.SyntaxList) {
+				if (
+					children.length > 0 &&
+					children[0].kind === ts.SyntaxKind.SyntaxList
+				) {
 					return children[0].getChildren(sourceFile);
 				} else {
 					return node.statements;
@@ -195,7 +252,6 @@ namespace tss {
 				return node.getChildren(sourceFile);
 			}
 		}
-
 
 		export function getSymbol(node: tt.Node): tt.Symbol | undefined {
 			return (node as InternalNode).symbol;
@@ -208,7 +264,10 @@ namespace tss {
 			return undefined;
 		}
 
-		export function getParentOfKind(node: tt.Node, kind: tt.SyntaxKind): tt.Node | undefined {
+		export function getParentOfKind(
+			node: tt.Node,
+			kind: tt.SyntaxKind,
+		): tt.Node | undefined {
 			let current: tt.Node | undefined = node;
 			while (current !== undefined) {
 				if (current.kind === kind) {
@@ -228,27 +287,41 @@ namespace tss {
 	}
 
 	export namespace TypeDeclarations {
-
 		export type Type = tt.InterfaceDeclaration | tt.ClassDeclaration;
 
 		export enum Mode {
-			topLevel
+			topLevel,
 		}
 
 		export function is(node: tt.Node): node is Type {
 			const kind = node.kind;
-			return kind === ts.SyntaxKind.InterfaceDeclaration || kind === ts.SyntaxKind.ClassDeclaration;
+			return (
+				kind === ts.SyntaxKind.InterfaceDeclaration ||
+				kind === ts.SyntaxKind.ClassDeclaration
+			);
 		}
 
-		export function entries(sourceFile: tt.SourceFile, _mode: Mode = Mode.topLevel): IterableIterator<Type> {
+		export function entries(
+			sourceFile: tt.SourceFile,
+			_mode: Mode = Mode.topLevel,
+		): IterableIterator<Type> {
 			return fromStatements(sourceFile.statements);
 		}
 
-		function* fromStatements(statements: readonly tt.Statement[]): IterableIterator<Type> {
+		function* fromStatements(
+			statements: readonly tt.Statement[],
+		): IterableIterator<Type> {
 			for (const statement of statements) {
-				if (ts.isClassDeclaration(statement) || ts.isInterfaceDeclaration(statement)) {
+				if (
+					ts.isClassDeclaration(statement) ||
+					ts.isInterfaceDeclaration(statement)
+				) {
 					yield statement;
-				} else if (ts.isModuleDeclaration(statement) && statement.body !== undefined && ts.isModuleBlock(statement.body)) {
+				} else if (
+					ts.isModuleDeclaration(statement) &&
+					statement.body !== undefined &&
+					ts.isModuleBlock(statement.body)
+				) {
 					yield* fromStatements(statement.body.statements);
 				}
 			}
@@ -256,29 +329,43 @@ namespace tss {
 	}
 
 	export namespace ClassDeclarations {
-		export function getExtendsClause(classDeclaration: tt.ClassDeclaration): tt.HeritageClause | undefined {
+		export function getExtendsClause(
+			classDeclaration: tt.ClassDeclaration,
+		): tt.HeritageClause | undefined {
 			const heritageClauses = classDeclaration.heritageClauses;
 			if (heritageClauses === undefined) {
 				return undefined;
 			}
-			return heritageClauses.find(h => h.token === ts.SyntaxKind.ExtendsKeyword);
+			return heritageClauses.find(
+				(h) => h.token === ts.SyntaxKind.ExtendsKeyword,
+			);
 		}
 
-		export function entries(sourceFile: tt.SourceFile): IterableIterator<tt.ClassDeclaration> {
+		export function entries(
+			sourceFile: tt.SourceFile,
+		): IterableIterator<tt.ClassDeclaration> {
 			return fromStatements(sourceFile.statements);
 		}
 
-		function* fromStatements(statements: readonly tt.Statement[]): IterableIterator<tt.ClassDeclaration> {
+		function* fromStatements(
+			statements: readonly tt.Statement[],
+		): IterableIterator<tt.ClassDeclaration> {
 			for (const statement of statements) {
 				if (ts.isClassDeclaration(statement)) {
 					yield statement;
-				} else if (ts.isModuleDeclaration(statement) && statement.body !== undefined && ts.isModuleBlock(statement.body)) {
+				} else if (
+					ts.isModuleDeclaration(statement) &&
+					statement.body !== undefined &&
+					ts.isModuleBlock(statement.body)
+				) {
 					yield* fromStatements(statement.body.statements);
 				}
 			}
 		}
 
-		export function fromSymbol(symbol: tt.Symbol): tt.ClassDeclaration | undefined {
+		export function fromSymbol(
+			symbol: tt.Symbol,
+		): tt.ClassDeclaration | undefined {
 			if (!Symbols.isClass(symbol)) {
 				return undefined;
 			}
@@ -296,22 +383,41 @@ namespace tss {
 	}
 
 	export namespace TypeChecker {
-
 		interface InternalTypeChecker extends tt.TypeChecker {
-			getAccessibleSymbolChain(symbol: tt.Symbol, enclosingDeclaration: tt.Node | undefined, meaning: tt.SymbolFlags, useOnlyExternalAliasing: boolean): tt.Symbol[] | undefined;
+			getAccessibleSymbolChain(
+				symbol: tt.Symbol,
+				enclosingDeclaration: tt.Node | undefined,
+				meaning: tt.SymbolFlags,
+				useOnlyExternalAliasing: boolean,
+			): tt.Symbol[] | undefined;
 		}
-		export function getAccessibleSymbolChain(typeChecker: tt.TypeChecker, symbol: tt.Symbol, enclosingDeclaration: tt.Node | undefined, meaning: tt.SymbolFlags, useOnlyExternalAliasing: boolean): tt.Symbol[] | undefined {
+		export function getAccessibleSymbolChain(
+			typeChecker: tt.TypeChecker,
+			symbol: tt.Symbol,
+			enclosingDeclaration: tt.Node | undefined,
+			meaning: tt.SymbolFlags,
+			useOnlyExternalAliasing: boolean,
+		): tt.Symbol[] | undefined {
 			const internalTypeChecker = typeChecker as InternalTypeChecker;
-			if (typeof internalTypeChecker.getAccessibleSymbolChain !== 'function') {
+			if (
+				typeof internalTypeChecker.getAccessibleSymbolChain !==
+				'function'
+			) {
 				return undefined;
 			}
-			return internalTypeChecker.getAccessibleSymbolChain(symbol, enclosingDeclaration, meaning, useOnlyExternalAliasing);
+			return internalTypeChecker.getAccessibleSymbolChain(
+				symbol,
+				enclosingDeclaration,
+				meaning,
+				useOnlyExternalAliasing,
+			);
 		}
 	}
 
 	export namespace Types {
-
-		export function isIntersection(type: tt.Type): type is tt.IntersectionType {
+		export function isIntersection(
+			type: tt.Type,
+		): type is tt.IntersectionType {
 			return (type.flags & ts.TypeFlags.Intersection) !== 0;
 		}
 
@@ -323,7 +429,10 @@ namespace tss {
 			return type.getBaseTypes();
 		}
 
-		export function getExtendsTypes(typeChecker: tt.TypeChecker, type: tt.Type): tt.Type[] | undefined {
+		export function getExtendsTypes(
+			typeChecker: tt.TypeChecker,
+			type: tt.Type,
+		): tt.Type[] | undefined {
 			const symbol = type.getSymbol();
 			if (symbol === undefined) {
 				return undefined;
@@ -339,7 +448,11 @@ namespace tss {
 					if (heritageClauses !== undefined) {
 						for (const heritageClause of heritageClauses) {
 							for (const type of heritageClause.types) {
-								result.push(typeChecker.getTypeAtLocation(type.expression));
+								result.push(
+									typeChecker.getTypeAtLocation(
+										type.expression,
+									),
+								);
 							}
 						}
 					}
@@ -350,14 +463,35 @@ namespace tss {
 	}
 
 	interface InternalLanguageServiceHost extends tt.LanguageServiceHost {
-		runWithTemporaryFileUpdate?(rootFile: string, updatedText: string, cb: (updatedProgram: tt.Program, originalProgram: tt.Program | undefined, updatedFile: tt.SourceFile) => void): void;
+		runWithTemporaryFileUpdate?(
+			rootFile: string,
+			updatedText: string,
+			cb: (
+				updatedProgram: tt.Program,
+				originalProgram: tt.Program | undefined,
+				updatedFile: tt.SourceFile,
+			) => void,
+		): void;
 	}
 
 	export namespace LanguageServiceHost {
-		export function runWithTemporaryFileUpdate(host: tt.LanguageServiceHost, rootFile: string, updatedText: string, cb: (updatedProgram: tt.Program, originalProgram: tt.Program | undefined, updatedFile: tt.SourceFile) => void): void {
+		export function runWithTemporaryFileUpdate(
+			host: tt.LanguageServiceHost,
+			rootFile: string,
+			updatedText: string,
+			cb: (
+				updatedProgram: tt.Program,
+				originalProgram: tt.Program | undefined,
+				updatedFile: tt.SourceFile,
+			) => void,
+		): void {
 			const internalHost = host as InternalLanguageServiceHost;
 			if (typeof internalHost.runWithTemporaryFileUpdate === 'function') {
-				internalHost.runWithTemporaryFileUpdate(rootFile, updatedText, cb);
+				internalHost.runWithTemporaryFileUpdate(
+					rootFile,
+					updatedText,
+					cb,
+				);
 			}
 		}
 	}
@@ -369,14 +503,16 @@ namespace tss {
 
 	export enum Traversal {
 		depthFirst = 'depthFirst',
-		breadthFirst = 'breadthFirst'
+		breadthFirst = 'breadthFirst',
 	}
 
 	enum InternalTraversal {
-		breadthFirstOnly = 'breadthFirstOnly'
+		breadthFirstOnly = 'breadthFirstOnly',
 	}
 
-	interface SubTypeTraversal<T extends tt.ClassDeclaration | TypeDeclarations.Type> {
+	interface SubTypeTraversal<
+		T extends tt.ClassDeclaration | TypeDeclarations.Type,
+	> {
 		start: tt.Symbol;
 		mode: Traversal | InternalTraversal;
 		isValid(): boolean;
@@ -387,12 +523,15 @@ namespace tss {
 	}
 
 	class ClassTraversal {
-
 		public readonly start: tt.Symbol;
 		public readonly mode: Traversal | InternalTraversal;
 		private readonly symbols: Symbols;
 
-		constructor(start: tt.Symbol, mode: Traversal | InternalTraversal, symbols: Symbols) {
+		constructor(
+			start: tt.Symbol,
+			mode: Traversal | InternalTraversal,
+			symbols: Symbols,
+		) {
 			this.start = start;
 			this.mode = mode;
 			this.symbols = symbols;
@@ -406,11 +545,16 @@ namespace tss {
 			return ts.isClassDeclaration(declaration);
 		}
 
-		public *getDeclarations(sourceFile: tt.SourceFile): IterableIterator<tt.ClassDeclaration> {
+		public *getDeclarations(
+			sourceFile: tt.SourceFile,
+		): IterableIterator<tt.ClassDeclaration> {
 			yield* ClassDeclarations.entries(sourceFile);
 		}
 
-		public isSubType(declaration: tt.ClassDeclaration, symbol: tt.Symbol): boolean {
+		public isSubType(
+			declaration: tt.ClassDeclaration,
+			symbol: tt.Symbol,
+		): boolean {
 			return this.symbols.isSubClass(declaration, symbol);
 		}
 
@@ -424,25 +568,44 @@ namespace tss {
 		public readonly mode: Traversal | InternalTraversal;
 		private readonly symbols: Symbols;
 
-		constructor(start: tt.Symbol, mode: Traversal | InternalTraversal, symbols: Symbols) {
+		constructor(
+			start: tt.Symbol,
+			mode: Traversal | InternalTraversal,
+			symbols: Symbols,
+		) {
 			this.start = start;
 			this.mode = mode;
 			this.symbols = symbols;
 		}
 
 		public isValid(): boolean {
-			return Symbols.isClass(this.start) || Symbols.isInterface(this.start) || Symbols.isTypeAlias(this.start);
+			return (
+				Symbols.isClass(this.start) ||
+				Symbols.isInterface(this.start) ||
+				Symbols.isTypeAlias(this.start)
+			);
 		}
 
 		public isValidDeclaration(declaration: tt.Declaration): boolean {
-			return TypeDeclarations.is(declaration) || ts.isTypeAliasDeclaration(declaration);
+			return (
+				TypeDeclarations.is(declaration) ||
+				ts.isTypeAliasDeclaration(declaration)
+			);
 		}
 
-		public *getDeclarations(sourceFile: tt.SourceFile): IterableIterator<TypeDeclarations.Type> {
-			yield* TypeDeclarations.entries(sourceFile, TypeDeclarations.Mode.topLevel);
+		public *getDeclarations(
+			sourceFile: tt.SourceFile,
+		): IterableIterator<TypeDeclarations.Type> {
+			yield* TypeDeclarations.entries(
+				sourceFile,
+				TypeDeclarations.Mode.topLevel,
+			);
 		}
 
-		public isSubType(declaration: TypeDeclarations.Type, symbol: tt.Symbol): boolean {
+		public isSubType(
+			declaration: TypeDeclarations.Type,
+			symbol: tt.Symbol,
+		): boolean {
 			return this.symbols.isSubType(declaration, symbol);
 		}
 
@@ -451,10 +614,12 @@ namespace tss {
 		}
 	}
 
-	export type DirectSuperSymbolInfo = { extends?: { symbol: tt.Symbol; name: string } | undefined; implements?: { symbol: tt.Symbol; name: string }[] };
+	export type DirectSuperSymbolInfo = {
+		extends?: { symbol: tt.Symbol; name: string } | undefined;
+		implements?: { symbol: tt.Symbol; name: string }[];
+	};
 
 	export class Symbols {
-
 		private readonly program: tt.Program;
 		private readonly typeChecker: tt.TypeChecker;
 
@@ -471,95 +636,169 @@ namespace tss {
 			return (symbol as InternalSymbol).parent;
 		}
 
-		public static isFunctionScopedVariable(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.FunctionScopedVariable) !== 0;
+		public static isFunctionScopedVariable(
+			symbol: tt.Symbol | undefined,
+		): boolean {
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.FunctionScopedVariable) !==
+					0
+			);
 		}
 
-		public static isBlockScopedVariable(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.BlockScopedVariable) !== 0;
+		public static isBlockScopedVariable(
+			symbol: tt.Symbol | undefined,
+		): boolean {
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.BlockScopedVariable) !== 0
+			);
 		}
 
 		public static isConstructor(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.Constructor) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.Constructor) !== 0
+			);
 		}
 
 		public static isGetAccessor(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.GetAccessor) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.GetAccessor) !== 0
+			);
 		}
 
 		public static isSetAccessor(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.SetAccessor) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.SetAccessor) !== 0
+			);
 		}
 
 		public static isMethod(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.Method) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.Method) !== 0
+			);
 		}
 
 		public static isProperty(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.Property) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.Property) !== 0
+			);
 		}
 
 		public static isClass(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.Class) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.Class) !== 0
+			);
 		}
 
 		public static isObjectLiteral(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.ObjectLiteral) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.ObjectLiteral) !== 0
+			);
 		}
 
 		public static isInterface(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.Interface) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.Interface) !== 0
+			);
 		}
 
 		public static isTypeAlias(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.TypeAlias) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.TypeAlias) !== 0
+			);
 		}
 
 		public static isTypeParameter(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.TypeParameter) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.TypeParameter) !== 0
+			);
 		}
 
 		public static isTypeLiteral(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.TypeLiteral) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.TypeLiteral) !== 0
+			);
 		}
 
 		public static isAlias(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.Alias) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.Alias) !== 0
+			);
 		}
 
 		public static isFunction(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.Function) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.Function) !== 0
+			);
 		}
 
 		public static isValueModule(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.ValueModule) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.ValueModule) !== 0
+			);
 		}
 
-		public static isNamespaceModule(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.NamespaceModule) !== 0;
+		public static isNamespaceModule(
+			symbol: tt.Symbol | undefined,
+		): boolean {
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.NamespaceModule) !== 0
+			);
 		}
 
 		public static isEnum(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.Enum) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.Enum) !== 0
+			);
 		}
 
 		public static isRegularEnum(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.RegularEnum) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.RegularEnum) !== 0
+			);
 		}
 
 		public static isConstEnum(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.ConstEnum) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.ConstEnum) !== 0
+			);
 		}
 
 		public static isSignature(symbol: tt.Symbol | undefined): boolean {
-			return symbol !== undefined && (symbol.getFlags() & ts.SymbolFlags.Signature) !== 0;
+			return (
+				symbol !== undefined &&
+				(symbol.getFlags() & ts.SymbolFlags.Signature) !== 0
+			);
 		}
 
-		public static hasModifierFlags(symbol: tt.Symbol, flags: tt.ModifierFlags): boolean {
+		public static hasModifierFlags(
+			symbol: tt.Symbol,
+			flags: tt.ModifierFlags,
+		): boolean {
 			const declarations = symbol.declarations;
 			if (declarations !== undefined) {
 				for (const declaration of declarations) {
-					const modifierFlags = ts.getCombinedModifierFlags(declaration);
+					const modifierFlags =
+						ts.getCombinedModifierFlags(declaration);
 					if ((modifierFlags & flags) === 0) {
 						return false;
 					}
@@ -585,7 +824,9 @@ namespace tss {
 			if (this.internalSymbolNames === undefined) {
 				this.internalSymbolNames = new Set();
 				for (const item in ts.InternalSymbolName) {
-					this.internalSymbolNames.add((ts.InternalSymbolName as Record<string, string>)[item]);
+					this.internalSymbolNames.add(
+						(ts.InternalSymbolName as Record<string, string>)[item],
+					);
 				}
 			}
 			return this.internalSymbolNames.has(symbol.escapedName as string);
@@ -593,10 +834,17 @@ namespace tss {
 
 		public static isSourceFile(symbol: tt.Symbol): boolean {
 			const declarations = symbol.getDeclarations();
-			return declarations !== undefined && declarations.length === 1 && ts.isSourceFile(declarations[0]);
+			return (
+				declarations !== undefined &&
+				declarations.length === 1 &&
+				ts.isSourceFile(declarations[0])
+			);
 		}
 
-		public static fillSources(sources: Set<string>, symbol: tt.Symbol): void {
+		public static fillSources(
+			sources: Set<string>,
+			symbol: tt.Symbol,
+		): void {
 			if (symbol.declarations === undefined) {
 				return;
 			}
@@ -608,7 +856,9 @@ namespace tss {
 			}
 		}
 
-		public static getPrimarySourceFile(symbol: tt.Symbol): tt.SourceFile | undefined {
+		public static getPrimarySourceFile(
+			symbol: tt.Symbol,
+		): tt.SourceFile | undefined {
 			const declarations = symbol.declarations;
 			if (declarations === undefined || declarations.length === 0) {
 				return undefined;
@@ -616,7 +866,10 @@ namespace tss {
 			return declarations[0].getSourceFile();
 		}
 
-		public static getDeclaration<T extends tt.Declaration>(symbol: tt.Symbol, kind: tt.SyntaxKind): T | undefined {
+		public static getDeclaration<T extends tt.Declaration>(
+			symbol: tt.Symbol,
+			kind: tt.SyntaxKind,
+		): T | undefined {
 			const declarations = symbol.getDeclarations();
 			if (declarations === undefined || declarations.length === 0) {
 				return undefined;
@@ -629,24 +882,28 @@ namespace tss {
 			return undefined;
 		}
 
-		public static createKey(symbol: tt.Symbol, hashProvider: { createHash(algorithm: string): Hash }): string | undefined {
+		public static createKey(
+			symbol: tt.Symbol,
+			hashProvider: { createHash(algorithm: string): Hash },
+		): string | undefined {
 			const declarations = symbol.getDeclarations();
 			if (declarations === undefined) {
 				return undefined;
 			}
-			const fragments: { f: string; s: number; e: number; k: number }[] = [];
+			const fragments: { f: string; s: number; e: number; k: number }[] =
+				[];
 			for (const declaration of declarations) {
 				const sourceFile = declaration.getSourceFile();
 				fragments.push({
 					f: sourceFile.fileName,
 					s: declaration.getStart(),
 					e: declaration.getEnd(),
-					k: declaration.kind
+					k: declaration.kind,
 				});
 			}
 			if (fragments.length > 1) {
 				fragments.sort((a, b) => {
-					let result = a.f < b.f ? -1 : (a.f > b.f ? 1 : 0);
+					let result = a.f < b.f ? -1 : a.f > b.f ? 1 : 0;
 					if (result !== 0) {
 						return result;
 					}
@@ -677,12 +934,21 @@ namespace tss {
 		 * @param hashProvider Provides a hash function to create the key.
 		 * @returns A versioned key for the symbol or `undefined` if the key could not be created.
 		 */
-		public static createVersionedKey(symbol: tt.Symbol, context: KeyComputationContext): string | undefined {
+		public static createVersionedKey(
+			symbol: tt.Symbol,
+			context: KeyComputationContext,
+		): string | undefined {
 			const declarations = symbol.getDeclarations();
 			if (declarations === undefined) {
 				return undefined;
 			}
-			const fragments: { f: string; v: string; s: number; e: number; k: number }[] = [];
+			const fragments: {
+				f: string;
+				v: string;
+				s: number;
+				e: number;
+				k: number;
+			}[] = [];
 			for (const declaration of declarations) {
 				const sourceFile = declaration.getSourceFile();
 				const scriptVersion = context.getScriptVersion(sourceFile);
@@ -694,16 +960,16 @@ namespace tss {
 					v: scriptVersion,
 					s: declaration.getStart(),
 					e: declaration.getEnd(),
-					k: declaration.kind
+					k: declaration.kind,
 				});
 			}
 			if (fragments.length > 1) {
 				fragments.sort((a, b) => {
-					let result = a.f < b.f ? -1 : (a.f > b.f ? 1 : 0);
+					let result = a.f < b.f ? -1 : a.f > b.f ? 1 : 0;
 					if (result !== 0) {
 						return result;
 					}
-					result = a.v < b.v ? -1 : (a.v > b.v ? 1 : 0);
+					result = a.v < b.v ? -1 : a.v > b.v ? 1 : 0;
 					if (result !== 0) {
 						return result;
 					}
@@ -726,7 +992,9 @@ namespace tss {
 			return hash.digest('base64');
 		}
 
-		public getFullyQualifiedSymbolName(symbol: tt.Symbol): string | undefined {
+		public getFullyQualifiedSymbolName(
+			symbol: tt.Symbol,
+		): string | undefined {
 			const declarations = symbol.getDeclarations();
 			if (declarations === undefined || declarations.length === 0) {
 				return undefined;
@@ -758,26 +1026,33 @@ namespace tss {
 					return undefined;
 				}
 				// The symbol represents a source file. Use the file path as a moniker.
-				if (declarations.length === 1 && ts.isSourceFile(declarations[0])) {
+				if (
+					declarations.length === 1 &&
+					ts.isSourceFile(declarations[0])
+				) {
 					break;
 				}
 				parts.push(this.getExportSymbolName(current));
 				current = Symbols.getParent(current);
 			}
-			return parts.length === 0 ? undefined : `${parts.reverse().join('.')}`;
+			return parts.length === 0
+				? undefined
+				: `${parts.reverse().join('.')}`;
 		}
 
 		private static escapeRegExp: RegExp = new RegExp('\\.', 'g');
 		private getExportSymbolName(symbol: tt.Symbol): string {
 			let escapedName = symbol.getEscapedName() as string;
-			if (escapedName.charAt(0) === '\"' || escapedName.charAt(0) === '\'') {
+			if (
+				escapedName.charAt(0) === '\"' ||
+				escapedName.charAt(0) === "'"
+			) {
 				escapedName = escapedName.substr(1, escapedName.length - 2);
 			}
 			// We use `.` as a path separator so escape `.` into `..`
 			escapedName = escapedName.replace(Symbols.escapeRegExp, '..');
 			return escapedName;
 		}
-
 
 		public getProgram(): tt.Program {
 			return this.program;
@@ -795,7 +1070,9 @@ namespace tss {
 			return result;
 		}
 
-		public getExtendsSymbol(symbol: tt.Symbol): [tt.Symbol | undefined, string | undefined] {
+		public getExtendsSymbol(
+			symbol: tt.Symbol,
+		): [tt.Symbol | undefined, string | undefined] {
 			const declarations = symbol.declarations;
 			if (declarations === undefined) {
 				return [undefined, undefined];
@@ -805,11 +1082,21 @@ namespace tss {
 					const heritageClauses = declaration.heritageClauses;
 					if (heritageClauses !== undefined) {
 						for (const heritageClause of heritageClauses) {
-							if (heritageClause.token === ts.SyntaxKind.ExtendsKeyword) {
-								const extendsNode = heritageClause.types[0]?.expression;
-								let candidate = this.typeChecker.getSymbolAtLocation(extendsNode);
+							if (
+								heritageClause.token ===
+								ts.SyntaxKind.ExtendsKeyword
+							) {
+								const extendsNode =
+									heritageClause.types[0]?.expression;
+								let candidate =
+									this.typeChecker.getSymbolAtLocation(
+										extendsNode,
+									);
 								if (Symbols.isAlias(candidate)) {
-									candidate = this.typeChecker.getAliasedSymbol(candidate!);
+									candidate =
+										this.typeChecker.getAliasedSymbol(
+											candidate!,
+										);
 								}
 								if (Symbols.isClass(candidate)) {
 									return [candidate, extendsNode.getText()];
@@ -822,7 +1109,9 @@ namespace tss {
 			return [undefined, undefined];
 		}
 
-		public getDirectSuperSymbols(symbol: tt.Symbol): DirectSuperSymbolInfo | undefined {
+		public getDirectSuperSymbols(
+			symbol: tt.Symbol,
+		): DirectSuperSymbolInfo | undefined {
 			const declarations = symbol.declarations;
 			if (declarations === undefined) {
 				return undefined;
@@ -833,21 +1122,39 @@ namespace tss {
 					const heritageClauses = declaration.heritageClauses;
 					if (heritageClauses !== undefined) {
 						for (const heritageClause of heritageClauses) {
-							const extendsNode = heritageClause.types[0]?.expression;
-							let candidate = this.typeChecker.getSymbolAtLocation(extendsNode);
+							const extendsNode =
+								heritageClause.types[0]?.expression;
+							let candidate =
+								this.typeChecker.getSymbolAtLocation(
+									extendsNode,
+								);
 							if (Symbols.isAlias(candidate)) {
-								candidate = this.typeChecker.getAliasedSymbol(candidate!);
+								candidate = this.typeChecker.getAliasedSymbol(
+									candidate!,
+								);
 							}
-							if (heritageClause.token === ts.SyntaxKind.ExtendsKeyword) {
+							if (
+								heritageClause.token ===
+								ts.SyntaxKind.ExtendsKeyword
+							) {
 								if (Symbols.isClass(candidate)) {
-									result.extends = { symbol: candidate!, name: extendsNode.getText() };
+									result.extends = {
+										symbol: candidate!,
+										name: extendsNode.getText(),
+									};
 								}
-							} else if (heritageClause.token === ts.SyntaxKind.ImplementsKeyword) {
+							} else if (
+								heritageClause.token ===
+								ts.SyntaxKind.ImplementsKeyword
+							) {
 								if (Symbols.isInterface(candidate)) {
 									if (result.implements === undefined) {
 										result.implements = [];
 									}
-									result.implements.push({ symbol: candidate!, name: extendsNode.getText() });
+									result.implements.push({
+										symbol: candidate!,
+										name: extendsNode.getText(),
+									});
 								}
 							}
 						}
@@ -857,7 +1164,9 @@ namespace tss {
 			return result;
 		}
 
-		public getAliasedSymbolAtLocation(node: tt.Node): tt.Symbol | undefined {
+		public getAliasedSymbolAtLocation(
+			node: tt.Node,
+		): tt.Symbol | undefined {
 			const symbol = this.getSymbolAtLocation(node);
 			if (symbol === undefined) {
 				return undefined;
@@ -876,7 +1185,9 @@ namespace tss {
 			return this.getLeafSymbol(symbol);
 		}
 
-		public getSymbolAtTypeNodeLocation(node: tt.TypeNode): tt.Symbol | undefined {
+		public getSymbolAtTypeNodeLocation(
+			node: tt.TypeNode,
+		): tt.Symbol | undefined {
 			if (ts.isTypeReferenceNode(node)) {
 				return this.getLeafSymbolAtLocation(node.typeName);
 			} else if (ts.isTypeLiteralNode(node)) {
@@ -887,7 +1198,9 @@ namespace tss {
 		}
 
 		public getAliasedSymbol(symbol: tt.Symbol): tt.Symbol | undefined {
-			return Symbols.isAlias(symbol) ? this.typeChecker.getAliasedSymbol(symbol) : symbol;
+			return Symbols.isAlias(symbol)
+				? this.typeChecker.getAliasedSymbol(symbol)
+				: symbol;
 		}
 
 		public getLeafSymbol(symbol: tt.Symbol): tt.Symbol {
@@ -913,22 +1226,57 @@ namespace tss {
 			return symbol;
 		}
 
-		public getAllSuperTypes(symbol: tt.Symbol, traversal: Traversal = Traversal.depthFirst): IterableIterator<tt.Symbol> {
+		public getAllSuperTypes(
+			symbol: tt.Symbol,
+			traversal: Traversal = Traversal.depthFirst,
+		): IterableIterator<tt.Symbol> {
 			return this._getAllSuperTypes(symbol, traversal, new Set(), false);
 		}
 
-		public getAllSuperTypesWithPath(symbol: tt.Symbol, traversal: Traversal = Traversal.depthFirst): IterableIterator<[tt.Symbol, tt.Symbol]> {
+		public getAllSuperTypesWithPath(
+			symbol: tt.Symbol,
+			traversal: Traversal = Traversal.depthFirst,
+		): IterableIterator<[tt.Symbol, tt.Symbol]> {
 			return this._getAllSuperTypes(symbol, traversal, new Set(), true);
 		}
 
-		public getDirectSuperTypes(symbol: tt.Symbol): IterableIterator<tt.Symbol> {
-			return this._getAllSuperTypes(symbol, InternalTraversal.breadthFirstOnly, new Set(), false);
+		public getDirectSuperTypes(
+			symbol: tt.Symbol,
+		): IterableIterator<tt.Symbol> {
+			return this._getAllSuperTypes(
+				symbol,
+				InternalTraversal.breadthFirstOnly,
+				new Set(),
+				false,
+			);
 		}
 
-		private _getAllSuperTypes(start: tt.Symbol, traversal: Traversal | InternalTraversal, seen: Set<tt.Symbol>, includePath: false): IterableIterator<tt.Symbol>;
-		private _getAllSuperTypes(start: tt.Symbol, traversal: Traversal | InternalTraversal, seen: Set<tt.Symbol>, includePath: true): IterableIterator<[tt.Symbol, tt.Symbol]>;
-		private _getAllSuperTypes(start: tt.Symbol, traversal: Traversal | InternalTraversal, seen: Set<tt.Symbol>, includePath: boolean): IterableIterator<tt.Symbol> | IterableIterator<[tt.Symbol, tt.Symbol]>;
-		private *_getAllSuperTypes(start: tt.Symbol, traversal: Traversal | InternalTraversal, seen: Set<tt.Symbol>, includePath: boolean): IterableIterator<tt.Symbol | [tt.Symbol, tt.Symbol]> {
+		private _getAllSuperTypes(
+			start: tt.Symbol,
+			traversal: Traversal | InternalTraversal,
+			seen: Set<tt.Symbol>,
+			includePath: false,
+		): IterableIterator<tt.Symbol>;
+		private _getAllSuperTypes(
+			start: tt.Symbol,
+			traversal: Traversal | InternalTraversal,
+			seen: Set<tt.Symbol>,
+			includePath: true,
+		): IterableIterator<[tt.Symbol, tt.Symbol]>;
+		private _getAllSuperTypes(
+			start: tt.Symbol,
+			traversal: Traversal | InternalTraversal,
+			seen: Set<tt.Symbol>,
+			includePath: boolean,
+		):
+			| IterableIterator<tt.Symbol>
+			| IterableIterator<[tt.Symbol, tt.Symbol]>;
+		private *_getAllSuperTypes(
+			start: tt.Symbol,
+			traversal: Traversal | InternalTraversal,
+			seen: Set<tt.Symbol>,
+			includePath: boolean,
+		): IterableIterator<tt.Symbol | [tt.Symbol, tt.Symbol]> {
 			const queue: tt.Symbol[] = [start];
 			while (queue.length > 0) {
 				let symbol = queue.pop()!;
@@ -942,7 +1290,9 @@ namespace tss {
 						return;
 					}
 					for (const declaration of declarations) {
-						let heritageClauses: tt.NodeArray<tt.HeritageClause> | undefined;
+						let heritageClauses:
+							| tt.NodeArray<tt.HeritageClause>
+							| undefined;
 						if (ts.isClassDeclaration(declaration)) {
 							heritageClauses = declaration.heritageClauses;
 						} else if (ts.isInterfaceDeclaration(declaration)) {
@@ -956,13 +1306,28 @@ namespace tss {
 							for (const type of heritageClause.types) {
 								// We can't reach to the leave symbol here since in a hierarchy we need to
 								// reference Type References by name.
-								const superType = this.getAliasedSymbolAtLocation(type.expression);
-								if (superType !== undefined && !seen.has(superType)) {
+								const superType =
+									this.getAliasedSymbolAtLocation(
+										type.expression,
+									);
+								if (
+									superType !== undefined &&
+									!seen.has(superType)
+								) {
 									seen.add(superType);
-									yield includePath ? [symbol, superType] : superType;
+									yield includePath
+										? [symbol, superType]
+										: superType;
 									if (traversal === Traversal.depthFirst) {
-										yield* this._getAllSuperTypes(superType, traversal, seen, includePath);
-									} else if (traversal === Traversal.breadthFirst) {
+										yield* this._getAllSuperTypes(
+											superType,
+											traversal,
+											seen,
+											includePath,
+										);
+									} else if (
+										traversal === Traversal.breadthFirst
+									) {
 										queue.push(superType);
 									}
 									// Here traversal === InternalTraversal.breadthFirstOnly; do nothing since iteration is already done.
@@ -979,44 +1344,97 @@ namespace tss {
 						if (ts.isTypeAliasDeclaration(declaration)) {
 							const type = declaration.type;
 							if (ts.isTypeLiteralNode(type)) {
-								const superType = this.getAliasedSymbolAtLocation(type);
-								if (superType !== undefined && !seen.has(superType)) {
+								const superType =
+									this.getAliasedSymbolAtLocation(type);
+								if (
+									superType !== undefined &&
+									!seen.has(superType)
+								) {
 									seen.add(superType);
-									yield includePath ? [symbol, superType] : superType;
+									yield includePath
+										? [symbol, superType]
+										: superType;
 								}
 							} else if (ts.isTypeReferenceNode(type)) {
-								const superType = this.getAliasedSymbolAtLocation(type.typeName);
-								if (superType !== undefined && !seen.has(superType)) {
+								const superType =
+									this.getAliasedSymbolAtLocation(
+										type.typeName,
+									);
+								if (
+									superType !== undefined &&
+									!seen.has(superType)
+								) {
 									// This is something like type _NameLength = NameLength
 									// Yield NameLength since it could represent and interface.
 									seen.add(superType);
-									yield includePath ? [symbol, superType] : superType;
+									yield includePath
+										? [symbol, superType]
+										: superType;
 									if (traversal === Traversal.depthFirst) {
-										yield* this._getAllSuperTypes(superType, traversal, seen, includePath);
-									} else if (traversal === Traversal.breadthFirst) {
+										yield* this._getAllSuperTypes(
+											superType,
+											traversal,
+											seen,
+											includePath,
+										);
+									} else if (
+										traversal === Traversal.breadthFirst
+									) {
 										queue.push(superType);
 									} // Here traversal === InternalTraversal.breadthFirstOnly; do nothing since iteration is already done.
 								}
 							} else if (ts.isIntersectionTypeNode(type)) {
 								for (const item of type.types) {
-									const superType = this.getSymbolAtTypeNodeLocation(item);
-									if (superType !== undefined && !seen.has(superType)) {
+									const superType =
+										this.getSymbolAtTypeNodeLocation(item);
+									if (
+										superType !== undefined &&
+										!seen.has(superType)
+									) {
 										if (Symbols.isTypeLiteral(superType)) {
 											seen.add(superType);
-											yield includePath ? [symbol, superType] : superType;
-										} else if (Symbols.isTypeAlias(superType)) {
+											yield includePath
+												? [symbol, superType]
+												: superType;
+										} else if (
+											Symbols.isTypeAlias(superType)
+										) {
 											seen.add(superType);
-											if (traversal === Traversal.depthFirst) {
-												yield* this._getAllSuperTypes(superType, traversal, seen, includePath);
-											} else if (traversal === Traversal.breadthFirst) {
+											if (
+												traversal ===
+												Traversal.depthFirst
+											) {
+												yield* this._getAllSuperTypes(
+													superType,
+													traversal,
+													seen,
+													includePath,
+												);
+											} else if (
+												traversal ===
+												Traversal.breadthFirst
+											) {
 												queue.push(superType);
 											} // Here traversal === InternalTraversal.breadthFirstOnly; do nothing since iteration is already done.
 										} else {
 											seen.add(superType);
-											yield includePath ? [symbol, superType] : superType;
-											if (traversal === Traversal.depthFirst) {
-												yield* this._getAllSuperTypes(superType, traversal, seen, includePath);
-											} else if (traversal === Traversal.breadthFirst) {
+											yield includePath
+												? [symbol, superType]
+												: superType;
+											if (
+												traversal ===
+												Traversal.depthFirst
+											) {
+												yield* this._getAllSuperTypes(
+													superType,
+													traversal,
+													seen,
+													includePath,
+												);
+											} else if (
+												traversal ===
+												Traversal.breadthFirst
+											) {
 												queue.push(superType);
 											} // Here traversal === InternalTraversal.breadthFirstOnly; do nothing since iteration is already done.
 										}
@@ -1029,11 +1447,16 @@ namespace tss {
 			}
 		}
 
-		public getAllSuperClasses(symbol: tt.Symbol): IterableIterator<tt.Symbol> {
+		public getAllSuperClasses(
+			symbol: tt.Symbol,
+		): IterableIterator<tt.Symbol> {
 			return this._getAllSuperClasses(symbol, new Set());
 		}
 
-		private *_getAllSuperClasses(symbol: tt.Symbol, seen: Set<tt.Symbol>): IterableIterator<tt.Symbol> {
+		private *_getAllSuperClasses(
+			symbol: tt.Symbol,
+			seen: Set<tt.Symbol>,
+		): IterableIterator<tt.Symbol> {
 			if (!Symbols.isClass(symbol)) {
 				return;
 			}
@@ -1053,12 +1476,18 @@ namespace tss {
 						continue;
 					}
 					for (const heritageClause of heritageClauses) {
-						if (heritageClause.token !== ts.SyntaxKind.ExtendsKeyword || heritageClause.types.length < 1) {
+						if (
+							heritageClause.token !==
+								ts.SyntaxKind.ExtendsKeyword ||
+							heritageClause.types.length < 1
+						) {
 							continue;
 						}
 						// TypeScript has exactly one extends clause.
 						const type = heritageClause.types[0];
-						const superClass = this.getAliasedSymbolAtLocation(type.expression);
+						const superClass = this.getAliasedSymbolAtLocation(
+							type.expression,
+						);
 						if (superClass !== undefined && !seen.has(superClass)) {
 							seen.add(superClass);
 							yield superClass;
@@ -1069,13 +1498,18 @@ namespace tss {
 			}
 		}
 
-		public isSubType(declaration: tt.ClassDeclaration | tt.InterfaceDeclaration, symbol: tt.Symbol): boolean {
+		public isSubType(
+			declaration: tt.ClassDeclaration | tt.InterfaceDeclaration,
+			symbol: tt.Symbol,
+		): boolean {
 			if (declaration.heritageClauses === undefined) {
 				return false;
 			}
 			for (const heritageClause of declaration.heritageClauses) {
 				for (const type of heritageClause.types) {
-					const superType = this.getAliasedSymbolAtLocation(type.expression);
+					const superType = this.getAliasedSymbolAtLocation(
+						type.expression,
+					);
 					if (superType !== undefined && superType === symbol) {
 						return true;
 					}
@@ -1084,7 +1518,10 @@ namespace tss {
 			return false;
 		}
 
-		public isSubClass(declaration: tt.ClassDeclaration, symbol: tt.Symbol): boolean {
+		public isSubClass(
+			declaration: tt.ClassDeclaration,
+			symbol: tt.Symbol,
+		): boolean {
 			if (declaration.heritageClauses === undefined) {
 				return false;
 			}
@@ -1096,7 +1533,9 @@ namespace tss {
 				if (heritageClause.types.length < 1) {
 					return false;
 				}
-				const superType = this.getAliasedSymbolAtLocation(heritageClause.types[0].expression);
+				const superType = this.getAliasedSymbolAtLocation(
+					heritageClause.types[0].expression,
+				);
 				if (superType !== undefined && superType === symbol) {
 					return true;
 				}
@@ -1104,27 +1543,68 @@ namespace tss {
 			return false;
 		}
 
-		public getDirectSubTypes(start: tt.Symbol, preferredSourceFiles: tt.SourceFile[] | undefined, stateProvider: StateProvider, token: tt.CancellationToken): IterableIterator<tt.Symbol> {
+		public getDirectSubTypes(
+			start: tt.Symbol,
+			preferredSourceFiles: tt.SourceFile[] | undefined,
+			stateProvider: StateProvider,
+			token: tt.CancellationToken,
+		): IterableIterator<tt.Symbol> {
 			const traversal = Symbols.isClass(start)
-				? new ClassTraversal(start, InternalTraversal.breadthFirstOnly, this)
-				: Symbols.isInterface(start) || Symbols.isTypeAlias(start) ? new TypeTraversal(start, InternalTraversal.breadthFirstOnly, this) : undefined;
+				? new ClassTraversal(
+						start,
+						InternalTraversal.breadthFirstOnly,
+						this,
+					)
+				: Symbols.isInterface(start) || Symbols.isTypeAlias(start)
+					? new TypeTraversal(
+							start,
+							InternalTraversal.breadthFirstOnly,
+							this,
+						)
+					: undefined;
 			if (traversal === undefined) {
 				return EmptyIterator;
 			}
-			return this._getAllSubTypes(traversal, preferredSourceFiles, stateProvider, new Set(), token);
+			return this._getAllSubTypes(
+				traversal,
+				preferredSourceFiles,
+				stateProvider,
+				new Set(),
+				token,
+			);
 		}
 
-		public getAllSubTypes(start: tt.Symbol, traversal: Traversal = Traversal.depthFirst, preferredSourceFiles: tt.SourceFile[] | undefined, stateProvider: StateProvider, token: tt.CancellationToken): IterableIterator<tt.Symbol> {
+		public getAllSubTypes(
+			start: tt.Symbol,
+			traversal: Traversal = Traversal.depthFirst,
+			preferredSourceFiles: tt.SourceFile[] | undefined,
+			stateProvider: StateProvider,
+			token: tt.CancellationToken,
+		): IterableIterator<tt.Symbol> {
 			const nt = Symbols.isClass(start)
 				? new ClassTraversal(start, traversal, this)
-				: Symbols.isInterface(start) || Symbols.isTypeAlias(start) ? new TypeTraversal(start, traversal, this) : undefined;
+				: Symbols.isInterface(start) || Symbols.isTypeAlias(start)
+					? new TypeTraversal(start, traversal, this)
+					: undefined;
 			if (nt === undefined) {
 				return EmptyIterator;
 			}
-			return this._getAllSubTypes(nt, preferredSourceFiles, stateProvider, new Set(), token);
+			return this._getAllSubTypes(
+				nt,
+				preferredSourceFiles,
+				stateProvider,
+				new Set(),
+				token,
+			);
 		}
 
-		private *_getAllSubTypes(traversal: SubTypeTraversal<TypeDeclarations.Type>, preferredSourceFiles: tt.SourceFile[] | undefined, stateProvider: StateProvider, seen: Set<tt.Symbol>, token: tt.CancellationToken): IterableIterator<tt.Symbol> {
+		private *_getAllSubTypes(
+			traversal: SubTypeTraversal<TypeDeclarations.Type>,
+			preferredSourceFiles: tt.SourceFile[] | undefined,
+			stateProvider: StateProvider,
+			seen: Set<tt.Symbol>,
+			token: tt.CancellationToken,
+		): IterableIterator<tt.Symbol> {
 			// In TypeScript classes can be used as interfaces as well (e.g. interface Foo extends Clazz)
 			// However we ignore this pattern for now since it allows that if we have a class as a start symbol
 			// that we can traverse the class hierarchy only.
@@ -1142,10 +1622,22 @@ namespace tss {
 					if (!traversal.isValidDeclaration(declaration)) {
 						continue;
 					}
-					const referencedBy = new ReferencedByVisitor(this.program, declaration.getSourceFile(), preferredSourceFiles, stateProvider, token);
+					const referencedBy = new ReferencedByVisitor(
+						this.program,
+						declaration.getSourceFile(),
+						preferredSourceFiles,
+						stateProvider,
+						token,
+					);
 					for (const sourceFile of referencedBy) {
-						for (const typeDeclaration of traversal.getDeclarations(sourceFile)) {
-							const symbol = this.getAliasedSymbolAtLocation(typeDeclaration.name ? typeDeclaration.name : typeDeclaration);
+						for (const typeDeclaration of traversal.getDeclarations(
+							sourceFile,
+						)) {
+							const symbol = this.getAliasedSymbolAtLocation(
+								typeDeclaration.name
+									? typeDeclaration.name
+									: typeDeclaration,
+							);
 							if (symbol === undefined || seen.has(symbol)) {
 								continue;
 							}
@@ -1153,8 +1645,16 @@ namespace tss {
 								seen.add(symbol);
 								yield symbol;
 								if (traversal.mode === Traversal.depthFirst) {
-									yield* this._getAllSubTypes(traversal.with(symbol), preferredSourceFiles, stateProvider, seen, token);
-								} else if (traversal.mode === Traversal.breadthFirst) {
+									yield* this._getAllSubTypes(
+										traversal.with(symbol),
+										preferredSourceFiles,
+										stateProvider,
+										seen,
+										token,
+									);
+								} else if (
+									traversal.mode === Traversal.breadthFirst
+								) {
 									queue.push(symbol);
 								} // Here traversal === InternalTraversal.breadthFirstOnly; do nothing since iteration is already done.
 							}
@@ -1164,17 +1664,32 @@ namespace tss {
 			}
 		}
 
-		public getMemberStatistic(symbol: tt.Symbol): { abstract: Set<string>; concrete: Set<string> } {
+		public getMemberStatistic(symbol: tt.Symbol): {
+			abstract: Set<string>;
+			concrete: Set<string>;
+		} {
 			const abstractMembers = new Set<string>();
 			const concreteMembers = new Set<string>();
-			Symbols._getMemberStatistic(abstractMembers, concreteMembers, symbol);
+			Symbols._getMemberStatistic(
+				abstractMembers,
+				concreteMembers,
+				symbol,
+			);
 			for (const superType of this.getAllSuperTypes(symbol)) {
-				Symbols._getMemberStatistic(abstractMembers, concreteMembers, superType);
+				Symbols._getMemberStatistic(
+					abstractMembers,
+					concreteMembers,
+					superType,
+				);
 			}
 			return { abstract: abstractMembers, concrete: concreteMembers };
 		}
 
-		private static _getMemberStatistic(abstractMembers: Set<string>, concreteMembers: Set<string>, symbol: tt.Symbol): void {
+		private static _getMemberStatistic(
+			abstractMembers: Set<string>,
+			concreteMembers: Set<string>,
+			symbol: tt.Symbol,
+		): void {
 			if (Symbols.isClass(symbol)) {
 				const declarations = symbol.declarations;
 				if (declarations === undefined) {
@@ -1183,15 +1698,30 @@ namespace tss {
 				for (const declaration of declarations) {
 					if (ts.isClassDeclaration(declaration)) {
 						for (const member of declaration.members) {
-							if ((ts.isMethodDeclaration(member) || ts.isGetAccessorDeclaration(member) || ts.isSetAccessorDeclaration(member) || ts.isPropertyDeclaration(member))) {
+							if (
+								ts.isMethodDeclaration(member) ||
+								ts.isGetAccessorDeclaration(member) ||
+								ts.isSetAccessorDeclaration(member) ||
+								ts.isPropertyDeclaration(member)
+							) {
 								const name = member.name.getText();
-								if (Symbols.includesAbstract(member.modifiers) && !concreteMembers.has(name)) {
+								if (
+									Symbols.includesAbstract(
+										member.modifiers,
+									) &&
+									!concreteMembers.has(name)
+								) {
 									abstractMembers.add(name);
 								} else {
 									concreteMembers.add(name);
 								}
 							} else if (ts.isIndexSignatureDeclaration(member)) {
-								if (Symbols.includesAbstract(member.modifiers) && !concreteMembers.has('[]')) {
+								if (
+									Symbols.includesAbstract(
+										member.modifiers,
+									) &&
+									!concreteMembers.has('[]')
+								) {
 									abstractMembers.add('[]');
 								} else {
 									concreteMembers.add('[]');
@@ -1200,7 +1730,10 @@ namespace tss {
 						}
 					}
 				}
-			} else if (Symbols.isInterface(symbol) || Symbols.isTypeLiteral(symbol)) {
+			} else if (
+				Symbols.isInterface(symbol) ||
+				Symbols.isTypeLiteral(symbol)
+			) {
 				if (symbol.members !== undefined) {
 					for (const member of symbol.members.values()) {
 						if (!concreteMembers.has(member.name)) {
@@ -1211,41 +1744,60 @@ namespace tss {
 			}
 		}
 
-		private static includesAbstract(modifiers: tt.NodeArray<tt.ModifierLike> | undefined): boolean {
+		private static includesAbstract(
+			modifiers: tt.NodeArray<tt.ModifierLike> | undefined,
+		): boolean {
 			if (modifiers === undefined) {
 				return false;
 			}
-			return modifiers.some(m => m.kind === ts.SyntaxKind.AbstractKeyword);
+			return modifiers.some(
+				(m) => m.kind === ts.SyntaxKind.AbstractKeyword,
+			);
 		}
 	}
 
 	interface InternalSession {
 		projectService?: tt.server.ProjectService;
-		getFileAndProject?(args: tt.server.protocol.FileRequestArgs): Sessions.FileAndProject;
-		getPositionInFile?(args: tt.server.protocol.Location & { position?: number }, file: tt.server.NormalizedPath): number;
+		getFileAndProject?(
+			args: tt.server.protocol.FileRequestArgs,
+		): Sessions.FileAndProject;
+		getPositionInFile?(
+			args: tt.server.protocol.Location & { position?: number },
+			file: tt.server.NormalizedPath,
+		): number;
 	}
 
 	export namespace Sessions {
-
 		export interface FileAndProject {
 			readonly file: tt.server.NormalizedPath;
 			readonly project: tt.server.Project;
 		}
 
-		export function getProjectService(session: tt.server.Session): tt.server.ProjectService | undefined {
+		export function getProjectService(
+			session: tt.server.Session,
+		): tt.server.ProjectService | undefined {
 			return (session as unknown as InternalSession).projectService;
 		}
 
-		export function getFileAndProject(session: tt.server.Session, args: tt.server.protocol.FileRequestArgs): FileAndProject | undefined {
-			const internal: InternalSession = session as unknown as InternalSession;
+		export function getFileAndProject(
+			session: tt.server.Session,
+			args: tt.server.protocol.FileRequestArgs,
+		): FileAndProject | undefined {
+			const internal: InternalSession =
+				session as unknown as InternalSession;
 			if (typeof internal.getFileAndProject !== 'function') {
 				return undefined;
 			}
 			return internal.getFileAndProject(args);
 		}
 
-		export function getPositionInFile(session: tt.server.Session, args: tt.server.protocol.Location & { position?: number }, file: tt.server.NormalizedPath): number | undefined {
-			const internal: InternalSession = session as unknown as InternalSession;
+		export function getPositionInFile(
+			session: tt.server.Session,
+			args: tt.server.protocol.Location & { position?: number },
+			file: tt.server.NormalizedPath,
+		): number | undefined {
+			const internal: InternalSession =
+				session as unknown as InternalSession;
 			if (typeof internal.getPositionInFile !== 'function') {
 				return undefined;
 			}
@@ -1258,8 +1810,15 @@ namespace tss {
 		imports?: readonly tt.StringLiteralLike[];
 	}
 
-	function isExternalModuleImportEquals(eq: tt.ImportEqualsDeclaration): eq is tt.ImportEqualsDeclaration & { moduleReference: { expression: tt.StringLiteral } } {
-		return eq.moduleReference.kind === ts.SyntaxKind.ExternalModuleReference && eq.moduleReference.expression.kind === ts.SyntaxKind.StringLiteral;
+	function isExternalModuleImportEquals(
+		eq: tt.ImportEqualsDeclaration,
+	): eq is tt.ImportEqualsDeclaration & {
+		moduleReference: { expression: tt.StringLiteral };
+	} {
+		return (
+			eq.moduleReference.kind === ts.SyntaxKind.ExternalModuleReference &&
+			eq.moduleReference.expression.kind === ts.SyntaxKind.StringLiteral
+		);
 	}
 
 	export interface StateProvider {
@@ -1315,12 +1874,17 @@ namespace tss {
 			values.add(source.fileName);
 		}
 
-		public getImportedBy(source: tt.SourceFile, considerOutdated: boolean): IterableIterator<string> {
+		public getImportedBy(
+			source: tt.SourceFile,
+			considerOutdated: boolean,
+		): IterableIterator<string> {
 			let importedBy = this.importedBy.get(source.fileName);
 			if (importedBy === undefined && considerOutdated) {
 				importedBy = this.outdatedImportedBy?.get(source.fileName);
 			}
-			return importedBy === undefined ? EmptyIterator : importedBy.values();
+			return importedBy === undefined
+				? EmptyIterator
+				: importedBy.values();
 		}
 
 		public markAsOutdated(): void {
@@ -1335,7 +1899,6 @@ namespace tss {
 	}
 
 	export class ReferencedByVisitor {
-
 		public readonly program: tt.Program;
 		public readonly sourceFile: tt.SourceFile;
 		private readonly preferredSourceFiles: tt.SourceFile[] | undefined;
@@ -1343,13 +1906,22 @@ namespace tss {
 
 		private readonly importedByState: ImportedByState | undefined;
 
-		constructor(program: tt.Program, sourceFile: tt.SourceFile, preferredSourceFiles: tt.SourceFile[] | undefined, stateProvider: StateProvider, token: tt.CancellationToken) {
+		constructor(
+			program: tt.Program,
+			sourceFile: tt.SourceFile,
+			preferredSourceFiles: tt.SourceFile[] | undefined,
+			stateProvider: StateProvider,
+			token: tt.CancellationToken,
+		) {
 			this.program = program;
 			this.sourceFile = sourceFile;
 			this.preferredSourceFiles = preferredSourceFiles;
 			this.token = token;
 			const programKey = tss.Programs.getKey(program);
-			this.importedByState = programKey !== undefined ? stateProvider.getImportedByState(programKey) : undefined;
+			this.importedByState =
+				programKey !== undefined
+					? stateProvider.getImportedByState(programKey)
+					: undefined;
 		}
 
 		public getSourceFile(fileName: string): tt.SourceFile | undefined {
@@ -1368,15 +1940,24 @@ namespace tss {
 			// We have some imported by state. We first use it to see if we can find something in
 			// the cache.
 			if (this.importedByState !== undefined) {
-				for (const fileName of this.importedByState.getImportedBy(this.sourceFile, true)) {
+				for (const fileName of this.importedByState.getImportedBy(
+					this.sourceFile,
+					true,
+				)) {
 					this.token.throwIfCancellationRequested();
 					const sourceFile = this.getSourceFile(fileName);
-					if (sourceFile !== undefined && !this.skipSourceFile(program, sourceFile)) {
+					if (
+						sourceFile !== undefined &&
+						!this.skipSourceFile(program, sourceFile)
+					) {
 						yield sourceFile;
 					}
 				}
 				// If the imported by state was complete we are done.
-				if (this.importedByState.isComplete() && !this.importedByState.isOutdated()) {
+				if (
+					this.importedByState.isComplete() &&
+					!this.importedByState.isOutdated()
+				) {
 					return;
 				}
 			}
@@ -1384,13 +1965,25 @@ namespace tss {
 			interface AmbientModuleDeclaration extends tt.ModuleDeclaration {
 				body?: tt.ModuleBlock;
 			}
-			function isAmbientModuleDeclaration(node: tt.Node): node is AmbientModuleDeclaration {
-				return node.kind === ts.SyntaxKind.ModuleDeclaration && (node as tt.ModuleDeclaration).name.kind === ts.SyntaxKind.StringLiteral;
+			function isAmbientModuleDeclaration(
+				node: tt.Node,
+			): node is AmbientModuleDeclaration {
+				return (
+					node.kind === ts.SyntaxKind.ModuleDeclaration &&
+					(node as tt.ModuleDeclaration).name.kind ===
+						ts.SyntaxKind.StringLiteral
+				);
 			}
 
-			function getUnderlyingSourceFileFromImport(checker: tt.TypeChecker, node: tt.StringLiteralLike): tt.SourceFile | undefined {
+			function getUnderlyingSourceFileFromImport(
+				checker: tt.TypeChecker,
+				node: tt.StringLiteralLike,
+			): tt.SourceFile | undefined {
 				const importedSymbol = checker.getSymbolAtLocation(node);
-				if (importedSymbol === undefined || !Symbols.isSourceFile(importedSymbol)) {
+				if (
+					importedSymbol === undefined ||
+					!Symbols.isSourceFile(importedSymbol)
+				) {
 					return undefined;
 				}
 				// We know the symbol is a source file which means the declaration at position 0
@@ -1400,9 +1993,10 @@ namespace tss {
 
 			type SourceFileLike = tt.SourceFile | AmbientModuleDeclaration;
 
-
 			const checker = program.getTypeChecker();
-			const sourceFileSymbolToCheck = checker.getSymbolAtLocation(this.sourceFile);
+			const sourceFileSymbolToCheck = checker.getSymbolAtLocation(
+				this.sourceFile,
+			);
 			if (sourceFileSymbolToCheck === undefined) {
 				return;
 			}
@@ -1417,52 +2011,111 @@ namespace tss {
 				}
 				// We have a module system.
 				// externalModuleIndicator is either true or the Node.
-				if (sourceFile.externalModuleIndicator && sourceFile.imports !== undefined) {
+				if (
+					sourceFile.externalModuleIndicator &&
+					sourceFile.imports !== undefined
+				) {
 					for (let i = 0; i < sourceFile.imports.length; i++) {
 						this.token.throwIfCancellationRequested();
-						const importedSymbol = checker.getSymbolAtLocation(sourceFile.imports[i]);
+						const importedSymbol = checker.getSymbolAtLocation(
+							sourceFile.imports[i],
+						);
 						if (importedSymbol === sourceFileSymbolToCheck) {
 							if (this.importedByState !== undefined) {
-								this.importedByState.imports(sourceFile, this.sourceFile);
+								this.importedByState.imports(
+									sourceFile,
+									this.sourceFile,
+								);
 								// If we capture the state for the imported by we need to visit
 								// all imports. Otherwise the traversed state will be incomplete.
-								for (let r = i + 1; r < sourceFile.imports.length; r++) {
-									const importedSourceFile = getUnderlyingSourceFileFromImport(checker, sourceFile.imports[i]);
-									if (importedSourceFile !== undefined && !this.skipSourceFile(program, importedSourceFile)) {
-										this.importedByState?.imports(sourceFile, importedSourceFile);
+								for (
+									let r = i + 1;
+									r < sourceFile.imports.length;
+									r++
+								) {
+									const importedSourceFile =
+										getUnderlyingSourceFileFromImport(
+											checker,
+											sourceFile.imports[i],
+										);
+									if (
+										importedSourceFile !== undefined &&
+										!this.skipSourceFile(
+											program,
+											importedSourceFile,
+										)
+									) {
+										this.importedByState?.imports(
+											sourceFile,
+											importedSourceFile,
+										);
 									}
 								}
 							}
 							yield sourceFile;
 							break;
-						} else if (importedSymbol !== undefined && Symbols.isSourceFile(importedSymbol)) {
-							const importedSourceFile: tt.SourceFile = importedSymbol.declarations![0] as tt.SourceFile;
-							if (!this.skipSourceFile(program, importedSourceFile)) {
-								this.importedByState?.imports(sourceFile, importedSourceFile);
+						} else if (
+							importedSymbol !== undefined &&
+							Symbols.isSourceFile(importedSymbol)
+						) {
+							const importedSourceFile: tt.SourceFile =
+								importedSymbol
+									.declarations![0] as tt.SourceFile;
+							if (
+								!this.skipSourceFile(
+									program,
+									importedSourceFile,
+								)
+							) {
+								this.importedByState?.imports(
+									sourceFile,
+									importedSourceFile,
+								);
 							}
 						}
 					}
 				} else {
 					const sf = sourceFile as SourceFileLike;
-					const statements = sf.kind === ts.SyntaxKind.SourceFile ? sf.statements : sf.body!.statements;
+					const statements =
+						sf.kind === ts.SyntaxKind.SourceFile
+							? sf.statements
+							: sf.body!.statements;
 					const imports = (statement: tt.Statement): boolean => {
 						switch (statement.kind) {
 							case ts.SyntaxKind.ExportDeclaration:
 							case ts.SyntaxKind.ImportDeclaration: {
-								const decl = statement as tt.ImportDeclaration | tt.ExportDeclaration;
-								if (decl.moduleSpecifier && ts.isStringLiteral(decl.moduleSpecifier)) {
-									const importedSourceFileSymbol = checker.getSymbolAtLocation(decl.moduleSpecifier);
-									if (importedSourceFileSymbol === sourceFileSymbolToCheck) {
+								const decl = statement as
+									| tt.ImportDeclaration
+									| tt.ExportDeclaration;
+								if (
+									decl.moduleSpecifier &&
+									ts.isStringLiteral(decl.moduleSpecifier)
+								) {
+									const importedSourceFileSymbol =
+										checker.getSymbolAtLocation(
+											decl.moduleSpecifier,
+										);
+									if (
+										importedSourceFileSymbol ===
+										sourceFileSymbolToCheck
+									) {
 										return true;
 									}
 								}
 								break;
 							}
 							case ts.SyntaxKind.ImportEqualsDeclaration: {
-								const decl = statement as tt.ImportEqualsDeclaration;
+								const decl =
+									statement as tt.ImportEqualsDeclaration;
 								if (isExternalModuleImportEquals(decl)) {
-									const importedSourceFileSymbol = checker.getSymbolAtLocation(decl.moduleReference.expression);
-									if (importedSourceFileSymbol === sourceFileSymbolToCheck) {
+									const importedSourceFileSymbol =
+										checker.getSymbolAtLocation(
+											decl.moduleReference.expression,
+										);
+									if (
+										importedSourceFileSymbol ===
+										sourceFileSymbolToCheck
+									) {
 										return true;
 									}
 								}
@@ -1474,15 +2127,22 @@ namespace tss {
 					loop: for (const statement of statements) {
 						this.token.throwIfCancellationRequested();
 						if (imports(statement)) {
-							this.importedByState?.imports(sourceFile, this.sourceFile);
+							this.importedByState?.imports(
+								sourceFile,
+								this.sourceFile,
+							);
 							yield sourceFile;
 							break loop;
 						} else if (isAmbientModuleDeclaration(statement)) {
-							const moduleStatements = statement.body && statement.body.statements;
+							const moduleStatements =
+								statement.body && statement.body.statements;
 							if (moduleStatements !== undefined) {
 								for (const moduleStatement of moduleStatements) {
 									if (imports(moduleStatement)) {
-										this.importedByState?.imports(sourceFile, this.sourceFile);
+										this.importedByState?.imports(
+											sourceFile,
+											this.sourceFile,
+										);
 										yield sourceFile;
 										break loop;
 									}
@@ -1494,16 +2154,23 @@ namespace tss {
 			}
 		}
 
-		private skipSourceFile(program: tt.Program, sourceFile: tt.SourceFile): boolean {
-			return program.isSourceFileDefaultLibrary(sourceFile) || program.isSourceFileFromExternalLibrary(sourceFile) || sourceFile.isDeclarationFile;
+		private skipSourceFile(
+			program: tt.Program,
+			sourceFile: tt.SourceFile,
+		): boolean {
+			return (
+				program.isSourceFileDefaultLibrary(sourceFile) ||
+				program.isSourceFileFromExternalLibrary(sourceFile) ||
+				sourceFile.isDeclarationFile
+			);
 		}
 
 		private *allSourceFiles(): IterableIterator<InternalSourceFile> {
 			if (this.importedByState === undefined) {
 				if (this.preferredSourceFiles !== undefined) {
-					yield* (this.preferredSourceFiles as InternalSourceFile[]);
+					yield* this.preferredSourceFiles as InternalSourceFile[];
 				}
-				yield* (this.program.getSourceFiles() as InternalSourceFile[]);
+				yield* this.program.getSourceFiles() as InternalSourceFile[];
 			} else {
 				if (this.preferredSourceFiles !== undefined) {
 					for (const sourceFile of this.preferredSourceFiles) {

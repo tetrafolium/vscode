@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../base/common/event.js';
-import { mainWindow } from '../../base/browser/window.js';
+import { Disposable } from "../../base/common/lifecycle.js";
+import { Emitter, Event } from "../../base/common/event.js";
+import { mainWindow } from "../../base/browser/window.js";
 
-export type MobileNavigationLayer = 'sidebar' | 'editor' | 'panel' | 'auxbar';
+export type MobileNavigationLayer = "sidebar" | "editor" | "panel" | "auxbar";
 
 interface MobileNavigationEntry {
 	readonly layer: MobileNavigationLayer;
@@ -20,25 +20,31 @@ interface MobileNavigationEntry {
  * Android back button dismisses overlays in LIFO order.
  */
 export class MobileNavigationStack extends Disposable {
-
 	private readonly _stack: MobileNavigationEntry[] = [];
 	private _nextId = 0;
 
-	private readonly _onDidPop = this._register(new Emitter<MobileNavigationLayer>());
+	private readonly _onDidPop = this._register(
+		new Emitter<MobileNavigationLayer>(),
+	);
 	readonly onDidPop: Event<MobileNavigationLayer> = this._onDidPop.event;
 
 	constructor() {
 		super();
 
-		this._register(Event.fromDOMEventEmitter<PopStateEvent>(mainWindow, 'popstate')(e => {
-			this._onPopState(e);
-		}));
+		this._register(
+			Event.fromDOMEventEmitter<PopStateEvent>(
+				mainWindow,
+				"popstate",
+			)((e) => {
+				this._onPopState(e);
+			}),
+		);
 	}
 
 	push(layer: MobileNavigationLayer): void {
 		const id = this._nextId++;
 		this._stack.push({ layer, id });
-		mainWindow.history.pushState({ layer, id }, '');
+		mainWindow.history.pushState({ layer, id }, "");
 	}
 
 	pop(): MobileNavigationLayer | undefined {
@@ -56,7 +62,7 @@ export class MobileNavigationStack extends Disposable {
 	}
 
 	has(layer: MobileNavigationLayer): boolean {
-		return this._stack.some(e => e.layer === layer);
+		return this._stack.some((e) => e.layer === layer);
 	}
 
 	clear(): void {
@@ -104,7 +110,7 @@ export class MobileNavigationStack extends Disposable {
 		// Only pop if the event's state id matches expectations —
 		// the popstate must correspond to a state *before* our top entry,
 		// meaning the top entry's push was just undone.
-		if (state && typeof state.id === 'number' && state.id >= top.id) {
+		if (state && typeof state.id === "number" && state.id >= top.id) {
 			return;
 		}
 

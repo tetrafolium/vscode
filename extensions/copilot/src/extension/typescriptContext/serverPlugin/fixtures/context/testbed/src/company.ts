@@ -5,7 +5,6 @@ import { LegalEntity, type RegistrationNumber } from './legalEntity';
 import type { Age } from './person';
 
 export class Company extends LegalEntity {
-
 	private employees: Employee[] = [];
 
 	constructor(companyName: Name, registrationNumber: RegistrationNumber) {
@@ -15,17 +14,15 @@ export class Company extends LegalEntity {
 	public listen(eventProvider: EventProvider): void {
 		eventProvider.onEmployeeAdded((employee: Employee) => {
 			this.addEmployee(employee);
-			
 		});
 	}
 
 	public addEmployee(employee: Employee): void {
 		this.employees.push(employee);
-
 	}
 
 	public getEmployee(name: string): Employee | undefined {
-		return this.employees.find(emp => emp.getName() === name);
+		return this.employees.find((emp) => emp.getName() === name);
 	}
 
 	public getAllEmployees(): Employee[] {
@@ -38,6 +35,8 @@ export class Company extends LegalEntity {
 			const age: Age = employee.getAge();
 			totalAge += age.value;
 		}
-		return this.employees.length === 0 ? 0 : totalAge / this.employees.length;
+		return this.employees.length === 0
+			? 0
+			: totalAge / this.employees.length;
 	}
 }

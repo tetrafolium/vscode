@@ -3,10 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import { Raw, RenderPromptResult } from '@vscode/prompt-tsx';
 import { afterEach, beforeEach, expect, suite, test, vi } from 'vitest';
-import type { ChatLanguageModelToolReference, ChatPromptReference, ChatRequest, ExtendedChatResponsePart, LanguageModelChat } from 'vscode';
+import type {
+	ChatLanguageModelToolReference,
+	ChatPromptReference,
+	ChatRequest,
+	ExtendedChatResponsePart,
+	LanguageModelChat,
+} from 'vscode';
 import { IChatMLFetcher } from '../../../../platform/chat/common/chatMLFetcher';
 import { toTextPart } from '../../../../platform/chat/common/globalStringUtils';
 import { StaticChatMLFetcher } from '../../../../platform/chat/test/common/staticChatMLFetcher';
@@ -20,11 +25,21 @@ import { NullWorkspaceFileIndex } from '../../../../platform/workspaceChunkSearc
 import { IWorkspaceFileIndex } from '../../../../platform/workspaceChunkSearch/node/workspaceFileIndex';
 import { ChatResponseStreamImpl } from '../../../../util/common/chatResponseStreamImpl';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
-import { isObject, isUndefinedOrNull } from '../../../../util/vs/base/common/types';
+import {
+	isObject,
+	isUndefinedOrNull,
+} from '../../../../util/vs/base/common/types';
 import { generateUuid } from '../../../../util/vs/base/common/uuid';
 import { SyncDescriptor } from '../../../../util/vs/platform/instantiation/common/descriptors';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
-import { ChatLocation, ChatResponseConfirmationPart, ChatResponseMarkdownPart, LanguageModelTextPart, LanguageModelToolResult, Uri } from '../../../../vscodeTypes';
+import {
+	ChatLocation,
+	ChatResponseConfirmationPart,
+	ChatResponseMarkdownPart,
+	LanguageModelTextPart,
+	LanguageModelToolResult,
+	Uri,
+} from '../../../../vscodeTypes';
 import { ToolCallingLoop } from '../../../intents/node/toolCallingLoop';
 import { ToolResultMetadata } from '../../../prompts/node/panel/toolCalling';
 import { createExtensionUnitTestingServices } from '../../../test/node/services';
@@ -33,7 +48,12 @@ import { IBuildPromptContext } from '../../common/intents';
 import { ToolCallRound } from '../../common/toolCallRound';
 import { ChatTelemetryBuilder } from '../chatParticipantTelemetry';
 import { DefaultIntentRequestHandler } from '../defaultIntentRequestHandler';
-import { IIntent, IIntentInvocation, nullRenderPromptResult, promptResultMetadata } from '../intents';
+import {
+	IIntent,
+	IIntentInvocation,
+	nullRenderPromptResult,
+	promptResultMetadata,
+} from '../intents';
 
 suite('defaultIntentRequestHandler', () => {
 	let accessor: ITestingServicesAccessor;
@@ -56,10 +76,15 @@ suite('defaultIntentRequestHandler', () => {
 		fetcher = new StaticChatMLFetcher(chatResponse);
 		services.define(ITelemetryService, telemetry);
 		services.define(IChatMLFetcher, fetcher);
-		services.define(IWorkspaceFileIndex, new SyncDescriptor(NullWorkspaceFileIndex));
+		services.define(
+			IWorkspaceFileIndex,
+			new SyncDescriptor(NullWorkspaceFileIndex),
+		);
 
 		accessor = services.createTestingAccessor();
-		endpoint = accessor.get(IInstantiationService).createInstance(MockEndpoint, undefined);
+		endpoint = accessor
+			.get(IInstantiationService)
+			.createInstance(MockEndpoint, undefined);
 		builtPrompts = [];
 		response = [];
 		promptResult = nullRenderPromptResult();
@@ -74,14 +99,19 @@ suite('defaultIntentRequestHandler', () => {
 		accessor.dispose();
 	});
 
-	const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+	const uuidRegex =
+		/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
 
 	function getDerandomizedTelemetry() {
 		const evts = telemetry.getEvents();
 		return cloneAndChangeWithKey(evts, (e, key) => {
 			if (typeof e === 'string' && uuidRegex.test(e)) {
 				return 'some-uuid';
-			} else if (typeof e === 'number' && typeof key === 'string' && key.startsWith('timeTo')) {
+			} else if (
+				typeof e === 'number' &&
+				typeof key === 'string' &&
+				key.startsWith('timeTo')
+			) {
 				return '<duration>';
 			}
 		});
@@ -92,7 +122,9 @@ suite('defaultIntentRequestHandler', () => {
 		description = 'test intent';
 		locations = [ChatLocation.Panel];
 		invoke(): Promise<IIntentInvocation> {
-			return Promise.resolve(new TestIntentInvocation(this, this.locations[0], endpoint));
+			return Promise.resolve(
+				new TestIntentInvocation(this, this.locations[0], endpoint),
+			);
 		}
 	}
 
@@ -103,9 +135,11 @@ suite('defaultIntentRequestHandler', () => {
 			readonly intent: IIntent,
 			readonly location: ChatLocation,
 			readonly endpoint: IChatEndpoint,
-		) { }
+		) {}
 
-		async buildPrompt(context: IBuildPromptContext): Promise<RenderPromptResult> {
+		async buildPrompt(
+			context: IBuildPromptContext,
+		): Promise<RenderPromptResult> {
 			builtPrompts.push(context);
 			if (Array.isArray(promptResult)) {
 				const next = promptResult.shift();
@@ -140,18 +174,27 @@ suite('defaultIntentRequestHandler', () => {
 		hasHooksEnabled = false;
 	}
 
-	const responseStream = new ChatResponseStreamImpl(p => response.push(p), () => { }, undefined, undefined, undefined, () => Promise.resolve(undefined));
+	const responseStream = new ChatResponseStreamImpl(
+		(p) => response.push(p),
+		() => {},
+		undefined,
+		undefined,
+		undefined,
+		() => Promise.resolve(undefined),
+	);
 	const maxToolCallIterations = 3;
 
 	const makeHandler = ({
 		request = new TestChatRequest(),
-		turns = []
+		turns = [],
 	}: { request?: ChatRequest; turns?: Turn[] } = {}) => {
-		turns.push(new Turn(
-			getTurnId(),
-			{ type: 'user', message: request.prompt },
-			undefined,
-		));
+		turns.push(
+			new Turn(
+				getTurnId(),
+				{ type: 'user', message: request.prompt },
+				undefined,
+			),
+		);
 
 		const instaService = accessor.get(IInstantiationService);
 		return instaService.createInstance(
@@ -163,7 +206,15 @@ suite('defaultIntentRequestHandler', () => {
 			CancellationToken.None,
 			undefined,
 			ChatLocation.Panel,
-			instaService.createInstance(ChatTelemetryBuilder, Date.now(), sessionId, undefined, turns.length > 1, request, undefined),
+			instaService.createInstance(
+				ChatTelemetryBuilder,
+				Date.now(),
+				sessionId,
+				undefined,
+				turns.length > 1,
+				request,
+				undefined,
+			),
 			{ maxToolCallIterations },
 			undefined,
 		);
@@ -181,7 +232,12 @@ suite('defaultIntentRequestHandler', () => {
 		chatResponse[0] = 'some response here :)';
 		promptResult = {
 			...nullRenderPromptResult(),
-			messages: [{ role: Raw.ChatRole.User, content: [toTextPart('hello world!')] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [toTextPart('hello world!')],
+				},
+			],
 		};
 
 		const result = await handler.getResult();
@@ -197,7 +253,12 @@ suite('defaultIntentRequestHandler', () => {
 		chatResponse[0] = 'some response here :)';
 		promptResult = {
 			...nullRenderPromptResult(),
-			messages: [{ role: Raw.ChatRole.User, content: [toTextPart('hello world!')] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [toTextPart('hello world!')],
+				},
+			],
 		};
 
 		const result = await handler.getResult();
@@ -206,62 +267,123 @@ suite('defaultIntentRequestHandler', () => {
 
 	test('ignores stateful marker when mode instructions changed on responses api requests', async () => {
 		const request = new TestChatRequest();
-		(request as any).modeInstructions2 = { name: 'Agent', content: 'agent instructions', isBuiltin: true };
+		(request as any).modeInstructions2 = {
+			name: 'Agent',
+			content: 'agent instructions',
+			isBuiltin: true,
+		};
 		(endpoint as any).apiType = 'responses';
 		const requestSpy = vi.spyOn(endpoint, 'makeChatRequest2');
-		const previousTurn = new Turn(generateUuid(), { message: 'previous', type: 'user' }, undefined, [], undefined, undefined, false, { name: 'Plan', content: 'plan instructions', isBuiltin: true } as any);
+		const previousTurn = new Turn(
+			generateUuid(),
+			{ message: 'previous', type: 'user' },
+			undefined,
+			[],
+			undefined,
+			undefined,
+			false,
+			{
+				name: 'Plan',
+				content: 'plan instructions',
+				isBuiltin: true,
+			} as any,
+		);
 		const handler = makeHandler({ request, turns: [previousTurn] });
 		chatResponse[0] = 'some response here :)';
 		promptResult = {
 			...nullRenderPromptResult(),
-			messages: [{ role: Raw.ChatRole.User, content: [toTextPart('hello world!')] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [toTextPart('hello world!')],
+				},
+			],
 		};
 
 		await handler.getResult();
 
 		expect(requestSpy).toHaveBeenCalledOnce();
 		expect(requestSpy.mock.calls[0][0].modeChanged).toBe(true);
-		expect(requestSpy.mock.calls[0][0].ignoreStatefulMarker).toBeUndefined();
+		expect(
+			requestSpy.mock.calls[0][0].ignoreStatefulMarker,
+		).toBeUndefined();
 	});
 
 	test('preserves default stateful marker behavior when mode instructions are unchanged on responses api requests', async () => {
 		const request = new TestChatRequest();
-		(request as any).modeInstructions2 = { name: 'Agent', content: 'agent instructions', isBuiltin: true };
+		(request as any).modeInstructions2 = {
+			name: 'Agent',
+			content: 'agent instructions',
+			isBuiltin: true,
+		};
 		(endpoint as any).apiType = 'responses';
 		const requestSpy = vi.spyOn(endpoint, 'makeChatRequest2');
-		const previousTurn = new Turn(generateUuid(), { message: 'previous', type: 'user' }, undefined, [], undefined, undefined, false, { name: 'Agent', content: 'agent instructions', isBuiltin: true } as any);
+		const previousTurn = new Turn(
+			generateUuid(),
+			{ message: 'previous', type: 'user' },
+			undefined,
+			[],
+			undefined,
+			undefined,
+			false,
+			{
+				name: 'Agent',
+				content: 'agent instructions',
+				isBuiltin: true,
+			} as any,
+		);
 		const handler = makeHandler({ request, turns: [previousTurn] });
 		chatResponse[0] = 'some response here :)';
 		promptResult = {
 			...nullRenderPromptResult(),
-			messages: [{ role: Raw.ChatRole.User, content: [toTextPart('hello world!')] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [toTextPart('hello world!')],
+				},
+			],
 		};
 
 		await handler.getResult();
 
 		expect(requestSpy).toHaveBeenCalledOnce();
 		expect(requestSpy.mock.calls[0][0].modeChanged).toBe(false);
-		expect(requestSpy.mock.calls[0][0].ignoreStatefulMarker).toBeUndefined();
+		expect(
+			requestSpy.mock.calls[0][0].ignoreStatefulMarker,
+		).toBeUndefined();
 	});
 
 	test('makes a tool call turn', async () => {
 		const handler = makeHandler();
-		chatResponse[0] = [{
-			text: 'some response here :)',
-			copilotToolCalls: [{
-				arguments: 'some args here',
-				name: 'my_func',
-				id: 'tool_call_id',
-			}],
-		}];
+		chatResponse[0] = [
+			{
+				text: 'some response here :)',
+				copilotToolCalls: [
+					{
+						arguments: 'some args here',
+						name: 'my_func',
+						id: 'tool_call_id',
+					},
+				],
+			},
+		];
 		chatResponse[1] = 'response to tool call';
 
-		const toolResult = new LanguageModelToolResult([new LanguageModelTextPart('tool-result')]);
+		const toolResult = new LanguageModelToolResult([
+			new LanguageModelTextPart('tool-result'),
+		]);
 
 		promptResult = {
 			...nullRenderPromptResult(),
-			messages: [{ role: Raw.ChatRole.User, content: [toTextPart('hello world!')] }],
-			metadata: promptResultMetadata([new ToolResultMetadata('tool_call_id__vscode-0', toolResult)])
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [toTextPart('hello world!')],
+				},
+			],
+			metadata: promptResultMetadata([
+				new ToolResultMetadata('tool_call_id__vscode-0', toolResult),
+			]),
 		};
 
 		const result = await handler.getResult();
@@ -271,10 +393,18 @@ suite('defaultIntentRequestHandler', () => {
 		expect(getDerandomizedTelemetry()).toMatchSnapshot();
 
 		expect(builtPrompts).toHaveLength(2);
-		expect(builtPrompts[1].toolCallResults).toEqual({ 'tool_call_id__vscode-0': toolResult });
+		expect(builtPrompts[1].toolCallResults).toEqual({
+			'tool_call_id__vscode-0': toolResult,
+		});
 		expect(builtPrompts[1].toolCallRounds).toMatchObject([
 			{
-				toolCalls: [{ arguments: 'some args here', name: 'my_func', id: 'tool_call_id__vscode-0' }],
+				toolCalls: [
+					{
+						arguments: 'some args here',
+						name: 'my_func',
+						id: 'tool_call_id__vscode-0',
+					},
+				],
 				toolInputRetry: 0,
 				response: 'some response here :)',
 			},
@@ -289,19 +419,35 @@ suite('defaultIntentRequestHandler', () => {
 	function fillWithToolCalls(insertN = 20) {
 		promptResult = [];
 		for (let i = 0; i < insertN; i++) {
-			chatResponse[i] = [{
-				text: `response number ${i}`,
-				copilotToolCalls: [{
-					arguments: 'some args here',
-					name: 'my_func',
-					id: `tool_call_id_${i}`,
-				}],
-			}];
-			const toolResult = new LanguageModelToolResult([new LanguageModelTextPart(`tool-result-${i}`)]);
+			chatResponse[i] = [
+				{
+					text: `response number ${i}`,
+					copilotToolCalls: [
+						{
+							arguments: 'some args here',
+							name: 'my_func',
+							id: `tool_call_id_${i}`,
+						},
+					],
+				},
+			];
+			const toolResult = new LanguageModelToolResult([
+				new LanguageModelTextPart(`tool-result-${i}`),
+			]);
 			promptResult[i] = {
 				...nullRenderPromptResult(),
-				messages: [{ role: Raw.ChatRole.User, content: [toTextPart('hello world!')] }],
-				metadata: promptResultMetadata([new ToolResultMetadata(`tool_call_id_${i}__vscode-${i}`, toolResult)])
+				messages: [
+					{
+						role: Raw.ChatRole.User,
+						content: [toTextPart('hello world!')],
+					},
+				],
+				metadata: promptResultMetadata([
+					new ToolResultMetadata(
+						`tool_call_id_${i}__vscode-${i}`,
+						toolResult,
+					),
+				]),
 			};
 		}
 	}
@@ -314,28 +460,50 @@ suite('defaultIntentRequestHandler', () => {
 			const endIdx = startIdx + roundsPerTurn;
 			for (let i = startIdx; i < endIdx; i++) {
 				const isLast = i === endIdx - 1;
-				chatResponse[i] = [{
-					text: `response number ${i}`,
-					copilotToolCalls: isLast ?
-						undefined :
-						[{
-							arguments: 'some args here',
-							name: 'my_func',
-							id: `tool_call_id_${toolCallCounter++}`,
-						}],
-				}];
+				chatResponse[i] = [
+					{
+						text: `response number ${i}`,
+						copilotToolCalls: isLast
+							? undefined
+							: [
+									{
+										arguments: 'some args here',
+										name: 'my_func',
+										id: `tool_call_id_${toolCallCounter++}`,
+									},
+								],
+					},
+				];
 
 				// ToolResultMetadata is reported by the prompt for all tool calls, in history or called this round
 				const promptMetadata: ToolResultMetadata[] = [];
-				for (let toolResultIdx = 0; toolResultIdx <= toolCallCounter; toolResultIdx++) {
+				for (
+					let toolResultIdx = 0;
+					toolResultIdx <= toolCallCounter;
+					toolResultIdx++
+				) {
 					// For each request in a round, all the previous and current ToolResultMetadata are reported
-					const toolResult = new LanguageModelToolResult([new LanguageModelTextPart(`tool-result-${toolResultIdx}`)]);
-					promptMetadata.push(new ToolResultMetadata(`tool_call_id_${toolResultIdx}__vscode-${toolResultIdx}`, toolResult));
+					const toolResult = new LanguageModelToolResult([
+						new LanguageModelTextPart(
+							`tool-result-${toolResultIdx}`,
+						),
+					]);
+					promptMetadata.push(
+						new ToolResultMetadata(
+							`tool_call_id_${toolResultIdx}__vscode-${toolResultIdx}`,
+							toolResult,
+						),
+					);
 				}
 				(promptResult as RenderPromptResult[])[i] = {
 					...nullRenderPromptResult(),
-					messages: [{ role: Raw.ChatRole.User, content: [toTextPart('hello world!')] }],
-					metadata: promptResultMetadata(promptMetadata)
+					messages: [
+						{
+							role: Raw.ChatRole.User,
+							content: [toTextPart('hello world!')],
+						},
+					],
+					metadata: promptResultMetadata(promptMetadata),
 				};
 			}
 		};
@@ -355,7 +523,9 @@ suite('defaultIntentRequestHandler', () => {
 		expect(last).toBeInstanceOf(ChatResponseConfirmationPart);
 
 		const request = new TestChatRequest();
-		request.acceptedConfirmationData = [(last as ChatResponseConfirmationPart).data];
+		request.acceptedConfirmationData = [
+			(last as ChatResponseConfirmationPart).data,
+		];
 		const handler2 = makeHandler({ request });
 		expect(await handler2.getResult()).toMatchSnapshot();
 
@@ -372,7 +542,11 @@ suite('defaultIntentRequestHandler', () => {
 		const result1 = await handler.getResult();
 		expect(result1.metadata).toMatchSnapshot();
 
-		const turn1 = new Turn(generateUuid(), { message: request.prompt, type: 'user' }, undefined);
+		const turn1 = new Turn(
+			generateUuid(),
+			{ message: request.prompt, type: 'user' },
+			undefined,
+		);
 		const handler2 = makeHandler({ request, turns: [turn1] });
 		const result2 = await handler2.getResult();
 		expect(result2.metadata).toMatchSnapshot();
@@ -387,23 +561,36 @@ suite('defaultIntentRequestHandler', () => {
 		expect(last).toBeInstanceOf(ChatResponseConfirmationPart);
 
 		const request = new TestChatRequest();
-		request.rejectedConfirmationData = [(last as ChatResponseConfirmationPart).data];
+		request.rejectedConfirmationData = [
+			(last as ChatResponseConfirmationPart).data,
+		];
 		request.prompt = (last as ChatResponseConfirmationPart).buttons![1];
 		const handler2 = makeHandler({ request });
 		await handler2.getResult();
 
 		const last2 = response.at(-1);
 		expect(last2).toBeInstanceOf(ChatResponseMarkdownPart);
-		expect((last2 as ChatResponseMarkdownPart).value.value).toMatchInlineSnapshot(`"Let me know if there's anything else I can help with!"`);
+		expect(
+			(last2 as ChatResponseMarkdownPart).value.value,
+		).toMatchInlineSnapshot(
+			`"Let me know if there's anything else I can help with!"`,
+		);
 	});
 });
 
-
-function cloneAndChangeWithKey(obj: any, changer: (orig: any, key?: string | number) => any): any {
+function cloneAndChangeWithKey(
+	obj: any,
+	changer: (orig: any, key?: string | number) => any,
+): any {
 	return _cloneAndChangeWithKey(obj, changer, new Set(), undefined);
 }
 
-function _cloneAndChangeWithKey(obj: any, changer: (orig: any, key?: string | number) => any, seen: Set<any>, key: string | number | undefined): any {
+function _cloneAndChangeWithKey(
+	obj: any,
+	changer: (orig: any, key?: string | number) => any,
+	seen: Set<any>,
+	key: string | number | undefined,
+): any {
 	if (isUndefinedOrNull(obj)) {
 		return obj;
 	}
@@ -429,7 +616,12 @@ function _cloneAndChangeWithKey(obj: any, changer: (orig: any, key?: string | nu
 		const r2 = {};
 		for (const i2 in obj) {
 			if (Object.prototype.hasOwnProperty.call(obj, i2)) {
-				(r2 as any)[i2] = _cloneAndChangeWithKey(obj[i2], changer, seen, i2);
+				(r2 as any)[i2] = _cloneAndChangeWithKey(
+					obj[i2],
+					changer,
+					seen,
+					i2,
+				);
 			}
 		}
 		seen.delete(obj);

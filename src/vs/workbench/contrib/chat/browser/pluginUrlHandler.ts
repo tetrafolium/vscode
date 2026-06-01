@@ -3,26 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { mainWindow } from '../../../../base/browser/window.js';
-import { decodeBase64 } from '../../../../base/common/buffer.js';
-import { Codicon } from '../../../../base/common/codicons.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { URI } from '../../../../base/common/uri.js';
-import { localize } from '../../../../nls.js';
-import { ConfigurationTarget, IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { IURLHandler, IURLService } from '../../../../platform/url/common/url.js';
-import { IEditorService } from '../../../services/editor/common/editorService.js';
-import { IHostService } from '../../../services/host/browser/host.js';
-import { IWorkbenchContribution } from '../../../common/contributions.js';
-import { IExtensionsWorkbenchService } from '../../extensions/common/extensions.js';
-import { AgentPluginEditorInput } from './agentPluginEditor/agentPluginEditorInput.js';
-import { AgentPluginItemKind, IMarketplacePluginItem } from './agentPluginEditor/agentPluginItems.js';
-import { ChatConfiguration } from '../common/constants.js';
-import { MarketplaceReferenceKind, parseMarketplaceReference, parseMarketplaceReferences, readConfiguredMarketplaces } from '../common/plugins/marketplaceReference.js';
-import { IPluginInstallService } from '../common/plugins/pluginInstallService.js';
+import { mainWindow } from "../../../../base/browser/window.js";
+import { decodeBase64 } from "../../../../base/common/buffer.js";
+import { Codicon } from "../../../../base/common/codicons.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { URI } from "../../../../base/common/uri.js";
+import { localize } from "../../../../nls.js";
+import {
+	ConfigurationTarget,
+	IConfigurationService,
+} from "../../../../platform/configuration/common/configuration.js";
+import { IDialogService } from "../../../../platform/dialogs/common/dialogs.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import {
+	IURLHandler,
+	IURLService,
+} from "../../../../platform/url/common/url.js";
+import { IEditorService } from "../../../services/editor/common/editorService.js";
+import { IHostService } from "../../../services/host/browser/host.js";
+import { IWorkbenchContribution } from "../../../common/contributions.js";
+import { IExtensionsWorkbenchService } from "../../extensions/common/extensions.js";
+import { AgentPluginEditorInput } from "./agentPluginEditor/agentPluginEditorInput.js";
+import {
+	AgentPluginItemKind,
+	IMarketplacePluginItem,
+} from "./agentPluginEditor/agentPluginItems.js";
+import { ChatConfiguration } from "../common/constants.js";
+import {
+	MarketplaceReferenceKind,
+	parseMarketplaceReference,
+	parseMarketplaceReferences,
+	readConfiguredMarketplaces,
+} from "../common/plugins/marketplaceReference.js";
+import { IPluginInstallService } from "../common/plugins/pluginInstallService.js";
 
 /**
  * Handles `vscode://chat-plugin/install?source=<base64>[&plugin=<base64>]` and
@@ -34,34 +48,40 @@ import { IPluginInstallService } from '../common/plugins/pluginInstallService.js
  * on the `/install` route, the handler targets that specific plugin within the
  * marketplace and opens its details in the editor after install.
  */
-export class PluginUrlHandler extends Disposable implements IWorkbenchContribution, IURLHandler {
-
-	static readonly ID = 'workbench.contrib.pluginUrlHandler';
+export class PluginUrlHandler
+	extends Disposable
+	implements IWorkbenchContribution, IURLHandler
+{
+	static readonly ID = "workbench.contrib.pluginUrlHandler";
 
 	constructor(
 		@IURLService urlService: IURLService,
-		@IPluginInstallService private readonly _pluginInstallService: IPluginInstallService,
+		@IPluginInstallService
+		private readonly _pluginInstallService: IPluginInstallService,
 		@IDialogService private readonly _dialogService: IDialogService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IExtensionsWorkbenchService private readonly _extensionsWorkbenchService: IExtensionsWorkbenchService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IExtensionsWorkbenchService
+		private readonly _extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@IHostService private readonly _hostService: IHostService,
 		@ILogService private readonly _logService: ILogService,
 		@IEditorService private readonly _editorService: IEditorService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 	) {
 		super();
 		this._register(urlService.registerHandler(this));
 	}
 
 	async handleURL(uri: URI): Promise<boolean> {
-		if (uri.authority !== 'chat-plugin') {
+		if (uri.authority !== "chat-plugin") {
 			return false;
 		}
 
 		switch (uri.path) {
-			case '/install':
+			case "/install":
 				return this._handleInstall(uri);
-			case '/add-marketplace':
+			case "/add-marketplace":
 				return this._handleAddMarketplace(uri);
 			default:
 				return false;
@@ -71,34 +91,56 @@ export class PluginUrlHandler extends Disposable implements IWorkbenchContributi
 	// --- install a plugin from source ---
 
 	private async _handleInstall(uri: URI): Promise<boolean> {
-		const source = this._decodeQueryParam(uri, 'source');
+		const source = this._decodeQueryParam(uri, "source");
 		if (!source) {
-			this._logService.warn('[PluginUrlHandler] Missing or invalid "source" query parameter');
+			this._logService.warn(
+				'[PluginUrlHandler] Missing or invalid "source" query parameter',
+			);
 			return true;
 		}
 
 		const ref = parseMarketplaceReference(source);
 		if (!ref) {
-			this._logService.warn(`[PluginUrlHandler] Invalid plugin source: ${source}`);
+			this._logService.warn(
+				`[PluginUrlHandler] Invalid plugin source: ${source}`,
+			);
 			return true;
 		}
 
 		if (ref.kind === MarketplaceReferenceKind.LocalFileUri) {
-			this._logService.warn('[PluginUrlHandler] Local file URIs are not supported for install');
+			this._logService.warn(
+				"[PluginUrlHandler] Local file URIs are not supported for install",
+			);
 			return true;
 		}
 
 		await this._hostService.focus(mainWindow);
 
-		const pluginName = this._decodeStringParam(uri, 'plugin');
+		const pluginName = this._decodeStringParam(uri, "plugin");
 
 		const { confirmed } = await this._dialogService.confirm({
-			type: 'question',
+			type: "question",
 			message: pluginName
-				? localize('confirmInstallTargetedPlugin', "Install Plugin '{0}' from '{1}'?", pluginName, ref.displayLabel)
-				: localize('confirmInstallPlugin', "Install Plugin from '{0}'?", ref.displayLabel),
-			detail: localize('confirmInstallPluginDetail', "An external application wants to install a plugin from this source. Plugins can run code on your machine. Only install plugins from sources you trust.\n\nSource: {0}", ref.rawValue),
-			primaryButton: localize({ key: 'installButton', comment: ['&& denotes a mnemonic'] }, "&&Install"),
+				? localize(
+						"confirmInstallTargetedPlugin",
+						"Install Plugin '{0}' from '{1}'?",
+						pluginName,
+						ref.displayLabel,
+					)
+				: localize(
+						"confirmInstallPlugin",
+						"Install Plugin from '{0}'?",
+						ref.displayLabel,
+					),
+			detail: localize(
+				"confirmInstallPluginDetail",
+				"An external application wants to install a plugin from this source. Plugins can run code on your machine. Only install plugins from sources you trust.\n\nSource: {0}",
+				ref.rawValue,
+			),
+			primaryButton: localize(
+				{ key: "installButton", comment: ["&& denotes a mnemonic"] },
+				"&&Install",
+			),
 			custom: { icon: Codicon.shield },
 		});
 
@@ -107,11 +149,17 @@ export class PluginUrlHandler extends Disposable implements IWorkbenchContributi
 		}
 
 		if (pluginName) {
-			return this._handleInstallTargetedPlugin(source, ref.displayLabel, pluginName);
+			return this._handleInstallTargetedPlugin(
+				source,
+				ref.displayLabel,
+				pluginName,
+			);
 		}
 
 		await this._pluginInstallService.installPluginFromSource(source);
-		this._extensionsWorkbenchService.openSearch(`@agentPlugins ${ref.displayLabel}`);
+		this._extensionsWorkbenchService.openSearch(
+			`@agentPlugins ${ref.displayLabel}`,
+		);
 		return true;
 	}
 
@@ -120,19 +168,31 @@ export class PluginUrlHandler extends Disposable implements IWorkbenchContributi
 	 * marketplace. Delegates trust and discovery to the install service,
 	 * then opens the plugin details in a modal editor.
 	 */
-	private async _handleInstallTargetedPlugin(source: string, displayLabel: string, pluginName: string): Promise<boolean> {
-		const result = await this._pluginInstallService.installPluginFromValidatedSource(source, { plugin: pluginName });
+	private async _handleInstallTargetedPlugin(
+		source: string,
+		displayLabel: string,
+		pluginName: string,
+	): Promise<boolean> {
+		const result =
+			await this._pluginInstallService.installPluginFromValidatedSource(
+				source,
+				{ plugin: pluginName },
+			);
 
 		if (!result.success) {
 			if (result.message) {
 				this._logService.warn(`[PluginUrlHandler] ${result.message}`);
 			}
-			this._extensionsWorkbenchService.openSearch(`@agentPlugins ${displayLabel}`);
+			this._extensionsWorkbenchService.openSearch(
+				`@agentPlugins ${displayLabel}`,
+			);
 			return true;
 		}
 
 		if (!result.matchedPlugin) {
-			this._extensionsWorkbenchService.openSearch(`@agentPlugins ${displayLabel}`);
+			this._extensionsWorkbenchService.openSearch(
+				`@agentPlugins ${displayLabel}`,
+			);
 			return true;
 		}
 
@@ -149,7 +209,10 @@ export class PluginUrlHandler extends Disposable implements IWorkbenchContributi
 			readmeUri: plugin.readmeUri,
 		};
 
-		const input = this._instantiationService.createInstance(AgentPluginEditorInput, item);
+		const input = this._instantiationService.createInstance(
+			AgentPluginEditorInput,
+			item,
+		);
 		await this._editorService.openEditor(input);
 
 		return true;
@@ -158,25 +221,40 @@ export class PluginUrlHandler extends Disposable implements IWorkbenchContributi
 	// --- add a marketplace ---
 
 	private async _handleAddMarketplace(uri: URI): Promise<boolean> {
-		const refValue = this._decodeQueryParam(uri, 'ref');
+		const refValue = this._decodeQueryParam(uri, "ref");
 		if (!refValue) {
-			this._logService.warn('[PluginUrlHandler] Missing or invalid "ref" query parameter');
+			this._logService.warn(
+				'[PluginUrlHandler] Missing or invalid "ref" query parameter',
+			);
 			return true;
 		}
 
 		const ref = parseMarketplaceReference(refValue);
 		if (!ref) {
-			this._logService.warn(`[PluginUrlHandler] Invalid marketplace reference: ${refValue}`);
+			this._logService.warn(
+				`[PluginUrlHandler] Invalid marketplace reference: ${refValue}`,
+			);
 			return true;
 		}
 
 		await this._hostService.focus(mainWindow);
 
 		const { confirmed } = await this._dialogService.confirm({
-			type: 'question',
-			message: localize('confirmAddMarketplace', "Add Plugin Marketplace '{0}'?", ref.displayLabel),
-			detail: localize('confirmAddMarketplaceDetail', "An external application wants to add a plugin marketplace. Plugins from this marketplace will appear in the plugin catalog and can be installed.\n\nSource: {0}", ref.rawValue),
-			primaryButton: localize({ key: 'addMarketplaceButton', comment: ['&& denotes a mnemonic'] }, "&&Add Marketplace"),
+			type: "question",
+			message: localize(
+				"confirmAddMarketplace",
+				"Add Plugin Marketplace '{0}'?",
+				ref.displayLabel,
+			),
+			detail: localize(
+				"confirmAddMarketplaceDetail",
+				"An external application wants to add a plugin marketplace. Plugins from this marketplace will appear in the plugin catalog and can be installed.\n\nSource: {0}",
+				ref.rawValue,
+			),
+			primaryButton: localize(
+				{ key: "addMarketplaceButton", comment: ["&& denotes a mnemonic"] },
+				"&&Add Marketplace",
+			),
 			custom: { icon: Codicon.shield },
 		});
 
@@ -184,9 +262,11 @@ export class PluginUrlHandler extends Disposable implements IWorkbenchContributi
 			return true;
 		}
 
-		const { userValues, effectiveValues } = readConfiguredMarketplaces(this._configurationService);
+		const { userValues, effectiveValues } = readConfiguredMarketplaces(
+			this._configurationService,
+		);
 		const existingRefs = parseMarketplaceReferences(effectiveValues);
-		if (!existingRefs.some(e => e.canonicalId === ref.canonicalId)) {
+		if (!existingRefs.some((e) => e.canonicalId === ref.canonicalId)) {
 			await this._configurationService.updateValue(
 				ChatConfiguration.PluginMarketplaces,
 				[...userValues, refValue],
@@ -194,7 +274,9 @@ export class PluginUrlHandler extends Disposable implements IWorkbenchContributi
 			);
 		}
 
-		this._extensionsWorkbenchService.openSearch(`@agentPlugins ${ref.displayLabel}`);
+		this._extensionsWorkbenchService.openSearch(
+			`@agentPlugins ${ref.displayLabel}`,
+		);
 		return true;
 	}
 

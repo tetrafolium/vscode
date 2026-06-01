@@ -5,9 +5,15 @@
 
 import type * as vscode from 'vscode';
 import { IAuthenticationService } from '../../../platform/authentication/common/authentication';
-import { ChatFetchResponseType, ChatLocation } from '../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+} from '../../../platform/chat/common/commonTypes';
 import { IInteractionService } from '../../../platform/chat/common/interactionService';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { TextDocumentSnapshot } from '../../../platform/editing/common/textDocumentSnapshot';
 import { IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
 import { IIgnoreService } from '../../../platform/ignore/common/ignoreService';
@@ -17,9 +23,17 @@ import { ISimulationTestContext } from '../../../platform/simulationTestContext/
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
 import { StopWatch } from '../../../util/vs/base/common/stopwatch';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
-import { NewSymbolName, NewSymbolNameTag, NewSymbolNameTriggerKind } from '../../../vscodeTypes';
+import {
+	NewSymbolName,
+	NewSymbolNameTag,
+	NewSymbolNameTriggerKind,
+} from '../../../vscodeTypes';
 import { PromptRenderer } from '../../prompts/node/base/promptRenderer';
-import { enforceNamingConvention, guessNamingConvention, NamingConvention } from '../common/namingConvention';
+import {
+	enforceNamingConvention,
+	guessNamingConvention,
+	NamingConvention,
+} from '../common/namingConvention';
 import { RenameSuggestionsPrompt } from './renameSuggestionsPrompt';
 
 /**
@@ -36,8 +50,7 @@ type ReplyFormat =
 	| 'list'
 
 	/** When we couldn't parse the response */
-	| 'unknown'
-	;
+	| 'unknown';
 
 enum ProvideCallCancellationReason {
 	None = '',
@@ -48,32 +61,47 @@ enum ProvideCallCancellationReason {
 	AfterFetchStarted = 'afterFetchStarted',
 }
 
-export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider {
-
+export class RenameSuggestionsProvider
+	implements vscode.NewSymbolNamesProvider
+{
 	public readonly supportsAutomaticTriggerKind: Promise<boolean>;
 
 	constructor(
-		@IInstantiationService private readonly _instaService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instaService: IInstantiationService,
 		@IIgnoreService private readonly _ignoreService: IIgnoreService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IEndpointProvider private readonly _endpointProvider: IEndpointProvider,
-		@ISimulationTestContext private readonly _simulationTestContext: ISimulationTestContext,
-		@IAuthenticationService private readonly _authService: IAuthenticationService,
-		@INotificationService private readonly _notificationService: INotificationService,
-		@IInteractionService private readonly _interactionService: IInteractionService
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IEndpointProvider
+		private readonly _endpointProvider: IEndpointProvider,
+		@ISimulationTestContext
+		private readonly _simulationTestContext: ISimulationTestContext,
+		@IAuthenticationService
+		private readonly _authService: IAuthenticationService,
+		@INotificationService
+		private readonly _notificationService: INotificationService,
+		@IInteractionService
+		private readonly _interactionService: IInteractionService,
 	) {
-
-		this.supportsAutomaticTriggerKind = Promise.resolve(this.isEnabled(NewSymbolNameTriggerKind.Automatic));
+		this.supportsAutomaticTriggerKind = Promise.resolve(
+			this.isEnabled(NewSymbolNameTriggerKind.Automatic),
+		);
 	}
 
 	protected isEnabled(triggerKind: NewSymbolNameTriggerKind) {
 		if (triggerKind === NewSymbolNameTriggerKind.Invoke) {
 			return true;
-		} else if (this._authService.copilotToken?.isFreeUser || this._authService.copilotToken?.isNoAuthUser) {
+		} else if (
+			this._authService.copilotToken?.isFreeUser ||
+			this._authService.copilotToken?.isNoAuthUser
+		) {
 			return false;
 		} else {
-			return this._configurationService.getConfig(ConfigKey.AutomaticRenameSuggestions);
+			return this._configurationService.getConfig(
+				ConfigKey.AutomaticRenameSuggestions,
+			);
 		}
 	}
 
@@ -81,10 +109,16 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 	 * @throws {Error} with `message = 'CopilotFeatureUnavailableOrDisabled' if the feature is not available
 	 * @throws {Error} with `message = 'CopilotIgnoredDocument' if the document is Copilot-ignored
 	 */
-	async provideNewSymbolNames(_document: vscode.TextDocument, range: vscode.Range, triggerKind: NewSymbolNameTriggerKind, token: vscode.CancellationToken): Promise<NewSymbolName[] | null> {
+	async provideNewSymbolNames(
+		_document: vscode.TextDocument,
+		range: vscode.Range,
+		triggerKind: NewSymbolNameTriggerKind,
+		token: vscode.CancellationToken,
+	): Promise<NewSymbolName[] | null> {
 		const document = TextDocumentSnapshot.create(_document);
 
-		let cancellationReason: ProvideCallCancellationReason = ProvideCallCancellationReason.None;
+		let cancellationReason: ProvideCallCancellationReason =
+			ProvideCallCancellationReason.None;
 
 		const beforeDelaySW = new StopWatch();
 
@@ -105,39 +139,58 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 		let timeElapsedBeforeDelay: number | undefined;
 
 		if (token.isCancellationRequested) {
-			cancellationReason = ProvideCallCancellationReason.AfterEnablementCheck;
+			cancellationReason =
+				ProvideCallCancellationReason.AfterEnablementCheck;
 		} else {
-			const endpoint = await this._endpointProvider.getChatEndpoint('copilot-utility-small');
+			const endpoint = await this._endpointProvider.getChatEndpoint(
+				'copilot-utility-small',
+			);
 			expectedDelayBeforeFetch = this.delayBeforeFetchMs;
 
 			if (token.isCancellationRequested) {
-				cancellationReason = ProvideCallCancellationReason.AfterRunParametersFetch;
+				cancellationReason =
+					ProvideCallCancellationReason.AfterRunParametersFetch;
 			} else {
-
 				const sw = new StopWatch(false);
 
 				sw.reset();
-				const promptRenderResult = await this._computePrompt(document, range, endpoint, token);
+				const promptRenderResult = await this._computePrompt(
+					document,
+					range,
+					endpoint,
+					token,
+				);
 				const promptConstructionTime = sw.elapsed();
 
 				if (token.isCancellationRequested) {
-					cancellationReason = ProvideCallCancellationReason.AfterPromptCompute;
+					cancellationReason =
+						ProvideCallCancellationReason.AfterPromptCompute;
 				} else {
-
 					timeElapsedBeforeDelay = beforeDelaySW.elapsed();
 
 					let actualDelayBeforeFetch: number | undefined;
 					if (triggerKind === NewSymbolNameTriggerKind.Automatic) {
-						actualDelayBeforeFetch = expectedDelayBeforeFetch ? Math.max(0, expectedDelayBeforeFetch - timeElapsedBeforeDelay) : undefined;
-						if (actualDelayBeforeFetch !== undefined && actualDelayBeforeFetch > 0) {
-							await new Promise(resolve => setTimeout(resolve, actualDelayBeforeFetch));
+						actualDelayBeforeFetch = expectedDelayBeforeFetch
+							? Math.max(
+									0,
+									expectedDelayBeforeFetch -
+										timeElapsedBeforeDelay,
+								)
+							: undefined;
+						if (
+							actualDelayBeforeFetch !== undefined &&
+							actualDelayBeforeFetch > 0
+						) {
+							await new Promise((resolve) =>
+								setTimeout(resolve, actualDelayBeforeFetch),
+							);
 						}
 					}
 
 					if (token.isCancellationRequested) {
-						cancellationReason = ProvideCallCancellationReason.AfterDelay;
+						cancellationReason =
+							ProvideCallCancellationReason.AfterDelay;
 					} else {
-
 						sw.reset();
 						this._interactionService.startInteraction();
 						const fetchResult = await endpoint.makeChatRequest(
@@ -149,26 +202,48 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 							undefined,
 							{
 								top_p: undefined,
-								temperature: undefined
+								temperature: undefined,
 							},
-							true
+							true,
 						);
 						const fetchTime = sw.elapsed();
 
-						if (fetchResult.type === ChatFetchResponseType.QuotaExceeded || (fetchResult.type === ChatFetchResponseType.RateLimited && this._authService.copilotToken?.isNoAuthUser)) {
-							await this._notificationService.showQuotaExceededDialog({ isNoAuthUser: this._authService.copilotToken?.isNoAuthUser ?? false });
+						if (
+							fetchResult.type ===
+								ChatFetchResponseType.QuotaExceeded ||
+							(fetchResult.type ===
+								ChatFetchResponseType.RateLimited &&
+								this._authService.copilotToken?.isNoAuthUser)
+						) {
+							await this._notificationService.showQuotaExceededDialog(
+								{
+									isNoAuthUser:
+										this._authService.copilotToken
+											?.isNoAuthUser ?? false,
+								},
+							);
 						}
 
 						if (token.isCancellationRequested) {
-							cancellationReason = ProvideCallCancellationReason.AfterFetchStarted;
+							cancellationReason =
+								ProvideCallCancellationReason.AfterFetchStarted;
 						}
 
 						switch (fetchResult.type) {
 							case ChatFetchResponseType.Success: {
 								const reply = fetchResult.value;
-								const { replyFormat, symbolNames, redundantCharCount: responseUnusedCharCount } = RenameSuggestionsProvider.parseResponse(reply);
+								const {
+									replyFormat,
+									symbolNames,
+									redundantCharCount: responseUnusedCharCount,
+								} = RenameSuggestionsProvider.parseResponse(
+									reply,
+								);
 								if (replyFormat === 'unknown') {
-									this._sendInternalTelemetry({ languageId, reply });
+									this._sendInternalTelemetry({
+										languageId,
+										reply,
+									});
 								}
 								this._sendPublicTelemetry({
 									triggerKind,
@@ -176,7 +251,8 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 									cancellationReason,
 									fetchResultType: fetchResult.type,
 									promptConstructionTime,
-									promptTokenCount: promptRenderResult.tokenCount,
+									promptTokenCount:
+										promptRenderResult.tokenCount,
 									expectedDelayBeforeFetch,
 									actualDelayBeforeFetch,
 									timeElapsedBeforeDelay,
@@ -187,8 +263,20 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 									symbolNamesCount: symbolNames.length,
 								});
 
-								const processedSymbolNames = RenameSuggestionsProvider.preprocessSymbolNames({ currentSymbolName, newSymbolNames: symbolNames, languageId });
-								return processedSymbolNames.map(symbolName => new NewSymbolName(symbolName, [NewSymbolNameTag.AIGenerated]));
+								const processedSymbolNames =
+									RenameSuggestionsProvider.preprocessSymbolNames(
+										{
+											currentSymbolName,
+											newSymbolNames: symbolNames,
+											languageId,
+										},
+									);
+								return processedSymbolNames.map(
+									(symbolName) =>
+										new NewSymbolName(symbolName, [
+											NewSymbolNameTag.AIGenerated,
+										]),
+								);
 							}
 							default: {
 								this._sendPublicTelemetry({
@@ -197,7 +285,8 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 									cancellationReason,
 									fetchResultType: fetchResult.type,
 									promptConstructionTime,
-									promptTokenCount: promptRenderResult.tokenCount,
+									promptTokenCount:
+										promptRenderResult.tokenCount,
 									expectedDelayBeforeFetch,
 									actualDelayBeforeFetch,
 									timeElapsedBeforeDelay,
@@ -228,7 +317,7 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 		if (this._simulationTestContext.isInSimulationTests) {
 			return 0;
 		} else {
-			const DELAY_BEFORE_FETCH = 250 /* milliseconds */;
+			const DELAY_BEFORE_FETCH = 250; /* milliseconds */
 			return DELAY_BEFORE_FETCH;
 		}
 	}
@@ -238,21 +327,33 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 	// - idea: include hover info (i.e., usually type info & corresponding document) of the symbol being renamed in the prompt
 	// - idea: include usages of the symbol being renamed in the prompt
 	// - idea: include peer symbols (e.g., other methods in the same class) in the prompt for copilot to see conventions in the code
-	private _computePrompt(document: TextDocumentSnapshot, range: vscode.Range, chatEndpoint: IChatEndpoint, token: vscode.CancellationToken) {
+	private _computePrompt(
+		document: TextDocumentSnapshot,
+		range: vscode.Range,
+		chatEndpoint: IChatEndpoint,
+		token: vscode.CancellationToken,
+	) {
 		const promptRenderer = PromptRenderer.create(
 			this._instaService,
 			chatEndpoint,
 			RenameSuggestionsPrompt,
 			{
 				document,
-				range
-			}
+				range,
+			},
 		);
 		return promptRenderer.render(undefined, token);
 	}
 
-	public static preprocessSymbolNames({ currentSymbolName, newSymbolNames, languageId }: { currentSymbolName: string; newSymbolNames: string[]; languageId: string }): string[] {
-
+	public static preprocessSymbolNames({
+		currentSymbolName,
+		newSymbolNames,
+		languageId,
+	}: {
+		currentSymbolName: string;
+		newSymbolNames: string[];
+		languageId: string;
+	}): string[] {
 		const currentNameConvention = guessNamingConvention(currentSymbolName);
 
 		let targetNamingConvention: NamingConvention;
@@ -285,12 +386,18 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 			return newSymbolNames;
 		}
 
-		return newSymbolNames.map(newSymbolName => enforceNamingConvention(newSymbolName, targetNamingConvention));
+		return newSymbolNames.map((newSymbolName) =>
+			enforceNamingConvention(newSymbolName, targetNamingConvention),
+		);
 	}
 
-	public static parseResponse(reply: string): { replyFormat: ReplyFormat; redundantCharCount: number; symbolNames: string[] } {
-
-		const parsedAsJSONStringArray = RenameSuggestionsProvider._parseReplyAsJSONStringArray(reply);
+	public static parseResponse(reply: string): {
+		replyFormat: ReplyFormat;
+		redundantCharCount: number;
+		symbolNames: string[];
+	} {
+		const parsedAsJSONStringArray =
+			RenameSuggestionsProvider._parseReplyAsJSONStringArray(reply);
 		if (parsedAsJSONStringArray !== undefined) {
 			return parsedAsJSONStringArray;
 		}
@@ -300,12 +407,15 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 			return parsedAsList;
 		}
 
-		return { replyFormat: 'unknown', symbolNames: [], redundantCharCount: reply.length };
+		return {
+			replyFormat: 'unknown',
+			symbolNames: [],
+			redundantCharCount: reply.length,
+		};
 	}
 
 	/** try extracting from JSON string array */
 	private static _parseReplyAsJSONStringArray(reply: string) {
-
 		const jsonArrayRe = /\[.*?\]/gs; // `s` regex flag allows matching newlines using `.`
 
 		const matches = [...reply.matchAll(jsonArrayRe)];
@@ -316,17 +426,25 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 				const parsedJSONArray: unknown = JSON.parse(match[0]);
 
 				if (Array.isArray(parsedJSONArray)) {
-
-					const symbolNames = parsedJSONArray.filter(v => typeof v === 'string');
+					const symbolNames = parsedJSONArray.filter(
+						(v) => typeof v === 'string',
+					);
 
 					if (symbolNames.length > 0) {
-						const replyFormat: ReplyFormat = i === 0 ? 'jsonStringArray' : 'multiJsonStringArray';
-						const redundantCharCount = reply.length - match[0].length;
-						return { replyFormat, redundantCharCount, symbolNames: symbolNames.map(s => s.trim()) } as const;
+						const replyFormat: ReplyFormat =
+							i === 0
+								? 'jsonStringArray'
+								: 'multiJsonStringArray';
+						const redundantCharCount =
+							reply.length - match[0].length;
+						return {
+							replyFormat,
+							redundantCharCount,
+							symbolNames: symbolNames.map((s) => s.trim()),
+						} as const;
 					}
 				}
-			} catch (error) {
-			}
+			} catch (error) {}
 		}
 	}
 
@@ -338,7 +456,7 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 		const symbolNames: string[] = [];
 		for (const match of matches) {
 			let symbolName = match[1].trim();
-			const punctuation = ['\'', '"', '`'];
+			const punctuation = ["'", '"', '`'];
 			if (punctuation.includes(symbolName[0])) {
 				symbolName = symbolName.slice(1);
 			}
@@ -354,9 +472,15 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 			return;
 		}
 
-		const redundantCharCount = reply.length - symbolNames.reduce((acc, name) => acc + name.length, 0);
+		const redundantCharCount =
+			reply.length -
+			symbolNames.reduce((acc, name) => acc + name.length, 0);
 
-		return { replyFormat: 'list' satisfies ReplyFormat, redundantCharCount, symbolNames } as const;
+		return {
+			replyFormat: 'list' satisfies ReplyFormat,
+			redundantCharCount,
+			symbolNames,
+		} as const;
 	}
 
 	private _sendPublicTelemetry({
@@ -373,7 +497,7 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 		responseUnusedCharCount,
 		fetchTime,
 		replyFormat,
-		symbolNamesCount
+		symbolNamesCount,
 	}: {
 		triggerKind: NewSymbolNameTriggerKind;
 		languageId: string;
@@ -417,7 +541,10 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 				cancellationReason,
 				fetchResultType,
 				replyFormat,
-				triggerKind: triggerKind === NewSymbolNameTriggerKind.Automatic ? 'automatic' : 'manual',
+				triggerKind:
+					triggerKind === NewSymbolNameTriggerKind.Automatic
+						? 'automatic'
+						: 'manual',
 			},
 			{
 				promptConstructionTime,
@@ -429,17 +556,23 @@ export class RenameSuggestionsProvider implements vscode.NewSymbolNamesProvider 
 				successResponseCharCount,
 				responseUnusedCharCount,
 				symbolNamesCount,
-			}
+			},
 		);
 	}
 
-	private _sendInternalTelemetry({ languageId, reply }: { languageId: string; reply: string }) {
+	private _sendInternalTelemetry({
+		languageId,
+		reply,
+	}: {
+		languageId: string;
+		reply: string;
+	}) {
 		this._telemetryService.sendMSFTTelemetryEvent(
 			'provideRenameSuggestionsIncorrectFormatResponse',
 			{
 				languageId,
-				reply
-			}
+				reply,
+			},
 		);
 	}
 

@@ -4,8 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CancellationToken, ChatRequest, LanguageModelToolInformation } from 'vscode';
-import { IChatHookService, SessionStartHookInput, StopHookInput, SubagentStartHookInput, SubagentStopHookInput } from '../../../../platform/chat/common/chatHookService';
+import type {
+	CancellationToken,
+	ChatRequest,
+	LanguageModelToolInformation,
+} from 'vscode';
+import {
+	IChatHookService,
+	SessionStartHookInput,
+	StopHookInput,
+	SubagentStartHookInput,
+	SubagentStopHookInput,
+} from '../../../../platform/chat/common/chatHookService';
 import { MockChatHookService } from './mockChatHookService';
 import { NoopOTelService } from '../../../../platform/otel/common/noopOtelService';
 import { resolveOTelConfig } from '../../../../platform/otel/common/otelConfig';
@@ -16,9 +26,15 @@ import { generateUuid } from '../../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { Conversation, Turn } from '../../../prompt/common/conversation';
 import { IBuildPromptContext } from '../../../prompt/common/intents';
-import { IBuildPromptResult, nullRenderPromptResult } from '../../../prompt/node/intents';
+import {
+	IBuildPromptResult,
+	nullRenderPromptResult,
+} from '../../../prompt/node/intents';
 import { createExtensionUnitTestingServices } from '../../../test/node/services';
-import { IToolCallingLoopOptions, ToolCallingLoop } from '../../node/toolCallingLoop';
+import {
+	IToolCallingLoopOptions,
+	ToolCallingLoop,
+} from '../../node/toolCallingLoop';
 
 /**
  * Minimal concrete implementation of ToolCallingLoop for testing.
@@ -29,12 +45,16 @@ class TestToolCallingLoop extends ToolCallingLoop<IToolCallingLoopOptions> {
 	public lastBuildPromptContext: IBuildPromptContext | undefined;
 	public additionalContextValue: string | undefined;
 
-	protected override async buildPrompt(buildPromptContext: IBuildPromptContext): Promise<IBuildPromptResult> {
+	protected override async buildPrompt(
+		buildPromptContext: IBuildPromptContext,
+	): Promise<IBuildPromptResult> {
 		this.lastBuildPromptContext = buildPromptContext;
 		return nullRenderPromptResult();
 	}
 
-	protected override async getAvailableTools(): Promise<LanguageModelToolInformation[]> {
+	protected override async getAvailableTools(): Promise<
+		LanguageModelToolInformation[]
+	> {
 		return [];
 	}
 
@@ -48,11 +68,19 @@ class TestToolCallingLoop extends ToolCallingLoop<IToolCallingLoopOptions> {
 	}
 
 	// Expose the protected stop hook methods for testing
-	public async testExecuteStopHook(input: StopHookInput, sessionId: string, token: CancellationToken) {
+	public async testExecuteStopHook(
+		input: StopHookInput,
+		sessionId: string,
+		token: CancellationToken,
+	) {
 		return this.executeStopHook(input, sessionId, undefined, token);
 	}
 
-	public async testExecuteSubagentStopHook(input: SubagentStopHookInput, sessionId: string, token: CancellationToken) {
+	public async testExecuteSubagentStopHook(
+		input: SubagentStopHookInput,
+		sessionId: string,
+		token: CancellationToken,
+	) {
 		return this.executeSubagentStopHook(input, sessionId, undefined, token);
 	}
 
@@ -64,7 +92,9 @@ class TestToolCallingLoop extends ToolCallingLoop<IToolCallingLoopOptions> {
 	}
 }
 
-function createMockChatRequest(overrides: Partial<ChatRequest> = {}): ChatRequest {
+function createMockChatRequest(
+	overrides: Partial<ChatRequest> = {},
+): ChatRequest {
 	return {
 		prompt: 'test prompt',
 		command: undefined,
@@ -87,10 +117,12 @@ function createMockChatRequest(overrides: Partial<ChatRequest> = {}): ChatReques
 function createTestConversation(turnCount: number = 1): Conversation {
 	const turns: Turn[] = [];
 	for (let i = 0; i < turnCount; i++) {
-		turns.push(new Turn(
-			generateUuid(),
-			{ message: `test message ${i}`, type: 'user' }
-		));
+		turns.push(
+			new Turn(generateUuid(), {
+				message: `test message ${i}`,
+				type: 'user',
+			}),
+		);
 	}
 	return new Conversation(generateUuid(), turns);
 }
@@ -105,10 +137,21 @@ describe('ToolCallingLoop SessionStart hook', () => {
 		disposables = new DisposableStore();
 		mockChatHookService = new MockChatHookService();
 
-		const serviceCollection = disposables.add(createExtensionUnitTestingServices());
+		const serviceCollection = disposables.add(
+			createExtensionUnitTestingServices(),
+		);
 		// Must define the mock service BEFORE creating the accessor
 		serviceCollection.define(IChatHookService, mockChatHookService);
-		serviceCollection.define(IOTelService, new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })));
+		serviceCollection.define(
+			IOTelService,
+			new NoopOTelService(
+				resolveOTelConfig({
+					env: {},
+					extensionVersion: '0.0.0',
+					sessionId: 'test',
+				}),
+			),
+		);
 
 		const accessor = serviceCollection.createTestingAccessor();
 		instantiationService = accessor.get(IInstantiationService);
@@ -136,7 +179,7 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
@@ -145,7 +188,8 @@ describe('ToolCallingLoop SessionStart hook', () => {
 
 			await loop.testRunStartHooks(tokenSource.token);
 
-			const sessionStartCalls = mockChatHookService.getCallsForHook('SessionStart');
+			const sessionStartCalls =
+				mockChatHookService.getCallsForHook('SessionStart');
 			expect(sessionStartCalls).toHaveLength(1);
 			const input = sessionStartCalls[0].input as SessionStartHookInput;
 			expect(input).toMatchObject({
@@ -165,13 +209,14 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			await loop.testRunStartHooks(tokenSource.token);
 
-			const sessionStartCalls = mockChatHookService.getCallsForHook('SessionStart');
+			const sessionStartCalls =
+				mockChatHookService.getCallsForHook('SessionStart');
 			expect(sessionStartCalls).toHaveLength(0);
 		});
 
@@ -188,18 +233,20 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			await loop.testRunStartHooks(tokenSource.token);
 
 			// SessionStart should NOT be called for subagents
-			const sessionStartCalls = mockChatHookService.getCallsForHook('SessionStart');
+			const sessionStartCalls =
+				mockChatHookService.getCallsForHook('SessionStart');
 			expect(sessionStartCalls).toHaveLength(0);
 
 			// SubagentStart should be called instead
-			const subagentStartCalls = mockChatHookService.getCallsForHook('SubagentStart');
+			const subagentStartCalls =
+				mockChatHookService.getCallsForHook('SubagentStart');
 			expect(subagentStartCalls).toHaveLength(1);
 		});
 	});
@@ -212,7 +259,11 @@ describe('ToolCallingLoop SessionStart hook', () => {
 			mockChatHookService.setHookResults('SessionStart', [
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 1' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 1',
+						},
+					},
 				},
 			]);
 
@@ -222,7 +273,7 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
@@ -239,15 +290,27 @@ describe('ToolCallingLoop SessionStart hook', () => {
 			mockChatHookService.setHookResults('SessionStart', [
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 1' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 1',
+						},
+					},
 				},
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 2' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 2',
+						},
+					},
 				},
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 3' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 3',
+						},
+					},
 				},
 			]);
 
@@ -257,14 +320,16 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			await loop.testRunStartHooks(tokenSource.token);
 
 			const additionalContext = loop.getAdditionalHookContext();
-			expect(additionalContext).toBe('Context from hook 1\nContext from hook 2\nContext from hook 3');
+			expect(additionalContext).toBe(
+				'Context from hook 1\nContext from hook 2\nContext from hook 3',
+			);
 		});
 
 		it('should ignore hook results with no additionalContext', async () => {
@@ -274,7 +339,11 @@ describe('ToolCallingLoop SessionStart hook', () => {
 			mockChatHookService.setHookResults('SessionStart', [
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 1' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 1',
+						},
+					},
 				},
 				{
 					resultKind: 'success',
@@ -282,7 +351,11 @@ describe('ToolCallingLoop SessionStart hook', () => {
 				},
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 3' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 3',
+						},
+					},
 				},
 			]);
 
@@ -292,14 +365,16 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			await loop.testRunStartHooks(tokenSource.token);
 
 			const additionalContext = loop.getAdditionalHookContext();
-			expect(additionalContext).toBe('Context from hook 1\nContext from hook 3');
+			expect(additionalContext).toBe(
+				'Context from hook 1\nContext from hook 3',
+			);
 		});
 
 		it('should silently ignore failed hook results (blocking errors are ignored)', async () => {
@@ -309,7 +384,11 @@ describe('ToolCallingLoop SessionStart hook', () => {
 			mockChatHookService.setHookResults('SessionStart', [
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 1' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 1',
+						},
+					},
 				},
 				{
 					resultKind: 'error',
@@ -317,7 +396,11 @@ describe('ToolCallingLoop SessionStart hook', () => {
 				},
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 3' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 3',
+						},
+					},
 				},
 			]);
 
@@ -327,16 +410,20 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			// Should NOT throw - blocking errors are silently ignored for SessionStart
-			await expect(loop.testRunStartHooks(tokenSource.token)).resolves.not.toThrow();
+			await expect(
+				loop.testRunStartHooks(tokenSource.token),
+			).resolves.not.toThrow();
 
 			// Only non-error results should be processed
 			const additionalContext = loop.getAdditionalHookContext();
-			expect(additionalContext).toBe('Context from hook 1\nContext from hook 3');
+			expect(additionalContext).toBe(
+				'Context from hook 1\nContext from hook 3',
+			);
 		});
 
 		it('should silently ignore stopReason (continue: false) from hook results', async () => {
@@ -346,16 +433,28 @@ describe('ToolCallingLoop SessionStart hook', () => {
 			mockChatHookService.setHookResults('SessionStart', [
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 1' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 1',
+						},
+					},
 				},
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 2' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 2',
+						},
+					},
 					stopReason: 'Build failed, should be ignored',
 				},
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from hook 3' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from hook 3',
+						},
+					},
 				},
 			]);
 
@@ -365,16 +464,20 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			// Should NOT throw - stopReason is silently ignored for SessionStart
-			await expect(loop.testRunStartHooks(tokenSource.token)).resolves.not.toThrow();
+			await expect(
+				loop.testRunStartHooks(tokenSource.token),
+			).resolves.not.toThrow();
 
 			// Results with stopReason are skipped, only other results are processed
 			const additionalContext = loop.getAdditionalHookContext();
-			expect(additionalContext).toBe('Context from hook 1\nContext from hook 3');
+			expect(additionalContext).toBe(
+				'Context from hook 1\nContext from hook 3',
+			);
 		});
 	});
 
@@ -383,7 +486,10 @@ describe('ToolCallingLoop SessionStart hook', () => {
 			const conversation = createTestConversation(1);
 			const request = createMockChatRequest();
 
-			mockChatHookService.setHookError('SessionStart', new Error('Hook service error'));
+			mockChatHookService.setHookError(
+				'SessionStart',
+				new Error('Hook service error'),
+			);
 
 			const loop = instantiationService.createInstance(
 				TestToolCallingLoop,
@@ -391,12 +497,14 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			// Should not throw
-			await expect(loop.testRunStartHooks(tokenSource.token)).resolves.not.toThrow();
+			await expect(
+				loop.testRunStartHooks(tokenSource.token),
+			).resolves.not.toThrow();
 
 			// additionalContext should be undefined since error occurred
 			const additionalContext = loop.getAdditionalHookContext();
@@ -415,7 +523,7 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
@@ -434,7 +542,11 @@ describe('ToolCallingLoop SessionStart hook', () => {
 			mockChatHookService.setHookResults('SessionStart', [
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Custom context for prompt' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Custom context for prompt',
+						},
+					},
 				},
 			]);
 
@@ -444,7 +556,7 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
@@ -462,7 +574,11 @@ describe('ToolCallingLoop SessionStart hook', () => {
 			mockChatHookService.setHookResults('SessionStart', [
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Context from SessionStart' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Context from SessionStart',
+						},
+					},
 				},
 			]);
 
@@ -472,7 +588,7 @@ describe('ToolCallingLoop SessionStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
@@ -480,7 +596,9 @@ describe('ToolCallingLoop SessionStart hook', () => {
 			loop.appendAdditionalHookContext('Context from UserPromptSubmit');
 
 			const additionalContext = loop.getAdditionalHookContext();
-			expect(additionalContext).toBe('Context from SessionStart\nContext from UserPromptSubmit');
+			expect(additionalContext).toBe(
+				'Context from SessionStart\nContext from UserPromptSubmit',
+			);
 		});
 	});
 });
@@ -495,9 +613,20 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 		disposables = new DisposableStore();
 		mockChatHookService = new MockChatHookService();
 
-		const serviceCollection = disposables.add(createExtensionUnitTestingServices());
+		const serviceCollection = disposables.add(
+			createExtensionUnitTestingServices(),
+		);
 		serviceCollection.define(IChatHookService, mockChatHookService);
-		serviceCollection.define(IOTelService, new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })));
+		serviceCollection.define(
+			IOTelService,
+			new NoopOTelService(
+				resolveOTelConfig({
+					env: {},
+					extensionVersion: '0.0.0',
+					sessionId: 'test',
+				}),
+			),
+		);
 
 		const accessor = serviceCollection.createTestingAccessor();
 		instantiationService = accessor.get(IInstantiationService);
@@ -525,13 +654,14 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			await loop.testRunStartHooks(tokenSource.token);
 
-			const subagentStartCalls = mockChatHookService.getCallsForHook('SubagentStart');
+			const subagentStartCalls =
+				mockChatHookService.getCallsForHook('SubagentStart');
 			expect(subagentStartCalls).toHaveLength(1);
 
 			const input = subagentStartCalls[0].input as SubagentStartHookInput;
@@ -552,13 +682,14 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			await loop.testRunStartHooks(tokenSource.token);
 
-			const subagentStartCalls = mockChatHookService.getCallsForHook('SubagentStart');
+			const subagentStartCalls =
+				mockChatHookService.getCallsForHook('SubagentStart');
 			expect(subagentStartCalls).toHaveLength(1);
 
 			const input = subagentStartCalls[0].input as SubagentStartHookInput;
@@ -578,7 +709,7 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
@@ -588,10 +719,13 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 			// Second call: run() should NOT execute SubagentStart again
 			// run() will throw because fetch() is not implemented, but SubagentStart
 			// happens before fetch, so we need to verify it wasn't called again
-			await expect(loop.run(undefined, tokenSource.token)).rejects.toThrow();
+			await expect(
+				loop.run(undefined, tokenSource.token),
+			).rejects.toThrow();
 
 			// SubagentStart should have been called exactly once (from runStartHooks only)
-			const subagentStartCalls = mockChatHookService.getCallsForHook('SubagentStart');
+			const subagentStartCalls =
+				mockChatHookService.getCallsForHook('SubagentStart');
 			expect(subagentStartCalls).toHaveLength(1);
 		});
 	});
@@ -607,7 +741,11 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 			mockChatHookService.setHookResults('SubagentStart', [
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Subagent-specific context' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Subagent-specific context',
+						},
+					},
 				},
 			]);
 
@@ -617,7 +755,7 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
@@ -637,11 +775,19 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 			mockChatHookService.setHookResults('SubagentStart', [
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'First subagent context' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'First subagent context',
+						},
+					},
 				},
 				{
 					resultKind: 'success',
-					output: { hookSpecificOutput: { additionalContext: 'Second subagent context' } },
+					output: {
+						hookSpecificOutput: {
+							additionalContext: 'Second subagent context',
+						},
+					},
 				},
 			]);
 
@@ -651,14 +797,16 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			await loop.testRunStartHooks(tokenSource.token);
 
 			const additionalContext = loop.getAdditionalHookContext();
-			expect(additionalContext).toBe('First subagent context\nSecond subagent context');
+			expect(additionalContext).toBe(
+				'First subagent context\nSecond subagent context',
+			);
 		});
 	});
 
@@ -670,7 +818,10 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 				subAgentName: 'ErrorAgent',
 			} as Partial<ChatRequest>);
 
-			mockChatHookService.setHookError('SubagentStart', new Error('Subagent hook failed'));
+			mockChatHookService.setHookError(
+				'SubagentStart',
+				new Error('Subagent hook failed'),
+			);
 
 			const loop = instantiationService.createInstance(
 				TestToolCallingLoop,
@@ -678,12 +829,14 @@ describe('ToolCallingLoop SubagentStart hook', () => {
 					conversation,
 					toolCallLimit: 10,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
 			// Should not throw
-			await expect(loop.testRunStartHooks(tokenSource.token)).resolves.not.toThrow();
+			await expect(
+				loop.testRunStartHooks(tokenSource.token),
+			).resolves.not.toThrow();
 
 			// additionalContext should be undefined since error occurred
 			const additionalContext = loop.getAdditionalHookContext();
@@ -702,9 +855,20 @@ describe('ToolCallingLoop Stop hook', () => {
 		disposables = new DisposableStore();
 		mockChatHookService = new MockChatHookService();
 
-		const serviceCollection = disposables.add(createExtensionUnitTestingServices());
+		const serviceCollection = disposables.add(
+			createExtensionUnitTestingServices(),
+		);
 		serviceCollection.define(IChatHookService, mockChatHookService);
-		serviceCollection.define(IOTelService, new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })));
+		serviceCollection.define(
+			IOTelService,
+			new NoopOTelService(
+				resolveOTelConfig({
+					env: {},
+					extensionVersion: '0.0.0',
+					sessionId: 'test',
+				}),
+			),
+		);
 
 		const accessor = serviceCollection.createTestingAccessor();
 		instantiationService = accessor.get(IInstantiationService);
@@ -722,13 +886,18 @@ describe('ToolCallingLoop Stop hook', () => {
 		const conversation = createTestConversation(1);
 		const request = createMockChatRequest();
 
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
-		);
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
-		const result = await loop.testExecuteStopHook({ stop_hook_active: false }, 'session-1', tokenSource.token);
+		const result = await loop.testExecuteStopHook(
+			{ stop_hook_active: false },
+			'session-1',
+			tokenSource.token,
+		);
 		expect(result.shouldContinue).toBe(false);
 		expect(result.reasons).toBeUndefined();
 	});
@@ -750,15 +919,22 @@ describe('ToolCallingLoop Stop hook', () => {
 			},
 		]);
 
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
-		);
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
-		const result = await loop.testExecuteStopHook({ stop_hook_active: false }, 'session-1', tokenSource.token);
+		const result = await loop.testExecuteStopHook(
+			{ stop_hook_active: false },
+			'session-1',
+			tokenSource.token,
+		);
 		expect(result.shouldContinue).toBe(true);
-		expect(result.reasons).toEqual(['Tests are failing. Fix the implementation until all tests pass before finishing.']);
+		expect(result.reasons).toEqual([
+			'Tests are failing. Fix the implementation until all tests pass before finishing.',
+		]);
 	});
 
 	it('should allow stopping when hook returns decision other than block', async () => {
@@ -777,13 +953,18 @@ describe('ToolCallingLoop Stop hook', () => {
 			},
 		]);
 
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
-		);
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
-		const result = await loop.testExecuteStopHook({ stop_hook_active: false }, 'session-1', tokenSource.token);
+		const result = await loop.testExecuteStopHook(
+			{ stop_hook_active: false },
+			'session-1',
+			tokenSource.token,
+		);
 		expect(result.shouldContinue).toBe(false);
 	});
 
@@ -798,13 +979,18 @@ describe('ToolCallingLoop Stop hook', () => {
 			},
 		]);
 
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
-		);
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
-		const result = await loop.testExecuteStopHook({ stop_hook_active: false }, 'session-1', tokenSource.token);
+		const result = await loop.testExecuteStopHook(
+			{ stop_hook_active: false },
+			'session-1',
+			tokenSource.token,
+		);
 		expect(result.shouldContinue).toBe(false);
 	});
 
@@ -824,13 +1010,18 @@ describe('ToolCallingLoop Stop hook', () => {
 			},
 		]);
 
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
-		);
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
-		const result = await loop.testExecuteStopHook({ stop_hook_active: false }, 'session-1', tokenSource.token);
+		const result = await loop.testExecuteStopHook(
+			{ stop_hook_active: false },
+			'session-1',
+			tokenSource.token,
+		);
 		expect(result.shouldContinue).toBe(false);
 	});
 
@@ -859,13 +1050,18 @@ describe('ToolCallingLoop Stop hook', () => {
 			},
 		]);
 
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
-		);
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
-		const result = await loop.testExecuteStopHook({ stop_hook_active: false }, 'session-1', tokenSource.token);
+		const result = await loop.testExecuteStopHook(
+			{ stop_hook_active: false },
+			'session-1',
+			tokenSource.token,
+		);
 		expect(result.shouldContinue).toBe(true);
 		expect(result.reasons).toContain('Tests are failing.');
 		expect(result.reasons).toContain('Lint errors found.');
@@ -882,13 +1078,18 @@ describe('ToolCallingLoop Stop hook', () => {
 			},
 		]);
 
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
-		);
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
-		const result = await loop.testExecuteStopHook({ stop_hook_active: false }, 'session-1', tokenSource.token);
+		const result = await loop.testExecuteStopHook(
+			{ stop_hook_active: false },
+			'session-1',
+			tokenSource.token,
+		);
 		expect(result.shouldContinue).toBe(true);
 		expect(result.reasons).toEqual(['Hook script failed with exit code 2']);
 	});
@@ -897,15 +1098,23 @@ describe('ToolCallingLoop Stop hook', () => {
 		const conversation = createTestConversation(1);
 		const request = createMockChatRequest();
 
-		mockChatHookService.setHookError('Stop', new Error('Service unavailable'));
-
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
+		mockChatHookService.setHookError(
+			'Stop',
+			new Error('Service unavailable'),
 		);
+
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
-		const result = await loop.testExecuteStopHook({ stop_hook_active: false }, 'session-1', tokenSource.token);
+		const result = await loop.testExecuteStopHook(
+			{ stop_hook_active: false },
+			'session-1',
+			tokenSource.token,
+		);
 		expect(result.shouldContinue).toBe(false);
 	});
 });
@@ -920,9 +1129,20 @@ describe('ToolCallingLoop SubagentStop hook', () => {
 		disposables = new DisposableStore();
 		mockChatHookService = new MockChatHookService();
 
-		const serviceCollection = disposables.add(createExtensionUnitTestingServices());
+		const serviceCollection = disposables.add(
+			createExtensionUnitTestingServices(),
+		);
 		serviceCollection.define(IChatHookService, mockChatHookService);
-		serviceCollection.define(IOTelService, new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })));
+		serviceCollection.define(
+			IOTelService,
+			new NoopOTelService(
+				resolveOTelConfig({
+					env: {},
+					extensionVersion: '0.0.0',
+					sessionId: 'test',
+				}),
+			),
+		);
 
 		const accessor = serviceCollection.createTestingAccessor();
 		instantiationService = accessor.get(IInstantiationService);
@@ -953,19 +1173,26 @@ describe('ToolCallingLoop SubagentStop hook', () => {
 			},
 		]);
 
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
-		);
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
 		const result = await loop.testExecuteSubagentStopHook(
-			{ agent_id: 'agent-1', agent_type: 'execution', stop_hook_active: false },
+			{
+				agent_id: 'agent-1',
+				agent_type: 'execution',
+				stop_hook_active: false,
+			},
 			'session-1',
-			tokenSource.token
+			tokenSource.token,
 		);
 		expect(result.shouldContinue).toBe(true);
-		expect(result.reasons).toEqual(['Subagent has not completed its task.']);
+		expect(result.reasons).toEqual([
+			'Subagent has not completed its task.',
+		]);
 	});
 
 	it('should allow stopping when SubagentStop hookSpecificOutput is missing', async () => {
@@ -979,16 +1206,21 @@ describe('ToolCallingLoop SubagentStop hook', () => {
 			},
 		]);
 
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
-		);
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
 		const result = await loop.testExecuteSubagentStopHook(
-			{ agent_id: 'agent-1', agent_type: 'execution', stop_hook_active: false },
+			{
+				agent_id: 'agent-1',
+				agent_type: 'execution',
+				stop_hook_active: false,
+			},
 			'session-1',
-			tokenSource.token
+			tokenSource.token,
 		);
 		expect(result.shouldContinue).toBe(false);
 	});
@@ -997,18 +1229,26 @@ describe('ToolCallingLoop SubagentStop hook', () => {
 		const conversation = createTestConversation(1);
 		const request = createMockChatRequest();
 
-		mockChatHookService.setHookError('SubagentStop', new Error('Service unavailable'));
-
-		const loop = instantiationService.createInstance(
-			TestToolCallingLoop,
-			{ conversation, toolCallLimit: 10, request }
+		mockChatHookService.setHookError(
+			'SubagentStop',
+			new Error('Service unavailable'),
 		);
+
+		const loop = instantiationService.createInstance(TestToolCallingLoop, {
+			conversation,
+			toolCallLimit: 10,
+			request,
+		});
 		disposables.add(loop);
 
 		const result = await loop.testExecuteSubagentStopHook(
-			{ agent_id: 'agent-1', agent_type: 'execution', stop_hook_active: false },
+			{
+				agent_id: 'agent-1',
+				agent_type: 'execution',
+				stop_hook_active: false,
+			},
 			'session-1',
-			tokenSource.token
+			tokenSource.token,
 		);
 		expect(result.shouldContinue).toBe(false);
 	});

@@ -7,7 +7,10 @@ import type * as vscode from 'vscode';
 import { splitLines } from '../../../vs/base/common/strings';
 import { URI as Uri, UriComponents } from '../../../vs/base/common/uri';
 import { IModelChangedEvent } from '../../../vs/editor/common/model/mirrorTextModel';
-import { ExtHostDocumentData, IExtHostDocumentSaveDelegate } from '../../../vs/workbench/api/common/extHostDocumentData';
+import {
+	ExtHostDocumentData,
+	IExtHostDocumentSaveDelegate,
+} from '../../../vs/workbench/api/common/extHostDocumentData';
 import { EndOfLine } from '../../../vs/workbench/api/common/extHostTypes/textEdit';
 
 export interface IExtHostDocumentData {
@@ -16,15 +19,30 @@ export interface IExtHostDocumentData {
 	onEvents(e: IModelChangedEvent): void;
 }
 
-export function createTextDocumentData(uri: Uri, contents: string, languageId: string, eol: '\r\n' | '\n' | undefined = undefined): IExtHostDocumentData {
+export function createTextDocumentData(
+	uri: Uri,
+	contents: string,
+	languageId: string,
+	eol: '\r\n' | '\n' | undefined = undefined,
+): IExtHostDocumentData {
 	const lines = splitLines(contents);
 	eol = eol ?? (contents.indexOf('\r\n') !== -1 ? '\r\n' : '\n');
 	const delegate: IExtHostDocumentSaveDelegate = {
 		$trySaveDocument: function (uri: UriComponents): Promise<boolean> {
 			throw new Error('Not implemented.');
-		}
+		},
 	};
-	return new ExtHostDocumentData(delegate, uri, lines, eol, 1, languageId, false, 'utf8', false);
+	return new ExtHostDocumentData(
+		delegate,
+		uri,
+		lines,
+		eol,
+		1,
+		languageId,
+		false,
+		'utf8',
+		false,
+	);
 }
 
 export function setDocText(doc: IExtHostDocumentData, text: string): void {
@@ -35,7 +53,9 @@ export function setDocText(doc: IExtHostDocumentData, text: string): void {
 					startLineNumber: 1,
 					startColumn: 1,
 					endLineNumber: doc.document.lineCount,
-					endColumn: doc.document.lineAt(doc.document.lineCount - 1).text.length + 1,
+					endColumn:
+						doc.document.lineAt(doc.document.lineCount - 1).text
+							.length + 1,
 				},
 				rangeOffset: 0,
 				rangeLength: doc.document.getText().length,
@@ -43,7 +63,7 @@ export function setDocText(doc: IExtHostDocumentData, text: string): void {
 			},
 		],
 		versionId: doc.document.version + 1,
-		eol: (doc.document.eol === EndOfLine.LF ? '\n' : '\r\n'),
+		eol: doc.document.eol === EndOfLine.LF ? '\n' : '\r\n',
 		isUndoing: false,
 		isRedoing: false,
 	});

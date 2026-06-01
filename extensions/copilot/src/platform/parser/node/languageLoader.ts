@@ -8,16 +8,21 @@ import { WASMLanguage } from './treeSitterLanguages';
 import Parser = require('web-tree-sitter');
 
 export class LanguageLoader {
-
 	private readonly loadedLanguagesCache;
 
 	constructor() {
-		this.loadedLanguagesCache = new Map<WASMLanguage, Promise<Parser.Language>>();
+		this.loadedLanguagesCache = new Map<
+			WASMLanguage,
+			Promise<Parser.Language>
+		>();
 	}
 
 	loadLanguage(wasmLanguage: WASMLanguage): Promise<Parser.Language> {
 		if (!this.loadedLanguagesCache.has(wasmLanguage)) {
-			this.loadedLanguagesCache.set(wasmLanguage, this._doLoadLanguage(wasmLanguage));
+			this.loadedLanguagesCache.set(
+				wasmLanguage,
+				this._doLoadLanguage(wasmLanguage),
+			);
 		}
 		return this.loadedLanguagesCache.get(wasmLanguage)!;
 	}

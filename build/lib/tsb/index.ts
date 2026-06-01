@@ -3,17 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import Vinyl from 'vinyl';
-import through from 'through';
-import * as builder from './builder.ts';
-import ts from 'typescript';
-import { Readable, Writable, Duplex } from 'stream';
-import { dirname } from 'path';
-import { strings } from './utils.ts';
-import { readFileSync, statSync } from 'fs';
-import log from 'fancy-log';
-import { ESBuildTranspiler, type ITranspiler, TscTranspiler } from './transpiler.ts';
-import colors from 'ansi-colors';
+import Vinyl from "vinyl";
+import through from "through";
+import * as builder from "./builder.ts";
+import ts from "typescript";
+import { Readable, Writable, Duplex } from "stream";
+import { dirname } from "path";
+import { strings } from "./utils.ts";
+import { readFileSync, statSync } from "fs";
+import log from "fancy-log";
+import {
+	ESBuildTranspiler,
+	type ITranspiler,
+	TscTranspiler,
+} from "./transpiler.ts";
+import colors from "ansi-colors";
 
 export interface IncrementalCompiler {
 	(token?: any): Readable & Writable;
@@ -21,38 +25,55 @@ export interface IncrementalCompiler {
 }
 
 class EmptyDuplex extends Duplex {
-	_write(_chunk: any, _encoding: string, callback: (err?: Error) => void): void { callback(); }
-	_read() { this.push(null); }
+	_write(
+		_chunk: any,
+		_encoding: string,
+		callback: (err?: Error) => void,
+	): void {
+		callback();
+	}
+	_read() {
+		this.push(null);
+	}
 }
 
 function createNullCompiler(): IncrementalCompiler {
-	const result: IncrementalCompiler = function () { return new EmptyDuplex(); };
+	const result: IncrementalCompiler = function () {
+		return new EmptyDuplex();
+	};
 	result.src = () => new EmptyDuplex();
 	return result;
 }
 
-const _defaultOnError = (err: string) => console.log(JSON.stringify(err, null, 4));
+const _defaultOnError = (err: string) =>
+	console.log(JSON.stringify(err, null, 4));
 
 export function create(
 	projectPath: string,
 	existingOptions: Partial<ts.CompilerOptions>,
-	config: { verbose?: boolean; transpileOnly?: boolean; transpileOnlyIncludesDts?: boolean; transpileWithEsbuild?: boolean },
-	onError: (message: string) => void = _defaultOnError
+	config: {
+		verbose?: boolean;
+		transpileOnly?: boolean;
+		transpileOnlyIncludesDts?: boolean;
+		transpileWithEsbuild?: boolean;
+	},
+	onError: (message: string) => void = _defaultOnError,
 ): IncrementalCompiler {
-
 	function printDiagnostic(diag: ts.Diagnostic | Error): void {
-
 		if (diag instanceof Error) {
 			onError(diag.message);
 		} else if (!diag.file || !diag.start) {
-			onError(ts.flattenDiagnosticMessageText(diag.messageText, '\n'));
+			onError(ts.flattenDiagnosticMessageText(diag.messageText, "\n"));
 		} else {
 			const lineAndCh = diag.file.getLineAndCharacterOfPosition(diag.start);
-			onError(strings.format('{0}({1},{2}): {3}',
-				diag.file.fileName,
-				lineAndCh.line + 1,
-				lineAndCh.character + 1,
-				ts.flattenDiagnosticMessageText(diag.messageText, '\n'))
+			onError(
+				strings.format(
+					"{0}({1},{2}): {3}",
+					diag.file.fileName,
+					lineAndCh.line + 1,
+					lineAndCh.character + 1,
+					ts.flattenDiagnosticMessageText(diag.messageText, "\n"),
+				),
 			);
 		}
 	}
@@ -63,7 +84,12 @@ export function create(
 		return createNullCompiler();
 	}
 
-	const cmdLine = ts.parseJsonConfigFileContent(parsed.config, ts.sys, dirname(projectPath), existingOptions);
+	const cmdLine = ts.parseJsonConfigFileContent(
+		parsed.config,
+		ts.sys,
+		dirname(projectPath),
+		existingOptions,
+	);
 	if (cmdLine.errors.length > 0) {
 		cmdLine.errors.forEach(printDiagnostic);
 		return createNullCompiler();
@@ -76,55 +102,62 @@ export function create(
 	}
 
 	// FULL COMPILE stream doing transpile, syntax and semantic diagnostics
-	function createCompileStream(builder: builder.ITypeScriptBuilder, token?: builder.CancellationToken): Readable & Writable {
-
-		return through(function (this: through.ThroughStream, file: Vinyl) {
-			// give the file to the compiler
-			if (file.isStream()) {
-				this.emit('error', 'no support for streams');
-				return;
-			}
-			builder.file(file);
-
-		}, function (this: { queue(a: any): void }) {
-			// start the compilation process
-			builder.build(
-				file => this.queue(file),
-				printDiagnostic,
-				token
-			).catch(e => console.error(e)).then(() => this.queue(null));
-		});
+	function createCompileStream(
+		builder: builder.ITypeScriptBuilder,
+		token?: builder.CancellationToken,
+	): Readable & Writable {
+		return through(
+			function (this: through.ThroughStream, file: Vinyl) {
+				// give the file to the compiler
+				if (file.isStream()) {
+					this.emit("error", "no support for streams");
+					return;
+				}
+				builder.file(file);
+			},
+			function (this: { queue(a: any): void }) {
+				// start the compilation process
+				builder
+					.build((file) => this.queue(file), printDiagnostic, token)
+					.catch((e) => console.error(e))
+					.then(() => this.queue(null));
+			},
+		);
 	}
 
 	// TRANSPILE ONLY stream doing just TS to JS conversion
 	function createTranspileStream(transpiler: ITranspiler): Readable & Writable {
-		return through(function (this: through.ThroughStream & { queue(a: any): void }, file: Vinyl) {
-			// give the file to the compiler
-			if (file.isStream()) {
-				this.emit('error', 'no support for streams');
-				return;
-			}
-			if (!file.contents) {
-				return;
-			}
-			if (!config.transpileOnlyIncludesDts && file.path.endsWith('.d.ts')) {
-				return;
-			}
+		return through(
+			function (
+				this: through.ThroughStream & { queue(a: any): void },
+				file: Vinyl,
+			) {
+				// give the file to the compiler
+				if (file.isStream()) {
+					this.emit("error", "no support for streams");
+					return;
+				}
+				if (!file.contents) {
+					return;
+				}
+				if (!config.transpileOnlyIncludesDts && file.path.endsWith(".d.ts")) {
+					return;
+				}
 
-			if (!transpiler.onOutfile) {
-				transpiler.onOutfile = file => this.queue(file);
-			}
+				if (!transpiler.onOutfile) {
+					transpiler.onOutfile = (file) => this.queue(file);
+				}
 
-			transpiler.transpile(file);
-
-		}, function (this: { queue(a: any): void }) {
-			transpiler.join().then(() => {
-				this.queue(null);
-				transpiler.onOutfile = undefined;
-			});
-		});
+				transpiler.transpile(file);
+			},
+			function (this: { queue(a: any): void }) {
+				transpiler.join().then(() => {
+					this.queue(null);
+					transpiler.onOutfile = undefined;
+				});
+			},
+		);
 	}
-
 
 	let result: IncrementalCompiler;
 	if (config.transpileOnly) {
@@ -133,14 +166,19 @@ export function create(
 			: new ESBuildTranspiler(logFn, printDiagnostic, projectPath, cmdLine);
 		result = (() => createTranspileStream(transpiler)) as IncrementalCompiler;
 	} else {
-		const _builder = builder.createTypeScriptBuilder({ logFn }, projectPath, cmdLine);
-		result = ((token: builder.CancellationToken) => createCompileStream(_builder, token)) as IncrementalCompiler;
+		const _builder = builder.createTypeScriptBuilder(
+			{ logFn },
+			projectPath,
+			cmdLine,
+		);
+		result = ((token: builder.CancellationToken) =>
+			createCompileStream(_builder, token)) as IncrementalCompiler;
 	}
 
 	result.src = (opts?: { cwd?: string; base?: string }) => {
 		let _pos = 0;
 		const _fileNames = cmdLine.fileNames.slice(0);
-		return new class extends Readable {
+		return new (class extends Readable {
 			constructor() {
 				super({ objectMode: true });
 			}
@@ -149,19 +187,21 @@ export function create(
 				let path: string;
 				for (; more && _pos < _fileNames.length; _pos++) {
 					path = _fileNames[_pos];
-					more = this.push(new Vinyl({
-						path,
-						contents: readFileSync(path),
-						stat: statSync(path),
-						cwd: opts && opts.cwd,
-						base: opts && opts.base || dirname(projectPath)
-					}));
+					more = this.push(
+						new Vinyl({
+							path,
+							contents: readFileSync(path),
+							stat: statSync(path),
+							cwd: opts && opts.cwd,
+							base: (opts && opts.base) || dirname(projectPath),
+						}),
+					);
 				}
 				if (_pos >= _fileNames.length) {
 					this.push(null);
 				}
 			}
-		};
+		})();
 	};
 
 	return result as IncrementalCompiler;

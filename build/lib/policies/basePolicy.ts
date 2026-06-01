@@ -3,8 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { renderADMLString } from './render.ts';
-import type { Category, LanguageTranslations, NlsString, Policy, PolicyType } from './types.ts';
+import { renderADMLString } from "./render.ts";
+import type {
+	Category,
+	LanguageTranslations,
+	NlsString,
+	Policy,
+	PolicyType,
+} from "./types.ts";
 
 export abstract class BasePolicy implements Policy {
 	readonly type: PolicyType;
@@ -30,19 +36,27 @@ export abstract class BasePolicy implements Policy {
 		this.moduleName = moduleName;
 	}
 
-	protected renderADMLString(nlsString: NlsString, translations?: LanguageTranslations): string {
-		return renderADMLString(this.name, this.moduleName, nlsString, translations);
+	protected renderADMLString(
+		nlsString: NlsString,
+		translations?: LanguageTranslations,
+	): string {
+		return renderADMLString(
+			this.name,
+			this.moduleName,
+			nlsString,
+			translations,
+		);
 	}
 
 	renderADMX(regKey: string) {
 		return [
-			`<policy name="${this.name}" class="Both" displayName="$(string.${this.name})" explainText="$(string.${this.name}_${this.description.nlsKey.replace(/\./g, '_')})" key="Software\\Policies\\Microsoft\\${regKey}" presentation="$(presentation.${this.name})">`,
+			`<policy name="${this.name}" class="Both" displayName="$(string.${this.name})" explainText="$(string.${this.name}_${this.description.nlsKey.replace(/\./g, "_")})" key="Software\\Policies\\Microsoft\\${regKey}" presentation="$(presentation.${this.name})">`,
 			`	<parentCategory ref="${this.category.name.nlsKey}" />`,
-			`	<supportedOn ref="Supported_${this.minimumVersion.replace(/\./g, '_')}" />`,
+			`	<supportedOn ref="Supported_${this.minimumVersion.replace(/\./g, "_")}" />`,
 			`	<elements>`,
 			...this.renderADMXElements(),
 			`	</elements>`,
-			`</policy>`
+			`</policy>`,
 		];
 	}
 
@@ -51,7 +65,7 @@ export abstract class BasePolicy implements Policy {
 	renderADMLStrings(translations?: LanguageTranslations) {
 		return [
 			`<string id="${this.name}">${this.name}</string>`,
-			this.renderADMLString(this.description, translations)
+			this.renderADMLString(this.description, translations),
 		];
 	}
 
@@ -73,5 +87,7 @@ ${this.renderProfileManifestValue(translations)}
 
 	abstract renderJsonValue(): string | number | boolean | object | null;
 	abstract renderProfileValue(): string;
-	abstract renderProfileManifestValue(translations?: LanguageTranslations): string;
+	abstract renderProfileManifestValue(
+		translations?: LanguageTranslations,
+	): string;
 }

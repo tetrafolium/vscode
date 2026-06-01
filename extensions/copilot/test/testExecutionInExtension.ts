@@ -12,10 +12,21 @@ import path from 'path';
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { SimpleRPC } from '../src/extension/onboardDebug/node/copilotDebugWorker/rpc';
 import { deserializeWorkbenchState } from '../src/platform/test/node/promptContextModel';
-import { createCancelablePromise, DeferredPromise, disposableTimeout, raceCancellablePromises, retry, timeout } from '../src/util/vs/base/common/async';
+import {
+	createCancelablePromise,
+	DeferredPromise,
+	disposableTimeout,
+	raceCancellablePromises,
+	retry,
+	timeout,
+} from '../src/util/vs/base/common/async';
 import { Emitter, Event } from '../src/util/vs/base/common/event';
 import { Iterable } from '../src/util/vs/base/common/iterator';
-import { Disposable, DisposableStore, toDisposable } from '../src/util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	DisposableStore,
+	toDisposable,
+} from '../src/util/vs/base/common/lifecycle';
 import { extUriBiasedIgnorePathCase } from '../src/util/vs/base/common/resources';
 import { URI } from '../src/util/vs/base/common/uri';
 import { generateUuid } from '../src/util/vs/base/common/uuid';
@@ -56,16 +67,20 @@ export class TestExecutionInExtension {
 		const { chromium } = await import('playwright');
 
 		//@ts-ignore
-		const testConfig: { default: { version: string } } = await import('../.vscode-test.mjs');
+		const testConfig: { default: { version: string } } =
+			await import('../.vscode-test.mjs');
 		const [serverBinary, browser] = await Promise.all([
-			downloadAndUnzipVSCode(testConfig.default.version, getServerPlatform()),
+			downloadAndUnzipVSCode(
+				testConfig.default.version,
+				getServerPlatform(),
+			),
 			chromium.launch({ headless: ctx.opts.headless }),
 		]);
 		const browserContext = await browser.newContext();
 		const childPortNumber = await findFreePortFaster(40_000, 1_000, 10_000);
 		const connectionToken = generateUuid();
 
-		const controlServer = createServer(s => inst._onConnection(s));
+		const controlServer = createServer((s) => inst._onConnection(s));
 		await new Promise((resolve, reject) => {
 			controlServer.on('listening', resolve);
 			controlServer.on('error', reject);
@@ -74,26 +89,41 @@ export class TestExecutionInExtension {
 		store.add(toDisposable(() => controlServer.close()));
 
 		const vsixFile = await TestExecutionInExtension._packExtension();
-		const child = spawn(serverBinary, [
-			'--server-data-dir', path.resolve(__dirname, '../.vscode-test/server-data'),
-			'--extensions-dir', path.resolve(__dirname, '../.vscode-test/server-extensions'),
-			...ctx.opts.installExtensions.flatMap(ext => ['--install-extension', ext]),
-			'--install-extension', vsixFile,
-			'--force',
-			'--accept-server-license-terms',
-			'--connection-token', connectionToken,
-			'--port', String(childPortNumber),
-			'--host', HOST,
-			'--disable-workspace-trust',
-			'--start-server'
-		], {
-			shell: process.platform === 'win32',
-			env: {
-				...process.env,
-				VSCODE_SIMULATION_EXTENSION_ENTRY: __filename,
-				VSCODE_SIMULATION_CONTROL_PORT: String((controlServer.address() as AddressInfo).port),
-			}
-		});
+		const child = spawn(
+			serverBinary,
+			[
+				'--server-data-dir',
+				path.resolve(__dirname, '../.vscode-test/server-data'),
+				'--extensions-dir',
+				path.resolve(__dirname, '../.vscode-test/server-extensions'),
+				...ctx.opts.installExtensions.flatMap((ext) => [
+					'--install-extension',
+					ext,
+				]),
+				'--install-extension',
+				vsixFile,
+				'--force',
+				'--accept-server-license-terms',
+				'--connection-token',
+				connectionToken,
+				'--port',
+				String(childPortNumber),
+				'--host',
+				HOST,
+				'--disable-workspace-trust',
+				'--start-server',
+			],
+			{
+				shell: process.platform === 'win32',
+				env: {
+					...process.env,
+					VSCODE_SIMULATION_EXTENSION_ENTRY: __filename,
+					VSCODE_SIMULATION_CONTROL_PORT: String(
+						(controlServer.address() as AddressInfo).port,
+					),
+				},
+			},
+		);
 		const output: Buffer[] = [];
 		await new Promise((resolve, reject) => {
 			const log = logger.tag('VSCodeServer');
@@ -109,35 +139,68 @@ export class TestExecutionInExtension {
 		store.add(toDisposable(() => child.kill()));
 
 		await raceCancellablePromises([
-			createCancelablePromise(tkn => waitForListenerOnPort(childPortNumber, HOST, tkn)),
-			createCancelablePromise(tkn => new Promise<void>((resolve, reject) => {
-				const listener = () => {
-					reject(new Error(`Child process exited unexpectedly. Output: ${Buffer.concat(output).toString()}`));
-				};
-				child.on('exit', listener);
-				const l = tkn.onCancellationRequested(() => {
-					l.dispose();
-					child.off('exit', listener);
-					resolve();
-				});
-			})),
-			createCancelablePromise(tkn => timeout(10_000, tkn).then(e => {
-				throw new Error(`Timeout waiting for server to start. Output: ${Buffer.concat(output).toString()}`);
-			})),
+			createCancelablePromise((tkn) =>
+				waitForListenerOnPort(childPortNumber, HOST, tkn),
+			),
+			createCancelablePromise(
+				(tkn) =>
+					new Promise<void>((resolve, reject) => {
+						const listener = () => {
+							reject(
+								new Error(
+									`Child process exited unexpectedly. Output: ${Buffer.concat(output).toString()}`,
+								),
+							);
+						};
+						child.on('exit', listener);
+						const l = tkn.onCancellationRequested(() => {
+							l.dispose();
+							child.off('exit', listener);
+							resolve();
+						});
+					}),
+			),
+			createCancelablePromise((tkn) =>
+				timeout(10_000, tkn).then((e) => {
+					throw new Error(
+						`Timeout waiting for server to start. Output: ${Buffer.concat(output).toString()}`,
+					);
+				}),
+			),
 		]);
 
-		const inst = new TestExecutionInExtension(ctx, output, browser, browserContext, child, childPortNumber, store, connectionToken);
+		const inst = new TestExecutionInExtension(
+			ctx,
+			output,
+			browser,
+			browserContext,
+			child,
+			childPortNumber,
+			store,
+			connectionToken,
+		);
 		return inst;
 	}
 
 	private static async _packExtension() {
 		const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
 
-		const extensionDir = path.resolve(__dirname, '..', 'test', 'simulationExtension');
-		const existingVsix = (await fs.readdir(extensionDir)).map(e => path.join(extensionDir, e)).find(f => f.endsWith('.vsix'));
+		const extensionDir = path.resolve(
+			__dirname,
+			'..',
+			'test',
+			'simulationExtension',
+		);
+		const existingVsix = (await fs.readdir(extensionDir))
+			.map((e) => path.join(extensionDir, e))
+			.find((f) => f.endsWith('.vsix'));
 		if (existingVsix) {
-			const vsixMtime = await fs.stat(existingVsix).then(s => s.mtimeMs);
-			const packageJsonMtime = await fs.stat(packageJsonPath).then(s => s.mtimeMs);
+			const vsixMtime = await fs
+				.stat(existingVsix)
+				.then((s) => s.mtimeMs);
+			const packageJsonMtime = await fs
+				.stat(packageJsonPath)
+				.then((s) => s.mtimeMs);
 			if (vsixMtime >= packageJsonMtime) {
 				return existingVsix;
 			}
@@ -146,22 +209,29 @@ export class TestExecutionInExtension {
 		}
 
 		logger.info('Packing extension for simulation test run...');
-		const packageJsonContents = JSON.parse(await fs.readFile(packageJsonPath, 'utf8'));
+		const packageJsonContents = JSON.parse(
+			await fs.readFile(packageJsonPath, 'utf8'),
+		);
 
-		await fs.writeFile(path.join(extensionDir, 'package.json'), JSON.stringify({
-			name: packageJsonContents.name,
-			publisher: packageJsonContents.publisher,
-			engines: packageJsonContents.engines,
-			displayName: 'Simulation Extension',
-			description: 'An extension installed in the VS Code server for the simulation test runs',
-			enabledApiProposals: packageJsonContents.enabledApiProposals,
-			version: `0.0.${Date.now()}`,
-			activationEvents: ['*'],
-			main: './extension.js',
-			contributes: {
-				languageModelTools: packageJsonContents.contributes?.languageModelTools,
-			},
-		}));
+		await fs.writeFile(
+			path.join(extensionDir, 'package.json'),
+			JSON.stringify({
+				name: packageJsonContents.name,
+				publisher: packageJsonContents.publisher,
+				engines: packageJsonContents.engines,
+				displayName: 'Simulation Extension',
+				description:
+					'An extension installed in the VS Code server for the simulation test runs',
+				enabledApiProposals: packageJsonContents.enabledApiProposals,
+				version: `0.0.${Date.now()}`,
+				activationEvents: ['*'],
+				main: './extension.js',
+				contributes: {
+					languageModelTools:
+						packageJsonContents.contributes?.languageModelTools,
+				},
+			}),
+		);
 
 		const vsixPath = path.join(extensionDir, 'extension.vsix');
 		await createVSIX({
@@ -180,7 +250,10 @@ export class TestExecutionInExtension {
 	}
 
 	private _isDisposed = false;
-	private readonly _pending = new Set<{ dir: string; workspace: Promise<ProxiedWorkspace> }>();
+	private readonly _pending = new Set<{
+		dir: string;
+		workspace: Promise<ProxiedWorkspace>;
+	}>();
 	private readonly _available = new Set<ProxiedWorkspaceWithConnection>();
 	private readonly _onDidChangeWorkspaces = new Emitter<void>();
 
@@ -200,7 +273,9 @@ export class TestExecutionInExtension {
 				return;
 			}
 			if (code !== 0) {
-				logger.error(`Child process exited with code ${code} and signal ${signal}. Output:`);
+				logger.error(
+					`Child process exited with code ${code} and signal ${signal}. Output:`,
+				);
 				logger.error(Buffer.concat(output).toString());
 			}
 		});
@@ -211,25 +286,49 @@ export class TestExecutionInExtension {
 		_parallelism: number,
 		outcomeDirectory: string,
 		test: SimulationTest,
-		runNumber: number
+		runNumber: number,
 	): Promise<ITestRunResult> {
 		let workspace: ProxiedWorkspaceWithConnection | undefined;
 
-		const explicitWorkspaceFolder = test.options.scenarioFolderPath && test.options.stateFile ? deserializeWorkbenchState(test.options.scenarioFolderPath, path.join(test.options.scenarioFolderPath, test.options.stateFile)).workspaceFolderPath : undefined;
+		const explicitWorkspaceFolder =
+			test.options.scenarioFolderPath && test.options.stateFile
+				? deserializeWorkbenchState(
+						test.options.scenarioFolderPath,
+						path.join(
+							test.options.scenarioFolderPath,
+							test.options.stateFile,
+						),
+					).workspaceFolderPath
+				: undefined;
 
 		const beforeWorkspace = Date.now();
 		try {
-			workspace = await this._acquireWorkspace(ctx, explicitWorkspaceFolder);
+			workspace = await this._acquireWorkspace(
+				ctx,
+				explicitWorkspaceFolder,
+			);
 			const afterWorkspace = Date.now();
-			ProxiedSimulationOutcome.registerTo(ctx.simulationOutcome, workspace.connection);
-			ProxiedSONOutputPrinter.registerTo(ctx.jsonOutputPrinter, workspace.connection);
-			ProxiedSimulationEndpointHealth.registerTo(ctx.simulationEndpointHealth, workspace.connection);
+			ProxiedSimulationOutcome.registerTo(
+				ctx.simulationOutcome,
+				workspace.connection,
+			);
+			ProxiedSONOutputPrinter.registerTo(
+				ctx.jsonOutputPrinter,
+				workspace.connection,
+			);
+			ProxiedSimulationEndpointHealth.registerTo(
+				ctx.simulationEndpointHealth,
+				workspace.connection,
+			);
 
-			const res: IRunTestResult = await workspace.connection.callMethod('runTest', {
-				testName: test.fullName,
-				outcomeDirectory,
-				runNumber,
-			} satisfies IRunTestParams);
+			const res: IRunTestResult = await workspace.connection.callMethod(
+				'runTest',
+				{
+					testName: test.fullName,
+					outcomeDirectory,
+					runNumber,
+				} satisfies IRunTestParams,
+			);
 
 			// For running in an explicit folder, don't let other connections reuse it
 			if (explicitWorkspaceFolder) {
@@ -242,7 +341,9 @@ export class TestExecutionInExtension {
 			this._onDidChangeWorkspaces.fire(); // wake up any tests waiting for a workspace
 
 			const afterTest = Date.now();
-			logger.trace(`[TestExecutionInExtension] Workspace acquired in ${afterWorkspace - beforeWorkspace}ms, test run in ${afterTest - afterWorkspace}ms`);
+			logger.trace(
+				`[TestExecutionInExtension] Workspace acquired in ${afterWorkspace - beforeWorkspace}ms, test run in ${afterTest - afterWorkspace}ms`,
+			);
 
 			return res.result;
 		} catch (e) {
@@ -255,34 +356,62 @@ export class TestExecutionInExtension {
 	}
 
 	private async _disposeWorkspace(workspace: ProxiedWorkspaceWithConnection) {
-		await workspace.dispose().catch(() => { });
+		await workspace.dispose().catch(() => {});
 		this._available.delete(workspace);
 		this._onDidChangeWorkspaces.fire();
 	}
 
-	private async _acquireWorkspace(ctx: SimulationTestContext, explicitWorkspaceFolder?: string) {
+	private async _acquireWorkspace(
+		ctx: SimulationTestContext,
+		explicitWorkspaceFolder?: string,
+	) {
 		// Get a workspace if one is available. If not and there are no pending
 		// workspaces, make one. And then wait for a workspace to be available.
 		while (true) {
-			const available = Iterable.find(this._available, v => !v.busy && (!explicitWorkspaceFolder || v.dir === explicitWorkspaceFolder));
+			const available = Iterable.find(
+				this._available,
+				(v) =>
+					!v.busy &&
+					(!explicitWorkspaceFolder ||
+						v.dir === explicitWorkspaceFolder),
+			);
 			if (available) {
 				available.busy = true;
 				this._onDidChangeWorkspaces.fire();
 				return available;
 			}
 
-			if (explicitWorkspaceFolder || this._pending.size + this._available.size < MAX_CONCURRENT_SESSIONS) {
-				const dir = explicitWorkspaceFolder || path.join(tmpdir(), 'vscode-simulation-extension-test', generateUuid());
-				const workspace = ProxiedWorkspace.create(dir, this._browserContext, this._serverPortNumber, this._connectionToken);
+			if (
+				explicitWorkspaceFolder ||
+				this._pending.size + this._available.size <
+					MAX_CONCURRENT_SESSIONS
+			) {
+				const dir =
+					explicitWorkspaceFolder ||
+					path.join(
+						tmpdir(),
+						'vscode-simulation-extension-test',
+						generateUuid(),
+					);
+				const workspace = ProxiedWorkspace.create(
+					dir,
+					this._browserContext,
+					this._serverPortNumber,
+					this._connectionToken,
+				);
 				const pending = { dir, workspace };
 
 				this._pending.add(pending);
-				workspace.then(w => w.onDidTimeout(() => {
-					logger.warn(`Pending workspace connection ${dir} timed out. Will retry...`);
-					this._pending.delete(pending);
-					this._onDidChangeWorkspaces.fire();
-					w.dispose();
-				}));
+				workspace.then((w) =>
+					w.onDidTimeout(() => {
+						logger.warn(
+							`Pending workspace connection ${dir} timed out. Will retry...`,
+						);
+						this._pending.delete(pending);
+						this._onDidChangeWorkspaces.fire();
+						w.dispose();
+					}),
+				);
 			}
 
 			await Event.toPromise(this._onDidChangeWorkspaces.event);
@@ -293,38 +422,52 @@ export class TestExecutionInExtension {
 		const rpc = new SimpleRPC(socket);
 
 		rpc.registerMethod('deviceCodeCallback', ({ url }) => {
-			logger.warn(`⚠️ \x1b[31mAuth Required!\x1b[0m Please open the link: ${url}`);
+			logger.warn(
+				`⚠️ \x1b[31mAuth Required!\x1b[0m Please open the link: ${url}`,
+			);
 		});
 
-		rpc.registerMethod('init', async (params: IInitParams): Promise<IInitResult> => {
-			const record = [...this._pending].find(w => extUriBiasedIgnorePathCase.isEqual(URI.file(w.dir), URI.file(params.folder)));
-			if (!record) {
-				socket.end();
-				const err = new Error(`No workspace found for folder ${params.folder}`);
-				logger.error(err);
-				throw err;
-			}
+		rpc.registerMethod(
+			'init',
+			async (params: IInitParams): Promise<IInitResult> => {
+				const record = [...this._pending].find((w) =>
+					extUriBiasedIgnorePathCase.isEqual(
+						URI.file(w.dir),
+						URI.file(params.folder),
+					),
+				);
+				if (!record) {
+					socket.end();
+					const err = new Error(
+						`No workspace found for folder ${params.folder}`,
+					);
+					logger.error(err);
+					throw err;
+				}
 
-			const workspace = await record.workspace;
-			this._pending.delete(record);
-			this._available.add(workspace.onConnection(rpc));
-			this._onDidChangeWorkspaces.fire();
+				const workspace = await record.workspace;
+				this._pending.delete(record);
+				this._available.add(workspace.onConnection(rpc));
+				this._onDidChangeWorkspaces.fire();
 
-			const argv = [...process.argv, '--in-extension-host', 'false'];
-			if (!argv.some(a => a.startsWith('--output'))) {
-				// Ensure output is stable otherwise it's regenerated
-				argv.push('--output', this._ctx.outputPath);
-			}
+				const argv = [...process.argv, '--in-extension-host', 'false'];
+				if (!argv.some((a) => a.startsWith('--output'))) {
+					// Ensure output is stable otherwise it's regenerated
+					argv.push('--output', this._ctx.outputPath);
+				}
 
-			return { argv };
-		});
+				return { argv };
+			},
+		);
 	}
 
 	public async dispose() {
 		this._isDisposed = true;
 
-		await Promise.all([...this._pending].map(w => w.workspace.then(w => w.dispose())));
-		await Promise.all([...this._available].map(w => w.dispose()));
+		await Promise.all(
+			[...this._pending].map((w) => w.workspace.then((w) => w.dispose())),
+		);
+		await Promise.all([...this._available].map((w) => w.dispose()));
 		this._pending.clear();
 		this._available.clear();
 
@@ -335,10 +478,17 @@ export class TestExecutionInExtension {
 	}
 }
 
-type ProxiedWorkspaceWithConnection = ProxiedWorkspace & { connection: SimpleRPC };
+type ProxiedWorkspaceWithConnection = ProxiedWorkspace & {
+	connection: SimpleRPC;
+};
 
 class ProxiedWorkspace extends Disposable {
-	public static async create(dir: string, context: BrowserContext, serverPort: number, connectionToken: string) {
+	public static async create(
+		dir: string,
+		context: BrowserContext,
+		serverPort: number,
+		connectionToken: string,
+	) {
 		// swebench runs run on the 'real' working directory and expect to be modified
 		// in-place. If it looks like this is happening, don't clear the directory
 		// afte each run.
@@ -372,9 +522,11 @@ class ProxiedWorkspace extends Disposable {
 		return this._onDidTimeout.event;
 	}
 
-	private readonly _connectionTimeout = this._register(disposableTimeout(() => {
-		this._onDidTimeout.fire();
-	}, CONNECT_TIMEOUT));
+	private readonly _connectionTimeout = this._register(
+		disposableTimeout(() => {
+			this._onDidTimeout.fire();
+		}, CONNECT_TIMEOUT),
+	);
 
 	public busy = false;
 
@@ -385,7 +537,11 @@ class ProxiedWorkspace extends Disposable {
 	) {
 		super();
 		const log = logger.tag('ProxiedWorkspace');
-		_page.on('console', e => log.debug(`[ProxiedWorkspace] ${e.type().toUpperCase()}: ${e.text()}`));
+		_page.on('console', (e) =>
+			log.debug(
+				`[ProxiedWorkspace] ${e.type().toUpperCase()}: ${e.text()}`,
+			),
+		);
 	}
 
 	public onConnection(rpc: SimpleRPC): ProxiedWorkspaceWithConnection {
@@ -398,7 +554,10 @@ class ProxiedWorkspace extends Disposable {
 		if (!this._dirIsReused) {
 			const entries = await fs.readdir(this.dir);
 			for (const entry of entries) {
-				await fs.rm(path.join(this.dir, entry), { recursive: true, force: true });
+				await fs.rm(path.join(this.dir, entry), {
+					recursive: true,
+					force: true,
+				});
 			}
 		}
 		this.busy = false;
@@ -407,12 +566,19 @@ class ProxiedWorkspace extends Disposable {
 	public override async dispose() {
 		super.dispose();
 
-		await this._connection.value?.callMethod('close', {}).catch(() => { });
+		await this._connection.value?.callMethod('close', {}).catch(() => {});
 		this._connection.value?.dispose();
 		await this._page.close();
 		// retry because the folder will be locked until the EH gets shut down
 		if (!this._dirIsReused) {
-			await retry(() => fs.rm(this.dir, { recursive: true, force: true }).catch(() => { }), 400, 10);
+			await retry(
+				() =>
+					fs
+						.rm(this.dir, { recursive: true, force: true })
+						.catch(() => {}),
+				400,
+				10,
+			);
 		}
 	}
 }
@@ -420,11 +586,17 @@ class ProxiedWorkspace extends Disposable {
 function getServerPlatform() {
 	switch (process.platform) {
 		case 'darwin':
-			return process.arch === 'arm64' ? 'server-darwin-arm64-web' : 'server-darwin-web';
+			return process.arch === 'arm64'
+				? 'server-darwin-arm64-web'
+				: 'server-darwin-web';
 		case 'linux':
-			return process.arch === 'arm64' ? 'server-linux-arm64-web' : 'server-linux-x64-web';
+			return process.arch === 'arm64'
+				? 'server-linux-arm64-web'
+				: 'server-linux-x64-web';
 		case 'win32':
-			return process.arch === 'arm64' ? 'server-win32-arm64-web' : 'server-win32-x64-web';
+			return process.arch === 'arm64'
+				? 'server-win32-arm64-web'
+				: 'server-win32-x64-web';
 		default:
 			throw new Error(`Unsupported platform: ${process.platform}`);
 	}

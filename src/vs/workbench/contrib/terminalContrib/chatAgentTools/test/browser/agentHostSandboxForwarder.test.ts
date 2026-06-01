@@ -3,33 +3,61 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { Emitter, Event } from '../../../../../../base/common/event.js';
-import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
-import { mock } from '../../../../../../base/test/common/mock.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { ConfigurationTarget, IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
-import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { ILogService, NullLogService } from '../../../../../../platform/log/common/log.js';
-import { IAgentConnection, IAgentHostService } from '../../../../../../platform/agentHost/common/agentService.js';
-import { IRemoteAgentHostService, IRemoteAgentHostConnectionInfo } from '../../../../../../platform/agentHost/common/remoteAgentHostService.js';
-import { AgentHostSandboxConfigKey, AgentHostSandboxKey } from '../../../../../../platform/agentHost/common/sandboxConfigSchema.js';
-import { ActionType } from '../../../../../../platform/agentHost/common/state/protocol/actions.js';
-import { IAgentSubscription } from '../../../../../../platform/agentHost/common/state/agentSubscription.js';
-import type { ActionEnvelope, IRootConfigChangedAction, INotification, SessionAction, TerminalAction } from '../../../../../../platform/agentHost/common/state/sessionActions.js';
-import type { RootState } from '../../../../../../platform/agentHost/common/state/sessionState.js';
-import { AgentNetworkDomainSettingId } from '../../../../../../platform/networkFilter/common/settings.js';
-import { AgentSandboxEnabledValue, AgentSandboxSettingId } from '../../../../../../platform/sandbox/common/settings.js';
-import { AgentHostSandboxForwarder } from '../../browser/agentHostSandboxForwarder.js';
+import assert from "assert";
+import { Emitter, Event } from "../../../../../../base/common/event.js";
+import { DisposableStore } from "../../../../../../base/common/lifecycle.js";
+import { mock } from "../../../../../../base/test/common/mock.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import { TestConfigurationService } from "../../../../../../platform/configuration/test/common/testConfigurationService.js";
+import {
+	ConfigurationTarget,
+	IConfigurationService,
+} from "../../../../../../platform/configuration/common/configuration.js";
+import { TestInstantiationService } from "../../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import {
+	ILogService,
+	NullLogService,
+} from "../../../../../../platform/log/common/log.js";
+import {
+	IAgentConnection,
+	IAgentHostService,
+} from "../../../../../../platform/agentHost/common/agentService.js";
+import {
+	IRemoteAgentHostService,
+	IRemoteAgentHostConnectionInfo,
+} from "../../../../../../platform/agentHost/common/remoteAgentHostService.js";
+import {
+	AgentHostSandboxConfigKey,
+	AgentHostSandboxKey,
+} from "../../../../../../platform/agentHost/common/sandboxConfigSchema.js";
+import { ActionType } from "../../../../../../platform/agentHost/common/state/protocol/actions.js";
+import { IAgentSubscription } from "../../../../../../platform/agentHost/common/state/agentSubscription.js";
+import type {
+	ActionEnvelope,
+	IRootConfigChangedAction,
+	INotification,
+	SessionAction,
+	TerminalAction,
+} from "../../../../../../platform/agentHost/common/state/sessionActions.js";
+import type { RootState } from "../../../../../../platform/agentHost/common/state/sessionState.js";
+import { AgentNetworkDomainSettingId } from "../../../../../../platform/networkFilter/common/settings.js";
+import {
+	AgentSandboxEnabledValue,
+	AgentSandboxSettingId,
+} from "../../../../../../platform/sandbox/common/settings.js";
+import { AgentHostSandboxForwarder } from "../../browser/agentHostSandboxForwarder.js";
 
 // ---- Mocks ------------------------------------------------------------------
 
 class MockAgentConnection {
 	declare readonly _serviceBrand: undefined;
 
-	public readonly clientId = 'mock-client';
-	public dispatched: (SessionAction | TerminalAction | IRootConfigChangedAction)[] = [];
+	public readonly clientId = "mock-client";
+	public dispatched: (
+		| SessionAction
+		| TerminalAction
+		| IRootConfigChangedAction
+	)[] = [];
 
 	private _rootStateValue: RootState | undefined;
 	private readonly _rootStateOnDidChange = new Emitter<RootState>();
@@ -37,8 +65,12 @@ class MockAgentConnection {
 	readonly rootState: IAgentSubscription<RootState> = (() => {
 		const self = this;
 		return {
-			get value() { return self._rootStateValue; },
-			get verifiedValue() { return self._rootStateValue; },
+			get value() {
+				return self._rootStateValue;
+			},
+			get verifiedValue() {
+				return self._rootStateValue;
+			},
 			onDidChange: this._rootStateOnDidChange.event,
 			onWillApplyAction: Event.None,
 			onDidApplyAction: Event.None,
@@ -48,7 +80,10 @@ class MockAgentConnection {
 	readonly onDidAction: Event<ActionEnvelope> = Event.None;
 	readonly onDidNotification: Event<INotification> = Event.None;
 
-	dispatch(_channel: string, action: SessionAction | TerminalAction | IRootConfigChangedAction): void {
+	dispatch(
+		_channel: string,
+		action: SessionAction | TerminalAction | IRootConfigChangedAction,
+	): void {
 		this.dispatched.push(action);
 	}
 
@@ -75,11 +110,18 @@ class MockAgentHostService extends mock<IAgentHostService>() {
 	override readonly onDidNotification = this.inner.onDidNotification;
 	override readonly rootState = this.inner.rootState;
 
-	override dispatch(channel: string, action: SessionAction | TerminalAction | IRootConfigChangedAction): void {
+	override dispatch(
+		channel: string,
+		action: SessionAction | TerminalAction | IRootConfigChangedAction,
+	): void {
 		this.inner.dispatch(channel, action);
 	}
 
-	get dispatched(): readonly (SessionAction | TerminalAction | IRootConfigChangedAction)[] {
+	get dispatched(): readonly (
+		| SessionAction
+		| TerminalAction
+		| IRootConfigChangedAction
+	)[] {
 		return this.inner.dispatched;
 	}
 
@@ -106,13 +148,23 @@ class MockRemoteAgentHostService extends mock<IRemoteAgentHostService>() {
 	}
 
 	override getConnection(address: string): IAgentConnection | undefined {
-		return this._byAddress.get(address) as unknown as IAgentConnection | undefined;
+		return this._byAddress.get(address) as unknown as
+			| IAgentConnection
+			| undefined;
 	}
 
 	addConnection(address: string): MockAgentConnection {
 		const conn = new MockAgentConnection();
 		this._byAddress.set(address, conn);
-		this._connections = [...this._connections, { address, name: address, clientId: conn.clientId, status: { kind: 'connected' } }];
+		this._connections = [
+			...this._connections,
+			{
+				address,
+				name: address,
+				clientId: conn.clientId,
+				status: { kind: "connected" },
+			},
+		];
 		this._onDidChangeConnections.fire();
 		return conn;
 	}
@@ -121,7 +173,7 @@ class MockRemoteAgentHostService extends mock<IRemoteAgentHostService>() {
 		const conn = this._byAddress.get(address);
 		conn?.dispose();
 		this._byAddress.delete(address);
-		this._connections = this._connections.filter(c => c.address !== address);
+		this._connections = this._connections.filter((c) => c.address !== address);
 		this._onDidChangeConnections.fire();
 	}
 
@@ -136,14 +188,19 @@ class MockRemoteAgentHostService extends mock<IRemoteAgentHostService>() {
 
 // ---- Helpers ----------------------------------------------------------------
 
-function rootStateWithSandboxSchema(sandbox: Record<string, unknown> = {}): RootState {
+function rootStateWithSandboxSchema(
+	sandbox: Record<string, unknown> = {},
+): RootState {
 	return {
 		agents: [],
 		config: {
 			schema: {
-				type: 'object',
+				type: "object",
 				properties: {
-					[AgentHostSandboxConfigKey.Sandbox]: { type: 'object', title: 'Agent Sandbox' },
+					[AgentHostSandboxConfigKey.Sandbox]: {
+						type: "object",
+						title: "Agent Sandbox",
+					},
 				},
 			},
 			values: { [AgentHostSandboxConfigKey.Sandbox]: sandbox },
@@ -156,9 +213,11 @@ function rootStateWithoutSandboxSchema(): RootState {
 		agents: [],
 		config: {
 			schema: {
-				type: 'object',
+				type: "object",
 				// Older / third-party host that doesn't advertise sandbox keys.
-				properties: { customizations: { type: 'array', title: 'Customizations' } },
+				properties: {
+					customizations: { type: "array", title: "Customizations" },
+				},
 			},
 			values: {},
 		},
@@ -172,7 +231,10 @@ interface ITestSetup {
 	configurationService: TestConfigurationService;
 }
 
-function setup(disposables: DisposableStore, configValues: Record<string, unknown> = {}): ITestSetup {
+function setup(
+	disposables: DisposableStore,
+	configValues: Record<string, unknown> = {},
+): ITestSetup {
 	const instantiationService = disposables.add(new TestInstantiationService());
 	const local = new MockAgentHostService();
 	disposables.add({ dispose: () => local.dispose() });
@@ -185,37 +247,49 @@ function setup(disposables: DisposableStore, configValues: Record<string, unknow
 	instantiationService.stub(IConfigurationService, configurationService);
 	instantiationService.stub(ILogService, new NullLogService());
 
-	const forwarder = disposables.add(instantiationService.createInstance(AgentHostSandboxForwarder));
+	const forwarder = disposables.add(
+		instantiationService.createInstance(AgentHostSandboxForwarder),
+	);
 	return { forwarder, local, remote, configurationService };
 }
 
 // =============================================================================
 
-suite('AgentHostSandboxForwarder', () => {
+suite("AgentHostSandboxForwarder", () => {
 	const disposables = new DisposableStore();
 	teardown(() => disposables.clear());
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('does not dispatch while rootState is unhydrated', () => {
-		const { local } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
+	test("does not dispatch while rootState is unhydrated", () => {
+		const { local } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
 		assert.deepStrictEqual(local.dispatched, []);
 	});
 
-	test('dispatches sandbox values to the local host when rootState hydrates', () => {
-		const { local } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
+	test("dispatches sandbox values to the local host when rootState hydrates", () => {
+		const { local } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
 
 		local.setRootState(rootStateWithSandboxSchema());
 
-		assert.deepStrictEqual(local.dispatched, [{
-			type: ActionType.RootConfigChanged,
-			config: { [AgentHostSandboxConfigKey.Sandbox]: { [AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On } },
-		}]);
+		assert.deepStrictEqual(local.dispatched, [
+			{
+				type: ActionType.RootConfigChanged,
+				config: {
+					[AgentHostSandboxConfigKey.Sandbox]: {
+						[AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On,
+					},
+				},
+			},
+		]);
 	});
 
-	test('schema-guards keys: skips keys the host does not advertise', () => {
+	test("schema-guards keys: skips keys the host does not advertise", () => {
 		const { local } = setup(disposables, {
 			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
-			[AgentNetworkDomainSettingId.AllowedNetworkDomains]: ['example.com'],
+			[AgentNetworkDomainSettingId.AllowedNetworkDomains]: ["example.com"],
 		});
 
 		local.setRootState(rootStateWithoutSandboxSchema());
@@ -223,59 +297,104 @@ suite('AgentHostSandboxForwarder', () => {
 		assert.deepStrictEqual(local.dispatched, []);
 	});
 
-	test('skips no-op dispatch when rootState already matches workbench values', () => {
-		const { local } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
+	test("skips no-op dispatch when rootState already matches workbench values", () => {
+		const { local } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
 
-		local.setRootState(rootStateWithSandboxSchema({ [AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On }));
+		local.setRootState(
+			rootStateWithSandboxSchema({
+				[AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On,
+			}),
+		);
 
 		assert.deepStrictEqual(local.dispatched, []);
 	});
 
-	test('re-dispatches when the workbench sandbox setting changes', () => {
-		const { local, configurationService } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
+	test("re-dispatches when the workbench sandbox setting changes", () => {
+		const { local, configurationService } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
 
-		local.setRootState(rootStateWithSandboxSchema({ [AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On }));
+		local.setRootState(
+			rootStateWithSandboxSchema({
+				[AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On,
+			}),
+		);
 		// Initial state already matches → no dispatch.
 		assert.deepStrictEqual(local.dispatched, []);
 
-		configurationService.setUserConfiguration(AgentSandboxSettingId.AgentSandboxEnabled, AgentSandboxEnabledValue.AllowNetwork);
+		configurationService.setUserConfiguration(
+			AgentSandboxSettingId.AgentSandboxEnabled,
+			AgentSandboxEnabledValue.AllowNetwork,
+		);
 		configurationService.onDidChangeConfigurationEmitter.fire({
 			source: ConfigurationTarget.USER,
-			affectsConfiguration: (key: string) => key === AgentSandboxSettingId.AgentSandboxEnabled,
+			affectsConfiguration: (key: string) =>
+				key === AgentSandboxSettingId.AgentSandboxEnabled,
 			affectedKeys: new Set([AgentSandboxSettingId.AgentSandboxEnabled]),
-			change: { keys: [AgentSandboxSettingId.AgentSandboxEnabled], overrides: [] },
+			change: {
+				keys: [AgentSandboxSettingId.AgentSandboxEnabled],
+				overrides: [],
+			},
 		});
 
-		assert.deepStrictEqual(local.dispatched, [{
-			type: ActionType.RootConfigChanged,
-			config: { [AgentHostSandboxConfigKey.Sandbox]: { [AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.AllowNetwork } },
-		}]);
+		assert.deepStrictEqual(local.dispatched, [
+			{
+				type: ActionType.RootConfigChanged,
+				config: {
+					[AgentHostSandboxConfigKey.Sandbox]: {
+						[AgentHostSandboxKey.Enabled]:
+							AgentSandboxEnabledValue.AllowNetwork,
+					},
+				},
+			},
+		]);
 	});
 
-	test('dispatches to remote connections when they appear', () => {
-		const { remote } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
+	test("dispatches to remote connections when they appear", () => {
+		const { remote } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
 
-		const remoteConn = remote.addConnection('remote.example:9000');
+		const remoteConn = remote.addConnection("remote.example:9000");
 		remoteConn.setRootState(rootStateWithSandboxSchema());
 
-		assert.deepStrictEqual(remoteConn.dispatched, [{
-			type: ActionType.RootConfigChanged,
-			config: { [AgentHostSandboxConfigKey.Sandbox]: { [AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On } },
-		}]);
+		assert.deepStrictEqual(remoteConn.dispatched, [
+			{
+				type: ActionType.RootConfigChanged,
+				config: {
+					[AgentHostSandboxConfigKey.Sandbox]: {
+						[AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On,
+					},
+				},
+			},
+		]);
 	});
 
-	test('fans out workbench setting changes to all connected agent hosts', () => {
-		const { local, remote, configurationService } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
+	test("fans out workbench setting changes to all connected agent hosts", () => {
+		const { local, remote, configurationService } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
 		local.setRootState(rootStateWithSandboxSchema());
-		const remoteConn = remote.addConnection('remote.example:9000');
+		const remoteConn = remote.addConnection("remote.example:9000");
 		remoteConn.setRootState(rootStateWithSandboxSchema());
 
-		configurationService.setUserConfiguration(AgentSandboxSettingId.AgentSandboxAllowUnsandboxedCommands, true);
+		configurationService.setUserConfiguration(
+			AgentSandboxSettingId.AgentSandboxAllowUnsandboxedCommands,
+			true,
+		);
 		configurationService.onDidChangeConfigurationEmitter.fire({
 			source: ConfigurationTarget.USER,
-			affectsConfiguration: (key: string) => key === AgentSandboxSettingId.AgentSandboxAllowUnsandboxedCommands,
-			affectedKeys: new Set([AgentSandboxSettingId.AgentSandboxAllowUnsandboxedCommands]),
-			change: { keys: [AgentSandboxSettingId.AgentSandboxAllowUnsandboxedCommands], overrides: [] },
+			affectsConfiguration: (key: string) =>
+				key === AgentSandboxSettingId.AgentSandboxAllowUnsandboxedCommands,
+			affectedKeys: new Set([
+				AgentSandboxSettingId.AgentSandboxAllowUnsandboxedCommands,
+			]),
+			change: {
+				keys: [AgentSandboxSettingId.AgentSandboxAllowUnsandboxedCommands],
+				overrides: [],
+			},
 		});
 
 		const expectedPatch = {
@@ -291,23 +410,31 @@ suite('AgentHostSandboxForwarder', () => {
 		assert.deepStrictEqual(remoteConn.dispatched.at(-1), expectedPatch);
 	});
 
-	test('ignores unrelated configuration changes', () => {
-		const { local, configurationService } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
-		local.setRootState(rootStateWithSandboxSchema({ [AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On }));
+	test("ignores unrelated configuration changes", () => {
+		const { local, configurationService } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
+		local.setRootState(
+			rootStateWithSandboxSchema({
+				[AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.On,
+			}),
+		);
 		assert.deepStrictEqual(local.dispatched, []);
 
 		configurationService.onDidChangeConfigurationEmitter.fire({
 			source: ConfigurationTarget.USER,
-			affectsConfiguration: (key: string) => key === 'editor.fontSize',
-			affectedKeys: new Set(['editor.fontSize']),
-			change: { keys: ['editor.fontSize'], overrides: [] },
+			affectsConfiguration: (key: string) => key === "editor.fontSize",
+			affectedKeys: new Set(["editor.fontSize"]),
+			change: { keys: ["editor.fontSize"], overrides: [] },
 		});
 
 		assert.deepStrictEqual(local.dispatched, []);
 	});
 
-	test('does not push back after initial push when the host updates rootState', () => {
-		const { local } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
+	test("does not push back after initial push when the host updates rootState", () => {
+		const { local } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
 
 		// Initial hydration triggers exactly one push.
 		local.setRootState(rootStateWithSandboxSchema());
@@ -316,26 +443,36 @@ suite('AgentHostSandboxForwarder', () => {
 		// Subsequent rootState changes from the host side (different sandbox
 		// values, unrelated config keys, anything) must NOT trigger another
 		// push — that's the push-back loop the forwarder is designed to avoid.
-		local.setRootState(rootStateWithSandboxSchema({ [AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.Off }));
-		local.setRootState(rootStateWithSandboxSchema({ [AgentHostSandboxKey.AllowUnsandboxedCommands]: true }));
+		local.setRootState(
+			rootStateWithSandboxSchema({
+				[AgentHostSandboxKey.Enabled]: AgentSandboxEnabledValue.Off,
+			}),
+		);
+		local.setRootState(
+			rootStateWithSandboxSchema({
+				[AgentHostSandboxKey.AllowUnsandboxedCommands]: true,
+			}),
+		);
 		local.setRootState(rootStateWithSandboxSchema());
 
 		assert.strictEqual(local.dispatched.length, 1);
 	});
 
-	test('does not re-push to existing connections when a new remote appears', () => {
-		const { local, remote } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
+	test("does not re-push to existing connections when a new remote appears", () => {
+		const { local, remote } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
 		local.setRootState(rootStateWithSandboxSchema());
 		assert.strictEqual(local.dispatched.length, 1);
 
-		const firstRemote = remote.addConnection('remote-a.example:9000');
+		const firstRemote = remote.addConnection("remote-a.example:9000");
 		firstRemote.setRootState(rootStateWithSandboxSchema());
 		assert.strictEqual(firstRemote.dispatched.length, 1);
 		assert.strictEqual(local.dispatched.length, 1);
 
 		// Adding a second remote must not cause a redundant push to the local
 		// host or to the already-pushed first remote.
-		const secondRemote = remote.addConnection('remote-b.example:9000');
+		const secondRemote = remote.addConnection("remote-b.example:9000");
 		secondRemote.setRootState(rootStateWithSandboxSchema());
 
 		assert.strictEqual(local.dispatched.length, 1);
@@ -343,15 +480,17 @@ suite('AgentHostSandboxForwarder', () => {
 		assert.strictEqual(secondRemote.dispatched.length, 1);
 	});
 
-	test('cleans up the pending listener when a remote disconnects before hydrating', () => {
-		const { remote } = setup(disposables, { [AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On });
+	test("cleans up the pending listener when a remote disconnects before hydrating", () => {
+		const { remote } = setup(disposables, {
+			[AgentSandboxSettingId.AgentSandboxEnabled]: AgentSandboxEnabledValue.On,
+		});
 
-		const remoteConn = remote.addConnection('remote.example:9000');
+		const remoteConn = remote.addConnection("remote.example:9000");
 		// Connection never hydrates → forwarder is still subscribed to its
 		// rootState.onDidChange waiting for the schema.
 		assert.deepStrictEqual(remoteConn.dispatched, []);
 
-		remote.removeConnection('remote.example:9000');
+		remote.removeConnection("remote.example:9000");
 		// If the listener wasn't disposed, the leak checker (see
 		// ensureNoDisposablesAreLeakedInTestSuite) would flag it at teardown.
 		// Firing here would also throw if the connection was still observed

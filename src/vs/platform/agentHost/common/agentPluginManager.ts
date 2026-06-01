@@ -3,11 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../base/common/uri.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import type { ClientPluginCustomization, Customization } from './state/sessionState.js';
+import { URI } from "../../../base/common/uri.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import type {
+	ClientPluginCustomization,
+	Customization,
+} from "./state/sessionState.js";
 
-export const IAgentPluginManager = createDecorator<IAgentPluginManager>('agentPluginManager');
+export const IAgentPluginManager =
+	createDecorator<IAgentPluginManager>("agentPluginManager");
 
 /**
  * A synced customization with its local plugin directory (when available).
@@ -51,6 +55,9 @@ export interface IAgentPluginManager {
 	 * @returns Final status for every customization, with `pluginDir`
 	 * defined when the sync was successful.
 	 */
-	syncCustomizations(clientId: string, customizations: ClientPluginCustomization[], progress?: (status: Customization) => void): Promise<ISyncedCustomization[]>;
+	syncCustomizations(
+		clientId: string,
+		customizations: ClientPluginCustomization[],
+		progress?: (status: Customization) => void,
+	): Promise<ISyncedCustomization[]>;
 }
-

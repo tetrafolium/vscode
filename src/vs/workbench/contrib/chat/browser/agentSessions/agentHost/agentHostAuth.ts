@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../../base/common/uri.js';
-import { type ProtectedResourceMetadata } from '../../../../../../platform/agentHost/common/state/protocol/state.js';
-import { type AgentInfo } from '../../../../../../platform/agentHost/common/state/sessionState.js';
-import { ILogService } from '../../../../../../platform/log/common/log.js';
-import { IAuthenticationService } from '../../../../../services/authentication/common/authentication.js';
+import { URI } from "../../../../../../base/common/uri.js";
+import { type ProtectedResourceMetadata } from "../../../../../../platform/agentHost/common/state/protocol/state.js";
+import { type AgentInfo } from "../../../../../../platform/agentHost/common/state/sessionState.js";
+import { ILogService } from "../../../../../../platform/log/common/log.js";
+import { IAuthenticationService } from "../../../../../services/authentication/common/authentication.js";
 
 /**
  * Tracks the last bearer token pushed to a given agent host connection
@@ -65,21 +65,39 @@ export async function resolveTokenForResource(
 ): Promise<string | undefined> {
 	for (const server of authorizationServers) {
 		const serverUri = URI.parse(server);
-		const providerId = await authenticationService.getOrActivateProviderIdForServer(serverUri, resourceServer);
+		const providerId =
+			await authenticationService.getOrActivateProviderIdForServer(
+				serverUri,
+				resourceServer,
+			);
 		if (!providerId) {
-			logService.trace(`${logPrefix} No auth provider found for server: ${server}`);
+			logService.trace(
+				`${logPrefix} No auth provider found for server: ${server}`,
+			);
 			continue;
 		}
-		logService.trace(`${logPrefix} Resolved auth provider '${providerId}' for server: ${server}`);
+		logService.trace(
+			`${logPrefix} Resolved auth provider '${providerId}' for server: ${server}`,
+		);
 
 		// Try exact scope match first
-		const sessions = await authenticationService.getSessions(providerId, [...scopes], { authorizationServer: serverUri }, true);
+		const sessions = await authenticationService.getSessions(
+			providerId,
+			[...scopes],
+			{ authorizationServer: serverUri },
+			true,
+		);
 		if (sessions.length > 0) {
 			return sessions[0].accessToken;
 		}
 
 		// Fall back: get all sessions and find the narrowest superset of requested scopes
-		const allSessions = await authenticationService.getSessions(providerId, undefined, { authorizationServer: serverUri }, true);
+		const allSessions = await authenticationService.getSessions(
+			providerId,
+			undefined,
+			{ authorizationServer: serverUri },
+			true,
+		);
 		const requestedSet = new Set(scopes);
 		let bestToken: string | undefined;
 		let bestExtraScopes = Infinity;
@@ -117,7 +135,9 @@ export interface IAgentHostAuthenticationOptions {
 	readonly authenticationService: IAuthenticationService;
 	readonly logPrefix: string;
 	readonly logService: ILogService;
-	readonly authenticate: (request: IAgentHostAuthenticateRequest) => Promise<unknown>;
+	readonly authenticate: (
+		request: IAgentHostAuthenticateRequest,
+	) => Promise<unknown>;
 }
 
 /**
@@ -140,16 +160,25 @@ export async function authenticateProtectedResources(
 				options.logPrefix,
 			);
 			if (!token) {
-				options.logService.info(`${options.logPrefix} No token resolved for resource: ${resource.resource}`);
+				options.logService.info(
+					`${options.logPrefix} No token resolved for resource: ${resource.resource}`,
+				);
 				continue;
 			}
 
-			if (options.authTokenCache && !options.authTokenCache.updateAndIsChanged(resource.resource, token)) {
-				options.logService.trace(`${options.logPrefix} Auth token for ${resource.resource} unchanged; skipping authenticate RPC`);
+			if (
+				options.authTokenCache &&
+				!options.authTokenCache.updateAndIsChanged(resource.resource, token)
+			) {
+				options.logService.trace(
+					`${options.logPrefix} Auth token for ${resource.resource} unchanged; skipping authenticate RPC`,
+				);
 				continue;
 			}
 
-			options.logService.info(`${options.logPrefix} Authenticating for resource: ${resource.resource}`);
+			options.logService.info(
+				`${options.logPrefix} Authenticating for resource: ${resource.resource}`,
+			);
 			try {
 				await options.authenticate({ resource: resource.resource, token });
 			} catch (err) {
@@ -181,26 +210,44 @@ export async function resolveAuthenticationInteractively(
 		if (token) {
 			await options.authenticate({ resource: resource.resource, token });
 			options.authTokenCache?.updateAndIsChanged(resource.resource, token);
-			options.logService.info(`${options.logPrefix} Interactive authentication succeeded for ${resource.resource}`);
+			options.logService.info(
+				`${options.logPrefix} Interactive authentication succeeded for ${resource.resource}`,
+			);
 			return true;
 		}
 
 		for (const server of resource.authorization_servers ?? []) {
 			const serverUri = URI.parse(server);
-			const providerId = await options.authenticationService.getOrActivateProviderIdForServer(serverUri, resourceUri);
+			const providerId =
+				await options.authenticationService.getOrActivateProviderIdForServer(
+					serverUri,
+					resourceUri,
+				);
 			if (!providerId) {
 				continue;
 			}
 
 			const scopes = [...(resource.scopes_supported ?? [])];
-			const session = await options.authenticationService.createSession(providerId, scopes, {
-				activateImmediate: true,
-				authorizationServer: serverUri,
-			});
+			const session = await options.authenticationService.createSession(
+				providerId,
+				scopes,
+				{
+					activateImmediate: true,
+					authorizationServer: serverUri,
+				},
+			);
 
-			await options.authenticate({ resource: resource.resource, token: session.accessToken });
-			options.authTokenCache?.updateAndIsChanged(resource.resource, session.accessToken);
-			options.logService.info(`${options.logPrefix} Interactive authentication succeeded for ${resource.resource}`);
+			await options.authenticate({
+				resource: resource.resource,
+				token: session.accessToken,
+			});
+			options.authTokenCache?.updateAndIsChanged(
+				resource.resource,
+				session.accessToken,
+			);
+			options.logService.info(
+				`${options.logPrefix} Interactive authentication succeeded for ${resource.resource}`,
+			);
 			return true;
 		}
 	}

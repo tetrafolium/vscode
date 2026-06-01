@@ -25,15 +25,20 @@ interface PathSegment {
  * @returns Value of the matched node as string
  * @throws {Error} If path is invalid or node cannot be found
  */
-export function querySnapshot(snapshot: PromptSnapshotNode, path: string): string | PromptSnapshotNode[] {
+export function querySnapshot(
+	snapshot: PromptSnapshotNode,
+	path: string,
+): string | PromptSnapshotNode[] {
 	const segments = path
 		.trim()
 		.split('.')
-		.map(s => s.trim());
+		.map((s) => s.trim());
 	let current = snapshot;
 	for (const segment of segments) {
 		if (!current?.children?.length) {
-			throw new Error(`No children found at path segment '${segment}'. Path: ${path}`);
+			throw new Error(
+				`No children found at path segment '${segment}'. Path: ${path}`,
+			);
 		}
 		const { name, index } = parsePathSegment(segment);
 		validateNodeName(name, current, segment, path);
@@ -43,9 +48,11 @@ export function querySnapshot(snapshot: PromptSnapshotNode, path: string): strin
 		} else if (index === '*') {
 			break;
 		} else {
-			const child = current.children.find(c => c.path.includes(index));
+			const child = current.children.find((c) => c.path.includes(index));
 			if (!child) {
-				throw new Error(`No children with index '${index}' found at path segment '${segment}'. Path: ${path}`);
+				throw new Error(
+					`No children with index '${index}' found at path segment '${segment}'. Path: ${path}`,
+				);
 			}
 			current = child;
 		}
@@ -62,7 +69,9 @@ function parsePathSegment(segment: string): PathSegment {
 		throw new Error(`Invalid path segment: ${segment}`);
 	}
 	const stringIndex = match[2] ?? 0;
-	const index = isNaN(Number(stringIndex)) ? stringIndex : Number(stringIndex);
+	const index = isNaN(Number(stringIndex))
+		? stringIndex
+		: Number(stringIndex);
 
 	return {
 		name: match[1],
@@ -70,10 +79,15 @@ function parsePathSegment(segment: string): PathSegment {
 	};
 }
 
-function validateNodeName(name: string, current: PromptSnapshotNode, segment: string, path: string) {
+function validateNodeName(
+	name: string,
+	current: PromptSnapshotNode,
+	segment: string,
+	path: string,
+) {
 	if (name !== '*' && name !== current.name) {
 		throw new Error(
-			`Name mismatch at segment '${segment}'. Expected '${current.name}' but got '${name}'. Path: ${path}`
+			`Name mismatch at segment '${segment}'. Expected '${current.name}' but got '${name}'. Path: ${path}`,
 		);
 	}
 }
@@ -82,11 +96,11 @@ function validateNodeChildrenLength(
 	index: number | string,
 	children: PromptSnapshotNode[],
 	segment: string,
-	path: string
+	path: string,
 ) {
 	if (typeof index === 'number' && index >= children.length) {
 		throw new Error(
-			`Index out of bounds at segment '${segment}'. Maximum index is ${children.length - 1}. Path: ${path}`
+			`Index out of bounds at segment '${segment}'. Maximum index is ${children.length - 1}. Path: ${path}`,
 		);
 	}
 }

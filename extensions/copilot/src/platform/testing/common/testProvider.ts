@@ -6,7 +6,8 @@
 import type * as vscode from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const ITestProvider = createServiceIdentifier<ITestProvider>('ITestProvider');
+export const ITestProvider =
+	createServiceIdentifier<ITestProvider>('ITestProvider');
 
 export interface ITestFailure {
 	snapshot: vscode.TestResultSnapshot;
@@ -29,7 +30,10 @@ export interface ITestProvider {
 	getLastFailureFor(testItem: vscode.TestItem): ITestFailure | undefined;
 
 	/** Gets a test at a position. */
-	getFailureAtPosition(uri: vscode.Uri, position: vscode.Position): ITestFailure | undefined;
+	getFailureAtPosition(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): ITestFailure | undefined;
 
 	/** Gets tests in the given URI */
 	hasTestsInUri(uri: vscode.Uri): Promise<boolean>;

@@ -3,14 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { localize } from '../../../../../nls.js';
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { localize } from "../../../../../nls.js";
 
-import { IWorkbenchContribution, registerWorkbenchContribution2, WorkbenchPhase } from '../../../../common/contributions.js';
-import { IChatContextService } from './chatContextService.js';
-import { isProposedApiEnabled } from '../../../../services/extensions/common/extensions.js';
-import { ExtensionsRegistry } from '../../../../services/extensions/common/extensionsRegistry.js';
+import {
+	IWorkbenchContribution,
+	registerWorkbenchContribution2,
+	WorkbenchPhase,
+} from "../../../../common/contributions.js";
+import { IChatContextService } from "./chatContextService.js";
+import { isProposedApiEnabled } from "../../../../services/extensions/common/extensions.js";
+import { ExtensionsRegistry } from "../../../../services/extensions/common/extensionsRegistry.js";
 
 interface IChatContextExtensionPoint {
 	id: string;
@@ -18,56 +22,87 @@ interface IChatContextExtensionPoint {
 	displayName: string;
 }
 
-const extensionPoint = ExtensionsRegistry.registerExtensionPoint<IChatContextExtensionPoint[]>({
-	extensionPoint: 'chatContext',
+const extensionPoint = ExtensionsRegistry.registerExtensionPoint<
+	IChatContextExtensionPoint[]
+>({
+	extensionPoint: "chatContext",
 	jsonSchema: {
-		description: localize('chatContextExtPoint', 'Contributes chat context integrations to the chat widget.'),
-		type: 'array',
+		description: localize(
+			"chatContextExtPoint",
+			"Contributes chat context integrations to the chat widget.",
+		),
+		type: "array",
 		items: {
-			type: 'object',
+			type: "object",
 			properties: {
 				id: {
-					description: localize('chatContextExtPoint.id', 'A unique identifier for this item.'),
-					type: 'string',
+					description: localize(
+						"chatContextExtPoint.id",
+						"A unique identifier for this item.",
+					),
+					type: "string",
 				},
 				icon: {
-					description: localize('chatContextExtPoint.icon', 'The icon associated with this chat context item.'),
-					type: 'string'
+					description: localize(
+						"chatContextExtPoint.icon",
+						"The icon associated with this chat context item.",
+					),
+					type: "string",
 				},
 				displayName: {
-					description: localize('chatContextExtPoint.title', 'A user-friendly name for this item which is used for display in menus.'),
-					type: 'string'
-				}
+					description: localize(
+						"chatContextExtPoint.title",
+						"A user-friendly name for this item which is used for display in menus.",
+					),
+					type: "string",
+				},
 			},
-			required: ['id', 'icon', 'displayName'],
-		}
+			required: ["id", "icon", "displayName"],
+		},
 	},
-	activationEventsGenerator: function* (contributions: readonly IChatContextExtensionPoint[]) {
+	activationEventsGenerator: function* (
+		contributions: readonly IChatContextExtensionPoint[],
+	) {
 		for (const contrib of contributions) {
 			yield `onChatContextProvider:${contrib.id}`;
 		}
 	},
 });
 
-export class ChatContextContribution extends Disposable implements IWorkbenchContribution {
-	public static readonly ID = 'workbench.contrib.chatContextContribution';
+export class ChatContextContribution
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	public static readonly ID = "workbench.contrib.chatContextContribution";
 
 	constructor(
-		@IChatContextService private readonly _chatContextService: IChatContextService
+		@IChatContextService
+		private readonly _chatContextService: IChatContextService,
 	) {
 		super();
-		extensionPoint.setHandler(extensions => {
+		extensionPoint.setHandler((extensions) => {
 			for (const ext of extensions) {
-				if (!isProposedApiEnabled(ext.description, 'chatContextProvider')) {
+				if (!isProposedApiEnabled(ext.description, "chatContextProvider")) {
 					continue;
 				}
 				if (!Array.isArray(ext.value)) {
 					continue;
 				}
 				for (const contribution of ext.value) {
-					const icon = contribution.icon ? ThemeIcon.fromString(contribution.icon) : undefined;
+					const icon = contribution.icon
+						? ThemeIcon.fromString(contribution.icon)
+						: undefined;
 					if (!icon && contribution.icon) {
-						ext.collector.error(localize('chatContextExtPoint.invalidIcon', "Invalid icon format for chat context contribution '{0}'. Icon must be in the format '{1}' or '{2}', e.g. '{3}'.", contribution.id, '$(iconId)', '$(iconId~spin)', '$(copilot)'));
+						ext.collector.error(
+							localize(
+								"chatContextExtPoint.invalidIcon",
+								"Invalid icon format for chat context contribution '{0}'. Icon must be in the format '{1}' or '{2}', e.g. '{3}'.",
+								contribution.id,
+								"$(iconId)",
+								"$(iconId~spin)",
+								"$(copilot)",
+							),
+						);
 						continue;
 					}
 					if (!icon) {
@@ -75,11 +110,18 @@ export class ChatContextContribution extends Disposable implements IWorkbenchCon
 						continue;
 					}
 
-					this._chatContextService.setChatContextProvider(`${ext.description.id}-${contribution.id}`, { title: contribution.displayName, icon });
+					this._chatContextService.setChatContextProvider(
+						`${ext.description.id}-${contribution.id}`,
+						{ title: contribution.displayName, icon },
+					);
 				}
 			}
 		});
 	}
 }
 
-registerWorkbenchContribution2(ChatContextContribution.ID, ChatContextContribution, WorkbenchPhase.AfterRestored);
+registerWorkbenchContribution2(
+	ChatContextContribution.ID,
+	ChatContextContribution,
+	WorkbenchPhase.AfterRestored,
+);

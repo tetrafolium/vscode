@@ -3,17 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IMarkerService, IMarkerData, type IMarker } from '../../../platform/markers/common/markers.js';
-import { URI, UriComponents } from '../../../base/common/uri.js';
-import { MainThreadDiagnosticsShape, MainContext, ExtHostDiagnosticsShape, ExtHostContext } from '../common/extHost.protocol.js';
-import { extHostNamedCustomer, IExtHostContext } from '../../services/extensions/common/extHostCustomers.js';
-import { IDisposable } from '../../../base/common/lifecycle.js';
-import { IUriIdentityService } from '../../../platform/uriIdentity/common/uriIdentity.js';
-import { ResourceMap } from '../../../base/common/map.js';
+import {
+	IMarkerService,
+	IMarkerData,
+	type IMarker,
+} from "../../../platform/markers/common/markers.js";
+import { URI, UriComponents } from "../../../base/common/uri.js";
+import {
+	MainThreadDiagnosticsShape,
+	MainContext,
+	ExtHostDiagnosticsShape,
+	ExtHostContext,
+} from "../common/extHost.protocol.js";
+import {
+	extHostNamedCustomer,
+	IExtHostContext,
+} from "../../services/extensions/common/extHostCustomers.js";
+import { IDisposable } from "../../../base/common/lifecycle.js";
+import { IUriIdentityService } from "../../../platform/uriIdentity/common/uriIdentity.js";
+import { ResourceMap } from "../../../base/common/map.js";
 
 @extHostNamedCustomer(MainContext.MainThreadDiagnostics)
 export class MainThreadDiagnostics implements MainThreadDiagnosticsShape {
-
 	private readonly _activeOwners = new Set<string>();
 
 	private readonly _proxy: ExtHostDiagnosticsShape;
@@ -29,7 +40,10 @@ export class MainThreadDiagnostics implements MainThreadDiagnosticsShape {
 	) {
 		this._proxy = extHostContext.getProxy(ExtHostContext.ExtHostDiagnostics);
 
-		this._markerListener = this._markerService.onMarkerChanged(this._forwardMarkers, this);
+		this._markerListener = this._markerService.onMarkerChanged(
+			this._forwardMarkers,
+			this,
+		);
 		this.extHostId = `extHost${MainThreadDiagnostics.ExtHostCounter++}`;
 	}
 
@@ -57,11 +71,16 @@ export class MainThreadDiagnostics implements MainThreadDiagnosticsShape {
 	private _forwardMarkers(resources: readonly URI[]): void {
 		const data: [UriComponents, IMarkerData[]][] = [];
 		for (const resource of resources) {
-			const allMarkerData = this._markerService.read({ resource, ignoreResourceFilters: true });
+			const allMarkerData = this._markerService.read({
+				resource,
+				ignoreResourceFilters: true,
+			});
 			if (allMarkerData.length === 0) {
 				data.push([resource, []]);
 			} else {
-				const foreignMarkerData = allMarkerData.filter(marker => marker?.origin !== this.extHostId);
+				const foreignMarkerData = allMarkerData.filter(
+					(marker) => marker?.origin !== this.extHostId,
+				);
 				if (foreignMarkerData.length > 0) {
 					data.push([resource, foreignMarkerData]);
 				}
@@ -79,10 +98,12 @@ export class MainThreadDiagnostics implements MainThreadDiagnosticsShape {
 				for (const marker of markers) {
 					if (marker.relatedInformation) {
 						for (const relatedInformation of marker.relatedInformation) {
-							relatedInformation.resource = URI.revive(relatedInformation.resource);
+							relatedInformation.resource = URI.revive(
+								relatedInformation.resource,
+							);
 						}
 					}
-					if (marker.code && typeof marker.code !== 'string') {
+					if (marker.code && typeof marker.code !== "string") {
 						marker.code.target = URI.revive(marker.code.target);
 					}
 					if (marker.origin === undefined) {
@@ -90,7 +111,11 @@ export class MainThreadDiagnostics implements MainThreadDiagnosticsShape {
 					}
 				}
 			}
-			this._markerService.changeOne(owner, this._uriIdentService.asCanonicalUri(URI.revive(uri)), markers);
+			this._markerService.changeOne(
+				owner,
+				this._uriIdentService.asCanonicalUri(URI.revive(uri)),
+				markers,
+			);
 		}
 		this._activeOwners.add(owner);
 	}

@@ -10,37 +10,55 @@ import { isLocation } from '../../src/util/common/types';
 import { URI } from '../../src/util/vs/base/common/uri';
 import { ServicesAccessor } from '../../src/util/vs/platform/instantiation/common/instantiation';
 import { ChatLocation, Location, Uri } from '../../src/vscodeTypes';
-import { EditingSimulationHost, EditingSimulationHostResponseProcessor, simulateEditingScenario } from './inlineChatSimulator';
-import { EditTestStrategy, IScenario, IScenarioQuery, OutcomeAnnotation } from './types';
+import {
+	EditingSimulationHost,
+	EditingSimulationHostResponseProcessor,
+	simulateEditingScenario,
+} from './inlineChatSimulator';
+import {
+	EditTestStrategy,
+	IScenario,
+	IScenarioQuery,
+	OutcomeAnnotation,
+} from './types';
 
-export type EditTestStrategyPanel = EditTestStrategy.Agent | EditTestStrategy.Edits;
+export type EditTestStrategyPanel =
+	| EditTestStrategy.Agent
+	| EditTestStrategy.Edits;
 
 export async function simulatePanelCodeMapper(
 	testingServiceCollection: TestingServiceCollection,
 	scenario: IScenario,
 	strategy?: EditTestStrategyPanel,
-	spyOnStream?: (stream: ChatResponseStream) => ChatResponseStream
+	spyOnStream?: (stream: ChatResponseStream) => ChatResponseStream,
 ): Promise<void> {
-	const overrideCommand = strategy === undefined ? undefined :
-		strategy === EditTestStrategy.Edits ? '/edit' :
-			'/editAgent';
+	const overrideCommand =
+		strategy === undefined
+			? undefined
+			: strategy === EditTestStrategy.Edits
+				? '/edit'
+				: '/editAgent';
 	const ensureSlashEdit = (query: string) => {
 		if (!overrideCommand) {
 			return query;
 		}
 
-		return query.startsWith(overrideCommand) ? query : `${overrideCommand} ${query}`;
+		return query.startsWith(overrideCommand)
+			? query
+			: `${overrideCommand} ${query}`;
 	};
 	const prependEditToUserQueries = (queries: IScenarioQuery[]) => {
-		return queries.map(scenarioQuery => {
+		return queries.map((scenarioQuery) => {
 			return {
 				...scenarioQuery,
 				query: ensureSlashEdit(scenarioQuery.query),
 			};
 		});
 	};
-	const massagedScenario = { ...scenario, queries: prependEditToUserQueries(scenario.queries) };
-
+	const massagedScenario = {
+		...scenario,
+		queries: prependEditToUserQueries(scenario.queries),
+	};
 
 	const host: EditingSimulationHost = {
 		prepareChatRequestLocation: (accessor: ServicesAccessor) => {
@@ -50,26 +68,37 @@ export async function simulatePanelCodeMapper(
 			};
 		},
 
-		contributeAdditionalReferences: (accessor: ServicesAccessor, existingReferences: readonly ChatPromptReference[]) => {
+		contributeAdditionalReferences: (
+			accessor: ServicesAccessor,
+			existingReferences: readonly ChatPromptReference[],
+		) => {
 			const tabsAndEditorsService = accessor.get(ITabsAndEditorsService);
 			const activeTextEditor = tabsAndEditorsService.activeTextEditor;
 			if (activeTextEditor) {
-				const existingReference = existingReferences.find(ref => _extractUri(ref.value)?.toString() === activeTextEditor.document.uri.toString());
+				const existingReference = existingReferences.find(
+					(ref) =>
+						_extractUri(ref.value)?.toString() ===
+						activeTextEditor.document.uri.toString(),
+				);
 				if (!existingReference) {
 					const varWithArg = `file:${activeTextEditor.document.uri.path}`;
-					return [{
-						id: `copilot.file`,
-						name: varWithArg,
-						value: new Location(
-							activeTextEditor.document.uri,
-							activeTextEditor.selection,
-						)
-					}];
+					return [
+						{
+							id: `copilot.file`,
+							name: varWithArg,
+							value: new Location(
+								activeTextEditor.document.uri,
+								activeTextEditor.selection,
+							),
+						},
+					];
 				}
 			}
 			return [];
 
-			function _extractUri(something: Uri | Location | unknown | undefined): Uri | undefined {
+			function _extractUri(
+				something: Uri | Location | unknown | undefined,
+			): Uri | undefined {
 				if (isLocation(something)) {
 					return something.uri;
 				}
@@ -80,12 +109,21 @@ export async function simulatePanelCodeMapper(
 			}
 		},
 
-		provideResponseProcessor: (_query: IScenarioQuery): EditingSimulationHostResponseProcessor => {
+		provideResponseProcessor: (
+			_query: IScenarioQuery,
+		): EditingSimulationHostResponseProcessor => {
 			return {
-				spyOnStream: (stream: ChatResponseStream): ChatResponseStream => {
+				spyOnStream: (
+					stream: ChatResponseStream,
+				): ChatResponseStream => {
 					return spyOnStream ? spyOnStream(stream) : stream;
 				},
-				postProcess: async (accessor, workspace, stream, chatResult): Promise<OutcomeAnnotation[]> => {
+				postProcess: async (
+					accessor,
+					workspace,
+					stream,
+					chatResult,
+				): Promise<OutcomeAnnotation[]> => {
 					const annotations: OutcomeAnnotation[] = [];
 					if (strategy === EditTestStrategy.Edits) {
 						if (chatResult?.errorDetails) {
@@ -99,7 +137,9 @@ export async function simulatePanelCodeMapper(
 
 						const codeBlocks = chatResult?.metadata?.codeBlocks;
 						if (!Array.isArray(codeBlocks)) {
-							throw new Error('No codeblocks in chat result metadata');
+							throw new Error(
+								'No codeblocks in chat result metadata',
+							);
 						}
 						for (const codeBlock of codeBlocks) {
 							if (!isCodeBlockWithResource(codeBlock)) {
@@ -112,14 +152,14 @@ export async function simulatePanelCodeMapper(
 						}
 					}
 					return annotations;
-				}
+				},
 			};
-		}
+		},
 	};
 
 	return simulateEditingScenario(
 		testingServiceCollection,
 		massagedScenario,
-		host
+		host,
 	);
 }

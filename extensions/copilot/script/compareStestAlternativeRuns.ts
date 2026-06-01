@@ -19,7 +19,11 @@ interface BaselineTestResult {
 	passCount: number;
 	failCount: number;
 	contentFilterCount: number;
-	attributes: (Record<string, string | number> & { ['CompScore1']: number | undefined } & { ['CompScore2']: number | undefined } & { ['CompScore3']: number | undefined });
+	attributes: Record<string, string | number> & {
+		['CompScore1']: number | undefined;
+	} & { ['CompScore2']: number | undefined } & {
+		['CompScore3']: number | undefined;
+	};
 }
 
 enum SignalKind {
@@ -35,7 +39,11 @@ namespace SignalKind {
 		const signalKindRe = `^\\[(${Object.values(SignalKind).join('|')})\\]`;
 		const signalKind = testName.match(signalKindRe);
 		if (signalKind) {
-			return Object.values(SignalKind).includes(signalKind[1] as SignalKind) ? signalKind[1] as SignalKind : undefined;
+			return Object.values(SignalKind).includes(
+				signalKind[1] as SignalKind,
+			)
+				? (signalKind[1] as SignalKind)
+				: undefined;
 		}
 	}
 }
@@ -57,9 +65,12 @@ function getFlavor(testResult: BaselineTestResult): string {
 	const match = testResult.name.match(regexForProviderName);
 	if (match) {
 		switch (match[1]) {
-			case 'prodFineTunedModel': return 'NES';
-			case 'prodFineTunedModelWithSummarizedDocument': return 'NES-summ';
-			case 'speculativeEditingInlineEditProvider': return 'SpecEdit';
+			case 'prodFineTunedModel':
+				return 'NES';
+			case 'prodFineTunedModelWithSummarizedDocument':
+				return 'NES-summ';
+			case 'speculativeEditingInlineEditProvider':
+				return 'SpecEdit';
 			default:
 				return match[1];
 		}
@@ -68,15 +79,24 @@ function getFlavor(testResult: BaselineTestResult): string {
 	}
 }
 
-function computeTestResultsFromBaseline(baseline: BaselineTestResult[]): TestResult[] {
-
-	const nesTestsWithFlavor = baseline.filter((currentBaselineTestResult) =>
-		currentBaselineTestResult.name.startsWith('NES ') || (currentBaselineTestResult.name.startsWith('InlineEdit') && currentBaselineTestResult.name.includes('])')));
+function computeTestResultsFromBaseline(
+	baseline: BaselineTestResult[],
+): TestResult[] {
+	const nesTestsWithFlavor = baseline.filter(
+		(currentBaselineTestResult) =>
+			currentBaselineTestResult.name.startsWith('NES ') ||
+			(currentBaselineTestResult.name.startsWith('InlineEdit') &&
+				currentBaselineTestResult.name.includes('])')),
+	);
 
 	const fullNameToTestName = (fullName: string) => {
 		const indexOfSuiteTestNameSplit = fullName.indexOf(' - ');
 		const testName = fullName.slice(indexOfSuiteTestNameSplit + 3);
-		if (testName === undefined) { throw new AssertionError({ message: `does not follow the expected pattern: ${fullName}` }); }
+		if (testName === undefined) {
+			throw new AssertionError({
+				message: `does not follow the expected pattern: ${fullName}`,
+			});
+		}
 		return testName;
 	};
 
@@ -102,9 +122,15 @@ function computeTestResultsFromBaseline(baseline: BaselineTestResult[]): TestRes
 			name: testName,
 			signalKind: SignalKind.getFromTestName(testName),
 			testResults: baselineTestResults,
-			compScore1: baselineTestResults[0]?.attributes?.CompScore1 as number | undefined,
-			compScore2: baselineTestResults[0]?.attributes?.CompScore2 as number | undefined,
-			compScore3: baselineTestResults[0]?.attributes?.CompScore3 as number | undefined,
+			compScore1: baselineTestResults[0]?.attributes?.CompScore1 as
+				| number
+				| undefined,
+			compScore2: baselineTestResults[0]?.attributes?.CompScore2 as
+				| number
+				| undefined,
+			compScore3: baselineTestResults[0]?.attributes?.CompScore3 as
+				| number
+				| undefined,
 		} satisfies TestResult;
 	});
 }
@@ -113,14 +139,17 @@ function formatAsBold(text: string) {
 	return `${text} *`;
 }
 
-function formatAsColored(text: string, color: 'green' | 'violet' | 'red' | undefined) {
+function formatAsColored(
+	text: string,
+	color: 'green' | 'violet' | 'red' | undefined,
+) {
 	if (!color) {
 		return text;
 	}
 	const colorMap = {
-		'green': 32,
-		'red': 31,
-		'violet': 35,
+		green: 32,
+		red: 31,
+		violet: 35,
 	};
 	return `\x1b[${colorMap[color]}m${text}\x1b[0m`;
 }
@@ -138,21 +167,50 @@ function formatPassRatio(passed: number, total: number): string {
 	return `${((passed / total) * 100).toFixed(2)}%`;
 }
 
-type TestScoreByFlavor = Record<string /* flavor */, number | { oldScore: number; newScore: number } | undefined>;
-type AggregatedTest = { test: string; scores: TestScoreByFlavor; signalKind?: SignalKind };
+type TestScoreByFlavor = Record<
+	string /* flavor */,
+	number | { oldScore: number; newScore: number } | undefined
+>;
+type AggregatedTest = {
+	test: string;
+	scores: TestScoreByFlavor;
+	signalKind?: SignalKind;
+};
 
-function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterProviders, omitEqual }: { compare: boolean; useColoredOutput: boolean; filterProviders?: string[]; omitEqual: boolean }) {
-	const providers = Array.from(new Set(data.flatMap(d => Object.keys(d.scores))));
-	const filteredProviders = filterProviders ? providers.filter(provider => filterProviders.includes(provider.toLocaleLowerCase())) : providers;
+function printTable(
+	data: AggregatedTest[],
+	{
+		compare,
+		useColoredOutput,
+		filterProviders,
+		omitEqual,
+	}: {
+		compare: boolean;
+		useColoredOutput: boolean;
+		filterProviders?: string[];
+		omitEqual: boolean;
+	},
+) {
+	const providers = Array.from(
+		new Set(data.flatMap((d) => Object.keys(d.scores))),
+	);
+	const filteredProviders = filterProviders
+		? providers.filter((provider) =>
+				filterProviders.includes(provider.toLocaleLowerCase()),
+			)
+		: providers;
 
-	const aggregatedTestsBySignalKind = data.reduce((acc: Record<SignalKind, AggregatedTest[]>, item) => {
-		const group = item.signalKind ?? SignalKind.Other;
-		if (!acc[group]) {
-			acc[group] = [];
-		}
-		acc[group].push(item);
-		return acc;
-	}, {} as Record<SignalKind, AggregatedTest[]>);
+	const aggregatedTestsBySignalKind = data.reduce(
+		(acc: Record<SignalKind, AggregatedTest[]>, item) => {
+			const group = item.signalKind ?? SignalKind.Other;
+			if (!acc[group]) {
+				acc[group] = [];
+			}
+			acc[group].push(item);
+			return acc;
+		},
+		{} as Record<SignalKind, AggregatedTest[]>,
+	);
 
 	const tableData: Record<string, string>[] = [];
 
@@ -173,17 +231,34 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 	}
 
 	// Iterate over each signal kind
-	for (const [signalKind, tests] of Object.entries(aggregatedTestsBySignalKind)) {
+	for (const [signalKind, tests] of Object.entries(
+		aggregatedTestsBySignalKind,
+	)) {
 		// add header
 		tableData.push({ 'Test Name': `=== ${signalKind} ===` });
 
-		const totalByProviderForSignalKind: Record<string /* provider */, number> = {};
-		const oldTotalByProviderForSignalKind: Record<string /* provider */, number> = {};
+		const totalByProviderForSignalKind: Record<
+			string /* provider */,
+			number
+		> = {};
+		const oldTotalByProviderForSignalKind: Record<
+			string /* provider */,
+			number
+		> = {};
 
 		// Track pass/fail counts for BadSuggestion tests within this signal kind
-		const badSuggestionPassedByProviderForSignalKind: Record<string, number> = {};
-		const badSuggestionTotalByProviderForSignalKind: Record<string, number> = {};
-		const oldBadSuggestionPassedByProviderForSignalKind: Record<string, number> = {};
+		const badSuggestionPassedByProviderForSignalKind: Record<
+			string,
+			number
+		> = {};
+		const badSuggestionTotalByProviderForSignalKind: Record<
+			string,
+			number
+		> = {};
+		const oldBadSuggestionPassedByProviderForSignalKind: Record<
+			string,
+			number
+		> = {};
 
 		for (const provider of filteredProviders) {
 			totalByProviderForSignalKind[provider] = 0;
@@ -193,13 +268,16 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 			oldBadSuggestionPassedByProviderForSignalKind[provider] = 0;
 		}
 
-		const isBadSuggestionCategory = signalKind === SignalKind.BadSuggestions;
+		const isBadSuggestionCategory =
+			signalKind === SignalKind.BadSuggestions;
 
 		for (const test of tests) {
-			const scores = filteredProviders.map(provider => {
+			const scores = filteredProviders.map((provider) => {
 				const score = test.scores[provider];
-				const oldScore = typeof score === 'object' ? score.oldScore : undefined;
-				const numericScore = typeof score === 'object' ? score.newScore : score ?? 0;
+				const oldScore =
+					typeof score === 'object' ? score.oldScore : undefined;
+				const numericScore =
+					typeof score === 'object' ? score.newScore : (score ?? 0);
 
 				// Handle BadSuggestion scores differently
 				if (isBadSuggestionCategory) {
@@ -214,7 +292,9 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 					if (oldScore !== undefined) {
 						if (isBadSuggestionPassed(oldScore)) {
 							oldBadSuggestionPassedByProvider[provider]++;
-							oldBadSuggestionPassedByProviderForSignalKind[provider]++;
+							oldBadSuggestionPassedByProviderForSignalKind[
+								provider
+							]++;
 						}
 					}
 				} else {
@@ -236,7 +316,9 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 				continue;
 			}
 
-			const resultRow: Record<string, string> = { 'Test Name': test.test };
+			const resultRow: Record<string, string> = {
+				'Test Name': test.test,
+			};
 			for (let i = 0; i < filteredProviders.length; i++) {
 				const provider = filteredProviders[i];
 				const rawScore = test.scores[provider];
@@ -246,52 +328,94 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 
 				if (isBadSuggestionCategory) {
 					// For BadSuggestion, show "Pass" or "Fail" instead of score
-					formattedScore = isBadSuggestionPassed(score) ? 'Pass' : 'Fail';
+					formattedScore = isBadSuggestionPassed(score)
+						? 'Pass'
+						: 'Fail';
 
 					if (compare && typeof rawScore === 'object') {
-						const oldResult = isBadSuggestionPassed(rawScore.oldScore) ? 'Pass' : 'Fail';
-						const newResult = isBadSuggestionPassed(rawScore.newScore) ? 'Pass' : 'Fail';
+						const oldResult = isBadSuggestionPassed(
+							rawScore.oldScore,
+						)
+							? 'Pass'
+							: 'Fail';
+						const newResult = isBadSuggestionPassed(
+							rawScore.newScore,
+						)
+							? 'Pass'
+							: 'Fail';
 
 						if (oldResult !== newResult) {
-							const color = useColoredOutput ?
-								(oldResult === 'Fail' && newResult === 'Pass' ? 'green' : 'red') :
-								undefined;
-							formattedScore = formatAsColored(`${oldResult} -> ${newResult}`, color);
+							const color = useColoredOutput
+								? oldResult === 'Fail' && newResult === 'Pass'
+									? 'green'
+									: 'red'
+								: undefined;
+							formattedScore = formatAsColored(
+								`${oldResult} -> ${newResult}`,
+								color,
+							);
 						}
 					}
 				} else {
 					// Regular formatting for non-BadSuggestion tests
 					formattedScore = score.toFixed(2);
-					if (compare && typeof rawScore === 'object' && rawScore.oldScore !== rawScore.newScore) {
-						const color = useColoredOutput ? (rawScore.newScore > rawScore.oldScore ? 'green' : 'red') : undefined;
-						formattedScore = formatAsColored(`${rawScore.oldScore.toFixed(2)} -> ${rawScore.newScore.toFixed(2)}`, color);
+					if (
+						compare &&
+						typeof rawScore === 'object' &&
+						rawScore.oldScore !== rawScore.newScore
+					) {
+						const color = useColoredOutput
+							? rawScore.newScore > rawScore.oldScore
+								? 'green'
+								: 'red'
+							: undefined;
+						formattedScore = formatAsColored(
+							`${rawScore.oldScore.toFixed(2)} -> ${rawScore.newScore.toFixed(2)}`,
+							color,
+						);
 					} else if (maxScore - score < 0.001 && !areAllScoresEqual) {
 						formattedScore = formatAsBold(formattedScore);
 					}
 				}
 
-				resultRow[provider] = typeof rawScore === 'undefined' ? '-' : formattedScore;
+				resultRow[provider] =
+					typeof rawScore === 'undefined' ? '-' : formattedScore;
 			}
 
 			tableData.push(resultRow);
 		}
 
 		// Add subtotal for signal kind
-		const subtotalRow: Record<string, string> = { 'Test Name': `${signalKind} Subtotal (${tests.length} tests)` };
+		const subtotalRow: Record<string, string> = {
+			'Test Name': `${signalKind} Subtotal (${tests.length} tests)`,
+		};
 		for (const provider of filteredProviders) {
 			if (isBadSuggestionCategory) {
 				// For BadSuggestion, show pass ratio
-				const passedTests = badSuggestionPassedByProviderForSignalKind[provider];
-				const totalTests = badSuggestionTotalByProviderForSignalKind[provider];
+				const passedTests =
+					badSuggestionPassedByProviderForSignalKind[provider];
+				const totalTests =
+					badSuggestionTotalByProviderForSignalKind[provider];
 				const passRatio = formatPassRatio(passedTests, totalTests);
 
 				if (compare) {
-					const oldPassedTests = oldBadSuggestionPassedByProviderForSignalKind[provider];
-					const oldPassRatio = formatPassRatio(oldPassedTests, totalTests);
+					const oldPassedTests =
+						oldBadSuggestionPassedByProviderForSignalKind[provider];
+					const oldPassRatio = formatPassRatio(
+						oldPassedTests,
+						totalTests,
+					);
 
 					if (oldPassedTests !== passedTests) {
-						const color = useColoredOutput ? (passedTests > oldPassedTests ? 'green' : 'red') : undefined;
-						subtotalRow[provider] = formatAsColored(`${oldPassRatio} -> ${passRatio}`, color);
+						const color = useColoredOutput
+							? passedTests > oldPassedTests
+								? 'green'
+								: 'red'
+							: undefined;
+						subtotalRow[provider] = formatAsColored(
+							`${oldPassRatio} -> ${passRatio}`,
+							color,
+						);
 					} else {
 						subtotalRow[provider] = passRatio;
 					}
@@ -302,9 +426,17 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 				// Regular handling for non-BadSuggestion categories
 				const oldSubTotal = oldTotalByProviderForSignalKind[provider];
 				const subTotal = totalByProviderForSignalKind[provider];
-				if (compare && Math.abs(oldSubTotal - subTotal) > 0.001 && !provider.startsWith('Comp')) {
+				if (
+					compare &&
+					Math.abs(oldSubTotal - subTotal) > 0.001 &&
+					!provider.startsWith('Comp')
+				) {
 					const rawOut = `${oldSubTotal.toFixed(2)} -> ${subTotal.toFixed(2)}`;
-					const color = useColoredOutput ? (oldSubTotal < subTotal ? 'green' : 'red') : undefined;
+					const color = useColoredOutput
+						? oldSubTotal < subTotal
+							? 'green'
+							: 'red'
+						: undefined;
 					subtotalRow[provider] = formatAsColored(rawOut, color);
 				} else {
 					subtotalRow[provider] = subTotal.toFixed(2);
@@ -315,13 +447,23 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 	}
 
 	// Add total (don't include BadSuggestion in the grand total)
-	const totalRow: Record<string, string> = { 'Test Name': 'Grand Total (excluding BadSuggestions)' };
+	const totalRow: Record<string, string> = {
+		'Test Name': 'Grand Total (excluding BadSuggestions)',
+	};
 	for (const provider of filteredProviders) {
 		const oldTotal = oldTotalScoreByProvider[provider];
 		const total = totalScoreByProvider[provider];
-		if (compare && Math.abs(oldTotal - total) > 0.001 && !provider.startsWith('Comp')) {
+		if (
+			compare &&
+			Math.abs(oldTotal - total) > 0.001 &&
+			!provider.startsWith('Comp')
+		) {
 			const rawOut = `${oldTotal.toFixed(2)} -> ${total.toFixed(2)}`;
-			const color = useColoredOutput ? (oldTotal < total ? 'green' : 'red') : undefined;
+			const color = useColoredOutput
+				? oldTotal < total
+					? 'green'
+					: 'red'
+				: undefined;
 			totalRow[provider] = formatAsColored(rawOut, color);
 		} else {
 			totalRow[provider] = total.toFixed(2);
@@ -330,7 +472,9 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 	tableData.push(totalRow);
 
 	// Add BadSuggestion aggregate pass ratio
-	const badSuggestionRow: Record<string, string> = { 'Test Name': 'BadSuggestion Pass Ratio' };
+	const badSuggestionRow: Record<string, string> = {
+		'Test Name': 'BadSuggestion Pass Ratio',
+	};
 	for (const provider of filteredProviders) {
 		const passedTests = badSuggestionPassedByProvider[provider];
 		const totalTests = badSuggestionTotalByProvider[provider];
@@ -341,8 +485,15 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 			const oldPassRatio = formatPassRatio(oldPassedTests, totalTests);
 
 			if (oldPassedTests !== passedTests) {
-				const color = useColoredOutput ? (passedTests > oldPassedTests ? 'green' : 'red') : undefined;
-				badSuggestionRow[provider] = formatAsColored(`${oldPassRatio} -> ${passRatio}`, color);
+				const color = useColoredOutput
+					? passedTests > oldPassedTests
+						? 'green'
+						: 'red'
+					: undefined;
+				badSuggestionRow[provider] = formatAsColored(
+					`${oldPassRatio} -> ${passRatio}`,
+					color,
+				);
 			} else {
 				badSuggestionRow[provider] = passRatio;
 			}
@@ -355,8 +506,14 @@ function printTable(data: AggregatedTest[], { compare, useColoredOutput, filterP
 	console.table(tableData);
 }
 
-const DEFAULT_BASELINE_JSON_PATH = path.join(__dirname, '../test/simulation/baseline.json');
-const DEFAULT_BASELINE_OLD_JSON_PATH = path.join(__dirname, '../test/simulation/baseline.old.json');
+const DEFAULT_BASELINE_JSON_PATH = path.join(
+	__dirname,
+	'../test/simulation/baseline.json',
+);
+const DEFAULT_BASELINE_OLD_JSON_PATH = path.join(
+	__dirname,
+	'../test/simulation/baseline.old.json',
+);
 
 async function main() {
 	const args = process.argv.slice(2);
@@ -364,14 +521,28 @@ async function main() {
 	const upgradeBaselineOldJson = args.includes('--upgrade-old-baseline');
 	const useColoredOutput = args.includes('--color');
 	const omitEqual = args.includes('--omit-equal');
-	const filterArg = args.find(arg => arg.startsWith('--filter='));
-	const filterProviders = filterArg ? filterArg.split('=')[1].split(',').map(s => s.toLocaleLowerCase()) : undefined;
-	const externalBaselineArg = args.find(arg => arg.startsWith('--external-baseline='));
-	const externalBaselinePath = externalBaselineArg ? externalBaselineArg.split('=')[1] : undefined;
+	const filterArg = args.find((arg) => arg.startsWith('--filter='));
+	const filterProviders = filterArg
+		? filterArg
+				.split('=')[1]
+				.split(',')
+				.map((s) => s.toLocaleLowerCase())
+		: undefined;
+	const externalBaselineArg = args.find((arg) =>
+		arg.startsWith('--external-baseline='),
+	);
+	const externalBaselinePath = externalBaselineArg
+		? externalBaselineArg.split('=')[1]
+		: undefined;
 
 	// Determine baseline paths
-	const BASELINE_JSON_PATH = externalBaselinePath ? path.resolve(externalBaselinePath) : DEFAULT_BASELINE_JSON_PATH;
-	const BASELINE_OLD_JSON_PATH = path.join(path.dirname(BASELINE_JSON_PATH), 'baseline.old.json');
+	const BASELINE_JSON_PATH = externalBaselinePath
+		? path.resolve(externalBaselinePath)
+		: DEFAULT_BASELINE_JSON_PATH;
+	const BASELINE_OLD_JSON_PATH = path.join(
+		path.dirname(BASELINE_JSON_PATH),
+		'baseline.old.json',
+	);
 
 	let baselineJson: string;
 	try {
@@ -389,16 +560,28 @@ async function main() {
 	}
 
 	if (upgradeBaselineOldJson) {
-		const baselineJsonContentsFromHEAD = await new Promise<string>((resolve, reject) => {
-			execFile('git', ['show', `HEAD:${path.relative(process.cwd(), BASELINE_JSON_PATH)}`], (error: Error | null, stdout: string) => {
-				if (error) {
-					reject(error);
-					return;
-				}
-				resolve(stdout);
-			});
-		});
-		await fs.writeFile(BASELINE_OLD_JSON_PATH, baselineJsonContentsFromHEAD);
+		const baselineJsonContentsFromHEAD = await new Promise<string>(
+			(resolve, reject) => {
+				execFile(
+					'git',
+					[
+						'show',
+						`HEAD:${path.relative(process.cwd(), BASELINE_JSON_PATH)}`,
+					],
+					(error: Error | null, stdout: string) => {
+						if (error) {
+							reject(error);
+							return;
+						}
+						resolve(stdout);
+					},
+				);
+			},
+		);
+		await fs.writeFile(
+			BASELINE_OLD_JSON_PATH,
+			baselineJsonContentsFromHEAD,
+		);
 	}
 
 	let oldBaseline: BaselineTestResult[] | undefined;
@@ -419,25 +602,54 @@ async function main() {
 	}
 
 	const testResults = computeTestResultsFromBaseline(baseline);
-	const oldTestResults = compare && oldBaseline ? computeTestResultsFromBaseline(oldBaseline) : undefined;
+	const oldTestResults =
+		compare && oldBaseline
+			? computeTestResultsFromBaseline(oldBaseline)
+			: undefined;
 
-	const testNameToOldScoresByFlavor = oldTestResults?.reduce((acc: Record<string /* testName */, Record<string /* flavor */, number | undefined>>, testResult) => {
-		acc[testResult.name] = testResult.testResults.reduce((acc, testResult) => {
-			acc[getFlavor(testResult)] = testResult.score;
-			return acc;
-		}, { 'Comp1': testResult.compScore1, 'Comp2': testResult.compScore2, 'Comp3': testResult.compScore3 } as Record<string, number | undefined>);
-		return acc;
-	}, {}) ?? {};
+	const testNameToOldScoresByFlavor =
+		oldTestResults?.reduce(
+			(
+				acc: Record<
+					string /* testName */,
+					Record<string /* flavor */, number | undefined>
+				>,
+				testResult,
+			) => {
+				acc[testResult.name] = testResult.testResults.reduce(
+					(acc, testResult) => {
+						acc[getFlavor(testResult)] = testResult.score;
+						return acc;
+					},
+					{
+						Comp1: testResult.compScore1,
+						Comp2: testResult.compScore2,
+						Comp3: testResult.compScore3,
+					} as Record<string, number | undefined>,
+				);
+				return acc;
+			},
+			{},
+		) ?? {};
 
-	const result = testResults.map(testResult => {
-		const oldScoresByFlavor = testNameToOldScoresByFlavor[testResult.name] || {};
-		const scores = testResult.testResults.reduce((acc: TestScoreByFlavor, testResult) => {
-			const flavor = getFlavor(testResult);
-			const newScore = testResult.score;
-			const oldScore = oldScoresByFlavor[flavor];
-			acc[flavor] = oldScore === undefined ? newScore : { oldScore, newScore };
-			return acc;
-		}, { 'Comp1': testResult.compScore1, 'Comp2': testResult.compScore2, 'Comp3': testResult.compScore3 });
+	const result = testResults.map((testResult) => {
+		const oldScoresByFlavor =
+			testNameToOldScoresByFlavor[testResult.name] || {};
+		const scores = testResult.testResults.reduce(
+			(acc: TestScoreByFlavor, testResult) => {
+				const flavor = getFlavor(testResult);
+				const newScore = testResult.score;
+				const oldScore = oldScoresByFlavor[flavor];
+				acc[flavor] =
+					oldScore === undefined ? newScore : { oldScore, newScore };
+				return acc;
+			},
+			{
+				Comp1: testResult.compScore1,
+				Comp2: testResult.compScore2,
+				Comp3: testResult.compScore3,
+			},
+		);
 		return {
 			test: testResult.name,
 			signalKind: testResult.signalKind,
@@ -445,7 +657,12 @@ async function main() {
 		};
 	});
 
-	printTable(result, { compare, useColoredOutput, filterProviders, omitEqual });
+	printTable(result, {
+		compare,
+		useColoredOutput,
+		filterProviders,
+		omitEqual,
+	});
 }
 
 main();

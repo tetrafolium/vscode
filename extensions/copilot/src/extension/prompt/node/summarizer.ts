@@ -5,7 +5,10 @@
 
 import { Raw } from '@vscode/prompt-tsx';
 import type * as vscode from 'vscode';
-import { ChatFetchResponseType, ChatLocation } from '../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+} from '../../../platform/chat/common/commonTypes';
 import { IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
 import { ILogService } from '../../../platform/log/common/logService';
 import { CapturingToken } from '../../../platform/requestLogger/common/capturingToken';
@@ -22,25 +25,31 @@ import { addHistoryToConversation } from './chatParticipantRequestHandler';
 import { sessionResourceToId } from '../../../platform/chat/common/chatDebugFileLoggerService';
 
 export class ChatSummarizerProvider implements vscode.ChatSummarizer {
-
 	constructor(
 		@ILogService private readonly logService: ILogService,
 		@IEndpointProvider private endpointProvider: IEndpointProvider,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IRequestLogger private readonly requestLogger: IRequestLogger,
-	) { }
+	) {}
 
 	async provideChatSummary(
 		context: vscode.ChatContext,
 		token: vscode.CancellationToken,
 	): Promise<string> {
-
-		const { turns } = this.instantiationService.invokeFunction(accessor => addHistoryToConversation(accessor, context.history));
-		if (turns.filter(t => t.responseStatus === TurnStatus.Success).length === 0) {
+		const { turns } = this.instantiationService.invokeFunction((accessor) =>
+			addHistoryToConversation(accessor, context.history),
+		);
+		if (
+			turns.filter((t) => t.responseStatus === TurnStatus.Success)
+				.length === 0
+		) {
 			return '';
 		}
 
-		const endpoint = await this.endpointProvider.getChatEndpoint('copilot-utility-small');
+		const endpoint = await this.endpointProvider.getChatEndpoint(
+			'copilot-utility-small',
+		);
 		const promptContext: IBuildPromptContext = {
 			requestId: 'chat-summary',
 			query: '',
@@ -68,17 +77,21 @@ export class ChatSummarizerProvider implements vscode.ChatSummarizer {
 					maxSummaryTokens: 7_000,
 				},
 				undefined,
-				token
+				token,
 			);
 			allMessages = rendered.messages;
 		} catch (err) {
-			this.logService.error(`Failed to render conversation summarization prompt: ${err instanceof Error ? err.message : String(err)}`);
+			this.logService.error(
+				`Failed to render conversation summarization prompt: ${err instanceof Error ? err.message : String(err)}`,
+			);
 			return '';
 		}
 
 		// Extract the parent session ID from the context's sessionResource (provided by VS Code)
 		const sessionResource = context.sessionResource;
-		const parentChatSessionId = sessionResource ? sessionResourceToId(URI.from(sessionResource)) : undefined;
+		const parentChatSessionId = sessionResource
+			? sessionResourceToId(URI.from(sessionResource))
+			: undefined;
 
 		const capturingToken = new CapturingToken(
 			'summarize',
@@ -90,14 +103,21 @@ export class ChatSummarizerProvider implements vscode.ChatSummarizer {
 			'summarize',
 		);
 
-		const response = await this.requestLogger.captureInvocation(capturingToken, () => endpoint.makeChatRequest2({
-			debugName: 'summarize',
-			messages: allMessages,
-			finishedCb: undefined,
-			location: ChatLocation.Panel,
-			userInitiatedRequest: false,
-			interactionTypeOverride: 'conversation-background',
-		}, token));
+		const response = await this.requestLogger.captureInvocation(
+			capturingToken,
+			() =>
+				endpoint.makeChatRequest2(
+					{
+						debugName: 'summarize',
+						messages: allMessages,
+						finishedCb: undefined,
+						location: ChatLocation.Panel,
+						userInitiatedRequest: false,
+						interactionTypeOverride: 'conversation-background',
+					},
+					token,
+				),
+		);
 
 		if (token.isCancellationRequested) {
 			return '';
@@ -110,7 +130,9 @@ export class ChatSummarizerProvider implements vscode.ChatSummarizer {
 			}
 			return summary;
 		} else {
-			this.logService.error(`Failed to fetch conversation summary because of response type (${response.type}) and reason (${response.reason})`);
+			this.logService.error(
+				`Failed to fetch conversation summary because of response type (${response.type}) and reason (${response.reason})`,
+			);
 			return '';
 		}
 	}

@@ -16,34 +16,51 @@
 	white-space: nowrap;
 }
 
-.monaco-workbench .open-in-agents-titlebar-widget > .open-in-agents-titlebar-widget-icon {
+.monaco-workbench
+	.open-in-agents-titlebar-widget
+	> .open-in-agents-titlebar-widget-icon {
 	width: 16px;
 	height: 16px;
 	flex: 0 0 auto;
-	background-image: url('../../../../../../sessions/browser/media/sessions-icon.svg');
+	background-image: url("../../../../../../sessions/browser/media/sessions-icon.svg");
 	background-repeat: no-repeat;
 	background-position: center center;
 	background-size: contain;
 	filter: grayscale(1);
 }
 
-.monaco-enable-motion .monaco-workbench .open-in-agents-titlebar-widget > .open-in-agents-titlebar-widget-icon,
-.monaco-workbench.monaco-enable-motion .open-in-agents-titlebar-widget > .open-in-agents-titlebar-widget-icon {
+.monaco-enable-motion
+	.monaco-workbench
+	.open-in-agents-titlebar-widget
+	> .open-in-agents-titlebar-widget-icon,
+.monaco-workbench.monaco-enable-motion
+	.open-in-agents-titlebar-widget
+	> .open-in-agents-titlebar-widget-icon {
 	transition: filter 160ms ease;
 }
 
-.monaco-reduce-motion .monaco-workbench .open-in-agents-titlebar-widget > .open-in-agents-titlebar-widget-icon,
-.monaco-workbench.monaco-reduce-motion .open-in-agents-titlebar-widget > .open-in-agents-titlebar-widget-icon {
+.monaco-reduce-motion
+	.monaco-workbench
+	.open-in-agents-titlebar-widget
+	> .open-in-agents-titlebar-widget-icon,
+.monaco-workbench.monaco-reduce-motion
+	.open-in-agents-titlebar-widget
+	> .open-in-agents-titlebar-widget-icon {
 	transition-duration: 0ms !important;
 }
 
-.monaco-workbench .open-in-agents-titlebar-widget:hover > .open-in-agents-titlebar-widget-icon,
-.monaco-workbench .open-in-agents-titlebar-widget:focus-visible > .open-in-agents-titlebar-widget-icon {
+.monaco-workbench
+	.open-in-agents-titlebar-widget:hover
+	> .open-in-agents-titlebar-widget-icon,
+.monaco-workbench
+	.open-in-agents-titlebar-widget:focus-visible
+	> .open-in-agents-titlebar-widget-icon {
 	filter: none;
 }
 
-
-.monaco-workbench .open-in-agents-titlebar-widget > .open-in-agents-titlebar-widget-label {
+.monaco-workbench
+	.open-in-agents-titlebar-widget
+	> .open-in-agents-titlebar-widget-label {
 	display: inline-block;
 	max-width: 0;
 	opacity: 0;
@@ -54,9 +71,17 @@
 	white-space: nowrap;
 }
 
-.monaco-enable-motion .monaco-workbench .open-in-agents-titlebar-widget > .open-in-agents-titlebar-widget-label,
-.monaco-workbench.monaco-enable-motion .open-in-agents-titlebar-widget > .open-in-agents-titlebar-widget-label {
-	transition: max-width 160ms ease, opacity 160ms ease, margin-left 160ms ease;
+.monaco-enable-motion
+	.monaco-workbench
+	.open-in-agents-titlebar-widget
+	> .open-in-agents-titlebar-widget-label,
+.monaco-workbench.monaco-enable-motion
+	.open-in-agents-titlebar-widget
+	> .open-in-agents-titlebar-widget-label {
+	transition:
+		max-width 160ms ease,
+		opacity 160ms ease,
+		margin-left 160ms ease;
 	transition-delay: 200ms;
 }
 
@@ -66,17 +91,31 @@
 	outline: none;
 }
 
-.monaco-workbench .open-in-agents-titlebar-widget:hover > .open-in-agents-titlebar-widget-label,
-.monaco-workbench .open-in-agents-titlebar-widget:focus-visible > .open-in-agents-titlebar-widget-label {
+.monaco-workbench
+	.open-in-agents-titlebar-widget:hover
+	> .open-in-agents-titlebar-widget-label,
+.monaco-workbench
+	.open-in-agents-titlebar-widget:focus-visible
+	> .open-in-agents-titlebar-widget-label {
 	max-width: 200px;
 	opacity: 1;
 	margin-left: 6px;
 }
 
-.monaco-enable-motion .monaco-workbench .open-in-agents-titlebar-widget:hover > .open-in-agents-titlebar-widget-label,
-.monaco-enable-motion .monaco-workbench .open-in-agents-titlebar-widget:focus-visible > .open-in-agents-titlebar-widget-label,
-.monaco-workbench.monaco-enable-motion .open-in-agents-titlebar-widget:hover > .open-in-agents-titlebar-widget-label,
-.monaco-workbench.monaco-enable-motion .open-in-agents-titlebar-widget:focus-visible > .open-in-agents-titlebar-widget-label {
+.monaco-enable-motion
+	.monaco-workbench
+	.open-in-agents-titlebar-widget:hover
+	> .open-in-agents-titlebar-widget-label,
+.monaco-enable-motion
+	.monaco-workbench
+	.open-in-agents-titlebar-widget:focus-visible
+	> .open-in-agents-titlebar-widget-label,
+.monaco-workbench.monaco-enable-motion
+	.open-in-agents-titlebar-widget:hover
+	> .open-in-agents-titlebar-widget-label,
+.monaco-workbench.monaco-enable-motion
+	.open-in-agents-titlebar-widget:focus-visible
+	> .open-in-agents-titlebar-widget-label {
 	transition-delay: 0ms;
 }
 

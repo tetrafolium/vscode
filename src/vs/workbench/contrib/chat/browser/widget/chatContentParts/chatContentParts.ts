@@ -3,16 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, IDisposable, ReferenceCollection } from '../../../../../../base/common/lifecycle.js';
-import { ChatTreeItem, IChatCodeBlockInfo } from '../../chat.js';
-import { IChatRendererContent, IChatRequestViewModel, IChatResponseViewModel } from '../../../common/model/chatViewModel.js';
-import { DiffEditorPool, EditorPool } from './chatContentCodePools.js';
-import { IObservable } from '../../../../../../base/common/observable.js';
-import { Event } from '../../../../../../base/common/event.js';
-import { ITextModel } from '../../../../../../editor/common/model.js';
-import { ILanguageSelection } from '../../../../../../editor/common/languages/language.js';
-import { IModelService } from '../../../../../../editor/common/services/model.js';
-import { URI } from '../../../../../../base/common/uri.js';
+import {
+	Disposable,
+	IDisposable,
+	ReferenceCollection,
+} from "../../../../../../base/common/lifecycle.js";
+import { ChatTreeItem, IChatCodeBlockInfo } from "../../chat.js";
+import {
+	IChatRendererContent,
+	IChatRequestViewModel,
+	IChatResponseViewModel,
+} from "../../../common/model/chatViewModel.js";
+import { DiffEditorPool, EditorPool } from "./chatContentCodePools.js";
+import { IObservable } from "../../../../../../base/common/observable.js";
+import { Event } from "../../../../../../base/common/event.js";
+import { ITextModel } from "../../../../../../editor/common/model.js";
+import { ILanguageSelection } from "../../../../../../editor/common/languages/language.js";
+import { IModelService } from "../../../../../../editor/common/services/model.js";
+import { URI } from "../../../../../../base/common/uri.js";
 
 export interface IChatContentPart extends IDisposable {
 	domNode: HTMLElement | undefined;
@@ -32,7 +40,11 @@ export interface IChatContentPart extends IDisposable {
 	 * Returns false if a rerender is needed.
 	 * followingContent is all the content that will be rendered after this content part (to support progress messages' behavior).
 	 */
-	hasSameContent(other: IChatRendererContent, followingContent: IChatRendererContent[], element: ChatTreeItem): boolean;
+	hasSameContent(
+		other: IChatRendererContent,
+		followingContent: IChatRendererContent[],
+		element: ChatTreeItem,
+	): boolean;
 
 	/**
 	 * Called when the content part is mounted to the DOM after being detached
@@ -71,8 +83,19 @@ export class InlineTextModelCollection extends Disposable {
 		this._collection = new InlineTextModelReferenceCollection(modelService);
 	}
 
-	acquire(uri: URI, value: string, languageSelection: ILanguageSelection | null, isForSimpleWidget: boolean) {
-		return this._collection.acquire(uri.toString(), uri, value, languageSelection, isForSimpleWidget);
+	acquire(
+		uri: URI,
+		value: string,
+		languageSelection: ILanguageSelection | null,
+		isForSimpleWidget: boolean,
+	) {
+		return this._collection.acquire(
+			uri.toString(),
+			uri,
+			value,
+			languageSelection,
+			isForSimpleWidget,
+		);
 	}
 }
 
@@ -81,11 +104,25 @@ class InlineTextModelReferenceCollection extends ReferenceCollection<ITextModel>
 		super();
 	}
 
-	protected override createReferencedObject(key: string, uri: URI, value: string, languageSelection: ILanguageSelection | null, isForSimpleWidget: boolean): ITextModel {
-		return this.modelService.createModel(value, languageSelection, uri, isForSimpleWidget);
+	protected override createReferencedObject(
+		key: string,
+		uri: URI,
+		value: string,
+		languageSelection: ILanguageSelection | null,
+		isForSimpleWidget: boolean,
+	): ITextModel {
+		return this.modelService.createModel(
+			value,
+			languageSelection,
+			uri,
+			isForSimpleWidget,
+		);
 	}
 
-	protected override destroyReferencedObject(_key: string, model: ITextModel): void {
+	protected override destroyReferencedObject(
+		_key: string,
+		model: ITextModel,
+	): void {
 		model.dispose();
 	}
 }

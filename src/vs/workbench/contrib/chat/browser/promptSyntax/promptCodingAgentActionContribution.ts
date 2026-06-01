@@ -3,27 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableMap } from '../../../../../base/common/lifecycle.js';
-import { ICodeEditor } from '../../../../../editor/browser/editorBrowser.js';
-import { registerEditorContribution, EditorContributionInstantiation } from '../../../../../editor/browser/editorExtensions.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { PROMPT_LANGUAGE_ID } from '../../common/promptSyntax/promptTypes.js';
-import { PromptCodingAgentActionOverlayWidget } from './promptCodingAgentActionOverlay.js';
+import {
+	Disposable,
+	DisposableMap,
+} from "../../../../../base/common/lifecycle.js";
+import { ICodeEditor } from "../../../../../editor/browser/editorBrowser.js";
+import {
+	registerEditorContribution,
+	EditorContributionInstantiation,
+} from "../../../../../editor/browser/editorExtensions.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { PROMPT_LANGUAGE_ID } from "../../common/promptSyntax/promptTypes.js";
+import { PromptCodingAgentActionOverlayWidget } from "./promptCodingAgentActionOverlay.js";
 
 export class PromptCodingAgentActionContribution extends Disposable {
-	static readonly ID = 'promptCodingAgentActionContribution';
+	static readonly ID = "promptCodingAgentActionContribution";
 
-	private readonly _overlayWidgets = this._register(new DisposableMap<ICodeEditor, PromptCodingAgentActionOverlayWidget>());
+	private readonly _overlayWidgets = this._register(
+		new DisposableMap<ICodeEditor, PromptCodingAgentActionOverlayWidget>(),
+	);
 
 	constructor(
 		private readonly _editor: ICodeEditor,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 	) {
 		super();
 
-		this._register(this._editor.onDidChangeModel(() => {
-			this._updateOverlayWidget();
-		}));
+		this._register(
+			this._editor.onDidChangeModel(() => {
+				this._updateOverlayWidget();
+			}),
+		);
 
 		this._updateOverlayWidget();
 	}
@@ -35,10 +46,17 @@ export class PromptCodingAgentActionContribution extends Disposable {
 
 		// Add overlay if this is a prompt file
 		if (model && model.getLanguageId() === PROMPT_LANGUAGE_ID) {
-			const widget = this._instantiationService.createInstance(PromptCodingAgentActionOverlayWidget, this._editor);
+			const widget = this._instantiationService.createInstance(
+				PromptCodingAgentActionOverlayWidget,
+				this._editor,
+			);
 			this._overlayWidgets.set(this._editor, widget);
 		}
 	}
 }
 
-registerEditorContribution(PromptCodingAgentActionContribution.ID, PromptCodingAgentActionContribution, EditorContributionInstantiation.AfterFirstRender);
+registerEditorContribution(
+	PromptCodingAgentActionContribution.ID,
+	PromptCodingAgentActionContribution,
+	EditorContributionInstantiation.AfterFirstRender,
+);

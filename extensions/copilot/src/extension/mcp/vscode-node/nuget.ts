@@ -39,7 +39,8 @@ interface DotnetCli {
 	args: Array<string>;
 }
 
-const MCP_SERVER_SCHEMA_2025_07_09_GH = 'https://modelcontextprotocol.io/schemas/draft/2025-07-09/server.json';
+const MCP_SERVER_SCHEMA_2025_07_09_GH =
+	'https://modelcontextprotocol.io/schemas/draft/2025-07-09/server.json';
 
 export class NuGetMcpSetup {
 	constructor(
@@ -52,8 +53,8 @@ export class NuGetMcpSetup {
 
 		// use NuGet.org central registry
 		// see https://github.com/microsoft/vscode/issues/259901 for future options
-		public readonly source: string = 'https://api.nuget.org/v3/index.json'
-	) { }
+		public readonly source: string = 'https://api.nuget.org/v3/index.json',
+	) {}
 
 	async getNuGetPackageMetadata(id: string): Promise<ValidatePackageResult> {
 		// use the home directory, which is the default for MCP servers
@@ -65,14 +66,19 @@ export class NuGetMcpSetup {
 		try {
 			dotnetVersion = await this.getDotnetVersion(cwd);
 		} catch (error) {
-			const errorCode = error.hasOwnProperty('code') ? String((error as any).code) : undefined;
+			const errorCode = error.hasOwnProperty('code')
+				? String((error as any).code)
+				: undefined;
 			if (errorCode === 'ENOENT') {
 				return {
 					state: 'error',
-					error: l10n.t("The '{0}' command was not found. .NET SDK 10 or newer must be installed and available in PATH.", this.dotnet.command),
+					error: l10n.t(
+						"The '{0}' command was not found. .NET SDK 10 or newer must be installed and available in PATH.",
+						this.dotnet.command,
+					),
 					errorType: ValidatePackageErrorType.MissingCommand,
 					helpUri: 'https://aka.ms/vscode-mcp-install/dotnet',
-					helpUriLabel: l10n.t("Install .NET SDK"),
+					helpUriLabel: l10n.t('Install .NET SDK'),
 				};
 			} else {
 				throw error;
@@ -84,10 +90,13 @@ export class NuGetMcpSetup {
 		if (dotnetMajorVersion < 10) {
 			return {
 				state: 'error',
-				error: l10n.t("The installed .NET SDK must be version 10 or newer. Found {0}.", dotnetVersion),
+				error: l10n.t(
+					'The installed .NET SDK must be version 10 or newer. Found {0}.',
+					dotnetVersion,
+				),
 				errorType: ValidatePackageErrorType.BadCommandVersion,
 				helpUri: 'https://aka.ms/vscode-mcp-install/dotnet',
-				helpUriLabel: l10n.t("Update .NET SDK"),
+				helpUriLabel: l10n.t('Update .NET SDK'),
 			};
 		}
 
@@ -97,12 +106,15 @@ export class NuGetMcpSetup {
 			return {
 				state: 'error',
 				errorType: ValidatePackageErrorType.NotFound,
-				error: l10n.t("Package {0} does not exist on NuGet.org.", id)
+				error: l10n.t('Package {0} does not exist on NuGet.org.', id),
 			};
 		}
 
 		// read the package readme from NuGet.org, using the HTTP API
-		const readme = await this.getPackageReadmeFromNuGetOrgAsync(latest.id, latest.version);
+		const readme = await this.getPackageReadmeFromNuGetOrgAsync(
+			latest.id,
+			latest.version,
+		);
 
 		return {
 			state: 'ok',
@@ -113,14 +125,22 @@ export class NuGetMcpSetup {
 			getMcpServer: async (installConsent) => {
 				// getting the server.json downloads the package, so wait for consent
 				await installConsent;
-				const manifest = await this.getServerManifest(latest.id, latest.version);
+				const manifest = await this.getServerManifest(
+					latest.id,
+					latest.version,
+				);
 				return mapServerJsonToMcpServer(manifest, RegistryType.NUGET);
 			},
 		};
 	}
 
-	async getServerManifest(id: string, version: string): Promise<string | undefined> {
-		this.logService.info(`Reading .mcp/server.json from NuGet package ${id}@${version}.`);
+	async getServerManifest(
+		id: string,
+		version: string,
+	): Promise<string | undefined> {
+		this.logService.info(
+			`Reading .mcp/server.json from NuGet package ${id}@${version}.`,
+		);
 		const installDir = randomPath(os.tmpdir(), 'vscode-nuget-mcp');
 		try {
 			// perform a local tool install using the .NET CLI
@@ -131,15 +151,33 @@ export class NuGetMcpSetup {
 			// the cwd must be the install directory or a child directory for local tool install to work
 			const cwd = installDir;
 
-			const packagesDir = await this.getGlobalPackagesPath(id, version, cwd);
-			if (!packagesDir) { return undefined; }
+			const packagesDir = await this.getGlobalPackagesPath(
+				id,
+				version,
+				cwd,
+			);
+			if (!packagesDir) {
+				return undefined;
+			}
 
 			// explicitly create a tool manifest in the off chance one already exists in a parent directory
-			const createManifestSuccess = await this.createToolManifest(id, version, cwd);
-			if (!createManifestSuccess) { return undefined; }
+			const createManifestSuccess = await this.createToolManifest(
+				id,
+				version,
+				cwd,
+			);
+			if (!createManifestSuccess) {
+				return undefined;
+			}
 
-			const localInstallSuccess = await this.installLocalTool(id, version, cwd);
-			if (!localInstallSuccess) { return undefined; }
+			const localInstallSuccess = await this.installLocalTool(
+				id,
+				version,
+				cwd,
+			);
+			if (!localInstallSuccess) {
+				return undefined;
+			}
 
 			return await this.readServerManifest(packagesDir, id, version);
 		} catch (e) {
@@ -150,7 +188,8 @@ Error: ${e}`);
 			try {
 				await fs.rm(installDir, { recursive: true, force: true });
 			} catch (e) {
-				this.logService.warn(`Failed to clean up temporary .NET tool install directory ${installDir}.
+				this.logService
+					.warn(`Failed to clean up temporary .NET tool install directory ${installDir}.
 Error: ${e}`);
 			}
 		}
@@ -158,83 +197,155 @@ Error: ${e}`);
 
 	async getDotnetVersion(cwd: string): Promise<string> {
 		const args = this.dotnet.args.concat(['--version']);
-		const result = await this.commandExecutor.executeWithTimeout(this.dotnet.command, args, cwd);
+		const result = await this.commandExecutor.executeWithTimeout(
+			this.dotnet.command,
+			args,
+			cwd,
+		);
 		const version = result.stdout.trim();
 		if (result.exitCode !== 0 || !version) {
-			this.logService.warn(`Failed to check for .NET version while checking if a NuGet MCP server exists.
+			this.logService
+				.warn(`Failed to check for .NET version while checking if a NuGet MCP server exists.
 stdout: ${result.stdout}
 stderr: ${result.stderr}`);
-			throw new Error(`Failed to check for .NET version using '${this.dotnet.command} --version'.`);
+			throw new Error(
+				`Failed to check for .NET version using '${this.dotnet.command} --version'.`,
+			);
 		}
 
 		return version;
 	}
 
-	async getLatestPackageVersion(cwd: string, id: string): Promise<{ id: string; version: string; owners?: string } | undefined> {
+	async getLatestPackageVersion(
+		cwd: string,
+		id: string,
+	): Promise<{ id: string; version: string; owners?: string } | undefined> {
 		// we don't use --exact-match here because it does not return owner information on NuGet.org
-		const args = this.dotnet.args.concat(['package', 'search', id, '--source', this.source, '--prerelease', '--format', 'json']);
-		const searchResult = await this.commandExecutor.executeWithTimeout(this.dotnet.command, args, cwd);
-		const searchData: DotnetPackageSearchOutput = JSON.parse(searchResult.stdout.trim());
+		const args = this.dotnet.args.concat([
+			'package',
+			'search',
+			id,
+			'--source',
+			this.source,
+			'--prerelease',
+			'--format',
+			'json',
+		]);
+		const searchResult = await this.commandExecutor.executeWithTimeout(
+			this.dotnet.command,
+			args,
+			cwd,
+		);
+		const searchData: DotnetPackageSearchOutput = JSON.parse(
+			searchResult.stdout.trim(),
+		);
 		for (const result of searchData.searchResult ?? []) {
 			for (const pkg of result.packages ?? []) {
 				if (pkg.id.toUpperCase() === id.toUpperCase()) {
-					return { id: pkg.id, version: pkg.latestVersion, owners: pkg.owners };
+					return {
+						id: pkg.id,
+						version: pkg.latestVersion,
+						owners: pkg.owners,
+					};
 				}
 			}
 		}
 	}
 
-	async getPackageReadmeFromNuGetOrgAsync(id: string, version: string): Promise<string | undefined> {
+	async getPackageReadmeFromNuGetOrgAsync(
+		id: string,
+		version: string,
+	): Promise<string | undefined> {
 		try {
 			const sourceUrl = URL.parse(this.source);
-			if (sourceUrl?.protocol !== 'https:' || !sourceUrl.pathname.endsWith('.json')) {
-				this.logService.warn(`NuGet package source is not an HTTPS V3 source URL. Cannot fetch a readme for ${id}@${version}.`);
+			if (
+				sourceUrl?.protocol !== 'https:' ||
+				!sourceUrl.pathname.endsWith('.json')
+			) {
+				this.logService.warn(
+					`NuGet package source is not an HTTPS V3 source URL. Cannot fetch a readme for ${id}@${version}.`,
+				);
 				return;
 			}
 
 			// download the service index to locate services
 			// https://learn.microsoft.com/en-us/nuget/api/service-index
-			const serviceIndexResponse = await this.fetcherService.fetch(this.source, { method: 'GET', callSite: 'mcp-nuget-service-index' });
+			const serviceIndexResponse = await this.fetcherService.fetch(
+				this.source,
+				{ method: 'GET', callSite: 'mcp-nuget-service-index' },
+			);
 			if (serviceIndexResponse.status !== 200) {
-				this.logService.warn(`Unable to read the service index for NuGet.org while fetching readme for ${id}@${version}.
+				this.logService
+					.warn(`Unable to read the service index for NuGet.org while fetching readme for ${id}@${version}.
 HTTP status: ${serviceIndexResponse.status}`);
 				return;
 			}
 
-			const serviceIndex = await serviceIndexResponse.json() as NuGetServiceIndexResponse;
+			const serviceIndex =
+				(await serviceIndexResponse.json()) as NuGetServiceIndexResponse;
 
 			// try to fetch the package readme using the URL template
 			// https://learn.microsoft.com/en-us/nuget/api/readme-template-resource
-			const readmeTemplate = serviceIndex.resources?.find(resource => resource['@type'] === 'ReadmeUriTemplate/6.13.0')?.['@id'];
+			const readmeTemplate = serviceIndex.resources?.find(
+				(resource) => resource['@type'] === 'ReadmeUriTemplate/6.13.0',
+			)?.['@id'];
 			if (!readmeTemplate) {
-				this.logService.warn(`No readme URL template found for ${id}@${version} on NuGet.org.`);
+				this.logService.warn(
+					`No readme URL template found for ${id}@${version} on NuGet.org.`,
+				);
 				return;
 			}
 
 			const readmeUrl = readmeTemplate
 				.replace('{lower_id}', encodeURIComponent(id.toLowerCase()))
-				.replace('{lower_version}', encodeURIComponent(version.toLowerCase()));
-			const readmeResponse = await this.fetcherService.fetch(readmeUrl, { method: 'GET', callSite: 'mcp-nuget-readme' });
+				.replace(
+					'{lower_version}',
+					encodeURIComponent(version.toLowerCase()),
+				);
+			const readmeResponse = await this.fetcherService.fetch(readmeUrl, {
+				method: 'GET',
+				callSite: 'mcp-nuget-readme',
+			});
 			if (readmeResponse.status === 200) {
 				return readmeResponse.text();
 			} else if (readmeResponse.status === 404) {
-				this.logService.info(`No package readme exists for ${id}@${version} on NuGet.org.`);
+				this.logService.info(
+					`No package readme exists for ${id}@${version} on NuGet.org.`,
+				);
 			} else {
-				this.logService.warn(`Failed to read package readme for ${id}@${version} from NuGet.org.
+				this.logService
+					.warn(`Failed to read package readme for ${id}@${version} from NuGet.org.
 HTTP status: ${readmeResponse.status}`);
 			}
 		} catch (error) {
-			this.logService.warn(`Failed to read package readme for ${id}@${version} from NuGet.org.
+			this.logService
+				.warn(`Failed to read package readme for ${id}@${version} from NuGet.org.
 Error: ${error}`);
 		}
 	}
 
-	async getGlobalPackagesPath(id: string, version: string, cwd: string): Promise<string | undefined> {
-		const args = this.dotnet.args.concat(['nuget', 'locals', 'global-packages', '--list', '--force-english-output']);
-		const globalPackagesResult = await this.commandExecutor.executeWithTimeout(this.dotnet.command, args, cwd);
+	async getGlobalPackagesPath(
+		id: string,
+		version: string,
+		cwd: string,
+	): Promise<string | undefined> {
+		const args = this.dotnet.args.concat([
+			'nuget',
+			'locals',
+			'global-packages',
+			'--list',
+			'--force-english-output',
+		]);
+		const globalPackagesResult =
+			await this.commandExecutor.executeWithTimeout(
+				this.dotnet.command,
+				args,
+				cwd,
+			);
 
 		if (globalPackagesResult.exitCode !== 0) {
-			this.logService.warn(`Failed to discover the NuGet global packages folder. Proceeding without server.json for ${id}@${version}.
+			this.logService
+				.warn(`Failed to discover the NuGet global packages folder. Proceeding without server.json for ${id}@${version}.
 stdout: ${globalPackagesResult.stdout}
 stderr: ${globalPackagesResult.stderr}`);
 			return undefined;
@@ -245,12 +356,21 @@ stderr: ${globalPackagesResult.stderr}`);
 		return globalPackagesResult.stdout.trim().split(' ', 2).at(-1)?.trim();
 	}
 
-	async createToolManifest(id: string, version: string, cwd: string): Promise<boolean> {
+	async createToolManifest(
+		id: string,
+		version: string,
+		cwd: string,
+	): Promise<boolean> {
 		const args = this.dotnet.args.concat(['new', 'tool-manifest']);
-		const result = await this.commandExecutor.executeWithTimeout(this.dotnet.command, args, cwd);
+		const result = await this.commandExecutor.executeWithTimeout(
+			this.dotnet.command,
+			args,
+			cwd,
+		);
 
 		if (result.exitCode !== 0) {
-			this.logService.warn(`Failed to create tool manifest.Proceeding without server.json for ${id}@${version}.
+			this.logService
+				.warn(`Failed to create tool manifest.Proceeding without server.json for ${id}@${version}.
 stdout: ${result.stdout}
 stderr: ${result.stderr}`);
 			return false;
@@ -259,12 +379,29 @@ stderr: ${result.stderr}`);
 		return true;
 	}
 
-	async installLocalTool(id: string, version: string, cwd: string): Promise<boolean> {
-		const args = this.dotnet.args.concat(['tool', 'install', `${id}@${version}`, '--source', this.source, '--local', '--create-manifest-if-needed']);
-		const installResult = await this.commandExecutor.executeWithTimeout(this.dotnet.command, args, cwd);
+	async installLocalTool(
+		id: string,
+		version: string,
+		cwd: string,
+	): Promise<boolean> {
+		const args = this.dotnet.args.concat([
+			'tool',
+			'install',
+			`${id}@${version}`,
+			'--source',
+			this.source,
+			'--local',
+			'--create-manifest-if-needed',
+		]);
+		const installResult = await this.commandExecutor.executeWithTimeout(
+			this.dotnet.command,
+			args,
+			cwd,
+		);
 
 		if (installResult.exitCode !== 0) {
-			this.logService.warn(`Failed to install local tool ${id} @${version}. Proceeding without server.json for ${id}@${version}.
+			this.logService
+				.warn(`Failed to install local tool ${id} @${version}. Proceeding without server.json for ${id}@${version}.
 stdout: ${installResult.stdout}
 stderr: ${installResult.stderr}`);
 			return false;
@@ -283,21 +420,30 @@ stderr: ${installResult.stderr}`);
 		// - https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json
 		if (manifest?.packages) {
 			for (const pkg of manifest.packages) {
-				if (!pkg) { continue; }
-				const registryType = pkg.registryType ?? pkg.registry_type ?? pkg.registry_name;
+				if (!pkg) {
+					continue;
+				}
+				const registryType =
+					pkg.registryType ?? pkg.registry_type ?? pkg.registry_name;
 				if (registryType === 'nuget') {
 					if (pkg.name && pkg.name !== id) {
-						this.logService.warn(`Package name mismatch in NuGet.mcp / server.json: expected ${id}, found ${pkg.name}.`);
+						this.logService.warn(
+							`Package name mismatch in NuGet.mcp / server.json: expected ${id}, found ${pkg.name}.`,
+						);
 						pkg.name = id;
 					}
 
 					if (pkg.identifier && pkg.identifier !== id) {
-						this.logService.warn(`Package identifier mismatch in NuGet.mcp / server.json: expected ${id}, found ${pkg.identifier}.`);
+						this.logService.warn(
+							`Package identifier mismatch in NuGet.mcp / server.json: expected ${id}, found ${pkg.identifier}.`,
+						);
 						pkg.identifier = id;
 					}
 
 					if (pkg.version !== version) {
-						this.logService.warn(`Package version mismatch in NuGet.mcp / server.json: expected ${version}, found ${pkg.version}.`);
+						this.logService.warn(
+							`Package version mismatch in NuGet.mcp / server.json: expected ${version}, found ${pkg.version}.`,
+						);
 						pkg.version = version;
 					}
 				}
@@ -305,24 +451,45 @@ stderr: ${installResult.stderr}`);
 		}
 
 		// the original .NET MCP server project template used a schema URL that is deprecated
-		if (manifest['$schema'] === MCP_SERVER_SCHEMA_2025_07_09_GH || !manifest['$schema']) {
+		if (
+			manifest['$schema'] === MCP_SERVER_SCHEMA_2025_07_09_GH ||
+			!manifest['$schema']
+		) {
 			manifest['$schema'] = McpServerSchemaVersion_v2025_07_09.SCHEMA;
 		}
 
 		// add missing properties to improve mapping
-		if (!manifest.name) { manifest.name = id; }
-		if (!manifest.description) { manifest.description = id; }
-		if (!manifest.version) { manifest.version = version; }
+		if (!manifest.name) {
+			manifest.name = id;
+		}
+		if (!manifest.description) {
+			manifest.description = id;
+		}
+		if (!manifest.version) {
+			manifest.version = version;
+		}
 
 		return manifest;
 	}
 
-	async readServerManifest(packagesDir: string, id: string, version: string): Promise<string | undefined> {
-		const serverJsonPath = path.join(packagesDir, id.toLowerCase(), version.toLowerCase(), '.mcp', 'server.json');
+	async readServerManifest(
+		packagesDir: string,
+		id: string,
+		version: string,
+	): Promise<string | undefined> {
+		const serverJsonPath = path.join(
+			packagesDir,
+			id.toLowerCase(),
+			version.toLowerCase(),
+			'.mcp',
+			'server.json',
+		);
 		try {
 			await fs.access(serverJsonPath, fs.constants.R_OK);
 		} catch {
-			this.logService.info(`No server.json found at ${serverJsonPath}. Proceeding without server.json for ${id}@${version}.`);
+			this.logService.info(
+				`No server.json found at ${serverJsonPath}. Proceeding without server.json for ${id}@${version}.`,
+			);
 			return undefined;
 		}
 
@@ -331,11 +498,19 @@ stderr: ${installResult.stderr}`);
 		try {
 			manifest = JSON.parse(json);
 		} catch {
-			this.logService.warn(`Invalid JSON in NuGet package server.json at ${serverJsonPath}. Proceeding without server.json for ${id}@${version}.`);
+			this.logService.warn(
+				`Invalid JSON in NuGet package server.json at ${serverJsonPath}. Proceeding without server.json for ${id}@${version}.`,
+			);
 			return undefined;
 		}
-		if (manifest === null || typeof manifest !== 'object' || Array.isArray(manifest)) {
-			this.logService.warn(`Invalid JSON in NuGet package server.json at ${serverJsonPath}. Proceeding without server.json for ${id}@${version}.`);
+		if (
+			manifest === null ||
+			typeof manifest !== 'object' ||
+			Array.isArray(manifest)
+		) {
+			this.logService.warn(
+				`Invalid JSON in NuGet package server.json at ${serverJsonPath}. Proceeding without server.json for ${id}@${version}.`,
+			);
 			return undefined;
 		}
 
@@ -343,7 +518,10 @@ stderr: ${installResult.stderr}`);
 	}
 }
 
-export function mapServerJsonToMcpServer(input: unknown, registryType: RegistryType): Omit<IInstallableMcpServer, 'name'> | undefined {
+export function mapServerJsonToMcpServer(
+	input: unknown,
+	registryType: RegistryType,
+): Omit<IInstallableMcpServer, 'name'> | undefined {
 	let data: any = input;
 
 	if (!data || typeof data !== 'object' || typeof data.$schema !== 'string') {
@@ -355,13 +533,17 @@ export function mapServerJsonToMcpServer(input: unknown, registryType: RegistryT
 		data = { server: data };
 	}
 
-	const raw = McpServerSchemaVersion_v0.SERIALIZER.toRawGalleryMcpServer(data);
+	const raw =
+		McpServerSchemaVersion_v0.SERIALIZER.toRawGalleryMcpServer(data);
 	if (!raw) {
 		return undefined;
 	}
 
 	const utility = new McpMappingUtility();
-	const result = utility.getMcpServerConfigurationFromManifest(raw, registryType);
+	const result = utility.getMcpServerConfigurationFromManifest(
+		raw,
+		registryType,
+	);
 	return result.mcpServerConfiguration;
 }
 
@@ -377,7 +559,6 @@ interface IRawGalleryMcpServer {
 }
 
 export namespace McpServerSchemaVersion_v2025_07_09 {
-
 	export const VERSION = 'v0-2025-07-09';
 	export const SCHEMA = `https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json`;
 
@@ -412,7 +593,9 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 		readonly value?: string;
 	}
 
-	type RawGalleryMcpServerArgument = RawGalleryMcpServerPositionalArgument | RawGalleryMcpServerNamedArgument;
+	type RawGalleryMcpServerArgument =
+		| RawGalleryMcpServerPositionalArgument
+		| RawGalleryMcpServerNamedArgument;
 
 	interface McpServerDeprecatedRemote {
 		readonly transport_type?: 'streamable' | 'sse';
@@ -421,9 +604,14 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 		readonly headers?: ReadonlyArray<RawGalleryMcpServerKeyValueInput>;
 	}
 
-	type RawGalleryMcpServerRemotes = ReadonlyArray<SseTransport | StreamableHttpTransport | McpServerDeprecatedRemote>;
+	type RawGalleryMcpServerRemotes = ReadonlyArray<
+		SseTransport | StreamableHttpTransport | McpServerDeprecatedRemote
+	>;
 
-	type RawGalleryTransport = StdioTransport | StreamableHttpTransport | SseTransport;
+	type RawGalleryTransport =
+		| StdioTransport
+		| StreamableHttpTransport
+		| SseTransport;
 
 	interface StdioTransport {
 		readonly type: 'stdio';
@@ -444,7 +632,13 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 	interface RawGalleryMcpServerPackage {
 		readonly registry_name: string;
 		readonly name: string;
-		readonly registry_type: 'npm' | 'pypi' | 'docker-hub' | 'nuget' | 'remote' | 'mcpb';
+		readonly registry_type:
+			| 'npm'
+			| 'pypi'
+			| 'docker-hub'
+			| 'nuget'
+			| 'remote'
+			| 'mcpb';
 		readonly registry_base_url?: string;
 		readonly identifier: string;
 		readonly version: string;
@@ -463,19 +657,25 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 	}
 
 	class Serializer implements IGalleryMcpServerDataSerializer {
-
-		public toRawGalleryMcpServer(input: unknown): IRawGalleryMcpServer | undefined {
+		public toRawGalleryMcpServer(
+			input: unknown,
+		): IRawGalleryMcpServer | undefined {
 			if (!input || typeof input !== 'object') {
 				return undefined;
 			}
 
 			const from = <RawGalleryMcpServer>input;
 
-			if (from.$schema && from.$schema !== McpServerSchemaVersion_v2025_07_09.SCHEMA) {
+			if (
+				from.$schema &&
+				from.$schema !== McpServerSchemaVersion_v2025_07_09.SCHEMA
+			) {
 				return undefined;
 			}
 
-			function convertServerInput(input: RawGalleryMcpServerInput): IMcpServerInput {
+			function convertServerInput(
+				input: RawGalleryMcpServerInput,
+			): IMcpServerInput {
 				return {
 					...input,
 					isRequired: input.is_required,
@@ -483,7 +683,9 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 				};
 			}
 
-			function convertVariables(variables: Record<string, RawGalleryMcpServerInput>): Record<string, IMcpServerInput> {
+			function convertVariables(
+				variables: Record<string, RawGalleryMcpServerInput>,
+			): Record<string, IMcpServerInput> {
 				const result: Record<string, IMcpServerInput> = {};
 				for (const [key, value] of Object.entries(variables)) {
 					result[key] = convertServerInput(value);
@@ -491,7 +693,9 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 				return result;
 			}
 
-			function convertServerArgument(arg: RawGalleryMcpServerArgument): IMcpServerArgument {
+			function convertServerArgument(
+				arg: RawGalleryMcpServerArgument,
+			): IMcpServerArgument {
 				if (arg.type === 'positional') {
 					return {
 						...arg,
@@ -499,7 +703,9 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 						isRepeated: arg.is_repeated,
 						isRequired: arg.is_required,
 						isSecret: arg.is_secret,
-						variables: arg.variables ? convertVariables(arg.variables) : undefined,
+						variables: arg.variables
+							? convertVariables(arg.variables)
+							: undefined,
 					};
 				}
 				return {
@@ -507,16 +713,22 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 					isRepeated: arg.is_repeated,
 					isRequired: arg.is_required,
 					isSecret: arg.is_secret,
-					variables: arg.variables ? convertVariables(arg.variables) : undefined,
+					variables: arg.variables
+						? convertVariables(arg.variables)
+						: undefined,
 				};
 			}
 
-			function convertKeyValueInput(input: RawGalleryMcpServerKeyValueInput): IMcpServerKeyValueInput {
+			function convertKeyValueInput(
+				input: RawGalleryMcpServerKeyValueInput,
+			): IMcpServerKeyValueInput {
 				return {
 					...input,
 					isRequired: input.is_required,
 					isSecret: input.is_secret,
-					variables: input.variables ? convertVariables(input.variables) : undefined,
+					variables: input.variables
+						? convertVariables(input.variables)
+						: undefined,
 				};
 			}
 
@@ -565,24 +777,39 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 			}
 
 			return {
-				packages: from.packages?.map<IMcpServerPackage>(p => ({
+				packages: from.packages?.map<IMcpServerPackage>((p) => ({
 					identifier: p.identifier ?? p.name,
-					registryType: convertRegistryType(p.registry_type ?? p.registry_name),
+					registryType: convertRegistryType(
+						p.registry_type ?? p.registry_name,
+					),
 					version: p.version,
 					fileSha256: p.file_sha256,
 					registryBaseUrl: p.registry_base_url,
-					transport: p.transport ? convertTransport(p.transport) : { type: TransportType.STDIO },
-					packageArguments: p.package_arguments?.map(convertServerArgument),
+					transport: p.transport
+						? convertTransport(p.transport)
+						: { type: TransportType.STDIO },
+					packageArguments: p.package_arguments?.map(
+						convertServerArgument,
+					),
 					runtimeHint: p.runtime_hint,
-					runtimeArguments: p.runtime_arguments?.map(convertServerArgument),
-					environmentVariables: p.environment_variables?.map(convertKeyValueInput),
+					runtimeArguments: p.runtime_arguments?.map(
+						convertServerArgument,
+					),
+					environmentVariables:
+						p.environment_variables?.map(convertKeyValueInput),
 				})),
-				remotes: from.remotes?.map(remote => {
-					const type = (<RawGalleryTransport>remote).type ?? (<McpServerDeprecatedRemote>remote).transport_type ?? (<McpServerDeprecatedRemote>remote).transport;
+				remotes: from.remotes?.map((remote) => {
+					const type =
+						(<RawGalleryTransport>remote).type ??
+						(<McpServerDeprecatedRemote>remote).transport_type ??
+						(<McpServerDeprecatedRemote>remote).transport;
 					return {
-						type: type === TransportType.SSE ? TransportType.SSE : TransportType.STREAMABLE_HTTP,
+						type:
+							type === TransportType.SSE
+								? TransportType.SSE
+								: TransportType.STREAMABLE_HTTP,
 						url: remote.url,
-						headers: remote.headers?.map(convertKeyValueInput)
+						headers: remote.headers?.map(convertKeyValueInput),
 					};
 				}),
 			};
@@ -593,7 +820,6 @@ export namespace McpServerSchemaVersion_v2025_07_09 {
 }
 
 namespace McpServerSchemaVersion_v0_1 {
-
 	export const VERSION = 'v0.1';
 	export const SCHEMA = `https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json`;
 
@@ -628,11 +854,18 @@ namespace McpServerSchemaVersion_v0_1 {
 		readonly name: string;
 	}
 
-	type RawGalleryMcpServerArgument = RawGalleryMcpServerPositionalArgument | RawGalleryMcpServerNamedArgument;
+	type RawGalleryMcpServerArgument =
+		| RawGalleryMcpServerPositionalArgument
+		| RawGalleryMcpServerNamedArgument;
 
-	type RawGalleryMcpServerRemotes = ReadonlyArray<SseTransport | StreamableHttpTransport>;
+	type RawGalleryMcpServerRemotes = ReadonlyArray<
+		SseTransport | StreamableHttpTransport
+	>;
 
-	type RawGalleryTransport = StdioTransport | StreamableHttpTransport | SseTransport;
+	type RawGalleryTransport =
+		| StdioTransport
+		| StreamableHttpTransport
+		| SseTransport;
 
 	interface StdioTransport {
 		readonly type: TransportType.STDIO;
@@ -674,21 +907,23 @@ namespace McpServerSchemaVersion_v0_1 {
 	}
 
 	class Serializer implements IGalleryMcpServerDataSerializer {
-
-		public toRawGalleryMcpServer(input: unknown): IRawGalleryMcpServer | undefined {
+		public toRawGalleryMcpServer(
+			input: unknown,
+		): IRawGalleryMcpServer | undefined {
 			if (!input || typeof input !== 'object') {
 				return undefined;
 			}
 
 			const from = <RawGalleryMcpServerInfo>input;
 
-			if (
-				(!from.server || !isObject(from.server))
-			) {
+			if (!from.server || !isObject(from.server)) {
 				return undefined;
 			}
 
-			if (from.server.$schema && from.server.$schema !== McpServerSchemaVersion_v0_1.SCHEMA) {
+			if (
+				from.server.$schema &&
+				from.server.$schema !== McpServerSchemaVersion_v0_1.SCHEMA
+			) {
 				return undefined;
 			}
 
@@ -703,19 +938,24 @@ namespace McpServerSchemaVersion_v0_1 {
 }
 
 export namespace McpServerSchemaVersion_v0 {
-
 	export const VERSION = 'v0';
 
 	class Serializer implements IGalleryMcpServerDataSerializer {
-
-		private readonly galleryMcpServerDataSerializers: IGalleryMcpServerDataSerializer[] = [];
+		private readonly galleryMcpServerDataSerializers: IGalleryMcpServerDataSerializer[] =
+			[];
 
 		constructor() {
-			this.galleryMcpServerDataSerializers.push(McpServerSchemaVersion_v0_1.SERIALIZER);
-			this.galleryMcpServerDataSerializers.push(McpServerSchemaVersion_v2025_07_09.SERIALIZER);
+			this.galleryMcpServerDataSerializers.push(
+				McpServerSchemaVersion_v0_1.SERIALIZER,
+			);
+			this.galleryMcpServerDataSerializers.push(
+				McpServerSchemaVersion_v2025_07_09.SERIALIZER,
+			);
 		}
 
-		public toRawGalleryMcpServer(input: unknown): IRawGalleryMcpServer | undefined {
+		public toRawGalleryMcpServer(
+			input: unknown,
+		): IRawGalleryMcpServer | undefined {
 			for (const serializer of this.galleryMcpServerDataSerializers) {
 				const result = serializer.toRawGalleryMcpServer(input);
 				if (result) {
@@ -728,7 +968,6 @@ export namespace McpServerSchemaVersion_v0 {
 
 	export const SERIALIZER = new Serializer();
 }
-
 
 export interface IMcpServerInput {
 	readonly description?: string;
@@ -761,7 +1000,9 @@ export interface IMcpServerKeyValueInput extends IMcpServerVariableInput {
 	readonly value?: string;
 }
 
-export type IMcpServerArgument = IMcpServerPositionalArgument | IMcpServerNamedArgument;
+export type IMcpServerArgument =
+	| IMcpServerPositionalArgument
+	| IMcpServerNamedArgument;
 
 export const enum RegistryType {
 	NODE = 'npm',
@@ -769,13 +1010,13 @@ export const enum RegistryType {
 	DOCKER = 'oci',
 	NUGET = 'nuget',
 	MCPB = 'mcpb',
-	REMOTE = 'remote'
+	REMOTE = 'remote',
 }
 
 export const enum TransportType {
 	STDIO = 'stdio',
 	STREAMABLE_HTTP = 'streamable-http',
-	SSE = 'sse'
+	SSE = 'sse',
 }
 
 export interface StdioTransport {
@@ -816,7 +1057,7 @@ export interface IGalleryMcpServerConfiguration {
 
 export const enum GalleryMcpServerStatus {
 	Active = 'active',
-	Deprecated = 'deprecated'
+	Deprecated = 'deprecated',
 }
 
 export interface IInstallableMcpServer {
@@ -831,21 +1072,26 @@ export interface McpServerConfigurationParseResult {
 	readonly notices: string[];
 }
 
-
 // Copied from https://github.com/microsoft/vscode/blob/f8e2f71c2f78ac1ce63389e761e2aefc724646fc/src/vs/platform/mcp/common/mcpManagementService.ts
 
 export class McpMappingUtility {
-	getMcpServerConfigurationFromManifest(manifest: IGalleryMcpServerConfiguration, packageType: RegistryType): McpServerConfigurationParseResult {
-
+	getMcpServerConfigurationFromManifest(
+		manifest: IGalleryMcpServerConfiguration,
+		packageType: RegistryType,
+	): McpServerConfigurationParseResult {
 		// remote
 		if (packageType === RegistryType.REMOTE && manifest.remotes?.length) {
-			const { inputs, variables } = this.processKeyValueInputs(manifest.remotes[0].headers ?? []);
+			const { inputs, variables } = this.processKeyValueInputs(
+				manifest.remotes[0].headers ?? [],
+			);
 			return {
 				mcpServerConfiguration: {
 					config: {
 						type: McpServerType.REMOTE,
 						url: manifest.remotes[0].url,
-						headers: Object.keys(inputs).length ? inputs : undefined,
+						headers: Object.keys(inputs).length
+							? inputs
+							: undefined,
 					},
 					inputs: variables.length ? variables : undefined,
 				},
@@ -854,7 +1100,9 @@ export class McpMappingUtility {
 		}
 
 		// local
-		const serverPackage = manifest.packages?.find(p => p.registryType === packageType) ?? manifest.packages?.[0];
+		const serverPackage =
+			manifest.packages?.find((p) => p.registryType === packageType) ??
+			manifest.packages?.[0];
 		if (!serverPackage) {
 			throw new Error(`No server package found`);
 		}
@@ -871,14 +1119,22 @@ export class McpMappingUtility {
 		}
 
 		if (serverPackage.runtimeArguments?.length) {
-			const result = this.processArguments(serverPackage.runtimeArguments ?? []);
+			const result = this.processArguments(
+				serverPackage.runtimeArguments ?? [],
+			);
 			args.push(...result.args);
 			inputs.push(...result.variables);
 			notices.push(...result.notices);
 		}
 
 		if (serverPackage.environmentVariables?.length) {
-			const { inputs: envInputs, variables: envVariables, notices: envNotices } = this.processKeyValueInputs(serverPackage.environmentVariables ?? []);
+			const {
+				inputs: envInputs,
+				variables: envVariables,
+				notices: envNotices,
+			} = this.processKeyValueInputs(
+				serverPackage.environmentVariables ?? [],
+			);
 			inputs.push(...envVariables);
 			notices.push(...envNotices);
 			for (const [name, value] of Object.entries(envInputs)) {
@@ -892,16 +1148,32 @@ export class McpMappingUtility {
 
 		switch (serverPackage.registryType) {
 			case RegistryType.NODE:
-				args.push(serverPackage.version ? `${serverPackage.identifier}@${serverPackage.version}` : serverPackage.identifier);
+				args.push(
+					serverPackage.version
+						? `${serverPackage.identifier}@${serverPackage.version}`
+						: serverPackage.identifier,
+				);
 				break;
 			case RegistryType.PYTHON:
-				args.push(serverPackage.version ? `${serverPackage.identifier}==${serverPackage.version}` : serverPackage.identifier);
+				args.push(
+					serverPackage.version
+						? `${serverPackage.identifier}==${serverPackage.version}`
+						: serverPackage.identifier,
+				);
 				break;
 			case RegistryType.DOCKER:
-				args.push(serverPackage.version ? `${serverPackage.identifier}:${serverPackage.version}` : serverPackage.identifier);
+				args.push(
+					serverPackage.version
+						? `${serverPackage.identifier}:${serverPackage.version}`
+						: serverPackage.identifier,
+				);
 				break;
 			case RegistryType.NUGET:
-				args.push(serverPackage.version ? `${serverPackage.identifier}@${serverPackage.version}` : serverPackage.identifier);
+				args.push(
+					serverPackage.version
+						? `${serverPackage.identifier}@${serverPackage.version}`
+						: serverPackage.identifier,
+				);
 				args.push('--yes'); // installation is confirmed by the UI, so --yes is appropriate here
 				if (serverPackage.packageArguments?.length) {
 					args.push('--');
@@ -910,7 +1182,9 @@ export class McpMappingUtility {
 		}
 
 		if (serverPackage.packageArguments?.length) {
-			const result = this.processArguments(serverPackage.packageArguments);
+			const result = this.processArguments(
+				serverPackage.packageArguments,
+			);
 			args.push(...result.args);
 			inputs.push(...result.variables);
 			notices.push(...result.notices);
@@ -926,26 +1200,34 @@ export class McpMappingUtility {
 					env: Object.keys(env).length ? env : undefined,
 				},
 				inputs: inputs.length ? inputs : undefined,
-			}
+			},
 		};
 	}
 
 	protected getCommandName(packageType: RegistryType): string {
 		switch (packageType) {
-			case RegistryType.NODE: return 'npx';
-			case RegistryType.DOCKER: return 'docker';
-			case RegistryType.PYTHON: return 'uvx';
-			case RegistryType.NUGET: return 'dnx';
+			case RegistryType.NODE:
+				return 'npx';
+			case RegistryType.DOCKER:
+				return 'docker';
+			case RegistryType.PYTHON:
+				return 'uvx';
+			case RegistryType.NUGET:
+				return 'dnx';
 		}
 		return packageType;
 	}
 
-	protected getVariables(variableInputs: Record<string, IMcpServerInput>): IMcpServerVariable[] {
+	protected getVariables(
+		variableInputs: Record<string, IMcpServerInput>,
+	): IMcpServerVariable[] {
 		const variables: IMcpServerVariable[] = [];
 		for (const [key, value] of Object.entries(variableInputs)) {
 			variables.push({
 				id: key,
-				type: value.choices ? McpServerVariableType.PICK : McpServerVariableType.PROMPT,
+				type: value.choices
+					? McpServerVariableType.PICK
+					: McpServerVariableType.PROMPT,
 				description: value.description ?? '',
 				password: !!value.isSecret,
 				default: value.default,
@@ -955,26 +1237,44 @@ export class McpMappingUtility {
 		return variables;
 	}
 
-	private processKeyValueInputs(keyValueInputs: ReadonlyArray<IMcpServerKeyValueInput>): { inputs: Record<string, string>; variables: IMcpServerVariable[]; notices: string[] } {
+	private processKeyValueInputs(
+		keyValueInputs: ReadonlyArray<IMcpServerKeyValueInput>,
+	): {
+		inputs: Record<string, string>;
+		variables: IMcpServerVariable[];
+		notices: string[];
+	} {
 		const notices: string[] = [];
 		const inputs: Record<string, string> = {};
 		const variables: IMcpServerVariable[] = [];
 
 		for (const input of keyValueInputs) {
-			const inputVariables = input.variables ? this.getVariables(input.variables) : [];
+			const inputVariables = input.variables
+				? this.getVariables(input.variables)
+				: [];
 			let value = input.value || '';
 
 			// If explicit variables exist, use them regardless of value
 			if (inputVariables.length) {
 				for (const variable of inputVariables) {
-					value = value.replace(`{${variable.id}}`, `\${input:${variable.id}}`);
+					value = value.replace(
+						`{${variable.id}}`,
+						`\${input:${variable.id}}`,
+					);
 				}
 				variables.push(...inputVariables);
-			} else if (!value && (input.description || input.choices || input.default !== undefined)) {
+			} else if (
+				!value &&
+				(input.description ||
+					input.choices ||
+					input.default !== undefined)
+			) {
 				// Only create auto-generated input variable if no explicit variables and no value
 				variables.push({
 					id: input.name,
-					type: input.choices ? McpServerVariableType.PICK : McpServerVariableType.PROMPT,
+					type: input.choices
+						? McpServerVariableType.PICK
+						: McpServerVariableType.PROMPT,
 					description: input.description ?? '',
 					password: !!input.isSecret,
 					default: input.default,
@@ -989,24 +1289,36 @@ export class McpMappingUtility {
 		return { inputs, variables, notices };
 	}
 
-	private processArguments(argumentsList: readonly IMcpServerArgument[]): { args: string[]; variables: IMcpServerVariable[]; notices: string[] } {
+	private processArguments(argumentsList: readonly IMcpServerArgument[]): {
+		args: string[];
+		variables: IMcpServerVariable[];
+		notices: string[];
+	} {
 		const args: string[] = [];
 		const variables: IMcpServerVariable[] = [];
 		const notices: string[] = [];
 		for (const arg of argumentsList) {
-			const argVariables = arg.variables ? this.getVariables(arg.variables) : [];
+			const argVariables = arg.variables
+				? this.getVariables(arg.variables)
+				: [];
 
 			if (arg.type === 'positional') {
 				let value = arg.value;
 				if (value) {
 					for (const variable of argVariables) {
-						value = value.replace(`{${variable.id}}`, `\${input:${variable.id}}`);
+						value = value.replace(
+							`{${variable.id}}`,
+							`\${input:${variable.id}}`,
+						);
 					}
 					args.push(value);
 					if (argVariables.length) {
 						variables.push(...argVariables);
 					}
-				} else if (arg.valueHint && (arg.description || arg.default !== undefined)) {
+				} else if (
+					arg.valueHint &&
+					(arg.description || arg.default !== undefined)
+				) {
 					// Create input variable for positional argument without value
 					variables.push({
 						id: arg.valueHint,
@@ -1022,14 +1334,19 @@ export class McpMappingUtility {
 				}
 			} else if (arg.type === 'named') {
 				if (!arg.name) {
-					notices.push(`Named argument is missing a name. ${JSON.stringify(arg)}`);
+					notices.push(
+						`Named argument is missing a name. ${JSON.stringify(arg)}`,
+					);
 					continue;
 				}
 				args.push(arg.name);
 				if (arg.value) {
 					let value = arg.value;
 					for (const variable of argVariables) {
-						value = value.replace(`{${variable.id}}`, `\${input:${variable.id}}`);
+						value = value.replace(
+							`{${variable.id}}`,
+							`\${input:${variable.id}}`,
+						);
 					}
 					args.push(value);
 					if (argVariables.length) {
@@ -1052,7 +1369,6 @@ export class McpMappingUtility {
 		return { args, variables, notices };
 	}
 }
-
 
 // Copied from https://github.com/microsoft/vscode/blob/f8e2f71c2f78ac1ce63389e761e2aefc724646fc/src/vs/platform/mcp/common/mcpPlatformTypes.ts
 
@@ -1106,7 +1422,9 @@ export interface IMcpRemoteServerConfiguration extends ICommonMcpServerConfigura
 	readonly dev?: IMcpDevModeConfig;
 }
 
-export type IMcpServerConfiguration = IMcpStdioServerConfiguration | IMcpRemoteServerConfiguration;
+export type IMcpServerConfiguration =
+	| IMcpStdioServerConfiguration
+	| IMcpRemoteServerConfiguration;
 
 export interface IMcpServersConfiguration {
 	servers?: IStringDictionary<IMcpServerConfiguration>;

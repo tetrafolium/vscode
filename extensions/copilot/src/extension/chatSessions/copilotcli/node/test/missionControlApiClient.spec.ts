@@ -8,12 +8,23 @@ import { describe, expect, it, vi } from 'vitest';
 import type { IAuthenticationService } from '../../../../../platform/authentication/common/authentication';
 import { INTEGRATION_ID } from '../../../../../platform/endpoint/common/licenseAgreement';
 import type { ILogService } from '../../../../../platform/log/common/logService';
-import { type FetchOptions, type IFetcherService, HeadersImpl, Response } from '../../../../../platform/networking/common/fetcherService';
+import {
+	type FetchOptions,
+	type IFetcherService,
+	HeadersImpl,
+	Response,
+} from '../../../../../platform/networking/common/fetcherService';
 import { Emitter } from '../../../../../util/vs/base/common/event';
 import { MissionControlApiClient } from '../missionControlApiClient';
 
 function createResponse(body: string): Response {
-	return Response.fromText(200, 'OK', new HeadersImpl({ 'content-type': 'application/json' }), body, 'test-stub');
+	return Response.fromText(
+		200,
+		'OK',
+		new HeadersImpl({ 'content-type': 'application/json' }),
+		body,
+		'test-stub',
+	);
 }
 
 describe('MissionControlApiClient', () => {
@@ -32,7 +43,9 @@ describe('MissionControlApiClient', () => {
 				}
 
 				if (url.endsWith('/agents/sessions')) {
-					return createResponse(JSON.stringify({ id: 'mc-session', task_id: 'task-1' }));
+					return createResponse(
+						JSON.stringify({ id: 'mc-session', task_id: 'task-1' }),
+					);
 				}
 
 				return createResponse('{}');
@@ -54,7 +67,10 @@ describe('MissionControlApiClient', () => {
 		const authenticationService = {
 			_serviceBrand: undefined,
 			getGitHubSession: vi.fn(async () => githubSession),
-			getCopilotToken: vi.fn(async () => ({ token: 'copilot-token', endpoints: { api: 'https://api.github.test/' } })),
+			getCopilotToken: vi.fn(async () => ({
+				token: 'copilot-token',
+				endpoints: { api: 'https://api.github.test/' },
+			})),
 		} as unknown as IAuthenticationService;
 		const logService = {
 			_serviceBrand: undefined,
@@ -68,7 +84,11 @@ describe('MissionControlApiClient', () => {
 			withExtraTarget: () => logService,
 		} as unknown as ILogService;
 
-		const client = new MissionControlApiClient(authenticationService, fetcherService, logService);
+		const client = new MissionControlApiClient(
+			authenticationService,
+			fetcherService,
+			logService,
+		);
 
 		await client.createSession(1, 2, 'task-1', {});
 		await client.submitEvents('mc-session', [], []);
@@ -76,7 +96,11 @@ describe('MissionControlApiClient', () => {
 		await client.deleteSession('mc-session');
 
 		expect(requests).toHaveLength(4);
-		expect(requests.map(({ options }) => options.headers?.['Copilot-Integration-Id'])).toEqual([
+		expect(
+			requests.map(
+				({ options }) => options.headers?.['Copilot-Integration-Id'],
+			),
+		).toEqual([
 			INTEGRATION_ID,
 			INTEGRATION_ID,
 			INTEGRATION_ID,

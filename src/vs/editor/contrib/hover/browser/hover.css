@@ -72,11 +72,19 @@
 	font-size: 11px;
 }
 
-.monaco-editor .monaco-hover .hover-row .verbosity-actions-inner .codicon.enabled {
+.monaco-editor
+	.monaco-hover
+	.hover-row
+	.verbosity-actions-inner
+	.codicon.enabled {
 	color: var(--vscode-textLink-foreground);
 }
 
-.monaco-editor .monaco-hover .hover-row .verbosity-actions-inner .codicon.disabled {
+.monaco-editor
+	.monaco-hover
+	.hover-row
+	.verbosity-actions-inner
+	.codicon.disabled {
 	opacity: 0.6;
 }
 
@@ -101,7 +109,10 @@
 }
 
 .monaco-editor .monaco-hover .hover-row-with-copy:hover .hover-copy-button,
-.monaco-editor .monaco-hover .hover-row-with-copy:focus-within .hover-copy-button {
+.monaco-editor
+	.monaco-hover
+	.hover-row-with-copy:focus-within
+	.hover-copy-button {
 	opacity: 1;
 }
 

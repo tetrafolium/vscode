@@ -6,13 +6,20 @@
 import type { LanguageModelToolInformation } from 'vscode';
 import { assertNever } from '../../../../util/vs/base/common/assert';
 import { groupBy } from '../../../../util/vs/base/common/collections';
-import { getToolsForCategory, toolCategories, ToolCategory, ToolName } from '../toolNames';
+import {
+	getToolsForCategory,
+	toolCategories,
+	ToolCategory,
+	ToolName,
+} from '../toolNames';
 import { VIRTUAL_TOOL_NAME_PREFIX, VirtualTool } from './virtualTool';
 import * as Constant from './virtualToolsConstants';
 
 const BUILT_IN_GROUP = 'builtin';
-const SUMMARY_PREFIX = 'Call this tool when you need access to a new category of tools. The category of tools is described as follows:\n\n';
-const SUMMARY_SUFFIX = '\n\nBe sure to call this tool if you need a capability related to the above.';
+const SUMMARY_PREFIX =
+	'Call this tool when you need access to a new category of tools. The category of tools is described as follows:\n\n';
+const SUMMARY_SUFFIX =
+	'\n\nBe sure to call this tool if you need a capability related to the above.';
 
 /**
  * Get the summary description for a tool category.
@@ -40,38 +47,56 @@ function getCategorySummary(category: ToolCategory): string {
 }
 
 export class BuiltInToolGroupHandler {
-	constructor() { }
+	constructor() {}
 
 	/** Creates groups for built-in tools based on the type-safe categorization system */
-	createBuiltInToolGroups(tools: LanguageModelToolInformation[]): (VirtualTool | LanguageModelToolInformation)[] {
+	createBuiltInToolGroups(
+		tools: LanguageModelToolInformation[],
+	): (VirtualTool | LanguageModelToolInformation)[] {
 		// If there are too few tools, don't group them
 		if (tools.length <= Constant.MIN_TOOLSET_SIZE_TO_GROUP) {
 			return tools;
 		}
 
-		const contributedTools = tools.filter(t => !toolCategories.hasOwnProperty(t.name));
-		const builtInTools = tools.filter(t => toolCategories.hasOwnProperty(t.name));
+		const contributedTools = tools.filter(
+			(t) => !toolCategories.hasOwnProperty(t.name),
+		);
+		const builtInTools = tools.filter((t) =>
+			toolCategories.hasOwnProperty(t.name),
+		);
 
 		// Filter out Core tools from grouping (they should remain individual)
-		const toolsToGroup = builtInTools.filter(t => toolCategories[t.name as ToolName] !== ToolCategory.Core);
-		const coreTools = builtInTools.filter(t => toolCategories[t.name as ToolName] === ToolCategory.Core);
+		const toolsToGroup = builtInTools.filter(
+			(t) => toolCategories[t.name as ToolName] !== ToolCategory.Core,
+		);
+		const coreTools = builtInTools.filter(
+			(t) => toolCategories[t.name as ToolName] === ToolCategory.Core,
+		);
 
-		const categories = groupBy(toolsToGroup, t => toolCategories[t.name as ToolName]);
-		const virtualTools = Object.entries(categories).flatMap<VirtualTool | LanguageModelToolInformation>(([category, tools]) => {
+		const categories = groupBy(
+			toolsToGroup,
+			(t) => toolCategories[t.name as ToolName],
+		);
+		const virtualTools = Object.entries(categories).flatMap<
+			VirtualTool | LanguageModelToolInformation
+		>(([category, tools]) => {
 			if (tools.length < Constant.MIN_TOOLSET_SIZE_TO_GROUP) {
 				return tools;
 			}
 
 			return new VirtualTool(
-				VIRTUAL_TOOL_NAME_PREFIX + category.toLowerCase().replace(/\s+/g, '_'),
-				SUMMARY_PREFIX + getCategorySummary(category as ToolCategory) + SUMMARY_SUFFIX,
+				VIRTUAL_TOOL_NAME_PREFIX +
+					category.toLowerCase().replace(/\s+/g, '_'),
+				SUMMARY_PREFIX +
+					getCategorySummary(category as ToolCategory) +
+					SUMMARY_SUFFIX,
 				0,
 				{
 					possiblePrefix: 'builtin_',
 					wasExpandedByDefault: false,
-					canBeCollapsed: true
+					canBeCollapsed: true,
 				},
-				tools
+				tools,
 			);
 		});
 

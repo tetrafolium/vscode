@@ -9,16 +9,22 @@ import { runQueries } from './querying';
 import { WASMLanguage } from './treeSitterLanguages';
 import { testInSuiteQueries } from './treeSitterQueries';
 
-export async function _findLastTest(lang: WASMLanguage, src: string): Promise<TreeSitterOffsetRange | null> {
-
+export async function _findLastTest(
+	lang: WASMLanguage,
+	src: string,
+): Promise<TreeSitterOffsetRange | null> {
 	const treeRef = await _parse(lang, src);
 
 	try {
-		const queryResults = runQueries(testInSuiteQueries[lang], treeRef.tree.rootNode);
+		const queryResults = runQueries(
+			testInSuiteQueries[lang],
+			treeRef.tree.rootNode,
+		);
 
 		const captures = queryResults
-			.flatMap(e => e.captures).sort((a, b) => a.node.endIndex - b.node.endIndex)
-			.filter(c => c.name === 'test');
+			.flatMap((e) => e.captures)
+			.sort((a, b) => a.node.endIndex - b.node.endIndex)
+			.filter((c) => c.name === 'test');
 
 		if (captures.length === 0) {
 			return null;
@@ -28,7 +34,7 @@ export async function _findLastTest(lang: WASMLanguage, src: string): Promise<Tr
 
 		return {
 			startIndex: lastTest.startIndex,
-			endIndex: lastTest.endIndex
+			endIndex: lastTest.endIndex,
 		};
 	} finally {
 		treeRef.dispose();

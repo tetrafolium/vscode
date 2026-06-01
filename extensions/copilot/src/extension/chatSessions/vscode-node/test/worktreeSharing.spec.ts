@@ -12,12 +12,20 @@ import { getBlockingSiblingSessionsForFolder } from '../worktreeSharing';
 
 class TestMetadataStore extends mock<IChatSessionMetadataStore>() {
 	sessionIdsForFolder: string[] = [];
-	parentBySessionId = new Map<string, Awaited<ReturnType<IChatSessionMetadataStore['getSessionParentId']>>>();
+	parentBySessionId = new Map<
+		string,
+		Awaited<ReturnType<IChatSessionMetadataStore['getSessionParentId']>>
+	>();
 	archivedBySessionId = new Map<string, boolean>();
 
 	override getSessionIdsForFolder = vi.fn(() => this.sessionIdsForFolder);
-	override getSessionParentId = vi.fn(async (sessionId: string) => this.parentBySessionId.get(sessionId));
-	override getSessionArchived = vi.fn(async (sessionId: string) => this.archivedBySessionId.get(sessionId) ?? false);
+	override getSessionParentId = vi.fn(async (sessionId: string) =>
+		this.parentBySessionId.get(sessionId),
+	);
+	override getSessionArchived = vi.fn(
+		async (sessionId: string) =>
+			this.archivedBySessionId.get(sessionId) ?? false,
+	);
 }
 
 class TestWorkspaceFolderService extends mock<IChatSessionWorkspaceFolderService>() {
@@ -38,7 +46,12 @@ describe('getBlockingSiblingSessionsForFolder', () => {
 	it('returns no blockers when only the excluded session matches', async () => {
 		metadataStore.sessionIdsForFolder = ['session-1'];
 
-		const blockers = await getBlockingSiblingSessionsForFolder(folder, 'session-1', metadataStore, workspaceFolderService);
+		const blockers = await getBlockingSiblingSessionsForFolder(
+			folder,
+			'session-1',
+			metadataStore,
+			workspaceFolderService,
+		);
 
 		expect(blockers).toEqual([]);
 		expect(metadataStore.getSessionParentId).not.toHaveBeenCalled();
@@ -46,24 +59,58 @@ describe('getBlockingSiblingSessionsForFolder', () => {
 	});
 
 	it('filters out archived and sub-session siblings', async () => {
-		metadataStore.sessionIdsForFolder = ['excluded', 'active', 'archived', 'sub', 'forked'];
+		metadataStore.sessionIdsForFolder = [
+			'excluded',
+			'active',
+			'archived',
+			'sub',
+			'forked',
+		];
 		workspaceFolderService.associatedSessions = ['sub'];
 		metadataStore.archivedBySessionId.set('archived', true);
-		metadataStore.parentBySessionId.set('sub', { parentSessionId: 'parent', kind: 'sub-session' });
-		metadataStore.parentBySessionId.set('forked', { parentSessionId: 'parent', kind: 'forked' });
+		metadataStore.parentBySessionId.set('sub', {
+			parentSessionId: 'parent',
+			kind: 'sub-session',
+		});
+		metadataStore.parentBySessionId.set('forked', {
+			parentSessionId: 'parent',
+			kind: 'forked',
+		});
 
-		const blockers = await getBlockingSiblingSessionsForFolder(folder, 'excluded', metadataStore, workspaceFolderService);
+		const blockers = await getBlockingSiblingSessionsForFolder(
+			folder,
+			'excluded',
+			metadataStore,
+			workspaceFolderService,
+		);
 
 		expect(blockers.sort()).toEqual(['active', 'forked']);
 	});
 
 	it('de-duplicates session ids across metadata and workspace associated sessions', async () => {
-		metadataStore.sessionIdsForFolder = ['excluded', 'shared', 'metadata-only'];
-		workspaceFolderService.associatedSessions = ['shared', 'workspace-only', 'excluded'];
+		metadataStore.sessionIdsForFolder = [
+			'excluded',
+			'shared',
+			'metadata-only',
+		];
+		workspaceFolderService.associatedSessions = [
+			'shared',
+			'workspace-only',
+			'excluded',
+		];
 
-		const blockers = await getBlockingSiblingSessionsForFolder(folder, 'excluded', metadataStore, workspaceFolderService);
+		const blockers = await getBlockingSiblingSessionsForFolder(
+			folder,
+			'excluded',
+			metadataStore,
+			workspaceFolderService,
+		);
 
-		expect(blockers.sort()).toEqual(['metadata-only', 'shared', 'workspace-only']);
+		expect(blockers.sort()).toEqual([
+			'metadata-only',
+			'shared',
+			'workspace-only',
+		]);
 		expect(metadataStore.getSessionArchived).toHaveBeenCalledTimes(3);
 		expect(metadataStore.getSessionParentId).toHaveBeenCalledTimes(3);
 	});

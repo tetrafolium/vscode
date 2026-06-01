@@ -16,7 +16,11 @@ export interface Event<T> {
 	 * @param disposables An array to which a {{Disposable}} will be added.
 	 * @returns A disposable which unsubscribes the event listener.
 	 */
-	(listener: (e: T) => void, thisArgs?: unknown, disposables?: Disposable[]): Disposable;
+	(
+		listener: (e: T) => void,
+		thisArgs?: unknown,
+		disposables?: Disposable[],
+	): Disposable;
 }
 
 /**
@@ -33,12 +37,19 @@ export class Emitter<T> extends lsp.Emitter<T> {
  * Mostly useful for tranforming native VS Code events into our own.
  * If the transformation function returns `undefined`, the listener will not be called.
  */
-export function transformEvent<T, R extends object>(event: Event<T>, transform: (value: T) => R | undefined): Event<R> {
+export function transformEvent<T, R extends object>(
+	event: Event<T>,
+	transform: (value: T) => R | undefined,
+): Event<R> {
 	return (listener, thisArgs, disposables) => {
-		if (thisArgs) { listener = listener.bind(thisArgs); }
+		if (thisArgs) {
+			listener = listener.bind(thisArgs);
+		}
 		const wrappedListener = (value: T) => {
 			const transformed = transform(value);
-			if (transformed !== undefined) { listener(transformed); }
+			if (transformed !== undefined) {
+				listener(transformed);
+			}
 		};
 		return event(wrappedListener, undefined, disposables);
 	};

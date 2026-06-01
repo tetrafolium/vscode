@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 export class GitCommitFoldingProvider implements vscode.FoldingRangeProvider {
-
 	provideFoldingRanges(
 		document: vscode.TextDocument,
 		_context: vscode.FoldingContext,
-		_token: vscode.CancellationToken
+		_token: vscode.CancellationToken,
 	): vscode.ProviderResult<vscode.FoldingRange[]> {
 		const ranges: vscode.FoldingRange[] = [];
 
@@ -22,7 +21,7 @@ export class GitCommitFoldingProvider implements vscode.FoldingRangeProvider {
 			const lineText = line.text;
 
 			// Check for comment lines (lines starting with #)
-			if (lineText.startsWith('#')) {
+			if (lineText.startsWith("#")) {
 				// Close any active diff block when we encounter a comment
 				if (currentDiffStart !== undefined) {
 					// Only create fold if there are at least 2 lines
@@ -40,18 +39,20 @@ export class GitCommitFoldingProvider implements vscode.FoldingRangeProvider {
 				if (commentBlockStart !== undefined) {
 					// Only create fold if there are at least 2 lines
 					if (i - commentBlockStart > 1) {
-						ranges.push(new vscode.FoldingRange(
-							commentBlockStart,
-							i - 1,
-							vscode.FoldingRangeKind.Comment
-						));
+						ranges.push(
+							new vscode.FoldingRange(
+								commentBlockStart,
+								i - 1,
+								vscode.FoldingRangeKind.Comment,
+							),
+						);
 					}
 					commentBlockStart = undefined;
 				}
 			}
 
 			// Check for diff sections (lines starting with "diff --git")
-			if (lineText.startsWith('diff --git ')) {
+			if (lineText.startsWith("diff --git ")) {
 				// If there's a previous diff block, close it
 				if (currentDiffStart !== undefined) {
 					// Only create fold if there are at least 2 lines
@@ -69,21 +70,22 @@ export class GitCommitFoldingProvider implements vscode.FoldingRangeProvider {
 		// If comment block extends to end of document
 		if (commentBlockStart !== undefined) {
 			if (document.lineCount - commentBlockStart > 1) {
-				ranges.push(new vscode.FoldingRange(
-					commentBlockStart,
-					document.lineCount - 1,
-					vscode.FoldingRangeKind.Comment
-				));
+				ranges.push(
+					new vscode.FoldingRange(
+						commentBlockStart,
+						document.lineCount - 1,
+						vscode.FoldingRangeKind.Comment,
+					),
+				);
 			}
 		}
 
 		// If diff block extends to end of document
 		if (currentDiffStart !== undefined) {
 			if (document.lineCount - currentDiffStart > 1) {
-				ranges.push(new vscode.FoldingRange(
-					currentDiffStart,
-					document.lineCount - 1
-				));
+				ranges.push(
+					new vscode.FoldingRange(currentDiffStart, document.lineCount - 1),
+				);
 			}
 		}
 

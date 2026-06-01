@@ -3,17 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { sumBy } from '../../../../../base/common/arrays.js';
-import { TaskQueue, timeout } from '../../../../../base/common/async.js';
-import { Lazy } from '../../../../../base/common/lazy.js';
-import { Disposable, DisposableStore, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { autorun, derived, mapObservableArrayCached, observableValue, runOnChange } from '../../../../../base/common/observable.js';
-import { AnnotatedStringEdit } from '../../../../../editor/common/core/edits/stringEdit.js';
-import { isAiEdit, isUserEdit } from '../../../../../editor/common/textModelEditSource.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
-import { AnnotatedDocuments } from '../helpers/annotatedDocuments.js';
-import { AiStatsStatusBar } from './aiStatsStatusBar.js';
+import { sumBy } from "../../../../../base/common/arrays.js";
+import { TaskQueue, timeout } from "../../../../../base/common/async.js";
+import { Lazy } from "../../../../../base/common/lazy.js";
+import {
+	Disposable,
+	DisposableStore,
+	toDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import {
+	autorun,
+	derived,
+	mapObservableArrayCached,
+	observableValue,
+	runOnChange,
+} from "../../../../../base/common/observable.js";
+import { AnnotatedStringEdit } from "../../../../../editor/common/core/edits/stringEdit.js";
+import {
+	isAiEdit,
+	isUserEdit,
+} from "../../../../../editor/common/textModelEditSource.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../../platform/storage/common/storage.js";
+import { AnnotatedDocuments } from "../helpers/annotatedDocuments.js";
+import { AiStatsStatusBar } from "./aiStatsStatusBar.js";
 
 export class AiStatsFeature extends Disposable {
 	private readonly _data: IValue<IData>;
@@ -22,67 +39,95 @@ export class AiStatsFeature extends Disposable {
 	constructor(
 		annotatedDocuments: AnnotatedDocuments,
 		@IStorageService private readonly _storageService: IStorageService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 	) {
 		super();
 
-		const storedValue = getStoredValue<IData>(this._storageService, 'aiStats', StorageScope.WORKSPACE, StorageTarget.USER);
+		const storedValue = getStoredValue<IData>(
+			this._storageService,
+			"aiStats",
+			StorageScope.WORKSPACE,
+			StorageTarget.USER,
+		);
 		this._data = rateLimitWrite<IData>(storedValue, 1 / 60, this._store);
 
 		this.aiRate.recomputeInitiallyAndOnChange(this._store);
 
-		this._register(autorun(reader => {
-			reader.store.add(this._instantiationService.createInstance(AiStatsStatusBar.hot.read(reader), this));
-		}));
-
+		this._register(
+			autorun((reader) => {
+				reader.store.add(
+					this._instantiationService.createInstance(
+						AiStatsStatusBar.hot.read(reader),
+						this,
+					),
+				);
+			}),
+		);
 
 		const lastRequestIds: string[] = [];
 
-		const obs = mapObservableArrayCached(this, annotatedDocuments.documents, (doc, store) => {
-			store.add(runOnChange(doc.documentWithAnnotations.value, (_val, _prev, edit) => {
-				const e = AnnotatedStringEdit.compose(edit.map(e => e.edit));
+		const obs = mapObservableArrayCached(
+			this,
+			annotatedDocuments.documents,
+			(doc, store) => {
+				store.add(
+					runOnChange(
+						doc.documentWithAnnotations.value,
+						(_val, _prev, edit) => {
+							const e = AnnotatedStringEdit.compose(edit.map((e) => e.edit));
 
-				const curSession = new Lazy(() => this._getDataAndSession());
+							const curSession = new Lazy(() => this._getDataAndSession());
 
-				for (const r of e.replacements) {
-					if (isAiEdit(r.data.editSource)) {
-						curSession.value.currentSession.aiCharacters += r.newText.length;
-					} else if (isUserEdit(r.data.editSource)) {
-						curSession.value.currentSession.typedCharacters += r.newText.length;
-					}
-				}
-
-				if (e.replacements.length > 0) {
-					const sessionToUpdate = curSession.value.currentSession;
-					const s = e.replacements[0].data.editSource;
-					if (s.metadata.source === 'inlineCompletionAccept') {
-						if (sessionToUpdate.acceptedInlineSuggestions === undefined) {
-							sessionToUpdate.acceptedInlineSuggestions = 0;
-						}
-						sessionToUpdate.acceptedInlineSuggestions += 1;
-					}
-
-					if (s.metadata.source === 'Chat.applyEdits' && s.metadata.$$requestId !== undefined) {
-						const didSeeRequestId = lastRequestIds.includes(s.metadata.$$requestId);
-						if (!didSeeRequestId) {
-							lastRequestIds.push(s.metadata.$$requestId);
-							if (lastRequestIds.length > 10) {
-								lastRequestIds.shift();
+							for (const r of e.replacements) {
+								if (isAiEdit(r.data.editSource)) {
+									curSession.value.currentSession.aiCharacters +=
+										r.newText.length;
+								} else if (isUserEdit(r.data.editSource)) {
+									curSession.value.currentSession.typedCharacters +=
+										r.newText.length;
+								}
 							}
-							if (sessionToUpdate.chatEditCount === undefined) {
-								sessionToUpdate.chatEditCount = 0;
-							}
-							sessionToUpdate.chatEditCount += 1;
-						}
-					}
-				}
 
-				if (curSession.hasValue) {
-					this._data.writeValue(curSession.value.data);
-					this._dataVersion.set(this._dataVersion.get() + 1, undefined);
-				}
-			}));
-		});
+							if (e.replacements.length > 0) {
+								const sessionToUpdate = curSession.value.currentSession;
+								const s = e.replacements[0].data.editSource;
+								if (s.metadata.source === "inlineCompletionAccept") {
+									if (sessionToUpdate.acceptedInlineSuggestions === undefined) {
+										sessionToUpdate.acceptedInlineSuggestions = 0;
+									}
+									sessionToUpdate.acceptedInlineSuggestions += 1;
+								}
+
+								if (
+									s.metadata.source === "Chat.applyEdits" &&
+									s.metadata.$$requestId !== undefined
+								) {
+									const didSeeRequestId = lastRequestIds.includes(
+										s.metadata.$$requestId,
+									);
+									if (!didSeeRequestId) {
+										lastRequestIds.push(s.metadata.$$requestId);
+										if (lastRequestIds.length > 10) {
+											lastRequestIds.shift();
+										}
+										if (sessionToUpdate.chatEditCount === undefined) {
+											sessionToUpdate.chatEditCount = 0;
+										}
+										sessionToUpdate.chatEditCount += 1;
+									}
+								}
+							}
+
+							if (curSession.hasValue) {
+								this._data.writeValue(curSession.value.data);
+								this._dataVersion.set(this._dataVersion.get() + 1, undefined);
+							}
+						},
+					),
+				);
+			},
+		);
 
 		obs.recomputeInitiallyAndOnChange(this._store);
 	}
@@ -93,7 +138,7 @@ export class AiStatsFeature extends Disposable {
 			return 0;
 		}
 
-		const r = average(val.sessions, session => {
+		const r = average(val.sessions, (session) => {
 			const sum = session.typedCharacters + session.aiCharacters;
 			if (sum === 0) {
 				return 0;
@@ -104,7 +149,7 @@ export class AiStatsFeature extends Disposable {
 		return r;
 	});
 
-	public readonly sessionCount = derived(this, r => {
+	public readonly sessionCount = derived(this, (r) => {
 		this._dataVersion.read(r);
 		const val = this._data.getValue();
 		if (!val) {
@@ -113,7 +158,7 @@ export class AiStatsFeature extends Disposable {
 		return val.sessions.length;
 	});
 
-	public readonly sessions = derived(this, r => {
+	public readonly sessions = derived(this, (r) => {
 		this._dataVersion.read(r);
 		const val = this._data.getValue();
 		if (!val) {
@@ -122,7 +167,7 @@ export class AiStatsFeature extends Disposable {
 		return val.sessions;
 	});
 
-	public readonly acceptedInlineSuggestionsToday = derived(this, r => {
+	public readonly acceptedInlineSuggestionsToday = derived(this, (r) => {
 		this._dataVersion.read(r);
 		const val = this._data.getValue();
 		if (!val) {
@@ -131,8 +176,10 @@ export class AiStatsFeature extends Disposable {
 		const startOfToday = new Date();
 		startOfToday.setHours(0, 0, 0, 0);
 
-		const sessionsToday = val.sessions.filter(s => s.startTime > startOfToday.getTime());
-		return sumBy(sessionsToday, s => s.acceptedInlineSuggestions ?? 0);
+		const sessionsToday = val.sessions.filter(
+			(s) => s.startTime > startOfToday.getTime(),
+		);
+		return sumBy(sessionsToday, (s) => s.acceptedInlineSuggestions ?? 0);
 	});
 
 	private _getDataAndSession(): { data: IData; currentSession: ISession } {
@@ -175,7 +222,6 @@ interface ISession {
 	chatEditCount: number | undefined;
 }
 
-
 function average<T>(arr: T[], selector: (item: T) => number): number {
 	if (arr.length === 0) {
 		return 0;
@@ -184,23 +230,28 @@ function average<T>(arr: T[], selector: (item: T) => number): number {
 	return s / arr.length;
 }
 
-
 interface IValue<T> {
 	writeValue(value: T | undefined): void;
 	getValue(): T | undefined;
 }
 
-function rateLimitWrite<T>(targetValue: IValue<T>, maxWritesPerSecond: number, store: DisposableStore): IValue<T> {
+function rateLimitWrite<T>(
+	targetValue: IValue<T>,
+	maxWritesPerSecond: number,
+	store: DisposableStore,
+): IValue<T> {
 	const queue = new TaskQueue();
 	let _value: T | undefined = undefined;
 	let valueVersion = 0;
 	let savedVersion = 0;
-	store.add(toDisposable(() => {
-		if (valueVersion !== savedVersion) {
-			targetValue.writeValue(_value);
-			savedVersion = valueVersion;
-		}
-	}));
+	store.add(
+		toDisposable(() => {
+			if (valueVersion !== savedVersion) {
+				targetValue.writeValue(_value);
+				savedVersion = valueVersion;
+			}
+		}),
+	);
 
 	return {
 		writeValue(value: T | undefined): void {
@@ -220,11 +271,16 @@ function rateLimitWrite<T>(targetValue: IValue<T>, maxWritesPerSecond: number, s
 				return _value;
 			}
 			return targetValue.getValue();
-		}
+		},
 	};
 }
 
-function getStoredValue<T>(service: IStorageService, key: string, scope: StorageScope, target: StorageTarget): IValue<T> {
+function getStoredValue<T>(
+	service: IStorageService,
+	key: string,
+	scope: StorageScope,
+	target: StorageTarget,
+): IValue<T> {
 	let lastValue: T | undefined = undefined;
 	let hasLastValue = false;
 	return {
@@ -241,9 +297,12 @@ function getStoredValue<T>(service: IStorageService, key: string, scope: Storage
 				return lastValue;
 			}
 			const strVal = service.get(key, scope);
-			lastValue = strVal === undefined ? undefined : JSON.parse(strVal) as T | undefined;
+			lastValue =
+				strVal === undefined
+					? undefined
+					: (JSON.parse(strVal) as T | undefined);
 			hasLastValue = true;
 			return lastValue;
-		}
+		},
 	};
 }

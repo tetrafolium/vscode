@@ -23,7 +23,12 @@ vi.mock('vscode', async (importOriginal) => {
 	};
 });
 
-import { LockFileHandle, createLockFile, isProcessRunning, cleanupStaleLockFiles } from '../lockFile';
+import {
+	LockFileHandle,
+	createLockFile,
+	isProcessRunning,
+	cleanupStaleLockFiles,
+} from '../lockFile';
 
 const logger = new TestLogService();
 
@@ -39,25 +44,39 @@ describe('LockFileHandle', () => {
 	});
 
 	afterEach(async () => {
-		await fs.rm(testDir, { recursive: true, force: true }).catch(() => { });
+		await fs.rm(testDir, { recursive: true, force: true }).catch(() => {});
 	});
 
 	describe('constructor and path getter', () => {
 		it('should store the lock file path', () => {
-			const handle = new LockFileHandle(testLockFilePath, mockServerUri, mockHeaders, testTimestamp, logger);
+			const handle = new LockFileHandle(
+				testLockFilePath,
+				mockServerUri,
+				mockHeaders,
+				testTimestamp,
+				logger,
+			);
 			expect(handle.path).toBe(testLockFilePath);
 		});
 	});
 
 	describe('update', () => {
 		it('should write lock file with correct content', async () => {
-			const handle = new LockFileHandle(testLockFilePath, mockServerUri, mockHeaders, testTimestamp, logger);
+			const handle = new LockFileHandle(
+				testLockFilePath,
+				mockServerUri,
+				mockHeaders,
+				testTimestamp,
+				logger,
+			);
 			await handle.update();
 
 			const stat = await fs.stat(testLockFilePath);
 			expect(stat.isFile()).toBe(true);
 
-			const content = JSON.parse(await fs.readFile(testLockFilePath, 'utf-8'));
+			const content = JSON.parse(
+				await fs.readFile(testLockFilePath, 'utf-8'),
+			);
 			expect(content.socketPath).toBe('/tmp/test.sock');
 			expect(content.scheme).toBe('http');
 			expect(content.headers).toEqual(mockHeaders);
@@ -66,14 +85,23 @@ describe('LockFileHandle', () => {
 			expect(content.isTrusted).toBe(true);
 		});
 
-		it.skipIf(process.platform === 'win32')('should set restrictive file permissions (0o600)', async () => {
-			const handle = new LockFileHandle(testLockFilePath, mockServerUri, mockHeaders, testTimestamp, logger);
-			await handle.update();
+		it.skipIf(process.platform === 'win32')(
+			'should set restrictive file permissions (0o600)',
+			async () => {
+				const handle = new LockFileHandle(
+					testLockFilePath,
+					mockServerUri,
+					mockHeaders,
+					testTimestamp,
+					logger,
+				);
+				await handle.update();
 
-			const stats = await fs.stat(testLockFilePath);
-			const mode = stats.mode & 0o777;
-			expect(mode).toBe(0o600);
-		});
+				const stats = await fs.stat(testLockFilePath);
+				const mode = stats.mode & 0o777;
+				expect(mode).toBe(0o600);
+			},
+		);
 	});
 
 	describe('remove', () => {
@@ -82,21 +110,36 @@ describe('LockFileHandle', () => {
 			const stat = await fs.stat(testLockFilePath);
 			expect(stat.isFile()).toBe(true);
 
-			const handle = new LockFileHandle(testLockFilePath, mockServerUri, mockHeaders, testTimestamp, logger);
+			const handle = new LockFileHandle(
+				testLockFilePath,
+				mockServerUri,
+				mockHeaders,
+				testTimestamp,
+				logger,
+			);
 			await handle.remove();
 
 			await expect(fs.stat(testLockFilePath)).rejects.toThrow();
 		});
 
 		it('should not throw if lock file does not exist', async () => {
-			const handle = new LockFileHandle(testLockFilePath, mockServerUri, mockHeaders, testTimestamp, logger);
+			const handle = new LockFileHandle(
+				testLockFilePath,
+				mockServerUri,
+				mockHeaders,
+				testTimestamp,
+				logger,
+			);
 			await expect(handle.remove()).resolves.not.toThrow();
 		});
 	});
 });
 
 describe('createLockFile', () => {
-	const testDir = path.join(os.tmpdir(), 'lockfile-create-test-' + Date.now());
+	const testDir = path.join(
+		os.tmpdir(),
+		'lockfile-create-test-' + Date.now(),
+	);
 	let originalEnv: string | undefined;
 	let createdLockFile: string | null = null;
 
@@ -107,7 +150,7 @@ describe('createLockFile', () => {
 
 	afterEach(async () => {
 		if (createdLockFile) {
-			await fs.unlink(createdLockFile).catch(() => { });
+			await fs.unlink(createdLockFile).catch(() => {});
 			createdLockFile = null;
 		}
 		if (originalEnv !== undefined) {
@@ -115,11 +158,14 @@ describe('createLockFile', () => {
 		} else {
 			delete process.env.XDG_STATE_HOME;
 		}
-		await fs.rm(testDir, { recursive: true, force: true }).catch(() => { });
+		await fs.rm(testDir, { recursive: true, force: true }).catch(() => {});
 	});
 
 	it('should create lock file in .copilot directory', async () => {
-		const mockServerUri = { path: '/tmp/server.sock', scheme: 'http' } as any;
+		const mockServerUri = {
+			path: '/tmp/server.sock',
+			scheme: 'http',
+		} as any;
 		const mockHeaders = { 'X-Test': 'value' };
 
 		const handle = await createLockFile(mockServerUri, mockHeaders, logger);
@@ -139,7 +185,10 @@ describe('createLockFile', () => {
 	});
 
 	it('should create .copilot directory if it does not exist', async () => {
-		const mockServerUri = { path: '/tmp/server.sock', scheme: 'http' } as any;
+		const mockServerUri = {
+			path: '/tmp/server.sock',
+			scheme: 'http',
+		} as any;
 		const handle = await createLockFile(mockServerUri, {}, logger);
 		createdLockFile = handle.path;
 
@@ -149,7 +198,10 @@ describe('createLockFile', () => {
 	});
 
 	it('should generate unique lock file names', async () => {
-		const mockServerUri = { path: '/tmp/server.sock', scheme: 'http' } as any;
+		const mockServerUri = {
+			path: '/tmp/server.sock',
+			scheme: 'http',
+		} as any;
 
 		const handle1 = await createLockFile(mockServerUri, {}, logger);
 		const handle2 = await createLockFile(mockServerUri, {}, logger);
@@ -172,7 +224,10 @@ describe('isProcessRunning', () => {
 });
 
 describe('cleanupStaleLockFiles', () => {
-	const testDir = path.join(os.tmpdir(), 'lockfile-cleanup-test-' + Date.now());
+	const testDir = path.join(
+		os.tmpdir(),
+		'lockfile-cleanup-test-' + Date.now(),
+	);
 	const copilotDir = path.join(testDir, '.copilot', 'ide');
 	let originalEnv: string | undefined;
 
@@ -188,7 +243,7 @@ describe('cleanupStaleLockFiles', () => {
 		} else {
 			delete process.env.XDG_STATE_HOME;
 		}
-		await fs.rm(testDir, { recursive: true, force: true }).catch(() => { });
+		await fs.rm(testDir, { recursive: true, force: true }).catch(() => {});
 	});
 
 	it('should remove lockfiles for non-running processes', async () => {

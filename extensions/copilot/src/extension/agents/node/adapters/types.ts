@@ -50,18 +50,23 @@ export interface IProtocolAdapter {
 	 */
 	formatStreamResponse(
 		streamData: IAgentStreamBlock,
-		context: IStreamingContext
+		context: IStreamingContext,
 	): readonly IStreamEventData[];
 
 	/**
 	 * Generate the final events to close the stream
 	 */
-	generateFinalEvents(context: IStreamingContext, usage?: APIUsage): readonly IStreamEventData[];
+	generateFinalEvents(
+		context: IStreamingContext,
+		usage?: APIUsage,
+	): readonly IStreamEventData[];
 
 	/**
 	 * Generate initial events to start the stream (optional, protocol-specific)
 	 */
-	generateInitialEvents?(context: IStreamingContext): readonly IStreamEventData[];
+	generateInitialEvents?(
+		context: IStreamingContext,
+	): readonly IStreamEventData[];
 
 	/**
 	 * Get the content type for responses

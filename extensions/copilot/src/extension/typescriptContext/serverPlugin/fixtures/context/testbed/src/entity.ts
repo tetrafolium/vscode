@@ -10,9 +10,7 @@ export class Name {
 }
 
 export class Entity {
-	
-	constructor(protected name: Name) {
-	}
+	constructor(protected name: Name) {}
 
 	getName(): Name {
 		return this.name;

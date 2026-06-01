@@ -93,7 +93,7 @@ interface ParseStats {
  */
 export function parseSessionFileContent(
 	content: string,
-	fileIdentifier?: string
+	fileIdentifier?: string,
 ): LinkedListParseResult {
 	const nodes = new Map<string, ChainNode>();
 	const summaries = new Map<string, SummaryEntry>();
@@ -167,8 +167,14 @@ export function parseSessionFileContent(
 		if (!summaryResult.error) {
 			stats.summaries++;
 			const summary = summaryResult.content.summary.toLowerCase();
-			if (!summary.startsWith('api error:') && !summary.startsWith('invalid api key')) {
-				summaries.set(summaryResult.content.leafUuid, summaryResult.content);
+			if (
+				!summary.startsWith('api error:') &&
+				!summary.startsWith('invalid api key')
+			) {
+				summaries.set(
+					summaryResult.content.leafUuid,
+					summaryResult.content,
+				);
 			}
 			continue;
 		}
@@ -218,8 +224,13 @@ export function parseSessionFileContent(
  */
 function isVisibleNode(raw: Record<string, unknown>): boolean {
 	// Must have displayable content
-	const hasMessage = 'message' in raw && (raw.type === 'user' || raw.type === 'assistant');
-	const hasSystemContent = typeof raw.content === 'string' && (raw.content as string).length > 0 && raw.type !== 'user' && raw.type !== 'assistant';
+	const hasMessage =
+		'message' in raw && (raw.type === 'user' || raw.type === 'assistant');
+	const hasSystemContent =
+		typeof raw.content === 'string' &&
+		(raw.content as string).length > 0 &&
+		raw.type !== 'user' &&
+		raw.type !== 'assistant';
 	if (!hasMessage && !hasSystemContent) {
 		return false;
 	}
@@ -320,8 +331,10 @@ function reviveAssistantMessage(entry: AssistantMessageEntry): StoredMessage {
  */
 function reviveSystemMessage(node: ChainNode): StoredMessage | null {
 	const raw = node.raw;
-	const sessionId = typeof raw.sessionId === 'string' ? raw.sessionId : undefined;
-	const timestamp = typeof raw.timestamp === 'string' ? raw.timestamp : undefined;
+	const sessionId =
+		typeof raw.sessionId === 'string' ? raw.sessionId : undefined;
+	const timestamp =
+		typeof raw.timestamp === 'string' ? raw.timestamp : undefined;
 	const content = typeof raw.content === 'string' ? raw.content : undefined;
 
 	if (!sessionId || !timestamp || !content) {
@@ -349,7 +362,7 @@ function reviveSystemMessage(node: ChainNode): StoredMessage | null {
  */
 export function buildSubagentSession(
 	agentId: string,
-	parseResult: LinkedListParseResult
+	parseResult: LinkedListParseResult,
 ): ISubagentSession | null {
 	const { nodes } = parseResult;
 

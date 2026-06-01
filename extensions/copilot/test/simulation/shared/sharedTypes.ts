@@ -48,7 +48,8 @@ export interface ISerialisedChatMessage {
 	name?: string;
 }
 
-export type ISerializedChatCompletionContentPart = Raw.ChatCompletionContentPart;
+export type ISerializedChatCompletionContentPart =
+	Raw.ChatCompletionContentPart;
 
 export interface ISerializedChatCompletionContentPartImage {
 	type: 'text';
@@ -67,7 +68,6 @@ export namespace ISerializedChatCompletionContentPartImage {
 		 */
 		url: string;
 
-
 		/**
 		 * Specifies the detail level of the image. Learn more in the
 		 * [Vision guide](https://platform.openai.com/docs/guides/vision/low-or-high-fidelity-image-understanding).
@@ -75,7 +75,6 @@ export namespace ISerializedChatCompletionContentPartImage {
 		detail?: 'low' | 'high';
 	}
 }
-
 
 export interface ICopilotFunctionCall {
 	name: string;
@@ -108,7 +107,6 @@ export type ISerialisedChatResponse = {
 	};
 };
 
-
 export class InterceptedRequest {
 	constructor(
 		public readonly requestMessages: string | ISerialisedChatMessage[],
@@ -116,13 +114,20 @@ export class InterceptedRequest {
 		public readonly response: ISerialisedChatResponse,
 		public readonly cacheKey: string | undefined,
 		public readonly model: string | undefined,
-		public readonly duration?: number
+		public readonly duration?: number,
 	) {
 		// console.log('InterceptedRequest', requestMessages, requestOptions, response, cacheKey, model);
 	}
 
 	static fromJSON(json: any): InterceptedRequest {
-		const request = new InterceptedRequest(json.requestMessages, json.requestOptions, json.response, json.cacheKey, json.model, json.duration);
+		const request = new InterceptedRequest(
+			json.requestMessages,
+			json.requestOptions,
+			json.response,
+			json.cacheKey,
+			json.model,
+			json.duration,
+		);
 		return request;
 	}
 
@@ -133,7 +138,7 @@ export class InterceptedRequest {
 			response: this.response,
 			cacheKey: this.cacheKey,
 			model: this.model,
-			duration: this.duration
+			duration: this.duration,
 		};
 	}
 }
@@ -154,8 +159,16 @@ export interface ISerializedFileEdit {
 }
 
 export type SimulationTestOutcome = (
-	| { kind: 'edit'; files: Array<{ srcUri: string; post: string }> | string[] } // inline edit, supports both old and new format
-	| { kind: 'failed'; hitContentFilter: boolean; error: string | undefined; /** if true, will fail CI */ critical: boolean } // failed
+	| {
+			kind: 'edit';
+			files: Array<{ srcUri: string; post: string }> | string[];
+	  } // inline edit, supports both old and new format
+	| {
+			kind: 'failed';
+			hitContentFilter: boolean;
+			error: string | undefined;
+			/** if true, will fail CI */ critical: boolean;
+	  } // failed
 	| { kind: 'answer'; content: string } // sidebar or inline-chat coversational answer
 ) & { annotations?: OutputAnnotation[] };
 
@@ -256,23 +269,23 @@ export interface IWrittenFile {
 	tag: string;
 }
 
-export type RunOutput = IInitialTestSummaryOutput
+export type RunOutput =
+	| IInitialTestSummaryOutput
 	| ISkippedTestOutput
 	| ITestRunStartOutput
 	| ITestRunEndOutput
 	| ITerminated
-	| IDeviceCodeCallbackOutput
-	;
+	| IDeviceCodeCallbackOutput;
 
-export type Output = IDetectedTestOutput
+export type Output =
+	| IDetectedTestOutput
 	| IDetectedSuiteOutput
 	| IInitialTestSummaryOutput
 	| ISkippedTestOutput
 	| ITestRunStartOutput
 	| ITestRunEndOutput
 	| ITerminated
-	| IDeviceCodeCallbackOutput
-	;
+	| IDeviceCodeCallbackOutput;
 
 export interface IRange {
 	readonly start: IPosition;
@@ -314,7 +327,11 @@ export interface IInteractionWorkspaceState {
 	annotations?: OutputAnnotation[];
 }
 
-export type OutputAnnotation = { severity: string; label: string; message: string };
+export type OutputAnnotation = {
+	severity: string;
+	label: string;
+	message: string;
+};
 
 export interface IInitialWorkspaceState {
 	kind: 'initial';
@@ -331,9 +348,14 @@ export interface IDiagnostic {
 	message: string;
 }
 
-export type IDiagnosticComparison = { before: IDiagnostic[]; after: IDiagnostic[] };
+export type IDiagnosticComparison = {
+	before: IDiagnostic[];
+	after: IDiagnostic[];
+};
 
-export type IWorkspaceState = IInitialWorkspaceState | IInteractionWorkspaceState;
+export type IWorkspaceState =
+	| IInitialWorkspaceState
+	| IInteractionWorkspaceState;
 
 /**
  * Generates a unique output folder name based on the current date and time.

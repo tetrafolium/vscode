@@ -3,9 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { handleBugIndicatingErrorRecovery, IObservable, IObserver, ITransaction } from './base.js';
-import { getFunctionName } from './debugName.js';
-import { getLogger } from './logging/logging.js';
+import {
+	handleBugIndicatingErrorRecovery,
+	IObservable,
+	IObserver,
+	ITransaction,
+} from "./base.js";
+import { getFunctionName } from "./debugName.js";
+import { getLogger } from "./logging/logging.js";
 
 /**
  * Starts a transaction in which many observables can be changed at once.
@@ -13,7 +18,10 @@ import { getLogger } from './logging/logging.js';
  * Reaction run on demand or when the transaction ends.
  */
 
-export function transaction(fn: (tx: ITransaction) => void, getDebugName?: () => string): void {
+export function transaction(
+	fn: (tx: ITransaction) => void,
+	getDebugName?: () => string,
+): void {
 	const tx = new TransactionImpl(fn, getDebugName);
 	try {
 		fn(tx);
@@ -41,7 +49,10 @@ export function globalTransaction(fn: (tx: ITransaction) => void) {
 }
 /** @deprecated */
 
-export async function asyncTransaction(fn: (tx: ITransaction) => Promise<void>, getDebugName?: () => string): Promise<void> {
+export async function asyncTransaction(
+	fn: (tx: ITransaction) => Promise<void>,
+	getDebugName?: () => string,
+): Promise<void> {
 	const tx = new TransactionImpl(fn, getDebugName);
 	try {
 		await fn(tx);
@@ -53,16 +64,26 @@ export async function asyncTransaction(fn: (tx: ITransaction) => Promise<void>, 
  * Allows to chain transactions.
  */
 
-export function subtransaction(tx: ITransaction | undefined, fn: (tx: ITransaction) => void, getDebugName?: () => string): void {
+export function subtransaction(
+	tx: ITransaction | undefined,
+	fn: (tx: ITransaction) => void,
+	getDebugName?: () => string,
+): void {
 	if (!tx) {
 		transaction(fn, getDebugName);
 	} else {
 		fn(tx);
 	}
-} export class TransactionImpl implements ITransaction {
-	private _updatingObservers: { observer: IObserver; observable: IObservable<any> }[] | null = [];
+}
+export class TransactionImpl implements ITransaction {
+	private _updatingObservers:
+		| { observer: IObserver; observable: IObservable<any> }[]
+		| null = [];
 
-	constructor(public readonly _fn: Function, private readonly _getDebugName?: () => string) {
+	constructor(
+		public readonly _fn: Function,
+		private readonly _getDebugName?: () => string,
+	) {
 		getLogger()?.handleBeginTransaction(this);
 	}
 
@@ -73,13 +94,16 @@ export function subtransaction(tx: ITransaction | undefined, fn: (tx: ITransacti
 		return getFunctionName(this._fn);
 	}
 
-	public updateObserver(observer: IObserver, observable: IObservable<any>): void {
+	public updateObserver(
+		observer: IObserver,
+		observable: IObservable<any>,
+	): void {
 		if (!this._updatingObservers) {
 			// This happens when a transaction is used in a callback or async function.
 			// If an async transaction is used, make sure the promise awaits all users of the transaction (e.g. no race).
-			handleBugIndicatingErrorRecovery('Transaction already finished!');
+			handleBugIndicatingErrorRecovery("Transaction already finished!");
 			// Error recovery
-			transaction(tx => {
+			transaction((tx) => {
 				tx.updateObserver(observer, observable);
 			});
 			return;
@@ -93,7 +117,9 @@ export function subtransaction(tx: ITransaction | undefined, fn: (tx: ITransacti
 	public finish(): void {
 		const updatingObservers = this._updatingObservers;
 		if (!updatingObservers) {
-			handleBugIndicatingErrorRecovery('transaction.finish() has already been called!');
+			handleBugIndicatingErrorRecovery(
+				"transaction.finish() has already been called!",
+			);
 			return;
 		}
 
@@ -110,4 +136,3 @@ export function subtransaction(tx: ITransaction | undefined, fn: (tx: ITransacti
 		return this._updatingObservers;
 	}
 }
-

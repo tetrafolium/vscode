@@ -14,7 +14,6 @@ const TARGET = join(__dirname, '../../src/util/vs');
  * Returns the absolute file path where the given file should be placed.
  */
 function determineTargetPath(absoluteVSCodeFilePath: string): string {
-
 	const vsRelative = path.relative(VS_ROOT, absoluteVSCodeFilePath);
 
 	const segements = vsRelative.split(path.sep);
@@ -29,9 +28,16 @@ function determineTargetPath(absoluteVSCodeFilePath: string): string {
 /**
  * Returns the relative path of `importedFilePath` to `currentFilePath` in a format suitable for import statements.
  */
-function createRelativeImportPath(currentFilePath: string, importedFilePath: string): string {
-	const relativePath = path.relative(path.dirname(currentFilePath), importedFilePath).replaceAll('\\', '/');
-	const result = relativePath.startsWith('.') ? relativePath : './' + relativePath;
+function createRelativeImportPath(
+	currentFilePath: string,
+	importedFilePath: string,
+): string {
+	const relativePath = path
+		.relative(path.dirname(currentFilePath), importedFilePath)
+		.replaceAll('\\', '/');
+	const result = relativePath.startsWith('.')
+		? relativePath
+		: './' + relativePath;
 	return result.replace(/\.ts$/, '');
 }
 
@@ -50,11 +56,20 @@ async function doIt(filepaths: string[]) {
 	}
 
 	type Edit = ts.TextRange & { newText: string };
-	type File = { sourceFilePath: string; targetFilePath: string; contents: string };
+	type File = {
+		sourceFilePath: string;
+		targetFilePath: string;
+		contents: string;
+	};
 	type StackElement = { filepath: string; importTrajectory: string[] };
 
 	const seen = new Map<string, File>(); // indexed by sourceFilePath
-	const stack: StackElement[] = [...filepaths.map(p => ({ filepath: join(VS_ROOT, p), importTrajectory: [] }))];
+	const stack: StackElement[] = [
+		...filepaths.map((p) => ({
+			filepath: join(VS_ROOT, p),
+			importTrajectory: [],
+		})),
+	];
 
 	while (stack.length > 0) {
 		const stackElement = stack.pop()!;
@@ -76,7 +91,12 @@ async function doIt(filepaths: string[]) {
 				filepath = filepath.replace(/\.ts$/, '.d.ts');
 				source = String(await fs.promises.readFile(filepath));
 			} catch (e) {
-				console.error(`❌ Error reading file ${filepath}. Trajectory:\n${stackElement.importTrajectory.reverse().map(el => `- ${el}`).join('\n')}:`);
+				console.error(
+					`❌ Error reading file ${filepath}. Trajectory:\n${stackElement.importTrajectory
+						.reverse()
+						.map((el) => `- ${el}`)
+						.join('\n')}:`,
+				);
 				throw e;
 			}
 		}
@@ -84,12 +104,18 @@ async function doIt(filepaths: string[]) {
 		const destinationFilePath = determineTargetPath(filepath);
 		const info = ts.preProcessFile(source, true, true);
 		for (const importedFile of info.importedFiles) {
-
 			let absolutePath: string | undefined;
 			if (importedFile.fileName.startsWith('.')) {
-				absolutePath = join(filepath, '..', importedFile.fileName.replace(/\.js$/, '.ts'));
+				absolutePath = join(
+					filepath,
+					'..',
+					importedFile.fileName.replace(/\.js$/, '.ts'),
+				);
 			} else if (importedFile.fileName.includes('/')) {
-				absolutePath = join(VS_ROOT, importedFile.fileName.replace(/\.js$/, '.ts'));
+				absolutePath = join(
+					VS_ROOT,
+					importedFile.fileName.replace(/\.js$/, '.ts'),
+				);
 			}
 
 			if (absolutePath) {
@@ -97,7 +123,10 @@ async function doIt(filepaths: string[]) {
 
 				edits.push({
 					...importedFile,
-					newText: createRelativeImportPath(destinationFilePath, determineTargetPath(absolutePath)),
+					newText: createRelativeImportPath(
+						destinationFilePath,
+						determineTargetPath(absolutePath),
+					),
 				});
 			}
 
@@ -107,27 +136,35 @@ async function doIt(filepaths: string[]) {
 		let newSource = source;
 
 		for (const edit of edits.sort((a, b) => b.pos - a.pos)) {
-			newSource = newSource.slice(0, edit.pos + 1) + edit.newText + newSource.slice(edit.end + 1);
+			newSource =
+				newSource.slice(0, edit.pos + 1) +
+				edit.newText +
+				newSource.slice(edit.end + 1);
 		}
 
-		newSource = '//!!! DO NOT modify, this file was COPIED from \'microsoft/vscode\'\n\n' + newSource;
+		newSource =
+			"//!!! DO NOT modify, this file was COPIED from 'microsoft/vscode'\n\n" +
+			newSource;
 
 		seen.set(filepath, {
 			sourceFilePath: filepath,
 			targetFilePath: destinationFilePath,
-			contents: newSource
+			contents: newSource,
 		});
 	}
 
 	for (const [_, file] of seen) {
-
 		const targetFilepath = file.targetFilePath;
 
-		await fs.promises.mkdir(join(targetFilepath, '..'), { recursive: true });
+		await fs.promises.mkdir(join(targetFilepath, '..'), {
+			recursive: true,
+		});
 		await fs.promises.writeFile(targetFilepath, file.contents);
 	}
 
-	console.log(`✅ done, copied ${filepaths.length} files and ${seen.size - filepaths.length} dependencies`);
+	console.log(
+		`✅ done, copied ${filepaths.length} files and ${seen.size - filepaths.length} dependencies`,
+	);
 }
 
 (async function () {

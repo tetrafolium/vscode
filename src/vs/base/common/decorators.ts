@@ -3,45 +3,57 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-function createDecorator(mapFn: (fn: Function, key: string) => Function): MethodDecorator {
-	return (_target: Object, key: string | symbol, descriptor: TypedPropertyDescriptor<any>) => {
-		let fnKey: 'value' | 'get' | null = null;
+function createDecorator(
+	mapFn: (fn: Function, key: string) => Function,
+): MethodDecorator {
+	return (
+		_target: Object,
+		key: string | symbol,
+		descriptor: TypedPropertyDescriptor<any>,
+	) => {
+		let fnKey: "value" | "get" | null = null;
 		let fn: Function | null = null;
 
-		if (typeof descriptor.value === 'function') {
-			fnKey = 'value';
+		if (typeof descriptor.value === "function") {
+			fnKey = "value";
 			fn = descriptor.value;
-		} else if (typeof descriptor.get === 'function') {
-			fnKey = 'get';
+		} else if (typeof descriptor.get === "function") {
+			fnKey = "get";
 			fn = descriptor.get;
 		}
 
-		if (!fn || typeof key === 'symbol') {
-			throw new Error('not supported');
+		if (!fn || typeof key === "symbol") {
+			throw new Error("not supported");
 		}
 
 		descriptor[fnKey!] = mapFn(fn, key);
 	};
 }
 
-export function memoize(_target: Object, key: string, descriptor: PropertyDescriptor) {
-	let fnKey: 'value' | 'get' | null = null;
+export function memoize(
+	_target: Object,
+	key: string,
+	descriptor: PropertyDescriptor,
+) {
+	let fnKey: "value" | "get" | null = null;
 	let fn: Function | null = null;
 
-	if (typeof descriptor.value === 'function') {
-		fnKey = 'value';
+	if (typeof descriptor.value === "function") {
+		fnKey = "value";
 		fn = descriptor.value;
 
 		if (fn!.length !== 0) {
-			console.warn('Memoize should only be used in functions with zero parameters');
+			console.warn(
+				"Memoize should only be used in functions with zero parameters",
+			);
 		}
-	} else if (typeof descriptor.get === 'function') {
-		fnKey = 'get';
+	} else if (typeof descriptor.get === "function") {
+		fnKey = "get";
 		fn = descriptor.get;
 	}
 
 	if (!fn) {
-		throw new Error('not supported');
+		throw new Error("not supported");
 	}
 
 	const memoizeKey = `$memoize$${key}`;
@@ -51,7 +63,7 @@ export function memoize(_target: Object, key: string, descriptor: PropertyDescri
 				configurable: false,
 				enumerable: false,
 				writable: false,
-				value: fn.apply(this, args)
+				value: fn.apply(this, args),
 			});
 		}
 		return this[memoizeKey];
@@ -62,14 +74,20 @@ export interface IDebounceReducer<T> {
 	(previousValue: T, ...args: any[]): T;
 }
 
-export function debounce<T>(delay: number, reducer?: IDebounceReducer<T>, initialValueProvider?: () => T) {
+export function debounce<T>(
+	delay: number,
+	reducer?: IDebounceReducer<T>,
+	initialValueProvider?: () => T,
+) {
 	return createDecorator((fn, key) => {
 		const timerKey = `$debounce$${key}`;
 		const resultKey = `$debounce$result$${key}`;
 
 		return function (this: any, ...args: any[]) {
 			if (!this[resultKey]) {
-				this[resultKey] = initialValueProvider ? initialValueProvider() : undefined;
+				this[resultKey] = initialValueProvider
+					? initialValueProvider()
+					: undefined;
 			}
 
 			clearTimeout(this[timerKey]);
@@ -81,13 +99,19 @@ export function debounce<T>(delay: number, reducer?: IDebounceReducer<T>, initia
 
 			this[timerKey] = setTimeout(() => {
 				fn.apply(this, args);
-				this[resultKey] = initialValueProvider ? initialValueProvider() : undefined;
+				this[resultKey] = initialValueProvider
+					? initialValueProvider()
+					: undefined;
 			}, delay);
 		};
 	});
 }
 
-export function throttle<T>(delay: number, reducer?: IDebounceReducer<T>, initialValueProvider?: () => T) {
+export function throttle<T>(
+	delay: number,
+	reducer?: IDebounceReducer<T>,
+	initialValueProvider?: () => T,
+) {
 	return createDecorator((fn, key) => {
 		const timerKey = `$throttle$timer$${key}`;
 		const resultKey = `$throttle$result$${key}`;
@@ -96,7 +120,9 @@ export function throttle<T>(delay: number, reducer?: IDebounceReducer<T>, initia
 
 		return function (this: any, ...args: any[]) {
 			if (!this[resultKey]) {
-				this[resultKey] = initialValueProvider ? initialValueProvider() : undefined;
+				this[resultKey] = initialValueProvider
+					? initialValueProvider()
+					: undefined;
 			}
 			if (this[lastRunKey] === null || this[lastRunKey] === undefined) {
 				this[lastRunKey] = -Number.MAX_VALUE;
@@ -114,18 +140,22 @@ export function throttle<T>(delay: number, reducer?: IDebounceReducer<T>, initia
 			if (nextTime <= Date.now()) {
 				this[lastRunKey] = Date.now();
 				fn.apply(this, [this[resultKey]]);
-				this[resultKey] = initialValueProvider ? initialValueProvider() : undefined;
+				this[resultKey] = initialValueProvider
+					? initialValueProvider()
+					: undefined;
 			} else {
 				this[pendingKey] = true;
 				this[timerKey] = setTimeout(() => {
 					this[pendingKey] = false;
 					this[lastRunKey] = Date.now();
 					fn.apply(this, [this[resultKey]]);
-					this[resultKey] = initialValueProvider ? initialValueProvider() : undefined;
+					this[resultKey] = initialValueProvider
+						? initialValueProvider()
+						: undefined;
 				}, nextTime - Date.now());
 			}
 		};
 	});
 }
 
-export { cancelPreviousCalls } from './decorators/cancelPreviousCalls.js';
+export { cancelPreviousCalls } from "./decorators/cancelPreviousCalls.js";

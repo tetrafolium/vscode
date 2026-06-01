@@ -3,46 +3,110 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDimension } from '../../../../base/browser/dom.js';
-import { Orientation } from '../../../../base/browser/ui/splitview/splitview.js';
-import { Color } from '../../../../base/common/color.js';
-import { Event, IDynamicListEventMultiplexer, type DynamicListEventMultiplexer } from '../../../../base/common/event.js';
-import { DisposableStore, IDisposable, type IReference } from '../../../../base/common/lifecycle.js';
-import { OperatingSystem } from '../../../../base/common/platform.js';
-import { URI, UriComponents } from '../../../../base/common/uri.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { IKeyMods } from '../../../../platform/quickinput/common/quickInput.js';
-import { IMarkProperties, ITerminalCapabilityImplMap, ITerminalCapabilityStore, ITerminalCommand, TerminalCapability } from '../../../../platform/terminal/common/capabilities/capabilities.js';
-import { IMergedEnvironmentVariableCollection } from '../../../../platform/terminal/common/environmentVariable.js';
-import { IExtensionTerminalProfile, IReconnectionProperties, IShellIntegration, IShellLaunchConfig, ITerminalBackend, ITerminalDimensions, ITerminalLaunchError, ITerminalProfile, ITerminalTabLayoutInfoById, TerminalExitReason, TerminalIcon, TerminalLocation, TerminalShellType, TerminalType, TitleEventSource, WaitOnExitValue, type IDecorationAddon, type ShellIntegrationInjectionFailureReason } from '../../../../platform/terminal/common/terminal.js';
-import { IColorTheme } from '../../../../platform/theme/common/themeService.js';
-import { IWorkspaceFolder } from '../../../../platform/workspace/common/workspace.js';
-import { EditorInput } from '../../../common/editor/editorInput.js';
-import { IEditableData } from '../../../common/views.js';
-import { ITerminalStatusList } from './terminalStatusList.js';
-import { XtermTerminal } from './xterm/xtermTerminal.js';
-import { IRegisterContributedProfileArgs, IRemoteTerminalAttachTarget, IStartExtensionTerminalRequest, ITerminalConfiguration, ITerminalFont, ITerminalProcessExtHostProxy, ITerminalProcessInfo } from '../common/terminal.js';
-import type { IMarker, ITheme, Terminal as RawXtermTerminal, IBufferRange, IMarker as IXtermMarker } from '@xterm/xterm';
-import { ScrollPosition } from './xterm/markNavigationAddon.js';
-import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
-import { GroupIdentifier } from '../../../common/editor.js';
-import { ACTIVE_GROUP_TYPE, AUX_WINDOW_GROUP_TYPE, SIDE_GROUP_TYPE } from '../../../services/editor/common/editorService.js';
-import type { ICurrentPartialCommand } from '../../../../platform/terminal/common/capabilities/commandDetection/terminalCommand.js';
-import type { IXtermCore, IBufferSet } from './xterm-private.js';
-import type { IMenu } from '../../../../platform/actions/common/actions.js';
-import type { IProgressState } from '@xterm/addon-progress';
-import type { IEditorOptions } from '../../../../platform/editor/common/editor.js';
-import type { TerminalEditorInput } from './terminalEditorInput.js';
-import type { MaybePromise } from '../../../../base/common/async.js';
-import { isNumber, type SingleOrMany } from '../../../../base/common/types.js';
+import { IDimension } from "../../../../base/browser/dom.js";
+import { Orientation } from "../../../../base/browser/ui/splitview/splitview.js";
+import { Color } from "../../../../base/common/color.js";
+import {
+	Event,
+	IDynamicListEventMultiplexer,
+	type DynamicListEventMultiplexer,
+} from "../../../../base/common/event.js";
+import {
+	DisposableStore,
+	IDisposable,
+	type IReference,
+} from "../../../../base/common/lifecycle.js";
+import { OperatingSystem } from "../../../../base/common/platform.js";
+import { URI, UriComponents } from "../../../../base/common/uri.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { IKeyMods } from "../../../../platform/quickinput/common/quickInput.js";
+import {
+	IMarkProperties,
+	ITerminalCapabilityImplMap,
+	ITerminalCapabilityStore,
+	ITerminalCommand,
+	TerminalCapability,
+} from "../../../../platform/terminal/common/capabilities/capabilities.js";
+import { IMergedEnvironmentVariableCollection } from "../../../../platform/terminal/common/environmentVariable.js";
+import {
+	IExtensionTerminalProfile,
+	IReconnectionProperties,
+	IShellIntegration,
+	IShellLaunchConfig,
+	ITerminalBackend,
+	ITerminalDimensions,
+	ITerminalLaunchError,
+	ITerminalProfile,
+	ITerminalTabLayoutInfoById,
+	TerminalExitReason,
+	TerminalIcon,
+	TerminalLocation,
+	TerminalShellType,
+	TerminalType,
+	TitleEventSource,
+	WaitOnExitValue,
+	type IDecorationAddon,
+	type ShellIntegrationInjectionFailureReason,
+} from "../../../../platform/terminal/common/terminal.js";
+import { IColorTheme } from "../../../../platform/theme/common/themeService.js";
+import { IWorkspaceFolder } from "../../../../platform/workspace/common/workspace.js";
+import { EditorInput } from "../../../common/editor/editorInput.js";
+import { IEditableData } from "../../../common/views.js";
+import { ITerminalStatusList } from "./terminalStatusList.js";
+import { XtermTerminal } from "./xterm/xtermTerminal.js";
+import {
+	IRegisterContributedProfileArgs,
+	IRemoteTerminalAttachTarget,
+	IStartExtensionTerminalRequest,
+	ITerminalConfiguration,
+	ITerminalFont,
+	ITerminalProcessExtHostProxy,
+	ITerminalProcessInfo,
+} from "../common/terminal.js";
+import type {
+	IMarker,
+	ITheme,
+	Terminal as RawXtermTerminal,
+	IBufferRange,
+	IMarker as IXtermMarker,
+} from "@xterm/xterm";
+import { ScrollPosition } from "./xterm/markNavigationAddon.js";
+import { IContextKeyService } from "../../../../platform/contextkey/common/contextkey.js";
+import { GroupIdentifier } from "../../../common/editor.js";
+import {
+	ACTIVE_GROUP_TYPE,
+	AUX_WINDOW_GROUP_TYPE,
+	SIDE_GROUP_TYPE,
+} from "../../../services/editor/common/editorService.js";
+import type { ICurrentPartialCommand } from "../../../../platform/terminal/common/capabilities/commandDetection/terminalCommand.js";
+import type { IXtermCore, IBufferSet } from "./xterm-private.js";
+import type { IMenu } from "../../../../platform/actions/common/actions.js";
+import type { IProgressState } from "@xterm/addon-progress";
+import type { IEditorOptions } from "../../../../platform/editor/common/editor.js";
+import type { TerminalEditorInput } from "./terminalEditorInput.js";
+import type { MaybePromise } from "../../../../base/common/async.js";
+import { isNumber, type SingleOrMany } from "../../../../base/common/types.js";
 
-export const ITerminalService = createDecorator<ITerminalService>('terminalService');
-export const ITerminalConfigurationService = createDecorator<ITerminalConfigurationService>('terminalConfigurationService');
-export const ITerminalEditorService = createDecorator<ITerminalEditorService>('terminalEditorService');
-export const ITerminalEditingService = createDecorator<ITerminalEditingService>('terminalEditingService');
-export const ITerminalGroupService = createDecorator<ITerminalGroupService>('terminalGroupService');
-export const ITerminalInstanceService = createDecorator<ITerminalInstanceService>('terminalInstanceService');
-export const ITerminalChatService = createDecorator<ITerminalChatService>('terminalChatService');
+export const ITerminalService =
+	createDecorator<ITerminalService>("terminalService");
+export const ITerminalConfigurationService =
+	createDecorator<ITerminalConfigurationService>(
+		"terminalConfigurationService",
+	);
+export const ITerminalEditorService = createDecorator<ITerminalEditorService>(
+	"terminalEditorService",
+);
+export const ITerminalEditingService = createDecorator<ITerminalEditingService>(
+	"terminalEditingService",
+);
+export const ITerminalGroupService = createDecorator<ITerminalGroupService>(
+	"terminalGroupService",
+);
+export const ITerminalInstanceService =
+	createDecorator<ITerminalInstanceService>("terminalInstanceService");
+export const ITerminalChatService = createDecorator<ITerminalChatService>(
+	"terminalChatService",
+);
 
 /**
  * A terminal contribution that gets created whenever a terminal is created. A contribution has
@@ -50,11 +114,16 @@ export const ITerminalChatService = createDecorator<ITerminalChatService>('termi
  * been initialized.
  */
 export interface ITerminalContribution extends IDisposable {
-	layout?(xterm: IXtermTerminal & { raw: RawXtermTerminal }, dimension: IDimension): void;
+	layout?(
+		xterm: IXtermTerminal & { raw: RawXtermTerminal },
+		dimension: IDimension,
+	): void;
 	xtermOpen?(xterm: IXtermTerminal & { raw: RawXtermTerminal }): void;
 	xtermReady?(xterm: IXtermTerminal & { raw: RawXtermTerminal }): void;
 
-	handleMouseEvent?(event: MouseEvent): MaybePromise<{ handled: boolean } | void>;
+	handleMouseEvent?(
+		event: MouseEvent,
+	): MaybePromise<{ handled: boolean } | void>;
 }
 
 /**
@@ -82,14 +151,21 @@ export interface ITerminalInstanceService {
 	 * @param shellLaunchConfigOrProfile A shell launch config, a profile or undefined
 	 * @param cwd A cwd to override.
 	 */
-	convertProfileToShellLaunchConfig(shellLaunchConfigOrProfile?: IShellLaunchConfig | ITerminalProfile, cwd?: string | URI): IShellLaunchConfig;
+	convertProfileToShellLaunchConfig(
+		shellLaunchConfigOrProfile?: IShellLaunchConfig | ITerminalProfile,
+		cwd?: string | URI,
+	): IShellLaunchConfig;
 
 	/**
 	 * Create a new terminal instance.
 	 * @param launchConfig The shell launch config.
 	 * @param target The target of the terminal.
 	 */
-	createInstance(launchConfig: IShellLaunchConfig, target: TerminalLocation, editorOptions?: TerminalEditorLocation): ITerminalInstance;
+	createInstance(
+		launchConfig: IShellLaunchConfig,
+		target: TerminalLocation,
+		editorOptions?: TerminalEditorLocation,
+	): ITerminalInstance;
 
 	/**
 	 * Gets the registered backend for a remote authority (undefined = local). This is a convenience
@@ -143,20 +219,27 @@ export interface ITerminalChatService {
 	 * Associate a tool session id with a terminal instance. The association is automatically
 	 * cleared when the instance is disposed.
 	 */
-	registerTerminalInstanceWithToolSession(terminalToolSessionId: string | undefined, instance: ITerminalInstance): void;
+	registerTerminalInstanceWithToolSession(
+		terminalToolSessionId: string | undefined,
+		instance: ITerminalInstance,
+	): void;
 
 	/**
 	 * Resolve a terminal instance by its tool session id.
 	 * @param terminalToolSessionId The tool session id provided in toolSpecificData.
 	 * If no tool session ID is provided, we do nothing.
 	 */
-	getTerminalInstanceByToolSessionId(terminalToolSessionId: string): Promise<ITerminalInstance | undefined>;
+	getTerminalInstanceByToolSessionId(
+		terminalToolSessionId: string,
+	): Promise<ITerminalInstance | undefined>;
 
 	/**
 	 * Returns the list of terminal instances that have been registered with a tool session id.
 	 * This is used for surfacing tool-driven/background terminals in UI (eg. quick picks).
 	 */
-	getToolSessionTerminalInstances(hiddenOnly?: boolean): readonly ITerminalInstance[];
+	getToolSessionTerminalInstances(
+		hiddenOnly?: boolean,
+	): readonly ITerminalInstance[];
 
 	/**
 	 * Returns the tool session ID for a given terminal instance, if it has been registered.
@@ -171,14 +254,19 @@ export interface ITerminalChatService {
 	 * @param chatSessionResource The chat session resource URI
 	 * @param instance The terminal instance
 	 */
-	registerTerminalInstanceWithChatSession(chatSessionResource: URI, instance: ITerminalInstance): void;
+	registerTerminalInstanceWithChatSession(
+		chatSessionResource: URI,
+		instance: ITerminalInstance,
+	): void;
 
 	/**
 	 * Returns the chat session resource for a given terminal instance, if it has been registered.
 	 * @param instance The terminal instance to look up
 	 * @returns The chat session resource if found, undefined otherwise
 	 */
-	getChatSessionResourceForInstance(instance: ITerminalInstance): URI | undefined;
+	getChatSessionResourceForInstance(
+		instance: ITerminalInstance,
+	): URI | undefined;
 
 	/**
 	 * Check if a terminal is a background terminal (tool-driven terminal that may be hidden from
@@ -239,14 +327,22 @@ export interface ITerminalChatService {
 	 * @param key The rule key (command or regex pattern)
 	 * @param value The rule value (approval boolean or object with approve and matchCommandLine)
 	 */
-	addSessionAutoApproveRule(chatSessionResource: URI, key: string, value: boolean | { approve: boolean; matchCommandLine?: boolean }): void;
+	addSessionAutoApproveRule(
+		chatSessionResource: URI,
+		key: string,
+		value: boolean | { approve: boolean; matchCommandLine?: boolean },
+	): void;
 
 	/**
 	 * Get all session-scoped auto-approve rules for a specific chat session.
 	 * @param chatSessionResource The chat session resource URI
 	 * @returns A record of all session-scoped auto-approve rules for the session
 	 */
-	getSessionAutoApproveRules(chatSessionResource: URI): Readonly<Record<string, boolean | { approve: boolean; matchCommandLine?: boolean }>>;
+	getSessionAutoApproveRules(
+		chatSessionResource: URI,
+	): Readonly<
+		Record<string, boolean | { approve: boolean; matchCommandLine?: boolean }>
+	>;
 
 	/**
 	 * Signal that a foreground terminal tool invocation should continue in the background.
@@ -267,14 +363,19 @@ export interface ITerminalChatService {
 	 * @param source The AHP command source
 	 * @returns A disposable that unregisters the source when disposed
 	 */
-	registerAhpCommandSource(terminalToolSessionId: string, source: IAhpTerminalCommandSource): IDisposable;
+	registerAhpCommandSource(
+		terminalToolSessionId: string,
+		source: IAhpTerminalCommandSource,
+	): IDisposable;
 
 	/**
 	 * Retrieve the AHP command source for a given tool session.
 	 * @param terminalToolSessionId The tool session ID to look up
 	 * @returns The AHP command source if registered, undefined otherwise
 	 */
-	getAhpCommandSource(terminalToolSessionId: string): IAhpTerminalCommandSource | undefined;
+	getAhpCommandSource(
+		terminalToolSessionId: string,
+	): IAhpTerminalCommandSource | undefined;
 }
 
 /**
@@ -323,28 +424,50 @@ export const enum Direction {
 	Left = 0,
 	Right = 1,
 	Up = 2,
-	Down = 3
+	Down = 3,
 }
 
 export interface IQuickPickTerminalObject {
-	config: IRegisterContributedProfileArgs | ITerminalProfile | { profile: IExtensionTerminalProfile; options: { icon?: string; color?: string } } | undefined;
+	config:
+		| IRegisterContributedProfileArgs
+		| ITerminalProfile
+		| {
+				profile: IExtensionTerminalProfile;
+				options: { icon?: string; color?: string };
+		  }
+		| undefined;
 	keyMods: IKeyMods | undefined;
 }
 
 export interface IMarkTracker {
-	scrollToPreviousMark(scrollPosition?: ScrollPosition, retainSelection?: boolean, skipEmptyCommands?: boolean): void;
+	scrollToPreviousMark(
+		scrollPosition?: ScrollPosition,
+		retainSelection?: boolean,
+		skipEmptyCommands?: boolean,
+	): void;
 	scrollToNextMark(): void;
 	selectToPreviousMark(): void;
 	selectToNextMark(): void;
 	selectToPreviousLine(): void;
 	selectToNextLine(): void;
 	clear(): void;
-	scrollToClosestMarker(startMarkerId: string, endMarkerId?: string, highlight?: boolean | undefined): void;
+	scrollToClosestMarker(
+		startMarkerId: string,
+		endMarkerId?: string,
+		highlight?: boolean | undefined,
+	): void;
 
 	scrollToLine(line: number, position: ScrollPosition): void;
-	revealCommand(command: ITerminalCommand | ICurrentPartialCommand | URI, position?: ScrollPosition): void;
+	revealCommand(
+		command: ITerminalCommand | ICurrentPartialCommand | URI,
+		position?: ScrollPosition,
+	): void;
 	revealRange(range: IBufferRange): void;
-	registerTemporaryDecoration(marker: IMarker, endMarker: IMarker | undefined, showOutline: boolean): void;
+	registerTemporaryDecoration(
+		marker: IMarker,
+		endMarker: IMarker | undefined,
+		showOutline: boolean,
+	): void;
 	showCommandGuide(command: ITerminalCommand | undefined): void;
 
 	saveScrollState(): void;
@@ -370,7 +493,11 @@ export interface ITerminalGroup {
 	attachToElement(element: HTMLElement): void;
 	addInstance(instance: ITerminalInstance): void;
 	removeInstance(instance: ITerminalInstance): void;
-	moveInstance(instances: SingleOrMany<ITerminalInstance>, index: number, position: 'before' | 'after'): void;
+	moveInstance(
+		instances: SingleOrMany<ITerminalInstance>,
+		index: number,
+		position: "before" | "after",
+	): void;
 	setVisible(visible: boolean): void;
 	layout(width: number, height: number): void;
 	addDisposable(disposable: IDisposable): void;
@@ -380,7 +507,7 @@ export interface ITerminalGroup {
 
 export const enum TerminalConnectionState {
 	Connecting,
-	Connected
+	Connected,
 }
 
 export interface IDetachedXTermOptions {
@@ -451,7 +578,8 @@ export interface IBaseTerminalInstance {
  * to represent terminals that appear in other parts of the VS Code UI outside
  * of the "Terminal" view or editors.
  */
-export interface IDetachedTerminalInstance extends IDisposable, IBaseTerminalInstance {
+export interface IDetachedTerminalInstance
+	extends IDisposable, IBaseTerminalInstance {
 	readonly xterm: IDetachedXtermTerminal;
 
 	/**
@@ -467,10 +595,16 @@ export interface IDetachedTerminalInstance extends IDisposable, IBaseTerminalIns
 	 * @param container Container the terminal will be rendered in
 	 * @param options Additional options for mounting the terminal in an element
 	 */
-	attachToElement(container: HTMLElement, options?: Partial<IXtermAttachToElementOptions>): void;
+	attachToElement(
+		container: HTMLElement,
+		options?: Partial<IXtermAttachToElementOptions>,
+	): void;
 }
 
-export const isDetachedTerminalInstance = (t: ITerminalInstance | IDetachedTerminalInstance): t is IDetachedTerminalInstance => !isNumber((t as ITerminalInstance).instanceId);
+export const isDetachedTerminalInstance = (
+	t: ITerminalInstance | IDetachedTerminalInstance,
+): t is IDetachedTerminalInstance =>
+	!isNumber((t as ITerminalInstance).instanceId);
 
 export interface ITerminalService extends ITerminalInstanceHost {
 	readonly _serviceBrand: undefined;
@@ -499,9 +633,15 @@ export interface ITerminalService extends ITerminalInstanceHost {
 	readonly onDidChangeActiveGroup: Event<ITerminalGroup | undefined>;
 
 	// Multiplexed events
-	readonly onAnyInstanceData: Event<{ instance: ITerminalInstance; data: string }>;
+	readonly onAnyInstanceData: Event<{
+		instance: ITerminalInstance;
+		data: string;
+	}>;
 	readonly onAnyInstanceDataInput: Event<ITerminalInstance>;
-	readonly onAnyInstanceIconChange: Event<{ instance: ITerminalInstance; userInitiated: boolean }>;
+	readonly onAnyInstanceIconChange: Event<{
+		instance: ITerminalInstance;
+		userInitiated: boolean;
+	}>;
 	readonly onAnyInstanceMaximumDimensionsChange: Event<ITerminalInstance>;
 	readonly onAnyInstancePrimaryStatusChange: Event<ITerminalInstance>;
 	readonly onAnyInstanceProcessIdReady: Event<ITerminalInstance>;
@@ -522,14 +662,18 @@ export interface ITerminalService extends ITerminalInstanceHost {
 	 * @param options The options to create the terminal with, when not specified the default
 	 * profile will be used at the default target.
 	 */
-	createAndFocusTerminal(options?: ICreateTerminalOptions): Promise<ITerminalInstance>;
+	createAndFocusTerminal(
+		options?: ICreateTerminalOptions,
+	): Promise<ITerminalInstance>;
 
 	/**
 	 * Creates a detached xterm instance which is not attached to the DOM or
 	 * tracked as a terminal instance.
 	 * @params options The options to create the terminal with
 	 */
-	createDetachedTerminal(options: IDetachedXTermOptions): Promise<IDetachedTerminalInstance>;
+	createDetachedTerminal(
+		options: IDetachedXTermOptions,
+	): Promise<IDetachedTerminalInstance>;
 
 	/**
 	 * Creates a raw terminal instance, this should not be used outside of the terminal part.
@@ -541,16 +685,26 @@ export interface ITerminalService extends ITerminalInstanceHost {
 	 * so store them to be requested/adopted later
 	 * @deprecated Use {@link onDidReconnectToSession}
 	 */
-	getReconnectedTerminals(reconnectionOwner: string): ITerminalInstance[] | undefined;
+	getReconnectedTerminals(
+		reconnectionOwner: string,
+	): ITerminalInstance[] | undefined;
 
-	getActiveOrCreateInstance(options?: { acceptsInput?: boolean }): Promise<ITerminalInstance>;
-	revealTerminal(source: ITerminalInstance, preserveFocus?: boolean): Promise<void>;
+	getActiveOrCreateInstance(options?: {
+		acceptsInput?: boolean;
+	}): Promise<ITerminalInstance>;
+	revealTerminal(
+		source: ITerminalInstance,
+		preserveFocus?: boolean,
+	): Promise<void>;
 	/**
 	 * @param instance
 	 * @param suppressSetActive Do not set the active instance when there is only one terminal
 	 * @param forceSaveState Used when the window is shutting down and we need to reveal and save hideFromUser terminals
 	 */
-	showBackgroundTerminal(instance: ITerminalInstance, suppressSetActive?: boolean): Promise<void>;
+	showBackgroundTerminal(
+		instance: ITerminalInstance,
+		suppressSetActive?: boolean,
+	): Promise<void>;
 	/**
 	 * Moves a visible terminal instance to the background. The terminal process
 	 * remains alive but the instance is removed from its group/editor and tracked
@@ -558,11 +712,22 @@ export interface ITerminalService extends ITerminalInstanceHost {
 	 */
 	moveToBackground(instance: ITerminalInstance): void;
 	revealActiveTerminal(preserveFocus?: boolean): Promise<void>;
-	moveToEditor(source: ITerminalInstance, group?: GroupIdentifier | SIDE_GROUP_TYPE | ACTIVE_GROUP_TYPE | AUX_WINDOW_GROUP_TYPE): void;
+	moveToEditor(
+		source: ITerminalInstance,
+		group?:
+			| GroupIdentifier
+			| SIDE_GROUP_TYPE
+			| ACTIVE_GROUP_TYPE
+			| AUX_WINDOW_GROUP_TYPE,
+	): void;
 	moveIntoNewEditor(source: ITerminalInstance): void;
 	moveToTerminalView(source: ITerminalInstance | URI): Promise<void>;
 	getPrimaryBackend(): ITerminalBackend | undefined;
-	setNextCommandId(id: number, commandLine: string, commandId: string): Promise<void>;
+	setNextCommandId(
+		id: number,
+		commandLine: string,
+		commandId: string,
+	): Promise<void>;
 
 	/**
 	 * Fire the onActiveTabChanged event, this will trigger the terminal dropdown to be updated,
@@ -572,18 +737,32 @@ export interface ITerminalService extends ITerminalInstanceHost {
 
 	registerProcessSupport(isSupported: boolean): void;
 
-	showProfileQuickPick(type: 'setDefault' | 'createInstance', cwd?: string | URI): Promise<ITerminalInstance | undefined>;
+	showProfileQuickPick(
+		type: "setDefault" | "createInstance",
+		cwd?: string | URI,
+	): Promise<ITerminalInstance | undefined>;
 
-	setContainers(panelContainer: HTMLElement, terminalContainer: HTMLElement): void;
+	setContainers(
+		panelContainer: HTMLElement,
+		terminalContainer: HTMLElement,
+	): void;
 
-	requestStartExtensionTerminal(proxy: ITerminalProcessExtHostProxy, cols: number, rows: number): Promise<ITerminalLaunchError | undefined>;
+	requestStartExtensionTerminal(
+		proxy: ITerminalProcessExtHostProxy,
+		cols: number,
+		rows: number,
+	): Promise<ITerminalLaunchError | undefined>;
 	isAttachedToTerminal(remoteTerm: IRemoteTerminalAttachTarget): boolean;
 	safeDisposeTerminal(instance: ITerminalInstance): Promise<void>;
 
 	getDefaultInstanceHost(): ITerminalInstanceHost;
-	getInstanceHost(target: ITerminalLocationOptions | undefined): Promise<ITerminalInstanceHost>;
+	getInstanceHost(
+		target: ITerminalLocationOptions | undefined,
+	): Promise<ITerminalInstanceHost>;
 
-	resolveLocation(location?: ITerminalLocationOptions): Promise<TerminalLocation | undefined>;
+	resolveLocation(
+		location?: ITerminalLocationOptions,
+	): Promise<TerminalLocation | undefined>;
 	setNativeDelegate(nativeCalls: ITerminalServiceNativeDelegate): void;
 
 	/**
@@ -591,7 +770,9 @@ export interface ITerminalService extends ITerminalInstanceHost {
 	 * instances and removing old instances as needed.
 	 * @param getEvent Maps the instance to the event.
 	 */
-	createOnInstanceEvent<T>(getEvent: (instance: ITerminalInstance) => Event<T>): DynamicListEventMultiplexer<ITerminalInstance, T>;
+	createOnInstanceEvent<T>(
+		getEvent: (instance: ITerminalInstance) => Event<T>,
+	): DynamicListEventMultiplexer<ITerminalInstance, T>;
 
 	/**
 	 * Creates a capability event listener that listens to capabilities on all instances,
@@ -599,7 +780,10 @@ export interface ITerminalService extends ITerminalInstanceHost {
 	 * @param capabilityId The capability type to listen to an event on.
 	 * @param getEvent Maps the capability to the event.
 	 */
-	createOnInstanceCapabilityEvent<T extends TerminalCapability, K>(capabilityId: T, getEvent: (capability: ITerminalCapabilityImplMap[T]) => Event<K>): IDynamicListEventMultiplexer<{ instance: ITerminalInstance; data: K }>;
+	createOnInstanceCapabilityEvent<T extends TerminalCapability, K>(
+		capabilityId: T,
+		getEvent: (capability: ITerminalCapabilityImplMap[T]) => Event<K>,
+	): IDynamicListEventMultiplexer<{ instance: ITerminalInstance; data: K }>;
 
 	/**
 	 * Reveals the terminal and, if provided, scrolls to the command mark.
@@ -631,7 +815,11 @@ export interface ITerminalConfigurationService {
 
 	setPanelContainer(panelContainer: HTMLElement): void;
 	configFontIsMonospace(): boolean;
-	getFont(w: Window, xtermCore?: IXtermCore, excludeDimensions?: boolean): ITerminalFont;
+	getFont(
+		w: Window,
+		xtermCore?: IXtermCore,
+		excludeDimensions?: boolean,
+	): ITerminalFont;
 
 	/**
 	 * Whether a particular command should skip the shell and go to be handled like a regular
@@ -641,9 +829,7 @@ export interface ITerminalConfigurationService {
 	shouldCommandSkipShell(commandId: string): boolean;
 }
 
-export class TerminalLinkQuickPickEvent extends MouseEvent {
-
-}
+export class TerminalLinkQuickPickEvent extends MouseEvent {}
 export interface ITerminalServiceNativeDelegate {
 	getWindowCount(): Promise<number>;
 }
@@ -658,16 +844,22 @@ export interface ITerminalEditorService extends ITerminalInstanceHost {
 	/** Gets all _terminal editor_ instances. */
 	readonly instances: readonly ITerminalInstance[];
 
-	openEditor(instance: ITerminalInstance, editorOptions?: TerminalEditorLocation): Promise<void>;
+	openEditor(
+		instance: ITerminalInstance,
+		editorOptions?: TerminalEditorLocation,
+	): Promise<void>;
 	detachInstance(instance: ITerminalInstance): void;
-	splitInstance(instanceToSplit: ITerminalInstance, shellLaunchConfig?: IShellLaunchConfig): Promise<ITerminalInstance>;
+	splitInstance(
+		instanceToSplit: ITerminalInstance,
+		shellLaunchConfig?: IShellLaunchConfig,
+	): Promise<ITerminalInstance>;
 	revealActiveEditor(preserveFocus?: boolean): Promise<void>;
 	resolveResource(instance: ITerminalInstance): URI;
 	reviveInput(deserializedInput: IDeserializedTerminalEditorInput): EditorInput;
 	getInputFromResource(resource: URI): TerminalEditorInput;
 }
 
-export const terminalEditorId = 'terminalEditor';
+export const terminalEditorId = "terminalEditor";
 
 interface ITerminalEditorInputObject {
 	readonly id: number;
@@ -685,13 +877,15 @@ interface ITerminalEditorInputObject {
 	readonly shellIntegrationNonce: string;
 }
 
-export interface ISerializedTerminalEditorInput extends ITerminalEditorInputObject {
-}
+export interface ISerializedTerminalEditorInput extends ITerminalEditorInputObject {}
 
-export interface IDeserializedTerminalEditorInput extends ITerminalEditorInputObject {
-}
+export interface IDeserializedTerminalEditorInput extends ITerminalEditorInputObject {}
 
-export type ITerminalLocationOptions = TerminalLocation | TerminalEditorLocation | { parentTerminal: MaybePromise<ITerminalInstance> } | { splitActiveTerminal: boolean };
+export type ITerminalLocationOptions =
+	| TerminalLocation
+	| TerminalEditorLocation
+	| { parentTerminal: MaybePromise<ITerminalInstance> }
+	| { splitActiveTerminal: boolean };
 
 export interface ICreateTerminalOptions {
 	/**
@@ -722,9 +916,13 @@ export interface ICreateTerminalOptions {
 }
 
 export interface TerminalEditorLocation {
-	viewColumn: GroupIdentifier | SIDE_GROUP_TYPE | ACTIVE_GROUP_TYPE | AUX_WINDOW_GROUP_TYPE;
+	viewColumn:
+		| GroupIdentifier
+		| SIDE_GROUP_TYPE
+		| ACTIVE_GROUP_TYPE
+		| AUX_WINDOW_GROUP_TYPE;
 	preserveFocus?: boolean;
-	auxiliary?: IEditorOptions['auxiliary'];
+	auxiliary?: IEditorOptions["auxiliary"];
 }
 
 /**
@@ -742,7 +940,7 @@ export interface ITerminalGroupService extends ITerminalInstanceHost {
 	/**
 	 * Gets or sets the last accessed menu, this is used to select the instance(s) for menu actions.
 	 */
-	lastAccessedMenu: 'inline-tab' | 'tab-list';
+	lastAccessedMenu: "inline-tab" | "tab-list";
 
 	readonly onDidChangeActiveGroup: Event<ITerminalGroup | undefined>;
 	readonly onDidDisposeGroup: Event<ITerminalGroup>;
@@ -761,10 +959,17 @@ export interface ITerminalGroupService extends ITerminalInstanceHost {
 	 * @param source The source instance to move.
 	 * @param target The target instance to move the source instance to.
 	 */
-	moveGroup(source: SingleOrMany<ITerminalInstance>, target: ITerminalInstance): void;
+	moveGroup(
+		source: SingleOrMany<ITerminalInstance>,
+		target: ITerminalInstance,
+	): void;
 	moveGroupToEnd(source: SingleOrMany<ITerminalInstance>): void;
 
-	moveInstance(source: ITerminalInstance, target: ITerminalInstance, side: 'before' | 'after'): void;
+	moveInstance(
+		source: ITerminalInstance,
+		target: ITerminalInstance,
+		side: "before" | "after",
+	): void;
 	unsplitInstance(instance: ITerminalInstance): void;
 	joinInstances(instances: ITerminalInstance[]): void;
 	instanceIsSplit(instance: ITerminalInstance): boolean;
@@ -812,7 +1017,9 @@ export interface ITerminalInstanceHost {
 	 * Gets an instance from a resource if it exists. This MUST be used instead of getInstanceFromId
 	 * when you only know about a terminal's URI. (a URI's instance ID may not be this window's instance ID)
 	 */
-	getInstanceFromResource(resource: UriComponents | undefined): ITerminalInstance | undefined;
+	getInstanceFromResource(
+		resource: UriComponents | undefined,
+	): ITerminalInstance | undefined;
 }
 
 /**
@@ -821,7 +1028,10 @@ export interface ITerminalInstanceHost {
  * workbench integrations.
  */
 export interface ITerminalExternalLinkProvider {
-	provideLinks(instance: ITerminalInstance, line: string): Promise<ITerminalLink[] | undefined>;
+	provideLinks(
+		instance: ITerminalInstance,
+		line: string,
+	): Promise<ITerminalLink[] | undefined>;
 }
 
 export interface ITerminalLink {
@@ -884,9 +1094,13 @@ export interface ITerminalInstance extends IBaseTerminalInstance {
 	readonly initialCwd?: string;
 	readonly os?: OperatingSystem;
 	readonly usedShellIntegrationInjection: boolean;
-	readonly shellIntegrationInjectionFailureReason: ShellIntegrationInjectionFailureReason | undefined;
+	readonly shellIntegrationInjectionFailureReason:
+		| ShellIntegrationInjectionFailureReason
+		| undefined;
 	readonly injectedArgs: string[] | undefined;
-	readonly extEnvironmentVariableCollection: IMergedEnvironmentVariableCollection | undefined;
+	readonly extEnvironmentVariableCollection:
+		| IMergedEnvironmentVariableCollection
+		| undefined;
 
 	/**
 	 * The underlying disposable store, allowing objects who share the same lifecycle as the
@@ -958,7 +1172,10 @@ export interface ITerminalInstance extends IBaseTerminalInstance {
 	/**
 	 * An event that fires when the terminal instance's icon changes.
 	 */
-	readonly onIconChanged: Event<{ instance: ITerminalInstance; userInitiated: boolean }>;
+	readonly onIconChanged: Event<{
+		instance: ITerminalInstance;
+		userInitiated: boolean;
+	}>;
 
 	/**
 	 * An event that fires when the terminal instance is disposed.
@@ -1128,7 +1345,11 @@ export interface ITerminalInstance extends IBaseTerminalInstance {
 	 * @param highlight Whether the buffer from startMarker to endMarker
 	 * should be highlighted
 	 */
-	scrollToMark(startMarkId: string, endMarkId?: string, highlight?: boolean): void;
+	scrollToMark(
+		startMarkId: string,
+		endMarkId?: string,
+		highlight?: boolean,
+	): void;
 
 	/**
 	 * Dispose the terminal instance, removing it from the panel/service and freeing up resources.
@@ -1172,7 +1393,11 @@ export interface ITerminalInstance extends IBaseTerminalInstance {
 	 * this may for example select the text and it will also ensure that the text will not be
 	 * interpreted as a shell keybinding.
 	 */
-	sendText(text: string, shouldExecute: boolean, bracketedPasteMode?: boolean): Promise<void>;
+	sendText(
+		text: string,
+		shouldExecute: boolean,
+		bracketedPasteMode?: boolean,
+	): Promise<void>;
 
 	/**
 	 * Sends a signal to the terminal instance's process.
@@ -1192,7 +1417,13 @@ export interface ITerminalInstance extends IBaseTerminalInstance {
 	 */
 	sendPath(originalPath: string | URI, shouldExecute: boolean): Promise<void>;
 
-	runCommand(command: string, shouldExecute?: boolean, commandId?: string, bracketedPasteMode?: boolean, commandLineForMetadata?: string): Promise<void>;
+	runCommand(
+		command: string,
+		shouldExecute?: boolean,
+		commandId?: string,
+		bracketedPasteMode?: boolean,
+		commandLineForMetadata?: string,
+	): Promise<void>;
 
 	/**
 	 * Takes a path and returns the properly escaped path to send to a given shell. On Windows, this
@@ -1208,12 +1439,12 @@ export interface ITerminalInstance extends IBaseTerminalInstance {
 	 */
 	getUriLabelForShell(uri: URI): Promise<string>;
 
-	/** Scroll the terminal buffer down 1 line. */   scrollDownLine(): void;
-	/** Scroll the terminal buffer down 1 page. */   scrollDownPage(): void;
+	/** Scroll the terminal buffer down 1 line. */ scrollDownLine(): void;
+	/** Scroll the terminal buffer down 1 page. */ scrollDownPage(): void;
 	/** Scroll the terminal buffer to the bottom. */ scrollToBottom(): void;
-	/** Scroll the terminal buffer up 1 line. */     scrollUpLine(): void;
-	/** Scroll the terminal buffer up 1 page. */     scrollUpPage(): void;
-	/** Scroll the terminal buffer to the top. */    scrollToTop(): void;
+	/** Scroll the terminal buffer up 1 line. */ scrollUpLine(): void;
+	/** Scroll the terminal buffer up 1 page. */ scrollUpPage(): void;
+	/** Scroll the terminal buffer to the top. */ scrollToTop(): void;
 
 	/**
 	 * Clears the terminal buffer, leaving only the prompt line and moving it to the top of the
@@ -1309,7 +1540,10 @@ export interface ITerminalInstance extends IBaseTerminalInstance {
 	/**
 	 * Sets or triggers a quick pick to change the color of the associated terminal tab icon.
 	 */
-	changeColor(color?: string, skipQuickPick?: boolean): Promise<string | undefined>;
+	changeColor(
+		color?: string,
+		skipQuickPick?: boolean,
+	): Promise<string | undefined>;
 
 	/**
 	 * Attempts to detect and kill the process listening on specified port.
@@ -1329,11 +1563,14 @@ export interface ITerminalInstance extends IBaseTerminalInstance {
 	 * @param contextMenu The context menu to show if needed.
 	 * @returns Whether the context menu should be suppressed.
 	 */
-	handleMouseEvent(event: MouseEvent, contextMenu: IMenu): Promise<{ cancelContextMenu: boolean } | void>;
+	handleMouseEvent(
+		event: MouseEvent,
+		contextMenu: IMenu,
+	): Promise<{ cancelContextMenu: boolean } | void>;
 }
 
 export const enum XtermTerminalConstants {
-	SearchHighlightLimit = 20000
+	SearchHighlightLimit = 20000,
 }
 
 export interface IXtermAttachToElementOptions {
@@ -1358,8 +1595,14 @@ export interface IXtermTerminal extends IDisposable {
 	readonly decorationAddon: IDecorationAddon;
 
 	readonly onDidChangeSelection: Event<void>;
-	readonly onDidChangeFindResults: Event<{ resultIndex: number; resultCount: number }>;
-	readonly onDidRequestRunCommand: Event<{ command: ITerminalCommand; noNewLine?: boolean }>;
+	readonly onDidChangeFindResults: Event<{
+		resultIndex: number;
+		resultCount: number;
+	}>;
+	readonly onDidRequestRunCommand: Event<{
+		command: ITerminalCommand;
+		noNewLine?: boolean;
+	}>;
 	readonly onDidRequestCopyAsHtml: Event<{ command: ITerminalCommand }>;
 
 	/**
@@ -1407,13 +1650,16 @@ export interface IXtermTerminal extends IDisposable {
 	 * @param container Container the terminal will be rendered in
 	 * @param options Additional options for mounting the terminal in an element
 	 */
-	attachToElement(container: HTMLElement, options?: Partial<IXtermAttachToElementOptions>): void;
+	attachToElement(
+		container: HTMLElement,
+		options?: Partial<IXtermAttachToElementOptions>,
+	): void;
 
 	findResult?: { resultIndex: number; resultCount: number };
 
 	/**
 	 * Find the next instance of the term
-	*/
+	 */
 	findNext(term: string, searchOptions: ISearchOptions): Promise<boolean>;
 
 	/**
@@ -1437,7 +1683,11 @@ export interface IXtermTerminal extends IDisposable {
 	 * @param endMarker The marker to end at. When not provided, will end at the last line.
 	 * @param skipLastLine Whether the last line should be skipped (e.g. when it's the prompt line)
 	 */
-	getRangeAsVT(startMarker?: IXtermMarker, endMarker?: IXtermMarker, skipLastLine?: boolean): Promise<string>;
+	getRangeAsVT(
+		startMarker?: IXtermMarker,
+		endMarker?: IXtermMarker,
+		skipLastLine?: boolean,
+	): Promise<string>;
 
 	/**
 	 * Gets whether there's any terminal selection.
@@ -1463,7 +1713,11 @@ export interface IXtermTerminal extends IDisposable {
 	 * @param scrollIntoView Whether the terminal should scroll to the start of
 	 * the range, defaults tof alse
 	 */
-	selectMarkedRange(fromMarkerId: string, toMarkerId: string, scrollIntoView?: boolean): void;
+	selectMarkedRange(
+		fromMarkerId: string,
+		toMarkerId: string,
+		scrollIntoView?: boolean,
+	): void;
 
 	/**
 	 * Copies the terminal selection.
@@ -1483,7 +1737,10 @@ export interface IXtermTerminal extends IDisposable {
 	/** Scroll the terminal buffer up 1 line.     */ scrollUpLine(): void;
 	/** Scroll the terminal buffer up 1 page.     */ scrollUpPage(): void;
 	/** Scroll the terminal buffer to the top.    */ scrollToTop(): void;
-	/** Scroll the terminal buffer to a set line  */ scrollToLine(line: number, position?: ScrollPosition): void;
+	/** Scroll the terminal buffer to a set line  */ scrollToLine(
+		line: number,
+		position?: ScrollPosition,
+	): void;
 
 	/**
 	 * Clears the terminal buffer, leaving only the prompt line and moving it to the top of the
@@ -1510,7 +1767,10 @@ export interface IXtermTerminal extends IDisposable {
 	 * Gets the contents of the buffer from a start marker (or line 0) to the end marker (or the
 	 * last line).
 	 */
-	getContentsAsText(startMarker?: IXtermMarker, endMarker?: IXtermMarker): string;
+	getContentsAsText(
+		startMarker?: IXtermMarker,
+		endMarker?: IXtermMarker,
+	): string;
 
 	/**
 	 * Gets the buffer contents as HTML.
@@ -1587,7 +1847,7 @@ export interface IXtermColorProvider {
 
 export interface IRequestAddInstanceToGroupEvent {
 	uri: URI;
-	side: 'before' | 'after';
+	side: "before" | "after";
 }
 
 export const enum LinuxDistro {
@@ -1597,5 +1857,5 @@ export const enum LinuxDistro {
 }
 
 export const enum TerminalDataTransfers {
-	Terminals = 'Terminals'
+	Terminals = "Terminals",
 }

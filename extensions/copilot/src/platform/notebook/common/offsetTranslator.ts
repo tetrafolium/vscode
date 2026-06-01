@@ -13,7 +13,10 @@ export class CrLfOffsetTranslator {
 	// Stores the offsets (indices) of each '\r' in a '\r\n' sequence
 	private readonly crlfOffsets: number[] = [];
 
-	constructor(original: string, private readonly originalEol: EndOfLine) {
+	constructor(
+		original: string,
+		private readonly originalEol: EndOfLine,
+	) {
 		if (originalEol === EndOfLine.CRLF) {
 			for (let i = 0; i < original.length - 1; i++) {
 				if (original[i] === '\r' && original[i + 1] === '\n') {
@@ -34,7 +37,8 @@ export class CrLfOffsetTranslator {
 			return originalOffset; // No translation needed if already LF
 		}
 		// Count how many CRLF pairs are before or at originalOffset
-		let left = 0, right = this.crlfOffsets.length;
+		let left = 0,
+			right = this.crlfOffsets.length;
 		while (left < right) {
 			const mid = (left + right) >> 1;
 			if (this.crlfOffsets[mid] < originalOffset) {

@@ -3,12 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IObservable, IObservableWithChange, IObserver, IReaderWithStore } from '../base.js';
-import { DebugNameData } from '../debugName.js';
-import { assertFn, BugIndicatingError, DisposableStore, IDisposable, markAsDisposed, onBugIndicatingError, trackDisposable } from '../commonFacade/deps.js';
-import { getLogger } from '../logging/logging.js';
-import { IChangeTracker } from '../changeTracker.js';
-import { DebugLocation } from '../debugLocation.js';
+import {
+	IObservable,
+	IObservableWithChange,
+	IObserver,
+	IReaderWithStore,
+} from "../base.js";
+import { DebugNameData } from "../debugName.js";
+import {
+	assertFn,
+	BugIndicatingError,
+	DisposableStore,
+	IDisposable,
+	markAsDisposed,
+	onBugIndicatingError,
+	trackDisposable,
+} from "../commonFacade/deps.js";
+import { getLogger } from "../logging/logging.js";
+import { IChangeTracker } from "../changeTracker.js";
+import { DebugLocation } from "../debugLocation.js";
 
 export const enum AutorunState {
 	/**
@@ -26,14 +39,20 @@ export const enum AutorunState {
 
 function autorunStateToString(state: AutorunState): string {
 	switch (state) {
-		case AutorunState.dependenciesMightHaveChanged: return 'dependenciesMightHaveChanged';
-		case AutorunState.stale: return 'stale';
-		case AutorunState.upToDate: return 'upToDate';
-		default: return '<unknown>';
+		case AutorunState.dependenciesMightHaveChanged:
+			return "dependenciesMightHaveChanged";
+		case AutorunState.stale:
+			return "stale";
+		case AutorunState.upToDate:
+			return "upToDate";
+		default:
+			return "<unknown>";
 	}
 }
 
-export class AutorunObserver<TChangeSummary = any> implements IObserver, IReaderWithStore, IDisposable {
+export class AutorunObserver<TChangeSummary = any>
+	implements IObserver, IReaderWithStore, IDisposable
+{
 	private _state = AutorunState.stale;
 	private _updateCount = 0;
 	private _disposed = false;
@@ -44,14 +63,17 @@ export class AutorunObserver<TChangeSummary = any> implements IObserver, IReader
 	private _iteration = 0;
 
 	public get debugName(): string {
-		return this._debugNameData.getDebugName(this) ?? '(anonymous)';
+		return this._debugNameData.getDebugName(this) ?? "(anonymous)";
 	}
 
 	constructor(
 		public readonly _debugNameData: DebugNameData,
-		public readonly _runFn: (reader: IReaderWithStore, changeSummary: TChangeSummary) => void,
+		public readonly _runFn: (
+			reader: IReaderWithStore,
+			changeSummary: TChangeSummary,
+		) => void,
 		private readonly _changeTracker: IChangeTracker<TChangeSummary> | undefined,
-		debugLocation: DebugLocation
+		debugLocation: DebugLocation,
 	) {
 		this._changeSummary = this._changeTracker?.createChangeSummary(undefined);
 		getLogger()?.handleAutorunCreated(this, debugLocation);
@@ -100,7 +122,8 @@ export class AutorunObserver<TChangeSummary = any> implements IObserver, IReader
 					this._isRunning = true;
 					if (this._changeTracker) {
 						this._changeTracker.beforeUpdate?.(this, changeSummary);
-						this._changeSummary = this._changeTracker.createChangeSummary(changeSummary); // Warning: external call!
+						this._changeSummary =
+							this._changeTracker.createChangeSummary(changeSummary); // Warning: external call!
 					}
 					if (this._store !== undefined) {
 						this._store.dispose();
@@ -155,7 +178,7 @@ export class AutorunObserver<TChangeSummary = any> implements IObserver, IReader
 						this._state = AutorunState.upToDate;
 						for (const d of this._dependencies) {
 							d.reportChanges(); // Warning: external call!
-							if (this._state as AutorunState === AutorunState.stale) {
+							if ((this._state as AutorunState) === AutorunState.stale) {
 								// The other dependencies will refresh on demand
 								break;
 							}
@@ -176,23 +199,34 @@ export class AutorunObserver<TChangeSummary = any> implements IObserver, IReader
 	}
 
 	public handlePossibleChange(observable: IObservable<any>): void {
-		if (this._state === AutorunState.upToDate && this._isDependency(observable)) {
+		if (
+			this._state === AutorunState.upToDate &&
+			this._isDependency(observable)
+		) {
 			this._checkIterations();
 			this._state = AutorunState.dependenciesMightHaveChanged;
 		}
 	}
 
-	public handleChange<T, TChange>(observable: IObservableWithChange<T, TChange>, change: TChange): void {
+	public handleChange<T, TChange>(
+		observable: IObservableWithChange<T, TChange>,
+		change: TChange,
+	): void {
 		if (this._isDependency(observable)) {
 			getLogger()?.handleAutorunDependencyChanged(this, observable, change);
 			try {
 				// Warning: external call!
-				const shouldReact = this._changeTracker ? this._changeTracker.handleChange({
-					changedObservable: observable,
-					change,
-					// eslint-disable-next-line local/code-no-any-casts
-					didChange: (o): this is any => o === observable as any,
-				}, this._changeSummary!) : true;
+				const shouldReact = this._changeTracker
+					? this._changeTracker.handleChange(
+							{
+								changedObservable: observable,
+								change,
+								// eslint-disable-next-line local/code-no-any-casts
+								didChange: (o): this is any => o === (observable as any),
+							},
+							this._changeSummary!,
+						)
+					: true;
 				if (shouldReact) {
 					this._checkIterations();
 					this._state = AutorunState.stale;
@@ -204,13 +238,20 @@ export class AutorunObserver<TChangeSummary = any> implements IObserver, IReader
 	}
 
 	private _isDependency(observable: IObservableWithChange<any, any>): boolean {
-		return this._dependencies.has(observable) && !this._dependenciesToBeRemoved.has(observable);
+		return (
+			this._dependencies.has(observable) &&
+			!this._dependenciesToBeRemoved.has(observable)
+		);
 	}
 
 	// IReader implementation
 
 	private _ensureNoRunning(): void {
-		if (!this._isRunning) { throw new BugIndicatingError('The reader object cannot be used outside its compute function!'); }
+		if (!this._isRunning) {
+			throw new BugIndicatingError(
+				"The reader object cannot be used outside its compute function!",
+			);
+		}
 	}
 
 	public readObservable<T>(observable: IObservable<T>): T {
@@ -232,7 +273,7 @@ export class AutorunObserver<TChangeSummary = any> implements IObserver, IReader
 	get store(): DisposableStore {
 		this._ensureNoRunning();
 		if (this._disposed) {
-			throw new BugIndicatingError('Cannot access store after dispose');
+			throw new BugIndicatingError("Cannot access store after dispose");
 		}
 
 		if (this._store === undefined) {
@@ -245,7 +286,7 @@ export class AutorunObserver<TChangeSummary = any> implements IObserver, IReader
 	get delayedStore(): DisposableStore {
 		this._ensureNoRunning();
 		if (this._disposed) {
-			throw new BugIndicatingError('Cannot access store after dispose');
+			throw new BugIndicatingError("Cannot access store after dispose");
 		}
 
 		if (this._delayedStore === undefined) {
@@ -274,7 +315,11 @@ export class AutorunObserver<TChangeSummary = any> implements IObserver, IReader
 
 	private _checkIterations(): boolean {
 		if (this._iteration > 100) {
-			onBugIndicatingError(new BugIndicatingError(`Autorun '${this.debugName}' is stuck in an infinite update loop.`));
+			onBugIndicatingError(
+				new BugIndicatingError(
+					`Autorun '${this.debugName}' is stuck in an infinite update loop.`,
+				),
+			);
 			return true;
 		}
 		return false;

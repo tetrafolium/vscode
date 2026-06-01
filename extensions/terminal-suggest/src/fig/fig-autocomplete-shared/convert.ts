@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { makeArray } from './utils';
+import { makeArray } from "./utils";
 
-export type SuggestionType = Fig.SuggestionType | 'history' | 'auto-execute';
+export type SuggestionType = Fig.SuggestionType | "history" | "auto-execute";
 
 type Override<T, S> = Omit<T, keyof S> & S;
 export type Suggestion = Override<Fig.Suggestion, { type?: SuggestionType }>;
@@ -23,7 +23,9 @@ export type Subcommand<ArgT, OptionT, SubcommandT> = SubcommandT & {
 	args: ArgT[];
 };
 
-const makeNamedMap = <T extends { name: string[] }>(items: T[] | undefined): Record<string, T> => {
+const makeNamedMap = <T extends { name: string[] }>(
+	items: T[] | undefined,
+): Record<string, T> => {
 	const nameMapping: Record<string, T> = {};
 	if (!items) {
 		return nameMapping;
@@ -45,7 +47,7 @@ export type Initializer<ArgT, OptionT, SubcommandT> = {
 
 function convertOption<ArgT, OptionT>(
 	option: Fig.Option,
-	initialize: Omit<Initializer<ArgT, OptionT, never>, 'subcommand'>
+	initialize: Omit<Initializer<ArgT, OptionT, never>, "subcommand">,
 ): Option<ArgT, OptionT> {
 	return {
 		...initialize.option(option),
@@ -56,22 +58,24 @@ function convertOption<ArgT, OptionT>(
 
 export function convertSubcommand<ArgT, OptionT, SubcommandT>(
 	subcommand: Fig.Subcommand,
-	initialize: Initializer<ArgT, OptionT, SubcommandT>
+	initialize: Initializer<ArgT, OptionT, SubcommandT>,
 ): Subcommand<ArgT, OptionT, SubcommandT> {
 	const { subcommands, options, args } = subcommand;
 	return {
 		...initialize.subcommand(subcommand),
 		name: makeArray(subcommand.name),
-		subcommands: makeNamedMap(subcommands?.map((s) => convertSubcommand(s, initialize))),
+		subcommands: makeNamedMap(
+			subcommands?.map((s) => convertSubcommand(s, initialize)),
+		),
 		options: makeNamedMap(
 			options
 				?.filter((option) => !option.isPersistent)
-				?.map((option) => convertOption(option, initialize))
+				?.map((option) => convertOption(option, initialize)),
 		),
 		persistentOptions: makeNamedMap(
 			options
 				?.filter((option) => option.isPersistent)
-				?.map((option) => convertOption(option, initialize))
+				?.map((option) => convertOption(option, initialize)),
 		),
 		args: args ? makeArray(args).map(initialize.arg) : [],
 	};

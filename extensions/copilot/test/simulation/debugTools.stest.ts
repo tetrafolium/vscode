@@ -13,11 +13,19 @@ import { ISimulationTestRuntime, ssuite, stest } from '../base/stest';
 const PRINT_LANGUAGE_TOOLS = false;
 
 ssuite({ title: 'Debug tools list', location: 'context' }, () => {
-
-	async function score(testingServiceCollection: TestingServiceCollection, languages: string[], expected: string[]) {
+	async function score(
+		testingServiceCollection: TestingServiceCollection,
+		languages: string[],
+		expected: string[],
+	) {
 		const accessor = testingServiceCollection.createTestingAccessor();
-		const tools = accessor.get(IInstantiationService).createInstance(LanguageToolsProvider);
-		const result = await tools.getToolsForLanguages(languages, CancellationToken.None);
+		const tools = accessor
+			.get(IInstantiationService)
+			.createInstance(LanguageToolsProvider);
+		const result = await tools.getToolsForLanguages(
+			languages,
+			CancellationToken.None,
+		);
 		if (!result.ok) {
 			throw new Error('Expected tools to be found');
 		}
@@ -29,31 +37,57 @@ ssuite({ title: 'Debug tools list', location: 'context' }, () => {
 			}
 		}
 
-		accessor.get(ISimulationTestRuntime).setExplicitScore(found / expected.length);
+		accessor
+			.get(ISimulationTestRuntime)
+			.setExplicitScore(found / expected.length);
 	}
 
 	stest({ description: 'javascript' }, async (testingServiceCollection) => {
-		await score(testingServiceCollection, ['javascript'], ['npm', 'node', 'npx', 'mocha']);
+		await score(
+			testingServiceCollection,
+			['javascript'],
+			['npm', 'node', 'npx', 'mocha'],
+		);
 	});
 
 	stest({ description: 'c' }, async (testingServiceCollection) => {
-		await score(testingServiceCollection, ['c'], ['gcc', 'clang', 'make', 'cmake', 'gdb']);
+		await score(
+			testingServiceCollection,
+			['c'],
+			['gcc', 'clang', 'make', 'cmake', 'gdb'],
+		);
 	});
 
 	stest({ description: 'python' }, async (testingServiceCollection) => {
-		await score(testingServiceCollection, ['python'], ['python', 'pip', 'pytest', 'tox']);
+		await score(
+			testingServiceCollection,
+			['python'],
+			['python', 'pip', 'pytest', 'tox'],
+		);
 	});
 
 	stest({ description: 'typescript' }, async (testingServiceCollection) => {
-		await score(testingServiceCollection, ['javascript'], ['npm', 'node', 'npx', 'mocha']);
+		await score(
+			testingServiceCollection,
+			['javascript'],
+			['npm', 'node', 'npx', 'mocha'],
+		);
 	});
 
 	stest({ description: 'ruby' }, async (testingServiceCollection) => {
-		await score(testingServiceCollection, ['ruby'], ['ruby', 'cucumber', 'rake', 'irb']);
+		await score(
+			testingServiceCollection,
+			['ruby'],
+			['ruby', 'cucumber', 'rake', 'irb'],
+		);
 	});
 
 	stest({ description: 'csharp' }, async (testingServiceCollection) => {
-		await score(testingServiceCollection, ['csharp'], ['dotnet', 'msbuild', 'xunit', 'vstest']);
+		await score(
+			testingServiceCollection,
+			['csharp'],
+			['dotnet', 'msbuild', 'xunit', 'vstest'],
+		);
 	});
 
 	stest({ description: 'elixir' }, async (testingServiceCollection) => {
@@ -71,44 +105,52 @@ ssuite({ title: 'Debug tools list', location: 'context' }, () => {
 	});
 
 	if (PRINT_LANGUAGE_TOOLS) {
-		stest({ description: 'print all languages' }, async (testingServiceCollection) => {
-			const accessor = testingServiceCollection.createTestingAccessor();
-			const tools = accessor.get(IInstantiationService).createInstance(LanguageToolsProvider);
-			const allTools = new Set<string>();
-			const allLanguageIds = new Set([
-				...baseLanguageIds,
-				...additionalLanguageIds,
-				...omittedLanguages,
-			]);
+		stest(
+			{ description: 'print all languages' },
+			async (testingServiceCollection) => {
+				const accessor =
+					testingServiceCollection.createTestingAccessor();
+				const tools = accessor
+					.get(IInstantiationService)
+					.createInstance(LanguageToolsProvider);
+				const allTools = new Set<string>();
+				const allLanguageIds = new Set([
+					...baseLanguageIds,
+					...additionalLanguageIds,
+					...omittedLanguages,
+				]);
 
-			for (const language of allLanguageIds) {
-				if (omittedLanguages.includes(language)) {
-					continue;
+				for (const language of allLanguageIds) {
+					if (omittedLanguages.includes(language)) {
+						continue;
+					}
+
+					console.log('Getting tools for', language);
+					const result = await tools.getToolsForLanguages(
+						[language],
+						CancellationToken.None,
+					);
+					if (!result.ok) {
+						throw new Error('Expected tools to be found');
+					}
+					for (const tool of result.commands) {
+						allTools.add(tool);
+					}
 				}
 
-				console.log('Getting tools for', language);
-				const result = await tools.getToolsForLanguages([language], CancellationToken.None);
-				if (!result.ok) {
-					throw new Error('Expected tools to be found');
-				}
-				for (const tool of result.commands) {
-					allTools.add(tool);
-				}
-			}
-
-			console.log(`const KNOWN_DEBUGGABLE_LANGUAGES = ${JSON.stringify([...allLanguageIds].sort())};`);
-			console.log(`const KNOWN_DEBUGGABLE_COMMANDS = ${JSON.stringify([...allTools].sort())};`);
-		});
+				console.log(
+					`const KNOWN_DEBUGGABLE_LANGUAGES = ${JSON.stringify([...allLanguageIds].sort())};`,
+				);
+				console.log(
+					`const KNOWN_DEBUGGABLE_COMMANDS = ${JSON.stringify([...allTools].sort())};`,
+				);
+			},
+		);
 	}
 });
 
 // Some additional languages popular in the 2024 SO developer survey
-const additionalLanguageIds = [
-	'dart',
-	'zig',
-	'kotlin',
-	'matlab',
-];
+const additionalLanguageIds = ['dart', 'zig', 'kotlin', 'matlab'];
 
 // Languages we don't want to bother getting tools for. These are text
 // languages, markup languages that aren't specific to any one set of tools,
@@ -225,5 +267,5 @@ const baseLanguageIds = [
 	'vue-html',
 	'xml',
 	'xsl',
-	'yaml'
+	'yaml',
 ];

@@ -3,23 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/mobileOverlayViews.css';
-import './mobileDiffColors.js';
-import * as DOM from '../../../../../base/browser/dom.js';
-import { Disposable, DisposableStore, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../../../../base/common/event.js';
-import { Gesture, EventType as TouchEventType } from '../../../../../base/browser/touch.js';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { autorun } from '../../../../../base/common/observable.js';
-import { localize } from '../../../../../nls.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { comparePaths } from '../../../../../base/common/comparers.js';
-import { basename, dirname } from '../../../../../base/common/resources.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { ISessionsManagementService } from '../../../../services/sessions/common/sessionsManagement.js';
-import { ISessionFileChange } from '../../../../services/sessions/common/session.js';
-import { IFileDiffViewData } from './mobileDiffView.js';
+import "./media/mobileOverlayViews.css";
+import "./mobileDiffColors.js";
+import * as DOM from "../../../../../base/browser/dom.js";
+import {
+	Disposable,
+	DisposableStore,
+	toDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { Emitter, Event } from "../../../../../base/common/event.js";
+import {
+	Gesture,
+	EventType as TouchEventType,
+} from "../../../../../base/browser/touch.js";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { autorun } from "../../../../../base/common/observable.js";
+import { localize } from "../../../../../nls.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { comparePaths } from "../../../../../base/common/comparers.js";
+import { basename, dirname } from "../../../../../base/common/resources.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { ISessionsManagementService } from "../../../../services/sessions/common/sessionsManagement.js";
+import { ISessionFileChange } from "../../../../services/sessions/common/session.js";
+import { IFileDiffViewData } from "./mobileDiffView.js";
 
 const $ = DOM.$;
 
@@ -29,12 +36,13 @@ const $ = DOM.$;
  * Takes no arguments. The view reads the active session's changes from
  * {@link ISessionsManagementService}. Phone-only.
  */
-export const MOBILE_OPEN_CHANGES_VIEW_COMMAND_ID = 'sessions.mobile.openChangesView';
+export const MOBILE_OPEN_CHANGES_VIEW_COMMAND_ID =
+	"sessions.mobile.openChangesView";
 
 /**
  * Visual change-type for a mobile changes-list row.
  */
-type MobileChangeType = 'added' | 'modified' | 'deleted';
+type MobileChangeType = "added" | "modified" | "deleted";
 
 /**
  * Normalised view-model for a single row in {@link MobileChangesView}. We
@@ -55,7 +63,11 @@ interface IMobileChangesRow {
  * payload along with the full sibling list and the tapped index — these
  * are forwarded to the diff overlay so it can render prev/next chevrons.
  */
-export type MobileChangesOpenHandler = (diff: IFileDiffViewData, siblings: readonly IFileDiffViewData[], index: number) => void;
+export type MobileChangesOpenHandler = (
+	diff: IFileDiffViewData,
+	siblings: readonly IFileDiffViewData[],
+	index: number,
+) => void;
 
 export function toRow(change: ISessionFileChange): IMobileChangesRow {
 	// `IChatSessionFileChange2` carries `uri` as the canonical identity; the
@@ -69,11 +81,12 @@ export function toRow(change: ISessionFileChange): IMobileChangesRow {
 	const originalUri = change.originalUri;
 	const modifiedUri = (change as { modifiedUri?: URI }).modifiedUri;
 
-	const changeType: MobileChangeType = originalUri === undefined
-		? 'added'
-		: modifiedUri === undefined
-			? 'deleted'
-			: 'modified';
+	const changeType: MobileChangeType =
+		originalUri === undefined
+			? "added"
+			: modifiedUri === undefined
+				? "deleted"
+				: "modified";
 
 	return {
 		displayUri,
@@ -112,7 +125,6 @@ function compareRows(a: IMobileChangesRow, b: IMobileChangesRow): number {
  * diff overlay to support prev/next navigation.
  */
 export class MobileChangesView extends Disposable {
-
 	private readonly _onDidDispose = this._register(new Emitter<void>());
 	/**
 	 * Fires when this view has been disposed (either externally or because
@@ -141,45 +153,81 @@ export class MobileChangesView extends Disposable {
 		workbenchContainer: HTMLElement,
 		private readonly onOpen: MobileChangesOpenHandler,
 		@IInstantiationService _instantiationService: IInstantiationService,
-		@ISessionsManagementService private readonly sessionsManagementService: ISessionsManagementService,
+		@ISessionsManagementService
+		private readonly sessionsManagementService: ISessionsManagementService,
 	) {
 		super();
 
 		// -- Root overlay -----------------------------------------
-		const overlay = DOM.append(workbenchContainer, $('div.mobile-overlay-view'));
-		this.viewStore.add(DOM.addDisposableListener(overlay, DOM.EventType.CONTEXT_MENU, e => e.preventDefault()));
+		const overlay = DOM.append(
+			workbenchContainer,
+			$("div.mobile-overlay-view"),
+		);
+		this.viewStore.add(
+			DOM.addDisposableListener(overlay, DOM.EventType.CONTEXT_MENU, (e) =>
+				e.preventDefault(),
+			),
+		);
 		this.viewStore.add(toDisposable(() => overlay.remove()));
 
 		// -- Header -----------------------------------------------
-		const header = DOM.append(overlay, $('div.mobile-overlay-header'));
+		const header = DOM.append(overlay, $("div.mobile-overlay-header"));
 
-		const backBtn = DOM.append(header, $('button.mobile-overlay-back-btn', { type: 'button' })) as HTMLButtonElement;
-		backBtn.setAttribute('aria-label', localize('changesView.back', "Back"));
-		DOM.append(backBtn, $('span')).classList.add(...ThemeIcon.asClassNameArray(Codicon.chevronLeft));
-		DOM.append(backBtn, $('span.back-btn-label')).textContent = localize('changesView.backLabel', "Back");
+		const backBtn = DOM.append(
+			header,
+			$("button.mobile-overlay-back-btn", { type: "button" }),
+		) as HTMLButtonElement;
+		backBtn.setAttribute("aria-label", localize("changesView.back", "Back"));
+		DOM.append(backBtn, $("span")).classList.add(
+			...ThemeIcon.asClassNameArray(Codicon.chevronLeft),
+		);
+		DOM.append(backBtn, $("span.back-btn-label")).textContent = localize(
+			"changesView.backLabel",
+			"Back",
+		);
 		this.viewStore.add(Gesture.addTarget(backBtn));
-		this.viewStore.add(DOM.addDisposableListener(backBtn, DOM.EventType.CLICK, () => this.dispose()));
-		this.viewStore.add(DOM.addDisposableListener(backBtn, TouchEventType.Tap, () => this.dispose()));
+		this.viewStore.add(
+			DOM.addDisposableListener(backBtn, DOM.EventType.CLICK, () =>
+				this.dispose(),
+			),
+		);
+		this.viewStore.add(
+			DOM.addDisposableListener(backBtn, TouchEventType.Tap, () =>
+				this.dispose(),
+			),
+		);
 
-		const info = DOM.append(header, $('div.mobile-overlay-header-info'));
-		DOM.append(info, $('div.mobile-overlay-header-title')).textContent = localize('changesView.title', "Session Changes");
-		this.subtitleEl = DOM.append(info, $('div.mobile-overlay-header-subtitle'));
+		const info = DOM.append(header, $("div.mobile-overlay-header-info"));
+		DOM.append(info, $("div.mobile-overlay-header-title")).textContent =
+			localize("changesView.title", "Session Changes");
+		this.subtitleEl = DOM.append(info, $("div.mobile-overlay-header-subtitle"));
 
 		// -- Body -------------------------------------------------
-		const body = DOM.append(overlay, $('div.mobile-overlay-body'));
-		const scrollWrapper = DOM.append(body, $('div.mobile-overlay-scroll'));
-		this.listContainer = DOM.append(scrollWrapper, $('div.mobile-changes-list'));
+		const body = DOM.append(overlay, $("div.mobile-overlay-body"));
+		const scrollWrapper = DOM.append(body, $("div.mobile-overlay-scroll"));
+		this.listContainer = DOM.append(
+			scrollWrapper,
+			$("div.mobile-changes-list"),
+		);
 
-		this.emptyEl = DOM.append(body, $('div.mobile-overlay-empty-state'));
-		this.emptyEl.style.display = 'none';
-		this.emptyEl.textContent = localize('changesView.empty', "No changes in this session yet.");
+		this.emptyEl = DOM.append(body, $("div.mobile-overlay-empty-state"));
+		this.emptyEl.style.display = "none";
+		this.emptyEl.textContent = localize(
+			"changesView.empty",
+			"No changes in this session yet.",
+		);
 
 		// -- Subscribe to live changes -----------------------------
-		this.viewStore.add(autorun(reader => {
-			const session = this.sessionsManagementService.activeSession.read(reader);
-			const rows = (session?.changes.read(reader) ?? []).map(toRow).sort(compareRows);
-			this.renderList(rows);
-		}));
+		this.viewStore.add(
+			autorun((reader) => {
+				const session =
+					this.sessionsManagementService.activeSession.read(reader);
+				const rows = (session?.changes.read(reader) ?? [])
+					.map(toRow)
+					.sort(compareRows);
+				this.renderList(rows);
+			}),
+		);
 	}
 
 	private renderList(rows: readonly IMobileChangesRow[]): void {
@@ -197,27 +245,40 @@ export class MobileChangesView extends Disposable {
 			totalRemoved += row.removed;
 		}
 		if (rows.length === 0) {
-			this.subtitleEl.textContent = '';
-			this.emptyEl.style.display = '';
-			this.listContainer.style.display = 'none';
+			this.subtitleEl.textContent = "";
+			this.emptyEl.style.display = "";
+			this.listContainer.style.display = "none";
 			return;
 		}
-		this.emptyEl.style.display = 'none';
-		this.listContainer.style.display = '';
+		this.emptyEl.style.display = "none";
+		this.listContainer.style.display = "";
 
 		// Render the subtitle as styled spans so the +N / -N counters
 		// pick up the same accent colours as the per-row counters. We
 		// can't use the `localize` template here directly because it
 		// returns a flat string — instead construct the DOM manually.
 		DOM.clearNode(this.subtitleEl);
-		const fileWord = rows.length === 1
-			? localize('changesView.subtitleFileSingular', "1 file")
-			: localize('changesView.subtitleFilePlural', "{0} files", rows.length);
-		DOM.append(this.subtitleEl, $('span.mobile-overlay-header-subtitle-files')).textContent = fileWord;
-		DOM.append(this.subtitleEl, $('span.mobile-overlay-header-subtitle-sep')).textContent = ' · ';
-		DOM.append(this.subtitleEl, $('span.mobile-changes-row-added')).textContent = `+${totalAdded}`;
-		DOM.append(this.subtitleEl, document.createTextNode(' '));
-		DOM.append(this.subtitleEl, $('span.mobile-changes-row-removed')).textContent = `-${totalRemoved}`;
+		const fileWord =
+			rows.length === 1
+				? localize("changesView.subtitleFileSingular", "1 file")
+				: localize("changesView.subtitleFilePlural", "{0} files", rows.length);
+		DOM.append(
+			this.subtitleEl,
+			$("span.mobile-overlay-header-subtitle-files"),
+		).textContent = fileWord;
+		DOM.append(
+			this.subtitleEl,
+			$("span.mobile-overlay-header-subtitle-sep"),
+		).textContent = " · ";
+		DOM.append(
+			this.subtitleEl,
+			$("span.mobile-changes-row-added"),
+		).textContent = `+${totalAdded}`;
+		DOM.append(this.subtitleEl, document.createTextNode(" "));
+		DOM.append(
+			this.subtitleEl,
+			$("span.mobile-changes-row-removed"),
+		).textContent = `-${totalRemoved}`;
 
 		// Build the sibling list once so each row passes the same
 		// reference to the open-handler — keeps prev/next navigation
@@ -229,47 +290,63 @@ export class MobileChangesView extends Disposable {
 		}
 	}
 
-	private renderRow(row: IMobileChangesRow, siblings: readonly IFileDiffViewData[], index: number): void {
-		const button = DOM.append(this.listContainer, $('button.mobile-changes-row', { type: 'button' })) as HTMLButtonElement;
+	private renderRow(
+		row: IMobileChangesRow,
+		siblings: readonly IFileDiffViewData[],
+		index: number,
+	): void {
+		const button = DOM.append(
+			this.listContainer,
+			$("button.mobile-changes-row", { type: "button" }),
+		) as HTMLButtonElement;
 		button.classList.add(`change-${row.changeType}`);
-		button.setAttribute('aria-label', localize(
-			'changesView.rowAria',
-			"{0}, {1}, +{2} -{3}",
-			row.displayUri.path,
-			localizeChangeType(row.changeType),
-			row.added,
-			row.removed,
-		));
+		button.setAttribute(
+			"aria-label",
+			localize(
+				"changesView.rowAria",
+				"{0}, {1}, +{2} -{3}",
+				row.displayUri.path,
+				localizeChangeType(row.changeType),
+				row.added,
+				row.removed,
+			),
+		);
 
 		// File icon (codicon, varies by change type) + filename + directory path
-		const labelHost = DOM.append(button, $('div.mobile-changes-row-label'));
+		const labelHost = DOM.append(button, $("div.mobile-changes-row-label"));
 
-		const iconEl = DOM.append(labelHost, $('span.mobile-changes-row-icon'));
-		iconEl.classList.add(...ThemeIcon.asClassNameArray(changeTypeIcon(row.changeType)));
+		const iconEl = DOM.append(labelHost, $("span.mobile-changes-row-icon"));
+		iconEl.classList.add(
+			...ThemeIcon.asClassNameArray(changeTypeIcon(row.changeType)),
+		);
 
-		const textHost = DOM.append(labelHost, $('div.mobile-changes-row-text'));
-		DOM.append(textHost, $('span.mobile-changes-row-filename')).textContent = basename(row.displayUri);
+		const textHost = DOM.append(labelHost, $("div.mobile-changes-row-text"));
+		DOM.append(textHost, $("span.mobile-changes-row-filename")).textContent =
+			basename(row.displayUri);
 		// Show only the directory portion relative to the tunnel root — strip
 		// the scheme-specific `/file/-` prefix if present so the user sees a
 		// clean path like `/Users/osvaldortega/project` rather than noise.
-		const rawDir = dirname(row.displayUri).path.replace(/^\/file\/-/, '');
-		if (rawDir && rawDir !== '/') {
-			DOM.append(textHost, $('span.mobile-changes-row-dir')).textContent = rawDir;
+		const rawDir = dirname(row.displayUri).path.replace(/^\/file\/-/, "");
+		if (rawDir && rawDir !== "/") {
+			DOM.append(textHost, $("span.mobile-changes-row-dir")).textContent =
+				rawDir;
 		}
 
 		// Trailing pill (A/M/D) + numeric counters.
-		const meta = DOM.append(button, $('div.mobile-changes-row-meta'));
-		const pill = DOM.append(meta, $('span.mobile-changes-row-pill'));
+		const meta = DOM.append(button, $("div.mobile-changes-row-meta"));
+		const pill = DOM.append(meta, $("span.mobile-changes-row-pill"));
 		pill.classList.add(`change-${row.changeType}`);
 		pill.textContent = changeTypeGlyph(row.changeType);
-		pill.setAttribute('aria-hidden', 'true');
+		pill.setAttribute("aria-hidden", "true");
 
-		const counts = DOM.append(meta, $('span.mobile-changes-row-counts'));
+		const counts = DOM.append(meta, $("span.mobile-changes-row-counts"));
 		if (row.added > 0) {
-			DOM.append(counts, $('span.mobile-changes-row-added')).textContent = `+${row.added}`;
+			DOM.append(counts, $("span.mobile-changes-row-added")).textContent =
+				`+${row.added}`;
 		}
 		if (row.removed > 0) {
-			DOM.append(counts, $('span.mobile-changes-row-removed')).textContent = `-${row.removed}`;
+			DOM.append(counts, $("span.mobile-changes-row-removed")).textContent =
+				`-${row.removed}`;
 		}
 
 		// Activate via both click and tap so quick taps don't get
@@ -278,8 +355,12 @@ export class MobileChangesView extends Disposable {
 		// reactive re-render.
 		this.rowsStore.add(Gesture.addTarget(button));
 		const onActivate = () => this.onOpen(siblings[index], siblings, index);
-		this.rowsStore.add(DOM.addDisposableListener(button, DOM.EventType.CLICK, onActivate));
-		this.rowsStore.add(DOM.addDisposableListener(button, TouchEventType.Tap, onActivate));
+		this.rowsStore.add(
+			DOM.addDisposableListener(button, DOM.EventType.CLICK, onActivate),
+		);
+		this.rowsStore.add(
+			DOM.addDisposableListener(button, TouchEventType.Tap, onActivate),
+		);
 	}
 
 	override dispose(): void {
@@ -292,25 +373,34 @@ export class MobileChangesView extends Disposable {
 
 function changeTypeGlyph(type: MobileChangeType): string {
 	switch (type) {
-		case 'added': return 'A';
-		case 'modified': return 'M';
-		case 'deleted': return 'D';
+		case "added":
+			return "A";
+		case "modified":
+			return "M";
+		case "deleted":
+			return "D";
 	}
 }
 
 function changeTypeIcon(type: MobileChangeType): ThemeIcon {
 	switch (type) {
-		case 'added': return Codicon.diffAdded;
-		case 'modified': return Codicon.diffModified;
-		case 'deleted': return Codicon.diffRemoved;
+		case "added":
+			return Codicon.diffAdded;
+		case "modified":
+			return Codicon.diffModified;
+		case "deleted":
+			return Codicon.diffRemoved;
 	}
 }
 
 function localizeChangeType(type: MobileChangeType): string {
 	switch (type) {
-		case 'added': return localize('changesView.changeAdded', "added");
-		case 'modified': return localize('changesView.changeModified', "modified");
-		case 'deleted': return localize('changesView.changeDeleted', "deleted");
+		case "added":
+			return localize("changesView.changeAdded", "added");
+		case "modified":
+			return localize("changesView.changeModified", "modified");
+		case "deleted":
+			return localize("changesView.changeDeleted", "deleted");
 	}
 }
 
@@ -323,5 +413,9 @@ export function openMobileChangesView(
 	workbenchContainer: HTMLElement,
 	onOpen: MobileChangesOpenHandler,
 ): MobileChangesView {
-	return instantiationService.createInstance(MobileChangesView, workbenchContainer, onOpen);
+	return instantiationService.createInstance(
+		MobileChangesView,
+		workbenchContainer,
+		onOpen,
+	);
 }

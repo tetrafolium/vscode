@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { expect, it, suite } from 'vitest';
-import { FileChunk, FileChunkAndScore } from '../../../../platform/chunking/common/chunk';
+import {
+	FileChunk,
+	FileChunkAndScore,
+} from '../../../../platform/chunking/common/chunk';
 import { EmbeddingType } from '../../../../platform/embeddings/common/embeddingsComputer';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { Range } from '../../../../util/vs/editor/common/core/range';
@@ -11,7 +14,12 @@ import { combineRankingInsights } from '../combinedRank';
 
 suite('combineRankingInsights', () => {
 	// Helper function to create a FileChunk object
-	function createFileChunk(path: string, text: string, startLine: number, endLine: number): FileChunk {
+	function createFileChunk(
+		path: string,
+		text: string,
+		startLine: number,
+		endLine: number,
+	): FileChunk {
 		return {
 			file: URI.file(path),
 			text,
@@ -26,11 +34,17 @@ suite('combineRankingInsights', () => {
 		text: string,
 		startLine: number,
 		endLine: number,
-		distance?: number
+		distance?: number,
 	): FileChunkAndScore<FileChunk> {
 		return {
 			chunk: createFileChunk(path, text, startLine, endLine),
-			distance: typeof distance === 'number' ? { value: distance, embeddingType: EmbeddingType.text3small_512 } : undefined,
+			distance:
+				typeof distance === 'number'
+					? {
+							value: distance,
+							embeddingType: EmbeddingType.text3small_512,
+						}
+					: undefined,
 		};
 	}
 
@@ -50,12 +64,12 @@ suite('combineRankingInsights', () => {
 			{
 				file: 'file3',
 				query: 'class Baz {}',
-			}
+			},
 		];
 
 		const result = combineRankingInsights(chunks, llmResponse);
 
-		expect(result.llmBestRank).toBe(0);  // 'file1' is at index 0
+		expect(result.llmBestRank).toBe(0); // 'file1' is at index 0
 		expect(result.llmWorstRank).toBe(2); // 'file3' is at index 2
 	});
 
@@ -69,7 +83,7 @@ suite('combineRankingInsights', () => {
 			{
 				file: 'file3',
 				query: 'class Baz {}',
-			}
+			},
 		];
 
 		const result = combineRankingInsights(chunks, llmResponse);
@@ -94,7 +108,7 @@ suite('combineRankingInsights', () => {
 			{
 				file: 'fileD',
 				query: 'return true;',
-			}
+			},
 		];
 
 		const result = combineRankingInsights(chunks, llmResponse);

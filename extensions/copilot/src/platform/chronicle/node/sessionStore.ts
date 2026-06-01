@@ -6,7 +6,15 @@
 import { mkdirSync } from 'fs';
 import { DatabaseSync } from 'node:sqlite';
 import { dirname } from 'path';
-import type { CheckpointRow, FileRow, ISessionStore, RefRow, SearchResult, SessionRow, TurnRow } from '../common/sessionStore';
+import type {
+	CheckpointRow,
+	FileRow,
+	ISessionStore,
+	RefRow,
+	SearchResult,
+	SessionRow,
+	TurnRow,
+} from '../common/sessionStore';
 
 /**
  * SQLite authorizer action codes that are safe for read-only access.
@@ -99,7 +107,9 @@ export class SessionStore implements ISessionStore {
 
 		const versionRow = (() => {
 			try {
-				const stmt = db.prepare('SELECT version FROM schema_version LIMIT 1');
+				const stmt = db.prepare(
+					'SELECT version FROM schema_version LIMIT 1',
+				);
 				return stmt.get() as unknown as { version: number } | undefined;
 			} catch {
 				return undefined;
@@ -185,7 +195,11 @@ export class SessionStore implements ISessionStore {
 
 		// FTS5 virtual table — CREATE VIRTUAL TABLE doesn't support IF NOT EXISTS
 		// in all SQLite builds, so we guard with a check.
-		const ftsExists = db.prepare('SELECT name FROM sqlite_master WHERE type=\'table\' AND name=\'search_index\'').get();
+		const ftsExists = db
+			.prepare(
+				"SELECT name FROM sqlite_master WHERE type='table' AND name='search_index'",
+			)
+			.get();
 		if (!ftsExists) {
 			db.exec(`
 				CREATE VIRTUAL TABLE search_index USING fts5(
@@ -208,9 +222,13 @@ export class SessionStore implements ISessionStore {
 
 		// Update or insert schema version
 		if (currentVersion === 0) {
-			db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
+			db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(
+				SCHEMA_VERSION,
+			);
 		} else {
-			db.prepare('UPDATE schema_version SET version = ?').run(SCHEMA_VERSION);
+			db.prepare('UPDATE schema_version SET version = ?').run(
+				SCHEMA_VERSION,
+			);
 		}
 	}
 
@@ -255,7 +273,9 @@ export class SessionStore implements ISessionStore {
 		const db = this.ensureDb();
 
 		// Ensure session exists (lightweight upsert)
-		db.prepare('INSERT OR IGNORE INTO sessions (id) VALUES (?)').run(turn.session_id);
+		db.prepare('INSERT OR IGNORE INTO sessions (id) VALUES (?)').run(
+			turn.session_id,
+		);
 
 		db.prepare(
 			`INSERT INTO turns (session_id, turn_index, user_message, assistant_response, timestamp)
@@ -272,11 +292,15 @@ export class SessionStore implements ISessionStore {
 		);
 
 		// Index searchable content
-		const content = [turn.user_message, turn.assistant_response].filter(Boolean).join('\n');
+		const content = [turn.user_message, turn.assistant_response]
+			.filter(Boolean)
+			.join('\n');
 		if (content) {
 			const turnId = `${turn.session_id}:turn:${turn.turn_index}`;
 			// Remove old FTS entry if exists, then insert new one
-			db.prepare('DELETE FROM search_index WHERE source_id = ?').run(turnId);
+			db.prepare('DELETE FROM search_index WHERE source_id = ?').run(
+				turnId,
+			);
 			db.prepare(
 				'INSERT INTO search_index (content, session_id, source_type, source_id) VALUES (?, ?, ?, ?)',
 			).run(content, turn.session_id, 'turn', turnId);
@@ -290,7 +314,9 @@ export class SessionStore implements ISessionStore {
 		const db = this.ensureDb();
 
 		// Ensure session exists
-		db.prepare('INSERT OR IGNORE INTO sessions (id) VALUES (?)').run(checkpoint.session_id);
+		db.prepare('INSERT OR IGNORE INTO sessions (id) VALUES (?)').run(
+			checkpoint.session_id,
+		);
 
 		db.prepare(
 			`INSERT INTO checkpoints (session_id, checkpoint_number, title, overview, history, work_done, technical_details, important_files, next_steps, created_at)
@@ -327,9 +353,13 @@ export class SessionStore implements ISessionStore {
 		];
 
 		for (const [sourceType, content] of sections) {
-			if (!content) { continue; }
+			if (!content) {
+				continue;
+			}
 			const sourceId = `${checkpoint.session_id}:ckpt:${checkpoint.checkpoint_number}:${sourceType}`;
-			db.prepare('DELETE FROM search_index WHERE source_id = ?').run(sourceId);
+			db.prepare('DELETE FROM search_index WHERE source_id = ?').run(
+				sourceId,
+			);
 			db.prepare(
 				'INSERT INTO search_index (content, session_id, source_type, source_id) VALUES (?, ?, ?, ?)',
 			).run(content, checkpoint.session_id, sourceType, sourceId);
@@ -342,7 +372,9 @@ export class SessionStore implements ISessionStore {
 	 */
 	insertFile(file: FileRow): void {
 		const db = this.ensureDb();
-		db.prepare('INSERT OR IGNORE INTO sessions (id) VALUES (?)').run(file.session_id);
+		db.prepare('INSERT OR IGNORE INTO sessions (id) VALUES (?)').run(
+			file.session_id,
+		);
 		db.prepare(
 			`INSERT OR IGNORE INTO session_files (session_id, file_path, tool_name, turn_index, first_seen_at)
 			 VALUES (?, ?, ?, ?, ?)`,
@@ -360,7 +392,9 @@ export class SessionStore implements ISessionStore {
 	 */
 	insertRef(ref: RefRow): void {
 		const db = this.ensureDb();
-		db.prepare('INSERT OR IGNORE INTO sessions (id) VALUES (?)').run(ref.session_id);
+		db.prepare('INSERT OR IGNORE INTO sessions (id) VALUES (?)').run(
+			ref.session_id,
+		);
 		db.prepare(
 			`INSERT OR IGNORE INTO session_refs (session_id, ref_type, ref_value, turn_index, created_at)
 			 VALUES (?, ?, ?, ?, ?)`,
@@ -379,17 +413,22 @@ export class SessionStore implements ISessionStore {
 	 * Index a workspace artifact (e.g. plan.md, context files) for full-text search.
 	 * Content is upserted: subsequent writes to the same file replace the previous index entry.
 	 */
-	indexWorkspaceArtifact(sessionId: string, filePath: string, content: string): void {
-		if (!content.trim()) { return; }
+	indexWorkspaceArtifact(
+		sessionId: string,
+		filePath: string,
+		content: string,
+	): void {
+		if (!content.trim()) {
+			return;
+		}
 		const db = this.ensureDb();
 		const sourceId = `${sessionId}:workspace:${filePath}`;
-		db.prepare('DELETE FROM search_index WHERE source_id = ?').run(sourceId);
-		db.prepare('INSERT INTO search_index (content, session_id, source_type, source_id) VALUES (?, ?, ?, ?)').run(
-			content,
-			sessionId,
-			'workspace_artifact',
+		db.prepare('DELETE FROM search_index WHERE source_id = ?').run(
 			sourceId,
 		);
+		db.prepare(
+			'INSERT INTO search_index (content, session_id, source_type, source_id) VALUES (?, ?, ?, ?)',
+		).run(content, sessionId, 'workspace_artifact', sourceId);
 	}
 
 	/**
@@ -399,10 +438,18 @@ export class SessionStore implements ISessionStore {
 	deleteSession(sessionId: string): void {
 		const db = this.ensureDb();
 		this.runInTransaction(() => {
-			db.prepare('DELETE FROM search_index WHERE session_id = ?').run(sessionId);
-			db.prepare('DELETE FROM session_refs WHERE session_id = ?').run(sessionId);
-			db.prepare('DELETE FROM session_files WHERE session_id = ?').run(sessionId);
-			db.prepare('DELETE FROM checkpoints WHERE session_id = ?').run(sessionId);
+			db.prepare('DELETE FROM search_index WHERE session_id = ?').run(
+				sessionId,
+			);
+			db.prepare('DELETE FROM session_refs WHERE session_id = ?').run(
+				sessionId,
+			);
+			db.prepare('DELETE FROM session_files WHERE session_id = ?').run(
+				sessionId,
+			);
+			db.prepare('DELETE FROM checkpoints WHERE session_id = ?').run(
+				sessionId,
+			);
 			db.prepare('DELETE FROM turns WHERE session_id = ?').run(sessionId);
 			db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
 		});
@@ -432,7 +479,9 @@ export class SessionStore implements ISessionStore {
 	 */
 	getSession(sessionId: string): SessionRow | undefined {
 		const db = this.ensureDb();
-		return db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId) as unknown as SessionRow | undefined;
+		return db
+			.prepare('SELECT * FROM sessions WHERE id = ?')
+			.get(sessionId) as unknown as SessionRow | undefined;
 	}
 
 	/**
@@ -441,7 +490,9 @@ export class SessionStore implements ISessionStore {
 	getTurns(sessionId: string): TurnRow[] {
 		const db = this.ensureDb();
 		return db
-			.prepare('SELECT * FROM turns WHERE session_id = ? ORDER BY turn_index')
+			.prepare(
+				'SELECT * FROM turns WHERE session_id = ? ORDER BY turn_index',
+			)
 			.all(sessionId) as unknown as TurnRow[];
 	}
 
@@ -450,7 +501,9 @@ export class SessionStore implements ISessionStore {
 	 */
 	getFiles(sessionId: string): FileRow[] {
 		const db = this.ensureDb();
-		return db.prepare('SELECT * FROM session_files WHERE session_id = ?').all(sessionId) as unknown as FileRow[];
+		return db
+			.prepare('SELECT * FROM session_files WHERE session_id = ?')
+			.all(sessionId) as unknown as FileRow[];
 	}
 
 	/**
@@ -458,7 +511,9 @@ export class SessionStore implements ISessionStore {
 	 */
 	getRefs(sessionId: string): RefRow[] {
 		const db = this.ensureDb();
-		return db.prepare('SELECT * FROM session_refs WHERE session_id = ?').all(sessionId) as unknown as RefRow[];
+		return db
+			.prepare('SELECT * FROM session_refs WHERE session_id = ?')
+			.all(sessionId) as unknown as RefRow[];
 	}
 
 	/**
@@ -471,11 +526,28 @@ export class SessionStore implements ISessionStore {
 	executeReadOnly(sql: string): Record<string, unknown>[] {
 		const db = this.ensureDb();
 
-		const hasAuthorizer = typeof (db as DatabaseSync & { setAuthorizer?: unknown }).setAuthorizer === 'function';
+		const hasAuthorizer =
+			typeof (db as DatabaseSync & { setAuthorizer?: unknown })
+				.setAuthorizer === 'function';
 
 		if (hasAuthorizer) {
-			(db as DatabaseSync & { setAuthorizer: (cb: ((actionCode: number, p1: string | null) => number) | null) => void }).setAuthorizer((actionCode: number, p1: string | null) => {
-				if (actionCode === SQLITE_FUNCTION && p1 && DENIED_FUNCTIONS.has(p1.toLowerCase())) {
+			(
+				db as DatabaseSync & {
+					setAuthorizer: (
+						cb:
+							| ((
+									actionCode: number,
+									p1: string | null,
+							  ) => number)
+							| null,
+					) => void;
+				}
+			).setAuthorizer((actionCode: number, p1: string | null) => {
+				if (
+					actionCode === SQLITE_FUNCTION &&
+					p1 &&
+					DENIED_FUNCTIONS.has(p1.toLowerCase())
+				) {
 					return SQLITE_DENY;
 				}
 				if (READ_ONLY_ACTION_CODES.has(actionCode)) {
@@ -493,7 +565,9 @@ export class SessionStore implements ISessionStore {
 			return db.prepare(sql).all() as Record<string, unknown>[];
 		} finally {
 			if (hasAuthorizer) {
-				(db as DatabaseSync & { setAuthorizer: (cb: null) => void }).setAuthorizer(null);
+				(
+					db as DatabaseSync & { setAuthorizer: (cb: null) => void }
+				).setAuthorizer(null);
 			}
 		}
 	}
@@ -512,18 +586,32 @@ export class SessionStore implements ISessionStore {
 	getMaxTurnIndex(sessionId: string): number {
 		const db = this.ensureDb();
 		const row = db
-			.prepare('SELECT MAX(turn_index) as max_idx FROM turns WHERE session_id = ?')
-			.get(sessionId) as unknown as { max_idx: number | null } | undefined;
+			.prepare(
+				'SELECT MAX(turn_index) as max_idx FROM turns WHERE session_id = ?',
+			)
+			.get(sessionId) as unknown as
+			| { max_idx: number | null }
+			| undefined;
 		return row?.max_idx ?? -1;
 	}
 
 	/**
 	 * Get basic stats about the store.
 	 */
-	getStats(): { sessions: number; turns: number; checkpoints: number; files: number; refs: number } {
+	getStats(): {
+		sessions: number;
+		turns: number;
+		checkpoints: number;
+		files: number;
+		refs: number;
+	} {
 		const db = this.ensureDb();
 		const count = (table: string) =>
-			(db.prepare(`SELECT COUNT(*) as c FROM ${table}`).get() as unknown as { c: number }).c;
+			(
+				db
+					.prepare(`SELECT COUNT(*) as c FROM ${table}`)
+					.get() as unknown as { c: number }
+			).c;
 		return {
 			sessions: count('sessions'),
 			turns: count('turns'),

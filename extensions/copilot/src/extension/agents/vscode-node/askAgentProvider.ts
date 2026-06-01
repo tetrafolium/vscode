@@ -4,13 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { AGENT_FILE_EXTENSION } from '../../../platform/customInstructions/common/promptTypes';
 import { IVSCodeExtensionContext } from '../../../platform/extContext/common/extensionContext';
 import { IFileSystemService } from '../../../platform/filesystem/common/fileSystemService';
 import { ILogService } from '../../../platform/log/common/logService';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
-import { AgentConfig, buildAgentMarkdown, DEFAULT_READ_TOOLS } from './agentTypes';
+import {
+	AgentConfig,
+	buildAgentMarkdown,
+	DEFAULT_READ_TOOLS,
+} from './agentTypes';
 
 /**
  * Base Ask agent configuration.
@@ -28,7 +35,7 @@ const BASE_ASK_AGENT_CONFIG: AgentConfig = {
 		...DEFAULT_READ_TOOLS,
 		'vscode.mermaid-markdown-features/renderMermaidDiagram',
 	],
-	body: '' // Generated dynamically in buildCustomizedConfig
+	body: '', // Generated dynamically in buildCustomizedConfig
 };
 
 /**
@@ -39,34 +46,50 @@ const BASE_ASK_AGENT_CONFIG: AgentConfig = {
  * workspace. It uses an embedded configuration and generates .agent.md content
  * with settings-based customization (additional tools and model override).
  */
-export class AskAgentProvider extends Disposable implements vscode.ChatCustomAgentProvider {
+export class AskAgentProvider
+	extends Disposable
+	implements vscode.ChatCustomAgentProvider
+{
 	readonly label = vscode.l10n.t('Ask Agent');
 
 	private static readonly CACHE_DIR = 'ask-agent';
 	private static readonly AGENT_FILENAME = `Ask${AGENT_FILE_EXTENSION}`;
 
-	private readonly _onDidChangeCustomAgents = this._register(new vscode.EventEmitter<void>());
+	private readonly _onDidChangeCustomAgents = this._register(
+		new vscode.EventEmitter<void>(),
+	);
 	readonly onDidChangeCustomAgents = this._onDidChangeCustomAgents.event;
 
 	constructor(
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IVSCodeExtensionContext private readonly _extensionContext: IVSCodeExtensionContext,
-		@IFileSystemService private readonly _fileSystemService: IFileSystemService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IVSCodeExtensionContext
+		private readonly _extensionContext: IVSCodeExtensionContext,
+		@IFileSystemService
+		private readonly _fileSystemService: IFileSystemService,
 		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
 
-		this._register(this._configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(ConfigKey.AskAgentAdditionalTools.fullyQualifiedId) ||
-				e.affectsConfiguration(ConfigKey.AskAgentModel.fullyQualifiedId)) {
-				this._onDidChangeCustomAgents.fire();
-			}
-		}));
+		this._register(
+			this._configurationService.onDidChangeConfiguration((e) => {
+				if (
+					e.affectsConfiguration(
+						ConfigKey.AskAgentAdditionalTools.fullyQualifiedId,
+					) ||
+					e.affectsConfiguration(
+						ConfigKey.AskAgentModel.fullyQualifiedId,
+					)
+				) {
+					this._onDidChangeCustomAgents.fire();
+				}
+			}),
+		);
 	}
 
 	async provideCustomAgents(
 		_context: unknown,
-		_token: vscode.CancellationToken
+		_token: vscode.CancellationToken,
 	): Promise<vscode.ChatResource[]> {
 		const config = this._buildCustomizedConfig();
 		const content = buildAgentMarkdown(config);
@@ -77,7 +100,7 @@ export class AskAgentProvider extends Disposable implements vscode.ChatCustomAge
 	private async _writeCacheFile(content: string): Promise<vscode.Uri> {
 		const cacheDir = vscode.Uri.joinPath(
 			this._extensionContext.globalStorageUri,
-			AskAgentProvider.CACHE_DIR
+			AskAgentProvider.CACHE_DIR,
 		);
 
 		try {
@@ -86,9 +109,17 @@ export class AskAgentProvider extends Disposable implements vscode.ChatCustomAge
 			await this._fileSystemService.createDirectory(cacheDir);
 		}
 
-		const fileUri = vscode.Uri.joinPath(cacheDir, AskAgentProvider.AGENT_FILENAME);
-		await this._fileSystemService.writeFile(fileUri, new TextEncoder().encode(content));
-		this._logService.trace(`[AskAgentProvider] Wrote agent file: ${fileUri.toString()}`);
+		const fileUri = vscode.Uri.joinPath(
+			cacheDir,
+			AskAgentProvider.AGENT_FILENAME,
+		);
+		await this._fileSystemService.writeFile(
+			fileUri,
+			new TextEncoder().encode(content),
+		);
+		this._logService.trace(
+			`[AskAgentProvider] Wrote agent file: ${fileUri.toString()}`,
+		);
 		return fileUri;
 	}
 
@@ -127,8 +158,12 @@ You can help with:
 	}
 
 	private _buildCustomizedConfig(): AgentConfig {
-		const additionalTools = this._configurationService.getConfig(ConfigKey.AskAgentAdditionalTools);
-		const modelOverride = this._configurationService.getConfig(ConfigKey.AskAgentModel);
+		const additionalTools = this._configurationService.getConfig(
+			ConfigKey.AskAgentAdditionalTools,
+		);
+		const modelOverride = this._configurationService.getConfig(
+			ConfigKey.AskAgentModel,
+		);
 
 		// Collect tools to add
 		const toolsToAdd: string[] = [...additionalTools];
@@ -137,9 +172,10 @@ You can help with:
 		toolsToAdd.push('vscode/askQuestions');
 
 		// Merge additional tools (deduplicated)
-		const tools = toolsToAdd.length > 0
-			? [...new Set([...BASE_ASK_AGENT_CONFIG.tools, ...toolsToAdd])]
-			: [...BASE_ASK_AGENT_CONFIG.tools];
+		const tools =
+			toolsToAdd.length > 0
+				? [...new Set([...BASE_ASK_AGENT_CONFIG.tools, ...toolsToAdd])]
+				: [...BASE_ASK_AGENT_CONFIG.tools];
 
 		return {
 			...BASE_ASK_AGENT_CONFIG,

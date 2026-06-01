@@ -1,5 +1,3 @@
 import { Name, NameLength } from './f1';
 
-export class Y implements Name, NameLength {
-
-}
+export class Y implements Name, NameLength {}

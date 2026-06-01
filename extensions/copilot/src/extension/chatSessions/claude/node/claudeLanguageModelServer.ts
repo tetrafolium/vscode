@@ -7,23 +7,52 @@ import { MessageParam } from '@anthropic-ai/sdk/resources';
 import { RequestMetadata, RequestType } from '@vscode/copilot-api';
 import { Raw } from '@vscode/prompt-tsx';
 import * as http from 'http';
-import { IChatMLFetcher, Source } from '../../../../platform/chat/common/chatMLFetcher';
-import { ChatFetchResponseType, ChatLocation, ChatResponse } from '../../../../platform/chat/common/commonTypes';
-import { CustomModel, EndpointEditToolName } from '../../../../platform/endpoint/common/endpointProvider';
-import { AnthropicMessagesProcessor, processNonStreamingResponseFromMessagesEndpoint } from '../../../../platform/endpoint/node/messagesApi';
+import {
+	IChatMLFetcher,
+	Source,
+} from '../../../../platform/chat/common/chatMLFetcher';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+	ChatResponse,
+} from '../../../../platform/chat/common/commonTypes';
+import {
+	CustomModel,
+	EndpointEditToolName,
+} from '../../../../platform/endpoint/common/endpointProvider';
+import {
+	AnthropicMessagesProcessor,
+	processNonStreamingResponseFromMessagesEndpoint,
+} from '../../../../platform/endpoint/node/messagesApi';
 import { ILogService } from '../../../../platform/log/common/logService';
 import { IOTelService } from '../../../../platform/otel/common/otelService';
-import { FinishedCallback, getRequestId, OptionalChatRequestParams } from '../../../../platform/networking/common/fetch';
+import {
+	FinishedCallback,
+	getRequestId,
+	OptionalChatRequestParams,
+} from '../../../../platform/networking/common/fetch';
 import { Response } from '../../../../platform/networking/common/fetcherService';
-import { IChatEndpoint, ICreateEndpointBodyOptions, IEndpointBody, IEndpointFetchOptions, IMakeChatRequestOptions } from '../../../../platform/networking/common/networking';
+import {
+	IChatEndpoint,
+	ICreateEndpointBodyOptions,
+	IEndpointBody,
+	IEndpointFetchOptions,
+	IMakeChatRequestOptions,
+} from '../../../../platform/networking/common/networking';
 import { ChatCompletion } from '../../../../platform/networking/common/openai';
 import { IRequestLogger } from '../../../../platform/requestLogger/common/requestLogger';
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry';
 import { TelemetryData } from '../../../../platform/telemetry/common/telemetryData';
 import { ITokenizer, TokenizerType } from '../../../../util/common/tokenizer';
 import { AsyncIterableObject } from '../../../../util/vs/base/common/async';
-import { CancellationToken, CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
-import { Disposable, toDisposable } from '../../../../util/vs/base/common/lifecycle';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../util/vs/base/common/cancellation';
+import {
+	Disposable,
+	toDisposable,
+} from '../../../../util/vs/base/common/lifecycle';
 import { SSEParser } from '../../../../util/vs/base/common/sseParser';
 import { generateUuid } from '../../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
@@ -59,7 +88,13 @@ interface AnthropicMessagesRequest {
 interface AnthropicErrorResponse {
 	type: 'error';
 	error: {
-		type: 'invalid_request_error' | 'authentication_error' | 'permission_error' | 'not_found_error' | 'rate_limit_error' | 'api_error';
+		type:
+			| 'invalid_request_error'
+			| 'authentication_error'
+			| 'permission_error'
+			| 'not_found_error'
+			| 'rate_limit_error'
+			| 'api_error';
 		message: string;
 	};
 }
@@ -78,16 +113,18 @@ export class ClaudeLanguageModelServer extends Disposable {
 
 	constructor(
 		@ILogService private readonly logService: ILogService,
-		@IClaudeSessionStateService private readonly sessionStateService: IClaudeSessionStateService,
+		@IClaudeSessionStateService
+		private readonly sessionStateService: IClaudeSessionStateService,
 		@IRequestLogger private readonly requestLogger: IRequestLogger,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IClaudeCodeModels private readonly claudeCodeModels: IClaudeCodeModels,
 		@IOTelService private readonly _otelService: IOTelService,
 	) {
 		super();
 		this.config = {
 			port: 0, // Will be set to random available port
-			nonce: 'vscode-lm-' + generateUuid()
+			nonce: 'vscode-lm-' + generateUuid(),
 		};
 
 		this.server = this.createServer();
@@ -106,8 +143,14 @@ export class ClaudeLanguageModelServer extends Disposable {
 
 			// Handle /v1/messages endpoint (also //messages if base URL ends in /)
 			// Use URL to properly parse and extract pathname, ignoring query string
-			const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
-			if (req.method === 'POST' && (pathname === '/v1/messages' || pathname === '/messages' || pathname === '//messages')) {
+			const pathname = new URL(req.url ?? '/', 'http://localhost')
+				.pathname;
+			if (
+				req.method === 'POST' &&
+				(pathname === '/v1/messages' ||
+					pathname === '/messages' ||
+					pathname === '//messages')
+			) {
 				await this.handleMessagesRequest(req, res);
 				return;
 			}
@@ -122,19 +165,37 @@ export class ClaudeLanguageModelServer extends Disposable {
 		});
 	}
 
-	private async handleMessagesRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+	private async handleMessagesRequest(
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
+	) {
 		try {
 			const body = await this.readRequestBody(req);
 			const auth = extractSessionId(req.headers, this.config.nonce);
 			if (!auth.valid) {
 				this.error('Invalid auth key');
-				this.sendErrorResponse(res, 401, 'authentication_error', 'Invalid authentication');
+				this.sendErrorResponse(
+					res,
+					401,
+					'authentication_error',
+					'Invalid authentication',
+				);
 				return;
 			}
 
-			await this.handleAuthedMessagesRequest(body, req.headers, res, auth.sessionId);
+			await this.handleAuthedMessagesRequest(
+				body,
+				req.headers,
+				res,
+				auth.sessionId,
+			);
 		} catch (error) {
-			this.sendErrorResponse(res, 500, 'api_error', error instanceof Error ? error.message : String(error));
+			this.sendErrorResponse(
+				res,
+				500,
+				'api_error',
+				error instanceof Error ? error.message : String(error),
+			);
 		}
 		return;
 	}
@@ -142,7 +203,7 @@ export class ClaudeLanguageModelServer extends Disposable {
 	private async readRequestBody(req: http.IncomingMessage): Promise<string> {
 		return new Promise((resolve, reject) => {
 			let body = '';
-			req.on('data', chunk => {
+			req.on('data', (chunk) => {
 				body += chunk.toString();
 			});
 			req.on('end', () => {
@@ -152,27 +213,49 @@ export class ClaudeLanguageModelServer extends Disposable {
 		});
 	}
 
-	private async handleAuthedMessagesRequest(bodyString: string, headers: http.IncomingHttpHeaders, res: http.ServerResponse, sessionId: string | undefined): Promise<void> {
+	private async handleAuthedMessagesRequest(
+		bodyString: string,
+		headers: http.IncomingHttpHeaders,
+		res: http.ServerResponse,
+		sessionId: string | undefined,
+	): Promise<void> {
 		// Create cancellation token for the request
 		const tokenSource = new CancellationTokenSource();
 
 		try {
-			const requestBody: AnthropicMessagesRequest = JSON.parse(bodyString);
+			const requestBody: AnthropicMessagesRequest =
+				JSON.parse(bodyString);
 
-			const fallbackModelId = sessionId ? this.sessionStateService.getModelIdForSession(sessionId) : undefined;
-			const selectedEndpoint = await this.claudeCodeModels.resolveEndpoint(requestBody.model, fallbackModelId);
+			const fallbackModelId = sessionId
+				? this.sessionStateService.getModelIdForSession(sessionId)
+				: undefined;
+			const selectedEndpoint =
+				await this.claudeCodeModels.resolveEndpoint(
+					requestBody.model,
+					fallbackModelId,
+				);
 			if (!selectedEndpoint) {
 				this.error('No model found matching criteria');
-				this.sendErrorResponse(res, 404, 'not_found_error', 'No model found matching criteria');
+				this.sendErrorResponse(
+					res,
+					404,
+					'not_found_error',
+					'No model found matching criteria',
+				);
 				return;
 			}
 			this.trace(`Session ${sessionId}: model=${selectedEndpoint.model}`);
 			requestBody.model = selectedEndpoint.model;
 			// Determine if this is a user-initiated message using counter-based approach
-			const count = this._userInitiatedMessageCounts.get(selectedEndpoint.model) ?? 0;
+			const count =
+				this._userInitiatedMessageCounts.get(selectedEndpoint.model) ??
+				0;
 			const isUserInitiatedMessage = count > 0;
 			if (isUserInitiatedMessage) {
-				this._userInitiatedMessageCounts.set(selectedEndpoint.model, count - 1);
+				this._userInitiatedMessageCounts.set(
+					selectedEndpoint.model,
+					count - 1,
+				);
 			}
 
 			// Set up streaming response
@@ -200,56 +283,96 @@ export class ClaudeLanguageModelServer extends Disposable {
 				headers,
 				'vscode_claude_code',
 				{
-					modelMaxPromptTokens: DEFAULT_MAX_TOKENS - DEFAULT_MAX_OUTPUT_TOKENS,
-					maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS
+					modelMaxPromptTokens:
+						DEFAULT_MAX_TOKENS - DEFAULT_MAX_OUTPUT_TOKENS,
+					maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
 				},
-				sessionId
+				sessionId,
 			);
 
 			let messagesForLogging: Raw.ChatMessage[] = [];
 			try {
 				// Don't fail based on any assumptions about the shape of the request
-				messagesForLogging = Array.isArray(requestBody.messages) ?
-					messagesApiInputToRawMessagesForLogging(requestBody) :
-					[];
+				messagesForLogging = Array.isArray(requestBody.messages)
+					? messagesApiInputToRawMessagesForLogging(requestBody)
+					: [];
 			} catch (e) {
-				this.exception(e as Error, `Failed to parse messages for logging`);
+				this.exception(
+					e as Error,
+					`Failed to parse messages for logging`,
+				);
 			}
 
-			const capturingToken = sessionId ? this.sessionStateService.getCapturingTokenForSession(sessionId) : undefined;
-			const sessionReasoningEffort = sessionId ? this.sessionStateService.getReasoningEffortForSession(sessionId) : undefined;
-			const reasoningEffort = sessionReasoningEffort && selectedEndpoint.supportsReasoningEffort?.includes(sessionReasoningEffort)
-				? sessionReasoningEffort
+			const capturingToken = sessionId
+				? this.sessionStateService.getCapturingTokenForSession(
+						sessionId,
+					)
 				: undefined;
+			const sessionReasoningEffort = sessionId
+				? this.sessionStateService.getReasoningEffortForSession(
+						sessionId,
+					)
+				: undefined;
+			const reasoningEffort =
+				sessionReasoningEffort &&
+				selectedEndpoint.supportsReasoningEffort?.includes(
+					sessionReasoningEffort,
+				)
+					? sessionReasoningEffort
+					: undefined;
 
-			const doRequest = () => streamingEndpoint.makeChatRequest2({
-				debugName: 'Claude Copilot Proxy',
-				messages: messagesForLogging,
-				finishedCb: async () => undefined,
-				location: ChatLocation.MessagesProxy,
-				modelCapabilities: { enableThinking: true, reasoningEffort },
-				userInitiatedRequest: isUserInitiatedMessage,
-				turnId: sessionId ? this.sessionStateService.getTurnIdForSession(sessionId) : undefined,
-				requestOptions: { stream: !!requestBody.stream },
-			}, tokenSource.token);
+			const doRequest = () =>
+				streamingEndpoint.makeChatRequest2(
+					{
+						debugName: 'Claude Copilot Proxy',
+						messages: messagesForLogging,
+						finishedCb: async () => undefined,
+						location: ChatLocation.MessagesProxy,
+						modelCapabilities: {
+							enableThinking: true,
+							reasoningEffort,
+						},
+						userInitiatedRequest: isUserInitiatedMessage,
+						turnId: sessionId
+							? this.sessionStateService.getTurnIdForSession(
+									sessionId,
+								)
+							: undefined,
+						requestOptions: { stream: !!requestBody.stream },
+					},
+					tokenSource.token,
+				);
 
 			// Wrap in trace context so chat spans are parented to the invoke_agent span
-			const traceContext = sessionId ? this.sessionStateService.getTraceContextForSession(sessionId) : undefined;
+			const traceContext = sessionId
+				? this.sessionStateService.getTraceContextForSession(sessionId)
+				: undefined;
 			const doRequestInContext = traceContext
-				? () => this._otelService.runWithTraceContext(traceContext, doRequest)
+				? () =>
+						this._otelService.runWithTraceContext(
+							traceContext,
+							doRequest,
+						)
 				: doRequest;
 
 			let chatResponse: ChatResponse;
 			if (capturingToken) {
-				chatResponse = await this.requestLogger.captureInvocation(capturingToken, doRequestInContext);
+				chatResponse = await this.requestLogger.captureInvocation(
+					capturingToken,
+					doRequestInContext,
+				);
 			} else {
 				chatResponse = await doRequestInContext();
 			}
 
 			// If the upstream returned an error, forward a proper HTTP error to the
 			// SDK subprocess so it can surface it instead of silently hanging.
-			if (chatResponse.type !== ChatFetchResponseType.Success && !res.headersSent) {
-				const { status, errorType, message } = this.mapChatResponseToHttpError(chatResponse);
+			if (
+				chatResponse.type !== ChatFetchResponseType.Success &&
+				!res.headersSent
+			) {
+				const { status, errorType, message } =
+					this.mapChatResponseToHttpError(chatResponse);
 				this.sendErrorResponse(res, status, errorType, message);
 				return;
 			}
@@ -258,7 +381,12 @@ export class ClaudeLanguageModelServer extends Disposable {
 
 			res.end();
 		} catch (error) {
-			this.sendErrorResponse(res, 500, 'api_error', error instanceof Error ? error.message : String(error));
+			this.sendErrorResponse(
+				res,
+				500,
+				'api_error',
+				error instanceof Error ? error.message : String(error),
+			);
 		} finally {
 			tokenSource.dispose();
 		}
@@ -268,23 +396,47 @@ export class ClaudeLanguageModelServer extends Disposable {
 	 * Maps a non-success ChatResponse to an HTTP status, Anthropic error type, and message
 	 * that the SDK subprocess can interpret.
 	 */
-	private mapChatResponseToHttpError(chatResponse: ChatResponse): { status: number; errorType: AnthropicErrorResponse['error']['type']; message: string } {
+	private mapChatResponseToHttpError(chatResponse: ChatResponse): {
+		status: number;
+		errorType: AnthropicErrorResponse['error']['type'];
+		message: string;
+	} {
 		// Base64-encode the full ChatFetchError JSON after the proxy error prefix.
 		// Base64 survives the SDK's JSON re-encoding without double-escaping issues.
 		const proxyMessage = `${PROXY_ERROR_PREFIX}${Buffer.from(JSON.stringify(chatResponse)).toString('base64')}`;
 
 		switch (chatResponse.type) {
 			case ChatFetchResponseType.QuotaExceeded:
-				return { status: 402, errorType: 'invalid_request_error', message: proxyMessage };
+				return {
+					status: 402,
+					errorType: 'invalid_request_error',
+					message: proxyMessage,
+				};
 			case ChatFetchResponseType.RateLimited:
-				return { status: 429, errorType: 'rate_limit_error', message: proxyMessage };
+				return {
+					status: 429,
+					errorType: 'rate_limit_error',
+					message: proxyMessage,
+				};
 			case ChatFetchResponseType.Canceled:
-				return { status: 499, errorType: 'api_error', message: proxyMessage };
+				return {
+					status: 499,
+					errorType: 'api_error',
+					message: proxyMessage,
+				};
 			case ChatFetchResponseType.Filtered:
 			case ChatFetchResponseType.PromptFiltered:
-				return { status: 400, errorType: 'invalid_request_error', message: proxyMessage };
+				return {
+					status: 400,
+					errorType: 'invalid_request_error',
+					message: proxyMessage,
+				};
 			default:
-				return { status: 500, errorType: 'api_error', message: proxyMessage };
+				return {
+					status: 500,
+					errorType: 'api_error',
+					message: proxyMessage,
+				};
 		}
 	}
 
@@ -292,7 +444,7 @@ export class ClaudeLanguageModelServer extends Disposable {
 		res: http.ServerResponse,
 		statusCode: number,
 		errorType: AnthropicErrorResponse['error']['type'],
-		message: string
+		message: string,
 	): void {
 		if (res.headersSent) {
 			res.end();
@@ -302,8 +454,8 @@ export class ClaudeLanguageModelServer extends Disposable {
 			type: 'error',
 			error: {
 				type: errorType,
-				message
-			}
+				message,
+			},
 		};
 		res.writeHead(statusCode, { 'Content-Type': 'application/json' });
 		res.end(JSON.stringify(errorResponse));
@@ -321,9 +473,11 @@ export class ClaudeLanguageModelServer extends Disposable {
 				if (address && typeof address === 'object') {
 					this.config = {
 						...this.config,
-						port: address.port
+						port: address.port,
 					};
-					this.info(`Claude Language Model Server started on http://localhost:${this.config.port}`);
+					this.info(
+						`Claude Language Model Server started on http://localhost:${this.config.port}`,
+					);
 					resolve();
 					return;
 				}
@@ -384,7 +538,10 @@ export interface ExtractSessionIdResult {
  * The `x-api-key` header is intentionally ignored to prevent the user's personal
  * `ANTHROPIC_API_KEY` environment variable from interfering with authentication.
  */
-export function extractSessionId(headers: http.IncomingHttpHeaders, expectedNonce: string): ExtractSessionIdResult {
+export function extractSessionId(
+	headers: http.IncomingHttpHeaders,
+	expectedNonce: string,
+): ExtractSessionIdResult {
 	let apiKey: string | undefined;
 
 	// Check Authorization header with Bearer prefix (set via ANTHROPIC_AUTH_TOKEN)
@@ -420,8 +577,14 @@ export function extractSessionId(headers: http.IncomingHttpHeaders, expectedNonc
 export function filterSupportedBetas(headerValue: string): string | undefined {
 	const filtered = headerValue
 		.split(',')
-		.map(b => b.trim())
-		.filter(b => b && SUPPORTED_ANTHROPIC_BETAS.some(supported => b.startsWith(supported + '-')));
+		.map((b) => b.trim())
+		.filter(
+			(b) =>
+				b &&
+				SUPPORTED_ANTHROPIC_BETAS.some((supported) =>
+					b.startsWith(supported + '-'),
+				),
+		);
 
 	return filtered.length > 0 ? filtered.join(',') : undefined;
 }
@@ -429,38 +592,62 @@ export function filterSupportedBetas(headerValue: string): string | undefined {
 /**
  * Converts Anthropic Messages API input to Raw.ChatMessage[] for logging purposes.
  */
-function messagesApiInputToRawMessagesForLogging(request: AnthropicMessagesRequest): Raw.ChatMessage[] {
+function messagesApiInputToRawMessagesForLogging(
+	request: AnthropicMessagesRequest,
+): Raw.ChatMessage[] {
 	const messages: Raw.ChatMessage[] = [];
 
 	// Add system message if present
 	if (request.system) {
-		const systemText = typeof request.system === 'string'
-			? request.system
-			: request.system.map(block => block.text).join('\n');
+		const systemText =
+			typeof request.system === 'string'
+				? request.system
+				: request.system.map((block) => block.text).join('\n');
 		messages.push({
 			role: Raw.ChatRole.System,
-			content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: systemText }]
+			content: [
+				{
+					type: Raw.ChatCompletionContentPartKind.Text,
+					text: systemText,
+				},
+			],
 		});
 	}
 
 	// Convert each message
 	for (const msg of request.messages ?? []) {
-		const role = msg.role === 'user' ? Raw.ChatRole.User : Raw.ChatRole.Assistant;
+		const role =
+			msg.role === 'user' ? Raw.ChatRole.User : Raw.ChatRole.Assistant;
 		const content: Raw.ChatCompletionContentPart[] = [];
 
 		if (typeof msg.content === 'string') {
-			content.push({ type: Raw.ChatCompletionContentPartKind.Text, text: msg.content });
+			content.push({
+				type: Raw.ChatCompletionContentPartKind.Text,
+				text: msg.content,
+			});
 		} else if (Array.isArray(msg.content)) {
 			for (const block of msg.content) {
 				if (block.type === 'text') {
-					content.push({ type: Raw.ChatCompletionContentPartKind.Text, text: block.text });
+					content.push({
+						type: Raw.ChatCompletionContentPartKind.Text,
+						text: block.text,
+					});
 				} else if (block.type === 'image') {
 					// Handle image blocks if needed for logging
-					content.push({ type: Raw.ChatCompletionContentPartKind.Text, text: '[image]' });
+					content.push({
+						type: Raw.ChatCompletionContentPartKind.Text,
+						text: '[image]',
+					});
 				} else if (block.type === 'tool_use') {
-					content.push({ type: Raw.ChatCompletionContentPartKind.Text, text: `[tool_use: ${block.name}]` });
+					content.push({
+						type: Raw.ChatCompletionContentPartKind.Text,
+						text: `[tool_use: ${block.name}]`,
+					});
 				} else if (block.type === 'tool_result') {
-					content.push({ type: Raw.ChatCompletionContentPartKind.Text, text: `[tool_result: ${block.tool_use_id}]` });
+					content.push({
+						type: Raw.ChatCompletionContentPartKind.Text,
+						text: `[tool_result: ${block.tool_use_id}]`,
+					});
 				}
 			}
 		}
@@ -490,14 +677,16 @@ function messagesApiInputToRawMessagesForLogging(request: AnthropicMessagesReque
 export function processNonStreamingPassThroughResponse(
 	response: Response,
 	forwardChunk: (chunk: Uint8Array) => void,
-	onUsage: ((usage: { promptTokens: number; completionTokens: number }) => void) | undefined,
+	onUsage:
+		| ((usage: { promptTokens: number; completionTokens: number }) => void)
+		| undefined,
 	telemetryService: ITelemetryService,
 	logService: ILogService,
 	finishCallback: FinishedCallback,
 	telemetryData: TelemetryData,
 	cancellationToken?: CancellationToken,
 ): AsyncIterableObject<ChatCompletion> {
-	return new AsyncIterableObject<ChatCompletion>(async feed => {
+	return new AsyncIterableObject<ChatCompletion>(async (feed) => {
 		const chunks: Uint8Array[] = [];
 		let totalLength = 0;
 		try {
@@ -562,12 +751,17 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 		private readonly requestBody: IEndpointBody,
 		private readonly requestHeaders: http.IncomingHttpHeaders,
 		private readonly userAgentPrefix: string,
-		private readonly contextWindowOverride: { modelMaxPromptTokens?: number; maxOutputTokens?: number },
+		private readonly contextWindowOverride: {
+			modelMaxPromptTokens?: number;
+			maxOutputTokens?: number;
+		},
 		private readonly sessionId: string | undefined,
 		@IChatMLFetcher private readonly chatMLFetcher: IChatMLFetcher,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@IClaudeSessionStateService private readonly sessionStateService: IClaudeSessionStateService
-	) { }
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+		@IClaudeSessionStateService
+		private readonly sessionStateService: IClaudeSessionStateService,
+	) {}
 
 	public get urlOrRequestMetadata(): string | RequestMetadata {
 		// Force Messages API endpoint - we need this regardless of the useMessagesApi setting
@@ -580,12 +774,17 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 	}
 
 	public getExtraHeaders(): Record<string, string> {
-		const headers = this.base.getExtraHeaders?.(ChatLocation.MessagesProxy) ?? {};
+		const headers =
+			this.base.getExtraHeaders?.(ChatLocation.MessagesProxy) ?? {};
 		if (this.requestHeaders['user-agent']) {
-			headers['User-Agent'] = this.getUserAgent(this.requestHeaders['user-agent']);
+			headers['User-Agent'] = this.getUserAgent(
+				this.requestHeaders['user-agent'],
+			);
 		}
 		if (typeof this.requestHeaders['anthropic-beta'] === 'string') {
-			const filtered = filterSupportedBetas(this.requestHeaders['anthropic-beta']);
+			const filtered = filterSupportedBetas(
+				this.requestHeaders['anthropic-beta'],
+			);
 			if (filtered) {
 				headers['anthropic-beta'] = filtered;
 			}
@@ -595,7 +794,7 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 
 	getEndpointFetchOptions(): IEndpointFetchOptions {
 		return {
-			suppressIntegrationId: true
+			suppressIntegrationId: true,
 		};
 	}
 
@@ -617,11 +816,17 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 	}
 
 	public get modelMaxPromptTokens(): number {
-		return this.contextWindowOverride.modelMaxPromptTokens ?? this.base.modelMaxPromptTokens;
+		return (
+			this.contextWindowOverride.modelMaxPromptTokens ??
+			this.base.modelMaxPromptTokens
+		);
 	}
 
 	public get maxOutputTokens(): number {
-		return this.contextWindowOverride.maxOutputTokens ?? this.base.maxOutputTokens;
+		return (
+			this.contextWindowOverride.maxOutputTokens ??
+			this.base.maxOutputTokens
+		);
 	}
 
 	public get model(): string {
@@ -720,7 +925,9 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 		return this.base.supportsPrediction;
 	}
 
-	public get supportedEditTools(): readonly EndpointEditToolName[] | undefined {
+	public get supportedEditTools():
+		| readonly EndpointEditToolName[]
+		| undefined {
 		return this.base.supportedEditTools;
 	}
 
@@ -731,7 +938,7 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 		expectedNumChoices: number,
 		finishCallback: FinishedCallback,
 		telemetryData: TelemetryData,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<AsyncIterableObject<ChatCompletion>> {
 		const body = response.body;
 		const upstreamContentType = response.headers.get('content-type') ?? '';
@@ -745,7 +952,7 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 				this.responseStream.writeHead(200, {
 					'Content-Type': 'text/event-stream',
 					'Cache-Control': 'no-cache',
-					'Connection': 'keep-alive',
+					Connection: 'keep-alive',
 				});
 			} else {
 				this.responseStream.writeHead(200, {
@@ -755,15 +962,30 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 		}
 
 		if (!isStreaming) {
-			return this._processNonStreamingResponse(response, telemetryService, logService, finishCallback, telemetryData, cancellationToken);
+			return this._processNonStreamingResponse(
+				response,
+				telemetryService,
+				logService,
+				finishCallback,
+				telemetryData,
+				cancellationToken,
+			);
 		}
 
-		return new AsyncIterableObject<ChatCompletion>(async feed => {
+		return new AsyncIterableObject<ChatCompletion>(async (feed) => {
 			// We parse the stream just to return a correct ChatCompletion for logging the response and token usage details.
-			const requestId = response.headers.get('X-Request-ID') ?? generateUuid();
-			const ghRequestId = response.headers.get('x-github-request-id') ?? '';
+			const requestId =
+				response.headers.get('X-Request-ID') ?? generateUuid();
+			const ghRequestId =
+				response.headers.get('x-github-request-id') ?? '';
 			const { serverExperiments } = getRequestId(response.headers);
-			const processor = this.instantiationService.createInstance(AnthropicMessagesProcessor, telemetryData, requestId, ghRequestId, serverExperiments);
+			const processor = this.instantiationService.createInstance(
+				AnthropicMessagesProcessor,
+				telemetryData,
+				requestId,
+				ghRequestId,
+				serverExperiments,
+			);
 			const parser = new SSEParser((ev) => {
 				try {
 					const trimmed = ev.data?.trim();
@@ -771,24 +993,34 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 						return;
 					}
 
-					logService.trace(`[ClaudeStreamingPassThroughEndpoint] SSE: ${ev.data}`);
+					logService.trace(
+						`[ClaudeStreamingPassThroughEndpoint] SSE: ${ev.data}`,
+					);
 					const parsed = JSON.parse(trimmed);
 					const type = parsed.type ?? ev.type;
 					if (!type) {
 						return;
 					}
-					const completion = processor.push({ ...parsed, type }, finishCallback);
+					const completion = processor.push(
+						{ ...parsed, type },
+						finishCallback,
+					);
 					if (completion) {
 						feed.emitOne(completion);
 
 						// Report usage to the usage handler if available
 						if (completion.usage && this.sessionId) {
-							const usageHandler = this.sessionStateService.getUsageHandlerForSession(this.sessionId);
+							const usageHandler =
+								this.sessionStateService.getUsageHandlerForSession(
+									this.sessionId,
+								);
 							if (usageHandler) {
 								usageHandler({
 									// Could we bucketize these token counts somehow for the details?
-									promptTokens: completion.usage.prompt_tokens,
-									completionTokens: completion.usage.completion_tokens
+									promptTokens:
+										completion.usage.prompt_tokens,
+									completionTokens:
+										completion.usage.completion_tokens,
 								});
 							}
 						}
@@ -826,13 +1058,15 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 		const sessionId = this.sessionId;
 		const onUsage = sessionId
 			? (usage: { promptTokens: number; completionTokens: number }) => {
-				this.sessionStateService.getUsageHandlerForSession(sessionId)?.(usage);
-			}
+					this.sessionStateService.getUsageHandlerForSession(
+						sessionId,
+					)?.(usage);
+				}
 			: undefined;
 
 		return processNonStreamingPassThroughResponse(
 			response,
-			chunk => this.responseStream.write(chunk),
+			(chunk) => this.responseStream.write(chunk),
 			onUsage,
 			telemetryService,
 			logService,
@@ -850,30 +1084,36 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 		location: ChatLocation,
 		source?: Source,
 		requestOptions?: Omit<OptionalChatRequestParams, 'n'>,
-		userInitiatedRequest?: boolean
+		userInitiatedRequest?: boolean,
 	): Promise<ChatResponse> {
 		throw new Error('not implemented');
 	}
 
 	public makeChatRequest2(
 		options: IMakeChatRequestOptions,
-		token: CancellationToken
+		token: CancellationToken,
 	): Promise<ChatResponse> {
-		return this.chatMLFetcher.fetchOne({
-			requestOptions: {},
-			...options,
-			endpoint: this,
-		}, token);
+		return this.chatMLFetcher.fetchOne(
+			{
+				requestOptions: {},
+				...options,
+				endpoint: this,
+			},
+			token,
+		);
 	}
 
 	public createRequestBody(
-		options: ICreateEndpointBodyOptions
+		options: ICreateEndpointBodyOptions,
 	): IEndpointBody {
 		const base = this.base.createRequestBody(options);
 
 		// Claude models don't support both temperature and top_p simultaneously.
 		// If the SDK request specifies either, clear both from base to avoid conflicts.
-		if (this.requestBody.temperature !== undefined || this.requestBody.top_p !== undefined) {
+		if (
+			this.requestBody.temperature !== undefined ||
+			this.requestBody.top_p !== undefined
+		) {
 			delete base.temperature;
 			delete base.top_p;
 		}
@@ -882,7 +1122,7 @@ class ClaudeStreamingPassThroughEndpoint implements IChatEndpoint {
 		// i.e. default thinking budget.
 		return {
 			...base,
-			...this.requestBody
+			...this.requestBody,
 		};
 	}
 

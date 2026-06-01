@@ -12,9 +12,7 @@ export class RecordedProgress<T> implements vscode.Progress<T> {
 		return this._items;
 	}
 
-	constructor(
-		private readonly _progress: vscode.Progress<T>,
-	) { }
+	constructor(private readonly _progress: vscode.Progress<T>) {}
 
 	report(value: T): void {
 		this._items.push(value);

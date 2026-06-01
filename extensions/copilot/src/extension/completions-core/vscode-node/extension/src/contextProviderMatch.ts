@@ -12,14 +12,19 @@ import { DocumentContext } from '../../types/src';
 export async function contextProviderMatch(
 	instantiationService: IInstantiationService,
 	documentSelector: DocumentSelector,
-	documentContext: DocumentContext
+	documentContext: DocumentContext,
 ): Promise<number> {
-	const vscDoc = workspace.textDocuments.find(td => td.uri.toString() === documentContext.uri);
+	const vscDoc = workspace.textDocuments.find(
+		(td) => td.uri.toString() === documentContext.uri,
+	);
 	if (!vscDoc) {
 		return 0;
 	}
 
-	const result = await instantiationService.invokeFunction(isDocumentValid, documentContext);
+	const result = await instantiationService.invokeFunction(
+		isDocumentValid,
+		documentContext,
+	);
 	if (result.status !== 'valid') {
 		return 0;
 	}

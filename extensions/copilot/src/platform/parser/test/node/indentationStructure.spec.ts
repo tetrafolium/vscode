@@ -16,7 +16,7 @@ describe('getStructure', () => {
 	afterAll(() => _dispose());
 
 	function treeToFlatList(
-		node: OverlayNode
+		node: OverlayNode,
 	): { startIndex: number; endIndex: number; kind: string }[] {
 		const result: { startIndex: number; endIndex: number; kind: string }[] =
 			[];
@@ -34,12 +34,12 @@ describe('getStructure', () => {
 	async function srcWithAnnotatedStructure(
 		source: string,
 		languageId: string,
-		formattingOptions: vscode.FormattingOptions
+		formattingOptions: vscode.FormattingOptions,
 	) {
 		const structure = await getStructureUsingIndentation(
 			new StringTextDocument(source),
 			languageId,
-			formattingOptions
+			formattingOptions,
 		);
 		const flatList = structure ? treeToFlatList(structure) : [];
 		return insertRangeMarkers(source, flatList);
@@ -137,7 +137,7 @@ describe('getStructure', () => {
 				await srcWithAnnotatedStructure(source, 'csharp', {
 					tabSize: 4,
 					insertSpaces: false,
-				})
+				}),
 			).toMatchInlineSnapshot(`
 				"<LINE>using System.Collections.Generic;
 				</LINE><LINE-1>using System.Threading.Tasks;
@@ -239,7 +239,7 @@ describe('getStructure', () => {
 				await srcWithAnnotatedStructure(source, 'plaintext', {
 					tabSize: 4,
 					insertSpaces: false,
-				})
+				}),
 			).toMatchInlineSnapshot(`
 				"<FOLD>if(something) {
 					console.log('something')
@@ -273,7 +273,7 @@ describe('getStructure', () => {
 				await srcWithAnnotatedStructure(source, 'plaintext', {
 					tabSize: 4,
 					insertSpaces: false,
-				})
+				}),
 			).toMatchInlineSnapshot(`
 				"<LINE><!-- Copyright (C) Microsoft Corporation. All rights reserved. -->
 				</LINE><LINE-1><!DOCTYPE html>
@@ -581,7 +581,7 @@ describe('getStructure', () => {
 				await srcWithAnnotatedStructure(source, 'css', {
 					tabSize: 4,
 					insertSpaces: false,
-				})
+				}),
 			).toMatchInlineSnapshot(`
 				"<LINE>/*---------------------------------------------------------------------------------------------
 				</LINE><LINE-1>*  Copyright (c) Microsoft Corporation. All rights reserved.

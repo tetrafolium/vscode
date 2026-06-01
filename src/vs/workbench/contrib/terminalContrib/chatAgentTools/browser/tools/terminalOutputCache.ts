@@ -3,9 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IToolResultCache, IToolResultCacheHit } from '../../../../chat/common/tools/toolResultCompressor.js';
-import { TerminalToolId } from '../../../../chat/common/tools/terminalToolIds.js';
-import { parseCommand, segmentHead } from './terminalCommandParser.js';
+import {
+	IToolResultCache,
+	IToolResultCacheHit,
+} from "../../../../chat/common/tools/toolResultCompressor.js";
+import { TerminalToolId } from "../../../../chat/common/tools/terminalToolIds.js";
+import { parseCommand, segmentHead } from "./terminalCommandParser.js";
 
 /**
  * Session-memory dedup cache for `run_in_terminal` output. Keyed on
@@ -27,11 +30,11 @@ interface ITerminalInput {
 
 export const enum CacheClass {
 	/** `git status`, `ls`, `pwd` — likely to change quickly. */
-	Fast = 'fast',
+	Fast = "fast",
 	/** test runners. */
-	Medium = 'medium',
+	Medium = "medium",
 	/** `git log`, `find`, `tree`. */
-	Slow = 'slow',
+	Slow = "slow",
 }
 
 const TTL_MS: Record<CacheClass, number> = {
@@ -76,65 +79,105 @@ function classifyCommand(command: string | undefined): IClassification {
 	return classifySingleHead(head);
 }
 
-function classifySingleHead(head: { head: string; sub: string | undefined }): IClassification {
+function classifySingleHead(head: {
+	head: string;
+	sub: string | undefined;
+}): IClassification {
 	switch (head.head) {
-		case 'git': {
+		case "git": {
 			// Mutations clear all cached `git ...` results in this cwd.
-			if (head.sub && /^(add|commit|push|pull|fetch|merge|rebase|reset|checkout|switch|restore|cherry-pick|revert|stash|tag|branch|am|apply|clean|rm|mv)$/.test(head.sub)) {
-				return { cls: undefined, invalidates: ['git'] };
+			if (
+				head.sub &&
+				/^(add|commit|push|pull|fetch|merge|rebase|reset|checkout|switch|restore|cherry-pick|revert|stash|tag|branch|am|apply|clean|rm|mv)$/.test(
+					head.sub,
+				)
+			) {
+				return { cls: undefined, invalidates: ["git"] };
 			}
-			if (head.sub === 'status' || head.sub === 'diff' || head.sub === 'show' || head.sub === 'blame') {
+			if (
+				head.sub === "status" ||
+				head.sub === "diff" ||
+				head.sub === "show" ||
+				head.sub === "blame"
+			) {
 				return { cls: CacheClass.Fast, invalidates: [] };
 			}
-			if (head.sub === 'log' || head.sub === 'reflog' || head.sub === 'shortlog') {
+			if (
+				head.sub === "log" ||
+				head.sub === "reflog" ||
+				head.sub === "shortlog"
+			) {
 				return { cls: CacheClass.Slow, invalidates: [] };
 			}
 			return { cls: undefined, invalidates: [] };
 		}
-		case 'ls':
-		case 'pwd':
-		case 'tree':
-		case 'find':
-			return { cls: head.head === 'find' || head.head === 'tree' ? CacheClass.Slow : CacheClass.Fast, invalidates: [] };
-		case 'npm':
-		case 'pnpm':
-		case 'yarn':
-			if (head.sub === 'ls' || head.sub === 'list' || head.sub === 'outdated') {
+		case "ls":
+		case "pwd":
+		case "tree":
+		case "find":
+			return {
+				cls:
+					head.head === "find" || head.head === "tree"
+						? CacheClass.Slow
+						: CacheClass.Fast,
+				invalidates: [],
+			};
+		case "npm":
+		case "pnpm":
+		case "yarn":
+			if (head.sub === "ls" || head.sub === "list" || head.sub === "outdated") {
 				return { cls: CacheClass.Slow, invalidates: [] };
 			}
-			if (head.sub === 'install' || head.sub === 'i' || head.sub === 'ci' || head.sub === 'add' || head.sub === 'remove' || head.sub === 'uninstall' || head.sub === 'update') {
-				return { cls: undefined, invalidates: ['npm', 'pnpm', 'yarn'] };
+			if (
+				head.sub === "install" ||
+				head.sub === "i" ||
+				head.sub === "ci" ||
+				head.sub === "add" ||
+				head.sub === "remove" ||
+				head.sub === "uninstall" ||
+				head.sub === "update"
+			) {
+				return { cls: undefined, invalidates: ["npm", "pnpm", "yarn"] };
 			}
-			if (head.sub === 'test' || head.sub === 'run' || head.sub === undefined) {
+			if (head.sub === "test" || head.sub === "run" || head.sub === undefined) {
 				return { cls: CacheClass.Medium, invalidates: [] };
 			}
 			return { cls: undefined, invalidates: [] };
-		case 'pytest':
-		case 'jest':
-		case 'vitest':
-		case 'cargo':
-			if (head.head === 'cargo' && head.sub && /^(test|nextest|check|build)$/.test(head.sub)) {
+		case "pytest":
+		case "jest":
+		case "vitest":
+		case "cargo":
+			if (
+				head.head === "cargo" &&
+				head.sub &&
+				/^(test|nextest|check|build)$/.test(head.sub)
+			) {
 				return { cls: CacheClass.Medium, invalidates: [] };
 			}
-			if (head.head !== 'cargo') {
+			if (head.head !== "cargo") {
 				return { cls: CacheClass.Medium, invalidates: [] };
 			}
 			return { cls: undefined, invalidates: [] };
-		case 'go':
-			if (head.sub === 'test' || head.sub === 'build' || head.sub === 'vet') {
+		case "go":
+			if (head.sub === "test" || head.sub === "build" || head.sub === "vet") {
 				return { cls: CacheClass.Medium, invalidates: [] };
 			}
 			return { cls: undefined, invalidates: [] };
-		case 'docker':
-		case 'kubectl':
-			if (head.sub === 'ps' || head.sub === 'images' || head.sub === 'get' || head.sub === 'describe') {
+		case "docker":
+		case "kubectl":
+			if (
+				head.sub === "ps" ||
+				head.sub === "images" ||
+				head.sub === "get" ||
+				head.sub === "describe"
+			) {
 				return { cls: CacheClass.Fast, invalidates: [] };
 			}
 			return { cls: undefined, invalidates: [] };
-		case 'env':
-		case 'printenv':
+		case "env":
+		case "printenv":
 			return { cls: CacheClass.Slow, invalidates: [] };
-		case 'gh':
+		case "gh":
 			return { cls: CacheClass.Medium, invalidates: [] };
 	}
 	return { cls: undefined, invalidates: [] };
@@ -148,20 +191,22 @@ interface ICacheEntry {
 	readonly cls: CacheClass;
 }
 
-function getInput(input: unknown): { command: string; cwd: string } | undefined {
-	if (typeof input !== 'object' || input === null) {
+function getInput(
+	input: unknown,
+): { command: string; cwd: string } | undefined {
+	if (typeof input !== "object" || input === null) {
 		return undefined;
 	}
 	const i = input as ITerminalInput;
-	if (typeof i.command !== 'string' || !i.command.trim()) {
+	if (typeof i.command !== "string" || !i.command.trim()) {
 		return undefined;
 	}
-	const cwd = typeof i.cwd === 'string' ? i.cwd : '';
+	const cwd = typeof i.cwd === "string" ? i.cwd : "";
 	return { command: i.command, cwd };
 }
 
 export class TerminalOutputCache implements IToolResultCache {
-	readonly id = 'terminal.session-dedup';
+	readonly id = "terminal.session-dedup";
 	readonly toolIds = [TerminalToolId.RunInTerminal];
 
 	private readonly _entries = new Map<string, ICacheEntry>();
@@ -256,7 +301,16 @@ export class TerminalOutputCache implements IToolResultCache {
 			if (e.cwd !== cwd) {
 				continue;
 			}
-			const head = segmentHead(parseCommand(e.command)?.segments[0] ?? { raw: '', tokens: [], rawTokens: [], envPrefixes: [], wrappers: [], trailingSeparator: undefined });
+			const head = segmentHead(
+				parseCommand(e.command)?.segments[0] ?? {
+					raw: "",
+					tokens: [],
+					rawTokens: [],
+					envPrefixes: [],
+					wrappers: [],
+					trailingSeparator: undefined,
+				},
+			);
 			if (head && progSet.has(head.head)) {
 				this._entries.delete(key);
 			}

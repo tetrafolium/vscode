@@ -9,7 +9,6 @@ import { extUriIgnorePathCase } from 'vs/base/common/resources';
 import { URI } from 'vs/base/common/uri';
 
 suite('Map', () => {
-
 	test('LinkedMap - Simple', () => {
 		const map = new LinkedMap<string, string>();
 		map.set('ak', 'av');
@@ -188,7 +187,7 @@ suite('Map', () => {
 	test('LinkedMap - LRU Cache simple', () => {
 		const cache = new LRUCache<number, number>(5);
 
-		[1, 2, 3, 4, 5].forEach(value => cache.set(value, value));
+		[1, 2, 3, 4, 5].forEach((value) => cache.set(value, value));
 		assert.strictEqual(cache.size, 5);
 		cache.set(6, 6);
 		assert.strictEqual(cache.size, 5);
@@ -197,14 +196,14 @@ suite('Map', () => {
 		assert.strictEqual(cache.size, 5);
 		assert.deepStrictEqual([...cache.keys()], [3, 4, 5, 6, 7]);
 		const values: number[] = [];
-		[3, 4, 5, 6, 7].forEach(key => values.push(cache.get(key)!));
+		[3, 4, 5, 6, 7].forEach((key) => values.push(cache.get(key)!));
 		assert.deepStrictEqual(values, [3, 4, 5, 6, 7]);
 	});
 
 	test('LinkedMap - LRU Cache get', () => {
 		const cache = new LRUCache<number, number>(5);
 
-		[1, 2, 3, 4, 5].forEach(value => cache.set(value, value));
+		[1, 2, 3, 4, 5].forEach((value) => cache.set(value, value));
 		assert.strictEqual(cache.size, 5);
 		assert.deepStrictEqual([...cache.keys()], [1, 2, 3, 4, 5]);
 		cache.get(3);
@@ -212,7 +211,7 @@ suite('Map', () => {
 		cache.peek(4);
 		assert.deepStrictEqual([...cache.keys()], [1, 2, 4, 5, 3]);
 		const values: number[] = [];
-		[1, 2, 3, 4, 5].forEach(key => values.push(cache.get(key)!));
+		[1, 2, 3, 4, 5].forEach((key) => values.push(cache.get(key)!));
 		assert.deepStrictEqual(values, [1, 2, 3, 4, 5]);
 	});
 
@@ -251,7 +250,7 @@ suite('Map', () => {
 		assert.strictEqual(cache.size, 5);
 		assert.deepStrictEqual([...cache.keys()], [7, 8, 9, 10, 11]);
 		const values: number[] = [];
-		[...cache.keys()].forEach(key => values.push(cache.get(key)!));
+		[...cache.keys()].forEach((key) => values.push(cache.get(key)!));
 		assert.deepStrictEqual(values, [7, 8, 9, 10, 11]);
 		assert.deepStrictEqual([...cache.values()], values);
 	});
@@ -437,7 +436,9 @@ suite('Map', () => {
 	});
 
 	test('ResourceMap - files (ignorecase)', function () {
-		const map = new ResourceMap<any>(uri => extUriIgnorePathCase.getComparisonKey(uri));
+		const map = new ResourceMap<any>((uri) =>
+			extUriIgnorePathCase.getComparisonKey(uri),
+		);
 
 		const fileA = URI.parse('file://some/filea');
 		const fileB = URI.parse('some://some/other/fileb');
@@ -466,7 +467,9 @@ suite('Map', () => {
 	});
 
 	test('ResourceMap - files (ignorecase, BUT preservecase)', function () {
-		const map = new ResourceMap<number>(uri => extUriIgnorePathCase.getComparisonKey(uri));
+		const map = new ResourceMap<number>((uri) =>
+			extUriIgnorePathCase.getComparisonKey(uri),
+		);
 
 		const fileA = URI.parse('file://some/filea');
 		const fileAUpper = URI.parse('file://SOME/FILEA');
@@ -474,13 +477,19 @@ suite('Map', () => {
 		map.set(fileA, 1);
 		assert.strictEqual(map.get(fileA), 1);
 		assert.strictEqual(map.get(fileAUpper), 1);
-		assert.deepStrictEqual(Array.from(map.keys()).map(String), [fileA].map(String));
+		assert.deepStrictEqual(
+			Array.from(map.keys()).map(String),
+			[fileA].map(String),
+		);
 		assert.deepStrictEqual(Array.from(map), [[fileA, 1]]);
 
 		map.set(fileAUpper, 1);
 		assert.strictEqual(map.get(fileA), 1);
 		assert.strictEqual(map.get(fileAUpper), 1);
-		assert.deepStrictEqual(Array.from(map.keys()).map(String), [fileAUpper].map(String));
+		assert.deepStrictEqual(
+			Array.from(map.keys()).map(String),
+			[fileAUpper].map(String),
+		);
 		assert.deepStrictEqual(Array.from(map), [[fileAUpper, 1]]);
 	});
 });

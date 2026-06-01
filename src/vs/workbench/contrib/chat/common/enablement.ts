@@ -3,10 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { IReader, ITransaction } from '../../../../base/common/observable.js';
-import { ObservableMemento, observableMemento } from '../../../../platform/observable/common/observableMemento.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { IReader, ITransaction } from "../../../../base/common/observable.js";
+import {
+	ObservableMemento,
+	observableMemento,
+} from "../../../../platform/observable/common/observableMemento.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../platform/storage/common/storage.js";
 
 export const enum ContributionEnablementState {
 	DisabledProfile,
@@ -15,17 +22,28 @@ export const enum ContributionEnablementState {
 	EnabledWorkspace,
 }
 
-export function isContributionEnabled(state: ContributionEnablementState): boolean {
-	return state === ContributionEnablementState.EnabledProfile || state === ContributionEnablementState.EnabledWorkspace;
+export function isContributionEnabled(
+	state: ContributionEnablementState,
+): boolean {
+	return (
+		state === ContributionEnablementState.EnabledProfile ||
+		state === ContributionEnablementState.EnabledWorkspace
+	);
 }
 
-export function isContributionDisabled(state: ContributionEnablementState): boolean {
+export function isContributionDisabled(
+	state: ContributionEnablementState,
+): boolean {
 	return !isContributionEnabled(state);
 }
 
 export interface IEnablementModel {
 	readEnabled(key: string, reader?: IReader): ContributionEnablementState;
-	setEnabled(key: string, state: ContributionEnablementState, tx?: ITransaction): void;
+	setEnabled(
+		key: string,
+		state: ContributionEnablementState,
+		tx?: ITransaction,
+	): void;
 	remove(key: string): void;
 }
 
@@ -67,11 +85,11 @@ export class EnablementModel extends Disposable implements IEnablementModel {
 		});
 
 		this._profileState = this._register(
-			mapMemento(StorageScope.PROFILE, StorageTarget.MACHINE, storageService)
+			mapMemento(StorageScope.PROFILE, StorageTarget.MACHINE, storageService),
 		);
 
 		this._workspaceState = this._register(
-			mapMemento(StorageScope.WORKSPACE, StorageTarget.MACHINE, storageService)
+			mapMemento(StorageScope.WORKSPACE, StorageTarget.MACHINE, storageService),
 		);
 	}
 
@@ -93,7 +111,11 @@ export class EnablementModel extends Disposable implements IEnablementModel {
 		return ContributionEnablementState.EnabledProfile;
 	}
 
-	setEnabled(key: string, state: ContributionEnablementState, tx?: ITransaction): void {
+	setEnabled(
+		key: string,
+		state: ContributionEnablementState,
+		tx?: ITransaction,
+	): void {
 		switch (state) {
 			case ContributionEnablementState.EnabledProfile: {
 				// Enabled-profile is the default: remove key from profile state,
@@ -126,7 +148,12 @@ export class EnablementModel extends Disposable implements IEnablementModel {
 		this._deleteFromMap(this._workspaceState, key);
 	}
 
-	private _setInMap(memento: ObservableMemento<EnablementMap>, key: string, value: boolean, tx?: ITransaction): void {
+	private _setInMap(
+		memento: ObservableMemento<EnablementMap>,
+		key: string,
+		value: boolean,
+		tx?: ITransaction,
+	): void {
 		const current = memento.get();
 		if (current.get(key) === value) {
 			return;
@@ -136,7 +163,11 @@ export class EnablementModel extends Disposable implements IEnablementModel {
 		memento.set(next, tx);
 	}
 
-	private _deleteFromMap(memento: ObservableMemento<EnablementMap>, key: string, tx?: ITransaction): void {
+	private _deleteFromMap(
+		memento: ObservableMemento<EnablementMap>,
+		key: string,
+		tx?: ITransaction,
+	): void {
 		const current = memento.get();
 		if (!current.has(key)) {
 			return;

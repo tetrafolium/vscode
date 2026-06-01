@@ -4,11 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FileType } from '../../../platform/filesystem/common/fileTypes';
-import { getWorkspaceFileDisplayPath, IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
+import {
+	getWorkspaceFileDisplayPath,
+	IWorkspaceService,
+} from '../../../platform/workspace/common/workspaceService';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { normalizePath as normalizeUriPath } from '../../../util/vs/base/common/resources';
 import { Location, Position, Range, Uri } from '../../../vscodeTypes';
-import { coalesceParts, LinkifiedPart, LinkifiedText, LinkifyLocationAnchor } from './linkifiedText';
+import {
+	coalesceParts,
+	LinkifiedPart,
+	LinkifiedText,
+	LinkifyLocationAnchor,
+} from './linkifiedText';
 import { IContributedLinkifier, LinkifierContext } from './linkifyService';
 import { IStatCache } from './statCache';
 
@@ -20,9 +28,13 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 	constructor(
 		private readonly workspaceService: IWorkspaceService,
 		private readonly statCache: IStatCache,
-	) { }
+	) {}
 
-	async linkify(text: string, context: LinkifierContext, token: CancellationToken): Promise<LinkifiedText | undefined> {
+	async linkify(
+		text: string,
+		context: LinkifierContext,
+		token: CancellationToken,
+	): Promise<LinkifiedText | undefined> {
 		let lastIndex = 0;
 		const parts: Array<LinkifiedPart | Promise<LinkifiedPart>> = [];
 		const workspaceFolders = this.workspaceService.getWorkspaceFolders();
@@ -48,27 +60,42 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 
 			// Push promise to resolve in parallel with other matches
 			// Pass originalTargetPath to preserve platform-specific separators (e.g., c:/path vs c:\path) before Uri.file() conversion
-			parts.push(this.resolveTarget(parsed.targetPath, parsed.originalTargetPath, workspaceFolders, parsed.preserveDirectorySlash, token).then(resolved => {
-				if (!resolved) {
-					return original;
-				}
+			parts.push(
+				this.resolveTarget(
+					parsed.targetPath,
+					parsed.originalTargetPath,
+					workspaceFolders,
+					parsed.preserveDirectorySlash,
+					token,
+				).then((resolved) => {
+					if (!resolved) {
+						return original;
+					}
 
-				const basePath = getWorkspaceFileDisplayPath(this.workspaceService, resolved);
-				const anchorRange = this.parseAnchor(parsed.anchor);
-				if (parsed.anchor && !anchorRange) {
-					return original;
-				}
+					const basePath = getWorkspaceFileDisplayPath(
+						this.workspaceService,
+						resolved,
+					);
+					const anchorRange = this.parseAnchor(parsed.anchor);
+					if (parsed.anchor && !anchorRange) {
+						return original;
+					}
 
-				if (anchorRange) {
-					const { range, startLine, endLine } = anchorRange;
-					const displayPath = endLine && startLine !== endLine
-						? `${basePath}#L${startLine}-L${endLine}`
-						: `${basePath}#L${startLine}`;
-					return new LinkifyLocationAnchor(new Location(resolved, range), displayPath);
-				}
+					if (anchorRange) {
+						const { range, startLine, endLine } = anchorRange;
+						const displayPath =
+							endLine && startLine !== endLine
+								? `${basePath}#L${startLine}-L${endLine}`
+								: `${basePath}#L${startLine}`;
+						return new LinkifyLocationAnchor(
+							new Location(resolved, range),
+							displayPath,
+						);
+					}
 
-				return new LinkifyLocationAnchor(resolved, basePath);
-			}));
+					return new LinkifyLocationAnchor(resolved, basePath);
+				}),
+			);
 		}
 
 		const suffix = text.slice(lastIndex);
@@ -83,7 +110,17 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 		return { parts: coalesceParts(await Promise.all(parts)) };
 	}
 
-	private parseModelLinkMatch(match: RegExpMatchArray): { readonly text: string; readonly targetPath: string; readonly anchor: string | undefined; readonly preserveDirectorySlash: boolean; readonly originalTargetPath: string } | undefined {
+	private parseModelLinkMatch(
+		match: RegExpMatchArray,
+	):
+		| {
+				readonly text: string;
+				readonly targetPath: string;
+				readonly anchor: string | undefined;
+				readonly preserveDirectorySlash: boolean;
+				readonly originalTargetPath: string;
+		  }
+		| undefined {
 		const rawText = match.groups?.['text'];
 		const rawTarget = match.groups?.['target'];
 		if (!rawText || !rawTarget) {
@@ -91,8 +128,10 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 		}
 
 		const hashIndex = rawTarget.indexOf('#');
-		const baseTarget = hashIndex === -1 ? rawTarget : rawTarget.slice(0, hashIndex);
-		const anchor = hashIndex === -1 ? undefined : rawTarget.slice(hashIndex + 1);
+		const baseTarget =
+			hashIndex === -1 ? rawTarget : rawTarget.slice(0, hashIndex);
+		const anchor =
+			hashIndex === -1 ? undefined : rawTarget.slice(hashIndex + 1);
 
 		let decodedBase = baseTarget;
 		try {
@@ -101,10 +140,17 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 			// noop
 		}
 
-		const preserveDirectorySlash = decodedBase.endsWith('/') && decodedBase.length > 1;
+		const preserveDirectorySlash =
+			decodedBase.endsWith('/') && decodedBase.length > 1;
 		const normalizedTarget = this.normalizeSlashes(decodedBase);
 		const normalizedText = this.normalizeLinkText(rawText);
-		return { text: normalizedText, targetPath: normalizedTarget, anchor, preserveDirectorySlash, originalTargetPath: decodedBase };
+		return {
+			text: normalizedText,
+			targetPath: normalizedTarget,
+			anchor,
+			preserveDirectorySlash,
+			originalTargetPath: decodedBase,
+		};
 	}
 
 	private normalizeSlashes(value: string): string {
@@ -122,10 +168,18 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 		return anchorMatch ? anchorMatch[1] : text;
 	}
 
-	private canLinkify(parsed: { readonly text: string; readonly targetPath: string; readonly anchor: string | undefined }, workspaceFolders: readonly Uri[]): boolean {
+	private canLinkify(
+		parsed: {
+			readonly text: string;
+			readonly targetPath: string;
+			readonly anchor: string | undefined;
+		},
+		workspaceFolders: readonly Uri[],
+	): boolean {
 		const { text, targetPath, anchor } = parsed;
 		const textMatchesBase = targetPath === text;
-		const textIsFilename = !text.includes('/') && targetPath.endsWith(`/${text}`);
+		const textIsFilename =
+			!text.includes('/') && targetPath.endsWith(`/${text}`);
 
 		// Allow descriptive text with anchor, but if text looks like a filename (has extension),
 		// it must match the target's filename to prevent linking to wrong files
@@ -143,10 +197,19 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 			}
 		}
 
-		return Boolean(workspaceFolders.length) && (textMatchesBase || textIsFilename || descriptiveWithAnchor);
+		return (
+			Boolean(workspaceFolders.length) &&
+			(textMatchesBase || textIsFilename || descriptiveWithAnchor)
+		);
 	}
 
-	private async resolveTarget(targetPath: string, originalTargetPath: string, workspaceFolders: readonly Uri[], preserveDirectorySlash: boolean, token: CancellationToken): Promise<Uri | undefined> {
+	private async resolveTarget(
+		targetPath: string,
+		originalTargetPath: string,
+		workspaceFolders: readonly Uri[],
+		preserveDirectorySlash: boolean,
+		token: CancellationToken,
+	): Promise<Uri | undefined> {
 		if (!workspaceFolders.length) {
 			return undefined;
 		}
@@ -165,22 +228,34 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 			const candidates: Uri[] = [];
 			for (const folderUri of workspaceFolders) {
 				if (folderUri.scheme === 'file') {
-					const absoluteFileUri = this.tryCreateFileUri(originalTargetPath);
-					if (absoluteFileUri && this.isEqualOrParent(absoluteFileUri, folderUri)) {
+					const absoluteFileUri =
+						this.tryCreateFileUri(originalTargetPath);
+					if (
+						absoluteFileUri &&
+						this.isEqualOrParent(absoluteFileUri, folderUri)
+					) {
 						candidates.push(absoluteFileUri);
 					}
 				} else {
 					// Remote / virtual workspace: attempt to map the absolute path into the same scheme.
 					const folderPath = folderUri.path.replace(/\\/g, '/');
-					const prefix = folderPath.endsWith('/') ? folderPath : folderPath + '/';
+					const prefix = folderPath.endsWith('/')
+						? folderPath
+						: folderPath + '/';
 					if (normalizedAbs.startsWith(prefix)) {
-						candidates.push(folderUri.with({ path: normalizedAbs }));
+						candidates.push(
+							folderUri.with({ path: normalizedAbs }),
+						);
 					}
 				}
 			}
 
 			if (candidates.length) {
-				const results = await Promise.all(candidates.map(c => this.tryStat(c, preserveDirectorySlash, token)));
+				const results = await Promise.all(
+					candidates.map((c) =>
+						this.tryStat(c, preserveDirectorySlash, token),
+					),
+				);
 				const found = results.find((r): r is Uri => r !== undefined);
 				if (found) {
 					return found;
@@ -190,8 +265,14 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 		}
 
 		const segments = targetPath.split('/').filter(Boolean);
-		const candidates = workspaceFolders.map(folderUri => Uri.joinPath(folderUri, ...segments));
-		const results = await Promise.all(candidates.map(c => this.tryStat(c, preserveDirectorySlash, token)));
+		const candidates = workspaceFolders.map((folderUri) =>
+			Uri.joinPath(folderUri, ...segments),
+		);
+		const results = await Promise.all(
+			candidates.map((c) =>
+				this.tryStat(c, preserveDirectorySlash, token),
+			),
+		);
 		const found = results.find((r): r is Uri => r !== undefined);
 		if (found) {
 			return found;
@@ -208,14 +289,26 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 		}
 	}
 
-
 	private isEqualOrParent(target: Uri, folder: Uri): boolean {
 		const targetPath = normalizeUriPath(target).path;
 		const folderPath = normalizeUriPath(folder).path;
-		return targetPath === folderPath || targetPath.startsWith(folderPath.endsWith('/') ? folderPath : `${folderPath}/`);
+		return (
+			targetPath === folderPath ||
+			targetPath.startsWith(
+				folderPath.endsWith('/') ? folderPath : `${folderPath}/`,
+			)
+		);
 	}
 
-	private parseAnchor(anchor: string | undefined): { readonly range: Range; readonly startLine: string; readonly endLine: string | undefined } | undefined {
+	private parseAnchor(
+		anchor: string | undefined,
+	):
+		| {
+				readonly range: Range;
+				readonly startLine: string;
+				readonly endLine: string | undefined;
+		  }
+		| undefined {
 		// Parse supported anchor formats: L123, L123-456, L123-L456, 123, 123-456
 		if (!anchor) {
 			return undefined;
@@ -227,10 +320,16 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 
 		const startLine = match[1];
 		const endLineRaw = match[2];
-		const normalizedEndLine = endLineRaw === startLine ? undefined : endLineRaw;
+		const normalizedEndLine =
+			endLineRaw === startLine ? undefined : endLineRaw;
 		const start = parseInt(startLine, 10) - 1;
 		const end = parseInt(normalizedEndLine ?? startLine, 10) - 1;
-		if (Number.isNaN(start) || Number.isNaN(end) || start < 0 || end < start) {
+		if (
+			Number.isNaN(start) ||
+			Number.isNaN(end) ||
+			start < 0 ||
+			end < start
+		) {
 			return undefined;
 		}
 
@@ -246,7 +345,11 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 		return /^[a-z]:/i.test(path) || path.startsWith('/');
 	}
 
-	private async tryStat(uri: Uri, preserveDirectorySlash: boolean, token: CancellationToken): Promise<Uri | undefined> {
+	private async tryStat(
+		uri: Uri,
+		preserveDirectorySlash: boolean,
+		token: CancellationToken,
+	): Promise<Uri | undefined> {
 		if (token.isCancellationRequested) {
 			return undefined;
 		}
@@ -258,7 +361,8 @@ export class ModelFilePathLinkifier implements IContributedLinkifier {
 			if (stat.type === FileType.Directory) {
 				const isRoot = uri.path === '/';
 				const hasTrailingSlash = uri.path.endsWith('/');
-				const shouldHaveTrailingSlash = preserveDirectorySlash && !isRoot;
+				const shouldHaveTrailingSlash =
+					preserveDirectorySlash && !isRoot;
 
 				if (shouldHaveTrailingSlash && !hasTrailingSlash) {
 					return uri.with({ path: `${uri.path}/` });

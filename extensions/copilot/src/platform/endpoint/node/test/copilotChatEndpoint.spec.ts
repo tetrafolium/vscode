@@ -13,7 +13,10 @@ import { DefaultsOnlyConfigurationService } from '../../../configuration/common/
 import { InMemoryConfigurationService } from '../../../configuration/test/common/inMemoryConfigurationService';
 import { ICAPIClientService } from '../../../endpoint/common/capiClient';
 import { IDomainService } from '../../../endpoint/common/domainService';
-import { IChatModelInformation, ModelSupportedEndpoint } from '../../../endpoint/common/endpointProvider';
+import {
+	IChatModelInformation,
+	ModelSupportedEndpoint,
+} from '../../../endpoint/common/endpointProvider';
 import { IEnvService } from '../../../env/common/envService';
 import { ILogService } from '../../../log/common/logService';
 import { IFetcherService } from '../../../networking/common/fetcherService';
@@ -26,7 +29,10 @@ import { ChatEndpoint } from '../chatEndpoint';
 import { CopilotChatEndpoint } from '../copilotChatEndpoint';
 
 // Test fixtures for thinking content
-const createThinkingMessage = (thinkingId: string, thinkingText: string): Raw.ChatMessage => ({
+const createThinkingMessage = (
+	thinkingId: string,
+	thinkingText: string,
+): Raw.ChatMessage => ({
 	role: Raw.ChatRole.Assistant,
 	content: [
 		{
@@ -35,20 +41,22 @@ const createThinkingMessage = (thinkingId: string, thinkingText: string): Raw.Ch
 				type: 'thinking',
 				thinking: {
 					id: thinkingId,
-					text: thinkingText
-				}
-			}
-		}
-	]
+					text: thinkingText,
+				},
+			},
+		},
+	],
 });
 
-const createTestOptions = (messages: Raw.ChatMessage[]): ICreateEndpointBodyOptions => ({
+const createTestOptions = (
+	messages: Raw.ChatMessage[],
+): ICreateEndpointBodyOptions => ({
 	debugName: 'test',
 	messages,
 	requestId: 'test-req-123',
 	postOptions: {},
 	finishedCb: undefined,
-	location: undefined as any
+	location: undefined as any,
 });
 
 // Mock implementations
@@ -62,15 +70,17 @@ const createMockServices = () => ({
 	chatMLFetcher: {} as IChatMLFetcher,
 	tokenizerProvider: {} as ITokenizerProvider,
 	instantiationService: {} as IInstantiationService,
-	configurationService: new InMemoryConfigurationService(new DefaultsOnlyConfigurationService()),
+	configurationService: new InMemoryConfigurationService(
+		new DefaultsOnlyConfigurationService(),
+	),
 	expService: new NullExperimentationService(),
 	chatWebSocketService: {} as IChatWebSocketManager,
-	logService: {} as ILogService
+	logService: {} as ILogService,
 });
 
-
-
-const createNonAnthropicModelMetadata = (family: string): IChatModelInformation => ({
+const createNonAnthropicModelMetadata = (
+	family: string,
+): IChatModelInformation => ({
 	id: `${family}-test`,
 	vendor: `${family} Vendor`,
 	name: `${family} Test Model`,
@@ -88,14 +98,14 @@ const createNonAnthropicModelMetadata = (family: string): IChatModelInformation 
 			tool_calls: true,
 			vision: false,
 			prediction: false,
-			thinking: false
+			thinking: false,
 		},
 		limits: {
 			max_prompt_tokens: 8192,
 			max_output_tokens: 4096,
-			max_context_window_tokens: 12288
-		}
-	}
+			max_context_window_tokens: 12288,
+		},
+	},
 });
 
 describe('CopilotChatEndpoint - Reasoning Properties', () => {
@@ -122,14 +132,14 @@ describe('CopilotChatEndpoint - Reasoning Properties', () => {
 					tool_calls: true,
 					vision: false,
 					prediction: false,
-					thinking: true
+					thinking: true,
 				},
 				limits: {
 					max_prompt_tokens: 8192,
 					max_output_tokens: 4096,
-					max_context_window_tokens: 12288
-				}
-			}
+					max_context_window_tokens: 12288,
+				},
+			},
 		};
 	});
 
@@ -149,10 +159,13 @@ describe('CopilotChatEndpoint - Reasoning Properties', () => {
 				mockServices.configurationService,
 				mockServices.expService,
 				mockServices.chatWebSocketService,
-				mockServices.logService
+				mockServices.logService,
 			);
 
-			const thinkingMessage = createThinkingMessage('copilot-thinking-abc', 'copilot reasoning process');
+			const thinkingMessage = createThinkingMessage(
+				'copilot-thinking-abc',
+				'copilot reasoning process',
+			);
 			const options = createTestOptions([thinkingMessage]);
 
 			const body = endpoint.createRequestBody(options);
@@ -161,7 +174,9 @@ describe('CopilotChatEndpoint - Reasoning Properties', () => {
 			const messages = body.messages as any[];
 			expect(messages).toHaveLength(1);
 			expect(messages[0].reasoning_opaque).toBe('copilot-thinking-abc');
-			expect(messages[0].reasoning_text).toBe('copilot reasoning process');
+			expect(messages[0].reasoning_text).toBe(
+				'copilot reasoning process',
+			);
 		});
 
 		it('should handle multiple messages with thinking content', () => {
@@ -179,14 +194,22 @@ describe('CopilotChatEndpoint - Reasoning Properties', () => {
 				mockServices.configurationService,
 				mockServices.expService,
 				mockServices.chatWebSocketService,
-				mockServices.logService
+				mockServices.logService,
 			);
 
 			const userMessage: Raw.ChatMessage = {
 				role: Raw.ChatRole.User,
-				content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'Help me with code' }]
+				content: [
+					{
+						type: Raw.ChatCompletionContentPartKind.Text,
+						text: 'Help me with code',
+					},
+				],
 			};
-			const thinkingMessage = createThinkingMessage('copilot-reasoning-def', 'analyzing the code request');
+			const thinkingMessage = createThinkingMessage(
+				'copilot-reasoning-def',
+				'analyzing the code request',
+			);
 			const options = createTestOptions([userMessage, thinkingMessage]);
 
 			const body = endpoint.createRequestBody(options);
@@ -201,7 +224,9 @@ describe('CopilotChatEndpoint - Reasoning Properties', () => {
 
 			// Assistant message should have reasoning properties
 			expect(messages[1].reasoning_opaque).toBe('copilot-reasoning-def');
-			expect(messages[1].reasoning_text).toBe('analyzing the code request');
+			expect(messages[1].reasoning_text).toBe(
+				'analyzing the code request',
+			);
 		});
 
 		it('should handle messages without thinking content', () => {
@@ -219,12 +244,17 @@ describe('CopilotChatEndpoint - Reasoning Properties', () => {
 				mockServices.configurationService,
 				mockServices.expService,
 				mockServices.chatWebSocketService,
-				mockServices.logService
+				mockServices.logService,
 			);
 
 			const regularMessage: Raw.ChatMessage = {
 				role: Raw.ChatRole.Assistant,
-				content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'Regular response' }]
+				content: [
+					{
+						type: Raw.ChatCompletionContentPartKind.Text,
+						text: 'Regular response',
+					},
+				],
 			};
 			const options = createTestOptions([regularMessage]);
 
@@ -249,20 +279,30 @@ describe('ChatEndpoint - Image Count Validation', () => {
 	const createImageMessage = (imageCount: number = 1): Raw.ChatMessage => ({
 		role: Raw.ChatRole.User,
 		content: [
-			{ type: Raw.ChatCompletionContentPartKind.Text, text: 'What is in this image?' },
+			{
+				type: Raw.ChatCompletionContentPartKind.Text,
+				text: 'What is in this image?',
+			},
 			...Array.from({ length: imageCount }, () => ({
 				type: Raw.ChatCompletionContentPartKind.Image as const,
-				imageUrl: { url: 'data:image/png;base64,test' }
-			}))
-		]
+				imageUrl: { url: 'data:image/png;base64,test' },
+			})),
+		],
 	});
 
 	const createAssistantMessage = (): Raw.ChatMessage => ({
 		role: Raw.ChatRole.Assistant,
-		content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'I see an image.' }]
+		content: [
+			{
+				type: Raw.ChatCompletionContentPartKind.Text,
+				text: 'I see an image.',
+			},
+		],
 	});
 
-	const createGeminiModelMetadata = (maxPromptImages?: number): IChatModelInformation => {
+	const createGeminiModelMetadata = (
+		maxPromptImages?: number,
+	): IChatModelInformation => {
 		const baseMetadata = createNonAnthropicModelMetadata('gemini-3');
 		return {
 			...baseMetadata,
@@ -270,13 +310,15 @@ describe('ChatEndpoint - Image Count Validation', () => {
 				...baseMetadata.capabilities,
 				supports: {
 					...baseMetadata.capabilities.supports,
-					vision: true
+					vision: true,
 				},
 				limits: {
 					...baseMetadata.capabilities.limits,
-					...(maxPromptImages !== undefined ? { vision: { max_prompt_images: maxPromptImages } } : {})
-				}
-			}
+					...(maxPromptImages !== undefined
+						? { vision: { max_prompt_images: maxPromptImages } }
+						: {}),
+				},
+			},
 		};
 	};
 
@@ -289,9 +331,9 @@ describe('ChatEndpoint - Image Count Validation', () => {
 				...baseMetadata.capabilities,
 				supports: {
 					...baseMetadata.capabilities.supports,
-					vision: true
-				}
-			}
+					vision: true,
+				},
+			},
 		};
 	};
 
@@ -305,7 +347,7 @@ describe('ChatEndpoint - Image Count Validation', () => {
 			mockServices.configurationService,
 			mockServices.expService,
 			mockServices.chatWebSocketService,
-			mockServices.logService
+			mockServices.logService,
 		);
 
 	const countImages = (messages: Raw.ChatMessage[]): number => {
@@ -324,9 +366,19 @@ describe('ChatEndpoint - Image Count Validation', () => {
 
 	// Exercises the private `validateAndFilterImages` method directly so we can
 	// assert on the filtered messages without being blocked by downstream mocks.
-	const filterImages = (endpoint: ChatEndpoint, messages: Raw.ChatMessage[], maxImages: number): Raw.ChatMessage[] => {
-		return (endpoint as unknown as { validateAndFilterImages(m: Raw.ChatMessage[], n: number): Raw.ChatMessage[] })
-			.validateAndFilterImages(messages, maxImages);
+	const filterImages = (
+		endpoint: ChatEndpoint,
+		messages: Raw.ChatMessage[],
+		maxImages: number,
+	): Raw.ChatMessage[] => {
+		return (
+			endpoint as unknown as {
+				validateAndFilterImages(
+					m: Raw.ChatMessage[],
+					n: number,
+				): Raw.ChatMessage[];
+			}
+		).validateAndFilterImages(messages, maxImages);
 	};
 
 	describe('Gemini image limits', () => {
@@ -349,7 +401,9 @@ describe('ChatEndpoint - Image Count Validation', () => {
 				createAssistantMessage(),
 				createImageMessage(2),
 			];
-			expect(() => endpoint.createRequestBody(createTestOptions(messages))).not.toThrow();
+			expect(() =>
+				endpoint.createRequestBody(createTestOptions(messages)),
+			).not.toThrow();
 			const filtered = filterImages(endpoint, messages, 3);
 			// Total image parts in the filtered output must not exceed the limit.
 			expect(countImages(filtered)).toBeLessThanOrEqual(3);
@@ -362,14 +416,18 @@ describe('ChatEndpoint - Image Count Validation', () => {
 
 	describe('Anthropic Messages API image limits', () => {
 		it('should allow requests within image limit', () => {
-			const endpoint = createEndpoint(createAnthropicMessagesModelMetadata());
+			const endpoint = createEndpoint(
+				createAnthropicMessagesModelMetadata(),
+			);
 			const messages = [createImageMessage(5)];
 			// Within limit — filter must not alter the messages.
 			expect(filterImages(endpoint, messages, 20)).toBe(messages);
 		});
 
 		it('should silently filter history images when total exceeds limit', () => {
-			const endpoint = createEndpoint(createAnthropicMessagesModelMetadata());
+			const endpoint = createEndpoint(
+				createAnthropicMessagesModelMetadata(),
+			);
 			// Build history with 18 images + current message with 5 images = 23 total > 20 limit
 			const messages: Raw.ChatMessage[] = [];
 			for (let i = 0; i < 18; i++) {
@@ -403,8 +461,11 @@ describe('ChatEndpoint - Image Count Validation', () => {
 				role: Raw.ChatRole.Tool,
 				toolCallId: 'tool-1',
 				content: [
-					{ type: Raw.ChatCompletionContentPartKind.Image, imageUrl: { url: 'https://example.com/tool.png' } }
-				]
+					{
+						type: Raw.ChatCompletionContentPartKind.Image,
+						imageUrl: { url: 'https://example.com/tool.png' },
+					},
+				],
 			};
 			// 2 tool-result images in history + 1 current user image = 3 total > 2 limit
 			const messages: Raw.ChatMessage[] = [
@@ -431,13 +492,19 @@ describe('ChatEndpoint - Image Count Validation', () => {
 		it('should throw using the hardcoded Gemini limit of 10 when the current turn exceeds it', () => {
 			const endpoint = createEndpoint(createGeminiModelMetadata(1));
 			const options = createTestOptions([createImageMessage(11)]);
-			expect(() => endpoint.createRequestBody(options)).toThrow(/maximum of 10 images/);
+			expect(() => endpoint.createRequestBody(options)).toThrow(
+				/maximum of 10 images/,
+			);
 		});
 
 		it('should throw using the hardcoded Anthropic Messages limit of 20 when the current turn exceeds it', () => {
-			const endpoint = createEndpoint(createAnthropicMessagesModelMetadata());
+			const endpoint = createEndpoint(
+				createAnthropicMessagesModelMetadata(),
+			);
 			const options = createTestOptions([createImageMessage(21)]);
-			expect(() => endpoint.createRequestBody(options)).toThrow(/maximum of 20 images/);
+			expect(() => endpoint.createRequestBody(options)).toThrow(
+				/maximum of 20 images/,
+			);
 		});
 
 		it('should throw a clear error when the current turn alone exceeds the limit', () => {
@@ -448,7 +515,9 @@ describe('ChatEndpoint - Image Count Validation', () => {
 				createAssistantMessage(),
 				createImageMessage(5),
 			];
-			expect(() => filterImages(endpoint, messages, 2)).toThrow(/Too many images/);
+			expect(() => filterImages(endpoint, messages, 2)).toThrow(
+				/Too many images/,
+			);
 		});
 	});
 });

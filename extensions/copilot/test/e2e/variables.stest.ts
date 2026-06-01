@@ -10,26 +10,40 @@ import { fetchConversationScenarios } from './scenarioLoader';
 import { generateScenarioTestRunner } from './scenarioTest';
 
 ssuite({ title: 'variables', location: 'panel' }, (inputPath) => {
-
-	const scenarioFolder = inputPath ?? path.join(__dirname, '..', 'test/scenarios/test-variables');
+	const scenarioFolder =
+		inputPath ??
+		path.join(__dirname, '..', 'test/scenarios/test-variables');
 	const scenarios = fetchConversationScenarios(scenarioFolder);
 
 	for (const scenario of scenarios) {
-		const language = scenario[0].getState?.().activeTextEditor?.document.languageId;
-		stest({ description: scenario[0].json.description ?? scenario[0].question, language: language ? getLanguage(language).languageId : undefined }, generateScenarioTestRunner(
-			scenario,
-			async (accessor, question, answer) => {
-				if (scenario[0].json.keywords !== undefined) {
-					const err = validate(answer, scenario[0].json.keywords);
-					if (err) {
-						return { success: false, errorMessage: err };
+		const language =
+			scenario[0].getState?.().activeTextEditor?.document.languageId;
+		stest(
+			{
+				description:
+					scenario[0].json.description ?? scenario[0].question,
+				language: language
+					? getLanguage(language).languageId
+					: undefined,
+			},
+			generateScenarioTestRunner(
+				scenario,
+				async (accessor, question, answer) => {
+					if (scenario[0].json.keywords !== undefined) {
+						const err = validate(answer, scenario[0].json.keywords);
+						if (err) {
+							return { success: false, errorMessage: err };
+						}
+
+						return { success: true };
 					}
 
-					return { success: true };
-				}
-
-				return { success: true, errorMessage: 'No requirements set for test.' };
-			}
-		));
+					return {
+						success: true,
+						errorMessage: 'No requirements set for test.',
+					};
+				},
+			),
+		);
 	}
 });

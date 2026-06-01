@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { NKeyMap } from '../../../../base/common/map.js';
+import { NKeyMap } from "../../../../base/common/map.js";
 
 export interface IDecorationStyleSet {
 	/**
@@ -40,11 +40,13 @@ export interface IDecorationStyleCacheEntry extends IDecorationStyleSet {
 }
 
 export class DecorationStyleCache {
-
 	private _nextId = 1;
 
 	private readonly _cacheById = new Map<number, IDecorationStyleCacheEntry>();
-	private readonly _cacheByStyle = new NKeyMap<IDecorationStyleCacheEntry, [number, number, string, number, string, number]>();
+	private readonly _cacheByStyle = new NKeyMap<
+		IDecorationStyleCacheEntry,
+		[number, number, string, number, string, number]
+	>();
 
 	getOrCreateEntry(
 		color: number | undefined,
@@ -52,18 +54,27 @@ export class DecorationStyleCache {
 		opacity: number | undefined,
 		strikethrough: boolean | undefined,
 		strikethroughThickness: number | undefined,
-		strikethroughColor: number | undefined
+		strikethroughColor: number | undefined,
 	): number {
-		if (color === undefined && bold === undefined && opacity === undefined && strikethrough === undefined && strikethroughThickness === undefined && strikethroughColor === undefined) {
+		if (
+			color === undefined &&
+			bold === undefined &&
+			opacity === undefined &&
+			strikethrough === undefined &&
+			strikethroughThickness === undefined &&
+			strikethroughColor === undefined
+		) {
 			return 0;
 		}
 		const result = this._cacheByStyle.get(
 			color ?? 0,
 			bold ? 1 : 0,
-			opacity === undefined ? '' : opacity.toFixed(2),
+			opacity === undefined ? "" : opacity.toFixed(2),
 			strikethrough ? 1 : 0,
-			strikethroughThickness === undefined ? '' : strikethroughThickness.toFixed(2),
-			strikethroughColor ?? 0
+			strikethroughThickness === undefined
+				? ""
+				: strikethroughThickness.toFixed(2),
+			strikethroughColor ?? 0,
 		);
 		if (result) {
 			return result.id;
@@ -79,13 +90,16 @@ export class DecorationStyleCache {
 			strikethroughColor,
 		};
 		this._cacheById.set(id, entry);
-		this._cacheByStyle.set(entry,
+		this._cacheByStyle.set(
+			entry,
 			color ?? 0,
 			bold ? 1 : 0,
-			opacity === undefined ? '' : opacity.toFixed(2),
+			opacity === undefined ? "" : opacity.toFixed(2),
 			strikethrough ? 1 : 0,
-			strikethroughThickness === undefined ? '' : strikethroughThickness.toFixed(2),
-			strikethroughColor ?? 0
+			strikethroughThickness === undefined
+				? ""
+				: strikethroughThickness.toFixed(2),
+			strikethroughColor ?? 0,
 		);
 		return id;
 	}

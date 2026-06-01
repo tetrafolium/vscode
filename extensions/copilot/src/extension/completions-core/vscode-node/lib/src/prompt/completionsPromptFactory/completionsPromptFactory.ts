@@ -3,16 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken, CancellationTokenSource } from 'vscode-languageserver-protocol';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from 'vscode-languageserver-protocol';
 import { IInstantiationService } from '../../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { VirtualPrompt } from '../../../../prompt/src/components/virtualPrompt';
 import { TokenizerName } from '../../../../prompt/src/tokenization';
 import { CompletionState } from '../../completionState';
 import { TelemetryWithExp } from '../../telemetry';
-import { _promptCancelled, _promptError, _promptTimeout, PromptResponse } from '../prompt';
+import {
+	_promptCancelled,
+	_promptError,
+	_promptTimeout,
+	PromptResponse,
+} from '../prompt';
 import {
 	PromptOrdering,
-	TestComponentsCompletionsPromptFactory
+	TestComponentsCompletionsPromptFactory,
 } from './componentsCompletionsPromptFactory';
 import { createServiceIdentifier } from '../../../../../../../util/common/services';
 
@@ -32,11 +40,14 @@ export interface CompletionsPromptOptions {
 export interface IPromptFactory {
 	prompt(
 		opts: CompletionsPromptOptions,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<PromptResponse>;
 }
 
-export const ICompletionsPromptFactoryService = createServiceIdentifier<ICompletionsPromptFactoryService>('ICompletionsPromptFactoryService');
+export const ICompletionsPromptFactoryService =
+	createServiceIdentifier<ICompletionsPromptFactoryService>(
+		'ICompletionsPromptFactoryService',
+	);
 export interface ICompletionsPromptFactoryService extends IPromptFactory {
 	readonly _serviceBrand: undefined;
 }
@@ -46,16 +57,19 @@ class SequentialCompletionsPromptFactory implements IPromptFactory {
 	declare _serviceBrand: undefined;
 	private lastPromise?: Promise<PromptResponse>;
 
-	constructor(private readonly delegate: IPromptFactory) { }
+	constructor(private readonly delegate: IPromptFactory) {}
 
-	async prompt(opts: CompletionsPromptOptions, cancellationToken?: CancellationToken): Promise<PromptResponse> {
+	async prompt(
+		opts: CompletionsPromptOptions,
+		cancellationToken?: CancellationToken,
+	): Promise<PromptResponse> {
 		this.lastPromise = this.promptAsync(opts, cancellationToken);
 		return this.lastPromise;
 	}
 
 	private async promptAsync(
 		opts: CompletionsPromptOptions,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<PromptResponse> {
 		// Wait for previous request to complete
 		await this.lastPromise;
@@ -77,9 +91,12 @@ class SequentialCompletionsPromptFactory implements IPromptFactory {
 // 0.01% of prompt construction time is 1s+. Setting this to 1200ms should be safe.
 export const DEFAULT_PROMPT_TIMEOUT = 1200;
 class TimeoutHandlingCompletionsPromptFactory implements IPromptFactory {
-	constructor(private readonly delegate: IPromptFactory) { }
+	constructor(private readonly delegate: IPromptFactory) {}
 
-	async prompt(opts: CompletionsPromptOptions, cancellationToken?: CancellationToken): Promise<PromptResponse> {
+	async prompt(
+		opts: CompletionsPromptOptions,
+		cancellationToken?: CancellationToken,
+	): Promise<PromptResponse> {
 		const timeoutTokenSource = new CancellationTokenSource();
 		const timeoutToken = timeoutTokenSource.token;
 		cancellationToken?.onCancellationRequested(() => {
@@ -88,7 +105,7 @@ class TimeoutHandlingCompletionsPromptFactory implements IPromptFactory {
 
 		return await Promise.race([
 			this.delegate.prompt(opts, timeoutToken),
-			new Promise<PromptResponse>(resolve => {
+			new Promise<PromptResponse>((resolve) => {
 				setTimeout(() => {
 					// Cancel the token when timeout occurs
 					timeoutTokenSource.cancel();
@@ -111,12 +128,19 @@ class BaseComponentsCompletionsPromptFactory implements IPromptFactory {
 	) {
 		this.delegate = new SequentialCompletionsPromptFactory(
 			new TimeoutHandlingCompletionsPromptFactory(
-				instantiationService.createInstance(TestComponentsCompletionsPromptFactory, virtualPrompt, ordering)
-			)
+				instantiationService.createInstance(
+					TestComponentsCompletionsPromptFactory,
+					virtualPrompt,
+					ordering,
+				),
+			),
 		);
 	}
 
-	prompt(opts: CompletionsPromptOptions, cancellationToken?: CancellationToken): Promise<PromptResponse> {
+	prompt(
+		opts: CompletionsPromptOptions,
+		cancellationToken?: CancellationToken,
+	): Promise<PromptResponse> {
 		return this.delegate.prompt(opts, cancellationToken);
 	}
 }
@@ -129,4 +153,4 @@ export class CompletionsPromptFactory extends BaseComponentsCompletionsPromptFac
 	}
 }
 
-export class TestCompletionsPromptFactory extends BaseComponentsCompletionsPromptFactory { }
+export class TestCompletionsPromptFactory extends BaseComponentsCompletionsPromptFactory {}

@@ -11,12 +11,16 @@ describe('errorMessage', () => {
 		it('returns default message for null', () => {
 			const result = toErrorMessage(null);
 			// In test environment, l10n.t returns the message itself
-			expect(result).toBe('An unknown error occurred. Please consult the log for more details.');
+			expect(result).toBe(
+				'An unknown error occurred. Please consult the log for more details.',
+			);
 		});
 
 		it('returns default message for undefined', () => {
 			const result = toErrorMessage(undefined);
-			expect(result).toBe('An unknown error occurred. Please consult the log for more details.');
+			expect(result).toBe(
+				'An unknown error occurred. Please consult the log for more details.',
+			);
 		});
 
 		it('returns the string when error is a string', () => {
@@ -31,7 +35,10 @@ describe('errorMessage', () => {
 		});
 
 		it('handles array of errors and returns first error message', () => {
-			const errors = [new Error('First error'), new Error('Second error')];
+			const errors = [
+				new Error('First error'),
+				new Error('Second error'),
+			];
 			const result = toErrorMessage(errors);
 			// In test environment, l10n.t returns the formatted message
 			expect(result).toBe('First error (2 errors in total)');
@@ -46,8 +53,8 @@ describe('errorMessage', () => {
 		it('handles error with detail.error property', () => {
 			const error = {
 				detail: {
-					error: new Error('Detail error')
-				}
+					error: new Error('Detail error'),
+				},
 			};
 			const result = toErrorMessage(error);
 			expect(result).toBe('Detail error');
@@ -56,8 +63,8 @@ describe('errorMessage', () => {
 		it('handles error with detail.exception property', () => {
 			const error = {
 				detail: {
-					exception: new Error('Detail exception')
-				}
+					exception: new Error('Detail exception'),
+				},
 			};
 			const result = toErrorMessage(error);
 			expect(result).toBe('Detail exception');
@@ -65,15 +72,19 @@ describe('errorMessage', () => {
 
 		it('includes stack trace in verbose mode', () => {
 			const error = new Error('Error with stack');
-			error.stack = 'Error: Error with stack\n  at someFunction (file.ts:10:5)';
+			error.stack =
+				'Error: Error with stack\n  at someFunction (file.ts:10:5)';
 			const result = toErrorMessage(error, true);
 			// Now using template string format
-			expect(result).toBe('Error with stack: Error: Error with stack\n  at someFunction (file.ts:10:5)');
+			expect(result).toBe(
+				'Error with stack: Error: Error with stack\n  at someFunction (file.ts:10:5)',
+			);
 		});
 
 		it('does not include stack trace in non-verbose mode', () => {
 			const error = new Error('Error with stack');
-			error.stack = 'Error: Error with stack\n  at someFunction (file.ts:10:5)';
+			error.stack =
+				'Error: Error with stack\n  at someFunction (file.ts:10:5)';
 			const result = toErrorMessage(error, false);
 			expect(result).toBe('Error with stack');
 			expect(result).not.toContain('at someFunction');
@@ -82,10 +93,12 @@ describe('errorMessage', () => {
 		it('handles stack trace as array', () => {
 			const error: any = {
 				message: 'Array stack error',
-				stack: ['at line 1', 'at line 2', 'at line 3']
+				stack: ['at line 1', 'at line 2', 'at line 3'],
 			};
 			const result = toErrorMessage(error, true);
-			expect(result).toBe('Array stack error: at line 1\nat line 2\nat line 3');
+			expect(result).toBe(
+				'Array stack error: at line 1\nat line 2\nat line 3',
+			);
 		});
 
 		it('handles Node.js system errors', () => {
@@ -93,7 +106,7 @@ describe('errorMessage', () => {
 				code: 'ENOENT',
 				errno: -2,
 				syscall: 'open',
-				message: 'File not found'
+				message: 'File not found',
 			};
 			const result = toErrorMessage(systemError);
 			// System error detection returns l10n.t result, which in tests returns the key
@@ -106,7 +119,7 @@ describe('errorMessage', () => {
 				code: 'ERR_UNC_HOST_NOT_ALLOWED',
 				message: 'UNC host not allowed',
 				// Need to add stack for the error to go through exceptionToErrorMessage
-				stack: 'Error: UNC host not allowed\n  at someFunction'
+				stack: 'Error: UNC host not allowed\n  at someFunction',
 			};
 			const result = toErrorMessage(uncError);
 			// With a stack, it goes through exceptionToErrorMessage -> detectSystemErrorMessage

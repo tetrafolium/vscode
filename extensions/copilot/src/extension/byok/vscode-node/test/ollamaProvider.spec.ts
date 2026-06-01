@@ -10,7 +10,11 @@ import { OllamaLMProvider } from '../ollamaProvider';
 describe('OllamaLMProvider', () => {
 	it('returns successful models when one /api/show lookup fails', async () => {
 		const ollamaBaseUrl = 'http://localhost:11434';
-		const tagsModels = [{ model: 'good-model-a' }, { model: 'bad-model' }, { model: 'good-model-b' }];
+		const tagsModels = [
+			{ model: 'good-model-a' },
+			{ model: 'bad-model' },
+			{ model: 'good-model-b' },
+		];
 		const showCalls: string[] = [];
 
 		const fetch = vi.fn(async (url: string, options: { body?: string }) => {
@@ -21,7 +25,8 @@ describe('OllamaLMProvider', () => {
 				return { json: async () => ({ models: tagsModels }) };
 			}
 			if (url === `${ollamaBaseUrl}/api/show`) {
-				const modelId = JSON.parse(options.body ?? '{}').model as string;
+				const modelId = JSON.parse(options.body ?? '{}')
+					.model as string;
 				showCalls.push(modelId);
 				if (modelId === 'bad-model') {
 					throw new Error('simulated /api/show failure');
@@ -37,7 +42,7 @@ describe('OllamaLMProvider', () => {
 							'general.architecture': 'llama',
 							'llama.context_length': 8192,
 						},
-					})
+					}),
 				};
 			}
 			throw new Error(`Unexpected URL in test: ${url}`);
@@ -76,7 +81,7 @@ describe('OllamaLMProvider', () => {
 			{
 				createInstance: vi.fn().mockReturnValue({}),
 			} as any,
-			{} as any
+			{} as any,
 		);
 
 		const tokenSource = new vscode.CancellationTokenSource();
@@ -85,10 +90,17 @@ describe('OllamaLMProvider', () => {
 				silent: false,
 				configuration: { url: ollamaBaseUrl },
 			},
-			tokenSource.token
+			tokenSource.token,
 		);
 
-		expect(showCalls).toEqual(['good-model-a', 'bad-model', 'good-model-b']);
-		expect(models.map(model => model.id)).toEqual(['good-model-a', 'good-model-b']);
+		expect(showCalls).toEqual([
+			'good-model-a',
+			'bad-model',
+			'good-model-b',
+		]);
+		expect(models.map((model) => model.id)).toEqual([
+			'good-model-a',
+			'good-model-b',
+		]);
 	});
 });

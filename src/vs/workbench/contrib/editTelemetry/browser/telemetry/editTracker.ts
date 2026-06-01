@@ -3,24 +3,35 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { observableSignal, runOnChange, IReader } from '../../../../../base/common/observable.js';
-import { AnnotatedStringEdit } from '../../../../../editor/common/core/edits/stringEdit.js';
-import { OffsetRange } from '../../../../../editor/common/core/ranges/offsetRange.js';
-import { TextModelEditSource } from '../../../../../editor/common/textModelEditSource.js';
-import { IDocumentWithAnnotatedEdits, EditKeySourceData, EditSource } from '../helpers/documentWithAnnotatedEdits.js';
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import {
+	observableSignal,
+	runOnChange,
+	IReader,
+} from "../../../../../base/common/observable.js";
+import { AnnotatedStringEdit } from "../../../../../editor/common/core/edits/stringEdit.js";
+import { OffsetRange } from "../../../../../editor/common/core/ranges/offsetRange.js";
+import { TextModelEditSource } from "../../../../../editor/common/textModelEditSource.js";
+import {
+	IDocumentWithAnnotatedEdits,
+	EditKeySourceData,
+	EditSource,
+} from "../helpers/documentWithAnnotatedEdits.js";
 
 /**
  * Tracks a single document.
-*/
+ */
 export class DocumentEditSourceTracker<T = void> extends Disposable {
-	private _edits: AnnotatedStringEdit<EditKeySourceData> = AnnotatedStringEdit.empty;
-	private _pendingExternalEdits: AnnotatedStringEdit<EditKeySourceData> = AnnotatedStringEdit.empty;
+	private _edits: AnnotatedStringEdit<EditKeySourceData> =
+		AnnotatedStringEdit.empty;
+	private _pendingExternalEdits: AnnotatedStringEdit<EditKeySourceData> =
+		AnnotatedStringEdit.empty;
 
 	private readonly _update = observableSignal(this);
-	private readonly _representativePerKey: Map<string, TextModelEditSource> = new Map();
-	private readonly _sumAddedCharactersPerKey: Map</* key */string, number> = new Map();
+	private readonly _representativePerKey: Map<string, TextModelEditSource> =
+		new Map();
+	private readonly _sumAddedCharactersPerKey: Map</* key */ string, number> =
+		new Map();
 
 	constructor(
 		private readonly _doc: IDocumentWithAnnotatedEdits,
@@ -28,25 +39,32 @@ export class DocumentEditSourceTracker<T = void> extends Disposable {
 	) {
 		super();
 
-		this._register(runOnChange(this._doc.value, (_val, _prevVal, edits) => {
-			const eComposed = AnnotatedStringEdit.compose(edits.map(e => e.edit));
-			if (eComposed.replacements.every(e => e.data.source.category === 'external')) {
-				if (this._edits.isEmpty()) {
-					// Ignore initial external edits
+		this._register(
+			runOnChange(this._doc.value, (_val, _prevVal, edits) => {
+				const eComposed = AnnotatedStringEdit.compose(edits.map((e) => e.edit));
+				if (
+					eComposed.replacements.every(
+						(e) => e.data.source.category === "external",
+					)
+				) {
+					if (this._edits.isEmpty()) {
+						// Ignore initial external edits
+					} else {
+						// queue pending external edits
+						this._pendingExternalEdits =
+							this._pendingExternalEdits.compose(eComposed);
+					}
 				} else {
-					// queue pending external edits
-					this._pendingExternalEdits = this._pendingExternalEdits.compose(eComposed);
+					if (!this._pendingExternalEdits.isEmpty()) {
+						this._applyEdit(this._pendingExternalEdits);
+						this._pendingExternalEdits = AnnotatedStringEdit.empty;
+					}
+					this._applyEdit(eComposed);
 				}
-			} else {
-				if (!this._pendingExternalEdits.isEmpty()) {
-					this._applyEdit(this._pendingExternalEdits);
-					this._pendingExternalEdits = AnnotatedStringEdit.empty;
-				}
-				this._applyEdit(eComposed);
-			}
 
-			this._update.trigger(undefined);
-		}));
+				this._update.trigger(undefined);
+			}),
+		);
 	}
 
 	private _applyEdit(e: AnnotatedStringEdit<EditKeySourceData>): void {
@@ -85,7 +103,13 @@ export class DocumentEditSourceTracker<T = void> extends Disposable {
 		const ranges = this._edits.getNewRanges();
 		return ranges.map((r, idx) => {
 			const e = this._edits.replacements[idx];
-			const te = new TrackedEdit(e.replaceRange, r, e.data.key, e.data.source, e.data.representative);
+			const te = new TrackedEdit(
+				e.replaceRange,
+				r,
+				e.data.key,
+				e.data.source,
+				e.data.representative,
+			);
 			return te;
 		});
 	}
@@ -99,14 +123,14 @@ export class DocumentEditSourceTracker<T = void> extends Disposable {
 		const txt = this._doc.value.get().value;
 
 		return {
-			...{ $fileExtension: 'text.w' },
-			'value': txt,
-			'decorations': ranges.map(r => {
+			...{ $fileExtension: "text.w" },
+			value: txt,
+			decorations: ranges.map((r) => {
 				return {
 					range: [r.range.start, r.range.endExclusive],
 					color: r.source.getColor(),
 				};
-			})
+			}),
 		};
 	}
 }
@@ -118,5 +142,5 @@ export class TrackedEdit {
 		public readonly sourceKey: string,
 		public readonly source: EditSource,
 		public readonly sourceRepresentative: TextModelEditSource,
-	) { }
+	) {}
 }

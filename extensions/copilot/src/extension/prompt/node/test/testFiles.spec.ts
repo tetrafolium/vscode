@@ -8,7 +8,11 @@ import { suite, test } from 'vitest';
 import type * as vscode from 'vscode';
 import { TextDocumentSnapshot } from '../../../../platform/editing/common/textDocumentSnapshot';
 import { AbstractSearchService } from '../../../../platform/search/common/searchService';
-import { ITabsAndEditorsService, TabChangeEvent, TabInfo } from '../../../../platform/tabs/common/tabsAndEditorsService';
+import {
+	ITabsAndEditorsService,
+	TabChangeEvent,
+	TabInfo,
+} from '../../../../platform/tabs/common/tabsAndEditorsService';
 import * as glob from '../../../../util/common/glob';
 import { createTextDocumentData } from '../../../../util/common/test/shims/textDocument';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
@@ -19,24 +23,38 @@ import { URI } from '../../../../util/vs/base/common/uri';
 import { TestFileFinder, isTestFile, suffix2Language } from '../testFiles';
 
 suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
-
 	class TestSearchService extends AbstractSearchService {
-		override async findTextInFiles(query: vscode.TextSearchQuery, options: vscode.FindTextInFilesOptions, progress: vscode.Progress<vscode.TextSearchResult>, token: vscode.CancellationToken): Promise<vscode.TextSearchComplete> {
+		override async findTextInFiles(
+			query: vscode.TextSearchQuery,
+			options: vscode.FindTextInFilesOptions,
+			progress: vscode.Progress<vscode.TextSearchResult>,
+			token: vscode.CancellationToken,
+		): Promise<vscode.TextSearchComplete> {
 			return {};
 		}
 
-		override findTextInFiles2(query: vscode.TextSearchQuery2, options?: vscode.FindTextInFilesOptions2, token?: vscode.CancellationToken): vscode.FindTextInFilesResponse {
+		override findTextInFiles2(
+			query: vscode.TextSearchQuery2,
+			options?: vscode.FindTextInFilesOptions2,
+			token?: vscode.CancellationToken,
+		): vscode.FindTextInFilesResponse {
 			return {} as vscode.FindTextInFilesResponse;
 		}
 
-		override async findFiles(filePattern: vscode.GlobPattern, options?: vscode.FindFiles2Options | undefined, token?: vscode.CancellationToken | undefined): Promise<vscode.Uri[]> {
+		override async findFiles(
+			filePattern: vscode.GlobPattern,
+			options?: vscode.FindFiles2Options | undefined,
+			token?: vscode.CancellationToken | undefined,
+		): Promise<vscode.Uri[]> {
 			return [];
 		}
 	}
 
 	class TestTabsService implements ITabsAndEditorsService {
 		declare _serviceBrand: undefined;
-		onDidChangeActiveTextEditor: vscode.Event<vscode.TextEditor | undefined> = Event.None;
+		onDidChangeActiveTextEditor: vscode.Event<
+			vscode.TextEditor | undefined
+		> = Event.None;
 		onDidChangeTabs: vscode.Event<TabChangeEvent> = Event.None;
 		activeTextEditor: vscode.TextEditor | undefined = undefined;
 		visibleTextEditors: readonly vscode.TextEditor[] = [];
@@ -46,26 +64,42 @@ suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
 	}
 
 	test('returns undefined when no test file exists', async function () {
-		const testFileFinder = new TestFileFinder(new TestSearchService(), new TestTabsService());
+		const testFileFinder = new TestFileFinder(
+			new TestSearchService(),
+			new TestTabsService(),
+		);
 		const sourceFile = URI.file('/path/to/source/file.ts');
 
-		const result = await testFileFinder.findTestFileForSourceFile(createTextDocument(sourceFile), CancellationToken.None);
+		const result = await testFileFinder.findTestFileForSourceFile(
+			createTextDocument(sourceFile),
+			CancellationToken.None,
+		);
 
 		assert.deepStrictEqual(result, undefined);
 	});
 
 	test('uses tab info', async function () {
-
 		const sourceFile = URI.file('/path/to/source/file.ts');
-		const testFileFinder = new TestFileFinder(new TestSearchService(), new class extends TestTabsService {
-			override tabs: TabInfo[] = [{
-				uri: URI.file('/path/to/source/file.spec.ts'),
-				tab: null!
-			}];
-		});
+		const testFileFinder = new TestFileFinder(
+			new TestSearchService(),
+			new (class extends TestTabsService {
+				override tabs: TabInfo[] = [
+					{
+						uri: URI.file('/path/to/source/file.spec.ts'),
+						tab: null!,
+					},
+				];
+			})(),
+		);
 
-		const result = await testFileFinder.findTestFileForSourceFile(createTextDocument(sourceFile), CancellationToken.None);
-		assert.deepStrictEqual(result?.toString(), 'file:///path/to/source/file.spec.ts');
+		const result = await testFileFinder.findTestFileForSourceFile(
+			createTextDocument(sourceFile),
+			CancellationToken.None,
+		);
+		assert.deepStrictEqual(
+			result?.toString(),
+			'file:///path/to/source/file.spec.ts',
+		);
 	});
 
 	test('returns test file URI when it exists', async function () {
@@ -74,10 +108,19 @@ suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
 		await assertTestFileFoundAsync(sourceFile, testFile);
 	});
 
-	const possibleTestNames = ['file.test.xx', 'file_test.xx', 'file.spec.xx', 'fileSpec.xx', 'test_file.xx'];
+	const possibleTestNames = [
+		'file.test.xx',
+		'file_test.xx',
+		'file.spec.xx',
+		'fileSpec.xx',
+		'test_file.xx',
+	];
 	for (const testName of possibleTestNames) {
 		test(`for unknown languages, returns test file URI if it exists (${testName})`, async function () {
-			await assertTestFileFoundAsync('/path/file.xx', '/path/file.test.xx');
+			await assertTestFileFoundAsync(
+				'/path/file.xx',
+				'/path/file.test.xx',
+			);
 		});
 	}
 
@@ -96,10 +139,12 @@ suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
 	test('returns same folder with prefix as fallback', async function () {
 		const sourceFile = '/path/to/source/foo.go';
 		const existingTestFile = '/path/to/source/foo_test.go';
-		await assertTestFileFoundAsync(sourceFile, existingTestFile, '/path/to/source');
+		await assertTestFileFoundAsync(
+			sourceFile,
+			existingTestFile,
+			'/path/to/source',
+		);
 	});
-
-
 
 	test('returns a test for Java for maven layout', async function () {
 		const sourceFile = '/src/main/java/p/Foo.java';
@@ -133,7 +178,10 @@ suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
 
 	test('returns a test for C#', async function () {
 		const sourceFile = 'src/project/Foo.cs';
-		await assertTestFileFoundAsync(sourceFile, '/src/tests/project/FooTest.cs');
+		await assertTestFileFoundAsync(
+			sourceFile,
+			'/src/tests/project/FooTest.cs',
+		);
 		// assertTestFileFound(sourceFile, '/unit-tests/project/FooTest.cs');
 		// assertTestFileFound(sourceFile, '/unittests/project/FooTest.cs');
 	});
@@ -147,7 +195,7 @@ suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
 		await assertTestFileFoundAsync(
 			'/Users/copilot/git/commons-io/src/main/java/org/apache/commons/io/EndianUtils.java',
 			'/Users/copilot/git/commons-io/src/test/java/org/apache/commons/io/EndianUtilsTest.java',
-			'file:///Users/copilot/git/commons-io'
+			'file:///Users/copilot/git/commons-io',
 		);
 	});
 
@@ -155,7 +203,7 @@ suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
 		await assertTestFileFoundAsync(
 			'/Users/copilot/git/github/foo/util.rb',
 			'/Users/copilot/git/github/test/foo/util_test.rb',
-			'file:///Users/copilot/git/github'
+			'file:///Users/copilot/git/github',
 		);
 	});
 
@@ -163,7 +211,7 @@ suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
 		await assertTestFileFoundAsync(
 			'/Users/copilot/git/github/foo/util.php',
 			'/Users/copilot/git/github/tests/utilTest.php',
-			'file:///Users/copilot/git/github'
+			'file:///Users/copilot/git/github',
 		);
 	});
 
@@ -171,7 +219,7 @@ suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
 		await assertTestFileFoundAsync(
 			'/Users/copilot/git/github/foo/util.ps1',
 			'/Users/copilot/git/github/Tests/util.Tests.ps1',
-			'file:///Users/copilot/git/github'
+			'file:///Users/copilot/git/github',
 		);
 	});
 
@@ -212,71 +260,154 @@ suite.skipIf(process.platform === 'win32')('TestFileFinder', function () {
 	}
 
 	function createTextDocument(uri: URI) {
-		const sourceDocumentData = createTextDocumentData(uri, '', suffix2Language[basename(uri).substring(1)] ?? '');
+		const sourceDocumentData = createTextDocumentData(
+			uri,
+			'',
+			suffix2Language[basename(uri).substring(1)] ?? '',
+		);
 		return TextDocumentSnapshot.create(sourceDocumentData.document);
 	}
 
-	async function assertTestFileFoundAsync(sourceFilePath: string, expectedTestFilePath: string, workspaceUri?: string) {
-
+	async function assertTestFileFoundAsync(
+		sourceFilePath: string,
+		expectedTestFilePath: string,
+		workspaceUri?: string,
+	) {
 		const sourceFile = URI.file(sourceFilePath);
 		const expectedTestFile = URI.file(expectedTestFilePath);
 
-		const testFileFinder = new TestFileFinder(new class extends AbstractSearchService {
-			override async findTextInFiles(query: vscode.TextSearchQuery, options: vscode.FindTextInFilesOptions, progress: vscode.Progress<vscode.TextSearchResult>, token: vscode.CancellationToken): Promise<vscode.TextSearchComplete> {
-				if (glob.shouldInclude(expectedTestFile, { include: options.include ? [options.include] : undefined, exclude: options.exclude ? [options.exclude] : undefined })) {
-					progress.report({ uri: expectedTestFile, ranges: [], preview: { matches: [], text: '' } });
+		const testFileFinder = new TestFileFinder(
+			new (class extends AbstractSearchService {
+				override async findTextInFiles(
+					query: vscode.TextSearchQuery,
+					options: vscode.FindTextInFilesOptions,
+					progress: vscode.Progress<vscode.TextSearchResult>,
+					token: vscode.CancellationToken,
+				): Promise<vscode.TextSearchComplete> {
+					if (
+						glob.shouldInclude(expectedTestFile, {
+							include: options.include
+								? [options.include]
+								: undefined,
+							exclude: options.exclude
+								? [options.exclude]
+								: undefined,
+						})
+					) {
+						progress.report({
+							uri: expectedTestFile,
+							ranges: [],
+							preview: { matches: [], text: '' },
+						});
+					}
+					return {};
 				}
-				return {};
-			}
-			override findTextInFiles2(query: vscode.TextSearchQuery2, options?: vscode.FindTextInFilesOptions2, token?: vscode.CancellationToken): vscode.FindTextInFilesResponse {
-				throw new Error('not implemented');
-			}
-			override async findFiles(filePattern: vscode.GlobPattern, options?: vscode.FindFiles2Options | undefined, token?: vscode.CancellationToken | undefined): Promise<vscode.Uri[]> {
-				if (glob.shouldInclude(expectedTestFile, { include: [filePattern], exclude: options?.exclude ? options.exclude : undefined })) {
-					return [expectedTestFile];
+				override findTextInFiles2(
+					query: vscode.TextSearchQuery2,
+					options?: vscode.FindTextInFilesOptions2,
+					token?: vscode.CancellationToken,
+				): vscode.FindTextInFilesResponse {
+					throw new Error('not implemented');
 				}
-				return [];
-			}
-		}, new TestTabsService());
+				override async findFiles(
+					filePattern: vscode.GlobPattern,
+					options?: vscode.FindFiles2Options | undefined,
+					token?: vscode.CancellationToken | undefined,
+				): Promise<vscode.Uri[]> {
+					if (
+						glob.shouldInclude(expectedTestFile, {
+							include: [filePattern],
+							exclude: options?.exclude
+								? options.exclude
+								: undefined,
+						})
+					) {
+						return [expectedTestFile];
+					}
+					return [];
+				}
+			})(),
+			new TestTabsService(),
+		);
 
 		const sourceDocument = createTextDocument(sourceFile);
-		const result = await testFileFinder.findTestFileForSourceFile(sourceDocument, CancellationToken.None);
+		const result = await testFileFinder.findTestFileForSourceFile(
+			sourceDocument,
+			CancellationToken.None,
+		);
 
 		assert.ok(result);
-		assert.strictEqual(normalize(result!.path), normalize(expectedTestFilePath.toString()));
+		assert.strictEqual(
+			normalize(result!.path),
+			normalize(expectedTestFilePath.toString()),
+		);
 	}
 
-	async function assertImplFileFoundAsync(testFilePath: string, expectedImplFilePath: string) {
-
+	async function assertImplFileFoundAsync(
+		testFilePath: string,
+		expectedImplFilePath: string,
+	) {
 		const testFile = URI.file(testFilePath);
 		const expectedImplFile = URI.file(expectedImplFilePath);
 
-		const testFileFinder = new TestFileFinder(new class extends AbstractSearchService {
-			override async findTextInFiles(query: vscode.TextSearchQuery, options: vscode.FindTextInFilesOptions, progress: vscode.Progress<vscode.TextSearchResult>, token: vscode.CancellationToken): Promise<vscode.TextSearchComplete> {
-				if (glob.isMatch(expectedImplFile, options.include!) && (!options.exclude || !glob.isMatch(expectedImplFile, options.exclude))) {
-					progress.report({
-						uri: expectedImplFile,
-						ranges: [],
-						preview: { text: '', matches: [] }
-					});
+		const testFileFinder = new TestFileFinder(
+			new (class extends AbstractSearchService {
+				override async findTextInFiles(
+					query: vscode.TextSearchQuery,
+					options: vscode.FindTextInFilesOptions,
+					progress: vscode.Progress<vscode.TextSearchResult>,
+					token: vscode.CancellationToken,
+				): Promise<vscode.TextSearchComplete> {
+					if (
+						glob.isMatch(expectedImplFile, options.include!) &&
+						(!options.exclude ||
+							!glob.isMatch(expectedImplFile, options.exclude))
+					) {
+						progress.report({
+							uri: expectedImplFile,
+							ranges: [],
+							preview: { text: '', matches: [] },
+						});
+					}
+					return {};
 				}
-				return {};
-			}
-			override findTextInFiles2(query: vscode.TextSearchQuery2, options?: vscode.FindTextInFilesOptions2, token?: vscode.CancellationToken): vscode.FindTextInFilesResponse {
-				throw new Error('not implemented');
-			}
-			override async findFiles(filePattern: vscode.GlobPattern, options?: vscode.FindFiles2Options | undefined, token?: vscode.CancellationToken | undefined): Promise<vscode.Uri[]> {
-				if (glob.isMatch(expectedImplFile, filePattern) && (!options?.exclude || !options.exclude.some(e => glob.isMatch(expectedImplFile, e)))) {
-					return [expectedImplFile];
+				override findTextInFiles2(
+					query: vscode.TextSearchQuery2,
+					options?: vscode.FindTextInFilesOptions2,
+					token?: vscode.CancellationToken,
+				): vscode.FindTextInFilesResponse {
+					throw new Error('not implemented');
 				}
-				return [];
-			}
-		}, new TestTabsService());
+				override async findFiles(
+					filePattern: vscode.GlobPattern,
+					options?: vscode.FindFiles2Options | undefined,
+					token?: vscode.CancellationToken | undefined,
+				): Promise<vscode.Uri[]> {
+					if (
+						glob.isMatch(expectedImplFile, filePattern) &&
+						(!options?.exclude ||
+							!options.exclude.some((e) =>
+								glob.isMatch(expectedImplFile, e),
+							))
+					) {
+						return [expectedImplFile];
+					}
+					return [];
+				}
+			})(),
+			new TestTabsService(),
+		);
 
 		const testFileDocument = createTextDocument(testFile);
-		const result = await testFileFinder.findFileForTestFile(testFileDocument, CancellationToken.None);
+		const result = await testFileFinder.findFileForTestFile(
+			testFileDocument,
+			CancellationToken.None,
+		);
 
 		assert.notStrictEqual(result, undefined);
-		assert.strictEqual(normalize(result!.path), normalize(expectedImplFilePath.toString()));
+		assert.strictEqual(
+			normalize(result!.path),
+			normalize(expectedImplFilePath.toString()),
+		);
 	}
 });

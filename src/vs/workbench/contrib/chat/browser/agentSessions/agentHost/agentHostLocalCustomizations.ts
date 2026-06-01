@@ -3,17 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../../../base/common/cancellation.js';
-import { isEqualOrParent } from '../../../../../../base/common/resources.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import { CustomizationType, type URI as ProtocolURI } from '../../../../../../platform/agentHost/common/state/protocol/state.js';
-import { customizationId, type ClientPluginCustomization } from '../../../../../../platform/agentHost/common/state/sessionState.js';
-import { AICustomizationSource, AICustomizationSources, BUILTIN_STORAGE } from '../../../common/aiCustomizationWorkspaceService.js';
-import { PromptsType } from '../../../common/promptSyntax/promptTypes.js';
-import { IPromptPath, IPromptsService, matchesSessionType, PromptsStorage } from '../../../common/promptSyntax/service/promptsService.js';
-import { type ICustomizationSyncProvider } from '../../../common/customizationHarnessService.js';
-import { IAgentPluginService } from '../../../common/plugins/agentPluginService.js';
-import type { SyncedCustomizationBundler } from './syncedCustomizationBundler.js';
+import { CancellationToken } from "../../../../../../base/common/cancellation.js";
+import { isEqualOrParent } from "../../../../../../base/common/resources.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import {
+	CustomizationType,
+	type URI as ProtocolURI,
+} from "../../../../../../platform/agentHost/common/state/protocol/state.js";
+import {
+	customizationId,
+	type ClientPluginCustomization,
+} from "../../../../../../platform/agentHost/common/state/sessionState.js";
+import {
+	AICustomizationSource,
+	AICustomizationSources,
+	BUILTIN_STORAGE,
+} from "../../../common/aiCustomizationWorkspaceService.js";
+import { PromptsType } from "../../../common/promptSyntax/promptTypes.js";
+import {
+	IPromptPath,
+	IPromptsService,
+	matchesSessionType,
+	PromptsStorage,
+} from "../../../common/promptSyntax/service/promptsService.js";
+import { type ICustomizationSyncProvider } from "../../../common/customizationHarnessService.js";
+import { IAgentPluginService } from "../../../common/plugins/agentPluginService.js";
+import type { SyncedCustomizationBundler } from "./syncedCustomizationBundler.js";
 
 /**
  * Prompt types that participate in auto-sync to an agent host harness.
@@ -35,7 +50,7 @@ export const SYNCABLE_PROMPT_TYPES: readonly PromptsType[] = [
  */
 export const SYNCABLE_STORAGE_SOURCES: readonly PromptsStorage[] = [
 	PromptsStorage.plugin,
-	PromptsStorage.extension
+	PromptsStorage.extension,
 ];
 
 export interface ILocalCustomizationFile {
@@ -70,7 +85,9 @@ export async function enumerateLocalCustomizationsForHarness(
 	const result: ILocalCustomizationFile[] = [];
 	for (const type of SYNCABLE_PROMPT_TYPES) {
 		const lists = await Promise.all(
-			SYNCABLE_STORAGE_SOURCES.map(storage => promptsService.listPromptFilesForStorage(type, storage, token)),
+			SYNCABLE_STORAGE_SOURCES.map((storage) =>
+				promptsService.listPromptFilesForStorage(type, storage, token),
+			),
 		);
 		for (let i = 0; i < lists.length; i++) {
 			const source = SYNCABLE_STORAGE_SOURCES[i];
@@ -134,8 +151,13 @@ export async function resolveCustomizationRefs(
 	bundler: SyncedCustomizationBundler,
 	sessionType: string,
 ): Promise<ClientPluginCustomization[]> {
-	const enumerated = await enumerateLocalCustomizationsForHarness(promptsService, syncProvider, sessionType, CancellationToken.None);
-	const enabled = enumerated.filter(e => !e.disabled);
+	const enumerated = await enumerateLocalCustomizationsForHarness(
+		promptsService,
+		syncProvider,
+		sessionType,
+		CancellationToken.None,
+	);
+	const enabled = enumerated.filter((e) => !e.disabled);
 	if (enabled.length === 0) {
 		return [];
 	}
@@ -146,7 +168,7 @@ export async function resolveCustomizationRefs(
 
 	for (const entry of enabled) {
 		if (entry.source === AICustomizationSources.plugin) {
-			const plugin = plugins.find(p => isEqualOrParent(entry.uri, p.uri));
+			const plugin = plugins.find((p) => isEqualOrParent(entry.uri, p.uri));
 			if (!plugin) {
 				continue;
 			}

@@ -3,20 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { strictEqual } from 'assert';
-import { OperatingSystem } from '../../../../../../base/common/platform.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { ConfigurationTarget } from '../../../../../../platform/configuration/common/configuration.js';
-import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
-import type { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
-import type { ICommandLineAnalyzerOptions } from '../../browser/tools/commandLineAnalyzer/commandLineAnalyzer.js';
-import { CommandLineSandboxAnalyzer } from '../../browser/tools/commandLineAnalyzer/commandLineSandboxAnalyzer.js';
-import { TreeSitterCommandParserLanguage } from '../../browser/treeSitterCommandParser.js';
-import { TerminalChatAgentToolsSettingId } from '../../common/terminalChatAgentToolsConfiguration.js';
-import { ITerminalSandboxService } from '../../common/terminalSandboxService.js';
+import { strictEqual } from "assert";
+import { OperatingSystem } from "../../../../../../base/common/platform.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import { ConfigurationTarget } from "../../../../../../platform/configuration/common/configuration.js";
+import { TestConfigurationService } from "../../../../../../platform/configuration/test/common/testConfigurationService.js";
+import type { TestInstantiationService } from "../../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import { workbenchInstantiationService } from "../../../../../test/browser/workbenchTestServices.js";
+import type { ICommandLineAnalyzerOptions } from "../../browser/tools/commandLineAnalyzer/commandLineAnalyzer.js";
+import { CommandLineSandboxAnalyzer } from "../../browser/tools/commandLineAnalyzer/commandLineSandboxAnalyzer.js";
+import { TreeSitterCommandParserLanguage } from "../../browser/treeSitterCommandParser.js";
+import { TerminalChatAgentToolsSettingId } from "../../common/terminalChatAgentToolsConfiguration.js";
+import { ITerminalSandboxService } from "../../common/terminalSandboxService.js";
 
-suite('CommandLineSandboxAnalyzer', () => {
+suite("CommandLineSandboxAnalyzer", () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
 	let instantiationService: TestInstantiationService;
@@ -28,16 +28,21 @@ suite('CommandLineSandboxAnalyzer', () => {
 		configurationService = new TestConfigurationService();
 		sandboxEnabled = true;
 
-		instantiationService = workbenchInstantiationService({
-			configurationService: () => configurationService,
-		}, store);
+		instantiationService = workbenchInstantiationService(
+			{
+				configurationService: () => configurationService,
+			},
+			store,
+		);
 		instantiationService.stub(ITerminalSandboxService, {
 			_serviceBrand: undefined,
 			isEnabled: async () => sandboxEnabled,
 			isSandboxAllowNetworkEnabled: async () => false,
 		} as unknown as ITerminalSandboxService);
 
-		analyzer = store.add(instantiationService.createInstance(CommandLineSandboxAnalyzer));
+		analyzer = store.add(
+			instantiationService.createInstance(CommandLineSandboxAnalyzer),
+		);
 	});
 
 	function setConfig(key: string, value: unknown) {
@@ -50,20 +55,22 @@ suite('CommandLineSandboxAnalyzer', () => {
 		});
 	}
 
-	function createOptions(options?: Partial<ICommandLineAnalyzerOptions>): ICommandLineAnalyzerOptions {
+	function createOptions(
+		options?: Partial<ICommandLineAnalyzerOptions>,
+	): ICommandLineAnalyzerOptions {
 		return {
-			commandLine: 'echo hello',
+			commandLine: "echo hello",
 			cwd: undefined,
-			shell: 'bash',
+			shell: "bash",
 			os: OperatingSystem.Linux,
 			treeSitterLanguage: TreeSitterCommandParserLanguage.Bash,
-			terminalToolSessionId: 'test',
+			terminalToolSessionId: "test",
 			chatSessionResource: undefined,
 			...options,
 		};
 	}
 
-	test('should force auto approval for sandboxed commands when auto approve is enabled', async () => {
+	test("should force auto approval for sandboxed commands when auto approve is enabled", async () => {
 		setConfig(TerminalChatAgentToolsSettingId.EnableAutoApprove, true);
 
 		const result = await analyzer.analyze(createOptions());
@@ -72,7 +79,7 @@ suite('CommandLineSandboxAnalyzer', () => {
 		strictEqual(result.forceAutoApproval, true);
 	});
 
-	test('should not force auto approval for sandboxed commands when auto approve is disabled', async () => {
+	test("should not force auto approval for sandboxed commands when auto approve is disabled", async () => {
 		setConfig(TerminalChatAgentToolsSettingId.EnableAutoApprove, false);
 
 		const result = await analyzer.analyze(createOptions());
@@ -81,16 +88,18 @@ suite('CommandLineSandboxAnalyzer', () => {
 		strictEqual(result.forceAutoApproval, false);
 	});
 
-	test('should not force auto approval when unsandbox confirmation is required', async () => {
+	test("should not force auto approval when unsandbox confirmation is required", async () => {
 		setConfig(TerminalChatAgentToolsSettingId.EnableAutoApprove, true);
 
-		const result = await analyzer.analyze(createOptions({ requiresUnsandboxConfirmation: true }));
+		const result = await analyzer.analyze(
+			createOptions({ requiresUnsandboxConfirmation: true }),
+		);
 
 		strictEqual(result.isAutoApproveAllowed, true);
 		strictEqual(result.forceAutoApproval, false);
 	});
 
-	test('should set auto approval allowed from setting when sandbox is disabled', async () => {
+	test("should set auto approval allowed from setting when sandbox is disabled", async () => {
 		sandboxEnabled = false;
 		setConfig(TerminalChatAgentToolsSettingId.EnableAutoApprove, false);
 

@@ -3,9 +3,9 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint no-inner-declarations: "error" */
 interface Node {
-	position: Position
+	position: Position;
 	payload: any;
-	children: Node[]
+	children: Node[];
 }
 function visitLeaves(root: Node, f: (n: Node) => void) {
 	if (root.children) {
@@ -16,6 +16,6 @@ function visitLeaves(root: Node, f: (n: Node) => void) {
 		}
 		walk(root);
 	} else {
-		f(root)
+		f(root);
 	}
 }

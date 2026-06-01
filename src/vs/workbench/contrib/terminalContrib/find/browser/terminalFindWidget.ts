@@ -3,26 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../base/browser/dom.js';
-import { SimpleFindWidget } from '../../../codeEditor/browser/find/simpleFindWidget.js';
-import { IContextMenuService, IContextViewService } from '../../../../../platform/contextview/browser/contextView.js';
-import { IContextKeyService, IContextKey } from '../../../../../platform/contextkey/common/contextkey.js';
-import { IDetachedTerminalInstance, ITerminalInstance, IXtermTerminal, XtermTerminalConstants } from '../../../terminal/browser/terminal.js';
-import { TerminalContextKeys } from '../../../terminal/common/terminalContextKey.js';
-import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { IKeybindingService } from '../../../../../platform/keybinding/common/keybinding.js';
-import { Event } from '../../../../../base/common/event.js';
-import type { ISearchOptions } from '@xterm/addon-search';
-import { IClipboardService } from '../../../../../platform/clipboard/common/clipboardService.js';
-import { MutableDisposable } from '../../../../../base/common/lifecycle.js';
-import { IHoverService } from '../../../../../platform/hover/browser/hover.js';
-import { TerminalFindCommandId } from '../common/terminal.find.js';
-import { TerminalClipboardContribution } from '../../clipboard/browser/terminal.clipboard.contribution.js';
-import { StandardMouseEvent } from '../../../../../base/browser/mouseEvent.js';
-import { createTextInputActions } from '../../../../browser/actions/textInputActions.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { IAccessibilityService } from '../../../../../platform/accessibility/common/accessibility.js';
+import * as dom from "../../../../../base/browser/dom.js";
+import { SimpleFindWidget } from "../../../codeEditor/browser/find/simpleFindWidget.js";
+import {
+	IContextMenuService,
+	IContextViewService,
+} from "../../../../../platform/contextview/browser/contextView.js";
+import {
+	IContextKeyService,
+	IContextKey,
+} from "../../../../../platform/contextkey/common/contextkey.js";
+import {
+	IDetachedTerminalInstance,
+	ITerminalInstance,
+	IXtermTerminal,
+	XtermTerminalConstants,
+} from "../../../terminal/browser/terminal.js";
+import { TerminalContextKeys } from "../../../terminal/common/terminalContextKey.js";
+import { IThemeService } from "../../../../../platform/theme/common/themeService.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { IKeybindingService } from "../../../../../platform/keybinding/common/keybinding.js";
+import { Event } from "../../../../../base/common/event.js";
+import type { ISearchOptions } from "@xterm/addon-search";
+import { IClipboardService } from "../../../../../platform/clipboard/common/clipboardService.js";
+import { MutableDisposable } from "../../../../../base/common/lifecycle.js";
+import { IHoverService } from "../../../../../platform/hover/browser/hover.js";
+import { TerminalFindCommandId } from "../common/terminal.find.js";
+import { TerminalClipboardContribution } from "../../clipboard/browser/terminal.clipboard.contribution.js";
+import { StandardMouseEvent } from "../../../../../base/browser/mouseEvent.js";
+import { createTextInputActions } from "../../../../browser/actions/textInputActions.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import { IAccessibilityService } from "../../../../../platform/accessibility/common/accessibility.js";
 
 const TERMINAL_FIND_WIDGET_INITIAL_WIDTH = 419;
 
@@ -31,7 +42,9 @@ export class TerminalFindWidget extends SimpleFindWidget {
 	private _findWidgetFocused: IContextKey<boolean>;
 	private _findWidgetVisible: IContextKey<boolean>;
 
-	private _overrideCopyOnSelectionDisposable = this._register(new MutableDisposable());
+	private _overrideCopyOnSelectionDisposable = this._register(
+		new MutableDisposable(),
+	);
 	private _selectionDisposable = this._register(new MutableDisposable());
 
 	constructor(
@@ -45,62 +58,89 @@ export class TerminalFindWidget extends SimpleFindWidget {
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IThemeService themeService: IThemeService,
 		@ILogService logService: ILogService,
-		@IAccessibilityService accessibilityService: IAccessibilityService
+		@IAccessibilityService accessibilityService: IAccessibilityService,
 	) {
-		super({
-			showCommonFindToggles: true,
-			checkImeCompletionState: true,
-			showResultCount: true,
-			initialWidth: TERMINAL_FIND_WIDGET_INITIAL_WIDTH,
-			enableSash: true,
-			appendCaseSensitiveActionId: TerminalFindCommandId.ToggleFindCaseSensitive,
-			appendRegexActionId: TerminalFindCommandId.ToggleFindRegex,
-			appendWholeWordsActionId: TerminalFindCommandId.ToggleFindWholeWord,
-			previousMatchActionId: TerminalFindCommandId.FindPrevious,
-			nextMatchActionId: TerminalFindCommandId.FindNext,
-			closeWidgetActionId: TerminalFindCommandId.FindHide,
-			type: 'Terminal',
-			matchesLimit: XtermTerminalConstants.SearchHighlightLimit
-		}, contextViewService, contextKeyService, hoverService, keybindingService, configurationService, accessibilityService);
+		super(
+			{
+				showCommonFindToggles: true,
+				checkImeCompletionState: true,
+				showResultCount: true,
+				initialWidth: TERMINAL_FIND_WIDGET_INITIAL_WIDTH,
+				enableSash: true,
+				appendCaseSensitiveActionId:
+					TerminalFindCommandId.ToggleFindCaseSensitive,
+				appendRegexActionId: TerminalFindCommandId.ToggleFindRegex,
+				appendWholeWordsActionId: TerminalFindCommandId.ToggleFindWholeWord,
+				previousMatchActionId: TerminalFindCommandId.FindPrevious,
+				nextMatchActionId: TerminalFindCommandId.FindNext,
+				closeWidgetActionId: TerminalFindCommandId.FindHide,
+				type: "Terminal",
+				matchesLimit: XtermTerminalConstants.SearchHighlightLimit,
+			},
+			contextViewService,
+			contextKeyService,
+			hoverService,
+			keybindingService,
+			configurationService,
+			accessibilityService,
+		);
 
-		this._register(this.state.onFindReplaceStateChange(() => {
-			this.show();
-		}));
-		this._findInputFocused = TerminalContextKeys.findInputFocus.bindTo(contextKeyService);
-		this._findWidgetFocused = TerminalContextKeys.findFocus.bindTo(contextKeyService);
-		this._findWidgetVisible = TerminalContextKeys.findVisible.bindTo(contextKeyService);
+		this._register(
+			this.state.onFindReplaceStateChange(() => {
+				this.show();
+			}),
+		);
+		this._findInputFocused =
+			TerminalContextKeys.findInputFocus.bindTo(contextKeyService);
+		this._findWidgetFocused =
+			TerminalContextKeys.findFocus.bindTo(contextKeyService);
+		this._findWidgetVisible =
+			TerminalContextKeys.findVisible.bindTo(contextKeyService);
 		const innerDom = this.getDomNode().firstChild;
 		if (innerDom) {
-			this._register(dom.addDisposableListener(innerDom, 'mousedown', (event) => {
-				event.stopPropagation();
-			}));
-			this._register(dom.addDisposableListener(innerDom, 'contextmenu', (event) => {
-				event.stopPropagation();
-			}));
+			this._register(
+				dom.addDisposableListener(innerDom, "mousedown", (event) => {
+					event.stopPropagation();
+				}),
+			);
+			this._register(
+				dom.addDisposableListener(innerDom, "contextmenu", (event) => {
+					event.stopPropagation();
+				}),
+			);
 		}
 		const findInputDomNode = this.getFindInputDomNode();
-		this._register(dom.addDisposableListener(findInputDomNode, 'contextmenu', (event) => {
-			const targetWindow = dom.getWindow(findInputDomNode);
-			const standardEvent = new StandardMouseEvent(targetWindow, event);
-			const actions = createTextInputActions(clipboardService, logService);
+		this._register(
+			dom.addDisposableListener(findInputDomNode, "contextmenu", (event) => {
+				const targetWindow = dom.getWindow(findInputDomNode);
+				const standardEvent = new StandardMouseEvent(targetWindow, event);
+				const actions = createTextInputActions(clipboardService, logService);
 
-			contextMenuService.showContextMenu({
-				getAnchor: () => standardEvent,
-				getActions: () => actions,
-				getActionsContext: () => event.target,
-			});
-			event.stopPropagation();
-		}));
-		this._register(themeService.onDidColorThemeChange(() => {
-			if (this.isVisible()) {
-				this.find(true, true);
-			}
-		}));
-		this._register(configurationService.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration('workbench.colorCustomizations') && this.isVisible()) {
-				this.find(true, true);
-			}
-		}));
+				contextMenuService.showContextMenu({
+					getAnchor: () => standardEvent,
+					getActions: () => actions,
+					getActionsContext: () => event.target,
+				});
+				event.stopPropagation();
+			}),
+		);
+		this._register(
+			themeService.onDidColorThemeChange(() => {
+				if (this.isVisible()) {
+					this.find(true, true);
+				}
+			}),
+		);
+		this._register(
+			configurationService.onDidChangeConfiguration((e) => {
+				if (
+					e.affectsConfiguration("workbench.colorCustomizations") &&
+					this.isVisible()
+				) {
+					this.find(true, true);
+				}
+			}),
+		);
 
 		this._setupSearchEventListeners();
 		this.updateResultCount();
@@ -113,15 +153,22 @@ export class TerminalFindWidget extends SimpleFindWidget {
 		}
 
 		// Disable copy-on-selection during search to prevent search result from overriding clipboard
-		this._register(xterm.onBeforeSearch(() => {
-			this._overrideCopyOnSelectionDisposable.clear();
-			this._overrideCopyOnSelectionDisposable.value = TerminalClipboardContribution.get(this._instance)?.overrideCopyOnSelection(false);
-		}));
+		this._register(
+			xterm.onBeforeSearch(() => {
+				this._overrideCopyOnSelectionDisposable.clear();
+				this._overrideCopyOnSelectionDisposable.value =
+					TerminalClipboardContribution.get(
+						this._instance,
+					)?.overrideCopyOnSelection(false);
+			}),
+		);
 
 		// Re-enable copy-on-selection after search completes
-		this._register(xterm.onAfterSearch(() => {
-			this._overrideCopyOnSelectionDisposable.clear();
-		}));
+		this._register(
+			xterm.onAfterSearch(() => {
+				this._overrideCopyOnSelectionDisposable.clear();
+			}),
+		);
 	}
 
 	find(previous: boolean, update?: boolean) {
@@ -130,21 +177,42 @@ export class TerminalFindWidget extends SimpleFindWidget {
 			return;
 		}
 		if (previous) {
-			this._findPreviousWithEvent(xterm, this.inputValue, { regex: this._getRegexValue(), wholeWord: this._getWholeWordValue(), caseSensitive: this._getCaseSensitiveValue(), incremental: update });
+			this._findPreviousWithEvent(xterm, this.inputValue, {
+				regex: this._getRegexValue(),
+				wholeWord: this._getWholeWordValue(),
+				caseSensitive: this._getCaseSensitiveValue(),
+				incremental: update,
+			});
 		} else {
-			this._findNextWithEvent(xterm, this.inputValue, { regex: this._getRegexValue(), wholeWord: this._getWholeWordValue(), caseSensitive: this._getCaseSensitiveValue() });
+			this._findNextWithEvent(xterm, this.inputValue, {
+				regex: this._getRegexValue(),
+				wholeWord: this._getWholeWordValue(),
+				caseSensitive: this._getCaseSensitiveValue(),
+			});
 		}
 	}
 
 	override reveal(): void {
-		const initialInput = this._instance.hasSelection() && !this._instance.selection!.includes('\n') ? this._instance.selection : undefined;
+		const initialInput =
+			this._instance.hasSelection() && !this._instance.selection!.includes("\n")
+				? this._instance.selection
+				: undefined;
 		const inputValue = initialInput ?? this.inputValue;
 		const xterm = this._instance.xterm;
-		if (xterm && inputValue && inputValue !== '') {
+		if (xterm && inputValue && inputValue !== "") {
 			// trigger highlight all matches
-			this._findPreviousWithEvent(xterm, inputValue, { incremental: true, regex: this._getRegexValue(), wholeWord: this._getWholeWordValue(), caseSensitive: this._getCaseSensitiveValue() }).then(foundMatch => {
+			this._findPreviousWithEvent(xterm, inputValue, {
+				incremental: true,
+				regex: this._getRegexValue(),
+				wholeWord: this._getWholeWordValue(),
+				caseSensitive: this._getCaseSensitiveValue(),
+			}).then((foundMatch) => {
 				this.updateButtons(foundMatch);
-				this._register(Event.once(xterm.onDidChangeSelection)(() => xterm.clearActiveSearchDecoration()));
+				this._register(
+					Event.once(xterm.onDidChangeSelection)(() =>
+						xterm.clearActiveSearchDecoration(),
+					),
+				);
 			});
 		}
 		this.updateButtons(false);
@@ -154,7 +222,10 @@ export class TerminalFindWidget extends SimpleFindWidget {
 	}
 
 	override show() {
-		const initialInput = this._instance.hasSelection() && !this._instance.selection!.includes('\n') ? this._instance.selection : undefined;
+		const initialInput =
+			this._instance.hasSelection() && !this._instance.selection!.includes("\n")
+				? this._instance.selection
+				: undefined;
 		super.show(initialInput);
 		this._findWidgetVisible.set(true);
 	}
@@ -167,7 +238,9 @@ export class TerminalFindWidget extends SimpleFindWidget {
 		this._instance.xterm?.clearSearchDecorations();
 	}
 
-	protected async _getResultCount(): Promise<{ resultIndex: number; resultCount: number } | undefined> {
+	protected async _getResultCount(): Promise<
+		{ resultIndex: number; resultCount: number } | undefined
+	> {
 		return this._instance.xterm?.findResult;
 	}
 
@@ -175,7 +248,12 @@ export class TerminalFindWidget extends SimpleFindWidget {
 		// Ignore input changes for now
 		const xterm = this._instance.xterm;
 		if (xterm) {
-			this._findPreviousWithEvent(xterm, this.inputValue, { regex: this._getRegexValue(), wholeWord: this._getWholeWordValue(), caseSensitive: this._getCaseSensitiveValue(), incremental: true }).then(foundMatch => {
+			this._findPreviousWithEvent(xterm, this.inputValue, {
+				regex: this._getRegexValue(),
+				wholeWord: this._getWholeWordValue(),
+				caseSensitive: this._getCaseSensitiveValue(),
+				incremental: true,
+			}).then((foundMatch) => {
 				this.updateButtons(foundMatch);
 			});
 		}
@@ -184,7 +262,10 @@ export class TerminalFindWidget extends SimpleFindWidget {
 
 	protected _onFocusTrackerFocus() {
 		this._overrideCopyOnSelectionDisposable.clear();
-		this._overrideCopyOnSelectionDisposable.value = TerminalClipboardContribution.get(this._instance)?.overrideCopyOnSelection(false);
+		this._overrideCopyOnSelectionDisposable.value =
+			TerminalClipboardContribution.get(
+				this._instance,
+			)?.overrideCopyOnSelection(false);
 		this._findWidgetFocused.set(true);
 	}
 
@@ -209,21 +290,35 @@ export class TerminalFindWidget extends SimpleFindWidget {
 		}
 		const xterm = instance.xterm;
 		if (xterm) {
-			this._findPreviousWithEvent(xterm, this.inputValue, { regex: this._getRegexValue(), wholeWord: this._getWholeWordValue(), caseSensitive: this._getCaseSensitiveValue() });
+			this._findPreviousWithEvent(xterm, this.inputValue, {
+				regex: this._getRegexValue(),
+				wholeWord: this._getWholeWordValue(),
+				caseSensitive: this._getCaseSensitiveValue(),
+			});
 		}
 	}
 
 	private _registerSelectionChangeListener(xterm: IXtermTerminal): void {
-		this._selectionDisposable.value = Event.once(xterm.onDidChangeSelection)(() => xterm.clearActiveSearchDecoration());
+		this._selectionDisposable.value = Event.once(xterm.onDidChangeSelection)(
+			() => xterm.clearActiveSearchDecoration(),
+		);
 	}
 
-	private async _findNextWithEvent(xterm: IXtermTerminal, term: string, options: ISearchOptions): Promise<boolean> {
+	private async _findNextWithEvent(
+		xterm: IXtermTerminal,
+		term: string,
+		options: ISearchOptions,
+	): Promise<boolean> {
 		const foundMatch = await xterm.findNext(term, options);
 		this._registerSelectionChangeListener(xterm);
 		return foundMatch;
 	}
 
-	private async _findPreviousWithEvent(xterm: IXtermTerminal, term: string, options: ISearchOptions): Promise<boolean> {
+	private async _findPreviousWithEvent(
+		xterm: IXtermTerminal,
+		term: string,
+		options: ISearchOptions,
+	): Promise<boolean> {
 		const foundMatch = await xterm.findPrevious(term, options);
 		this._registerSelectionChangeListener(xterm);
 		return foundMatch;

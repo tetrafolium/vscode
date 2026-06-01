@@ -7,7 +7,14 @@ import { ResourceSet } from '../../../util/vs/base/common/map';
 import { URI } from '../../../util/vs/base/common/uri';
 import type { Uri } from '../../../vscodeTypes';
 import { Config } from '../../configuration/common/configurationService';
-import { CodeGenerationInstruction, ICustomInstructions, ICustomInstructionsService, IInstructionIndexFile, ISkillInfo, SkillStorage } from '../../customInstructions/common/customInstructionsService';
+import {
+	CodeGenerationInstruction,
+	ICustomInstructions,
+	ICustomInstructionsService,
+	IInstructionIndexFile,
+	ISkillInfo,
+	SkillStorage,
+} from '../../customInstructions/common/customInstructionsService';
 
 /**
  * A configurable mock implementation of ICustomInstructionsService for testing.
@@ -19,23 +26,31 @@ export class MockCustomInstructionsService implements ICustomInstructionsService
 	private skillFiles = new Map<string, SkillStorage>();
 	private externalFiles = new Set<string>();
 	private externalFolders = new Set<string>();
-	private extensionSkillInfos = new Map<string, ISkillInfo & { extensionId: string }>();
+	private extensionSkillInfos = new Map<
+		string,
+		ISkillInfo & { extensionId: string }
+	>();
 
-	parseInstructionIndexFile(promptFileIndexText: string): IInstructionIndexFile {
+	parseInstructionIndexFile(
+		promptFileIndexText: string,
+	): IInstructionIndexFile {
 		return {
 			instructions: new ResourceSet(),
 			skills: new ResourceSet(),
 			skillFolders: new ResourceSet(),
-			agents: new Set<string>()
+			agents: new Set<string>(),
 		};
 	}
 
 	/**
 	 * Set the URIs that should be recognized as skill files.
 	 */
-	setSkillFiles(uris: URI[], storage: SkillStorage = SkillStorage.Workspace): void {
+	setSkillFiles(
+		uris: URI[],
+		storage: SkillStorage = SkillStorage.Workspace,
+	): void {
 		this.skillFiles.clear();
-		uris.forEach(uri => this.skillFiles.set(uri.toString(), storage));
+		uris.forEach((uri) => this.skillFiles.set(uri.toString(), storage));
 	}
 
 	/**
@@ -43,7 +58,7 @@ export class MockCustomInstructionsService implements ICustomInstructionsService
 	 */
 	setExternalFiles(uris: URI[]): void {
 		this.externalFiles.clear();
-		uris.forEach(uri => this.externalFiles.add(uri.toString()));
+		uris.forEach((uri) => this.externalFiles.add(uri.toString()));
 	}
 
 	/**
@@ -51,15 +66,29 @@ export class MockCustomInstructionsService implements ICustomInstructionsService
 	 */
 	setExternalFolders(uris: URI[]): void {
 		this.externalFolders.clear();
-		uris.forEach(uri => this.externalFolders.add(uri.toString()));
+		uris.forEach((uri) => this.externalFolders.add(uri.toString()));
 	}
 
 	/**
 	 * Set the URIs that should be recognized as extension skill files with their info.
 	 */
-	setExtensionSkillInfos(infos: { uri: URI; skillName: string; skillFolderUri: URI; extensionId: string }[]): void {
+	setExtensionSkillInfos(
+		infos: {
+			uri: URI;
+			skillName: string;
+			skillFolderUri: URI;
+			extensionId: string;
+		}[],
+	): void {
 		this.extensionSkillInfos.clear();
-		infos.forEach(info => this.extensionSkillInfos.set(info.uri.toString(), { skillName: info.skillName, skillFolderUri: info.skillFolderUri, storage: SkillStorage.Extension, extensionId: info.extensionId }));
+		infos.forEach((info) =>
+			this.extensionSkillInfos.set(info.uri.toString(), {
+				skillName: info.skillName,
+				skillFolderUri: info.skillFolderUri,
+				storage: SkillStorage.Extension,
+				extensionId: info.extensionId,
+			}),
+		);
 	}
 
 	isSkillFile(uri: URI): boolean {
@@ -67,12 +96,16 @@ export class MockCustomInstructionsService implements ICustomInstructionsService
 	}
 
 	isSkillMdFile(uri: URI): boolean {
-		return this.isSkillFile(uri) && uri.path.toLowerCase().endsWith('skill.md');
+		return (
+			this.isSkillFile(uri) && uri.path.toLowerCase().endsWith('skill.md')
+		);
 	}
 
 	getSkillDirectory(uri: URI): URI {
 		// Simple mock implementation: return parent directory
-		return URI.parse(uri.toString().substring(0, uri.toString().lastIndexOf('/')));
+		return URI.parse(
+			uri.toString().substring(0, uri.toString().lastIndexOf('/')),
+		);
 	}
 
 	getSkillName(uri: URI): string {
@@ -95,7 +128,8 @@ export class MockCustomInstructionsService implements ICustomInstructionsService
 		}
 		const skillFolderUri = this.getSkillDirectory(uri);
 		const skillName = this.getSkillName(uri);
-		const storage = this.skillFiles.get(uri.toString()) ?? SkillStorage.Workspace;
+		const storage =
+			this.skillFiles.get(uri.toString()) ?? SkillStorage.Workspace;
 		return { skillName, skillFolderUri, storage };
 	}
 
@@ -107,11 +141,15 @@ export class MockCustomInstructionsService implements ICustomInstructionsService
 		return this.externalFolders.has(uri.toString());
 	}
 
-	fetchInstructionsFromSetting(_configKey: Config<CodeGenerationInstruction[]>): Promise<ICustomInstructions[]> {
+	fetchInstructionsFromSetting(
+		_configKey: Config<CodeGenerationInstruction[]>,
+	): Promise<ICustomInstructions[]> {
 		return Promise.resolve([]);
 	}
 
-	fetchInstructionsFromFile(_fileUri: Uri): Promise<ICustomInstructions | undefined> {
+	fetchInstructionsFromFile(
+		_fileUri: Uri,
+	): Promise<ICustomInstructions | undefined> {
 		return Promise.resolve(undefined);
 	}
 
@@ -123,7 +161,9 @@ export class MockCustomInstructionsService implements ICustomInstructionsService
 		return Promise.resolve();
 	}
 
-	getExtensionSkillInfo(uri: URI): (ISkillInfo & { extensionId: string }) | undefined {
+	getExtensionSkillInfo(
+		uri: URI,
+	): (ISkillInfo & { extensionId: string }) | undefined {
 		return this.extensionSkillInfos.get(uri.toString());
 	}
 }

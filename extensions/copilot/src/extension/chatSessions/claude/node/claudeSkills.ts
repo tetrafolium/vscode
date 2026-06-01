@@ -36,13 +36,18 @@ export interface IClaudePluginService {
 	getPluginLocations(token: CancellationToken): Promise<Uri[]>;
 }
 
-export const IClaudePluginService = createServiceIdentifier<IClaudePluginService>('IClaudePluginService');
+export const IClaudePluginService =
+	createServiceIdentifier<IClaudePluginService>('IClaudePluginService');
 
-export class ClaudePluginService extends Disposable implements IClaudePluginService {
+export class ClaudePluginService
+	extends Disposable
+	implements IClaudePluginService
+{
 	declare _serviceBrand: undefined;
 
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 		@INativeEnvService private readonly envService: INativeEnvService,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
 		@IPromptsService private readonly promptsService: IPromptsService,
@@ -57,24 +62,28 @@ export class ClaudePluginService extends Disposable implements IClaudePluginServ
 		// Skill locations point to directories containing skill subdirectories (e.g. .../skills/).
 		// The Claude SDK plugin loader expects the parent of the skills/ directory, so we
 		// walk one level up from each location.
-		for (const uri of resolveSkillConfigLocations(this.configurationService, this.envService, this.workspaceService)) {
+		for (const uri of resolveSkillConfigLocations(
+			this.configurationService,
+			this.envService,
+			this.workspaceService,
+		)) {
 			pluginRoots.add(dirname(uri));
 		}
 
 		(await this.promptsService.getSkills(token))
-			.filter(s => s.uri.scheme === Schemas.file)
-			.map(s => s.uri)
-			.map(uri => dirname(dirname(dirname(uri))))
-			.filter(uri => !isClaudeDirectory(uri))
-			.forEach(uri => pluginRoots.add(uri));
+			.filter((s) => s.uri.scheme === Schemas.file)
+			.map((s) => s.uri)
+			.map((uri) => dirname(dirname(dirname(uri))))
+			.filter((uri) => !isClaudeDirectory(uri))
+			.forEach((uri) => pluginRoots.add(uri));
 		// #endregion
 
 		// #region Plugin roots from prompts service
 		(await this.promptsService.getPlugins(token))
-			.filter(p => p.uri.scheme === Schemas.file)
-			.filter(p => !isClaudeDirectory(p.uri))
-			.map(p => p.uri)
-			.forEach(uri => pluginRoots.add(uri));
+			.filter((p) => p.uri.scheme === Schemas.file)
+			.filter((p) => !isClaudeDirectory(p.uri))
+			.map((p) => p.uri)
+			.forEach((uri) => pluginRoots.add(uri));
 		// #endregion
 
 		return Array.from(pluginRoots);

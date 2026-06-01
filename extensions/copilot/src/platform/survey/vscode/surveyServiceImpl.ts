@@ -42,10 +42,13 @@ export class SurveyService implements ISurveyService {
 
 	constructor(
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
-		@IVSCodeExtensionContext private readonly vscodeExtensionContext: IVSCodeExtensionContext,
+		@IVSCodeExtensionContext
+		private readonly vscodeExtensionContext: IVSCodeExtensionContext,
 		@IEnvService private readonly envService: IEnvService,
-		@IExperimentationService private readonly experimentationService: IExperimentationService,
-		@IAuthenticationService private readonly authenticationService: IAuthenticationService,
+		@IExperimentationService
+		private readonly experimentationService: IExperimentationService,
+		@IAuthenticationService
+		private readonly authenticationService: IAuthenticationService,
 	) {
 		this.surveyUri = Uri.parse(SURVEY_URI);
 		this.sessionSeed = Math.random();
@@ -65,7 +68,10 @@ export class SurveyService implements ISurveyService {
 		clearTimeout(this.debounceTimeout);
 	}
 
-	public async signalUsage(source: string, languageId?: string): Promise<void> {
+	public async signalUsage(
+		source: string,
+		languageId?: string,
+	): Promise<void> {
 		await this.updateUsageData(true);
 		this.lastSource = source;
 		if (languageId) {
@@ -90,15 +96,20 @@ export class SurveyService implements ISurveyService {
 		const now = Date.now();
 		const daysUsedInLast14Days = usageData.activeDays.length;
 
-		const isOldEnough = usageData.firstActive > 0 && usageData.firstActive < now - DAYS_14;
+		const isOldEnough =
+			usageData.firstActive > 0 && usageData.firstActive < now - DAYS_14;
 		const isCooldownOver = !nextSurveyDate || nextSurveyDate < now;
 		const hasNotBeenActiveInLast14Days = daysUsedInLast14Days === 0;
 
-		const isEligible = hasNotBeenActiveInLast14Days && isOldEnough && isCooldownOver;
+		const isEligible =
+			hasNotBeenActiveInLast14Days && isOldEnough && isCooldownOver;
 
 		if (isEligible) {
-			const sessionProbability = this.experimentationService.getTreatmentVariable<number>('copilotchat.feedback.sessionProbability.inactive') ?? DEFAULT_SESSION_PROBABILITY_INACTIVE;
-			return (this.sessionSeed < sessionProbability / 100);
+			const sessionProbability =
+				this.experimentationService.getTreatmentVariable<number>(
+					'copilotchat.feedback.sessionProbability.inactive',
+				) ?? DEFAULT_SESSION_PROBABILITY_INACTIVE;
+			return this.sessionSeed < sessionProbability / 100;
 		}
 
 		return false;
@@ -118,9 +129,15 @@ export class SurveyService implements ISurveyService {
 		const isEligible = hasEnoughUsage && isOldEnough && isCooldownOver;
 
 		if (isEligible) {
-			const sessionProbability = this.experimentationService.getTreatmentVariable<number>('copilotchat.feedback.sessionProbability') ?? DEFAULT_SESSION_PROBABILITY;
+			const sessionProbability =
+				this.experimentationService.getTreatmentVariable<number>(
+					'copilotchat.feedback.sessionProbability',
+				) ?? DEFAULT_SESSION_PROBABILITY;
 			if (this.sessionSeed < sessionProbability / 100) {
-				const notificationProbability = this.experimentationService.getTreatmentVariable<number>('copilotchat.feedback.notificationProbability') ?? DEFAULT_NOTIFICATION_PROBABILITY;
+				const notificationProbability =
+					this.experimentationService.getTreatmentVariable<number>(
+						'copilotchat.feedback.notificationProbability',
+					) ?? DEFAULT_NOTIFICATION_PROBABILITY;
 				const seed = Math.random();
 				return seed < notificationProbability / 100;
 			}
@@ -130,7 +147,10 @@ export class SurveyService implements ISurveyService {
 	}
 
 	private async getUsageData(): Promise<UsageData> {
-		const usageData = this.vscodeExtensionContext.globalState.get<UsageData>(USAGE_DATA_KEY);
+		const usageData =
+			this.vscodeExtensionContext.globalState.get<UsageData>(
+				USAGE_DATA_KEY,
+			);
 		if (usageData) {
 			return usageData;
 		}
@@ -138,7 +158,11 @@ export class SurveyService implements ISurveyService {
 	}
 
 	private async getNextSurveyDate(): Promise<number | null> {
-		return this.vscodeExtensionContext.globalState.get<number>(NEXT_SURVEY_DATE_KEY) ?? null;
+		return (
+			this.vscodeExtensionContext.globalState.get<number>(
+				NEXT_SURVEY_DATE_KEY,
+			) ?? null
+		);
 	}
 
 	private async updateUsageData(wasActive: boolean): Promise<void> {
@@ -159,20 +183,30 @@ export class SurveyService implements ISurveyService {
 		}
 
 		// Prune timestamps older than 14 days
-		usageData.activeDays = usageData.activeDays.filter(timestamp => timestamp >= now - DAYS_14);
+		usageData.activeDays = usageData.activeDays.filter(
+			(timestamp) => timestamp >= now - DAYS_14,
+		);
 
-		await this.vscodeExtensionContext.globalState.update(USAGE_DATA_KEY, usageData);
+		await this.vscodeExtensionContext.globalState.update(
+			USAGE_DATA_KEY,
+			usageData,
+		);
 	}
 
 	private async updateNextSurveyDate(days: number): Promise<void> {
-		await this.vscodeExtensionContext.globalState.update(NEXT_SURVEY_DATE_KEY, Date.now() + days * 24 * 60 * 60 * 1000);
+		await this.vscodeExtensionContext.globalState.update(
+			NEXT_SURVEY_DATE_KEY,
+			Date.now() + days * 24 * 60 * 60 * 1000,
+		);
 	}
 
 	private async promptSurvey(surveyType: 'churn' | 'usage'): Promise<void> {
 		const usage = await this.getUsageData();
 		const source = this.lastSource || '';
 		const language = this.lastLanguageId || '';
-		const firstSeenInDays = Math.floor((Date.now() - usage.firstActive) / (1000 * 60 * 60 * 24));
+		const firstSeenInDays = Math.floor(
+			(Date.now() - usage.firstActive) / (1000 * 60 * 60 * 24),
+		);
 		/* __GDPR__
 			"survey.show" : {
 				"owner": "digitarald",
@@ -184,24 +218,35 @@ export class SurveyService implements ISurveyService {
 				"surveyType": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The type of survey being prompted." }
 			}
 		*/
-		this.telemetryService.sendMSFTTelemetryEvent('survey.show', {
-			source,
-			language,
-			surveyType
-		}, {
-			activeDays: usage.activeDays.length,
-			firstActive: firstSeenInDays,
-		});
+		this.telemetryService.sendMSFTTelemetryEvent(
+			'survey.show',
+			{
+				source,
+				language,
+				surveyType,
+			},
+			{
+				activeDays: usage.activeDays.length,
+				firstActive: firstSeenInDays,
+			},
+		);
 		await this.updateNextSurveyDate(DAYS_COOLDOWN);
 
 		const confirmation = l10n.t('Give Feedback');
 		const later = l10n.t('Later');
 		const skip = l10n.t('Skip');
-		vscode.window.showInformationMessage(l10n.t('Got a minute? Help us make GitHub Copilot better.'), confirmation, later, skip).then(async selection => {
-			const accepted = selection === confirmation;
-			const postponed = selection === later;
+		vscode.window
+			.showInformationMessage(
+				l10n.t('Got a minute? Help us make GitHub Copilot better.'),
+				confirmation,
+				later,
+				skip,
+			)
+			.then(async (selection) => {
+				const accepted = selection === confirmation;
+				const postponed = selection === later;
 
-			/* __GDPR__
+				/* __GDPR__
 				"survey.action" : {
 					"owner": "digitarald",
 					"comment": "Measures survey notification result",
@@ -211,33 +256,38 @@ export class SurveyService implements ISurveyService {
 					"surveyType": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The type of survey being prompted." }
 				}
 			*/
-			this.telemetryService.sendMSFTTelemetryEvent('survey.action', {
-				source,
-				language,
-				selection: accepted ? 'accepted' : postponed ? 'postponed' : 'skipped',
-				surveyType
-			});
-
-			if (accepted) {
-				const copilotToken = await this.authenticationService.getCopilotToken();
-				const params: Record<string, string> = {
-					m: this.envService.machineId,
-					s: this.envService.sessionId,
-					k: copilotToken.sku ?? '',
-					d: usage.activeDays.length.toString(),
-					f: firstSeenInDays.toString(),
-					v: this.envService.getVersion(),
-					l: language,
-					src: source,
-					type: surveyType
-				};
-				const surveyUriWithParams = this.surveyUri.with({
-					query: new URLSearchParams(params).toString(),
+				this.telemetryService.sendMSFTTelemetryEvent('survey.action', {
+					source,
+					language,
+					selection: accepted
+						? 'accepted'
+						: postponed
+							? 'postponed'
+							: 'skipped',
+					surveyType,
 				});
-				vscode.env.openExternal(surveyUriWithParams);
-			} else if (postponed) {
-				await this.updateNextSurveyDate(DAYS_LATER);
-			}
-		});
+
+				if (accepted) {
+					const copilotToken =
+						await this.authenticationService.getCopilotToken();
+					const params: Record<string, string> = {
+						m: this.envService.machineId,
+						s: this.envService.sessionId,
+						k: copilotToken.sku ?? '',
+						d: usage.activeDays.length.toString(),
+						f: firstSeenInDays.toString(),
+						v: this.envService.getVersion(),
+						l: language,
+						src: source,
+						type: surveyType,
+					};
+					const surveyUriWithParams = this.surveyUri.with({
+						query: new URLSearchParams(params).toString(),
+					});
+					vscode.env.openExternal(surveyUriWithParams);
+				} else if (postponed) {
+					await this.updateNextSurveyDate(DAYS_LATER);
+				}
+			});
 	}
 }

@@ -2,7 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { IInstantiationService, ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ICompletionsLogTargetService } from '../logger';
 import { getLastKnownEndpoints } from '../networkConfiguration';
 import { ICompletionsFetcherService } from '../networking';
@@ -32,7 +35,8 @@ type ConnectionState = {
 const InitialTimeout = 3000;
 const BaseRetryTime = 2;
 const MaxRetryTime = 256;
-const MaxAttempts = Math.log(MaxRetryTime) / Math.log(BaseRetryTime) / BaseRetryTime;
+const MaxAttempts =
+	Math.log(MaxRetryTime) / Math.log(BaseRetryTime) / BaseRetryTime;
 
 const state: ConnectionState = {
 	connection: 'disabled',
@@ -113,7 +117,10 @@ function registerConnectionState(): ConnectionAPI {
 		}
 	}
 
-	function enableRetry(accessor: ServicesAccessor, initialTimeout = InitialTimeout) {
+	function enableRetry(
+		accessor: ServicesAccessor,
+		initialTimeout = InitialTimeout,
+	) {
 		if (isRetrying()) {
 			return;
 		}
@@ -127,11 +134,17 @@ function registerConnectionState(): ConnectionAPI {
 		return state.initialWait;
 	}
 
-	async function attemptToPing(accessor: ServicesAccessor, initialTimeout: number) {
+	async function attemptToPing(
+		accessor: ServicesAccessor,
+		initialTimeout: number,
+	) {
 		const logTarget = accessor.get(ICompletionsLogTargetService);
 		const fetcher = accessor.get(ICompletionsFetcherService);
 		const instantiationService = accessor.get(IInstantiationService);
-		codeReferenceLogger.info(logTarget, `Attempting to reconnect in ${initialTimeout}ms.`);
+		codeReferenceLogger.info(
+			logTarget,
+			`Attempting to reconnect in ${initialTimeout}ms.`,
+		);
 
 		// Initial 3 second delay before attempting to reconnect to Snippy.
 		await timeout(initialTimeout);
@@ -139,31 +152,48 @@ function registerConnectionState(): ConnectionAPI {
 
 		function succeedOrRetry(time: number) {
 			if (time > MaxRetryTime) {
-				codeReferenceLogger.info(logTarget, 'Max retry time reached, disabling.');
+				codeReferenceLogger.info(
+					logTarget,
+					'Max retry time reached, disabling.',
+				);
 				setDisabled();
 				return;
 			}
 
 			const tryAgain = async () => {
-				state.retryAttempts = Math.min(state.retryAttempts + 1, MaxAttempts);
+				state.retryAttempts = Math.min(
+					state.retryAttempts + 1,
+					MaxAttempts,
+				);
 
 				try {
-					codeReferenceLogger.info(logTarget, `Pinging service after ${time} second(s)`);
+					codeReferenceLogger.info(
+						logTarget,
+						`Pinging service after ${time} second(s)`,
+					);
 					const response = await fetcher.fetch(
-						new URL('_ping', instantiationService.invokeFunction(getLastKnownEndpoints)['origin-tracker']).href,
+						new URL(
+							'_ping',
+							instantiationService.invokeFunction(
+								getLastKnownEndpoints,
+							)['origin-tracker'],
+						).href,
 						{
 							callSite: 'snippy-ping',
 							method: 'GET',
 							headers: {
 								'content-type': 'application/json',
 							},
-						}
+						},
 					);
 
 					if (response.status !== 200 || !response.ok) {
 						succeedOrRetry(time ** 2);
 					} else {
-						codeReferenceLogger.info(logTarget, 'Successfully reconnected.');
+						codeReferenceLogger.info(
+							logTarget,
+							'Successfully reconnected.',
+						);
 						setConnected();
 						return;
 					}
@@ -180,7 +210,7 @@ function registerConnectionState(): ConnectionAPI {
 	}
 
 	const timeout = (ms: number) => {
-		return new Promise(resolve => setTimeout(resolve, ms));
+		return new Promise((resolve) => setTimeout(resolve, ms));
 	};
 
 	function listen(cb: () => void) {

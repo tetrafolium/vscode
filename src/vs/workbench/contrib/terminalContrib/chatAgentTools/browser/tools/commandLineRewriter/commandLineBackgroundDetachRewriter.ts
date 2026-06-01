@@ -3,12 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../../../../base/common/lifecycle.js';
-import { OperatingSystem } from '../../../../../../../base/common/platform.js';
-import { IConfigurationService } from '../../../../../../../platform/configuration/common/configuration.js';
-import { TerminalChatAgentToolsSettingId } from '../../../common/terminalChatAgentToolsConfiguration.js';
-import { isBash, isFish, isPowerShell, isZsh } from '../../runInTerminalHelpers.js';
-import type { ICommandLineRewriter, ICommandLineRewriterOptions, ICommandLineRewriterResult } from './commandLineRewriter.js';
+import { Disposable } from "../../../../../../../base/common/lifecycle.js";
+import { OperatingSystem } from "../../../../../../../base/common/platform.js";
+import { IConfigurationService } from "../../../../../../../platform/configuration/common/configuration.js";
+import { TerminalChatAgentToolsSettingId } from "../../../common/terminalChatAgentToolsConfiguration.js";
+import {
+	isBash,
+	isFish,
+	isPowerShell,
+	isZsh,
+} from "../../runInTerminalHelpers.js";
+import type {
+	ICommandLineRewriter,
+	ICommandLineRewriterOptions,
+	ICommandLineRewriterResult,
+} from "./commandLineRewriter.js";
 
 /**
  * Wraps background terminal commands so their processes survive VS Code shutdown.
@@ -22,15 +31,25 @@ import type { ICommandLineRewriter, ICommandLineRewriterOptions, ICommandLineRew
  * Gated behind the {@link TerminalChatAgentToolsSettingId.DetachBackgroundProcesses} setting
  * (default off) to avoid orphaned processes in normal usage.
  */
-export class CommandLineBackgroundDetachRewriter extends Disposable implements ICommandLineRewriter {
+export class CommandLineBackgroundDetachRewriter
+	extends Disposable
+	implements ICommandLineRewriter
+{
 	constructor(
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
 	) {
 		super();
 	}
 
-	rewrite(options: ICommandLineRewriterOptions): ICommandLineRewriterResult | undefined {
-		if (!this._configurationService.getValue(TerminalChatAgentToolsSettingId.DetachBackgroundProcesses)) {
+	rewrite(
+		options: ICommandLineRewriterOptions,
+	): ICommandLineRewriterResult | undefined {
+		if (
+			!this._configurationService.getValue(
+				TerminalChatAgentToolsSettingId.DetachBackgroundProcesses,
+			)
+		) {
 			return undefined;
 		}
 
@@ -80,33 +99,50 @@ export class CommandLineBackgroundDetachRewriter extends Disposable implements I
 		// `cd ... && ` / `cd ... ;` / env-var assignments, since those don't
 		// affect stdin behaviour.
 		const trimmed = commandLine
-			.replace(/^\s*(?:[A-Z_][A-Z0-9_]*=\S+\s+)+/, '')
-			.replace(/^\s*cd\s+\S+\s*(?:&&|;)\s*/i, '')
+			.replace(/^\s*(?:[A-Z_][A-Z0-9_]*=\S+\s+)+/, "")
+			.replace(/^\s*cd\s+\S+\s*(?:&&|;)\s*/i, "")
 			.trimStart();
 		// Bare `expect`, `gdb`, `psql` (without `-c`/`-f`), `passwd`, `vi`/`vim`,
 		// `nano`, `less`, `more`, `top`, `htop`, `ssh` without `-T`, `mysql`
 		// without `-e`, `sftp`, `ftp`, `telnet`.
-		if (/^(expect|passwd|vi|vim|nano|less|more|top|htop|sftp|ftp|telnet|gdb|lldb)\b/.test(trimmed)) {
+		if (
+			/^(expect|passwd|vi|vim|nano|less|more|top|htop|sftp|ftp|telnet|gdb|lldb)\b/.test(
+				trimmed,
+			)
+		) {
 			return true;
 		}
-		if (/^psql\b/.test(trimmed) && !/\s(-c|-f|--command|--file)\b/.test(trimmed)) {
+		if (
+			/^psql\b/.test(trimmed) &&
+			!/\s(-c|-f|--command|--file)\b/.test(trimmed)
+		) {
 			return true;
 		}
 		if (/^mysql\b/.test(trimmed) && !/\s(-e|--execute)\b/.test(trimmed)) {
 			return true;
 		}
-		if (/^ssh\b/.test(trimmed) && !/\s-T\b/.test(trimmed) && !/\sssh\s+\S+\s+\S/.test(' ' + trimmed)) {
+		if (
+			/^ssh\b/.test(trimmed) &&
+			!/\s-T\b/.test(trimmed) &&
+			!/\sssh\s+\S+\s+\S/.test(" " + trimmed)
+		) {
 			// `ssh host` with no command is interactive; `ssh host cmd` runs cmd non-interactively.
 			return true;
 		}
 		// `sudo` without `-n` (non-interactive) may prompt for a password.
-		if (/^sudo\b/.test(trimmed) && !/\s-n\b/.test(trimmed) && !/\bSUDO_ASKPASS\b/.test(commandLine)) {
+		if (
+			/^sudo\b/.test(trimmed) &&
+			!/\s-n\b/.test(trimmed) &&
+			!/\bSUDO_ASKPASS\b/.test(commandLine)
+		) {
 			return true;
 		}
 		return false;
 	}
 
-	private _rewriteForPosix(options: ICommandLineRewriterOptions): ICommandLineRewriterResult {
+	private _rewriteForPosix(
+		options: ICommandLineRewriterOptions,
+	): ICommandLineRewriterResult {
 		const trimmed = options.commandLine.trimEnd();
 
 		// Check for a trailing background `&` (not `&&`) on the original command.
@@ -120,11 +156,15 @@ export class CommandLineBackgroundDetachRewriter extends Disposable implements I
 		let commandToWrap = trimmed;
 		if (this._needsShellCWrapper(trimmed)) {
 			// Strip trailing `&` before quoting — we'll add the outer `&` below.
-			const innerCommand = endsWithBackgroundAmp ? trimmed.replace(/\s*&$/, '') : trimmed;
+			const innerCommand = endsWithBackgroundAmp
+				? trimmed.replace(/\s*&$/, "")
+				: trimmed;
 			if (isFish(options.shell, options.os)) {
 				// Fish does not support the POSIX '\'' escape inside single-quoted strings.
 				// Use a double-quoted string and escape backslash and double-quote instead.
-				const escaped = innerCommand.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+				const escaped = innerCommand
+					.replace(/\\/g, "\\\\")
+					.replace(/"/g, '\\"');
 				commandToWrap = `${options.shell} -c "${escaped}"`;
 			} else {
 				// bash/zsh: escape single quotes for use inside a single-quoted shell -c '...' string.
@@ -135,21 +175,23 @@ export class CommandLineBackgroundDetachRewriter extends Disposable implements I
 
 		// Always append `&` unless the (unwrapped) command already has a trailing `&`
 		// and we didn't wrap it in shell -c (in which case the `&` is still present).
-		const needsTrailingAmp = !(/(?:^|[^&])&$/.test(commandToWrap));
+		const needsTrailingAmp = !/(?:^|[^&])&$/.test(commandToWrap);
 
 		// `disown` removes the job from the shell's job table so it won't print
 		// `[1]+  Done  nohup ...` notifications that contaminate subsequent command
 		// output and can cause spurious SIGINT (exit 130). Only bash/zsh support
 		// `disown`; fish handles it differently (no contamination observed).
-		const supportsDisown = isBash(options.shell, options.os) || isZsh(options.shell, options.os);
-		const disownSuffix = supportsDisown ? ' disown' : '';
+		const supportsDisown =
+			isBash(options.shell, options.os) || isZsh(options.shell, options.os);
+		const disownSuffix = supportsDisown ? " disown" : "";
 
 		const rewritten = needsTrailingAmp
 			? `nohup ${commandToWrap} &${disownSuffix}`
 			: `nohup ${commandToWrap}${disownSuffix}`;
 		return {
 			rewritten,
-			reasoning: 'Wrapped background command with nohup to survive terminal shutdown',
+			reasoning:
+				"Wrapped background command with nohup to survive terminal shutdown",
 			forDisplay: options.commandLine,
 		};
 	}
@@ -170,7 +212,9 @@ export class CommandLineBackgroundDetachRewriter extends Disposable implements I
 			/^(for|while|until|if|case|select|function)\b/.test(trimmed) ||
 			// Shell builtins — these only run meaningfully inside the current shell; nohup
 			// cannot exec them (eval, set, export, source, unset, declare, cd, exec, etc.).
-			/^(eval|set|export|source|unset|declare|typeset|local|readonly|alias|cd|exec)\b/.test(trimmed) ||
+			/^(eval|set|export|source|unset|declare|typeset|local|readonly|alias|cd|exec)\b/.test(
+				trimmed,
+			) ||
 			// `. file` (dot-source builtin). Exclude `./script` (relative path) by requiring
 			// whitespace after the dot.
 			/^\.\s/.test(trimmed) ||
@@ -188,7 +232,9 @@ export class CommandLineBackgroundDetachRewriter extends Disposable implements I
 		);
 	}
 
-	private _rewriteForPowerShell(options: ICommandLineRewriterOptions): ICommandLineRewriterResult | undefined {
+	private _rewriteForPowerShell(
+		options: ICommandLineRewriterOptions,
+	): ICommandLineRewriterResult | undefined {
 		if (!isPowerShell(options.shell, options.os)) {
 			return undefined;
 		}
@@ -198,7 +244,8 @@ export class CommandLineBackgroundDetachRewriter extends Disposable implements I
 
 		return {
 			rewritten: `Start-Process -WindowStyle Hidden -FilePath "${options.shell}" -ArgumentList "-NoProfile", "-Command", "${escapedCommand}"`,
-			reasoning: 'Wrapped background command with Start-Process to survive terminal shutdown',
+			reasoning:
+				"Wrapped background command with Start-Process to survive terminal shutdown",
 			forDisplay: options.commandLine,
 		};
 	}

@@ -3,16 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AccessibleContentProvider, AccessibleViewProviderId, AccessibleViewType } from '../../../../../platform/accessibility/browser/accessibleView.js';
-import { IAccessibleViewImplementation } from '../../../../../platform/accessibility/browser/accessibleViewRegistry.js';
-import { ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
-import { AccessibilityVerbositySettingId } from '../../../accessibility/browser/accessibilityConfiguration.js';
-import { ChatContextKeys } from '../../common/actions/chatContextKeys.js';
-import { ITerminalChatService } from '../../../terminal/browser/terminal.js';
+import {
+	AccessibleContentProvider,
+	AccessibleViewProviderId,
+	AccessibleViewType,
+} from "../../../../../platform/accessibility/browser/accessibleView.js";
+import { IAccessibleViewImplementation } from "../../../../../platform/accessibility/browser/accessibleViewRegistry.js";
+import { ServicesAccessor } from "../../../../../platform/instantiation/common/instantiation.js";
+import { AccessibilityVerbositySettingId } from "../../../accessibility/browser/accessibilityConfiguration.js";
+import { ChatContextKeys } from "../../common/actions/chatContextKeys.js";
+import { ITerminalChatService } from "../../../terminal/browser/terminal.js";
 
 export class ChatTerminalOutputAccessibleView implements IAccessibleViewImplementation {
 	readonly priority = 115;
-	readonly name = 'chatTerminalOutput';
+	readonly name = "chatTerminalOutput";
 	readonly type = AccessibleViewType.View;
 	readonly when = ChatContextKeys.inChatTerminalToolOutput;
 
@@ -30,10 +34,14 @@ export class ChatTerminalOutputAccessibleView implements IAccessibleViewImplemen
 
 		return new AccessibleContentProvider(
 			AccessibleViewProviderId.ChatTerminalOutput,
-			{ type: AccessibleViewType.View, id: AccessibleViewProviderId.ChatTerminalOutput, language: 'text' },
+			{
+				type: AccessibleViewType.View,
+				id: AccessibleViewProviderId.ChatTerminalOutput,
+				language: "text",
+			},
 			() => content,
 			() => part.focusOutput(),
-			AccessibilityVerbositySettingId.TerminalChatOutput
+			AccessibilityVerbositySettingId.TerminalChatOutput,
 		);
 	}
 }

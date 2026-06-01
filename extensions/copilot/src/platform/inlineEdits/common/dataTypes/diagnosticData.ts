@@ -15,18 +15,20 @@ export class DiagnosticData {
 		public readonly range: OffsetRange,
 		public readonly code: string | number | undefined,
 		public readonly source: string | undefined,
-	) { }
+	) {}
 
 	public toString(): string {
 		return `${this.severity.toUpperCase()}: ${this.message} (${this.range})`;
 	}
 
 	public equals(other: DiagnosticData): boolean {
-		return isEqual(this.documentUri, other.documentUri)
-			&& this.message === other.message
-			&& this.severity === other.severity
-			&& this.range.equals(other.range)
-			&& this.code === other.code
-			&& this.source === other.source;
+		return (
+			isEqual(this.documentUri, other.documentUri) &&
+			this.message === other.message &&
+			this.severity === other.severity &&
+			this.range.equals(other.range) &&
+			this.code === other.code &&
+			this.source === other.source
+		);
 	}
 }

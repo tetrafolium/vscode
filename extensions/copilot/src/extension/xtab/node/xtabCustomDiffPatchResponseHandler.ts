@@ -5,7 +5,10 @@
 
 import { DocumentId } from '../../../platform/inlineEdits/common/dataTypes/documentId';
 import { DuplicateAdditionsMode } from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
-import { NoNextEditReason, StreamedEdit } from '../../../platform/inlineEdits/common/statelessNextEditProvider';
+import {
+	NoNextEditReason,
+	StreamedEdit,
+} from '../../../platform/inlineEdits/common/statelessNextEditProvider';
 import { ILogger } from '../../../platform/log/common/logService';
 import { ErrorUtils } from '../../../util/common/errors';
 import { equals as arraysEqual } from '../../../util/vs/base/common/arrays';
@@ -22,7 +25,6 @@ import { CurrentDocument } from '../common/xtabCurrentDocument';
 
 export { DuplicateAdditionsMode };
 
-
 class Patch {
 	public removedLines: string[] = [];
 	public addedLines: string[] = [];
@@ -33,7 +35,7 @@ class Patch {
 		 */
 		public readonly filePath: string,
 		public readonly lineNumZeroBased: number,
-	) { }
+	) {}
 
 	public static ofLine(line: string): Patch | null {
 		const match = line.match(/^(.+):(\d+)$/);
@@ -60,8 +62,8 @@ class Patch {
 	public toString(): string {
 		return [
 			`${this.filePath}:${this.lineNumZeroBased}`,
-			...this.removedLines.map(l => `-${l}`),
-			...this.addedLines.map(l => `+${l}`),
+			...this.removedLines.map((l) => `-${l}`),
+			...this.addedLines.map((l) => `+${l}`),
 		].join('\n');
 	}
 }
@@ -174,14 +176,19 @@ export function tryRemoveDuplicateAdditions(
 	// All line numbers here are 1-based (matching `LineRange` and
 	// `AbstractText.getLineAt`). `endLineNumberExclusive` is the first line
 	// after the deletion — i.e. the first "following" line.
-	const followingStartLine1Based = replacement.lineRange.endLineNumberExclusive;
+	const followingStartLine1Based =
+		replacement.lineRange.endLineNumberExclusive;
 	const fileLineCount = currentText.lineRange.endLineNumberExclusive - 1;
 	const followingEndLine1BasedExclusive = Math.min(
 		fileLineCount + 1,
 		followingStartLine1Based + addedLines.length,
 	);
 	const following: string[] = [];
-	for (let l = followingStartLine1Based; l < followingEndLine1BasedExclusive; l++) {
+	for (
+		let l = followingStartLine1Based;
+		l < followingEndLine1BasedExclusive;
+		l++
+	) {
 		following.push(currentText.getLineAt(l));
 	}
 	if (following.length === 0) {
@@ -216,8 +223,12 @@ export function tryRemoveDuplicateAdditions(
 	//    matches such as duplicate blank lines. After finding the seed pair,
 	//    greedily extend `k` while addedLines and `following` continue to
 	//    match — only the verified-equal range is dropped.
-	if (addedLines.length >= 3 && following.length >= 2 &&
-		isMeaningfulLine(following[0]) && isMeaningfulLine(following[1])) {
+	if (
+		addedLines.length >= 3 &&
+		following.length >= 2 &&
+		isMeaningfulLine(following[0]) &&
+		isMeaningfulLine(following[1])
+	) {
 		const a = following[0];
 		const b = following[1];
 		for (let start = 1; start < addedLines.length - 1; start++) {
@@ -246,9 +257,7 @@ export function tryRemoveDuplicateAdditions(
 	return undefined;
 }
 
-
 export class XtabCustomDiffPatchResponseHandler {
-
 	public static async *handleResponse(
 		linesStream: AsyncIterable<string>,
 		currentDocument: CurrentDocument,
@@ -259,12 +268,20 @@ export class XtabCustomDiffPatchResponseHandler {
 		duplicateAdditionsMode: DuplicateAdditionsMode = DuplicateAdditionsMode.Off,
 		onDuplicateRemoved?: OnDuplicateRemovedCallback,
 	): AsyncGenerator<StreamedEdit, NoNextEditReason, void> {
-		const tracer = parentTracer.createSubLogger(['XtabCustomDiffPatchResponseHandler', 'handleResponse']);
-		const activeDocRelativePath = toUniquePath(activeDocumentId, workspaceRoot?.path);
+		const tracer = parentTracer.createSubLogger([
+			'XtabCustomDiffPatchResponseHandler',
+			'handleResponse',
+		]);
+		const activeDocRelativePath = toUniquePath(
+			activeDocumentId,
+			workspaceRoot?.path,
+		);
 
 		try {
 			let dropAllRemaining = false;
-			for await (const edit of XtabCustomDiffPatchResponseHandler.extractEdits(linesStream)) {
+			for await (const edit of XtabCustomDiffPatchResponseHandler.extractEdits(
+				linesStream,
+			)) {
 				if (dropAllRemaining) {
 					continue;
 				}
@@ -272,28 +289,43 @@ export class XtabCustomDiffPatchResponseHandler {
 				const isActiveDoc = edit.filePath === activeDocRelativePath;
 				const targetDocument = isActiveDoc
 					? activeDocumentId
-					: XtabCustomDiffPatchResponseHandler.resolveTargetDocument(edit.filePath, workspaceRoot);
+					: XtabCustomDiffPatchResponseHandler.resolveTargetDocument(
+							edit.filePath,
+							workspaceRoot,
+						);
 				if (!targetDocument) {
-					tracer.error(`Could not resolve target document for edit: ${edit.toString()}`);
+					tracer.error(
+						`Could not resolve target document for edit: ${edit.toString()}`,
+					);
 					continue;
 				}
 
-				let lineReplacement = XtabCustomDiffPatchResponseHandler.resolveEdit(edit);
+				let lineReplacement =
+					XtabCustomDiffPatchResponseHandler.resolveEdit(edit);
 
 				// Only attempt dedup for the active document — other files'
 				// content is not directly available here.
-				if (duplicateAdditionsMode !== DuplicateAdditionsMode.Off && isActiveDoc) {
-					const removal = tryRemoveDuplicateAdditions(lineReplacement, currentDocument.content);
+				if (
+					duplicateAdditionsMode !== DuplicateAdditionsMode.Off &&
+					isActiveDoc
+				) {
+					const removal = tryRemoveDuplicateAdditions(
+						lineReplacement,
+						currentDocument.content,
+					);
 					if (removal !== undefined) {
 						// Log only metadata (kind / counts / location) — do
 						// NOT include raw line content. The tracer output
 						// may end up in user-visible diagnostics.
-						tracer.trace(`Detected duplicate addition(s) (kind=${removal.kind}, count=${removal.removedLines.length}, mode=${duplicateAdditionsMode}) for edit at ${edit.filePath}:${edit.lineNumZeroBased}`);
+						tracer.trace(
+							`Detected duplicate addition(s) (kind=${removal.kind}, count=${removal.removedLines.length}, mode=${duplicateAdditionsMode}) for edit at ${edit.filePath}:${edit.lineNumZeroBased}`,
+						);
 						onDuplicateRemoved?.({
 							summary: {
 								kind: removal.kind,
 								removedLineCount: removal.removedLines.length,
-								remainingAdditionCount: removal.newAdditions.length,
+								remainingAdditionCount:
+									removal.newAdditions.length,
 							},
 							mode: duplicateAdditionsMode,
 							filePath: edit.filePath,
@@ -315,11 +347,17 @@ export class XtabCustomDiffPatchResponseHandler {
 								continue;
 							case DuplicateAdditionsMode.TrimDuplicate: {
 								const newAdditions = removal.newAdditions;
-								if (newAdditions.length === 0 && lineReplacement.lineRange.length === 0) {
+								if (
+									newAdditions.length === 0 &&
+									lineReplacement.lineRange.length === 0
+								) {
 									// Trim left a no-op patch — drop it.
 									continue;
 								}
-								lineReplacement = new LineReplacement(lineReplacement.lineRange, newAdditions);
+								lineReplacement = new LineReplacement(
+									lineReplacement.lineRange,
+									newAdditions,
+								);
 								break;
 							}
 						}
@@ -341,25 +379,42 @@ export class XtabCustomDiffPatchResponseHandler {
 			return new NoNextEditReason.Unexpected(err);
 		}
 
-		return new NoNextEditReason.NoSuggestions(currentDocument.content, window, undefined);
+		return new NoNextEditReason.NoSuggestions(
+			currentDocument.content,
+			window,
+			undefined,
+		);
 	}
 
 	private static resolveEdit(patch: Patch): LineReplacement {
-		return new LineReplacement(new LineRange(patch.lineNumZeroBased + 1, patch.lineNumZeroBased + 1 + patch.removedLines.length), patch.addedLines);
+		return new LineReplacement(
+			new LineRange(
+				patch.lineNumZeroBased + 1,
+				patch.lineNumZeroBased + 1 + patch.removedLines.length,
+			),
+			patch.addedLines,
+		);
 	}
 
-	private static resolveTargetDocument(filePath: string, workspaceRoot: URI | undefined): DocumentId | undefined {
+	private static resolveTargetDocument(
+		filePath: string,
+		workspaceRoot: URI | undefined,
+	): DocumentId | undefined {
 		if (isAbsolute(filePath)) {
 			return DocumentId.create(URI.file(filePath).toString());
 		}
 		if (workspaceRoot) {
-			return DocumentId.create(URI.joinPath(workspaceRoot, filePath).toString());
+			return DocumentId.create(
+				URI.joinPath(workspaceRoot, filePath).toString(),
+			);
 		}
 		// Relative path with no workspace root — cannot resolve to a valid URI
 		return undefined;
 	}
 
-	public static async *extractEdits(linesStream: AsyncIterable<string>): AsyncGenerator<Patch> {
+	public static async *extractEdits(
+		linesStream: AsyncIterable<string>,
+	): AsyncGenerator<Patch> {
 		let currentPatch: Patch | null = null;
 		for await (const line of linesStream) {
 			// if no current patch, try to parse a new one
@@ -373,7 +428,8 @@ export class XtabCustomDiffPatchResponseHandler {
 			// try to add line to current patch
 			if (currentPatch.addLine(line)) {
 				continue;
-			} else { // line does not belong to current patch, yield current and start new
+			} else {
+				// line does not belong to current patch, yield current and start new
 				if (currentPatch) {
 					yield currentPatch;
 				}

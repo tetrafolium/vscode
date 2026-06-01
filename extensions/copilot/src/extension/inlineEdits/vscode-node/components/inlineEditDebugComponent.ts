@@ -10,109 +10,173 @@ import { TsExpr } from '../../../../platform/inlineEdits/common/utils/tsExpr';
 import { LogEntry } from '../../../../platform/workspaceRecorder/common/workspaceLog';
 import { assertNever } from '../../../../util/vs/base/common/assert';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
-import { IObservable, ISettableObservable } from '../../../../util/vs/base/common/observableInternal';
+import {
+	IObservable,
+	ISettableObservable,
+} from '../../../../util/vs/base/common/observableInternal';
 import { basename, extname } from '../../../../util/vs/base/common/path';
 import { openIssueReporter } from '../../../conversation/vscode-node/feedbackReporter';
 import { XtabProvider } from '../../../xtab/node/xtabProvider';
 import { defaultNextEditProviderId } from '../../node/createNextEditProvider';
 import { DebugRecorder } from '../../node/debugRecorder';
 
-export const reportFeedbackCommandId = 'github.copilot.debug.inlineEdit.reportFeedback';
+export const reportFeedbackCommandId =
+	'github.copilot.debug.inlineEdit.reportFeedback';
 const pickProviderId = 'github.copilot.debug.inlineEdit.pickProvider';
 
 export type InlineCompletionCommand = { command: Command; icon: ThemeIcon };
 
 export class InlineEditDebugComponent extends Disposable {
-
 	constructor(
 		private readonly _internalActionsEnabled: IObservable<boolean>,
 		private readonly _inlineEditsEnabled: IObservable<boolean>,
 		private readonly _debugRecorder: DebugRecorder,
-		private readonly _inlineEditsProviderId: ISettableObservable<string | undefined>,
+		private readonly _inlineEditsProviderId: ISettableObservable<
+			string | undefined
+		>,
 	) {
 		super();
 
-		this._register(commands.registerCommand(reportFeedbackCommandId, async (args: { logContext: InlineEditRequestLogContext }) => {
-			if (!this._inlineEditsEnabled.get()) {
-				return;
-			}
-			const isInternalUser = this._internalActionsEnabled.get();
+		this._register(
+			commands.registerCommand(
+				reportFeedbackCommandId,
+				async (args: { logContext: InlineEditRequestLogContext }) => {
+					if (!this._inlineEditsEnabled.get()) {
+						return;
+					}
+					const isInternalUser = this._internalActionsEnabled.get();
 
-			const data = new SimpleMarkdownBuilder();
+					const data = new SimpleMarkdownBuilder();
 
-			data.appendLine(`# Inline Edits Debug Info`);
+					data.appendLine(`# Inline Edits Debug Info`);
 
-			if (!isInternalUser) {
-				// Public users
-				data.appendLine(args.logContext.toMinimalLog());
-			} else {
-				// Internal users
-				data.appendLine(args.logContext.toLogDocument());
-
-				let logFilteredForSensitiveFiles: LogEntry[] | undefined;
-				{
-					const bookmark = args.logContext.recordingBookmark;
-					const log = this._debugRecorder.getRecentLog(bookmark);
-
-					let hasRemovedSensitiveFilesFromHistory = false;
-					let sectionContent;
-					if (log === undefined) {
-						sectionContent = ['Could not get recording to generate stest (likely because there was no corresponding workspaceRoot for this file)'];
+					if (!isInternalUser) {
+						// Public users
+						data.appendLine(args.logContext.toMinimalLog());
 					} else {
-						logFilteredForSensitiveFiles = filterLogForSensitiveFiles(log);
-						hasRemovedSensitiveFilesFromHistory = log.length !== logFilteredForSensitiveFiles.length;
-						const stest = generateSTest(logFilteredForSensitiveFiles);
+						// Internal users
+						data.appendLine(args.logContext.toLogDocument());
 
-						sectionContent = [
-							'```typescript',
-							stest,
-							'```'
-						];
+						let logFilteredForSensitiveFiles:
+							| LogEntry[]
+							| undefined;
+						{
+							const bookmark = args.logContext.recordingBookmark;
+							const log =
+								this._debugRecorder.getRecentLog(bookmark);
+
+							let hasRemovedSensitiveFilesFromHistory = false;
+							let sectionContent;
+							if (log === undefined) {
+								sectionContent = [
+									'Could not get recording to generate stest (likely because there was no corresponding workspaceRoot for this file)',
+								];
+							} else {
+								logFilteredForSensitiveFiles =
+									filterLogForSensitiveFiles(log);
+								hasRemovedSensitiveFilesFromHistory =
+									log.length !==
+									logFilteredForSensitiveFiles.length;
+								const stest = generateSTest(
+									logFilteredForSensitiveFiles,
+								);
+
+								sectionContent = [
+									'```typescript',
+									stest,
+									'```',
+								];
+							}
+							const header = hasRemovedSensitiveFilesFromHistory
+								? 'STest (sensitive files removed)'
+								: 'STest';
+							data.appendSection(header, sectionContent);
+							data.appendLine('');
+						}
+
+						{
+							if (logFilteredForSensitiveFiles !== undefined) {
+								data.appendSection('Recording', [
+									'```json',
+									JSON.stringify(
+										logFilteredForSensitiveFiles,
+										undefined,
+										2,
+									),
+									'```',
+								]);
+							}
+						}
+
+						{
+							const uiRepro = await extractInlineEditRepro();
+							if (uiRepro) {
+								data.appendSection('UI Repro', [
+									'```',
+									uiRepro,
+									'```',
+								]);
+							}
+						}
 					}
-					const header = hasRemovedSensitiveFilesFromHistory ? 'STest (sensitive files removed)' : 'STest';
-					data.appendSection(header, sectionContent);
-					data.appendLine('');
+
+					await openIssueReporter({
+						title: '',
+						data: data.toString(),
+						issueBody:
+							'# Description\nPlease describe the expected outcome and attach a screenshot!',
+						public: !isInternalUser,
+					});
+				},
+			),
+		);
+
+		this._register(
+			commands.registerCommand(pickProviderId, async (args: unknown) => {
+				if (!this._inlineEditsEnabled.get()) {
+					return;
+				}
+				if (!this._internalActionsEnabled.get()) {
+					return;
 				}
 
-				{
-					if (logFilteredForSensitiveFiles !== undefined) {
-						data.appendSection('Recording', ['```json', JSON.stringify(logFilteredForSensitiveFiles, undefined, 2), '```']);
-					}
+				const selectedProvider = await window.showQuickPick(
+					this._getAvailableProviderIds(),
+					{ placeHolder: 'Select inline edits provider' },
+				);
+				if (
+					!selectedProvider ||
+					selectedProvider === this._inlineEditsProviderId.get()
+				) {
+					return;
 				}
 
-				{
-					const uiRepro = await extractInlineEditRepro();
-					if (uiRepro) {
-						data.appendSection('UI Repro', ['```', uiRepro, '```']);
-					}
+				this._inlineEditsProviderId.set(selectedProvider, undefined);
+
+				const pick = await window.showWarningMessage(
+					`Inline edits provider set to ${selectedProvider}. Reloading will undo this change. Set "github.copilot.${ConfigKey.TeamInternal.InlineEditsProviderId.id}": "${selectedProvider}" in your settings file to make the change persistent.`,
+					'Open settings (JSON)',
+				);
+				if (!pick) {
+					return;
 				}
-			}
 
-			await openIssueReporter({
-				title: '',
-				data: data.toString(),
-				issueBody: '# Description\nPlease describe the expected outcome and attach a screenshot!',
-				public: !isInternalUser
-			});
-		}));
-
-		this._register(commands.registerCommand(pickProviderId, async (args: unknown) => {
-			if (!this._inlineEditsEnabled.get()) { return; }
-			if (!this._internalActionsEnabled.get()) { return; }
-
-			const selectedProvider = await window.showQuickPick(this._getAvailableProviderIds(), { placeHolder: 'Select inline edits provider' });
-			if (!selectedProvider || selectedProvider === this._inlineEditsProviderId.get()) { return; }
-
-			this._inlineEditsProviderId.set(selectedProvider, undefined);
-
-			const pick = await window.showWarningMessage(`Inline edits provider set to ${selectedProvider}. Reloading will undo this change. Set "github.copilot.${ConfigKey.TeamInternal.InlineEditsProviderId.id}": "${selectedProvider}" in your settings file to make the change persistent.`, 'Open settings (JSON)');
-			if (!pick) { return; }
-
-			await commands.executeCommand('workbench.action.openSettingsJson', { revealSetting: { key: `github.copilot.${ConfigKey.TeamInternal.InlineEditsProviderId.id}`, edit: true } });
-		}));
+				await commands.executeCommand(
+					'workbench.action.openSettingsJson',
+					{
+						revealSetting: {
+							key: `github.copilot.${ConfigKey.TeamInternal.InlineEditsProviderId.id}`,
+							edit: true,
+						},
+					},
+				);
+			}),
+		);
 	}
 
-	getCommands(logContext: InlineEditRequestLogContext): InlineCompletionCommand[] {
+	getCommands(
+		logContext: InlineEditRequestLogContext,
+	): InlineCompletionCommand[] {
 		const menuCommands: InlineCompletionCommand[] = [];
 		menuCommands.push({
 			command: {
@@ -120,7 +184,7 @@ export class InlineEditDebugComponent extends Disposable {
 				title: 'Feedback',
 				arguments: [{ logContext }],
 			},
-			icon: new ThemeIcon('feedback')
+			icon: new ThemeIcon('feedback'),
 		});
 
 		if (this._internalActionsEnabled.get()) {
@@ -168,22 +232,22 @@ stest({ description: 'MyTest', language: 'typescript' }, collection => tester.ru
 const SENSITIVE_FILE_PATTERNS = {
 	// Exact basename matches (case-insensitive)
 	exactNames: new Set([
-		'settings.json',      // VS Code settings
-		'keybindings.json',   // VS Code keybindings (may contain custom bindings)
-		'launch.json',        // Debug configs often contain env vars with secrets
-		'.npmrc',             // npm auth tokens
-		'.netrc',             // Network credentials
-		'.htpasswd',          // HTTP auth passwords
-		'.gitconfig',         // Git config can contain tokens
-		'credentials',        // Generic credentials file
+		'settings.json', // VS Code settings
+		'keybindings.json', // VS Code keybindings (may contain custom bindings)
+		'launch.json', // Debug configs often contain env vars with secrets
+		'.npmrc', // npm auth tokens
+		'.netrc', // Network credentials
+		'.htpasswd', // HTTP auth passwords
+		'.gitconfig', // Git config can contain tokens
+		'credentials', // Generic credentials file
 		'credentials.json',
 		'secrets.json',
-		'config.json',        // Often contains API keys
-		'password.txt',       // Plain text password files
+		'config.json', // Often contains API keys
+		'password.txt', // Plain text password files
 		'passwords.txt',
 		'password.json',
 		'passwords.json',
-		'token.json',         // Token storage files
+		'token.json', // Token storage files
 		'tokens.json',
 		'token.txt',
 		'tokens.txt',
@@ -191,34 +255,34 @@ const SENSITIVE_FILE_PATTERNS = {
 
 	// File extensions that are sensitive (checked with endsWith)
 	extensions: [
-		'.env',               // Files ending with .env (e.g., app.env, local.env)
-		'.pem',               // Private keys
-		'.key',               // Private keys
-		'.p12',               // PKCS#12 certificates
-		'.pfx',               // PKCS#12 certificates
+		'.env', // Files ending with .env (e.g., app.env, local.env)
+		'.pem', // Private keys
+		'.key', // Private keys
+		'.p12', // PKCS#12 certificates
+		'.pfx', // PKCS#12 certificates
 	],
 
 	// Prefixes for dotfiles that are sensitive (e.g., .env, .env.local, .env.production)
 	sensitiveDotfilePrefixes: [
-		'.env',               // Environment files (.env, .env.local, .env.development, etc.)
+		'.env', // Environment files (.env, .env.local, .env.development, etc.)
 	],
 
 	// Path segments that indicate sensitive directories
 	sensitivePathSegments: [
-		'.aws',               // AWS credentials
-		'.ssh',               // SSH keys
-		'.gnupg',             // GPG keys
-		'.docker',            // Docker config with registry auth
+		'.aws', // AWS credentials
+		'.ssh', // SSH keys
+		'.gnupg', // GPG keys
+		'.docker', // Docker config with registry auth
 	],
 
 	// Filename patterns (using includes)
 	patterns: [
-		'id_rsa',             // SSH private keys
-		'id_ed25519',         // SSH private keys
-		'id_ecdsa',           // SSH private keys
-		'id_dsa',             // SSH private keys
-		'.secret',            // Files with .secret in name
-		'_secret',            // Files with _secret in name
+		'id_rsa', // SSH private keys
+		'id_ed25519', // SSH private keys
+		'id_ecdsa', // SSH private keys
+		'id_dsa', // SSH private keys
+		'.secret', // Files with .secret in name
+		'_secret', // Files with _secret in name
 	],
 };
 
@@ -249,14 +313,17 @@ function isSensitiveFile(relativePath: string): boolean {
 
 	// Check sensitive dotfile prefixes (e.g., .env, .env.local, .env.production)
 	for (const prefix of SENSITIVE_FILE_PATTERNS.sensitiveDotfilePrefixes) {
-		if (fileNameLower === prefix || fileNameLower.startsWith(prefix + '.')) {
+		if (
+			fileNameLower === prefix ||
+			fileNameLower.startsWith(prefix + '.')
+		) {
 			return true;
 		}
 	}
 
 	// Check sensitive path segments
 	for (const segment of SENSITIVE_FILE_PATTERNS.sensitivePathSegments) {
-		if (pathParts.some(part => part === segment)) {
+		if (pathParts.some((part) => part === segment)) {
 			return true;
 		}
 	}
@@ -324,18 +391,17 @@ export function filterLogForSensitiveFiles(log: LogEntry[]): LogEntry[] {
 	return safeEntries;
 }
 
-
 async function extractInlineEditRepro() {
 	const commandId = 'editor.action.inlineSuggest.dev.extractRepro';
-	const result: { reproCase: string } | undefined = await commands.executeCommand(commandId);
+	const result: { reproCase: string } | undefined =
+		await commands.executeCommand(commandId);
 	return result?.reproCase;
 }
 
 class SimpleMarkdownBuilder {
 	private readonly _lines: string[] = [];
 
-	constructor() {
-	}
+	constructor() {}
 
 	appendLine(line: string): void {
 		this._lines.push(line);
@@ -350,7 +416,7 @@ class SimpleMarkdownBuilder {
 			`<details><summary>${header}</summary>`,
 			'', // we need separation between the summary and the content
 			...lines,
-			`</details>`
+			`</details>`,
 		);
 	}
 }

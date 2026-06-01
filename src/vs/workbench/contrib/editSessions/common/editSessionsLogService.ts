@@ -3,24 +3,39 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { joinPath } from '../../../../base/common/resources.js';
-import { localize } from '../../../../nls.js';
-import { IEnvironmentService } from '../../../../platform/environment/common/environment.js';
-import { AbstractLogger, ILogger, ILoggerService } from '../../../../platform/log/common/log.js';
-import { windowLogGroup } from '../../../services/log/common/logConstants.js';
-import { IEditSessionsLogService, editSessionsLogId } from './editSessions.js';
+import { joinPath } from "../../../../base/common/resources.js";
+import { localize } from "../../../../nls.js";
+import { IEnvironmentService } from "../../../../platform/environment/common/environment.js";
+import {
+	AbstractLogger,
+	ILogger,
+	ILoggerService,
+} from "../../../../platform/log/common/log.js";
+import { windowLogGroup } from "../../../services/log/common/logConstants.js";
+import { IEditSessionsLogService, editSessionsLogId } from "./editSessions.js";
 
-export class EditSessionsLogService extends AbstractLogger implements IEditSessionsLogService {
-
+export class EditSessionsLogService
+	extends AbstractLogger
+	implements IEditSessionsLogService
+{
 	declare readonly _serviceBrand: undefined;
 	private readonly logger: ILogger;
 
 	constructor(
 		@ILoggerService loggerService: ILoggerService,
-		@IEnvironmentService environmentService: IEnvironmentService
+		@IEnvironmentService environmentService: IEnvironmentService,
 	) {
 		super();
-		this.logger = this._register(loggerService.createLogger(joinPath(environmentService.logsHome, `${editSessionsLogId}.log`), { id: editSessionsLogId, name: localize('cloudChangesLog', "Cloud Changes"), group: windowLogGroup }));
+		this.logger = this._register(
+			loggerService.createLogger(
+				joinPath(environmentService.logsHome, `${editSessionsLogId}.log`),
+				{
+					id: editSessionsLogId,
+					name: localize("cloudChangesLog", "Cloud Changes"),
+					group: windowLogGroup,
+				},
+			),
+		);
 	}
 
 	trace(message: string, ...args: unknown[]): void {

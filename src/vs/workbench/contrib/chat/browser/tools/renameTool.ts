@@ -3,29 +3,49 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { ResourceMap, ResourceSet } from '../../../../../base/common/map.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { Position } from '../../../../../editor/common/core/position.js';
-import { TextEdit } from '../../../../../editor/common/languages.js';
-import { IBulkEditService, ResourceTextEdit } from '../../../../../editor/browser/services/bulkEditService.js';
-import { ILanguageFeaturesService } from '../../../../../editor/common/services/languageFeatures.js';
-import { ITextModelService } from '../../../../../editor/common/services/resolverService.js';
-import { rename } from '../../../../../editor/contrib/rename/browser/rename.js';
-import { localize } from '../../../../../nls.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
-import { IWorkbenchContribution } from '../../../../common/contributions.js';
-import { IChatService } from '../../common/chatService/chatService.js';
-import { ChatModel } from '../../common/model/chatModel.js';
-import { CountTokensCallback, ILanguageModelToolsService, IPreparedToolInvocation, IToolData, IToolImpl, IToolInvocation, IToolInvocationPreparationContext, IToolResult, ToolDataSource, ToolProgress } from '../../common/tools/languageModelToolsService.js';
-import { createToolSimpleTextResult } from '../../common/tools/builtinTools/toolHelpers.js';
-import { errorResult, findLineNumber, findSymbolColumn, ISymbolToolInput, resolveToolUri } from './toolHelpers.js';
+import { CancellationToken } from "../../../../../base/common/cancellation.js";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { MarkdownString } from "../../../../../base/common/htmlContent.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { ResourceMap, ResourceSet } from "../../../../../base/common/map.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { Position } from "../../../../../editor/common/core/position.js";
+import { TextEdit } from "../../../../../editor/common/languages.js";
+import {
+	IBulkEditService,
+	ResourceTextEdit,
+} from "../../../../../editor/browser/services/bulkEditService.js";
+import { ILanguageFeaturesService } from "../../../../../editor/common/services/languageFeatures.js";
+import { ITextModelService } from "../../../../../editor/common/services/resolverService.js";
+import { rename } from "../../../../../editor/contrib/rename/browser/rename.js";
+import { localize } from "../../../../../nls.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { IWorkspaceContextService } from "../../../../../platform/workspace/common/workspace.js";
+import { IWorkbenchContribution } from "../../../../common/contributions.js";
+import { IChatService } from "../../common/chatService/chatService.js";
+import { ChatModel } from "../../common/model/chatModel.js";
+import {
+	CountTokensCallback,
+	ILanguageModelToolsService,
+	IPreparedToolInvocation,
+	IToolData,
+	IToolImpl,
+	IToolInvocation,
+	IToolInvocationPreparationContext,
+	IToolResult,
+	ToolDataSource,
+	ToolProgress,
+} from "../../common/tools/languageModelToolsService.js";
+import { createToolSimpleTextResult } from "../../common/tools/builtinTools/toolHelpers.js";
+import {
+	errorResult,
+	findLineNumber,
+	findSymbolColumn,
+	ISymbolToolInput,
+	resolveToolUri,
+} from "./toolHelpers.js";
 
-export const RenameToolId = 'vscode_renameSymbol';
+export const RenameToolId = "vscode_renameSymbol";
 
 interface IRenameToolInput extends ISymbolToolInput {
 	newName: string;
@@ -49,16 +69,19 @@ If the tool returns an error, retry with corrected input - ensure the file path 
  * providers, so it stays byte-stable across requests as language extensions
  * activate during a turn.
  */
-const StaticModelDescription = BaseModelDescription + `
+const StaticModelDescription =
+	BaseModelDescription +
+	`
 
 If the file's language has no rename provider registered, the tool returns an error.`;
 
 export class RenameTool extends Disposable implements IToolImpl {
-
 	constructor(
-		@ILanguageFeaturesService private readonly _languageFeaturesService: ILanguageFeaturesService,
+		@ILanguageFeaturesService
+		private readonly _languageFeaturesService: ILanguageFeaturesService,
 		@ITextModelService private readonly _textModelService: ITextModelService,
-		@IWorkspaceContextService private readonly _workspaceContextService: IWorkspaceContextService,
+		@IWorkspaceContextService
+		private readonly _workspaceContextService: IWorkspaceContextService,
 		@IChatService private readonly _chatService: IChatService,
 		@IBulkEditService private readonly _bulkEditService: IBulkEditService,
 	) {
@@ -68,63 +91,91 @@ export class RenameTool extends Disposable implements IToolImpl {
 	getToolData(): IToolData {
 		return this._buildToolData(
 			StaticModelDescription,
-			localize('tool.rename.userDescription', 'Rename a symbol across the workspace'),
+			localize(
+				"tool.rename.userDescription",
+				"Rename a symbol across the workspace",
+			),
 		);
 	}
 
-	private _buildToolData(modelDescription: string, userDescription: string): IToolData {
+	private _buildToolData(
+		modelDescription: string,
+		userDescription: string,
+	): IToolData {
 		return {
 			id: RenameToolId,
-			toolReferenceName: 'rename',
+			toolReferenceName: "rename",
 			canBeReferencedInPrompt: false,
 			icon: ThemeIcon.fromId(Codicon.rename.id),
-			displayName: localize('tool.rename.displayName', 'Rename Symbol'),
+			displayName: localize("tool.rename.displayName", "Rename Symbol"),
 			userDescription,
 			modelDescription,
 			source: ToolDataSource.Internal,
 			inputSchema: {
-				type: 'object',
+				type: "object",
 				properties: {
 					symbol: {
-						type: 'string',
-						description: 'The exact current name of the symbol to rename.'
+						type: "string",
+						description: "The exact current name of the symbol to rename.",
 					},
 					newName: {
-						type: 'string',
-						description: 'The new name for the symbol.'
+						type: "string",
+						description: "The new name for the symbol.",
 					},
 					uri: {
-						type: 'string',
-						description: 'A full URI of a file where the symbol appears (e.g. "file:///path/to/file.ts"). Provide either "uri" or "filePath".'
+						type: "string",
+						description:
+							'A full URI of a file where the symbol appears (e.g. "file:///path/to/file.ts"). Provide either "uri" or "filePath".',
 					},
 					filePath: {
-						type: 'string',
-						description: 'A workspace-relative file path where the symbol appears (e.g. "src/utils/helpers.ts"). Provide either "uri" or "filePath".'
+						type: "string",
+						description:
+							'A workspace-relative file path where the symbol appears (e.g. "src/utils/helpers.ts"). Provide either "uri" or "filePath".',
 					},
 					lineContent: {
-						type: 'string',
-						description: 'A substring of the line of code where the symbol appears. Used to locate the exact position. Must be actual text from the file.'
-					}
+						type: "string",
+						description:
+							"A substring of the line of code where the symbol appears. Used to locate the exact position. Must be actual text from the file.",
+					},
 				},
-				required: ['symbol', 'newName', 'lineContent']
-			}
+				required: ["symbol", "newName", "lineContent"],
+			},
 		};
 	}
 
-	async prepareToolInvocation(context: IToolInvocationPreparationContext, _token: CancellationToken): Promise<IPreparedToolInvocation | undefined> {
+	async prepareToolInvocation(
+		context: IToolInvocationPreparationContext,
+		_token: CancellationToken,
+	): Promise<IPreparedToolInvocation | undefined> {
 		const input = context.parameters as IRenameToolInput;
 		return {
-			invocationMessage: localize('tool.rename.invocationMessage', 'Renaming `{0}` to `{1}`', input.symbol, input.newName),
+			invocationMessage: localize(
+				"tool.rename.invocationMessage",
+				"Renaming `{0}` to `{1}`",
+				input.symbol,
+				input.newName,
+			),
 		};
 	}
 
-	async invoke(invocation: IToolInvocation, _countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
+	async invoke(
+		invocation: IToolInvocation,
+		_countTokens: CountTokensCallback,
+		_progress: ToolProgress,
+		token: CancellationToken,
+	): Promise<IToolResult> {
 		const input = invocation.parameters as IRenameToolInput;
 
 		// --- resolve URI ---
-		const uri = resolveToolUri(input, this._workspaceContextService, invocation.context?.workingDirectory);
+		const uri = resolveToolUri(
+			input,
+			this._workspaceContextService,
+			invocation.context?.workingDirectory,
+		);
 		if (!uri) {
-			return errorResult('Provide either "uri" (a full URI) or "filePath" (a workspace-relative path) to identify the file.');
+			return errorResult(
+				'Provide either "uri" (a full URI) or "filePath" (a workspace-relative path) to identify the file.',
+			);
 		}
 
 		// --- open text model ---
@@ -133,26 +184,37 @@ export class RenameTool extends Disposable implements IToolImpl {
 			const model = ref.object.textEditorModel;
 
 			if (!this._languageFeaturesService.renameProvider.has(model)) {
-				return errorResult(`No rename provider available for this file's language. The rename tool may not support this language.`);
+				return errorResult(
+					`No rename provider available for this file's language. The rename tool may not support this language.`,
+				);
 			}
 
 			// --- find line containing lineContent ---
 			const lineNumber = findLineNumber(model, input.lineContent);
 			if (lineNumber === undefined) {
-				return errorResult(`Could not find line content "${input.lineContent}" in ${uri.toString()}. Provide the exact text from the line where the symbol appears.`);
+				return errorResult(
+					`Could not find line content "${input.lineContent}" in ${uri.toString()}. Provide the exact text from the line where the symbol appears.`,
+				);
 			}
 
 			// --- find symbol in that line ---
 			const lineText = model.getLineContent(lineNumber);
 			const column = findSymbolColumn(lineText, input.symbol);
 			if (column === undefined) {
-				return errorResult(`Could not find symbol "${input.symbol}" in the matched line. Ensure the symbol name is correct and appears in the provided line content.`);
+				return errorResult(
+					`Could not find symbol "${input.symbol}" in the matched line. Ensure the symbol name is correct and appears in the provided line content.`,
+				);
 			}
 
 			const position = new Position(lineNumber, column);
 
 			// --- perform rename ---
-			const renameResult = await rename(this._languageFeaturesService.renameProvider, model, position, input.newName);
+			const renameResult = await rename(
+				this._languageFeaturesService.renameProvider,
+				model,
+				position,
+				input.newName,
+			);
 
 			if (renameResult.rejectReason) {
 				return errorResult(`Rename rejected: ${renameResult.rejectReason}`);
@@ -164,7 +226,9 @@ export class RenameTool extends Disposable implements IToolImpl {
 
 			// --- apply edits via chat response stream ---
 			if (invocation.context) {
-				const chatModel = this._chatService.getSession(invocation.context.sessionResource) as ChatModel | undefined;
+				const chatModel = this._chatService.getSession(
+					invocation.context.sessionResource,
+				) as ChatModel | undefined;
 				const request = chatModel?.getRequests().at(-1);
 
 				if (chatModel && request) {
@@ -184,53 +248,75 @@ export class RenameTool extends Disposable implements IToolImpl {
 					// Push edits through the chat response stream
 					for (const [editUri, edits] of editsByUri) {
 						chatModel.acceptResponseProgress(request, {
-							kind: 'textEdit',
+							kind: "textEdit",
 							uri: editUri,
 							edits: [],
 						});
 						chatModel.acceptResponseProgress(request, {
-							kind: 'textEdit',
+							kind: "textEdit",
 							uri: editUri,
 							edits,
 						});
 						chatModel.acceptResponseProgress(request, {
-							kind: 'textEdit',
+							kind: "textEdit",
 							uri: editUri,
 							edits: [],
 							done: true,
 						});
 					}
 
-					return this._successResult(input, editsByUri.size, renameResult.edits.length);
+					return this._successResult(
+						input,
+						editsByUri.size,
+						renameResult.edits.length,
+					);
 				}
 			}
 
 			// Fallback: apply via bulk edit service when no chat context is available
 			await this._bulkEditService.apply(renameResult);
-			const fileCount = new ResourceSet(renameResult.edits.filter(ResourceTextEdit.is).map(e => e.resource)).size;
+			const fileCount = new ResourceSet(
+				renameResult.edits.filter(ResourceTextEdit.is).map((e) => e.resource),
+			).size;
 			return this._successResult(input, fileCount, renameResult.edits.length);
-
 		} finally {
 			ref.dispose();
 		}
 	}
 
-	private _successResult(input: IRenameToolInput, fileCount: number, editCount: number): IToolResult {
-		const text = editCount === 1
-			? localize('tool.rename.oneEdit', "Renamed `{0}` to `{1}` - 1 edit in {2} file.", input.symbol, input.newName, fileCount)
-			: localize('tool.rename.edits', "Renamed `{0}` to `{1}` - {2} edits across {3} files.", input.symbol, input.newName, editCount, fileCount);
+	private _successResult(
+		input: IRenameToolInput,
+		fileCount: number,
+		editCount: number,
+	): IToolResult {
+		const text =
+			editCount === 1
+				? localize(
+						"tool.rename.oneEdit",
+						"Renamed `{0}` to `{1}` - 1 edit in {2} file.",
+						input.symbol,
+						input.newName,
+						fileCount,
+					)
+				: localize(
+						"tool.rename.edits",
+						"Renamed `{0}` to `{1}` - {2} edits across {3} files.",
+						input.symbol,
+						input.newName,
+						editCount,
+						fileCount,
+					);
 		const result = createToolSimpleTextResult(text);
 		result.toolResultMessage = new MarkdownString(text);
 		return result;
 	}
-
 }
 
-
-
-export class RenameToolContribution extends Disposable implements IWorkbenchContribution {
-
-	static readonly ID = 'chat.renameTool';
+export class RenameToolContribution
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	static readonly ID = "chat.renameTool";
 
 	constructor(
 		@ILanguageModelToolsService toolsService: ILanguageModelToolsService,
@@ -238,7 +324,11 @@ export class RenameToolContribution extends Disposable implements IWorkbenchCont
 	) {
 		super();
 
-		const renameTool = this._store.add(instantiationService.createInstance(RenameTool));
-		this._store.add(toolsService.registerTool(renameTool.getToolData(), renameTool));
+		const renameTool = this._store.add(
+			instantiationService.createInstance(RenameTool),
+		);
+		this._store.add(
+			toolsService.registerTool(renameTool.getToolData(), renameTool),
+		);
 	}
 }

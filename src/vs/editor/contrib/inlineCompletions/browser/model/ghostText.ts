@@ -3,61 +3,79 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { equals } from '../../../../../base/common/arrays.js';
-import { splitLines } from '../../../../../base/common/strings.js';
-import { Position } from '../../../../common/core/position.js';
-import { Range } from '../../../../common/core/range.js';
-import { TextReplacement, TextEdit } from '../../../../common/core/edits/textEdit.js';
-import { LineDecoration } from '../../../../common/viewLayout/lineDecorations.js';
-import { ColumnRange } from '../../../../common/core/ranges/columnRange.js';
-import { assertFn, checkAdjacentItems } from '../../../../../base/common/assert.js';
-import { InlineDecoration } from '../../../../common/viewModel/inlineDecorations.js';
+import { equals } from "../../../../../base/common/arrays.js";
+import { splitLines } from "../../../../../base/common/strings.js";
+import { Position } from "../../../../common/core/position.js";
+import { Range } from "../../../../common/core/range.js";
+import {
+	TextReplacement,
+	TextEdit,
+} from "../../../../common/core/edits/textEdit.js";
+import { LineDecoration } from "../../../../common/viewLayout/lineDecorations.js";
+import { ColumnRange } from "../../../../common/core/ranges/columnRange.js";
+import {
+	assertFn,
+	checkAdjacentItems,
+} from "../../../../../base/common/assert.js";
+import { InlineDecoration } from "../../../../common/viewModel/inlineDecorations.js";
 
 export class GhostText {
 	constructor(
 		public readonly lineNumber: number,
 		public readonly parts: GhostTextPart[],
 	) {
-		assertFn(() => checkAdjacentItems(parts, (p1, p2) => p1.column <= p2.column));
+		assertFn(() =>
+			checkAdjacentItems(parts, (p1, p2) => p1.column <= p2.column),
+		);
 	}
 
 	equals(other: GhostText): boolean {
-		return this.lineNumber === other.lineNumber &&
+		return (
+			this.lineNumber === other.lineNumber &&
 			this.parts.length === other.parts.length &&
-			this.parts.every((part, index) => part.equals(other.parts[index]));
+			this.parts.every((part, index) => part.equals(other.parts[index]))
+		);
 	}
 
 	/**
 	 * Only used for testing/debugging.
-	*/
+	 */
 	render(documentText: string, debug: boolean = false): string {
 		return new TextEdit([
-			...this.parts.map(p => new TextReplacement(
-				Range.fromPositions(new Position(this.lineNumber, p.column)),
-				debug ? `[${p.lines.map(line => line.line).join('\n')}]` : p.lines.map(line => line.line).join('\n')
-			)),
+			...this.parts.map(
+				(p) =>
+					new TextReplacement(
+						Range.fromPositions(new Position(this.lineNumber, p.column)),
+						debug
+							? `[${p.lines.map((line) => line.line).join("\n")}]`
+							: p.lines.map((line) => line.line).join("\n"),
+					),
+			),
 		]).applyToString(documentText);
 	}
 
 	renderForScreenReader(lineText: string): string {
 		if (this.parts.length === 0) {
-			return '';
+			return "";
 		}
 		const lastPart = this.parts[this.parts.length - 1];
 
 		const cappedLineText = lineText.substr(0, lastPart.column - 1);
 		const text = new TextEdit([
-			...this.parts.map(p => new TextReplacement(
-				Range.fromPositions(new Position(1, p.column)),
-				p.lines.map(line => line.line).join('\n')
-			)),
+			...this.parts.map(
+				(p) =>
+					new TextReplacement(
+						Range.fromPositions(new Position(1, p.column)),
+						p.lines.map((line) => line.line).join("\n"),
+					),
+			),
 		]).applyToString(cappedLineText);
 
 		return text.substring(this.parts[0].column - 1);
 	}
 
 	isEmpty(): boolean {
-		return this.parts.every(p => p.lines.length === 0);
+		return this.parts.every((p) => p.lines.length === 0);
 	}
 
 	get lineCount(): number {
@@ -70,9 +88,7 @@ export interface IGhostTextLine {
 	lineDecorations: LineDecoration[];
 }
 
-
 export class GhostTextPart {
-
 	readonly lines: IGhostTextLine[];
 
 	constructor(
@@ -80,23 +96,34 @@ export class GhostTextPart {
 		readonly text: string,
 		/**
 		 * Indicates if this part is a preview of an inline suggestion when a suggestion is previewed.
-		*/
+		 */
 		readonly preview: boolean,
 		private _inlineDecorations: InlineDecoration[] = [],
 	) {
 		this.lines = splitLines(this.text).map((line, i) => ({
 			line,
-			lineDecorations: LineDecoration.filter(this._inlineDecorations, i + 1, 1, line.length + 1)
+			lineDecorations: LineDecoration.filter(
+				this._inlineDecorations,
+				i + 1,
+				1,
+				line.length + 1,
+			),
 		}));
 	}
 
 	equals(other: GhostTextPart): boolean {
-		return this.column === other.column &&
+		return (
+			this.column === other.column &&
 			this.lines.length === other.lines.length &&
-			this.lines.every((line, index) =>
-				line.line === other.lines[index].line &&
-				LineDecoration.equalsArr(line.lineDecorations, other.lines[index].lineDecorations)
-			);
+			this.lines.every(
+				(line, index) =>
+					line.line === other.lines[index].line &&
+					LineDecoration.equalsArr(
+						line.lineDecorations,
+						other.lines[index].lineDecorations,
+					),
+			)
+		);
 	}
 }
 
@@ -111,17 +138,13 @@ export class GhostTextReplacement {
 		public readonly additionalReservedLineCount: number = 0,
 	) {
 		this.parts = [
-			new GhostTextPart(
-				this.columnRange.endColumnExclusive,
-				this.text,
-				false
-			),
+			new GhostTextPart(this.columnRange.endColumnExclusive, this.text, false),
 		];
 		this.newLines = splitLines(this.text);
 	}
 
 	renderForScreenReader(_lineText: string): string {
-		return this.newLines.join('\n');
+		return this.newLines.join("\n");
 	}
 
 	render(documentText: string, debug: boolean = false): string {
@@ -129,12 +152,18 @@ export class GhostTextReplacement {
 
 		if (debug) {
 			return new TextEdit([
-				new TextReplacement(Range.fromPositions(replaceRange.getStartPosition()), '('),
-				new TextReplacement(Range.fromPositions(replaceRange.getEndPosition()), `)[${this.newLines.join('\n')}]`),
+				new TextReplacement(
+					Range.fromPositions(replaceRange.getStartPosition()),
+					"(",
+				),
+				new TextReplacement(
+					Range.fromPositions(replaceRange.getEndPosition()),
+					`)[${this.newLines.join("\n")}]`,
+				),
 			]).applyToString(documentText);
 		} else {
 			return new TextEdit([
-				new TextReplacement(replaceRange, this.newLines.join('\n')),
+				new TextReplacement(replaceRange, this.newLines.join("\n")),
 			]).applyToString(documentText);
 		}
 	}
@@ -144,25 +173,33 @@ export class GhostTextReplacement {
 	}
 
 	isEmpty(): boolean {
-		return this.parts.every(p => p.lines.length === 0);
+		return this.parts.every((p) => p.lines.length === 0);
 	}
 
 	equals(other: GhostTextReplacement): boolean {
-		return this.lineNumber === other.lineNumber &&
+		return (
+			this.lineNumber === other.lineNumber &&
 			this.columnRange.equals(other.columnRange) &&
 			this.newLines.length === other.newLines.length &&
 			this.newLines.every((line, index) => line === other.newLines[index]) &&
-			this.additionalReservedLineCount === other.additionalReservedLineCount;
+			this.additionalReservedLineCount === other.additionalReservedLineCount
+		);
 	}
 }
 
 export type GhostTextOrReplacement = GhostText | GhostTextReplacement;
 
-export function ghostTextsOrReplacementsEqual(a: readonly GhostTextOrReplacement[] | undefined, b: readonly GhostTextOrReplacement[] | undefined): boolean {
+export function ghostTextsOrReplacementsEqual(
+	a: readonly GhostTextOrReplacement[] | undefined,
+	b: readonly GhostTextOrReplacement[] | undefined,
+): boolean {
 	return equals(a, b, ghostTextOrReplacementEquals);
 }
 
-export function ghostTextOrReplacementEquals(a: GhostTextOrReplacement | undefined, b: GhostTextOrReplacement | undefined): boolean {
+export function ghostTextOrReplacementEquals(
+	a: GhostTextOrReplacement | undefined,
+	b: GhostTextOrReplacement | undefined,
+): boolean {
 	if (a === b) {
 		return true;
 	}

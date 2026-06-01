@@ -5,8 +5,7 @@
 
 // version: 1
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	export interface LanguageModelToolDefinition extends LanguageModelToolInformation {
 		/**
 		 * Display name for the tool.
@@ -64,6 +63,10 @@ declare module 'vscode' {
 		 * @param token A cancellation token.
 		 * @returns The result of the tool invocation.
 		 */
-		export function invokeTool(tool: LanguageModelToolInformation, options: LanguageModelToolInvocationOptions<object>, token?: CancellationToken): Thenable<LanguageModelToolResult>;
+		export function invokeTool(
+			tool: LanguageModelToolInformation,
+			options: LanguageModelToolInvocationOptions<object>,
+			token?: CancellationToken,
+		): Thenable<LanguageModelToolResult>;
 	}
 }

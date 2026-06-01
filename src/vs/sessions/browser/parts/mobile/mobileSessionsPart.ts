@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Parts } from '../../../../workbench/services/layout/browser/layoutService.js';
-import { Part } from '../../../../workbench/browser/part.js';
-import { SessionsPart } from '../sessionsPart.js';
-import { isPhoneLayout } from './mobileLayout.js';
+import { Parts } from "../../../../workbench/services/layout/browser/layoutService.js";
+import { Part } from "../../../../workbench/browser/part.js";
+import { SessionsPart } from "../sessionsPart.js";
+import { isPhoneLayout } from "./mobileLayout.js";
 
 /**
  * Mobile variant of SessionsPart.
@@ -18,7 +18,6 @@ import { isPhoneLayout } from './mobileLayout.js';
  * implementation so layout math stays correct.
  */
 export class MobileSessionsPart extends SessionsPart {
-
 	override updateStyles(): void {
 		// Always run the desktop implementation first so inline styles are
 		// set on tablet/desktop transitions. In phone mode we then clear
@@ -31,14 +30,19 @@ export class MobileSessionsPart extends SessionsPart {
 
 		const container = this.getContainer();
 		if (container) {
-			container.style.backgroundColor = '';
-			container.style.removeProperty('--part-background');
-			container.style.removeProperty('--part-border-color');
-			container.style.color = '';
+			container.style.backgroundColor = "";
+			container.style.removeProperty("--part-background");
+			container.style.removeProperty("--part-border-color");
+			container.style.color = "";
 		}
 	}
 
-	override layout(width: number, height: number, top: number, left: number): void {
+	override layout(
+		width: number,
+		height: number,
+		top: number,
+		left: number,
+	): void {
 		if (!isPhoneLayout(this.layoutService)) {
 			super.layout(width, height, top, left);
 			return;

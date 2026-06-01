@@ -13,7 +13,8 @@ import { AgentConfig, buildAgentMarkdown } from './agentTypes';
 
 const BASE_EDIT_MODE_AGENT_CONFIG: AgentConfig = {
 	name: 'Edit',
-	description: 'Edit-only mode restricted to the currently active file and any files explicitly attached in the request context.',
+	description:
+		'Edit-only mode restricted to the currently active file and any files explicitly attached in the request context.',
 	argumentHint: 'Describe the edit to apply in the active or attached files',
 	target: 'vscode',
 	disableModelInvocation: true,
@@ -43,18 +44,23 @@ const BASE_EDIT_MODE_AGENT_CONFIG: AgentConfig = {
 2. Confirm every requested edit target is in that allowed-file set before editing, unless it is an explicitly user-requested new file creation.
 3. Make the minimum required edits only within allowed files.
 4. Summarize exactly what changed and list touched files.
-5. If further changes are needed outside the allowlist, suggest switching to Agent Mode to complete the task without restrictions.`
+5. If further changes are needed outside the allowlist, suggest switching to Agent Mode to complete the task without restrictions.`,
 };
 
-export class EditModeAgentProvider extends Disposable implements vscode.ChatCustomAgentProvider {
+export class EditModeAgentProvider
+	extends Disposable
+	implements vscode.ChatCustomAgentProvider
+{
 	readonly label = vscode.l10n.t('Edit Mode Agent');
 
 	private static readonly CACHE_DIR = 'edit-mode-agent';
 	private static readonly AGENT_FILENAME = `EditMode${AGENT_FILE_EXTENSION}`;
 
 	constructor(
-		@IVSCodeExtensionContext private readonly _extensionContext: IVSCodeExtensionContext,
-		@IFileSystemService private readonly _fileSystemService: IFileSystemService,
+		@IVSCodeExtensionContext
+		private readonly _extensionContext: IVSCodeExtensionContext,
+		@IFileSystemService
+		private readonly _fileSystemService: IFileSystemService,
 		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
@@ -62,7 +68,7 @@ export class EditModeAgentProvider extends Disposable implements vscode.ChatCust
 
 	async provideCustomAgents(
 		_context: unknown,
-		_token: vscode.CancellationToken
+		_token: vscode.CancellationToken,
 	): Promise<vscode.ChatResource[]> {
 		const content = buildAgentMarkdown(BASE_EDIT_MODE_AGENT_CONFIG);
 		const fileUri = await this._writeCacheFile(content);
@@ -72,7 +78,7 @@ export class EditModeAgentProvider extends Disposable implements vscode.ChatCust
 	private async _writeCacheFile(content: string): Promise<vscode.Uri> {
 		const cacheDir = vscode.Uri.joinPath(
 			this._extensionContext.globalStorageUri,
-			EditModeAgentProvider.CACHE_DIR
+			EditModeAgentProvider.CACHE_DIR,
 		);
 
 		try {
@@ -81,9 +87,17 @@ export class EditModeAgentProvider extends Disposable implements vscode.ChatCust
 			await this._fileSystemService.createDirectory(cacheDir);
 		}
 
-		const fileUri = vscode.Uri.joinPath(cacheDir, EditModeAgentProvider.AGENT_FILENAME);
-		await this._fileSystemService.writeFile(fileUri, new TextEncoder().encode(content));
-		this._logService.trace(`[EditModeAgentProvider] Wrote agent file: ${fileUri.toString()}`);
+		const fileUri = vscode.Uri.joinPath(
+			cacheDir,
+			EditModeAgentProvider.AGENT_FILENAME,
+		);
+		await this._fileSystemService.writeFile(
+			fileUri,
+			new TextEncoder().encode(content),
+		);
+		this._logService.trace(
+			`[EditModeAgentProvider] Wrote agent file: ${fileUri.toString()}`,
+		);
 		return fileUri;
 	}
 }

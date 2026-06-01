@@ -3,14 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { VSBuffer } from '../../../../base/common/buffer.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { Event } from '../../../../base/common/event.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { FocusMode } from '../../../../platform/native/common/native.js';
-import { IWindowOpenable, IOpenWindowOptions, IOpenEmptyWindowOptions, IPoint, IRectangle, IOpenedMainWindow, IOpenedAuxiliaryWindow } from '../../../../platform/window/common/window.js';
+import { VSBuffer } from "../../../../base/common/buffer.js";
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { Event } from "../../../../base/common/event.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { FocusMode } from "../../../../platform/native/common/native.js";
+import {
+	IWindowOpenable,
+	IOpenWindowOptions,
+	IOpenEmptyWindowOptions,
+	IPoint,
+	IRectangle,
+	IOpenedMainWindow,
+	IOpenedAuxiliaryWindow,
+} from "../../../../platform/window/common/window.js";
 
-export const IHostService = createDecorator<IHostService>('hostService');
+export const IHostService = createDecorator<IHostService>("hostService");
 
 export interface IToastOptions {
 	readonly title: string;
@@ -35,7 +43,6 @@ export interface IToastResult {
  * environments.
  */
 export interface IHostService {
-
 	readonly _serviceBrand: undefined;
 
 	//#region Focus
@@ -82,7 +89,10 @@ export interface IHostService {
 	 * Emitted when the window with the given identifier changes
 	 * its fullscreen state.
 	 */
-	readonly onDidChangeFullScreen: Event<{ windowId: number; fullscreen: boolean }>;
+	readonly onDidChangeFullScreen: Event<{
+		windowId: number;
+		fullscreen: boolean;
+	}>;
 
 	/**
 	 * Opens an empty window. The optional parameter allows to define if
@@ -93,7 +103,10 @@ export interface IHostService {
 	/**
 	 * Opens the provided array of openables in a window with the provided options.
 	 */
-	openWindow(toOpen: IWindowOpenable[], options?: IOpenWindowOptions): Promise<void>;
+	openWindow(
+		toOpen: IWindowOpenable[],
+		options?: IOpenWindowOptions,
+	): Promise<void>;
 
 	/**
 	 * Switch between fullscreen and normal window.
@@ -114,13 +127,19 @@ export interface IHostService {
 	/**
 	 * Get the location of the mouse cursor and its display bounds or `undefined` if unavailable.
 	 */
-	getCursorScreenPoint(): Promise<{ readonly point: IPoint; readonly display: IRectangle } | undefined>;
+	getCursorScreenPoint(): Promise<
+		{ readonly point: IPoint; readonly display: IRectangle } | undefined
+	>;
 
 	/**
 	 * Get the list of opened windows, optionally including auxiliary windows.
 	 */
-	getWindows(options: { includeAuxiliaryWindows: true }): Promise<Array<IOpenedMainWindow | IOpenedAuxiliaryWindow>>;
-	getWindows(options: { includeAuxiliaryWindows: false }): Promise<Array<IOpenedMainWindow>>;
+	getWindows(options: {
+		includeAuxiliaryWindows: true;
+	}): Promise<Array<IOpenedMainWindow | IOpenedAuxiliaryWindow>>;
+	getWindows(options: {
+		includeAuxiliaryWindows: false;
+	}): Promise<Array<IOpenedMainWindow>>;
 
 	//#endregion
 
@@ -179,7 +198,10 @@ export interface IHostService {
 	/**
 	 * Show an OS-level toast notification.
 	 */
-	showToast(options: IToastOptions, token: CancellationToken): Promise<IToastResult>;
+	showToast(
+		options: IToastOptions,
+		token: CancellationToken,
+	): Promise<IToastResult>;
 
 	//#endregion
 }

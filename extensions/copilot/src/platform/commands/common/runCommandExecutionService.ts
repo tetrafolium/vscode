@@ -5,7 +5,10 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IRunCommandExecutionService = createServiceIdentifier<IRunCommandExecutionService>('IRunCommandExecutionService');
+export const IRunCommandExecutionService =
+	createServiceIdentifier<IRunCommandExecutionService>(
+		'IRunCommandExecutionService',
+	);
 
 export interface IRunCommandExecutionService {
 	readonly _serviceBrand: undefined;

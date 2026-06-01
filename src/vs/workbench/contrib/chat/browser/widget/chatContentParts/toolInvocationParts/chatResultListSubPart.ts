@@ -3,17 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Codicon } from '../../../../../../../base/common/codicons.js';
-import { IMarkdownString } from '../../../../../../../base/common/htmlContent.js';
-import { URI } from '../../../../../../../base/common/uri.js';
-import { Location } from '../../../../../../../editor/common/languages.js';
-import { IInstantiationService } from '../../../../../../../platform/instantiation/common/instantiation.js';
-import { IChatToolInvocation, IChatToolInvocationSerialized } from '../../../../common/chatService/chatService.js';
-import { IChatCodeBlockInfo } from '../../../chat.js';
-import { IChatContentPartRenderContext } from '../chatContentParts.js';
-import { ChatCollapsibleListContentPart, CollapsibleListPool, IChatCollapsibleListItem } from '../chatReferencesContentPart.js';
-import { BaseChatToolInvocationSubPart } from './chatToolInvocationSubPart.js';
-import { getToolApprovalMessage } from './chatToolPartUtilities.js';
+import { Codicon } from "../../../../../../../base/common/codicons.js";
+import { IMarkdownString } from "../../../../../../../base/common/htmlContent.js";
+import { URI } from "../../../../../../../base/common/uri.js";
+import { Location } from "../../../../../../../editor/common/languages.js";
+import { IInstantiationService } from "../../../../../../../platform/instantiation/common/instantiation.js";
+import {
+	IChatToolInvocation,
+	IChatToolInvocationSerialized,
+} from "../../../../common/chatService/chatService.js";
+import { IChatCodeBlockInfo } from "../../../chat.js";
+import { IChatContentPartRenderContext } from "../chatContentParts.js";
+import {
+	ChatCollapsibleListContentPart,
+	CollapsibleListPool,
+	IChatCollapsibleListItem,
+} from "../chatReferencesContentPart.js";
+import { BaseChatToolInvocationSubPart } from "./chatToolInvocationSubPart.js";
+import { getToolApprovalMessage } from "./chatToolPartUtilities.js";
 
 export class ChatResultListSubPart extends BaseChatToolInvocationSubPart {
 	public readonly domNode: HTMLElement;
@@ -29,17 +36,19 @@ export class ChatResultListSubPart extends BaseChatToolInvocationSubPart {
 	) {
 		super(toolInvocation);
 
-		const collapsibleListPart = this._register(instantiationService.createInstance(
-			ChatCollapsibleListContentPart,
-			toolDetails.map<IChatCollapsibleListItem>(detail => ({
-				kind: 'reference',
-				reference: detail,
-			})),
-			message,
-			context,
-			listPool,
-			getToolApprovalMessage(toolInvocation),
-		));
+		const collapsibleListPart = this._register(
+			instantiationService.createInstance(
+				ChatCollapsibleListContentPart,
+				toolDetails.map<IChatCollapsibleListItem>((detail) => ({
+					kind: "reference",
+					reference: detail,
+				})),
+				message,
+				context,
+				listPool,
+				getToolApprovalMessage(toolInvocation),
+			),
+		);
 		collapsibleListPart.icon = Codicon.check;
 		this.domNode = collapsibleListPart.domNode;
 	}

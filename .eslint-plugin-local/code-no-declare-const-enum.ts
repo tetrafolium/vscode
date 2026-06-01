@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as eslint from 'eslint';
+import * as eslint from "eslint";
 
 /**
  * Disallows `declare const enum` declarations. esbuild does not inline
@@ -14,14 +14,14 @@ import * as eslint from 'eslint';
  *
  * See https://github.com/evanw/esbuild/issues/4394
  */
-export default new class NoDeclareConstEnum implements eslint.Rule.RuleModule {
-
+export default new (class NoDeclareConstEnum implements eslint.Rule.RuleModule {
 	readonly meta: eslint.Rule.RuleMetaData = {
 		messages: {
-			noDeclareConstEnum: '"declare const enum" is not supported by esbuild. Use "const enum" instead. See https://github.com/evanw/esbuild/issues/4394',
+			noDeclareConstEnum:
+				'"declare const enum" is not supported by esbuild. Use "const enum" instead. See https://github.com/evanw/esbuild/issues/4394',
 		},
 		schema: false,
-		fixable: 'code',
+		fixable: "code",
 	};
 
 	create(context: eslint.Rule.RuleContext): eslint.Rule.RuleListener {
@@ -30,23 +30,23 @@ export default new class NoDeclareConstEnum implements eslint.Rule.RuleModule {
 				if (node.const && node.declare) {
 					context.report({
 						node,
-						messageId: 'noDeclareConstEnum',
+						messageId: "noDeclareConstEnum",
 						fix: (fixer) => {
 							// Remove "declare " from "declare const enum"
 							const sourceCode = context.sourceCode;
 							const text = sourceCode.getText(node);
-							const declareIndex = text.indexOf('declare');
+							const declareIndex = text.indexOf("declare");
 							if (declareIndex !== -1) {
 								return fixer.removeRange([
 									node.range[0] + declareIndex,
-									node.range[0] + declareIndex + 'declare '.length
+									node.range[0] + declareIndex + "declare ".length,
 								]);
 							}
 							return null;
-						}
+						},
 					});
 				}
-			}
+			},
 		};
 	}
-};
+})();

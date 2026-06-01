@@ -9,7 +9,11 @@ import { IRunCommandExecutionService } from '../../../platform/commands/common/r
 import { ILogService } from '../../../platform/log/common/logService';
 import { IWorkbenchService } from '../../../platform/workbench/common/workbenchService';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
-import { LanguageModelTextPart, LanguageModelToolResult, MarkdownString } from '../../../vscodeTypes';
+import {
+	LanguageModelTextPart,
+	LanguageModelToolResult,
+	MarkdownString,
+} from '../../../vscodeTypes';
 import { commandUri } from '../../linkify/common/commands';
 import { ToolName } from '../common/toolNames';
 import { ToolRegistry } from '../common/toolsRegistry';
@@ -89,7 +93,7 @@ const noConfirmationCommandsWithoutArgs = new Set([
 	'workbench.action.toggleZenMode',
 	'workbench.action.zoomIn',
 	'workbench.action.zoomOut',
-	'workbench.action.zoomReset'
+	'workbench.action.zoomReset',
 ]);
 
 const noConfirmationCommandsWithArgs = new Set([
@@ -105,45 +109,73 @@ const noConfirmationCommandsWithArgs = new Set([
 	'extension.bisect.next',
 	'git.openChange',
 	'git.openMergeEditor',
-	'git.stage'
+	'git.stage',
 ]);
 
 class VSCodeCmdTool implements vscode.LanguageModelTool<IVSCodeCmdToolToolInput> {
-
 	public static readonly toolName = ToolName.RunVscodeCmd;
 
 	constructor(
-		@IRunCommandExecutionService private readonly _commandService: IRunCommandExecutionService,
-		@IWorkbenchService private readonly _workbenchService: IWorkbenchService,
-		@ILogService private readonly _logService: ILogService
-	) { }
+		@IRunCommandExecutionService
+		private readonly _commandService: IRunCommandExecutionService,
+		@IWorkbenchService
+		private readonly _workbenchService: IWorkbenchService,
+		@ILogService private readonly _logService: ILogService,
+	) {}
 
-	async invoke(options: vscode.LanguageModelToolInvocationOptions<IVSCodeCmdToolToolInput>, token: CancellationToken): Promise<vscode.LanguageModelToolResult> {
+	async invoke(
+		options: vscode.LanguageModelToolInvocationOptions<IVSCodeCmdToolToolInput>,
+		token: CancellationToken,
+	): Promise<vscode.LanguageModelToolResult> {
 		const command = options.input.commandId;
 		const args = options.input.args ?? [];
 
 		if (!options.input.skipCheck) {
-			const allCommands = (await this._workbenchService.getAllCommands(/* filterByPreCondition */true));
-			const commandItem = allCommands.find(commandItem => commandItem.command === command);
+			const allCommands = await this._workbenchService.getAllCommands(
+				/* filterByPreCondition */ true,
+			);
+			const commandItem = allCommands.find(
+				(commandItem) => commandItem.command === command,
+			);
 			if (!commandItem) {
 				// Try again but without filtering by preconditions to see if the command exists at all
-				const allCommandsNoFilter = (await this._workbenchService.getAllCommands(/* filterByPreCondition */false));
-				const commandItemNoFilter = allCommandsNoFilter.find(commandItem => commandItem.command === command);
+				const allCommandsNoFilter =
+					await this._workbenchService.getAllCommands(
+						/* filterByPreCondition */ false,
+					);
+				const commandItemNoFilter = allCommandsNoFilter.find(
+					(commandItem) => commandItem.command === command,
+				);
 				if (commandItemNoFilter) {
-					return new LanguageModelToolResult([new LanguageModelTextPart(`Command \`${options.input.name}\` exists, but its preconditions are not currently met. Ask the user to try running it manually via the command palette.`)]);
+					return new LanguageModelToolResult([
+						new LanguageModelTextPart(
+							`Command \`${options.input.name}\` exists, but its preconditions are not currently met. Ask the user to try running it manually via the command palette.`,
+						),
+					]);
 				} else {
-					return new LanguageModelToolResult([new LanguageModelTextPart(`Failed to find command \`${options.input.name}\`.`)]);
+					return new LanguageModelToolResult([
+						new LanguageModelTextPart(
+							`Failed to find command \`${options.input.name}\`.`,
+						),
+					]);
 				}
 			}
 		}
 
 		try {
-			const result = await this._commandService.executeCommand(command, ...args);
+			const result = await this._commandService.executeCommand(
+				command,
+				...args,
+			);
 			let textPart: LanguageModelTextPart;
 			if (result === undefined || result === null) {
-				textPart = new LanguageModelTextPart(`Finished running command \`${options.input.name}\`.`);
+				textPart = new LanguageModelTextPart(
+					`Finished running command \`${options.input.name}\`.`,
+				);
 			} else if (typeof result === 'string') {
-				textPart = new LanguageModelTextPart(`Finished running command \`${options.input.name}\` with result:\n\n${result}`);
+				textPart = new LanguageModelTextPart(
+					`Finished running command \`${options.input.name}\` with result:\n\n${result}`,
+				);
 			} else {
 				let serializedResult: string;
 				try {
@@ -151,16 +183,25 @@ class VSCodeCmdTool implements vscode.LanguageModelTool<IVSCodeCmdToolToolInput>
 				} catch {
 					serializedResult = String(result);
 				}
-				textPart = new LanguageModelTextPart(`Finished running command \`${options.input.name}\` with result:\n\n${serializedResult}`);
+				textPart = new LanguageModelTextPart(
+					`Finished running command \`${options.input.name}\` with result:\n\n${serializedResult}`,
+				);
 			}
 			return new LanguageModelToolResult([textPart]);
 		} catch (error) {
 			this._logService.error(`[VSCodeCmdTool] ${error}`);
-			return new LanguageModelToolResult([new LanguageModelTextPart(`Failed to run command \`${options.input.name}\`.`)]);
+			return new LanguageModelToolResult([
+				new LanguageModelTextPart(
+					`Failed to run command \`${options.input.name}\`.`,
+				),
+			]);
 		}
 	}
 
-	async prepareInvocation(options: vscode.LanguageModelToolInvocationPrepareOptions<IVSCodeCmdToolToolInput>, token: vscode.CancellationToken): Promise<vscode.PreparedToolInvocation> {
+	async prepareInvocation(
+		options: vscode.LanguageModelToolInvocationPrepareOptions<IVSCodeCmdToolToolInput>,
+		token: vscode.CancellationToken,
+	): Promise<vscode.PreparedToolInvocation> {
 		const commandId = options.input.commandId;
 		if (!commandId) {
 			throw new Error('Command ID undefined');
@@ -168,11 +209,19 @@ class VSCodeCmdTool implements vscode.LanguageModelTool<IVSCodeCmdToolToolInput>
 
 		const invocationMessage = l10n.t`Running command \`${options.input.name}\``;
 
-		if ((noConfirmationCommandsWithoutArgs.has(commandId) || noConfirmationCommandsWithArgs.has(commandId)) && (!options.input.args || options.input.args.length === 0)) {
+		if (
+			(noConfirmationCommandsWithoutArgs.has(commandId) ||
+				noConfirmationCommandsWithArgs.has(commandId)) &&
+			(!options.input.args || options.input.args.length === 0)
+		) {
 			return { invocationMessage };
 		}
 
-		if (noConfirmationCommandsWithArgs.has(commandId) && options.input.args && options.input.args.length > 0) {
+		if (
+			noConfirmationCommandsWithArgs.has(commandId) &&
+			options.input.args &&
+			options.input.args.length > 0
+		) {
 			return { invocationMessage };
 		}
 
@@ -182,10 +231,20 @@ class VSCodeCmdTool implements vscode.LanguageModelTool<IVSCodeCmdToolToolInput>
 		const commandStr = commandUri(quickOpenCommand, ['>' + commandId]);
 		const hasArguments = !!options.input.args?.length;
 		const markdownString = new MarkdownString();
-		markdownString.appendMarkdown(l10n.t(`Copilot will execute the [{0}]({1}) (\`{2}\`) command.`, options.input.name, commandStr, options.input.commandId));
+		markdownString.appendMarkdown(
+			l10n.t(
+				`Copilot will execute the [{0}]({1}) (\`{2}\`) command.`,
+				options.input.name,
+				commandStr,
+				options.input.commandId,
+			),
+		);
 		if (hasArguments) {
 			markdownString.appendMarkdown(`\n\n${l10n.t('Arguments')}:\n\n`);
-			markdownString.appendCodeblock(JSON.stringify(options.input.args, undefined, 2), 'json');
+			markdownString.appendCodeblock(
+				JSON.stringify(options.input.args, undefined, 2),
+				'json',
+			);
 		}
 		markdownString.isTrusted = { enabledCommands: [quickOpenCommand] };
 		return {
@@ -197,7 +256,9 @@ class VSCodeCmdTool implements vscode.LanguageModelTool<IVSCodeCmdToolToolInput>
 					message: hasArguments
 						? l10n.t`Allow running command \`${options.input.commandId}\` with specific arguments`
 						: l10n.t`Allow running command \`${options.input.commandId}\` without arguments`,
-					arguments: hasArguments ? JSON.stringify(options.input.args) : undefined,
+					arguments: hasArguments
+						? JSON.stringify(options.input.args)
+						: undefined,
 				},
 			},
 		};

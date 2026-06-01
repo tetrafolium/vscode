@@ -15,8 +15,11 @@ import * as simulationStorage from './simulationStorage';
  * @param defaultValue - The default value to use if the key is not found in localStorage.
  * @returns A tuple containing the current state value, and a function to update it.
  */
-export function useLocalStorageState<S>(key: string, initialVal: S | (() => S) | undefined, defaultValue: S): [S, (newV: S | ((oldV: S | undefined) => S)) => void] {
-
+export function useLocalStorageState<S>(
+	key: string,
+	initialVal: S | (() => S) | undefined,
+	defaultValue: S,
+): [S, (newV: S | ((oldV: S | undefined) => S)) => void] {
 	let initVal = initialVal;
 
 	if (initVal === undefined) {
@@ -25,7 +28,9 @@ export function useLocalStorageState<S>(key: string, initialVal: S | (() => S) |
 
 	const [v, setV] = useState(initVal);
 
-	const setVWithLocalStorageBacking = (newV: S | ((oldV: S | undefined) => S)) => {
+	const setVWithLocalStorageBacking = (
+		newV: S | ((oldV: S | undefined) => S),
+	) => {
 		let valueToSet: S;
 		if (typeof newV === 'function') {
 			valueToSet = (newV as Function)(v);
@@ -39,7 +44,6 @@ export function useLocalStorageState<S>(key: string, initialVal: S | (() => S) |
 	return [v, setVWithLocalStorageBacking];
 }
 
-
 export function getLocalStorageValue<T>(key: string, defaultValue: T): T {
 	const item = localStorage.getItem(simulationStorage.PREFIX + key);
 	if (item) {
@@ -50,5 +54,8 @@ export function getLocalStorageValue<T>(key: string, defaultValue: T): T {
 }
 
 export function setLocalStorageValue<T>(key: string, valueToSet: T): void {
-	localStorage.setItem(simulationStorage.PREFIX + key, JSON.stringify(valueToSet));
+	localStorage.setItem(
+		simulationStorage.PREFIX + key,
+		JSON.stringify(valueToSet),
+	);
 }

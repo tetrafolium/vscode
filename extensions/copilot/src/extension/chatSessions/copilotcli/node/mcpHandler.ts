@@ -3,14 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Session, SessionOptions, SweCustomAgent } from '@github/copilot/sdk';
+import type {
+	Session,
+	SessionOptions,
+	SweCustomAgent,
+} from '@github/copilot/sdk';
 import type { CancellationToken } from 'vscode';
 import { IAuthenticationService } from '../../../../platform/authentication/common/authentication';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { ILogService } from '../../../../platform/log/common/logService';
 import { IMcpService } from '../../../../platform/mcp/common/mcpService';
 import { createServiceIdentifier } from '../../../../util/common/services';
-import { Disposable, DisposableStore, IDisposable } from '../../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+} from '../../../../util/vs/base/common/lifecycle';
 import { hasKey } from '../../../../util/vs/base/common/types';
 import { URI } from '../../../../util/vs/base/common/uri';
 import type { LanguageModelToolInformation } from '../../../../vscodeTypes';
@@ -33,25 +44,40 @@ export type MCPServerConfig = NonNullable<Session['mcpServers']>[string];
 
 export interface ICopilotCLIMCPHandler {
 	readonly _serviceBrand: undefined;
-	loadMcpConfig(sessionUri: URI): Promise<{ mcpConfig: Record<string, MCPServerConfig> | undefined; disposable: IDisposable }>;
+	loadMcpConfig(
+		sessionUri: URI,
+	): Promise<{
+		mcpConfig: Record<string, MCPServerConfig> | undefined;
+		disposable: IDisposable;
+	}>;
 }
 
-export const ICopilotCLIMCPHandler = createServiceIdentifier<ICopilotCLIMCPHandler>('ICopilotCLIMCPHandler');
+export const ICopilotCLIMCPHandler =
+	createServiceIdentifier<ICopilotCLIMCPHandler>('ICopilotCLIMCPHandler');
 
 export class CopilotCLIMCPHandler implements ICopilotCLIMCPHandler {
 	declare _serviceBrand: undefined;
 	constructor(
 		@ILogService private readonly logService: ILogService,
-		@IAuthenticationService private readonly authenticationService: IAuthenticationService,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IAuthenticationService
+		private readonly authenticationService: IAuthenticationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 		@IMcpService private readonly mcpService: IMcpService,
-	) { }
+	) {}
 
-	public async loadMcpConfig(sessionUri: URI): Promise<{ mcpConfig: Record<string, MCPServerConfig> | undefined; disposable: IDisposable }> {
-
+	public async loadMcpConfig(
+		sessionUri: URI,
+	): Promise<{
+		mcpConfig: Record<string, MCPServerConfig> | undefined;
+		disposable: IDisposable;
+	}> {
 		// TODO: Sessions window settings override is not honored with extension
 		//       configuration API, so this needs to be a core setting
-		const isSessionsWindow = this.configurationService.getNonExtensionConfig<boolean>('chat.experimentalSessionsWindowOverride') ?? false;
+		const isSessionsWindow =
+			this.configurationService.getNonExtensionConfig<boolean>(
+				'chat.experimentalSessionsWindowOverride',
+			) ?? false;
 
 		// Sessions window: use the gateway approach which proxies all MCP servers from core
 		if (isSessionsWindow) {
@@ -59,7 +85,9 @@ export class CopilotCLIMCPHandler implements ICopilotCLIMCPHandler {
 		}
 
 		// Standard path: use the CLIMCPServerEnabled setting
-		const enabled = this.configurationService.getConfig(ConfigKey.Advanced.CLIMCPServerEnabled);
+		const enabled = this.configurationService.getConfig(
+			ConfigKey.Advanced.CLIMCPServerEnabled,
+		);
 
 		if (enabled) {
 			return this.loadMcpConfigWithGateway(sessionUri);
@@ -68,15 +96,23 @@ export class CopilotCLIMCPHandler implements ICopilotCLIMCPHandler {
 		const processedConfig: Record<string, MCPServerConfig> = {};
 		await this.addBuiltInGitHubServer(processedConfig);
 		return {
-			mcpConfig: Object.keys(processedConfig).length > 0 ? processedConfig : undefined,
-			disposable: Disposable.None
+			mcpConfig:
+				Object.keys(processedConfig).length > 0
+					? processedConfig
+					: undefined,
+			disposable: Disposable.None,
 		};
 	}
 
 	/**
 	 * Use the Gateway to handle all connections
 	 */
-	private async loadMcpConfigWithGateway(sessionUri: URI): Promise<{ mcpConfig: Record<string, MCPServerConfig> | undefined; disposable: IDisposable }> {
+	private async loadMcpConfigWithGateway(
+		sessionUri: URI,
+	): Promise<{
+		mcpConfig: Record<string, MCPServerConfig> | undefined;
+		disposable: IDisposable;
+	}> {
 		const mcpConfig: Record<string, MCPServerConfig> = {};
 		const disposable = new DisposableStore();
 		try {
@@ -84,7 +120,9 @@ export class CopilotCLIMCPHandler implements ICopilotCLIMCPHandler {
 			if (gateway) {
 				disposable.add(gateway);
 				for (const server of gateway.servers) {
-					const serverId = this.normalizeServerName(server.label) ?? `vscode-mcp-server-${Object.keys(mcpConfig).length}`;
+					const serverId =
+						this.normalizeServerName(server.label) ??
+						`vscode-mcp-server-${Object.keys(mcpConfig).length}`;
 					mcpConfig[serverId] = {
 						type: 'http',
 						url: server.address.toString(),
@@ -93,48 +131,60 @@ export class CopilotCLIMCPHandler implements ICopilotCLIMCPHandler {
 					};
 				}
 			} else {
-				this.logService.warn('[CopilotCLIMCPHandler]   gateway failed to start');
+				this.logService.warn(
+					'[CopilotCLIMCPHandler]   gateway failed to start',
+				);
 				disposable.dispose();
 			}
 		} catch (error) {
-			this.logService.warn(`[CopilotCLIMCPHandler]   gateway error: ${error}`);
+			this.logService.warn(
+				`[CopilotCLIMCPHandler]   gateway error: ${error}`,
+			);
 		}
 
 		if (Object.keys(mcpConfig).length === 0) {
 			disposable.dispose();
 			return {
 				mcpConfig: undefined,
-				disposable: Disposable.None
+				disposable: Disposable.None,
 			};
 		} else {
 			return {
 				mcpConfig,
-				disposable
+				disposable,
 			};
 		}
 	}
 
 	private normalizeServerName(originalName: string): string | undefined {
 		// Convert to lowercase and replace invalid characters with underscore
-		let normalized = originalName.toLowerCase().replace(toolInvalidCharRe, '_');
+		let normalized = originalName
+			.toLowerCase()
+			.replace(toolInvalidCharRe, '_');
 
 		// Trim leading and trailing underscores
 		normalized = normalized.replace(/^_+|_+$/g, '');
 
 		// Return undefined if normalization results in empty string
 		if (!normalized) {
-			this.logService.error(`[CopilotCLIMCPHandler] Failed to normalize server name '${originalName}' - result is empty`);
+			this.logService.error(
+				`[CopilotCLIMCPHandler] Failed to normalize server name '${originalName}' - result is empty`,
+			);
 			return undefined;
 		}
 
 		if (normalized !== originalName) {
-			this.logService.trace(`[CopilotCLIMCPHandler] Normalized server '${originalName}' to '${normalized}'`);
+			this.logService.trace(
+				`[CopilotCLIMCPHandler] Normalized server '${originalName}' to '${normalized}'`,
+			);
 		}
 
 		return normalized;
 	}
 
-	private async addBuiltInGitHubServer(config: Record<string, MCPServerConfig>): Promise<void> {
+	private async addBuiltInGitHubServer(
+		config: Record<string, MCPServerConfig>,
+	): Promise<void> {
 		try {
 			const githubId = this.normalizeServerName('gitHub');
 			if (!githubId) {
@@ -152,12 +202,15 @@ export class CopilotCLIMCPHandler implements ICopilotCLIMCPHandler {
 			const definitionProvider = new GitHubMcpDefinitionProvider(
 				this.configurationService,
 				this.authenticationService,
-				this.logService
+				this.logService,
 			);
 
-			const definitions = definitionProvider.provideMcpServerDefinitions();
+			const definitions =
+				definitionProvider.provideMcpServerDefinitions();
 			if (!definitions || definitions.length === 0) {
-				this.logService.trace('[CopilotCLIMCPHandler] No GitHub MCP server definitions available.');
+				this.logService.trace(
+					'[CopilotCLIMCPHandler] No GitHub MCP server definitions available.',
+				);
 				return;
 			}
 
@@ -165,7 +218,11 @@ export class CopilotCLIMCPHandler implements ICopilotCLIMCPHandler {
 			const definition = definitions[0];
 
 			// Resolve the definition to get the access token
-			const resolvedDefinition = await definitionProvider.resolveMcpServerDefinition(definition, {} as CancellationToken);
+			const resolvedDefinition =
+				await definitionProvider.resolveMcpServerDefinition(
+					definition,
+					{} as CancellationToken,
+				);
 
 			config[githubId] = {
 				type: 'http',
@@ -175,9 +232,13 @@ export class CopilotCLIMCPHandler implements ICopilotCLIMCPHandler {
 				tools: ['*'],
 				displayName: 'GitHub',
 			};
-			this.logService.trace('[CopilotCLIMCPHandler] Added built-in GitHub MCP server.');
+			this.logService.trace(
+				'[CopilotCLIMCPHandler] Added built-in GitHub MCP server.',
+			);
 		} catch (error) {
-			this.logService.warn(`[CopilotCLIMCPHandler] Failed to add built-in GitHub MCP server: ${error}`);
+			this.logService.warn(
+				`[CopilotCLIMCPHandler] Failed to add built-in GitHub MCP server: ${error}`,
+			);
 		}
 	}
 }
@@ -190,10 +251,16 @@ export class CopilotCLIMCPHandler implements ICopilotCLIMCPHandler {
  * {@link hasKey}) and a `fullReferenceName` in the format `<server name>/<tool name>`,
  * extracting the server name portion as the key and the source's `label` as the value.
  */
-export function buildMcpServerMappings(tools: ReadonlyMap<LanguageModelToolInformation, boolean>): McpServerMappings {
+export function buildMcpServerMappings(
+	tools: ReadonlyMap<LanguageModelToolInformation, boolean>,
+): McpServerMappings {
 	const mappings = new Map<string, string>();
 	for (const [tool] of tools) {
-		if (!tool.source || !hasKey(tool.source, { name: true }) || !tool.fullReferenceName) {
+		if (
+			!tool.source ||
+			!hasKey(tool.source, { name: true }) ||
+			!tool.fullReferenceName
+		) {
 			continue;
 		}
 		const slashIndex = tool.fullReferenceName.lastIndexOf('/');
@@ -236,7 +303,9 @@ export function remapCustomAgentTools(
 		}
 	}
 
-	const agentsToRemap = selectedAgent ? [...customAgents, selectedAgent] : customAgents;
+	const agentsToRemap = selectedAgent
+		? [...customAgents, selectedAgent]
+		: customAgents;
 	for (const agent of agentsToRemap) {
 		if (!agent.tools?.length) {
 			continue;
@@ -255,7 +324,9 @@ export function remapCustomAgentTools(
 			// First try: map through mcpServerMappings (friendly name → display name) then to gateway name.
 			const displayName = mcpServerMappings.get(serverName);
 			// Also try to look up the server name directly as a display name in the gateway map.
-			const gatewayName = displayName ? displayNameToGatewayName.get(displayName) : displayNameToGatewayName.get(serverName);
+			const gatewayName = displayName
+				? displayNameToGatewayName.get(displayName)
+				: displayNameToGatewayName.get(serverName);
 
 			if (gatewayName) {
 				agent.tools[i] = `${gatewayName}/${toolName}`;

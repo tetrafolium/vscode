@@ -5,16 +5,29 @@
 
 import { mkdir, rename } from 'fs/promises';
 import { env } from 'vscode';
-import { IChangedMetadata, LogDocumentId, LogEntry, serializeEdit, serializeOffsetRange } from '../../../platform/workspaceRecorder/common/workspaceLog';
+import {
+	IChangedMetadata,
+	LogDocumentId,
+	LogEntry,
+	serializeEdit,
+	serializeOffsetRange,
+} from '../../../platform/workspaceRecorder/common/workspaceLog';
 import { TaskQueue } from '../../../util/common/async';
 import { timeout } from '../../../util/vs/base/common/async';
 import { BugIndicatingError } from '../../../util/vs/base/common/errors';
-import { Disposable, toDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	toDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 import * as path from '../../../util/vs/base/common/path';
 import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { StringEdit } from '../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRange';
-import { FlushableJSONFile, FlushableSafeJSONLFile, getFileSize } from './safeFileWriteUtils';
+import {
+	FlushableJSONFile,
+	FlushableSafeJSONLFile,
+	getFileSize,
+} from './safeFileWriteUtils';
 import { computeShortSha } from './utils';
 
 interface IWorkspaceRecorderContext {
@@ -24,8 +37,16 @@ interface IWorkspaceRecorderContext {
 export class WorkspaceRecorder extends Disposable {
 	private readonly _queue = new TaskQueue();
 
-	public readonly logFilePath = path.join(this.recordingDirPath, `current.workspaceRecording.jsonl`);
-	private readonly _impl = WorkspaceRecorderImpl.create(this.repoRootUri, this.recordingDirPath, this.logFilePath, this._context);
+	public readonly logFilePath = path.join(
+		this.recordingDirPath,
+		`current.workspaceRecording.jsonl`,
+	);
+	private readonly _impl = WorkspaceRecorderImpl.create(
+		this.repoRootUri,
+		this.recordingDirPath,
+		this.logFilePath,
+		this._context,
+	);
 
 	constructor(
 		public readonly repoRootUri: string,
@@ -35,46 +56,116 @@ export class WorkspaceRecorder extends Disposable {
 		super();
 	}
 
-	handleOnDidOpenTextDocument(documentUri: string, initialText: string, newModelVersion: number): void {
-		this._schedule(() => this._impl.then(v => v.handleOnDidOpenTextDocument(this._getTime(), documentUri, initialText, newModelVersion)));
+	handleOnDidOpenTextDocument(
+		documentUri: string,
+		initialText: string,
+		newModelVersion: number,
+	): void {
+		this._schedule(() =>
+			this._impl.then((v) =>
+				v.handleOnDidOpenTextDocument(
+					this._getTime(),
+					documentUri,
+					initialText,
+					newModelVersion,
+				),
+			),
+		);
 	}
 
 	handleOnDidCloseTextDocument(documentUri: string): void {
-		this._schedule(() => this._impl.then(v => v.handleOnDidCloseTextDocument(this._getTime(), documentUri)));
+		this._schedule(() =>
+			this._impl.then((v) =>
+				v.handleOnDidCloseTextDocument(this._getTime(), documentUri),
+			),
+		);
 	}
 
 	handleOnDidShowTextDocument(documentUri: string): void {
-		this._schedule(() => this._impl.then(v => v.handleOnDidShowTextDocument(this._getTime(), documentUri)));
+		this._schedule(() =>
+			this._impl.then((v) =>
+				v.handleOnDidShowTextDocument(this._getTime(), documentUri),
+			),
+		);
 	}
 
 	handleOnDidHideTextDocument(documentUri: string): void {
-		this._schedule(() => this._impl.then(v => v.handleOnDidHideTextDocument(this._getTime(), documentUri)));
+		this._schedule(() =>
+			this._impl.then((v) =>
+				v.handleOnDidHideTextDocument(this._getTime(), documentUri),
+			),
+		);
 	}
 
-	handleOnDidChangeTextDocument(documentUri: string, edit: StringEdit, newModelVersion: number, metadata: IChangedMetadata | undefined): void {
-		if (edit.isEmpty()) { return; }
+	handleOnDidChangeTextDocument(
+		documentUri: string,
+		edit: StringEdit,
+		newModelVersion: number,
+		metadata: IChangedMetadata | undefined,
+	): void {
+		if (edit.isEmpty()) {
+			return;
+		}
 
-		this._schedule(() => this._impl.then(v => v.handleOnDidChangeTextDocument(this._getTime(), documentUri, edit, newModelVersion, metadata)));
+		this._schedule(() =>
+			this._impl.then((v) =>
+				v.handleOnDidChangeTextDocument(
+					this._getTime(),
+					documentUri,
+					edit,
+					newModelVersion,
+					metadata,
+				),
+			),
+		);
 	}
 
 	handleOnDidFocusedDocumentChange(documentUri: string): void {
-		this._schedule(() => this._impl.then(v => v.handleOnDidFocusedDocumentChange(this._getTime(), documentUri)));
+		this._schedule(() =>
+			this._impl.then((v) =>
+				v.handleOnDidFocusedDocumentChange(
+					this._getTime(),
+					documentUri,
+				),
+			),
+		);
 	}
 
-	handleOnDidSelectionChange(documentUri: string, selection: OffsetRange[]): void {
-		this._schedule(() => this._impl.then(v => v.handleOnDidSelectionChange(this._getTime(), documentUri, selection)));
+	handleOnDidSelectionChange(
+		documentUri: string,
+		selection: OffsetRange[],
+	): void {
+		this._schedule(() =>
+			this._impl.then((v) =>
+				v.handleOnDidSelectionChange(
+					this._getTime(),
+					documentUri,
+					selection,
+				),
+			),
+		);
 	}
 
 	handleEvent(time: number, data: unknown): void {
-		this._schedule(() => this._impl.then(v => v.handleEvent(time, data)));
+		this._schedule(() => this._impl.then((v) => v.handleEvent(time, data)));
 	}
 
-	handleDocumentEvent(documentUri: string, time: number, data: unknown): void {
-		this._schedule(() => this._impl.then(v => v.handleDocumentEvent(time, documentUri, data)));
+	handleDocumentEvent(
+		documentUri: string,
+		time: number,
+		data: unknown,
+	): void {
+		this._schedule(() =>
+			this._impl.then((v) =>
+				v.handleDocumentEvent(time, documentUri, data),
+			),
+		);
 	}
 
 	addBookmark() {
-		this._schedule(() => this._impl.then(v => v.addBookmark(this._getTime())));
+		this._schedule(() =>
+			this._impl.then((v) => v.addBookmark(this._getTime())),
+		);
 	}
 
 	private _schedule(task: () => Promise<void>) {
@@ -87,24 +178,36 @@ export class WorkspaceRecorder extends Disposable {
 }
 
 export class WorkspaceRecorderImpl extends Disposable {
-	public static async create(repoRootUri: string, recordingDirPath: string, logFilePath: string, context: IWorkspaceRecorderContext): Promise<WorkspaceRecorderImpl> {
+	public static async create(
+		repoRootUri: string,
+		recordingDirPath: string,
+		logFilePath: string,
+		context: IWorkspaceRecorderContext,
+	): Promise<WorkspaceRecorderImpl> {
 		await mkdir(recordingDirPath, { recursive: true });
 
 		const currentVersion = 4;
 
-		const state = await FlushableJSONFile.loadOrCreate<WorkspaceRecordingState>(path.join(recordingDirPath, 'state.json'), {
-			version: currentVersion,
-			logCount: 0,
-			documents: {}
-		});
+		const state =
+			await FlushableJSONFile.loadOrCreate<WorkspaceRecordingState>(
+				path.join(recordingDirPath, 'state.json'),
+				{
+					version: currentVersion,
+					logCount: 0,
+					documents: {},
+				},
+			);
 
 		let shouldStartNewLog = false;
-		if (!('version' in state.value) || state.value.version !== currentVersion) {
+		if (
+			!('version' in state.value) ||
+			state.value.version !== currentVersion
+		) {
 			shouldStartNewLog = true;
 			state.setValue({
 				version: currentVersion,
 				logCount: 0,
-				documents: {}
+				documents: {},
 			});
 			await state.flushAsync();
 		}
@@ -130,7 +233,13 @@ export class WorkspaceRecorderImpl extends Disposable {
 				return date.toISOString().replace(/:/g, '-');
 			}
 
-			await rename(logFilePath, path.join(recordingDirPath, `${state.value.logCount}.${formatDateFileNameSafe(date)}.workspaceRecording.jsonl`));
+			await rename(
+				logFilePath,
+				path.join(
+					recordingDirPath,
+					`${state.value.logCount}.${formatDateFileNameSafe(date)}.workspaceRecording.jsonl`,
+				),
+			);
 
 			// Reset state after truncating the log
 			state.setValue({
@@ -143,7 +252,14 @@ export class WorkspaceRecorderImpl extends Disposable {
 		}
 
 		const log = new FlushableSafeJSONLFile<LogEntry>(logFilePath);
-		return new WorkspaceRecorderImpl(repoRootUri, state, log, context, logFileExists, currentVersion);
+		return new WorkspaceRecorderImpl(
+			repoRootUri,
+			state,
+			log,
+			context,
+			logFileExists,
+			currentVersion,
+		);
 	}
 
 	private constructor(
@@ -155,9 +271,11 @@ export class WorkspaceRecorderImpl extends Disposable {
 		private readonly _revision: number,
 	) {
 		super();
-		this._register(toDisposable(() => {
-			this._forceFlush();
-		}));
+		this._register(
+			toDisposable(() => {
+				this._forceFlush();
+			}),
+		);
 
 		if (!this._logFileExists) {
 			this._appendEntry({
@@ -173,59 +291,118 @@ export class WorkspaceRecorderImpl extends Disposable {
 		this._appendEntry({
 			kind: 'applicationStart',
 			time: Date.now(),
-			commitHash: env.appCommit
+			commitHash: env.appCommit,
 		});
 	}
 
-	async handleOnDidOpenTextDocument(time: number, documentUri: string, initialText: string, initialModelVersion: number): Promise<void> {
+	async handleOnDidOpenTextDocument(
+		time: number,
+		documentUri: string,
+		initialText: string,
+		initialModelVersion: number,
+	): Promise<void> {
 		const relativeUri = this._getRelativePath(documentUri);
 		if (this._documentInitialTexts.has(relativeUri)) {
 			throw new BugIndicatingError('should not happen');
 		}
-		this._documentInitialTexts.set(relativeUri, { value: initialText, time, initialModelVersion });
+		this._documentInitialTexts.set(relativeUri, {
+			value: initialText,
+			time,
+			initialModelVersion,
+		});
 	}
 
-	async handleOnDidCloseTextDocument(time: number, documentUri: string): Promise<void> {
+	async handleOnDidCloseTextDocument(
+		time: number,
+		documentUri: string,
+	): Promise<void> {
 		this._documentInitialTexts.delete(this._getRelativePath(documentUri));
 	}
 
-	async handleOnDidShowTextDocument(time: number, documentUri: string): Promise<void> {
+	async handleOnDidShowTextDocument(
+		time: number,
+		documentUri: string,
+	): Promise<void> {
 		const id = await this._getId(documentUri);
-		if (id === undefined) { return; }
+		if (id === undefined) {
+			return;
+		}
 		this._appendEntry({ kind: 'opened', id, time });
 	}
 
-	async handleOnDidHideTextDocument(time: number, documentUri: string): Promise<void> {
+	async handleOnDidHideTextDocument(
+		time: number,
+		documentUri: string,
+	): Promise<void> {
 		const id = await this._getId(documentUri);
-		if (id === undefined) { return; }
+		if (id === undefined) {
+			return;
+		}
 		this._appendEntry({ kind: 'closed', id, time });
 	}
 
-	async handleOnDidChangeTextDocument(time: number, documentUri: string, edit: StringEdit, newModelVersion: number, metadata: IChangedMetadata | undefined): Promise<void> {
+	async handleOnDidChangeTextDocument(
+		time: number,
+		documentUri: string,
+		edit: StringEdit,
+		newModelVersion: number,
+		metadata: IChangedMetadata | undefined,
+	): Promise<void> {
 		const id = await this._getId(documentUri);
-		if (id === undefined) { return; }
-		this._appendEntry({ kind: 'changed', id, time, edit: serializeEdit(edit), v: newModelVersion, metadata });
+		if (id === undefined) {
+			return;
+		}
+		this._appendEntry({
+			kind: 'changed',
+			id,
+			time,
+			edit: serializeEdit(edit),
+			v: newModelVersion,
+			metadata,
+		});
 	}
 
-	async handleOnDidFocusedDocumentChange(time: number, documentUri: string): Promise<void> {
+	async handleOnDidFocusedDocumentChange(
+		time: number,
+		documentUri: string,
+	): Promise<void> {
 		const id = await this._getId(documentUri);
-		if (id === undefined) { return; }
+		if (id === undefined) {
+			return;
+		}
 		this._appendEntry({ kind: 'focused', id, time });
 	}
 
-	async handleOnDidSelectionChange(time: number, documentUri: string, selection: OffsetRange[]): Promise<void> {
+	async handleOnDidSelectionChange(
+		time: number,
+		documentUri: string,
+		selection: OffsetRange[],
+	): Promise<void> {
 		const id = await this._getId(documentUri);
-		if (id === undefined) { return; }
-		this._appendEntry({ kind: 'selectionChanged', id, time, selection: selection.map(s => serializeOffsetRange(s)) });
+		if (id === undefined) {
+			return;
+		}
+		this._appendEntry({
+			kind: 'selectionChanged',
+			id,
+			time,
+			selection: selection.map((s) => serializeOffsetRange(s)),
+		});
 	}
 
 	async addBookmark(time: number): Promise<void> {
 		this._appendEntry({ kind: 'bookmark', time });
 	}
 
-	async handleDocumentEvent(time: number, documentUri: string, data: unknown): Promise<void> {
+	async handleDocumentEvent(
+		time: number,
+		documentUri: string,
+		data: unknown,
+	): Promise<void> {
 		const id = await this._getId(documentUri);
-		if (id === undefined) { return; }
+		if (id === undefined) {
+			return;
+		}
 		this._appendEntry({ kind: 'documentEvent', id, time, data });
 	}
 
@@ -233,7 +410,10 @@ export class WorkspaceRecorderImpl extends Disposable {
 		this._appendEntry({ kind: 'event', time, data });
 	}
 
-	private readonly _documentInitialTexts = new Map<string, { value: string; time: number; initialModelVersion: number }>();
+	private readonly _documentInitialTexts = new Map<
+		string,
+		{ value: string; time: number; initialModelVersion: number }
+	>();
 	private _getRelativePath(documentUri: string): string {
 		return path.relative(this.repoRootUri, documentUri);
 	}
@@ -250,33 +430,67 @@ export class WorkspaceRecorderImpl extends Disposable {
 		let shouldWrite = false;
 		let info = curState.documents[relativePath];
 		if (!info) {
-			info = { id: Object.entries(curState.documents).length, lastHash: '' };
-			this._appendEntry({ kind: 'documentEncountered', time: Date.now(), id: info.id, relativePath });
+			info = {
+				id: Object.entries(curState.documents).length,
+				lastHash: '',
+			};
+			this._appendEntry({
+				kind: 'documentEncountered',
+				time: Date.now(),
+				id: info.id,
+				relativePath,
+			});
 			shouldWrite = true;
 		}
 
 		const initialText = this._documentInitialTexts.get(relativePath);
 		if (initialText !== undefined) {
 			const hash = computeShortSha(initialText.value);
-			const v = initialText.initialModelVersion === 0 ? undefined : initialText.initialModelVersion;
+			const v =
+				initialText.initialModelVersion === 0
+					? undefined
+					: initialText.initialModelVersion;
 			if (info.lastHash !== hash) {
 				info.lastHash = hash;
 				shouldWrite = true;
-				this._appendEntry({ kind: 'setContent', time: initialText.time, id: info.id, content: initialText.value, v });
-				this._appendEntry({ kind: 'storeContent', time: initialText.time, id: info.id, contentId: hash, v });
+				this._appendEntry({
+					kind: 'setContent',
+					time: initialText.time,
+					id: info.id,
+					content: initialText.value,
+					v,
+				});
+				this._appendEntry({
+					kind: 'storeContent',
+					time: initialText.time,
+					id: info.id,
+					contentId: hash,
+					v,
+				});
 			} else {
-				this._appendEntry({ kind: 'restoreContent', time: initialText.time, id: info.id, contentId: hash, v });
+				this._appendEntry({
+					kind: 'restoreContent',
+					time: initialText.time,
+					id: info.id,
+					contentId: hash,
+					v,
+				});
 			}
 			this._documentInitialTexts.delete(relativePath);
 		}
 
 		if (shouldWrite) {
-			s.setValue({ ...s.value, documents: { ...curState.documents, [relativePath]: info } });
+			s.setValue({
+				...s.value,
+				documents: { ...curState.documents, [relativePath]: info },
+			});
 			this._scheduleFlush();
 		}
 
 		if (info.lastHash === '') {
-			throw new BugIndicatingError(`hash was empty for uri "${documentUri}"`);
+			throw new BugIndicatingError(
+				`hash was empty for uri "${documentUri}"`,
+			);
 		}
 
 		return info.id;
@@ -307,11 +521,18 @@ export class WorkspaceRecorderImpl extends Disposable {
 	}
 }
 
-
-type WorkspaceRecordingState = {
-	version: 3 | 4;
-	logCount: number;
-	documents: Record</* relativePath */ string, { id: LogDocumentId; lastHash: string }>;
-} | {
-	documents: Record</* relativePath */ string, { id: LogDocumentId; lastHash: string }>;
-};
+type WorkspaceRecordingState =
+	| {
+			version: 3 | 4;
+			logCount: number;
+			documents: Record<
+				/* relativePath */ string,
+				{ id: LogDocumentId; lastHash: string }
+			>;
+	  }
+	| {
+			documents: Record<
+				/* relativePath */ string,
+				{ id: LogDocumentId; lastHash: string }
+			>;
+	  };

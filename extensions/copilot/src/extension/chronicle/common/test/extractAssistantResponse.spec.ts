@@ -9,7 +9,10 @@ import { extractAssistantResponse } from '../sessionStoreTracking';
 describe('extractAssistantResponse', () => {
 	it('returns assistant text from valid JSON', () => {
 		const raw = JSON.stringify([
-			{ role: 'assistant', parts: [{ type: 'text', content: 'Hello, world!' }] },
+			{
+				role: 'assistant',
+				parts: [{ type: 'text', content: 'Hello, world!' }],
+			},
 		]);
 
 		expect(extractAssistantResponse(raw)).toBe('Hello, world!');
@@ -39,8 +42,14 @@ describe('extractAssistantResponse', () => {
 
 	it('ignores non-assistant roles', () => {
 		const raw = JSON.stringify([
-			{ role: 'system', parts: [{ type: 'text', content: 'System message' }] },
-			{ role: 'assistant', parts: [{ type: 'text', content: 'Assistant reply' }] },
+			{
+				role: 'system',
+				parts: [{ type: 'text', content: 'System message' }],
+			},
+			{
+				role: 'assistant',
+				parts: [{ type: 'text', content: 'Assistant reply' }],
+			},
 		]);
 
 		expect(extractAssistantResponse(raw)).toBe('Assistant reply');
@@ -51,7 +60,12 @@ describe('extractAssistantResponse', () => {
 			{
 				role: 'assistant',
 				parts: [
-					{ type: 'tool_call', id: 'tc-1', name: 'some_tool', arguments: '{}' },
+					{
+						type: 'tool_call',
+						id: 'tc-1',
+						name: 'some_tool',
+						arguments: '{}',
+					},
 					{ type: 'text', content: 'After tool call.' },
 				],
 			},
@@ -61,9 +75,7 @@ describe('extractAssistantResponse', () => {
 	});
 
 	it('returns undefined for empty parts array', () => {
-		const raw = JSON.stringify([
-			{ role: 'assistant', parts: [] },
-		]);
+		const raw = JSON.stringify([{ role: 'assistant', parts: [] }]);
 
 		expect(extractAssistantResponse(raw)).toBeUndefined();
 	});
@@ -72,9 +84,14 @@ describe('extractAssistantResponse', () => {
 		// Simulate what truncateForOTel does: slices JSON mid-string and appends suffix
 		const longContent = 'A'.repeat(100_000);
 		const fullJson = JSON.stringify([
-			{ role: 'assistant', parts: [{ type: 'text', content: longContent }] },
+			{
+				role: 'assistant',
+				parts: [{ type: 'text', content: longContent }],
+			},
 		]);
-		const truncated = fullJson.substring(0, 500) + '...[truncated, original 100123 chars]';
+		const truncated =
+			fullJson.substring(0, 500) +
+			'...[truncated, original 100123 chars]';
 
 		const result = extractAssistantResponse(truncated);
 		expect(result).toBeDefined();
@@ -86,9 +103,16 @@ describe('extractAssistantResponse', () => {
 		// Content with characters that get JSON-escaped: newlines, quotes, backslashes
 		const content = 'Hello "world"\nLine two\tTabbed\\end';
 		const fullJson = JSON.stringify([
-			{ role: 'assistant', parts: [{ type: 'text', content: content + 'A'.repeat(100_000) }] },
+			{
+				role: 'assistant',
+				parts: [
+					{ type: 'text', content: content + 'A'.repeat(100_000) },
+				],
+			},
 		]);
-		const truncated = fullJson.substring(0, 200) + '...[truncated, original 100050 chars]';
+		const truncated =
+			fullJson.substring(0, 200) +
+			'...[truncated, original 100050 chars]';
 
 		const result = extractAssistantResponse(truncated);
 		expect(result).toBeDefined();
@@ -98,7 +122,9 @@ describe('extractAssistantResponse', () => {
 	});
 
 	it('returns undefined for malformed non-truncated JSON', () => {
-		expect(extractAssistantResponse('{not valid json at all}')).toBeUndefined();
+		expect(
+			extractAssistantResponse('{not valid json at all}'),
+		).toBeUndefined();
 	});
 
 	it('skips tool_call content and extracts text part in truncated JSON', () => {
@@ -107,12 +133,21 @@ describe('extractAssistantResponse', () => {
 			{
 				role: 'assistant',
 				parts: [
-					{ type: 'tool_call', id: 'tc-1', content: 'should be skipped' },
-					{ type: 'text', content: 'The real answer' + 'B'.repeat(100_000) },
+					{
+						type: 'tool_call',
+						id: 'tc-1',
+						content: 'should be skipped',
+					},
+					{
+						type: 'text',
+						content: 'The real answer' + 'B'.repeat(100_000),
+					},
 				],
 			},
 		]);
-		const truncated = fullJson.substring(0, 500) + '...[truncated, original 100050 chars]';
+		const truncated =
+			fullJson.substring(0, 500) +
+			'...[truncated, original 100050 chars]';
 
 		const result = extractAssistantResponse(truncated);
 		expect(result).toBeDefined();

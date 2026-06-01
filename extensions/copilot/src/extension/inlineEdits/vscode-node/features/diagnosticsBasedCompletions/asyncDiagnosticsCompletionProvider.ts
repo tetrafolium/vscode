@@ -10,7 +10,15 @@ import { CancellationToken } from '../../../../../util/vs/base/common/cancellati
 import { TextReplacement } from '../../../../../util/vs/editor/common/core/edits/textEdit';
 import { Position } from '../../../../../util/vs/editor/common/core/position';
 import { IVSCodeObservableDocument } from '../../parts/vscodeWorkspace';
-import { Diagnostic, DiagnosticCompletionItem, DiagnosticInlineEditRequestLogContext, IDiagnosticCodeAction, IDiagnosticCompletionProvider, isDiagnosticWithinDistance, log } from './diagnosticsCompletions';
+import {
+	Diagnostic,
+	DiagnosticCompletionItem,
+	DiagnosticInlineEditRequestLogContext,
+	IDiagnosticCodeAction,
+	IDiagnosticCompletionProvider,
+	isDiagnosticWithinDistance,
+	log,
+} from './diagnosticsCompletions';
 
 class AsyncDiagnosticCompletionItem extends DiagnosticCompletionItem {
 	public static readonly type = 'async';
@@ -22,52 +30,106 @@ class AsyncDiagnosticCompletionItem extends DiagnosticCompletionItem {
 		edit: TextReplacement,
 		workspaceDocument: IVSCodeObservableDocument,
 	) {
-		super(AsyncDiagnosticCompletionItem.type, diagnostic, edit, workspaceDocument);
+		super(
+			AsyncDiagnosticCompletionItem.type,
+			diagnostic,
+			edit,
+			workspaceDocument,
+		);
 	}
 }
 export class AsyncDiagnosticCompletionProvider implements IDiagnosticCompletionProvider<AsyncDiagnosticCompletionItem> {
-
-	public static SupportedLanguages = new Set<string>(['typescript', 'javascript', 'typescriptreact', 'javascriptreact']);
+	public static SupportedLanguages = new Set<string>([
+		'typescript',
+		'javascript',
+		'typescriptreact',
+		'javascriptreact',
+	]);
 
 	public readonly providerName = 'async';
 
-	constructor(private readonly _logger: ILogger) { }
+	constructor(private readonly _logger: ILogger) {}
 
-	public providesCompletionsForDiagnostic(workspaceDocument: IVSCodeObservableDocument, diagnostic: Diagnostic, language: LanguageId, pos: Position): boolean {
-		if (!AsyncDiagnosticCompletionProvider.SupportedLanguages.has(language)) {
+	public providesCompletionsForDiagnostic(
+		workspaceDocument: IVSCodeObservableDocument,
+		diagnostic: Diagnostic,
+		language: LanguageId,
+		pos: Position,
+	): boolean {
+		if (
+			!AsyncDiagnosticCompletionProvider.SupportedLanguages.has(language)
+		) {
 			return false;
 		}
 
-		if (!isDiagnosticWithinDistance(workspaceDocument, diagnostic, pos, 3)) {
+		if (
+			!isDiagnosticWithinDistance(workspaceDocument, diagnostic, pos, 3)
+		) {
 			return false;
 		}
 
 		return isAsyncDiagnostics(diagnostic);
 	}
 
-	async provideDiagnosticCompletionItem(workspaceDocument: IVSCodeObservableDocument, sortedDiagnostics: Diagnostic[], pos: Position, logContext: DiagnosticInlineEditRequestLogContext, token: CancellationToken): Promise<AsyncDiagnosticCompletionItem | null> {
-		const missingAsyncDiagnostic = sortedDiagnostics.find(diagnostic => this.providesCompletionsForDiagnostic(workspaceDocument, diagnostic, workspaceDocument.languageId.get(), pos));
+	async provideDiagnosticCompletionItem(
+		workspaceDocument: IVSCodeObservableDocument,
+		sortedDiagnostics: Diagnostic[],
+		pos: Position,
+		logContext: DiagnosticInlineEditRequestLogContext,
+		token: CancellationToken,
+	): Promise<AsyncDiagnosticCompletionItem | null> {
+		const missingAsyncDiagnostic = sortedDiagnostics.find((diagnostic) =>
+			this.providesCompletionsForDiagnostic(
+				workspaceDocument,
+				diagnostic,
+				workspaceDocument.languageId.get(),
+				pos,
+			),
+		);
 		if (missingAsyncDiagnostic === undefined) {
 			return null;
 		}
 
 		// fetch code actions for missing async
-		const availableCodeActions = await workspaceDocument.getCodeActions(missingAsyncDiagnostic.range, 3, token);
+		const availableCodeActions = await workspaceDocument.getCodeActions(
+			missingAsyncDiagnostic.range,
+			3,
+			token,
+		);
 		if (availableCodeActions === undefined) {
-			log(`Fetching code actions likely timed out for \`${missingAsyncDiagnostic.message}\``, logContext, this._logger);
+			log(
+				`Fetching code actions likely timed out for \`${missingAsyncDiagnostic.message}\``,
+				logContext,
+				this._logger,
+			);
 			return null;
 		}
 
-		const asyncCodeActions = getAsyncCodeActions(availableCodeActions, workspaceDocument);
+		const asyncCodeActions = getAsyncCodeActions(
+			availableCodeActions,
+			workspaceDocument,
+		);
 		if (asyncCodeActions.length === 0) {
-			log('No async code actions found in the available code actions', logContext, this._logger);
+			log(
+				'No async code actions found in the available code actions',
+				logContext,
+				this._logger,
+			);
 			return null;
 		}
 
 		const asyncCodeActionToShow = asyncCodeActions[0];
-		const item = new AsyncDiagnosticCompletionItem(missingAsyncDiagnostic, asyncCodeActionToShow.edit, workspaceDocument);
+		const item = new AsyncDiagnosticCompletionItem(
+			missingAsyncDiagnostic,
+			asyncCodeActionToShow.edit,
+			workspaceDocument,
+		);
 
-		log(`Created async completion item for: \`${missingAsyncDiagnostic.toString()}\``, logContext, this._logger);
+		log(
+			`Created async completion item for: \`${missingAsyncDiagnostic.toString()}\``,
+			logContext,
+			this._logger,
+		);
 
 		return item;
 	}
@@ -79,11 +141,15 @@ function isAsyncDiagnostics(diagnostic: Diagnostic): boolean {
 
 const CODE_ACTION_ASYNC_TITLE_PREFIXES = ['Add async', 'Update async'];
 
-function getAsyncCodeActions(codeActions: CodeActionData[], workspaceDocument: IVSCodeObservableDocument): IDiagnosticCodeAction[] {
-
+function getAsyncCodeActions(
+	codeActions: CodeActionData[],
+	workspaceDocument: IVSCodeObservableDocument,
+): IDiagnosticCodeAction[] {
 	const asyncCodeActions: IDiagnosticCodeAction[] = [];
 	for (const codeAction of codeActions) {
-		const asyncTitlePrefix = CODE_ACTION_ASYNC_TITLE_PREFIXES.find(prefix => codeAction.title.startsWith(prefix));
+		const asyncTitlePrefix = CODE_ACTION_ASYNC_TITLE_PREFIXES.find(
+			(prefix) => codeAction.title.startsWith(prefix),
+		);
 
 		const isAsyncCodeAction = !!asyncTitlePrefix;
 		if (!isAsyncCodeAction) {
@@ -94,7 +160,10 @@ function getAsyncCodeActions(codeActions: CodeActionData[], workspaceDocument: I
 			continue;
 		}
 
-		const joinedEdit = TextReplacement.joinReplacements(codeAction.edits, workspaceDocument.value.get());
+		const joinedEdit = TextReplacement.joinReplacements(
+			codeAction.edits,
+			workspaceDocument.value.get(),
+		);
 
 		asyncCodeActions.push({
 			...codeAction,

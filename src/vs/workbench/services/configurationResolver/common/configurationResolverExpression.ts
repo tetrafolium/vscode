@@ -3,9 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Iterable } from '../../../../base/common/iterator.js';
-import { isLinux, isMacintosh, isWindows } from '../../../../base/common/platform.js';
-import { ConfiguredInput } from './configurationResolver.js';
+import { Iterable } from "../../../../base/common/iterator.js";
+import {
+	isLinux,
+	isMacintosh,
+	isWindows,
+} from "../../../../base/common/platform.js";
+import { ConfiguredInput } from "./configurationResolver.js";
 
 /** A replacement found in the object, as ${name} or ${name:arg} */
 export type Replacement = {
@@ -62,8 +66,10 @@ interface IReplacementLocation {
 	resolved?: IResolvedValue;
 }
 
-export class ConfigurationResolverExpression<T> implements IConfigurationResolverExpression<T> {
-	public static readonly VARIABLE_LHS = '${';
+export class ConfigurationResolverExpression<
+	T,
+> implements IConfigurationResolverExpression<T> {
+	public static readonly VARIABLE_LHS = "${";
 
 	private readonly locations = new Map<string, IReplacementLocation>();
 	private root: T;
@@ -76,7 +82,7 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 
 	private constructor(object: T) {
 		// If the input is a string, wrap it in an object so we can use the same logic
-		if (typeof object === 'string') {
+		if (typeof object === "string") {
 			this.stringRoot = true;
 			// eslint-disable-next-line local/code-no-any-casts
 			this.root = { value: object } as any;
@@ -105,10 +111,21 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 	private applyPlatformSpecificKeys() {
 		// eslint-disable-next-line local/code-no-any-casts
 		const config = this.root as any; // already cloned by ctor, safe to change
-		const key = isWindows ? 'windows' : isMacintosh ? 'osx' : isLinux ? 'linux' : undefined;
+		const key = isWindows
+			? "windows"
+			: isMacintosh
+				? "osx"
+				: isLinux
+					? "linux"
+					: undefined;
 
-		if (key && config && typeof config === 'object' && config.hasOwnProperty(key)) {
-			Object.keys(config[key]).forEach(k => config[k] = config[key][k]);
+		if (
+			key &&
+			config &&
+			typeof config === "object" &&
+			config.hasOwnProperty(key)
+		) {
+			Object.keys(config[key]).forEach((k) => (config[k] = config[key][k]));
 		}
 
 		delete config.windows;
@@ -116,17 +133,20 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 		delete config.linux;
 	}
 
-	private parseVariable(str: string, start: number): { replacement: Replacement; end: number } | undefined {
-		if (str[start] !== '$' || str[start + 1] !== '{') {
+	private parseVariable(
+		str: string,
+		start: number,
+	): { replacement: Replacement; end: number } | undefined {
+		if (str[start] !== "$" || str[start + 1] !== "{") {
 			return undefined;
 		}
 
 		let end = start + 2;
 		let braceCount = 1;
 		while (end < str.length) {
-			if (str[end] === '{') {
+			if (str[end] === "{") {
 				braceCount++;
-			} else if (str[end] === '}') {
+			} else if (str[end] === "}") {
 				braceCount--;
 				if (braceCount === 0) {
 					break;
@@ -141,7 +161,7 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 
 		const id = str.slice(start, end + 1);
 		const inner = str.substring(start + 2, end);
-		const colonIdx = inner.indexOf(':');
+		const colonIdx = inner.indexOf(":");
 		if (colonIdx === -1) {
 			return { replacement: { id, name: inner, inner }, end };
 		}
@@ -151,21 +171,21 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 				id,
 				inner,
 				name: inner.slice(0, colonIdx),
-				arg: inner.slice(colonIdx + 1)
+				arg: inner.slice(colonIdx + 1),
 			},
-			end
+			end,
 		};
 	}
 
 	private parseObject(obj: any): void {
-		if (typeof obj !== 'object' || obj === null) {
+		if (typeof obj !== "object" || obj === null) {
 			return;
 		}
 
 		if (Array.isArray(obj)) {
 			for (let i = 0; i < obj.length; i++) {
 				const value = obj[i];
-				if (typeof value === 'string') {
+				if (typeof value === "string") {
 					this.parseString(obj, i, value);
 				} else {
 					this.parseObject(value);
@@ -177,7 +197,7 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 		for (const [key, value] of Object.entries(obj)) {
 			this.parseString(obj, key, key, true); // parse key
 
-			if (typeof value === 'string') {
+			if (typeof value === "string") {
 				this.parseString(obj, key, value);
 			} else {
 				this.parseObject(value);
@@ -185,10 +205,16 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 		}
 	}
 
-	private parseString(object: any, propertyName: string | number, value: string, replaceKeyName?: boolean, replacementPath?: string[]): void {
+	private parseString(
+		object: any,
+		propertyName: string | number,
+		value: string,
+		replaceKeyName?: boolean,
+		replacementPath?: string[],
+	): void {
 		let pos = 0;
 		while (pos < value.length) {
-			const match = value.indexOf('${', pos);
+			const match = value.indexOf("${", pos);
 			if (match === -1) {
 				break;
 			}
@@ -199,15 +225,27 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 					continue;
 				}
 
-				const locations = this.locations.get(parsed.replacement.id) || { locations: [], replacement: parsed.replacement };
-				const newLocation: PropertyLocation = { object, propertyName, replaceKeyName };
+				const locations = this.locations.get(parsed.replacement.id) || {
+					locations: [],
+					replacement: parsed.replacement,
+				};
+				const newLocation: PropertyLocation = {
+					object,
+					propertyName,
+					replaceKeyName,
+				};
 				locations.locations.push(newLocation);
 				this.locations.set(parsed.replacement.id, locations);
 
 				if (locations.resolved) {
-					this._resolveAtLocation(parsed.replacement, newLocation, locations.resolved, replacementPath);
+					this._resolveAtLocation(
+						parsed.replacement,
+						newLocation,
+						locations.resolved,
+						replacementPath,
+					);
 				} else {
-					this.newReplacementNotifiers.forEach(n => n(parsed.replacement));
+					this.newReplacementNotifiers.forEach((n) => n(parsed.replacement));
 				}
 			} else {
 				pos = match + 2;
@@ -244,11 +282,17 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 	}
 
 	public resolved(): Iterable<[Replacement, IResolvedValue]> {
-		return Iterable.map(Iterable.filter(this.locations.values(), l => !!l.resolved), l => [l.replacement, l.resolved!]);
+		return Iterable.map(
+			Iterable.filter(this.locations.values(), (l) => !!l.resolved),
+			(l) => [l.replacement, l.resolved!],
+		);
 	}
 
-	public resolve(replacement: Replacement, data: string | IResolvedValue): void {
-		if (typeof data !== 'object') {
+	public resolve(
+		replacement: Replacement,
+		data: string | IResolvedValue,
+	): void {
+		if (typeof data !== "object") {
 			data = { value: String(data) };
 		}
 
@@ -266,7 +310,12 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 		}
 	}
 
-	private _resolveAtLocation(replacement: Replacement, { replaceKeyName, propertyName, object }: PropertyLocation, data: IResolvedValue, path: string[] = []) {
+	private _resolveAtLocation(
+		replacement: Replacement,
+		{ replaceKeyName, propertyName, object }: PropertyLocation,
+		data: IResolvedValue,
+		path: string[] = [],
+	) {
 		if (data.value === undefined) {
 			return;
 		}
@@ -275,7 +324,7 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 		path.push(replacement.id);
 
 		// note: in nested `this.parseString`, parse only the new substring for any replacements, don't reparse the whole string
-		if (replaceKeyName && typeof propertyName === 'string') {
+		if (replaceKeyName && typeof propertyName === "string") {
 			const value = object[propertyName];
 			const newKey = propertyName.replaceAll(replacement.id, data.value);
 			delete object[propertyName];
@@ -283,7 +332,10 @@ export class ConfigurationResolverExpression<T> implements IConfigurationResolve
 			this._renameKeyInLocations(object, propertyName, newKey);
 			this.parseString(object, newKey, data.value, true, path);
 		} else {
-			object[propertyName] = object[propertyName].replaceAll(replacement.id, data.value);
+			object[propertyName] = object[propertyName].replaceAll(
+				replacement.id,
+				data.value,
+			);
 			this.parseString(object, propertyName, data.value, false, path);
 		}
 

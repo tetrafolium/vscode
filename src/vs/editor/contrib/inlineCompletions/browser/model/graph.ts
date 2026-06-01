@@ -7,7 +7,10 @@ export class DirectedGraph<T> {
 	private readonly _nodes = new Set<T>();
 	private readonly _outgoingEdges = new Map<T, Set<T>>();
 
-	public static from<T>(nodes: readonly T[], getOutgoing: (node: T) => readonly T[]): DirectedGraph<T> {
+	public static from<T>(
+		nodes: readonly T[],
+		getOutgoing: (node: T) => readonly T[],
+	): DirectedGraph<T> {
 		const graph = new DirectedGraph<T>();
 
 		for (const node of nodes) {

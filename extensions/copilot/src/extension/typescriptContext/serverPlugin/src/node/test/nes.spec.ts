@@ -89,7 +89,11 @@ type PostRenameTestCase = {
 
 function computeNesRenameTestCases(filePath: string): NesRenameTestCase[] {
 	const text = fs.readFileSync(filePath, 'utf8');
-	const sourceFile = ts.createSourceFile(filePath, text, ts.ScriptTarget.Latest);
+	const sourceFile = ts.createSourceFile(
+		filePath,
+		text,
+		ts.ScriptTarget.Latest,
+	);
 	const result: NesRenameTestCase[] = [];
 	const regex = /\/\/\/\/\s(\{.*\})/g;
 	let match: RegExpExecArray | null;
@@ -100,7 +104,8 @@ function computeNesRenameTestCases(filePath: string): NesRenameTestCase[] {
 				continue;
 			}
 			const testCase = parsed;
-			const { line, character } = sourceFile.getLineAndCharacterOfPosition(match.index);
+			const { line, character } =
+				sourceFile.getLineAndCharacterOfPosition(match.index);
 			result.push({
 				title: testCase.title,
 				oldName: testCase.oldName,
@@ -118,7 +123,11 @@ function computeNesRenameTestCases(filePath: string): NesRenameTestCase[] {
 
 function computePostRenameTestCases(filePath: string): PostRenameTestCase[] {
 	const text = fs.readFileSync(filePath, 'utf8');
-	const sourceFile = ts.createSourceFile(filePath, text, ts.ScriptTarget.Latest);
+	const sourceFile = ts.createSourceFile(
+		filePath,
+		text,
+		ts.ScriptTarget.Latest,
+	);
 	const result: PostRenameTestCase[] = [];
 	const regex = /\/\/\/\/\s(\{.*\})/g;
 
@@ -132,9 +141,15 @@ function computePostRenameTestCases(filePath: string): PostRenameTestCase[] {
 	while ((match = regex.exec(text)) !== null) {
 		try {
 			const parsed = JSON.parse(match[1]);
-			const { line, character } = sourceFile.getLineAndCharacterOfPosition(match.index);
-			const endPos = sourceFile.getLineAndCharacterOfPosition(match.index + match[0].length);
-			if (TrackedRenameAnnotation.is(parsed) || TestAnnotation.is(parsed)) {
+			const { line, character } =
+				sourceFile.getLineAndCharacterOfPosition(match.index);
+			const endPos = sourceFile.getLineAndCharacterOfPosition(
+				match.index + match[0].length,
+			);
+			if (
+				TrackedRenameAnnotation.is(parsed) ||
+				TestAnnotation.is(parsed)
+			) {
 				annotations.push({
 					annotation: parsed,
 					range: {
@@ -164,8 +179,17 @@ function computePostRenameTestCases(filePath: string): PostRenameTestCase[] {
 				oldName: first.annotation.oldName,
 				newName: first.annotation.newName,
 				range: {
-					start: { line: start.line + 1, character: start.character + delta },
-					end: { line: start.line + 1, character: start.character + delta + first.annotation.newName.length }
+					start: {
+						line: start.line + 1,
+						character: start.character + delta,
+					},
+					end: {
+						line: start.line + 1,
+						character:
+							start.character +
+							delta +
+							first.annotation.newName.length,
+					},
 				},
 			};
 			start = second.range.start;
@@ -202,7 +226,6 @@ beforeAll(async function () {
 }, 10000);
 
 suite('NES Test Suite', function () {
-
 	let session: testing.TestSession;
 	beforeAll(() => {
 		session = create(path.join(root, 'p1'));
@@ -219,13 +242,15 @@ suite('NES Test Suite', function () {
 				testCase.oldName,
 				testCase.newName,
 			);
-			assert.strictEqual(renameKind, RenameKind.fromString(testCase.expected));
+			assert.strictEqual(
+				renameKind,
+				RenameKind.fromString(testCase.expected),
+			);
 		});
 	}
 });
 
 suite('NES Post Rename Test Suite', function () {
-
 	let session: testing.TestSession;
 	beforeAll(() => {
 		session = create(path.join(root, 'p2'));
@@ -238,7 +263,10 @@ suite('NES Post Rename Test Suite', function () {
 		const end = trackedRename.range.end;
 		test(testCase.title, () => {
 			const normalizedFilePath = toNormalizedPath(filePath);
-			const position = { line: testCase.line, character: testCase.character };
+			const position = {
+				line: testCase.line,
+				character: testCase.character,
+			};
 			const lastSymbolRename: Range = {
 				start: { line: start.line, character: start.character },
 				end: { line: end.line, character: end.character },
@@ -252,8 +280,18 @@ suite('NES Post Rename Test Suite', function () {
 				testCase.newName,
 				lastSymbolRename,
 			);
-			assert.strictEqual(trackedRenameKind, RenameKind.fromString(testCase.expected));
-			const renameGroups = nesRename(session, normalizedFilePath, position, testCase.oldName, testCase.newName, lastSymbolRename);
+			assert.strictEqual(
+				trackedRenameKind,
+				RenameKind.fromString(testCase.expected),
+			);
+			const renameGroups = nesRename(
+				session,
+				normalizedFilePath,
+				position,
+				testCase.oldName,
+				testCase.newName,
+				lastSymbolRename,
+			);
 			assert.strictEqual(renameGroups.length > 0, true);
 		});
 	}

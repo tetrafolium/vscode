@@ -20,10 +20,10 @@ describe('createWebSocket', () => {
 			res.end('Not Found');
 		});
 		wss = new WebSocketServer({ server });
-		wss.on('connection', ws => {
-			ws.on('message', data => ws.send(data));
+		wss.on('connection', (ws) => {
+			ws.on('message', (data) => ws.send(data));
 		});
-		await new Promise<void>(resolve => {
+		await new Promise<void>((resolve) => {
 			server.listen(0, () => {
 				port = (server.address() as { port: number }).port;
 				resolve();
@@ -42,7 +42,10 @@ describe('createWebSocket', () => {
 			conn.webSocket.onopen = () => {
 				conn.webSocket.close();
 				assert.strictEqual(conn.responseStatusCode, 101);
-				assert.ok(conn.responseHeaders.get('upgrade') || conn.responseHeaders.get('connection'));
+				assert.ok(
+					conn.responseHeaders.get('upgrade') ||
+						conn.responseHeaders.get('connection'),
+				);
 				resolve();
 			};
 			conn.webSocket.onerror = () => {
@@ -59,7 +62,7 @@ describe('createWebSocket', () => {
 			res.writeHead(404, 'Not Found', { 'content-type': 'text/plain' });
 			res.end('Not Found');
 		});
-		const nonWsPort = await new Promise<number>(resolve => {
+		const nonWsPort = await new Promise<number>((resolve) => {
 			nonWsServer.listen(0, () => {
 				resolve((nonWsServer.address() as { port: number }).port);
 			});

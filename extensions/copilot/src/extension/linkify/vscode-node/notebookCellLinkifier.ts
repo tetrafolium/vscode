@@ -5,18 +5,34 @@
 
 import { NotebookCell, NotebookDocument } from 'vscode';
 import { ILogService } from '../../../platform/log/common/logService';
-import { CellIdPatternRe, getCellIdMap } from '../../../platform/notebook/common/helpers';
+import {
+	CellIdPatternRe,
+	getCellIdMap,
+} from '../../../platform/notebook/common/helpers';
 import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
-import { LinkifiedPart, LinkifiedText, LinkifyLocationAnchor } from '../common/linkifiedText';
-import { IContributedLinkifier, LinkifierContext } from '../common/linkifyService';
-import { Disposable, IDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	LinkifiedPart,
+	LinkifiedText,
+	LinkifyLocationAnchor,
+} from '../common/linkifiedText';
+import {
+	IContributedLinkifier,
+	LinkifierContext,
+} from '../common/linkifyService';
+import {
+	Disposable,
+	IDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 
 /**
  * Linkifies notebook cell IDs in chat responses.
  * The linkified text will show as "<Cell ID> (Cell <number>)" where number is the cell's index + 1.
  */
-export class NotebookCellLinkifier extends Disposable implements IDisposable, IContributedLinkifier {
+export class NotebookCellLinkifier
+	extends Disposable
+	implements IDisposable, IContributedLinkifier
+{
 	private cells = new Map<string, WeakRef<NotebookCell>>();
 	private notebookCellIds = new WeakMap<NotebookDocument, Set<string>>();
 	private initialized = false;
@@ -27,7 +43,11 @@ export class NotebookCellLinkifier extends Disposable implements IDisposable, IC
 		super();
 	}
 
-	async linkify(text: string, context: LinkifierContext, token: CancellationToken): Promise<LinkifiedText> {
+	async linkify(
+		text: string,
+		context: LinkifierContext,
+		token: CancellationToken,
+	): Promise<LinkifiedText> {
 		const parts: LinkifiedPart[] = [];
 
 		// Safety check
@@ -55,10 +75,17 @@ export class NotebookCellLinkifier extends Disposable implements IDisposable, IC
 			// Try to resolve the cell ID to a linkable cell
 			const resolved = this.resolveCellId(cellId);
 			if (resolved) {
-				parts.push(fullMatch.slice(0, fullMatch.indexOf(cellId) + cellId.length));
+				parts.push(
+					fullMatch.slice(
+						0,
+						fullMatch.indexOf(cellId) + cellId.length,
+					),
+				);
 				parts.push(' ');
 				parts.push(resolved);
-				parts.push(fullMatch.slice(fullMatch.indexOf(cellId) + cellId.length));
+				parts.push(
+					fullMatch.slice(fullMatch.indexOf(cellId) + cellId.length),
+				);
 			} else {
 				parts.push(fullMatch);
 			}
@@ -80,7 +107,10 @@ export class NotebookCellLinkifier extends Disposable implements IDisposable, IC
 			if (!cell) {
 				return;
 			}
-			return new LinkifyLocationAnchor(cell.document.uri, `Cell ${cell.index + 1}`);
+			return new LinkifyLocationAnchor(
+				cell.document.uri,
+				`Cell ${cell.index + 1}`,
+			);
 		} catch (error) {
 			this.logger.error(error, `Error resolving cell ID: ${cellId}`);
 			return undefined;
@@ -93,7 +123,7 @@ export class NotebookCellLinkifier extends Disposable implements IDisposable, IC
 		}
 		const updateNbCellIds = (notebook: NotebookDocument) => {
 			const ids = this.notebookCellIds.get(notebook) ?? new Set<string>();
-			ids.forEach(id => this.cells.delete(id));
+			ids.forEach((id) => this.cells.delete(id));
 			getCellIdMap(notebook).forEach((cell, cellId) => {
 				this.cells.set(cellId, new WeakRef(cell));
 				ids.add(cellId);
@@ -101,20 +131,31 @@ export class NotebookCellLinkifier extends Disposable implements IDisposable, IC
 			this.notebookCellIds.set(notebook, ids);
 		};
 
-		this._register(this.workspaceService.onDidOpenNotebookDocument(notebook => updateNbCellIds(notebook)));
-		this._register(this.workspaceService.onDidCloseNotebookDocument(notebook => {
-			if (this.workspaceService.notebookDocuments.length === 0) {
-				this.cells.clear();
-				return;
-			}
-			const ids = this.notebookCellIds.get(notebook) ?? new Set<string>();
-			ids.forEach(id => this.cells.delete(id));
-		}));
-		this._register(this.workspaceService.onDidChangeNotebookDocument(e => {
-			if (e.contentChanges.length) {
-				updateNbCellIds(e.notebook);
-			}
-		}));
-		this.workspaceService.notebookDocuments.forEach(notebook => updateNbCellIds(notebook));
+		this._register(
+			this.workspaceService.onDidOpenNotebookDocument((notebook) =>
+				updateNbCellIds(notebook),
+			),
+		);
+		this._register(
+			this.workspaceService.onDidCloseNotebookDocument((notebook) => {
+				if (this.workspaceService.notebookDocuments.length === 0) {
+					this.cells.clear();
+					return;
+				}
+				const ids =
+					this.notebookCellIds.get(notebook) ?? new Set<string>();
+				ids.forEach((id) => this.cells.delete(id));
+			}),
+		);
+		this._register(
+			this.workspaceService.onDidChangeNotebookDocument((e) => {
+				if (e.contentChanges.length) {
+					updateNbCellIds(e.notebook);
+				}
+			}),
+		);
+		this.workspaceService.notebookDocuments.forEach((notebook) =>
+			updateNbCellIds(notebook),
+		);
 	}
 }

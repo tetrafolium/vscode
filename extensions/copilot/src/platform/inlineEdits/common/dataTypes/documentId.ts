@@ -10,19 +10,19 @@ import { URI } from '../../../../util/vs/base/common/uri';
 /**
  * Refers to a document, independent of its content or a point in time.
  * Two document ids are equal if they are triple-equal.
-*/
+ */
 export class DocumentId {
-	private static readonly _cache = new CachedFunction({ getCacheKey: JSON.stringify }, (arg: { uri: string }) => new DocumentId(arg.uri));
+	private static readonly _cache = new CachedFunction(
+		{ getCacheKey: JSON.stringify },
+		(arg: { uri: string }) => new DocumentId(arg.uri),
+	);
 	public static create(uri: string): DocumentId {
 		return DocumentId._cache.get({ uri });
 	}
 
 	private readonly _uri = URI.parse(this.uri);
 
-	private constructor(
-		public readonly uri: string,
-	) {
-	}
+	private constructor(public readonly uri: string) {}
 
 	public get path(): string {
 		return this._uri.path;

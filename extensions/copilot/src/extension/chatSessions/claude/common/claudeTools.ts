@@ -60,8 +60,6 @@ export enum ClaudeToolNames {
 	AskUserQuestion = 'AskUserQuestion',
 }
 
-
-
 /**
  * LS tool input - not defined in SDK
  */
@@ -94,9 +92,17 @@ export interface ClaudeToolInputMap {
 	[ClaudeToolNames.AskUserQuestion]: AskUserQuestionInput;
 }
 
-export const claudeEditTools: readonly string[] = [ClaudeToolNames.Edit, ClaudeToolNames.MultiEdit, ClaudeToolNames.Write, ClaudeToolNames.NotebookEdit];
+export const claudeEditTools: readonly string[] = [
+	ClaudeToolNames.Edit,
+	ClaudeToolNames.MultiEdit,
+	ClaudeToolNames.Write,
+	ClaudeToolNames.NotebookEdit,
+];
 
-export function getAffectedUrisForEditTool(toolName: string, toolInput: unknown): URI[] {
+export function getAffectedUrisForEditTool(
+	toolName: string,
+	toolInput: unknown,
+): URI[] {
 	switch (toolName) {
 		case ClaudeToolNames.Edit:
 		case ClaudeToolNames.MultiEdit:

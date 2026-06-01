@@ -10,7 +10,11 @@ import { ServicesAccessor } from '../../../../../../util/vs/platform/instantiati
 import * as Network from './network';
 import * as Schema from './snippy.proto';
 
-export async function Match(accessor: ServicesAccessor, source: string, signal?: IAbortSignal) {
+export async function Match(
+	accessor: ServicesAccessor,
+	source: string,
+	signal?: IAbortSignal,
+) {
 	const result = await Network.call<typeof Schema.MatchResponse>(
 		accessor,
 		accessor.get(ICAPIClientService).snippyMatchPath,
@@ -18,7 +22,7 @@ export async function Match(accessor: ServicesAccessor, source: string, signal?:
 			method: 'POST',
 			body: assertShape(Schema.MatchRequest, { source }),
 		},
-		signal
+		signal,
 	);
 
 	const payload = assertShape(Schema.MatchResponse, result);
@@ -26,7 +30,11 @@ export async function Match(accessor: ServicesAccessor, source: string, signal?:
 	return payload;
 }
 
-export async function FilesForMatch(accessor: ServicesAccessor, { cursor }: Schema.FileMatchRequest, signal?: IAbortSignal) {
+export async function FilesForMatch(
+	accessor: ServicesAccessor,
+	{ cursor }: Schema.FileMatchRequest,
+	signal?: IAbortSignal,
+) {
 	const result = await Network.call<typeof Schema.FileMatchResponse>(
 		accessor,
 		accessor.get(ICAPIClientService).snippyFilesForMatchPath,
@@ -34,7 +42,7 @@ export async function FilesForMatch(accessor: ServicesAccessor, { cursor }: Sche
 			method: 'POST',
 			body: assertShape(Schema.FileMatchRequest, { cursor }),
 		},
-		signal
+		signal,
 	);
 
 	const payload = assertShape(Schema.FileMatchResponse, result);

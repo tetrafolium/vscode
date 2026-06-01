@@ -115,7 +115,10 @@ export enum BuildType {
 	NIGHTLY = 'nightly',
 }
 
-export const ICompletionsConfigProvider = createServiceIdentifier<ICompletionsConfigProvider>('ICompletionsConfigProvider');
+export const ICompletionsConfigProvider =
+	createServiceIdentifier<ICompletionsConfigProvider>(
+		'ICompletionsConfigProvider',
+	);
 export interface ICompletionsConfigProvider {
 	readonly _serviceBrand: undefined;
 
@@ -142,7 +145,7 @@ export abstract class ConfigProvider implements ICompletionsConfigProvider {
 
 /** Provides only the default values, ignoring the user's settings.
  * @public KEEPING FOR TESTS
-*/
+ */
 export class DefaultsOnlyConfigProvider extends ConfigProvider {
 	override getConfig<T>(key: ConfigKeyType): T {
 		// hardcode default values for the agent, for now
@@ -160,7 +163,7 @@ export class DefaultsOnlyConfigProvider extends ConfigProvider {
 	override onDidChangeCopilotSettings = () => {
 		// no-op, since this provider does not support changing settings
 		return {
-			dispose: () => { },
+			dispose: () => {},
 		};
 	};
 }
@@ -168,15 +171,13 @@ export class DefaultsOnlyConfigProvider extends ConfigProvider {
 /**
  * A ConfigProvider that allows overriding of config values.
  * @public KEEPING FOR TESTS
-*/
+ */
 export class InMemoryConfigProvider extends ConfigProvider {
 	protected readonly copilotEmitter = new Emitter<this>();
 	readonly onDidChangeCopilotSettings = this.copilotEmitter.event;
 	private overrides: Map<ConfigKeyType, unknown> = new Map();
 
-	constructor(
-		private readonly baseConfigProvider: ConfigProvider,
-	) {
+	constructor(private readonly baseConfigProvider: ConfigProvider) {
 		super();
 	}
 
@@ -193,11 +194,17 @@ export class InMemoryConfigProvider extends ConfigProvider {
 	}
 
 	override getConfig<T>(key: ConfigKeyType): T {
-		return this.getOptionalOverride(key) ?? this.baseConfigProvider.getConfig(key);
+		return (
+			this.getOptionalOverride(key) ??
+			this.baseConfigProvider.getConfig(key)
+		);
 	}
 
 	override getOptionalConfig<T>(key: ConfigKeyType): T | undefined {
-		return this.getOptionalOverride(key) ?? this.baseConfigProvider.getOptionalConfig(key);
+		return (
+			this.getOptionalOverride(key) ??
+			this.baseConfigProvider.getOptionalConfig(key)
+		);
 	}
 
 	setConfig(key: ConfigKeyType, value: unknown): void {
@@ -231,11 +238,12 @@ export class InMemoryConfigProvider extends ConfigProvider {
 		}
 		return config;
 	}
-
-
 }
 
-export function getConfigKeyRecursively<T>(config: Record<string, unknown>, key: string): T | undefined {
+export function getConfigKeyRecursively<T>(
+	config: Record<string, unknown>,
+	key: string,
+): T | undefined {
 	let value: unknown = config;
 	const prefix: string[] = [];
 	for (const segment of key.split('.')) {
@@ -247,7 +255,9 @@ export function getConfigKeyRecursively<T>(config: Record<string, unknown>, key:
 			prefix.push(segment);
 		}
 	}
-	if (value === undefined || prefix.length > 0) { return; }
+	if (value === undefined || prefix.length > 0) {
+		return;
+	}
 	return value as T;
 }
 
@@ -255,7 +265,9 @@ export function getConfigDefaultForKey<T>(key: string): T {
 	if (configDefaults.has(key)) {
 		return configDefaults.get(key) as T;
 	}
-	throw new Error(`Missing config default value: ${CopilotConfigPrefix}.${key}`);
+	throw new Error(
+		`Missing config default value: ${CopilotConfigPrefix}.${key}`,
+	);
 }
 
 export function getOptionalConfigDefaultForKey<T>(key: string): T | undefined {
@@ -287,7 +299,6 @@ const configDefaults = new Map<ConfigKeyType, unknown>([
 	[ConfigKey.ModelAlwaysTerminatesSingleline, undefined],
 	[ConfigKey.UseWorkspaceContextCoordinator, undefined],
 
-
 	// These are only used for telemetry from LSP based editors and do not affect any behavior.
 	[ConfigKey.ShowEditorCompletions, undefined],
 	[ConfigKey.EnableAutoCompletions, undefined],
@@ -296,7 +307,10 @@ const configDefaults = new Map<ConfigKeyType, unknown>([
 	[ConfigKey.UseSplitContextPrompt, true],
 
 	// These are defaults from package.json
-	[ConfigKey.Enable, { '*': true, 'plaintext': false, 'markdown': false, 'scminput': false }],
+	[
+		ConfigKey.Enable,
+		{ '*': true, plaintext: false, markdown: false, scminput: false },
+	],
 	[ConfigKey.UserSelectedCompletionModel, ''],
 
 	// These are advanced defaults from package.json
@@ -308,7 +322,10 @@ const configDefaults = new Map<ConfigKeyType, unknown>([
 	[ConfigKey.DebugFilterLogCategories, []],
 ]);
 
-export function getConfig<T>(accessor: ServicesAccessor, key: ConfigKeyType): T {
+export function getConfig<T>(
+	accessor: ServicesAccessor,
+	key: ConfigKeyType,
+): T {
 	return accessor.get(ICompletionsConfigProvider).getConfig(key);
 }
 
@@ -322,7 +339,6 @@ export function dumpForTelemetry(accessor: ServicesAccessor) {
 }
 
 export class BuildInfo {
-
 	static isPreRelease(): boolean {
 		return this.getBuildType() === BuildType.NIGHTLY;
 	}
@@ -334,7 +350,9 @@ export class BuildInfo {
 	static getBuildType(): BuildType {
 		const buildType = <'dev' | 'prod'>packageJson.buildType;
 		if (buildType === 'prod') {
-			return BuildInfo.getVersion().length === 15 ? BuildType.NIGHTLY : BuildType.PROD;
+			return BuildInfo.getVersion().length === 15
+				? BuildType.NIGHTLY
+				: BuildType.PROD;
 		}
 		return BuildType.DEV;
 	}
@@ -362,13 +380,23 @@ export type EditorInfo = NameAndVersion & {
 
 export type EditorPluginInfo = NameAndVersion;
 
-export type EditorPluginFilter = { filter: Filter; value: string; isVersion?: boolean };
+export type EditorPluginFilter = {
+	filter: Filter;
+	value: string;
+	isVersion?: boolean;
+};
 
-export function formatNameAndVersion({ name, version }: NameAndVersion): string {
+export function formatNameAndVersion({
+	name,
+	version,
+}: NameAndVersion): string {
 	return `${name}/${version}`;
 }
 
-export const ICompletionsEditorAndPluginInfo = createServiceIdentifier<ICompletionsEditorAndPluginInfo>('ICompletionsEditorAndPluginInfo');
+export const ICompletionsEditorAndPluginInfo =
+	createServiceIdentifier<ICompletionsEditorAndPluginInfo>(
+		'ICompletionsEditorAndPluginInfo',
+	);
 export interface ICompletionsEditorAndPluginInfo {
 	readonly _serviceBrand: undefined;
 
@@ -384,11 +412,15 @@ export interface ICompletionsEditorAndPluginInfo {
  */
 export const apiVersion = '2025-05-01';
 
-export function editorVersionHeaders(accessor: ServicesAccessor): { [key: string]: string } {
+export function editorVersionHeaders(accessor: ServicesAccessor): {
+	[key: string]: string;
+} {
 	const info = accessor.get(ICompletionsEditorAndPluginInfo);
 	return {
 		'Editor-Version': formatNameAndVersion(info.getEditorInfo()),
-		'Editor-Plugin-Version': formatNameAndVersion(info.getEditorPluginInfo()),
+		'Editor-Plugin-Version': formatNameAndVersion(
+			info.getEditorPluginInfo(),
+		),
 		'Copilot-Language-Server-Version': BuildInfo.getVersion(),
 	};
 }

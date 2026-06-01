@@ -17,7 +17,11 @@ import {
 } from 'vscode';
 import { IVSCodeExtensionContext } from '../../../../../../platform/extContext/common/extensionContext';
 import { debounce } from '../../../../../../util/common/debounce';
-import { BasePanelCompletion, ISuggestionsPanel, PanelConfig } from './basePanelTypes';
+import {
+	BasePanelCompletion,
+	ISuggestionsPanel,
+	PanelConfig,
+} from './basePanelTypes';
 import { Highlighter } from './highlighter';
 import { getNonce, pluralize } from './utils';
 
@@ -73,7 +77,9 @@ export type WebviewMessage =
 	| RefreshMessage
 	| WebviewReadyMessage;
 
-export abstract class BaseSuggestionsPanel<TPanelCompletion extends BasePanelCompletion> implements ISuggestionsPanel {
+export abstract class BaseSuggestionsPanel<
+	TPanelCompletion extends BasePanelCompletion,
+> implements ISuggestionsPanel {
 	private _disposables: Disposable[] = [];
 	#items: TPanelCompletion[] = [];
 	#batchItems: TPanelCompletion[] = [];
@@ -96,62 +102,82 @@ export abstract class BaseSuggestionsPanel<TPanelCompletion extends BasePanelCom
 		document: TextDocument,
 		protected suggestionsPanelManager: SuggestionsPanelManagerInterface,
 		protected readonly config: PanelConfig,
-		@IVSCodeExtensionContext protected readonly contextService: IVSCodeExtensionContext,
+		@IVSCodeExtensionContext
+		protected readonly contextService: IVSCodeExtensionContext,
 	) {
-		webviewPanel.onDidDispose(() => this._dispose(), null, this._disposables);
+		webviewPanel.onDidDispose(
+			() => this._dispose(),
+			null,
+			this._disposables,
+		);
 		webviewPanel.webview.html = this._getWebviewContent();
 		this.#documentUri = document.uri;
 
 		this.#highlighter = Highlighter.create(document.languageId);
 
-		workspace.onDidChangeConfiguration(e => {
+		workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('workbench.colorTheme')) {
 				return this.render();
 			}
 		});
 
-		webviewPanel.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
-			// First lest the subclass handle custom messages
-			if ((await this.handleCustomMessage(message)) === true) {
-				return;
-			}
-			switch (message.command) {
-				case 'focusSolution':
-					this._focusedSolution = this.#items[message.solutionIndex];
+		webviewPanel.webview.onDidReceiveMessage(
+			async (message: WebviewMessage) => {
+				// First lest the subclass handle custom messages
+				if ((await this.handleCustomMessage(message)) === true) {
 					return;
-				case 'webviewReady':
-					// Send the config to the webview
-					void this.postMessage({
-						command: 'updateConfig',
-						config: {
-							renderingMode: this.config.renderingMode,
-							shuffleSolutions: this.config.shuffleSolutions,
-						},
-					});
-					return;
-			}
-		}, undefined);
+				}
+				switch (message.command) {
+					case 'focusSolution':
+						this._focusedSolution =
+							this.#items[message.solutionIndex];
+						return;
+					case 'webviewReady':
+						// Send the config to the webview
+						void this.postMessage({
+							command: 'updateConfig',
+							config: {
+								renderingMode: this.config.renderingMode,
+								shuffleSolutions: this.config.shuffleSolutions,
+							},
+						});
+						return;
+				}
+			},
+			undefined,
+		);
 
-		webviewPanel.onDidChangeViewState(e => {
+		webviewPanel.onDidChangeViewState((e) => {
 			if (e.webviewPanel?.visible) {
 				this.suggestionsPanelManager.activeWebviewPanel = this;
 			}
 		});
 	}
 
-	protected async handleCustomMessage(message: BaseWebviewMessage): Promise<boolean> {
+	protected async handleCustomMessage(
+		message: BaseWebviewMessage,
+	): Promise<boolean> {
 		return Promise.resolve(false);
 	}
-	protected abstract renderSolutionContent(item: TPanelCompletion, baseContent: SolutionContent): SolutionContent;
+	protected abstract renderSolutionContent(
+		item: TPanelCompletion,
+		baseContent: SolutionContent,
+	): SolutionContent;
 
 	private _buildExtensionUri(...path: string[]): Uri {
-		const extensionPath = Uri.joinPath(this.contextService.extensionUri, ...path);
+		const extensionPath = Uri.joinPath(
+			this.contextService.extensionUri,
+			...path,
+		);
 		return this.webviewPanel.webview.asWebviewUri(extensionPath);
 	}
 
 	private _getWebviewContent() {
 		const nonce = getNonce();
-		const scriptUri = this._buildExtensionUri('dist', this.config.webviewScriptName);
+		const scriptUri = this._buildExtensionUri(
+			'dist',
+			this.config.webviewScriptName,
+		);
 
 		return `
 		<!DOCTYPE html>
@@ -256,14 +282,23 @@ export abstract class BaseSuggestionsPanel<TPanelCompletion extends BasePanelCom
 		void this.render();
 	}
 
-	protected async acceptSolution(solution: TPanelCompletion, closePanel: boolean = true) {
+	protected async acceptSolution(
+		solution: TPanelCompletion,
+		closePanel: boolean = true,
+	) {
 		if (this._isDisposed === false && solution?.range) {
 			const edit = new WorkspaceEdit();
-			edit.replace(this.#documentUri, solution.range, solution.insertText);
+			edit.replace(
+				this.#documentUri,
+				solution.range,
+				solution.insertText,
+			);
 			await workspace.applyEdit(edit);
 			this.#cts.cancel();
 			if (closePanel) {
-				await commands.executeCommand('workbench.action.closeActiveEditor');
+				await commands.executeCommand(
+					'workbench.action.closeActiveEditor',
+				);
 			}
 			await solution.postInsertionCallback();
 		}
@@ -282,18 +317,26 @@ export abstract class BaseSuggestionsPanel<TPanelCompletion extends BasePanelCom
 
 	protected async renderSolutions() {
 		const highlighter = await this.#highlighter;
-		const content = this.#items.map(item => {
-			const firstCitation = item.copilotAnnotations?.ip_code_citations?.[0];
-			const details = firstCitation?.details.citations as IPCitationDetail[] | undefined;
-			let renderedCitatation: { message: string; url: string } | undefined;
+		const content = this.#items.map((item) => {
+			const firstCitation =
+				item.copilotAnnotations?.ip_code_citations?.[0];
+			const details = firstCitation?.details.citations as
+				| IPCitationDetail[]
+				| undefined;
+			let renderedCitatation:
+				| { message: string; url: string }
+				| undefined;
 			if (details && details.length > 0) {
-				const licensesSet = new Set(details.map(d => d.license));
+				const licensesSet = new Set(details.map((d) => d.license));
 				if (licensesSet.has('NOASSERTION')) {
 					licensesSet.delete('NOASSERTION');
 					licensesSet.add('unknown');
 				}
 				const allLicenses = Array.from(licensesSet).sort();
-				const licenseString = allLicenses.length === 1 ? allLicenses[0] : `[${allLicenses.join(', ')}]`;
+				const licenseString =
+					allLicenses.length === 1
+						? allLicenses[0]
+						: `[${allLicenses.join(', ')}]`;
 				renderedCitatation = {
 					message: `Similar code with ${pluralize(allLicenses.length, 'license type')} ${licenseString} detected.`,
 					url: details[0].url,
@@ -313,7 +356,10 @@ export abstract class BaseSuggestionsPanel<TPanelCompletion extends BasePanelCom
 	}
 
 	// Subclasses must implement this to create their specific message format
-	protected abstract createSolutionsMessage(content: SolutionContent[], percentage: number): unknown;
+	protected abstract createSolutionsMessage(
+		content: SolutionContent[],
+		percentage: number,
+	): unknown;
 
 	render = debounce(10, () => this.renderSolutions());
 

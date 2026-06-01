@@ -10,18 +10,19 @@ import { parseScoredPredictionsCsv } from './amlResults';
 import { AMLProvider, AMLRun } from './amlSimulations';
 import { SimulationRunner, TestRuns } from './simulationRunner';
 
-
 export class ResolvedAMLRun {
-
 	@mobx.computed
 	public get tests(): ObservablePromise<TestRuns[]> {
 		const selected = this.amlProvider.selected;
 		if (!selected) {
 			return ObservablePromise.resolve([]);
 		}
-		return new ObservablePromise((async () => {
-			return this.testsForRun(selected);
-		})(), []);
+		return new ObservablePromise(
+			(async () => {
+				return this.testsForRun(selected);
+			})(),
+			[],
+		);
 	}
 
 	@mobx.computed
@@ -30,16 +31,24 @@ export class ResolvedAMLRun {
 		if (!compareAgainstRun) {
 			return ObservablePromise.resolve([]);
 		}
-		return new ObservablePromise((async () => {
-			return this.testsForRun(compareAgainstRun);
-		})(), []);
+		return new ObservablePromise(
+			(async () => {
+				return this.testsForRun(compareAgainstRun);
+			})(),
+			[],
+		);
 	}
 
 	private async testsForRun(run: AMLRun): Promise<TestRuns[]> {
-		const testRuns = await SimulationRunner.readFromStdoutJSON(run.stdoutPath, run.simulationInputPath);
+		const testRuns = await SimulationRunner.readFromStdoutJSON(
+			run.stdoutPath,
+			run.simulationInputPath,
+		);
 
 		if (run.scoredPredictionsJSONL) {
-			const contents = await this.readContentsLineByLine(run.scoredPredictionsJSONL);
+			const contents = await this.readContentsLineByLine(
+				run.scoredPredictionsJSONL,
+			);
 			const evals = parseScoredPredictionsCsv(run.kind, contents);
 
 			const testRunsMap = new Map<string, TestRuns>();
@@ -50,10 +59,13 @@ export class ResolvedAMLRun {
 			for (const evaluation of evals) {
 				const testRun = testRunsMap.get(evaluation.caseName);
 				if (!testRun) {
-					console.warn(`Could not find test run for ${evaluation.caseName}`);
+					console.warn(
+						`Could not find test run for ${evaluation.caseName}`,
+					);
 					continue;
 				}
-				testRun.activeEditorLanguageId = evaluation.activeEditorLanguageId;
+				testRun.activeEditorLanguageId =
+					evaluation.activeEditorLanguageId;
 				testRun.runs.forEach((run, i) => {
 					run.pass = evaluation.isEachTestRunSuccess[i];
 					run.errorsOnlyInBefore = evaluation.errorsOnlyInBefore;
@@ -64,7 +76,8 @@ export class ResolvedAMLRun {
 					if (evaluation.annotations) {
 						run.annotations.push(...evaluation.annotations);
 					}
-					run.generatedTestCaseCount = evaluation.generatedTestCaseCount;
+					run.generatedTestCaseCount =
+						evaluation.generatedTestCaseCount;
 					run.generatedAssertCount = evaluation.generatedAssertCount;
 					run.expectedDiff = evaluation.expectedDiff;
 				});
@@ -78,7 +91,7 @@ export class ResolvedAMLRun {
 		return new Promise((resolve) => {
 			const contents: string[] = [];
 			const rd = readline.createInterface({
-				input: fs.createReadStream(filePath)
+				input: fs.createReadStream(filePath),
 			});
 			rd.on('line', function (line) {
 				contents.push(line);
@@ -89,9 +102,7 @@ export class ResolvedAMLRun {
 		});
 	}
 
-	constructor(
-		private readonly amlProvider: AMLProvider
-	) {
+	constructor(private readonly amlProvider: AMLProvider) {
 		mobx.makeObservable(this);
 	}
 }

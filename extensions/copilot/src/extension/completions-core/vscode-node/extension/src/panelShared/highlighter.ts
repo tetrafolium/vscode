@@ -3,7 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getSingletonHighlighterCore, HighlighterCore, ThemeRegistration, ThemeRegistrationAny } from 'shiki/core';
+import {
+	getSingletonHighlighterCore,
+	HighlighterCore,
+	ThemeRegistration,
+	ThemeRegistrationAny,
+} from 'shiki/core';
 import * as langs from 'shiki/langs';
 import { BundledLanguage } from 'shiki/langs';
 import getWasmInlined from 'shiki/wasm';
@@ -14,10 +19,12 @@ import * as themes from './themes';
 export class Highlighter {
 	private constructor(
 		private languageId: string | undefined,
-		private highlighter: HighlighterCore | undefined
-	) { }
+		private highlighter: HighlighterCore | undefined,
+	) {}
 
-	static async create(languageId = window.activeTextEditor?.document.languageId): Promise<Highlighter> {
+	static async create(
+		languageId = window.activeTextEditor?.document.languageId,
+	): Promise<Highlighter> {
 		if (!languageId) {
 			return new Highlighter(undefined, undefined);
 		}
@@ -29,7 +36,8 @@ export class Highlighter {
 
 		// Load additional language if not out of the box for shiki
 		if (!langs.bundledLanguages[languageId as BundledLanguage]) {
-			const additionalLang = vscLanguageMap[languageId as keyof typeof vscLanguageMap];
+			const additionalLang =
+				vscLanguageMap[languageId as keyof typeof vscLanguageMap];
 			if (additionalLang) {
 				await highlighter.loadLanguage(additionalLang);
 			}
@@ -39,15 +47,24 @@ export class Highlighter {
 	}
 
 	createSnippet(text: string): string {
-		if (!this.highlighter || !this.languageId || !this.languageSupported()) {
+		if (
+			!this.highlighter ||
+			!this.languageId ||
+			!this.languageSupported()
+		) {
 			return `<pre>${text}</pre>`;
 		}
 
-		return this.highlighter.codeToHtml(text, { lang: this.languageId, theme: getCurrentTheme() });
+		return this.highlighter.codeToHtml(text, {
+			lang: this.languageId,
+			theme: getCurrentTheme(),
+		});
 	}
 
 	private languageSupported() {
-		if (!this.languageId) { return false; }
+		if (!this.languageId) {
+			return false;
+		}
 
 		if (this.highlighter?.getLoadedLanguages().includes(this.languageId)) {
 			return true;
@@ -101,7 +118,9 @@ const vscThemeMap: { [key: string]: ThemeRegistrationAny } = {
 	'Solarized Light': themes.solarizedLight,
 } as const;
 
-function isSupportedTheme(theme: keyof typeof vscThemeMap): theme is keyof typeof vscThemeMap {
+function isSupportedTheme(
+	theme: keyof typeof vscThemeMap,
+): theme is keyof typeof vscThemeMap {
 	return theme in vscThemeMap;
 }
 

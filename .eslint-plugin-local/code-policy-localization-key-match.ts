@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as eslint from 'eslint';
-import type * as ESTree from 'estree';
+import * as eslint from "eslint";
+import type * as ESTree from "estree";
 
 /**
  * Ensures that localization keys in policy blocks match the keys used in nls.localize() calls.
@@ -22,20 +22,22 @@ import type * as ESTree from 'estree';
  * The key property ('autoApprove2.description') must match the first argument
  * to nls.localize() ('autoApprove2.description').
  */
-export default new class PolicyLocalizationKeyMatch implements eslint.Rule.RuleModule {
-
+export default new (class PolicyLocalizationKeyMatch
+	implements eslint.Rule.RuleModule
+{
 	readonly meta: eslint.Rule.RuleMetaData = {
 		messages: {
-			mismatch: 'Localization key "{{keyValue}}" does not match the key used in nls.localize("{{localizeKey}}", ...). They must be identical.'
+			mismatch:
+				'Localization key "{{keyValue}}" does not match the key used in nls.localize("{{localizeKey}}", ...). They must be identical.',
 		},
 		docs: {
-			description: 'Ensures that localization keys in policy blocks match the keys used in nls.localize() calls',
+			description:
+				"Ensures that localization keys in policy blocks match the keys used in nls.localize() calls",
 		},
 		schema: false,
 	};
 
 	create(context: eslint.Rule.RuleContext): eslint.Rule.RuleListener {
-
 		function checkLocalizationObject(node: ESTree.ObjectExpression) {
 			// Look for objects with structure: { key: '...', value: nls.localize('...', '...') }
 
@@ -43,15 +45,15 @@ export default new class PolicyLocalizationKeyMatch implements eslint.Rule.RuleM
 			let valueProperty: ESTree.Property | undefined;
 
 			for (const property of node.properties) {
-				if (property.type !== 'Property') {
+				if (property.type !== "Property") {
 					continue;
 				}
 
 				const propertyKey = property.key;
-				if (propertyKey.type === 'Identifier') {
-					if (propertyKey.name === 'key') {
+				if (propertyKey.type === "Identifier") {
+					if (propertyKey.name === "key") {
 						keyProperty = property;
-					} else if (propertyKey.name === 'value') {
+					} else if (propertyKey.name === "value") {
 						valueProperty = property;
 					}
 				}
@@ -63,7 +65,10 @@ export default new class PolicyLocalizationKeyMatch implements eslint.Rule.RuleM
 
 			// Extract the key value (should be a string literal)
 			let keyValue: string | undefined;
-			if (keyProperty.value.type === 'Literal' && typeof keyProperty.value.value === 'string') {
+			if (
+				keyProperty.value.type === "Literal" &&
+				typeof keyProperty.value.value === "string"
+			) {
 				keyValue = keyProperty.value.value;
 			}
 
@@ -72,19 +77,22 @@ export default new class PolicyLocalizationKeyMatch implements eslint.Rule.RuleM
 			}
 
 			// Check if value is a call to localize or any namespace's localize method
-			if (valueProperty.value.type === 'CallExpression') {
+			if (valueProperty.value.type === "CallExpression") {
 				const callee = valueProperty.value.callee;
 
 				// Check if it's <anything>.localize or just localize
 				let isLocalizeCall = false;
-				if (callee.type === 'MemberExpression') {
+				if (callee.type === "MemberExpression") {
 					const object = callee.object;
 					const property = callee.property;
-					if (object.type === 'Identifier' &&
-						property.type === 'Identifier' && property.name === 'localize') {
+					if (
+						object.type === "Identifier" &&
+						property.type === "Identifier" &&
+						property.name === "localize"
+					) {
 						isLocalizeCall = true;
 					}
-				} else if (callee.type === 'Identifier' && callee.name === 'localize') {
+				} else if (callee.type === "Identifier" && callee.name === "localize") {
 					// Direct localize() call
 					isLocalizeCall = true;
 				}
@@ -94,18 +102,21 @@ export default new class PolicyLocalizationKeyMatch implements eslint.Rule.RuleM
 					const args = valueProperty.value.arguments;
 					if (args.length > 0) {
 						const firstArg = args[0];
-						if (firstArg.type === 'Literal' && typeof firstArg.value === 'string') {
+						if (
+							firstArg.type === "Literal" &&
+							typeof firstArg.value === "string"
+						) {
 							const localizeKey = firstArg.value;
 
 							// Compare the keys
 							if (keyValue !== localizeKey) {
 								context.report({
 									node: keyProperty.value,
-									messageId: 'mismatch',
+									messageId: "mismatch",
 									data: {
 										keyValue,
-										localizeKey
-									}
+										localizeKey,
+									},
 								});
 							}
 						}
@@ -119,10 +130,14 @@ export default new class PolicyLocalizationKeyMatch implements eslint.Rule.RuleM
 			const ancestors = context.sourceCode.getAncestors(node);
 
 			for (const ancestor of ancestors) {
-				if (ancestor.type === 'Property') {
+				if (ancestor.type === "Property") {
 					// eslint-disable-next-line local/code-no-any-casts
 					const property = ancestor as any;
-					if (property.key && property.key.type === 'Identifier' && property.key.name === 'policy') {
+					if (
+						property.key &&
+						property.key.type === "Identifier" &&
+						property.key.name === "policy"
+					) {
 						return true;
 					}
 				}
@@ -132,7 +147,7 @@ export default new class PolicyLocalizationKeyMatch implements eslint.Rule.RuleM
 		}
 
 		return {
-			'ObjectExpression': (node: ESTree.ObjectExpression) => {
+			ObjectExpression: (node: ESTree.ObjectExpression) => {
 				// Only check objects inside policy blocks
 				if (!isInPolicyBlock(node)) {
 					return;
@@ -140,7 +155,7 @@ export default new class PolicyLocalizationKeyMatch implements eslint.Rule.RuleM
 
 				// Check if this object has the pattern we're looking for
 				checkLocalizationObject(node);
-			}
+			},
 		};
 	}
-};
+})();

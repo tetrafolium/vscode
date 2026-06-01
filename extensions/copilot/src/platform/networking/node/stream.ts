@@ -7,16 +7,42 @@ import type { CancellationToken } from 'vscode';
 import { ILogService, LogLevel } from '../../log/common/logService';
 import { ITelemetryService } from '../../telemetry/common/telemetry';
 import { TelemetryData } from '../../telemetry/common/telemetryData';
-import { RawThinkingDelta, ThinkingDelta } from '../../thinking/common/thinking';
-import { extractThinkingDeltaFromChoice, } from '../../thinking/common/thinkingUtils';
-import { FinishedCallback, getRequestId, ICodeVulnerabilityAnnotation, ICopilotBeginToolCall, ICopilotConfirmation, ICopilotError, ICopilotFunctionCall, ICopilotReference, ICopilotToolCall, ICopilotToolCallStreamUpdate, IIPCodeCitation, isCodeCitationAnnotation, isCopilotAnnotation, RequestId } from '../common/fetch';
+import {
+	RawThinkingDelta,
+	ThinkingDelta,
+} from '../../thinking/common/thinking';
+import { extractThinkingDeltaFromChoice } from '../../thinking/common/thinkingUtils';
+import {
+	FinishedCallback,
+	getRequestId,
+	ICodeVulnerabilityAnnotation,
+	ICopilotBeginToolCall,
+	ICopilotConfirmation,
+	ICopilotError,
+	ICopilotFunctionCall,
+	ICopilotReference,
+	ICopilotToolCall,
+	ICopilotToolCallStreamUpdate,
+	IIPCodeCitation,
+	isCodeCitationAnnotation,
+	isCopilotAnnotation,
+	RequestId,
+} from '../common/fetch';
 import { DestroyableStream, Response } from '../common/fetcherService';
-import { APIErrorResponse, APIJsonData, APIUsage, ChoiceLogProbs, FilterReason, FinishedCompletionReason, isApiUsage, IToolCall } from '../common/openai';
+import {
+	APIErrorResponse,
+	APIJsonData,
+	APIUsage,
+	ChoiceLogProbs,
+	FilterReason,
+	FinishedCompletionReason,
+	isApiUsage,
+	IToolCall,
+} from '../common/openai';
 
 /** Gathers together many chunks of a single completion choice. */
 class APIJsonDataStreaming {
-
-	constructor(public readonly model: string) { }
+	constructor(public readonly model: string) {}
 
 	get text(): readonly string[] {
 		return this._text;
@@ -36,8 +62,14 @@ class APIJsonDataStreaming {
 			this._text.push(str);
 			this._newText.push(str);
 		}
-		if (choice.delta?.function_call && (choice.delta.function_call.name || choice.delta.function_call.arguments)) {
-			const str = APIJsonDataStreaming._removeCR(choice.delta.function_call.arguments);
+		if (
+			choice.delta?.function_call &&
+			(choice.delta.function_call.name ||
+				choice.delta.function_call.arguments)
+		) {
+			const str = APIJsonDataStreaming._removeCR(
+				choice.delta.function_call.arguments,
+			);
 			this._text.push(str);
 			this._newText.push(str);
 		}
@@ -56,7 +88,7 @@ class APIJsonDataStreaming {
 	toJSON() {
 		return {
 			text: this._text,
-			newText: this._newText
+			newText: this._newText,
 		};
 	}
 }
@@ -66,7 +98,7 @@ class StreamingToolCall {
 	public name: string | undefined;
 	public arguments: string = '';
 
-	constructor() { }
+	constructor() {}
 
 	update(toolCall: IToolCall): boolean {
 		let argumentsChanged = false;
@@ -91,10 +123,10 @@ class StreamingToolCall {
 class StreamingToolCalls {
 	private toolCalls: StreamingToolCall[] = [];
 
-	constructor() { }
+	constructor() {}
 
 	getToolCalls(): ICopilotToolCall[] {
-		return this.toolCalls.map(call => {
+		return this.toolCalls.map((call) => {
 			return {
 				name: call.name!,
 				arguments: call.arguments,
@@ -109,15 +141,22 @@ class StreamingToolCalls {
 
 	update(choice: ExtendedChoiceJSON): ICopilotToolCallStreamUpdate[] {
 		const updates: ICopilotToolCallStreamUpdate[] = [];
-		choice.delta?.tool_calls?.forEach(toolCall => {
+		choice.delta?.tool_calls?.forEach((toolCall) => {
 			let currentCall: StreamingToolCall | undefined;
 			if (toolCall.id) {
-				currentCall = this.toolCalls.find(call => call.id === toolCall.id);
+				currentCall = this.toolCalls.find(
+					(call) => call.id === toolCall.id,
+				);
 			}
 			if (!currentCall) {
 				currentCall = this.toolCalls.at(-1);
 			}
-			if (!currentCall || (toolCall.id && currentCall.id && currentCall.id !== toolCall.id)) {
+			if (
+				!currentCall ||
+				(toolCall.id &&
+					currentCall.id &&
+					currentCall.id !== toolCall.id)
+			) {
 				currentCall = new StreamingToolCall();
 				this.toolCalls.push(currentCall);
 			}
@@ -140,7 +179,7 @@ class StreamingToolCalls {
 export function splitChunk(chunk: string): [string[], string] {
 	const dataLines = chunk.split('\n');
 	const newExtra = dataLines.pop(); // will be empty string if chunk ends with "\n"
-	return [dataLines.filter(line => line !== ''), newExtra!];
+	return [dataLines.filter((line) => line !== ''), newExtra!];
 }
 
 /**
@@ -175,7 +214,14 @@ interface ChoiceJSON {
 	 * See https://github.com/openai/openai-cookbook/blob/main/examples/How_to_stream_completions.ipynb
 	 */
 	delta?: { content: string | null };
-	finish_reason?: FinishedCompletionReason.Stop | FinishedCompletionReason.Length | FinishedCompletionReason.FunctionCall | FinishedCompletionReason.ContentFilter | FinishedCompletionReason.ServerError | FinishedCompletionReason.ToolCalls | null;
+	finish_reason?:
+		| FinishedCompletionReason.Stop
+		| FinishedCompletionReason.Length
+		| FinishedCompletionReason.FunctionCall
+		| FinishedCompletionReason.ContentFilter
+		| FinishedCompletionReason.ServerError
+		| FinishedCompletionReason.ToolCalls
+		| null;
 	logprobs?: ChoiceLogProbs;
 }
 
@@ -183,7 +229,10 @@ interface ChoiceJSON {
  * Extensions to the OpenAI stream format
  */
 interface ExtendedChoiceJSON extends ChoiceJSON {
-	content_filter_results?: Record<Exclude<FilterReason, FilterReason.Copyright>, { filtered: boolean; severity: string }>;
+	content_filter_results?: Record<
+		Exclude<FilterReason, FilterReason.Copyright>,
+		{ filtered: boolean; severity: string }
+	>;
 	message?: RawThinkingDelta;
 	delta?: {
 		content: string | null;
@@ -218,10 +267,17 @@ export class SSEProcessor {
 	 * has been received. A null value means we've already finished the given
 	 * solution and should not process incoming tokens further.
 	 */
-	private readonly solutions: Record<number, APIJsonDataStreaming | null> = {};
+	private readonly solutions: Record<number, APIJsonDataStreaming | null> =
+		{};
 
-	private readonly completedFunctionCallIdxs: Map<number /* index */, 'function' | 'tool'> = new Map();
-	private readonly functionCalls: Record<string, APIJsonDataStreaming | null> = {};
+	private readonly completedFunctionCallIdxs: Map<
+		number /* index */,
+		'function' | 'tool'
+	> = new Map();
+	private readonly functionCalls: Record<
+		string,
+		APIJsonDataStreaming | null
+	> = {};
 	private readonly toolCalls = new StreamingToolCalls();
 	private functionCallName: string | undefined = undefined;
 
@@ -231,15 +287,15 @@ export class SSEProcessor {
 		private readonly expectedNumChoices: number,
 		private readonly response: Response,
 		private readonly body: DestroyableStream<string>,
-		private readonly cancellationToken?: CancellationToken
-	) { }
+		private readonly cancellationToken?: CancellationToken,
+	) {}
 
 	static async create(
 		logService: ILogService,
 		telemetryService: ITelemetryService,
 		expectedNumChoices: number,
 		response: Response,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	) {
 		const body = response.body.pipeThrough(new TextDecoderStream());
 		return new SSEProcessor(
@@ -248,7 +304,7 @@ export class SSEProcessor {
 			expectedNumChoices,
 			response,
 			body,
-			cancellationToken
+			cancellationToken,
 		);
 	}
 
@@ -267,12 +323,16 @@ export class SSEProcessor {
 	 * iterating manually this needs to be done by calling `.next()` until it
 	 * returns an item with done = true (or calling `.return()`).
 	 */
-	async *processSSE(finishedCb: FinishedCallback = async () => undefined): AsyncIterable<FinishedCompletion> {
+	async *processSSE(
+		finishedCb: FinishedCallback = async () => undefined,
+	): AsyncIterable<FinishedCompletion> {
 		try {
 			// If it's n > 1 we don't handle usage as the usage is global for the stream and all our code assumes per choice
 			// Therefore we will just skip over the usage and yield the completions
 			if (this.expectedNumChoices > 1) {
-				for await (const usageOrCompletions of this.processSSEInner(finishedCb)) {
+				for await (const usageOrCompletions of this.processSSEInner(
+					finishedCb,
+				)) {
 					if (!isApiUsage(usageOrCompletions)) {
 						yield usageOrCompletions;
 					}
@@ -282,7 +342,9 @@ export class SSEProcessor {
 				let usage: APIUsage | undefined;
 
 				// Process both the usage and the completions, then yield one combined completions
-				for await (const usageOrCompletions of this.processSSEInner(finishedCb)) {
+				for await (const usageOrCompletions of this.processSSEInner(
+					finishedCb,
+				)) {
 					if (isApiUsage(usageOrCompletions)) {
 						usage = usageOrCompletions;
 					} else {
@@ -290,7 +352,11 @@ export class SSEProcessor {
 					}
 				}
 
-				if (await this.maybeCancel('after receiving the completion, but maybe before we got the usage')) {
+				if (
+					await this.maybeCancel(
+						'after receiving the completion, but maybe before we got the usage',
+					)
+				) {
 					return;
 				}
 
@@ -302,12 +368,14 @@ export class SSEProcessor {
 		} finally {
 			await this.cancel();
 			this.logService.info(
-				`request done: requestId: [${this.requestId.headerRequestId}] model deployment ID: [${this.requestId.deploymentId}]`
+				`request done: requestId: [${this.requestId.headerRequestId}] model deployment ID: [${this.requestId.deploymentId}]`,
 			);
 		}
 	}
 
-	private async *processSSEInner(finishedCb: FinishedCallback): AsyncIterable<FinishedCompletion | APIUsage> {
+	private async *processSSEInner(
+		finishedCb: FinishedCallback,
+	): AsyncIterable<FinishedCompletion | APIUsage> {
 		// Collects pieces of the SSE stream that haven't been fully processed yet.
 		let extraData = '';
 		// This flag is set when at least for one solution we finished early (via `finishedCb`).
@@ -326,7 +394,9 @@ export class SSEProcessor {
 			}
 
 			// this.logService.debug(chunk.toString());
-			const [dataLines, remainder] = splitChunk(extraData + chunk.toString());
+			const [dataLines, remainder] = splitChunk(
+				extraData + chunk.toString(),
+			);
 			extraData = remainder;
 
 			// Each dataLine is complete since we've seen at least one \n after it
@@ -356,52 +426,89 @@ export class SSEProcessor {
 				try {
 					json = JSON.parse(lineWithoutData);
 				} catch (e) {
-					this.logService.error(`Error parsing JSON stream data for request id ${this.requestId.headerRequestId}:${dataLine}`);
-					sendCommunicationErrorTelemetry(this.telemetryService, `Error parsing JSON stream data for request id ${this.requestId.headerRequestId}:`, dataLine);
+					this.logService.error(
+						`Error parsing JSON stream data for request id ${this.requestId.headerRequestId}:${dataLine}`,
+					);
+					sendCommunicationErrorTelemetry(
+						this.telemetryService,
+						`Error parsing JSON stream data for request id ${this.requestId.headerRequestId}:`,
+						dataLine,
+					);
 					continue;
 				}
 
 				// Track usage data for this stream. Usage is global and not per choice. Therefore it's emitted as its own chunk
 				if (json.usage) {
-					if (json.copilot_usage && typeof json.copilot_usage.total_nano_aiu === 'number') {
+					if (
+						json.copilot_usage &&
+						typeof json.copilot_usage.total_nano_aiu === 'number'
+					) {
 						json.usage.copilot_usage = json.copilot_usage;
 					}
 					yield json.usage;
 				}
 
 				// A message with a confirmation may or may not have 'choices'
-				if (json.copilot_confirmation && isCopilotConfirmation(json.copilot_confirmation)) {
-					await finishedCb('', 0, { text: '', copilotConfirmation: json.copilot_confirmation });
+				if (
+					json.copilot_confirmation &&
+					isCopilotConfirmation(json.copilot_confirmation)
+				) {
+					await finishedCb('', 0, {
+						text: '',
+						copilotConfirmation: json.copilot_confirmation,
+					});
 				}
 
 				if (!json.choices) {
 					// Currently there are messages with a null 'choices' that include copilot_references- ignore these
-					if (!json.copilot_references && !json.copilot_confirmation) {
+					if (
+						!json.copilot_references &&
+						!json.copilot_confirmation
+					) {
 						if (json.error !== undefined) {
-							this.logService.error(`Error in response for request id ${this.requestId.headerRequestId}:${json.error.message}`);
-							sendCommunicationErrorTelemetry(this.telemetryService, `Error in response for request id ${this.requestId.headerRequestId}:`, json.error.message);
+							this.logService.error(
+								`Error in response for request id ${this.requestId.headerRequestId}:${json.error.message}`,
+							);
+							sendCommunicationErrorTelemetry(
+								this.telemetryService,
+								`Error in response for request id ${this.requestId.headerRequestId}:`,
+								json.error.message,
+							);
 							// Encountered an error mid stream we immediately yield as the response is not usable.
 							yield {
 								index: 0,
 								finishOffset: undefined,
-								solution: new APIJsonDataStreaming(json.model || ''),
+								solution: new APIJsonDataStreaming(
+									json.model || '',
+								),
 								reason: FinishedCompletionReason.ServerError,
 								error: json.error,
 								requestId: this.requestId,
 							};
 						} else {
-							this.logService.error(`Unexpected response with no choices or error for request id ${this.requestId.headerRequestId}`);
-							sendCommunicationErrorTelemetry(this.telemetryService, `Unexpected response with no choices or error for request id ${this.requestId.headerRequestId}`);
+							this.logService.error(
+								`Unexpected response with no choices or error for request id ${this.requestId.headerRequestId}`,
+							);
+							sendCommunicationErrorTelemetry(
+								this.telemetryService,
+								`Unexpected response with no choices or error for request id ${this.requestId.headerRequestId}`,
+							);
 						}
 					}
 
 					// There are also messages with a null 'choices' that include copilot_errors- report these
 					if (json.copilot_errors) {
-						await finishedCb('', 0, { text: '', copilotErrors: json.copilot_errors });
+						await finishedCb('', 0, {
+							text: '',
+							copilotErrors: json.copilot_errors,
+						});
 					}
 
 					if (json.copilot_references) {
-						await finishedCb('', 0, { text: '', copilotReferences: json.copilot_references });
+						await finishedCb('', 0, {
+							text: '',
+							copilotReferences: json.copilot_references,
+						});
 					}
 
 					continue;
@@ -410,7 +517,8 @@ export class SSEProcessor {
 				if (this.requestId.created === 0) {
 					// Would only be 0 if we're the first actual response chunk
 					this.requestId = getRequestId(this.response.headers, json);
-					if (this.requestId.created === 0 && json.choices?.length) { // An initial chunk is sent with an empty choices array and no id, to hold `prompt_filter_results`
+					if (this.requestId.created === 0 && json.choices?.length) {
+						// An initial chunk is sent with an empty choices array and no id, to hold `prompt_filter_results`
 						this.requestId.created = Math.floor(Date.now() / 1000);
 					}
 				}
@@ -420,114 +528,209 @@ export class SSEProcessor {
 
 					this.logChoice(choice);
 
-
-					const thinkingDelta = extractThinkingDeltaFromChoice(choice);
+					const thinkingDelta =
+						extractThinkingDeltaFromChoice(choice);
 
 					// Once we observe any thinking text or an id in this batch, keep the flag true
-					thinkingFound ||= !!(thinkingDelta?.text || thinkingDelta?.id);
+					thinkingFound ||= !!(
+						thinkingDelta?.text || thinkingDelta?.id
+					);
 
 					if (!(choice.index in this.solutions)) {
-						this.solutions[choice.index] = new APIJsonDataStreaming(json.model);
+						this.solutions[choice.index] = new APIJsonDataStreaming(
+							json.model,
+						);
 					}
 
 					const solution = this.solutions[choice.index];
 					if (solution === null) {
 						if (thinkingDelta) {
-							await finishedCb('', choice.index, { text: '', thinking: thinkingDelta });
+							await finishedCb('', choice.index, {
+								text: '',
+								thinking: thinkingDelta,
+							});
 						}
 						continue; // already finished
 					}
 
 					let finishOffset: number | undefined;
 
-					const emitSolution = async (delta?: { vulnAnnotations?: ICodeVulnerabilityAnnotation[]; ipCodeCitations?: IIPCodeCitation[]; references?: ICopilotReference[]; toolCalls?: ICopilotToolCall[]; toolCallStreamUpdates?: ICopilotToolCallStreamUpdate[]; functionCalls?: ICopilotFunctionCall[]; errors?: ICopilotError[]; beginToolCalls?: ICopilotBeginToolCall[]; thinking?: ThinkingDelta }) => {
-						if (delta?.vulnAnnotations && (!Array.isArray(delta.vulnAnnotations) || !delta.vulnAnnotations.every(a => isCopilotAnnotation(a)))) {
+					const emitSolution = async (delta?: {
+						vulnAnnotations?: ICodeVulnerabilityAnnotation[];
+						ipCodeCitations?: IIPCodeCitation[];
+						references?: ICopilotReference[];
+						toolCalls?: ICopilotToolCall[];
+						toolCallStreamUpdates?: ICopilotToolCallStreamUpdate[];
+						functionCalls?: ICopilotFunctionCall[];
+						errors?: ICopilotError[];
+						beginToolCalls?: ICopilotBeginToolCall[];
+						thinking?: ThinkingDelta;
+					}) => {
+						if (
+							delta?.vulnAnnotations &&
+							(!Array.isArray(delta.vulnAnnotations) ||
+								!delta.vulnAnnotations.every((a) =>
+									isCopilotAnnotation(a),
+								))
+						) {
 							delta.vulnAnnotations = undefined;
 						}
 
 						// Validate code citation annotations carefully, because the API is a work in progress
-						if (delta?.ipCodeCitations && (!Array.isArray(delta.ipCodeCitations) || !delta.ipCodeCitations.every(isCodeCitationAnnotation))) {
+						if (
+							delta?.ipCodeCitations &&
+							(!Array.isArray(delta.ipCodeCitations) ||
+								!delta.ipCodeCitations.every(
+									isCodeCitationAnnotation,
+								))
+						) {
 							delta.ipCodeCitations = undefined;
 						}
 
-						finishOffset = await finishedCb(solution.text.join(''), choice.index, {
-							text: solution.flush(),
-							logprobs: choice.logprobs,
-							codeVulnAnnotations: delta?.vulnAnnotations,
-							ipCitations: delta?.ipCodeCitations,
-							copilotReferences: delta?.references,
-							copilotToolCalls: delta?.toolCalls,
-							copilotToolCallStreamUpdates: delta?.toolCallStreamUpdates,
-							_deprecatedCopilotFunctionCalls: delta?.functionCalls,
-							beginToolCalls: delta?.beginToolCalls,
-							copilotErrors: delta?.errors,
-							thinking: thinkingDelta ?? delta?.thinking,
-						});
+						finishOffset = await finishedCb(
+							solution.text.join(''),
+							choice.index,
+							{
+								text: solution.flush(),
+								logprobs: choice.logprobs,
+								codeVulnAnnotations: delta?.vulnAnnotations,
+								ipCitations: delta?.ipCodeCitations,
+								copilotReferences: delta?.references,
+								copilotToolCalls: delta?.toolCalls,
+								copilotToolCallStreamUpdates:
+									delta?.toolCallStreamUpdates,
+								_deprecatedCopilotFunctionCalls:
+									delta?.functionCalls,
+								beginToolCalls: delta?.beginToolCalls,
+								copilotErrors: delta?.errors,
+								thinking: thinkingDelta ?? delta?.thinking,
+							},
+						);
 						if (finishOffset !== undefined) {
 							hadEarlyFinishedSolution = true;
 						}
-						return await this.maybeCancel('after awaiting finishedCb');
+						return await this.maybeCancel(
+							'after awaiting finishedCb',
+						);
 					};
 
 					let handled = true;
 					if (choice.delta?.tool_calls) {
-						const hadExistingToolCalls = this.toolCalls.hasToolCalls();
+						const hadExistingToolCalls =
+							this.toolCalls.hasToolCalls();
 						if (!hadExistingToolCalls) {
 							const firstToolCall = choice.delta.tool_calls.at(0);
 							const firstToolName = firstToolCall?.function?.name;
 							if (firstToolName) {
 								if (solution.text.length) {
 									// Flush the linkifier stream. See #16465
-									solution.append({ index: 0, delta: { content: ' ' } });
+									solution.append({
+										index: 0,
+										delta: { content: ' ' },
+									});
 								}
-								if (await emitSolution({ beginToolCalls: [{ name: firstToolName, id: firstToolCall?.id }] })) {
+								if (
+									await emitSolution({
+										beginToolCalls: [
+											{
+												name: firstToolName,
+												id: firstToolCall?.id,
+											},
+										],
+									})
+								) {
 									continue;
 								}
 							}
 						}
-						const toolCallStreamUpdates = this.toolCalls.update(choice);
+						const toolCallStreamUpdates =
+							this.toolCalls.update(choice);
 						if (toolCallStreamUpdates.length) {
 							if (await emitSolution({ toolCallStreamUpdates })) {
 								continue;
 							}
 						}
-					} else if (choice.delta?.copilot_annotations?.CodeVulnerability || choice.delta?.copilot_annotations?.IPCodeCitations) {
+					} else if (
+						choice.delta?.copilot_annotations?.CodeVulnerability ||
+						choice.delta?.copilot_annotations?.IPCodeCitations
+					) {
 						if (await emitSolution()) {
 							continue;
 						}
 
 						if (!hadEarlyFinishedSolution) {
 							solution.append(choice);
-							if (await emitSolution({ vulnAnnotations: choice.delta?.copilot_annotations?.CodeVulnerability, ipCodeCitations: choice.delta?.copilot_annotations?.IPCodeCitations })) {
+							if (
+								await emitSolution({
+									vulnAnnotations:
+										choice.delta?.copilot_annotations
+											?.CodeVulnerability,
+									ipCodeCitations:
+										choice.delta?.copilot_annotations
+											?.IPCodeCitations,
+								})
+							) {
 								continue;
 							}
 						}
 					} else if (choice.delta?.role === 'function') {
 						if (choice.delta.content) {
 							try {
-								const references = JSON.parse(choice.delta.content);
+								const references = JSON.parse(
+									choice.delta.content,
+								);
 								if (Array.isArray(references)) {
-									if (await emitSolution({ references: references })) {
+									if (
+										await emitSolution({
+											references: references,
+										})
+									) {
 										continue;
 									}
 								}
 							} catch (ex) {
-								this.logService.error(`Error parsing function references: ${JSON.stringify(ex)}`);
+								this.logService.error(
+									`Error parsing function references: ${JSON.stringify(ex)}`,
+								);
 							}
 						}
-					} else if (choice.delta?.function_call && (choice.delta.function_call.name || choice.delta.function_call.arguments)) {
+					} else if (
+						choice.delta?.function_call &&
+						(choice.delta.function_call.name ||
+							choice.delta.function_call.arguments)
+					) {
 						allowCompletingSolution = false;
-						this.functionCallName ??= choice.delta.function_call.name;
-						this.functionCalls[this.functionCallName] ??= new APIJsonDataStreaming(json.model);
-						const functionCall = this.functionCalls[this.functionCallName];
+						this.functionCallName ??=
+							choice.delta.function_call.name;
+						this.functionCalls[this.functionCallName] ??=
+							new APIJsonDataStreaming(json.model);
+						const functionCall =
+							this.functionCalls[this.functionCallName];
 						functionCall!.append(choice);
-					} else if ((choice.finish_reason === FinishedCompletionReason.FunctionCall || choice.finish_reason === FinishedCompletionReason.Stop) && this.functionCallName) {
+					} else if (
+						(choice.finish_reason ===
+							FinishedCompletionReason.FunctionCall ||
+							choice.finish_reason ===
+								FinishedCompletionReason.Stop) &&
+						this.functionCallName
+					) {
 						// We don't want to yield the function call until we have all the data
-						const functionCallStreamObj = this.functionCalls[this.functionCallName];
-						const functionCall = { name: this.functionCallName, arguments: functionCallStreamObj!.flush() };
-						this.completedFunctionCallIdxs.set(choice.index, 'function');
+						const functionCallStreamObj =
+							this.functionCalls[this.functionCallName];
+						const functionCall = {
+							name: this.functionCallName,
+							arguments: functionCallStreamObj!.flush(),
+						};
+						this.completedFunctionCallIdxs.set(
+							choice.index,
+							'function',
+						);
 						try {
-							if (await emitSolution({ functionCalls: [functionCall] })) {
+							if (
+								await emitSolution({
+									functionCalls: [functionCall],
+								})
+							) {
 								continue;
 							}
 						} catch (error) {
@@ -536,7 +739,10 @@ export class SSEProcessor {
 
 						this.functionCalls[this.functionCallName] = null;
 						this.functionCallName = undefined;
-						if (choice.finish_reason === FinishedCompletionReason.FunctionCall) {
+						if (
+							choice.finish_reason ===
+							FinishedCompletionReason.FunctionCall
+						) {
 							// See note about the 'function_call' finish_reason below
 							continue;
 						}
@@ -544,13 +750,31 @@ export class SSEProcessor {
 						handled = false;
 					}
 
-					if ((choice.finish_reason === FinishedCompletionReason.ToolCalls || choice.finish_reason === FinishedCompletionReason.Stop) && this.toolCalls.hasToolCalls()) {
+					if (
+						(choice.finish_reason ===
+							FinishedCompletionReason.ToolCalls ||
+							choice.finish_reason ===
+								FinishedCompletionReason.Stop) &&
+						this.toolCalls.hasToolCalls()
+					) {
 						handled = true;
 						const toolCalls = this.toolCalls.getToolCalls();
-						this.completedFunctionCallIdxs.set(choice.index, 'tool');
-						const toolId = toolCalls.length > 0 ? toolCalls[0].id : undefined;
+						this.completedFunctionCallIdxs.set(
+							choice.index,
+							'tool',
+						);
+						const toolId =
+							toolCalls.length > 0 ? toolCalls[0].id : undefined;
 						try {
-							if (await emitSolution({ toolCalls: toolCalls, thinking: (toolId && thinkingFound) ? { metadata: { toolId } } : undefined })) {
+							if (
+								await emitSolution({
+									toolCalls: toolCalls,
+									thinking:
+										toolId && thinkingFound
+											? { metadata: { toolId } }
+											: undefined,
+								})
+							) {
 								continue;
 							}
 						} catch (error) {
@@ -567,7 +791,9 @@ export class SSEProcessor {
 						}
 					}
 
-					const solutionDone = Boolean(choice.finish_reason) || finishOffset !== undefined;
+					const solutionDone =
+						Boolean(choice.finish_reason) ||
+						finishOffset !== undefined;
 					if (!solutionDone) {
 						continue;
 					}
@@ -580,13 +806,17 @@ export class SSEProcessor {
 					yield {
 						solution,
 						finishOffset,
-						reason: choice.finish_reason ?? FinishedCompletionReason.ClientTrimmed,
+						reason:
+							choice.finish_reason ??
+							FinishedCompletionReason.ClientTrimmed,
 						filterReason: choiceToFilterReason(choice),
 						requestId: this.requestId,
 						index: choice.index,
 					};
 
-					if (await this.maybeCancel('after yielding finished choice')) {
+					if (
+						await this.maybeCancel('after yielding finished choice')
+					) {
 						return;
 					}
 
@@ -628,12 +858,24 @@ export class SSEProcessor {
 			try {
 				const extraDataJson = JSON.parse(extraData);
 				if (extraDataJson.error !== undefined) {
-					this.logService.error(extraDataJson.error, `Error in response: ${extraDataJson.error.message}`);
-					sendCommunicationErrorTelemetry(this.telemetryService, `Error in response: ${extraDataJson.error.message}`, extraDataJson.error);
+					this.logService.error(
+						extraDataJson.error,
+						`Error in response: ${extraDataJson.error.message}`,
+					);
+					sendCommunicationErrorTelemetry(
+						this.telemetryService,
+						`Error in response: ${extraDataJson.error.message}`,
+						extraDataJson.error,
+					);
 				}
 			} catch (e) {
-				this.logService.error(`Error parsing extraData for request id ${this.requestId.headerRequestId}: ${extraData}`);
-				sendCommunicationErrorTelemetry(this.telemetryService, `Error parsing extraData for request id ${this.requestId.headerRequestId}: ${extraData}`);
+				this.logService.error(
+					`Error parsing extraData for request id ${this.requestId.headerRequestId}: ${extraData}`,
+				);
+				sendCommunicationErrorTelemetry(
+					this.telemetryService,
+					`Error parsing extraData for request id ${this.requestId.headerRequestId}: ${extraData}`,
+				);
 			}
 		}
 	}
@@ -649,7 +891,11 @@ export class SSEProcessor {
 				yield {
 					solution,
 					finishOffset: undefined,
-					reason: this.completedFunctionCallIdxs.get(solutionIndex) === 'function' ? FinishedCompletionReason.FunctionCall : FinishedCompletionReason.ToolCalls,
+					reason:
+						this.completedFunctionCallIdxs.get(solutionIndex) ===
+						'function'
+							? FinishedCompletionReason.FunctionCall
+							: FinishedCompletionReason.ToolCalls,
 					requestId: this.requestId,
 					index: solutionIndex,
 				};
@@ -697,13 +943,17 @@ export class SSEProcessor {
 
 // data: {"choices":null,"copilot_confirmation":{"type":"action","title":"Are you sure you want to proceed?","message":"This action is irreversible.","confirmation":{"id":"123"}},"id":null}
 function isCopilotConfirmation(obj: unknown): obj is ICopilotConfirmation {
-	return typeof (obj as ICopilotConfirmation).title === 'string' &&
+	return (
+		typeof (obj as ICopilotConfirmation).title === 'string' &&
 		typeof (obj as ICopilotConfirmation).message === 'string' &&
-		!!(obj as ICopilotConfirmation).confirmation;
+		!!(obj as ICopilotConfirmation).confirmation
+	);
 }
 
 // Function to convert from APIJsonDataStreaming to APIJsonData format
-export function convertToAPIJsonData(streamingData: APIJsonDataStreaming): APIJsonData {
+export function convertToAPIJsonData(
+	streamingData: APIJsonDataStreaming,
+): APIJsonData {
 	const joinedText = streamingData.text.join('');
 	const out: APIJsonData = {
 		text: joinedText,
@@ -717,7 +967,9 @@ export function convertToAPIJsonData(streamingData: APIJsonDataStreaming): APIJs
  * @param choice The choice from the API call
  * @returns The reason for filtering out the choice, or undefined if the choice should not be filtered out.
  */
-function choiceToFilterReason(choice: ExtendedChoiceJSON): FilterReason | undefined {
+function choiceToFilterReason(
+	choice: ExtendedChoiceJSON,
+): FilterReason | undefined {
 	if (choice.finish_reason !== FinishedCompletionReason.ContentFilter) {
 		return undefined;
 	}
@@ -726,14 +978,20 @@ function choiceToFilterReason(choice: ExtendedChoiceJSON): FilterReason | undefi
 		return FilterReason.Copyright;
 	}
 
-	if (choice.delta?.copilot_annotations?.Sexual || choice.delta?.copilot_annotations?.SexualPattern) {
+	if (
+		choice.delta?.copilot_annotations?.Sexual ||
+		choice.delta?.copilot_annotations?.SexualPattern
+	) {
 		return FilterReason.Sexual;
 	}
 	if (choice.delta?.copilot_annotations?.Violence) {
 		return FilterReason.Violence;
 	}
 
-	if (choice.delta?.copilot_annotations?.HateSpeech || choice.delta?.copilot_annotations?.HateSpeechPattern) {
+	if (
+		choice.delta?.copilot_annotations?.HateSpeech ||
+		choice.delta?.copilot_annotations?.HateSpeechPattern
+	) {
 		return FilterReason.Hate;
 	}
 
@@ -749,7 +1007,10 @@ function choiceToFilterReason(choice: ExtendedChoiceJSON): FilterReason | undefi
 		return undefined;
 	}
 
-	for (const filter of Object.keys(choice.content_filter_results) as Exclude<FilterReason, FilterReason.Copyright>[]) {
+	for (const filter of Object.keys(choice.content_filter_results) as Exclude<
+		FilterReason,
+		FilterReason.Copyright
+	>[]) {
 		if (choice.content_filter_results[filter]?.filtered) {
 			return filter;
 		}
@@ -757,9 +1018,13 @@ function choiceToFilterReason(choice: ExtendedChoiceJSON): FilterReason | undefi
 	return undefined;
 }
 
-export function sendCommunicationErrorTelemetry(telemetryService: ITelemetryService, message: string, extra?: any) {
+export function sendCommunicationErrorTelemetry(
+	telemetryService: ITelemetryService,
+	message: string,
+	extra?: any,
+) {
 	const args = [message, extra];
-	const secureMessage = (args.length > 0 ? JSON.stringify(args) : 'no msg');
+	const secureMessage = args.length > 0 ? JSON.stringify(args) : 'no msg';
 
 	const enhancedData = TelemetryData.createAndMarkAsIssued({
 		context: 'fetch',
@@ -768,7 +1033,11 @@ export function sendCommunicationErrorTelemetry(telemetryService: ITelemetryServ
 	});
 
 	// send full content to secure telemetry
-	telemetryService.sendEnhancedGHTelemetryErrorEvent('log', enhancedData.properties, enhancedData.measurements);
+	telemetryService.sendEnhancedGHTelemetryErrorEvent(
+		'log',
+		enhancedData.properties,
+		enhancedData.measurements,
+	);
 
 	const data = TelemetryData.createAndMarkAsIssued({
 		context: 'fetch',
@@ -780,6 +1049,6 @@ export function sendCommunicationErrorTelemetry(telemetryService: ITelemetryServ
 	telemetryService.sendGHTelemetryErrorEvent(
 		'log',
 		data.properties,
-		data.measurements
+		data.measurements,
 	);
 }

@@ -6,12 +6,21 @@
 import { DisposableStore } from '../../../util/vs/base/common/lifecycle';
 import { CopilotToken } from '../../authentication/common/copilotToken';
 import { ICopilotTokenStore } from '../../authentication/common/copilotTokenStore';
-import { IMSFTTelemetrySender, ITelemetrySender, TelemetryEventMeasurements, TelemetryEventProperties } from './telemetry';
+import {
+	IMSFTTelemetrySender,
+	ITelemetrySender,
+	TelemetryEventMeasurements,
+	TelemetryEventProperties,
+} from './telemetry';
 
 // This type aims to mirror the `TelemetryReporter` exposed by `@vscode/extension-telemetry`
 // It has a few more methods than just the base sender
 export interface ITelemetryReporter extends ITelemetrySender {
-	sendRawTelemetryEvent(eventName: string, properties?: TelemetryEventProperties, measurements?: TelemetryEventMeasurements): void;
+	sendRawTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties,
+		measurements?: TelemetryEventMeasurements,
+	): void;
 }
 
 export class BaseMsftTelemetrySender implements IMSFTTelemetrySender {
@@ -28,11 +37,17 @@ export class BaseMsftTelemetrySender implements IMSFTTelemetrySender {
 
 	constructor(
 		copilotTokenStore: ICopilotTokenStore,
-		private readonly _createTelemetryReporter: (internal: boolean) => ITelemetryReporter
+		private readonly _createTelemetryReporter: (
+			internal: boolean,
+		) => ITelemetryReporter,
 	) {
 		this._externalTelemetryReporter = this._createTelemetryReporter(false);
 		this.processToken(copilotTokenStore.copilotToken);
-		this._disposables.add(copilotTokenStore.onDidStoreUpdate(() => this.processToken(copilotTokenStore.copilotToken)));
+		this._disposables.add(
+			copilotTokenStore.onDidStoreUpdate(() =>
+				this.processToken(copilotTokenStore.copilotToken),
+			),
+		);
 	}
 
 	/**
@@ -42,13 +57,28 @@ export class BaseMsftTelemetrySender implements IMSFTTelemetrySender {
 	 * @param measurements The measurements (numerical values)
 	 * @returns
 	 */
-	sendInternalTelemetryEvent(eventName: string, properties?: TelemetryEventProperties, measurements?: TelemetryEventMeasurements): void {
+	sendInternalTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties,
+		measurements?: TelemetryEventMeasurements,
+	): void {
 		if (!this._internalTelemetryReporter || !this._isInternal) {
 			return;
 		}
-		properties = { ...properties, 'common.tid': this._tid, 'common.userName': this._username ?? 'undefined' };
-		measurements = { ...measurements, 'common.isVscodeTeamMember': this._vscodeTeamMember ? 1 : 0 };
-		this._internalTelemetryReporter.sendRawTelemetryEvent(eventName, properties, measurements);
+		properties = {
+			...properties,
+			'common.tid': this._tid,
+			'common.userName': this._username ?? 'undefined',
+		};
+		measurements = {
+			...measurements,
+			'common.isVscodeTeamMember': this._vscodeTeamMember ? 1 : 0,
+		};
+		this._internalTelemetryReporter.sendRawTelemetryEvent(
+			eventName,
+			properties,
+			measurements,
+		);
 	}
 
 	/**
@@ -57,15 +87,27 @@ export class BaseMsftTelemetrySender implements IMSFTTelemetrySender {
 	 * @param properties The properties to send
 	 * @param measurements The measurements (numerical values)
 	 */
-	sendTelemetryEvent(eventName: string, properties?: TelemetryEventProperties, measurements?: TelemetryEventMeasurements): void {
+	sendTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties,
+		measurements?: TelemetryEventMeasurements,
+	): void {
 		// __GDPR__COMMON__ "common.tid" : { "endPoint": "GoogleAnalyticsId", "classification": "EndUserPseudonymizedInformation", "purpose": "BusinessInsight" }
 		// __GDPR__COMMON__ "common.sku" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
 		// __GDPR__COMMON__ "common.internal" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true }
-		properties = { ...properties, 'common.tid': this._tid ?? '', 'common.sku': this._sku ?? 'undefined' };
+		properties = {
+			...properties,
+			'common.tid': this._tid ?? '',
+			'common.sku': this._sku ?? 'undefined',
+		};
 		if (this._isInternal) {
 			measurements = { ...measurements, 'common.internal': 1 };
 		}
-		this._externalTelemetryReporter.sendTelemetryEvent(eventName, properties, measurements);
+		this._externalTelemetryReporter.sendTelemetryEvent(
+			eventName,
+			properties,
+			measurements,
+		);
 	}
 
 	/**
@@ -74,15 +116,27 @@ export class BaseMsftTelemetrySender implements IMSFTTelemetrySender {
 	 * @param properties The properties to send
 	 * @param measurements The measurements (numerical values)
 	 */
-	sendTelemetryErrorEvent(eventName: string, properties?: TelemetryEventProperties, measurements?: TelemetryEventMeasurements): void {
+	sendTelemetryErrorEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties,
+		measurements?: TelemetryEventMeasurements,
+	): void {
 		// __GDPR__COMMON__ "common.tid" : { "endPoint": "GoogleAnalyticsID", "classification": "EndUserPseudonymizedInformation", "purpose": "BusinessInsight" }
 		// __GDPR__COMMON__ "common.sku" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
 		// __GDPR__COMMON__ "common.internal" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true }
-		properties = { ...properties, 'common.tid': this._tid ?? '', 'common.sku': this._sku ?? 'undefined' };
+		properties = {
+			...properties,
+			'common.tid': this._tid ?? '',
+			'common.sku': this._sku ?? 'undefined',
+		};
 		if (this._isInternal) {
 			measurements = { ...measurements, 'common.internal': 1 };
 		}
-		this._externalTelemetryReporter.sendTelemetryErrorEvent(eventName, properties, measurements);
+		this._externalTelemetryReporter.sendTelemetryErrorEvent(
+			eventName,
+			properties,
+			measurements,
+		);
 	}
 
 	dispose(): void {
@@ -102,7 +156,8 @@ export class BaseMsftTelemetrySender implements IMSFTTelemetrySender {
 		this._isInternal = !!token?.isInternal;
 
 		if (this._isInternal) {
-			this._internalTelemetryReporter ??= this._createTelemetryReporter(true);
+			this._internalTelemetryReporter ??=
+				this._createTelemetryReporter(true);
 		}
 
 		if (!token || !this._isInternal) {

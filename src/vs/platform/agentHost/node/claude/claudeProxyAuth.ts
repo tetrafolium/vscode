@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type * as http from 'http';
+import type * as http from "http";
 
 /**
  * Result of {@link parseProxyBearer}. `valid` is `true` only when the
@@ -19,7 +19,10 @@ export interface ProxyBearerAuth {
 	readonly sessionId: string | undefined;
 }
 
-const INVALID: ProxyBearerAuth = Object.freeze({ valid: false, sessionId: undefined });
+const INVALID: ProxyBearerAuth = Object.freeze({
+	valid: false,
+	sessionId: undefined,
+});
 
 /**
  * Parses + validates the inbound Bearer token on Claude proxy requests.
@@ -35,14 +38,17 @@ const INVALID: ProxyBearerAuth = Object.freeze({ valid: false, sessionId: undefi
  * - `Bearer <nonce>.` (empty sessionId)
  * - `Bearer <wrong-nonce>.<sessionId>`
  */
-export function parseProxyBearer(headers: http.IncomingHttpHeaders, expectedNonce: string): ProxyBearerAuth {
-	const authHeader = headers['authorization'];
-	if (typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+export function parseProxyBearer(
+	headers: http.IncomingHttpHeaders,
+	expectedNonce: string,
+): ProxyBearerAuth {
+	const authHeader = headers["authorization"];
+	if (typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
 		return INVALID;
 	}
 
-	const token = authHeader.slice('Bearer '.length);
-	const dotIndex = token.indexOf('.');
+	const token = authHeader.slice("Bearer ".length);
+	const dotIndex = token.indexOf(".");
 	if (dotIndex === -1) {
 		// Phase 2 explicitly rejects the legacy nonce-only format.
 		return INVALID;

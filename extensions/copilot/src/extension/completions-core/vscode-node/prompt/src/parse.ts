@@ -57,15 +57,25 @@ export function languageIdToWasmLanguage(languageId: string): WASMLanguage {
 
 const languageLoadPromises = new Map<WASMLanguage, Promise<Parser.Language>>();
 
-async function loadWasmLanguage(language: WASMLanguage): Promise<Parser.Language> {
+async function loadWasmLanguage(
+	language: WASMLanguage,
+): Promise<Parser.Language> {
 	// construct a path that works both for the TypeScript source, which lives under `/src`, and for
 	// the transpiled JavaScript, which lives under `/dist`
 	let wasmBytes;
 	try {
 		wasmBytes = await readFile(`tree-sitter-${language}.wasm`);
 	} catch (e: unknown) {
-		if (e instanceof Error && 'code' in e && typeof e.code === 'string' && e.name === 'Error') {
-			throw new CopilotPromptLoadFailure(`Could not load tree-sitter-${language}.wasm`, e);
+		if (
+			e instanceof Error &&
+			'code' in e &&
+			typeof e.code === 'string' &&
+			e.name === 'Error'
+		) {
+			throw new CopilotPromptLoadFailure(
+				`Could not load tree-sitter-${language}.wasm`,
+				e,
+			);
 		}
 		throw e;
 	}
@@ -93,12 +103,18 @@ class WrappedError extends Error {
 }
 
 // This method returns a tree that the user needs to call `.delete()` before going out of scope.
-export async function parseTreeSitter(language: string, source: string): Promise<Parser.Tree> {
+export async function parseTreeSitter(
+	language: string,
+	source: string,
+): Promise<Parser.Tree> {
 	return (await parseTreeSitterIncludingVersion(language, source))[0];
 }
 
 // This method returns a tree that the user needs to call `.delete()` before going out of scope.
-export async function parseTreeSitterIncludingVersion(language: string, source: string): Promise<[Parser.Tree, number]> {
+export async function parseTreeSitterIncludingVersion(
+	language: string,
+	source: string,
+): Promise<[Parser.Tree, number]> {
 	// `Parser.init` needs to be called before `new Parser()` below
 	await Parser.init({
 		locateFile: (filename: string) => locateFile(filename),
@@ -114,7 +130,10 @@ export async function parseTreeSitterIncludingVersion(language: string, source: 
 			typeof e.message === 'string' &&
 			e.message.includes('table index is out of bounds')
 		) {
-			throw new WrappedError(`Could not init Parse for language <${language}>`, e);
+			throw new WrappedError(
+				`Could not init Parse for language <${language}>`,
+				e,
+			);
 		}
 		throw e;
 	}
@@ -146,7 +165,10 @@ export function getBlockCloseToken(language: string): string | null {
 	}
 }
 
-function innerQuery(queries: [string, Parser.Query?][], root: Parser.SyntaxNode): Parser.QueryMatch[] {
+function innerQuery(
+	queries: [string, Parser.Query?][],
+	root: Parser.SyntaxNode,
+): Parser.QueryMatch[] {
 	const matches = [];
 	for (const query of queries) {
 		// parse and cache query if this is the first time we've used it

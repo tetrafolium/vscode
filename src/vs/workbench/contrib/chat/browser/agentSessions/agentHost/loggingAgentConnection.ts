@@ -3,26 +3,84 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../../../../base/common/event.js';
-import { Disposable, DisposableStore, IDisposable, IReference, toDisposable } from '../../../../../../base/common/lifecycle.js';
-import { URI, UriComponents } from '../../../../../../base/common/uri.js';
-import { Registry } from '../../../../../../platform/registry/common/platform.js';
-import { IAgentConnection, IAgentCreateSessionConfig, IAgentResolveSessionConfigParams, IAgentSessionConfigCompletionsParams, IAgentSessionMetadata, AuthenticateParams, AuthenticateResult, AgentHostIpcLoggingSettingId } from '../../../../../../platform/agentHost/common/agentService.js';
-import type { IAgentSubscription } from '../../../../../../platform/agentHost/common/state/agentSubscription.js';
-import { StateComponents, type ComponentToState, type RootState } from '../../../../../../platform/agentHost/common/state/sessionState.js';
-import type { ActionEnvelope, IRootConfigChangedAction, SessionAction, TerminalAction, INotification } from '../../../../../../platform/agentHost/common/state/sessionActions.js';
-import type { CompletionsParams, CompletionsResult, CreateTerminalParams, ResolveSessionConfigResult, SessionConfigCompletionsResult } from '../../../../../../platform/agentHost/common/state/protocol/commands.js';
-import type { IRemoteWatchHandle } from '../../../../../../platform/agentHost/common/agentHostFileSystemProvider.js';
-import type { CreateResourceWatchParams, CreateResourceWatchResult, ResourceCopyParams, ResourceCopyResult, ResourceDeleteParams, ResourceDeleteResult, ResourceListResult, ResourceMkdirParams, ResourceMkdirResult, ResourceMoveParams, ResourceMoveResult, ResourceReadResult, ResourceResolveParams, ResourceResolveResult, ResourceWriteParams, ResourceWriteResult } from '../../../../../../platform/agentHost/common/state/sessionProtocol.js';
-import { Extensions, IOutputChannel, IOutputChannelRegistry, IOutputService } from '../../../../../services/output/common/output.js';
-import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
+import { Emitter, Event } from "../../../../../../base/common/event.js";
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+	IReference,
+	toDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import { URI, UriComponents } from "../../../../../../base/common/uri.js";
+import { Registry } from "../../../../../../platform/registry/common/platform.js";
+import {
+	IAgentConnection,
+	IAgentCreateSessionConfig,
+	IAgentResolveSessionConfigParams,
+	IAgentSessionConfigCompletionsParams,
+	IAgentSessionMetadata,
+	AuthenticateParams,
+	AuthenticateResult,
+	AgentHostIpcLoggingSettingId,
+} from "../../../../../../platform/agentHost/common/agentService.js";
+import type { IAgentSubscription } from "../../../../../../platform/agentHost/common/state/agentSubscription.js";
+import {
+	StateComponents,
+	type ComponentToState,
+	type RootState,
+} from "../../../../../../platform/agentHost/common/state/sessionState.js";
+import type {
+	ActionEnvelope,
+	IRootConfigChangedAction,
+	SessionAction,
+	TerminalAction,
+	INotification,
+} from "../../../../../../platform/agentHost/common/state/sessionActions.js";
+import type {
+	CompletionsParams,
+	CompletionsResult,
+	CreateTerminalParams,
+	ResolveSessionConfigResult,
+	SessionConfigCompletionsResult,
+} from "../../../../../../platform/agentHost/common/state/protocol/commands.js";
+import type { IRemoteWatchHandle } from "../../../../../../platform/agentHost/common/agentHostFileSystemProvider.js";
+import type {
+	CreateResourceWatchParams,
+	CreateResourceWatchResult,
+	ResourceCopyParams,
+	ResourceCopyResult,
+	ResourceDeleteParams,
+	ResourceDeleteResult,
+	ResourceListResult,
+	ResourceMkdirParams,
+	ResourceMkdirResult,
+	ResourceMoveParams,
+	ResourceMoveResult,
+	ResourceReadResult,
+	ResourceResolveParams,
+	ResourceResolveResult,
+	ResourceWriteParams,
+	ResourceWriteResult,
+} from "../../../../../../platform/agentHost/common/state/sessionProtocol.js";
+import {
+	Extensions,
+	IOutputChannel,
+	IOutputChannelRegistry,
+	IOutputService,
+} from "../../../../../services/output/common/output.js";
+import { IConfigurationService } from "../../../../../../platform/configuration/common/configuration.js";
 
 /**
  * JSON replacer that serializes revived URI objects to their string form,
  * keeping the rest of the payload intact.
  */
 function uriReplacer(_key: string, value: unknown): unknown {
-	if (value && typeof value === 'object' && (value as { $mid?: unknown }).$mid !== undefined && (value as { scheme?: unknown }).scheme !== undefined) {
+	if (
+		value &&
+		typeof value === "object" &&
+		(value as { $mid?: unknown }).$mid !== undefined &&
+		(value as { scheme?: unknown }).scheme !== undefined
+	) {
 		return URI.revive(value as UriComponents).toString();
 	}
 	return value;
@@ -30,7 +88,7 @@ function uriReplacer(_key: string, value: unknown): unknown {
 
 function formatPayload(data: unknown): string {
 	if (data === undefined) {
-		return '';
+		return "";
 	}
 	try {
 		return JSON.stringify(data, uriReplacer, 2);
@@ -39,8 +97,10 @@ function formatPayload(data: unknown): string {
 	}
 }
 
-class LoggingAgentSubscription<T> extends Disposable implements IAgentSubscription<T> {
-
+class LoggingAgentSubscription<T>
+	extends Disposable
+	implements IAgentSubscription<T>
+{
 	private readonly _onDidChange = this._register(new Emitter<T>());
 	readonly onDidChange: Event<T> = this._onDidChange.event;
 
@@ -51,7 +111,11 @@ class LoggingAgentSubscription<T> extends Disposable implements IAgentSubscripti
 		private readonly _label: string,
 		private readonly _inner: IAgentSubscription<T>,
 		logCurrentValue: boolean,
-		private readonly _log: (arrow: string, method: string, data?: unknown) => void,
+		private readonly _log: (
+			arrow: string,
+			method: string,
+			data?: unknown,
+		) => void,
 	) {
 		super();
 
@@ -59,13 +123,15 @@ class LoggingAgentSubscription<T> extends Disposable implements IAgentSubscripti
 		this.onDidApplyAction = _inner.onDidApplyAction;
 
 		if (logCurrentValue && _inner.value !== undefined) {
-			this._log('**', `${this._label}.current`, _inner.value);
+			this._log("**", `${this._label}.current`, _inner.value);
 		}
 
-		this._register(_inner.onDidChange(value => {
-			this._log('**', `${this._label}.onDidChange`, value);
-			this._onDidChange.fire(value);
-		}));
+		this._register(
+			_inner.onDidChange((value) => {
+				this._log("**", `${this._label}.onDidChange`, value);
+				this._onDidChange.fire(value);
+			}),
+		);
 	}
 
 	get value(): T | Error | undefined {
@@ -92,8 +158,10 @@ class LoggingAgentSubscription<T> extends Disposable implements IAgentSubscripti
  * - `!!` for errors
  * - `**` for events (onDidAction, onDidNotification)
  */
-export class LoggingAgentConnection extends Disposable implements IAgentConnection {
-
+export class LoggingAgentConnection
+	extends Disposable
+	implements IAgentConnection
+{
 	declare readonly _serviceBrand: undefined;
 
 	/** Ref-count per channel ID so the output channel survives reconnections. */
@@ -123,42 +191,71 @@ export class LoggingAgentConnection extends Disposable implements IAgentConnecti
 	) {
 		super();
 		this.clientId = _inner.clientId;
-		this._enabled = !!configurationService.getValue<boolean>(AgentHostIpcLoggingSettingId);
+		this._enabled = !!configurationService.getValue<boolean>(
+			AgentHostIpcLoggingSettingId,
+		);
 		const currentRootStateLogKey = `${this.channelId}:rootState.current`;
 		let logCurrentRootState = false;
 
 		if (this._enabled) {
-			const registry = Registry.as<IOutputChannelRegistry>(Extensions.OutputChannels);
-			const refs = LoggingAgentConnection._channelRefCounts.get(this.channelId) ?? 0;
+			const registry = Registry.as<IOutputChannelRegistry>(
+				Extensions.OutputChannels,
+			);
+			const refs =
+				LoggingAgentConnection._channelRefCounts.get(this.channelId) ?? 0;
 			if (refs === 0) {
 				registry.registerChannel({
 					id: this.channelId,
 					label: this._channelLabel,
 					log: false,
-					languageId: 'log',
+					languageId: "log",
 				});
 				const eventLogStore = new DisposableStore();
-				eventLogStore.add(_inner.onDidAction(e => this._log('**', 'onDidAction', e)));
-				eventLogStore.add(_inner.onDidNotification(e => this._log('**', 'onDidNotification', e)));
-				LoggingAgentConnection._sharedEventLog.set(this.channelId, eventLogStore);
+				eventLogStore.add(
+					_inner.onDidAction((e) => this._log("**", "onDidAction", e)),
+				);
+				eventLogStore.add(
+					_inner.onDidNotification((e) =>
+						this._log("**", "onDidNotification", e),
+					),
+				);
+				LoggingAgentConnection._sharedEventLog.set(
+					this.channelId,
+					eventLogStore,
+				);
 			}
 			LoggingAgentConnection._channelRefCounts.set(this.channelId, refs + 1);
-			logCurrentRootState = !LoggingAgentConnection._currentRootStateLogKeys.has(currentRootStateLogKey);
+			logCurrentRootState =
+				!LoggingAgentConnection._currentRootStateLogKeys.has(
+					currentRootStateLogKey,
+				);
 			if (logCurrentRootState) {
-				LoggingAgentConnection._currentRootStateLogKeys.add(currentRootStateLogKey);
+				LoggingAgentConnection._currentRootStateLogKeys.add(
+					currentRootStateLogKey,
+				);
 			}
-			this._register(toDisposable(() => {
-				const current = LoggingAgentConnection._channelRefCounts.get(this.channelId)! - 1;
-				if (current <= 0) {
-					LoggingAgentConnection._channelRefCounts.delete(this.channelId);
-					LoggingAgentConnection._currentRootStateLogKeys.delete(currentRootStateLogKey);
-					LoggingAgentConnection._sharedEventLog.get(this.channelId)?.dispose();
-					LoggingAgentConnection._sharedEventLog.delete(this.channelId);
-					registry.removeChannel(this.channelId);
-				} else {
-					LoggingAgentConnection._channelRefCounts.set(this.channelId, current);
-				}
-			}));
+			this._register(
+				toDisposable(() => {
+					const current =
+						LoggingAgentConnection._channelRefCounts.get(this.channelId)! - 1;
+					if (current <= 0) {
+						LoggingAgentConnection._channelRefCounts.delete(this.channelId);
+						LoggingAgentConnection._currentRootStateLogKeys.delete(
+							currentRootStateLogKey,
+						);
+						LoggingAgentConnection._sharedEventLog
+							.get(this.channelId)
+							?.dispose();
+						LoggingAgentConnection._sharedEventLog.delete(this.channelId);
+						registry.removeChannel(this.channelId);
+					} else {
+						LoggingAgentConnection._channelRefCounts.set(
+							this.channelId,
+							current,
+						);
+					}
+				}),
+			);
 		}
 
 		// Expose the inner events directly. Logging happens once per channel
@@ -168,33 +265,56 @@ export class LoggingAgentConnection extends Disposable implements IAgentConnecti
 		this.onDidAction = _inner.onDidAction;
 		this.onDidNotification = _inner.onDidNotification;
 
-		this._rootState = this._register(new LoggingAgentSubscription('rootState', _inner.rootState, logCurrentRootState, (arrow, method, data) => this._log(arrow, method, data)));
+		this._rootState = this._register(
+			new LoggingAgentSubscription(
+				"rootState",
+				_inner.rootState,
+				logCurrentRootState,
+				(arrow, method, data) => this._log(arrow, method, data),
+			),
+		);
 	}
 
 	// ---- IAgentConnection method proxies with logging -----------------------
 
 	async authenticate(params: AuthenticateParams): Promise<AuthenticateResult> {
-		return this._logCall('authenticate', params, () => this._inner.authenticate(params));
+		return this._logCall("authenticate", params, () =>
+			this._inner.authenticate(params),
+		);
 	}
 
 	async listSessions(): Promise<IAgentSessionMetadata[]> {
-		return this._logCall('listSessions', undefined, () => this._inner.listSessions());
+		return this._logCall("listSessions", undefined, () =>
+			this._inner.listSessions(),
+		);
 	}
 
 	async createSession(config?: IAgentCreateSessionConfig): Promise<URI> {
-		return this._logCall('createSession', config, () => this._inner.createSession(config));
+		return this._logCall("createSession", config, () =>
+			this._inner.createSession(config),
+		);
 	}
 
-	async resolveSessionConfig(params: IAgentResolveSessionConfigParams): Promise<ResolveSessionConfigResult> {
-		return this._logCall('resolveSessionConfig', params, () => this._inner.resolveSessionConfig(params));
+	async resolveSessionConfig(
+		params: IAgentResolveSessionConfigParams,
+	): Promise<ResolveSessionConfigResult> {
+		return this._logCall("resolveSessionConfig", params, () =>
+			this._inner.resolveSessionConfig(params),
+		);
 	}
 
-	async sessionConfigCompletions(params: IAgentSessionConfigCompletionsParams): Promise<SessionConfigCompletionsResult> {
-		return this._logCall('sessionConfigCompletions', params, () => this._inner.sessionConfigCompletions(params));
+	async sessionConfigCompletions(
+		params: IAgentSessionConfigCompletionsParams,
+	): Promise<SessionConfigCompletionsResult> {
+		return this._logCall("sessionConfigCompletions", params, () =>
+			this._inner.sessionConfigCompletions(params),
+		);
 	}
 
 	async completions(params: CompletionsParams): Promise<CompletionsResult> {
-		return this._logCall('completions', params, () => this._inner.completions(params));
+		return this._logCall("completions", params, () =>
+			this._inner.completions(params),
+		);
 	}
 
 	async getCompletionTriggerCharacters(): Promise<readonly string[]> {
@@ -202,75 +322,122 @@ export class LoggingAgentConnection extends Disposable implements IAgentConnecti
 	}
 
 	async disposeSession(session: URI): Promise<void> {
-		return this._logCall('disposeSession', session, () => this._inner.disposeSession(session));
+		return this._logCall("disposeSession", session, () =>
+			this._inner.disposeSession(session),
+		);
 	}
 
 	async createTerminal(params: CreateTerminalParams): Promise<void> {
-		return this._logCall('createTerminal', params, () => this._inner.createTerminal(params));
+		return this._logCall("createTerminal", params, () =>
+			this._inner.createTerminal(params),
+		);
 	}
 
 	async disposeTerminal(terminal: URI): Promise<void> {
-		return this._logCall('disposeTerminal', terminal, () => this._inner.disposeTerminal(terminal));
+		return this._logCall("disposeTerminal", terminal, () =>
+			this._inner.disposeTerminal(terminal),
+		);
 	}
 
 	get rootState(): IAgentSubscription<RootState> {
 		return this._rootState;
 	}
 
-	getSubscription<T extends StateComponents>(kind: T, resource: URI): IReference<IAgentSubscription<ComponentToState[T]>> {
+	getSubscription<T extends StateComponents>(
+		kind: T,
+		resource: URI,
+	): IReference<IAgentSubscription<ComponentToState[T]>> {
 		return this._inner.getSubscription(kind, resource);
 	}
 
-	getSubscriptionUnmanaged<T extends StateComponents>(kind: T, resource: URI): IAgentSubscription<ComponentToState[T]> | undefined {
+	getSubscriptionUnmanaged<T extends StateComponents>(
+		kind: T,
+		resource: URI,
+	): IAgentSubscription<ComponentToState[T]> | undefined {
 		return this._inner.getSubscriptionUnmanaged(kind, resource);
 	}
 
-	dispatch(channel: string, action: SessionAction | TerminalAction | IRootConfigChangedAction): void {
-		this._log('>>', 'dispatch', { channel, action });
+	dispatch(
+		channel: string,
+		action: SessionAction | TerminalAction | IRootConfigChangedAction,
+	): void {
+		this._log(">>", "dispatch", { channel, action });
 		this._inner.dispatch(channel, action);
 	}
 
 	async resourceList(uri: URI): Promise<ResourceListResult> {
-		return this._logCall('resourceList', uri, () => this._inner.resourceList(uri));
+		return this._logCall("resourceList", uri, () =>
+			this._inner.resourceList(uri),
+		);
 	}
 
 	async resourceRead(uri: URI): Promise<ResourceReadResult> {
-		return this._logCall('resourceRead', uri, () => this._inner.resourceRead(uri));
+		return this._logCall("resourceRead", uri, () =>
+			this._inner.resourceRead(uri),
+		);
 	}
 
-	async resourceWrite(params: ResourceWriteParams): Promise<ResourceWriteResult> {
-		return this._logCall('resourceWrite', params, () => this._inner.resourceWrite(params));
+	async resourceWrite(
+		params: ResourceWriteParams,
+	): Promise<ResourceWriteResult> {
+		return this._logCall("resourceWrite", params, () =>
+			this._inner.resourceWrite(params),
+		);
 	}
 
 	async resourceCopy(params: ResourceCopyParams): Promise<ResourceCopyResult> {
-		return this._logCall('resourceCopy', params, () => this._inner.resourceCopy(params));
+		return this._logCall("resourceCopy", params, () =>
+			this._inner.resourceCopy(params),
+		);
 	}
 
-	async resourceDelete(params: ResourceDeleteParams): Promise<ResourceDeleteResult> {
-		return this._logCall('resourceDelete', params, () => this._inner.resourceDelete(params));
+	async resourceDelete(
+		params: ResourceDeleteParams,
+	): Promise<ResourceDeleteResult> {
+		return this._logCall("resourceDelete", params, () =>
+			this._inner.resourceDelete(params),
+		);
 	}
 
 	async resourceMove(params: ResourceMoveParams): Promise<ResourceMoveResult> {
-		return this._logCall('resourceMove', params, () => this._inner.resourceMove(params));
+		return this._logCall("resourceMove", params, () =>
+			this._inner.resourceMove(params),
+		);
 	}
 
-	async resourceResolve(params: ResourceResolveParams): Promise<ResourceResolveResult> {
-		return this._logCall('resourceResolve', params, () => this._inner.resourceResolve(params));
+	async resourceResolve(
+		params: ResourceResolveParams,
+	): Promise<ResourceResolveResult> {
+		return this._logCall("resourceResolve", params, () =>
+			this._inner.resourceResolve(params),
+		);
 	}
 
-	async resourceMkdir(params: ResourceMkdirParams): Promise<ResourceMkdirResult> {
-		return this._logCall('resourceMkdir', params, () => this._inner.resourceMkdir(params));
+	async resourceMkdir(
+		params: ResourceMkdirParams,
+	): Promise<ResourceMkdirResult> {
+		return this._logCall("resourceMkdir", params, () =>
+			this._inner.resourceMkdir(params),
+		);
 	}
 
-	async createResourceWatch(params: CreateResourceWatchParams): Promise<CreateResourceWatchResult> {
-		return this._logCall('createResourceWatch', params, () => this._inner.createResourceWatch(params));
+	async createResourceWatch(
+		params: CreateResourceWatchParams,
+	): Promise<CreateResourceWatchResult> {
+		return this._logCall("createResourceWatch", params, () =>
+			this._inner.createResourceWatch(params),
+		);
 	}
 
-	watchResource(params: CreateResourceWatchParams): Promise<IRemoteWatchHandle> {
+	watchResource(
+		params: CreateResourceWatchParams,
+	): Promise<IRemoteWatchHandle> {
 		// Watcher setup is a single round-trip; the running watcher
 		// produces events on its own channel which is logged separately
 		// via the action stream, so no need to wrap the handle.
-		return this._logCall('watchResource', params, () => this._inner.watchResource(params));
+		return this._logCall("watchResource", params, () =>
+			this._inner.watchResource(params),
+		);
 	}
 
 	// ---- Public logging API for callers' catch blocks -----------------------
@@ -280,19 +447,27 @@ export class LoggingAgentConnection extends Disposable implements IAgentConnecti
 	 * so connection errors appear in the per-host channel.
 	 */
 	logError(context: string, error: unknown): void {
-		this._log('!!', context, error instanceof Error ? error.message : String(error));
+		this._log(
+			"!!",
+			context,
+			error instanceof Error ? error.message : String(error),
+		);
 	}
 
 	// ---- Internal helpers ---------------------------------------------------
 
-	private async _logCall<T>(method: string, params: unknown, fn: () => Promise<T>): Promise<T> {
-		this._log('>>', method, params);
+	private async _logCall<T>(
+		method: string,
+		params: unknown,
+		fn: () => Promise<T>,
+	): Promise<T> {
+		this._log(">>", method, params);
 		try {
 			const result = await fn();
-			this._log('<<', method, result);
+			this._log("<<", method, result);
 			return result;
 		} catch (err) {
-			this._log('!!', method, err instanceof Error ? err.message : String(err));
+			this._log("!!", method, err instanceof Error ? err.message : String(err));
 			throw err;
 		}
 	}
@@ -311,6 +486,8 @@ export class LoggingAgentConnection extends Disposable implements IAgentConnecti
 
 		const timestamp = new Date().toISOString();
 		const payload = formatPayload(data);
-		this._outputChannel.append(`[${timestamp}] ${arrow} ${method}${payload ? `\n${payload}` : ''}\n`);
+		this._outputChannel.append(
+			`[${timestamp}] ${arrow} ${method}${payload ? `\n${payload}` : ""}\n`,
+		);
 	}
 }

@@ -3,18 +3,44 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getDevElectronPath, Quality, ConsoleLogger, FileLogger, Logger, MultiLogger, getBuildElectronPath, getBuildVersion, measureAndLog, Application } from '../../automation';
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as vscodetest from '@vscode/test-electron';
-import { createApp, retry, parseVersion } from './utils';
-import { opts } from './options';
+import {
+	getDevElectronPath,
+	Quality,
+	ConsoleLogger,
+	FileLogger,
+	Logger,
+	MultiLogger,
+	getBuildElectronPath,
+	getBuildVersion,
+	measureAndLog,
+	Application,
+} from "../../automation";
+import * as path from "path";
+import * as fs from "fs";
+import * as os from "os";
+import * as vscodetest from "@vscode/test-electron";
+import { createApp, retry, parseVersion } from "./utils";
+import { opts } from "./options";
 
-const rootPath = path.join(__dirname, '..', '..', '..');
-const logsRootPath = path.join(rootPath, '.build', 'vscode-playwright-mcp', 'logs');
-const crashesRootPath = path.join(rootPath, '.build', 'vscode-playwright-mcp', 'crashes');
-const videoRootPath = path.join(rootPath, '.build', 'vscode-playwright-mcp', 'videos');
+const rootPath = path.join(__dirname, "..", "..", "..");
+const logsRootPath = path.join(
+	rootPath,
+	".build",
+	"vscode-playwright-mcp",
+	"logs",
+);
+const crashesRootPath = path.join(
+	rootPath,
+	".build",
+	"vscode-playwright-mcp",
+	"crashes",
+);
+const videoRootPath = path.join(
+	rootPath,
+	".build",
+	"vscode-playwright-mcp",
+	"videos",
+);
 
 const logger = createLogger();
 
@@ -31,17 +57,19 @@ function createLogger(): Logger {
 	fs.mkdirSync(logsRootPath, { recursive: true });
 
 	// Always log to log file
-	loggers.push(new FileLogger(path.join(logsRootPath, 'smoke-test-runner.log')));
+	loggers.push(
+		new FileLogger(path.join(logsRootPath, "smoke-test-runner.log")),
+	);
 
 	return new MultiLogger(loggers);
 }
 
-const testDataPath = path.join(os.tmpdir(), 'vscsmoke');
+const testDataPath = path.join(os.tmpdir(), "vscsmoke");
 if (fs.existsSync(testDataPath)) {
 	fs.rmSync(testDataPath, { recursive: true, force: true, maxRetries: 10 });
 }
 fs.mkdirSync(testDataPath, { recursive: true });
-process.once('exit', () => {
+process.once("exit", () => {
 	try {
 		fs.rmSync(testDataPath, { recursive: true, force: true, maxRetries: 10 });
 	} catch {
@@ -61,20 +89,20 @@ let quality: Quality;
 let version: string | undefined;
 
 function parseQuality(): Quality {
-	if (process.env.VSCODE_DEV === '1') {
+	if (process.env.VSCODE_DEV === "1") {
 		return Quality.Dev;
 	}
 
-	const quality = process.env.VSCODE_QUALITY ?? '';
+	const quality = process.env.VSCODE_QUALITY ?? "";
 
 	switch (quality) {
-		case 'stable':
+		case "stable":
 			return Quality.Stable;
-		case 'insider':
+		case "insider":
 			return Quality.Insiders;
-		case 'exploration':
+		case "exploration":
 			return Quality.Exploration;
-		case 'oss':
+		case "oss":
 			return Quality.OSS;
 		default:
 			return Quality.Dev;
@@ -95,12 +123,14 @@ if (!opts.web) {
 		testCodePath = getDevElectronPath();
 		electronPath = testCodePath;
 		process.env.VSCODE_REPOSITORY = rootPath;
-		process.env.VSCODE_DEV = '1';
-		process.env.VSCODE_CLI = '1';
+		process.env.VSCODE_DEV = "1";
+		process.env.VSCODE_CLI = "1";
 	}
 
-	if (!fs.existsSync(electronPath || '')) {
-		fail(`Cannot find VSCode at ${electronPath}. Please run VSCode once first (scripts/code.sh, scripts\\code.bat) and try again.`);
+	if (!fs.existsSync(electronPath || "")) {
+		fail(
+			`Cannot find VSCode at ${electronPath}. Please run VSCode once first (scripts/code.sh, scripts\\code.bat) and try again.`,
+		);
 	}
 
 	quality = parseQuality();
@@ -116,9 +146,10 @@ if (!opts.web) {
 // #### Web Smoke Tests ####
 //
 else {
-	const testCodeServerPath = opts.build || process.env.VSCODE_REMOTE_SERVER_PATH;
+	const testCodeServerPath =
+		opts.build || process.env.VSCODE_REMOTE_SERVER_PATH;
 
-	if (typeof testCodeServerPath === 'string') {
+	if (typeof testCodeServerPath === "string") {
 		if (!fs.existsSync(testCodeServerPath)) {
 			fail(`Cannot find Code server at ${testCodeServerPath}.`);
 		} else {
@@ -128,8 +159,8 @@ else {
 
 	if (!testCodeServerPath) {
 		process.env.VSCODE_REPOSITORY = rootPath;
-		process.env.VSCODE_DEV = '1';
-		process.env.VSCODE_CLI = '1';
+		process.env.VSCODE_DEV = "1";
+		process.env.VSCODE_CLI = "1";
 
 		logger.log(`Running web smoke out of sources`);
 	}
@@ -140,70 +171,111 @@ else {
 logger.log(`VS Code product quality: ${quality}.`);
 
 async function ensureStableCode(): Promise<void> {
-	let stableCodePath = opts['stable-build'];
+	let stableCodePath = opts["stable-build"];
 	if (!stableCodePath) {
 		const current = parseVersion(version!);
-		const versionsReq = await retry(() => measureAndLog(() => fetch('https://update.code.visualstudio.com/api/releases/stable'), 'versionReq', logger), 1000, 20);
+		const versionsReq = await retry(
+			() =>
+				measureAndLog(
+					() =>
+						fetch("https://update.code.visualstudio.com/api/releases/stable"),
+					"versionReq",
+					logger,
+				),
+			1000,
+			20,
+		);
 
 		if (!versionsReq.ok) {
-			throw new Error('Could not fetch releases from update server');
+			throw new Error("Could not fetch releases from update server");
 		}
 
-		const versions: string[] = await measureAndLog(() => versionsReq.json(), 'versionReq.json()', logger);
-		const stableVersion = versions.find(raw => {
+		const versions: string[] = await measureAndLog(
+			() => versionsReq.json(),
+			"versionReq.json()",
+			logger,
+		);
+		const stableVersion = versions.find((raw) => {
 			const version = parseVersion(raw);
-			return version.major < current.major || (version.major === current.major && version.minor < current.minor);
+			return (
+				version.major < current.major ||
+				(version.major === current.major && version.minor < current.minor)
+			);
 		});
 
 		if (!stableVersion) {
 			throw new Error(`Could not find suitable stable version for ${version}`);
 		}
 
-		logger.log(`Found VS Code v${version}, downloading previous VS Code version ${stableVersion}...`);
+		logger.log(
+			`Found VS Code v${version}, downloading previous VS Code version ${stableVersion}...`,
+		);
 
 		let lastProgressMessage: string | undefined = undefined;
 		let lastProgressReportedAt = 0;
-		const stableCodeDestination = path.join(testDataPath, 's');
-		const stableCodeExecutable = await retry(() => measureAndLog(() => vscodetest.download({
-			cachePath: stableCodeDestination,
-			version: stableVersion,
-			extractSync: true,
-			reporter: {
-				report: report => {
-					let progressMessage = `download stable code progress: ${report.stage}`;
-					const now = Date.now();
-					if (progressMessage !== lastProgressMessage || now - lastProgressReportedAt > 10000) {
-						lastProgressMessage = progressMessage;
-						lastProgressReportedAt = now;
+		const stableCodeDestination = path.join(testDataPath, "s");
+		const stableCodeExecutable = await retry(
+			() =>
+				measureAndLog(
+					() =>
+						vscodetest.download({
+							cachePath: stableCodeDestination,
+							version: stableVersion,
+							extractSync: true,
+							reporter: {
+								report: (report) => {
+									let progressMessage = `download stable code progress: ${report.stage}`;
+									const now = Date.now();
+									if (
+										progressMessage !== lastProgressMessage ||
+										now - lastProgressReportedAt > 10000
+									) {
+										lastProgressMessage = progressMessage;
+										lastProgressReportedAt = now;
 
-						if (report.stage === 'downloading') {
-							progressMessage += ` (${report.bytesSoFar}/${report.totalBytes})`;
-						}
+										if (report.stage === "downloading") {
+											progressMessage += ` (${report.bytesSoFar}/${report.totalBytes})`;
+										}
 
-						logger.log(progressMessage);
-					}
-				},
-				error: error => logger.log(`download stable code error: ${error}`)
-			}
-		}), 'download stable code', logger), 1000, 3, () => new Promise<void>((resolve, reject) => {
-			fs.rm(stableCodeDestination, { recursive: true, force: true, maxRetries: 10 }, error => {
-				if (error) {
-					reject(error);
-				} else {
-					resolve();
-				}
-			});
-		}));
+										logger.log(progressMessage);
+									}
+								},
+								error: (error) =>
+									logger.log(`download stable code error: ${error}`),
+							},
+						}),
+					"download stable code",
+					logger,
+				),
+			1000,
+			3,
+			() =>
+				new Promise<void>((resolve, reject) => {
+					fs.rm(
+						stableCodeDestination,
+						{ recursive: true, force: true, maxRetries: 10 },
+						(error) => {
+							if (error) {
+								reject(error);
+							} else {
+								resolve();
+							}
+						},
+					);
+				}),
+		);
 
-		if (process.platform === 'darwin') {
+		if (process.platform === "darwin") {
 			// Visual Studio Code.app/Contents/MacOS/Code
-			stableCodePath = path.dirname(path.dirname(path.dirname(stableCodeExecutable)));
+			stableCodePath = path.dirname(
+				path.dirname(path.dirname(stableCodeExecutable)),
+			);
 		} else {
 			// VSCode/Code.exe (Windows) | VSCode/code (Linux)
 			stableCodePath = path.dirname(stableCodeExecutable);
 		}
 
-		opts['stable-version'] = parseVersion(stableVersion);
+		opts["stable-version"] = parseVersion(stableVersion);
 	}
 
 	if (!fs.existsSync(stableCodePath)) {
@@ -212,53 +284,62 @@ async function ensureStableCode(): Promise<void> {
 
 	logger.log(`Using stable build ${stableCodePath} for migration tests`);
 
-	opts['stable-build'] = stableCodePath;
+	opts["stable-build"] = stableCodePath;
 }
 
 async function setup(): Promise<void> {
-	logger.log('Preparing smoketest setup...');
+	logger.log("Preparing smoketest setup...");
 
 	if (!opts.web && !opts.remote && opts.build) {
 		// only enabled when running with --build and not in web or remote
-		await measureAndLog(() => ensureStableCode(), 'ensureStableCode', logger);
+		await measureAndLog(() => ensureStableCode(), "ensureStableCode", logger);
 	}
 
-	logger.log('Smoketest setup done!\n');
+	logger.log("Smoketest setup done!\n");
 }
 
-export async function getApplication({ recordVideo, workspacePath }: { recordVideo?: boolean; workspacePath?: string } = {}) {
+export async function getApplication({
+	recordVideo,
+	workspacePath,
+}: { recordVideo?: boolean; workspacePath?: string } = {}) {
 	const testCodePath = getDevElectronPath();
 	const electronPath = testCodePath;
-	if (!fs.existsSync(electronPath || '')) {
-		throw new Error(`Cannot find VSCode at ${electronPath}. Please run VSCode once first (scripts/code.sh, scripts\\code.bat) and try again.`);
+	if (!fs.existsSync(electronPath || "")) {
+		throw new Error(
+			`Cannot find VSCode at ${electronPath}. Please run VSCode once first (scripts/code.sh, scripts\\code.bat) and try again.`,
+		);
 	}
 	process.env.VSCODE_REPOSITORY = rootPath;
-	process.env.VSCODE_DEV = '1';
-	process.env.VSCODE_CLI = '1';
+	process.env.VSCODE_DEV = "1";
+	process.env.VSCODE_CLI = "1";
 	delete process.env.ELECTRON_RUN_AS_NODE; // Ensure we run as Node.js
 
 	await setup();
 	const application = createApp({
 		quality,
-		version: parseVersion(version ?? '0.0.0'),
+		version: parseVersion(version ?? "0.0.0"),
 		codePath: opts.build,
 		// Use provided workspace path, or fall back to rootPath on CI (GitHub Actions)
-		workspacePath: workspacePath ?? (process.env.GITHUB_ACTIONS ? rootPath : undefined),
+		workspacePath:
+			workspacePath ?? (process.env.GITHUB_ACTIONS ? rootPath : undefined),
 		logger,
 		logsPath: logsRootPath,
 		crashesPath: crashesRootPath,
-		videosPath: (recordVideo || opts.video) ? videoRootPath : undefined,
+		videosPath: recordVideo || opts.video ? videoRootPath : undefined,
 		verbose: opts.verbose,
 		remote: opts.remote,
 		web: opts.web,
 		tracing: true,
 		headless: opts.headless,
 		browser: opts.browser,
-		extraArgs: (opts.electronArgs || '').split(' ').map(arg => arg.trim()).filter(arg => !!arg),
+		extraArgs: (opts.electronArgs || "")
+			.split(" ")
+			.map((arg) => arg.trim())
+			.filter((arg) => !!arg),
 		extensionDevelopmentPath: opts.extensionDevelopmentPath,
 	});
 	await application.start();
-	application.code.driver.currentPage.on('close', async () => {
+	application.code.driver.currentPage.on("close", async () => {
 		fs.rmSync(testDataPath, { recursive: true, force: true, maxRetries: 10 });
 	});
 	return application;
@@ -267,13 +348,19 @@ export async function getApplication({ recordVideo, workspacePath }: { recordVid
 export class ApplicationService {
 	private _application: Application | undefined;
 	private _closing: Promise<void> | undefined;
-	private _listeners: ((app: Application | undefined) => Promise<void> | void)[] = [];
+	private _listeners: ((
+		app: Application | undefined,
+	) => Promise<void> | void)[] = [];
 
-	onApplicationChange(listener: (app: Application | undefined) => Promise<void> | void): void {
+	onApplicationChange(
+		listener: (app: Application | undefined) => Promise<void> | void,
+	): void {
 		this._listeners.push(listener);
 	}
 
-	removeApplicationChangeListener(listener: (app: Application | undefined) => void): void {
+	removeApplicationChangeListener(
+		listener: (app: Application | undefined) => void,
+	): void {
 		const index = this._listeners.indexOf(listener);
 		if (index >= 0) {
 			this._listeners.splice(index, 1);
@@ -284,13 +371,19 @@ export class ApplicationService {
 		return this._application;
 	}
 
-	async getOrCreateApplication({ recordVideo, workspacePath }: { recordVideo?: boolean; workspacePath?: string } = {}): Promise<Application> {
+	async getOrCreateApplication({
+		recordVideo,
+		workspacePath,
+	}: {
+		recordVideo?: boolean;
+		workspacePath?: string;
+	} = {}): Promise<Application> {
 		if (this._closing) {
 			await this._closing;
 		}
 		if (!this._application) {
 			this._application = await getApplication({ recordVideo, workspacePath });
-			this._application.code.driver.currentPage.on('close', () => {
+			this._application.code.driver.currentPage.on("close", () => {
 				this._closing = (async () => {
 					if (this._application) {
 						this._application.code.driver.browserContext.removeAllListeners();
@@ -310,7 +403,7 @@ export class ApplicationService {
 			try {
 				await listener(this._application);
 			} catch (error) {
-				console.error('Error occurred in application change listener:', error);
+				console.error("Error occurred in application change listener:", error);
 			}
 		}
 	}

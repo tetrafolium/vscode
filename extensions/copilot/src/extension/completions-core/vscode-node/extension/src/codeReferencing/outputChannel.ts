@@ -5,7 +5,11 @@
 
 import { window, type OutputChannel } from 'vscode';
 import { IAuthenticationService } from '../../../../../../platform/authentication/common/authentication';
-import { Disposable, IDisposable, MutableDisposable } from '../../../../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	IDisposable,
+	MutableDisposable,
+} from '../../../../../../util/vs/base/common/lifecycle';
 import { IInstantiationService } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { CopilotToken } from '../../../lib/src/auth/copilotTokenManager';
 import { onCopilotToken } from '../../../lib/src/auth/copilotTokenNotifier';
@@ -20,20 +24,23 @@ export const citationsChannelName = 'GitHub Copilot Log (Code References)';
 // Literally taken from VS Code
 function getCurrentTimestamp() {
 	const toTwoDigits = (v: number) => (v < 10 ? `0${v}` : v);
-	const toThreeDigits = (v: number) => (v < 10 ? `00${v}` : v < 100 ? `0${v}` : v);
+	const toThreeDigits = (v: number) =>
+		v < 10 ? `00${v}` : v < 100 ? `0${v}` : v;
 	const currentTime = new Date();
 	return `${currentTime.getFullYear()}-${toTwoDigits(currentTime.getMonth() + 1)}-${toTwoDigits(
-		currentTime.getDate()
+		currentTime.getDate(),
 	)} ${toTwoDigits(currentTime.getHours())}:${toTwoDigits(currentTime.getMinutes())}:${toTwoDigits(
-		currentTime.getSeconds()
+		currentTime.getSeconds(),
 	)}.${toThreeDigits(currentTime.getMilliseconds())}`;
 }
 
 class CodeReferenceOutputChannel implements IDisposable {
-	constructor(private output: OutputChannel) { }
+	constructor(private output: OutputChannel) {}
 
 	info(...messages: string[]) {
-		this.output.appendLine(`${getCurrentTimestamp()} [info] ${messages.join(' ')}`);
+		this.output.appendLine(
+			`${getCurrentTimestamp()} [info] ${messages.join(' ')}`,
+		);
 	}
 
 	show(preserveFocus: boolean) {
@@ -46,15 +53,20 @@ class CodeReferenceOutputChannel implements IDisposable {
 }
 
 export class GitHubCopilotLogger extends Disposable implements GitHubLogger {
-
-	private output = this._register(new MutableDisposable<CodeReferenceOutputChannel>());
+	private output = this._register(
+		new MutableDisposable<CodeReferenceOutputChannel>(),
+	);
 
 	constructor(
 		@IInstantiationService instantiationService: IInstantiationService,
-		@IAuthenticationService authenticationService: IAuthenticationService
+		@IAuthenticationService authenticationService: IAuthenticationService,
 	) {
 		super();
-		this._register(onCopilotToken(authenticationService, t => this.checkCopilotToken(t)));
+		this._register(
+			onCopilotToken(authenticationService, (t) =>
+				this.checkCopilotToken(t),
+			),
+		);
 
 		this.createChannel();
 	}
@@ -88,7 +100,12 @@ export class GitHubCopilotLogger extends Disposable implements GitHubLogger {
 			return this.output.value;
 		}
 
-		this.output.value = new CodeReferenceOutputChannel(window.createOutputChannel(citationsChannelName, 'code-referencing'));
+		this.output.value = new CodeReferenceOutputChannel(
+			window.createOutputChannel(
+				citationsChannelName,
+				'code-referencing',
+			),
+		);
 		return this.output.value;
 	}
 

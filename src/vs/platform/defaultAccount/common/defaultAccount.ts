@@ -3,17 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ICopilotTokenInfo, IDefaultAccount, IDefaultAccountAuthenticationProvider, IPolicyData } from '../../../base/common/defaultAccount.js';
-import { Event } from '../../../base/common/event.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
+import {
+	ICopilotTokenInfo,
+	IDefaultAccount,
+	IDefaultAccountAuthenticationProvider,
+	IPolicyData,
+} from "../../../base/common/defaultAccount.js";
+import { Event } from "../../../base/common/event.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
 
 /**
  * Well-known GitHub URL paths used with {@link IDefaultAccountService.resolveGitHubUrl}.
  */
 export const GitHubPaths = {
-	copilotSettings: 'settings/copilot/features',
-	billingBudgets: 'settings/copilot/features?utm_source=vscode',
-	copilotUpgrade: 'github-copilot/upgrade?utm_source=vscode',
+	copilotSettings: "settings/copilot/features",
+	billingBudgets: "settings/copilot/features?utm_source=vscode",
+	copilotUpgrade: "github-copilot/upgrade?utm_source=vscode",
 } as const;
 
 /**
@@ -25,7 +30,13 @@ export const GitHubPaths = {
  * - `'parse-error'`: response received but JSON parsing failed.
  * - `null`: never fetched.
  */
-export type ManagedSettingsFetchStatus = number | 'ok' | 'no-url' | 'no-response' | 'parse-error' | null;
+export type ManagedSettingsFetchStatus =
+	| number
+	| "ok"
+	| "no-url"
+	| "no-response"
+	| "parse-error"
+	| null;
 
 export interface IDefaultAccountProvider {
 	readonly defaultAccount: IDefaultAccount | null;
@@ -48,12 +59,19 @@ export interface IDefaultAccountProvider {
 	 */
 	resolveGitHubUrl(path: string): string;
 
-	refresh(options?: { forceRefresh?: boolean }): Promise<IDefaultAccount | null>;
-	signIn(options?: { additionalScopes?: readonly string[];[key: string]: unknown }): Promise<IDefaultAccount | null>;
+	refresh(options?: {
+		forceRefresh?: boolean;
+	}): Promise<IDefaultAccount | null>;
+	signIn(options?: {
+		additionalScopes?: readonly string[];
+		[key: string]: unknown;
+	}): Promise<IDefaultAccount | null>;
 	signOut(): Promise<void>;
 }
 
-export const IDefaultAccountService = createDecorator<IDefaultAccountService>('defaultAccountService');
+export const IDefaultAccountService = createDecorator<IDefaultAccountService>(
+	"defaultAccountService",
+);
 
 export interface IDefaultAccountService {
 	readonly _serviceBrand: undefined;
@@ -69,8 +87,13 @@ export interface IDefaultAccountService {
 	getDefaultAccount(): Promise<IDefaultAccount | null>;
 	getDefaultAccountAuthenticationProvider(): IDefaultAccountAuthenticationProvider;
 	setDefaultAccountProvider(provider: IDefaultAccountProvider): void;
-	refresh(options?: { forceRefresh?: boolean }): Promise<IDefaultAccount | null>;
-	signIn(options?: { additionalScopes?: readonly string[];[key: string]: unknown }): Promise<IDefaultAccount | null>;
+	refresh(options?: {
+		forceRefresh?: boolean;
+	}): Promise<IDefaultAccount | null>;
+	signIn(options?: {
+		additionalScopes?: readonly string[];
+		[key: string]: unknown;
+	}): Promise<IDefaultAccount | null>;
 	signOut(): Promise<void>;
 
 	/**

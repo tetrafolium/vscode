@@ -14,10 +14,25 @@ import * as path from '../../../util/vs/base/common/path';
 import { isEqual } from '../../../util/vs/base/common/resources';
 import { URI } from '../../../util/vs/base/common/uri';
 import { NotebookRange } from '../../../util/vs/workbench/api/common/extHostTypes/notebooks';
-import { Diagnostic, DiagnosticRelatedInformation, Location, Range, Selection, SymbolInformation, Uri } from '../../../vscodeTypes';
+import {
+	Diagnostic,
+	DiagnosticRelatedInformation,
+	Location,
+	Range,
+	Selection,
+	SymbolInformation,
+	Uri,
+} from '../../../vscodeTypes';
 import { RepoContext } from '../../git/common/gitService';
-import type { ISerializedWorkspaceState, IWorkspaceStateChangeFile, IWorkspaceStateTestFailure } from '../../workspaceState/common/promptContextModel';
-import { extensionHostWorkspaceUri, isInExtensionHost } from './isInExtensionHost';
+import type {
+	ISerializedWorkspaceState,
+	IWorkspaceStateChangeFile,
+	IWorkspaceStateTestFailure,
+} from '../../workspaceState/common/promptContextModel';
+import {
+	extensionHostWorkspaceUri,
+	isInExtensionHost,
+} from './isInExtensionHost';
 import { WORKSPACE_PATH } from './simulationWorkspaceServices';
 
 /**
@@ -58,16 +73,28 @@ function copyFolderContents(src: string, dest: string) {
 	}
 }
 
-export function deserializeWorkbenchState(scenarioFolderPath: string, stateFilePath: string): IDeserializedWorkspaceState {
-	const state: ISerializedWorkspaceState = JSON.parse(fs.readFileSync(stateFilePath, 'utf8'));
+export function deserializeWorkbenchState(
+	scenarioFolderPath: string,
+	stateFilePath: string,
+): IDeserializedWorkspaceState {
+	const state: ISerializedWorkspaceState = JSON.parse(
+		fs.readFileSync(stateFilePath, 'utf8'),
+	);
 
-	if (state.workspaceFoldersFilePaths && state.workspaceFoldersFilePaths.length > 1) {
+	if (
+		state.workspaceFoldersFilePaths &&
+		state.workspaceFoldersFilePaths.length > 1
+	) {
 		throw new Error('Currently only supporting a single workspace folder');
 	}
 
 	// workspace folder is relative to the scenario folder
-	let workspaceFolderPath = state.workspaceFoldersFilePaths ? path.join(scenarioFolderPath, state.workspaceFoldersFilePaths[0]) : scenarioFolderPath;
-	let workspaceFolderUri = state.workspaceFolderFilePath ? Uri.file(path.join(scenarioFolderPath, state.workspaceFolderFilePath)) : URI.file(WORKSPACE_PATH);
+	let workspaceFolderPath = state.workspaceFoldersFilePaths
+		? path.join(scenarioFolderPath, state.workspaceFoldersFilePaths[0])
+		: scenarioFolderPath;
+	let workspaceFolderUri = state.workspaceFolderFilePath
+		? Uri.file(path.join(scenarioFolderPath, state.workspaceFolderFilePath))
+		: URI.file(WORKSPACE_PATH);
 	let workspaceFolders = [workspaceFolderUri];
 
 	if (isInExtensionHost) {
@@ -79,57 +106,112 @@ export function deserializeWorkbenchState(scenarioFolderPath: string, stateFileP
 
 	// all other resources are relative to the workspace folder
 	function readFileSync(filePath: string) {
-		return fs.readFileSync(path.join(workspaceFolderPath, filePath), 'utf8');
+		return fs.readFileSync(
+			path.join(workspaceFolderPath, filePath),
+			'utf8',
+		);
 	}
 
 	const repositories = state?.repoContexts;
-	const activeFileDiagnostics = state.activeFileDiagnostics?.map(diagnostic => {
-		const relatedInformation = diagnostic.relatedInformation?.map(relatedInfo => (new DiagnosticRelatedInformation(
-			new Location(
-				Uri.joinPath(workspaceFolderUri, relatedInfo.filePath),
-				new Range(relatedInfo.start.line, relatedInfo.start.character, relatedInfo.end.line, relatedInfo.end.character)
-			),
-			relatedInfo.message
-		)));
-		const diag = new Diagnostic(new Range(diagnostic.start.line, diagnostic.start.character, diagnostic.end.line, diagnostic.end.character), diagnostic.message, diagnostic.severity);
-		diag.relatedInformation = relatedInformation;
-		return diag;
-	});
-	const workspaceSymbols = (state.symbols ?? []).map(symbol => {
+	const activeFileDiagnostics = state.activeFileDiagnostics?.map(
+		(diagnostic) => {
+			const relatedInformation = diagnostic.relatedInformation?.map(
+				(relatedInfo) =>
+					new DiagnosticRelatedInformation(
+						new Location(
+							Uri.joinPath(
+								workspaceFolderUri,
+								relatedInfo.filePath,
+							),
+							new Range(
+								relatedInfo.start.line,
+								relatedInfo.start.character,
+								relatedInfo.end.line,
+								relatedInfo.end.character,
+							),
+						),
+						relatedInfo.message,
+					),
+			);
+			const diag = new Diagnostic(
+				new Range(
+					diagnostic.start.line,
+					diagnostic.start.character,
+					diagnostic.end.line,
+					diagnostic.end.character,
+				),
+				diagnostic.message,
+				diagnostic.severity,
+			);
+			diag.relatedInformation = relatedInformation;
+			return diag;
+		},
+	);
+	const workspaceSymbols = (state.symbols ?? []).map((symbol) => {
 		return new SymbolInformation(
 			symbol.name,
 			symbol.kind,
-			new Range(symbol.start.line, symbol.start.character, symbol.end.line, symbol.end.character),
+			new Range(
+				symbol.start.line,
+				symbol.start.character,
+				symbol.end.line,
+				symbol.end.character,
+			),
 			Uri.joinPath(workspaceFolderUri, symbol.filePath),
 			symbol.containerName,
 		);
 	});
 
-	const terminalLastCommand = state.terminalLastCommand ? { terminal: null!, ...state.terminalLastCommand } : undefined;
+	const terminalLastCommand = state.terminalLastCommand
+		? { terminal: null!, ...state.terminalLastCommand }
+		: undefined;
 
-	const notebookExtHostDocuments = state.notebookDocumentFilePaths?.map((path: string) => {
-		const fileContents = readFileSync(path);
-		const notebookFileUri = URI.joinPath(workspaceFolderUri, path);
-		const notebook = ExtHostNotebookDocumentData.createJupyterNotebook(notebookFileUri, fileContents);
-		return notebook;
-	}) ?? [];
+	const notebookExtHostDocuments =
+		state.notebookDocumentFilePaths?.map((path: string) => {
+			const fileContents = readFileSync(path);
+			const notebookFileUri = URI.joinPath(workspaceFolderUri, path);
+			const notebook = ExtHostNotebookDocumentData.createJupyterNotebook(
+				notebookFileUri,
+				fileContents,
+			);
+			return notebook;
+		}) ?? [];
 
-	const notebookDocuments = notebookExtHostDocuments.map(doc => doc.document);
+	const notebookDocuments = notebookExtHostDocuments.map(
+		(doc) => doc.document,
+	);
 	let extHostNotebookEditor: ExtHostNotebookEditor | undefined;
 
 	if (state.activeNotebookEditor) {
 		const activeNotebookEditor = state.activeNotebookEditor;
-		const notebookFileUri = URI.joinPath(workspaceFolderUri, activeNotebookEditor.documentFilePath);
+		const notebookFileUri = URI.joinPath(
+			workspaceFolderUri,
+			activeNotebookEditor.documentFilePath,
+		);
 
-		let activeNotebookDocument = notebookExtHostDocuments.find(doc => isEqual(doc.document.uri, notebookFileUri));
+		let activeNotebookDocument = notebookExtHostDocuments.find((doc) =>
+			isEqual(doc.document.uri, notebookFileUri),
+		);
 
 		if (!activeNotebookDocument) {
-			const fileContents = readFileSync(activeNotebookEditor.documentFilePath);
-			activeNotebookDocument = ExtHostNotebookDocumentData.createJupyterNotebook(notebookFileUri, fileContents);
+			const fileContents = readFileSync(
+				activeNotebookEditor.documentFilePath,
+			);
+			activeNotebookDocument =
+				ExtHostNotebookDocumentData.createJupyterNotebook(
+					notebookFileUri,
+					fileContents,
+				);
 			notebookExtHostDocuments.push(activeNotebookDocument);
 		}
 
-		extHostNotebookEditor = new ExtHostNotebookEditor(activeNotebookDocument, activeNotebookEditor.selections.map(selection => new NotebookRange(selection.start, selection.end)));
+		extHostNotebookEditor = new ExtHostNotebookEditor(
+			activeNotebookDocument,
+			activeNotebookEditor.selections.map(
+				(selection) =>
+					new NotebookRange(selection.start, selection.end),
+			),
+		);
 	}
 
 	// No active text editor so skip constructing one
@@ -156,14 +238,17 @@ export function deserializeWorkbenchState(scenarioFolderPath: string, stateFileP
 		};
 	}
 	const fileContents = readFileSync(state.activeTextEditor.documentFilePath);
-	const activeEditorFileUri = URI.joinPath(workspaceFolderUri, state.activeTextEditor.documentFilePath);
+	const activeEditorFileUri = URI.joinPath(
+		workspaceFolderUri,
+		state.activeTextEditor.documentFilePath,
+	);
 	const selections: Selection[] = [];
 	for (const selection of state.activeTextEditor.selections) {
 		const mockSelection = new Selection(
 			selection.anchor.line,
 			selection.anchor.character,
 			selection.active.line,
-			selection.active.character
+			selection.active.character,
 		);
 		selections.push(mockSelection);
 	}
@@ -174,7 +259,7 @@ export function deserializeWorkbenchState(scenarioFolderPath: string, stateFileP
 			visibleRange.start.line,
 			visibleRange.start.character,
 			visibleRange.end.line,
-			visibleRange.end.character
+			visibleRange.end.character,
 		);
 		visibleRanges.push(mockRange);
 	}
@@ -183,7 +268,13 @@ export function deserializeWorkbenchState(scenarioFolderPath: string, stateFileP
 		fileContents,
 		state.activeTextEditor.languageId,
 	).document;
-	const mockTextEditor = new ExtHostTextEditor(mockTextDocument, selections, {}, visibleRanges, undefined).value;
+	const mockTextEditor = new ExtHostTextEditor(
+		mockTextDocument,
+		selections,
+		{},
+		visibleRanges,
+		undefined,
+	).value;
 	return {
 		activeFileDiagnostics,
 		workspaceSymbols,
@@ -206,7 +297,9 @@ export function deserializeWorkbenchState(scenarioFolderPath: string, stateFileP
 	};
 }
 
-export const noopFileSystemWatcher = new class implements vscode.FileSystemWatcher {
+export const noopFileSystemWatcher = new (class
+	implements vscode.FileSystemWatcher
+{
 	ignoreCreateEvents = false;
 	ignoreChangeEvents = false;
 	ignoreDeleteEvents = false;
@@ -216,4 +309,4 @@ export const noopFileSystemWatcher = new class implements vscode.FileSystemWatch
 	dispose() {
 		// noop
 	}
-};
+})();

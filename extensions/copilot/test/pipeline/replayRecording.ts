@@ -3,9 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IRecordingInformation, ObservableWorkspaceRecordingReplayer } from '../../src/extension/inlineEdits/common/observableWorkspaceRecordingReplayer';
+import {
+	IRecordingInformation,
+	ObservableWorkspaceRecordingReplayer,
+} from '../../src/extension/inlineEdits/common/observableWorkspaceRecordingReplayer';
 import { DocumentId } from '../../src/platform/inlineEdits/common/dataTypes/documentId';
-import { IObservableDocument, MutableObservableWorkspace } from '../../src/platform/inlineEdits/common/observableWorkspace';
+import {
+	IObservableDocument,
+	MutableObservableWorkspace,
+} from '../../src/platform/inlineEdits/common/observableWorkspace';
 import { coalesce } from '../../src/util/vs/base/common/arrays';
 import { Processor } from './alternativeAction/processor';
 import { IInputRow } from './parseInput';
@@ -23,7 +29,11 @@ export interface IProcessedRow {
 	readonly activeFilePath: string;
 	/** What the user actually typed next (from post-request recording). */
 	readonly nextUserEdit: {
-		readonly edit: readonly (readonly [start: number, endEx: number, text: string])[];
+		readonly edit: readonly (readonly [
+			start: number,
+			endEx: number,
+			text: string,
+		])[];
 		readonly relativePath: string;
 		readonly originalOpIdx: number;
 	};
@@ -34,14 +44,18 @@ export interface IProcessedRow {
  * Parse a suggestedEdit string like `[978, 1021) -> "foo"` into `[start, endEx, text]`.
  * The text portion is JSON-encoded (from `JSON.stringify`), so we parse it back.
  */
-export function parseSuggestedEdit(suggestedEditStr: string): [start: number, endEx: number, text: string] | null {
+export function parseSuggestedEdit(
+	suggestedEditStr: string,
+): [start: number, endEx: number, text: string] | null {
 	const separator = ' -> ';
 	const delimiterIdx = suggestedEditStr.indexOf(separator);
 	if (delimiterIdx === -1) {
 		return null;
 	}
 	const stringifiedRange = suggestedEditStr.substring(0, delimiterIdx);
-	const quotedText = suggestedEditStr.substring(delimiterIdx + separator.length);
+	const quotedText = suggestedEditStr.substring(
+		delimiterIdx + separator.length,
+	);
 	const match = stringifiedRange.match(/^\[(\d+), (\d+)\)$/);
 	if (!match || !quotedText) {
 		return null;
@@ -59,7 +73,11 @@ export function parseSuggestedEdit(suggestedEditStr: string): [start: number, en
 function formatError(e: unknown): string {
 	if (e instanceof Error) {
 		if (e.message === 'An unexpected bug occurred.' && e.stack) {
-			const frames = e.stack.split('\n').slice(1, 4).map(f => f.trim()).join(' <- ');
+			const frames = e.stack
+				.split('\n')
+				.slice(1, 4)
+				.map((f) => f.trim())
+				.join(' <- ');
 			return `${e.message} Stack: ${frames}`;
 		}
 		return e.message;
@@ -80,7 +98,9 @@ export function processRow(row: IInputRow): IProcessedRow | { error: string } {
 }
 
 function _processRow(row: IInputRow): IProcessedRow | { error: string } {
-	const proposedEdits = coalesce([parseSuggestedEdit(row.postProcessingOutcome.suggestedEdit)]);
+	const proposedEdits = coalesce([
+		parseSuggestedEdit(row.postProcessingOutcome.suggestedEdit),
+	]);
 	const isAccepted = row.suggestionStatus === 'accepted';
 
 	const scoring = Processor.createScoringForAlternativeAction(
@@ -90,8 +110,11 @@ function _processRow(row: IInputRow): IProcessedRow | { error: string } {
 	);
 
 	if (!scoring) {
-		const entryCount = row.alternativeAction?.recording?.entries?.length ?? 0;
-		return { error: `Processor.createScoringForAlternativeAction returned undefined (${entryCount} entries, lang: ${row.activeDocumentLanguageId})` };
+		const entryCount =
+			row.alternativeAction?.recording?.entries?.length ?? 0;
+		return {
+			error: `Processor.createScoringForAlternativeAction returned undefined (${entryCount} entries, lang: ${row.activeDocumentLanguageId})`,
+		};
 	}
 
 	const recording = scoring.scoringContext.recording;
@@ -111,18 +134,25 @@ function _processRow(row: IInputRow): IProcessedRow | { error: string } {
 		lastDocId = result.lastDocId;
 	} catch (e) {
 		replayer.dispose();
-		return { error: `Replay failed (${recording.log.length} entries, file: ${recording.nextUserEdit?.relativePath ?? 'unknown'}): ${formatError(e)}` };
+		return {
+			error: `Replay failed (${recording.log.length} entries, file: ${recording.nextUserEdit?.relativePath ?? 'unknown'}): ${formatError(e)}`,
+		};
 	}
 
 	const workspace = replayer.workspace;
 	const activeDocument = workspace.getDocument(lastDocId);
 	if (!activeDocument) {
 		replayer.dispose();
-		return { error: `Active document not found after replay: ${lastDocId}` };
+		return {
+			error: `Active document not found after replay: ${lastDocId}`,
+		};
 	}
 
 	// Prefer scoring edit URI, fall back to oracle path
-	const activeFilePath = scoring.edits[0]?.documentUri ?? recording.nextUserEdit?.relativePath ?? 'unknown';
+	const activeFilePath =
+		scoring.edits[0]?.documentUri ??
+		recording.nextUserEdit?.relativePath ??
+		'unknown';
 
 	return {
 		originalRowIndex: row.originalRowIndex,

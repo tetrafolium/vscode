@@ -3,7 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AuthOptions, CCAEnabledResult, CustomAgentDetails, CustomAgentListItem, CustomAgentListOptions, GitHubOutageStatus, IOctoKitService, PermissiveAuthRequiredError } from '../../../../platform/github/common/githubService';
+import {
+	AuthOptions,
+	CCAEnabledResult,
+	CustomAgentDetails,
+	CustomAgentListItem,
+	CustomAgentListOptions,
+	GitHubOutageStatus,
+	IOctoKitService,
+	PermissiveAuthRequiredError,
+} from '../../../../platform/github/common/githubService';
 
 /**
  * Mock implementation of IOctoKitService for testing
@@ -16,9 +25,14 @@ export class MockOctoKitService implements IOctoKitService {
 	private orgInstructions: Map<string, string> = new Map();
 	private userOrganizations: string[] = ['testorg'];
 
-	getCurrentAuthedUser = async () => ({ login: 'testuser', name: 'Test User', avatar_url: '' });
+	getCurrentAuthedUser = async () => ({
+		login: 'testuser',
+		name: 'Test User',
+		avatar_url: '',
+	});
 	getCopilotPullRequestsForUser = async () => [];
-	getGitHubOutageStatus = async (): Promise<GitHubOutageStatus> => GitHubOutageStatus.None;
+	getGitHubOutageStatus = async (): Promise<GitHubOutageStatus> =>
+		GitHubOutageStatus.None;
 	getCopilotSessionsForPR = async () => [];
 	getSessionLogs = async () => '';
 	getSessionInfo = async () => undefined;
@@ -41,22 +55,44 @@ export class MockOctoKitService implements IOctoKitService {
 	getAssignableActors = async () => [];
 	isCCAEnabled = async (): Promise<CCAEnabledResult> => ({ enabled: true });
 
-	getUserOrganizations = async (_authOptions?: AuthOptions, _pageSize?: number) => this.userOrganizations;
-	isUserMemberOfOrg = async (org: string, _authOptions?: AuthOptions) => this.userOrganizations.includes(org);
-	getOrganizationRepositories = async (org: string, _authOptions?: AuthOptions, _pageSize?: number) => [org === 'testorg' ? 'testrepo' : 'repo'];
+	getUserOrganizations = async (
+		_authOptions?: AuthOptions,
+		_pageSize?: number,
+	) => this.userOrganizations;
+	isUserMemberOfOrg = async (org: string, _authOptions?: AuthOptions) =>
+		this.userOrganizations.includes(org);
+	getOrganizationRepositories = async (
+		org: string,
+		_authOptions?: AuthOptions,
+		_pageSize?: number,
+	) => [org === 'testorg' ? 'testrepo' : 'repo'];
 
-	async getOrgCustomInstructions(orgLogin: string, _authOptions?: AuthOptions): Promise<string | undefined> {
+	async getOrgCustomInstructions(
+		orgLogin: string,
+		_authOptions?: AuthOptions,
+	): Promise<string | undefined> {
 		return this.orgInstructions.get(orgLogin);
 	}
 
-	async getCustomAgents(_owner: string, _repo: string, _options: CustomAgentListOptions, _authOptions: AuthOptions): Promise<CustomAgentListItem[]> {
+	async getCustomAgents(
+		_owner: string,
+		_repo: string,
+		_options: CustomAgentListOptions,
+		_authOptions: AuthOptions,
+	): Promise<CustomAgentListItem[]> {
 		if (!(await this.getCurrentAuthedUser())) {
 			throw new PermissiveAuthRequiredError();
 		}
 		return this.customAgents;
 	}
 
-	async getCustomAgentDetails(_owner: string, _repo: string, agentName: string, _version: string, _authOptions: AuthOptions): Promise<CustomAgentDetails | undefined> {
+	async getCustomAgentDetails(
+		_owner: string,
+		_repo: string,
+		agentName: string,
+		_version: string,
+		_authOptions: AuthOptions,
+	): Promise<CustomAgentDetails | undefined> {
 		return this.agentDetails.get(agentName);
 	}
 

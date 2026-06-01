@@ -116,8 +116,20 @@ suite('contextProviderStatistics', function () {
 			assert.deepStrictEqual(stats.resolution, resolution);
 			assert.deepStrictEqual(stats.usage, 'full');
 			assert.deepStrictEqual(stats.usageDetails, [
-				{ id: '1234', usage: 'full', expectedTokens: 7, actualTokens: 7, type: 'Trait' },
-				{ id: '5678', usage: 'full', expectedTokens: 10, actualTokens: 10, type: 'Trait' },
+				{
+					id: '1234',
+					usage: 'full',
+					expectedTokens: 7,
+					actualTokens: 7,
+					type: 'Trait',
+				},
+				{
+					id: '5678',
+					usage: 'full',
+					expectedTokens: 10,
+					actualTokens: 10,
+					type: 'Trait',
+				},
 			]);
 		});
 
@@ -147,8 +159,20 @@ suite('contextProviderStatistics', function () {
 			assert.deepStrictEqual(stats.resolution, resolution);
 			assert.deepStrictEqual(stats.usage, 'partial');
 			assert.deepStrictEqual(stats.usageDetails, [
-				{ id: '1234', usage: 'full', expectedTokens: 7, actualTokens: 7, type: 'Trait' },
-				{ id: '5678', usage: 'partial', expectedTokens: 10, actualTokens: 5, type: 'Trait' },
+				{
+					id: '1234',
+					usage: 'full',
+					expectedTokens: 7,
+					actualTokens: 7,
+					type: 'Trait',
+				},
+				{
+					id: '5678',
+					usage: 'partial',
+					expectedTokens: 10,
+					actualTokens: 5,
+					type: 'Trait',
+				},
 			]);
 		});
 
@@ -178,8 +202,20 @@ suite('contextProviderStatistics', function () {
 			assert.deepStrictEqual(stats.resolution, resolution);
 			assert.deepStrictEqual(stats.usage, 'none');
 			assert.deepStrictEqual(stats.usageDetails, [
-				{ id: '1234', usage: 'none', expectedTokens: 7, actualTokens: 0, type: 'Trait' },
-				{ id: '5678', usage: 'none', expectedTokens: 10, actualTokens: 0, type: 'Trait' },
+				{
+					id: '1234',
+					usage: 'none',
+					expectedTokens: 7,
+					actualTokens: 0,
+					type: 'Trait',
+				},
+				{
+					id: '5678',
+					usage: 'none',
+					expectedTokens: 10,
+					actualTokens: 0,
+					type: 'Trait',
+				},
 			]);
 		});
 
@@ -204,7 +240,13 @@ suite('contextProviderStatistics', function () {
 			assert.deepStrictEqual(stats.resolution, resolution);
 			assert.deepStrictEqual(stats.usage, 'partial');
 			assert.deepStrictEqual(stats.usageDetails, [
-				{ id: '1234', usage: 'full', expectedTokens: 7, actualTokens: 7, type: 'Trait' },
+				{
+					id: '1234',
+					usage: 'full',
+					expectedTokens: 7,
+					actualTokens: 7,
+					type: 'Trait',
+				},
 				{ id: '5678', usage: 'none_content_excluded', type: 'Trait' },
 			]);
 		});

@@ -1,4 +1,4 @@
-import { filepaths } from '../../helpers/filepaths';
+import { filepaths } from "../../helpers/filepaths";
 
 const completionSpec: Fig.Spec = {
 	name: "python",

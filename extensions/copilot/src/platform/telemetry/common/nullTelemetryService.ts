@@ -3,7 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ITelemetryService, TelemetryDestination, TelemetryEventMeasurements, TelemetryEventProperties } from './telemetry';
+import {
+	ITelemetryService,
+	TelemetryDestination,
+	TelemetryEventMeasurements,
+	TelemetryEventProperties,
+} from './telemetry';
 
 export class NullTelemetryService implements ITelemetryService {
 	declare readonly _serviceBrand: undefined;
@@ -12,28 +17,58 @@ export class NullTelemetryService implements ITelemetryService {
 		return;
 	}
 
-	sendInternalMSFTTelemetryEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendInternalMSFTTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		return;
 	}
-	sendMSFTTelemetryEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendMSFTTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		return;
 	}
-	sendMSFTTelemetryErrorEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendMSFTTelemetryErrorEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		return;
 	}
-	sendGHTelemetryEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendGHTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		return;
 	}
-	sendGHTelemetryErrorEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendGHTelemetryErrorEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		return;
 	}
 	sendGHTelemetryException(maybeError: unknown, origin: string): void {
 		return;
 	}
-	sendTelemetryEvent(eventName: string, destination: TelemetryDestination, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendTelemetryEvent(
+		eventName: string,
+		destination: TelemetryDestination,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		return;
 	}
-	sendTelemetryErrorEvent(eventName: string, destination: TelemetryDestination, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendTelemetryErrorEvent(
+		eventName: string,
+		destination: TelemetryDestination,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		return;
 	}
 	setSharedProperty(name: string, value: string): void {
@@ -46,11 +81,18 @@ export class NullTelemetryService implements ITelemetryService {
 		return;
 	}
 
-	sendEnhancedGHTelemetryEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendEnhancedGHTelemetryEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		return;
 	}
-	sendEnhancedGHTelemetryErrorEvent(eventName: string, properties?: TelemetryEventProperties | undefined, measurements?: TelemetryEventMeasurements | undefined): void {
+	sendEnhancedGHTelemetryErrorEvent(
+		eventName: string,
+		properties?: TelemetryEventProperties | undefined,
+		measurements?: TelemetryEventMeasurements | undefined,
+	): void {
 		return;
 	}
-
 }

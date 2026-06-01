@@ -3,12 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { Event } from '../../../../base/common/event.js';
-import { ContextKeyExpr, IContextKey, IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
-import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { ChatContextKeys } from '../../chat/common/actions/chatContextKeys.js';
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { Event } from "../../../../base/common/event.js";
+import {
+	ContextKeyExpr,
+	IContextKey,
+	IContextKeyService,
+} from "../../../../platform/contextkey/common/contextkey.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../platform/instantiation/common/extensions.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { ChatContextKeys } from "../../chat/common/actions/chatContextKeys.js";
 
 export interface IRemoteCodingAgent {
 	id: string;
@@ -26,24 +33,34 @@ export interface IRemoteCodingAgentsService {
 	registerAgent(agent: IRemoteCodingAgent): void;
 }
 
-export const IRemoteCodingAgentsService = createDecorator<IRemoteCodingAgentsService>('remoteCodingAgentsService');
+export const IRemoteCodingAgentsService =
+	createDecorator<IRemoteCodingAgentsService>("remoteCodingAgentsService");
 
-export class RemoteCodingAgentsService extends Disposable implements IRemoteCodingAgentsService {
+export class RemoteCodingAgentsService
+	extends Disposable
+	implements IRemoteCodingAgentsService
+{
 	readonly _serviceBrand: undefined;
 	private readonly _ctxHasRemoteCodingAgent: IContextKey<boolean>;
 	private readonly agents: IRemoteCodingAgent[] = [];
 	private readonly contextKeys = new Set<string>();
 
 	constructor(
-		@IContextKeyService private readonly contextKeyService: IContextKeyService
+		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 	) {
 		super();
-		this._ctxHasRemoteCodingAgent = ChatContextKeys.hasRemoteCodingAgent.bindTo(this.contextKeyService);
+		this._ctxHasRemoteCodingAgent = ChatContextKeys.hasRemoteCodingAgent.bindTo(
+			this.contextKeyService,
+		);
 
 		// Listen for context changes and re-evaluate agent availability
-		this._register(Event.filter(contextKeyService.onDidChangeContext, e => e.affectsSome(this.contextKeys))(() => {
-			this.updateContextKeys();
-		}));
+		this._register(
+			Event.filter(contextKeyService.onDidChangeContext, (e) =>
+				e.affectsSome(this.contextKeys),
+			)(() => {
+				this.updateContextKeys();
+			}),
+		);
 	}
 
 	getRegisteredAgents(): IRemoteCodingAgent[] {
@@ -51,12 +68,12 @@ export class RemoteCodingAgentsService extends Disposable implements IRemoteCodi
 	}
 
 	getAvailableAgents(): IRemoteCodingAgent[] {
-		return this.agents.filter(agent => this.isAgentAvailable(agent));
+		return this.agents.filter((agent) => this.isAgentAvailable(agent));
 	}
 
 	registerAgent(agent: IRemoteCodingAgent): void {
 		// Check if agent already exists
-		const existingIndex = this.agents.findIndex(a => a.id === agent.id);
+		const existingIndex = this.agents.findIndex((a) => a.id === agent.id);
 		if (existingIndex >= 0) {
 			// Update existing agent
 			this.agents[existingIndex] = agent;
@@ -93,4 +110,8 @@ export class RemoteCodingAgentsService extends Disposable implements IRemoteCodi
 	}
 }
 
-registerSingleton(IRemoteCodingAgentsService, RemoteCodingAgentsService, InstantiationType.Delayed);
+registerSingleton(
+	IRemoteCodingAgentsService,
+	RemoteCodingAgentsService,
+	InstantiationType.Delayed,
+);

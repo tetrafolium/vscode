@@ -7,10 +7,13 @@ import * as vscode from 'vscode';
 import { Emitter } from '../../../util/vs/base/common/event';
 import { DisposableStore } from '../../../util/vs/base/common/lifecycle';
 import { ResourceMap } from '../../../util/vs/base/common/map';
-import { ITabsAndEditorsService, TabChangeEvent, TabInfo } from '../common/tabsAndEditorsService';
+import {
+	ITabsAndEditorsService,
+	TabChangeEvent,
+	TabInfo,
+} from '../common/tabsAndEditorsService';
 
 export class TabsAndEditorsServiceImpl implements ITabsAndEditorsService {
-
 	declare _serviceBrand: undefined;
 
 	private readonly _store = new DisposableStore();
@@ -18,29 +21,41 @@ export class TabsAndEditorsServiceImpl implements ITabsAndEditorsService {
 	private readonly _tabGroupsUseInfo = new Map<vscode.TabGroup, number>();
 	private _tabClock: number = 0;
 
-	readonly onDidChangeActiveTextEditor: vscode.Event<vscode.TextEditor | undefined> = vscode.window.onDidChangeActiveTextEditor;
-	private readonly _onDidChangeTabs = this._store.add(new Emitter<TabChangeEvent>());
+	readonly onDidChangeActiveTextEditor: vscode.Event<
+		vscode.TextEditor | undefined
+	> = vscode.window.onDidChangeActiveTextEditor;
+	private readonly _onDidChangeTabs = this._store.add(
+		new Emitter<TabChangeEvent>(),
+	);
 	readonly onDidChangeTabs = this._onDidChangeTabs.event;
 
 	constructor() {
 		// Set the activeTabGroup as the most recently used
-		const updateActiveTabGroup = () => this._tabGroupsUseInfo.set(vscode.window.tabGroups.activeTabGroup, this._tabClock++);
+		const updateActiveTabGroup = () =>
+			this._tabGroupsUseInfo.set(
+				vscode.window.tabGroups.activeTabGroup,
+				this._tabClock++,
+			);
 
 		updateActiveTabGroup();
-		this._store.add(vscode.window.tabGroups.onDidChangeTabGroups(e => {
-			// remove all tab groups!
-			e.closed.forEach(item => this._tabGroupsUseInfo.delete(item));
+		this._store.add(
+			vscode.window.tabGroups.onDidChangeTabGroups((e) => {
+				// remove all tab groups!
+				e.closed.forEach((item) => this._tabGroupsUseInfo.delete(item));
 
-			updateActiveTabGroup();
-		}));
+				updateActiveTabGroup();
+			}),
+		);
 
-		this._store.add(vscode.window.tabGroups.onDidChangeTabs(e => {
-			this._onDidChangeTabs.fire({
-				changed: e.changed.map(t => this._asTabInfo(t)),
-				closed: e.closed.map(t => this._asTabInfo(t)),
-				opened: e.opened.map(t => this._asTabInfo(t))
-			});
-		}));
+		this._store.add(
+			vscode.window.tabGroups.onDidChangeTabs((e) => {
+				this._onDidChangeTabs.fire({
+					changed: e.changed.map((t) => this._asTabInfo(t)),
+					closed: e.closed.map((t) => this._asTabInfo(t)),
+					opened: e.opened.map((t) => this._asTabInfo(t)),
+				});
+			}),
+		);
 	}
 
 	dispose(): void {
@@ -54,14 +69,15 @@ export class TabsAndEditorsServiceImpl implements ITabsAndEditorsService {
 	 * the most recent tab group that shows a text editor is used.
 	 */
 	get activeTextEditor(): vscode.TextEditor | undefined {
-
 		const candidate = vscode.window.activeTextEditor;
 		if (candidate && candidate.document.uri.scheme !== 'output') {
 			return candidate;
 		}
 
 		const allEditors = new ResourceMap<vscode.TextEditor>();
-		vscode.window.visibleTextEditors.forEach(e => allEditors.set(e.document.uri, e));
+		vscode.window.visibleTextEditors.forEach((e) =>
+			allEditors.set(e.document.uri, e),
+		);
 
 		const groups = [...this._tabGroupsUseInfo];
 		groups.sort((a, b) => b[1] - a[1]);
@@ -91,19 +107,27 @@ export class TabsAndEditorsServiceImpl implements ITabsAndEditorsService {
 	}
 
 	get tabs(): TabInfo[] {
-		return vscode.window.tabGroups.all.flatMap(g => g.tabs).map(this._asTabInfo, this);
+		return vscode.window.tabGroups.all
+			.flatMap((g) => g.tabs)
+			.map(this._asTabInfo, this);
 	}
 
 	private _asTabInfo(tab: vscode.Tab): TabInfo {
 		let uri: vscode.Uri | undefined;
-		if (tab.input instanceof vscode.TabInputText || tab.input instanceof vscode.TabInputNotebook) {
+		if (
+			tab.input instanceof vscode.TabInputText ||
+			tab.input instanceof vscode.TabInputNotebook
+		) {
 			uri = tab.input.uri;
-		} else if (tab.input instanceof vscode.TabInputTextDiff || tab.input instanceof vscode.TabInputNotebookDiff) {
+		} else if (
+			tab.input instanceof vscode.TabInputTextDiff ||
+			tab.input instanceof vscode.TabInputNotebookDiff
+		) {
 			uri = tab.input.modified;
 		}
 		return {
 			tab,
-			uri
+			uri,
 		};
 	}
 }

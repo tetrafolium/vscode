@@ -59,18 +59,29 @@ export function vIsoTimestamp(): IValidator<string> {
 	return {
 		validate(content: unknown) {
 			if (typeof content !== 'string') {
-				return { content: undefined, error: { message: `Expected ISO timestamp string, got ${typeof content}` } };
+				return {
+					content: undefined,
+					error: {
+						message: `Expected ISO timestamp string, got ${typeof content}`,
+					},
+				};
 			}
 			// Basic ISO 8601 format check (YYYY-MM-DDTHH:MM:SS with optional fractional seconds and Z)
-			const isoPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
+			const isoPattern =
+				/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
 			if (!isoPattern.test(content)) {
-				return { content: undefined, error: { message: `Invalid ISO timestamp format: ${content}` } };
+				return {
+					content: undefined,
+					error: {
+						message: `Invalid ISO timestamp format: ${content}`,
+					},
+				};
 			}
 			return { content, error: undefined };
 		},
 		toSchema() {
 			return { type: 'string', format: 'date-time' };
-		}
+		},
 	};
 }
 
@@ -86,16 +97,24 @@ export function vUuid(): IValidator<string> {
 	return {
 		validate(content: unknown) {
 			if (typeof content !== 'string') {
-				return { content: undefined, error: { message: `Expected UUID string, got ${typeof content}` } };
+				return {
+					content: undefined,
+					error: {
+						message: `Expected UUID string, got ${typeof content}`,
+					},
+				};
 			}
 			if (content.length === 0) {
-				return { content: undefined, error: { message: 'Expected non-empty UUID string' } };
+				return {
+					content: undefined,
+					error: { message: 'Expected non-empty UUID string' },
+				};
 			}
 			return { content, error: undefined };
 		},
 		toSchema() {
 			return { type: 'string', format: 'uuid' };
-		}
+		},
 	};
 }
 
@@ -110,7 +129,10 @@ export function vUuid(): IValidator<string> {
  * If SDK changes in incompatible ways, this will fail and remind us to update the validator.
  * Direction: Validator -> SDK (validator output can be used as SDK type)
  */
-function assertValidatorAssignable<_TValidator extends TSDKType, TSDKType>(): void { }
+function assertValidatorAssignable<
+	_TValidator extends TSDKType,
+	TSDKType,
+>(): void {}
 
 /**
  * Text content block in assistant messages.
@@ -121,7 +143,10 @@ export const vTextBlock = vObj({
 	text: vRequired(vString()),
 	citations: vNullable(vArray(vUnchecked<Anthropic.TextCitation>())),
 });
-assertValidatorAssignable<ValidatorType<typeof vTextBlock>, Anthropic.TextBlock>();
+assertValidatorAssignable<
+	ValidatorType<typeof vTextBlock>,
+	Anthropic.TextBlock
+>();
 export type TextBlock = Anthropic.TextBlock;
 
 /**
@@ -133,7 +158,10 @@ export const vThinkingBlock = vObj({
 	thinking: vRequired(vString()),
 	signature: vRequired(vString()),
 });
-assertValidatorAssignable<ValidatorType<typeof vThinkingBlock>, Anthropic.ThinkingBlock>();
+assertValidatorAssignable<
+	ValidatorType<typeof vThinkingBlock>,
+	Anthropic.ThinkingBlock
+>();
 export type ThinkingBlock = Anthropic.ThinkingBlock;
 
 /**
@@ -146,7 +174,10 @@ export const vToolUseBlock = vObj({
 	name: vRequired(vString()),
 	input: vRequired(vUnknown()),
 });
-assertValidatorAssignable<ValidatorType<typeof vToolUseBlock>, Anthropic.Beta.Messages.BetaToolUseBlock>();
+assertValidatorAssignable<
+	ValidatorType<typeof vToolUseBlock>,
+	Anthropic.Beta.Messages.BetaToolUseBlock
+>();
 export type ToolUseBlock = Anthropic.Beta.Messages.BetaToolUseBlock;
 
 /**
@@ -163,12 +194,22 @@ export const vToolResultBlock = vObj({
 	tool_use_id: vRequired(vString()),
 	content: vUnion(
 		vString(),
-		vArray(vUnchecked<Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.SearchResultBlockParam | Anthropic.DocumentBlockParam>()),
-		vUndefined()
+		vArray(
+			vUnchecked<
+				| Anthropic.TextBlockParam
+				| Anthropic.ImageBlockParam
+				| Anthropic.SearchResultBlockParam
+				| Anthropic.DocumentBlockParam
+			>(),
+		),
+		vUndefined(),
 	),
 	is_error: vBoolean(),
 });
-assertValidatorAssignable<ValidatorType<typeof vToolResultBlock>, Anthropic.ToolResultBlockParam>();
+assertValidatorAssignable<
+	ValidatorType<typeof vToolResultBlock>,
+	Anthropic.ToolResultBlockParam
+>();
 export type ToolResultBlock = Anthropic.ToolResultBlockParam;
 
 /**
@@ -177,7 +218,9 @@ export type ToolResultBlock = Anthropic.ToolResultBlockParam;
  */
 const vBase64ImageSource = vObj({
 	type: vRequired(vLiteral('base64')),
-	media_type: vRequired(vEnum('image/jpeg', 'image/png', 'image/gif', 'image/webp')),
+	media_type: vRequired(
+		vEnum('image/jpeg', 'image/png', 'image/gif', 'image/webp'),
+	),
 	data: vRequired(vString()),
 });
 
@@ -201,7 +244,10 @@ export const vImageBlock = vObj({
 	type: vRequired(vLiteral('image')),
 	source: vRequired(vUnion(vBase64ImageSource, vURLImageSource)),
 });
-assertValidatorAssignable<ValidatorType<typeof vImageBlock>, Anthropic.ImageBlockParam>();
+assertValidatorAssignable<
+	ValidatorType<typeof vImageBlock>,
+	Anthropic.ImageBlockParam
+>();
 export type ImageBlock = Anthropic.ImageBlockParam;
 
 /**
@@ -224,9 +270,15 @@ export const vContentBlock = vUnion(
 	vToolUseBlock,
 	vToolResultBlock,
 	vImageBlock,
-	vUnknownContentBlock
+	vUnknownContentBlock,
 );
-export type ContentBlock = TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock | ImageBlock | UnknownContentBlock;
+export type ContentBlock =
+	| TextBlock
+	| ThinkingBlock
+	| ToolUseBlock
+	| ToolResultBlock
+	| ImageBlock
+	| UnknownContentBlock;
 
 // #endregion
 
@@ -280,7 +332,9 @@ export const vAssistantMessageContent = vObj({
 	usage: vUsage,
 	parent_tool_use_id: vNullable(vString()),
 });
-export type AssistantMessageContent = ValidatorType<typeof vAssistantMessageContent>;
+export type AssistantMessageContent = ValidatorType<
+	typeof vAssistantMessageContent
+>;
 
 /**
  * System message content — a simple text entry produced by the runtime
@@ -353,7 +407,9 @@ export const vAssistantMessageEntry = vObj({
 	type: vRequired(vLiteral('assistant')),
 	message: vRequired(vAssistantMessageContent),
 });
-export type AssistantMessageEntry = ValidatorType<typeof vAssistantMessageEntry>;
+export type AssistantMessageEntry = ValidatorType<
+	typeof vAssistantMessageEntry
+>;
 
 /**
  * Summary entry - provides a label for the session based on conversation.
@@ -393,10 +449,7 @@ export const vChainNodeFields = vObj({
 
 // #region Union Validators
 
-export const vMessageEntry = vUnion(
-	vUserMessageEntry,
-	vAssistantMessageEntry
-);
+export const vMessageEntry = vUnion(vUserMessageEntry, vAssistantMessageEntry);
 export type MessageEntry = ValidatorType<typeof vMessageEntry>;
 
 // #endregion
@@ -422,8 +475,13 @@ function isImageMediaType(value: string): value is ImageMediaType {
  * Handles variations like 'image/jpg' → 'image/jpeg'.
  * Returns undefined for unsupported types.
  */
-export function toAnthropicImageMediaType(mimeType: string): ImageMediaType | undefined {
-	const normalized = mimeType.toLowerCase() === 'image/jpg' ? 'image/jpeg' : mimeType.toLowerCase();
+export function toAnthropicImageMediaType(
+	mimeType: string,
+): ImageMediaType | undefined {
+	const normalized =
+		mimeType.toLowerCase() === 'image/jpg'
+			? 'image/jpeg'
+			: mimeType.toLowerCase();
 	return isImageMediaType(normalized) ? normalized : undefined;
 }
 
@@ -439,7 +497,7 @@ export function isUserRequest(content: UserMessageContent['content']): boolean {
 	if (!Array.isArray(content)) {
 		return false;
 	}
-	return content.some(block => block.type !== 'tool_result');
+	return content.some((block) => block.type !== 'tool_result');
 }
 
 // #endregion
@@ -466,7 +524,10 @@ export interface StoredMessage {
 	readonly timestamp: Date;
 	readonly parentUuid: string | null;
 	readonly type: 'user' | 'assistant' | 'system';
-	readonly message: UserMessageContent | AssistantMessageContent | SystemMessageContent;
+	readonly message:
+		| UserMessageContent
+		| AssistantMessageContent
+		| SystemMessageContent;
 	readonly isSidechain?: boolean;
 	readonly userType?: string;
 	readonly cwd?: string;

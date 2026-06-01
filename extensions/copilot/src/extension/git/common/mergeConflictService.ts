@@ -7,11 +7,14 @@ import type { CancellationToken, Uri } from 'vscode';
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IMergeConflictService = createServiceIdentifier<IMergeConflictService>('IMergeConflictService');
+export const IMergeConflictService =
+	createServiceIdentifier<IMergeConflictService>('IMergeConflictService');
 
 export interface IMergeConflictService {
-
 	readonly _serviceBrand: undefined;
 
-	resolveMergeConflicts(documents: Uri[], cancellationToken: CancellationToken | undefined): Promise<void>;
+	resolveMergeConflicts(
+		documents: Uri[],
+		cancellationToken: CancellationToken | undefined,
+	): Promise<void>;
 }

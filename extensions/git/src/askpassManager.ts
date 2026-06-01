@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as cp from 'child_process';
-import { env, LogOutputChannel } from 'vscode';
+import * as crypto from "crypto";
+import * as fs from "fs";
+import * as path from "path";
+import * as cp from "child_process";
+import { env, LogOutputChannel } from "vscode";
 
 /**
  * Manages content-addressed copies of askpass scripts in a user-controlled folder.
@@ -31,18 +31,18 @@ import { env, LogOutputChannel } from 'vscode';
  * Returns false for archive, portable, or non-Windows installations.
  */
 function isWindowsUserOrSystemSetup(): boolean {
-	if (process.platform !== 'win32') {
+	if (process.platform !== "win32") {
 		return false;
 	}
 
 	try {
-		const productJsonPath = path.join(env.appRoot, 'product.json');
-		const productJson = JSON.parse(fs.readFileSync(productJsonPath, 'utf8'));
+		const productJsonPath = path.join(env.appRoot, "product.json");
+		const productJson = JSON.parse(fs.readFileSync(productJsonPath, "utf8"));
 		const target = productJson.target as string | undefined;
 
 		// Target is 'user' or 'system' for Inno Setup installations.
 		// Archive and portable builds don't have a target property.
-		return target === 'user' || target === 'system';
+		return target === "user" || target === "system";
 	} catch {
 		// If we can't read product.json, assume not applicable
 		return false;
@@ -62,7 +62,7 @@ interface SourceAskpassPaths {
  * This hash is used to create content-addressed directories.
  */
 function computeContentHash(sourcePaths: SourceAskpassPaths): string {
-	const hash = crypto.createHash('sha256');
+	const hash = crypto.createHash("sha256");
 
 	// Hash all source files in a deterministic order
 	const files = [
@@ -80,17 +80,22 @@ function computeContentHash(sourcePaths: SourceAskpassPaths): string {
 		hash.update(path.basename(file));
 	}
 
-	return hash.digest('hex').substring(0, 16);
+	return hash.digest("hex").substring(0, 16);
 }
 
 /**
  * Sets restrictive file permissions on Windows using icacls.
  * Grants full control only to the current user and removes inherited permissions.
  */
-async function setWindowsPermissions(filePath: string, logger: LogOutputChannel): Promise<void> {
-	const username = process.env['USERNAME'];
+async function setWindowsPermissions(
+	filePath: string,
+	logger: LogOutputChannel,
+): Promise<void> {
+	const username = process.env["USERNAME"];
 	if (!username) {
-		logger.warn(`[askpassManager] Cannot set Windows permissions: USERNAME not set`);
+		logger.warn(
+			`[askpassManager] Cannot set Windows permissions: USERNAME not set`,
+		);
 		return;
 	}
 
@@ -98,11 +103,13 @@ async function setWindowsPermissions(filePath: string, logger: LogOutputChannel)
 		// icacls <file> /inheritance:r /grant:r "<username>:F"
 		// /inheritance:r - Remove all inherited permissions
 		// /grant:r - Replace (not add) permissions, giving Full control to user
-		const args = [filePath, '/inheritance:r', '/grant:r', `${username}:F`];
+		const args = [filePath, "/inheritance:r", "/grant:r", `${username}:F`];
 
-		cp.execFile('icacls', args, (error, _stdout, stderr) => {
+		cp.execFile("icacls", args, (error, _stdout, stderr) => {
 			if (error) {
-				logger.warn(`[askpassManager] Failed to set permissions on ${filePath}: ${error.message}`);
+				logger.warn(
+					`[askpassManager] Failed to set permissions on ${filePath}: ${error.message}`,
+				);
 				if (stderr) {
 					logger.warn(`[askpassManager] icacls stderr: ${stderr}`);
 				}
@@ -121,7 +128,7 @@ async function setWindowsPermissions(filePath: string, logger: LogOutputChannel)
 async function copyFileSecure(
 	source: string,
 	dest: string,
-	logger: LogOutputChannel
+	logger: LogOutputChannel,
 ): Promise<void> {
 	const content = await fs.promises.readFile(source);
 	await fs.promises.writeFile(dest, content);
@@ -131,13 +138,18 @@ async function copyFileSecure(
 /**
  * Updates the modification time of a directory to mark it as recently used.
  */
-async function updateDirectoryMtime(dirPath: string, logger: LogOutputChannel): Promise<void> {
+async function updateDirectoryMtime(
+	dirPath: string,
+	logger: LogOutputChannel,
+): Promise<void> {
 	try {
 		const now = new Date();
 		await fs.promises.utimes(dirPath, now, now);
 		logger.trace(`[askpassManager] Updated mtime for ${dirPath}`);
 	} catch (err) {
-		logger.warn(`[askpassManager] Failed to update mtime for ${dirPath}: ${err}`);
+		logger.warn(
+			`[askpassManager] Failed to update mtime for ${dirPath}: ${err}`,
+		);
 	}
 }
 
@@ -148,7 +160,7 @@ async function updateDirectoryMtime(dirPath: string, logger: LogOutputChannel): 
 async function garbageCollectOldDirectories(
 	askpassBaseDir: string,
 	currentHash: string,
-	logger: LogOutputChannel
+	logger: LogOutputChannel,
 ): Promise<void> {
 	try {
 		// Check if the askpass base directory exists
@@ -160,7 +172,7 @@ async function garbageCollectOldDirectories(
 		}
 
 		const entries = await fs.promises.readdir(askpassBaseDir);
-		const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+		const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
 		for (const entry of entries) {
 			// Skip the current content-addressed directory
@@ -180,19 +192,27 @@ async function garbageCollectOldDirectories(
 
 				// Check if the directory hasn't been used in 7 days
 				if (stat.mtime.getTime() < sevenDaysAgo) {
-					logger.info(`[askpassManager] Removing old askpass directory: ${entryPath} (last used: ${stat.mtime.toISOString()})`);
+					logger.info(
+						`[askpassManager] Removing old askpass directory: ${entryPath} (last used: ${stat.mtime.toISOString()})`,
+					);
 
 					// Remove the directory and all its contents
 					await fs.promises.rm(entryPath, { recursive: true, force: true });
 				} else {
-					logger.trace(`[askpassManager] Keeping askpass directory: ${entryPath} (last used: ${stat.mtime.toISOString()})`);
+					logger.trace(
+						`[askpassManager] Keeping askpass directory: ${entryPath} (last used: ${stat.mtime.toISOString()})`,
+					);
 				}
 			} catch (err) {
-				logger.warn(`[askpassManager] Failed to process/remove directory ${entryPath}: ${err}`);
+				logger.warn(
+					`[askpassManager] Failed to process/remove directory ${entryPath}: ${err}`,
+				);
 			}
 		}
 	} catch (err) {
-		logger.warn(`[askpassManager] Failed to garbage collect old directories: ${err}`);
+		logger.warn(
+			`[askpassManager] Failed to garbage collect old directories: ${err}`,
+		);
 	}
 }
 
@@ -215,14 +235,14 @@ export interface AskpassPaths {
 export async function ensureAskpassScripts(
 	sourceDir: string,
 	storageDir: string,
-	logger: LogOutputChannel
+	logger: LogOutputChannel,
 ): Promise<AskpassPaths> {
 	const sourcePaths: SourceAskpassPaths = {
-		askpass: path.join(sourceDir, 'askpass.sh'),
-		askpassMain: path.join(sourceDir, 'askpass-main.js'),
-		sshAskpass: path.join(sourceDir, 'ssh-askpass.sh'),
-		askpassEmpty: path.join(sourceDir, 'askpass-empty.sh'),
-		sshAskpassEmpty: path.join(sourceDir, 'ssh-askpass-empty.sh'),
+		askpass: path.join(sourceDir, "askpass.sh"),
+		askpassMain: path.join(sourceDir, "askpass-main.js"),
+		sshAskpass: path.join(sourceDir, "ssh-askpass.sh"),
+		askpassEmpty: path.join(sourceDir, "askpass-empty.sh"),
+		sshAskpassEmpty: path.join(sourceDir, "ssh-askpass-empty.sh"),
 	};
 
 	// Compute content hash
@@ -230,22 +250,24 @@ export async function ensureAskpassScripts(
 	logger.trace(`[askpassManager] Content hash: ${contentHash}`);
 
 	// Create content-addressed directory
-	const askpassBaseDir = path.join(storageDir, 'askpass');
+	const askpassBaseDir = path.join(storageDir, "askpass");
 	const askpassDir = path.join(askpassBaseDir, contentHash);
 
 	const destPaths: AskpassPaths = {
-		askpass: path.join(askpassDir, 'askpass.sh'),
-		askpassMain: path.join(askpassDir, 'askpass-main.js'),
-		sshAskpass: path.join(askpassDir, 'ssh-askpass.sh'),
-		askpassEmpty: path.join(askpassDir, 'askpass-empty.sh'),
-		sshAskpassEmpty: path.join(askpassDir, 'ssh-askpass-empty.sh'),
+		askpass: path.join(askpassDir, "askpass.sh"),
+		askpassMain: path.join(askpassDir, "askpass-main.js"),
+		sshAskpass: path.join(askpassDir, "ssh-askpass.sh"),
+		askpassEmpty: path.join(askpassDir, "askpass-empty.sh"),
+		sshAskpassEmpty: path.join(askpassDir, "ssh-askpass-empty.sh"),
 	};
 
 	// Check if already exists (fast path for subsequent activations)
 	try {
 		const stat = await fs.promises.stat(destPaths.askpass);
 		if (stat.isFile()) {
-			logger.trace(`[askpassManager] Using existing content-addressed askpass at ${askpassDir}`);
+			logger.trace(
+				`[askpassManager] Using existing content-addressed askpass at ${askpassDir}`,
+			);
 
 			// Update mtime to mark this directory as recently used
 			await updateDirectoryMtime(askpassDir, logger);
@@ -256,7 +278,9 @@ export async function ensureAskpassScripts(
 		// Directory doesn't exist, create it
 	}
 
-	logger.info(`[askpassManager] Creating content-addressed askpass scripts at ${askpassDir}`);
+	logger.info(
+		`[askpassManager] Creating content-addressed askpass scripts at ${askpassDir}`,
+	);
 
 	// Create directory and set Windows ACLs
 	await fs.promises.mkdir(askpassDir, { recursive: true });
@@ -268,10 +292,16 @@ export async function ensureAskpassScripts(
 		copyFileSecure(sourcePaths.askpassMain, destPaths.askpassMain, logger),
 		copyFileSecure(sourcePaths.sshAskpass, destPaths.sshAskpass, logger),
 		copyFileSecure(sourcePaths.askpassEmpty, destPaths.askpassEmpty, logger),
-		copyFileSecure(sourcePaths.sshAskpassEmpty, destPaths.sshAskpassEmpty, logger),
+		copyFileSecure(
+			sourcePaths.sshAskpassEmpty,
+			destPaths.sshAskpassEmpty,
+			logger,
+		),
 	]);
 
-	logger.info(`[askpassManager] Successfully created content-addressed askpass scripts`);
+	logger.info(
+		`[askpassManager] Successfully created content-addressed askpass scripts`,
+	);
 
 	// Update mtime to mark this directory as recently used
 	await updateDirectoryMtime(askpassDir, logger);
@@ -290,23 +320,25 @@ export async function ensureAskpassScripts(
 export async function getAskpassPaths(
 	sourceDir: string,
 	storagePath: string | undefined,
-	logger: LogOutputChannel
+	logger: LogOutputChannel,
 ): Promise<AskpassPaths> {
 	// Try content-addressed paths on Windows user/system setups
 	if (storagePath && isWindowsUserOrSystemSetup()) {
 		try {
 			return await ensureAskpassScripts(sourceDir, storagePath, logger);
 		} catch (err) {
-			logger.error(`[askpassManager] Failed to create content-addressed askpass scripts: ${err}`);
+			logger.error(
+				`[askpassManager] Failed to create content-addressed askpass scripts: ${err}`,
+			);
 		}
 	}
 
 	// Fallback to source directory paths (for development or non-Windows setups)
 	return {
-		askpass: path.join(sourceDir, 'askpass.sh'),
-		askpassMain: path.join(sourceDir, 'askpass-main.js'),
-		sshAskpass: path.join(sourceDir, 'ssh-askpass.sh'),
-		askpassEmpty: path.join(sourceDir, 'askpass-empty.sh'),
-		sshAskpassEmpty: path.join(sourceDir, 'ssh-askpass-empty.sh'),
+		askpass: path.join(sourceDir, "askpass.sh"),
+		askpassMain: path.join(sourceDir, "askpass-main.js"),
+		sshAskpass: path.join(sourceDir, "ssh-askpass.sh"),
+		askpassEmpty: path.join(sourceDir, "askpass-empty.sh"),
+		sshAskpassEmpty: path.join(sourceDir, "ssh-askpass-empty.sh"),
 	};
 }

@@ -11,10 +11,15 @@ import { StringText } from '../../../util/vs/editor/common/core/text/abstractTex
 export interface ISnippyService {
 	_serviceBrand: undefined;
 
-	handlePostInsertion(documentUri: URI, documentBeforeEdits: StringText, singleEdit: StringReplacement): Promise<void>;
+	handlePostInsertion(
+		documentUri: URI,
+		documentBeforeEdits: StringText,
+		singleEdit: StringReplacement,
+	): Promise<void>;
 }
 
-export const ISnippyService = createServiceIdentifier<ISnippyService>('ISnippyService');
+export const ISnippyService =
+	createServiceIdentifier<ISnippyService>('ISnippyService');
 
 export class NullSnippyService implements ISnippyService {
 	_serviceBrand: undefined;

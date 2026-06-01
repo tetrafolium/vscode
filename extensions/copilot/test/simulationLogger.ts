@@ -5,12 +5,15 @@
 import * as chalk from 'chalk';
 import { LogLevel } from '../src/platform/log/common/logService';
 
-
 class SimulationLogger {
 	public logLevel: LogLevel;
 	private tagPrefix: string;
 
-	constructor(private logFn: (...args: any[]) => void, logLevel: LogLevel = LogLevel.Info, tagPrefix: string = '') {
+	constructor(
+		private logFn: (...args: any[]) => void,
+		logLevel: LogLevel = LogLevel.Info,
+		tagPrefix: string = '',
+	) {
 		this.logLevel = logLevel;
 		this.tagPrefix = tagPrefix;
 	}
@@ -50,11 +53,20 @@ class SimulationLogger {
 	}
 
 	tag(tag: string): SimulationLogger {
-		return new SimulationLogger(this.logFn, this.logLevel, `${this.tagPrefix}[${tag}] `);
+		return new SimulationLogger(
+			this.logFn,
+			this.logLevel,
+			`${this.tagPrefix}[${tag}] `,
+		);
 	}
 
 	shouldLog(level: LogLevel): boolean {
-		const levels: LogLevel[] = [LogLevel.Debug, LogLevel.Info, LogLevel.Warning, LogLevel.Error];
+		const levels: LogLevel[] = [
+			LogLevel.Debug,
+			LogLevel.Info,
+			LogLevel.Warning,
+			LogLevel.Error,
+		];
 		return levels.indexOf(level) >= levels.indexOf(this.logLevel);
 	}
 
@@ -65,7 +77,7 @@ class SimulationLogger {
 			[LogLevel.Debug]: chalk.blue('debug'),
 			[LogLevel.Info]: chalk.green('info '),
 			[LogLevel.Warning]: chalk.yellow('yellow'),
-			[LogLevel.Error]: chalk.red('error')
+			[LogLevel.Error]: chalk.red('error'),
 		};
 		return `${chalk.bold(levelColors[level])} ${this.tagPrefix}${args.join(' ')}`;
 	}

@@ -3,8 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
-import { getModelId, modelSupportsContextEditing } from '../../endpoint/common/chatModelCapabilities';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
+import {
+	getModelId,
+	modelSupportsContextEditing,
+} from '../../endpoint/common/chatModelCapabilities';
 import type { LanguageModelChat } from 'vscode';
 import { IExperimentationService } from '../../telemetry/common/nullExperimentationService';
 import { ChatLocation } from '../../chat/common/commonTypes';
@@ -95,10 +101,12 @@ export interface ContextManagementResponse {
 export function modelSupportsInterleavedThinking(modelId: string): boolean {
 	// Normalize: lowercase and replace dots with dashes so "4.5" matches "4-5"
 	const normalized = modelId.toLowerCase().replace(/\./g, '-');
-	return normalized.startsWith('claude-sonnet-4-5') ||
+	return (
+		normalized.startsWith('claude-sonnet-4-5') ||
 		normalized.startsWith('claude-sonnet-4') ||
 		normalized.startsWith('claude-haiku-4-5') ||
-		normalized.startsWith('claude-opus-4-5');
+		normalized.startsWith('claude-opus-4-5')
+	);
 }
 
 /**
@@ -112,19 +120,23 @@ export function modelSupportsInterleavedThinking(modelId: string): boolean {
  * is also checked, so a per-model family override lights this up
  * automatically.
  */
-export function modelSupportsMemory(model: LanguageModelChat | IChatEndpoint | string): boolean {
+export function modelSupportsMemory(
+	model: LanguageModelChat | IChatEndpoint | string,
+): boolean {
 	const id = typeof model === 'string' ? model : getModelId(model);
 	const family = typeof model === 'string' ? model : model.family;
 	const matches = (s: string) => {
 		const n = s.toLowerCase().replace(/\./g, '-');
-		return n.startsWith('claude-haiku-4-5') ||
+		return (
+			n.startsWith('claude-haiku-4-5') ||
 			n.startsWith('claude-sonnet-4-6') ||
 			n.startsWith('claude-sonnet-4-5') ||
 			n.startsWith('claude-sonnet-4') ||
 			n.startsWith('claude-opus-4-6') ||
 			n.startsWith('claude-opus-4-5') ||
 			n.startsWith('claude-opus-4-1') ||
-			n.startsWith('claude-opus-4');
+			n.startsWith('claude-opus-4')
+		);
 	};
 	return matches(id) || matches(family);
 }
@@ -134,13 +146,18 @@ export function isAnthropicContextEditingEnabled(
 	configurationService: IConfigurationService,
 	experimentationService: IExperimentationService,
 ): boolean {
-	const supportsIt = typeof endpoint === 'string'
-		? modelSupportsContextEditing(endpoint)
-		: endpoint.supportsContextEditing ?? modelSupportsContextEditing(endpoint.model);
+	const supportsIt =
+		typeof endpoint === 'string'
+			? modelSupportsContextEditing(endpoint)
+			: (endpoint.supportsContextEditing ??
+				modelSupportsContextEditing(endpoint.model));
 	if (!supportsIt) {
 		return false;
 	}
-	const mode = configurationService.getExperimentBasedConfig(ConfigKey.AnthropicContextEditingMode, experimentationService);
+	const mode = configurationService.getExperimentBasedConfig(
+		ConfigKey.AnthropicContextEditingMode,
+		experimentationService,
+	);
 	return mode !== 'off';
 }
 
@@ -156,17 +173,21 @@ export function isAnthropicContextEditingEnabled(
  * is also checked, so a per-model family override lights this up
  * automatically.
  */
-export function modelSupportsExtendedCacheTtl(model: LanguageModelChat | IChatEndpoint | string): boolean {
+export function modelSupportsExtendedCacheTtl(
+	model: LanguageModelChat | IChatEndpoint | string,
+): boolean {
 	const id = typeof model === 'string' ? model : getModelId(model);
 	const family = typeof model === 'string' ? model : model.family;
 	const matches = (s: string) => {
 		const n = s.toLowerCase().replace(/\./g, '-');
-		return n.startsWith('claude-opus-4-7') ||
+		return (
+			n.startsWith('claude-opus-4-7') ||
 			n.startsWith('claude-opus-4-6') ||
 			n.startsWith('claude-opus-4-5') ||
 			n.startsWith('claude-sonnet-4-6') ||
 			n.startsWith('claude-sonnet-4-5') ||
-			n.startsWith('claude-haiku-4-5');
+			n.startsWith('claude-haiku-4-5')
+		);
 	};
 	return matches(id) || matches(family);
 }
@@ -204,7 +225,10 @@ export function isExtendedCacheTtlEnabled(
 	if (isSubagent) {
 		return false;
 	}
-	return configurationService.getExperimentBasedConfig(ConfigKey.Advanced.AnthropicExtendedCacheTtl, experimentationService);
+	return configurationService.getExperimentBasedConfig(
+		ConfigKey.Advanced.AnthropicExtendedCacheTtl,
+		experimentationService,
+	);
 }
 
 /**
@@ -237,10 +261,17 @@ export function isExtendedCacheTtlMessagesEnabled(
 	if (!parentEnabled) {
 		return false;
 	}
-	return configurationService.getExperimentBasedConfig(ConfigKey.Advanced.AnthropicExtendedCacheTtlMessages, experimentationService);
+	return configurationService.getExperimentBasedConfig(
+		ConfigKey.Advanced.AnthropicExtendedCacheTtlMessages,
+		experimentationService,
+	);
 }
 
-export type ContextEditingMode = 'off' | 'clear-thinking' | 'clear-tooluse' | 'clear-both';
+export type ContextEditingMode =
+	| 'off'
+	| 'clear-thinking'
+	| 'clear-tooluse'
+	| 'clear-both';
 
 /**
  * Builds the context_management configuration object for the Messages API request.
@@ -250,7 +281,7 @@ export type ContextEditingMode = 'off' | 'clear-thinking' | 'clear-tooluse' | 'c
  */
 export function buildContextManagement(
 	mode: ContextEditingMode,
-	thinkingEnabled: boolean
+	thinkingEnabled: boolean,
 ): ContextManagement | undefined {
 	if (mode === 'off') {
 		return undefined;
@@ -259,7 +290,10 @@ export function buildContextManagement(
 	const edits: ContextManagementEdit[] = [];
 
 	// Add thinking block clearing for clear-thinking and clear-both modes
-	if ((mode === 'clear-thinking' || mode === 'clear-both') && thinkingEnabled) {
+	if (
+		(mode === 'clear-thinking' || mode === 'clear-both') &&
+		thinkingEnabled
+	) {
 		edits.push({
 			type: 'clear_thinking_20251015',
 			keep: { type: 'thinking_turns', value: 1 },
@@ -290,6 +324,9 @@ export function getContextManagementFromConfig(
 	experimentationService: IExperimentationService,
 	thinkingEnabled: boolean,
 ): ContextManagement | undefined {
-	const mode = configurationService.getExperimentBasedConfig(ConfigKey.AnthropicContextEditingMode, experimentationService);
+	const mode = configurationService.getExperimentBasedConfig(
+		ConfigKey.AnthropicContextEditingMode,
+		experimentationService,
+	);
 	return buildContextManagement(mode, thinkingEnabled);
 }

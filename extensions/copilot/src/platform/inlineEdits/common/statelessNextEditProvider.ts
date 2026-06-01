@@ -7,16 +7,30 @@ import { Raw } from '@vscode/prompt-tsx';
 import { Result } from '../../../util/common/result';
 import { assert, assertNever } from '../../../util/vs/base/common/assert';
 import { DeferredPromise } from '../../../util/vs/base/common/async';
-import { CancellationToken, CancellationTokenSource } from '../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../util/vs/base/common/cancellation';
 import { URI } from '../../../util/vs/base/common/uri';
-import { LineEdit, LineReplacement, SerializedLineEdit } from '../../../util/vs/editor/common/core/edits/lineEdit';
+import {
+	LineEdit,
+	LineReplacement,
+	SerializedLineEdit,
+} from '../../../util/vs/editor/common/core/edits/lineEdit';
 import { StringEdit } from '../../../util/vs/editor/common/core/edits/stringEdit';
 import { Position } from '../../../util/vs/editor/common/core/position';
 import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRange';
 import { StringText } from '../../../util/vs/editor/common/core/text/abstractText';
-import { ChatFetchResponseType, FetchResponse } from '../../chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	FetchResponse,
+} from '../../chat/common/commonTypes';
 import { ILogger } from '../../log/common/logService';
-import { ISerializedOffsetRange, LogEntry, serializeOffsetRange } from '../../workspaceRecorder/common/workspaceLog';
+import {
+	ISerializedOffsetRange,
+	LogEntry,
+	serializeOffsetRange,
+} from '../../workspaceRecorder/common/workspaceLog';
 import { DocumentId } from './dataTypes/documentId';
 import { Edits } from './dataTypes/edit';
 import { SerializedEdit } from './dataTypes/editUtils';
@@ -26,17 +40,24 @@ import { InlineEditRequestLogContext } from './inlineEditLogContext';
 import { stringifyChatMessages } from './utils/stringifyChatMessages';
 import { IXtabHistoryEntry } from './workspaceEditTracker/nesXtabHistoryTracker';
 
-export type EditStreaming = AsyncGenerator<StreamedEdit, NoNextEditReason, void>;
+export type EditStreaming = AsyncGenerator<
+	StreamedEdit,
+	NoNextEditReason,
+	void
+>;
 
 export class WithStatelessProviderTelemetry<T> {
 	constructor(
 		public readonly v: T,
 		public readonly telemetryBuilder: IStatelessNextEditTelemetry,
-	) {
-	}
+	) {}
 }
 
-export type EditStreamingWithTelemetry = AsyncGenerator<WithStatelessProviderTelemetry<StreamedEdit>, WithStatelessProviderTelemetry<NoNextEditReason>, void>;
+export type EditStreamingWithTelemetry = AsyncGenerator<
+	WithStatelessProviderTelemetry<StreamedEdit>,
+	WithStatelessProviderTelemetry<NoNextEditReason>,
+	void
+>;
 
 export type StreamedEdit = {
 	readonly targetDocument: DocumentId;
@@ -54,29 +75,39 @@ export type StreamedEdit = {
 export type PushEdit = (edit: Result<StreamedEdit, NoNextEditReason>) => void;
 
 export class RequestEditWindow {
-	constructor(readonly window: OffsetRange) { }
+	constructor(readonly window: OffsetRange) {}
 	containsCursor(cursor: OffsetRange): boolean {
 		return this.window.containsRange(cursor);
 	}
 }
 
 export class RequestEditWindowWithCursorJump {
-	constructor(readonly window: OffsetRange, readonly originalWindow: OffsetRange) { }
+	constructor(
+		readonly window: OffsetRange,
+		readonly originalWindow: OffsetRange,
+	) {}
 	containsCursor(cursor: OffsetRange): boolean {
-		return this.window.containsRange(cursor) || this.originalWindow.containsRange(cursor);
+		return (
+			this.window.containsRange(cursor) ||
+			this.originalWindow.containsRange(cursor)
+		);
 	}
 }
 
 export interface IStatelessNextEditProvider {
 	readonly ID: string;
-	provideNextEdit(request: StatelessNextEditRequest, logger: ILogger, logContext: InlineEditRequestLogContext, cancellationToken: CancellationToken): EditStreamingWithTelemetry;
+	provideNextEdit(
+		request: StatelessNextEditRequest,
+		logger: ILogger,
+		logContext: InlineEditRequestLogContext,
+		cancellationToken: CancellationToken,
+	): EditStreamingWithTelemetry;
 	handleAcceptance?(): void;
 	handleRejection?(): void;
 	handleIgnored?(): void;
 }
 
 export class StatelessNextEditRequest<TFirstEdit = any> {
-
 	private static ID = 0;
 	public readonly seqid = String(++StatelessNextEditRequest.ID);
 
@@ -90,9 +121,13 @@ export class StatelessNextEditRequest<TFirstEdit = any> {
 	 * Used to check whether a new cursor position falls within the edit window when
 	 * deciding whether to reuse an in-flight request.
 	 */
-	public requestEditWindow: RequestEditWindow | RequestEditWindowWithCursorJump | undefined;
+	public requestEditWindow:
+		| RequestEditWindow
+		| RequestEditWindowWithCursorJump
+		| undefined;
 
-	private readonly _result: DeferredPromise<StatelessNextEditResult> = new DeferredPromise<StatelessNextEditResult>();
+	private readonly _result: DeferredPromise<StatelessNextEditResult> =
+		new DeferredPromise<StatelessNextEditResult>();
 	public get result(): Promise<StatelessNextEditResult> {
 		return this._result.p;
 	}
@@ -105,7 +140,9 @@ export class StatelessNextEditRequest<TFirstEdit = any> {
 		public readonly documents: readonly StatelessNextEditDocument[],
 		public readonly activeDocumentIdx: number,
 		public readonly xtabEditHistory: readonly IXtabHistoryEntry[],
-		public readonly firstEdit: DeferredPromise<Result<TFirstEdit, NoNextEditReason>>,
+		public readonly firstEdit: DeferredPromise<
+			Result<TFirstEdit, NoNextEditReason>
+		>,
 		public readonly expandedEditWindowNLines: number | undefined,
 		public readonly isSpeculative: boolean,
 		public readonly logContext: InlineEditRequestLogContext,
@@ -126,7 +163,7 @@ export class StatelessNextEditRequest<TFirstEdit = any> {
 	}
 
 	public hasDocument(docId: DocumentId): boolean {
-		return this.documents.find(d => d.id === docId) !== undefined;
+		return this.documents.find((d) => d.id === docId) !== undefined;
 	}
 
 	getActiveDocument(): StatelessNextEditDocument {
@@ -136,7 +173,7 @@ export class StatelessNextEditRequest<TFirstEdit = any> {
 	serialize(): ISerializedNextEditRequest {
 		return {
 			id: this.headerRequestId,
-			documents: this.documents.map(d => d.serialize()),
+			documents: this.documents.map((d) => d.serialize()),
 			activeDocumentIdx: this.activeDocumentIdx,
 			recording: this.recording,
 		};
@@ -147,7 +184,13 @@ export class StatelessNextEditRequest<TFirstEdit = any> {
 	}
 
 	toMarkdown(): string {
-		const docs = this.documents.map((d, idx) => ` * [${idx + 1}/${this.documents.length}] ${idx === this.activeDocumentIdx ? '(active document) ' : ''}` + d.toMarkdown()).join('\n\n');
+		const docs = this.documents
+			.map(
+				(d, idx) =>
+					` * [${idx + 1}/${this.documents.length}] ${idx === this.activeDocumentIdx ? '(active document) ' : ''}` +
+					d.toMarkdown(),
+			)
+			.join('\n\n');
 		return `### StatelessNextEditRequest\n\n${docs}`;
 	}
 }
@@ -160,8 +203,11 @@ export interface ISerializedNextEditRequest {
 }
 
 export class StatelessNextEditDocument {
-	public readonly documentAfterEdits = new StringText(this.recentEdits.apply(this.documentBeforeEdits.value));
-	public readonly documentAfterEditsLines: string[] = this.documentAfterEdits.getLines();
+	public readonly documentAfterEdits = new StringText(
+		this.recentEdits.apply(this.documentBeforeEdits.value),
+	);
+	public readonly documentAfterEditsLines: string[] =
+		this.documentAfterEdits.getLines();
 
 	/**
 	 * NOTE: if you add new public fields to this class, please also update {@link ISerializedNextEditDocument} and {@link serialize()} methods,
@@ -175,8 +221,10 @@ export class StatelessNextEditDocument {
 		public readonly recentEdit: LineEdit,
 		public readonly documentBeforeEdits: StringText,
 		public readonly recentEdits: Edits,
-		public readonly lastSelectionInAfterEdit: OffsetRange | undefined = undefined,
-	) { }
+		public readonly lastSelectionInAfterEdit:
+			| OffsetRange
+			| undefined = undefined,
+	) {}
 
 	serialize(): ISerializedNextEditDocument {
 		return {
@@ -187,7 +235,10 @@ export class StatelessNextEditDocument {
 			recentEdit: this.recentEdit.serialize(),
 			documentBeforeEdits: this.documentBeforeEdits.value,
 			recentEdits: this.recentEdits.serialize(),
-			lastSelectionInAfterEdit: this.lastSelectionInAfterEdit === undefined ? undefined : serializeOffsetRange(this.lastSelectionInAfterEdit),
+			lastSelectionInAfterEdit:
+				this.lastSelectionInAfterEdit === undefined
+					? undefined
+					: serializeOffsetRange(this.lastSelectionInAfterEdit),
 		};
 	}
 
@@ -200,7 +251,9 @@ export class StatelessNextEditDocument {
 
 		lines.push(`StatelessNextEditDocument: **${this.id.uri}**\n`);
 		lines.push('```patch');
-		lines.push(this.recentEdit.humanReadablePatch(this.documentLinesBeforeEdit));
+		lines.push(
+			this.recentEdit.humanReadablePatch(this.documentLinesBeforeEdit),
+		);
 		lines.push('```');
 		lines.push('');
 
@@ -255,7 +308,21 @@ export namespace NoNextEditReason {
 	}
 	export class GotCancelled extends NoNextEditReason {
 		public readonly kind = 'gotCancelled';
-		constructor(public readonly message: string | 'afterDebounce' | 'afterGettingEndpoint' | 'afterLanguageContextAwait' | 'afterPromptConstruction' | 'afterFetchCall' | 'duringStreaming' | 'afterResponse' | 'afterFailedRebase' | 'beforeExecutingNewRequest' | 'afterArtificialDelay' | 'afterNextCursorPredictionFetch') {
+		constructor(
+			public readonly message:
+				| string
+				| 'afterDebounce'
+				| 'afterGettingEndpoint'
+				| 'afterLanguageContextAwait'
+				| 'afterPromptConstruction'
+				| 'afterFetchCall'
+				| 'duringStreaming'
+				| 'afterResponse'
+				| 'afterFailedRebase'
+				| 'beforeExecutingNewRequest'
+				| 'afterArtificialDelay'
+				| 'afterNextCursorPredictionFetch',
+		) {
 			super();
 		}
 
@@ -283,7 +350,9 @@ export namespace NoNextEditReason {
 	}
 	export class PromptTooLarge extends NoNextEditReason {
 		public readonly kind = 'promptTooLarge';
-		constructor(public readonly message: 'editWindow' | 'currentFile' | 'final') {
+		constructor(
+			public readonly message: 'editWindow' | 'currentFile' | 'final',
+		) {
 			super();
 		}
 		toString(): string {
@@ -318,17 +387,21 @@ export type NoNextEditReason =
 	| NoNextEditReason.FilteredOut
 	| NoNextEditReason.PromptTooLarge
 	| NoNextEditReason.Uncategorized
-	| NoNextEditReason.Unexpected
-	;
+	| NoNextEditReason.Unexpected;
 
 export class StatelessNextEditResult {
-	public static noEdit(reason: NoNextEditReason, telemetryBuilder: StatelessNextEditTelemetryBuilder): StatelessNextEditResult {
+	public static noEdit(
+		reason: NoNextEditReason,
+		telemetryBuilder: StatelessNextEditTelemetryBuilder,
+	): StatelessNextEditResult {
 		const result = Result.error(reason);
 		const telemetry = telemetryBuilder.build(result);
 		return new StatelessNextEditResult(result, telemetry);
 	}
 
-	public static streaming(telemetryBuilder: StatelessNextEditTelemetryBuilder): StatelessNextEditResult {
+	public static streaming(
+		telemetryBuilder: StatelessNextEditTelemetryBuilder,
+	): StatelessNextEditResult {
 		const result = Result.ok<void>(undefined);
 		const telemetry = telemetryBuilder.build(result);
 		return new StatelessNextEditResult(result, telemetry);
@@ -337,12 +410,10 @@ export class StatelessNextEditResult {
 	constructor(
 		public readonly nextEdit: Result<void, NoNextEditReason>,
 		public readonly telemetry: IStatelessNextEditTelemetry,
-	) {
-	}
+	) {}
 }
 
 export interface IStatelessNextEditTelemetry {
-
 	readonly hadStatelessNextEditProviderCall: boolean;
 
 	/* general info */
@@ -441,7 +512,6 @@ export type FetchResultWithStats = {
 };
 
 export class StatelessNextEditTelemetryBuilder {
-
 	public readonly startTime: number;
 	public readonly requestUuid: string;
 
@@ -453,25 +523,52 @@ export class StatelessNextEditTelemetryBuilder {
 		this.requestUuid = headerRequestId;
 	}
 
-	public build(result: Result<void, NoNextEditReason>): IStatelessNextEditTelemetry {
+	public build(
+		result: Result<void, NoNextEditReason>,
+	): IStatelessNextEditTelemetry {
 		const endTime = Date.now();
 		const timeSpent = endTime - this.startTime;
 
-		const prompt = this._prompt ? JSON.stringify(this._prompt.map(({ role, content }) => ({ role, content }))) : undefined;
-		const promptText = this._prompt ? stringifyChatMessages(this._prompt) : undefined;
+		const prompt = this._prompt
+			? JSON.stringify(
+					this._prompt.map(({ role, content }) => ({
+						role,
+						content,
+					})),
+				)
+			: undefined;
+		const promptText = this._prompt
+			? stringifyChatMessages(this._prompt)
+			: undefined;
 		const promptLineCount = promptText?.split('\n').length;
 		const promptCharCount = promptText?.length;
 
-		const noNextEditReasonKind = result.isOk() ? undefined : result.err.kind;
+		const noNextEditReasonKind = result.isOk()
+			? undefined
+			: result.err.kind;
 
 		let noNextEditReasonMessage: string | undefined;
 		if (result.isError()) {
-			if (result.err instanceof NoNextEditReason.ActiveDocumentHasNoEdits || result.err instanceof NoNextEditReason.NoSuggestions) {
+			if (
+				result.err instanceof
+					NoNextEditReason.ActiveDocumentHasNoEdits ||
+				result.err instanceof NoNextEditReason.NoSuggestions
+			) {
 				// ignore
-			} else if (result.err instanceof NoNextEditReason.GotCancelled || result.err instanceof NoNextEditReason.FilteredOut || result.err instanceof NoNextEditReason.PromptTooLarge) {
+			} else if (
+				result.err instanceof NoNextEditReason.GotCancelled ||
+				result.err instanceof NoNextEditReason.FilteredOut ||
+				result.err instanceof NoNextEditReason.PromptTooLarge
+			) {
 				noNextEditReasonMessage = result.err.message;
-			} else if (result.err instanceof NoNextEditReason.FetchFailure || result.err instanceof NoNextEditReason.Uncategorized || result.err instanceof NoNextEditReason.Unexpected) {
-				noNextEditReasonMessage = result.err.error.stack ? result.err.error.stack : result.err.error.message;
+			} else if (
+				result.err instanceof NoNextEditReason.FetchFailure ||
+				result.err instanceof NoNextEditReason.Uncategorized ||
+				result.err instanceof NoNextEditReason.Unexpected
+			) {
+				noNextEditReasonMessage = result.err.error.stack
+					? result.err.error.stack
+					: result.err.error.message;
 			} else {
 				assertNever(result.err);
 			}
@@ -508,13 +605,21 @@ export class StatelessNextEditTelemetryBuilder {
 			editIntent: this._editIntent,
 			editIntentParseError: this._editIntentParseError,
 			cursorJumpModelName: this._cursorJumpModelName,
-			cursorJumpPrompt: this._cursorJumpPrompt ? JSON.stringify(this._cursorJumpPrompt.map(({ role, content }) => ({ role, content }))) : undefined,
+			cursorJumpPrompt: this._cursorJumpPrompt
+				? JSON.stringify(
+						this._cursorJumpPrompt.map(({ role, content }) => ({
+							role,
+							content,
+						})),
+					)
+				: undefined,
 			cursorJumpResponse: this._cursorJumpResponse,
 			nDiffsInPrompt: this._nDiffsInPrompt,
 			diffTokensInPrompt: this._diffTokensInPrompt,
 			nNeighborSnippetsComputed: this._nNeighborSnippetsComputed,
 			nNeighborSnippetsInPrompt: this._nNeighborSnippetsInPrompt,
-			neighborSnippetIndicesInPrompt: this._neighborSnippetIndicesInPrompt,
+			neighborSnippetIndicesInPrompt:
+				this._neighborSnippetIndicesInPrompt,
 			lintErrors: this._lintErrors,
 			terminalOutput: this._terminalOutput,
 			similarFilesContext: this._similarFilesContext,
@@ -529,7 +634,9 @@ export class StatelessNextEditTelemetryBuilder {
 	}
 
 	private _mergeConflictExpanded: 'normal' | 'only' | undefined;
-	public setMergeConflictExpanded(mergeConflictExpanded: 'normal' | 'only'): this {
+	public setMergeConflictExpanded(
+		mergeConflictExpanded: 'normal' | 'only',
+	): this {
 		this._mergeConflictExpanded = mergeConflictExpanded;
 		return this;
 	}
@@ -592,9 +699,13 @@ export class StatelessNextEditTelemetryBuilder {
 	}
 
 	private _response: Promise<FetchResultWithStats> | undefined;
-	public setResponse(response: Promise<{ ttft: number | undefined; response: FetchResponse<string> }>): this {
+	public setResponse(
+		response: Promise<{
+			ttft: number | undefined;
+			response: FetchResponse<string>;
+		}>,
+	): this {
 		this._response = response.then(({ response, ttft }) => {
-
 			const fetchTime = Date.now() - this._fetchStartedAt!;
 
 			const fetchResult = response.type;
@@ -641,16 +752,19 @@ export class StatelessNextEditTelemetryBuilder {
 	}
 
 	private _lineDistanceToMostRecentEdit: number | undefined;
-	public setLineDistanceToMostRecentEdit(distanceToMostRecentEdit: number): this {
+	public setLineDistanceToMostRecentEdit(
+		distanceToMostRecentEdit: number,
+	): this {
 		this._lineDistanceToMostRecentEdit = distanceToMostRecentEdit;
 		return this;
 	}
 
-	private _nextCursorPrediction: IStatelessNextEditTelemetry['nextCursorPrediction'] = {
-		nextCursorLineError: undefined,
-		nextCursorLineDistance: undefined,
-		isCrossFile: undefined
-	};
+	private _nextCursorPrediction: IStatelessNextEditTelemetry['nextCursorPrediction'] =
+		{
+			nextCursorLineError: undefined,
+			nextCursorLineDistance: undefined,
+			isCrossFile: undefined,
+		};
 
 	public setNextCursorLineError(error: string): this {
 		this._nextCursorPrediction.nextCursorLineError = error;
@@ -743,7 +857,9 @@ export class StatelessNextEditTelemetryBuilder {
 	}
 
 	private _similarFilesContext: Promise<string | undefined> | undefined;
-	public setSimilarFilesContext(similarFilesContext: Promise<string | undefined>): this {
+	public setSimilarFilesContext(
+		similarFilesContext: Promise<string | undefined>,
+	): this {
 		this._similarFilesContext = similarFilesContext;
 		return this;
 	}

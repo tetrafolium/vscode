@@ -3,34 +3,50 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { Schemas } from '../../../../../base/common/network.js';
-import { autorun, constObservable, IObservable } from '../../../../../base/common/observable.js';
-import { basename, dirname } from '../../../../../base/common/resources.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { localize } from '../../../../../nls.js';
-import { toAgentHostUri } from '../../../../../platform/agentHost/common/agentHostUri.js';
-import { IAgentConnection, IAgentHostService, type IAgentSessionMetadata } from '../../../../../platform/agentHost/common/agentService.js';
-import type { ISessionGitState } from '../../../../../platform/agentHost/common/state/sessionState.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { ILabelService } from '../../../../../platform/label/common/label.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { IStorageService } from '../../../../../platform/storage/common/storage.js';
-import { IAgentHostActiveClientService } from '../../../../../workbench/contrib/chat/browser/agentSessions/agentHost/agentHostActiveClientService.js';
-import { IChatWidgetService } from '../../../../../workbench/contrib/chat/browser/chat.js';
-import { IChatService } from '../../../../../workbench/contrib/chat/common/chatService/chatService.js';
-import { IChatSessionsService } from '../../../../../workbench/contrib/chat/common/chatSessionsService.js';
-import { ILanguageModelsService } from '../../../../../workbench/contrib/chat/common/languageModels.js';
-import { LOCAL_AGENT_HOST_PROVIDER_ID } from '../../../../common/agentHostSessionsProvider.js';
-import { buildAgentHostSessionWorkspace, readBranchProtectionPatterns } from '../../../../common/agentHostSessionWorkspace.js';
-import { IGitHubInfo, ISessionWorkspace, ISessionWorkspaceBrowseAction, SESSION_WORKSPACE_GROUP_LOCAL } from '../../../../services/sessions/common/session.js';
-import { ISessionsManagementService } from '../../../../services/sessions/common/sessionsManagement.js';
-import { IGitHubService } from '../../../github/browser/githubService.js';
-import { BaseAgentHostSessionsProvider } from './baseAgentHostSessionsProvider.js';
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { Schemas } from "../../../../../base/common/network.js";
+import {
+	autorun,
+	constObservable,
+	IObservable,
+} from "../../../../../base/common/observable.js";
+import { basename, dirname } from "../../../../../base/common/resources.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { localize } from "../../../../../nls.js";
+import { toAgentHostUri } from "../../../../../platform/agentHost/common/agentHostUri.js";
+import {
+	IAgentConnection,
+	IAgentHostService,
+	type IAgentSessionMetadata,
+} from "../../../../../platform/agentHost/common/agentService.js";
+import type { ISessionGitState } from "../../../../../platform/agentHost/common/state/sessionState.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { ILabelService } from "../../../../../platform/label/common/label.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import { IStorageService } from "../../../../../platform/storage/common/storage.js";
+import { IAgentHostActiveClientService } from "../../../../../workbench/contrib/chat/browser/agentSessions/agentHost/agentHostActiveClientService.js";
+import { IChatWidgetService } from "../../../../../workbench/contrib/chat/browser/chat.js";
+import { IChatService } from "../../../../../workbench/contrib/chat/common/chatService/chatService.js";
+import { IChatSessionsService } from "../../../../../workbench/contrib/chat/common/chatSessionsService.js";
+import { ILanguageModelsService } from "../../../../../workbench/contrib/chat/common/languageModels.js";
+import { LOCAL_AGENT_HOST_PROVIDER_ID } from "../../../../common/agentHostSessionsProvider.js";
+import {
+	buildAgentHostSessionWorkspace,
+	readBranchProtectionPatterns,
+} from "../../../../common/agentHostSessionWorkspace.js";
+import {
+	IGitHubInfo,
+	ISessionWorkspace,
+	ISessionWorkspaceBrowseAction,
+	SESSION_WORKSPACE_GROUP_LOCAL,
+} from "../../../../services/sessions/common/session.js";
+import { ISessionsManagementService } from "../../../../services/sessions/common/sessionsManagement.js";
+import { IGitHubService } from "../../../github/browser/githubService.js";
+import { BaseAgentHostSessionsProvider } from "./baseAgentHostSessionsProvider.js";
 
-const LOCAL_RESOURCE_SCHEME_PREFIX = 'agent-host-';
+const LOCAL_RESOURCE_SCHEME_PREFIX = "agent-host-";
 
 /**
  * Local-window sessions provider backed by the in-process
@@ -41,7 +57,6 @@ const LOCAL_RESOURCE_SCHEME_PREFIX = 'agent-host-';
  * file-picker browse action.
  */
 export class LocalAgentHostSessionsProvider extends BaseAgentHostSessionsProvider {
-
 	readonly id = LOCAL_AGENT_HOST_PROVIDER_ID;
 	readonly label: string;
 	readonly icon: ThemeIcon = Codicon.vm;
@@ -55,17 +70,32 @@ export class LocalAgentHostSessionsProvider extends BaseAgentHostSessionsProvide
 		@IChatWidgetService chatWidgetService: IChatWidgetService,
 		@ILanguageModelsService languageModelsService: ILanguageModelsService,
 		@ILabelService private readonly _labelService: ILabelService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
 		@ILogService logService: ILogService,
 		@IGitHubService gitHubService: IGitHubService,
 		@IInstantiationService instantiationService: IInstantiationService,
-		@ISessionsManagementService sessionsManagementService: ISessionsManagementService,
-		@IAgentHostActiveClientService activeClientService: IAgentHostActiveClientService,
+		@ISessionsManagementService
+		sessionsManagementService: ISessionsManagementService,
+		@IAgentHostActiveClientService
+		activeClientService: IAgentHostActiveClientService,
 		@IStorageService storageService: IStorageService,
 	) {
-		super(chatSessionsService, chatService, chatWidgetService, languageModelsService, _configurationService, logService, gitHubService, instantiationService, sessionsManagementService, activeClientService, storageService);
+		super(
+			chatSessionsService,
+			chatService,
+			chatWidgetService,
+			languageModelsService,
+			_configurationService,
+			logService,
+			gitHubService,
+			instantiationService,
+			sessionsManagementService,
+			activeClientService,
+			storageService,
+		);
 
-		this.label = localize('localAgentHostLabel', "Local Agent Host");
+		this.label = localize("localAgentHostLabel", "Local Agent Host");
 
 		this.browseActions = [];
 
@@ -76,10 +106,12 @@ export class LocalAgentHostSessionsProvider extends BaseAgentHostSessionsProvide
 			this._syncSessionTypesFromRootState(rootStateValue);
 			this._syncRootConfigFromRootState(rootStateValue);
 		}
-		this._register(this._agentHostService.rootState.onDidChange(rootState => {
-			this._syncSessionTypesFromRootState(rootState);
-			this._syncRootConfigFromRootState(rootState);
-		}));
+		this._register(
+			this._agentHostService.rootState.onDidChange((rootState) => {
+				this._syncSessionTypesFromRootState(rootState);
+				this._syncRootConfigFromRootState(rootState);
+			}),
+		);
 
 		// Eagerly populate the session cache once authentication has settled.
 		// Without this, the sidebar would only call `getSessions()` after some
@@ -90,19 +122,25 @@ export class LocalAgentHostSessionsProvider extends BaseAgentHostSessionsProvide
 		// resolved. The `authenticationPending` observable is sticky (once
 		// it goes false it stays false), so this autorun fires
 		// `_refreshSessions()` at most once for the eager-load case.
-		this._register(autorun(reader => {
-			if (this._agentHostService.authenticationPending.read(reader)) {
-				return;
-			}
-			this._refreshSessions();
-		}));
+		this._register(
+			autorun((reader) => {
+				if (this._agentHostService.authenticationPending.read(reader)) {
+					return;
+				}
+				this._refreshSessions();
+			}),
+		);
 	}
 
 	// -- BaseAgentHostSessionsProvider hooks ---------------------------------
 
-	protected get connection(): IAgentConnection { return this._agentHostService; }
+	protected get connection(): IAgentConnection {
+		return this._agentHostService;
+	}
 
-	protected get authenticationPending(): IObservable<boolean> { return this._agentHostService.authenticationPending; }
+	protected get authenticationPending(): IObservable<boolean> {
+		return this._agentHostService.authenticationPending;
+	}
 
 	/**
 	 * Local resource scheme: `agent-host-${provider}`. Must match the type
@@ -117,11 +155,30 @@ export class LocalAgentHostSessionsProvider extends BaseAgentHostSessionsProvide
 
 	protected _adapterOptions() {
 		return {
-			buildWorkspace: (project: IAgentSessionMetadata['project'], workingDirectory: URI | undefined, gitHubInfo: IObservable<IGitHubInfo | undefined>, gitState: ISessionGitState | undefined) => {
+			buildWorkspace: (
+				project: IAgentSessionMetadata["project"],
+				workingDirectory: URI | undefined,
+				gitHubInfo: IObservable<IGitHubInfo | undefined>,
+				gitState: ISessionGitState | undefined,
+			) => {
 				const uriForDescription = project?.uri ?? workingDirectory;
-				const description = uriForDescription ? this._labelService.getUriLabel(dirname(uriForDescription), { relative: false }) : undefined;
-				const branchProtectionPatterns = readBranchProtectionPatterns(this._configurationService, workingDirectory ?? project?.uri);
-				return LocalAgentHostSessionsProvider.buildWorkspace(project, workingDirectory, gitHubInfo, gitState, description, branchProtectionPatterns);
+				const description = uriForDescription
+					? this._labelService.getUriLabel(dirname(uriForDescription), {
+							relative: false,
+						})
+					: undefined;
+				const branchProtectionPatterns = readBranchProtectionPatterns(
+					this._configurationService,
+					workingDirectory ?? project?.uri,
+				);
+				return LocalAgentHostSessionsProvider.buildWorkspace(
+					project,
+					workingDirectory,
+					gitHubInfo,
+					gitState,
+					description,
+					branchProtectionPatterns,
+				);
 			},
 		};
 	}
@@ -136,18 +193,38 @@ export class LocalAgentHostSessionsProvider extends BaseAgentHostSessionsProvide
 	}
 
 	protected override _diffUriMapper(): (uri: URI) => URI {
-		return uri => toAgentHostUri(uri, 'local');
+		return (uri) => toAgentHostUri(uri, "local");
 	}
 
 	// -- Workspaces ----------------------------------------------------------
 
-	static buildWorkspace(project: IAgentSessionMetadata['project'], workingDirectory: URI | undefined, gitHubInfo: IObservable<IGitHubInfo | undefined>, gitState: ISessionGitState | undefined, description?: string, branchProtectionPatterns?: readonly string[]): ISessionWorkspace | undefined {
+	static buildWorkspace(
+		project: IAgentSessionMetadata["project"],
+		workingDirectory: URI | undefined,
+		gitHubInfo: IObservable<IGitHubInfo | undefined>,
+		gitState: ISessionGitState | undefined,
+		description?: string,
+		branchProtectionPatterns?: readonly string[],
+	): ISessionWorkspace | undefined {
 		// Intentionally pass `undefined` for `providerLabel` so the workspace
 		// label matches the one produced by `resolveWorkspace` (and by other
 		// providers serving the same folder). Sessions list grouping uses
 		// `workspace.label` as the group key — divergent labels would surface
 		// the same folder as multiple groups.
-		return buildAgentHostSessionWorkspace(project, workingDirectory, { providerLabel: undefined, fallbackIcon: Codicon.folder, requiresWorkspaceTrust: true, description, branchProtectionPatterns, group: SESSION_WORKSPACE_GROUP_LOCAL }, gitHubInfo, gitState);
+		return buildAgentHostSessionWorkspace(
+			project,
+			workingDirectory,
+			{
+				providerLabel: undefined,
+				fallbackIcon: Codicon.folder,
+				requiresWorkspaceTrust: true,
+				description,
+				branchProtectionPatterns,
+				group: SESSION_WORKSPACE_GROUP_LOCAL,
+			},
+			gitHubInfo,
+			gitState,
+		);
 	}
 
 	resolveWorkspace(repositoryUri: URI): ISessionWorkspace | undefined {
@@ -158,16 +235,25 @@ export class LocalAgentHostSessionsProvider extends BaseAgentHostSessionsProvide
 		return {
 			uri: repositoryUri,
 			label: folderName,
-			description: this._labelService.getUriLabel(dirname(repositoryUri), { relative: false }),
+			description: this._labelService.getUriLabel(dirname(repositoryUri), {
+				relative: false,
+			}),
 			group: SESSION_WORKSPACE_GROUP_LOCAL,
 			icon: Codicon.folder,
-			folders: [{
-				root: repositoryUri,
-				workingDirectory: repositoryUri,
-				name: folderName,
-				description: undefined,
-				gitRepository: { uri: repositoryUri, workTreeUri: undefined, baseBranchName: undefined, gitHubInfo: constObservable(undefined) },
-			}],
+			folders: [
+				{
+					root: repositoryUri,
+					workingDirectory: repositoryUri,
+					name: folderName,
+					description: undefined,
+					gitRepository: {
+						uri: repositoryUri,
+						workTreeUri: undefined,
+						baseBranchName: undefined,
+						gitHubInfo: constObservable(undefined),
+					},
+				},
+			],
 			requiresWorkspaceTrust: true,
 			isVirtualWorkspace: false,
 		};

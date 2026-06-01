@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAuthenticationService } from '../../../../../../platform/authentication/common/authentication';
-import { ICompletionModelInformation, IEndpointProvider } from '../../../../../../platform/endpoint/common/endpointProvider';
+import {
+	ICompletionModelInformation,
+	IEndpointProvider,
+} from '../../../../../../platform/endpoint/common/endpointProvider';
 import { createServiceIdentifier } from '../../../../../../util/common/services';
 import { Disposable } from '../../../../../../util/vs/base/common/lifecycle';
 import { IInstantiationService } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
@@ -18,18 +21,26 @@ import { ICompletionsLogTargetService, LogLevel } from '../logger';
 import { TelemetryWithExp } from '../telemetry';
 import { CompletionHeaders } from './fetch';
 
-export const ICompletionsModelManagerService = createServiceIdentifier<ICompletionsModelManagerService>('ICompletionsModelManagerService');
+export const ICompletionsModelManagerService =
+	createServiceIdentifier<ICompletionsModelManagerService>(
+		'ICompletionsModelManagerService',
+	);
 export interface ICompletionsModelManagerService {
 	readonly _serviceBrand: undefined;
 	readonly onDidChangeModels: Event<void>;
 	getGenericCompletionModels(): ModelItem[];
 	getDefaultModelId(): string;
 	getTokenizerForModel(modelId: string): TokenizerName;
-	getCurrentModelRequestInfo(featureSettings?: TelemetryWithExp): ModelRequestInfo;
+	getCurrentModelRequestInfo(
+		featureSettings?: TelemetryWithExp,
+	): ModelRequestInfo;
 }
 
 const FallbackModelId = 'gpt-41-copilot';
-export class AvailableModelsManager extends Disposable implements ICompletionsModelManagerService {
+export class AvailableModelsManager
+	extends Disposable
+	implements ICompletionsModelManagerService
+{
 	declare _serviceBrand: undefined;
 	fetchedModelData: ICompletionModelInformation[] = [];
 	customModels: string[] = [];
@@ -39,16 +50,24 @@ export class AvailableModelsManager extends Disposable implements ICompletionsMo
 
 	constructor(
 		shouldFetch: boolean = true,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@ICompletionsFeaturesService private readonly _featuresService: ICompletionsFeaturesService,
-		@IEndpointProvider private readonly _endpointProvider: IEndpointProvider,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
+		@ICompletionsFeaturesService
+		private readonly _featuresService: ICompletionsFeaturesService,
+		@IEndpointProvider
+		private readonly _endpointProvider: IEndpointProvider,
 		@IAuthenticationService authenticationService: IAuthenticationService,
-		@ICompletionsLogTargetService private readonly _logService: ICompletionsLogTargetService,
+		@ICompletionsLogTargetService
+		private readonly _logService: ICompletionsLogTargetService,
 	) {
 		super();
 
 		if (shouldFetch) {
-			this._register(onCopilotToken(authenticationService, () => this.refreshAvailableModels()));
+			this._register(
+				onCopilotToken(authenticationService, () =>
+					this.refreshAvailableModels(),
+				),
+			);
 		}
 	}
 
@@ -63,10 +82,11 @@ export class AvailableModelsManager extends Disposable implements ICompletionsMo
 	 */
 	getDefaultModelId(): string {
 		if (this.fetchedModelData) {
-			const fetchedDefaultModel = AvailableModelsManager.filterCompletionModels(
-				this.fetchedModelData,
-				this.editorPreviewFeaturesDisabled
-			)[0];
+			const fetchedDefaultModel =
+				AvailableModelsManager.filterCompletionModels(
+					this.fetchedModelData,
+					this.editorPreviewFeaturesDisabled,
+				)[0];
 
 			if (fetchedDefaultModel) {
 				return fetchedDefaultModel.id;
@@ -77,7 +97,8 @@ export class AvailableModelsManager extends Disposable implements ICompletionsMo
 	}
 
 	async refreshModels(): Promise<void> {
-		const fetchedData = await this._endpointProvider.getAllCompletionModels(true);
+		const fetchedData =
+			await this._endpointProvider.getAllCompletionModels(true);
 		if (fetchedData) {
 			this.fetchedModelData = fetchedData;
 			this._onDidChangeModels.fire();
@@ -91,7 +112,7 @@ export class AvailableModelsManager extends Disposable implements ICompletionsMo
 	getGenericCompletionModels(): ModelItem[] {
 		const filteredResult = AvailableModelsManager.filterCompletionModels(
 			this.fetchedModelData,
-			this.editorPreviewFeaturesDisabled
+			this.editorPreviewFeaturesDisabled,
 		);
 
 		return AvailableModelsManager.mapCompletionModels(filteredResult);
@@ -99,7 +120,7 @@ export class AvailableModelsManager extends Disposable implements ICompletionsMo
 
 	getTokenizerForModel(modelId: string): TokenizerName {
 		const modelItems = this.getGenericCompletionModels();
-		const modelItem = modelItems.find(item => item.modelId === modelId);
+		const modelItem = modelItems.find((item) => item.modelId === modelId);
 		if (modelItem) {
 			return modelItem.tokenizer as TokenizerName;
 		}
@@ -107,23 +128,36 @@ export class AvailableModelsManager extends Disposable implements ICompletionsMo
 		return TokenizerName.o200k;
 	}
 
-	static filterCompletionModels(data: ICompletionModelInformation[], editorPreviewFeaturesDisabled: boolean): ICompletionModelInformation[] {
+	static filterCompletionModels(
+		data: ICompletionModelInformation[],
+		editorPreviewFeaturesDisabled: boolean,
+	): ICompletionModelInformation[] {
 		return data
-			.filter(item => item.capabilities.type === 'completion')
-			.filter(item => !editorPreviewFeaturesDisabled || item.preview === false || item.preview === undefined);
+			.filter((item) => item.capabilities.type === 'completion')
+			.filter(
+				(item) =>
+					!editorPreviewFeaturesDisabled ||
+					item.preview === false ||
+					item.preview === undefined,
+			);
 	}
 
 	static filterModelsWithEditorPreviewFeatures(
 		data: ICompletionModelInformation[],
-		editorPreviewFeaturesDisabled: boolean
+		editorPreviewFeaturesDisabled: boolean,
 	): ICompletionModelInformation[] {
 		return data.filter(
-			item => !editorPreviewFeaturesDisabled || item.preview === false || item.preview === undefined
+			(item) =>
+				!editorPreviewFeaturesDisabled ||
+				item.preview === false ||
+				item.preview === undefined,
 		);
 	}
 
-	static mapCompletionModels(data: ICompletionModelInformation[]): ModelItem[] {
-		return data.map(item => ({
+	static mapCompletionModels(
+		data: ICompletionModelInformation[],
+	): ModelItem[] {
+		return data.map((item) => ({
 			modelId: item.id,
 			label: item.name,
 			preview: !!item.preview,
@@ -131,16 +165,23 @@ export class AvailableModelsManager extends Disposable implements ICompletionsMo
 		}));
 	}
 
-	getCurrentModelRequestInfo(featureSettings: TelemetryWithExp | undefined = undefined): ModelRequestInfo {
+	getCurrentModelRequestInfo(
+		featureSettings: TelemetryWithExp | undefined = undefined,
+	): ModelRequestInfo {
 		const defaultModelId = this.getDefaultModelId();
-		let userSelectedCompletionModel = this._instantiationService.invokeFunction(getUserSelectedModelConfiguration);
+		let userSelectedCompletionModel =
+			this._instantiationService.invokeFunction(
+				getUserSelectedModelConfiguration,
+			);
 		if (userSelectedCompletionModel) {
-			const genericModels = this.getGenericCompletionModels().map(model => model.modelId);
+			const genericModels = this.getGenericCompletionModels().map(
+				(model) => model.modelId,
+			);
 			if (!genericModels.includes(userSelectedCompletionModel)) {
 				if (genericModels.length > 0) {
 					this._logService.logIt(
 						LogLevel.INFO,
-						`User selected model ${userSelectedCompletionModel} is not in the list of generic models: ${genericModels.join(', ')}, falling back to default model.`
+						`User selected model ${userSelectedCompletionModel} is not in the list of generic models: ${genericModels.join(', ')}, falling back to default model.`,
 					);
 				}
 				userSelectedCompletionModel = null;
@@ -151,23 +192,40 @@ export class AvailableModelsManager extends Disposable implements ICompletionsMo
 		}
 
 		const debugOverride =
-			this._instantiationService.invokeFunction(getConfig<string>, ConfigKey.DebugOverrideEngine) ||
-			this._instantiationService.invokeFunction(getConfig<string>, ConfigKey.DebugOverrideEngineLegacy);
+			this._instantiationService.invokeFunction(
+				getConfig<string>,
+				ConfigKey.DebugOverrideEngine,
+			) ||
+			this._instantiationService.invokeFunction(
+				getConfig<string>,
+				ConfigKey.DebugOverrideEngineLegacy,
+			);
 
 		if (debugOverride) {
 			return new ModelRequestInfo(debugOverride, 'override');
 		}
 
-		const customEngine = featureSettings ? this._featuresService.customEngine(featureSettings) : undefined;
-		const targetEngine = featureSettings ? this._featuresService.customEngineTargetEngine(featureSettings) : undefined;
+		const customEngine = featureSettings
+			? this._featuresService.customEngine(featureSettings)
+			: undefined;
+		const targetEngine = featureSettings
+			? this._featuresService.customEngineTargetEngine(featureSettings)
+			: undefined;
 
 		if (userSelectedCompletionModel) {
 			// If the user selected completion model matches the targetEngine, use the custom engine
-			if (customEngine && targetEngine && userSelectedCompletionModel === targetEngine) {
+			if (
+				customEngine &&
+				targetEngine &&
+				userSelectedCompletionModel === targetEngine
+			) {
 				return new ModelRequestInfo(customEngine, 'exp');
 			}
 
-			return new ModelRequestInfo(userSelectedCompletionModel, 'modelpicker');
+			return new ModelRequestInfo(
+				userSelectedCompletionModel,
+				'modelpicker',
+			);
 		}
 
 		if (customEngine) {
@@ -200,8 +258,8 @@ export type ModelChoiceSourceTelemetryValue =
 class ModelRequestInfo {
 	constructor(
 		readonly modelId: string,
-		readonly modelChoiceSource: ModelChoiceSourceTelemetryValue
-	) { }
+		readonly modelChoiceSource: ModelChoiceSourceTelemetryValue,
+	) {}
 
 	get headers(): CompletionHeaders {
 		return {};

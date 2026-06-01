@@ -12,14 +12,30 @@ import { DocumentId } from '../../../../platform/inlineEdits/common/dataTypes/do
 import { InlineEditRequestLogContext } from '../../../../platform/inlineEdits/common/inlineEditLogContext';
 import { ObservableGit } from '../../../../platform/inlineEdits/common/observableGit';
 import { MutableObservableWorkspace } from '../../../../platform/inlineEdits/common/observableWorkspace';
-import { IStatelessNextEditProvider, NoNextEditReason, StatelessNextEditRequest, StatelessNextEditTelemetryBuilder, WithStatelessProviderTelemetry } from '../../../../platform/inlineEdits/common/statelessNextEditProvider';
+import {
+	IStatelessNextEditProvider,
+	NoNextEditReason,
+	StatelessNextEditRequest,
+	StatelessNextEditTelemetryBuilder,
+	WithStatelessProviderTelemetry,
+} from '../../../../platform/inlineEdits/common/statelessNextEditProvider';
 import { NesHistoryContextProvider } from '../../../../platform/inlineEdits/common/workspaceEditTracker/nesHistoryContextProvider';
 import { NesXtabHistoryTracker } from '../../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
-import { ILogger, ILogService, LogServiceImpl } from '../../../../platform/log/common/logService';
+import {
+	ILogger,
+	ILogService,
+	LogServiceImpl,
+} from '../../../../platform/log/common/logService';
 import { IRequestLogger } from '../../../../platform/requestLogger/common/requestLogger';
 import { NullRequestLogger } from '../../../../platform/requestLogger/node/nullRequestLogger';
-import { ISnippyService, NullSnippyService } from '../../../../platform/snippy/common/snippyService';
-import { IExperimentationService, NullExperimentationService } from '../../../../platform/telemetry/common/nullExperimentationService';
+import {
+	ISnippyService,
+	NullSnippyService,
+} from '../../../../platform/snippy/common/snippyService';
+import {
+	IExperimentationService,
+	NullExperimentationService,
+} from '../../../../platform/telemetry/common/nullExperimentationService';
 import { mockNotebookService } from '../../../../platform/test/common/testNotebookService';
 import { TestWorkspaceService } from '../../../../platform/test/node/testWorkspaceService';
 import { IWorkspaceService } from '../../../../platform/workspace/common/workspaceService';
@@ -28,15 +44,20 @@ import { CancellationToken } from '../../../../util/vs/base/common/cancellation'
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { generateUuid } from '../../../../util/vs/base/common/uuid';
-import { LineEdit, LineReplacement } from '../../../../util/vs/editor/common/core/edits/lineEdit';
+import {
+	LineEdit,
+	LineReplacement,
+} from '../../../../util/vs/editor/common/core/edits/lineEdit';
 import { StringEdit } from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { LineRange } from '../../../../util/vs/editor/common/core/ranges/lineRange';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
-import { NESInlineCompletionContext, NextEditProvider } from '../../node/nextEditProvider';
+import {
+	NESInlineCompletionContext,
+	NextEditProvider,
+} from '../../node/nextEditProvider';
 import { NextEditProviderTelemetryBuilder } from '../../node/nextEditProviderTelemetry';
 
 describe('NextEditProvider Caching', () => {
-
 	let configService: IConfigurationService;
 	let snippyService: ISnippyService;
 	let gitExtensionService: IGitExtensionService;
@@ -61,34 +82,47 @@ describe('NextEditProvider Caching', () => {
 	function createStatelessNextEditProvider(): IStatelessNextEditProvider {
 		return {
 			ID: 'TestNextEditProvider',
-			provideNextEdit: async function*(request: StatelessNextEditRequest, logger: ILogger, logContext: InlineEditRequestLogContext, cancellationToken: CancellationToken) {
-				const telemetryBuilder = new StatelessNextEditTelemetryBuilder(request.headerRequestId);
-				const lineEdit = LineEdit.createFromUnsorted(
-					[
-						new LineReplacement(
-							new LineRange(11, 12),
-							['const myPoint = new Point3D(0, 1, 2);']
-						),
-						new LineReplacement(
-							new LineRange(5, 5),
-							['\t\tprivate readonly z: number,']
-						),
-						new LineReplacement(
-							new LineRange(6, 9),
-							[
-								'\tgetDistance() {',
-								'\t\treturn Math.sqrt(this.x ** 2 + this.y ** 2 + this.z ** 2);',
-								'\t}'
-							]
-						)
-					]
+			provideNextEdit: async function* (
+				request: StatelessNextEditRequest,
+				logger: ILogger,
+				logContext: InlineEditRequestLogContext,
+				cancellationToken: CancellationToken,
+			) {
+				const telemetryBuilder = new StatelessNextEditTelemetryBuilder(
+					request.headerRequestId,
 				);
+				const lineEdit = LineEdit.createFromUnsorted([
+					new LineReplacement(new LineRange(11, 12), [
+						'const myPoint = new Point3D(0, 1, 2);',
+					]),
+					new LineReplacement(new LineRange(5, 5), [
+						'\t\tprivate readonly z: number,',
+					]),
+					new LineReplacement(new LineRange(6, 9), [
+						'\tgetDistance() {',
+						'\t\treturn Math.sqrt(this.x ** 2 + this.y ** 2 + this.z ** 2);',
+						'\t}',
+					]),
+				]);
 				for (const edit of lineEdit.replacements) {
-					yield new WithStatelessProviderTelemetry({ targetDocument: request.getActiveDocument().id, edit, isFromCursorJump: false }, telemetryBuilder.build(Result.ok(undefined)));
+					yield new WithStatelessProviderTelemetry(
+						{
+							targetDocument: request.getActiveDocument().id,
+							edit,
+							isFromCursorJump: false,
+						},
+						telemetryBuilder.build(Result.ok(undefined)),
+					);
 				}
-				const noSuggestions = new NoNextEditReason.NoSuggestions(request.documentBeforeEdits, undefined);
-				return new WithStatelessProviderTelemetry(noSuggestions, telemetryBuilder.build(Result.error(noSuggestions)));
-			}
+				const noSuggestions = new NoNextEditReason.NoSuggestions(
+					request.documentBeforeEdits,
+					undefined,
+				);
+				return new WithStatelessProviderTelemetry(
+					noSuggestions,
+					telemetryBuilder.build(Result.error(noSuggestions)),
+				);
+			},
 		};
 	}
 
@@ -97,7 +131,23 @@ describe('NextEditProvider Caching', () => {
 		const obsGit = new ObservableGit(gitExtensionService);
 		const statelessNextEditProvider = createStatelessNextEditProvider();
 
-		const nextEditProvider: NextEditProvider = new NextEditProvider(obsWorkspace, statelessNextEditProvider, new NesHistoryContextProvider(obsWorkspace, obsGit), new NesXtabHistoryTracker(obsWorkspace, undefined, configService, expService), undefined, configService, snippyService, logService, expService, requestLogger);
+		const nextEditProvider: NextEditProvider = new NextEditProvider(
+			obsWorkspace,
+			statelessNextEditProvider,
+			new NesHistoryContextProvider(obsWorkspace, obsGit),
+			new NesXtabHistoryTracker(
+				obsWorkspace,
+				undefined,
+				configService,
+				expService,
+			),
+			undefined,
+			configService,
+			snippyService,
+			logService,
+			expService,
+			requestLogger,
+		);
 
 		const doc = obsWorkspace.addDocument({
 			id: DocumentId.create(URI.file('/test/test.ts').toString()),
@@ -112,18 +162,41 @@ describe('NextEditProvider Caching', () => {
 				}
 			}
 
-			const myPoint = new Point(0, 1);`.trimStart()
+			const myPoint = new Point(0, 1);`.trimStart(),
 		});
 		doc.setSelection([new OffsetRange(1, 1)], undefined);
 
 		doc.applyEdit(StringEdit.insert(11, '3D'));
 
-		const context: NESInlineCompletionContext = { triggerKind: 1, selectedCompletionInfo: undefined, requestUuid: generateUuid(), requestIssuedDateTime: Date.now(), earliestShownDateTime: Date.now() + 200, enforceCacheDelay: false };
-		const logContext = new InlineEditRequestLogContext(doc.id.toString(), 1, context);
+		const context: NESInlineCompletionContext = {
+			triggerKind: 1,
+			selectedCompletionInfo: undefined,
+			requestUuid: generateUuid(),
+			requestIssuedDateTime: Date.now(),
+			earliestShownDateTime: Date.now() + 200,
+			enforceCacheDelay: false,
+		};
+		const logContext = new InlineEditRequestLogContext(
+			doc.id.toString(),
+			1,
+			context,
+		);
 		const cancellationToken = CancellationToken.None;
-		const tb1 = new NextEditProviderTelemetryBuilder(gitExtensionService, mockNotebookService, workspaceService, nextEditProvider.ID, doc);
+		const tb1 = new NextEditProviderTelemetryBuilder(
+			gitExtensionService,
+			mockNotebookService,
+			workspaceService,
+			nextEditProvider.ID,
+			doc,
+		);
 
-		let result = await nextEditProvider.getNextEdit(doc.id, context, logContext, cancellationToken, tb1.nesBuilder);
+		let result = await nextEditProvider.getNextEdit(
+			doc.id,
+			context,
+			logContext,
+			cancellationToken,
+			tb1.nesBuilder,
+		);
 
 		tb1.dispose();
 
@@ -146,9 +219,21 @@ describe('NextEditProvider Caching', () => {
 			const myPoint = new Point(0, 1);"
 		`);
 
-		const tb2 = new NextEditProviderTelemetryBuilder(gitExtensionService, mockNotebookService, workspaceService, nextEditProvider.ID, doc);
+		const tb2 = new NextEditProviderTelemetryBuilder(
+			gitExtensionService,
+			mockNotebookService,
+			workspaceService,
+			nextEditProvider.ID,
+			doc,
+		);
 
-		result = await nextEditProvider.getNextEdit(doc.id, context, logContext, cancellationToken, tb2.nesBuilder);
+		result = await nextEditProvider.getNextEdit(
+			doc.id,
+			context,
+			logContext,
+			cancellationToken,
+			tb2.nesBuilder,
+		);
 
 		tb2.dispose();
 
@@ -171,9 +256,21 @@ describe('NextEditProvider Caching', () => {
 			const myPoint = new Point(0, 1);"
 		`);
 
-		const tb3 = new NextEditProviderTelemetryBuilder(gitExtensionService, mockNotebookService, workspaceService, nextEditProvider.ID, doc);
+		const tb3 = new NextEditProviderTelemetryBuilder(
+			gitExtensionService,
+			mockNotebookService,
+			workspaceService,
+			nextEditProvider.ID,
+			doc,
+		);
 
-		result = await nextEditProvider.getNextEdit(doc.id, context, logContext, cancellationToken, tb3.nesBuilder);
+		result = await nextEditProvider.getNextEdit(
+			doc.id,
+			context,
+			logContext,
+			cancellationToken,
+			tb3.nesBuilder,
+		);
 
 		tb3.dispose();
 
@@ -202,7 +299,23 @@ describe('NextEditProvider Caching', () => {
 		const obsGit = new ObservableGit(gitExtensionService);
 		const statelessNextEditProvider = createStatelessNextEditProvider();
 
-		const nextEditProvider: NextEditProvider = new NextEditProvider(obsWorkspace, statelessNextEditProvider, new NesHistoryContextProvider(obsWorkspace, obsGit), new NesXtabHistoryTracker(obsWorkspace, undefined, configService, expService), undefined, configService, snippyService, logService, expService, requestLogger);
+		const nextEditProvider: NextEditProvider = new NextEditProvider(
+			obsWorkspace,
+			statelessNextEditProvider,
+			new NesHistoryContextProvider(obsWorkspace, obsGit),
+			new NesXtabHistoryTracker(
+				obsWorkspace,
+				undefined,
+				configService,
+				expService,
+			),
+			undefined,
+			configService,
+			snippyService,
+			logService,
+			expService,
+			requestLogger,
+		);
 
 		// Use \r\n line endings to simulate a Windows document
 		const initialValue = [
@@ -228,13 +341,36 @@ describe('NextEditProvider Caching', () => {
 		// Insert "3D" after "Point" at offset 11 (same offset, within first line before any line ending)
 		doc.applyEdit(StringEdit.insert(11, '3D'));
 
-		const context: NESInlineCompletionContext = { triggerKind: 1, selectedCompletionInfo: undefined, requestUuid: generateUuid(), requestIssuedDateTime: Date.now(), earliestShownDateTime: Date.now() + 200, enforceCacheDelay: false };
-		const logContext = new InlineEditRequestLogContext(doc.id.toString(), 1, context);
+		const context: NESInlineCompletionContext = {
+			triggerKind: 1,
+			selectedCompletionInfo: undefined,
+			requestUuid: generateUuid(),
+			requestIssuedDateTime: Date.now(),
+			earliestShownDateTime: Date.now() + 200,
+			enforceCacheDelay: false,
+		};
+		const logContext = new InlineEditRequestLogContext(
+			doc.id.toString(),
+			1,
+			context,
+		);
 		const cancellationToken = CancellationToken.None;
-		const tb1 = new NextEditProviderTelemetryBuilder(gitExtensionService, mockNotebookService, workspaceService, nextEditProvider.ID, doc);
+		const tb1 = new NextEditProviderTelemetryBuilder(
+			gitExtensionService,
+			mockNotebookService,
+			workspaceService,
+			nextEditProvider.ID,
+			doc,
+		);
 
 		// First edit: should add z parameter
-		let result = await nextEditProvider.getNextEdit(doc.id, context, logContext, cancellationToken, tb1.nesBuilder);
+		let result = await nextEditProvider.getNextEdit(
+			doc.id,
+			context,
+			logContext,
+			cancellationToken,
+			tb1.nesBuilder,
+		);
 		tb1.dispose();
 		assert(result.result?.edit);
 		doc.applyEdit(result.result.edit.toEdit());
@@ -244,8 +380,20 @@ describe('NextEditProvider Caching', () => {
 		expect(doc.value.get().value).not.toMatch(/[^\r]\n/);
 
 		// Second edit: should update getDistance method — this uses a cached edit
-		const tb2 = new NextEditProviderTelemetryBuilder(gitExtensionService, mockNotebookService, workspaceService, nextEditProvider.ID, doc);
-		result = await nextEditProvider.getNextEdit(doc.id, context, logContext, cancellationToken, tb2.nesBuilder);
+		const tb2 = new NextEditProviderTelemetryBuilder(
+			gitExtensionService,
+			mockNotebookService,
+			workspaceService,
+			nextEditProvider.ID,
+			doc,
+		);
+		result = await nextEditProvider.getNextEdit(
+			doc.id,
+			context,
+			logContext,
+			cancellationToken,
+			tb2.nesBuilder,
+		);
 		tb2.dispose();
 		assert(result.result?.edit, 'second cached edit should be found');
 		doc.applyEdit(result.result.edit.toEdit());
@@ -253,8 +401,20 @@ describe('NextEditProvider Caching', () => {
 		expect(doc.value.get().value).not.toMatch(/[^\r]\n/);
 
 		// Third edit: should update the variable — also from cache
-		const tb3 = new NextEditProviderTelemetryBuilder(gitExtensionService, mockNotebookService, workspaceService, nextEditProvider.ID, doc);
-		result = await nextEditProvider.getNextEdit(doc.id, context, logContext, cancellationToken, tb3.nesBuilder);
+		const tb3 = new NextEditProviderTelemetryBuilder(
+			gitExtensionService,
+			mockNotebookService,
+			workspaceService,
+			nextEditProvider.ID,
+			doc,
+		);
+		result = await nextEditProvider.getNextEdit(
+			doc.id,
+			context,
+			logContext,
+			cancellationToken,
+			tb3.nesBuilder,
+		);
 		tb3.dispose();
 		assert(result.result?.edit, 'third cached edit should be found');
 		doc.applyEdit(result.result.edit.toEdit());
@@ -282,7 +442,23 @@ describe('NextEditProvider Caching', () => {
 		const obsGit = new ObservableGit(gitExtensionService);
 		const statelessNextEditProvider = createStatelessNextEditProvider();
 
-		const nextEditProvider: NextEditProvider = new NextEditProvider(obsWorkspace, statelessNextEditProvider, new NesHistoryContextProvider(obsWorkspace, obsGit), new NesXtabHistoryTracker(obsWorkspace, undefined, configService, expService), undefined, configService, snippyService, logService, expService, requestLogger);
+		const nextEditProvider: NextEditProvider = new NextEditProvider(
+			obsWorkspace,
+			statelessNextEditProvider,
+			new NesHistoryContextProvider(obsWorkspace, obsGit),
+			new NesXtabHistoryTracker(
+				obsWorkspace,
+				undefined,
+				configService,
+				expService,
+			),
+			undefined,
+			configService,
+			snippyService,
+			logService,
+			expService,
+			requestLogger,
+		);
 
 		const doc = obsWorkspace.addDocument({
 			id: DocumentId.create(URI.file('/test/test.ts').toString()),
@@ -297,23 +473,49 @@ describe('NextEditProvider Caching', () => {
 				}
 			}
 
-			const myPoint = new Point(0, 1);`.trimStart()
+			const myPoint = new Point(0, 1);`.trimStart(),
 		});
 		doc.setSelection([new OffsetRange(1, 1)], undefined);
 
 		doc.applyEdit(StringEdit.insert(11, '3D'));
 
-		const context: NESInlineCompletionContext = { triggerKind: 1, selectedCompletionInfo: undefined, requestUuid: generateUuid(), requestIssuedDateTime: Date.now(), earliestShownDateTime: Date.now() + 200, enforceCacheDelay: false };
-		const logContext = new InlineEditRequestLogContext(doc.id.toString(), 1, context);
+		const context: NESInlineCompletionContext = {
+			triggerKind: 1,
+			selectedCompletionInfo: undefined,
+			requestUuid: generateUuid(),
+			requestIssuedDateTime: Date.now(),
+			earliestShownDateTime: Date.now() + 200,
+			enforceCacheDelay: false,
+		};
+		const logContext = new InlineEditRequestLogContext(
+			doc.id.toString(),
+			1,
+			context,
+		);
 		const cancellationToken = CancellationToken.None;
 
 		// First call: edit comes fresh from the (mock) provider but is also cached.
-		const tb1 = new NextEditProviderTelemetryBuilder(gitExtensionService, mockNotebookService, workspaceService, nextEditProvider.ID, doc);
-		const first = await nextEditProvider.getNextEdit(doc.id, context, logContext, cancellationToken, tb1.nesBuilder);
+		const tb1 = new NextEditProviderTelemetryBuilder(
+			gitExtensionService,
+			mockNotebookService,
+			workspaceService,
+			nextEditProvider.ID,
+			doc,
+		);
+		const first = await nextEditProvider.getNextEdit(
+			doc.id,
+			context,
+			logContext,
+			cancellationToken,
+			tb1.nesBuilder,
+		);
 		tb1.dispose();
 		assert(first.result?.edit);
 		const firstCacheEntry = first.result.cacheEntry;
-		assert(firstCacheEntry, 'expected a cacheEntry reference on the first (fresh) NextEditResult');
+		assert(
+			firstCacheEntry,
+			'expected a cacheEntry reference on the first (fresh) NextEditResult',
+		);
 		expect(firstCacheEntry.wasRenderedAsInlineSuggestion).toBeFalsy();
 
 		// Simulate the inline-completion-provider marking the entry as having been
@@ -322,12 +524,27 @@ describe('NextEditProvider Caching', () => {
 
 		// Second call (no document changes): we should still get the same cached
 		// edit back, and the flag must have been preserved on the same entry.
-		const tb2 = new NextEditProviderTelemetryBuilder(gitExtensionService, mockNotebookService, workspaceService, nextEditProvider.ID, doc);
-		const second = await nextEditProvider.getNextEdit(doc.id, context, logContext, cancellationToken, tb2.nesBuilder);
+		const tb2 = new NextEditProviderTelemetryBuilder(
+			gitExtensionService,
+			mockNotebookService,
+			workspaceService,
+			nextEditProvider.ID,
+			doc,
+		);
+		const second = await nextEditProvider.getNextEdit(
+			doc.id,
+			context,
+			logContext,
+			cancellationToken,
+			tb2.nesBuilder,
+		);
 		tb2.dispose();
 		assert(second.result?.edit);
 		const secondCacheEntry = second.result.cacheEntry;
-		assert(secondCacheEntry, 'expected a cacheEntry reference on the second (cached) NextEditResult');
+		assert(
+			secondCacheEntry,
+			'expected a cacheEntry reference on the second (cached) NextEditResult',
+		);
 		expect(secondCacheEntry).toBe(firstCacheEntry);
 		expect(secondCacheEntry.wasRenderedAsInlineSuggestion).toBe(true);
 	});

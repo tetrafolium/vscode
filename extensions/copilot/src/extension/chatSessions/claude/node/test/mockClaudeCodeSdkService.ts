@@ -3,7 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ForkSessionOptions, ForkSessionResult, GetSubagentMessagesOptions, ListSubagentsOptions, Options, Query, SDKAssistantMessage, SDKResultMessage, SDKSessionInfo, SDKUserMessage, SessionMessage, Settings } from '@anthropic-ai/claude-agent-sdk';
+import type {
+	ForkSessionOptions,
+	ForkSessionResult,
+	GetSubagentMessagesOptions,
+	ListSubagentsOptions,
+	Options,
+	Query,
+	SDKAssistantMessage,
+	SDKResultMessage,
+	SDKSessionInfo,
+	SDKUserMessage,
+	SessionMessage,
+	Settings,
+} from '@anthropic-ai/claude-agent-sdk';
 import type { IClaudeCodeSdkService } from '../claudeCodeSdkService';
 
 /**
@@ -39,18 +52,27 @@ export class MockClaudeCodeSdkService implements IClaudeCodeSdkService {
 		return this.mockSessions;
 	}
 
-	public async getSessionInfo(sessionId: string, dir: string): Promise<SDKSessionInfo | undefined> {
-		return this.mockSessions.find(s => s.sessionId === sessionId);
+	public async getSessionInfo(
+		sessionId: string,
+		dir: string,
+	): Promise<SDKSessionInfo | undefined> {
+		return this.mockSessions.find((s) => s.sessionId === sessionId);
 	}
 
-	public async getSessionMessages(sessionId: string, dir: string): Promise<SessionMessage[]> {
+	public async getSessionMessages(
+		sessionId: string,
+		dir: string,
+	): Promise<SessionMessage[]> {
 		return this.mockSessionMessages;
 	}
 
 	public lastRenameSessionId: string | undefined;
 	public lastRenameTitle: string | undefined;
 
-	public async renameSession(sessionId: string, title: string): Promise<void> {
+	public async renameSession(
+		sessionId: string,
+		title: string,
+	): Promise<void> {
 		this.lastRenameSessionId = sessionId;
 		this.lastRenameTitle = title;
 	}
@@ -58,17 +80,27 @@ export class MockClaudeCodeSdkService implements IClaudeCodeSdkService {
 	public lastForkSessionId: string | undefined;
 	public lastForkOptions: ForkSessionOptions | undefined;
 
-	public async forkSession(sessionId: string, options?: ForkSessionOptions): Promise<ForkSessionResult> {
+	public async forkSession(
+		sessionId: string,
+		options?: ForkSessionOptions,
+	): Promise<ForkSessionResult> {
 		this.lastForkSessionId = sessionId;
 		this.lastForkOptions = options;
 		return { sessionId: 'forked-session-id' } as ForkSessionResult;
 	}
 
-	public async listSubagents(sessionId: string, options?: ListSubagentsOptions): Promise<string[]> {
+	public async listSubagents(
+		sessionId: string,
+		options?: ListSubagentsOptions,
+	): Promise<string[]> {
 		return this.mockSubagentIds;
 	}
 
-	public async getSubagentMessages(sessionId: string, agentId: string, options?: GetSubagentMessagesOptions): Promise<SessionMessage[]> {
+	public async getSubagentMessages(
+		sessionId: string,
+		agentId: string,
+		options?: GetSubagentMessagesOptions,
+	): Promise<SessionMessage[]> {
 		return this.mockSubagentMessages.get(agentId) ?? [];
 	}
 
@@ -88,11 +120,15 @@ export class MockClaudeCodeSdkService implements IClaudeCodeSdkService {
 				this.applyFlagSettingsCallCount++;
 				this.lastAppliedFlagSettings = settings;
 			},
-			abort: () => { /* no-op for mock */ },
+			abort: () => {
+				/* no-op for mock */
+			},
 		} as unknown as Query;
 	}
 
-	private async* createMockGenerator(prompt: AsyncIterable<SDKUserMessage>): AsyncGenerator<SDKAssistantMessage | SDKResultMessage, void, unknown> {
+	private async *createMockGenerator(
+		prompt: AsyncIterable<SDKUserMessage>,
+	): AsyncGenerator<SDKAssistantMessage | SDKResultMessage, void, unknown> {
 		// For every user message yielded, emit an assistant text and then a result
 		for await (const msg of prompt) {
 			this.receivedMessages.push(msg);
@@ -101,10 +137,8 @@ export class MockClaudeCodeSdkService implements IClaudeCodeSdkService {
 				session_id: 'sess-1',
 				message: {
 					role: 'assistant',
-					content: [
-						{ type: 'text', text: 'Hello from mock!' }
-					]
-				}
+					content: [{ type: 'text', text: 'Hello from mock!' }],
+				},
 			} as SDKAssistantMessage;
 			yield {
 				type: 'result',
@@ -117,7 +151,7 @@ export class MockClaudeCodeSdkService implements IClaudeCodeSdkService {
 				num_turns: 0,
 				total_cost_usd: 0,
 				usage: { input_tokens: 0, output_tokens: 0 },
-				permission_denials: []
+				permission_denials: [],
 			} as unknown as SDKResultMessage;
 		}
 	}

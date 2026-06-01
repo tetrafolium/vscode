@@ -19,14 +19,18 @@ import Parser from 'web-tree-sitter';
 export class BlockTokenSubsetMatcher extends WindowedMatcher {
 	private windowLength: number;
 
-	private constructor(referenceDoc: DocumentInfoWithOffset, windowLength: number) {
+	private constructor(
+		referenceDoc: DocumentInfoWithOffset,
+		windowLength: number,
+	) {
 		super(referenceDoc);
 		this.windowLength = windowLength;
 	}
 
 	static FACTORY = (windowLength: number) => {
 		return {
-			to: (referenceDoc: DocumentInfoWithOffset) => new BlockTokenSubsetMatcher(referenceDoc, windowLength),
+			to: (referenceDoc: DocumentInfoWithOffset) =>
+				new BlockTokenSubsetMatcher(referenceDoc, windowLength),
 		};
 	};
 
@@ -38,7 +42,9 @@ export class BlockTokenSubsetMatcher extends WindowedMatcher {
 		return getBasicWindowDelineations(this.windowLength, lines);
 	}
 
-	protected _getCursorContextInfo(referenceDoc: DocumentInfoWithOffset): CursorContextInfo {
+	protected _getCursorContextInfo(
+		referenceDoc: DocumentInfoWithOffset,
+	): CursorContextInfo {
 		return getCursorContext(referenceDoc, {
 			maxLineCount: this.windowLength,
 		});
@@ -55,25 +61,32 @@ export class BlockTokenSubsetMatcher extends WindowedMatcher {
 
 		// Syntax aware reference tokens uses tree-sitter based parsing to identify the bounds of the current
 		// method and extracts tokens from just that span for use as the reference set.
-		this.referenceTokensCache = BlockTokenSubsetMatcher.syntaxAwareSupportsLanguage(this.referenceDoc.languageId)
-			? await this.syntaxAwareReferenceTokens()
-			: await super.referenceTokens;
+		this.referenceTokensCache =
+			BlockTokenSubsetMatcher.syntaxAwareSupportsLanguage(
+				this.referenceDoc.languageId,
+			)
+				? await this.syntaxAwareReferenceTokens()
+				: await super.referenceTokens;
 
 		return this.referenceTokensCache;
 	}
 
 	private async syntaxAwareReferenceTokens(): Promise<Set<string>> {
 		// See if there is an enclosing class or type member.
-		const start = (await this.getEnclosingMemberStart(this.referenceDoc.source, this.referenceDoc.offset))
-			?.startIndex;
+		const start = (
+			await this.getEnclosingMemberStart(
+				this.referenceDoc.source,
+				this.referenceDoc.offset,
+			)
+		)?.startIndex;
 		const end = this.referenceDoc.offset;
 
 		// If not, fallback to the 60-line chunk behavior.
 		const text = start
 			? this.referenceDoc.source.slice(start, end)
 			: getCursorContext(this.referenceDoc, {
-				maxLineCount: this.windowLength,
-			}).context;
+					maxLineCount: this.windowLength,
+				}).context;
 
 		// Extract the tokens.
 		return this.tokenizer.tokenize(text);
@@ -92,17 +105,24 @@ export class BlockTokenSubsetMatcher extends WindowedMatcher {
 		return computeScore(a, b);
 	}
 
-	async getEnclosingMemberStart(text: string, offset: number): Promise<Parser.SyntaxNode | undefined> {
+	async getEnclosingMemberStart(
+		text: string,
+		offset: number,
+	): Promise<Parser.SyntaxNode | undefined> {
 		let tree: Parser.Tree | undefined;
 
 		try {
 			tree = await parseTreeSitter(this.referenceDoc.languageId, text);
 
-			let nodeAtPos: Parser.SyntaxNode | undefined = tree.rootNode.namedDescendantForIndex(offset);
+			let nodeAtPos: Parser.SyntaxNode | undefined =
+				tree.rootNode.namedDescendantForIndex(offset);
 
 			while (nodeAtPos) {
 				// For now, hard code for C#.
-				if (BlockTokenSubsetMatcher.isMember(nodeAtPos) || BlockTokenSubsetMatcher.isBlock(nodeAtPos)) {
+				if (
+					BlockTokenSubsetMatcher.isMember(nodeAtPos) ||
+					BlockTokenSubsetMatcher.isBlock(nodeAtPos)
+				) {
 					break;
 				}
 
@@ -149,7 +169,7 @@ export class BlockTokenSubsetMatcher extends WindowedMatcher {
 function computeScore(a: Set<string>, b: Set<string>) {
 	const subsetOverlap = new Set();
 
-	b.forEach(x => {
+	b.forEach((x) => {
 		if (a.has(x)) {
 			subsetOverlap.add(x);
 		}

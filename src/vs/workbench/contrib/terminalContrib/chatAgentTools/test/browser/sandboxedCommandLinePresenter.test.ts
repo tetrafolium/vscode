@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ok, strictEqual } from 'assert';
-import { SandboxedCommandLinePresenter } from '../../browser/tools/commandLinePresenter/sandboxedCommandLinePresenter.js';
-import { OperatingSystem } from '../../../../../../base/common/platform.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import type { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
-import { ITerminalSandboxService } from '../../common/terminalSandboxService.js';
+import { ok, strictEqual } from "assert";
+import { SandboxedCommandLinePresenter } from "../../browser/tools/commandLinePresenter/sandboxedCommandLinePresenter.js";
+import { OperatingSystem } from "../../../../../../base/common/platform.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import type { TestInstantiationService } from "../../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import { workbenchInstantiationService } from "../../../../../test/browser/workbenchTestServices.js";
+import { ITerminalSandboxService } from "../../common/terminalSandboxService.js";
 
-suite('SandboxedCommandLinePresenter', () => {
+suite("SandboxedCommandLinePresenter", () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 	let instantiationService: TestInstantiationService;
 
@@ -21,24 +21,25 @@ suite('SandboxedCommandLinePresenter', () => {
 			_serviceBrand: undefined,
 			isEnabled: async () => enabled,
 			isSandboxAllowNetworkEnabled: async () => false,
-			wrapCommand: async command => ({
+			wrapCommand: async (command) => ({
 				command,
 				isSandboxWrapped: false,
 			}),
-			getSandboxConfigPath: async () => '/tmp/sandbox.json',
+			getSandboxConfigPath: async () => "/tmp/sandbox.json",
 			getTempDir: () => undefined,
-			setNeedsForceUpdateConfigFile: () => { },
+			setNeedsForceUpdateConfigFile: () => {},
 		});
 		return instantiationService.createInstance(SandboxedCommandLinePresenter);
 	};
 
-	test('should return command line when sandboxing is enabled', async () => {
+	test("should return command line when sandboxing is enabled", async () => {
 		const presenter = createPresenter();
-		const commandLine = 'ELECTRON_RUN_AS_NODE=1 "/path/to/electron" "/path/to/srt/cli.js" TMPDIR=/tmp --settings "/tmp/sandbox.json" -c "echo hello"';
+		const commandLine =
+			'ELECTRON_RUN_AS_NODE=1 "/path/to/electron" "/path/to/srt/cli.js" TMPDIR=/tmp --settings "/tmp/sandbox.json" -c "echo hello"';
 		const result = await presenter.present({
 			commandLine: { forDisplay: commandLine },
-			shell: 'bash',
-			os: OperatingSystem.Linux
+			shell: "bash",
+			os: OperatingSystem.Linux,
 		});
 		ok(result);
 		strictEqual(result.commandLine, commandLine);
@@ -46,13 +47,13 @@ suite('SandboxedCommandLinePresenter', () => {
 		strictEqual(result.languageDisplayName, undefined);
 	});
 
-	test('should return command line for non-sandboxed command when enabled', async () => {
+	test("should return command line for non-sandboxed command when enabled", async () => {
 		const presenter = createPresenter();
-		const commandLine = 'echo hello';
+		const commandLine = "echo hello";
 		const result = await presenter.present({
 			commandLine: { forDisplay: commandLine },
-			shell: 'bash',
-			os: OperatingSystem.Linux
+			shell: "bash",
+			os: OperatingSystem.Linux,
 		});
 		ok(result);
 		strictEqual(result.commandLine, commandLine);
@@ -60,23 +61,29 @@ suite('SandboxedCommandLinePresenter', () => {
 		strictEqual(result.languageDisplayName, undefined);
 	});
 
-	test('should use forDisplay over original when both are provided', async () => {
+	test("should use forDisplay over original when both are provided", async () => {
 		const presenter = createPresenter();
 		const result = await presenter.present({
-			commandLine: { original: 'cd /some/path && ls -lh', forDisplay: 'ls -lh' },
-			shell: 'bash',
-			os: OperatingSystem.Linux
+			commandLine: {
+				original: "cd /some/path && ls -lh",
+				forDisplay: "ls -lh",
+			},
+			shell: "bash",
+			os: OperatingSystem.Linux,
 		});
 		ok(result);
-		strictEqual(result.commandLine, 'ls -lh');
+		strictEqual(result.commandLine, "ls -lh");
 	});
 
-	test('should return undefined when sandboxing is disabled', async () => {
+	test("should return undefined when sandboxing is disabled", async () => {
 		const presenter = createPresenter(false);
 		const result = await presenter.present({
-			commandLine: { forDisplay: 'ELECTRON_RUN_AS_NODE=1 "/path/to/electron" "/path/to/srt/cli.js" TMPDIR=/tmp --settings "/tmp/sandbox.json" -c "echo hello"' },
-			shell: 'bash',
-			os: OperatingSystem.Linux
+			commandLine: {
+				forDisplay:
+					'ELECTRON_RUN_AS_NODE=1 "/path/to/electron" "/path/to/srt/cli.js" TMPDIR=/tmp --settings "/tmp/sandbox.json" -c "echo hello"',
+			},
+			shell: "bash",
+			os: OperatingSystem.Linux,
 		});
 		strictEqual(result, undefined);
 	});

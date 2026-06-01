@@ -3,13 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ApplicationService } from '../application';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ApplicationService } from "../application";
 
 /**
  * Status Bar Tools
  */
-export function applyStatusBarTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applyStatusBarTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	const tools: RegisteredTool[] = [];
 
 	// Seems too niche

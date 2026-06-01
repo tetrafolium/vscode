@@ -29,7 +29,7 @@ const handlerRegistry: IToolPermissionHandlerRegistration[] = [];
  */
 export function registerToolPermissionHandler<T extends ClaudeToolNames>(
 	toolNames: readonly T[],
-	ctor: IClaudeToolPermissionHandlerCtor<T>
+	ctor: IClaudeToolPermissionHandlerCtor<T>,
 ): void {
 	handlerRegistry.push({ toolNames, ctor });
 }

@@ -3,27 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { HookType } from '../../../common/promptSyntax/hookTypes.js';
-import { parseCopilotHooks, parseHooksFromFile, HookSourceFormat } from '../../../common/promptSyntax/hookCompatibility.js';
-import { URI } from '../../../../../../base/common/uri.js';
+import assert from "assert";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import { HookType } from "../../../common/promptSyntax/hookTypes.js";
+import {
+	parseCopilotHooks,
+	parseHooksFromFile,
+	HookSourceFormat,
+} from "../../../common/promptSyntax/hookCompatibility.js";
+import { URI } from "../../../../../../base/common/uri.js";
 
-suite('HookCompatibility', () => {
+suite("HookCompatibility", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	suite('parseCopilotHooks', () => {
-		const workspaceRoot = URI.file('/workspace');
-		const userHome = '/home/user';
+	suite("parseCopilotHooks", () => {
+		const workspaceRoot = URI.file("/workspace");
+		const userHome = "/home/user";
 
-		suite('basic parsing', () => {
-			test('parses simple hook with command', () => {
+		suite("basic parsing", () => {
+			test("parses simple hook with command", () => {
 				const json = {
 					hooks: {
-						PreToolUse: [
-							{ type: 'command', command: 'echo "pre-tool"' }
-						]
-					}
+						PreToolUse: [{ type: "command", command: 'echo "pre-tool"' }],
+					},
 				};
 
 				const result = parseCopilotHooks(json, workspaceRoot, userHome);
@@ -36,37 +38,35 @@ suite('HookCompatibility', () => {
 			});
 		});
 
-		suite('invalid inputs', () => {
-			test('returns empty result for null json', () => {
+		suite("invalid inputs", () => {
+			test("returns empty result for null json", () => {
 				const result = parseCopilotHooks(null, workspaceRoot, userHome);
 				assert.strictEqual(result.size, 0);
 			});
 
-			test('returns empty result for undefined json', () => {
+			test("returns empty result for undefined json", () => {
 				const result = parseCopilotHooks(undefined, workspaceRoot, userHome);
 				assert.strictEqual(result.size, 0);
 			});
 
-			test('returns empty result for missing hooks property', () => {
+			test("returns empty result for missing hooks property", () => {
 				const result = parseCopilotHooks({}, workspaceRoot, userHome);
 				assert.strictEqual(result.size, 0);
 			});
 		});
 
-		suite('Claude-style matcher compatibility', () => {
-			test('parses Claude-style nested matcher structure', () => {
+		suite("Claude-style matcher compatibility", () => {
+			test("parses Claude-style nested matcher structure", () => {
 				// When Claude format is pasted into Copilot hooks file
 				const json = {
 					hooks: {
 						PreToolUse: [
 							{
-								matcher: 'Bash',
-								hooks: [
-									{ type: 'command', command: 'echo "from matcher"' }
-								]
-							}
-						]
-					}
+								matcher: "Bash",
+								hooks: [{ type: "command", command: 'echo "from matcher"' }],
+							},
+						],
+					},
 				};
 
 				const result = parseCopilotHooks(json, workspaceRoot, userHome);
@@ -77,19 +77,19 @@ suite('HookCompatibility', () => {
 				assert.strictEqual(entry.hooks[0].command, 'echo "from matcher"');
 			});
 
-			test('parses Claude-style nested matcher with multiple hooks', () => {
+			test("parses Claude-style nested matcher with multiple hooks", () => {
 				const json = {
 					hooks: {
 						PostToolUse: [
 							{
-								matcher: 'Write',
+								matcher: "Write",
 								hooks: [
-									{ type: 'command', command: 'echo "first"' },
-									{ type: 'command', command: 'echo "second"' }
-								]
-							}
-						]
-					}
+									{ type: "command", command: 'echo "first"' },
+									{ type: "command", command: 'echo "second"' },
+								],
+							},
+						],
+					},
 				};
 
 				const result = parseCopilotHooks(json, workspaceRoot, userHome);
@@ -100,19 +100,17 @@ suite('HookCompatibility', () => {
 				assert.strictEqual(entry.hooks[1].command, 'echo "second"');
 			});
 
-			test('handles mixed direct and nested matcher entries', () => {
+			test("handles mixed direct and nested matcher entries", () => {
 				const json = {
 					hooks: {
 						PreToolUse: [
-							{ type: 'command', command: 'echo "direct"' },
+							{ type: "command", command: 'echo "direct"' },
 							{
-								matcher: 'Bash',
-								hooks: [
-									{ type: 'command', command: 'echo "nested"' }
-								]
-							}
-						]
-					}
+								matcher: "Bash",
+								hooks: [{ type: "command", command: 'echo "nested"' }],
+							},
+						],
+					},
 				};
 
 				const result = parseCopilotHooks(json, workspaceRoot, userHome);
@@ -123,14 +121,12 @@ suite('HookCompatibility', () => {
 				assert.strictEqual(entry.hooks[1].command, 'echo "nested"');
 			});
 
-			test('handles Claude-style hook without type field', () => {
+			test("handles Claude-style hook without type field", () => {
 				// Claude allows omitting the type field
 				const json = {
 					hooks: {
-						SessionStart: [
-							{ command: 'echo "no type"' }
-						]
-					}
+						SessionStart: [{ command: 'echo "no type"' }],
+					},
 				};
 
 				const result = parseCopilotHooks(json, workspaceRoot, userHome);
@@ -142,18 +138,16 @@ suite('HookCompatibility', () => {
 		});
 	});
 
-	suite('parseHooksFromFile', () => {
-		const workspaceRoot = URI.file('/workspace');
-		const userHome = '/home/user';
+	suite("parseHooksFromFile", () => {
+		const workspaceRoot = URI.file("/workspace");
+		const userHome = "/home/user";
 
-		test('uses Copilot format for .github/hooks/*.json files', () => {
-			const fileUri = URI.file('/workspace/.github/hooks/my-hooks.json');
+		test("uses Copilot format for .github/hooks/*.json files", () => {
+			const fileUri = URI.file("/workspace/.github/hooks/my-hooks.json");
 			const json = {
 				hooks: {
-					PreToolUse: [
-						{ type: 'command', command: 'echo "test"' }
-					]
-				}
+					PreToolUse: [{ type: "command", command: 'echo "test"' }],
+				},
 			};
 
 			const result = parseHooksFromFile(fileUri, json, workspaceRoot, userHome);
@@ -163,15 +157,13 @@ suite('HookCompatibility', () => {
 			assert.strictEqual(result.hooks.size, 1);
 		});
 
-		test('uses Claude format for .claude/settings.json files', () => {
-			const fileUri = URI.file('/workspace/.claude/settings.json');
+		test("uses Claude format for .claude/settings.json files", () => {
+			const fileUri = URI.file("/workspace/.claude/settings.json");
 			const json = {
 				disableAllHooks: true,
 				hooks: {
-					PreToolUse: [
-						{ type: 'command', command: 'echo "test"' }
-					]
-				}
+					PreToolUse: [{ type: "command", command: 'echo "test"' }],
+				},
 			};
 
 			const result = parseHooksFromFile(fileUri, json, workspaceRoot, userHome);
@@ -181,15 +173,13 @@ suite('HookCompatibility', () => {
 			assert.strictEqual(result.hooks.size, 0);
 		});
 
-		test('disableAllHooks is ignored for Copilot format', () => {
-			const fileUri = URI.file('/workspace/.github/hooks/hooks.json');
+		test("disableAllHooks is ignored for Copilot format", () => {
+			const fileUri = URI.file("/workspace/.github/hooks/hooks.json");
 			const json = {
 				disableAllHooks: true,
 				hooks: {
-					SessionStart: [
-						{ type: 'command', command: 'echo "start"' }
-					]
-				}
+					SessionStart: [{ type: "command", command: 'echo "start"' }],
+				},
 			};
 
 			const result = parseHooksFromFile(fileUri, json, workspaceRoot, userHome);
@@ -199,15 +189,13 @@ suite('HookCompatibility', () => {
 			assert.strictEqual(result.hooks.size, 1);
 		});
 
-		test('disabledAllHooks works for Claude format', () => {
-			const fileUri = URI.file('/workspace/.claude/settings.local.json');
+		test("disabledAllHooks works for Claude format", () => {
+			const fileUri = URI.file("/workspace/.claude/settings.local.json");
 			const json = {
 				disableAllHooks: true,
 				hooks: {
-					SessionStart: [
-						{ type: 'command', command: 'echo "start"' }
-					]
-				}
+					SessionStart: [{ type: "command", command: 'echo "start"' }],
+				},
 			};
 
 			const result = parseHooksFromFile(fileUri, json, workspaceRoot, userHome);

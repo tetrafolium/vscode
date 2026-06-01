@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CharCode } from '../../../util/vs/base/common/charCode';
-import { StringEdit, StringReplacement } from '../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRange';
 import * as vscodeTypes from '../../../vscodeTypes';
 import { IDiffService } from '../../diff/common/diffService';
@@ -38,7 +41,11 @@ export class EditCollector implements IEditCollector {
 
 	public async getEdits(): Promise<StringEdit> {
 		const newText = this.getText();
-		const edits = await stringEditFromDiff(this.initialText, newText, this._diffService);
+		const edits = await stringEditFromDiff(
+			this.initialText,
+			newText,
+			this._diffService,
+		);
 		return edits;
 	}
 }
@@ -55,11 +62,16 @@ export class OffsetBasedTextDocument {
 	}
 
 	applyTextEdits(edits: vscodeTypes.TextEdit[]) {
-		const offsetEdit = new StringEdit(edits.map(e => {
-			const start = this.positionToOffset(e.range.start);
-			const end = this.positionToOffset(e.range.end);
-			return new StringReplacement(new OffsetRange(start, end), e.newText);
-		}));
+		const offsetEdit = new StringEdit(
+			edits.map((e) => {
+				const start = this.positionToOffset(e.range.start);
+				const end = this.positionToOffset(e.range.end);
+				return new StringReplacement(
+					new OffsetRange(start, end),
+					e.newText,
+				);
+			}),
+		);
 		this.applyOffsetEdit(offsetEdit);
 	}
 
@@ -88,10 +100,18 @@ export class OffsetBasedTextDocument {
 			endLineOffest = this._converter.lineOffset(line + 2);
 			if (endLineOffest > lineOffet) {
 				const ch = this._value.charCodeAt(endLineOffest - 1);
-				if (ch === CharCode.CarriageReturn || ch === CharCode.LineFeed) {
+				if (
+					ch === CharCode.CarriageReturn ||
+					ch === CharCode.LineFeed
+				) {
 					endLineOffest--;
 				}
-				if (ch === CharCode.LineFeed && endLineOffest > lineOffet && this._value.charCodeAt(endLineOffest - 1) === CharCode.CarriageReturn) {
+				if (
+					ch === CharCode.LineFeed &&
+					endLineOffest > lineOffet &&
+					this._value.charCodeAt(endLineOffest - 1) ===
+						CharCode.CarriageReturn
+				) {
 					endLineOffest--;
 				}
 			} else {

@@ -2,7 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-export type FormattedSnippyError = { kind: 'failure'; reason: string; code: number; msg: string; meta: object };
+export type FormattedSnippyError = {
+	kind: 'failure';
+	reason: string;
+	code: number;
+	msg: string;
+	meta: object;
+};
 export const ErrorReasons = {
 	BadArguments: 'BadArgumentsError',
 	Unauthorized: 'NotAuthorized',
@@ -18,8 +24,7 @@ export const ErrorMessages = {
 		'Invalid GitHub token. Please sign out from your GitHub account using VSCode UI and try again',
 	[ErrorReasons.InternalError]:
 		'Internal error: matches to public code will not be detected. It is advised to disable Copilot completions until the service is reconnected.',
-	[ErrorReasons.RateLimit]:
-		`You've reached your quota and limit, code matching will be unavailable until the limit resets`,
+	[ErrorReasons.RateLimit]: `You've reached your quota and limit, code matching will be unavailable until the limit resets`,
 };
 
 export function getErrorType(code: number) {
@@ -51,7 +56,11 @@ export function getErrorType(code: number) {
  * @param meta Any additional data, typically an object
  * @returns FormattedSnippyError
  */
-export function createErrorResponse(code: number | string, msg: string, meta = {}) {
+export function createErrorResponse(
+	code: number | string,
+	msg: string,
+	meta = {},
+) {
 	const reason = getErrorType(Number(code));
 	const errorResponse: FormattedSnippyError = {
 		kind: 'failure',

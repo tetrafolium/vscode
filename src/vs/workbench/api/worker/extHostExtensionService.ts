@@ -3,20 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createApiFactoryAndRegisterActors } from '../common/extHost.api.impl.js';
-import { ExtensionActivationTimesBuilder } from '../common/extHostExtensionActivator.js';
-import { AbstractExtHostExtensionService } from '../common/extHostExtensionService.js';
-import { URI } from '../../../base/common/uri.js';
-import { RequireInterceptor } from '../common/extHostRequireInterceptor.js';
-import { IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
-import { ExtensionRuntime } from '../common/extHostTypes.js';
-import { timeout } from '../../../base/common/async.js';
-import { ExtHostConsoleForwarder } from './extHostConsoleForwarder.js';
-import { extname } from '../../../base/common/path.js';
+import { createApiFactoryAndRegisterActors } from "../common/extHost.api.impl.js";
+import { ExtensionActivationTimesBuilder } from "../common/extHostExtensionActivator.js";
+import { AbstractExtHostExtensionService } from "../common/extHostExtensionService.js";
+import { URI } from "../../../base/common/uri.js";
+import { RequireInterceptor } from "../common/extHostRequireInterceptor.js";
+import { IExtensionDescription } from "../../../platform/extensions/common/extensions.js";
+import { ExtensionRuntime } from "../common/extHostTypes.js";
+import { timeout } from "../../../base/common/async.js";
+import { ExtHostConsoleForwarder } from "./extHostConsoleForwarder.js";
+import { extname } from "../../../base/common/path.js";
 
 class WorkerRequireInterceptor extends RequireInterceptor {
-
-	protected _installInterceptor() { }
+	protected _installInterceptor() {}
 
 	getModule(request: string, parent: URI): undefined | any {
 		for (const alternativeModuleName of this._alternatives) {
@@ -28,7 +27,9 @@ class WorkerRequireInterceptor extends RequireInterceptor {
 		}
 
 		if (this._factories.has(request)) {
-			return this._factories.get(request)!.load(request, parent, () => { throw new Error('CANNOT LOAD MODULE from here.'); });
+			return this._factories.get(request)!.load(request, parent, () => {
+				throw new Error("CANNOT LOAD MODULE from here.");
+			});
 		}
 		return undefined;
 	}
@@ -44,20 +45,32 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		this._instaService.createInstance(ExtHostConsoleForwarder);
 
 		// initialize API and register actors
-		const apiFactory = this._instaService.invokeFunction(createApiFactoryAndRegisterActors);
-		this._fakeModules = this._instaService.createInstance(WorkerRequireInterceptor, apiFactory, { mine: this._myRegistry, all: this._globalRegistry });
+		const apiFactory = this._instaService.invokeFunction(
+			createApiFactoryAndRegisterActors,
+		);
+		this._fakeModules = this._instaService.createInstance(
+			WorkerRequireInterceptor,
+			apiFactory,
+			{ mine: this._myRegistry, all: this._globalRegistry },
+		);
 		await this._fakeModules.install();
-		performance.mark('code/extHost/didInitAPI');
+		performance.mark("code/extHost/didInitAPI");
 
 		await this._waitForDebuggerAttachment();
 	}
 
-	protected _getEntryPoint(extensionDescription: IExtensionDescription): string | undefined {
+	protected _getEntryPoint(
+		extensionDescription: IExtensionDescription,
+	): string | undefined {
 		return extensionDescription.browser;
 	}
 
-	protected async _loadCommonJSModule<T extends object | undefined>(extension: IExtensionDescription | null, module: URI, activationTimesBuilder: ExtensionActivationTimesBuilder): Promise<T> {
-		module = module.with({ path: ensureSuffix(module.path, '.js') });
+	protected async _loadCommonJSModule<T extends object | undefined>(
+		extension: IExtensionDescription | null,
+		module: URI,
+		activationTimesBuilder: ExtensionActivationTimesBuilder,
+	): Promise<T> {
+		module = module.with({ path: ensureSuffix(module.path, ".js") });
 		const extensionId = extension?.identifier.value;
 		if (extensionId) {
 			performance.mark(`code/extHost/willFetchExtensionCode/${extensionId}`);
@@ -66,7 +79,9 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		// First resolve the extension entry point URI to something we can load using `fetch`
 		// This needs to be done on the main thread due to a potential `resourceUriProvider` (workbench api)
 		// which is only available in the main thread
-		const browserUri = URI.revive(await this._mainThreadExtensionsProxy.$asBrowserUri(module));
+		const browserUri = URI.revive(
+			await this._mainThreadExtensionsProxy.$asBrowserUri(module),
+		);
 		const response = await fetch(browserUri.toString(true));
 		if (extensionId) {
 			performance.mark(`code/extHost/didFetchExtensionCode/${extensionId}`);
@@ -84,20 +99,26 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		const fullSource = `${source}\n//# sourceURL=${sourceURL}`;
 		let initFn: Function;
 		try {
-			initFn = new Function('module', 'exports', 'require', fullSource); // CodeQL [SM01632] js/eval-call there is no alternative until we move to ESM
+			initFn = new Function("module", "exports", "require", fullSource); // CodeQL [SM01632] js/eval-call there is no alternative until we move to ESM
 		} catch (err) {
 			if (extensionId) {
-				console.error(`Loading code for extension ${extensionId} failed: ${err.message}`);
+				console.error(
+					`Loading code for extension ${extensionId} failed: ${err.message}`,
+				);
 			} else {
 				console.error(`Loading code failed: ${err.message}`);
 			}
-			console.error(`${module.toString(true)}${typeof err.line === 'number' ? ` line ${err.line}` : ''}${typeof err.column === 'number' ? ` column ${err.column}` : ''}`);
+			console.error(
+				`${module.toString(true)}${typeof err.line === "number" ? ` line ${err.line}` : ""}${typeof err.column === "number" ? ` column ${err.column}` : ""}`,
+			);
 			console.error(err);
 			throw err;
 		}
 
 		if (extension) {
-			await this._extHostLocalizationService.initializeLocalizedMessages(extension);
+			await this._extHostLocalizationService.initializeLocalizedMessages(
+				extension,
+			);
 		}
 
 		// define commonjs globals: `module`, `exports`, and `require`
@@ -126,11 +147,19 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		}
 	}
 
-	protected override _loadESMModule<T>(extension: IExtensionDescription | null, module: URI, activationTimesBuilder: ExtensionActivationTimesBuilder): Promise<T> {
-		throw new Error('ESM modules are not supported in the web worker extension host');
+	protected override _loadESMModule<T>(
+		extension: IExtensionDescription | null,
+		module: URI,
+		activationTimesBuilder: ExtensionActivationTimesBuilder,
+	): Promise<T> {
+		throw new Error(
+			"ESM modules are not supported in the web worker extension host",
+		);
 	}
 
-	async $setRemoteEnvironment(_env: { [key: string]: string | null }): Promise<void> {
+	async $setRemoteEnvironment(_env: {
+		[key: string]: string | null;
+	}): Promise<void> {
 		return;
 	}
 
@@ -141,7 +170,7 @@ export class ExtHostExtensionService extends AbstractExtHostExtensionService {
 		}
 
 		const deadline = Date.now() + waitTimeout;
-		while (Date.now() < deadline && !('__jsDebugIsReady' in globalThis)) {
+		while (Date.now() < deadline && !("__jsDebugIsReady" in globalThis)) {
 			await timeout(10);
 		}
 	}

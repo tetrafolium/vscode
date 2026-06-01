@@ -3,26 +3,39 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { addDisposableListener, clearNode, Dimension, EventType, h } from '../../../../base/browser/dom.js';
-import { StandardKeyboardEvent } from '../../../../base/browser/keyboardEvent.js';
-import { KeyCode } from '../../../../base/common/keyCodes.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { clamp } from '../../../../base/common/numbers.js';
-import { isMacintosh } from '../../../../base/common/platform.js';
-import { generateUuid } from '../../../../base/common/uuid.js';
-import { localize } from '../../../../nls.js';
-import { IEditorOptions } from '../../../../platform/editor/common/editor.js';
-import { IFileService } from '../../../../platform/files/common/files.js';
-import { IThemeService } from '../../../../platform/theme/common/themeService.js';
-import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
-import { IEditorOpenContext } from '../../../common/editor.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { IEditorGroup } from '../../../services/editor/common/editorGroupsService.js';
-import { IWebviewElement, IWebviewService } from '../../webview/browser/webview.js';
-import { ImageCarouselEditorInput } from './imageCarouselEditorInput.js';
-import { ICarouselImage, ICarouselSection, isVideoMimeType } from './imageCarouselTypes.js';
+import {
+	addDisposableListener,
+	clearNode,
+	Dimension,
+	EventType,
+	h,
+} from "../../../../base/browser/dom.js";
+import { StandardKeyboardEvent } from "../../../../base/browser/keyboardEvent.js";
+import { KeyCode } from "../../../../base/common/keyCodes.js";
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { DisposableStore } from "../../../../base/common/lifecycle.js";
+import { clamp } from "../../../../base/common/numbers.js";
+import { isMacintosh } from "../../../../base/common/platform.js";
+import { generateUuid } from "../../../../base/common/uuid.js";
+import { localize } from "../../../../nls.js";
+import { IEditorOptions } from "../../../../platform/editor/common/editor.js";
+import { IFileService } from "../../../../platform/files/common/files.js";
+import { IThemeService } from "../../../../platform/theme/common/themeService.js";
+import { EditorPane } from "../../../browser/parts/editor/editorPane.js";
+import { IEditorOpenContext } from "../../../common/editor.js";
+import { ITelemetryService } from "../../../../platform/telemetry/common/telemetry.js";
+import { IStorageService } from "../../../../platform/storage/common/storage.js";
+import { IEditorGroup } from "../../../services/editor/common/editorGroupsService.js";
+import {
+	IWebviewElement,
+	IWebviewService,
+} from "../../webview/browser/webview.js";
+import { ImageCarouselEditorInput } from "./imageCarouselEditorInput.js";
+import {
+	ICarouselImage,
+	ICarouselSection,
+	isVideoMimeType,
+} from "./imageCarouselTypes.js";
 
 /**
  * A flat entry referencing a specific image within a section, used
@@ -34,20 +47,22 @@ interface IFlatImageEntry {
 	readonly image: ICarouselImage;
 }
 
-type ZoomScale = number | 'fit';
+type ZoomScale = number | "fit";
 
 const SCALE_PINCH_FACTOR = 0.075;
 const MAX_SCALE = 20;
 const MIN_SCALE = 0.1;
 const PIXELATION_THRESHOLD = 3;
-const ZOOM_LEVELS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.5, 2, 3, 5, 7, 10, 15, 20];
+const ZOOM_LEVELS = [
+	0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.5, 2, 3, 5, 7, 10, 15, 20,
+];
 
 export class ImageCarouselEditor extends EditorPane {
-	static readonly ID = 'workbench.editor.imageCarousel';
+	static readonly ID = "workbench.editor.imageCarousel";
 
 	private _container: HTMLElement | undefined;
 	private _currentIndex: number = 0;
-	private _zoomScale: ZoomScale = 'fit';
+	private _zoomScale: ZoomScale = "fit";
 	private _sections: ReadonlyArray<ICarouselSection> = [];
 	private _flatImages: IFlatImageEntry[] = [];
 	private readonly _contentDisposables = this._register(new DisposableStore());
@@ -55,20 +70,22 @@ export class ImageCarouselEditor extends EditorPane {
 	private readonly _blobUrlCache = new Map<string, string>();
 
 	private _videoWebview: IWebviewElement | undefined;
-	private _elements: {
-		root: HTMLElement;
-		imageArea: HTMLElement;
-		mainImageContainer: HTMLElement;
-		mainImage: HTMLImageElement;
-		videoContainer: HTMLElement;
-		captionText: HTMLElement;
-		captionSeparator: HTMLElement;
-		counter: HTMLElement;
-		ariaStatus: HTMLElement;
-		prevBtn: HTMLButtonElement;
-		nextBtn: HTMLButtonElement;
-		sectionsContainer: HTMLElement;
-	} | undefined;
+	private _elements:
+		| {
+				root: HTMLElement;
+				imageArea: HTMLElement;
+				mainImageContainer: HTMLElement;
+				mainImage: HTMLImageElement;
+				videoContainer: HTMLElement;
+				captionText: HTMLElement;
+				captionSeparator: HTMLElement;
+				counter: HTMLElement;
+				ariaStatus: HTMLElement;
+				prevBtn: HTMLButtonElement;
+				nextBtn: HTMLButtonElement;
+				sectionsContainer: HTMLElement;
+		  }
+		| undefined;
 	private _thumbnailElements: HTMLElement[] = [];
 
 	constructor(
@@ -77,27 +94,45 @@ export class ImageCarouselEditor extends EditorPane {
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IFileService private readonly _fileService: IFileService,
-		@IWebviewService private readonly _webviewService: IWebviewService
+		@IWebviewService private readonly _webviewService: IWebviewService,
 	) {
-		super(ImageCarouselEditor.ID, group, telemetryService, themeService, storageService);
+		super(
+			ImageCarouselEditor.ID,
+			group,
+			telemetryService,
+			themeService,
+			storageService,
+		);
 	}
 
 	protected override createEditor(parent: HTMLElement): void {
-		this._container = h('div.image-carousel-editor').root;
+		this._container = h("div.image-carousel-editor").root;
 		parent.appendChild(this._container);
 	}
 
-	override async setInput(input: ImageCarouselEditorInput, options: IEditorOptions | undefined, context: IEditorOpenContext, token: CancellationToken): Promise<void> {
+	override async setInput(
+		input: ImageCarouselEditorInput,
+		options: IEditorOptions | undefined,
+		context: IEditorOpenContext,
+		token: CancellationToken,
+	): Promise<void> {
 		await super.setInput(input, options, context, token);
 
 		this._sections = input.collection.sections;
 		this._flatImages = [];
 		for (let s = 0; s < this._sections.length; s++) {
 			for (let i = 0; i < this._sections[s].images.length; i++) {
-				this._flatImages.push({ sectionIndex: s, imageIndexInSection: i, image: this._sections[s].images[i] });
+				this._flatImages.push({
+					sectionIndex: s,
+					imageIndexInSection: i,
+					image: this._sections[s].images[i],
+				});
 			}
 		}
-		this._currentIndex = Math.min(input.startIndex, Math.max(0, this._flatImages.length - 1));
+		this._currentIndex = Math.min(
+			input.startIndex,
+			Math.max(0, this._flatImages.length - 1),
+		);
 		this.buildSlideshow();
 	}
 
@@ -107,7 +142,7 @@ export class ImageCarouselEditor extends EditorPane {
 		this._contentDisposables.clear();
 		this._imageDisposables.clear();
 		this._revokeCachedBlobUrls();
-		this._zoomScale = 'fit';
+		this._zoomScale = "fit";
 		if (this._container) {
 			clearNode(this._container);
 		}
@@ -135,44 +170,62 @@ export class ImageCarouselEditor extends EditorPane {
 		clearNode(this._container);
 
 		if (this._flatImages.length === 0) {
-			const empty = h('div.empty-message');
-			empty.root.textContent = localize('imageCarousel.noImages', "No images to display");
+			const empty = h("div.empty-message");
+			empty.root.textContent = localize(
+				"imageCarousel.noImages",
+				"No images to display",
+			);
 			this._container.appendChild(empty.root);
 			return;
 		}
 
-		const elements = h('div.slideshow-container', [
-			h('div.image-area@imageArea', [
-				h('div.main-image-container@mainImageContainer', [
-					h('img.main-image@mainImage'),
-					h('div.video-container@videoContainer'),
+		const elements = h("div.slideshow-container", [
+			h("div.image-area@imageArea", [
+				h("div.main-image-container@mainImageContainer", [
+					h("img.main-image@mainImage"),
+					h("div.video-container@videoContainer"),
 				]),
-				h('button.nav-arrow.prev-arrow@prevBtn', { ariaLabel: localize('imageCarousel.previousImage', "Previous image") }, [
-					h('span.codicon.codicon-chevron-left', { ariaHidden: 'true' }),
-				]),
-				h('button.nav-arrow.next-arrow@nextBtn', { ariaLabel: localize('imageCarousel.nextImage', "Next image") }, [
-					h('span.codicon.codicon-chevron-right', { ariaHidden: 'true' }),
-				]),
+				h(
+					"button.nav-arrow.prev-arrow@prevBtn",
+					{
+						ariaLabel: localize(
+							"imageCarousel.previousImage",
+							"Previous image",
+						),
+					},
+					[h("span.codicon.codicon-chevron-left", { ariaHidden: "true" })],
+				),
+				h(
+					"button.nav-arrow.next-arrow@nextBtn",
+					{ ariaLabel: localize("imageCarousel.nextImage", "Next image") },
+					[h("span.codicon.codicon-chevron-right", { ariaHidden: "true" })],
+				),
 			]),
-			h('div.bottom-bar@bottomBar', [
-				h('div.image-info-bar', [
-					h('span.caption-text@captionText'),
-					h('span.caption-separator@captionSeparator'),
-					h('span.image-counter@counter'),
+			h("div.bottom-bar@bottomBar", [
+				h("div.image-info-bar", [
+					h("span.caption-text@captionText"),
+					h("span.caption-separator@captionSeparator"),
+					h("span.image-counter@counter"),
 				]),
-				h('div.sections-container@sectionsContainer'),
-				h('span.sr-only@ariaStatus'),
+				h("div.sections-container@sectionsContainer"),
+				h("span.sr-only@ariaStatus"),
 			]),
 		]);
 
 		// ARIA: set up slideshow container for screen readers
-		elements.root.setAttribute('role', 'group');
-		elements.root.setAttribute('aria-label', localize('imageCarousel.ariaLabel', "Images Preview"));
-		elements.captionSeparator.setAttribute('aria-hidden', 'true');
-		elements.ariaStatus.setAttribute('aria-live', 'polite');
-		elements.ariaStatus.setAttribute('aria-atomic', 'true');
-		elements.sectionsContainer.setAttribute('role', 'group');
-		elements.sectionsContainer.setAttribute('aria-label', localize('imageCarousel.thumbnails', "Image thumbnails"));
+		elements.root.setAttribute("role", "group");
+		elements.root.setAttribute(
+			"aria-label",
+			localize("imageCarousel.ariaLabel", "Images Preview"),
+		);
+		elements.captionSeparator.setAttribute("aria-hidden", "true");
+		elements.ariaStatus.setAttribute("aria-live", "polite");
+		elements.ariaStatus.setAttribute("aria-atomic", "true");
+		elements.sectionsContainer.setAttribute("role", "group");
+		elements.sectionsContainer.setAttribute(
+			"aria-label",
+			localize("imageCarousel.thumbnails", "Image thumbnails"),
+		);
 
 		this._elements = {
 			root: elements.root,
@@ -190,94 +243,132 @@ export class ImageCarouselEditor extends EditorPane {
 		};
 
 		// Initialize image in fit mode
-		this._elements.mainImage.classList.add('scale-to-fit');
-		this._elements.mainImage.alt = '';
+		this._elements.mainImage.classList.add("scale-to-fit");
+		this._elements.mainImage.alt = "";
 
 		// Hide video container initially
-		this._elements.videoContainer.style.display = 'none';
+		this._elements.videoContainer.style.display = "none";
 
 		// Navigation listeners
-		this._contentDisposables.add(addDisposableListener(this._elements.prevBtn, 'click', () => {
-			if (this._currentIndex > 0) {
-				this._currentIndex--;
-				this.updateCurrentImage();
-			}
-		}));
-		this._contentDisposables.add(addDisposableListener(this._elements.nextBtn, 'click', () => {
-			if (this._currentIndex < this._flatImages.length - 1) {
-				this._currentIndex++;
-				this.updateCurrentImage();
-			}
-		}));
+		this._contentDisposables.add(
+			addDisposableListener(this._elements.prevBtn, "click", () => {
+				if (this._currentIndex > 0) {
+					this._currentIndex--;
+					this.updateCurrentImage();
+				}
+			}),
+		);
+		this._contentDisposables.add(
+			addDisposableListener(this._elements.nextBtn, "click", () => {
+				if (this._currentIndex < this._flatImages.length - 1) {
+					this._currentIndex++;
+					this.updateCurrentImage();
+				}
+			}),
+		);
 
 		// Keyboard navigation
-		this._contentDisposables.add(addDisposableListener(elements.root, EventType.KEY_DOWN, e => {
-			const event = new StandardKeyboardEvent(e);
-			if (event.keyCode === KeyCode.LeftArrow) {
-				this.previous();
-				event.stopPropagation();
-				event.preventDefault();
-			} else if (event.keyCode === KeyCode.RightArrow) {
-				this.next();
-				event.stopPropagation();
-				event.preventDefault();
-			}
-		}));
+		this._contentDisposables.add(
+			addDisposableListener(elements.root, EventType.KEY_DOWN, (e) => {
+				const event = new StandardKeyboardEvent(e);
+				if (event.keyCode === KeyCode.LeftArrow) {
+					this.previous();
+					event.stopPropagation();
+					event.preventDefault();
+				} else if (event.keyCode === KeyCode.RightArrow) {
+					this.next();
+					event.stopPropagation();
+					event.preventDefault();
+				}
+			}),
+		);
 		elements.root.tabIndex = 0;
 
 		// Zoom: scroll wheel + modifier key (Ctrl on Win/Linux, Alt on Mac) or pinch
-		this._contentDisposables.add(addDisposableListener(this._elements.imageArea, EventType.MOUSE_WHEEL, (e: WheelEvent) => {
-			if (this._isCurrentVideo()) {
-				return;
-			}
-			const isZoomModifier = isMacintosh ? e.altKey : e.ctrlKey;
-			if (!isZoomModifier && !e.ctrlKey) {
-				return;
-			}
-			e.preventDefault();
+		this._contentDisposables.add(
+			addDisposableListener(
+				this._elements.imageArea,
+				EventType.MOUSE_WHEEL,
+				(e: WheelEvent) => {
+					if (this._isCurrentVideo()) {
+						return;
+					}
+					const isZoomModifier = isMacintosh ? e.altKey : e.ctrlKey;
+					if (!isZoomModifier && !e.ctrlKey) {
+						return;
+					}
+					e.preventDefault();
 
-			if (e.deltaY === 0) {
-				return;
-			}
+					if (e.deltaY === 0) {
+						return;
+					}
 
-			if (this._zoomScale === 'fit') {
-				this._initZoomFromFit();
-			}
+					if (this._zoomScale === "fit") {
+						this._initZoomFromFit();
+					}
 
-			const delta = e.deltaY > 0 ? 1 : -1;
-			this._applyZoom((this._zoomScale as number) * (1 - delta * SCALE_PINCH_FACTOR));
-		}, { passive: false }));
+					const delta = e.deltaY > 0 ? 1 : -1;
+					this._applyZoom(
+						(this._zoomScale as number) * (1 - delta * SCALE_PINCH_FACTOR),
+					);
+				},
+				{ passive: false },
+			),
+		);
 
 		// Zoom: single click to zoom in/out (like image preview)
 		// Track modifier keys at mousedown time
 		let clickCtrlPressed = false;
 		let clickAltPressed = false;
-		this._contentDisposables.add(addDisposableListener(this._elements.mainImageContainer, EventType.MOUSE_DOWN, (e: MouseEvent) => {
-			if (e.button !== 0) {
-				return;
-			}
-			clickCtrlPressed = e.ctrlKey;
-			clickAltPressed = e.altKey;
-		}));
-		this._contentDisposables.add(addDisposableListener(this._elements.mainImageContainer, EventType.CLICK, (e: MouseEvent) => {
-			if (e.button !== 0 || this._isCurrentVideo()) {
-				return;
-			}
-			const isZoomOut = isMacintosh ? clickAltPressed : clickCtrlPressed;
-			if (isZoomOut) {
-				this._zoomOut();
-			} else {
-				this._zoomIn();
-			}
-		}));
+		this._contentDisposables.add(
+			addDisposableListener(
+				this._elements.mainImageContainer,
+				EventType.MOUSE_DOWN,
+				(e: MouseEvent) => {
+					if (e.button !== 0) {
+						return;
+					}
+					clickCtrlPressed = e.ctrlKey;
+					clickAltPressed = e.altKey;
+				},
+			),
+		);
+		this._contentDisposables.add(
+			addDisposableListener(
+				this._elements.mainImageContainer,
+				EventType.CLICK,
+				(e: MouseEvent) => {
+					if (e.button !== 0 || this._isCurrentVideo()) {
+						return;
+					}
+					const isZoomOut = isMacintosh ? clickAltPressed : clickCtrlPressed;
+					if (isZoomOut) {
+						this._zoomOut();
+					} else {
+						this._zoomIn();
+					}
+				},
+			),
+		);
 
 		// Update zoom-out cursor class when modifier key is held
 		const updateZoomCursor = (e: KeyboardEvent) => {
 			const isZoomOut = isMacintosh ? e.altKey : e.ctrlKey;
-			this._elements!.mainImageContainer.classList.toggle('zoom-out', isZoomOut);
+			this._elements!.mainImageContainer.classList.toggle(
+				"zoom-out",
+				isZoomOut,
+			);
 		};
-		this._contentDisposables.add(addDisposableListener(elements.root, EventType.KEY_DOWN, updateZoomCursor));
-		this._contentDisposables.add(addDisposableListener(elements.root, EventType.KEY_UP, updateZoomCursor));
+		this._contentDisposables.add(
+			addDisposableListener(
+				elements.root,
+				EventType.KEY_DOWN,
+				updateZoomCursor,
+			),
+		);
+		this._contentDisposables.add(
+			addDisposableListener(elements.root, EventType.KEY_UP, updateZoomCursor),
+		);
 
 		// Build section thumbnails
 		this._thumbnailElements = [];
@@ -287,8 +378,8 @@ export class ImageCarouselEditor extends EditorPane {
 
 			// Add separator between sections (not before the first)
 			if (s > 0 && this._sections.length > 1) {
-				const separator = h('div.thumbnail-separator').root;
-				separator.setAttribute('aria-hidden', 'true');
+				const separator = h("div.thumbnail-separator").root;
+				separator.setAttribute("aria-hidden", "true");
 				this._elements.sectionsContainer.appendChild(separator);
 			}
 
@@ -297,73 +388,98 @@ export class ImageCarouselEditor extends EditorPane {
 				const currentFlatIndex = flatIndex;
 				const isItemVideo = isVideoMimeType(image.mimeType);
 
-				const btn = document.createElement('button');
-				btn.className = isItemVideo ? 'thumbnail video-thumbnail' : 'thumbnail';
+				const btn = document.createElement("button");
+				btn.className = isItemVideo ? "thumbnail video-thumbnail" : "thumbnail";
 				btn.ariaLabel = isItemVideo
-					? localize('imageCarousel.thumbnailLabelVideo', "Video {0} of {1}", currentFlatIndex + 1, this._flatImages.length)
-					: localize('imageCarousel.thumbnailLabelImage', "Image {0} of {1}", currentFlatIndex + 1, this._flatImages.length);
+					? localize(
+							"imageCarousel.thumbnailLabelVideo",
+							"Video {0} of {1}",
+							currentFlatIndex + 1,
+							this._flatImages.length,
+						)
+					: localize(
+							"imageCarousel.thumbnailLabelImage",
+							"Image {0} of {1}",
+							currentFlatIndex + 1,
+							this._flatImages.length,
+						);
 
 				if (isItemVideo) {
-					const icon = h('span.codicon.codicon-play.thumbnail-play-icon');
-					icon.root.setAttribute('aria-hidden', 'true');
+					const icon = h("span.codicon.codicon-play.thumbnail-play-icon");
+					icon.root.setAttribute("aria-hidden", "true");
 					btn.appendChild(icon.root);
 				} else {
-					const img = document.createElement('img');
-					img.className = 'thumbnail-image';
+					const img = document.createElement("img");
+					img.className = "thumbnail-image";
 					img.alt = image.name;
-					const thumbnailDisposables = this._contentDisposables.add(new DisposableStore());
+					const thumbnailDisposables = this._contentDisposables.add(
+						new DisposableStore(),
+					);
 
 					const markBroken = () => {
 						if (thumbnailDisposables.isDisposed) {
 							return;
 						}
 
-						if (!btn.classList.contains('broken')) {
-							btn.classList.add('broken');
-							img.removeAttribute('src');
-							img.alt = '';
+						if (!btn.classList.contains("broken")) {
+							btn.classList.add("broken");
+							img.removeAttribute("src");
+							img.alt = "";
 							img.remove();
-							const fallback = h('span.codicon.codicon-warning.thumbnail-broken-icon');
-							fallback.root.setAttribute('aria-hidden', 'true');
+							const fallback = h(
+								"span.codicon.codicon-warning.thumbnail-broken-icon",
+							);
+							fallback.root.setAttribute("aria-hidden", "true");
 							btn.appendChild(fallback.root);
 						}
 					};
 
-					this._loadBlobUrl(image).then(url => {
-						if (thumbnailDisposables.isDisposed) {
-							return;
-						}
+					this._loadBlobUrl(image).then(
+						(url) => {
+							if (thumbnailDisposables.isDisposed) {
+								return;
+							}
 
-						if (url) {
-							const preloader = new Image();
-							thumbnailDisposables.add(addDisposableListener(preloader, 'load', () => {
-								if (btn.classList.contains('broken')) {
-									return;
-								}
-								img.src = url;
-								if (!img.parentElement) {
-									btn.appendChild(img);
-								}
-							}));
-							thumbnailDisposables.add(addDisposableListener(preloader, 'error', () => {
+							if (url) {
+								const preloader = new Image();
+								thumbnailDisposables.add(
+									addDisposableListener(preloader, "load", () => {
+										if (btn.classList.contains("broken")) {
+											return;
+										}
+										img.src = url;
+										if (!img.parentElement) {
+											btn.appendChild(img);
+										}
+									}),
+								);
+								thumbnailDisposables.add(
+									addDisposableListener(preloader, "error", () => {
+										markBroken();
+									}),
+								);
+								preloader.src = url;
+							} else {
 								markBroken();
-							}));
-							preloader.src = url;
-						} else {
+							}
+						},
+						() => {
 							markBroken();
-						}
-					}, () => {
-						markBroken();
-					});
-					thumbnailDisposables.add(addDisposableListener(img, 'error', () => {
-						markBroken();
-					}));
+						},
+					);
+					thumbnailDisposables.add(
+						addDisposableListener(img, "error", () => {
+							markBroken();
+						}),
+					);
 				}
 
-				this._contentDisposables.add(addDisposableListener(btn, 'click', () => {
-					this._currentIndex = currentFlatIndex;
-					this.updateCurrentImage();
-				}));
+				this._contentDisposables.add(
+					addDisposableListener(btn, "click", () => {
+						this._currentIndex = currentFlatIndex;
+						this.updateCurrentImage();
+					}),
+				);
 
 				this._elements.sectionsContainer.appendChild(btn);
 				this._thumbnailElements.push(btn);
@@ -399,10 +515,10 @@ export class ImageCarouselEditor extends EditorPane {
 
 		if (isVideo) {
 			// Show video container, hide image
-			this._elements.mainImage.style.display = 'none';
-			this._elements.videoContainer.style.display = '';
-			this._elements.mainImageContainer.classList.remove('zoomed');
-			this._elements.mainImageContainer.style.cursor = 'default';
+			this._elements.mainImage.style.display = "none";
+			this._elements.videoContainer.style.display = "";
+			this._elements.mainImageContainer.classList.remove("zoomed");
+			this._elements.mainImageContainer.style.cursor = "default";
 
 			// Load raw data to send via postMessage
 			const rawData = await this._loadRawData(currentImage);
@@ -427,12 +543,14 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 			// Reuse existing webview or create one on first video navigation
 			let webview: IWebviewElement;
 			if (!this._videoWebview) {
-				webview = this._contentDisposables.add(this._webviewService.createWebviewElement({
-					title: currentImage.name,
-					options: { disableServiceWorker: true },
-					contentOptions: { allowScripts: true },
-					extension: undefined,
-				}));
+				webview = this._contentDisposables.add(
+					this._webviewService.createWebviewElement({
+						title: currentImage.name,
+						options: { disableServiceWorker: true },
+						contentOptions: { allowScripts: true },
+						extension: undefined,
+					}),
+				);
 				webview.mountTo(this._elements.videoContainer, this.window);
 				this._videoWebview = webview;
 			} else {
@@ -443,12 +561,15 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 
 			// Send the video data to the webview via postMessage
 			const buffer = (rawData as Uint8Array<ArrayBuffer>).buffer;
-			webview.postMessage({ type: 'loadVideo', data: buffer, mimeType: currentImage.mimeType }, [buffer]);
+			webview.postMessage(
+				{ type: "loadVideo", data: buffer, mimeType: currentImage.mimeType },
+				[buffer],
+			);
 		} else {
 			// Show image, hide video container
-			this._elements.videoContainer.style.display = 'none';
-			this._elements.mainImage.style.display = '';
-			this._elements.mainImageContainer.style.cursor = '';
+			this._elements.videoContainer.style.display = "none";
+			this._elements.mainImage.style.display = "";
+			this._elements.mainImageContainer.style.cursor = "";
 
 			const url = await this._loadBlobUrl(currentImage);
 
@@ -459,47 +580,70 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 
 			const tmp = new Image();
 			tmp.src = url;
-			tmp.decode().then(() => {
-				// Only apply if user hasn't navigated away during decode
-				if (this._currentIndex === navigationIndex && this._elements) {
-					this._elements.mainImage.src = url;
-					this._elements.mainImage.alt = currentImage.name;
-				}
-			}, () => {
-				// Decode failed (invalid image) — still show src for browser fallback
-				if (this._currentIndex === navigationIndex && this._elements) {
-					this._elements.mainImage.src = url;
-					this._elements.mainImage.alt = currentImage.name;
-				}
-			});
+			tmp.decode().then(
+				() => {
+					// Only apply if user hasn't navigated away during decode
+					if (this._currentIndex === navigationIndex && this._elements) {
+						this._elements.mainImage.src = url;
+						this._elements.mainImage.alt = currentImage.name;
+					}
+				},
+				() => {
+					// Decode failed (invalid image) — still show src for browser fallback
+					if (this._currentIndex === navigationIndex && this._elements) {
+						this._elements.mainImage.src = url;
+						this._elements.mainImage.alt = currentImage.name;
+					}
+				},
+			);
 		}
 
 		// Reset zoom when switching images
-		this._applyZoom('fit');
+		this._applyZoom("fit");
 
 		// Update info bar: caption + separator + counter
 		if (currentImage.caption) {
 			this._elements.captionText.textContent = currentImage.caption;
-			this._elements.captionText.style.display = '';
-			this._elements.captionSeparator.style.display = '';
+			this._elements.captionText.style.display = "";
+			this._elements.captionSeparator.style.display = "";
 		} else {
-			this._elements.captionText.textContent = '';
-			this._elements.captionText.style.display = 'none';
-			this._elements.captionSeparator.style.display = 'none';
+			this._elements.captionText.textContent = "";
+			this._elements.captionText.style.display = "none";
+			this._elements.captionSeparator.style.display = "none";
 		}
-		this._elements.counter.textContent = localize('imageCarousel.counter', "{0} / {1}", navigationIndex + 1, this._flatImages.length);
+		this._elements.counter.textContent = localize(
+			"imageCarousel.counter",
+			"{0} / {1}",
+			navigationIndex + 1,
+			this._flatImages.length,
+		);
 
 		// Announce to screen readers with full context (position + caption/name)
 		const itemKind = isVideo
-			? localize('imageCarousel.kindVideo', "Video")
-			: localize('imageCarousel.kindImage', "Image");
+			? localize("imageCarousel.kindVideo", "Video")
+			: localize("imageCarousel.kindImage", "Image");
 		this._elements.ariaStatus.textContent = currentImage.caption
-			? localize('imageCarousel.statusWithCaption', "{0} {1} of {2}: {3}", itemKind, navigationIndex + 1, this._flatImages.length, currentImage.caption)
-			: localize('imageCarousel.statusWithName', "{0} {1} of {2}: {3}", itemKind, navigationIndex + 1, this._flatImages.length, currentImage.name);
+			? localize(
+					"imageCarousel.statusWithCaption",
+					"{0} {1} of {2}: {3}",
+					itemKind,
+					navigationIndex + 1,
+					this._flatImages.length,
+					currentImage.caption,
+				)
+			: localize(
+					"imageCarousel.statusWithName",
+					"{0} {1} of {2}: {3}",
+					itemKind,
+					navigationIndex + 1,
+					this._flatImages.length,
+					currentImage.name,
+				);
 
 		// Update button states
 		this._elements.prevBtn.disabled = navigationIndex === 0;
-		this._elements.nextBtn.disabled = navigationIndex === this._flatImages.length - 1;
+		this._elements.nextBtn.disabled =
+			navigationIndex === this._flatImages.length - 1;
 
 		// Update thumbnail selection — only toggle active class and
 		// call getBoundingClientRect on the active thumbnail to avoid
@@ -507,11 +651,11 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 		for (let i = 0; i < this._thumbnailElements.length; i++) {
 			const isActive = i === navigationIndex;
 			const thumbnail = this._thumbnailElements[i];
-			thumbnail.classList.toggle('active', isActive);
+			thumbnail.classList.toggle("active", isActive);
 			if (isActive) {
-				thumbnail.setAttribute('aria-current', 'page');
+				thumbnail.setAttribute("aria-current", "page");
 			} else {
-				thumbnail.removeAttribute('aria-current');
+				thumbnail.removeAttribute("aria-current");
 			}
 		}
 
@@ -521,7 +665,7 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 		// the browser's scroll machinery.
 		const activeThumbnail = this._thumbnailElements[navigationIndex];
 		if (activeThumbnail) {
-			activeThumbnail.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+			activeThumbnail.scrollIntoView({ block: "nearest", inline: "nearest" });
 		}
 
 		// Update editor title to reflect current section
@@ -543,15 +687,18 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 		let buffer: Uint8Array;
 		if (image.data) {
 			// Handle both VSBuffer (has .buffer property) and raw Uint8Array from chat attachments
-			buffer = image.data instanceof Uint8Array ? image.data : image.data.buffer;
+			buffer =
+				image.data instanceof Uint8Array ? image.data : image.data.buffer;
 		} else if (image.uri) {
 			const content = await this._fileService.readFile(image.uri);
 			buffer = content.value.buffer;
 		} else {
-			return '';
+			return "";
 		}
 
-		const blob = new Blob([buffer as Uint8Array<ArrayBuffer>], { type: image.mimeType });
+		const blob = new Blob([buffer as Uint8Array<ArrayBuffer>], {
+			type: image.mimeType,
+		});
 		const url = URL.createObjectURL(blob);
 		this._blobUrlCache.set(image.id, url);
 		return url;
@@ -580,14 +727,18 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 				const adjacentImage = this._flatImages[idx].image;
 				if (isVideoMimeType(adjacentImage.mimeType)) {
 					// For video, preload raw data into the file service cache
-					this._loadRawData(adjacentImage).catch(() => { /* ignore */ });
+					this._loadRawData(adjacentImage).catch(() => {
+						/* ignore */
+					});
 				} else {
-					this._loadBlobUrl(adjacentImage).then(url => {
+					this._loadBlobUrl(adjacentImage).then((url) => {
 						// Pre-decode via decode() so the compositor doesn't block
 						// the main thread decoding this image during commit.
 						const img = new Image();
 						img.src = url;
-						img.decode().catch(() => { /* invalid image */ });
+						img.decode().catch(() => {
+							/* invalid image */
+						});
 					});
 				}
 			}
@@ -627,7 +778,7 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 	 * Zoom in to the next predefined zoom level.
 	 */
 	private _zoomIn(): void {
-		if (this._zoomScale === 'fit') {
+		if (this._zoomScale === "fit") {
 			this._initZoomFromFit();
 		}
 		const scale = this._zoomScale as number;
@@ -644,7 +795,7 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 	 * Zoom out to the previous predefined zoom level.
 	 */
 	private _zoomOut(): void {
-		if (this._zoomScale === 'fit') {
+		if (this._zoomScale === "fit") {
 			this._initZoomFromFit();
 		}
 		const scale = this._zoomScale as number;
@@ -668,16 +819,16 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 		const container = this._elements.mainImageContainer;
 		const img = this._elements.mainImage;
 
-		if (newScale === 'fit') {
-			this._zoomScale = 'fit';
-			img.classList.add('scale-to-fit');
-			img.classList.remove('pixelated');
-			img.style.zoom = '';
+		if (newScale === "fit") {
+			this._zoomScale = "fit";
+			img.classList.add("scale-to-fit");
+			img.classList.remove("pixelated");
+			img.style.zoom = "";
 			// Remove zoomed/overflow before scrollTo to avoid an expensive
 			// synchronous ScrollLayer that blocks the main thread.
-			const wasZoomed = container.classList.contains('zoomed');
-			container.classList.remove('zoomed');
-			container.classList.remove('zoom-out');
+			const wasZoomed = container.classList.contains("zoomed");
+			container.classList.remove("zoomed");
+			container.classList.remove("zoom-out");
 			if (wasZoomed) {
 				container.scrollTo(0, 0);
 			}
@@ -686,22 +837,27 @@ window.addEventListener("message",function(e){var m=e.data;if(m.type==="loadVide
 			this._zoomScale = scale;
 
 			// Capture scroll center ratio before changing zoom.
-			const dx = container.scrollWidth > 0
-				? (container.scrollLeft + container.clientWidth / 2) / container.scrollWidth
-				: 0.5;
-			const dy = container.scrollHeight > 0
-				? (container.scrollTop + container.clientHeight / 2) / container.scrollHeight
-				: 0.5;
+			const dx =
+				container.scrollWidth > 0
+					? (container.scrollLeft + container.clientWidth / 2) /
+						container.scrollWidth
+					: 0.5;
+			const dy =
+				container.scrollHeight > 0
+					? (container.scrollTop + container.clientHeight / 2) /
+						container.scrollHeight
+					: 0.5;
 
-			img.classList.remove('scale-to-fit');
-			img.classList.toggle('pixelated', scale >= PIXELATION_THRESHOLD);
+			img.classList.remove("scale-to-fit");
+			img.classList.toggle("pixelated", scale >= PIXELATION_THRESHOLD);
 			img.style.zoom = String(scale);
-			container.classList.add('zoomed');
+			container.classList.add("zoomed");
 
 			// Restore scroll center — works because setting img.style.zoom triggers
 			// synchronous layout, so scrollWidth/scrollHeight reflect the new size.
 			const newScrollX = container.scrollWidth * dx - container.clientWidth / 2;
-			const newScrollY = container.scrollHeight * dy - container.clientHeight / 2;
+			const newScrollY =
+				container.scrollHeight * dy - container.clientHeight / 2;
 			container.scrollTo(newScrollX, newScrollY);
 		}
 	}

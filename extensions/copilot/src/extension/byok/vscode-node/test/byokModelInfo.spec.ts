@@ -17,16 +17,26 @@ describe('byokKnownModelToAPIInfoWithEffort', () => {
 	};
 
 	it('omits the configurationSchema when the model does not declare reasoning effort levels', () => {
-		const info = byokKnownModelToAPIInfoWithEffort('TestProvider', 'm1', baseCapabilities);
+		const info = byokKnownModelToAPIInfoWithEffort(
+			'TestProvider',
+			'm1',
+			baseCapabilities,
+		);
 
-		expect((info as { configurationSchema?: unknown }).configurationSchema).toBeUndefined();
+		expect(
+			(info as { configurationSchema?: unknown }).configurationSchema,
+		).toBeUndefined();
 	});
 
 	it('builds a Thinking Effort picker with non-Claude default `medium` for non-Claude families', () => {
-		const info = byokKnownModelToAPIInfoWithEffort('TestProvider', 'gpt-5', {
-			...baseCapabilities,
-			supportsReasoningEffort: ['minimal', 'low', 'medium', 'high'],
-		});
+		const info = byokKnownModelToAPIInfoWithEffort(
+			'TestProvider',
+			'gpt-5',
+			{
+				...baseCapabilities,
+				supportsReasoningEffort: ['minimal', 'low', 'medium', 'high'],
+			},
+		);
 
 		expect(info).toMatchObject({
 			id: 'gpt-5',
@@ -44,20 +54,44 @@ describe('byokKnownModelToAPIInfoWithEffort', () => {
 	});
 
 	it('uses Claude-family default `high` when the family begins with `claude`', () => {
-		const info = byokKnownModelToAPIInfoWithEffort('TestProvider', 'claude-sonnet-4', {
-			...baseCapabilities,
-			supportsReasoningEffort: ['low', 'medium', 'high'],
-		});
+		const info = byokKnownModelToAPIInfoWithEffort(
+			'TestProvider',
+			'claude-sonnet-4',
+			{
+				...baseCapabilities,
+				supportsReasoningEffort: ['low', 'medium', 'high'],
+			},
+		);
 
-		expect((info as { configurationSchema?: { properties: { reasoningEffort: { default?: string } } } }).configurationSchema?.properties.reasoningEffort.default).toBe('high');
+		expect(
+			(
+				info as {
+					configurationSchema?: {
+						properties: { reasoningEffort: { default?: string } };
+					};
+				}
+			).configurationSchema?.properties.reasoningEffort.default,
+		).toBe('high');
 	});
 
 	it('falls back to the first advertised level when the family has no explicit default', () => {
-		const info = byokKnownModelToAPIInfoWithEffort('TestProvider', 'grok-4', {
-			...baseCapabilities,
-			supportsReasoningEffort: ['low', 'high'],
-		});
+		const info = byokKnownModelToAPIInfoWithEffort(
+			'TestProvider',
+			'grok-4',
+			{
+				...baseCapabilities,
+				supportsReasoningEffort: ['low', 'high'],
+			},
+		);
 
-		expect((info as { configurationSchema?: { properties: { reasoningEffort: { default?: string } } } }).configurationSchema?.properties.reasoningEffort.default).toBe('low');
+		expect(
+			(
+				info as {
+					configurationSchema?: {
+						properties: { reasoningEffort: { default?: string } };
+					};
+				}
+			).configurationSchema?.properties.reasoningEffort.default,
+		).toBe('low');
 	});
 });

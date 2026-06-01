@@ -2,16 +2,28 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import type { ChatErrorDetails, Diagnostic, FormattingOptions, Uri, WorkspaceEdit } from 'vscode';
+import type {
+	ChatErrorDetails,
+	Diagnostic,
+	FormattingOptions,
+	Uri,
+	WorkspaceEdit,
+} from 'vscode';
 import { IDeserializedWorkspaceState } from '../../src/platform/test/node/promptContextModel';
 import { ITestingServicesAccessor } from '../../src/platform/test/node/services';
-import { IFile, SimulationWorkspace } from '../../src/platform/test/node/simulationWorkspace';
+import {
+	IFile,
+	SimulationWorkspace,
+} from '../../src/platform/test/node/simulationWorkspace';
 import { ResourceMap } from '../../src/util/vs/base/common/map';
 
 export interface IInlineEdit {
 	readonly offset: number;
 	readonly length: number;
-	readonly range: { start: { line: number; character: number }; end: { line: number; character: number } };
+	readonly range: {
+		start: { line: number; character: number };
+		end: { line: number; character: number };
+	};
 	readonly newText: string;
 }
 export interface IInlineEditOutcome {
@@ -49,14 +61,27 @@ export interface IErrorOutcome {
 	readonly annotations: OutcomeAnnotation[];
 }
 
-export type OutcomeAnnotation = { severity: 'info' | 'warning' | 'error'; label: string; message: string };
+export type OutcomeAnnotation = {
+	severity: 'info' | 'warning' | 'error';
+	label: string;
+	message: string;
+};
 
-export type IOutcome = (IInlineEditOutcome | IWorkspaceEditOutcome | IConversationalOutcome | IErrorOutcome | IEmptyOutcome);
+export type IOutcome =
+	| IInlineEditOutcome
+	| IWorkspaceEditOutcome
+	| IConversationalOutcome
+	| IErrorOutcome
+	| IEmptyOutcome;
 
 export interface ICommonScenarioProps {
 	queries: IScenarioQuery[];
-	extraWorkspaceSetup?: (workspace: SimulationWorkspace) => void | Promise<void>;
-	onBeforeStart?: (accessor: ITestingServicesAccessor) => void | Promise<void>;
+	extraWorkspaceSetup?: (
+		workspace: SimulationWorkspace,
+	) => void | Promise<void>;
+	onBeforeStart?: (
+		accessor: ITestingServicesAccessor,
+	) => void | Promise<void>;
 }
 export interface IDeserializedWorkspaceStateBasedScenario extends ICommonScenarioProps {
 	readonly workspaceState: IDeserializedWorkspaceState;
@@ -66,8 +91,17 @@ export interface IFileBasedScenario extends ICommonScenarioProps {
 	readonly files: IFile[];
 	readonly workspaceFolders?: Uri[];
 }
-export type IScenario = IDeserializedWorkspaceStateBasedScenario | IFileBasedScenario;
-export type DiagnosticProviderId = 'tsc' | 'eslint' | 'pylint' | 'pyright' | 'roslyn' | 'cpp' | 'ruff';
+export type IScenario =
+	| IDeserializedWorkspaceStateBasedScenario
+	| IFileBasedScenario;
+export type DiagnosticProviderId =
+	| 'tsc'
+	| 'eslint'
+	| 'pylint'
+	| 'pyright'
+	| 'roslyn'
+	| 'cpp'
+	| 'ruff';
 
 export interface IScenarioQuery {
 	file?: string | Uri;
@@ -77,7 +111,11 @@ export interface IScenarioQuery {
 	wholeRange?: [number, number, number, number] | [number, number];
 	query: string;
 	expectedIntent?: string | undefined;
-	validate(outcome: IOutcome, workspace: SimulationWorkspace, accessor: ITestingServicesAccessor): void | Promise<void>;
+	validate(
+		outcome: IOutcome,
+		workspace: SimulationWorkspace,
+		accessor: ITestingServicesAccessor,
+	): void | Promise<void>;
 	diagnostics?: IScenarioDiagnostic[] | DiagnosticProviderId;
 	fileIndentInfo?: FormattingOptions;
 	promptReferences?: IScenarioPromptReference[];
@@ -91,7 +129,6 @@ export interface IScenarioDiagnostic {
 	message: string;
 	relatedInformation?: IScenarioRelatedInformation[];
 }
-
 
 export interface IScenarioPromptReference {
 	value: string | IFile;
@@ -127,5 +164,5 @@ export const enum EditTestStrategy {
 	/**
 	 * Test Edits in agent mode
 	 */
-	Agent
+	Agent,
 }

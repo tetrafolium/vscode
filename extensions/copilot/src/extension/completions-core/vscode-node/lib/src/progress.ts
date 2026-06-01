@@ -12,7 +12,10 @@ export interface StatusChangedEvent {
 	command?: Command;
 }
 
-export const ICompletionsStatusReporter = createServiceIdentifier<ICompletionsStatusReporter>('ICompletionsStatusReporter');
+export const ICompletionsStatusReporter =
+	createServiceIdentifier<ICompletionsStatusReporter>(
+		'ICompletionsStatusReporter',
+	);
 export interface ICompletionsStatusReporter {
 	readonly _serviceBrand: undefined;
 
@@ -44,15 +47,29 @@ export abstract class StatusReporter implements ICompletionsStatusReporter {
 	}
 
 	withProgress<T>(callback: () => Promise<T>): Promise<T> {
-		if (this.#kind === 'Warning') { this.forceNormal(); }
-		if (this.#inProgressCount++ === 0) { this.#didChange(); }
+		if (this.#kind === 'Warning') {
+			this.forceNormal();
+		}
+		if (this.#inProgressCount++ === 0) {
+			this.#didChange();
+		}
 		return callback().finally(() => {
-			if (--this.#inProgressCount === 0) { this.#didChange(); }
+			if (--this.#inProgressCount === 0) {
+				this.#didChange();
+			}
 		});
 	}
 
 	forceStatus(kind: StatusKind, message?: string, command?: Command) {
-		if (this.#kind === kind && this.#message === message && !command && !this.#command && !this.#startup) { return; }
+		if (
+			this.#kind === kind &&
+			this.#message === message &&
+			!command &&
+			!this.#command &&
+			!this.#startup
+		) {
+			return;
+		}
 		this.#kind = kind;
 		this.#message = message;
 		this.#command = command;
@@ -61,7 +78,9 @@ export abstract class StatusReporter implements ICompletionsStatusReporter {
 	}
 
 	forceNormal() {
-		if (this.#kind === 'Inactive') { return; }
+		if (this.#kind === 'Inactive') {
+			return;
+		}
 		this.forceStatus('Normal');
 	}
 
@@ -70,27 +89,38 @@ export abstract class StatusReporter implements ICompletionsStatusReporter {
 	}
 
 	setWarning(message: string) {
-		if (this.#kind === 'Error') { return; }
+		if (this.#kind === 'Error') {
+			return;
+		}
 		this.forceStatus('Warning', message);
 	}
 
 	setInactive(message: string) {
-		if (this.#kind === 'Error' || this.#kind === 'Warning') { return; }
+		if (this.#kind === 'Error' || this.#kind === 'Warning') {
+			return;
+		}
 		this.forceStatus('Inactive', message);
 	}
 
 	clearInactive() {
-		if (this.#kind !== 'Inactive') { return; }
+		if (this.#kind !== 'Inactive') {
+			return;
+		}
 		this.forceStatus('Normal');
 	}
 
 	#didChange() {
-		const event = { kind: this.#kind, message: this.#message, busy: this.busy, command: this.#command };
+		const event = {
+			kind: this.#kind,
+			message: this.#message,
+			busy: this.busy,
+			command: this.#command,
+		};
 		this.didChange(event);
 	}
 }
 
 // Don't delete. Needed for tests that don't care about status changes
 export class NoOpStatusReporter extends StatusReporter {
-	override didChange() { }
+	override didChange() {}
 }

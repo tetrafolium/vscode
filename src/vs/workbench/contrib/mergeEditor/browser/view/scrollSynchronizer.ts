@@ -3,30 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { derived, IObservable } from '../../../../../base/common/observable.js';
-import { CodeEditorWidget } from '../../../../../editor/browser/widget/codeEditor/codeEditorWidget.js';
-import { ScrollType } from '../../../../../editor/common/editorCommon.js';
-import { DocumentLineRangeMap } from '../model/mapping.js';
-import { ReentrancyBarrier } from '../../../../../base/common/controlFlow.js';
-import { BaseCodeEditorView } from './editors/baseCodeEditorView.js';
-import { IMergeEditorLayout } from './mergeEditor.js';
-import { MergeEditorViewModel } from './viewModel.js';
-import { InputCodeEditorView } from './editors/inputCodeEditorView.js';
-import { ResultCodeEditorView } from './editors/resultCodeEditorView.js';
-import { CodeEditorView } from './editors/codeEditorView.js';
-import { BugIndicatingError } from '../../../../../base/common/errors.js';
-import { isDefined } from '../../../../../base/common/types.js';
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { derived, IObservable } from "../../../../../base/common/observable.js";
+import { CodeEditorWidget } from "../../../../../editor/browser/widget/codeEditor/codeEditorWidget.js";
+import { ScrollType } from "../../../../../editor/common/editorCommon.js";
+import { DocumentLineRangeMap } from "../model/mapping.js";
+import { ReentrancyBarrier } from "../../../../../base/common/controlFlow.js";
+import { BaseCodeEditorView } from "./editors/baseCodeEditorView.js";
+import { IMergeEditorLayout } from "./mergeEditor.js";
+import { MergeEditorViewModel } from "./viewModel.js";
+import { InputCodeEditorView } from "./editors/inputCodeEditorView.js";
+import { ResultCodeEditorView } from "./editors/resultCodeEditorView.js";
+import { CodeEditorView } from "./editors/codeEditorView.js";
+import { BugIndicatingError } from "../../../../../base/common/errors.js";
+import { isDefined } from "../../../../../base/common/types.js";
 
 export class ScrollSynchronizer extends Disposable {
-	private get model() { return this.viewModel.get()?.model; }
+	private get model() {
+		return this.viewModel.get()?.model;
+	}
 
 	private readonly reentrancyBarrier = new ReentrancyBarrier();
 
 	public readonly updateScrolling: () => void;
 
-	private get lockResultWithInputs() { return this.layout.get().kind === 'columns'; }
-	private get lockBaseWithInputs() { return this.layout.get().kind === 'mixed' && !this.layout.get().showBaseAtTop; }
+	private get lockResultWithInputs() {
+		return this.layout.get().kind === "columns";
+	}
+	private get lockBaseWithInputs() {
+		return (
+			this.layout.get().kind === "mixed" && !this.layout.get().showBaseAtTop
+		);
+	}
 
 	private _isSyncing = true;
 
@@ -42,15 +50,27 @@ export class ScrollSynchronizer extends Disposable {
 
 		const s = derived((reader) => {
 			const baseView = this.baseView.read(reader);
-			const editors = [this.input1View, this.input2View, this.inputResultView, baseView].filter(isDefined);
+			const editors = [
+				this.input1View,
+				this.input2View,
+				this.inputResultView,
+				baseView,
+			].filter(isDefined);
 
-			const alignScrolling = (source: CodeEditorView, updateScrollLeft: boolean, updateScrollTop: boolean) => {
+			const alignScrolling = (
+				source: CodeEditorView,
+				updateScrollLeft: boolean,
+				updateScrollTop: boolean,
+			) => {
 				this.reentrancyBarrier.runExclusivelyOrSkip(() => {
 					if (updateScrollLeft) {
 						const scrollLeft = source.editor.getScrollLeft();
 						for (const editorView of editors) {
 							if (editorView !== source) {
-								editorView.editor.setScrollLeft(scrollLeft, ScrollType.Immediate);
+								editorView.editor.setScrollLeft(
+									scrollLeft,
+									ScrollType.Immediate,
+								);
 							}
 						}
 					}
@@ -59,11 +79,18 @@ export class ScrollSynchronizer extends Disposable {
 						for (const editorView of editors) {
 							if (editorView !== source) {
 								if (this._shouldLock(source, editorView)) {
-									editorView.editor.setScrollTop(scrollTop, ScrollType.Immediate);
+									editorView.editor.setScrollTop(
+										scrollTop,
+										ScrollType.Immediate,
+									);
 								} else {
 									const m = this._getMapping(source, editorView);
 									if (m) {
-										this._synchronizeScrolling(source.editor, editorView.editor, m);
+										this._synchronizeScrolling(
+											source.editor,
+											editorView.editor,
+											m,
+										);
 									}
 								}
 							}
@@ -73,18 +100,20 @@ export class ScrollSynchronizer extends Disposable {
 			};
 
 			for (const editorView of editors) {
-				reader.store.add(editorView.editor.onDidScrollChange(e => {
-					if (!this._isSyncing) {
-						return;
-					}
-					alignScrolling(editorView, e.scrollLeftChanged, e.scrollTopChanged);
-				}));
+				reader.store.add(
+					editorView.editor.onDidScrollChange((e) => {
+						if (!this._isSyncing) {
+							return;
+						}
+						alignScrolling(editorView, e.scrollLeftChanged, e.scrollTopChanged);
+					}),
+				);
 			}
 
 			return {
 				update: () => {
 					alignScrolling(this.inputResultView, true, true);
-				}
+				},
 			};
 		}).recomputeInitiallyAndOnChange(this._store);
 
@@ -101,12 +130,22 @@ export class ScrollSynchronizer extends Disposable {
 		this._isSyncing = true;
 	}
 
-	private _shouldLock(editor1: CodeEditorView, editor2: CodeEditorView): boolean {
-		const isInput = (editor: CodeEditorView) => editor === this.input1View || editor === this.input2View;
-		if (isInput(editor1) && editor2 === this.inputResultView || isInput(editor2) && editor1 === this.inputResultView) {
+	private _shouldLock(
+		editor1: CodeEditorView,
+		editor2: CodeEditorView,
+	): boolean {
+		const isInput = (editor: CodeEditorView) =>
+			editor === this.input1View || editor === this.input2View;
+		if (
+			(isInput(editor1) && editor2 === this.inputResultView) ||
+			(isInput(editor2) && editor1 === this.inputResultView)
+		) {
 			return this.lockResultWithInputs;
 		}
-		if (isInput(editor1) && editor2 === this.baseView.get() || isInput(editor2) && editor1 === this.baseView.get()) {
+		if (
+			(isInput(editor1) && editor2 === this.baseView.get()) ||
+			(isInput(editor2) && editor1 === this.baseView.get())
+		) {
 			return this.lockBaseWithInputs;
 		}
 		if (isInput(editor1) && isInput(editor2)) {
@@ -115,7 +154,10 @@ export class ScrollSynchronizer extends Disposable {
 		return false;
 	}
 
-	private _getMapping(editor1: CodeEditorView, editor2: CodeEditorView): DocumentLineRangeMap | undefined {
+	private _getMapping(
+		editor1: CodeEditorView,
+		editor2: CodeEditorView,
+	): DocumentLineRangeMap | undefined {
 		if (editor1 === this.input1View) {
 			if (editor2 === this.input2View) {
 				return undefined;
@@ -123,7 +165,9 @@ export class ScrollSynchronizer extends Disposable {
 				return this.model?.input1ResultMapping.get()!;
 			} else if (editor2 === this.baseView.get()) {
 				const b = this.model?.baseInput1Diffs.get();
-				if (!b) { return undefined; }
+				if (!b) {
+					return undefined;
+				}
 				return new DocumentLineRangeMap(b, -1).reverse();
 			}
 		} else if (editor1 === this.input2View) {
@@ -133,7 +177,9 @@ export class ScrollSynchronizer extends Disposable {
 				return this.model?.input2ResultMapping.get()!;
 			} else if (editor2 === this.baseView.get()) {
 				const b = this.model?.baseInput2Diffs.get();
-				if (!b) { return undefined; }
+				if (!b) {
+					return undefined;
+				}
 				return new DocumentLineRangeMap(b, -1).reverse();
 			}
 		} else if (editor1 === this.inputResultView) {
@@ -143,21 +189,29 @@ export class ScrollSynchronizer extends Disposable {
 				return this.model?.resultInput2Mapping.get()!;
 			} else if (editor2 === this.baseView.get()) {
 				const b = this.model?.resultBaseMapping.get();
-				if (!b) { return undefined; }
+				if (!b) {
+					return undefined;
+				}
 				return b;
 			}
 		} else if (editor1 === this.baseView.get()) {
 			if (editor2 === this.input1View) {
 				const b = this.model?.baseInput1Diffs.get();
-				if (!b) { return undefined; }
+				if (!b) {
+					return undefined;
+				}
 				return new DocumentLineRangeMap(b, -1);
 			} else if (editor2 === this.input2View) {
 				const b = this.model?.baseInput2Diffs.get();
-				if (!b) { return undefined; }
+				if (!b) {
+					return undefined;
+				}
 				return new DocumentLineRangeMap(b, -1);
 			} else if (editor2 === this.inputResultView) {
 				const b = this.model?.baseResultMapping.get();
-				if (!b) { return undefined; }
+				if (!b) {
+					return undefined;
+				}
 				return b;
 			}
 		}
@@ -165,7 +219,11 @@ export class ScrollSynchronizer extends Disposable {
 		throw new BugIndicatingError();
 	}
 
-	private _synchronizeScrolling(scrollingEditor: CodeEditorWidget, targetEditor: CodeEditorWidget, mapping: DocumentLineRangeMap | undefined) {
+	private _synchronizeScrolling(
+		scrollingEditor: CodeEditorWidget,
+		targetEditor: CodeEditorWidget,
+		mapping: DocumentLineRangeMap | undefined,
+	) {
 		if (!mapping) {
 			return;
 		}
@@ -180,14 +238,27 @@ export class ScrollSynchronizer extends Disposable {
 		const sourceRange = result.inputRange;
 		const targetRange = result.outputRange;
 
-		const resultStartTopPx = targetEditor.getTopForLineNumber(targetRange.startLineNumber);
-		const resultEndPx = targetEditor.getTopForLineNumber(targetRange.endLineNumberExclusive);
+		const resultStartTopPx = targetEditor.getTopForLineNumber(
+			targetRange.startLineNumber,
+		);
+		const resultEndPx = targetEditor.getTopForLineNumber(
+			targetRange.endLineNumberExclusive,
+		);
 
-		const sourceStartTopPx = scrollingEditor.getTopForLineNumber(sourceRange.startLineNumber);
-		const sourceEndPx = scrollingEditor.getTopForLineNumber(sourceRange.endLineNumberExclusive);
+		const sourceStartTopPx = scrollingEditor.getTopForLineNumber(
+			sourceRange.startLineNumber,
+		);
+		const sourceEndPx = scrollingEditor.getTopForLineNumber(
+			sourceRange.endLineNumberExclusive,
+		);
 
-		const factor = Math.min((scrollingEditor.getScrollTop() - sourceStartTopPx) / (sourceEndPx - sourceStartTopPx), 1);
-		const resultScrollPosition = resultStartTopPx + (resultEndPx - resultStartTopPx) * factor;
+		const factor = Math.min(
+			(scrollingEditor.getScrollTop() - sourceStartTopPx) /
+				(sourceEndPx - sourceStartTopPx),
+			1,
+		);
+		const resultScrollPosition =
+			resultStartTopPx + (resultEndPx - resultStartTopPx) * factor;
 
 		targetEditor.setScrollTop(resultScrollPosition, ScrollType.Immediate);
 	}

@@ -5,6 +5,9 @@
 import { VSCodeWorkspace } from '../../../../inlineEdits/vscode-node/parts/vscodeWorkspace';
 import { ICompletionsObservableWorkspace } from '../../lib/src/completionsObservableWorkspace';
 
-export class CompletionsObservableWorkspace extends VSCodeWorkspace implements ICompletionsObservableWorkspace {
+export class CompletionsObservableWorkspace
+	extends VSCodeWorkspace
+	implements ICompletionsObservableWorkspace
+{
 	declare _serviceBrand: undefined;
 }

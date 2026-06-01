@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 export enum TerminalShellExecutionCommandLineConfidence {
 	/**
 	 * The command line value confidence is low. This means that the value was read from the
@@ -29,5 +28,5 @@ export enum TerminalShellExecutionCommandLineConfidence {
 	 * from the shell integration script or the command was executed via the
 	 * {@link TerminalShellIntegration.executeCommand} API.
 	 */
-	High = 2
+	High = 2,
 }

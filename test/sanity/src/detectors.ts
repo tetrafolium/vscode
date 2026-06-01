@@ -3,22 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import fs from 'fs';
-import os from 'os';
-import { spawnSync } from 'child_process';
-import { webkit } from 'playwright';
+import fs from "fs";
+import os from "os";
+import { spawnSync } from "child_process";
+import { webkit } from "playwright";
 
 /**
  * The capabilities of the current environment.
  */
 export type Capability =
-	| 'linux' | 'darwin' | 'windows' | 'alpine'
-	| 'x64' | 'arm64' | 'arm32'
-	| 'deb' | 'rpm' | 'snap'
-	| 'desktop'
-	| 'browser'
-	| 'wsl'
-	| 'github-account';
+	| "linux"
+	| "darwin"
+	| "windows"
+	| "alpine"
+	| "x64"
+	| "arm64"
+	| "arm32"
+	| "deb"
+	| "rpm"
+	| "snap"
+	| "desktop"
+	| "browser"
+	| "wsl"
+	| "github-account";
 
 /**
  * Detect the capabilities of the current environment.
@@ -40,18 +47,18 @@ export function detectCapabilities(): ReadonlySet<Capability> {
  */
 function detectOS(capabilities: Set<Capability>) {
 	switch (os.platform()) {
-		case 'linux':
-			if (fs.existsSync('/etc/alpine-release')) {
-				capabilities.add('alpine');
+		case "linux":
+			if (fs.existsSync("/etc/alpine-release")) {
+				capabilities.add("alpine");
 			} else {
-				capabilities.add('linux');
+				capabilities.add("linux");
 			}
 			break;
-		case 'darwin':
-			capabilities.add('darwin');
+		case "darwin":
+			capabilities.add("darwin");
 			break;
-		case 'win32':
-			capabilities.add('windows');
+		case "win32":
+			capabilities.add("windows");
 			break;
 		default:
 			throw new Error(`Unsupported platform: ${os.platform()}`);
@@ -64,24 +71,25 @@ function detectOS(capabilities: Set<Capability>) {
 function detectArch(capabilities: Set<Capability>) {
 	let arch = os.arch();
 
-	if (os.platform() === 'win32') {
-		const winArch = process.env.PROCESSOR_ARCHITEW6432 || process.env.PROCESSOR_ARCHITECTURE;
-		if (winArch === 'ARM64') {
-			arch = 'arm64';
-		} else if (winArch === 'AMD64') {
-			arch = 'x64';
+	if (os.platform() === "win32") {
+		const winArch =
+			process.env.PROCESSOR_ARCHITEW6432 || process.env.PROCESSOR_ARCHITECTURE;
+		if (winArch === "ARM64") {
+			arch = "arm64";
+		} else if (winArch === "AMD64") {
+			arch = "x64";
 		}
 	}
 
 	switch (arch) {
-		case 'x64':
-			capabilities.add('x64');
+		case "x64":
+			capabilities.add("x64");
 			break;
-		case 'arm64':
-			capabilities.add('arm64');
+		case "arm64":
+			capabilities.add("arm64");
 			break;
-		case 'arm':
-			capabilities.add('arm32');
+		case "arm":
+			capabilities.add("arm32");
 			break;
 		default:
 			throw new Error(`Unsupported architecture: ${arch}`);
@@ -92,17 +100,17 @@ function detectArch(capabilities: Set<Capability>) {
  * Detect the package managers.
  */
 function detectPackageManagers(capabilities: Set<Capability>) {
-	if (os.platform() !== 'linux') {
+	if (os.platform() !== "linux") {
 		return;
 	}
-	if (fs.existsSync('/usr/bin/dpkg')) {
-		capabilities.add('deb');
+	if (fs.existsSync("/usr/bin/dpkg")) {
+		capabilities.add("deb");
 	}
-	if (fs.existsSync('/usr/bin/dnf') || fs.existsSync('/usr/bin/yum')) {
-		capabilities.add('rpm');
+	if (fs.existsSync("/usr/bin/dnf") || fs.existsSync("/usr/bin/yum")) {
+		capabilities.add("rpm");
 	}
-	if (fs.existsSync('/run/snapd.socket')) {
-		capabilities.add('snap');
+	if (fs.existsSync("/run/snapd.socket")) {
+		capabilities.add("snap");
 	}
 }
 
@@ -110,8 +118,8 @@ function detectPackageManagers(capabilities: Set<Capability>) {
  * Detect if a desktop environment is available.
  */
 function detectDesktop(capabilities: Set<Capability>) {
-	if (os.platform() !== 'linux' || !!process.env.DISPLAY) {
-		capabilities.add('desktop');
+	if (os.platform() !== "linux" || !!process.env.DISPLAY) {
+		capabilities.add("desktop");
 	}
 }
 
@@ -120,26 +128,26 @@ function detectDesktop(capabilities: Set<Capability>) {
  */
 function detectBrowser(capabilities: Set<Capability>) {
 	switch (os.platform()) {
-		case 'linux': {
+		case "linux": {
 			const path = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 			if (path && fs.existsSync(path)) {
-				capabilities.add('browser');
+				capabilities.add("browser");
 			}
 			break;
 		}
-		case 'darwin': {
+		case "darwin": {
 			if (fs.existsSync(webkit.executablePath())) {
-				capabilities.add('browser');
+				capabilities.add("browser");
 			}
 			break;
 		}
-		case 'win32': {
+		case "win32": {
 			const path =
 				process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ??
-				`${process.env['ProgramFiles(x86)']}\\Microsoft\\Edge\\Application\\msedge.exe`;
+				`${process.env["ProgramFiles(x86)"]}\\Microsoft\\Edge\\Application\\msedge.exe`;
 
 			if (fs.existsSync(path)) {
-				capabilities.add('browser');
+				capabilities.add("browser");
 			}
 			break;
 		}
@@ -150,11 +158,15 @@ function detectBrowser(capabilities: Set<Capability>) {
  * Detect if WSL is available on Windows.
  */
 function detectWSL(capabilities: Set<Capability>) {
-	if (os.platform() === 'win32') {
+	if (os.platform() === "win32") {
 		const wslPath = `${process.env.SystemRoot}\\System32\\wsl.exe`;
 		if (fs.existsSync(wslPath)) {
 			// wsl.exe can exist even when WSL isn't installed; ensure the command is usable.
-			const result = spawnSync(wslPath, ['--list', '--quiet'], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
+			const result = spawnSync(wslPath, ["--list", "--quiet"], {
+				encoding: "utf8",
+				windowsHide: true,
+				timeout: 5000,
+			});
 			if (result.status !== 0 || result.error) {
 				return;
 			}
@@ -162,7 +174,7 @@ function detectWSL(capabilities: Set<Capability>) {
 				return;
 			}
 
-			capabilities.add('wsl');
+			capabilities.add("wsl");
 		}
 	}
 }
@@ -172,7 +184,6 @@ function detectWSL(capabilities: Set<Capability>) {
  */
 function detectGitHubAccount(capabilities: Set<Capability>) {
 	if (process.env.GITHUB_ACCOUNT && process.env.GITHUB_PASSWORD) {
-		capabilities.add('github-account');
+		capabilities.add("github-account");
 	}
 }
-

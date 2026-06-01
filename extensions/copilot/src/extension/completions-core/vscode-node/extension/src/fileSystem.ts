@@ -4,7 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { FileType, Uri, workspace } from 'vscode';
-import { FileIdentifier, FileStat, ICompletionsFileSystemService } from '../../lib/src/fileSystem';
+import {
+	FileIdentifier,
+	FileStat,
+	ICompletionsFileSystemService,
+} from '../../lib/src/fileSystem';
 
 class ExtensionFileSystem implements ICompletionsFileSystemService {
 	declare _serviceBrand: undefined;
@@ -13,7 +17,9 @@ class ExtensionFileSystem implements ICompletionsFileSystemService {
 		if (typeof uri !== 'string') {
 			uri = uri.uri;
 		}
-		return new TextDecoder().decode(await workspace.fs.readFile(Uri.parse(uri, true)));
+		return new TextDecoder().decode(
+			await workspace.fs.readFile(Uri.parse(uri, true)),
+		);
 	}
 	async stat(uri: FileIdentifier): Promise<FileStat> {
 		if (typeof uri !== 'string') {

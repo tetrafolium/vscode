@@ -37,8 +37,8 @@ export function createProxyXtabEndpoint(
 				tool_calls: false,
 				vision: false,
 				prediction: true,
-			}
-		}
+			},
+		},
 	};
 	return instaService.createInstance(ChatEndpoint, defaultInfo);
 }

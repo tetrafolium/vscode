@@ -3,22 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getScriptSuggestions } from '../generators/scriptSuggestionsGenerator';
+import { getScriptSuggestions } from "../generators/scriptSuggestionsGenerator";
 // import { getCustomSuggestions } from '../generators/customSuggestionsGenerator';
-import { AutocompleteState } from './types';
-import { GeneratorState, GeneratorContext } from '../generators/helpers';
-import { sleep } from '../../shared/utils';
-import type { ArgumentParserResult } from '../../autocomplete-parser/parseArguments';
-import { getCustomSuggestions } from '../generators/customSuggestionsGenerator';
-import { IFigExecuteExternals } from '../../execute';
+import { AutocompleteState } from "./types";
+import { GeneratorState, GeneratorContext } from "../generators/helpers";
+import { sleep } from "../../shared/utils";
+import type { ArgumentParserResult } from "../../autocomplete-parser/parseArguments";
+import { getCustomSuggestions } from "../generators/customSuggestionsGenerator";
+import { IFigExecuteExternals } from "../../execute";
 
 export const shellContextSelector = ({
 	figState,
 }: AutocompleteState): Fig.ShellContext => ({
-	currentWorkingDirectory: figState.cwd || '',
-	currentProcess: figState.processUserIsIn || '',
+	currentWorkingDirectory: figState.cwd || "",
+	currentProcess: figState.processUserIsIn || "",
 	environmentVariables: figState.environmentVariables,
-	sshPrefix: '',
+	sshPrefix: "",
 });
 
 const getGeneratorContext = (state: AutocompleteState): GeneratorContext => {
@@ -37,9 +37,12 @@ const getGeneratorContext = (state: AutocompleteState): GeneratorContext => {
 export const createGeneratorState = (
 	// setNamed: NamedSetState<AutocompleteState>,
 	state: AutocompleteState,
-	executeExternals?: IFigExecuteExternals
+	executeExternals?: IFigExecuteExternals,
 ): {
-	triggerGenerators: (result: ArgumentParserResult, executeExternals: IFigExecuteExternals) => GeneratorState[];
+	triggerGenerators: (
+		result: ArgumentParserResult,
+		executeExternals: IFigExecuteExternals,
+	) => GeneratorState[];
 } => {
 	// function updateGenerator(
 	// 	generatorState: GeneratorState,
@@ -80,7 +83,10 @@ export const createGeneratorState = (
 	// 	}
 	// 	return generatorState;
 	// }
-	const triggerGenerator = (currentState: GeneratorState, executeExternals: IFigExecuteExternals) => {
+	const triggerGenerator = (
+		currentState: GeneratorState,
+		executeExternals: IFigExecuteExternals,
+	) => {
 		const { generator, context } = currentState;
 		let request: Promise<Fig.Suggestion[] | undefined>;
 
@@ -88,16 +94,14 @@ export const createGeneratorState = (
 			// TODO: Implement template generators
 			// request = getTemplateSuggestions(generator, context);
 			request = Promise.resolve(undefined);
-		}
-		else if (generator.script) {
+		} else if (generator.script) {
 			request = getScriptSuggestions(
 				generator,
 				context,
 				undefined, // getSetting<number>(SETTINGS.SCRIPT_TIMEOUT, 5000),
-				executeExternals
+				executeExternals,
 			);
-		}
-		else {
+		} else {
 			request = getCustomSuggestions(generator, context, executeExternals);
 			// filepaths/folders templates are now a sugar for two custom generators, we need to filter
 			// the suggestion created by those two custom generators
@@ -143,21 +147,21 @@ export const createGeneratorState = (
 				shouldTrigger = Boolean(currentArg?.debounce);
 			} else {
 				let triggerFn: (a: string, b: string) => boolean;
-				if (typeof trigger === 'string') {
+				if (typeof trigger === "string") {
 					triggerFn = (a, b) =>
 						a.lastIndexOf(trigger) !== b.lastIndexOf(trigger);
-				} else if (typeof trigger === 'function') {
+				} else if (typeof trigger === "function") {
 					triggerFn = trigger;
 				} else {
 					switch (trigger.on) {
-						case 'threshold': {
+						case "threshold": {
 							triggerFn = (a, b) =>
 								a.length > trigger.length && !(b.length > trigger.length);
 							break;
 						}
-						case 'match': {
+						case "match": {
 							const strings =
-								typeof trigger.string === 'string'
+								typeof trigger.string === "string"
 									? [trigger.string]
 									: trigger.string;
 							triggerFn = (a, b) =>
@@ -165,7 +169,7 @@ export const createGeneratorState = (
 								strings.findIndex((x) => x === b);
 							break;
 						}
-						case 'change':
+						case "change":
 						default: {
 							triggerFn = (a, b) => a !== b;
 							break;
@@ -186,10 +190,11 @@ export const createGeneratorState = (
 			const result = previousGeneratorState?.result || [];
 			const generatorState = { generator, context, result, loading: true };
 
-			const getTriggeredState = () => triggerGenerator(generatorState, executeExternals);
+			const getTriggeredState = () =>
+				triggerGenerator(generatorState, executeExternals);
 			if (currentArg?.debounce) {
 				sleep(
-					typeof currentArg.debounce === 'number' && currentArg.debounce > 0
+					typeof currentArg.debounce === "number" && currentArg.debounce > 0
 						? currentArg.debounce
 						: 200,
 				); //.then(() => updateGenerator(generatorState, getTriggeredState));

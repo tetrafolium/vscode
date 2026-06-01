@@ -7,8 +7,14 @@ import { PromptElement, PromptPiece } from '@vscode/prompt-tsx';
 import type * as vscode from 'vscode';
 import { IChatDebugFileLoggerService } from '../../../platform/chat/common/chatDebugFileLoggerService';
 import { ISessionTranscriptService } from '../../../platform/chat/common/sessionTranscriptService';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
-import { ICustomInstructionsService, IInstructionIndexFile } from '../../../platform/customInstructions/common/customInstructionsService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
+import {
+	ICustomInstructionsService,
+	IInstructionIndexFile,
+} from '../../../platform/customInstructions/common/customInstructionsService';
 import { IFileSystemService } from '../../../platform/filesystem/common/fileSystemService';
 import { RelativePattern } from '../../../platform/filesystem/common/fileTypes';
 import { IIgnoreService } from '../../../platform/ignore/common/ignoreService';
@@ -20,12 +26,25 @@ import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { CancellationError } from '../../../util/vs/base/common/errors';
 import { Schemas } from '../../../util/vs/base/common/network';
 import { isAbsolute } from '../../../util/vs/base/common/path';
-import { extUriBiasedIgnorePathCase, isEqual, normalizePath } from '../../../util/vs/base/common/resources';
+import {
+	extUriBiasedIgnorePathCase,
+	isEqual,
+	normalizePath,
+} from '../../../util/vs/base/common/resources';
 import { isString } from '../../../util/vs/base/common/types';
 import { URI } from '../../../util/vs/base/common/uri';
-import { IInstantiationService, ServicesAccessor } from '../../../util/vs/platform/instantiation/common/instantiation';
-import { LanguageModelPromptTsxPart, LanguageModelToolResult } from '../../../vscodeTypes';
-import { isCustomizationsIndex, isPromptFile } from '../../prompt/common/chatVariablesCollection';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	LanguageModelPromptTsxPart,
+	LanguageModelToolResult,
+} from '../../../vscodeTypes';
+import {
+	isCustomizationsIndex,
+	isPromptFile,
+} from '../../prompt/common/chatVariablesCollection';
 import { IBuildPromptContext } from '../../prompt/common/intents';
 import { IChatDiskSessionResources } from '../../prompts/common/chatDiskSessionResources';
 import { renderPromptElementJSON } from '../../prompts/node/base/promptRenderer';
@@ -36,15 +55,26 @@ export function checkCancellation(token: CancellationToken): void {
 	}
 }
 
-export async function toolTSX(insta: IInstantiationService, options: vscode.LanguageModelToolInvocationOptions<unknown>, piece: PromptPiece, token: CancellationToken): Promise<vscode.LanguageModelToolResult> {
+export async function toolTSX(
+	insta: IInstantiationService,
+	options: vscode.LanguageModelToolInvocationOptions<unknown>,
+	piece: PromptPiece,
+	token: CancellationToken,
+): Promise<vscode.LanguageModelToolResult> {
 	return new LanguageModelToolResult([
 		new LanguageModelPromptTsxPart(
-			await renderPromptElementJSON(insta, class extends PromptElement {
-				render() {
-					return piece;
-				}
-			}, {}, options.tokenizationOptions, token)
-		)
+			await renderPromptElementJSON(
+				insta,
+				class extends PromptElement {
+					render() {
+						return piece;
+					}
+				},
+				{},
+				options.tokenizationOptions,
+				token,
+			),
+		),
 	]);
 }
 
@@ -66,7 +96,11 @@ export interface InputGlobResult {
  * - When a working directory is set (agents window), unscoped patterns
  *   are scoped to it so searches target the session's folder.
  */
-export function inputGlobToPattern(query: string, workingDir: WorkingDirectory, modelFamily: string | undefined): InputGlobResult {
+export function inputGlobToPattern(
+	query: string,
+	workingDir: WorkingDirectory,
+	modelFamily: string | undefined,
+): InputGlobResult {
 	let pattern: vscode.GlobPattern = query;
 	let folderName: string | undefined;
 	let folderRelativePattern: string | undefined;
@@ -76,7 +110,11 @@ export function inputGlobToPattern(query: string, workingDir: WorkingDirectory, 
 			const uri = URI.file(query);
 			const workspaceFolder = workingDir.getFolder(uri);
 			if (workspaceFolder) {
-				const relative = extUriBiasedIgnorePathCase.relativePath(workspaceFolder, uri) || '';
+				const relative =
+					extUriBiasedIgnorePathCase.relativePath(
+						workspaceFolder,
+						uri,
+					) || '';
 				pattern = new RelativePattern(workspaceFolder, relative);
 				folderName = workingDir.getFolderName(workspaceFolder);
 				folderRelativePattern = relative;
@@ -88,7 +126,11 @@ export function inputGlobToPattern(query: string, workingDir: WorkingDirectory, 
 
 	// In multi-root workspaces (and only when no explicit workingDirectory), detect patterns
 	// like "folderName/src/**" or "**/folderName/src/**" and rewrite to a RelativePattern.
-	if (typeof pattern === 'string' && !workingDir.hasExplicitWorkingDirectory && workingDir.getFolders().length > 1) {
+	if (
+		typeof pattern === 'string' &&
+		!workingDir.hasExplicitWorkingDirectory &&
+		workingDir.getFolders().length > 1
+	) {
 		let raw = pattern;
 		if (raw.startsWith('**/')) {
 			raw = raw.slice(3);
@@ -100,7 +142,8 @@ export function inputGlobToPattern(query: string, workingDir: WorkingDirectory, 
 			for (const folderUri of workingDir.getFolders()) {
 				const name = workingDir.getFolderName(folderUri);
 				if (name === candidateName) {
-					const remainder = slashIndex >= 0 ? raw.slice(slashIndex + 1) : '**';
+					const remainder =
+						slashIndex >= 0 ? raw.slice(slashIndex + 1) : '**';
 					const resolvedRemainder = remainder || '**';
 					pattern = new RelativePattern(folderUri, resolvedRemainder);
 					folderName = name;
@@ -126,8 +169,13 @@ export function inputGlobToPattern(query: string, workingDir: WorkingDirectory, 
 	if (modelFamily === 'gpt-4.1') {
 		if (typeof pattern === 'string' && !pattern.endsWith('/**')) {
 			patterns.push(pattern + '/**');
-		} else if (typeof pattern !== 'string' && !pattern.pattern.endsWith('/**')) {
-			patterns.push(new RelativePattern(pattern.baseUri, pattern.pattern + '/**'));
+		} else if (
+			typeof pattern !== 'string' &&
+			!pattern.pattern.endsWith('/**')
+		) {
+			patterns.push(
+				new RelativePattern(pattern.baseUri, pattern.pattern + '/**'),
+			);
 		}
 	}
 
@@ -138,13 +186,19 @@ export function inputGlobToPattern(query: string, workingDir: WorkingDirectory, 
  * Checks whether the raw input pattern contains an absolute workspace folder path.
  * Used for telemetry to detect patterns we may not be handling yet.
  */
-export function patternContainsWorkspaceFolderPath(pattern: string | undefined, workspaceService: IWorkspaceService): boolean {
+export function patternContainsWorkspaceFolderPath(
+	pattern: string | undefined,
+	workspaceService: IWorkspaceService,
+): boolean {
 	if (!pattern) {
 		return false;
 	}
 
 	for (const folderUri of workspaceService.getWorkspaceFolders()) {
-		if (pattern.includes(folderUri.fsPath) || pattern.includes(folderUri.path)) {
+		if (
+			pattern.includes(folderUri.fsPath) ||
+			pattern.includes(folderUri.path)
+		) {
 			return true;
 		}
 	}
@@ -152,16 +206,25 @@ export function patternContainsWorkspaceFolderPath(pattern: string | undefined, 
 	return false;
 }
 
-export function resolveToolInputPath(path: string, promptPathRepresentationService: IPromptPathRepresentationService): URI {
+export function resolveToolInputPath(
+	path: string,
+	promptPathRepresentationService: IPromptPathRepresentationService,
+): URI {
 	const uri = promptPathRepresentationService.resolveFilePath(path);
 	if (!uri) {
-		throw new Error(`Invalid input path: ${path}. Be sure to use an absolute path.`);
+		throw new Error(
+			`Invalid input path: ${path}. Be sure to use an absolute path.`,
+		);
 	}
 
 	return uri;
 }
 
-export async function isFileOkForTool(accessor: ServicesAccessor, uri: URI, buildPromptContext?: IBuildPromptContext): Promise<boolean> {
+export async function isFileOkForTool(
+	accessor: ServicesAccessor,
+	uri: URI,
+	buildPromptContext?: IBuildPromptContext,
+): Promise<boolean> {
 	try {
 		await assertFileOkForTool(accessor, uri, buildPromptContext);
 		return true;
@@ -175,10 +238,17 @@ export interface AssertFileOkForToolOptions {
 	workingDirectory?: URI;
 }
 
-export async function assertFileOkForTool(accessor: ServicesAccessor, uri: URI, buildPromptContext?: IBuildPromptContext, options?: AssertFileOkForToolOptions): Promise<void> {
+export async function assertFileOkForTool(
+	accessor: ServicesAccessor,
+	uri: URI,
+	buildPromptContext?: IBuildPromptContext,
+	options?: AssertFileOkForToolOptions,
+): Promise<void> {
 	const workspaceService = accessor.get(IWorkspaceService);
 	const tabsAndEditorsService = accessor.get(ITabsAndEditorsService);
-	const promptPathRepresentationService = accessor.get(IPromptPathRepresentationService);
+	const promptPathRepresentationService = accessor.get(
+		IPromptPathRepresentationService,
+	);
 	const customInstructionsService = accessor.get(ICustomInstructionsService);
 	const diskSessionResources = accessor.get(IChatDiskSessionResources);
 	const configurationService = accessor.get(IConfigurationService);
@@ -188,17 +258,25 @@ export async function assertFileOkForTool(accessor: ServicesAccessor, uri: URI, 
 	await assertFileNotContentExcluded(accessor, uri);
 
 	const normalizedUri = normalizePath(uri);
-	const workingDir = new WorkingDirectory(options?.workingDirectory, workspaceService);
+	const workingDir = new WorkingDirectory(
+		options?.workingDirectory,
+		workspaceService,
+	);
 	if (workingDir.getFolder(normalizedUri)) {
 		return;
 	}
-	if (options?.readOnly && isUriUnderAdditionalReadAccessPaths(normalizedUri, configurationService)) {
+	if (
+		options?.readOnly &&
+		isUriUnderAdditionalReadAccessPaths(normalizedUri, configurationService)
+	) {
 		return;
 	}
 	if (uri.scheme === Schemas.untitled) {
 		return;
 	}
-	const fileOpenInSomeTab = tabsAndEditorsService.tabs.some(tab => isEqual(tab.uri, uri));
+	const fileOpenInSomeTab = tabsAndEditorsService.tabs.some((tab) =>
+		isEqual(tab.uri, uri),
+	);
 	if (fileOpenInSomeTab) {
 		return;
 	}
@@ -214,27 +292,52 @@ export async function assertFileOkForTool(accessor: ServicesAccessor, uri: URI, 
 	if (normalizedUri.scheme === 'vscode-chat-response-resource') {
 		return;
 	}
-	if (await isExternalInstructionsFile(normalizedUri, customInstructionsService, buildPromptContext)) {
+	if (
+		await isExternalInstructionsFile(
+			normalizedUri,
+			customInstructionsService,
+			buildPromptContext,
+		)
+	) {
 		return;
 	}
-	throw new Error(`File ${promptPathRepresentationService.getFilePath(normalizedUri)} is outside of the workspace, and not open in an editor, and can't be read`);
+	throw new Error(
+		`File ${promptPathRepresentationService.getFilePath(normalizedUri)} is outside of the workspace, and not open in an editor, and can't be read`,
+	);
 }
 
-async function isExternalInstructionsFile(normalizedUri: URI, customInstructionsService: ICustomInstructionsService, buildPromptContext?: IBuildPromptContext): Promise<boolean> {
+async function isExternalInstructionsFile(
+	normalizedUri: URI,
+	customInstructionsService: ICustomInstructionsService,
+	buildPromptContext?: IBuildPromptContext,
+): Promise<boolean> {
 	if (buildPromptContext) {
-		const instructionIndexFile = getInstructionsIndexFile(buildPromptContext, customInstructionsService);
+		const instructionIndexFile = getInstructionsIndexFile(
+			buildPromptContext,
+			customInstructionsService,
+		);
 		if (instructionIndexFile) {
-			if (instructionIndexFile.instructions.has(normalizedUri) || instructionIndexFile.skills.has(normalizedUri)) {
+			if (
+				instructionIndexFile.instructions.has(normalizedUri) ||
+				instructionIndexFile.skills.has(normalizedUri)
+			) {
 				return true;
 			}
 			// Check if the URI is under any skill folder (e.g., nested files like primitives/agents.md)
 			for (const skillFolderUri of instructionIndexFile.skillFolders) {
-				if (extUriBiasedIgnorePathCase.isEqualOrParent(normalizedUri, skillFolderUri)) {
+				if (
+					extUriBiasedIgnorePathCase.isEqualOrParent(
+						normalizedUri,
+						skillFolderUri,
+					)
+				) {
 					return true;
 				}
 			}
 		}
-		const attachedPromptFile = buildPromptContext.chatVariables.find(v => isPromptFile(v) && isEqual(normalizedUri, v.value));
+		const attachedPromptFile = buildPromptContext.chatVariables.find(
+			(v) => isPromptFile(v) && isEqual(normalizedUri, v.value),
+		);
 		if (attachedPromptFile) {
 			return true;
 		}
@@ -243,45 +346,74 @@ async function isExternalInstructionsFile(normalizedUri: URI, customInstructions
 			return true;
 		}
 		// Note: this fallback check does not handle scenario where model passes file:// for userData schemes.
-		if (await customInstructionsService.isExternalInstructionsFile(normalizedUri)) {
+		if (
+			await customInstructionsService.isExternalInstructionsFile(
+				normalizedUri,
+			)
+		) {
 			return true;
 		}
 	}
 	return false;
 }
 
-let cachedInstructionIndexFile: { requestId: string; file: IInstructionIndexFile } | undefined;
+let cachedInstructionIndexFile:
+	| { requestId: string; file: IInstructionIndexFile }
+	| undefined;
 
-function getInstructionsIndexFile(buildPromptContext: IBuildPromptContext, customInstructionsService: ICustomInstructionsService): IInstructionIndexFile | undefined {
+function getInstructionsIndexFile(
+	buildPromptContext: IBuildPromptContext,
+	customInstructionsService: ICustomInstructionsService,
+): IInstructionIndexFile | undefined {
 	if (!buildPromptContext.requestId) {
 		return undefined;
 	}
 
-	if (cachedInstructionIndexFile?.requestId === buildPromptContext.requestId) {
+	if (
+		cachedInstructionIndexFile?.requestId === buildPromptContext.requestId
+	) {
 		return cachedInstructionIndexFile.file;
 	}
 
-	const indexVariable = buildPromptContext.chatVariables.find(isCustomizationsIndex);
+	const indexVariable = buildPromptContext.chatVariables.find(
+		isCustomizationsIndex,
+	);
 	if (indexVariable && isString(indexVariable.value)) {
-		const indexFile = customInstructionsService.parseInstructionIndexFile(indexVariable.value);
-		cachedInstructionIndexFile = { requestId: buildPromptContext.requestId, file: indexFile };
+		const indexFile = customInstructionsService.parseInstructionIndexFile(
+			indexVariable.value,
+		);
+		cachedInstructionIndexFile = {
+			requestId: buildPromptContext.requestId,
+			file: indexFile,
+		};
 		return indexFile;
 	}
 	cachedInstructionIndexFile = undefined;
 	return undefined;
-
 }
 
-export async function assertFileNotContentExcluded(accessor: ServicesAccessor, uri: URI): Promise<void> {
+export async function assertFileNotContentExcluded(
+	accessor: ServicesAccessor,
+	uri: URI,
+): Promise<void> {
 	const ignoreService = accessor.get(IIgnoreService);
-	const promptPathRepresentationService = accessor.get(IPromptPathRepresentationService);
+	const promptPathRepresentationService = accessor.get(
+		IPromptPathRepresentationService,
+	);
 
 	if (await ignoreService.isCopilotIgnored(uri)) {
-		throw new Error(`File ${promptPathRepresentationService.getFilePath(uri)} is configured to be ignored by Copilot`);
+		throw new Error(
+			`File ${promptPathRepresentationService.getFilePath(uri)} is configured to be ignored by Copilot`,
+		);
 	}
 }
 
-export async function isFileExternalAndNeedsConfirmation(accessor: ServicesAccessor, uri: URI, buildPromptContext?: IBuildPromptContext, options?: { readOnly?: boolean; workingDirectory?: URI }): Promise<boolean> {
+export async function isFileExternalAndNeedsConfirmation(
+	accessor: ServicesAccessor,
+	uri: URI,
+	buildPromptContext?: IBuildPromptContext,
+	options?: { readOnly?: boolean; workingDirectory?: URI },
+): Promise<boolean> {
 	const workspaceService = accessor.get(IWorkspaceService);
 	const tabsAndEditorsService = accessor.get(ITabsAndEditorsService);
 	const customInstructionsService = accessor.get(ICustomInstructionsService);
@@ -293,17 +425,32 @@ export async function isFileExternalAndNeedsConfirmation(accessor: ServicesAcces
 
 	const normalizedUri = normalizePath(uri);
 
-	const workingDir = new WorkingDirectory(options?.workingDirectory, workspaceService);
+	const workingDir = new WorkingDirectory(
+		options?.workingDirectory,
+		workspaceService,
+	);
 	if (workingDir.getFolder(normalizedUri)) {
 		return false;
 	}
-	if (options?.readOnly && isUriUnderAdditionalReadAccessPaths(normalizedUri, configurationService)) {
+	if (
+		options?.readOnly &&
+		isUriUnderAdditionalReadAccessPaths(normalizedUri, configurationService)
+	) {
 		return false;
 	}
-	if (uri.scheme === Schemas.untitled || uri.scheme === 'vscode-chat-response-resource') {
+	if (
+		uri.scheme === Schemas.untitled ||
+		uri.scheme === 'vscode-chat-response-resource'
+	) {
 		return false;
 	}
-	if (await isExternalInstructionsFile(normalizedUri, customInstructionsService, buildPromptContext)) {
+	if (
+		await isExternalInstructionsFile(
+			normalizedUri,
+			customInstructionsService,
+			buildPromptContext,
+		)
+	) {
 		return false;
 	}
 	if (diskSessionResources.isSessionResourceUri(normalizedUri)) {
@@ -315,13 +462,16 @@ export async function isFileExternalAndNeedsConfirmation(accessor: ServicesAcces
 	if (sessionTranscriptService.isTranscriptUri(normalizedUri)) {
 		return false;
 	}
-	if (tabsAndEditorsService.tabs.some(tab => isEqual(tab.uri, uri))) {
+	if (tabsAndEditorsService.tabs.some((tab) => isEqual(tab.uri, uri))) {
 		return false;
 	}
 
 	// If the file doesn't exist, throw immediately rather than showing a confusing "external file"
 	// confirmation — the tool should fail with a clear "file not found" error instead.
-	const fileExists = await fileSystemService.stat(normalizedUri).then(() => true).catch(() => false);
+	const fileExists = await fileSystemService
+		.stat(normalizedUri)
+		.then(() => true)
+		.catch(() => false);
 	if (!fileExists) {
 		throw new Error(`File ${normalizedUri.fsPath} does not exist`);
 	}
@@ -329,39 +479,67 @@ export async function isFileExternalAndNeedsConfirmation(accessor: ServicesAcces
 	return true;
 }
 
-export function isDirExternalAndNeedsConfirmation(accessor: ServicesAccessor, uri: URI, buildPromptContext?: IBuildPromptContext, options?: { readOnly?: boolean; workingDirectory?: URI }): boolean {
+export function isDirExternalAndNeedsConfirmation(
+	accessor: ServicesAccessor,
+	uri: URI,
+	buildPromptContext?: IBuildPromptContext,
+	options?: { readOnly?: boolean; workingDirectory?: URI },
+): boolean {
 	const workspaceService = accessor.get(IWorkspaceService);
 	const customInstructionsService = accessor.get(ICustomInstructionsService);
 	const configurationService = accessor.get(IConfigurationService);
 
 	const normalizedUri = normalizePath(uri);
 
-	const workingDir = new WorkingDirectory(options?.workingDirectory, workspaceService);
+	const workingDir = new WorkingDirectory(
+		options?.workingDirectory,
+		workspaceService,
+	);
 	if (workingDir.getFolder(normalizedUri)) {
 		return false;
 	}
-	if (options?.readOnly && isUriUnderAdditionalReadAccessPaths(normalizedUri, configurationService)) {
+	if (
+		options?.readOnly &&
+		isUriUnderAdditionalReadAccessPaths(normalizedUri, configurationService)
+	) {
 		return false;
 	}
 	if (buildPromptContext) {
-		const instructionIndexFile = getInstructionsIndexFile(buildPromptContext, customInstructionsService);
+		const instructionIndexFile = getInstructionsIndexFile(
+			buildPromptContext,
+			customInstructionsService,
+		);
 		if (instructionIndexFile) {
 			for (const skillFolderUri of instructionIndexFile.skillFolders) {
-				if (extUriBiasedIgnorePathCase.isEqualOrParent(normalizedUri, skillFolderUri)) {
+				if (
+					extUriBiasedIgnorePathCase.isEqualOrParent(
+						normalizedUri,
+						skillFolderUri,
+					)
+				) {
 					return false;
 				}
 			}
 		}
 	} else {
-		if (customInstructionsService.isExternalInstructionsFolder(normalizedUri)) {
+		if (
+			customInstructionsService.isExternalInstructionsFolder(
+				normalizedUri,
+			)
+		) {
 			return false;
 		}
 	}
 	return true;
 }
 
-function isUriUnderAdditionalReadAccessPaths(uri: URI, configurationService: IConfigurationService): boolean {
-	const paths = configurationService.getConfig(ConfigKey.AdditionalReadAccessPaths);
+function isUriUnderAdditionalReadAccessPaths(
+	uri: URI,
+	configurationService: IConfigurationService,
+): boolean {
+	const paths = configurationService.getConfig(
+		ConfigKey.AdditionalReadAccessPaths,
+	);
 	for (const p of paths) {
 		const folderUri = normalizePath(URI.file(p));
 		if (extUriBiasedIgnorePathCase.isEqualOrParent(uri, folderUri)) {

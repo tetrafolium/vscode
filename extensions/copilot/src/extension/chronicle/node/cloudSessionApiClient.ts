@@ -7,7 +7,13 @@ import { IAuthenticationService } from '../../../platform/authentication/common/
 import { ICopilotTokenManager } from '../../../platform/authentication/common/copilotTokenManager';
 import { INTEGRATION_ID } from '../../../platform/endpoint/common/licenseAgreement';
 import { IFetcherService } from '../../../platform/networking/common/fetcherService';
-import type { CreateSessionFailureReason, CreateSessionResult, CloudSession, SessionEvent, SubmitSessionEventsResult } from '../common/cloudSessionTypes';
+import type {
+	CreateSessionFailureReason,
+	CreateSessionResult,
+	CloudSession,
+	SessionEvent,
+	SubmitSessionEventsResult,
+} from '../common/cloudSessionTypes';
 
 /** Timeout for individual cloud API requests (ms). */
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -36,7 +42,6 @@ export const CloudAgentId = {
  * the Retry-After period expires.
  */
 export class CloudSessionApiClient {
-
 	/** Timestamp (epoch ms) until which all requests should be skipped due to 429. */
 	private _rateLimitedUntil = 0;
 
@@ -44,13 +49,15 @@ export class CloudSessionApiClient {
 	private _rateLimitCount = 0;
 
 	/** Callback fired when a 429 is received. */
-	onRateLimited: ((callSite: string, retryAfterSec: number) => void) | undefined;
+	onRateLimited:
+		| ((callSite: string, retryAfterSec: number) => void)
+		| undefined;
 
 	constructor(
 		private readonly _tokenManager: ICopilotTokenManager,
 		private readonly _authService: IAuthenticationService,
 		private readonly _fetcherService: IFetcherService,
-	) { }
+	) {}
 
 	/** Returns true if we're currently rate-limited and should skip requests. */
 	isRateLimited(): boolean {
@@ -58,7 +65,10 @@ export class CloudSessionApiClient {
 	}
 
 	/** Record a 429 response and back off for the indicated duration. */
-	private _handleRateLimit(res: { headers?: { get?(name: string): string | null } }, callSite: string): void {
+	private _handleRateLimit(
+		res: { headers?: { get?(name: string): string | null } },
+		callSite: string,
+	): void {
 		let retryAfterSec = 60; // Default: 60 seconds
 		try {
 			const header = res.headers?.get?.('Retry-After');
@@ -117,11 +127,16 @@ export class CloudSessionApiClient {
 			}
 
 			if (!res.ok) {
-				const reason: CreateSessionFailureReason = res.status === 403 ? 'policy_blocked' : 'error';
+				const reason: CreateSessionFailureReason =
+					res.status === 403 ? 'policy_blocked' : 'error';
 				return { ok: false, reason };
 			}
 
-			const response = await res.json() as { id: string; task_id?: string; agent_task_id?: string };
+			const response = (await res.json()) as {
+				id: string;
+				task_id?: string;
+				agent_task_id?: string;
+			};
 			return { ok: true, response };
 		} catch (err) {
 			return { ok: false, reason: 'error' };
@@ -141,7 +156,9 @@ export class CloudSessionApiClient {
 			return { ok: false, reason: 'rate_limited' };
 		}
 		try {
-			const { url, headers } = await this._buildRequest(`${SESSIONS_PATH}/${sessionId}/events`);
+			const { url, headers } = await this._buildRequest(
+				`${SESSIONS_PATH}/${sessionId}/events`,
+			);
 			if (!url) {
 				return { ok: false, reason: 'error' };
 			}
@@ -160,7 +177,8 @@ export class CloudSessionApiClient {
 			}
 
 			if (!res.ok) {
-				const reason: 'policy_blocked' | 'error' = res.status === 403 ? 'policy_blocked' : 'error';
+				const reason: 'policy_blocked' | 'error' =
+					res.status === 403 ? 'policy_blocked' : 'error';
 				return { ok: false, reason };
 			}
 
@@ -178,7 +196,9 @@ export class CloudSessionApiClient {
 			return undefined;
 		}
 		try {
-			const { url, headers } = await this._buildRequest(`${SESSIONS_PATH}/${sessionId}`);
+			const { url, headers } = await this._buildRequest(
+				`${SESSIONS_PATH}/${sessionId}`,
+			);
 			if (!url) {
 				return undefined;
 			}
@@ -209,8 +229,24 @@ export class CloudSessionApiClient {
 	 * List VS Code cloud sessions for the authenticated user.
 	 * Paginates through all pages and filters to only VS Code Chat sessions.
 	 */
-	async listSessions(): Promise<Array<{ id: string; task_id?: string; agent_task_id?: string; agent_id?: number; state: string; created_at: string }>> {
-		const allSessions: Array<{ id: string; task_id?: string; agent_task_id?: string; agent_id?: number; state: string; created_at: string }> = [];
+	async listSessions(): Promise<
+		Array<{
+			id: string;
+			task_id?: string;
+			agent_task_id?: string;
+			agent_id?: number;
+			state: string;
+			created_at: string;
+		}>
+	> {
+		const allSessions: Array<{
+			id: string;
+			task_id?: string;
+			agent_task_id?: string;
+			agent_id?: number;
+			state: string;
+			created_at: string;
+		}> = [];
 		if (this.isRateLimited()) {
 			return allSessions;
 		}
@@ -219,7 +255,9 @@ export class CloudSessionApiClient {
 
 		try {
 			while (true) {
-				const { url, headers } = await this._buildRequest(`${SESSIONS_PATH}?page_size=${pageSize}&page_number=${page}`);
+				const { url, headers } = await this._buildRequest(
+					`${SESSIONS_PATH}?page_size=${pageSize}&page_number=${page}`,
+				);
 				if (!url) {
 					return allSessions;
 				}
@@ -241,7 +279,9 @@ export class CloudSessionApiClient {
 				}
 
 				const data = await res.json();
-				const sessions = Array.isArray(data) ? data : (data as Record<string, unknown>).sessions;
+				const sessions = Array.isArray(data)
+					? data
+					: (data as Record<string, unknown>).sessions;
 				const pageSessions = Array.isArray(sessions) ? sessions : [];
 
 				// Filter to VS Code Chat sessions only
@@ -271,12 +311,16 @@ export class CloudSessionApiClient {
 	 * Returns 'deleted' on any 2xx, 'not_found' if the task doesn't exist (404,
 	 * treated as success), or 'error' on failure.
 	 */
-	async deleteSession(taskId: string): Promise<'deleted' | 'not_found' | 'error'> {
+	async deleteSession(
+		taskId: string,
+	): Promise<'deleted' | 'not_found' | 'error'> {
 		if (this.isRateLimited()) {
 			return 'error';
 		}
 		try {
-			const { url, headers } = await this._buildRequest(`/agents/tasks/${encodeURIComponent(taskId)}`);
+			const { url, headers } = await this._buildRequest(
+				`/agents/tasks/${encodeURIComponent(taskId)}`,
+			);
 			if (!url) {
 				return 'error';
 			}
@@ -310,12 +354,16 @@ export class CloudSessionApiClient {
 	 * Trigger bulk analytics backfill for all remote sessions at the given indexing level.
 	 * Single API call that queues all eligible sessions for reindexing.
 	 */
-	async backfillAnalytics(indexingLevel: 'user' | 'repo_and_user'): Promise<{ ok: true; sessionsQueued: number } | { ok: false }> {
+	async backfillAnalytics(
+		indexingLevel: 'user' | 'repo_and_user',
+	): Promise<{ ok: true; sessionsQueued: number } | { ok: false }> {
 		if (this.isRateLimited()) {
 			return { ok: false };
 		}
 		try {
-			const { url, headers } = await this._buildRequest('/agents/analytics/backfill');
+			const { url, headers } = await this._buildRequest(
+				'/agents/analytics/backfill',
+			);
 			if (!url) {
 				return { ok: false };
 			}
@@ -337,7 +385,7 @@ export class CloudSessionApiClient {
 				return { ok: false };
 			}
 
-			const data = await res.json() as { sessions_queued?: number };
+			const data = (await res.json()) as { sessions_queued?: number };
 			return { ok: true, sessionsQueued: data.sessions_queued ?? 0 };
 		} catch {
 			return { ok: false };
@@ -347,7 +395,9 @@ export class CloudSessionApiClient {
 	/**
 	 * Build the full URL and auth headers for a cloud API request.
 	 */
-	private async _buildRequest(path: string): Promise<{ url: string | undefined; headers: Record<string, string> }> {
+	private async _buildRequest(
+		path: string,
+	): Promise<{ url: string | undefined; headers: Record<string, string> }> {
 		try {
 			const copilotToken = await this._tokenManager.getCopilotToken();
 			const baseUrl = copilotToken.endpoints?.api;
@@ -362,7 +412,7 @@ export class CloudSessionApiClient {
 			const url = `${baseUrl.replace(/\/+$/, '')}${path}`;
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${bearerToken}`,
+				Authorization: `Bearer ${bearerToken}`,
 				'Copilot-Integration-Id': INTEGRATION_ID,
 			};
 

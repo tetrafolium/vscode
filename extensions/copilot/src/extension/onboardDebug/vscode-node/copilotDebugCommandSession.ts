@@ -48,17 +48,35 @@ export const handleDebugSession = (
 	}
 
 	async function followup() {
-		switch (once ? 'Q' : await handle.getFollowupKeys(CopilotDebugCommandHandle.COPILOT_LABEL.length + 3)) {
+		switch (
+			once
+				? 'Q'
+				: await handle.getFollowupKeys(
+						CopilotDebugCommandHandle.COPILOT_LABEL.length + 3,
+					)
+		) {
 			case 'Enter':
-				handleDebugSession(launchConfigService, workspaceFolder, config, handle, once, startAgain);
+				handleDebugSession(
+					launchConfigService,
+					workspaceFolder,
+					config,
+					handle,
+					once,
+					startAgain,
+				);
 				break;
 			case 'R':
 				startAgain({ forceNew: true });
 				break;
 			case 'S':
-				await launchConfigService.add(workspaceFolder?.uri, { configurations: [config] });
+				await launchConfigService.add(workspaceFolder?.uri, {
+					configurations: [config],
+				});
 				if (workspaceFolder) {
-					await launchConfigService.show(workspaceFolder.uri, config.name);
+					await launchConfigService.show(
+						workspaceFolder.uri,
+						config.name,
+					);
 				}
 				handle.exit(0);
 				break;
@@ -74,50 +92,71 @@ export const handleDebugSession = (
 
 	handle.ended.then(() => {
 		if (!store.isDisposed) {
-			sessions.forEach(s => vscode.debug.stopDebugging(s));
+			sessions.forEach((s) => vscode.debug.stopDebugging(s));
 		}
 	});
 
-	store.add(vscode.debug.registerDebugAdapterTrackerFactory('*', {
-		createDebugAdapterTracker(session) {
-			if (session.configuration[TRACKED_SESSION_KEY] !== trackedId && (!session.parentSession || !sessions.has(session.parentSession))) {
-				return;
+	store.add(
+		vscode.debug.registerDebugAdapterTrackerFactory('*', {
+			createDebugAdapterTracker(session) {
+				if (
+					session.configuration[TRACKED_SESSION_KEY] !== trackedId &&
+					(!session.parentSession ||
+						!sessions.has(session.parentSession))
+				) {
+					return;
+				}
+
+				// handle nested sessions:
+				const isRoot = !gotRoot;
+				gotRoot = true;
+				sessions.add(session);
+
+				return {
+					onWillStartSession() {
+						if (isRoot) {
+							handle.printLabel(
+								'blue',
+								l10n.t('Debug session starting...'),
+							);
+						}
+					},
+					onDidSendMessage(message) {
+						if (
+							message.type === 'event' &&
+							message.event === 'output' &&
+							message.body.output
+						) {
+							handle.output(
+								message.body.category,
+								message.body.output,
+							);
+						}
+					},
+					onExit(code, signal) {
+						if (isRoot) {
+							ended(code ?? 0, signal);
+						}
+					},
+					onWillStopSession() {
+						if (isRoot) {
+							ended(0);
+						}
+					},
+				};
+			},
+		}),
+	);
+
+	vscode.debug
+		.startDebugging(workspaceFolder, {
+			...config,
+			[TRACKED_SESSION_KEY]: trackedId,
+		})
+		.then((ok) => {
+			if (!ok) {
+				// error will be displayed to user by vscode
+				ended(1);
 			}
-
-			// handle nested sessions:
-			const isRoot = !gotRoot;
-			gotRoot = true;
-			sessions.add(session);
-
-			return {
-				onWillStartSession() {
-					if (isRoot) {
-						handle.printLabel('blue', l10n.t('Debug session starting...'));
-					}
-				},
-				onDidSendMessage(message) {
-					if (message.type === 'event' && message.event === 'output' && message.body.output) {
-						handle.output(message.body.category, message.body.output);
-					}
-				},
-				onExit(code, signal) {
-					if (isRoot) {
-						ended(code ?? 0, signal);
-					}
-				},
-				onWillStopSession() {
-					if (isRoot) {
-						ended(0);
-					}
-				},
-			};
-		},
-	}));
-
-	vscode.debug.startDebugging(workspaceFolder, { ...config, [TRACKED_SESSION_KEY]: trackedId }).then(ok => {
-		if (!ok) {
-			// error will be displayed to user by vscode
-			ended(1);
-		}
-	});
+		});
 };

@@ -15,23 +15,46 @@ import { isNumber, isString } from '../../../../util/vs/base/common/types';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { Range as InternalRange } from '../../../../util/vs/editor/common/core/range';
 import { SymbolKind } from '../../../../util/vs/workbench/api/common/extHostTypes/symbolInformation';
-import { ChatReferenceDiagnostic, Diagnostic, DiagnosticRelatedInformation, DiagnosticSeverity, Range, Uri } from '../../../../vscodeTypes';
+import {
+	ChatReferenceDiagnostic,
+	Diagnostic,
+	DiagnosticRelatedInformation,
+	DiagnosticSeverity,
+	Range,
+	Uri,
+} from '../../../../vscodeTypes';
 import { PromptFileIdPrefix } from '../../../prompt/common/chatVariablesCollection';
 
 /**
  * Converts a ChatPromptReference into a PromptVariable entry that is used in VS code.
  */
-export function convertReferenceToVariable(ref: ChatPromptReference, attachments: readonly Attachment[]) {
+export function convertReferenceToVariable(
+	ref: ChatPromptReference,
+	attachments: readonly Attachment[],
+) {
 	const value = ref.value;
-	const range = ref.range ? { start: ref.range[0], endExclusive: ref.range[1] } : undefined;
+	const range = ref.range
+		? { start: ref.range[0], endExclusive: ref.range[1] }
+		: undefined;
 
-	if (value && value instanceof ChatReferenceDiagnostic && Array.isArray(value.diagnostics) && value.diagnostics.length && value.diagnostics[0][1].length) {
+	if (
+		value &&
+		value instanceof ChatReferenceDiagnostic &&
+		Array.isArray(value.diagnostics) &&
+		value.diagnostics.length &&
+		value.diagnostics[0][1].length
+	) {
 		const marker = DiagnosticConverter.from(value.diagnostics[0][1][0]);
 		const refValue = {
-			filterRange: { startLineNumber: marker.startLineNumber, startColumn: marker.startColumn, endLineNumber: marker.endLineNumber, endColumn: marker.endColumn },
+			filterRange: {
+				startLineNumber: marker.startLineNumber,
+				startColumn: marker.startColumn,
+				endLineNumber: marker.endLineNumber,
+				endColumn: marker.endColumn,
+			},
 			filterSeverity: marker.severity,
 			filterUri: value.diagnostics[0][0],
-			problemMessage: value.diagnostics[0][1][0].message
+			problemMessage: value.diagnostics[0][1][0].message,
 		};
 		return IDiagnosticVariableEntryFilterData.toEntry(refValue);
 	}
@@ -41,7 +64,10 @@ export function convertReferenceToVariable(ref: ChatPromptReference, attachments
 			id: ref.id,
 			name: ref.name,
 			fullName: ref.name.substring(4),
-			value: { uri: ref.value.uri, range: toInternalRange(ref.value.range) },
+			value: {
+				uri: ref.value.uri,
+				range: toInternalRange(ref.value.range),
+			},
 			// We never send this information to extensions, so default to Property
 			symbolKind: SymbolKind.Property,
 			// We never send this information to extensions, so default to Property
@@ -51,9 +77,12 @@ export function convertReferenceToVariable(ref: ChatPromptReference, attachments
 		};
 	}
 
-	if (URI.isUri(value) && ref.name.startsWith(`prompt:`) &&
+	if (
+		URI.isUri(value) &&
+		ref.name.startsWith(`prompt:`) &&
 		ref.id.startsWith(PromptFileIdPrefix) &&
-		ref.id.endsWith(value.toString())) {
+		ref.id.endsWith(value.toString())
+	) {
 		return {
 			id: ref.id,
 			name: `prompt:${basename(value)}`,
@@ -66,25 +95,38 @@ export function convertReferenceToVariable(ref: ChatPromptReference, attachments
 		};
 	}
 
-	const folders = new ResourceSet(attachments.filter(att => att.type === 'directory').map(att => URI.file(att.path)));
+	const folders = new ResourceSet(
+		attachments
+			.filter((att) => att.type === 'directory')
+			.map((att) => URI.file(att.path)),
+	);
 	const isFile = URI.isUri(value) || isLocation(value);
-	const isFolder = URI.isUri(value) && (value.path.endsWith('/') || folders.has(value));
+	const isFolder =
+		URI.isUri(value) && (value.path.endsWith('/') || folders.has(value));
 	return {
 		id: ref.id,
 		name: ref.name,
 		value,
 		modelDescription: ref.modelDescription,
 		range,
-		kind: isFolder ? 'directory' as const : isFile ? 'file' as const : 'generic' as const
+		kind: isFolder
+			? ('directory' as const)
+			: isFile
+				? ('file' as const)
+				: ('generic' as const),
 	};
 }
 
 function toInternalRange(range: Range): InternalRange {
-	return new InternalRange(range.start.line + 1, range.start.character + 1, range.end.line + 1, range.end.character + 1);
+	return new InternalRange(
+		range.start.line + 1,
+		range.start.character + 1,
+		range.end.line + 1,
+		range.end.character + 1,
+	);
 }
 
 namespace DiagnosticTagConverter {
-
 	/**
 	 * Additional metadata about the type of a diagnostic.
 	 */
@@ -110,12 +152,10 @@ namespace DiagnosticTagConverter {
 	}
 	export const enum MarkerTag {
 		Unnecessary = 1,
-		Deprecated = 2
+		Deprecated = 2,
 	}
 
-
 	export function from(value: DiagnosticTag) {
-
 		switch (value) {
 			case DiagnosticTag.Unnecessary:
 				return MarkerTag.Unnecessary;
@@ -127,7 +167,6 @@ namespace DiagnosticTagConverter {
 	}
 }
 
-
 namespace IDiagnosticVariableEntryFilterData {
 	export const icon = Codicon.error;
 
@@ -136,7 +175,12 @@ namespace IDiagnosticVariableEntryFilterData {
 			filterUri: marker.resource,
 			owner: marker.owner,
 			problemMessage: marker.message,
-			filterRange: { startLineNumber: marker.startLineNumber, endLineNumber: marker.endLineNumber, startColumn: marker.startColumn, endColumn: marker.endColumn }
+			filterRange: {
+				startLineNumber: marker.startLineNumber,
+				endLineNumber: marker.endLineNumber,
+				startColumn: marker.startColumn,
+				endColumn: marker.endColumn,
+			},
 		};
 	}
 
@@ -151,11 +195,24 @@ namespace IDiagnosticVariableEntryFilterData {
 		};
 	}
 
-	export function id(data: Record<string, unknown> & { filterRange?: InternalRange }) {
-		return [data.filterUri, data.owner, data.filterSeverity, data.filterRange?.startLineNumber, data.filterRange?.startColumn].join(':');
+	export function id(
+		data: Record<string, unknown> & { filterRange?: InternalRange },
+	) {
+		return [
+			data.filterUri,
+			data.owner,
+			data.filterSeverity,
+			data.filterRange?.startLineNumber,
+			data.filterRange?.startColumn,
+		].join(':');
 	}
 
-	export function label(data: Record<string, unknown> & { problemMessage?: string; filterUri?: Uri }) {
+	export function label(
+		data: Record<string, unknown> & {
+			problemMessage?: string;
+			filterUri?: Uri;
+		},
+	) {
 		const enum TrimThreshold {
 			MaxChars = 30,
 			MaxSpaceLookback = 10,
@@ -167,15 +224,25 @@ namespace IDiagnosticVariableEntryFilterData {
 
 			// Trim the message, on a space if it would not lose too much
 			// data (MaxSpaceLookback) or just blindly otherwise.
-			const lastSpace = data.problemMessage.lastIndexOf(' ', TrimThreshold.MaxChars);
-			if (lastSpace === -1 || lastSpace + TrimThreshold.MaxSpaceLookback < TrimThreshold.MaxChars) {
-				return data.problemMessage.substring(0, TrimThreshold.MaxChars) + '…';
+			const lastSpace = data.problemMessage.lastIndexOf(
+				' ',
+				TrimThreshold.MaxChars,
+			);
+			if (
+				lastSpace === -1 ||
+				lastSpace + TrimThreshold.MaxSpaceLookback <
+					TrimThreshold.MaxChars
+			) {
+				return (
+					data.problemMessage.substring(0, TrimThreshold.MaxChars) +
+					'…'
+				);
 			}
 			return data.problemMessage.substring(0, lastSpace) + '…';
 		}
-		let labelStr = l10n.t("All Problems");
+		let labelStr = l10n.t('All Problems');
 		if (data.filterUri) {
-			labelStr = l10n.t("Problems in {0}", basename(data.filterUri));
+			labelStr = l10n.t('Problems in {0}', basename(data.filterUri));
 		}
 
 		return labelStr;
@@ -203,8 +270,14 @@ namespace DiagnosticConverter {
 			source: value.source,
 			code,
 			severity: DiagnosticSeverityConverter.from(value.severity),
-			relatedInformation: value.relatedInformation && value.relatedInformation.map(DiagnosticRelatedInformationConverter.from),
-			tags: Array.isArray(value.tags) ? coalesce(value.tags.map(DiagnosticTagConverter.from)) : undefined,
+			relatedInformation:
+				value.relatedInformation &&
+				value.relatedInformation.map(
+					DiagnosticRelatedInformationConverter.from,
+				),
+			tags: Array.isArray(value.tags)
+				? coalesce(value.tags.map(DiagnosticTagConverter.from))
+				: undefined,
 		};
 	}
 }
@@ -214,7 +287,7 @@ namespace DiagnosticRelatedInformationConverter {
 		return {
 			...toInternalRange(value.location.range),
 			message: value.message,
-			resource: value.location.uri
+			resource: value.location.uri,
 		};
 	}
 }

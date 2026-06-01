@@ -3,51 +3,109 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from '../../../../nls.js';
-import { Event, Emitter } from '../../../../base/common/event.js';
-import { Disposable, toDisposable } from '../../../../base/common/lifecycle.js';
-import { IExtensionManagementService, IExtensionIdentifier, IGlobalExtensionEnablementService, ENABLED_EXTENSIONS_STORAGE_PATH, DISABLED_EXTENSIONS_STORAGE_PATH, InstallOperation, IAllowedExtensionsService, MaliciousExtensionInfo } from '../../../../platform/extensionManagement/common/extensionManagement.js';
-import { IWorkbenchExtensionEnablementService, EnablementState, IExtensionManagementServerService, IWorkbenchExtensionManagementService, IExtensionManagementServer, ExtensionInstallLocation } from '../common/extensionManagement.js';
-import { areSameExtensions, BetterMergeId, getExtensionDependencies, isMalicious } from '../../../../platform/extensionManagement/common/extensionManagementUtil.js';
-import { IWorkspaceContextService, WorkbenchState } from '../../../../platform/workspace/common/workspace.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
-import { ExtensionType, IExtension, isAuthenticationProviderExtension, isLanguagePackExtension, isResolverExtension } from '../../../../platform/extensions/common/extensions.js';
-import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
-import { StorageManager } from '../../../../platform/extensionManagement/common/extensionEnablementService.js';
-import { webWorkerExtHostConfig, WebWorkerExtHostConfigValue } from '../../extensions/common/extensions.js';
-import { IUserDataSyncAccountService } from '../../../../platform/userDataSync/common/userDataSyncAccount.js';
-import { IUserDataSyncEnablementService } from '../../../../platform/userDataSync/common/userDataSync.js';
-import { ILifecycleService, LifecyclePhase } from '../../lifecycle/common/lifecycle.js';
-import { INotificationService, NotificationPriority, Severity } from '../../../../platform/notification/common/notification.js';
-import { IHostService } from '../../host/browser/host.js';
-import { IExtensionBisectService } from './extensionBisect.js';
-import { IWorkspaceTrustManagementService, IWorkspaceTrustRequestService } from '../../../../platform/workspace/common/workspaceTrust.js';
-import { IExtensionManifestPropertiesService } from '../../extensions/common/extensionManifestPropertiesService.js';
-import { isVirtualWorkspace } from '../../../../platform/workspace/common/virtualWorkspace.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { equals } from '../../../../base/common/arrays.js';
-import { isString } from '../../../../base/common/types.js';
-import { Delayer } from '../../../../base/common/async.js';
-import { IProductService } from '../../../../platform/product/common/productService.js';
-import { isWeb } from '../../../../base/common/platform.js';
-import { ChatEntitlementService, IChatEntitlementService } from '../../chat/common/chatEntitlementService.js';
+import { localize } from "../../../../nls.js";
+import { Event, Emitter } from "../../../../base/common/event.js";
+import { Disposable, toDisposable } from "../../../../base/common/lifecycle.js";
+import {
+	IExtensionManagementService,
+	IExtensionIdentifier,
+	IGlobalExtensionEnablementService,
+	ENABLED_EXTENSIONS_STORAGE_PATH,
+	DISABLED_EXTENSIONS_STORAGE_PATH,
+	InstallOperation,
+	IAllowedExtensionsService,
+	MaliciousExtensionInfo,
+} from "../../../../platform/extensionManagement/common/extensionManagement.js";
+import {
+	IWorkbenchExtensionEnablementService,
+	EnablementState,
+	IExtensionManagementServerService,
+	IWorkbenchExtensionManagementService,
+	IExtensionManagementServer,
+	ExtensionInstallLocation,
+} from "../common/extensionManagement.js";
+import {
+	areSameExtensions,
+	BetterMergeId,
+	getExtensionDependencies,
+	isMalicious,
+} from "../../../../platform/extensionManagement/common/extensionManagementUtil.js";
+import {
+	IWorkspaceContextService,
+	WorkbenchState,
+} from "../../../../platform/workspace/common/workspace.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../platform/storage/common/storage.js";
+import { IWorkbenchEnvironmentService } from "../../environment/common/environmentService.js";
+import {
+	ExtensionType,
+	IExtension,
+	isAuthenticationProviderExtension,
+	isLanguagePackExtension,
+	isResolverExtension,
+} from "../../../../platform/extensions/common/extensions.js";
+import { IConfigurationService } from "../../../../platform/configuration/common/configuration.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../platform/instantiation/common/extensions.js";
+import { StorageManager } from "../../../../platform/extensionManagement/common/extensionEnablementService.js";
+import {
+	webWorkerExtHostConfig,
+	WebWorkerExtHostConfigValue,
+} from "../../extensions/common/extensions.js";
+import { IUserDataSyncAccountService } from "../../../../platform/userDataSync/common/userDataSyncAccount.js";
+import { IUserDataSyncEnablementService } from "../../../../platform/userDataSync/common/userDataSync.js";
+import {
+	ILifecycleService,
+	LifecyclePhase,
+} from "../../lifecycle/common/lifecycle.js";
+import {
+	INotificationService,
+	NotificationPriority,
+	Severity,
+} from "../../../../platform/notification/common/notification.js";
+import { IHostService } from "../../host/browser/host.js";
+import { IExtensionBisectService } from "./extensionBisect.js";
+import {
+	IWorkspaceTrustManagementService,
+	IWorkspaceTrustRequestService,
+} from "../../../../platform/workspace/common/workspaceTrust.js";
+import { IExtensionManifestPropertiesService } from "../../extensions/common/extensionManifestPropertiesService.js";
+import { isVirtualWorkspace } from "../../../../platform/workspace/common/virtualWorkspace.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import { equals } from "../../../../base/common/arrays.js";
+import { isString } from "../../../../base/common/types.js";
+import { Delayer } from "../../../../base/common/async.js";
+import { IProductService } from "../../../../platform/product/common/productService.js";
+import { isWeb } from "../../../../base/common/platform.js";
+import {
+	ChatEntitlementService,
+	IChatEntitlementService,
+} from "../../chat/common/chatEntitlementService.js";
 
-const SOURCE = 'IWorkbenchExtensionEnablementService';
+const SOURCE = "IWorkbenchExtensionEnablementService";
 
 type WorkspaceType = { readonly virtual: boolean; readonly trusted: boolean };
 
-const EXTENSION_UNIFICATION_SETTING = 'chat.extensionUnification.enabled';
-const MALICIOUS_EXTENSIONS_STORAGE_KEY = 'extensionsEnablement/malicious';
+const EXTENSION_UNIFICATION_SETTING = "chat.extensionUnification.enabled";
+const MALICIOUS_EXTENSIONS_STORAGE_KEY = "extensionsEnablement/malicious";
 
-export class ExtensionEnablementService extends Disposable implements IWorkbenchExtensionEnablementService {
-
+export class ExtensionEnablementService
+	extends Disposable
+	implements IWorkbenchExtensionEnablementService
+{
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onEnablementChanged = this._register(new Emitter<readonly IExtension[]>());
-	public readonly onEnablementChanged: Event<readonly IExtension[]> = this._onEnablementChanged.event;
+	private readonly _onEnablementChanged = this._register(
+		new Emitter<readonly IExtension[]>(),
+	);
+	public readonly onEnablementChanged: Event<readonly IExtension[]> =
+		this._onEnablementChanged.event;
 
 	protected readonly extensionsManager: ExtensionsManager;
 	private readonly storageManager: StorageManager;
@@ -62,58 +120,111 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	// Sessions window allow-list (lowercased extension ids)
 	private readonly _sessionsWindowAllowedExtensions: ReadonlySet<string>;
 
-	private _maliciousExtensionsCache: ReadonlyArray<MaliciousExtensionInfo> | undefined;
+	private _maliciousExtensionsCache:
+		| ReadonlyArray<MaliciousExtensionInfo>
+		| undefined;
 
 	constructor(
 		@IStorageService private readonly storageService: IStorageService,
-		@IGlobalExtensionEnablementService protected readonly globalExtensionEnablementService: IGlobalExtensionEnablementService,
-		@IWorkspaceContextService private readonly contextService: IWorkspaceContextService,
-		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService,
-		@IExtensionManagementService private readonly extensionManagementService: IExtensionManagementService,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@IExtensionManagementServerService private readonly extensionManagementServerService: IExtensionManagementServerService,
-		@IUserDataSyncEnablementService private readonly userDataSyncEnablementService: IUserDataSyncEnablementService,
-		@IUserDataSyncAccountService private readonly userDataSyncAccountService: IUserDataSyncAccountService,
+		@IGlobalExtensionEnablementService
+		protected readonly globalExtensionEnablementService: IGlobalExtensionEnablementService,
+		@IWorkspaceContextService
+		private readonly contextService: IWorkspaceContextService,
+		@IWorkbenchEnvironmentService
+		private readonly environmentService: IWorkbenchEnvironmentService,
+		@IExtensionManagementService
+		private readonly extensionManagementService: IExtensionManagementService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
+		@IExtensionManagementServerService
+		private readonly extensionManagementServerService: IExtensionManagementServerService,
+		@IUserDataSyncEnablementService
+		private readonly userDataSyncEnablementService: IUserDataSyncEnablementService,
+		@IUserDataSyncAccountService
+		private readonly userDataSyncAccountService: IUserDataSyncAccountService,
 		@ILifecycleService private readonly lifecycleService: ILifecycleService,
-		@INotificationService private readonly notificationService: INotificationService,
+		@INotificationService
+		private readonly notificationService: INotificationService,
 		@IHostService hostService: IHostService,
-		@IExtensionBisectService private readonly extensionBisectService: IExtensionBisectService,
-		@IAllowedExtensionsService private readonly allowedExtensionsService: IAllowedExtensionsService,
-		@IWorkspaceTrustManagementService private readonly workspaceTrustManagementService: IWorkspaceTrustManagementService,
-		@IWorkspaceTrustRequestService private readonly workspaceTrustRequestService: IWorkspaceTrustRequestService,
-		@IExtensionManifestPropertiesService private readonly extensionManifestPropertiesService: IExtensionManifestPropertiesService,
-		@IChatEntitlementService private readonly chatEntitlementService: IChatEntitlementService,
+		@IExtensionBisectService
+		private readonly extensionBisectService: IExtensionBisectService,
+		@IAllowedExtensionsService
+		private readonly allowedExtensionsService: IAllowedExtensionsService,
+		@IWorkspaceTrustManagementService
+		private readonly workspaceTrustManagementService: IWorkspaceTrustManagementService,
+		@IWorkspaceTrustRequestService
+		private readonly workspaceTrustRequestService: IWorkspaceTrustRequestService,
+		@IExtensionManifestPropertiesService
+		private readonly extensionManifestPropertiesService: IExtensionManifestPropertiesService,
+		@IChatEntitlementService
+		private readonly chatEntitlementService: IChatEntitlementService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@ILogService private readonly logService: ILogService,
-		@IProductService productService: IProductService
+		@IProductService productService: IProductService,
 	) {
 		super();
 		this.storageManager = this._register(new StorageManager(storageService));
 
-		const uninstallDisposable = this._register(Event.filter(extensionManagementService.onDidUninstallExtension, e => !e.error)(({ identifier }) => this._reset(identifier)));
+		const uninstallDisposable = this._register(
+			Event.filter(
+				extensionManagementService.onDidUninstallExtension,
+				(e) => !e.error,
+			)(({ identifier }) => this._reset(identifier)),
+		);
 		let isDisposed = false;
-		this._register(toDisposable(() => isDisposed = true));
-		this.extensionsManager = this._register(instantiationService.createInstance(ExtensionsManager));
+		this._register(toDisposable(() => (isDisposed = true)));
+		this.extensionsManager = this._register(
+			instantiationService.createInstance(ExtensionsManager),
+		);
 		this.extensionsManager.whenInitialized().then(() => {
 			if (!isDisposed) {
 				uninstallDisposable.dispose();
 				this._onDidChangeExtensions([], [], false);
-				this._register(this.extensionsManager.onDidChangeExtensions(({ added, removed, isProfileSwitch }) => this._onDidChangeExtensions(added, removed, isProfileSwitch)));
+				this._register(
+					this.extensionsManager.onDidChangeExtensions(
+						({ added, removed, isProfileSwitch }) =>
+							this._onDidChangeExtensions(added, removed, isProfileSwitch),
+					),
+				);
 				this.loopCheckForMaliciousExtensions();
 			}
 		});
 
-		this._register(this.globalExtensionEnablementService.onDidChangeEnablement(({ extensions, source }) => this._onDidChangeGloballyDisabledExtensions(extensions, source)));
-		this._register(allowedExtensionsService.onDidChangeAllowedExtensionsConfigValue(() => this._onDidChangeExtensions([], [], false)));
+		this._register(
+			this.globalExtensionEnablementService.onDidChangeEnablement(
+				({ extensions, source }) =>
+					this._onDidChangeGloballyDisabledExtensions(extensions, source),
+			),
+		);
+		this._register(
+			allowedExtensionsService.onDidChangeAllowedExtensionsConfigValue(() =>
+				this._onDidChangeExtensions([], [], false),
+			),
+		);
 
 		// Invalidate the cached malicious extensions list when the stored value changes.
-		this._register(this.storageService.onDidChangeValue(StorageScope.APPLICATION, MALICIOUS_EXTENSIONS_STORAGE_KEY, this._store)(() => this._maliciousExtensionsCache = undefined));
+		this._register(
+			this.storageService.onDidChangeValue(
+				StorageScope.APPLICATION,
+				MALICIOUS_EXTENSIONS_STORAGE_KEY,
+				this._store,
+			)(() => (this._maliciousExtensionsCache = undefined)),
+		);
 
 		// Extension unification
-		this._completionsExtensionId = productService.defaultChatAgent?.extensionId.toLowerCase();
-		this._chatExtensionId = productService.defaultChatAgent?.chatExtensionId.toLowerCase();
-		this._sessionsWindowAllowedExtensions = new Set<string>((productService.sessionsWindowAllowedExtensions ?? []).map(id => id.toLowerCase()));
-		const unificationExtensions = [this._completionsExtensionId, this._chatExtensionId].filter(id => !!id);
+		this._completionsExtensionId =
+			productService.defaultChatAgent?.extensionId.toLowerCase();
+		this._chatExtensionId =
+			productService.defaultChatAgent?.chatExtensionId.toLowerCase();
+		this._sessionsWindowAllowedExtensions = new Set<string>(
+			(productService.sessionsWindowAllowedExtensions ?? []).map((id) =>
+				id.toLowerCase(),
+			),
+		);
+		const unificationExtensions = [
+			this._completionsExtensionId,
+			this._chatExtensionId,
+		].filter((id) => !!id);
 
 		// Disabling extension unification should immediately disable the unified extension flow
 		// Enabling extension unification will only take effect after restart
@@ -121,28 +232,50 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		if (isWeb && this.environmentService.remoteAuthority === undefined) {
 			this._extensionUnificationEnabled = false;
 		} else {
-			this._extensionUnificationEnabled = this.configurationService.getValue<boolean>(EXTENSION_UNIFICATION_SETTING);
+			this._extensionUnificationEnabled =
+				this.configurationService.getValue<boolean>(
+					EXTENSION_UNIFICATION_SETTING,
+				);
 		}
-		this._register(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(EXTENSION_UNIFICATION_SETTING)) {
-				const extensionUnificationEnabled = this.configurationService.getValue<boolean>(EXTENSION_UNIFICATION_SETTING);
-				if (!extensionUnificationEnabled) {
-					this._extensionUnificationEnabled = false;
-					this._onEnablementChanged.fire(this.extensionsManager.extensions.filter(ext => unificationExtensions.includes(ext.identifier.id.toLowerCase())));
+		this._register(
+			this.configurationService.onDidChangeConfiguration((e) => {
+				if (e.affectsConfiguration(EXTENSION_UNIFICATION_SETTING)) {
+					const extensionUnificationEnabled =
+						this.configurationService.getValue<boolean>(
+							EXTENSION_UNIFICATION_SETTING,
+						);
+					if (!extensionUnificationEnabled) {
+						this._extensionUnificationEnabled = false;
+						this._onEnablementChanged.fire(
+							this.extensionsManager.extensions.filter((ext) =>
+								unificationExtensions.includes(ext.identifier.id.toLowerCase()),
+							),
+						);
+					}
 				}
-			}
-		}));
+			}),
+		);
 
 		// delay notification for extensions disabled until workbench restored
 		if (this.allUserExtensionsDisabled) {
 			this.lifecycleService.when(LifecyclePhase.Eventually).then(() => {
-				this.notificationService.prompt(Severity.Info, localize('extensionsDisabled', "All installed extensions are temporarily disabled."), [{
-					label: localize('Reload', "Reload and Enable Extensions"),
-					run: () => hostService.reload({ disableExtensions: false })
-				}], {
-					sticky: true,
-					priority: NotificationPriority.URGENT
-				});
+				this.notificationService.prompt(
+					Severity.Info,
+					localize(
+						"extensionsDisabled",
+						"All installed extensions are temporarily disabled.",
+					),
+					[
+						{
+							label: localize("Reload", "Reload and Enable Extensions"),
+							run: () => hostService.reload({ disableExtensions: false }),
+						},
+					],
+					{
+						sticky: true,
+						priority: NotificationPriority.URGENT,
+					},
+				);
 			});
 		}
 
@@ -150,38 +283,73 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	}
 
 	private ensureChatExtensionInitialDisabledState(): void {
-		if (!this._chatExtensionId || this.environmentService.isSessionsWindow || this.environmentService.skipBuiltinExtensions?.some(id => id.toLowerCase() === this._chatExtensionId)) {
+		if (
+			!this._chatExtensionId ||
+			this.environmentService.isSessionsWindow ||
+			this.environmentService.skipBuiltinExtensions?.some(
+				(id) => id.toLowerCase() === this._chatExtensionId,
+			)
+		) {
 			return;
 		}
 
-		const builtinChatExtensionEnablementMigrationKey = 'builtinChatExtensionEnablementMigration';
-		const builtinChatExtensionEnablementMigration = this.storageService.getBoolean(builtinChatExtensionEnablementMigrationKey, StorageScope.PROFILE) === true;
+		const builtinChatExtensionEnablementMigrationKey =
+			"builtinChatExtensionEnablementMigration";
+		const builtinChatExtensionEnablementMigration =
+			this.storageService.getBoolean(
+				builtinChatExtensionEnablementMigrationKey,
+				StorageScope.PROFILE,
+			) === true;
 		if (builtinChatExtensionEnablementMigration) {
 			return;
 		}
 
-		this.logService.debug('Running builtin chat extension enablement migration');
-		this.storageService.store(builtinChatExtensionEnablementMigrationKey, true, StorageScope.PROFILE, StorageTarget.MACHINE);
-		const context = (this.chatEntitlementService as ChatEntitlementService).context;
+		this.logService.debug(
+			"Running builtin chat extension enablement migration",
+		);
+		this.storageService.store(
+			builtinChatExtensionEnablementMigrationKey,
+			true,
+			StorageScope.PROFILE,
+			StorageTarget.MACHINE,
+		);
+		const context = (this.chatEntitlementService as ChatEntitlementService)
+			.context;
 		if (context) {
 			if (context.value.state.completed) {
 				// User has used chat features before
 				if (this._isDisabledGlobally({ id: this._chatExtensionId })) {
 					// User had specifically disabled the chat extension to disable AI features
-					if (this.configurationService.getValue('chat.disableAIFeatures') !== true) {
+					if (
+						this.configurationService.getValue("chat.disableAIFeatures") !==
+						true
+					) {
 						// Honor that choice by disabling AI features
-						this.logService.debug('Disabling AI features because builtin chat extension is disabled');
-						this.configurationService.updateValue('chat.disableAIFeatures', true)
-							.catch(err => this.logService.error('Failed to update chat.disableAIFeatures setting during builtin chat extension enablement migration', err));
+						this.logService.debug(
+							"Disabling AI features because builtin chat extension is disabled",
+						);
+						this.configurationService
+							.updateValue("chat.disableAIFeatures", true)
+							.catch((err) =>
+								this.logService.error(
+									"Failed to update chat.disableAIFeatures setting during builtin chat extension enablement migration",
+									err,
+								),
+							);
 					}
 				}
 			} else {
 				try {
 					// User has not used chat features before so avoid activating the chat extension by disabling it
-					this.logService.debug('Disabling builtin chat extension as chat set up is not completed');
+					this.logService.debug(
+						"Disabling builtin chat extension as chat set up is not completed",
+					);
 					this._disableExtension({ id: this._chatExtensionId });
 				} catch (error) {
-					this.logService.error('Failed to disable builtin chat extension during enablement migration', error);
+					this.logService.error(
+						"Failed to disable builtin chat extension during enablement migration",
+						error,
+					);
 				}
 			}
 		}
@@ -196,17 +364,39 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	}
 
 	getEnablementState(extension: IExtension): EnablementState {
-		return this._computeEnablementState(extension, this.extensionsManager.extensions, this.getWorkspaceType());
+		return this._computeEnablementState(
+			extension,
+			this.extensionsManager.extensions,
+			this.getWorkspaceType(),
+		);
 	}
 
-	getEnablementStates(extensions: IExtension[], workspaceTypeOverrides: Partial<WorkspaceType> = {}): EnablementState[] {
+	getEnablementStates(
+		extensions: IExtension[],
+		workspaceTypeOverrides: Partial<WorkspaceType> = {},
+	): EnablementState[] {
 		const extensionsEnablements = new Map<IExtension, EnablementState>();
-		const workspaceType = { ...this.getWorkspaceType(), ...workspaceTypeOverrides };
-		return extensions.map(extension => this._computeEnablementState(extension, extensions, workspaceType, extensionsEnablements));
+		const workspaceType = {
+			...this.getWorkspaceType(),
+			...workspaceTypeOverrides,
+		};
+		return extensions.map((extension) =>
+			this._computeEnablementState(
+				extension,
+				extensions,
+				workspaceType,
+				extensionsEnablements,
+			),
+		);
 	}
 
-	getDependenciesEnablementStates(extension: IExtension): [IExtension, EnablementState][] {
-		return getExtensionDependencies(this.extensionsManager.extensions, extension).map(e => [e, this.getEnablementState(e)]);
+	getDependenciesEnablementStates(
+		extension: IExtension,
+	): [IExtension, EnablementState][] {
+		return getExtensionDependencies(
+			this.extensionsManager.extensions,
+			extension,
+		).map((e) => [e, this.getEnablementState(e)]);
 	}
 
 	canChangeEnablement(extension: IExtension): boolean {
@@ -231,68 +421,174 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		}
 	}
 
-	private throwErrorIfCannotChangeEnablement(extension: IExtension, donotCheckDependencies?: boolean): void {
+	private throwErrorIfCannotChangeEnablement(
+		extension: IExtension,
+		donotCheckDependencies?: boolean,
+	): void {
 		if (isLanguagePackExtension(extension.manifest)) {
-			throw new Error(localize('cannot disable language pack extension', "Cannot change enablement of {0} extension because it contributes language packs.", extension.manifest.displayName || extension.identifier.id));
+			throw new Error(
+				localize(
+					"cannot disable language pack extension",
+					"Cannot change enablement of {0} extension because it contributes language packs.",
+					extension.manifest.displayName || extension.identifier.id,
+				),
+			);
 		}
 
-		if (this.userDataSyncEnablementService.isEnabled() && this.userDataSyncAccountService.account &&
-			isAuthenticationProviderExtension(extension.manifest) && extension.manifest.contributes!.authentication!.some(a => a.id === this.userDataSyncAccountService.account!.authenticationProviderId)) {
-			throw new Error(localize('cannot disable auth extension', "Cannot change enablement {0} extension because Settings Sync depends on it.", extension.manifest.displayName || extension.identifier.id));
+		if (
+			this.userDataSyncEnablementService.isEnabled() &&
+			this.userDataSyncAccountService.account &&
+			isAuthenticationProviderExtension(extension.manifest) &&
+			extension.manifest.contributes!.authentication!.some(
+				(a) =>
+					a.id ===
+					this.userDataSyncAccountService.account!.authenticationProviderId,
+			)
+		) {
+			throw new Error(
+				localize(
+					"cannot disable auth extension",
+					"Cannot change enablement {0} extension because Settings Sync depends on it.",
+					extension.manifest.displayName || extension.identifier.id,
+				),
+			);
 		}
 
 		if (this._isEnabledInEnv(extension)) {
-			throw new Error(localize('cannot change enablement environment', "Cannot change enablement of {0} extension because it is enabled in environment", extension.manifest.displayName || extension.identifier.id));
+			throw new Error(
+				localize(
+					"cannot change enablement environment",
+					"Cannot change enablement of {0} extension because it is enabled in environment",
+					extension.manifest.displayName || extension.identifier.id,
+				),
+			);
 		}
 
-		this.throwErrorIfEnablementStateCannotBeChanged(extension, this.getEnablementState(extension), donotCheckDependencies);
+		this.throwErrorIfEnablementStateCannotBeChanged(
+			extension,
+			this.getEnablementState(extension),
+			donotCheckDependencies,
+		);
 	}
 
-	private throwErrorIfEnablementStateCannotBeChanged(extension: IExtension, enablementStateOfExtension: EnablementState, donotCheckDependencies?: boolean): void {
+	private throwErrorIfEnablementStateCannotBeChanged(
+		extension: IExtension,
+		enablementStateOfExtension: EnablementState,
+		donotCheckDependencies?: boolean,
+	): void {
 		switch (enablementStateOfExtension) {
 			case EnablementState.DisabledByEnvironment:
-				throw new Error(localize('cannot change disablement environment', "Cannot change enablement of {0} extension because it is disabled in environment", extension.manifest.displayName || extension.identifier.id));
+				throw new Error(
+					localize(
+						"cannot change disablement environment",
+						"Cannot change enablement of {0} extension because it is disabled in environment",
+						extension.manifest.displayName || extension.identifier.id,
+					),
+				);
 			case EnablementState.DisabledByMalicious:
-				throw new Error(localize('cannot change enablement malicious', "Cannot change enablement of {0} extension because it is malicious", extension.manifest.displayName || extension.identifier.id));
+				throw new Error(
+					localize(
+						"cannot change enablement malicious",
+						"Cannot change enablement of {0} extension because it is malicious",
+						extension.manifest.displayName || extension.identifier.id,
+					),
+				);
 			case EnablementState.DisabledByVirtualWorkspace:
-				throw new Error(localize('cannot change enablement virtual workspace', "Cannot change enablement of {0} extension because it does not support virtual workspaces", extension.manifest.displayName || extension.identifier.id));
+				throw new Error(
+					localize(
+						"cannot change enablement virtual workspace",
+						"Cannot change enablement of {0} extension because it does not support virtual workspaces",
+						extension.manifest.displayName || extension.identifier.id,
+					),
+				);
 			case EnablementState.DisabledByExtensionKind:
-				throw new Error(localize('cannot change enablement extension kind', "Cannot change enablement of {0} extension because of its extension kind", extension.manifest.displayName || extension.identifier.id));
+				throw new Error(
+					localize(
+						"cannot change enablement extension kind",
+						"Cannot change enablement of {0} extension because of its extension kind",
+						extension.manifest.displayName || extension.identifier.id,
+					),
+				);
 			case EnablementState.DisabledByAllowlist:
-				throw new Error(localize('cannot change disallowed extension enablement', "Cannot change enablement of {0} extension because it is disallowed", extension.manifest.displayName || extension.identifier.id));
+				throw new Error(
+					localize(
+						"cannot change disallowed extension enablement",
+						"Cannot change enablement of {0} extension because it is disallowed",
+						extension.manifest.displayName || extension.identifier.id,
+					),
+				);
 			case EnablementState.DisabledByInvalidExtension:
-				throw new Error(localize('cannot change invalid extension enablement', "Cannot change enablement of {0} extension because of it is invalid", extension.manifest.displayName || extension.identifier.id));
+				throw new Error(
+					localize(
+						"cannot change invalid extension enablement",
+						"Cannot change enablement of {0} extension because of it is invalid",
+						extension.manifest.displayName || extension.identifier.id,
+					),
+				);
 			case EnablementState.DisabledByExtensionDependency:
 				if (donotCheckDependencies) {
 					break;
 				}
 				// Can be changed only when all its dependencies enablements can be changed
-				for (const dependency of getExtensionDependencies(this.extensionsManager.extensions, extension)) {
+				for (const dependency of getExtensionDependencies(
+					this.extensionsManager.extensions,
+					extension,
+				)) {
 					if (this.isEnabled(dependency)) {
 						continue;
 					}
-					throw new Error(localize('cannot change enablement dependency', "Cannot enable '{0}' extension because it depends on '{1}' extension that cannot be enabled", extension.manifest.displayName || extension.identifier.id, dependency.manifest.displayName || dependency.identifier.id));
+					throw new Error(
+						localize(
+							"cannot change enablement dependency",
+							"Cannot enable '{0}' extension because it depends on '{1}' extension that cannot be enabled",
+							extension.manifest.displayName || extension.identifier.id,
+							dependency.manifest.displayName || dependency.identifier.id,
+						),
+					);
 				}
 		}
 	}
 
-	private throwErrorIfCannotChangeWorkspaceEnablement(extension: IExtension): void {
+	private throwErrorIfCannotChangeWorkspaceEnablement(
+		extension: IExtension,
+	): void {
 		if (!this.hasWorkspace) {
-			throw new Error(localize('noWorkspace', "No workspace."));
+			throw new Error(localize("noWorkspace", "No workspace."));
 		}
 		if (isAuthenticationProviderExtension(extension.manifest)) {
-			throw new Error(localize('cannot disable auth extension in workspace', "Cannot change enablement of {0} extension in workspace because it contributes authentication providers", extension.manifest.displayName || extension.identifier.id));
+			throw new Error(
+				localize(
+					"cannot disable auth extension in workspace",
+					"Cannot change enablement of {0} extension in workspace because it contributes authentication providers",
+					extension.manifest.displayName || extension.identifier.id,
+				),
+			);
 		}
 	}
 
-	async setEnablement(extensions: IExtension[], newState: EnablementState): Promise<boolean[]> {
+	async setEnablement(
+		extensions: IExtension[],
+		newState: EnablementState,
+	): Promise<boolean[]> {
 		await this.extensionsManager.whenInitialized();
 
-		if (newState === EnablementState.EnabledGlobally || newState === EnablementState.EnabledWorkspace) {
-			extensions.push(...this.getExtensionsToEnableRecursively(extensions, this.extensionsManager.extensions, newState, { dependencies: true, pack: true }));
+		if (
+			newState === EnablementState.EnabledGlobally ||
+			newState === EnablementState.EnabledWorkspace
+		) {
+			extensions.push(
+				...this.getExtensionsToEnableRecursively(
+					extensions,
+					this.extensionsManager.extensions,
+					newState,
+					{ dependencies: true, pack: true },
+				),
+			);
 		}
 
-		const workspace = newState === EnablementState.DisabledWorkspace || newState === EnablementState.EnabledWorkspace;
+		const workspace =
+			newState === EnablementState.DisabledWorkspace ||
+			newState === EnablementState.EnabledWorkspace;
 		for (const extension of extensions) {
 			if (workspace) {
 				this.throwErrorIfCannotChangeWorkspaceEnablement(extension);
@@ -304,11 +600,18 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		const result: boolean[] = [];
 		for (const extension of extensions) {
 			const enablementState = this.getEnablementState(extension);
-			if (enablementState === EnablementState.DisabledByTrustRequirement
+			if (
+				enablementState === EnablementState.DisabledByTrustRequirement ||
 				/* All its disabled dependencies are disabled by Trust Requirement */
-				|| (enablementState === EnablementState.DisabledByExtensionDependency && this.getDependenciesEnablementStates(extension).every(([, e]) => this.isEnabledEnablementState(e) || e === EnablementState.DisabledByTrustRequirement))
+				(enablementState === EnablementState.DisabledByExtensionDependency &&
+					this.getDependenciesEnablementStates(extension).every(
+						([, e]) =>
+							this.isEnabledEnablementState(e) ||
+							e === EnablementState.DisabledByTrustRequirement,
+					))
 			) {
-				const trustState = await this.workspaceTrustRequestService.requestWorkspaceTrust();
+				const trustState =
+					await this.workspaceTrustRequestService.requestWorkspaceTrust();
 				result.push(trustState ?? false);
 			} else {
 				result.push(await this._setUserEnablementState(extension, newState));
@@ -322,12 +625,18 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return result;
 	}
 
-	private getExtensionsToEnableRecursively(extensions: IExtension[], allExtensions: ReadonlyArray<IExtension>, enablementState: EnablementState, options: { dependencies: boolean; pack: boolean }, checked: IExtension[] = []): IExtension[] {
+	private getExtensionsToEnableRecursively(
+		extensions: IExtension[],
+		allExtensions: ReadonlyArray<IExtension>,
+		enablementState: EnablementState,
+		options: { dependencies: boolean; pack: boolean },
+		checked: IExtension[] = [],
+	): IExtension[] {
 		if (!options.dependencies && !options.pack) {
 			return [];
 		}
 
-		const toCheck = extensions.filter(e => checked.indexOf(e) === -1);
+		const toCheck = extensions.filter((e) => checked.indexOf(e) === -1);
 		if (!toCheck.length) {
 			return [];
 		}
@@ -339,7 +648,11 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		const extensionsToEnable: IExtension[] = [];
 		for (const extension of allExtensions) {
 			// Extension is already checked
-			if (checked.some(e => areSameExtensions(e.identifier, extension.identifier))) {
+			if (
+				checked.some((e) =>
+					areSameExtensions(e.identifier, extension.identifier),
+				)
+			) {
 				continue;
 			}
 
@@ -350,16 +663,29 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 			}
 
 			// Skip if dependency extension is disabled by extension kind
-			if (enablementStateOfExtension === EnablementState.DisabledByExtensionKind) {
+			if (
+				enablementStateOfExtension === EnablementState.DisabledByExtensionKind
+			) {
 				continue;
 			}
 
 			// Check if the extension is a dependency or in extension pack
-			if (extensions.some(e =>
-				(options.dependencies && e.manifest.extensionDependencies?.some(id => areSameExtensions({ id }, extension.identifier)))
-				|| (options.pack && e.manifest.extensionPack?.some(id => areSameExtensions({ id }, extension.identifier))))) {
-
-				const index = extensionsToEnable.findIndex(e => areSameExtensions(e.identifier, extension.identifier));
+			if (
+				extensions.some(
+					(e) =>
+						(options.dependencies &&
+							e.manifest.extensionDependencies?.some((id) =>
+								areSameExtensions({ id }, extension.identifier),
+							)) ||
+						(options.pack &&
+							e.manifest.extensionPack?.some((id) =>
+								areSameExtensions({ id }, extension.identifier),
+							)),
+				)
+			) {
+				const index = extensionsToEnable.findIndex((e) =>
+					areSameExtensions(e.identifier, extension.identifier),
+				);
 
 				// Extension is not added to the disablement list so add it
 				if (index === -1) {
@@ -370,22 +696,38 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 				else {
 					try {
 						// Replace only if the enablement state can be changed
-						this.throwErrorIfEnablementStateCannotBeChanged(extension, enablementStateOfExtension, true);
+						this.throwErrorIfEnablementStateCannotBeChanged(
+							extension,
+							enablementStateOfExtension,
+							true,
+						);
 						extensionsToEnable.splice(index, 1, extension);
-					} catch (error) { /*Do not add*/ }
+					} catch (error) {
+						/*Do not add*/
+					}
 				}
 			}
 		}
 
 		if (extensionsToEnable.length) {
-			extensionsToEnable.push(...this.getExtensionsToEnableRecursively(extensionsToEnable, allExtensions, enablementState, options, checked));
+			extensionsToEnable.push(
+				...this.getExtensionsToEnableRecursively(
+					extensionsToEnable,
+					allExtensions,
+					enablementState,
+					options,
+					checked,
+				),
+			);
 		}
 
 		return extensionsToEnable;
 	}
 
-	private _setUserEnablementState(extension: IExtension, newState: EnablementState): Promise<boolean> {
-
+	private _setUserEnablementState(
+		extension: IExtension,
+		newState: EnablementState,
+	): Promise<boolean> {
 		const currentState = this._getUserEnablementState(extension.identifier);
 
 		if (currentState === newState) {
@@ -416,15 +758,25 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	}
 
 	isEnabledEnablementState(enablementState: EnablementState): boolean {
-		return enablementState === EnablementState.EnabledByEnvironment || enablementState === EnablementState.EnabledWorkspace || enablementState === EnablementState.EnabledGlobally;
+		return (
+			enablementState === EnablementState.EnabledByEnvironment ||
+			enablementState === EnablementState.EnabledWorkspace ||
+			enablementState === EnablementState.EnabledGlobally
+		);
 	}
 
 	isDisabledGlobally(extension: IExtension): boolean {
 		return this._isDisabledGlobally(extension.identifier);
 	}
 
-	private _computeEnablementState(extension: IExtension, extensions: ReadonlyArray<IExtension>, workspaceType: WorkspaceType, computedEnablementStates?: Map<IExtension, EnablementState>): EnablementState {
-		computedEnablementStates = computedEnablementStates ?? new Map<IExtension, EnablementState>();
+	private _computeEnablementState(
+		extension: IExtension,
+		extensions: ReadonlyArray<IExtension>,
+		workspaceType: WorkspaceType,
+		computedEnablementStates?: Map<IExtension, EnablementState>,
+	): EnablementState {
+		computedEnablementStates =
+			computedEnablementStates ?? new Map<IExtension, EnablementState>();
 		let enablementState = computedEnablementStates.get(extension);
 		if (enablementState !== undefined) {
 			return enablementState;
@@ -440,51 +792,46 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		enablementState = this._getUserEnablementState(extension.identifier);
 		const isEnabled = this.isEnabledEnablementState(enablementState);
 
-		if (isMalicious(extension.identifier, this.getMaliciousExtensionsForCheck())) {
+		if (
+			isMalicious(extension.identifier, this.getMaliciousExtensionsForCheck())
+		) {
 			enablementState = EnablementState.DisabledByMalicious;
-		}
-
-		else if (isEnabled && extension.type === ExtensionType.User && this.allowedExtensionsService.isAllowed(extension) !== true) {
+		} else if (
+			isEnabled &&
+			extension.type === ExtensionType.User &&
+			this.allowedExtensionsService.isAllowed(extension) !== true
+		) {
 			enablementState = EnablementState.DisabledByAllowlist;
-		}
-
-		else if (isEnabled && !extension.isValid) {
+		} else if (isEnabled && !extension.isValid) {
 			enablementState = EnablementState.DisabledByInvalidExtension;
-		}
-
-		else if (this.extensionBisectService.isDisabledByBisect(extension)) {
+		} else if (this.extensionBisectService.isDisabledByBisect(extension)) {
 			enablementState = EnablementState.DisabledByEnvironment;
-		}
-
-		else if (this._isDisabledInEnv(extension)) {
+		} else if (this._isDisabledInEnv(extension)) {
 			enablementState = EnablementState.DisabledByEnvironment;
-		}
-
-		else if (this._isDisabledByVirtualWorkspace(extension, workspaceType)) {
+		} else if (this._isDisabledByVirtualWorkspace(extension, workspaceType)) {
 			enablementState = EnablementState.DisabledByVirtualWorkspace;
-		}
-
-		else if (isEnabled && this._isDisabledByWorkspaceTrust(extension, workspaceType)) {
+		} else if (
+			isEnabled &&
+			this._isDisabledByWorkspaceTrust(extension, workspaceType)
+		) {
 			enablementState = EnablementState.DisabledByTrustRequirement;
-		}
-
-		else if (this._isDisabledByExtensionKind(extension)) {
+		} else if (this._isDisabledByExtensionKind(extension)) {
 			enablementState = EnablementState.DisabledByExtensionKind;
-		}
-
-		else if (this._isDisabledBySessionsWindow(extension)) {
+		} else if (this._isDisabledBySessionsWindow(extension)) {
 			enablementState = EnablementState.DisabledByEnvironment;
-		}
-
-		else if (isEnabled && this._isDisabledByExtensionDependency(extension, extensions, workspaceType, computedEnablementStates)) {
+		} else if (
+			isEnabled &&
+			this._isDisabledByExtensionDependency(
+				extension,
+				extensions,
+				workspaceType,
+				computedEnablementStates,
+			)
+		) {
 			enablementState = EnablementState.DisabledByExtensionDependency;
-		}
-
-		else if (this._isDisabledByUnification(extension.identifier)) {
+		} else if (this._isDisabledByUnification(extension.identifier)) {
 			enablementState = EnablementState.DisabledByUnification;
-		}
-
-		else if (!isEnabled && this._isEnabledInEnv(extension)) {
+		} else if (!isEnabled && this._isEnabledInEnv(extension)) {
 			enablementState = EnablementState.EnabledByEnvironment;
 		}
 
@@ -494,12 +841,20 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 
 	private _isDisabledInEnv(extension: IExtension): boolean {
 		if (this.allUserExtensionsDisabled) {
-			return !extension.isBuiltin && !isResolverExtension(extension.manifest, this.environmentService.remoteAuthority);
+			return (
+				!extension.isBuiltin &&
+				!isResolverExtension(
+					extension.manifest,
+					this.environmentService.remoteAuthority,
+				)
+			);
 		}
 
 		const disabledExtensions = this.environmentService.disableExtensions;
 		if (Array.isArray(disabledExtensions)) {
-			return disabledExtensions.some(id => areSameExtensions({ id }, extension.identifier));
+			return disabledExtensions.some((id) =>
+				areSameExtensions({ id }, extension.identifier),
+			);
 		}
 
 		// Check if this is the better merge extension which was migrated to a built-in extension
@@ -513,24 +868,41 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	private _isEnabledInEnv(extension: IExtension): boolean {
 		const enabledExtensions = this.environmentService.enableExtensions;
 		if (Array.isArray(enabledExtensions)) {
-			return enabledExtensions.some(id => areSameExtensions({ id }, extension.identifier));
+			return enabledExtensions.some((id) =>
+				areSameExtensions({ id }, extension.identifier),
+			);
 		}
 		return false;
 	}
 
-	private _isDisabledByVirtualWorkspace(extension: IExtension, workspaceType: WorkspaceType): boolean {
+	private _isDisabledByVirtualWorkspace(
+		extension: IExtension,
+		workspaceType: WorkspaceType,
+	): boolean {
 		// Not a virtual workspace
 		if (!workspaceType.virtual) {
 			return false;
 		}
 
 		// Supports virtual workspace
-		if (this.extensionManifestPropertiesService.getExtensionVirtualWorkspaceSupportType(extension.manifest) !== false) {
+		if (
+			this.extensionManifestPropertiesService.getExtensionVirtualWorkspaceSupportType(
+				extension.manifest,
+			) !== false
+		) {
 			return false;
 		}
 
 		// Web extension from web extension management server
-		if (this.extensionManagementServerService.getExtensionManagementServer(extension) === this.extensionManagementServerService.webExtensionManagementServer && this.extensionManifestPropertiesService.canExecuteOnWeb(extension.manifest)) {
+		if (
+			this.extensionManagementServerService.getExtensionManagementServer(
+				extension,
+			) ===
+				this.extensionManagementServerService.webExtensionManagementServer &&
+			this.extensionManifestPropertiesService.canExecuteOnWeb(
+				extension.manifest,
+			)
+		) {
 			return false;
 		}
 
@@ -538,27 +910,47 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	}
 
 	private _isDisabledByExtensionKind(extension: IExtension): boolean {
-		if (this.extensionManagementServerService.remoteExtensionManagementServer || this.extensionManagementServerService.webExtensionManagementServer) {
-			const installLocation = this.extensionManagementServerService.getExtensionInstallLocation(extension);
-			for (const extensionKind of this.extensionManifestPropertiesService.getExtensionKind(extension.manifest)) {
-				if (extensionKind === 'ui') {
+		if (
+			this.extensionManagementServerService.remoteExtensionManagementServer ||
+			this.extensionManagementServerService.webExtensionManagementServer
+		) {
+			const installLocation =
+				this.extensionManagementServerService.getExtensionInstallLocation(
+					extension,
+				);
+			for (const extensionKind of this.extensionManifestPropertiesService.getExtensionKind(
+				extension.manifest,
+			)) {
+				if (extensionKind === "ui") {
 					if (installLocation === ExtensionInstallLocation.Local) {
 						return false;
 					}
 				}
-				if (extensionKind === 'workspace') {
+				if (extensionKind === "workspace") {
 					if (installLocation === ExtensionInstallLocation.Remote) {
 						return false;
 					}
 				}
-				if (extensionKind === 'web') {
-					if (this.extensionManagementServerService.webExtensionManagementServer /* web */) {
-						if (installLocation === ExtensionInstallLocation.Web || installLocation === ExtensionInstallLocation.Remote) {
+				if (extensionKind === "web") {
+					if (
+						this.extensionManagementServerService
+							.webExtensionManagementServer /* web */
+					) {
+						if (
+							installLocation === ExtensionInstallLocation.Web ||
+							installLocation === ExtensionInstallLocation.Remote
+						) {
 							return false;
 						}
 					} else if (installLocation === ExtensionInstallLocation.Local) {
-						const enableLocalWebWorker = this.configurationService.getValue<WebWorkerExtHostConfigValue>(webWorkerExtHostConfig);
-						if (enableLocalWebWorker === true || enableLocalWebWorker === 'auto') {
+						const enableLocalWebWorker =
+							this.configurationService.getValue<WebWorkerExtHostConfigValue>(
+								webWorkerExtHostConfig,
+							);
+						if (
+							enableLocalWebWorker === true ||
+							enableLocalWebWorker === "auto"
+						) {
 							// Web extensions are enabled on all configurations
 							return false;
 						}
@@ -570,7 +962,10 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return false;
 	}
 
-	private _isDisabledByWorkspaceTrust(extension: IExtension, workspaceType: WorkspaceType): boolean {
+	private _isDisabledByWorkspaceTrust(
+		extension: IExtension,
+		workspaceType: WorkspaceType,
+	): boolean {
 		if (workspaceType.trusted) {
 			return false;
 		}
@@ -579,19 +974,38 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 			return true;
 		}
 
-		return this.extensionManifestPropertiesService.getExtensionUntrustedWorkspaceSupportType(extension.manifest) === false;
+		return (
+			this.extensionManifestPropertiesService.getExtensionUntrustedWorkspaceSupportType(
+				extension.manifest,
+			) === false
+		);
 	}
 
-	private _isDisabledByExtensionDependency(extension: IExtension, extensions: ReadonlyArray<IExtension>, workspaceType: WorkspaceType, computedEnablementStates: Map<IExtension, EnablementState>): boolean {
-
+	private _isDisabledByExtensionDependency(
+		extension: IExtension,
+		extensions: ReadonlyArray<IExtension>,
+		workspaceType: WorkspaceType,
+		computedEnablementStates: Map<IExtension, EnablementState>,
+	): boolean {
 		if (!extension.manifest.extensionDependencies) {
 			return false;
 		}
 
 		// Find dependency that is from the same server or does not exports any API
-		const dependencyExtensions = extensions.filter(e =>
-			extension.manifest.extensionDependencies?.some(id => areSameExtensions(e.identifier, { id })
-				&& (this.extensionManagementServerService.getExtensionManagementServer(e) === this.extensionManagementServerService.getExtensionManagementServer(extension) || ((e.manifest.main || e.manifest.browser) && e.manifest.api === 'none'))));
+		const dependencyExtensions = extensions.filter((e) =>
+			extension.manifest.extensionDependencies?.some(
+				(id) =>
+					areSameExtensions(e.identifier, { id }) &&
+					(this.extensionManagementServerService.getExtensionManagementServer(
+						e,
+					) ===
+						this.extensionManagementServerService.getExtensionManagementServer(
+							extension,
+						) ||
+						((e.manifest.main || e.manifest.browser) &&
+							e.manifest.api === "none")),
+			),
+		);
 
 		if (!dependencyExtensions.length) {
 			return false;
@@ -604,8 +1018,16 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		}
 		try {
 			for (const dependencyExtension of dependencyExtensions) {
-				const enablementState = this._computeEnablementState(dependencyExtension, extensions, workspaceType, computedEnablementStates);
-				if (!this.isEnabledEnablementState(enablementState) && enablementState !== EnablementState.DisabledByExtensionKind) {
+				const enablementState = this._computeEnablementState(
+					dependencyExtension,
+					extensions,
+					workspaceType,
+					computedEnablementStates,
+				);
+				if (
+					!this.isEnabledEnablementState(enablementState) &&
+					enablementState !== EnablementState.DisabledByExtensionKind
+				) {
 					return true;
 				}
 			}
@@ -619,13 +1041,23 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return false;
 	}
 
-	private _getUserEnablementState(identifier: IExtensionIdentifier): EnablementState {
+	private _getUserEnablementState(
+		identifier: IExtensionIdentifier,
+	): EnablementState {
 		if (this.hasWorkspace) {
-			if (this._getWorkspaceEnabledExtensions().filter(e => areSameExtensions(e, identifier))[0]) {
+			if (
+				this._getWorkspaceEnabledExtensions().filter((e) =>
+					areSameExtensions(e, identifier),
+				)[0]
+			) {
 				return EnablementState.EnabledWorkspace;
 			}
 
-			if (this._getWorkspaceDisabledExtensions().filter(e => areSameExtensions(e, identifier))[0]) {
+			if (
+				this._getWorkspaceDisabledExtensions().filter((e) =>
+					areSameExtensions(e, identifier),
+				)[0]
+			) {
 				return EnablementState.DisabledWorkspace;
 			}
 		}
@@ -636,11 +1068,16 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	}
 
 	private _isDisabledGlobally(identifier: IExtensionIdentifier): boolean {
-		return this.globalExtensionEnablementService.getDisabledExtensions().some(e => areSameExtensions(e, identifier));
+		return this.globalExtensionEnablementService
+			.getDisabledExtensions()
+			.some((e) => areSameExtensions(e, identifier));
 	}
 
 	private _isDisabledByUnification(identifier: IExtensionIdentifier): boolean {
-		return this._extensionUnificationEnabled && identifier.id.toLowerCase() === this._completionsExtensionId;
+		return (
+			this._extensionUnificationEnabled &&
+			identifier.id.toLowerCase() === this._completionsExtensionId
+		);
 	}
 
 	private _isDisabledBySessionsWindow(extension: IExtension): boolean {
@@ -649,7 +1086,11 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		}
 
 		// Allow-listed extensions are always enabled in the sessions window.
-		if (this._sessionsWindowAllowedExtensions.has(extension.identifier.id.toLowerCase())) {
+		if (
+			this._sessionsWindowAllowedExtensions.has(
+				extension.identifier.id.toLowerCase(),
+			)
+		) {
 			return false;
 		}
 
@@ -660,26 +1101,41 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 			}
 
 			const contributes = extension.manifest.contributes;
-			if (contributes?.debuggers || contributes?.views || contributes?.viewsContainers || contributes?.walkthroughs) {
+			if (
+				contributes?.debuggers ||
+				contributes?.views ||
+				contributes?.viewsContainers ||
+				contributes?.walkthroughs
+			) {
 				return true;
 			}
 
 			return false;
 		}
 
-		return !this.extensionManifestPropertiesService.canExecuteOnSessionsWindow(extension.manifest);
+		return !this.extensionManifestPropertiesService.canExecuteOnSessionsWindow(
+			extension.manifest,
+		);
 	}
 
 	private _enableExtension(identifier: IExtensionIdentifier): Promise<boolean> {
 		this._removeFromWorkspaceDisabledExtensions(identifier);
 		this._removeFromWorkspaceEnabledExtensions(identifier);
-		return this.globalExtensionEnablementService.enableExtension(identifier, SOURCE);
+		return this.globalExtensionEnablementService.enableExtension(
+			identifier,
+			SOURCE,
+		);
 	}
 
-	private _disableExtension(identifier: IExtensionIdentifier): Promise<boolean> {
+	private _disableExtension(
+		identifier: IExtensionIdentifier,
+	): Promise<boolean> {
 		this._removeFromWorkspaceDisabledExtensions(identifier);
 		this._removeFromWorkspaceEnabledExtensions(identifier);
-		return this.globalExtensionEnablementService.disableExtension(identifier, SOURCE);
+		return this.globalExtensionEnablementService.disableExtension(
+			identifier,
+			SOURCE,
+		);
 	}
 
 	private _enableExtensionInWorkspace(identifier: IExtensionIdentifier): void {
@@ -692,12 +1148,14 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		this._removeFromWorkspaceEnabledExtensions(identifier);
 	}
 
-	private _addToWorkspaceDisabledExtensions(identifier: IExtensionIdentifier): Promise<boolean> {
+	private _addToWorkspaceDisabledExtensions(
+		identifier: IExtensionIdentifier,
+	): Promise<boolean> {
 		if (!this.hasWorkspace) {
 			return Promise.resolve(false);
 		}
 		const disabledExtensions = this._getWorkspaceDisabledExtensions();
-		if (disabledExtensions.every(e => !areSameExtensions(e, identifier))) {
+		if (disabledExtensions.every((e) => !areSameExtensions(e, identifier))) {
 			disabledExtensions.push(identifier);
 			this._setDisabledExtensions(disabledExtensions);
 			return Promise.resolve(true);
@@ -705,7 +1163,9 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return Promise.resolve(false);
 	}
 
-	private async _removeFromWorkspaceDisabledExtensions(identifier: IExtensionIdentifier): Promise<boolean> {
+	private async _removeFromWorkspaceDisabledExtensions(
+		identifier: IExtensionIdentifier,
+	): Promise<boolean> {
 		if (!this.hasWorkspace) {
 			return false;
 		}
@@ -721,12 +1181,14 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return false;
 	}
 
-	private _addToWorkspaceEnabledExtensions(identifier: IExtensionIdentifier): boolean {
+	private _addToWorkspaceEnabledExtensions(
+		identifier: IExtensionIdentifier,
+	): boolean {
 		if (!this.hasWorkspace) {
 			return false;
 		}
 		const enabledExtensions = this._getWorkspaceEnabledExtensions();
-		if (enabledExtensions.every(e => !areSameExtensions(e, identifier))) {
+		if (enabledExtensions.every((e) => !areSameExtensions(e, identifier))) {
 			enabledExtensions.push(identifier);
 			this._setEnabledExtensions(enabledExtensions);
 			return true;
@@ -734,7 +1196,9 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return false;
 	}
 
-	private _removeFromWorkspaceEnabledExtensions(identifier: IExtensionIdentifier): boolean {
+	private _removeFromWorkspaceEnabledExtensions(
+		identifier: IExtensionIdentifier,
+	): boolean {
 		if (!this.hasWorkspace) {
 			return false;
 		}
@@ -754,7 +1218,9 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return this._getExtensions(ENABLED_EXTENSIONS_STORAGE_PATH);
 	}
 
-	private _setEnabledExtensions(enabledExtensions: IExtensionIdentifier[]): void {
+	private _setEnabledExtensions(
+		enabledExtensions: IExtensionIdentifier[],
+	): void {
 		this._setExtensions(ENABLED_EXTENSIONS_STORAGE_PATH, enabledExtensions);
 	}
 
@@ -762,7 +1228,9 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return this._getExtensions(DISABLED_EXTENSIONS_STORAGE_PATH);
 	}
 
-	private _setDisabledExtensions(disabledExtensions: IExtensionIdentifier[]): void {
+	private _setDisabledExtensions(
+		disabledExtensions: IExtensionIdentifier[],
+	): void {
 		this._setExtensions(DISABLED_EXTENSIONS_STORAGE_PATH, disabledExtensions);
 	}
 
@@ -773,32 +1241,62 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		return this.storageManager.get(storageId, StorageScope.WORKSPACE);
 	}
 
-	private _setExtensions(storageId: string, extensions: IExtensionIdentifier[]): void {
+	private _setExtensions(
+		storageId: string,
+		extensions: IExtensionIdentifier[],
+	): void {
 		this.storageManager.set(storageId, extensions, StorageScope.WORKSPACE);
 	}
 
-	private async _onDidChangeGloballyDisabledExtensions(extensionIdentifiers: ReadonlyArray<IExtensionIdentifier>, source?: string): Promise<void> {
+	private async _onDidChangeGloballyDisabledExtensions(
+		extensionIdentifiers: ReadonlyArray<IExtensionIdentifier>,
+		source?: string,
+	): Promise<void> {
 		if (source !== SOURCE) {
 			await this.extensionsManager.whenInitialized();
-			const extensions = this.extensionsManager.extensions.filter(installedExtension => extensionIdentifiers.some(identifier => areSameExtensions(identifier, installedExtension.identifier)));
+			const extensions = this.extensionsManager.extensions.filter(
+				(installedExtension) =>
+					extensionIdentifiers.some((identifier) =>
+						areSameExtensions(identifier, installedExtension.identifier),
+					),
+			);
 			this._onEnablementChanged.fire(extensions);
 		}
 	}
 
-	private _onDidChangeExtensions(added: ReadonlyArray<IExtension>, removed: ReadonlyArray<IExtension>, isProfileSwitch: boolean): void {
-		const changedExtensions: IExtension[] = added.filter(e => !this.isEnabledEnablementState(this.getEnablementState(e)));
+	private _onDidChangeExtensions(
+		added: ReadonlyArray<IExtension>,
+		removed: ReadonlyArray<IExtension>,
+		isProfileSwitch: boolean,
+	): void {
+		const changedExtensions: IExtension[] = added.filter(
+			(e) => !this.isEnabledEnablementState(this.getEnablementState(e)),
+		);
 		const existingDisabledExtensions = this.extensionsDisabledExtensions;
-		this.extensionsDisabledExtensions = this.extensionsManager.extensions.filter(extension => {
-			const enablementState = this.getEnablementState(extension);
-			return enablementState === EnablementState.DisabledByExtensionDependency || enablementState === EnablementState.DisabledByAllowlist || enablementState === EnablementState.DisabledByMalicious;
-		});
+		this.extensionsDisabledExtensions =
+			this.extensionsManager.extensions.filter((extension) => {
+				const enablementState = this.getEnablementState(extension);
+				return (
+					enablementState === EnablementState.DisabledByExtensionDependency ||
+					enablementState === EnablementState.DisabledByAllowlist ||
+					enablementState === EnablementState.DisabledByMalicious
+				);
+			});
 		for (const extension of existingDisabledExtensions) {
-			if (this.extensionsDisabledExtensions.every(e => !areSameExtensions(e.identifier, extension.identifier))) {
+			if (
+				this.extensionsDisabledExtensions.every(
+					(e) => !areSameExtensions(e.identifier, extension.identifier),
+				)
+			) {
 				changedExtensions.push(extension);
 			}
 		}
 		for (const extension of this.extensionsDisabledExtensions) {
-			if (existingDisabledExtensions.every(e => !areSameExtensions(e.identifier, extension.identifier))) {
+			if (
+				existingDisabledExtensions.every(
+					(e) => !areSameExtensions(e.identifier, extension.identifier),
+				)
+			) {
 				changedExtensions.push(extension);
 			}
 		}
@@ -813,15 +1311,38 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	public async updateExtensionsEnablementsWhenWorkspaceTrustChanges(): Promise<void> {
 		await this.extensionsManager.whenInitialized();
 
-		const computeEnablementStates = (workspaceType: WorkspaceType): [IExtension, EnablementState][] => {
+		const computeEnablementStates = (
+			workspaceType: WorkspaceType,
+		): [IExtension, EnablementState][] => {
 			const extensionsEnablements = new Map<IExtension, EnablementState>();
-			return this.extensionsManager.extensions.map(extension => [extension, this._computeEnablementState(extension, this.extensionsManager.extensions, workspaceType, extensionsEnablements)]);
+			return this.extensionsManager.extensions.map((extension) => [
+				extension,
+				this._computeEnablementState(
+					extension,
+					this.extensionsManager.extensions,
+					workspaceType,
+					extensionsEnablements,
+				),
+			]);
 		};
 
 		const workspaceType = this.getWorkspaceType();
-		const enablementStatesWithTrustedWorkspace = computeEnablementStates({ ...workspaceType, trusted: true });
-		const enablementStatesWithUntrustedWorkspace = computeEnablementStates({ ...workspaceType, trusted: false });
-		const enablementChangedExtensionsBecauseOfTrust = enablementStatesWithTrustedWorkspace.filter(([, enablementState], index) => enablementState !== enablementStatesWithUntrustedWorkspace[index][1]).map(([extension]) => extension);
+		const enablementStatesWithTrustedWorkspace = computeEnablementStates({
+			...workspaceType,
+			trusted: true,
+		});
+		const enablementStatesWithUntrustedWorkspace = computeEnablementStates({
+			...workspaceType,
+			trusted: false,
+		});
+		const enablementChangedExtensionsBecauseOfTrust =
+			enablementStatesWithTrustedWorkspace
+				.filter(
+					([, enablementState], index) =>
+						enablementState !==
+						enablementStatesWithUntrustedWorkspace[index][1],
+				)
+				.map(([extension]) => extension);
 
 		if (enablementChangedExtensionsBecauseOfTrust.length) {
 			this._onEnablementChanged.fire(enablementChangedExtensionsBecauseOfTrust);
@@ -829,7 +1350,10 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 	}
 
 	private getWorkspaceType(): WorkspaceType {
-		return { trusted: this.workspaceTrustManagementService.isWorkspaceTrusted(), virtual: isVirtualWorkspace(this.contextService.getWorkspace()) };
+		return {
+			trusted: this.workspaceTrustManagementService.isWorkspaceTrusted(),
+			virtual: isVirtualWorkspace(this.contextService.getWorkspace()),
+		};
 	}
 
 	private _reset(extension: IExtensionIdentifier) {
@@ -840,14 +1364,19 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 
 	private loopCheckForMaliciousExtensions(): void {
 		this.checkForMaliciousExtensions()
-			.then(() => this.delayer.trigger(() => { }, 1000 * 60 * 5)) // every five minutes
+			.then(() => this.delayer.trigger(() => {}, 1000 * 60 * 5)) // every five minutes
 			.then(() => this.loopCheckForMaliciousExtensions());
 	}
 
 	private async checkForMaliciousExtensions(): Promise<void> {
 		try {
-			const extensionsControlManifest = await this.extensionManagementService.getExtensionsControlManifest();
-			const changed = this.storeMaliciousExtensions(extensionsControlManifest.malicious.map(({ extensionOrPublisher }) => extensionOrPublisher));
+			const extensionsControlManifest =
+				await this.extensionManagementService.getExtensionsControlManifest();
+			const changed = this.storeMaliciousExtensions(
+				extensionsControlManifest.malicious.map(
+					({ extensionOrPublisher }) => extensionOrPublisher,
+				),
+			);
 			if (changed) {
 				this._onDidChangeExtensions([], [], false);
 			}
@@ -856,46 +1385,74 @@ export class ExtensionEnablementService extends Disposable implements IWorkbench
 		}
 	}
 
-	private getMaliciousExtensions(): ReadonlyArray<IExtensionIdentifier | string> {
-		return this.storageService.getObject(MALICIOUS_EXTENSIONS_STORAGE_KEY, StorageScope.APPLICATION, []);
+	private getMaliciousExtensions(): ReadonlyArray<
+		IExtensionIdentifier | string
+	> {
+		return this.storageService.getObject(
+			MALICIOUS_EXTENSIONS_STORAGE_KEY,
+			StorageScope.APPLICATION,
+			[],
+		);
 	}
 
 	private getMaliciousExtensionsForCheck(): ReadonlyArray<MaliciousExtensionInfo> {
 		if (!this._maliciousExtensionsCache) {
-			this._maliciousExtensionsCache = this.getMaliciousExtensions().map(extensionOrPublisher => ({ extensionOrPublisher }));
+			this._maliciousExtensionsCache = this.getMaliciousExtensions().map(
+				(extensionOrPublisher) => ({ extensionOrPublisher }),
+			);
 		}
 		return this._maliciousExtensionsCache;
 	}
 
-	private storeMaliciousExtensions(extensions: ReadonlyArray<IExtensionIdentifier | string>): boolean {
+	private storeMaliciousExtensions(
+		extensions: ReadonlyArray<IExtensionIdentifier | string>,
+	): boolean {
 		const existing = this.getMaliciousExtensions();
-		if (equals(existing, extensions, (a, b) => !isString(a) && !isString(b) ? areSameExtensions(a, b) : a === b)) {
+		if (
+			equals(existing, extensions, (a, b) =>
+				!isString(a) && !isString(b) ? areSameExtensions(a, b) : a === b,
+			)
+		) {
 			return false;
 		}
 		this._maliciousExtensionsCache = undefined;
-		this.storageService.store(MALICIOUS_EXTENSIONS_STORAGE_KEY, JSON.stringify(extensions), StorageScope.APPLICATION, StorageTarget.MACHINE);
+		this.storageService.store(
+			MALICIOUS_EXTENSIONS_STORAGE_KEY,
+			JSON.stringify(extensions),
+			StorageScope.APPLICATION,
+			StorageTarget.MACHINE,
+		);
 		return true;
 	}
 }
 
 class ExtensionsManager extends Disposable {
-
 	private _extensions: IExtension[] = [];
-	get extensions(): readonly IExtension[] { return this._extensions; }
+	get extensions(): readonly IExtension[] {
+		return this._extensions;
+	}
 
-	private _onDidChangeExtensions = this._register(new Emitter<{ added: readonly IExtension[]; removed: readonly IExtension[]; readonly isProfileSwitch: boolean }>());
+	private _onDidChangeExtensions = this._register(
+		new Emitter<{
+			added: readonly IExtension[];
+			removed: readonly IExtension[];
+			readonly isProfileSwitch: boolean;
+		}>(),
+	);
 	readonly onDidChangeExtensions = this._onDidChangeExtensions.event;
 
 	private readonly initializePromise;
 	private disposed: boolean = false;
 
 	constructor(
-		@IWorkbenchExtensionManagementService private readonly extensionManagementService: IWorkbenchExtensionManagementService,
-		@IExtensionManagementServerService private readonly extensionManagementServerService: IExtensionManagementServerService,
-		@ILogService private readonly logService: ILogService
+		@IWorkbenchExtensionManagementService
+		private readonly extensionManagementService: IWorkbenchExtensionManagementService,
+		@IExtensionManagementServerService
+		private readonly extensionManagementServerService: IExtensionManagementServerService,
+		@ILogService private readonly logService: ILogService,
 	) {
 		super();
-		this._register(toDisposable(() => this.disposed = true));
+		this._register(toDisposable(() => (this.disposed = true)));
 		this.initializePromise = this.initialize();
 	}
 
@@ -906,31 +1463,76 @@ class ExtensionsManager extends Disposable {
 	private async initialize(): Promise<void> {
 		try {
 			this._extensions = [
-				...await this.extensionManagementService.getInstalled(),
-				...await this.extensionManagementService.getInstalledWorkspaceExtensions(true)
+				...(await this.extensionManagementService.getInstalled()),
+				...(await this.extensionManagementService.getInstalledWorkspaceExtensions(
+					true,
+				)),
 			];
 			if (this.disposed) {
 				return;
 			}
-			this._onDidChangeExtensions.fire({ added: this.extensions, removed: [], isProfileSwitch: false });
+			this._onDidChangeExtensions.fire({
+				added: this.extensions,
+				removed: [],
+				isProfileSwitch: false,
+			});
 		} catch (error) {
 			this.logService.error(error);
 		}
-		this._register(this.extensionManagementService.onDidInstallExtensions(e =>
-			this.updateExtensions(e.reduce<IExtension[]>((result, { local, operation }) => {
-				if (local && operation !== InstallOperation.Migrate) { result.push(local); } return result;
-			}, []), [], undefined, false)));
-		this._register(Event.filter(this.extensionManagementService.onDidUninstallExtension, (e => !e.error))(e => this.updateExtensions([], [e.identifier], e.server, false)));
-		this._register(this.extensionManagementService.onDidChangeProfile(({ added, removed, server }) => {
-			this.updateExtensions(added, removed.map(({ identifier }) => identifier), server, true);
-		}));
+		this._register(
+			this.extensionManagementService.onDidInstallExtensions((e) =>
+				this.updateExtensions(
+					e.reduce<IExtension[]>((result, { local, operation }) => {
+						if (local && operation !== InstallOperation.Migrate) {
+							result.push(local);
+						}
+						return result;
+					}, []),
+					[],
+					undefined,
+					false,
+				),
+			),
+		);
+		this._register(
+			Event.filter(
+				this.extensionManagementService.onDidUninstallExtension,
+				(e) => !e.error,
+			)((e) => this.updateExtensions([], [e.identifier], e.server, false)),
+		);
+		this._register(
+			this.extensionManagementService.onDidChangeProfile(
+				({ added, removed, server }) => {
+					this.updateExtensions(
+						added,
+						removed.map(({ identifier }) => identifier),
+						server,
+						true,
+					);
+				},
+			),
+		);
 	}
 
-	private updateExtensions(added: IExtension[], identifiers: IExtensionIdentifier[], server: IExtensionManagementServer | undefined, isProfileSwitch: boolean): void {
+	private updateExtensions(
+		added: IExtension[],
+		identifiers: IExtensionIdentifier[],
+		server: IExtensionManagementServer | undefined,
+		isProfileSwitch: boolean,
+	): void {
 		if (added.length) {
 			for (const extension of added) {
-				const extensionServer = this.extensionManagementServerService.getExtensionManagementServer(extension);
-				const index = this._extensions.findIndex(e => areSameExtensions(e.identifier, extension.identifier) && this.extensionManagementServerService.getExtensionManagementServer(e) === extensionServer);
+				const extensionServer =
+					this.extensionManagementServerService.getExtensionManagementServer(
+						extension,
+					);
+				const index = this._extensions.findIndex(
+					(e) =>
+						areSameExtensions(e.identifier, extension.identifier) &&
+						this.extensionManagementServerService.getExtensionManagementServer(
+							e,
+						) === extensionServer,
+				);
 				if (index !== -1) {
 					this._extensions.splice(index, 1);
 				}
@@ -939,7 +1541,13 @@ class ExtensionsManager extends Disposable {
 		}
 		const removed: IExtension[] = [];
 		for (const identifier of identifiers) {
-			const index = this._extensions.findIndex(e => areSameExtensions(e.identifier, identifier) && this.extensionManagementServerService.getExtensionManagementServer(e) === server);
+			const index = this._extensions.findIndex(
+				(e) =>
+					areSameExtensions(e.identifier, identifier) &&
+					this.extensionManagementServerService.getExtensionManagementServer(
+						e,
+					) === server,
+			);
 			if (index !== -1) {
 				removed.push(...this._extensions.splice(index, 1));
 			}
@@ -950,4 +1558,8 @@ class ExtensionsManager extends Disposable {
 	}
 }
 
-registerSingleton(IWorkbenchExtensionEnablementService, ExtensionEnablementService, InstantiationType.Delayed);
+registerSingleton(
+	IWorkbenchExtensionEnablementService,
+	ExtensionEnablementService,
+	InstantiationType.Delayed,
+);

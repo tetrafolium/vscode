@@ -8,7 +8,8 @@ import * as assert from 'assert';
 import { createServiceIdentifier } from '../../src/util/common/services';
 import { Lazy } from '../../src/util/vs/base/common/lazy';
 
-export const ITestSnapshots = createServiceIdentifier<ITestSnapshots>('ITestSnapshots');
+export const ITestSnapshots =
+	createServiceIdentifier<ITestSnapshots>('ITestSnapshots');
 
 export interface ITestSnapshots {
 	readonly _serviceBrand: undefined;
@@ -28,10 +29,13 @@ export class TestSnapshotsImpl implements ITestSnapshots {
 				} catch {
 					return false;
 				}
-			}
+			},
 		});
 
-		const name = this.runNumber !== undefined ? `${this.testName}-${this.runNumber}` : this.testName;
+		const name =
+			this.runNumber !== undefined
+				? `${this.testName}-${this.runNumber}`
+				: this.testName;
 		await client.startCurrentRun(this.filePath, name, {
 			updateSnapshot: 'new',
 			snapshotEnvironment: new NodeSnapshotEnvironment(),
@@ -44,8 +48,7 @@ export class TestSnapshotsImpl implements ITestSnapshots {
 		private readonly filePath: string,
 		private readonly testName: string,
 		private readonly runNumber?: number,
-	) { }
-
+	) {}
 
 	public async matches(value: unknown, message?: string): Promise<void> {
 		(await this.client.value).assert({

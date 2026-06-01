@@ -9,14 +9,21 @@ import type * as vscode from 'vscode';
 import { IChatEndpoint } from '../../../../../platform/networking/common/networking';
 import { Emitter } from '../../../../../util/vs/base/common/event';
 import { DisposableStore } from '../../../../../util/vs/base/common/lifecycle';
-import { constObservable, IObservable } from '../../../../../util/vs/base/common/observableInternal';
+import {
+	constObservable,
+	IObservable,
+} from '../../../../../util/vs/base/common/observableInternal';
 import { IInstantiationService } from '../../../../../util/vs/platform/instantiation/common/instantiation';
 import { LanguageModelTextPart } from '../../../../../vscodeTypes';
 import { createExtensionUnitTestingServices } from '../../../../test/node/services';
 import { IAnswerResult } from '../../../../tools/common/askQuestionsTypes';
 import { ToolName } from '../../../../tools/common/toolNames';
 import { ICopilotTool } from '../../../../tools/common/toolsRegistry';
-import { IOnWillInvokeToolEvent, IToolsService, IToolValidationResult } from '../../../../tools/common/toolsService';
+import {
+	IOnWillInvokeToolEvent,
+	IToolsService,
+	IToolValidationResult,
+} from '../../../../tools/common/toolsService';
 import { ClaudeToolPermissionContext } from '../../common/claudeToolPermission';
 import { ClaudeToolNames } from '../../common/claudeTools';
 import { AskUserQuestionHandler } from '../../common/toolPermissionHandlers/askUserQuestionHandler';
@@ -28,7 +35,12 @@ class MockToolsService implements IToolsService {
 	readonly onWillInvokeTool = this._onWillInvokeTool.event;
 	readonly tools: ReadonlyArray<vscode.LanguageModelToolInformation> = [];
 	readonly copilotTools = new Map<ToolName, ICopilotTool<unknown>>();
-	modelSpecificTools: IObservable<{ definition: vscode.LanguageModelToolDefinition; tool: ICopilotTool<unknown> }[]> = constObservable([]);
+	modelSpecificTools: IObservable<
+		{
+			definition: vscode.LanguageModelToolDefinition;
+			tool: ICopilotTool<unknown>;
+		}[]
+	> = constObservable([]);
 
 	private _result: vscode.LanguageModelToolResult2 = { content: [] };
 	private _shouldThrow = false;
@@ -36,7 +48,7 @@ class MockToolsService implements IToolsService {
 
 	setResult(answerResult: IAnswerResult): void {
 		this._result = {
-			content: [new LanguageModelTextPart(JSON.stringify(answerResult))]
+			content: [new LanguageModelTextPart(JSON.stringify(answerResult))],
 		};
 	}
 
@@ -52,7 +64,10 @@ class MockToolsService implements IToolsService {
 		return this._invokeToolCalls;
 	}
 
-	async invokeTool(name: string, options: vscode.LanguageModelToolInvocationOptions<unknown>): Promise<vscode.LanguageModelToolResult2> {
+	async invokeTool(
+		name: string,
+		options: vscode.LanguageModelToolInvocationOptions<unknown>,
+	): Promise<vscode.LanguageModelToolResult2> {
 		this._invokeToolCalls.push({ name, input: options.input });
 		if (this._shouldThrow) {
 			throw new Error('Tool invocation failed');
@@ -60,25 +75,45 @@ class MockToolsService implements IToolsService {
 		return this._result;
 	}
 
-	invokeToolWithEndpoint(name: string, options: vscode.LanguageModelToolInvocationOptions<unknown>, _endpoint: IChatEndpoint | undefined): Thenable<vscode.LanguageModelToolResult2> {
+	invokeToolWithEndpoint(
+		name: string,
+		options: vscode.LanguageModelToolInvocationOptions<unknown>,
+		_endpoint: IChatEndpoint | undefined,
+	): Thenable<vscode.LanguageModelToolResult2> {
 		return this.invokeTool(name, options);
 	}
 
-	getCopilotTool(): ICopilotTool<unknown> | undefined { return undefined; }
-	getTool(): vscode.LanguageModelToolInformation | undefined { return undefined; }
-	getToolByToolReferenceName(): vscode.LanguageModelToolInformation | undefined { return undefined; }
-	validateToolInput(): IToolValidationResult { return { inputObj: {} }; }
-	validateToolName(): string | undefined { return undefined; }
-	getEnabledTools(): vscode.LanguageModelToolInformation[] { return []; }
+	getCopilotTool(): ICopilotTool<unknown> | undefined {
+		return undefined;
+	}
+	getTool(): vscode.LanguageModelToolInformation | undefined {
+		return undefined;
+	}
+	getToolByToolReferenceName():
+		| vscode.LanguageModelToolInformation
+		| undefined {
+		return undefined;
+	}
+	validateToolInput(): IToolValidationResult {
+		return { inputObj: {} };
+	}
+	validateToolName(): string | undefined {
+		return undefined;
+	}
+	getEnabledTools(): vscode.LanguageModelToolInformation[] {
+		return [];
+	}
 }
 
 function createMockContext(): ClaudeToolPermissionContext {
 	return {
-		toolInvocationToken: {} as vscode.ChatParticipantToolToken
+		toolInvocationToken: {} as vscode.ChatParticipantToolToken,
 	};
 }
 
-function createInput(questions: AskUserQuestionInput['questions']): AskUserQuestionInput {
+function createInput(
+	questions: AskUserQuestionInput['questions'],
+): AskUserQuestionInput {
 	return { questions } as AskUserQuestionInput;
 }
 
@@ -89,7 +124,9 @@ describe('AskUserQuestionHandler', () => {
 
 	beforeEach(() => {
 		store = new DisposableStore();
-		const serviceCollection = store.add(createExtensionUnitTestingServices());
+		const serviceCollection = store.add(
+			createExtensionUnitTestingServices(),
+		);
 
 		mockToolsService = new MockToolsService();
 		serviceCollection.set(IToolsService, mockToolsService);
@@ -100,70 +137,119 @@ describe('AskUserQuestionHandler', () => {
 	});
 
 	it('invokes CoreAskQuestions tool with input', async () => {
-		const input = createInput([{
-			question: 'Which framework?',
-			header: 'Framework',
-			options: [{ label: 'React', description: '' }, { label: 'Vue', description: '' }],
-			multiSelect: false,
-		}]);
+		const input = createInput([
+			{
+				question: 'Which framework?',
+				header: 'Framework',
+				options: [
+					{ label: 'React', description: '' },
+					{ label: 'Vue', description: '' },
+				],
+				multiSelect: false,
+			},
+		]);
 
 		mockToolsService.setResult({
 			answers: {
-				Framework: { selected: ['React'], freeText: null, skipped: false }
-			}
+				Framework: {
+					selected: ['React'],
+					freeText: null,
+					skipped: false,
+				},
+			},
 		});
 
-		await handler.handle(ClaudeToolNames.AskUserQuestion, input, createMockContext());
+		await handler.handle(
+			ClaudeToolNames.AskUserQuestion,
+			input,
+			createMockContext(),
+		);
 
 		expect(mockToolsService.invokeToolCalls.length).toBe(1);
-		expect(mockToolsService.invokeToolCalls[0].name).toBe(ToolName.CoreAskQuestions);
+		expect(mockToolsService.invokeToolCalls[0].name).toBe(
+			ToolName.CoreAskQuestions,
+		);
 		expect(mockToolsService.invokeToolCalls[0].input).toBe(input);
 	});
 
 	it('transforms answers from header-keyed to question-text-keyed', async () => {
-		const input = createInput([{
-			question: 'Which framework do you prefer?',
-			header: 'Framework',
-			options: [{ label: 'React', description: '' }, { label: 'Vue', description: '' }],
-			multiSelect: false,
-		}]);
+		const input = createInput([
+			{
+				question: 'Which framework do you prefer?',
+				header: 'Framework',
+				options: [
+					{ label: 'React', description: '' },
+					{ label: 'Vue', description: '' },
+				],
+				multiSelect: false,
+			},
+		]);
 
 		mockToolsService.setResult({
 			answers: {
-				Framework: { selected: ['React'], freeText: null, skipped: false }
-			}
+				Framework: {
+					selected: ['React'],
+					freeText: null,
+					skipped: false,
+				},
+			},
 		});
 
-		const result = await handler.handle(ClaudeToolNames.AskUserQuestion, input, createMockContext());
+		const result = await handler.handle(
+			ClaudeToolNames.AskUserQuestion,
+			input,
+			createMockContext(),
+		);
 
 		expect(result.behavior).toBe('allow');
 		if (result.behavior === 'allow') {
-			const answers = result.updatedInput.answers as Record<string, string>;
+			const answers = result.updatedInput.answers as Record<
+				string,
+				string
+			>;
 			expect(answers['Which framework do you prefer?']).toBe('React');
 			expect(answers['Framework']).toBeUndefined();
 		}
 	});
 
 	it('combines selected options and free text', async () => {
-		const input = createInput([{
-			question: 'What features do you want?',
-			header: 'Features',
-			options: [{ label: 'Auth', description: '' }, { label: 'DB', description: '' }],
-			multiSelect: true,
-		}]);
+		const input = createInput([
+			{
+				question: 'What features do you want?',
+				header: 'Features',
+				options: [
+					{ label: 'Auth', description: '' },
+					{ label: 'DB', description: '' },
+				],
+				multiSelect: true,
+			},
+		]);
 
 		mockToolsService.setResult({
 			answers: {
-				Features: { selected: ['Auth', 'DB'], freeText: 'also caching', skipped: false }
-			}
+				Features: {
+					selected: ['Auth', 'DB'],
+					freeText: 'also caching',
+					skipped: false,
+				},
+			},
 		});
 
-		const result = await handler.handle(ClaudeToolNames.AskUserQuestion, input, createMockContext());
+		const result = await handler.handle(
+			ClaudeToolNames.AskUserQuestion,
+			input,
+			createMockContext(),
+		);
 
 		expect(result.behavior).toBe('allow');
 		if (result.behavior === 'allow') {
-			const answers = result.updatedInput.answers as Record<string, string>;
-			expect(answers['What features do you want?']).toBe('Auth, DB, also caching');
+			const answers = result.updatedInput.answers as Record<
+				string,
+				string
+			>;
+			expect(answers['What features do you want?']).toBe(
+				'Auth, DB, also caching',
+			);
 		}
 	});
 
@@ -172,49 +258,75 @@ describe('AskUserQuestionHandler', () => {
 			{
 				question: 'Which framework?',
 				header: 'Framework',
-				options: [{ label: 'React', description: '' }, { label: 'Vue', description: '' }],
+				options: [
+					{ label: 'React', description: '' },
+					{ label: 'Vue', description: '' },
+				],
 				multiSelect: false,
 			},
 			{
 				question: 'Which database?',
 				header: 'Database',
-				options: [{ label: 'Postgres', description: '' }, { label: 'MySQL', description: '' }],
+				options: [
+					{ label: 'Postgres', description: '' },
+					{ label: 'MySQL', description: '' },
+				],
 				multiSelect: false,
 			},
 		]);
 
 		mockToolsService.setResult({
 			answers: {
-				Framework: { selected: ['React'], freeText: null, skipped: false },
-				Database: { selected: [], freeText: null, skipped: true }
-			}
+				Framework: {
+					selected: ['React'],
+					freeText: null,
+					skipped: false,
+				},
+				Database: { selected: [], freeText: null, skipped: true },
+			},
 		});
 
-		const result = await handler.handle(ClaudeToolNames.AskUserQuestion, input, createMockContext());
+		const result = await handler.handle(
+			ClaudeToolNames.AskUserQuestion,
+			input,
+			createMockContext(),
+		);
 
 		expect(result.behavior).toBe('allow');
 		if (result.behavior === 'allow') {
-			const answers = result.updatedInput.answers as Record<string, string>;
+			const answers = result.updatedInput.answers as Record<
+				string,
+				string
+			>;
 			expect(answers['Which framework?']).toBe('React');
 			expect(answers['Which database?']).toBeUndefined();
 		}
 	});
 
 	it('denies when all questions are skipped', async () => {
-		const input = createInput([{
-			question: 'Which framework?',
-			header: 'Framework',
-			options: [{ label: 'React', description: '' }, { label: 'Vue', description: '' }],
-			multiSelect: false,
-		}]);
+		const input = createInput([
+			{
+				question: 'Which framework?',
+				header: 'Framework',
+				options: [
+					{ label: 'React', description: '' },
+					{ label: 'Vue', description: '' },
+				],
+				multiSelect: false,
+			},
+		]);
 
 		mockToolsService.setResult({
 			answers: {
-				Framework: { selected: [], freeText: null, skipped: true }
-			}
+				Framework: { selected: [], freeText: null, skipped: true },
+			},
 		});
 
-		const result = await handler.handle(ClaudeToolNames.AskUserQuestion, input, createMockContext());
+		const result = await handler.handle(
+			ClaudeToolNames.AskUserQuestion,
+			input,
+			createMockContext(),
+		);
 
 		expect(result.behavior).toBe('deny');
 		if (result.behavior === 'deny') {
@@ -223,16 +335,25 @@ describe('AskUserQuestionHandler', () => {
 	});
 
 	it('denies when tool returns empty content', async () => {
-		const input = createInput([{
-			question: 'Which framework?',
-			header: 'Framework',
-			options: [{ label: 'React', description: '' }, { label: 'Vue', description: '' }],
-			multiSelect: false,
-		}]);
+		const input = createInput([
+			{
+				question: 'Which framework?',
+				header: 'Framework',
+				options: [
+					{ label: 'React', description: '' },
+					{ label: 'Vue', description: '' },
+				],
+				multiSelect: false,
+			},
+		]);
 
 		mockToolsService.setEmptyResult();
 
-		const result = await handler.handle(ClaudeToolNames.AskUserQuestion, input, createMockContext());
+		const result = await handler.handle(
+			ClaudeToolNames.AskUserQuestion,
+			input,
+			createMockContext(),
+		);
 
 		expect(result.behavior).toBe('deny');
 		if (result.behavior === 'deny') {
@@ -241,16 +362,25 @@ describe('AskUserQuestionHandler', () => {
 	});
 
 	it('denies when tool throws', async () => {
-		const input = createInput([{
-			question: 'Which framework?',
-			header: 'Framework',
-			options: [{ label: 'React', description: '' }, { label: 'Vue', description: '' }],
-			multiSelect: false,
-		}]);
+		const input = createInput([
+			{
+				question: 'Which framework?',
+				header: 'Framework',
+				options: [
+					{ label: 'React', description: '' },
+					{ label: 'Vue', description: '' },
+				],
+				multiSelect: false,
+			},
+		]);
 
 		mockToolsService.setShouldThrow();
 
-		const result = await handler.handle(ClaudeToolNames.AskUserQuestion, input, createMockContext());
+		const result = await handler.handle(
+			ClaudeToolNames.AskUserQuestion,
+			input,
+			createMockContext(),
+		);
 
 		expect(result.behavior).toBe('deny');
 		if (result.behavior === 'deny') {
@@ -259,20 +389,33 @@ describe('AskUserQuestionHandler', () => {
 	});
 
 	it('preserves original input in updatedInput alongside answers', async () => {
-		const input = createInput([{
-			question: 'Which framework?',
-			header: 'Framework',
-			options: [{ label: 'React', description: '' }, { label: 'Vue', description: '' }],
-			multiSelect: false,
-		}]);
+		const input = createInput([
+			{
+				question: 'Which framework?',
+				header: 'Framework',
+				options: [
+					{ label: 'React', description: '' },
+					{ label: 'Vue', description: '' },
+				],
+				multiSelect: false,
+			},
+		]);
 
 		mockToolsService.setResult({
 			answers: {
-				Framework: { selected: ['React'], freeText: null, skipped: false }
-			}
+				Framework: {
+					selected: ['React'],
+					freeText: null,
+					skipped: false,
+				},
+			},
 		});
 
-		const result = await handler.handle(ClaudeToolNames.AskUserQuestion, input, createMockContext());
+		const result = await handler.handle(
+			ClaudeToolNames.AskUserQuestion,
+			input,
+			createMockContext(),
+		);
 
 		expect(result.behavior).toBe('allow');
 		if (result.behavior === 'allow') {

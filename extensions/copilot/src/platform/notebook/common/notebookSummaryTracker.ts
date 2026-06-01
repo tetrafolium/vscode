@@ -6,7 +6,8 @@
 import type { NotebookDocument } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const INotebookSummaryTracker = createServiceIdentifier<INotebookSummaryTracker>('INotebookSummaryTracker');
+export const INotebookSummaryTracker =
+	createServiceIdentifier<INotebookSummaryTracker>('INotebookSummaryTracker');
 
 export interface INotebookSummaryTracker {
 	readonly _serviceBrand: undefined;

@@ -4,24 +4,35 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DeferredPromise } from '../vs/base/common/async';
-import { BugIndicatingError, CancellationError } from '../vs/base/common/errors';
+import {
+	BugIndicatingError,
+	CancellationError,
+} from '../vs/base/common/errors';
 
-export type Task<T = void> = () => (Promise<T> | T);
+export type Task<T = void> = () => Promise<T> | T;
 
 /**
  * Processes tasks in the order they were scheduled.
-*/
+ */
 export class TaskQueue {
 	private _runningTask: Task<any> | undefined = undefined;
-	private _pendingTasks: { task: Task<any>; deferred: DeferredPromise<any>; setUndefinedWhenCleared: boolean }[] = [];
+	private _pendingTasks: {
+		task: Task<any>;
+		deferred: DeferredPromise<any>;
+		setUndefinedWhenCleared: boolean;
+	}[] = [];
 
 	/**
 	 * Waits for the current and pending tasks to finish, then runs and awaits the given task.
 	 * If the task is skipped because of clearPending, the promise is rejected with a CancellationError.
-	*/
+	 */
 	public schedule<T>(task: Task<T>): Promise<T> {
 		const deferred = new DeferredPromise<T>();
-		this._pendingTasks.push({ task, deferred, setUndefinedWhenCleared: false });
+		this._pendingTasks.push({
+			task,
+			deferred,
+			setUndefinedWhenCleared: false,
+		});
 		this._runIfNotRunning();
 		return deferred.p;
 	}
@@ -29,10 +40,14 @@ export class TaskQueue {
 	/**
 	 * Waits for the current and pending tasks to finish, then runs and awaits the given task.
 	 * If the task is skipped because of clearPending, the promise is resolved with undefined.
-	*/
+	 */
 	public scheduleSkipIfCleared<T>(task: Task<T>): Promise<T | undefined> {
 		const deferred = new DeferredPromise<T>();
-		this._pendingTasks.push({ task, deferred, setUndefinedWhenCleared: true });
+		this._pendingTasks.push({
+			task,
+			deferred,
+			setUndefinedWhenCleared: true,
+		});
 		this._runIfNotRunning();
 		return deferred.p;
 	}
@@ -72,7 +87,7 @@ export class TaskQueue {
 
 	/**
 	 * Clears all pending tasks. Does not cancel the currently running task.
-	*/
+	 */
 	public clearPending(): void {
 		const tasks = this._pendingTasks;
 		this._pendingTasks = [];
@@ -92,12 +107,15 @@ export class BatchedProcessor<TArg, TResult> {
 
 	constructor(
 		private readonly _fn: (args: TArg[]) => Promise<TResult[]>,
-		private readonly _waitingTimeMs: number
-	) { }
+		private readonly _waitingTimeMs: number,
+	) {}
 
 	request(arg: TArg): Promise<TResult> {
 		if (this._timeout === null) {
-			this._timeout = setTimeout(() => this._flush(), this._waitingTimeMs);
+			this._timeout = setTimeout(
+				() => this._flush(),
+				this._waitingTimeMs,
+			);
 		}
 
 		const p = new DeferredPromise<TResult>();
@@ -110,7 +128,7 @@ export class BatchedProcessor<TArg, TResult> {
 		this._queue = [];
 		this._timeout = null;
 
-		const args = queue.map(e => e.arg);
+		const args = queue.map((e) => e.arg);
 
 		let results: TResult[];
 		try {
@@ -128,7 +146,10 @@ export class BatchedProcessor<TArg, TResult> {
 	}
 }
 
-export function raceFilter<T>(promises: Promise<T>[], filter: (result: T) => boolean): Promise<T | undefined> {
+export function raceFilter<T>(
+	promises: Promise<T>[],
+	filter: (result: T) => boolean,
+): Promise<T | undefined> {
 	return new Promise((resolve, reject) => {
 		if (promises.length === 0) {
 			resolve(undefined);
@@ -138,18 +159,20 @@ export function raceFilter<T>(promises: Promise<T>[], filter: (result: T) => boo
 		let resolved = false;
 		let unresolvedCount = promises.length;
 		for (const promise of promises) {
-			promise.then(result => {
-				unresolvedCount--;
-				if (!resolved) {
-					if (filter(result)) {
-						resolved = true;
-						resolve(result);
-					} else if (unresolvedCount === 0) {
-						// Last one has to resolve the promise
-						resolve(undefined);
+			promise
+				.then((result) => {
+					unresolvedCount--;
+					if (!resolved) {
+						if (filter(result)) {
+							resolved = true;
+							resolve(result);
+						} else if (unresolvedCount === 0) {
+							// Last one has to resolve the promise
+							resolve(undefined);
+						}
 					}
-				}
-			}).catch(reject);
+				})
+				.catch(reject);
 		}
 	});
 }

@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { AbstractChatView } from '../../../browser/parts/chatView.js';
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { AbstractChatView } from "../../../browser/parts/chatView.js";
 
-export const IChatViewFactory = createDecorator<IChatViewFactory>('chatViewFactory');
+export const IChatViewFactory =
+	createDecorator<IChatViewFactory>("chatViewFactory");
 
 /**
  * Creates {@link AbstractChatView} instances for the {@link SessionsPart}
@@ -15,7 +16,6 @@ export const IChatViewFactory = createDecorator<IChatViewFactory>('chatViewFacto
  * concrete view implementations, which live in `sessions/contrib/chat/`.
  */
 export interface IChatViewFactory {
-
 	readonly _serviceBrand: undefined;
 
 	/**

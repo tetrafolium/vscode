@@ -13,13 +13,13 @@ export interface MermaidExtensionConfig {
 }
 
 export const enum ShowControlsMode {
-	Never = 'never',
-	OnHoverOrFocus = 'onHoverOrFocus',
-	Always = 'always'
+	Never = "never",
+	OnHoverOrFocus = "onHoverOrFocus",
+	Always = "always",
 }
 
 export const enum ClickDragMode {
-	Always = 'always',
-	Alt = 'alt',
-	Never = 'never'
+	Always = "always",
+	Alt = "alt",
+	Never = "never",
 }

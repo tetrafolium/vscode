@@ -24,4 +24,5 @@ export interface IDomainService {
 	readonly _serviceBrand: undefined;
 	readonly onDidChangeDomains: Event<IDomainChangeEvent>;
 }
-export const IDomainService = createServiceIdentifier<IDomainService>('IDomainService');
+export const IDomainService =
+	createServiceIdentifier<IDomainService>('IDomainService');

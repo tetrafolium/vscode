@@ -3,15 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ApplicationService } from '../application';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ApplicationService } from "../application";
 
 /**
  * Profiler Tools
  * Note: Due to MCP limitations, these tools provide information about profiler methods
  * but cannot execute them directly as they require function parameters
  */
-export function applyProfilerTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applyProfilerTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	const tools: RegisteredTool[] = [];
 
 	// Seems too niche

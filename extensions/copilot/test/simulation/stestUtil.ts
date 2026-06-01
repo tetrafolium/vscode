@@ -5,14 +5,27 @@
 import assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
-import { IFile, IQualifiedFile, IRelativeFile } from '../../src/platform/test/node/simulationWorkspace';
+import {
+	IFile,
+	IQualifiedFile,
+	IRelativeFile,
+} from '../../src/platform/test/node/simulationWorkspace';
 import { timeout } from '../../src/util/vs/base/common/async';
 import { URI } from '../../src/util/vs/base/common/uri';
 import { generateUuid } from '../../src/util/vs/base/common/uuid';
 import { SIMULATION_FOLDER_NAME } from './shared/sharedTypes';
-import { IConversationalOutcome, IEmptyOutcome, IInlineEditOutcome, IOutcome, IWorkspaceEditOutcome } from './types';
+import {
+	IConversationalOutcome,
+	IEmptyOutcome,
+	IInlineEditOutcome,
+	IOutcome,
+	IWorkspaceEditOutcome,
+} from './types';
 
-export function forEachModel(models: readonly string[], func: (model: string) => void) {
+export function forEachModel(
+	models: readonly string[],
+	func: (model: string) => void,
+) {
 	return () => models.forEach(func);
 }
 
@@ -26,7 +39,12 @@ interface FixtureFileInfo {
 type RelativeFilePath<T extends string> = string & { baseDir?: T };
 
 /** This function allows [tools](https://github.com/microsoft/vscode-ts-file-path-support/tree/main) to inline/extract the file content. */
-export function toFile(data: { filePath: string | FixtureFileInfo } | { fileName: string; fileContents: string } | { uri: URI; fileContents: string }): IFile {
+export function toFile(
+	data:
+		| { filePath: string | FixtureFileInfo }
+		| { fileName: string; fileContents: string }
+		| { uri: URI; fileContents: string },
+): IFile {
 	if ('filePath' in data) {
 		if (typeof data.filePath === 'string') {
 			return fromFixture(data.filePath);
@@ -55,7 +73,7 @@ export function getFixturesDir() {
 		_fixturesDir = [
 			path.join(__dirname, '../test/simulation/fixtures'), // after bundling with esbuild
 			path.join(__dirname, './fixtures'), // when running from sources
-		].filter(p => fs.existsSync(p))[0];
+		].filter((p) => fs.existsSync(p))[0];
 		if (!_fixturesDir) {
 			throw new Error('Could not find fixtures directory');
 		}
@@ -63,17 +81,27 @@ export function getFixturesDir() {
 	return _fixturesDir;
 }
 
-export function fromFixture(pathWithinFixturesDir: RelativeFilePath<'$dir/fixtures'>): FixtureFileInfo;
-export function fromFixture(dirnameWithinFixturesDir: string, relativePathWithinBaseDir: string): FixtureFileInfo;
-export function fromFixture(pathOrDirnameWithinFixturesDir: string, relativePathWithinBaseDir?: string): FixtureFileInfo {
-
+export function fromFixture(
+	pathWithinFixturesDir: RelativeFilePath<'$dir/fixtures'>,
+): FixtureFileInfo;
+export function fromFixture(
+	dirnameWithinFixturesDir: string,
+	relativePathWithinBaseDir: string,
+): FixtureFileInfo;
+export function fromFixture(
+	pathOrDirnameWithinFixturesDir: string,
+	relativePathWithinBaseDir?: string,
+): FixtureFileInfo {
 	let filePath: string;
 	let baseDirname: string;
 	if (relativePathWithinBaseDir === undefined) {
 		filePath = path.join(getFixturesDir(), pathOrDirnameWithinFixturesDir);
 		baseDirname = path.dirname(filePath);
 	} else {
-		baseDirname = path.join(getFixturesDir(), pathOrDirnameWithinFixturesDir);
+		baseDirname = path.join(
+			getFixturesDir(),
+			pathOrDirnameWithinFixturesDir,
+		);
 		filePath = path.join(baseDirname, relativePathWithinBaseDir);
 	}
 
@@ -82,9 +110,13 @@ export function fromFixture(pathOrDirnameWithinFixturesDir: string, relativePath
 	return { kind: 'relativeFile' as const, fileName, fileContents };
 }
 
-export function fromFixtureDir(dirnameWithinFixturesDir: string, dirnameWithinDir?: string): FixtureFileInfo[] {
+export function fromFixtureDir(
+	dirnameWithinFixturesDir: string,
+	dirnameWithinDir?: string,
+): FixtureFileInfo[] {
 	const files = fs.readdirSync(
-		path.join(getFixturesDir(),
+		path.join(
+			getFixturesDir(),
 			dirnameWithinFixturesDir,
 			dirnameWithinDir ?? '',
 		),
@@ -122,7 +154,9 @@ export function assertOneOf<T>(assertions: (() => T)[]): T {
 			}
 		}
 	}
-	throw new assert.AssertionError({ message: 'none of the assertions passed' });
+	throw new assert.AssertionError({
+		message: 'none of the assertions passed',
+	});
 }
 
 export interface IInlineReplaceEdit {
@@ -137,32 +171,62 @@ export interface IInlineReplaceEdit {
 	allModifiedLines: string[];
 }
 
-export function assertInlineEdit(outcome: IOutcome): asserts outcome is IInlineEditOutcome {
-	assert.strictEqual(outcome.type, 'inlineEdit', `'${outcome.type}' === 'inlineEdit'`);
+export function assertInlineEdit(
+	outcome: IOutcome,
+): asserts outcome is IInlineEditOutcome {
+	assert.strictEqual(
+		outcome.type,
+		'inlineEdit',
+		`'${outcome.type}' === 'inlineEdit'`,
+	);
 }
 
-export function assertNoErrorOutcome(outcome: IOutcome): asserts outcome is IInlineEditOutcome | IWorkspaceEditOutcome | IConversationalOutcome | IEmptyOutcome {
+export function assertNoErrorOutcome(
+	outcome: IOutcome,
+): asserts outcome is
+	| IInlineEditOutcome
+	| IWorkspaceEditOutcome
+	| IConversationalOutcome
+	| IEmptyOutcome {
 	assert.notEqual(outcome.type, 'error', `no error outcome expected`);
 }
 
-export function assertConversationalOutcome(outcome: IOutcome): asserts outcome is IConversationalOutcome {
-	assert.strictEqual(outcome.type, 'conversational', `'${outcome.type}' === 'conversational'`);
+export function assertConversationalOutcome(
+	outcome: IOutcome,
+): asserts outcome is IConversationalOutcome {
+	assert.strictEqual(
+		outcome.type,
+		'conversational',
+		`'${outcome.type}' === 'conversational'`,
+	);
 }
 
-export function assertWorkspaceEdit(outcome: IOutcome): asserts outcome is IWorkspaceEditOutcome {
-	assert.strictEqual(outcome.type, 'workspaceEdit', `'${outcome.type}' === 'workspaceEdit'`);
+export function assertWorkspaceEdit(
+	outcome: IOutcome,
+): asserts outcome is IWorkspaceEditOutcome {
+	assert.strictEqual(
+		outcome.type,
+		'workspaceEdit',
+		`'${outcome.type}' === 'workspaceEdit'`,
+	);
 }
 
 /**
  * returns null if the files are identical
  */
-export function extractInlineReplaceEdits(outcome: IInlineEditOutcome): IInlineReplaceEdit | null {
+export function extractInlineReplaceEdits(
+	outcome: IInlineEditOutcome,
+): IInlineReplaceEdit | null {
 	const originalLines = outcome.originalFileContents.split(/\r\n|\r|\n/g);
 	const modifiedLines = outcome.fileContents.split(/\r\n|\r|\n/g);
 
 	let ostart = 0;
 	let mstart = 0;
-	while (ostart < originalLines.length && mstart < modifiedLines.length && originalLines[ostart] === modifiedLines[mstart]) {
+	while (
+		ostart < originalLines.length &&
+		mstart < modifiedLines.length &&
+		originalLines[ostart] === modifiedLines[mstart]
+	) {
 		ostart++;
 		mstart++;
 	}
@@ -174,7 +238,11 @@ export function extractInlineReplaceEdits(outcome: IInlineEditOutcome): IInlineR
 
 	let ostop = originalLines.length - 1;
 	let mstop = modifiedLines.length - 1;
-	while (ostop >= ostart && mstop >= mstart && originalLines[ostop] === modifiedLines[mstop]) {
+	while (
+		ostop >= ostart &&
+		mstop >= mstart &&
+		originalLines[ostop] === modifiedLines[mstop]
+	) {
 		ostop--;
 		mstop--;
 	}
@@ -201,7 +269,10 @@ export interface IInlineEditShape {
 	modifiedLength: number | undefined;
 }
 
-export function assertInlineEditShape(outcome: IOutcome, _expected: IInlineEditShape | IInlineEditShape[]): IInlineReplaceEdit {
+export function assertInlineEditShape(
+	outcome: IOutcome,
+	_expected: IInlineEditShape | IInlineEditShape[],
+): IInlineReplaceEdit {
 	assertInlineEdit(outcome);
 	const actual = extractInlineReplaceEdits(outcome);
 	assert.ok(actual, 'unexpected identical files');
@@ -210,18 +281,21 @@ export function assertInlineEditShape(outcome: IOutcome, _expected: IInlineEditS
 		originalLength: actual.originalEndLine - actual.originalStartLine + 1,
 		modifiedLength: actual.modifiedEndLine - actual.modifiedStartLine + 1,
 	};
-	const originalLineCount = outcome.originalFileContents.split(/\r\n|\r|\n/g).length;
+	const originalLineCount =
+		outcome.originalFileContents.split(/\r\n|\r|\n/g).length;
 	const _expectedArr = Array.isArray(_expected) ? _expected : [_expected];
 	const expectedArr = _expectedArr.map((expected) => {
-		const line = (
-			expected.line < 0 ? actual.allOriginalLines.length - ~expected.line : expected.line
-		);
+		const line =
+			expected.line < 0
+				? actual.allOriginalLines.length - ~expected.line
+				: expected.line;
 		const originalLength = expected.originalLength;
-		const modifiedLength = (
+		const modifiedLength =
 			typeof expected.modifiedLength === 'undefined'
-				? (actual.allModifiedLines.length + originalLength - originalLineCount)
-				: expected.modifiedLength
-		);
+				? actual.allModifiedLines.length +
+					originalLength -
+					originalLineCount
+				: expected.modifiedLength;
 		return { line, originalLength, modifiedLength };
 	});
 	let err: Error | undefined;
@@ -239,22 +313,31 @@ export function assertInlineEditShape(outcome: IOutcome, _expected: IInlineEditS
 	throw err;
 }
 
-export function assertQualifiedFile(file: IFile | { srcUri: string; post: string }): asserts file is IQualifiedFile {
+export function assertQualifiedFile(
+	file: IFile | { srcUri: string; post: string },
+): asserts file is IQualifiedFile {
 	if ('srcUri' in file && 'post' in file) {
 		// New format - nothing to assert, it's already a qualified file equivalent
 		return;
 	}
 	// Old format - check the kind
-	assert.strictEqual(file.kind, 'qualifiedFile', `'${file.kind}' === 'qualifiedFile'`);
+	assert.strictEqual(
+		file.kind,
+		'qualifiedFile',
+		`'${file.kind}' === 'qualifiedFile'`,
+	);
 }
-
 
 /**
  * Asserts that at least `n` out of `expected.length` strings are present in `actual` string.
  *
  * If `n` is not given, `n = Math.floor(1, expected.length / 2)` is used.
  */
-export function assertSomeStrings(actual: string, expected: string[], n?: number) {
+export function assertSomeStrings(
+	actual: string,
+	expected: string[],
+	n?: number,
+) {
 	assert.ok(expected.length > 0, 'Need to expect at least one string');
 
 	if (n === undefined) {
@@ -268,28 +351,46 @@ export function assertSomeStrings(actual: string, expected: string[], n?: number
 		}
 	}
 
-	assert.ok(seen >= n, `Expected to see at least ${n} of ${expected.join(',')}, but only saw ${seen} in ${actual}`);
+	assert.ok(
+		seen >= n,
+		`Expected to see at least ${n} of ${expected.join(',')}, but only saw ${seen} in ${actual}`,
+	);
 }
 
-export function assertNoStrings(actual: string, expected: string[],) {
+export function assertNoStrings(actual: string, expected: string[]) {
 	assertSomeStrings(actual, expected, 0);
 }
 
 export function assertOccursOnce(hay: string, needle: string) {
 	const firstOccurrence = hay.indexOf(needle);
-	assert(firstOccurrence > -1, `assertOccursOnce: no occurrence\n${JSON.stringify({ hay, needle }, null, '\t')}`);
-	assert(hay.indexOf(needle, firstOccurrence + needle.length) === -1, `assertOccursOnce: more than 1 occurrence\n${JSON.stringify({ hay, needle }, null, '\t')}`);
+	assert(
+		firstOccurrence > -1,
+		`assertOccursOnce: no occurrence\n${JSON.stringify({ hay, needle }, null, '\t')}`,
+	);
+	assert(
+		hay.indexOf(needle, firstOccurrence + needle.length) === -1,
+		`assertOccursOnce: more than 1 occurrence\n${JSON.stringify({ hay, needle }, null, '\t')}`,
+	);
 }
 
-export function assertNoOccurrence(hay: string, needles: string | string[]): void {
+export function assertNoOccurrence(
+	hay: string,
+	needles: string | string[],
+): void {
 	needles = Array.isArray(needles) ? needles : [needles];
 	for (const needle of needles) {
-		assert(hay.indexOf(needle) === -1, `assertDoesNotOccur: occurrence\n${JSON.stringify({ hay, needle }, null, '\t')}`);
+		assert(
+			hay.indexOf(needle) === -1,
+			`assertDoesNotOccur: occurrence\n${JSON.stringify({ hay, needle }, null, '\t')}`,
+		);
 	}
 }
 
 function generateTempDirPath(): string {
-	return path.join(__dirname, `../${SIMULATION_FOLDER_NAME}/tmp-${generateUuid()}`);
+	return path.join(
+		__dirname,
+		`../${SIMULATION_FOLDER_NAME}/tmp-${generateUuid()}`,
+	);
 }
 
 export async function createTempDir(): Promise<string> {
@@ -302,7 +403,10 @@ export async function cleanTempDir(folderPath: string): Promise<void> {
 	await fs.promises.rm(folderPath, { recursive: true, force: true });
 }
 
-export async function cleanTempDirWithRetry(path: string, retry = 3): Promise<void> {
+export async function cleanTempDirWithRetry(
+	path: string,
+	retry = 3,
+): Promise<void> {
 	// On windows, sometimes the tsc process holds locks on the directory even after it exits.
 	// This tries to delete the folder a few times with a delay in between.
 	let err = null;

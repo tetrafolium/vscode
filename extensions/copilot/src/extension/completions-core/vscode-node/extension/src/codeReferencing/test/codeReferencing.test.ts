@@ -6,7 +6,10 @@ import * as assert from 'assert';
 import * as Sinon from 'sinon';
 import { Disposable, ExtensionContext } from 'vscode';
 import { CodeReference } from '..';
-import { CopilotToken, createTestExtendedTokenInfo } from '../../../../../../../platform/authentication/common/copilotToken';
+import {
+	CopilotToken,
+	createTestExtendedTokenInfo,
+} from '../../../../../../../platform/authentication/common/copilotToken';
 import { generateUuid } from '../../../../../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ConnectionState } from '../../../../lib/src/snippy/connectionState';
@@ -24,13 +27,15 @@ suite('CodeReference', function () {
 	let sub: Disposable | undefined;
 
 	setup(function () {
-		const accessor = createExtensionTestingContext().createTestingAccessor();
+		const accessor =
+			createExtensionTestingContext().createTestingAccessor();
 		instantiationService = accessor.get(IInstantiationService);
-		extensionContext = testExtensionContext() as unknown as ExtensionContext;
+		extensionContext =
+			testExtensionContext() as unknown as ExtensionContext;
 	});
 
 	teardown(function () {
-		extensionContext.subscriptions.forEach(sub => {
+		extensionContext.subscriptions.forEach((sub) => {
 			sub.dispose();
 		});
 		sub?.dispose();
@@ -45,9 +50,24 @@ suite('CodeReference', function () {
 		});
 
 		test('should be updated correctly when token change events received', function () {
-			const codeQuote = instantiationService.createInstance(CodeReference);
-			const enabledToken = new CopilotToken(createTestExtendedTokenInfo({ token: `test token ${generateUuid()}`, username: 'fixedTokenManager', copilot_plan: 'unknown', code_quote_enabled: true }));
-			const disabledToken = new CopilotToken(createTestExtendedTokenInfo({ token: `test token ${generateUuid()}`, username: 'fixedTokenManager', copilot_plan: 'unknown', code_quote_enabled: false }));
+			const codeQuote =
+				instantiationService.createInstance(CodeReference);
+			const enabledToken = new CopilotToken(
+				createTestExtendedTokenInfo({
+					token: `test token ${generateUuid()}`,
+					username: 'fixedTokenManager',
+					copilot_plan: 'unknown',
+					code_quote_enabled: true,
+				}),
+			);
+			const disabledToken = new CopilotToken(
+				createTestExtendedTokenInfo({
+					token: `test token ${generateUuid()}`,
+					username: 'fixedTokenManager',
+					copilot_plan: 'unknown',
+					code_quote_enabled: false,
+				}),
+			);
 
 			codeQuote.onCopilotToken(enabledToken);
 

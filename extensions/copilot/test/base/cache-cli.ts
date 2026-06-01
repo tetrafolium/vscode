@@ -11,11 +11,15 @@ async function main() {
 
 	if (args.length < 1) {
 		console.log('Usage:');
-		console.log('  npx tsx cache-cli check - Check if there are any duplicate keys in the databases');
+		console.log(
+			'  npx tsx cache-cli check - Check if there are any duplicate keys in the databases',
+		);
 		process.exit(1);
 	}
 
-	const cache = new Cache(path.resolve(__dirname, '..', 'simulation', 'cache'));
+	const cache = new Cache(
+		path.resolve(__dirname, '..', 'simulation', 'cache'),
+	);
 
 	try {
 		switch (args[0]) {
@@ -26,7 +30,10 @@ async function main() {
 				} else {
 					console.log('⛔ Duplicate keys found:');
 					for (const [key, values] of result) {
-						console.log(` - "${key}" found in: `, values.join(', '));
+						console.log(
+							` - "${key}" found in: `,
+							values.join(', '),
+						);
 					}
 					throw new Error('Duplicate keys found in the database.');
 				}

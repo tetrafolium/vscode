@@ -2,6 +2,4 @@
  *  Copyright (c) Microsoft Corporation and GitHub. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-export class A implements B {
-
-}
+export class A implements B {}

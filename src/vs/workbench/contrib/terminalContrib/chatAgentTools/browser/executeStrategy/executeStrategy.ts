@@ -3,16 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeferredPromise, RunOnceScheduler } from '../../../../../../base/common/async.js';
-import type { CancellationToken } from '../../../../../../base/common/cancellation.js';
-import type { Event } from '../../../../../../base/common/event.js';
-import { DisposableStore, type IDisposable } from '../../../../../../base/common/lifecycle.js';
-import type { ITerminalLogService } from '../../../../../../platform/terminal/common/terminal.js';
-import type { ITerminalInstance } from '../../../../terminal/browser/terminal.js';
-import type { IMarker as IXtermMarker } from '@xterm/xterm';
+import {
+	DeferredPromise,
+	RunOnceScheduler,
+} from "../../../../../../base/common/async.js";
+import type { CancellationToken } from "../../../../../../base/common/cancellation.js";
+import type { Event } from "../../../../../../base/common/event.js";
+import {
+	DisposableStore,
+	type IDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import type { ITerminalLogService } from "../../../../../../platform/terminal/common/terminal.js";
+import type { ITerminalInstance } from "../../../../terminal/browser/terminal.js";
+import type { IMarker as IXtermMarker } from "@xterm/xterm";
 
 export interface ITerminalExecuteStrategy extends IDisposable {
-	readonly type: 'rich' | 'basic' | 'none';
+	readonly type: "rich" | "basic" | "none";
 	/**
 	 * Executes a command line and gets a result designed to be passed directly to an LLM. The
 	 * result will include information about the exit code.
@@ -23,7 +29,12 @@ export interface ITerminalExecuteStrategy extends IDisposable {
 	 * This can differ from the command line that is sent to the shell, for example when the command
 	 * is wrapped for sandbox execution.
 	 */
-	execute(commandLine: string, token: CancellationToken, commandId?: string, commandLineForMetadata?: string): Promise<ITerminalExecuteStrategyResult>;
+	execute(
+		commandLine: string,
+		token: CancellationToken,
+		commandId?: string,
+		commandLineForMetadata?: string,
+	): Promise<ITerminalExecuteStrategyResult>;
 
 	readonly onDidCreateStartMarker: Event<IXtermMarker | undefined>;
 }
@@ -36,12 +47,17 @@ export interface ITerminalExecuteStrategyResult {
 	didEnterAltBuffer?: boolean;
 }
 
-export async function waitForIdle(onData: Event<unknown>, idleDurationMs: number): Promise<void> {
+export async function waitForIdle(
+	onData: Event<unknown>,
+	idleDurationMs: number,
+): Promise<void> {
 	// This is basically Event.debounce but with an initial event to trigger the debounce
 	// immediately
 	const store = new DisposableStore();
 	const deferred = new DeferredPromise<void>();
-	const scheduler = store.add(new RunOnceScheduler(() => deferred.complete(), idleDurationMs));
+	const scheduler = store.add(
+		new RunOnceScheduler(() => deferred.complete(), idleDurationMs),
+	);
 	store.add(onData(() => scheduler.schedule()));
 	scheduler.schedule();
 	return deferred.p.finally(() => store.dispose());
@@ -61,47 +77,76 @@ export interface IPromptDetectionResult {
 /**
  * Detects if the given text content appears to end with a common prompt pattern.
  */
-export function detectsCommonPromptPattern(cursorLine: string): IPromptDetectionResult {
+export function detectsCommonPromptPattern(
+	cursorLine: string,
+): IPromptDetectionResult {
 	if (cursorLine.trim().length === 0) {
-		return { detected: false, reason: 'Content is empty or contains only whitespace' };
+		return {
+			detected: false,
+			reason: "Content is empty or contains only whitespace",
+		};
 	}
 
 	// PowerShell prompt: PS C:\> or similar patterns
 	if (/PS\s+[A-Z]:\\.*>\s*$/.test(cursorLine)) {
-		return { detected: true, reason: `PowerShell prompt pattern detected: "${cursorLine}"` };
+		return {
+			detected: true,
+			reason: `PowerShell prompt pattern detected: "${cursorLine}"`,
+		};
 	}
 
 	// Command Prompt: C:\path>
 	if (/^[A-Z]:\\.*>\s*$/.test(cursorLine)) {
-		return { detected: true, reason: `Command Prompt pattern detected: "${cursorLine}"` };
+		return {
+			detected: true,
+			reason: `Command Prompt pattern detected: "${cursorLine}"`,
+		};
 	}
 
 	// Bash-style prompts ending with $
 	if (/\$\s*$/.test(cursorLine)) {
-		return { detected: true, reason: `Bash-style prompt pattern detected: "${cursorLine}"` };
+		return {
+			detected: true,
+			reason: `Bash-style prompt pattern detected: "${cursorLine}"`,
+		};
 	}
 
 	// Root prompts ending with #
 	if (/#\s*$/.test(cursorLine)) {
-		return { detected: true, reason: `Root prompt pattern detected: "${cursorLine}"` };
+		return {
+			detected: true,
+			reason: `Root prompt pattern detected: "${cursorLine}"`,
+		};
 	}
 
 	// Python REPL prompt
 	if (/^>>>\s*$/.test(cursorLine)) {
-		return { detected: true, reason: `Python REPL prompt pattern detected: "${cursorLine}"` };
+		return {
+			detected: true,
+			reason: `Python REPL prompt pattern detected: "${cursorLine}"`,
+		};
 	}
 
 	// Custom prompts ending with the starship character (\u276f)
 	if (/\u276f\s*$/.test(cursorLine)) {
-		return { detected: true, reason: `Starship prompt pattern detected: "${cursorLine}"` };
+		return {
+			detected: true,
+			reason: `Starship prompt pattern detected: "${cursorLine}"`,
+		};
 	}
 
 	// Generic prompts ending with common prompt characters
 	if (/[>%]\s*$/.test(cursorLine)) {
-		return { detected: true, reason: `Generic prompt pattern detected: "${cursorLine}"` };
+		return {
+			detected: true,
+			reason: `Generic prompt pattern detected: "${cursorLine}"`,
+		};
 	}
 
-	return { detected: false, reason: `No common prompt pattern found in last line: "${cursorLine}"` };
+	return {
+		detected: false,
+		reason: `No common prompt pattern found in last line: "${cursorLine}"`,
+	};
 }
 
 /**
@@ -119,14 +164,17 @@ export async function waitForIdleWithPromptHeuristics(
 
 	const xterm = await instance.xtermReadyPromise;
 	if (!xterm) {
-		return { detected: false, reason: `Xterm not available, using ${idlePollIntervalMs}ms timeout` };
+		return {
+			detected: false,
+			reason: `Xterm not available, using ${idlePollIntervalMs}ms timeout`,
+		};
 	}
 	const startTime = Date.now();
 
 	// Attempt to detect a prompt pattern after idle
 	while (Date.now() - startTime < extendedTimeoutMs) {
 		try {
-			let content = '';
+			let content = "";
 			const buffer = xterm.raw.buffer.active;
 			const line = buffer.getLine(buffer.baseY + buffer.cursorY);
 			if (line) {
@@ -139,20 +187,32 @@ export async function waitForIdleWithPromptHeuristics(
 		} catch (error) {
 			// Continue polling even if there's an error reading terminal content
 		}
-		await waitForIdle(onData, Math.min(idlePollIntervalMs, extendedTimeoutMs - (Date.now() - startTime)));
+		await waitForIdle(
+			onData,
+			Math.min(
+				idlePollIntervalMs,
+				extendedTimeoutMs - (Date.now() - startTime),
+			),
+		);
 	}
 
 	// Extended timeout reached without detecting a prompt
 	try {
-		let content = '';
+		let content = "";
 		const buffer = xterm.raw.buffer.active;
 		const line = buffer.getLine(buffer.baseY + buffer.cursorY);
 		if (line) {
-			content = line.translateToString(true) + '\n';
+			content = line.translateToString(true) + "\n";
 		}
-		return { detected: false, reason: `Extended timeout reached without prompt detection. Last line: "${content.trim()}"` };
+		return {
+			detected: false,
+			reason: `Extended timeout reached without prompt detection. Last line: "${content.trim()}"`,
+		};
 	} catch (error) {
-		return { detected: false, reason: `Extended timeout reached. Error reading terminal content: ${error}` };
+		return {
+			detected: false,
+			reason: `Extended timeout reached. Error reading terminal content: ${error}`,
+		};
 	}
 }
 
@@ -182,7 +242,9 @@ export async function trackIdleOnPrompt(
 ): Promise<void> {
 	const idleOnPrompt = new DeferredPromise<void>();
 	const onData = instance.onData;
-	const log = logService ? (msg: string) => logService.info(`trackIdleOnPrompt: ${msg}`) : undefined;
+	const log = logService
+		? (msg: string) => logService.info(`trackIdleOnPrompt: ${msg}`)
+		: undefined;
 
 	const enum TerminalState {
 		Initial,
@@ -191,10 +253,10 @@ export async function trackIdleOnPrompt(
 		PromptAfterExecuting,
 	}
 	const stateNames: Record<TerminalState, string> = {
-		[TerminalState.Initial]: 'Initial',
-		[TerminalState.Prompt]: 'Prompt',
-		[TerminalState.Executing]: 'Executing',
-		[TerminalState.PromptAfterExecuting]: 'PromptAfterExecuting',
+		[TerminalState.Initial]: "Initial",
+		[TerminalState.Prompt]: "Prompt",
+		[TerminalState.Executing]: "Executing",
+		[TerminalState.PromptAfterExecuting]: "PromptAfterExecuting",
 	};
 
 	let state: TerminalState = TerminalState.Initial;
@@ -207,21 +269,28 @@ export async function trackIdleOnPrompt(
 		}
 	}
 
-	const scheduler = store.add(new RunOnceScheduler(() => {
-		log?.(`Idle scheduler fired, completing (dataEvents=${dataEventCount})`);
-		idleOnPrompt.complete();
-	}, idleDurationMs));
+	const scheduler = store.add(
+		new RunOnceScheduler(() => {
+			log?.(`Idle scheduler fired, completing (dataEvents=${dataEventCount})`);
+			idleOnPrompt.complete();
+		}, idleDurationMs),
+	);
 
 	// Fallback in case prompt sequences are not seen but the terminal goes idle.
-	const promptFallbackScheduler = store.add(new RunOnceScheduler(() => {
-		if (state === TerminalState.Executing || state === TerminalState.PromptAfterExecuting) {
-			promptFallbackScheduler.cancel();
-			return;
-		}
-		log?.(`Prompt fallback fired (dataEvents=${dataEventCount})`);
-		setState(TerminalState.PromptAfterExecuting, 'promptFallback');
-		scheduler.schedule();
-	}, promptFallbackMs ?? 1000));
+	const promptFallbackScheduler = store.add(
+		new RunOnceScheduler(() => {
+			if (
+				state === TerminalState.Executing ||
+				state === TerminalState.PromptAfterExecuting
+			) {
+				promptFallbackScheduler.cancel();
+				return;
+			}
+			log?.(`Prompt fallback fired (dataEvents=${dataEventCount})`);
+			setState(TerminalState.PromptAfterExecuting, "promptFallback");
+			scheduler.schedule();
+		}, promptFallbackMs ?? 1000),
+	);
 	// Schedule an initial fallback with a longer timeout so we can detect idle
 	// even when no terminal data events arrive at all (e.g. shell integration
 	// is broken and the command finishes silently or hangs waiting for input).
@@ -231,15 +300,22 @@ export async function trackIdleOnPrompt(
 	// producing output. Once any data arrives, the onData handler takes over
 	// with the shorter promptFallbackMs interval.
 	const disableFallbacks = options?.disableFallbacks ?? false;
-	const initialFallbackScheduler = store.add(new RunOnceScheduler(() => {
-		if (state === TerminalState.Executing || state === TerminalState.PromptAfterExecuting) {
-			log?.(`Initial fallback fired but state is ${stateNames[state]}, skipping`);
-			return;
-		}
-		log?.(`Initial fallback fired, no data events received`);
-		setState(TerminalState.PromptAfterExecuting, 'initialFallback');
-		scheduler.schedule();
-	}, 10_000));
+	const initialFallbackScheduler = store.add(
+		new RunOnceScheduler(() => {
+			if (
+				state === TerminalState.Executing ||
+				state === TerminalState.PromptAfterExecuting
+			) {
+				log?.(
+					`Initial fallback fired but state is ${stateNames[state]}, skipping`,
+				);
+				return;
+			}
+			log?.(`Initial fallback fired, no data events received`);
+			setState(TerminalState.PromptAfterExecuting, "initialFallback");
+			scheduler.schedule();
+		}, 10_000),
+	);
 	if (!disableFallbacks) {
 		initialFallbackScheduler.schedule();
 	}
@@ -256,25 +332,33 @@ export async function trackIdleOnPrompt(
 	// In sync (foreground) mode this fallback is disabled: sync commands should
 	// block until the command truly finishes. The overall chat-request timeout
 	// or user-specified timeout serves as the safety net instead.
-	const executingFallbackScheduler = store.add(new RunOnceScheduler(() => {
-		if (state === TerminalState.Executing) {
-			log?.(`Executing fallback fired after 30s data-idle (dataEvents=${dataEventCount})`);
-			setState(TerminalState.PromptAfterExecuting, 'executingFallback');
-			scheduler.schedule();
-		}
-	}, 30_000));
+	const executingFallbackScheduler = store.add(
+		new RunOnceScheduler(() => {
+			if (state === TerminalState.Executing) {
+				log?.(
+					`Executing fallback fired after 30s data-idle (dataEvents=${dataEventCount})`,
+				);
+				setState(TerminalState.PromptAfterExecuting, "executingFallback");
+				scheduler.schedule();
+			}
+		}, 30_000),
+	);
 	// Hard wall-clock safety net for the case where shell integration never
 	// engages at all — no OSC `C`/`D` is ever parsed so state never advances
 	// to Executing. This is purely a resource-cleanup fallback; with recent
 	// shell integration fixes this path is rare. The 5-minute timeout is
 	// generous to avoid prematurely abandoning legitimate commands.
-	const hardCapScheduler = store.add(new RunOnceScheduler(() => {
-		if (state === TerminalState.Initial || state === TerminalState.Prompt) {
-			log?.(`Hard cap fired after 5min in state ${stateNames[state]} (dataEvents=${dataEventCount})`);
-			setState(TerminalState.PromptAfterExecuting, 'hardCap');
-			scheduler.schedule();
-		}
-	}, 60_000));
+	const hardCapScheduler = store.add(
+		new RunOnceScheduler(() => {
+			if (state === TerminalState.Initial || state === TerminalState.Prompt) {
+				log?.(
+					`Hard cap fired after 5min in state ${stateNames[state]} (dataEvents=${dataEventCount})`,
+				);
+				setState(TerminalState.PromptAfterExecuting, "hardCap");
+				scheduler.schedule();
+			}
+		}, 60_000),
+	);
 	if (!disableFallbacks) {
 		hardCapScheduler.schedule();
 	}
@@ -284,49 +368,56 @@ export async function trackIdleOnPrompt(
 	// and the terminal is idle. Note that D is treated as a signal for executed since shell
 	// integration sometimes lacks the C sequence either due to limitations in the integation or the
 	// required hooks aren't available.
-	store.add(onData(e => {
-		dataEventCount++;
-		// Once any data arrives, cancel the initial fallback — the data-driven
-		// promptFallbackScheduler handles rescheduling from here.
-		initialFallbackScheduler.cancel();
-		// Update state
-		// p10k fires C as `133;C;`
-		const matches = e.matchAll(/(?:\x1b\]|\x9d)[16]33;(?<type>[ACD])(?:;.*)?(?:\x1b\\|\x07|\x9c)/g);
-		for (const match of matches) {
-			if (match.groups?.type === 'A') {
-				if (state === TerminalState.Initial) {
-					setState(TerminalState.Prompt, 'sequence A');
-				} else if (state === TerminalState.Executing) {
-					setState(TerminalState.PromptAfterExecuting, 'sequence A after executing');
-					executingFallbackScheduler.cancel();
-				}
-			} else if (match.groups?.type === 'C' || match.groups?.type === 'D') {
-				setState(TerminalState.Executing, `sequence ${match.groups?.type}`);
-				if (!disableFallbacks) {
-					executingFallbackScheduler.schedule();
+	store.add(
+		onData((e) => {
+			dataEventCount++;
+			// Once any data arrives, cancel the initial fallback — the data-driven
+			// promptFallbackScheduler handles rescheduling from here.
+			initialFallbackScheduler.cancel();
+			// Update state
+			// p10k fires C as `133;C;`
+			const matches = e.matchAll(
+				/(?:\x1b\]|\x9d)[16]33;(?<type>[ACD])(?:;.*)?(?:\x1b\\|\x07|\x9c)/g,
+			);
+			for (const match of matches) {
+				if (match.groups?.type === "A") {
+					if (state === TerminalState.Initial) {
+						setState(TerminalState.Prompt, "sequence A");
+					} else if (state === TerminalState.Executing) {
+						setState(
+							TerminalState.PromptAfterExecuting,
+							"sequence A after executing",
+						);
+						executingFallbackScheduler.cancel();
+					}
+				} else if (match.groups?.type === "C" || match.groups?.type === "D") {
+					setState(TerminalState.Executing, `sequence ${match.groups?.type}`);
+					if (!disableFallbacks) {
+						executingFallbackScheduler.schedule();
+					}
 				}
 			}
-		}
-		// Re-schedule on every data event as we're tracking data idle
-		if (state === TerminalState.PromptAfterExecuting) {
-			promptFallbackScheduler.cancel();
-			executingFallbackScheduler.cancel();
-			scheduler.schedule();
-		} else {
-			scheduler.cancel();
-			if (state === TerminalState.Initial || state === TerminalState.Prompt) {
-				if (!disableFallbacks) {
-					promptFallbackScheduler.schedule();
-				}
-			} else {
+			// Re-schedule on every data event as we're tracking data idle
+			if (state === TerminalState.PromptAfterExecuting) {
 				promptFallbackScheduler.cancel();
-				// Re-schedule on every data event so it only fires after 30s
-				// of data-idle while in the Executing state.
-				if (!disableFallbacks) {
-					executingFallbackScheduler.schedule();
+				executingFallbackScheduler.cancel();
+				scheduler.schedule();
+			} else {
+				scheduler.cancel();
+				if (state === TerminalState.Initial || state === TerminalState.Prompt) {
+					if (!disableFallbacks) {
+						promptFallbackScheduler.schedule();
+					}
+				} else {
+					promptFallbackScheduler.cancel();
+					// Re-schedule on every data event so it only fires after 30s
+					// of data-idle while in the Executing state.
+					if (!disableFallbacks) {
+						executingFallbackScheduler.schedule();
+					}
 				}
 			}
-		}
-	}));
+		}),
+	);
 	return idleOnPrompt.p;
 }

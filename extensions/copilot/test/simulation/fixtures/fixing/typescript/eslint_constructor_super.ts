@@ -2,7 +2,10 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation and GitHub. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
-interface Position { x: number, y: number }
+interface Position {
+	x: number;
+	y: number;
+}
 class Character {
 	name: string;
 	position: Position;
@@ -24,5 +27,4 @@ class Monster extends Character {
 		this.level = level;
 		this.family = family;
 	}
-
 }

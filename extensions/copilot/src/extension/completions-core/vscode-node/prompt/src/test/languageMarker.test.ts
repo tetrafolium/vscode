@@ -20,7 +20,10 @@ suite('LanguageMarker Test Suite', function () {
 	let doc: DocumentInfoWithOffset;
 
 	setup(function () {
-		const source = fs.readFileSync(resolve(__dirname, 'testdata/example.py'), 'utf8');
+		const source = fs.readFileSync(
+			resolve(__dirname, 'testdata/example.py'),
+			'utf8',
+		);
 		const languageId = 'python';
 
 		doc = {
@@ -75,7 +78,10 @@ suite('LanguageMarker Test Suite', function () {
 	});
 
 	test('comment demonstrate multiple lines gives unintuitive result', function () {
-		assert.strictEqual(comment('hello\nworld', 'typescript'), '// hello\nworld');
+		assert.strictEqual(
+			comment('hello\nworld', 'typescript'),
+			'// hello\nworld',
+		);
 	});
 
 	test('comment non-existing language', function () {
@@ -91,22 +97,40 @@ suite('LanguageMarker Test Suite', function () {
 	test('commentBlockAsSingles normal', function () {
 		assert.strictEqual(commentBlockAsSingles('', 'python'), '');
 		assert.strictEqual(commentBlockAsSingles('hello', 'python'), '# hello');
-		assert.strictEqual(commentBlockAsSingles('hello\nworld', 'python'), '# hello\n# world');
-		assert.strictEqual(commentBlockAsSingles('hello\nworld', 'typescript'), '// hello\n// world');
+		assert.strictEqual(
+			commentBlockAsSingles('hello\nworld', 'python'),
+			'# hello\n# world',
+		);
+		assert.strictEqual(
+			commentBlockAsSingles('hello\nworld', 'typescript'),
+			'// hello\n// world',
+		);
 	});
 
 	test('commentBlockAsSingles trailing newline', function () {
-		assert.strictEqual(commentBlockAsSingles('hello\nworld\n', 'python'), '# hello\n# world\n');
+		assert.strictEqual(
+			commentBlockAsSingles('hello\nworld\n', 'python'),
+			'# hello\n# world\n',
+		);
 		assert.strictEqual(commentBlockAsSingles('\n', 'python'), '# \n');
 	});
 
 	test('commentBlockAsSingles nonexistent language', function () {
-		assert.strictEqual(commentBlockAsSingles('hello\nworld', 'nonexistent'), '// hello\n// world');
+		assert.strictEqual(
+			commentBlockAsSingles('hello\nworld', 'nonexistent'),
+			'// hello\n// world',
+		);
 	});
 
 	test('commentBlockAsSingles with default', function () {
-		assert.strictEqual(commentBlockAsSingles('hello\nworld', 'python'), '# hello\n# world');
-		assert.strictEqual(commentBlockAsSingles('hello\nworld', 'nonexistent'), '// hello\n// world');
+		assert.strictEqual(
+			commentBlockAsSingles('hello\nworld', 'python'),
+			'# hello\n# world',
+		);
+		assert.strictEqual(
+			commentBlockAsSingles('hello\nworld', 'nonexistent'),
+			'// hello\n// world',
+		);
 	});
 
 	const markdownLanguageIdsTestCases = [
@@ -142,37 +166,154 @@ suite('LanguageMarker Test Suite', function () {
 	});
 
 	const getLanguageTestCases = [
-		{ input: 'python', expected: 'python', expCommentStart: '#', expCommentEnd: '' },
-		{ input: 'javascript', expected: 'javascript', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'typescript', expected: 'typescript', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'cpp', expected: 'cpp', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'java', expected: 'java', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'csharp', expected: 'csharp', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'ruby', expected: 'ruby', expCommentStart: '#', expCommentEnd: '' },
-		{ input: 'php', expected: 'php', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'html', expected: 'html', expCommentStart: '<!--', expCommentEnd: '-->' },
-		{ input: 'css', expected: 'css', expCommentStart: '/*', expCommentEnd: '*/' },
-		{ input: 'xml', expected: 'xml', expCommentStart: '<!--', expCommentEnd: '-->' },
-		{ input: 'shellscript', expected: 'shellscript', expCommentStart: '#', expCommentEnd: '' },
-		{ input: 'go', expected: 'go', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'rust', expected: 'rust', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'swift', expected: 'swift', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'kotlin', expected: 'kotlin', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'lua', expected: 'lua', expCommentStart: '--', expCommentEnd: '' },
-		{ input: 'sql', expected: 'sql', expCommentStart: '--', expCommentEnd: '' },
-		{ input: 'yaml', expected: 'yaml', expCommentStart: '#', expCommentEnd: '' },
-		{ input: 'markdown', expected: 'markdown', expCommentStart: '[]: #', expCommentEnd: '' },
-		{ input: 'plaintext', expected: 'plaintext', expCommentStart: '//', expCommentEnd: '' },
-		{ input: 'not-existed', expected: 'not-existed', expCommentStart: '//', expCommentEnd: '' },
-		{ input: undefined, expected: 'plaintext', expCommentStart: '//', expCommentEnd: '' },
+		{
+			input: 'python',
+			expected: 'python',
+			expCommentStart: '#',
+			expCommentEnd: '',
+		},
+		{
+			input: 'javascript',
+			expected: 'javascript',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'typescript',
+			expected: 'typescript',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'cpp',
+			expected: 'cpp',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'java',
+			expected: 'java',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'csharp',
+			expected: 'csharp',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'ruby',
+			expected: 'ruby',
+			expCommentStart: '#',
+			expCommentEnd: '',
+		},
+		{
+			input: 'php',
+			expected: 'php',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'html',
+			expected: 'html',
+			expCommentStart: '<!--',
+			expCommentEnd: '-->',
+		},
+		{
+			input: 'css',
+			expected: 'css',
+			expCommentStart: '/*',
+			expCommentEnd: '*/',
+		},
+		{
+			input: 'xml',
+			expected: 'xml',
+			expCommentStart: '<!--',
+			expCommentEnd: '-->',
+		},
+		{
+			input: 'shellscript',
+			expected: 'shellscript',
+			expCommentStart: '#',
+			expCommentEnd: '',
+		},
+		{
+			input: 'go',
+			expected: 'go',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'rust',
+			expected: 'rust',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'swift',
+			expected: 'swift',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'kotlin',
+			expected: 'kotlin',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'lua',
+			expected: 'lua',
+			expCommentStart: '--',
+			expCommentEnd: '',
+		},
+		{
+			input: 'sql',
+			expected: 'sql',
+			expCommentStart: '--',
+			expCommentEnd: '',
+		},
+		{
+			input: 'yaml',
+			expected: 'yaml',
+			expCommentStart: '#',
+			expCommentEnd: '',
+		},
+		{
+			input: 'markdown',
+			expected: 'markdown',
+			expCommentStart: '[]: #',
+			expCommentEnd: '',
+		},
+		{
+			input: 'plaintext',
+			expected: 'plaintext',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: 'not-existed',
+			expected: 'not-existed',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
+		{
+			input: undefined,
+			expected: 'plaintext',
+			expCommentStart: '//',
+			expCommentEnd: '',
+		},
 	];
 
-	getLanguageTestCases.forEach(({ input, expected, expCommentStart, expCommentEnd }) => {
-		test(`test getLanguage for language id ${input} to language id ${expected}`, function () {
-			const language = getLanguage(input);
-			assert.strictEqual(language.languageId, expected);
-			assert.strictEqual(language.lineComment.start, expCommentStart);
-			assert.strictEqual(language.lineComment.end, expCommentEnd);
-		});
-	});
+	getLanguageTestCases.forEach(
+		({ input, expected, expCommentStart, expCommentEnd }) => {
+			test(`test getLanguage for language id ${input} to language id ${expected}`, function () {
+				const language = getLanguage(input);
+				assert.strictEqual(language.languageId, expected);
+				assert.strictEqual(language.lineComment.start, expCommentStart);
+				assert.strictEqual(language.lineComment.end, expCommentEnd);
+			});
+		},
+	);
 });

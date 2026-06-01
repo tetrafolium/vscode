@@ -6,8 +6,16 @@
 import * as vscode from 'vscode';
 import { window, workspace } from 'vscode';
 import { detectLanguage } from '../../lib/src/language/languageDetection';
-import { CopilotTextDocument, INotebookCell, INotebookDocument, ITextDocument } from '../../lib/src/textDocument';
-import { TextDocumentManager, WorkspaceFoldersChangeEvent } from '../../lib/src/textDocumentManager';
+import {
+	CopilotTextDocument,
+	INotebookCell,
+	INotebookDocument,
+	ITextDocument,
+} from '../../lib/src/textDocument';
+import {
+	TextDocumentManager,
+	WorkspaceFoldersChangeEvent,
+} from '../../lib/src/textDocumentManager';
 import { transformEvent } from '../../lib/src/util/event';
 import { normalizeUri } from '../../lib/src/util/uri';
 
@@ -34,42 +42,78 @@ export function wrapDoc(doc: vscode.TextDocument): ITextDocument | undefined {
 		}
 		throw e;
 	}
-	const languageId = detectLanguage({ uri: doc.uri.toString(), languageId: doc.languageId });
-	return CopilotTextDocument.create(doc.uri.toString(), doc.languageId, doc.version, text, languageId);
+	const languageId = detectLanguage({
+		uri: doc.uri.toString(),
+		languageId: doc.languageId,
+	});
+	return CopilotTextDocument.create(
+		doc.uri.toString(),
+		doc.languageId,
+		doc.version,
+		text,
+		languageId,
+	);
 }
 
 export class ExtensionTextDocumentManager extends TextDocumentManager {
-	override onDidFocusTextDocument = transformEvent(window.onDidChangeActiveTextEditor, event => {
-		return { document: event && { uri: event.document.uri.toString() } };
-	});
+	override onDidFocusTextDocument = transformEvent(
+		window.onDidChangeActiveTextEditor,
+		(event) => {
+			return {
+				document: event && { uri: event.document.uri.toString() },
+			};
+		},
+	);
 
-	override onDidChangeTextDocument = transformEvent(workspace.onDidChangeTextDocument, e => {
-		const document = wrapDoc(e.document);
-		return document && { document, contentChanges: e.contentChanges };
-	});
+	override onDidChangeTextDocument = transformEvent(
+		workspace.onDidChangeTextDocument,
+		(e) => {
+			const document = wrapDoc(e.document);
+			return document && { document, contentChanges: e.contentChanges };
+		},
+	);
 
-	override onDidOpenTextDocument = transformEvent(workspace.onDidOpenTextDocument, e => {
-		// use wrapDoc() to handle the "Invalid string length" case
-		const text = wrapDoc(e)?.getText();
-		if (text === undefined) {
-			return;
-		}
-		return { document: { uri: e.uri.toString(), languageId: e.languageId, version: e.version, text } };
-	});
+	override onDidOpenTextDocument = transformEvent(
+		workspace.onDidOpenTextDocument,
+		(e) => {
+			// use wrapDoc() to handle the "Invalid string length" case
+			const text = wrapDoc(e)?.getText();
+			if (text === undefined) {
+				return;
+			}
+			return {
+				document: {
+					uri: e.uri.toString(),
+					languageId: e.languageId,
+					version: e.version,
+					text,
+				},
+			};
+		},
+	);
 
-	override onDidCloseTextDocument = transformEvent(workspace.onDidCloseTextDocument, e => {
-		return { document: { uri: normalizeUri(e.uri.toString()) } };
-	});
+	override onDidCloseTextDocument = transformEvent(
+		workspace.onDidCloseTextDocument,
+		(e) => {
+			return { document: { uri: normalizeUri(e.uri.toString()) } };
+		},
+	);
 
 	override onDidChangeWorkspaceFolders = transformEvent(
 		workspace.onDidChangeWorkspaceFolders,
 		(e): WorkspaceFoldersChangeEvent => {
 			return {
 				workspaceFolders: this.getWorkspaceFolders(),
-				added: e.added.map(f => ({ uri: f.uri.toString(), name: f.name })),
-				removed: e.removed.map(f => ({ uri: f.uri.toString(), name: f.name })),
+				added: e.added.map((f) => ({
+					uri: f.uri.toString(),
+					name: f.name,
+				})),
+				removed: e.removed.map((f) => ({
+					uri: f.uri.toString(),
+					name: f.name,
+				})),
 			};
-		}
+		},
 	);
 
 	getTextDocumentsUnsafe(): ITextDocument[] {
@@ -85,11 +129,25 @@ export class ExtensionTextDocumentManager extends TextDocumentManager {
 
 	findNotebook(doc: { uri: string }): INotebookDocument | undefined {
 		for (const notebook of workspace.notebookDocuments) {
-			if (notebook.getCells().some(cell => cell.document.uri.toString() === doc.uri.toString())) {
+			if (
+				notebook
+					.getCells()
+					.some(
+						(cell) =>
+							cell.document.uri.toString() === doc.uri.toString(),
+					)
+			) {
 				return {
-					getCells: () => notebook.getCells().map(cell => this.wrapCell(cell)),
+					getCells: () =>
+						notebook.getCells().map((cell) => this.wrapCell(cell)),
 					getCellFor: ({ uri }: { uri: string }) => {
-						const cell = notebook.getCells().find(cell => cell.document.uri.toString() === uri.toString());
+						const cell = notebook
+							.getCells()
+							.find(
+								(cell) =>
+									cell.document.uri.toString() ===
+									uri.toString(),
+							);
 						return cell ? this.wrapCell(cell) : undefined;
 					},
 				};
@@ -107,7 +165,7 @@ export class ExtensionTextDocumentManager extends TextDocumentManager {
 					cell.document.version,
 					cell.document.getText(),
 					// use the original language id as cells have no metadata to leverage for language detection
-					cell.document.languageId
+					cell.document.languageId,
 				);
 			},
 		};
@@ -115,7 +173,7 @@ export class ExtensionTextDocumentManager extends TextDocumentManager {
 
 	getWorkspaceFolders() {
 		return (
-			workspace.workspaceFolders?.map(f => {
+			workspace.workspaceFolders?.map((f) => {
 				return { uri: f.uri.toString(), name: f.name };
 			}) ?? []
 		);

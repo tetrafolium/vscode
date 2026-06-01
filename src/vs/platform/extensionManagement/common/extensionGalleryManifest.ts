@@ -3,35 +3,35 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
+import { Event } from "../../../base/common/event.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
 
 export const enum ExtensionGalleryResourceType {
-	ExtensionQueryService = 'ExtensionQueryService',
-	ExtensionLatestVersionUri = 'ExtensionLatestVersionUriTemplate',
-	ExtensionStatisticsUri = 'ExtensionStatisticsUriTemplate',
-	PublisherViewUri = 'PublisherViewUriTemplate',
-	ExtensionDetailsViewUri = 'ExtensionDetailsViewUriTemplate',
-	ExtensionRatingViewUri = 'ExtensionRatingViewUriTemplate',
-	ExtensionResourceUri = 'ExtensionResourceUriTemplate',
-	ContactSupportUri = 'ContactSupportUri',
+	ExtensionQueryService = "ExtensionQueryService",
+	ExtensionLatestVersionUri = "ExtensionLatestVersionUriTemplate",
+	ExtensionStatisticsUri = "ExtensionStatisticsUriTemplate",
+	PublisherViewUri = "PublisherViewUriTemplate",
+	ExtensionDetailsViewUri = "ExtensionDetailsViewUriTemplate",
+	ExtensionRatingViewUri = "ExtensionRatingViewUriTemplate",
+	ExtensionResourceUri = "ExtensionResourceUriTemplate",
+	ContactSupportUri = "ContactSupportUri",
 }
 
 export const enum Flag {
-	None = 'None',
-	IncludeVersions = 'IncludeVersions',
-	IncludeFiles = 'IncludeFiles',
-	IncludeCategoryAndTags = 'IncludeCategoryAndTags',
-	IncludeSharedAccounts = 'IncludeSharedAccounts',
-	IncludeVersionProperties = 'IncludeVersionProperties',
-	ExcludeNonValidated = 'ExcludeNonValidated',
-	IncludeInstallationTargets = 'IncludeInstallationTargets',
-	IncludeAssetUri = 'IncludeAssetUri',
-	IncludeStatistics = 'IncludeStatistics',
-	IncludeLatestVersionOnly = 'IncludeLatestVersionOnly',
-	Unpublished = 'Unpublished',
-	IncludeNameConflictInfo = 'IncludeNameConflictInfo',
-	IncludeLatestPrereleaseAndStableVersionOnly = 'IncludeLatestPrereleaseAndStableVersionOnly',
+	None = "None",
+	IncludeVersions = "IncludeVersions",
+	IncludeFiles = "IncludeFiles",
+	IncludeCategoryAndTags = "IncludeCategoryAndTags",
+	IncludeSharedAccounts = "IncludeSharedAccounts",
+	IncludeVersionProperties = "IncludeVersionProperties",
+	ExcludeNonValidated = "ExcludeNonValidated",
+	IncludeInstallationTargets = "IncludeInstallationTargets",
+	IncludeAssetUri = "IncludeAssetUri",
+	IncludeStatistics = "IncludeStatistics",
+	IncludeLatestVersionOnly = "IncludeLatestVersionOnly",
+	Unpublished = "Unpublished",
+	IncludeNameConflictInfo = "IncludeNameConflictInfo",
+	IncludeLatestPrereleaseAndStableVersionOnly = "IncludeLatestPrereleaseAndStableVersionOnly",
 }
 
 export type ExtensionGalleryManifestResource = {
@@ -65,13 +65,16 @@ export interface IExtensionGalleryManifest {
 }
 
 export const enum ExtensionGalleryManifestStatus {
-	Available = 'available',
-	RequiresSignIn = 'requiresSignIn',
-	AccessDenied = 'accessDenied',
-	Unavailable = 'unavailable'
+	Available = "available",
+	RequiresSignIn = "requiresSignIn",
+	AccessDenied = "accessDenied",
+	Unavailable = "unavailable",
 }
 
-export const IExtensionGalleryManifestService = createDecorator<IExtensionGalleryManifestService>('IExtensionGalleryManifestService');
+export const IExtensionGalleryManifestService =
+	createDecorator<IExtensionGalleryManifestService>(
+		"IExtensionGalleryManifestService",
+	);
 
 export interface IExtensionGalleryManifestService {
 	readonly _serviceBrand: undefined;
@@ -82,10 +85,13 @@ export interface IExtensionGalleryManifestService {
 	getExtensionGalleryManifest(): Promise<IExtensionGalleryManifest | null>;
 }
 
-export function getExtensionGalleryManifestResourceUri(manifest: IExtensionGalleryManifest, type: string): string | undefined {
-	const [name, version] = type.split('/');
+export function getExtensionGalleryManifestResourceUri(
+	manifest: IExtensionGalleryManifest,
+	type: string,
+): string | undefined {
+	const [name, version] = type.split("/");
 	for (const resource of manifest.resources) {
-		const [r, v] = resource.type.split('/');
+		const [r, v] = resource.type.split("/");
 		if (r !== name) {
 			continue;
 		}
@@ -97,4 +103,5 @@ export function getExtensionGalleryManifestResourceUri(manifest: IExtensionGalle
 	return undefined;
 }
 
-export const ExtensionGalleryServiceUrlConfigKey = 'extensions.gallery.serviceUrl';
+export const ExtensionGalleryServiceUrlConfigKey =
+	"extensions.gallery.serviceUrl";

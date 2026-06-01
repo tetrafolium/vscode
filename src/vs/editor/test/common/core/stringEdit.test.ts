@@ -3,33 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { ArrayEdit, ArrayReplacement } from '../../../common/core/edits/arrayEdit.js';
-import { StringEdit, StringReplacement } from '../../../common/core/edits/stringEdit.js';
-import { OffsetRange } from '../../../common/core/ranges/offsetRange.js';
-import { Random } from './random.js';
+import assert from "assert";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../base/test/common/utils.js";
+import {
+	ArrayEdit,
+	ArrayReplacement,
+} from "../../../common/core/edits/arrayEdit.js";
+import {
+	StringEdit,
+	StringReplacement,
+} from "../../../common/core/edits/stringEdit.js";
+import { OffsetRange } from "../../../common/core/ranges/offsetRange.js";
+import { Random } from "./random.js";
 
-suite('Edit', () => {
-
+suite("Edit", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	suite('StringEdit', () => {
-		test('basic', () => {
-			const arr = '0123456789';
-			const edit = StringEdit.replace(new OffsetRange(4, 6), 'xyz');
+	suite("StringEdit", () => {
+		test("basic", () => {
+			const arr = "0123456789";
+			const edit = StringEdit.replace(new OffsetRange(4, 6), "xyz");
 			const result = edit.apply(arr);
-			assert.deepStrictEqual(result, '0123xyz6789');
+			assert.deepStrictEqual(result, "0123xyz6789");
 		});
 
-		test('inverse', () => {
+		test("inverse", () => {
 			for (let i = 0; i < 1000; i++) {
-				test('case' + i, () => {
+				test("case" + i, () => {
 					runTest(i);
 				});
 			}
 
-			test.skip('fuzz', () => {
+			test.skip("fuzz", () => {
 				for (let i = 0; i < 1_000_000; i++) {
 					runTest(i);
 				}
@@ -38,7 +43,7 @@ suite('Edit', () => {
 			function runTest(seed: number) {
 				const rng = Random.create(seed);
 
-				const s0 = 'abcde\nfghij\nklmno\npqrst\n';
+				const s0 = "abcde\nfghij\nklmno\npqrst\n";
 
 				const e = getRandomEdit(s0, rng.nextIntRange(1, 4), rng);
 				const eInv = e.inverse(s0);
@@ -47,14 +52,14 @@ suite('Edit', () => {
 			}
 		});
 
-		suite('compose', () => {
+		suite("compose", () => {
 			for (let i = 0; i < 1000; i++) {
-				test('case' + i, () => {
+				test("case" + i, () => {
 					runTest(i);
 				});
 			}
 
-			test.skip('fuzz', () => {
+			test.skip("fuzz", () => {
 				for (let i = 0; i < 1_000_000; i++) {
 					runTest(i);
 				}
@@ -63,7 +68,7 @@ suite('Edit', () => {
 			function runTest(seed: number) {
 				const rng = Random.create(seed);
 
-				const s0 = 'abcde\nfghij\nklmno\npqrst\n';
+				const s0 = "abcde\nfghij\nklmno\npqrst\n";
 
 				const edits1 = getRandomEdit(s0, rng.nextIntRange(1, 4), rng);
 				const s1 = edits1.apply(s0);
@@ -78,11 +83,11 @@ suite('Edit', () => {
 			}
 		});
 
-		test('equals', () => {
-			const edit1 = StringEdit.replace(new OffsetRange(4, 6), 'xyz');
-			const edit2 = StringEdit.replace(new OffsetRange(4, 6), 'xyz');
-			const edit3 = StringEdit.replace(new OffsetRange(5, 6), 'xyz');
-			const edit4 = StringEdit.replace(new OffsetRange(4, 6), 'xy');
+		test("equals", () => {
+			const edit1 = StringEdit.replace(new OffsetRange(4, 6), "xyz");
+			const edit2 = StringEdit.replace(new OffsetRange(4, 6), "xyz");
+			const edit3 = StringEdit.replace(new OffsetRange(5, 6), "xyz");
+			const edit4 = StringEdit.replace(new OffsetRange(4, 6), "xy");
 
 			assert.ok(edit1.equals(edit1));
 			assert.ok(edit1.equals(edit2));
@@ -92,10 +97,10 @@ suite('Edit', () => {
 			assert.ok(!edit1.equals(edit4));
 		});
 
-		test('getNewRanges', () => {
+		test("getNewRanges", () => {
 			const edit = StringEdit.create([
-				new StringReplacement(new OffsetRange(4, 6), 'abcde'),
-				new StringReplacement(new OffsetRange(7, 9), 'a'),
+				new StringReplacement(new OffsetRange(4, 6), "abcde"),
+				new StringReplacement(new OffsetRange(7, 9), "a"),
 			]);
 			const ranges = edit.getNewRanges();
 			assert.deepStrictEqual(ranges, [
@@ -104,19 +109,19 @@ suite('Edit', () => {
 			]);
 		});
 
-		test('getJoinedReplaceRange', () => {
+		test("getJoinedReplaceRange", () => {
 			const edit = StringEdit.create([
-				new StringReplacement(new OffsetRange(4, 6), 'abcde'),
-				new StringReplacement(new OffsetRange(7, 9), 'a'),
+				new StringReplacement(new OffsetRange(4, 6), "abcde"),
+				new StringReplacement(new OffsetRange(7, 9), "a"),
 			]);
 			const range = edit.getJoinedReplaceRange();
 			assert.deepStrictEqual(range, new OffsetRange(4, 9));
 		});
 
-		test('getLengthDelta', () => {
+		test("getLengthDelta", () => {
 			const edit = StringEdit.create([
-				new StringReplacement(new OffsetRange(4, 6), 'abcde'),
-				new StringReplacement(new OffsetRange(7, 9), 'a'),
+				new StringReplacement(new OffsetRange(4, 6), "abcde"),
+				new StringReplacement(new OffsetRange(7, 9), "a"),
 			]);
 			const delta = edit.getLengthDelta();
 			assert.strictEqual(delta, 2);
@@ -124,13 +129,19 @@ suite('Edit', () => {
 			assert.strictEqual(edit.replacements[1].getLengthDelta(), -1);
 		});
 
-		test('adjacent edit and insert should rebase successfully', () => {
+		test("adjacent edit and insert should rebase successfully", () => {
 			// A replacement ending at X followed by an insert at X should not conflict
 			const firstEdit = StringEdit.create([
-				StringReplacement.replace(new OffsetRange(1826, 1838), 'function fib(n: number): number {'),
+				StringReplacement.replace(
+					new OffsetRange(1826, 1838),
+					"function fib(n: number): number {",
+				),
 			]);
 			const followupEdit = StringEdit.create([
-				StringReplacement.replace(new OffsetRange(1838, 1838), '\n\tif (n <= 1) {\n\t\treturn n;\n\t}\n\treturn fib(n - 1) + fib(n - 2);\n}'),
+				StringReplacement.replace(
+					new OffsetRange(1838, 1838),
+					"\n\tif (n <= 1) {\n\t\treturn n;\n\t}\n\treturn fib(n - 1) + fib(n - 2);\n}",
+				),
 			]);
 			const rebasedEdit = followupEdit.tryRebase(firstEdit);
 
@@ -138,16 +149,19 @@ suite('Edit', () => {
 			// the insert at 1838 should be rebased to 1826 + 33 = 1859
 			assert.ok(rebasedEdit);
 			assert.strictEqual(rebasedEdit?.replacements[0].replaceRange.start, 1859);
-			assert.strictEqual(rebasedEdit?.replacements[0].replaceRange.endExclusive, 1859);
+			assert.strictEqual(
+				rebasedEdit?.replacements[0].replaceRange.endExclusive,
+				1859,
+			);
 		});
 
-		test('concurrent inserts at same position should conflict', () => {
+		test("concurrent inserts at same position should conflict", () => {
 			// Two inserts at the exact same position conflict because order matters
 			const firstEdit = StringEdit.create([
-				StringReplacement.replace(new OffsetRange(1838, 1838), '1'),
+				StringReplacement.replace(new OffsetRange(1838, 1838), "1"),
 			]);
 			const followupEdit = StringEdit.create([
-				StringReplacement.replace(new OffsetRange(1838, 1838), '2'),
+				StringReplacement.replace(new OffsetRange(1838, 1838), "2"),
 			]);
 			const rebasedEdit = followupEdit.tryRebase(firstEdit);
 
@@ -155,38 +169,38 @@ suite('Edit', () => {
 			assert.strictEqual(rebasedEdit, undefined);
 		});
 
-		test('tryRebase should return undefined when rebasing would produce non-disjoint edits (negative offset case)', () => {
+		test("tryRebase should return undefined when rebasing would produce non-disjoint edits (negative offset case)", () => {
 			// ourEdit1: [100, 110) -> "A"
 			// ourEdit2: [120, 120) -> "B"
 			// baseEdit: [110, 125) -> "" (delete 15 chars, offset = -15)
 			// After transformation, ourEdit2 at [105, 105) < ourEdit1 end (110)
 
 			const ourEdit = StringEdit.create([
-				new StringReplacement(new OffsetRange(100, 110), 'A'),
-				new StringReplacement(OffsetRange.emptyAt(120), 'B'),
+				new StringReplacement(new OffsetRange(100, 110), "A"),
+				new StringReplacement(OffsetRange.emptyAt(120), "B"),
 			]);
 
 			const baseEdit = StringEdit.create([
-				new StringReplacement(new OffsetRange(110, 125), ''),
+				new StringReplacement(new OffsetRange(110, 125), ""),
 			]);
 
 			const result = ourEdit.tryRebase(baseEdit);
 			assert.strictEqual(result, undefined);
 		});
 
-		test('tryRebase should succeed when edits remain disjoint after rebasing', () => {
+		test("tryRebase should succeed when edits remain disjoint after rebasing", () => {
 			// ourEdit1: [100, 110) -> "A"
 			// ourEdit2: [200, 210) -> "B"
 			// baseEdit: [50, 60) -> "" (delete 10 chars, offset = -10)
 			// After: ourEdit1 at [90, 100), ourEdit2 at [190, 200) - still disjoint
 
 			const ourEdit = StringEdit.create([
-				new StringReplacement(new OffsetRange(100, 110), 'A'),
-				new StringReplacement(new OffsetRange(200, 210), 'B'),
+				new StringReplacement(new OffsetRange(100, 110), "A"),
+				new StringReplacement(new OffsetRange(200, 210), "B"),
 			]);
 
 			const baseEdit = StringEdit.create([
-				new StringReplacement(new OffsetRange(50, 60), ''),
+				new StringReplacement(new OffsetRange(50, 60), ""),
 			]);
 
 			const result = ourEdit.tryRebase(baseEdit);
@@ -195,14 +209,14 @@ suite('Edit', () => {
 			assert.strictEqual(result?.replacements[1].replaceRange.start, 190);
 		});
 
-		test('rebaseSkipConflicting should skip edits that would produce non-disjoint results', () => {
+		test("rebaseSkipConflicting should skip edits that would produce non-disjoint results", () => {
 			const ourEdit = StringEdit.create([
-				new StringReplacement(new OffsetRange(100, 110), 'A'),
-				new StringReplacement(OffsetRange.emptyAt(120), 'B'),
+				new StringReplacement(new OffsetRange(100, 110), "A"),
+				new StringReplacement(OffsetRange.emptyAt(120), "B"),
 			]);
 
 			const baseEdit = StringEdit.create([
-				new StringReplacement(new OffsetRange(110, 125), ''),
+				new StringReplacement(new OffsetRange(110, 125), ""),
 			]);
 
 			// Should not throw, and should skip the conflicting edit
@@ -212,17 +226,29 @@ suite('Edit', () => {
 		});
 	});
 
-	suite('ArrayEdit', () => {
-		test('basic', () => {
-			const arr = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-			const edit = ArrayEdit.replace(new OffsetRange(4, 6), ['x', 'y', 'z']);
+	suite("ArrayEdit", () => {
+		test("basic", () => {
+			const arr = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+			const edit = ArrayEdit.replace(new OffsetRange(4, 6), ["x", "y", "z"]);
 			const result = edit.apply(arr);
-			assert.deepStrictEqual(result, ['0', '1', '2', '3', 'x', 'y', 'z', '6', '7', '8', '9']);
+			assert.deepStrictEqual(result, [
+				"0",
+				"1",
+				"2",
+				"3",
+				"x",
+				"y",
+				"z",
+				"6",
+				"7",
+				"8",
+				"9",
+			]);
 		});
 
-		suite('compose', () => {
+		suite("compose", () => {
 			for (let i = 0; i < 100; i++) {
-				test('case' + i, () => {
+				test("case" + i, () => {
 					runTest(i);
 				});
 			}
@@ -230,15 +256,23 @@ suite('Edit', () => {
 			function runTest(seed: number) {
 				const rng = Random.create(seed);
 
-				const s0 = 'abcde\nfghij\nklmno\npqrst\n';
+				const s0 = "abcde\nfghij\nklmno\npqrst\n";
 
 				const e1 = getRandomEdit(s0, rng.nextIntRange(1, 4), rng);
 				const s1 = e1.apply(s0);
 
 				const e2 = getRandomEdit(s1, rng.nextIntRange(1, 4), rng);
 
-				const ae1 = ArrayEdit.create(e1.replacements.map(r => new ArrayReplacement(r.replaceRange, [...r.newText])));
-				const ae2 = ArrayEdit.create(e2.replacements.map(r => new ArrayReplacement(r.replaceRange, [...r.newText])));
+				const ae1 = ArrayEdit.create(
+					e1.replacements.map(
+						(r) => new ArrayReplacement(r.replaceRange, [...r.newText]),
+					),
+				);
+				const ae2 = ArrayEdit.create(
+					e2.replacements.map(
+						(r) => new ArrayReplacement(r.replaceRange, [...r.newText]),
+					),
+				);
 				const as0 = [...s0];
 				const as1 = ae1.apply(as0);
 				const as2 = ae2.apply(as1);
@@ -249,7 +283,6 @@ suite('Edit', () => {
 			}
 		});
 	});
-
 
 	function getRandomEdit(str: string, count: number, rng: Random): StringEdit {
 		const edits: StringReplacement[] = [];
@@ -264,7 +297,11 @@ suite('Edit', () => {
 		return StringEdit.create(edits);
 	}
 
-	function getRandomSingleEdit(str: string, rangeOffsetStart: number, rng: Random): StringReplacement {
+	function getRandomSingleEdit(
+		str: string,
+		rangeOffsetStart: number,
+		rng: Random,
+	): StringReplacement {
 		const offsetStart = rng.nextIntRange(rangeOffsetStart, str.length);
 		const offsetEnd = rng.nextIntRange(offsetStart, str.length);
 
@@ -273,20 +310,20 @@ suite('Edit', () => {
 
 		return new StringReplacement(
 			new OffsetRange(offsetStart, offsetEnd),
-			str.substring(textStart, textStart + textLen)
+			str.substring(textStart, textStart + textLen),
 		);
 	}
 
-	suite('tryRebase invariants', () => {
+	suite("tryRebase invariants", () => {
 		for (let i = 0; i < 1000; i++) {
-			test('case' + i, () => {
+			test("case" + i, () => {
 				runTest(i);
 			});
 		}
 
 		function runTest(seed: number) {
 			const rng = Random.create(seed);
-			const s0 = 'abcde\nfghij\nklmno\npqrst\n';
+			const s0 = "abcde\nfghij\nklmno\npqrst\n";
 
 			const e1 = getRandomEdit(s0, rng.nextIntRange(1, 4), rng);
 			const e2 = getRandomEdit(s0, rng.nextIntRange(1, 4), rng);
@@ -298,7 +335,7 @@ suite('Edit', () => {
 			assert.strictEqual(
 				e1RebasedOnE2 !== undefined,
 				e2RebasedOnE1 !== undefined,
-				`Symmetry violated: e1.rebase(e2)=${e1RebasedOnE2 !== undefined}, e2.rebase(e1)=${e2RebasedOnE1 !== undefined}`
+				`Symmetry violated: e1.rebase(e2)=${e1RebasedOnE2 !== undefined}, e2.rebase(e1)=${e2RebasedOnE1 !== undefined}`,
 			);
 
 			// Invariant 2: e1.rebase(e2) != undefined => e1.compose(e2.rebase(e1)) = e2.compose(e1.rebase(e2))
@@ -336,7 +373,10 @@ suite('Edit', () => {
 				const path2 = e3OnE2.tryRebase(e1OnE2); // T(T(e3, e2), T(e1, e2))
 
 				if (path1 && path2) {
-					assert.ok(path1.equals(path2), `TP2 violated: transformation order matters`);
+					assert.ok(
+						path1.equals(path2),
+						`TP2 violated: transformation order matters`,
+					);
 				}
 			}
 		}

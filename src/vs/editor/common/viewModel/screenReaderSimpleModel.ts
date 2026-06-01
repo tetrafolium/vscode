@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Position } from '../core/position.js';
-import { Range } from '../core/range.js';
-import { EndOfLinePreference } from '../model.js';
+import { Position } from "../core/position.js";
+import { Range } from "../core/range.js";
+import { EndOfLinePreference } from "../model.js";
 
 export interface ISimpleModel {
 	getLineContent(lineNumber: number): string;

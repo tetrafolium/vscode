@@ -3,11 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ITextModel } from '../../model.js';
-import { Position } from '../position.js';
-import { PositionOffsetTransformerBase } from './positionToOffset.js';
+import { ITextModel } from "../../model.js";
+import { Position } from "../position.js";
+import { PositionOffsetTransformerBase } from "./positionToOffset.js";
 
-export function getPositionOffsetTransformerFromTextModel(textModel: ITextModel): PositionOffsetTransformerBase {
+export function getPositionOffsetTransformerFromTextModel(
+	textModel: ITextModel,
+): PositionOffsetTransformerBase {
 	return new PositionOffsetTransformerWithTextModel(textModel);
 }
 

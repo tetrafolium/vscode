@@ -14,16 +14,27 @@ import { renderPromptElementJSON } from '../promptRenderer';
 class ThrowingEndpointProvider implements IEndpointProvider {
 	declare readonly _serviceBrand: undefined;
 	readonly onDidModelsRefresh = Event.None;
-	async getChatEndpoint(): Promise<never> { throw new Error('no utility model'); }
-	async getEmbeddingsEndpoint(): Promise<never> { throw new Error('not implemented'); }
-	async getAllChatEndpoints(): Promise<never[]> { return []; }
-	async getAllCompletionModels(): Promise<never[]> { return []; }
+	async getChatEndpoint(): Promise<never> {
+		throw new Error('no utility model');
+	}
+	async getEmbeddingsEndpoint(): Promise<never> {
+		throw new Error('not implemented');
+	}
+	async getAllChatEndpoints(): Promise<never[]> {
+		return [];
+	}
+	async getAllCompletionModels(): Promise<never[]> {
+		return [];
+	}
 }
 
 describe('renderPromptElementJSON', () => {
 	test('falls back to a stub endpoint when no utility model is available', async () => {
 		const testingServiceCollection = createExtensionUnitTestingServices();
-		testingServiceCollection.define(IEndpointProvider, new ThrowingEndpointProvider());
+		testingServiceCollection.define(
+			IEndpointProvider,
+			new ThrowingEndpointProvider(),
+		);
 		const accessor = testingServiceCollection.createTestingAccessor();
 
 		const result = await renderPromptElementJSON(

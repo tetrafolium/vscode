@@ -3,23 +3,46 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { Emitter, Event } from '../../../../../base/common/event.js';
-import { IMarkdownString } from '../../../../../base/common/htmlContent.js';
-import { DisposableStore, IDisposable, ImmortalReference, IReference, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { constObservable, IObservable, observableValue } from '../../../../../base/common/observable.js';
-import { GitHubPullRequestModel } from '../../browser/models/githubPullRequestModel.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { mock } from '../../../../../base/test/common/mock.js';
-import { GitHubPullRequestPollingContribution } from '../../browser/github.contribution.js';
-import { IGitHubService } from '../../browser/githubService.js';
-import { IChat, IGitHubInfo, ISession, ISessionCapabilities, ISessionChangeset, IChatCheckpoints, ISessionFileChange, ISessionWorkspace, SessionStatus } from '../../../../services/sessions/common/session.js';
-import { IActiveSession, ISessionsChangeEvent, ISessionsManagementService } from '../../../../services/sessions/common/sessionsManagement.js';
+import assert from "assert";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { Emitter, Event } from "../../../../../base/common/event.js";
+import { IMarkdownString } from "../../../../../base/common/htmlContent.js";
+import {
+	DisposableStore,
+	IDisposable,
+	ImmortalReference,
+	IReference,
+	toDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import {
+	constObservable,
+	IObservable,
+	observableValue,
+} from "../../../../../base/common/observable.js";
+import { GitHubPullRequestModel } from "../../browser/models/githubPullRequestModel.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../base/test/common/utils.js";
+import { mock } from "../../../../../base/test/common/mock.js";
+import { GitHubPullRequestPollingContribution } from "../../browser/github.contribution.js";
+import { IGitHubService } from "../../browser/githubService.js";
+import {
+	IChat,
+	IGitHubInfo,
+	ISession,
+	ISessionCapabilities,
+	ISessionChangeset,
+	IChatCheckpoints,
+	ISessionFileChange,
+	ISessionWorkspace,
+	SessionStatus,
+} from "../../../../services/sessions/common/session.js";
+import {
+	IActiveSession,
+	ISessionsChangeEvent,
+	ISessionsManagementService,
+} from "../../../../services/sessions/common/sessionsManagement.js";
 
-suite('GitHubPullRequestPollingContribution', () => {
-
+suite("GitHubPullRequestPollingContribution", () => {
 	const store = new DisposableStore();
 	let sessionsManagementService: TestSessionsManagementService;
 	let gitHubService: TestGitHubService;
@@ -33,43 +56,87 @@ suite('GitHubPullRequestPollingContribution', () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('starts polling existing and added pull request sessions', () => {
-		const existingSession = sessionsManagementService.addSession('existing', makeGitHubInfo(1));
+	test("starts polling existing and added pull request sessions", () => {
+		const existingSession = sessionsManagementService.addSession(
+			"existing",
+			makeGitHubInfo(1),
+		);
 
-		store.add(new GitHubPullRequestPollingContribution(gitHubService, sessionsManagementService));
+		store.add(
+			new GitHubPullRequestPollingContribution(
+				gitHubService,
+				sessionsManagementService,
+			),
+		);
 
-		const addedSession = sessionsManagementService.addSession('added', makeGitHubInfo(2));
+		const addedSession = sessionsManagementService.addSession(
+			"added",
+			makeGitHubInfo(2),
+		);
 		sessionsManagementService.fireSessionsChanged({ added: [addedSession] });
 
 		assert.deepStrictEqual(gitHubService.snapshot(), {
-			'owner/repo/1': { startPollingCalls: 1, stopPollingCalls: 0, disposeCalls: 0 },
-			'owner/repo/2': { startPollingCalls: 1, stopPollingCalls: 0, disposeCalls: 0 },
+			"owner/repo/1": {
+				startPollingCalls: 1,
+				stopPollingCalls: 0,
+				disposeCalls: 0,
+			},
+			"owner/repo/2": {
+				startPollingCalls: 1,
+				stopPollingCalls: 0,
+				disposeCalls: 0,
+			},
 		});
 		assert.strictEqual(existingSession.isArchived.get(), false);
 	});
 
-	test('stops polling when a session is archived, then resumes when unarchived', () => {
-		const session = sessionsManagementService.addSession('session', makeGitHubInfo(1));
-		store.add(new GitHubPullRequestPollingContribution(gitHubService, sessionsManagementService));
+	test("stops polling when a session is archived, then resumes when unarchived", () => {
+		const session = sessionsManagementService.addSession(
+			"session",
+			makeGitHubInfo(1),
+		);
+		store.add(
+			new GitHubPullRequestPollingContribution(
+				gitHubService,
+				sessionsManagementService,
+			),
+		);
 
 		sessionsManagementService.setArchived(session, true);
 		sessionsManagementService.fireSessionsChanged({ changed: [session] });
 
 		assert.deepStrictEqual(gitHubService.snapshot(), {
-			'owner/repo/1': { startPollingCalls: 1, stopPollingCalls: 1, disposeCalls: 0 },
+			"owner/repo/1": {
+				startPollingCalls: 1,
+				stopPollingCalls: 1,
+				disposeCalls: 0,
+			},
 		});
 
 		sessionsManagementService.setArchived(session, false);
 		sessionsManagementService.fireSessionsChanged({ changed: [session] });
 
 		assert.deepStrictEqual(gitHubService.snapshot(), {
-			'owner/repo/1': { startPollingCalls: 2, stopPollingCalls: 1, disposeCalls: 0 },
+			"owner/repo/1": {
+				startPollingCalls: 2,
+				stopPollingCalls: 1,
+				disposeCalls: 0,
+			},
 		});
 	});
 
-	test('does not poll archived sessions until they are unarchived', () => {
-		const session = sessionsManagementService.addSession('session', makeGitHubInfo(1), true);
-		store.add(new GitHubPullRequestPollingContribution(gitHubService, sessionsManagementService));
+	test("does not poll archived sessions until they are unarchived", () => {
+		const session = sessionsManagementService.addSession(
+			"session",
+			makeGitHubInfo(1),
+			true,
+		);
+		store.add(
+			new GitHubPullRequestPollingContribution(
+				gitHubService,
+				sessionsManagementService,
+			),
+		);
 
 		assert.deepStrictEqual(gitHubService.snapshot(), {});
 
@@ -77,39 +144,64 @@ suite('GitHubPullRequestPollingContribution', () => {
 		sessionsManagementService.fireSessionsChanged({ changed: [session] });
 
 		assert.deepStrictEqual(gitHubService.snapshot(), {
-			'owner/repo/1': { startPollingCalls: 1, stopPollingCalls: 0, disposeCalls: 0 },
+			"owner/repo/1": {
+				startPollingCalls: 1,
+				stopPollingCalls: 0,
+				disposeCalls: 0,
+			},
 		});
 	});
 
-	test('stops polling tracked pull requests when disposed', () => {
-		const session = sessionsManagementService.addSession('session', makeGitHubInfo(1));
-		const contribution = store.add(new GitHubPullRequestPollingContribution(gitHubService, sessionsManagementService));
+	test("stops polling tracked pull requests when disposed", () => {
+		const session = sessionsManagementService.addSession(
+			"session",
+			makeGitHubInfo(1),
+		);
+		const contribution = store.add(
+			new GitHubPullRequestPollingContribution(
+				gitHubService,
+				sessionsManagementService,
+			),
+		);
 
 		contribution.dispose();
 
 		assert.deepStrictEqual(gitHubService.snapshot(), {
-			'owner/repo/1': { startPollingCalls: 1, stopPollingCalls: 1, disposeCalls: 0 },
+			"owner/repo/1": {
+				startPollingCalls: 1,
+				stopPollingCalls: 1,
+				disposeCalls: 0,
+			},
 		});
 		assert.strictEqual(session.isArchived.get(), false);
 	});
 });
 
 class TestSessionsManagementService extends mock<ISessionsManagementService>() {
-
 	private readonly _onDidChangeSessions: Emitter<ISessionsChangeEvent>;
-	private readonly _activeSession = observableValue<IActiveSession | undefined>('test.activeSession', undefined);
+	private readonly _activeSession = observableValue<IActiveSession | undefined>(
+		"test.activeSession",
+		undefined,
+	);
 	private readonly _sessions = new Map<string, ISession>();
 
 	override readonly onDidChangeSessions: Event<ISessionsChangeEvent>;
-	override readonly activeSession: IObservable<IActiveSession | undefined> = this._activeSession;
+	override readonly activeSession: IObservable<IActiveSession | undefined> =
+		this._activeSession;
 
 	constructor(disposables: DisposableStore) {
 		super();
-		this._onDidChangeSessions = disposables.add(new Emitter<ISessionsChangeEvent>());
+		this._onDidChangeSessions = disposables.add(
+			new Emitter<ISessionsChangeEvent>(),
+		);
 		this.onDidChangeSessions = this._onDidChangeSessions.event;
 	}
 
-	addSession(id: string, gitHubInfo: IGitHubInfo | undefined, archived = false): ISession {
+	addSession(
+		id: string,
+		gitHubInfo: IGitHubInfo | undefined,
+		archived = false,
+	): ISession {
 		const session = new TestSession(id, gitHubInfo, archived);
 		this._sessions.set(session.sessionId, session);
 		return session;
@@ -121,14 +213,21 @@ class TestSessionsManagementService extends mock<ISessionsManagementService>() {
 	}
 
 	setArchived(session: ISession, archived: boolean): void {
-		(session.isArchived as ReturnType<typeof observableValue<boolean>>).set(archived, undefined);
+		(session.isArchived as ReturnType<typeof observableValue<boolean>>).set(
+			archived,
+			undefined,
+		);
 	}
 
 	setGitHubInfo(session: ISession, gitHubInfo: IGitHubInfo | undefined): void {
 		const workspace = session.workspace.get();
 		const folder = workspace?.folders[0];
 		if (folder) {
-			(folder.gitRepository!.gitHubInfo as ReturnType<typeof observableValue<IGitHubInfo | undefined>>).set(gitHubInfo, undefined);
+			(
+				folder.gitRepository!.gitHubInfo as ReturnType<
+					typeof observableValue<IGitHubInfo | undefined>
+				>
+			).set(gitHubInfo, undefined);
 		}
 	}
 
@@ -146,63 +245,119 @@ class TestSessionsManagementService extends mock<ISessionsManagementService>() {
 }
 
 class TestSession implements ISession {
-
 	readonly sessionId: string;
 	readonly resource: URI;
-	readonly providerId = 'test';
-	readonly sessionType = 'test';
+	readonly providerId = "test";
+	readonly sessionType = "test";
 	readonly icon = Codicon.comment;
 	readonly createdAt = new Date(0);
 	readonly title: ReturnType<typeof observableValue<string>>;
 	readonly updatedAt: ReturnType<typeof observableValue<Date>>;
 	readonly status: ReturnType<typeof observableValue<SessionStatus>>;
-	readonly changesets: ReturnType<typeof observableValue<readonly ISessionChangeset[]>>;
-	readonly changes: ReturnType<typeof observableValue<readonly ISessionFileChange[]>>;
-	readonly workspace: ReturnType<typeof observableValue<ISessionWorkspace | undefined>>;
+	readonly changesets: ReturnType<
+		typeof observableValue<readonly ISessionChangeset[]>
+	>;
+	readonly changes: ReturnType<
+		typeof observableValue<readonly ISessionFileChange[]>
+	>;
+	readonly workspace: ReturnType<
+		typeof observableValue<ISessionWorkspace | undefined>
+	>;
 	readonly modelId: ReturnType<typeof observableValue<string | undefined>>;
-	readonly mode: ReturnType<typeof observableValue<{ readonly id: string; readonly kind: string } | undefined>>;
+	readonly mode: ReturnType<
+		typeof observableValue<
+			{ readonly id: string; readonly kind: string } | undefined
+		>
+	>;
 	readonly loading: ReturnType<typeof observableValue<boolean>>;
 	readonly isArchived: ReturnType<typeof observableValue<boolean>>;
 	readonly isRead: ReturnType<typeof observableValue<boolean>>;
-	readonly description: ReturnType<typeof observableValue<IMarkdownString | undefined>>;
+	readonly description: ReturnType<
+		typeof observableValue<IMarkdownString | undefined>
+	>;
 	readonly lastTurnEnd: ReturnType<typeof observableValue<Date | undefined>>;
 	readonly chats: ReturnType<typeof observableValue<readonly IChat[]>>;
 	readonly mainChat: IObservable<IChat>;
-	readonly capabilities: ISessionCapabilities = { supportsMultipleChats: false };
+	readonly capabilities: ISessionCapabilities = {
+		supportsMultipleChats: false,
+	};
 
-	constructor(id: string, gitHubInfo: IGitHubInfo | undefined, archived: boolean) {
+	constructor(
+		id: string,
+		gitHubInfo: IGitHubInfo | undefined,
+		archived: boolean,
+	) {
 		this.sessionId = `test:${id}`;
-		this.resource = URI.from({ scheme: 'test', path: `/${id}` });
-		const gitHubInfoObs = observableValue<IGitHubInfo | undefined>(`test.gitHubInfo.${id}`, gitHubInfo);
-		const workspaceUri = URI.from({ scheme: 'test', path: `/workspace/${id}` });
+		this.resource = URI.from({ scheme: "test", path: `/${id}` });
+		const gitHubInfoObs = observableValue<IGitHubInfo | undefined>(
+			`test.gitHubInfo.${id}`,
+			gitHubInfo,
+		);
+		const workspaceUri = URI.from({ scheme: "test", path: `/workspace/${id}` });
 		this.title = observableValue<string>(`test.title.${id}`, id);
 		this.updatedAt = observableValue<Date>(`test.updatedAt.${id}`, new Date(0));
-		this.status = observableValue<SessionStatus>(`test.status.${id}`, SessionStatus.Completed);
-		this.changesets = observableValue<readonly ISessionChangeset[]>(`test.changesets.${id}`, []);
-		this.changes = observableValue<readonly ISessionFileChange[]>(`test.changes.${id}`, []);
-		this.workspace = observableValue<ISessionWorkspace | undefined>(`test.workspace.${id}`, {
-			uri: workspaceUri,
-			label: id,
-			icon: Codicon.folder,
-			folders: [{
-				root: workspaceUri,
-				workingDirectory: workspaceUri,
-				name: id,
-				description: undefined,
-				gitRepository: { uri: workspaceUri, workTreeUri: undefined, baseBranchName: undefined, gitHubInfo: gitHubInfoObs },
-			}],
-			requiresWorkspaceTrust: false,
-			isVirtualWorkspace: false,
-		});
-		this.modelId = observableValue<string | undefined>(`test.modelId.${id}`, undefined);
-		this.mode = observableValue<{ readonly id: string; readonly kind: string } | undefined>(`test.mode.${id}`, undefined);
+		this.status = observableValue<SessionStatus>(
+			`test.status.${id}`,
+			SessionStatus.Completed,
+		);
+		this.changesets = observableValue<readonly ISessionChangeset[]>(
+			`test.changesets.${id}`,
+			[],
+		);
+		this.changes = observableValue<readonly ISessionFileChange[]>(
+			`test.changes.${id}`,
+			[],
+		);
+		this.workspace = observableValue<ISessionWorkspace | undefined>(
+			`test.workspace.${id}`,
+			{
+				uri: workspaceUri,
+				label: id,
+				icon: Codicon.folder,
+				folders: [
+					{
+						root: workspaceUri,
+						workingDirectory: workspaceUri,
+						name: id,
+						description: undefined,
+						gitRepository: {
+							uri: workspaceUri,
+							workTreeUri: undefined,
+							baseBranchName: undefined,
+							gitHubInfo: gitHubInfoObs,
+						},
+					},
+				],
+				requiresWorkspaceTrust: false,
+				isVirtualWorkspace: false,
+			},
+		);
+		this.modelId = observableValue<string | undefined>(
+			`test.modelId.${id}`,
+			undefined,
+		);
+		this.mode = observableValue<
+			{ readonly id: string; readonly kind: string } | undefined
+		>(`test.mode.${id}`, undefined);
 		this.loading = observableValue<boolean>(`test.loading.${id}`, false);
-		this.isArchived = observableValue<boolean>(`test.isArchived.${id}`, archived);
+		this.isArchived = observableValue<boolean>(
+			`test.isArchived.${id}`,
+			archived,
+		);
 		this.isRead = observableValue<boolean>(`test.isRead.${id}`, true);
-		this.description = observableValue<IMarkdownString | undefined>(`test.description.${id}`, undefined);
-		this.lastTurnEnd = observableValue<Date | undefined>(`test.lastTurnEnd.${id}`, undefined);
+		this.description = observableValue<IMarkdownString | undefined>(
+			`test.description.${id}`,
+			undefined,
+		);
+		this.lastTurnEnd = observableValue<Date | undefined>(
+			`test.lastTurnEnd.${id}`,
+			undefined,
+		);
 
-		const checkpoints = observableValue<IChatCheckpoints | undefined>(`test.checkpoints.${id}`, undefined);
+		const checkpoints = observableValue<IChatCheckpoints | undefined>(
+			`test.checkpoints.${id}`,
+			undefined,
+		);
 
 		const mainChat: IChat = {
 			resource: this.resource,
@@ -220,19 +375,33 @@ class TestSession implements ISession {
 			lastTurnEnd: this.lastTurnEnd,
 		};
 		this.mainChat = constObservable(mainChat);
-		this.chats = observableValue<readonly IChat[]>(`test.chats.${id}`, [mainChat]);
+		this.chats = observableValue<readonly IChat[]>(`test.chats.${id}`, [
+			mainChat,
+		]);
 	}
 }
 
 class TestGitHubService extends mock<IGitHubService>() {
-
 	private readonly _models = new Map<string, TestPullRequestModel>();
 
-	override readonly activeSessionPullRequestObs = observableValue('test.activePR', undefined);
-	override readonly activeSessionPullRequestCIObs = observableValue('test.activePRCI', undefined);
-	override readonly activeSessionPullRequestReviewThreadsObs = observableValue('test.activePRReviewThreads', undefined);
+	override readonly activeSessionPullRequestObs = observableValue(
+		"test.activePR",
+		undefined,
+	);
+	override readonly activeSessionPullRequestCIObs = observableValue(
+		"test.activePRCI",
+		undefined,
+	);
+	override readonly activeSessionPullRequestReviewThreadsObs = observableValue(
+		"test.activePRReviewThreads",
+		undefined,
+	);
 
-	override createPullRequestModelReference(owner: string, repo: string, prNumber: number): IReference<GitHubPullRequestModel> {
+	override createPullRequestModelReference(
+		owner: string,
+		repo: string,
+		prNumber: number,
+	): IReference<GitHubPullRequestModel> {
 		const key = `${owner}/${repo}/${prNumber}`;
 		let model = this._models.get(key);
 		if (!model) {
@@ -242,18 +411,30 @@ class TestGitHubService extends mock<IGitHubService>() {
 		return new ImmortalReference(model as unknown as GitHubPullRequestModel);
 	}
 
-	snapshot(): Record<string, { startPollingCalls: number; stopPollingCalls: number; disposeCalls: number }> {
-		const entries = [...this._models.entries()].map(([key, model]) => [key, {
-			startPollingCalls: model.startPollingCalls,
-			stopPollingCalls: model.stopPollingCalls,
-			disposeCalls: model.disposeCalls,
-		}] as const);
+	snapshot(): Record<
+		string,
+		{
+			startPollingCalls: number;
+			stopPollingCalls: number;
+			disposeCalls: number;
+		}
+	> {
+		const entries = [...this._models.entries()].map(
+			([key, model]) =>
+				[
+					key,
+					{
+						startPollingCalls: model.startPollingCalls,
+						stopPollingCalls: model.stopPollingCalls,
+						disposeCalls: model.disposeCalls,
+					},
+				] as const,
+		);
 		return Object.fromEntries(entries);
 	}
 }
 
 class TestPullRequestModel implements IDisposable {
-
 	startPollingCalls = 0;
 	stopPollingCalls = 0;
 	disposeCalls = 0;
@@ -274,8 +455,8 @@ class TestPullRequestModel implements IDisposable {
 
 function makeGitHubInfo(prNumber: number): IGitHubInfo {
 	return {
-		owner: 'owner',
-		repo: 'repo',
+		owner: "owner",
+		repo: "repo",
 		pullRequest: {
 			number: prNumber,
 			uri: URI.parse(`https://github.com/owner/repo/pull/${prNumber}`),

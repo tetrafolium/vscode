@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IWorkbenchContribution } from '../../../common/contributions.js';
-import { IMainProcessService } from '../../../../platform/ipc/common/mainProcessService.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { McpGatewayToolBrokerChannelName } from '../../../../platform/mcp/common/mcpGateway.js';
-import { IMcpService } from '../common/mcpTypes.js';
-import { McpGatewayToolBrokerChannel } from '../common/mcpGatewayToolBrokerChannel.js';
+import { IWorkbenchContribution } from "../../../common/contributions.js";
+import { IMainProcessService } from "../../../../platform/ipc/common/mainProcessService.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { McpGatewayToolBrokerChannelName } from "../../../../platform/mcp/common/mcpGateway.js";
+import { IMcpService } from "../common/mcpTypes.js";
+import { McpGatewayToolBrokerChannel } from "../common/mcpGatewayToolBrokerChannel.js";
 
 export class McpGatewayToolBrokerContribution implements IWorkbenchContribution {
 	constructor(
@@ -16,6 +16,9 @@ export class McpGatewayToolBrokerContribution implements IWorkbenchContribution 
 		@IMcpService mcpService: IMcpService,
 		@ILogService logService: ILogService,
 	) {
-		mainProcessService.registerChannel(McpGatewayToolBrokerChannelName, new McpGatewayToolBrokerChannel(mcpService, logService));
+		mainProcessService.registerChannel(
+			McpGatewayToolBrokerChannelName,
+			new McpGatewayToolBrokerChannel(mcpService, logService),
+		);
 	}
 }

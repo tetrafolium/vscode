@@ -31,16 +31,25 @@ import * as path from '../../../util/vs/base/common/path';
 
 const REQUIRED_VERSION = '0.0.394';
 const PACKAGE_NAME = '@github/copilot';
-const env = { ...process.env, PATH: (process.env.PATH || '').replaceAll(`${__dirname}${path.delimiter}`, '').replaceAll(`${path.delimiter}${__dirname}`, '') };
+const env = {
+	...process.env,
+	PATH: (process.env.PATH || '')
+		.replaceAll(`${__dirname}${path.delimiter}`, '')
+		.replaceAll(`${path.delimiter}${__dirname}`, ''),
+};
 
 const rl = readline.createInterface({
 	input: process.stdin,
 	output: process.stdout,
 });
 
-function log(msg: string) { process.stdout.write(msg + '\n'); }
+function log(msg: string) {
+	process.stdout.write(msg + '\n');
+}
 
-function warn(msg: string) { process.stderr.write(msg + '\n'); }
+function warn(msg: string) {
+	process.stderr.write(msg + '\n');
+}
 
 function promptYes(question: string): Promise<boolean> {
 	return new Promise((resolve) => {
@@ -52,14 +61,21 @@ function promptYes(question: string): Promise<boolean> {
 
 function semverParts(v: string) {
 	const cleaned = v.replace(/^v/, '').split('.');
-	return [0, 1, 2].map(i => parseInt((cleaned[i] || '0').replace(/[^0-9].*$/, ''), 10) || 0);
+	return [0, 1, 2].map(
+		(i) => parseInt((cleaned[i] || '0').replace(/[^0-9].*$/, ''), 10) || 0,
+	);
 }
 
 function versionGte(versionA: string, versionB: string) {
-	const aa = semverParts(versionA), bb = semverParts(versionB);
+	const aa = semverParts(versionA),
+		bb = semverParts(versionB);
 	for (let i = 0; i < 3; i++) {
-		if (aa[i] > bb[i]) { return true; }
-		if (aa[i] < bb[i]) { return false; }
+		if (aa[i] > bb[i]) {
+			return true;
+		}
+		if (aa[i] < bb[i]) {
+			return false;
+		}
 	}
 	return true;
 }
@@ -70,13 +86,16 @@ function versionGte(versionA: string, versionB: string) {
  * Version can be undefined if it cannot be determined.
  */
 function getCopilotInfo(): { installed: true; version?: string } | undefined {
-	const result = spawnSync('copilot --version', { env, shell: true, encoding: 'utf8' });
+	const result = spawnSync('copilot --version', {
+		env,
+		shell: true,
+		encoding: 'utf8',
+	});
 	if (result.error || result.status !== 0) {
 		return undefined;
 	}
 	const m = result.stdout.match(/[0-9]+\.[0-9]+\.[0-9]+/);
 	return m ? { version: m[0], installed: true } : { installed: true };
-
 }
 
 function runNpm(args: string[], label: string) {
@@ -93,7 +112,10 @@ function runNpm(args: string[], label: string) {
 }
 
 function runBrew(label: string) {
-	const result = spawnSync('brew', ['install', 'copilot-cli'], { stdio: 'inherit', env });
+	const result = spawnSync('brew', ['install', 'copilot-cli'], {
+		stdio: 'inherit',
+		env,
+	});
 	if (result.error) {
 		warn(`${label} via brew failed: ${result.error.message}`);
 		return false;
@@ -106,7 +128,11 @@ function runBrew(label: string) {
 }
 
 function runCurl(label: string) {
-	const result = spawnSync('bash', ['-c', 'curl -fsSL https://gh.io/copilot-install | bash'], { stdio: 'inherit', env });
+	const result = spawnSync(
+		'bash',
+		['-c', 'curl -fsSL https://gh.io/copilot-install | bash'],
+		{ stdio: 'inherit', env },
+	);
 	if (result.error) {
 		warn(`${label} via curl failed: ${result.error.message}`);
 		return false;
@@ -119,7 +145,11 @@ function runCurl(label: string) {
 }
 
 function runWget(label: string) {
-	const result = spawnSync('bash', ['-c', 'wget -qO- https://gh.io/copilot-install | bash'], { stdio: 'inherit', env });
+	const result = spawnSync(
+		'bash',
+		['-c', 'wget -qO- https://gh.io/copilot-install | bash'],
+		{ stdio: 'inherit', env },
+	);
 	if (result.error) {
 		warn(`${label} via wget failed: ${result.error.message}`);
 		return false;
@@ -132,29 +162,43 @@ function runWget(label: string) {
 }
 
 function hasCommand(cmd: string) {
-	const result = spawnSync('sh', ['-c', `command -v ${cmd}`], { env, encoding: 'utf8' });
+	const result = spawnSync('sh', ['-c', `command -v ${cmd}`], {
+		env,
+		encoding: 'utf8',
+	});
 	return !result.error && result.status === 0;
 }
 
 function installCopilotCLI(label: string, update = false): boolean {
 	// Try npm first
-	if (hasCommand('npm') && runNpm([update ? 'update' : 'install', '-g', PACKAGE_NAME], label)) {
+	if (
+		hasCommand('npm') &&
+		runNpm([update ? 'update' : 'install', '-g', PACKAGE_NAME], label)
+	) {
 		return true;
 	}
 	// Try brew
 	if (hasCommand('brew')) {
-		log(`npm is not available or ${update ? 'update' : 'installation'} failed. Trying brew...`);
-		if (runBrew(label)) { return true; }
+		log(
+			`npm is not available or ${update ? 'update' : 'installation'} failed. Trying brew...`,
+		);
+		if (runBrew(label)) {
+			return true;
+		}
 	}
 	// Try curl
 	if (hasCommand('curl')) {
 		log('Trying install script via curl...');
-		if (runCurl(label)) { return true; }
+		if (runCurl(label)) {
+			return true;
+		}
 	}
 	// Try wget
 	if (hasCommand('wget')) {
 		log('Trying install script via wget...');
-		if (runWget(label)) { return true; }
+		if (runWget(label)) {
+			return true;
+		}
 	}
 	return false;
 }
@@ -162,7 +206,9 @@ function installCopilotCLI(label: string, update = false): boolean {
 async function ensureInstalled() {
 	const version = getCopilotInfo();
 	if (!version) {
-		warn('Cannot find GitHub Copilot CLI (https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)');
+		warn(
+			'Cannot find GitHub Copilot CLI (https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)',
+		);
 		if (await promptYes('Install GitHub Copilot CLI?')) {
 			if (installCopilotCLI('Installing')) {
 				return ensureInstalled();
@@ -190,14 +236,15 @@ async function validateVersion(version: string) {
 	}
 }
 
-async function pressKeyToExit(message: string = 'Press Enter to exit...'): Promise<void> {
+async function pressKeyToExit(
+	message: string = 'Press Enter to exit...',
+): Promise<void> {
 	await new Promise<void>((resolve) => {
 		rl.question(`${message}`, () => {
 			resolve();
 		});
 	});
 	process.exit(0);
-
 }
 
 (async function main() {
@@ -207,7 +254,9 @@ async function pressKeyToExit(message: string = 'Press Enter to exit...'): Promi
 	}
 	if (!info) {
 		warn('Error: Could not locate Copilot CLI after update.');
-		await pressKeyToExit('Try manually reinstalling (https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)');
+		await pressKeyToExit(
+			'Try manually reinstalling (https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli)',
+		);
 	}
 	const args = process.argv.slice(2);
 

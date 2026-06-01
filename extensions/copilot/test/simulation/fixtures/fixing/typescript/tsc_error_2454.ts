@@ -2,7 +2,7 @@ enum FeedbackKind {
 	Helpful,
 	Unhelpful,
 	Undone,
-	Accepted
+	Accepted,
 }
 
 class SomeClass {
@@ -24,5 +24,5 @@ class SomeClass {
 		}
 	}
 
-	takeAction(): void { }
+	takeAction(): void {}
 }

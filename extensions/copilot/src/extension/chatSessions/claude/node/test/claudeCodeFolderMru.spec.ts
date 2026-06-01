@@ -34,7 +34,9 @@ class TestClaudeCodeSessionService extends mock<IClaudeCodeSessionService>() {
 	override getAllSessions = vi.fn(async () => this.sessions);
 }
 
-function makeSession(overrides: Partial<IClaudeCodeSessionInfo> & { id: string }): IClaudeCodeSessionInfo {
+function makeSession(
+	overrides: Partial<IClaudeCodeSessionInfo> & { id: string },
+): IClaudeCodeSessionInfo {
 	return {
 		label: 'test',
 		created: 1000,
@@ -54,50 +56,76 @@ describe('ClaudeCodeFolderMruService', () => {
 		sessionService = new TestClaudeCodeSessionService();
 		gitService = new TestGitService();
 		workspaceService = new TestWorkspaceService([]);
-		service = new ClaudeCodeFolderMruService(sessionService, gitService, workspaceService);
+		service = new ClaudeCodeFolderMruService(
+			sessionService,
+			gitService,
+			workspaceService,
+		);
 	});
 
 	// #region Session extraction
 
 	it('returns empty array when no sessions exist', async () => {
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result).toEqual([]);
 	});
 
 	it('converts session cwd to folder URI', async () => {
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/Users/test/project', lastRequestEnded: 2000 }),
+			makeSession({
+				id: 's1',
+				cwd: '/Users/test/project',
+				lastRequestEnded: 2000,
+			}),
 		];
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 
 		expect(result).toHaveLength(1);
-		expect(result[0].folder.toString()).toBe(URI.file('/Users/test/project').toString());
+		expect(result[0].folder.toString()).toBe(
+			URI.file('/Users/test/project').toString(),
+		);
 		expect(result[0].lastAccessed).toBe(2000);
 	});
 
 	it('skips sessions without cwd', async () => {
 		sessionService.sessions = [makeSession({ id: 's1' })];
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result).toEqual([]);
 	});
 
 	it('skips sessions with .claude/worktrees/ cwd', async () => {
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/Users/test/.claude/worktrees/branch-1' }),
+			makeSession({
+				id: 's1',
+				cwd: '/Users/test/.claude/worktrees/branch-1',
+			}),
 		];
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result).toEqual([]);
 	});
 
 	it('skips sessions with .worktrees/copilot- cwd', async () => {
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/Users/test/repo/.worktrees/copilot-abc123' }),
+			makeSession({
+				id: 's1',
+				cwd: '/Users/test/repo/.worktrees/copilot-abc123',
+			}),
 		];
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result).toEqual([]);
 	});
 
@@ -107,17 +135,32 @@ describe('ClaudeCodeFolderMruService', () => {
 
 	it('uses lastRequestEnded as primary timestamp', async () => {
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/a', created: 100, lastRequestStarted: 200, lastRequestEnded: 300 }),
+			makeSession({
+				id: 's1',
+				cwd: '/a',
+				created: 100,
+				lastRequestStarted: 200,
+				lastRequestEnded: 300,
+			}),
 		];
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result[0].lastAccessed).toBe(300);
 	});
 
 	it('falls back to lastRequestStarted', async () => {
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/a', created: 100, lastRequestStarted: 200 }),
+			makeSession({
+				id: 's1',
+				cwd: '/a',
+				created: 100,
+				lastRequestStarted: 200,
+			}),
 		];
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result[0].lastAccessed).toBe(200);
 	});
 
@@ -125,7 +168,9 @@ describe('ClaudeCodeFolderMruService', () => {
 		sessionService.sessions = [
 			makeSession({ id: 's1', cwd: '/a', created: 100 }),
 		];
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result[0].lastAccessed).toBe(100);
 	});
 
@@ -135,12 +180,18 @@ describe('ClaudeCodeFolderMruService', () => {
 
 	it('merges git repo into matching session entry', async () => {
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/Users/test/project', lastRequestEnded: 100 }),
+			makeSession({
+				id: 's1',
+				cwd: '/Users/test/project',
+				lastRequestEnded: 100,
+			}),
 		];
 		const folderUri = URI.file('/Users/test/project');
 		gitService.recentRepos = [{ rootUri: folderUri, lastAccessTime: 200 }];
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 
 		expect(result).toHaveLength(1);
 		expect(result[0].repository).toEqual(folderUri);
@@ -151,7 +202,9 @@ describe('ClaudeCodeFolderMruService', () => {
 		const repoUri = URI.file('/Users/test/other-repo');
 		gitService.recentRepos = [{ rootUri: repoUri, lastAccessTime: 500 }];
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 
 		expect(result).toHaveLength(1);
 		expect(result[0].folder).toEqual(repoUri);
@@ -161,19 +214,29 @@ describe('ClaudeCodeFolderMruService', () => {
 
 	it('filters git repos with .claude/worktrees/ path', async () => {
 		gitService.recentRepos = [
-			{ rootUri: URI.file('/Users/test/.claude/worktrees/branch'), lastAccessTime: 100 },
+			{
+				rootUri: URI.file('/Users/test/.claude/worktrees/branch'),
+				lastAccessTime: 100,
+			},
 		];
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result).toEqual([]);
 	});
 
 	it('filters git repos with .worktrees/copilot- path', async () => {
 		gitService.recentRepos = [
-			{ rootUri: URI.file('/Users/test/repo/.worktrees/copilot-abc123'), lastAccessTime: 100 },
+			{
+				rootUri: URI.file('/Users/test/repo/.worktrees/copilot-abc123'),
+				lastAccessTime: 100,
+			},
 		];
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result).toEqual([]);
 	});
 
@@ -184,9 +247,15 @@ describe('ClaudeCodeFolderMruService', () => {
 	it('adds workspace folders not already present', async () => {
 		const folder = URI.file('/Users/test/workspace');
 		workspaceService = new TestWorkspaceService([folder]);
-		service = new ClaudeCodeFolderMruService(sessionService, gitService, workspaceService);
+		service = new ClaudeCodeFolderMruService(
+			sessionService,
+			gitService,
+			workspaceService,
+		);
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 
 		expect(result).toHaveLength(1);
 		expect(result[0].folder).toEqual(folder);
@@ -196,12 +265,22 @@ describe('ClaudeCodeFolderMruService', () => {
 	it('does not duplicate workspace folders already in sessions', async () => {
 		const folder = URI.file('/Users/test/project');
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/Users/test/project', lastRequestEnded: 100 }),
+			makeSession({
+				id: 's1',
+				cwd: '/Users/test/project',
+				lastRequestEnded: 100,
+			}),
 		];
 		workspaceService = new TestWorkspaceService([folder]);
-		service = new ClaudeCodeFolderMruService(sessionService, gitService, workspaceService);
+		service = new ClaudeCodeFolderMruService(
+			sessionService,
+			gitService,
+			workspaceService,
+		);
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result).toHaveLength(1);
 	});
 
@@ -211,39 +290,71 @@ describe('ClaudeCodeFolderMruService', () => {
 
 	it('sorts entries by lastAccessed descending', async () => {
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/Users/test/old', lastRequestEnded: 100 }),
-			makeSession({ id: 's2', cwd: '/Users/test/new', lastRequestEnded: 300 }),
-			makeSession({ id: 's3', cwd: '/Users/test/mid', lastRequestEnded: 200 }),
+			makeSession({
+				id: 's1',
+				cwd: '/Users/test/old',
+				lastRequestEnded: 100,
+			}),
+			makeSession({
+				id: 's2',
+				cwd: '/Users/test/new',
+				lastRequestEnded: 300,
+			}),
+			makeSession({
+				id: 's3',
+				cwd: '/Users/test/mid',
+				lastRequestEnded: 200,
+			}),
 		];
 
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
-		expect(result.map(e => e.lastAccessed)).toEqual([300, 200, 100]);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
+		expect(result.map((e) => e.lastAccessed)).toEqual([300, 200, 100]);
 	});
 
 	it('deleteRecentlyUsedFolder filters the folder from results', async () => {
 		const folder = URI.file('/Users/test/project');
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/Users/test/project', lastRequestEnded: 100 }),
+			makeSession({
+				id: 's1',
+				cwd: '/Users/test/project',
+				lastRequestEnded: 100,
+			}),
 		];
 
 		await service.deleteRecentlyUsedFolder(folder);
-		const result = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const result = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(result).toEqual([]);
 	});
 
 	it('returns cached entries on subsequent calls', async () => {
 		sessionService.sessions = [
-			makeSession({ id: 's1', cwd: '/Users/test/project', lastRequestEnded: 100 }),
+			makeSession({
+				id: 's1',
+				cwd: '/Users/test/project',
+				lastRequestEnded: 100,
+			}),
 		];
 
-		const first = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const first = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(first).toHaveLength(1);
 
 		// Add another session — second call returns stale cache immediately
 		sessionService.sessions.push(
-			makeSession({ id: 's2', cwd: '/Users/test/other', lastRequestEnded: 200 }),
+			makeSession({
+				id: 's2',
+				cwd: '/Users/test/other',
+				lastRequestEnded: 200,
+			}),
 		);
-		const second = await service.getRecentlyUsedFolders(CancellationToken.None);
+		const second = await service.getRecentlyUsedFolders(
+			CancellationToken.None,
+		);
 		expect(second).toHaveLength(1);
 	});
 

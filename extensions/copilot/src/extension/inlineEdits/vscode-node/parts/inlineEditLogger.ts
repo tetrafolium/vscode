@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { InlineEditRequestLogContext } from '../../../../platform/inlineEdits/common/inlineEditLogContext';
-import { IRequestLogger, LoggedRequestKind } from '../../../../platform/requestLogger/common/requestLogger';
+import {
+	IRequestLogger,
+	LoggedRequestKind,
+} from '../../../../platform/requestLogger/common/requestLogger';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
 
 export class InlineEditLogger extends Disposable {
@@ -41,7 +44,11 @@ export class InlineEditLogger extends Disposable {
 		}
 	}
 
-	public getRequestById(requestId: number): InlineEditRequestLogContext | undefined {
-		return this._requests.find(request => request.requestId === requestId);
+	public getRequestById(
+		requestId: number,
+	): InlineEditRequestLogContext | undefined {
+		return this._requests.find(
+			(request) => request.requestId === requestId,
+		);
 	}
 }

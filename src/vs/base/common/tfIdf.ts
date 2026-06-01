@@ -3,11 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from './cancellation.js';
+import { CancellationToken } from "./cancellation.js";
 
-type SparseEmbedding = Record</* word */ string, /* weight */number>;
+type SparseEmbedding = Record</* word */ string, /* weight */ number>;
 type TermFrequencies = Map</* word */ string, /*occurrences*/ number>;
-type DocumentOccurrences = Map</* word */ string, /*documentOccurrences*/ number>;
+type DocumentOccurrences = Map<
+	/* word */ string,
+	/*documentOccurrences*/ number
+>;
 
 function countMapFrom<K>(values: Iterable<K>): Map<K, number> {
 	const map = new Map<K, number>();
@@ -88,7 +91,7 @@ export class TfIdfCalculator {
 		for (const [word] of input.matchAll(/\b\p{Letter}[\p{Letter}\d]{2,}\b/gu)) {
 			yield normalize(word);
 
-			const camelParts = word.replace(/([a-z])([A-Z])/g, '$1 $2').split(/\s+/g);
+			const camelParts = word.replace(/([a-z])([A-Z])/g, "$1 $2").split(/\s+/g);
 			if (camelParts.length > 1) {
 				for (const part of camelParts) {
 					// Require at least 3 letters in the parts of a camel case word
@@ -105,11 +108,17 @@ export class TfIdfCalculator {
 	 */
 	private chunkCount = 0;
 
-	private readonly chunkOccurrences: DocumentOccurrences = new Map</* word */ string, /*documentOccurrences*/ number>();
+	private readonly chunkOccurrences: DocumentOccurrences = new Map<
+		/* word */ string,
+		/*documentOccurrences*/ number
+	>();
 
-	private readonly documents = new Map</* key */ string, {
-		readonly chunks: ReadonlyArray<DocumentChunkEntry>;
-	}>();
+	private readonly documents = new Map<
+		/* key */ string,
+		{
+			readonly chunks: ReadonlyArray<DocumentChunkEntry>;
+		}
+	>();
 
 	updateDocuments(documents: ReadonlyArray<TfIdfDocument>): this {
 		for (const { key } of documents) {
@@ -127,7 +136,10 @@ export class TfIdfCalculator {
 
 				// Update occurrences list
 				for (const term of tf.keys()) {
-					this.chunkOccurrences.set(term, (this.chunkOccurrences.get(term) ?? 0) + 1);
+					this.chunkOccurrences.set(
+						term,
+						(this.chunkOccurrences.get(term) ?? 0) + 1,
+					);
 				}
 
 				chunks.push({ text, tf });
@@ -152,7 +164,7 @@ export class TfIdfCalculator {
 		for (const chunk of doc.chunks) {
 			for (const term of chunk.tf.keys()) {
 				const currentOccurrences = this.chunkOccurrences.get(term);
-				if (typeof currentOccurrences === 'number') {
+				if (typeof currentOccurrences === "number") {
 					const newOccurrences = currentOccurrences - 1;
 					if (newOccurrences <= 0) {
 						this.chunkOccurrences.delete(term);
@@ -164,7 +176,11 @@ export class TfIdfCalculator {
 		}
 	}
 
-	private computeSimilarityScore(chunk: DocumentChunkEntry, queryEmbedding: SparseEmbedding, idfCache: Map<string, number>): number {
+	private computeSimilarityScore(
+		chunk: DocumentChunkEntry,
+		queryEmbedding: SparseEmbedding,
+		idfCache: Map<string, number>,
+	): number {
 		// Compute the dot product between the chunk's embedding and the query embedding
 
 		// Note that the chunk embedding is computed lazily on a per-term basis.
@@ -180,7 +196,7 @@ export class TfIdfCalculator {
 			}
 
 			let chunkIdf = idfCache.get(term);
-			if (typeof chunkIdf !== 'number') {
+			if (typeof chunkIdf !== "number") {
 				chunkIdf = this.computeIdf(term);
 				idfCache.set(term, chunkIdf);
 			}
@@ -220,8 +236,9 @@ export class TfIdfCalculator {
  * @param scores array of scores from {@link TfIdfCalculator.calculateScores}
  * @returns normalized scores
  */
-export function normalizeTfIdfScores(scores: TfIdfScore[]): NormalizedTfIdfScore[] {
-
+export function normalizeTfIdfScores(
+	scores: TfIdfScore[],
+): NormalizedTfIdfScore[] {
 	// copy of scores
 	const result = scores.slice(0) as { score: number }[];
 

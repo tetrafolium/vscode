@@ -8,7 +8,6 @@ import * as yaml from 'yaml';
  * Types for CoffE completion stests.
  */
 export namespace CompletionStests {
-
 	export interface TestDocument {
 		uri: string;
 		text: string;
@@ -34,18 +33,27 @@ export namespace CompletionStests {
 	export function parseTestInput(fileContents: string): TestInput {
 		return yaml.parse(fileContents, {
 			reviver: (_, value) => {
-				if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+				if (
+					typeof value === 'object' &&
+					value !== null &&
+					!Array.isArray(value)
+				) {
 					const converted: Record<string, any> = {};
 					for (const prop in value) {
 						if (Object.prototype.hasOwnProperty.call(value, prop)) {
-							const camelKey = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-							converted[camelKey] = (value as Record<string, any>)[prop];
+							const camelKey = prop.replace(
+								/-([a-z])/g,
+								(_, letter) => letter.toUpperCase(),
+							);
+							converted[camelKey] = (
+								value as Record<string, any>
+							)[prop];
 						}
 					}
 					return converted;
 				}
 				return value;
-			}
+			},
 		}) as TestInput;
 	}
 
@@ -62,7 +70,6 @@ export namespace CompletionStests {
 	// 	export function of
 	// }
 
-
 	export interface TestCompletion {
 		insertText: string;
 		/**
@@ -75,5 +82,4 @@ export namespace CompletionStests {
 	export interface TestOutput {
 		completions: TestCompletion[];
 	}
-
 }

@@ -18,7 +18,10 @@ interface RemoteHubApi {
 	loadWorkspaceContents?(workspaceUri: Uri): Promise<boolean>;
 }
 
-export const IRemoteRepositoriesService = createServiceIdentifier<IRemoteRepositoriesService>('IRemoteRepositoriesService');
+export const IRemoteRepositoriesService =
+	createServiceIdentifier<IRemoteRepositoriesService>(
+		'IRemoteRepositoriesService',
+	);
 export interface IRemoteRepositoriesService {
 	readonly _serviceBrand: undefined;
 	loadWorkspaceContents(workspaceUri: Uri): Promise<boolean>;
@@ -28,7 +31,6 @@ export interface IRemoteRepositoriesService {
  * Service for interacting with the Remote Repositories API.
  */
 export class RemoteRepositoriesService implements IRemoteRepositoriesService {
-
 	declare readonly _serviceBrand: undefined;
 
 	private _remoteHub: Extension<RemoteHubApi> | undefined;
@@ -36,7 +38,7 @@ export class RemoteRepositoriesService implements IRemoteRepositoriesService {
 	async loadWorkspaceContents(workspaceUri: Uri) {
 		const api = await this.getApi();
 		// TODO: Defaulted to false in case the API doesn't exist... is this the correct assumption?
-		return await api.loadWorkspaceContents?.(workspaceUri) ?? false;
+		return (await api.loadWorkspaceContents?.(workspaceUri)) ?? false;
 	}
 
 	private getApi(): Thenable<RemoteHubApi> {
@@ -48,9 +50,12 @@ export class RemoteRepositoriesService implements IRemoteRepositoriesService {
 			return this._remoteHub;
 		}
 
-		this._remoteHub = extensions.getExtension<RemoteHubApi>('ms-vscode.remote-repositories')
-			?? extensions.getExtension<RemoteHubApi>('GitHub.remoteHub')
-			?? extensions.getExtension<RemoteHubApi>('GitHub.remoteHub-insiders');
+		this._remoteHub =
+			extensions.getExtension<RemoteHubApi>(
+				'ms-vscode.remote-repositories',
+			) ??
+			extensions.getExtension<RemoteHubApi>('GitHub.remoteHub') ??
+			extensions.getExtension<RemoteHubApi>('GitHub.remoteHub-insiders');
 
 		if (this._remoteHub === undefined) {
 			throw new Error(`No Remote repository extension found.`);

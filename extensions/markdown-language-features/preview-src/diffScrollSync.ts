@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { DiffScrollSyncData } from '../types/previewMessaging';
+import type { DiffScrollSyncData } from "../types/previewMessaging";
 
 export class DiffScrollSyncManager {
-
 	readonly #previewId = Math.random().toString(36).slice(2, 10);
 	readonly #onIncomingScroll: (line: number) => void;
 
@@ -14,7 +13,10 @@ export class DiffScrollSyncManager {
 	readonly #channel: BroadcastChannel;
 	#ignoreIncomingScrollUntil = 0;
 
-	constructor(sync: DiffScrollSyncData, onIncomingScroll: (line: number) => void) {
+	constructor(
+		sync: DiffScrollSyncData,
+		onIncomingScroll: (line: number) => void,
+	) {
 		this.#onIncomingScroll = onIncomingScroll;
 		this.#syncData = sync;
 		this.#channel = new BroadcastChannel(sync.channelName);
@@ -23,11 +25,14 @@ export class DiffScrollSyncManager {
 			if (sender === this.#previewId) {
 				return;
 			}
-			if (typeof line !== 'number' || isNaN(line)) {
+			if (typeof line !== "number" || isNaN(line)) {
 				return;
 			}
 
-			const mappedLine = translateLineWithMappings(line, this.#syncData.lineMappings);
+			const mappedLine = translateLineWithMappings(
+				line,
+				this.#syncData.lineMappings,
+			);
 			this.#ignoreIncomingScrollUntil = Date.now() + 100;
 			this.#onIncomingScroll(mappedLine);
 		};
@@ -45,7 +50,10 @@ export class DiffScrollSyncManager {
 	}
 }
 
-function translateLineWithMappings(line: number, mappings: readonly number[] | undefined): number {
+function translateLineWithMappings(
+	line: number,
+	mappings: readonly number[] | undefined,
+): number {
 	if (!mappings?.length) {
 		return line;
 	}
@@ -56,8 +64,8 @@ function translateLineWithMappings(line: number, mappings: readonly number[] | u
 		return Math.max(0, mappedLine);
 	}
 	const nextMappedLine = mappings[sourceLine + 1];
-	if (typeof nextMappedLine !== 'number') {
+	if (typeof nextMappedLine !== "number") {
 		return Math.max(0, mappedLine + progress);
 	}
-	return Math.max(0, mappedLine + ((nextMappedLine - mappedLine) * progress));
+	return Math.max(0, mappedLine + (nextMappedLine - mappedLine) * progress);
 }

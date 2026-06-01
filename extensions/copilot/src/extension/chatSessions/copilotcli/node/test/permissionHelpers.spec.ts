@@ -11,15 +11,26 @@ import { CancellationTokenSource } from '../../../../../util/vs/base/common/canc
 import { DisposableStore } from '../../../../../util/vs/base/common/lifecycle';
 import { URI } from '../../../../../util/vs/base/common/uri';
 import { IInstantiationService } from '../../../../../util/vs/platform/instantiation/common/instantiation';
-import { LanguageModelTextPart, LanguageModelToolResult2 } from '../../../../../vscodeTypes';
+import {
+	LanguageModelTextPart,
+	LanguageModelToolResult2,
+} from '../../../../../vscodeTypes';
 import { createExtensionUnitTestingServices } from '../../../../test/node/services';
 import { ToolName } from '../../../../tools/common/toolNames';
 import { IToolsService } from '../../../../tools/common/toolsService';
 import { ExternalEditTracker } from '../../../common/externalEditTracker';
 import { IWorkspaceInfo } from '../../../common/workspaceInfo';
 import { ICopilotCLIImageSupport } from '../copilotCLIImageSupport';
-import { buildMcpConfirmationParams, buildShellConfirmationParams, handleReadPermission, handleWritePermission, isFileFromSessionWorkspace, PermissionRequest, requiresFileEditconfirmation, showInteractivePermissionPrompt } from '../permissionHelpers';
-
+import {
+	buildMcpConfirmationParams,
+	buildShellConfirmationParams,
+	handleReadPermission,
+	handleWritePermission,
+	isFileFromSessionWorkspace,
+	PermissionRequest,
+	requiresFileEditconfirmation,
+	showInteractivePermissionPrompt,
+} from '../permissionHelpers';
 
 describe('CopilotCLI permissionHelpers', () => {
 	const disposables = new DisposableStore();
@@ -35,7 +46,11 @@ describe('CopilotCLI permissionHelpers', () => {
 
 	describe('buildShellConfirmationParams', () => {
 		it('shell: uses intention over command text and sets terminal confirmation tool', () => {
-			const req = { kind: 'shell', intention: 'List workspace files', fullCommandText: 'ls -la' } as any;
+			const req = {
+				kind: 'shell',
+				intention: 'List workspace files',
+				fullCommandText: 'ls -la',
+			} as any;
 			const result = buildShellConfirmationParams(req, undefined);
 			expect(result.tool).toBe(ToolName.CoreTerminalConfirmationTool);
 			expect(result.input.message).toBe('List workspace files');
@@ -61,24 +76,41 @@ describe('CopilotCLI permissionHelpers', () => {
 
 		it('shell: strips cd prefix from command when matching workingDirectory on bash', () => {
 			const workingDirectory = URI.file('/workspace');
-			const req = { kind: 'shell', fullCommandText: `cd ${workingDirectory.fsPath} && npm test` } as any;
-			const result = buildShellConfirmationParams(req, workingDirectory, false);
+			const req = {
+				kind: 'shell',
+				fullCommandText: `cd ${workingDirectory.fsPath} && npm test`,
+			} as any;
+			const result = buildShellConfirmationParams(
+				req,
+				workingDirectory,
+				false,
+			);
 			expect(result.input.command).toBe('npm test');
 			expect(result.input.message).toBe('npm test');
 		});
 
 		it('shell: keeps full command when cd prefix does not match workingDirectory on bash', () => {
 			const fullCommandText = `cd ${URI.file('/other').fsPath} && npm test`;
-			const req = { kind: 'shell', fullCommandText: fullCommandText } as any;
+			const req = {
+				kind: 'shell',
+				fullCommandText: fullCommandText,
+			} as any;
 			const workingDirectory = URI.file('/workspace');
-			const result = buildShellConfirmationParams(req, workingDirectory, false);
+			const result = buildShellConfirmationParams(
+				req,
+				workingDirectory,
+				false,
+			);
 			expect(result.input.command).toBe(fullCommandText);
 			expect(result.input.message).toBe(fullCommandText);
 		});
 
 		it('shell: keeps full command with cd prefix when no workingDirectory', () => {
 			const fullCommandText = 'cd /workspace && npm test';
-			const req = { kind: 'shell', fullCommandText: fullCommandText } as any;
+			const req = {
+				kind: 'shell',
+				fullCommandText: fullCommandText,
+			} as any;
 			const result = buildShellConfirmationParams(req, undefined, false);
 			expect(result.input.command).toBe(fullCommandText);
 			expect(result.input.message).toBe(fullCommandText);
@@ -87,7 +119,11 @@ describe('CopilotCLI permissionHelpers', () => {
 		it('shell: plain command without cd prefix is unchanged', () => {
 			const req = { kind: 'shell', fullCommandText: 'npm test' } as any;
 			const workingDirectory = URI.file('/workspace');
-			const result = buildShellConfirmationParams(req, workingDirectory, false);
+			const result = buildShellConfirmationParams(
+				req,
+				workingDirectory,
+				false,
+			);
 			expect(result.input.command).toBe('npm test');
 			expect(result.input.message).toBe('npm test');
 		});
@@ -95,8 +131,16 @@ describe('CopilotCLI permissionHelpers', () => {
 		it('shell: intention takes priority in message even when cd prefix is stripped', () => {
 			const workingDirectory = URI.file('/workspace');
 			const fullCommandText = `cd ${workingDirectory.fsPath} && npm test`;
-			const req = { kind: 'shell', intention: 'Run unit tests', fullCommandText: fullCommandText } as any;
-			const result = buildShellConfirmationParams(req, workingDirectory, false);
+			const req = {
+				kind: 'shell',
+				intention: 'Run unit tests',
+				fullCommandText: fullCommandText,
+			} as any;
+			const result = buildShellConfirmationParams(
+				req,
+				workingDirectory,
+				false,
+			);
 			expect(result.input.message).toBe('Run unit tests');
 			expect(result.input.command).toBe('npm test');
 		});
@@ -104,8 +148,15 @@ describe('CopilotCLI permissionHelpers', () => {
 		it('shell: strips Set-Location prefix when matching workingDirectory on Windows', () => {
 			const workingDirectory = URI.file('C:\\workspace');
 			const fullCommandText = `Set-Location ${workingDirectory.fsPath}; npm test`;
-			const req = { kind: 'shell', fullCommandText: fullCommandText } as any;
-			const result = buildShellConfirmationParams(req, workingDirectory, true);
+			const req = {
+				kind: 'shell',
+				fullCommandText: fullCommandText,
+			} as any;
+			const result = buildShellConfirmationParams(
+				req,
+				workingDirectory,
+				true,
+			);
 			expect(result.input.command).toBe('npm test');
 			expect(result.input.message).toBe('npm test');
 		});
@@ -114,7 +165,11 @@ describe('CopilotCLI permissionHelpers', () => {
 			const workingDirectory = URI.file('C:\\project');
 			const fullCommandText = `cd /d ${workingDirectory.fsPath} && npm start`;
 			const req = { kind: 'shell', fullCommandText } as any;
-			const result = buildShellConfirmationParams(req, workingDirectory, true);
+			const result = buildShellConfirmationParams(
+				req,
+				workingDirectory,
+				true,
+			);
 			expect(result.input.command).toBe('npm start');
 			expect(result.input.message).toBe('npm start');
 		});
@@ -123,7 +178,11 @@ describe('CopilotCLI permissionHelpers', () => {
 			const workingDirectory = URI.file('C:\\project');
 			const fullCommandText = `Set-Location -Path ${workingDirectory.fsPath} && npm start`;
 			const req = { kind: 'shell', fullCommandText } as any;
-			const result = buildShellConfirmationParams(req, workingDirectory, true);
+			const result = buildShellConfirmationParams(
+				req,
+				workingDirectory,
+				true,
+			);
 			expect(result.input.command).toBe('npm start');
 			expect(result.input.message).toBe('npm start');
 		});
@@ -133,7 +192,11 @@ describe('CopilotCLI permissionHelpers', () => {
 			const workingDirectory = URI.file('/workspace');
 			const fullCommandText = `cd ${workingDirectory.fsPath} && npm test`;
 			const req = { kind: 'shell', fullCommandText } as any;
-			const result = buildShellConfirmationParams(req, workingDirectory, true);
+			const result = buildShellConfirmationParams(
+				req,
+				workingDirectory,
+				true,
+			);
 			// Powershell regex does match `cd <dir> &&` pattern (cd without /d), so stripping still happens
 			expect(result.input.command).toBe('npm test');
 		});
@@ -143,7 +206,11 @@ describe('CopilotCLI permissionHelpers', () => {
 			const workingDirectory = URI.file('C:\\workspace');
 			const fullCommandText = `Set-Location -Path ${workingDirectory.fsPath}; npm test`;
 			const req = { kind: 'shell', fullCommandText } as any;
-			const result = buildShellConfirmationParams(req, workingDirectory, false);
+			const result = buildShellConfirmationParams(
+				req,
+				workingDirectory,
+				false,
+			);
 			// Bash regex doesn't recognize Set-Location, so full command is kept
 			expect(result.input.command).toBe(fullCommandText);
 		});
@@ -151,8 +218,16 @@ describe('CopilotCLI permissionHelpers', () => {
 
 	describe('buildMcpConfirmationParams', () => {
 		it('mcp: formats with serverName, toolTitle and args JSON', () => {
-			const req = { kind: 'mcp', serverName: 'files', toolTitle: 'List Files', toolName: 'list', args: { path: '/tmp' } } as any;
-			const result = buildMcpConfirmationParams(req as Extract<PermissionRequest, { kind: 'mcp' }>);
+			const req = {
+				kind: 'mcp',
+				serverName: 'files',
+				toolTitle: 'List Files',
+				toolName: 'list',
+				args: { path: '/tmp' },
+			} as any;
+			const result = buildMcpConfirmationParams(
+				req as Extract<PermissionRequest, { kind: 'mcp' }>,
+			);
 			expect(result.tool).toBe(ToolName.CoreConfirmationTool);
 			expect(result.input.title).toBe('List Files');
 			expect(result.input.message).toContain('Server: files');
@@ -160,8 +235,14 @@ describe('CopilotCLI permissionHelpers', () => {
 		});
 
 		it('mcp: falls back to generated title and full JSON when no serverName', () => {
-			const req = { kind: 'mcp', toolName: 'info', args: { detail: true } } as any;
-			const result = buildMcpConfirmationParams(req as Extract<PermissionRequest, { kind: 'mcp' }>);
+			const req = {
+				kind: 'mcp',
+				toolName: 'info',
+				args: { detail: true },
+			} as any;
+			const result = buildMcpConfirmationParams(
+				req as Extract<PermissionRequest, { kind: 'mcp' }>,
+			);
 			expect(result.input.title).toBe('MCP Tool: info');
 			expect(result.input.message).toMatch(/```json/);
 			expect(result.input.message).toContain('"detail": true');
@@ -169,7 +250,9 @@ describe('CopilotCLI permissionHelpers', () => {
 
 		it('mcp: uses Unknown when neither toolTitle nor toolName provided', () => {
 			const req = { kind: 'mcp', args: {} } as any;
-			const result = buildMcpConfirmationParams(req as Extract<PermissionRequest, { kind: 'mcp' }>);
+			const result = buildMcpConfirmationParams(
+				req as Extract<PermissionRequest, { kind: 'mcp' }>,
+			);
 			expect(result.input.title).toBe('MCP Tool: Unknown');
 		});
 	});
@@ -177,30 +260,65 @@ describe('CopilotCLI permissionHelpers', () => {
 	describe('requiresFileEditconfirmation', () => {
 		it('returns false for non-write requests', async () => {
 			const req = { kind: 'shell', fullCommandText: 'ls' } as any;
-			expect(await requiresFileEditconfirmation(instaService, req)).toBe(false);
+			expect(await requiresFileEditconfirmation(instaService, req)).toBe(
+				false,
+			);
 		});
 
 		it('returns false when no fileName is provided', async () => {
 			const req = { kind: 'write', intention: 'edit' } as any;
-			expect(await requiresFileEditconfirmation(instaService, req)).toBe(false);
+			expect(await requiresFileEditconfirmation(instaService, req)).toBe(
+				false,
+			);
 		});
 
 		it('requires confirmation for file outside workspace when no workingDirectory', async () => {
-			const req = { kind: 'write', fileName: URI.file('/some/path/foo.ts').fsPath, diff: '', intention: '' } as any;
-			expect(await requiresFileEditconfirmation(instaService, req)).toBe(true);
+			const req = {
+				kind: 'write',
+				fileName: URI.file('/some/path/foo.ts').fsPath,
+				diff: '',
+				intention: '',
+			} as any;
+			expect(await requiresFileEditconfirmation(instaService, req)).toBe(
+				true,
+			);
 		});
 
 		it('does not require confirmation when workingDirectory covers the file', async () => {
-			const req = { kind: 'write', fileName: URI.file('/workspace/src/foo.ts').fsPath, diff: '', intention: '' } as any;
+			const req = {
+				kind: 'write',
+				fileName: URI.file('/workspace/src/foo.ts').fsPath,
+				diff: '',
+				intention: '',
+			} as any;
 			const workingDirectory = URI.file('/workspace');
-			expect(await requiresFileEditconfirmation(instaService, req, undefined, workingDirectory)).toBe(false);
+			expect(
+				await requiresFileEditconfirmation(
+					instaService,
+					req,
+					undefined,
+					workingDirectory,
+				),
+			).toBe(false);
 		});
 
 		it('does not require confirmation when workingDirectory is provided', async () => {
-			const req = { kind: 'write', fileName: URI.file('/workspace/other/foo.ts').fsPath, diff: '', intention: '' } as any;
+			const req = {
+				kind: 'write',
+				fileName: URI.file('/workspace/other/foo.ts').fsPath,
+				diff: '',
+				intention: '',
+			} as any;
 			const workingDirectory = URI.file('/workspace');
 			// workingDirectory callback always returns the same folder, treating all files as in-workspace
-			expect(await requiresFileEditconfirmation(instaService, req, undefined, workingDirectory)).toBe(false);
+			expect(
+				await requiresFileEditconfirmation(
+					instaService,
+					req,
+					undefined,
+					workingDirectory,
+				),
+			).toBe(false);
 		});
 	});
 
@@ -212,7 +330,12 @@ describe('CopilotCLI permissionHelpers', () => {
 				worktree: undefined,
 				worktreeProperties: undefined,
 			};
-			expect(isFileFromSessionWorkspace(URI.file('/workspace/src/foo.ts'), workspaceInfo)).toBe(true);
+			expect(
+				isFileFromSessionWorkspace(
+					URI.file('/workspace/src/foo.ts'),
+					workspaceInfo,
+				),
+			).toBe(true);
 		});
 
 		it('returns false for file outside all known directories', () => {
@@ -222,7 +345,12 @@ describe('CopilotCLI permissionHelpers', () => {
 				worktree: undefined,
 				worktreeProperties: undefined,
 			};
-			expect(isFileFromSessionWorkspace(URI.file('/other/path/foo.ts'), workspaceInfo)).toBe(false);
+			expect(
+				isFileFromSessionWorkspace(
+					URI.file('/other/path/foo.ts'),
+					workspaceInfo,
+				),
+			).toBe(false);
 		});
 
 		it('returns true for file inside the worktree', () => {
@@ -230,9 +358,21 @@ describe('CopilotCLI permissionHelpers', () => {
 				folder: URI.file('/workspace'),
 				repository: URI.file('/repo'),
 				worktree: URI.file('/worktree'),
-				worktreeProperties: { autoCommit: true, baseCommit: 'abc', branchName: 'test', repositoryPath: '/repo', worktreePath: '/worktree', version: 1 },
+				worktreeProperties: {
+					autoCommit: true,
+					baseCommit: 'abc',
+					branchName: 'test',
+					repositoryPath: '/repo',
+					worktreePath: '/worktree',
+					version: 1,
+				},
 			};
-			expect(isFileFromSessionWorkspace(URI.file('/worktree/src/foo.ts'), workspaceInfo)).toBe(true);
+			expect(
+				isFileFromSessionWorkspace(
+					URI.file('/worktree/src/foo.ts'),
+					workspaceInfo,
+				),
+			).toBe(true);
 		});
 
 		it('returns true for file inside repository when worktree exists', () => {
@@ -240,9 +380,21 @@ describe('CopilotCLI permissionHelpers', () => {
 				folder: URI.file('/workspace'),
 				repository: URI.file('/repo'),
 				worktree: URI.file('/worktree'),
-				worktreeProperties: { autoCommit: true, baseCommit: 'abc', branchName: 'test', repositoryPath: '/repo', worktreePath: '/worktree', version: 1 },
+				worktreeProperties: {
+					autoCommit: true,
+					baseCommit: 'abc',
+					branchName: 'test',
+					repositoryPath: '/repo',
+					worktreePath: '/worktree',
+					version: 1,
+				},
 			};
-			expect(isFileFromSessionWorkspace(URI.file('/repo/src/foo.ts'), workspaceInfo)).toBe(true);
+			expect(
+				isFileFromSessionWorkspace(
+					URI.file('/repo/src/foo.ts'),
+					workspaceInfo,
+				),
+			).toBe(true);
 		});
 
 		it('returns false for file inside repository when no worktree exists', () => {
@@ -252,7 +404,12 @@ describe('CopilotCLI permissionHelpers', () => {
 				worktree: undefined,
 				worktreeProperties: undefined,
 			};
-			expect(isFileFromSessionWorkspace(URI.file('/repo/src/foo.ts'), workspaceInfo)).toBe(false);
+			expect(
+				isFileFromSessionWorkspace(
+					URI.file('/repo/src/foo.ts'),
+					workspaceInfo,
+				),
+			).toBe(false);
 		});
 
 		it('returns false when workspaceInfo has no folder, no repository, no worktree', () => {
@@ -262,7 +419,12 @@ describe('CopilotCLI permissionHelpers', () => {
 				worktree: undefined,
 				worktreeProperties: undefined,
 			};
-			expect(isFileFromSessionWorkspace(URI.file('/any/file.ts'), workspaceInfo)).toBe(false);
+			expect(
+				isFileFromSessionWorkspace(
+					URI.file('/any/file.ts'),
+					workspaceInfo,
+				),
+			).toBe(false);
 		});
 	});
 
@@ -272,7 +434,9 @@ describe('CopilotCLI permissionHelpers', () => {
 		let tokenSource: CancellationTokenSource;
 
 		beforeEach(() => {
-			const services = disposables.add(createExtensionUnitTestingServices());
+			const services = disposables.add(
+				createExtensionUnitTestingServices(),
+			);
 			const accessor = services.createTestingAccessor();
 			logService = accessor.get(ILogService);
 			tokenSource = new CancellationTokenSource();
@@ -283,35 +447,68 @@ describe('CopilotCLI permissionHelpers', () => {
 			tokenSource.dispose();
 		});
 
-		function makeWorkspaceInfo(folder?: URI, worktree?: URI, repository?: URI): IWorkspaceInfo {
+		function makeWorkspaceInfo(
+			folder?: URI,
+			worktree?: URI,
+			repository?: URI,
+		): IWorkspaceInfo {
 			return {
 				folder,
 				repository,
 				worktree,
-				worktreeProperties: worktree ? { autoCommit: true, baseCommit: 'abc', branchName: 'test', repositoryPath: repository?.fsPath ?? '', worktreePath: worktree.fsPath, version: 1 } : undefined,
+				worktreeProperties: worktree
+					? {
+							autoCommit: true,
+							baseCommit: 'abc',
+							branchName: 'test',
+							repositoryPath: repository?.fsPath ?? '',
+							worktreePath: worktree.fsPath,
+							version: 1,
+						}
+					: undefined,
 			};
 		}
 
 		function makeImageSupport(trusted: boolean): ICopilotCLIImageSupport {
-			return { _serviceBrand: undefined, storeImage: vi.fn(), isTrustedImage: () => trusted };
+			return {
+				_serviceBrand: undefined,
+				storeImage: vi.fn(),
+				isTrustedImage: () => trusted,
+			};
 		}
 
 		function makeWorkspaceService(folders: URI[]): IWorkspaceService {
-			return { getWorkspaceFolder: (resource: URI) => folders.find(f => resource.fsPath.startsWith(f.fsPath)) } as unknown as IWorkspaceService;
+			return {
+				getWorkspaceFolder: (resource: URI) =>
+					folders.find((f) => resource.fsPath.startsWith(f.fsPath)),
+			} as unknown as IWorkspaceService;
 		}
 
 		function makeToolsService(response: string): IToolsService {
 			return {
-				invokeTool: vi.fn(async () => new LanguageModelToolResult2([new LanguageModelTextPart(response)])),
+				invokeTool: vi.fn(
+					async () =>
+						new LanguageModelToolResult2([
+							new LanguageModelTextPart(response),
+						]),
+				),
 			} as unknown as IToolsService;
 		}
 
 		it('auto-approves trusted images', async () => {
 			const req = { kind: 'read', path: '/images/cat.png' } as any;
 			const result = await handleReadPermission(
-				'session-1', req, undefined, [], makeImageSupport(true),
-				makeWorkspaceInfo(), makeWorkspaceService([]), makeToolsService('no'),
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				'session-1',
+				req,
+				undefined,
+				[],
+				makeImageSupport(true),
+				makeWorkspaceInfo(),
+				makeWorkspaceService([]),
+				makeToolsService('no'),
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
 		});
@@ -319,9 +516,17 @@ describe('CopilotCLI permissionHelpers', () => {
 		it('auto-approves files in session workspace (folder)', async () => {
 			const req = { kind: 'read', path: '/workspace/src/file.ts' } as any;
 			const result = await handleReadPermission(
-				'session-1', req, undefined, [], makeImageSupport(false),
-				makeWorkspaceInfo(URI.file('/workspace')), makeWorkspaceService([]),
-				makeToolsService('no'), undefined as unknown as ChatParticipantToolToken, logService, token,
+				'session-1',
+				req,
+				undefined,
+				[],
+				makeImageSupport(false),
+				makeWorkspaceInfo(URI.file('/workspace')),
+				makeWorkspaceService([]),
+				makeToolsService('no'),
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
 		});
@@ -329,9 +534,17 @@ describe('CopilotCLI permissionHelpers', () => {
 		it('auto-approves files in a VS Code workspace folder', async () => {
 			const req = { kind: 'read', path: '/vscode-ws/src/file.ts' } as any;
 			const result = await handleReadPermission(
-				'session-1', req, undefined, [], makeImageSupport(false),
-				makeWorkspaceInfo(URI.file('/other')), makeWorkspaceService([URI.file('/vscode-ws')]),
-				makeToolsService('no'), undefined as unknown as ChatParticipantToolToken, logService, token,
+				'session-1',
+				req,
+				undefined,
+				[],
+				makeImageSupport(false),
+				makeWorkspaceInfo(URI.file('/other')),
+				makeWorkspaceService([URI.file('/vscode-ws')]),
+				makeToolsService('no'),
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
 		});
@@ -341,20 +554,40 @@ describe('CopilotCLI permissionHelpers', () => {
 			const req = { kind: 'read', path: filePath } as any;
 			const attachments = [{ type: 'file', path: filePath }] as any;
 			const result = await handleReadPermission(
-				'session-1', req, undefined, attachments, makeImageSupport(false),
-				makeWorkspaceInfo(), makeWorkspaceService([]),
-				makeToolsService('no'), undefined as unknown as ChatParticipantToolToken, logService, token,
+				'session-1',
+				req,
+				undefined,
+				attachments,
+				makeImageSupport(false),
+				makeWorkspaceInfo(),
+				makeWorkspaceService([]),
+				makeToolsService('no'),
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
 		});
 
 		it('falls back to confirmation tool for out-of-workspace reads and approves on "yes"', async () => {
 			const toolsService = makeToolsService('yes');
-			const req = { kind: 'read', path: '/external/secret.txt', intention: 'Read config' } as any;
+			const req = {
+				kind: 'read',
+				path: '/external/secret.txt',
+				intention: 'Read config',
+			} as any;
 			const result = await handleReadPermission(
-				'session-1', req, undefined, [], makeImageSupport(false),
-				makeWorkspaceInfo(URI.file('/workspace')), makeWorkspaceService([]),
-				toolsService, undefined as unknown as ChatParticipantToolToken, logService, token,
+				'session-1',
+				req,
+				undefined,
+				[],
+				makeImageSupport(false),
+				makeWorkspaceInfo(URI.file('/workspace')),
+				makeWorkspaceService([]),
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
 			expect(toolsService.invokeTool).toHaveBeenCalled();
@@ -364,22 +597,44 @@ describe('CopilotCLI permissionHelpers', () => {
 			const toolsService = makeToolsService('no');
 			const req = { kind: 'read', path: '/external/secret.txt' } as any;
 			const result = await handleReadPermission(
-				'session-1', req, undefined, [], makeImageSupport(false),
-				makeWorkspaceInfo(URI.file('/workspace')), makeWorkspaceService([]),
-				toolsService, undefined as unknown as ChatParticipantToolToken, logService, token,
+				'session-1',
+				req,
+				undefined,
+				[],
+				makeImageSupport(false),
+				makeWorkspaceInfo(URI.file('/workspace')),
+				makeWorkspaceService([]),
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('denied-interactively-by-user');
 		});
 
 		it('uses intention as message when available', async () => {
 			const toolsService = makeToolsService('yes');
-			const req = { kind: 'read', path: '/external/file.txt', intention: 'Read 3 config files' } as any;
+			const req = {
+				kind: 'read',
+				path: '/external/file.txt',
+				intention: 'Read 3 config files',
+			} as any;
 			await handleReadPermission(
-				'session-1', req, undefined, [], makeImageSupport(false),
-				makeWorkspaceInfo(), makeWorkspaceService([]),
-				toolsService, undefined as unknown as ChatParticipantToolToken, logService, token,
+				'session-1',
+				req,
+				undefined,
+				[],
+				makeImageSupport(false),
+				makeWorkspaceInfo(),
+				makeWorkspaceService([]),
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
-			const callArgs = (toolsService.invokeTool as ReturnType<typeof vi.fn>).mock.calls[0];
+			const callArgs = (
+				toolsService.invokeTool as ReturnType<typeof vi.fn>
+			).mock.calls[0];
 			expect(callArgs[0]).toBe(ToolName.CoreConfirmationTool);
 			expect(callArgs[1].input.message).toBe('Read 3 config files');
 		});
@@ -388,11 +643,21 @@ describe('CopilotCLI permissionHelpers', () => {
 			const toolsService = makeToolsService('yes');
 			const req = { kind: 'read', path: '/external/file.txt' } as any;
 			await handleReadPermission(
-				'session-1', req, undefined, [], makeImageSupport(false),
-				makeWorkspaceInfo(), makeWorkspaceService([]),
-				toolsService, undefined as unknown as ChatParticipantToolToken, logService, token,
+				'session-1',
+				req,
+				undefined,
+				[],
+				makeImageSupport(false),
+				makeWorkspaceInfo(),
+				makeWorkspaceService([]),
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
-			const callArgs = (toolsService.invokeTool as ReturnType<typeof vi.fn>).mock.calls[0];
+			const callArgs = (
+				toolsService.invokeTool as ReturnType<typeof vi.fn>
+			).mock.calls[0];
 			expect(callArgs[1].input.message).toBe('/external/file.txt');
 		});
 	});
@@ -404,20 +669,29 @@ describe('CopilotCLI permissionHelpers', () => {
 		let editTracker: ExternalEditTracker;
 
 		beforeEach(() => {
-			const services = disposables.add(createExtensionUnitTestingServices());
+			const services = disposables.add(
+				createExtensionUnitTestingServices(),
+			);
 			const accessor = services.createTestingAccessor();
 			logService = accessor.get(ILogService);
 			tokenSource = new CancellationTokenSource();
 			token = tokenSource.token;
 			editTracker = new ExternalEditTracker();
-			editTracker.trackEdit = vi.fn(async () => { });
+			editTracker.trackEdit = vi.fn(async () => {});
 		});
 
 		afterEach(() => {
 			tokenSource.dispose();
 		});
 
-		function makeWorkspaceInfo(opts: { folder?: URI; worktree?: URI; repository?: URI; worktreeProperties?: any } = {}): IWorkspaceInfo {
+		function makeWorkspaceInfo(
+			opts: {
+				folder?: URI;
+				worktree?: URI;
+				repository?: URI;
+				worktreeProperties?: any;
+			} = {},
+		): IWorkspaceInfo {
 			return {
 				folder: opts.folder,
 				repository: opts.repository,
@@ -427,54 +701,108 @@ describe('CopilotCLI permissionHelpers', () => {
 		}
 
 		function makeWorkspaceService(folders: URI[]): IWorkspaceService {
-			return { getWorkspaceFolder: (resource: URI) => folders.find(f => resource.fsPath.startsWith(f.fsPath)) } as unknown as IWorkspaceService;
+			return {
+				getWorkspaceFolder: (resource: URI) =>
+					folders.find((f) => resource.fsPath.startsWith(f.fsPath)),
+			} as unknown as IWorkspaceService;
 		}
 
 		function makeToolsService(response: string): IToolsService {
 			return {
-				invokeTool: vi.fn(async () => new LanguageModelToolResult2([new LanguageModelTextPart(response)])),
+				invokeTool: vi.fn(
+					async () =>
+						new LanguageModelToolResult2([
+							new LanguageModelTextPart(response),
+						]),
+				),
 			} as unknown as IToolsService;
 		}
 
 		it('auto-approves writes in workspace folder for non-protected files', async () => {
 			const wsFolder = URI.file('/workspace');
-			const req = { kind: 'write', fileName: URI.file('/workspace/src/foo.ts').fsPath, diff: '', intention: '' } as any;
+			const req = {
+				kind: 'write',
+				fileName: URI.file('/workspace/src/foo.ts').fsPath,
+				diff: '',
+				intention: '',
+			} as any;
 			const result = await handleWritePermission(
-				'session-1', req, undefined, undefined, undefined, editTracker,
+				'session-1',
+				req,
+				undefined,
+				undefined,
+				undefined,
+				editTracker,
 				makeWorkspaceInfo({ folder: wsFolder }),
 				makeWorkspaceService([wsFolder]),
-				instaService, makeToolsService('no'),
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				instaService,
+				makeToolsService('no'),
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
 		});
 
 		it('auto-approves writes in working directory when isolation is enabled', async () => {
 			const worktree = URI.file('/worktree');
-			const req = { kind: 'write', fileName: URI.file('/worktree/src/foo.ts').fsPath, diff: '', intention: '' } as any;
+			const req = {
+				kind: 'write',
+				fileName: URI.file('/worktree/src/foo.ts').fsPath,
+				diff: '',
+				intention: '',
+			} as any;
 			const result = await handleWritePermission(
-				'session-1', req, undefined, undefined, undefined, editTracker,
+				'session-1',
+				req,
+				undefined,
+				undefined,
+				undefined,
+				editTracker,
 				makeWorkspaceInfo({
 					folder: URI.file('/workspace'),
 					worktree,
-					worktreeProperties: { autoCommit: true, baseCommit: 'abc', branchName: 'test', repositoryPath: '/repo', worktreePath: '/worktree', version: 1 },
+					worktreeProperties: {
+						autoCommit: true,
+						baseCommit: 'abc',
+						branchName: 'test',
+						repositoryPath: '/repo',
+						worktreePath: '/worktree',
+						version: 1,
+					},
 				}),
 				makeWorkspaceService([]),
-				instaService, makeToolsService('no'),
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				instaService,
+				makeToolsService('no'),
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
 		});
 
 		it('falls back to confirmation for writes outside workspace', async () => {
 			const toolsService = makeToolsService('yes');
-			const req = { kind: 'write', fileName: URI.file('/external/foo.ts').fsPath, diff: '', intention: '' } as any;
+			const req = {
+				kind: 'write',
+				fileName: URI.file('/external/foo.ts').fsPath,
+				diff: '',
+				intention: '',
+			} as any;
 			const result = await handleWritePermission(
-				'session-1', req, undefined, undefined, undefined, editTracker,
+				'session-1',
+				req,
+				undefined,
+				undefined,
+				undefined,
+				editTracker,
 				makeWorkspaceInfo({ folder: URI.file('/workspace') }),
 				makeWorkspaceService([URI.file('/workspace')]),
-				instaService, toolsService,
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				instaService,
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
 			expect(toolsService.invokeTool).toHaveBeenCalled();
@@ -482,13 +810,26 @@ describe('CopilotCLI permissionHelpers', () => {
 
 		it('denies writes outside workspace when user declines confirmation', async () => {
 			const toolsService = makeToolsService('no');
-			const req = { kind: 'write', fileName: URI.file('/external/foo.ts').fsPath, diff: '', intention: '' } as any;
+			const req = {
+				kind: 'write',
+				fileName: URI.file('/external/foo.ts').fsPath,
+				diff: '',
+				intention: '',
+			} as any;
 			const result = await handleWritePermission(
-				'session-1', req, undefined, undefined, undefined, editTracker,
+				'session-1',
+				req,
+				undefined,
+				undefined,
+				undefined,
+				editTracker,
 				makeWorkspaceInfo({ folder: URI.file('/workspace') }),
 				makeWorkspaceService([URI.file('/workspace')]),
-				instaService, toolsService,
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				instaService,
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('denied-interactively-by-user');
 		});
@@ -496,11 +837,19 @@ describe('CopilotCLI permissionHelpers', () => {
 		it('auto-approves when no file can be determined (no fileName, no toolCall)', async () => {
 			const req = { kind: 'write', intention: 'some write' } as any;
 			const result = await handleWritePermission(
-				'session-1', req, undefined, undefined, undefined, editTracker,
+				'session-1',
+				req,
+				undefined,
+				undefined,
+				undefined,
+				editTracker,
 				makeWorkspaceInfo({ folder: URI.file('/workspace') }),
 				makeWorkspaceService([URI.file('/workspace')]),
-				instaService, makeToolsService('no'),
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				instaService,
+				makeToolsService('no'),
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			// No file => getFileEditConfirmationToolParams returns undefined => auto-approve
 			expect(result.kind).toBe('approve-once');
@@ -513,7 +862,9 @@ describe('CopilotCLI permissionHelpers', () => {
 		let tokenSource: CancellationTokenSource;
 
 		beforeEach(() => {
-			const services = disposables.add(createExtensionUnitTestingServices());
+			const services = disposables.add(
+				createExtensionUnitTestingServices(),
+			);
 			const accessor = services.createTestingAccessor();
 			logService = accessor.get(ILogService);
 			tokenSource = new CancellationTokenSource();
@@ -526,7 +877,12 @@ describe('CopilotCLI permissionHelpers', () => {
 
 		function makeToolsService(response: string): IToolsService {
 			return {
-				invokeTool: vi.fn(async () => new LanguageModelToolResult2([new LanguageModelTextPart(response)])),
+				invokeTool: vi.fn(
+					async () =>
+						new LanguageModelToolResult2([
+							new LanguageModelTextPart(response),
+						]),
+				),
 			} as unknown as IToolsService;
 		}
 
@@ -534,33 +890,51 @@ describe('CopilotCLI permissionHelpers', () => {
 			const toolsService = makeToolsService('yes');
 			const req = { kind: 'url', url: 'https://example.com' } as any;
 			const result = await showInteractivePermissionPrompt(
-				req, undefined, toolsService,
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				req,
+				undefined,
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
-			const callArgs = (toolsService.invokeTool as ReturnType<typeof vi.fn>).mock.calls[0];
+			const callArgs = (
+				toolsService.invokeTool as ReturnType<typeof vi.fn>
+			).mock.calls[0];
 			expect(callArgs[0]).toBe(ToolName.CoreConfirmationTool);
-			expect(callArgs[1].input.title).toBe('Copilot CLI Permission Request');
+			expect(callArgs[1].input.title).toBe(
+				'Copilot CLI Permission Request',
+			);
 		});
 
 		it('denies when user declines', async () => {
 			const toolsService = makeToolsService('no');
 			const req = { kind: 'url', url: 'https://example.com' } as any;
 			const result = await showInteractivePermissionPrompt(
-				req, undefined, toolsService,
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				req,
+				undefined,
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('denied-interactively-by-user');
 		});
 
 		it('denies when invokeTool throws', async () => {
 			const toolsService = {
-				invokeTool: vi.fn(async () => { throw new Error('tool failure'); }),
+				invokeTool: vi.fn(async () => {
+					throw new Error('tool failure');
+				}),
 			} as unknown as IToolsService;
 			const req = { kind: 'url', url: 'https://example.com' } as any;
 			const result = await showInteractivePermissionPrompt(
-				req, undefined, toolsService,
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				req,
+				undefined,
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('denied-interactively-by-user');
 		});
@@ -569,10 +943,16 @@ describe('CopilotCLI permissionHelpers', () => {
 			const toolsService = makeToolsService('yes');
 			const req = { kind: 'url', url: 'https://example.com' } as any;
 			await showInteractivePermissionPrompt(
-				req, 'parent-123', toolsService,
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				req,
+				'parent-123',
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
-			const callArgs = (toolsService.invokeTool as ReturnType<typeof vi.fn>).mock.calls[0];
+			const callArgs = (
+				toolsService.invokeTool as ReturnType<typeof vi.fn>
+			).mock.calls[0];
 			expect(callArgs[1].subAgentInvocationId).toBe('parent-123');
 		});
 
@@ -580,8 +960,12 @@ describe('CopilotCLI permissionHelpers', () => {
 			const toolsService = makeToolsService('Yes');
 			const req = { kind: 'url', url: 'https://example.com' } as any;
 			const result = await showInteractivePermissionPrompt(
-				req, undefined, toolsService,
-				undefined as unknown as ChatParticipantToolToken, logService, token,
+				req,
+				undefined,
+				toolsService,
+				undefined as unknown as ChatParticipantToolToken,
+				logService,
+				token,
 			);
 			expect(result.kind).toBe('approve-once');
 		});

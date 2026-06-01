@@ -3,9 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type Anthropic from '@anthropic-ai/sdk';
-import { URI } from '../../../../base/common/uri.js';
-import { MessageAttachmentKind, type MessageAttachment } from '../../common/state/protocol/state.js';
+import type Anthropic from "@anthropic-ai/sdk";
+import { URI } from "../../../../base/common/uri.js";
+import {
+	MessageAttachmentKind,
+	type MessageAttachment,
+} from "../../common/state/protocol/state.js";
 
 /**
  * Build the {@link Anthropic.ContentBlockParam}[] payload for an
@@ -30,7 +33,9 @@ export function resolvePromptToContentBlocks(
 	prompt: string,
 	attachments?: readonly MessageAttachment[],
 ): Anthropic.ContentBlockParam[] {
-	const blocks: Anthropic.ContentBlockParam[] = [{ type: 'text', text: prompt }];
+	const blocks: Anthropic.ContentBlockParam[] = [
+		{ type: "text", text: prompt },
+	];
 	if (!attachments?.length) {
 		return blocks;
 	}
@@ -47,8 +52,10 @@ export function resolvePromptToContentBlocks(
 			continue;
 		}
 		const uri = URI.parse(att.uri);
-		if (att.displayKind === 'selection') {
-			const startLine = att.selection ? `:${att.selection.range.start.line + 1}` : '';
+		if (att.displayKind === "selection") {
+			const startLine = att.selection
+				? `:${att.selection.range.start.line + 1}`
+				: "";
 			refLines.push(`- ${uriToString(uri)}${startLine}`);
 		} else {
 			refLines.push(`- ${uriToString(uri)}`);
@@ -56,24 +63,25 @@ export function resolvePromptToContentBlocks(
 	}
 	if (simpleBlocks.length > 0) {
 		blocks.push({
-			type: 'text',
-			text: simpleBlocks.join('\n\n'),
+			type: "text",
+			text: simpleBlocks.join("\n\n"),
 		});
 	}
 	if (refLines.length === 0) {
 		return blocks;
 	}
 	blocks.push({
-		type: 'text',
-		text: '<system-reminder>\nThe user provided the following references:\n' +
-			refLines.join('\n') +
-			'\n\nIMPORTANT: this context may or may not be relevant to your tasks. ' +
-			'You should not respond to this context unless it is highly relevant to your task.\n' +
-			'</system-reminder>',
+		type: "text",
+		text:
+			"<system-reminder>\nThe user provided the following references:\n" +
+			refLines.join("\n") +
+			"\n\nIMPORTANT: this context may or may not be relevant to your tasks. " +
+			"You should not respond to this context unless it is highly relevant to your task.\n" +
+			"</system-reminder>",
 	});
 	return blocks;
 }
 
 function uriToString(uri: URI): string {
-	return uri.scheme === 'file' ? uri.fsPath : uri.toString();
+	return uri.scheme === "file" ? uri.fsPath : uri.toString();
 }

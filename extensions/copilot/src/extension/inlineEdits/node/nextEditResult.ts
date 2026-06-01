@@ -19,34 +19,38 @@ export interface INextEditDisplayLocation {
 
 export interface INextEditResult {
 	requestId: number;
-	result: {
-		edit?: StringReplacement;
-		displayLocation?: INextEditDisplayLocation;
-		targetDocumentId?: DocumentId;
-		isFromCursorJump?: boolean;
-	} | undefined;
+	result:
+		| {
+				edit?: StringReplacement;
+				displayLocation?: INextEditDisplayLocation;
+				targetDocumentId?: DocumentId;
+				isFromCursorJump?: boolean;
+		  }
+		| undefined;
 }
 
 export class NextEditResult implements INextEditResult {
 	constructor(
 		public readonly requestId: number,
 		public readonly source: NextEditFetchRequest,
-		public readonly result: {
-			edit?: StringReplacement;
-			documentBeforeEdits: StringText;
-			displayLocation?: INextEditDisplayLocation;
-			targetDocumentId?: DocumentId;
-			action?: Command;
-			isFromCursorJump: boolean;
-			jumpToPosition?: Position;
-			isSubsequentEdit: boolean;
-			/**
-			 * Reference to the underlying cache entry, when this result was either
-			 * served from the cache or freshly produced and immediately cached.
-			 * Consumers can use this to read/write per-entry flags such as
-			 * {@link CachedEdit.wasRenderedAsInlineSuggestion}.
-			 */
-			cacheEntry?: CachedEdit;
-		} | undefined,
-	) { }
+		public readonly result:
+			| {
+					edit?: StringReplacement;
+					documentBeforeEdits: StringText;
+					displayLocation?: INextEditDisplayLocation;
+					targetDocumentId?: DocumentId;
+					action?: Command;
+					isFromCursorJump: boolean;
+					jumpToPosition?: Position;
+					isSubsequentEdit: boolean;
+					/**
+					 * Reference to the underlying cache entry, when this result was either
+					 * served from the cache or freshly produced and immediately cached.
+					 * Consumers can use this to read/write per-entry flags such as
+					 * {@link CachedEdit.wasRenderedAsInlineSuggestion}.
+					 */
+					cacheEntry?: CachedEdit;
+			  }
+			| undefined,
+	) {}
 }

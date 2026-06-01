@@ -38,6 +38,6 @@ export function activate(context: ExtensionContext, forceActivation?: boolean) {
 		registerServices,
 		contributions: vscodeNodeContributions,
 		configureDevPackages,
-		forceActivation
+		forceActivation,
 	});
 }

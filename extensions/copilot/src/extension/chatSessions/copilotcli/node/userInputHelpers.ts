@@ -7,11 +7,15 @@ import type { UserInputRequestedEvent } from '@github/copilot/sdk';
 import type { CancellationToken, ChatParticipantToolToken } from 'vscode';
 import { createServiceIdentifier } from '../../../../util/common/services';
 
-export type UserInputRequest = Omit<UserInputRequestedEvent['data'], 'requestId'>;
+export type UserInputRequest = Omit<
+	UserInputRequestedEvent['data'],
+	'requestId'
+>;
 
 export type UserInputResponse = { answer: string; wasFreeform: boolean };
 
-export const IUserQuestionHandler = createServiceIdentifier<IUserQuestionHandler>('IUserQuestionHandler');
+export const IUserQuestionHandler =
+	createServiceIdentifier<IUserQuestionHandler>('IUserQuestionHandler');
 
 export interface IQuestionOption {
 	readonly label: string;
@@ -36,6 +40,15 @@ export interface IQuestion {
 
 export interface IUserQuestionHandler {
 	_serviceBrand: undefined;
-	askUserQuestion(question: IQuestion, toolInvocationToken: ChatParticipantToolToken, token: CancellationToken, toolCallId?: string): Promise<IQuestionAnswer | undefined>;
-	notifyQuestionCarouselAnswer?(toolCallId: string, question: IQuestion, response: UserInputResponse): Promise<void>;
+	askUserQuestion(
+		question: IQuestion,
+		toolInvocationToken: ChatParticipantToolToken,
+		token: CancellationToken,
+		toolCallId?: string,
+	): Promise<IQuestionAnswer | undefined>;
+	notifyQuestionCarouselAnswer?(
+		toolCallId: string,
+		question: IQuestion,
+		response: UserInputResponse,
+	): Promise<void>;
 }

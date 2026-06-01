@@ -3,17 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ClassifiedEvent, OmitMetadata, IGDPRProperty, StrictPropertyCheck } from '../../telemetry/common/gdprTypings.js';
-import { ITelemetryData, ITelemetryService, TelemetryLevel } from '../../telemetry/common/telemetry.js';
-import { IDataChannelService } from '../common/dataChannel.js';
+import {
+	ClassifiedEvent,
+	OmitMetadata,
+	IGDPRProperty,
+	StrictPropertyCheck,
+} from "../../telemetry/common/gdprTypings.js";
+import {
+	ITelemetryData,
+	ITelemetryService,
+	TelemetryLevel,
+} from "../../telemetry/common/telemetry.js";
+import { IDataChannelService } from "../common/dataChannel.js";
 
 export class InterceptingTelemetryService implements ITelemetryService {
 	_serviceBrand: undefined;
 
 	constructor(
 		private readonly _baseService: ITelemetryService,
-		private readonly _intercept: (eventName: string, data?: ITelemetryData) => void,
-	) { }
+		private readonly _intercept: (
+			eventName: string,
+			data?: ITelemetryData,
+		) => void,
+	) {}
 
 	get telemetryLevel(): TelemetryLevel {
 		return this._baseService.telemetryLevel;
@@ -52,7 +64,10 @@ export class InterceptingTelemetryService implements ITelemetryService {
 		this._baseService.publicLog(eventName, data);
 	}
 
-	publicLog2<E extends ClassifiedEvent<OmitMetadata<T>> = never, T extends IGDPRProperty = never>(eventName: string, data?: StrictPropertyCheck<T, E>): void {
+	publicLog2<
+		E extends ClassifiedEvent<OmitMetadata<T>> = never,
+		T extends IGDPRProperty = never,
+	>(eventName: string, data?: StrictPropertyCheck<T, E>): void {
 		this._intercept(eventName, data);
 		this._baseService.publicLog2(eventName, data);
 	}
@@ -62,7 +77,10 @@ export class InterceptingTelemetryService implements ITelemetryService {
 		this._baseService.publicLogError(errorEventName, data);
 	}
 
-	publicLogError2<E extends ClassifiedEvent<OmitMetadata<T>> = never, T extends IGDPRProperty = never>(eventName: string, data?: StrictPropertyCheck<T, E>): void {
+	publicLogError2<
+		E extends ClassifiedEvent<OmitMetadata<T>> = never,
+		T extends IGDPRProperty = never,
+	>(eventName: string, data?: StrictPropertyCheck<T, E>): void {
 		this._intercept(eventName, data);
 		this._baseService.publicLogError2(eventName, data);
 	}
@@ -94,24 +112,31 @@ export class DataChannelForwardingTelemetryService extends InterceptingTelemetry
 			}
 
 			if (forward) {
-				dataChannelService.getDataChannel<IEditTelemetryData>('editTelemetry').sendData({ eventName, data: data ?? {} });
+				dataChannelService
+					.getDataChannel<IEditTelemetryData>("editTelemetry")
+					.sendData({ eventName, data: data ?? {} });
 			}
 		});
 	}
 }
 
-const shouldForwardToChannel = Symbol('shouldForwardToChannel');
+const shouldForwardToChannel = Symbol("shouldForwardToChannel");
 export function forwardToChannelIf(value: boolean): Record<string, unknown> {
 	return {
 		// This will not be sent via telemetry, it is just a marker
-		[shouldForwardToChannel]: value
+		[shouldForwardToChannel]: value,
 	};
 }
 
-export function isCopilotLikeExtension(extensionId: string | undefined): boolean {
+export function isCopilotLikeExtension(
+	extensionId: string | undefined,
+): boolean {
 	if (!extensionId) {
 		return false;
 	}
 	const extIdLowerCase = extensionId.toLowerCase();
-	return extIdLowerCase === 'github.copilot' || extIdLowerCase === 'github.copilot-chat';
+	return (
+		extIdLowerCase === "github.copilot" ||
+		extIdLowerCase === "github.copilot-chat"
+	);
 }

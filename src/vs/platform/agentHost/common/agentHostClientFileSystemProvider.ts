@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../base/common/uri.js';
-import { AHPFileSystemProvider } from './agentHostFileSystemProvider.js';
-import { fromAgentClientUri, toAgentClientUri } from './agentClientUri.js';
+import { URI } from "../../../base/common/uri.js";
+import { AHPFileSystemProvider } from "./agentHostFileSystemProvider.js";
+import { fromAgentClientUri, toAgentClientUri } from "./agentClientUri.js";
 
 /**
  * Read-only filesystem provider for accessing client-side files from the
@@ -24,7 +24,6 @@ import { fromAgentClientUri, toAgentClientUri } from './agentClientUri.js';
  * (e.g. via a reverse JSON-RPC request over the WebSocket transport).
  */
 export class AgentHostClientFileSystemProvider extends AHPFileSystemProvider {
-
 	protected _decodeUri(resource: URI): URI {
 		return fromAgentClientUri(resource);
 	}

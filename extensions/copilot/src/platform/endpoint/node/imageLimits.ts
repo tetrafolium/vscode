@@ -9,7 +9,8 @@ import { Raw } from '@vscode/prompt-tsx';
  * Model-facing placeholder substituted for dropped history images.
  * Intentionally not localized — this text is sent to the model, not the user.
  */
-const IMAGE_PLACEHOLDER_TEXT = '[Image omitted from conversation history due to model limit.]';
+const IMAGE_PLACEHOLDER_TEXT =
+	'[Image omitted from conversation history due to model limit.]';
 
 /**
  * Silently drops the oldest images from history when the total number of images
@@ -22,7 +23,10 @@ const IMAGE_PLACEHOLDER_TEXT = '[Image omitted from conversation history due to 
  *
  * @returns A (possibly filtered) copy of messages. The original array is never mutated.
  */
-export function filterHistoryImages(messages: Raw.ChatMessage[], maxImages: number): Raw.ChatMessage[] {
+export function filterHistoryImages(
+	messages: Raw.ChatMessage[],
+	maxImages: number,
+): Raw.ChatMessage[] {
 	// Anchor the current turn at the last user message; anything at or after this
 	// index is treated as "current turn" and its images are never filtered.
 	let lastUserIdx = -1;
@@ -75,7 +79,13 @@ export function filterHistoryImages(messages: Raw.ChatMessage[], maxImages: numb
 	// opaque error. Silent history filtering is only safe when dropping history
 	// images can bring the total down to the limit.
 	if (currentTurnImages > maxImages) {
-		throw new Error(l10n.t('Too many images in request: {0} images provided, but the model supports a maximum of {1} images.', currentTurnImages, maxImages));
+		throw new Error(
+			l10n.t(
+				'Too many images in request: {0} images provided, but the model supports a maximum of {1} images.',
+				currentTurnImages,
+				maxImages,
+			),
+		);
 	}
 
 	// Walk backward through history (before the current turn), keeping the
@@ -89,7 +99,10 @@ export function filterHistoryImages(messages: Raw.ChatMessage[], maxImages: numb
 			continue;
 		}
 		for (let j = messages[i].content.length - 1; j >= 0; j--) {
-			if (messages[i].content[j].type === Raw.ChatCompletionContentPartKind.Image) {
+			if (
+				messages[i].content[j].type ===
+				Raw.ChatCompletionContentPartKind.Image
+			) {
 				const key = `${i}:${j}`;
 				if (historyBudget > 0) {
 					historyImageDecisions.set(key, true);
@@ -109,7 +122,11 @@ export function filterHistoryImages(messages: Raw.ChatMessage[], maxImages: numb
 		if (!Array.isArray(message.content)) {
 			return message;
 		}
-		if (!message.content.some(p => p.type === Raw.ChatCompletionContentPartKind.Image)) {
+		if (
+			!message.content.some(
+				(p) => p.type === Raw.ChatCompletionContentPartKind.Image,
+			)
+		) {
 			return message;
 		}
 		return {
@@ -121,8 +138,11 @@ export function filterHistoryImages(messages: Raw.ChatMessage[], maxImages: numb
 				if (historyImageDecisions.get(`${msgIdx}:${partIdx}`)) {
 					return part;
 				}
-				return { type: Raw.ChatCompletionContentPartKind.Text, text: IMAGE_PLACEHOLDER_TEXT };
-			})
+				return {
+					type: Raw.ChatCompletionContentPartKind.Text,
+					text: IMAGE_PLACEHOLDER_TEXT,
+				};
+			}),
 		};
 	});
 }

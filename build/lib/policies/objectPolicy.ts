@@ -3,21 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BasePolicy } from './basePolicy.ts';
-import type { CategoryDto, PolicyDto } from './policyDto.ts';
-import { renderProfileString } from './render.ts';
-import { type Category, type NlsString, PolicyType, type LanguageTranslations } from './types.ts';
+import { BasePolicy } from "./basePolicy.ts";
+import type { CategoryDto, PolicyDto } from "./policyDto.ts";
+import { renderProfileString } from "./render.ts";
+import {
+	type Category,
+	type NlsString,
+	PolicyType,
+	type LanguageTranslations,
+} from "./types.ts";
 
 export class ObjectPolicy extends BasePolicy {
-
-	static from(category: CategoryDto, policy: PolicyDto): ObjectPolicy | undefined {
+	static from(
+		category: CategoryDto,
+		policy: PolicyDto,
+	): ObjectPolicy | undefined {
 		const { type, name, minimumVersion, localization } = policy;
 
-		if (type !== 'object' && type !== 'array') {
+		if (type !== "object" && type !== "array") {
 			return undefined;
 		}
 
-		return new ObjectPolicy(name, { moduleName: '', name: { nlsKey: category.name.key, value: category.name.value } }, minimumVersion, { nlsKey: localization.description.key, value: localization.description.value }, '');
+		return new ObjectPolicy(
+			name,
+			{
+				moduleName: "",
+				name: { nlsKey: category.name.key, value: category.name.value },
+			},
+			minimumVersion,
+			{
+				nlsKey: localization.description.key,
+				value: localization.description.value,
+			},
+			"",
+		);
 	}
 
 	private constructor(
@@ -27,11 +46,20 @@ export class ObjectPolicy extends BasePolicy {
 		description: NlsString,
 		moduleName: string,
 	) {
-		super(PolicyType.Object, name, category, minimumVersion, description, moduleName);
+		super(
+			PolicyType.Object,
+			name,
+			category,
+			minimumVersion,
+			description,
+			moduleName,
+		);
 	}
 
 	protected renderADMXElements(): string[] {
-		return [`<multiText id="${this.name}" valueName="${this.name}" required="true" />`];
+		return [
+			`<multiText id="${this.name}" valueName="${this.name}" required="true" />`,
+		];
 	}
 
 	renderADMLPresentationContents() {
@@ -39,7 +67,7 @@ export class ObjectPolicy extends BasePolicy {
 	}
 
 	renderJsonValue() {
-		return '';
+		return "";
 	}
 
 	renderProfileValue(): string {

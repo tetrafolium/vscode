@@ -3,16 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../base/common/uri.js';
-import { Disposable, IDisposable } from '../../../../base/common/lifecycle.js';
-import { IQuickDiffService, QuickDiff, QuickDiffProvider } from './quickDiff.js';
-import { isEqualOrParent } from '../../../../base/common/resources.js';
-import { score } from '../../../../editor/common/languageSelector.js';
-import { Emitter } from '../../../../base/common/event.js';
-import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
+import { URI } from "../../../../base/common/uri.js";
+import { Disposable, IDisposable } from "../../../../base/common/lifecycle.js";
+import {
+	IQuickDiffService,
+	QuickDiff,
+	QuickDiffProvider,
+} from "./quickDiff.js";
+import { isEqualOrParent } from "../../../../base/common/resources.js";
+import { score } from "../../../../editor/common/languageSelector.js";
+import { Emitter } from "../../../../base/common/event.js";
+import { IUriIdentityService } from "../../../../platform/uriIdentity/common/uriIdentity.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../platform/storage/common/storage.js";
 
-function createProviderComparer(uri: URI): (a: QuickDiffProvider, b: QuickDiffProvider) => number {
+function createProviderComparer(
+	uri: URI,
+): (a: QuickDiffProvider, b: QuickDiffProvider) => number {
 	return (a, b) => {
 		if (a.rootUri && !b.rootUri) {
 			return -1;
@@ -38,13 +48,13 @@ function createProviderComparer(uri: URI): (a: QuickDiffProvider, b: QuickDiffPr
 }
 
 function providerComparer(a: QuickDiffProvider, b: QuickDiffProvider): number {
-	if (a.kind === 'primary') {
+	if (a.kind === "primary") {
 		return -1;
-	} else if (b.kind === 'primary') {
+	} else if (b.kind === "primary") {
 		return 1;
-	} else if (a.kind === 'secondary') {
+	} else if (a.kind === "secondary") {
 		return -1;
-	} else if (b.kind === 'secondary') {
+	} else if (b.kind === "secondary") {
 		return 1;
 	}
 	return 0;
@@ -52,21 +62,26 @@ function providerComparer(a: QuickDiffProvider, b: QuickDiffProvider): number {
 
 export class QuickDiffService extends Disposable implements IQuickDiffService {
 	declare readonly _serviceBrand: undefined;
-	private static readonly STORAGE_KEY = 'workbench.scm.quickDiffProviders.hidden';
+	private static readonly STORAGE_KEY =
+		"workbench.scm.quickDiffProviders.hidden";
 
 	private quickDiffProviders: Set<QuickDiffProvider> = new Set();
 	get providers(): readonly QuickDiffProvider[] {
 		return Array.from(this.quickDiffProviders).sort(providerComparer);
 	}
 
-	private readonly _onDidChangeQuickDiffProviders = this._register(new Emitter<void>());
-	readonly onDidChangeQuickDiffProviders = this._onDidChangeQuickDiffProviders.event;
+	private readonly _onDidChangeQuickDiffProviders = this._register(
+		new Emitter<void>(),
+	);
+	readonly onDidChangeQuickDiffProviders =
+		this._onDidChangeQuickDiffProviders.event;
 
 	private hiddenQuickDiffProviders = new Set<string>();
 
 	constructor(
 		@IStorageService private readonly storageService: IStorageService,
-		@IUriIdentityService private readonly uriIdentityService: IUriIdentityService
+		@IUriIdentityService
+		private readonly uriIdentityService: IUriIdentityService,
 	) {
 		super();
 
@@ -80,24 +95,46 @@ export class QuickDiffService extends Disposable implements IQuickDiffService {
 			dispose: () => {
 				this.quickDiffProviders.delete(quickDiff);
 				this._onDidChangeQuickDiffProviders.fire();
-			}
+			},
 		};
 	}
 
-	async getQuickDiffs(uri: URI, language: string = '', isSynchronized: boolean = false): Promise<QuickDiff[]> {
+	async getQuickDiffs(
+		uri: URI,
+		language: string = "",
+		isSynchronized: boolean = false,
+	): Promise<QuickDiff[]> {
 		const providers = Array.from(this.quickDiffProviders)
-			.filter(provider => !provider.rootUri || this.uriIdentityService.extUri.isEqualOrParent(uri, provider.rootUri))
+			.filter(
+				(provider) =>
+					!provider.rootUri ||
+					this.uriIdentityService.extUri.isEqualOrParent(uri, provider.rootUri),
+			)
 			.sort(createProviderComparer(uri));
 
-		const quickDiffOriginalResources = await Promise.allSettled(providers.map(async provider => {
-			const scoreValue = provider.selector ? score(provider.selector, uri, language, isSynchronized, undefined, undefined) : 10;
-			const originalResource = scoreValue > 0 ? await provider.getOriginalResource(uri) ?? undefined : undefined;
-			return { provider, originalResource };
-		}));
+		const quickDiffOriginalResources = await Promise.allSettled(
+			providers.map(async (provider) => {
+				const scoreValue = provider.selector
+					? score(
+							provider.selector,
+							uri,
+							language,
+							isSynchronized,
+							undefined,
+							undefined,
+						)
+					: 10;
+				const originalResource =
+					scoreValue > 0
+						? ((await provider.getOriginalResource(uri)) ?? undefined)
+						: undefined;
+				return { provider, originalResource };
+			}),
+		);
 
 		const quickDiffs: QuickDiff[] = [];
 		for (const quickDiffOriginalResource of quickDiffOriginalResources) {
-			if (quickDiffOriginalResource.status === 'rejected') {
+			if (quickDiffOriginalResource.status === "rejected") {
 				continue;
 			}
 
@@ -133,25 +170,47 @@ export class QuickDiffService extends Disposable implements IQuickDiffService {
 	}
 
 	private loadState(): void {
-		const raw = this.storageService.get(QuickDiffService.STORAGE_KEY, StorageScope.PROFILE);
+		const raw = this.storageService.get(
+			QuickDiffService.STORAGE_KEY,
+			StorageScope.PROFILE,
+		);
 		if (raw) {
 			try {
 				this.hiddenQuickDiffProviders = new Set(JSON.parse(raw));
-			} catch { }
+			} catch {}
 		}
 	}
 
 	private saveState(): void {
 		if (this.hiddenQuickDiffProviders.size === 0) {
-			this.storageService.remove(QuickDiffService.STORAGE_KEY, StorageScope.PROFILE);
+			this.storageService.remove(
+				QuickDiffService.STORAGE_KEY,
+				StorageScope.PROFILE,
+			);
 		} else {
-			this.storageService.store(QuickDiffService.STORAGE_KEY, JSON.stringify(Array.from(this.hiddenQuickDiffProviders)), StorageScope.PROFILE, StorageTarget.USER);
+			this.storageService.store(
+				QuickDiffService.STORAGE_KEY,
+				JSON.stringify(Array.from(this.hiddenQuickDiffProviders)),
+				StorageScope.PROFILE,
+				StorageTarget.USER,
+			);
 		}
 	}
 }
 
-export async function getOriginalResource(quickDiffService: IQuickDiffService, uri: URI, language: string | undefined, isSynchronized: boolean | undefined): Promise<URI | null> {
-	const quickDiffs = await quickDiffService.getQuickDiffs(uri, language, isSynchronized);
-	const primaryQuickDiffs = quickDiffs.find(quickDiff => quickDiff.kind === 'primary');
+export async function getOriginalResource(
+	quickDiffService: IQuickDiffService,
+	uri: URI,
+	language: string | undefined,
+	isSynchronized: boolean | undefined,
+): Promise<URI | null> {
+	const quickDiffs = await quickDiffService.getQuickDiffs(
+		uri,
+		language,
+		isSynchronized,
+	);
+	const primaryQuickDiffs = quickDiffs.find(
+		(quickDiff) => quickDiff.kind === "primary",
+	);
 	return primaryQuickDiffs ? primaryQuickDiffs.originalResource : null;
 }

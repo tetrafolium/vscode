@@ -19,14 +19,15 @@ export class ErrorHandler {
 	private listeners: ErrorListenerCallback[];
 
 	constructor() {
-
 		this.listeners = [];
 
 		this.unexpectedErrorHandler = function (e: any) {
 			setTimeout(() => {
 				if (e.stack) {
 					if (ErrorNoTelemetry.isErrorNoTelemetry(e)) {
-						throw new ErrorNoTelemetry(e.message + '\n\n' + e.stack);
+						throw new ErrorNoTelemetry(
+							e.message + '\n\n' + e.stack,
+						);
 					}
 
 					throw new Error(e.message + '\n\n' + e.stack);
@@ -55,7 +56,9 @@ export class ErrorHandler {
 		this.listeners.splice(this.listeners.indexOf(listener), 1);
 	}
 
-	setUnexpectedErrorHandler(newUnexpectedErrorHandler: (e: any) => void): void {
+	setUnexpectedErrorHandler(
+		newUnexpectedErrorHandler: (e: any) => void,
+	): void {
 		this.unexpectedErrorHandler = newUnexpectedErrorHandler;
 	}
 
@@ -77,7 +80,9 @@ export class ErrorHandler {
 export const errorHandler = new ErrorHandler();
 
 /** @skipMangle */
-export function setUnexpectedErrorHandler(newUnexpectedErrorHandler: (e: any) => void): void {
+export function setUnexpectedErrorHandler(
+	newUnexpectedErrorHandler: (e: any) => void,
+): void {
 	errorHandler.setUnexpectedErrorHandler(newUnexpectedErrorHandler);
 }
 
@@ -100,7 +105,7 @@ export function isSigPipeError(e: unknown): e is Error {
  * This function should only be called with errors that indicate a bug in the product.
  * E.g. buggy extensions/invalid user-input/network issues should not be able to trigger this code path.
  * If they are, this indicates there is also a bug in the product.
-*/
+ */
 export function onBugIndicatingError(e: any): undefined {
 	errorHandler.onUnexpectedError(e);
 	return undefined;
@@ -150,7 +155,7 @@ export function transformErrorForSerialization(error: any): any {
 			stack,
 			noTelemetry: ErrorNoTelemetry.isErrorNoTelemetry(error),
 			cause: cause ? transformErrorForSerialization(cause) : undefined,
-			code: (<ErrorWithCode>error).code
+			code: (<ErrorWithCode>error).code,
 		};
 	}
 
@@ -204,7 +209,11 @@ export function isCancellationError(error: any): boolean {
 	if (error instanceof CancellationError) {
 		return true;
 	}
-	return error instanceof Error && error.name === canceledName && error.message === canceledName;
+	return (
+		error instanceof Error &&
+		error.name === canceledName &&
+		error.message === canceledName
+	);
 }
 
 // !!!IMPORTANT!!!
@@ -217,11 +226,14 @@ export class CancellationError extends Error {
 }
 
 export class PendingMigrationError extends Error {
-
 	private static readonly _name = 'PendingMigrationError';
 
 	static is(error: unknown): error is PendingMigrationError {
-		return error instanceof PendingMigrationError || (error instanceof Error && error.name === PendingMigrationError._name);
+		return (
+			error instanceof PendingMigrationError ||
+			(error instanceof Error &&
+				error.name === PendingMigrationError._name)
+		);
 	}
 
 	constructor(message: string) {
@@ -257,7 +269,11 @@ export function illegalState(name?: string): Error {
 
 export class ReadonlyError extends TypeError {
 	constructor(name?: string) {
-		super(name ? `${name} is read-only and cannot be changed` : 'Cannot change read-only property');
+		super(
+			name
+				? `${name} is read-only and cannot be changed`
+				: 'Cannot change read-only property',
+		);
 	}
 }
 

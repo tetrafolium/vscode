@@ -21,9 +21,8 @@ function stringifyMessage({ role, content }: Raw.ChatMessage) {
 		return 'omitted because of non-text content'; // should be impossible
 	}
 
-	return (
-		`${roleStr}
+	return `${roleStr}
 ------
 ${textContentPart.text}
-==================`);
+==================`;
 }

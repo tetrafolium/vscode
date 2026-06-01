@@ -17,20 +17,41 @@ ssuite({ title: 'intent', location: 'panel' }, () => {
 });
 
 function runAdditionalCases(sourceFile: string) {
-	const additionalCases = JSON.parse(fs.readFileSync(sourceFile, { encoding: 'utf8' }));
+	const additionalCases = JSON.parse(
+		fs.readFileSync(sourceFile, { encoding: 'utf8' }),
+	);
 	if (additionalCases && Array.isArray(additionalCases)) {
 		additionalCases.forEach((testCase: any) => {
-			if (typeof testCase === 'object' && !!testCase && testCase['Location'] === 'panel') {
+			if (
+				typeof testCase === 'object' &&
+				!!testCase &&
+				testCase['Location'] === 'panel'
+			) {
 				const query = testCase['Request'];
 				const expectedIntent = testCase['Intent'];
 				for (const strictMode of [true, false]) {
 					generateIntentTest({
 						location: ChatLocation.Panel,
-						name: (strictMode ? '[strict] ' : '[relaxed] ') + `[${expectedIntent === 'github' ? 'github' : 'builtin'}] ` + query,
+						name:
+							(strictMode ? '[strict] ' : '[relaxed] ') +
+							`[${expectedIntent === 'github' ? 'github' : 'builtin'}] ` +
+							query,
 						query,
-						expectedIntent: (['workspace', 'vscode', 'new', 'newNotebook', 'unknown', 'tests', 'setupTests', 'terminalExplain', 'github.copilot-dynamic.platform'].includes(expectedIntent)
-							? (strictMode ? expectedIntent : [expectedIntent, 'unknown'])
-							: 'unknown'),
+						expectedIntent: [
+							'workspace',
+							'vscode',
+							'new',
+							'newNotebook',
+							'unknown',
+							'tests',
+							'setupTests',
+							'terminalExplain',
+							'github.copilot-dynamic.platform',
+						].includes(expectedIntent)
+							? strictMode
+								? expectedIntent
+								: [expectedIntent, 'unknown']
+							: 'unknown',
 					});
 				}
 			}

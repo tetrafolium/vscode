@@ -3,13 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { forEachWithNeighbors } from '../../../../base/common/arrays.js';
-import { OffsetRange } from '../../core/ranges/offsetRange.js';
-import { ISequence, OffsetPair, SequenceDiff } from './algorithms/diffAlgorithm.js';
-import { LineSequence } from './lineSequence.js';
-import { LinesSliceCharSequence } from './linesSliceCharSequence.js';
+import { forEachWithNeighbors } from "../../../../base/common/arrays.js";
+import { OffsetRange } from "../../core/ranges/offsetRange.js";
+import {
+	ISequence,
+	OffsetPair,
+	SequenceDiff,
+} from "./algorithms/diffAlgorithm.js";
+import { LineSequence } from "./lineSequence.js";
+import { LinesSliceCharSequence } from "./linesSliceCharSequence.js";
 
-export function optimizeSequenceDiffs(sequence1: ISequence, sequence2: ISequence, sequenceDiffs: SequenceDiff[]): SequenceDiff[] {
+export function optimizeSequenceDiffs(
+	sequence1: ISequence,
+	sequence2: ISequence,
+	sequenceDiffs: SequenceDiff[],
+): SequenceDiff[] {
 	let result = sequenceDiffs;
 	result = joinSequenceDiffsByShifting(sequence1, sequence2, result);
 	// Sometimes, calling this function twice improves the result.
@@ -31,7 +39,11 @@ export function optimizeSequenceDiffs(sequence1: ISequence, sequence2: ISequence
  * Computed diff: [ {Add "," after Bar}, {Add "Foo " after space} }
  * Improved diff: [{Add ", Foo" after Bar}]
  */
-function joinSequenceDiffsByShifting(sequence1: ISequence, sequence2: ISequence, sequenceDiffs: SequenceDiff[]): SequenceDiff[] {
+function joinSequenceDiffsByShifting(
+	sequence1: ISequence,
+	sequence2: ISequence,
+	sequenceDiffs: SequenceDiff[],
+): SequenceDiff[] {
 	if (sequenceDiffs.length === 0) {
 		return sequenceDiffs;
 	}
@@ -49,8 +61,11 @@ function joinSequenceDiffsByShifting(sequence1: ISequence, sequence2: ISequence,
 			let d;
 			for (d = 1; d <= length; d++) {
 				if (
-					sequence1.getElement(cur.seq1Range.start - d) !== sequence1.getElement(cur.seq1Range.endExclusive - d) ||
-					sequence2.getElement(cur.seq2Range.start - d) !== sequence2.getElement(cur.seq2Range.endExclusive - d)) {
+					sequence1.getElement(cur.seq1Range.start - d) !==
+						sequence1.getElement(cur.seq1Range.endExclusive - d) ||
+					sequence2.getElement(cur.seq2Range.start - d) !==
+						sequence2.getElement(cur.seq2Range.endExclusive - d)
+				) {
 					break;
 				}
 			}
@@ -59,8 +74,14 @@ function joinSequenceDiffsByShifting(sequence1: ISequence, sequence2: ISequence,
 			if (d === length) {
 				// Merge previous and current diff
 				result[result.length - 1] = new SequenceDiff(
-					new OffsetRange(prevResult.seq1Range.start, cur.seq1Range.endExclusive - length),
-					new OffsetRange(prevResult.seq2Range.start, cur.seq2Range.endExclusive - length),
+					new OffsetRange(
+						prevResult.seq1Range.start,
+						cur.seq1Range.endExclusive - length,
+					),
+					new OffsetRange(
+						prevResult.seq2Range.start,
+						cur.seq2Range.endExclusive - length,
+					),
 				);
 				continue;
 			}
@@ -82,8 +103,14 @@ function joinSequenceDiffsByShifting(sequence1: ISequence, sequence2: ISequence,
 			let d;
 			for (d = 0; d < length; d++) {
 				if (
-					!sequence1.isStronglyEqual(cur.seq1Range.start + d, cur.seq1Range.endExclusive + d) ||
-					!sequence2.isStronglyEqual(cur.seq2Range.start + d, cur.seq2Range.endExclusive + d)
+					!sequence1.isStronglyEqual(
+						cur.seq1Range.start + d,
+						cur.seq1Range.endExclusive + d,
+					) ||
+					!sequence2.isStronglyEqual(
+						cur.seq2Range.start + d,
+						cur.seq2Range.endExclusive + d,
+					)
 				) {
 					break;
 				}
@@ -92,8 +119,14 @@ function joinSequenceDiffsByShifting(sequence1: ISequence, sequence2: ISequence,
 			if (d === length) {
 				// Merge previous and current diff, write to result!
 				result[i + 1] = new SequenceDiff(
-					new OffsetRange(cur.seq1Range.start + length, nextResult.seq1Range.endExclusive),
-					new OffsetRange(cur.seq2Range.start + length, nextResult.seq2Range.endExclusive),
+					new OffsetRange(
+						cur.seq1Range.start + length,
+						nextResult.seq1Range.endExclusive,
+					),
+					new OffsetRange(
+						cur.seq2Range.start + length,
+						nextResult.seq2Range.endExclusive,
+					),
 				);
 				continue;
 			}
@@ -129,30 +162,59 @@ function joinSequenceDiffsByShifting(sequence1: ISequence, sequence2: ISequence,
 // ->
 // collectBrackets(level + 1, [levelPerBracket + 1, ]levelPerBracketType);
 
-function shiftSequenceDiffs(sequence1: ISequence, sequence2: ISequence, sequenceDiffs: SequenceDiff[]): SequenceDiff[] {
+function shiftSequenceDiffs(
+	sequence1: ISequence,
+	sequence2: ISequence,
+	sequenceDiffs: SequenceDiff[],
+): SequenceDiff[] {
 	if (!sequence1.getBoundaryScore || !sequence2.getBoundaryScore) {
 		return sequenceDiffs;
 	}
 
 	for (let i = 0; i < sequenceDiffs.length; i++) {
-		const prevDiff = (i > 0 ? sequenceDiffs[i - 1] : undefined);
+		const prevDiff = i > 0 ? sequenceDiffs[i - 1] : undefined;
 		const diff = sequenceDiffs[i];
-		const nextDiff = (i + 1 < sequenceDiffs.length ? sequenceDiffs[i + 1] : undefined);
+		const nextDiff =
+			i + 1 < sequenceDiffs.length ? sequenceDiffs[i + 1] : undefined;
 
-		const seq1ValidRange = new OffsetRange(prevDiff ? prevDiff.seq1Range.endExclusive + 1 : 0, nextDiff ? nextDiff.seq1Range.start - 1 : sequence1.length);
-		const seq2ValidRange = new OffsetRange(prevDiff ? prevDiff.seq2Range.endExclusive + 1 : 0, nextDiff ? nextDiff.seq2Range.start - 1 : sequence2.length);
+		const seq1ValidRange = new OffsetRange(
+			prevDiff ? prevDiff.seq1Range.endExclusive + 1 : 0,
+			nextDiff ? nextDiff.seq1Range.start - 1 : sequence1.length,
+		);
+		const seq2ValidRange = new OffsetRange(
+			prevDiff ? prevDiff.seq2Range.endExclusive + 1 : 0,
+			nextDiff ? nextDiff.seq2Range.start - 1 : sequence2.length,
+		);
 
 		if (diff.seq1Range.isEmpty) {
-			sequenceDiffs[i] = shiftDiffToBetterPosition(diff, sequence1, sequence2, seq1ValidRange, seq2ValidRange);
+			sequenceDiffs[i] = shiftDiffToBetterPosition(
+				diff,
+				sequence1,
+				sequence2,
+				seq1ValidRange,
+				seq2ValidRange,
+			);
 		} else if (diff.seq2Range.isEmpty) {
-			sequenceDiffs[i] = shiftDiffToBetterPosition(diff.swap(), sequence2, sequence1, seq2ValidRange, seq1ValidRange).swap();
+			sequenceDiffs[i] = shiftDiffToBetterPosition(
+				diff.swap(),
+				sequence2,
+				sequence1,
+				seq2ValidRange,
+				seq1ValidRange,
+			).swap();
 		}
 	}
 
 	return sequenceDiffs;
 }
 
-function shiftDiffToBetterPosition(diff: SequenceDiff, sequence1: ISequence, sequence2: ISequence, seq1ValidRange: OffsetRange, seq2ValidRange: OffsetRange,) {
+function shiftDiffToBetterPosition(
+	diff: SequenceDiff,
+	sequence1: ISequence,
+	sequence2: ISequence,
+	seq1ValidRange: OffsetRange,
+	seq2ValidRange: OffsetRange,
+) {
 	const maxShiftLimit = 100; // To prevent performance issues
 
 	// don't touch previous or next!
@@ -160,7 +222,11 @@ function shiftDiffToBetterPosition(diff: SequenceDiff, sequence1: ISequence, seq
 	while (
 		diff.seq1Range.start - deltaBefore >= seq1ValidRange.start &&
 		diff.seq2Range.start - deltaBefore >= seq2ValidRange.start &&
-		sequence2.isStronglyEqual(diff.seq2Range.start - deltaBefore, diff.seq2Range.endExclusive - deltaBefore) && deltaBefore < maxShiftLimit
+		sequence2.isStronglyEqual(
+			diff.seq2Range.start - deltaBefore,
+			diff.seq2Range.endExclusive - deltaBefore,
+		) &&
+		deltaBefore < maxShiftLimit
 	) {
 		deltaBefore++;
 	}
@@ -170,7 +236,11 @@ function shiftDiffToBetterPosition(diff: SequenceDiff, sequence1: ISequence, seq
 	while (
 		diff.seq1Range.start + deltaAfter < seq1ValidRange.endExclusive &&
 		diff.seq2Range.endExclusive + deltaAfter < seq2ValidRange.endExclusive &&
-		sequence2.isStronglyEqual(diff.seq2Range.start + deltaAfter, diff.seq2Range.endExclusive + deltaAfter) && deltaAfter < maxShiftLimit
+		sequence2.isStronglyEqual(
+			diff.seq2Range.start + deltaAfter,
+			diff.seq2Range.endExclusive + deltaAfter,
+		) &&
+		deltaAfter < maxShiftLimit
 	) {
 		deltaAfter++;
 	}
@@ -190,7 +260,10 @@ function shiftDiffToBetterPosition(diff: SequenceDiff, sequence1: ISequence, seq
 		const seq2OffsetEndExclusive = diff.seq2Range.endExclusive + delta;
 		const seq1Offset = diff.seq1Range.start + delta;
 
-		const score = sequence1.getBoundaryScore!(seq1Offset) + sequence2.getBoundaryScore!(seq2OffsetStart) + sequence2.getBoundaryScore!(seq2OffsetEndExclusive);
+		const score =
+			sequence1.getBoundaryScore!(seq1Offset) +
+			sequence2.getBoundaryScore!(seq2OffsetStart) +
+			sequence2.getBoundaryScore!(seq2OffsetEndExclusive);
 		if (score > bestScore) {
 			bestScore = score;
 			bestDelta = delta;
@@ -200,7 +273,11 @@ function shiftDiffToBetterPosition(diff: SequenceDiff, sequence1: ISequence, seq
 	return diff.delta(bestDelta);
 }
 
-export function removeShortMatches(sequence1: ISequence, sequence2: ISequence, sequenceDiffs: SequenceDiff[]): SequenceDiff[] {
+export function removeShortMatches(
+	sequence1: ISequence,
+	sequence2: ISequence,
+	sequenceDiffs: SequenceDiff[],
+): SequenceDiff[] {
 	const result: SequenceDiff[] = [];
 	for (const s of sequenceDiffs) {
 		const last = result[result.length - 1];
@@ -209,8 +286,14 @@ export function removeShortMatches(sequence1: ISequence, sequence2: ISequence, s
 			continue;
 		}
 
-		if (s.seq1Range.start - last.seq1Range.endExclusive <= 2 || s.seq2Range.start - last.seq2Range.endExclusive <= 2) {
-			result[result.length - 1] = new SequenceDiff(last.seq1Range.join(s.seq1Range), last.seq2Range.join(s.seq2Range));
+		if (
+			s.seq1Range.start - last.seq1Range.endExclusive <= 2 ||
+			s.seq2Range.start - last.seq2Range.endExclusive <= 2
+		) {
+			result[result.length - 1] = new SequenceDiff(
+				last.seq1Range.join(s.seq1Range),
+				last.seq2Range.join(s.seq2Range),
+			);
 		} else {
 			result.push(s);
 		}
@@ -223,7 +306,10 @@ export function extendDiffsToEntireWordIfAppropriate(
 	sequence1: LinesSliceCharSequence,
 	sequence2: LinesSliceCharSequence,
 	sequenceDiffs: SequenceDiff[],
-	findParent: (seq: LinesSliceCharSequence, idx: number) => OffsetRange | undefined,
+	findParent: (
+		seq: LinesSliceCharSequence,
+		idx: number,
+	) => OffsetRange | undefined,
 	force: boolean = false,
 ): SequenceDiff[] {
 	const equalMappings = SequenceDiff.invert(sequenceDiffs, sequence1.length);
@@ -253,7 +339,9 @@ export function extendDiffsToEntireWordIfAppropriate(
 
 		while (equalMappings.length > 0) {
 			const next = equalMappings[0];
-			const intersects = next.seq1Range.intersects(w.seq1Range) || next.seq2Range.intersects(w.seq2Range);
+			const intersects =
+				next.seq1Range.intersects(w.seq1Range) ||
+				next.seq2Range.intersects(w.seq2Range);
 			if (!intersects) {
 				break;
 			}
@@ -277,7 +365,12 @@ export function extendDiffsToEntireWordIfAppropriate(
 			}
 		}
 
-		if ((force && equalChars1 + equalChars2 < w.seq1Range.length + w.seq2Range.length) || equalChars1 + equalChars2 < (w.seq1Range.length + w.seq2Range.length) * 2 / 3) {
+		if (
+			(force &&
+				equalChars1 + equalChars2 < w.seq1Range.length + w.seq2Range.length) ||
+			equalChars1 + equalChars2 <
+				((w.seq1Range.length + w.seq2Range.length) * 2) / 3
+		) {
 			additional.push(w);
 		}
 
@@ -298,7 +391,10 @@ export function extendDiffsToEntireWordIfAppropriate(
 	return merged;
 }
 
-function mergeSequenceDiffs(sequenceDiffs1: SequenceDiff[], sequenceDiffs2: SequenceDiff[]): SequenceDiff[] {
+function mergeSequenceDiffs(
+	sequenceDiffs1: SequenceDiff[],
+	sequenceDiffs2: SequenceDiff[],
+): SequenceDiff[] {
 	const result: SequenceDiff[] = [];
 
 	while (sequenceDiffs1.length > 0 || sequenceDiffs2.length > 0) {
@@ -312,7 +408,10 @@ function mergeSequenceDiffs(sequenceDiffs1: SequenceDiff[], sequenceDiffs2: Sequ
 			next = sequenceDiffs2.shift()!;
 		}
 
-		if (result.length > 0 && result[result.length - 1].seq1Range.endExclusive >= next.seq1Range.start) {
+		if (
+			result.length > 0 &&
+			result[result.length - 1].seq1Range.endExclusive >= next.seq1Range.start
+		) {
 			result[result.length - 1] = result[result.length - 1].join(next);
 		} else {
 			result.push(next);
@@ -322,7 +421,11 @@ function mergeSequenceDiffs(sequenceDiffs1: SequenceDiff[], sequenceDiffs2: Sequ
 	return result;
 }
 
-export function removeVeryShortMatchingLinesBetweenDiffs(sequence1: LineSequence, _sequence2: LineSequence, sequenceDiffs: SequenceDiff[]): SequenceDiff[] {
+export function removeVeryShortMatchingLinesBetweenDiffs(
+	sequence1: LineSequence,
+	_sequence2: LineSequence,
+	sequenceDiffs: SequenceDiff[],
+): SequenceDiff[] {
 	let diffs = sequenceDiffs;
 	if (diffs.length === 0) {
 		return diffs;
@@ -333,21 +436,28 @@ export function removeVeryShortMatchingLinesBetweenDiffs(sequence1: LineSequence
 	do {
 		shouldRepeat = false;
 
-		const result: SequenceDiff[] = [
-			diffs[0]
-		];
+		const result: SequenceDiff[] = [diffs[0]];
 
 		for (let i = 1; i < diffs.length; i++) {
 			const cur = diffs[i];
 			const lastResult = result[result.length - 1];
 
-			function shouldJoinDiffs(before: SequenceDiff, after: SequenceDiff): boolean {
-				const unchangedRange = new OffsetRange(lastResult.seq1Range.endExclusive, cur.seq1Range.start);
+			function shouldJoinDiffs(
+				before: SequenceDiff,
+				after: SequenceDiff,
+			): boolean {
+				const unchangedRange = new OffsetRange(
+					lastResult.seq1Range.endExclusive,
+					cur.seq1Range.start,
+				);
 
 				const unchangedText = sequence1.getText(unchangedRange);
-				const unchangedTextWithoutWs = unchangedText.replace(/\s/g, '');
-				if (unchangedTextWithoutWs.length <= 4
-					&& (before.seq1Range.length + before.seq2Range.length > 5 || after.seq1Range.length + after.seq2Range.length > 5)) {
+				const unchangedTextWithoutWs = unchangedText.replace(/\s/g, "");
+				if (
+					unchangedTextWithoutWs.length <= 4 &&
+					(before.seq1Range.length + before.seq2Range.length > 5 ||
+						after.seq1Range.length + after.seq2Range.length > 5)
+				) {
 					return true;
 				}
 
@@ -369,7 +479,11 @@ export function removeVeryShortMatchingLinesBetweenDiffs(sequence1: LineSequence
 	return diffs;
 }
 
-export function removeVeryShortMatchingTextBetweenLongDiffs(sequence1: LinesSliceCharSequence, sequence2: LinesSliceCharSequence, sequenceDiffs: SequenceDiff[]): SequenceDiff[] {
+export function removeVeryShortMatchingTextBetweenLongDiffs(
+	sequence1: LinesSliceCharSequence,
+	sequence2: LinesSliceCharSequence,
+	sequenceDiffs: SequenceDiff[],
+): SequenceDiff[] {
 	let diffs = sequenceDiffs;
 	if (diffs.length === 0) {
 		return diffs;
@@ -380,16 +494,20 @@ export function removeVeryShortMatchingTextBetweenLongDiffs(sequence1: LinesSlic
 	do {
 		shouldRepeat = false;
 
-		const result: SequenceDiff[] = [
-			diffs[0]
-		];
+		const result: SequenceDiff[] = [diffs[0]];
 
 		for (let i = 1; i < diffs.length; i++) {
 			const cur = diffs[i];
 			const lastResult = result[result.length - 1];
 
-			function shouldJoinDiffs(before: SequenceDiff, after: SequenceDiff): boolean {
-				const unchangedRange = new OffsetRange(lastResult.seq1Range.endExclusive, cur.seq1Range.start);
+			function shouldJoinDiffs(
+				before: SequenceDiff,
+				after: SequenceDiff,
+			): boolean {
+				const unchangedRange = new OffsetRange(
+					lastResult.seq1Range.endExclusive,
+					cur.seq1Range.start,
+				);
 
 				const unchangedLineCount = sequence1.countLinesIn(unchangedRange);
 				if (unchangedLineCount > 5 || unchangedRange.length > 500) {
@@ -397,7 +515,10 @@ export function removeVeryShortMatchingTextBetweenLongDiffs(sequence1: LinesSlic
 				}
 
 				const unchangedText = sequence1.getText(unchangedRange).trim();
-				if (unchangedText.length > 20 || unchangedText.split(/\r\n|\r|\n/).length > 1) {
+				if (
+					unchangedText.length > 20 ||
+					unchangedText.split(/\r\n|\r|\n/).length > 1
+				) {
 					return false;
 				}
 
@@ -418,8 +539,19 @@ export function removeVeryShortMatchingTextBetweenLongDiffs(sequence1: LinesSlic
 					return Math.min(v, max);
 				}
 
-				if (Math.pow(Math.pow(cap(beforeLineCount1 * 40 + beforeSeq1Length), 1.5) + Math.pow(cap(beforeLineCount2 * 40 + beforeSeq2Length), 1.5), 1.5)
-					+ Math.pow(Math.pow(cap(afterLineCount1 * 40 + afterSeq1Length), 1.5) + Math.pow(cap(afterLineCount2 * 40 + afterSeq2Length), 1.5), 1.5) > ((max ** 1.5) ** 1.5) * 1.3) {
+				if (
+					Math.pow(
+						Math.pow(cap(beforeLineCount1 * 40 + beforeSeq1Length), 1.5) +
+							Math.pow(cap(beforeLineCount2 * 40 + beforeSeq2Length), 1.5),
+						1.5,
+					) +
+						Math.pow(
+							Math.pow(cap(afterLineCount1 * 40 + afterSeq1Length), 1.5) +
+								Math.pow(cap(afterLineCount2 * 40 + afterSeq2Length), 1.5),
+							1.5,
+						) >
+					(max ** 1.5) ** 1.5 * 1.3
+				) {
 					return true;
 				}
 				return false;
@@ -444,15 +576,23 @@ export function removeVeryShortMatchingTextBetweenLongDiffs(sequence1: LinesSlic
 		let newDiff = cur;
 
 		function shouldMarkAsChanged(text: string): boolean {
-			return text.length > 0 && text.trim().length <= 3 && cur.seq1Range.length + cur.seq2Range.length > 100;
+			return (
+				text.length > 0 &&
+				text.trim().length <= 3 &&
+				cur.seq1Range.length + cur.seq2Range.length > 100
+			);
 		}
 
 		const fullRange1 = sequence1.extendToFullLines(cur.seq1Range);
-		const prefix = sequence1.getText(new OffsetRange(fullRange1.start, cur.seq1Range.start));
+		const prefix = sequence1.getText(
+			new OffsetRange(fullRange1.start, cur.seq1Range.start),
+		);
 		if (shouldMarkAsChanged(prefix)) {
 			newDiff = newDiff.deltaStart(-prefix.length);
 		}
-		const suffix = sequence1.getText(new OffsetRange(cur.seq1Range.endExclusive, fullRange1.endExclusive));
+		const suffix = sequence1.getText(
+			new OffsetRange(cur.seq1Range.endExclusive, fullRange1.endExclusive),
+		);
 		if (shouldMarkAsChanged(suffix)) {
 			newDiff = newDiff.deltaEnd(suffix.length);
 		}
@@ -462,8 +602,14 @@ export function removeVeryShortMatchingTextBetweenLongDiffs(sequence1: LinesSlic
 			next ? next.getStarts() : OffsetPair.max,
 		);
 		const result = newDiff.intersect(availableSpace)!;
-		if (newDiffs.length > 0 && result.getStarts().equals(newDiffs[newDiffs.length - 1].getEndExclusives())) {
-			newDiffs[newDiffs.length - 1] = newDiffs[newDiffs.length - 1].join(result);
+		if (
+			newDiffs.length > 0 &&
+			result
+				.getStarts()
+				.equals(newDiffs[newDiffs.length - 1].getEndExclusives())
+		) {
+			newDiffs[newDiffs.length - 1] =
+				newDiffs[newDiffs.length - 1].join(result);
 		} else {
 			newDiffs.push(result);
 		}

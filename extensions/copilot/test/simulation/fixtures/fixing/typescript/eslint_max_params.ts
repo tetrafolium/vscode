@@ -8,7 +8,13 @@ export class Location {
 	region: string;
 	country: string;
 	continent: string;
-	constructor(x: number, y: number, region: string, country: string, continent: string) {
+	constructor(
+		x: number,
+		y: number,
+		region: string,
+		country: string,
+		continent: string,
+	) {
 		this.x = x;
 		this.y = y;
 		this.region = region;

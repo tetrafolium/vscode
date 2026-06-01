@@ -1,9 +1,7 @@
-
 class StoreData {
-
 	height: number | undefined;
 
-	constructor() { }
+	constructor() {}
 
 	storeHeight() {
 		this._storeHeight();

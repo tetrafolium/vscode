@@ -322,7 +322,7 @@ const completionSpec: Fig.Spec = {
 									return ["install", "install-on-request", "build-error"].map(
 										(sugg) => ({
 											name: sugg,
-										})
+										}),
 									);
 								}
 

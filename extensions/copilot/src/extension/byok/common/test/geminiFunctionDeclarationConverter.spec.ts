@@ -5,7 +5,10 @@
 
 import { Type } from '@google/genai';
 import { describe, expect, it } from 'vitest';
-import { toGeminiFunction, ToolJsonSchema } from '../geminiFunctionDeclarationConverter';
+import {
+	toGeminiFunction,
+	ToolJsonSchema,
+} from '../geminiFunctionDeclarationConverter';
 
 describe('GeminiFunctionDeclarationConverter', () => {
 	describe('toGeminiFunction', () => {
@@ -15,21 +18,25 @@ describe('GeminiFunctionDeclarationConverter', () => {
 				properties: {
 					name: {
 						type: 'string',
-						description: 'The name parameter'
+						description: 'The name parameter',
 					},
 					age: {
 						type: 'number',
-						description: 'The age parameter'
+						description: 'The age parameter',
 					},
 					isActive: {
 						type: 'boolean',
-						description: 'Whether the user is active'
-					}
+						description: 'Whether the user is active',
+					},
 				},
-				required: ['name', 'age']
+				required: ['name', 'age'],
 			};
 
-			const result = toGeminiFunction('testFunction', 'A test function', schema);
+			const result = toGeminiFunction(
+				'testFunction',
+				'A test function',
+				schema,
+			);
 
 			expect(result.name).toBe('testFunction');
 			expect(result.description).toBe('A test function');
@@ -39,15 +46,15 @@ describe('GeminiFunctionDeclarationConverter', () => {
 			expect(result.parameters!.properties).toBeDefined();
 			expect(result.parameters!.properties!['name']).toEqual({
 				type: Type.STRING,
-				description: 'The name parameter'
+				description: 'The name parameter',
 			});
 			expect(result.parameters!.properties!['age']).toEqual({
 				type: Type.NUMBER,
-				description: 'The age parameter'
+				description: 'The age parameter',
 			});
 			expect(result.parameters!.properties!['isActive']).toEqual({
 				type: Type.BOOLEAN,
-				description: 'Whether the user is active'
+				description: 'Whether the user is active',
 			});
 		});
 
@@ -55,8 +62,8 @@ describe('GeminiFunctionDeclarationConverter', () => {
 			const schema: ToolJsonSchema = {
 				type: 'object',
 				properties: {
-					value: { type: 'string' }
-				}
+					value: { type: 'string' },
+				},
 			};
 
 			const result = toGeminiFunction('noDescFunction', '', schema);
@@ -70,17 +77,21 @@ describe('GeminiFunctionDeclarationConverter', () => {
 				properties: {
 					count: {
 						type: 'integer',
-						description: 'An integer count'
+						description: 'An integer count',
 					},
 					groupIndex: {
 						type: 'integer',
-						description: 'Group index'
-					}
+						description: 'Group index',
+					},
 				},
-				required: ['count']
+				required: ['count'],
 			};
 
-			const result = toGeminiFunction('integerFunction', 'Function with integer parameters', schema);
+			const result = toGeminiFunction(
+				'integerFunction',
+				'Function with integer parameters',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.type).toBe(Type.OBJECT);
@@ -88,11 +99,11 @@ describe('GeminiFunctionDeclarationConverter', () => {
 			expect(result.parameters!.properties).toBeDefined();
 			expect(result.parameters!.properties!['count']).toEqual({
 				type: Type.INTEGER,
-				description: 'An integer count'
+				description: 'An integer count',
 			});
 			expect(result.parameters!.properties!['groupIndex']).toEqual({
 				type: Type.INTEGER,
-				description: 'Group index'
+				description: 'Group index',
 			});
 		});
 
@@ -102,18 +113,22 @@ describe('GeminiFunctionDeclarationConverter', () => {
 				properties: {
 					nullableField: {
 						type: 'null',
-						description: 'A nullable field'
-					}
-				}
+						description: 'A nullable field',
+					},
+				},
 			};
 
-			const result = toGeminiFunction('nullFunction', 'Function with null parameter', schema);
+			const result = toGeminiFunction(
+				'nullFunction',
+				'Function with null parameter',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.properties).toBeDefined();
 			expect(result.parameters!.properties!['nullableField']).toEqual({
 				type: Type.NULL,
-				description: 'A nullable field'
+				description: 'A nullable field',
 			});
 		});
 
@@ -124,23 +139,27 @@ describe('GeminiFunctionDeclarationConverter', () => {
 					type: 'object',
 					properties: {
 						id: { type: 'string' },
-						count: { type: 'number' }
+						count: { type: 'number' },
 					},
-					required: ['id']
-				}
+					required: ['id'],
+				},
 			};
 
-			const result = toGeminiFunction('arrayFunction', 'Array function', schema);
+			const result = toGeminiFunction(
+				'arrayFunction',
+				'Array function',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.type).toBe(Type.OBJECT);
 			expect(result.parameters!.required).toEqual(['id']);
 			expect(result.parameters!.properties).toBeDefined();
 			expect(result.parameters!.properties!['id']).toEqual({
-				type: Type.STRING
+				type: Type.STRING,
 			});
 			expect(result.parameters!.properties!['count']).toEqual({
-				type: Type.NUMBER
+				type: Type.NUMBER,
 			});
 		});
 
@@ -156,24 +175,28 @@ describe('GeminiFunctionDeclarationConverter', () => {
 								type: 'object',
 								properties: {
 									firstName: { type: 'string' },
-									lastName: { type: 'string' }
+									lastName: { type: 'string' },
 								},
-								required: ['firstName']
+								required: ['firstName'],
 							},
 							settings: {
 								type: 'object',
 								properties: {
 									theme: { type: 'string' },
-									notifications: { type: 'boolean' }
-								}
-							}
+									notifications: { type: 'boolean' },
+								},
+							},
 						},
-						required: ['profile']
-					}
-				}
+						required: ['profile'],
+					},
+				},
 			};
 
-			const result = toGeminiFunction('nestedFunction', 'Function with nested objects', schema);
+			const result = toGeminiFunction(
+				'nestedFunction',
+				'Function with nested objects',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.properties).toBeDefined();
@@ -188,20 +211,20 @@ describe('GeminiFunctionDeclarationConverter', () => {
 			expect(profileProperty.required).toEqual(['firstName']);
 			expect(profileProperty.properties).toBeDefined();
 			expect(profileProperty.properties!['firstName']).toEqual({
-				type: Type.STRING
+				type: Type.STRING,
 			});
 			expect(profileProperty.properties!['lastName']).toEqual({
-				type: Type.STRING
+				type: Type.STRING,
 			});
 
 			const settingsProperty = userProperty.properties!['settings'];
 			expect(settingsProperty.type).toBe(Type.OBJECT);
 			expect(settingsProperty.properties).toBeDefined();
 			expect(settingsProperty.properties!['theme']).toEqual({
-				type: Type.STRING
+				type: Type.STRING,
 			});
 			expect(settingsProperty.properties!['notifications']).toEqual({
-				type: Type.BOOLEAN
+				type: Type.BOOLEAN,
 			});
 		});
 
@@ -214,19 +237,23 @@ describe('GeminiFunctionDeclarationConverter', () => {
 						description: 'List of tags',
 						items: {
 							type: 'string',
-							description: 'Individual tag'
-						}
+							description: 'Individual tag',
+						},
 					},
 					scores: {
 						type: 'array',
 						items: {
-							type: 'number'
-						}
-					}
-				}
+							type: 'number',
+						},
+					},
+				},
 			};
 
-			const result = toGeminiFunction('arrayPropsFunction', 'Function with arrays', schema);
+			const result = toGeminiFunction(
+				'arrayPropsFunction',
+				'Function with arrays',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.properties).toBeDefined();
@@ -235,13 +262,13 @@ describe('GeminiFunctionDeclarationConverter', () => {
 			expect(tagsProperty.description).toBe('List of tags');
 			expect(tagsProperty.items).toEqual({
 				type: Type.STRING,
-				description: 'Individual tag'
+				description: 'Individual tag',
 			});
 
 			const scoresProperty = result.parameters!.properties!['scores'];
 			expect(scoresProperty.type).toBe(Type.ARRAY);
 			expect(scoresProperty.items).toEqual({
-				type: Type.NUMBER
+				type: Type.NUMBER,
 			});
 		});
 
@@ -262,17 +289,21 @@ describe('GeminiFunctionDeclarationConverter', () => {
 									type: 'object',
 									properties: {
 										created: { type: 'string' },
-										version: { type: 'number' }
-									}
-								}
+										version: { type: 'number' },
+									},
+								},
 							},
-							required: ['id', 'name']
-						}
-					}
-				}
+							required: ['id', 'name'],
+						},
+					},
+				},
 			};
 
-			const result = toGeminiFunction('complexArrayFunction', 'Function with complex arrays', schema);
+			const result = toGeminiFunction(
+				'complexArrayFunction',
+				'Function with complex arrays',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.properties).toBeDefined();
@@ -285,18 +316,30 @@ describe('GeminiFunctionDeclarationConverter', () => {
 			expect(itemsProperty.items!.required).toEqual(['id', 'name']);
 			expect(itemsProperty.items!.properties).toBeDefined();
 			expect(itemsProperty.items!.properties!['id']).toEqual({
-				type: Type.STRING
+				type: Type.STRING,
 			});
 			expect(itemsProperty.items!.properties!['name']).toEqual({
-				type: Type.STRING
+				type: Type.STRING,
 			});
-			expect(itemsProperty.items!.properties!['metadata'].type).toBe(Type.OBJECT);
-			expect(itemsProperty.items!.properties!['metadata'].properties).toBeDefined();
-			expect(itemsProperty.items!.properties!['metadata'].properties!['created']).toEqual({
-				type: Type.STRING
+			expect(itemsProperty.items!.properties!['metadata'].type).toBe(
+				Type.OBJECT,
+			);
+			expect(
+				itemsProperty.items!.properties!['metadata'].properties,
+			).toBeDefined();
+			expect(
+				itemsProperty.items!.properties!['metadata'].properties![
+					'created'
+				],
+			).toEqual({
+				type: Type.STRING,
 			});
-			expect(itemsProperty.items!.properties!['metadata'].properties!['version']).toEqual({
-				type: Type.NUMBER
+			expect(
+				itemsProperty.items!.properties!['metadata'].properties![
+					'version'
+				],
+			).toEqual({
+				type: Type.NUMBER,
 			});
 		});
 
@@ -307,23 +350,31 @@ describe('GeminiFunctionDeclarationConverter', () => {
 					status: {
 						type: 'string',
 						description: 'Status value',
-						enum: ['active', 'inactive', 'pending']
+						enum: ['active', 'inactive', 'pending'],
 					},
 					priority: {
 						type: 'string',
-						enum: ['1', '2', '3', '4', '5']
-					}
-				}
+						enum: ['1', '2', '3', '4', '5'],
+					},
+				},
 			};
 
-			const result = toGeminiFunction('enumFunction', 'Function with enums', schema);
+			const result = toGeminiFunction(
+				'enumFunction',
+				'Function with enums',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.properties).toBeDefined();
 			const statusProperty = result.parameters!.properties!['status'];
 			expect(statusProperty.type).toBe(Type.STRING);
 			expect(statusProperty.description).toBe('Status value');
-			expect(statusProperty.enum).toEqual(['active', 'inactive', 'pending']);
+			expect(statusProperty.enum).toEqual([
+				'active',
+				'inactive',
+				'pending',
+			]);
 
 			const priorityProperty = result.parameters!.properties!['priority'];
 			expect(priorityProperty.type).toBe(Type.STRING);
@@ -337,13 +388,17 @@ describe('GeminiFunctionDeclarationConverter', () => {
 					value: {
 						anyOf: [
 							{ type: 'string', description: 'String value' },
-							{ type: 'number', description: 'Number value' }
-						]
-					}
-				}
+							{ type: 'number', description: 'Number value' },
+						],
+					},
+				},
 			};
 
-			const result = toGeminiFunction('anyOfFunction', 'Function with anyOf', schema);
+			const result = toGeminiFunction(
+				'anyOfFunction',
+				'Function with anyOf',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.properties).toBeDefined();
@@ -359,13 +414,17 @@ describe('GeminiFunctionDeclarationConverter', () => {
 					data: {
 						oneOf: [
 							{ type: 'boolean', description: 'Boolean data' },
-							{ type: 'string', description: 'String data' }
-						]
-					}
-				}
+							{ type: 'string', description: 'String data' },
+						],
+					},
+				},
 			};
 
-			const result = toGeminiFunction('oneOfFunction', 'Function with oneOf', schema);
+			const result = toGeminiFunction(
+				'oneOfFunction',
+				'Function with oneOf',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.properties).toBeDefined();
@@ -381,13 +440,17 @@ describe('GeminiFunctionDeclarationConverter', () => {
 					config: {
 						allOf: [
 							{ type: 'object', description: 'Config object' },
-							{ type: 'string', description: 'Config string' }
-						]
-					}
-				}
+							{ type: 'string', description: 'Config string' },
+						],
+					},
+				},
 			};
 
-			const result = toGeminiFunction('allOfFunction', 'Function with allOf', schema);
+			const result = toGeminiFunction(
+				'allOfFunction',
+				'Function with allOf',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.properties).toBeDefined();
@@ -398,10 +461,14 @@ describe('GeminiFunctionDeclarationConverter', () => {
 
 		it('should handle schema with no properties', () => {
 			const schema: ToolJsonSchema = {
-				type: 'object'
+				type: 'object',
 			};
 
-			const result = toGeminiFunction('emptyFunction', 'Function with no properties', schema);
+			const result = toGeminiFunction(
+				'emptyFunction',
+				'Function with no properties',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.type).toBe(Type.OBJECT);
@@ -414,20 +481,24 @@ describe('GeminiFunctionDeclarationConverter', () => {
 				type: 'object',
 				properties: {
 					optional1: { type: 'string' },
-					optional2: { type: 'number' }
-				}
+					optional2: { type: 'number' },
+				},
 			};
 
-			const result = toGeminiFunction('optionalFunction', 'Function with optional params', schema);
+			const result = toGeminiFunction(
+				'optionalFunction',
+				'Function with optional params',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.required).toEqual([]);
 			expect(result.parameters!.properties).toBeDefined();
 			expect(result.parameters!.properties!['optional1']).toEqual({
-				type: Type.STRING
+				type: Type.STRING,
 			});
 			expect(result.parameters!.properties!['optional2']).toEqual({
-				type: Type.NUMBER
+				type: Type.NUMBER,
 			});
 		});
 
@@ -435,12 +506,16 @@ describe('GeminiFunctionDeclarationConverter', () => {
 			const schema: ToolJsonSchema = {
 				properties: {
 					field: {
-						description: 'Field without type'
-					}
-				}
+						description: 'Field without type',
+					},
+				},
 			};
 
-			const result = toGeminiFunction('defaultTypeFunction', 'Function with missing types', schema);
+			const result = toGeminiFunction(
+				'defaultTypeFunction',
+				'Function with missing types',
+				schema,
+			);
 
 			expect(result.parameters).toBeDefined();
 			expect(result.parameters!.properties).toBeDefined();

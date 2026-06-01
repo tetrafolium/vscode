@@ -8,7 +8,10 @@ import { URI } from '../../../../util/vs/base/common/uri';
 
 export namespace SessionIdForCLI {
 	export function getResource(sessionId: string): Uri {
-		return URI.from({ scheme: 'copilotcli', path: `/${sessionId}` }) as unknown as Uri;
+		return URI.from({
+			scheme: 'copilotcli',
+			path: `/${sessionId}`,
+		}) as unknown as Uri;
 	}
 
 	export function parse(resource: Uri): string {

@@ -6,15 +6,43 @@
 import { Emitter, type Event } from '../../../util/vs/base/common/event';
 import { GenAiAttr, GenAiOperationName } from '../common/genAiAttributes';
 import type { OTelConfig } from '../common/otelConfig';
-import { type ICompletedSpanData, type IOTelService, type ISpanEventData, type ISpanEventRecord, type ISpanHandle, SpanKind, type SpanOptions, SpanStatusCode, type TraceContext } from '../common/otelService';
+import {
+	type ICompletedSpanData,
+	type IOTelService,
+	type ISpanEventData,
+	type ISpanEventRecord,
+	type ISpanHandle,
+	SpanKind,
+	type SpanOptions,
+	SpanStatusCode,
+	type TraceContext,
+} from '../common/otelService';
 
 // Type-only imports — erased by esbuild, zero bundle impact
-import type { Attributes, Context, Meter, MetricOptions, Span, SpanContext, Tracer } from '@opentelemetry/api';
+import type {
+	Attributes,
+	Context,
+	Meter,
+	MetricOptions,
+	Span,
+	SpanContext,
+	Tracer,
+} from '@opentelemetry/api';
 import type { AnyValueMap, Logger } from '@opentelemetry/api-logs';
 import type { ExportResult } from '@opentelemetry/core';
-import type { BatchLogRecordProcessor, LogRecordExporter } from '@opentelemetry/sdk-logs';
-import type { PeriodicExportingMetricReader, PushMetricExporter } from '@opentelemetry/sdk-metrics';
-import type { BatchSpanProcessor, ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node';
+import type {
+	BatchLogRecordProcessor,
+	LogRecordExporter,
+} from '@opentelemetry/sdk-logs';
+import type {
+	PeriodicExportingMetricReader,
+	PushMetricExporter,
+} from '@opentelemetry/sdk-metrics';
+import type {
+	BatchSpanProcessor,
+	ReadableSpan,
+	SpanExporter,
+} from '@opentelemetry/sdk-trace-node';
 import type { OTelSqliteStore } from './sqlite/otelSqliteStore';
 
 interface ExporterSet {
@@ -24,19 +52,24 @@ interface ExporterSet {
 }
 
 const noopSpanHandle: ISpanHandle = {
-	setAttribute() { },
-	setAttributes() { },
-	setStatus() { },
-	recordException() { },
-	addEvent() { },
-	getSpanContext() { return undefined; },
-	end() { },
+	setAttribute() {},
+	setAttributes() {},
+	setStatus() {},
+	recordException() {},
+	addEvent() {},
+	getSpanContext() {
+		return undefined;
+	},
+	end() {},
 };
 
 /**
  * Callback for routing OTel service log messages to the extension's output channel.
  */
-export type OTelLogFn = (level: 'info' | 'warn' | 'error', message: string) => void;
+export type OTelLogFn = (
+	level: 'info' | 'warn' | 'error',
+	message: string,
+) => void;
 
 /**
  * Real OTel service implementation, only instantiated when OTel is enabled.
@@ -62,20 +95,34 @@ export class NodeOTelService implements IOTelService {
 
 	// Event emitters for span lifecycle
 	private readonly _onDidCompleteSpan = new Emitter<ICompletedSpanData>();
-	readonly onDidCompleteSpan: Event<ICompletedSpanData> = this._onDidCompleteSpan.event;
+	readonly onDidCompleteSpan: Event<ICompletedSpanData> =
+		this._onDidCompleteSpan.event;
 	private readonly _onDidEmitSpanEvent = new Emitter<ISpanEventData>();
-	readonly onDidEmitSpanEvent: Event<ISpanEventData> = this._onDidEmitSpanEvent.event;
+	readonly onDidEmitSpanEvent: Event<ISpanEventData> =
+		this._onDidEmitSpanEvent.event;
 
 	injectCompletedSpan(span: ICompletedSpanData): void {
-		try { this._onDidCompleteSpan.fire(span); } catch { /* emitter may be disposed */ }
+		try {
+			this._onDidCompleteSpan.fire(span);
+		} catch {
+			/* emitter may be disposed */
+		}
 	}
 
 	// Buffer events until SDK is ready
 	private readonly _buffer: Array<() => void> = [];
 
-	constructor(config: OTelConfig, logFn?: OTelLogFn, sqliteStore?: OTelSqliteStore) {
+	constructor(
+		config: OTelConfig,
+		logFn?: OTelLogFn,
+		sqliteStore?: OTelSqliteStore,
+	) {
 		this.config = config;
-		this._log = logFn ?? ((_level, _msg) => { /* silent when no logger wired */ });
+		this._log =
+			logFn ??
+			((_level, _msg) => {
+				/* silent when no logger wired */
+			});
 		this._sqliteStore = sqliteStore;
 		// Start async initialization immediately
 		void this._initialize();
@@ -88,21 +135,15 @@ export class NodeOTelService implements IOTelService {
 
 		try {
 			// Dynamic imports — only loaded when OTel is enabled
-			const [
-				api,
-				apiLogs,
-				traceSDK,
-				logsSDK,
-				metricsSDK,
-				resourcesMod,
-			] = await Promise.all([
-				import('@opentelemetry/api'),
-				import('@opentelemetry/api-logs'),
-				import('@opentelemetry/sdk-trace-node'),
-				import('@opentelemetry/sdk-logs'),
-				import('@opentelemetry/sdk-metrics'),
-				import('@opentelemetry/resources'),
-			]);
+			const [api, apiLogs, traceSDK, logsSDK, metricsSDK, resourcesMod] =
+				await Promise.all([
+					import('@opentelemetry/api'),
+					import('@opentelemetry/api-logs'),
+					import('@opentelemetry/sdk-trace-node'),
+					import('@opentelemetry/sdk-logs'),
+					import('@opentelemetry/sdk-metrics'),
+					import('@opentelemetry/resources'),
+				]);
 
 			const BSP = traceSDK.BatchSpanProcessor;
 			const BLRP = logsSDK.BatchLogRecordProcessor;
@@ -120,17 +161,25 @@ export class NodeOTelService implements IOTelService {
 			});
 
 			// Create exporters based on config
-			const { spanExporter, logExporter, metricExporter } = await this._createExporters();
+			const { spanExporter, logExporter, metricExporter } =
+				await this._createExporters();
 
 			// Primary span processor: filters debug-panel-only spans for the user's exporter
-			const diagnosticSpanExporter = new DiagnosticSpanExporter(spanExporter, this.config.exporterType, this._log);
+			const diagnosticSpanExporter = new DiagnosticSpanExporter(
+				spanExporter,
+				this.config.exporterType,
+				this._log,
+			);
 			this._spanProcessors.push(new BSP(diagnosticSpanExporter));
 
 			// SQLite DB span processor: standard GenAI spans only (same filter as primary).
 			// Registered as a separate processor so it works in parallel with any user exporter.
 			if (this.config.dbSpanExporter && this._sqliteStore) {
-				const { SqliteSpanExporter } = await import('./sqlite/sqliteSpanExporter');
-				const sqliteExporter = new FilteredSpanExporter(new SqliteSpanExporter(this._sqliteStore));
+				const { SqliteSpanExporter } =
+					await import('./sqlite/sqliteSpanExporter');
+				const sqliteExporter = new FilteredSpanExporter(
+					new SqliteSpanExporter(this._sqliteStore),
+				);
 				this._spanProcessors.push(new BSP(sqliteExporter));
 			}
 
@@ -140,7 +189,10 @@ export class NodeOTelService implements IOTelService {
 				spanProcessors: this._spanProcessors,
 			});
 			tracerProvider.register();
-			this._tracer = api.trace.getTracer(this.config.serviceName, this.config.serviceVersion);
+			this._tracer = api.trace.getTracer(
+				this.config.serviceName,
+				this.config.serviceVersion,
+			);
 			this._otelApi = api;
 
 			// Log provider — pass processors in constructor (SDK v2 uses 'processors' key)
@@ -153,7 +205,10 @@ export class NodeOTelService implements IOTelService {
 				processors: [this._logProcessor],
 			} as ConstructorParameters<typeof LoggerProvider>[0]);
 			apiLogs.logs.setGlobalLoggerProvider(loggerProvider);
-			this._logger = apiLogs.logs.getLogger(this.config.serviceName, this.config.serviceVersion);
+			this._logger = apiLogs.logs.getLogger(
+				this.config.serviceName,
+				this.config.serviceVersion,
+			);
 
 			// Metric provider
 			this._metricReader = new PEMR({
@@ -165,7 +220,10 @@ export class NodeOTelService implements IOTelService {
 				readers: [this._metricReader],
 			});
 			api.metrics.setGlobalMeterProvider(meterProvider);
-			this._meter = api.metrics.getMeter(this.config.serviceName, this.config.serviceVersion);
+			this._meter = api.metrics.getMeter(
+				this.config.serviceName,
+				this.config.serviceVersion,
+			);
 
 			this._initialized = true;
 
@@ -175,14 +233,19 @@ export class NodeOTelService implements IOTelService {
 			for (let i = 0; i < batch.length; i += BATCH_SIZE) {
 				const chunk = batch.slice(i, i + BATCH_SIZE);
 				for (const fn of chunk) {
-					try { fn(); } catch { /* swallow */ }
+					try {
+						fn();
+					} catch {
+						/* swallow */
+					}
 				}
 				if (i + BATCH_SIZE < batch.length) {
 					// Yield to event loop between batches
-					await new Promise<void>(resolve => setTimeout(resolve, 0));
+					await new Promise<void>((resolve) =>
+						setTimeout(resolve, 0),
+					);
 				}
 			}
-
 		} catch (err) {
 			// OTel init failure should never break the extension
 			this._initFailed = true;
@@ -198,13 +261,15 @@ export class NodeOTelService implements IOTelService {
 		// use a noop exporter as the primary span exporter so the pipeline still runs.
 		// If the user also explicitly enabled OTel (via setting or env var), honour their
 		// exporter config and don't switch to noop.
-		const dbOnlyMode = config.dbSpanExporter
-			&& !config.enabledExplicitly
-			&& !config.fileExporterPath
-			&& config.exporterType !== 'console';
+		const dbOnlyMode =
+			config.dbSpanExporter &&
+			!config.enabledExplicitly &&
+			!config.fileExporterPath &&
+			config.exporterType !== 'console';
 
 		if (config.exporterType === 'file' && config.fileExporterPath) {
-			const { FileSpanExporter, FileLogExporter, FileMetricExporter } = await import('./fileExporters');
+			const { FileSpanExporter, FileLogExporter, FileMetricExporter } =
+				await import('./fileExporters');
 			return {
 				spanExporter: new FileSpanExporter(config.fileExporterPath),
 				logExporter: new FileLogExporter(config.fileExporterPath),
@@ -266,7 +331,9 @@ export class NodeOTelService implements IOTelService {
 		return {
 			spanExporter: new OTLPTraceExporter({ url: `${base}/v1/traces` }),
 			logExporter: new OTLPLogExporter({ url: `${base}/v1/logs` }),
-			metricExporter: new OTLPMetricExporter({ url: `${base}/v1/metrics` }),
+			metricExporter: new OTLPMetricExporter({
+				url: `${base}/v1/metrics`,
+			}),
 		};
 	}
 
@@ -274,7 +341,10 @@ export class NodeOTelService implements IOTelService {
 
 	startSpan(name: string, options?: SpanOptions): ISpanHandle {
 		if (!this._tracer) {
-			if (this._initFailed || this._buffer.length >= NodeOTelService._MAX_BUFFER_SIZE) {
+			if (
+				this._initFailed ||
+				this._buffer.length >= NodeOTelService._MAX_BUFFER_SIZE
+			) {
 				return noopSpanHandle;
 			}
 			const handle = new BufferedSpanHandle();
@@ -287,7 +357,11 @@ export class NodeOTelService implements IOTelService {
 		return this._createSpan(name, options);
 	}
 
-	async startActiveSpan<T>(name: string, options: SpanOptions, fn: (span: ISpanHandle) => Promise<T>): Promise<T> {
+	async startActiveSpan<T>(
+		name: string,
+		options: SpanOptions,
+		fn: (span: ISpanHandle) => Promise<T>,
+	): Promise<T> {
 		if (!this._tracer) {
 			const handle = this.startSpan(name, options);
 			try {
@@ -297,23 +371,34 @@ export class NodeOTelService implements IOTelService {
 			}
 		}
 
-		const spanOpts = { kind: toOTelSpanKind(options?.kind), attributes: options?.attributes as Attributes };
+		const spanOpts = {
+			kind: toOTelSpanKind(options?.kind),
+			attributes: options?.attributes as Attributes,
+		};
 
 		// If a parent trace context is provided, create a remote context and start span within it
 		if (options.parentTraceContext && this._otelApi) {
-			const parentCtx = this._createRemoteContext(options.parentTraceContext);
+			const parentCtx = this._createRemoteContext(
+				options.parentTraceContext,
+			);
 			return this._tracer.startActiveSpan(
 				name,
 				spanOpts,
 				parentCtx,
 				async (span: Span) => {
-					const handle = new RealSpanHandle(span, this._onDidCompleteSpan, this._onDidEmitSpanEvent, options?.attributes, options.parentTraceContext!.spanId);
+					const handle = new RealSpanHandle(
+						span,
+						this._onDidCompleteSpan,
+						this._onDidEmitSpanEvent,
+						options?.attributes,
+						options.parentTraceContext!.spanId,
+					);
 					try {
 						return await fn(handle);
 					} finally {
 						handle.end();
 					}
-				}
+				},
 			);
 		}
 
@@ -322,13 +407,19 @@ export class NodeOTelService implements IOTelService {
 			name,
 			spanOpts,
 			async (span: Span) => {
-				const handle = new RealSpanHandle(span, this._onDidCompleteSpan, this._onDidEmitSpanEvent, options?.attributes, activeParentId);
+				const handle = new RealSpanHandle(
+					span,
+					this._onDidCompleteSpan,
+					this._onDidEmitSpanEvent,
+					options?.attributes,
+					activeParentId,
+				);
 				try {
 					return await fn(handle);
 				} finally {
 					handle.end();
 				}
-			}
+			},
 		);
 	}
 
@@ -336,7 +427,9 @@ export class NodeOTelService implements IOTelService {
 		if (!this._otelApi) {
 			return undefined;
 		}
-		const activeSpan = this._otelApi.trace.getSpan(this._otelApi.context.active());
+		const activeSpan = this._otelApi.trace.getSpan(
+			this._otelApi.context.active(),
+		);
 		if (!activeSpan) {
 			return undefined;
 		}
@@ -344,18 +437,29 @@ export class NodeOTelService implements IOTelService {
 		if (!ctx.traceId || !ctx.spanId) {
 			return undefined;
 		}
-		return { traceId: ctx.traceId, spanId: ctx.spanId, traceFlags: ctx.traceFlags, traceState: ctx.traceState?.serialize() };
+		return {
+			traceId: ctx.traceId,
+			spanId: ctx.spanId,
+			traceFlags: ctx.traceFlags,
+			traceState: ctx.traceState?.serialize(),
+		};
 	}
 
 	// ── Trace Context Store ── (for cross-boundary propagation)
 
 	private static readonly _MAX_TRACE_CONTEXT_STORE_SIZE = 100;
 	private readonly _traceContextStore = new Map<string, TraceContext>();
-	private readonly _traceContextTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	private readonly _traceContextTimers = new Map<
+		string,
+		ReturnType<typeof setTimeout>
+	>();
 
 	storeTraceContext(key: string, context: TraceContext): void {
 		// Evict oldest entry if at capacity
-		if (this._traceContextStore.size >= NodeOTelService._MAX_TRACE_CONTEXT_STORE_SIZE) {
+		if (
+			this._traceContextStore.size >=
+			NodeOTelService._MAX_TRACE_CONTEXT_STORE_SIZE
+		) {
 			const oldestKey = this._traceContextStore.keys().next().value;
 			if (oldestKey !== undefined) {
 				this._clearStoredTraceContext(oldestKey);
@@ -363,7 +467,10 @@ export class NodeOTelService implements IOTelService {
 		}
 		this._traceContextStore.set(key, context);
 		// Auto-cleanup after 5 minutes; tracked for proper disposal
-		const timer = setTimeout(() => this._clearStoredTraceContext(key), 5 * 60 * 1000);
+		const timer = setTimeout(
+			() => this._clearStoredTraceContext(key),
+			5 * 60 * 1000,
+		);
 		this._traceContextTimers.set(key, timer);
 	}
 
@@ -396,11 +503,17 @@ export class NodeOTelService implements IOTelService {
 			traceFlags: 1, // SAMPLED
 			isRemote: true,
 		};
-		const remoteCtx = api.trace.setSpanContext(api.context.active(), remoteSpanContext);
+		const remoteCtx = api.trace.setSpanContext(
+			api.context.active(),
+			remoteSpanContext,
+		);
 		return remoteCtx;
 	}
 
-	async runWithTraceContext<T>(traceContext: TraceContext, fn: () => Promise<T>): Promise<T> {
+	async runWithTraceContext<T>(
+		traceContext: TraceContext,
+		fn: () => Promise<T>,
+	): Promise<T> {
 		if (!this._otelApi) {
 			return fn();
 		}
@@ -409,26 +522,49 @@ export class NodeOTelService implements IOTelService {
 	}
 
 	private _createSpan(name: string, options?: SpanOptions): ISpanHandle {
-		const spanOpts = { kind: toOTelSpanKind(options?.kind), attributes: options?.attributes as Attributes };
+		const spanOpts = {
+			kind: toOTelSpanKind(options?.kind),
+			attributes: options?.attributes as Attributes,
+		};
 
 		// If an explicit parent trace context is provided, create the span as its child.
 		// This ensures correct parent-child hierarchy even when async context propagation
 		// doesn't carry the active span (common in the VS Code extension host).
 		if (options?.parentTraceContext && this._otelApi) {
-			const parentCtx = this._createRemoteContext(options.parentTraceContext);
+			const parentCtx = this._createRemoteContext(
+				options.parentTraceContext,
+			);
 			const span = this._tracer!.startSpan(name, spanOpts, parentCtx);
-			return new RealSpanHandle(span, this._onDidCompleteSpan, this._onDidEmitSpanEvent, options?.attributes, options.parentTraceContext.spanId);
+			return new RealSpanHandle(
+				span,
+				this._onDidCompleteSpan,
+				this._onDidEmitSpanEvent,
+				options?.attributes,
+				options.parentTraceContext.spanId,
+			);
 		}
 
 		const parentSpanId = this._getActiveParentSpanId();
 		const span = this._tracer!.startSpan(name, spanOpts);
-		return new RealSpanHandle(span, this._onDidCompleteSpan, this._onDidEmitSpanEvent, options?.attributes, parentSpanId);
+		return new RealSpanHandle(
+			span,
+			this._onDidCompleteSpan,
+			this._onDidEmitSpanEvent,
+			options?.attributes,
+			parentSpanId,
+		);
 	}
 
 	private _getActiveParentSpanId(): string | undefined {
-		if (!this._otelApi) { return undefined; }
-		const activeSpan = this._otelApi.trace.getSpan(this._otelApi.context.active());
-		if (!activeSpan) { return undefined; }
+		if (!this._otelApi) {
+			return undefined;
+		}
+		const activeSpan = this._otelApi.trace.getSpan(
+			this._otelApi.context.active(),
+		);
+		if (!activeSpan) {
+			return undefined;
+		}
 		const ctx = activeSpan.spanContext();
 		return ctx.spanId || undefined;
 	}
@@ -439,33 +575,83 @@ export class NodeOTelService implements IOTelService {
 	 * Explicit bucket boundaries per the OTel GenAI semantic conventions.
 	 * @see https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/
 	 */
-	private static readonly _histogramOptions: ReadonlyMap<string, MetricOptions> = new Map([
-		['gen_ai.client.operation.duration', { advice: { explicitBucketBoundaries: [0.01, 0.02, 0.04, 0.08, 0.16, 0.32, 0.64, 1.28, 2.56, 5.12, 10.24, 20.48, 40.96, 81.92] } }],
-		['gen_ai.client.token.usage', { advice: { explicitBucketBoundaries: [1, 4, 16, 64, 256, 1024, 4096, 16384, 65536, 262144, 1048576, 4194304, 16777216, 67108864] } }],
+	private static readonly _histogramOptions: ReadonlyMap<
+		string,
+		MetricOptions
+	> = new Map([
+		[
+			'gen_ai.client.operation.duration',
+			{
+				advice: {
+					explicitBucketBoundaries: [
+						0.01, 0.02, 0.04, 0.08, 0.16, 0.32, 0.64, 1.28, 2.56,
+						5.12, 10.24, 20.48, 40.96, 81.92,
+					],
+				},
+			},
+		],
+		[
+			'gen_ai.client.token.usage',
+			{
+				advice: {
+					explicitBucketBoundaries: [
+						1, 4, 16, 64, 256, 1024, 4096, 16384, 65536, 262144,
+						1048576, 4194304, 16777216, 67108864,
+					],
+				},
+			},
+		],
 	]);
 
-	private readonly _histograms = new Map<string, ReturnType<Meter['createHistogram']>>();
-	private readonly _counters = new Map<string, ReturnType<Meter['createCounter']>>();
+	private readonly _histograms = new Map<
+		string,
+		ReturnType<Meter['createHistogram']>
+	>();
+	private readonly _counters = new Map<
+		string,
+		ReturnType<Meter['createCounter']>
+	>();
 
-	recordMetric(name: string, value: number, attributes?: Record<string, string | number | boolean>): void {
+	recordMetric(
+		name: string,
+		value: number,
+		attributes?: Record<string, string | number | boolean>,
+	): void {
 		if (!this._meter) {
-			if (!this._initFailed && this._buffer.length < NodeOTelService._MAX_BUFFER_SIZE) {
-				this._buffer.push(() => this.recordMetric(name, value, attributes));
+			if (
+				!this._initFailed &&
+				this._buffer.length < NodeOTelService._MAX_BUFFER_SIZE
+			) {
+				this._buffer.push(() =>
+					this.recordMetric(name, value, attributes),
+				);
 			}
 			return;
 		}
 		let histogram = this._histograms.get(name);
 		if (!histogram) {
-			histogram = this._meter.createHistogram(name, NodeOTelService._histogramOptions.get(name));
+			histogram = this._meter.createHistogram(
+				name,
+				NodeOTelService._histogramOptions.get(name),
+			);
 			this._histograms.set(name, histogram);
 		}
 		histogram.record(value, attributes);
 	}
 
-	incrementCounter(name: string, value = 1, attributes?: Record<string, string | number | boolean>): void {
+	incrementCounter(
+		name: string,
+		value = 1,
+		attributes?: Record<string, string | number | boolean>,
+	): void {
 		if (!this._meter) {
-			if (!this._initFailed && this._buffer.length < NodeOTelService._MAX_BUFFER_SIZE) {
-				this._buffer.push(() => this.incrementCounter(name, value, attributes));
+			if (
+				!this._initFailed &&
+				this._buffer.length < NodeOTelService._MAX_BUFFER_SIZE
+			) {
+				this._buffer.push(() =>
+					this.incrementCounter(name, value, attributes),
+				);
 			}
 			return;
 		}
@@ -483,7 +669,10 @@ export class NodeOTelService implements IOTelService {
 
 	emitLogRecord(body: string, attributes?: Record<string, unknown>): void {
 		if (!this._logger) {
-			if (!this._initFailed && this._buffer.length < NodeOTelService._MAX_BUFFER_SIZE) {
+			if (
+				!this._initFailed &&
+				this._buffer.length < NodeOTelService._MAX_BUFFER_SIZE
+			) {
 				this._buffer.push(() => this.emitLogRecord(body, attributes));
 			}
 			return;
@@ -492,7 +681,11 @@ export class NodeOTelService implements IOTelService {
 		// the current span (if any). Without this, logs emitted inside a span
 		// created via startSpan() (rather than startActiveSpan()) lack trace context.
 		const ctx = this._otelApi?.context.active();
-		this._logger.emit({ body, attributes: attributes as AnyValueMap, ...(ctx ? { context: ctx } : {}) });
+		this._logger.emit({
+			body,
+			attributes: attributes as AnyValueMap,
+			...(ctx ? { context: ctx } : {}),
+		});
 		this._logEmitCount++;
 		if (this._logEmitCount === 1) {
 			this._log('info', `[OTel] First log record emitted: ${body}`);
@@ -503,7 +696,7 @@ export class NodeOTelService implements IOTelService {
 
 	async flush(): Promise<void> {
 		await Promise.all([
-			...this._spanProcessors.map(p => p.forceFlush()),
+			...this._spanProcessors.map((p) => p.forceFlush()),
 			this._logProcessor?.forceFlush(),
 			this._metricReader?.forceFlush(),
 		]);
@@ -520,7 +713,7 @@ export class NodeOTelService implements IOTelService {
 
 			await this.flush();
 			await Promise.all([
-				...this._spanProcessors.map(p => p.shutdown()),
+				...this._spanProcessors.map((p) => p.shutdown()),
 				this._logProcessor?.shutdown(),
 				this._metricReader?.shutdown(),
 			]);
@@ -541,7 +734,10 @@ export class NodeOTelService implements IOTelService {
 // ── Span Handle Implementations ──
 
 class RealSpanHandle implements ISpanHandle {
-	private readonly _attributes: Record<string, string | number | boolean | string[]> = {};
+	private readonly _attributes: Record<
+		string,
+		string | number | boolean | string[]
+	> = {};
 	private readonly _events: ISpanEventRecord[] = [];
 	private _statusCode = SpanStatusCode.UNSET;
 	private _statusMessage?: string;
@@ -553,25 +749,35 @@ class RealSpanHandle implements ISpanHandle {
 		private readonly _span: Span,
 		private readonly _onDidCompleteSpan: Emitter<ICompletedSpanData>,
 		private readonly _onDidEmitSpanEvent: Emitter<ISpanEventData>,
-		initialAttributes?: Record<string, string | number | boolean | string[]>,
+		initialAttributes?: Record<
+			string,
+			string | number | boolean | string[]
+		>,
 		parentSpanId?: string,
 	) {
 		this._parentSpanId = parentSpanId;
 		if (initialAttributes) {
 			for (const k in initialAttributes) {
-				if (Object.prototype.hasOwnProperty.call(initialAttributes, k)) {
+				if (
+					Object.prototype.hasOwnProperty.call(initialAttributes, k)
+				) {
 					this._attributes[k] = initialAttributes[k];
 				}
 			}
 		}
 	}
 
-	setAttribute(key: string, value: string | number | boolean | string[]): void {
+	setAttribute(
+		key: string,
+		value: string | number | boolean | string[],
+	): void {
 		this._attributes[key] = value;
 		this._span.setAttribute(key, value);
 	}
 
-	setAttributes(attrs: Record<string, string | number | boolean | string[] | undefined>): void {
+	setAttributes(
+		attrs: Record<string, string | number | boolean | string[] | undefined>,
+	): void {
 		for (const k in attrs) {
 			if (Object.prototype.hasOwnProperty.call(attrs, k)) {
 				const v = attrs[k];
@@ -586,7 +792,12 @@ class RealSpanHandle implements ISpanHandle {
 	setStatus(code: SpanStatusCode, message?: string): void {
 		this._statusCode = code;
 		this._statusMessage = message;
-		const otelCode = code === SpanStatusCode.OK ? 1 : code === SpanStatusCode.ERROR ? 2 : 0;
+		const otelCode =
+			code === SpanStatusCode.OK
+				? 1
+				: code === SpanStatusCode.ERROR
+					? 2
+					: 0;
 		this._span.setStatus({ code: otelCode, message });
 	}
 
@@ -598,7 +809,10 @@ class RealSpanHandle implements ISpanHandle {
 		}
 	}
 
-	addEvent(name: string, attributes?: Record<string, string | number | boolean | string[]>): void {
+	addEvent(
+		name: string,
+		attributes?: Record<string, string | number | boolean | string[]>,
+	): void {
 		const timestamp = Date.now();
 		const record: ISpanEventRecord = { name, timestamp, attributes };
 		this._events.push(record);
@@ -615,13 +829,20 @@ class RealSpanHandle implements ISpanHandle {
 				attributes: attributes ?? {},
 				timestamp,
 			});
-		} catch { /* emitter may be disposed after shutdown */ }
+		} catch {
+			/* emitter may be disposed after shutdown */
+		}
 	}
 
 	getSpanContext(): TraceContext | undefined {
 		const ctx = this._span.spanContext();
 		return ctx.traceId && ctx.spanId
-			? { traceId: ctx.traceId, spanId: ctx.spanId, traceFlags: ctx.traceFlags, traceState: ctx.traceState?.serialize() }
+			? {
+					traceId: ctx.traceId,
+					spanId: ctx.spanId,
+					traceFlags: ctx.traceFlags,
+					traceState: ctx.traceState?.serialize(),
+				}
 			: undefined;
 	}
 
@@ -641,11 +862,16 @@ class RealSpanHandle implements ISpanHandle {
 				parentSpanId: this._parentSpanId,
 				startTime: this._startTime,
 				endTime: Date.now(),
-				status: { code: this._statusCode, message: this._statusMessage },
+				status: {
+					code: this._statusCode,
+					message: this._statusMessage,
+				},
 				attributes: { ...this._attributes },
 				events: [...this._events],
 			});
-		} catch { /* emitter may be disposed after shutdown */ }
+		} catch {
+			/* emitter may be disposed after shutdown */
+		}
 	}
 }
 
@@ -657,38 +883,61 @@ class BufferedSpanHandle implements ISpanHandle {
 	private readonly _ops: Array<(span: ISpanHandle) => void> = [];
 	private _real: ISpanHandle | undefined;
 
-	setAttribute(key: string, value: string | number | boolean | string[]): void {
-		if (this._real) { this._real.setAttribute(key, value); return; }
+	setAttribute(
+		key: string,
+		value: string | number | boolean | string[],
+	): void {
+		if (this._real) {
+			this._real.setAttribute(key, value);
+			return;
+		}
 		if (this._ops.length < BufferedSpanHandle._MAX_OPS) {
-			this._ops.push(s => s.setAttribute(key, value));
+			this._ops.push((s) => s.setAttribute(key, value));
 		}
 	}
 
-	setAttributes(attrs: Record<string, string | number | boolean | string[] | undefined>): void {
-		if (this._real) { this._real.setAttributes(attrs); return; }
+	setAttributes(
+		attrs: Record<string, string | number | boolean | string[] | undefined>,
+	): void {
+		if (this._real) {
+			this._real.setAttributes(attrs);
+			return;
+		}
 		if (this._ops.length < BufferedSpanHandle._MAX_OPS) {
-			this._ops.push(s => s.setAttributes(attrs));
+			this._ops.push((s) => s.setAttributes(attrs));
 		}
 	}
 
 	setStatus(code: SpanStatusCode, message?: string): void {
-		if (this._real) { this._real.setStatus(code, message); return; }
+		if (this._real) {
+			this._real.setStatus(code, message);
+			return;
+		}
 		if (this._ops.length < BufferedSpanHandle._MAX_OPS) {
-			this._ops.push(s => s.setStatus(code, message));
+			this._ops.push((s) => s.setStatus(code, message));
 		}
 	}
 
 	recordException(error: unknown): void {
-		if (this._real) { this._real.recordException(error); return; }
+		if (this._real) {
+			this._real.recordException(error);
+			return;
+		}
 		if (this._ops.length < BufferedSpanHandle._MAX_OPS) {
-			this._ops.push(s => s.recordException(error));
+			this._ops.push((s) => s.recordException(error));
 		}
 	}
 
-	addEvent(name: string, attributes?: Record<string, string | number | boolean | string[]>): void {
-		if (this._real) { this._real.addEvent(name, attributes); return; }
+	addEvent(
+		name: string,
+		attributes?: Record<string, string | number | boolean | string[]>,
+	): void {
+		if (this._real) {
+			this._real.addEvent(name, attributes);
+			return;
+		}
 		if (this._ops.length < BufferedSpanHandle._MAX_OPS) {
-			this._ops.push(s => s.addEvent(name, attributes));
+			this._ops.push((s) => s.addEvent(name, attributes));
 		}
 	}
 
@@ -697,9 +946,12 @@ class BufferedSpanHandle implements ISpanHandle {
 	}
 
 	end(): void {
-		if (this._real) { this._real.end(); return; }
+		if (this._real) {
+			this._real.end();
+			return;
+		}
 		// Always buffer end() regardless of cap — it's critical for span lifecycle
-		this._ops.push(s => s.end());
+		this._ops.push((s) => s.end());
 	}
 
 	replay(real: ISpanHandle): void {
@@ -713,9 +965,12 @@ class BufferedSpanHandle implements ISpanHandle {
 
 function toOTelSpanKind(kind: SpanKind | undefined): number {
 	switch (kind) {
-		case SpanKind.CLIENT: return 2; // OTel SpanKind.CLIENT
-		case SpanKind.INTERNAL: return 0; // OTel SpanKind.INTERNAL
-		default: return 0; // INTERNAL
+		case SpanKind.CLIENT:
+			return 2; // OTel SpanKind.CLIENT
+		case SpanKind.INTERNAL:
+			return 0; // OTel SpanKind.INTERNAL
+		default:
+			return 0; // INTERNAL
 	}
 }
 
@@ -755,9 +1010,12 @@ class DiagnosticSpanExporter implements SpanExporter {
 		this._log = logFn;
 	}
 
-	export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
+	export(
+		spans: ReadableSpan[],
+		resultCallback: (result: ExportResult) => void,
+	): void {
 		// Filter out debug-panel-only spans — only export standard GenAI operations
-		const exportable = spans.filter(span => {
+		const exportable = spans.filter((span) => {
 			const opName = span.attributes[GenAiAttr.OPERATION_NAME];
 			// If no operation name set, export it (safety: don't drop unknown spans)
 			if (opName === undefined) {
@@ -769,19 +1027,28 @@ class DiagnosticSpanExporter implements SpanExporter {
 			resultCallback({ code: 0 }); // ExportResultCode.SUCCESS
 			return;
 		}
-		this._inner.export(exportable, result => {
+		this._inner.export(exportable, (result) => {
 			// ExportResultCode.SUCCESS === 0
 			if (result.code === 0) {
 				if (!this._firstSuccessLogged) {
 					this._firstSuccessLogged = true;
-					this._log('info', `[OTel] First span batch exported successfully via ${this._exporterType} (${exportable.length} spans)`);
+					this._log(
+						'info',
+						`[OTel] First span batch exported successfully via ${this._exporterType} (${exportable.length} spans)`,
+					);
 				}
 			} else {
 				// Rate-limit failure logging to avoid flooding stdout
 				const now = Date.now();
-				if (now - this._lastFailureLogTime >= DiagnosticSpanExporter._FAILURE_LOG_INTERVAL_MS) {
+				if (
+					now - this._lastFailureLogTime >=
+					DiagnosticSpanExporter._FAILURE_LOG_INTERVAL_MS
+				) {
 					this._lastFailureLogTime = now;
-					this._log('warn', `[OTel] Span export failed via ${this._exporterType}: ${result.error ?? 'unknown error'}`);
+					this._log(
+						'warn',
+						`[OTel] Span export failed via ${this._exporterType}: ${result.error ?? 'unknown error'}`,
+					);
 				}
 			}
 			resultCallback(result);
@@ -802,12 +1069,18 @@ class DiagnosticSpanExporter implements SpanExporter {
  * passing only standard GenAI operations through to the inner exporter.
  */
 class FilteredSpanExporter implements SpanExporter {
-	constructor(private readonly _inner: SpanExporter) { }
+	constructor(private readonly _inner: SpanExporter) {}
 
-	export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
-		const filtered = spans.filter(span => {
+	export(
+		spans: ReadableSpan[],
+		resultCallback: (result: ExportResult) => void,
+	): void {
+		const filtered = spans.filter((span) => {
 			const opName = span.attributes[GenAiAttr.OPERATION_NAME];
-			return opName === undefined || EXPORTABLE_OPERATION_NAMES.has(String(opName));
+			return (
+				opName === undefined ||
+				EXPORTABLE_OPERATION_NAMES.has(String(opName))
+			);
 		});
 		if (filtered.length === 0) {
 			resultCallback({ code: 0 });
@@ -816,8 +1089,12 @@ class FilteredSpanExporter implements SpanExporter {
 		this._inner.export(filtered, resultCallback);
 	}
 
-	shutdown(): Promise<void> { return this._inner.shutdown?.() ?? Promise.resolve(); }
-	forceFlush(): Promise<void> { return this._inner.forceFlush?.() ?? Promise.resolve(); }
+	shutdown(): Promise<void> {
+		return this._inner.shutdown?.() ?? Promise.resolve();
+	}
+	forceFlush(): Promise<void> {
+		return this._inner.forceFlush?.() ?? Promise.resolve();
+	}
 }
 
 /**
@@ -825,9 +1102,16 @@ class FilteredSpanExporter implements SpanExporter {
  * this satisfies the OTel pipeline requirement for a primary exporter.
  */
 class NoopSpanExporter implements SpanExporter {
-	export(_spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
+	export(
+		_spans: ReadableSpan[],
+		resultCallback: (result: ExportResult) => void,
+	): void {
 		resultCallback({ code: 0 }); // ExportResultCode.SUCCESS
 	}
-	shutdown(): Promise<void> { return Promise.resolve(); }
-	forceFlush(): Promise<void> { return Promise.resolve(); }
+	shutdown(): Promise<void> {
+		return Promise.resolve();
+	}
+	forceFlush(): Promise<void> {
+		return Promise.resolve();
+	}
 }

@@ -7,25 +7,24 @@ import { describe, expect, it } from 'vitest';
 import { AsyncIterUtils, AsyncIterUtilsExt } from '../../asyncIterableUtils';
 
 describe('AsyncIterableUtils', () => {
-
 	describe('map', () => {
 		it('should map items using the provided function', async () => {
 			const input = AsyncIterUtils.fromArray([1, 2, 3]);
-			const mapped = AsyncIterUtils.map(input, x => x * 2);
+			const mapped = AsyncIterUtils.map(input, (x) => x * 2);
 			const result = await AsyncIterUtils.toArray(mapped);
 			expect(result).toEqual([2, 4, 6]);
 		});
 
 		it('should handle empty iterable', async () => {
 			const input = AsyncIterUtils.fromArray<number>([]);
-			const mapped = AsyncIterUtils.map(input, x => x * 2);
+			const mapped = AsyncIterUtils.map(input, (x) => x * 2);
 			const result = await AsyncIterUtils.toArray(mapped);
 			expect(result).toEqual([]);
 		});
 
 		it('should transform item types', async () => {
 			const input = AsyncIterUtils.fromArray([1, 2, 3]);
-			const mapped = AsyncIterUtils.map(input, x => x.toString());
+			const mapped = AsyncIterUtils.map(input, (x) => x.toString());
 			const result = await AsyncIterUtils.toArray(mapped);
 			expect(result).toEqual(['1', '2', '3']);
 		});
@@ -36,22 +35,27 @@ describe('AsyncIterableUtils', () => {
 			const input = AsyncIterUtils.fromArrayWithReturn([1, 2, 3], 'done');
 			const mapped = AsyncIterUtils.mapWithReturn(
 				input,
-				x => x * 2,
-				ret => ret.toUpperCase()
+				(x) => x * 2,
+				(ret) => ret.toUpperCase(),
 			);
-			const [items, returnValue] = await AsyncIterUtils.toArrayWithReturn(mapped);
+			const [items, returnValue] =
+				await AsyncIterUtils.toArrayWithReturn(mapped);
 			expect(items).toEqual([2, 4, 6]);
 			expect(returnValue).toBe('DONE');
 		});
 
 		it('should handle empty iterable with return value', async () => {
-			const input = AsyncIterUtils.fromArrayWithReturn<number, string>([], 'empty');
+			const input = AsyncIterUtils.fromArrayWithReturn<number, string>(
+				[],
+				'empty',
+			);
 			const mapped = AsyncIterUtils.mapWithReturn(
 				input,
-				x => x * 2,
-				ret => ret.toUpperCase()
+				(x) => x * 2,
+				(ret) => ret.toUpperCase(),
 			);
-			const [items, returnValue] = await AsyncIterUtils.toArrayWithReturn(mapped);
+			const [items, returnValue] =
+				await AsyncIterUtils.toArrayWithReturn(mapped);
 			expect(items).toEqual([]);
 			expect(returnValue).toBe('EMPTY');
 		});
@@ -60,28 +64,28 @@ describe('AsyncIterableUtils', () => {
 	describe('filter', () => {
 		it('should filter items using the provided predicate', async () => {
 			const input = AsyncIterUtils.fromArray([1, 2, 3, 4, 5]);
-			const filtered = AsyncIterUtils.filter(input, x => x % 2 === 0);
+			const filtered = AsyncIterUtils.filter(input, (x) => x % 2 === 0);
 			const result = await AsyncIterUtils.toArray(filtered);
 			expect(result).toEqual([2, 4]);
 		});
 
 		it('should handle empty iterable', async () => {
 			const input = AsyncIterUtils.fromArray<number>([]);
-			const filtered = AsyncIterUtils.filter(input, x => x % 2 === 0);
+			const filtered = AsyncIterUtils.filter(input, (x) => x % 2 === 0);
 			const result = await AsyncIterUtils.toArray(filtered);
 			expect(result).toEqual([]);
 		});
 
 		it('should return empty when no items match', async () => {
 			const input = AsyncIterUtils.fromArray([1, 3, 5]);
-			const filtered = AsyncIterUtils.filter(input, x => x % 2 === 0);
+			const filtered = AsyncIterUtils.filter(input, (x) => x % 2 === 0);
 			const result = await AsyncIterUtils.toArray(filtered);
 			expect(result).toEqual([]);
 		});
 
 		it('should return all items when all match', async () => {
 			const input = AsyncIterUtils.fromArray([2, 4, 6]);
-			const filtered = AsyncIterUtils.filter(input, x => x % 2 === 0);
+			const filtered = AsyncIterUtils.filter(input, (x) => x % 2 === 0);
 			const result = await AsyncIterUtils.toArray(filtered);
 			expect(result).toEqual([2, 4, 6]);
 		});
@@ -109,23 +113,35 @@ describe('AsyncIterableUtils', () => {
 
 	describe('toArrayWithReturn', () => {
 		it('should collect items and capture return value', async () => {
-			const input = AsyncIterUtils.fromArrayWithReturn([1, 2, 3], 'finished');
-			const [items, returnValue] = await AsyncIterUtils.toArrayWithReturn(input);
+			const input = AsyncIterUtils.fromArrayWithReturn(
+				[1, 2, 3],
+				'finished',
+			);
+			const [items, returnValue] =
+				await AsyncIterUtils.toArrayWithReturn(input);
 			expect(items).toEqual([1, 2, 3]);
 			expect(returnValue).toBe('finished');
 		});
 
 		it('should handle empty iterable with return value', async () => {
-			const input = AsyncIterUtils.fromArrayWithReturn<number, string>([], 'empty result');
-			const [items, returnValue] = await AsyncIterUtils.toArrayWithReturn(input);
+			const input = AsyncIterUtils.fromArrayWithReturn<number, string>(
+				[],
+				'empty result',
+			);
+			const [items, returnValue] =
+				await AsyncIterUtils.toArrayWithReturn(input);
 			expect(items).toEqual([]);
 			expect(returnValue).toBe('empty result');
 		});
 
 		it('should handle complex return types', async () => {
 			const returnObj = { status: 'complete', count: 3 };
-			const input = AsyncIterUtils.fromArrayWithReturn([1, 2, 3], returnObj);
-			const [items, returnValue] = await AsyncIterUtils.toArrayWithReturn(input);
+			const input = AsyncIterUtils.fromArrayWithReturn(
+				[1, 2, 3],
+				returnObj,
+			);
+			const [items, returnValue] =
+				await AsyncIterUtils.toArrayWithReturn(input);
 			expect(items).toEqual([1, 2, 3]);
 			expect(returnValue).toBe(returnObj);
 		});
@@ -133,9 +149,7 @@ describe('AsyncIterableUtils', () => {
 });
 
 describe('AsyncIterUtilsExt', () => {
-
 	describe('splitLines', () => {
-
 		async function chunksToLines(chunks: string[]) {
 			const iter = AsyncIterUtils.fromArray(chunks);
 			const linesStream = AsyncIterUtilsExt.splitLines(iter);
@@ -184,7 +198,11 @@ describe('AsyncIterUtilsExt', () => {
 
 		describe('multiple chunks', () => {
 			it('handles each line as separate chunk', async () => {
-				const arr = await chunksToLines(['line1\n', 'line2\n', 'line3']);
+				const arr = await chunksToLines([
+					'line1\n',
+					'line2\n',
+					'line3',
+				]);
 				expect(arr).toEqual(['line1', 'line2', 'line3']);
 			});
 
@@ -204,7 +222,12 @@ describe('AsyncIterUtilsExt', () => {
 			});
 
 			it('handles complex split across chunks', async () => {
-				const arr = await chunksToLines(['li', 'ne1\nli', 'ne2\n', 'line3']);
+				const arr = await chunksToLines([
+					'li',
+					'ne1\nli',
+					'ne2\n',
+					'line3',
+				]);
 				expect(arr).toEqual(['line1', 'line2', 'line3']);
 			});
 		});
@@ -286,5 +309,4 @@ describe('AsyncIterUtilsExt', () => {
 			});
 		});
 	});
-
 });

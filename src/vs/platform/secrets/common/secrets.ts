@@ -3,20 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SequencerByKey } from '../../../base/common/async.js';
-import { IEncryptionService } from '../../encryption/common/encryptionService.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { IStorageService, IStorageValueChangeEvent, InMemoryStorageService, StorageScope, StorageTarget } from '../../storage/common/storage.js';
-import { Emitter, Event } from '../../../base/common/event.js';
-import { ILogService } from '../../log/common/log.js';
-import { Disposable, DisposableStore } from '../../../base/common/lifecycle.js';
-import { Lazy } from '../../../base/common/lazy.js';
-import { isWindows } from '../../../base/common/platform.js';
+import { SequencerByKey } from "../../../base/common/async.js";
+import { IEncryptionService } from "../../encryption/common/encryptionService.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import {
+	IStorageService,
+	IStorageValueChangeEvent,
+	InMemoryStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../storage/common/storage.js";
+import { Emitter, Event } from "../../../base/common/event.js";
+import { ILogService } from "../../log/common/log.js";
+import { Disposable, DisposableStore } from "../../../base/common/lifecycle.js";
+import { Lazy } from "../../../base/common/lazy.js";
+import { isWindows } from "../../../base/common/platform.js";
 
 /**
  * The storage key prefix used for all secrets.
  */
-export const SECRET_STORAGE_PREFIX = 'secret://';
+export const SECRET_STORAGE_PREFIX = "secret://";
 
 /**
  * Builds the full storage key for a secret.
@@ -39,15 +45,15 @@ export async function readEncryptedSecret(
 	logService?: ILogService,
 ): Promise<string | undefined> {
 	const fullKey = secretStorageKey(key);
-	logService?.trace('[secrets] getting secret for key:', fullKey);
+	logService?.trace("[secrets] getting secret for key:", fullKey);
 	const encrypted = storageGet(fullKey);
 	if (!encrypted) {
-		logService?.trace('[secrets] no secret found for key:', fullKey);
+		logService?.trace("[secrets] no secret found for key:", fullKey);
 		return undefined;
 	}
-	logService?.trace('[secrets] decrypting secret for key:', fullKey);
+	logService?.trace("[secrets] decrypting secret for key:", fullKey);
 	const result = await decrypt(encrypted);
-	logService?.trace('[secrets] decrypted secret for key:', fullKey);
+	logService?.trace("[secrets] decrypted secret for key:", fullKey);
 	return result;
 }
 
@@ -66,12 +72,12 @@ export async function writeEncryptedSecret(
 	encrypt: (value: string) => Promise<string>,
 	logService?: ILogService,
 ): Promise<void> {
-	logService?.trace('[secrets] encrypting secret for key:', key);
+	logService?.trace("[secrets] encrypting secret for key:", key);
 	const encrypted = await encrypt(value);
 	const fullKey = secretStorageKey(key);
-	logService?.trace('[secrets] storing encrypted secret for key:', fullKey);
+	logService?.trace("[secrets] storing encrypted secret for key:", fullKey);
 	storageSet(fullKey, encrypted);
-	logService?.trace('[secrets] stored encrypted secret for key:', fullKey);
+	logService?.trace("[secrets] stored encrypted secret for key:", fullKey);
 }
 
 /**
@@ -83,10 +89,12 @@ export const CROSS_APP_SHARED_SECRET_KEYS: readonly string[] = [
 	'{"extensionId":"vscode.github-authentication","key":"github.auth"}',
 ];
 
-export const ISecretStorageService = createDecorator<ISecretStorageService>('secretStorageService');
+export const ISecretStorageService = createDecorator<ISecretStorageService>(
+	"secretStorageService",
+);
 
 export interface ISecretStorageProvider {
-	type: 'in-memory' | 'persisted' | 'unknown';
+	type: "in-memory" | "persisted" | "unknown";
 	get(key: string): Promise<string | undefined>;
 	set(key: string, value: string): Promise<void>;
 	delete(key: string): Promise<void>;
@@ -98,17 +106,25 @@ export interface ISecretStorageService extends ISecretStorageProvider {
 	readonly onDidChangeSecret: Event<string>;
 }
 
-export class BaseSecretStorageService extends Disposable implements ISecretStorageService {
+export class BaseSecretStorageService
+	extends Disposable
+	implements ISecretStorageService
+{
 	declare readonly _serviceBrand: undefined;
 
-	protected readonly onDidChangeSecretEmitter = this._register(new Emitter<string>());
-	readonly onDidChangeSecret: Event<string> = this.onDidChangeSecretEmitter.event;
+	protected readonly onDidChangeSecretEmitter = this._register(
+		new Emitter<string>(),
+	);
+	readonly onDidChangeSecret: Event<string> =
+		this.onDidChangeSecretEmitter.event;
 
 	protected readonly _sequencer = new SequencerByKey<string>();
 
-	private _type: 'in-memory' | 'persisted' | 'unknown' = 'unknown';
+	private _type: "in-memory" | "persisted" | "unknown" = "unknown";
 
-	private readonly _onDidChangeValueDisposable = this._register(new DisposableStore());
+	private readonly _onDidChangeValueDisposable = this._register(
+		new DisposableStore(),
+	);
 
 	constructor(
 		private readonly _useInMemoryStorage: boolean,
@@ -131,7 +147,9 @@ export class BaseSecretStorageService extends Disposable implements ISecretStora
 		return this._type;
 	}
 
-	private _lazyStorageService: Lazy<Promise<IStorageService>> = new Lazy(() => this.initialize());
+	private _lazyStorageService: Lazy<Promise<IStorageService>> = new Lazy(() =>
+		this.initialize(),
+	);
 	protected get resolvedStorageService() {
 		return this._lazyStorageService.value;
 	}
@@ -145,7 +163,9 @@ export class BaseSecretStorageService extends Disposable implements ISecretStora
 					key,
 					(fullKey) => this.getValueFromStorage(key, fullKey, storageService),
 					// If the storage service is in-memory, we don't need to decrypt
-					this._type === 'in-memory' ? (v) => Promise.resolve(v) : (v) => this._encryptionService.decrypt(v),
+					this._type === "in-memory"
+						? (v) => Promise.resolve(v)
+						: (v) => this._encryptionService.decrypt(v),
 					this._logService,
 				);
 			} catch (e) {
@@ -164,9 +184,12 @@ export class BaseSecretStorageService extends Disposable implements ISecretStora
 				await writeEncryptedSecret(
 					key,
 					value,
-					(fullKey, encrypted) => this.setValueInStorage(key, fullKey, encrypted, storageService),
+					(fullKey, encrypted) =>
+						this.setValueInStorage(key, fullKey, encrypted, storageService),
 					// If the storage service is in-memory, we don't need to encrypt
-					this._type === 'in-memory' ? (v) => Promise.resolve(v) : (v) => this._encryptionService.encrypt(v),
+					this._type === "in-memory"
+						? (v) => Promise.resolve(v)
+						: (v) => this._encryptionService.encrypt(v),
 					this._logService,
 				);
 			} catch (e) {
@@ -181,63 +204,110 @@ export class BaseSecretStorageService extends Disposable implements ISecretStora
 			const storageService = await this.resolvedStorageService;
 
 			const fullKey = secretStorageKey(key);
-			this._logService.trace('[secrets] deleting secret for key:', fullKey);
-			const scope = this.useSharedStorage(key) ? StorageScope.APPLICATION_SHARED : StorageScope.APPLICATION;
+			this._logService.trace("[secrets] deleting secret for key:", fullKey);
+			const scope = this.useSharedStorage(key)
+				? StorageScope.APPLICATION_SHARED
+				: StorageScope.APPLICATION;
 			storageService.remove(fullKey, scope);
-			this._logService.trace('[secrets] deleted secret for key:', fullKey);
+			this._logService.trace("[secrets] deleted secret for key:", fullKey);
 		});
 	}
 
 	keys(): Promise<string[]> {
-		return this._sequencer.queue('__keys__', async () => {
+		return this._sequencer.queue("__keys__", async () => {
 			const storageService = await this.resolvedStorageService;
-			this._logService.trace('[secrets] fetching keys of all secrets');
-			const allKeys = storageService.keys(StorageScope.APPLICATION, StorageTarget.MACHINE);
-			this._logService.trace('[secrets] fetched keys of all secrets');
-			return allKeys.filter(key => key.startsWith(SECRET_STORAGE_PREFIX)).map(key => key.slice(SECRET_STORAGE_PREFIX.length));
+			this._logService.trace("[secrets] fetching keys of all secrets");
+			const allKeys = storageService.keys(
+				StorageScope.APPLICATION,
+				StorageTarget.MACHINE,
+			);
+			this._logService.trace("[secrets] fetched keys of all secrets");
+			return allKeys
+				.filter((key) => key.startsWith(SECRET_STORAGE_PREFIX))
+				.map((key) => key.slice(SECRET_STORAGE_PREFIX.length));
 		});
 	}
 
-	private getValueFromStorage(key: string, fullKey: string, storageService: IStorageService): string | undefined {
+	private getValueFromStorage(
+		key: string,
+		fullKey: string,
+		storageService: IStorageService,
+	): string | undefined {
 		if (this.useSharedStorage(key)) {
-			this._logService.trace(`[SecretStorageService] Fetching value for cross-app shared secret: ${fullKey}`);
+			this._logService.trace(
+				`[SecretStorageService] Fetching value for cross-app shared secret: ${fullKey}`,
+			);
 			return storageService.get(fullKey, StorageScope.APPLICATION_SHARED);
 		}
 		return storageService.get(fullKey, StorageScope.APPLICATION);
 	}
 
-	private setValueInStorage(key: string, fullKey: string, value: string, storageService: IStorageService): void {
+	private setValueInStorage(
+		key: string,
+		fullKey: string,
+		value: string,
+		storageService: IStorageService,
+	): void {
 		if (this.useSharedStorage(key)) {
-			this._logService.trace(`[SecretStorageService] Setting value for cross-app shared secret: ${fullKey}`);
-			storageService.store(fullKey, value, StorageScope.APPLICATION_SHARED, StorageTarget.MACHINE);
+			this._logService.trace(
+				`[SecretStorageService] Setting value for cross-app shared secret: ${fullKey}`,
+			);
+			storageService.store(
+				fullKey,
+				value,
+				StorageScope.APPLICATION_SHARED,
+				StorageTarget.MACHINE,
+			);
 			return;
 		}
-		storageService.store(fullKey, value, StorageScope.APPLICATION, StorageTarget.MACHINE);
+		storageService.store(
+			fullKey,
+			value,
+			StorageScope.APPLICATION,
+			StorageTarget.MACHINE,
+		);
 	}
 
 	private async initialize(): Promise<IStorageService> {
 		let storageService;
-		if (!this._useInMemoryStorage && await this._encryptionService.isEncryptionAvailable()) {
-			this._logService.trace(`[SecretStorageService] Encryption is available, using persisted storage`);
-			this._type = 'persisted';
+		if (
+			!this._useInMemoryStorage &&
+			(await this._encryptionService.isEncryptionAvailable())
+		) {
+			this._logService.trace(
+				`[SecretStorageService] Encryption is available, using persisted storage`,
+			);
+			this._type = "persisted";
 			storageService = this._storageService;
 		} else {
 			// If we already have an in-memory storage service, we don't need to recreate it
-			if (this._type === 'in-memory') {
+			if (this._type === "in-memory") {
 				return this._storageService;
 			}
-			this._logService.trace('[SecretStorageService] Encryption is not available, falling back to in-memory storage');
-			this._type = 'in-memory';
+			this._logService.trace(
+				"[SecretStorageService] Encryption is not available, falling back to in-memory storage",
+			);
+			this._type = "in-memory";
 			storageService = this._register(new InMemoryStorageService());
 		}
 
 		this._onDidChangeValueDisposable.clear();
-		this._onDidChangeValueDisposable.add(Event.any<IStorageValueChangeEvent>(
-			storageService.onDidChangeValue(StorageScope.APPLICATION, undefined, this._onDidChangeValueDisposable),
-			storageService.onDidChangeValue(StorageScope.APPLICATION_SHARED, undefined, this._onDidChangeValueDisposable),
-		)(e => {
-			this.onDidChangeValue(e.key);
-		}));
+		this._onDidChangeValueDisposable.add(
+			Event.any<IStorageValueChangeEvent>(
+				storageService.onDidChangeValue(
+					StorageScope.APPLICATION,
+					undefined,
+					this._onDidChangeValueDisposable,
+				),
+				storageService.onDidChangeValue(
+					StorageScope.APPLICATION_SHARED,
+					undefined,
+					this._onDidChangeValueDisposable,
+				),
+			)((e) => {
+				this.onDidChangeValue(e.key);
+			}),
+		);
 		return storageService;
 	}
 
@@ -252,7 +322,9 @@ export class BaseSecretStorageService extends Disposable implements ISecretStora
 
 		const secretKey = key.slice(SECRET_STORAGE_PREFIX.length);
 
-		this._logService.trace(`[SecretStorageService] Notifying change in value for secret: ${secretKey}`);
+		this._logService.trace(
+			`[SecretStorageService] Notifying change in value for secret: ${secretKey}`,
+		);
 		this.onDidChangeSecretEmitter.fire(secretKey);
 	}
 }

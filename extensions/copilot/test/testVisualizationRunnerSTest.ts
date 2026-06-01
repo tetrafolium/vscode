@@ -4,10 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 import { enableHotReload, hotRequire } from '@hediet/node-reload';
 import path from 'path';
-import { IDebugValueEditorGlobals, IPlaygroundRunnerGlobals } from '../src/util/common/debugValueEditorGlobals';
+import {
+	IDebugValueEditorGlobals,
+	IPlaygroundRunnerGlobals,
+} from '../src/util/common/debugValueEditorGlobals';
 
 enableHotReload({ loggingEnabled: true });
-
 
 /** See {@link file://./../.vscode/extensions/visualization-runner/README.md}, this is for stests and jsx tree visualization */
 
@@ -18,16 +20,23 @@ function run(args: { fileName: string; path: string }) {
 	runCurrentTest();
 }
 
-const g = globalThis as unknown as IDebugValueEditorGlobals & IPlaygroundRunnerGlobals;
+const g = globalThis as unknown as IDebugValueEditorGlobals &
+	IPlaygroundRunnerGlobals;
 g.$$playgroundRunner_data = { currentPath: [] };
 
-
-g.$$debugValueEditor_run = (...args) => { setTimeout(() => run(...args), 0); };
-(g.$$debugValueEditor_debugChannels ?? (g.$$debugValueEditor_debugChannels = {}))['run'] = host => ({
-	handleRequest: (args) => { setTimeout(() => run(args as any), 0); }
+g.$$debugValueEditor_run = (...args) => {
+	setTimeout(() => run(...args), 0);
+};
+(g.$$debugValueEditor_debugChannels ??
+	(g.$$debugValueEditor_debugChannels = {}))['run'] = (host) => ({
+	handleRequest: (args) => {
+		setTimeout(() => run(args as any), 0);
+	},
 });
 
-let runnerFn: (typeof import('./testVisualizationRunnerSTestRunner'))['run'] | undefined = undefined;
+let runnerFn:
+	| (typeof import('./testVisualizationRunnerSTestRunner'))['run']
+	| undefined = undefined;
 
 let hotRequireDisposable: any;
 let currentFileName: string | undefined = undefined;
@@ -36,21 +45,26 @@ function setTestFile(fileName: string) {
 		return;
 	}
 	currentFileName = fileName;
-	if (hotRequireDisposable) { hotRequireDisposable.dispose(); }
+	if (hotRequireDisposable) {
+		hotRequireDisposable.dispose();
+	}
 	let isFirst = true;
-	hotRequireDisposable = hotRequire(module, './testVisualizationRunnerSTestRunner.ts', (cur: typeof import('./testVisualizationRunnerSTestRunner')) => {
-		runnerFn = cur.run;
+	hotRequireDisposable = hotRequire(
+		module,
+		'./testVisualizationRunnerSTestRunner.ts',
+		(cur: typeof import('./testVisualizationRunnerSTestRunner')) => {
+			runnerFn = cur.run;
 
-		if (isFirst) {
-			console.log('> Loading tests');
-			isFirst = false;
-		} else {
-			console.log('> Running test: ' + currentFullName);
-			runCurrentTest();
-		}
-	});
+			if (isFirst) {
+				console.log('> Loading tests');
+				isFirst = false;
+			} else {
+				console.log('> Running test: ' + currentFullName);
+				runCurrentTest();
+			}
+		},
+	);
 }
-
 
 let currentFullName: string = '';
 function setTest(path: string) {
@@ -60,7 +74,10 @@ function setTest(path: string) {
 setTest('');
 
 async function runCurrentTest() {
-	const normalizedFileName = path.join(__dirname, path.relative(__dirname, currentFileName!));
+	const normalizedFileName = path.join(
+		__dirname,
+		path.relative(__dirname, currentFileName!),
+	);
 	if (!runnerFn) {
 		console.error('Runner not loaded yet');
 	} else {

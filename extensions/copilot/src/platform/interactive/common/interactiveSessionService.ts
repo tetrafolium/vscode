@@ -6,7 +6,10 @@
 import type { Uri } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IInteractiveSessionService = createServiceIdentifier<IInteractiveSessionService>('IInteractiveSessionService');
+export const IInteractiveSessionService =
+	createServiceIdentifier<IInteractiveSessionService>(
+		'IInteractiveSessionService',
+	);
 export interface IInteractiveSessionService {
 	readonly _serviceBrand: undefined;
 	transferActiveChat(workspaceUri: Uri): Thenable<void>;

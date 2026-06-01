@@ -3,10 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	export namespace env {
-
 		/**
 		 * Namespace for power-related APIs including monitoring system power state
 		 * and preventing the system from entering low-power modes.
@@ -15,7 +13,6 @@ declare module 'vscode' {
 		 * In web or remote scenarios, events will not fire and queries return default values.
 		 */
 		export namespace power {
-
 			// === Events ===
 
 			/**
@@ -85,7 +82,9 @@ declare module 'vscode' {
 			 * is considered idle.
 			 * @returns The system's current idle state.
 			 */
-			export function getSystemIdleState(idleThresholdSeconds: number): Thenable<SystemIdleState>;
+			export function getSystemIdleState(
+				idleThresholdSeconds: number,
+			): Thenable<SystemIdleState>;
 
 			/**
 			 * Gets the system's idle time in seconds.
@@ -127,24 +126,33 @@ declare module 'vscode' {
 			 *
 			 * @returns A {@link PowerSaveBlocker} that can be disposed to stop blocking.
 			 */
-			export function startPowerSaveBlocker(type: PowerSaveBlockerType): Thenable<PowerSaveBlocker>;
+			export function startPowerSaveBlocker(
+				type: PowerSaveBlockerType,
+			): Thenable<PowerSaveBlocker>;
 
 			// === Types ===
 
 			/**
 			 * Represents the system's idle state.
 			 */
-			export type SystemIdleState = 'active' | 'idle' | 'locked' | 'unknown';
+			export type SystemIdleState = "active" | "idle" | "locked" | "unknown";
 
 			/**
 			 * Represents the system's thermal state.
 			 */
-			export type ThermalState = 'unknown' | 'nominal' | 'fair' | 'serious' | 'critical';
+			export type ThermalState =
+				| "unknown"
+				| "nominal"
+				| "fair"
+				| "serious"
+				| "critical";
 
 			/**
 			 * The type of power save blocker.
 			 */
-			export type PowerSaveBlockerType = 'prevent-app-suspension' | 'prevent-display-sleep';
+			export type PowerSaveBlockerType =
+				| "prevent-app-suspension"
+				| "prevent-display-sleep";
 
 			/**
 			 * A power save blocker that prevents the system from entering low-power mode.

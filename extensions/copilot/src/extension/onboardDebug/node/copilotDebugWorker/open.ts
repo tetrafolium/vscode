@@ -5,7 +5,10 @@
 
 import { spawn } from 'child_process';
 
-export const openVscodeUri = (remoteCommand: string | undefined, uri: string): Promise<void> => {
+export const openVscodeUri = (
+	remoteCommand: string | undefined,
+	uri: string,
+): Promise<void> => {
 	let command: string;
 	let shell = false;
 	let args = [uri];
@@ -37,11 +40,11 @@ export const openVscodeUri = (remoteCommand: string | undefined, uri: string): P
 			shell,
 			env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined },
 		});
-		cmd.stdout.setEncoding('utf8').on('data', d => std += d);
-		cmd.stderr.setEncoding('utf8').on('data', d => std += d);
+		cmd.stdout.setEncoding('utf8').on('data', (d) => (std += d));
+		cmd.stderr.setEncoding('utf8').on('data', (d) => (std += d));
 
 		cmd.on('error', reject);
-		cmd.on('exit', code => {
+		cmd.on('exit', (code) => {
 			if (code !== 0) {
 				reject(new Error(`Failed to open: ${std}`));
 			} else {

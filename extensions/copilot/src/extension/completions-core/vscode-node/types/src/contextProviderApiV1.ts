@@ -30,7 +30,9 @@ import {
  * ```
  */
 export interface ContextProviderApiV1 {
-	registerContextProvider<T extends SupportedContextItem>(provider: ContextProvider<T>): Disposable;
+	registerContextProvider<T extends SupportedContextItem>(
+		provider: ContextProvider<T>,
+	): Disposable;
 }
 
 /**
@@ -59,12 +61,20 @@ export interface ContextProvider<T extends SupportedContextItem> {
 }
 
 export type ResolveOnTimeoutResult<T> = T | readonly T[];
-export type ResolveResult<T> = Promise<T> | Promise<readonly T[]> | AsyncIterable<T>;
+export type ResolveResult<T> =
+	| Promise<T>
+	| Promise<readonly T[]>
+	| AsyncIterable<T>;
 
 export interface ContextResolver<T extends SupportedContextItem> {
-	resolve(request: ResolveRequest, token: CancellationToken): ResolveResult<T>;
+	resolve(
+		request: ResolveRequest,
+		token: CancellationToken,
+	): ResolveResult<T>;
 	// Optional method to be invoked if the request timed out. This requests additional context items.
-	resolveOnTimeout?(request: ResolveRequest): ResolveOnTimeoutResult<T> | undefined;
+	resolveOnTimeout?(
+		request: ResolveRequest,
+	): ResolveOnTimeoutResult<T> | undefined;
 }
 
 /**
@@ -77,20 +87,31 @@ export interface ContextResolver<T extends SupportedContextItem> {
  * - the previousUsageStatistics, which contains information about the last request to the provider
  */
 export type ResolutionStatus = 'full' | 'partial' | 'none' | 'error';
-export type UsageStatus = ResolutionStatus | 'partial_content_excluded' | 'none_content_excluded';
+export type UsageStatus =
+	| ResolutionStatus
+	| 'partial_content_excluded'
+	| 'none_content_excluded';
 
 export type ContextItemUsageDetails = {
 	id: string;
 	type: SupportedContextItemType;
 	origin?: ContextItemOrigin;
 } & (
-		| {
-			usage: Extract<UsageStatus, 'full' | 'partial' | 'partial_content_excluded'>;
+	| {
+			usage: Extract<
+				UsageStatus,
+				'full' | 'partial' | 'partial_content_excluded'
+			>;
 			expectedTokens: number;
 			actualTokens: number;
-		}
-		| { usage: Extract<UsageStatus, 'none' | 'none_content_excluded' | 'error'> }
-	);
+	  }
+	| {
+			usage: Extract<
+				UsageStatus,
+				'none' | 'none_content_excluded' | 'error'
+			>;
+	  }
+);
 
 export type ContextUsageStatistics = {
 	usage: UsageStatus;
@@ -203,7 +224,10 @@ export interface DiagnosticBag extends ContextItem {
 }
 
 export type SupportedContextItem = Trait | CodeSnippet | DiagnosticBag;
-export type SupportedContextItemType = 'Trait' | 'CodeSnippet' | 'DiagnosticBag';
+export type SupportedContextItemType =
+	| 'Trait'
+	| 'CodeSnippet'
+	| 'DiagnosticBag';
 export type ContextItemOrigin = 'request' | 'update';
 export namespace ContextItemOrigin {
 	export function is(value: string): value is ContextItemOrigin {

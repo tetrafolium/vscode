@@ -6,12 +6,13 @@
 import type * as vscode from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const ILanguageContextService = createServiceIdentifier<ILanguageContextService>('ILanguageContextService');
+export const ILanguageContextService =
+	createServiceIdentifier<ILanguageContextService>('ILanguageContextService');
 
 export enum ContextKind {
 	Snippet = 'snippet',
 	Trait = 'trait',
-	DiagnosticBag = 'diagnosticBag'
+	DiagnosticBag = 'diagnosticBag',
 }
 
 /**
@@ -119,7 +120,7 @@ export enum KnownSources {
 	populateCache = 'populateCache',
 	nes = 'nes',
 	chat = 'chat',
-	fix = 'fix'
+	fix = 'fix',
 }
 
 export enum TriggerKind {
@@ -162,7 +163,10 @@ export type RequestContext = {
 	/**
 	 * A list of proposed edits that should be applied before computing the context.
 	 */
-	proposedEdits?: { edit: vscode.TextEdit; source?: 'selectedCompletionInfo' }[];
+	proposedEdits?: {
+		edit: vscode.TextEdit;
+		source?: 'selectedCompletionInfo';
+	}[];
 
 	/**
 	 * If provided the telemetry will be sampled. A value of 1 will log every request, a value of
@@ -179,7 +183,9 @@ export interface ILanguageContextService {
 	 * Checks whether is language server context is activated for the
 	 * given text document or language.
 	 */
-	isActivated(documentOrLanguageId: vscode.TextDocument | string): Promise<boolean>;
+	isActivated(
+		documentOrLanguageId: vscode.TextDocument | string,
+	): Promise<boolean>;
 
 	/**
 	 * Populates the cache with context information for the given document and position.
@@ -188,7 +194,11 @@ export interface ILanguageContextService {
 	 * @param position The position in the document to populate the cache for.
 	 * @param context The context for the request.
 	 */
-	populateCache(document: vscode.TextDocument, position: vscode.Position, context: RequestContext): Promise<void>;
+	populateCache(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		context: RequestContext,
+	): Promise<void>;
 
 	/**
 	 * Retrieves the context for the given document and position.
@@ -199,7 +209,12 @@ export interface ILanguageContextService {
 	 * @param token A cancellation token.
 	 * @returns A promise that resolves to an array of context items.
 	 */
-	getContext(document: vscode.TextDocument, position: vscode.Position, context: RequestContext, token: vscode.CancellationToken): AsyncIterable<ContextItem>;
+	getContext(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		context: RequestContext,
+		token: vscode.CancellationToken,
+	): AsyncIterable<ContextItem>;
 
 	/**
 	 * Retrieves the context for the given document and position when a request timeout is reached.
@@ -214,17 +229,20 @@ export interface ILanguageContextService {
 	 * @param context The context for the request.
 	 * @returns An array of `ContextItem` or `undefined`.
 	 */
-	getContextOnTimeout(document: vscode.TextDocument, position: vscode.Position, context: RequestContext): readonly ContextItem[] | undefined;
+	getContextOnTimeout(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		context: RequestContext,
+	): readonly ContextItem[] | undefined;
 }
 
 class EmptyAsyncIterable<T> implements AsyncIterable<T> {
-	public async *[Symbol.asyncIterator](): AsyncIterator<T> {
-	}
+	public async *[Symbol.asyncIterator](): AsyncIterator<T> {}
 }
 export const NullLanguageContextService: ILanguageContextService = {
 	_serviceBrand: undefined,
 	isActivated: async () => false,
-	populateCache: async () => { },
+	populateCache: async () => {},
 	getContext: () => new EmptyAsyncIterable<ContextItem>(),
 	getContextOnTimeout: () => [],
 };

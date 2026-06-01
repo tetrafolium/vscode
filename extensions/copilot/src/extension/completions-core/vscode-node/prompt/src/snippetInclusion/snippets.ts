@@ -43,7 +43,10 @@ export interface SnippetWithProviderInfo extends ScoredSnippet {
 	semantics: SnippetSemantics;
 }
 
-type SnippetToAnnounce = Pick<SnippetWithProviderInfo, 'snippet' | 'semantics' | 'relativePath'>;
+type SnippetToAnnounce = Pick<
+	SnippetWithProviderInfo,
+	'snippet' | 'semantics' | 'relativePath'
+>;
 
 /**
  * A map from semantics enum to a human / LLM-readable label that we
@@ -68,7 +71,11 @@ const snippetSemanticsToString: { [key in SnippetSemantics]: string } = {
  */
 export function announceSnippet(snippet: SnippetToAnnounce) {
 	const semantics = snippetSemanticsToString[snippet.semantics];
-	const pluralizedSemantics = [SnippetSemantics.Snippets].includes(snippet.semantics) ? 'these' : 'this';
+	const pluralizedSemantics = [SnippetSemantics.Snippets].includes(
+		snippet.semantics,
+	)
+		? 'these'
+		: 'this';
 	const headline = snippet.relativePath
 		? `Compare ${pluralizedSemantics} ${semantics} from ${snippet.relativePath}:`
 		: `Compare ${pluralizedSemantics} ${semantics}:`;

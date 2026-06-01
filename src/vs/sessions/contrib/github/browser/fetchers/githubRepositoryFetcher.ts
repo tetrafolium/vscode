@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IGitHubRepository } from '../../common/types.js';
-import { GitHubApiClient, IGitHubApiResponse } from '../githubApiClient.js';
+import { IGitHubRepository } from "../../common/types.js";
+import { GitHubApiClient, IGitHubApiResponse } from "../githubApiClient.js";
 
 interface IGitHubRepoResponse {
 	readonly name: string;
@@ -20,31 +20,32 @@ interface IGitHubRepoResponse {
  * All methods return raw typed data with no caching or state.
  */
 export class GitHubRepositoryFetcher {
+	constructor(private readonly _apiClient: GitHubApiClient) {}
 
-	constructor(
-		private readonly _apiClient: GitHubApiClient,
-	) { }
-
-	async getRepository(owner: string, repo: string, etag?: string): Promise<IGitHubApiResponse<IGitHubRepository>> {
+	async getRepository(
+		owner: string,
+		repo: string,
+		etag?: string,
+	): Promise<IGitHubApiResponse<IGitHubRepository>> {
 		const response = await this._apiClient.request<IGitHubRepoResponse>(
-			'GET',
+			"GET",
 			`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
-			'githubApi.getRepository',
-			{ etag }
+			"githubApi.getRepository",
+			{ etag },
 		);
 
 		return {
 			...response,
 			data: response.data
 				? {
-					owner: response.data.owner.login,
-					name: response.data.name,
-					fullName: response.data.full_name,
-					defaultBranch: response.data.default_branch,
-					isPrivate: response.data.private,
-					description: response.data.description ?? '',
-				}
-				: undefined
+						owner: response.data.owner.login,
+						name: response.data.name,
+						fullName: response.data.full_name,
+						defaultBranch: response.data.default_branch,
+						isPrivate: response.data.private,
+						description: response.data.description ?? "",
+					}
+				: undefined,
 		};
 	}
 }

@@ -3,7 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { FetchMiddleware, HttpFetchFn, HttpRequest, HttpResponse } from './fetchTypes';
+import type {
+	FetchMiddleware,
+	HttpFetchFn,
+	HttpRequest,
+	HttpResponse,
+} from './fetchTypes';
 
 /**
  * Composes an array of middlewares into a single middleware. Middlewares
@@ -14,8 +19,11 @@ import type { FetchMiddleware, HttpFetchFn, HttpRequest, HttpResponse } from './
  * // equivalent to: a(b(c(httpFetch)))
  * ```
  */
-export function composeFetchMiddleware(...middlewares: readonly FetchMiddleware[]): FetchMiddleware {
-	return (baseFetch) => middlewares.reduceRight<HttpFetchFn>((next, mw) => mw(next), baseFetch);
+export function composeFetchMiddleware(
+	...middlewares: readonly FetchMiddleware[]
+): FetchMiddleware {
+	return (baseFetch) =>
+		middlewares.reduceRight<HttpFetchFn>((next, mw) => mw(next), baseFetch);
 }
 
 // ── Factory ─────────────────────────────────────────────────────────────
@@ -76,12 +84,17 @@ export interface AdvancedFetchOptions<T> {
  * });
  * ```
  */
-export function createAdvancedFetch<T>(options: AdvancedFetchOptions<T>): () => Promise<T> {
+export function createAdvancedFetch<T>(
+	options: AdvancedFetchOptions<T>,
+): () => Promise<T> {
 	const { httpFetch, parseResponse, middleware = [] } = options;
 	const composedFetch = composeFetchMiddleware(...middleware)(httpFetch);
 
 	return async () => {
-		const request = typeof options.request === 'function' ? await options.request() : options.request;
+		const request =
+			typeof options.request === 'function'
+				? await options.request()
+				: options.request;
 		const response = await composedFetch(request);
 		return parseResponse(response);
 	};

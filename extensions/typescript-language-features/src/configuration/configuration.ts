@@ -3,31 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import * as Proto from '../tsServer/protocol/protocol';
-import { readUnifiedConfig } from '../utils/configuration';
-import * as objects from '../utils/objects';
+import * as vscode from "vscode";
+import * as Proto from "../tsServer/protocol/protocol";
+import { readUnifiedConfig } from "../utils/configuration";
+import * as objects from "../utils/objects";
 
 export enum TsServerLogLevel {
 	Off,
 	Normal,
 	Terse,
 	Verbose,
-	RequestTime
+	RequestTime,
 }
 
 export namespace TsServerLogLevel {
 	export function fromString(value: string): TsServerLogLevel {
 		switch (value?.toLowerCase()) {
-			case 'normal':
+			case "normal":
 				return TsServerLogLevel.Normal;
-			case 'terse':
+			case "terse":
 				return TsServerLogLevel.Terse;
-			case 'verbose':
+			case "verbose":
 				return TsServerLogLevel.Verbose;
-			case 'requestTime':
+			case "requestTime":
 				return TsServerLogLevel.RequestTime;
-			case 'off':
+			case "off":
 			default:
 				return TsServerLogLevel.Off;
 		}
@@ -36,16 +36,16 @@ export namespace TsServerLogLevel {
 	export function toString(value: TsServerLogLevel): string {
 		switch (value) {
 			case TsServerLogLevel.Normal:
-				return 'normal';
+				return "normal";
 			case TsServerLogLevel.Terse:
-				return 'terse';
+				return "terse";
 			case TsServerLogLevel.Verbose:
-				return 'verbose';
+				return "verbose";
 			case TsServerLogLevel.RequestTime:
-				return 'requestTime';
+				return "requestTime";
 			case TsServerLogLevel.Off:
 			default:
-				return 'off';
+				return "off";
 		}
 	}
 }
@@ -58,7 +58,6 @@ export const enum SyntaxServerConfiguration {
 }
 
 export class ImplicitProjectConfiguration {
-
 	public readonly target: string | undefined;
 	public readonly module: string | undefined;
 	public readonly checkJs: boolean;
@@ -71,42 +70,77 @@ export class ImplicitProjectConfiguration {
 		this.target = ImplicitProjectConfiguration.readTarget(configuration);
 		this.module = ImplicitProjectConfiguration.readModule(configuration);
 		this.checkJs = ImplicitProjectConfiguration.readCheckJs(configuration);
-		this.experimentalDecorators = ImplicitProjectConfiguration.readExperimentalDecorators(configuration);
-		this.strictNullChecks = ImplicitProjectConfiguration.readImplicitStrictNullChecks(configuration);
-		this.strictFunctionTypes = ImplicitProjectConfiguration.readImplicitStrictFunctionTypes(configuration);
-		this.strict = ImplicitProjectConfiguration.readImplicitStrict(configuration);
+		this.experimentalDecorators =
+			ImplicitProjectConfiguration.readExperimentalDecorators(configuration);
+		this.strictNullChecks =
+			ImplicitProjectConfiguration.readImplicitStrictNullChecks(configuration);
+		this.strictFunctionTypes =
+			ImplicitProjectConfiguration.readImplicitStrictFunctionTypes(
+				configuration,
+			);
+		this.strict =
+			ImplicitProjectConfiguration.readImplicitStrict(configuration);
 	}
 
 	public isEqualTo(other: ImplicitProjectConfiguration): boolean {
 		return objects.equals(this, other);
 	}
 
-	private static readTarget(configuration: vscode.WorkspaceConfiguration): string | undefined {
-		return configuration.get<string>('js/ts.implicitProjectConfig.target');
+	private static readTarget(
+		configuration: vscode.WorkspaceConfiguration,
+	): string | undefined {
+		return configuration.get<string>("js/ts.implicitProjectConfig.target");
 	}
 
-	private static readModule(configuration: vscode.WorkspaceConfiguration): string | undefined {
-		return configuration.get<string>('js/ts.implicitProjectConfig.module');
+	private static readModule(
+		configuration: vscode.WorkspaceConfiguration,
+	): string | undefined {
+		return configuration.get<string>("js/ts.implicitProjectConfig.module");
 	}
 
-	private static readCheckJs(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('js/ts.implicitProjectConfig.checkJs', false);
+	private static readCheckJs(
+		configuration: vscode.WorkspaceConfiguration,
+	): boolean {
+		return configuration.get<boolean>(
+			"js/ts.implicitProjectConfig.checkJs",
+			false,
+		);
 	}
 
-	private static readExperimentalDecorators(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('js/ts.implicitProjectConfig.experimentalDecorators', false);
+	private static readExperimentalDecorators(
+		configuration: vscode.WorkspaceConfiguration,
+	): boolean {
+		return configuration.get<boolean>(
+			"js/ts.implicitProjectConfig.experimentalDecorators",
+			false,
+		);
 	}
 
-	private static readImplicitStrictNullChecks(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('js/ts.implicitProjectConfig.strictNullChecks', true);
+	private static readImplicitStrictNullChecks(
+		configuration: vscode.WorkspaceConfiguration,
+	): boolean {
+		return configuration.get<boolean>(
+			"js/ts.implicitProjectConfig.strictNullChecks",
+			true,
+		);
 	}
 
-	private static readImplicitStrictFunctionTypes(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('js/ts.implicitProjectConfig.strictFunctionTypes', true);
+	private static readImplicitStrictFunctionTypes(
+		configuration: vscode.WorkspaceConfiguration,
+	): boolean {
+		return configuration.get<boolean>(
+			"js/ts.implicitProjectConfig.strictFunctionTypes",
+			true,
+		);
 	}
 
-	private static readImplicitStrict(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('js/ts.implicitProjectConfig.strict', true);
+	private static readImplicitStrict(
+		configuration: vscode.WorkspaceConfiguration,
+	): boolean {
+		return configuration.get<boolean>(
+			"js/ts.implicitProjectConfig.strict",
+			true,
+		);
 	}
 }
 
@@ -138,14 +172,17 @@ export interface TypeScriptServiceConfiguration {
 	readonly enablePromptUseWorkspaceTsdk: boolean;
 	readonly useVsCodeWatcher: boolean;
 	readonly watchOptions: Proto.WatchOptions | undefined;
-	readonly includePackageJsonAutoImports: 'auto' | 'on' | 'off' | undefined;
+	readonly includePackageJsonAutoImports: "auto" | "on" | "off" | undefined;
 	readonly enableTsServerTracing: boolean;
 	readonly localNodePath: string | null;
 	readonly globalNodePath: string | null;
 	readonly workspaceSymbolsExcludeLibrarySymbols: boolean;
 }
 
-export function areServiceConfigurationsEqual(a: TypeScriptServiceConfiguration, b: TypeScriptServiceConfiguration): boolean {
+export function areServiceConfigurationsEqual(
+	a: TypeScriptServiceConfiguration,
+	b: TypeScriptServiceConfiguration,
+): boolean {
 	return objects.equals(a, b);
 }
 
@@ -153,12 +190,10 @@ export interface ServiceConfigurationProvider {
 	loadFromWorkspace(): TypeScriptServiceConfiguration;
 }
 
-const vscodeWatcherName = 'vscode';
+const vscodeWatcherName = "vscode";
 type vscodeWatcherName = typeof vscodeWatcherName;
 
-
 export abstract class BaseServiceConfigurationProvider implements ServiceConfigurationProvider {
-
 	public loadFromWorkspace(): TypeScriptServiceConfiguration {
 		const configuration = vscode.workspace.getConfiguration();
 		return {
@@ -168,11 +203,16 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 			npmLocation: this.readNpmLocation(),
 			tsServerLogLevel: this.readTsServerLogLevel(),
 			tsServerPluginPaths: this.readTsServerPluginPaths(),
-			implicitProjectConfiguration: new ImplicitProjectConfiguration(configuration),
-			disableAutomaticTypeAcquisition: this.readDisableAutomaticTypeAcquisition(configuration),
+			implicitProjectConfiguration: new ImplicitProjectConfiguration(
+				configuration,
+			),
+			disableAutomaticTypeAcquisition:
+				this.readDisableAutomaticTypeAcquisition(configuration),
 			useSyntaxServer: this.readUseSyntaxServer(configuration),
-			webProjectWideIntellisenseEnabled: this.readWebProjectWideIntellisenseEnable(),
-			webProjectWideIntellisenseSuppressSemanticErrors: this.readWebProjectWideIntellisenseSuppressSemanticErrors(),
+			webProjectWideIntellisenseEnabled:
+				this.readWebProjectWideIntellisenseEnable(),
+			webProjectWideIntellisenseSuppressSemanticErrors:
+				this.readWebProjectWideIntellisenseSuppressSemanticErrors(),
 			webTypeAcquisitionEnabled: this.readWebTypeAcquisition(),
 			enableDiagnosticsTelemetry: this.readEnableDiagnosticsTelemetry(),
 			enableProjectDiagnostics: this.readEnableProjectDiagnostics(),
@@ -187,53 +227,93 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 			enableTsServerTracing: this.readEnableTsServerTracing(),
 			localNodePath: this.readLocalNodePath(configuration),
 			globalNodePath: this.readGlobalNodePath(configuration),
-			workspaceSymbolsExcludeLibrarySymbols: this.readWorkspaceSymbolsExcludeLibrarySymbols(),
+			workspaceSymbolsExcludeLibrarySymbols:
+				this.readWorkspaceSymbolsExcludeLibrarySymbols(),
 		};
 	}
 
-	protected abstract readGlobalTsdk(configuration: vscode.WorkspaceConfiguration): string | null;
-	protected abstract readLocalTsdk(configuration: vscode.WorkspaceConfiguration): string | null;
-	protected abstract readLocalNodePath(configuration: vscode.WorkspaceConfiguration): string | null;
-	protected abstract readGlobalNodePath(configuration: vscode.WorkspaceConfiguration): string | null;
+	protected abstract readGlobalTsdk(
+		configuration: vscode.WorkspaceConfiguration,
+	): string | null;
+	protected abstract readLocalTsdk(
+		configuration: vscode.WorkspaceConfiguration,
+	): string | null;
+	protected abstract readLocalNodePath(
+		configuration: vscode.WorkspaceConfiguration,
+	): string | null;
+	protected abstract readGlobalNodePath(
+		configuration: vscode.WorkspaceConfiguration,
+	): string | null;
 
 	protected readTsServerLogLevel(): TsServerLogLevel {
-		const setting = readUnifiedConfig<string>('tsserver.log', 'off', { fallbackSection: 'typescript' });
+		const setting = readUnifiedConfig<string>("tsserver.log", "off", {
+			fallbackSection: "typescript",
+		});
 		return TsServerLogLevel.fromString(setting);
 	}
 
 	protected readTsServerPluginPaths(): string[] {
-		return readUnifiedConfig<string[]>('tsserver.pluginPaths', [], { fallbackSection: 'typescript' });
+		return readUnifiedConfig<string[]>("tsserver.pluginPaths", [], {
+			fallbackSection: "typescript",
+		});
 	}
 
 	protected readNpmLocation(): string | null {
-		return readUnifiedConfig<string | null>('tsserver.npm.path', null, { fallbackSection: 'typescript', fallbackSubSectionNameOverride: 'npm' });
+		return readUnifiedConfig<string | null>("tsserver.npm.path", null, {
+			fallbackSection: "typescript",
+			fallbackSubSectionNameOverride: "npm",
+		});
 	}
 
-	protected readDisableAutomaticTypeAcquisition(configuration: vscode.WorkspaceConfiguration): boolean {
-		const enabled = readUnifiedConfig<boolean | undefined>('tsserver.automaticTypeAcquisition.enabled', undefined, { fallbackSection: 'typescript' });
+	protected readDisableAutomaticTypeAcquisition(
+		configuration: vscode.WorkspaceConfiguration,
+	): boolean {
+		const enabled = readUnifiedConfig<boolean | undefined>(
+			"tsserver.automaticTypeAcquisition.enabled",
+			undefined,
+			{ fallbackSection: "typescript" },
+		);
 		if (enabled !== undefined) {
 			return !enabled;
 		}
 		// Fall back to the old deprecated setting
-		return configuration.get<boolean>('typescript.disableAutomaticTypeAcquisition', false);
+		return configuration.get<boolean>(
+			"typescript.disableAutomaticTypeAcquisition",
+			false,
+		);
 	}
 
 	protected readLocale(): string | null {
-		const value = readUnifiedConfig<string>('locale', 'auto', { fallbackSection: 'typescript' });
-		return !value || value === 'auto' ? null : value;
+		const value = readUnifiedConfig<string>("locale", "auto", {
+			fallbackSection: "typescript",
+		});
+		return !value || value === "auto" ? null : value;
 	}
 
-	protected readUseSyntaxServer(configuration: vscode.WorkspaceConfiguration): SyntaxServerConfiguration {
-		const value = readUnifiedConfig<string | undefined>('tsserver.useSyntaxServer', undefined, { fallbackSection: 'typescript' });
+	protected readUseSyntaxServer(
+		configuration: vscode.WorkspaceConfiguration,
+	): SyntaxServerConfiguration {
+		const value = readUnifiedConfig<string | undefined>(
+			"tsserver.useSyntaxServer",
+			undefined,
+			{ fallbackSection: "typescript" },
+		);
 		switch (value) {
-			case 'never': return SyntaxServerConfiguration.Never;
-			case 'always': return SyntaxServerConfiguration.Always;
-			case 'auto': return SyntaxServerConfiguration.Auto;
+			case "never":
+				return SyntaxServerConfiguration.Never;
+			case "always":
+				return SyntaxServerConfiguration.Always;
+			case "auto":
+				return SyntaxServerConfiguration.Auto;
 		}
 
 		// Fallback to deprecated setting
-		const deprecatedValue = configuration.get<boolean | string>('typescript.tsserver.useSeparateSyntaxServer', true);
-		if (deprecatedValue === 'forAllRequests') { // Undocumented setting
+		const deprecatedValue = configuration.get<boolean | string>(
+			"typescript.tsserver.useSeparateSyntaxServer",
+			true,
+		);
+		if (deprecatedValue === "forAllRequests") {
+			// Undocumented setting
 			return SyntaxServerConfiguration.Always;
 		}
 		if (deprecatedValue === true) {
@@ -244,40 +324,59 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 
 	protected readEnableDiagnosticsTelemetry(): boolean {
 		// This setting does not appear in the settings view, as it is not to be enabled by users outside the team
-		return readUnifiedConfig<boolean>('enableDiagnosticsTelemetry', false, { fallbackSection: 'typescript' });
+		return readUnifiedConfig<boolean>("enableDiagnosticsTelemetry", false, {
+			fallbackSection: "typescript",
+		});
 	}
 
 	protected readEnableProjectDiagnostics(): boolean {
-		return readUnifiedConfig<boolean>('tsserver.experimental.enableProjectDiagnostics', false, { fallbackSection: 'typescript' });
+		return readUnifiedConfig<boolean>(
+			"tsserver.experimental.enableProjectDiagnostics",
+			false,
+			{ fallbackSection: "typescript" },
+		);
 	}
 
-	private readUseVsCodeWatcher(configuration: vscode.WorkspaceConfiguration): boolean {
-		const watcherExcludes = configuration.get<Record<string, boolean>>('files.watcherExclude') ?? {};
+	private readUseVsCodeWatcher(
+		configuration: vscode.WorkspaceConfiguration,
+	): boolean {
+		const watcherExcludes =
+			configuration.get<Record<string, boolean>>("files.watcherExclude") ?? {};
 		if (
-			watcherExcludes['**/node_modules/*/**'] === true || // VS Code default prior to 1.94.x
-			watcherExcludes['**/node_modules/**'] === true ||
-			watcherExcludes['**/node_modules'] === true ||
-			watcherExcludes['**'] === true	 					// VS Code Watching is entirely disabled
+			watcherExcludes["**/node_modules/*/**"] === true || // VS Code default prior to 1.94.x
+			watcherExcludes["**/node_modules/**"] === true ||
+			watcherExcludes["**/node_modules"] === true ||
+			watcherExcludes["**"] === true // VS Code Watching is entirely disabled
 		) {
 			return false;
 		}
 
-		const experimentalConfig = configuration.inspect('typescript.tsserver.experimental.useVsCodeWatcher');
-		if (typeof experimentalConfig?.globalValue === 'boolean') {
+		const experimentalConfig = configuration.inspect(
+			"typescript.tsserver.experimental.useVsCodeWatcher",
+		);
+		if (typeof experimentalConfig?.globalValue === "boolean") {
 			return experimentalConfig.globalValue;
 		}
-		if (typeof experimentalConfig?.workspaceValue === 'boolean') {
+		if (typeof experimentalConfig?.workspaceValue === "boolean") {
 			return experimentalConfig.workspaceValue;
 		}
-		if (typeof experimentalConfig?.workspaceFolderValue === 'boolean') {
+		if (typeof experimentalConfig?.workspaceFolderValue === "boolean") {
 			return experimentalConfig.workspaceFolderValue;
 		}
 
-		return readUnifiedConfig<Proto.WatchOptions | vscodeWatcherName>('tsserver.watchOptions', vscodeWatcherName, { fallbackSection: 'typescript' }) === vscodeWatcherName;
+		return (
+			readUnifiedConfig<Proto.WatchOptions | vscodeWatcherName>(
+				"tsserver.watchOptions",
+				vscodeWatcherName,
+				{ fallbackSection: "typescript" },
+			) === vscodeWatcherName
+		);
 	}
 
 	private readWatchOptions(): Proto.WatchOptions | undefined {
-		const watchOptions = readUnifiedConfig<Proto.WatchOptions | vscodeWatcherName | undefined>('tsserver.watchOptions', undefined, { fallbackSection: 'typescript' });
+		const watchOptions = readUnifiedConfig<
+			Proto.WatchOptions | vscodeWatcherName | undefined
+		>("tsserver.watchOptions", undefined, { fallbackSection: "typescript" });
 		if (!watchOptions || watchOptions === vscodeWatcherName) {
 			return undefined;
 		}
@@ -286,14 +385,29 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 		return { ...(watchOptions ?? {}) };
 	}
 
-	protected readIncludePackageJsonAutoImports(): 'auto' | 'on' | 'off' | undefined {
-		return readUnifiedConfig<'auto' | 'on' | 'off' | undefined>('preferences.includePackageJsonAutoImports', undefined, { fallbackSection: 'typescript' });
+	protected readIncludePackageJsonAutoImports():
+		| "auto"
+		| "on"
+		| "off"
+		| undefined {
+		return readUnifiedConfig<"auto" | "on" | "off" | undefined>(
+			"preferences.includePackageJsonAutoImports",
+			undefined,
+			{ fallbackSection: "typescript" },
+		);
 	}
 
 	protected readMaxTsServerMemory(): number {
 		const defaultMaxMemory = 3072;
 		const minimumMaxMemory = 128;
-		const memoryInMB = readUnifiedConfig<number>('tsserver.maxMemory', defaultMaxMemory, { fallbackSection: 'typescript', fallbackSubSectionNameOverride: 'tsserver.maxTsServerMemory' });
+		const memoryInMB = readUnifiedConfig<number>(
+			"tsserver.maxMemory",
+			defaultMaxMemory,
+			{
+				fallbackSection: "typescript",
+				fallbackSubSectionNameOverride: "tsserver.maxTsServerMemory",
+			},
+		);
 		if (!Number.isSafeInteger(memoryInMB)) {
 			return defaultMaxMemory;
 		}
@@ -301,13 +415,23 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 	}
 
 	protected readDiagnosticDir(): string | undefined {
-		const diagnosticDir = readUnifiedConfig<string | undefined>('tsserver.diagnosticDir', undefined, { fallbackSection: 'typescript' });
-		return typeof diagnosticDir === 'string' && diagnosticDir.length > 0 ? diagnosticDir : undefined;
+		const diagnosticDir = readUnifiedConfig<string | undefined>(
+			"tsserver.diagnosticDir",
+			undefined,
+			{ fallbackSection: "typescript" },
+		);
+		return typeof diagnosticDir === "string" && diagnosticDir.length > 0
+			? diagnosticDir
+			: undefined;
 	}
 
 	protected readHeapSnapshot(): number {
 		const defaultNearHeapLimitSnapshotCount = 0;
-		const nearHeapLimitSnapshotCount = readUnifiedConfig<number>('tsserver.heapSnapshot', defaultNearHeapLimitSnapshotCount, { fallbackSection: 'typescript' });
+		const nearHeapLimitSnapshotCount = readUnifiedConfig<number>(
+			"tsserver.heapSnapshot",
+			defaultNearHeapLimitSnapshotCount,
+			{ fallbackSection: "typescript" },
+		);
 		if (!Number.isSafeInteger(nearHeapLimitSnapshotCount)) {
 			return defaultNearHeapLimitSnapshotCount;
 		}
@@ -321,13 +445,26 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 			interval: undefined,
 		};
 
-		const rawConfig = readUnifiedConfig<{ enabled?: unknown; dir?: unknown; interval?: unknown }>('tsserver.heapProfile', defaultHeapProfileConfiguration, { fallbackSection: 'typescript' });
+		const rawConfig = readUnifiedConfig<{
+			enabled?: unknown;
+			dir?: unknown;
+			interval?: unknown;
+		}>("tsserver.heapProfile", defaultHeapProfileConfiguration, {
+			fallbackSection: "typescript",
+		});
 
-		const enabled = typeof rawConfig.enabled === 'boolean' ? rawConfig.enabled : false;
-		const dir = typeof rawConfig.dir === 'string' && rawConfig.dir.length > 0 ? rawConfig.dir : undefined;
-		const interval = typeof rawConfig.interval === 'number' && Number.isSafeInteger(rawConfig.interval) && rawConfig.interval > 0
-			? rawConfig.interval
-			: undefined;
+		const enabled =
+			typeof rawConfig.enabled === "boolean" ? rawConfig.enabled : false;
+		const dir =
+			typeof rawConfig.dir === "string" && rawConfig.dir.length > 0
+				? rawConfig.dir
+				: undefined;
+		const interval =
+			typeof rawConfig.interval === "number" &&
+			Number.isSafeInteger(rawConfig.interval) &&
+			rawConfig.interval > 0
+				? rawConfig.interval
+				: undefined;
 
 		return {
 			enabled,
@@ -337,26 +474,55 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 	}
 
 	protected readEnablePromptUseWorkspaceTsdk(): boolean {
-		return readUnifiedConfig<boolean>('tsdk.promptToUseWorkspaceVersion', false, { fallbackSection: 'typescript', fallbackSubSectionNameOverride: 'enablePromptUseWorkspaceTsdk' });
+		return readUnifiedConfig<boolean>(
+			"tsdk.promptToUseWorkspaceVersion",
+			false,
+			{
+				fallbackSection: "typescript",
+				fallbackSubSectionNameOverride: "enablePromptUseWorkspaceTsdk",
+			},
+		);
 	}
 
 	protected readEnableTsServerTracing(): boolean {
-		return readUnifiedConfig<boolean>('tsserver.tracing.enabled', false, { fallbackSection: 'typescript', fallbackSubSectionNameOverride: 'tsserver.enableTracing' });
+		return readUnifiedConfig<boolean>("tsserver.tracing.enabled", false, {
+			fallbackSection: "typescript",
+			fallbackSubSectionNameOverride: "tsserver.enableTracing",
+		});
 	}
 
 	private readWorkspaceSymbolsExcludeLibrarySymbols(): boolean {
-		return readUnifiedConfig<boolean>('workspaceSymbols.excludeLibrarySymbols', true, { scope: null, fallbackSection: 'typescript' });
+		return readUnifiedConfig<boolean>(
+			"workspaceSymbols.excludeLibrarySymbols",
+			true,
+			{ scope: null, fallbackSection: "typescript" },
+		);
 	}
 
 	private readWebProjectWideIntellisenseEnable(): boolean {
-		return readUnifiedConfig<boolean>('tsserver.web.projectWideIntellisense.enabled', true, { fallbackSection: 'typescript' });
+		return readUnifiedConfig<boolean>(
+			"tsserver.web.projectWideIntellisense.enabled",
+			true,
+			{ fallbackSection: "typescript" },
+		);
 	}
 
 	private readWebProjectWideIntellisenseSuppressSemanticErrors(): boolean {
-		return this.readWebTypeAcquisition() && readUnifiedConfig<boolean>('tsserver.web.projectWideIntellisense.suppressSemanticErrors', false, { fallbackSection: 'typescript' });
+		return (
+			this.readWebTypeAcquisition() &&
+			readUnifiedConfig<boolean>(
+				"tsserver.web.projectWideIntellisense.suppressSemanticErrors",
+				false,
+				{ fallbackSection: "typescript" },
+			)
+		);
 	}
 
 	private readWebTypeAcquisition(): boolean {
-		return readUnifiedConfig<boolean>('tsserver.web.typeAcquisition.enabled', true, { fallbackSection: 'typescript' });
+		return readUnifiedConfig<boolean>(
+			"tsserver.web.typeAcquisition.enabled",
+			true,
+			{ fallbackSection: "typescript" },
+		);
 	}
 }

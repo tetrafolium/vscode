@@ -5,9 +5,11 @@
 
 /* eslint-disable local/code-no-unexternalized-strings */
 
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
-function ai(...args: any[]): undefined { return undefined; }
+function ai(...args: any[]): undefined {
+	return undefined;
+}
 
 const filterMessages = (out: string): string => {
 	return out.startsWith("warning:") || out.startsWith("error:")
@@ -17,7 +19,7 @@ const filterMessages = (out: string): string => {
 
 const postProcessTrackedFiles: Fig.Generator["postProcess"] = (
 	out,
-	context
+	context,
 ) => {
 	const output = filterMessages(out);
 
@@ -38,7 +40,7 @@ const postProcessTrackedFiles: Fig.Generator["postProcess"] = (
 
 			try {
 				ext = file.split(".").slice(-1)[0];
-			} catch (e) { }
+			} catch (e) {}
 
 			if (file.endsWith("/")) {
 				ext = "folder";
@@ -62,93 +64,93 @@ interface PostProcessBranchesOptions {
 
 const postProcessBranches =
 	(options: PostProcessBranchesOptions = {}): Fig.Generator["postProcess"] =>
-		(out) => {
-			const { insertWithoutRemotes = false } = options;
+	(out) => {
+		const { insertWithoutRemotes = false } = options;
 
-			const output = filterMessages(out);
+		const output = filterMessages(out);
 
-			if (output.startsWith("fatal:")) {
-				return [];
-			}
+		if (output.startsWith("fatal:")) {
+			return [];
+		}
 
-			const seen = new Set<string>();
-			return output
-				.split("\n")
-				.filter((line) => line.trim() && !line.trim().startsWith("HEAD"))
-				.map((branch) => {
-					// Parse the format: branchName|author|hash|subject|timeAgo
-					const parts = branch.split("|");
-					if (parts.length < 5) {
-						// Fallback to old parsing if format doesn't match
-						let name = branch.trim();
-						const oldParts = branch.match(/\S+/g);
-						if (oldParts && oldParts.length > 1) {
-							if (oldParts[0] === "*") {
-								if (branch.includes("HEAD detached")) {
-									return null;
-								}
-								return {
-									name: branch.replaceAll("*", "").trim(),
-									description: "Current branch",
-									priority: 100,
-									icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmBranch}`
-								};
-							} else if (oldParts[0] === "+") {
-								name = branch.replaceAll("+", "").trim();
+		const seen = new Set<string>();
+		return output
+			.split("\n")
+			.filter((line) => line.trim() && !line.trim().startsWith("HEAD"))
+			.map((branch) => {
+				// Parse the format: branchName|author|hash|subject|timeAgo
+				const parts = branch.split("|");
+				if (parts.length < 5) {
+					// Fallback to old parsing if format doesn't match
+					let name = branch.trim();
+					const oldParts = branch.match(/\S+/g);
+					if (oldParts && oldParts.length > 1) {
+						if (oldParts[0] === "*") {
+							if (branch.includes("HEAD detached")) {
+								return null;
 							}
+							return {
+								name: branch.replaceAll("*", "").trim(),
+								description: "Current branch",
+								priority: 100,
+								icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmBranch}`,
+							};
+						} else if (oldParts[0] === "+") {
+							name = branch.replaceAll("+", "").trim();
 						}
-
-						let description = "Branch";
-
-						if (insertWithoutRemotes && name.startsWith("remotes/")) {
-							name = name.slice(name.indexOf("/", 8) + 1);
-							description = "Remote branch";
-						}
-
-						const space = name.indexOf(" ");
-						if (space !== -1) {
-							name = name.slice(0, space);
-						}
-
-						return {
-							name,
-							description,
-							icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmBranch}`,
-							priority: 75,
-						};
 					}
 
-					let name = parts[0].trim();
-					const author = parts[1].trim();
-					const hash = parts[2].trim();
-					const subject = parts[3].trim();
-					const timeAgo = parts[4].trim();
-
-					const description = `${timeAgo} • ${author} • ${hash} • ${subject}`;
-					const priority = 75;
+					let description = "Branch";
 
 					if (insertWithoutRemotes && name.startsWith("remotes/")) {
 						name = name.slice(name.indexOf("/", 8) + 1);
+						description = "Remote branch";
+					}
+
+					const space = name.indexOf(" ");
+					if (space !== -1) {
+						name = name.slice(0, space);
 					}
 
 					return {
 						name,
 						description,
 						icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmBranch}`,
-						priority,
+						priority: 75,
 					};
-				})
-				.filter((suggestion) => {
-					if (!suggestion) {
-						return false;
-					}
-					if (seen.has(suggestion.name)) {
-						return false;
-					}
-					seen.add(suggestion.name);
-					return true;
-				});
-		};
+				}
+
+				let name = parts[0].trim();
+				const author = parts[1].trim();
+				const hash = parts[2].trim();
+				const subject = parts[3].trim();
+				const timeAgo = parts[4].trim();
+
+				const description = `${timeAgo} • ${author} • ${hash} • ${subject}`;
+				const priority = 75;
+
+				if (insertWithoutRemotes && name.startsWith("remotes/")) {
+					name = name.slice(name.indexOf("/", 8) + 1);
+				}
+
+				return {
+					name,
+					description,
+					icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmBranch}`,
+					priority,
+				};
+			})
+			.filter((suggestion) => {
+				if (!suggestion) {
+					return false;
+				}
+				if (seen.has(suggestion.name)) {
+					return false;
+				}
+				seen.add(suggestion.name);
+				return true;
+			});
+	};
 
 // Common git for-each-ref arguments for branch queries with commit details
 const gitBranchForEachRefArgs = [
@@ -282,19 +284,12 @@ export const gitGenerators = {
 
 	// All branches
 	remoteLocalBranches: {
-		script: [
-			...gitBranchForEachRefArgs,
-			"refs/heads/",
-			"refs/remotes/",
-		],
+		script: [...gitBranchForEachRefArgs, "refs/heads/", "refs/remotes/"],
 		postProcess: postProcessBranches({ insertWithoutRemotes: true }),
 	},
 
 	localBranches: {
-		script: [
-			...gitBranchForEachRefArgs,
-			"refs/heads/",
-		],
+		script: [...gitBranchForEachRefArgs, "refs/heads/"],
 		postProcess: postProcessBranches({ insertWithoutRemotes: true }),
 	},
 
@@ -316,7 +311,7 @@ export const gitGenerators = {
 							],
 						})
 					).stdout,
-					tokens
+					tokens,
 				);
 			} else {
 				return pp?.(
@@ -331,7 +326,7 @@ export const gitGenerators = {
 							],
 						})
 					).stdout,
-					tokens
+					tokens,
 				);
 			}
 		},
@@ -372,7 +367,7 @@ export const gitGenerators = {
 		postProcess: function (output) {
 			return output.split("\n").map((tag) => ({
 				name: tag,
-				icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmTag}`
+				icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmTag}`,
 			}));
 		},
 	} satisfies Fig.Generator,
@@ -457,7 +452,7 @@ export const gitGenerators = {
 					let ext = "";
 					try {
 						ext = file.split(".").slice(-1)[0];
-					} catch (e) { }
+					} catch (e) {}
 
 					if (file.endsWith("/")) {
 						ext = "folder";
@@ -486,7 +481,7 @@ export const gitGenerators = {
 				return [];
 			}
 
-			const filteredLines = output.split("\n").filter(line => {
+			const filteredLines = output.split("\n").filter((line) => {
 				return line.match(/^M /) || line.match(/A /);
 			});
 
@@ -510,11 +505,11 @@ export const gitGenerators = {
 
 			let filteredLines;
 			if (context.includes("--staged") || context.includes("--cached")) {
-				filteredLines = output.split("\n").filter(line => {
+				filteredLines = output.split("\n").filter((line) => {
 					return line.match(/^M /) || line.match(/A /);
 				});
 			} else {
-				filteredLines = output.split("\n").filter(line => {
+				filteredLines = output.split("\n").filter((line) => {
 					return line.match(/M /) || line.match(/A /);
 				});
 			}
@@ -3905,7 +3900,7 @@ const addOptions: Fig.Option[] = [
 	{
 		name: ["-i", "--interactive"],
 		description:
-			"Add modified contents in the working tree interactively to the index. Optional path arguments may be supplied to limit operation to a subset of the working tree. See \"Interactive mode\" for details",
+			'Add modified contents in the working tree interactively to the index. Optional path arguments may be supplied to limit operation to a subset of the working tree. See "Interactive mode" for details',
 	},
 	{
 		name: ["-p", "--patch"],
@@ -4979,7 +4974,7 @@ const completionSpec: Fig.Spec = {
 										line.startsWith("alias.") ||
 										line.startsWith("branch.") ||
 										line.startsWith("remote.") ||
-										!configSuggestions.find(({ name }) => line === name)
+										!configSuggestions.find(({ name }) => line === name),
 								)
 								.map((name) => ({ name, icon: "⚙️" })), // allow-any-unicode-next-line
 					},
@@ -6366,7 +6361,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--graph",
-					description: "Draw a text-based graphical representation of the commit history",
+					description:
+						"Draw a text-based graphical representation of the commit history",
 				},
 				{
 					name: "--all",
@@ -6382,7 +6378,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--abbrev-commit",
-					description: "Show only the first few characters of the SHA-1 checksum",
+					description:
+						"Show only the first few characters of the SHA-1 checksum",
 				},
 				{
 					name: ["-n", "--max-count"],
@@ -6434,7 +6431,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--first-parent",
-					description: "Follow only the first parent commit upon seeing a merge commit",
+					description:
+						"Follow only the first parent commit upon seeing a merge commit",
 				},
 				{
 					name: "--reverse",
@@ -6461,7 +6459,10 @@ const completionSpec: Fig.Spec = {
 							{ name: "short", description: "YYYY-MM-DD format" },
 							{ name: "raw", description: "Seconds since epoch + timezone" },
 							{ name: "human", description: "Human-readable format" },
-							{ name: "unix", description: "Unix timestamp (seconds since epoch)" },
+							{
+								name: "unix",
+								description: "Unix timestamp (seconds since epoch)",
+							},
 							{ name: "default", description: "Default ctime-like format" },
 							{ name: "format:", description: "Custom strftime format" },
 						],
@@ -6474,23 +6475,48 @@ const completionSpec: Fig.Spec = {
 					args: {
 						name: "format",
 						suggestions: [
-							{ name: "oneline", description: "Show each commit as a single line" },
+							{
+								name: "oneline",
+								description: "Show each commit as a single line",
+							},
 							{ name: "short", description: "Show commit and author" },
-							{ name: "medium", description: "Show commit, author, and date (default)" },
-							{ name: "full", description: "Show commit, author, and committer" },
-							{ name: "fuller", description: "Show commit, author, committer, and dates" },
-							{ name: "reference", description: "Abbreviated hash with title and date" },
+							{
+								name: "medium",
+								description: "Show commit, author, and date (default)",
+							},
+							{
+								name: "full",
+								description: "Show commit, author, and committer",
+							},
+							{
+								name: "fuller",
+								description: "Show commit, author, committer, and dates",
+							},
+							{
+								name: "reference",
+								description: "Abbreviated hash with title and date",
+							},
 							{ name: "email", description: "Format as email with headers" },
-							{ name: "mboxrd", description: "Email format with quoted From lines" },
+							{
+								name: "mboxrd",
+								description: "Email format with quoted From lines",
+							},
 							{ name: "raw", description: "Show raw commit object" },
-							{ name: "format:", description: "Custom format string with placeholders" },
-							{ name: "tformat:", description: "Custom format with terminator semantics" },
+							{
+								name: "format:",
+								description: "Custom format string with placeholders",
+							},
+							{
+								name: "tformat:",
+								description: "Custom format with terminator semantics",
+							},
 						],
 					},
 				},
 				{
 					name: "--format",
-					description: "Pretty-print the contents of the commit logs in a given format",
+					description:
+						"Pretty-print the contents of the commit logs in a given format",
 					requiresSeparator: true,
 					args: {
 						name: "format",
@@ -6510,7 +6536,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "-S",
-					description: "Look for differences that change the number of occurrences of the specified string",
+					description:
+						"Look for differences that change the number of occurrences of the specified string",
 					requiresSeparator: true,
 					args: {
 						name: "string",
@@ -6518,7 +6545,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "-G",
-					description: "Look for differences whose patch text contains added/removed lines that match <regex>",
+					description:
+						"Look for differences whose patch text contains added/removed lines that match <regex>",
 					requiresSeparator: true,
 					args: {
 						name: "regex",
@@ -6526,11 +6554,13 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--no-walk",
-					description: "Only display the given commits, but do not traverse their ancestors",
+					description:
+						"Only display the given commits, but do not traverse their ancestors",
 				},
 				{
 					name: "--cherry-pick",
-					description: "Omit any commit that introduces the same change as another commit",
+					description:
+						"Omit any commit that introduces the same change as another commit",
 				},
 				{
 					name: ["-i", "--regexp-ignore-case"],
@@ -6558,7 +6588,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--skip",
-					description: "Skip a number of commits before starting to show output",
+					description:
+						"Skip a number of commits before starting to show output",
 					requiresSeparator: true,
 					args: {
 						name: "number",
@@ -6606,7 +6637,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--glob",
-					description: "Show commits from refs matching the given shell glob pattern",
+					description:
+						"Show commits from refs matching the given shell glob pattern",
 					requiresSeparator: true,
 					args: {
 						name: "pattern",
@@ -6650,7 +6682,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--left-right",
-					description: "Mark commits with < or > for left or right side of symmetric difference",
+					description:
+						"Mark commits with < or > for left or right side of symmetric difference",
 				},
 				{
 					name: "--cherry-mark",
@@ -6658,11 +6691,13 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--left-only",
-					description: "Show only commits on the left side of a symmetric difference",
+					description:
+						"Show only commits on the left side of a symmetric difference",
 				},
 				{
 					name: "--right-only",
-					description: "Show only commits on the right side of a symmetric difference",
+					description:
+						"Show only commits on the right side of a symmetric difference",
 				},
 				{
 					name: "--cherry",
@@ -6678,11 +6713,13 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--ancestry-path",
-					description: "Only display commits between the specified range that are ancestors of the end commit",
+					description:
+						"Only display commits between the specified range that are ancestors of the end commit",
 				},
 				{
 					name: "--numstat",
-					description: "Show number of added and deleted lines in decimal notation",
+					description:
+						"Show number of added and deleted lines in decimal notation",
 				},
 				{
 					name: "--no-patch",
@@ -6734,7 +6771,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--encoding",
-					description: "Re-encode commit messages in the specified character encoding",
+					description:
+						"Re-encode commit messages in the specified character encoding",
 					requiresSeparator: true,
 					args: {
 						name: "encoding",
@@ -6746,7 +6784,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--diff-filter",
-					description: "Select only files that are Added (A), Copied (C), Deleted (D), Modified (M), Renamed (R), etc.",
+					description:
+						"Select only files that are Added (A), Copied (C), Deleted (D), Modified (M), Renamed (R), etc.",
 					requiresSeparator: true,
 					args: {
 						name: "filter",
@@ -6781,7 +6820,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--summary",
-					description: "Show a diffstat summary of created, renamed, and mode changes",
+					description:
+						"Show a diffstat summary of created, renamed, and mode changes",
 				},
 				{
 					name: "--patch-with-stat",
@@ -6813,7 +6853,8 @@ const completionSpec: Fig.Spec = {
 				},
 				{
 					name: "--textconv",
-					description: "Allow external text conversion filters for binary files",
+					description:
+						"Allow external text conversion filters for binary files",
 				},
 				{
 					name: "--no-textconv",
@@ -6828,7 +6869,10 @@ const completionSpec: Fig.Spec = {
 						suggestions: [
 							{ name: "always", description: "Always use colors" },
 							{ name: "never", description: "Never use colors" },
-							{ name: "auto", description: "Use colors when output is to a terminal" },
+							{
+								name: "auto",
+								description: "Use colors when output is to a terminal",
+							},
 						],
 					},
 				},
@@ -6843,9 +6887,18 @@ const completionSpec: Fig.Spec = {
 						name: "mode",
 						isOptional: true,
 						suggestions: [
-							{ name: "color", description: "Highlight changed words using colors" },
-							{ name: "plain", description: "Show words with [-removed-] and {+added+}" },
-							{ name: "porcelain", description: "Use special line-based format" },
+							{
+								name: "color",
+								description: "Highlight changed words using colors",
+							},
+							{
+								name: "plain",
+								description: "Show words with [-removed-] and {+added+}",
+							},
+							{
+								name: "porcelain",
+								description: "Use special line-based format",
+							},
 							{ name: "none", description: "Disable word diff" },
 						],
 					},
@@ -8640,7 +8693,7 @@ const completionSpec: Fig.Spec = {
 						{
 							name: "-",
 							description: "Switch to the last used branch",
-							icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmBranch}`
+							icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmBranch}`,
 						},
 						{
 							name: "--",
@@ -9806,7 +9859,7 @@ const completionSpec: Fig.Spec = {
 						{
 							name: "-",
 							description: "Switch to the last used branch",
-							icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmBranch}`
+							icon: `vscode://icon?type=${vscode.TerminalCompletionItemKind.ScmBranch}`,
 						},
 					],
 				},

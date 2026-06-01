@@ -4,12 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Raw } from '@vscode/prompt-tsx';
-import { IRecordingInformation, ObservableWorkspaceRecordingReplayer } from '../../src/extension/inlineEdits/common/observableWorkspaceRecordingReplayer';
+import {
+	IRecordingInformation,
+	ObservableWorkspaceRecordingReplayer,
+} from '../../src/extension/inlineEdits/common/observableWorkspaceRecordingReplayer';
 import { createNextEditProvider } from '../../src/extension/inlineEdits/node/createNextEditProvider';
 import { DebugRecorder } from '../../src/extension/inlineEdits/node/debugRecorder';
-import { NESInlineCompletionContext, NextEditProvider } from '../../src/extension/inlineEdits/node/nextEditProvider';
+import {
+	NESInlineCompletionContext,
+	NextEditProvider,
+} from '../../src/extension/inlineEdits/node/nextEditProvider';
 import { NextEditProviderTelemetryBuilder } from '../../src/extension/inlineEdits/node/nextEditProviderTelemetry';
-import { ConfigKey, IConfigurationService } from '../../src/platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../src/platform/configuration/common/configurationService';
 import { IGitExtensionService } from '../../src/platform/git/common/gitExtensionService';
 import { InlineEditRequestLogContext } from '../../src/platform/inlineEdits/common/inlineEditLogContext';
 import { ObservableGit } from '../../src/platform/inlineEdits/common/observableGit';
@@ -20,7 +29,10 @@ import { IExperimentationService } from '../../src/platform/telemetry/common/nul
 import { IWorkspaceService } from '../../src/platform/workspace/common/workspaceService';
 import { CancellationToken } from '../../src/util/vs/base/common/cancellation';
 import { generateUuid } from '../../src/util/vs/base/common/uuid';
-import { IInstantiationService, ServicesAccessor } from '../../src/util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../src/util/vs/platform/instantiation/common/instantiation';
 
 export interface IGeneratedPrompt {
 	readonly system: string;
@@ -28,13 +40,18 @@ export interface IGeneratedPrompt {
 }
 
 function extractTextContent(message: Raw.ChatMessage): string {
-	const textPart = message.content.find(p => p.type === Raw.ChatCompletionContentPartKind.Text);
+	const textPart = message.content.find(
+		(p) => p.type === Raw.ChatCompletionContentPartKind.Text,
+	);
 	return textPart && 'text' in textPart ? textPart.text : '';
 }
 
-function extractPromptParts(messages: Raw.ChatMessage[]): { system: string; user: string } {
-	const systemMsg = messages.find(m => m.role === Raw.ChatRole.System);
-	const userMsg = messages.find(m => m.role === Raw.ChatRole.User);
+function extractPromptParts(messages: Raw.ChatMessage[]): {
+	system: string;
+	user: string;
+} {
+	const systemMsg = messages.find((m) => m.role === Raw.ChatRole.System);
+	const userMsg = messages.find((m) => m.role === Raw.ChatRole.User);
 	return {
 		system: systemMsg ? extractTextContent(systemMsg) : '',
 		user: userMsg ? extractTextContent(userMsg) : '',
@@ -58,21 +75,40 @@ export async function generatePromptFromRecording(
 
 	const replayer = new ObservableWorkspaceRecordingReplayer(recordingInfo);
 	const obsGit = instaService.createInstance(ObservableGit);
-	const historyContextProvider = new NesHistoryContextProvider(replayer.workspace, obsGit);
-	const nesXtabHistoryTracker = new NesXtabHistoryTracker(replayer.workspace, undefined, configService, expService);
+	const historyContextProvider = new NesHistoryContextProvider(
+		replayer.workspace,
+		obsGit,
+	);
+	const nesXtabHistoryTracker = new NesXtabHistoryTracker(
+		replayer.workspace,
+		undefined,
+		configService,
+		expService,
+	);
 	const debugRecorder = new DebugRecorder(replayer.workspace);
 
 	try {
 		const { lastDocId } = replayer.replay();
 
-		const nextEditProviderId = configService.getExperimentBasedConfig(ConfigKey.TeamInternal.InlineEditsProviderId, expService);
-		const statelessNextEditProvider = createNextEditProvider(nextEditProviderId, instaService);
+		const nextEditProviderId = configService.getExperimentBasedConfig(
+			ConfigKey.TeamInternal.InlineEditsProviderId,
+			expService,
+		);
+		const statelessNextEditProvider = createNextEditProvider(
+			nextEditProviderId,
+			instaService,
+		);
 		const nextEditProvider = instaService.createInstance(
-			NextEditProvider, replayer.workspace, statelessNextEditProvider,
-			historyContextProvider, nesXtabHistoryTracker, debugRecorder,
+			NextEditProvider,
+			replayer.workspace,
+			statelessNextEditProvider,
+			historyContextProvider,
+			nesXtabHistoryTracker,
+			debugRecorder,
 		);
 
-		const historyContext = historyContextProvider.getHistoryContext(lastDocId);
+		const historyContext =
+			historyContextProvider.getHistoryContext(lastDocId);
 		if (!historyContext) {
 			nextEditProvider.dispose();
 			return { error: `No history context for document ${lastDocId}` };
@@ -87,10 +123,17 @@ export async function generatePromptFromRecording(
 			earliestShownDateTime: Date.now() + 200,
 			enforceCacheDelay: false,
 		};
-		const logContext = new InlineEditRequestLogContext(activeDocument.docId.toString(), 1, context);
+		const logContext = new InlineEditRequestLogContext(
+			activeDocument.docId.toString(),
+			1,
+			context,
+		);
 		const telemetryBuilder = new NextEditProviderTelemetryBuilder(
-			gitExtensionService, notebookService, workspaceService,
-			nextEditProvider.ID, replayer.workspace.getDocument(activeDocument.docId),
+			gitExtensionService,
+			notebookService,
+			workspaceService,
+			nextEditProvider.ID,
+			replayer.workspace.getDocument(activeDocument.docId),
 		);
 
 		// Prompt is captured in logContext; model call is mocked via DI.
@@ -100,8 +143,11 @@ export async function generatePromptFromRecording(
 		// handler can surface a useful error message.
 		try {
 			await nextEditProvider.getNextEdit(
-				activeDocument.docId, context, logContext,
-				CancellationToken.None, telemetryBuilder.nesBuilder,
+				activeDocument.docId,
+				context,
+				logContext,
+				CancellationToken.None,
+				telemetryBuilder.nesBuilder,
 			);
 		} catch (err) {
 			if (!logContext.rawMessages) {
@@ -118,16 +164,20 @@ export async function generatePromptFromRecording(
 
 		const rawMessages = logContext.rawMessages;
 		if (!rawMessages) {
-			return { error: 'Prompt was not captured in logContext (pipeline returned early before prompt construction)' };
+			return {
+				error: 'Prompt was not captured in logContext (pipeline returned early before prompt construction)',
+			};
 		}
 
 		const { system, user } = extractPromptParts(rawMessages);
 		return { system, user };
-
 	} catch (e) {
-		const detail = e instanceof Error && e.stack
-			? e.stack.split('\n').slice(0, 3).join(' | ')
-			: (e instanceof Error ? e.message : String(e));
+		const detail =
+			e instanceof Error && e.stack
+				? e.stack.split('\n').slice(0, 3).join(' | ')
+				: e instanceof Error
+					? e.message
+					: String(e);
 		return { error: `Prompt generation failed: ${detail}` };
 	} finally {
 		historyContextProvider.dispose();

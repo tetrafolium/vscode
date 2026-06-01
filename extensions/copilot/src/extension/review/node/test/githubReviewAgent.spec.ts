@@ -7,19 +7,28 @@ import assert from 'assert';
 import { describe, suite, test } from 'vitest';
 import type { TextDocument } from 'vscode';
 import { IAuthenticationService } from '../../../../platform/authentication/common/authentication';
-import { CopilotToken, createTestExtendedTokenInfo } from '../../../../platform/authentication/common/copilotToken';
+import {
+	CopilotToken,
+	createTestExtendedTokenInfo,
+} from '../../../../platform/authentication/common/copilotToken';
 import { ICustomInstructionsService } from '../../../../platform/customInstructions/common/customInstructionsService';
 import { ICAPIClientService } from '../../../../platform/endpoint/common/capiClient';
 import { IDomainService } from '../../../../platform/endpoint/common/domainService';
 import { IEnvService } from '../../../../platform/env/common/envService';
 import { IGitExtensionService } from '../../../../platform/git/common/gitExtensionService';
 import { NullGitExtensionService } from '../../../../platform/git/common/nullGitExtensionService';
-import { IIgnoreService, NullIgnoreService } from '../../../../platform/ignore/common/ignoreService';
+import {
+	IIgnoreService,
+	NullIgnoreService,
+} from '../../../../platform/ignore/common/ignoreService';
 import { MockAuthenticationService } from '../../../../platform/ignore/node/test/mockAuthenticationService';
 import { MockCAPIClientService } from '../../../../platform/ignore/node/test/mockCAPIClientService';
 import { MockWorkspaceService } from '../../../../platform/ignore/node/test/mockWorkspaceService';
 import { IFetcherService } from '../../../../platform/networking/common/fetcherService';
-import { ReviewComment, ReviewRequest } from '../../../../platform/review/common/reviewService';
+import {
+	ReviewComment,
+	ReviewRequest,
+} from '../../../../platform/review/common/reviewService';
 import { MockCustomInstructionsService } from '../../../../platform/test/common/testCustomInstructionsService';
 import { createFakeStreamResponse } from '../../../../platform/test/node/fetcher';
 import { TestLogService } from '../../../../platform/testing/common/testLogService';
@@ -39,13 +48,11 @@ import {
 	removeSuggestion,
 	ResponseComment,
 	reverseParsedPatch,
-	reversePatch
+	reversePatch,
 } from '../githubReviewAgent';
 
 suite('githubReviewAgent', () => {
-
 	describe('normalizePath', () => {
-
 		test('returns path unchanged when no backslashes', () => {
 			const result = normalizePath('src/components/Button.tsx');
 			assert.strictEqual(result, 'src/components/Button.tsx');
@@ -82,7 +89,6 @@ suite('githubReviewAgent', () => {
 	});
 
 	describe('parseLine', () => {
-
 		test('returns empty array for empty line', () => {
 			const result = parseLine('');
 			assert.deepStrictEqual(result, []);
@@ -105,19 +111,24 @@ suite('githubReviewAgent', () => {
 
 		test('parses generated pull request comment', () => {
 			const data = {
-				copilot_references: [{
-					type: 'github.generated-pull-request-comment',
-					data: {
-						path: 'src/file.ts',
-						line: 10,
-						body: 'This is a bug'
-					}
-				}]
+				copilot_references: [
+					{
+						type: 'github.generated-pull-request-comment',
+						data: {
+							path: 'src/file.ts',
+							line: 10,
+							body: 'This is a bug',
+						},
+					},
+				],
 			};
 			const result = parseLine(`data: ${JSON.stringify(data)}`);
 
 			assert.strictEqual(result.length, 1);
-			assert.strictEqual(result[0].type, 'github.generated-pull-request-comment');
+			assert.strictEqual(
+				result[0].type,
+				'github.generated-pull-request-comment',
+			);
 			if (result[0].type === 'github.generated-pull-request-comment') {
 				assert.strictEqual(result[0].data.path, 'src/file.ts');
 				assert.strictEqual(result[0].data.line, 10);
@@ -127,32 +138,39 @@ suite('githubReviewAgent', () => {
 
 		test('parses excluded pull request comment', () => {
 			const data = {
-				copilot_references: [{
-					type: 'github.excluded-pull-request-comment',
-					data: {
-						path: 'src/file.ts',
-						line: 5,
-						body: 'Low confidence comment',
-						exclusion_reason: 'denylisted_type'
-					}
-				}]
+				copilot_references: [
+					{
+						type: 'github.excluded-pull-request-comment',
+						data: {
+							path: 'src/file.ts',
+							line: 5,
+							body: 'Low confidence comment',
+							exclusion_reason: 'denylisted_type',
+						},
+					},
+				],
 			};
 			const result = parseLine(`data: ${JSON.stringify(data)}`);
 
 			assert.strictEqual(result.length, 1);
-			assert.strictEqual(result[0].type, 'github.excluded-pull-request-comment');
+			assert.strictEqual(
+				result[0].type,
+				'github.excluded-pull-request-comment',
+			);
 		});
 
 		test('parses excluded file reference', () => {
 			const data = {
-				copilot_references: [{
-					type: 'github.excluded-file',
-					data: {
-						file_path: 'src/file.txt',
-						language: 'plaintext',
-						reason: 'file_type_not_supported'
-					}
-				}]
+				copilot_references: [
+					{
+						type: 'github.excluded-file',
+						data: {
+							file_path: 'src/file.txt',
+							language: 'plaintext',
+							reason: 'file_type_not_supported',
+						},
+					},
+				],
 			};
 			const result = parseLine(`data: ${JSON.stringify(data)}`);
 
@@ -165,13 +183,13 @@ suite('githubReviewAgent', () => {
 				copilot_references: [
 					{
 						type: 'github.generated-pull-request-comment',
-						data: { path: 'a.ts', line: 1, body: 'Comment 1' }
+						data: { path: 'a.ts', line: 1, body: 'Comment 1' },
 					},
 					{
 						type: 'github.generated-pull-request-comment',
-						data: { path: 'b.ts', line: 2, body: 'Comment 2' }
-					}
-				]
+						data: { path: 'b.ts', line: 2, body: 'Comment 2' },
+					},
+				],
 			};
 			const result = parseLine(`data: ${JSON.stringify(data)}`);
 
@@ -181,9 +199,12 @@ suite('githubReviewAgent', () => {
 		test('filters out references without type', () => {
 			const data = {
 				copilot_references: [
-					{ type: 'github.generated-pull-request-comment', data: { path: 'a.ts', line: 1, body: 'Valid' } },
-					{ data: { path: 'b.ts', line: 2, body: 'No type field' } }
-				]
+					{
+						type: 'github.generated-pull-request-comment',
+						data: { path: 'a.ts', line: 1, body: 'Valid' },
+					},
+					{ data: { path: 'b.ts', line: 2, body: 'No type field' } },
+				],
 			};
 			const result = parseLine(`data: ${JSON.stringify(data)}`);
 
@@ -192,7 +213,6 @@ suite('githubReviewAgent', () => {
 	});
 
 	describe('removeSuggestion', () => {
-
 		test('returns original content when no suggestion block', () => {
 			const body = 'This is a regular comment without suggestions.';
 			const result = removeSuggestion(body);
@@ -202,16 +222,20 @@ suite('githubReviewAgent', () => {
 		});
 
 		test('extracts single suggestion and removes block', () => {
-			const body = 'Fix the typo.\n```suggestion\nconst fixed = true;\n```';
+			const body =
+				'Fix the typo.\n```suggestion\nconst fixed = true;\n```';
 			const result = removeSuggestion(body);
 
 			assert.strictEqual(result.content, 'Fix the typo.\n');
 			// The regex captures content including the trailing newline before ```
-			assert.deepStrictEqual(result.suggestions, ['const fixed = true;\n']);
+			assert.deepStrictEqual(result.suggestions, [
+				'const fixed = true;\n',
+			]);
 		});
 
 		test('extracts multiple suggestions', () => {
-			const body = 'First issue.\n```suggestion\nfix1\n```\nSecond issue.\n```suggestion\nfix2\n```';
+			const body =
+				'First issue.\n```suggestion\nfix1\n```\nSecond issue.\n```suggestion\nfix2\n```';
 			const result = removeSuggestion(body);
 
 			assert.strictEqual(result.suggestions.length, 2);
@@ -254,7 +278,6 @@ suite('githubReviewAgent', () => {
 	});
 
 	describe('parsePatch', () => {
-
 		test('returns empty array for empty input', () => {
 			const result = parsePatch([]);
 			assert.deepStrictEqual(result, []);
@@ -266,7 +289,7 @@ suite('githubReviewAgent', () => {
 				' line1',
 				'+added line',
 				' line2',
-				' line3'
+				' line3',
 			];
 			const result = parsePatch(patchLines);
 
@@ -282,7 +305,7 @@ suite('githubReviewAgent', () => {
 				' line1',
 				'-deleted line',
 				' line2',
-				' line3'
+				' line3',
 			];
 			const result = parsePatch(patchLines);
 
@@ -298,7 +321,7 @@ suite('githubReviewAgent', () => {
 				' line1',
 				'-old line',
 				'+new line',
-				' line3'
+				' line3',
 			];
 			const result = parsePatch(patchLines);
 
@@ -316,7 +339,7 @@ suite('githubReviewAgent', () => {
 				'+added1',
 				'@@ -10,2 +11,3 @@',
 				' line10',
-				'+added2'
+				'+added2',
 			];
 			const result = parsePatch(patchLines);
 
@@ -333,7 +356,7 @@ suite('githubReviewAgent', () => {
 				'+++ b/file.ts',
 				'@@ -1,2 +1,3 @@',
 				' context',
-				'+added'
+				'+added',
 			];
 			const result = parsePatch(patchLines);
 
@@ -347,7 +370,7 @@ suite('githubReviewAgent', () => {
 				'+should be ignored',
 				'@@ -5,2 +5,3 @@',
 				' context',
-				'+added after valid header'
+				'+added after valid header',
 			];
 			const result = parsePatch(patchLines);
 
@@ -375,7 +398,7 @@ suite('githubReviewAgent', () => {
 				'@@ -1,3 +1,3 @@',
 				' line1',
 				' line2',
-				' line3'
+				' line3',
 			];
 			const result = parsePatch(patchLines);
 
@@ -389,7 +412,7 @@ suite('githubReviewAgent', () => {
 				'+added1',
 				'+added2',
 				'+added3',
-				' line2'
+				' line2',
 			];
 			const result = parsePatch(patchLines);
 
@@ -406,7 +429,7 @@ suite('githubReviewAgent', () => {
 				'-deleted1',
 				'-deleted2',
 				'-deleted3',
-				' line5'
+				' line5',
 			];
 			const result = parsePatch(patchLines);
 
@@ -419,7 +442,6 @@ suite('githubReviewAgent', () => {
 	});
 
 	describe('reverseParsedPatch', () => {
-
 		test('returns original lines when patch is empty', () => {
 			const lines = ['line1', 'line2', 'line3'];
 			const result = reverseParsedPatch([...lines], []);
@@ -430,7 +452,7 @@ suite('githubReviewAgent', () => {
 		test('reverses an addition by removing the line', () => {
 			const afterLines = ['line1', 'added', 'line2'];
 			const patch: LineChange[] = [
-				{ beforeLineNumber: 2, content: 'added', type: 'add' }
+				{ beforeLineNumber: 2, content: 'added', type: 'add' },
 			];
 			const result = reverseParsedPatch([...afterLines], patch);
 
@@ -440,7 +462,7 @@ suite('githubReviewAgent', () => {
 		test('reverses a deletion by re-adding the line', () => {
 			const afterLines = ['line1', 'line3'];
 			const patch: LineChange[] = [
-				{ beforeLineNumber: 2, content: 'line2', type: 'remove' }
+				{ beforeLineNumber: 2, content: 'line2', type: 'remove' },
 			];
 			const result = reverseParsedPatch([...afterLines], patch);
 
@@ -458,7 +480,7 @@ suite('githubReviewAgent', () => {
 			const afterLines = ['line1', 'new', 'line3'];
 			const patch: LineChange[] = [
 				{ beforeLineNumber: 2, content: 'old', type: 'remove' },
-				{ beforeLineNumber: 2, content: 'new', type: 'add' }
+				{ beforeLineNumber: 2, content: 'new', type: 'add' },
 			];
 			const result = reverseParsedPatch([...afterLines], patch);
 
@@ -472,7 +494,7 @@ suite('githubReviewAgent', () => {
 			const afterLines = ['line1', 'added1', 'line2', 'added2', 'line3'];
 			const patch: LineChange[] = [
 				{ beforeLineNumber: 2, content: 'added1', type: 'add' },
-				{ beforeLineNumber: 3, content: 'added2', type: 'add' }
+				{ beforeLineNumber: 3, content: 'added2', type: 'add' },
 			];
 			const result = reverseParsedPatch([...afterLines], patch);
 
@@ -487,19 +509,25 @@ suite('githubReviewAgent', () => {
 			const afterLines = ['line1', 'line3', 'line5'];
 			const patch: LineChange[] = [
 				{ beforeLineNumber: 2, content: 'line2', type: 'remove' },
-				{ beforeLineNumber: 4, content: 'line4', type: 'remove' }
+				{ beforeLineNumber: 4, content: 'line4', type: 'remove' },
 			];
 			const result = reverseParsedPatch([...afterLines], patch);
 
 			// After first insert at 1: ['line1', 'line2', 'line3', 'line5']
 			// After second insert at 3: ['line1', 'line2', 'line3', 'line4', 'line5']
-			assert.deepStrictEqual(result, ['line1', 'line2', 'line3', 'line4', 'line5']);
+			assert.deepStrictEqual(result, [
+				'line1',
+				'line2',
+				'line3',
+				'line4',
+				'line5',
+			]);
 		});
 
 		test('handles empty file lines array', () => {
 			const afterLines: string[] = [];
 			const patch: LineChange[] = [
-				{ beforeLineNumber: 1, content: 'was here', type: 'remove' }
+				{ beforeLineNumber: 1, content: 'was here', type: 'remove' },
 			];
 			const result = reverseParsedPatch([...afterLines], patch);
 
@@ -509,7 +537,7 @@ suite('githubReviewAgent', () => {
 		test('handles addition at end of file', () => {
 			const afterLines = ['line1', 'line2', 'added at end'];
 			const patch: LineChange[] = [
-				{ beforeLineNumber: 3, content: 'added at end', type: 'add' }
+				{ beforeLineNumber: 3, content: 'added at end', type: 'add' },
 			];
 			const result = reverseParsedPatch([...afterLines], patch);
 
@@ -518,7 +546,6 @@ suite('githubReviewAgent', () => {
 	});
 
 	describe('reversePatch', () => {
-
 		test('reverses simple addition', () => {
 			const after = 'line1\nadded\nline2';
 			const diff = '@@ -1,2 +1,3 @@\n line1\n+added\n line2';
@@ -566,8 +593,9 @@ suite('githubReviewAgent', () => {
 	});
 
 	describe('createReviewComment', () => {
-
-		function createTestRequest(overrides?: Partial<ReviewRequest>): ReviewRequest {
+		function createTestRequest(
+			overrides?: Partial<ReviewRequest>,
+		): ReviewRequest {
 			return {
 				source: 'githubReviewAgent',
 				promptCount: 1,
@@ -582,19 +610,24 @@ suite('githubReviewAgent', () => {
 			const docData = createTextDocumentData(
 				URI.file('/test/file.ts'),
 				'line1\n    indented line\nline3',
-				'typescript'
+				'typescript',
 			);
 			const ghComment: ResponseComment = {
 				type: 'github.generated-pull-request-comment',
 				data: {
 					path: 'file.ts',
 					line: 2,
-					body: 'This line has an issue.'
-				}
+					body: 'This line has an issue.',
+				},
 			};
 			const request = createTestRequest();
 
-			const comment = createReviewComment(ghComment, request, docData.document, 0);
+			const comment = createReviewComment(
+				ghComment,
+				request,
+				docData.document,
+				0,
+			);
 
 			assert.strictEqual(comment.range.start.line, 1); // 0-indexed
 			assert.strictEqual(comment.range.start.character, 4); // firstNonWhitespaceCharacterIndex
@@ -609,36 +642,49 @@ suite('githubReviewAgent', () => {
 			const docData = createTextDocumentData(
 				URI.file('/test/file.ts'),
 				'const x = 1;\nconst y = 2;\nconst z = 3;',
-				'typescript'
+				'typescript',
 			);
 			const ghComment: ResponseComment = {
 				type: 'github.generated-pull-request-comment',
 				data: {
 					path: 'file.ts',
 					line: 2,
-					body: 'Fix the variable name.\n```suggestion\nconst fixedY = 2;\n```'
-				}
+					body: 'Fix the variable name.\n```suggestion\nconst fixedY = 2;\n```',
+				},
 			};
 			const request = createTestRequest();
 
-			const comment = createReviewComment(ghComment, request, docData.document, 0);
+			const comment = createReviewComment(
+				ghComment,
+				request,
+				docData.document,
+				0,
+			);
 
 			// Body should have suggestion removed - body is MarkdownString in this case
-			const bodyValue = typeof comment.body === 'string' ? comment.body : comment.body.value;
+			const bodyValue =
+				typeof comment.body === 'string'
+					? comment.body
+					: comment.body.value;
 			assert.strictEqual(bodyValue, 'Fix the variable name.\n');
 			// Should have one edit suggestion
 			assert.ok(comment.suggestion);
 			assert.ok(!('then' in comment.suggestion)); // Not a promise
-			const suggestion = comment.suggestion as { edits: { newText: string }[] };
+			const suggestion = comment.suggestion as {
+				edits: { newText: string }[];
+			};
 			assert.strictEqual(suggestion.edits.length, 1);
-			assert.strictEqual(suggestion.edits[0].newText, 'const fixedY = 2;\n');
+			assert.strictEqual(
+				suggestion.edits[0].newText,
+				'const fixedY = 2;\n',
+			);
 		});
 
 		test('handles comment with start_line for multi-line range', () => {
 			const docData = createTextDocumentData(
 				URI.file('/test/file.ts'),
 				'line1\nline2\nline3\nline4',
-				'typescript'
+				'typescript',
 			);
 			const ghComment: ResponseComment = {
 				type: 'github.generated-pull-request-comment',
@@ -646,17 +692,26 @@ suite('githubReviewAgent', () => {
 					path: 'file.ts',
 					line: 3,
 					start_line: 2,
-					body: 'Multi-line issue.\n```suggestion\nreplacement\n```'
-				}
+					body: 'Multi-line issue.\n```suggestion\nreplacement\n```',
+				},
 			};
 			const request = createTestRequest();
 
-			const comment = createReviewComment(ghComment, request, docData.document, 1);
+			const comment = createReviewComment(
+				ghComment,
+				request,
+				docData.document,
+				1,
+			);
 
 			// Suggestion range should span from start_line to line
 			assert.ok(comment.suggestion);
 			assert.ok(!('then' in comment.suggestion)); // Not a promise
-			const suggestion = comment.suggestion as { edits: { range: { start: { line: number }; end: { line: number } } }[] };
+			const suggestion = comment.suggestion as {
+				edits: {
+					range: { start: { line: number }; end: { line: number } };
+				}[];
+			};
 			assert.strictEqual(suggestion.edits[0].range.start.line, 1); // start_line - 1
 			assert.strictEqual(suggestion.edits[0].range.end.line, 3); // line
 			assert.strictEqual(comment.originalIndex, 1);
@@ -666,7 +721,7 @@ suite('githubReviewAgent', () => {
 			const docData = createTextDocumentData(
 				URI.file('/test/file.ts'),
 				'line1\nline2\nline3',
-				'typescript'
+				'typescript',
 			);
 			const ghComment: ExcludedComment = {
 				type: 'github.excluded-pull-request-comment',
@@ -674,14 +729,22 @@ suite('githubReviewAgent', () => {
 					path: 'file.ts',
 					line: 2,
 					body: 'Low confidence comment.',
-					exclusion_reason: 'denylisted_type'
-				}
+					exclusion_reason: 'denylisted_type',
+				},
 			};
 			const request = createTestRequest();
 
-			const comment = createReviewComment(ghComment, request, docData.document, 0);
+			const comment = createReviewComment(
+				ghComment,
+				request,
+				docData.document,
+				0,
+			);
 
-			const bodyValue = typeof comment.body === 'string' ? comment.body : comment.body.value;
+			const bodyValue =
+				typeof comment.body === 'string'
+					? comment.body
+					: comment.body.value;
 			assert.strictEqual(bodyValue, 'Low confidence comment.');
 			assert.strictEqual(comment.range.start.line, 1);
 		});
@@ -690,21 +753,29 @@ suite('githubReviewAgent', () => {
 			const docData = createTextDocumentData(
 				URI.file('/test/file.ts'),
 				'const x = 1;',
-				'typescript'
+				'typescript',
 			);
 			const ghComment: ResponseComment = {
 				type: 'github.generated-pull-request-comment',
 				data: {
 					path: 'file.ts',
 					line: 1,
-					body: 'Consider renaming this variable.'
-				}
+					body: 'Consider renaming this variable.',
+				},
 			};
 			const request = createTestRequest();
 
-			const comment = createReviewComment(ghComment, request, docData.document, 0);
+			const comment = createReviewComment(
+				ghComment,
+				request,
+				docData.document,
+				0,
+			);
 
-			const bodyValue = typeof comment.body === 'string' ? comment.body : comment.body.value;
+			const bodyValue =
+				typeof comment.body === 'string'
+					? comment.body
+					: comment.body.value;
 			assert.strictEqual(bodyValue, 'Consider renaming this variable.');
 			assert.ok(comment.suggestion);
 			assert.ok(!('then' in comment.suggestion)); // Not a promise
@@ -714,15 +785,16 @@ suite('githubReviewAgent', () => {
 	});
 
 	describe('loadCustomInstructions', () => {
-
 		function createMockWorkspaceService(): IWorkspaceService {
 			return {
-				asRelativePath: (uri: URI) => uri.path.split('/').pop() || uri.path
+				asRelativePath: (uri: URI) =>
+					uri.path.split('/').pop() || uri.path,
 			} as IWorkspaceService;
 		}
 
 		test('returns empty array when no instructions configured', async () => {
-			const customInstructionsService = new MockCustomInstructionsService();
+			const customInstructionsService =
+				new MockCustomInstructionsService();
 			const workspaceService = createMockWorkspaceService();
 			const languageIdToFilePatterns = new Map<string, Set<string>>();
 
@@ -731,7 +803,7 @@ suite('githubReviewAgent', () => {
 				workspaceService,
 				'diff',
 				languageIdToFilePatterns,
-				1
+				1,
 			);
 
 			assert.deepStrictEqual(result, []);
@@ -743,10 +815,16 @@ suite('githubReviewAgent', () => {
 			const customInstructionsService = {
 				...new MockCustomInstructionsService(),
 				getAgentInstructions: () => Promise.resolve([testUri]),
-				fetchInstructionsFromFile: (uri: typeof testUri) => Promise.resolve({
-					content: [{ instruction: 'Test instruction', languageId: undefined }]
-				}),
-				fetchInstructionsFromSetting: () => Promise.resolve([])
+				fetchInstructionsFromFile: (uri: typeof testUri) =>
+					Promise.resolve({
+						content: [
+							{
+								instruction: 'Test instruction',
+								languageId: undefined,
+							},
+						],
+					}),
+				fetchInstructionsFromSetting: () => Promise.resolve([]),
 			};
 			const workspaceService = createMockWorkspaceService();
 			const languageIdToFilePatterns = new Map<string, Set<string>>();
@@ -756,7 +834,7 @@ suite('githubReviewAgent', () => {
 				workspaceService,
 				'selection',
 				languageIdToFilePatterns,
-				1
+				1,
 			);
 
 			assert.strictEqual(result.length, 1);
@@ -771,9 +849,17 @@ suite('githubReviewAgent', () => {
 				...new MockCustomInstructionsService(),
 				getAgentInstructions: () => Promise.resolve([]),
 				fetchInstructionsFromFile: () => Promise.resolve(undefined),
-				fetchInstructionsFromSetting: () => Promise.resolve([{
-					content: [{ instruction: 'Settings instruction', languageId: undefined }]
-				}])
+				fetchInstructionsFromSetting: () =>
+					Promise.resolve([
+						{
+							content: [
+								{
+									instruction: 'Settings instruction',
+									languageId: undefined,
+								},
+							],
+						},
+					]),
 			};
 			const workspaceService = createMockWorkspaceService();
 			const languageIdToFilePatterns = new Map<string, Set<string>>();
@@ -783,7 +869,7 @@ suite('githubReviewAgent', () => {
 				workspaceService,
 				'selection',
 				languageIdToFilePatterns,
-				1
+				1,
 			);
 
 			// CodeGenerationInstructions + CodeFeedbackInstructions for 'selection' kind
@@ -797,19 +883,29 @@ suite('githubReviewAgent', () => {
 			const customInstructionsService = {
 				...new MockCustomInstructionsService(),
 				getAgentInstructions: () => Promise.resolve([testUri]),
-				fetchInstructionsFromFile: () => Promise.resolve({
-					content: [
-						{ instruction: 'TypeScript only', languageId: 'typescript' },
-						{ instruction: 'Python only', languageId: 'python' },
-						{ instruction: 'All languages', languageId: undefined }
-					]
-				}),
-				fetchInstructionsFromSetting: () => Promise.resolve([])
+				fetchInstructionsFromFile: () =>
+					Promise.resolve({
+						content: [
+							{
+								instruction: 'TypeScript only',
+								languageId: 'typescript',
+							},
+							{
+								instruction: 'Python only',
+								languageId: 'python',
+							},
+							{
+								instruction: 'All languages',
+								languageId: undefined,
+							},
+						],
+					}),
+				fetchInstructionsFromSetting: () => Promise.resolve([]),
 			};
 			const workspaceService = createMockWorkspaceService();
 			// Only TypeScript is in the map, so Python instruction should be skipped
 			const languageIdToFilePatterns = new Map<string, Set<string>>([
-				['typescript', new Set(['*.ts', '*.tsx'])]
+				['typescript', new Set(['*.ts', '*.tsx'])],
 			]);
 
 			const result = await loadCustomInstructions(
@@ -817,20 +913,25 @@ suite('githubReviewAgent', () => {
 				workspaceService,
 				'selection',
 				languageIdToFilePatterns,
-				1
+				1,
 			);
 
 			// Should have 2 instructions: TypeScript + All languages (Python skipped)
 			assert.strictEqual(result.length, 2);
-			const descriptions = result.map(r => r.data.description);
+			const descriptions = result.map((r) => r.data.description);
 			assert.ok(descriptions.includes('TypeScript only'));
 			assert.ok(descriptions.includes('All languages'));
 			assert.ok(!descriptions.includes('Python only'));
 
 			// TypeScript instruction should have specific file patterns
-			const tsInstruction = result.find(r => r.data.description === 'TypeScript only');
+			const tsInstruction = result.find(
+				(r) => r.data.description === 'TypeScript only',
+			);
 			assert.ok(tsInstruction);
-			assert.deepStrictEqual(tsInstruction.data.filePatterns.sort(), ['*.ts', '*.tsx']);
+			assert.deepStrictEqual(tsInstruction.data.filePatterns.sort(), [
+				'*.ts',
+				'*.tsx',
+			]);
 		});
 
 		test('filters settings instructions by languageId', async () => {
@@ -839,18 +940,30 @@ suite('githubReviewAgent', () => {
 				...new MockCustomInstructionsService(),
 				getAgentInstructions: () => Promise.resolve([]),
 				fetchInstructionsFromFile: () => Promise.resolve(undefined),
-				fetchInstructionsFromSetting: () => Promise.resolve([{
-					content: [
-						{ instruction: 'JavaScript rule', languageId: 'javascript' },
-						{ instruction: 'Ruby rule', languageId: 'ruby' },
-						{ instruction: 'General rule', languageId: undefined }
-					]
-				}])
+				fetchInstructionsFromSetting: () =>
+					Promise.resolve([
+						{
+							content: [
+								{
+									instruction: 'JavaScript rule',
+									languageId: 'javascript',
+								},
+								{
+									instruction: 'Ruby rule',
+									languageId: 'ruby',
+								},
+								{
+									instruction: 'General rule',
+									languageId: undefined,
+								},
+							],
+						},
+					]),
 			};
 			const workspaceService = createMockWorkspaceService();
 			// Only JavaScript is in the map, Ruby should be filtered out
 			const languageIdToFilePatterns = new Map<string, Set<string>>([
-				['javascript', new Set(['*.js'])]
+				['javascript', new Set(['*.js'])],
 			]);
 
 			const result = await loadCustomInstructions(
@@ -858,11 +971,11 @@ suite('githubReviewAgent', () => {
 				workspaceService,
 				'selection',
 				languageIdToFilePatterns,
-				1
+				1,
 			);
 
 			// JavaScript + General should be included, Ruby filtered out
-			const descriptions = result.map(r => r.data.description);
+			const descriptions = result.map((r) => r.data.description);
 			assert.ok(descriptions.includes('JavaScript rule'));
 			assert.ok(descriptions.includes('General rule'));
 			assert.ok(!descriptions.includes('Ruby rule'));
@@ -874,13 +987,17 @@ suite('githubReviewAgent', () => {
 		// Following the pattern from chatMLFetcherRetry.spec.ts for extending mocks
 
 		// Common mock services shared across tests
-		const createMockFetcherService = (): IFetcherService => ({
-			makeAbortController: () => ({ abort: () => { }, signal: {} }),
-			isAbortError: () => false,
-		} as unknown as IFetcherService);
+		const createMockFetcherService = (): IFetcherService =>
+			({
+				makeAbortController: () => ({ abort: () => {}, signal: {} }),
+				isAbortError: () => false,
+			}) as unknown as IFetcherService;
 
 		const createBaseMocks = () => ({
-			domainService: { _serviceBrand: undefined, onDidChangeDomains: Event.None } as IDomainService,
+			domainService: {
+				_serviceBrand: undefined,
+				onDidChangeDomains: Event.None,
+			} as IDomainService,
 			fetcherService: createMockFetcherService(),
 			envService: { sessionId: 'test' } as IEnvService,
 		});
@@ -898,7 +1015,8 @@ suite('githubReviewAgent', () => {
 
 		test('returns success with empty comments when git extension is not available', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			const result = await githubReview(
 				new TestLogService(),
@@ -913,8 +1031,8 @@ suite('githubReviewAgent', () => {
 				new MockCustomInstructionsService(),
 				{ repositoryRoot: '/test', commitMessages: [], patches: [] },
 				undefined,
-				{ report: () => { } },
-				CancellationToken.None
+				{ report: () => {} },
+				CancellationToken.None,
 			);
 
 			assert.strictEqual(result.type, 'success');
@@ -925,7 +1043,8 @@ suite('githubReviewAgent', () => {
 
 		test('returns success with empty comments when no patches provided', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			const result = await githubReview(
 				new TestLogService(),
@@ -940,8 +1059,8 @@ suite('githubReviewAgent', () => {
 				new MockCustomInstructionsService(),
 				{ repositoryRoot: '/test', commitMessages: [], patches: [] },
 				undefined,
-				{ report: () => { } },
-				CancellationToken.None
+				{ report: () => {} },
+				CancellationToken.None,
 			);
 
 			assert.strictEqual(result.type, 'success');
@@ -952,50 +1071,71 @@ suite('githubReviewAgent', () => {
 
 		test('processes patches and returns review comments from API response', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			// Extend MockAuthenticationService to return a valid token (following chatMLFetcherRetry.spec.ts pattern)
 			class TestAuthenticationService extends MockAuthenticationService {
-				override getCopilotToken(_force?: boolean): Promise<CopilotToken> {
-					return Promise.resolve(new CopilotToken(createTestExtendedTokenInfo({ token: 'test-token', code_review_enabled: true })));
+				override getCopilotToken(
+					_force?: boolean,
+				): Promise<CopilotToken> {
+					return Promise.resolve(
+						new CopilotToken(
+							createTestExtendedTokenInfo({
+								token: 'test-token',
+								code_review_enabled: true,
+							}),
+						),
+					);
 				}
 			}
 
 			// Set up CAPI client to return a streaming response with a comment
 			const sseResponse = [
 				`data: ${JSON.stringify({
-					copilot_references: [{
-						type: 'github.generated-pull-request-comment',
-						data: {
-							path: 'file.ts',
-							line: 1,
-							body: 'Consider using const instead of let.'
-						}
-					}]
+					copilot_references: [
+						{
+							type: 'github.generated-pull-request-comment',
+							data: {
+								path: 'file.ts',
+								line: 1,
+								body: 'Consider using const instead of let.',
+							},
+						},
+					],
 				})}\n`,
-				'data: [DONE]\n'
+				'data: [DONE]\n',
 			];
 			class TestCAPIClientService extends MockCAPIClientService {
 				override makeRequest<T>(): Promise<T> {
-					return Promise.resolve(createFakeStreamResponse(sseResponse) as unknown as T);
+					return Promise.resolve(
+						createFakeStreamResponse(sseResponse) as unknown as T,
+					);
 				}
 			}
 
 			// Set up workspace service with a document (inline extension pattern)
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'let x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'let x = 1;',
+				'typescript',
+			);
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 			}
 
 			const reportedComments: ReviewComment[] = [];
 			const progress = {
-				report: (comments: ReviewComment[]) => reportedComments.push(...comments)
+				report: (comments: ReviewComment[]) =>
+					reportedComments.push(...comments),
 			};
 
 			const result = await githubReview(
@@ -1012,14 +1152,16 @@ suite('githubReviewAgent', () => {
 				{
 					repositoryRoot: '/test',
 					commitMessages: ['test commit'],
-					patches: [{
-						patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-						fileUri: fileUri.toString(),
-					}]
+					patches: [
+						{
+							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+							fileUri: fileUri.toString(),
+						},
+					],
 				},
 				undefined,
 				progress,
-				CancellationToken.None
+				CancellationToken.None,
 			);
 
 			assert.strictEqual(result.type, 'success');
@@ -1031,7 +1173,8 @@ suite('githubReviewAgent', () => {
 
 		test('returns info error when all files are ignored', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			// Create an ignore service that ignores all files
 			const ignoreService = {
@@ -1040,13 +1183,19 @@ suite('githubReviewAgent', () => {
 
 			// Set up workspace service with a document (inline extension pattern)
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'let x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'let x = 1;',
+				'typescript',
+			);
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 			}
 
@@ -1064,14 +1213,16 @@ suite('githubReviewAgent', () => {
 				{
 					repositoryRoot: '/test',
 					commitMessages: [],
-					patches: [{
-						patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-						fileUri: fileUri.toString(),
-					}]
+					patches: [
+						{
+							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+							fileUri: fileUri.toString(),
+						},
+					],
 				},
 				undefined,
-				{ report: () => { } },
-				CancellationToken.None
+				{ report: () => {} },
+				CancellationToken.None,
 			);
 
 			assert.strictEqual(result.type, 'error');
@@ -1087,20 +1238,34 @@ suite('githubReviewAgent', () => {
 
 			// Create auth service with token
 			class TestAuthenticationService extends MockAuthenticationService {
-				override getCopilotToken(_force?: boolean): Promise<CopilotToken> {
-					return Promise.resolve(new CopilotToken(createTestExtendedTokenInfo({ token: 'test-token' })));
+				override getCopilotToken(
+					_force?: boolean,
+				): Promise<CopilotToken> {
+					return Promise.resolve(
+						new CopilotToken(
+							createTestExtendedTokenInfo({
+								token: 'test-token',
+							}),
+						),
+					);
 				}
 			}
 
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'const x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'const x = 1;',
+				'typescript',
+			);
 
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 				override asRelativePath(uri: URI): string {
 					return uri.path.replace(/^\/test\//, '');
@@ -1110,7 +1275,7 @@ suite('githubReviewAgent', () => {
 			// Mock fetcher with abort support
 			const abortError = new Error('Aborted');
 			const fetcherService: IFetcherService = {
-				makeAbortController: () => ({ abort: () => { }, signal: {} }),
+				makeAbortController: () => ({ abort: () => {}, signal: {} }),
 				isAbortError: (err: unknown) => err === abortError,
 			} as unknown as IFetcherService;
 
@@ -1138,14 +1303,16 @@ suite('githubReviewAgent', () => {
 				{
 					repositoryRoot: '/test',
 					commitMessages: ['test commit'],
-					patches: [{
-						patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-						fileUri: fileUri.toString(),
-					}]
+					patches: [
+						{
+							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+							fileUri: fileUri.toString(),
+						},
+					],
 				},
 				undefined,
-				{ report: () => { } },
-				CancellationToken.None
+				{ report: () => {} },
+				CancellationToken.None,
 			);
 
 			// When aborted, should return cancelled
@@ -1154,24 +1321,39 @@ suite('githubReviewAgent', () => {
 
 		test('handles HTTP 402 quota exceeded error', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			// Create auth service with token
 			class TestAuthenticationService extends MockAuthenticationService {
-				override getCopilotToken(_force?: boolean): Promise<CopilotToken> {
-					return Promise.resolve(new CopilotToken(createTestExtendedTokenInfo({ token: 'test-token' })));
+				override getCopilotToken(
+					_force?: boolean,
+				): Promise<CopilotToken> {
+					return Promise.resolve(
+						new CopilotToken(
+							createTestExtendedTokenInfo({
+								token: 'test-token',
+							}),
+						),
+					);
 				}
 			}
 
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'const x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'const x = 1;',
+				'typescript',
+			);
 
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 				override asRelativePath(uri: URI): string {
 					return uri.path.replace(/^\/test\//, '');
@@ -1187,7 +1369,12 @@ suite('githubReviewAgent', () => {
 					return Promise.resolve({
 						ok: false,
 						status: 402,
-						headers: { get: (name: string) => name === 'x-github-request-id' ? 'test-req-id' : null },
+						headers: {
+							get: (name: string) =>
+								name === 'x-github-request-id'
+									? 'test-req-id'
+									: null,
+						},
 					} as unknown as T);
 				}
 			}
@@ -1207,14 +1394,16 @@ suite('githubReviewAgent', () => {
 					{
 						repositoryRoot: '/test',
 						commitMessages: ['test commit'],
-						patches: [{
-							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-							fileUri: fileUri.toString(),
-						}]
+						patches: [
+							{
+								patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+								fileUri: fileUri.toString(),
+							},
+						],
 					},
 					undefined,
-					{ report: () => { } },
-					CancellationToken.None
+					{ report: () => {} },
+					CancellationToken.None,
 				);
 				assert.fail('Should have thrown an error');
 			} catch (err: unknown) {
@@ -1226,24 +1415,39 @@ suite('githubReviewAgent', () => {
 
 		test('handles HTTP error response', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			// Create auth service with token
 			class TestAuthenticationService extends MockAuthenticationService {
-				override getCopilotToken(_force?: boolean): Promise<CopilotToken> {
-					return Promise.resolve(new CopilotToken(createTestExtendedTokenInfo({ token: 'test-token' })));
+				override getCopilotToken(
+					_force?: boolean,
+				): Promise<CopilotToken> {
+					return Promise.resolve(
+						new CopilotToken(
+							createTestExtendedTokenInfo({
+								token: 'test-token',
+							}),
+						),
+					);
 				}
 			}
 
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'const x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'const x = 1;',
+				'typescript',
+			);
 
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 				override asRelativePath(uri: URI): string {
 					return uri.path.replace(/^\/test\//, '');
@@ -1259,7 +1463,12 @@ suite('githubReviewAgent', () => {
 					return Promise.resolve({
 						ok: false,
 						status: 500,
-						headers: { get: (name: string) => name === 'x-github-request-id' ? 'test-req-id' : null },
+						headers: {
+							get: (name: string) =>
+								name === 'x-github-request-id'
+									? 'test-req-id'
+									: null,
+						},
 					} as unknown as T);
 				}
 			}
@@ -1279,14 +1488,16 @@ suite('githubReviewAgent', () => {
 					{
 						repositoryRoot: '/test',
 						commitMessages: ['test commit'],
-						patches: [{
-							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-							fileUri: fileUri.toString(),
-						}]
+						patches: [
+							{
+								patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+								fileUri: fileUri.toString(),
+							},
+						],
 					},
 					undefined,
-					{ report: () => { } },
-					CancellationToken.None
+					{ report: () => {} },
+					CancellationToken.None,
 				);
 				assert.fail('Should have thrown an error');
 			} catch (err: unknown) {
@@ -1302,20 +1513,34 @@ suite('githubReviewAgent', () => {
 
 			// Create auth service with token
 			class TestAuthenticationService extends MockAuthenticationService {
-				override getCopilotToken(_force?: boolean): Promise<CopilotToken> {
-					return Promise.resolve(new CopilotToken(createTestExtendedTokenInfo({ token: 'test-token' })));
+				override getCopilotToken(
+					_force?: boolean,
+				): Promise<CopilotToken> {
+					return Promise.resolve(
+						new CopilotToken(
+							createTestExtendedTokenInfo({
+								token: 'test-token',
+							}),
+						),
+					);
 				}
 			}
 
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'const x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'const x = 1;',
+				'typescript',
+			);
 
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 				override asRelativePath(uri: URI): string {
 					return uri.path.replace(/^\/test\//, '');
@@ -1325,7 +1550,7 @@ suite('githubReviewAgent', () => {
 			// Mock fetcher that does NOT recognize this error as abort
 			const networkError = new Error('Network failure');
 			const fetcherService: IFetcherService = {
-				makeAbortController: () => ({ abort: () => { }, signal: {} }),
+				makeAbortController: () => ({ abort: () => {}, signal: {} }),
 				isAbortError: () => false, // Not an abort error
 			} as unknown as IFetcherService;
 
@@ -1354,14 +1579,16 @@ suite('githubReviewAgent', () => {
 					{
 						repositoryRoot: '/test',
 						commitMessages: ['test commit'],
-						patches: [{
-							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-							fileUri: fileUri.toString(),
-						}]
+						patches: [
+							{
+								patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+								fileUri: fileUri.toString(),
+							},
+						],
 					},
 					undefined,
-					{ report: () => { } },
-					CancellationToken.None
+					{ report: () => {} },
+					CancellationToken.None,
 				);
 				assert.fail('Should have thrown an error');
 			} catch (err: unknown) {
@@ -1372,25 +1599,40 @@ suite('githubReviewAgent', () => {
 
 		test('ignores comments with paths not matching any change', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			// Extend MockAuthenticationService to return a valid token
 			class TestAuthenticationService extends MockAuthenticationService {
-				override getCopilotToken(_force?: boolean): Promise<CopilotToken> {
-					return Promise.resolve(new CopilotToken(createTestExtendedTokenInfo({ token: 'test-token' })));
+				override getCopilotToken(
+					_force?: boolean,
+				): Promise<CopilotToken> {
+					return Promise.resolve(
+						new CopilotToken(
+							createTestExtendedTokenInfo({
+								token: 'test-token',
+							}),
+						),
+					);
 				}
 			}
 
 			// Set up workspace service with a document
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'const x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'const x = 1;',
+				'typescript',
+			);
 
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 				override asRelativePath(uri: URI): string {
 					return uri.path.replace(/^\/test\//, '');
@@ -1400,20 +1642,24 @@ suite('githubReviewAgent', () => {
 			// Response contains a comment for a different file - use proper SSE format
 			const sseResponse = [
 				`data: ${JSON.stringify({
-					copilot_references: [{
-						type: 'github.generated-pull-request-comment',
-						data: {
-							path: 'other-file.ts', // Different from file.ts
-							line: 1,
-							body: 'Comment on non-existent file'
-						}
-					}]
+					copilot_references: [
+						{
+							type: 'github.generated-pull-request-comment',
+							data: {
+								path: 'other-file.ts', // Different from file.ts
+								line: 1,
+								body: 'Comment on non-existent file',
+							},
+						},
+					],
 				})}\n`,
-				'data: [DONE]\n'
+				'data: [DONE]\n',
 			];
 			class TestCAPIClientService extends MockCAPIClientService {
 				override makeRequest<T>(): Promise<T> {
-					return Promise.resolve(createFakeStreamResponse(sseResponse) as unknown as T);
+					return Promise.resolve(
+						createFakeStreamResponse(sseResponse) as unknown as T,
+					);
 				}
 			}
 
@@ -1431,14 +1677,16 @@ suite('githubReviewAgent', () => {
 				{
 					repositoryRoot: '/test',
 					commitMessages: ['test commit'],
-					patches: [{
-						patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-						fileUri: fileUri.toString(),
-					}]
+					patches: [
+						{
+							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+							fileUri: fileUri.toString(),
+						},
+					],
 				},
 				undefined,
-				{ report: () => { } },
-				CancellationToken.None
+				{ report: () => {} },
+				CancellationToken.None,
 			);
 
 			// Should succeed but with no comments (the mismatched path comment is skipped)
@@ -1450,44 +1698,64 @@ suite('githubReviewAgent', () => {
 
 		test('returns excluded comments in result', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			class TestAuthenticationService extends MockAuthenticationService {
-				override getCopilotToken(_force?: boolean): Promise<CopilotToken> {
-					return Promise.resolve(new CopilotToken(createTestExtendedTokenInfo({ token: 'test-token', code_review_enabled: true })));
+				override getCopilotToken(
+					_force?: boolean,
+				): Promise<CopilotToken> {
+					return Promise.resolve(
+						new CopilotToken(
+							createTestExtendedTokenInfo({
+								token: 'test-token',
+								code_review_enabled: true,
+							}),
+						),
+					);
 				}
 			}
 
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'let x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'let x = 1;',
+				'typescript',
+			);
 
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 			}
 
 			// Response with excluded comment
 			const sseResponse = [
 				`data: ${JSON.stringify({
-					copilot_references: [{
-						type: 'github.excluded-pull-request-comment',
-						data: {
-							path: 'file.ts',
-							line: 1,
-							body: 'Low confidence comment',
-							exclusion_reason: 'denylisted_type'
-						}
-					}]
+					copilot_references: [
+						{
+							type: 'github.excluded-pull-request-comment',
+							data: {
+								path: 'file.ts',
+								line: 1,
+								body: 'Low confidence comment',
+								exclusion_reason: 'denylisted_type',
+							},
+						},
+					],
 				})}\n`,
-				'data: [DONE]\n'
+				'data: [DONE]\n',
 			];
 			class TestCAPIClientService extends MockCAPIClientService {
 				override makeRequest<T>(): Promise<T> {
-					return Promise.resolve(createFakeStreamResponse(sseResponse) as unknown as T);
+					return Promise.resolve(
+						createFakeStreamResponse(sseResponse) as unknown as T,
+					);
 				}
 			}
 
@@ -1505,64 +1773,89 @@ suite('githubReviewAgent', () => {
 				{
 					repositoryRoot: '/test',
 					commitMessages: ['test commit'],
-					patches: [{
-						patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-						fileUri: fileUri.toString(),
-					}]
+					patches: [
+						{
+							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+							fileUri: fileUri.toString(),
+						},
+					],
 				},
 				undefined,
-				{ report: () => { } },
-				CancellationToken.None
+				{ report: () => {} },
+				CancellationToken.None,
 			);
 
 			assert.strictEqual(result.type, 'success');
 			if (result.type === 'success') {
 				assert.strictEqual(result.comments.length, 0);
 				assert.strictEqual(result.excludedComments?.length, 1);
-				const bodyValue = typeof result.excludedComments![0].body === 'string' ? result.excludedComments![0].body : result.excludedComments![0].body.value;
+				const bodyValue =
+					typeof result.excludedComments![0].body === 'string'
+						? result.excludedComments![0].body
+						: result.excludedComments![0].body.value;
 				assert.ok(bodyValue.includes('Low confidence'));
 			}
 		});
 
 		test('returns unsupported language reason when no comments and excluded files exist', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			class TestAuthenticationService extends MockAuthenticationService {
-				override getCopilotToken(_force?: boolean): Promise<CopilotToken> {
-					return Promise.resolve(new CopilotToken(createTestExtendedTokenInfo({ token: 'test-token', code_review_enabled: true })));
+				override getCopilotToken(
+					_force?: boolean,
+				): Promise<CopilotToken> {
+					return Promise.resolve(
+						new CopilotToken(
+							createTestExtendedTokenInfo({
+								token: 'test-token',
+								code_review_enabled: true,
+							}),
+						),
+					);
 				}
 			}
 
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'let x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'let x = 1;',
+				'typescript',
+			);
 
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 			}
 
 			// Response with excluded file due to unsupported language
 			const sseResponse = [
 				`data: ${JSON.stringify({
-					copilot_references: [{
-						type: 'github.excluded-file',
-						data: {
-							file_path: 'file.ts',
-							language: 'cobol',
-							reason: 'file_type_not_supported'
-						}
-					}]
+					copilot_references: [
+						{
+							type: 'github.excluded-file',
+							data: {
+								file_path: 'file.ts',
+								language: 'cobol',
+								reason: 'file_type_not_supported',
+							},
+						},
+					],
 				})}\n`,
-				'data: [DONE]\n'
+				'data: [DONE]\n',
 			];
 			class TestCAPIClientService extends MockCAPIClientService {
 				override makeRequest<T>(): Promise<T> {
-					return Promise.resolve(createFakeStreamResponse(sseResponse) as unknown as T);
+					return Promise.resolve(
+						createFakeStreamResponse(sseResponse) as unknown as T,
+					);
 				}
 			}
 
@@ -1580,14 +1873,16 @@ suite('githubReviewAgent', () => {
 				{
 					repositoryRoot: '/test',
 					commitMessages: ['test commit'],
-					patches: [{
-						patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-						fileUri: fileUri.toString(),
-					}]
+					patches: [
+						{
+							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+							fileUri: fileUri.toString(),
+						},
+					],
 				},
 				undefined,
-				{ report: () => { } },
-				CancellationToken.None
+				{ report: () => {} },
+				CancellationToken.None,
 			);
 
 			assert.strictEqual(result.type, 'success');
@@ -1600,23 +1895,39 @@ suite('githubReviewAgent', () => {
 
 		test('does not report unsupported languages when comments exist', async () => {
 			const { githubReview } = await import('../githubReviewAgent');
-			const { domainService, fetcherService, envService } = createBaseMocks();
+			const { domainService, fetcherService, envService } =
+				createBaseMocks();
 
 			class TestAuthenticationService extends MockAuthenticationService {
-				override getCopilotToken(_force?: boolean): Promise<CopilotToken> {
-					return Promise.resolve(new CopilotToken(createTestExtendedTokenInfo({ token: 'test-token', code_review_enabled: true })));
+				override getCopilotToken(
+					_force?: boolean,
+				): Promise<CopilotToken> {
+					return Promise.resolve(
+						new CopilotToken(
+							createTestExtendedTokenInfo({
+								token: 'test-token',
+								code_review_enabled: true,
+							}),
+						),
+					);
 				}
 			}
 
 			const fileUri = URI.file('/test/file.ts');
-			const docData = createTextDocumentData(fileUri, 'let x = 1;', 'typescript');
+			const docData = createTextDocumentData(
+				fileUri,
+				'let x = 1;',
+				'typescript',
+			);
 
 			class TestWorkspaceService extends MockWorkspaceService {
 				override openTextDocument(uri: URI): Promise<TextDocument> {
 					if (uri.toString() === fileUri.toString()) {
 						return Promise.resolve(docData.document);
 					}
-					return Promise.reject(new Error(`Document not found: ${uri.toString()}`));
+					return Promise.reject(
+						new Error(`Document not found: ${uri.toString()}`),
+					);
 				}
 			}
 
@@ -1629,24 +1940,26 @@ suite('githubReviewAgent', () => {
 							data: {
 								path: 'file.ts',
 								line: 1,
-								body: 'Use const instead of let'
-							}
+								body: 'Use const instead of let',
+							},
 						},
 						{
 							type: 'github.excluded-file',
 							data: {
 								file_path: 'other.cobol',
 								language: 'cobol',
-								reason: 'file_type_not_supported'
-							}
-						}
-					]
+								reason: 'file_type_not_supported',
+							},
+						},
+					],
 				})}\n`,
-				'data: [DONE]\n'
+				'data: [DONE]\n',
 			];
 			class TestCAPIClientService extends MockCAPIClientService {
 				override makeRequest<T>(): Promise<T> {
-					return Promise.resolve(createFakeStreamResponse(sseResponse) as unknown as T);
+					return Promise.resolve(
+						createFakeStreamResponse(sseResponse) as unknown as T,
+					);
 				}
 			}
 
@@ -1664,14 +1977,16 @@ suite('githubReviewAgent', () => {
 				{
 					repositoryRoot: '/test',
 					commitMessages: ['test commit'],
-					patches: [{
-						patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
-						fileUri: fileUri.toString(),
-					}]
+					patches: [
+						{
+							patch: '@@ -1,1 +1,1 @@\n-const x = 1;\n+let x = 1;',
+							fileUri: fileUri.toString(),
+						},
+					],
 				},
 				undefined,
-				{ report: () => { } },
-				CancellationToken.None
+				{ report: () => {} },
+				CancellationToken.None,
 			);
 
 			assert.strictEqual(result.type, 'success');

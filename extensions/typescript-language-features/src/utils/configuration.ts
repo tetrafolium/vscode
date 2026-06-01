@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { Disposable } from './dispose';
+import * as vscode from "vscode";
+import { Disposable } from "./dispose";
 
-export type UnifiedConfigurationScope = vscode.ConfigurationScope | null | undefined;
+export type UnifiedConfigurationScope =
+	| vscode.ConfigurationScope
+	| null
+	| undefined;
 
-export const unifiedConfigSection = 'js/ts';
+export const unifiedConfigSection = "js/ts";
 
 export interface ReadUnifiedConfigOptions<Scope = UnifiedConfigurationScope> {
 	readonly scope?: Scope;
@@ -23,36 +26,47 @@ export interface ReadUnifiedConfigOptions<Scope = UnifiedConfigurationScope> {
 export function readUnifiedConfig<T>(
 	subSectionName: string,
 	defaultValue: T,
-	options: ReadUnifiedConfigOptions
+	options: ReadUnifiedConfigOptions,
 ): T {
 	// Check unified setting first
-	const unifiedConfig = vscode.workspace.getConfiguration(unifiedConfigSection, options.scope);
+	const unifiedConfig = vscode.workspace.getConfiguration(
+		unifiedConfigSection,
+		options.scope,
+	);
 	const unifiedInspect = unifiedConfig.inspect<T>(subSectionName);
 	if (hasModifiedValue(unifiedInspect)) {
 		return unifiedConfig.get<T>(subSectionName, defaultValue);
 	}
 
 	// Fall back to language-specific setting
-	const languageConfig = vscode.workspace.getConfiguration(options.fallbackSection, options.scope);
-	return languageConfig.get<T>(options.fallbackSubSectionNameOverride ?? subSectionName, defaultValue);
+	const languageConfig = vscode.workspace.getConfiguration(
+		options.fallbackSection,
+		options.scope,
+	);
+	return languageConfig.get<T>(
+		options.fallbackSubSectionNameOverride ?? subSectionName,
+		defaultValue,
+	);
 }
 
 /**
  * Checks if an inspected configuration value has any user-defined values set.
  */
-function hasModifiedValue(inspect: ReturnType<vscode.WorkspaceConfiguration['inspect']>): boolean {
+function hasModifiedValue(
+	inspect: ReturnType<vscode.WorkspaceConfiguration["inspect"]>,
+): boolean {
 	if (!inspect) {
 		return false;
 	}
 
 	return (
-		typeof inspect.globalValue !== 'undefined'
-		|| typeof inspect.workspaceValue !== 'undefined'
-		|| typeof inspect.workspaceFolderValue !== 'undefined'
-		|| typeof inspect.globalLanguageValue !== 'undefined'
-		|| typeof inspect.workspaceLanguageValue !== 'undefined'
-		|| typeof inspect.workspaceFolderLanguageValue !== 'undefined'
-		|| ((inspect.languageIds?.length ?? 0) > 0)
+		typeof inspect.globalValue !== "undefined" ||
+		typeof inspect.workspaceValue !== "undefined" ||
+		typeof inspect.workspaceFolderValue !== "undefined" ||
+		typeof inspect.globalLanguageValue !== "undefined" ||
+		typeof inspect.workspaceLanguageValue !== "undefined" ||
+		typeof inspect.workspaceFolderLanguageValue !== "undefined" ||
+		(inspect.languageIds?.length ?? 0) > 0
 	);
 }
 
@@ -64,16 +78,22 @@ export function hasModifiedUnifiedConfig(
 	options: {
 		readonly scope?: UnifiedConfigurationScope;
 		readonly fallbackSection: string;
-	}
+	},
 ): boolean {
 	// Check unified setting
-	const unifiedConfig = vscode.workspace.getConfiguration(unifiedConfigSection, options.scope);
+	const unifiedConfig = vscode.workspace.getConfiguration(
+		unifiedConfigSection,
+		options.scope,
+	);
 	if (hasModifiedValue(unifiedConfig.inspect(subSectionName))) {
 		return true;
 	}
 
 	// Check language-specific setting
-	const languageConfig = vscode.workspace.getConfiguration(options.fallbackSection, options.scope);
+	const languageConfig = vscode.workspace.getConfiguration(
+		options.fallbackSection,
+		options.scope,
+	);
 	return hasModifiedValue(languageConfig.inspect(subSectionName));
 }
 
@@ -81,11 +101,12 @@ export function hasModifiedUnifiedConfig(
  * A cached, observable unified configuration value.
  */
 export class UnifiedConfigValue<T> extends Disposable {
-
 	private _value: T;
 
 	private readonly _onDidChange = this._register(new vscode.EventEmitter<T>());
-	public get onDidChange() { return this._onDidChange.event; }
+	public get onDidChange() {
+		return this._onDidChange.event;
+	}
 
 	constructor(
 		private readonly subSectionName: string,
@@ -96,21 +117,34 @@ export class UnifiedConfigValue<T> extends Disposable {
 
 		this._value = this.read();
 
-		this._register(vscode.workspace.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(`${unifiedConfigSection}.${subSectionName}`, options.scope ?? undefined) ||
-				e.affectsConfiguration(`${options.fallbackSection}.${options.fallbackSubSectionNameOverride ?? subSectionName}`, options.scope ?? undefined)
-			) {
-				const newValue = this.read();
-				if (newValue !== this._value) {
-					this._value = newValue;
-					this._onDidChange.fire(newValue);
+		this._register(
+			vscode.workspace.onDidChangeConfiguration((e) => {
+				if (
+					e.affectsConfiguration(
+						`${unifiedConfigSection}.${subSectionName}`,
+						options.scope ?? undefined,
+					) ||
+					e.affectsConfiguration(
+						`${options.fallbackSection}.${options.fallbackSubSectionNameOverride ?? subSectionName}`,
+						options.scope ?? undefined,
+					)
+				) {
+					const newValue = this.read();
+					if (newValue !== this._value) {
+						this._value = newValue;
+						this._onDidChange.fire(newValue);
+					}
 				}
-			}
-		}));
+			}),
+		);
 	}
 
 	private read(): T {
-		return readUnifiedConfig<T>(this.subSectionName, this.defaultValue, this.options);
+		return readUnifiedConfig<T>(
+			this.subSectionName,
+			this.defaultValue,
+			this.options,
+		);
 	}
 
 	public getValue(): T {
@@ -130,10 +164,11 @@ export interface ResourceUnifiedConfigScope {
  * entry for resources outside any workspace folder.
  */
 export class ResourceUnifiedConfigValue<T> extends Disposable {
-
 	private readonly _cache = new Map</* workspace folder */ string, T>();
 
-	private readonly _onDidChange = this._register(new vscode.EventEmitter<void>());
+	private readonly _onDidChange = this._register(
+		new vscode.EventEmitter<void>(),
+	);
 	public readonly onDidChange = this._onDidChange.event;
 
 	constructor(
@@ -145,22 +180,28 @@ export class ResourceUnifiedConfigValue<T> extends Disposable {
 	) {
 		super();
 
-		const fallbackName = options?.fallbackSubSectionNameOverride ?? subSectionName;
+		const fallbackName =
+			options?.fallbackSubSectionNameOverride ?? subSectionName;
 
-		this._register(vscode.workspace.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(`${unifiedConfigSection}.${subSectionName}`) ||
-				e.affectsConfiguration(`javascript.${fallbackName}`) ||
-				e.affectsConfiguration(`typescript.${fallbackName}`)
-			) {
+		this._register(
+			vscode.workspace.onDidChangeConfiguration((e) => {
+				if (
+					e.affectsConfiguration(`${unifiedConfigSection}.${subSectionName}`) ||
+					e.affectsConfiguration(`javascript.${fallbackName}`) ||
+					e.affectsConfiguration(`typescript.${fallbackName}`)
+				) {
+					this._cache.clear();
+					this._onDidChange.fire();
+				}
+			}),
+		);
+
+		this._register(
+			vscode.workspace.onDidChangeWorkspaceFolders(() => {
 				this._cache.clear();
 				this._onDidChange.fire();
-			}
-		}));
-
-		this._register(vscode.workspace.onDidChangeWorkspaceFolders(() => {
-			this._cache.clear();
-			this._onDidChange.fire();
-		}));
+			}),
+		);
 	}
 
 	public getValue(scope: ResourceUnifiedConfigScope): T {
@@ -174,7 +215,8 @@ export class ResourceUnifiedConfigValue<T> extends Disposable {
 		const value = readUnifiedConfig<T>(this.subSectionName, this.defaultValue, {
 			scope: { uri: scope.uri, languageId: scope.languageId },
 			fallbackSection,
-			fallbackSubSectionNameOverride: this.options?.fallbackSubSectionNameOverride,
+			fallbackSubSectionNameOverride:
+				this.options?.fallbackSubSectionNameOverride,
 		});
 		this._cache.set(key, value);
 		return value;
@@ -182,16 +224,16 @@ export class ResourceUnifiedConfigValue<T> extends Disposable {
 
 	private fallbackSectionFor(languageId: string): string {
 		switch (languageId) {
-			case 'javascript':
-			case 'javascriptreact':
-				return 'javascript';
+			case "javascript":
+			case "javascriptreact":
+				return "javascript";
 			default:
-				return 'typescript';
+				return "typescript";
 		}
 	}
 
 	private keyFor(scope: ResourceUnifiedConfigScope): string {
 		const folder = vscode.workspace.getWorkspaceFolder(scope.uri);
-		return folder ? folder.uri.toString() : '';
+		return folder ? folder.uri.toString() : "";
 	}
 }

@@ -10,7 +10,10 @@ import type tt from 'typescript';
 import TS from '../../common/typescript';
 const ts = TS();
 
-import { ComputeContextSession, type Logger } from '../../common/contextProvider';
+import {
+	ComputeContextSession,
+	type Logger,
+} from '../../common/contextProvider';
 import type { Host } from '../../common/host';
 import { LanguageServiceProxy } from './languageServerProxy';
 
@@ -23,7 +26,9 @@ function _normalizePath(value: string): string {
 		}
 	}
 	const result = path.posix.normalize(value);
-	return result.length > 0 && result.charAt(result.length - 1) === '/' ? result.substr(0, result.length - 1) : result;
+	return result.length > 0 && result.charAt(result.length - 1) === '/'
+		? result.substr(0, result.length - 1)
+		: result;
 }
 
 function makeAbsolute(p: string, root?: string): string {
@@ -50,37 +55,62 @@ namespace ParseCommandLine {
 		} else if (stat.isDirectory()) {
 			configFilePath = path.join(fileOrDirectory, 'tsconfig.json');
 		} else {
-			throw new Error('The provided path is neither a file nor a directory.');
+			throw new Error(
+				'The provided path is neither a file nor a directory.',
+			);
 		}
 		return loadConfigFile(configFilePath);
 	}
 
 	function getDefaultCompilerOptions(configFileName?: string) {
-		const options: tt.CompilerOptions = configFileName && path.basename(configFileName) === 'jsconfig.json'
-			? { allowJs: true, maxNodeModuleJsDepth: 2, allowSyntheticDefaultImports: true, skipLibCheck: true, noEmit: true }
-			: {};
+		const options: tt.CompilerOptions =
+			configFileName && path.basename(configFileName) === 'jsconfig.json'
+				? {
+						allowJs: true,
+						maxNodeModuleJsDepth: 2,
+						allowSyntheticDefaultImports: true,
+						skipLibCheck: true,
+						noEmit: true,
+					}
+				: {};
 		return options;
 	}
 
 	function loadConfigFile(filePath: string): tt.ParsedCommandLine {
 		const readResult = ts.readConfigFile(filePath, ts.sys.readFile);
 		if (readResult.error) {
-			throw new Error(ts.formatDiagnostics([readResult.error], ts.createCompilerHost({})));
+			throw new Error(
+				ts.formatDiagnostics(
+					[readResult.error],
+					ts.createCompilerHost({}),
+				),
+			);
 		}
 		const config = readResult.config;
 		if (config.compilerOptions !== undefined) {
-			config.compilerOptions = Object.assign(config.compilerOptions, getDefaultCompilerOptions(filePath));
+			config.compilerOptions = Object.assign(
+				config.compilerOptions,
+				getDefaultCompilerOptions(filePath),
+			);
 		}
-		const result = ts.parseJsonConfigFileContent(config, ts.sys, path.dirname(filePath));
+		const result = ts.parseJsonConfigFileContent(
+			config,
+			ts.sys,
+			path.dirname(filePath),
+		);
 		if (result.errors.length > 0) {
-			throw new Error(ts.formatDiagnostics(result.errors, ts.createCompilerHost({})));
+			throw new Error(
+				ts.formatDiagnostics(result.errors, ts.createCompilerHost({})),
+			);
 		}
 		return result;
 	}
 }
 
 namespace CompileOptions {
-	export function getConfigFilePath(options: tt.CompilerOptions): string | undefined {
+	export function getConfigFilePath(
+		options: tt.CompilerOptions,
+	): string | undefined {
 		if (options.project) {
 			const projectPath = path.resolve(options.project);
 			if (ts.sys.directoryExists(projectPath)) {
@@ -99,21 +129,31 @@ interface InternalLanguageServiceHost extends tt.LanguageServiceHost {
 }
 
 namespace LanguageServiceHost {
-	export function useSourceOfProjectReferenceRedirect(host: tt.LanguageServiceHost, value: () => boolean): void {
-		(host as InternalLanguageServiceHost).useSourceOfProjectReferenceRedirect = value;
+	export function useSourceOfProjectReferenceRedirect(
+		host: tt.LanguageServiceHost,
+		value: () => boolean,
+	): void {
+		(
+			host as InternalLanguageServiceHost
+		).useSourceOfProjectReferenceRedirect = value;
 	}
 }
 
 class LocalLanguageServiceHost implements tt.LanguageServiceHost {
-
 	private readonly scriptSnapshots: Map<string, tt.IScriptSnapshot>;
 	private languageServiceProxy: LanguageServiceProxy | undefined;
 
-	constructor(private readonly config: tt.ParsedCommandLine, private readonly configFilePath: string | undefined, private readonly overrides?: Map<string, string>) {
+	constructor(
+		private readonly config: tt.ParsedCommandLine,
+		private readonly configFilePath: string | undefined,
+		private readonly overrides?: Map<string, string>,
+	) {
 		this.scriptSnapshots = new Map<string, tt.IScriptSnapshot>();
 	}
 
-	public setLanguageServiceProxy(languageService: LanguageServiceProxy): void {
+	public setLanguageServiceProxy(
+		languageService: LanguageServiceProxy,
+	): void {
 		this.languageServiceProxy = languageService;
 	}
 
@@ -139,9 +179,14 @@ class LocalLanguageServiceHost implements tt.LanguageServiceHost {
 		return '0';
 	}
 	public getScriptSnapshot(fileName: string): tt.IScriptSnapshot | undefined {
-		let result: tt.IScriptSnapshot | undefined = this.scriptSnapshots.get(fileName);
+		let result: tt.IScriptSnapshot | undefined =
+			this.scriptSnapshots.get(fileName);
 		if (result === undefined) {
-			const content: string | undefined = this.overrides?.get(fileName) ?? (ts.sys.fileExists(fileName) ? ts.sys.readFile(fileName) : undefined);
+			const content: string | undefined =
+				this.overrides?.get(fileName) ??
+				(ts.sys.fileExists(fileName)
+					? ts.sys.readFile(fileName)
+					: undefined);
 			if (content === undefined) {
 				return undefined;
 			}
@@ -172,7 +217,15 @@ class LocalLanguageServiceHost implements tt.LanguageServiceHost {
 	// this is necessary to make source references work.
 	public realpath = ts.sys.realpath;
 
-	public runWithTemporaryFileUpdate(rootFile: string, updatedText: string, cb: (updatedProgram: tt.Program, originalProgram: tt.Program | undefined, updatedFile: tt.SourceFile) => void): void {
+	public runWithTemporaryFileUpdate(
+		rootFile: string,
+		updatedText: string,
+		cb: (
+			updatedProgram: tt.Program,
+			originalProgram: tt.Program | undefined,
+			updatedFile: tt.SourceFile,
+		) => void,
+	): void {
 		if (this.languageServiceProxy === undefined) {
 			throw new Error('Language service proxy not set.');
 		}
@@ -182,51 +235,75 @@ class LocalLanguageServiceHost implements tt.LanguageServiceHost {
 		const overrides = this.overrides ?? new Map<string, string>();
 		overrides.set(rootFile, updatedText);
 
-		const originalLanguageService = this.languageServiceProxy.getLanguageService();
+		const originalLanguageService =
+			this.languageServiceProxy.getLanguageService();
 		try {
-			const host: LocalLanguageServiceHost = new LocalLanguageServiceHost(this.config, this.configFilePath, overrides);
-			LanguageServiceHost.useSourceOfProjectReferenceRedirect(host, () => {
-				return !this.config.options.disableSourceOfProjectReferenceRedirect;
-			});
+			const host: LocalLanguageServiceHost = new LocalLanguageServiceHost(
+				this.config,
+				this.configFilePath,
+				overrides,
+			);
+			LanguageServiceHost.useSourceOfProjectReferenceRedirect(
+				host,
+				() => {
+					return !this.config.options
+						.disableSourceOfProjectReferenceRedirect;
+				},
+			);
 
-			const languageService: tt.LanguageService = ts.createLanguageService(host);
+			const languageService: tt.LanguageService =
+				ts.createLanguageService(host);
 			const program = languageService.getProgram();
 			if (program === undefined) {
-				throw new Error('Couldn\'t create language service with underlying program.');
+				throw new Error(
+					"Couldn't create language service with underlying program.",
+				);
 			}
 			this.languageServiceProxy.setLanguageService(languageService);
 			host.setLanguageServiceProxy(this.languageServiceProxy);
 			const updatedFile = program.getSourceFile(rootFile);
 			if (updatedFile === undefined) {
-				throw new Error('Couldn\'t find updated file in program.');
+				throw new Error("Couldn't find updated file in program.");
 			}
 			cb(program, originalLanguageService.getProgram(), updatedFile);
 		} finally {
-			this.languageServiceProxy.setLanguageService(originalLanguageService!);
+			this.languageServiceProxy.setLanguageService(
+				originalLanguageService!,
+			);
 		}
 	}
 }
 
 export namespace LanguageServices {
-
-	export function createLanguageService(fileOrDirectory: string): [tt.LanguageService, tt.LanguageServiceHost] {
+	export function createLanguageService(
+		fileOrDirectory: string,
+	): [tt.LanguageService, tt.LanguageServiceHost] {
 		const config = ParseCommandLine.create(fileOrDirectory);
 		return LanguageServices._createLanguageService(config);
 	}
 
-	export function _createLanguageService(config: tt.ParsedCommandLine): [tt.LanguageService, tt.LanguageServiceHost] {
+	export function _createLanguageService(
+		config: tt.ParsedCommandLine,
+	): [tt.LanguageService, tt.LanguageServiceHost] {
 		const configFilePath = CompileOptions.getConfigFilePath(config.options);
-		const host: LocalLanguageServiceHost = new LocalLanguageServiceHost(config, configFilePath);
+		const host: LocalLanguageServiceHost = new LocalLanguageServiceHost(
+			config,
+			configFilePath,
+		);
 
 		LanguageServiceHost.useSourceOfProjectReferenceRedirect(host, () => {
 			return !config.options.disableSourceOfProjectReferenceRedirect;
 		});
 
-		const languageService: LanguageServiceProxy = new LanguageServiceProxy(ts.createLanguageService(host));
+		const languageService: LanguageServiceProxy = new LanguageServiceProxy(
+			ts.createLanguageService(host),
+		);
 
 		const program = languageService.getProgram();
 		if (program === undefined) {
-			throw new Error('Couldn\'t create language service with underlying program.');
+			throw new Error(
+				"Couldn't create language service with underlying program.",
+			);
 		}
 		host.setLanguageServiceProxy(languageService);
 		return [languageService, host];
@@ -234,7 +311,6 @@ export namespace LanguageServices {
 }
 
 class ConsoleLogger implements Logger {
-
 	info(s: string): void {
 		console.info(s);
 	}
@@ -254,7 +330,6 @@ class ConsoleLogger implements Logger {
 			default:
 				console.error(s);
 		}
-
 	}
 
 	startGroup(): void {
@@ -267,12 +342,15 @@ class ConsoleLogger implements Logger {
 }
 
 export class LanguageServicesSession extends ComputeContextSession {
-
 	private readonly languageServices: Map<string, tt.LanguageService>;
 
 	public readonly logger: Logger;
 
-	constructor(root: tt.LanguageService | string, languageServiceHost: tt.LanguageServiceHost, host: Host) {
+	constructor(
+		root: tt.LanguageService | string,
+		languageServiceHost: tt.LanguageServiceHost,
+		host: Host,
+	) {
 		super(languageServiceHost, host, true);
 		this.logger = new ConsoleLogger();
 		this.languageServices = new Map();
@@ -283,7 +361,9 @@ export class LanguageServicesSession extends ComputeContextSession {
 			key = makeAbsolute(root);
 		} else {
 			languageService = root;
-			key = CompileOptions.getConfigFilePath(languageService.getProgram()!.getCompilerOptions());
+			key = CompileOptions.getConfigFilePath(
+				languageService.getProgram()!.getCompilerOptions(),
+			);
 		}
 		if (key === undefined) {
 			throw new Error('Failed to create key');
@@ -296,17 +376,23 @@ export class LanguageServicesSession extends ComputeContextSession {
 		console.error(`Error in ${cmd}: ${error.message}`, error);
 	}
 
-	public override getScriptVersion(_sourceFile: tt.SourceFile): string | undefined {
+	public override getScriptVersion(
+		_sourceFile: tt.SourceFile,
+	): string | undefined {
 		return '1';
 	}
 
-	public *getLanguageServices(sourceFile?: tt.SourceFile): IterableIterator<tt.LanguageService> {
+	public *getLanguageServices(
+		sourceFile?: tt.SourceFile,
+	): IterableIterator<tt.LanguageService> {
 		if (sourceFile === undefined) {
 			yield* this.languageServices.values();
 		} else {
 			const file = ts.server.toNormalizedPath(sourceFile.fileName);
 			for (const languageService of this.languageServices.values()) {
-				const scriptInfo = languageService.getProgram()?.getSourceFile(file);
+				const scriptInfo = languageService
+					.getProgram()
+					?.getSourceFile(file);
 				if (scriptInfo === undefined) {
 					continue;
 				}
@@ -330,12 +416,19 @@ export class LanguageServicesSession extends ComputeContextSession {
 				if (reference === undefined) {
 					continue;
 				}
-				const configFilePath = CompileOptions.getConfigFilePath(reference.commandLine.options);
-				const key = configFilePath ?? LanguageServicesSession.makeKey(reference.commandLine);
+				const configFilePath = CompileOptions.getConfigFilePath(
+					reference.commandLine.options,
+				);
+				const key =
+					configFilePath ??
+					LanguageServicesSession.makeKey(reference.commandLine);
 				if (this.languageServices.has(key)) {
 					continue;
 				}
-				const [languageService] = LanguageServices._createLanguageService(reference.commandLine);
+				const [languageService] =
+					LanguageServices._createLanguageService(
+						reference.commandLine,
+					);
 				this.languageServices.set(key, languageService);
 				this.createDeep(languageService);
 			}

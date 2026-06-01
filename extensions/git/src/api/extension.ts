@@ -3,15 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Model } from '../model';
-import type { GitExtension, Repository, API } from './git';
-import { ApiRepository, ApiImpl } from './api1';
-import { Event, EventEmitter } from 'vscode';
-import { CloneManager } from '../cloneManager';
+import { Model } from "../model";
+import type { GitExtension, Repository, API } from "./git";
+import { ApiRepository, ApiImpl } from "./api1";
+import { Event, EventEmitter } from "vscode";
+import { CloneManager } from "../cloneManager";
 
-function deprecated(_target: unknown, key: string | symbol, descriptor: PropertyDescriptor): void {
-	if (typeof descriptor.value !== 'function') {
-		throw new Error('not supported');
+function deprecated(
+	_target: unknown,
+	key: string | symbol,
+	descriptor: PropertyDescriptor,
+): void {
+	if (typeof descriptor.value !== "function") {
+		throw new Error("not supported");
 	}
 
 	const original = descriptor.value;
@@ -22,11 +26,11 @@ function deprecated(_target: unknown, key: string | symbol, descriptor: Property
 }
 
 export class GitExtensionImpl implements GitExtension {
-
 	enabled: boolean = false;
 
 	private _onDidChangeEnablement = new EventEmitter<boolean>();
-	readonly onDidChangeEnablement: Event<boolean> = this._onDidChangeEnablement.event;
+	readonly onDidChangeEnablement: Event<boolean> =
+		this._onDidChangeEnablement.event;
 
 	private _model: Model | undefined = undefined;
 	private _cloneManager: CloneManager | undefined = undefined;
@@ -63,7 +67,7 @@ export class GitExtensionImpl implements GitExtension {
 	@deprecated
 	async getGitPath(): Promise<string> {
 		if (!this._model) {
-			throw new Error('Git model not found');
+			throw new Error("Git model not found");
 		}
 
 		return this._model.git.path;
@@ -72,21 +76,26 @@ export class GitExtensionImpl implements GitExtension {
 	@deprecated
 	async getRepositories(): Promise<Repository[]> {
 		if (!this._model) {
-			throw new Error('Git model not found');
+			throw new Error("Git model not found");
 		}
 
-		return this._model.repositories.map(repository => new ApiRepository(repository));
+		return this._model.repositories.map(
+			(repository) => new ApiRepository(repository),
+		);
 	}
 
 	getAPI(version: number): API {
 		if (!this._model || !this._cloneManager) {
-			throw new Error('Git model not found');
+			throw new Error("Git model not found");
 		}
 
 		if (version !== 1) {
 			throw new Error(`No API version ${version} found.`);
 		}
 
-		return new ApiImpl({ model: this._model, cloneManager: this._cloneManager });
+		return new ApiImpl({
+			model: this._model,
+			cloneManager: this._cloneManager,
+		});
 	}
 }

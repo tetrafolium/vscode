@@ -3,24 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../../../base/browser/dom.js';
-import { Emitter } from '../../../../../../../base/common/event.js';
-import { toDisposable } from '../../../../../../../base/common/lifecycle.js';
-import { localize } from '../../../../../../../nls.js';
-import { IContextKeyService } from '../../../../../../../platform/contextkey/common/contextkey.js';
-import { IExtensionManagementService } from '../../../../../../../platform/extensionManagement/common/extensionManagement.js';
-import { areSameExtensions } from '../../../../../../../platform/extensionManagement/common/extensionManagementUtil.js';
-import { IInstantiationService } from '../../../../../../../platform/instantiation/common/instantiation.js';
-import { IKeybindingService } from '../../../../../../../platform/keybinding/common/keybinding.js';
-import { ChatContextKeys } from '../../../../common/actions/chatContextKeys.js';
-import { ConfirmedReason, IChatToolInvocation, ToolConfirmKind } from '../../../../common/chatService/chatService.js';
-import { CancelChatActionId } from '../../../actions/chatExecuteActions.js';
-import { AcceptToolConfirmationActionId } from '../../../actions/chatToolActions.js';
-import { IChatWidgetService } from '../../../chat.js';
-import { ChatConfirmationWidget, IChatConfirmationButton } from '../chatConfirmationWidget.js';
-import { IChatContentPartRenderContext } from '../chatContentParts.js';
-import { ChatExtensionsContentPart } from '../chatExtensionsContentPart.js';
-import { BaseChatToolInvocationSubPart } from './chatToolInvocationSubPart.js';
+import * as dom from "../../../../../../../base/browser/dom.js";
+import { Emitter } from "../../../../../../../base/common/event.js";
+import { toDisposable } from "../../../../../../../base/common/lifecycle.js";
+import { localize } from "../../../../../../../nls.js";
+import { IContextKeyService } from "../../../../../../../platform/contextkey/common/contextkey.js";
+import { IExtensionManagementService } from "../../../../../../../platform/extensionManagement/common/extensionManagement.js";
+import { areSameExtensions } from "../../../../../../../platform/extensionManagement/common/extensionManagementUtil.js";
+import { IInstantiationService } from "../../../../../../../platform/instantiation/common/instantiation.js";
+import { IKeybindingService } from "../../../../../../../platform/keybinding/common/keybinding.js";
+import { ChatContextKeys } from "../../../../common/actions/chatContextKeys.js";
+import {
+	ConfirmedReason,
+	IChatToolInvocation,
+	ToolConfirmKind,
+} from "../../../../common/chatService/chatService.js";
+import { CancelChatActionId } from "../../../actions/chatExecuteActions.js";
+import { AcceptToolConfirmationActionId } from "../../../actions/chatToolActions.js";
+import { IChatWidgetService } from "../../../chat.js";
+import {
+	ChatConfirmationWidget,
+	IChatConfirmationButton,
+} from "../chatConfirmationWidget.js";
+import { IChatContentPartRenderContext } from "../chatContentParts.js";
+import { ChatExtensionsContentPart } from "../chatExtensionsContentPart.js";
+import { BaseChatToolInvocationSubPart } from "./chatToolInvocationSubPart.js";
 
 export class ExtensionsInstallConfirmationWidgetSubPart extends BaseChatToolInvocationSubPart {
 	public readonly domNode: HTMLElement;
@@ -31,7 +38,7 @@ export class ExtensionsInstallConfirmationWidgetSubPart extends BaseChatToolInvo
 	}
 
 	public override get codeblocksPartId() {
-		return this._confirmWidget?.codeblocksPartId || '<none>';
+		return this._confirmWidget?.codeblocksPartId || "<none>";
 	}
 
 	constructor(
@@ -40,27 +47,41 @@ export class ExtensionsInstallConfirmationWidgetSubPart extends BaseChatToolInvo
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IChatWidgetService chatWidgetService: IChatWidgetService,
-		@IExtensionManagementService extensionManagementService: IExtensionManagementService,
+		@IExtensionManagementService
+		extensionManagementService: IExtensionManagementService,
 		@IInstantiationService instantiationService: IInstantiationService,
 	) {
 		super(toolInvocation);
 
-		if (toolInvocation.toolSpecificData?.kind !== 'extensions') {
-			throw new Error('Tool specific data is missing or not of kind extensions');
+		if (toolInvocation.toolSpecificData?.kind !== "extensions") {
+			throw new Error(
+				"Tool specific data is missing or not of kind extensions",
+			);
 		}
 
 		const extensionsContent = toolInvocation.toolSpecificData;
-		this.domNode = dom.$('');
-		const chatExtensionsContentPart = this._register(instantiationService.createInstance(ChatExtensionsContentPart, extensionsContent));
+		this.domNode = dom.$("");
+		const chatExtensionsContentPart = this._register(
+			instantiationService.createInstance(
+				ChatExtensionsContentPart,
+				extensionsContent,
+			),
+		);
 		dom.append(this.domNode, chatExtensionsContentPart.domNode);
 
 		const state = toolInvocation.state.get();
 		if (state.type === IChatToolInvocation.StateKind.WaitingForConfirmation) {
-			const allowLabel = localize('allow', "Allow");
-			const allowTooltip = keybindingService.appendKeybinding(allowLabel, AcceptToolConfirmationActionId);
+			const allowLabel = localize("allow", "Allow");
+			const allowTooltip = keybindingService.appendKeybinding(
+				allowLabel,
+				AcceptToolConfirmationActionId,
+			);
 
-			const cancelLabel = localize('cancel', "Cancel");
-			const cancelTooltip = keybindingService.appendKeybinding(cancelLabel, CancelChatActionId);
+			const cancelLabel = localize("cancel", "Cancel");
+			const cancelTooltip = keybindingService.appendKeybinding(
+				cancelLabel,
+				CancelChatActionId,
+			);
 			const enableAllowButtonEvent = this._register(new Emitter<boolean>());
 
 			const buttons: IChatConfirmationButton<ConfirmedReason>[] = [
@@ -69,43 +90,62 @@ export class ExtensionsInstallConfirmationWidgetSubPart extends BaseChatToolInvo
 					data: { type: ToolConfirmKind.UserAction },
 					tooltip: allowTooltip,
 					disabled: true,
-					onDidChangeDisablement: enableAllowButtonEvent.event
+					onDidChangeDisablement: enableAllowButtonEvent.event,
 				},
 				{
 					label: cancelLabel,
 					data: { type: ToolConfirmKind.Denied },
 					isSecondary: true,
-					tooltip: cancelTooltip
-				}
+					tooltip: cancelTooltip,
+				},
 			];
 
-			const confirmWidget = this._register(instantiationService.createInstance(
-				ChatConfirmationWidget<ConfirmedReason>,
-				context,
-				{
-					title: state.confirmationMessages?.title ?? localize('installExtensions', "Install Extensions"),
-					message: state.confirmationMessages?.message ?? localize('installExtensionsConfirmation', "Click the Install button on the extension and then press Allow when finished."),
-					buttons,
-				}
-			));
+			const confirmWidget = this._register(
+				instantiationService.createInstance(
+					ChatConfirmationWidget<ConfirmedReason>,
+					context,
+					{
+						title:
+							state.confirmationMessages?.title ??
+							localize("installExtensions", "Install Extensions"),
+						message:
+							state.confirmationMessages?.message ??
+							localize(
+								"installExtensionsConfirmation",
+								"Click the Install button on the extension and then press Allow when finished.",
+							),
+						buttons,
+					},
+				),
+			);
 			this._confirmWidget = confirmWidget;
 			dom.append(this.domNode, confirmWidget.domNode);
-			this._register(confirmWidget.onDidClick(({ button, isTouchClick }) => {
-				IChatToolInvocation.confirmWith(toolInvocation, button.data);
-				if (!isTouchClick) {
-					chatWidgetService.getWidgetBySessionResource(context.element.sessionResource)?.focusInput();
-				}
-			}));
-			const hasToolConfirmationKey = ChatContextKeys.Editing.hasToolConfirmation.bindTo(contextKeyService);
+			this._register(
+				confirmWidget.onDidClick(({ button, isTouchClick }) => {
+					IChatToolInvocation.confirmWith(toolInvocation, button.data);
+					if (!isTouchClick) {
+						chatWidgetService
+							.getWidgetBySessionResource(context.element.sessionResource)
+							?.focusInput();
+					}
+				}),
+			);
+			const hasToolConfirmationKey =
+				ChatContextKeys.Editing.hasToolConfirmation.bindTo(contextKeyService);
 			hasToolConfirmationKey.set(true);
 			this._register(toDisposable(() => hasToolConfirmationKey.reset()));
-			const disposable = this._register(extensionManagementService.onInstallExtension(e => {
-				if (extensionsContent.extensions.some(id => areSameExtensions({ id }, e.identifier))) {
-					disposable.dispose();
-					enableAllowButtonEvent.fire(false);
-				}
-			}));
+			const disposable = this._register(
+				extensionManagementService.onInstallExtension((e) => {
+					if (
+						extensionsContent.extensions.some((id) =>
+							areSameExtensions({ id }, e.identifier),
+						)
+					) {
+						disposable.dispose();
+						enableAllowButtonEvent.fire(false);
+					}
+				}),
+			);
 		}
-
 	}
 }

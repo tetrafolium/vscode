@@ -3,25 +3,36 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../../../base/common/cancellation.js';
-import { MarkdownString } from '../../../../../../base/common/htmlContent.js';
-import { IDisposable } from '../../../../../../base/common/lifecycle.js';
-import { autorun } from '../../../../../../base/common/observable.js';
-import { isEqual } from '../../../../../../base/common/resources.js';
-import { URI, UriComponents } from '../../../../../../base/common/uri.js';
-import { CellUri } from '../../../../notebook/common/notebookCommon.js';
-import { INotebookService } from '../../../../notebook/common/notebookService.js';
-import { ICodeMapperService } from '../../editing/chatCodeMapperService.js';
-import { ChatModel } from '../../model/chatModel.js';
-import { IChatService } from '../../chatService/chatService.js';
-import { CountTokensCallback, IPreparedToolInvocation, IToolData, IToolImpl, IToolInvocation, IToolInvocationPreparationContext, IToolResult, ToolDataSource, ToolInvocationPresentation, ToolProgress } from '../languageModelToolsService.js';
+import { CancellationToken } from "../../../../../../base/common/cancellation.js";
+import { MarkdownString } from "../../../../../../base/common/htmlContent.js";
+import { IDisposable } from "../../../../../../base/common/lifecycle.js";
+import { autorun } from "../../../../../../base/common/observable.js";
+import { isEqual } from "../../../../../../base/common/resources.js";
+import { URI, UriComponents } from "../../../../../../base/common/uri.js";
+import { CellUri } from "../../../../notebook/common/notebookCommon.js";
+import { INotebookService } from "../../../../notebook/common/notebookService.js";
+import { ICodeMapperService } from "../../editing/chatCodeMapperService.js";
+import { ChatModel } from "../../model/chatModel.js";
+import { IChatService } from "../../chatService/chatService.js";
+import {
+	CountTokensCallback,
+	IPreparedToolInvocation,
+	IToolData,
+	IToolImpl,
+	IToolInvocation,
+	IToolInvocationPreparationContext,
+	IToolResult,
+	ToolDataSource,
+	ToolInvocationPresentation,
+	ToolProgress,
+} from "../languageModelToolsService.js";
 
-export const ExtensionEditToolId = 'vscode_editFile';
-export const InternalEditToolId = 'vscode_editFile_internal';
+export const ExtensionEditToolId = "vscode_editFile";
+export const InternalEditToolId = "vscode_editFile_internal";
 export const EditToolData: IToolData = {
 	id: InternalEditToolId,
-	displayName: '', // not used
-	modelDescription: '', // Not used
+	displayName: "", // not used
+	modelDescription: "", // Not used
 	source: ToolDataSource.Internal,
 };
 
@@ -32,78 +43,120 @@ export interface EditToolParams {
 }
 
 export class EditTool implements IToolImpl {
-
 	constructor(
 		@IChatService private readonly chatService: IChatService,
 		@ICodeMapperService private readonly codeMapperService: ICodeMapperService,
 		@INotebookService private readonly notebookService: INotebookService,
-	) { }
+	) {}
 
-	async invoke(invocation: IToolInvocation, countTokens: CountTokensCallback, _progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
+	async invoke(
+		invocation: IToolInvocation,
+		countTokens: CountTokensCallback,
+		_progress: ToolProgress,
+		token: CancellationToken,
+	): Promise<IToolResult> {
 		if (!invocation.context) {
-			throw new Error('toolInvocationToken is required for this tool');
+			throw new Error("toolInvocationToken is required for this tool");
 		}
 
 		const parameters = invocation.parameters as EditToolParams;
 		const fileUri = URI.revive(parameters.uri);
 		const uri = CellUri.parse(fileUri)?.notebook || fileUri;
 
-		const model = this.chatService.getSession(invocation.context.sessionResource) as ChatModel;
+		const model = this.chatService.getSession(
+			invocation.context.sessionResource,
+		) as ChatModel;
 		const request = model.getRequests().at(-1)!;
 
 		model.acceptResponseProgress(request, {
-			kind: 'markdownContent',
-			content: new MarkdownString('\n````\n')
+			kind: "markdownContent",
+			content: new MarkdownString("\n````\n"),
 		});
 		model.acceptResponseProgress(request, {
-			kind: 'codeblockUri',
+			kind: "codeblockUri",
 			uri,
-			isEdit: true
+			isEdit: true,
 		});
 		model.acceptResponseProgress(request, {
-			kind: 'markdownContent',
-			content: new MarkdownString('\n````\n')
+			kind: "markdownContent",
+			content: new MarkdownString("\n````\n"),
 		});
 		// Signal start.
-		if (this.notebookService.hasSupportedNotebooks(uri) && (this.notebookService.getNotebookTextModel(uri))) {
+		if (
+			this.notebookService.hasSupportedNotebooks(uri) &&
+			this.notebookService.getNotebookTextModel(uri)
+		) {
 			model.acceptResponseProgress(request, {
-				kind: 'notebookEdit',
+				kind: "notebookEdit",
 				edits: [],
-				uri
+				uri,
 			});
 		} else {
 			model.acceptResponseProgress(request, {
-				kind: 'textEdit',
+				kind: "textEdit",
 				edits: [],
-				uri
+				uri,
 			});
 		}
 
 		const editSession = model.editingSession;
 		if (!editSession) {
-			throw new Error('This tool must be called from within an editing session');
+			throw new Error(
+				"This tool must be called from within an editing session",
+			);
 		}
 
-		const result = await this.codeMapperService.mapCode({
-			codeBlocks: [{ code: parameters.code, resource: uri, markdownBeforeBlock: parameters.explanation }],
-			location: 'tool',
-			chatRequestId: invocation.chatRequestId,
-			chatRequestModel: invocation.modelId,
-			chatSessionResource: invocation.context.sessionResource,
-		}, {
-			textEdit: (target, edits) => {
-				model.acceptResponseProgress(request, { kind: 'textEdit', uri: target, edits });
+		const result = await this.codeMapperService.mapCode(
+			{
+				codeBlocks: [
+					{
+						code: parameters.code,
+						resource: uri,
+						markdownBeforeBlock: parameters.explanation,
+					},
+				],
+				location: "tool",
+				chatRequestId: invocation.chatRequestId,
+				chatRequestModel: invocation.modelId,
+				chatSessionResource: invocation.context.sessionResource,
 			},
-			notebookEdit(target, edits) {
-				model.acceptResponseProgress(request, { kind: 'notebookEdit', uri: target, edits });
+			{
+				textEdit: (target, edits) => {
+					model.acceptResponseProgress(request, {
+						kind: "textEdit",
+						uri: target,
+						edits,
+					});
+				},
+				notebookEdit(target, edits) {
+					model.acceptResponseProgress(request, {
+						kind: "notebookEdit",
+						uri: target,
+						edits,
+					});
+				},
 			},
-		}, token);
+			token,
+		);
 
 		// Signal end.
-		if (this.notebookService.hasSupportedNotebooks(uri) && (this.notebookService.getNotebookTextModel(uri))) {
-			model.acceptResponseProgress(request, { kind: 'notebookEdit', uri, edits: [], done: true });
+		if (
+			this.notebookService.hasSupportedNotebooks(uri) &&
+			this.notebookService.getNotebookTextModel(uri)
+		) {
+			model.acceptResponseProgress(request, {
+				kind: "notebookEdit",
+				uri,
+				edits: [],
+				done: true,
+			});
 		} else {
-			model.acceptResponseProgress(request, { kind: 'textEdit', uri, edits: [], done: true });
+			model.acceptResponseProgress(request, {
+				kind: "textEdit",
+				uri,
+				edits: [],
+				done: true,
+			});
 		}
 
 		if (result?.errorMessage) {
@@ -117,7 +170,6 @@ export class EditTool implements IToolImpl {
 			let wasFileBeingModified = false;
 
 			dispose = autorun((r) => {
-
 				const entries = editSession.entries.read(r);
 				const currentFile = entries?.find((e) => isEqual(e.modifiedURI, uri));
 				if (currentFile) {
@@ -133,13 +185,16 @@ export class EditTool implements IToolImpl {
 		});
 
 		return {
-			content: [{ kind: 'text', value: 'The file was edited successfully' }]
+			content: [{ kind: "text", value: "The file was edited successfully" }],
 		};
 	}
 
-	async prepareToolInvocation(context: IToolInvocationPreparationContext, token: CancellationToken): Promise<IPreparedToolInvocation | undefined> {
+	async prepareToolInvocation(
+		context: IToolInvocationPreparationContext,
+		token: CancellationToken,
+	): Promise<IPreparedToolInvocation | undefined> {
 		return {
-			presentation: ToolInvocationPresentation.Hidden
+			presentation: ToolInvocationPresentation.Hidden,
 		};
 	}
 }

@@ -349,7 +349,10 @@ export const vsDark: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['punctuation.section.embedded.begin.php', 'punctuation.section.embedded.end.php'],
+			scope: [
+				'punctuation.section.embedded.begin.php',
+				'punctuation.section.embedded.end.php',
+			],
 			settings: {
 				foreground: '#569CD6',
 			},
@@ -367,7 +370,11 @@ export const vsDark: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['storage.modifier.import.java', 'variable.language.wildcard.java', 'storage.modifier.package.java'],
+			scope: [
+				'storage.modifier.import.java',
+				'variable.language.wildcard.java',
+				'storage.modifier.package.java',
+			],
 			settings: {
 				foreground: '#D4D4D4',
 			},

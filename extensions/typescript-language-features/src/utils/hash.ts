@@ -8,20 +8,20 @@
  */
 export function hash(obj: unknown, hashVal = 0): number {
 	switch (typeof obj) {
-		case 'object':
+		case "object":
 			if (obj === null) {
 				return numberHash(349, hashVal);
 			} else if (Array.isArray(obj)) {
 				return arrayHash(obj, hashVal);
 			}
 			return objectHash(obj, hashVal);
-		case 'string':
+		case "string":
 			return stringHash(obj, hashVal);
-		case 'boolean':
+		case "boolean":
 			return booleanHash(obj, hashVal);
-		case 'number':
+		case "number":
 			return numberHash(obj, hashVal);
-		case 'undefined':
+		case "undefined":
 			return 937 * 31;
 		default:
 			return stringHash(String(obj), 617);
@@ -29,7 +29,7 @@ export function hash(obj: unknown, hashVal = 0): number {
 }
 
 function numberHash(val: number, initialHashVal: number): number {
-	return (((initialHashVal << 5) - initialHashVal) + val) | 0;  // hashVal * 31 + ch, keep as int32
+	return ((initialHashVal << 5) - initialHashVal + val) | 0; // hashVal * 31 + ch, keep as int32
 }
 
 function booleanHash(b: boolean, initialHashVal: number): number {
@@ -46,13 +46,18 @@ function stringHash(s: string, hashVal: number) {
 
 function arrayHash(arr: readonly unknown[], initialHashVal: number): number {
 	initialHashVal = numberHash(104579, initialHashVal);
-	return arr.reduce<number>((hashVal, item) => hash(item, hashVal), initialHashVal);
+	return arr.reduce<number>(
+		(hashVal, item) => hash(item, hashVal),
+		initialHashVal,
+	);
 }
 
 function objectHash(obj: object, initialHashVal: number): number {
 	initialHashVal = numberHash(181387, initialHashVal);
-	return Object.keys(obj).sort().reduce((hashVal, key) => {
-		hashVal = stringHash(key, hashVal);
-		return hash(Reflect.get(obj, key), hashVal);
-	}, initialHashVal);
+	return Object.keys(obj)
+		.sort()
+		.reduce((hashVal, key) => {
+			hashVal = stringHash(key, hashVal);
+			return hash(Reflect.get(obj, key), hashVal);
+		}, initialHashVal);
 }

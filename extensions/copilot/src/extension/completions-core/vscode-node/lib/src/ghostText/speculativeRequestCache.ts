@@ -7,7 +7,10 @@ import { LRUCacheMap } from '../helpers/cache';
 
 type RequestFunction = () => Promise<unknown>;
 
-export const ICompletionsSpeculativeRequestCache = createServiceIdentifier<ICompletionsSpeculativeRequestCache>('ICompletionsSpeculativeRequestCache');
+export const ICompletionsSpeculativeRequestCache =
+	createServiceIdentifier<ICompletionsSpeculativeRequestCache>(
+		'ICompletionsSpeculativeRequestCache',
+	);
 export interface ICompletionsSpeculativeRequestCache {
 	readonly _serviceBrand: undefined;
 
@@ -26,7 +29,9 @@ export class SpeculativeRequestCache implements ICompletionsSpeculativeRequestCa
 
 	async request(completionId: string): Promise<void> {
 		const fn = this.cache.get(completionId);
-		if (fn === undefined) { return; }
+		if (fn === undefined) {
+			return;
+		}
 		this.cache.delete(completionId);
 		await fn();
 	}

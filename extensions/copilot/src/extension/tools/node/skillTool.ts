@@ -17,11 +17,19 @@ import { extUriBiasedIgnorePathCase } from '../../../util/vs/base/common/resourc
 import { equalsIgnoreCase } from '../../../util/vs/base/common/strings';
 import { isString } from '../../../util/vs/base/common/types';
 import { URI } from '../../../util/vs/base/common/uri';
-import { ExtendedLanguageModelToolResult, LanguageModelTextPart, MarkdownString } from '../../../vscodeTypes';
+import {
+	ExtendedLanguageModelToolResult,
+	LanguageModelTextPart,
+	MarkdownString,
+} from '../../../vscodeTypes';
 import { isCustomizationsIndex } from '../../prompt/common/chatVariablesCollection';
 import { IBuildPromptContext } from '../../prompt/common/intents';
 import { ToolName } from '../common/toolNames';
-import { CopilotToolMode, ICopilotTool, ToolRegistry } from '../common/toolsRegistry';
+import {
+	CopilotToolMode,
+	ICopilotTool,
+	ToolRegistry,
+} from '../common/toolsRegistry';
 import { IToolsService } from '../common/toolsService';
 import { formatUriForFileWidget } from '../common/toolUtils';
 import { sendSkillContentReadTelemetry } from '../common/skillTelemetry';
@@ -36,8 +44,19 @@ const MAX_RELATED_FILES = 50;
 
 /** Directories to skip when listing related files */
 const SKILL_SKIP_DIRS = new Set([
-	'.git', 'node_modules', 'dist', 'build', 'out', '.cache',
-	'coverage', '__pycache__', 'target', 'bin', 'obj', '.venv', 'venv',
+	'.git',
+	'node_modules',
+	'dist',
+	'build',
+	'out',
+	'.cache',
+	'coverage',
+	'__pycache__',
+	'target',
+	'bin',
+	'obj',
+	'.venv',
+	'venv',
 ]);
 
 class SkillTool implements ICopilotTool<ISkillParams> {
@@ -47,14 +66,20 @@ class SkillTool implements ICopilotTool<ISkillParams> {
 
 	constructor(
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-		@ICustomInstructionsService private readonly customInstructionsService: ICustomInstructionsService,
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
+		@ICustomInstructionsService
+		private readonly customInstructionsService: ICustomInstructionsService,
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
 		@IToolsService private readonly toolsService: IToolsService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
-		@IExtensionsService private readonly extensionsService: IExtensionsService,
-	) { }
+		@IExtensionsService
+		private readonly extensionsService: IExtensionsService,
+	) {}
 
-	async invoke(options: vscode.LanguageModelToolInvocationOptions<ISkillParams>, token: vscode.CancellationToken) {
+	async invoke(
+		options: vscode.LanguageModelToolInvocationOptions<ISkillParams>,
+		token: vscode.CancellationToken,
+	) {
 		const uri = this.resolveSkillUri(options.input.skill);
 
 		// Read the skill file content
@@ -65,7 +90,14 @@ class SkillTool implements ICopilotTool<ISkillParams> {
 		// Emit skill content read telemetry
 		const skillInfo = this.customInstructionsService.getSkillInfo(uri);
 		if (skillInfo) {
-			sendSkillContentReadTelemetry(this.telemetryService, this.customInstructionsService, this.extensionsService, uri, skillInfo, skillContent);
+			sendSkillContentReadTelemetry(
+				this.telemetryService,
+				this.customInstructionsService,
+				this.extensionsService,
+				uri,
+				skillInfo,
+				skillContent,
+			);
 		}
 
 		const mode = parseSkillContext(skillContent);
@@ -80,13 +112,16 @@ class SkillTool implements ICopilotTool<ISkillParams> {
 	private async invokeInline(skillContent: string, uri: URI) {
 		const skillInfo = this.customInstructionsService.getSkillInfo(uri);
 		const skillLabel = skillInfo?.skillName ?? 'skill';
-		const skillFolderUri = skillInfo?.skillFolderUri ?? extUriBiasedIgnorePathCase.dirname(uri);
+		const skillFolderUri =
+			skillInfo?.skillFolderUri ??
+			extUriBiasedIgnorePathCase.dirname(uri);
 
 		// List related files in the skill directory
 		const relatedFiles = await this.listRelatedFiles(skillFolderUri);
-		const relatedFilesSection = relatedFiles.length > 0
-			? `\nRelated files (use read_file tool to read):\n${relatedFiles.map(f => `  - ${f}`).join('\n')}\n`
-			: '';
+		const relatedFilesSection =
+			relatedFiles.length > 0
+				? `\nRelated files (use read_file tool to read):\n${relatedFiles.map((f) => `  - ${f}`).join('\n')}\n`
+				: '';
 
 		const resultText = `<skill-context name="${skillLabel}">
 Base directory: ${skillFolderUri.fsPath}
@@ -94,22 +129,32 @@ ${relatedFilesSection}
 ${skillContent}
 </skill-context>`;
 
-		const result = new ExtendedLanguageModelToolResult([new LanguageModelTextPart(resultText)]);
-		result.toolResultMessage = new MarkdownString(l10n.t`Loaded skill: ${skillLabel}`);
+		const result = new ExtendedLanguageModelToolResult([
+			new LanguageModelTextPart(resultText),
+		]);
+		result.toolResultMessage = new MarkdownString(
+			l10n.t`Loaded skill: ${skillLabel}`,
+		);
 		result.toolMetadata = {
 			skill: skillLabel,
 			skillUri: uri.toString(),
-			agentName: 'skill'
+			agentName: 'skill',
 		};
 		return result;
 	}
 
-	private async invokeFork(skillContent: string, uri: URI, options: vscode.LanguageModelToolInvocationOptions<ISkillParams>, token: vscode.CancellationToken) {
+	private async invokeFork(
+		skillContent: string,
+		uri: URI,
+		options: vscode.LanguageModelToolInvocationOptions<ISkillParams>,
+		token: vscode.CancellationToken,
+	) {
 		const skillInfo = this.customInstructionsService.getSkillInfo(uri);
 		const skillLabel = skillInfo?.skillName ?? options.input.skill;
 
 		// Use the user's original message as the task for the subagent
-		const userMessage = this._inputContext?.conversation?.turns[0]?.request.message;
+		const userMessage =
+			this._inputContext?.conversation?.turns[0]?.request.message;
 		const query = userMessage ?? `Run the ${skillLabel} skill`;
 
 		// Embed skill instructions in the prompt for the subagent
@@ -123,13 +168,17 @@ Task: ${query}`;
 
 		// Delegate to the runSubagent tool which goes through the full VS Code chat
 		// pipeline (automatic instructions, hooks, model resolution, nesting depth, etc.)
-		const subagentResult = await this.toolsService.invokeTool(ToolName.CoreRunSubagent, {
-			...options,
-			input: {
-				prompt,
-				description: `Skill: ${skillLabel}`,
+		const subagentResult = await this.toolsService.invokeTool(
+			ToolName.CoreRunSubagent,
+			{
+				...options,
+				input: {
+					prompt,
+					description: `Skill: ${skillLabel}`,
+				},
 			},
-		}, token);
+			token,
+		);
 
 		// Extract text from the subagent result
 		const parts: string[] = [];
@@ -138,30 +187,40 @@ Task: ${query}`;
 				parts.push(part.value);
 			}
 		}
-		const subagentResponse = parts.join('') || 'Skill completed with no output';
+		const subagentResponse =
+			parts.join('') || 'Skill completed with no output';
 
 		// Frame the result as skill output (not as another agent's response) so the
 		// parent agent summarizes the content naturally without treating it as a
 		// conversation with a separate agent.
-		const result = new ExtendedLanguageModelToolResult([new LanguageModelTextPart(
-			`Result from the "${skillLabel}" skill:\n\n${subagentResponse}`
-		)]);
+		const result = new ExtendedLanguageModelToolResult([
+			new LanguageModelTextPart(
+				`Result from the "${skillLabel}" skill:\n\n${subagentResponse}`,
+			),
+		]);
 		result.toolMetadata = {
 			skill: options.input.skill,
 			skillUri: uri.toString(),
-			agentName: 'skill'
+			agentName: 'skill',
 		};
-		result.toolResultMessage = new MarkdownString(l10n.t`Skill complete: ${skillLabel}`);
+		result.toolResultMessage = new MarkdownString(
+			l10n.t`Skill complete: ${skillLabel}`,
+		);
 		return result;
 	}
 
-	async prepareInvocation(options: vscode.LanguageModelToolInvocationPrepareOptions<ISkillParams>, _token: vscode.CancellationToken): Promise<vscode.PreparedToolInvocation | undefined> {
+	async prepareInvocation(
+		options: vscode.LanguageModelToolInvocationPrepareOptions<ISkillParams>,
+		_token: vscode.CancellationToken,
+	): Promise<vscode.PreparedToolInvocation | undefined> {
 		let uri: URI;
 		try {
 			uri = this.resolveSkillUri(options.input.skill);
 		} catch {
 			return {
-				invocationMessage: new MarkdownString(l10n.t`Loading skill: ${options.input.skill}`),
+				invocationMessage: new MarkdownString(
+					l10n.t`Loading skill: ${options.input.skill}`,
+				),
 			};
 		}
 
@@ -176,18 +235,30 @@ Task: ${query}`;
 
 		if (mode === 'fork') {
 			return {
-				invocationMessage: new MarkdownString(l10n.t`Running skill ${formatUriForFileWidget(uri, { vscodeLinkType: 'skill', linkText: skillLabel })}`),
-				pastTenseMessage: new MarkdownString(l10n.t`Ran skill ${formatUriForFileWidget(uri, { vscodeLinkType: 'skill', linkText: skillLabel })}`),
+				invocationMessage: new MarkdownString(
+					l10n.t`Running skill ${formatUriForFileWidget(uri, { vscodeLinkType: 'skill', linkText: skillLabel })}`,
+				),
+				pastTenseMessage: new MarkdownString(
+					l10n.t`Ran skill ${formatUriForFileWidget(uri, { vscodeLinkType: 'skill', linkText: skillLabel })}`,
+				),
 			};
 		}
 
 		return {
-			invocationMessage: new MarkdownString(l10n.t`Loading skill ${formatUriForFileWidget(uri, { vscodeLinkType: 'skill', linkText: skillLabel })}`),
-			pastTenseMessage: new MarkdownString(l10n.t`Loaded skill ${formatUriForFileWidget(uri, { vscodeLinkType: 'skill', linkText: skillLabel })}`),
+			invocationMessage: new MarkdownString(
+				l10n.t`Loading skill ${formatUriForFileWidget(uri, { vscodeLinkType: 'skill', linkText: skillLabel })}`,
+			),
+			pastTenseMessage: new MarkdownString(
+				l10n.t`Loaded skill ${formatUriForFileWidget(uri, { vscodeLinkType: 'skill', linkText: skillLabel })}`,
+			),
 		};
 	}
 
-	async resolveInput(input: ISkillParams, promptContext: IBuildPromptContext, _mode: CopilotToolMode): Promise<ISkillParams> {
+	async resolveInput(
+		input: ISkillParams,
+		promptContext: IBuildPromptContext,
+		_mode: CopilotToolMode,
+	): Promise<ISkillParams> {
 		this._inputContext = promptContext;
 		return input;
 	}
@@ -197,13 +268,19 @@ Task: ${query}`;
 	 * If not found, throws with a list of available skills.
 	 */
 	private resolveSkillUri(skillName: string): URI {
-		const indexVariable = this._inputContext?.chatVariables.find(isCustomizationsIndex);
-		const indexValue = indexVariable && isString(indexVariable.value) ? indexVariable.value : undefined;
+		const indexVariable = this._inputContext?.chatVariables.find(
+			isCustomizationsIndex,
+		);
+		const indexValue =
+			indexVariable && isString(indexVariable.value)
+				? indexVariable.value
+				: undefined;
 		return resolveSkillUri(
 			skillName,
 			indexValue,
-			text => this.customInstructionsService.parseInstructionIndexFile(text),
-			uri => this.customInstructionsService.getSkillInfo(uri),
+			(text) =>
+				this.customInstructionsService.parseInstructionIndexFile(text),
+			(uri) => this.customInstructionsService.getSkillInfo(uri),
 		);
 	}
 
@@ -211,7 +288,9 @@ Task: ${query}`;
 	 * List files in a skill directory, excluding SKILL.md and skipped directories.
 	 */
 	private async listRelatedFiles(skillFolderUri: URI): Promise<string[]> {
-		return listRelatedFiles(skillFolderUri, uri => this.fileSystemService.readDirectory(uri));
+		return listRelatedFiles(skillFolderUri, (uri) =>
+			this.fileSystemService.readDirectory(uri),
+		);
 	}
 }
 
@@ -226,7 +305,9 @@ export type ReadDirectoryFn = (uri: URI) => Promise<[string, FileType][]>;
 export function resolveSkillUri(
 	skillName: string,
 	indexValue: string | undefined,
-	parseInstructionIndexFile: (text: string) => { readonly skills: Iterable<URI> },
+	parseInstructionIndexFile: (text: string) => {
+		readonly skills: Iterable<URI>;
+	},
 	getSkillInfo: (uri: URI) => { readonly skillName: string } | undefined,
 ): URI {
 	const availableSkills: string[] = [];
@@ -244,26 +325,41 @@ export function resolveSkillUri(
 		}
 	}
 
-	const skillListMessage = availableSkills.length > 0
-		? ` Available skills: ${availableSkills.join(', ')}`
-		: '';
+	const skillListMessage =
+		availableSkills.length > 0
+			? ` Available skills: ${availableSkills.join(', ')}`
+			: '';
 	throw new Error(`Skill "${skillName}" not found.${skillListMessage}`);
 }
 
 /**
  * List files in a skill directory, excluding SKILL.md and skipped directories.
  */
-export async function listRelatedFiles(skillFolderUri: URI, readDirectory: ReadDirectoryFn): Promise<string[]> {
+export async function listRelatedFiles(
+	skillFolderUri: URI,
+	readDirectory: ReadDirectoryFn,
+): Promise<string[]> {
 	try {
 		const files: string[] = [];
-		await listRelatedFilesRecursive(skillFolderUri, skillFolderUri, files, readDirectory);
+		await listRelatedFilesRecursive(
+			skillFolderUri,
+			skillFolderUri,
+			files,
+			readDirectory,
+		);
 		return files;
 	} catch {
 		return [];
 	}
 }
 
-export async function listRelatedFilesRecursive(baseUri: URI, currentUri: URI, files: string[], readDirectory: ReadDirectoryFn, depth: number = 0): Promise<void> {
+export async function listRelatedFilesRecursive(
+	baseUri: URI,
+	currentUri: URI,
+	files: string[],
+	readDirectory: ReadDirectoryFn,
+	depth: number = 0,
+): Promise<void> {
 	if (files.length >= MAX_RELATED_FILES || depth > 5) {
 		return;
 	}
@@ -277,10 +373,22 @@ export async function listRelatedFilesRecursive(baseUri: URI, currentUri: URI, f
 
 		if (type === FileType.Directory) {
 			if (!SKILL_SKIP_DIRS.has(name)) {
-				await listRelatedFilesRecursive(baseUri, extUriBiasedIgnorePathCase.joinPath(currentUri, name), files, readDirectory, depth + 1);
+				await listRelatedFilesRecursive(
+					baseUri,
+					extUriBiasedIgnorePathCase.joinPath(currentUri, name),
+					files,
+					readDirectory,
+					depth + 1,
+				);
 			}
-		} else if (type === FileType.File && !equalsIgnoreCase(name, SKILL_FILENAME)) {
-			const relativePath = extUriBiasedIgnorePathCase.relativePath(baseUri, extUriBiasedIgnorePathCase.joinPath(currentUri, name));
+		} else if (
+			type === FileType.File &&
+			!equalsIgnoreCase(name, SKILL_FILENAME)
+		) {
+			const relativePath = extUriBiasedIgnorePathCase.relativePath(
+				baseUri,
+				extUriBiasedIgnorePathCase.joinPath(currentUri, name),
+			);
 			if (relativePath) {
 				files.push(relativePath);
 			}

@@ -3,14 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import https from 'https';
+import https from "https";
 
-function request(options: https.RequestOptions, body?: object): Promise<Record<string, unknown>> {
+function request(
+	options: https.RequestOptions,
+	body?: object,
+): Promise<Record<string, unknown>> {
 	return new Promise((resolve, reject) => {
-		const req = https.request(options, res => {
-			let data = '';
-			res.on('data', chunk => data += chunk);
-			res.on('end', () => {
+		const req = https.request(options, (res) => {
+			let data = "";
+			res.on("data", (chunk) => (data += chunk));
+			res.on("end", () => {
 				if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
 					resolve(JSON.parse(data));
 				} else {
@@ -18,7 +21,7 @@ function request(options: https.RequestOptions, body?: object): Promise<Record<s
 				}
 			});
 		});
-		req.on('error', reject);
+		req.on("error", reject);
 		if (body) {
 			req.write(JSON.stringify(body));
 		}
@@ -26,23 +29,31 @@ function request(options: https.RequestOptions, body?: object): Promise<Record<s
 	});
 }
 
-function updateCheckRun(token: string, checkRunId: string, conclusion: string, detailsUrl: string) {
-	return request({
-		hostname: 'api.github.com',
-		path: `/repos/microsoft/vscode/check-runs/${encodeURIComponent(checkRunId)}`,
-		method: 'PATCH',
-		headers: {
-			'Authorization': `token ${token}`,
-			'Accept': 'application/vnd.github+json',
-			'User-Agent': 'VSCode-ADO-Pipeline',
-			'X-GitHub-Api-Version': '2022-11-28'
-		}
-	}, {
-		status: 'completed',
-		conclusion,
-		completed_at: new Date().toISOString(),
-		details_url: detailsUrl
-	});
+function updateCheckRun(
+	token: string,
+	checkRunId: string,
+	conclusion: string,
+	detailsUrl: string,
+) {
+	return request(
+		{
+			hostname: "api.github.com",
+			path: `/repos/microsoft/vscode/check-runs/${encodeURIComponent(checkRunId)}`,
+			method: "PATCH",
+			headers: {
+				Authorization: `token ${token}`,
+				Accept: "application/vnd.github+json",
+				"User-Agent": "VSCode-ADO-Pipeline",
+				"X-GitHub-Api-Version": "2022-11-28",
+			},
+		},
+		{
+			status: "completed",
+			conclusion,
+			completed_at: new Date().toISOString(),
+			details_url: detailsUrl,
+		},
+	);
 }
 
 async function main() {
@@ -52,20 +63,20 @@ async function main() {
 	const detailsUrl = `${process.env.SYSTEM_COLLECTIONURI}${process.env.SYSTEM_TEAMPROJECT}/_build/results?buildId=${process.env.BUILD_BUILDID}`;
 
 	if (!token || !checkRunId) {
-		throw new Error('Missing required environment variables');
+		throw new Error("Missing required environment variables");
 	}
 
 	let conclusion: string;
 	switch (jobStatus) {
-		case 'Succeeded':
-		case 'SucceededWithIssues':
-			conclusion = 'success';
+		case "Succeeded":
+		case "SucceededWithIssues":
+			conclusion = "success";
 			break;
-		case 'Canceled':
-			conclusion = 'cancelled';
+		case "Canceled":
+			conclusion = "cancelled";
 			break;
 		default:
-			conclusion = 'failure';
+			conclusion = "failure";
 			break;
 	}
 
@@ -73,7 +84,7 @@ async function main() {
 	console.log(`Updated check run ${checkRunId} with conclusion: ${conclusion}`);
 }
 
-main().catch(err => {
+main().catch((err) => {
 	console.error(err);
 	process.exit(1);
 });

@@ -3,10 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	export namespace workspace {
-
 		/**
 		 * Compute the diff between two text documents.
 		 *
@@ -20,7 +18,12 @@ declare module 'vscode' {
 		 *
 		 * @returns A response object with streaming changes and a completion promise.
 		 */
-		export function getTextDiff(originalDocument: TextDocument, modifiedDocument: TextDocument, options?: TextDiffOptions, token?: CancellationToken): TextDiffResponse;
+		export function getTextDiff(
+			originalDocument: TextDocument,
+			modifiedDocument: TextDocument,
+			options?: TextDiffOptions,
+			token?: CancellationToken,
+		): TextDiffResponse;
 	}
 
 	/**

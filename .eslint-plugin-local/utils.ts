@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as eslint from 'eslint';
-import type * as ESTree from 'estree';
-import { TSESTree } from '@typescript-eslint/utils';
+import * as eslint from "eslint";
+import type * as ESTree from "estree";
+import { TSESTree } from "@typescript-eslint/utils";
 
-export function createImportRuleListener(validateImport: (node: TSESTree.Literal, value: string) => any): eslint.Rule.RuleListener {
-
+export function createImportRuleListener(
+	validateImport: (node: TSESTree.Literal, value: string) => any,
+): eslint.Rule.RuleListener {
 	function _checkImport(node: TSESTree.Node | null) {
-		if (node && node.type === 'Literal' && typeof node.value === 'string') {
+		if (node && node.type === "Literal" && typeof node.value === "string") {
 			validateImport(node, node.value);
 		}
 	}
@@ -21,11 +22,15 @@ export function createImportRuleListener(validateImport: (node: TSESTree.Literal
 			_checkImport((node as TSESTree.ImportDeclaration).source);
 		},
 		// import('module').then(...) OR await import('module')
-		['CallExpression[callee.type="Import"][arguments.length=1] > Literal']: (node: TSESTree.Literal) => {
+		['CallExpression[callee.type="Import"][arguments.length=1] > Literal']: (
+			node: TSESTree.Literal,
+		) => {
 			_checkImport(node);
 		},
 		// import foo = ...
-		['TSImportEqualsDeclaration > TSExternalModuleReference > Literal']: (node: TSESTree.Literal) => {
+		["TSImportEqualsDeclaration > TSExternalModuleReference > Literal"]: (
+			node: TSESTree.Literal,
+		) => {
 			_checkImport(node);
 		},
 		// export ?? from 'module'
@@ -36,6 +41,5 @@ export function createImportRuleListener(validateImport: (node: TSESTree.Literal
 		ExportNamedDeclaration: (node: ESTree.ExportNamedDeclaration) => {
 			_checkImport((node as TSESTree.ExportNamedDeclaration).source);
 		},
-
 	};
 }

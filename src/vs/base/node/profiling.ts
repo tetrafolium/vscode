@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Client } from 'chrome-remote-interface';
-import { timeout } from '../common/async.js';
+import type { Client } from "chrome-remote-interface";
+import { timeout } from "../common/async.js";
 
 export interface ProfileResult {
 	profile: Profile;
@@ -56,14 +56,20 @@ export interface StartOptions {
 	target?: (targets: Target[]) => Target;
 }
 
-
-async function connectWithRetry(host: string | undefined, port: number, tries: number = 10, retryWait: number = 50, errors: Error[] = [], target?: (targets: Target[]) => Target): Promise<Client> {
-	if (typeof target === 'undefined') {
+async function connectWithRetry(
+	host: string | undefined,
+	port: number,
+	tries: number = 10,
+	retryWait: number = 50,
+	errors: Error[] = [],
+	target?: (targets: Target[]) => Target,
+): Promise<Client> {
+	if (typeof target === "undefined") {
 		target = function (targets: Target[]) {
-			const target = targets.find(target => {
+			const target = targets.find((target) => {
 				if (target.webSocketDebuggerUrl) {
-					if (target.type === 'page') {
-						return target.url.indexOf('bootstrap/index.html') > 0;
+					if (target.type === "page") {
+						return target.url.indexOf("bootstrap/index.html") > 0;
 					} else {
 						return true;
 					}
@@ -71,19 +77,19 @@ async function connectWithRetry(host: string | undefined, port: number, tries: n
 				return false;
 			});
 			if (!target) {
-				throw new class extends Error {
+				throw new (class extends Error {
 					code: string;
 					constructor() {
-						super('no target');
-						this.code = 'ECONNREFUSED';
+						super("no target");
+						this.code = "ECONNREFUSED";
 					}
-				};
+				})();
 			}
 			return target;
 		};
 	}
 
-	const { default: cdp } = await import('chrome-remote-interface');
+	const { default: cdp } = await import("chrome-remote-interface");
 
 	try {
 		return await cdp({
@@ -95,30 +101,38 @@ async function connectWithRetry(host: string | undefined, port: number, tries: n
 	} catch (e) {
 		errors.push(e);
 		if (tries <= 1) {
-			throw new class extends Error {
+			throw new (class extends Error {
 				errors: Error[];
 				constructor() {
-					super('failed to connect');
+					super("failed to connect");
 					this.errors = errors;
 				}
-			};
+			})();
 		}
 		await timeout(retryWait);
 		return connectWithRetry(host, port, tries - 1, retryWait, errors, target);
 	}
 }
 
-export async function startProfiling(options: StartOptions): Promise<ProfilingSession> {
-
-	const client = await connectWithRetry(options.host, options.port, options.tries, options.retryWait, [], options.target);
+export async function startProfiling(
+	options: StartOptions,
+): Promise<ProfilingSession> {
+	const client = await connectWithRetry(
+		options.host,
+		options.port,
+		options.tries,
+		options.retryWait,
+		[],
+		options.target,
+	);
 	const { Runtime, Profiler } = client;
 
 	if (options.checkForPaused) {
 		// ensure the runtime isn't being debugged
 		const { Debugger } = client;
 		let isPaused = false;
-		client.on('event', (message) => {
-			if (message.method === 'Debugger.paused') {
+		client.on("event", (message) => {
+			if (message.method === "Debugger.paused") {
 				isPaused = true;
 			}
 		});
@@ -129,7 +143,7 @@ export async function startProfiling(options: StartOptions): Promise<ProfilingSe
 			// chrome that it will resume the runtime whenever a client
 			// disconnects. Because things are relatively short-lived
 			// we trade the leakage for being able to debug
-			throw new Error('runtime is paused');
+			throw new Error("runtime is paused");
 		}
 	} else {
 		// resume from inspect-brk
@@ -149,6 +163,6 @@ export async function startProfiling(options: StartOptions): Promise<ProfilingSe
 			const data = await Profiler.stop();
 			await client.close();
 			return data as ProfileResult;
-		}
+		},
 	};
 }

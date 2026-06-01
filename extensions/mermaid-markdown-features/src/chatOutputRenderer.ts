@@ -2,32 +2,36 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as vscode from 'vscode';
-import { MermaidEditorManager } from './editorManager';
-import { MermaidCommandContext, MermaidWebviewManager } from './webviewManager';
-import { escapeHtmlText } from './util/html';
-import { generateUuid } from './util/uuid';
-import { disposeAll } from './util/dispose';
-import { renderMermaidConfigSpan } from './markdownMermaid/config';
+import * as vscode from "vscode";
+import { MermaidEditorManager } from "./editorManager";
+import { MermaidCommandContext, MermaidWebviewManager } from "./webviewManager";
+import { escapeHtmlText } from "./util/html";
+import { generateUuid } from "./util/uuid";
+import { disposeAll } from "./util/dispose";
+import { renderMermaidConfigSpan } from "./markdownMermaid/config";
 
 /**
  * Mime type used to identify Mermaid diagram data in chat output.
  */
-const mime = 'text/vnd.mermaid';
+const mime = "text/vnd.mermaid";
 
 /**
  * View type that uniquely identifies the Mermaid chat output renderer.
  */
-const viewType = 'vscode.mermaid-markdown-features.chatOutputItem';
+const viewType = "vscode.mermaid-markdown-features.chatOutputItem";
 
 class MermaidChatOutputRenderer implements vscode.ChatOutputRenderer {
-
 	constructor(
 		private readonly _extensionUri: vscode.Uri,
-		private readonly _webviewManager: MermaidWebviewManager
-	) { }
+		private readonly _webviewManager: MermaidWebviewManager,
+	) {}
 
-	async renderChatOutput({ value }: vscode.ChatOutputDataItem, chatOutputWebview: vscode.ChatOutputWebview, _ctx: unknown, _token: vscode.CancellationToken): Promise<void> {
+	async renderChatOutput(
+		{ value }: vscode.ChatOutputDataItem,
+		chatOutputWebview: vscode.ChatOutputWebview,
+		_ctx: unknown,
+		_token: vscode.CancellationToken,
+	): Promise<void> {
 		const webview = chatOutputWebview.webview;
 		const decoded = decodeMermaidData(value);
 		const mermaidSource = decoded.source;
@@ -39,14 +43,27 @@ class MermaidChatOutputRenderer implements vscode.ChatOutputRenderer {
 		const disposables: vscode.Disposable[] = [];
 
 		// Register and set as active
-		disposables.push(this._webviewManager.registerWebview(webviewId, webview, mermaidSource, title, 'chat'));
+		disposables.push(
+			this._webviewManager.registerWebview(
+				webviewId,
+				webview,
+				mermaidSource,
+				title,
+				"chat",
+			),
+		);
 
 		// Listen for messages from the webview
-		disposables.push(webview.onDidReceiveMessage(message => {
-			if (message.type === 'openInEditor') {
-				void vscode.commands.executeCommand('_mermaid-markdown.openInEditor', { mermaidWebviewId: webviewId });
-			}
-		}));
+		disposables.push(
+			webview.onDidReceiveMessage((message) => {
+				if (message.type === "openInEditor") {
+					void vscode.commands.executeCommand(
+						"_mermaid-markdown.openInEditor",
+						{ mermaidWebviewId: webviewId },
+					);
+				}
+			}),
+		);
 
 		// Dispose resources when webview is disposed
 		chatOutputWebview.onDidDispose(() => {
@@ -54,7 +71,10 @@ class MermaidChatOutputRenderer implements vscode.ChatOutputRenderer {
 		});
 
 		// Set the options for the webview
-		const mediaRoot = vscode.Uri.joinPath(this._extensionUri, 'chat-webview-out');
+		const mediaRoot = vscode.Uri.joinPath(
+			this._extensionUri,
+			"chat-webview-out",
+		);
 		webview.options = {
 			enableScripts: true,
 			localResourceRoots: [mediaRoot],
@@ -62,9 +82,11 @@ class MermaidChatOutputRenderer implements vscode.ChatOutputRenderer {
 
 		// Set the HTML content for the webview
 		const nonce = generateUuid();
-		const mermaidScript = vscode.Uri.joinPath(mediaRoot, 'index.js');
-		const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(mediaRoot, 'codicon.css'));
-		const openInEditorLabel = vscode.l10n.t('Open Diagram in Editor');
+		const mermaidScript = vscode.Uri.joinPath(mediaRoot, "index.js");
+		const codiconsUri = webview.asWebviewUri(
+			vscode.Uri.joinPath(mediaRoot, "codicon.css"),
+		);
+		const openInEditorLabel = vscode.l10n.t("Open Diagram in Editor");
 
 		webview.html = `
 			<!DOCTYPE html>
@@ -129,53 +151,74 @@ class MermaidChatOutputRenderer implements vscode.ChatOutputRenderer {
 	}
 }
 
-
 export function registerChatSupport(
 	context: vscode.ExtensionContext,
 	webviewManager: MermaidWebviewManager,
-	editorManager: MermaidEditorManager
+	editorManager: MermaidEditorManager,
 ): vscode.Disposable {
 	const disposables: vscode.Disposable[] = [];
 
 	disposables.push(
-		vscode.commands.registerCommand('_mermaid-markdown.openInEditor', (ctx?: MermaidCommandContext) => {
-			if (typeof ctx?.mermaidSource === 'string') {
-				editorManager.openPreview(ctx.mermaidSource, typeof ctx.title === 'string' ? ctx.title : undefined);
-				return;
-			}
+		vscode.commands.registerCommand(
+			"_mermaid-markdown.openInEditor",
+			(ctx?: MermaidCommandContext) => {
+				if (typeof ctx?.mermaidSource === "string") {
+					editorManager.openPreview(
+						ctx.mermaidSource,
+						typeof ctx.title === "string" ? ctx.title : undefined,
+					);
+					return;
+				}
 
-			const webviewInfo = ctx?.mermaidWebviewId ? webviewManager.getWebview(ctx.mermaidWebviewId) : webviewManager.activeWebview;
-			if (webviewInfo) {
-				editorManager.openPreview(webviewInfo.mermaidSource, webviewInfo.title);
-			}
-		})
+				const webviewInfo = ctx?.mermaidWebviewId
+					? webviewManager.getWebview(ctx.mermaidWebviewId)
+					: webviewManager.activeWebview;
+				if (webviewInfo) {
+					editorManager.openPreview(
+						webviewInfo.mermaidSource,
+						webviewInfo.title,
+					);
+				}
+			},
+		),
 	);
 
 	// Register lm tools
 	disposables.push(
-		vscode.lm.registerTool<{ markup: string; title?: string }>('renderMermaidDiagram', {
-			invoke: async (options, _token) => {
-				const sourceCode = options.input.markup;
-				const title = options.input.title;
-				return writeMermaidToolOutput(sourceCode, title);
+		vscode.lm.registerTool<{ markup: string; title?: string }>(
+			"renderMermaidDiagram",
+			{
+				invoke: async (options, _token) => {
+					const sourceCode = options.input.markup;
+					const title = options.input.title;
+					return writeMermaidToolOutput(sourceCode, title);
+				},
 			},
-		})
+		),
 	);
 
 	// Register the chat output renderer for Mermaid diagrams.
 	// This will be invoked with the data generated by the tools.
 	// It can also be invoked when rendering old Mermaid diagrams in the chat history.
-	const renderer = new MermaidChatOutputRenderer(context.extensionUri, webviewManager);
+	const renderer = new MermaidChatOutputRenderer(
+		context.extensionUri,
+		webviewManager,
+	);
 	disposables.push(vscode.chat.registerChatOutputRenderer(viewType, renderer));
 
 	return vscode.Disposable.from(...disposables);
 }
 
-function writeMermaidToolOutput(sourceCode: string, title: string | undefined): vscode.LanguageModelToolResult {
+function writeMermaidToolOutput(
+	sourceCode: string,
+	title: string | undefined,
+): vscode.LanguageModelToolResult {
 	// Expose the source code as a markdown mermaid code block
 	const fence = getFenceForContent(sourceCode);
 	const result = new vscode.LanguageModelToolResult([
-		new vscode.LanguageModelTextPart(`${fence}mermaid\n${sourceCode}\n${fence}`)
+		new vscode.LanguageModelTextPart(
+			`${fence}mermaid\n${sourceCode}\n${fence}`,
+		),
 	]);
 
 	// And store custom data in the tool result details to indicate that a custom renderer should be used for it.
@@ -193,11 +236,13 @@ function writeMermaidToolOutput(sourceCode: string, title: string | undefined): 
 function getFenceForContent(content: string): string {
 	const backtickMatch = content.matchAll(/`+/g);
 	if (!backtickMatch) {
-		return '```';
+		return "```";
 	}
 
-	const maxBackticks = Math.max(...Array.from(backtickMatch, s => s[0].length));
-	return '`'.repeat(Math.max(3, maxBackticks + 1));
+	const maxBackticks = Math.max(
+		...Array.from(backtickMatch, (s) => s[0].length),
+	);
+	return "`".repeat(Math.max(3, maxBackticks + 1));
 }
 
 interface MermaidData {
@@ -211,7 +256,7 @@ function decodeMermaidData(value: Uint8Array): MermaidData {
 	// Try to parse as JSON (new format with title), fall back to plain text (legacy format)
 	try {
 		const parsed = JSON.parse(text);
-		if (typeof parsed === 'object' && typeof parsed.source === 'string') {
+		if (typeof parsed === "object" && typeof parsed.source === "string") {
 			return { title: parsed.title, source: parsed.source };
 		}
 	} catch {

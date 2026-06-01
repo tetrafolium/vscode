@@ -21,11 +21,12 @@ export class ChangeTracker {
 	constructor(
 		fileURI: string,
 		insertionOffset: number,
-		@ICompletionsTextDocumentManagerService documentManager: ICompletionsTextDocumentManagerService
+		@ICompletionsTextDocumentManagerService
+		documentManager: ICompletionsTextDocumentManagerService,
 	) {
 		this._offset = insertionOffset;
 
-		this._tracker = documentManager.onDidChangeTextDocument(e => {
+		this._tracker = documentManager.onDidChangeTextDocument((e) => {
 			if (e.document.uri === fileURI) {
 				for (const cc of e.contentChanges) {
 					if (cc.rangeOffset + cc.rangeLength <= this.offset) {
@@ -39,7 +40,9 @@ export class ChangeTracker {
 
 	push(action: () => void, timeout: number): void {
 		if (this._isDisposed) {
-			throw new Error('Unable to push new actions to a disposed ChangeTracker');
+			throw new Error(
+				'Unable to push new actions to a disposed ChangeTracker',
+			);
 		}
 		this._referenceCount++;
 		setTimeout(() => {

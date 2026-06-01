@@ -13,20 +13,30 @@ vi.mock('vscode', () => ({
 			fsPath: path,
 			toString: () => `file://${path}`,
 		}),
-		from: (components: { scheme: string; path: string; query: string }) => ({
+		from: (components: {
+			scheme: string;
+			path: string;
+			query: string;
+		}) => ({
 			scheme: components.scheme,
 			path: components.path,
 			query: components.query,
-			toString: () => `${components.scheme}:${components.path}?${components.query}`,
+			toString: () =>
+				`${components.scheme}:${components.path}?${components.query}`,
 		}),
 	},
 	workspace: {
-		registerTextDocumentContentProvider: vi.fn(() => ({ dispose: () => { } })),
+		registerTextDocumentContentProvider: vi.fn(() => ({
+			dispose: () => {},
+		})),
 	},
 }));
 
 import type { Uri } from 'vscode';
-import { ReadonlyContentProvider, createReadonlyUri } from '../readonlyContentProvider';
+import {
+	ReadonlyContentProvider,
+	createReadonlyUri,
+} from '../readonlyContentProvider';
 
 /** Creates a mock URI using the same factory as the source code */
 function mockUri(path: string, query: string): Uri {
@@ -50,7 +60,9 @@ describe('ReadonlyContentProvider', () => {
 	});
 
 	it('should return empty string for unknown URIs', () => {
-		const content = provider.provideTextDocumentContent(mockUri('/unknown/file.ts', 'version=1'));
+		const content = provider.provideTextDocumentContent(
+			mockUri('/unknown/file.ts', 'version=1'),
+		);
 
 		expect(content).toBe('');
 	});
@@ -82,15 +94,21 @@ describe('ReadonlyContentProvider', () => {
 		provider.setContent(originalUri, 'Original');
 		provider.setContent(modifiedUri, 'Modified');
 
-		expect(provider.provideTextDocumentContent(originalUri)).toBe('Original');
-		expect(provider.provideTextDocumentContent(modifiedUri)).toBe('Modified');
+		expect(provider.provideTextDocumentContent(originalUri)).toBe(
+			'Original',
+		);
+		expect(provider.provideTextDocumentContent(modifiedUri)).toBe(
+			'Modified',
+		);
 	});
 
 	it('should register as a text document content provider', async () => {
 		const disposable = provider.register();
 
 		const vscodeModule = await import('vscode');
-		expect(vscodeModule.workspace.registerTextDocumentContentProvider).toHaveBeenCalled();
+		expect(
+			vscodeModule.workspace.registerTextDocumentContentProvider,
+		).toHaveBeenCalled();
 		expect(disposable).toBeDefined();
 	});
 

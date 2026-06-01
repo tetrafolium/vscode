@@ -9,8 +9,71 @@
 // Generated from types/actions.ts — do not edit
 // Run `npm run generate` to regenerate.
 
-import { ActionType, type StateAction, type RootAgentsChangedAction, type RootActiveSessionsChangedAction, type RootTerminalsChangedAction, type RootConfigChangedAction, type SessionReadyAction, type SessionCreationFailedAction, type SessionTurnStartedAction, type SessionDeltaAction, type SessionResponsePartAction, type SessionToolCallStartAction, type SessionToolCallDeltaAction, type SessionToolCallReadyAction, type SessionToolCallConfirmedAction, type SessionToolCallCompleteAction, type SessionToolCallResultConfirmedAction, type SessionToolCallContentChangedAction, type SessionTurnCompleteAction, type SessionTurnCancelledAction, type SessionErrorAction, type SessionTitleChangedAction, type SessionUsageAction, type SessionReasoningAction, type SessionModelChangedAction, type SessionAgentChangedAction, type SessionServerToolsChangedAction, type SessionActiveClientChangedAction, type SessionActiveClientToolsChangedAction, type SessionPendingMessageSetAction, type SessionPendingMessageRemovedAction, type SessionQueuedMessagesReorderedAction, type SessionInputRequestedAction, type SessionInputAnswerChangedAction, type SessionInputCompletedAction, type SessionCustomizationsChangedAction, type SessionCustomizationToggledAction, type SessionCustomizationUpdatedAction, type SessionCustomizationRemovedAction, type SessionTruncatedAction, type SessionIsReadChangedAction, type SessionIsArchivedChangedAction, type SessionActivityChangedAction, type SessionChangesetsChangedAction, type SessionConfigChangedAction, type SessionMetaChangedAction, type ChangesetStatusChangedAction, type ChangesetFileSetAction, type ChangesetFileRemovedAction, type ChangesetOperationsChangedAction, type ChangesetClearedAction, type TerminalDataAction, type TerminalInputAction, type TerminalResizedAction, type TerminalClaimedAction, type TerminalTitleChangedAction, type TerminalCwdChangedAction, type TerminalExitedAction, type TerminalClearedAction, type TerminalCommandDetectionAvailableAction, type TerminalCommandExecutedAction, type TerminalCommandFinishedAction, type ResourceWatchChangedAction } from './actions.js';
-
+import {
+	ActionType,
+	type StateAction,
+	type RootAgentsChangedAction,
+	type RootActiveSessionsChangedAction,
+	type RootTerminalsChangedAction,
+	type RootConfigChangedAction,
+	type SessionReadyAction,
+	type SessionCreationFailedAction,
+	type SessionTurnStartedAction,
+	type SessionDeltaAction,
+	type SessionResponsePartAction,
+	type SessionToolCallStartAction,
+	type SessionToolCallDeltaAction,
+	type SessionToolCallReadyAction,
+	type SessionToolCallConfirmedAction,
+	type SessionToolCallCompleteAction,
+	type SessionToolCallResultConfirmedAction,
+	type SessionToolCallContentChangedAction,
+	type SessionTurnCompleteAction,
+	type SessionTurnCancelledAction,
+	type SessionErrorAction,
+	type SessionTitleChangedAction,
+	type SessionUsageAction,
+	type SessionReasoningAction,
+	type SessionModelChangedAction,
+	type SessionAgentChangedAction,
+	type SessionServerToolsChangedAction,
+	type SessionActiveClientChangedAction,
+	type SessionActiveClientToolsChangedAction,
+	type SessionPendingMessageSetAction,
+	type SessionPendingMessageRemovedAction,
+	type SessionQueuedMessagesReorderedAction,
+	type SessionInputRequestedAction,
+	type SessionInputAnswerChangedAction,
+	type SessionInputCompletedAction,
+	type SessionCustomizationsChangedAction,
+	type SessionCustomizationToggledAction,
+	type SessionCustomizationUpdatedAction,
+	type SessionCustomizationRemovedAction,
+	type SessionTruncatedAction,
+	type SessionIsReadChangedAction,
+	type SessionIsArchivedChangedAction,
+	type SessionActivityChangedAction,
+	type SessionChangesetsChangedAction,
+	type SessionConfigChangedAction,
+	type SessionMetaChangedAction,
+	type ChangesetStatusChangedAction,
+	type ChangesetFileSetAction,
+	type ChangesetFileRemovedAction,
+	type ChangesetOperationsChangedAction,
+	type ChangesetClearedAction,
+	type TerminalDataAction,
+	type TerminalInputAction,
+	type TerminalResizedAction,
+	type TerminalClaimedAction,
+	type TerminalTitleChangedAction,
+	type TerminalCwdChangedAction,
+	type TerminalExitedAction,
+	type TerminalClearedAction,
+	type TerminalCommandDetectionAvailableAction,
+	type TerminalCommandExecutedAction,
+	type TerminalCommandFinishedAction,
+	type ResourceWatchChangedAction,
+} from "./actions.js";
 
 // ─── Root vs Session vs Terminal vs Changeset Action Unions ─────────────────
 
@@ -19,20 +82,16 @@ export type RootAction =
 	| RootAgentsChangedAction
 	| RootActiveSessionsChangedAction
 	| RootTerminalsChangedAction
-	| RootConfigChangedAction
-	;
+	| RootConfigChangedAction;
 
 /** Union of root actions that clients may dispatch. */
-export type ClientRootAction =
-	| RootConfigChangedAction
-	;
+export type ClientRootAction = RootConfigChangedAction;
 
 /** Union of root actions that only the server may produce. */
 export type ServerRootAction =
 	| RootAgentsChangedAction
 	| RootActiveSessionsChangedAction
-	| RootTerminalsChangedAction
-	;
+	| RootTerminalsChangedAction;
 
 /** Union of all session-scoped actions. */
 export type SessionAction =
@@ -75,8 +134,7 @@ export type SessionAction =
 	| SessionActivityChangedAction
 	| SessionChangesetsChangedAction
 	| SessionConfigChangedAction
-	| SessionMetaChangedAction
-	;
+	| SessionMetaChangedAction;
 
 /** Union of session actions that clients may dispatch. */
 export type ClientSessionAction =
@@ -100,8 +158,7 @@ export type ClientSessionAction =
 	| SessionTruncatedAction
 	| SessionIsReadChangedAction
 	| SessionIsArchivedChangedAction
-	| SessionConfigChangedAction
-	;
+	| SessionConfigChangedAction;
 
 /** Union of session actions that only the server may produce. */
 export type ServerSessionAction =
@@ -123,8 +180,7 @@ export type ServerSessionAction =
 	| SessionCustomizationRemovedAction
 	| SessionActivityChangedAction
 	| SessionChangesetsChangedAction
-	| SessionMetaChangedAction
-	;
+	| SessionMetaChangedAction;
 
 /** Union of all terminal-scoped actions. */
 export type TerminalAction =
@@ -138,8 +194,7 @@ export type TerminalAction =
 	| TerminalClearedAction
 	| TerminalCommandDetectionAvailableAction
 	| TerminalCommandExecutedAction
-	| TerminalCommandFinishedAction
-	;
+	| TerminalCommandFinishedAction;
 
 /** Union of terminal actions that clients may dispatch. */
 export type ClientTerminalAction =
@@ -147,8 +202,7 @@ export type ClientTerminalAction =
 	| TerminalResizedAction
 	| TerminalClaimedAction
 	| TerminalTitleChangedAction
-	| TerminalClearedAction
-	;
+	| TerminalClearedAction;
 
 /** Union of terminal actions that only the server may produce. */
 export type ServerTerminalAction =
@@ -157,8 +211,7 @@ export type ServerTerminalAction =
 	| TerminalExitedAction
 	| TerminalCommandDetectionAvailableAction
 	| TerminalCommandExecutedAction
-	| TerminalCommandFinishedAction
-	;
+	| TerminalCommandFinishedAction;
 
 /** Union of all changeset-scoped actions. */
 export type ChangesetAction =
@@ -166,13 +219,10 @@ export type ChangesetAction =
 	| ChangesetFileSetAction
 	| ChangesetFileRemovedAction
 	| ChangesetOperationsChangedAction
-	| ChangesetClearedAction
-	;
+	| ChangesetClearedAction;
 
 /** Union of changeset actions that clients may dispatch. */
-export type ClientChangesetAction =
-	never
-	;
+export type ClientChangesetAction = never;
 
 /** Union of changeset actions that only the server may produce. */
 export type ServerChangesetAction =
@@ -180,23 +230,16 @@ export type ServerChangesetAction =
 	| ChangesetFileSetAction
 	| ChangesetFileRemovedAction
 	| ChangesetOperationsChangedAction
-	| ChangesetClearedAction
-	;
+	| ChangesetClearedAction;
 
 /** Union of all resource-watch-scoped actions. */
-export type ResourceWatchAction =
-	| ResourceWatchChangedAction
-	;
+export type ResourceWatchAction = ResourceWatchChangedAction;
 
 /** Union of resource-watch actions that clients may dispatch. */
-export type ClientResourceWatchAction =
-	never
-	;
+export type ClientResourceWatchAction = never;
 
 /** Union of resource-watch actions that only the server may produce. */
-export type ServerResourceWatchAction =
-	| ResourceWatchChangedAction
-	;
+export type ServerResourceWatchAction = ResourceWatchChangedAction;
 
 // ─── Client-Dispatchable Map ─────────────────────────────────────────────────
 
@@ -204,7 +247,9 @@ export type ServerResourceWatchAction =
  * Exhaustive map indicating which action types may be dispatched by clients.
  * Adding a new action to StateAction without adding it here is a compile error.
  */
-export const IS_CLIENT_DISPATCHABLE: { readonly [K in StateAction['type']]: boolean } = {
+export const IS_CLIENT_DISPATCHABLE: {
+	readonly [K in StateAction["type"]]: boolean;
+} = {
 	[ActionType.RootAgentsChanged]: false,
 	[ActionType.RootActiveSessionsChanged]: false,
 	[ActionType.RootTerminalsChanged]: false,

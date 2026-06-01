@@ -46,7 +46,10 @@ export class NullWorkspaceFileIndex implements IWorkspaceFileIndex {
 		return undefined;
 	}
 
-	async shouldIndexWorkspaceFile(_resource: URI, _token: CancellationToken): Promise<boolean> {
+	async shouldIndexWorkspaceFile(
+		_resource: URI,
+		_token: CancellationToken,
+	): Promise<boolean> {
 		return false;
 	}
 

@@ -3,23 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type * as vscode from 'vscode';
-import * as extHostProtocol from './extHost.protocol.js';
-import { ExtensionIdentifier, IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
+import type * as vscode from "vscode";
+import * as extHostProtocol from "./extHost.protocol.js";
+import {
+	ExtensionIdentifier,
+	IExtensionDescription,
+} from "../../../platform/extensions/common/extensions.js";
 
 export class ExtHostChatStatus {
-
 	private readonly _proxy: extHostProtocol.MainThreadChatStatusShape;
 
 	private readonly _items = new Map<string, vscode.ChatStatusItem>();
 
-	constructor(
-		mainContext: extHostProtocol.IMainContext
-	) {
-		this._proxy = mainContext.getProxy(extHostProtocol.MainContext.MainThreadChatStatus);
+	constructor(mainContext: extHostProtocol.IMainContext) {
+		this._proxy = mainContext.getProxy(
+			extHostProtocol.MainContext.MainThreadChatStatus,
+		);
 	}
 
-	createChatStatusItem(extension: IExtensionDescription, id: string): vscode.ChatStatusItem {
+	createChatStatusItem(
+		extension: IExtensionDescription,
+		id: string,
+	): vscode.ChatStatusItem {
 		const internalId = asChatItemIdentifier(extension.identifier, id);
 		if (this._items.has(internalId)) {
 			throw new Error(`Chat status item '${id}' already exists`);
@@ -27,9 +32,9 @@ export class ExtHostChatStatus {
 
 		const state: extHostProtocol.ChatStatusItemDto = {
 			id: internalId,
-			title: '',
-			description: '',
-			detail: '',
+			title: "",
+			description: "",
+			detail: "",
 			tooltip: undefined,
 		};
 
@@ -37,7 +42,7 @@ export class ExtHostChatStatus {
 		let visible = false;
 		const syncState = () => {
 			if (disposed) {
-				throw new Error('Chat status item is disposed');
+				throw new Error("Chat status item is disposed");
 			}
 
 			if (!visible) {
@@ -53,7 +58,9 @@ export class ExtHostChatStatus {
 			get title(): string | { label: string; link: string; helpText?: string } {
 				return state.title;
 			},
-			set title(value: string | { label: string; link: string; helpText?: string }) {
+			set title(
+				value: string | { label: string; link: string; helpText?: string },
+			) {
 				state.title = value;
 				syncState();
 			},
@@ -102,7 +109,9 @@ export class ExtHostChatStatus {
 	}
 }
 
-function asChatItemIdentifier(extension: ExtensionIdentifier, id: string): string {
+function asChatItemIdentifier(
+	extension: ExtensionIdentifier,
+	id: string,
+): string {
 	return `${ExtensionIdentifier.toKey(extension)}.${id}`;
 }
-

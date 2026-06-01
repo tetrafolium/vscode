@@ -3,24 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { mainWindow } from '../../../../../base/browser/window.js';
-import { Event } from '../../../../../base/common/event.js';
-import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { observableValue } from '../../../../../base/common/observable.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { ICommandService } from '../../../../../platform/commands/common/commands.js';
-import { IMarkdownRenderer } from '../../../../../platform/markdown/browser/markdownRenderer.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { ChatEntitlement, IChatEntitlementService, IChatSentiment } from '../../../../services/chat/common/chatEntitlementService.js';
-import { IChatResponseErrorDetails } from '../../common/chatService/chatService.js';
-import { IChatErrorDetailsPart, IChatResponseViewModel } from '../../common/model/chatViewModel.js';
-import { IChatWidgetService } from '../../browser/chat.js';
-import { ChatQuotaExceededPart } from '../../browser/widget/chatContentParts/chatQuotaExceededPart.js';
+import assert from "assert";
+import { mainWindow } from "../../../../../base/browser/window.js";
+import { Event } from "../../../../../base/common/event.js";
+import { MarkdownString } from "../../../../../base/common/htmlContent.js";
+import { observableValue } from "../../../../../base/common/observable.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../base/test/common/utils.js";
+import { ICommandService } from "../../../../../platform/commands/common/commands.js";
+import { IMarkdownRenderer } from "../../../../../platform/markdown/browser/markdownRenderer.js";
+import { ITelemetryService } from "../../../../../platform/telemetry/common/telemetry.js";
+import {
+	ChatEntitlement,
+	IChatEntitlementService,
+	IChatSentiment,
+} from "../../../../services/chat/common/chatEntitlementService.js";
+import { IChatResponseErrorDetails } from "../../common/chatService/chatService.js";
+import {
+	IChatErrorDetailsPart,
+	IChatResponseViewModel,
+} from "../../common/model/chatViewModel.js";
+import { IChatWidgetService } from "../../browser/chat.js";
+import { ChatQuotaExceededPart } from "../../browser/widget/chatContentParts/chatQuotaExceededPart.js";
 
-
-function createMockEntitlementService(entitlement: ChatEntitlement): IChatEntitlementService {
+function createMockEntitlementService(
+	entitlement: ChatEntitlement,
+): IChatEntitlementService {
 	return {
 		_serviceBrand: undefined,
 		entitlement,
@@ -43,47 +51,54 @@ function createMockEntitlementService(entitlement: ChatEntitlement): IChatEntitl
 		onDidChangeAnonymous: Event.None,
 		anonymous: false,
 		anonymousObs: observableValue({}, false),
-		acceptQuotas() { },
-		clearQuotas() { },
-		markAnonymousRateLimited() { },
-		markSetupCompleted() { },
-		setForceHidden() { },
-		update() { return Promise.resolve(); },
+		acceptQuotas() {},
+		clearQuotas() {},
+		markAnonymousRateLimited() {},
+		markSetupCompleted() {},
+		setForceHidden() {},
+		update() {
+			return Promise.resolve();
+		},
 	} as IChatEntitlementService;
 }
 
 function createMockRenderer(): IMarkdownRenderer {
 	return {
 		render(markdown: MarkdownString) {
-			const el = mainWindow.document.createElement('div');
+			const el = mainWindow.document.createElement("div");
 			el.textContent = markdown.value;
-			return { element: el, dispose() { } };
+			return { element: el, dispose() {} };
 		},
-		dispose() { },
+		dispose() {},
 	} as unknown as IMarkdownRenderer;
 }
 
-function createMockElement(errorDetails: IChatResponseErrorDetails): IChatResponseViewModel {
+function createMockElement(
+	errorDetails: IChatResponseErrorDetails,
+): IChatResponseViewModel {
 	return {
 		errorDetails,
-		sessionResource: URI.parse('test://session'),
+		sessionResource: URI.parse("test://session"),
 	} as unknown as IChatResponseViewModel;
 }
 
 function createMockContent(): IChatErrorDetailsPart {
 	return {
-		kind: 'errorDetails',
-		errorDetails: { message: 'test', isQuotaExceeded: true },
+		kind: "errorDetails",
+		errorDetails: { message: "test", isQuotaExceeded: true },
 		isLast: true,
 	};
 }
 
-suite('ChatQuotaExceededPart', () => {
+suite("ChatQuotaExceededPart", () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
 	let executedCommands: string[];
 
-	function createWidget(entitlement: ChatEntitlement, errorDetails: IChatResponseErrorDetails): ChatQuotaExceededPart {
+	function createWidget(
+		entitlement: ChatEntitlement,
+		errorDetails: IChatResponseErrorDetails,
+	): ChatQuotaExceededPart {
 		executedCommands = [];
 
 		const chatWidgetService = {} as IChatWidgetService;
@@ -94,7 +109,7 @@ suite('ChatQuotaExceededPart', () => {
 			},
 		} as unknown as ICommandService;
 		const telemetryService = {
-			publicLog2() { },
+			publicLog2() {},
 		} as unknown as ITelemetryService;
 		const entitlementService = createMockEntitlementService(entitlement);
 		const renderer = createMockRenderer();
@@ -117,116 +132,127 @@ suite('ChatQuotaExceededPart', () => {
 	}
 
 	function getPrimaryButton(widget: ChatQuotaExceededPart): HTMLElement | null {
-		return widget.domNode.querySelector('.chat-quota-error-button');
+		return widget.domNode.querySelector(".chat-quota-error-button");
 	}
 
 	teardown(() => {
-		for (const el of mainWindow.document.body.querySelectorAll('.chat-quota-error-widget')) {
+		for (const el of mainWindow.document.body.querySelectorAll(
+			".chat-quota-error-widget",
+		)) {
 			el.remove();
 		}
 	});
 
-	suite('button label', () => {
+	suite("button label", () => {
 		test('shows "Manage Budget" for Pro user without additional_spend_limit_reached', () => {
 			const widget = createWidget(ChatEntitlement.Pro, {
-				message: 'Quota exceeded',
+				message: "Quota exceeded",
 				isQuotaExceeded: true,
 			});
 
 			const button = getPrimaryButton(widget);
 			assert.ok(button);
-			assert.strictEqual(button.textContent, 'Manage Budget');
+			assert.strictEqual(button.textContent, "Manage Budget");
 		});
 
 		test('shows "Upgrade to GitHub Copilot Pro" for Free user', () => {
 			const widget = createWidget(ChatEntitlement.Free, {
-				message: 'Quota exceeded',
+				message: "Quota exceeded",
 				isQuotaExceeded: true,
 			});
 
 			const button = getPrimaryButton(widget);
 			assert.ok(button);
-			assert.strictEqual(button.textContent, 'Upgrade to GitHub Copilot Pro');
+			assert.strictEqual(button.textContent, "Upgrade to GitHub Copilot Pro");
 		});
 
 		test('shows "Upgrade" for Pro user with additional_spend_limit_reached', () => {
 			const widget = createWidget(ChatEntitlement.Pro, {
-				message: 'Spend limit reached',
+				message: "Spend limit reached",
 				isQuotaExceeded: true,
-				code: 'additional_spend_limit_reached',
+				code: "additional_spend_limit_reached",
 			});
 
 			const button = getPrimaryButton(widget);
 			assert.ok(button);
-			assert.strictEqual(button.textContent, 'Upgrade');
+			assert.strictEqual(button.textContent, "Upgrade");
 		});
 
 		test('shows "Upgrade" for ProPlus user with additional_spend_limit_reached', () => {
 			const widget = createWidget(ChatEntitlement.ProPlus, {
-				message: 'Spend limit reached',
+				message: "Spend limit reached",
 				isQuotaExceeded: true,
-				code: 'additional_spend_limit_reached',
+				code: "additional_spend_limit_reached",
 			});
 
 			const button = getPrimaryButton(widget);
 			assert.ok(button);
-			assert.strictEqual(button.textContent, 'Upgrade');
+			assert.strictEqual(button.textContent, "Upgrade");
 		});
 
 		test('shows "Manage Budget" for EDU user without additional_spend_limit_reached', () => {
 			const widget = createWidget(ChatEntitlement.EDU, {
-				message: 'Quota exceeded',
+				message: "Quota exceeded",
 				isQuotaExceeded: true,
 			});
 
 			const button = getPrimaryButton(widget);
 			assert.ok(button);
-			assert.strictEqual(button.textContent, 'Manage Budget');
+			assert.strictEqual(button.textContent, "Manage Budget");
 		});
 	});
 
-	suite('button command', () => {
+	suite("button command", () => {
 		test('Pro user clicks "Manage Budget" -> manageAdditionalSpend', async () => {
 			const widget = createWidget(ChatEntitlement.Pro, {
-				message: 'Quota exceeded',
+				message: "Quota exceeded",
 				isQuotaExceeded: true,
 			});
 
 			const button = getPrimaryButton(widget);
 			assert.ok(button);
 			button.click();
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			assert.strictEqual(executedCommands[0], 'workbench.action.chat.manageAdditionalSpend');
+			assert.strictEqual(
+				executedCommands[0],
+				"workbench.action.chat.manageAdditionalSpend",
+			);
 		});
 
 		test('Free user clicks "Upgrade" -> upgradePlan', async () => {
 			const widget = createWidget(ChatEntitlement.Free, {
-				message: 'Quota exceeded',
+				message: "Quota exceeded",
 				isQuotaExceeded: true,
 			});
 
 			const button = getPrimaryButton(widget);
 			assert.ok(button);
 			button.click();
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			assert.strictEqual(executedCommands[0], 'workbench.action.chat.upgradePlan');
+			assert.strictEqual(
+				executedCommands[0],
+				"workbench.action.chat.upgradePlan",
+			);
 		});
 
 		test('Pro user with additional_spend_limit_reached clicks "Upgrade" -> upgradePlan', async () => {
 			const widget = createWidget(ChatEntitlement.Pro, {
-				message: 'Spend limit reached',
+				message: "Spend limit reached",
 				isQuotaExceeded: true,
-				code: 'additional_spend_limit_reached',
+				code: "additional_spend_limit_reached",
 			});
 
 			const button = getPrimaryButton(widget);
 			assert.ok(button);
 			button.click();
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			assert.strictEqual(executedCommands[0], 'workbench.action.chat.upgradePlan');
+			assert.strictEqual(
+				executedCommands[0],
+				"workbench.action.chat.upgradePlan",
+			);
 		});
 	});
 });

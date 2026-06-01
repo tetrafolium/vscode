@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ChatModeKind, RawChatParticipantLocation } from '../constants.js';
+import { ChatModeKind, RawChatParticipantLocation } from "../constants.js";
 
 export interface IRawChatCommandContribution {
 	name: string;
@@ -11,7 +11,12 @@ export interface IRawChatCommandContribution {
 	sampleRequest?: string;
 	isSticky?: boolean;
 	when?: string;
-	disambiguation?: { category: string; categoryName?: string /** Deprecated */; description: string; examples: string[] }[];
+	disambiguation?: {
+		category: string;
+		categoryName?: string /** Deprecated */;
+		description: string;
+		examples: string[];
+	}[];
 }
 
 export interface IRawChatParticipantContribution {
@@ -29,7 +34,12 @@ export interface IRawChatParticipantContribution {
 	 * Valid for default participants in 'panel' location
 	 */
 	modes?: ChatModeKind[];
-	disambiguation?: { category: string; categoryName?: string /** Deprecated */; description: string; examples: string[] }[];
+	disambiguation?: {
+		category: string;
+		categoryName?: string /** Deprecated */;
+		description: string;
+		examples: string[];
+	}[];
 }
 
 /**
@@ -37,4 +47,4 @@ export interface IRawChatParticipantContribution {
  * DON'T use this for any new data, only for old persisted data.
  * @deprecated
  */
-export const CHAT_PROVIDER_ID = 'copilot';
+export const CHAT_PROVIDER_ID = "copilot";

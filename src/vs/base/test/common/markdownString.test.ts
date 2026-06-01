@@ -3,80 +3,77 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { IMarkdownString, MarkdownString } from '../../common/htmlContent.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from './utils.js';
-import { URI } from '../../common/uri.js';
+import assert from "assert";
+import { IMarkdownString, MarkdownString } from "../../common/htmlContent.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "./utils.js";
+import { URI } from "../../common/uri.js";
 
-suite('MarkdownString', () => {
-
+suite("MarkdownString", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('Escape leading whitespace', function () {
+	test("Escape leading whitespace", function () {
 		const mds = new MarkdownString();
-		mds.appendText('Hello\n    Not a code block');
-		assert.strictEqual(mds.value, 'Hello\n\n&nbsp;&nbsp;&nbsp;&nbsp;Not&nbsp;a&nbsp;code&nbsp;block');
+		mds.appendText("Hello\n    Not a code block");
+		assert.strictEqual(
+			mds.value,
+			"Hello\n\n&nbsp;&nbsp;&nbsp;&nbsp;Not&nbsp;a&nbsp;code&nbsp;block",
+		);
 	});
 
-	test('MarkdownString.appendText doesn\'t escape quote #109040', function () {
+	test("MarkdownString.appendText doesn't escape quote #109040", function () {
 		const mds = new MarkdownString();
-		mds.appendText('> Text\n>More');
-		assert.strictEqual(mds.value, '\\>&nbsp;Text\n\n\\>More');
+		mds.appendText("> Text\n>More");
+		assert.strictEqual(mds.value, "\\>&nbsp;Text\n\n\\>More");
 	});
 
-	test('appendText', () => {
-
+	test("appendText", () => {
 		const mds = new MarkdownString();
-		mds.appendText('# foo\n*bar*');
+		mds.appendText("# foo\n*bar*");
 
-		assert.strictEqual(mds.value, '\\#&nbsp;foo\n\n\\*bar\\*');
+		assert.strictEqual(mds.value, "\\#&nbsp;foo\n\n\\*bar\\*");
 	});
 
-	test('appendLink', function () {
-
-		function assertLink(target: string, label: string, title: string | undefined, expected: string) {
+	test("appendLink", function () {
+		function assertLink(
+			target: string,
+			label: string,
+			title: string | undefined,
+			expected: string,
+		) {
 			const mds = new MarkdownString();
 			mds.appendLink(target, label, title);
 			assert.strictEqual(mds.value, expected);
 		}
 
 		assertLink(
-			'https://example.com\\()![](file:///Users/jrieken/Code/_samples/devfest/foo/img.png)', 'hello', undefined,
-			'[hello](https://example.com\\(\\)![](file:///Users/jrieken/Code/_samples/devfest/foo/img.png\\))'
+			"https://example.com\\()![](file:///Users/jrieken/Code/_samples/devfest/foo/img.png)",
+			"hello",
+			undefined,
+			"[hello](https://example.com\\(\\)![](file:///Users/jrieken/Code/_samples/devfest/foo/img.png\\))",
 		);
 		assertLink(
-			'https://example.com', 'hello', 'title',
-			'[hello](https://example.com "title")'
+			"https://example.com",
+			"hello",
+			"title",
+			'[hello](https://example.com "title")',
 		);
-		assertLink(
-			'foo)', 'hello]', undefined,
-			'[hello\\]](foo\\))'
-		);
-		assertLink(
-			'foo\\)', 'hello]', undefined,
-			'[hello\\]](foo\\))'
-		);
-		assertLink(
-			'fo)o', 'hell]o', undefined,
-			'[hell\\]o](fo\\)o)'
-		);
-		assertLink(
-			'foo)', 'hello]', 'title"',
-			'[hello\\]](foo\\) "title\\"")'
-		);
+		assertLink("foo)", "hello]", undefined, "[hello\\]](foo\\))");
+		assertLink("foo\\)", "hello]", undefined, "[hello\\]](foo\\))");
+		assertLink("fo)o", "hell]o", undefined, "[hell\\]o](fo\\)o)");
+		assertLink("foo)", "hello]", 'title"', '[hello\\]](foo\\) "title\\"")');
 	});
 
-	test('lift', () => {
+	test("lift", () => {
 		const dto: IMarkdownString = {
-			value: 'hello',
-			baseUri: URI.file('/foo/bar'),
+			value: "hello",
+			baseUri: URI.file("/foo/bar"),
 			supportThemeIcons: true,
 			isTrusted: true,
 			supportHtml: true,
 			uris: {
-				[URI.file('/foo/bar2').toString()]: URI.file('/foo/bar2'),
-				[URI.file('/foo/bar3').toString()]: URI.file('/foo/bar3')
-			}
+				[URI.file("/foo/bar2").toString()]: URI.file("/foo/bar2"),
+				[URI.file("/foo/bar3").toString()]: URI.file("/foo/bar3"),
+			},
 		};
 		const mds = MarkdownString.lift(dto);
 		assert.strictEqual(mds.value, dto.value);
@@ -87,108 +84,109 @@ suite('MarkdownString', () => {
 		assert.deepStrictEqual(mds.uris, dto.uris);
 	});
 
-	test('lift returns new instance', () => {
-		const instance = new MarkdownString('hello');
-		const mds2 = MarkdownString.lift(instance).appendText('world');
-		assert.strictEqual(mds2.value, 'helloworld');
-		assert.strictEqual(instance.value, 'hello');
+	test("lift returns new instance", () => {
+		const instance = new MarkdownString("hello");
+		const mds2 = MarkdownString.lift(instance).appendText("world");
+		assert.strictEqual(mds2.value, "helloworld");
+		assert.strictEqual(instance.value, "hello");
 	});
 
-	suite('appendCodeBlock', () => {
+	suite("appendCodeBlock", () => {
 		function assertCodeBlock(lang: string, code: string, result: string) {
 			const mds = new MarkdownString();
 			mds.appendCodeblock(lang, code);
 			assert.strictEqual(mds.value, result);
 		}
 
-		test('common cases', () => {
+		test("common cases", () => {
 			// no backticks
-			assertCodeBlock('ts', 'const a = 1;', `\n${[
-				'```ts',
-				'const a = 1;',
-				'```'
-			].join('\n')}\n`);
+			assertCodeBlock(
+				"ts",
+				"const a = 1;",
+				`\n${["```ts", "const a = 1;", "```"].join("\n")}\n`,
+			);
 			// backticks
-			assertCodeBlock('ts', 'const a = `1`;', `\n${[
-				'```ts',
-				'const a = `1`;',
-				'```'
-			].join('\n')}\n`);
+			assertCodeBlock(
+				"ts",
+				"const a = `1`;",
+				`\n${["```ts", "const a = `1`;", "```"].join("\n")}\n`,
+			);
 		});
 
 		// @see https://github.com/microsoft/vscode/issues/193746
-		test('escape fence', () => {
+		test("escape fence", () => {
 			// fence in the first line
-			assertCodeBlock('md', '```\n```', `\n${[
-				'````md',
-				'```\n```',
-				'````'
-			].join('\n')}\n`);
+			assertCodeBlock(
+				"md",
+				"```\n```",
+				`\n${["````md", "```\n```", "````"].join("\n")}\n`,
+			);
 			// fence in the middle of code
-			assertCodeBlock('md', '\n\n```\n```', `\n${[
-				'````md',
-				'\n\n```\n```',
-				'````'
-			].join('\n')}\n`);
+			assertCodeBlock(
+				"md",
+				"\n\n```\n```",
+				`\n${["````md", "\n\n```\n```", "````"].join("\n")}\n`,
+			);
 			// longer fence at the end of code
-			assertCodeBlock('md', '```\n```\n````\n````', `\n${[
-				'`````md',
-				'```\n```\n````\n````',
-				'`````'
-			].join('\n')}\n`);
+			assertCodeBlock(
+				"md",
+				"```\n```\n````\n````",
+				`\n${["`````md", "```\n```\n````\n````", "`````"].join("\n")}\n`,
+			);
 		});
 	});
 
-	suite('ThemeIcons', () => {
-
-		suite('Support On', () => {
-
-			test('appendText', () => {
+	suite("ThemeIcons", () => {
+		suite("Support On", () => {
+			test("appendText", () => {
 				const mds = new MarkdownString(undefined, { supportThemeIcons: true });
-				mds.appendText('$(zap) $(not a theme icon) $(add)');
+				mds.appendText("$(zap) $(not a theme icon) $(add)");
 
-				assert.strictEqual(mds.value, '\\\\$\\(zap\\)&nbsp;$\\(not&nbsp;a&nbsp;theme&nbsp;icon\\)&nbsp;\\\\$\\(add\\)');
+				assert.strictEqual(
+					mds.value,
+					"\\\\$\\(zap\\)&nbsp;$\\(not&nbsp;a&nbsp;theme&nbsp;icon\\)&nbsp;\\\\$\\(add\\)",
+				);
 			});
 
-			test('appendMarkdown', () => {
+			test("appendMarkdown", () => {
 				const mds = new MarkdownString(undefined, { supportThemeIcons: true });
-				mds.appendMarkdown('$(zap) $(not a theme icon) $(add)');
+				mds.appendMarkdown("$(zap) $(not a theme icon) $(add)");
 
-				assert.strictEqual(mds.value, '$(zap) $(not a theme icon) $(add)');
+				assert.strictEqual(mds.value, "$(zap) $(not a theme icon) $(add)");
 			});
 
-			test('appendMarkdown with escaped icon', () => {
+			test("appendMarkdown with escaped icon", () => {
 				const mds = new MarkdownString(undefined, { supportThemeIcons: true });
-				mds.appendMarkdown('\\$(zap) $(not a theme icon) $(add)');
+				mds.appendMarkdown("\\$(zap) $(not a theme icon) $(add)");
 
-				assert.strictEqual(mds.value, '\\$(zap) $(not a theme icon) $(add)');
+				assert.strictEqual(mds.value, "\\$(zap) $(not a theme icon) $(add)");
 			});
-
 		});
 
-		suite('Support Off', () => {
-
-			test('appendText', () => {
+		suite("Support Off", () => {
+			test("appendText", () => {
 				const mds = new MarkdownString(undefined, { supportThemeIcons: false });
-				mds.appendText('$(zap) $(not a theme icon) $(add)');
+				mds.appendText("$(zap) $(not a theme icon) $(add)");
 
-				assert.strictEqual(mds.value, '$\\(zap\\)&nbsp;$\\(not&nbsp;a&nbsp;theme&nbsp;icon\\)&nbsp;$\\(add\\)');
+				assert.strictEqual(
+					mds.value,
+					"$\\(zap\\)&nbsp;$\\(not&nbsp;a&nbsp;theme&nbsp;icon\\)&nbsp;$\\(add\\)",
+				);
 			});
 
-			test('appendMarkdown', () => {
+			test("appendMarkdown", () => {
 				const mds = new MarkdownString(undefined, { supportThemeIcons: false });
-				mds.appendMarkdown('$(zap) $(not a theme icon) $(add)');
+				mds.appendMarkdown("$(zap) $(not a theme icon) $(add)");
 
-				assert.strictEqual(mds.value, '$(zap) $(not a theme icon) $(add)');
+				assert.strictEqual(mds.value, "$(zap) $(not a theme icon) $(add)");
 			});
 
-			test('appendMarkdown with escaped icon', () => {
+			test("appendMarkdown with escaped icon", () => {
 				const mds = new MarkdownString(undefined, { supportThemeIcons: true });
-				mds.appendMarkdown('\\$(zap) $(not a theme icon) $(add)');
+				mds.appendMarkdown("\\$(zap) $(not a theme icon) $(add)");
 
-				assert.strictEqual(mds.value, '\\$(zap) $(not a theme icon) $(add)');
+				assert.strictEqual(mds.value, "\\$(zap) $(not a theme icon) $(add)");
 			});
-
 		});
 	});
 });

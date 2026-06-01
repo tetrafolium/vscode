@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	// @kycutler https://github.com/microsoft/vscode/issues/300319
 
 	/**
@@ -87,6 +86,9 @@ declare module 'vscode' {
 		 * @param options Controls where and how the browser tab is shown.
 		 * @returns The {@link BrowserTab} representing the opened page.
 		 */
-		export function openBrowserTab(url: string, options?: BrowserTabShowOptions): Thenable<BrowserTab>;
+		export function openBrowserTab(
+			url: string,
+			options?: BrowserTabShowOptions,
+		): Thenable<BrowserTab>;
 	}
 }

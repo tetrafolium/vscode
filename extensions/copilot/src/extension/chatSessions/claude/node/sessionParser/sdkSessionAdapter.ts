@@ -17,7 +17,10 @@
  * and `claudeChatSessionContentProvider.ts` without any JSONL parsing.
  */
 
-import type { SDKSessionInfo, SessionMessage } from '@anthropic-ai/claude-agent-sdk';
+import type {
+	SDKSessionInfo,
+	SessionMessage,
+} from '@anthropic-ai/claude-agent-sdk';
 import {
 	AssistantMessageContent,
 	IClaudeCodeSession,
@@ -36,7 +39,9 @@ import {
  * The SDK includes raw system-reminder blocks in `summary` and `firstPrompt` fields.
  */
 function stripSystemReminders(text: string): string {
-	return text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>\s*/g, '').trim();
+	return text
+		.replace(/<system-reminder>[\s\S]*?<\/system-reminder>\s*/g, '')
+		.trim();
 }
 
 /**
@@ -53,7 +58,9 @@ function computeSessionLabel(info: SDKSessionInfo): string {
 		return truncateLabel(summary);
 	}
 
-	const firstPrompt = info.firstPrompt ? stripSystemReminders(info.firstPrompt) : '';
+	const firstPrompt = info.firstPrompt
+		? stripSystemReminders(info.firstPrompt)
+		: '';
 	if (firstPrompt) {
 		return truncateLabel(firstPrompt);
 	}
@@ -163,9 +170,15 @@ function sdkSessionMessageToStoredMessage(
 
 // #region Subagent Session Building
 
-function extractParentToolUseId(messages: readonly SessionMessage[]): string | undefined {
+function extractParentToolUseId(
+	messages: readonly SessionMessage[],
+): string | undefined {
 	for (const msg of messages) {
-		if (msg.type !== 'assistant' || msg.message === null || typeof msg.message !== 'object') {
+		if (
+			msg.type !== 'assistant' ||
+			msg.message === null ||
+			typeof msg.message !== 'object'
+		) {
 			continue;
 		}
 		if ('parent_tool_use_id' in msg.message) {

@@ -3,50 +3,78 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as DOM from '../../../../../base/browser/dom.js';
-import { Dimension } from '../../../../../base/browser/dom.js';
-import { BreadcrumbsWidget } from '../../../../../base/browser/ui/breadcrumbs/breadcrumbsWidget.js';
-import { Button } from '../../../../../base/browser/ui/button/button.js';
-import { ProgressBar } from '../../../../../base/browser/ui/progressbar/progressbar.js';
-import { IObjectTreeElement } from '../../../../../base/browser/ui/tree/tree.js';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { Emitter } from '../../../../../base/common/event.js';
-import { combinedDisposable, Disposable, DisposableStore, MutableDisposable } from '../../../../../base/common/lifecycle.js';
-import { autorun } from '../../../../../base/common/observable.js';
-import { RunOnceScheduler } from '../../../../../base/common/async.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { localize } from '../../../../../nls.js';
-import { IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { ServiceCollection } from '../../../../../platform/instantiation/common/serviceCollection.js';
-import { WorkbenchList, WorkbenchObjectTree } from '../../../../../platform/list/browser/listService.js';
-import { defaultBreadcrumbsWidgetStyles, defaultButtonStyles, defaultProgressBarStyles } from '../../../../../platform/theme/browser/defaultStyles.js';
-import { FilterWidget } from '../../../../browser/parts/views/viewFilter.js';
-import { IChatDebugEvent, IChatDebugService } from '../../common/chatDebugService.js';
-import { debugEventMatchesText } from '../../common/chatDebugEvents.js';
-import { IChatService } from '../../common/chatService/chatService.js';
-import { LocalChatSessionUri } from '../../common/model/chatUri.js';
-import { ChatDebugEventRenderer, ChatDebugEventDelegate, ChatDebugEventTreeRenderer, getEventCreatedText, getEventNameText, getEventDetailsText } from './chatDebugEventList.js';
-import { setupBreadcrumbKeyboardNavigation, TextBreadcrumbItem, LogsViewMode } from './chatDebugTypes.js';
-import { ChatDebugFilterState, bindFilterContextKeys } from './chatDebugFilters.js';
-import { ChatDebugDetailPanel } from './chatDebugDetailPanel.js';
-import { IClipboardService } from '../../../../../platform/clipboard/common/clipboardService.js';
-import { IContextMenuService } from '../../../../../platform/contextview/browser/contextView.js';
-import { Action, Separator } from '../../../../../base/common/actions.js';
-import { StandardMouseEvent } from '../../../../../base/browser/mouseEvent.js';
+import * as DOM from "../../../../../base/browser/dom.js";
+import { Dimension } from "../../../../../base/browser/dom.js";
+import { BreadcrumbsWidget } from "../../../../../base/browser/ui/breadcrumbs/breadcrumbsWidget.js";
+import { Button } from "../../../../../base/browser/ui/button/button.js";
+import { ProgressBar } from "../../../../../base/browser/ui/progressbar/progressbar.js";
+import { IObjectTreeElement } from "../../../../../base/browser/ui/tree/tree.js";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { Emitter } from "../../../../../base/common/event.js";
+import {
+	combinedDisposable,
+	Disposable,
+	DisposableStore,
+	MutableDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { autorun } from "../../../../../base/common/observable.js";
+import { RunOnceScheduler } from "../../../../../base/common/async.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { localize } from "../../../../../nls.js";
+import { IContextKeyService } from "../../../../../platform/contextkey/common/contextkey.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { ServiceCollection } from "../../../../../platform/instantiation/common/serviceCollection.js";
+import {
+	WorkbenchList,
+	WorkbenchObjectTree,
+} from "../../../../../platform/list/browser/listService.js";
+import {
+	defaultBreadcrumbsWidgetStyles,
+	defaultButtonStyles,
+	defaultProgressBarStyles,
+} from "../../../../../platform/theme/browser/defaultStyles.js";
+import { FilterWidget } from "../../../../browser/parts/views/viewFilter.js";
+import {
+	IChatDebugEvent,
+	IChatDebugService,
+} from "../../common/chatDebugService.js";
+import { debugEventMatchesText } from "../../common/chatDebugEvents.js";
+import { IChatService } from "../../common/chatService/chatService.js";
+import { LocalChatSessionUri } from "../../common/model/chatUri.js";
+import {
+	ChatDebugEventRenderer,
+	ChatDebugEventDelegate,
+	ChatDebugEventTreeRenderer,
+	getEventCreatedText,
+	getEventNameText,
+	getEventDetailsText,
+} from "./chatDebugEventList.js";
+import {
+	setupBreadcrumbKeyboardNavigation,
+	TextBreadcrumbItem,
+	LogsViewMode,
+} from "./chatDebugTypes.js";
+import {
+	ChatDebugFilterState,
+	bindFilterContextKeys,
+} from "./chatDebugFilters.js";
+import { ChatDebugDetailPanel } from "./chatDebugDetailPanel.js";
+import { IClipboardService } from "../../../../../platform/clipboard/common/clipboardService.js";
+import { IContextMenuService } from "../../../../../platform/contextview/browser/contextView.js";
+import { Action, Separator } from "../../../../../base/common/actions.js";
+import { StandardMouseEvent } from "../../../../../base/browser/mouseEvent.js";
 
 const $ = DOM.$;
 
 const PAGE_SIZE = 1000;
 
 export const enum LogsNavigation {
-	Home = 'home',
-	Overview = 'overview',
+	Home = "home",
+	Overview = "overview",
 }
 
 export class ChatDebugLogsView extends Disposable {
-
 	private readonly _onNavigate = this._register(new Emitter<LogsNavigation>());
 	readonly onNavigate = this._onNavigate.event;
 
@@ -74,7 +102,9 @@ export class ChatDebugLogsView extends Disposable {
 	private cachedTextFilter: string | undefined;
 	private currentDimension: Dimension | undefined;
 	private readonly eventListener = this._register(new MutableDisposable());
-	private readonly sessionStateDisposable = this._register(new MutableDisposable());
+	private readonly sessionStateDisposable = this._register(
+		new MutableDisposable(),
+	);
 	private readonly refreshScheduler: RunOnceScheduler;
 	private readonly progressBar: ProgressBar;
 	private readonly showMoreContainer: HTMLElement;
@@ -89,117 +119,250 @@ export class ChatDebugLogsView extends Disposable {
 		private readonly filterState: ChatDebugFilterState,
 		@IChatService private readonly chatService: IChatService,
 		@IChatDebugService private readonly chatDebugService: IChatDebugService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@IClipboardService private readonly clipboardService: IClipboardService,
-		@IContextMenuService private readonly contextMenuService: IContextMenuService,
+		@IContextMenuService
+		private readonly contextMenuService: IContextMenuService,
 	) {
 		super();
-		this.refreshScheduler = this._register(new RunOnceScheduler(() => this.refreshList(), 50));
-		this.container = DOM.append(parent, $('.chat-debug-logs'));
+		this.refreshScheduler = this._register(
+			new RunOnceScheduler(() => this.refreshList(), 50),
+		);
+		this.container = DOM.append(parent, $(".chat-debug-logs"));
 		DOM.hide(this.container);
 
 		// Breadcrumb
-		const breadcrumbContainer = DOM.append(this.container, $('.chat-debug-breadcrumb'));
-		this.breadcrumbWidget = this._register(new BreadcrumbsWidget(breadcrumbContainer, 3, undefined, Codicon.chevronRight, defaultBreadcrumbsWidgetStyles));
-		this._register(setupBreadcrumbKeyboardNavigation(breadcrumbContainer, this.breadcrumbWidget));
-		this._register(this.breadcrumbWidget.onDidSelectItem(e => {
-			if (e.type === 'select' && e.item instanceof TextBreadcrumbItem) {
-				this.breadcrumbWidget.setSelection(undefined);
-				const items = this.breadcrumbWidget.getItems();
-				const idx = items.indexOf(e.item);
-				if (idx === 0) {
-					this._onNavigate.fire(LogsNavigation.Home);
-				} else if (idx === 1) {
-					this._onNavigate.fire(LogsNavigation.Overview);
+		const breadcrumbContainer = DOM.append(
+			this.container,
+			$(".chat-debug-breadcrumb"),
+		);
+		this.breadcrumbWidget = this._register(
+			new BreadcrumbsWidget(
+				breadcrumbContainer,
+				3,
+				undefined,
+				Codicon.chevronRight,
+				defaultBreadcrumbsWidgetStyles,
+			),
+		);
+		this._register(
+			setupBreadcrumbKeyboardNavigation(
+				breadcrumbContainer,
+				this.breadcrumbWidget,
+			),
+		);
+		this._register(
+			this.breadcrumbWidget.onDidSelectItem((e) => {
+				if (e.type === "select" && e.item instanceof TextBreadcrumbItem) {
+					this.breadcrumbWidget.setSelection(undefined);
+					const items = this.breadcrumbWidget.getItems();
+					const idx = items.indexOf(e.item);
+					if (idx === 0) {
+						this._onNavigate.fire(LogsNavigation.Home);
+					} else if (idx === 1) {
+						this._onNavigate.fire(LogsNavigation.Overview);
+					}
 				}
-			}
-		}));
+			}),
+		);
 
 		// Header (filter)
-		this.headerContainer = DOM.append(this.container, $('.chat-debug-editor-header'));
+		this.headerContainer = DOM.append(
+			this.container,
+			$(".chat-debug-editor-header"),
+		);
 
 		// Scoped context key service for filter menu items
-		const scopedContextKeyService = this._register(this.contextKeyService.createScoped(this.headerContainer));
-		const syncContextKeys = bindFilterContextKeys(this.filterState, scopedContextKeyService);
+		const scopedContextKeyService = this._register(
+			this.contextKeyService.createScoped(this.headerContainer),
+		);
+		const syncContextKeys = bindFilterContextKeys(
+			this.filterState,
+			scopedContextKeyService,
+		);
 		syncContextKeys();
 
-		const childInstantiationService = this._register(this.instantiationService.createChild(
-			new ServiceCollection([IContextKeyService, scopedContextKeyService])
-		));
-		this.filterWidget = this._register(childInstantiationService.createInstance(FilterWidget, {
-			placeholder: localize('chatDebug.search', "Filter (e.g. text, !exclude, before:YYYY-MM-DDTHH:MM:SS)"),
-			ariaLabel: localize('chatDebug.filterAriaLabel', "Filter debug events"),
-		}));
+		const childInstantiationService = this._register(
+			this.instantiationService.createChild(
+				new ServiceCollection([IContextKeyService, scopedContextKeyService]),
+			),
+		);
+		this.filterWidget = this._register(
+			childInstantiationService.createInstance(FilterWidget, {
+				placeholder: localize(
+					"chatDebug.search",
+					"Filter (e.g. text, !exclude, before:YYYY-MM-DDTHH:MM:SS)",
+				),
+				ariaLabel: localize("chatDebug.filterAriaLabel", "Filter debug events"),
+			}),
+		);
 
 		// View mode toggle
-		this.viewModeToggle = this._register(new Button(this.headerContainer, { ...defaultButtonStyles, secondary: true, title: localize('chatDebug.toggleViewMode', "Toggle between list and tree view") }));
-		this.viewModeToggle.element.classList.add('chat-debug-view-mode-toggle', 'monaco-text-button');
+		this.viewModeToggle = this._register(
+			new Button(this.headerContainer, {
+				...defaultButtonStyles,
+				secondary: true,
+				title: localize(
+					"chatDebug.toggleViewMode",
+					"Toggle between list and tree view",
+				),
+			}),
+		);
+		this.viewModeToggle.element.classList.add(
+			"chat-debug-view-mode-toggle",
+			"monaco-text-button",
+		);
 		this.updateViewModeToggle();
-		this._register(this.viewModeToggle.onDidClick(() => {
-			this.toggleViewMode();
-		}));
+		this._register(
+			this.viewModeToggle.onDidClick(() => {
+				this.toggleViewMode();
+			}),
+		);
 
-		const filterContainer = DOM.append(this.headerContainer, $('.viewpane-filter-container'));
+		const filterContainer = DOM.append(
+			this.headerContainer,
+			$(".viewpane-filter-container"),
+		);
 		filterContainer.appendChild(this.filterWidget.element);
 
-		this._register(this.filterWidget.onDidChangeFilterText(text => {
-			this.filterState.setTextFilter(text);
-		}));
+		this._register(
+			this.filterWidget.onDidChangeFilterText((text) => {
+				this.filterState.setTextFilter(text);
+			}),
+		);
 
 		// React to shared filter state changes
-		this._register(this.filterState.onDidChange(() => {
-			syncContextKeys();
-			this.updateMoreFiltersChecked();
-			this.visibleLimit = PAGE_SIZE;
-			this.filterDirty = true;
-			this.refreshList();
-		}));
+		this._register(
+			this.filterState.onDidChange(() => {
+				syncContextKeys();
+				this.updateMoreFiltersChecked();
+				this.visibleLimit = PAGE_SIZE;
+				this.filterDirty = true;
+				this.refreshList();
+			}),
+		);
 
 		// Content wrapper (flex row: main column + detail panel)
-		const contentContainer = DOM.append(this.container, $('.chat-debug-logs-content'));
+		const contentContainer = DOM.append(
+			this.container,
+			$(".chat-debug-logs-content"),
+		);
 
 		// Main column (table header + list/tree body)
-		const mainColumn = DOM.append(contentContainer, $('.chat-debug-logs-main'));
+		const mainColumn = DOM.append(contentContainer, $(".chat-debug-logs-main"));
 
 		// Table header
-		this.tableHeader = DOM.append(mainColumn, $('.chat-debug-table-header'));
-		DOM.append(this.tableHeader, $('span.chat-debug-col-created', undefined, localize('chatDebug.col.created', "Created")));
-		DOM.append(this.tableHeader, $('span.chat-debug-col-name', undefined, localize('chatDebug.col.name', "Name")));
-		DOM.append(this.tableHeader, $('span.chat-debug-col-details', undefined, localize('chatDebug.col.details', "Details")));
+		this.tableHeader = DOM.append(mainColumn, $(".chat-debug-table-header"));
+		DOM.append(
+			this.tableHeader,
+			$(
+				"span.chat-debug-col-created",
+				undefined,
+				localize("chatDebug.col.created", "Created"),
+			),
+		);
+		DOM.append(
+			this.tableHeader,
+			$(
+				"span.chat-debug-col-name",
+				undefined,
+				localize("chatDebug.col.name", "Name"),
+			),
+		);
+		DOM.append(
+			this.tableHeader,
+			$(
+				"span.chat-debug-col-details",
+				undefined,
+				localize("chatDebug.col.details", "Details"),
+			),
+		);
 
 		// Progress bar (shown when session is in progress)
-		this.progressBar = this._register(new ProgressBar(mainColumn, {
-			...defaultProgressBarStyles,
-			ariaLabel: localize('chatDebug.progressAriaLabel', "Chat debug logs loading progress")
-		}));
+		this.progressBar = this._register(
+			new ProgressBar(mainColumn, {
+				...defaultProgressBarStyles,
+				ariaLabel: localize(
+					"chatDebug.progressAriaLabel",
+					"Chat debug logs loading progress",
+				),
+			}),
+		);
 
 		// Body container
-		this.bodyContainer = DOM.append(mainColumn, $('.chat-debug-logs-body'));
+		this.bodyContainer = DOM.append(mainColumn, $(".chat-debug-logs-body"));
 
 		// "Show More" container (below the body, shown when events exceed the visible limit)
-		this.showMoreContainer = DOM.append(mainColumn, $('.chat-debug-logs-show-more'));
+		this.showMoreContainer = DOM.append(
+			mainColumn,
+			$(".chat-debug-logs-show-more"),
+		);
 		DOM.hide(this.showMoreContainer);
 
 		// List container (initially hidden — tree view is default)
-		this.listContainer = DOM.append(this.bodyContainer, $('.chat-debug-list-container'));
+		this.listContainer = DOM.append(
+			this.bodyContainer,
+			$(".chat-debug-list-container"),
+		);
 		DOM.hide(this.listContainer);
 
 		const accessibilityProvider = {
 			getAriaLabel: (e: IChatDebugEvent) => {
 				switch (e.kind) {
-					case 'toolCall': return localize('chatDebug.aria.toolCall', "Tool call: {0}{1}", e.toolName, e.result ? ` (${e.result})` : '');
-					case 'modelTurn': return localize('chatDebug.aria.modelTurn', "Model turn: {0}{1}{2}",
-						e.model ?? localize('chatDebug.aria.model', "model"),
-						e.totalTokens !== undefined ? localize('chatDebug.aria.tokenCount', " {0} tokens", e.totalTokens) : '',
-						e.cachedTokens !== undefined ? localize('chatDebug.aria.cachedTokens', " {0} cached", e.cachedTokens) : '');
-					case 'generic': return `${e.category ? e.category + ': ' : ''}${e.name}: ${e.details ?? ''}`;
-					case 'subagentInvocation': return localize('chatDebug.aria.subagent', "Subagent: {0}{1}", e.agentName, e.description ? ` - ${e.description}` : '');
-					case 'userMessage': return localize('chatDebug.aria.userMessage', "User message: {0}", e.message);
-					case 'agentResponse': return localize('chatDebug.aria.agentResponse', "Agent response: {0}", e.message);
+					case "toolCall":
+						return localize(
+							"chatDebug.aria.toolCall",
+							"Tool call: {0}{1}",
+							e.toolName,
+							e.result ? ` (${e.result})` : "",
+						);
+					case "modelTurn":
+						return localize(
+							"chatDebug.aria.modelTurn",
+							"Model turn: {0}{1}{2}",
+							e.model ?? localize("chatDebug.aria.model", "model"),
+							e.totalTokens !== undefined
+								? localize(
+										"chatDebug.aria.tokenCount",
+										" {0} tokens",
+										e.totalTokens,
+									)
+								: "",
+							e.cachedTokens !== undefined
+								? localize(
+										"chatDebug.aria.cachedTokens",
+										" {0} cached",
+										e.cachedTokens,
+									)
+								: "",
+						);
+					case "generic":
+						return `${e.category ? e.category + ": " : ""}${e.name}: ${e.details ?? ""}`;
+					case "subagentInvocation":
+						return localize(
+							"chatDebug.aria.subagent",
+							"Subagent: {0}{1}",
+							e.agentName,
+							e.description ? ` - ${e.description}` : "",
+						);
+					case "userMessage":
+						return localize(
+							"chatDebug.aria.userMessage",
+							"User message: {0}",
+							e.message,
+						);
+					case "agentResponse":
+						return localize(
+							"chatDebug.aria.agentResponse",
+							"Agent response: {0}",
+							e.message,
+						);
 				}
 			},
-			getWidgetAriaLabel: () => localize('chatDebug.ariaLabel', "Chat Debug Events"),
+			getWidgetAriaLabel: () =>
+				localize("chatDebug.ariaLabel", "Chat Debug Events"),
 		};
 		let nextFallbackId = 0;
 		const fallbackIds = new WeakMap<IChatDebugEvent, string>();
@@ -214,83 +377,110 @@ export class ChatDebugLogsView extends Disposable {
 					fallbackIds.set(e, fallback);
 				}
 				return fallback;
-			}
+			},
 		};
 
-		this.list = this._register(this.instantiationService.createInstance(
-			WorkbenchList<IChatDebugEvent>,
-			'ChatDebugEvents',
-			this.listContainer,
-			new ChatDebugEventDelegate(),
-			[new ChatDebugEventRenderer()],
-			{ identityProvider, accessibilityProvider }
-		));
+		this.list = this._register(
+			this.instantiationService.createInstance(
+				WorkbenchList<IChatDebugEvent>,
+				"ChatDebugEvents",
+				this.listContainer,
+				new ChatDebugEventDelegate(),
+				[new ChatDebugEventRenderer()],
+				{ identityProvider, accessibilityProvider },
+			),
+		);
 
 		// Tree container (default view)
-		this.treeContainer = DOM.append(this.bodyContainer, $('.chat-debug-list-container'));
+		this.treeContainer = DOM.append(
+			this.bodyContainer,
+			$(".chat-debug-list-container"),
+		);
 
-		this.tree = this._register(this.instantiationService.createInstance(
-			WorkbenchObjectTree<IChatDebugEvent, void>,
-			'ChatDebugEventsTree',
-			this.treeContainer,
-			new ChatDebugEventDelegate(),
-			[new ChatDebugEventTreeRenderer()],
-			{ identityProvider, accessibilityProvider }
-		));
+		this.tree = this._register(
+			this.instantiationService.createInstance(
+				WorkbenchObjectTree<IChatDebugEvent, void>,
+				"ChatDebugEventsTree",
+				this.treeContainer,
+				new ChatDebugEventDelegate(),
+				[new ChatDebugEventTreeRenderer()],
+				{ identityProvider, accessibilityProvider },
+			),
+		);
 
 		// Detail panel (sibling of main column so it aligns with table header)
-		this.detailPanel = this._register(this.instantiationService.createInstance(ChatDebugDetailPanel, contentContainer));
-		this._register(this.detailPanel.onDidChangeWidth(() => {
-			if (this.currentDimension) {
-				this.layout(this.currentDimension);
-			}
-		}));
-		this._register(this.detailPanel.onDidHide(() => {
-			if (this.list.getSelection().length > 0) {
-				this.list.setSelection([]);
-			}
-			if (this.tree.getSelection().length > 0) {
-				this.tree.setSelection([]);
-			}
-			if (this.currentDimension) {
-				this.layout(this.currentDimension);
-			}
-		}));
+		this.detailPanel = this._register(
+			this.instantiationService.createInstance(
+				ChatDebugDetailPanel,
+				contentContainer,
+			),
+		);
+		this._register(
+			this.detailPanel.onDidChangeWidth(() => {
+				if (this.currentDimension) {
+					this.layout(this.currentDimension);
+				}
+			}),
+		);
+		this._register(
+			this.detailPanel.onDidHide(() => {
+				if (this.list.getSelection().length > 0) {
+					this.list.setSelection([]);
+				}
+				if (this.tree.getSelection().length > 0) {
+					this.tree.setSelection([]);
+				}
+				if (this.currentDimension) {
+					this.layout(this.currentDimension);
+				}
+			}),
+		);
 
 		// Context menu
-		this._register(this.list.onContextMenu(e => {
-			if (e.element) {
-				this.showEventContextMenu(e.element, e.browserEvent);
-			}
-		}));
-		this._register(this.tree.onContextMenu(e => {
-			if (e.element) {
-				this.showEventContextMenu(e.element, e.browserEvent);
-			}
-		}));
+		this._register(
+			this.list.onContextMenu((e) => {
+				if (e.element) {
+					this.showEventContextMenu(e.element, e.browserEvent);
+				}
+			}),
+		);
+		this._register(
+			this.tree.onContextMenu((e) => {
+				if (e.element) {
+					this.showEventContextMenu(e.element, e.browserEvent);
+				}
+			}),
+		);
 
 		// Resolve event details on selection
-		this._register(this.list.onDidChangeSelection(e => {
-			const selected = e.elements[0];
-			if (selected) {
-				this.detailPanel.show(selected);
-			} else {
-				this.detailPanel.hide();
-			}
-		}));
+		this._register(
+			this.list.onDidChangeSelection((e) => {
+				const selected = e.elements[0];
+				if (selected) {
+					this.detailPanel.show(selected);
+				} else {
+					this.detailPanel.hide();
+				}
+			}),
+		);
 
-		this._register(this.tree.onDidChangeSelection(e => {
-			const selected = e.elements[0];
-			if (selected) {
-				this.detailPanel.show(selected);
-			} else {
-				this.detailPanel.hide();
-			}
-		}));
+		this._register(
+			this.tree.onDidChangeSelection((e) => {
+				const selected = e.elements[0];
+				if (selected) {
+					this.detailPanel.show(selected);
+				} else {
+					this.detailPanel.hide();
+				}
+			}),
+		);
 	}
 
 	setSession(sessionResource: URI): void {
-		if (!this.currentSessionResource || this.currentSessionResource.toString() !== sessionResource.toString()) {
+		if (
+			!this.currentSessionResource ||
+			this.currentSessionResource.toString() !== sessionResource.toString()
+		) {
 			this.visibleLimit = PAGE_SIZE;
 		}
 		this.currentSessionResource = sessionResource;
@@ -322,11 +512,17 @@ export class ChatDebugLogsView extends Disposable {
 		if (!this.currentSessionResource) {
 			return;
 		}
-		const sessionTitle = this.chatService.getSessionTitle(this.currentSessionResource) || LocalChatSessionUri.parseLocalSessionId(this.currentSessionResource) || this.currentSessionResource.toString();
+		const sessionTitle =
+			this.chatService.getSessionTitle(this.currentSessionResource) ||
+			LocalChatSessionUri.parseLocalSessionId(this.currentSessionResource) ||
+			this.currentSessionResource.toString();
 		this.breadcrumbWidget.setItems([
-			new TextBreadcrumbItem(localize('chatDebug.title', "Agent Debug Logs"), true),
+			new TextBreadcrumbItem(
+				localize("chatDebug.title", "Agent Debug Logs"),
+				true,
+			),
 			new TextBreadcrumbItem(sessionTitle, true),
-			new TextBreadcrumbItem(localize('chatDebug.logs', "Logs")),
+			new TextBreadcrumbItem(localize("chatDebug.logs", "Logs")),
 		]);
 	}
 
@@ -338,7 +534,12 @@ export class ChatDebugLogsView extends Disposable {
 		const showMoreHeight = this.showMoreContainer.offsetHeight;
 		const detailVisible = this.detailPanel.isVisible;
 		const detailWidth = detailVisible ? this.detailPanel.width : 0;
-		const listHeight = dimension.height - breadcrumbHeight - headerHeight - tableHeaderHeight - showMoreHeight;
+		const listHeight =
+			dimension.height -
+			breadcrumbHeight -
+			headerHeight -
+			tableHeaderHeight -
+			showMoreHeight;
 		const listWidth = dimension.width - detailWidth;
 		if (this.logsViewMode === LogsViewMode.Tree) {
 			this.tree.layout(listHeight, listWidth);
@@ -357,7 +558,9 @@ export class ChatDebugLogsView extends Disposable {
 		// the filtered list is kept up-to-date incrementally via addEvent(),
 		// making each refresh O(1) instead of O(n).
 		if (this.filterDirty) {
-			this.filteredEvents = this.events.filter(e => this.passesCurrentFilter(e));
+			this.filteredEvents = this.events.filter((e) =>
+				this.passesCurrentFilter(e),
+			);
 			this.filterDirty = false;
 		}
 
@@ -365,7 +568,10 @@ export class ChatDebugLogsView extends Disposable {
 		// responsive for large sessions. The "Show More" button loads the
 		// next page.
 		const totalFiltered = this.filteredEvents.length;
-		const display = totalFiltered > this.visibleLimit ? this.filteredEvents.slice(0, this.visibleLimit) : this.filteredEvents;
+		const display =
+			totalFiltered > this.visibleLimit
+				? this.filteredEvents.slice(0, this.visibleLimit)
+				: this.filteredEvents;
 
 		if (this.logsViewMode === LogsViewMode.List) {
 			this.list.splice(0, this.list.length, display);
@@ -422,7 +628,7 @@ export class ChatDebugLogsView extends Disposable {
 	 */
 	private passesCurrentFilter(event: IChatDebugEvent): boolean {
 		// Kind filter
-		const category = event.kind === 'generic' ? event.category : undefined;
+		const category = event.kind === "generic" ? event.category : undefined;
 		if (!this.filterState.isKindVisible(event.kind, category)) {
 			return false;
 		}
@@ -435,10 +641,18 @@ export class ChatDebugLogsView extends Disposable {
 		// Text filter — use cached parsed terms to avoid re-splitting on
 		// every addEvent() call during rapid backfill.
 		this.ensureCachedTerms();
-		if (this.cachedExcludeTerms.length > 0 && this.cachedExcludeTerms.some(term => debugEventMatchesText(event, term))) {
+		if (
+			this.cachedExcludeTerms.length > 0 &&
+			this.cachedExcludeTerms.some((term) => debugEventMatchesText(event, term))
+		) {
 			return false;
 		}
-		if (this.cachedIncludeTerms.length > 0 && !this.cachedIncludeTerms.some(term => debugEventMatchesText(event, term))) {
+		if (
+			this.cachedIncludeTerms.length > 0 &&
+			!this.cachedIncludeTerms.some((term) =>
+				debugEventMatchesText(event, term),
+			)
+		) {
 			return false;
 		}
 
@@ -456,9 +670,15 @@ export class ChatDebugLogsView extends Disposable {
 			this.cachedExcludeTerms = [];
 			return;
 		}
-		const terms = textOnly.split(',').map(t => t.trim()).filter(t => t.length > 0);
-		this.cachedIncludeTerms = terms.filter(t => !t.startsWith('!'));
-		this.cachedExcludeTerms = terms.filter(t => t.startsWith('!')).map(t => t.slice(1).trim()).filter(t => t.length > 0);
+		const terms = textOnly
+			.split(",")
+			.map((t) => t.trim())
+			.filter((t) => t.length > 0);
+		this.cachedIncludeTerms = terms.filter((t) => !t.startsWith("!"));
+		this.cachedExcludeTerms = terms
+			.filter((t) => t.startsWith("!"))
+			.map((t) => t.slice(1).trim())
+			.filter((t) => t.length > 0);
 	}
 
 	private scheduleRefresh(): void {
@@ -468,25 +688,43 @@ export class ChatDebugLogsView extends Disposable {
 	}
 
 	private loadEvents(): void {
-		this.events = [...this.chatDebugService.getEvents(this.currentSessionResource || undefined)];
+		this.events = [
+			...this.chatDebugService.getEvents(
+				this.currentSessionResource || undefined,
+			),
+		];
 		this.filterDirty = true;
 
-		const addEventDisposable = this.chatDebugService.onDidAddEvent(e => {
-			if (!this.currentSessionResource || e.sessionResource.toString() === this.currentSessionResource.toString()) {
+		const addEventDisposable = this.chatDebugService.onDidAddEvent((e) => {
+			if (
+				!this.currentSessionResource ||
+				e.sessionResource.toString() === this.currentSessionResource.toString()
+			) {
 				this.addEvent(e);
 			}
 		});
 
 		// Reload events when provider events are cleared (before re-invoking providers)
-		const clearEventsDisposable = this.chatDebugService.onDidClearProviderEvents(sessionResource => {
-			if (!this.currentSessionResource || sessionResource.toString() === this.currentSessionResource.toString()) {
-				this.events = [...this.chatDebugService.getEvents(this.currentSessionResource || undefined)];
-				this.filterDirty = true;
-				this.refreshList();
-			}
-		});
+		const clearEventsDisposable =
+			this.chatDebugService.onDidClearProviderEvents((sessionResource) => {
+				if (
+					!this.currentSessionResource ||
+					sessionResource.toString() === this.currentSessionResource.toString()
+				) {
+					this.events = [
+						...this.chatDebugService.getEvents(
+							this.currentSessionResource || undefined,
+						),
+					];
+					this.filterDirty = true;
+					this.refreshList();
+				}
+			});
 
-		this.eventListener.value = combinedDisposable(addEventDisposable, clearEventsDisposable);
+		this.eventListener.value = combinedDisposable(
+			addEventDisposable,
+			clearEventsDisposable,
+		);
 		this.updateBreadcrumb();
 		this.trackSessionState();
 	}
@@ -505,7 +743,7 @@ export class ChatDebugLogsView extends Disposable {
 			return;
 		}
 
-		this.sessionStateDisposable.value = autorun(reader => {
+		this.sessionStateDisposable.value = autorun((reader) => {
 			const inProgress = model.requestInProgress.read(reader);
 			if (inProgress) {
 				this.progressBar.infinite();
@@ -520,7 +758,9 @@ export class ChatDebugLogsView extends Disposable {
 		this.tree.setChildren(null, treeElements);
 	}
 
-	private buildTreeHierarchy(events: readonly IChatDebugEvent[]): IObjectTreeElement<IChatDebugEvent>[] {
+	private buildTreeHierarchy(
+		events: readonly IChatDebugEvent[],
+	): IObjectTreeElement<IChatDebugEvent>[] {
 		const idToEvent = new Map<string, IChatDebugEvent>();
 		const idToChildren = new Map<string, IChatDebugEvent[]>();
 		const roots: IChatDebugEvent[] = [];
@@ -544,7 +784,9 @@ export class ChatDebugLogsView extends Disposable {
 			}
 		}
 
-		const toTreeElement = (event: IChatDebugEvent): IObjectTreeElement<IChatDebugEvent> => {
+		const toTreeElement = (
+			event: IChatDebugEvent,
+		): IObjectTreeElement<IChatDebugEvent> => {
 			const children = event.id ? idToChildren.get(event.id) : undefined;
 			return {
 				element: event,
@@ -568,21 +810,41 @@ export class ChatDebugLogsView extends Disposable {
 
 		// Create the status label and button once, then reuse.
 		if (!this.showMoreStatusLabel) {
-			this.showMoreStatusLabel = DOM.append(this.showMoreContainer, $('span.chat-debug-logs-show-more-status'));
+			this.showMoreStatusLabel = DOM.append(
+				this.showMoreContainer,
+				$("span.chat-debug-logs-show-more-status"),
+			);
 		}
 		if (!this.showMoreBtn) {
-			this.showMoreBtn = this.showMoreDisposables.add(new Button(this.showMoreContainer, { ...defaultButtonStyles, secondary: true, title: localize('chatDebug.showMoreTitle', "Load more events") }));
-			this.showMoreDisposables.add(this.showMoreBtn.onDidClick(() => {
-				this.visibleLimit += PAGE_SIZE;
-				this.refreshList();
-			}));
+			this.showMoreBtn = this.showMoreDisposables.add(
+				new Button(this.showMoreContainer, {
+					...defaultButtonStyles,
+					secondary: true,
+					title: localize("chatDebug.showMoreTitle", "Load more events"),
+				}),
+			);
+			this.showMoreDisposables.add(
+				this.showMoreBtn.onDidClick(() => {
+					this.visibleLimit += PAGE_SIZE;
+					this.refreshList();
+				}),
+			);
 		}
 
 		const shown = Math.min(this.visibleLimit, totalFiltered);
 		const remaining = totalFiltered - shown;
 
-		this.showMoreStatusLabel.textContent = localize('chatDebug.showingCount', "Showing {0} of {1} events", shown, totalFiltered);
-		this.showMoreBtn.label = localize('chatDebug.showMore', "Show More ({0})", remaining);
+		this.showMoreStatusLabel.textContent = localize(
+			"chatDebug.showingCount",
+			"Showing {0} of {1} events",
+			shown,
+			totalFiltered,
+		);
+		this.showMoreBtn.label = localize(
+			"chatDebug.showMore",
+			"Show More ({0})",
+			remaining,
+		);
 
 		if (!this.showMoreVisible) {
 			DOM.show(this.showMoreContainer);
@@ -611,24 +873,38 @@ export class ChatDebugLogsView extends Disposable {
 		const el = this.viewModeToggle.element;
 		DOM.clearNode(el);
 		const isTree = this.logsViewMode === LogsViewMode.Tree;
-		DOM.append(el, $(`span${ThemeIcon.asCSSSelector(isTree ? Codicon.listTree : Codicon.listFlat)}`));
+		DOM.append(
+			el,
+			$(
+				`span${ThemeIcon.asCSSSelector(isTree ? Codicon.listTree : Codicon.listFlat)}`,
+			),
+		);
 
-		const labelContainer = DOM.append(el, $('span.chat-debug-view-mode-labels'));
-		const treeLabel = DOM.append(labelContainer, $('span.chat-debug-view-mode-label'));
-		treeLabel.textContent = localize('chatDebug.treeView', "Tree View");
-		const listLabel = DOM.append(labelContainer, $('span.chat-debug-view-mode-label'));
-		listLabel.textContent = localize('chatDebug.listView', "List View");
+		const labelContainer = DOM.append(
+			el,
+			$("span.chat-debug-view-mode-labels"),
+		);
+		const treeLabel = DOM.append(
+			labelContainer,
+			$("span.chat-debug-view-mode-label"),
+		);
+		treeLabel.textContent = localize("chatDebug.treeView", "Tree View");
+		const listLabel = DOM.append(
+			labelContainer,
+			$("span.chat-debug-view-mode-label"),
+		);
+		listLabel.textContent = localize("chatDebug.listView", "List View");
 
 		if (isTree) {
-			listLabel.classList.add('hidden');
+			listLabel.classList.add("hidden");
 		} else {
-			treeLabel.classList.add('hidden');
+			treeLabel.classList.add("hidden");
 		}
 
 		const activeLabel = isTree
-			? localize('chatDebug.switchToListView', "Switch to List View")
-			: localize('chatDebug.switchToTreeView', "Switch to Tree View");
-		el.setAttribute('aria-label', activeLabel);
+			? localize("chatDebug.switchToListView", "Switch to List View")
+			: localize("chatDebug.switchToTreeView", "Switch to Tree View");
+		el.setAttribute("aria-label", activeLabel);
 		this.viewModeToggle.setTitle(activeLabel);
 	}
 
@@ -636,23 +912,63 @@ export class ChatDebugLogsView extends Disposable {
 		this.filterWidget.checkMoreFilters(!this.filterState.isAllFiltersDefault());
 	}
 
-	private showEventContextMenu(event: IChatDebugEvent, browserEvent: UIEvent): void {
+	private showEventContextMenu(
+		event: IChatDebugEvent,
+		browserEvent: UIEvent,
+	): void {
 		const d = event.created;
-		const pad = (n: number) => String(n).padStart(2, '0');
+		const pad = (n: number) => String(n).padStart(2, "0");
 		const timestamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-		const row = [getEventCreatedText(event), getEventNameText(event), getEventDetailsText(event)].filter(Boolean).join('\t');
+		const row = [
+			getEventCreatedText(event),
+			getEventNameText(event),
+			getEventDetailsText(event),
+		]
+			.filter(Boolean)
+			.join("\t");
 		const name = getEventNameText(event);
 		this.contextMenuService.showContextMenu({
-			getAnchor: () => DOM.isMouseEvent(browserEvent)
-				? new StandardMouseEvent(DOM.getWindow(this.container), browserEvent)
-				: this.container,
+			getAnchor: () =>
+				DOM.isMouseEvent(browserEvent)
+					? new StandardMouseEvent(DOM.getWindow(this.container), browserEvent)
+					: this.container,
 			getActions: () => [
-				new Action('chatDebug.copyTimestamp', localize('chatDebug.copyTimestamp', "Copy Timestamp"), undefined, true, () => this.clipboardService.writeText(timestamp)),
-				new Action('chatDebug.copyRow', localize('chatDebug.copyRow', "Copy Row"), undefined, true, () => this.clipboardService.writeText(row)),
+				new Action(
+					"chatDebug.copyTimestamp",
+					localize("chatDebug.copyTimestamp", "Copy Timestamp"),
+					undefined,
+					true,
+					() => this.clipboardService.writeText(timestamp),
+				),
+				new Action(
+					"chatDebug.copyRow",
+					localize("chatDebug.copyRow", "Copy Row"),
+					undefined,
+					true,
+					() => this.clipboardService.writeText(row),
+				),
 				new Separator(),
-				new Action('chatDebug.filterBefore', localize('chatDebug.filterBefore', "Filter Before Timestamp"), undefined, true, () => this.applyFilterToken(`before:${timestamp}`)),
-				new Action('chatDebug.filterAfter', localize('chatDebug.filterAfter', "Filter After Timestamp"), undefined, true, () => this.applyFilterToken(`after:${timestamp}`)),
-				new Action('chatDebug.filterName', localize('chatDebug.filterName', "Filter Name"), undefined, !!name, () => this.applyFilterToken(name)),
+				new Action(
+					"chatDebug.filterBefore",
+					localize("chatDebug.filterBefore", "Filter Before Timestamp"),
+					undefined,
+					true,
+					() => this.applyFilterToken(`before:${timestamp}`),
+				),
+				new Action(
+					"chatDebug.filterAfter",
+					localize("chatDebug.filterAfter", "Filter After Timestamp"),
+					undefined,
+					true,
+					() => this.applyFilterToken(`after:${timestamp}`),
+				),
+				new Action(
+					"chatDebug.filterName",
+					localize("chatDebug.filterName", "Filter Name"),
+					undefined,
+					!!name,
+					() => this.applyFilterToken(name),
+				),
 			],
 		});
 	}
@@ -660,5 +976,4 @@ export class ChatDebugLogsView extends Disposable {
 	private applyFilterToken(token: string): void {
 		this.filterWidget.setFilterText(token);
 	}
-
 }

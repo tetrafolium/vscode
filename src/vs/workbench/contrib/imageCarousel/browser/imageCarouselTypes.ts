@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../base/common/uri.js';
-import { VSBuffer } from '../../../../base/common/buffer.js';
+import { URI } from "../../../../base/common/uri.js";
+import { VSBuffer } from "../../../../base/common/buffer.js";
 
 export interface ICarouselImage {
 	readonly id: string;
@@ -29,5 +29,5 @@ export interface IImageCarouselCollection {
 }
 
 export function isVideoMimeType(mimeType: string): boolean {
-	return mimeType.startsWith('video/');
+	return mimeType.startsWith("video/");
 }

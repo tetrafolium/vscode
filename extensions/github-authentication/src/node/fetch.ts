@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as http from 'http';
-import * as https from 'https';
-import { workspace } from 'vscode';
-import { Log } from '../common/logger';
-import { Readable } from 'stream';
+import * as http from "http";
+import * as https from "https";
+import { workspace } from "vscode";
+import { Log } from "../common/logger";
+import { Readable } from "stream";
 
 export interface FetchOptions {
 	logger: Log;
 	retryFallbacks: boolean;
 	expectJSON: boolean;
-	method?: 'GET' | 'POST' | 'DELETE';
+	method?: "GET" | "POST" | "DELETE";
 	headers?: Record<string, string>;
 	body?: string;
 	signal?: AbortSignal;
@@ -32,7 +32,10 @@ export interface FetchResponse {
 	json(): Promise<any>;
 }
 
-export type Fetch = (url: string, options: FetchOptions) => Promise<FetchResponse>;
+export type Fetch = (
+	url: string,
+	options: FetchOptions,
+) => Promise<FetchResponse>;
 
 interface Fetcher {
 	name: string;
@@ -42,18 +45,20 @@ interface Fetcher {
 const _fetchers: Fetcher[] = [];
 try {
 	_fetchers.push({
-		name: 'Electron fetch',
-		fetch: require('electron').net.fetch
+		name: "Electron fetch",
+		fetch: require("electron").net.fetch,
 	});
 } catch {
 	// ignore
 }
 
 const nodeFetch = {
-	name: 'Node fetch',
+	name: "Node fetch",
 	fetch,
 };
-const useElectronFetch = workspace.getConfiguration('github-authentication').get<boolean>('useElectronFetch', true);
+const useElectronFetch = workspace
+	.getConfiguration("github-authentication")
+	.get<boolean>("useElectronFetch", true);
 if (useElectronFetch) {
 	_fetchers.push(nodeFetch);
 } else {
@@ -61,14 +66,19 @@ if (useElectronFetch) {
 }
 
 _fetchers.push({
-	name: 'Node http/s',
+	name: "Node http/s",
 	fetch: nodeHTTP,
 });
 
 export function createFetch(): Fetch {
 	let fetchers: readonly Fetcher[] = _fetchers;
 	return async (url, options) => {
-		const result = await fetchWithFallbacks(fetchers, url, options, options.logger);
+		const result = await fetchWithFallbacks(
+			fetchers,
+			url,
+			options,
+			options.logger,
+		);
 		if (result.updatedFetchers) {
 			fetchers = result.updatedFetchers;
 		}
@@ -86,9 +96,17 @@ function shouldNotRetry(status: number): boolean {
 	return status === 429 || status === 401 || status === 403 || status === 404;
 }
 
-async function fetchWithFallbacks(availableFetchers: readonly Fetcher[], url: string, options: FetchOptions, logService: Log): Promise<{ response: FetchResponse; updatedFetchers?: Fetcher[] }> {
+async function fetchWithFallbacks(
+	availableFetchers: readonly Fetcher[],
+	url: string,
+	options: FetchOptions,
+	logService: Log,
+): Promise<{ response: FetchResponse; updatedFetchers?: Fetcher[] }> {
 	if (options.retryFallbacks && availableFetchers.length > 1) {
-		let firstResult: { ok: boolean; response: FetchResponse } | { ok: false; err: any } | undefined;
+		let firstResult:
+			| { ok: boolean; response: FetchResponse }
+			| { ok: false; err: any }
+			| undefined;
 		for (const fetcher of availableFetchers) {
 			const result = await tryFetch(fetcher, url, options, logService);
 			if (fetcher === availableFetchers[0]) {
@@ -97,13 +115,18 @@ async function fetchWithFallbacks(availableFetchers: readonly Fetcher[], url: st
 			if (!result.ok) {
 				// For certain HTTP status codes, don't retry with other fetchers
 				// These are application-level errors, not network-level errors
-				if ('response' in result && shouldNotRetry(result.response.status)) {
+				if ("response" in result && shouldNotRetry(result.response.status)) {
 					return { response: result.response };
 				}
 				continue;
 			}
 			if (fetcher !== availableFetchers[0]) {
-				const retry = await tryFetch(availableFetchers[0], url, options, logService);
+				const retry = await tryFetch(
+					availableFetchers[0],
+					url,
+					options,
+					logService,
+				);
 				if (retry.ok) {
 					return { response: retry.response };
 				}
@@ -115,7 +138,7 @@ async function fetchWithFallbacks(availableFetchers: readonly Fetcher[], url: st
 			}
 			return { response: result.response };
 		}
-		if ('response' in firstResult!) {
+		if ("response" in firstResult!) {
 			return { response: firstResult.response };
 		}
 		throw firstResult!.err;
@@ -123,12 +146,21 @@ async function fetchWithFallbacks(availableFetchers: readonly Fetcher[], url: st
 	return { response: await availableFetchers[0].fetch(url, options) };
 }
 
-async function tryFetch(fetcher: Fetcher, url: string, options: FetchOptions, logService: Log): Promise<{ ok: boolean; response: FetchResponse } | { ok: false; err: any }> {
+async function tryFetch(
+	fetcher: Fetcher,
+	url: string,
+	options: FetchOptions,
+	logService: Log,
+): Promise<{ ok: boolean; response: FetchResponse } | { ok: false; err: any }> {
 	try {
-		logService.debug(`FetcherService: trying fetcher ${fetcher.name} for ${url}`);
+		logService.debug(
+			`FetcherService: trying fetcher ${fetcher.name} for ${url}`,
+		);
 		const response = await fetcher.fetch(url, options);
 		if (!response.ok) {
-			logService.info(`FetcherService: ${fetcher.name} failed with status: ${response.status} ${response.statusText}`);
+			logService.info(
+				`FetcherService: ${fetcher.name} failed with status: ${response.status} ${response.statusText}`,
+			);
 			return { ok: false, response };
 		}
 		if (!options.expectJSON) {
@@ -139,13 +171,40 @@ async function tryFetch(fetcher: Fetcher, url: string, options: FetchOptions, lo
 		try {
 			const json = JSON.parse(text); // Verify JSON
 			logService.debug(`FetcherService: ${fetcher.name} succeeded (JSON)`);
-			return { ok: true, response: new FetchResponseImpl(response.status, response.statusText, response.headers, async () => text, async () => json, async () => Readable.from([text])) };
+			return {
+				ok: true,
+				response: new FetchResponseImpl(
+					response.status,
+					response.statusText,
+					response.headers,
+					async () => text,
+					async () => json,
+					async () => Readable.from([text]),
+				),
+			};
 		} catch (err) {
-			logService.info(`FetcherService: ${fetcher.name} failed to parse JSON: ${err.message}`);
-			return { ok: false, err, response: new FetchResponseImpl(response.status, response.statusText, response.headers, async () => text, async () => { throw err; }, async () => Readable.from([text])) };
+			logService.info(
+				`FetcherService: ${fetcher.name} failed to parse JSON: ${err.message}`,
+			);
+			return {
+				ok: false,
+				err,
+				response: new FetchResponseImpl(
+					response.status,
+					response.statusText,
+					response.headers,
+					async () => text,
+					async () => {
+						throw err;
+					},
+					async () => Readable.from([text]),
+				),
+			};
 		}
 	} catch (err) {
-		logService.info(`FetcherService: ${fetcher.name} failed with error: ${err.message}`);
+		logService.info(
+			`FetcherService: ${fetcher.name} failed with error: ${err.message}`,
+		);
 		return { ok: false, err };
 	}
 }
@@ -166,11 +225,14 @@ class FetchResponseImpl implements FetchResponse {
 	}
 }
 
-async function nodeHTTP(url: string, options: FetchOptions): Promise<FetchResponse> {
+async function nodeHTTP(
+	url: string,
+	options: FetchOptions,
+): Promise<FetchResponse> {
 	return new Promise((resolve, reject) => {
 		const { method, headers, body, signal } = options;
-		const module = url.startsWith('https:') ? https : http;
-		const req = module.request(url, { method, headers }, res => {
+		const module = url.startsWith("https:") ? https : http;
+		const req = module.request(url, { method, headers }, (res) => {
 			if (signal?.aborted) {
 				res.destroy();
 				req.destroy();
@@ -179,17 +241,19 @@ async function nodeHTTP(url: string, options: FetchOptions): Promise<FetchRespon
 			}
 
 			const nodeFetcherResponse = new NodeFetcherResponse(req, res, signal);
-			resolve(new FetchResponseImpl(
-				res.statusCode || 0,
-				res.statusMessage || '',
-				nodeFetcherResponse.headers,
-				async () => nodeFetcherResponse.text(),
-				async () => nodeFetcherResponse.json(),
-				async () => nodeFetcherResponse.body(),
-			));
+			resolve(
+				new FetchResponseImpl(
+					res.statusCode || 0,
+					res.statusMessage || "",
+					nodeFetcherResponse.headers,
+					async () => nodeFetcherResponse.text(),
+					async () => nodeFetcherResponse.json(),
+					async () => nodeFetcherResponse.body(),
+				),
+			);
 		});
 		req.setTimeout(60 * 1000); // time out after 60s of receiving no data
-		req.on('error', reject);
+		req.on("error", reject);
 
 		if (body) {
 			req.write(body);
@@ -199,7 +263,6 @@ async function nodeHTTP(url: string, options: FetchOptions): Promise<FetchRespon
 }
 
 class NodeFetcherResponse {
-
 	readonly headers: FetchHeaders;
 
 	constructor(
@@ -207,10 +270,10 @@ class NodeFetcherResponse {
 		readonly res: http.IncomingMessage,
 		readonly signal: AbortSignal | undefined,
 	) {
-		this.headers = new class implements FetchHeaders {
+		this.headers = new (class implements FetchHeaders {
 			get(name: string): string | null {
 				const result = res.headers[name];
-				return Array.isArray(result) ? result[0] : result ?? null;
+				return Array.isArray(result) ? result[0] : (result ?? null);
 			}
 			[Symbol.iterator](): Iterator<[string, string], any, undefined> {
 				const keys = Object.keys(res.headers);
@@ -222,19 +285,19 @@ class NodeFetcherResponse {
 						}
 						const key = keys[index++];
 						return { done: false, value: [key, this.get(key)!] };
-					}
+					},
 				};
 			}
-		};
+		})();
 	}
 
 	public text(): Promise<string> {
 		return new Promise<string>((resolve, reject) => {
 			const chunks: Buffer[] = [];
-			this.res.on('data', chunk => chunks.push(chunk));
-			this.res.on('end', () => resolve(Buffer.concat(chunks).toString()));
-			this.res.on('error', reject);
-			this.signal?.addEventListener('abort', () => {
+			this.res.on("data", (chunk) => chunks.push(chunk));
+			this.res.on("end", () => resolve(Buffer.concat(chunks).toString()));
+			this.res.on("error", reject);
+			this.signal?.addEventListener("abort", () => {
 				this.res.destroy();
 				this.req.destroy();
 				reject(makeAbortError(this.signal!));
@@ -248,8 +311,8 @@ class NodeFetcherResponse {
 	}
 
 	public async body(): Promise<NodeJS.ReadableStream | null> {
-		this.signal?.addEventListener('abort', () => {
-			this.res.emit('error', makeAbortError(this.signal!));
+		this.signal?.addEventListener("abort", () => {
+			this.res.emit("error", makeAbortError(this.signal!));
 			this.res.destroy();
 			this.req.destroy();
 		});

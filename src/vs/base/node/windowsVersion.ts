@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as os from 'os';
-import { isWindows } from '../common/platform.js';
+import * as os from "os";
+import { isWindows } from "../common/platform.js";
 
 let versionInfo: { release: string; buildNumber: number } | undefined;
 
@@ -31,10 +31,14 @@ export async function initWindowsVersionInfo() {
 	let buildNumber: number | undefined;
 	let release: string | undefined;
 	try {
-		const Registry = await import('@vscode/windows-registry');
-		const versionKey = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion';
+		const Registry = await import("@vscode/windows-registry");
+		const versionKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
 
-		const build = Registry.GetStringRegKey('HKEY_LOCAL_MACHINE', versionKey, 'CurrentBuild');
+		const build = Registry.GetStringRegKey(
+			"HKEY_LOCAL_MACHINE",
+			versionKey,
+			"CurrentBuild",
+		);
 		if (build !== undefined) {
 			buildNumber = parseInt(build, 10);
 			if (isNaN(buildNumber)) {
@@ -42,8 +46,16 @@ export async function initWindowsVersionInfo() {
 			}
 		}
 
-		const major = Registry.GetDWORDRegKey('HKEY_LOCAL_MACHINE', versionKey, 'CurrentMajorVersionNumber');
-		const minor = Registry.GetDWORDRegKey('HKEY_LOCAL_MACHINE', versionKey, 'CurrentMinorVersionNumber');
+		const major = Registry.GetDWORDRegKey(
+			"HKEY_LOCAL_MACHINE",
+			versionKey,
+			"CurrentMajorVersionNumber",
+		);
+		const minor = Registry.GetDWORDRegKey(
+			"HKEY_LOCAL_MACHINE",
+			versionKey,
+			"CurrentMinorVersionNumber",
+		);
 		if (major !== undefined && minor !== undefined && build !== undefined) {
 			release = `${major}.${minor}.${build}`;
 		}
@@ -52,7 +64,7 @@ export async function initWindowsVersionInfo() {
 	} finally {
 		versionInfo = {
 			release: release || os.release(),
-			buildNumber: buildNumber || getWindowsBuildNumberFromOsRelease()
+			buildNumber: buildNumber || getWindowsBuildNumberFromOsRelease(),
 		};
 	}
 }
@@ -105,7 +117,7 @@ export function getWindowsReleaseSync(): string {
  * This is used as a fallback when registry reading is not available.
  */
 function getWindowsBuildNumberFromOsRelease(): number {
-	const osVersion = (/(\d+)\.(\d+)\.(\d+)/g).exec(os.release());
+	const osVersion = /(\d+)\.(\d+)\.(\d+)/g.exec(os.release());
 	if (osVersion && osVersion.length === 4) {
 		return parseInt(osVersion[3], 10);
 	}

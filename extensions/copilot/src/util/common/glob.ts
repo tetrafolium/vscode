@@ -11,7 +11,10 @@ import { URI } from '../vs/base/common/uri';
 
 export function isMatch(uri: URI, glob: vscode.GlobPattern): boolean {
 	if (typeof glob === 'string') {
-		return picomatch.isMatch(uri.fsPath, glob, { dot: true, windows: isWindows });
+		return picomatch.isMatch(uri.fsPath, glob, {
+			dot: true,
+			windows: isWindows,
+		});
 	} else {
 		if (uri.fsPath === glob.baseUri.fsPath && glob.pattern === '*') {
 			return true;
@@ -19,10 +22,16 @@ export function isMatch(uri: URI, glob: vscode.GlobPattern): boolean {
 
 		const relativePath = path.relative(glob.baseUri.fsPath, uri.fsPath);
 		if (!relativePath.startsWith('..')) {
-			return picomatch.isMatch(relativePath, glob.pattern, { dot: true, windows: isWindows });
+			return picomatch.isMatch(relativePath, glob.pattern, {
+				dot: true,
+				windows: isWindows,
+			});
 		}
 
-		return picomatch.isMatch(uri.fsPath, glob.pattern, { dot: true, windows: isWindows });
+		return picomatch.isMatch(uri.fsPath, glob.pattern, {
+			dot: true,
+			windows: isWindows,
+		});
 	}
 }
 
@@ -42,25 +51,37 @@ export interface GlobIncludeOptions {
 	readonly exclude?: readonly vscode.GlobPattern[];
 }
 
-export function shouldInclude(uri: URI, options: GlobIncludeOptions | undefined): boolean {
+export function shouldInclude(
+	uri: URI,
+	options: GlobIncludeOptions | undefined,
+): boolean {
 	if (!options) {
 		return true;
 	}
 
-	if (options.exclude?.some(x => isMatch(uri, x))) {
+	if (options.exclude?.some((x) => isMatch(uri, x))) {
 		return false;
 	}
 
 	if (options.include) {
-		return options.include.some(x => isMatch(uri, x));
+		return options.include.some((x) => isMatch(uri, x));
 	}
 
 	return true;
 }
 
-export function combineGlob(glob1: string | vscode.RelativePattern, glob2: string | vscode.RelativePattern): string {
-	let stringGlob1 = typeof glob1 === 'string' ? glob1 : glob1.baseUri.toString() + glob1.pattern;
-	let stringGlob2 = typeof glob2 === 'string' ? glob2 : glob2.baseUri.toString() + glob2.pattern;
+export function combineGlob(
+	glob1: string | vscode.RelativePattern,
+	glob2: string | vscode.RelativePattern,
+): string {
+	let stringGlob1 =
+		typeof glob1 === 'string'
+			? glob1
+			: glob1.baseUri.toString() + glob1.pattern;
+	let stringGlob2 =
+		typeof glob2 === 'string'
+			? glob2
+			: glob2.baseUri.toString() + glob2.pattern;
 	// Remove any bracket expansion from the globs
 	stringGlob1 = stringGlob1.replace(/\{.*\}/g, '');
 	stringGlob2 = stringGlob2.replace(/\{.*\}/g, '');

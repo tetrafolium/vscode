@@ -3,23 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type * as vscode from 'vscode';
-import { illegalArgument } from '../../../../base/common/errors.js';
-import { es5ClassCompat } from './es5ClassCompat.js';
-import { Position } from './position.js';
+import type * as vscode from "vscode";
+import { illegalArgument } from "../../../../base/common/errors.js";
+import { es5ClassCompat } from "./es5ClassCompat.js";
+import { Position } from "./position.js";
 
 @es5ClassCompat
 export class Range {
-
 	static isRange(thing: unknown): thing is vscode.Range {
 		if (thing instanceof Range) {
 			return true;
 		}
-		if (!thing || typeof thing !== 'object') {
+		if (!thing || typeof thing !== "object") {
 			return false;
 		}
-		return Position.isPosition((<Range>thing).start)
-			&& Position.isPosition((<Range>thing).end);
+		return (
+			Position.isPosition((<Range>thing).start) &&
+			Position.isPosition((<Range>thing).end)
+		);
 	}
 
 	static of(obj: vscode.Range): Range {
@@ -29,7 +30,7 @@ export class Range {
 		if (this.isRange(obj)) {
 			return new Range(obj.start, obj.end);
 		}
-		throw new Error('Invalid argument, is NOT a range-like object');
+		throw new Error("Invalid argument, is NOT a range-like object");
 	}
 
 	protected _start: Position;
@@ -45,21 +46,39 @@ export class Range {
 
 	constructor(start: vscode.Position, end: vscode.Position);
 	constructor(start: Position, end: Position);
-	constructor(startLine: number, startColumn: number, endLine: number, endColumn: number);
-	constructor(startLineOrStart: number | Position | vscode.Position, startColumnOrEnd: number | Position | vscode.Position, endLine?: number, endColumn?: number) {
+	constructor(
+		startLine: number,
+		startColumn: number,
+		endLine: number,
+		endColumn: number,
+	);
+	constructor(
+		startLineOrStart: number | Position | vscode.Position,
+		startColumnOrEnd: number | Position | vscode.Position,
+		endLine?: number,
+		endColumn?: number,
+	) {
 		let start: Position | undefined;
 		let end: Position | undefined;
 
-		if (typeof startLineOrStart === 'number' && typeof startColumnOrEnd === 'number' && typeof endLine === 'number' && typeof endColumn === 'number') {
+		if (
+			typeof startLineOrStart === "number" &&
+			typeof startColumnOrEnd === "number" &&
+			typeof endLine === "number" &&
+			typeof endColumn === "number"
+		) {
 			start = new Position(startLineOrStart, startColumnOrEnd);
 			end = new Position(endLine, endColumn);
-		} else if (Position.isPosition(startLineOrStart) && Position.isPosition(startColumnOrEnd)) {
+		} else if (
+			Position.isPosition(startLineOrStart) &&
+			Position.isPosition(startColumnOrEnd)
+		) {
 			start = Position.of(startLineOrStart);
 			end = Position.of(startColumnOrEnd);
 		}
 
 		if (!start || !end) {
-			throw new Error('Invalid arguments');
+			throw new Error("Invalid arguments");
 		}
 
 		if (start.isBefore(end)) {
@@ -73,9 +92,10 @@ export class Range {
 
 	contains(positionOrRange: Position | Range): boolean {
 		if (Range.isRange(positionOrRange)) {
-			return this.contains(positionOrRange.start)
-				&& this.contains(positionOrRange.end);
-
+			return (
+				this.contains(positionOrRange.start) &&
+				this.contains(positionOrRange.end)
+			);
 		} else if (Position.isPosition(positionOrRange)) {
 			if (Position.of(positionOrRange).isBefore(this._start)) {
 				return false;
@@ -125,8 +145,10 @@ export class Range {
 
 	with(change: { start?: Position; end?: Position }): Range;
 	with(start?: Position, end?: Position): Range;
-	with(startOrChange: Position | undefined | { start?: Position; end?: Position }, end: Position = this.end): Range {
-
+	with(
+		startOrChange: Position | undefined | { start?: Position; end?: Position },
+		end: Position = this.end,
+	): Range {
 		if (startOrChange === null || end === null) {
 			throw illegalArgument();
 		}
@@ -134,10 +156,8 @@ export class Range {
 		let start: Position;
 		if (!startOrChange) {
 			start = this.start;
-
 		} else if (Position.isPosition(startOrChange)) {
 			start = startOrChange;
-
 		} else {
 			start = startOrChange.start || this.start;
 			end = startOrChange.end || this.end;
@@ -153,7 +173,7 @@ export class Range {
 		return [this.start, this.end];
 	}
 
-	[Symbol.for('debug.description')]() {
+	[Symbol.for("debug.description")]() {
 		return getDebugDescriptionOfRange(this);
 	}
 }

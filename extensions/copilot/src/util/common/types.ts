@@ -21,7 +21,13 @@ export function toLocation(obj: any) {
 		// HACK: prompt-tsx returns serialized ranges/positions that need to be converted back into real objects
 		const start = obj.range[0];
 		const end = obj.range[1];
-		return new Location(obj.uri, new Range(new Position(start.line, start.character), new Position(end.line, end.character)));
+		return new Location(
+			obj.uri,
+			new Range(
+				new Position(start.line, start.character),
+				new Position(end.line, end.character),
+			),
+		);
 	} else if (isLocation(obj) && obj.range instanceof Range) {
 		return obj;
 	}
@@ -29,5 +35,10 @@ export function toLocation(obj: any) {
 }
 
 export function isSymbolInformation(obj: any): obj is vscode.SymbolInformation {
-	return obj && typeof obj === 'object' && 'name' in obj && 'containerName' in obj;
+	return (
+		obj &&
+		typeof obj === 'object' &&
+		'name' in obj &&
+		'containerName' in obj
+	);
 }

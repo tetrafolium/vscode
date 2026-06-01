@@ -3,34 +3,63 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { stringDiff } from '../../../base/common/diff/diff.js';
-import { IDisposable } from '../../../base/common/lifecycle.js';
-import { URI } from '../../../base/common/uri.js';
-import { IWebWorkerServerRequestHandler } from '../../../base/common/worker/webWorker.js';
-import { Position } from '../core/position.js';
-import { IRange, Range } from '../core/range.js';
-import { EndOfLineSequence, ITextModel } from '../model.js';
-import { IMirrorTextModel, IModelChangedEvent } from '../model/mirrorTextModel.js';
-import { IColorInformation, IInplaceReplaceSupportResult, ILink, TextEdit } from '../languages.js';
-import { computeLinks } from '../languages/linkComputer.js';
-import { BasicInplaceReplace } from '../languages/supports/inplaceReplaceSupport.js';
-import { DiffAlgorithmName, IDiffComputationResult, ILineChange, IUnicodeHighlightsResult } from './editorWorker.js';
-import { createMonacoBaseAPI } from './editorBaseApi.js';
-import { StopWatch } from '../../../base/common/stopwatch.js';
-import { UnicodeTextModelHighlighter, UnicodeHighlighterOptions } from './unicodeTextModelHighlighter.js';
-import { DiffComputer, IChange } from '../diff/legacyLinesDiffComputer.js';
-import { ILinesDiffComputer, ILinesDiffComputerOptions } from '../diff/linesDiffComputer.js';
-import { DetailedLineRangeMapping } from '../diff/rangeMapping.js';
-import { linesDiffComputers } from '../diff/linesDiffComputers.js';
-import { IDocumentDiffProviderOptions } from '../diff/documentDiffProvider.js';
-import { BugIndicatingError } from '../../../base/common/errors.js';
-import { computeDefaultDocumentColors } from '../languages/defaultDocumentColorsComputer.js';
-import { FindSectionHeaderOptions, SectionHeader, findSectionHeaders } from './findSectionHeaders.js';
-import { IRawModelData, IWorkerTextModelSyncChannelServer } from './textModelSync/textModelSync.protocol.js';
-import { ICommonModel, WorkerTextModelSyncServer } from './textModelSync/textModelSync.impl.js';
-import { ISerializedStringEdit, StringEdit } from '../core/edits/stringEdit.js';
-import { StringText } from '../core/text/abstractText.js';
-import { ensureDependenciesAreSet } from '../core/text/positionToOffset.js';
+import { stringDiff } from "../../../base/common/diff/diff.js";
+import { IDisposable } from "../../../base/common/lifecycle.js";
+import { URI } from "../../../base/common/uri.js";
+import { IWebWorkerServerRequestHandler } from "../../../base/common/worker/webWorker.js";
+import { Position } from "../core/position.js";
+import { IRange, Range } from "../core/range.js";
+import { EndOfLineSequence, ITextModel } from "../model.js";
+import {
+	IMirrorTextModel,
+	IModelChangedEvent,
+} from "../model/mirrorTextModel.js";
+import {
+	IColorInformation,
+	IInplaceReplaceSupportResult,
+	ILink,
+	TextEdit,
+} from "../languages.js";
+import { computeLinks } from "../languages/linkComputer.js";
+import { BasicInplaceReplace } from "../languages/supports/inplaceReplaceSupport.js";
+import {
+	DiffAlgorithmName,
+	IDiffComputationResult,
+	ILineChange,
+	IUnicodeHighlightsResult,
+} from "./editorWorker.js";
+import { createMonacoBaseAPI } from "./editorBaseApi.js";
+import { StopWatch } from "../../../base/common/stopwatch.js";
+import {
+	UnicodeTextModelHighlighter,
+	UnicodeHighlighterOptions,
+} from "./unicodeTextModelHighlighter.js";
+import { DiffComputer, IChange } from "../diff/legacyLinesDiffComputer.js";
+import {
+	ILinesDiffComputer,
+	ILinesDiffComputerOptions,
+} from "../diff/linesDiffComputer.js";
+import { DetailedLineRangeMapping } from "../diff/rangeMapping.js";
+import { linesDiffComputers } from "../diff/linesDiffComputers.js";
+import { IDocumentDiffProviderOptions } from "../diff/documentDiffProvider.js";
+import { BugIndicatingError } from "../../../base/common/errors.js";
+import { computeDefaultDocumentColors } from "../languages/defaultDocumentColorsComputer.js";
+import {
+	FindSectionHeaderOptions,
+	SectionHeader,
+	findSectionHeaders,
+} from "./findSectionHeaders.js";
+import {
+	IRawModelData,
+	IWorkerTextModelSyncChannelServer,
+} from "./textModelSync/textModelSync.protocol.js";
+import {
+	ICommonModel,
+	WorkerTextModelSyncServer,
+} from "./textModelSync/textModelSync.impl.js";
+import { ISerializedStringEdit, StringEdit } from "../core/edits/stringEdit.js";
+import { StringText } from "../core/text/abstractText.js";
+import { ensureDependenciesAreSet } from "../core/text/positionToOffset.js";
 
 export interface IMirrorModel extends IMirrorTextModel {
 	readonly uri: URI;
@@ -67,20 +96,22 @@ export interface IWordRange {
 /**
  * @internal
  */
-export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelServer, IWebWorkerServerRequestHandler {
+export class EditorWorker
+	implements
+		IDisposable,
+		IWorkerTextModelSyncChannelServer,
+		IWebWorkerServerRequestHandler
+{
 	_requestHandlerBrand: void = undefined;
 
 	private readonly _workerTextModelSyncServer = new WorkerTextModelSyncServer();
 
-	constructor(
-		private readonly _foreignModule: unknown | null = null
-	) { }
+	constructor(private readonly _foreignModule: unknown | null = null) {}
 
-	dispose(): void {
-	}
+	dispose(): void {}
 
 	public async $ping() {
-		return 'pong';
+		return "pong";
 	}
 
 	protected _getModel(uri: string): ICommonModel | undefined {
@@ -103,15 +134,32 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 		this._workerTextModelSyncServer.$acceptRemovedModel(uri);
 	}
 
-	public async $computeUnicodeHighlights(url: string, options: UnicodeHighlighterOptions, range?: IRange): Promise<IUnicodeHighlightsResult> {
+	public async $computeUnicodeHighlights(
+		url: string,
+		options: UnicodeHighlighterOptions,
+		range?: IRange,
+	): Promise<IUnicodeHighlightsResult> {
 		const model = this._getModel(url);
 		if (!model) {
-			return { ranges: [], hasMore: false, ambiguousCharacterCount: 0, invisibleCharacterCount: 0, nonBasicAsciiCharacterCount: 0 };
+			return {
+				ranges: [],
+				hasMore: false,
+				ambiguousCharacterCount: 0,
+				invisibleCharacterCount: 0,
+				nonBasicAsciiCharacterCount: 0,
+			};
 		}
-		return UnicodeTextModelHighlighter.computeUnicodeHighlights(model, options, range);
+		return UnicodeTextModelHighlighter.computeUnicodeHighlights(
+			model,
+			options,
+			range,
+		);
 	}
 
-	public async $findSectionHeaders(url: string, options: FindSectionHeaderOptions): Promise<SectionHeader[]> {
+	public async $findSectionHeaders(
+		url: string,
+		options: FindSectionHeaderOptions,
+	): Promise<SectionHeader[]> {
 		const model = this._getModel(url);
 		if (!model) {
 			return [];
@@ -121,7 +169,12 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 
 	// ---- BEGIN diff --------------------------------------------------------------------------
 
-	public async $computeDiff(originalUrl: string, modifiedUrl: string, options: IDocumentDiffProviderOptions, algorithm: DiffAlgorithmName): Promise<IDiffComputationResult | null> {
+	public async $computeDiff(
+		originalUrl: string,
+		modifiedUrl: string,
+		options: IDocumentDiffProviderOptions,
+		algorithm: DiffAlgorithmName,
+	): Promise<IDiffComputationResult | null> {
 		const original = this._getModel(originalUrl);
 		const modified = this._getModel(modifiedUrl);
 		if (!original || !modified) {
@@ -129,47 +182,74 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 		}
 
 		const diffAlgorithm = await resolveLinesDiffComputer(algorithm);
-		const result = EditorWorker.computeDiff(original, modified, options, diffAlgorithm);
+		const result = EditorWorker.computeDiff(
+			original,
+			modified,
+			options,
+			diffAlgorithm,
+		);
 		return result;
 	}
 
-	private static computeDiff(originalTextModel: ICommonModel | ITextModel, modifiedTextModel: ICommonModel | ITextModel, options: IDocumentDiffProviderOptions, diffAlgorithm: ILinesDiffComputer): IDiffComputationResult {
-
+	private static computeDiff(
+		originalTextModel: ICommonModel | ITextModel,
+		modifiedTextModel: ICommonModel | ITextModel,
+		options: IDocumentDiffProviderOptions,
+		diffAlgorithm: ILinesDiffComputer,
+	): IDiffComputationResult {
 		const originalLines = originalTextModel.getLinesContent();
 		const modifiedLines = modifiedTextModel.getLinesContent();
 
-		const result = diffAlgorithm.computeDiff(originalLines, modifiedLines, options);
+		const result = diffAlgorithm.computeDiff(
+			originalLines,
+			modifiedLines,
+			options,
+		);
 
-		const identical = (result.changes.length > 0 ? false : this._modelsAreIdentical(originalTextModel, modifiedTextModel));
+		const identical =
+			result.changes.length > 0
+				? false
+				: this._modelsAreIdentical(originalTextModel, modifiedTextModel);
 
-		function getLineChanges(changes: readonly DetailedLineRangeMapping[]): ILineChange[] {
-			return changes.map(m => ([m.original.startLineNumber, m.original.endLineNumberExclusive, m.modified.startLineNumber, m.modified.endLineNumberExclusive, m.innerChanges?.map(m => [
-				m.originalRange.startLineNumber,
-				m.originalRange.startColumn,
-				m.originalRange.endLineNumber,
-				m.originalRange.endColumn,
-				m.modifiedRange.startLineNumber,
-				m.modifiedRange.startColumn,
-				m.modifiedRange.endLineNumber,
-				m.modifiedRange.endColumn,
-			])]));
+		function getLineChanges(
+			changes: readonly DetailedLineRangeMapping[],
+		): ILineChange[] {
+			return changes.map((m) => [
+				m.original.startLineNumber,
+				m.original.endLineNumberExclusive,
+				m.modified.startLineNumber,
+				m.modified.endLineNumberExclusive,
+				m.innerChanges?.map((m) => [
+					m.originalRange.startLineNumber,
+					m.originalRange.startColumn,
+					m.originalRange.endLineNumber,
+					m.originalRange.endColumn,
+					m.modifiedRange.startLineNumber,
+					m.modifiedRange.startColumn,
+					m.modifiedRange.endLineNumber,
+					m.modifiedRange.endColumn,
+				]),
+			]);
 		}
 
 		return {
 			identical,
 			quitEarly: result.hitTimeout,
 			changes: getLineChanges(result.changes),
-			moves: result.moves.map(m => ([
+			moves: result.moves.map((m) => [
 				m.lineRangeMapping.original.startLineNumber,
 				m.lineRangeMapping.original.endLineNumberExclusive,
 				m.lineRangeMapping.modified.startLineNumber,
 				m.lineRangeMapping.modified.endLineNumberExclusive,
-				getLineChanges(m.changes)
-			])),
+				getLineChanges(m.changes),
+			]),
 		};
 	}
 
-	private static _modelsAreIdentical(original: ICommonModel | ITextModel, modified: ICommonModel | ITextModel): boolean {
+	private static _modelsAreIdentical(
+		original: ICommonModel | ITextModel,
+		modified: ICommonModel | ITextModel,
+	): boolean {
 		const originalLineCount = original.getLineCount();
 		const modifiedLineCount = modified.getLineCount();
 		if (originalLineCount !== modifiedLineCount) {
@@ -185,7 +265,11 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 		return true;
 	}
 
-	public async $computeDirtyDiff(originalUrl: string, modifiedUrl: string, ignoreTrimWhitespace: boolean): Promise<IChange[] | null> {
+	public async $computeDirtyDiff(
+		originalUrl: string,
+		modifiedUrl: string,
+		ignoreTrimWhitespace: boolean,
+	): Promise<IChange[] | null> {
 		const original = this._getModel(originalUrl);
 		const modified = this._getModel(modifiedUrl);
 		if (!original || !modified) {
@@ -199,23 +283,33 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 			shouldPostProcessCharChanges: false,
 			shouldIgnoreTrimWhitespace: ignoreTrimWhitespace,
 			shouldMakePrettyDiff: true,
-			maxComputationTime: 1000
+			maxComputationTime: 1000,
 		});
 		return diffComputer.computeDiff().changes;
 	}
 
-	public async $computeStringDiff(original: string, modified: string, options: { maxComputationTimeMs: number }, algorithm: DiffAlgorithmName): Promise<ISerializedStringEdit> {
-		return (await computeStringDiff(original, modified, options, algorithm)).toJson();
+	public async $computeStringDiff(
+		original: string,
+		modified: string,
+		options: { maxComputationTimeMs: number },
+		algorithm: DiffAlgorithmName,
+	): Promise<ISerializedStringEdit> {
+		return (
+			await computeStringDiff(original, modified, options, algorithm)
+		).toJson();
 	}
 
 	// ---- END diff --------------------------------------------------------------------------
-
 
 	// ---- BEGIN minimal edits ---------------------------------------------------------------
 
 	private static readonly _diffLimit = 100000;
 
-	public async $computeMoreMinimalEdits(modelUrl: string, edits: TextEdit[], pretty: boolean): Promise<TextEdit[]> {
+	public async $computeMoreMinimalEdits(
+		modelUrl: string,
+		edits: TextEdit[],
+		pretty: boolean,
+	): Promise<TextEdit[]> {
 		const model = this._getModel(modelUrl);
 		if (!model) {
 			return edits;
@@ -237,8 +331,15 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 		// merge adjacent edits
 		let writeIndex = 0;
 		for (let readIndex = 1; readIndex < edits.length; readIndex++) {
-			if (Range.getEndPosition(edits[writeIndex].range).equals(Range.getStartPosition(edits[readIndex].range))) {
-				edits[writeIndex].range = Range.fromPositions(Range.getStartPosition(edits[writeIndex].range), Range.getEndPosition(edits[readIndex].range));
+			if (
+				Range.getEndPosition(edits[writeIndex].range).equals(
+					Range.getStartPosition(edits[readIndex].range),
+				)
+			) {
+				edits[writeIndex].range = Range.fromPositions(
+					Range.getStartPosition(edits[writeIndex].range),
+					Range.getEndPosition(edits[readIndex].range),
+				);
 				edits[writeIndex].text += edits[readIndex].text;
 			} else {
 				writeIndex++;
@@ -248,8 +349,7 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 		edits.length = writeIndex + 1;
 
 		for (let { range, text, eol } of edits) {
-
-			if (typeof eol === 'number') {
+			if (typeof eol === "number") {
 				lastEol = eol;
 			}
 
@@ -278,10 +378,17 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 
 			for (const change of changes) {
 				const start = model.positionAt(editOffset + change.originalStart);
-				const end = model.positionAt(editOffset + change.originalStart + change.originalLength);
+				const end = model.positionAt(
+					editOffset + change.originalStart + change.originalLength,
+				);
 				const newEdit: TextEdit = {
 					text: text.substr(change.modifiedStart, change.modifiedLength),
-					range: { startLineNumber: start.lineNumber, startColumn: start.column, endLineNumber: end.lineNumber, endColumn: end.column }
+					range: {
+						startLineNumber: start.lineNumber,
+						startColumn: start.column,
+						endLineNumber: end.lineNumber,
+						endColumn: end.column,
+					},
 				};
 
 				if (model.getValueInRange(newEdit.range) !== newEdit.text) {
@@ -290,14 +397,27 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 			}
 		}
 
-		if (typeof lastEol === 'number') {
-			result.push({ eol: lastEol, text: '', range: { startLineNumber: 0, startColumn: 0, endLineNumber: 0, endColumn: 0 } });
+		if (typeof lastEol === "number") {
+			result.push({
+				eol: lastEol,
+				text: "",
+				range: {
+					startLineNumber: 0,
+					startColumn: 0,
+					endLineNumber: 0,
+					endColumn: 0,
+				},
+			});
 		}
 
 		return result;
 	}
 
-	public $computeHumanReadableDiff(modelUrl: string, edits: TextEdit[], options: ILinesDiffComputerOptions): TextEdit[] {
+	public $computeHumanReadableDiff(
+		modelUrl: string,
+		edits: TextEdit[],
+		options: ILinesDiffComputerOptions,
+	): TextEdit[] {
 		const model = this._getModel(modelUrl);
 		if (!model) {
 			return edits;
@@ -317,8 +437,7 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 		});
 
 		for (let { range, text, eol } of edits) {
-
-			if (typeof eol === 'number') {
+			if (typeof eol === "number") {
 				lastEol = eol;
 			}
 
@@ -346,12 +465,17 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 			const originalLines = original.split(/\r\n|\n|\r/);
 			const modifiedLines = text.split(/\r\n|\n|\r/);
 
-			const diff = linesDiffComputers.getDefault().computeDiff(originalLines, modifiedLines, options);
+			const diff = linesDiffComputers
+				.getDefault()
+				.computeDiff(originalLines, modifiedLines, options);
 
 			const start = Range.lift(range).getStartPosition();
 
 			function addPositions(pos1: Position, pos2: Position): Position {
-				return new Position(pos1.lineNumber + pos2.lineNumber - 1, pos2.lineNumber === 1 ? pos1.column + pos2.column - 1 : pos2.column);
+				return new Position(
+					pos1.lineNumber + pos2.lineNumber - 1,
+					pos2.lineNumber === 1 ? pos1.column + pos2.column - 1 : pos2.column,
+				);
 			}
 
 			function getText(lines: string[], range: Range): string[] {
@@ -359,7 +483,9 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 				for (let i = range.startLineNumber; i <= range.endLineNumber; i++) {
 					const line = lines[i - 1];
 					if (i === range.startLineNumber && i === range.endLineNumber) {
-						result.push(line.substring(range.startColumn - 1, range.endColumn - 1));
+						result.push(
+							line.substring(range.startColumn - 1, range.endColumn - 1),
+						);
 					} else if (i === range.startLineNumber) {
 						result.push(line.substring(range.startColumn - 1));
 					} else if (i === range.endLineNumber) {
@@ -377,19 +503,30 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 						result.push({
 							range: Range.fromPositions(
 								addPositions(start, x.originalRange.getStartPosition()),
-								addPositions(start, x.originalRange.getEndPosition())
+								addPositions(start, x.originalRange.getEndPosition()),
 							),
-							text: getText(modifiedLines, x.modifiedRange).join(model.eol)
+							text: getText(modifiedLines, x.modifiedRange).join(model.eol),
 						});
 					}
 				} else {
-					throw new BugIndicatingError('The experimental diff algorithm always produces inner changes');
+					throw new BugIndicatingError(
+						"The experimental diff algorithm always produces inner changes",
+					);
 				}
 			}
 		}
 
-		if (typeof lastEol === 'number') {
-			result.push({ eol: lastEol, text: '', range: { startLineNumber: 0, startColumn: 0, endLineNumber: 0, endColumn: 0 } });
+		if (typeof lastEol === "number") {
+			result.push({
+				eol: lastEol,
+				text: "",
+				range: {
+					startLineNumber: 0,
+					startColumn: 0,
+					endLineNumber: 0,
+					endColumn: 0,
+				},
+			});
 		}
 
 		return result;
@@ -408,7 +545,9 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 
 	// --- BEGIN default document colors -----------------------------------------------------------
 
-	public async $computeDefaultDocumentColors(modelUrl: string): Promise<IColorInformation[] | null> {
+	public async $computeDefaultDocumentColors(
+		modelUrl: string,
+	): Promise<IColorInformation[] | null> {
 		const model = this._getModel(modelUrl);
 		if (!model) {
 			return null;
@@ -420,8 +559,12 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 
 	private static readonly _suggestionsLimit = 10000;
 
-	public async $textualSuggest(modelUrls: string[], leadingWord: string | undefined, wordDef: string, wordDefFlags: string): Promise<{ words: string[]; duration: number } | null> {
-
+	public async $textualSuggest(
+		modelUrls: string[],
+		leadingWord: string | undefined,
+		wordDef: string,
+		wordDefFlags: string,
+	): Promise<{ words: string[]; duration: number } | null> {
 		const sw = new StopWatch();
 		const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
 		const seen = new Set<string>();
@@ -446,12 +589,16 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 		return { words: Array.from(seen), duration: sw.elapsed() };
 	}
 
-
 	// ---- END suggest --------------------------------------------------------------------------
 
 	//#region -- word ranges --
 
-	public async $computeWordRanges(modelUrl: string, range: IRange, wordDef: string, wordDefFlags: string): Promise<{ [word: string]: IRange[] }> {
+	public async $computeWordRanges(
+		modelUrl: string,
+		range: IRange,
+		wordDef: string,
+		wordDefFlags: string,
+	): Promise<{ [word: string]: IRange[] }> {
 		const model = this._getModel(modelUrl);
 		if (!model) {
 			return Object.create(null);
@@ -473,7 +620,7 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 					startLineNumber: line,
 					startColumn: word.startColumn,
 					endLineNumber: line,
-					endColumn: word.endColumn
+					endColumn: word.endColumn,
 				});
 			}
 		}
@@ -482,7 +629,13 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 
 	//#endregion
 
-	public async $navigateValueSet(modelUrl: string, range: IRange, up: boolean, wordDef: string, wordDefFlags: string): Promise<IInplaceReplaceSupportResult | null> {
+	public async $navigateValueSet(
+		modelUrl: string,
+		range: IRange,
+		up: boolean,
+		wordDef: string,
+		wordDefFlags: string,
+	): Promise<IInplaceReplaceSupportResult | null> {
 		const model = this._getModel(modelUrl);
 		if (!model) {
 			return null;
@@ -495,18 +648,27 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 				startLineNumber: range.startLineNumber,
 				startColumn: range.startColumn,
 				endLineNumber: range.endLineNumber,
-				endColumn: range.endColumn + 1
+				endColumn: range.endColumn + 1,
 			};
 		}
 
 		const selectionText = model.getValueInRange(range);
 
-		const wordRange = model.getWordAtPosition({ lineNumber: range.startLineNumber, column: range.startColumn }, wordDefRegExp);
+		const wordRange = model.getWordAtPosition(
+			{ lineNumber: range.startLineNumber, column: range.startColumn },
+			wordDefRegExp,
+		);
 		if (!wordRange) {
 			return null;
 		}
 		const word = model.getValueInRange(wordRange);
-		const result = BasicInplaceReplace.INSTANCE.navigateValueSet(range, selectionText, wordRange, word, up);
+		const result = BasicInplaceReplace.INSTANCE.navigateValueSet(
+			range,
+			selectionText,
+			wordRange,
+			word,
+			up,
+		);
 		return result;
 	}
 
@@ -514,12 +676,23 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 
 	// foreign method request
 	public $fmr(method: string, args: unknown[]): Promise<unknown> {
-		if (!this._foreignModule || typeof (this._foreignModule as Record<string, unknown>)[method] !== 'function') {
-			return Promise.reject(new Error('Missing requestHandler or method: ' + method));
+		if (
+			!this._foreignModule ||
+			typeof (this._foreignModule as Record<string, unknown>)[method] !==
+				"function"
+		) {
+			return Promise.reject(
+				new Error("Missing requestHandler or method: " + method),
+			);
 		}
 
 		try {
-			return Promise.resolve((this._foreignModule as Record<string, Function>)[method].apply(this._foreignModule, args));
+			return Promise.resolve(
+				(this._foreignModule as Record<string, Function>)[method].apply(
+					this._foreignModule,
+					args,
+				),
+			);
 		} catch (e) {
 			return Promise.reject(e);
 		}
@@ -531,24 +704,35 @@ export class EditorWorker implements IDisposable, IWorkerTextModelSyncChannelSer
 // This is only available in a Web Worker
 declare function importScripts(...urls: string[]): void;
 
-if (typeof importScripts === 'function') {
+if (typeof importScripts === "function") {
 	// Running in a web worker
 	globalThis.monaco = createMonacoBaseAPI();
 }
 
-function resolveLinesDiffComputer(algorithm: DiffAlgorithmName): ILinesDiffComputer | Promise<ILinesDiffComputer> {
+function resolveLinesDiffComputer(
+	algorithm: DiffAlgorithmName,
+): ILinesDiffComputer | Promise<ILinesDiffComputer> {
 	switch (algorithm) {
-		case 'legacy': return linesDiffComputers.getLegacy();
-		case 'advanced': return linesDiffComputers.getDefault();
-		case 'advanced-external': return linesDiffComputers.getAdvancedExternal();
-		case 'advanced-wasm': return linesDiffComputers.getAdvancedWasm();
+		case "legacy":
+			return linesDiffComputers.getLegacy();
+		case "advanced":
+			return linesDiffComputers.getDefault();
+		case "advanced-external":
+			return linesDiffComputers.getAdvancedExternal();
+		case "advanced-wasm":
+			return linesDiffComputers.getAdvancedWasm();
 	}
 }
 
 /**
  * @internal
-*/
-export async function computeStringDiff(original: string, modified: string, options: { maxComputationTimeMs: number }, algorithm: DiffAlgorithmName): Promise<StringEdit> {
+ */
+export async function computeStringDiff(
+	original: string,
+	modified: string,
+	options: { maxComputationTimeMs: number },
+	algorithm: DiffAlgorithmName,
+): Promise<StringEdit> {
 	const diffAlgorithm = await resolveLinesDiffComputer(algorithm);
 
 	ensureDependenciesAreSet();
@@ -558,9 +742,17 @@ export async function computeStringDiff(original: string, modified: string, opti
 	const modifiedText = new StringText(modified);
 	const modifiedLines = modifiedText.getLines();
 
-	const result = diffAlgorithm.computeDiff(originalLines, modifiedLines, { ignoreTrimWhitespace: false, maxComputationTimeMs: options.maxComputationTimeMs, computeMoves: false, extendToSubwords: false });
+	const result = diffAlgorithm.computeDiff(originalLines, modifiedLines, {
+		ignoreTrimWhitespace: false,
+		maxComputationTimeMs: options.maxComputationTimeMs,
+		computeMoves: false,
+		extendToSubwords: false,
+	});
 
-	const textEdit = DetailedLineRangeMapping.toTextEdit(result.changes, modifiedText);
+	const textEdit = DetailedLineRangeMapping.toTextEdit(
+		result.changes,
+		modifiedText,
+	);
 	const strEdit = originalText.getTransformer().getStringEdit(textEdit);
 
 	return strEdit;

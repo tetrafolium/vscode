@@ -3,7 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TikTokenizer, createTokenizer, getRegexByEncoder, getSpecialTokensByEncoder } from '@microsoft/tiktokenizer';
+import {
+	TikTokenizer,
+	createTokenizer,
+	getRegexByEncoder,
+	getSpecialTokensByEncoder,
+} from '@microsoft/tiktokenizer';
 import { parseTikTokenBinary } from '../../../../../../platform/tokenizer/node/parseTikTokens';
 import { CopilotPromptLoadFailure } from '../error';
 import { locateFile } from '../fileLoader';
@@ -16,12 +21,18 @@ export enum TokenizerName {
 
 const tokenizers = new Map<TokenizerName, Tokenizer>();
 
-export function getTokenizer(name: TokenizerName = TokenizerName.o200k): Tokenizer {
+export function getTokenizer(
+	name: TokenizerName = TokenizerName.o200k,
+): Tokenizer {
 	let tokenizer = tokenizers.get(name);
-	if (tokenizer !== undefined) { return tokenizer; }
+	if (tokenizer !== undefined) {
+		return tokenizer;
+	}
 	// Fallback to o200k
 	tokenizer = tokenizers.get(TokenizerName.o200k);
-	if (tokenizer !== undefined) { return tokenizer; }
+	if (tokenizer !== undefined) {
+		return tokenizer;
+	}
 	// Fallback to approximate tokenizer
 	return new ApproximateTokenizer();
 }
@@ -82,7 +93,10 @@ export interface Tokenizer {
 	 * @param n - How many tokens to take
 	 * @returns A prefix of `text`, as a `{ text: string, tokens: number[] }`.
 	 */
-	takeFirstTokens(text: string, n: number): { text: string; tokens: number[] };
+	takeFirstTokens(
+		text: string,
+		n: number,
+	): { text: string; tokens: number[] };
 
 	/**
 	 * Return the longest suffix of `text` of complete lines and is at most
@@ -94,7 +108,7 @@ export interface Tokenizer {
 }
 
 export class TTokenizer implements Tokenizer {
-	constructor(private readonly _tokenizer: TikTokenizer) { }
+	constructor(private readonly _tokenizer: TikTokenizer) {}
 
 	static async create(encoder: TokenizerName): Promise<TTokenizer> {
 		try {
@@ -102,12 +116,15 @@ export class TTokenizer implements Tokenizer {
 				parseTikTokenBinary(locateFile(`${encoder}.tiktoken`)),
 				getSpecialTokensByEncoder(encoder),
 				getRegexByEncoder(encoder),
-				32768
+				32768,
 			);
 			return new TTokenizer(tokenizer);
 		} catch (e: unknown) {
 			if (e instanceof Error) {
-				throw new CopilotPromptLoadFailure(`Could not load tokenizer`, e);
+				throw new CopilotPromptLoadFailure(
+					`Could not load tokenizer`,
+					e,
+				);
 			}
 			throw e;
 		}
@@ -127,11 +144,16 @@ export class TTokenizer implements Tokenizer {
 
 	tokenizeStrings(text: string): string[] {
 		const tokens = this.tokenize(text);
-		return tokens.map(token => this.detokenize([token]));
+		return tokens.map((token) => this.detokenize([token]));
 	}
 
-	takeLastTokens(text: string, n: number): { text: string; tokens: number[] } {
-		if (n <= 0) { return { text: '', tokens: [] }; }
+	takeLastTokens(
+		text: string,
+		n: number,
+	): { text: string; tokens: number[] } {
+		if (n <= 0) {
+			return { text: '', tokens: [] };
+		}
 
 		// Find long enough suffix of text that has >= n + 2 tokens
 		// We add the 2 extra tokens to avoid the edge case where
@@ -155,8 +177,13 @@ export class TTokenizer implements Tokenizer {
 		return { text: this.detokenize(suffixT), tokens: suffixT };
 	}
 
-	takeFirstTokens(text: string, n: number): { text: string; tokens: number[] } {
-		if (n <= 0) { return { text: '', tokens: [] }; }
+	takeFirstTokens(
+		text: string,
+		n: number,
+	): { text: string; tokens: number[] } {
+		if (n <= 0) {
+			return { text: '', tokens: [] };
+		}
 
 		// Find long enough suffix of text that has >= n + 2 tokens
 		// We add the 2 extra tokens to avoid the edge case where
@@ -190,7 +217,10 @@ export class TTokenizer implements Tokenizer {
 
 	takeLastLinesTokens(text: string, n: number): string {
 		const { text: suffix } = this.takeLastTokens(text, n);
-		if (suffix.length === text.length || text[text.length - suffix.length - 1] === '\n') {
+		if (
+			suffix.length === text.length ||
+			text[text.length - suffix.length - 1] === '\n'
+		) {
 			// Edge case: We already took whole lines
 			return suffix;
 		}
@@ -216,7 +246,7 @@ class MockTokenizer implements Tokenizer {
 	detokenize(tokens: number[]): string {
 		// Note because this is using hashing to mock tokenization, it is not
 		// reversible, so detokenize will not return the original input.
-		return tokens.map(token => token.toString()).join(' ');
+		return tokens.map((token) => token.toString()).join(' ');
 	}
 	tokenizeStrings(text: string): string[] {
 		return text.split(/\b/);
@@ -225,17 +255,26 @@ class MockTokenizer implements Tokenizer {
 		return this.tokenizeStrings(text).length;
 	}
 
-	takeLastTokens(text: string, n: number): { text: string; tokens: number[] } {
+	takeLastTokens(
+		text: string,
+		n: number,
+	): { text: string; tokens: number[] } {
 		const tokens = this.tokenizeStrings(text).slice(-n);
 		return { text: tokens.join(''), tokens: tokens.map(this.hash) };
 	}
-	takeFirstTokens(text: string, n: number): { text: string; tokens: number[] } {
+	takeFirstTokens(
+		text: string,
+		n: number,
+	): { text: string; tokens: number[] } {
 		const tokens = this.tokenizeStrings(text).slice(0, n);
 		return { text: tokens.join(''), tokens: tokens.map(this.hash) };
 	}
 	takeLastLinesTokens(text: string, n: number): string {
 		const { text: suffix } = this.takeLastTokens(text, n);
-		if (suffix.length === text.length || text[text.length - suffix.length - 1] === '\n') {
+		if (
+			suffix.length === text.length ||
+			text[text.length - suffix.length - 1] === '\n'
+		) {
 			// Edge case: We already took whole lines
 			return suffix;
 		}
@@ -246,7 +285,9 @@ class MockTokenizer implements Tokenizer {
 
 // These are the effective token lengths for each language. They are based on empirical data to balance the risk of accidental overflow and overeager elision.
 // Note: These may need to be recalculated in the future if typical prompt lengths are significantly changed.
-const EFFECTIVE_TOKEN_LENGTH: Partial<Record<TokenizerName, Record<string, number>>> = {
+const EFFECTIVE_TOKEN_LENGTH: Partial<
+	Record<TokenizerName, Record<string, number>>
+> = {
 	[TokenizerName.cl100k]: {
 		python: 3.99,
 		typescript: 4.54,
@@ -292,16 +333,18 @@ export class ApproximateTokenizer implements Tokenizer {
 
 	constructor(
 		tokenizerName: TokenizerName = TokenizerName.o200k,
-		private languageId?: string
+		private languageId?: string,
 	) {
 		this.tokenizerName = tokenizerName;
 	}
 
 	tokenize(text: string): number[] {
-		return this.tokenizeStrings(text).map(substring => {
+		return this.tokenizeStrings(text).map((substring) => {
 			let charCode = 0;
 			for (let i = 0; i < substring.length; i++) {
-				charCode = charCode * Math.pow(10, MAX_CODE_POINT_SIZE) + substring.charCodeAt(i);
+				charCode =
+					charCode * Math.pow(10, MAX_CODE_POINT_SIZE) +
+					substring.charCodeAt(i);
 			}
 			return charCode;
 		});
@@ -309,7 +352,7 @@ export class ApproximateTokenizer implements Tokenizer {
 
 	detokenize(tokens: number[]): string {
 		return tokens
-			.map(token => {
+			.map((token) => {
 				const chars = [];
 				let charCodes = token.toString();
 				while (charCodes.length > 0) {
@@ -334,7 +377,10 @@ export class ApproximateTokenizer implements Tokenizer {
 
 		if (this.tokenizerName && this.languageId) {
 			// Use our calculated effective token length for head languages
-			return EFFECTIVE_TOKEN_LENGTH[this.tokenizerName]?.[this.languageId] ?? defaultETL;
+			return (
+				EFFECTIVE_TOKEN_LENGTH[this.tokenizerName]?.[this.languageId] ??
+				defaultETL
+			);
 		}
 
 		return defaultETL;
@@ -344,23 +390,53 @@ export class ApproximateTokenizer implements Tokenizer {
 		return Math.ceil(text.length / this.getEffectiveTokenLength());
 	}
 
-	takeLastTokens(text: string, n: number): { text: string; tokens: number[] } {
-		if (n <= 0) { return { text: '', tokens: [] }; }
+	takeLastTokens(
+		text: string,
+		n: number,
+	): { text: string; tokens: number[] } {
+		if (n <= 0) {
+			return { text: '', tokens: [] };
+		}
 		// Return the last characters approximately. It doesn't matter what we return as token, just that it has the correct length.
-		const suffix = text.slice(-Math.floor(n * this.getEffectiveTokenLength()));
-		return { text: suffix, tokens: Array.from({ length: this.tokenLength(suffix) }, (_, i) => i) };
+		const suffix = text.slice(
+			-Math.floor(n * this.getEffectiveTokenLength()),
+		);
+		return {
+			text: suffix,
+			tokens: Array.from(
+				{ length: this.tokenLength(suffix) },
+				(_, i) => i,
+			),
+		};
 	}
 
-	takeFirstTokens(text: string, n: number): { text: string; tokens: number[] } {
-		if (n <= 0) { return { text: '', tokens: [] }; }
+	takeFirstTokens(
+		text: string,
+		n: number,
+	): { text: string; tokens: number[] } {
+		if (n <= 0) {
+			return { text: '', tokens: [] };
+		}
 		// Return the first characters approximately.
-		const prefix = text.slice(0, Math.floor(n * this.getEffectiveTokenLength()));
-		return { text: prefix, tokens: Array.from({ length: this.tokenLength(prefix) }, (_, i) => i) };
+		const prefix = text.slice(
+			0,
+			Math.floor(n * this.getEffectiveTokenLength()),
+		);
+		return {
+			text: prefix,
+			tokens: Array.from(
+				{ length: this.tokenLength(prefix) },
+				(_, i) => i,
+			),
+		};
 	}
 
 	takeLastLinesTokens(text: string, n: number): string {
 		const { text: suffix } = this.takeLastTokens(text, n);
-		if (suffix.length === text.length || text[text.length - suffix.length - 1] === '\n') {
+		if (
+			suffix.length === text.length ||
+			text[text.length - suffix.length - 1] === '\n'
+		) {
 			// Edge case: We already took whole lines
 			return suffix;
 		}
@@ -381,5 +457,8 @@ async function setTokenizer(name: TokenizerName) {
 /** Load tokenizers on start. Export promise for to be awaited by initialization. */
 export const initializeTokenizers = (async () => {
 	tokenizers.set(TokenizerName.mock, new MockTokenizer());
-	await Promise.all([setTokenizer(TokenizerName.cl100k), setTokenizer(TokenizerName.o200k)]);
+	await Promise.all([
+		setTokenizer(TokenizerName.cl100k),
+		setTokenizer(TokenizerName.o200k),
+	]);
 })();

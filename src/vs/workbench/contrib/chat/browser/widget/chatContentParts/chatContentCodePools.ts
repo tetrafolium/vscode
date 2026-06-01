@@ -3,17 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../../../base/common/lifecycle.js';
-import { MenuId } from '../../../../../../platform/actions/common/actions.js';
-import { IInstantiationService } from '../../../../../../platform/instantiation/common/instantiation.js';
-import { IChatRendererDelegate } from '../chatListRenderer.js';
-import { ChatEditorOptions } from '../chatOptions.js';
-import { CodeBlockPart, CodeCompareBlockPart } from './codeBlockPart.js';
-import { ResourcePool, KeyedResourcePool, IDisposableReference } from './chatCollections.js';
-import { createSingleCallFunction } from '../../../../../../base/common/functional.js';
+import { Disposable } from "../../../../../../base/common/lifecycle.js";
+import { MenuId } from "../../../../../../platform/actions/common/actions.js";
+import { IInstantiationService } from "../../../../../../platform/instantiation/common/instantiation.js";
+import { IChatRendererDelegate } from "../chatListRenderer.js";
+import { ChatEditorOptions } from "../chatOptions.js";
+import { CodeBlockPart, CodeCompareBlockPart } from "./codeBlockPart.js";
+import {
+	ResourcePool,
+	KeyedResourcePool,
+	IDisposableReference,
+} from "./chatCollections.js";
+import { createSingleCallFunction } from "../../../../../../base/common/functional.js";
 
 export class EditorPool extends Disposable {
-
 	private readonly _pool: KeyedResourcePool<CodeBlockPart>;
 
 	inUse(): Iterable<CodeBlockPart> {
@@ -28,9 +31,21 @@ export class EditorPool extends Disposable {
 		@IInstantiationService instantiationService: IInstantiationService,
 	) {
 		super();
-		this._pool = this._register(new KeyedResourcePool(() => {
-			return instantiationService.createInstance(CodeBlockPart, options, MenuId.ChatCodeBlock, delegate, overflowWidgetsDomNode, this.isSimpleWidget);
-		}, { maxIdleSize: 2 }));
+		this._pool = this._register(
+			new KeyedResourcePool(
+				() => {
+					return instantiationService.createInstance(
+						CodeBlockPart,
+						options,
+						MenuId.ChatCodeBlock,
+						delegate,
+						overflowWidgetsDomNode,
+						this.isSimpleWidget,
+					);
+				},
+				{ maxIdleSize: 2 },
+			),
+		);
 	}
 
 	get(key: string): IDisposableReference<CodeBlockPart> {
@@ -43,7 +58,7 @@ export class EditorPool extends Disposable {
 				codeBlock.reset();
 				stale = true;
 				this._pool.release(codeBlock, key);
-			})
+			}),
 		};
 	}
 
@@ -53,7 +68,6 @@ export class EditorPool extends Disposable {
 }
 
 export class DiffEditorPool extends Disposable {
-
 	private readonly _pool: ResourcePool<CodeCompareBlockPart>;
 
 	public inUse(): Iterable<CodeCompareBlockPart> {
@@ -68,9 +82,18 @@ export class DiffEditorPool extends Disposable {
 		@IInstantiationService instantiationService: IInstantiationService,
 	) {
 		super();
-		this._pool = this._register(new ResourcePool(() => {
-			return instantiationService.createInstance(CodeCompareBlockPart, options, MenuId.ChatCompareBlock, delegate, overflowWidgetsDomNode, this.isSimpleWidget);
-		}));
+		this._pool = this._register(
+			new ResourcePool(() => {
+				return instantiationService.createInstance(
+					CodeCompareBlockPart,
+					options,
+					MenuId.ChatCompareBlock,
+					delegate,
+					overflowWidgetsDomNode,
+					this.isSimpleWidget,
+				);
+			}),
+		);
 	}
 
 	get(): IDisposableReference<CodeCompareBlockPart> {
@@ -83,7 +106,7 @@ export class DiffEditorPool extends Disposable {
 				codeBlock.reset();
 				stale = true;
 				this._pool.release(codeBlock);
-			})
+			}),
 		};
 	}
 

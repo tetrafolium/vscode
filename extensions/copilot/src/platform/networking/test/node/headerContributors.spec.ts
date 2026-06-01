@@ -7,7 +7,10 @@ import assert from 'assert';
 import * as sinon from 'sinon';
 import { beforeEach, suite, test } from 'vitest';
 import { TestHeaderContributor } from '../../../test/node/testHeaderContributor';
-import { HeaderContributors, IHeaderContributors } from '../../common/networking';
+import {
+	HeaderContributors,
+	IHeaderContributors,
+} from '../../common/networking';
 
 suite('HeaderContributors', () => {
 	let contributorCollection: IHeaderContributors;

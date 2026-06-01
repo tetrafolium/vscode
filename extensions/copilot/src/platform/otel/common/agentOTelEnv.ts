@@ -13,7 +13,10 @@ import type { OTelConfig } from './otelConfig';
  * Used for both the in-process `LocalSessionManager` (spread into `process.env`)
  * and the terminal CLI session (spread into `TerminalOptions.env`).
  */
-export function deriveCopilotCliOTelEnv(config: OTelConfig, env: Record<string, string | undefined> = process.env): Record<string, string> {
+export function deriveCopilotCliOTelEnv(
+	config: OTelConfig,
+	env: Record<string, string | undefined> = process.env,
+): Record<string, string> {
 	if (!config.enabled) {
 		return {};
 	}
@@ -26,7 +29,10 @@ export function deriveCopilotCliOTelEnv(config: OTelConfig, env: Record<string, 
 	if (!env['OTEL_EXPORTER_OTLP_ENDPOINT'] && config.otlpEndpoint) {
 		result['OTEL_EXPORTER_OTLP_ENDPOINT'] = config.otlpEndpoint;
 	}
-	if (!env['OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT'] && config.captureContent) {
+	if (
+		!env['OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT'] &&
+		config.captureContent
+	) {
 		result['OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT'] = 'true';
 	}
 	if (!env['COPILOT_OTEL_FILE_EXPORTER_PATH'] && config.fileExporterPath) {
@@ -50,7 +56,10 @@ export function deriveCopilotCliOTelEnv(config: OTelConfig, env: Record<string, 
  *
  * Only sets variables not already present in `process.env`.
  */
-export function deriveClaudeOTelEnv(config: OTelConfig, env: Record<string, string | undefined> = process.env): Record<string, string> {
+export function deriveClaudeOTelEnv(
+	config: OTelConfig,
+	env: Record<string, string | undefined> = process.env,
+): Record<string, string> {
 	if (!config.enabled) {
 		return {};
 	}
@@ -70,7 +79,8 @@ export function deriveClaudeOTelEnv(config: OTelConfig, env: Record<string, stri
 		result['OTEL_EXPORTER_OTLP_ENDPOINT'] = config.otlpEndpoint;
 	}
 	if (!env['OTEL_EXPORTER_OTLP_PROTOCOL']) {
-		result['OTEL_EXPORTER_OTLP_PROTOCOL'] = config.otlpProtocol === 'grpc' ? 'grpc' : 'http/json';
+		result['OTEL_EXPORTER_OTLP_PROTOCOL'] =
+			config.otlpProtocol === 'grpc' ? 'grpc' : 'http/json';
 	}
 	if (config.captureContent) {
 		if (!env['OTEL_LOG_USER_PROMPTS']) {

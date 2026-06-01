@@ -4,7 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CopilotUserQuotaInfo } from '../../chat/common/chatQuotaService';
-import { vArray, vBoolean, vEnum, vNullable, vNumber, vObj, vRequired, vString } from '../../configuration/common/validator';
+import {
+	vArray,
+	vBoolean,
+	vEnum,
+	vNullable,
+	vNumber,
+	vObj,
+	vRequired,
+	vString,
+} from '../../configuration/common/validator';
 
 /**
  * A function used to determine if the org list contains an internal organization
@@ -37,8 +46,12 @@ function containsGitHubOrg(orgList: string[]): boolean {
  * Whether or not it contains a Microsoft org
  */
 function containsMicrosoftOrg(orgList: string[]): boolean {
-	const MICROSOFT_ORGANIZATIONS = ['a5db0bcaae94032fe715fb34a5e4bce2', '7184f66dfcee98cb5f08a1cb936d5225',
-		'1cb18ac6eedd49b43d74a1c5beb0b955', 'ea9395b9a9248c05ee6847cbd24355ed'];
+	const MICROSOFT_ORGANIZATIONS = [
+		'a5db0bcaae94032fe715fb34a5e4bce2',
+		'7184f66dfcee98cb5f08a1cb936d5225',
+		'1cb18ac6eedd49b43d74a1c5beb0b955',
+		'ea9395b9a9248c05ee6847cbd24355ed',
+	];
 	// Check if the user is part of a Microsoft organization.
 	for (const org of orgList) {
 		if (MICROSOFT_ORGANIZATIONS.includes(org)) {
@@ -148,11 +161,16 @@ export class CopilotToken {
 	}
 
 	get isChatQuotaExceeded(): boolean {
-		return this.isFreeUser && (this._info.limited_user_quotas?.chat ?? 1) <= 0;
+		return (
+			this.isFreeUser && (this._info.limited_user_quotas?.chat ?? 1) <= 0
+		);
 	}
 
 	get isCompletionsQuotaExceeded(): boolean {
-		return this.isFreeUser && (this._info.limited_user_quotas?.completions ?? 1) <= 0;
+		return (
+			this.isFreeUser &&
+			(this._info.limited_user_quotas?.completions ?? 1) <= 0
+		);
 	}
 
 	get codeQuoteEnabled(): boolean {
@@ -160,14 +178,23 @@ export class CopilotToken {
 	}
 
 	get isVscodeTeamMember(): boolean {
-		return this._info.isVscodeTeamMember || containsVSCodeOrg(this.organizationList);
+		return (
+			this._info.isVscodeTeamMember ||
+			containsVSCodeOrg(this.organizationList)
+		);
 	}
 
 	get codexAgentEnabled(): boolean {
 		return this._info.codex_agent_enabled ?? false;
 	}
 
-	get copilotPlan(): 'free' | 'individual' | 'individual_pro' | 'individual_max' | 'business' | 'enterprise' {
+	get copilotPlan():
+		| 'free'
+		| 'individual'
+		| 'individual_pro'
+		| 'individual_max'
+		| 'business'
+		| 'enterprise' {
 		if (this.isFreeUser) {
 			return 'free';
 		}
@@ -198,7 +225,10 @@ export class CopilotToken {
 	}
 
 	get quotaInfo() {
-		return { quota_snapshots: this._info.quota_snapshots, quota_reset_date: this._info.quota_reset_date };
+		return {
+			quota_snapshots: this._info.quota_snapshots,
+			quota_reset_date: this._info.quota_reset_date,
+		};
 	}
 
 	get tokenBasedBilling(): boolean | undefined {
@@ -220,7 +250,8 @@ export class CopilotToken {
 	private _isPublicSuggestionsEnabled: boolean | undefined;
 	isPublicSuggestionsEnabled(): boolean {
 		if (this._isPublicSuggestionsEnabled === undefined) {
-			this._isPublicSuggestionsEnabled = this._info.public_suggestions === 'enabled';
+			this._isPublicSuggestionsEnabled =
+				this._info.public_suggestions === 'enabled';
 		}
 		return this._isPublicSuggestionsEnabled;
 	}
@@ -230,7 +261,9 @@ export class CopilotToken {
 	}
 
 	get isCopilotCodeReviewEnabled(): boolean {
-		return this._info.code_review_enabled ?? (this.getTokenValue('ccr') === '1');
+		return (
+			this._info.code_review_enabled ?? this.getTokenValue('ccr') === '1'
+		);
 	}
 
 	isEditorPreviewFeaturesEnabled(): boolean {
@@ -303,9 +336,7 @@ export interface NotificationEnvelope {
  * Well-known SKU values that are checked in source code.
  * The actual SKU can be any string - these are just the ones we explicitly handle.
  */
-export type WellKnownSku =
-	| 'free_limited_copilot'
-	| 'no_auth_limited_copilot';
+export type WellKnownSku = 'free_limited_copilot' | 'no_auth_limited_copilot';
 
 /**
  * User's access type/SKU from the Copilot token endpoint.
@@ -433,12 +464,14 @@ const tokenEnvelopeValidator = vObj({
 		telemetry: vString(),
 	}),
 	enterprise_list: vNullable(vArray(vNumber())),
-	limited_user_quotas: vNullable(vObj({
-		chat: vRequired(vNumber()),
-		completions: vRequired(vNumber()),
-	})),
+	limited_user_quotas: vNullable(
+		vObj({
+			chat: vRequired(vNumber()),
+			completions: vRequired(vNumber()),
+		}),
+	),
 	limited_user_reset_date: vNullable(vNumber()),
-	organization_list: vArray(vString())
+	organization_list: vArray(vString()),
 });
 
 const standardErrorEnvelopeValidator = vObj({
@@ -463,8 +496,19 @@ const tokenEnvelopeCriticalValidator = vObj({
  */
 export type TokenValidationResult =
 	| { valid: true; strategy: 'strict'; envelope: TokenEnvelope }
-	| { valid: true; strategy: 'fallback'; strictError: string; envelope: TokenEnvelope; fallbackError?: string }
-	| { valid: false; strategy: 'failed'; strictError: string; fallbackError: string };
+	| {
+			valid: true;
+			strategy: 'fallback';
+			strictError: string;
+			envelope: TokenEnvelope;
+			fallbackError?: string;
+	  }
+	| {
+			valid: false;
+			strategy: 'failed';
+			strictError: string;
+			fallbackError: string;
+	  };
 
 /**
  * Validates a token envelope using a two-tier strategy:
@@ -477,7 +521,11 @@ export type TokenValidationResult =
 export function validateTokenEnvelope(obj: unknown): TokenValidationResult {
 	const strictResult = tokenEnvelopeValidator.validate(obj);
 	if (strictResult.error === undefined) {
-		return { valid: true, strategy: 'strict', envelope: strictResult.content };
+		return {
+			valid: true,
+			strategy: 'strict',
+			envelope: strictResult.content,
+		};
 	}
 
 	const strictError = strictResult.error.message;
@@ -489,7 +537,7 @@ export function validateTokenEnvelope(obj: unknown): TokenValidationResult {
 			strategy: 'fallback',
 			strictError,
 			// Use the full payload, not the validator result, to preserve all server fields
-			envelope: obj as TokenEnvelope
+			envelope: obj as TokenEnvelope,
 		};
 	}
 
@@ -509,18 +557,22 @@ export function isErrorEnvelope(obj: unknown): obj is ErrorEnvelope {
 	return errorEnvelopeValidator.validate(obj).error === undefined;
 }
 
-export function isStandardErrorEnvelope(obj: unknown): obj is StandardErrorEnvelope {
+export function isStandardErrorEnvelope(
+	obj: unknown,
+): obj is StandardErrorEnvelope {
 	return standardErrorEnvelopeValidator.validate(obj).error === undefined;
 }
 
 //#endregion
 
-
 /**
  * Combined response type from the /copilot_internal/v2/token endpoint.
  * Can be either a success (TokenEnvelope) or error (ErrorEnvelope) response.
  */
-export type CopilotTokenResponse = TokenEnvelope | ErrorEnvelope | StandardErrorEnvelope;
+export type CopilotTokenResponse =
+	| TokenEnvelope
+	| ErrorEnvelope
+	| StandardErrorEnvelope;
 
 /**
  * A server response containing the user info for the copilot user from the /copilot_internal/user endpoint
@@ -548,13 +600,23 @@ export type ExtendedTokenInfo = TokenEnvelope & {
 	// Extended fields added by client
 	username: string;
 	isVscodeTeamMember: boolean;
-} & Pick<CopilotUserInfo, 'copilot_plan' | 'quota_snapshots' | 'quota_reset_date' | 'codex_agent_enabled' | 'organization_login_list' | 'token_based_billing'>;
+} & Pick<
+		CopilotUserInfo,
+		| 'copilot_plan'
+		| 'quota_snapshots'
+		| 'quota_reset_date'
+		| 'codex_agent_enabled'
+		| 'organization_login_list'
+		| 'token_based_billing'
+	>;
 
 /**
  * Creates a minimal ExtendedTokenInfo for testing purposes.
  * All required TokenEnvelope fields are populated with sensible defaults.
  */
-export function createTestExtendedTokenInfo(overrides?: Partial<ExtendedTokenInfo>): ExtendedTokenInfo {
+export function createTestExtendedTokenInfo(
+	overrides?: Partial<ExtendedTokenInfo>,
+): ExtendedTokenInfo {
 	return {
 		// Required token envelope fields
 		token: 'test-token',
@@ -586,17 +648,17 @@ export function createTestExtendedTokenInfo(overrides?: Partial<ExtendedTokenInf
  */
 export type TokenErrorReason =
 	/** User doesn't have Copilot access or authorization failed. Includes detailed error_details from server with notification_id specifying the specific authorization issue. */
-	'NotAuthorized' |
+	| 'NotAuthorized'
 	/** Network request failed - no response received from the server (connection failed, endpoint unreachable, etc.). */
-	'RequestFailed' |
+	| 'RequestFailed'
 	/** Server response could not be parsed as JSON (malformed or unexpected response format). */
-	'ParseFailed' |
+	| 'ParseFailed'
 	/** User not authenticated with GitHub through VS Code. Only returned from VS Code integration layer, not from platform token minting. */
-	'GitHubLoginFailed' |
+	| 'GitHubLoginFailed'
 	/** Server returned 401 Unauthorized HTTP status. */
-	'HTTP401' |
+	| 'HTTP401'
 	/** GitHub API rate limit exceeded (403 status with rate limit message). */
-	'RateLimited';
+	| 'RateLimited';
 
 export const enum TokenErrorNotificationId {
 	NoCopilotAccess = 'no_copilot_access',
@@ -615,7 +677,7 @@ export const enum TokenErrorNotificationId {
 	GoHttpClient = 'go_http_client',
 	ProgrammaticTokenGeneration = 'programmatic_token_generation',
 	AccessRevoked = 'access_revoked',
-	ServerError = 'server_error'
+	ServerError = 'server_error',
 }
 
 /**
@@ -639,4 +701,6 @@ export type TokenError = {
 	title?: string;
 };
 
-export type TokenInfoOrError = ({ kind: 'success' } & ExtendedTokenInfo) | ({ kind: 'failure' } & TokenError);
+export type TokenInfoOrError =
+	| ({ kind: 'success' } & ExtendedTokenInfo)
+	| ({ kind: 'failure' } & TokenError);

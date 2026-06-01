@@ -19,4 +19,5 @@ export interface IReleaseNotesService {
 	fetchReleaseNotesForVersion(version: string): Promise<string | undefined>;
 }
 
-export const IReleaseNotesService = createServiceIdentifier<IReleaseNotesService>('releaseNotesService');
+export const IReleaseNotesService =
+	createServiceIdentifier<IReleaseNotesService>('releaseNotesService');

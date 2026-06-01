@@ -3,30 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import { RequestMetadata } from '@vscode/copilot-api';
 import type { LanguageModelChat } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { TokenizerType } from '../../../util/common/tokenizer';
 import { Event } from '../../../util/vs/base/common/event';
 import type { ChatRequest } from '../../../vscodeTypes';
-import { IChatEndpoint, IEmbeddingsEndpoint } from '../../networking/common/networking';
+import {
+	IChatEndpoint,
+	IEmbeddingsEndpoint,
+} from '../../networking/common/networking';
 
 export type CustomModel = {
 	key_name: string;
 	owner_name: string;
 };
 
-export type EndpointEditToolName = 'find-replace' | 'multi-find-replace' | 'apply-patch' | 'code-rewrite';
+export type EndpointEditToolName =
+	| 'find-replace'
+	| 'multi-find-replace'
+	| 'apply-patch'
+	| 'code-rewrite';
 
 const allEndpointEditToolNames: ReadonlySet<EndpointEditToolName> = new Set([
 	'find-replace',
 	'multi-find-replace',
 	'apply-patch',
-	'code-rewrite'
+	'code-rewrite',
 ]);
 
-export function isEndpointEditToolName(toolName: string): toolName is EndpointEditToolName {
+export function isEndpointEditToolName(
+	toolName: string,
+): toolName is EndpointEditToolName {
 	return allEndpointEditToolNames.has(toolName as EndpointEditToolName);
 }
 
@@ -76,7 +84,7 @@ export enum ModelSupportedEndpoint {
 	ChatCompletions = '/chat/completions',
 	Responses = '/responses',
 	WebSocketResponses = 'ws:/responses',
-	Messages = '/v1/messages'
+	Messages = '/v1/messages',
 }
 
 export interface IModelTokenPriceTier {
@@ -117,7 +125,10 @@ export interface IModelAPIResponse {
 	info_messages?: { code: string; message: string }[];
 	billing?: IModelBilling;
 	model_picker_price_category?: string;
-	capabilities: IChatModelCapabilities | ICompletionModelCapabilities | IEmbeddingModelCapabilities;
+	capabilities:
+		| IChatModelCapabilities
+		| ICompletionModelCapabilities
+		| IEmbeddingModelCapabilities;
 	supported_endpoints?: ModelSupportedEndpoint[];
 	custom_model?: CustomModel;
 }
@@ -135,21 +146,29 @@ export type IChatModelInformation = IModelAPIResponse & {
 	reasoningEffortFormat?: 'chat-completions' | 'responses';
 };
 
-export function isChatModelInformation(model: IModelAPIResponse): model is IChatModelInformation {
+export function isChatModelInformation(
+	model: IModelAPIResponse,
+): model is IChatModelInformation {
 	return model.capabilities.type === 'chat';
 }
 
-export function isEmbeddingModelInformation(model: IModelAPIResponse): model is IEmbeddingModelInformation {
+export function isEmbeddingModelInformation(
+	model: IModelAPIResponse,
+): model is IEmbeddingModelInformation {
 	return model.capabilities.type === 'embeddings';
 }
 
-export type IEmbeddingModelInformation = IModelAPIResponse & { capabilities: IEmbeddingModelCapabilities };
+export type IEmbeddingModelInformation = IModelAPIResponse & {
+	capabilities: IEmbeddingModelCapabilities;
+};
 
 export type ICompletionModelInformation = IModelAPIResponse & {
 	capabilities: ICompletionModelCapabilities;
 };
 
-export function isCompletionModelInformation(model: IModelAPIResponse): model is ICompletionModelInformation {
+export function isCompletionModelInformation(
+	model: IModelAPIResponse,
+): model is ICompletionModelInformation {
 	return model.capabilities.type === 'completion';
 }
 
@@ -168,7 +187,9 @@ export interface IEndpointProvider {
 	/**
 	 * Gets all the completion models known by the endpoint provider.
 	 */
-	getAllCompletionModels(forceRefresh?: boolean): Promise<ICompletionModelInformation[]>;
+	getAllCompletionModels(
+		forceRefresh?: boolean,
+	): Promise<ICompletionModelInformation[]>;
 
 	/**
 	 * Gets all the chat endpoints known by the endpoint provider. Mainly used by language model access
@@ -179,12 +200,17 @@ export interface IEndpointProvider {
 	 * Given a chat request returns the appropriate chat endpoint to serve that request
 	 * @param requestOrFamily The chat request to get the endpoint for, the family you want the endpoint for, or the LanguageModelChat.
 	 */
-	getChatEndpoint(requestOrFamily: LanguageModelChat | ChatRequest | ChatEndpointFamily): Promise<IChatEndpoint>;
+	getChatEndpoint(
+		requestOrFamily: LanguageModelChat | ChatRequest | ChatEndpointFamily,
+	): Promise<IChatEndpoint>;
 
 	/**
 	 * Get the CAPI embedding endpoint information
 	 */
-	getEmbeddingsEndpoint(family?: EmbeddingsEndpointFamily): Promise<IEmbeddingsEndpoint>;
+	getEmbeddingsEndpoint(
+		family?: EmbeddingsEndpointFamily,
+	): Promise<IEmbeddingsEndpoint>;
 }
 
-export const IEndpointProvider = createServiceIdentifier<IEndpointProvider>('IEndpointProvider');
+export const IEndpointProvider =
+	createServiceIdentifier<IEndpointProvider>('IEndpointProvider');

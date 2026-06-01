@@ -8,10 +8,10 @@ import { createServiceIdentifier } from '../../../util/common/services';
 import { Emitter, Event } from '../../../util/vs/base/common/event';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
 
-export const ITerminalService = createServiceIdentifier<ITerminalService>('ITerminalService');
+export const ITerminalService =
+	createServiceIdentifier<ITerminalService>('ITerminalService');
 
 export interface ITerminalService {
-
 	readonly _serviceBrand: undefined;
 
 	readonly terminalBuffer: string;
@@ -30,7 +30,11 @@ export interface ITerminalService {
 	/**
 	 * See {@link vscode.window.createTerminal}.
 	 */
-	createTerminal(name?: string, shellPath?: string, shellArgs?: readonly string[] | string): vscode.Terminal;
+	createTerminal(
+		name?: string,
+		shellPath?: string,
+		shellArgs?: readonly string[] | string,
+	): vscode.Terminal;
 	createTerminal(options: vscode.TerminalOptions): vscode.Terminal;
 	createTerminal(options: vscode.ExtensionTerminalOptions): vscode.Terminal;
 
@@ -50,7 +54,9 @@ export interface ITerminalService {
 	 * Gets the last command executed in a terminal.
 	 * @param terminal The terminal to get the last command for
 	 */
-	getLastCommandForTerminal(terminal: vscode.Terminal): vscode.TerminalExecutedCommand | undefined;
+	getLastCommandForTerminal(
+		terminal: vscode.Terminal,
+	): vscode.TerminalExecutedCommand | undefined;
 
 	/**
 	 * Contributes a path to the terminal PATH environment variable.
@@ -58,16 +64,26 @@ export interface ITerminalService {
 	 * @param pathLocation The path to add to PATH
 	 * @param description Optional description for the PATH contribution
 	 * @param prepend Whether to prepend (true) or append (false) the path. Defaults to false (append).
-	*/
-	contributePath(contributor: string, pathLocation: string, description?: string, prepend?: boolean): void;
+	 */
+	contributePath(
+		contributor: string,
+		pathLocation: string,
+		description?: string,
+		prepend?: boolean,
+	): void;
 	/**
 	 * Contributes a path to the terminal PATH environment variable.
 	 * @param contributor Unique identifier for the contributor
 	 * @param pathLocation The path to add to PATH
 	 * @param description Optional command thats contributed in the Terminal.
 	 * @param prepend Whether to prepend (true) or append (false) the path. Defaults to false (append).
-	*/
-	contributePath(contributor: string, pathLocation: string, description?: { command: string }, prepend?: boolean): void;
+	 */
+	contributePath(
+		contributor: string,
+		pathLocation: string,
+		description?: { command: string },
+		prepend?: boolean,
+	): void;
 
 	/**
 	 * Removes a path contribution from the terminal PATH environment variable.
@@ -84,15 +100,28 @@ export const enum ShellIntegrationQuality {
 	Rich = 'rich',
 }
 
-
-export class NullTerminalService extends Disposable implements ITerminalService {
-	private _onDidWriteTerminalData = this._register(new Emitter<vscode.TerminalDataWriteEvent>());
-	onDidWriteTerminalData: Event<vscode.TerminalDataWriteEvent> = this._onDidWriteTerminalData.event;
-	private _onDidChangeTerminalShellIntegration = this._register(new Emitter<vscode.TerminalShellIntegrationChangeEvent>());
-	onDidChangeTerminalShellIntegration: Event<vscode.TerminalShellIntegrationChangeEvent> = this._onDidChangeTerminalShellIntegration.event;
-	private _onDidEndTerminalShellExecution = this._register(new Emitter<vscode.TerminalShellExecutionEndEvent>());
-	onDidEndTerminalShellExecution: Event<vscode.TerminalShellExecutionEndEvent> = this._onDidEndTerminalShellExecution.event;
-	private _onDidCloseTerminal = this._register(new Emitter<vscode.Terminal>());
+export class NullTerminalService
+	extends Disposable
+	implements ITerminalService
+{
+	private _onDidWriteTerminalData = this._register(
+		new Emitter<vscode.TerminalDataWriteEvent>(),
+	);
+	onDidWriteTerminalData: Event<vscode.TerminalDataWriteEvent> =
+		this._onDidWriteTerminalData.event;
+	private _onDidChangeTerminalShellIntegration = this._register(
+		new Emitter<vscode.TerminalShellIntegrationChangeEvent>(),
+	);
+	onDidChangeTerminalShellIntegration: Event<vscode.TerminalShellIntegrationChangeEvent> =
+		this._onDidChangeTerminalShellIntegration.event;
+	private _onDidEndTerminalShellExecution = this._register(
+		new Emitter<vscode.TerminalShellExecutionEndEvent>(),
+	);
+	onDidEndTerminalShellExecution: Event<vscode.TerminalShellExecutionEndEvent> =
+		this._onDidEndTerminalShellExecution.event;
+	private _onDidCloseTerminal = this._register(
+		new Emitter<vscode.Terminal>(),
+	);
 	onDidCloseTerminal: Event<vscode.Terminal> = this._onDidCloseTerminal.event;
 
 	declare readonly _serviceBrand: undefined;
@@ -123,22 +152,48 @@ export class NullTerminalService extends Disposable implements ITerminalService 
 		return Promise.resolve([]);
 	}
 
-	getTerminalsWithSessionInfo(): Promise<{ terminal: IKnownTerminal; sessionId: string; shellIntegrationQuality: ShellIntegrationQuality }[]> {
+	getTerminalsWithSessionInfo(): Promise<
+		{
+			terminal: IKnownTerminal;
+			sessionId: string;
+			shellIntegrationQuality: ShellIntegrationQuality;
+		}[]
+	> {
 		throw new Error('Method not implemented.');
 	}
 
-	getToolTerminalForSession(sessionId: string): Promise<{ terminal: IKnownTerminal; shellIntegrationQuality: ShellIntegrationQuality } | undefined> {
+	getToolTerminalForSession(
+		sessionId: string,
+	): Promise<
+		| {
+				terminal: IKnownTerminal;
+				shellIntegrationQuality: ShellIntegrationQuality;
+		  }
+		| undefined
+	> {
 		throw new Error('Method not implemented.');
 	}
 
-	async associateTerminalWithSession(terminal: vscode.Terminal, sessionId: string, shellIntegrationquality: ShellIntegrationQuality): Promise<void> {
+	async associateTerminalWithSession(
+		terminal: vscode.Terminal,
+		sessionId: string,
+		shellIntegrationquality: ShellIntegrationQuality,
+	): Promise<void> {
 		Promise.resolve();
 	}
 
-	createTerminal(name?: string, shellPath?: string, shellArgs?: readonly string[] | string): vscode.Terminal;
+	createTerminal(
+		name?: string,
+		shellPath?: string,
+		shellArgs?: readonly string[] | string,
+	): vscode.Terminal;
 	createTerminal(options: vscode.TerminalOptions): vscode.Terminal;
 	createTerminal(options: vscode.ExtensionTerminalOptions): vscode.Terminal;
-	createTerminal(name?: any, shellPath?: any, shellArgs?: any): vscode.Terminal {
+	createTerminal(
+		name?: any,
+		shellPath?: any,
+		shellArgs?: any,
+	): vscode.Terminal {
 		return {} as vscode.Terminal;
 	}
 
@@ -154,16 +209,32 @@ export class NullTerminalService extends Disposable implements ITerminalService 
 		return Promise.resolve('');
 	}
 
-	getLastCommandForTerminal(terminal: vscode.Terminal): vscode.TerminalExecutedCommand | undefined {
+	getLastCommandForTerminal(
+		terminal: vscode.Terminal,
+	): vscode.TerminalExecutedCommand | undefined {
 		return undefined;
 	}
 
-	contributePath(contributor: string, pathLocation: string, description?: string, prepend?: boolean): void;
-	contributePath(contributor: string, pathLocation: string, description?: { command: string }, prepend?: boolean): void;
-	contributePath(contributor: unknown, pathLocation: unknown, description?: unknown, prepend?: unknown): void {
+	contributePath(
+		contributor: string,
+		pathLocation: string,
+		description?: string,
+		prepend?: boolean,
+	): void;
+	contributePath(
+		contributor: string,
+		pathLocation: string,
+		description?: { command: string },
+		prepend?: boolean,
+	): void;
+	contributePath(
+		contributor: unknown,
+		pathLocation: unknown,
+		description?: unknown,
+		prepend?: unknown,
+	): void {
 		// No-op for null service
 	}
-
 
 	removePathContribution(contributor: string): void {
 		// No-op for null service
@@ -172,8 +243,14 @@ export class NullTerminalService extends Disposable implements ITerminalService 
 export function isTerminalService(thing: any): thing is ITerminalService {
 	return thing && typeof thing.createTerminal === 'function';
 }
-export function isNullTerminalService(thing: any): thing is NullTerminalService {
-	return thing && typeof thing.createTerminal === 'function' && thing.createTerminal() === undefined;
+export function isNullTerminalService(
+	thing: any,
+): thing is NullTerminalService {
+	return (
+		thing &&
+		typeof thing.createTerminal === 'function' &&
+		thing.createTerminal() === undefined
+	);
 }
 
 export interface IKnownTerminal extends vscode.Terminal {

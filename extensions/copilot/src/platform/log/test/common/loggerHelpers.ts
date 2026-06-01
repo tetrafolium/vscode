@@ -19,8 +19,7 @@ export class TestLogTarget implements ILogTarget {
 
 	public hasMessage(level: LogLevel, message: string) {
 		return this._messages.some(
-			m =>
-				m.level === level && m.message === message
+			(m) => m.level === level && m.message === message,
 		);
 	}
 
@@ -28,10 +27,16 @@ export class TestLogTarget implements ILogTarget {
 		if (!this.hasMessage(level, message)) {
 			throw new Error(
 				`Expected message not found: ${LogLevel[level]} ${JSON.stringify(
-					message
+					message,
 				)}. Actual messages: ${this._messages
-					.map(m => '\n- ' + LogLevel[m.level] + ': ' + JSON.stringify(m.message))
-					.join('')}`
+					.map(
+						(m) =>
+							'\n- ' +
+							LogLevel[m.level] +
+							': ' +
+							JSON.stringify(m.message),
+					)
+					.join('')}`,
 			);
 		}
 	}
@@ -41,7 +46,9 @@ export class TestLogTarget implements ILogTarget {
 	 * OutputChannelLog for conversion of log message to string.
 	 */
 	hasMessageMatching(level: LogLevel, test: RegExp) {
-		return this._messages.some(m => m.level === level && test.test(m.message));
+		return this._messages.some(
+			(m) => m.level === level && test.test(m.message),
+		);
 	}
 
 	public isEmpty() {

@@ -35,7 +35,10 @@ export function taggedCacheInterceptor(
 		const countingDispatch: typeof dispatch = (dOpts, dHandler) => {
 			state.networkCalled = true;
 			const h = dOpts.headers as Record<string, string> | undefined;
-			state.conditional = !!(h && (h['if-modified-since'] || h['if-none-match']));
+			state.conditional = !!(
+				h &&
+				(h['if-modified-since'] || h['if-none-match'])
+			);
 			return dispatch(dOpts, dHandler);
 		};
 
@@ -43,15 +46,33 @@ export function taggedCacheInterceptor(
 			get(target, prop, receiver) {
 				if (prop === 'onResponseStart') {
 					return (
-						controller: Parameters<NonNullable<undici.Dispatcher.DispatchHandler['onResponseStart']>>[0],
+						controller: Parameters<
+							NonNullable<
+								undici.Dispatcher.DispatchHandler['onResponseStart']
+							>
+						>[0],
 						statusCode: number,
 						headers: unknown,
 						statusMessage?: string,
 					) => {
 						const status = classify(state, headers);
 						stampStatus(headers, status);
-						const orig = Reflect.get(target, prop, receiver) as undici.Dispatcher.DispatchHandler['onResponseStart'];
-						return orig?.call(target, controller, statusCode, headers as Parameters<NonNullable<undici.Dispatcher.DispatchHandler['onResponseStart']>>[2], statusMessage);
+						const orig = Reflect.get(
+							target,
+							prop,
+							receiver,
+						) as undici.Dispatcher.DispatchHandler['onResponseStart'];
+						return orig?.call(
+							target,
+							controller,
+							statusCode,
+							headers as Parameters<
+								NonNullable<
+									undici.Dispatcher.DispatchHandler['onResponseStart']
+								>
+							>[2],
+							statusMessage,
+						);
 					};
 				}
 				const value = Reflect.get(target, prop, receiver);
@@ -97,6 +118,7 @@ function readHeader(headers: unknown, name: string): string | undefined {
 
 function stampStatus(headers: unknown, status: CacheStatus): void {
 	if (headers && typeof headers === 'object' && !Array.isArray(headers)) {
-		(headers as Record<string, string>)[VSCODE_CACHE_STATUS_HEADER] = status;
+		(headers as Record<string, string>)[VSCODE_CACHE_STATUS_HEADER] =
+			status;
 	}
 }

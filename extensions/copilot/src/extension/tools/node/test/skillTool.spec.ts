@@ -12,7 +12,9 @@ import '../skillTool';
 
 suite('SkillTool', () => {
 	test('is registered and categorized as Core', () => {
-		const isRegistered = ToolRegistry.getTools().some(t => t.toolName === ToolName.Skill);
+		const isRegistered = ToolRegistry.getTools().some(
+			(t) => t.toolName === ToolName.Skill,
+		);
 		expect(isRegistered).toBe(true);
 		expect(toolCategories[ToolName.Skill]).toBe(ToolCategory.Core);
 	});

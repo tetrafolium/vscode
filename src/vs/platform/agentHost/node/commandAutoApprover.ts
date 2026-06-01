@@ -3,13 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Language, Parser, Query, QueryCapture } from '@vscode/tree-sitter-wasm';
-import * as fs from 'fs';
-import { Disposable, toDisposable } from '../../../base/common/lifecycle.js';
-import { FileAccess } from '../../../base/common/network.js';
-import { escapeRegExpCharacters, regExpLeadsToEndlessLoop } from '../../../base/common/strings.js';
-import { URI } from '../../../base/common/uri.js';
-import { ILogService } from '../../log/common/log.js';
+import type {
+	Language,
+	Parser,
+	Query,
+	QueryCapture,
+} from "@vscode/tree-sitter-wasm";
+import * as fs from "fs";
+import { Disposable, toDisposable } from "../../../base/common/lifecycle.js";
+import { FileAccess } from "../../../base/common/network.js";
+import {
+	escapeRegExpCharacters,
+	regExpLeadsToEndlessLoop,
+} from "../../../base/common/strings.js";
+import { URI } from "../../../base/common/uri.js";
+import { ILogService } from "../../log/common/log.js";
 
 /**
  * Redirect destinations that do not result in a write to an arbitrary file
@@ -17,10 +25,10 @@ import { ILogService } from '../../log/common/log.js';
  * the same terminal (`/dev/stdout`, `/dev/stderr`, `/dev/tty`).
  */
 const SAFE_REDIRECT_TARGETS: ReadonlySet<string> = new Set([
-	'/dev/null',
-	'/dev/stdout',
-	'/dev/stderr',
-	'/dev/tty',
+	"/dev/null",
+	"/dev/stdout",
+	"/dev/stderr",
+	"/dev/tty",
 ]);
 
 /**
@@ -33,8 +41,10 @@ function isSafeRedirectDestination(dest: string): boolean {
 	if (cleaned.length === 0) {
 		return false;
 	}
-	if ((cleaned.startsWith(`'`) && cleaned.endsWith(`'`)) ||
-		(cleaned.startsWith('"') && cleaned.endsWith('"'))) {
+	if (
+		(cleaned.startsWith(`'`) && cleaned.endsWith(`'`)) ||
+		(cleaned.startsWith('"') && cleaned.endsWith('"'))
+	) {
 		cleaned = cleaned.slice(1, -1);
 	}
 	// File-descriptor duplication: `&N`, optionally followed by `-` to close.
@@ -53,28 +63,32 @@ function isSafeRedirectDestination(dest: string): boolean {
  *   so the caller may decide whether the target is acceptable.
  */
 type FileRedirectClassification =
-	| { kind: 'read' }
-	| { kind: 'safeWrite' }
-	| { kind: 'unsafeWrite'; dest: string | undefined };
+	| { kind: "read" }
+	| { kind: "safeWrite" }
+	| { kind: "unsafeWrite"; dest: string | undefined };
 
-function classifyFileRedirect(redirectText: string): FileRedirectClassification {
-	if (!redirectText.includes('>')) {
-		return { kind: 'read' };
+function classifyFileRedirect(
+	redirectText: string,
+): FileRedirectClassification {
+	if (!redirectText.includes(">")) {
+		return { kind: "read" };
 	}
 	const destMatch = redirectText.match(/(?:[0-9]+|&)?>>?\|?\s*(.+)$/);
 	if (!destMatch) {
-		return { kind: 'unsafeWrite', dest: undefined };
+		return { kind: "unsafeWrite", dest: undefined };
 	}
 	const rawDest = destMatch[1].trim();
 	if (isSafeRedirectDestination(rawDest)) {
-		return { kind: 'safeWrite' };
+		return { kind: "safeWrite" };
 	}
 	let dest = rawDest;
-	if ((dest.startsWith(`'`) && dest.endsWith(`'`)) ||
-		(dest.startsWith('"') && dest.endsWith('"'))) {
+	if (
+		(dest.startsWith(`'`) && dest.endsWith(`'`)) ||
+		(dest.startsWith('"') && dest.endsWith('"'))
+	) {
 		dest = dest.slice(1, -1);
 	}
-	return { kind: 'unsafeWrite', dest };
+	return { kind: "unsafeWrite", dest };
 }
 
 /**
@@ -83,7 +97,7 @@ function classifyFileRedirect(redirectText: string): FileRedirectClassification 
  * - `denied`: at least one sub-command matches a deny rule
  * - `noMatch`: no rule matched — requires user confirmation
  */
-export type CommandApprovalResult = 'approved' | 'denied' | 'noMatch';
+export type CommandApprovalResult = "approved" | "denied" | "noMatch";
 
 /** Options for {@link CommandAutoApprover.shouldAutoApprove}. */
 export interface IShouldAutoApproveOptions {
@@ -122,7 +136,6 @@ const transientEnvVarRegex = /^[A-Z_][A-Z0-9_]*=/i;
  * confirmation rather than auto-approving based on the command name alone.
  */
 export class CommandAutoApprover extends Disposable {
-
 	private _allowRules: IAutoApproveRule[] | undefined;
 	private _denyRules: IAutoApproveRule[] | undefined;
 	private _parser: Parser | undefined;
@@ -130,9 +143,7 @@ export class CommandAutoApprover extends Disposable {
 	private _queryClass: typeof Query | undefined;
 	private readonly _initPromise: Promise<void>;
 
-	constructor(
-		private readonly _logService: ILogService,
-	) {
+	constructor(private readonly _logService: ILogService) {
 		super();
 		this._initPromise = this._initTreeSitter();
 	}
@@ -154,26 +165,33 @@ export class CommandAutoApprover extends Disposable {
 	 * is consulted for each destination. If every destination is approved by the
 	 * predicate, write redirections do not block auto-approval.
 	 */
-	shouldAutoApprove(commandLine: string, options?: IShouldAutoApproveOptions): CommandApprovalResult {
+	shouldAutoApprove(
+		commandLine: string,
+		options?: IShouldAutoApproveOptions,
+	): CommandApprovalResult {
 		const trimmed = commandLine.trimStart();
 		if (trimmed.length === 0) {
-			return 'approved';
+			return "approved";
 		}
 
 		this._ensureRules();
 
 		const parsed = this._extractSubCommands(trimmed);
 		if (!parsed) {
-			this._logService.trace('[CommandAutoApprover] Tree-sitter unavailable, requiring confirmation');
-			return 'noMatch';
+			this._logService.trace(
+				"[CommandAutoApprover] Tree-sitter unavailable, requiring confirmation",
+			);
+			return "noMatch";
 		}
 
 		const result = this._matchSubCommands(parsed.subCommands);
-		if (result === 'approved' && parsed.unsafeWriteDests.length > 0) {
+		if (result === "approved" && parsed.unsafeWriteDests.length > 0) {
 			for (const dest of parsed.unsafeWriteDests) {
 				if (dest === undefined || !options?.isWriteDestApproved?.(dest)) {
-					this._logService.trace('[CommandAutoApprover] Write redirection to non-approved destination, requiring confirmation');
-					return 'noMatch';
+					this._logService.trace(
+						"[CommandAutoApprover] Write redirection to non-approved destination, requiring confirmation",
+					);
+					return "noMatch";
 				}
 			}
 		}
@@ -185,41 +203,45 @@ export class CommandAutoApprover extends Disposable {
 		for (const subCommand of subCommands) {
 			// Deny transient env var assignments
 			if (transientEnvVarRegex.test(subCommand)) {
-				return 'denied';
+				return "denied";
 			}
 
 			const result = this._matchSingleCommand(subCommand);
-			if (result === 'denied') {
-				return 'denied';
+			if (result === "denied") {
+				return "denied";
 			}
-			if (result !== 'approved') {
+			if (result !== "approved") {
 				allApproved = false;
 			}
 		}
-		return allApproved ? 'approved' : 'noMatch';
+		return allApproved ? "approved" : "noMatch";
 	}
 
 	private _matchSingleCommand(command: string): CommandApprovalResult {
 		// Check deny rules first
 		for (const rule of this._denyRules!) {
 			if (rule.regex.test(command)) {
-				return 'denied';
+				return "denied";
 			}
 		}
 
 		// Then check allow rules
 		for (const rule of this._allowRules!) {
 			if (rule.regex.test(command)) {
-				return 'approved';
+				return "approved";
 			}
 		}
 
-		return 'noMatch';
+		return "noMatch";
 	}
 
 	// ---- Tree-sitter --------------------------------------------------------
 
-	private _extractSubCommands(commandLine: string): { subCommands: string[]; unsafeWriteDests: (string | undefined)[] } | undefined {
+	private _extractSubCommands(
+		commandLine: string,
+	):
+		| { subCommands: string[]; unsafeWriteDests: (string | undefined)[] }
+		| undefined {
 		if (!this._parser || !this._bashLanguage || !this._queryClass) {
 			return undefined;
 		}
@@ -232,52 +254,70 @@ export class CommandAutoApprover extends Disposable {
 			}
 
 			try {
-				const query = new this._queryClass(this._bashLanguage, '(command) @command (file_redirect) @file_redirect (heredoc_redirect) @heredoc_redirect (herestring_redirect) @herestring_redirect');
+				const query = new this._queryClass(
+					this._bashLanguage,
+					"(command) @command (file_redirect) @file_redirect (heredoc_redirect) @heredoc_redirect (herestring_redirect) @herestring_redirect",
+				);
 				const captures: QueryCapture[] = query.captures(tree.rootNode);
 				const subCommands: string[] = [];
 				const unsafeWriteDests: (string | undefined)[] = [];
 				for (const capture of captures) {
-					if (capture.name === 'command') {
+					if (capture.name === "command") {
 						subCommands.push(capture.node.text);
-					} else if (capture.name === 'file_redirect') {
+					} else if (capture.name === "file_redirect") {
 						// Writes to known-safe sinks (e.g. `> /dev/null`) and
 						// file-descriptor duplications (e.g. `2>&1`) are allowed.
 						const cls = classifyFileRedirect(capture.node.text);
-						if (cls.kind === 'unsafeWrite') {
+						if (cls.kind === "unsafeWrite") {
 							unsafeWriteDests.push(cls.dest);
 						}
-					} else if (capture.name === 'heredoc_redirect' || capture.name === 'herestring_redirect') {
+					} else if (
+						capture.name === "heredoc_redirect" ||
+						capture.name === "herestring_redirect"
+					) {
 						// Heredoc/herestring feed data into stdin; they do not write
 						// files, so they are not treated as write redirects here.
 					}
 				}
 				query.delete();
-				return subCommands.length > 0 || unsafeWriteDests.length > 0 ? { subCommands, unsafeWriteDests } : undefined;
+				return subCommands.length > 0 || unsafeWriteDests.length > 0
+					? { subCommands, unsafeWriteDests }
+					: undefined;
 			} finally {
 				tree.delete();
 			}
 		} catch (err) {
-			this._logService.warn('[CommandAutoApprover] Tree-sitter parsing failed', err);
+			this._logService.warn(
+				"[CommandAutoApprover] Tree-sitter parsing failed",
+				err,
+			);
 			return undefined;
 		}
 	}
 
 	private async _initTreeSitter(): Promise<void> {
 		try {
-			const { default: TreeSitter } = (await import('@vscode/tree-sitter-wasm'));
+			const { default: TreeSitter } = await import("@vscode/tree-sitter-wasm");
 
 			if (this._store.isDisposed) {
 				return;
 			}
 
 			// Resolve WASM files from node_modules
-			const moduleRoot = URI.joinPath(FileAccess.asFileUri(''), '..', 'node_modules', '@vscode', 'tree-sitter-wasm', 'wasm');
-			const wasmPath = URI.joinPath(moduleRoot, 'tree-sitter.wasm').fsPath;
+			const moduleRoot = URI.joinPath(
+				FileAccess.asFileUri(""),
+				"..",
+				"node_modules",
+				"@vscode",
+				"tree-sitter-wasm",
+				"wasm",
+			);
+			const wasmPath = URI.joinPath(moduleRoot, "tree-sitter.wasm").fsPath;
 
 			await TreeSitter.Parser.init({
 				locateFile() {
 					return wasmPath;
-				}
+				},
 			});
 
 			if (this._store.isDisposed) {
@@ -285,23 +325,34 @@ export class CommandAutoApprover extends Disposable {
 			}
 
 			const parser = new TreeSitter.Parser();
-			this._register(toDisposable(() => {
-				try {
-					parser.delete();
-				} catch {
-					// WASM memory may already be freed
-				}
-			}));
+			this._register(
+				toDisposable(() => {
+					try {
+						parser.delete();
+					} catch {
+						// WASM memory may already be freed
+					}
+				}),
+			);
 
 			// Load bash grammar
-			const bashWasmPath = URI.joinPath(moduleRoot, 'tree-sitter-bash.wasm').fsPath;
+			const bashWasmPath = URI.joinPath(
+				moduleRoot,
+				"tree-sitter-bash.wasm",
+			).fsPath;
 			const bashWasm = await fs.promises.readFile(bashWasmPath);
 
 			if (this._store.isDisposed) {
 				return;
 			}
 
-			const bashLanguage = await TreeSitter.Language.load(new Uint8Array(bashWasm.buffer, bashWasm.byteOffset, bashWasm.byteLength));
+			const bashLanguage = await TreeSitter.Language.load(
+				new Uint8Array(
+					bashWasm.buffer,
+					bashWasm.byteOffset,
+					bashWasm.byteLength,
+				),
+			);
 
 			if (this._store.isDisposed) {
 				return;
@@ -310,9 +361,14 @@ export class CommandAutoApprover extends Disposable {
 			this._parser = parser;
 			this._bashLanguage = bashLanguage;
 			this._queryClass = TreeSitter.Query;
-			this._logService.info('[CommandAutoApprover] Tree-sitter initialized successfully');
+			this._logService.info(
+				"[CommandAutoApprover] Tree-sitter initialized successfully",
+			);
 		} catch (err) {
-			this._logService.warn('[CommandAutoApprover] Failed to initialize tree-sitter', err);
+			this._logService.warn(
+				"[CommandAutoApprover] Failed to initialize tree-sitter",
+				err,
+			);
 		}
 	}
 
@@ -326,7 +382,9 @@ export class CommandAutoApprover extends Disposable {
 		const allowRules: IAutoApproveRule[] = [];
 		const denyRules: IAutoApproveRule[] = [];
 
-		for (const [key, value] of Object.entries(DEFAULT_TERMINAL_AUTO_APPROVE_RULES)) {
+		for (const [key, value] of Object.entries(
+			DEFAULT_TERMINAL_AUTO_APPROVE_RULES,
+		)) {
 			const regex = convertAutoApproveEntryToRegex(key);
 			if (value === true) {
 				allowRules.push({ regex });
@@ -349,10 +407,10 @@ function convertAutoApproveEntryToRegex(value: string): RegExp {
 	if (regexPattern) {
 		let flags = regexMatch.groups?.flags;
 		if (flags) {
-			flags = flags.replaceAll('g', '');
+			flags = flags.replaceAll("g", "");
 		}
 
-		if (regexPattern === '.*') {
+		if (regexPattern === ".*") {
 			return new RegExp(regexPattern);
 		}
 
@@ -367,17 +425,17 @@ function convertAutoApproveEntryToRegex(value: string): RegExp {
 		}
 	}
 
-	if (value === '') {
+	if (value === "") {
 		return neverMatchRegex;
 	}
 
 	let sanitizedValue: string;
 
 	// Match both path separators if it looks like a path
-	if (value.includes('/') || value.includes('\\')) {
-		let pattern = value.replace(/[/\\]/g, '%%PATH_SEP%%');
+	if (value.includes("/") || value.includes("\\")) {
+		let pattern = value.replace(/[/\\]/g, "%%PATH_SEP%%");
 		pattern = escapeRegExpCharacters(pattern);
-		pattern = pattern.replace(/%%PATH_SEP%%*/g, '[/\\\\]');
+		pattern = pattern.replace(/%%PATH_SEP%%*/g, "[/\\\\]");
 		sanitizedValue = `^(?:\\.[/\\\\])?${pattern}`;
 	} else {
 		sanitizedValue = escapeRegExpCharacters(value);
@@ -422,87 +480,87 @@ const DEFAULT_TERMINAL_AUTO_APPROVE_RULES: Readonly<Record<string, boolean>> = {
 	grep: true,
 
 	// Safe git sub-commands
-	'/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+status\\b/': true,
-	'/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+log\\b/': true,
-	'/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+log\\b.*\\s--output(=|\\s|$)/': false,
-	'/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+show\\b/': true,
-	'/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+diff\\b/': true,
-	'/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+ls-files\\b/': true,
-	'/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+grep\\b/': true,
-	'/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+branch\\b/': true,
-	'/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+branch\\b.*\\s-(d|D|m|M|-delete|-force)\\b/': false,
+	"/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+status\\b/": true,
+	"/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+log\\b/": true,
+	"/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+log\\b.*\\s--output(=|\\s|$)/": false,
+	"/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+show\\b/": true,
+	"/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+diff\\b/": true,
+	"/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+ls-files\\b/": true,
+	"/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+grep\\b/": true,
+	"/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+branch\\b/": true,
+	"/^git(\\s+(-C\\s+\\S+|--no-pager))*\\s+branch\\b.*\\s-(d|D|m|M|-delete|-force)\\b/": false,
 
 	// Docker readonly sub-commands
-	'/^docker\\s+(ps|images|info|version|inspect|logs|top|stats|port|diff|search|events)\\b/': true,
-	'/^docker\\s+(container|image|network|volume|context|system)\\s+(ls|ps|inspect|history|show|df|info)\\b/': true,
-	'/^docker\\s+compose\\s+(ps|ls|top|logs|images|config|version|port|events)\\b/': true,
+	"/^docker\\s+(ps|images|info|version|inspect|logs|top|stats|port|diff|search|events)\\b/": true,
+	"/^docker\\s+(container|image|network|volume|context|system)\\s+(ls|ps|inspect|history|show|df|info)\\b/": true,
+	"/^docker\\s+compose\\s+(ps|ls|top|logs|images|config|version|port|events)\\b/": true,
 
 	// PowerShell
-	'Get-ChildItem': true,
-	'Get-Content': true,
-	'Get-Date': true,
-	'Get-Random': true,
-	'Get-Location': true,
-	'Set-Location': true,
-	'Write-Host': true,
-	'Write-Output': true,
-	'Out-String': true,
-	'Split-Path': true,
-	'Join-Path': true,
-	'Start-Sleep': true,
-	'Where-Object': true,
-	'/^Select-[a-z0-9]/i': true,
-	'/^Measure-[a-z0-9]/i': true,
-	'/^Compare-[a-z0-9]/i': true,
-	'/^Format-[a-z0-9]/i': true,
-	'/^Sort-[a-z0-9]/i': true,
+	"Get-ChildItem": true,
+	"Get-Content": true,
+	"Get-Date": true,
+	"Get-Random": true,
+	"Get-Location": true,
+	"Set-Location": true,
+	"Write-Host": true,
+	"Write-Output": true,
+	"Out-String": true,
+	"Split-Path": true,
+	"Join-Path": true,
+	"Start-Sleep": true,
+	"Where-Object": true,
+	"/^Select-[a-z0-9]/i": true,
+	"/^Measure-[a-z0-9]/i": true,
+	"/^Compare-[a-z0-9]/i": true,
+	"/^Format-[a-z0-9]/i": true,
+	"/^Sort-[a-z0-9]/i": true,
 
 	// Package manager read-only commands
-	'/^npm\\s+(ls|list|outdated|view|info|show|explain|why|root|prefix|bin|search|doctor|fund|repo|bugs|docs|home|help(-search)?)\\b/': true,
-	'/^npm\\s+config\\s+(list|get)\\b/': true,
-	'/^npm\\s+pkg\\s+get\\b/': true,
-	'/^npm\\s+audit$/': true,
-	'/^npm\\s+cache\\s+verify\\b/': true,
-	'/^yarn\\s+(list|outdated|info|why|bin|help|versions)\\b/': true,
-	'/^yarn\\s+licenses\\b/': true,
-	'/^yarn\\s+audit\\b(?!.*\\bfix\\b)/': true,
-	'/^yarn\\s+config\\s+(list|get)\\b/': true,
-	'/^yarn\\s+cache\\s+dir\\b/': true,
-	'/^pnpm\\s+(ls|list|outdated|why|root|bin|doctor)\\b/': true,
-	'/^pnpm\\s+licenses\\b/': true,
-	'/^pnpm\\s+audit\\b(?!.*\\bfix\\b)/': true,
-	'/^pnpm\\s+config\\s+(list|get)\\b/': true,
+	"/^npm\\s+(ls|list|outdated|view|info|show|explain|why|root|prefix|bin|search|doctor|fund|repo|bugs|docs|home|help(-search)?)\\b/": true,
+	"/^npm\\s+config\\s+(list|get)\\b/": true,
+	"/^npm\\s+pkg\\s+get\\b/": true,
+	"/^npm\\s+audit$/": true,
+	"/^npm\\s+cache\\s+verify\\b/": true,
+	"/^yarn\\s+(list|outdated|info|why|bin|help|versions)\\b/": true,
+	"/^yarn\\s+licenses\\b/": true,
+	"/^yarn\\s+audit\\b(?!.*\\bfix\\b)/": true,
+	"/^yarn\\s+config\\s+(list|get)\\b/": true,
+	"/^yarn\\s+cache\\s+dir\\b/": true,
+	"/^pnpm\\s+(ls|list|outdated|why|root|bin|doctor)\\b/": true,
+	"/^pnpm\\s+licenses\\b/": true,
+	"/^pnpm\\s+audit\\b(?!.*\\bfix\\b)/": true,
+	"/^pnpm\\s+config\\s+(list|get)\\b/": true,
 
 	// Safe lockfile-only installs
-	'npm ci': true,
-	'/^yarn\\s+install\\s+--frozen-lockfile\\b/': true,
-	'/^pnpm\\s+install\\s+--frozen-lockfile\\b/': true,
+	"npm ci": true,
+	"/^yarn\\s+install\\s+--frozen-lockfile\\b/": true,
+	"/^pnpm\\s+install\\s+--frozen-lockfile\\b/": true,
 
 	// Safe commands with dangerous arg blocking
 	column: true,
-	'/^column\\b.*\\s-c\\s+[0-9]{4,}/': false,
+	"/^column\\b.*\\s-c\\s+[0-9]{4,}/": false,
 	date: true,
-	'/^date\\b.*\\s(-s|--set)\\b/': false,
+	"/^date\\b.*\\s(-s|--set)\\b/": false,
 	find: true,
-	'/^find\\b.*\\s-(delete|exec|execdir|fprint|fprintf|fls|ok|okdir)\\b/': false,
+	"/^find\\b.*\\s-(delete|exec|execdir|fprint|fprintf|fls|ok|okdir)\\b/": false,
 	rg: true,
-	'/^rg\\b.*\\s(--pre|--hostname-bin)\\b/': false,
+	"/^rg\\b.*\\s(--pre|--hostname-bin)\\b/": false,
 	sed: true,
-	'/^sed\\b.*\\s(-[a-zA-Z]*(e|f)[a-zA-Z]*|--expression|--file)\\b/': false,
-	'/^sed\\b.*s\\/.*\\/.*\\/[ew]/': false,
-	'/^sed\\b.*;W/': false,
+	"/^sed\\b.*\\s(-[a-zA-Z]*(e|f)[a-zA-Z]*|--expression|--file)\\b/": false,
+	"/^sed\\b.*s\\/.*\\/.*\\/[ew]/": false,
+	"/^sed\\b.*;W/": false,
 	sort: true,
-	'/^sort\\b.*\\s-(o|S)\\b/': false,
+	"/^sort\\b.*\\s-(o|S)\\b/": false,
 	tree: true,
-	'/^tree\\b.*\\s-o\\b/': false,
-	'/^xxd$/': true,
-	'/^xxd\\b(\\s+-\\S+)*\\s+[^-\\s]\\S*$/': true,
+	"/^tree\\b.*\\s-o\\b/": false,
+	"/^xxd$/": true,
+	"/^xxd\\b(\\s+-\\S+)*\\s+[^-\\s]\\S*$/": true,
 
 	// Dangerous commands
 	rm: false,
 	rmdir: false,
 	del: false,
-	'Remove-Item': false,
+	"Remove-Item": false,
 	ri: false,
 	rd: false,
 	erase: false,
@@ -510,24 +568,24 @@ const DEFAULT_TERMINAL_AUTO_APPROVE_RULES: Readonly<Record<string, boolean>> = {
 	kill: false,
 	ps: false,
 	top: false,
-	'Stop-Process': false,
+	"Stop-Process": false,
 	spps: false,
 	taskkill: false,
-	'taskkill.exe': false,
+	"taskkill.exe": false,
 	curl: false,
 	wget: false,
-	'Invoke-RestMethod': false,
-	'Invoke-WebRequest': false,
+	"Invoke-RestMethod": false,
+	"Invoke-WebRequest": false,
 	irm: false,
 	iwr: false,
 	chmod: false,
 	chown: false,
-	'Set-ItemProperty': false,
+	"Set-ItemProperty": false,
 	sp: false,
-	'Set-Acl': false,
+	"Set-Acl": false,
 	jq: false,
 	xargs: false,
 	eval: false,
-	'Invoke-Expression': false,
+	"Invoke-Expression": false,
 	iex: false,
 };

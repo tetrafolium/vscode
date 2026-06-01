@@ -89,9 +89,9 @@ declare namespace Fig {
 		| string
 		| Subcommand
 		| ((
-			token: string,
-			executeCommand: ExecuteCommandFunction
-		) => Promise<SpecLocation | SpecLocation[] | Subcommand>);
+				token: string,
+				executeCommand: ExecuteCommandFunction,
+		  ) => Promise<SpecLocation | SpecLocation[] | Subcommand>);
 
 	/**
 	 * The type of a suggestion object.
@@ -130,7 +130,9 @@ declare namespace Fig {
 	 * `v26`
 	 *
 	 */
-	type GetVersionCommand = (executeCommand: ExecuteCommandFunction) => Promise<string>;
+	type GetVersionCommand = (
+		executeCommand: ExecuteCommandFunction,
+	) => Promise<string>;
 
 	/**
 	 * Context about a current shell session.
@@ -235,9 +237,9 @@ declare namespace Fig {
 		| Subcommand
 		| ((version?: string) => Subcommand)
 		| ((version?: string) => {
-			versionedSpecPath: string;
-			version?: string;
-		});
+				versionedSpecPath: string;
+				version?: string;
+		  });
 
 	type ExecuteCommandInput = {
 		/**
@@ -285,7 +287,9 @@ declare namespace Fig {
 	 * An async function to execute a command
 	 * @returns The output of the command
 	 */
-	type ExecuteCommandFunction = (args: ExecuteCommandInput) => Promise<ExecuteCommandOutput>;
+	type ExecuteCommandFunction = (
+		args: ExecuteCommandInput,
+	) => Promise<ExecuteCommandOutput>;
 
 	type CacheMaxAge = {
 		strategy: "max-age";
@@ -666,14 +670,19 @@ declare namespace Fig {
 		 *  },
 		 * ```
 		 */
-		generateSpec?: (tokens: string[], executeCommand: ExecuteCommandFunction) => Promise<Spec | undefined>;
+		generateSpec?: (
+			tokens: string[],
+			executeCommand: ExecuteCommandFunction,
+		) => Promise<Spec | undefined>;
 
 		/**
 		 * Generating a spec can be expensive, but due to current guarantees they are not cached.
 		 * This function generates a cache key which is used to cache the result of generateSpec.
 		 * If `undefined` is returned, the cache will not be used.
 		 */
-		generateSpecCacheKey?: Function<{ tokens: string[] }, string | undefined> | string;
+		generateSpecCacheKey?:
+			| Function<{ tokens: string[] }, string | undefined>
+			| string;
 
 		/**
 		 * Configure how the autocomplete engine will map the raw tokens to a given completion spec.
@@ -1105,7 +1114,9 @@ declare namespace Fig {
 		 * Note: In both cases, the alias function is only used to expand a given alias NOT to generate the list of aliases. To generate a list of aliases, scripts etc, use a generator.
 		 */
 		parserDirectives?: {
-			alias?: string | ((token: string, exec: ExecuteCommandFunction) => Promise<string>);
+			alias?:
+				| string
+				| ((token: string, exec: ExecuteCommandFunction) => Promise<string>);
 		};
 	}
 
@@ -1156,10 +1167,10 @@ declare namespace Fig {
 		 * `git checkout <branch>` takes one argument which is a git branch. Its arg object has a generator with a `script: ["git", "branch"]"`. The stdout output of this shell command is then passed into the postProcess function to generate the final suggestions.
 		 */
 		script?:
-		| string[]
-		| Function<string[], string[] | undefined> // <-- VS Code edit to make results correct
-		| ExecuteCommandInput
-		| Function<string[], ExecuteCommandInput>;
+			| string[]
+			| Function<string[], string[] | undefined> // <-- VS Code edit to make results correct
+			| ExecuteCommandInput
+			| Function<string[], ExecuteCommandInput>;
 		/**
 		 * Set the execution timeout of the command specified in the `script` prop.
 		 * @defaultValue 5000
@@ -1174,7 +1185,10 @@ declare namespace Fig {
 		 * @returns An array of `Suggestion` objects.
 		 *
 		 */
-		postProcess?: (out: string, tokens: string[]) => (Suggestion | null)[] | undefined; // <-- VS Code edit to make results correct
+		postProcess?: (
+			out: string,
+			tokens: string[],
+		) => (Suggestion | null)[] | undefined; // <-- VS Code edit to make results correct
 		/**
 		 * Syntactic sugar for `postProcess` function
 		 *
@@ -1278,7 +1292,7 @@ declare namespace Fig {
 		custom?: (
 			tokens: string[],
 			executeCommand: ExecuteCommandFunction,
-			generatorContext: GeneratorContext
+			generatorContext: GeneratorContext,
 		) => Promise<(Suggestion | null)[] | undefined>; // <-- VS Code edit to make results correct
 		/**
 		 *

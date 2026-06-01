@@ -3,33 +3,53 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { Emitter, Event } from '../../../../../../base/common/event.js';
-import { DisposableStore, IDisposable } from '../../../../../../base/common/lifecycle.js';
-import { OS, OperatingSystem } from '../../../../../../base/common/platform.js';
-import { observableValue } from '../../../../../../base/common/observable.js';
-import { mock } from '../../../../../../base/test/common/mock.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
-import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { AgentHostCustomTerminalToolEnabledSettingId, AgentHostEnabledSettingId, IAgentHostService } from '../../../../../../platform/agentHost/common/agentService.js';
-import { AgentHostConfigKey } from '../../../../../../platform/agentHost/common/agentHostCustomizationConfig.js';
-import { ActionType } from '../../../../../../platform/agentHost/common/state/protocol/actions.js';
-import { IAgentSubscription } from '../../../../../../platform/agentHost/common/state/agentSubscription.js';
-import type { ActionEnvelope, IRootConfigChangedAction, INotification, SessionAction, TerminalAction } from '../../../../../../platform/agentHost/common/state/sessionActions.js';
-import type { RootState } from '../../../../../../platform/agentHost/common/state/sessionState.js';
-import { TerminalSettingId, type ITerminalProfile } from '../../../../../../platform/terminal/common/terminal.js';
-import { ITerminalProfileResolverService, ITerminalProfileService, type IShellLaunchConfigResolveOptions } from '../../../../terminal/common/terminal.js';
-import { IAgentHostTerminalService } from '../../../../terminal/browser/agentHostTerminalService.js';
-import { AgentHostTerminalContribution } from '../../../browser/agentSessions/agentHost/agentHostTerminalContribution.js';
+import assert from "assert";
+import { Emitter, Event } from "../../../../../../base/common/event.js";
+import {
+	DisposableStore,
+	IDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import { OS, OperatingSystem } from "../../../../../../base/common/platform.js";
+import { observableValue } from "../../../../../../base/common/observable.js";
+import { mock } from "../../../../../../base/test/common/mock.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import { TestConfigurationService } from "../../../../../../platform/configuration/test/common/testConfigurationService.js";
+import { IConfigurationService } from "../../../../../../platform/configuration/common/configuration.js";
+import { TestInstantiationService } from "../../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import {
+	AgentHostCustomTerminalToolEnabledSettingId,
+	AgentHostEnabledSettingId,
+	IAgentHostService,
+} from "../../../../../../platform/agentHost/common/agentService.js";
+import { AgentHostConfigKey } from "../../../../../../platform/agentHost/common/agentHostCustomizationConfig.js";
+import { ActionType } from "../../../../../../platform/agentHost/common/state/protocol/actions.js";
+import { IAgentSubscription } from "../../../../../../platform/agentHost/common/state/agentSubscription.js";
+import type {
+	ActionEnvelope,
+	IRootConfigChangedAction,
+	INotification,
+	SessionAction,
+	TerminalAction,
+} from "../../../../../../platform/agentHost/common/state/sessionActions.js";
+import type { RootState } from "../../../../../../platform/agentHost/common/state/sessionState.js";
+import {
+	TerminalSettingId,
+	type ITerminalProfile,
+} from "../../../../../../platform/terminal/common/terminal.js";
+import {
+	ITerminalProfileResolverService,
+	ITerminalProfileService,
+	type IShellLaunchConfigResolveOptions,
+} from "../../../../terminal/common/terminal.js";
+import { IAgentHostTerminalService } from "../../../../terminal/browser/agentHostTerminalService.js";
+import { AgentHostTerminalContribution } from "../../../browser/agentSessions/agentHost/agentHostTerminalContribution.js";
 
 // ---- Mock agent host service (minimal — only what the contribution touches) ----
 
 class MockAgentHostService extends mock<IAgentHostService>() {
 	declare readonly _serviceBrand: undefined;
 
-	override readonly clientId = 'test-window-1';
+	override readonly clientId = "test-window-1";
 
 	private readonly _onAgentHostStart = new Emitter<void>();
 	override readonly onAgentHostStart = this._onAgentHostStart.event;
@@ -40,9 +60,15 @@ class MockAgentHostService extends mock<IAgentHostService>() {
 	private readonly _onDidNotification = new Emitter<INotification>();
 	override readonly onDidNotification = this._onDidNotification.event;
 
-	public dispatchedActions: { channel: string; action: SessionAction | TerminalAction | IRootConfigChangedAction }[] = [];
+	public dispatchedActions: {
+		channel: string;
+		action: SessionAction | TerminalAction | IRootConfigChangedAction;
+	}[] = [];
 
-	override dispatch(channel: string, action: SessionAction | TerminalAction | IRootConfigChangedAction): void {
+	override dispatch(
+		channel: string,
+		action: SessionAction | TerminalAction | IRootConfigChangedAction,
+	): void {
 		this.dispatchedActions.push({ channel, action });
 	}
 
@@ -52,8 +78,12 @@ class MockAgentHostService extends mock<IAgentHostService>() {
 	override readonly rootState: IAgentSubscription<RootState> = (() => {
 		const self = this;
 		return {
-			get value() { return self._rootStateValue; },
-			get verifiedValue() { return self._rootStateValue; },
+			get value() {
+				return self._rootStateValue;
+			},
+			get verifiedValue() {
+				return self._rootStateValue;
+			},
 			onDidChange: this._rootStateOnDidChange.event,
 			onWillApplyAction: Event.None,
 			onDidApplyAction: Event.None,
@@ -84,14 +114,16 @@ class MockTerminalProfileResolverService extends mock<ITerminalProfileResolverSe
 	declare readonly _serviceBrand: undefined;
 
 	public profile: ITerminalProfile | Error = {
-		profileName: 'Bash',
-		path: '/bin/bash',
+		profileName: "Bash",
+		path: "/bin/bash",
 		args: [],
 		isDefault: true,
 	};
 	public lastOptions: IShellLaunchConfigResolveOptions | undefined;
 
-	override async getDefaultProfile(options: IShellLaunchConfigResolveOptions): Promise<ITerminalProfile> {
+	override async getDefaultProfile(
+		options: IShellLaunchConfigResolveOptions,
+	): Promise<ITerminalProfile> {
 		this.lastOptions = options;
 		if (this.profile instanceof Error) {
 			throw this.profile;
@@ -105,8 +137,11 @@ class MockTerminalProfileResolverService extends mock<ITerminalProfileResolverSe
 class MockTerminalProfileService extends mock<ITerminalProfileService>() {
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidChangeAvailableProfiles = new Emitter<ITerminalProfile[]>();
-	override readonly onDidChangeAvailableProfiles = this._onDidChangeAvailableProfiles.event;
+	private readonly _onDidChangeAvailableProfiles = new Emitter<
+		ITerminalProfile[]
+	>();
+	override readonly onDidChangeAvailableProfiles =
+		this._onDidChangeAvailableProfiles.event;
 
 	fireAvailableProfilesChanged(): void {
 		this._onDidChangeAvailableProfiles.fire([]);
@@ -119,11 +154,16 @@ class MockTerminalProfileService extends mock<ITerminalProfileService>() {
 
 // ---- Helpers ----
 
-function makeRootStateWithSchema(properties: Record<string, unknown>): RootState {
+function makeRootStateWithSchema(
+	properties: Record<string, unknown>,
+): RootState {
 	return {
 		agents: [],
 		config: {
-			schema: { type: 'object', properties: properties as Record<string, never> },
+			schema: {
+				type: "object",
+				properties: properties as Record<string, never>,
+			},
 			values: {},
 		},
 	};
@@ -131,7 +171,10 @@ function makeRootStateWithSchema(properties: Record<string, unknown>): RootState
 
 function rootStateWithDefaultShellKey(): RootState {
 	return makeRootStateWithSchema({
-		[AgentHostConfigKey.DefaultShell]: { type: 'string', title: 'Default Shell' },
+		[AgentHostConfigKey.DefaultShell]: {
+			type: "string",
+			title: "Default Shell",
+		},
 	});
 }
 
@@ -139,13 +182,19 @@ function rootStateWithoutDefaultShellKey(): RootState {
 	return makeRootStateWithSchema({
 		// Schema published by an older / third-party host that doesn't know
 		// about defaultShell.
-		[AgentHostConfigKey.Customizations]: { type: 'array', title: 'Customizations' },
+		[AgentHostConfigKey.Customizations]: {
+			type: "array",
+			title: "Customizations",
+		},
 	});
 }
 
 function rootStateWithDisableCustomTerminalToolKey(): RootState {
 	return makeRootStateWithSchema({
-		[AgentHostConfigKey.DisableCustomTerminalTool]: { type: 'boolean', title: 'Use SDK Terminal Tool' },
+		[AgentHostConfigKey.DisableCustomTerminalTool]: {
+			type: "boolean",
+			title: "Use SDK Terminal Tool",
+		},
 	});
 }
 
@@ -157,7 +206,10 @@ interface ITestSetup {
 	configurationService: TestConfigurationService;
 }
 
-function setup(disposables: DisposableStore, agentHostEnabled: boolean = true): ITestSetup {
+function setup(
+	disposables: DisposableStore,
+	agentHostEnabled: boolean = true,
+): ITestSetup {
 	const instantiationService = disposables.add(new TestInstantiationService());
 	const agentHostService = new MockAgentHostService();
 	disposables.add({ dispose: () => agentHostService.dispose() });
@@ -174,12 +226,20 @@ function setup(disposables: DisposableStore, agentHostEnabled: boolean = true): 
 	instantiationService.stub(ITerminalProfileResolverService, resolver);
 	instantiationService.stub(ITerminalProfileService, profileService);
 	instantiationService.stub(IAgentHostTerminalService, {
-		registerEntry: (): IDisposable => ({ dispose() { } }),
-		profiles: observableValue('test', []),
+		registerEntry: (): IDisposable => ({ dispose() {} }),
+		profiles: observableValue("test", []),
 	});
 
-	const contribution = disposables.add(instantiationService.createInstance(AgentHostTerminalContribution));
-	return { contribution, agentHostService, resolver, profileService, configurationService };
+	const contribution = disposables.add(
+		instantiationService.createInstance(AgentHostTerminalContribution),
+	);
+	return {
+		contribution,
+		agentHostService,
+		resolver,
+		profileService,
+		configurationService,
+	};
 }
 
 /** Wait for any in-flight `_pushDefaultShell` promises to settle. */
@@ -192,14 +252,13 @@ async function flush(): Promise<void> {
 
 // =============================================================================
 
-suite('AgentHostTerminalContribution', () => {
-
+suite("AgentHostTerminalContribution", () => {
 	const disposables = new DisposableStore();
 
 	teardown(() => disposables.clear());
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('does not dispatch when chat.agentHost.enabled is false', async () => {
+	test("does not dispatch when chat.agentHost.enabled is false", async () => {
 		const { agentHostService } = setup(disposables, /*agentHostEnabled*/ false);
 
 		// Even with a fully-hydrated rootState, nothing should fire because
@@ -211,7 +270,7 @@ suite('AgentHostTerminalContribution', () => {
 		assert.deepStrictEqual(agentHostService.dispatchedActions, []);
 	});
 
-	test('does not dispatch while rootState has not hydrated', async () => {
+	test("does not dispatch while rootState has not hydrated", async () => {
 		const { agentHostService } = setup(disposables);
 
 		// rootState.value is undefined — schema gate bails before dispatch.
@@ -221,7 +280,7 @@ suite('AgentHostTerminalContribution', () => {
 		assert.deepStrictEqual(agentHostService.dispatchedActions, []);
 	});
 
-	test('does not dispatch when host schema does not advertise defaultShell', async () => {
+	test("does not dispatch when host schema does not advertise defaultShell", async () => {
 		const { agentHostService } = setup(disposables);
 
 		agentHostService.setRootState(rootStateWithoutDefaultShellKey());
@@ -231,9 +290,14 @@ suite('AgentHostTerminalContribution', () => {
 		assert.deepStrictEqual(agentHostService.dispatchedActions, []);
 	});
 
-	test('dispatches RootConfigChanged with resolved shell path when host schema includes defaultShell', async () => {
+	test("dispatches RootConfigChanged with resolved shell path when host schema includes defaultShell", async () => {
 		const { agentHostService, resolver } = setup(disposables);
-		resolver.profile = { profileName: 'Git Bash', path: '/usr/bin/bash', args: [], isDefault: true };
+		resolver.profile = {
+			profileName: "Git Bash",
+			path: "/usr/bin/bash",
+			args: [],
+			isDefault: true,
+		};
 
 		agentHostService.setRootState(rootStateWithDefaultShellKey());
 		await flush();
@@ -244,7 +308,7 @@ suite('AgentHostTerminalContribution', () => {
 		const action = agentHostService.dispatchedActions[0].action;
 		assert.strictEqual(action.type, ActionType.RootConfigChanged);
 		assert.deepStrictEqual((action as IRootConfigChangedAction).config, {
-			[AgentHostConfigKey.DefaultShell]: '/usr/bin/bash',
+			[AgentHostConfigKey.DefaultShell]: "/usr/bin/bash",
 		});
 
 		// Resolver should have been called with the agent-host-shell flag.
@@ -252,7 +316,7 @@ suite('AgentHostTerminalContribution', () => {
 		assert.strictEqual(resolver.lastOptions?.os, OS);
 	});
 
-	test('retries the push when rootState hydrates after agentHostStart', async () => {
+	test("retries the push when rootState hydrates after agentHostStart", async () => {
 		const { agentHostService } = setup(disposables);
 
 		// Initial start happens before rootState hydration — push is gated.
@@ -267,31 +331,47 @@ suite('AgentHostTerminalContribution', () => {
 		assert.strictEqual(agentHostService.dispatchedActions.length, 1);
 	});
 
-	test('re-dispatches when an agent-host-shell-dependent setting changes', async () => {
-		const { agentHostService, resolver, configurationService } = setup(disposables);
+	test("re-dispatches when an agent-host-shell-dependent setting changes", async () => {
+		const { agentHostService, resolver, configurationService } =
+			setup(disposables);
 		agentHostService.setRootState(rootStateWithDefaultShellKey());
 		await flush();
 		const initialCount = agentHostService.dispatchedActions.length;
 		assert.strictEqual(initialCount, 1);
 
 		// User changes their agent-host profile setting.
-		resolver.profile = { profileName: 'PowerShell', path: '/usr/bin/pwsh', args: [], isDefault: true };
+		resolver.profile = {
+			profileName: "PowerShell",
+			path: "/usr/bin/pwsh",
+			args: [],
+			isDefault: true,
+		};
 		configurationService.onDidChangeConfigurationEmitter.fire({
 			affectedKeys: new Set([TerminalSettingId.AgentHostProfileLinux]),
-			affectsConfiguration: (key: string) => key === TerminalSettingId.AgentHostProfileLinux,
+			affectsConfiguration: (key: string) =>
+				key === TerminalSettingId.AgentHostProfileLinux,
 			source: 1, // ConfigurationTarget.USER
-			change: { keys: [TerminalSettingId.AgentHostProfileLinux], overrides: [] },
+			change: {
+				keys: [TerminalSettingId.AgentHostProfileLinux],
+				overrides: [],
+			},
 		});
 		await flush();
 
-		assert.strictEqual(agentHostService.dispatchedActions.length, initialCount + 1);
-		const last = agentHostService.dispatchedActions[agentHostService.dispatchedActions.length - 1].action;
+		assert.strictEqual(
+			agentHostService.dispatchedActions.length,
+			initialCount + 1,
+		);
+		const last =
+			agentHostService.dispatchedActions[
+				agentHostService.dispatchedActions.length - 1
+			].action;
 		assert.deepStrictEqual((last as IRootConfigChangedAction).config, {
-			[AgentHostConfigKey.DefaultShell]: '/usr/bin/pwsh',
+			[AgentHostConfigKey.DefaultShell]: "/usr/bin/pwsh",
 		});
 	});
 
-	test('re-dispatches when terminal profiles become available', async () => {
+	test("re-dispatches when terminal profiles become available", async () => {
 		const { agentHostService, profileService } = setup(disposables);
 		agentHostService.setRootState(rootStateWithDefaultShellKey());
 		await flush();
@@ -301,12 +381,20 @@ suite('AgentHostTerminalContribution', () => {
 		profileService.fireAvailableProfilesChanged();
 		await flush();
 
-		assert.strictEqual(agentHostService.dispatchedActions.length, initialCount + 1);
+		assert.strictEqual(
+			agentHostService.dispatchedActions.length,
+			initialCount + 1,
+		);
 	});
 
-	test('skips dispatch when the resolver returns a profile without a path', async () => {
+	test("skips dispatch when the resolver returns a profile without a path", async () => {
 		const { agentHostService, resolver } = setup(disposables);
-		resolver.profile = { profileName: 'Empty', path: '', args: [], isDefault: false };
+		resolver.profile = {
+			profileName: "Empty",
+			path: "",
+			args: [],
+			isDefault: false,
+		};
 
 		agentHostService.setRootState(rootStateWithDefaultShellKey());
 		await flush();
@@ -314,9 +402,9 @@ suite('AgentHostTerminalContribution', () => {
 		assert.deepStrictEqual(agentHostService.dispatchedActions, []);
 	});
 
-	test('skips dispatch when the resolver throws', async () => {
+	test("skips dispatch when the resolver throws", async () => {
 		const { agentHostService, resolver } = setup(disposables);
-		resolver.profile = new Error('resolver failed');
+		resolver.profile = new Error("resolver failed");
 
 		agentHostService.setRootState(rootStateWithDefaultShellKey());
 		await flush();
@@ -324,7 +412,7 @@ suite('AgentHostTerminalContribution', () => {
 		assert.deepStrictEqual(agentHostService.dispatchedActions, []);
 	});
 
-	test('uses the local OS when resolving the profile', async () => {
+	test("uses the local OS when resolving the profile", async () => {
 		const { agentHostService, resolver } = setup(disposables);
 		agentHostService.setRootState(rootStateWithDefaultShellKey());
 		await flush();
@@ -333,51 +421,76 @@ suite('AgentHostTerminalContribution', () => {
 		assert.strictEqual(resolver.lastOptions?.remoteAuthority, undefined);
 	});
 
-	test('dispatches inverted disableCustomTerminalTool from the VS Code setting', async () => {
+	test("dispatches inverted disableCustomTerminalTool from the VS Code setting", async () => {
 		const { agentHostService, configurationService } = setup(disposables);
-		configurationService.setUserConfiguration(AgentHostCustomTerminalToolEnabledSettingId, false);
+		configurationService.setUserConfiguration(
+			AgentHostCustomTerminalToolEnabledSettingId,
+			false,
+		);
 
 		agentHostService.setRootState(rootStateWithDisableCustomTerminalToolKey());
 		await flush();
 
 		assert.strictEqual(agentHostService.dispatchedActions.length, 1);
-		assert.deepStrictEqual((agentHostService.dispatchedActions[0].action as IRootConfigChangedAction).config, {
-			[AgentHostConfigKey.DisableCustomTerminalTool]: true,
-		});
+		assert.deepStrictEqual(
+			(agentHostService.dispatchedActions[0].action as IRootConfigChangedAction)
+				.config,
+			{
+				[AgentHostConfigKey.DisableCustomTerminalTool]: true,
+			},
+		);
 	});
 
-	test('dispatches disableCustomTerminalTool false by default', async () => {
+	test("dispatches disableCustomTerminalTool false by default", async () => {
 		const { agentHostService } = setup(disposables);
 
 		agentHostService.setRootState(rootStateWithDisableCustomTerminalToolKey());
 		await flush();
 
 		assert.strictEqual(agentHostService.dispatchedActions.length, 1);
-		assert.deepStrictEqual((agentHostService.dispatchedActions[0].action as IRootConfigChangedAction).config, {
-			[AgentHostConfigKey.DisableCustomTerminalTool]: false,
-		});
+		assert.deepStrictEqual(
+			(agentHostService.dispatchedActions[0].action as IRootConfigChangedAction)
+				.config,
+			{
+				[AgentHostConfigKey.DisableCustomTerminalTool]: false,
+			},
+		);
 	});
 
-	test('re-dispatches disableCustomTerminalTool when the enabled setting changes', async () => {
+	test("re-dispatches disableCustomTerminalTool when the enabled setting changes", async () => {
 		const { agentHostService, configurationService } = setup(disposables);
 		const rootState = rootStateWithDisableCustomTerminalToolKey();
-		rootState.config!.values[AgentHostConfigKey.DisableCustomTerminalTool] = false;
+		rootState.config!.values[AgentHostConfigKey.DisableCustomTerminalTool] =
+			false;
 		agentHostService.setRootState(rootState);
 		await flush();
-		assert.deepStrictEqual(agentHostService.dispatchedActions as readonly unknown[], []);
+		assert.deepStrictEqual(
+			agentHostService.dispatchedActions as readonly unknown[],
+			[],
+		);
 
-		configurationService.setUserConfiguration(AgentHostCustomTerminalToolEnabledSettingId, false);
+		configurationService.setUserConfiguration(
+			AgentHostCustomTerminalToolEnabledSettingId,
+			false,
+		);
 		configurationService.onDidChangeConfigurationEmitter.fire({
 			affectedKeys: new Set([AgentHostCustomTerminalToolEnabledSettingId]),
-			affectsConfiguration: (key: string) => key === AgentHostCustomTerminalToolEnabledSettingId,
+			affectsConfiguration: (key: string) =>
+				key === AgentHostCustomTerminalToolEnabledSettingId,
 			source: 1, // ConfigurationTarget.USER
-			change: { keys: [AgentHostCustomTerminalToolEnabledSettingId], overrides: [] },
+			change: {
+				keys: [AgentHostCustomTerminalToolEnabledSettingId],
+				overrides: [],
+			},
 		});
 
 		assert.strictEqual(agentHostService.dispatchedActions.length, 1);
-		assert.deepStrictEqual((agentHostService.dispatchedActions[0].action as IRootConfigChangedAction).config, {
-			[AgentHostConfigKey.DisableCustomTerminalTool]: true,
-		});
+		assert.deepStrictEqual(
+			(agentHostService.dispatchedActions[0].action as IRootConfigChangedAction)
+				.config,
+			{
+				[AgentHostConfigKey.DisableCustomTerminalTool]: true,
+			},
+		);
 	});
 });
-

@@ -13,4 +13,3 @@ export function getAvailableNodeId(): NodeId {
 }
 
 export type NodeCostFunction = (node: IVirtualNode) => number;
-

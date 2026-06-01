@@ -4,7 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { assertNever } from '../../../../util/vs/base/common/assert';
-import { IValidator, vBoolean, vEnum, vNumber, vObj, vRequired, vString, vUndefined, vUnion } from '../../../configuration/common/validator';
+import {
+	IValidator,
+	vBoolean,
+	vEnum,
+	vNumber,
+	vObj,
+	vRequired,
+	vString,
+	vUndefined,
+	vUnion,
+} from '../../../configuration/common/validator';
 
 export enum IncludeLineNumbersOption {
 	WithSpaceAfter = 'withSpaceAfter',
@@ -20,7 +30,10 @@ export enum RecentFileClippingStrategy {
 }
 
 export namespace RecentFileClippingStrategy {
-	export const VALIDATOR = vEnum(RecentFileClippingStrategy.AroundEditRange, RecentFileClippingStrategy.Proportional);
+	export const VALIDATOR = vEnum(
+		RecentFileClippingStrategy.AroundEditRange,
+		RecentFileClippingStrategy.Proportional,
+	);
 }
 
 export type RecentlyViewedDocumentsOptions = {
@@ -32,12 +45,21 @@ export type RecentlyViewedDocumentsOptions = {
 };
 
 export namespace RecentlyViewedDocumentsOptions {
-	export const VALIDATOR: IValidator<Partial<RecentlyViewedDocumentsOptions>> = vObj({
-		'nDocuments': vNumber(),
-		'maxTokens': vNumber(),
-		'includeViewedFiles': vBoolean(),
-		'includeLineNumbers': vEnum(IncludeLineNumbersOption.WithSpaceAfter, IncludeLineNumbersOption.WithoutSpace, IncludeLineNumbersOption.None),
-		'clippingStrategy': vEnum(RecentFileClippingStrategy.AroundEditRange, RecentFileClippingStrategy.Proportional),
+	export const VALIDATOR: IValidator<
+		Partial<RecentlyViewedDocumentsOptions>
+	> = vObj({
+		nDocuments: vNumber(),
+		maxTokens: vNumber(),
+		includeViewedFiles: vBoolean(),
+		includeLineNumbers: vEnum(
+			IncludeLineNumbersOption.WithSpaceAfter,
+			IncludeLineNumbersOption.WithoutSpace,
+			IncludeLineNumbersOption.None,
+		),
+		clippingStrategy: vEnum(
+			RecentFileClippingStrategy.AroundEditRange,
+			RecentFileClippingStrategy.Proportional,
+		),
 	});
 }
 
@@ -60,8 +82,8 @@ export type NeighborFilesOptions = {
 
 export namespace NeighborFilesOptions {
 	export const VALIDATOR: IValidator<Partial<NeighborFilesOptions>> = vObj({
-		'enabled': vBoolean(),
-		'maxTokens': vNumber(),
+		enabled: vBoolean(),
+		maxTokens: vNumber(),
 	});
 }
 
@@ -137,11 +159,15 @@ export type CurrentFileOptions = {
 
 export namespace CurrentFileOptions {
 	export const VALIDATOR: IValidator<Partial<CurrentFileOptions>> = vObj({
-		'maxTokens': vNumber(),
-		'includeTags': vBoolean(),
-		'includeLineNumbers': vEnum(IncludeLineNumbersOption.WithSpaceAfter, IncludeLineNumbersOption.WithoutSpace, IncludeLineNumbersOption.None),
-		'includeCursorTag': vBoolean(),
-		'prioritizeAboveCursor': vBoolean(),
+		maxTokens: vNumber(),
+		includeTags: vBoolean(),
+		includeLineNumbers: vEnum(
+			IncludeLineNumbersOption.WithSpaceAfter,
+			IncludeLineNumbersOption.WithoutSpace,
+			IncludeLineNumbersOption.None,
+		),
+		includeCursorTag: vBoolean(),
+		prioritizeAboveCursor: vBoolean(),
 	});
 }
 
@@ -200,19 +226,34 @@ export enum EarlyDivergenceCancellationMode {
 }
 
 export namespace EarlyDivergenceCancellationMode {
-	export const VALIDATOR = vEnum(EarlyDivergenceCancellationMode.Cursor, EarlyDivergenceCancellationMode.EditWindow, EarlyDivergenceCancellationMode.Off);
+	export const VALIDATOR = vEnum(
+		EarlyDivergenceCancellationMode.Cursor,
+		EarlyDivergenceCancellationMode.EditWindow,
+		EarlyDivergenceCancellationMode.Off,
+	);
 }
 
 export namespace AggressivenessSetting {
-	export const VALIDATOR = vEnum(AggressivenessSetting.Default, AggressivenessSetting.Low, AggressivenessSetting.Medium, AggressivenessSetting.High);
+	export const VALIDATOR = vEnum(
+		AggressivenessSetting.Default,
+		AggressivenessSetting.Low,
+		AggressivenessSetting.Medium,
+		AggressivenessSetting.High,
+	);
 
 	/** Resolves a non-default setting value to an AggressivenessLevel. Returns undefined for Default. */
-	export function toLevel(setting: AggressivenessSetting): AggressivenessLevel | undefined {
+	export function toLevel(
+		setting: AggressivenessSetting,
+	): AggressivenessLevel | undefined {
 		switch (setting) {
-			case AggressivenessSetting.Low: return AggressivenessLevel.Low;
-			case AggressivenessSetting.Medium: return AggressivenessLevel.Medium;
-			case AggressivenessSetting.High: return AggressivenessLevel.High;
-			case AggressivenessSetting.Default: return undefined;
+			case AggressivenessSetting.Low:
+				return AggressivenessLevel.Low;
+			case AggressivenessSetting.Medium:
+				return AggressivenessLevel.Medium;
+			case AggressivenessSetting.High:
+				return AggressivenessLevel.High;
+			case AggressivenessSetting.Default:
+				return undefined;
 		}
 	}
 }
@@ -279,7 +320,10 @@ export namespace EditIntent {
 	 * - medium confidence: Show only if user aggressiveness is medium or high
 	 * - low confidence: Show only if user aggressiveness is high
 	 */
-	export function shouldShowEdit(editIntent: EditIntent, aggressivenessLevel: AggressivenessLevel): boolean {
+	export function shouldShowEdit(
+		editIntent: EditIntent,
+		aggressivenessLevel: AggressivenessLevel,
+	): boolean {
 		switch (editIntent) {
 			case EditIntent.NoEdit:
 				return false;
@@ -288,8 +332,10 @@ export namespace EditIntent {
 				return true;
 			case EditIntent.Medium:
 				// Medium confidence edits show for medium or high aggressiveness
-				return aggressivenessLevel === AggressivenessLevel.Medium ||
-					aggressivenessLevel === AggressivenessLevel.High;
+				return (
+					aggressivenessLevel === AggressivenessLevel.Medium ||
+					aggressivenessLevel === AggressivenessLevel.High
+				);
 			case EditIntent.Low:
 				// Low confidence edits only show for high aggressiveness
 				return aggressivenessLevel === AggressivenessLevel.High;
@@ -365,12 +411,16 @@ export function isPromptingStrategy(value: string): value is PromptingStrategy {
 	return (Object.values(PromptingStrategy) as string[]).includes(value);
 }
 
-export function isAggressivenessStrategy(strategy: PromptingStrategy | undefined): boolean {
-	return strategy === PromptingStrategy.XtabAggressiveness
-		|| strategy === PromptingStrategy.Xtab275Aggressiveness
-		|| strategy === PromptingStrategy.Xtab275AggressivenessHighLow
-		|| strategy === PromptingStrategy.Xtab275EditIntent
-		|| strategy === PromptingStrategy.Xtab275EditIntentShort;
+export function isAggressivenessStrategy(
+	strategy: PromptingStrategy | undefined,
+): boolean {
+	return (
+		strategy === PromptingStrategy.XtabAggressiveness ||
+		strategy === PromptingStrategy.Xtab275Aggressiveness ||
+		strategy === PromptingStrategy.Xtab275AggressivenessHighLow ||
+		strategy === PromptingStrategy.Xtab275EditIntent ||
+		strategy === PromptingStrategy.Xtab275EditIntentShort
+	);
 }
 
 export enum ResponseFormat {
@@ -383,7 +433,9 @@ export enum ResponseFormat {
 }
 
 export namespace ResponseFormat {
-	export function fromPromptingStrategy(strategy: PromptingStrategy | undefined): ResponseFormat {
+	export function fromPromptingStrategy(
+		strategy: PromptingStrategy | undefined,
+	): ResponseFormat {
 		switch (strategy) {
 			case PromptingStrategy.UnifiedModel:
 			case PromptingStrategy.Codexv21NesUnified:
@@ -463,9 +515,9 @@ export const DEFAULT_CURSOR_PREDICTION_LINT_OPTIONS: LintOptions = {
 
 // TODO: consider a better per language setting/experiment approach
 export const LANGUAGE_CONTEXT_ENABLED_LANGUAGES: LanguageContextLanguages = {
-	'prompt': true,
-	'instructions': true,
-	'chatagent': true,
+	prompt: true,
+	instructions: true,
+	chatagent: true,
 };
 
 export interface ModelConfiguration {
@@ -484,7 +536,9 @@ export interface ModelConfiguration {
  * declares values here, those values override anything provided by the upstream
  * model configuration. A strategy without an entry contributes no overrides.
  */
-const STRATEGY_CONFIG: Partial<Record<PromptingStrategy, Partial<ModelConfiguration>>> = {
+const STRATEGY_CONFIG: Partial<
+	Record<PromptingStrategy, Partial<ModelConfiguration>>
+> = {
 	// proxy /models doesn't know about includeTagsInCurrentFile field as of now, so hard-code it for CopilotNesXtab
 	[PromptingStrategy.CopilotNesXtab]: {
 		includeTagsInCurrentFile: true,
@@ -492,64 +546,110 @@ const STRATEGY_CONFIG: Partial<Record<PromptingStrategy, Partial<ModelConfigurat
 	[PromptingStrategy.PatchBased02WithRecentLineNumbers]: {
 		includeTagsInCurrentFile: false,
 		includePostScript: true,
-		currentFile: { includeLineNumbers: IncludeLineNumbersOption.WithoutSpace },
-		recentlyViewedDocuments: { includeLineNumbers: IncludeLineNumbersOption.WithoutSpace },
+		currentFile: {
+			includeLineNumbers: IncludeLineNumbersOption.WithoutSpace,
+		},
+		recentlyViewedDocuments: {
+			includeLineNumbers: IncludeLineNumbersOption.WithoutSpace,
+		},
 		supportsNextCursorLinePrediction: false,
 	},
 	[PromptingStrategy.PatchBased02WithoutRecentLineNumbers]: {
 		includeTagsInCurrentFile: false,
 		includePostScript: true,
-		currentFile: { includeLineNumbers: IncludeLineNumbersOption.WithoutSpace },
-		recentlyViewedDocuments: { includeLineNumbers: IncludeLineNumbersOption.None },
+		currentFile: {
+			includeLineNumbers: IncludeLineNumbersOption.WithoutSpace,
+		},
+		recentlyViewedDocuments: {
+			includeLineNumbers: IncludeLineNumbersOption.None,
+		},
 		supportsNextCursorLinePrediction: false,
 	},
 };
 
 /** Apply per-strategy baked-in config; strategy values override `config`. */
-export function applyStrategyConfig(config: ModelConfiguration): ModelConfiguration {
-	const overrides = config.promptingStrategy === undefined ? undefined : STRATEGY_CONFIG[config.promptingStrategy];
+export function applyStrategyConfig(
+	config: ModelConfiguration,
+): ModelConfiguration {
+	const overrides =
+		config.promptingStrategy === undefined
+			? undefined
+			: STRATEGY_CONFIG[config.promptingStrategy];
 	if (!overrides) {
 		return config;
 	}
-	const hasCurrentFile = config.currentFile !== undefined || overrides.currentFile !== undefined;
-	const hasRecentlyViewed = config.recentlyViewedDocuments !== undefined || overrides.recentlyViewedDocuments !== undefined;
-	const hasLintOptions = config.lintOptions !== undefined || overrides.lintOptions !== undefined;
+	const hasCurrentFile =
+		config.currentFile !== undefined || overrides.currentFile !== undefined;
+	const hasRecentlyViewed =
+		config.recentlyViewedDocuments !== undefined ||
+		overrides.recentlyViewedDocuments !== undefined;
+	const hasLintOptions =
+		config.lintOptions !== undefined || overrides.lintOptions !== undefined;
 	return {
 		...config,
 		...overrides,
-		currentFile: hasCurrentFile ? { ...config.currentFile, ...overrides.currentFile } : undefined,
-		recentlyViewedDocuments: hasRecentlyViewed ? { ...config.recentlyViewedDocuments, ...overrides.recentlyViewedDocuments } : undefined,
-		lintOptions: hasLintOptions ? { ...config.lintOptions, ...overrides.lintOptions } : undefined,
+		currentFile: hasCurrentFile
+			? { ...config.currentFile, ...overrides.currentFile }
+			: undefined,
+		recentlyViewedDocuments: hasRecentlyViewed
+			? {
+					...config.recentlyViewedDocuments,
+					...overrides.recentlyViewedDocuments,
+				}
+			: undefined,
+		lintOptions: hasLintOptions
+			? { ...config.lintOptions, ...overrides.lintOptions }
+			: undefined,
 	};
 }
 
 export const LINT_OPTIONS_VALIDATOR: IValidator<Partial<LintOptions>> = vObj({
-	'tagName': vString(),
-	'warnings': vEnum(LintOptionWarning.YES, LintOptionWarning.NO, LintOptionWarning.YES_IF_NO_ERRORS),
-	'showCode': vEnum(LintOptionShowCode.NO, LintOptionShowCode.YES, LintOptionShowCode.YES_WITH_SURROUNDING),
-	'maxLints': vNumber(),
-	'maxLineDistance': vNumber(),
-	'nRecentFiles': vNumber(),
+	tagName: vString(),
+	warnings: vEnum(
+		LintOptionWarning.YES,
+		LintOptionWarning.NO,
+		LintOptionWarning.YES_IF_NO_ERRORS,
+	),
+	showCode: vEnum(
+		LintOptionShowCode.NO,
+		LintOptionShowCode.YES,
+		LintOptionShowCode.YES_WITH_SURROUNDING,
+	),
+	maxLints: vNumber(),
+	maxLineDistance: vNumber(),
+	nRecentFiles: vNumber(),
 });
 
-export const MODEL_CONFIGURATION_VALIDATOR: IValidator<ModelConfiguration> = vObj({
-	'modelName': vRequired(vString()),
-	'promptingStrategy': vUnion(vEnum(...Object.values(PromptingStrategy)), vUndefined()),
-	'includeTagsInCurrentFile': vRequired(vBoolean()),
-	'includePostScript': vUnion(vBoolean(), vUndefined()),
-	'currentFile': vUnion(CurrentFileOptions.VALIDATOR, vUndefined()),
-	'recentlyViewedDocuments': vUnion(RecentlyViewedDocumentsOptions.VALIDATOR, vUndefined()),
-	'lintOptions': vUnion(LINT_OPTIONS_VALIDATOR, vUndefined()),
-	'supportsNextCursorLinePrediction': vUnion(vBoolean(), vUndefined()),
-});
+export const MODEL_CONFIGURATION_VALIDATOR: IValidator<ModelConfiguration> =
+	vObj({
+		modelName: vRequired(vString()),
+		promptingStrategy: vUnion(
+			vEnum(...Object.values(PromptingStrategy)),
+			vUndefined(),
+		),
+		includeTagsInCurrentFile: vRequired(vBoolean()),
+		includePostScript: vUnion(vBoolean(), vUndefined()),
+		currentFile: vUnion(CurrentFileOptions.VALIDATOR, vUndefined()),
+		recentlyViewedDocuments: vUnion(
+			RecentlyViewedDocumentsOptions.VALIDATOR,
+			vUndefined(),
+		),
+		lintOptions: vUnion(LINT_OPTIONS_VALIDATOR, vUndefined()),
+		supportsNextCursorLinePrediction: vUnion(vBoolean(), vUndefined()),
+	});
 
-export function parseLintOptionString(optionString: string, defaults: LintOptions): LintOptions {
+export function parseLintOptionString(
+	optionString: string,
+	defaults: LintOptions,
+): LintOptions {
 	try {
 		const parsed = JSON.parse(optionString);
 
 		const lintValidation = LINT_OPTIONS_VALIDATOR.validate(parsed);
 		if (lintValidation.error) {
-			throw new Error(`Lint options validation failed: ${lintValidation.error.message}`);
+			throw new Error(
+				`Lint options validation failed: ${lintValidation.error.message}`,
+			);
 		}
 
 		return { ...defaults, ...lintValidation.content };
@@ -582,32 +682,34 @@ export interface UserHappinessScoreConfiguration {
 /**
  * Default configuration for user happiness score calculation. Mimics v1 behavior.
  */
-export const DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION: UserHappinessScoreConfiguration = {
-	acceptedScore: 1,
-	rejectedScore: 0,
-	ignoredScore: 0.5,
-	highThreshold: 0.7,
-	mediumThreshold: 0.4,
-	includeIgnored: false,
-	ignoredLimit: 0,
-	limitConsecutiveIgnored: false,
-	limitTotalIgnored: true,
-};
+export const DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION: UserHappinessScoreConfiguration =
+	{
+		acceptedScore: 1,
+		rejectedScore: 0,
+		ignoredScore: 0.5,
+		highThreshold: 0.7,
+		mediumThreshold: 0.4,
+		includeIgnored: false,
+		ignoredLimit: 0,
+		limitConsecutiveIgnored: false,
+		limitTotalIgnored: true,
+	};
 
 /**
  * Basic type validation for happiness config.
  */
-const USER_HAPPINESS_SCORE_CONFIGURATION_BASE_VALIDATOR: IValidator<UserHappinessScoreConfiguration> = vObj({
-	'acceptedScore': vRequired(vNumber()),
-	'rejectedScore': vRequired(vNumber()),
-	'ignoredScore': vRequired(vNumber()),
-	'highThreshold': vRequired(vNumber()),
-	'mediumThreshold': vRequired(vNumber()),
-	'includeIgnored': vRequired(vBoolean()),
-	'ignoredLimit': vRequired(vNumber()),
-	'limitConsecutiveIgnored': vRequired(vBoolean()),
-	'limitTotalIgnored': vRequired(vBoolean()),
-});
+const USER_HAPPINESS_SCORE_CONFIGURATION_BASE_VALIDATOR: IValidator<UserHappinessScoreConfiguration> =
+	vObj({
+		acceptedScore: vRequired(vNumber()),
+		rejectedScore: vRequired(vNumber()),
+		ignoredScore: vRequired(vNumber()),
+		highThreshold: vRequired(vNumber()),
+		mediumThreshold: vRequired(vNumber()),
+		includeIgnored: vRequired(vBoolean()),
+		ignoredLimit: vRequired(vNumber()),
+		limitConsecutiveIgnored: vRequired(vBoolean()),
+		limitTotalIgnored: vRequired(vBoolean()),
+	});
 
 function isInRange(value: number, min: number, max: number): boolean {
 	return value >= min && value <= max;
@@ -616,76 +718,131 @@ function isInRange(value: number, min: number, max: number): boolean {
 /**
  * Value checking for happiness config.
  */
-export const USER_HAPPINESS_SCORE_CONFIGURATION_VALIDATOR: IValidator<UserHappinessScoreConfiguration> = {
-	validate(content: unknown) {
-		const baseResult = USER_HAPPINESS_SCORE_CONFIGURATION_BASE_VALIDATOR.validate(content);
-		if (baseResult.error) {
-			return baseResult;
-		}
+export const USER_HAPPINESS_SCORE_CONFIGURATION_VALIDATOR: IValidator<UserHappinessScoreConfiguration> =
+	{
+		validate(content: unknown) {
+			const baseResult =
+				USER_HAPPINESS_SCORE_CONFIGURATION_BASE_VALIDATOR.validate(
+					content,
+				);
+			if (baseResult.error) {
+				return baseResult;
+			}
 
-		const config = baseResult.content;
+			const config = baseResult.content;
 
-		// Validate score ranges [0, 1]
-		if (!isInRange(config.acceptedScore, 0, 1)) {
-			return { content: undefined, error: { message: 'acceptedScore must be in range [0, 1]' } };
-		}
-		if (!isInRange(config.rejectedScore, 0, 1)) {
-			return { content: undefined, error: { message: 'rejectedScore must be in range [0, 1]' } };
-		}
-		if (!isInRange(config.ignoredScore, 0, 1)) {
-			return { content: undefined, error: { message: 'ignoredScore must be in range [0, 1]' } };
-		}
+			// Validate score ranges [0, 1]
+			if (!isInRange(config.acceptedScore, 0, 1)) {
+				return {
+					content: undefined,
+					error: { message: 'acceptedScore must be in range [0, 1]' },
+				};
+			}
+			if (!isInRange(config.rejectedScore, 0, 1)) {
+				return {
+					content: undefined,
+					error: { message: 'rejectedScore must be in range [0, 1]' },
+				};
+			}
+			if (!isInRange(config.ignoredScore, 0, 1)) {
+				return {
+					content: undefined,
+					error: { message: 'ignoredScore must be in range [0, 1]' },
+				};
+			}
 
-		// Validate threshold ranges [0, 1]
-		if (!isInRange(config.highThreshold, 0, 1)) {
-			return { content: undefined, error: { message: 'highThreshold must be in range [0, 1]' } };
-		}
-		if (!isInRange(config.mediumThreshold, 0, 1)) {
-			return { content: undefined, error: { message: 'mediumThreshold must be in range [0, 1]' } };
-		}
+			// Validate threshold ranges [0, 1]
+			if (!isInRange(config.highThreshold, 0, 1)) {
+				return {
+					content: undefined,
+					error: { message: 'highThreshold must be in range [0, 1]' },
+				};
+			}
+			if (!isInRange(config.mediumThreshold, 0, 1)) {
+				return {
+					content: undefined,
+					error: {
+						message: 'mediumThreshold must be in range [0, 1]',
+					},
+				};
+			}
 
-		// Validate acceptedScore > rejectedScore to prevent division by zero
-		if (config.acceptedScore <= config.rejectedScore) {
-			return { content: undefined, error: { message: 'acceptedScore must be greater than rejectedScore to prevent division by zero' } };
-		}
+			// Validate acceptedScore > rejectedScore to prevent division by zero
+			if (config.acceptedScore <= config.rejectedScore) {
+				return {
+					content: undefined,
+					error: {
+						message:
+							'acceptedScore must be greater than rejectedScore to prevent division by zero',
+					},
+				};
+			}
 
-		// Validate acceptedScore >= ignoredScore >= rejectedScore to prevent exceeding bounds
-		if (config.ignoredScore < config.rejectedScore) {
-			return { content: undefined, error: { message: 'ignoredScore must be greater than or equal to rejectedScore to prevent exceeding bounds' } };
-		}
-		if (config.acceptedScore < config.ignoredScore) {
-			return { content: undefined, error: { message: 'acceptedScore must be greater than or equal to ignoredScore to prevent exceeding bounds' } };
-		}
+			// Validate acceptedScore >= ignoredScore >= rejectedScore to prevent exceeding bounds
+			if (config.ignoredScore < config.rejectedScore) {
+				return {
+					content: undefined,
+					error: {
+						message:
+							'ignoredScore must be greater than or equal to rejectedScore to prevent exceeding bounds',
+					},
+				};
+			}
+			if (config.acceptedScore < config.ignoredScore) {
+				return {
+					content: undefined,
+					error: {
+						message:
+							'acceptedScore must be greater than or equal to ignoredScore to prevent exceeding bounds',
+					},
+				};
+			}
 
-		// Validate highThreshold > mediumThreshold for logical consistency
-		if (config.highThreshold <= config.mediumThreshold) {
-			return { content: undefined, error: { message: 'highThreshold must be greater than mediumThreshold' } };
-		}
+			// Validate highThreshold > mediumThreshold for logical consistency
+			if (config.highThreshold <= config.mediumThreshold) {
+				return {
+					content: undefined,
+					error: {
+						message:
+							'highThreshold must be greater than mediumThreshold',
+					},
+				};
+			}
 
-		// Validate ignoredLimit >= 0
-		if (config.ignoredLimit < 0) {
-			return { content: undefined, error: { message: 'ignoredLimit must be non-negative' } };
-		}
+			// Validate ignoredLimit >= 0
+			if (config.ignoredLimit < 0) {
+				return {
+					content: undefined,
+					error: { message: 'ignoredLimit must be non-negative' },
+				};
+			}
 
-		return { content: config, error: undefined };
-	},
-	toSchema() {
-		return USER_HAPPINESS_SCORE_CONFIGURATION_BASE_VALIDATOR.toSchema();
-	}
-};
+			return { content: config, error: undefined };
+		},
+		toSchema() {
+			return USER_HAPPINESS_SCORE_CONFIGURATION_BASE_VALIDATOR.toSchema();
+		},
+	};
 
-export function parseUserHappinessScoreConfigurationString(optionString: string): UserHappinessScoreConfiguration {
+export function parseUserHappinessScoreConfigurationString(
+	optionString: string,
+): UserHappinessScoreConfiguration {
 	try {
 		const parsed = JSON.parse(optionString);
 
-		const validation = USER_HAPPINESS_SCORE_CONFIGURATION_VALIDATOR.validate(parsed);
+		const validation =
+			USER_HAPPINESS_SCORE_CONFIGURATION_VALIDATOR.validate(parsed);
 		if (validation.error) {
-			throw new Error(`User happiness score configuration validation failed: ${validation.error.message}`);
+			throw new Error(
+				`User happiness score configuration validation failed: ${validation.error.message}`,
+			);
 		}
 
 		return validation.content;
 	} catch (e) {
-		throw new Error(`Failed to parse user happiness score configuration string: ${e}`);
+		throw new Error(
+			`Failed to parse user happiness score configuration string: ${e}`,
+		);
 	}
 }
 
@@ -695,7 +852,10 @@ export enum SpeculativeRequestsEnablement {
 }
 
 export namespace SpeculativeRequestsEnablement {
-	export const VALIDATOR = vEnum(SpeculativeRequestsEnablement.On, SpeculativeRequestsEnablement.Off);
+	export const VALIDATOR = vEnum(
+		SpeculativeRequestsEnablement.On,
+		SpeculativeRequestsEnablement.Off,
+	);
 }
 
 /**
@@ -743,7 +903,10 @@ export enum SpeculativeRequestsCursorPlacement {
 }
 
 export namespace SpeculativeRequestsCursorPlacement {
-	export const VALIDATOR = vEnum(SpeculativeRequestsCursorPlacement.AfterEditApplied, SpeculativeRequestsCursorPlacement.AfterEditWindow);
+	export const VALIDATOR = vEnum(
+		SpeculativeRequestsCursorPlacement.AfterEditApplied,
+		SpeculativeRequestsCursorPlacement.AfterEditWindow,
+	);
 }
 
 export enum SpeculativeRequestsAutoExpandEditWindowLines {
@@ -753,5 +916,9 @@ export enum SpeculativeRequestsAutoExpandEditWindowLines {
 }
 
 export namespace SpeculativeRequestsAutoExpandEditWindowLines {
-	export const VALIDATOR = vEnum(SpeculativeRequestsAutoExpandEditWindowLines.Off, SpeculativeRequestsAutoExpandEditWindowLines.Smart, SpeculativeRequestsAutoExpandEditWindowLines.Always);
+	export const VALIDATOR = vEnum(
+		SpeculativeRequestsAutoExpandEditWindowLines.Off,
+		SpeculativeRequestsAutoExpandEditWindowLines.Smart,
+		SpeculativeRequestsAutoExpandEditWindowLines.Always,
+	);
 }

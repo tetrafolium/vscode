@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { NKeyMap } from '../../../../base/common/map.js';
-import type { IBoundingBox, IRasterizedGlyph } from '../raster/raster.js';
+import type { NKeyMap } from "../../../../base/common/map.js";
+import type { IBoundingBox, IRasterizedGlyph } from "../raster/raster.js";
 
 /**
  * Information about a {@link IRasterizedGlyph rasterized glyph} that has been drawn to a texture
@@ -56,7 +56,9 @@ export interface ITextureAtlasAllocator {
 	 * Allocates a rasterized glyph to the canvas, drawing it and returning information on its
 	 * position in the canvas. This will return undefined if the glyph does not fit on the canvas.
 	 */
-	allocate(rasterizedGlyph: Readonly<IRasterizedGlyph>): Readonly<ITextureAtlasPageGlyph> | undefined;
+	allocate(
+		rasterizedGlyph: Readonly<IRasterizedGlyph>,
+	): Readonly<ITextureAtlasPageGlyph> | undefined;
 	/**
 	 * Gets a usage preview of the atlas for debugging purposes.
 	 */
@@ -100,15 +102,18 @@ export interface IReadableTextureAtlasPage {
 }
 
 export const enum UsagePreviewColors {
-	Unused = '#808080',
-	Used = '#4040FF',
-	Wasted = '#FF0000',
-	Restricted = '#FF000088',
+	Unused = "#808080",
+	Used = "#4040FF",
+	Wasted = "#FF0000",
+	Restricted = "#FF000088",
 }
 
-export type GlyphMap<T> = NKeyMap<T, [
-	chars: string,
-	tokenMetadata: number,
-	decorationStyleSetId: number,
-	rasterizerCacheKey: string,
-]>;
+export type GlyphMap<T> = NKeyMap<
+	T,
+	[
+		chars: string,
+		tokenMetadata: number,
+		decorationStyleSetId: number,
+		rasterizerCacheKey: string,
+	]
+>;

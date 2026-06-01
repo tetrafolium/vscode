@@ -9,7 +9,10 @@ import { TokenizerType } from '../../../util/common/tokenizer';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { IAuthenticationService } from '../../authentication/common/authentication';
 import { IChatMLFetcher } from '../../chat/common/chatMLFetcher';
-import { ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { ILogService } from '../../log/common/logService';
 import { IFetcherService } from '../../networking/common/fetcherService';
 import { IChatWebSocketManager } from '../../networking/node/chatWebSocketManager';
@@ -23,7 +26,6 @@ import { ChatEndpoint } from './chatEndpoint';
 import { getInstantApplyModel } from './proxyModelHelper';
 
 export class Proxy4oEndpoint extends ChatEndpoint {
-
 	_serviceBrand: undefined;
 
 	constructor(
@@ -31,12 +33,14 @@ export class Proxy4oEndpoint extends ChatEndpoint {
 		@ICAPIClientService capiClientService: ICAPIClientService,
 		@IFetcherService fetcherService: IFetcherService,
 		@ITelemetryService telemetryService: ITelemetryService,
-		@IAuthenticationService private readonly authService: IAuthenticationService,
+		@IAuthenticationService
+		private readonly authService: IAuthenticationService,
 		@IChatMLFetcher chatMLFetcher: IChatMLFetcher,
 		@ITokenizerProvider tokenizerProvider: ITokenizerProvider,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IExperimentationService experimentationService: IExperimentationService,
+		@IExperimentationService
+		experimentationService: IExperimentationService,
 		@IChatWebSocketManager chatWebSocketService: IChatWebSocketManager,
 		@ILogService logService: ILogService,
 		@IProxyModelsService proxyModelsService: IProxyModelsService,
@@ -60,12 +64,18 @@ export class Proxy4oEndpoint extends ChatEndpoint {
 				type: 'chat',
 				family: model,
 				tokenizer: TokenizerType.O200K,
-				supports: { streaming: true, parallel_tool_calls: false, tool_calls: false, vision: false, prediction: true },
+				supports: {
+					streaming: true,
+					parallel_tool_calls: false,
+					tool_calls: false,
+					vision: false,
+					prediction: true,
+				},
 				limits: {
 					max_prompt_tokens: 128000,
 					max_output_tokens: 16000,
-				}
-			}
+				},
+			},
 		};
 		super(
 			modelInfo,
@@ -76,18 +86,18 @@ export class Proxy4oEndpoint extends ChatEndpoint {
 			configurationService,
 			experimentationService,
 			chatWebSocketService,
-			logService
+			logService,
 		);
 	}
 
 	public override getExtraHeaders(): Record<string, string> {
 		const headers: Record<string, string> = {};
 		if (this.authService.speculativeDecodingEndpointToken) {
-			headers['Copilot-Edits-Session'] = this.authService.speculativeDecodingEndpointToken;
+			headers['Copilot-Edits-Session'] =
+				this.authService.speculativeDecodingEndpointToken;
 		}
 		return headers;
 	}
-
 
 	override get urlOrRequestMetadata(): RequestMetadata {
 		return { type: RequestType.ProxyChatCompletions };

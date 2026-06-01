@@ -35,7 +35,11 @@
 }
 
 /* Sync Changes Action */
-.monaco-workbench .part > .title > .title-actions .action-label.sync-changes-action-view-item {
+.monaco-workbench
+	.part
+	> .title
+	> .title-actions
+	.action-label.sync-changes-action-view-item {
 	display: flex;
 	align-items: center;
 	gap: 2px;

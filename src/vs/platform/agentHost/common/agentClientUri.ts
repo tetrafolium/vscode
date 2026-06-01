@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../base/common/uri.js';
+import { URI } from "../../../base/common/uri.js";
 
 /**
  * The URI scheme for accessing client-side files from the agent host.
@@ -20,7 +20,7 @@ import { URI } from '../../../base/common/uri.js';
  * vscode-agent-client://client-1/file/-/Users/user/plugins/my-plugin
  * ```
  */
-export const AGENT_CLIENT_SCHEME = 'vscode-agent-client';
+export const AGENT_CLIENT_SCHEME = "vscode-agent-client";
 
 /**
  * Wraps a client-side URI into a {@link AGENT_CLIENT_SCHEME} URI that
@@ -30,7 +30,7 @@ export const AGENT_CLIENT_SCHEME = 'vscode-agent-client';
  * @param clientId The client identifier (from the protocol `clientId`)
  */
 export function toAgentClientUri(originalUri: URI, clientId: string): URI {
-	const originalAuthority = originalUri.authority || '-';
+	const originalAuthority = originalUri.authority || "-";
 	return URI.from({
 		scheme: AGENT_CLIENT_SCHEME,
 		authority: clientId,
@@ -46,22 +46,26 @@ export function toAgentClientUri(originalUri: URI, clientId: string): URI {
 export function fromAgentClientUri(agentClientUri: URI): URI {
 	const path = agentClientUri.path;
 
-	const schemeEnd = path.indexOf('/', 1);
+	const schemeEnd = path.indexOf("/", 1);
 	if (schemeEnd === -1) {
-		return URI.from({ scheme: 'file', path });
+		return URI.from({ scheme: "file", path });
 	}
 
 	const originalScheme = path.substring(1, schemeEnd);
 
-	const authorityEnd = path.indexOf('/', schemeEnd + 1);
+	const authorityEnd = path.indexOf("/", schemeEnd + 1);
 	if (authorityEnd === -1) {
 		const originalAuthority = path.substring(schemeEnd + 1);
-		return URI.from({ scheme: originalScheme, authority: originalAuthority === '-' ? '' : originalAuthority, path: '/' });
+		return URI.from({
+			scheme: originalScheme,
+			authority: originalAuthority === "-" ? "" : originalAuthority,
+			path: "/",
+		});
 	}
 
 	let originalAuthority = path.substring(schemeEnd + 1, authorityEnd);
-	if (originalAuthority === '-') {
-		originalAuthority = '';
+	if (originalAuthority === "-") {
+		originalAuthority = "";
 	}
 
 	const originalPath = path.substring(authorityEnd);

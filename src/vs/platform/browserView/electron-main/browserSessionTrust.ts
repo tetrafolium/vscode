@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IApplicationStorageMainService } from '../../storage/electron-main/storageMainService.js';
-import { StorageScope, StorageTarget } from '../../storage/common/storage.js';
-import { IBrowserViewCertificateError } from '../common/browserView.js';
-import type { BrowserSession } from './browserSession.js';
+import { IApplicationStorageMainService } from "../../storage/electron-main/storageMainService.js";
+import { StorageScope, StorageTarget } from "../../storage/common/storage.js";
+import { IBrowserViewCertificateError } from "../common/browserView.js";
+import type { BrowserSession } from "./browserSession.js";
 
 /** Key used to store trusted certificate data in the application storage. */
-const STORAGE_KEY = 'browserView.sessionTrustData';
+const STORAGE_KEY = "browserView.sessionTrustData";
 
 /** Trust entries expire after 1 week. */
 const TRUST_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -44,12 +44,14 @@ export interface IBrowserSessionTrust {
  * and the per-`WebContents` `certificate-error` handler.
  */
 export class BrowserSessionTrust implements IBrowserSessionTrust {
-
 	/**
 	 * Trusted certificates stored as host → (fingerprint → expiration epoch ms).
 	 * Entries are time-limited; see {@link TRUST_DURATION_MS}.
 	 */
-	private readonly _trustedCertificates = new Map<string, Map<string, /* expiresAt */ number>>();
+	private readonly _trustedCertificates = new Map<
+		string,
+		Map<string, /* expiresAt */ number>
+	>();
 
 	/**
 	 * Last known certificate per host (hostname → { fingerprint, error }).
@@ -57,7 +59,10 @@ export class BrowserSessionTrust implements IBrowserSessionTrust {
 	 * handshake, not just errors. This lets us look up cert status for a
 	 * URL even after Chromium has cached the allow decision.
 	 */
-	private readonly _certErrors = new Map<string, { certificate: Electron.Certificate; error: string }>();
+	private readonly _certErrors = new Map<
+		string,
+		{ certificate: Electron.Certificate; error: string }
+	>();
 
 	/**
 	 * Application storage service for persisting trusted certificates
@@ -65,9 +70,7 @@ export class BrowserSessionTrust implements IBrowserSessionTrust {
 	 */
 	private _storage: IApplicationStorageMainService | undefined;
 
-	constructor(
-		private readonly _session: BrowserSession,
-	) {
+	constructor(private readonly _session: BrowserSession) {
 		this._installCertVerifyProc();
 	}
 
@@ -76,17 +79,23 @@ export class BrowserSessionTrust implements IBrowserSessionTrust {
 	 * This does not grant any trust by itself; it just populates the `_certErrors` cache.
 	 */
 	private _installCertVerifyProc(): void {
-		this._session.electronSession.setCertificateVerifyProc((request, callback) => {
-			const { hostname, errorCode, certificate, verificationResult } = request;
+		this._session.electronSession.setCertificateVerifyProc(
+			(request, callback) => {
+				const { hostname, errorCode, certificate, verificationResult } =
+					request;
 
-			if (errorCode !== 0) {
-				this._certErrors.set(hostname, { certificate, error: verificationResult });
-			} else {
-				this._certErrors.delete(hostname);
-			}
+				if (errorCode !== 0) {
+					this._certErrors.set(hostname, {
+						certificate,
+						error: verificationResult,
+					});
+				} else {
+					this._certErrors.delete(hostname);
+				}
 
-			return callback(-3); // Always use default handling from Chromium
-		});
+				return callback(-3); // Always use default handling from Chromium
+			},
+		);
 	}
 
 	/**
@@ -94,20 +103,23 @@ export class BrowserSessionTrust implements IBrowserSessionTrust {
 	 * so that user-trusted certificates are accepted at the page level.
 	 */
 	installCertErrorHandler(webContents: Electron.WebContents): void {
-		webContents.on('certificate-error', (event, url, _error, certificate, callback) => {
-			event.preventDefault();
+		webContents.on(
+			"certificate-error",
+			(event, url, _error, certificate, callback) => {
+				event.preventDefault();
 
-			const host = URL.parse(url)?.hostname;
-			if (!host) {
+				const host = URL.parse(url)?.hostname;
+				if (!host) {
+					return callback(false);
+				}
+
+				if (this.isCertificateTrusted(host, certificate.fingerprint)) {
+					return callback(true);
+				}
+
 				return callback(false);
-			}
-
-			if (this.isCertificateTrusted(host, certificate.fingerprint)) {
-				return callback(true);
-			}
-
-			return callback(false);
-		});
+			},
+		);
 	}
 
 	/**
@@ -118,7 +130,7 @@ export class BrowserSessionTrust implements IBrowserSessionTrust {
 	 */
 	getCertificateError(url: string): IBrowserViewCertificateError | undefined {
 		const parsed = URL.parse(url);
-		if (!parsed || parsed.protocol !== 'https:') {
+		if (!parsed || parsed.protocol !== "https:") {
 			return undefined;
 		}
 
@@ -169,7 +181,9 @@ export class BrowserSessionTrust implements IBrowserSessionTrust {
 				this._trustedCertificates.delete(host);
 			}
 		} else {
-			throw new Error(`Certificate not found: host=${host} fingerprint=${fingerprint}`);
+			throw new Error(
+				`Certificate not found: host=${host} fingerprint=${fingerprint}`,
+			);
 		}
 		this.writeStorage();
 		// Important: close all connections since they may be using the now-untrusted cert.
@@ -291,7 +305,8 @@ export class BrowserSessionTrust implements IBrowserSessionTrust {
 		if (this._trustedCertificates.size === 0) {
 			delete all[this._session.id].trustedCerts;
 		} else {
-			const certs: { host: string; fingerprint: string; expiresAt: number }[] = [];
+			const certs: { host: string; fingerprint: string; expiresAt: number }[] =
+				[];
 			for (const [host, entries] of this._trustedCertificates) {
 				for (const [fingerprint, expiresAt] of entries) {
 					certs.push({ host, fingerprint, expiresAt });
@@ -309,7 +324,12 @@ export class BrowserSessionTrust implements IBrowserSessionTrust {
 		if (Object.keys(all).length === 0) {
 			storage.remove(STORAGE_KEY, StorageScope.APPLICATION);
 		} else {
-			storage.store(STORAGE_KEY, JSON.stringify(all), StorageScope.APPLICATION, StorageTarget.MACHINE);
+			storage.store(
+				STORAGE_KEY,
+				JSON.stringify(all),
+				StorageScope.APPLICATION,
+				StorageTarget.MACHINE,
+			);
 		}
 	}
 

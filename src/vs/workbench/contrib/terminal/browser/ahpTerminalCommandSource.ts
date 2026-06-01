@@ -3,14 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { removeAnsiEscapeCodes } from '../../../../base/common/strings.js';
-import type { IMarker } from '@xterm/xterm';
-import { TerminalCapability, type ITerminalCommand, type IMarkProperties } from '../../../../platform/terminal/common/capabilities/capabilities.js';
-import type { ITerminalOutputMatch, ITerminalOutputMatcher } from '../../../../platform/terminal/common/terminal.js';
-import type { IAhpTerminalCommandSource, ITerminalInstance } from './terminal.js';
-import { AhpCommandMarkKind, getAhpCommandMarkId, type AgentHostPty, type IAgentHostPtyCommandExecutedEvent, type IAgentHostPtyCommandFinishedEvent } from './agentHostPty.js';
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { removeAnsiEscapeCodes } from "../../../../base/common/strings.js";
+import type { IMarker } from "@xterm/xterm";
+import {
+	TerminalCapability,
+	type ITerminalCommand,
+	type IMarkProperties,
+} from "../../../../platform/terminal/common/capabilities/capabilities.js";
+import type {
+	ITerminalOutputMatch,
+	ITerminalOutputMatcher,
+} from "../../../../platform/terminal/common/terminal.js";
+import type {
+	IAhpTerminalCommandSource,
+	ITerminalInstance,
+} from "./terminal.js";
+import {
+	AhpCommandMarkKind,
+	getAhpCommandMarkId,
+	type AgentHostPty,
+	type IAgentHostPtyCommandExecutedEvent,
+	type IAgentHostPtyCommandFinishedEvent,
+} from "./agentHostPty.js";
 
 /**
  * An implementation of {@link ITerminalCommand} backed by AHP protocol data
@@ -23,7 +39,7 @@ import { AhpCommandMarkKind, getAhpCommandMarkId, type AgentHostPty, type IAgent
 export class AhpTerminalCommand implements ITerminalCommand {
 	// -- IBaseTerminalCommand mandatory fields --
 	command: string;
-	readonly commandLineConfidence: 'low' | 'medium' | 'high' = 'high';
+	readonly commandLineConfidence: "low" | "medium" | "high" = "high";
 	readonly isTrusted: boolean = false;
 	timestamp: number;
 	duration: number = 0;
@@ -60,7 +76,11 @@ export class AhpTerminalCommand implements ITerminalCommand {
 	 * Lazily resolved end marker, same rationale as {@link executedMarker}.
 	 */
 	get endMarker(): IMarker | undefined {
-		if (this._endMarker === undefined && this._isComplete && this._resolveMarker) {
+		if (
+			this._endMarker === undefined &&
+			this._isComplete &&
+			this._resolveMarker
+		) {
 			this._endMarker = this._resolveMarker(AhpCommandMarkKind.End);
 		}
 		return this._endMarker;
@@ -81,7 +101,9 @@ export class AhpTerminalCommand implements ITerminalCommand {
 	 * Optional function to lazily resolve markers from the terminal's
 	 * {@link IBufferMarkCapability}. Set during construction.
 	 */
-	private readonly _resolveMarker?: (kind: AhpCommandMarkKind) => IMarker | undefined;
+	private readonly _resolveMarker?: (
+		kind: AhpCommandMarkKind,
+	) => IMarker | undefined;
 
 	constructor(
 		commandId: string,
@@ -126,7 +148,9 @@ export class AhpTerminalCommand implements ITerminalCommand {
 		return false;
 	}
 
-	getOutputMatch(_outputMatcher: ITerminalOutputMatcher): ITerminalOutputMatch | undefined {
+	getOutputMatch(
+		_outputMatcher: ITerminalOutputMatcher,
+	): ITerminalOutputMatch | undefined {
 		return undefined;
 	}
 
@@ -166,15 +190,24 @@ export class AhpTerminalCommand implements ITerminalCommand {
  * {@link AhpTerminalCommand} objects, exposing an interface compatible with
  * {@link IAhpTerminalCommandSource}.
  */
-export class AhpTerminalCommandSource extends Disposable implements IAhpTerminalCommandSource {
+export class AhpTerminalCommandSource
+	extends Disposable
+	implements IAhpTerminalCommandSource
+{
 	private readonly _commands: AhpTerminalCommand[] = [];
 	private _executingCommand: AhpTerminalCommand | undefined;
 
-	private readonly _onCommandExecuted = this._register(new Emitter<ITerminalCommand>());
-	readonly onCommandExecuted: Event<ITerminalCommand> = this._onCommandExecuted.event;
+	private readonly _onCommandExecuted = this._register(
+		new Emitter<ITerminalCommand>(),
+	);
+	readonly onCommandExecuted: Event<ITerminalCommand> =
+		this._onCommandExecuted.event;
 
-	private readonly _onCommandFinished = this._register(new Emitter<ITerminalCommand>());
-	readonly onCommandFinished: Event<ITerminalCommand> = this._onCommandFinished.event;
+	private readonly _onCommandFinished = this._register(
+		new Emitter<ITerminalCommand>(),
+	);
+	readonly onCommandFinished: Event<ITerminalCommand> =
+		this._onCommandFinished.event;
 
 	private _terminalInstance: ITerminalInstance | undefined;
 
@@ -186,27 +219,30 @@ export class AhpTerminalCommandSource extends Disposable implements IAhpTerminal
 		return this._executingCommand;
 	}
 
-	connect(
-		terminalInstance: ITerminalInstance,
-		pty: AgentHostPty,
-	) {
+	connect(terminalInstance: ITerminalInstance, pty: AgentHostPty) {
 		this._terminalInstance = terminalInstance;
-		this._register(pty.onCommandExecuted(e => this._handleCommandExecuted(e)));
-		this._register(pty.onCommandFinished(e => this._handleCommandFinished(e)));
+		this._register(
+			pty.onCommandExecuted((e) => this._handleCommandExecuted(e)),
+		);
+		this._register(
+			pty.onCommandFinished((e) => this._handleCommandFinished(e)),
+		);
 		// Track streaming data so we can append to the executing command's output.
 		// Skip for replayed commands (storedOutput already populated from snapshot).
-		this._register(terminalInstance.onWillData(data => {
-			if (this._executingCommand && !this._executingCommand.wasReplayed) {
-				this._executingCommand.appendOutput(data);
-			}
-		}));
+		this._register(
+			terminalInstance.onWillData((data) => {
+				if (this._executingCommand && !this._executingCommand.wasReplayed) {
+					this._executingCommand.appendOutput(data);
+				}
+			}),
+		);
 	}
 
 	getCommandById(id: string): ITerminalCommand | undefined {
 		if (this._executingCommand?.id === id) {
 			return this._executingCommand;
 		}
-		return this._commands.find(c => c.id === id);
+		return this._commands.find((c) => c.id === id);
 	}
 
 	/**
@@ -216,13 +252,20 @@ export class AhpTerminalCommandSource extends Disposable implements IAhpTerminal
 	 * {@link AgentHostPty}, so it is always at the correct cursor position
 	 * regardless of whether the data was replayed or streamed.
 	 */
-	private _resolveMarkById(commandId: string, kind: AhpCommandMarkKind): IMarker | undefined {
+	private _resolveMarkById(
+		commandId: string,
+		kind: AhpCommandMarkKind,
+	): IMarker | undefined {
 		const markId = getAhpCommandMarkId(commandId, kind);
-		const bufferMarkCapability = this._terminalInstance?.capabilities.get(TerminalCapability.BufferMarkDetection);
+		const bufferMarkCapability = this._terminalInstance?.capabilities.get(
+			TerminalCapability.BufferMarkDetection,
+		);
 		return bufferMarkCapability?.getMark(markId);
 	}
 
-	private _handleCommandExecuted(event: IAgentHostPtyCommandExecutedEvent): void {
+	private _handleCommandExecuted(
+		event: IAgentHostPtyCommandExecutedEvent,
+	): void {
 		const command = new AhpTerminalCommand(
 			event.commandId,
 			event.commandLine,
@@ -237,10 +280,13 @@ export class AhpTerminalCommandSource extends Disposable implements IAhpTerminal
 		this._onCommandExecuted.fire(command);
 	}
 
-	private _handleCommandFinished(event: IAgentHostPtyCommandFinishedEvent): void {
-		const command = this._executingCommand?.id === event.commandId
-			? this._executingCommand
-			: this._commands.find(c => c.id === event.commandId);
+	private _handleCommandFinished(
+		event: IAgentHostPtyCommandFinishedEvent,
+	): void {
+		const command =
+			this._executingCommand?.id === event.commandId
+				? this._executingCommand
+				: this._commands.find((c) => c.id === event.commandId);
 
 		if (!command) {
 			return;

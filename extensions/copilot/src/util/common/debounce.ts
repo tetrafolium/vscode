@@ -43,7 +43,7 @@ export class Debouncer {
 /** Debounce function for sync functions */
 export function debounce<T extends (...args: any[]) => any>(
 	ms: number,
-	callback: T
+	callback: T,
 ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
 	let timer: any | undefined;
 
@@ -51,7 +51,7 @@ export function debounce<T extends (...args: any[]) => any>(
 		if (timer) {
 			clearTimeout(timer);
 		}
-		return new Promise<ReturnType<T>>(resolve => {
+		return new Promise<ReturnType<T>>((resolve) => {
 			timer = setTimeout(() => {
 				const returnValue = callback(...args) as ReturnType<T>;
 				resolve(returnValue);

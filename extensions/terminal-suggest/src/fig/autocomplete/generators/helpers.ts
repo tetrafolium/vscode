@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Cache } from './cache';
-import type { Annotation } from '../../autocomplete-parser/parseArguments';
-import type { Suggestion } from '../../shared/internal';
-import { getCWDForFilesAndFolders } from '../../shared/utils';
+import { Cache } from "./cache";
+import type { Annotation } from "../../autocomplete-parser/parseArguments";
+import type { Suggestion } from "../../shared/internal";
+import { getCWDForFilesAndFolders } from "../../shared/utils";
 
 export type GeneratorContext = Fig.ShellContext & {
 	annotations: Annotation[];
@@ -37,7 +37,7 @@ export async function runCachedGenerator<T>(
 	const cacheDefault = false; // getSetting<boolean>(SETTINGS.CACHE_ALL_GENERATORS) ?? false;
 	let { cache } = generator;
 	if (!cache && cacheDefault) {
-		cache = { strategy: 'stale-while-revalidate', ttl: 1_000 };
+		cache = { strategy: "stale-while-revalidate", ttl: 1_000 };
 	}
 	if (!cache) {
 		return initialRun();
@@ -51,7 +51,7 @@ export async function runCachedGenerator<T>(
 	// we cache generator results by script, if no script was provided we use the tokens instead
 	const key = [
 		cache.cacheByDirectory ? directory : undefined,
-		cacheKey || tokenArray.join(' '),
+		cacheKey || tokenArray.join(" "),
 	].toString();
 
 	return generatorCache.entry(key, initialRun, cache);

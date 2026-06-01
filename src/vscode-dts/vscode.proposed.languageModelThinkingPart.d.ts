@@ -5,8 +5,7 @@
 
 // version: 1
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	/**
 	 * A language model response part containing thinking/reasoning content.
 	 * Thinking tokens represent the model's internal reasoning process that
@@ -36,7 +35,11 @@ declare module 'vscode' {
 		 * @param id Optional unique identifier for this thinking sequence.
 		 * @param metadata Optional metadata associated with this thinking sequence.
 		 */
-		constructor(value: string | string[], id?: string, metadata?: { readonly [key: string]: any });
+		constructor(
+			value: string | string[],
+			id?: string,
+			metadata?: { readonly [key: string]: any },
+		);
 	}
 
 	export interface LanguageModelChatResponse {
@@ -44,26 +47,46 @@ declare module 'vscode' {
 		 * An async iterable that is a stream of text, thinking, and tool-call parts forming the overall response.
 		 * This includes {@link LanguageModelThinkingPart} which represents the model's internal reasoning process.
 		 */
-		stream: AsyncIterable<LanguageModelTextPart | LanguageModelThinkingPart | LanguageModelToolCallPart | unknown>;
+		stream: AsyncIterable<
+			| LanguageModelTextPart
+			| LanguageModelThinkingPart
+			| LanguageModelToolCallPart
+			| unknown
+		>;
 	}
 
 	export interface LanguageModelChat {
-		sendRequest(messages: Array<LanguageModelChatMessage | LanguageModelChatMessage2>, options?: LanguageModelChatRequestOptions, token?: CancellationToken): Thenable<LanguageModelChatResponse>;
-		countTokens(text: string | LanguageModelChatMessage | LanguageModelChatMessage2, token?: CancellationToken): Thenable<number>;
+		sendRequest(
+			messages: Array<LanguageModelChatMessage | LanguageModelChatMessage2>,
+			options?: LanguageModelChatRequestOptions,
+			token?: CancellationToken,
+		): Thenable<LanguageModelChatResponse>;
+		countTokens(
+			text: string | LanguageModelChatMessage | LanguageModelChatMessage2,
+			token?: CancellationToken,
+		): Thenable<number>;
 	}
 
 	/**
 	 * Represents a message in a chat. Can assume different roles, like user or assistant.
 	 */
 	export class LanguageModelChatMessage2 {
-
 		/**
 		 * Utility to create a new user message.
 		 *
 		 * @param content The content of the message.
 		 * @param name The optional name of a user for the message.
 		 */
-		static User(content: string | Array<LanguageModelTextPart | LanguageModelToolResultPart | LanguageModelDataPart>, name?: string): LanguageModelChatMessage2;
+		static User(
+			content:
+				| string
+				| Array<
+						| LanguageModelTextPart
+						| LanguageModelToolResultPart
+						| LanguageModelDataPart
+				  >,
+			name?: string,
+		): LanguageModelChatMessage2;
 
 		/**
 		 * Utility to create a new assistant message.
@@ -71,7 +94,16 @@ declare module 'vscode' {
 		 * @param content The content of the message.
 		 * @param name The optional name of a user for the message.
 		 */
-		static Assistant(content: string | Array<LanguageModelTextPart | LanguageModelToolCallPart | LanguageModelDataPart>, name?: string): LanguageModelChatMessage2;
+		static Assistant(
+			content:
+				| string
+				| Array<
+						| LanguageModelTextPart
+						| LanguageModelToolCallPart
+						| LanguageModelDataPart
+				  >,
+			name?: string,
+		): LanguageModelChatMessage2;
 
 		/**
 		 * The role of this message.
@@ -82,7 +114,13 @@ declare module 'vscode' {
 		 * A string or heterogeneous array of things that a message can contain as content. Some parts may be message-type
 		 * specific for some models.
 		 */
-		content: Array<LanguageModelTextPart | LanguageModelToolResultPart | LanguageModelToolCallPart | LanguageModelDataPart | LanguageModelThinkingPart>;
+		content: Array<
+			| LanguageModelTextPart
+			| LanguageModelToolResultPart
+			| LanguageModelToolCallPart
+			| LanguageModelDataPart
+			| LanguageModelThinkingPart
+		>;
 
 		/**
 		 * The optional name of a user for this message.
@@ -96,16 +134,28 @@ declare module 'vscode' {
 		 * @param content The content of the message.
 		 * @param name The optional name of a user for the message.
 		 */
-		constructor(role: LanguageModelChatMessageRole, content: string | Array<LanguageModelTextPart | LanguageModelToolResultPart | LanguageModelToolCallPart | LanguageModelDataPart | LanguageModelThinkingPart>, name?: string);
+		constructor(
+			role: LanguageModelChatMessageRole,
+			content:
+				| string
+				| Array<
+						| LanguageModelTextPart
+						| LanguageModelToolResultPart
+						| LanguageModelToolCallPart
+						| LanguageModelDataPart
+						| LanguageModelThinkingPart
+				  >,
+			name?: string,
+		);
 	}
 
 	/**
 	 * Temporary alias for LanguageModelToolResultPart to avoid breaking changes in chat.
 	 */
-	export class LanguageModelToolResultPart2 extends LanguageModelToolResultPart { }
+	export class LanguageModelToolResultPart2 extends LanguageModelToolResultPart {}
 
 	/**
 	 * Temporary alias for LanguageModelToolResult to avoid breaking changes in chat.
 	 */
-	export class LanguageModelToolResult2 extends LanguageModelToolResult { }
+	export class LanguageModelToolResult2 extends LanguageModelToolResult {}
 }

@@ -9,24 +9,30 @@ import { LanguageModelTextPart } from '../../../vscodeTypes';
 import { ToolName } from '../../tools/common/toolNames';
 import { IToolsService } from '../../tools/common/toolsService';
 
-export const ITodoListContextProvider = createServiceIdentifier<ITodoListContextProvider>('ITodoListContextProvider');
+export const ITodoListContextProvider =
+	createServiceIdentifier<ITodoListContextProvider>(
+		'ITodoListContextProvider',
+	);
 export interface ITodoListContextProvider {
 	getCurrentTodoContext(sessionResource: string): Promise<string | undefined>;
 }
 
 export class TodoListContextProvider implements ITodoListContextProvider {
-	constructor(
-		@IToolsService private readonly toolsService: IToolsService,
-	) { }
+	constructor(@IToolsService private readonly toolsService: IToolsService) {}
 
-	async getCurrentTodoContext(sessionResource: string): Promise<string | undefined> {
+	async getCurrentTodoContext(
+		sessionResource: string,
+	): Promise<string | undefined> {
 		try {
 			const result = await this.toolsService.invokeTool(
 				ToolName.CoreManageTodoList,
 				{
-					input: { operation: 'read', chatSessionResource: sessionResource }
+					input: {
+						operation: 'read',
+						chatSessionResource: sessionResource,
+					},
 				} as any,
-				CancellationToken.None
+				CancellationToken.None,
 			);
 
 			if (!result || !result.content) {
@@ -34,8 +40,11 @@ export class TodoListContextProvider implements ITodoListContextProvider {
 			}
 
 			const todoList = result.content
-				.filter((part): part is LanguageModelTextPart => part instanceof LanguageModelTextPart)
-				.map(part => part.value)
+				.filter(
+					(part): part is LanguageModelTextPart =>
+						part instanceof LanguageModelTextPart,
+				)
+				.map((part) => part.value)
 				.join('\n');
 
 			if (!todoList.trim() || todoList === 'No todo list found.') {

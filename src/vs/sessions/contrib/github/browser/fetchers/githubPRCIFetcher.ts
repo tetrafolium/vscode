@@ -3,8 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { GitHubCheckConclusion, GitHubCheckStatus, GitHubCIOverallStatus, IGitHubCICheck } from '../../common/types.js';
-import { GitHubApiClient, IGitHubApiResponse } from '../githubApiClient.js';
+import {
+	GitHubCheckConclusion,
+	GitHubCheckStatus,
+	GitHubCIOverallStatus,
+	IGitHubCICheck,
+} from "../../common/types.js";
+import { GitHubApiClient, IGitHubApiResponse } from "../githubApiClient.js";
 
 //#region GitHub API response types
 
@@ -54,35 +59,42 @@ interface IGitHubCheckRunDetailResponse {
  * All methods return raw typed data with no caching or state.
  */
 export class GitHubPRCIFetcher {
+	constructor(private readonly _apiClient: GitHubApiClient) {}
 
-	constructor(
-		private readonly _apiClient: GitHubApiClient,
-	) { }
-
-	async getCheckRuns(owner: string, repo: string, ref: string, etag?: string): Promise<IGitHubApiResponse<readonly IGitHubCICheck[]>> {
-		const response = await this._apiClient.request<IGitHubCheckRunsListResponse>(
-			'GET',
-			`/repos/${e(owner)}/${e(repo)}/commits/${e(ref)}/check-runs`,
-			'githubApi.getCheckRuns',
-			{ etag }
-		);
+	async getCheckRuns(
+		owner: string,
+		repo: string,
+		ref: string,
+		etag?: string,
+	): Promise<IGitHubApiResponse<readonly IGitHubCICheck[]>> {
+		const response =
+			await this._apiClient.request<IGitHubCheckRunsListResponse>(
+				"GET",
+				`/repos/${e(owner)}/${e(repo)}/commits/${e(ref)}/check-runs`,
+				"githubApi.getCheckRuns",
+				{ etag },
+			);
 
 		return {
 			...response,
 			data: response.data
 				? response.data.check_runs.map(mapCheckRun)
-				: undefined
+				: undefined,
 		};
 	}
 
 	/**
 	 * Rerun failed jobs in a GitHub Actions workflow run.
 	 */
-	async rerunFailedJobs(owner: string, repo: string, runId: number): Promise<void> {
+	async rerunFailedJobs(
+		owner: string,
+		repo: string,
+		runId: number,
+	): Promise<void> {
 		await this._apiClient.request<void>(
-			'POST',
+			"POST",
 			`/repos/${e(owner)}/${e(repo)}/actions/runs/${runId}/rerun-failed-jobs`,
-			'githubApi.rerunFailedJobs'
+			"githubApi.rerunFailedJobs",
 		);
 	}
 
@@ -95,16 +107,21 @@ export class GitHubPRCIFetcher {
 	 * 2. Annotations attached to the check run.
 	 * 3. GitHub Actions job logs (only works for GitHub Actions workflows).
 	 */
-	async getCheckRunAnnotations(owner: string, repo: string, checkRunId: number): Promise<string> {
+	async getCheckRunAnnotations(
+		owner: string,
+		repo: string,
+		checkRunId: number,
+	): Promise<string> {
 		const sections: string[] = [];
 
 		// 1. Fetch check run detail for output fields
 		try {
-			const detailResponse = await this._apiClient.request<IGitHubCheckRunDetailResponse>(
-				'GET',
-				`/repos/${e(owner)}/${e(repo)}/check-runs/${checkRunId}`,
-				'githubApi.getCheckRunAnnotations'
-			);
+			const detailResponse =
+				await this._apiClient.request<IGitHubCheckRunDetailResponse>(
+					"GET",
+					`/repos/${e(owner)}/${e(repo)}/check-runs/${checkRunId}`,
+					"githubApi.getCheckRunAnnotations",
+				);
 			const output = detailResponse.data?.output;
 			if (output?.title) {
 				sections.push(`# ${output.title}`);
@@ -121,17 +138,22 @@ export class GitHubPRCIFetcher {
 
 		// 2. Fetch annotations
 		try {
-			const annotationsResponse = await this._apiClient.request<readonly IGitHubCheckRunAnnotationResponse[]>(
-				'GET',
+			const annotationsResponse = await this._apiClient.request<
+				readonly IGitHubCheckRunAnnotationResponse[]
+			>(
+				"GET",
 				`/repos/${e(owner)}/${e(repo)}/check-runs/${checkRunId}/annotations`,
-				'githubApi.getCheckRunAnnotations.annotations'
+				"githubApi.getCheckRunAnnotations.annotations",
 			);
 			const annotations = annotationsResponse.data;
 			if (annotations && annotations.length > 0) {
 				sections.push(
-					annotations.map(a =>
-						`[${a.annotation_level}] ${a.path}:${a.start_line}${a.end_line !== a.start_line ? `-${a.end_line}` : ''} ${a.title ? `(${a.title}) ` : ''}${a.message}`
-					).join('\n')
+					annotations
+						.map(
+							(a) =>
+								`[${a.annotation_level}] ${a.path}:${a.start_line}${a.end_line !== a.start_line ? `-${a.end_line}` : ""} ${a.title ? `(${a.title}) ` : ""}${a.message}`,
+						)
+						.join("\n"),
 				);
 			}
 		} catch {
@@ -139,10 +161,10 @@ export class GitHubPRCIFetcher {
 		}
 
 		if (sections.length > 0) {
-			return sections.join('\n\n');
+			return sections.join("\n\n");
 		}
 
-		return 'No output available for this check run.';
+		return "No output available for this check run.";
 	}
 }
 
@@ -157,7 +179,9 @@ function mapCheckRun(data: IGitHubCheckRunResponse): IGitHubCICheck {
 		id: data.id,
 		name: data.name,
 		status: mapCheckStatus(data.status),
-		conclusion: data.conclusion ? mapCheckConclusion(data.conclusion) : undefined,
+		conclusion: data.conclusion
+			? mapCheckConclusion(data.conclusion)
+			: undefined,
 		startedAt: data.started_at ?? undefined,
 		completedAt: data.completed_at ?? undefined,
 		detailsUrl: data.details_url ?? undefined,
@@ -166,31 +190,46 @@ function mapCheckRun(data: IGitHubCheckRunResponse): IGitHubCICheck {
 
 function mapCheckStatus(status: string): GitHubCheckStatus {
 	switch (status) {
-		case 'queued': return GitHubCheckStatus.Queued;
-		case 'in_progress': return GitHubCheckStatus.InProgress;
-		case 'completed': return GitHubCheckStatus.Completed;
-		default: return GitHubCheckStatus.Queued;
+		case "queued":
+			return GitHubCheckStatus.Queued;
+		case "in_progress":
+			return GitHubCheckStatus.InProgress;
+		case "completed":
+			return GitHubCheckStatus.Completed;
+		default:
+			return GitHubCheckStatus.Queued;
 	}
 }
 
 function mapCheckConclusion(conclusion: string): GitHubCheckConclusion {
 	switch (conclusion) {
-		case 'success': return GitHubCheckConclusion.Success;
-		case 'failure': return GitHubCheckConclusion.Failure;
-		case 'neutral': return GitHubCheckConclusion.Neutral;
-		case 'cancelled': return GitHubCheckConclusion.Cancelled;
-		case 'skipped': return GitHubCheckConclusion.Skipped;
-		case 'timed_out': return GitHubCheckConclusion.TimedOut;
-		case 'action_required': return GitHubCheckConclusion.ActionRequired;
-		case 'stale': return GitHubCheckConclusion.Stale;
-		default: return GitHubCheckConclusion.Neutral;
+		case "success":
+			return GitHubCheckConclusion.Success;
+		case "failure":
+			return GitHubCheckConclusion.Failure;
+		case "neutral":
+			return GitHubCheckConclusion.Neutral;
+		case "cancelled":
+			return GitHubCheckConclusion.Cancelled;
+		case "skipped":
+			return GitHubCheckConclusion.Skipped;
+		case "timed_out":
+			return GitHubCheckConclusion.TimedOut;
+		case "action_required":
+			return GitHubCheckConclusion.ActionRequired;
+		case "stale":
+			return GitHubCheckConclusion.Stale;
+		default:
+			return GitHubCheckConclusion.Neutral;
 	}
 }
 
 /**
  * Compute an overall CI status from a list of check runs.
  */
-export function computeOverallCIStatus(checks: readonly IGitHubCICheck[]): GitHubCIOverallStatus {
+export function computeOverallCIStatus(
+	checks: readonly IGitHubCICheck[],
+): GitHubCIOverallStatus {
 	if (checks.length === 0) {
 		return GitHubCIOverallStatus.Neutral;
 	}
@@ -203,9 +242,11 @@ export function computeOverallCIStatus(checks: readonly IGitHubCICheck[]): GitHu
 			hasPending = true;
 			continue;
 		}
-		if (check.conclusion === GitHubCheckConclusion.Failure ||
+		if (
+			check.conclusion === GitHubCheckConclusion.Failure ||
 			check.conclusion === GitHubCheckConclusion.TimedOut ||
-			check.conclusion === GitHubCheckConclusion.ActionRequired) {
+			check.conclusion === GitHubCheckConclusion.ActionRequired
+		) {
 			hasFailure = true;
 		}
 	}

@@ -29,12 +29,19 @@ import {
 	IClaudeCodeSessionInfo,
 	ISubagentSession,
 } from './claudeSessionSchema';
-import { buildClaudeCodeSession, sdkSessionInfoToSessionInfo, sdkSubagentMessagesToSubagentSession } from './sdkSessionAdapter';
+import {
+	buildClaudeCodeSession,
+	sdkSessionInfoToSessionInfo,
+	sdkSubagentMessagesToSubagentSession,
+} from './sdkSessionAdapter';
 import { toErrorMessage } from '../../../../../util/common/errorMessage';
 
 // #region Service Interface
 
-export const IClaudeCodeSessionService = createServiceIdentifier<IClaudeCodeSessionService>('IClaudeCodeSessionService');
+export const IClaudeCodeSessionService =
+	createServiceIdentifier<IClaudeCodeSessionService>(
+		'IClaudeCodeSessionService',
+	);
 
 /**
  * Service to load and manage Claude Code chat sessions.
@@ -46,13 +53,18 @@ export interface IClaudeCodeSessionService {
 	 * Get lightweight metadata for all sessions in the current workspace.
 	 * This is optimized for listing sessions without loading full content.
 	 */
-	getAllSessions(token: CancellationToken): Promise<readonly IClaudeCodeSessionInfo[]>;
+	getAllSessions(
+		token: CancellationToken,
+	): Promise<readonly IClaudeCodeSessionInfo[]>;
 
 	/**
 	 * Get a specific session with full content by its resource URI.
 	 * This loads the complete message history and subagents.
 	 */
-	getSession(resource: URI, token: CancellationToken): Promise<IClaudeCodeSession | undefined>;
+	getSession(
+		resource: URI,
+		token: CancellationToken,
+	): Promise<IClaudeCodeSession | undefined>;
 }
 
 // #endregion
@@ -63,24 +75,33 @@ export class ClaudeCodeSessionService implements IClaudeCodeSessionService {
 	declare _serviceBrand: undefined;
 
 	constructor(
-		@IClaudeCodeSdkService private readonly _sdkService: IClaudeCodeSdkService,
+		@IClaudeCodeSdkService
+		private readonly _sdkService: IClaudeCodeSdkService,
 		@ILogService private readonly _logService: ILogService,
 		@IWorkspaceService private readonly _workspace: IWorkspaceService,
-		@IFolderRepositoryManager private readonly _folderRepositoryManager: IFolderRepositoryManager,
-		@IAgentSessionsWorkspace private readonly _agentSessionsWorkspace: IAgentSessionsWorkspace,
-	) { }
+		@IFolderRepositoryManager
+		private readonly _folderRepositoryManager: IFolderRepositoryManager,
+		@IAgentSessionsWorkspace
+		private readonly _agentSessionsWorkspace: IAgentSessionsWorkspace,
+	) {}
 
 	/**
 	 * Get lightweight metadata for all sessions in the current workspace.
 	 * Delegates to the SDK's `listSessions()` and converts results.
 	 */
-	async getAllSessions(token: CancellationToken): Promise<readonly IClaudeCodeSessionInfo[]> {
+	async getAllSessions(
+		token: CancellationToken,
+	): Promise<readonly IClaudeCodeSessionInfo[]> {
 		if (this._agentSessionsWorkspace.isAgentSessionsWorkspace) {
 			try {
 				const sdkSessions = await this._sdkService.listSessions();
-				return sdkSessions.map(sdkInfo => sdkSessionInfoToSessionInfo(sdkInfo));
+				return sdkSessions.map((sdkInfo) =>
+					sdkSessionInfoToSessionInfo(sdkInfo),
+				);
 			} catch (e) {
-				this._logService.debug(`[ClaudeCodeSessionService] Failed to list all sessions: ${e}`);
+				this._logService.debug(
+					`[ClaudeCodeSessionService] Failed to list all sessions: ${e}`,
+				);
 				return [];
 			}
 		}
@@ -96,12 +117,18 @@ export class ClaudeCodeSessionService implements IClaudeCodeSessionService {
 			const folderName = basename(folderUri);
 
 			try {
-				const sdkSessions = await this._sdkService.listSessions(folderUri.fsPath);
+				const sdkSessions = await this._sdkService.listSessions(
+					folderUri.fsPath,
+				);
 				for (const sdkInfo of sdkSessions) {
-					items.push(sdkSessionInfoToSessionInfo(sdkInfo, folderName));
+					items.push(
+						sdkSessionInfoToSessionInfo(sdkInfo, folderName),
+					);
 				}
 			} catch (e) {
-				this._logService.debug(`[ClaudeCodeSessionService] Failed to list sessions for slug ${slug}: ${e}`);
+				this._logService.debug(
+					`[ClaudeCodeSessionService] Failed to list sessions for slug ${slug}: ${e}`,
+				);
 			}
 		}
 
@@ -112,7 +139,10 @@ export class ClaudeCodeSessionService implements IClaudeCodeSessionService {
 	 * Get a specific session with full content by its resource URI.
 	 * Uses SDK APIs for metadata, messages, and subagent transcripts.
 	 */
-	async getSession(resource: URI, token: CancellationToken): Promise<IClaudeCodeSession | undefined> {
+	async getSession(
+		resource: URI,
+		token: CancellationToken,
+	): Promise<IClaudeCodeSession | undefined> {
 		const sessionId = ClaudeSessionUri.getSessionId(resource);
 
 		if (this._agentSessionsWorkspace.isAgentSessionsWorkspace) {
@@ -122,15 +152,24 @@ export class ClaudeCodeSessionService implements IClaudeCodeSessionService {
 					return undefined;
 				}
 
-				const messages = await this._sdkService.getSessionMessages(sessionId, info.cwd);
+				const messages = await this._sdkService.getSessionMessages(
+					sessionId,
+					info.cwd,
+				);
 				if (token.isCancellationRequested) {
 					return undefined;
 				}
 
-				const subagents = await this._loadSubagents(sessionId, info.cwd, token);
+				const subagents = await this._loadSubagents(
+					sessionId,
+					info.cwd,
+					token,
+				);
 				return buildClaudeCodeSession(info, messages, subagents);
 			} catch (e) {
-				this._logService.debug(`[ClaudeCodeSessionService] Failed to load session ${sessionId}: ${e}`);
+				this._logService.debug(
+					`[ClaudeCodeSessionService] Failed to load session ${sessionId}: ${e}`,
+				);
 				return undefined;
 			}
 		}
@@ -145,23 +184,40 @@ export class ClaudeCodeSessionService implements IClaudeCodeSessionService {
 			const dir = folderUri.fsPath;
 
 			try {
-				const info = await this._sdkService.getSessionInfo(sessionId, dir);
+				const info = await this._sdkService.getSessionInfo(
+					sessionId,
+					dir,
+				);
 				if (!info) {
 					continue;
 				}
 
 				const sessionDir = info.cwd ?? dir;
-				const messages = await this._sdkService.getSessionMessages(sessionId, sessionDir);
+				const messages = await this._sdkService.getSessionMessages(
+					sessionId,
+					sessionDir,
+				);
 				if (token.isCancellationRequested) {
 					return undefined;
 				}
 
-				const subagents = await this._loadSubagents(sessionId, sessionDir, token);
+				const subagents = await this._loadSubagents(
+					sessionId,
+					sessionDir,
+					token,
+				);
 
 				const folderName = basename(folderUri);
-				return buildClaudeCodeSession(info, messages, subagents, folderName);
+				return buildClaudeCodeSession(
+					info,
+					messages,
+					subagents,
+					folderName,
+				);
 			} catch (e) {
-				this._logService.debug(`[ClaudeCodeSessionService] Failed to load session ${sessionId} from slug ${slug}: ${e}`);
+				this._logService.debug(
+					`[ClaudeCodeSessionService] Failed to load session ${sessionId} from slug ${slug}: ${e}`,
+				);
 			}
 		}
 
@@ -175,7 +231,10 @@ export class ClaudeCodeSessionService implements IClaudeCodeSessionService {
 	 * original folder URIs (needed for badge display).
 	 */
 	private _getProjectFolders() {
-		return getProjectFolders(this._workspace, this._folderRepositoryManager);
+		return getProjectFolders(
+			this._workspace,
+			this._folderRepositoryManager,
+		);
 	}
 
 	// #endregion
@@ -189,9 +248,14 @@ export class ClaudeCodeSessionService implements IClaudeCodeSessionService {
 	): Promise<readonly ISubagentSession[]> {
 		let agentIds: string[];
 		try {
-			agentIds = await this._sdkService.listSubagents(sessionId, cwd ? { dir: cwd } : undefined);
+			agentIds = await this._sdkService.listSubagents(
+				sessionId,
+				cwd ? { dir: cwd } : undefined,
+			);
 		} catch (error) {
-			this._logService.warn(`[ClaudeCodeSessionService] listSubagents failed: ${toErrorMessage(error)}`);
+			this._logService.warn(
+				`[ClaudeCodeSessionService] listSubagents failed: ${toErrorMessage(error)}`,
+			);
 			return [];
 		}
 
@@ -200,7 +264,9 @@ export class ClaudeCodeSessionService implements IClaudeCodeSessionService {
 		}
 
 		const results = await Promise.allSettled(
-			agentIds.map(agentId => this._loadSubagentFromSdk(sessionId, agentId, cwd))
+			agentIds.map((agentId) =>
+				this._loadSubagentFromSdk(sessionId, agentId, cwd),
+			),
 		);
 
 		if (token.isCancellationRequested) {
@@ -225,10 +291,16 @@ export class ClaudeCodeSessionService implements IClaudeCodeSessionService {
 		cwd: string | undefined,
 	): Promise<ISubagentSession | null> {
 		try {
-			const messages = await this._sdkService.getSubagentMessages(sessionId, agentId, cwd ? { dir: cwd } : undefined);
+			const messages = await this._sdkService.getSubagentMessages(
+				sessionId,
+				agentId,
+				cwd ? { dir: cwd } : undefined,
+			);
 			return sdkSubagentMessagesToSubagentSession(agentId, messages);
 		} catch (error) {
-			this._logService.warn(`[ClaudeCodeSessionService] Failed to load subagent ${agentId} for session ${sessionId}: ${toErrorMessage(error)}`);
+			this._logService.warn(
+				`[ClaudeCodeSessionService] Failed to load subagent ${agentId} for session ${sessionId}: ${toErrorMessage(error)}`,
+			);
 			return null;
 		}
 	}

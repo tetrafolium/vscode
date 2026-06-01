@@ -86,7 +86,11 @@
 }
 
 .session-view.is-active .chat-composite-bar-tab.active {
-	background-color: color-mix(in srgb, var(--vscode-agentsPanel-foreground, var(--vscode-foreground)) 5%, transparent);
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-agentsPanel-foreground, var(--vscode-foreground)) 5%,
+		transparent
+	);
 }
 
 /* Reduce right padding when close button is present to avoid excess spacing */
@@ -122,8 +126,9 @@
 }
 
 .chat-composite-bar-tab.unread .chat-composite-bar-tab-indicator-icon::before,
-.chat-composite-bar-tab.needs-input .chat-composite-bar-tab-indicator-icon::before {
-	content: '';
+.chat-composite-bar-tab.needs-input
+	.chat-composite-bar-tab-indicator-icon::before {
+	content: "";
 	width: 6px;
 	height: 6px;
 	border-radius: 50%;
@@ -133,7 +138,8 @@
 	background-color: var(--vscode-textLink-foreground);
 }
 
-.chat-composite-bar-tab.needs-input .chat-composite-bar-tab-indicator-icon::before {
+.chat-composite-bar-tab.needs-input
+	.chat-composite-bar-tab-indicator-icon::before {
 	background-color: var(--vscode-list-warningForeground);
 }
 

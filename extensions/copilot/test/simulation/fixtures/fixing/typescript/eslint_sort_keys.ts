@@ -10,16 +10,16 @@ export interface Feature {
 export function combineFeatures(
 	segment: Feature[],
 	other: Feature,
-	suprasegmental: Feature
+	suprasegmental: Feature,
 ) {
 	const features = [other].concat(segment).concat(suprasegmental);
 	return (unify as any).apply(undefined, features);
 }
 function unify() {
 	const feature = {
-		name: "",
+		name: '',
 		value: false,
-		extended: undefined
+		extended: undefined,
 	};
 	for (let i = 0; i < arguments.length; i++) {
 		feature.name = arguments[i].name;

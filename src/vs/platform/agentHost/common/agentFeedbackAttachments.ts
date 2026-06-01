@@ -3,11 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isString } from '../../../base/common/types.js';
-import { MessageAttachmentKind, type MessageAttachment, type SimpleMessageAttachment, type TextRange } from './state/protocol/state.js';
+import { isString } from "../../../base/common/types.js";
+import {
+	MessageAttachmentKind,
+	type MessageAttachment,
+	type SimpleMessageAttachment,
+	type TextRange,
+} from "./state/protocol/state.js";
 
-export const AgentFeedbackAttachmentDisplayKind = 'agentFeedback';
-export const AgentFeedbackAttachmentMetadataKey = 'agentFeedback';
+export const AgentFeedbackAttachmentDisplayKind = "agentFeedback";
+export const AgentFeedbackAttachmentMetadataKey = "agentFeedback";
 
 export interface IAgentFeedbackAttachmentMetadata {
 	readonly sessionResource: string;
@@ -22,16 +27,27 @@ export interface IAgentFeedbackAttachmentItemMetadata {
 	readonly replies?: readonly string[];
 }
 
-export function isAgentFeedbackAttachment(attachment: MessageAttachment): attachment is SimpleMessageAttachment {
-	return attachment.type === MessageAttachmentKind.Simple && attachment.displayKind === AgentFeedbackAttachmentDisplayKind;
+export function isAgentFeedbackAttachment(
+	attachment: MessageAttachment,
+): attachment is SimpleMessageAttachment {
+	return (
+		attachment.type === MessageAttachmentKind.Simple &&
+		attachment.displayKind === AgentFeedbackAttachmentDisplayKind
+	);
 }
 
-export function getAgentFeedbackAttachmentMetadata(attachment: MessageAttachment): IAgentFeedbackAttachmentMetadata | undefined {
+export function getAgentFeedbackAttachmentMetadata(
+	attachment: MessageAttachment,
+): IAgentFeedbackAttachmentMetadata | undefined {
 	if (!isAgentFeedbackAttachment(attachment)) {
 		return undefined;
 	}
 	const metadata = attachment._meta?.[AgentFeedbackAttachmentMetadataKey];
-	if (!isRecord(metadata) || !isString(metadata.sessionResource) || !Array.isArray(metadata.feedbackItems)) {
+	if (
+		!isRecord(metadata) ||
+		!isString(metadata.sessionResource) ||
+		!Array.isArray(metadata.feedbackItems)
+	) {
 		return undefined;
 	}
 
@@ -49,8 +65,15 @@ export function getAgentFeedbackAttachmentMetadata(attachment: MessageAttachment
 	};
 }
 
-function parseAgentFeedbackAttachmentItem(item: unknown): IAgentFeedbackAttachmentItemMetadata | undefined {
-	if (!isRecord(item) || !isString(item.id) || !isString(item.text) || !isString(item.resourceUri)) {
+function parseAgentFeedbackAttachmentItem(
+	item: unknown,
+): IAgentFeedbackAttachmentItemMetadata | undefined {
+	if (
+		!isRecord(item) ||
+		!isString(item.id) ||
+		!isString(item.text) ||
+		!isString(item.resourceUri)
+	) {
 		return undefined;
 	}
 	const range = parseTextRange(item.range);
@@ -87,13 +110,18 @@ function parseTextRange(range: unknown): TextRange | undefined {
 	return { start, end };
 }
 
-function parseTextPosition(position: Record<string, unknown>): TextRange['start'] | undefined {
-	if (typeof position.line !== 'number' || typeof position.character !== 'number') {
+function parseTextPosition(
+	position: Record<string, unknown>,
+): TextRange["start"] | undefined {
+	if (
+		typeof position.line !== "number" ||
+		typeof position.character !== "number"
+	) {
 		return undefined;
 	}
 	return { line: position.line, character: position.character };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null;
+	return typeof value === "object" && value !== null;
 }

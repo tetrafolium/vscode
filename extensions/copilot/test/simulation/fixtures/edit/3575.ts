@@ -26,7 +26,11 @@ export function arrayIntersection(arr1: number[], arr2: number[]): number[] {
  * @param arr2 - The second array of numbers.
  * @param sum - The target sum. If not provided, defaults to 10.
  */
-export function findPairs(arr1: number[], arr2: number[], sum: number = 10): void {
+export function findPairs(
+	arr1: number[],
+	arr2: number[],
+	sum: number = 10,
+): void {
 	for (let i = 0; i < arr1.length; i++) {
 		for (let j = 0; j < arr2.length; j++) {
 			if (arr1[i] + arr2[j] === sum) {

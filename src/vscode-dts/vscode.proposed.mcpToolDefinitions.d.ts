@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	// https://github.com/microsoft/vscode/issues/272000 @connor4312
 
 	/**
@@ -76,10 +75,16 @@ declare module 'vscode' {
 		serverInfo?: unknown;
 	}
 
-
 	export class McpStdioServerDefinition2 extends McpStdioServerDefinition {
 		metadata?: McpServerMetadata;
-		constructor(label: string, command: string, args?: string[], env?: Record<string, string | number | null>, version?: string, metadata?: McpServerMetadata);
+		constructor(
+			label: string,
+			command: string,
+			args?: string[],
+			env?: Record<string, string | number | null>,
+			version?: string,
+			metadata?: McpServerMetadata,
+		);
 	}
 
 	export class McpHttpServerDefinition2 extends McpHttpServerDefinition {
@@ -93,6 +98,13 @@ declare module 'vscode' {
 			scopes: string[];
 		};
 
-		constructor(label: string, uri: Uri, headers?: Record<string, string>, version?: string, metadata?: McpServerMetadata, authentication?: { providerId: string; scopes: string[] });
+		constructor(
+			label: string,
+			uri: Uri,
+			headers?: Record<string, string>,
+			version?: string,
+			metadata?: McpServerMetadata,
+			authentication?: { providerId: string; scopes: string[] },
+		);
 	}
 }

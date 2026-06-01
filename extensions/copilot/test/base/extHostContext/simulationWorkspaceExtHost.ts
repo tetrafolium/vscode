@@ -15,15 +15,33 @@ import { addExtensionHostSimulationServices } from './simulationExtHostContext';
 export class SimulationWorkspaceExtHost extends SimulationWorkspace {
 	private readonly _root = vscode.workspace.workspaceFolders![0].uri;
 
-	public override setupServices(testingServiceCollection: TestingServiceCollection): void {
+	public override setupServices(
+		testingServiceCollection: TestingServiceCollection,
+	): void {
 		super.setupServices(testingServiceCollection);
 		addExtensionHostSimulationServices(testingServiceCollection);
-		vscode.commands.executeCommand('setContext', 'vscode.chat.tools.global.autoApprove.testMode', true);
-		vscode.workspace.getConfiguration('chat.tools.global').update('autoApprove', true, vscode.ConfigurationTarget.Global);
-		vscode.workspace.getConfiguration('chat.tools.terminal').update('autoReplyToPrompts', true, vscode.ConfigurationTarget.Global);
+		vscode.commands.executeCommand(
+			'setContext',
+			'vscode.chat.tools.global.autoApprove.testMode',
+			true,
+		);
+		vscode.workspace
+			.getConfiguration('chat.tools.global')
+			.update('autoApprove', true, vscode.ConfigurationTarget.Global);
+		vscode.workspace
+			.getConfiguration('chat.tools.terminal')
+			.update(
+				'autoReplyToPrompts',
+				true,
+				vscode.ConfigurationTarget.Global,
+			);
 	}
 
-	override applyEdits(uri: vscode.Uri, edits: vscode.TextEdit[], initialRange?: vscode.Range): vscode.Range {
+	override applyEdits(
+		uri: vscode.Uri,
+		edits: vscode.TextEdit[],
+		initialRange?: vscode.Range,
+	): vscode.Range {
 		const res = super.applyEdits(uri, edits, initialRange);
 
 		if (isEqualOrParent(uri, this._root)) {

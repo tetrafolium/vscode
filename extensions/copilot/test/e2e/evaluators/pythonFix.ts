@@ -12,17 +12,25 @@ async function pythonTestFnEvaluator(
 	accessor: ITestingServicesAccessor,
 	query: string,
 	response: string,
-	testFn: string
+	testFn: string,
 ): Promise<{ success: boolean; errorMessage?: string }> {
-	const codeBlock = extractCodeBlocks(response).filter(x => x.language === 'python').at(0);
+	const codeBlock = extractCodeBlocks(response)
+		.filter((x) => x.language === 'python')
+		.at(0);
 	if (!codeBlock) {
-		return { success: false, errorMessage: 'No python code block found in response' };
+		return {
+			success: false,
+			errorMessage: 'No python code block found in response',
+		};
 	}
 
-	const testCode = '\n' + codeBlock.code + '\n\n' + testFn + '\n\n' + 'test()';
+	const testCode =
+		'\n' + codeBlock.code + '\n\n' + testFn + '\n\n' + 'test()';
 
 	const isValid = await isValidPythonFile(accessor, testCode);
-	return isValid ? { success: true } : { success: false, errorMessage: 'Unit test failed' };
+	return isValid
+		? { success: true }
+		: { success: false, errorMessage: 'Unit test failed' };
 }
 
 const testFnSubArrayMinMaxSum = `
@@ -54,21 +62,37 @@ def test():
 `;
 
 const PythonTestFnEvaluatorGenerator = (testFn: string): ScenarioEvaluator => {
-	return (accessor: ITestingServicesAccessor, question: string, answer: string) =>
-		pythonTestFnEvaluator(accessor, question, answer, testFn);
+	return (
+		accessor: ITestingServicesAccessor,
+		question: string,
+		answer: string,
+	) => pythonTestFnEvaluator(accessor, question, answer, testFn);
 };
 
 export const pythonFixEvaluators: { [key: string]: ScenarioEvaluator } = {
-	'case1.conversation.json': PythonTestFnEvaluatorGenerator(testFnSubArrayMinMaxSum),
-	'case2.conversation.json': PythonTestFnEvaluatorGenerator(testFnSubArrayMinMaxSum),
-	'case3.conversation.json': PythonTestFnEvaluatorGenerator(testFnSubArrayMinMaxSum),
-	'case4.conversation.json': PythonTestFnEvaluatorGenerator(testFnSubArrayMinMaxSum),
-	'case5.conversation.json': PythonTestFnEvaluatorGenerator(testFnSubArrayMinMaxSum),
+	'case1.conversation.json': PythonTestFnEvaluatorGenerator(
+		testFnSubArrayMinMaxSum,
+	),
+	'case2.conversation.json': PythonTestFnEvaluatorGenerator(
+		testFnSubArrayMinMaxSum,
+	),
+	'case3.conversation.json': PythonTestFnEvaluatorGenerator(
+		testFnSubArrayMinMaxSum,
+	),
+	'case4.conversation.json': PythonTestFnEvaluatorGenerator(
+		testFnSubArrayMinMaxSum,
+	),
+	'case5.conversation.json': PythonTestFnEvaluatorGenerator(
+		testFnSubArrayMinMaxSum,
+	),
 	'case6.conversation.json': PythonTestFnEvaluatorGenerator(testFnPalindrome),
 	'case7.conversation.json': PythonTestFnEvaluatorGenerator(testFnPalindrome),
 	'case8.conversation.json': PythonTestFnEvaluatorGenerator(testFnPalindrome),
 	'case9.conversation.json': PythonTestFnEvaluatorGenerator(testFnPalindrome),
-	'case10.conversation.json': PythonTestFnEvaluatorGenerator(testFnPalindrome),
-	'case11.conversation.json': PythonTestFnEvaluatorGenerator(testFnPalindrome),
-	'case12.conversation.json': PythonTestFnEvaluatorGenerator(testFnPalindrome),
+	'case10.conversation.json':
+		PythonTestFnEvaluatorGenerator(testFnPalindrome),
+	'case11.conversation.json':
+		PythonTestFnEvaluatorGenerator(testFnPalindrome),
+	'case12.conversation.json':
+		PythonTestFnEvaluatorGenerator(testFnPalindrome),
 };

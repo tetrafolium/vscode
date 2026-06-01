@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	/**
 	 * Data returned from a tool.
 	 *
@@ -91,7 +90,12 @@ declare module 'vscode' {
 		 *
 		 * @returns A promise that resolves when the webview has been initialized and is ready to be presented to the user.
 		 */
-		renderChatOutput(data: ChatOutputDataItem, webview: ChatOutputWebview, ctx: ChatOutputRenderContext, token: CancellationToken): Thenable<void>;
+		renderChatOutput(
+			data: ChatOutputDataItem,
+			webview: ChatOutputWebview,
+			ctx: ChatOutputRenderContext,
+			token: CancellationToken,
+		): Thenable<void>;
 	}
 
 	export namespace chat {
@@ -116,6 +120,9 @@ declare module 'vscode' {
 		 * @param viewType Unique identifier for the renderer. This should match the `viewType` in your contribution point.
 		 * @param renderer The renderer to register.
 		 */
-		export function registerChatOutputRenderer(viewType: string, renderer: ChatOutputRenderer): Disposable;
+		export function registerChatOutputRenderer(
+			viewType: string,
+			renderer: ChatOutputRenderer,
+		): Disposable;
 	}
 }

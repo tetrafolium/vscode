@@ -4,20 +4,34 @@
  *--------------------------------------------------------------------------------------------*/
 import * as fs from 'fs';
 import path from 'path';
-import { Config, ExperimentBasedConfig, ExperimentBasedConfigType } from '../../src/platform/configuration/common/configurationService';
+import {
+	Config,
+	ExperimentBasedConfig,
+	ExperimentBasedConfigType,
+} from '../../src/platform/configuration/common/configurationService';
 import { EmbeddingType } from '../../src/platform/embeddings/common/embeddingsComputer';
 import { ILogTarget, LogLevel } from '../../src/platform/log/common/logService';
 import { ISimulationTestContext } from '../../src/platform/simulationTestContext/common/simulationTestContext';
 import { TestingServiceCollection } from '../../src/platform/test/node/services';
 import { createServiceIdentifier } from '../../src/util/common/services';
 import { grepStrToRegex } from '../simulation/shared/grepFilter';
-import { EXPLICIT_LOG_TAG, IMPLICIT_LOG_TAG, ITestLocation, IWrittenFile, SIMULATION_EXPLICIT_LOG_FILENAME, SIMULATION_IMPLICIT_LOG_FILENAME, SimulationTestOutcome } from '../simulation/shared/sharedTypes';
+import {
+	EXPLICIT_LOG_TAG,
+	IMPLICIT_LOG_TAG,
+	ITestLocation,
+	IWrittenFile,
+	SIMULATION_EXPLICIT_LOG_FILENAME,
+	SIMULATION_IMPLICIT_LOG_FILENAME,
+	SimulationTestOutcome,
+} from '../simulation/shared/sharedTypes';
 import { computeSHA256 } from './hash';
 import { SimulationOptions } from './simulationOptions';
 export { REPO_ROOT } from '../util';
 
 export interface SimulationTestFunction {
-	(testingServiceCollection: TestingServiceCollection): Promise<unknown> | unknown;
+	(
+		testingServiceCollection: TestingServiceCollection,
+	): Promise<unknown> | unknown;
 }
 
 export interface ISimulationTestOptions {
@@ -70,12 +84,11 @@ export class SimulationTestOptions {
 
 	constructor(
 		private readonly _opts: ISimulationTestOptions,
-		private readonly _suiteOpts: SimulationSuiteOptions
-	) { }
+		private readonly _suiteOpts: SimulationSuiteOptions,
+	) {}
 }
 
 export interface ISimulationTestDescriptor {
-
 	/**
 	 * This is used to capture the test scenario description itself.
 	 */
@@ -106,7 +119,9 @@ export interface ISimulationTestDescriptor {
 	/**
 	 * Non-extension settings configurations defined for the test
 	 */
-	readonly nonExtensionConfigurations?: NonExtensionConfiguration[] | undefined;
+	readonly nonExtensionConfigurations?:
+		| NonExtensionConfiguration[]
+		| undefined;
 
 	/**
 	 * Arbitrary attributes that will be serialised to the metadata.json file.
@@ -116,17 +131,21 @@ export interface ISimulationTestDescriptor {
 
 export type NonExtensionConfiguration = [string, any];
 
-export type Configuration<T> = { key: ExperimentBasedConfig<ExperimentBasedConfigType> | Config<T>; value: T };
+export type Configuration<T> = {
+	key: ExperimentBasedConfig<ExperimentBasedConfigType> | Config<T>;
+	value: T;
+};
 
 export class SimulationTest {
-
 	public readonly options: SimulationTestOptions;
 	public readonly description: string;
 	public readonly language: string | undefined;
 	public readonly model: string | undefined;
 	public readonly embeddingType: EmbeddingType | undefined;
 	public readonly configurations: Configuration<any>[] | undefined;
-	public readonly nonExtensionConfigurations: NonExtensionConfiguration[] | undefined;
+	public readonly nonExtensionConfigurations:
+		| NonExtensionConfiguration[]
+		| undefined;
 	public readonly attributes: Record<string, string | number> | undefined;
 
 	constructor(
@@ -157,7 +176,9 @@ export class SimulationTest {
 		return getOutcomeFileName(this.fullName);
 	}
 
-	public run(testingServiceCollection: TestingServiceCollection): Promise<unknown> {
+	public run(
+		testingServiceCollection: TestingServiceCollection,
+	): Promise<unknown> {
 		return Promise.resolve(this._runner(testingServiceCollection));
 	}
 
@@ -202,21 +223,17 @@ export class SimulationSuiteOptions {
 		return this._opts.location;
 	}
 
-	constructor(
-		private readonly _opts: ISimulationSuiteOptions
-	) { }
+	constructor(private readonly _opts: ISimulationSuiteOptions) {}
 }
 
 export type ExtHostDescriptor = boolean; // todo: more things like extension config later
 
 export interface ISimulationSuiteDescriptor {
-
 	/***
 	 * This is used to group tests together.
 	 * If using a slashCommand, use the command name else use "generic"
 	 */
 	readonly title: string;
-
 
 	/***
 	 * This is used to capture the test scenario scope.
@@ -242,7 +259,9 @@ export interface ISimulationSuiteDescriptor {
 	/**
 	 * Non-extension settings configurations defined for the test
 	 */
-	readonly nonExtensionConfigurations?: NonExtensionConfiguration[] | undefined;
+	readonly nonExtensionConfigurations?:
+		| NonExtensionConfiguration[]
+		| undefined;
 
 	/**
 	 * Set to true to run in a real VS Code extension host.
@@ -260,7 +279,9 @@ export class SimulationSuite {
 	private readonly _location: 'inline' | 'panel' | 'external' | 'context';
 
 	public readonly configurations: Configuration<any>[] | undefined;
-	public readonly nonExtensionConfigurations: NonExtensionConfiguration[] | undefined;
+	public readonly nonExtensionConfigurations:
+		| NonExtensionConfiguration[]
+		| undefined;
 	public readonly extHost: ExtHostDescriptor | undefined;
 
 	constructor(
@@ -287,10 +308,12 @@ export class SimulationSuite {
 }
 
 export type SimulationTestFilter = (test: SimulationTest) => boolean;
-export function createSimulationTestFilter(grep?: string[] | string, omitGrep?: string): SimulationTestFilter {
+export function createSimulationTestFilter(
+	grep?: string[] | string,
+	omitGrep?: string,
+): SimulationTestFilter {
 	const filters: ((test: SimulationTest) => boolean)[] = [];
 	if (grep) {
-
 		if (typeof grep === 'string') {
 			let trimmedGrep = grep.trim();
 			const isSuiteNameSearch = trimmedGrep.startsWith('!s:');
@@ -298,12 +321,17 @@ export function createSimulationTestFilter(grep?: string[] | string, omitGrep?: 
 				trimmedGrep = trimmedGrep.replace(/^!s:/, '');
 			}
 			const grepRegex = grepStrToRegex(trimmedGrep);
-			filters.push((test) => isSuiteNameSearch ? grepRegex.test(test.suite.fullName) : grepRegex.test(test.fullName));
+			filters.push((test) =>
+				isSuiteNameSearch
+					? grepRegex.test(test.suite.fullName)
+					: grepRegex.test(test.fullName),
+			);
 		} else {
 			const grepArr = Array.isArray(grep) ? grep : [grep];
 			for (const grep of grepArr) {
 				const grepLowerCase = String(grep).toLowerCase();
-				const grepFilter = (str: string) => str.toLowerCase().indexOf(grepLowerCase) >= 0;
+				const grepFilter = (str: string) =>
+					str.toLowerCase().indexOf(grepLowerCase) >= 0;
 				filters.push((test) => grepFilter(test.fullName));
 			}
 		}
@@ -313,11 +341,15 @@ export function createSimulationTestFilter(grep?: string[] | string, omitGrep?: 
 		const omitGrepRegex = grepStrToRegex(omitGrep);
 		filters.push((test) => !omitGrepRegex.test(test.fullName));
 	}
-	return (test: SimulationTest) => filters.every(shouldRunTest => shouldRunTest(test));
+	return (test: SimulationTest) =>
+		filters.every((shouldRunTest) => shouldRunTest(test));
 }
 
 class SimulationTestsRegistryClass {
-	private readonly defaultSuite: SimulationSuite = new SimulationSuite({ title: 'generic', location: 'inline' });
+	private readonly defaultSuite: SimulationSuite = new SimulationSuite({
+		title: 'generic',
+		location: 'inline',
+	});
 	private suites: SimulationSuite[] = [this.defaultSuite];
 	private currentSuite: SimulationSuite = this.defaultSuite;
 	private readonly testNames = new Set<string>();
@@ -329,7 +361,11 @@ class SimulationTestsRegistryClass {
 
 	private _testPath: string | undefined;
 	private _filter: (test: SimulationTest) => boolean = () => true;
-	public setFilters(testPath?: string, grep?: string[] | string, omitGrep?: string) {
+	public setFilters(
+		testPath?: string,
+		grep?: string[] | string,
+		omitGrep?: string,
+	) {
 		this._testPath = testPath;
 		this._filter = createSimulationTestFilter(grep, omitGrep);
 	}
@@ -339,8 +375,13 @@ class SimulationTestsRegistryClass {
 	}
 
 	public getAllTests(): readonly SimulationTest[] {
-		const allTests = this.suites.reduce((prev, curr) => prev.concat(curr.tests), [] as SimulationTest[]);
-		const testsToRun = allTests.filter(this._filter).sort((t0, t1) => t0.fullName.localeCompare(t1.fullName));
+		const allTests = this.suites.reduce(
+			(prev, curr) => prev.concat(curr.tests),
+			[] as SimulationTest[],
+		);
+		const testsToRun = allTests
+			.filter(this._filter)
+			.sort((t0, t1) => t0.fullName.localeCompare(t1.fullName));
 		return testsToRun;
 	}
 
@@ -350,9 +391,19 @@ class SimulationTestsRegistryClass {
 		this._allowTestReregistration = true;
 	}
 
-	public registerTest(testDescriptor: ISimulationTestDescriptor, options: ISimulationTestOptions, runner: SimulationTestFunction): void {
-		if (testDescriptor.language === undefined && this.currentSuite.language) {
-			testDescriptor = { ...testDescriptor, language: this.currentSuite.language };
+	public registerTest(
+		testDescriptor: ISimulationTestDescriptor,
+		options: ISimulationTestOptions,
+		runner: SimulationTestFunction,
+	): void {
+		if (
+			testDescriptor.language === undefined &&
+			this.currentSuite.language
+		) {
+			testDescriptor = {
+				...testDescriptor,
+				language: this.currentSuite.language,
+			};
 		}
 
 		// inherit configurations from suite
@@ -360,41 +411,78 @@ class SimulationTestsRegistryClass {
 			const updatedConfigurations =
 				testDescriptor.configurations === undefined
 					? this.currentSuite.configurations
-					: [...this.currentSuite.configurations, ...testDescriptor.configurations];
-			testDescriptor = { ...testDescriptor, configurations: updatedConfigurations };
+					: [
+							...this.currentSuite.configurations,
+							...testDescriptor.configurations,
+						];
+			testDescriptor = {
+				...testDescriptor,
+				configurations: updatedConfigurations,
+			};
 		}
 
 		if (this.currentSuite.nonExtensionConfigurations !== undefined) {
-			const updatedNonExtConfig: NonExtensionConfiguration[] = this.currentSuite.nonExtensionConfigurations.slice(0);
-			updatedNonExtConfig.push(...testDescriptor.nonExtensionConfigurations ?? []);
-			testDescriptor = { ...testDescriptor, nonExtensionConfigurations: updatedNonExtConfig };
+			const updatedNonExtConfig: NonExtensionConfiguration[] =
+				this.currentSuite.nonExtensionConfigurations.slice(0);
+			updatedNonExtConfig.push(
+				...(testDescriptor.nonExtensionConfigurations ?? []),
+			);
+			testDescriptor = {
+				...testDescriptor,
+				nonExtensionConfigurations: updatedNonExtConfig,
+			};
 		}
 
 		// remove newlines, carriage returns, bad whitespace, etc
-		testDescriptor = { ...testDescriptor, description: testDescriptor.description.replace(/\s+/g, ' ') };
+		testDescriptor = {
+			...testDescriptor,
+			description: testDescriptor.description.replace(/\s+/g, ' '),
+		};
 
 		// force a length of 100 chars for a stest name
 		if (testDescriptor.description.length > 100) {
-			testDescriptor = { ...testDescriptor, description: testDescriptor.description.substring(0, 100) + '…' };
+			testDescriptor = {
+				...testDescriptor,
+				description: testDescriptor.description.substring(0, 100) + '…',
+			};
 		}
 
-		const test = new SimulationTest(testDescriptor, options, this.currentSuite, runner);
+		const test = new SimulationTest(
+			testDescriptor,
+			options,
+			this.currentSuite,
+			runner,
+		);
 		// change this validation up
-		if (this.testNames.has(test.fullName) && !this._allowTestReregistration) {
-			throw new Error(`Cannot have two tests with the same name: ${test.fullName}`);
+		if (
+			this.testNames.has(test.fullName) &&
+			!this._allowTestReregistration
+		) {
+			throw new Error(
+				`Cannot have two tests with the same name: ${test.fullName}`,
+			);
 		}
 		this.testNames.add(test.fullName);
 
 		this.currentSuite.tests.push(test);
 	}
 
-	public registerSuite(descriptor: ISimulationSuiteDescriptor, options: ISimulationSuiteOptions, factory: (inputPath?: string) => void) {
+	public registerSuite(
+		descriptor: ISimulationSuiteDescriptor,
+		options: ISimulationSuiteOptions,
+		factory: (inputPath?: string) => void,
+	) {
 		if (this._testPath && options.location !== undefined) {
-
 			const testBasename = path.basename(options.location.path);
-			const testBasenameWithoutExtension = testBasename.replace(/\.[^/.]+$/, '');
+			const testBasenameWithoutExtension = testBasename.replace(
+				/\.[^/.]+$/,
+				'',
+			);
 
-			if (this._testPath !== testBasename && this._testPath !== testBasenameWithoutExtension) {
+			if (
+				this._testPath !== testBasename &&
+				this._testPath !== testBasenameWithoutExtension
+			) {
 				return;
 			}
 		}
@@ -404,12 +492,15 @@ class SimulationTestsRegistryClass {
 		function suiteId(s: SimulationSuite): string {
 			return s.options.location?.path + '###' + s.fullName;
 		}
-		this.suites = this.suites.filter(s => suiteId(s) !== suiteId(suite)); // When re-registering a suite, delete the old one
+		this.suites = this.suites.filter((s) => suiteId(s) !== suiteId(suite)); // When re-registering a suite, delete the old one
 		this.suites.push(suite);
 		this.invokeSuiteFactory(suite, factory);
 	}
 
-	private invokeSuiteFactory(suite: SimulationSuite, factory: (inputPath?: string) => void) {
+	private invokeSuiteFactory(
+		suite: SimulationSuite,
+		factory: (inputPath?: string) => void,
+	) {
 		try {
 			this.currentSuite = suite;
 			factory(this._inputPath);
@@ -427,7 +518,6 @@ function captureLocation(fn: Function): ITestLocation | undefined {
 		Error.captureStackTrace(err, fn);
 		throw err;
 	} catch (e) {
-
 		const stack = (<string[]>e.stack.split('\n')).at(1);
 		if (!stack) {
 			// It looks like sometimes the stack is empty,
@@ -456,7 +546,9 @@ function captureLocation(fn: Function): ITestLocation | undefined {
 		}
 	}
 
-	function extractPositionFromStackTraceLine(stack: string): ITestLocation | undefined {
+	function extractPositionFromStackTraceLine(
+		stack: string,
+	): ITestLocation | undefined {
 		const r1 = /\((.+):(\d+):(\d+)\)/;
 		const r2 = /at (.+):(\d+):(\d+)/;
 		const match = stack.match(r1) ?? stack.match(r2);
@@ -471,7 +563,7 @@ function captureLocation(fn: Function): ITestLocation | undefined {
 			position: {
 				line: Number(match[2]) - 1,
 				character: Number(match[3]) - 1,
-			}
+			},
 		};
 	}
 }
@@ -479,14 +571,40 @@ function captureLocation(fn: Function): ITestLocation | undefined {
 /**
  * @remarks DO NOT FORGET to register the test file in `simulationTests.ts` for local test files
  */
-export function ssuite(descriptor: ISimulationSuiteDescriptor, factory: (inputPath?: string) => void) {
-	SimulationTestsRegistry.registerSuite(descriptor, { optional: false, location: captureLocation(ssuite) }, factory);
+export function ssuite(
+	descriptor: ISimulationSuiteDescriptor,
+	factory: (inputPath?: string) => void,
+) {
+	SimulationTestsRegistry.registerSuite(
+		descriptor,
+		{ optional: false, location: captureLocation(ssuite) },
+		factory,
+	);
 }
-ssuite.optional = function (skip: (opts: SimulationOptions) => boolean, descriptor: ISimulationSuiteDescriptor, factory: (inputPath?: string) => void) {
-	SimulationTestsRegistry.registerSuite(descriptor, { optional: true, skip, location: captureLocation(ssuite.optional) }, factory);
+ssuite.optional = function (
+	skip: (opts: SimulationOptions) => boolean,
+	descriptor: ISimulationSuiteDescriptor,
+	factory: (inputPath?: string) => void,
+) {
+	SimulationTestsRegistry.registerSuite(
+		descriptor,
+		{ optional: true, skip, location: captureLocation(ssuite.optional) },
+		factory,
+	);
 };
-ssuite.skip = function (descriptor: ISimulationSuiteDescriptor, factory: (inputPath?: string) => void) {
-	SimulationTestsRegistry.registerSuite(descriptor, { optional: true, skip: (_: SimulationOptions) => true, location: captureLocation(ssuite.skip) }, factory);
+ssuite.skip = function (
+	descriptor: ISimulationSuiteDescriptor,
+	factory: (inputPath?: string) => void,
+) {
+	SimulationTestsRegistry.registerSuite(
+		descriptor,
+		{
+			optional: true,
+			skip: (_: SimulationOptions) => true,
+			location: captureLocation(ssuite.skip),
+		},
+		factory,
+	);
 };
 
 /**
@@ -498,26 +616,69 @@ ssuite.skip = function (descriptor: ISimulationSuiteDescriptor, factory: (inputP
  * You will also find `SimulationTestRuntime` on the context, which allows you
  * to use logging in your test or write files to the test outcome directory.
  */
-export function stest(testDescriptor: string | ISimulationTestDescriptor, runner: SimulationTestFunction, opts?: ISimulationTestOptions) {
-	testDescriptor = typeof testDescriptor === 'string' ? { description: testDescriptor } : testDescriptor;
-	SimulationTestsRegistry.registerTest(testDescriptor, { optional: false, location: captureLocation(stest), ...opts }, runner);
+export function stest(
+	testDescriptor: string | ISimulationTestDescriptor,
+	runner: SimulationTestFunction,
+	opts?: ISimulationTestOptions,
+) {
+	testDescriptor =
+		typeof testDescriptor === 'string'
+			? { description: testDescriptor }
+			: testDescriptor;
+	SimulationTestsRegistry.registerTest(
+		testDescriptor,
+		{ optional: false, location: captureLocation(stest), ...opts },
+		runner,
+	);
 }
-stest.optional = function (skip: () => boolean, testDescriptor: ISimulationTestDescriptor, runner: SimulationTestFunction, opts?: ISimulationTestOptions) {
-	SimulationTestsRegistry.registerTest(testDescriptor, { optional: true, skip, location: captureLocation(stest.optional), ...opts }, runner);
+stest.optional = function (
+	skip: () => boolean,
+	testDescriptor: ISimulationTestDescriptor,
+	runner: SimulationTestFunction,
+	opts?: ISimulationTestOptions,
+) {
+	SimulationTestsRegistry.registerTest(
+		testDescriptor,
+		{
+			optional: true,
+			skip,
+			location: captureLocation(stest.optional),
+			...opts,
+		},
+		runner,
+	);
 };
-stest.skip = function (testDescriptor: ISimulationTestDescriptor, runner: SimulationTestFunction, opts?: ISimulationTestOptions) {
-	SimulationTestsRegistry.registerTest(testDescriptor, { optional: true, skip: () => true, location: captureLocation(stest.skip), ...opts }, runner);
+stest.skip = function (
+	testDescriptor: ISimulationTestDescriptor,
+	runner: SimulationTestFunction,
+	opts?: ISimulationTestOptions,
+) {
+	SimulationTestsRegistry.registerTest(
+		testDescriptor,
+		{
+			optional: true,
+			skip: () => true,
+			location: captureLocation(stest.skip),
+			...opts,
+		},
+		runner,
+	);
 };
 
-export const ISimulationTestRuntime = createServiceIdentifier<ISimulationTestRuntime>('ISimulationTestRuntime');
+export const ISimulationTestRuntime =
+	createServiceIdentifier<ISimulationTestRuntime>('ISimulationTestRuntime');
 
-export interface ISimulationTestRuntime extends ILogTarget, ISimulationTestContext {
-
+export interface ISimulationTestRuntime
+	extends ILogTarget, ISimulationTestContext {
 	logIt(level: LogLevel, metadataStr: string, ...extra: any[]): void;
 	shouldLog(level: LogLevel): boolean | undefined;
 	log(message: string, err?: any): void;
 	flushLogs(): Promise<void>;
-	writeFile(filename: string, contents: Uint8Array | string, tag: string): Promise<string>;
+	writeFile(
+		filename: string,
+		contents: Uint8Array | string,
+		tag: string,
+	): Promise<string>;
 	getWrittenFiles(): IWrittenFile[];
 	getOutcome(): SimulationTestOutcome | undefined;
 	setOutcome(outcome: SimulationTestOutcome): void;
@@ -526,7 +687,6 @@ export interface ISimulationTestRuntime extends ILogTarget, ISimulationTestConte
 }
 
 export class SimulationTestRuntime implements ISimulationTestRuntime {
-
 	declare readonly _serviceBrand: undefined;
 
 	private readonly explicitLogMessages: string[] = [];
@@ -538,14 +698,16 @@ export class SimulationTestRuntime implements ISimulationTestRuntime {
 	constructor(
 		private readonly baseDir: string,
 		private readonly testOutcomeDir: string,
-		protected readonly runNumber: number
-	) { }
+		protected readonly runNumber: number,
+	) {}
 
 	public readonly isInSimulationTests = true;
 
 	public logIt(level: LogLevel, metadataStr: string, ...extra: any[]): void {
 		const timestamp = new Date().toISOString();
-		this.implicitLogMessages.push(`[${timestamp}] ${metadataStr} ${extra.join(' ')}`);
+		this.implicitLogMessages.push(
+			`[${timestamp}] ${metadataStr} ${extra.join(' ')}`,
+		);
 	}
 
 	public shouldLog(level: LogLevel): boolean | undefined {
@@ -561,22 +723,34 @@ export class SimulationTestRuntime implements ISimulationTestRuntime {
 
 	public async flushLogs(): Promise<void> {
 		if (this.explicitLogMessages.length > 0) {
-			await this.writeFile(SIMULATION_EXPLICIT_LOG_FILENAME, this.explicitLogMessages.join('\n'), EXPLICIT_LOG_TAG);
+			await this.writeFile(
+				SIMULATION_EXPLICIT_LOG_FILENAME,
+				this.explicitLogMessages.join('\n'),
+				EXPLICIT_LOG_TAG,
+			);
 		}
 		if (this.implicitLogMessages.length > 0) {
-			await this.writeFile(SIMULATION_IMPLICIT_LOG_FILENAME, this.implicitLogMessages.join('\n'), IMPLICIT_LOG_TAG);
+			await this.writeFile(
+				SIMULATION_IMPLICIT_LOG_FILENAME,
+				this.implicitLogMessages.join('\n'),
+				IMPLICIT_LOG_TAG,
+			);
 		}
 	}
 
-	public async writeFile(filename: string, contents: Uint8Array | string, tag: string): Promise<string> {
+	public async writeFile(
+		filename: string,
+		contents: Uint8Array | string,
+		tag: string,
+	): Promise<string> {
 		const dest = this._findUniqueFilename(
-			path.join(this.testOutcomeDir, this.massageFilename(filename))
+			path.join(this.testOutcomeDir, this.massageFilename(filename)),
 		);
 
 		const relativePath = path.relative(this.baseDir, dest);
 		this.writtenFiles.push({
 			relativePath,
-			tag
+			tag,
 		});
 
 		await fs.promises.mkdir(path.dirname(dest), { recursive: true });
@@ -585,7 +759,7 @@ export class SimulationTestRuntime implements ISimulationTestRuntime {
 	}
 
 	protected massageFilename(filename: string): string {
-		return `${(this.runNumber).toString().padStart(2, '0')}-${filename}`;
+		return `${this.runNumber.toString().padStart(2, '0')}-${filename}`;
 	}
 
 	/**
@@ -597,11 +771,16 @@ export class SimulationTestRuntime implements ISimulationTestRuntime {
 			if (i > 0) {
 				// This file was already written, we'll rename it to <basename>.X.<ext>
 				const ext = path.extname(initialFilePath);
-				const basename = initialFilePath.substring(0, initialFilePath.length - ext.length);
+				const basename = initialFilePath.substring(
+					0,
+					initialFilePath.length - ext.length,
+				);
 				filePath = `${basename}.${i}${ext}`;
 			}
 			const relativePath = path.relative(this.baseDir, filePath);
-			const exists = this.writtenFiles.find(x => x.relativePath === relativePath);
+			const exists = this.writtenFiles.find(
+				(x) => x.relativePath === relativePath,
+			);
 			if (!exists) {
 				return filePath;
 			}
@@ -633,8 +812,12 @@ export class SimulationTestRuntime implements ISimulationTestRuntime {
 const FILENAME_LIMIT = 125;
 
 export function toDirname(testName: string): string {
-	const filename = testName.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-').toLowerCase();
-	if (filename.length > FILENAME_LIMIT) { // windows file names can not exceed 255 chars and path length limits, so keep it short
+	const filename = testName
+		.replace(/[^a-zA-Z0-9]/g, '-')
+		.replace(/-+/g, '-')
+		.toLowerCase();
+	if (filename.length > FILENAME_LIMIT) {
+		// windows file names can not exceed 255 chars and path length limits, so keep it short
 		return `${filename.substring(0, FILENAME_LIMIT)}-${computeSHA256(filename).substring(0, 8)}`;
 	}
 	return filename;

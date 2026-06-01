@@ -3,13 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { Command } from '../commandManager';
+import * as vscode from "vscode";
+import { Command } from "../commandManager";
 
 export class OpenFrontMatterSettingsCommand implements Command {
-	public readonly id = '_markdown.openFrontMatterSettings';
+	public readonly id = "_markdown.openFrontMatterSettings";
 
 	public async execute() {
-		await vscode.commands.executeCommand('workbench.action.openSettings', '@id:markdown.preview.frontMatter');
+		await vscode.commands.executeCommand(
+			"workbench.action.openSettings",
+			"@id:markdown.preview.frontMatter",
+		);
 	}
 }

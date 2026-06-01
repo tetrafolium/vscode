@@ -3,12 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { workspace, Uri, Disposable, Event, EventEmitter, window, FileSystemProvider, FileChangeEvent, FileStat, FileType, FileChangeType, FileSystemError, LogOutputChannel } from 'vscode';
-import { debounce, throttle } from './decorators';
-import { fromGitUri, toGitUri } from './uri';
-import { Model, ModelChangeEvent, OriginalResourceChangeEvent } from './model';
-import { filterEvent, eventToPromise, isDescendant, pathEquals, EmptyDisposable } from './util';
-import { Repository } from './repository';
+import {
+	workspace,
+	Uri,
+	Disposable,
+	Event,
+	EventEmitter,
+	window,
+	FileSystemProvider,
+	FileChangeEvent,
+	FileStat,
+	FileType,
+	FileChangeType,
+	FileSystemError,
+	LogOutputChannel,
+} from "vscode";
+import { debounce, throttle } from "./decorators";
+import { fromGitUri, toGitUri } from "./uri";
+import { Model, ModelChangeEvent, OriginalResourceChangeEvent } from "./model";
+import {
+	filterEvent,
+	eventToPromise,
+	isDescendant,
+	pathEquals,
+	EmptyDisposable,
+} from "./util";
+import { Repository } from "./repository";
 
 interface CacheRow {
 	uri: Uri;
@@ -18,12 +38,19 @@ interface CacheRow {
 const THREE_MINUTES = 1000 * 60 * 3;
 const FIVE_MINUTES = 1000 * 60 * 5;
 
-function sanitizeRef(ref: string, path: string, submoduleOf: string | undefined, repository: Repository): string {
-	if (ref === '~') {
+function sanitizeRef(
+	ref: string,
+	path: string,
+	submoduleOf: string | undefined,
+	repository: Repository,
+): string {
+	if (ref === "~") {
 		const fileUri = Uri.file(path);
 		const uriString = fileUri.toString();
-		const [indexStatus] = repository.indexGroup.resourceStates.filter(r => r.resourceUri.toString() === uriString);
-		return indexStatus ? '' : 'HEAD';
+		const [indexStatus] = repository.indexGroup.resourceStates.filter(
+			(r) => r.resourceUri.toString() === uriString,
+		);
+		return indexStatus ? "" : "HEAD";
 	}
 
 	if (/^~\d$/.test(ref)) {
@@ -31,30 +58,36 @@ function sanitizeRef(ref: string, path: string, submoduleOf: string | undefined,
 	}
 
 	// Submodule HEAD
-	if (submoduleOf && (ref === 'index' || ref === 'wt')) {
-		return 'HEAD';
+	if (submoduleOf && (ref === "index" || ref === "wt")) {
+		return "HEAD";
 	}
 
 	return ref;
 }
 
 export class GitFileSystemProvider implements FileSystemProvider {
-
 	private _onDidChangeFile = new EventEmitter<FileChangeEvent[]>();
-	readonly onDidChangeFile: Event<FileChangeEvent[]> = this._onDidChangeFile.event;
+	readonly onDidChangeFile: Event<FileChangeEvent[]> =
+		this._onDidChangeFile.event;
 
 	private changedRepositoryRoots = new Set<string>();
 	private cache = new Map<string, CacheRow>();
 	private mtime = new Date().getTime();
 	private disposables: Disposable[] = [];
 
-	constructor(private readonly model: Model, private readonly logger: LogOutputChannel) {
+	constructor(
+		private readonly model: Model,
+		private readonly logger: LogOutputChannel,
+	) {
 		const cleanupHandle = setInterval(() => this.cleanup(), FIVE_MINUTES);
 
 		this.disposables.push(
 			model.onDidChangeRepository(this.onDidChangeRepository, this),
 			model.onDidChangeOriginalResource(this.onDidChangeOriginalResource, this),
-			workspace.registerFileSystemProvider('git', this, { isReadonly: true, isCaseSensitive: true }),
+			workspace.registerFileSystemProvider("git", this, {
+				isReadonly: true,
+				isCaseSensitive: true,
+			}),
 			new Disposable(() => clearInterval(cleanupHandle)),
 		);
 	}
@@ -64,18 +97,22 @@ export class GitFileSystemProvider implements FileSystemProvider {
 		this.eventuallyFireChangeEvents();
 	}
 
-	private onDidChangeOriginalResource({ uri }: OriginalResourceChangeEvent): void {
-		if (uri.scheme !== 'file') {
+	private onDidChangeOriginalResource({
+		uri,
+	}: OriginalResourceChangeEvent): void {
+		if (uri.scheme !== "file") {
 			return;
 		}
 
-		const diffOriginalResourceUri = toGitUri(uri, '~',);
-		const quickDiffOriginalResourceUri = toGitUri(uri, '', { replaceFileExtension: true });
+		const diffOriginalResourceUri = toGitUri(uri, "~");
+		const quickDiffOriginalResourceUri = toGitUri(uri, "", {
+			replaceFileExtension: true,
+		});
 
 		this.mtime = new Date().getTime();
 		this._onDidChangeFile.fire([
 			{ type: FileChangeType.Changed, uri: diffOriginalResourceUri },
-			{ type: FileChangeType.Changed, uri: quickDiffOriginalResourceUri }
+			{ type: FileChangeType.Changed, uri: quickDiffOriginalResourceUri },
 		]);
 	}
 
@@ -87,7 +124,10 @@ export class GitFileSystemProvider implements FileSystemProvider {
 	@throttle
 	private async fireChangeEvents(): Promise<void> {
 		if (!window.state.focused) {
-			const onDidFocusWindow = filterEvent(window.onDidChangeWindowState, e => e.focused);
+			const onDidFocusWindow = filterEvent(
+				window.onDidChangeWindowState,
+				(e) => e.focused,
+			);
 			await eventToPromise(onDidFocusWindow);
 		}
 
@@ -119,8 +159,8 @@ export class GitFileSystemProvider implements FileSystemProvider {
 		for (const row of this.cache.values()) {
 			const { path } = fromGitUri(row.uri);
 			const isOpen = workspace.textDocuments
-				.filter(d => d.uri.scheme === 'file')
-				.some(d => pathEquals(d.uri.fsPath, path));
+				.filter((d) => d.uri.scheme === "file")
+				.some((d) => pathEquals(d.uri.fsPath, path));
 
 			if (isOpen || now - row.timestamp < THREE_MINUTES) {
 				cache.set(row.uri.toString(), row);
@@ -132,7 +172,9 @@ export class GitFileSystemProvider implements FileSystemProvider {
 		this.cache = cache;
 	}
 
-	private async getOrOpenRepository(uri: string | Uri): Promise<Repository | undefined> {
+	private async getOrOpenRepository(
+		uri: string | Uri,
+	): Promise<Repository | undefined> {
 		let repository = this.model.getRepository(uri);
 		if (repository) {
 			return repository;
@@ -141,9 +183,14 @@ export class GitFileSystemProvider implements FileSystemProvider {
 		// In case of the empty window, or the agent sessions window, no repositories are open
 		// so we need to explicitly open a repository before we can serve git content for the
 		// given git resource.
-		if (workspace.workspaceFolders === undefined || workspace.isAgentSessionsWorkspace) {
-			const fsPath = typeof uri === 'string' ? uri : fromGitUri(uri).path;
-			this.logger.info(`[GitFileSystemProvider][getOrOpenRepository] Opening repository for ${fsPath}`);
+		if (
+			workspace.workspaceFolders === undefined ||
+			workspace.isAgentSessionsWorkspace
+		) {
+			const fsPath = typeof uri === "string" ? uri : fromGitUri(uri).path;
+			this.logger.info(
+				`[GitFileSystemProvider][getOrOpenRepository] Opening repository for ${fsPath}`,
+			);
 
 			await this.model.openRepository(fsPath, true, true);
 			repository = this.model.getRepository(uri);
@@ -166,32 +213,46 @@ export class GitFileSystemProvider implements FileSystemProvider {
 			: await this.getOrOpenRepository(uri);
 
 		if (!repository) {
-			this.logger.warn(`[GitFileSystemProvider][stat] Repository not found - ${uri.toString()}`);
+			this.logger.warn(
+				`[GitFileSystemProvider][stat] Repository not found - ${uri.toString()}`,
+			);
 			throw FileSystemError.FileNotFound();
 		}
 
 		try {
-			const details = await repository.getObjectDetails(sanitizeRef(ref, path, submoduleOf, repository), path);
-			return { type: FileType.File, size: details.size, mtime: this.mtime, ctime: 0 };
+			const details = await repository.getObjectDetails(
+				sanitizeRef(ref, path, submoduleOf, repository),
+				path,
+			);
+			return {
+				type: FileType.File,
+				size: details.size,
+				mtime: this.mtime,
+				ctime: 0,
+			};
 		} catch {
 			// Empty tree
-			if (ref === await repository.getEmptyTree()) {
-				this.logger.warn(`[GitFileSystemProvider][stat] Empty tree - ${uri.toString()}`);
+			if (ref === (await repository.getEmptyTree())) {
+				this.logger.warn(
+					`[GitFileSystemProvider][stat] Empty tree - ${uri.toString()}`,
+				);
 				return { type: FileType.File, size: 0, mtime: this.mtime, ctime: 0 };
 			}
 
 			// File does not exist in git. This could be because the file is untracked or ignored
-			this.logger.warn(`[GitFileSystemProvider][stat] File not found - ${uri.toString()}`);
+			this.logger.warn(
+				`[GitFileSystemProvider][stat] File not found - ${uri.toString()}`,
+			);
 			throw FileSystemError.FileNotFound();
 		}
 	}
 
 	readDirectory(): Thenable<[string, FileType][]> {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	createDirectory(): void {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	async readFile(uri: Uri): Promise<Uint8Array> {
@@ -208,7 +269,7 @@ export class GitFileSystemProvider implements FileSystemProvider {
 
 			const encoder = new TextEncoder();
 
-			if (ref === 'index') {
+			if (ref === "index") {
 				return encoder.encode(await repository.diffIndexWithHEAD(path));
 			} else {
 				return encoder.encode(await repository.diffWithHEAD(path));
@@ -218,7 +279,9 @@ export class GitFileSystemProvider implements FileSystemProvider {
 		const repository = await this.getOrOpenRepository(uri);
 
 		if (!repository) {
-			this.logger.warn(`[GitFileSystemProvider][readFile] Repository not found - ${uri.toString()}`);
+			this.logger.warn(
+				`[GitFileSystemProvider][readFile] Repository not found - ${uri.toString()}`,
+			);
 			throw FileSystemError.FileNotFound();
 		}
 
@@ -228,33 +291,40 @@ export class GitFileSystemProvider implements FileSystemProvider {
 		this.cache.set(uri.toString(), cacheValue);
 
 		try {
-			return await repository.buffer(sanitizeRef(ref, path, submoduleOf, repository), path);
+			return await repository.buffer(
+				sanitizeRef(ref, path, submoduleOf, repository),
+				path,
+			);
 		} catch {
 			// Empty tree
-			if (ref === await repository.getEmptyTree()) {
-				this.logger.warn(`[GitFileSystemProvider][readFile] Empty tree - ${uri.toString()}`);
+			if (ref === (await repository.getEmptyTree())) {
+				this.logger.warn(
+					`[GitFileSystemProvider][readFile] Empty tree - ${uri.toString()}`,
+				);
 				return new Uint8Array(0);
 			}
 
 			// File does not exist in git. This could be because the file is untracked or ignored
-			this.logger.warn(`[GitFileSystemProvider][readFile] File not found - ${uri.toString()}`);
+			this.logger.warn(
+				`[GitFileSystemProvider][readFile] File not found - ${uri.toString()}`,
+			);
 			throw FileSystemError.FileNotFound();
 		}
 	}
 
 	writeFile(): void {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	delete(): void {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	rename(): void {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	dispose(): void {
-		this.disposables.forEach(d => d.dispose());
+		this.disposables.forEach((d) => d.dispose());
 	}
 }

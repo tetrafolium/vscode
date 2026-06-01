@@ -5,33 +5,37 @@
 
 // Test file to verify the code-no-observable-get-in-reactive-context ESLint rule works correctly
 
-import { observableValue, derived, autorun } from '../../src/vs/base/common/observable.js';
+import {
+	observableValue,
+	derived,
+	autorun,
+} from "../../src/vs/base/common/observable.js";
 
 export function testValidUsage() {
-	const obs = observableValue('test', 0);
+	const obs = observableValue("test", 0);
 
 	// Valid: Using .read(reader) in derived
-	const validDerived = derived(reader => {
+	const validDerived = derived((reader) => {
 		const value = obs.read(reader);
 		return value * 2;
 	});
 
 	// Valid: Using .read(reader) in autorun
-	autorun(rdr => {
+	autorun((rdr) => {
 		const value = validDerived.read(rdr);
-		console.log('Value:', value);
+		console.log("Value:", value);
 	});
 
 	// Valid: Using .get() outside reactive context
 	const outsideValue = obs.get();
-	console.log('Outside value:', outsideValue);
+	console.log("Outside value:", outsideValue);
 }
 
 export function testInvalidUsage() {
-	const obs = observableValue('test', 0);
+	const obs = observableValue("test", 0);
 
 	// Invalid: Using .get() in derived instead of .read(reader)
-	const invalidDerived = derived(rdr => {
+	const invalidDerived = derived((rdr) => {
 		// This should use obs.read(reader) instead
 		// eslint-disable-next-line local/code-no-observable-get-in-reactive-context
 		const value = obs.get();
@@ -44,30 +48,30 @@ export function testInvalidUsage() {
 	});
 
 	// Invalid: Using .get() in autorun instead of .read(reader)
-	autorun(reader => {
+	autorun((reader) => {
 		// This should use invalidDerived.read(reader) instead
 		// eslint-disable-next-line local/code-no-observable-get-in-reactive-context
 		const value = invalidDerived.get();
 		// Use reader for something valid to avoid unused var warning
 		const validValue = obs.read(reader);
-		console.log('Value:', value, validValue);
+		console.log("Value:", value, validValue);
 	});
 
 	// Invalid: Using .get() in derivedWithStore
-	derived(reader => {
+	derived((reader) => {
 		// eslint-disable-next-line local/code-no-observable-get-in-reactive-context
 		const value = obs.get();
-		reader.store.add({ dispose: () => { } });
+		reader.store.add({ dispose: () => {} });
 		return value;
 	});
 }
 
 export function testComplexCases() {
-	const obs1 = observableValue('test1', 0);
-	const obs2 = observableValue('test2', 10);
+	const obs1 = observableValue("test1", 0);
+	const obs2 = observableValue("test2", 10);
 
 	// Invalid: Using .get() in conditional within derived
-	derived(reader => {
+	derived((reader) => {
 		const initial = obs1.read(reader);
 
 		if (initial > 0) {
@@ -79,7 +83,7 @@ export function testComplexCases() {
 	});
 
 	// Invalid: Using .get() in nested function call within autorun
-	autorun(reader => {
+	autorun((reader) => {
 		const process = () => {
 			// eslint-disable-next-line local/code-no-observable-get-in-reactive-context
 			return obs1.get() + obs2.get();
@@ -88,11 +92,11 @@ export function testComplexCases() {
 		// Use reader for something valid to avoid unused var warning
 		const validValue = obs1.read(reader);
 		const result = process();
-		console.log('Result:', result, validValue);
+		console.log("Result:", result, validValue);
 	});
 
 	// Invalid: Using .get() in try-catch within derived
-	derived(reader => {
+	derived((reader) => {
 		try {
 			// eslint-disable-next-line local/code-no-observable-get-in-reactive-context
 			const value = obs1.get();
@@ -106,11 +110,11 @@ export function testComplexCases() {
 }
 
 export function testValidComplexCases() {
-	const obs1 = observableValue('test1', 0);
-	const obs2 = observableValue('test2', 10);
+	const obs1 = observableValue("test1", 0);
+	const obs2 = observableValue("test2", 10);
 
 	// Valid: Proper usage with .read(reader)
-	derived(reader => {
+	derived((reader) => {
 		const value1 = obs1.read(reader);
 		const value2 = obs2.read(undefined);
 
@@ -129,15 +133,15 @@ export function testValidComplexCases() {
 	}
 
 	// Valid: Mixed usage - .read(reader) inside reactive, .get() outside
-	autorun(reader => {
+	autorun((reader) => {
 		const reactiveValue = obs1.read(reader);
 		const outsideValue = processValues();
-		console.log('Values:', reactiveValue, outsideValue);
+		console.log("Values:", reactiveValue, outsideValue);
 	});
 }
 
 export function testEdgeCases() {
-	const obs = observableValue('test', 0);
+	const obs = observableValue("test", 0);
 
 	// Valid: Function with no reader parameter
 	derived(() => {
@@ -146,14 +150,14 @@ export function testEdgeCases() {
 	});
 
 	// Invalid: Function with differently named parameter (now also flagged)
-	derived(_someOtherName => {
+	derived((_someOtherName) => {
 		// eslint-disable-next-line local/code-no-observable-get-in-reactive-context
 		const value = obs.get();
 		return value;
 	});
 
 	// Invalid: Correctly named reader parameter
-	derived(reader => {
+	derived((reader) => {
 		// eslint-disable-next-line local/code-no-observable-get-in-reactive-context
 		const value = obs.get();
 		// Use reader for something valid to avoid unused var warning
@@ -163,19 +167,19 @@ export function testEdgeCases() {
 }
 
 export function testQuickFixScenarios() {
-	const obs = observableValue('test', 0);
-	const obs2 = observableValue('test2', 10);
+	const obs = observableValue("test", 0);
+	const obs2 = observableValue("test2", 10);
 
 	// These examples show what the quick fix should transform:
 
 	// Example 1: Simple case with 'reader' parameter name
-	derived(_reader => {
+	derived((_reader) => {
 		const value = obs.read(undefined); // This should be the auto-fix result
 		return value;
 	});
 
 	// Example 2: Different parameter name
-	derived(rdr => {
+	derived((rdr) => {
 		// Before fix: obs2.get()
 		// After fix: obs2.read(rdr)
 		const value = obs2.read(rdr); // This should be the auto-fix result
@@ -183,7 +187,7 @@ export function testQuickFixScenarios() {
 	});
 
 	// Example 3: Complex expression
-	derived(ctx => {
+	derived((ctx) => {
 		// Before fix: (someCondition ? obs : obs2).get()
 		// After fix: (someCondition ? obs : obs2).read(ctx)
 		const someCondition = true;
@@ -192,7 +196,7 @@ export function testQuickFixScenarios() {
 	});
 
 	// Example 4: Multiple calls in same function
-	autorun(reader => {
+	autorun((reader) => {
 		// Before fix: obs.get() and obs2.get()
 		// After fix: obs.read(reader) and obs2.read(reader)
 		const val1 = obs.read(reader); // This should be the auto-fix result

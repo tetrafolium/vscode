@@ -6,7 +6,8 @@
 import type { ExtensionContext } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IVSCodeExtensionContext = createServiceIdentifier<IVSCodeExtensionContext>('IVSCodeExtensionContext');
+export const IVSCodeExtensionContext =
+	createServiceIdentifier<IVSCodeExtensionContext>('IVSCodeExtensionContext');
 
 export interface IVSCodeExtensionContext extends ExtensionContext {
 	readonly _serviceBrand: undefined;

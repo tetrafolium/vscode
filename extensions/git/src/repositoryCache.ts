@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LogOutputChannel, Memento, Uri, workspace } from 'vscode';
-import { LRUCache } from './cache';
-import type { Remote, RepositoryAccessDetails } from './api/git';
-import { isDescendant } from './util';
+import { LogOutputChannel, Memento, Uri, workspace } from "vscode";
+import { LRUCache } from "./cache";
+import type { Remote, RepositoryAccessDetails } from "./api/git";
+import { isDescendant } from "./util";
 
 export interface RepositoryCacheInfo {
 	repositoryPath: string; // path of the local repository clone
@@ -15,31 +15,37 @@ export interface RepositoryCacheInfo {
 }
 
 function isRepositoryCacheInfo(obj: unknown): obj is RepositoryCacheInfo {
-	if (!obj || typeof obj !== 'object') {
+	if (!obj || typeof obj !== "object") {
 		return false;
 	}
 	const rec = obj as Record<string, unknown>;
-	return typeof rec.workspacePath === 'string' && typeof rec.repositoryPath === 'string' &&
-		(rec.lastTouchedTime === undefined || typeof rec.lastTouchedTime === 'number');
+	return (
+		typeof rec.workspacePath === "string" &&
+		typeof rec.repositoryPath === "string" &&
+		(rec.lastTouchedTime === undefined ||
+			typeof rec.lastTouchedTime === "number")
+	);
 }
 
 export class RepositoryCache {
-
-	private static readonly STORAGE_KEY = 'git.repositoryCache';
+	private static readonly STORAGE_KEY = "git.repositoryCache";
 	private static readonly MAX_REPO_ENTRIES = 30; // Max repositories tracked
 	private static readonly MAX_FOLDER_ENTRIES = 10; // Max folders per repository
 
 	private normalizeRepoUrl(url: string): string {
 		try {
 			const trimmed = url.trim();
-			return trimmed.replace(/(?:\.git)?\/*$/i, '');
+			return trimmed.replace(/(?:\.git)?\/*$/i, "");
 		} catch {
 			return url;
 		}
 	}
 
 	// Outer LRU: repoUrl -> inner LRU (folderPathOrWorkspaceFile -> RepositoryCacheInfo).
-	private readonly lru = new LRUCache<string, LRUCache<string, RepositoryCacheInfo>>(RepositoryCache.MAX_REPO_ENTRIES);
+	private readonly lru = new LRUCache<
+		string,
+		LRUCache<string, RepositoryCacheInfo>
+	>(RepositoryCache.MAX_REPO_ENTRIES);
 
 	private _recentRepositories: Map<string, number> | undefined;
 
@@ -49,26 +55,45 @@ export class RepositoryCache {
 
 			for (const [_, inner] of this.lru) {
 				for (const [, repositoryDetails] of inner) {
-					if (!repositoryDetails.repositoryPath || !repositoryDetails.lastTouchedTime) {
+					if (
+						!repositoryDetails.repositoryPath ||
+						!repositoryDetails.lastTouchedTime
+					) {
 						continue;
 					}
 
 					// Check whether the repository exists with a more recent access time
-					const repositoryLastAccessTime = this._recentRepositories.get(repositoryDetails.repositoryPath);
-					if (repositoryLastAccessTime && repositoryDetails.lastTouchedTime <= repositoryLastAccessTime) {
+					const repositoryLastAccessTime = this._recentRepositories.get(
+						repositoryDetails.repositoryPath,
+					);
+					if (
+						repositoryLastAccessTime &&
+						repositoryDetails.lastTouchedTime <= repositoryLastAccessTime
+					) {
 						continue;
 					}
 
-					this._recentRepositories.set(repositoryDetails.repositoryPath, repositoryDetails.lastTouchedTime);
+					this._recentRepositories.set(
+						repositoryDetails.repositoryPath,
+						repositoryDetails.lastTouchedTime,
+					);
 				}
 			}
 		}
 
-		return Array.from(this._recentRepositories.entries()).map(([rootPath, lastAccessTime]) =>
-			({ rootUri: Uri.file(rootPath), lastAccessTime } satisfies RepositoryAccessDetails));
+		return Array.from(this._recentRepositories.entries()).map(
+			([rootPath, lastAccessTime]) =>
+				({
+					rootUri: Uri.file(rootPath),
+					lastAccessTime,
+				}) satisfies RepositoryAccessDetails,
+		);
 	}
 
-	constructor(public readonly _globalState: Memento, private readonly _logger: LogOutputChannel) {
+	constructor(
+		public readonly _globalState: Memento,
+		private readonly _logger: LogOutputChannel,
+	) {
 		this.load();
 	}
 
@@ -92,9 +117,12 @@ export class RepositoryCache {
 		const key = this.normalizeRepoUrl(repoUrl);
 		let foldersLru = this.lru.get(key);
 		if (!foldersLru) {
-			foldersLru = new LRUCache<string, RepositoryCacheInfo>(RepositoryCache.MAX_FOLDER_ENTRIES);
+			foldersLru = new LRUCache<string, RepositoryCacheInfo>(
+				RepositoryCache.MAX_FOLDER_ENTRIES,
+			);
 		}
-		const folderPathOrWorkspaceFile: string | undefined = this._findWorkspaceForRepo(rootPath);
+		const folderPathOrWorkspaceFile: string | undefined =
+			this._findWorkspaceForRepo(rootPath);
 		if (!folderPathOrWorkspaceFile) {
 			return;
 		}
@@ -102,7 +130,7 @@ export class RepositoryCache {
 		foldersLru.set(folderPathOrWorkspaceFile, {
 			repositoryPath: rootPath,
 			workspacePath: folderPathOrWorkspaceFile,
-			lastTouchedTime: Date.now()
+			lastTouchedTime: Date.now(),
 		}); // touch entry
 		this.lru.set(key, foldersLru);
 		this.save();
@@ -112,13 +140,18 @@ export class RepositoryCache {
 		// If the current workspace is a workspace file, use that. Otherwise, find the workspace folder that contains the rootUri
 		let folderPathOrWorkspaceFile: string | undefined;
 		try {
-			if (this._workspaceFile && this._workspaceFile.scheme === 'file') {
+			if (this._workspaceFile && this._workspaceFile.scheme === "file") {
 				folderPathOrWorkspaceFile = this._workspaceFile.fsPath;
 			} else if (this._workspaceFolders && this._workspaceFolders.length) {
-				const sorted = [...this._workspaceFolders].sort((a, b) => b.uri.fsPath.length - a.uri.fsPath.length);
+				const sorted = [...this._workspaceFolders].sort(
+					(a, b) => b.uri.fsPath.length - a.uri.fsPath.length,
+				);
 				for (const folder of sorted) {
 					const folderPath = folder.uri.fsPath;
-					if (isDescendant(folderPath, rootPath) || isDescendant(rootPath, folderPath)) {
+					if (
+						isDescendant(folderPath, rootPath) ||
+						isDescendant(rootPath, folderPath)
+					) {
 						folderPathOrWorkspaceFile = folderPath;
 						break;
 					}
@@ -130,7 +163,11 @@ export class RepositoryCache {
 		}
 	}
 
-	update(addedRemotes: Remote[], removedRemotes: Remote[], rootPath: string): void {
+	update(
+		addedRemotes: Remote[],
+		removedRemotes: Remote[],
+		rootPath: string,
+	): void {
 		for (const remote of removedRemotes) {
 			const url = remote.fetchUrl;
 			if (!url) {
@@ -180,21 +217,25 @@ export class RepositoryCache {
 
 	private load(): void {
 		try {
-			const raw = this._globalState.get<[string, [string, RepositoryCacheInfo][]][]>(RepositoryCache.STORAGE_KEY);
+			const raw = this._globalState.get<
+				[string, [string, RepositoryCacheInfo][]][]
+			>(RepositoryCache.STORAGE_KEY);
 			if (!Array.isArray(raw)) {
 				return;
 			}
 			for (const [repo, storedFolders] of raw) {
-				if (typeof repo !== 'string' || !Array.isArray(storedFolders)) {
+				if (typeof repo !== "string" || !Array.isArray(storedFolders)) {
 					continue;
 				}
-				const inner = new LRUCache<string, RepositoryCacheInfo>(RepositoryCache.MAX_FOLDER_ENTRIES);
+				const inner = new LRUCache<string, RepositoryCacheInfo>(
+					RepositoryCache.MAX_FOLDER_ENTRIES,
+				);
 				for (const entry of storedFolders) {
 					if (!Array.isArray(entry) || entry.length !== 2) {
 						continue;
 					}
 					const [folderPath, info] = entry;
-					if (typeof folderPath !== 'string' || !isRepositoryCacheInfo(info)) {
+					if (typeof folderPath !== "string" || !isRepositoryCacheInfo(info)) {
 						continue;
 					}
 
@@ -205,7 +246,9 @@ export class RepositoryCache {
 				}
 			}
 		} catch {
-			this._logger.warn('[CachedRepositories][load] Failed to load cached repositories from global state.');
+			this._logger.warn(
+				"[CachedRepositories][load] Failed to load cached repositories from global state.",
+			);
 		}
 	}
 

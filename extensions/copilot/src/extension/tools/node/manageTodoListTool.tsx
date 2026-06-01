@@ -16,7 +16,10 @@ class ManageTodoListTool implements ICopilotTool<unknown> {
 	public static readonly toolName = ToolName.CoreManageTodoList;
 	public static readonly nonDeferred = true;
 
-	alternativeDefinition(tool: vscode.LanguageModelToolInformation, endpoint?: IChatEndpoint): vscode.LanguageModelToolInformation {
+	alternativeDefinition(
+		tool: vscode.LanguageModelToolInformation,
+		endpoint?: IChatEndpoint,
+	): vscode.LanguageModelToolInformation {
 		if (!isGpt5PlusFamily(endpoint)) {
 			return tool;
 		}
@@ -24,7 +27,8 @@ class ManageTodoListTool implements ICopilotTool<unknown> {
 		return {
 			...tool,
 			// name: 'update_plan', // Can't update this in a model-specific way yet
-			description: 'Updates the task plan.\nProvide an optional explanation and a list of plan items, each with a step and status.\nAt most one step can be in_progress at a time.',
+			description:
+				'Updates the task plan.\nProvide an optional explanation and a list of plan items, each with a step and status.\nAt most one step can be in_progress at a time.',
 		};
 	}
 }

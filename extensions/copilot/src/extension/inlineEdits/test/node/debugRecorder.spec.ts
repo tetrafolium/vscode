@@ -11,7 +11,6 @@ import { ObservableWorkspaceRecordingReplayer } from '../../common/observableWor
 import { DebugRecorder } from '../../node/debugRecorder';
 
 suite('Debug recorder', () => {
-
 	// like `Date.now()` but repeats the same time on every 4th invocation
 	// eg 1 2 3 4 4 5 6 7 8 8 9 ...
 	function createRepeatingGetNow() {
@@ -28,7 +27,6 @@ suite('Debug recorder', () => {
 	}
 
 	test('enforce total ordering on events', async () => {
-
 		function assertMonotonousTime(log: LogEntry[]) {
 			let lastTime: number | undefined;
 			for (const entry of log) {
@@ -40,13 +38,35 @@ suite('Debug recorder', () => {
 			}
 		}
 
-		const recordingFileContents = await fs.readFile(path.join(__dirname, 'recordings/ChangePointToPoint3D.recording.w.json'), 'utf-8');
-		const recordingInfo = JSON.parse(recordingFileContents) as { log: LogEntry[] };
-		const replayer = new ObservableWorkspaceRecordingReplayer(recordingInfo);
+		const recordingFileContents = await fs.readFile(
+			path.join(
+				__dirname,
+				'recordings/ChangePointToPoint3D.recording.w.json',
+			),
+			'utf-8',
+		);
+		const recordingInfo = JSON.parse(recordingFileContents) as {
+			log: LogEntry[];
+		};
+		const replayer = new ObservableWorkspaceRecordingReplayer(
+			recordingInfo,
+		);
 		const getNow = createRepeatingGetNow();
 		const recorder = new DebugRecorder(replayer.workspace, getNow);
 		replayer.replay();
-		const log = recorder.getRecentLog()?.filter(e => e.kind !== 'header')?.map(e => e.kind === 'setContent' ? { ...e, content: '<omitted>' } : ('relativePath' in e ? { ...e, relativePath: e.relativePath.replace('\\', '/') } : e));
+		const log = recorder
+			.getRecentLog()
+			?.filter((e) => e.kind !== 'header')
+			?.map((e) =>
+				e.kind === 'setContent'
+					? { ...e, content: '<omitted>' }
+					: 'relativePath' in e
+						? {
+								...e,
+								relativePath: e.relativePath.replace('\\', '/'),
+							}
+						: e,
+			);
 		assert(log);
 		assertMonotonousTime(log);
 		expect(log).toMatchInlineSnapshot(`
@@ -210,6 +230,4 @@ suite('Debug recorder', () => {
 			]
 		`);
 	});
-
 });
-

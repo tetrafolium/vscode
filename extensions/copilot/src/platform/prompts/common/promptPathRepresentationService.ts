@@ -5,26 +5,34 @@
 
 import type { Uri } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
-import { getDriveLetter, hasDriveLetter } from '../../../util/vs/base/common/extpath';
+import {
+	getDriveLetter,
+	hasDriveLetter,
+} from '../../../util/vs/base/common/extpath';
 import { Schemas } from '../../../util/vs/base/common/network';
 import { isWindows } from '../../../util/vs/base/common/platform';
 import { isDefined } from '../../../util/vs/base/common/types';
 import { URI } from '../../../util/vs/base/common/uri';
 import { IWorkspaceService } from '../../workspace/common/workspaceService';
 
-export const IPromptPathRepresentationService = createServiceIdentifier<IPromptPathRepresentationService>('IPromptPathRepresentationService');
+export const IPromptPathRepresentationService =
+	createServiceIdentifier<IPromptPathRepresentationService>(
+		'IPromptPathRepresentationService',
+	);
 
 /**
  * A service that is to be used to represent and restore document URI's in prompts.
  * Using the service makes sure this happens in consistent and portable way across prompt elements.
  */
 export interface IPromptPathRepresentationService {
-
 	_serviceBrand: undefined;
 
 	getFilePath(uri: Uri): string;
 
-	resolveFilePath(filePath: string, predominantScheme?: string): Uri | undefined;
+	resolveFilePath(
+		filePath: string,
+		predominantScheme?: string,
+	): Uri | undefined;
 
 	getExampleFilePath(relativeFilePath: string): string;
 }
@@ -39,17 +47,21 @@ export interface IPromptPathRepresentationService {
  * We currently use the fsPath for local and remote filesystems, and URI.toString() for other schemes.
  */
 export class PromptPathRepresentationService implements IPromptPathRepresentationService {
-
 	_serviceBrand: undefined;
 
 	protected isWindows() {
 		return isWindows;
 	}
 
-	constructor(@IWorkspaceService private readonly workspaceService: IWorkspaceService) { }
+	constructor(
+		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
+	) {}
 
 	getFilePath(uri: Uri): string {
-		if (uri.scheme === Schemas.file || uri.scheme === Schemas.vscodeRemote) {
+		if (
+			uri.scheme === Schemas.file ||
+			uri.scheme === Schemas.vscodeRemote
+		) {
 			return uri.fsPath;
 		}
 		return uri.toString();
@@ -63,39 +75,58 @@ export class PromptPathRepresentationService implements IPromptPathRepresentatio
 	 *
 	 * @returns The resolved URI or undefined if filepath does not look like a file path or URI.
 	 */
-	resolveFilePath(filepath: string, predominantScheme = Schemas.file): Uri | undefined {
+	resolveFilePath(
+		filepath: string,
+		predominantScheme = Schemas.file,
+	): Uri | undefined {
 		// Always check for posix-like absolute paths, and also for platform-like
 		// (i.e. Windows) absolute paths in case the model generates them.
 		const isPosixPath = filepath.startsWith('/');
-		const isWindowsPath = this.isWindows() && (hasDriveLetter(filepath) || filepath.startsWith('\\'));
+		const isWindowsPath =
+			this.isWindows() &&
+			(hasDriveLetter(filepath) || filepath.startsWith('\\'));
 		if (isPosixPath || isWindowsPath) {
 			// Some models double-escape backslashes, which causes problems down the line.
 			// Remove repeated backslashes from windows path (but preserve UNC paths)
 			if (isWindowsPath) {
 				const isUncPath = filepath.startsWith('\\\\');
 				filepath = filepath.replace(/\\+/g, '\\');
-				if (isUncPath) { filepath = '\\' + filepath; }
+				if (isUncPath) {
+					filepath = '\\' + filepath;
+				}
 			}
 
 			// Some models see an example of a unix path in tool calls and try to
 			// represent unix paths on windows without a drive letter, which causes
 			// issues. Try to rectify this.
-			if (isPosixPath && this.isWindows() && predominantScheme === Schemas.file) {
-				const lowerCandidates = this.workspaceService.getWorkspaceFolders()
-					.filter(folder => folder.scheme === Schemas.file)
-					.map(folder => getDriveLetter(folder.fsPath, true))
+			if (
+				isPosixPath &&
+				this.isWindows() &&
+				predominantScheme === Schemas.file
+			) {
+				const lowerCandidates = this.workspaceService
+					.getWorkspaceFolders()
+					.filter((folder) => folder.scheme === Schemas.file)
+					.map((folder) => getDriveLetter(folder.fsPath, true))
 					.filter(isDefined);
 
-				const matchingDriveLetter = lowerCandidates.find(c => this.workspaceService.getWorkspaceFolder(URI.file(`${c}:${filepath}`)));
+				const matchingDriveLetter = lowerCandidates.find((c) =>
+					this.workspaceService.getWorkspaceFolder(
+						URI.file(`${c}:${filepath}`),
+					),
+				);
 				if (matchingDriveLetter) {
 					filepath = `${matchingDriveLetter}:${filepath}`;
 				}
 			}
 
 			const fileUri = URI.file(filepath);
-			return predominantScheme === Schemas.file ? fileUri : URI.from({ scheme: predominantScheme, path: fileUri.path });
+			return predominantScheme === Schemas.file
+				? fileUri
+				: URI.from({ scheme: predominantScheme, path: fileUri.path });
 		}
-		if (/\w[\w\d+.-]*:\S/.test(filepath)) { // starts with a scheme
+		if (/\w[\w\d+.-]*:\S/.test(filepath)) {
+			// starts with a scheme
 			try {
 				return URI.parse(filepath);
 			} catch (e) {
@@ -107,9 +138,13 @@ export class PromptPathRepresentationService implements IPromptPathRepresentatio
 
 	getExampleFilePath(absolutePosixFilePath: string): string {
 		if (this.isWindows()) {
-			return this.getFilePath(URI.parse(`file:///C:${absolutePosixFilePath}`));
+			return this.getFilePath(
+				URI.parse(`file:///C:${absolutePosixFilePath}`),
+			);
 		} else {
-			return this.getFilePath(URI.parse(`file://${absolutePosixFilePath}`));
+			return this.getFilePath(
+				URI.parse(`file://${absolutePosixFilePath}`),
+			);
 		}
 	}
 }
@@ -118,7 +153,10 @@ export class PromptPathRepresentationService implements IPromptPathRepresentatio
  */
 export class TestPromptPathRepresentationService extends PromptPathRepresentationService {
 	override getFilePath(uri: Uri): string {
-		if (uri.scheme === Schemas.file || uri.scheme === Schemas.vscodeRemote) {
+		if (
+			uri.scheme === Schemas.file ||
+			uri.scheme === Schemas.vscodeRemote
+		) {
 			return uri.path;
 		}
 		return uri.toString();

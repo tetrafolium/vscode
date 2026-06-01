@@ -7,7 +7,8 @@ import type { AgentInfo, Query } from '@anthropic-ai/claude-agent-sdk';
 import { Event } from '../../../../util/vs/base/common/event';
 import { createDecorator } from '../../../../util/vs/platform/instantiation/common/instantiation';
 
-export const IClaudeRuntimeDataService = createDecorator<IClaudeRuntimeDataService>('claudeRuntimeDataService');
+export const IClaudeRuntimeDataService =
+	createDecorator<IClaudeRuntimeDataService>('claudeRuntimeDataService');
 
 export interface IClaudeRuntimeDataService {
 	readonly _serviceBrand: undefined;

@@ -27,7 +27,9 @@ const ClaudePluginServiceConstructor = ClaudePluginService as unknown as new (
 	promptsService: IPromptsService,
 ) => ClaudePluginService;
 
-function createWorkspaceService(folders: URI[] = [URI.file('/workspace')]): IWorkspaceService {
+function createWorkspaceService(
+	folders: URI[] = [URI.file('/workspace')],
+): IWorkspaceService {
 	return {
 		_serviceBrand: undefined,
 		onDidChangeWorkspaceFolders: Event.None,
@@ -64,13 +66,22 @@ describe('ClaudePluginService', () => {
 		plugins?: readonly ChatPlugin[];
 		userHome?: URI;
 	}): ClaudePluginService {
-		const configService = new InMemoryConfigurationService(baseConfigurationService);
+		const configService = new InMemoryConfigurationService(
+			baseConfigurationService,
+		);
 		if (options?.configLocations) {
-			configService.setNonExtensionConfig(SKILLS_LOCATION_KEY, options.configLocations);
+			configService.setNonExtensionConfig(
+				SKILLS_LOCATION_KEY,
+				options.configLocations,
+			);
 		}
 
 		const envService = options?.userHome
-			? new class extends NullNativeEnvService { override get userHome() { return options.userHome!; } }()
+			? new (class extends NullNativeEnvService {
+					override get userHome() {
+						return options.userHome!;
+					}
+				})()
 			: new NullNativeEnvService();
 
 		const promptsService = disposables.add(new MockPromptsService());
@@ -93,7 +104,9 @@ describe('ClaudePluginService', () => {
 
 	it('returns empty array when no config, no skills, and no plugins', async () => {
 		const service = createService();
-		expect(await service.getPluginLocations(CancellationToken.None)).toEqual([]);
+		expect(
+			await service.getPluginLocations(CancellationToken.None),
+		).toEqual([]);
 	});
 
 	// #region Config-based skill locations (walks one level up)
@@ -102,7 +115,9 @@ describe('ClaudePluginService', () => {
 		const service = createService({
 			configLocations: { '/projects/my-extension/skills': true },
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(1);
 		expect(locations[0].path).toBe('/projects/my-extension');
 	});
@@ -112,17 +127,24 @@ describe('ClaudePluginService', () => {
 			configLocations: { '~/skills': true },
 			userHome: URI.file('/home/user'),
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(1);
 		expect(locations[0].path).toBe('/home/user');
 	});
 
 	it('resolves relative config paths per workspace folder and walks up', async () => {
 		const service = createService({
-			configLocations: { 'skills': true },
-			workspaceFolders: [URI.file('/workspace1'), URI.file('/workspace2')],
+			configLocations: { skills: true },
+			workspaceFolders: [
+				URI.file('/workspace1'),
+				URI.file('/workspace2'),
+			],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(2);
 		expect(locations[0].path).toBe('/workspace1');
 		expect(locations[1].path).toBe('/workspace2');
@@ -134,9 +156,16 @@ describe('ClaudePluginService', () => {
 
 	it('derives plugin roots from SKILL.md URIs by walking three levels up', async () => {
 		const service = createService({
-			skills: [mockSkill('/plugins/my-plugin/skills/my-skill/SKILL.md', 'my-skill')],
+			skills: [
+				mockSkill(
+					'/plugins/my-plugin/skills/my-skill/SKILL.md',
+					'my-skill',
+				),
+			],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(1);
 		expect(locations[0].path).toBe('/plugins/my-plugin');
 	});
@@ -144,28 +173,50 @@ describe('ClaudePluginService', () => {
 	it('deduplicates skills from the same plugin root', async () => {
 		const service = createService({
 			skills: [
-				mockSkill('/plugins/my-plugin/skills/skill-a/SKILL.md', 'skill-a'),
-				mockSkill('/plugins/my-plugin/skills/skill-b/SKILL.md', 'skill-b'),
+				mockSkill(
+					'/plugins/my-plugin/skills/skill-a/SKILL.md',
+					'skill-a',
+				),
+				mockSkill(
+					'/plugins/my-plugin/skills/skill-b/SKILL.md',
+					'skill-b',
+				),
 			],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(1);
 		expect(locations[0].path).toBe('/plugins/my-plugin');
 	});
 
 	it('filters out non-file-scheme skills', async () => {
 		const service = createService({
-			skills: [mockSkill('copilot-skill:/remote/skills/my-skill/SKILL.md', 'remote')],
+			skills: [
+				mockSkill(
+					'copilot-skill:/remote/skills/my-skill/SKILL.md',
+					'remote',
+				),
+			],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(0);
 	});
 
 	it('filters out skills inside .claude directories', async () => {
 		const service = createService({
-			skills: [mockSkill('/projects/my-project/.claude/skills/my-skill/SKILL.md', 'my-skill')],
+			skills: [
+				mockSkill(
+					'/projects/my-project/.claude/skills/my-skill/SKILL.md',
+					'my-skill',
+				),
+			],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(0);
 	});
 
@@ -177,7 +228,9 @@ describe('ClaudePluginService', () => {
 		const service = createService({
 			plugins: [mockPlugin('/plugins/external-plugin')],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(1);
 		expect(locations[0].path).toBe('/plugins/external-plugin');
 	});
@@ -186,7 +239,9 @@ describe('ClaudePluginService', () => {
 		const service = createService({
 			plugins: [mockPlugin('copilot-plugin:/remote/plugin')],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(0);
 	});
 
@@ -194,7 +249,9 @@ describe('ClaudePluginService', () => {
 		const service = createService({
 			plugins: [mockPlugin('/projects/my-project/.claude')],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(0);
 	});
 
@@ -205,10 +262,14 @@ describe('ClaudePluginService', () => {
 	it('deduplicates across config locations, skills, and plugins', async () => {
 		const service = createService({
 			configLocations: { '/my-plugin/skills': true },
-			skills: [mockSkill('/my-plugin/skills/skill-a/SKILL.md', 'skill-a')],
+			skills: [
+				mockSkill('/my-plugin/skills/skill-a/SKILL.md', 'skill-a'),
+			],
 			plugins: [mockPlugin('/my-plugin')],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
 		expect(locations).toHaveLength(1);
 		expect(locations[0].path).toBe('/my-plugin');
 	});
@@ -216,11 +277,15 @@ describe('ClaudePluginService', () => {
 	it('combines distinct locations from all sources', async () => {
 		const service = createService({
 			configLocations: { '/config-plugin/skills': true },
-			skills: [mockSkill('/skill-plugin/skills/my-skill/SKILL.md', 'my-skill')],
+			skills: [
+				mockSkill('/skill-plugin/skills/my-skill/SKILL.md', 'my-skill'),
+			],
 			plugins: [mockPlugin('/direct-plugin')],
 		});
-		const locations = await service.getPluginLocations(CancellationToken.None);
-		const paths = locations.map(l => l.path);
+		const locations = await service.getPluginLocations(
+			CancellationToken.None,
+		);
+		const paths = locations.map((l) => l.path);
 		expect(paths).toContain('/config-plugin');
 		expect(paths).toContain('/skill-plugin');
 		expect(paths).toContain('/direct-plugin');

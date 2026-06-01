@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import * as sinon from 'sinon';
-import { memoize, throttle } from '../../common/decorators.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from './utils.js';
+import assert from "assert";
+import * as sinon from "sinon";
+import { memoize, throttle } from "../../common/decorators.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "./utils.js";
 
-suite('Decorators', () => {
+suite("Decorators", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('memoize should memoize methods', () => {
+	test("memoize should memoize methods", () => {
 		class Foo {
 			count = 0;
 
-			constructor(private _answer: number | null | undefined) { }
+			constructor(private _answer: number | null | undefined) {}
 
 			@memoize
 			answer() {
@@ -56,11 +56,11 @@ suite('Decorators', () => {
 		assert.strictEqual(foo4.count, 1);
 	});
 
-	test('memoize should memoize getters', () => {
+	test("memoize should memoize getters", () => {
 		class Foo {
 			count = 0;
 
-			constructor(private _answer: number | null | undefined) { }
+			constructor(private _answer: number | null | undefined) {}
 
 			@memoize
 			get answer() {
@@ -101,7 +101,7 @@ suite('Decorators', () => {
 		assert.strictEqual(foo4.count, 1);
 	});
 
-	test('memoized property should not be enumerable', () => {
+	test("memoized property should not be enumerable", () => {
 		class Foo {
 			@memoize
 			get answer() {
@@ -112,10 +112,10 @@ suite('Decorators', () => {
 		const foo = new Foo();
 		assert.strictEqual(foo.answer, 42);
 
-		assert(!Object.keys(foo).some(k => /\$memoize\$/.test(k)));
+		assert(!Object.keys(foo).some((k) => /\$memoize\$/.test(k)));
 	});
 
-	test('memoized property should not be writable', () => {
+	test("memoized property should not be writable", () => {
 		class Foo {
 			@memoize
 			get answer() {
@@ -128,14 +128,14 @@ suite('Decorators', () => {
 
 		try {
 			// eslint-disable-next-line local/code-no-any-casts
-			(foo as any)['$memoize$answer'] = 1337;
+			(foo as any)["$memoize$answer"] = 1337;
 			assert(false);
 		} catch (e) {
 			assert.strictEqual(foo.answer, 42);
 		}
 	});
 
-	test('throttle', () => {
+	test("throttle", () => {
 		const spy = sinon.spy();
 		const clock = sinon.useFakeTimers();
 		try {
@@ -146,11 +146,7 @@ suite('Decorators', () => {
 					this._handle = fn;
 				}
 
-				@throttle(
-					100,
-					(a: number, b: number) => a + b,
-					() => 0
-				)
+				@throttle(100, (a: number, b: number) => a + b, () => 0)
 				report(p: number): void {
 					this._handle(p);
 				}

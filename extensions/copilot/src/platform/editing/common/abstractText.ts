@@ -13,7 +13,7 @@ import { TextDocumentSnapshot } from './textDocumentSnapshot';
 /**
  * Represents an immutable view of a string with line/column characteristics.
  * Offers many methods to work with various data types (ranges, positions, offsets, ...).
-*/
+ */
 export abstract class AbstractDocument {
 	abstract getText(): string;
 
@@ -30,7 +30,10 @@ export abstract class AbstractDocument {
 	abstract getLineCount(): number;
 
 	rangeToOffsetRange(range: Range): OffsetRange {
-		return new OffsetRange(this.getOffsetAtPosition(range.start), this.getOffsetAtPosition(range.end));
+		return new OffsetRange(
+			this.getOffsetAtPosition(range.start),
+			this.getOffsetAtPosition(range.end),
+		);
 	}
 
 	offsetRangeToRange(offsetRange: OffsetRange): Range {
@@ -51,7 +54,10 @@ export interface AbstractDocumentWithLanguageId extends AbstractDocument {
 	readonly languageId: string;
 }
 
-export class VsCodeTextDocument extends AbstractDocument implements AbstractDocumentWithLanguageId {
+export class VsCodeTextDocument
+	extends AbstractDocument
+	implements AbstractDocumentWithLanguageId
+{
 	public readonly uri = this.document.uri;
 
 	public readonly languageId = this.document.languageId;
@@ -88,7 +94,9 @@ export class VsCodeTextDocument extends AbstractDocument implements AbstractDocu
 		return this.document.offsetAt(position);
 	}
 
-	private readonly _transformer = new Lazy(() => new PositionOffsetTransformer(this.document.getText()));
+	private readonly _transformer = new Lazy(
+		() => new PositionOffsetTransformer(this.document.getText()),
+	);
 
 	override getPositionOffsetTransformer() {
 		return this._transformer.value;
@@ -98,9 +106,7 @@ export class VsCodeTextDocument extends AbstractDocument implements AbstractDocu
 export class StringTextDocument extends AbstractDocument {
 	private readonly _transformer = new PositionOffsetTransformer(this.value);
 
-	constructor(
-		public readonly value: string,
-	) {
+	constructor(public readonly value: string) {
 		super();
 	}
 
@@ -109,7 +115,9 @@ export class StringTextDocument extends AbstractDocument {
 	}
 
 	getLineText(lineIndex: number): string {
-		const startOffset = this._transformer.getOffset(new CorePos(lineIndex + 1, 1));
+		const startOffset = this._transformer.getOffset(
+			new CorePos(lineIndex + 1, 1),
+		);
 		const endOffset = startOffset + this.getLineLength(lineIndex);
 		return this.value.substring(startOffset, endOffset);
 	}
@@ -127,12 +135,16 @@ export class StringTextDocument extends AbstractDocument {
 	}
 
 	override getPositionAtOffset(offset: number): VSCodePos {
-		return corePositionToVSCodePosition(this._transformer.getPosition(offset));
+		return corePositionToVSCodePosition(
+			this._transformer.getPosition(offset),
+		);
 	}
 
 	override getOffsetAtPosition(position: VSCodePos): number {
 		position = this._validatePosition(position);
-		return this._transformer.getOffset(vsCodePositionToCorePosition(position));
+		return this._transformer.getOffset(
+			vsCodePositionToCorePosition(position),
+		);
 	}
 
 	private _validatePosition(position: VSCodePos): VSCodePos {
@@ -159,7 +171,10 @@ export class StringTextDocument extends AbstractDocument {
 	}
 }
 
-export class StringTextDocumentWithLanguageId extends StringTextDocument implements AbstractDocumentWithLanguageId {
+export class StringTextDocumentWithLanguageId
+	extends StringTextDocument
+	implements AbstractDocumentWithLanguageId
+{
 	constructor(
 		value: string,
 		public readonly languageId: string,

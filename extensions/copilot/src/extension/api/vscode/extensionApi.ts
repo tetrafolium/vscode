@@ -15,8 +15,9 @@ export class CopilotExtensionApi implements ICopilotExtensionApi {
 
 	constructor(
 		@IScopeSelector private readonly _scopeSelector: IScopeSelector,
-		@ILanguageContextProviderService private readonly _languageContextProviderService: ILanguageContextProviderService
-	) { }
+		@ILanguageContextProviderService
+		private readonly _languageContextProviderService: ILanguageContextProviderService,
+	) {}
 
 	async selectScope(editor?: TextEditor, options?: { reason?: string }) {
 		editor ??= window.activeTextEditor;
@@ -27,6 +28,8 @@ export class CopilotExtensionApi implements ICopilotExtensionApi {
 	}
 
 	getContextProviderAPI(_version: 'v1'): Copilot.ContextProviderApiV1 {
-		return new VSCodeContextProviderApiV1(this._languageContextProviderService);
+		return new VSCodeContextProviderApiV1(
+			this._languageContextProviderService,
+		);
 	}
 }

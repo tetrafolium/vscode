@@ -6,10 +6,10 @@
 import { ICodeOrDocsSearchBaseScopingQuery } from './codeOrDocsSearchClient';
 
 export function formatScopingQuery(query: ICodeOrDocsSearchBaseScopingQuery) {
-	const repo: string[] = Array.isArray(query.repo) ? query.repo : [query.repo];
-	const parts: string[] = [
-		`(repo:${repo.join(' OR repo:')})`
-	];
+	const repo: string[] = Array.isArray(query.repo)
+		? query.repo
+		: [query.repo];
+	const parts: string[] = [`(repo:${repo.join(' OR repo:')})`];
 	if (query.lang) {
 		parts.push(`(lang:${query.lang.join(' OR lang:')})`);
 	}

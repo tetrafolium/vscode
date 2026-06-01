@@ -3,15 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AuthenticationSession, EventEmitter, authentication, window } from 'vscode';
-import { Agent, globalAgent } from 'https';
-import { graphql } from '@octokit/graphql/types';
-import { Octokit } from '@octokit/rest';
-import { httpsOverHttp } from 'tunnel';
-import { URL } from 'url';
-import { DisposableStore, sequentialize } from './util.js';
+import {
+	AuthenticationSession,
+	EventEmitter,
+	authentication,
+	window,
+} from "vscode";
+import { Agent, globalAgent } from "https";
+import { graphql } from "@octokit/graphql/types";
+import { Octokit } from "@octokit/rest";
+import { httpsOverHttp } from "tunnel";
+import { URL } from "url";
+import { DisposableStore, sequentialize } from "./util.js";
 
-export class AuthenticationError extends Error { }
+export class AuthenticationError extends Error {}
 
 function getAgent(url: string | undefined = process.env.HTTPS_PROXY): Agent {
 	if (!url) {
@@ -23,36 +28,42 @@ function getAgent(url: string | undefined = process.env.HTTPS_PROXY): Agent {
 		const auth = username && password && `${username}:${password}`;
 		return httpsOverHttp({ proxy: { host: hostname, port, proxyAuth: auth } });
 	} catch (e) {
-		window.showErrorMessage(`HTTPS_PROXY environment variable ignored: ${e.message}`);
+		window.showErrorMessage(
+			`HTTPS_PROXY environment variable ignored: ${e.message}`,
+		);
 		return globalAgent;
 	}
 }
 
-const scopes = ['repo', 'workflow', 'user:email', 'read:user'];
+const scopes = ["repo", "workflow", "user:email", "read:user"];
 
 export async function getSession(): Promise<AuthenticationSession> {
-	return await authentication.getSession('github', scopes, { createIfNone: true });
+	return await authentication.getSession("github", scopes, {
+		createIfNone: true,
+	});
 }
 
 let _octokit: Promise<Octokit> | undefined;
 
 export function getOctokit(): Promise<Octokit> {
 	if (!_octokit) {
-		_octokit = getSession().then(async session => {
-			const token = session.accessToken;
-			const agent = getAgent();
+		_octokit = getSession()
+			.then(async (session) => {
+				const token = session.accessToken;
+				const agent = getAgent();
 
-			const { Octokit } = await import('@octokit/rest');
+				const { Octokit } = await import("@octokit/rest");
 
-			return new Octokit({
-				request: { agent },
-				userAgent: 'GitHub VSCode',
-				auth: `token ${token}`
+				return new Octokit({
+					request: { agent },
+					userAgent: "GitHub VSCode",
+					auth: `token ${token}`,
+				});
+			})
+			.then(null, async (err) => {
+				_octokit = undefined;
+				throw err;
 			});
-		}).then(null, async err => {
-			_octokit = undefined;
-			throw err;
-		});
 	}
 
 	return _octokit;
@@ -68,34 +79,40 @@ export class OctokitService {
 
 	constructor() {
 		this._disposables.add(this._onDidChangeSessions);
-		this._disposables.add(authentication.onDidChangeSessions(e => {
-			if (e.provider.id === 'github') {
-				this._octokitGraphql = undefined;
-				this._onDidChangeSessions.fire();
-			}
-		}));
+		this._disposables.add(
+			authentication.onDidChangeSessions((e) => {
+				if (e.provider.id === "github") {
+					this._octokitGraphql = undefined;
+					this._onDidChangeSessions.fire();
+				}
+			}),
+		);
 	}
 
 	@sequentialize
 	public async getOctokitGraphql(): Promise<graphql> {
 		if (!this._octokitGraphql) {
 			try {
-				const session = await authentication.getSession('github', scopes, { silent: true });
+				const session = await authentication.getSession("github", scopes, {
+					silent: true,
+				});
 
 				if (!session) {
-					throw new AuthenticationError('No GitHub authentication session available.');
+					throw new AuthenticationError(
+						"No GitHub authentication session available.",
+					);
 				}
 
 				const token = session.accessToken;
-				const { graphql } = await import('@octokit/graphql');
+				const { graphql } = await import("@octokit/graphql");
 
 				this._octokitGraphql = graphql.defaults({
 					headers: {
-						authorization: `token ${token}`
+						authorization: `token ${token}`,
 					},
 					request: {
-						agent: getAgent()
-					}
+						agent: getAgent(),
+					},
 				});
 
 				return this._octokitGraphql;

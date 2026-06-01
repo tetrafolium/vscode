@@ -151,8 +151,12 @@ export class CircuitBreaker {
 
 		// Exponential backoff: double the probe interval after each failed probe
 		if (wasHalfOpen && this.state === CircuitState.OPEN) {
-			const maxTimeout = this.options.maxResetTimeoutMs ?? this.options.resetTimeoutMs;
-			this.currentResetTimeoutMs = Math.min(this.currentResetTimeoutMs * 2, maxTimeout);
+			const maxTimeout =
+				this.options.maxResetTimeoutMs ?? this.options.resetTimeoutMs;
+			this.currentResetTimeoutMs = Math.min(
+				this.currentResetTimeoutMs * 2,
+				maxTimeout,
+			);
 		}
 	}
 

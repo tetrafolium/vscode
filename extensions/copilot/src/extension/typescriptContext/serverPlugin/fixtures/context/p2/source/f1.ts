@@ -1,5 +1,4 @@
 export class A {
-
 	/**
 	 * The private length of the line.
 	 */

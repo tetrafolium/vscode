@@ -7,15 +7,30 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatResponseStream } from 'vscode';
 import { TestLogService } from '../../../../platform/testing/common/testLogService';
 import { ChatHookType } from '../../../../vscodeTypes';
-import { formatHookErrorMessage, HookAbortError, HookResult, isHookAbortError, processHookResults, ProcessHookResultsOptions } from '../../node/hookResultProcessor';
+import {
+	formatHookErrorMessage,
+	HookAbortError,
+	HookResult,
+	isHookAbortError,
+	processHookResults,
+	ProcessHookResultsOptions,
+} from '../../node/hookResultProcessor';
 
 /**
  * Mock implementation of ChatResponseStream that tracks hookProgress calls.
  */
 class MockChatResponseStream {
-	readonly hookProgressCalls: Array<{ hookType: ChatHookType; stopReason?: string; systemMessage?: string }> = [];
+	readonly hookProgressCalls: Array<{
+		hookType: ChatHookType;
+		stopReason?: string;
+		systemMessage?: string;
+	}> = [];
 
-	hookProgress(hookType: ChatHookType, stopReason?: string, systemMessage?: string): void {
+	hookProgress(
+		hookType: ChatHookType,
+		stopReason?: string,
+		systemMessage?: string,
+	): void {
 		this.hookProgressCalls.push({ hookType, stopReason, systemMessage });
 	}
 }
@@ -31,10 +46,15 @@ describe('hookResultProcessor', () => {
 
 	describe('HookAbortError', () => {
 		it('should create error with hookType and stopReason', () => {
-			const error = new HookAbortError('UserPromptSubmit', 'Build failed');
+			const error = new HookAbortError(
+				'UserPromptSubmit',
+				'Build failed',
+			);
 			expect(error.hookType).toBe('UserPromptSubmit');
 			expect(error.stopReason).toBe('Build failed');
-			expect(error.message).toBe('Hook UserPromptSubmit aborted: Build failed');
+			expect(error.message).toBe(
+				'Hook UserPromptSubmit aborted: Build failed',
+			);
 			expect(error.name).toBe('HookAbortError');
 		});
 
@@ -63,7 +83,8 @@ describe('hookResultProcessor', () => {
 						{
 							resultKind: 'success',
 							output: {},
-							stopReason: 'Build failed, fix errors before continuing',
+							stopReason:
+								'Build failed, fix errors before continuing',
 						},
 					];
 
@@ -71,19 +92,28 @@ describe('hookResultProcessor', () => {
 					const options: ProcessHookResultsOptions = {
 						hookType,
 						results,
-						outputStream: mockStream as unknown as ChatResponseStream,
+						outputStream:
+							mockStream as unknown as ChatResponseStream,
 						logService,
 						onSuccess,
 					};
 
-					expect(() => processHookResults(options)).toThrow(HookAbortError);
 					expect(() => processHookResults(options)).toThrow(
-						`Hook ${hookType} aborted: Build failed, fix errors before continuing`
+						HookAbortError,
+					);
+					expect(() => processHookResults(options)).toThrow(
+						`Hook ${hookType} aborted: Build failed, fix errors before continuing`,
 					);
 					// Verify hookProgress is called with the stopReason
-					expect(mockStream.hookProgressCalls.length).toBeGreaterThan(0);
-					expect(mockStream.hookProgressCalls[0].hookType).toBe(hookType);
-					expect(mockStream.hookProgressCalls[0].stopReason).toContain('Build failed, fix errors before continuing');
+					expect(mockStream.hookProgressCalls.length).toBeGreaterThan(
+						0,
+					);
+					expect(mockStream.hookProgressCalls[0].hookType).toBe(
+						hookType,
+					);
+					expect(
+						mockStream.hookProgressCalls[0].stopReason,
+					).toContain('Build failed, fix errors before continuing');
 				});
 
 				it('should not call onSuccess when stopReason is present', () => {
@@ -99,7 +129,8 @@ describe('hookResultProcessor', () => {
 					const options: ProcessHookResultsOptions = {
 						hookType,
 						results,
-						outputStream: mockStream as unknown as ChatResponseStream,
+						outputStream:
+							mockStream as unknown as ChatResponseStream,
 						logService,
 						onSuccess,
 					};
@@ -130,17 +161,24 @@ describe('hookResultProcessor', () => {
 					const options: ProcessHookResultsOptions = {
 						hookType,
 						results,
-						outputStream: mockStream as unknown as ChatResponseStream,
+						outputStream:
+							mockStream as unknown as ChatResponseStream,
 						logService,
 						onSuccess,
 					};
 
-					expect(() => processHookResults(options)).toThrow('First hook aborted');
+					expect(() => processHookResults(options)).toThrow(
+						'First hook aborted',
+					);
 					expect(onSuccess).not.toHaveBeenCalled();
 					// Verify hookProgress is called with the stopReason
 					expect(mockStream.hookProgressCalls).toHaveLength(1);
-					expect(mockStream.hookProgressCalls[0].hookType).toBe(hookType);
-					expect(mockStream.hookProgressCalls[0].stopReason).toContain('First hook aborted');
+					expect(mockStream.hookProgressCalls[0].hookType).toBe(
+						hookType,
+					);
+					expect(
+						mockStream.hookProgressCalls[0].stopReason,
+					).toContain('First hook aborted');
 				});
 
 				it('should throw HookAbortError when stopReason is empty string (continue: false)', () => {
@@ -156,12 +194,15 @@ describe('hookResultProcessor', () => {
 					const options: ProcessHookResultsOptions = {
 						hookType,
 						results,
-						outputStream: mockStream as unknown as ChatResponseStream,
+						outputStream:
+							mockStream as unknown as ChatResponseStream,
 						logService,
 						onSuccess,
 					};
 
-					expect(() => processHookResults(options)).toThrow(HookAbortError);
+					expect(() => processHookResults(options)).toThrow(
+						HookAbortError,
+					);
 					expect(onSuccess).not.toHaveBeenCalled();
 				});
 			});
@@ -187,7 +228,9 @@ describe('hookResultProcessor', () => {
 				onSuccess,
 			});
 
-			expect(onSuccess).toHaveBeenCalledWith('Additional context for Claude');
+			expect(onSuccess).toHaveBeenCalledWith(
+				'Additional context for Claude',
+			);
 		});
 
 		// Exit code 2 - block processing, erase original prompt, and show stderr to user only
@@ -207,13 +250,17 @@ describe('hookResultProcessor', () => {
 					outputStream: mockStream as unknown as ChatResponseStream,
 					logService,
 					onSuccess,
-				})
+				}),
 			).toThrow(HookAbortError);
 
 			expect(onSuccess).not.toHaveBeenCalled();
 			expect(mockStream.hookProgressCalls).toHaveLength(1);
-			expect(mockStream.hookProgressCalls[0].hookType).toBe('UserPromptSubmit');
-			expect(mockStream.hookProgressCalls[0].stopReason).toContain('Validation failed: missing required field');
+			expect(mockStream.hookProgressCalls[0].hookType).toBe(
+				'UserPromptSubmit',
+			);
+			expect(mockStream.hookProgressCalls[0].stopReason).toContain(
+				'Validation failed: missing required field',
+			);
 		});
 
 		// Other exit codes - show stderr to user only (warnings flow)
@@ -237,14 +284,26 @@ describe('hookResultProcessor', () => {
 
 			expect(onSuccess).not.toHaveBeenCalled();
 			expect(mockStream.hookProgressCalls).toHaveLength(1);
-			expect(mockStream.hookProgressCalls[0].hookType).toBe('UserPromptSubmit');
-			expect(mockStream.hookProgressCalls[0].systemMessage).toBe('Process exited with code 1: Some warning');
+			expect(mockStream.hookProgressCalls[0].hookType).toBe(
+				'UserPromptSubmit',
+			);
+			expect(mockStream.hookProgressCalls[0].systemMessage).toBe(
+				'Process exited with code 1: Some warning',
+			);
 		});
 
 		it('should aggregate multiple warnings', () => {
 			const results: HookResult[] = [
-				{ resultKind: 'warning', warningMessage: 'Warning 1', output: undefined },
-				{ resultKind: 'warning', warningMessage: 'Warning 2', output: undefined },
+				{
+					resultKind: 'warning',
+					warningMessage: 'Warning 1',
+					output: undefined,
+				},
+				{
+					resultKind: 'warning',
+					warningMessage: 'Warning 2',
+					output: undefined,
+				},
 			];
 
 			processHookResults({
@@ -252,12 +311,16 @@ describe('hookResultProcessor', () => {
 				results,
 				outputStream: mockStream as unknown as ChatResponseStream,
 				logService,
-				onSuccess: () => { },
+				onSuccess: () => {},
 			});
 
 			expect(mockStream.hookProgressCalls).toHaveLength(1);
-			expect(mockStream.hookProgressCalls[0].systemMessage).toContain('1. Warning 1');
-			expect(mockStream.hookProgressCalls[0].systemMessage).toContain('2. Warning 2');
+			expect(mockStream.hookProgressCalls[0].systemMessage).toContain(
+				'1. Warning 1',
+			);
+			expect(mockStream.hookProgressCalls[0].systemMessage).toContain(
+				'2. Warning 2',
+			);
 		});
 	});
 
@@ -280,7 +343,9 @@ describe('hookResultProcessor', () => {
 				onSuccess,
 			});
 
-			expect(onSuccess).toHaveBeenCalledWith({ additionalContext: 'Session context data' });
+			expect(onSuccess).toHaveBeenCalledWith({
+				additionalContext: 'Session context data',
+			});
 		});
 
 		// Blocking errors are silently ignored (ignoreErrors: true) - no throw, no hookProgress
@@ -301,7 +366,7 @@ describe('hookResultProcessor', () => {
 					logService,
 					onSuccess,
 					ignoreErrors: true,
-				})
+				}),
 			).not.toThrow();
 
 			expect(onSuccess).not.toHaveBeenCalled();
@@ -328,7 +393,7 @@ describe('hookResultProcessor', () => {
 					logService,
 					onSuccess,
 					ignoreErrors: true,
-				})
+				}),
 			).not.toThrow();
 
 			// stopReason means the result is ignored entirely, so onSuccess is NOT called
@@ -352,11 +417,13 @@ describe('hookResultProcessor', () => {
 				results,
 				outputStream: mockStream as unknown as ChatResponseStream,
 				logService,
-				onSuccess: () => { },
+				onSuccess: () => {},
 			});
 
 			expect(mockStream.hookProgressCalls).toHaveLength(1);
-			expect(mockStream.hookProgressCalls[0].systemMessage).toBe('Session start warning');
+			expect(mockStream.hookProgressCalls[0].systemMessage).toBe(
+				'Session start warning',
+			);
 		});
 	});
 
@@ -458,11 +525,13 @@ describe('hookResultProcessor', () => {
 				results,
 				outputStream: mockStream as unknown as ChatResponseStream,
 				logService,
-				onSuccess: () => { },
+				onSuccess: () => {},
 			});
 
 			expect(mockStream.hookProgressCalls).toHaveLength(1);
-			expect(mockStream.hookProgressCalls[0].systemMessage).toBe('Stop hook warning');
+			expect(mockStream.hookProgressCalls[0].systemMessage).toBe(
+				'Stop hook warning',
+			);
 		});
 	});
 
@@ -485,7 +554,9 @@ describe('hookResultProcessor', () => {
 				onSuccess,
 			});
 
-			expect(onSuccess).toHaveBeenCalledWith({ additionalContext: 'Subagent context' });
+			expect(onSuccess).toHaveBeenCalledWith({
+				additionalContext: 'Subagent context',
+			});
 		});
 
 		// Blocking errors are silently ignored (ignoreErrors: true) - no throw, no hookProgress
@@ -506,7 +577,7 @@ describe('hookResultProcessor', () => {
 					logService,
 					onSuccess,
 					ignoreErrors: true,
-				})
+				}),
 			).not.toThrow();
 
 			expect(onSuccess).not.toHaveBeenCalled();
@@ -533,7 +604,7 @@ describe('hookResultProcessor', () => {
 					logService,
 					onSuccess,
 					ignoreErrors: true,
-				})
+				}),
 			).not.toThrow();
 
 			// stopReason means the result is ignored entirely, so onSuccess is NOT called
@@ -557,11 +628,13 @@ describe('hookResultProcessor', () => {
 				results,
 				outputStream: mockStream as unknown as ChatResponseStream,
 				logService,
-				onSuccess: () => { },
+				onSuccess: () => {},
 			});
 
 			expect(mockStream.hookProgressCalls).toHaveLength(1);
-			expect(mockStream.hookProgressCalls[0].systemMessage).toBe('Subagent start warning');
+			expect(mockStream.hookProgressCalls[0].systemMessage).toBe(
+				'Subagent start warning',
+			);
 		});
 	});
 
@@ -609,7 +682,9 @@ describe('hookResultProcessor', () => {
 			});
 
 			expect(onSuccess).not.toHaveBeenCalled();
-			expect(onError).toHaveBeenCalledWith('Subagent stop blocking reason');
+			expect(onError).toHaveBeenCalledWith(
+				'Subagent stop blocking reason',
+			);
 			// hookProgress should NOT be called when onError is provided
 			expect(mockStream.hookProgressCalls).toHaveLength(0);
 		});
@@ -629,11 +704,13 @@ describe('hookResultProcessor', () => {
 				results,
 				outputStream: mockStream as unknown as ChatResponseStream,
 				logService,
-				onSuccess: () => { },
+				onSuccess: () => {},
 			});
 
 			expect(mockStream.hookProgressCalls).toHaveLength(1);
-			expect(mockStream.hookProgressCalls[0].systemMessage).toBe('Subagent stop warning');
+			expect(mockStream.hookProgressCalls[0].systemMessage).toBe(
+				'Subagent stop warning',
+			);
 		});
 	});
 
@@ -668,7 +745,11 @@ describe('hookResultProcessor', () => {
 
 		it('should handle undefined outputStream', () => {
 			const results: HookResult[] = [
-				{ resultKind: 'warning', warningMessage: 'Warning message', output: undefined },
+				{
+					resultKind: 'warning',
+					warningMessage: 'Warning message',
+					output: undefined,
+				},
 			];
 
 			// Should not throw when outputStream is undefined
@@ -678,8 +759,8 @@ describe('hookResultProcessor', () => {
 					results,
 					outputStream: undefined,
 					logService,
-					onSuccess: () => { },
-				})
+					onSuccess: () => {},
+				}),
 			).not.toThrow();
 		});
 
@@ -703,7 +784,9 @@ describe('hookResultProcessor', () => {
 
 			expect(onSuccess).toHaveBeenCalledWith('some output');
 			expect(mockStream.hookProgressCalls).toHaveLength(1);
-			expect(mockStream.hookProgressCalls[0].systemMessage).toBe('Warning from success result');
+			expect(mockStream.hookProgressCalls[0].systemMessage).toBe(
+				'Warning from success result',
+			);
 		});
 
 		it('should handle error result with empty output', () => {
@@ -720,8 +803,8 @@ describe('hookResultProcessor', () => {
 					results,
 					outputStream: mockStream as unknown as ChatResponseStream,
 					logService,
-					onSuccess: () => { },
-				})
+					onSuccess: () => {},
+				}),
 			).toThrow(HookAbortError);
 
 			expect(mockStream.hookProgressCalls).toHaveLength(1);
@@ -741,8 +824,8 @@ describe('hookResultProcessor', () => {
 					results,
 					outputStream: mockStream as unknown as ChatResponseStream,
 					logService,
-					onSuccess: () => { },
-				})
+					onSuccess: () => {},
+				}),
 			).toThrow(HookAbortError);
 
 			// Empty error message when output is not a string

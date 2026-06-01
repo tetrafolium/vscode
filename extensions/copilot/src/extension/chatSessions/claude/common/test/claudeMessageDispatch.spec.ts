@@ -3,19 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { NonNullableUsage, SDKAssistantMessage, SDKCompactBoundaryMessage, SDKHookProgressMessage, SDKHookResponseMessage, SDKHookStartedMessage, SDKResultError, SDKResultSuccess, SDKStatusMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import type {
+	NonNullableUsage,
+	SDKAssistantMessage,
+	SDKCompactBoundaryMessage,
+	SDKHookProgressMessage,
+	SDKHookResponseMessage,
+	SDKHookStartedMessage,
+	SDKResultError,
+	SDKResultSuccess,
+	SDKStatusMessage,
+	SDKUserMessage,
+} from '@anthropic-ai/claude-agent-sdk';
 import type Anthropic from '@anthropic-ai/sdk';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as vscode from 'vscode';
 import { ILogService } from '../../../../../platform/log/common/logService';
-import { IOTelService, type ISpanHandle } from '../../../../../platform/otel/common/otelService';
+import {
+	IOTelService,
+	type ISpanHandle,
+} from '../../../../../platform/otel/common/otelService';
 import { IRequestLogger } from '../../../../../platform/requestLogger/common/requestLogger';
 import { TestLogService } from '../../../../../platform/testing/common/testLogService';
-import { ITelemetryService, type TelemetryEventMeasurements, type TelemetryEventProperties } from '../../../../../platform/telemetry/common/telemetry';
+import {
+	ITelemetryService,
+	type TelemetryEventMeasurements,
+	type TelemetryEventProperties,
+} from '../../../../../platform/telemetry/common/telemetry';
 import type { ServicesAccessor } from '../../../../../util/vs/platform/instantiation/common/instantiation';
 import { URI } from '../../../../../util/vs/base/common/uri';
 import { IToolsService } from '../../../../tools/common/toolsService';
-import { ChatFetchResponseType, type ChatFetchError } from '../../../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	type ChatFetchError,
+} from '../../../../../platform/chat/common/commonTypes';
 import {
 	ALL_KNOWN_MESSAGE_KEYS,
 	ClaudeProxyError,
@@ -42,38 +63,66 @@ import { IClaudeSessionStateService } from '../claudeSessionStateService';
 
 // #region Test helpers
 
-const TEST_UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' as `${string}-${string}-${string}-${string}-${string}`;
+const TEST_UUID =
+	'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' as `${string}-${string}-${string}-${string}-${string}`;
 const TEST_SESSION = 'test-session';
 
 const noopSpan: ISpanHandle = {
-	setAttribute() { },
-	setAttributes() { },
-	setStatus() { },
-	recordException() { },
-	addEvent() { },
-	getSpanContext() { return undefined; },
-	end() { },
+	setAttribute() {},
+	setAttributes() {},
+	setStatus() {},
+	recordException() {},
+	addEvent() {},
+	getSpanContext() {
+		return undefined;
+	},
+	end() {},
 };
 
 interface TestServices {
 	readonly logService: TestLogService;
 	readonly otelService: IOTelService;
 	readonly toolsService: IToolsService;
-	readonly requestLogger: { logToolCall: ReturnType<typeof vi.fn>; captureInvocation: ReturnType<typeof vi.fn> };
-	readonly telemetryService: { sendMSFTTelemetryEvent: ReturnType<typeof vi.fn> };
-	readonly sessionStateService: { setPermissionModeForSession: ReturnType<typeof vi.fn>; getCapturingTokenForSession: ReturnType<typeof vi.fn> };
-	readonly planFileTracker: { recordIfPlanFile: ReturnType<typeof vi.fn>; getLastPlanFile: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> };
+	readonly requestLogger: {
+		logToolCall: ReturnType<typeof vi.fn>;
+		captureInvocation: ReturnType<typeof vi.fn>;
+	};
+	readonly telemetryService: {
+		sendMSFTTelemetryEvent: ReturnType<typeof vi.fn>;
+	};
+	readonly sessionStateService: {
+		setPermissionModeForSession: ReturnType<typeof vi.fn>;
+		getCapturingTokenForSession: ReturnType<typeof vi.fn>;
+	};
+	readonly planFileTracker: {
+		recordIfPlanFile: ReturnType<typeof vi.fn>;
+		getLastPlanFile: ReturnType<typeof vi.fn>;
+		clear: ReturnType<typeof vi.fn>;
+	};
 }
 
 function createTestServices(): TestServices {
 	return {
 		logService: new TestLogService(),
-		otelService: { startSpan: () => noopSpan, config: { maxAttributeSizeChars: 0 } } as unknown as IOTelService,
-		toolsService: { invokeTool: vi.fn() } as Pick<IToolsService, 'invokeTool'> as IToolsService,
+		otelService: {
+			startSpan: () => noopSpan,
+			config: { maxAttributeSizeChars: 0 },
+		} as unknown as IOTelService,
+		toolsService: { invokeTool: vi.fn() } as Pick<
+			IToolsService,
+			'invokeTool'
+		> as IToolsService,
 		requestLogger: { logToolCall: vi.fn(), captureInvocation: vi.fn() },
 		telemetryService: { sendMSFTTelemetryEvent: vi.fn() },
-		sessionStateService: { setPermissionModeForSession: vi.fn(), getCapturingTokenForSession: vi.fn().mockReturnValue(undefined) },
-		planFileTracker: { recordIfPlanFile: vi.fn(), getLastPlanFile: vi.fn(), clear: vi.fn() },
+		sessionStateService: {
+			setPermissionModeForSession: vi.fn(),
+			getCapturingTokenForSession: vi.fn().mockReturnValue(undefined),
+		},
+		planFileTracker: {
+			recordIfPlanFile: vi.fn(),
+			getLastPlanFile: vi.fn(),
+			clear: vi.fn(),
+		},
 	};
 }
 
@@ -89,7 +138,9 @@ function createAccessor(services: TestServices): ServicesAccessor {
 		[IClaudeSessionStateService, services.sessionStateService],
 		[IClaudePlanFileTracker, services.planFileTracker],
 	]);
-	return { get: <T>(id: { toString(): string }): T => serviceMap.get(id) as T };
+	return {
+		get: <T>(id: { toString(): string }): T => serviceMap.get(id) as T,
+	};
 }
 
 function createRequestContext(): MessageHandlerRequestContext {
@@ -99,7 +150,10 @@ function createRequestContext(): MessageHandlerRequestContext {
 			push: vi.fn(),
 			progress: vi.fn(),
 			hookProgress: vi.fn(),
-		} as Pick<vscode.ChatResponseStream, 'markdown' | 'push' | 'progress' | 'hookProgress'> as vscode.ChatResponseStream,
+		} as Pick<
+			vscode.ChatResponseStream,
+			'markdown' | 'push' | 'progress' | 'hookProgress'
+		> as vscode.ChatResponseStream,
 		toolInvocationToken: {} as vscode.ChatParticipantToolToken,
 		token: { isCancellationRequested: false } as vscode.CancellationToken,
 	};
@@ -122,7 +176,10 @@ function createState(): MessageHandlerState {
  * Claude tool inputs exercised in these tests. Keeps the test in the `common/`
  * layer (the real implementation lives in `node/` and cannot be imported here).
  */
-function stubExtractToolParameters(toolName: string, input: unknown): { attrs: Record<string, string>; gatedAttrs: Record<string, string> } {
+function stubExtractToolParameters(
+	toolName: string,
+	input: unknown,
+): { attrs: Record<string, string>; gatedAttrs: Record<string, string> } {
 	const attrs: Record<string, string> = {};
 	const gatedAttrs: Record<string, string> = {};
 	if (typeof input !== 'object' || input === null) {
@@ -183,7 +240,10 @@ function makeNonNullableUsage(): NonNullableUsage {
 		output_tokens: 20,
 		cache_creation_input_tokens: 0,
 		cache_read_input_tokens: 0,
-		cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 0 },
+		cache_creation: {
+			ephemeral_1h_input_tokens: 0,
+			ephemeral_5m_input_tokens: 0,
+		},
 		inference_geo: 'us',
 		iterations: [],
 		server_tool_use: { web_fetch_requests: 0, web_search_requests: 0 },
@@ -192,7 +252,11 @@ function makeNonNullableUsage(): NonNullableUsage {
 	};
 }
 
-function makeAssistantMessage(content: Anthropic.Beta.Messages.BetaContentBlock[], parentToolUseId: string | null = null, model = 'claude-3-sonnet'): SDKAssistantMessage {
+function makeAssistantMessage(
+	content: Anthropic.Beta.Messages.BetaContentBlock[],
+	parentToolUseId: string | null = null,
+	model = 'claude-3-sonnet',
+): SDKAssistantMessage {
 	return {
 		type: 'assistant',
 		message: {
@@ -213,7 +277,9 @@ function makeAssistantMessage(content: Anthropic.Beta.Messages.BetaContentBlock[
 	};
 }
 
-function makeUserMessage(content: Anthropic.Messages.ContentBlockParam[]): SDKUserMessage {
+function makeUserMessage(
+	content: Anthropic.Messages.ContentBlockParam[],
+): SDKUserMessage {
 	return {
 		type: 'user',
 		message: { role: 'user', content },
@@ -249,7 +315,10 @@ function makeErroredSuccessResult(resultText = 'API Error'): SDKResultSuccess {
 	};
 }
 
-function makeErrorResult(subtype: SDKResultError['subtype'], numTurns = 5): SDKResultError {
+function makeErrorResult(
+	subtype: SDKResultError['subtype'],
+	numTurns = 5,
+): SDKResultError {
 	return {
 		type: 'result',
 		subtype,
@@ -288,7 +357,11 @@ function makeStatusMessage(): SDKStatusMessage {
 	};
 }
 
-function makeHookStarted(hookId = 'hook-1', hookName = 'my-hook', hookEvent = 'PreToolUse'): SDKHookStartedMessage {
+function makeHookStarted(
+	hookId = 'hook-1',
+	hookName = 'my-hook',
+	hookEvent = 'PreToolUse',
+): SDKHookStartedMessage {
 	return {
 		type: 'system',
 		subtype: 'hook_started',
@@ -303,7 +376,17 @@ function makeHookStarted(hookId = 'hook-1', hookName = 'my-hook', hookEvent = 'P
 function makeHookResponse(
 	hookId = 'hook-1',
 	outcome: 'success' | 'error' | 'cancelled' = 'success',
-	overrides: Partial<Pick<SDKHookResponseMessage, 'output' | 'stderr' | 'stdout' | 'exit_code' | 'hook_name' | 'hook_event'>> = {},
+	overrides: Partial<
+		Pick<
+			SDKHookResponseMessage,
+			| 'output'
+			| 'stderr'
+			| 'stdout'
+			| 'exit_code'
+			| 'hook_name'
+			| 'hook_event'
+		>
+	> = {},
 ): SDKHookResponseMessage {
 	return {
 		type: 'system',
@@ -323,7 +406,12 @@ function makeHookResponse(
 
 function makeHookProgress(
 	hookId = 'hook-1',
-	overrides: Partial<Pick<SDKHookProgressMessage, 'stdout' | 'stderr' | 'output' | 'hook_name' | 'hook_event'>> = {},
+	overrides: Partial<
+		Pick<
+			SDKHookProgressMessage,
+			'stdout' | 'stderr' | 'output' | 'hook_name' | 'hook_event'
+		>
+	> = {},
 ): SDKHookProgressMessage {
 	return {
 		type: 'system',
@@ -351,7 +439,9 @@ describe('messageKey', () => {
 	});
 
 	it('returns type:subtype for system messages', () => {
-		expect(messageKey(makeCompactBoundary())).toBe('system:compact_boundary');
+		expect(messageKey(makeCompactBoundary())).toBe(
+			'system:compact_boundary',
+		);
 		expect(messageKey(makeStatusMessage())).toBe('system:status');
 	});
 });
@@ -374,27 +464,59 @@ describe('dispatchMessage', () => {
 	});
 
 	it('dispatches assistant messages', () => {
-		const message = makeAssistantMessage([{ type: 'text', text: 'Hello', citations: null }]);
-		const result = dispatchMessage(accessor, message, TEST_SESSION_ID, request, state);
+		const message = makeAssistantMessage([
+			{ type: 'text', text: 'Hello', citations: null },
+		]);
+		const result = dispatchMessage(
+			accessor,
+			message,
+			TEST_SESSION_ID,
+			request,
+			state,
+		);
 		expect(result).toBeUndefined(); // assistant handler returns void
 		expect(request.stream.markdown).toHaveBeenCalledWith('Hello');
 	});
 
 	it('dispatches result messages and returns requestComplete', () => {
-		const result = dispatchMessage(accessor, makeSuccessResult(), TEST_SESSION_ID, request, state);
+		const result = dispatchMessage(
+			accessor,
+			makeSuccessResult(),
+			TEST_SESSION_ID,
+			request,
+			state,
+		);
 		expect(result).toEqual({ requestComplete: true });
 	});
 
 	it('dispatches compact_boundary messages', () => {
-		dispatchMessage(accessor, makeCompactBoundary(), TEST_SESSION_ID, request, state);
-		expect(request.stream.markdown).toHaveBeenCalledWith('*Conversation compacted*');
+		dispatchMessage(
+			accessor,
+			makeCompactBoundary(),
+			TEST_SESSION_ID,
+			request,
+			state,
+		);
+		expect(request.stream.markdown).toHaveBeenCalledWith(
+			'*Conversation compacted*',
+		);
 	});
 
 	it('trace-logs known but unhandled message types', () => {
 		const traceSpy = vi.spyOn(services.logService, 'trace');
-		const result = dispatchMessage(accessor, makeStatusMessage(), TEST_SESSION_ID, request, state);
+		const result = dispatchMessage(
+			accessor,
+			makeStatusMessage(),
+			TEST_SESSION_ID,
+			request,
+			state,
+		);
 		expect(result).toBeUndefined();
-		expect(traceSpy).toHaveBeenCalledWith(expect.stringContaining('Unhandled known message type: system:status'));
+		expect(traceSpy).toHaveBeenCalledWith(
+			expect.stringContaining(
+				'Unhandled known message type: system:status',
+			),
+		);
 	});
 });
 
@@ -417,8 +539,15 @@ describe('handleAssistantMessage', () => {
 
 	it('skips synthetic messages', () => {
 		handleAssistantMessage(
-			makeAssistantMessage([{ type: 'text', text: 'should be ignored', citations: null }], null, SYNTHETIC_MODEL_ID),
-			accessor, TEST_SESSION_ID, request, state,
+			makeAssistantMessage(
+				[{ type: 'text', text: 'should be ignored', citations: null }],
+				null,
+				SYNTHETIC_MODEL_ID,
+			),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 		expect(request.stream.markdown).not.toHaveBeenCalled();
 		expect(request.stream.push).not.toHaveBeenCalled();
@@ -426,26 +555,48 @@ describe('handleAssistantMessage', () => {
 
 	it('streams text content as markdown', () => {
 		handleAssistantMessage(
-			makeAssistantMessage([{ type: 'text', text: 'Hello world', citations: null }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeAssistantMessage([
+				{ type: 'text', text: 'Hello world', citations: null },
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 		expect(request.stream.markdown).toHaveBeenCalledWith('Hello world');
 	});
 
 	it('pushes thinking content', () => {
 		handleAssistantMessage(
-			makeAssistantMessage([{ type: 'thinking', thinking: 'Let me think...', signature: 'sig' }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeAssistantMessage([
+				{
+					type: 'thinking',
+					thinking: 'Let me think...',
+					signature: 'sig',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 		expect(request.stream.push).toHaveBeenCalled();
 	});
 
 	it('tracks tool_use blocks in unprocessedToolCalls', () => {
 		handleAssistantMessage(
-			makeAssistantMessage([{
-				type: 'tool_use', id: 'tool-123', name: ClaudeToolNames.Read, input: { file_path: '/test.ts' },
-			}]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeAssistantMessage([
+				{
+					type: 'tool_use',
+					id: 'tool-123',
+					name: ClaudeToolNames.Read,
+					input: { file_path: '/test.ts' },
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 		expect(state.unprocessedToolCalls.has('tool-123')).toBe(true);
 	});
@@ -453,10 +604,18 @@ describe('handleAssistantMessage', () => {
 	it('creates OTel spans for tool_use blocks', () => {
 		const startSpanSpy = vi.spyOn(services.otelService, 'startSpan');
 		handleAssistantMessage(
-			makeAssistantMessage([{
-				type: 'tool_use', id: 'tool-456', name: ClaudeToolNames.Bash, input: { command: 'ls' },
-			}]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeAssistantMessage([
+				{
+					type: 'tool_use',
+					id: 'tool-456',
+					name: ClaudeToolNames.Bash,
+					input: { command: 'ls' },
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 		expect(startSpanSpy).toHaveBeenCalledWith(
 			expect.stringContaining('execute_tool'),
@@ -469,20 +628,46 @@ describe('handleAssistantMessage', () => {
 		const mockSpan = createMockSpan();
 		vi.spyOn(services.otelService, 'startSpan').mockReturnValue(mockSpan);
 		handleAssistantMessage(
-			makeAssistantMessage([{
-				type: 'tool_use', id: 'tool-edit', name: 'Edit', input: { file_path: '/x.ts', old_string: 'a', new_string: 'b' },
-			}]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeAssistantMessage([
+				{
+					type: 'tool_use',
+					id: 'tool-edit',
+					name: 'Edit',
+					input: {
+						file_path: '/x.ts',
+						old_string: 'a',
+						new_string: 'b',
+					},
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
-		expect(mockSpan.setAttribute).toHaveBeenCalledWith('github.copilot.tool.parameters.edit_type', 'str_replace');
+		expect(mockSpan.setAttribute).toHaveBeenCalledWith(
+			'github.copilot.tool.parameters.edit_type',
+			'str_replace',
+		);
 	});
 
 	it('sets subAgentInvocationId when parent_tool_use_id is present', () => {
 		handleAssistantMessage(
-			makeAssistantMessage([{
-				type: 'tool_use', id: 'tool-789', name: ClaudeToolNames.Bash, input: { command: 'echo test' },
-			}], 'parent-tool-id'),
-			accessor, TEST_SESSION_ID, request, state,
+			makeAssistantMessage(
+				[
+					{
+						type: 'tool_use',
+						id: 'tool-789',
+						name: ClaudeToolNames.Bash,
+						input: { command: 'echo test' },
+					},
+				],
+				'parent-tool-id',
+			),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 		expect(request.stream.push).toHaveBeenCalled();
 	});
@@ -495,35 +680,70 @@ describe('handleAssistantMessage', () => {
 		// tracker can decide.
 		handleAssistantMessage(
 			makeAssistantMessage([
-				{ type: 'tool_use', id: 'w1', name: ClaudeToolNames.Write, input: { file_path: '/home/testuser/.claude/plans/plan.md', content: '# plan' } },
-				{ type: 'tool_use', id: 'w2', name: ClaudeToolNames.Write, input: { file_path: '/tmp/other.md', content: 'x' } },
+				{
+					type: 'tool_use',
+					id: 'w1',
+					name: ClaudeToolNames.Write,
+					input: {
+						file_path: '/home/testuser/.claude/plans/plan.md',
+						content: '# plan',
+					},
+				},
+				{
+					type: 'tool_use',
+					id: 'w2',
+					name: ClaudeToolNames.Write,
+					input: { file_path: '/tmp/other.md', content: 'x' },
+				},
 			]),
-			accessor, TEST_SESSION_ID, request, state,
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
-		expect(services.planFileTracker.recordIfPlanFile).toHaveBeenCalledTimes(2);
+		expect(services.planFileTracker.recordIfPlanFile).toHaveBeenCalledTimes(
+			2,
+		);
 		const calls = services.planFileTracker.recordIfPlanFile.mock.calls;
 		expect(calls[0][0]).toBe(TEST_SESSION_ID);
 		// Dispatch forwards `uri.fsPath`, which uses backslashes on Windows;
 		// compare against the same `URI.file(...).fsPath` round-trip rather
 		// than the raw posix string to keep the assertion platform-agnostic.
-		expect(calls[0][1]).toBe(URI.file('/home/testuser/.claude/plans/plan.md').fsPath);
+		expect(calls[0][1]).toBe(
+			URI.file('/home/testuser/.claude/plans/plan.md').fsPath,
+		);
 		expect(calls[1][1]).toBe(URI.file('/tmp/other.md').fsPath);
 	});
 
 	it('does not consult the plan file tracker for non-edit tools', () => {
 		handleAssistantMessage(
-			makeAssistantMessage([{
-				type: 'tool_use', id: 'r1', name: ClaudeToolNames.Read, input: { file_path: '/home/testuser/.claude/plans/plan.md' },
-			}]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeAssistantMessage([
+				{
+					type: 'tool_use',
+					id: 'r1',
+					name: ClaudeToolNames.Read,
+					input: {
+						file_path: '/home/testuser/.claude/plans/plan.md',
+					},
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
-		expect(services.planFileTracker.recordIfPlanFile).not.toHaveBeenCalled();
+		expect(
+			services.planFileTracker.recordIfPlanFile,
+		).not.toHaveBeenCalled();
 	});
 
 	it('tracks lastApiError from assistant message error field', () => {
-		const msg = makeAssistantMessage([{ type: 'text', text: 'error', citations: null }]);
-		(msg as SDKAssistantMessage & { error: string }).error = 'billing_error';
+		const msg = makeAssistantMessage([
+			{ type: 'text', text: 'error', citations: null },
+		]);
+		(msg as SDKAssistantMessage & { error: string }).error =
+			'billing_error';
 		handleAssistantMessage(msg, accessor, TEST_SESSION_ID, request, state);
 		// Assistant message error tracking is no longer used for quota detection;
 		// the proxy embeds error codes in the result text instead.
@@ -532,8 +752,13 @@ describe('handleAssistantMessage', () => {
 	});
 
 	it('handles synthetic messages with error field without crashing', () => {
-		const msg = makeAssistantMessage([{ type: 'text', text: '', citations: null }], null, SYNTHETIC_MODEL_ID);
-		(msg as SDKAssistantMessage & { error: string }).error = 'billing_error';
+		const msg = makeAssistantMessage(
+			[{ type: 'text', text: '', citations: null }],
+			null,
+			SYNTHETIC_MODEL_ID,
+		);
+		(msg as SDKAssistantMessage & { error: string }).error =
+			'billing_error';
 		handleAssistantMessage(msg, accessor, TEST_SESSION_ID, request, state);
 		expect(request.stream.markdown).not.toHaveBeenCalled();
 	});
@@ -558,7 +783,10 @@ describe('handleUserMessage', () => {
 
 	it('processes tool_result blocks that match unprocessed tool calls', () => {
 		const toolUse: Anthropic.Beta.Messages.BetaToolUseBlock = {
-			type: 'tool_use', id: 'tool-100', name: ClaudeToolNames.Read, input: { file_path: '/test.ts' },
+			type: 'tool_use',
+			id: 'tool-100',
+			name: ClaudeToolNames.Read,
+			input: { file_path: '/test.ts' },
 		};
 		state.unprocessedToolCalls.set('tool-100', toolUse);
 
@@ -566,8 +794,17 @@ describe('handleUserMessage', () => {
 		state.otelToolSpans.set('tool-100', mockSpan);
 
 		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'tool-100', content: 'file contents here' }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-100',
+					content: 'file contents here',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
 		expect(state.unprocessedToolCalls.has('tool-100')).toBe(false);
@@ -576,54 +813,107 @@ describe('handleUserMessage', () => {
 
 	it('emits languageModelToolInvoked telemetry for completed tool results', () => {
 		const toolUse: Anthropic.Beta.Messages.BetaToolUseBlock = {
-			type: 'tool_use', id: 'tool-telemetry', name: ClaudeToolNames.Read, input: { file_path: '/test.ts' },
+			type: 'tool_use',
+			id: 'tool-telemetry',
+			name: ClaudeToolNames.Read,
+			input: { file_path: '/test.ts' },
 		};
 		state.unprocessedToolCalls.set('tool-telemetry', toolUse);
 		state.toolStartTimes.set('tool-telemetry', Date.now());
 
 		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'tool-telemetry', content: 'file contents here' }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-telemetry',
+					content: 'file contents here',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
-		expect(services.telemetryService.sendMSFTTelemetryEvent).toHaveBeenCalledWith('languageModelToolInvoked', {
-			result: 'success',
-			chatSessionId: 'claude-code:/test-session-id',
-			toolId: ClaudeToolNames.Read,
-			toolExtensionId: undefined,
-			toolSourceKind: 'claudeCode',
-		}, { invocationTimeMs: expect.any(Number) });
+		expect(
+			services.telemetryService.sendMSFTTelemetryEvent,
+		).toHaveBeenCalledWith(
+			'languageModelToolInvoked',
+			{
+				result: 'success',
+				chatSessionId: 'claude-code:/test-session-id',
+				toolId: ClaudeToolNames.Read,
+				toolExtensionId: undefined,
+				toolSourceKind: 'claudeCode',
+			},
+			{ invocationTimeMs: expect.any(Number) },
+		);
 	});
 
 	it('maps Claude Code MCP, error, and denied tool telemetry', () => {
 		const mcpToolUse: Anthropic.Beta.Messages.BetaToolUseBlock = {
-			type: 'tool_use', id: 'tool-mcp', name: 'mcp__server__tool', input: {},
+			type: 'tool_use',
+			id: 'tool-mcp',
+			name: 'mcp__server__tool',
+			input: {},
 		};
 		const deniedToolUse: Anthropic.Beta.Messages.BetaToolUseBlock = {
-			type: 'tool_use', id: 'tool-denied-telemetry', name: ClaudeToolNames.Bash, input: { command: 'rm -rf /' },
+			type: 'tool_use',
+			id: 'tool-denied-telemetry',
+			name: ClaudeToolNames.Bash,
+			input: { command: 'rm -rf /' },
 		};
 		state.unprocessedToolCalls.set('tool-mcp', mcpToolUse);
 		state.unprocessedToolCalls.set('tool-denied-telemetry', deniedToolUse);
 
 		handleUserMessage(
 			makeUserMessage([
-				{ type: 'tool_result', tool_use_id: 'tool-mcp', content: 'failed', is_error: true },
-				{ type: 'tool_result', tool_use_id: 'tool-denied-telemetry', content: DENY_TOOL_MESSAGE },
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-mcp',
+					content: 'failed',
+					is_error: true,
+				},
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-denied-telemetry',
+					content: DENY_TOOL_MESSAGE,
+				},
 			]),
-			accessor, TEST_SESSION_ID, request, state,
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
-		const events = services.telemetryService.sendMSFTTelemetryEvent.mock.calls.map(call => ({
-			properties: call[1] as TelemetryEventProperties,
-			measurements: call[2] as TelemetryEventMeasurements | undefined,
-		}));
+		const events =
+			services.telemetryService.sendMSFTTelemetryEvent.mock.calls.map(
+				(call) => ({
+					properties: call[1] as TelemetryEventProperties,
+					measurements: call[2] as
+						| TelemetryEventMeasurements
+						| undefined,
+				}),
+			);
 		expect(events).toEqual([
 			{
-				properties: { result: 'error', chatSessionId: 'claude-code:/test-session-id', toolId: 'mcp__server__tool', toolExtensionId: undefined, toolSourceKind: 'mcp' },
+				properties: {
+					result: 'error',
+					chatSessionId: 'claude-code:/test-session-id',
+					toolId: 'mcp__server__tool',
+					toolExtensionId: undefined,
+					toolSourceKind: 'mcp',
+				},
 				measurements: undefined,
 			},
 			{
-				properties: { result: 'userCancelled', chatSessionId: 'claude-code:/test-session-id', toolId: ClaudeToolNames.Bash, toolExtensionId: undefined, toolSourceKind: 'claudeCode' },
+				properties: {
+					result: 'userCancelled',
+					chatSessionId: 'claude-code:/test-session-id',
+					toolId: ClaudeToolNames.Bash,
+					toolExtensionId: undefined,
+					toolSourceKind: 'claudeCode',
+				},
 				measurements: undefined,
 			},
 		]);
@@ -631,8 +921,17 @@ describe('handleUserMessage', () => {
 
 	it('skips tool_result blocks with no matching tool call', () => {
 		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'nonexistent-tool', content: 'result' }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'nonexistent-tool',
+					content: 'result',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 		expect(request.stream.push).not.toHaveBeenCalled();
 	});
@@ -650,13 +949,25 @@ describe('handleUserMessage', () => {
 
 	it('marks denied tool results with isConfirmed=false', () => {
 		const toolUse: Anthropic.Beta.Messages.BetaToolUseBlock = {
-			type: 'tool_use', id: 'tool-denied', name: ClaudeToolNames.Bash, input: { command: 'rm -rf /' },
+			type: 'tool_use',
+			id: 'tool-denied',
+			name: ClaudeToolNames.Bash,
+			input: { command: 'rm -rf /' },
 		};
 		state.unprocessedToolCalls.set('tool-denied', toolUse);
 
 		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'tool-denied', content: DENY_TOOL_MESSAGE }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-denied',
+					content: DENY_TOOL_MESSAGE,
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 		expect(request.stream.push).toHaveBeenCalled();
 	});
@@ -668,16 +979,33 @@ describe('handleUserMessage', () => {
 			name: ClaudeToolNames.TodoWrite,
 			input: {
 				todos: [
-					{ content: 'Fix bug', status: 'in_progress', activeForm: 'Fixing bug' },
-					{ content: 'Write tests', status: 'pending', activeForm: 'Writing tests' },
-				]
+					{
+						content: 'Fix bug',
+						status: 'in_progress',
+						activeForm: 'Fixing bug',
+					},
+					{
+						content: 'Write tests',
+						status: 'pending',
+						activeForm: 'Writing tests',
+					},
+				],
 			},
 		};
 		state.unprocessedToolCalls.set('tool-todo', toolUse);
 
 		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'tool-todo', content: 'success' }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-todo',
+					content: 'success',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
 		expect(services.toolsService.invokeTool).toHaveBeenCalledWith(
@@ -686,89 +1014,209 @@ describe('handleUserMessage', () => {
 				input: expect.objectContaining({
 					operation: 'write',
 					todoList: expect.arrayContaining([
-						expect.objectContaining({ title: 'Fix bug', status: 'in-progress' }),
-						expect.objectContaining({ title: 'Write tests', status: 'not-started' }),
+						expect.objectContaining({
+							title: 'Fix bug',
+							status: 'in-progress',
+						}),
+						expect.objectContaining({
+							title: 'Write tests',
+							status: 'not-started',
+						}),
 					]),
 				}),
 			}),
 			expect.anything(),
 		);
-		expect(services.telemetryService.sendMSFTTelemetryEvent).not.toHaveBeenCalled();
+		expect(
+			services.telemetryService.sendMSFTTelemetryEvent,
+		).not.toHaveBeenCalled();
 	});
 
 	it('sets permission mode to plan on EnterPlanMode tool completion', () => {
-		state.unprocessedToolCalls.set('tool-1', { type: 'tool_use', id: 'tool-1', name: ClaudeToolNames.EnterPlanMode, input: {} });
+		state.unprocessedToolCalls.set('tool-1', {
+			type: 'tool_use',
+			id: 'tool-1',
+			name: ClaudeToolNames.EnterPlanMode,
+			input: {},
+		});
 		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'tool-1', content: 'success' }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-1',
+					content: 'success',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
-		expect(services.sessionStateService.setPermissionModeForSession).toHaveBeenCalledWith(TEST_SESSION_ID, 'plan');
+		expect(
+			services.sessionStateService.setPermissionModeForSession,
+		).toHaveBeenCalledWith(TEST_SESSION_ID, 'plan');
 	});
 
 	it('sets permission mode to acceptEdits on ExitPlanMode tool completion', () => {
-		state.unprocessedToolCalls.set('tool-1', { type: 'tool_use', id: 'tool-1', name: ClaudeToolNames.ExitPlanMode, input: {} });
+		state.unprocessedToolCalls.set('tool-1', {
+			type: 'tool_use',
+			id: 'tool-1',
+			name: ClaudeToolNames.ExitPlanMode,
+			input: {},
+		});
 		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'tool-1', content: 'success' }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-1',
+					content: 'success',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
-		expect(services.sessionStateService.setPermissionModeForSession).toHaveBeenCalledWith(TEST_SESSION_ID, 'acceptEdits');
+		expect(
+			services.sessionStateService.setPermissionModeForSession,
+		).toHaveBeenCalledWith(TEST_SESSION_ID, 'acceptEdits');
 	});
 
 	it('handles EnterPlanMode followed by ExitPlanMode in same message', () => {
-		state.unprocessedToolCalls.set('tool-a', { type: 'tool_use', id: 'tool-a', name: ClaudeToolNames.EnterPlanMode, input: {} });
-		state.unprocessedToolCalls.set('tool-b', { type: 'tool_use', id: 'tool-b', name: ClaudeToolNames.ExitPlanMode, input: {} });
+		state.unprocessedToolCalls.set('tool-a', {
+			type: 'tool_use',
+			id: 'tool-a',
+			name: ClaudeToolNames.EnterPlanMode,
+			input: {},
+		});
+		state.unprocessedToolCalls.set('tool-b', {
+			type: 'tool_use',
+			id: 'tool-b',
+			name: ClaudeToolNames.ExitPlanMode,
+			input: {},
+		});
 
 		handleUserMessage(
 			makeUserMessage([
-				{ type: 'tool_result', tool_use_id: 'tool-a', content: 'success' },
-				{ type: 'tool_result', tool_use_id: 'tool-b', content: 'success' },
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-a',
+					content: 'success',
+				},
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-b',
+					content: 'success',
+				},
 			]),
-			accessor, TEST_SESSION_ID, request, state,
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
-		expect(services.sessionStateService.setPermissionModeForSession).toHaveBeenCalledTimes(2);
-		expect(services.sessionStateService.setPermissionModeForSession).toHaveBeenNthCalledWith(1, TEST_SESSION_ID, 'plan');
-		expect(services.sessionStateService.setPermissionModeForSession).toHaveBeenNthCalledWith(2, TEST_SESSION_ID, 'acceptEdits');
+		expect(
+			services.sessionStateService.setPermissionModeForSession,
+		).toHaveBeenCalledTimes(2);
+		expect(
+			services.sessionStateService.setPermissionModeForSession,
+		).toHaveBeenNthCalledWith(1, TEST_SESSION_ID, 'plan');
+		expect(
+			services.sessionStateService.setPermissionModeForSession,
+		).toHaveBeenNthCalledWith(2, TEST_SESSION_ID, 'acceptEdits');
 	});
 
 	it('does not set permission mode for non-plan-mode tools', () => {
-		state.unprocessedToolCalls.set('tool-x', { type: 'tool_use', id: 'tool-x', name: ClaudeToolNames.Read, input: { file_path: '/test.ts' } });
+		state.unprocessedToolCalls.set('tool-x', {
+			type: 'tool_use',
+			id: 'tool-x',
+			name: ClaudeToolNames.Read,
+			input: { file_path: '/test.ts' },
+		});
 		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'tool-x', content: 'success' }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-x',
+					content: 'success',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
-		expect(services.sessionStateService.setPermissionModeForSession).not.toHaveBeenCalled();
+		expect(
+			services.sessionStateService.setPermissionModeForSession,
+		).not.toHaveBeenCalled();
 	});
 
 	it('calls logToolCall on IRequestLogger for completed tools', () => {
-		state.unprocessedToolCalls.set('tool-1', { type: 'tool_use', id: 'tool-1', name: ClaudeToolNames.Read, input: { file_path: '/test.ts' } });
+		state.unprocessedToolCalls.set('tool-1', {
+			type: 'tool_use',
+			id: 'tool-1',
+			name: ClaudeToolNames.Read,
+			input: { file_path: '/test.ts' },
+		});
 		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'tool-1', content: 'file contents here' }]),
-			accessor, TEST_SESSION_ID, request, state,
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-1',
+					content: 'file contents here',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
 		);
 
 		expect(services.requestLogger.logToolCall).toHaveBeenCalledWith(
 			'tool-1',
 			ClaudeToolNames.Read,
 			{ file_path: '/test.ts' },
-			{ content: [expect.objectContaining({ value: 'file contents here' })] },
+			{
+				content: [
+					expect.objectContaining({ value: 'file contents here' }),
+				],
+			},
 		);
 	});
 
 	it('uses captureInvocation when a capturing token is set', () => {
 		const mockToken = { label: 'test' };
-		services.sessionStateService.getCapturingTokenForSession.mockReturnValue(mockToken);
-
-		state.unprocessedToolCalls.set('tool-1', { type: 'tool_use', id: 'tool-1', name: ClaudeToolNames.Read, input: { file_path: '/test.ts' } });
-		handleUserMessage(
-			makeUserMessage([{ type: 'tool_result', tool_use_id: 'tool-1', content: 'file contents here' }]),
-			accessor, TEST_SESSION_ID, request, state,
+		services.sessionStateService.getCapturingTokenForSession.mockReturnValue(
+			mockToken,
 		);
 
-		expect(services.requestLogger.captureInvocation).toHaveBeenCalledWith(mockToken, expect.any(Function));
+		state.unprocessedToolCalls.set('tool-1', {
+			type: 'tool_use',
+			id: 'tool-1',
+			name: ClaudeToolNames.Read,
+			input: { file_path: '/test.ts' },
+		});
+		handleUserMessage(
+			makeUserMessage([
+				{
+					type: 'tool_result',
+					tool_use_id: 'tool-1',
+					content: 'file contents here',
+				},
+			]),
+			accessor,
+			TEST_SESSION_ID,
+			request,
+			state,
+		);
+
+		expect(services.requestLogger.captureInvocation).toHaveBeenCalledWith(
+			mockToken,
+			expect.any(Function),
+		);
 	});
 });
 
@@ -780,7 +1228,9 @@ describe('handleCompactBoundary', () => {
 	it('streams compact notification markdown', () => {
 		const request = createRequestContext();
 		handleCompactBoundary(makeCompactBoundary(), request);
-		expect(request.stream.markdown).toHaveBeenCalledWith('*Conversation compacted*');
+		expect(request.stream.markdown).toHaveBeenCalledWith(
+			'*Conversation compacted*',
+		);
 	});
 });
 
@@ -801,7 +1251,12 @@ describe('handleHookStarted', () => {
 
 	it('creates an OTel span and stores it by hook_id', () => {
 		const startSpanSpy = vi.spyOn(services.otelService, 'startSpan');
-		handleHookStarted(makeHookStarted('hook-42', 'lint-check', 'PreToolUse'), accessor, TEST_SESSION_ID, state);
+		handleHookStarted(
+			makeHookStarted('hook-42', 'lint-check', 'PreToolUse'),
+			accessor,
+			TEST_SESSION_ID,
+			state,
+		);
 
 		expect(startSpanSpy).toHaveBeenCalledWith(
 			'execute_hook lint-check',
@@ -828,7 +1283,12 @@ describe('handleHookResponse', () => {
 		const mockSpan = createMockSpan();
 		state.otelHookSpans.set('hook-1', mockSpan);
 
-		handleHookResponse(makeHookResponse('hook-1', 'success'), accessor, request, state);
+		handleHookResponse(
+			makeHookResponse('hook-1', 'success'),
+			accessor,
+			request,
+			state,
+		);
 
 		expect(mockSpan.setStatus).toHaveBeenCalledWith(expect.anything()); // SpanStatusCode.OK
 		expect(mockSpan.end).toHaveBeenCalled();
@@ -840,9 +1300,17 @@ describe('handleHookResponse', () => {
 		state.otelHookSpans.set('hook-1', mockSpan);
 		state.hookStartTimes.set('hook-1', Date.now() - 100);
 
-		handleHookResponse(makeHookResponse('hook-1', 'success'), accessor, request, state);
+		handleHookResponse(
+			makeHookResponse('hook-1', 'success'),
+			accessor,
+			request,
+			state,
+		);
 
-		expect(mockSpan.setAttribute).toHaveBeenCalledWith('github.copilot.hook.decision', 'pass');
+		expect(mockSpan.setAttribute).toHaveBeenCalledWith(
+			'github.copilot.hook.decision',
+			'pass',
+		);
 		expect(mockSpan.setAttribute).toHaveBeenCalledWith(
 			'github.copilot.hook.duration',
 			expect.any(Number),
@@ -855,11 +1323,20 @@ describe('handleHookResponse', () => {
 		state.otelHookSpans.set('hook-1', mockSpan);
 
 		handleHookResponse(
-			makeHookResponse('hook-1', 'error', { exit_code: 2, stderr: 'blocked', hook_event: 'PreToolUse' }),
-			accessor, request, state,
+			makeHookResponse('hook-1', 'error', {
+				exit_code: 2,
+				stderr: 'blocked',
+				hook_event: 'PreToolUse',
+			}),
+			accessor,
+			request,
+			state,
 		);
 
-		expect(mockSpan.setAttribute).toHaveBeenCalledWith('github.copilot.hook.decision', 'block');
+		expect(mockSpan.setAttribute).toHaveBeenCalledWith(
+			'github.copilot.hook.decision',
+			'block',
+		);
 	});
 
 	it('ends the OTel span with ERROR on failure and surfaces error via hookProgress', () => {
@@ -867,13 +1344,25 @@ describe('handleHookResponse', () => {
 		state.otelHookSpans.set('hook-1', mockSpan);
 
 		handleHookResponse(
-			makeHookResponse('hook-1', 'error', { stderr: 'lint failed', hook_name: 'lint-check', hook_event: 'PreToolUse' }),
-			accessor, request, state,
+			makeHookResponse('hook-1', 'error', {
+				stderr: 'lint failed',
+				hook_name: 'lint-check',
+				hook_event: 'PreToolUse',
+			}),
+			accessor,
+			request,
+			state,
 		);
 
-		expect(mockSpan.setStatus).toHaveBeenCalledWith(expect.anything(), 'lint failed');
+		expect(mockSpan.setStatus).toHaveBeenCalledWith(
+			expect.anything(),
+			'lint failed',
+		);
 		expect(mockSpan.end).toHaveBeenCalled();
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('PreToolUse', expect.stringContaining('lint failed'));
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'PreToolUse',
+			expect.stringContaining('lint failed'),
+		);
 		expect(request.stream.markdown).not.toHaveBeenCalled();
 	});
 
@@ -881,7 +1370,12 @@ describe('handleHookResponse', () => {
 		const mockSpan = createMockSpan();
 		state.otelHookSpans.set('hook-1', mockSpan);
 
-		handleHookResponse(makeHookResponse('hook-1', 'success'), accessor, request, state);
+		handleHookResponse(
+			makeHookResponse('hook-1', 'success'),
+			accessor,
+			request,
+			state,
+		);
 
 		expect(request.stream.hookProgress).not.toHaveBeenCalled();
 		expect(request.stream.markdown).not.toHaveBeenCalled();
@@ -891,9 +1385,17 @@ describe('handleHookResponse', () => {
 		const mockSpan = createMockSpan();
 		state.otelHookSpans.set('hook-1', mockSpan);
 
-		handleHookResponse(makeHookResponse('hook-1', 'cancelled'), accessor, request, state);
+		handleHookResponse(
+			makeHookResponse('hook-1', 'cancelled'),
+			accessor,
+			request,
+			state,
+		);
 
-		expect(mockSpan.setStatus).toHaveBeenCalledWith(expect.anything(), 'cancelled');
+		expect(mockSpan.setStatus).toHaveBeenCalledWith(
+			expect.anything(),
+			'cancelled',
+		);
 		expect(mockSpan.end).toHaveBeenCalled();
 		expect(request.stream.hookProgress).not.toHaveBeenCalled();
 	});
@@ -901,21 +1403,39 @@ describe('handleHookResponse', () => {
 	it('handles response without a matching started span gracefully', () => {
 		// No span in otelHookSpans — should not throw
 		handleHookResponse(
-			makeHookResponse('nonexistent', 'error', { stderr: 'some error', hook_name: 'my-hook', hook_event: 'PreToolUse' }),
-			accessor, request, state,
+			makeHookResponse('nonexistent', 'error', {
+				stderr: 'some error',
+				hook_name: 'my-hook',
+				hook_event: 'PreToolUse',
+			}),
+			accessor,
+			request,
+			state,
 		);
 		// Still surfaces the error via hookProgress
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('PreToolUse', expect.stringContaining('some error'));
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'PreToolUse',
+			expect.stringContaining('some error'),
+		);
 	});
 
 	// #region Exit code handling
 
 	it('exit code 2 — blocking error via hookProgress with stderr', () => {
 		handleHookResponse(
-			makeHookResponse('hook-1', 'error', { exit_code: 2, stderr: 'blocked!', hook_event: 'Stop' }),
-			accessor, request, state,
+			makeHookResponse('hook-1', 'error', {
+				exit_code: 2,
+				stderr: 'blocked!',
+				hook_event: 'Stop',
+			}),
+			accessor,
+			request,
+			state,
 		);
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('Stop', expect.stringContaining('blocked!'));
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'Stop',
+			expect.stringContaining('blocked!'),
+		);
 	});
 
 	it('exit code 2 — ignores JSON in stdout', () => {
@@ -926,24 +1446,44 @@ describe('handleHookResponse', () => {
 				stdout: '{"decision": "block", "reason": "should be ignored"}',
 				hook_event: 'PostToolUse',
 			}),
-			accessor, request, state,
+			accessor,
+			request,
+			state,
 		);
 		// Should use stderr, not JSON
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('PostToolUse', expect.stringContaining('real error'));
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'PostToolUse',
+			expect.stringContaining('real error'),
+		);
 	});
 
 	it('other non-zero exit codes — non-blocking warning', () => {
 		handleHookResponse(
-			makeHookResponse('hook-1', 'error', { exit_code: 1, stderr: 'warning text', hook_event: 'PreToolUse' }),
-			accessor, request, state,
+			makeHookResponse('hook-1', 'error', {
+				exit_code: 1,
+				stderr: 'warning text',
+				hook_event: 'PreToolUse',
+			}),
+			accessor,
+			request,
+			state,
 		);
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('PreToolUse', undefined, 'warning text');
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'PreToolUse',
+			undefined,
+			'warning text',
+		);
 	});
 
 	it('other non-zero exit codes without stderr — no hookProgress', () => {
 		handleHookResponse(
-			makeHookResponse('hook-1', 'error', { exit_code: 1, hook_event: 'PreToolUse' }),
-			accessor, request, state,
+			makeHookResponse('hook-1', 'error', {
+				exit_code: 1,
+				hook_event: 'PreToolUse',
+			}),
+			accessor,
+			request,
+			state,
 		);
 		expect(request.stream.hookProgress).not.toHaveBeenCalled();
 	});
@@ -956,12 +1496,20 @@ describe('handleHookResponse', () => {
 		handleHookResponse(
 			makeHookResponse('hook-1', 'success', {
 				exit_code: 0,
-				stdout: JSON.stringify({ continue: false, stopReason: 'Build failed' }),
+				stdout: JSON.stringify({
+					continue: false,
+					stopReason: 'Build failed',
+				}),
 				hook_event: 'UserPromptSubmit',
 			}),
-			accessor, request, state,
+			accessor,
+			request,
+			state,
 		);
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('UserPromptSubmit', expect.stringContaining('Build failed'));
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'UserPromptSubmit',
+			expect.stringContaining('Build failed'),
+		);
 	});
 
 	it('exit code 0 — JSON with continue:false and no stopReason uses empty string', () => {
@@ -971,33 +1519,54 @@ describe('handleHookResponse', () => {
 				stdout: JSON.stringify({ continue: false }),
 				hook_event: 'Stop',
 			}),
-			accessor, request, state,
+			accessor,
+			request,
+			state,
 		);
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('Stop', expect.any(String));
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'Stop',
+			expect.any(String),
+		);
 	});
 
 	it('exit code 0 — JSON with decision:block calls hookProgress with reason', () => {
 		handleHookResponse(
 			makeHookResponse('hook-1', 'success', {
 				exit_code: 0,
-				stdout: JSON.stringify({ decision: 'block', reason: 'Tests must pass' }),
+				stdout: JSON.stringify({
+					decision: 'block',
+					reason: 'Tests must pass',
+				}),
 				hook_event: 'PostToolUse',
 			}),
-			accessor, request, state,
+			accessor,
+			request,
+			state,
 		);
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('PostToolUse', expect.stringContaining('Tests must pass'));
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'PostToolUse',
+			expect.stringContaining('Tests must pass'),
+		);
 	});
 
 	it('exit code 0 — JSON with systemMessage shows warning via hookProgress', () => {
 		handleHookResponse(
 			makeHookResponse('hook-1', 'success', {
 				exit_code: 0,
-				stdout: JSON.stringify({ systemMessage: 'Watch out for side effects' }),
+				stdout: JSON.stringify({
+					systemMessage: 'Watch out for side effects',
+				}),
 				hook_event: 'PreToolUse',
 			}),
-			accessor, request, state,
+			accessor,
+			request,
+			state,
 		);
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('PreToolUse', undefined, 'Watch out for side effects');
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'PreToolUse',
+			undefined,
+			'Watch out for side effects',
+		);
 	});
 
 	it('exit code 0 — non-JSON stdout logs warning, no hookProgress', () => {
@@ -1008,16 +1577,22 @@ describe('handleHookResponse', () => {
 				stdout: 'not valid json {',
 				hook_event: 'PreToolUse',
 			}),
-			accessor, request, state,
+			accessor,
+			request,
+			state,
 		);
-		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('non-JSON output'));
+		expect(warnSpy).toHaveBeenCalledWith(
+			expect.stringContaining('non-JSON output'),
+		);
 		expect(request.stream.hookProgress).not.toHaveBeenCalled();
 	});
 
 	it('exit code 0 — empty stdout means success, no hookProgress', () => {
 		handleHookResponse(
 			makeHookResponse('hook-1', 'success', { exit_code: 0, stdout: '' }),
-			accessor, request, state,
+			accessor,
+			request,
+			state,
 		);
 		expect(request.stream.hookProgress).not.toHaveBeenCalled();
 	});
@@ -1029,7 +1604,9 @@ describe('handleHookResponse', () => {
 				stdout: JSON.stringify({ continue: true }),
 				hook_event: 'PreToolUse',
 			}),
-			accessor, request, state,
+			accessor,
+			request,
+			state,
 		);
 		expect(request.stream.hookProgress).not.toHaveBeenCalled();
 	});
@@ -1054,36 +1631,58 @@ describe('handleHookProgress', () => {
 
 	it('shows stdout via hookProgress as system message', () => {
 		handleHookProgress(
-			makeHookProgress('hook-1', { stdout: 'Running lint...', hook_event: 'PreToolUse' }),
-			accessor, request,
+			makeHookProgress('hook-1', {
+				stdout: 'Running lint...',
+				hook_event: 'PreToolUse',
+			}),
+			accessor,
+			request,
 		);
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('PreToolUse', undefined, 'Running lint...');
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'PreToolUse',
+			undefined,
+			'Running lint...',
+		);
 	});
 
 	it('falls back to stderr when stdout is empty', () => {
 		handleHookProgress(
-			makeHookProgress('hook-1', { stderr: 'warning output', hook_event: 'PostToolUse' }),
-			accessor, request,
+			makeHookProgress('hook-1', {
+				stderr: 'warning output',
+				hook_event: 'PostToolUse',
+			}),
+			accessor,
+			request,
 		);
-		expect(request.stream.hookProgress).toHaveBeenCalledWith('PostToolUse', undefined, 'warning output');
+		expect(request.stream.hookProgress).toHaveBeenCalledWith(
+			'PostToolUse',
+			undefined,
+			'warning output',
+		);
 	});
 
 	it('does not call hookProgress when both stdout and stderr are empty', () => {
-		handleHookProgress(
-			makeHookProgress('hook-1'),
-			accessor, request,
-		);
+		handleHookProgress(makeHookProgress('hook-1'), accessor, request);
 		expect(request.stream.hookProgress).not.toHaveBeenCalled();
 	});
 
 	it('trace-logs progress output', () => {
 		const traceSpy = vi.spyOn(services.logService, 'trace');
 		handleHookProgress(
-			makeHookProgress('hook-1', { stdout: 'progress text', hook_name: 'my-hook', hook_event: 'PreToolUse' }),
-			accessor, request,
+			makeHookProgress('hook-1', {
+				stdout: 'progress text',
+				hook_name: 'my-hook',
+				hook_event: 'PreToolUse',
+			}),
+			accessor,
+			request,
 		);
-		expect(traceSpy).toHaveBeenCalledWith(expect.stringContaining('Hook progress'));
-		expect(traceSpy).toHaveBeenCalledWith(expect.stringContaining('progress text'));
+		expect(traceSpy).toHaveBeenCalledWith(
+			expect.stringContaining('Hook progress'),
+		);
+		expect(traceSpy).toHaveBeenCalledWith(
+			expect.stringContaining('progress text'),
+		);
 	});
 });
 
@@ -1093,13 +1692,15 @@ describe('handleHookProgress', () => {
 
 describe('parseHookJsonOutput', () => {
 	it('parses valid JSON with all fields', () => {
-		const result = parseHookJsonOutput(JSON.stringify({
-			continue: false,
-			stopReason: 'Build failed',
-			systemMessage: 'Warning',
-			decision: 'block',
-			reason: 'Not allowed',
-		}));
+		const result = parseHookJsonOutput(
+			JSON.stringify({
+				continue: false,
+				stopReason: 'Build failed',
+				systemMessage: 'Warning',
+				decision: 'block',
+				reason: 'Not allowed',
+			}),
+		);
 		expect(result).toEqual({
 			continue: false,
 			stopReason: 'Build failed',
@@ -1131,35 +1732,43 @@ describe('parseHookJsonOutput', () => {
 	});
 
 	it('ignores fields with wrong types via fallback validation', () => {
-		const result = parseHookJsonOutput(JSON.stringify({
-			continue: 'not-a-boolean',
-			stopReason: 42,
-			systemMessage: 'valid string',
-		}));
+		const result = parseHookJsonOutput(
+			JSON.stringify({
+				continue: 'not-a-boolean',
+				stopReason: 42,
+				systemMessage: 'valid string',
+			}),
+		);
 		expect(result).toEqual({ systemMessage: 'valid string' });
 	});
 
 	it('returns undefined when all fields have wrong types', () => {
-		const result = parseHookJsonOutput(JSON.stringify({
-			continue: 'true',
-			decision: 'allow',
-		}));
+		const result = parseHookJsonOutput(
+			JSON.stringify({
+				continue: 'true',
+				decision: 'allow',
+			}),
+		);
 		expect(result).toBeUndefined();
 	});
 
 	it('ignores unknown fields', () => {
-		const result = parseHookJsonOutput(JSON.stringify({
-			continue: true,
-			unknownField: 'whatever',
-		}));
+		const result = parseHookJsonOutput(
+			JSON.stringify({
+				continue: true,
+				unknownField: 'whatever',
+			}),
+		);
 		expect(result).toEqual({ continue: true });
 	});
 
 	it('rejects decision values other than block', () => {
-		const result = parseHookJsonOutput(JSON.stringify({
-			decision: 'allow',
-			systemMessage: 'hello',
-		}));
+		const result = parseHookJsonOutput(
+			JSON.stringify({
+				decision: 'allow',
+				systemMessage: 'hello',
+			}),
+		);
 		// decision: 'allow' fails vLiteral('block'), but systemMessage succeeds
 		expect(result).toEqual({ systemMessage: 'hello' });
 	});
@@ -1194,87 +1803,117 @@ const TEST_RATE_LIMIT_ERROR: ChatFetchError = {
 
 describe('handleResultMessage', () => {
 	it('returns requestComplete for success', () => {
-		const result = handleResultMessage(makeSuccessResult(), createRequestContext());
+		const result = handleResultMessage(
+			makeSuccessResult(),
+			createRequestContext(),
+		);
 		expect(result).toEqual({ requestComplete: true });
 	});
 
 	it('shows progress for error_max_turns', () => {
 		const request = createRequestContext();
-		const result = handleResultMessage(makeErrorResult('error_max_turns', 25), request);
+		const result = handleResultMessage(
+			makeErrorResult('error_max_turns', 25),
+			request,
+		);
 		expect(result).toEqual({ requestComplete: true });
 		expect(request.stream.progress).toHaveBeenCalled();
 	});
 
 	it('throws KnownClaudeError for error_during_execution', () => {
-		expect(
-			() => handleResultMessage(makeErrorResult('error_during_execution'), createRequestContext()),
+		expect(() =>
+			handleResultMessage(
+				makeErrorResult('error_during_execution'),
+				createRequestContext(),
+			),
 		).toThrow(KnownClaudeError);
 	});
 
 	it('throws ClaudeProxyError with parsed ChatFetchError for quota exceeded', () => {
 		const errorResult = makeErrorResult('error_during_execution');
-		errorResult.errors = [`API Error: ${encodeProxyError(TEST_QUOTA_ERROR)}`];
-		expect(
-			() => handleResultMessage(errorResult, createRequestContext()),
+		errorResult.errors = [
+			`API Error: ${encodeProxyError(TEST_QUOTA_ERROR)}`,
+		];
+		expect(() =>
+			handleResultMessage(errorResult, createRequestContext()),
 		).toThrow(ClaudeProxyError);
 		try {
 			handleResultMessage(errorResult, createRequestContext());
 		} catch (e) {
-			expect((e as ClaudeProxyError).fetchError.type).toBe(ChatFetchResponseType.QuotaExceeded);
+			expect((e as ClaudeProxyError).fetchError.type).toBe(
+				ChatFetchResponseType.QuotaExceeded,
+			);
 		}
 	});
 
 	it('throws ClaudeProxyError for rate limited in success result', () => {
-		expect(
-			() => handleResultMessage(
-				makeErroredSuccessResult(`API Error: ${encodeProxyError(TEST_RATE_LIMIT_ERROR)}`),
+		expect(() =>
+			handleResultMessage(
+				makeErroredSuccessResult(
+					`API Error: ${encodeProxyError(TEST_RATE_LIMIT_ERROR)}`,
+				),
 				createRequestContext(),
 			),
 		).toThrow(ClaudeProxyError);
 		try {
 			handleResultMessage(
-				makeErroredSuccessResult(`API Error: ${encodeProxyError(TEST_RATE_LIMIT_ERROR)}`),
+				makeErroredSuccessResult(
+					`API Error: ${encodeProxyError(TEST_RATE_LIMIT_ERROR)}`,
+				),
 				createRequestContext(),
 			);
 		} catch (e) {
-			expect((e as ClaudeProxyError).fetchError.type).toBe(ChatFetchResponseType.RateLimited);
+			expect((e as ClaudeProxyError).fetchError.type).toBe(
+				ChatFetchResponseType.RateLimited,
+			);
 		}
 	});
 
 	it('throws KnownClaudeError for success result with is_error and non-proxy error', () => {
-		expect(
-			() => handleResultMessage(makeErroredSuccessResult('API Error: 500 {"type":"error"}'), createRequestContext()),
+		expect(() =>
+			handleResultMessage(
+				makeErroredSuccessResult('API Error: 500 {"type":"error"}'),
+				createRequestContext(),
+			),
 		).toThrow(KnownClaudeError);
 	});
 
 	it('detects proxy error among multiple errors in error_during_execution', () => {
 		const errorResult = makeErrorResult('error_during_execution');
-		errorResult.errors = ['Some other error', `API Error: ${encodeProxyError(TEST_QUOTA_ERROR)}`];
-		expect(
-			() => handleResultMessage(errorResult, createRequestContext()),
+		errorResult.errors = [
+			'Some other error',
+			`API Error: ${encodeProxyError(TEST_QUOTA_ERROR)}`,
+		];
+		expect(() =>
+			handleResultMessage(errorResult, createRequestContext()),
 		).toThrow(ClaudeProxyError);
 	});
 
 	it('throws KnownClaudeError for error_during_execution with empty errors array', () => {
 		const errorResult = makeErrorResult('error_during_execution');
 		errorResult.errors = [];
-		expect(
-			() => handleResultMessage(errorResult, createRequestContext()),
+		expect(() =>
+			handleResultMessage(errorResult, createRequestContext()),
 		).toThrow(KnownClaudeError);
 	});
 
 	it('throws KnownClaudeError for malformed proxy error payload', () => {
 		const errorResult = makeErrorResult('error_during_execution');
-		errorResult.errors = [`API Error: ${PROXY_ERROR_PREFIX}not-valid-base64!!!`];
-		expect(
-			() => handleResultMessage(errorResult, createRequestContext()),
+		errorResult.errors = [
+			`API Error: ${PROXY_ERROR_PREFIX}not-valid-base64!!!`,
+		];
+		expect(() =>
+			handleResultMessage(errorResult, createRequestContext()),
 		).toThrow(KnownClaudeError);
 	});
 
 	it('returns requestComplete for success with is_error false even if result contains proxy prefix', () => {
 		const successResult = makeSuccessResult();
 		successResult.result = `contains ${encodeProxyError(TEST_QUOTA_ERROR)} but is_error is false`;
-		const result = handleResultMessage(successResult, createRequestContext());
+		const result = handleResultMessage(
+			successResult,
+			createRequestContext(),
+		);
 		expect(result).toEqual({ requestComplete: true });
 	});
 });
@@ -1286,9 +1925,15 @@ describe('handleResultMessage', () => {
 describe('ALL_KNOWN_MESSAGE_KEYS', () => {
 	it('contains entries for all non-system SDKMessage type values', () => {
 		const expectedNonSystemTypes = [
-			'assistant', 'user', 'result', 'stream_event',
-			'tool_progress', 'tool_use_summary', 'auth_status',
-			'rate_limit_event', 'prompt_suggestion',
+			'assistant',
+			'user',
+			'result',
+			'stream_event',
+			'tool_progress',
+			'tool_use_summary',
+			'auth_status',
+			'rate_limit_event',
+			'prompt_suggestion',
 		];
 		for (const key of expectedNonSystemTypes) {
 			expect(ALL_KNOWN_MESSAGE_KEYS.has(key)).toBe(true);
@@ -1297,10 +1942,19 @@ describe('ALL_KNOWN_MESSAGE_KEYS', () => {
 
 	it('contains entries for all system subtype values', () => {
 		const expectedSystemSubtypes = [
-			'init', 'compact_boundary', 'status', 'api_retry', 'local_command_output',
-			'hook_started', 'hook_progress', 'hook_response',
-			'task_notification', 'task_started', 'task_progress',
-			'files_persisted', 'elicitation_complete',
+			'init',
+			'compact_boundary',
+			'status',
+			'api_retry',
+			'local_command_output',
+			'hook_started',
+			'hook_progress',
+			'hook_response',
+			'task_notification',
+			'task_started',
+			'task_progress',
+			'files_persisted',
+			'elicitation_complete',
 		];
 		for (const subtype of expectedSystemSubtypes) {
 			expect(ALL_KNOWN_MESSAGE_KEYS.has(`system:${subtype}`)).toBe(true);

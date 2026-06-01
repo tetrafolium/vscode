@@ -3,13 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { timeout } from '../../../base/common/async.js';
-import { debounce } from '../../../base/common/decorators.js';
-import { Emitter, Event } from '../../../base/common/event.js';
-import { Disposable, IDisposable } from '../../../base/common/lifecycle.js';
-import { isWindows, platform } from '../../../base/common/platform.js';
-import { GeneralShellType, TerminalShellType, WindowsShellType } from '../common/terminal.js';
-import type * as WindowsProcessTreeType from '@vscode/windows-process-tree';
+import { timeout } from "../../../base/common/async.js";
+import { debounce } from "../../../base/common/decorators.js";
+import { Emitter, Event } from "../../../base/common/event.js";
+import { Disposable, IDisposable } from "../../../base/common/lifecycle.js";
+import { isWindows, platform } from "../../../base/common/platform.js";
+import {
+	GeneralShellType,
+	TerminalShellType,
+	WindowsShellType,
+} from "../common/terminal.js";
+import type * as WindowsProcessTreeType from "@vscode/windows-process-tree";
 
 export interface IWindowsShellHelper extends IDisposable {
 	readonly onShellNameChanged: Event<string>;
@@ -19,59 +23,73 @@ export interface IWindowsShellHelper extends IDisposable {
 }
 
 const SHELL_EXECUTABLES = [
-	'cmd.exe',
-	'powershell.exe',
-	'pwsh.exe',
-	'bash.exe',
-	'git-cmd.exe',
-	'wsl.exe',
-	'ubuntu.exe',
-	'ubuntu1804.exe',
-	'kali.exe',
-	'debian.exe',
-	'opensuse-42.exe',
-	'sles-12.exe',
-	'julia.exe',
-	'nu.exe',
-	'node.exe',
-	'xonsh.exe',
+	"cmd.exe",
+	"powershell.exe",
+	"pwsh.exe",
+	"bash.exe",
+	"git-cmd.exe",
+	"wsl.exe",
+	"ubuntu.exe",
+	"ubuntu1804.exe",
+	"kali.exe",
+	"debian.exe",
+	"opensuse-42.exe",
+	"sles-12.exe",
+	"julia.exe",
+	"nu.exe",
+	"node.exe",
+	"xonsh.exe",
 ];
 
-const SHELL_EXECUTABLE_REGEXES = [
-	/^python(\d(\.\d{0,2})?)?\.exe$/,
-];
+const SHELL_EXECUTABLE_REGEXES = [/^python(\d(\.\d{0,2})?)?\.exe$/];
 
 /**
  * npm-installed agent CLIs appear in the process tree as plain `node.exe`, so we identify
  * them by matching the package folder in node's command line.
  */
-const NODE_AGENT_CLI_PATTERNS: ReadonlyArray<{ regex: RegExp; executable: string }> = [
-	{ regex: /[\\/]claude-code[\\/]/i, executable: 'claude.exe' },
-	{ regex: /[\\/]codex[\\/]/i, executable: 'codex.exe' },
-	{ regex: /[\\/]copilot[\\/]/i, executable: 'copilot.exe' },
-	{ regex: /[\\/]gemini-cli[\\/]/i, executable: 'gemini.exe' },
+const NODE_AGENT_CLI_PATTERNS: ReadonlyArray<{
+	regex: RegExp;
+	executable: string;
+}> = [
+	{ regex: /[\\/]claude-code[\\/]/i, executable: "claude.exe" },
+	{ regex: /[\\/]codex[\\/]/i, executable: "codex.exe" },
+	{ regex: /[\\/]copilot[\\/]/i, executable: "copilot.exe" },
+	{ regex: /[\\/]gemini-cli[\\/]/i, executable: "gemini.exe" },
 ];
 
 let windowsProcessTree: typeof WindowsProcessTreeType;
 
-export class WindowsShellHelper extends Disposable implements IWindowsShellHelper {
+export class WindowsShellHelper
+	extends Disposable
+	implements IWindowsShellHelper
+{
 	private _currentRequest: Promise<string> | undefined;
 	private _shellType: TerminalShellType | undefined;
-	get shellType(): TerminalShellType | undefined { return this._shellType; }
-	private _shellTitle: string = '';
-	get shellTitle(): string { return this._shellTitle; }
+	get shellType(): TerminalShellType | undefined {
+		return this._shellType;
+	}
+	private _shellTitle: string = "";
+	get shellTitle(): string {
+		return this._shellTitle;
+	}
 	private readonly _onShellNameChanged = this._register(new Emitter<string>());
-	get onShellNameChanged(): Event<string> { return this._onShellNameChanged.event; }
-	private readonly _onShellTypeChanged = this._register(new Emitter<TerminalShellType | undefined>());
-	get onShellTypeChanged(): Event<TerminalShellType | undefined> { return this._onShellTypeChanged.event; }
+	get onShellNameChanged(): Event<string> {
+		return this._onShellNameChanged.event;
+	}
+	private readonly _onShellTypeChanged = this._register(
+		new Emitter<TerminalShellType | undefined>(),
+	);
+	get onShellTypeChanged(): Event<TerminalShellType | undefined> {
+		return this._onShellTypeChanged.event;
+	}
 
-	constructor(
-		private _rootProcessId: number
-	) {
+	constructor(private _rootProcessId: number) {
 		super();
 
 		if (!isWindows) {
-			throw new Error(`WindowsShellHelper cannot be instantiated on ${platform}`);
+			throw new Error(
+				`WindowsShellHelper cannot be instantiated on ${platform}`,
+			);
 		}
 
 		this._startMonitoringShell();
@@ -91,7 +109,7 @@ export class WindowsShellHelper extends Disposable implements IWindowsShellHelpe
 			// could lead to a race condition but it would be recovered from when
 			// data stops and should cover the majority of cases
 			await timeout(300);
-			this.getShellName().then(title => {
+			this.getShellName().then((title) => {
 				const type = this.getShellType(title);
 				if (type !== this._shellType) {
 					this._onShellTypeChanged.fire(type);
@@ -103,13 +121,15 @@ export class WindowsShellHelper extends Disposable implements IWindowsShellHelpe
 		}
 	}
 
-	private traverseTree(tree: WindowsProcessTreeType.IProcessTreeNode | undefined): string {
+	private traverseTree(
+		tree: WindowsProcessTreeType.IProcessTreeNode | undefined,
+	): string {
 		if (!tree) {
-			return '';
+			return "";
 		}
 		// Detect npm-installed agent CLIs running inside `node.exe` by inspecting the command line
 		// passed to Node. Without this we'd treat them as a generic Node shell.
-		if (tree.name === 'node.exe' && tree.commandLine) {
+		if (tree.name === "node.exe" && tree.commandLine) {
 			for (const { regex, executable } of NODE_AGENT_CLI_PATTERNS) {
 				if (regex.test(tree.commandLine)) {
 					return executable;
@@ -133,7 +153,7 @@ export class WindowsShellHelper extends Disposable implements IWindowsShellHelpe
 			if (!child.children || child.children.length === 0) {
 				break;
 			}
-			if (child.children[0].name !== 'conhost.exe') {
+			if (child.children[0].name !== "conhost.exe") {
 				break;
 			}
 		}
@@ -148,58 +168,62 @@ export class WindowsShellHelper extends Disposable implements IWindowsShellHelpe
 	 */
 	async getShellName(): Promise<string> {
 		if (this._store.isDisposed) {
-			return Promise.resolve('');
+			return Promise.resolve("");
 		}
 		// Prevent multiple requests at once, instead return current request
 		if (this._currentRequest) {
 			return this._currentRequest;
 		}
 		if (!windowsProcessTree) {
-			windowsProcessTree = await import('@vscode/windows-process-tree');
+			windowsProcessTree = await import("@vscode/windows-process-tree");
 		}
-		this._currentRequest = new Promise<string>(resolve => {
-			windowsProcessTree.getProcessTree(this._rootProcessId, tree => {
-				const name = this.traverseTree(tree);
-				this._currentRequest = undefined;
-				resolve(name);
-			}, windowsProcessTree.ProcessDataFlag.CommandLine);
+		this._currentRequest = new Promise<string>((resolve) => {
+			windowsProcessTree.getProcessTree(
+				this._rootProcessId,
+				(tree) => {
+					const name = this.traverseTree(tree);
+					this._currentRequest = undefined;
+					resolve(name);
+				},
+				windowsProcessTree.ProcessDataFlag.CommandLine,
+			);
 		});
 		return this._currentRequest;
 	}
 
 	getShellType(executable: string): TerminalShellType | undefined {
 		switch (executable.toLowerCase()) {
-			case 'cmd.exe':
+			case "cmd.exe":
 				return WindowsShellType.CommandPrompt;
-			case 'powershell.exe':
-			case 'pwsh.exe':
+			case "powershell.exe":
+			case "pwsh.exe":
 				return GeneralShellType.PowerShell;
-			case 'bash.exe':
-			case 'git-cmd.exe':
+			case "bash.exe":
+			case "git-cmd.exe":
 				return WindowsShellType.GitBash;
-			case 'julia.exe':
+			case "julia.exe":
 				return GeneralShellType.Julia;
-			case 'node.exe':
+			case "node.exe":
 				return GeneralShellType.Node;
-			case 'nu.exe':
+			case "nu.exe":
 				return GeneralShellType.NuShell;
-			case 'xonsh.exe':
+			case "xonsh.exe":
 				return GeneralShellType.Xonsh;
-			case 'claude.exe':
+			case "claude.exe":
 				return GeneralShellType.Claude;
-			case 'codex.exe':
+			case "codex.exe":
 				return GeneralShellType.Codex;
-			case 'copilot.exe':
+			case "copilot.exe":
 				return GeneralShellType.Copilot;
-			case 'gemini.exe':
+			case "gemini.exe":
 				return GeneralShellType.Gemini;
-			case 'wsl.exe':
-			case 'ubuntu.exe':
-			case 'ubuntu1804.exe':
-			case 'kali.exe':
-			case 'debian.exe':
-			case 'opensuse-42.exe':
-			case 'sles-12.exe':
+			case "wsl.exe":
+			case "ubuntu.exe":
+			case "ubuntu1804.exe":
+			case "kali.exe":
+			case "debian.exe":
+			case "opensuse-42.exe":
+			case "sles-12.exe":
 				return WindowsShellType.Wsl;
 			default:
 				if (executable.match(/python(\d(\.\d{0,2})?)?\.exe/)) {

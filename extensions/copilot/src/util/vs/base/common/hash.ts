@@ -43,7 +43,7 @@ export function doHash(obj: unknown, hashVal: number): number {
 }
 
 export function numberHash(val: number, initialHashVal: number): number {
-	return (((initialHashVal << 5) - initialHashVal) + val) | 0;  // hashVal * 31 + ch, keep as int32
+	return ((initialHashVal << 5) - initialHashVal + val) | 0; // hashVal * 31 + ch, keep as int32
 }
 
 function booleanHash(b: boolean, initialHashVal: number): number {
@@ -60,18 +60,21 @@ export function stringHash(s: string, hashVal: number) {
 
 function arrayHash(arr: unknown[], initialHashVal: number): number {
 	initialHashVal = numberHash(104579, initialHashVal);
-	return arr.reduce<number>((hashVal, item) => doHash(item, hashVal), initialHashVal);
+	return arr.reduce<number>(
+		(hashVal, item) => doHash(item, hashVal),
+		initialHashVal,
+	);
 }
 
 function objectHash(obj: object, initialHashVal: number): number {
 	initialHashVal = numberHash(181387, initialHashVal);
-	return Object.keys(obj).sort().reduce((hashVal, key) => {
-		hashVal = stringHash(key, hashVal);
-		return doHash((obj as Record<string, unknown>)[key], hashVal);
-	}, initialHashVal);
+	return Object.keys(obj)
+		.sort()
+		.reduce((hashVal, key) => {
+			hashVal = stringHash(key, hashVal);
+			return doHash((obj as Record<string, unknown>)[key], hashVal);
+		}, initialHashVal);
 }
-
-
 
 /** Hashes the input as SHA-1, returning a hex-encoded string. */
 export const hashAsync = (input: string | ArrayBufferView | VSBuffer) => {
@@ -95,15 +98,21 @@ export const hashAsync = (input: string | ArrayBufferView | VSBuffer) => {
 		buff = input;
 	}
 
-	return crypto.subtle.digest('sha-1', buff as ArrayBufferView<ArrayBuffer>).then(toHexString); // CodeQL [SM04514] we use sha1 here for validating old stored client state, not for security
+	return crypto.subtle
+		.digest('sha-1', buff as ArrayBufferView<ArrayBuffer>)
+		.then(toHexString); // CodeQL [SM04514] we use sha1 here for validating old stored client state, not for security
 };
 
 const enum SHA1Constant {
 	BLOCK_SIZE = 64, // 512 / 8
-	UNICODE_REPLACEMENT = 0xFFFD,
+	UNICODE_REPLACEMENT = 0xfffd,
 }
 
-function leftRotate(value: number, bits: number, totalBits: number = 32): number {
+function leftRotate(
+	value: number,
+	bits: number,
+	totalBits: number = 32,
+): number {
 	// delta + bits = totalBits
 	const delta = totalBits - bits;
 
@@ -116,7 +125,10 @@ function leftRotate(value: number, bits: number, totalBits: number = 32): number
 
 function toHexString(buffer: ArrayBuffer): string;
 function toHexString(value: number, bitsize?: number): string;
-function toHexString(bufferOrValue: ArrayBuffer | number, bitsize: number = 32): string {
+function toHexString(
+	bufferOrValue: ArrayBuffer | number,
+	bitsize: number = 32,
+): string {
 	if (bufferOrValue instanceof ArrayBuffer) {
 		return encodeHex(VSBuffer.wrap(new Uint8Array(bufferOrValue)));
 	}
@@ -133,10 +145,10 @@ export class StringSHA1 {
 	private static _bigBlock32 = new DataView(new ArrayBuffer(320)); // 80 * 4 = 320
 
 	private _h0 = 0x67452301;
-	private _h1 = 0xEFCDAB89;
-	private _h2 = 0x98BADCFE;
+	private _h1 = 0xefcdab89;
+	private _h2 = 0x98badcfe;
 	private _h3 = 0x10325476;
-	private _h4 = 0xC3D2E1F0;
+	private _h4 = 0xc3d2e1f0;
 
 	private readonly _buff: Uint8Array;
 	private readonly _buffDV: DataView;
@@ -146,7 +158,9 @@ export class StringSHA1 {
 	private _finished: boolean;
 
 	constructor() {
-		this._buff = new Uint8Array(SHA1Constant.BLOCK_SIZE + 3 /* to fit any utf-8 */);
+		this._buff = new Uint8Array(
+			SHA1Constant.BLOCK_SIZE + 3 /* to fit any utf-8 */,
+		);
 		this._buffDV = new DataView(this._buff.buffer);
 		this._buffLen = 0;
 		this._totalLen = 0;
@@ -182,7 +196,10 @@ export class StringSHA1 {
 					const nextCharCode = str.charCodeAt(offset + 1);
 					if (strings.isLowSurrogate(nextCharCode)) {
 						offset++;
-						codePoint = strings.computeCodePoint(charCode, nextCharCode);
+						codePoint = strings.computeCodePoint(
+							charCode,
+							nextCharCode,
+						);
 					} else {
 						// illegal => unicode replacement character
 						codePoint = SHA1Constant.UNICODE_REPLACEMENT;
@@ -210,21 +227,43 @@ export class StringSHA1 {
 		this._leftoverHighSurrogate = leftoverHighSurrogate;
 	}
 
-	private _push(buff: Uint8Array, buffLen: number, codePoint: number): number {
+	private _push(
+		buff: Uint8Array,
+		buffLen: number,
+		codePoint: number,
+	): number {
 		if (codePoint < 0x0080) {
 			buff[buffLen++] = codePoint;
 		} else if (codePoint < 0x0800) {
-			buff[buffLen++] = 0b11000000 | ((codePoint & 0b00000000000000000000011111000000) >>> 6);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000000000111111) >>> 0);
+			buff[buffLen++] =
+				0b11000000 |
+				((codePoint & 0b00000000000000000000011111000000) >>> 6);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000000000111111) >>> 0);
 		} else if (codePoint < 0x10000) {
-			buff[buffLen++] = 0b11100000 | ((codePoint & 0b00000000000000001111000000000000) >>> 12);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000111111000000) >>> 6);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000000000111111) >>> 0);
+			buff[buffLen++] =
+				0b11100000 |
+				((codePoint & 0b00000000000000001111000000000000) >>> 12);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000111111000000) >>> 6);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000000000111111) >>> 0);
 		} else {
-			buff[buffLen++] = 0b11110000 | ((codePoint & 0b00000000000111000000000000000000) >>> 18);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000111111000000000000) >>> 12);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000111111000000) >>> 6);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000000000111111) >>> 0);
+			buff[buffLen++] =
+				0b11110000 |
+				((codePoint & 0b00000000000111000000000000000000) >>> 18);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000111111000000000000) >>> 12);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000111111000000) >>> 6);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000000000111111) >>> 0);
 		}
 
 		if (buffLen >= SHA1Constant.BLOCK_SIZE) {
@@ -246,13 +285,23 @@ export class StringSHA1 {
 			if (this._leftoverHighSurrogate) {
 				// illegal => unicode replacement character
 				this._leftoverHighSurrogate = 0;
-				this._buffLen = this._push(this._buff, this._buffLen, SHA1Constant.UNICODE_REPLACEMENT);
+				this._buffLen = this._push(
+					this._buff,
+					this._buffLen,
+					SHA1Constant.UNICODE_REPLACEMENT,
+				);
 			}
 			this._totalLen += this._buffLen;
 			this._wrapUp();
 		}
 
-		return toHexString(this._h0) + toHexString(this._h1) + toHexString(this._h2) + toHexString(this._h3) + toHexString(this._h4);
+		return (
+			toHexString(this._h0) +
+			toHexString(this._h1) +
+			toHexString(this._h2) +
+			toHexString(this._h3) +
+			toHexString(this._h4)
+		);
 	}
 
 	private _wrapUp(): void {
@@ -282,7 +331,17 @@ export class StringSHA1 {
 		}
 
 		for (let j = 64; j < 320 /* 80*4 */; j += 4) {
-			bigBlock32.setUint32(j, leftRotate((bigBlock32.getUint32(j - 12, false) ^ bigBlock32.getUint32(j - 32, false) ^ bigBlock32.getUint32(j - 56, false) ^ bigBlock32.getUint32(j - 64, false)), 1), false);
+			bigBlock32.setUint32(
+				j,
+				leftRotate(
+					bigBlock32.getUint32(j - 12, false) ^
+						bigBlock32.getUint32(j - 32, false) ^
+						bigBlock32.getUint32(j - 56, false) ^
+						bigBlock32.getUint32(j - 64, false),
+					1,
+				),
+				false,
+			);
 		}
 
 		let a = this._h0;
@@ -296,20 +355,26 @@ export class StringSHA1 {
 
 		for (let j = 0; j < 80; j++) {
 			if (j < 20) {
-				f = (b & c) | ((~b) & d);
-				k = 0x5A827999;
+				f = (b & c) | (~b & d);
+				k = 0x5a827999;
 			} else if (j < 40) {
 				f = b ^ c ^ d;
-				k = 0x6ED9EBA1;
+				k = 0x6ed9eba1;
 			} else if (j < 60) {
 				f = (b & c) | (b & d) | (c & d);
-				k = 0x8F1BBCDC;
+				k = 0x8f1bbcdc;
 			} else {
 				f = b ^ c ^ d;
-				k = 0xCA62C1D6;
+				k = 0xca62c1d6;
 			}
 
-			temp = (leftRotate(a, 5) + f + e + k + bigBlock32.getUint32(j * 4, false)) & 0xffffffff;
+			temp =
+				(leftRotate(a, 5) +
+					f +
+					e +
+					k +
+					bigBlock32.getUint32(j * 4, false)) &
+				0xffffffff;
 			e = d;
 			d = c;
 			c = leftRotate(b, 30);

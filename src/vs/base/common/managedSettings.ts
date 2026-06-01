@@ -8,5 +8,19 @@
  * name (used as `displayLabel`) and the original `source` discriminator.
  */
 export type IExtraKnownMarketplaceEntry =
-	| { readonly name: string; readonly source: { readonly source: 'github'; readonly repo: string; readonly ref?: string } }
-	| { readonly name: string; readonly source: { readonly source: 'git'; readonly url: string; readonly ref?: string } };
+	| {
+			readonly name: string;
+			readonly source: {
+				readonly source: "github";
+				readonly repo: string;
+				readonly ref?: string;
+			};
+	  }
+	| {
+			readonly name: string;
+			readonly source: {
+				readonly source: "git";
+				readonly url: string;
+				readonly ref?: string;
+			};
+	  };

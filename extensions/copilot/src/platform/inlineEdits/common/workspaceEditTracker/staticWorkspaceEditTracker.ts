@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DocumentId } from '../dataTypes/documentId';
-import { HistoryContext, IHistoryContextProvider } from './historyContextProvider';
+import {
+	HistoryContext,
+	IHistoryContextProvider,
+} from './historyContextProvider';
 
 export class StaticWorkspaceTracker implements IHistoryContextProvider {
-	constructor(
-		private readonly edits: HistoryContext,
-	) {
-	}
+	constructor(private readonly edits: HistoryContext) {}
 
 	getHistoryContext(_docId: DocumentId): HistoryContext | undefined {
 		return this.edits;

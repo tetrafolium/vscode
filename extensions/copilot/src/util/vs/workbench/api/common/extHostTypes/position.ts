@@ -11,7 +11,6 @@ import { es5ClassCompat } from './es5ClassCompat';
 
 @es5ClassCompat
 export class Position {
-
 	static Min(...positions: Position[]): Position {
 		if (positions.length === 0) {
 			throw new TypeError();
@@ -114,7 +113,9 @@ export class Position {
 	}
 
 	isEqual(other: Position): boolean {
-		return this._line === other._line && this._character === other._character;
+		return (
+			this._line === other._line && this._character === other._character
+		);
 	}
 
 	compareTo(other: Position): number {
@@ -135,10 +136,18 @@ export class Position {
 		}
 	}
 
-	translate(change: { lineDelta?: number; characterDelta?: number }): Position;
+	translate(change: {
+		lineDelta?: number;
+		characterDelta?: number;
+	}): Position;
 	translate(lineDelta?: number, characterDelta?: number): Position;
-	translate(lineDeltaOrChange: number | undefined | { lineDelta?: number; characterDelta?: number }, characterDelta: number = 0): Position {
-
+	translate(
+		lineDeltaOrChange:
+			| number
+			| undefined
+			| { lineDelta?: number; characterDelta?: number },
+		characterDelta: number = 0,
+	): Position {
 		if (lineDeltaOrChange === null || characterDelta === null) {
 			throw illegalArgument();
 		}
@@ -149,20 +158,34 @@ export class Position {
 		} else if (typeof lineDeltaOrChange === 'number') {
 			lineDelta = lineDeltaOrChange;
 		} else {
-			lineDelta = typeof lineDeltaOrChange.lineDelta === 'number' ? lineDeltaOrChange.lineDelta : 0;
-			characterDelta = typeof lineDeltaOrChange.characterDelta === 'number' ? lineDeltaOrChange.characterDelta : 0;
+			lineDelta =
+				typeof lineDeltaOrChange.lineDelta === 'number'
+					? lineDeltaOrChange.lineDelta
+					: 0;
+			characterDelta =
+				typeof lineDeltaOrChange.characterDelta === 'number'
+					? lineDeltaOrChange.characterDelta
+					: 0;
 		}
 
 		if (lineDelta === 0 && characterDelta === 0) {
 			return this;
 		}
-		return new Position(this.line + lineDelta, this.character + characterDelta);
+		return new Position(
+			this.line + lineDelta,
+			this.character + characterDelta,
+		);
 	}
 
 	with(change: { line?: number; character?: number }): Position;
 	with(line?: number, character?: number): Position;
-	with(lineOrChange: number | undefined | { line?: number; character?: number }, character: number = this.character): Position {
-
+	with(
+		lineOrChange:
+			| number
+			| undefined
+			| { line?: number; character?: number },
+		character: number = this.character,
+	): Position {
 		if (lineOrChange === null || character === null) {
 			throw illegalArgument();
 		}
@@ -170,13 +193,17 @@ export class Position {
 		let line: number;
 		if (typeof lineOrChange === 'undefined') {
 			line = this.line;
-
 		} else if (typeof lineOrChange === 'number') {
 			line = lineOrChange;
-
 		} else {
-			line = typeof lineOrChange.line === 'number' ? lineOrChange.line : this.line;
-			character = typeof lineOrChange.character === 'number' ? lineOrChange.character : this.character;
+			line =
+				typeof lineOrChange.line === 'number'
+					? lineOrChange.line
+					: this.line;
+			character =
+				typeof lineOrChange.character === 'number'
+					? lineOrChange.character
+					: this.character;
 		}
 
 		if (line === this.line && character === this.character) {

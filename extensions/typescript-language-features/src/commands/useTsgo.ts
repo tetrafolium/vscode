@@ -3,14 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { readUnifiedConfig, unifiedConfigSection } from '../utils/configuration';
-import { Command } from './commandManager';
+import * as vscode from "vscode";
+import {
+	readUnifiedConfig,
+	unifiedConfigSection,
+} from "../utils/configuration";
+import { Command } from "./commandManager";
 
-export const tsNativeExtensionId = 'typescriptteam.native-preview';
+export const tsNativeExtensionId = "typescriptteam.native-preview";
 
 export class EnableTsgoCommand implements Command {
-	public readonly id = 'typescript.experimental.enableTsgo';
+	public readonly id = "typescript.experimental.enableTsgo";
 
 	public async execute(): Promise<void> {
 		await updateTsgoSetting(true);
@@ -18,7 +21,7 @@ export class EnableTsgoCommand implements Command {
 }
 
 export class DisableTsgoCommand implements Command {
-	public readonly id = 'typescript.experimental.disableTsgo';
+	public readonly id = "typescript.experimental.disableTsgo";
 
 	public async execute(): Promise<void> {
 		await updateTsgoSetting(false);
@@ -34,19 +37,25 @@ async function updateTsgoSetting(enable: boolean): Promise<void> {
 	// Error if the TypeScript Go extension is not installed with a button to open the GitHub repo
 	if (!tsgoExtension) {
 		const selection = await vscode.window.showErrorMessage(
-			vscode.l10n.t('The TypeScript Go extension is not installed.'),
+			vscode.l10n.t("The TypeScript Go extension is not installed."),
 			{
-				title: vscode.l10n.t('Open on GitHub'),
+				title: vscode.l10n.t("Open on GitHub"),
 				isCloseAffordance: true,
-			}
+			},
 		);
 
 		if (selection) {
-			await vscode.env.openExternal(vscode.Uri.parse('https://github.com/microsoft/typescript-go'));
+			await vscode.env.openExternal(
+				vscode.Uri.parse("https://github.com/microsoft/typescript-go"),
+			);
 		}
 	}
 
-	const currentValue = readUnifiedConfig<boolean>('experimental.useTsgo', false, { fallbackSection: 'typescript' });
+	const currentValue = readUnifiedConfig<boolean>(
+		"experimental.useTsgo",
+		false,
+		{ fallbackSection: "typescript" },
+	);
 	if (currentValue === enable) {
 		return;
 	}
@@ -54,16 +63,24 @@ async function updateTsgoSetting(enable: boolean): Promise<void> {
 	// Determine the target scope for the configuration update
 	let target = vscode.ConfigurationTarget.Global;
 	const unifiedConfig = vscode.workspace.getConfiguration(unifiedConfigSection);
-	const inspect = unifiedConfig.inspect<boolean>('experimental.useTsgo');
-	const legacyInspect = vscode.workspace.getConfiguration('typescript').inspect<boolean>('experimental.useTsgo');
-	if (inspect?.workspaceValue !== undefined || legacyInspect?.workspaceValue !== undefined) {
+	const inspect = unifiedConfig.inspect<boolean>("experimental.useTsgo");
+	const legacyInspect = vscode.workspace
+		.getConfiguration("typescript")
+		.inspect<boolean>("experimental.useTsgo");
+	if (
+		inspect?.workspaceValue !== undefined ||
+		legacyInspect?.workspaceValue !== undefined
+	) {
 		target = vscode.ConfigurationTarget.Workspace;
-	} else if (inspect?.workspaceFolderValue !== undefined || legacyInspect?.workspaceFolderValue !== undefined) {
+	} else if (
+		inspect?.workspaceFolderValue !== undefined ||
+		legacyInspect?.workspaceFolderValue !== undefined
+	) {
 		target = vscode.ConfigurationTarget.WorkspaceFolder;
 	} else {
 		// If setting is not defined yet, use the same scope as typescript-go.executablePath
-		const tsgoConfig = vscode.workspace.getConfiguration('typescript-go');
-		const tsgoInspect = tsgoConfig.inspect<string>('executablePath');
+		const tsgoConfig = vscode.workspace.getConfiguration("typescript-go");
+		const tsgoInspect = tsgoConfig.inspect<string>("executablePath");
 
 		if (tsgoInspect?.workspaceValue !== undefined) {
 			target = vscode.ConfigurationTarget.Workspace;
@@ -72,5 +89,5 @@ async function updateTsgoSetting(enable: boolean): Promise<void> {
 		}
 	}
 
-	await unifiedConfig.update('experimental.useTsgo', enable, target);
+	await unifiedConfig.update("experimental.useTsgo", enable, target);
 }

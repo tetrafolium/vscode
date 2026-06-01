@@ -5,7 +5,13 @@
 import { ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ICompletionsLogTargetService, Logger } from '../logger';
 import { PromptResponse } from '../prompt/prompt';
-import { now, telemetry, TelemetryData, telemetryRaw, TelemetryWithExp } from '../telemetry';
+import {
+	now,
+	telemetry,
+	TelemetryData,
+	telemetryRaw,
+	TelemetryWithExp,
+} from '../telemetry';
 import { CopilotCompletion } from './copilotCompletion';
 import { ResultType } from './resultType';
 import { ICompletionsSpeculativeRequestCache } from './speculativeRequestCache';
@@ -17,11 +23,18 @@ export const GHOST_TEXT_CATEGORY: PostInsertionCategory = 'ghostText';
 export const logger = new Logger('getCompletions');
 
 /** Send `.shown` event */
-export function telemetryShown(accessor: ServicesAccessor, completion: CopilotCompletion) {
-	const speculativeRequestCache = accessor.get(ICompletionsSpeculativeRequestCache);
+export function telemetryShown(
+	accessor: ServicesAccessor,
+	completion: CopilotCompletion,
+) {
+	const speculativeRequestCache = accessor.get(
+		ICompletionsSpeculativeRequestCache,
+	);
 	void speculativeRequestCache.request(completion.clientCompletionId);
 	completion.telemetry.markAsDisplayed(); // TODO: Consider removing displayedTime as unused and generally incorrect.
-	completion.telemetry.properties.reason = resultTypeToString(completion.resultType);
+	completion.telemetry.properties.reason = resultTypeToString(
+		completion.resultType,
+	);
 	telemetry(accessor, `ghostText.shown`, completion.telemetry);
 }
 
@@ -29,7 +42,7 @@ export function telemetryShown(accessor: ServicesAccessor, completion: CopilotCo
 export function telemetryAccepted(
 	accessor: ServicesAccessor,
 	insertionCategory: PostInsertionCategory,
-	telemetryData: TelemetryData
+	telemetryData: TelemetryData,
 ) {
 	const telemetryName = insertionCategory + '.accepted';
 
@@ -40,7 +53,7 @@ export function telemetryAccepted(
 export function telemetryRejected(
 	accessor: ServicesAccessor,
 	insertionCategory: PostInsertionCategory,
-	telemetryData: TelemetryData
+	telemetryData: TelemetryData,
 ) {
 	const telemetryName = insertionCategory + '.rejected';
 
@@ -85,19 +98,23 @@ export type GhostTextResultWithTelemetry<T> =
 	 * we should send the result message `ghostText.produced`.
 	 */
 	| {
-		type: 'success';
-		value: T;
-		telemetryData: BasicResultTelemetry;
-		// This is needed to populate the telemetryBlob in `ghostText.canceled` if this happens later.
-		telemetryBlob: TelemetryWithExp;
-		resultType: ResultType;
-		performanceMetrics?: [string, number][];
-	}
+			type: 'success';
+			value: T;
+			telemetryData: BasicResultTelemetry;
+			// This is needed to populate the telemetryBlob in `ghostText.canceled` if this happens later.
+			telemetryBlob: TelemetryWithExp;
+			resultType: ResultType;
+			performanceMetrics?: [string, number][];
+	  }
 	/**
 	 * We decided not to request ghost text this time. No `ghostText.issued` message
 	 * was sent so there is no need send any result telemetry.
 	 */
-	| { type: 'abortedBeforeIssued'; reason: string; telemetryData: BasicResultTelemetry }
+	| {
+			type: 'abortedBeforeIssued';
+			reason: string;
+			telemetryData: BasicResultTelemetry;
+	  }
 	/**
 	 * We requested ghost text, but we decided to cancel mid-way, for example because the
 	 * user kept typing. This will turn into a `ghostText.canceled` result message.
@@ -105,7 +122,11 @@ export type GhostTextResultWithTelemetry<T> =
 	 * because the telemetry message has always done that, even though it may be inconsistent
 	 * with log messages and code comments etc.
 	 */
-	| { type: 'canceled'; reason: string; telemetryData: CanceledResultTelemetry }
+	| {
+			type: 'canceled';
+			reason: string;
+			telemetryData: CanceledResultTelemetry;
+	  }
 	/**
 	 * We requested ghost text, but didn't come up with any results for some "expected"
 	 * reason, such as slur redaction or snippy. This will turn into a `ghostText.empty`
@@ -126,7 +147,7 @@ export type GhostTextResultWithTelemetry<T> =
 
 export function mkCanceledResultTelemetry(
 	telemetryBlob: TelemetryData,
-	extraFlags: { cancelledNetworkRequest?: boolean } = {}
+	extraFlags: { cancelledNetworkRequest?: boolean } = {},
 ): CanceledResultTelemetry {
 	return {
 		...extraFlags,
@@ -149,13 +170,15 @@ export function mkBasicResultTelemetry(
 		result.opportunityId = telemetryBlob.properties['opportunityId'];
 	}
 	if (telemetryBlob.properties['organizations_list'] !== undefined) {
-		result.organizations_list = telemetryBlob.properties['organizations_list'];
+		result.organizations_list =
+			telemetryBlob.properties['organizations_list'];
 	}
 	if (telemetryBlob.properties['enterprise_list'] !== undefined) {
 		result.enterprise_list = telemetryBlob.properties['enterprise_list'];
 	}
 	if (telemetryBlob.properties['clientCompletionId'] !== undefined) {
-		result.clientCompletionId = telemetryBlob.properties['clientCompletionId'];
+		result.clientCompletionId =
+			telemetryBlob.properties['clientCompletionId'];
 	}
 
 	return result;
@@ -168,28 +191,43 @@ export function mkBasicResultTelemetry(
  */
 export function handleGhostTextResultTelemetry<T>(
 	accessor: ServicesAccessor,
-	result: GhostTextResultWithTelemetry<T>
+	result: GhostTextResultWithTelemetry<T>,
 ): T | undefined {
 	const logTarget = accessor.get(ICompletionsLogTargetService);
 	// testing/debugging only case, no telemetry
-	if (result.type === 'promptOnly') { return; }
+	if (result.type === 'promptOnly') {
+		return;
+	}
 
 	if (result.type === 'success') {
 		const timeToProduceMs = now() - result.telemetryBlob.issuedTime;
 		const reason = resultTypeToString(result.resultType);
 		const performanceMetrics = JSON.stringify(result.performanceMetrics);
-		const properties = { ...result.telemetryData, reason, performanceMetrics };
+		const properties = {
+			...result.telemetryData,
+			reason,
+			performanceMetrics,
+		};
 		const { foundOffset } = result.telemetryBlob.measurements;
-		const perf = result.performanceMetrics?.map(([key, dur]) => `\n${dur.toFixed(2)}\t${key}`).join('') ?? '';
+		const perf =
+			result.performanceMetrics
+				?.map(([key, dur]) => `\n${dur.toFixed(2)}\t${key}`)
+				.join('') ?? '';
 		logger.debug(
 			logTarget,
-			`ghostText produced from ${reason} in ${Math.round(timeToProduceMs)}ms with foundOffset ${foundOffset}${perf}`
+			`ghostText produced from ${reason} in ${Math.round(timeToProduceMs)}ms with foundOffset ${foundOffset}${perf}`,
 		);
-		telemetryRaw(accessor, 'ghostText.produced', properties, { timeToProduceMs, foundOffset });
+		telemetryRaw(accessor, 'ghostText.produced', properties, {
+			timeToProduceMs,
+			foundOffset,
+		});
 		return result.value;
 	}
 
-	logger.debug(logTarget, 'No ghostText produced -- ' + result.type + ': ' + result.reason);
+	logger.debug(
+		logTarget,
+		'No ghostText produced -- ' + result.type + ': ' + result.reason,
+	);
 	if (result.type === 'canceled') {
 		// For backwards compatibility, we send a "fat" telemetry message in this case.
 		telemetry(
@@ -197,12 +235,20 @@ export function handleGhostTextResultTelemetry<T>(
 			`ghostText.canceled`,
 			result.telemetryData.telemetryBlob.extendedBy({
 				reason: result.reason,
-				cancelledNetworkRequest: result.telemetryData.cancelledNetworkRequest ? 'true' : 'false',
-			})
+				cancelledNetworkRequest: result.telemetryData
+					.cancelledNetworkRequest
+					? 'true'
+					: 'false',
+			}),
 		);
 		return;
 	}
-	telemetryRaw(accessor, `ghostText.${result.type}`, { ...result.telemetryData, reason: result.reason }, {});
+	telemetryRaw(
+		accessor,
+		`ghostText.${result.type}`,
+		{ ...result.telemetryData, reason: result.reason },
+		{},
+	);
 }
 
 export function resultTypeToString(resultType: ResultType): string {

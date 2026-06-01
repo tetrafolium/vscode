@@ -3,16 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ok, strictEqual } from 'assert';
-import type { IMarker as IXtermMarker } from '@xterm/xterm';
-import type { ITerminalInstance } from '../../../../terminal/browser/terminal.js';
-import { getOutput } from '../../browser/outputHelpers.js';
-import { TRUNCATION_MESSAGE } from '../../browser/runInTerminalHelpers.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
+import { ok, strictEqual } from "assert";
+import type { IMarker as IXtermMarker } from "@xterm/xterm";
+import type { ITerminalInstance } from "../../../../terminal/browser/terminal.js";
+import { getOutput } from "../../browser/outputHelpers.js";
+import { TRUNCATION_MESSAGE } from "../../browser/runInTerminalHelpers.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
 
-suite('outputHelpers', () => {
+suite("outputHelpers", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
-	function createMockInstance(lines: { text: string; isWrapped?: boolean }[]): ITerminalInstance {
+	function createMockInstance(
+		lines: { text: string; isWrapped?: boolean }[],
+	): ITerminalInstance {
 		const buffer = {
 			length: lines.length,
 			getLine: (index: number) => {
@@ -22,39 +24,40 @@ suite('outputHelpers', () => {
 				}
 				return {
 					isWrapped: !!line.isWrapped,
-					translateToString: (trimRight?: boolean) => trimRight ? line.text.replace(/\s+$/g, '') : line.text
+					translateToString: (trimRight?: boolean) =>
+						trimRight ? line.text.replace(/\s+$/g, "") : line.text,
 				};
-			}
+			},
 		};
 		return {
 			xterm: {
 				raw: {
 					buffer: {
-						active: buffer
-					}
-				}
-			}
+						active: buffer,
+					},
+				},
+			},
 		} as unknown as ITerminalInstance;
 	}
 
-	test('preserves explicit newline after an 80-column soft wrap', () => {
-		const line80 = 'A'.repeat(80);
+	test("preserves explicit newline after an 80-column soft wrap", () => {
+		const line80 = "A".repeat(80);
 		const instance = createMockInstance([
 			{ text: line80 },
-			{ text: 'X', isWrapped: true },
-			{ text: 'after' }
+			{ text: "X", isWrapped: true },
+			{ text: "after" },
 		]);
 
 		const output = getOutput(instance);
 		strictEqual(output, `${line80}X\nafter`);
 	});
 
-	test('rewinds marker when it starts on a wrapped continuation line', () => {
-		const line80 = 'A'.repeat(80);
+	test("rewinds marker when it starts on a wrapped continuation line", () => {
+		const line80 = "A".repeat(80);
 		const instance = createMockInstance([
 			{ text: line80 },
-			{ text: 'X', isWrapped: true },
-			{ text: 'after' }
+			{ text: "X", isWrapped: true },
+			{ text: "after" },
 		]);
 
 		const marker = { line: 1 } as IXtermMarker;
@@ -62,10 +65,10 @@ suite('outputHelpers', () => {
 		strictEqual(output, `${line80}X\nafter`);
 	});
 
-	test('caps output at 60KB and prefixes the truncation marker', () => {
-		const line = 'a'.repeat(1000);
+	test("caps output at 60KB and prefixes the truncation marker", () => {
+		const line = "a".repeat(1000);
 		const instance = createMockInstance(
-			Array.from({ length: 100 }, () => ({ text: line }))
+			Array.from({ length: 100 }, () => ({ text: line })),
 		);
 
 		const output = getOutput(instance);

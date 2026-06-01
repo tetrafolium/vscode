@@ -3,52 +3,76 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import { ApplicationService } from '../application';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { ApplicationService } from "../application";
 
 /**
  * Core Application Management Tools
  */
-export function applyCoreTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applyCoreTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	const tools: RegisteredTool[] = [];
 
-	tools.push(server.tool(
-		'vscode_automation_restart',
-		'Restart VS Code with optional workspace or folder and extra command-line arguments',
-		{
-			workspaceOrFolder: z.string().optional().describe('Path to a workspace or folder to open on restart'),
-			extraArgs: z.array(z.string()).optional().describe('Extra CLI arguments to pass on restart')
-		},
-		async ({ workspaceOrFolder, extraArgs }) => {
-			const app = await appService.getOrCreateApplication();
-			await app.restart({ workspaceOrFolder, extraArgs });
-			const workspaceText = workspaceOrFolder ? ` with workspace: ${workspaceOrFolder}` : '';
-			const argsText = extraArgs?.length ? ` (args: ${extraArgs.join(' ')})` : '';
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `VS Code restarted successfully${workspaceText}${argsText}`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_restart",
+			"Restart VS Code with optional workspace or folder and extra command-line arguments",
+			{
+				workspaceOrFolder: z
+					.string()
+					.optional()
+					.describe("Path to a workspace or folder to open on restart"),
+				extraArgs: z
+					.array(z.string())
+					.optional()
+					.describe("Extra CLI arguments to pass on restart"),
+			},
+			async ({ workspaceOrFolder, extraArgs }) => {
+				const app = await appService.getOrCreateApplication();
+				await app.restart({ workspaceOrFolder, extraArgs });
+				const workspaceText = workspaceOrFolder
+					? ` with workspace: ${workspaceOrFolder}`
+					: "";
+				const argsText = extraArgs?.length
+					? ` (args: ${extraArgs.join(" ")})`
+					: "";
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `VS Code restarted successfully${workspaceText}${argsText}`,
+						},
+					],
+				};
+			},
+		),
+	);
 
-	tools.push(server.tool(
-		'vscode_automation_stop',
-		'Stop the VS Code application',
-		async () => {
-			const app = await appService.getOrCreateApplication();
-			await app.stopTracing(undefined, true);
-			await app.stop();
-			return {
-				content: [{
-					type: 'text' as const,
-					text: 'VS Code stopped successfully'
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_stop",
+			"Stop the VS Code application",
+			async () => {
+				const app = await appService.getOrCreateApplication();
+				await app.stopTracing(undefined, true);
+				await app.stop();
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: "VS Code stopped successfully",
+						},
+					],
+				};
+			},
+		),
+	);
 
 	// This doesn't seem particularly useful
 	// server.tool(

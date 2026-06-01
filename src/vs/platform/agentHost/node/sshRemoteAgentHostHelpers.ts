@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ILogService } from '../../log/common/log.js';
-import { createRemoteAgentHostState, parseRemoteAgentHostState } from '../common/remoteAgentHostMetadata.js';
+import { ILogService } from "../../log/common/log.js";
+import {
+	createRemoteAgentHostState,
+	parseRemoteAgentHostState,
+} from "../common/remoteAgentHostMetadata.js";
 
-const LOG_PREFIX = '[SSHRemoteAgentHost]';
+const LOG_PREFIX = "[SSHRemoteAgentHost]";
 
 /**
  * Validate that a quality string is safe for bare interpolation in shell commands.
@@ -16,7 +19,9 @@ const LOG_PREFIX = '[SSHRemoteAgentHost]';
  */
 export function validateShellToken(value: string, label: string): string {
 	if (!/^[a-zA-Z0-9._-]+$/.test(value)) {
-		throw new Error(`Unsafe ${label} value for shell interpolation: ${JSON.stringify(value)}`);
+		throw new Error(
+			`Unsafe ${label} value for shell interpolation: ${JSON.stringify(value)}`,
+		);
 	}
 	return value;
 }
@@ -36,7 +41,9 @@ export function validateShellToken(value: string, label: string): string {
 export function validateCommit(commit: string): string {
 	const normalized = commit.toLowerCase();
 	if (!/^[0-9a-f]{40}$/.test(normalized)) {
-		throw new Error(`Unsafe commit value (expected 40-char hex SHA): ${JSON.stringify(commit)}`);
+		throw new Error(
+			`Unsafe commit value (expected 40-char hex SHA): ${JSON.stringify(commit)}`,
+		);
 	}
 	return normalized;
 }
@@ -48,11 +55,14 @@ export function validateCommit(commit: string): string {
  * two features.
  */
 export function getRemoteCLIArchiveName(quality: string): string {
-	const q = validateShellToken(quality, 'quality');
+	const q = validateShellToken(quality, "quality");
 	switch (q) {
-		case 'stable': return 'code';
-		case 'exploration': return 'code-exploration';
-		default: return 'code-insiders';
+		case "stable":
+			return "code";
+		case "exploration":
+			return "code-exploration";
+		default:
+			return "code-insiders";
 	}
 }
 
@@ -62,7 +72,7 @@ export function getRemoteCLIArchiveName(quality: string): string {
  * other's installations. Also the parent of the agent host lockfile dir.
  */
 export function getRemoteCLIInstallRoot(serverDataFolderName: string): string {
-	const d = validateShellToken(serverDataFolderName, 'server data folder name');
+	const d = validateShellToken(serverDataFolderName, "server data folder name");
 	return `~/${d}`;
 }
 
@@ -96,7 +106,11 @@ export function getRemoteCLIDataDir(serverDataFolderName: string): string {
  * filename. Caller code should keep the loose `--version`-based reuse
  * check in that case.
  */
-export function getRemoteCLIBin(serverDataFolderName: string, quality: string, commit?: string): string {
+export function getRemoteCLIBin(
+	serverDataFolderName: string,
+	quality: string,
+	commit?: string,
+): string {
 	const archive = getRemoteCLIArchiveName(quality);
 	const root = getRemoteCLIInstallRoot(serverDataFolderName);
 	if (commit) {
@@ -109,7 +123,7 @@ export function getRemoteCLIBin(serverDataFolderName: string, quality: string, c
 /** Escape a string for use as a single shell argument (single-quote wrapping). */
 export function shellEscape(s: string): string {
 	// Wrap in single quotes; escape embedded single quotes as: '\''
-	const escaped = s.replace(/'/g, '\'\\\'\'');
+	const escaped = s.replace(/'/g, "'\\''");
 	return `'${escaped}'`;
 }
 
@@ -127,30 +141,36 @@ export function shellEscape(s: string): string {
  * build them via {@link getRemoteCLIBin} / {@link getRemoteCLIDataDir}
  * which validate their components.
  */
-export function buildAgentHostBaseCommand(cliBin: string, cliDataDir: string): string {
+export function buildAgentHostBaseCommand(
+	cliBin: string,
+	cliDataDir: string,
+): string {
 	return `${cliBin} --cli-data-dir ${cliDataDir} agent host --port 0`;
 }
 
-export function resolveRemotePlatform(unameS: string, unameM: string): { os: string; arch: string } | undefined {
+export function resolveRemotePlatform(
+	unameS: string,
+	unameM: string,
+): { os: string; arch: string } | undefined {
 	const os = unameS.trim().toLowerCase();
 	const machine = unameM.trim().toLowerCase();
 
 	let platformOs: string;
-	if (os === 'linux') {
-		platformOs = 'linux';
-	} else if (os === 'darwin') {
-		platformOs = 'darwin';
+	if (os === "linux") {
+		platformOs = "linux";
+	} else if (os === "darwin") {
+		platformOs = "darwin";
 	} else {
 		return undefined;
 	}
 
 	let arch: string;
-	if (machine === 'x86_64' || machine === 'amd64') {
-		arch = 'x64';
-	} else if (machine === 'aarch64' || machine === 'arm64') {
-		arch = 'arm64';
-	} else if (machine === 'armv7l') {
-		arch = 'armhf';
+	if (machine === "x86_64" || machine === "amd64") {
+		arch = "x64";
+	} else if (machine === "aarch64" || machine === "arm64") {
+		arch = "arm64";
+	} else if (machine === "armv7l") {
+		arch = "armhf";
 	} else {
 		return undefined;
 	}
@@ -165,8 +185,13 @@ export function resolveRemotePlatform(unameS: string, unameM: string): { os: str
  * the exact CLI matching the current desktop build (mirrors Remote-SSH).
  * When `commit` is undefined (dev/OSS builds), falls back to `latest`.
  */
-export function buildCLIDownloadUrl(os: string, arch: string, quality: string, commit?: string): string {
-	const base = 'https://update.code.visualstudio.com';
+export function buildCLIDownloadUrl(
+	os: string,
+	arch: string,
+	quality: string,
+	commit?: string,
+): string {
+	const base = "https://update.code.visualstudio.com";
 	const artifact = `cli-${os}-${arch}`;
 	if (commit) {
 		// Defense-in-depth: same validation as getRemoteCLIBin so the URL
@@ -191,10 +216,13 @@ export function buildCLIDownloadUrl(os: string, arch: string, quality: string, c
  * splitting hazards. We also use `rm -f --` and `xargs -I{}` (which
  * skips the command entirely on empty input on both GNU and BSD `xargs`).
  */
-export function buildCleanupOldCLIsCommand(serverDataFolderName: string, quality: string): string {
+export function buildCleanupOldCLIsCommand(
+	serverDataFolderName: string,
+	quality: string,
+): string {
 	const root = getRemoteCLIInstallRoot(serverDataFolderName);
 	const archive = getRemoteCLIArchiveName(quality);
-	const commitGlob = '[0-9a-f]'.repeat(40);
+	const commitGlob = "[0-9a-f]".repeat(40);
 	// `ls -1t` sorts by mtime newest-first on both Linux (coreutils) and
 	// macOS (BSD). `awk 'NR>5'` drops the 5 most recent entries we want to
 	// keep. `xargs -I{} rm -f -- {}` is one-rm-per-line — slow but safe
@@ -217,18 +245,21 @@ export function buildCleanupOldCLIsCommand(serverDataFolderName: string, quality
  * derived from validated tokens, so they cannot contain shell
  * metacharacters either.
  */
-export function buildFindFallbackCLICommand(serverDataFolderName: string, quality: string): string {
+export function buildFindFallbackCLICommand(
+	serverDataFolderName: string,
+	quality: string,
+): string {
 	const root = getRemoteCLIInstallRoot(serverDataFolderName);
 	const archive = getRemoteCLIArchiveName(quality);
-	const commitGlob = '[0-9a-f]'.repeat(40);
-	const q = validateShellToken(quality, 'quality');
-	const legacyDir = q === 'stable' ? '~/.vscode-cli' : `~/.vscode-cli-${q}`;
+	const commitGlob = "[0-9a-f]".repeat(40);
+	const q = validateShellToken(quality, "quality");
+	const legacyDir = q === "stable" ? "~/.vscode-cli" : `~/.vscode-cli-${q}`;
 	const legacyBin = `${legacyDir}/${archive}`;
 	return [
 		`ls -1t -- ${root}/${archive}-${commitGlob} 2>/dev/null`,
 		`ls -1 -- ${legacyBin} 2>/dev/null`,
-		'true',
-	].join('; ');
+		"true",
+	].join("; ");
 }
 
 /**
@@ -244,11 +275,15 @@ export function buildFindFallbackCLICommand(serverDataFolderName: string, qualit
  * agent host spawn) with attacker-controlled metacharacters in the
  * event that something unexpected ends up in the install root.
  */
-export function isValidFallbackCLIPath(candidate: string, serverDataFolderName: string, quality: string): boolean {
+export function isValidFallbackCLIPath(
+	candidate: string,
+	serverDataFolderName: string,
+	quality: string,
+): boolean {
 	const root = getRemoteCLIInstallRoot(serverDataFolderName);
 	const archive = getRemoteCLIArchiveName(quality);
-	const q = validateShellToken(quality, 'quality');
-	const legacyDir = q === 'stable' ? '~/.vscode-cli' : `~/.vscode-cli-${q}`;
+	const q = validateShellToken(quality, "quality");
+	const legacyDir = q === "stable" ? "~/.vscode-cli" : `~/.vscode-cli-${q}`;
 	const legacyBin = `${legacyDir}/${archive}`;
 	if (candidate === legacyBin) {
 		return true;
@@ -263,7 +298,7 @@ export function isValidFallbackCLIPath(candidate: string, serverDataFolderName: 
 
 /** Redact connection tokens from log output. */
 export function redactToken(text: string): string {
-	return text.replace(/\?tkn=[^\s&]+/g, '?tkn=***');
+	return text.replace(/\?tkn=[^\s&]+/g, "?tkn=***");
 }
 
 /**
@@ -277,9 +312,12 @@ export function redactToken(text: string): string {
  * started locally and the supervisor spawned by the SSH `command-shell`
  * path agree on the same lockfile regardless of `--cli-data-dir`.
  */
-export function getAgentHostLockfile(serverDataFolderName: string, quality: string): string {
-	const d = validateShellToken(serverDataFolderName, 'server data folder name');
-	const q = validateShellToken(quality, 'quality');
+export function getAgentHostLockfile(
+	serverDataFolderName: string,
+	quality: string,
+): string {
+	const d = validateShellToken(serverDataFolderName, "server data folder name");
+	const q = validateShellToken(quality, "quality");
 	return `~/${d}/cli/agent-host-${q}.lock`;
 }
 
@@ -287,12 +325,20 @@ export function getAgentHostLockfile(serverDataFolderName: string, quality: stri
  * Abstraction over SSH command execution to enable testing without a real SSH connection.
  */
 export interface ISshExec {
-	(command: string, opts?: { ignoreExitCode?: boolean }): Promise<{ stdout: string; stderr: string; code: number }>;
+	(
+		command: string,
+		opts?: { ignoreExitCode?: boolean },
+	): Promise<{ stdout: string; stderr: string; code: number }>;
 }
 
 export type FindRunningAgentHostResult =
-	| { readonly kind: 'notFound' }
-	| { readonly kind: 'compatible'; readonly host: string; readonly port: number; readonly connectionToken: string | undefined };
+	| { readonly kind: "notFound" }
+	| {
+			readonly kind: "compatible";
+			readonly host: string;
+			readonly port: number;
+			readonly connectionToken: string | undefined;
+	  };
 
 /**
  * Try to find a running agent host on the remote by reading the lockfile and
@@ -305,9 +351,11 @@ export async function findRunningAgentHost(
 	quality: string,
 ): Promise<FindRunningAgentHostResult> {
 	const stateFile = getAgentHostLockfile(serverDataFolderName, quality);
-	const { stdout, code } = await exec(`cat ${stateFile} 2>/dev/null`, { ignoreExitCode: true });
+	const { stdout, code } = await exec(`cat ${stateFile} 2>/dev/null`, {
+		ignoreExitCode: true,
+	});
 	if (code !== 0 || !stdout.trim()) {
-		return { kind: 'notFound' };
+		return { kind: "notFound" };
 	}
 
 	let parsed: unknown;
@@ -318,17 +366,23 @@ export async function findRunningAgentHost(
 	}
 	const state = parseRemoteAgentHostState(parsed);
 	if (!state) {
-		logService.info(`${LOG_PREFIX} Invalid agent host state file ${stateFile}, removing`);
+		logService.info(
+			`${LOG_PREFIX} Invalid agent host state file ${stateFile}, removing`,
+		);
 		await exec(`rm -f ${stateFile}`, { ignoreExitCode: true });
-		return { kind: 'notFound' };
+		return { kind: "notFound" };
 	}
 
 	// Verify the PID is still alive
-	const { code: killCode } = await exec(`kill -0 ${state.pid} 2>/dev/null`, { ignoreExitCode: true });
+	const { code: killCode } = await exec(`kill -0 ${state.pid} 2>/dev/null`, {
+		ignoreExitCode: true,
+	});
 	if (killCode !== 0) {
-		logService.info(`${LOG_PREFIX} Stale agent host state in ${stateFile} (PID ${state.pid} not running), cleaning up`);
+		logService.info(
+			`${LOG_PREFIX} Stale agent host state in ${stateFile} (PID ${state.pid} not running), cleaning up`,
+		);
 		await exec(`rm -f ${stateFile}`, { ignoreExitCode: true });
-		return { kind: 'notFound' };
+		return { kind: "notFound" };
 	}
 
 	// We deliberately do not gate on `protocolVersion` here: the remote
@@ -338,9 +392,11 @@ export async function findRunningAgentHost(
 	// reuse decision we treat any live process as a candidate, and the
 	// caller (sshRemoteAgentHostService) already falls back to spawning
 	// fresh if the relay fails to connect.
-	logService.info(`${LOG_PREFIX} Found running agent host via ${stateFile}: PID ${state.pid}, port ${state.port}`);
+	logService.info(
+		`${LOG_PREFIX} Found running agent host via ${stateFile}: PID ${state.pid}, port ${state.port}`,
+	);
 	return {
-		kind: 'compatible',
+		kind: "compatible",
 		host: dialAgentHostHost(state.host),
 		port: state.port,
 		connectionToken: state.connectionToken ?? undefined,
@@ -358,8 +414,8 @@ export async function findRunningAgentHost(
  * preserve the prior behaviour.
  */
 export function dialAgentHostHost(bound: string | undefined): string {
-	if (!bound || bound === '0.0.0.0' || bound === '::' || bound === '[::]') {
-		return '127.0.0.1';
+	if (!bound || bound === "0.0.0.0" || bound === "::" || bound === "[::]") {
+		return "127.0.0.1";
 	}
 	return bound;
 }
@@ -378,24 +434,38 @@ export async function writeAgentHostState(
 	connectionToken: string | undefined,
 ): Promise<void> {
 	if (!pid) {
-		logService.info(`${LOG_PREFIX} Agent host PID unknown, state file not written`);
+		logService.info(
+			`${LOG_PREFIX} Agent host PID unknown, state file not written`,
+		);
 		return;
 	}
 
 	const stateFile = getAgentHostLockfile(serverDataFolderName, quality);
-	const state = createRemoteAgentHostState({ pid, port, connectionToken, quality });
+	const state = createRemoteAgentHostState({
+		pid,
+		port,
+		connectionToken,
+		quality,
+	});
 	const json = JSON.stringify(state);
 	// Remove any existing file first so `>` creates a fresh inode with the
 	// new umask (overwriting an existing file preserves its old permissions).
 	// Use a subshell with restrictive umask (077) so the file is created with
 	// owner-only permissions (0600), protecting the connection token.
 	// The CLI itself stores its token file with the same permissions.
-	const result = await exec(`mkdir -p $(dirname ${stateFile}) && rm -f ${stateFile} && (umask 077 && printf %s ${shellEscape(json)} > ${stateFile})`, { ignoreExitCode: true });
+	const result = await exec(
+		`mkdir -p $(dirname ${stateFile}) && rm -f ${stateFile} && (umask 077 && printf %s ${shellEscape(json)} > ${stateFile})`,
+		{ ignoreExitCode: true },
+	);
 	if (result.code !== 0) {
-		logService.warn(`${LOG_PREFIX} Failed to write agent host state to ${stateFile} (exit code ${result.code})${result.stderr ? `: ${result.stderr.trim()}` : ''}`);
+		logService.warn(
+			`${LOG_PREFIX} Failed to write agent host state to ${stateFile} (exit code ${result.code})${result.stderr ? `: ${result.stderr.trim()}` : ""}`,
+		);
 		return;
 	}
-	logService.info(`${LOG_PREFIX} Wrote agent host state to ${stateFile}: PID ${pid}, port ${port}`);
+	logService.info(
+		`${LOG_PREFIX} Wrote agent host state to ${stateFile}: PID ${pid}, port ${port}`,
+	);
 }
 
 /**
@@ -408,14 +478,20 @@ export async function cleanupRemoteAgentHost(
 	quality: string,
 ): Promise<void> {
 	const stateFile = getAgentHostLockfile(serverDataFolderName, quality);
-	const { stdout, code } = await exec(`cat ${stateFile} 2>/dev/null`, { ignoreExitCode: true });
+	const { stdout, code } = await exec(`cat ${stateFile} 2>/dev/null`, {
+		ignoreExitCode: true,
+	});
 	if (code === 0 && stdout.trim()) {
 		let state: { readonly pid: number } | undefined;
 		try {
 			state = parseRemoteAgentHostState(JSON.parse(stdout.trim()));
-		} catch { /* ignore parse errors */ }
+		} catch {
+			/* ignore parse errors */
+		}
 		if (state) {
-			logService.info(`${LOG_PREFIX} Killing remote agent host PID ${state.pid} (from ${stateFile})`);
+			logService.info(
+				`${LOG_PREFIX} Killing remote agent host PID ${state.pid} (from ${stateFile})`,
+			);
 			await exec(`kill ${state.pid} 2>/dev/null`, { ignoreExitCode: true });
 		}
 	}

@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../base/common/uri.js';
-import { IClipboardService } from '../../common/clipboardService.js';
+import { URI } from "../../../../base/common/uri.js";
+import { IClipboardService } from "../../common/clipboardService.js";
 
 export class TestClipboardService implements IClipboardService {
 	readImage(): Promise<Uint8Array> {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	_serviceBrand: undefined;
@@ -24,13 +24,13 @@ export class TestClipboardService implements IClipboardService {
 	}
 
 	async readText(type?: string): Promise<string> {
-		return this.text ?? '';
+		return this.text ?? "";
 	}
 
 	private findText: string | undefined = undefined;
 
 	async readFindText(): Promise<string> {
-		return this.findText ?? '';
+		return this.findText ?? "";
 	}
 
 	async writeFindText(text: string): Promise<void> {

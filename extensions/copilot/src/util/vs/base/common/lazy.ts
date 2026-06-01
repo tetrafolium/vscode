@@ -12,19 +12,18 @@ enum LazyValueState {
 }
 
 export class Lazy<T> {
-
 	private _state = LazyValueState.Uninitialized;
 	private _value?: T;
 	private _error: Error | undefined;
 
-	constructor(
-		private readonly executor: () => T,
-	) { }
+	constructor(private readonly executor: () => T) {}
 
 	/**
 	 * True if the lazy value has been resolved.
 	 */
-	get hasValue(): boolean { return this._state === LazyValueState.Completed; }
+	get hasValue(): boolean {
+		return this._state === LazyValueState.Completed;
+	}
 
 	/**
 	 * Get the wrapped value.
@@ -43,7 +42,9 @@ export class Lazy<T> {
 				this._state = LazyValueState.Completed;
 			}
 		} else if (this._state === LazyValueState.Running) {
-			throw new Error('Cannot read the value of a lazy that is being initialized');
+			throw new Error(
+				'Cannot read the value of a lazy that is being initialized',
+			);
 		}
 
 		if (this._error) {
@@ -55,5 +56,7 @@ export class Lazy<T> {
 	/**
 	 * Get the wrapped value without forcing evaluation.
 	 */
-	get rawValue(): T | undefined { return this._value; }
+	get rawValue(): T | undefined {
+		return this._value;
+	}
 }

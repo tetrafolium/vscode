@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	// https://github.com/microsoft/vscode/issues/120173
 
 	export interface ResourceTrustRequestOptions {
@@ -49,13 +48,17 @@ declare module 'vscode' {
 		 * Prompt the user to chose whether to trust the specified resource (ex: folder)
 		 * @param options Object describing the properties of the resource trust request.
 		 */
-		export function requestResourceTrust(options: ResourceTrustRequestOptions): Thenable<boolean | undefined>;
+		export function requestResourceTrust(
+			options: ResourceTrustRequestOptions,
+		): Thenable<boolean | undefined>;
 
 		/**
 		 * Prompt the user to chose whether to trust the current workspace
 		 * @param options Optional object describing the properties of the
 		 * workspace trust request.
 		 */
-		export function requestWorkspaceTrust(options?: WorkspaceTrustRequestOptions): Thenable<boolean | undefined>;
+		export function requestWorkspaceTrust(
+			options?: WorkspaceTrustRequestOptions,
+		): Thenable<boolean | undefined>;
 	}
 }

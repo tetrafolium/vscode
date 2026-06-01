@@ -3,6 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'rcedit' {
+declare module "rcedit" {
 	export default function rcedit(exePath, options, cb): Promise<void>;
 }

@@ -3,14 +3,36 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableStore, MutableDisposable, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { UriTemplate } from '../../../../../base/common/uriTemplate.js';
-import { ILogService, LogLevel } from '../../../../../platform/log/common/log.js';
-import { Registry } from '../../../../../platform/registry/common/platform.js';
-import { iterateOtlpLogRecords, logLevelToOtlpLevelName, severityNumberToLogLevel, type IOtlpLogRecord, type OtlpLogLevelName } from '../../../../../platform/agentHost/common/otlp/otlpLogEmitter.js';
-import { AgentHostClientState, type RemoteAgentHostProtocolClient } from '../../../../../platform/agentHost/browser/remoteAgentHostProtocolClient.js';
-import { Extensions, IOutputChannel, IOutputChannelRegistry, IOutputService } from '../../../../../workbench/services/output/common/output.js';
+import {
+	Disposable,
+	DisposableStore,
+	MutableDisposable,
+	toDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { UriTemplate } from "../../../../../base/common/uriTemplate.js";
+import {
+	ILogService,
+	LogLevel,
+} from "../../../../../platform/log/common/log.js";
+import { Registry } from "../../../../../platform/registry/common/platform.js";
+import {
+	iterateOtlpLogRecords,
+	logLevelToOtlpLevelName,
+	severityNumberToLogLevel,
+	type IOtlpLogRecord,
+	type OtlpLogLevelName,
+} from "../../../../../platform/agentHost/common/otlp/otlpLogEmitter.js";
+import {
+	AgentHostClientState,
+	type RemoteAgentHostProtocolClient,
+} from "../../../../../platform/agentHost/browser/remoteAgentHostProtocolClient.js";
+import {
+	Extensions,
+	IOutputChannel,
+	IOutputChannelRegistry,
+	IOutputService,
+} from "../../../../../workbench/services/output/common/output.js";
 
 /**
  * Forwarder that bridges a connected {@link RemoteAgentHostProtocolClient}'s
@@ -39,13 +61,14 @@ import { Extensions, IOutputChannel, IOutputChannelRegistry, IOutputService } fr
  * this class.
  */
 export class RemoteAgentHostLogForwarder extends Disposable {
-
 	private readonly _channelId: string;
 	private readonly _channelLabel: string;
 	private _outputChannel: IOutputChannel | undefined;
 	private _channelRegistered = false;
 	/** Tracks whatever needs to be torn down for a single subscribe cycle. */
-	private readonly _subscriptionStore = this._register(new MutableDisposable<DisposableStore>());
+	private readonly _subscriptionStore = this._register(
+		new MutableDisposable<DisposableStore>(),
+	);
 	private _currentLevel: OtlpLogLevelName | undefined;
 
 	constructor(
@@ -61,26 +84,30 @@ export class RemoteAgentHostLogForwarder extends Disposable {
 		this._channelLabel = `Agent Host (${displayName})`;
 
 		// Wire up subscribe/teardown around the client's connection state.
-		this._register(_client.onDidChangeConnectionState(state => {
-			switch (state) {
-				case AgentHostClientState.Connected:
-					this._attach();
-					break;
-				case AgentHostClientState.Reconnecting:
-				case AgentHostClientState.Closed:
-					this._detach();
-					break;
-			}
-		}));
+		this._register(
+			_client.onDidChangeConnectionState((state) => {
+				switch (state) {
+					case AgentHostClientState.Connected:
+						this._attach();
+						break;
+					case AgentHostClientState.Reconnecting:
+					case AgentHostClientState.Closed:
+						this._detach();
+						break;
+				}
+			}),
+		);
 
 		// The workbench's overall log level drives the wire-level
 		// subscription. Re-subscribe when it changes so we stop receiving
 		// records the user does not want to see.
 		this._register(_logService.onDidChangeLogLevel(() => this._attach()));
 
-		this._register(_client.onDidReceiveOtlpLogs(params => {
-			this._handleBatch(params.payload);
-		}));
+		this._register(
+			_client.onDidReceiveOtlpLogs((params) => {
+				this._handleBatch(params.payload);
+			}),
+		);
 
 		// If the client is already connected when the forwarder is
 		// constructed (e.g. attached after handshake), attach immediately.
@@ -137,19 +164,23 @@ export class RemoteAgentHostLogForwarder extends Disposable {
 		// Best-effort: the server may reject the subscribe (incompatible
 		// protocol version, host without OTLP, etc.). Log to our channel
 		// and bail — the channel itself stays registered.
-		this._client.subscribeStateless(URI.parse(channelUri)).catch(err => {
-			this._appendLine(`Failed to subscribe to OTLP logs channel ${channelUri}: ${formatError(err)}`);
+		this._client.subscribeStateless(URI.parse(channelUri)).catch((err) => {
+			this._appendLine(
+				`Failed to subscribe to OTLP logs channel ${channelUri}: ${formatError(err)}`,
+			);
 		});
 
-		store.add(toDisposable(() => {
-			// Server unsubscribe is best-effort: if the connection has
-			// already torn down we just drop our state.
-			try {
-				this._client.unsubscribe(URI.parse(channelUri));
-			} catch {
-				// ignore
-			}
-		}));
+		store.add(
+			toDisposable(() => {
+				// Server unsubscribe is best-effort: if the connection has
+				// already torn down we just drop our state.
+				try {
+					this._client.unsubscribe(URI.parse(channelUri));
+				} catch {
+					// ignore
+				}
+			}),
+		);
 	}
 
 	/**
@@ -166,13 +197,15 @@ export class RemoteAgentHostLogForwarder extends Disposable {
 			return;
 		}
 		this._channelRegistered = true;
-		const registry = Registry.as<IOutputChannelRegistry>(Extensions.OutputChannels);
+		const registry = Registry.as<IOutputChannelRegistry>(
+			Extensions.OutputChannels,
+		);
 		if (!registry.getChannel(this._channelId)) {
 			registry.registerChannel({
 				id: this._channelId,
 				label: this._channelLabel,
 				log: false,
-				languageId: 'log',
+				languageId: "log",
 			});
 		}
 	}
@@ -197,7 +230,7 @@ export class RemoteAgentHostLogForwarder extends Disposable {
 		if (level === LogLevel.Off) {
 			return undefined;
 		}
-		return logLevelToOtlpLevelName(level) ?? 'info';
+		return logLevelToOtlpLevelName(level) ?? "info";
 	}
 
 	/**
@@ -211,7 +244,10 @@ export class RemoteAgentHostLogForwarder extends Disposable {
 	 * advertise variants like `{?level}` or pin additional unknown
 	 * variables the protocol may later define.
 	 */
-	private _expandLogsChannel(template: string, level: OtlpLogLevelName): string {
+	private _expandLogsChannel(
+		template: string,
+		level: OtlpLogLevelName,
+	): string {
 		return UriTemplate.parse(template).resolve({ level });
 	}
 
@@ -248,7 +284,7 @@ export class RemoteAgentHostLogForwarder extends Disposable {
 				return;
 			}
 		}
-		this._outputChannel.append(text.endsWith('\n') ? text : `${text}\n`);
+		this._outputChannel.append(text.endsWith("\n") ? text : `${text}\n`);
 	}
 }
 

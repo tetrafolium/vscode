@@ -7,7 +7,10 @@ import * as fs from 'fs';
 import * as mobx from 'mobx';
 import * as path from 'path';
 import { RunOnceScheduler } from '../../../../src/util/vs/base/common/async';
-import { Disposable, toDisposable } from '../../../../src/util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	toDisposable,
+} from '../../../../src/util/vs/base/common/lifecycle';
 import { AML_OUTPUT_PATH, STDOUT_FILENAME } from '../../shared/sharedTypes';
 import { REPO_ROOT } from '../utils/utils';
 import { SimulationStorage, SimulationStorageValue } from './simulationStorage';
@@ -33,7 +36,6 @@ function pathIfExists(filePath: string): string | undefined {
 }
 
 export class AMLRun {
-
 	public readonly scoreCardCsvPath: string | undefined;
 	public readonly scoreCardByLanguageJsonPath: string | undefined;
 	public readonly scoredPredictionsJSONL: string | undefined;
@@ -46,11 +48,28 @@ export class AMLRun {
 		public readonly stat: fs.Stats,
 		public readonly stdoutPath: string,
 	) {
-		this.scoreCardCsvPath = kind !== 'unknown' ? pathIfExists(path.join(runPath, `eval/${kind}_scorecard.csv`)) : undefined;
-		this.scoreCardByLanguageJsonPath = pathIfExists(path.join(runPath, `eval/metric_scorecard_by_language.json`));
+		this.scoreCardCsvPath =
+			kind !== 'unknown'
+				? pathIfExists(path.join(runPath, `eval/${kind}_scorecard.csv`))
+				: undefined;
+		this.scoreCardByLanguageJsonPath = pathIfExists(
+			path.join(runPath, `eval/metric_scorecard_by_language.json`),
+		);
 
-		this.scoredPredictionsJSONL = kind !== 'unknown' ? pathIfExists(path.join(runPath, `eval/${kind}_scored_predictions.jsonl`)) : undefined;
-		this.simulationInputPath = path.join(runPath, 'simulate', 'simulator_input');
+		this.scoredPredictionsJSONL =
+			kind !== 'unknown'
+				? pathIfExists(
+						path.join(
+							runPath,
+							`eval/${kind}_scored_predictions.jsonl`,
+						),
+					)
+				: undefined;
+		this.simulationInputPath = path.join(
+			runPath,
+			'simulate',
+			'simulator_input',
+		);
 	}
 }
 
@@ -58,8 +77,9 @@ export class AMLRun {
  * Detects possible AML runs
  */
 export class AMLProvider extends Disposable {
-
-	private readonly _updateSoon = this._register(new RunOnceScheduler(() => this._update(), 50));
+	private readonly _updateSoon = this._register(
+		new RunOnceScheduler(() => this._update(), 50),
+	);
 
 	@mobx.observable
 	public runs: AMLRun[] = [];
@@ -72,19 +92,29 @@ export class AMLProvider extends Disposable {
 
 	@mobx.computed
 	public get selected(): AMLRun | undefined {
-		return this.runs.find(r => r.name === this.selectedName.value);
+		return this.runs.find((r) => r.name === this.selectedName.value);
 	}
 
 	@mobx.computed
 	public get compareAgainstRun(): AMLRun | undefined {
-		return this.runs.find(r => r.name === this.compareAgainstRunName.value);
+		return this.runs.find(
+			(r) => r.name === this.compareAgainstRunName.value,
+		);
 	}
 
 	constructor(storage: SimulationStorage) {
 		super();
 
-		this.selectedName = new SimulationStorageValue(storage, 'selectedAML', '');
-		this.compareAgainstRunName = new SimulationStorageValue(storage, 'compareAgainstAML', '');
+		this.selectedName = new SimulationStorageValue(
+			storage,
+			'selectedAML',
+			'',
+		);
+		this.compareAgainstRunName = new SimulationStorageValue(
+			storage,
+			'compareAgainstAML',
+			'',
+		);
 
 		mobx.makeObservable(this);
 
@@ -94,20 +124,38 @@ export class AMLProvider extends Disposable {
 			}
 		};
 
-		fs.promises.mkdir(AML_OUTPUT_FOLDER_PATH, { recursive: true }).then(() => {
-			fs.watch(AML_OUTPUT_FOLDER_PATH, { recursive: false }, listener);
-			this._register(toDisposable(() => fs.unwatchFile(AML_OUTPUT_FOLDER_PATH, listener)));
-			this._update();
-		});
+		fs.promises
+			.mkdir(AML_OUTPUT_FOLDER_PATH, { recursive: true })
+			.then(() => {
+				fs.watch(
+					AML_OUTPUT_FOLDER_PATH,
+					{ recursive: false },
+					listener,
+				);
+				this._register(
+					toDisposable(() =>
+						fs.unwatchFile(AML_OUTPUT_FOLDER_PATH, listener),
+					),
+				);
+				this._update();
+			});
 	}
 
 	private async _update(): Promise<void> {
-		const amlOutputFolders = await fs.promises.readdir(AML_OUTPUT_FOLDER_PATH);
+		const amlOutputFolders = await fs.promises.readdir(
+			AML_OUTPUT_FOLDER_PATH,
+		);
 		const rawEntries = await Promise.all(
 			amlOutputFolders.map(async (entry) => {
 				const entryPath = path.join(AML_OUTPUT_FOLDER_PATH, entry);
 				const stat = await fs.promises.stat(entryPath);
-				const stdoutPath = path.join(entryPath, 'simulate', 'simulator_output_dir', 'simulator_output', STDOUT_FILENAME);
+				const stdoutPath = path.join(
+					entryPath,
+					'simulate',
+					'simulator_output_dir',
+					'simulator_output',
+					STDOUT_FILENAME,
+				);
 				try {
 					const stdoutStat = await fs.promises.stat(stdoutPath);
 					if (!stdoutStat.isFile()) {
@@ -119,7 +167,7 @@ export class AMLProvider extends Disposable {
 				}
 				const kind = await AMLProvider.determineKind(entryPath);
 				return new AMLRun(kind, entry, entryPath, stat, stdoutPath);
-			})
+			}),
 		);
 
 		let entries = rawEntries.filter((entry): entry is AMLRun => !!entry);
@@ -141,10 +189,17 @@ export class AMLProvider extends Disposable {
 	 * @param amlRunPath - The path to the AML run directory.
 	 * @returns The kind of AML run.
 	 */
-	private static async determineKind(amlRunPath: string): Promise<AMLRunKind> {
-
+	private static async determineKind(
+		amlRunPath: string,
+	): Promise<AMLRunKind> {
 		const defaultKind = AMLRunKind.Unknown;
-		const jobParametersPath = path.join(amlRunPath, 'simulate', 'simulator_output_dir', 'simulator_output', 'job_parameters.json');
+		const jobParametersPath = path.join(
+			amlRunPath,
+			'simulate',
+			'simulator_output_dir',
+			'simulator_output',
+			'job_parameters.json',
+		);
 		try {
 			const file = await fs.promises.readFile(jobParametersPath);
 			const jobParameters = JSON.parse(file.toString());
@@ -152,9 +207,13 @@ export class AMLProvider extends Disposable {
 				return jobParameters.dataset as AMLRunKind;
 			}
 
-			console.error(`Unknown AML run kind: ${jobParameters.dataset}; considering it as 'unknown'`);
+			console.error(
+				`Unknown AML run kind: ${jobParameters.dataset}; considering it as 'unknown'`,
+			);
 		} catch (err) {
-			console.error(`Error determining AML run kind: Unable to read ${jobParametersPath}`);
+			console.error(
+				`Error determining AML run kind: Unable to read ${jobParametersPath}`,
+			);
 		}
 		return defaultKind;
 	}

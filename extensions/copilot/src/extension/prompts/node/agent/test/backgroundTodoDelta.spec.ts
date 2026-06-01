@@ -5,7 +5,10 @@
 
 import { describe, expect, test } from 'vitest';
 import { BackgroundTodoDeltaTracker } from '../backgroundTodoDelta';
-import { IBuildPromptContext, IToolCallRound } from '../../../../prompt/common/intents';
+import {
+	IBuildPromptContext,
+	IToolCallRound,
+} from '../../../../prompt/common/intents';
 import { URI } from '../../../../../util/vs/base/common/uri';
 
 function makeRound(id: string): IToolCallRound {
@@ -25,13 +28,15 @@ function makePromptContext(opts: {
 }): IBuildPromptContext {
 	return {
 		query: opts.query ?? 'fix the bug',
-		history: (opts.historyRounds ?? []).map(rounds => ({
+		history: (opts.historyRounds ?? []).map((rounds) => ({
 			rounds,
 			request: { message: 'old request' },
 		})) as any,
 		chatVariables: { hasVariables: () => false } as any,
 		toolCallRounds: opts.toolCallRounds,
-		request: opts.sessionResource ? { sessionResource: opts.sessionResource } as any : undefined,
+		request: opts.sessionResource
+			? ({ sessionResource: opts.sessionResource } as any)
+			: undefined,
 	};
 }
 
@@ -99,9 +104,16 @@ describe('BackgroundTodoDeltaTracker', () => {
 		const sharedHistory = makeRound('shared');
 		const sharedCurrent = makeRound('shared');
 		const c1 = makeRound('current-r1');
-		const ctx = makePromptContext({ historyRounds: [[h1, sharedHistory]], toolCallRounds: [sharedCurrent, c1] });
+		const ctx = makePromptContext({
+			historyRounds: [[h1, sharedHistory]],
+			toolCallRounds: [sharedCurrent, c1],
+		});
 		const delta = tracker.getDelta(ctx);
-		expect(delta!.newRounds.map(round => round.id)).toEqual(['hist-r1', 'shared', 'current-r1']);
+		expect(delta!.newRounds.map((round) => round.id)).toEqual([
+			'hist-r1',
+			'shared',
+			'current-r1',
+		]);
 	});
 
 	test('keeps sessionResource as Uri', () => {
@@ -160,7 +172,9 @@ describe('BackgroundTodoDeltaTracker', () => {
 		tracker.markProcessed(delta1);
 
 		const r2 = makeRound('r2');
-		const ctx2 = makePromptContext({ toolCallRounds: [makeRound('r1'), r2] });
+		const ctx2 = makePromptContext({
+			toolCallRounds: [makeRound('r1'), r2],
+		});
 		const delta2 = tracker.peekDelta(ctx2)!;
 		expect(delta2.metadata.isInitialDelta).toBe(false);
 	});
@@ -169,7 +183,9 @@ describe('BackgroundTodoDeltaTracker', () => {
 		const tracker = new BackgroundTodoDeltaTracker();
 		const r1 = makeRound('r1'); // has 1 tool call
 		const r2: IToolCallRound = {
-			id: 'r2', response: '', toolInputRetry: 0,
+			id: 'r2',
+			response: '',
+			toolInputRetry: 0,
 			toolCalls: [
 				{ name: 'read_file', arguments: '{}', id: 'tc-r2a' },
 				{ name: 'edit_file', arguments: '{}', id: 'tc-r2b' },
@@ -187,17 +203,24 @@ describe('BackgroundTodoDeltaTracker', () => {
 	test('currentTurnSubstantiveToolCallCount counts only current-turn rounds', () => {
 		const tracker = new BackgroundTodoDeltaTracker();
 		const historyRound: IToolCallRound = {
-			id: 'h1', response: '', toolInputRetry: 0,
+			id: 'h1',
+			response: '',
+			toolInputRetry: 0,
 			toolCalls: [
 				{ name: 'read_file', arguments: '{}', id: 'tc-h1a' },
 				{ name: 'edit_file', arguments: '{}', id: 'tc-h1b' },
 			],
 		};
 		const currentRound: IToolCallRound = {
-			id: 'c1', response: '', toolInputRetry: 0,
+			id: 'c1',
+			response: '',
+			toolInputRetry: 0,
 			toolCalls: [{ name: 'read_file', arguments: '{}', id: 'tc-c1' }],
 		};
-		const ctx = makePromptContext({ historyRounds: [[historyRound]], toolCallRounds: [currentRound] });
+		const ctx = makePromptContext({
+			historyRounds: [[historyRound]],
+			toolCallRounds: [currentRound],
+		});
 		const delta = tracker.peekDelta(ctx)!;
 		// Total substantive counts all unprocessed rounds (2 from history + 1 current)
 		expect(delta.metadata.substantiveToolCallCount).toBe(3);

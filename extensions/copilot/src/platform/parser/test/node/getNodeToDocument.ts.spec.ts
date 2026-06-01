@@ -5,23 +5,15 @@
 
 import { outdent } from 'outdent';
 import { afterAll, expect, suite, test } from 'vitest';
-import {
-	_dispose,
-	_getNodeToDocument
-} from '../../node/parserImpl';
+import { _dispose, _getNodeToDocument } from '../../node/parserImpl';
 import { WASMLanguage } from '../../node/treeSitterLanguages';
 import { srcWithAnnotatedNodeToDoc } from './getNodeToDocument.util';
 
-
 suite('getNodeToDocument - typescript', () => {
-
 	afterAll(() => _dispose());
 
 	async function run(annotatedSrc: string) {
-		return srcWithAnnotatedNodeToDoc(
-			WASMLanguage.TypeScript,
-			annotatedSrc,
-		);
+		return srcWithAnnotatedNodeToDoc(WASMLanguage.TypeScript, annotatedSrc);
 	}
 
 	test('should return root node for invalid range', async () => {
@@ -31,7 +23,7 @@ suite('getNodeToDocument - typescript', () => {
 			{
 				startIndex: 100,
 				endIndex: 200,
-			}
+			},
 		);
 		expect(result).toMatchInlineSnapshot(`
 		{
@@ -47,17 +39,16 @@ suite('getNodeToDocument - typescript', () => {
 	});
 
 	test('should return root node for empty source', async () => {
-
 		const result = await run('<<>>');
 
 		expect(result).toMatchInlineSnapshot(`"<PROGRAM></PROGRAM>"`);
 	});
 
 	test('should return node position for a variable declaration', async () => {
-		const result = await run(
-			'<<const>> a = 1;',
+		const result = await run('<<const>> a = 1;');
+		expect(result).toMatchInlineSnapshot(
+			`"<LEXICAL_DECLARATION>const <IDENT>a</IDENT> = 1;</LEXICAL_DECLARATION>"`,
 		);
-		expect(result).toMatchInlineSnapshot(`"<LEXICAL_DECLARATION>const <IDENT>a</IDENT> = 1;</LEXICAL_DECLARATION>"`);
 	});
 
 	test('should return node position for a function declaration', async () => {
@@ -65,14 +56,16 @@ suite('getNodeToDocument - typescript', () => {
 			WASMLanguage.TypeScript,
 			'<<function>> add(a: number, b: number): number { return a + b; }',
 		);
-		expect(result).toMatchInlineSnapshot(`"<FUNCTION_DECLARATION>function <IDENT>add</IDENT>(a: number, b: number): number { return a + b; }</FUNCTION_DECLARATION>"`);
+		expect(result).toMatchInlineSnapshot(
+			`"<FUNCTION_DECLARATION>function <IDENT>add</IDENT>(a: number, b: number): number { return a + b; }</FUNCTION_DECLARATION>"`,
+		);
 	});
 
 	test('should return node position for a class declaration', async () => {
-		const result = await run(
-			'<<class>> MyClass { constructor() {} }',
+		const result = await run('<<class>> MyClass { constructor() {} }');
+		expect(result).toMatchInlineSnapshot(
+			`"<CLASS_DECLARATION>class <IDENT>MyClass</IDENT> { constructor() {} }</CLASS_DECLARATION>"`,
 		);
-		expect(result).toMatchInlineSnapshot(`"<CLASS_DECLARATION>class <IDENT>MyClass</IDENT> { constructor() {} }</CLASS_DECLARATION>"`);
 	});
 
 	test('should return the whole program', async () => {

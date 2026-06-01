@@ -18,10 +18,13 @@ describe('Tool Service', () => {
 		});
 
 		test('should return error for non-existent tool', () => {
-			const result = toolsService.validateToolInput('nonExistentTool', '{}');
+			const result = toolsService.validateToolInput(
+				'nonExistentTool',
+				'{}',
+			);
 
 			expect(result).toEqual({
-				error: 'ERROR: The tool "nonExistentTool" does not exist'
+				error: 'ERROR: The tool "nonExistentTool" does not exist',
 			});
 		});
 
@@ -35,37 +38,52 @@ describe('Tool Service', () => {
 					properties: {
 						message: {
 							type: 'string',
-							description: 'A message parameter'
+							description: 'A message parameter',
 						},
 						count: {
 							type: 'number',
-							description: 'A numeric parameter'
-						}
+							description: 'A numeric parameter',
+						},
 					},
-					required: ['message']
+					required: ['message'],
 				},
 				tags: [],
-				source: undefined
+				source: undefined,
 			};
 
-			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(mockTool);
+			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(
+				mockTool,
+			);
 
 			// Test valid input
-			const validResult = toolsService.validateToolInput('testTool', '{"message": "hello", "count": 42}');
+			const validResult = toolsService.validateToolInput(
+				'testTool',
+				'{"message": "hello", "count": 42}',
+			);
 			expect(validResult).toEqual({
-				inputObj: { message: 'hello', count: 42 }
+				inputObj: { message: 'hello', count: 42 },
 			});
 
 			// Test missing required field
-			const invalidResult = toolsService.validateToolInput('testTool', '{"count": 42}');
+			const invalidResult = toolsService.validateToolInput(
+				'testTool',
+				'{"count": 42}',
+			);
 			expect(invalidResult).toMatchObject({
-				error: expect.stringContaining('ERROR: Your input to the tool was invalid')
+				error: expect.stringContaining(
+					'ERROR: Your input to the tool was invalid',
+				),
 			});
 
 			// Test invalid JSON
-			const malformedResult = toolsService.validateToolInput('testTool', '{"message": "hello"');
+			const malformedResult = toolsService.validateToolInput(
+				'testTool',
+				'{"message": "hello"',
+			);
 			expect(malformedResult).toMatchObject({
-				error: expect.stringContaining('ERROR: Your input to the tool was invalid')
+				error: expect.stringContaining(
+					'ERROR: Your input to the tool was invalid',
+				),
 			});
 		});
 
@@ -78,18 +96,20 @@ describe('Tool Service', () => {
 					properties: {
 						optionalParam: {
 							type: 'string',
-							description: 'An optional parameter'
-						}
-					}
+							description: 'An optional parameter',
+						},
+					},
 				},
 				tags: [],
-				source: undefined
+				source: undefined,
 			};
 
-			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(emptyTool);
+			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(
+				emptyTool,
+			);
 			const emptyResult = toolsService.validateToolInput('emptyTool', '');
 			expect(emptyResult).toMatchObject({
-				inputObj: undefined
+				inputObj: undefined,
 			});
 		});
 
@@ -99,14 +119,19 @@ describe('Tool Service', () => {
 				description: 'A tool without input schema',
 				inputSchema: undefined,
 				tags: [],
-				source: undefined
+				source: undefined,
 			};
 
-			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(toolWithoutSchema);
+			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(
+				toolWithoutSchema,
+			);
 
-			const result = toolsService.validateToolInput('schemaLessTool', '{"anyParam": "anyValue"}');
+			const result = toolsService.validateToolInput(
+				'schemaLessTool',
+				'{"anyParam": "anyValue"}',
+			);
 			expect(result).toEqual({
-				inputObj: { anyParam: 'anyValue' }
+				inputObj: { anyParam: 'anyValue' },
 			});
 		});
 
@@ -118,23 +143,28 @@ describe('Tool Service', () => {
 					type: 'object',
 					properties: {
 						numberAsString: {
-							type: 'number'
+							type: 'number',
 						},
 						booleanAsString: {
-							type: 'boolean'
-						}
-					}
+							type: 'boolean',
+						},
+					},
 				},
 				tags: [],
-				source: undefined
+				source: undefined,
 			};
 
-			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(coercionTool);
+			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(
+				coercionTool,
+			);
 
 			// Test that AJV coerces string numbers to numbers and string booleans to booleans
-			const result = toolsService.validateToolInput('coercionTool', '{"numberAsString": "42", "booleanAsString": "true"}');
+			const result = toolsService.validateToolInput(
+				'coercionTool',
+				'{"numberAsString": "42", "booleanAsString": "true"}',
+			);
 			expect(result).toEqual({
-				inputObj: { numberAsString: 42, booleanAsString: true }
+				inputObj: { numberAsString: 42, booleanAsString: true },
 			});
 		});
 
@@ -147,34 +177,39 @@ describe('Tool Service', () => {
 					properties: {
 						thread_id: {
 							type: 'string',
-							description: 'Thread identifier'
+							description: 'Thread identifier',
 						},
 						action_json: {
 							type: 'object',
 							description: 'Action configuration',
 							properties: {
 								command: {
-									type: 'string'
-								}
+									type: 'string',
+								},
 							},
-							required: ['command']
-						}
+							required: ['command'],
+						},
 					},
-					required: ['thread_id', 'action_json']
+					required: ['thread_id', 'action_json'],
 				},
 				tags: [],
-				source: undefined
+				source: undefined,
 			};
 
-			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(nestedJsonTool);
+			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(
+				nestedJsonTool,
+			);
 
 			// Test that nested JSON strings are automatically parsed
-			const result = toolsService.validateToolInput('nestedJsonTool', '{"thread_id": "i6747", "action_json": "{\\"command\\": \\"ls -la\\"}"}');
+			const result = toolsService.validateToolInput(
+				'nestedJsonTool',
+				'{"thread_id": "i6747", "action_json": "{\\"command\\": \\"ls -la\\"}"}',
+			);
 			expect(result).toEqual({
 				inputObj: {
 					thread_id: 'i6747',
-					action_json: { command: 'ls -la' }
-				}
+					action_json: { command: 'ls -la' },
+				},
 			});
 
 			// Test with multiple nested JSON strings
@@ -187,47 +222,59 @@ describe('Tool Service', () => {
 						config: {
 							type: 'object',
 							properties: {
-								setting: { type: 'string' }
-							}
+								setting: { type: 'string' },
+							},
 						},
 						metadata: {
 							type: 'object',
 							properties: {
-								tags: { type: 'array' }
-							}
-						}
-					}
+								tags: { type: 'array' },
+							},
+						},
+					},
 				},
 				tags: [],
-				source: undefined
+				source: undefined,
 			};
 
-			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(multiNestedTool);
+			(toolsService.tools as vscode.LanguageModelToolInformation[]).push(
+				multiNestedTool,
+			);
 
-			const multiResult = toolsService.validateToolInput('multiNestedTool', '{"config": "{\\"setting\\": \\"value\\"}", "metadata": "{\\"tags\\": [\\"tag1\\", \\"tag2\\"]}"}');
+			const multiResult = toolsService.validateToolInput(
+				'multiNestedTool',
+				'{"config": "{\\"setting\\": \\"value\\"}", "metadata": "{\\"tags\\": [\\"tag1\\", \\"tag2\\"]}"}',
+			);
 			expect(multiResult).toEqual({
 				inputObj: {
 					config: { setting: 'value' },
-					metadata: { tags: ['tag1', 'tag2'] }
-				}
+					metadata: { tags: ['tag1', 'tag2'] },
+				},
 			});
 
-
-			const multiResult2 = toolsService.validateToolInput('multiNestedTool', JSON.stringify({
-				config: { setting: 'value' },
-				metadata: { tags: JSON.stringify(['tag1', 'tag2']) }
-			}));
+			const multiResult2 = toolsService.validateToolInput(
+				'multiNestedTool',
+				JSON.stringify({
+					config: { setting: 'value' },
+					metadata: { tags: JSON.stringify(['tag1', 'tag2']) },
+				}),
+			);
 			expect(multiResult2).toEqual({
 				inputObj: {
 					config: { setting: 'value' },
-					metadata: { tags: ['tag1', 'tag2'] }
-				}
+					metadata: { tags: ['tag1', 'tag2'] },
+				},
 			});
 
 			// Test that malformed nested JSON strings still fail gracefully
-			const malformedResult = toolsService.validateToolInput('nestedJsonTool', '{"thread_id": "i6747", "action_json": "{\\"command\\": invalid}"}');
+			const malformedResult = toolsService.validateToolInput(
+				'nestedJsonTool',
+				'{"thread_id": "i6747", "action_json": "{\\"command\\": invalid}"}',
+			);
 			expect(malformedResult).toMatchObject({
-				error: expect.stringContaining('ERROR: Your input to the tool was invalid')
+				error: expect.stringContaining(
+					'ERROR: Your input to the tool was invalid',
+				),
 			});
 		});
 	});

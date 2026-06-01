@@ -10,27 +10,29 @@
  * Used for all ChatML requests (all models).
  */
 export const CHAT_ML_CACHE_SALT_PER_MODEL: Record<string, string> = {
-	'DEFAULT': '2026-04-28T00:00:00Z',
+	DEFAULT: '2026-04-28T00:00:00Z',
 	'copilot-nes-oct': '2026-02-10T12:14:18.526Z',
 };
 
 /**
  * Used for all NES requests.
  */
-export const OPENAI_FETCHER_CACHE_SALT: { getByUrl: (url: string) => string } = new class {
-	private readonly _cacheSaltByUrl: Record<string, string> = Object.freeze({
-		// Other endpoints
-		'DEFAULT': '2024-09-25T11:25:00Z',
-	});
+export const OPENAI_FETCHER_CACHE_SALT: { getByUrl: (url: string) => string } =
+	new (class {
+		private readonly _cacheSaltByUrl: Record<string, string> =
+			Object.freeze({
+				// Other endpoints
+				DEFAULT: '2024-09-25T11:25:00Z',
+			});
 
-	getByUrl(url: string): string {
-		if (url in this._cacheSaltByUrl) {
-			return this._cacheSaltByUrl[url];
-		} else {
-			return this._cacheSaltByUrl['DEFAULT'];
+		getByUrl(url: string): string {
+			if (url in this._cacheSaltByUrl) {
+				return this._cacheSaltByUrl[url];
+			} else {
+				return this._cacheSaltByUrl['DEFAULT'];
+			}
 		}
-	}
-};
+	})();
 
 /**
  * Used for all Code Search requests.
@@ -66,7 +68,6 @@ export const PYTHON_EXECUTES_WITHOUT_ERRORS = 2;
  * Used by `isValidNotebookCell`.
  */
 export const NOTEBOOK_CELL_VALID_CACHE_SALT = 1;
-
 
 /**
  * Used for all Chunking Endpoint requests.

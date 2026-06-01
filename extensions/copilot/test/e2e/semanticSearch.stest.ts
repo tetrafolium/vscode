@@ -18,21 +18,21 @@ function getFiles(answer: string): string[] {
 }
 
 function expectedFileDoesMatch(files: string[], target: string): boolean {
-	return files.some(e => {
+	return files.some((e) => {
 		return e.trim().endsWith(target);
 	});
 }
 function assertFilesMatch(expected: string[], actual: string[]) {
-	expected.forEach(e => {
+	expected.forEach((e) => {
 		if (!expectedFileDoesMatch(actual, e)) {
-			throw Error(`Cannot find match for expected file: ${e}. Instead got the following: \n-${actual.join('\n')}`);
+			throw Error(
+				`Cannot find match for expected file: ${e}. Instead got the following: \n-${actual.join('\n')}`,
+			);
 		}
 	});
 }
 
-
 ssuite({ title: 'semanticSearch', location: 'panel' }, (inputPath) => {
-
 	// No default cases checked in at the moment
 	if (!inputPath) {
 		return;
@@ -41,15 +41,17 @@ ssuite({ title: 'semanticSearch', location: 'panel' }, (inputPath) => {
 	const scenariosFolder = inputPath;
 	const scenarios = discoverScenarios(scenariosFolder);
 	for (const scenario of scenarios) {
-
 		const fileName = scenario[0].name;
 		const testName = fileName.substring(0, fileName.indexOf('.'));
-		stest.optional(shouldSkip.bind(undefined, scenario), { description: testName },
+		stest.optional(
+			shouldSkip.bind(undefined, scenario),
+			{ description: testName },
 			generateScenarioTestRunner(
 				scenario,
 				async (accessor, question, answer) => {
 					if (scenario[0].json.expectedRetrieval !== undefined) {
-						const expected: string[] = scenario[0].json.expectedRetrieval;
+						const expected: string[] =
+							scenario[0].json.expectedRetrieval;
 						const actual = getFiles(answer);
 
 						try {
@@ -61,7 +63,12 @@ ssuite({ title: 'semanticSearch', location: 'panel' }, (inputPath) => {
 						// TODO: incorporate `keywords` into the test.
 						// They should already be on the tests, but to test solely file retrieval first, we can ignore them for now.
 					}
-					return { success: false, errorMessage: 'expectedRetrieval not defined' };
-				}));
+					return {
+						success: false,
+						errorMessage: 'expectedRetrieval not defined',
+					};
+				},
+			),
+		);
 	}
 });

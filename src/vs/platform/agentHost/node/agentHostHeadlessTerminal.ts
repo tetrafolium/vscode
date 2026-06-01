@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../base/common/event.js';
-import { DeferredPromise } from '../../../base/common/async.js';
-import { Disposable, DisposableStore } from '../../../base/common/lifecycle.js';
-import type { ILogService } from '../../log/common/log.js';
-import pkg from '@xterm/headless';
+import { Emitter, Event } from "../../../base/common/event.js";
+import { DeferredPromise } from "../../../base/common/async.js";
+import { Disposable, DisposableStore } from "../../../base/common/lifecycle.js";
+import type { ILogService } from "../../log/common/log.js";
+import pkg from "@xterm/headless";
 
 type XtermTerminal = pkg.Terminal;
 const { Terminal: XtermTerminal } = pkg;
@@ -29,7 +29,6 @@ export interface IAgentHostHeadlessTerminalOptions {
  * terminal state.
  */
 export class AgentHostHeadlessTerminal extends Disposable {
-
 	private readonly _terminal: XtermTerminal;
 	private readonly _logService: ILogService;
 	private readonly _onResponseData = this._register(new Emitter<string>());
@@ -46,37 +45,47 @@ export class AgentHostHeadlessTerminal extends Disposable {
 			scrollback: options.scrollback,
 			allowProposedApi: true,
 		};
-		this._terminal = options.terminalFactory?.(terminalOptions) ?? new XtermTerminal(terminalOptions);
+		this._terminal =
+			options.terminalFactory?.(terminalOptions) ??
+			new XtermTerminal(terminalOptions);
 
-		this._register(this._terminal.onData(data => {
-			if (this._isCursorPositionReportResponse(data)) {
-				this._logService.debug(`[AgentHostHeadlessTerminal] Forwarding terminal response ${JSON.stringify(data)}`);
-				this._onResponseData.fire(data);
-			} else {
-				this._logService.debug(`[AgentHostHeadlessTerminal] Dropping terminal response ${JSON.stringify(data)}`);
-			}
-		}));
+		this._register(
+			this._terminal.onData((data) => {
+				if (this._isCursorPositionReportResponse(data)) {
+					this._logService.debug(
+						`[AgentHostHeadlessTerminal] Forwarding terminal response ${JSON.stringify(data)}`,
+					);
+					this._onResponseData.fire(data);
+				} else {
+					this._logService.debug(
+						`[AgentHostHeadlessTerminal] Dropping terminal response ${JSON.stringify(data)}`,
+					);
+				}
+			}),
+		);
 		this._register({
 			dispose: () => {
 				this._isDisposed = true;
 				this._terminal.dispose();
-			}
+			},
 		});
 	}
 
 	writePtyData(data: string): Promise<void> {
-		this._writeBarrier = this._writeBarrier.catch(() => undefined).then(() => {
-			if (this._isDisposed) {
-				return;
-			}
-			return new Promise<void>(resolve => {
-				try {
-					this._terminal.write(data, resolve);
-				} catch {
-					resolve();
+		this._writeBarrier = this._writeBarrier
+			.catch(() => undefined)
+			.then(() => {
+				if (this._isDisposed) {
+					return;
 				}
+				return new Promise<void>((resolve) => {
+					try {
+						this._terminal.write(data, resolve);
+					} catch {
+						resolve();
+					}
+				});
 			});
-		});
 		return this._writeBarrier;
 	}
 
@@ -100,7 +109,9 @@ export class AgentHostHeadlessTerminal extends Disposable {
 		const deferred = new DeferredPromise<void>();
 		const complete = () => {
 			if (!deferred.isSettled) {
-				this._logService.debug('[AgentHostHeadlessTerminal] Detected alternate buffer entry');
+				this._logService.debug(
+					"[AgentHostHeadlessTerminal] Detected alternate buffer entry",
+				);
 				deferred.complete();
 			}
 		};
@@ -108,11 +119,13 @@ export class AgentHostHeadlessTerminal extends Disposable {
 		if (this.isInAltBuffer()) {
 			complete();
 		} else {
-			store.add(this._terminal.buffer.onBufferChange(() => {
-				if (this.isInAltBuffer()) {
-					complete();
-				}
-			}));
+			store.add(
+				this._terminal.buffer.onBufferChange(() => {
+					if (this.isInAltBuffer()) {
+						complete();
+					}
+				}),
+			);
 		}
 
 		return deferred.p;
@@ -121,7 +134,7 @@ export class AgentHostHeadlessTerminal extends Disposable {
 	clear(): void {
 		// xterm.clear() preserves the visible line content; emulate a terminal
 		// clear sequence so future terminal-state reads match a user-visible clear.
-		void this.writePtyData('\x1b[2J\x1b[3J\x1b[H');
+		void this.writePtyData("\x1b[2J\x1b[3J\x1b[H");
 	}
 
 	override dispose(): void {

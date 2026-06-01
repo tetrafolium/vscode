@@ -3,8 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Extensions, IConfigurationRegistry } from '../../../../platform/configuration/common/configurationRegistry.js';
-import { Registry } from '../../../../platform/registry/common/platform.js';
+import {
+	Extensions,
+	IConfigurationRegistry,
+} from "../../../../platform/configuration/common/configurationRegistry.js";
+import { Registry } from "../../../../platform/registry/common/platform.js";
 
 // ⚠️  WARNING — DO NOT ADD SETTINGS HERE ⚠️
 //
@@ -36,12 +39,16 @@ import { Registry } from '../../../../platform/registry/common/platform.js';
 // Only add entries to this file if the setting is declared by a third party and
 // cannot be annotated with `agentsWindow`, AND you have exhausted all other options.
 
-Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerDefaultConfigurations([{
-	overrides: {
-		'chat.customizationsMenu.userStoragePath': '~/.copilot',
-		'github.copilot.chat.claudeCode.enabled': true,
+Registry.as<IConfigurationRegistry>(
+	Extensions.Configuration,
+).registerDefaultConfigurations([
+	{
+		overrides: {
+			"chat.customizationsMenu.userStoragePath": "~/.copilot",
+			"github.copilot.chat.claudeCode.enabled": true,
+		},
+		donotCache: true,
+		preventExperimentOverride: true,
+		source: "sessionsDefaults",
 	},
-	donotCache: true,
-	preventExperimentOverride: true,
-	source: 'sessionsDefaults'
-}]);
+]);

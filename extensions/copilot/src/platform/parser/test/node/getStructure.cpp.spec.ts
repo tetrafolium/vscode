@@ -7,7 +7,11 @@ import { outdent } from 'outdent';
 import { afterAll, describe, expect, test } from 'vitest';
 import { _dispose } from '../../node/parserImpl';
 import { WASMLanguage } from '../../node/treeSitterLanguages';
-import { fromFixture, snapshotPathInFixture, srcWithAnnotatedStructure } from './getStructure.util';
+import {
+	fromFixture,
+	snapshotPathInFixture,
+	srcWithAnnotatedStructure,
+} from './getStructure.util';
 
 describe('getStructure - cpp', () => {
 	afterAll(() => _dispose());
@@ -17,21 +21,23 @@ describe('getStructure - cpp', () => {
 	}
 
 	test('source with different syntax constructs', async () => {
-
 		const filename = 'test.cpp';
 
 		const source = await fromFixture(filename);
 
-		await expect(await cppStruct(source)).toMatchFileSnapshot(snapshotPathInFixture(filename));
+		await expect(await cppStruct(source)).toMatchFileSnapshot(
+			snapshotPathInFixture(filename),
+		);
 	});
 
 	test('do not throw invalid range error', async () => {
-
 		const filename = 'problem1.cpp';
 
 		const source = await fromFixture(filename);
 
-		await expect(await cppStruct(source)).toMatchFileSnapshot(snapshotPathInFixture(filename));
+		await expect(await cppStruct(source)).toMatchFileSnapshot(
+			snapshotPathInFixture(filename),
+		);
 	});
 
 	test('do not throw invalid range error - 2', async () => {
@@ -71,6 +77,8 @@ describe('getStructure - cpp', () => {
 	test('trailing semicolon after class declaration', async () => {
 		const source = `class A {};`;
 
-		expect(await cppStruct(source)).toMatchInlineSnapshot(`"<CLASS_SPECIFIER>class A {};</CLASS_SPECIFIER>"`);
+		expect(await cppStruct(source)).toMatchInlineSnapshot(
+			`"<CLASS_SPECIFIER>class A {};</CLASS_SPECIFIER>"`,
+		);
 	});
 });

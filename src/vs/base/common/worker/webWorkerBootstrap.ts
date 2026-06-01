@@ -3,7 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IWebWorkerServerRequestHandler, IWebWorkerServerRequestHandlerFactory, WebWorkerServer } from './webWorker.js';
+import {
+	IWebWorkerServerRequestHandler,
+	IWebWorkerServerRequestHandlerFactory,
+	WebWorkerServer,
+} from "./webWorker.js";
 
 type MessageEvent = {
 	data: unknown;
@@ -16,15 +20,17 @@ declare const globalThis: {
 
 let initialized = false;
 
-export function initialize<T extends IWebWorkerServerRequestHandler>(factory: IWebWorkerServerRequestHandlerFactory<T>) {
+export function initialize<T extends IWebWorkerServerRequestHandler>(
+	factory: IWebWorkerServerRequestHandlerFactory<T>,
+) {
 	if (initialized) {
-		throw new Error('WebWorker already initialized!');
+		throw new Error("WebWorker already initialized!");
 	}
 	initialized = true;
 
 	const webWorkerServer = new WebWorkerServer<T>(
-		msg => globalThis.postMessage(msg),
-		(workerServer) => factory(workerServer)
+		(msg) => globalThis.postMessage(msg),
+		(workerServer) => factory(workerServer),
 	);
 
 	globalThis.onmessage = (e: MessageEvent) => {
@@ -34,7 +40,9 @@ export function initialize<T extends IWebWorkerServerRequestHandler>(factory: IW
 	return webWorkerServer;
 }
 
-export function bootstrapWebWorker(factory: IWebWorkerServerRequestHandlerFactory<any>) {
+export function bootstrapWebWorker(
+	factory: IWebWorkerServerRequestHandlerFactory<any>,
+) {
 	globalThis.onmessage = (_e: MessageEvent) => {
 		// Ignore first message in this case and initialize if not yet initialized
 		if (!initialized) {

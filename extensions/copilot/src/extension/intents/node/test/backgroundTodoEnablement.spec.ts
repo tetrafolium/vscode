@@ -3,8 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+} from 'vitest';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { MockEndpoint } from '../../../../platform/endpoint/test/node/mockEndpoint';
 import { IChatEndpoint } from '../../../../platform/networking/common/networking';
 import { IExperimentationService } from '../../../../platform/telemetry/common/nullExperimentationService';
@@ -19,12 +29,16 @@ import { IInstantiationService } from '../../../../util/vs/platform/instantiatio
 import { createExtensionUnitTestingServices } from '../../../test/node/services';
 import { TestChatRequest } from '../../../test/node/testHelpers';
 import { ToolName } from '../../../tools/common/toolNames';
-import { AgentIntentInvocation, getAgentTools, isBackgroundTodoAgentEnabled, isTodoToolExplicitlyEnabled } from '../agentIntent';
+import {
+	AgentIntentInvocation,
+	getAgentTools,
+	isBackgroundTodoAgentEnabled,
+	isTodoToolExplicitlyEnabled,
+} from '../agentIntent';
 
 // ─── isTodoToolExplicitlyEnabled unit tests ──────────────────────
 
 describe('isTodoToolExplicitlyEnabled', () => {
-
 	test('returns false when toolReferences is empty', () => {
 		const request = new TestChatRequest('fix the bug');
 		expect(isTodoToolExplicitlyEnabled(request)).toBe(false);
@@ -32,7 +46,10 @@ describe('isTodoToolExplicitlyEnabled', () => {
 
 	test('returns false when toolReferences contains unrelated tools', () => {
 		const request = new TestChatRequest('fix the bug');
-		(request as any).toolReferences = [{ name: 'read_file' }, { name: 'codebase' }];
+		(request as any).toolReferences = [
+			{ name: 'read_file' },
+			{ name: 'codebase' },
+		];
 		expect(isTodoToolExplicitlyEnabled(request)).toBe(false);
 	});
 
@@ -44,13 +61,19 @@ describe('isTodoToolExplicitlyEnabled', () => {
 
 	test('returns true when toolReferences contains manage_todo_list tool name', () => {
 		const request = new TestChatRequest('fix the bug');
-		(request as any).toolReferences = [{ name: ToolName.CoreManageTodoList }];
+		(request as any).toolReferences = [
+			{ name: ToolName.CoreManageTodoList },
+		];
 		expect(isTodoToolExplicitlyEnabled(request)).toBe(true);
 	});
 
 	test('returns true when toolReferences has mixed tools including todo', () => {
 		const request = new TestChatRequest('fix the bug');
-		(request as any).toolReferences = [{ name: 'read_file' }, { name: 'todo' }, { name: 'codebase' }];
+		(request as any).toolReferences = [
+			{ name: 'read_file' },
+			{ name: 'todo' },
+			{ name: 'codebase' },
+		];
 		expect(isTodoToolExplicitlyEnabled(request)).toBe(true);
 	});
 
@@ -74,19 +97,25 @@ describe('getAgentTools background todo enablement', () => {
 
 	beforeAll(() => {
 		const services = createExtensionUnitTestingServices();
-		services.define(IWorkspaceFileIndex, new SyncDescriptor(NullWorkspaceFileIndex));
-		services.define(IWorkspaceService, new SyncDescriptor(
-			TestWorkspaceService,
-			[
+		services.define(
+			IWorkspaceFileIndex,
+			new SyncDescriptor(NullWorkspaceFileIndex),
+		);
+		services.define(
+			IWorkspaceService,
+			new SyncDescriptor(TestWorkspaceService, [
 				[URI.file('/workspace')],
-				[]
-			]
-		));
+				[],
+			]),
+		);
 		accessor = services.createTestingAccessor();
 		instantiationService = accessor.get(IInstantiationService);
 		configService = accessor.get(IConfigurationService);
 		experimentationService = accessor.get(IExperimentationService);
-		mockEndpoint = instantiationService.createInstance(MockEndpoint, undefined);
+		mockEndpoint = instantiationService.createInstance(
+			MockEndpoint,
+			undefined,
+		);
 	});
 
 	afterAll(() => {
@@ -95,46 +124,96 @@ describe('getAgentTools background todo enablement', () => {
 
 	beforeEach(() => {
 		// Reset to experiment disabled
-		configService.setConfig(ConfigKey.Advanced.BackgroundTodoAgentEnabled, false);
+		configService.setConfig(
+			ConfigKey.Advanced.BackgroundTodoAgentEnabled,
+			false,
+		);
 	});
 
 	function hasTodoTool(tools: readonly { name: string }[]): boolean {
-		return tools.some(t => t.name === ToolName.CoreManageTodoList);
+		return tools.some((t) => t.name === ToolName.CoreManageTodoList);
 	}
 
 	test('background todo agent is enabled only when experiment is on and todo is not explicit', () => {
 		const request = new TestChatRequest('fix the bug');
-		configService.setConfig(ConfigKey.Advanced.BackgroundTodoAgentEnabled, false);
-		expect(isBackgroundTodoAgentEnabled(configService, experimentationService, request)).toBe(false);
+		configService.setConfig(
+			ConfigKey.Advanced.BackgroundTodoAgentEnabled,
+			false,
+		);
+		expect(
+			isBackgroundTodoAgentEnabled(
+				configService,
+				experimentationService,
+				request,
+			),
+		).toBe(false);
 
-		configService.setConfig(ConfigKey.Advanced.BackgroundTodoAgentEnabled, true);
-		expect(isBackgroundTodoAgentEnabled(configService, experimentationService, request)).toBe(true);
+		configService.setConfig(
+			ConfigKey.Advanced.BackgroundTodoAgentEnabled,
+			true,
+		);
+		expect(
+			isBackgroundTodoAgentEnabled(
+				configService,
+				experimentationService,
+				request,
+			),
+		).toBe(true);
 
 		(request as any).toolReferences = [{ name: 'todo' }];
-		expect(isBackgroundTodoAgentEnabled(configService, experimentationService, request)).toBe(false);
+		expect(
+			isBackgroundTodoAgentEnabled(
+				configService,
+				experimentationService,
+				request,
+			),
+		).toBe(false);
 	});
 
 	test('todo tool is not in enabled tools when experiment is on', async () => {
-		configService.setConfig(ConfigKey.Advanced.BackgroundTodoAgentEnabled, true);
+		configService.setConfig(
+			ConfigKey.Advanced.BackgroundTodoAgentEnabled,
+			true,
+		);
 		const request = new TestChatRequest('fix the bug');
-		const tools = await instantiationService.invokeFunction(getAgentTools, request, mockEndpoint);
+		const tools = await instantiationService.invokeFunction(
+			getAgentTools,
+			request,
+			mockEndpoint,
+		);
 		expect(hasTodoTool(tools)).toBe(false);
 	});
 
 	test('todo tool is not in enabled tools when experiment is on even with tool picker default', async () => {
-		configService.setConfig(ConfigKey.Advanced.BackgroundTodoAgentEnabled, true);
+		configService.setConfig(
+			ConfigKey.Advanced.BackgroundTodoAgentEnabled,
+			true,
+		);
 		const request = new TestChatRequest('fix the bug');
 		// Simulate default tool picker state: core tools appear as enabled
-		request.tools = new Map([[{ name: ToolName.CoreManageTodoList } as any, true]]);
-		const tools = await instantiationService.invokeFunction(getAgentTools, request, mockEndpoint);
+		request.tools = new Map([
+			[{ name: ToolName.CoreManageTodoList } as any, true],
+		]);
+		const tools = await instantiationService.invokeFunction(
+			getAgentTools,
+			request,
+			mockEndpoint,
+		);
 		expect(hasTodoTool(tools)).toBe(false);
 	});
 
 	test('todo tool is disabled when experiment is on and user has not referenced #todo', async () => {
-		configService.setConfig(ConfigKey.Advanced.BackgroundTodoAgentEnabled, true);
+		configService.setConfig(
+			ConfigKey.Advanced.BackgroundTodoAgentEnabled,
+			true,
+		);
 		const request = new TestChatRequest('fix the bug');
 		(request as any).toolReferences = [{ name: 'read_file' }];
-		const tools = await instantiationService.invokeFunction(getAgentTools, request, mockEndpoint);
+		const tools = await instantiationService.invokeFunction(
+			getAgentTools,
+			request,
+			mockEndpoint,
+		);
 		expect(hasTodoTool(tools)).toBe(false);
 	});
 });
@@ -148,12 +227,26 @@ describe('getAgentTools background todo enablement', () => {
 // modifier is compile-time only, so the method is reachable at runtime.
 
 describe('AgentIntentInvocation._maybeStartBackgroundTodoPass subagent guard', () => {
-
-	function getMethod(): (this: unknown, promptContext: unknown, token: unknown) => void {
-		return (AgentIntentInvocation.prototype as unknown as { _maybeStartBackgroundTodoPass: (this: unknown, promptContext: unknown, token: unknown) => void })._maybeStartBackgroundTodoPass;
+	function getMethod(): (
+		this: unknown,
+		promptContext: unknown,
+		token: unknown,
+	) => void {
+		return (
+			AgentIntentInvocation.prototype as unknown as {
+				_maybeStartBackgroundTodoPass: (
+					this: unknown,
+					promptContext: unknown,
+					token: unknown,
+				) => void;
+			}
+		)._maybeStartBackgroundTodoPass;
 	}
 
-	function makeStub(request: TestChatRequest, processorLookup: () => unknown) {
+	function makeStub(
+		request: TestChatRequest,
+		processorLookup: () => unknown,
+	) {
 		return {
 			request,
 			_getOrCreateBackgroundTodoProcessor: processorLookup,
@@ -162,14 +255,16 @@ describe('AgentIntentInvocation._maybeStartBackgroundTodoPass subagent guard', (
 			instantiationService: {},
 			toolsService: {},
 			telemetryService: {},
-			logService: { debug: () => { } },
+			logService: { debug: () => {} },
 		};
 	}
 
 	test('returns early without touching the processor when request is from a subagent', () => {
 		let processorLookups = 0;
 		const request = new TestChatRequest('do work');
-		(request as unknown as { subAgentInvocationId: string }).subAgentInvocationId = 'subagent-uuid-1';
+		(
+			request as unknown as { subAgentInvocationId: string }
+		).subAgentInvocationId = 'subagent-uuid-1';
 
 		const stub = makeStub(request, () => {
 			processorLookups++;
@@ -198,7 +293,9 @@ describe('AgentIntentInvocation._maybeStartBackgroundTodoPass subagent guard', (
 	test('treats an empty-string subAgentInvocationId as not-a-subagent', () => {
 		let processorLookups = 0;
 		const request = new TestChatRequest('do work');
-		(request as unknown as { subAgentInvocationId: string }).subAgentInvocationId = '';
+		(
+			request as unknown as { subAgentInvocationId: string }
+		).subAgentInvocationId = '';
 
 		const stub = makeStub(request, () => {
 			processorLookups++;

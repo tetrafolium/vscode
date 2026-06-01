@@ -51,7 +51,7 @@ suite('VerboseBlockTrimmer', function () {
 						j++;
 					}
 				}
-			` + '\n'
+			` + '\n',
 		);
 	});
 
@@ -260,8 +260,13 @@ suite('VerboseBlockTrimmer', function () {
 		`);
 	});
 
-	async function testCompletionTrimming(textWithCompletion: string): Promise<void> {
-		await testCompletionTrimmingWithTrimmer(textWithCompletion, VerboseBlockTrimmer);
+	async function testCompletionTrimming(
+		textWithCompletion: string,
+	): Promise<void> {
+		await testCompletionTrimmingWithTrimmer(
+			textWithCompletion,
+			VerboseBlockTrimmer,
+		);
 	}
 });
 
@@ -359,7 +364,7 @@ suite('TerseBlockTrimmer', function () {
 				i = 0âœ‚ï¸
 				while i < len(haystack):
 				`,
-			'python'
+			'python',
 		);
 	});
 
@@ -372,7 +377,7 @@ suite('TerseBlockTrimmer', function () {
 					return câœ‚ï¸
 				else:
 			`,
-			'python'
+			'python',
 		);
 	});
 
@@ -388,7 +393,7 @@ suite('TerseBlockTrimmer', function () {
 					if haystack[i] == needle {
 						return i
 				`,
-			'go'
+			'go',
 		);
 	});
 
@@ -404,7 +409,7 @@ suite('TerseBlockTrimmer', function () {
 					}
 				}
 				`,
-			'php'
+			'php',
 		);
 	});
 
@@ -419,7 +424,7 @@ suite('TerseBlockTrimmer', function () {
 					i -= 1
 				end
 				`,
-			'ruby'
+			'ruby',
 		);
 	});
 
@@ -435,7 +440,7 @@ suite('TerseBlockTrimmer', function () {
 						}
 					}
 				`,
-			'java'
+			'java',
 		);
 	});
 
@@ -451,7 +456,7 @@ suite('TerseBlockTrimmer', function () {
 						}
 					}
 				`,
-			'csharp'
+			'csharp',
 		);
 	});
 
@@ -469,7 +474,7 @@ suite('TerseBlockTrimmer', function () {
 					i--;
 				}
 				`,
-			'c'
+			'c',
 		);
 	});
 
@@ -493,31 +498,45 @@ suite('TerseBlockTrimmer', function () {
 				}
 			};
 			`,
-			'cpp'
+			'cpp',
 		);
 	});
 
-	async function testCompletionTrimming(textWithCompletion: string, languageId = 'typescript'): Promise<void> {
-		await testCompletionTrimmingWithTrimmer(textWithCompletion, TerseBlockTrimmer, languageId);
+	async function testCompletionTrimming(
+		textWithCompletion: string,
+		languageId = 'typescript',
+	): Promise<void> {
+		await testCompletionTrimmingWithTrimmer(
+			textWithCompletion,
+			TerseBlockTrimmer,
+			languageId,
+		);
 	}
 });
 
 interface BlockTrimmerConstructor {
-	new(languageId: string, prefix: string, completion: string): BlockTrimmer;
+	new (languageId: string, prefix: string, completion: string): BlockTrimmer;
 }
 
 async function testCompletionTrimmingWithTrimmer(
 	textWithCompletion: string,
 	blockTrimmerType: BlockTrimmerConstructor,
-	languageId = 'typescript'
+	languageId = 'typescript',
 ): Promise<void> {
 	const cursorMarker = 'âš';
 	const trimMarker = 'âœ‚ï¸';
 	const cursorPos = textWithCompletion.indexOf(cursorMarker);
 	const trimPos = textWithCompletion.indexOf(trimMarker);
 	const prefix = textWithCompletion.substring(0, cursorPos);
-	const trimmed = textWithCompletion.substring(cursorPos + cursorMarker.length, trimPos === -1 ? undefined : trimPos);
-	const completion = trimmed + (trimPos === -1 ? '' : textWithCompletion.substring(trimPos + trimMarker.length));
+	const trimmed = textWithCompletion.substring(
+		cursorPos + cursorMarker.length,
+		trimPos === -1 ? undefined : trimPos,
+	);
+	const completion =
+		trimmed +
+		(trimPos === -1
+			? ''
+			: textWithCompletion.substring(trimPos + trimMarker.length));
 	const expectedOffset = trimPos === -1 ? undefined : trimmed.length;
 	const trimmer = new blockTrimmerType(languageId, prefix, completion);
 
@@ -535,7 +554,7 @@ async function testCompletionTrimmingWithTrimmer(
 
 			actual completion:
 				${JSON.stringify(completion.substring(0, actualOffset))}
-		`
+		`,
 	);
 }
 
@@ -549,24 +568,42 @@ suite('getBlockPositionType()', function () {
 	});
 
 	test('with an empty block returns EmptyBlock', async function () {
-		await testPositionType(BlockPositionType.EmptyBlock, 'while (true) { âš }');
-		await testPositionType(BlockPositionType.EmptyBlock, 'function example() { âš }');
+		await testPositionType(
+			BlockPositionType.EmptyBlock,
+			'while (true) { âš }',
+		);
+		await testPositionType(
+			BlockPositionType.EmptyBlock,
+			'function example() { âš }',
+		);
 	});
 
 	test('at the end of a non-empty block returns BlockEnd', async function () {
-		await testPositionType(BlockPositionType.BlockEnd, 'while (true) { x += 1; âš }');
+		await testPositionType(
+			BlockPositionType.BlockEnd,
+			'while (true) { x += 1; âš }',
+		);
 	});
 
 	test('mid-statement at the end of a non-empty block returns BlockEnd', async function () {
-		await testPositionType(BlockPositionType.BlockEnd, 'while (true) { x += 1âš; }');
+		await testPositionType(
+			BlockPositionType.BlockEnd,
+			'while (true) { x += 1âš; }',
+		);
 	});
 
 	test('between statements within a block returns MidBlock', async function () {
-		await testPositionType(BlockPositionType.MidBlock, 'while (true) { last = x; âš x += 1; }');
+		await testPositionType(
+			BlockPositionType.MidBlock,
+			'while (true) { last = x; âš x += 1; }',
+		);
 	});
 
 	test('on a statement before the last within a block returns MidBlock', async function () {
-		await testPositionType(BlockPositionType.MidBlock, 'while (true) { last = xâš; x += 1; }');
+		await testPositionType(
+			BlockPositionType.MidBlock,
+			'while (true) { last = xâš; x += 1; }',
+		);
 	});
 
 	test('on a multi-line simple statement within a block before the last line returns MidBlock', async function () {
@@ -581,7 +618,7 @@ suite('getBlockPositionType()', function () {
 					arg3
 				);
 			}
-			`
+			`,
 		);
 	});
 
@@ -596,13 +633,16 @@ suite('getBlockPositionType()', function () {
 					arg3
 				âš);
 			}
-			`
+			`,
 		);
 	});
 
 	// confirm single-line if statement behavior in JS given the special treatment by StatementTree:
 	test('inside an empty block of a single-line if statement in JS returns EmptyBlock', async function () {
-		await testPositionType(BlockPositionType.EmptyBlock, 'if (true) { âš }');
+		await testPositionType(
+			BlockPositionType.EmptyBlock,
+			'if (true) { âš }',
+		);
 	});
 
 	test('supports Python', async function () {
@@ -613,7 +653,7 @@ suite('getBlockPositionType()', function () {
 					âš
 					pass
 			`,
-			'python'
+			'python',
 		);
 	});
 
@@ -627,7 +667,7 @@ suite('getBlockPositionType()', function () {
 					âš
 				}
 			`,
-			'go'
+			'go',
 		);
 	});
 
@@ -640,7 +680,7 @@ suite('getBlockPositionType()', function () {
 					âš
 				}
 			`,
-			'php'
+			'php',
 		);
 	});
 
@@ -652,7 +692,7 @@ suite('getBlockPositionType()', function () {
 					âš
 				end
 			`,
-			'ruby'
+			'ruby',
 		);
 	});
 
@@ -666,7 +706,7 @@ suite('getBlockPositionType()', function () {
 					}
 				}
 			`,
-			'java'
+			'java',
 		);
 	});
 
@@ -681,7 +721,7 @@ suite('getBlockPositionType()', function () {
 					}
 				}
 			`,
-			'csharp'
+			'csharp',
 		);
 	});
 
@@ -695,7 +735,7 @@ suite('getBlockPositionType()', function () {
 					âš
 				}
 			`,
-			'cpp'
+			'cpp',
 		);
 	});
 
@@ -709,20 +749,27 @@ suite('getBlockPositionType()', function () {
 					âš
 				}
 			`,
-			'cpp'
+			'cpp',
 		);
 	});
 
 	async function testPositionType(
 		expectedType: BlockPositionType,
 		textWithCursor: string,
-		languageId = 'typescript'
+		languageId = 'typescript',
 	): Promise<void> {
 		const cursorMarker = 'âš';
 		const cursorPos = textWithCursor.indexOf(cursorMarker);
 		const prefix = textWithCursor.substring(0, cursorPos);
-		const suffix = textWithCursor.substring(cursorPos + cursorMarker.length);
-		const doc = createTextDocument('file:///test.ts', languageId, 0, prefix + suffix);
+		const suffix = textWithCursor.substring(
+			cursorPos + cursorMarker.length,
+		);
+		const doc = createTextDocument(
+			'file:///test.ts',
+			languageId,
+			0,
+			prefix + suffix,
+		);
 		const pos = doc.positionAt(cursorPos);
 
 		const actualType = await getBlockPositionType(doc, pos);

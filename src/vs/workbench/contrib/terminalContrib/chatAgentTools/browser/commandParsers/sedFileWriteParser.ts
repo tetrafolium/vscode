@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ICommandFileWriteParser } from './commandFileWriteParser.js';
+import { ICommandFileWriteParser } from "./commandFileWriteParser.js";
 
 /**
  * Parser for detecting file writes from `sed` commands using in-place editing.
@@ -17,7 +17,7 @@ import { ICommandFileWriteParser } from './commandFileWriteParser.js';
  * - `sed -I 's/foo/bar/' file.txt` (BSD case-insensitive variant)
  */
 export class SedFileWriteParser implements ICommandFileWriteParser {
-	readonly commandName = 'sed';
+	readonly commandName = "sed";
 
 	canHandle(commandText: string): boolean {
 		// Check if this is a sed command
@@ -26,7 +26,8 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 		}
 
 		// Check for -i, -I, or --in-place flag
-		const inPlaceRegex = /(?:^|\s)(-[a-zA-Z]*[iI][a-zA-Z]*\S*|--in-place(?:=\S*)?|(-i|-I)\s*'[^']*'|(-i|-I)\s*"[^"]*")(?:\s|$)/;
+		const inPlaceRegex =
+			/(?:^|\s)(-[a-zA-Z]*[iI][a-zA-Z]*\S*|--in-place(?:=\S*)?|(-i|-I)\s*'[^']*'|(-i|-I)\s*"[^"]*")(?:\s|$)/;
 		return inPlaceRegex.test(commandText);
 	}
 
@@ -40,7 +41,7 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 	 */
 	private _tokenizeCommand(commandText: string): string[] {
 		const tokens: string[] = [];
-		let current = '';
+		let current = "";
 		let inSingleQuote = false;
 		let inDoubleQuote = false;
 		let escaped = false;
@@ -54,13 +55,13 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 				continue;
 			}
 
-			if (char === '\\' && !inSingleQuote) {
+			if (char === "\\" && !inSingleQuote) {
 				escaped = true;
 				current += char;
 				continue;
 			}
 
-			if (char === '\'' && !inDoubleQuote) {
+			if (char === "'" && !inDoubleQuote) {
 				inSingleQuote = !inSingleQuote;
 				current += char;
 				continue;
@@ -75,7 +76,7 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 			if (/\s/.test(char) && !inSingleQuote && !inDoubleQuote) {
 				if (current) {
 					tokens.push(current);
-					current = '';
+					current = "";
 				}
 				continue;
 			}
@@ -95,7 +96,7 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 	 * Files are generally the last non-option, non-script arguments.
 	 */
 	private _extractFileTargets(tokens: string[]): string[] {
-		if (tokens.length === 0 || tokens[0] !== 'sed') {
+		if (tokens.length === 0 || tokens[0] !== "sed") {
 			return [];
 		}
 
@@ -107,19 +108,19 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 			const token = tokens[i];
 
 			// Long options
-			if (token.startsWith('--')) {
-				if (token === '--in-place' || token.startsWith('--in-place=')) {
+			if (token.startsWith("--")) {
+				if (token === "--in-place" || token.startsWith("--in-place=")) {
 					// In-place flag (already verified we have one)
 					i++;
 					continue;
 				}
-				if (token === '--expression' || token === '--file') {
+				if (token === "--expression" || token === "--file") {
 					// Skip the option and its argument
 					i += 2;
 					foundScript = true;
 					continue;
 				}
-				if (token.startsWith('--expression=') || token.startsWith('--file=')) {
+				if (token.startsWith("--expression=") || token.startsWith("--file=")) {
 					i++;
 					foundScript = true;
 					continue;
@@ -130,13 +131,13 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 			}
 
 			// Short options
-			if (token.startsWith('-') && token.length > 1 && token[1] !== '-') {
+			if (token.startsWith("-") && token.length > 1 && token[1] !== "-") {
 				// Could be combined flags like -ni or -i.bak
 				const flags = token.slice(1);
 
 				// Check if this is -i with backup suffix attached (e.g., -i.bak)
-				const iIndex = flags.indexOf('i');
-				const IIndex = flags.indexOf('I');
+				const iIndex = flags.indexOf("i");
+				const IIndex = flags.indexOf("I");
 				const inPlaceIndex = iIndex >= 0 ? iIndex : IIndex;
 
 				if (inPlaceIndex >= 0 && inPlaceIndex < flags.length - 1) {
@@ -146,20 +147,30 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 				}
 
 				// Check if -i or -I is the last flag and next token could be backup suffix
-				if ((flags.endsWith('i') || flags.endsWith('I')) && i + 1 < tokens.length) {
+				if (
+					(flags.endsWith("i") || flags.endsWith("I")) &&
+					i + 1 < tokens.length
+				) {
 					const nextToken = tokens[i + 1];
 					// macOS/BSD style: -i '' or -i "" (empty string backup suffix)
 					// Only treat it as a backup suffix if it's empty or looks like a backup
 					// extension (starts with '.' and is short). Don't match sed scripts like 's/foo/bar/'.
-					if (nextToken === '\'\'' || nextToken === '""') {
+					if (nextToken === "''" || nextToken === '""') {
 						i += 2;
 						continue;
 					}
 					// Check for quoted backup suffixes like '.bak' or ".backup"
-					if ((nextToken.startsWith('\'') && nextToken.endsWith('\'')) || (nextToken.startsWith('"') && nextToken.endsWith('"'))) {
+					if (
+						(nextToken.startsWith("'") && nextToken.endsWith("'")) ||
+						(nextToken.startsWith('"') && nextToken.endsWith('"'))
+					) {
 						const unquoted = nextToken.slice(1, -1);
 						// Backup suffixes typically start with '.' and are short extensions
-						if (unquoted.startsWith('.') && unquoted.length <= 10 && !unquoted.includes('/')) {
+						if (
+							unquoted.startsWith(".") &&
+							unquoted.length <= 10 &&
+							!unquoted.includes("/")
+						) {
 							i += 2;
 							continue;
 						}
@@ -167,9 +178,9 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 				}
 
 				// Check for -e or -f which take arguments
-				if (flags.includes('e') || flags.includes('f')) {
-					const eIndex = flags.indexOf('e');
-					const fIndex = flags.indexOf('f');
+				if (flags.includes("e") || flags.includes("f")) {
+					const eIndex = flags.indexOf("e");
+					const fIndex = flags.indexOf("f");
 					const optIndex = eIndex >= 0 ? eIndex : fIndex;
 
 					// If -e or -f is not the last character, the rest of the token is the argument
@@ -200,7 +211,10 @@ export class SedFileWriteParser implements ICommandFileWriteParser {
 			// Subsequent non-option arguments are files
 			// Strip surrounding quotes from file path
 			let file = token;
-			if ((file.startsWith('\'') && file.endsWith('\'')) || (file.startsWith('"') && file.endsWith('"'))) {
+			if (
+				(file.startsWith("'") && file.endsWith("'")) ||
+				(file.startsWith('"') && file.endsWith('"'))
+			) {
 				file = file.slice(1, -1);
 			}
 			files.push(file);

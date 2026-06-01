@@ -27,7 +27,12 @@ describe('SessionStore', () => {
 	});
 
 	it('upserts a session', () => {
-		store.upsertSession({ id: 'session-1', branch: 'main', repository: 'owner/repo', host_type: 'vscode' });
+		store.upsertSession({
+			id: 'session-1',
+			branch: 'main',
+			repository: 'owner/repo',
+			host_type: 'vscode',
+		});
 
 		const session = store.getSession('session-1');
 		expect(session).toBeDefined();
@@ -56,8 +61,18 @@ describe('SessionStore', () => {
 
 	it('inserts turns and retrieves them ordered', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.insertTurn({ session_id: 'session-1', turn_index: 0, user_message: 'Hello', assistant_response: 'Hi!' });
-		store.insertTurn({ session_id: 'session-1', turn_index: 1, user_message: 'Fix bug', assistant_response: 'Done.' });
+		store.insertTurn({
+			session_id: 'session-1',
+			turn_index: 0,
+			user_message: 'Hello',
+			assistant_response: 'Hi!',
+		});
+		store.insertTurn({
+			session_id: 'session-1',
+			turn_index: 1,
+			user_message: 'Fix bug',
+			assistant_response: 'Done.',
+		});
 
 		const turns = store.getTurns('session-1');
 		expect(turns).toHaveLength(2);
@@ -68,7 +83,11 @@ describe('SessionStore', () => {
 	});
 
 	it('insertTurn auto-creates session if not exists', () => {
-		store.insertTurn({ session_id: 'session-new', turn_index: 0, user_message: 'test' });
+		store.insertTurn({
+			session_id: 'session-new',
+			turn_index: 0,
+			user_message: 'test',
+		});
 
 		const session = store.getSession('session-new');
 		expect(session).toBeDefined();
@@ -77,8 +96,16 @@ describe('SessionStore', () => {
 
 	it('insertTurn upserts on conflict', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.insertTurn({ session_id: 'session-1', turn_index: 0, user_message: 'Hello' });
-		store.insertTurn({ session_id: 'session-1', turn_index: 0, assistant_response: 'Hi!' });
+		store.insertTurn({
+			session_id: 'session-1',
+			turn_index: 0,
+			user_message: 'Hello',
+		});
+		store.insertTurn({
+			session_id: 'session-1',
+			turn_index: 0,
+			assistant_response: 'Hi!',
+		});
 
 		const turns = store.getTurns('session-1');
 		expect(turns).toHaveLength(1);
@@ -88,19 +115,39 @@ describe('SessionStore', () => {
 
 	it('inserts and retrieves files', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.insertFile({ session_id: 'session-1', file_path: '/src/index.ts', tool_name: 'apply_patch', turn_index: 0 });
-		store.insertFile({ session_id: 'session-1', file_path: '/src/utils.ts', tool_name: 'create_file', turn_index: 1 });
+		store.insertFile({
+			session_id: 'session-1',
+			file_path: '/src/index.ts',
+			tool_name: 'apply_patch',
+			turn_index: 0,
+		});
+		store.insertFile({
+			session_id: 'session-1',
+			file_path: '/src/utils.ts',
+			tool_name: 'create_file',
+			turn_index: 1,
+		});
 
 		const files = store.getFiles('session-1');
 		expect(files).toHaveLength(2);
-		expect(files.map(f => f.file_path)).toContain('/src/index.ts');
-		expect(files.map(f => f.file_path)).toContain('/src/utils.ts');
+		expect(files.map((f) => f.file_path)).toContain('/src/index.ts');
+		expect(files.map((f) => f.file_path)).toContain('/src/utils.ts');
 	});
 
 	it('insertFile ignores duplicate file paths (first wins)', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.insertFile({ session_id: 'session-1', file_path: '/src/index.ts', tool_name: 'apply_patch', turn_index: 0 });
-		store.insertFile({ session_id: 'session-1', file_path: '/src/index.ts', tool_name: 'str_replace_editor', turn_index: 5 });
+		store.insertFile({
+			session_id: 'session-1',
+			file_path: '/src/index.ts',
+			tool_name: 'apply_patch',
+			turn_index: 0,
+		});
+		store.insertFile({
+			session_id: 'session-1',
+			file_path: '/src/index.ts',
+			tool_name: 'str_replace_editor',
+			turn_index: 5,
+		});
 
 		const files = store.getFiles('session-1');
 		expect(files).toHaveLength(1);
@@ -110,19 +157,39 @@ describe('SessionStore', () => {
 
 	it('inserts and retrieves refs', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.insertRef({ session_id: 'session-1', ref_type: 'pr', ref_value: '123' });
-		store.insertRef({ session_id: 'session-1', ref_type: 'commit', ref_value: 'abc123' });
+		store.insertRef({
+			session_id: 'session-1',
+			ref_type: 'pr',
+			ref_value: '123',
+		});
+		store.insertRef({
+			session_id: 'session-1',
+			ref_type: 'commit',
+			ref_value: 'abc123',
+		});
 
 		const refs = store.getRefs('session-1');
 		expect(refs).toHaveLength(2);
-		expect(refs.find(r => r.ref_type === 'pr')!.ref_value).toBe('123');
-		expect(refs.find(r => r.ref_type === 'commit')!.ref_value).toBe('abc123');
+		expect(refs.find((r) => r.ref_type === 'pr')!.ref_value).toBe('123');
+		expect(refs.find((r) => r.ref_type === 'commit')!.ref_value).toBe(
+			'abc123',
+		);
 	});
 
 	it('insertRef ignores duplicate (session_id, ref_type, ref_value)', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.insertRef({ session_id: 'session-1', ref_type: 'pr', ref_value: '123', turn_index: 0 });
-		store.insertRef({ session_id: 'session-1', ref_type: 'pr', ref_value: '123', turn_index: 5 });
+		store.insertRef({
+			session_id: 'session-1',
+			ref_type: 'pr',
+			ref_value: '123',
+			turn_index: 0,
+		});
+		store.insertRef({
+			session_id: 'session-1',
+			ref_type: 'pr',
+			ref_value: '123',
+			turn_index: 5,
+		});
 
 		const refs = store.getRefs('session-1');
 		expect(refs).toHaveLength(1);
@@ -150,9 +217,21 @@ describe('SessionStore', () => {
 
 	it('getMaxTurnIndex returns highest turn index', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.insertTurn({ session_id: 'session-1', turn_index: 0, user_message: 'a' });
-		store.insertTurn({ session_id: 'session-1', turn_index: 3, user_message: 'b' });
-		store.insertTurn({ session_id: 'session-1', turn_index: 1, user_message: 'c' });
+		store.insertTurn({
+			session_id: 'session-1',
+			turn_index: 0,
+			user_message: 'a',
+		});
+		store.insertTurn({
+			session_id: 'session-1',
+			turn_index: 3,
+			user_message: 'b',
+		});
+		store.insertTurn({
+			session_id: 'session-1',
+			turn_index: 1,
+			user_message: 'c',
+		});
 
 		expect(store.getMaxTurnIndex('session-1')).toBe(3);
 	});
@@ -180,9 +259,15 @@ describe('SessionStore', () => {
 	});
 
 	it('executeReadOnly returns rows for a SELECT query', () => {
-		store.upsertSession({ id: 'session-1', branch: 'main', repository: 'owner/repo' });
+		store.upsertSession({
+			id: 'session-1',
+			branch: 'main',
+			repository: 'owner/repo',
+		});
 
-		const rows = store.executeReadOnly('SELECT id, branch FROM sessions WHERE id = \'session-1\'');
+		const rows = store.executeReadOnly(
+			"SELECT id, branch FROM sessions WHERE id = 'session-1'",
+		);
 		expect(rows).toHaveLength(1);
 		expect((rows[0] as { id: string }).id).toBe('session-1');
 		expect((rows[0] as { branch: string }).branch).toBe('main');
@@ -190,7 +275,11 @@ describe('SessionStore', () => {
 
 	it('FTS5 search indexes turn content', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.insertTurn({ session_id: 'session-1', turn_index: 0, user_message: 'How do I implement authentication?' });
+		store.insertTurn({
+			session_id: 'session-1',
+			turn_index: 0,
+			user_message: 'How do I implement authentication?',
+		});
 
 		const results = store.search('authentication');
 		expect(results).toHaveLength(1);
@@ -214,7 +303,11 @@ describe('SessionStore', () => {
 
 	it('indexWorkspaceArtifact stores and searches content', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.indexWorkspaceArtifact('session-1', '/workspace/plan.md', 'Implement user registration feature');
+		store.indexWorkspaceArtifact(
+			'session-1',
+			'/workspace/plan.md',
+			'Implement user registration feature',
+		);
 
 		const results = store.search('registration');
 		expect(results).toHaveLength(1);
@@ -223,8 +316,16 @@ describe('SessionStore', () => {
 
 	it('indexWorkspaceArtifact replaces previous content for same path', () => {
 		store.upsertSession({ id: 'session-1' });
-		store.indexWorkspaceArtifact('session-1', '/workspace/plan.md', 'Old plan');
-		store.indexWorkspaceArtifact('session-1', '/workspace/plan.md', 'New plan with registration');
+		store.indexWorkspaceArtifact(
+			'session-1',
+			'/workspace/plan.md',
+			'Old plan',
+		);
+		store.indexWorkspaceArtifact(
+			'session-1',
+			'/workspace/plan.md',
+			'New plan with registration',
+		);
 
 		const results = store.search('registration');
 		expect(results).toHaveLength(1);

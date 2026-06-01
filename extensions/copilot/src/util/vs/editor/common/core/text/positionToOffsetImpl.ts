@@ -19,7 +19,7 @@ export abstract class PositionOffsetTransformerBase {
 	getOffsetRange(range: Range): OffsetRange {
 		return new OffsetRange(
 			this.getOffset(range.getStartPosition()),
-			this.getOffset(range.getEndPosition())
+			this.getOffset(range.getEndPosition()),
 		);
 	}
 
@@ -28,25 +28,33 @@ export abstract class PositionOffsetTransformerBase {
 	getRange(offsetRange: OffsetRange): Range {
 		return Range.fromPositions(
 			this.getPosition(offsetRange.start),
-			this.getPosition(offsetRange.endExclusive)
+			this.getPosition(offsetRange.endExclusive),
 		);
 	}
 
 	getStringEdit(edit: TextEdit): StringEdit {
-		const edits = edit.replacements.map(e => this.getStringReplacement(e));
+		const edits = edit.replacements.map((e) =>
+			this.getStringReplacement(e),
+		);
 		return new Deps.deps.StringEdit(edits);
 	}
 
 	getStringReplacement(edit: TextReplacement): StringReplacement {
-		return new Deps.deps.StringReplacement(this.getOffsetRange(edit.range), edit.text);
+		return new Deps.deps.StringReplacement(
+			this.getOffsetRange(edit.range),
+			edit.text,
+		);
 	}
 
 	getTextReplacement(edit: StringReplacement): TextReplacement {
-		return new Deps.deps.TextReplacement(this.getRange(edit.replaceRange), edit.newText);
+		return new Deps.deps.TextReplacement(
+			this.getRange(edit.replaceRange),
+			edit.newText,
+		);
 	}
 
 	getTextEdit(edit: StringEdit): TextEdit {
-		const edits = edit.replacements.map(e => this.getTextReplacement(e));
+		const edits = edit.replacements.map((e) => this.getTextReplacement(e));
 		return new Deps.deps.TextEdit(edits);
 	}
 }
@@ -63,7 +71,9 @@ class Deps {
 	static _deps: IDeps | undefined = undefined;
 	static get deps(): IDeps {
 		if (!this._deps) {
-			throw new Error('Dependencies not set. Call _setDependencies first.');
+			throw new Error(
+				'Dependencies not set. Call _setDependencies first.',
+			);
 		}
 		return this._deps;
 	}
@@ -116,7 +126,11 @@ export class PositionOffsetTransformer extends PositionOffsetTransformerBase {
 
 	override getOffset(position: Position): number {
 		const valPos = this._validatePosition(position);
-		return this.lineStartOffsetByLineIdx[valPos.lineNumber - 1] + valPos.column - 1;
+		return (
+			this.lineStartOffsetByLineIdx[valPos.lineNumber - 1] +
+			valPos.column -
+			1
+		);
 	}
 
 	private _validatePosition(position: Position): Position {
@@ -139,7 +153,10 @@ export class PositionOffsetTransformer extends PositionOffsetTransformerBase {
 	}
 
 	override getPosition(offset: number): Position {
-		const idx = findLastIdxMonotonous(this.lineStartOffsetByLineIdx, i => i <= offset);
+		const idx = findLastIdxMonotonous(
+			this.lineStartOffsetByLineIdx,
+			(i) => i <= offset,
+		);
 		const lineNumber = idx + 1;
 		const column = offset - this.lineStartOffsetByLineIdx[idx] + 1;
 		return new Position(lineNumber, column);
@@ -151,10 +168,16 @@ export class PositionOffsetTransformer extends PositionOffsetTransformerBase {
 
 	get textLength(): TextLength {
 		const lineIdx = this.lineStartOffsetByLineIdx.length - 1;
-		return new Deps.deps.TextLength(lineIdx, this.text.length - this.lineStartOffsetByLineIdx[lineIdx]);
+		return new Deps.deps.TextLength(
+			lineIdx,
+			this.text.length - this.lineStartOffsetByLineIdx[lineIdx],
+		);
 	}
 
 	getLineLength(lineNumber: number): number {
-		return this.lineEndOffsetByLineIdx[lineNumber - 1] - this.lineStartOffsetByLineIdx[lineNumber - 1];
+		return (
+			this.lineEndOffsetByLineIdx[lineNumber - 1] -
+			this.lineStartOffsetByLineIdx[lineNumber - 1]
+		);
 	}
 }

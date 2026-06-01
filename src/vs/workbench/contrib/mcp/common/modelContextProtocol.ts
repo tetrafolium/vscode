@@ -3,4 +3,4 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export { MCP } from '../../../../platform/mcp/common/modelContextProtocol.js';
+export { MCP } from "../../../../platform/mcp/common/modelContextProtocol.js";

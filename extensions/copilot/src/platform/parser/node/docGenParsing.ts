@@ -8,11 +8,13 @@ import { Node, TreeSitterOffsetRange } from './nodes';
 import { _parse } from './parserWithCaching';
 import { _getNodeMatchingSelection } from './selectionParsing';
 import { WASMLanguage } from './treeSitterLanguages';
-import { extractIdentifier, isDocumentableNode, unwrapPythonDecoratedDefinition } from './util';
-
+import {
+	extractIdentifier,
+	isDocumentableNode,
+	unwrapPythonDecoratedDefinition,
+} from './util';
 
 export type NodeToDocumentContext = {
-
 	/** is undefined when we couldn't determine the identifier */
 	nodeIdentifier: string | undefined;
 
@@ -38,42 +40,54 @@ export type NodeToDocumentContext = {
 export async function _getNodeToDocument(
 	language: WASMLanguage,
 	source: string,
-	selection: TreeSitterOffsetRange
+	selection: TreeSitterOffsetRange,
 ): Promise<NodeToDocumentContext> {
-
 	const treeRef = await _parse(language, source);
 
 	try {
-
 		// if selection is non-empty, try identify a documentable AST node that most matches the selection
 		// otherwise, try to find the smallest documentable AST node that wraps the selection
 
 		const isSelectionEmpty = selection.startIndex === selection.endIndex;
 
-		const selectionMatchedNode = isSelectionEmpty ? undefined : _getNodeMatchingSelection(treeRef.tree, selection, language);
+		const selectionMatchedNode = isSelectionEmpty
+			? undefined
+			: _getNodeMatchingSelection(treeRef.tree, selection, language);
 
 		if (selectionMatchedNode) {
-			const unwrapped = unwrapPythonDecoratedDefinition(selectionMatchedNode, language);
+			const unwrapped = unwrapPythonDecoratedDefinition(
+				selectionMatchedNode,
+				language,
+			);
 			const nodeIdentifier = extractIdentifier(unwrapped, language);
 			return {
 				nodeIdentifier,
 				nodeToDocument: Node.ofSyntaxNode(unwrapped),
-				nodeSelectionBy: 'matchingSelection'
+				nodeSelectionBy: 'matchingSelection',
 			};
 		}
 
-		const nodeContainingCursor = treeRef.tree.rootNode.descendantForIndex(selection.startIndex, selection.endIndex);
+		const nodeContainingCursor = treeRef.tree.rootNode.descendantForIndex(
+			selection.startIndex,
+			selection.endIndex,
+		);
 
 		let nodeToDocument: SyntaxNode = nodeContainingCursor;
 		let nNodesClimbedUp = 0;
 
 		// ascend the parse tree until we find a declaration/definition (documentable) node or reach the root node
-		while (!isDocumentableNode(nodeToDocument, language) && nodeToDocument.parent !== null) {
+		while (
+			!isDocumentableNode(nodeToDocument, language) &&
+			nodeToDocument.parent !== null
+		) {
 			nodeToDocument = nodeToDocument.parent;
 			++nNodesClimbedUp;
 		}
 
-		nodeToDocument = unwrapPythonDecoratedDefinition(nodeToDocument, language);
+		nodeToDocument = unwrapPythonDecoratedDefinition(
+			nodeToDocument,
+			language,
+		);
 
 		const nodeIdentifier = extractIdentifier(nodeToDocument, language);
 		return {
@@ -89,27 +103,45 @@ export async function _getNodeToDocument(
 export async function _getDocumentableNodeIfOnIdentifier(
 	language: WASMLanguage,
 	source: string,
-	range: TreeSitterOffsetRange
-): Promise<{ identifier: string; nodeRange?: TreeSitterOffsetRange } | undefined> {
+	range: TreeSitterOffsetRange,
+): Promise<
+	{ identifier: string; nodeRange?: TreeSitterOffsetRange } | undefined
+> {
 	const treeRef = await _parse(language, source);
 	try {
+		const smallestNodeContainingRange =
+			treeRef.tree.rootNode.descendantForIndex(
+				range.startIndex,
+				range.endIndex,
+			);
 
-		const smallestNodeContainingRange = treeRef.tree.rootNode.descendantForIndex(range.startIndex, range.endIndex);
-
-		if (smallestNodeContainingRange.type.match(/identifier/) &&
-			(smallestNodeContainingRange.parent === null || isDocumentableNode(smallestNodeContainingRange.parent, language))
+		if (
+			smallestNodeContainingRange.type.match(/identifier/) &&
+			(smallestNodeContainingRange.parent === null ||
+				isDocumentableNode(
+					smallestNodeContainingRange.parent,
+					language,
+				))
 		) {
-			const parent = smallestNodeContainingRange.parent === null
-				? null
-				: unwrapPythonDecoratedDefinition(smallestNodeContainingRange.parent, language);
+			const parent =
+				smallestNodeContainingRange.parent === null
+					? null
+					: unwrapPythonDecoratedDefinition(
+							smallestNodeContainingRange.parent,
+							language,
+						);
 
-			const parentNodeRange = parent === null
-				? undefined
-				: { startIndex: parent.startIndex, endIndex: parent.endIndex };
+			const parentNodeRange =
+				parent === null
+					? undefined
+					: {
+							startIndex: parent.startIndex,
+							endIndex: parent.endIndex,
+						};
 
 			return {
 				identifier: smallestNodeContainingRange.text,
-				nodeRange: parentNodeRange
+				nodeRange: parentNodeRange,
 			};
 		}
 	} finally {

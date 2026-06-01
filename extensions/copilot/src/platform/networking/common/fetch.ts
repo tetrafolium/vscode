@@ -3,11 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EncryptedThinkingDelta, ThinkingData, ThinkingDelta } from '../../thinking/common/thinking';
+import {
+	EncryptedThinkingDelta,
+	ThinkingData,
+	ThinkingDelta,
+} from '../../thinking/common/thinking';
 import { AnthropicMessagesTool, ContextManagementResponse } from './anthropic';
 import { IHeaders } from './fetcherService';
-import { ChoiceLogProbs, FilterReason, openAIContextManagementCompactionType, OpenAIContextManagementResponse } from './openai';
-
+import {
+	ChoiceLogProbs,
+	FilterReason,
+	openAIContextManagementCompactionType,
+	OpenAIContextManagementResponse,
+} from './openai';
 
 // Request helpers
 
@@ -22,15 +30,17 @@ export interface RequestId {
 
 export function getRequestId(headers: IHeaders, json?: any): RequestId {
 	const serverExperiments = headers.get('X-Copilot-Experiment') || '';
-	const capiExpAssignmentContext = headers.get('x-copilot-api-exp-assignment-context') || '';
+	const capiExpAssignmentContext =
+		headers.get('x-copilot-api-exp-assignment-context') || '';
 	return {
 		headerRequestId: headers.get('x-request-id') || '',
 		gitHubRequestId: headers.get('x-github-request-id') || '',
 		completionId: json && json.id ? json.id : '',
 		created: json && json.created ? json.created : 0,
-		serverExperiments: serverExperiments && capiExpAssignmentContext
-			? `${serverExperiments};${capiExpAssignmentContext}`
-			: serverExperiments || capiExpAssignmentContext,
+		serverExperiments:
+			serverExperiments && capiExpAssignmentContext
+				? `${serverExperiments};${capiExpAssignmentContext}`
+				: serverExperiments || capiExpAssignmentContext,
 		deploymentId: headers.get('azureml-model-deployment') || '',
 	};
 }
@@ -52,24 +62,44 @@ export interface IIPCodeCitation {
 	};
 }
 
-export function isCopilotAnnotation(thing: unknown): thing is ICodeVulnerabilityAnnotation {
+export function isCopilotAnnotation(
+	thing: unknown,
+): thing is ICodeVulnerabilityAnnotation {
 	if (typeof thing !== 'object' || thing === null || !('details' in thing)) {
 		return false;
 	}
 
 	const { details } = thing as ICodeVulnerabilityAnnotation;
-	return typeof details === 'object' && details !== null &&
-		'type' in details && 'description' in details && typeof details.type === 'string' && typeof details.description === 'string';
+	return (
+		typeof details === 'object' &&
+		details !== null &&
+		'type' in details &&
+		'description' in details &&
+		typeof details.type === 'string' &&
+		typeof details.description === 'string'
+	);
 }
 
-export function isCodeCitationAnnotation(thing: unknown): thing is IIPCodeCitation {
-	if (typeof thing !== 'object' || thing === null || !('citations' in thing)) {
+export function isCodeCitationAnnotation(
+	thing: unknown,
+): thing is IIPCodeCitation {
+	if (
+		typeof thing !== 'object' ||
+		thing === null ||
+		!('citations' in thing)
+	) {
 		return false;
 	}
 
 	const { citations } = thing as IIPCodeCitation;
-	return typeof citations === 'object' && citations !== null &&
-		'url' in citations && 'license' in citations && typeof citations.url === 'string' && typeof citations.license === 'string';
+	return (
+		typeof citations === 'object' &&
+		citations !== null &&
+		'url' in citations &&
+		'license' in citations &&
+		typeof citations.url === 'string' &&
+		typeof citations.license === 'string'
+	);
 }
 
 export interface ICopilotReference {
@@ -117,7 +147,13 @@ export interface ICopilotError {
 }
 
 export function isCopilotWebReference(reference: unknown) {
-	return typeof reference === 'object' && !!reference && 'title' in reference && 'excerpt' in reference && 'url' in reference;
+	return (
+		typeof reference === 'object' &&
+		!!reference &&
+		'title' in reference &&
+		'excerpt' in reference &&
+		'url' in reference
+	);
 }
 
 export interface ICopilotWebReference {
@@ -150,14 +186,22 @@ export interface IResponseDelta {
 	/** Marker for the current response, which should be presented in `IMakeChatRequestOptions` on the next call */
 	statefulMarker?: string;
 	/** Context management information from Anthropic Messages API */
-	contextManagement?: ContextManagementResponse | OpenAIContextManagementResponse;
+	contextManagement?:
+		| ContextManagementResponse
+		| OpenAIContextManagementResponse;
 }
 
-export function isOpenAIContextManagementResponse(value: ContextManagementResponse | OpenAIContextManagementResponse): value is OpenAIContextManagementResponse {
-	return 'type' in value && value.type === openAIContextManagementCompactionType;
+export function isOpenAIContextManagementResponse(
+	value: ContextManagementResponse | OpenAIContextManagementResponse,
+): value is OpenAIContextManagementResponse {
+	return (
+		'type' in value && value.type === openAIContextManagementCompactionType
+	);
 }
 
-export function isAnthropicContextManagementResponse(value: ContextManagementResponse | OpenAIContextManagementResponse): value is ContextManagementResponse {
+export function isAnthropicContextManagementResponse(
+	value: ContextManagementResponse | OpenAIContextManagementResponse,
+): value is ContextManagementResponse {
 	return 'applied_edits' in value;
 }
 
@@ -262,7 +306,6 @@ export type ResponsePart =
 	| IConfirmationResponsePart
 	| IErrorResponsePart;
 
-
 export interface FinishedCallback {
 	/**
 	 * @param text The full concatenated text of the response
@@ -270,7 +313,11 @@ export interface FinishedCallback {
 	 * @param delta A delta for the latest chunk
 	 * @returns A number to stop reading data from the server, `undefined` to continue
 	 */
-	(text: string, index: number, delta: IResponseDelta): Promise<number | undefined>;
+	(
+		text: string,
+		index: number,
+		delta: IResponseDelta,
+	): Promise<number | undefined>;
 }
 
 export interface OpenAiFunctionDef {
@@ -298,7 +345,13 @@ export interface OpenAiToolSearchTool {
 	parameters?: Record<string, unknown>;
 }
 
-export function isOpenAiFunctionTool(tool: OpenAiResponsesFunctionTool | OpenAiFunctionTool | AnthropicMessagesTool | OpenAiToolSearchTool): tool is OpenAiFunctionTool {
+export function isOpenAiFunctionTool(
+	tool:
+		| OpenAiResponsesFunctionTool
+		| OpenAiFunctionTool
+		| AnthropicMessagesTool
+		| OpenAiToolSearchTool,
+): tool is OpenAiFunctionTool {
 	return (tool as OpenAiFunctionTool).function !== undefined;
 }
 
@@ -323,7 +376,6 @@ export type Prediction = {
 
 /** based on https://platform.openai.com/docs/api-reference/chat/create */
 export interface OptionalChatRequestParams {
-
 	/** Non-negative temperature sampling parameter (default 1). */
 	temperature?: number;
 
@@ -364,7 +416,10 @@ export interface OptionalChatRequestParams {
 	/**
 	 * Note: 'required' is not supported
 	 */
-	tool_choice?: 'none' | 'auto' | { type: 'function'; function: { name: string } };
+	tool_choice?:
+		| 'none'
+		| 'auto'
+		| { type: 'function'; function: { name: string } };
 
 	prediction?: Prediction;
 	logprobs?: boolean;

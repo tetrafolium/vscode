@@ -3,16 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../base/browser/dom.js';
-import { DragAndDropObserver } from '../../../../../base/browser/dom.js';
-import { Disposable, DisposableStore, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { ChatRequestQueueKind, IChatService } from '../../common/chatService/chatService.js';
-import { IChatPendingRequest } from '../../common/model/chatModel.js';
-import { IChatRequestViewModel, IChatViewModel } from '../../common/model/chatViewModel.js';
+import * as dom from "../../../../../base/browser/dom.js";
+import { DragAndDropObserver } from "../../../../../base/browser/dom.js";
+import {
+	Disposable,
+	DisposableStore,
+	toDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import {
+	ChatRequestQueueKind,
+	IChatService,
+} from "../../common/chatService/chatService.js";
+import { IChatPendingRequest } from "../../common/model/chatModel.js";
+import {
+	IChatRequestViewModel,
+	IChatViewModel,
+} from "../../common/model/chatViewModel.js";
 
-const PENDING_REQUEST_ID_ATTR = 'data-pending-request-id';
-const PENDING_KIND_ATTR = 'data-pending-kind';
-const DRAGGING_CLASS = 'chat-pending-dragging';
+const PENDING_REQUEST_ID_ATTR = "data-pending-request-id";
+const PENDING_KIND_ATTR = "data-pending-kind";
+const DRAGGING_CLASS = "chat-pending-dragging";
 
 interface IDragState {
 	readonly element: IChatRequestViewModel;
@@ -26,7 +36,6 @@ interface IDragState {
  * renderer itself.
  */
 export class ChatPendingDragController extends Disposable {
-
 	private _dragState: IDragState | undefined;
 	private readonly _insertIndicator: HTMLElement;
 
@@ -37,16 +46,18 @@ export class ChatPendingDragController extends Disposable {
 	) {
 		super();
 
-		this._insertIndicator = dom.$('.chat-pending-insert-indicator');
+		this._insertIndicator = dom.$(".chat-pending-insert-indicator");
 		listContainer.append(this._insertIndicator);
 		this._register(toDisposable(() => this._insertIndicator.remove()));
 
-		this._register(new DragAndDropObserver(listContainer, {
-			onDragOver: (e) => this._onDragOver(e),
-			onDragLeave: () => this._hideIndicator(),
-			onDragEnd: () => this._onDragEnd(),
-			onDrop: (e) => this._onDrop(e),
-		}));
+		this._register(
+			new DragAndDropObserver(listContainer, {
+				onDragOver: (e) => this._onDragOver(e),
+				onDragLeave: () => this._hideIndicator(),
+				onDragEnd: () => this._onDragEnd(),
+				onDrop: (e) => this._onDrop(e),
+			}),
+		);
 	}
 
 	/**
@@ -58,25 +69,33 @@ export class ChatPendingDragController extends Disposable {
 		rowContainer: HTMLElement,
 		disposables: DisposableStore,
 	): void {
-		handleEl.setAttribute('draggable', 'true');
+		handleEl.setAttribute("draggable", "true");
 
-		disposables.add(dom.addDisposableListener(handleEl, dom.EventType.DRAG_START, (e: DragEvent) => {
-			if (!e.dataTransfer || !element.pendingKind) {
-				return;
-			}
+		disposables.add(
+			dom.addDisposableListener(
+				handleEl,
+				dom.EventType.DRAG_START,
+				(e: DragEvent) => {
+					if (!e.dataTransfer || !element.pendingKind) {
+						return;
+					}
 
-			this._dragState = { element, pendingKind: element.pendingKind };
-			rowContainer.classList.add(DRAGGING_CLASS);
+					this._dragState = { element, pendingKind: element.pendingKind };
+					rowContainer.classList.add(DRAGGING_CLASS);
 
-			// Use the row as the drag image
-			e.dataTransfer.setDragImage(rowContainer, 0, 0);
-			e.dataTransfer.effectAllowed = 'move';
-		}));
+					// Use the row as the drag image
+					e.dataTransfer.setDragImage(rowContainer, 0, 0);
+					e.dataTransfer.effectAllowed = "move";
+				},
+			),
+		);
 
-		disposables.add(dom.addDisposableListener(handleEl, dom.EventType.DRAG_END, () => {
-			rowContainer.classList.remove(DRAGGING_CLASS);
-			this._onDragEnd();
-		}));
+		disposables.add(
+			dom.addDisposableListener(handleEl, dom.EventType.DRAG_END, () => {
+				rowContainer.classList.remove(DRAGGING_CLASS);
+				this._onDragEnd();
+			}),
+		);
 	}
 
 	// --- drag event handlers (delegated on the container) ---
@@ -94,7 +113,7 @@ export class ChatPendingDragController extends Disposable {
 
 		e.preventDefault();
 		if (e.dataTransfer) {
-			e.dataTransfer.dropEffect = 'move';
+			e.dataTransfer.dropEffect = "move";
 		}
 
 		const rect = target.row.getBoundingClientRect();
@@ -134,8 +153,9 @@ export class ChatPendingDragController extends Disposable {
 
 	private _showIndicator(targetRow: HTMLElement, before: boolean): void {
 		const rect = targetRow.getBoundingClientRect();
-		const parentRect = this._insertIndicator.parentElement!.getBoundingClientRect();
-		this._insertIndicator.style.display = 'block';
+		const parentRect =
+			this._insertIndicator.parentElement!.getBoundingClientRect();
+		this._insertIndicator.style.display = "block";
 		this._insertIndicator.style.left = `${rect.left - parentRect.left}px`;
 		this._insertIndicator.style.width = `${rect.width}px`;
 		this._insertIndicator.style.top = before
@@ -144,17 +164,21 @@ export class ChatPendingDragController extends Disposable {
 	}
 
 	private _hideIndicator(): void {
-		this._insertIndicator.style.display = 'none';
+		this._insertIndicator.style.display = "none";
 	}
 
 	// --- target resolution ---
 
-	private _findDropTarget(e: DragEvent): { row: HTMLElement; requestId: string } | undefined {
+	private _findDropTarget(
+		e: DragEvent,
+	): { row: HTMLElement; requestId: string } | undefined {
 		if (!this._dragState) {
 			return undefined;
 		}
 
-		const target = (e.target as HTMLElement)?.closest?.<HTMLElement>(`[${PENDING_REQUEST_ID_ATTR}]`);
+		const target = (e.target as HTMLElement)?.closest?.<HTMLElement>(
+			`[${PENDING_REQUEST_ID_ATTR}]`,
+		);
 		if (!target) {
 			return undefined;
 		}
@@ -163,7 +187,10 @@ export class ChatPendingDragController extends Disposable {
 		const kind = target.getAttribute(PENDING_KIND_ATTR);
 
 		// Only allow reorder within the same group
-		if (kind !== this._dragState.pendingKind || requestId === this._dragState.element.id) {
+		if (
+			kind !== this._dragState.pendingKind ||
+			requestId === this._dragState.element.id
+		) {
 			return undefined;
 		}
 
@@ -172,7 +199,11 @@ export class ChatPendingDragController extends Disposable {
 
 	// --- reorder logic ---
 
-	private _reorder(draggedElement: IChatRequestViewModel, targetId: string, insertBefore: boolean): void {
+	private _reorder(
+		draggedElement: IChatRequestViewModel,
+		targetId: string,
+		insertBefore: boolean,
+	): void {
 		const viewModel = this._getViewModel();
 		if (!viewModel) {
 			return;
@@ -189,14 +220,16 @@ export class ChatPendingDragController extends Disposable {
 		}
 
 		// Remove dragged from group
-		const draggedIdx = group.findIndex(p => p.request.id === draggedElement.id);
+		const draggedIdx = group.findIndex(
+			(p) => p.request.id === draggedElement.id,
+		);
 		if (draggedIdx === -1) {
 			return;
 		}
 		const [dragged] = group.splice(draggedIdx, 1);
 
 		// Find target position and insert
-		let targetIdx = group.findIndex(p => p.request.id === targetId);
+		let targetIdx = group.findIndex((p) => p.request.id === targetId);
 		if (targetIdx === -1) {
 			return;
 		}
@@ -206,10 +239,12 @@ export class ChatPendingDragController extends Disposable {
 		group.splice(targetIdx, 0, dragged);
 
 		// Rebuild full list: steering first, then queued (matching addPendingRequest ordering)
-		const reordered = (draggedKind === ChatRequestQueueKind.Steering
-			? [...group, ...rest]   // group is steering, rest is queued
-			: [...rest, ...group]   // rest is steering, group is queued
-		).map(p => ({ requestId: p.request.id, kind: p.kind }));
+		const reordered = (
+			draggedKind === ChatRequestQueueKind.Steering
+				? [...group, ...rest] // group is steering, rest is queued
+				: [...rest, ...group]
+		) // rest is steering, group is queued
+			.map((p) => ({ requestId: p.request.id, kind: p.kind }));
 
 		this._chatService.setPendingRequests(viewModel.sessionResource, reordered);
 	}

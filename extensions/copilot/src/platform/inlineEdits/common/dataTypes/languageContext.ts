@@ -5,7 +5,13 @@
 
 import { Range } from '../../../../util/vs/editor/common/core/range';
 import { Diagnostic, Uri } from '../../../../vscodeTypes';
-import { ContextItem, ContextKind, SnippetContext, TraitContext, type DiagnosticBagContext } from '../../../languageServer/common/languageContextService';
+import {
+	ContextItem,
+	ContextKind,
+	SnippetContext,
+	TraitContext,
+	type DiagnosticBagContext,
+} from '../../../languageServer/common/languageContextService';
 
 export type LanguageContextEntry = {
 	context: ContextItem;
@@ -41,7 +47,10 @@ type SerializedDiagnosticBagContext = {
 	values: Omit<SerializedDiagnostic, 'uri'>[];
 };
 
-type SerializedContextItem = SerializedSnippetContext | SerializedTraitContext | SerializedDiagnosticBagContext;
+type SerializedContextItem =
+	| SerializedSnippetContext
+	| SerializedTraitContext
+	| SerializedDiagnosticBagContext;
 
 export type SerializedContextResponse = {
 	start: number;
@@ -52,19 +61,23 @@ export type SerializedContextResponse = {
 	}[];
 };
 
-export function serializeLanguageContext(response: LanguageContextResponse): SerializedContextResponse {
+export function serializeLanguageContext(
+	response: LanguageContextResponse,
+): SerializedContextResponse {
 	return {
 		start: response.start,
 		end: response.end,
-		items: response.items.map(item => ({
+		items: response.items.map((item) => ({
 			context: serializeLanguageContextItem(item.context),
 			timeStamp: item.timeStamp,
 			onTimeout: item.onTimeout,
-		}))
+		})),
 	};
 }
 
-function serializeLanguageContextItem(context: ContextItem): SerializedContextItem {
+function serializeLanguageContextItem(
+	context: ContextItem,
+): SerializedContextItem {
 	switch (context.kind) {
 		case ContextKind.Snippet:
 			return serializeSnippetContext(context);
@@ -75,13 +88,15 @@ function serializeLanguageContextItem(context: ContextItem): SerializedContextIt
 	}
 }
 
-function serializeSnippetContext(context: SnippetContext): SerializedSnippetContext {
+function serializeSnippetContext(
+	context: SnippetContext,
+): SerializedSnippetContext {
 	return {
 		kind: context.kind,
 		priority: context.priority,
 		uri: context.uri.toString(),
-		additionalUris: context.additionalUris?.map(uri => uri.toString()),
-		value: context.value
+		additionalUris: context.additionalUris?.map((uri) => uri.toString()),
+		value: context.value,
 	};
 }
 
@@ -90,11 +105,13 @@ function serializeTraitContext(context: TraitContext): SerializedTraitContext {
 		kind: context.kind,
 		priority: context.priority,
 		name: context.name,
-		value: context.value
+		value: context.value,
 	};
 }
 
-function serializeDiagnosticBagContext(context: DiagnosticBagContext): SerializedDiagnosticBagContext {
+function serializeDiagnosticBagContext(
+	context: DiagnosticBagContext,
+): SerializedDiagnosticBagContext {
 	const values = context.values.map((diagnostic) => {
 		return serializeDiagnostic(diagnostic);
 	});
@@ -102,7 +119,7 @@ function serializeDiagnosticBagContext(context: DiagnosticBagContext): Serialize
 		kind: context.kind,
 		priority: context.priority,
 		uri: context.uri.toString(),
-		values: values
+		values: values,
 	};
 }
 
@@ -115,15 +132,40 @@ export type SerializedDiagnostic = {
 	range: string;
 };
 
-function serializeDiagnostic(diagnostic: Diagnostic): Omit<SerializedDiagnostic, 'uri'>;
-function serializeDiagnostic(diagnostic: Diagnostic, resource: Uri): SerializedDiagnostic;
-function serializeDiagnostic(diagnostic: Diagnostic, resource?: Uri): SerializedDiagnostic | Omit<SerializedDiagnostic, 'uri'> {
+function serializeDiagnostic(
+	diagnostic: Diagnostic,
+): Omit<SerializedDiagnostic, 'uri'>;
+function serializeDiagnostic(
+	diagnostic: Diagnostic,
+	resource: Uri,
+): SerializedDiagnostic;
+function serializeDiagnostic(
+	diagnostic: Diagnostic,
+	resource?: Uri,
+): SerializedDiagnostic | Omit<SerializedDiagnostic, 'uri'> {
 	const result: SerializedDiagnostic | Omit<SerializedDiagnostic, 'uri'> = {
-		severity: diagnostic.severity === 0 ? 'Error' : diagnostic.severity === 1 ? 'Warning' : diagnostic.severity === 2 ? 'Information' : 'Hint',
+		severity:
+			diagnostic.severity === 0
+				? 'Error'
+				: diagnostic.severity === 1
+					? 'Warning'
+					: diagnostic.severity === 2
+						? 'Information'
+						: 'Hint',
 		message: diagnostic.message,
 		source: diagnostic.source || '',
-		code: diagnostic.code && !(typeof diagnostic.code === 'number') && !(typeof diagnostic.code === 'string') ? diagnostic.code.value : diagnostic.code,
-		range: new Range(diagnostic.range.start.line + 1, diagnostic.range.start.character + 1, diagnostic.range.end.line + 1, diagnostic.range.end.character + 1).toString(),
+		code:
+			diagnostic.code &&
+			!(typeof diagnostic.code === 'number') &&
+			!(typeof diagnostic.code === 'string')
+				? diagnostic.code.value
+				: diagnostic.code,
+		range: new Range(
+			diagnostic.range.start.line + 1,
+			diagnostic.range.start.character + 1,
+			diagnostic.range.end.line + 1,
+			diagnostic.range.end.character + 1,
+		).toString(),
 	};
 	if (resource) {
 		(result as SerializedDiagnostic).uri = resource.toString();
@@ -131,8 +173,10 @@ function serializeDiagnostic(diagnostic: Diagnostic, resource?: Uri): Serialized
 	return result;
 }
 
-export function serializeFileDiagnostics(diagnostics: [Uri, Diagnostic[]][]): SerializedDiagnostic[] {
+export function serializeFileDiagnostics(
+	diagnostics: [Uri, Diagnostic[]][],
+): SerializedDiagnostic[] {
 	return diagnostics.flatMap(([resource, diags]) =>
-		diags.map(diagnostic => serializeDiagnostic(diagnostic, resource))
+		diags.map((diagnostic) => serializeDiagnostic(diagnostic, resource)),
 	);
 }

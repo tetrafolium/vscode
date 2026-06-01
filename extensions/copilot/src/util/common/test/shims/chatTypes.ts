@@ -10,7 +10,8 @@ import { MarkdownString } from '../../../vs/workbench/api/common/extHostTypes/ma
 export class ChatResponseMarkdownPart {
 	value: vscode.MarkdownString;
 	constructor(value: string | vscode.MarkdownString) {
-		this.value = typeof value === 'string' ? new MarkdownString(value) : value;
+		this.value =
+			typeof value === 'string' ? new MarkdownString(value) : value;
 	}
 }
 
@@ -53,14 +54,25 @@ export class ChatResponseThinkingProgressPart {
 	value: string | string[];
 	id?: string;
 	metadata?: { readonly [key: string]: any };
-	constructor(value: string | string[], id?: string, metadata?: { readonly [key: string]: any }) {
+	constructor(
+		value: string | string[],
+		id?: string,
+		metadata?: { readonly [key: string]: any },
+	) {
 		this.value = value;
 		this.id = id;
 		this.metadata = metadata;
 	}
 }
 
-export type ChatHookType = 'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PostToolUse' | 'SubagentStart' | 'SubagentStop' | 'Stop';
+export type ChatHookType =
+	| 'SessionStart'
+	| 'UserPromptSubmit'
+	| 'PreToolUse'
+	| 'PostToolUse'
+	| 'SubagentStart'
+	| 'SubagentStop'
+	| 'Stop';
 
 export class ChatResponseHookPart {
 	hookType: ChatHookType;
@@ -71,7 +83,7 @@ export class ChatResponseHookPart {
 		hookType: ChatHookType,
 		stopReason?: string,
 		systemMessage?: string,
-		metadata?: { readonly [key: string]: unknown }
+		metadata?: { readonly [key: string]: unknown },
 	) {
 		this.hookType = hookType;
 		this.stopReason = stopReason;
@@ -96,8 +108,15 @@ export class ChatResponseExternalEditPart {
 
 export class ChatResponseProgressPart2 {
 	value: string;
-	task?: (progress: vscode.Progress<vscode.ChatResponseWarningPart>) => Thenable<string | void>;
-	constructor(value: string, task?: (progress: vscode.Progress<vscode.ChatResponseWarningPart>) => Thenable<string | void>) {
+	task?: (
+		progress: vscode.Progress<vscode.ChatResponseWarningPart>,
+	) => Thenable<string | void>;
+	constructor(
+		value: string,
+		task?: (
+			progress: vscode.Progress<vscode.ChatResponseWarningPart>,
+		) => Thenable<string | void>,
+	) {
 		this.value = value;
 		this.task = task;
 	}
@@ -106,14 +125,16 @@ export class ChatResponseProgressPart2 {
 export class ChatResponseWarningPart {
 	value: vscode.MarkdownString;
 	constructor(value: string | vscode.MarkdownString) {
-		this.value = typeof value === 'string' ? new MarkdownString(value) : value;
+		this.value =
+			typeof value === 'string' ? new MarkdownString(value) : value;
 	}
 }
 
 export class ChatResponseInfoPart {
 	value: vscode.MarkdownString;
 	constructor(value: string | vscode.MarkdownString) {
-		this.value = typeof value === 'string' ? new MarkdownString(value) : value;
+		this.value =
+			typeof value === 'string' ? new MarkdownString(value) : value;
 	}
 }
 
@@ -125,10 +146,36 @@ export class ChatResponseReferencePart {
 }
 
 export class ChatResponseReferencePart2 {
-	value: vscode.Uri | vscode.Location | { variableName: string; value?: vscode.Uri | vscode.Location };
-	iconPath?: vscode.Uri | vscode.ThemeIcon | { light: vscode.Uri; dark: vscode.Uri };
-	options?: { status?: { description: string; kind: vscode.ChatResponseReferencePartStatusKind } };
-	constructor(value: vscode.Uri | vscode.Location | { variableName: string; value?: vscode.Uri | vscode.Location }, iconPath?: vscode.Uri | vscode.ThemeIcon | { light: vscode.Uri; dark: vscode.Uri }, options?: { status?: { description: string; kind: vscode.ChatResponseReferencePartStatusKind } }) {
+	value:
+		| vscode.Uri
+		| vscode.Location
+		| { variableName: string; value?: vscode.Uri | vscode.Location };
+	iconPath?:
+		| vscode.Uri
+		| vscode.ThemeIcon
+		| { light: vscode.Uri; dark: vscode.Uri };
+	options?: {
+		status?: {
+			description: string;
+			kind: vscode.ChatResponseReferencePartStatusKind;
+		};
+	};
+	constructor(
+		value:
+			| vscode.Uri
+			| vscode.Location
+			| { variableName: string; value?: vscode.Uri | vscode.Location },
+		iconPath?:
+			| vscode.Uri
+			| vscode.ThemeIcon
+			| { light: vscode.Uri; dark: vscode.Uri },
+		options?: {
+			status?: {
+				description: string;
+				kind: vscode.ChatResponseReferencePartStatusKind;
+			};
+		},
+	) {
 		this.value = value;
 		this.iconPath = iconPath;
 		this.options = options;
@@ -136,7 +183,6 @@ export class ChatResponseReferencePart2 {
 }
 
 export class ChatResponseMovePart {
-
 	readonly uri: vscode.Uri;
 	readonly range: vscode.Range;
 
@@ -147,7 +193,6 @@ export class ChatResponseMovePart {
 }
 
 export class ChatResponseExtensionsPart {
-
 	readonly extensions: string[];
 
 	constructor(extensions: string[]) {
@@ -165,8 +210,17 @@ export class ChatResponsePullRequestPart {
 	readonly description: string;
 	readonly author: string;
 	readonly command: vscode.Command;
-	constructor(uriOrCommand: vscode.Uri | vscode.Command, title: string, description: string, author: string, linkTag: string) {
-		if ('command' in uriOrCommand && typeof uriOrCommand.command === 'string') {
+	constructor(
+		uriOrCommand: vscode.Uri | vscode.Command,
+		title: string,
+		description: string,
+		author: string,
+		linkTag: string,
+	) {
+		if (
+			'command' in uriOrCommand &&
+			typeof uriOrCommand.command === 'string'
+		) {
 			// It's a Command
 			this.command = uriOrCommand;
 		} else {
@@ -175,7 +229,7 @@ export class ChatResponsePullRequestPart {
 			this.command = {
 				title: 'View Pull Request',
 				command: 'vscode.open',
-				arguments: [uriOrCommand]
+				arguments: [uriOrCommand],
 			};
 		}
 		this.title = title;
@@ -184,7 +238,6 @@ export class ChatResponsePullRequestPart {
 		this.linkTag = linkTag;
 	}
 }
-
 
 export class ChatResponseCodeCitationPart {
 	value: vscode.Uri;
@@ -207,8 +260,12 @@ export class ChatResponseCommandButtonPart {
 export class ChatResponseMarkdownWithVulnerabilitiesPart {
 	value: vscode.MarkdownString;
 	vulnerabilities: vscode.ChatVulnerability[];
-	constructor(value: string | vscode.MarkdownString, vulnerabilities: vscode.ChatVulnerability[]) {
-		this.value = typeof value === 'string' ? new MarkdownString(value) : value;
+	constructor(
+		value: string | vscode.MarkdownString,
+		vulnerabilities: vscode.ChatVulnerability[],
+	) {
+		this.value =
+			typeof value === 'string' ? new MarkdownString(value) : value;
 		this.vulnerabilities = vulnerabilities;
 	}
 }
@@ -217,34 +274,47 @@ export class ChatResponseTextEditPart {
 	uri: vscode.Uri;
 	edits: vscode.TextEdit[];
 	isDone?: boolean;
-	constructor(uri: vscode.Uri, editsOrDone: vscode.TextEdit | vscode.TextEdit[] | true) {
+	constructor(
+		uri: vscode.Uri,
+		editsOrDone: vscode.TextEdit | vscode.TextEdit[] | true,
+	) {
 		this.uri = uri;
 		if (editsOrDone === true) {
 			this.isDone = true;
 			this.edits = [];
 		} else {
-			this.edits = Array.isArray(editsOrDone) ? editsOrDone : [editsOrDone];
+			this.edits = Array.isArray(editsOrDone)
+				? editsOrDone
+				: [editsOrDone];
 		}
 	}
 }
 
-export class ChatResponseNotebookEditPart implements vscode.ChatResponseNotebookEditPart {
+export class ChatResponseNotebookEditPart
+	implements vscode.ChatResponseNotebookEditPart
+{
 	uri: vscode.Uri;
 	edits: vscode.NotebookEdit[];
 	isDone?: boolean;
-	constructor(uri: vscode.Uri, editsOrDone: vscode.NotebookEdit | vscode.NotebookEdit[] | true) {
+	constructor(
+		uri: vscode.Uri,
+		editsOrDone: vscode.NotebookEdit | vscode.NotebookEdit[] | true,
+	) {
 		this.uri = uri;
 		if (editsOrDone === true) {
 			this.isDone = true;
 			this.edits = [];
 		} else {
-			this.edits = Array.isArray(editsOrDone) ? editsOrDone : [editsOrDone];
-
+			this.edits = Array.isArray(editsOrDone)
+				? editsOrDone
+				: [editsOrDone];
 		}
 	}
 }
 
-export class ChatResponseWorkspaceEditPart implements vscode.ChatResponseWorkspaceEditPart {
+export class ChatResponseWorkspaceEditPart
+	implements vscode.ChatResponseWorkspaceEditPart
+{
 	edits: vscode.ChatWorkspaceFileEdit[];
 	constructor(edits: vscode.ChatWorkspaceFileEdit[]) {
 		this.edits = edits;
@@ -267,7 +337,7 @@ export class ChatResponseConfirmationPart {
 export enum ChatQuestionType {
 	Text = 1,
 	SingleSelect = 2,
-	MultiSelect = 3
+	MultiSelect = 3,
 }
 
 export class ChatQuestion implements vscode.ChatQuestion {
@@ -288,7 +358,7 @@ export class ChatQuestion implements vscode.ChatQuestion {
 			options?: vscode.ChatQuestionOption[];
 			defaultValue?: string | string[];
 			allowFreeformInput?: boolean;
-		}
+		},
 	) {
 		this.id = id;
 		this.type = type;
@@ -302,7 +372,9 @@ export class ChatQuestion implements vscode.ChatQuestion {
 	}
 }
 
-export class ChatResponseQuestionCarouselPart implements vscode.ChatResponseQuestionCarouselPart {
+export class ChatResponseQuestionCarouselPart
+	implements vscode.ChatResponseQuestionCarouselPart
+{
 	questions: vscode.ChatQuestion[];
 	allowSkip: boolean;
 	constructor(questions: vscode.ChatQuestion[], allowSkip?: boolean) {
@@ -317,8 +389,8 @@ export class ChatRequestTurn implements vscode.ChatRequestTurn {
 		readonly command: string | undefined,
 		readonly references: vscode.ChatPromptReference[],
 		readonly participant: string,
-		readonly toolReferences: vscode.ChatLanguageModelToolReference[]
-	) { }
+		readonly toolReferences: vscode.ChatLanguageModelToolReference[],
+	) {}
 }
 
 export class ChatRequestTurn2 implements vscode.ChatRequestTurn2 {
@@ -328,21 +400,29 @@ export class ChatRequestTurn2 implements vscode.ChatRequestTurn2 {
 		readonly references: vscode.ChatPromptReference[],
 		readonly participant: string,
 		readonly toolReferences: readonly vscode.ChatLanguageModelToolReference[],
-		readonly editedFileEvents: vscode.ChatRequestEditedFileEvent[] | undefined,
+		readonly editedFileEvents:
+			| vscode.ChatRequestEditedFileEvent[]
+			| undefined,
 		readonly id: string | undefined,
 		readonly modelId: string | undefined,
-		readonly modeInstructions2: vscode.ChatRequestModeInstructions | undefined,
-	) { }
+		readonly modeInstructions2:
+			| vscode.ChatRequestModeInstructions
+			| undefined,
+	) {}
 }
 
 export class ChatResponseTurn implements vscode.ChatResponseTurn {
-
 	constructor(
-		readonly response: ReadonlyArray<ChatResponseMarkdownPart | ChatResponseFileTreePart | ChatResponseAnchorPart | ChatResponseCommandButtonPart>,
+		readonly response: ReadonlyArray<
+			| ChatResponseMarkdownPart
+			| ChatResponseFileTreePart
+			| ChatResponseAnchorPart
+			| ChatResponseCommandButtonPart
+		>,
 		readonly result: vscode.ChatResult,
 		readonly participant: string,
-		readonly command?: string
-	) { }
+		readonly command?: string,
+	) {}
 }
 
 export class ChatRequestEditorData {
@@ -351,36 +431,43 @@ export class ChatRequestEditorData {
 		readonly document: vscode.TextDocument,
 		readonly selection: vscode.Selection,
 		readonly wholeRange: vscode.Range,
-	) { }
+	) {}
 }
 
 export class ChatRequestNotebookData {
-	constructor(
-		readonly cell: vscode.TextDocument
-	) { }
+	constructor(readonly cell: vscode.TextDocument) {}
 }
-
 
 export class ChatReferenceDiagnostic {
-	constructor(
-		readonly diagnostics: [vscode.Uri, vscode.Diagnostic[]][]
-	) { }
+	constructor(readonly diagnostics: [vscode.Uri, vscode.Diagnostic[]][]) {}
 }
-
 
 export class ChatReferenceBinaryData {
 	constructor(
 		readonly mimeType: string,
-		readonly data: () => Thenable<Uint8Array>
-	) { }
+		readonly data: () => Thenable<Uint8Array>,
+	) {}
 }
 
 export class LanguageModelToolResult {
-	constructor(public content: (LanguageModelTextPart | LanguageModelPromptTsxPart | unknown)[]) { }
+	constructor(
+		public content: (
+			| LanguageModelTextPart
+			| LanguageModelPromptTsxPart
+			| unknown
+		)[],
+	) {}
 }
 
 export class LanguageModelToolResult2 {
-	constructor(public content: (LanguageModelTextPart | LanguageModelPromptTsxPart | LanguageModelDataPart | unknown)[]) { }
+	constructor(
+		public content: (
+			| LanguageModelTextPart
+			| LanguageModelPromptTsxPart
+			| LanguageModelDataPart
+			| unknown
+		)[],
+	) {}
 }
 
 export class LanguageModelTextPart implements vscode.LanguageModelTextPart {
@@ -388,7 +475,6 @@ export class LanguageModelTextPart implements vscode.LanguageModelTextPart {
 
 	constructor(value: string) {
 		this.value = value;
-
 	}
 }
 
@@ -406,12 +492,18 @@ export class LanguageModelTextPart2 extends LanguageModelTextPart {
 	}
 }
 
-export class LanguageModelThinkingPart implements vscode.LanguageModelThinkingPart {
+export class LanguageModelThinkingPart
+	implements vscode.LanguageModelThinkingPart
+{
 	value: string | string[];
 	id?: string;
 	metadata?: { readonly [key: string]: any };
 
-	constructor(value: string | string[], id?: string, metadata?: { readonly [key: string]: any }) {
+	constructor(
+		value: string | string[],
+		id?: string,
+		metadata?: { readonly [key: string]: any },
+	) {
 		this.value = value;
 		this.id = id;
 		this.metadata = metadata;
@@ -427,23 +519,36 @@ export class LanguageModelDataPart implements vscode.LanguageModelDataPart {
 		this.data = data;
 	}
 
-	static image(data: Uint8Array<ArrayBufferLike>, mimeType: string): vscode.LanguageModelDataPart {
+	static image(
+		data: Uint8Array<ArrayBufferLike>,
+		mimeType: string,
+	): vscode.LanguageModelDataPart {
 		return new LanguageModelDataPart(data, mimeType);
 	}
 
 	static json(value: object): vscode.LanguageModelDataPart {
 		const rawStr = JSON.stringify(value, undefined, '\t');
-		return new LanguageModelDataPart(VSBuffer.fromString(rawStr).buffer, 'json');
+		return new LanguageModelDataPart(
+			VSBuffer.fromString(rawStr).buffer,
+			'json',
+		);
 	}
 
 	static text(value: string): vscode.LanguageModelDataPart {
-		return new LanguageModelDataPart(VSBuffer.fromString(value).buffer, 'text/plain');
+		return new LanguageModelDataPart(
+			VSBuffer.fromString(value).buffer,
+			'text/plain',
+		);
 	}
 }
 
 export class LanguageModelDataPart2 extends LanguageModelDataPart {
 	audience: LanguageModelPartAudience[] | undefined;
-	constructor(data: Uint8Array, mimeType: string, audience?: LanguageModelPartAudience[]) {
+	constructor(
+		data: Uint8Array,
+		mimeType: string,
+		audience?: LanguageModelPartAudience[],
+	) {
 		super(data, mimeType);
 		this.audience = audience;
 	}
@@ -468,21 +573,28 @@ export class LanguageModelPromptTsxPart {
 export enum ExcludeSettingOptions {
 	None = 1,
 	FilesExclude = 2,
-	SearchAndFilesExclude = 3
+	SearchAndFilesExclude = 3,
 }
 
 export class TextSearchMatch2 {
-	constructor(public uri: vscode.Uri, public ranges: { sourceRange: vscode.Range; previewRange: vscode.Range }[], public previewText: string) { }
+	constructor(
+		public uri: vscode.Uri,
+		public ranges: {
+			sourceRange: vscode.Range;
+			previewRange: vscode.Range;
+		}[],
+		public previewText: string,
+	) {}
 }
 
 export class AISearchKeyword {
-	constructor(public keyword: string) { }
+	constructor(public keyword: string) {}
 }
 
 export enum ChatErrorLevel {
 	Info = 0,
 	Warning = 1,
-	Error = 2
+	Error = 2,
 }
 
 export enum ChatInputNotificationSeverity {
@@ -503,15 +615,28 @@ export enum ChatResponseClearToPreviousToolInvocationReason {
 	CopyrightContentRetry = 2,
 }
 
-export class LanguageModelToolExtensionSource implements vscode.LanguageModelToolExtensionSource {
-	constructor(public readonly id: string, public readonly label: string) { }
+export class LanguageModelToolExtensionSource
+	implements vscode.LanguageModelToolExtensionSource
+{
+	constructor(
+		public readonly id: string,
+		public readonly label: string,
+	) {}
 }
 
-export class LanguageModelToolMCPSource implements vscode.LanguageModelToolMCPSource {
-	constructor(public readonly label: string, public readonly name: string, public readonly instructions: string | undefined) { }
+export class LanguageModelToolMCPSource
+	implements vscode.LanguageModelToolMCPSource
+{
+	constructor(
+		public readonly label: string,
+		public readonly name: string,
+		public readonly instructions: string | undefined,
+	) {}
 }
 
-export class LanguageModelToolCallPart implements vscode.LanguageModelToolCallPart {
+export class LanguageModelToolCallPart
+	implements vscode.LanguageModelToolCallPart
+{
 	callId: string;
 	name: string;
 	input: object;
@@ -524,24 +649,50 @@ export class LanguageModelToolCallPart implements vscode.LanguageModelToolCallPa
 	}
 }
 
-export class LanguageModelToolResultPart implements vscode.LanguageModelToolResultPart {
+export class LanguageModelToolResultPart
+	implements vscode.LanguageModelToolResultPart
+{
 	callId: string;
 	content: (LanguageModelTextPart | LanguageModelPromptTsxPart | unknown)[];
 	isError: boolean;
 
-	constructor(callId: string, content: (LanguageModelTextPart | LanguageModelPromptTsxPart | unknown)[], isError?: boolean) {
+	constructor(
+		callId: string,
+		content: (
+			| LanguageModelTextPart
+			| LanguageModelPromptTsxPart
+			| unknown
+		)[],
+		isError?: boolean,
+	) {
 		this.callId = callId;
 		this.content = content;
 		this.isError = isError ?? false;
 	}
 }
 
-export class LanguageModelToolResultPart2 implements vscode.LanguageModelToolResultPart2 {
+export class LanguageModelToolResultPart2
+	implements vscode.LanguageModelToolResultPart2
+{
 	callId: string;
-	content: (LanguageModelTextPart | LanguageModelPromptTsxPart | LanguageModelDataPart | unknown)[];
+	content: (
+		| LanguageModelTextPart
+		| LanguageModelPromptTsxPart
+		| LanguageModelDataPart
+		| unknown
+	)[];
 	isError: boolean;
 
-	constructor(callId: string, content: (LanguageModelTextPart | LanguageModelPromptTsxPart | LanguageModelDataPart | unknown)[], isError?: boolean) {
+	constructor(
+		callId: string,
+		content: (
+			| LanguageModelTextPart
+			| LanguageModelPromptTsxPart
+			| LanguageModelDataPart
+			| unknown
+		)[],
+		isError?: boolean,
+	) {
 		this.callId = callId;
 		this.content = content;
 		this.isError = isError ?? false;
@@ -551,35 +702,60 @@ export class LanguageModelToolResultPart2 implements vscode.LanguageModelToolRes
 export enum LanguageModelChatMessageRole {
 	User = 1,
 	Assistant = 2,
-	System = 3
+	System = 3,
 }
 
 export enum LanguageModelChatToolMode {
 	Auto = 1,
-	Required = 2
+	Required = 2,
 }
 
-export class LanguageModelChatMessage implements vscode.LanguageModelChatMessage {
+export class LanguageModelChatMessage
+	implements vscode.LanguageModelChatMessage
+{
 	role: LanguageModelChatMessageRole;
 	content: Array<any>;
 	name: string | undefined;
 
-	constructor(role: LanguageModelChatMessageRole, content: string | Array<any>, name?: string) {
+	constructor(
+		role: LanguageModelChatMessageRole,
+		content: string | Array<any>,
+		name?: string,
+	) {
 		this.role = role;
-		this.content = typeof content === 'string' ? [{ type: 'text', value: content }] : content;
+		this.content =
+			typeof content === 'string'
+				? [{ type: 'text', value: content }]
+				: content;
 		this.name = name;
 	}
 
-	static User(content: string | Array<any>, name?: string): LanguageModelChatMessage {
-		return new LanguageModelChatMessage(LanguageModelChatMessageRole.User, content, name);
+	static User(
+		content: string | Array<any>,
+		name?: string,
+	): LanguageModelChatMessage {
+		return new LanguageModelChatMessage(
+			LanguageModelChatMessageRole.User,
+			content,
+			name,
+		);
 	}
 
-	static Assistant(content: string | Array<any>, name?: string): LanguageModelChatMessage {
-		return new LanguageModelChatMessage(LanguageModelChatMessageRole.Assistant, content, name);
+	static Assistant(
+		content: string | Array<any>,
+		name?: string,
+	): LanguageModelChatMessage {
+		return new LanguageModelChatMessage(
+			LanguageModelChatMessageRole.Assistant,
+			content,
+			name,
+		);
 	}
 }
 
-export class McpToolInvocationContentData implements vscode.McpToolInvocationContentData {
+export class McpToolInvocationContentData
+	implements vscode.McpToolInvocationContentData
+{
 	mimeType: string;
 	data: Uint8Array;
 
@@ -589,7 +765,8 @@ export class McpToolInvocationContentData implements vscode.McpToolInvocationCon
 	}
 }
 
-export interface ChatMcpToolInvocationData extends vscode.ChatMcpToolInvocationData {
+export interface ChatMcpToolInvocationData
+	extends vscode.ChatMcpToolInvocationData {
 	input: string;
 	output: McpToolInvocationContentData[];
 }
@@ -603,11 +780,15 @@ export class ChatToolInvocationPart {
 	pastTenseMessage?: string | vscode.MarkdownString;
 	isConfirmed?: boolean;
 	isComplete?: boolean;
-	toolSpecificData?: vscode.ChatTerminalToolInvocationData | ChatMcpToolInvocationData;
+	toolSpecificData?:
+		| vscode.ChatTerminalToolInvocationData
+		| ChatMcpToolInvocationData;
 
-	constructor(toolName: string,
+	constructor(
+		toolName: string,
 		toolCallId: string,
-		isError?: boolean | string) {
+		isError?: boolean | string,
+	) {
 		this.toolName = toolName;
 		this.toolCallId = toolCallId;
 		this.isError = typeof isError === 'string' ? true : isError;
@@ -619,7 +800,12 @@ export class ChatSubagentToolInvocationData {
 	agentName?: string;
 	prompt?: string;
 	result?: string;
-	constructor(description?: string, agentName?: string, prompt?: string, result?: string) {
+	constructor(
+		description?: string,
+		agentName?: string,
+		prompt?: string,
+		result?: string,
+	) {
 		this.description = description;
 		this.agentName = agentName;
 		this.prompt = prompt;
@@ -628,32 +814,43 @@ export class ChatSubagentToolInvocationData {
 }
 
 export class ChatResponseTurn2 implements vscode.ChatResponseTurn2 {
-
 	constructor(
-		readonly response: ReadonlyArray<ChatResponseMarkdownPart | ChatResponseFileTreePart | ChatResponseAnchorPart | ChatResponseCommandButtonPart | ChatResponseExtensionsPart | ChatToolInvocationPart>,
+		readonly response: ReadonlyArray<
+			| ChatResponseMarkdownPart
+			| ChatResponseFileTreePart
+			| ChatResponseAnchorPart
+			| ChatResponseCommandButtonPart
+			| ChatResponseExtensionsPart
+			| ChatToolInvocationPart
+		>,
 		readonly result: vscode.ChatResult,
 		readonly participant: string,
-		readonly command?: string
-	) { }
+		readonly command?: string,
+	) {}
 }
 
 export enum ChatSessionStatus {
 	Failed = 0,
 	Completed = 1,
 	InProgress = 2,
-	NeedsInput = 3
+	NeedsInput = 3,
 }
 
 export class LanguageModelError extends Error {
-
 	static readonly #name = 'LanguageModelError';
 
 	static NotFound(message?: string): LanguageModelError {
-		return new LanguageModelError(message, LanguageModelError.NotFound.name);
+		return new LanguageModelError(
+			message,
+			LanguageModelError.NotFound.name,
+		);
 	}
 
 	static NoPermissions(message?: string): LanguageModelError {
-		return new LanguageModelError(message, LanguageModelError.NoPermissions.name);
+		return new LanguageModelError(
+			message,
+			LanguageModelError.NoPermissions.name,
+		);
 	}
 
 	static Blocked(message?: string): LanguageModelError {
@@ -679,7 +876,6 @@ export class ChatResource implements vscode.ChatResource {
 		this.uri = uri;
 	}
 }
-
 
 /**
  * McpStdioServerDefinition represents an MCP server available by running
@@ -729,7 +925,13 @@ export class McpStdioServerDefinition {
 	 * @param env Optional additional environment information for the server.
 	 * @param version Optional version identification for the server.
 	 */
-	constructor(label: string, command: string, args?: string[], env?: Record<string, string | number | null>, version?: string) {
+	constructor(
+		label: string,
+		command: string,
+		args?: string[],
+		env?: Record<string, string | number | null>,
+		version?: string,
+	) {
 		this.label = label;
 		this.command = command;
 		this.args = args ?? [];
@@ -770,7 +972,12 @@ export class McpHttpServerDefinition {
 	 * @param uri The URI of the server.
 	 * @param headers Optional additional heads included with each request to the server.
 	 */
-	constructor(label: string, uri: vscode.Uri, headers?: Record<string, string>, version?: string) {
+	constructor(
+		label: string,
+		uri: vscode.Uri,
+		headers?: Record<string, string>,
+		version?: string,
+	) {
 		this.label = label;
 		this.uri = uri;
 		this.headers = headers ?? {};

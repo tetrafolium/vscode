@@ -162,7 +162,7 @@ export function filterSecretsFromObj<T>(obj: T): T {
 		return obj;
 	}
 	if (Array.isArray(obj)) {
-		return obj.map(item => filterSecretsFromObj(item)) as T;
+		return obj.map((item) => filterSecretsFromObj(item)) as T;
 	}
 	const result: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {

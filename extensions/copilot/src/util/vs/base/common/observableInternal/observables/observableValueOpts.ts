@@ -25,13 +25,13 @@ export function observableValueOpts<T, TChange = void>(
 			new DebugNameData(options.owner, options.debugName, undefined),
 			initialValue,
 			options.equalsFn ?? strictEquals,
-			debugLocation
+			debugLocation,
 		);
 	}
 	return new ObservableValue(
 		new DebugNameData(options.owner, options.debugName, undefined),
 		initialValue,
 		options.equalsFn ?? strictEquals,
-		debugLocation
+		debugLocation,
 	);
 }

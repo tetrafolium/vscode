@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import product from '../../../platform/product/common/product.js';
-import { isObject } from '../../../base/common/types.js';
-import { IConfigurationService } from '../../../platform/configuration/common/configuration.js';
-import { ITextResourceConfigurationService } from './textResourceConfiguration.js';
-import { URI } from '../../../base/common/uri.js';
+import product from "../../../platform/product/common/product.js";
+import { isObject } from "../../../base/common/types.js";
+import { IConfigurationService } from "../../../platform/configuration/common/configuration.js";
+import { ITextResourceConfigurationService } from "./textResourceConfiguration.js";
+import { URI } from "../../../base/common/uri.js";
 
 /**
  * Get the completions enablement setting name from product configuration.
@@ -24,7 +24,10 @@ function getCompletionsEnablementSettingName(): string | undefined {
  * @param modeId The language ID to check. Defaults to '*' which checks the global setting.
  * @returns `true` if completions are enabled for the language, `false` otherwise.
  */
-export function isCompletionsEnabled(configurationService: IConfigurationService, modeId: string = '*'): boolean {
+export function isCompletionsEnabled(
+	configurationService: IConfigurationService,
+	modeId: string = "*",
+): boolean {
 	const settingName = getCompletionsEnablementSettingName();
 	if (!settingName) {
 		return false;
@@ -32,7 +35,7 @@ export function isCompletionsEnabled(configurationService: IConfigurationService
 
 	return isCompletionsEnabledFromObject(
 		configurationService.getValue<Record<string, boolean>>(settingName),
-		modeId
+		modeId,
 	);
 }
 
@@ -44,7 +47,11 @@ export function isCompletionsEnabled(configurationService: IConfigurationService
  * @param modeId The language ID to check. Defaults to '*' which checks the global setting.
  * @returns `true` if completions are enabled for the language, `false` otherwise.
  */
-export function isCompletionsEnabledWithTextResourceConfig(configurationService: ITextResourceConfigurationService, resource: URI, modeId: string = '*'): boolean {
+export function isCompletionsEnabledWithTextResourceConfig(
+	configurationService: ITextResourceConfigurationService,
+	resource: URI,
+	modeId: string = "*",
+): boolean {
 	const settingName = getCompletionsEnablementSettingName();
 	if (!settingName) {
 		return false;
@@ -52,8 +59,11 @@ export function isCompletionsEnabledWithTextResourceConfig(configurationService:
 
 	// Pass undefined as resource to get the global setting
 	return isCompletionsEnabledFromObject(
-		configurationService.getValue<Record<string, boolean>>(resource, settingName),
-		modeId
+		configurationService.getValue<Record<string, boolean>>(
+			resource,
+			settingName,
+		),
+		modeId,
 	);
 }
 
@@ -65,14 +75,17 @@ export function isCompletionsEnabledWithTextResourceConfig(configurationService:
  * @param modeId The language ID to check. Defaults to '*' which checks the global setting.
  * @returns `true` if completions are enabled for the language, `false` otherwise.
  */
-export function isCompletionsEnabledFromObject(completionsEnablementObject: Record<string, boolean> | undefined, modeId: string = '*'): boolean {
+export function isCompletionsEnabledFromObject(
+	completionsEnablementObject: Record<string, boolean> | undefined,
+	modeId: string = "*",
+): boolean {
 	if (!isObject(completionsEnablementObject)) {
 		return false; // default to disabled if setting is not available
 	}
 
-	if (typeof completionsEnablementObject[modeId] !== 'undefined') {
+	if (typeof completionsEnablementObject[modeId] !== "undefined") {
 		return Boolean(completionsEnablementObject[modeId]); // go with setting if explicitly defined
 	}
 
-	return Boolean(completionsEnablementObject['*']); // fallback to global setting otherwise
+	return Boolean(completionsEnablementObject["*"]); // fallback to global setting otherwise
 }

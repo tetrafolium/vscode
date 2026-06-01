@@ -3,15 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ApiClient, FileStat, FileType, Requests } from '@vscode/sync-api-client';
-import { ClientConnection } from '@vscode/sync-api-common/browser';
-import { basename } from 'path';
-import type * as ts from 'typescript/lib/tsserverlibrary';
-import { FileWatcherManager } from './fileWatcherManager';
-import { Logger } from './logging';
-import { PathMapper, looksLikeNodeModules, mapUri } from './pathMapper';
-import { findArgument, hasArgument } from './util/args';
-import { URI } from 'vscode-uri';
+import {
+	ApiClient,
+	FileStat,
+	FileType,
+	Requests,
+} from "@vscode/sync-api-client";
+import { ClientConnection } from "@vscode/sync-api-common/browser";
+import { basename } from "path";
+import type * as ts from "typescript/lib/tsserverlibrary";
+import { FileWatcherManager } from "./fileWatcherManager";
+import { Logger } from "./logging";
+import { PathMapper, looksLikeNodeModules, mapUri } from "./pathMapper";
+import { findArgument, hasArgument } from "./util/args";
+import { URI } from "vscode-uri";
 
 type TsModule = typeof ts;
 
@@ -26,8 +31,11 @@ interface TsInternals extends TsModule {
 		useCaseSensitiveFileNames: boolean,
 		currentDirectory: string,
 		depth: number | undefined,
-		getFileSystemEntries: (path: string) => { files: readonly string[]; directories: readonly string[] },
-		realpath: (path: string) => string
+		getFileSystemEntries: (path: string) => {
+			files: readonly string[];
+			directories: readonly string[];
+		},
+		realpath: (path: string) => string,
 	): string[];
 
 	generateDjb2Hash(data: string): string;
@@ -38,10 +46,15 @@ interface TsInternals extends TsModule {
 	directorySeparator: string;
 }
 
-type ServerHostWithImport = ts.server.ServerHost & { importPlugin(root: string, moduleName: string): Promise<ts.server.ModuleImportResult> };
+type ServerHostWithImport = ts.server.ServerHost & {
+	importPlugin(
+		root: string,
+		moduleName: string,
+	): Promise<ts.server.ModuleImportResult>;
+};
 
 function createServerHost(
-	ts: typeof import('typescript/lib/tsserverlibrary'),
+	ts: typeof import("typescript/lib/tsserverlibrary"),
 	logger: Logger,
 	apiClient: ApiClient | undefined,
 	args: readonly string[],
@@ -50,23 +63,32 @@ function createServerHost(
 	enabledExperimentalTypeAcquisition: boolean,
 	exit: () => void,
 ): ServerHostWithImport {
-	const currentDirectory = '/';
+	const currentDirectory = "/";
 	const fs = apiClient?.vscode.workspace.fileSystem;
 
 	// Internals
 	const combinePaths = (ts as TsInternals).combinePaths;
-	const byteOrderMarkIndicator = '\uFEFF';
+	const byteOrderMarkIndicator = "\uFEFF";
 	const matchFiles = (ts as TsInternals).matchFiles;
 	const generateDjb2Hash = (ts as TsInternals).generateDjb2Hash;
 
 	// Legacy web
 	const memoize = (ts as TsInternals).memoize;
-	const ensureTrailingDirectorySeparator = (ts as TsInternals).ensureTrailingDirectorySeparator;
+	const ensureTrailingDirectorySeparator = (ts as TsInternals)
+		.ensureTrailingDirectorySeparator;
 	const getDirectoryPath = (ts as TsInternals).getDirectoryPath;
 	const directorySeparator = (ts as TsInternals).directorySeparator;
-	const executingFilePath = findArgument(args, '--executingFilePath') || location + '';
-	const getExecutingDirectoryPath = memoize(() => memoize(() => ensureTrailingDirectorySeparator(getDirectoryPath(executingFilePath))));
-	const getWebPath = (path: string) => path.startsWith(directorySeparator) ? path.replace(directorySeparator, getExecutingDirectoryPath()) : undefined;
+	const executingFilePath =
+		findArgument(args, "--executingFilePath") || location + "";
+	const getExecutingDirectoryPath = memoize(() =>
+		memoize(() =>
+			ensureTrailingDirectorySeparator(getDirectoryPath(executingFilePath)),
+		),
+	);
+	const getWebPath = (path: string) =>
+		path.startsWith(directorySeparator)
+			? path.replace(directorySeparator, getExecutingDirectoryPath())
+			: undefined;
 
 	const textDecoder = new TextDecoder();
 	const textEncoder = new TextEncoder();
@@ -74,13 +96,20 @@ function createServerHost(
 	return {
 		watchFile: watchManager.watchFile.bind(watchManager),
 		watchDirectory: watchManager.watchDirectory.bind(watchManager),
-		setTimeout(callback: (...args: unknown[]) => void, ms: number, ...args: unknown[]): unknown {
+		setTimeout(
+			callback: (...args: unknown[]) => void,
+			ms: number,
+			...args: unknown[]
+		): unknown {
 			return setTimeout(callback, ms, ...args);
 		},
 		clearTimeout(timeoutId: any): void {
 			clearTimeout(timeoutId);
 		},
-		setImmediate(callback: (...args: unknown[]) => void, ...args: unknown[]): unknown {
+		setImmediate(
+			callback: (...args: unknown[]) => void,
+			...args: unknown[]
+		): unknown {
 			return this.setTimeout(callback, 0, ...args);
 		},
 		clearImmediate(timeoutId: unknown): void {
@@ -91,44 +120,58 @@ function createServerHost(
 
 			let packageJson: any | undefined;
 			try {
-				const packageJsonResponse = await fetch(combinePaths(packageRoot, 'package.json'));
+				const packageJsonResponse = await fetch(
+					combinePaths(packageRoot, "package.json"),
+				);
 				packageJson = await packageJsonResponse.json();
 			} catch (e) {
-				return { module: undefined, error: new Error(`Could not load plugin. Could not load 'package.json'.`) };
+				return {
+					module: undefined,
+					error: new Error(
+						`Could not load plugin. Could not load 'package.json'.`,
+					),
+				};
 			}
 
 			const browser = packageJson.browser;
 			if (!browser) {
-				return { module: undefined, error: new Error(`Could not load plugin. No 'browser' field found in package.json.`) };
+				return {
+					module: undefined,
+					error: new Error(
+						`Could not load plugin. No 'browser' field found in package.json.`,
+					),
+				};
 			}
 
 			const scriptPath = combinePaths(packageRoot, browser);
 			try {
 				// This file isn't bundled so we really do want a dynamic import here
 				// eslint-disable-next-line no-restricted-syntax
-				const { default: module } = await import(/* webpackIgnore: true */ scriptPath);
+				const { default: module } = await import(
+					/* webpackIgnore: true */ scriptPath
+				);
 				return { module, error: undefined };
 			} catch (e) {
 				return { module: undefined, error: e };
 			}
 		},
 		args: Array.from(args),
-		newLine: '\n',
+		newLine: "\n",
 		useCaseSensitiveFileNames: true,
-		write: s => {
+		write: (s) => {
 			apiClient?.vscode.terminal.write(s);
 		},
 		writeOutputIsTTY() {
 			return true;
 		},
 		readFile(path) {
-			logger.logVerbose('fs.readFile', { path });
+			logger.logVerbose("fs.readFile", { path });
 
 			if (!fs) {
 				const webPath = getWebPath(path);
 				if (webPath) {
 					const request = new XMLHttpRequest();
-					request.open('GET', webPath, /* asynchronous */ false);
+					request.open("GET", webPath, /* asynchronous */ false);
 					request.send();
 					return request.status === 200 ? request.responseText : undefined;
 				} else {
@@ -152,7 +195,7 @@ function createServerHost(
 					return undefined;
 				}
 				try {
-					contents = fs.readFile(mapUri(uri, 'vscode-node-modules'));
+					contents = fs.readFile(mapUri(uri, "vscode-node-modules"));
 				} catch (e) {
 					return undefined;
 				}
@@ -160,10 +203,10 @@ function createServerHost(
 			return textDecoder.decode(contents.slice());
 		},
 		getFileSize(path) {
-			logger.logVerbose('fs.getFileSize', { path });
+			logger.logVerbose("fs.getFileSize", { path });
 
 			if (!fs) {
-				throw new Error('not supported');
+				throw new Error("not supported");
 			}
 
 			const uri = pathMapper.toResource(path);
@@ -173,18 +216,17 @@ function createServerHost(
 			} catch (_error) {
 				if (enabledExperimentalTypeAcquisition) {
 					try {
-						ret = fs.stat(mapUri(uri, 'vscode-node-modules')).size;
-					} catch (_error) {
-					}
+						ret = fs.stat(mapUri(uri, "vscode-node-modules")).size;
+					} catch (_error) {}
 				}
 			}
 			return ret;
 		},
 		writeFile(path, data, writeByteOrderMark) {
-			logger.logVerbose('fs.writeFile', { path });
+			logger.logVerbose("fs.writeFile", { path });
 
 			if (!fs) {
-				throw new Error('not supported');
+				throw new Error("not supported");
 			}
 
 			if (writeByteOrderMark) {
@@ -201,18 +243,23 @@ function createServerHost(
 			try {
 				fs.writeFile(uri, encoded);
 				const name = basename(uri.path);
-				if (uri.scheme !== 'vscode-global-typings' && (name === 'package.json' || name === 'package-lock.json' || name === 'package-lock.kdl')) {
-					fs.writeFile(mapUri(uri, 'vscode-node-modules'), encoded);
+				if (
+					uri.scheme !== "vscode-global-typings" &&
+					(name === "package.json" ||
+						name === "package-lock.json" ||
+						name === "package-lock.kdl")
+				) {
+					fs.writeFile(mapUri(uri, "vscode-node-modules"), encoded);
 				}
 			} catch (error) {
-				console.error('fs.writeFile', { path, error });
+				console.error("fs.writeFile", { path, error });
 			}
 		},
 		resolvePath(path: string): string {
 			return path;
 		},
 		fileExists(path: string): boolean {
-			logger.logVerbose('fs.fileExists', { path });
+			logger.logVerbose("fs.fileExists", { path });
 
 			if (!fs) {
 				const webPath = getWebPath(path);
@@ -221,7 +268,7 @@ function createServerHost(
 				}
 
 				const request = new XMLHttpRequest();
-				request.open('HEAD', webPath, /* asynchronous */ false);
+				request.open("HEAD", webPath, /* asynchronous */ false);
 				request.send();
 				return request.status === 200;
 			}
@@ -238,15 +285,16 @@ function createServerHost(
 			} catch (_error) {
 				if (enabledExperimentalTypeAcquisition) {
 					try {
-						ret = fs.stat(mapUri(uri, 'vscode-node-modules')).type === FileType.File;
-					} catch (_error) {
-					}
+						ret =
+							fs.stat(mapUri(uri, "vscode-node-modules")).type ===
+							FileType.File;
+					} catch (_error) {}
 				}
 			}
 			return ret;
 		},
 		directoryExists(path: string): boolean {
-			logger.logVerbose('fs.directoryExists', { path });
+			logger.logVerbose("fs.directoryExists", { path });
 
 			if (!fs) {
 				return false;
@@ -265,15 +313,16 @@ function createServerHost(
 			} catch (_error) {
 				if (enabledExperimentalTypeAcquisition) {
 					try {
-						stat = fs.stat(mapUri(uri, 'vscode-node-modules'));
-					} catch (_error) {
-					}
+						stat = fs.stat(mapUri(uri, "vscode-node-modules"));
+					} catch (_error) {}
 				}
 			}
 			if (stat) {
-				if (path.startsWith('/https') && !path.endsWith('.d.ts')) {
+				if (path.startsWith("/https") && !path.endsWith(".d.ts")) {
 					// TODO: Hack, https 'file system' can't actually tell what is a file vs directory
-					return stat.type === FileType.File || stat.type === FileType.Directory;
+					return (
+						stat.type === FileType.File || stat.type === FileType.Directory
+					);
 				}
 
 				return stat.type === FileType.Directory;
@@ -282,15 +331,18 @@ function createServerHost(
 			}
 		},
 		createDirectory(path: string): void {
-			logger.logVerbose('fs.createDirectory', { path });
+			logger.logVerbose("fs.createDirectory", { path });
 			if (!fs) {
-				throw new Error('not supported');
+				throw new Error("not supported");
 			}
 
 			try {
 				fs.createDirectory(pathMapper.toResource(path));
 			} catch (error) {
-				logger.logNormal('Error fs.createDirectory', { path, error: error + '' });
+				logger.logNormal("Error fs.createDirectory", {
+					path,
+					error: error + "",
+				});
 			}
 		},
 		getExecutingFilePath(): string {
@@ -300,20 +352,36 @@ function createServerHost(
 			return currentDirectory;
 		},
 		getDirectories(path: string): string[] {
-			logger.logVerbose('fs.getDirectories', { path });
+			logger.logVerbose("fs.getDirectories", { path });
 
 			return getAccessibleFileSystemEntries(path).directories.slice();
 		},
-		readDirectory(path: string, extensions?: readonly string[], excludes?: readonly string[], includes?: readonly string[], depth?: number): string[] {
-			logger.logVerbose('fs.readDirectory', { path });
+		readDirectory(
+			path: string,
+			extensions?: readonly string[],
+			excludes?: readonly string[],
+			includes?: readonly string[],
+			depth?: number,
+		): string[] {
+			logger.logVerbose("fs.readDirectory", { path });
 
-			return matchFiles(path, extensions, excludes, includes, /*useCaseSensitiveFileNames*/ true, currentDirectory, depth, getAccessibleFileSystemEntries, realpath);
+			return matchFiles(
+				path,
+				extensions,
+				excludes,
+				includes,
+				/*useCaseSensitiveFileNames*/ true,
+				currentDirectory,
+				depth,
+				getAccessibleFileSystemEntries,
+				realpath,
+			);
 		},
 		getModifiedTime(path: string): Date | undefined {
-			logger.logVerbose('fs.getModifiedTime', { path });
+			logger.logVerbose("fs.getModifiedTime", { path });
 
 			if (!fs) {
-				throw new Error('not supported');
+				throw new Error("not supported");
 			}
 
 			const uri = pathMapper.toResource(path);
@@ -323,24 +391,23 @@ function createServerHost(
 			} catch (_e) {
 				if (enabledExperimentalTypeAcquisition) {
 					try {
-						s = fs.stat(mapUri(uri, 'vscode-node-modules'));
-					} catch (_e) {
-					}
+						s = fs.stat(mapUri(uri, "vscode-node-modules"));
+					} catch (_e) {}
 				}
 			}
 			return s && new Date(s.mtime);
 		},
 		deleteFile(path: string): void {
-			logger.logVerbose('fs.deleteFile', { path });
+			logger.logVerbose("fs.deleteFile", { path });
 
 			if (!fs) {
-				throw new Error('not supported');
+				throw new Error("not supported");
 			}
 
 			try {
 				fs.delete(pathMapper.toResource(path));
 			} catch (error) {
-				logger.logNormal('Error fs.deleteFile', { path, error: error + '' });
+				logger.logNormal("Error fs.deleteFile", { path, error: error + "" });
 			}
 		},
 		createHash: generateDjb2Hash,
@@ -349,23 +416,24 @@ function createServerHost(
 		createSHA256Hash: undefined,
 		exit: exit,
 		realpath,
-		base64decode: input => Buffer.from(input, 'base64').toString('utf8'),
-		base64encode: input => Buffer.from(input).toString('base64'),
+		base64decode: (input) => Buffer.from(input, "base64").toString("utf8"),
+		base64encode: (input) => Buffer.from(input).toString("base64"),
 	};
 
 	// For module resolution only. `node_modules` is also automatically mapped
 	// as if all node_modules-like paths are symlinked.
 	function realpath(path: string): string {
-		if (path.startsWith('/^/')) {
+		if (path.startsWith("/^/")) {
 			// In memory file. No mapping needed
 			return path;
 		}
 
-		const isNm = looksLikeNodeModules(path)
-			&& !path.startsWith('/vscode-global-typings/')
+		const isNm =
+			looksLikeNodeModules(path) &&
+			!path.startsWith("/vscode-global-typings/") &&
 			// Handle the case where a local folder has been opened in VS Code
 			// In these cases we do not want to use the mapped node_module
-			&& !path.startsWith('/file/');
+			!path.startsWith("/file/");
 
 		// skip paths without .. or ./ or /
 		if (!isNm && !path.match(/\.\.|\/\.|\.\//)) {
@@ -380,16 +448,18 @@ function createServerHost(
 		}
 
 		if (isNm) {
-			uri = mapUri(uri, 'vscode-node-modules');
+			uri = mapUri(uri, "vscode-node-modules");
 		}
 		const out = [uri.scheme];
-		if (uri.authority) { out.push(uri.authority); }
-		for (const part of uri.path.split('/')) {
+		if (uri.authority) {
+			out.push(uri.authority);
+		}
+		for (const part of uri.path.split("/")) {
 			switch (part) {
-				case '':
-				case '.':
+				case "":
+				case ".":
 					break;
-				case '..':
+				case "..":
 					//delete if there is something there to delete
 					out.pop();
 					break;
@@ -397,15 +467,18 @@ function createServerHost(
 					out.push(part);
 			}
 		}
-		return '/' + out.join('/');
+		return "/" + out.join("/");
 	}
 
-	function getAccessibleFileSystemEntries(path: string): { files: readonly string[]; directories: readonly string[] } {
+	function getAccessibleFileSystemEntries(path: string): {
+		files: readonly string[];
+		directories: readonly string[];
+	} {
 		if (!fs) {
-			throw new Error('not supported');
+			throw new Error("not supported");
 		}
 
-		const uri = pathMapper.toResource(path || '.');
+		const uri = pathMapper.toResource(path || ".");
 		let entries: [string, FileType][] = [];
 		const files: string[] = [];
 		const directories: string[] = [];
@@ -413,21 +486,19 @@ function createServerHost(
 			entries = fs.readDirectory(uri);
 		} catch (_e) {
 			try {
-				entries = fs.readDirectory(mapUri(uri, 'vscode-node-modules'));
-			} catch (_e) {
-			}
+				entries = fs.readDirectory(mapUri(uri, "vscode-node-modules"));
+			} catch (_e) {}
 		}
 		for (const [entry, type] of entries) {
 			// This is necessary because on some file system node fails to exclude
 			// '.' and '..'. See https://github.com/nodejs/node/issues/4002
-			if (entry === '.' || entry === '..') {
+			if (entry === "." || entry === "..") {
 				continue;
 			}
 
 			if (type === FileType.File) {
 				files.push(entry);
-			}
-			else if (type === FileType.Directory) {
+			} else if (type === FileType.Directory) {
 				directories.push(entry);
 			}
 		}
@@ -438,7 +509,7 @@ function createServerHost(
 }
 
 export async function createSys(
-	ts: typeof import('typescript/lib/tsserverlibrary'),
+	ts: typeof import("typescript/lib/tsserverlibrary"),
 	args: readonly string[],
 	fsPort: MessagePort,
 	logger: Logger,
@@ -446,17 +517,39 @@ export async function createSys(
 	pathMapper: PathMapper,
 	onExit: () => void,
 ) {
-	if (hasArgument(args, '--enableProjectWideIntelliSenseOnWeb')) {
-		const enabledExperimentalTypeAcquisition = hasArgument(args, '--experimentalTypeAcquisition');
+	if (hasArgument(args, "--enableProjectWideIntelliSenseOnWeb")) {
+		const enabledExperimentalTypeAcquisition = hasArgument(
+			args,
+			"--experimentalTypeAcquisition",
+		);
 		const connection = new ClientConnection<Requests>(fsPort);
 		await connection.serviceReady();
 
 		const apiClient = new ApiClient(connection);
 		const fs = apiClient.vscode.workspace.fileSystem;
-		const sys = createServerHost(ts, logger, apiClient, args, watchManager, pathMapper, enabledExperimentalTypeAcquisition, onExit);
+		const sys = createServerHost(
+			ts,
+			logger,
+			apiClient,
+			args,
+			watchManager,
+			pathMapper,
+			enabledExperimentalTypeAcquisition,
+			onExit,
+		);
 		return { sys, fs };
 	} else {
-		return { sys: createServerHost(ts, logger, undefined, args, watchManager, pathMapper, false, onExit) };
+		return {
+			sys: createServerHost(
+				ts,
+				logger,
+				undefined,
+				args,
+				watchManager,
+				pathMapper,
+				false,
+				onExit,
+			),
+		};
 	}
 }
-

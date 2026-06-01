@@ -10,7 +10,11 @@ import { join, win32 } from '../../../util/vs/base/common/path';
 import { isWindows } from '../../../util/vs/base/common/platform';
 import { removeAnsiEscapeCodes } from '../../../util/vs/base/common/strings';
 import { ILogService } from '../../log/common/logService';
-import { HookCommandResultKind, IHookCommandResult, IHookExecutor } from '../common/hookExecutor';
+import {
+	HookCommandResultKind,
+	IHookCommandResult,
+	IHookExecutor,
+} from '../common/hookExecutor';
 import { IHooksOutputChannel } from '../common/hooksOutputChannel';
 
 const SIGKILL_DELAY_MS = 5000;
@@ -21,15 +25,18 @@ export class NodeHookExecutor implements IHookExecutor {
 
 	constructor(
 		@ILogService private readonly _logService: ILogService,
-		@IHooksOutputChannel private readonly _outputChannel: IHooksOutputChannel,
-	) { }
+		@IHooksOutputChannel
+		private readonly _outputChannel: IHooksOutputChannel,
+	) {}
 
 	async executeCommand(
 		hookCommand: ChatHookCommand,
 		input: unknown,
-		token: CancellationToken
+		token: CancellationToken,
 	): Promise<IHookCommandResult> {
-		this._logService.debug(`[HookExecutor] Running hook command: ${hookCommand.command}`);
+		this._logService.debug(
+			`[HookExecutor] Running hook command: ${hookCommand.command}`,
+		);
 
 		try {
 			return await this._spawn(hookCommand, input, token);
@@ -41,15 +48,24 @@ export class NodeHookExecutor implements IHookExecutor {
 			this._outputChannel.appendLine(`[HookExecutor] ${message}`);
 			return {
 				kind: HookCommandResultKind.NonBlockingError,
-				result: errMessage
+				result: errMessage,
 			};
 		}
 	}
 
-	private _spawn(hook: ChatHookCommand, input: unknown, token: CancellationToken): Promise<IHookCommandResult> {
+	private _spawn(
+		hook: ChatHookCommand,
+		input: unknown,
+		token: CancellationToken,
+	): Promise<IHookCommandResult> {
 		const cwd = hook.cwd ? uriToFsPath(hook.cwd) : homedir();
 		const env = { ...process.env, ...hook.env };
-		const { command, args, shell, env: shellEnv } = getShellCommand(hook.command);
+		const {
+			command,
+			args,
+			shell,
+			env: shellEnv,
+		} = getShellCommand(hook.command);
 
 		const child = spawn(command, args, {
 			stdio: 'pipe',
@@ -91,27 +107,34 @@ export class NodeHookExecutor implements IHookExecutor {
 			};
 
 			// Collect output
-			child.stdout.on('data', data => stdout.push(data.toString()));
-			child.stderr.on('data', data => stderr.push(data.toString()));
+			child.stdout.on('data', (data) => stdout.push(data.toString()));
+			child.stderr.on('data', (data) => stderr.push(data.toString()));
 
 			// Set up timeout
-			const timeoutTimer = setTimeout(() => killWithEscalation('timeout'), (hook.timeout ?? DEFAULT_TIMEOUT_SEC) * 1000);
+			const timeoutTimer = setTimeout(
+				() => killWithEscalation('timeout'),
+				(hook.timeout ?? DEFAULT_TIMEOUT_SEC) * 1000,
+			);
 
 			// Set up cancellation
 			if (token) {
-				tokenListener = token.onCancellationRequested(() => killWithEscalation('cancelled'));
+				tokenListener = token.onCancellationRequested(() =>
+					killWithEscalation('cancelled'),
+				);
 			}
 
 			// Write input to stdin
 			if (input !== undefined && input !== null) {
 				try {
-					child.stdin.write(JSON.stringify(input, (_key, value) => {
-						// Convert URI-like objects to filesystem paths
-						if (isUriLike(value)) {
-							return uriToFsPath(value);
-						}
-						return value;
-					}));
+					child.stdin.write(
+						JSON.stringify(input, (_key, value) => {
+							// Convert URI-like objects to filesystem paths
+							if (isUriLike(value)) {
+								return uriToFsPath(value);
+							}
+							return value;
+						}),
+					);
 				} catch {
 					// Ignore stdin write errors
 				}
@@ -119,7 +142,9 @@ export class NodeHookExecutor implements IHookExecutor {
 			child.stdin.end();
 
 			// Capture exit code
-			child.on('exit', code => { exitCode = code; });
+			child.on('exit', (code) => {
+				exitCode = code;
+			});
 
 			// Resolve on close (after streams flush)
 			child.on('close', () => {
@@ -130,7 +155,9 @@ export class NodeHookExecutor implements IHookExecutor {
 					this._logService.warn(`[HookExecutor] ${message}`);
 					this._outputChannel.appendLine(`[HookExecutor] ${message}`);
 				} else if (killReason === 'cancelled') {
-					this._outputChannel.appendLine(`[HookExecutor] Hook command was cancelled: ${hook.command}`);
+					this._outputChannel.appendLine(
+						`[HookExecutor] Hook command was cancelled: ${hook.command}`,
+					);
 				}
 
 				const code = exitCode ?? 1;
@@ -145,20 +172,34 @@ export class NodeHookExecutor implements IHookExecutor {
 						} catch {
 							const message = `Hook command returned non-JSON output: ${hook.command}`;
 							this._logService.warn(`[HookExecutor] ${message}`);
-							this._outputChannel.appendLine(`[HookExecutor] ${message}`);
+							this._outputChannel.appendLine(
+								`[HookExecutor] ${message}`,
+							);
 						}
 					}
-					resolve({ kind: HookCommandResultKind.Success, result, exitCode: code });
+					resolve({
+						kind: HookCommandResultKind.Success,
+						result,
+						exitCode: code,
+					});
 				} else if (code === 2) {
 					// Exit code 2: blocking error shown to model
-					resolve({ kind: HookCommandResultKind.Error, result: stderrStr, exitCode: code });
+					resolve({
+						kind: HookCommandResultKind.Error,
+						result: stderrStr,
+						exitCode: code,
+					});
 				} else {
 					// Other non-zero: non-blocking warning shown to user only
-					resolve({ kind: HookCommandResultKind.NonBlockingError, result: stderrStr, exitCode: code });
+					resolve({
+						kind: HookCommandResultKind.NonBlockingError,
+						result: stderrStr,
+						exitCode: code,
+					});
 				}
 			});
 
-			child.on('error', err => {
+			child.on('error', (err) => {
 				cleanup();
 				reject(err);
 			});
@@ -167,7 +208,12 @@ export class NodeHookExecutor implements IHookExecutor {
 }
 
 function isUriLike(value: unknown): value is Uri {
-	return typeof value === 'object' && value !== null && 'scheme' in value && 'path' in value;
+	return (
+		typeof value === 'object' &&
+		value !== null &&
+		'scheme' in value &&
+		'path' in value
+	);
 }
 
 function uriToFsPath(uri: Uri): string {
@@ -179,13 +225,20 @@ function uriToFsPath(uri: Uri): string {
 	return (uri as { path: string }).path;
 }
 
-
 /**
  * Returns the shell command and arguments to use for executing a hook command.
  * On Windows when ComSpec is cmd.exe, uses PowerShell with -ExecutionPolicy Bypass.
  * Otherwise uses the platform default shell via `shell: true`.
  */
-export function getShellCommand(hookCommand: string, windowsOS: boolean = isWindows): { command: string; args: string[]; shell?: boolean; env?: Record<string, string> } {
+export function getShellCommand(
+	hookCommand: string,
+	windowsOS: boolean = isWindows,
+): {
+	command: string;
+	args: string[];
+	shell?: boolean;
+	env?: Record<string, string>;
+} {
 	if (!windowsOS) {
 		return { command: hookCommand, args: [], shell: true };
 	}
@@ -201,8 +254,21 @@ export function getShellCommand(hookCommand: string, windowsOS: boolean = isWind
 	}
 
 	return {
-		command: join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'),
-		args: ['-ExecutionPolicy', 'Bypass', '-NoProfile', '-NoLogo', '-Command', hookCommand],
+		command: join(
+			systemRoot,
+			'System32',
+			'WindowsPowerShell',
+			'v1.0',
+			'powershell.exe',
+		),
+		args: [
+			'-ExecutionPolicy',
+			'Bypass',
+			'-NoProfile',
+			'-NoLogo',
+			'-Command',
+			hookCommand,
+		],
 		env: { POWERSHELL_UPDATECHECK: 'Off' },
 	};
 }

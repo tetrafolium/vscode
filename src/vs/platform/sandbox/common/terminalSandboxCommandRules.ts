@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { OperatingSystem } from '../../../base/common/platform.js';
-import type { ITerminalSandboxCommand } from './terminalSandboxService.js';
+import type { OperatingSystem } from "../../../base/common/platform.js";
+import type { ITerminalSandboxCommand } from "./terminalSandboxService.js";
 
 export interface ITerminalSandboxCommandRuleContext {
 	readonly os: OperatingSystem;
@@ -27,20 +27,24 @@ export interface ITerminalSandboxCommandRule<T> {
  * instead of treating `repo` as the subcommand.
  */
 export const gitGlobalOptionsWithValue = new Set([
-	'-C',
-	'-c',
-	'--config-env',
-	'--exec-path',
-	'--git-dir',
-	'--html-path',
-	'--info-path',
-	'--man-path',
-	'--namespace',
-	'--super-prefix',
-	'--work-tree',
+	"-C",
+	"-c",
+	"--config-env",
+	"--exec-path",
+	"--git-dir",
+	"--html-path",
+	"--info-path",
+	"--man-path",
+	"--namespace",
+	"--super-prefix",
+	"--work-tree",
 ]);
 
-export function matchesTerminalSandboxCommandRule<T>(command: ITerminalSandboxCommand, rule: ITerminalSandboxCommandRule<T>, context?: ITerminalSandboxCommandRuleContext): boolean {
+export function matchesTerminalSandboxCommandRule<T>(
+	command: ITerminalSandboxCommand,
+	rule: ITerminalSandboxCommandRule<T>,
+	context?: ITerminalSandboxCommandRuleContext,
+): boolean {
 	if (!rule.keywords.includes(command.keyword.toLowerCase())) {
 		return false;
 	}
@@ -48,7 +52,10 @@ export function matchesTerminalSandboxCommandRule<T>(command: ITerminalSandboxCo
 		return false;
 	}
 	if (rule.subcommands) {
-		const subcommand = getCommandSubcommand(command.args, rule.optionsWithValue);
+		const subcommand = getCommandSubcommand(
+			command.args,
+			rule.optionsWithValue,
+		);
 		if (subcommand === undefined || !rule.subcommands.includes(subcommand)) {
 			return false;
 		}
@@ -64,16 +71,21 @@ export function matchesTerminalSandboxCommandRule<T>(command: ITerminalSandboxCo
  * For example, with `-C` in `optionsWithValue`, `git -C repo commit` returns
  * `commit` instead of `repo`.
  */
-export function getCommandSubcommand(args: readonly string[], optionsWithValue?: ReadonlySet<string>): string | undefined {
+export function getCommandSubcommand(
+	args: readonly string[],
+	optionsWithValue?: ReadonlySet<string>,
+): string | undefined {
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
-		if (arg === '--') {
+		if (arg === "--") {
 			return undefined;
 		}
 
-		if (arg.startsWith('-')) {
-			const option = arg.includes('=') ? arg.substring(0, arg.indexOf('=')) : arg;
-			if (!arg.includes('=') && optionsWithValue?.has(option)) {
+		if (arg.startsWith("-")) {
+			const option = arg.includes("=")
+				? arg.substring(0, arg.indexOf("="))
+				: arg;
+			if (!arg.includes("=") && optionsWithValue?.has(option)) {
 				i++;
 			}
 			continue;

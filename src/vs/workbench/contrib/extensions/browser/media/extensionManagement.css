@@ -7,6 +7,7 @@
 	vertical-align: sub;
 }
 
-.rendered-markdown.extensions-management-publisher-trust-dialog .codicon.codicon-extensions-verified-publisher {
+.rendered-markdown.extensions-management-publisher-trust-dialog
+	.codicon.codicon-extensions-verified-publisher {
 	color: var(--vscode-extensionIcon-verifiedForeground);
 }

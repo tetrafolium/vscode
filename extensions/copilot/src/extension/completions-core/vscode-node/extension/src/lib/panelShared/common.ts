@@ -5,27 +5,60 @@
 
 import { CancellationToken } from 'vscode';
 import { generateUuid } from '../../../../../../../util/vs/base/common/uuid';
-import { IInstantiationService, type ServicesAccessor } from '../../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	type ServicesAccessor,
+} from '../../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { createCompletionState } from '../../../../lib/src/completionState';
 import { BlockMode } from '../../../../lib/src/config';
 import { ICompletionsFeaturesService } from '../../../../lib/src/experiments/featuresService';
 import { ICompletionsBlockModeConfig } from '../../../../lib/src/ghostText/configBlockMode';
-import { ICompletionsLogTargetService, type Logger } from '../../../../lib/src/logger';
+import {
+	ICompletionsLogTargetService,
+	type Logger,
+} from '../../../../lib/src/logger';
 import { getEngineRequestInfo } from '../../../../lib/src/openai/config';
-import { CompletionHeaders, CompletionRequestExtra, PostOptions } from '../../../../lib/src/openai/fetch';
+import {
+	CompletionHeaders,
+	CompletionRequestExtra,
+	PostOptions,
+} from '../../../../lib/src/openai/fetch';
 import { APIChoice, FinishedCallback } from '../../../../lib/src/openai/openai';
-import { contextIndentation, parsingBlockFinished } from '../../../../lib/src/prompt/parseBlock';
+import {
+	contextIndentation,
+	parsingBlockFinished,
+} from '../../../../lib/src/prompt/parseBlock';
 import { extractPrompt, Prompt } from '../../../../lib/src/prompt/prompt';
-import { extractRepoInfoInBackground, MaybeRepoInfo } from '../../../../lib/src/prompt/repository';
-import { telemetrizePromptLength, telemetry, TelemetryData, TelemetryWithExp } from '../../../../lib/src/telemetry';
-import { IPosition, ITextDocument, LocationFactory, TextDocumentContents } from '../../../../lib/src/textDocument';
+import {
+	extractRepoInfoInBackground,
+	MaybeRepoInfo,
+} from '../../../../lib/src/prompt/repository';
+import {
+	telemetrizePromptLength,
+	telemetry,
+	TelemetryData,
+	TelemetryWithExp,
+} from '../../../../lib/src/telemetry';
+import {
+	IPosition,
+	ITextDocument,
+	LocationFactory,
+	TextDocumentContents,
+} from '../../../../lib/src/textDocument';
 import { isSupportedLanguageId } from '../../../../prompt/src/parse';
 import { Position } from '../../../../types/src';
-import { ISolutionHandler, SolutionsStream, UnformattedSolution } from './panelTypes';
+import {
+	ISolutionHandler,
+	SolutionsStream,
+	UnformattedSolution,
+} from './panelTypes';
 
 export const solutionCountTarget = 10;
 
-export function panelPositionForDocument(document: TextDocumentContents, position: Position): IPosition {
+export function panelPositionForDocument(
+	document: TextDocumentContents,
+	position: Position,
+): IPosition {
 	let returnPosition = position;
 	const line = document.lineAt(position.line);
 	if (!line.isEmptyOrWhitespace) {
@@ -37,7 +70,9 @@ export function panelPositionForDocument(document: TextDocumentContents, positio
 /**
  * Trim trailing whitespace.
  */
-export async function* trimChoices(choices: AsyncIterable<APIChoice>): AsyncIterable<APIChoice> {
+export async function* trimChoices(
+	choices: AsyncIterable<APIChoice>,
+): AsyncIterable<APIChoice> {
 	for await (const choice of choices) {
 		const choiceCopy = { ...choice };
 		choiceCopy.completionText = choiceCopy.completionText.trimEnd();
@@ -47,14 +82,17 @@ export async function* trimChoices(choices: AsyncIterable<APIChoice>): AsyncIter
 
 export class SolutionManager {
 	private _savedTelemetryData?: TelemetryWithExp | undefined;
-	readonly targetPosition = panelPositionForDocument(this.textDocument, this.startPosition);
+	readonly targetPosition = panelPositionForDocument(
+		this.textDocument,
+		this.startPosition,
+	);
 
 	constructor(
 		readonly textDocument: ITextDocument,
 		public startPosition: IPosition,
 		readonly cancellationToken: CancellationToken,
-		readonly solutionCountTarget: number
-	) { }
+		readonly solutionCountTarget: number,
+	) {}
 
 	get savedTelemetryData(): TelemetryWithExp | undefined {
 		return this._savedTelemetryData;
@@ -67,7 +105,7 @@ export class SolutionManager {
 
 export async function reportSolutions(
 	nextSolutionPromise: Promise<SolutionsStream>,
-	solutionHandler: ISolutionHandler
+	solutionHandler: ISolutionHandler,
 ): Promise<void> {
 	const nextSolution = await nextSolutionPromise;
 	switch (nextSolution.status) {
@@ -86,7 +124,7 @@ export async function reportSolutions(
 
 export async function generateSolutionsStream(
 	cancellationToken: CancellationToken,
-	solutions: AsyncIterator<UnformattedSolution>
+	solutions: AsyncIterator<UnformattedSolution>,
 ): Promise<SolutionsStream> {
 	if (cancellationToken.isCancellationRequested) {
 		return { status: 'FinishedWithError', error: 'Cancelled' };
@@ -127,7 +165,7 @@ export async function setupPromptAndTelemetry(
 	source: 'open copilot' | 'open comparison',
 	solutionsLogger: Logger,
 	engineName?: string,
-	comparisonRequestId?: string
+	comparisonRequestId?: string,
 ): Promise<PromptSetupResult | SolutionsStream> {
 	const position = solutionManager.targetPosition;
 	const document = solutionManager.textDocument;
@@ -142,36 +180,39 @@ export async function setupPromptAndTelemetry(
 			languageId: document.detectedLanguageId,
 			source,
 		},
-		{}
+		{},
 	);
 
 	const featuresService = accessor.get(ICompletionsFeaturesService);
 	const instantiationService = accessor.get(IInstantiationService);
 	const logTarget = accessor.get(ICompletionsLogTargetService);
 	// Update telemetry with experiment values
-	solutionManager.savedTelemetryData = await featuresService
-		.fetchTokenAndUpdateExPValuesAndAssignments(
+	solutionManager.savedTelemetryData =
+		await featuresService.fetchTokenAndUpdateExPValuesAndAssignments(
 			{ uri: document.uri, languageId: document.detectedLanguageId },
-			tempTelemetry
+			tempTelemetry,
 		);
 
 	// Add in comparison panel specific info
 	if (engineName) {
-		solutionManager.savedTelemetryData = solutionManager.savedTelemetryData!.extendedBy({
-			engineName,
-		});
+		solutionManager.savedTelemetryData =
+			solutionManager.savedTelemetryData!.extendedBy({
+				engineName,
+			});
 	}
 	if (comparisonRequestId) {
-		solutionManager.savedTelemetryData = solutionManager.savedTelemetryData!.extendedBy({
-			comparisonRequestId,
-		});
+		solutionManager.savedTelemetryData =
+			solutionManager.savedTelemetryData!.extendedBy({
+				comparisonRequestId,
+			});
 	}
 
 	// Extract prompt
-	const promptResponse = await instantiationService.invokeFunction(extractPrompt,
+	const promptResponse = await instantiationService.invokeFunction(
+		extractPrompt,
 		ourRequestId,
 		createCompletionState(document, position),
-		solutionManager.savedTelemetryData!
+		solutionManager.savedTelemetryData!,
 	);
 
 	// Handle prompt extraction errors
@@ -198,22 +239,27 @@ export async function setupPromptAndTelemetry(
 	if (trailingWs.length > 0) {
 		solutionManager.startPosition = LocationFactory.position(
 			solutionManager.startPosition.line,
-			solutionManager.startPosition.character - trailingWs.length
+			solutionManager.startPosition.character - trailingWs.length,
 		);
 	}
 
 	// Update telemetry with prompt information
-	solutionManager.savedTelemetryData = solutionManager.savedTelemetryData!.extendedBy(
-		{},
-		{
-			...telemetrizePromptLength(prompt),
-			solutionCount: solutionManager.solutionCountTarget,
-			promptEndPos: document.offsetAt(position),
-		}
-	);
+	solutionManager.savedTelemetryData =
+		solutionManager.savedTelemetryData!.extendedBy(
+			{},
+			{
+				...telemetrizePromptLength(prompt),
+				solutionCount: solutionManager.solutionCountTarget,
+				promptEndPos: document.offsetAt(position),
+			},
+		);
 
 	solutionsLogger.debug(logTarget, 'prompt:', prompt);
-	instantiationService.invokeFunction(telemetry, 'solution.requested', solutionManager.savedTelemetryData);
+	instantiationService.invokeFunction(
+		telemetry,
+		'solution.requested',
+		solutionManager.savedTelemetryData,
+	);
 
 	return {
 		prompt,
@@ -243,11 +289,15 @@ export function setupCompletionParams(
 	position: IPosition,
 	prompt: Prompt,
 	solutionManager: SolutionManager,
-	telemetryData: TelemetryWithExp
+	telemetryData: TelemetryWithExp,
 ): CompletionSetupResult {
 	// Compute block mode
-	const blockMode = accessor.get(ICompletionsBlockModeConfig).forLanguage(document.detectedLanguageId, telemetryData);
-	const isSupportedLanguage = isSupportedLanguageId(document.detectedLanguageId);
+	const blockMode = accessor
+		.get(ICompletionsBlockModeConfig)
+		.forLanguage(document.detectedLanguageId, telemetryData);
+	const isSupportedLanguage = isSupportedLanguageId(
+		document.detectedLanguageId,
+	);
 
 	const contextIndent = contextIndentation(document, position);
 	const extra: CompletionRequestExtra = {

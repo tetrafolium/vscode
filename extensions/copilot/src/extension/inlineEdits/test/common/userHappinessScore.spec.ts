@@ -4,8 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, test } from 'vitest';
-import { DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION, parseUserHappinessScoreConfigurationString, UserHappinessScoreConfiguration } from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
-import { ActionKind, getUserHappinessScore, getWindowWithIgnoredLimit, MAX_INTERACTIONS_CONSIDERED, NESUserAction } from '../../common/userInteractionMonitor';
+import {
+	DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION,
+	parseUserHappinessScoreConfigurationString,
+	UserHappinessScoreConfiguration,
+} from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	ActionKind,
+	getUserHappinessScore,
+	getWindowWithIgnoredLimit,
+	MAX_INTERACTIONS_CONSIDERED,
+	NESUserAction,
+} from '../../common/userInteractionMonitor';
 
 function action(kind: ActionKind): NESUserAction {
 	return { time: 0, kind };
@@ -60,7 +70,6 @@ const CONFIG_MIMICS_V1: UserHappinessScoreConfiguration = {
 };
 
 describe('UserHappinessScore', () => {
-
 	const accepted = ActionKind.Accepted;
 	const rejected = ActionKind.Rejected;
 	const ignored = ActionKind.Ignored;
@@ -70,31 +79,110 @@ describe('UserHappinessScore', () => {
 			{ name: 'empty actions', actions: [] },
 			{ name: 'single accept', actions: [accepted] },
 			{ name: 'single reject', actions: [rejected] },
-			{ name: 'all accepts', actions: [accepted, accepted, accepted, accepted, accepted] },
-			{ name: 'all rejects', actions: [rejected, rejected, rejected, rejected, rejected] },
-			{ name: 'mixed 50/50', actions: [accepted, rejected, accepted, rejected, accepted, rejected] },
-			{ name: 'accepts then rejects', actions: [accepted, accepted, accepted, rejected, rejected, rejected] },
-			{ name: 'rejects then accepts', actions: [rejected, rejected, rejected, accepted, accepted, accepted] },
-			{ name: 'full 10 mixed', actions: [accepted, rejected, accepted, accepted, rejected, accepted, rejected, accepted, rejected, accepted] },
+			{
+				name: 'all accepts',
+				actions: [accepted, accepted, accepted, accepted, accepted],
+			},
+			{
+				name: 'all rejects',
+				actions: [rejected, rejected, rejected, rejected, rejected],
+			},
+			{
+				name: 'mixed 50/50',
+				actions: [
+					accepted,
+					rejected,
+					accepted,
+					rejected,
+					accepted,
+					rejected,
+				],
+			},
+			{
+				name: 'accepts then rejects',
+				actions: [
+					accepted,
+					accepted,
+					accepted,
+					rejected,
+					rejected,
+					rejected,
+				],
+			},
+			{
+				name: 'rejects then accepts',
+				actions: [
+					rejected,
+					rejected,
+					rejected,
+					accepted,
+					accepted,
+					accepted,
+				],
+			},
+			{
+				name: 'full 10 mixed',
+				actions: [
+					accepted,
+					rejected,
+					accepted,
+					accepted,
+					rejected,
+					accepted,
+					rejected,
+					accepted,
+					rejected,
+					accepted,
+				],
+			},
 			// Cases with ignored (should be filtered out when mimicking v1)
-			{ name: 'accepts with ignored', actions: [accepted, ignored, accepted, ignored, accepted] },
-			{ name: 'rejects with ignored', actions: [rejected, ignored, rejected, ignored, rejected] },
-			{ name: 'mixed with many ignored', actions: [accepted, ignored, ignored, ignored, rejected, ignored, accepted] },
-			{ name: 'all ignored', actions: [ignored, ignored, ignored, ignored, ignored] },
-			{ name: 'accept surrounded by ignored', actions: [ignored, ignored, accepted, ignored, ignored] },
+			{
+				name: 'accepts with ignored',
+				actions: [accepted, ignored, accepted, ignored, accepted],
+			},
+			{
+				name: 'rejects with ignored',
+				actions: [rejected, ignored, rejected, ignored, rejected],
+			},
+			{
+				name: 'mixed with many ignored',
+				actions: [
+					accepted,
+					ignored,
+					ignored,
+					ignored,
+					rejected,
+					ignored,
+					accepted,
+				],
+			},
+			{
+				name: 'all ignored',
+				actions: [ignored, ignored, ignored, ignored, ignored],
+			},
+			{
+				name: 'accept surrounded by ignored',
+				actions: [ignored, ignored, accepted, ignored, ignored],
+			},
 		];
 
 		for (const testCase of testCases) {
 			test(testCase.name, () => {
 				// For v1, filter out ignored actions
 				const v1Actions = testCase.actions
-					.filter((a): a is ActionKind.Accepted | ActionKind.Rejected => a !== ActionKind.Ignored)
-					.map(kind => action(kind));
+					.filter(
+						(a): a is ActionKind.Accepted | ActionKind.Rejected =>
+							a !== ActionKind.Ignored,
+					)
+					.map((kind) => action(kind));
 
-				const newActions = testCase.actions.map(kind => action(kind));
+				const newActions = testCase.actions.map((kind) => action(kind));
 
 				const v1Score = v1GetUserHappinessScore(v1Actions);
-				const newScore = getUserHappinessScore(newActions, CONFIG_MIMICS_V1);
+				const newScore = getUserHappinessScore(
+					newActions,
+					CONFIG_MIMICS_V1,
+				);
 
 				expect(newScore).toBeCloseTo(v1Score, 6);
 			});
@@ -165,7 +253,9 @@ describe('UserHappinessScore', () => {
 
 			const window = getWindowWithIgnoredLimit(actions, config);
 			// Should only include 2 total ignored
-			const ignoredCount = window.filter(a => a.kind === ignored).length;
+			const ignoredCount = window.filter(
+				(a) => a.kind === ignored,
+			).length;
 			expect(ignoredCount).toBe(2);
 		});
 
@@ -194,8 +284,14 @@ describe('UserHappinessScore', () => {
 				limitTotalIgnored: false,
 			};
 
-			const neutralScore = getUserHappinessScore(actions, configWithIgnoredNeutral);
-			const positiveScore = getUserHappinessScore(actions, configWithIgnoredPositive);
+			const neutralScore = getUserHappinessScore(
+				actions,
+				configWithIgnoredNeutral,
+			);
+			const positiveScore = getUserHappinessScore(
+				actions,
+				configWithIgnoredPositive,
+			);
 
 			// With higher ignored score, overall score should be higher
 			expect(positiveScore).toBeGreaterThan(neutralScore);
@@ -204,7 +300,10 @@ describe('UserHappinessScore', () => {
 
 	describe('edge cases', () => {
 		test('empty actions returns neutral score', () => {
-			const score = getUserHappinessScore([], DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION);
+			const score = getUserHappinessScore(
+				[],
+				DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION,
+			);
 			expect(score).toBe(0.5);
 		});
 
@@ -216,11 +315,7 @@ describe('UserHappinessScore', () => {
 				includeIgnored: false,
 			};
 
-			const actions = [
-				action(ignored),
-				action(ignored),
-				action(ignored),
-			];
+			const actions = [action(ignored), action(ignored), action(ignored)];
 
 			const score = getUserHappinessScore(actions, config);
 			expect(score).toBe(0.5);
@@ -230,14 +325,19 @@ describe('UserHappinessScore', () => {
 			const config = DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION;
 
 			// Single accept should give score above 0.5 but not too high
-			const singleAccept = getUserHappinessScore([action(accepted)], config);
+			const singleAccept = getUserHappinessScore(
+				[action(accepted)],
+				config,
+			);
 			expect(singleAccept).toBeGreaterThan(0.5);
 			expect(singleAccept).toBeLessThan(0.6); // Pulled towards neutral due to low confidence
 
 			// 10 accepts should give score closer to 1
 			const manyAccepts = getUserHappinessScore(
-				Array(10).fill(null).map(() => action(accepted)),
-				config
+				Array(10)
+					.fill(null)
+					.map(() => action(accepted)),
+				config,
 			);
 			expect(manyAccepts).toBeGreaterThan(0.9);
 		});
@@ -247,14 +347,24 @@ describe('UserHappinessScore', () => {
 
 			// Accepts followed by rejects (recent rejects should lower score)
 			const acceptsThenRejects = getUserHappinessScore(
-				[action(accepted), action(accepted), action(rejected), action(rejected)],
-				config
+				[
+					action(accepted),
+					action(accepted),
+					action(rejected),
+					action(rejected),
+				],
+				config,
 			);
 
 			// Rejects followed by accepts (recent accepts should raise score)
 			const rejectsThenAccepts = getUserHappinessScore(
-				[action(rejected), action(rejected), action(accepted), action(accepted)],
-				config
+				[
+					action(rejected),
+					action(rejected),
+					action(accepted),
+					action(accepted),
+				],
+				config,
 			);
 
 			// Recent accepts should give higher score than recent rejects
@@ -264,15 +374,20 @@ describe('UserHappinessScore', () => {
 
 	describe('configuration parsing', () => {
 		test('stringified default configuration parses correctly', () => {
-			const stringified = JSON.stringify(DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION);
-			const parsed = parseUserHappinessScoreConfigurationString(stringified);
+			const stringified = JSON.stringify(
+				DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION,
+			);
+			const parsed =
+				parseUserHappinessScoreConfigurationString(stringified);
 
 			expect(parsed).toEqual(DEFAULT_USER_HAPPINESS_SCORE_CONFIGURATION);
 		});
 
 		test('custom configuration string parses correctly', () => {
-			const configString = '{"acceptedScore": 1.0, "rejectedScore": 0.2, "ignoredScore": 0.5, "highThreshold": 0.6, "mediumThreshold": 0.4, "includeIgnored": true, "ignoredLimit": 5, "limitConsecutiveIgnored": false, "limitTotalIgnored": true}';
-			const parsed = parseUserHappinessScoreConfigurationString(configString);
+			const configString =
+				'{"acceptedScore": 1.0, "rejectedScore": 0.2, "ignoredScore": 0.5, "highThreshold": 0.6, "mediumThreshold": 0.4, "includeIgnored": true, "ignoredLimit": 5, "limitConsecutiveIgnored": false, "limitTotalIgnored": true}';
+			const parsed =
+				parseUserHappinessScoreConfigurationString(configString);
 
 			expect(parsed).toEqual({
 				acceptedScore: 1.0,
@@ -288,8 +403,10 @@ describe('UserHappinessScore', () => {
 		});
 
 		test('parsed configuration can be used for score calculation', () => {
-			const configString = '{"acceptedScore": 1.0, "rejectedScore": 0.2, "ignoredScore": 0.5, "highThreshold": 0.6, "mediumThreshold": 0.4, "includeIgnored": true, "ignoredLimit": 5, "limitConsecutiveIgnored": false, "limitTotalIgnored": true}';
-			const config = parseUserHappinessScoreConfigurationString(configString);
+			const configString =
+				'{"acceptedScore": 1.0, "rejectedScore": 0.2, "ignoredScore": 0.5, "highThreshold": 0.6, "mediumThreshold": 0.4, "includeIgnored": true, "ignoredLimit": 5, "limitConsecutiveIgnored": false, "limitTotalIgnored": true}';
+			const config =
+				parseUserHappinessScoreConfigurationString(configString);
 
 			const actions = [
 				action(accepted),

@@ -3,17 +3,59 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../base/common/uri.js';
+import { URI } from "../../../base/common/uri.js";
 
 /**
  * Common file extensions that are unlikely to be network domains.
  * Used to filter false positives when extracting domains from freeform text.
  */
 const fileExtensionSuffixes = new Set([
-	'7z', 'bz2', 'cjs', 'class', 'cpp', 'cs', 'css', 'csv', 'dll', 'exe', 'gif', 'gz', 'ico', 'jar',
-	'env', 'java', 'jpeg', 'jpg', 'js', 'json', 'jsx', 'lock', 'log', 'md', 'mjs', 'pdf', 'php', 'png',
-	'py', 'rar', 'rs', 'so', 'sql', 'svg', 'tar', 'tgz', 'toml', 'ts', 'tsx', 'txt', 'wasm', 'webp',
-	'xml', 'yaml', 'yml', 'zip'
+	"7z",
+	"bz2",
+	"cjs",
+	"class",
+	"cpp",
+	"cs",
+	"css",
+	"csv",
+	"dll",
+	"exe",
+	"gif",
+	"gz",
+	"ico",
+	"jar",
+	"env",
+	"java",
+	"jpeg",
+	"jpg",
+	"js",
+	"json",
+	"jsx",
+	"lock",
+	"log",
+	"md",
+	"mjs",
+	"pdf",
+	"php",
+	"png",
+	"py",
+	"rar",
+	"rs",
+	"so",
+	"sql",
+	"svg",
+	"tar",
+	"tgz",
+	"toml",
+	"ts",
+	"tsx",
+	"txt",
+	"wasm",
+	"webp",
+	"xml",
+	"yaml",
+	"yml",
+	"zip",
 ]);
 
 /**
@@ -21,7 +63,15 @@ const fileExtensionSuffixes = new Set([
  * Keep this list intentionally conservative and focused on TLDs commonly used for coding-related hosts and services.
  */
 const wellKnownDomainSuffixes = new Set([
-	'ai', 'cloud', 'com', 'dev', 'io', 'me', 'net', 'org', 'tech'
+	"ai",
+	"cloud",
+	"com",
+	"dev",
+	"io",
+	"me",
+	"net",
+	"org",
+	"tech",
 ]);
 
 /**
@@ -34,19 +84,32 @@ const wellKnownDomainSuffixes = new Set([
  * @param fromUrl Whether the value was extracted from a URL context (skips file-extension filtering).
  * @returns The normalized domain string, or `undefined` if the input is invalid.
  */
-export function normalizeDomain(value: string | undefined, fromUrl: boolean = false): string | undefined {
+export function normalizeDomain(
+	value: string | undefined,
+	fromUrl: boolean = false,
+): string | undefined {
 	if (!value) {
 		return undefined;
 	}
 
-	const normalized = value.trim().toLowerCase().replace(/^[^@]+@/, '').replace(/:\d+$/, '').replace(/\.+$/, '');
-	if (!normalized || normalized.includes('/') || normalized === '.' || normalized === '..') {
+	const normalized = value
+		.trim()
+		.toLowerCase()
+		.replace(/^[^@]+@/, "")
+		.replace(/:\d+$/, "")
+		.replace(/\.+$/, "");
+	if (
+		!normalized ||
+		normalized.includes("/") ||
+		normalized === "." ||
+		normalized === ".."
+	) {
 		return undefined;
 	}
 
 	// Allow a bare wildcard pattern early, before hostname validation.
-	if (normalized === '*') {
-		return '*';
+	if (normalized === "*") {
+		return "*";
 	}
 
 	if (!/^\*?\.?[a-z0-9.;,)!?:-]+$/.test(normalized)) {
@@ -54,18 +117,24 @@ export function normalizeDomain(value: string | undefined, fromUrl: boolean = fa
 	}
 
 	// Strip common trailing punctuation that may follow a domain in text, e.g. "example.com,".
-	const stripped = normalized.replace(/[),;:!?]+$/, '');
+	const stripped = normalized.replace(/[),;:!?]+$/, "");
 	if (!stripped) {
 		return undefined;
 	}
 
-	const domainToValidate = stripped.startsWith('*.') ? stripped.slice(2) : stripped;
-	if (!/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?))*$/.test(domainToValidate)) {
+	const domainToValidate = stripped.startsWith("*.")
+		? stripped.slice(2)
+		: stripped;
+	if (
+		!/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?))*$/.test(
+			domainToValidate,
+		)
+	) {
 		return undefined;
 	}
 
 	// Support wildcard domain patterns like "*.example.com".
-	const hasWildcardPrefix = stripped.startsWith('*.');
+	const hasWildcardPrefix = stripped.startsWith("*.");
 	const host = hasWildcardPrefix ? stripped.slice(2) : stripped;
 	if (!host) {
 		return undefined;
@@ -79,7 +148,7 @@ export function normalizeDomain(value: string | undefined, fromUrl: boolean = fa
 	// Disallow patterns that look like file names with common extensions, as these are unlikely
 	// to be intended as network domains and may be false positives from the regex.
 	if (!fromUrl) {
-		const lastLabel = host.slice(host.lastIndexOf('.') + 1);
+		const lastLabel = host.slice(host.lastIndexOf(".") + 1);
 		if (fileExtensionSuffixes.has(lastLabel)) {
 			return undefined;
 		}
@@ -98,10 +167,10 @@ export function normalizeDomain(value: string | undefined, fromUrl: boolean = fa
  */
 export function extractDomainPattern(pattern: string): string {
 	const trimmed = pattern.trim();
-	if (trimmed === '*') {
+	if (trimmed === "*") {
 		return trimmed;
 	}
-	if (!trimmed.includes('://')) {
+	if (!trimmed.includes("://")) {
 		return trimmed;
 	}
 	try {
@@ -120,14 +189,17 @@ export function extractDomainPattern(pattern: string): string {
  * @returns `true` if the domain matches the pattern.
  */
 export function matchesDomainPattern(domain: string, pattern: string): boolean {
-	const normalizedPattern = normalizeDomain(extractDomainPattern(pattern), pattern.includes('://'));
+	const normalizedPattern = normalizeDomain(
+		extractDomainPattern(pattern),
+		pattern.includes("://"),
+	);
 	if (!normalizedPattern) {
 		return false;
 	}
-	if (normalizedPattern === '*') {
+	if (normalizedPattern === "*") {
 		return true;
 	}
-	if (normalizedPattern.startsWith('*.')) {
+	if (normalizedPattern.startsWith("*.")) {
 		const suffix = normalizedPattern.slice(2);
 		return domain === suffix || domain.endsWith(`.${suffix}`);
 	}
@@ -159,14 +231,18 @@ export function extractDomainFromUri(uri: URI): string | undefined {
  * @param deniedPatterns Array of denied domain patterns.
  * @returns `true` if the domain is allowed, `false` if it is blocked.
  */
-export function isDomainAllowed(domain: string, allowedPatterns: string[], deniedPatterns: string[]): boolean {
+export function isDomainAllowed(
+	domain: string,
+	allowedPatterns: string[],
+	deniedPatterns: string[],
+): boolean {
 	// Restrictive default: deny all when both lists are empty.
 	if (allowedPatterns.length === 0 && deniedPatterns.length === 0) {
 		return false;
 	}
 
 	// Denied patterns take precedence.
-	if (deniedPatterns.some(pattern => matchesDomainPattern(domain, pattern))) {
+	if (deniedPatterns.some((pattern) => matchesDomainPattern(domain, pattern))) {
 		return false;
 	}
 
@@ -176,5 +252,7 @@ export function isDomainAllowed(domain: string, allowedPatterns: string[], denie
 	}
 
 	// The domain must match at least one allowed pattern.
-	return allowedPatterns.some(pattern => matchesDomainPattern(domain, pattern));
+	return allowedPatterns.some((pattern) =>
+		matchesDomainPattern(domain, pattern),
+	);
 }

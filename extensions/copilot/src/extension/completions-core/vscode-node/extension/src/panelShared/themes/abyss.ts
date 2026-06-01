@@ -101,7 +101,11 @@ export const abyss: ThemeRegistrationAny = {
 	},
 	tokenColors: [
 		{
-			scope: ['meta.embedded', 'source.groovy.embedded', 'string meta.image.inline.markdown'],
+			scope: [
+				'meta.embedded',
+				'source.groovy.embedded',
+				'string meta.image.inline.markdown',
+			],
 			settings: {
 				foreground: '#6688CC',
 			},
@@ -163,7 +167,12 @@ export const abyss: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['entity.name.class', 'entity.name.type', 'entity.name.namespace', 'entity.name.scope-resolution'],
+			scope: [
+				'entity.name.class',
+				'entity.name.type',
+				'entity.name.namespace',
+				'entity.name.scope-resolution',
+			],
 			settings: {
 				foreground: '#FFEEBB',
 				fontStyle: 'underline',

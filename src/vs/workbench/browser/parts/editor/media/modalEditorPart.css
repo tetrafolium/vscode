@@ -37,7 +37,8 @@
 	width: 100%;
 	height: 100%;
 	background-color: var(--vscode-editor-background);
-	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-contrastBorder));
+	border: 1px solid
+		var(--vscode-editorWidget-border, var(--vscode-contrastBorder));
 	border-radius: 8px;
 	overflow: hidden;
 	position: relative;
@@ -71,11 +72,20 @@
 	overflow: hidden;
 	box-sizing: border-box;
 	padding: 8px;
-	background-color: var(--vscode-sideBar-background, var(--vscode-editor-background));
-	border-right: 1px solid var(--vscode-sideBarSectionHeader-border, var(--vscode-editorWidget-border, transparent));
+	background-color: var(
+		--vscode-sideBar-background,
+		var(--vscode-editor-background)
+	);
+	border-right: 1px solid
+		var(
+			--vscode-sideBarSectionHeader-border,
+			var(--vscode-editorWidget-border, transparent)
+		);
 }
 
-.monaco-modal-editor-block .modal-editor-sidebar .monaco-tl-twistie.force-no-twistie {
+.monaco-modal-editor-block
+	.modal-editor-sidebar
+	.monaco-tl-twistie.force-no-twistie {
 	width: 10px !important;
 	padding-left: 0 !important;
 	padding-right: 0 !important;
@@ -202,7 +212,12 @@
 	min-height: 40px;
 }
 
-.monaco-modal-editor-block.compact-header .modal-editor-title .monaco-icon-label::before,
-.monaco-modal-editor-block.compact-header .modal-editor-title .monaco-icon-label > .monaco-icon-label-iconpath {
+.monaco-modal-editor-block.compact-header
+	.modal-editor-title
+	.monaco-icon-label::before,
+.monaco-modal-editor-block.compact-header
+	.modal-editor-title
+	.monaco-icon-label
+	> .monaco-icon-label-iconpath {
 	display: none;
 }

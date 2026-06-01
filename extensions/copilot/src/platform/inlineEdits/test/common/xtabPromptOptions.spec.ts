@@ -4,9 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it } from 'vitest';
-import { applyStrategyConfig, IncludeLineNumbersOption, ModelConfiguration, PromptingStrategy } from '../../common/dataTypes/xtabPromptOptions';
+import {
+	applyStrategyConfig,
+	IncludeLineNumbersOption,
+	ModelConfiguration,
+	PromptingStrategy,
+} from '../../common/dataTypes/xtabPromptOptions';
 
-function baseConfig(overrides: Partial<ModelConfiguration> = {}): ModelConfiguration {
+function baseConfig(
+	overrides: Partial<ModelConfiguration> = {},
+): ModelConfiguration {
 	return {
 		modelName: 'test-model',
 		promptingStrategy: undefined,
@@ -17,9 +24,10 @@ function baseConfig(overrides: Partial<ModelConfiguration> = {}): ModelConfigura
 }
 
 describe('applyStrategyConfig', () => {
-
 	it('returns config unchanged when strategy has no entry', () => {
-		const config = baseConfig({ promptingStrategy: PromptingStrategy.Xtab275 });
+		const config = baseConfig({
+			promptingStrategy: PromptingStrategy.Xtab275,
+		});
 		expect(applyStrategyConfig(config)).toBe(config);
 	});
 
@@ -29,44 +37,72 @@ describe('applyStrategyConfig', () => {
 	});
 
 	it('forces includeTagsInCurrentFile=true for CopilotNesXtab', () => {
-		const result = applyStrategyConfig(baseConfig({
-			promptingStrategy: PromptingStrategy.CopilotNesXtab,
-			includeTagsInCurrentFile: false,
-		}));
+		const result = applyStrategyConfig(
+			baseConfig({
+				promptingStrategy: PromptingStrategy.CopilotNesXtab,
+				includeTagsInCurrentFile: false,
+			}),
+		);
 		expect(result.includeTagsInCurrentFile).toBe(true);
 	});
 
 	it('forces baked-in fields for PatchBased02WithRecentLineNumbers', () => {
-		const result = applyStrategyConfig(baseConfig({
-			promptingStrategy: PromptingStrategy.PatchBased02WithRecentLineNumbers,
-			includeTagsInCurrentFile: true,
-			includePostScript: false,
-			currentFile: { includeLineNumbers: IncludeLineNumbersOption.None, maxTokens: 42 },
-			recentlyViewedDocuments: { includeLineNumbers: IncludeLineNumbersOption.None, maxTokens: 99 },
-			supportsNextCursorLinePrediction: true,
-		}));
+		const result = applyStrategyConfig(
+			baseConfig({
+				promptingStrategy:
+					PromptingStrategy.PatchBased02WithRecentLineNumbers,
+				includeTagsInCurrentFile: true,
+				includePostScript: false,
+				currentFile: {
+					includeLineNumbers: IncludeLineNumbersOption.None,
+					maxTokens: 42,
+				},
+				recentlyViewedDocuments: {
+					includeLineNumbers: IncludeLineNumbersOption.None,
+					maxTokens: 99,
+				},
+				supportsNextCursorLinePrediction: true,
+			}),
+		);
 		expect(result).toMatchObject({
 			includeTagsInCurrentFile: false,
 			includePostScript: true,
-			currentFile: { includeLineNumbers: IncludeLineNumbersOption.WithoutSpace, maxTokens: 42 },
-			recentlyViewedDocuments: { includeLineNumbers: IncludeLineNumbersOption.WithoutSpace, maxTokens: 99 },
+			currentFile: {
+				includeLineNumbers: IncludeLineNumbersOption.WithoutSpace,
+				maxTokens: 42,
+			},
+			recentlyViewedDocuments: {
+				includeLineNumbers: IncludeLineNumbersOption.WithoutSpace,
+				maxTokens: 99,
+			},
 			supportsNextCursorLinePrediction: false,
 		});
 	});
 
 	it('forces recentlyViewedDocuments.includeLineNumbers=None for PatchBased02WithoutRecentLineNumbers', () => {
-		const result = applyStrategyConfig(baseConfig({
-			promptingStrategy: PromptingStrategy.PatchBased02WithoutRecentLineNumbers,
-			recentlyViewedDocuments: { includeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter },
-		}));
-		expect(result.recentlyViewedDocuments?.includeLineNumbers).toBe(IncludeLineNumbersOption.None);
-		expect(result.currentFile?.includeLineNumbers).toBe(IncludeLineNumbersOption.WithoutSpace);
+		const result = applyStrategyConfig(
+			baseConfig({
+				promptingStrategy:
+					PromptingStrategy.PatchBased02WithoutRecentLineNumbers,
+				recentlyViewedDocuments: {
+					includeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter,
+				},
+			}),
+		);
+		expect(result.recentlyViewedDocuments?.includeLineNumbers).toBe(
+			IncludeLineNumbersOption.None,
+		);
+		expect(result.currentFile?.includeLineNumbers).toBe(
+			IncludeLineNumbersOption.WithoutSpace,
+		);
 	});
 
 	it('preserves undefined for option bags neither side specifies', () => {
-		const result = applyStrategyConfig(baseConfig({
-			promptingStrategy: PromptingStrategy.CopilotNesXtab,
-		}));
+		const result = applyStrategyConfig(
+			baseConfig({
+				promptingStrategy: PromptingStrategy.CopilotNesXtab,
+			}),
+		);
 		// CopilotNesXtab only sets includeTagsInCurrentFile; nested option bags should stay undefined.
 		expect(result.currentFile).toBeUndefined();
 		expect(result.recentlyViewedDocuments).toBeUndefined();

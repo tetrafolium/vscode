@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { join } from 'path';
-import { WorkerWithRpcProxy, type RpcProxy } from '../../../../util/node/worker';
+import {
+	WorkerWithRpcProxy,
+	type RpcProxy,
+} from '../../../../util/node/worker';
 import type { TodoItem, TodoSqlWorkerApi } from './copilotCLITodoWorker';
 
 const DATABASE_FILENAME = 'session.db';
@@ -23,7 +26,7 @@ export class TodoSqlQuery {
 	private ensureWorker(): RpcProxy<TodoSqlWorkerApi> {
 		if (!this._proxy) {
 			this._worker = new WorkerWithRpcProxy<TodoSqlWorkerApi>(
-				join(__dirname, 'copilotCLITodoWorker.js')
+				join(__dirname, 'copilotCLITodoWorker.js'),
 			);
 			this._proxy = this._worker.proxy;
 		}

@@ -31,7 +31,9 @@ const defaultCursorContextOptions: CursorContextOptions = {
 	tokenizerName: TokenizerName.o200k,
 };
 
-function cursorContextOptions(options?: Partial<CursorContextOptions>): CursorContextOptions {
+function cursorContextOptions(
+	options?: Partial<CursorContextOptions>,
+): CursorContextOptions {
 	return { ...defaultCursorContextOptions, ...options };
 }
 
@@ -57,19 +59,28 @@ export interface CursorContextInfo {
  */
 export function getCursorContext(
 	doc: DocumentInfoWithOffset,
-	options: Partial<CursorContextOptions> = {}
+	options: Partial<CursorContextOptions> = {},
 ): CursorContextInfo {
 	const completeOptions = cursorContextOptions(options);
 	const tokenizer = getTokenizer(completeOptions.tokenizerName);
 
-	if (completeOptions.maxLineCount !== undefined && completeOptions.maxLineCount < 0) {
+	if (
+		completeOptions.maxLineCount !== undefined &&
+		completeOptions.maxLineCount < 0
+	) {
 		throw new Error('maxLineCount must be non-negative if defined');
 	}
-	if (completeOptions.maxTokenLength !== undefined && completeOptions.maxTokenLength < 0) {
+	if (
+		completeOptions.maxTokenLength !== undefined &&
+		completeOptions.maxTokenLength < 0
+	) {
 		throw new Error('maxTokenLength must be non-negative if defined');
 	}
 
-	if (completeOptions.maxLineCount === 0 || completeOptions.maxTokenLength === 0) {
+	if (
+		completeOptions.maxLineCount === 0 ||
+		completeOptions.maxTokenLength === 0
+	) {
 		return {
 			context: '',
 			lineCount: 0,
@@ -80,10 +91,16 @@ export function getCursorContext(
 
 	let context = doc.source.slice(0, doc.offset); // Trim to cursor location, offset is a character location
 	if (completeOptions.maxLineCount !== undefined) {
-		context = context.split('\n').slice(-completeOptions.maxLineCount).join('\n');
+		context = context
+			.split('\n')
+			.slice(-completeOptions.maxLineCount)
+			.join('\n');
 	}
 	if (completeOptions.maxTokenLength !== undefined) {
-		context = tokenizer.takeLastLinesTokens(context, completeOptions.maxTokenLength);
+		context = tokenizer.takeLastLinesTokens(
+			context,
+			completeOptions.maxTokenLength,
+		);
 	}
 	return {
 		context,

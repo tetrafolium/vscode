@@ -6,7 +6,10 @@
 import type * as vscode from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IClaudeWorkspaceFolderService = createServiceIdentifier<IClaudeWorkspaceFolderService>('IClaudeWorkspaceFolderService');
+export const IClaudeWorkspaceFolderService =
+	createServiceIdentifier<IClaudeWorkspaceFolderService>(
+		'IClaudeWorkspaceFolderService',
+	);
 
 /**
  * Service for computing and caching workspace file changes for Claude chat sessions.
@@ -22,5 +25,10 @@ export interface IClaudeWorkspaceFolderService {
 	 * @param gitBaseBranch The base branch to diff against, or `undefined` to diff against HEAD.
 	 * @param forceRefresh When `true`, bypasses the cache and recomputes changes.
 	 */
-	getWorkspaceChanges(cwd: string, gitBranch: string | undefined, gitBaseBranch: string | undefined, forceRefresh?: boolean): Promise<vscode.ChatSessionChangedFile[]>;
+	getWorkspaceChanges(
+		cwd: string,
+		gitBranch: string | undefined,
+		gitBaseBranch: string | undefined,
+		forceRefresh?: boolean,
+	): Promise<vscode.ChatSessionChangedFile[]>;
 }

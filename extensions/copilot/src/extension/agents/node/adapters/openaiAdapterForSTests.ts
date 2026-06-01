@@ -6,20 +6,37 @@
 import { Raw } from '@vscode/prompt-tsx';
 import { ChatCompletionContentPartKind } from '@vscode/prompt-tsx/dist/base/output/rawTypes';
 import * as http from 'http';
-import { ChatCompletionChunk, ChatCompletionCreateParamsBase, ChatCompletionMessageParam } from 'openai/resources/chat/completions.js';
+import {
+	ChatCompletionChunk,
+	ChatCompletionCreateParamsBase,
+	ChatCompletionMessageParam,
+} from 'openai/resources/chat/completions.js';
 import type { OpenAiFunctionTool } from '../../../../platform/networking/common/fetch';
 import { IMakeChatRequestOptions } from '../../../../platform/networking/common/networking';
 import { APIUsage } from '../../../../platform/networking/common/openai';
 import { coalesce } from '../../../../util/vs/base/common/arrays';
-import { IAgentStreamBlock, IParsedRequest, IProtocolAdapter, IProtocolAdapterFactory, IStreamEventData, IStreamingContext } from './types';
+import {
+	IAgentStreamBlock,
+	IParsedRequest,
+	IProtocolAdapter,
+	IProtocolAdapterFactory,
+	IStreamEventData,
+	IStreamingContext,
+} from './types';
 
 export class OpenAIAdapterFactoryForSTests implements IProtocolAdapterFactory {
 	private readonly requestHooks: ((body: string) => string)[] = [];
 	private readonly responseHooks: ((body: string) => string)[] = [];
 	createAdapter(): IProtocolAdapter {
-		return new OpenAIAdapterForSTests(this.requestHooks, this.responseHooks);
+		return new OpenAIAdapterForSTests(
+			this.requestHooks,
+			this.responseHooks,
+		);
 	}
-	public addHooks(requestHook?: (body: string) => string, responseHook?: (body: string) => string): void {
+	public addHooks(
+		requestHook?: (body: string) => string,
+		responseHook?: (body: string) => string,
+	): void {
 		if (requestHook) {
 			this.requestHooks.push(requestHook);
 		}
@@ -36,7 +53,10 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 	private currentBlockIndex = 0;
 	private hasTextBlock = false;
 	private hadToolCalls = false;
-	constructor(private readonly requestHooks: ((body: string) => string)[], private readonly responseHooks: ((body: string) => string)[] = []) {
+	constructor(
+		private readonly requestHooks: ((body: string) => string)[],
+		private readonly responseHooks: ((body: string) => string)[] = [],
+	) {
 		// No-op for test adapter
 	}
 
@@ -52,8 +72,8 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 			return this.requestHooks.reduce((b, hook) => hook(b), msg);
 		};
 		const messages = responseApiInputToRawMessages(requestBody.messages);
-		messages.forEach(msg => {
-			msg.content.forEach(part => {
+		messages.forEach((msg) => {
+			msg.content.forEach((part) => {
 				switch (part.type) {
 					case ChatCompletionContentPartKind.Image: {
 						part.imageUrl.url = runHooks(part.imageUrl.url);
@@ -74,26 +94,35 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 		});
 
 		const options: IMakeChatRequestOptions['requestOptions'] = {
-			temperature: (requestBody.temperature ?? undefined),
-			max_tokens: (requestBody.max_tokens ?? requestBody.max_completion_tokens) ?? undefined,
+			temperature: requestBody.temperature ?? undefined,
+			max_tokens:
+				requestBody.max_tokens ??
+				requestBody.max_completion_tokens ??
+				undefined,
 		};
 
-		if (requestBody.tools && Array.isArray(requestBody.tools) && requestBody.tools.length > 0) {
+		if (
+			requestBody.tools &&
+			Array.isArray(requestBody.tools) &&
+			requestBody.tools.length > 0
+		) {
 			// Map OpenAI tools to VS Code chat tools
-			const tools = coalesce(requestBody.tools.map((tool) => {
-				if (tool.type === 'function' && tool.function) {
-					const chatTool: OpenAiFunctionTool = {
-						type: 'function',
-						function: {
-							name: tool.function.name,
-							description: tool.function.description || '',
-							parameters: tool.function.parameters || {},
-						}
-					};
-					return chatTool;
-				}
-				return undefined;
-			}));
+			const tools = coalesce(
+				requestBody.tools.map((tool) => {
+					if (tool.type === 'function' && tool.function) {
+						const chatTool: OpenAiFunctionTool = {
+							type: 'function',
+							function: {
+								name: tool.function.name,
+								description: tool.function.description || '',
+								parameters: tool.function.parameters || {},
+							},
+						};
+						return chatTool;
+					}
+					return undefined;
+				}),
+			);
 			if (tools.length) {
 				options.tools = tools;
 			}
@@ -102,18 +131,22 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 		return {
 			model,
 			messages,
-			options
+			options,
 		};
 	}
 
-
 	private readonly textMessages = new Map<string, string>();
 
-	private collectTextContent(context: IStreamingContext, content: string): void {
+	private collectTextContent(
+		context: IStreamingContext,
+		content: string,
+	): void {
 		const existing = this.textMessages.get(context.requestId) || '';
 		this.textMessages.set(context.requestId, existing + content);
 	}
-	private getCollectedTextContent(context: IStreamingContext): IStreamEventData | undefined {
+	private getCollectedTextContent(
+		context: IStreamingContext,
+	): IStreamEventData | undefined {
 		let content = this.textMessages.get(context.requestId);
 		if (typeof content !== 'string') {
 			return undefined;
@@ -127,24 +160,26 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 			object: 'chat.completion.chunk',
 			created: Math.floor(Date.now() / 1000),
 			model: context.endpoint.modelId,
-			choices: [{
-				index: this.currentBlockIndex,
-				delta: {
-					content,
-					role: 'assistant'
+			choices: [
+				{
+					index: this.currentBlockIndex,
+					delta: {
+						content,
+						role: 'assistant',
+					},
+					finish_reason: null,
 				},
-				finish_reason: null
-			}]
+			],
 		} satisfies ChatCompletionChunk;
 
 		return {
 			event: 'message',
-			data: this.formatEventData(event)
+			data: this.formatEventData(event),
 		};
 	}
 	formatStreamResponse(
 		streamData: IAgentStreamBlock,
-		context: IStreamingContext
+		context: IStreamingContext,
 	): IStreamEventData[] {
 		const events: IStreamEventData[] = [];
 
@@ -170,7 +205,10 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 			this.hadToolCalls = true;
 
 			// Arguments can contain file paths.
-			const toolArguments = this.responseHooks.reduce((b, hook) => hook(b), JSON.stringify(streamData.input || {}));
+			const toolArguments = this.responseHooks.reduce(
+				(b, hook) => hook(b),
+				JSON.stringify(streamData.input || {}),
+			);
 
 			// Send tool call events
 			const toolCallDelta: ChatCompletionChunk = {
@@ -178,25 +216,29 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 				object: 'chat.completion.chunk',
 				created: Math.floor(Date.now() / 1000),
 				model: context.endpoint.modelId,
-				choices: [{
-					index: this.currentBlockIndex,
-					delta: {
-						tool_calls: [{
-							index: this.currentBlockIndex,
-							id: streamData.callId,
-							type: 'function',
-							function: {
-								name: streamData.name,
-								arguments: toolArguments
-							}
-						}]
+				choices: [
+					{
+						index: this.currentBlockIndex,
+						delta: {
+							tool_calls: [
+								{
+									index: this.currentBlockIndex,
+									id: streamData.callId,
+									type: 'function',
+									function: {
+										name: streamData.name,
+										arguments: toolArguments,
+									},
+								},
+							],
+						},
+						finish_reason: null,
 					},
-					finish_reason: null
-				}]
+				],
 			};
 			events.push({
 				event: 'message',
-				data: this.formatEventData(toolCallDelta)
+				data: this.formatEventData(toolCallDelta),
 			});
 
 			this.currentBlockIndex++;
@@ -205,7 +247,10 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 		return events;
 	}
 
-	generateFinalEvents(context: IStreamingContext, usage?: APIUsage): IStreamEventData[] {
+	generateFinalEvents(
+		context: IStreamingContext,
+		usage?: APIUsage,
+	): IStreamEventData[] {
 		const events: IStreamEventData[] = [];
 
 		const event = this.getCollectedTextContent(context);
@@ -219,25 +264,29 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 			object: 'chat.completion.chunk',
 			created: Math.floor(Date.now() / 1000),
 			model: context.endpoint.modelId,
-			choices: [{
-				index: 0,
-				delta: { content: null },
-				finish_reason: this.hadToolCalls ? 'tool_calls' : 'stop'
-			}],
-			usage: usage ? {
-				prompt_tokens: usage.prompt_tokens,
-				completion_tokens: usage.completion_tokens,
-				total_tokens: usage.total_tokens
-			} : {
-				prompt_tokens: 0,
-				completion_tokens: 0,
-				total_tokens: 0
-			}
+			choices: [
+				{
+					index: 0,
+					delta: { content: null },
+					finish_reason: this.hadToolCalls ? 'tool_calls' : 'stop',
+				},
+			],
+			usage: usage
+				? {
+						prompt_tokens: usage.prompt_tokens,
+						completion_tokens: usage.completion_tokens,
+						total_tokens: usage.total_tokens,
+					}
+				: {
+						prompt_tokens: 0,
+						completion_tokens: 0,
+						total_tokens: 0,
+					},
 		} satisfies ChatCompletionChunk;
 
 		events.push({
 			event: 'message',
-			data: this.formatEventData(finalCompletion)
+			data: this.formatEventData(finalCompletion),
 		});
 
 		return events;
@@ -255,14 +304,18 @@ class OpenAIAdapterForSTests implements IProtocolAdapter {
 	extractAuthKey(headers: http.IncomingHttpHeaders): string | undefined {
 		const authHeader = headers.authorization;
 		const bearerSpace = 'Bearer ';
-		return authHeader?.startsWith(bearerSpace) ? authHeader.substring(bearerSpace.length) : undefined;
+		return authHeader?.startsWith(bearerSpace)
+			? authHeader.substring(bearerSpace.length)
+			: undefined;
 	}
 
 	private formatEventData(data: unknown): string {
 		return JSON.stringify(data).replace(/\n/g, '\\n');
 	}
 }
-function responseApiInputToRawMessages(messages: ChatCompletionMessageParam[]): Raw.ChatMessage[] {
+function responseApiInputToRawMessages(
+	messages: ChatCompletionMessageParam[],
+): Raw.ChatMessage[] {
 	const raw: Raw.ChatMessage[] = [];
 
 	// Helper to push or merge consecutive messages of same role
@@ -272,37 +325,62 @@ function responseApiInputToRawMessages(messages: ChatCompletionMessageParam[]): 
 			// Merge content arrays
 			last.content.push(...msg.content);
 			// Merge tool calls if assistant
-			if (last.role === Raw.ChatRole.Assistant && msg.role === Raw.ChatRole.Assistant && msg.toolCalls) {
+			if (
+				last.role === Raw.ChatRole.Assistant &&
+				msg.role === Raw.ChatRole.Assistant &&
+				msg.toolCalls
+			) {
 				const l = last as Raw.AssistantChatMessage;
-				l.toolCalls = [...(l.toolCalls || []), ...((msg as Raw.AssistantChatMessage).toolCalls || [])];
+				l.toolCalls = [
+					...(l.toolCalls || []),
+					...((msg as Raw.AssistantChatMessage).toolCalls || []),
+				];
 			}
 		} else {
 			raw.push(msg);
 		}
 	};
 
-	messages.forEach(m => {
+	messages.forEach((m) => {
 		// Collect content parts
 		const contentParts: Raw.ChatCompletionContentPart[] = [];
 
 		// OpenAI message content can be string or ChatCompletionContentPart[]
-		(Array.isArray(m.content) ? m.content : []).forEach(part => {
+		(Array.isArray(m.content) ? m.content : []).forEach((part) => {
 			switch (part.type) {
 				case 'text': {
-					contentParts.push({ type: Raw.ChatCompletionContentPartKind.Text, text: part.text });
+					contentParts.push({
+						type: Raw.ChatCompletionContentPartKind.Text,
+						text: part.text,
+					});
 					break;
 				}
 				case 'image_url': {
-					contentParts.push({ imageUrl: { url: part.image_url.url, detail: part.image_url.detail as unknown as ('low' | 'high' | undefined) }, type: ChatCompletionContentPartKind.Image });
+					contentParts.push({
+						imageUrl: {
+							url: part.image_url.url,
+							detail: part.image_url.detail as unknown as
+								| 'low'
+								| 'high'
+								| undefined,
+						},
+						type: ChatCompletionContentPartKind.Image,
+					});
 					break;
 				}
 				case 'file': {
-					contentParts.push({ type: ChatCompletionContentPartKind.Opaque, value: `[File Input - Filename: ${part.file.filename}]` });
+					contentParts.push({
+						type: ChatCompletionContentPartKind.Opaque,
+						value: `[File Input - Filename: ${part.file.filename}]`,
+					});
 					break;
 				}
 				case 'refusal': {
 					// Refusal parts contain a 'refusal' field; access defensively
-					contentParts.push({ type: Raw.ChatCompletionContentPartKind.Text, text: `[Refusal: ${part.refusal || ''}]` });
+					contentParts.push({
+						type: Raw.ChatCompletionContentPartKind.Text,
+						text: `[Refusal: ${part.refusal || ''}]`,
+					});
 					break;
 				}
 				case 'input_audio':
@@ -312,7 +390,10 @@ function responseApiInputToRawMessages(messages: ChatCompletionMessageParam[]): 
 			}
 		});
 		if (typeof m.content === 'string') {
-			contentParts.push({ type: Raw.ChatCompletionContentPartKind.Text, text: m.content });
+			contentParts.push({
+				type: Raw.ChatCompletionContentPartKind.Text,
+				text: m.content,
+			});
 		}
 
 		switch (m.role) {
@@ -322,28 +403,47 @@ function responseApiInputToRawMessages(messages: ChatCompletionMessageParam[]): 
 			}
 			case 'tool': {
 				// contentParts.splice(0, contentParts.length);
-				raw.push({ role: Raw.ChatRole.Tool, content: contentParts, toolCallId: m.tool_call_id || '' });
+				raw.push({
+					role: Raw.ChatRole.Tool,
+					content: contentParts,
+					toolCallId: m.tool_call_id || '',
+				});
 				return;
-
 			}
 			case 'assistant': {
-				const toolCalls: Raw.ChatMessageToolCall[] = (m.tool_calls || []).map(tc => {
+				const toolCalls: Raw.ChatMessageToolCall[] = (
+					m.tool_calls || []
+				).map((tc) => {
 					try {
 						if (tc.type === 'function') {
 							return {
 								id: tc.id || tc.function.name || 'tool_call',
 								type: 'function',
 								function: {
-									name: tc.function.name || 'unknown_function',
-									arguments: typeof tc.function.arguments === 'string' ? tc.function.arguments : JSON.stringify(tc.function.arguments ?? {})
-								}
+									name:
+										tc.function.name || 'unknown_function',
+									arguments:
+										typeof tc.function.arguments ===
+										'string'
+											? tc.function.arguments
+											: JSON.stringify(
+													tc.function.arguments ?? {},
+												),
+								},
 							} satisfies Raw.ChatMessageToolCall;
 						}
-					} catch { }
+					} catch {}
 					// Fallback minimal tool call
-					return { id: 'tool_call', type: 'function', function: { name: 'unknown_function', arguments: '{}' } } satisfies Raw.ChatMessageToolCall;
+					return {
+						id: 'tool_call',
+						type: 'function',
+						function: { name: 'unknown_function', arguments: '{}' },
+					} satisfies Raw.ChatMessageToolCall;
 				});
-				const message: Raw.AssistantChatMessage = { role: Raw.ChatRole.Assistant, content: contentParts };
+				const message: Raw.AssistantChatMessage = {
+					role: Raw.ChatRole.Assistant,
+					content: contentParts,
+				};
 				if (toolCalls.length) {
 					message.toolCalls = toolCalls;
 				}
@@ -353,7 +453,11 @@ function responseApiInputToRawMessages(messages: ChatCompletionMessageParam[]): 
 			case 'system':
 			case 'developer': {
 				// System (and any unexpected) messages
-				pushOrMerge({ role: Raw.ChatRole.System, content: contentParts, name: m.name });
+				pushOrMerge({
+					role: Raw.ChatRole.System,
+					content: contentParts,
+					name: m.name,
+				});
 				return;
 			}
 			default: {
@@ -364,4 +468,3 @@ function responseApiInputToRawMessages(messages: ChatCompletionMessageParam[]): 
 
 	return raw;
 }
-

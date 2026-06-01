@@ -3,37 +3,68 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Codicon } from '../../../../base/common/codicons.js';
-import { ConfigurationTarget, IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { IQuickInputService, IKeyMods, IPickOptions, IQuickPickSeparator, IQuickInputButton, IQuickPickItem } from '../../../../platform/quickinput/common/quickInput.js';
-import { IExtensionTerminalProfile, ITerminalProfile, ITerminalProfileObject, TerminalSettingPrefix, type ITerminalExecutable } from '../../../../platform/terminal/common/terminal.js';
-import { getUriClasses, getColorClass, createColorStyleElement } from './terminalIcon.js';
-import { configureTerminalProfileIcon } from './terminalIcons.js';
-import * as nls from '../../../../nls.js';
-import { IThemeService } from '../../../../platform/theme/common/themeService.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { ITerminalProfileResolverService, ITerminalProfileService } from '../common/terminal.js';
-import { IQuickPickTerminalObject, ITerminalInstance } from './terminal.js';
-import { IPickerQuickAccessItem } from '../../../../platform/quickinput/browser/pickerQuickAccess.js';
-import { getIconRegistry } from '../../../../platform/theme/common/iconRegistry.js';
-import { basename } from '../../../../base/common/path.js';
-import { INotificationService, Severity } from '../../../../platform/notification/common/notification.js';
-import { hasKey, isString } from '../../../../base/common/types.js';
-import { Event } from '../../../../base/common/event.js';
-
+import { Codicon } from "../../../../base/common/codicons.js";
+import {
+	ConfigurationTarget,
+	IConfigurationService,
+} from "../../../../platform/configuration/common/configuration.js";
+import {
+	IQuickInputService,
+	IKeyMods,
+	IPickOptions,
+	IQuickPickSeparator,
+	IQuickInputButton,
+	IQuickPickItem,
+} from "../../../../platform/quickinput/common/quickInput.js";
+import {
+	IExtensionTerminalProfile,
+	ITerminalProfile,
+	ITerminalProfileObject,
+	TerminalSettingPrefix,
+	type ITerminalExecutable,
+} from "../../../../platform/terminal/common/terminal.js";
+import {
+	getUriClasses,
+	getColorClass,
+	createColorStyleElement,
+} from "./terminalIcon.js";
+import { configureTerminalProfileIcon } from "./terminalIcons.js";
+import * as nls from "../../../../nls.js";
+import { IThemeService } from "../../../../platform/theme/common/themeService.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import {
+	ITerminalProfileResolverService,
+	ITerminalProfileService,
+} from "../common/terminal.js";
+import { IQuickPickTerminalObject, ITerminalInstance } from "./terminal.js";
+import { IPickerQuickAccessItem } from "../../../../platform/quickinput/browser/pickerQuickAccess.js";
+import { getIconRegistry } from "../../../../platform/theme/common/iconRegistry.js";
+import { basename } from "../../../../base/common/path.js";
+import {
+	INotificationService,
+	Severity,
+} from "../../../../platform/notification/common/notification.js";
+import { hasKey, isString } from "../../../../base/common/types.js";
+import { Event } from "../../../../base/common/event.js";
 
 type DefaultProfileName = string;
 export class TerminalProfileQuickpick {
 	constructor(
-		@ITerminalProfileService private readonly _terminalProfileService: ITerminalProfileService,
-		@ITerminalProfileResolverService private readonly _terminalProfileResolverService: ITerminalProfileResolverService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
+		@ITerminalProfileService
+		private readonly _terminalProfileService: ITerminalProfileService,
+		@ITerminalProfileResolverService
+		private readonly _terminalProfileResolverService: ITerminalProfileResolverService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
 		@IQuickInputService private readonly _quickInputService: IQuickInputService,
 		@IThemeService private readonly _themeService: IThemeService,
-		@INotificationService private readonly _notificationService: INotificationService
-	) { }
+		@INotificationService
+		private readonly _notificationService: INotificationService,
+	) {}
 
-	async showAndGetResult(type: 'setDefault' | 'createInstance'): Promise<IQuickPickTerminalObject | DefaultProfileName | undefined> {
+	async showAndGetResult(
+		type: "setDefault" | "createInstance",
+	): Promise<IQuickPickTerminalObject | DefaultProfileName | undefined> {
 		const platformKey = await this._terminalProfileService.getPlatformKey();
 		const profilesKey = TerminalSettingPrefix.Profiles + platformKey;
 		const result = await this._createAndShow(type);
@@ -41,10 +72,14 @@ export class TerminalProfileQuickpick {
 		if (!result) {
 			return;
 		}
-		if (type === 'setDefault') {
+		if (type === "setDefault") {
 			if (hasKey(result.profile, { id: true })) {
 				// extension contributed profile
-				await this._configurationService.updateValue(defaultProfileKey, result.profile.title, ConfigurationTarget.USER);
+				await this._configurationService.updateValue(
+					defaultProfileKey,
+					result.profile.title,
+					ConfigurationTarget.USER,
+				);
 				return {
 					config: {
 						extensionIdentifier: result.profile.extensionIdentifier,
@@ -52,30 +87,41 @@ export class TerminalProfileQuickpick {
 						title: result.profile.title,
 						options: {
 							color: result.profile.color,
-							icon: result.profile.icon
-						}
+							icon: result.profile.icon,
+						},
 					},
-					keyMods: result.keyMods
+					keyMods: result.keyMods,
 				};
 			}
 
 			// Add the profile to settings if necessary
 			if (hasKey(result.profile, { profileName: true })) {
-				const profilesConfig = await this._configurationService.getValue(profilesKey);
-				if (typeof profilesConfig === 'object') {
+				const profilesConfig =
+					await this._configurationService.getValue(profilesKey);
+				if (typeof profilesConfig === "object") {
 					const newProfile: ITerminalProfileObject = {
-						path: result.profile.path
+						path: result.profile.path,
 					};
 					if (result.profile.args) {
 						newProfile.args = result.profile.args;
 					}
-					(profilesConfig as { [key: string]: ITerminalProfileObject })[result.profile.profileName] = this._createNewProfileConfig(result.profile);
-					await this._configurationService.updateValue(profilesKey, profilesConfig, ConfigurationTarget.USER);
+					(profilesConfig as { [key: string]: ITerminalProfileObject })[
+						result.profile.profileName
+					] = this._createNewProfileConfig(result.profile);
+					await this._configurationService.updateValue(
+						profilesKey,
+						profilesConfig,
+						ConfigurationTarget.USER,
+					);
 				}
 			}
 			// Set the default profile
-			await this._configurationService.updateValue(defaultProfileKey, result.profileName, ConfigurationTarget.USER);
-		} else if (type === 'createInstance') {
+			await this._configurationService.updateValue(
+				defaultProfileKey,
+				result.profileName,
+				ConfigurationTarget.USER,
+			);
+		} else if (type === "createInstance") {
 			if (hasKey(result.profile, { id: true })) {
 				const config: {
 					extensionIdentifier: string;
@@ -83,8 +129,8 @@ export class TerminalProfileQuickpick {
 					title: string;
 					titleTemplate?: string;
 					options: {
-						icon: IExtensionTerminalProfile['icon'];
-						color: IExtensionTerminalProfile['color'];
+						icon: IExtensionTerminalProfile["icon"];
+						color: IExtensionTerminalProfile["color"];
 					};
 				} = {
 					extensionIdentifier: result.profile.extensionIdentifier,
@@ -93,79 +139,126 @@ export class TerminalProfileQuickpick {
 					options: {
 						icon: result.profile.icon,
 						color: result.profile.color,
-					}
+					},
 				};
 				if (result.profile.titleTemplate !== undefined) {
 					config.titleTemplate = result.profile.titleTemplate;
 				}
 				return {
 					config,
-					keyMods: result.keyMods
+					keyMods: result.keyMods,
 				};
 			} else {
 				return { config: result.profile, keyMods: result.keyMods };
 			}
 		}
 		// for tests
-		return hasKey(result.profile, { profileName: true }) ? result.profile.profileName : result.profile.title;
+		return hasKey(result.profile, { profileName: true })
+			? result.profile.profileName
+			: result.profile.title;
 	}
 
-	private async _createAndShow(type: 'setDefault' | 'createInstance'): Promise<IProfileQuickPickItem | undefined> {
+	private async _createAndShow(
+		type: "setDefault" | "createInstance",
+	): Promise<IProfileQuickPickItem | undefined> {
 		const platformKey = await this._terminalProfileService.getPlatformKey();
 		const profiles = this._terminalProfileService.availableProfiles;
 		const profilesKey = TerminalSettingPrefix.Profiles + platformKey;
-		const defaultProfileName = this._terminalProfileService.getDefaultProfileName();
+		const defaultProfileName =
+			this._terminalProfileService.getDefaultProfileName();
 		let keyMods: IKeyMods | undefined;
 		const options: IPickOptions<IProfileQuickPickItem> = {
-			placeHolder: type === 'createInstance' ? nls.localize('terminal.integrated.selectProfileToCreate', "Select the terminal profile to create") : nls.localize('terminal.integrated.chooseDefaultProfile', "Select your default terminal profile"),
+			placeHolder:
+				type === "createInstance"
+					? nls.localize(
+							"terminal.integrated.selectProfileToCreate",
+							"Select the terminal profile to create",
+						)
+					: nls.localize(
+							"terminal.integrated.chooseDefaultProfile",
+							"Select your default terminal profile",
+						),
 			onDidTriggerItemButton: async (context) => {
 				// Get the user's explicit permission to use a potentially unsafe path
-				if (!await this._isProfileSafe(context.item.profile)) {
+				if (!(await this._isProfileSafe(context.item.profile))) {
 					return;
 				}
 				if (hasKey(context.item.profile, { id: true })) {
 					return;
 				}
-				const configProfiles: { [key: string]: ITerminalExecutable | null | undefined } = this._configurationService.getValue(TerminalSettingPrefix.Profiles + platformKey);
-				const existingProfiles = !!configProfiles ? Object.keys(configProfiles) : [];
+				const configProfiles: {
+					[key: string]: ITerminalExecutable | null | undefined;
+				} = this._configurationService.getValue(
+					TerminalSettingPrefix.Profiles + platformKey,
+				);
+				const existingProfiles = !!configProfiles
+					? Object.keys(configProfiles)
+					: [];
 				const name = await this._quickInputService.input({
-					prompt: nls.localize('enterTerminalProfileName', "Enter terminal profile name"),
+					prompt: nls.localize(
+						"enterTerminalProfileName",
+						"Enter terminal profile name",
+					),
 					value: context.item.profile.profileName,
-					validateInput: async input => {
+					validateInput: async (input) => {
 						if (existingProfiles.includes(input)) {
-							return nls.localize('terminalProfileAlreadyExists', "A terminal profile already exists with that name");
+							return nls.localize(
+								"terminalProfileAlreadyExists",
+								"A terminal profile already exists with that name",
+							);
 						}
 						return undefined;
-					}
+					},
 				});
 				if (!name) {
 					return;
 				}
-				const newConfigValue: { [key: string]: ITerminalExecutable | null | undefined } = {
+				const newConfigValue: {
+					[key: string]: ITerminalExecutable | null | undefined;
+				} = {
 					...configProfiles,
-					[name]: this._createNewProfileConfig(context.item.profile)
+					[name]: this._createNewProfileConfig(context.item.profile),
 				};
-				await this._configurationService.updateValue(profilesKey, newConfigValue, ConfigurationTarget.USER);
+				await this._configurationService.updateValue(
+					profilesKey,
+					newConfigValue,
+					ConfigurationTarget.USER,
+				);
 			},
-			onKeyMods: mods => keyMods = mods
+			onKeyMods: (mods) => (keyMods = mods),
 		};
 
 		// Build quick pick items
 		const quickPickItems: (IProfileQuickPickItem | IQuickPickSeparator)[] = [];
-		const configProfiles = profiles.filter(e => !e.isAutoDetected);
-		const autoDetectedProfiles = profiles.filter(e => e.isAutoDetected);
+		const configProfiles = profiles.filter((e) => !e.isAutoDetected);
+		const autoDetectedProfiles = profiles.filter((e) => e.isAutoDetected);
 
 		if (configProfiles.length > 0) {
-			quickPickItems.push({ type: 'separator', label: nls.localize('terminalProfiles', "profiles") });
-			quickPickItems.push(...this._sortProfileQuickPickItems(configProfiles.map(e => this._createProfileQuickPickItem(e)), defaultProfileName!));
+			quickPickItems.push({
+				type: "separator",
+				label: nls.localize("terminalProfiles", "profiles"),
+			});
+			quickPickItems.push(
+				...this._sortProfileQuickPickItems(
+					configProfiles.map((e) => this._createProfileQuickPickItem(e)),
+					defaultProfileName!,
+				),
+			);
 		}
 
-		quickPickItems.push({ type: 'separator', label: nls.localize('ICreateContributedTerminalProfileOptions', "contributed") });
+		quickPickItems.push({
+			type: "separator",
+			label: nls.localize(
+				"ICreateContributedTerminalProfileOptions",
+				"contributed",
+			),
+		});
 		const contributedProfiles: IProfileQuickPickItem[] = [];
-		for (const contributed of this._terminalProfileService.contributedProfiles) {
+		for (const contributed of this._terminalProfileService
+			.contributedProfiles) {
 			let icon: ThemeIcon | undefined;
 			if (isString(contributed.icon)) {
-				if (contributed.icon.startsWith('$(')) {
+				if (contributed.icon.startsWith("$(")) {
 					icon = ThemeIcon.fromString(contributed.icon);
 				} else {
 					icon = ThemeIcon.fromId(contributed.icon);
@@ -174,7 +267,11 @@ export class TerminalProfileQuickpick {
 			if (!icon || !getIconRegistry().getIcon(icon.id)) {
 				icon = this._terminalProfileResolverService.getDefaultIcon();
 			}
-			const uriClasses = getUriClasses(contributed, this._themeService.getColorTheme().type, true);
+			const uriClasses = getUriClasses(
+				contributed,
+				this._themeService.getColorTheme().type,
+				true,
+			);
 			const colorClass = getColorClass(contributed);
 			const iconClasses = [];
 			if (uriClasses) {
@@ -191,29 +288,44 @@ export class TerminalProfileQuickpick {
 					icon: contributed.icon,
 					id: contributed.id,
 					color: contributed.color,
-					titleTemplate: contributed.titleTemplate
+					titleTemplate: contributed.titleTemplate,
 				},
 				profileName: contributed.title,
-				iconClasses
+				iconClasses,
 			});
 		}
 
 		if (contributedProfiles.length > 0) {
-			quickPickItems.push(...this._sortProfileQuickPickItems(contributedProfiles, defaultProfileName!));
+			quickPickItems.push(
+				...this._sortProfileQuickPickItems(
+					contributedProfiles,
+					defaultProfileName!,
+				),
+			);
 		}
 
 		if (autoDetectedProfiles.length > 0) {
-			quickPickItems.push({ type: 'separator', label: nls.localize('terminalProfiles.detected', "detected") });
-			quickPickItems.push(...this._sortProfileQuickPickItems(autoDetectedProfiles.map(e => this._createProfileQuickPickItem(e)), defaultProfileName!));
+			quickPickItems.push({
+				type: "separator",
+				label: nls.localize("terminalProfiles.detected", "detected"),
+			});
+			quickPickItems.push(
+				...this._sortProfileQuickPickItems(
+					autoDetectedProfiles.map((e) => this._createProfileQuickPickItem(e)),
+					defaultProfileName!,
+				),
+			);
 		}
-		const colorStyleDisposable = createColorStyleElement(this._themeService.getColorTheme());
+		const colorStyleDisposable = createColorStyleElement(
+			this._themeService.getColorTheme(),
+		);
 
 		const result = await this._quickInputService.pick(quickPickItems, options);
 		colorStyleDisposable.dispose();
 		if (!result) {
 			return undefined;
 		}
-		if (!await this._isProfileSafe(result.profile)) {
+		if (!(await this._isProfileSafe(result.profile))) {
 			return undefined;
 		}
 		if (keyMods) {
@@ -222,7 +334,9 @@ export class TerminalProfileQuickpick {
 		return result;
 	}
 
-	private _createNewProfileConfig(profile: ITerminalProfile): ITerminalExecutable {
+	private _createNewProfileConfig(
+		profile: ITerminalProfile,
+	): ITerminalExecutable {
 		const result: ITerminalExecutable = { path: profile.path };
 		if (profile.args) {
 			result.args = profile.args;
@@ -233,15 +347,19 @@ export class TerminalProfileQuickpick {
 		return result;
 	}
 
-	private async _isProfileSafe(profile: ITerminalProfile | IExtensionTerminalProfile): Promise<boolean> {
-		const isUnsafePath = hasKey(profile, { profileName: true }) && profile.isUnsafePath;
-		const requiresUnsafePath = hasKey(profile, { profileName: true }) && profile.requiresUnsafePath;
+	private async _isProfileSafe(
+		profile: ITerminalProfile | IExtensionTerminalProfile,
+	): Promise<boolean> {
+		const isUnsafePath =
+			hasKey(profile, { profileName: true }) && profile.isUnsafePath;
+		const requiresUnsafePath =
+			hasKey(profile, { profileName: true }) && profile.requiresUnsafePath;
 		if (!isUnsafePath && !requiresUnsafePath) {
 			return true;
 		}
 
 		// Get the user's explicit permission to use a potentially unsafe path
-		return await new Promise<boolean>(r => {
+		return await new Promise<boolean>((r) => {
 			const unsafePaths = [];
 			if (isUnsafePath) {
 				unsafePaths.push(profile.path);
@@ -253,14 +371,21 @@ export class TerminalProfileQuickpick {
 			// possible so the message is optimized for a single path.
 			const handle = this._notificationService.prompt(
 				Severity.Warning,
-				nls.localize('unsafePathWarning', 'This terminal profile uses a potentially unsafe path that can be modified by another user: {0}. Are you sure you want to use it?', `"${unsafePaths.join(',')}"`),
-				[{
-					label: nls.localize('yes', 'Yes'),
-					run: () => r(true)
-				}, {
-					label: nls.localize('cancel', 'Cancel'),
-					run: () => r(false)
-				}]
+				nls.localize(
+					"unsafePathWarning",
+					"This terminal profile uses a potentially unsafe path that can be modified by another user: {0}. Are you sure you want to use it?",
+					`"${unsafePaths.join(",")}"`,
+				),
+				[
+					{
+						label: nls.localize("yes", "Yes"),
+						run: () => r(true),
+					},
+					{
+						label: nls.localize("cancel", "Cancel"),
+						run: () => r(false),
+					},
+				],
 			);
 			Event.once(handle.onDidClose)(() => {
 				r(false);
@@ -268,14 +393,26 @@ export class TerminalProfileQuickpick {
 		});
 	}
 
-	private _createProfileQuickPickItem(profile: ITerminalProfile): IProfileQuickPickItem {
-		const buttons: IQuickInputButton[] = [{
-			iconClass: ThemeIcon.asClassName(configureTerminalProfileIcon),
-			tooltip: nls.localize('createQuickLaunchProfile', "Configure Terminal Profile")
-		}];
-		const icon = (profile.icon && ThemeIcon.isThemeIcon(profile.icon)) ? profile.icon : Codicon.terminal;
+	private _createProfileQuickPickItem(
+		profile: ITerminalProfile,
+	): IProfileQuickPickItem {
+		const buttons: IQuickInputButton[] = [
+			{
+				iconClass: ThemeIcon.asClassName(configureTerminalProfileIcon),
+				tooltip: nls.localize(
+					"createQuickLaunchProfile",
+					"Configure Terminal Profile",
+				),
+			},
+		];
+		const icon =
+			profile.icon && ThemeIcon.isThemeIcon(profile.icon)
+				? profile.icon
+				: Codicon.terminal;
 		const label = `$(${icon.id}) ${profile.profileName}`;
-		const friendlyPath = profile.isFromPath ? basename(profile.path) : profile.path;
+		const friendlyPath = profile.isFromPath
+			? basename(profile.path)
+			: profile.path;
 		const colorClass = getColorClass(profile);
 		const iconClasses = [];
 		if (colorClass) {
@@ -284,20 +421,46 @@ export class TerminalProfileQuickpick {
 
 		if (profile.args) {
 			if (isString(profile.args)) {
-				return { label, description: `${profile.path} ${profile.args}`, profile, profileName: profile.profileName, buttons, iconClasses };
+				return {
+					label,
+					description: `${profile.path} ${profile.args}`,
+					profile,
+					profileName: profile.profileName,
+					buttons,
+					iconClasses,
+				};
 			}
-			const argsString = profile.args.map(e => {
-				if (e.includes(' ')) {
-					return `"${e.replace(/"/g, '\\"')}"`; // CodeQL [SM02383] js/incomplete-sanitization This is only used as a label on the UI so this isn't a problem
-				}
-				return e;
-			}).join(' ');
-			return { label, description: `${friendlyPath} ${argsString}`, profile, profileName: profile.profileName, buttons, iconClasses };
+			const argsString = profile.args
+				.map((e) => {
+					if (e.includes(" ")) {
+						return `"${e.replace(/"/g, '\\"')}"`; // CodeQL [SM02383] js/incomplete-sanitization This is only used as a label on the UI so this isn't a problem
+					}
+					return e;
+				})
+				.join(" ");
+			return {
+				label,
+				description: `${friendlyPath} ${argsString}`,
+				profile,
+				profileName: profile.profileName,
+				buttons,
+				iconClasses,
+			};
 		}
-		return { label, description: friendlyPath, profile, profileName: profile.profileName, buttons, iconClasses };
+		return {
+			label,
+			description: friendlyPath,
+			profile,
+			profileName: profile.profileName,
+			buttons,
+			iconClasses,
+		};
 	}
 
-	private _sortProfileQuickPickItems(items: IProfileQuickPickItem[], defaultProfileName: string) {
+	private _sortProfileQuickPickItems(
+		items: IProfileQuickPickItem[],
+		defaultProfileName: string,
+	) {
 		return items.sort((a, b) => {
 			if (b.profileName === defaultProfileName) {
 				return 1;

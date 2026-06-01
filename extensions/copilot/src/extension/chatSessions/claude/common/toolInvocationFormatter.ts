@@ -3,12 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AgentInput, BashInput, FileReadInput, GlobInput, GrepInput } from '@anthropic-ai/claude-agent-sdk/sdk-tools';
+import {
+	AgentInput,
+	BashInput,
+	FileReadInput,
+	GlobInput,
+	GrepInput,
+} from '@anthropic-ai/claude-agent-sdk/sdk-tools';
 import Anthropic from '@anthropic-ai/sdk';
 import * as l10n from '@vscode/l10n';
-import type { ChatSimpleToolResultData, ChatTerminalToolInvocationData } from 'vscode';
+import type {
+	ChatSimpleToolResultData,
+	ChatTerminalToolInvocationData,
+} from 'vscode';
 import { URI } from '../../../../util/vs/base/common/uri';
-import { ChatSubagentToolInvocationData, ChatToolInvocationPart, MarkdownString } from '../../../../vscodeTypes';
+import {
+	ChatSubagentToolInvocationData,
+	ChatToolInvocationPart,
+	MarkdownString,
+} from '../../../../vscodeTypes';
 import { ClaudeToolNames, ExitPlanModeInput, LSInput } from './claudeTools';
 
 // #region Tool Result Content Extraction
@@ -17,7 +30,9 @@ import { ClaudeToolNames, ExitPlanModeInput, LSInput } from './claudeTools';
  * Extracts text content from a tool result's content field.
  * Tool results can be a string, an array of content blocks, or undefined.
  */
-function extractToolResultContent(content: Anthropic.Messages.ToolResultBlockParam['content']): string {
+function extractToolResultContent(
+	content: Anthropic.Messages.ToolResultBlockParam['content'],
+): string {
 	if (!content) {
 		return '';
 	}
@@ -26,8 +41,11 @@ function extractToolResultContent(content: Anthropic.Messages.ToolResultBlockPar
 	}
 	// Array of content blocks - extract text from each
 	return content
-		.filter((block): block is Anthropic.Messages.TextBlockParam => block.type === 'text')
-		.map(block => block.text)
+		.filter(
+			(block): block is Anthropic.Messages.TextBlockParam =>
+				block.type === 'text',
+		)
+		.map((block) => block.text)
 		.join('\n');
 }
 
@@ -42,7 +60,7 @@ function extractToolResultContent(content: Anthropic.Messages.ToolResultBlockPar
 export function completeToolInvocation(
 	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
 	toolResult: Anthropic.Messages.ToolResultBlockParam,
-	invocation: ChatToolInvocationPart
+	invocation: ChatToolInvocationPart,
 ): void {
 	const resultContent = extractToolResultContent(toolResult.content);
 
@@ -81,16 +99,20 @@ export function completeToolInvocation(
 function completeBashInvocation(
 	invocation: ChatToolInvocationPart,
 	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
-	resultContent: string
+	resultContent: string,
 ): void {
 	// Parse exit code from the end of the result (format: "Exit code: X" or similar patterns)
-	const exitCodeMatch = /(?:exit code|exited with)[:=\s]*(\d+)/i.exec(resultContent);
+	const exitCodeMatch = /(?:exit code|exited with)[:=\s]*(\d+)/i.exec(
+		resultContent,
+	);
 	const exitCode = exitCodeMatch ? parseInt(exitCodeMatch[1], 10) : undefined;
 
 	// Remove exit code line from output for cleaner display
 	let text = resultContent;
 	if (exitCode !== undefined) {
-		text = resultContent.replace(/(?:exit code|exited with)[:=\s]*\d+\s*$/i, '').trimEnd();
+		text = resultContent
+			.replace(/(?:exit code|exited with)[:=\s]*\d+\s*$/i, '')
+			.trimEnd();
 	}
 
 	// Convert \n to \r\n for proper terminal display
@@ -102,7 +124,7 @@ function completeBashInvocation(
 		},
 		language: 'bash',
 		state: exitCode !== undefined ? { exitCode } : undefined,
-		output: text ? { text } : undefined
+		output: text ? { text } : undefined,
 	};
 	invocation.toolSpecificData = toolSpecificData;
 }
@@ -113,19 +135,20 @@ function completeBashInvocation(
 function completeReadInvocation(
 	invocation: ChatToolInvocationPart,
 	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
-	resultContent: string
+	resultContent: string,
 ): void {
 	if (!resultContent) {
 		return;
 	}
 
-	const input = toolUse.name === ClaudeToolNames.LS
-		? (toolUse.input as LSInput)?.path ?? ''
-		: (toolUse.input as FileReadInput)?.file_path ?? '';
+	const input =
+		toolUse.name === ClaudeToolNames.LS
+			? ((toolUse.input as LSInput)?.path ?? '')
+			: ((toolUse.input as FileReadInput)?.file_path ?? '');
 
 	const toolSpecificData: ChatSimpleToolResultData = {
 		input,
-		output: resultContent
+		output: resultContent,
 	};
 	invocation.toolSpecificData = toolSpecificData;
 }
@@ -136,19 +159,20 @@ function completeReadInvocation(
 function completeSearchInvocation(
 	invocation: ChatToolInvocationPart,
 	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
-	resultContent: string
+	resultContent: string,
 ): void {
 	if (!resultContent) {
 		return;
 	}
 
-	const input = toolUse.name === ClaudeToolNames.Glob
-		? (toolUse.input as GlobInput)?.pattern ?? ''
-		: (toolUse.input as GrepInput)?.pattern ?? '';
+	const input =
+		toolUse.name === ClaudeToolNames.Glob
+			? ((toolUse.input as GlobInput)?.pattern ?? '')
+			: ((toolUse.input as GrepInput)?.pattern ?? '');
 
 	const toolSpecificData: ChatSimpleToolResultData = {
 		input,
-		output: resultContent
+		output: resultContent,
 	};
 	invocation.toolSpecificData = toolSpecificData;
 }
@@ -160,7 +184,7 @@ function completeSearchInvocation(
  */
 function completeTaskInvocation(
 	invocation: ChatToolInvocationPart,
-	resultContent: string
+	resultContent: string,
 ): void {
 	if (invocation.toolSpecificData instanceof ChatSubagentToolInvocationData) {
 		invocation.toolSpecificData.result = resultContent;
@@ -174,7 +198,7 @@ function completeTaskInvocation(
 function completeGenericInvocation(
 	invocation: ChatToolInvocationPart,
 	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
-	resultContent: string
+	resultContent: string,
 ): void {
 	if (!resultContent) {
 		return;
@@ -182,7 +206,7 @@ function completeGenericInvocation(
 
 	const toolSpecificData: ChatSimpleToolResultData = {
 		input: toolUse.input ? JSON.stringify(toolUse.input, null, 2) : '',
-		output: resultContent
+		output: resultContent,
 	};
 	invocation.toolSpecificData = toolSpecificData;
 }
@@ -196,7 +220,7 @@ function completeGenericInvocation(
  */
 export function createFormattedToolInvocation(
 	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
-	complete?: boolean
+	complete?: boolean,
 ): ChatToolInvocationPart | undefined {
 	const invocation = new ChatToolInvocationPart(toolUse.name, toolUse.id);
 	if (complete !== undefined) {
@@ -242,55 +266,93 @@ export function createFormattedToolInvocation(
 	return invocation;
 }
 
-function formatBashInvocation(invocation: ChatToolInvocationPart, toolUse: Anthropic.Beta.Messages.BetaToolUseBlock): void {
+function formatBashInvocation(
+	invocation: ChatToolInvocationPart,
+	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
+): void {
 	invocation.invocationMessage = '';
 	invocation.toolSpecificData = {
 		commandLine: {
 			original: (toolUse.input as BashInput)?.command,
 		},
-		language: 'bash'
+		language: 'bash',
 	};
 }
 
-function formatReadInvocation(invocation: ChatToolInvocationPart, toolUse: Anthropic.Beta.Messages.BetaToolUseBlock): void {
+function formatReadInvocation(
+	invocation: ChatToolInvocationPart,
+	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
+): void {
 	const filePath: string = (toolUse.input as FileReadInput)?.file_path ?? '';
 	const display = filePath ? formatUriForMessage(filePath) : '';
-	invocation.invocationMessage = new MarkdownString(l10n.t("Read {0}", display));
+	invocation.invocationMessage = new MarkdownString(
+		l10n.t('Read {0}', display),
+	);
 }
 
-function formatGlobInvocation(invocation: ChatToolInvocationPart, toolUse: Anthropic.Beta.Messages.BetaToolUseBlock): void {
+function formatGlobInvocation(
+	invocation: ChatToolInvocationPart,
+	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
+): void {
 	const pattern: string = (toolUse.input as GlobInput)?.pattern ?? '';
-	invocation.invocationMessage = new MarkdownString(l10n.t("Searched for files matching `{0}`", pattern));
+	invocation.invocationMessage = new MarkdownString(
+		l10n.t('Searched for files matching `{0}`', pattern),
+	);
 }
 
-function formatGrepInvocation(invocation: ChatToolInvocationPart, toolUse: Anthropic.Beta.Messages.BetaToolUseBlock): void {
+function formatGrepInvocation(
+	invocation: ChatToolInvocationPart,
+	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
+): void {
 	const pattern: string = (toolUse.input as GrepInput)?.pattern ?? '';
-	invocation.invocationMessage = new MarkdownString(l10n.t("Searched for regex `{0}`", pattern));
+	invocation.invocationMessage = new MarkdownString(
+		l10n.t('Searched for regex `{0}`', pattern),
+	);
 }
 
-function formatLSInvocation(invocation: ChatToolInvocationPart, toolUse: Anthropic.Beta.Messages.BetaToolUseBlock): void {
+function formatLSInvocation(
+	invocation: ChatToolInvocationPart,
+	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
+): void {
 	const path: string = (toolUse.input as LSInput)?.path ?? '';
 	const display = path ? formatUriForMessage(path) : '';
-	invocation.invocationMessage = new MarkdownString(l10n.t("Read {0}", display));
+	invocation.invocationMessage = new MarkdownString(
+		l10n.t('Read {0}', display),
+	);
 }
 
-function formatExitPlanModeInvocation(invocation: ChatToolInvocationPart, toolUse: Anthropic.Beta.Messages.BetaToolUseBlock): void {
-	invocation.invocationMessage = l10n.t("Here is Claude's plan:\n\n{0}", (toolUse.input as ExitPlanModeInput)?.plan ?? '');
+function formatExitPlanModeInvocation(
+	invocation: ChatToolInvocationPart,
+	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
+): void {
+	invocation.invocationMessage = l10n.t(
+		"Here is Claude's plan:\n\n{0}",
+		(toolUse.input as ExitPlanModeInput)?.plan ?? '',
+	);
 }
 
-function formatTaskInvocation(invocation: ChatToolInvocationPart, toolUse: Anthropic.Beta.Messages.BetaToolUseBlock): void {
+function formatTaskInvocation(
+	invocation: ChatToolInvocationPart,
+	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
+): void {
 	const description = (toolUse.input as AgentInput)?.description ?? '';
-	invocation.invocationMessage = new MarkdownString(l10n.t("Completed Task: \"{0}\"", description));
+	invocation.invocationMessage = new MarkdownString(
+		l10n.t('Completed Task: "{0}"', description),
+	);
 
 	const input = toolUse.input as AgentInput;
 	invocation.toolSpecificData = new ChatSubagentToolInvocationData(
 		input.description,
 		input.subagent_type,
-		input.prompt);
+		input.prompt,
+	);
 }
 
-function formatGenericInvocation(invocation: ChatToolInvocationPart, toolUse: Anthropic.Beta.Messages.BetaToolUseBlock): void {
-	invocation.invocationMessage = l10n.t("Used tool: {0}", toolUse.name);
+function formatGenericInvocation(
+	invocation: ChatToolInvocationPart,
+	toolUse: Anthropic.Beta.Messages.BetaToolUseBlock,
+): void {
+	invocation.invocationMessage = l10n.t('Used tool: {0}', toolUse.name);
 }
 
 function formatUriForMessage(path: string): string {

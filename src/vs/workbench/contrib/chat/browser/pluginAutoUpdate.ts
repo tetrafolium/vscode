@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { autorun } from '../../../../base/common/observable.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { IWorkbenchContribution } from '../../../common/contributions.js';
-import { IExtensionsWorkbenchService } from '../../extensions/common/extensions.js';
-import { IPluginInstallService } from '../common/plugins/pluginInstallService.js';
-import { IPluginMarketplaceService } from '../common/plugins/pluginMarketplaceService.js';
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { autorun } from "../../../../base/common/observable.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { IWorkbenchContribution } from "../../../common/contributions.js";
+import { IExtensionsWorkbenchService } from "../../extensions/common/extensions.js";
+import { IPluginInstallService } from "../common/plugins/pluginInstallService.js";
+import { IPluginMarketplaceService } from "../common/plugins/pluginMarketplaceService.js";
 
 /**
  * Bridges the periodic plugin update *check* performed by
@@ -33,25 +33,33 @@ import { IPluginMarketplaceService } from '../common/plugins/pluginMarketplaceSe
  * in `finally` is a no-op on the success path and handles the partial-
  * failure path where the install service leaves the flag at `true`.
  */
-export class PluginAutoUpdate extends Disposable implements IWorkbenchContribution {
-	static readonly ID = 'workbench.contrib.pluginAutoUpdate';
+export class PluginAutoUpdate
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	static readonly ID = "workbench.contrib.pluginAutoUpdate";
 
 	private _updateInFlight = false;
 
 	constructor(
-		@IPluginMarketplaceService private readonly _pluginMarketplaceService: IPluginMarketplaceService,
-		@IPluginInstallService private readonly _pluginInstallService: IPluginInstallService,
-		@IExtensionsWorkbenchService private readonly _extensionsWorkbenchService: IExtensionsWorkbenchService,
+		@IPluginMarketplaceService
+		private readonly _pluginMarketplaceService: IPluginMarketplaceService,
+		@IPluginInstallService
+		private readonly _pluginInstallService: IPluginInstallService,
+		@IExtensionsWorkbenchService
+		private readonly _extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
 
-		this._register(autorun(reader => {
-			if (!this._pluginMarketplaceService.hasUpdatesAvailable.read(reader)) {
-				return;
-			}
-			void this._triggerAutoUpdate();
-		}));
+		this._register(
+			autorun((reader) => {
+				if (!this._pluginMarketplaceService.hasUpdatesAvailable.read(reader)) {
+					return;
+				}
+				void this._triggerAutoUpdate();
+			}),
+		);
 	}
 
 	private async _triggerAutoUpdate(): Promise<void> {
@@ -60,15 +68,21 @@ export class PluginAutoUpdate extends Disposable implements IWorkbenchContributi
 		}
 
 		const autoUpdate = this._extensionsWorkbenchService.getAutoUpdateValue();
-		if (autoUpdate === 'off') {
+		if (autoUpdate === "off") {
 			return;
 		}
 
 		this._updateInFlight = true;
 		try {
-			await this._pluginInstallService.updateAllPlugins({ silent: true }, CancellationToken.None);
+			await this._pluginInstallService.updateAllPlugins(
+				{ silent: true },
+				CancellationToken.None,
+			);
 		} catch (err) {
-			this._logService.error('[PluginAutoUpdate] Failed to auto-update plugins:', err);
+			this._logService.error(
+				"[PluginAutoUpdate] Failed to auto-update plugins:",
+				err,
+			);
 		} finally {
 			this._updateInFlight = false;
 			// Ensure the flag is cleared even on partial failure so the next

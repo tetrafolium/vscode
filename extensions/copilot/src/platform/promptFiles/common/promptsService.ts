@@ -3,7 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ChatCustomAgent, ChatHook, ChatInstruction, ChatPlugin, ChatSkill, ChatSlashCommand } from 'vscode';
+import type {
+	ChatCustomAgent,
+	ChatHook,
+	ChatInstruction,
+	ChatPlugin,
+	ChatSkill,
+	ChatSlashCommand,
+} from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { Event } from '../../../util/vs/base/common/event';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
@@ -12,7 +19,8 @@ import { ParsedPromptFile } from '../../../util/vs/workbench/contrib/chat/common
 
 export * from '../../../util/vs/workbench/contrib/chat/common/promptSyntax/promptFileParser';
 
-export const IPromptsService = createServiceIdentifier<IPromptsService>('IPromptsService');
+export const IPromptsService =
+	createServiceIdentifier<IPromptsService>('IPromptsService');
 
 export namespace PromptFileLangageId {
 	export const prompt = 'prompt';
@@ -67,13 +75,17 @@ export interface IPromptsService {
 	 * The list of currently available custom agents. These are `.agent.md` files
 	 * from all sources (workspace, user, and extension-provided).
 	 */
-	getCustomAgents(token: CancellationToken): Promise<readonly ChatCustomAgent[]>;
+	getCustomAgents(
+		token: CancellationToken,
+	): Promise<readonly ChatCustomAgent[]>;
 
 	/**
 	 * Returns the slash command prompt files. These are prompts and skills
 	 * from all sources (workspace, user, and extension-provided).
 	 */
-	getSlashCommands(token: CancellationToken): Promise<readonly ChatSlashCommand[]>;
+	getSlashCommands(
+		token: CancellationToken,
+	): Promise<readonly ChatSlashCommand[]>;
 
 	/**
 	 * An event that fires when the list of {@link instructions instructions} changes.
@@ -84,7 +96,9 @@ export interface IPromptsService {
 	 * The list of currently available instructions. These are `.instructions.md` files
 	 * from all sources (workspace, user, and extension-provided).
 	 */
-	getInstructions(token: CancellationToken): Promise<readonly ChatInstruction[]>;
+	getInstructions(
+		token: CancellationToken,
+	): Promise<readonly ChatInstruction[]>;
 
 	/**
 	 * An event that fires when the list of {@link skills skills} changes.
@@ -127,14 +141,17 @@ export interface IPromptsService {
 	 * `github.copilot.chat.codeGeneration.useInstructionFiles` settings as
 	 * well as `chat.useCustomizationsInParentRepositories`.
 	 */
-	listAgentInstructions(token: CancellationToken, logger?: AgentInstructionsLogger): Promise<IAgentInstructionFile[]>;
+	listAgentInstructions(
+		token: CancellationToken,
+		logger?: AgentInstructionsLogger,
+	): Promise<IAgentInstructionFile[]>;
 
 	/**
 	 * Gets the list of nested `AGENTS.md` files in the workspace, when the
 	 * `chat.useNestedAgentsMdFiles` setting is enabled. Returns an empty
 	 * array otherwise.
 	 */
-	listNestedAgentMDs(token: CancellationToken): Promise<IAgentInstructionFile[]>;
-
-
+	listNestedAgentMDs(
+		token: CancellationToken,
+	): Promise<IAgentInstructionFile[]>;
 }

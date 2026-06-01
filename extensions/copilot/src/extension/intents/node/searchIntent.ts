@@ -17,11 +17,19 @@ import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { Intent } from '../../common/constants';
 import { IBuildPromptContext } from '../../prompt/common/intents';
-import { IIntent, IIntentInvocation, IIntentInvocationContext, IIntentSlashCommandInfo, IResponseProcessorContext } from '../../prompt/node/intents';
+import {
+	IIntent,
+	IIntentInvocation,
+	IIntentInvocationContext,
+	IIntentSlashCommandInfo,
+	IResponseProcessorContext,
+} from '../../prompt/node/intents';
 import { PseudoStopStartResponseProcessor } from '../../prompt/node/pseudoStartStopConversationCallback';
-import { PromptRenderer, RendererIntentInvocation } from '../../prompts/node/base/promptRenderer';
+import {
+	PromptRenderer,
+	RendererIntentInvocation,
+} from '../../prompts/node/base/promptRenderer';
 import { SearchPrompt } from '../../prompts/node/panel/search';
-
 
 export interface FindInFilesArgs {
 	query: string;
@@ -49,7 +57,7 @@ function createSearchFollowUps(args: any): vscode.Command[] {
 	searchResponses.push({
 		command: 'github.copilot.executeSearch',
 		arguments: [searchArg],
-		title: l10n.t("Search"),
+		title: l10n.t('Search'),
 	});
 	return searchResponses;
 }
@@ -94,41 +102,70 @@ function jsonToTable(args: any): string[] {
 
 export const searchIntentPromptSnippet = `Search for 'foo' in all files under my 'src' directory`;
 
-class SearchIntentInvocation extends RendererIntentInvocation implements IIntentInvocation {
-
+class SearchIntentInvocation
+	extends RendererIntentInvocation
+	implements IIntentInvocation
+{
 	constructor(
 		intent: IIntent,
 		location: ChatLocation,
 		endpoint: IChatEndpoint,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super(intent, location, endpoint);
 	}
 
-	createRenderer(promptContext: IBuildPromptContext, endpoint: IChatEndpoint, progress: vscode.Progress<vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart>, token: vscode.CancellationToken) {
-		return PromptRenderer.create(this.instantiationService, endpoint, SearchPrompt, {
-			promptContext
-		});
+	createRenderer(
+		promptContext: IBuildPromptContext,
+		endpoint: IChatEndpoint,
+		progress: vscode.Progress<
+			vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart
+		>,
+		token: vscode.CancellationToken,
+	) {
+		return PromptRenderer.create(
+			this.instantiationService,
+			endpoint,
+			SearchPrompt,
+			{
+				promptContext,
+			},
+		);
 	}
 
-	processResponse(context: IResponseProcessorContext, inputStream: AsyncIterable<IResponsePart>, outputStream: vscode.ChatResponseStream, token: CancellationToken): Promise<void> {
-		const responseProcessor = this.instantiationService.createInstance(SearchResponseProcessor);
-		return responseProcessor.processResponse(context, inputStream, outputStream, token);
+	processResponse(
+		context: IResponseProcessorContext,
+		inputStream: AsyncIterable<IResponsePart>,
+		outputStream: vscode.ChatResponseStream,
+		token: CancellationToken,
+	): Promise<void> {
+		const responseProcessor = this.instantiationService.createInstance(
+			SearchResponseProcessor,
+		);
+		return responseProcessor.processResponse(
+			context,
+			inputStream,
+			outputStream,
+			token,
+		);
 	}
 }
 
 class SearchResponseProcessor extends PseudoStopStartResponseProcessor {
-
 	private _response = '';
 
 	constructor() {
-		super(
-			[{ start: '[ARGS END]', stop: '[ARGS START]' }],
-			(delta) => jsonToTable(parseSearchParams(delta.join(''))),
+		super([{ start: '[ARGS END]', stop: '[ARGS START]' }], (delta) =>
+			jsonToTable(parseSearchParams(delta.join(''))),
 		);
 	}
 
-	override async doProcessResponse(responseStream: AsyncIterable<IResponsePart>, progress: vscode.ChatResponseStream, token: CancellationToken): Promise<void> {
+	override async doProcessResponse(
+		responseStream: AsyncIterable<IResponsePart>,
+		progress: vscode.ChatResponseStream,
+		token: CancellationToken,
+	): Promise<void> {
 		await super.doProcessResponse(responseStream, progress, token);
 		const args = parseSearchParams(this._response ?? '');
 		for (const command of createSearchFollowUps(args)) {
@@ -136,18 +173,22 @@ class SearchResponseProcessor extends PseudoStopStartResponseProcessor {
 		}
 	}
 
-	protected override applyDelta(delta: IResponseDelta, progress: vscode.ChatResponseStream): void {
+	protected override applyDelta(
+		delta: IResponseDelta,
+		progress: vscode.ChatResponseStream,
+	): void {
 		this._response += delta.text;
 		super.applyDelta(delta, progress);
 	}
 }
 
 export class SearchIntent implements IIntent {
-
 	static readonly ID = Intent.Search;
 	readonly id: string = Intent.Search;
 	readonly locations = [ChatLocation.Panel];
-	readonly description: string = l10n.t('Generate query parameters for workspace search');
+	readonly description: string = l10n.t(
+		'Generate query parameters for workspace search',
+	);
 
 	readonly commandInfo: IIntentSlashCommandInfo = {
 		allowsEmptyArgs: false,
@@ -155,13 +196,23 @@ export class SearchIntent implements IIntent {
 	};
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
-	) { }
+	) {}
 
-	async invoke(invocationContext: IIntentInvocationContext): Promise<IIntentInvocation> {
+	async invoke(
+		invocationContext: IIntentInvocationContext,
+	): Promise<IIntentInvocation> {
 		const location = invocationContext.location;
-		const endpoint = await this.endpointProvider.getChatEndpoint(invocationContext.request);
-		return this.instantiationService.createInstance(SearchIntentInvocation, this, location, endpoint);
+		const endpoint = await this.endpointProvider.getChatEndpoint(
+			invocationContext.request,
+		);
+		return this.instantiationService.createInstance(
+			SearchIntentInvocation,
+			this,
+			location,
+			endpoint,
+		);
 	}
 }

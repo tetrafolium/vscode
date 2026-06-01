@@ -11,9 +11,23 @@ import { ExtHostNotebookDocumentData } from '../../../../util/common/test/shims/
 import { Uri } from '../../../../vscodeTypes';
 
 export function loadFile(data: FixtureData): Promise<ITestFile>;
-export function loadFile(data: Omit<FixtureData, 'filePath'> & { fileName: string; fileContents: string }): Promise<'not_supported'>;
-export async function loadFile(data: FixtureData | (Omit<FixtureData, 'filePath'> & { fileName: string; fileContents: string })): Promise<ITestFile | 'not_supported'> {
-	if ('fileName' in data) { return 'not_supported'; }
+export function loadFile(
+	data: Omit<FixtureData, 'filePath'> & {
+		fileName: string;
+		fileContents: string;
+	},
+): Promise<'not_supported'>;
+export async function loadFile(
+	data:
+		| FixtureData
+		| (Omit<FixtureData, 'filePath'> & {
+				fileName: string;
+				fileContents: string;
+		  }),
+): Promise<ITestFile | 'not_supported'> {
+	if ('fileName' in data) {
+		return 'not_supported';
+	}
 	const contents = (await fs.promises.readFile(data.filePath)).toString();
 	return {
 		contents,
@@ -28,11 +42,16 @@ interface FixtureData {
 
 export type RelativeFilePath<T extends string> = string & { baseDir?: T };
 
-export function fixture(relativePath: RelativeFilePath<'$dir/fixtures'>): string {
+export function fixture(
+	relativePath: RelativeFilePath<'$dir/fixtures'>,
+): string {
 	const filePath = path.join(__dirname, 'fixtures', relativePath);
 	return filePath;
 }
-export function getAlternativeNotebookSnapshotPath(data: ITestFile, extension: string): string {
+export function getAlternativeNotebookSnapshotPath(
+	data: ITestFile,
+	extension: string,
+): string {
 	return addSecondaryExtension(data.filePath, [extension]);
 }
 
@@ -40,8 +59,10 @@ function addSecondaryExtension(filePath: string, extensions: string[]): string {
 	return filePath + '.' + extensions.join('.');
 }
 
-
-export function docPathInFixture(pathWithinFixturesDir: string, type: 'summarized' | 'selection') {
+export function docPathInFixture(
+	pathWithinFixturesDir: string,
+	type: 'summarized' | 'selection',
+) {
 	const dirname = path.dirname(pathWithinFixturesDir);
 	const basename = path.basename(pathWithinFixturesDir);
 	const basenameByDots = basename.split('.');
@@ -66,9 +87,21 @@ export async function generateAlternativeContent(
 	return { content, notebook };
 }
 
-export async function loadNotebook(filePromise: ITestFile | Promise<ITestFile>, simulationWorkspace?: SimulationWorkspace) {
+export async function loadNotebook(
+	filePromise: ITestFile | Promise<ITestFile>,
+	simulationWorkspace?: SimulationWorkspace,
+) {
 	const file = await filePromise;
 	const uri = Uri.file(file.filePath);
-	return file.filePath.endsWith('.ipynb') ? ExtHostNotebookDocumentData.createJupyterNotebook(uri, file.contents, simulationWorkspace).document :
-		ExtHostNotebookDocumentData.createGithubIssuesNotebook(uri, file.contents, simulationWorkspace).document;
+	return file.filePath.endsWith('.ipynb')
+		? ExtHostNotebookDocumentData.createJupyterNotebook(
+				uri,
+				file.contents,
+				simulationWorkspace,
+			).document
+		: ExtHostNotebookDocumentData.createGithubIssuesNotebook(
+				uri,
+				file.contents,
+				simulationWorkspace,
+			).document;
 }

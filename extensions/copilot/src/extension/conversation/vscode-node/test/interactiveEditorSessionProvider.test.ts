@@ -64,15 +64,30 @@ suite('findFixRangeOfInterest', function () {
 	}
 
 	test('typescript - max number of lines 4', async function () {
-		await assertfindFixRangeOfInterestAsync(accessor, typeScriptDoc, 4, [16, 18]);
+		await assertfindFixRangeOfInterestAsync(
+			accessor,
+			typeScriptDoc,
+			4,
+			[16, 18],
+		);
 	});
 
 	test('typescript - max number of lines 10', async function () {
-		await assertfindFixRangeOfInterestAsync(accessor, typeScriptDoc, 10, [13, 21]);
+		await assertfindFixRangeOfInterestAsync(
+			accessor,
+			typeScriptDoc,
+			10,
+			[13, 21],
+		);
 	});
 
 	test('typescript - max number of lines 15', async function () {
-		await assertfindFixRangeOfInterestAsync(accessor, typeScriptDoc, 15, [11, 24]);
+		await assertfindFixRangeOfInterestAsync(
+			accessor,
+			typeScriptDoc,
+			15,
+			[11, 24],
+		);
 	});
 
 	async function setupPythonDoc() {
@@ -104,11 +119,21 @@ suite('findFixRangeOfInterest', function () {
 	});
 
 	test('python - max number of lines 11', async function () {
-		await assertfindFixRangeOfInterestAsync(accessor, pythonDoc, 11, [0, 9]);
+		await assertfindFixRangeOfInterestAsync(
+			accessor,
+			pythonDoc,
+			11,
+			[0, 9],
+		);
 	});
 
 	test('python - max number of lines 16', async function () {
-		await assertfindFixRangeOfInterestAsync(accessor, pythonDoc, 16, [0, 13]);
+		await assertfindFixRangeOfInterestAsync(
+			accessor,
+			pythonDoc,
+			16,
+			[0, 13],
+		);
 	});
 
 	async function setupJavaDoc() {
@@ -182,7 +207,12 @@ suite('findFixRangeOfInterest', function () {
 	});
 });
 
-async function assertfindFixRangeOfInterestAsync(accessor: ITestingServicesAccessor, _document: TextDocument, maximumNumberOfLines: number, expectedLineRange: [number, number]) {
+async function assertfindFixRangeOfInterestAsync(
+	accessor: ITestingServicesAccessor,
+	_document: TextDocument,
+	maximumNumberOfLines: number,
+	expectedLineRange: [number, number],
+) {
 	let startPosition: Position | undefined;
 	let endPosition: Position | undefined;
 	const documentLineCount = _document.lineCount;
@@ -195,8 +225,12 @@ async function assertfindFixRangeOfInterestAsync(accessor: ITestingServicesAcces
 		const position = new Position(index, firstPipeIndex);
 		if (!startPosition) {
 			startPosition = position;
-			const secondPipeIndex = line.text.indexOf('|', firstPipeIndex + 1) - 1;
-			endPosition = secondPipeIndex !== -1 ? new Position(index, secondPipeIndex) : undefined;
+			const secondPipeIndex =
+				line.text.indexOf('|', firstPipeIndex + 1) - 1;
+			endPosition =
+				secondPipeIndex !== -1
+					? new Position(index, secondPipeIndex)
+					: undefined;
 			continue;
 		}
 		if (!endPosition) {
@@ -212,11 +246,19 @@ async function assertfindFixRangeOfInterestAsync(accessor: ITestingServicesAcces
 		language: _document.languageId,
 		content: _document.getText().replace(/\|/g, ''),
 	});
-	const treeSitterAST = accessor.get(IParserService).getTreeSitterAST(document);
+	const treeSitterAST = accessor
+		.get(IParserService)
+		.getTreeSitterAST(document);
 	assert(treeSitterAST);
-	const diagnostics: Diagnostic[] = [new Diagnostic(new Range(startPosition, endPosition), 'placeholder')];
+	const diagnostics: Diagnostic[] = [
+		new Diagnostic(new Range(startPosition, endPosition), 'placeholder'),
+	];
 	const diagnosticsRange = rangeSpanningDiagnostics(diagnostics);
-	const rangeOfInterest = await findFixRangeOfInterest(treeSitterAST, diagnosticsRange, maximumNumberOfLines);
+	const rangeOfInterest = await findFixRangeOfInterest(
+		treeSitterAST,
+		diagnosticsRange,
+		maximumNumberOfLines,
+	);
 	assert.deepStrictEqual(rangeOfInterest!.start.line, expectedLineRange[0]);
 	assert.deepStrictEqual(rangeOfInterest!.end.line, expectedLineRange[1]);
 }

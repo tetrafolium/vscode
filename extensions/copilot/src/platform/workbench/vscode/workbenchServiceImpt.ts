@@ -8,15 +8,19 @@ import { SettingListItem } from '../../embeddings/common/vscodeIndex';
 import { IWorkbenchService } from '../common/workbenchService';
 
 export class WorkbenchServiceImpl implements IWorkbenchService {
-
 	declare readonly _serviceBrand: undefined;
 
 	getAllExtensions(): readonly vscode.Extension<any>[] {
 		return vscode.extensions.all;
 	}
 
-	async getAllCommands(filterByPreCondition?: boolean): Promise<{ label: string; command: string; keybinding: string }[]> {
-		return vscode.commands.executeCommand('_getAllCommands', filterByPreCondition);
+	async getAllCommands(
+		filterByPreCondition?: boolean,
+	): Promise<{ label: string; command: string; keybinding: string }[]> {
+		return vscode.commands.executeCommand(
+			'_getAllCommands',
+			filterByPreCondition,
+		);
 	}
 
 	async getAllSettings(): Promise<{ [key: string]: SettingListItem }> {

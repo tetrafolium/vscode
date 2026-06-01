@@ -71,7 +71,11 @@
 	color: var(--vscode-button-foreground);
 }
 
-.monaco-workbench .chat-editor-overlay-widget .monaco-action-bar .action-item.primary > .action-label:hover {
+.monaco-workbench
+	.chat-editor-overlay-widget
+	.monaco-action-bar
+	.action-item.primary
+	> .action-label:hover {
 	background-color: var(--vscode-button-hoverBackground);
 }
 
@@ -79,7 +83,9 @@
 	color: var(--vscode-foreground);
 }
 
-.chat-editor-overlay-widget .action-item > .action-label.codicon:not(.separator) {
+.chat-editor-overlay-widget
+	.action-item
+	> .action-label.codicon:not(.separator) {
 	color: var(--vscode-foreground);
 	width: 22px; /* align with default icon button dimensions */
 	height: 22px;
@@ -93,7 +99,6 @@
 
 .chat-diff-change-content-widget .monaco-action-bar .action-item.disabled,
 .chat-editor-overlay-widget .monaco-action-bar .action-item.disabled {
-
 	> .action-label.codicon::before,
 	> .action-label.codicon,
 	> .action-label,
@@ -107,8 +112,14 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.chat-editor-overlay-widget .monaco-action-bar .action-item.label-item > .action-label,
-.chat-editor-overlay-widget .monaco-action-bar .action-item.label-item > .action-label:hover {
+.chat-editor-overlay-widget
+	.monaco-action-bar
+	.action-item.label-item
+	> .action-label,
+.chat-editor-overlay-widget
+	.monaco-action-bar
+	.action-item.label-item
+	> .action-label:hover {
 	color: var(--vscode-foreground);
 	opacity: 1;
 }
@@ -119,7 +130,7 @@
 }
 
 .chat-editor-overlay-widget .action-item.auto::before {
-	content: '';
+	content: "";
 	position: absolute;
 	top: 0;
 	left: var(--vscode-action-item-auto-timeout, -100%);

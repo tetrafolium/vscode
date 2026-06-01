@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { IGitService, RepoContext } from '../../../../platform/git/common/gitService';
+import {
+	IGitService,
+	RepoContext,
+} from '../../../../platform/git/common/gitService';
 import { observableValue } from '../../../../util/vs/base/common/observableInternal/observables/observableValue';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { getRepoId } from '../copilotCodingAgentUtils';
@@ -17,7 +20,12 @@ function makeRepoContext(overrides: Partial<RepoContext>): RepoContext {
 		remoteFetchUrls: [],
 		headBranchName: 'main',
 		headCommitHash: 'abc123',
-		changes: { mergeChanges: [], indexChanges: [], workingTree: [], untrackedChanges: [] },
+		changes: {
+			mergeChanges: [],
+			indexChanges: [],
+			workingTree: [],
+			untrackedChanges: [],
+		},
 		...overrides,
 	} as RepoContext;
 }
@@ -28,8 +36,11 @@ function makeRepoContext(overrides: Partial<RepoContext>): RepoContext {
  */
 class TestGitService {
 	repositories: RepoContext[] = [];
-	activeRepository = observableValue<RepoContext | undefined>('test-active-repo', undefined);
-	async initialize(): Promise<void> { }
+	activeRepository = observableValue<RepoContext | undefined>(
+		'test-active-repo',
+		undefined,
+	);
+	async initialize(): Promise<void> {}
 }
 
 describe('getRepoId', () => {

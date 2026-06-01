@@ -5,9 +5,7 @@
 
 import { outdent } from 'outdent';
 import { afterAll, expect, suite, test } from 'vitest';
-import {
-	_dispose,
-} from '../../node/parserImpl';
+import { _dispose } from '../../node/parserImpl';
 import { _parse } from '../../node/parserWithCaching';
 import { _getNodeMatchingSelection } from '../../node/selectionParsing';
 import { WASMLanguage } from '../../node/treeSitterLanguages';
@@ -27,7 +25,7 @@ suite('getNodeMatchingSelection', () => {
 
 	async function getNode(
 		annotatedSrc: string,
-		languageId = WASMLanguage.TypeScript
+		languageId = WASMLanguage.TypeScript,
 	) {
 		const { deannotatedSrc, annotatedRange } = deannotateSrc(annotatedSrc);
 
@@ -37,7 +35,7 @@ suite('getNodeMatchingSelection', () => {
 			const r = _getNodeMatchingSelection(
 				parseTreeRef.tree,
 				annotatedRange,
-				languageId
+				languageId,
 			);
 			return r ? r.text : 'undefined';
 		} finally {
@@ -273,4 +271,3 @@ suite('getNodeMatchingSelection', () => {
 		});
 	});
 });
-

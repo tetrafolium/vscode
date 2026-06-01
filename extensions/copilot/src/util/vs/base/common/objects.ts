@@ -16,7 +16,8 @@ export function deepClone<T>(obj: T): T {
 	}
 	const result: any = Array.isArray(obj) ? [] : {};
 	Object.entries(obj).forEach(([key, value]) => {
-		result[key] = value && typeof value === 'object' ? deepClone(value) : value;
+		result[key] =
+			value && typeof value === 'object' ? deepClone(value) : value;
 	});
 	return result;
 }
@@ -32,7 +33,11 @@ export function deepFreeze<T>(obj: T): T {
 		for (const key in obj) {
 			if (_hasOwnProperty.call(obj, key)) {
 				const prop = obj[key];
-				if (typeof prop === 'object' && !Object.isFrozen(prop) && !isTypedArray(prop)) {
+				if (
+					typeof prop === 'object' &&
+					!Object.isFrozen(prop) &&
+					!isTypedArray(prop)
+				) {
 					stack.push(prop);
 				}
 			}
@@ -43,12 +48,15 @@ export function deepFreeze<T>(obj: T): T {
 
 const _hasOwnProperty = Object.prototype.hasOwnProperty;
 
-
 export function cloneAndChange(obj: any, changer: (orig: any) => any): any {
 	return _cloneAndChange(obj, changer, new Set());
 }
 
-function _cloneAndChange(obj: any, changer: (orig: any) => any, seen: Set<any>): any {
+function _cloneAndChange(
+	obj: any,
+	changer: (orig: any) => any,
+	seen: Set<any>,
+): any {
 	if (isUndefinedOrNull(obj)) {
 		return obj;
 	}
@@ -88,13 +96,17 @@ function _cloneAndChange(obj: any, changer: (orig: any) => any, seen: Set<any>):
  * Copies all properties of source into destination. The optional parameter "overwrite" allows to control
  * if existing properties on the destination should be overwritten or not. Defaults to true (overwrite).
  */
-export function mixin(destination: any, source: any, overwrite: boolean = true): any {
+export function mixin(
+	destination: any,
+	source: any,
+	overwrite: boolean = true,
+): any {
 	if (!isObject(destination)) {
 		return source;
 	}
 
 	if (isObject(source)) {
-		Object.keys(source).forEach(key => {
+		Object.keys(source).forEach((key) => {
 			if (key in destination) {
 				if (overwrite) {
 					if (isObject(destination[key]) && isObject(source[key])) {
@@ -115,7 +127,12 @@ export function equals(one: any, other: any): boolean {
 	if (one === other) {
 		return true;
 	}
-	if (one === null || one === undefined || other === null || other === undefined) {
+	if (
+		one === null ||
+		one === undefined ||
+		other === null ||
+		other === undefined
+	) {
 		return false;
 	}
 	if (typeof one !== typeof other) {
@@ -124,7 +141,7 @@ export function equals(one: any, other: any): boolean {
 	if (typeof one !== 'object') {
 		return false;
 	}
-	if ((Array.isArray(one)) !== (Array.isArray(other))) {
+	if (Array.isArray(one) !== Array.isArray(other)) {
 		return false;
 	}
 
@@ -218,7 +235,9 @@ function _stableStringify(value: unknown, seen: WeakSet<object>): string {
 	}
 	seen.add(value as object);
 	if (Array.isArray(value)) {
-		return '[' + value.map(v => _stableStringify(v, seen)).join(',') + ']';
+		return (
+			'[' + value.map((v) => _stableStringify(v, seen)).join(',') + ']'
+		);
 	}
 	const keys = Object.keys(value as object).sort();
 	const parts: string[] = [];
@@ -251,7 +270,7 @@ export function distinct(base: obj, target: obj): obj {
 	}
 
 	const targetKeys = Object.keys(target);
-	targetKeys.forEach(k => {
+	targetKeys.forEach((k) => {
 		const baseValue = base[k];
 		const targetValue = target[k];
 
@@ -265,11 +284,16 @@ export function distinct(base: obj, target: obj): obj {
 
 export function getCaseInsensitive(target: obj, key: string): unknown {
 	const lowercaseKey = key.toLowerCase();
-	const equivalentKey = Object.keys(target).find(k => k.toLowerCase() === lowercaseKey);
+	const equivalentKey = Object.keys(target).find(
+		(k) => k.toLowerCase() === lowercaseKey,
+	);
 	return equivalentKey ? target[equivalentKey] : target[key];
 }
 
-export function filter(obj: obj, predicate: (key: string, value: any) => boolean): obj {
+export function filter(
+	obj: obj,
+	predicate: (key: string, value: any) => boolean,
+): obj {
 	const result = Object.create(null);
 	for (const [key, value] of Object.entries(obj)) {
 		if (predicate(key, value)) {
@@ -279,7 +303,10 @@ export function filter(obj: obj, predicate: (key: string, value: any) => boolean
 	return result;
 }
 
-export function mapValues<T extends {}, R>(obj: T, fn: (value: T[keyof T], key: string) => R): { [K in keyof T]: R } {
+export function mapValues<T extends {}, R>(
+	obj: T,
+	fn: (value: T[keyof T], key: string) => R,
+): { [K in keyof T]: R } {
 	const result: { [key: string]: R } = {};
 	for (const [key, value] of Object.entries(obj)) {
 		result[key] = fn(<T[keyof T]>value, key);

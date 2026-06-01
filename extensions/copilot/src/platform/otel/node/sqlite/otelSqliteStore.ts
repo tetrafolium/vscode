@@ -46,7 +46,8 @@ const DENORMALIZED_ATTRS: Record<string, string> = {
 
 // ── Service identifier ──────────────────────────────────────────────────────────
 
-export const IOTelSqliteStore = createServiceIdentifier<OTelSqliteStore>('IOTelSqliteStore');
+export const IOTelSqliteStore =
+	createServiceIdentifier<OTelSqliteStore>('IOTelSqliteStore');
 
 // ── Row types ───────────────────────────────────────────────────────────────────
 
@@ -145,8 +146,14 @@ export class OTelSqliteStore {
 			this._beginTx!.run();
 
 			this._insertSpanStmt!.run(
-				span.spanId, span.traceId, span.parentSpanId ?? null, span.name,
-				span.startTime, span.endTime, span.status.code, span.status.message ?? null,
+				span.spanId,
+				span.traceId,
+				span.parentSpanId ?? null,
+				span.name,
+				span.startTime,
+				span.endTime,
+				span.status.code,
+				span.status.message ?? null,
 				this._attr(span, DENORMALIZED_ATTRS.operation_name),
 				this._attr(span, DENORMALIZED_ATTRS.provider_name),
 				this._attr(span, DENORMALIZED_ATTRS.agent_name),
@@ -166,63 +173,98 @@ export class OTelSqliteStore {
 			);
 
 			for (const [key, value] of Object.entries(span.attributes)) {
-				const serialized = Array.isArray(value) ? JSON.stringify(value) : String(value);
+				const serialized = Array.isArray(value)
+					? JSON.stringify(value)
+					: String(value);
 				this._insertAttrStmt!.run(span.spanId, key, serialized);
 			}
 
 			for (const event of span.events) {
-				const eventAttrs = event.attributes ? JSON.stringify(event.attributes) : null;
-				this._insertEventStmt!.run(span.spanId, event.name, event.timestamp, eventAttrs);
+				const eventAttrs = event.attributes
+					? JSON.stringify(event.attributes)
+					: null;
+				this._insertEventStmt!.run(
+					span.spanId,
+					event.name,
+					event.timestamp,
+					eventAttrs,
+				);
 			}
 
 			this._commitTx!.run();
 		} catch (err) {
-			try { this._rollbackTx!.run(); } catch { /* ignore */ }
+			try {
+				this._rollbackTx!.run();
+			} catch {
+				/* ignore */
+			}
 			throw err;
 		}
 	}
 
 	getSpansByTraceId(traceId: string): SpanRow[] {
 		return this._ensureDb()
-			.prepare('SELECT * FROM spans WHERE trace_id = ? ORDER BY start_time_ms')
+			.prepare(
+				'SELECT * FROM spans WHERE trace_id = ? ORDER BY start_time_ms',
+			)
 			.all(traceId) as unknown as SpanRow[];
 	}
 
 	getSpansByConversationId(conversationId: string): SpanRow[] {
 		return this._ensureDb()
-			.prepare('SELECT * FROM spans WHERE conversation_id = ? OR chat_session_id = ? ORDER BY start_time_ms')
+			.prepare(
+				'SELECT * FROM spans WHERE conversation_id = ? OR chat_session_id = ? ORDER BY start_time_ms',
+			)
 			.all(conversationId, conversationId) as unknown as SpanRow[];
 	}
 
-	getSpanAttributes(spanId: string): Array<{ key: string; value: string | null }> {
+	getSpanAttributes(
+		spanId: string,
+	): Array<{ key: string; value: string | null }> {
 		return this._ensureDb()
 			.prepare('SELECT key, value FROM span_attributes WHERE span_id = ?')
-			.all(spanId) as unknown as Array<{ key: string; value: string | null }>;
+			.all(spanId) as unknown as Array<{
+			key: string;
+			value: string | null;
+		}>;
 	}
 
 	getSpanAttribute(spanId: string, key: string): string | null {
 		const row = this._ensureDb()
-			.prepare('SELECT value FROM span_attributes WHERE span_id = ? AND key = ?')
-			.get(spanId, key) as unknown as { value: string | null } | undefined;
+			.prepare(
+				'SELECT value FROM span_attributes WHERE span_id = ? AND key = ?',
+			)
+			.get(spanId, key) as unknown as
+			| { value: string | null }
+			| undefined;
 		return row?.value ?? null;
 	}
 
 	getSpanEvents(spanId: string): SpanEventRow[] {
 		return this._ensureDb()
-			.prepare('SELECT * FROM span_events WHERE span_id = ? ORDER BY timestamp_ms')
+			.prepare(
+				'SELECT * FROM span_events WHERE span_id = ? ORDER BY timestamp_ms',
+			)
 			.all(spanId) as unknown as SpanEventRow[];
 	}
 
 	getTraceIds(conversationId?: string): string[] {
 		const db = this._ensureDb();
 		if (conversationId) {
-			const rows = db.prepare(
-				'SELECT DISTINCT trace_id FROM spans WHERE conversation_id = ? OR chat_session_id = ?'
-			).all(conversationId, conversationId) as unknown as Array<{ trace_id: string }>;
-			return rows.map(r => r.trace_id);
+			const rows = db
+				.prepare(
+					'SELECT DISTINCT trace_id FROM spans WHERE conversation_id = ? OR chat_session_id = ?',
+				)
+				.all(conversationId, conversationId) as unknown as Array<{
+				trace_id: string;
+			}>;
+			return rows.map((r) => r.trace_id);
 		}
-		return (db.prepare('SELECT DISTINCT trace_id FROM spans').all() as unknown as Array<{ trace_id: string }>)
-			.map(r => r.trace_id);
+		return (
+			db
+				.prepare('SELECT DISTINCT trace_id FROM spans')
+				.all() as unknown as Array<{ trace_id: string }>
+		).map((r) => r.trace_id);
 	}
 
 	/**
@@ -234,8 +276,10 @@ export class OTelSqliteStore {
 			? 'SELECT * FROM sessions ORDER BY started_at DESC LIMIT ?'
 			: 'SELECT * FROM sessions ORDER BY started_at DESC';
 		return limit
-			? this._ensureDb().prepare(sql).all(limit) as unknown as SessionRow[]
-			: this._ensureDb().prepare(sql).all() as unknown as SessionRow[];
+			? (this._ensureDb()
+					.prepare(sql)
+					.all(limit) as unknown as SessionRow[])
+			: (this._ensureDb().prepare(sql).all() as unknown as SessionRow[]);
 	}
 
 	/**
@@ -243,14 +287,18 @@ export class OTelSqliteStore {
 	 * @param sinceMs Epoch ms — only return sessions that started after this time
 	 */
 	getSessionsSince(sinceMs: number): SessionRow[] {
-		return this._ensureDb().prepare(
-			'SELECT * FROM sessions WHERE started_at >= ? ORDER BY started_at DESC'
-		).all(sinceMs) as unknown as SessionRow[];
+		return this._ensureDb()
+			.prepare(
+				'SELECT * FROM sessions WHERE started_at >= ? ORDER BY started_at DESC',
+			)
+			.all(sinceMs) as unknown as SessionRow[];
 	}
 
 	cleanup(maxAgeMs: number = DEFAULT_MAX_AGE_MS): number {
 		const cutoffMs = Date.now() - maxAgeMs;
-		const result = this._ensureDb().prepare('DELETE FROM spans WHERE start_time_ms < ?').run(cutoffMs);
+		const result = this._ensureDb()
+			.prepare('DELETE FROM spans WHERE start_time_ms < ?')
+			.run(cutoffMs);
 		return Number(result.changes);
 	}
 
@@ -278,11 +326,20 @@ export class OTelSqliteStore {
 
 	// ── Private ────────────────────────────────────────────────────────────
 
-	private _attr(span: ICompletedSpanData, attrKey: string): string | number | null {
+	private _attr(
+		span: ICompletedSpanData,
+		attrKey: string,
+	): string | number | null {
 		const val = span.attributes[attrKey];
-		if (val === undefined) { return null; }
-		if (Array.isArray(val)) { return JSON.stringify(val); }
-		if (typeof val === 'boolean') { return val ? 1 : 0; }
+		if (val === undefined) {
+			return null;
+		}
+		if (Array.isArray(val)) {
+			return JSON.stringify(val);
+		}
+		if (typeof val === 'boolean') {
+			return val ? 1 : 0;
+		}
 		return val as string | number;
 	}
 
@@ -296,17 +353,27 @@ export class OTelSqliteStore {
 	 * @see https://github.com/open-telemetry/semantic-conventions/pull/3607 (semconv addition)
 	 */
 	private _ttftMs(span: ICompletedSpanData): number | null {
-		const foreground = this._attr(span, CopilotChatAttr.TIME_TO_FIRST_TOKEN);
-		if (foreground !== null) { return foreground as number; }
-		const cli = span.attributes['gen_ai.response.time_to_first_chunk']
-			?? span.attributes['github.copilot.time_to_first_chunk'];
-		if (cli === undefined) { return null; }
+		const foreground = this._attr(
+			span,
+			CopilotChatAttr.TIME_TO_FIRST_TOKEN,
+		);
+		if (foreground !== null) {
+			return foreground as number;
+		}
+		const cli =
+			span.attributes['gen_ai.response.time_to_first_chunk'] ??
+			span.attributes['github.copilot.time_to_first_chunk'];
+		if (cli === undefined) {
+			return null;
+		}
 		const sec = typeof cli === 'number' ? cli : parseFloat(String(cli));
 		return isNaN(sec) ? null : Math.round(sec * 1000);
 	}
 
 	private _ensureDb(): DatabaseSync {
-		if (this._db) { return this._db; }
+		if (this._db) {
+			return this._db;
+		}
 
 		mkdirSync(dirname(this._dbPath), { recursive: true });
 
@@ -343,10 +410,10 @@ export class OTelSqliteStore {
 			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`);
 		this._insertAttrStmt = db.prepare(
-			'INSERT OR REPLACE INTO span_attributes (span_id, key, value) VALUES (?, ?, ?)'
+			'INSERT OR REPLACE INTO span_attributes (span_id, key, value) VALUES (?, ?, ?)',
 		);
 		this._insertEventStmt = db.prepare(
-			'INSERT INTO span_events (span_id, name, timestamp_ms, attributes) VALUES (?, ?, ?, ?)'
+			'INSERT INTO span_events (span_id, name, timestamp_ms, attributes) VALUES (?, ?, ?, ?)',
 		);
 		this._beginTx = db.prepare('BEGIN');
 		this._commitTx = db.prepare('COMMIT');
@@ -357,11 +424,17 @@ export class OTelSqliteStore {
 		const db = this._db!;
 		const versionRow = (() => {
 			try {
-				return db.prepare('SELECT version FROM schema_version LIMIT 1').get() as { version: number } | undefined;
-			} catch { return undefined; }
+				return db
+					.prepare('SELECT version FROM schema_version LIMIT 1')
+					.get() as { version: number } | undefined;
+			} catch {
+				return undefined;
+			}
 		})();
 
-		if ((versionRow?.version ?? 0) >= SCHEMA_VERSION) { return; }
+		if ((versionRow?.version ?? 0) >= SCHEMA_VERSION) {
+			return;
+		}
 
 		db.exec(`
 			CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY);
@@ -427,7 +500,9 @@ export class OTelSqliteStore {
 		// 2. Session-count cap: keep only the most recent DEFAULT_MAX_SESSIONS sessions.
 		// A "session" is identified by conversation_id (or chat_session_id as fallback).
 		// We find the Nth-newest session's max start_time_ms and delete everything older.
-		const sessionCutoff = db.prepare(`
+		const sessionCutoff = db
+			.prepare(
+				`
 			SELECT MIN(max_start) AS cutoff_ms FROM (
 				SELECT MAX(start_time_ms) AS max_start
 				FROM spans
@@ -436,10 +511,15 @@ export class OTelSqliteStore {
 				ORDER BY max_start DESC
 				LIMIT ?
 			)
-		`).get(DEFAULT_MAX_SESSIONS) as unknown as { cutoff_ms: number | null } | undefined;
+		`,
+			)
+			.get(DEFAULT_MAX_SESSIONS) as unknown as
+			| { cutoff_ms: number | null }
+			| undefined;
 
 		if (sessionCutoff?.cutoff_ms) {
-			db.prepare(`
+			db.prepare(
+				`
 				DELETE FROM spans
 				WHERE start_time_ms < ?
 				AND COALESCE(conversation_id, chat_session_id) NOT IN (
@@ -450,7 +530,8 @@ export class OTelSqliteStore {
 					ORDER BY MAX(start_time_ms) DESC
 					LIMIT ?
 				)
-			`).run(sessionCutoff.cutoff_ms, DEFAULT_MAX_SESSIONS);
+			`,
+			).run(sessionCutoff.cutoff_ms, DEFAULT_MAX_SESSIONS);
 		}
 	}
 }

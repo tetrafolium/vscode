@@ -9,28 +9,31 @@ import { dirname, join, relative } from 'path';
 import picomatch from 'picomatch';
 import { createImportRuleListener } from './utils.ts';
 
-export default new class implements eslint.Rule.RuleModule {
-
+export default new (class implements eslint.Rule.RuleModule {
 	readonly meta: eslint.Rule.RuleMetaData = {
 		messages: {
-			layerbreaker: 'You are only allowed to import {{import}} from here using `import type ...`.'
+			layerbreaker:
+				'You are only allowed to import {{import}} from here using `import type ...`.',
 		},
 		schema: {
-			type: "array",
+			type: 'array',
 			items: {
-				type: "object",
+				type: 'object',
 				additionalProperties: {
-					type: "array",
+					type: 'array',
 					items: {
-						type: "string"
-					}
-				}
-			}
-		}
+						type: 'string',
+					},
+				},
+			},
+		},
 	};
 
 	create(context: eslint.Rule.RuleContext): eslint.Rule.RuleListener {
-		let fileRelativePath = relative(dirname(import.meta.dirname), context.getFilename());
+		let fileRelativePath = relative(
+			dirname(import.meta.dirname),
+			context.getFilename(),
+		);
 		fileRelativePath = fileRelativePath.replace(/\\/g, '/');
 
 		if (!fileRelativePath.endsWith('/')) {
@@ -38,7 +41,11 @@ export default new class implements eslint.Rule.RuleModule {
 		}
 		const ruleArgs = context.options[0] as Record<string, string[]>;
 
-		const matchingKey = Object.keys(ruleArgs).find(key => fileRelativePath.startsWith(key) || picomatch(key)(fileRelativePath));
+		const matchingKey = Object.keys(ruleArgs).find(
+			(key) =>
+				fileRelativePath.startsWith(key) ||
+				picomatch(key)(fileRelativePath),
+		);
 		if (!matchingKey) {
 			// nothing
 			return {};
@@ -50,17 +57,26 @@ export default new class implements eslint.Rule.RuleModule {
 				path = join(dirname(context.getFilename()), path);
 			}
 
-			if (restrictedImports.includes(path) && !(
-				(node.parent?.type === TSESTree.AST_NODE_TYPES.ImportDeclaration && node.parent.importKind === 'type') ||
-				(node.parent && 'exportKind' in node.parent && node.parent.exportKind === 'type'))) { // the export could be multiple types
+			if (
+				restrictedImports.includes(path) &&
+				!(
+					(node.parent?.type ===
+						TSESTree.AST_NODE_TYPES.ImportDeclaration &&
+						node.parent.importKind === 'type') ||
+					(node.parent &&
+						'exportKind' in node.parent &&
+						node.parent.exportKind === 'type')
+				)
+			) {
+				// the export could be multiple types
 				context.report({
 					loc: node.parent!.loc,
 					messageId: 'layerbreaker',
 					data: {
-						import: path
-					}
+						import: path,
+					},
 				});
 			}
 		});
 	}
-};
+})();

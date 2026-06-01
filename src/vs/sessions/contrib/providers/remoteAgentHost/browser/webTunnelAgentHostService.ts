@@ -3,13 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../../../base/common/event.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { RemoteAgentHostProtocolClient } from '../../../../../platform/agentHost/browser/remoteAgentHostProtocolClient.js';
-import { RemoteAgentHostEntryType, IRemoteAgentHostService, RemoteAgentHostsEnabledSettingId } from '../../../../../platform/agentHost/common/remoteAgentHostService.js';
-import type { IProtocolTransport } from '../../../../../platform/agentHost/common/state/sessionTransport.js';
-import type { ProtocolMessage, AhpServerNotification, JsonRpcResponse } from '../../../../../platform/agentHost/common/state/sessionProtocol.js';
-import { MALFORMED_FRAMES_FORCE_CLOSE_THRESHOLD, MALFORMED_FRAMES_LOG_CAP } from '../../../../../platform/agentHost/common/transportConstants.js';
+import { Emitter, Event } from "../../../../../base/common/event.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { RemoteAgentHostProtocolClient } from "../../../../../platform/agentHost/browser/remoteAgentHostProtocolClient.js";
+import {
+	RemoteAgentHostEntryType,
+	IRemoteAgentHostService,
+	RemoteAgentHostsEnabledSettingId,
+} from "../../../../../platform/agentHost/common/remoteAgentHostService.js";
+import type { IProtocolTransport } from "../../../../../platform/agentHost/common/state/sessionTransport.js";
+import type {
+	ProtocolMessage,
+	AhpServerNotification,
+	JsonRpcResponse,
+} from "../../../../../platform/agentHost/common/state/sessionProtocol.js";
+import {
+	MALFORMED_FRAMES_FORCE_CLOSE_THRESHOLD,
+	MALFORMED_FRAMES_LOG_CAP,
+} from "../../../../../platform/agentHost/common/transportConstants.js";
 import {
 	ITunnelAgentHostService,
 	TUNNEL_ADDRESS_PREFIX,
@@ -17,21 +28,30 @@ import {
 	TunnelTags,
 	type ICachedTunnel,
 	type ITunnelInfo,
-} from '../../../../../platform/agentHost/common/tunnelAgentHost.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
-import type { IDiscoveredTunnel, ITunnelConnection, ITunnelDiscoveryProvider } from '../../../../../workbench/browser/web.api.js';
-import { IBrowserWorkbenchEnvironmentService } from '../../../../../workbench/services/environment/browser/environmentService.js';
-import { IAuthenticationService } from '../../../../../workbench/services/authentication/common/authentication.js';
+} from "../../../../../platform/agentHost/common/tunnelAgentHost.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../../platform/storage/common/storage.js";
+import type {
+	IDiscoveredTunnel,
+	ITunnelConnection,
+	ITunnelDiscoveryProvider,
+} from "../../../../../workbench/browser/web.api.js";
+import { IBrowserWorkbenchEnvironmentService } from "../../../../../workbench/services/environment/browser/environmentService.js";
+import { IAuthenticationService } from "../../../../../workbench/services/authentication/common/authentication.js";
 
-const LOG_PREFIX = '[WebTunnelAgentHost]';
+const LOG_PREFIX = "[WebTunnelAgentHost]";
 
 /** Storage key for recently used tunnel cache. */
-const CACHED_TUNNELS_KEY = 'tunnelAgentHost.recentTunnels';
+const CACHED_TUNNELS_KEY = "tunnelAgentHost.recentTunnels";
 /** Storage key for tunnels the user explicitly disconnected. */
-const AUTO_CONNECT_SUPPRESSED_TUNNELS_KEY = 'tunnelAgentHost.autoConnectSuppressedTunnels';
+const AUTO_CONNECT_SUPPRESSED_TUNNELS_KEY =
+	"tunnelAgentHost.autoConnectSuppressedTunnels";
 
 /**
  * Web (browser) implementation of {@link ITunnelAgentHostService}.
@@ -45,7 +65,10 @@ const AUTO_CONNECT_SUPPRESSED_TUNNELS_KEY = 'tunnelAgentHost.autoConnectSuppress
  * github.dev, etc.). The embedder handles the actual Dev Tunnels API
  * calls and relay proxying.
  */
-export class WebTunnelAgentHostService extends Disposable implements ITunnelAgentHostService {
+export class WebTunnelAgentHostService
+	extends Disposable
+	implements ITunnelAgentHostService
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _onDidChangeTunnels = this._register(new Emitter<void>());
@@ -54,18 +77,26 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 	private readonly _discoveryProvider: ITunnelDiscoveryProvider | undefined;
 
 	constructor(
-		@IRemoteAgentHostService private readonly _remoteAgentHostService: IRemoteAgentHostService,
-		@IBrowserWorkbenchEnvironmentService environmentService: IBrowserWorkbenchEnvironmentService,
+		@IRemoteAgentHostService
+		private readonly _remoteAgentHostService: IRemoteAgentHostService,
+		@IBrowserWorkbenchEnvironmentService
+		environmentService: IBrowserWorkbenchEnvironmentService,
 		@ILogService private readonly _logService: ILogService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IAuthenticationService private readonly _authenticationService: IAuthenticationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IAuthenticationService
+		private readonly _authenticationService: IAuthenticationService,
 		@IStorageService private readonly _storageService: IStorageService,
 	) {
 		super();
-		this._discoveryProvider = environmentService.options?.tunnelDiscoveryProvider;
+		this._discoveryProvider =
+			environmentService.options?.tunnelDiscoveryProvider;
 		if (!this._discoveryProvider) {
-			this._logService.debug(`${LOG_PREFIX} No tunnelDiscoveryProvider — tunnel discovery disabled`);
+			this._logService.debug(
+				`${LOG_PREFIX} No tunnelDiscoveryProvider — tunnel discovery disabled`,
+			);
 		}
 	}
 
@@ -76,7 +107,11 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 			return [];
 		}
 
-		if (!this._configurationService.getValue<boolean>(RemoteAgentHostsEnabledSettingId)) {
+		if (
+			!this._configurationService.getValue<boolean>(
+				RemoteAgentHostsEnabledSettingId,
+			)
+		) {
 			return [];
 		}
 
@@ -96,16 +131,18 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 				if (info.protocolVersion < TUNNEL_MIN_PROTOCOL_VERSION) {
 					droppedByProtocolVersion++;
 					this._logService.debug(
-						`${LOG_PREFIX} Dropping tunnel ${info.tunnelId} (protocolVersion=${info.protocolVersion} < ${TUNNEL_MIN_PROTOCOL_VERSION})`
+						`${LOG_PREFIX} Dropping tunnel ${info.tunnelId} (protocolVersion=${info.protocolVersion} < ${TUNNEL_MIN_PROTOCOL_VERSION})`,
 					);
 					continue;
 				}
 				results.push(info);
 			}
 
-			const withActiveHost = results.filter(t => t.hostConnectionCount > 0).length;
+			const withActiveHost = results.filter(
+				(t) => t.hostConnectionCount > 0,
+			).length;
 			this._logService.info(
-				`${LOG_PREFIX} Discovery complete: total=${discovered.length}, accepted=${results.length}, withActiveHost=${withActiveHost}, droppedByProtocolVersion=${droppedByProtocolVersion}, droppedMissingIds=${withoutIds}`
+				`${LOG_PREFIX} Discovery complete: total=${discovered.length}, accepted=${results.length}, withActiveHost=${withActiveHost}, droppedByProtocolVersion=${droppedByProtocolVersion}, droppedMissingIds=${withoutIds}`,
 			);
 			return results;
 		} catch (err) {
@@ -133,32 +170,52 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 
 	// Connection (via embedder)
 
-	async connect(tunnel: ITunnelInfo, authProvider?: 'github' | 'microsoft'): Promise<void> {
+	async connect(
+		tunnel: ITunnelInfo,
+		authProvider?: "github" | "microsoft",
+	): Promise<void> {
 		if (!this._discoveryProvider) {
-			throw new Error('No tunnelDiscoveryProvider available');
+			throw new Error("No tunnelDiscoveryProvider available");
 		}
-		if (!this._configurationService.getValue<boolean>(RemoteAgentHostsEnabledSettingId)) {
-			throw new Error('Remote agent host connections are not enabled.');
+		if (
+			!this._configurationService.getValue<boolean>(
+				RemoteAgentHostsEnabledSettingId,
+			)
+		) {
+			throw new Error("Remote agent host connections are not enabled.");
 		}
 
 		const { tunnelId, clusterId } = tunnel;
-		this._logService.info(`${LOG_PREFIX} Connecting to tunnel '${tunnel.name}' (${tunnelId})`);
+		this._logService.info(
+			`${LOG_PREFIX} Connecting to tunnel '${tunnel.name}' (${tunnelId})`,
+		);
 
 		// The embedder handles the full connection including auth
-		const connection = await this._discoveryProvider.connect(tunnelId, clusterId);
+		const connection = await this._discoveryProvider.connect(
+			tunnelId,
+			clusterId,
+		);
 
 		// Derive connection token from tunnel ID (same convention as CLI and desktop)
 		const connectionToken = await deriveConnectionToken(tunnelId);
 
-		const transport = new TunnelConnectionTransport(connection, this._logService);
+		const transport = new TunnelConnectionTransport(
+			connection,
+			this._logService,
+		);
 		const address = `${TUNNEL_ADDRESS_PREFIX}${tunnelId}`;
 		const protocolClient = this._instantiationService.createInstance(
-			RemoteAgentHostProtocolClient, address, transport, undefined,
+			RemoteAgentHostProtocolClient,
+			address,
+			transport,
+			undefined,
 		);
 
 		try {
 			await protocolClient.connect();
-			this._logService.info(`${LOG_PREFIX} Protocol handshake completed with ${address}`);
+			this._logService.info(
+				`${LOG_PREFIX} Protocol handshake completed with ${address}`,
+			);
 
 			// Cache before announcing the live connection so the contribution's
 			// `onDidChangeTunnels` handler has created the provider by the time
@@ -166,17 +223,20 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 			// wires the connection. Also fires `onDidChangeTunnels`.
 			this.cacheTunnel(tunnel, authProvider);
 
-			await this._remoteAgentHostService.addManagedConnection({
-				name: tunnel.name,
-				connectionToken,
-				connection: {
-					type: RemoteAgentHostEntryType.Tunnel,
-					tunnelId,
-					clusterId,
-					label: tunnel.name,
-					authProvider,
+			await this._remoteAgentHostService.addManagedConnection(
+				{
+					name: tunnel.name,
+					connectionToken,
+					connection: {
+						type: RemoteAgentHostEntryType.Tunnel,
+						tunnelId,
+						clusterId,
+						label: tunnel.name,
+						authProvider,
+					},
 				},
-			}, protocolClient);
+				protocolClient,
+			);
 		} catch (err) {
 			protocolClient.dispose();
 			this._logService.error(`${LOG_PREFIX} Connection setup failed`, err);
@@ -191,9 +251,16 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 
 	// Auth
 
-	async getAuthProvider(options?: { silent?: boolean }): Promise<'github' | 'microsoft' | undefined> {
-		for (const provider of ['github', 'microsoft'] as const) {
-			const sessions = await this._authenticationService.getSessions(provider, undefined, {}, true);
+	async getAuthProvider(options?: {
+		silent?: boolean;
+	}): Promise<"github" | "microsoft" | undefined> {
+		for (const provider of ["github", "microsoft"] as const) {
+			const sessions = await this._authenticationService.getSessions(
+				provider,
+				undefined,
+				{},
+				true,
+			);
 			if (sessions.length > 0) {
 				return provider;
 			}
@@ -204,7 +271,10 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 	// Tunnel cache
 
 	getCachedTunnels(): ICachedTunnel[] {
-		const raw = this._storageService.get(CACHED_TUNNELS_KEY, StorageScope.APPLICATION);
+		const raw = this._storageService.get(
+			CACHED_TUNNELS_KEY,
+			StorageScope.APPLICATION,
+		);
 		if (!raw) {
 			return [];
 		}
@@ -215,9 +285,12 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 		}
 	}
 
-	cacheTunnel(tunnel: ITunnelInfo, authProvider?: 'github' | 'microsoft'): void {
+	cacheTunnel(
+		tunnel: ITunnelInfo,
+		authProvider?: "github" | "microsoft",
+	): void {
 		const cached = this.getCachedTunnels();
-		const filtered = cached.filter(t => t.tunnelId !== tunnel.tunnelId);
+		const filtered = cached.filter((t) => t.tunnelId !== tunnel.tunnelId);
 		filtered.unshift({
 			tunnelId: tunnel.tunnelId,
 			clusterId: tunnel.clusterId,
@@ -231,7 +304,7 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 
 	removeCachedTunnel(tunnelId: string): void {
 		const cached = this.getCachedTunnels();
-		this._storeCachedTunnels(cached.filter(t => t.tunnelId !== tunnelId));
+		this._storeCachedTunnels(cached.filter((t) => t.tunnelId !== tunnelId));
 		this.clearAutoConnectSuppression(tunnelId);
 		this._onDidChangeTunnels.fire();
 	}
@@ -258,12 +331,20 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 		if (tunnels.length === 0) {
 			this._storageService.remove(CACHED_TUNNELS_KEY, StorageScope.APPLICATION);
 		} else {
-			this._storageService.store(CACHED_TUNNELS_KEY, JSON.stringify(tunnels), StorageScope.APPLICATION, StorageTarget.USER);
+			this._storageService.store(
+				CACHED_TUNNELS_KEY,
+				JSON.stringify(tunnels),
+				StorageScope.APPLICATION,
+				StorageTarget.USER,
+			);
 		}
 	}
 
 	private _getAutoConnectSuppressedTunnels(): Set<string> {
-		const raw = this._storageService.get(AUTO_CONNECT_SUPPRESSED_TUNNELS_KEY, StorageScope.APPLICATION);
+		const raw = this._storageService.get(
+			AUTO_CONNECT_SUPPRESSED_TUNNELS_KEY,
+			StorageScope.APPLICATION,
+		);
 		if (!raw) {
 			return new Set();
 		}
@@ -272,7 +353,7 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 			if (!Array.isArray(parsed)) {
 				return new Set();
 			}
-			return new Set(parsed.filter(item => typeof item === 'string'));
+			return new Set(parsed.filter((item) => typeof item === "string"));
 		} catch {
 			return new Set();
 		}
@@ -280,9 +361,17 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
 
 	private _storeAutoConnectSuppressedTunnels(tunnelIds: Set<string>): void {
 		if (tunnelIds.size === 0) {
-			this._storageService.remove(AUTO_CONNECT_SUPPRESSED_TUNNELS_KEY, StorageScope.APPLICATION);
+			this._storageService.remove(
+				AUTO_CONNECT_SUPPRESSED_TUNNELS_KEY,
+				StorageScope.APPLICATION,
+			);
 		} else {
-			this._storageService.store(AUTO_CONNECT_SUPPRESSED_TUNNELS_KEY, JSON.stringify([...tunnelIds]), StorageScope.APPLICATION, StorageTarget.USER);
+			this._storageService.store(
+				AUTO_CONNECT_SUPPRESSED_TUNNELS_KEY,
+				JSON.stringify([...tunnelIds]),
+				StorageScope.APPLICATION,
+				StorageTarget.USER,
+			);
 		}
 	}
 }
@@ -294,7 +383,10 @@ export class WebTunnelAgentHostService extends Disposable implements ITunnelAgen
  * The connection is already established by the time this adapter is created,
  * so there is no `connect()` method — the protocol client skips that step.
  */
-class TunnelConnectionTransport extends Disposable implements IProtocolTransport {
+class TunnelConnectionTransport
+	extends Disposable
+	implements IProtocolTransport
+{
 	private readonly _onMessage = this._register(new Emitter<ProtocolMessage>());
 	readonly onMessage = this._onMessage.event;
 
@@ -308,35 +400,41 @@ class TunnelConnectionTransport extends Disposable implements IProtocolTransport
 		private readonly _logService: ILogService,
 	) {
 		super();
-		this._register(_connection.onMessage((data: string) => {
-			let message: ProtocolMessage;
-			try {
-				message = JSON.parse(data) as ProtocolMessage;
-			} catch (err) {
-				this._malformedFrames++;
-				if (this._malformedFrames <= MALFORMED_FRAMES_LOG_CAP) {
-					const preview = data.length > 80 ? data.slice(0, 80) + '…' : data;
-					this._logService.warn(
-						`[TunnelConnectionTransport] Malformed frame #${this._malformedFrames} (len=${data.length}): ${preview}`,
-						err instanceof Error ? err.message : String(err)
-					);
+		this._register(
+			_connection.onMessage((data: string) => {
+				let message: ProtocolMessage;
+				try {
+					message = JSON.parse(data) as ProtocolMessage;
+				} catch (err) {
+					this._malformedFrames++;
+					if (this._malformedFrames <= MALFORMED_FRAMES_LOG_CAP) {
+						const preview = data.length > 80 ? data.slice(0, 80) + "…" : data;
+						this._logService.warn(
+							`[TunnelConnectionTransport] Malformed frame #${this._malformedFrames} (len=${data.length}): ${preview}`,
+							err instanceof Error ? err.message : String(err),
+						);
+					}
+					if (this._malformedFrames > MALFORMED_FRAMES_FORCE_CLOSE_THRESHOLD) {
+						this._logService.warn(
+							"[TunnelConnectionTransport] Malformed frame threshold exceeded; forcing tunnel close.",
+						);
+						this._connection.close();
+					}
+					return;
 				}
-				if (this._malformedFrames > MALFORMED_FRAMES_FORCE_CLOSE_THRESHOLD) {
-					this._logService.warn(
-						'[TunnelConnectionTransport] Malformed frame threshold exceeded; forcing tunnel close.'
-					);
-					this._connection.close();
-				}
-				return;
-			}
-			this._onMessage.fire(message);
-		}));
-		this._register(_connection.onClose(() => {
-			this._onClose.fire();
-		}));
+				this._onMessage.fire(message);
+			}),
+		);
+		this._register(
+			_connection.onClose(() => {
+				this._onClose.fire();
+			}),
+		);
 	}
 
-	send(message: ProtocolMessage | AhpServerNotification | JsonRpcResponse): void {
+	send(
+		message: ProtocolMessage | AhpServerNotification | JsonRpcResponse,
+	): void {
 		this._connection.send(JSON.stringify(message));
 	}
 
@@ -353,17 +451,17 @@ class TunnelConnectionTransport extends Disposable implements IProtocolTransport
 async function deriveConnectionToken(tunnelId: string): Promise<string> {
 	const encoder = new TextEncoder();
 	const data = encoder.encode(tunnelId);
-	const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);
+	const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", data);
 	const hashArray = new Uint8Array(hashBuffer);
 
 	// Base64url encode (matches Node's createHash('sha256').digest('base64url'))
 	let result = btoa(String.fromCharCode(...hashArray))
-		.replace(/\+/g, '-')
-		.replace(/\//g, '_')
-		.replace(/=+$/, '');
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=+$/, "");
 
-	if (result.startsWith('-')) {
-		result = 'a' + result;
+	if (result.startsWith("-")) {
+		result = "a" + result;
 	}
 	return result;
 }

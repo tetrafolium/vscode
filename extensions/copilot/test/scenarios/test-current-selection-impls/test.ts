@@ -3,7 +3,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 class Baz {
-	constructor(public readonly id: number) { }
+	constructor(public readonly id: number) {}
 }
 
 function foo() {

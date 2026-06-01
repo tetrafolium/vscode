@@ -3,24 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createLogger, defineConfig, Plugin } from 'vite';
-import path, { join } from 'path';
-import { componentExplorer } from '@vscode/component-explorer-vite-plugin';
-import { statSync } from 'fs';
-import { pathToFileURL } from 'url';
-import { rollupEsmUrlPlugin } from '@vscode/rollup-plugin-esm-url';
+import { createLogger, defineConfig, Plugin } from "vite";
+import path, { join } from "path";
+import { componentExplorer } from "@vscode/component-explorer-vite-plugin";
+import { statSync } from "fs";
+import { pathToFileURL } from "url";
+import { rollupEsmUrlPlugin } from "@vscode/rollup-plugin-esm-url";
 
 function injectBuiltinExtensionsPlugin(): Plugin {
 	let builtinExtensionsCache: unknown[] | null = null;
 
-	function replaceAllOccurrences(str: string, search: string, replace: string): string {
+	function replaceAllOccurrences(
+		str: string,
+		search: string,
+		replace: string,
+	): string {
 		return str.split(search).join(replace);
 	}
 
 	async function loadBuiltinExtensions() {
 		if (!builtinExtensionsCache) {
-			builtinExtensionsCache = await getScannedBuiltinExtensions(path.resolve(__dirname, '../../'));
-			console.log(`Found ${builtinExtensionsCache!.length} built-in extensions.`);
+			builtinExtensionsCache = await getScannedBuiltinExtensions(
+				path.resolve(__dirname, "../../"),
+			);
+			console.log(
+				`Found ${builtinExtensionsCache!.length} built-in extensions.`,
+			);
 		}
 		return builtinExtensionsCache;
 	}
@@ -30,40 +38,62 @@ function injectBuiltinExtensionsPlugin(): Plugin {
 	}
 
 	function escapeHtmlByReplacingCharacters(str: string) {
-		if (typeof str !== 'string') {
-			return '';
+		if (typeof str !== "string") {
+			return "";
 		}
 
 		const escapeCharacter = (match: string) => {
 			switch (match) {
-				case '&': return '&amp;';
-				case '<': return '&lt;';
-				case '>': return '&gt;';
-				case '"': return '&quot;';
-				case '\'': return '&#039;';
-				case '`': return '&#096;';
-				default: return match;
+				case "&":
+					return "&amp;";
+				case "<":
+					return "&lt;";
+				case ">":
+					return "&gt;";
+				case '"':
+					return "&quot;";
+				case "'":
+					return "&#039;";
+				case "`":
+					return "&#096;";
+				default:
+					return match;
 			}
 		};
 
 		return str.replace(/[&<>"'`]/g, escapeCharacter);
 	}
 
-	const prebuiltExtensionsLocation = '.build/builtInExtensions';
+	const prebuiltExtensionsLocation = ".build/builtInExtensions";
 	async function getScannedBuiltinExtensions(vsCodeDevLocation: string) {
 		// use the build utility as to not duplicate the code
-		const extensionsUtil = await import(pathToFileURL(path.join(vsCodeDevLocation, 'build', 'lib', 'extensions.ts')).toString());
-		const localExtensions = extensionsUtil.scanBuiltinExtensions(path.join(vsCodeDevLocation, 'extensions'));
-		const prebuiltExtensions = extensionsUtil.scanBuiltinExtensions(path.join(vsCodeDevLocation, prebuiltExtensionsLocation));
+		const extensionsUtil = await import(
+			pathToFileURL(
+				path.join(vsCodeDevLocation, "build", "lib", "extensions.ts"),
+			).toString()
+		);
+		const localExtensions = extensionsUtil.scanBuiltinExtensions(
+			path.join(vsCodeDevLocation, "extensions"),
+		);
+		const prebuiltExtensions = extensionsUtil.scanBuiltinExtensions(
+			path.join(vsCodeDevLocation, prebuiltExtensionsLocation),
+		);
 		for (const ext of localExtensions) {
 			let browserMain = ext.packageJSON.browser;
 			if (browserMain) {
-				if (!browserMain.endsWith('.js')) {
-					browserMain = browserMain + '.js';
+				if (!browserMain.endsWith(".js")) {
+					browserMain = browserMain + ".js";
 				}
-				const browserMainLocation = path.join(vsCodeDevLocation, 'extensions', ext.extensionPath, browserMain);
+				const browserMainLocation = path.join(
+					vsCodeDevLocation,
+					"extensions",
+					ext.extensionPath,
+					browserMain,
+				);
 				if (!fileExists(browserMainLocation)) {
-					console.log(`${browserMainLocation} not found. Make sure all extensions are compiled (use 'yarn watch-web').`);
+					console.log(
+						`${browserMainLocation} not found. Make sure all extensions are compiled (use 'yarn watch-web').`,
+					);
 				}
 			}
 		}
@@ -79,11 +109,11 @@ function injectBuiltinExtensionsPlugin(): Plugin {
 	}
 
 	return {
-		name: 'inject-builtin-extensions',
+		name: "inject-builtin-extensions",
 		transformIndexHtml: {
-			order: 'pre',
+			order: "pre",
 			async handler(html) {
-				const search = '{{WORKBENCH_BUILTIN_EXTENSIONS}}';
+				const search = "{{WORKBENCH_BUILTIN_EXTENSIONS}}";
 				if (html.indexOf(search) === -1) {
 					return html;
 				}
@@ -91,21 +121,21 @@ function injectBuiltinExtensionsPlugin(): Plugin {
 				const extensions = await loadBuiltinExtensions();
 				const h = replaceAllOccurrences(html, search, asJSON(extensions));
 				return h;
-			}
-		}
+			},
+		},
 	};
 }
 
 function createHotClassSupport(): Plugin {
 	return {
-		name: 'createHotClassSupport',
+		name: "createHotClassSupport",
 		transform: {
-			order: 'pre',
+			order: "pre",
 			handler: (code, id) => {
-				if (id.endsWith('.ts')) {
+				if (id.endsWith(".ts")) {
 					let needsHMRAccept = false;
-					const hasCreateHotClass = code.includes('createHotClass');
-					const hasDomWidget = code.includes('DomWidget');
+					const hasCreateHotClass = code.includes("createHotClass");
+					const hasDomWidget = code.includes("DomWidget");
 
 					if (!hasCreateHotClass && !hasDomWidget) {
 						return undefined;
@@ -116,17 +146,23 @@ function createHotClassSupport(): Plugin {
 					}
 
 					if (hasDomWidget) {
-						const matches = code.matchAll(/class\s+([a-zA-Z0-9_]+)\s+extends\s+DomWidget/g);
+						const matches = code.matchAll(
+							/class\s+([a-zA-Z0-9_]+)\s+extends\s+DomWidget/g,
+						);
 						/// @ts-ignore
 						for (const match of matches) {
 							const className = match[1];
-							code = code + `\n${className}.registerWidgetHotReplacement(${JSON.stringify(id + '#' + className)});`;
+							code =
+								code +
+								`\n${className}.registerWidgetHotReplacement(${JSON.stringify(id + "#" + className)});`;
 							needsHMRAccept = true;
 						}
 					}
 
 					if (needsHMRAccept) {
-						code = code + `\n
+						code =
+							code +
+							`\n
 if (import.meta.hot) {
 	import.meta.hot.accept();
 }`;
@@ -135,7 +171,7 @@ if (import.meta.hot) {
 				}
 				return undefined;
 			},
-		}
+		},
 	};
 }
 
@@ -145,15 +181,22 @@ const loggerWarn = logger.warn;
 logger.warn = (msg, options) => {
 	// the baseUrl code cannot be analyzed by vite.
 	// However, it is not needed, so it is okay to silence the warning.
-	if (msg.indexOf('await import(new URL(`vs/workbench/workbench.desktop.main.js`, baseUrl).href)') !== -1) {
+	if (
+		msg.indexOf(
+			"await import(new URL(`vs/workbench/workbench.desktop.main.js`, baseUrl).href)",
+		) !== -1
+	) {
 		return;
 	}
-	if (msg.indexOf('const result2 = await import(workbenchUrl);') !== -1) {
+	if (msg.indexOf("const result2 = await import(workbenchUrl);") !== -1) {
 		return;
 	}
 
 	// See https://github.com/microsoft/vscode/issues/278153
-	if (msg.indexOf('marked.esm.js.map') !== -1 || msg.indexOf('purify.es.mjs.map') !== -1) {
+	if (
+		msg.indexOf("marked.esm.js.map") !== -1 ||
+		msg.indexOf("purify.es.mjs.map") !== -1
+	) {
 		return;
 	}
 
@@ -161,39 +204,42 @@ logger.warn = (msg, options) => {
 };
 
 export default defineConfig({
-	base: './',
+	base: "./",
 	plugins: [
 		rollupEsmUrlPlugin({}),
 		injectBuiltinExtensionsPlugin(),
 		createHotClassSupport(),
 		componentExplorer({
-			logLevel: 'verbose',
-			include: join(__dirname, '../../src/**/*.fixture.ts'),
-			build: 'all',
+			logLevel: "verbose",
+			include: join(__dirname, "../../src/**/*.fixture.ts"),
+			build: "all",
 		}),
 	],
 	customLogger: logger,
 	resolve: {
 		alias: {
-			'~@vscode/codicons': join(__dirname, '../../node_modules/@vscode/codicons'),
-		}
+			"~@vscode/codicons": join(
+				__dirname,
+				"../../node_modules/@vscode/codicons",
+			),
+		},
 	},
 	esbuild: {
 		tsconfigRaw: {
 			compilerOptions: {
 				experimentalDecorators: true,
-			}
-		}
+			},
+		},
 	},
-	root: '../..', // To support /out/... paths
+	root: "../..", // To support /out/... paths
 	build: {
-		outDir: join(__dirname, 'dist'),
+		outDir: join(__dirname, "dist"),
 		rollupOptions: {
 			input: {
 				//index: path.resolve(__dirname, 'index.html'),
-				workbench: path.resolve(__dirname, 'workbench-vite.html'),
-			}
-		}
+				workbench: path.resolve(__dirname, "workbench-vite.html"),
+			},
+		},
 	},
 	server: {
 		cors: true,
@@ -201,8 +247,8 @@ export default defineConfig({
 		fs: {
 			allow: [
 				// To allow loading from sources, not needed when loading monaco-editor from npm package
-				join(import.meta.dirname, '../../../')
-			]
-		}
-	}
+				join(import.meta.dirname, "../../../"),
+			],
+		},
+	},
 });

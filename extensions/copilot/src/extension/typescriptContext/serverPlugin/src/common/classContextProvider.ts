@@ -7,9 +7,25 @@ import TS from './typescript';
 const ts = TS();
 
 import { CodeSnippetBuilder } from './code';
-import { AbstractContextRunnable, ComputeCost, ContextProvider, ContextResult, Search, SnippetLocation, type ComputeContextSession, type ContextRunnableCollector, type RequestContext, type RunnableResult } from './contextProvider';
+import {
+	AbstractContextRunnable,
+	ComputeCost,
+	ContextProvider,
+	ContextResult,
+	Search,
+	SnippetLocation,
+	type ComputeContextSession,
+	type ContextRunnableCollector,
+	type RequestContext,
+	type RunnableResult,
+} from './contextProvider';
 import { EmitMode, Priorities, SpeculativeKind } from './protocol';
-import tss, { ClassDeclarations, ReferencedByVisitor, Symbols, type DirectSuperSymbolInfo } from './typescripts';
+import tss, {
+	ClassDeclarations,
+	ReferencedByVisitor,
+	Symbols,
+	type DirectSuperSymbolInfo,
+} from './typescripts';
 
 export type TypeInfo = {
 	symbol: tt.Symbol;
@@ -23,7 +39,6 @@ export type SimilarClassDeclaration = {
 };
 
 export class ClassBlueprintSearch extends Search<SimilarClassDeclaration> {
-
 	private readonly classDeclaration: tt.ClassDeclaration;
 	private readonly stateProvider: tss.StateProvider;
 
@@ -31,22 +46,44 @@ export class ClassBlueprintSearch extends Search<SimilarClassDeclaration> {
 	public readonly extends: TypeInfo | undefined;
 	public readonly implements: readonly TypeInfo[] | undefined;
 
-	constructor(program: tt.Program, symbols: Symbols, classDeclarationOrSearch: tt.ClassDeclaration | ClassBlueprintSearch, stateProvider?: tss.StateProvider) {
+	constructor(
+		program: tt.Program,
+		symbols: Symbols,
+		classDeclarationOrSearch: tt.ClassDeclaration | ClassBlueprintSearch,
+		stateProvider?: tss.StateProvider,
+	) {
 		super(program, symbols);
 		if (classDeclarationOrSearch instanceof ClassBlueprintSearch) {
 			const search = classDeclarationOrSearch;
-			this.classDeclaration = Search.getNodeInProgram(program, search.classDeclaration);
+			this.classDeclaration = Search.getNodeInProgram(
+				program,
+				search.classDeclaration,
+			);
 			this.stateProvider = search.stateProvider;
 			this.abstractMembers = search.abstractMembers;
 			const mapTypeInfo = (typeInfo: TypeInfo): TypeInfo | undefined => {
 				const type = typeInfo.type;
-				const sourceFile = program.getSourceFile(type.getSourceFile().fileName);
+				const sourceFile = program.getSourceFile(
+					type.getSourceFile().fileName,
+				);
 				if (sourceFile !== undefined) {
-					const localType = tss.getTokenAtPosition(sourceFile, type.pos);
+					const localType = tss.getTokenAtPosition(
+						sourceFile,
+						type.pos,
+					);
 					if (ts.isExpressionWithTypeArguments(localType)) {
-						const symbol = symbols.getLeafSymbolAtLocation(localType.expression);
-						if (symbol !== undefined && !this.getSymbolInfo(symbol).skip) {
-							return { symbol, type: localType, abstractMembers: typeInfo.abstractMembers };
+						const symbol = symbols.getLeafSymbolAtLocation(
+							localType.expression,
+						);
+						if (
+							symbol !== undefined &&
+							!this.getSymbolInfo(symbol).skip
+						) {
+							return {
+								symbol,
+								type: localType,
+								abstractMembers: typeInfo.abstractMembers,
+							};
 						}
 					}
 				}
@@ -87,26 +124,46 @@ export class ClassBlueprintSearch extends Search<SimilarClassDeclaration> {
 					if (heritageClause.types.length === 1) {
 						const type = heritageClause.types[0];
 						const symbol = this.getHeritageSymbol(type.expression);
-						if (symbol !== undefined && !this.getSymbolInfo(symbol).skip) {
-							const abstractMembers = this.getNumberOfAbstractMembers(symbol);
+						if (
+							symbol !== undefined &&
+							!this.getSymbolInfo(symbol).skip
+						) {
+							const abstractMembers =
+								this.getNumberOfAbstractMembers(symbol);
 							totalAbstractMembers += abstractMembers;
-							extendsSymbol = { symbol, type: type, abstractMembers: abstractMembers };
+							extendsSymbol = {
+								symbol,
+								type: type,
+								abstractMembers: abstractMembers,
+							};
 						}
 					}
-				} else if (heritageClause.token === ts.SyntaxKind.ImplementsKeyword) {
+				} else if (
+					heritageClause.token === ts.SyntaxKind.ImplementsKeyword
+				) {
 					for (const type of heritageClause.types) {
 						const symbol = this.getHeritageSymbol(type.expression);
-						if (symbol !== undefined && !this.getSymbolInfo(symbol).skip) {
+						if (
+							symbol !== undefined &&
+							!this.getSymbolInfo(symbol).skip
+						) {
 							implementsSymbols = implementsSymbols ?? [];
-							const abstractMembers = this.getNumberOfAbstractMembers(symbol);
+							const abstractMembers =
+								this.getNumberOfAbstractMembers(symbol);
 							totalAbstractMembers += abstractMembers;
-							implementsSymbols.push({ symbol, type: type, abstractMembers: abstractMembers });
+							implementsSymbols.push({
+								symbol,
+								type: type,
+								abstractMembers: abstractMembers,
+							});
 						}
 					}
 				}
 			}
 			if (implementsSymbols !== undefined) {
-				implementsSymbols.sort((a, b) => b.abstractMembers - a.abstractMembers);
+				implementsSymbols.sort(
+					(a, b) => b.abstractMembers - a.abstractMembers,
+				);
 			}
 			this.abstractMembers = totalAbstractMembers;
 			this.extends = extendsSymbol;
@@ -131,8 +188,12 @@ export class ClassBlueprintSearch extends Search<SimilarClassDeclaration> {
 	}
 
 	private isSame(other: tt.ClassDeclaration): boolean {
-		return this.classDeclaration === other ||
-			(this.classDeclaration.getSourceFile().fileName === other.getSourceFile().fileName && this.classDeclaration.pos === other.pos);
+		return (
+			this.classDeclaration === other ||
+			(this.classDeclaration.getSourceFile().fileName ===
+				other.getSourceFile().fileName &&
+				this.classDeclaration.pos === other.pos)
+		);
 	}
 
 	public score(program: tt.Program, context: RequestContext): number {
@@ -147,7 +208,11 @@ export class ClassBlueprintSearch extends Search<SimilarClassDeclaration> {
 				return -1;
 			}
 			for (const declaration of declarations) {
-				if (program.getSourceFile(declaration.getSourceFile().fileName) === undefined) {
+				if (
+					program.getSourceFile(
+						declaration.getSourceFile().fileName,
+					) === undefined
+				) {
 					return -1;
 				}
 			}
@@ -189,12 +254,17 @@ export class ClassBlueprintSearch extends Search<SimilarClassDeclaration> {
 		return result;
 	}
 
-	public run(context: RequestContext, token: tt.CancellationToken): SimilarClassDeclaration | undefined {
+	public run(
+		context: RequestContext,
+		token: tt.CancellationToken,
+	): SimilarClassDeclaration | undefined {
 		if (this.extends === undefined && this.implements === undefined) {
 			return undefined;
 		}
 		let result: SimilarClassDeclaration | undefined;
-		const symbol2TypeInfo: Map<tt.Symbol, TypeInfo> = new Map([...this.all()].map(info => [info.symbol, info]));
+		const symbol2TypeInfo: Map<tt.Symbol, TypeInfo> = new Map(
+			[...this.all()].map((info) => [info.symbol, info]),
+		);
 		for (const typeInfo of this.all()) {
 			const symbol = typeInfo.symbol;
 			const declarations = symbol.declarations;
@@ -203,27 +273,47 @@ export class ClassBlueprintSearch extends Search<SimilarClassDeclaration> {
 			}
 			const declarationSourceFileVisited = new Set<string>();
 			for (const declaration of declarations) {
-				if (!ts.isClassDeclaration(declaration) && !ts.isInterfaceDeclaration(declaration) && !ts.isTypeAliasDeclaration(declaration) || declaration.name === undefined) {
+				if (
+					(!ts.isClassDeclaration(declaration) &&
+						!ts.isInterfaceDeclaration(declaration) &&
+						!ts.isTypeAliasDeclaration(declaration)) ||
+					declaration.name === undefined
+				) {
 					continue;
 				}
 				const declarationSourceFile = declaration.getSourceFile();
-				if (declarationSourceFileVisited.has(declarationSourceFile.fileName)) {
+				if (
+					declarationSourceFileVisited.has(
+						declarationSourceFile.fileName,
+					)
+				) {
 					continue;
 				}
-				const referencedByVisitor = new ReferencedByVisitor(this.program, declarationSourceFile, context.getPreferredNeighborFiles(this.program), this.stateProvider, token);
+				const referencedByVisitor = new ReferencedByVisitor(
+					this.program,
+					declarationSourceFile,
+					context.getPreferredNeighborFiles(this.program),
+					this.stateProvider,
+					token,
+				);
 				for (const sourceFile of referencedByVisitor.entries()) {
 					token.throwIfCancellationRequested();
-					for (const candidate of ClassDeclarations.entries(sourceFile)) {
+					for (const candidate of ClassDeclarations.entries(
+						sourceFile,
+					)) {
 						if (candidate.heritageClauses === undefined) {
 							continue;
 						}
 						if (this.isSame(candidate)) {
 							continue;
 						}
-						let matchesAbstractMembers: number | undefined = undefined;
+						let matchesAbstractMembers: number | undefined =
+							undefined;
 						for (const heritageClause of candidate.heritageClauses) {
 							for (const type of heritageClause.types) {
-								const symbol = this.getHeritageSymbol(type.expression);
+								const symbol = this.getHeritageSymbol(
+									type.expression,
+								);
 								if (symbol === undefined) {
 									continue;
 								}
@@ -232,18 +322,34 @@ export class ClassBlueprintSearch extends Search<SimilarClassDeclaration> {
 									continue;
 								}
 								matchesAbstractMembers ??= 0;
-								matchesAbstractMembers += typeInfo.abstractMembers;
+								matchesAbstractMembers +=
+									typeInfo.abstractMembers;
 							}
 						}
 						if (matchesAbstractMembers !== undefined) {
 							if (result === undefined) {
-								result = { declaration: candidate, matchesAbstractMembers: matchesAbstractMembers };
-							} else if (matchesAbstractMembers > result.matchesAbstractMembers) {
-								result = { declaration: candidate, matchesAbstractMembers: matchesAbstractMembers };
+								result = {
+									declaration: candidate,
+									matchesAbstractMembers:
+										matchesAbstractMembers,
+								};
+							} else if (
+								matchesAbstractMembers >
+								result.matchesAbstractMembers
+							) {
+								result = {
+									declaration: candidate,
+									matchesAbstractMembers:
+										matchesAbstractMembers,
+								};
 							}
 						}
 						// Here we can be smart. We could for 30ms continue to search for a better match and then return the best match.
-						if (result !== undefined && result.matchesAbstractMembers === this.abstractMembers) {
+						if (
+							result !== undefined &&
+							result.matchesAbstractMembers ===
+								this.abstractMembers
+						) {
 							return result;
 						}
 					}
@@ -260,11 +366,24 @@ export class ClassBlueprintSearch extends Search<SimilarClassDeclaration> {
 }
 
 export class SuperClassRunnable extends AbstractContextRunnable {
-
 	private readonly classDeclaration: tt.ClassDeclaration;
 
-	constructor(session: ComputeContextSession, languageService: tt.LanguageService, context: RequestContext, classDeclaration: tt.ClassDeclaration, priority: number = Priorities.Inherited) {
-		super(session, languageService, context, 'SuperClassRunnable', SnippetLocation.Primary, priority, ComputeCost.Medium);
+	constructor(
+		session: ComputeContextSession,
+		languageService: tt.LanguageService,
+		context: RequestContext,
+		classDeclaration: tt.ClassDeclaration,
+		priority: number = Priorities.Inherited,
+	) {
+		super(
+			session,
+			languageService,
+			context,
+			'SuperClassRunnable',
+			SnippetLocation.Primary,
+			priority,
+			ComputeCost.Medium,
+		);
 		this.classDeclaration = classDeclaration;
 	}
 
@@ -272,19 +391,39 @@ export class SuperClassRunnable extends AbstractContextRunnable {
 		return this.classDeclaration.getSourceFile();
 	}
 
-	protected override createRunnableResult(result: ContextResult): RunnableResult {
-		const cacheScope = this.createCacheScope(this.classDeclaration.members, this.classDeclaration.getSourceFile());
-		return result.createRunnableResult(this.id, this.priority, SpeculativeKind.emit, { emitMode: EmitMode.ClientBased, scope: cacheScope });
+	protected override createRunnableResult(
+		result: ContextResult,
+	): RunnableResult {
+		const cacheScope = this.createCacheScope(
+			this.classDeclaration.members,
+			this.classDeclaration.getSourceFile(),
+		);
+		return result.createRunnableResult(
+			this.id,
+			this.priority,
+			SpeculativeKind.emit,
+			{ emitMode: EmitMode.ClientBased, scope: cacheScope },
+		);
 	}
 
-	protected override run(_result: RunnableResult, _token: tt.CancellationToken): void {
+	protected override run(
+		_result: RunnableResult,
+		_token: tt.CancellationToken,
+	): void {
 		const symbols = this.symbols;
-		const clazz = symbols.getLeafSymbolAtLocation(this.classDeclaration.name ?? this.classDeclaration);
-		if (clazz === undefined || !Symbols.isClass(clazz) || clazz.declarations === undefined) {
+		const clazz = symbols.getLeafSymbolAtLocation(
+			this.classDeclaration.name ?? this.classDeclaration,
+		);
+		if (
+			clazz === undefined ||
+			!Symbols.isClass(clazz) ||
+			clazz.declarations === undefined
+		) {
 			return;
 		}
 
-		const directSuperSymbolInfo: DirectSuperSymbolInfo | undefined = symbols.getDirectSuperSymbols(clazz);
+		const directSuperSymbolInfo: DirectSuperSymbolInfo | undefined =
+			symbols.getDirectSuperSymbols(clazz);
 		if (directSuperSymbolInfo === undefined) {
 			return;
 		}
@@ -306,11 +445,24 @@ export class SuperClassRunnable extends AbstractContextRunnable {
 }
 
 class SimilarClassRunnable extends AbstractContextRunnable {
-
 	private readonly classDeclaration: tt.ClassDeclaration;
 
-	constructor(session: ComputeContextSession, languageService: tt.LanguageService, context: RequestContext, classDeclaration: tt.ClassDeclaration, priority: number = Priorities.Blueprints) {
-		super(session, languageService, context, 'SimilarClassRunnable', SnippetLocation.Primary, priority, ComputeCost.High);
+	constructor(
+		session: ComputeContextSession,
+		languageService: tt.LanguageService,
+		context: RequestContext,
+		classDeclaration: tt.ClassDeclaration,
+		priority: number = Priorities.Blueprints,
+	) {
+		super(
+			session,
+			languageService,
+			context,
+			'SimilarClassRunnable',
+			SnippetLocation.Primary,
+			priority,
+			ComputeCost.High,
+		);
 		this.classDeclaration = classDeclaration;
 	}
 
@@ -318,35 +470,63 @@ class SimilarClassRunnable extends AbstractContextRunnable {
 		return this.classDeclaration.getSourceFile();
 	}
 
-	protected override createRunnableResult(result: ContextResult): RunnableResult {
-		return result.createRunnableResult(this.id, this.priority, SpeculativeKind.emit);
+	protected override createRunnableResult(
+		result: ContextResult,
+	): RunnableResult {
+		return result.createRunnableResult(
+			this.id,
+			this.priority,
+			SpeculativeKind.emit,
+		);
 	}
 
-	protected override run(result: RunnableResult, token: tt.CancellationToken): void {
+	protected override run(
+		result: RunnableResult,
+		token: tt.CancellationToken,
+	): void {
 		const program = this.getProgram();
 		const classDeclaration = this.classDeclaration;
-		const symbol = this.symbols.getLeafSymbolAtLocation(classDeclaration.name ?? classDeclaration);
+		const symbol = this.symbols.getLeafSymbolAtLocation(
+			classDeclaration.name ?? classDeclaration,
+		);
 		if (symbol === undefined || !Symbols.isClass(symbol)) {
 			return;
 		}
-		const search = new ClassBlueprintSearch(program, this.symbols, classDeclaration);
+		const search = new ClassBlueprintSearch(
+			program,
+			this.symbols,
+			classDeclaration,
+		);
 		if (search.extends === undefined && search.implements === undefined) {
 			return;
 		}
-		const [foundInProgram, similarClass] = this.session.run(search, this.context, token);
+		const [foundInProgram, similarClass] = this.session.run(
+			search,
+			this.context,
+			token,
+		);
 		if (foundInProgram === undefined || similarClass === undefined) {
 			return;
 		}
-		const code = new CodeSnippetBuilder(this.context, this.context.getSymbols(foundInProgram), classDeclaration.getSourceFile());
+		const code = new CodeSnippetBuilder(
+			this.context,
+			this.context.getSymbols(foundInProgram),
+			classDeclaration.getSourceFile(),
+		);
 		code.addDeclaration(similarClass.declaration);
 		result.addSnippet(code, this.location, undefined);
 	}
 }
 
 export class ClassContextProvider extends ContextProvider {
-
-	public static create(declaration: tt.ClassDeclaration, tokenInfo: tss.TokenInfo): ContextProvider {
-		if (declaration.members === undefined || declaration.members.length === 0) {
+	public static create(
+		declaration: tt.ClassDeclaration,
+		tokenInfo: tss.TokenInfo,
+	): ContextProvider {
+		if (
+			declaration.members === undefined ||
+			declaration.members.length === 0
+		) {
 			return new WholeClassContextProvider(declaration, tokenInfo);
 		} else {
 			return new ClassContextProvider(declaration, tokenInfo);
@@ -355,35 +535,69 @@ export class ClassContextProvider extends ContextProvider {
 
 	private readonly classDeclaration: tt.ClassDeclaration;
 
-	constructor(classDeclaration: tt.ClassDeclaration, _tokenInfo: tss.TokenInfo) {
+	constructor(
+		classDeclaration: tt.ClassDeclaration,
+		_tokenInfo: tss.TokenInfo,
+	) {
 		super();
 		this.classDeclaration = classDeclaration;
 	}
 
-	public override provide(result: ContextRunnableCollector, session: ComputeContextSession, languageService: tt.LanguageService, context: RequestContext, token: tt.CancellationToken): void {
+	public override provide(
+		result: ContextRunnableCollector,
+		session: ComputeContextSession,
+		languageService: tt.LanguageService,
+		context: RequestContext,
+		token: tt.CancellationToken,
+	): void {
 		token.throwIfCancellationRequested();
 		result.addPrimary(
-			new SuperClassRunnable(session, languageService, context, this.classDeclaration),
+			new SuperClassRunnable(
+				session,
+				languageService,
+				context,
+				this.classDeclaration,
+			),
 		);
 	}
 }
 
 export class WholeClassContextProvider extends ContextProvider {
-
 	private readonly classDeclaration: tt.ClassDeclaration;
 
-	constructor(classDeclaration: tt.ClassDeclaration, _tokenInfo: tss.TokenInfo) {
+	constructor(
+		classDeclaration: tt.ClassDeclaration,
+		_tokenInfo: tss.TokenInfo,
+	) {
 		super();
 		this.classDeclaration = classDeclaration;
 	}
 
-	public override provide(result: ContextRunnableCollector, session: ComputeContextSession, languageService: tt.LanguageService, context: RequestContext, token: tt.CancellationToken): void {
+	public override provide(
+		result: ContextRunnableCollector,
+		session: ComputeContextSession,
+		languageService: tt.LanguageService,
+		context: RequestContext,
+		token: tt.CancellationToken,
+	): void {
 		token.throwIfCancellationRequested();
 		result.addPrimary(
-			new SuperClassRunnable(session, languageService, context, this.classDeclaration),
+			new SuperClassRunnable(
+				session,
+				languageService,
+				context,
+				this.classDeclaration,
+			),
 		);
 		if (session.enableBlueprintSearch()) {
-			result.addPrimary(new SimilarClassRunnable(session, languageService, context, this.classDeclaration));
+			result.addPrimary(
+				new SimilarClassRunnable(
+					session,
+					languageService,
+					context,
+					this.classDeclaration,
+				),
+			);
 		}
 	}
 }

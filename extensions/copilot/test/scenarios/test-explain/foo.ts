@@ -4,6 +4,6 @@
 
 export class FooImpl {
 	boo() {
-		console.log("boo");
+		console.log('boo');
 	}
 }

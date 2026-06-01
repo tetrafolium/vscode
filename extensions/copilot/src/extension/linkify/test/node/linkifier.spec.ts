@@ -5,21 +5,35 @@
 
 import { suite, test } from 'vitest';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
-import { coalesceParts, LinkifiedPart, LinkifyLocationAnchor } from '../../common/linkifiedText';
+import {
+	coalesceParts,
+	LinkifiedPart,
+	LinkifyLocationAnchor,
+} from '../../common/linkifiedText';
 import { ILinkifier, LinkifierContext } from '../../common/linkifyService';
-import { assertPartsEqual, createTestLinkifierService, workspaceFile } from './util';
+import {
+	assertPartsEqual,
+	createTestLinkifierService,
+	workspaceFile,
+} from './util';
 
 const emptyContext: LinkifierContext = { requestId: undefined, references: [] };
 
 suite('Stateful Linkifier', () => {
-
-	async function runLinkifier(linkifier: ILinkifier, parts: readonly string[]): Promise<LinkifiedPart[]> {
+	async function runLinkifier(
+		linkifier: ILinkifier,
+		parts: readonly string[],
+	): Promise<LinkifiedPart[]> {
 		const out: LinkifiedPart[] = [];
 		for (const part of parts) {
-			out.push(...(await linkifier.append(part, CancellationToken.None)).parts);
+			out.push(
+				...(await linkifier.append(part, CancellationToken.None)).parts,
+			);
 		}
 
-		out.push(...(await linkifier.flush(CancellationToken.None))?.parts ?? []);
+		out.push(
+			...((await linkifier.flush(CancellationToken.None))?.parts ?? []),
+		);
 		return coalesceParts(out);
 	}
 
@@ -44,15 +58,16 @@ suite('Stateful Linkifier', () => {
 		const result = await runLinkifier(linkifier, parts);
 		assertPartsEqual(result, [
 			new LinkifyLocationAnchor(workspaceFile('file.ts')),
-			['\n',
+			[
+				'\n',
 				'```',
 				'\n',
 				'[file.ts](file.ts)', // no linkification here
 				'\n',
 				'```',
-				'\n'
+				'\n',
 			].join(''),
-			new LinkifyLocationAnchor(workspaceFile('file.ts'))
+			new LinkifyLocationAnchor(workspaceFile('file.ts')),
 		]);
 	});
 
@@ -64,14 +79,7 @@ suite('Stateful Linkifier', () => {
 
 		{
 			// Tokens for `[file.ts](file.ts)`
-			const parts: string[] = [
-				'[file',
-				'.ts',
-				'](',
-				'file',
-				'.ts',
-				')',
-			];
+			const parts: string[] = ['[file', '.ts', '](', 'file', '.ts', ')'];
 
 			const result = await runLinkifier(linkifier, parts);
 			assertPartsEqual(result, [
@@ -130,25 +138,19 @@ suite('Stateful Linkifier', () => {
 						}
 						return;
 					},
-				})
-			}
+				}),
+			},
 		]);
 
-		const parts: string[] = [
-			'`code ',
-			' more`',
-		];
+		const parts: string[] = ['`code ', ' more`'];
 
 		const result = await runLinkifier(linkifier, parts);
-		assertPartsEqual(result, [
-			linkText
-		]);
+		assertPartsEqual(result, [linkText]);
 	});
 
 	test(`Should not linkify inside of markdown fenced code block containing fenced code blocks (#5708)`, async () => {
-		const linkifier = createTestLinkifierService(
-			'file.ts',
-		).createLinkifier(emptyContext);
+		const linkifier =
+			createTestLinkifierService('file.ts').createLinkifier(emptyContext);
 
 		const parts: string[] = [
 			'[file.ts](file.ts)',
@@ -194,14 +196,13 @@ suite('Stateful Linkifier', () => {
 				'```',
 				'\n',
 			].join(''),
-			new LinkifyLocationAnchor(workspaceFile('file.ts'))
+			new LinkifyLocationAnchor(workspaceFile('file.ts')),
 		]);
 	});
 
 	test(`Should not linkify inside tilde markdown code blocks`, async () => {
-		const linkifier = createTestLinkifierService(
-			'file.ts',
-		).createLinkifier(emptyContext);
+		const linkifier =
+			createTestLinkifierService('file.ts').createLinkifier(emptyContext);
 
 		const parts: string[] = [
 			'[file.ts](file.ts)',
@@ -227,14 +228,13 @@ suite('Stateful Linkifier', () => {
 				'~~~',
 				'\n',
 			].join(''),
-			new LinkifyLocationAnchor(workspaceFile('file.ts'))
+			new LinkifyLocationAnchor(workspaceFile('file.ts')),
 		]);
 	});
 
 	test(`Should correctly handle fenced code blocks split over multiple parts`, async () => {
-		const linkifier = createTestLinkifierService(
-			'file.ts',
-		).createLinkifier(emptyContext);
+		const linkifier =
+			createTestLinkifierService('file.ts').createLinkifier(emptyContext);
 
 		const parts: string[] = [
 			'[file.ts](file.ts)',
@@ -260,14 +260,13 @@ suite('Stateful Linkifier', () => {
 				'```',
 				'\n',
 			].join(''),
-			new LinkifyLocationAnchor(workspaceFile('file.ts'))
+			new LinkifyLocationAnchor(workspaceFile('file.ts')),
 		]);
 	});
 
 	test(`Should correctly handle fenced code blocks when opening fence is split`, async () => {
-		const linkifier = createTestLinkifierService(
-			'file.ts',
-		).createLinkifier(emptyContext);
+		const linkifier =
+			createTestLinkifierService('file.ts').createLinkifier(emptyContext);
 
 		const parts: string[] = [
 			'[file.ts](file.ts)',
@@ -294,73 +293,52 @@ suite('Stateful Linkifier', () => {
 				'```',
 				'\n',
 			].join(''),
-			new LinkifyLocationAnchor(workspaceFile('file.ts'))
+			new LinkifyLocationAnchor(workspaceFile('file.ts')),
 		]);
 	});
 
 	test(`Should de-linkify links without schemes`, async () => {
-		const linkifier = createTestLinkifierService().createLinkifier(emptyContext);
+		const linkifier =
+			createTestLinkifierService().createLinkifier(emptyContext);
 
-		const parts: string[] = [
-			'[text](file.ts) [`text`](/file.ts)',
-		];
+		const parts: string[] = ['[text](file.ts) [`text`](/file.ts)'];
 
 		const result = await runLinkifier(linkifier, parts);
-		assertPartsEqual(result, [
-			'text `text`'
-		]);
+		assertPartsEqual(result, ['text `text`']);
 	});
 
 	test(`Should de-linkify Windows absolute paths with drive letters`, async () => {
-		const linkifier = createTestLinkifierService().createLinkifier(emptyContext);
+		const linkifier =
+			createTestLinkifierService().createLinkifier(emptyContext);
 
-		const parts: string[] = [
-			'[text](c:\\src\\file.ts)',
-		];
+		const parts: string[] = ['[text](c:\\src\\file.ts)'];
 
 		const result = await runLinkifier(linkifier, parts);
-		assertPartsEqual(result, [
-			'text'
-		]);
+		assertPartsEqual(result, ['text']);
 	});
 
 	test(`Should not unlinkify text inside of code blocks`, async () => {
-		const linkifier = createTestLinkifierService().createLinkifier(emptyContext);
+		const linkifier =
+			createTestLinkifierService().createLinkifier(emptyContext);
 
-		const parts: string[] = [
-			'```md\n',
-			`[g](x)\n`,
-			'```',
-		];
+		const parts: string[] = ['```md\n', `[g](x)\n`, '```'];
 
 		const result = await runLinkifier(linkifier, parts);
-		assertPartsEqual(result, [
-			[
-				'```md\n',
-				`[g](x)\n`,
-				'```'
-			].join('')
-		]);
+		assertPartsEqual(result, [['```md\n', `[g](x)\n`, '```'].join('')]);
 	});
 
 	test(`Should not unlikify text inside of inline code`, async () => {
 		{
-			const linkifier = createTestLinkifierService().createLinkifier(emptyContext);
-			const result = await runLinkifier(linkifier, [
-				'a `J[g](x)` b',
-			]);
-			assertPartsEqual(result, [
-				'a `J[g](x)` b'
-			]);
+			const linkifier =
+				createTestLinkifierService().createLinkifier(emptyContext);
+			const result = await runLinkifier(linkifier, ['a `J[g](x)` b']);
+			assertPartsEqual(result, ['a `J[g](x)` b']);
 		}
 		{
-			const linkifier = createTestLinkifierService().createLinkifier(emptyContext);
-			const result = await runLinkifier(linkifier, [
-				'a `b [c](d) e` f',
-			]);
-			assertPartsEqual(result, [
-				'a `b [c](d) e` f'
-			]);
+			const linkifier =
+				createTestLinkifierService().createLinkifier(emptyContext);
+			const result = await runLinkifier(linkifier, ['a `b [c](d) e` f']);
+			assertPartsEqual(result, ['a `b [c](d) e` f']);
 		}
 	});
 
@@ -376,17 +354,11 @@ suite('Stateful Linkifier', () => {
 				'$$\n',
 				`J[g](x)\n`,
 				'$$\n',
-				'[file2.ts](file2.ts)'
+				'[file2.ts](file2.ts)',
 			]);
 			assertPartsEqual(result, [
 				new LinkifyLocationAnchor(workspaceFile('file1.ts')),
-				[
-					'',
-					'$$',
-					'J[g](x)',
-					'$$',
-					'',
-				].join('\n'),
+				['', '$$', 'J[g](x)', '$$', ''].join('\n'),
 				new LinkifyLocationAnchor(workspaceFile('file2.ts')),
 			]);
 		}
@@ -394,24 +366,18 @@ suite('Stateful Linkifier', () => {
 
 	test(`Should not touch code inside of inline math equations`, async () => {
 		{
-			const linkifier = createTestLinkifierService().createLinkifier(emptyContext);
+			const linkifier =
+				createTestLinkifierService().createLinkifier(emptyContext);
 
-			const result = await runLinkifier(linkifier, [
-				'a $J[g](x)$ b',
-			]);
-			assertPartsEqual(result, [
-				'a $J[g](x)$ b'
-			]);
+			const result = await runLinkifier(linkifier, ['a $J[g](x)$ b']);
+			assertPartsEqual(result, ['a $J[g](x)$ b']);
 		}
 		{
-			const linkifier = createTestLinkifierService().createLinkifier(emptyContext);
+			const linkifier =
+				createTestLinkifierService().createLinkifier(emptyContext);
 
-			const result = await runLinkifier(linkifier, [
-				'a $c [g](x) d$ x',
-			]);
-			assertPartsEqual(result, [
-				'a $c [g](x) d$ x',
-			]);
+			const result = await runLinkifier(linkifier, ['a $c [g](x) d$ x']);
+			assertPartsEqual(result, ['a $c [g](x) d$ x']);
 		}
 	});
 });

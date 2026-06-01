@@ -16,8 +16,8 @@ export class Language {
 	constructor(
 		readonly languageId: string,
 		readonly isGuess: boolean,
-		readonly fileExtension: string
-	) { }
+		readonly fileExtension: string,
+	) {}
 }
 
 interface LanguageDetectionInput {
@@ -34,12 +34,20 @@ type LanguageIdWithGuessing = { languageId: string; isGuess: boolean };
 const knownExtensions = new Map<string, string[]>();
 const knownFilenames = new Map<string, string[]>();
 
-for (const [languageId, { extensions, filenames }] of Object.entries(knownLanguages)) {
+for (const [languageId, { extensions, filenames }] of Object.entries(
+	knownLanguages,
+)) {
 	for (const extension of extensions) {
-		knownExtensions.set(extension, [...(knownExtensions.get(extension) ?? []), languageId]);
+		knownExtensions.set(extension, [
+			...(knownExtensions.get(extension) ?? []),
+			languageId,
+		]);
 	}
 	for (const filename of filenames ?? []) {
-		knownFilenames.set(filename, [...(knownFilenames.get(filename) ?? []), languageId]);
+		knownFilenames.set(filename, [
+			...(knownFilenames.get(filename) ?? []),
+			languageId,
+		]);
 	}
 }
 
@@ -47,23 +55,47 @@ class FilenameAndExensionLanguageDetection extends LanguageDetection {
 	detectLanguage(doc: LanguageDetectionInput): Language {
 		const filename = basename(doc.uri);
 		const extension = path.extname(filename).toLowerCase();
-		const extensionWithoutTemplate = this.extensionWithoutTemplateLanguage(filename, extension);
-		const languageIdWithGuessing = this.detectLanguageId(filename, extensionWithoutTemplate);
-		const ext = this.computeFullyQualifiedExtension(extension, extensionWithoutTemplate);
+		const extensionWithoutTemplate = this.extensionWithoutTemplateLanguage(
+			filename,
+			extension,
+		);
+		const languageIdWithGuessing = this.detectLanguageId(
+			filename,
+			extensionWithoutTemplate,
+		);
+		const ext = this.computeFullyQualifiedExtension(
+			extension,
+			extensionWithoutTemplate,
+		);
 		if (!languageIdWithGuessing) {
 			return new Language(doc.languageId, true, ext);
 		}
-		return new Language(languageIdWithGuessing.languageId, languageIdWithGuessing.isGuess, ext);
+		return new Language(
+			languageIdWithGuessing.languageId,
+			languageIdWithGuessing.isGuess,
+			ext,
+		);
 	}
 
-	private extensionWithoutTemplateLanguage(filename: string, extension: string): string {
+	private extensionWithoutTemplateLanguage(
+		filename: string,
+		extension: string,
+	): string {
 		if (knownTemplateLanguageExtensions.includes(extension)) {
-			const filenameWithoutExtension = filename.substring(0, filename.lastIndexOf('.'));
-			const extensionWithoutTemplate = path.extname(filenameWithoutExtension).toLowerCase();
+			const filenameWithoutExtension = filename.substring(
+				0,
+				filename.lastIndexOf('.'),
+			);
+			const extensionWithoutTemplate = path
+				.extname(filenameWithoutExtension)
+				.toLowerCase();
 			const isTemplateLanguage =
 				extensionWithoutTemplate.length > 0 &&
 				knownFileExtensions.includes(extensionWithoutTemplate) &&
-				this.isExtensionValidForTemplateLanguage(extension, extensionWithoutTemplate);
+				this.isExtensionValidForTemplateLanguage(
+					extension,
+					extensionWithoutTemplate,
+				);
 			if (isTemplateLanguage) {
 				return extensionWithoutTemplate;
 			}
@@ -71,28 +103,46 @@ class FilenameAndExensionLanguageDetection extends LanguageDetection {
 		return extension;
 	}
 
-	private isExtensionValidForTemplateLanguage(extension: string, extensionWithoutTemplate: string): boolean {
+	private isExtensionValidForTemplateLanguage(
+		extension: string,
+		extensionWithoutTemplate: string,
+	): boolean {
 		const limitations = templateLanguageLimitations[extension];
 		return !limitations || limitations.includes(extensionWithoutTemplate);
 	}
 
-	private detectLanguageId(filename: string, extension: string): LanguageIdWithGuessing | undefined {
+	private detectLanguageId(
+		filename: string,
+		extension: string,
+	): LanguageIdWithGuessing | undefined {
 		if (knownFilenames.has(filename)) {
-			return { languageId: knownFilenames.get(filename)![0], isGuess: false };
+			return {
+				languageId: knownFilenames.get(filename)![0],
+				isGuess: false,
+			};
 		}
 		const extensionCandidates = knownExtensions.get(extension) ?? [];
 		if (extensionCandidates.length > 0) {
-			return { languageId: extensionCandidates[0], isGuess: extensionCandidates.length > 1 };
+			return {
+				languageId: extensionCandidates[0],
+				isGuess: extensionCandidates.length > 1,
+			};
 		}
 		while (filename.includes('.')) {
 			filename = filename.replace(/\.[^.]*$/, '');
 			if (knownFilenames.has(filename)) {
-				return { languageId: knownFilenames.get(filename)![0], isGuess: false };
+				return {
+					languageId: knownFilenames.get(filename)![0],
+					isGuess: false,
+				};
 			}
 		}
 	}
 
-	private computeFullyQualifiedExtension(extension: string, extensionWithoutTemplate: string): string {
+	private computeFullyQualifiedExtension(
+		extension: string,
+		extensionWithoutTemplate: string,
+	): string {
 		if (extension !== extensionWithoutTemplate) {
 			return extensionWithoutTemplate + extension;
 		}
@@ -113,7 +163,11 @@ class GroupingLanguageDetection extends LanguageDetection {
 		const language = this.delegate.detectLanguage(doc);
 		const languageId = language.languageId;
 		if (languageId === 'c' || languageId === 'cpp') {
-			return new Language('cpp', language.isGuess, language.fileExtension);
+			return new Language(
+				'cpp',
+				language.isGuess,
+				language.fileExtension,
+			);
 		}
 		return language;
 	}
@@ -125,7 +179,10 @@ class ClientProvidedLanguageDetection extends LanguageDetection {
 	}
 
 	detectLanguage(doc: LanguageDetectionInput): Language {
-		if (doc.uri.startsWith('untitled:') || doc.uri.startsWith('vscode-notebook-cell:')) {
+		if (
+			doc.uri.startsWith('untitled:') ||
+			doc.uri.startsWith('vscode-notebook-cell:')
+		) {
 			return new Language(doc.languageId, true, '');
 		}
 		return this.delegate.detectLanguage(doc);
@@ -133,13 +190,30 @@ class ClientProvidedLanguageDetection extends LanguageDetection {
 }
 
 export const languageDetection = new GroupingLanguageDetection(
-	new ClientProvidedLanguageDetection(new FilenameAndExensionLanguageDetection())
+	new ClientProvidedLanguageDetection(
+		new FilenameAndExensionLanguageDetection(),
+	),
 );
 
-export function detectLanguage({ uri, languageId }: { uri: string; languageId: string }): string;
+export function detectLanguage({
+	uri,
+	languageId,
+}: {
+	uri: string;
+	languageId: string;
+}): string;
 export function detectLanguage({ uri }: { uri: string }): string | undefined;
-export function detectLanguage({ uri, languageId }: { uri: string; languageId?: string }) {
-	const language = languageDetection.detectLanguage({ uri, languageId: 'UNKNOWN' });
+export function detectLanguage({
+	uri,
+	languageId,
+}: {
+	uri: string;
+	languageId?: string;
+}) {
+	const language = languageDetection.detectLanguage({
+		uri,
+		languageId: 'UNKNOWN',
+	});
 	if (language.languageId === 'UNKNOWN') {
 		return languageId;
 	}

@@ -20,9 +20,18 @@ import type { TextDocument } from 'vscode';
 import { AbstractDocumentWithLanguageId } from '../../../../platform/editing/common/abstractText';
 import { getFilepathComment } from '../../../../util/common/markdown';
 import { computeLevenshteinDistance } from '../../../../util/vs/base/common/diff/diff';
-import { count, isFalsyOrWhitespace } from '../../../../util/vs/base/common/strings';
+import {
+	count,
+	isFalsyOrWhitespace,
+} from '../../../../util/vs/base/common/strings';
 import { Lines } from '../../../prompt/node/editGeneration';
-import { computeIndentLevel2, getIndentationChar, guessIndentation, IGuessedIndentation, transformIndentation } from '../../../prompt/node/indentationGuesser';
+import {
+	computeIndentLevel2,
+	getIndentationChar,
+	guessIndentation,
+	IGuessedIndentation,
+	transformIndentation,
+} from '../../../prompt/node/indentationGuesser';
 import {
 	ADD_FILE_PREFIX,
 	DELETE_FILE_PREFIX,
@@ -41,7 +50,6 @@ const CHUNK_DELIMITER = '@@';
 // occasionally 'forgets' a character in a diff, and this allows those to still
 // match in conservative cases.
 const EDIT_DISTANCE_ALLOWANCE_PER_LINE = 0.34;
-
 
 // GPT models have some tendency to forget to escape \t, \r, \n, and such in
 // their edits. Generally we're somewhat aggressive about normalizing these
@@ -151,16 +159,23 @@ export interface Patch {
 	actions: Record<string, PatchAction>;
 }
 
-export class DiffError extends Error { }
+export class DiffError extends Error {}
 
 export class InvalidContextError extends DiffError {
-	constructor(message: string, public readonly file: string, public readonly kindForTelemetry: string) {
+	constructor(
+		message: string,
+		public readonly file: string,
+		public readonly kindForTelemetry: string,
+	) {
 		super(message);
 	}
 }
 
 export class InvalidPatchFormatError extends DiffError {
-	constructor(message: string, public readonly kindForTelemetry: string) {
+	constructor(
+		message: string,
+		public readonly kindForTelemetry: string,
+	) {
 		super(message);
 	}
 }
@@ -170,18 +185,31 @@ export class InvalidPatchFormatError extends DiffError {
 // -----------------------------------------------------------------------------
 
 export class Parser {
-	current_files: Record<string, AbstractDocumentWithLanguageId | TextDocument>;
+	current_files: Record<
+		string,
+		AbstractDocumentWithLanguageId | TextDocument
+	>;
 	indent_styles: Record<string, IGuessedIndentation> = {};
 	lines: Array<string>;
 	index = 0;
 	patch: Patch = { actions: {} };
 	fuzz = 0;
 
-	constructor(currentFiles: Record<string, AbstractDocumentWithLanguageId | TextDocument>, lines: Array<string>) {
+	constructor(
+		currentFiles: Record<
+			string,
+			AbstractDocumentWithLanguageId | TextDocument
+		>,
+		lines: Array<string>,
+	) {
 		this.current_files = currentFiles;
 		this.lines = lines;
 		for (const [path, doc] of Object.entries(currentFiles)) {
-			this.indent_styles[path] = guessIndentation(Lines.fromString(doc.getText()), 4, false);
+			this.indent_styles[path] = guessIndentation(
+				Lines.fromString(doc.getText()),
+				4,
+				false,
+			);
 		}
 	}
 
@@ -222,16 +250,24 @@ export class Parser {
 			let path = this.read_str(UPDATE_FILE_PREFIX);
 			if (path) {
 				if (this.patch.actions[path]) {
-					throw new DiffError(`Update File Error: Duplicate Path: ${path}`);
+					throw new DiffError(
+						`Update File Error: Duplicate Path: ${path}`,
+					);
 				}
 				const moveTo = this.read_str(MOVE_FILE_TO_PREFIX);
 				if (!(path in this.current_files)) {
-					throw new DiffError(`Update File Error: Missing File: ${path}`);
+					throw new DiffError(
+						`Update File Error: Missing File: ${path}`,
+					);
 				}
 				const textDocument = this.current_files[path];
 				const indentStyle = this.indent_styles[path];
 				const text = textDocument.getText();
-				const action = this.parse_update_file(getFilepathComment(textDocument.languageId, path), text ?? '', indentStyle);
+				const action = this.parse_update_file(
+					getFilepathComment(textDocument.languageId, path),
+					text ?? '',
+					indentStyle,
+				);
 				action.movePath = moveTo || undefined;
 				this.patch.actions[path] = action;
 				continue;
@@ -239,21 +275,32 @@ export class Parser {
 			path = this.read_str(DELETE_FILE_PREFIX);
 			if (path) {
 				if (this.patch.actions[path]) {
-					throw new DiffError(`Delete File Error: Duplicate Path: ${path}`);
+					throw new DiffError(
+						`Delete File Error: Duplicate Path: ${path}`,
+					);
 				}
 				if (!(path in this.current_files)) {
-					throw new DiffError(`Delete File Error: Missing File: ${path}`);
+					throw new DiffError(
+						`Delete File Error: Missing File: ${path}`,
+					);
 				}
-				this.patch.actions[path] = { type: ActionType.DELETE, chunks: [] };
+				this.patch.actions[path] = {
+					type: ActionType.DELETE,
+					chunks: [],
+				};
 				continue;
 			}
 			path = this.read_str(ADD_FILE_PREFIX);
 			if (path) {
 				if (this.patch.actions[path]) {
-					throw new DiffError(`Add File Error: Duplicate Path: ${path}`);
+					throw new DiffError(
+						`Add File Error: Duplicate Path: ${path}`,
+					);
 				}
 				if (path in this.current_files) {
-					throw new DiffError(`Add File Error: File already exists: ${path}`);
+					throw new DiffError(
+						`Add File Error: File already exists: ${path}`,
+					);
 				}
 				this.patch.actions[path] = this.parse_add_file();
 				continue;
@@ -261,15 +308,24 @@ export class Parser {
 			throw new DiffError(`Unknown Line: ${this.lines[this.index]}`);
 		}
 		if (!this.startswith(PATCH_SUFFIX.trim())) {
-			throw new InvalidPatchFormatError('Missing End Patch', 'missingEndPatch');
+			throw new InvalidPatchFormatError(
+				'Missing End Patch',
+				'missingEndPatch',
+			);
 		}
 		this.index += 1;
 	}
 
-	private parse_update_file(path: string, text: string, targetIndentStyle: IGuessedIndentation): PatchAction {
+	private parse_update_file(
+		path: string,
+		text: string,
+		targetIndentStyle: IGuessedIndentation,
+	): PatchAction {
 		const action: PatchAction = { type: ActionType.UPDATE, chunks: [] };
 		const fileLines = text.split('\n');
-		const replaceExplicitTabsByDefault = !AVOID_EXPLICIT_TABS_REGEX.test(path.trimEnd());
+		const replaceExplicitTabsByDefault = !AVOID_EXPLICIT_TABS_REGEX.test(
+			path.trimEnd(),
+		);
 		let index = 0;
 
 		while (
@@ -284,7 +340,9 @@ export class Parser {
 			const sectionStr = this.read_str(CHUNK_DELIMITER, true);
 			const defStr = sectionStr.slice(CHUNK_DELIMITER.length).trim();
 			if (!(sectionStr || index === 0)) {
-				throw new DiffError(`Invalid line. Consider splitting each change into individual apply_patch tool calls:\n${this.lines[this.index]}`);
+				throw new DiffError(
+					`Invalid line. Consider splitting each change into individual apply_patch tool calls:\n${this.lines[this.index]}`,
+				);
 			}
 			if (defStr) {
 				let found = false;
@@ -338,11 +396,14 @@ export class Parser {
 					!found &&
 					!fileLines
 						.slice(0, index)
-						.some((s) => canonLocal(s.trim()) === canonLocal(defStr))
+						.some(
+							(s) => canonLocal(s.trim()) === canonLocal(defStr),
+						)
 				) {
 					for (let i = index; i < fileLines.length; i++) {
 						if (
-							canonLocal(fileLines[i]!.trim()) === canonLocal(defStr)
+							canonLocal(fileLines[i]!.trim()) ===
+							canonLocal(defStr)
 						) {
 							index = i + 1;
 							this.fuzz += 1;
@@ -353,10 +414,7 @@ export class Parser {
 				}
 			}
 
-			let nextSection = peek_next_section(
-				this.lines,
-				this.index,
-			);
+			let nextSection = peek_next_section(this.lines, this.index);
 
 			let match: FuzzMatch | undefined;
 			for (let i = 0; i <= nextSection.fuzzMerges && !match; i++) {
@@ -390,32 +448,54 @@ export class Parser {
 			if (!match) {
 				const ctxText = nextSection.nextChunkContext.join('\n');
 				if (nextSection.eof) {
-					throw new InvalidContextError(`Invalid EOF context at character ${index}:\n${ctxText}`, text, 'invalidContext-eof');
+					throw new InvalidContextError(
+						`Invalid EOF context at character ${index}:\n${ctxText}`,
+						text,
+						'invalidContext-eof',
+					);
 				} else {
-					const kindForTelemetry = ctxText.match(/^\\t/) ?
-						'invalidContext-maybeInvalidTab' :
-						ctxText.match(/^\\\t/) ?
-							'invalidContext-maybeEscapedTab' :
-							'invalidContext';
-					throw new InvalidContextError(`Invalid context at character ${index}:\n${ctxText}`, text, kindForTelemetry);
+					const kindForTelemetry = ctxText.match(/^\\t/)
+						? 'invalidContext-maybeInvalidTab'
+						: ctxText.match(/^\\\t/)
+							? 'invalidContext-maybeEscapedTab'
+							: 'invalidContext';
+					throw new InvalidContextError(
+						`Invalid context at character ${index}:\n${ctxText}`,
+						text,
+						kindForTelemetry,
+					);
 				}
 			}
 			this.fuzz += match.fuzz;
 			const srcIndentStyle = guessIndentation(
-				nextSection.chunks.flatMap(c => c.insLines).concat(nextSection.nextChunkContext),
+				nextSection.chunks
+					.flatMap((c) => c.insLines)
+					.concat(nextSection.nextChunkContext),
 				targetIndentStyle.tabSize,
-				targetIndentStyle.insertSpaces
+				targetIndentStyle.insertSpaces,
 			);
 
-			const matchedLineIndent = computeIndentLevel2(fileLines[match.line], targetIndentStyle.tabSize);
-			const normalizedNextChunkContext = (match.fuzz & Fuzz.NormalizedExplicitTab)
-				? replace_explicit_tabs(nextSection.nextChunkContext[0])
-				: (match.fuzz & Fuzz.NormalizedExplicitNL)
-					? replace_explicit_nl(nextSection.nextChunkContext[0])
-					: nextSection.nextChunkContext[0];
-			const srcLineIndent = nextSection.nextChunkContext && nextSection.nextChunkContext.length > 0 ?
-				computeIndentLevel2(normalizedNextChunkContext, srcIndentStyle.tabSize) : 0;
-			const additionalIndentation = getIndentationChar(targetIndentStyle).repeat(Math.max(0, matchedLineIndent - srcLineIndent));
+			const matchedLineIndent = computeIndentLevel2(
+				fileLines[match.line],
+				targetIndentStyle.tabSize,
+			);
+			const normalizedNextChunkContext =
+				match.fuzz & Fuzz.NormalizedExplicitTab
+					? replace_explicit_tabs(nextSection.nextChunkContext[0])
+					: match.fuzz & Fuzz.NormalizedExplicitNL
+						? replace_explicit_nl(nextSection.nextChunkContext[0])
+						: nextSection.nextChunkContext[0];
+			const srcLineIndent =
+				nextSection.nextChunkContext &&
+				nextSection.nextChunkContext.length > 0
+					? computeIndentLevel2(
+							normalizedNextChunkContext,
+							srcIndentStyle.tabSize,
+						)
+					: 0;
+			const additionalIndentation = getIndentationChar(
+				targetIndentStyle,
+			).repeat(Math.max(0, matchedLineIndent - srcLineIndent));
 
 			for (const ch of nextSection.chunks) {
 				ch.origIndex += match.line;
@@ -424,11 +504,23 @@ export class Parser {
 					ch.delLines = ch.delLines.map(replace_explicit_nl);
 				}
 
-				if (replaceExplicitTabsByDefault || (match.fuzz & Fuzz.NormalizedExplicitTab)) {
+				if (
+					replaceExplicitTabsByDefault ||
+					match.fuzz & Fuzz.NormalizedExplicitTab
+				) {
 					ch.insLines = ch.insLines.map(replace_explicit_tabs);
 				}
 
-				ch.insLines = ch.insLines.map(ins => isFalsyOrWhitespace(ins) ? ins : additionalIndentation + transformIndentation(ins, srcIndentStyle, targetIndentStyle));
+				ch.insLines = ch.insLines.map((ins) =>
+					isFalsyOrWhitespace(ins)
+						? ins
+						: additionalIndentation +
+							transformIndentation(
+								ins,
+								srcIndentStyle,
+								targetIndentStyle,
+							),
+				);
 
 				if (match.fuzz & Fuzz.NormalizedExplicitTab) {
 					ch.delLines = ch.delLines.map(replace_explicit_tabs);
@@ -454,7 +546,10 @@ export class Parser {
 		) {
 			const s = this.read_str();
 			if (!s.startsWith(HUNK_ADD_LINE_PREFIX)) {
-				throw new InvalidPatchFormatError(`Invalid Add File Line: ${s}`, 'invalidAddFileLine');
+				throw new InvalidPatchFormatError(
+					`Invalid Add File Line: ${s}`,
+					'invalidAddFileLine',
+				);
 			}
 			lines.push(s.slice(1));
 		}
@@ -467,7 +562,7 @@ export class Parser {
 }
 
 export function replace_explicit_tabs(s: string) {
-	return s.replace(/^(?:\s|\\t|\/|#)*/gm, r => r.replaceAll('\\t', '\t'));
+	return s.replace(/^(?:\s|\\t|\/|#)*/gm, (r) => r.replaceAll('\\t', '\t'));
 }
 
 export function replace_explicit_nl(s: string) {
@@ -535,7 +630,6 @@ function find_context_core(
 		return { line: start, fuzz: Fuzz.None };
 	}
 
-
 	// Pass 1 – exact equality after canonicalisation ---------------------------
 	const ctxPass1 = canon(context.join('\n'));
 	const workingLines = lines.map(canon);
@@ -547,7 +641,10 @@ function find_context_core(
 	}
 
 	// Pass 2 – ignore trailing whitespace -------------------------------------
-	const ctxPass2 = ctxPass1.split('\n').map(l => l.trimEnd()).join('\n');
+	const ctxPass2 = ctxPass1
+		.split('\n')
+		.map((l) => l.trimEnd())
+		.join('\n');
 	let fuzz = Fuzz.IgnoredTrailingWhitespace;
 	for (let i = start; i < workingLines.length; i++) {
 		workingLines[i] = workingLines[i].trimEnd();
@@ -563,27 +660,43 @@ function find_context_core(
 	if (ctxPass3 !== ctxPass2) {
 		fuzz |= Fuzz.NormalizedExplicitTab;
 		for (let i = start; i < lines.length; i++) {
-			if (workingLines.slice(i, i + context.length).join('\n') === ctxPass3) {
+			if (
+				workingLines.slice(i, i + context.length).join('\n') ===
+				ctxPass3
+			) {
 				return { line: i, fuzz };
 			}
 		}
 	}
 
 	// Pass 4 normalize explicit \\t and \\n tab chars -------------------------
-	if (context.length === 1) { // https://github.com/microsoft/vscode/issues/253960
+	if (context.length === 1) {
+		// https://github.com/microsoft/vscode/issues/253960
 		const ctxPass4 = replace_explicit_nl(ctxPass3);
 		if (ctxPass4 !== ctxPass3) {
 			const newContextLines = count(ctxPass4, '\n') + 1;
 			for (let i = start; i < lines.length; i++) {
-				if (workingLines.slice(i, i + newContextLines).join('\n') === ctxPass4) {
-					return { line: i, fuzz: fuzz | Fuzz.NormalizedExplicitNL | Fuzz.NormalizedExplicitTab };
+				if (
+					workingLines.slice(i, i + newContextLines).join('\n') ===
+					ctxPass4
+				) {
+					return {
+						line: i,
+						fuzz:
+							fuzz |
+							Fuzz.NormalizedExplicitNL |
+							Fuzz.NormalizedExplicitTab,
+					};
 				}
 			}
 		}
 	}
 
 	// Pass 5 – ignore all surrounding whitespace ------------------------------
-	const ctxPass5 = ctxPass3.split('\n').map(l => l.trim()).join('\n');
+	const ctxPass5 = ctxPass3
+		.split('\n')
+		.map((l) => l.trim())
+		.join('\n');
 	fuzz |= Fuzz.IgnoredWhitespace;
 	for (let i = start; i < workingLines.length; i++) {
 		workingLines[i] = workingLines[i].trimStart();
@@ -595,14 +708,23 @@ function find_context_core(
 	}
 
 	// Pass 5 - within edit distance while ignoring surrounding whitespace -----
-	const maxDistance = Math.floor(context.length * EDIT_DISTANCE_ALLOWANCE_PER_LINE);
+	const maxDistance = Math.floor(
+		context.length * EDIT_DISTANCE_ALLOWANCE_PER_LINE,
+	);
 	fuzz |= Fuzz.EditDistanceMatch;
 	if (maxDistance > 0) {
 		const ctxPass6 = ctxPass5.split('\n');
 		for (let i = start; i < lines.length; i++) {
 			let totalDistance = 0;
-			for (let j = 0; j < ctxPass6.length && totalDistance < maxDistance; j++) {
-				totalDistance += computeLevenshteinDistance(workingLines[i + j], ctxPass6[j]);
+			for (
+				let j = 0;
+				j < ctxPass6.length && totalDistance < maxDistance;
+				j++
+			) {
+				totalDistance += computeLevenshteinDistance(
+					workingLines[i + j],
+					ctxPass6[j],
+				);
 			}
 			if (totalDistance <= maxDistance) {
 				return { line: i, fuzz };
@@ -658,7 +780,13 @@ function peek_next_section(
 	lines: Array<string>,
 	initialIndex: number,
 	fuzzMerge = 0,
-): { nextChunkContext: Array<string>; chunks: Array<Chunk>; endPatchIndex: number; eof: boolean; fuzzMerges: number } {
+): {
+	nextChunkContext: Array<string>;
+	chunks: Array<Chunk>;
+	endPatchIndex: number;
+	eof: boolean;
+	fuzzMerges: number;
+} {
 	const enum Mode {
 		Add,
 		Delete,
@@ -684,7 +812,11 @@ function peek_next_section(
 				END_OF_FILE_PREFIX,
 			].some((p) => s.startsWith(p.trim()))
 		) {
-			if (mode === Mode.Keep && old.length && !/\S/.test(old[old.length - 1])) {
+			if (
+				mode === Mode.Keep &&
+				old.length &&
+				!/\S/.test(old[old.length - 1])
+			) {
 				// @connor4312: If the last line is context and empty, remove it. Example
 				// input adds an extra newline between `@@`-delimited sections which
 				// cause matching to fail if preserved.
@@ -696,7 +828,10 @@ function peek_next_section(
 			break;
 		}
 		if (s.startsWith('***')) {
-			throw new InvalidPatchFormatError(`Invalid Line: ${s}`, 'invalidLine');
+			throw new InvalidPatchFormatError(
+				`Invalid Line: ${s}`,
+				'invalidLine',
+			);
 		}
 		index += 1;
 		const lastMode: Mode = mode;
@@ -712,7 +847,12 @@ function peek_next_section(
 			// the model sometimes doesn't fully adhere to the spec and returns lines without leading
 			// whitespace for context lines.
 			const nextLine = lines[index];
-			const nextOp = nextLine?.[0] === HUNK_ADD_LINE_PREFIX ? Mode.Add : nextLine?.[0] === HUNK_DELETE_LINE_PREFIX ? Mode.Delete : Mode.Keep;
+			const nextOp =
+				nextLine?.[0] === HUNK_ADD_LINE_PREFIX
+					? Mode.Add
+					: nextLine?.[0] === HUNK_DELETE_LINE_PREFIX
+						? Mode.Delete
+						: Mode.Keep;
 			const canFuzz = mode !== Mode.Keep && nextOp === mode;
 
 			mode = Mode.Keep;
@@ -759,10 +899,22 @@ function peek_next_section(
 	}
 	if (index < lines.length && lines[index] === END_OF_FILE_PREFIX) {
 		index += 1;
-		return { nextChunkContext: old, chunks, endPatchIndex: index, eof: true, fuzzMerges: fuzzMergeNo };
+		return {
+			nextChunkContext: old,
+			chunks,
+			endPatchIndex: index,
+			eof: true,
+			fuzzMerges: fuzzMergeNo,
+		};
 	}
 
-	return { nextChunkContext: old, chunks, endPatchIndex: index, eof: false, fuzzMerges: fuzzMergeNo };
+	return {
+		nextChunkContext: old,
+		chunks,
+		endPatchIndex: index,
+		eof: false,
+		fuzzMerges: fuzzMergeNo,
+	};
 }
 
 // -----------------------------------------------------------------------------
@@ -775,11 +927,17 @@ export function text_to_patch(
 ): [Patch, number] {
 	const lines = text.trim().split('\n');
 	if (lines.length < 2) {
-		throw new InvalidPatchFormatError('Invalid patch text', 'invalidPatchText');
+		throw new InvalidPatchFormatError(
+			'Invalid patch text',
+			'invalidPatchText',
+		);
 	}
 	const patchPrefix = PATCH_PREFIX.trim();
 	if (!(lines[0] ?? '').startsWith(patchPrefix)) {
-		throw new InvalidPatchFormatError(`Invalid patch text. Patch must start with ${patchPrefix}.`, 'invalidPatchTextPrefix');
+		throw new InvalidPatchFormatError(
+			`Invalid patch text. Patch must start with ${patchPrefix}.`,
+			'invalidPatchTextPrefix',
+		);
 	}
 	const patchSuffix = PATCH_SUFFIX.trim();
 	if (lines[lines.length - 1] !== patchSuffix) {
@@ -910,9 +1068,12 @@ export function patch_to_commit(
 
 export async function load_files(
 	paths: Array<string>,
-	openFn: (p: string) => Promise<AbstractDocumentWithLanguageId | TextDocument>,
+	openFn: (
+		p: string,
+	) => Promise<AbstractDocumentWithLanguageId | TextDocument>,
 ): Promise<Record<string, AbstractDocumentWithLanguageId | TextDocument>> {
-	const orig: Record<string, AbstractDocumentWithLanguageId | TextDocument> = {};
+	const orig: Record<string, AbstractDocumentWithLanguageId | TextDocument> =
+		{};
 	for (const p of paths) {
 		try {
 			orig[p] = await openFn(p);
@@ -948,10 +1109,15 @@ export function apply_commit(
 
 export async function processPatch(
 	text: string,
-	openFn: (p: string) => Promise<AbstractDocumentWithLanguageId | TextDocument>,
+	openFn: (
+		p: string,
+	) => Promise<AbstractDocumentWithLanguageId | TextDocument>,
 ): Promise<Commit> {
 	if (!text.startsWith(PATCH_PREFIX)) {
-		throw new InvalidPatchFormatError('Patch must start with *** Begin Patch\\n', 'patchMustStartWithBeginPatch');
+		throw new InvalidPatchFormatError(
+			'Patch must start with *** Begin Patch\\n',
+			'patchMustStartWithBeginPatch',
+		);
 	}
 	const paths = identify_files_needed(text);
 	const orig = await load_files(paths, openFn);

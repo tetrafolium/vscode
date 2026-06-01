@@ -89,10 +89,13 @@ suite('Test Multiple Snippet Selection', function () {
 		 * We expect only 1 match from line 0 to 60. WIth no selection option, we expect the best match to be returned.
 		 */
 		const options: SimilarFilesOptions = defaultSimilarFilesOptions;
-		const snippetLocationsTop1 = (await getSimilarSnippets(fixedWinDoc, fixedWinSimilarFiles, options)).map(
-			snippet => [snippet.startLine, snippet.endLine]
-		);
+		const snippetLocationsTop1 = (
+			await getSimilarSnippets(fixedWinDoc, fixedWinSimilarFiles, options)
+		).map((snippet) => [snippet.startLine, snippet.endLine]);
 		const correctSnippetLocations: number[][] = [[0, 60]];
-		assert.deepStrictEqual(snippetLocationsTop1.sort(), correctSnippetLocations.sort());
+		assert.deepStrictEqual(
+			snippetLocationsTop1.sort(),
+			correctSnippetLocations.sort(),
+		);
 	});
 });

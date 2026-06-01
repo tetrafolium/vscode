@@ -4,11 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ICopilotTokenStore } from '../../../platform/authentication/common/copilotTokenStore';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { IFileSystemService } from '../../../platform/filesystem/common/fileSystemService';
 import { IGitDiffService } from '../../../platform/git/common/gitDiffService';
 import { IGitExtensionService } from '../../../platform/git/common/gitExtensionService';
-import { getOrderedRepoInfosFromContext, IGitService, normalizeFetchUrl, RepoContext, ResolvedRepoRemoteInfo } from '../../../platform/git/common/gitService';
+import {
+	getOrderedRepoInfosFromContext,
+	IGitService,
+	normalizeFetchUrl,
+	RepoContext,
+	ResolvedRepoRemoteInfo,
+} from '../../../platform/git/common/gitService';
 import { Change, Repository } from '../../../platform/git/vscode/git';
 import { ILogService } from '../../../platform/log/common/logService';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
@@ -53,7 +62,15 @@ const MAX_MERGE_BASE_AGE_DAYS = 30;
 const MAX_DIFF_COMMITS = 30;
 
 // EVENT: repoInfo
-type RepoInfoTelemetryResult = 'success' | 'filesChanged' | 'diffTooLarge' | 'noChanges' | 'tooManyChanges' | 'mergeBaseTooOld' | 'virtualFileSystem' | 'tooManyCommits';
+type RepoInfoTelemetryResult =
+	| 'success'
+	| 'filesChanged'
+	| 'diffTooLarge'
+	| 'noChanges'
+	| 'tooManyChanges'
+	| 'mergeBaseTooOld'
+	| 'virtualFileSystem'
+	| 'tooManyCommits';
 
 type RepoInfoTelemetryProperties = {
 	remoteUrl: string | undefined;
@@ -83,37 +100,47 @@ type RepoInfoInternalTelemetryProperties = RepoInfoTelemetryProperties & {
 };
 
 // Only send ending telemetry on states where we capture repo info or no changes currently
-function shouldSendEndTelemetry(result: RepoInfoTelemetryResult | undefined): boolean {
+function shouldSendEndTelemetry(
+	result: RepoInfoTelemetryResult | undefined,
+): boolean {
 	return result === 'success' || result === 'noChanges';
 }
 
 /*
-* Handles sending telemetry about the current git repository.
-* Repo metadata and diffsJSON are sent via sendEnhancedGHTelemetryEvent.
-* Full repo info is additionally sent for internal users via sendInternalMSFTTelemetryEvent.
-*/
+ * Handles sending telemetry about the current git repository.
+ * Repo metadata and diffsJSON are sent via sendEnhancedGHTelemetryEvent.
+ * Full repo info is additionally sent for internal users via sendInternalMSFTTelemetryEvent.
+ */
 export class RepoInfoTelemetry {
 	private _beginTelemetrySent = false;
-	private _beginTelemetryPromise: Promise<RepoInfoTelemetryData | undefined> | undefined;
+	private _beginTelemetryPromise:
+		| Promise<RepoInfoTelemetryData | undefined>
+		| undefined;
 	private _beginTelemetryResult: RepoInfoTelemetryResult | undefined;
 
 	constructor(
 		private readonly _telemetryMessageId: string,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
 		@IGitService private readonly _gitService: IGitService,
 		@IGitDiffService private readonly _gitDiffService: IGitDiffService,
-		@IGitExtensionService private readonly _gitExtensionService: IGitExtensionService,
+		@IGitExtensionService
+		private readonly _gitExtensionService: IGitExtensionService,
 		@ILogService private readonly _logService: ILogService,
-		@IFileSystemService private readonly _fileSystemService: IFileSystemService,
-		@IWorkspaceFileIndex private readonly _workspaceFileIndex: IWorkspaceFileIndex,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@ICopilotTokenStore private readonly _copilotTokenStore: ICopilotTokenStore,
-	) { }
+		@IFileSystemService
+		private readonly _fileSystemService: IFileSystemService,
+		@IWorkspaceFileIndex
+		private readonly _workspaceFileIndex: IWorkspaceFileIndex,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@ICopilotTokenStore
+		private readonly _copilotTokenStore: ICopilotTokenStore,
+	) {}
 
 	/*
-	* Sends the begin event telemetry, make sure to only send one time, as multiple PanelChatTelemetry instances
-	* are created per user request.
-	*/
+	 * Sends the begin event telemetry, make sure to only send one time, as multiple PanelChatTelemetry instances
+	 * are created per user request.
+	 */
 	public async sendBeginTelemetryIfNeeded(): Promise<void> {
 		if (this._beginTelemetrySent) {
 			// Already sent or in progress
@@ -127,13 +154,15 @@ export class RepoInfoTelemetry {
 			const gitInfo = await this._beginTelemetryPromise;
 			this._beginTelemetryResult = gitInfo?.properties.result;
 		} catch (error) {
-			this._logService.warn(`Failed to send begin repo info telemetry ${error}`);
+			this._logService.warn(
+				`Failed to send begin repo info telemetry ${error}`,
+			);
 		}
 	}
 
 	/*
-	* Sends the end event telemetry
-	*/
+	 * Sends the end event telemetry
+	 */
 	public async sendEndTelemetry(): Promise<void> {
 		await this._beginTelemetryPromise;
 
@@ -145,12 +174,20 @@ export class RepoInfoTelemetry {
 		try {
 			await this._sendRepoInfoTelemetry('end');
 		} catch (error) {
-			this._logService.warn(`Failed to send end repo info telemetry ${error}`);
+			this._logService.warn(
+				`Failed to send end repo info telemetry ${error}`,
+			);
 		}
 	}
 
-	private async _sendRepoInfoTelemetry(location: 'begin' | 'end'): Promise<RepoInfoTelemetryData | undefined> {
-		if (this._configurationService.getConfig(ConfigKey.TeamInternal.DisableRepoInfoTelemetry)) {
+	private async _sendRepoInfoTelemetry(
+		location: 'begin' | 'end',
+	): Promise<RepoInfoTelemetryData | undefined> {
+		if (
+			this._configurationService.getConfig(
+				ConfigKey.TeamInternal.DisableRepoInfoTelemetry,
+			)
+		) {
 			return undefined;
 		}
 
@@ -162,26 +199,49 @@ export class RepoInfoTelemetry {
 		const internalProperties: RepoInfoInternalTelemetryProperties = {
 			...repoInfo.properties,
 			location,
-			telemetryMessageId: this._telemetryMessageId
+			telemetryMessageId: this._telemetryMessageId,
 		};
 
 		const isInternal = !!this._copilotTokenStore.copilotToken?.isInternal;
 		if (isInternal) {
-			const { headBranchName: _, fileRelativePaths: _2, ...msftProperties } = internalProperties;
-			this._telemetryService.sendInternalMSFTTelemetryEvent('request.repoInfo', msftProperties, repoInfo.measurements);
+			const {
+				headBranchName: _,
+				fileRelativePaths: _2,
+				...msftProperties
+			} = internalProperties;
+			this._telemetryService.sendInternalMSFTTelemetryEvent(
+				'request.repoInfo',
+				msftProperties,
+				repoInfo.measurements,
+			);
 		}
-		this._telemetryService.sendEnhancedGHTelemetryEvent('request.repoInfo', internalProperties, repoInfo.measurements);
+		this._telemetryService.sendEnhancedGHTelemetryEvent(
+			'request.repoInfo',
+			internalProperties,
+			repoInfo.measurements,
+		);
 
 		return repoInfo;
 	}
 
-	private async _resolveRepoContext(): Promise<{ repoContext: RepoContext; repoInfo: ResolvedRepoRemoteInfo; repository: Repository; upstreamCommit: string; headBranchName: string | undefined } | undefined> {
+	private async _resolveRepoContext(): Promise<
+		| {
+				repoContext: RepoContext;
+				repoInfo: ResolvedRepoRemoteInfo;
+				repository: Repository;
+				upstreamCommit: string;
+				headBranchName: string | undefined;
+		  }
+		| undefined
+	> {
 		const repoContext = this._gitService.activeRepository?.get();
 		if (!repoContext) {
 			return;
 		}
 
-		const repoInfo = Array.from(getOrderedRepoInfosFromContext(repoContext))[0];
+		const repoInfo = Array.from(
+			getOrderedRepoInfosFromContext(repoContext),
+		)[0];
 		if (!repoInfo || !repoInfo.fetchUrl) {
 			return;
 		}
@@ -192,7 +252,10 @@ export class RepoInfoTelemetry {
 			return;
 		}
 
-		let upstreamCommit = await repository.getMergeBase('HEAD', '@{upstream}');
+		let upstreamCommit = await repository.getMergeBase(
+			'HEAD',
+			'@{upstream}',
+		);
 		if (!upstreamCommit) {
 			const baseBranch = await repository.getBranchBase('HEAD');
 			if (baseBranch) {
@@ -206,19 +269,35 @@ export class RepoInfoTelemetry {
 		}
 
 		const headBranchName = repository.state.HEAD?.name;
-		return { repoContext, repoInfo, repository, upstreamCommit, headBranchName };
+		return {
+			repoContext,
+			repoInfo,
+			repository,
+			upstreamCommit,
+			headBranchName,
+		};
 	}
 
-	private async _getRepoInfoTelemetry(): Promise<RepoInfoTelemetryData | undefined> {
+	private async _getRepoInfoTelemetry(): Promise<
+		RepoInfoTelemetryData | undefined
+	> {
 		const ctx = await this._resolveRepoContext();
 		if (!ctx) {
 			return;
 		}
 
-		const { repoContext, repoInfo, repository, upstreamCommit, headBranchName } = ctx;
+		const {
+			repoContext,
+			repoInfo,
+			repository,
+			upstreamCommit,
+			headBranchName,
+		} = ctx;
 		const normalizedFetchUrl = normalizeFetchUrl(repoInfo.fetchUrl!);
 
-		const skipDiffResult = (result: RepoInfoTelemetryResult): RepoInfoTelemetryData => ({
+		const skipDiffResult = (
+			result: RepoInfoTelemetryResult,
+		): RepoInfoTelemetryData => ({
 			properties: {
 				remoteUrl: normalizedFetchUrl,
 				repoId: repoInfo.repoId.toString(),
@@ -233,7 +312,7 @@ export class RepoInfoTelemetry {
 				workspaceFileCount: 0,
 				changedFileCount: 0,
 				diffSizeBytes: 0,
-			}
+			},
 		});
 
 		// VFS and sparse checkout enlistments are unlikely to have all blobs available locally,
@@ -242,10 +321,17 @@ export class RepoInfoTelemetry {
 		// core.sparsecheckout is a git boolean: true/yes/on/1 are truthy per git-config spec.
 		// If we can't determine the config, skip to be safe.
 		try {
-			const virtualFileSystem = await repository.getConfig('core.virtualfilesystem');
-			const sparseCheckout = await repository.getConfig('core.sparsecheckout');
+			const virtualFileSystem = await repository.getConfig(
+				'core.virtualfilesystem',
+			);
+			const sparseCheckout = await repository.getConfig(
+				'core.sparsecheckout',
+			);
 			const GIT_TRUE_VALUES = new Set(['true', 'yes', 'on', '1']);
-			if (virtualFileSystem || GIT_TRUE_VALUES.has(sparseCheckout.toLowerCase())) {
+			if (
+				virtualFileSystem ||
+				GIT_TRUE_VALUES.has(sparseCheckout.toLowerCase())
+			) {
 				return skipDiffResult('virtualFileSystem');
 			}
 		} catch {
@@ -258,7 +344,8 @@ export class RepoInfoTelemetry {
 		try {
 			const mergeBaseCommit = await repository.getCommit(upstreamCommit);
 			const ageDays = mergeBaseCommit.commitDate
-				? (Date.now() - mergeBaseCommit.commitDate.getTime()) / (1000 * 60 * 60 * 24)
+				? (Date.now() - mergeBaseCommit.commitDate.getTime()) /
+					(1000 * 60 * 60 * 24)
 				: undefined;
 
 			if (ageDays === undefined || ageDays > MAX_MERGE_BASE_AGE_DAYS) {
@@ -272,7 +359,10 @@ export class RepoInfoTelemetry {
 		// Extensive renames can make even the check for number of changed files expensive, and we are likely to have
 		// too big a diff to log anyways
 		try {
-			const commitLog = await repository.log({ range: `${upstreamCommit}..HEAD`, maxEntries: MAX_DIFF_COMMITS });
+			const commitLog = await repository.log({
+				range: `${upstreamCommit}..HEAD`,
+				maxEntries: MAX_DIFF_COMMITS,
+			});
 			if (commitLog.length >= MAX_DIFF_COMMITS) {
 				return skipDiffResult('tooManyCommits');
 			}
@@ -285,12 +375,21 @@ export class RepoInfoTelemetry {
 		// as a failure without a diffs
 		const watcher = this._fileSystemService.createFileSystemWatcher('**/*');
 		let filesChanged = false;
-		const createDisposable = watcher.onDidCreate(() => filesChanged = true);
-		const changeDisposable = watcher.onDidChange(() => filesChanged = true);
-		const deleteDisposable = watcher.onDidDelete(() => filesChanged = true);
+		const createDisposable = watcher.onDidCreate(
+			() => (filesChanged = true),
+		);
+		const changeDisposable = watcher.onDidChange(
+			() => (filesChanged = true),
+		);
+		const deleteDisposable = watcher.onDidDelete(
+			() => (filesChanged = true),
+		);
 
 		try {
-			const baseProperties: Omit<RepoInfoTelemetryProperties, 'diffsJSON' | 'fileRelativePaths' | 'result'> = {
+			const baseProperties: Omit<
+				RepoInfoTelemetryProperties,
+				'diffsJSON' | 'fileRelativePaths' | 'result'
+			> = {
 				remoteUrl: normalizedFetchUrl,
 				repoId: repoInfo.repoId.toString(),
 				repoType: repoInfo.repoId.type,
@@ -310,7 +409,11 @@ export class RepoInfoTelemetry {
 
 			// Combine our diff against the upstream commit with untracked changes, and working tree changes
 			// A change like a new untracked file could end up in either the untracked or working tree changes and won't be in the diffWith.
-			const diffChanges = await this._gitService.diffWith(repoContext.rootUri, upstreamCommit) ?? [];
+			const diffChanges =
+				(await this._gitService.diffWith(
+					repoContext.rootUri,
+					upstreamCommit,
+				)) ?? [];
 
 			const changeMap = new Map<string, Change>();
 
@@ -333,8 +436,13 @@ export class RepoInfoTelemetry {
 
 			if (!changes || changes.length === 0) {
 				return {
-					properties: { ...baseProperties, fileRelativePaths: undefined, diffsJSON: undefined, result: 'noChanges' },
-					measurements
+					properties: {
+						...baseProperties,
+						fileRelativePaths: undefined,
+						diffsJSON: undefined,
+						result: 'noChanges',
+					},
+					measurements,
 				};
 			}
 			measurements.changedFileCount = changes.length;
@@ -342,25 +450,43 @@ export class RepoInfoTelemetry {
 			// Check if there are too many changes (e.g., mass renames)
 			if (changes.length > MAX_CHANGES) {
 				return {
-					properties: { ...baseProperties, fileRelativePaths: undefined, diffsJSON: undefined, result: 'tooManyChanges' },
-					measurements
+					properties: {
+						...baseProperties,
+						fileRelativePaths: undefined,
+						diffsJSON: undefined,
+						result: 'tooManyChanges',
+					},
+					measurements,
 				};
 			}
 
 			// Check if files changed during the git diff operation
 			if (filesChanged) {
 				return {
-					properties: { ...baseProperties, fileRelativePaths: undefined, diffsJSON: undefined, result: 'filesChanged' },
-					measurements
+					properties: {
+						...baseProperties,
+						fileRelativePaths: undefined,
+						diffsJSON: undefined,
+						result: 'filesChanged',
+					},
+					measurements,
 				};
 			}
 
-			const diffs = (await this._gitDiffService.getWorkingTreeDiffsFromRef(repoContext.rootUri, changes, upstreamCommit)).map(diff => {
+			const diffs = (
+				await this._gitDiffService.getWorkingTreeDiffsFromRef(
+					repoContext.rootUri,
+					changes,
+					upstreamCommit,
+				)
+			).map((diff) => {
 				return {
 					uri: diff.uri.toString(),
 					originalUri: diff.originalUri.toString(),
 					renameUri: diff.renameUri?.toString(),
-					status: STATUS_TO_STRING[diff.status] ?? `UNKNOWN_${diff.status}`,
+					status:
+						STATUS_TO_STRING[diff.status] ??
+						`UNKNOWN_${diff.status}`,
 					diff: diff.diff,
 				};
 			});
@@ -368,20 +494,33 @@ export class RepoInfoTelemetry {
 			// Check if files changed during the individual file diffs
 			if (filesChanged) {
 				return {
-					properties: { ...baseProperties, fileRelativePaths: undefined, diffsJSON: undefined, result: 'filesChanged' },
-					measurements
+					properties: {
+						...baseProperties,
+						fileRelativePaths: undefined,
+						diffsJSON: undefined,
+						result: 'filesChanged',
+					},
+					measurements,
 				};
 			}
 
 			const rootUri = repoContext.rootUri;
 			const fileRelativePaths = JSON.stringify(
 				changes
-					.filter(c => extUriBiasedIgnorePathCase.isEqualOrParent(c.uri, rootUri))
-					.map(c => extUriBiasedIgnorePathCase.relativePath(rootUri, c.uri))
-					.filter((p): p is string => p !== undefined)
+					.filter((c) =>
+						extUriBiasedIgnorePathCase.isEqualOrParent(
+							c.uri,
+							rootUri,
+						),
+					)
+					.map((c) =>
+						extUriBiasedIgnorePathCase.relativePath(rootUri, c.uri),
+					)
+					.filter((p): p is string => p !== undefined),
 			);
 
-			const diffsJSON = diffs.length > 0 ? JSON.stringify(diffs) : undefined;
+			const diffsJSON =
+				diffs.length > 0 ? JSON.stringify(diffs) : undefined;
 
 			// Check against our size limit to make sure our telemetry fits in the 1MB limit
 			if (diffsJSON) {
@@ -390,15 +529,25 @@ export class RepoInfoTelemetry {
 
 				if (diffSizeBytes > MAX_DIFFS_JSON_SIZE) {
 					return {
-						properties: { ...baseProperties, fileRelativePaths, diffsJSON: undefined, result: 'diffTooLarge' },
-						measurements
+						properties: {
+							...baseProperties,
+							fileRelativePaths,
+							diffsJSON: undefined,
+							result: 'diffTooLarge',
+						},
+						measurements,
 					};
 				}
 			}
 
 			return {
-				properties: { ...baseProperties, fileRelativePaths, diffsJSON, result: 'success' },
-				measurements
+				properties: {
+					...baseProperties,
+					fileRelativePaths,
+					diffsJSON,
+					result: 'success',
+				},
+				measurements,
 			};
 		} finally {
 			createDisposable.dispose();

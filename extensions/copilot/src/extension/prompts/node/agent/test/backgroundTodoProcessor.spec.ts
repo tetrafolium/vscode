@@ -4,14 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, test } from 'vitest';
-import { BackgroundTodoProcessor, BackgroundTodoProcessorState, IBackgroundTodoExecutionContext, IBackgroundTodoResult } from '../backgroundTodoProcessor';
+import {
+	BackgroundTodoProcessor,
+	BackgroundTodoProcessorState,
+	IBackgroundTodoExecutionContext,
+	IBackgroundTodoResult,
+} from '../backgroundTodoProcessor';
 import { IBackgroundTodoDelta } from '../backgroundTodoDelta';
 import { CancellationTokenSource } from '../../../../../util/vs/base/common/cancellation';
 
 function makeDelta(rounds: string[] = []): IBackgroundTodoDelta {
 	return {
 		userRequest: 'fix the bug',
-		newRounds: rounds.map(id => ({
+		newRounds: rounds.map((id) => ({
 			id,
 			response: '',
 			toolInputRetry: 0,
@@ -43,30 +48,42 @@ function makeLogService(logMessages?: string[]) {
 	} as any;
 }
 
-function makeExecutionContext(rounds: string[] = [], options: IExecutionContextTestOptions = {}): IBackgroundTodoExecutionContext {
+function makeExecutionContext(
+	rounds: string[] = [],
+	options: IExecutionContextTestOptions = {},
+): IBackgroundTodoExecutionContext {
 	return {
 		instantiationService: {
 			invokeFunction: async () => {
 				if (options.endpointDelayMs !== undefined) {
-					await new Promise(resolve => setTimeout(resolve, options.endpointDelayMs));
+					await new Promise((resolve) =>
+						setTimeout(resolve, options.endpointDelayMs),
+					);
 				}
 				throw new Error('no endpoint');
-			}
+			},
 		} as any,
 		logService: makeLogService(options.logMessages),
 		toolsService: { invokeTool: async () => undefined } as any,
-		telemetryService: { sendMSFTTelemetryEvent: (eventName: string) => options.telemetryEvents?.push(eventName) } as any,
+		telemetryService: {
+			sendMSFTTelemetryEvent: (eventName: string) =>
+				options.telemetryEvents?.push(eventName),
+		} as any,
 		promptContext: {
 			query: 'fix the bug',
 			history: [],
 			chatVariables: { hasVariables: () => false } as any,
-			toolCallRounds: rounds.map(id => ({ id, response: '', toolInputRetry: 0, toolCalls: [] })),
+			toolCallRounds: rounds.map((id) => ({
+				id,
+				response: '',
+				toolInputRetry: 0,
+				toolCalls: [],
+			})),
 		} as any,
 	};
 }
 
 describe('BackgroundTodoProcessor', () => {
-
 	test('initial state is Idle', () => {
 		const processor = new BackgroundTodoProcessor();
 		expect(processor.state).toBe(BackgroundTodoProcessorState.Idle);
@@ -98,12 +115,21 @@ describe('BackgroundTodoProcessor', () => {
 
 		// The delta tracker should now have r1 marked as processed
 		// So a context with only r1 should produce no new delta
-		expect(processor.deltaTracker.getDelta({
-			query: 'fix',
-			history: [],
-			chatVariables: { hasVariables: () => false } as any,
-			toolCallRounds: [{ id: 'r1', response: '', toolInputRetry: 0, toolCalls: [] }],
-		})).toBeUndefined();
+		expect(
+			processor.deltaTracker.getDelta({
+				query: 'fix',
+				history: [],
+				chatVariables: { hasVariables: () => false } as any,
+				toolCallRounds: [
+					{
+						id: 'r1',
+						response: '',
+						toolInputRetry: 0,
+						toolCalls: [],
+					},
+				],
+			}),
+		).toBeUndefined();
 	});
 
 	test('delta cursor does NOT advance on failure (retryable)', async () => {
@@ -114,25 +140,48 @@ describe('BackgroundTodoProcessor', () => {
 		await processor.waitForCompletion();
 
 		// r1 should NOT be marked processed on failure — a later pass can retry
-		expect(processor.deltaTracker.getDelta({
-			query: 'fix',
-			history: [],
-			chatVariables: { hasVariables: () => false } as any,
-			toolCallRounds: [{ id: 'r1', response: '', toolInputRetry: 0, toolCalls: [] }],
-		})).toBeDefined();
+		expect(
+			processor.deltaTracker.getDelta({
+				query: 'fix',
+				history: [],
+				chatVariables: { hasVariables: () => false } as any,
+				toolCallRounds: [
+					{
+						id: 'r1',
+						response: '',
+						toolInputRetry: 0,
+						toolCalls: [],
+					},
+				],
+			}),
+		).toBeDefined();
 	});
 
 	test('delta cursor does NOT advance when advanceCursor is false', async () => {
 		const processor = new BackgroundTodoProcessor();
-		processor.start(makeDelta(['r1']), async () => ({ outcome: 'success' }), undefined, false);
+		processor.start(
+			makeDelta(['r1']),
+			async () => ({ outcome: 'success' }),
+			undefined,
+			false,
+		);
 		await processor.waitForCompletion();
 
-		expect(processor.deltaTracker.getDelta({
-			query: 'fix',
-			history: [],
-			chatVariables: { hasVariables: () => false } as any,
-			toolCallRounds: [{ id: 'r1', response: '', toolInputRetry: 0, toolCalls: [] }],
-		})).toBeDefined();
+		expect(
+			processor.deltaTracker.getDelta({
+				query: 'fix',
+				history: [],
+				chatVariables: { hasVariables: () => false } as any,
+				toolCallRounds: [
+					{
+						id: 'r1',
+						response: '',
+						toolInputRetry: 0,
+						toolCalls: [],
+					},
+				],
+			}),
+		).toBeDefined();
 	});
 
 	test('coalesces concurrent updates', async () => {
@@ -142,7 +191,7 @@ describe('BackgroundTodoProcessor', () => {
 		// Start a pass that will be slow
 		processor.start(makeDelta(['r1']), async () => {
 			workCallCount++;
-			await new Promise(resolve => setTimeout(resolve, 50));
+			await new Promise((resolve) => setTimeout(resolve, 50));
 			return { outcome: 'success' };
 		});
 
@@ -164,7 +213,10 @@ describe('BackgroundTodoProcessor', () => {
 
 	test('requestRegularPass skips queued work when only in-flight rounds were present', async () => {
 		const telemetryEvents: string[] = [];
-		const context = makeExecutionContext(['r1'], { endpointDelayMs: 20, telemetryEvents });
+		const context = makeExecutionContext(['r1'], {
+			endpointDelayMs: 20,
+			telemetryEvents,
+		});
 		const processor = new BackgroundTodoProcessor();
 
 		processor.requestRegularPass(makeDelta(['r1']), context);
@@ -174,7 +226,9 @@ describe('BackgroundTodoProcessor', () => {
 		expect({
 			state: processor.state,
 			telemetryEventCount: telemetryEvents.length,
-			hasRemainingDelta: processor.deltaTracker.getDelta(context.promptContext) !== undefined,
+			hasRemainingDelta:
+				processor.deltaTracker.getDelta(context.promptContext) !==
+				undefined,
 		}).toEqual({
 			state: BackgroundTodoProcessorState.Idle,
 			telemetryEventCount: 1,
@@ -186,14 +240,14 @@ describe('BackgroundTodoProcessor', () => {
 		const processor = new BackgroundTodoProcessor();
 		let completed = false;
 		processor.start(makeDelta(['r1']), async () => {
-			await new Promise(resolve => setTimeout(resolve, 200));
+			await new Promise((resolve) => setTimeout(resolve, 200));
 			completed = true;
 			return { outcome: 'success' };
 		});
 		processor.cancel();
 		expect(processor.state).toBe(BackgroundTodoProcessorState.Idle);
 		// Give time for the cancelled work to settle
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 		expect(completed).toBe(false);
 	});
 
@@ -202,12 +256,16 @@ describe('BackgroundTodoProcessor', () => {
 		const cts = new CancellationTokenSource();
 		let sawCancellation = false;
 
-		processor.start(makeDelta(['r1']), async (_delta, token) => {
-			// Wait and check cancellation
-			await new Promise(resolve => setTimeout(resolve, 50));
-			sawCancellation = token.isCancellationRequested;
-			return { outcome: 'noop' };
-		}, cts.token);
+		processor.start(
+			makeDelta(['r1']),
+			async (_delta, token) => {
+				// Wait and check cancellation
+				await new Promise((resolve) => setTimeout(resolve, 50));
+				sawCancellation = token.isCancellationRequested;
+				return { outcome: 'noop' };
+			},
+			cts.token,
+		);
 
 		cts.cancel();
 		await processor.waitForCompletion();
@@ -229,7 +287,9 @@ describe('BackgroundTodoProcessor', () => {
 
 	test('requestFinalReview runs when processor is idle and todos exist', async () => {
 		const processor = new BackgroundTodoProcessor();
-		processor.start(makeDelta(['r1']), async () => ({ outcome: 'success' }));
+		processor.start(makeDelta(['r1']), async () => ({
+			outcome: 'success',
+		}));
 		await processor.waitForCompletion();
 		expect(processor.hasCreatedTodos).toBe(true);
 		expect(processor.state).toBe(BackgroundTodoProcessorState.Idle);
@@ -242,7 +302,9 @@ describe('BackgroundTodoProcessor', () => {
 
 	test('requestFinalReview deduplicates by turn ID', async () => {
 		const processor = new BackgroundTodoProcessor();
-		processor.start(makeDelta(['r1']), async () => ({ outcome: 'success' }));
+		processor.start(makeDelta(['r1']), async () => ({
+			outcome: 'success',
+		}));
 		await processor.waitForCompletion();
 		// First request should be accepted
 		processor.requestFinalReview('turn-1', makeExecutionContext(['r1']));
@@ -257,16 +319,26 @@ describe('BackgroundTodoProcessor', () => {
 	test('requestFinalReview runs with current context even when regular work last ran in another turn', async () => {
 		const processor = new BackgroundTodoProcessor();
 		// Simulate a successful pass so hasCreatedTodos becomes true
-		processor.start(makeDelta(['r1']), async () => ({ outcome: 'success' }));
+		processor.start(makeDelta(['r1']), async () => ({
+			outcome: 'success',
+		}));
 		await processor.waitForCompletion();
 		expect(processor.hasCreatedTodos).toBe(true);
 
 		// Record context for turn-1
-		processor.requestRegularPass(makeDelta(['r2']), makeExecutionContext(['r2']), undefined, 'turn-1');
+		processor.requestRegularPass(
+			makeDelta(['r2']),
+			makeExecutionContext(['r2']),
+			undefined,
+			'turn-1',
+		);
 		await processor.waitForCompletion();
 
 		// The final turn never queued a regular pass, but it still has a current render context.
-		processor.requestFinalReview('turn-2', makeExecutionContext(['turn-2-round']));
+		processor.requestFinalReview(
+			'turn-2',
+			makeExecutionContext(['turn-2-round']),
+		);
 		expect(processor.state).toBe(BackgroundTodoProcessorState.InProgress);
 		await processor.waitForCompletion();
 	});
@@ -274,37 +346,55 @@ describe('BackgroundTodoProcessor', () => {
 	test('requestFinalReview drains after a regular pass completes', async () => {
 		const logMessages: string[] = [];
 		const telemetryEvents: string[] = [];
-		const processor = new BackgroundTodoProcessor(makeLogService(logMessages));
+		const processor = new BackgroundTodoProcessor(
+			makeLogService(logMessages),
+		);
 		const ranWork: string[] = [];
 
-		processor.start(makeDelta(['r0']), async () => ({ outcome: 'success' }));
+		processor.start(makeDelta(['r0']), async () => ({
+			outcome: 'success',
+		}));
 		await processor.waitForCompletion();
 		logMessages.length = 0;
 
 		// Start a slow regular pass
 		processor.start(makeDelta(['r1']), async () => {
 			ranWork.push('regular');
-			await new Promise(resolve => setTimeout(resolve, 50));
+			await new Promise((resolve) => setTimeout(resolve, 50));
 			return { outcome: 'success' };
 		});
 
 		// While in progress, record context and request final review
-		processor.requestRegularPass(makeDelta(['r2']), makeExecutionContext(['r1', 'r2'], { telemetryEvents }));
-		processor.requestFinalReview('turn-1', makeExecutionContext(['r1', 'r2'], { telemetryEvents }));
+		processor.requestRegularPass(
+			makeDelta(['r2']),
+			makeExecutionContext(['r1', 'r2'], { telemetryEvents }),
+		);
+		processor.requestFinalReview(
+			'turn-1',
+			makeExecutionContext(['r1', 'r2'], { telemetryEvents }),
+		);
 
 		await processor.waitForCompletion();
 
 		const passStartIndexes = logMessages
-			.map((message, index) => message.includes('starting pass #') ? index : -1)
-			.filter(index => index !== -1);
-		const finalReviewIndex = logMessages.findIndex(message => message.includes('draining final review'));
+			.map((message, index) =>
+				message.includes('starting pass #') ? index : -1,
+			)
+			.filter((index) => index !== -1);
+		const finalReviewIndex = logMessages.findIndex((message) =>
+			message.includes('draining final review'),
+		);
 		expect({
 			state: processor.state,
 			ranWork,
 			telemetryEventCount: telemetryEvents.length,
 			passStartCount: passStartIndexes.length,
-			coalescedRegularBeforeFinalReview: passStartIndexes[1] !== undefined && passStartIndexes[1] < finalReviewIndex,
-			finalReviewBeforeFinalPass: passStartIndexes[2] !== undefined && finalReviewIndex < passStartIndexes[2],
+			coalescedRegularBeforeFinalReview:
+				passStartIndexes[1] !== undefined &&
+				passStartIndexes[1] < finalReviewIndex,
+			finalReviewBeforeFinalPass:
+				passStartIndexes[2] !== undefined &&
+				finalReviewIndex < passStartIndexes[2],
 		}).toEqual({
 			state: BackgroundTodoProcessorState.Idle,
 			ranWork: ['regular'],
@@ -322,7 +412,7 @@ describe('BackgroundTodoProcessor', () => {
 		// Start a slow first pass with workA.
 		processor.start(makeDelta(['r1']), async () => {
 			ranWork.push('A');
-			await new Promise(resolve => setTimeout(resolve, 50));
+			await new Promise((resolve) => setTimeout(resolve, 50));
 			return { outcome: 'success' };
 		});
 		expect(processor.state).toBe(BackgroundTodoProcessorState.InProgress);
@@ -343,7 +433,7 @@ describe('BackgroundTodoProcessor', () => {
 
 		processor.start(makeDelta(['r1']), async () => {
 			ranWork.push('A');
-			await new Promise(resolve => setTimeout(resolve, 50));
+			await new Promise((resolve) => setTimeout(resolve, 50));
 			return { outcome: 'success' };
 		});
 
@@ -353,7 +443,7 @@ describe('BackgroundTodoProcessor', () => {
 		});
 
 		processor.cancel();
-		await new Promise(resolve => setTimeout(resolve, 80));
+		await new Promise((resolve) => setTimeout(resolve, 80));
 
 		expect(ranWork).toEqual(['A']);
 		expect(processor.state).toBe(BackgroundTodoProcessorState.Idle);

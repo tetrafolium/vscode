@@ -22,14 +22,22 @@ export interface ILeadingSlashToken {
  * run of non-whitespace characters starting at offset 0. Returns `undefined`
  * if the input does not start with `/` or the cursor is past the token.
  */
-export function extractLeadingSlashToken(text: string, offset: number): ILeadingSlashToken | undefined {
+export function extractLeadingSlashToken(
+	text: string,
+	offset: number,
+): ILeadingSlashToken | undefined {
 	if (text.length === 0 || text.charCodeAt(0) !== 0x2f /* / */) {
 		return undefined;
 	}
 	let end = 1;
 	while (end < text.length) {
 		const ch = text.charCodeAt(end);
-		if (ch === 0x20 /* space */ || ch === 0x09 /* tab */ || ch === 0x0a /* \n */ || ch === 0x0d /* \r */) {
+		if (
+			ch === 0x20 /* space */ ||
+			ch === 0x09 /* tab */ ||
+			ch === 0x0a /* \n */ ||
+			ch === 0x0d /* \r */
+		) {
 			break;
 		}
 		end++;

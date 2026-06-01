@@ -5,7 +5,11 @@
 
 import { ExportResultCode, type ExportResult } from '@opentelemetry/core';
 import type { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-node';
-import { SpanStatusCode, type ICompletedSpanData, type ISpanEventRecord } from '../../common/otelService';
+import {
+	SpanStatusCode,
+	type ICompletedSpanData,
+	type ISpanEventRecord,
+} from '../../common/otelService';
 import type { OTelSqliteStore } from './otelSqliteStore';
 
 /**
@@ -16,16 +20,22 @@ import type { OTelSqliteStore } from './otelSqliteStore';
  * and inserted into the store.
  */
 export class SqliteSpanExporter implements SpanExporter {
-	constructor(private readonly _store: OTelSqliteStore) { }
+	constructor(private readonly _store: OTelSqliteStore) {}
 
-	export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
+	export(
+		spans: ReadableSpan[],
+		resultCallback: (result: ExportResult) => void,
+	): void {
 		try {
 			for (const span of spans) {
 				this._store.insertSpan(readableSpanToCompletedSpanData(span));
 			}
 			resultCallback({ code: ExportResultCode.SUCCESS });
 		} catch (err) {
-			resultCallback({ code: ExportResultCode.FAILED, error: err instanceof Error ? err : new Error(String(err)) });
+			resultCallback({
+				code: ExportResultCode.FAILED,
+				error: err instanceof Error ? err : new Error(String(err)),
+			});
 		}
 	}
 
@@ -41,7 +51,9 @@ export class SqliteSpanExporter implements SpanExporter {
 /**
  * Convert an OTel SDK ReadableSpan to our ICompletedSpanData format.
  */
-function readableSpanToCompletedSpanData(span: ReadableSpan): ICompletedSpanData {
+function readableSpanToCompletedSpanData(
+	span: ReadableSpan,
+): ICompletedSpanData {
 	const ctx = span.spanContext();
 	const parentSpanId = span.parentSpanContext?.spanId;
 
@@ -62,22 +74,34 @@ function readableSpanToCompletedSpanData(span: ReadableSpan): ICompletedSpanData
 	}
 
 	// Convert span events
-	const events: ISpanEventRecord[] = span.events.map(evt => ({
+	const events: ISpanEventRecord[] = span.events.map((evt) => ({
 		name: evt.name,
 		timestamp: hrTimeToMs(evt.time),
 		attributes: evt.attributes
 			? Object.fromEntries(
-				Object.entries(evt.attributes).filter(([, v]) => v !== undefined && v !== null).map(([k, v]) => [k, Array.isArray(v) ? v.map(String) : v as string | number | boolean])
-			)
+					Object.entries(evt.attributes)
+						.filter(([, v]) => v !== undefined && v !== null)
+						.map(([k, v]) => [
+							k,
+							Array.isArray(v)
+								? v.map(String)
+								: (v as string | number | boolean),
+						]),
+				)
 			: undefined,
 	}));
 
 	// Convert status
 	let statusCode: SpanStatusCode;
 	switch (span.status.code) {
-		case 1: statusCode = SpanStatusCode.OK; break;
-		case 2: statusCode = SpanStatusCode.ERROR; break;
-		default: statusCode = SpanStatusCode.UNSET;
+		case 1:
+			statusCode = SpanStatusCode.OK;
+			break;
+		case 2:
+			statusCode = SpanStatusCode.ERROR;
+			break;
+		default:
+			statusCode = SpanStatusCode.UNSET;
 	}
 
 	return {

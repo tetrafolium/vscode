@@ -6,14 +6,27 @@
 // WebSocket client transport for connecting to remote agent host processes.
 // Uses plain JSON serialization — URIs are string-typed in the protocol.
 
-import { Emitter } from '../../../base/common/event.js';
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { connectionTokenQueryName } from '../../../base/common/network.js';
-import { IInstantiationService } from '../../instantiation/common/instantiation.js';
-import { AhpJsonlLogger, getAhpLogByteLength, IAhpJsonlLoggerOptions } from '../common/ahpJsonlLogger.js';
-import type { AhpServerNotification, JsonRpcNotification, JsonRpcRequest, JsonRpcResponse, ProtocolMessage } from '../common/state/sessionProtocol.js';
-import type { IClientTransport } from '../common/state/sessionTransport.js';
-import { MALFORMED_FRAMES_FORCE_CLOSE_THRESHOLD, MALFORMED_FRAMES_LOG_CAP } from '../common/transportConstants.js';
+import { Emitter } from "../../../base/common/event.js";
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { connectionTokenQueryName } from "../../../base/common/network.js";
+import { IInstantiationService } from "../../instantiation/common/instantiation.js";
+import {
+	AhpJsonlLogger,
+	getAhpLogByteLength,
+	IAhpJsonlLoggerOptions,
+} from "../common/ahpJsonlLogger.js";
+import type {
+	AhpServerNotification,
+	JsonRpcNotification,
+	JsonRpcRequest,
+	JsonRpcResponse,
+	ProtocolMessage,
+} from "../common/state/sessionProtocol.js";
+import type { IClientTransport } from "../common/state/sessionTransport.js";
+import {
+	MALFORMED_FRAMES_FORCE_CLOSE_THRESHOLD,
+	MALFORMED_FRAMES_LOG_CAP,
+} from "../common/transportConstants.js";
 
 // ---- Client transport -------------------------------------------------------
 
@@ -22,8 +35,10 @@ import { MALFORMED_FRAMES_FORCE_CLOSE_THRESHOLD, MALFORMED_FRAMES_LOG_CAP } from
  * Uses the native browser WebSocket API (available in Electron renderer).
  * Implements {@link IClientTransport} with JSON serialization and URI revival.
  */
-export class WebSocketClientTransport extends Disposable implements IClientTransport {
-
+export class WebSocketClientTransport
+	extends Disposable
+	implements IClientTransport
+{
 	private readonly _onMessage = this._register(new Emitter<ProtocolMessage>());
 	readonly onMessage = this._onMessage.event;
 
@@ -54,7 +69,9 @@ export class WebSocketClientTransport extends Disposable implements IClientTrans
 		// TODO: @osortega remove console.logs
 		super();
 		if (ahpLogOptions) {
-			this._ahpLogger = this._register(instantiationService.createInstance(AhpJsonlLogger, ahpLogOptions));
+			this._ahpLogger = this._register(
+				instantiationService.createInstance(AhpJsonlLogger, ahpLogOptions),
+			);
 		}
 	}
 
@@ -65,16 +82,17 @@ export class WebSocketClientTransport extends Disposable implements IClientTrans
 	connect(): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			if (this._store.isDisposed) {
-				reject(new Error('Transport is disposed'));
+				reject(new Error("Transport is disposed"));
 				return;
 			}
 
-			let url = this._address.startsWith('ws://') || this._address.startsWith('wss://')
-				? this._address
-				: `ws://${this._address}`;
+			let url =
+				this._address.startsWith("ws://") || this._address.startsWith("wss://")
+					? this._address
+					: `ws://${this._address}`;
 
 			if (this._connectionToken) {
-				const separator = url.includes('?') ? '&' : '?';
+				const separator = url.includes("?") ? "&" : "?";
 				url += `${separator}${connectionTokenQueryName}=${encodeURIComponent(this._connectionToken)}`;
 			}
 
@@ -94,35 +112,49 @@ export class WebSocketClientTransport extends Disposable implements IClientTrans
 
 			const onClose = () => {
 				cleanup();
-				reject(new Error(`WebSocket closed before connection was established: ${this._address}`));
+				reject(
+					new Error(
+						`WebSocket closed before connection was established: ${this._address}`,
+					),
+				);
 			};
 
 			const cleanup = () => {
-				ws.removeEventListener('open', onOpen);
-				ws.removeEventListener('error', onError);
-				ws.removeEventListener('close', onClose);
+				ws.removeEventListener("open", onOpen);
+				ws.removeEventListener("error", onError);
+				ws.removeEventListener("close", onClose);
 			};
 
-			ws.addEventListener('open', onOpen);
-			ws.addEventListener('error', onError);
-			ws.addEventListener('close', onClose);
+			ws.addEventListener("open", onOpen);
+			ws.addEventListener("error", onError);
+			ws.addEventListener("close", onClose);
 
 			// Wire up long-lived listeners after connection
-			ws.addEventListener('message', (event: MessageEvent) => {
-				if (typeof event.data !== 'string') {
+			ws.addEventListener("message", (event: MessageEvent) => {
+				if (typeof event.data !== "string") {
 					this._malformedFrames++;
 					if (this._malformedFrames <= MALFORMED_FRAMES_LOG_CAP) {
-						const dataType = event.data instanceof ArrayBuffer ? 'ArrayBuffer' : event.data instanceof Blob ? 'Blob' : typeof event.data;
-						const byteLen = event.data instanceof ArrayBuffer ? event.data.byteLength : event.data instanceof Blob ? event.data.size : 0;
+						const dataType =
+							event.data instanceof ArrayBuffer
+								? "ArrayBuffer"
+								: event.data instanceof Blob
+									? "Blob"
+									: typeof event.data;
+						const byteLen =
+							event.data instanceof ArrayBuffer
+								? event.data.byteLength
+								: event.data instanceof Blob
+									? event.data.size
+									: 0;
 						console.warn(
-							`[WebSocketClientTransport] Non-string frame #${this._malformedFrames} (type=${dataType}, bytes=${byteLen})`
+							`[WebSocketClientTransport] Non-string frame #${this._malformedFrames} (type=${dataType}, bytes=${byteLen})`,
 						);
 					}
 					if (this._malformedFrames > MALFORMED_FRAMES_FORCE_CLOSE_THRESHOLD) {
 						console.warn(
-							`[WebSocketClientTransport] Malformed frame threshold exceeded; forcing close of ${this._address}.`
+							`[WebSocketClientTransport] Malformed frame threshold exceeded; forcing close of ${this._address}.`,
 						);
-						this._ws?.close(4002, 'malformed-frames');
+						this._ws?.close(4002, "malformed-frames");
 					}
 					return;
 				}
@@ -133,32 +165,32 @@ export class WebSocketClientTransport extends Disposable implements IClientTrans
 				} catch (err) {
 					this._malformedFrames++;
 					if (this._malformedFrames <= MALFORMED_FRAMES_LOG_CAP) {
-						const preview = text.length > 80 ? text.slice(0, 80) + '…' : text;
+						const preview = text.length > 80 ? text.slice(0, 80) + "…" : text;
 						console.warn(
 							`[WebSocketClientTransport] Malformed frame #${this._malformedFrames} (len=${text.length}): ${preview}`,
-							err instanceof Error ? err.message : String(err)
+							err instanceof Error ? err.message : String(err),
 						);
 					}
 					if (this._malformedFrames > MALFORMED_FRAMES_FORCE_CLOSE_THRESHOLD) {
 						console.warn(
-							`[WebSocketClientTransport] Malformed frame threshold exceeded; forcing close of ${this._address}.`
+							`[WebSocketClientTransport] Malformed frame threshold exceeded; forcing close of ${this._address}.`,
 						);
-						this._ws?.close(4002, 'malformed-frames');
+						this._ws?.close(4002, "malformed-frames");
 					}
 					return;
 				}
-				this._ahpLogger?.log(message, 's2c', getAhpLogByteLength(text));
+				this._ahpLogger?.log(message, "s2c", getAhpLogByteLength(text));
 				this._onMessage.fire(message);
 			});
 
-			ws.addEventListener('close', () => {
+			ws.addEventListener("close", () => {
 				if (!this._closeFired) {
 					this._closeFired = true;
 					this._onClose.fire();
 				}
 			});
 
-			ws.addEventListener('error', () => {
+			ws.addEventListener("error", () => {
 				// Error always precedes close - closing is handled in the close handler.
 				// Only fire if close hasn't already been fired (e.g. from send failure).
 				if (!this._closeFired) {
@@ -175,18 +207,25 @@ export class WebSocketClientTransport extends Disposable implements IClientTrans
 	 * transport is force-closed so reconnection is triggered immediately
 	 * rather than silently losing messages.
 	 */
-	send(message: ProtocolMessage | AhpServerNotification | JsonRpcNotification | JsonRpcResponse | JsonRpcRequest): boolean {
+	send(
+		message:
+			| ProtocolMessage
+			| AhpServerNotification
+			| JsonRpcNotification
+			| JsonRpcResponse
+			| JsonRpcRequest,
+	): boolean {
 		if (this._ws?.readyState === WebSocket.OPEN) {
 			const text = JSON.stringify(message);
-			this._ahpLogger?.log(message, 'c2s', getAhpLogByteLength(text));
+			this._ahpLogger?.log(message, "c2s", getAhpLogByteLength(text));
 			this._ws.send(text);
 			return true;
 		}
 		console.warn(
-			`[WebSocketClientTransport] Message dropped: readyState=${this._ws?.readyState ?? 'no-socket'}`
+			`[WebSocketClientTransport] Message dropped: readyState=${this._ws?.readyState ?? "no-socket"}`,
 		);
 		// Force-close and fire onClose exactly once to trigger reconnection
-		this._ws?.close(4001, 'send-on-dead-socket');
+		this._ws?.close(4001, "send-on-dead-socket");
 		if (!this._closeFired) {
 			this._closeFired = true;
 			this._onClose.fire();

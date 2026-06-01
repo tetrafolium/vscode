@@ -6,7 +6,6 @@ import { expect, suite, test } from 'vitest';
 import { validateDocstringFormat } from '../slashDoc.py.stest';
 
 suite('hasCorrectlyFormattedDocstring Tests', function () {
-
 	test('Correctly formatted docstring', function () {
 		const fileContents = `
 def my_function(param1, param2):
@@ -28,7 +27,11 @@ This is a wrongly indented docstring for my_function.
 	pass
 `;
 		const targetLineString = 'def my_function(param1, param2):';
-		expect(() => validateDocstringFormat(fileContents, targetLineString)).toThrowErrorMatchingInlineSnapshot(`[Error: Incorrect docstring indentation. Expected: '	', but got: '']`);
+		expect(() =>
+			validateDocstringFormat(fileContents, targetLineString),
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Incorrect docstring indentation. Expected: '	', but got: '']`,
+		);
 	});
 
 	test('error: no docstring', function () {
@@ -37,7 +40,11 @@ def my_function(param1, param2):
 	pass
 `;
 		const targetLineString = 'def my_function(param1, param2):';
-		expect(() => validateDocstringFormat(fileContents, targetLineString)).toThrowErrorMatchingInlineSnapshot(`[Error: No docstring found after the target line.]`);
+		expect(() =>
+			validateDocstringFormat(fileContents, targetLineString),
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: No docstring found after the target line.]`,
+		);
 	});
 
 	test('Docstring with correct indentation using tabs', function () {
@@ -48,7 +55,10 @@ def my_function(param1, param2):
         """
 `;
 		const targetLineString = 'def my_function(param1, param2):';
-		expect(() => validateDocstringFormat(fileContents, targetLineString)).toThrowErrorMatchingInlineSnapshot(`[Error: Incorrect docstring indentation. Expected: '	········', but got: '········']`);
+		expect(() =>
+			validateDocstringFormat(fileContents, targetLineString),
+		).toThrowErrorMatchingInlineSnapshot(
+			`[Error: Incorrect docstring indentation. Expected: '	········', but got: '········']`,
+		);
 	});
-
 });

@@ -9,12 +9,15 @@
 // otherwise it uses the local utility-process agent host
 // (`LocalAgentHostServiceClient`).
 
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
-import { IAgentHostService } from '../../../../platform/agentHost/common/agentService.js';
-import { LocalAgentHostServiceClient } from '../../../../platform/agentHost/electron-browser/localAgentHostService.js';
-import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
-import { EditorRemoteAgentHostServiceClient } from '../browser/editorRemoteAgentHostServiceClient.js';
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../platform/instantiation/common/extensions.js";
+import { IAgentHostService } from "../../../../platform/agentHost/common/agentService.js";
+import { LocalAgentHostServiceClient } from "../../../../platform/agentHost/electron-browser/localAgentHostService.js";
+import { IWorkbenchEnvironmentService } from "../../environment/common/environmentService.js";
+import { EditorRemoteAgentHostServiceClient } from "../browser/editorRemoteAgentHostServiceClient.js";
 
 /**
  * DI shim: picks between the local utility-process agent host and the
@@ -28,7 +31,8 @@ class WorkbenchAgentHostService {
 
 	constructor(
 		@IInstantiationService instantiationService: IInstantiationService,
-		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
+		@IWorkbenchEnvironmentService
+		environmentService: IWorkbenchEnvironmentService,
 	) {
 		const inner = environmentService.remoteAuthority
 			? instantiationService.createInstance(EditorRemoteAgentHostServiceClient)
@@ -39,6 +43,8 @@ class WorkbenchAgentHostService {
 
 registerSingleton(
 	IAgentHostService,
-	WorkbenchAgentHostService as unknown as { new(...args: unknown[]): IAgentHostService },
+	WorkbenchAgentHostService as unknown as {
+		new (...args: unknown[]): IAgentHostService;
+	},
 	InstantiationType.Delayed,
 );

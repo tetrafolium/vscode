@@ -6,7 +6,11 @@
 import { CopilotTelemetryReporter } from '../telemetry';
 import * as assert from 'assert';
 
-type ReportedEvent = { name: string; properties: { [key: string]: string }; measurements: { [key: string]: number } };
+type ReportedEvent = {
+	name: string;
+	properties: { [key: string]: string };
+	measurements: { [key: string]: number };
+};
 type ReportedError = {
 	name: string;
 	properties: { [key: string]: string };
@@ -25,7 +29,7 @@ export class TelemetrySpy implements CopilotTelemetryReporter {
 		} = {},
 		measurements: {
 			[key: string]: number;
-		} = {}
+		} = {},
 	): void {
 		this.events.push({
 			name: eventName,
@@ -42,7 +46,7 @@ export class TelemetrySpy implements CopilotTelemetryReporter {
 		measurements: {
 			[key: string]: number;
 		} = {},
-		errorProps?: string[]
+		errorProps?: string[],
 	): void {
 		this.errors.push({
 			name: eventName,
@@ -59,7 +63,7 @@ export class TelemetrySpy implements CopilotTelemetryReporter {
 		} = {},
 		measurements: {
 			[key: string]: number;
-		} = {}
+		} = {},
 	): void {
 		this.events.push({
 			name: 'error.exception',
@@ -81,7 +85,7 @@ export class TelemetrySpy implements CopilotTelemetryReporter {
 	}
 
 	get exceptions(): ReportedEvent[] {
-		return this.events.filter(e => e.name === 'error.exception');
+		return this.events.filter((e) => e.name === 'error.exception');
 	}
 
 	get hasException(): boolean {
@@ -105,8 +109,12 @@ export class TelemetrySpy implements CopilotTelemetryReporter {
 	}
 
 	eventByName(name: string): ReportedEvent {
-		const candidates = this.events.filter(e => e.name === name);
-		assert.strictEqual(candidates.length, 1, `Expected exactly one event with name ${name}`);
+		const candidates = this.events.filter((e) => e.name === name);
+		assert.strictEqual(
+			candidates.length,
+			1,
+			`Expected exactly one event with name ${name}`,
+		);
 		return candidates[0];
 	}
 
@@ -114,12 +122,18 @@ export class TelemetrySpy implements CopilotTelemetryReporter {
 		return this.errors.filter(filter);
 	}
 
-	exceptionsMatching(filter: (event: ReportedEvent) => boolean): ReportedEvent[] {
+	exceptionsMatching(
+		filter: (event: ReportedEvent) => boolean,
+	): ReportedEvent[] {
 		return this.exceptions.filter(filter);
 	}
 
 	// equivalent of assertHasProperty in testing/telemetry.ts
 	assertHasProperty(assertion: (m: { [key: string]: string }) => boolean) {
-		assert.ok(this.eventsMatching(e => e.name !== 'ghostText.produced').every(e => assertion(e.properties)));
+		assert.ok(
+			this.eventsMatching((e) => e.name !== 'ghostText.produced').every(
+				(e) => assertion(e.properties),
+			),
+		);
 	}
 }

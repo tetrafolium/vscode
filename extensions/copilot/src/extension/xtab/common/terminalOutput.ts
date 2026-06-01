@@ -25,7 +25,6 @@ interface LastTerminalActivity {
  * to understand user terminal activity patterns.
  */
 export class TerminalMonitor extends Disposable {
-
 	private _lastActivity: LastTerminalActivity | undefined;
 
 	constructor(
@@ -34,19 +33,25 @@ export class TerminalMonitor extends Disposable {
 		super();
 
 		// Listen to terminal shell execution end events to track command completions
-		this._register(this._terminalService.onDidEndTerminalShellExecution(e => {
-			this._recordTerminalActivity(e);
-		}));
+		this._register(
+			this._terminalService.onDidEndTerminalShellExecution((e) => {
+				this._recordTerminalActivity(e);
+			}),
+		);
 
 		// Clear last activity if the terminal is closed
-		this._register(this._terminalService.onDidCloseTerminal(terminal => {
-			if (this._lastActivity?.terminal === terminal) {
-				this._lastActivity = undefined;
-			}
-		}));
+		this._register(
+			this._terminalService.onDidCloseTerminal((terminal) => {
+				if (this._lastActivity?.terminal === terminal) {
+					this._lastActivity = undefined;
+				}
+			}),
+		);
 	}
 
-	private _recordTerminalActivity(event: vscode.TerminalShellExecutionEndEvent): void {
+	private _recordTerminalActivity(
+		event: vscode.TerminalShellExecutionEndEvent,
+	): void {
 		const executedCommand = event.execution;
 
 		this._lastActivity = {
@@ -75,7 +80,10 @@ export class TerminalMonitor extends Disposable {
 		}
 
 		// Get buffer from the same terminal where the last command was executed
-		const buffer = this._terminalService.getBufferForTerminal(this._lastActivity.terminal, MAX_BUFFER_CHARS * 2);
+		const buffer = this._terminalService.getBufferForTerminal(
+			this._lastActivity.terminal,
+			MAX_BUFFER_CHARS * 2,
+		);
 		const msAgo = now - this._lastActivity.timestamp;
 
 		const data = {
@@ -86,17 +94,20 @@ export class TerminalMonitor extends Disposable {
 			exitCode: this._lastActivity.exitCode,
 			msAgo,
 			// Buffer from the same terminal
-			buffer: buffer.length <= MAX_BUFFER_CHARS ? {
-				fits: true,
-				content: buffer,
-				length: buffer.length,
-			} : {
-				fits: false,
-				contentStart: buffer.slice(0, MAX_BUFFER_CHARS / 2),
-				contentEnd: buffer.slice(-MAX_BUFFER_CHARS / 2),
-				length: buffer.length,
-				truncatedChars: buffer.length - MAX_BUFFER_CHARS,
-			},
+			buffer:
+				buffer.length <= MAX_BUFFER_CHARS
+					? {
+							fits: true,
+							content: buffer,
+							length: buffer.length,
+						}
+					: {
+							fits: false,
+							contentStart: buffer.slice(0, MAX_BUFFER_CHARS / 2),
+							contentEnd: buffer.slice(-MAX_BUFFER_CHARS / 2),
+							length: buffer.length,
+							truncatedChars: buffer.length - MAX_BUFFER_CHARS,
+						},
 			// General terminal state
 			terminalCount,
 		};

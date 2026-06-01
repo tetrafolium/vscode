@@ -17,15 +17,18 @@ vi.mock('vscode', () => ({
 				activeTab: null,
 			},
 			all: [],
-			onDidChangeTabGroups: () => ({ dispose: () => { } }),
-			onDidChangeTabs: () => ({ dispose: () => { } }),
+			onDidChangeTabGroups: () => ({ dispose: () => {} }),
+			onDidChangeTabs: () => ({ dispose: () => {} }),
 		},
 	},
 	commands: {
 		executeCommand: vi.fn().mockResolvedValue(undefined),
 	},
 	TabInputTextDiff: class TabInputTextDiff {
-		constructor(public original: any, public modified: any) { }
+		constructor(
+			public original: any,
+			public modified: any,
+		) {}
 	},
 }));
 
@@ -36,21 +39,27 @@ interface CloseDiffResult {
 	message: string;
 }
 
-import {
-	DiffStateManager,
-	type ActiveDiff,
-} from '../diffState';
+import { DiffStateManager, type ActiveDiff } from '../diffState';
 import { registerCloseDiffTool } from '../tools/closeDiff';
 
 describe('closeDiff tool', () => {
 	const logger = new TestLogService();
 	let diffState: DiffStateManager;
 
-	const createMockDiff = (tabName: string, diffIdSuffix?: string): ActiveDiff => ({
+	const createMockDiff = (
+		tabName: string,
+		diffIdSuffix?: string,
+	): ActiveDiff => ({
 		diffId: `/tmp/modified-${diffIdSuffix ?? tabName}.ts`,
 		tabName: tabName,
-		originalUri: { fsPath: `/path/to/original-${tabName}.ts`, scheme: 'file' } as any,
-		modifiedUri: { fsPath: `/tmp/modified-${diffIdSuffix ?? tabName}.ts`, scheme: 'file' } as any,
+		originalUri: {
+			fsPath: `/path/to/original-${tabName}.ts`,
+			scheme: 'file',
+		} as any,
+		modifiedUri: {
+			fsPath: `/tmp/modified-${diffIdSuffix ?? tabName}.ts`,
+			scheme: 'file',
+		} as any,
 		newContents: `// new contents for ${tabName}`,
 		cleanup: vi.fn(),
 		resolve: vi.fn(),
@@ -172,11 +181,15 @@ describe('closeDiff tool', () => {
 			const mockServer = new MockMcpServer();
 			registerCloseDiffTool(mockServer as any, logger, diffState);
 
-			const diff = createMockDiff('Diff: src/file.ts → modified (2024-01-23)');
+			const diff = createMockDiff(
+				'Diff: src/file.ts → modified (2024-01-23)',
+			);
 			diffState.register(diff);
 
 			const handler = mockServer.getToolHandler('close_diff')!;
-			const result = await handler({ tab_name: 'Diff: src/file.ts → modified (2024-01-23)' });
+			const result = await handler({
+				tab_name: 'Diff: src/file.ts → modified (2024-01-23)',
+			});
 			const parsed = parseToolResult<CloseDiffResult>(result);
 
 			expect(parsed.success).toBe(true);
@@ -240,9 +253,15 @@ describe('closeDiff tool', () => {
 				handler({ tab_name: 'Tab C' }),
 			]);
 
-			expect(parseToolResult<CloseDiffResult>(result1).success).toBe(true);
-			expect(parseToolResult<CloseDiffResult>(result2).success).toBe(true);
-			expect(parseToolResult<CloseDiffResult>(result3).success).toBe(true);
+			expect(parseToolResult<CloseDiffResult>(result1).success).toBe(
+				true,
+			);
+			expect(parseToolResult<CloseDiffResult>(result2).success).toBe(
+				true,
+			);
+			expect(parseToolResult<CloseDiffResult>(result3).success).toBe(
+				true,
+			);
 
 			expect(diff1.resolve).toHaveBeenCalled();
 			expect(diff2.resolve).toHaveBeenCalled();

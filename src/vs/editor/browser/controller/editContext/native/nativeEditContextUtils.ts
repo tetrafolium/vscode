@@ -3,9 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { addDisposableListener, getActiveElement, getShadowRoot } from '../../../../../base/browser/dom.js';
-import { IDisposable, Disposable } from '../../../../../base/common/lifecycle.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
+import {
+	addDisposableListener,
+	getActiveElement,
+	getShadowRoot,
+} from "../../../../../base/browser/dom.js";
+import {
+	IDisposable,
+	Disposable,
+} from "../../../../../base/common/lifecycle.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
 
 export interface ITypeData {
 	text: string;
@@ -24,23 +31,27 @@ export class FocusTracker extends Disposable {
 		private readonly _onFocusChange: (newFocusValue: boolean) => void,
 	) {
 		super();
-		this._register(addDisposableListener(this._domNode, 'focus', () => {
-			_logService.trace('NativeEditContext.focus');
-			if (this._isPaused) {
-				return;
-			}
-			// Here we don't trust the browser and instead we check
-			// that the active element is the one we are tracking
-			// (this happens when cmd+tab is used to switch apps)
-			this.refreshFocusState();
-		}));
-		this._register(addDisposableListener(this._domNode, 'blur', () => {
-			_logService.trace('NativeEditContext.blur');
-			if (this._isPaused) {
-				return;
-			}
-			this._handleFocusedChanged(false);
-		}));
+		this._register(
+			addDisposableListener(this._domNode, "focus", () => {
+				_logService.trace("NativeEditContext.focus");
+				if (this._isPaused) {
+					return;
+				}
+				// Here we don't trust the browser and instead we check
+				// that the active element is the one we are tracking
+				// (this happens when cmd+tab is used to switch apps)
+				this.refreshFocusState();
+			}),
+		);
+		this._register(
+			addDisposableListener(this._domNode, "blur", () => {
+				_logService.trace("NativeEditContext.blur");
+				if (this._isPaused) {
+					return;
+				}
+				this._handleFocusedChanged(false);
+			}),
+		);
 	}
 
 	public pause(): void {
@@ -67,7 +78,9 @@ export class FocusTracker extends Disposable {
 
 	public refreshFocusState(): void {
 		const shadowRoot = getShadowRoot(this._domNode);
-		const activeElement = shadowRoot ? shadowRoot.activeElement : getActiveElement();
+		const activeElement = shadowRoot
+			? shadowRoot.activeElement
+			: getActiveElement();
 		const focused = this._domNode === activeElement;
 		this._handleFocusedChanged(focused);
 	}
@@ -77,13 +90,23 @@ export class FocusTracker extends Disposable {
 	}
 }
 
-export function editContextAddDisposableListener<K extends keyof EditContextEventHandlersEventMap>(target: EventTarget, type: K, listener: (this: GlobalEventHandlers, ev: EditContextEventHandlersEventMap[K]) => void, options?: boolean | AddEventListenerOptions): IDisposable {
+export function editContextAddDisposableListener<
+	K extends keyof EditContextEventHandlersEventMap,
+>(
+	target: EventTarget,
+	type: K,
+	listener: (
+		this: GlobalEventHandlers,
+		ev: EditContextEventHandlersEventMap[K],
+	) => void,
+	options?: boolean | AddEventListenerOptions,
+): IDisposable {
 	// eslint-disable-next-line local/code-no-any-casts, @typescript-eslint/no-explicit-any
 	target.addEventListener(type, listener as any, options);
 	return {
 		dispose() {
 			// eslint-disable-next-line local/code-no-any-casts, @typescript-eslint/no-explicit-any
 			target.removeEventListener(type, listener as any);
-		}
+		},
 	};
 }

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IExtraKnownMarketplaceEntry } from './managedSettings.js';
+import { IExtraKnownMarketplaceEntry } from "./managedSettings.js";
 
 export interface IQuotaSnapshotData {
 	readonly overage_count: number;
@@ -36,9 +36,9 @@ export interface IEntitlementsData extends ILegacyQuotaSnapshotData {
 	readonly copilot_plan: string;
 	readonly organization_login_list: string[];
 	readonly analytics_tracking_id: string;
-	readonly limited_user_reset_date?: string; 	// for Copilot Free
-	readonly quota_reset_date?: string; 		// for all other Copilot SKUs
-	readonly quota_reset_date_utc?: string; 	// for all other Copilot SKUs (includes time)
+	readonly limited_user_reset_date?: string; // for Copilot Free
+	readonly quota_reset_date?: string; // for all other Copilot SKUs
+	readonly quota_reset_date_utc?: string; // for all other Copilot SKUs (includes time)
 	readonly token_based_billing?: boolean;
 	readonly can_upgrade_plan?: boolean;
 	readonly cloud_session_storage_enabled?: boolean;
@@ -55,7 +55,7 @@ export interface IPolicyData {
 	readonly chat_agent_enabled?: boolean;
 	readonly cloud_session_storage_enabled?: boolean;
 	readonly mcpRegistryUrl?: string;
-	readonly mcpAccess?: 'allow_all' | 'registry_only';
+	readonly mcpAccess?: "allow_all" | "registry_only";
 
 	/**
 	 * Enterprise-managed plugin enablement, delivered via the Copilot
@@ -73,7 +73,10 @@ export interface IPolicyData {
 	 * resolve) plus the original `source` discriminator. Legacy string entries
 	 * are still accepted for forward/backward compatibility.
 	 */
-	readonly extraKnownMarketplaces?: readonly (string | IExtraKnownMarketplaceEntry)[];
+	readonly extraKnownMarketplaces?: readonly (
+		| string
+		| IExtraKnownMarketplaceEntry
+	)[];
 
 	/**
 	 * Enterprise-managed strict-marketplace flag. When true, only marketplaces

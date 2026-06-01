@@ -48,26 +48,34 @@
  *   create and rebind.
  */
 
-import { SequencerByKey } from '../../../../../../base/common/async.js';
-import { Emitter, Event } from '../../../../../../base/common/event.js';
-import { Disposable } from '../../../../../../base/common/lifecycle.js';
-import { ResourceMap, ResourceSet } from '../../../../../../base/common/map.js';
-import { equals } from '../../../../../../base/common/objects.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import { IAgentHostService } from '../../../../../../platform/agentHost/common/agentService.js';
-import { KNOWN_AUTO_APPROVE_VALUES, SessionConfigKey } from '../../../../../../platform/agentHost/common/sessionConfigKeys.js';
-import { ActionType } from '../../../../../../platform/agentHost/common/state/protocol/actions.js';
-import type { ResolveSessionConfigResult } from '../../../../../../platform/agentHost/common/state/protocol/commands.js';
-import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
-import { InstantiationType, registerSingleton } from '../../../../../../platform/instantiation/common/extensions.js';
-import { createDecorator } from '../../../../../../platform/instantiation/common/instantiation.js';
-import { ILogService } from '../../../../../../platform/log/common/log.js';
-import { IWorkbenchEnvironmentService } from '../../../../../services/environment/common/environmentService.js';
-import { ChatConfiguration } from '../../../common/constants.js';
-import { IChatService } from '../../../common/chatService/chatService.js';
+import { SequencerByKey } from "../../../../../../base/common/async.js";
+import { Emitter, Event } from "../../../../../../base/common/event.js";
+import { Disposable } from "../../../../../../base/common/lifecycle.js";
+import { ResourceMap, ResourceSet } from "../../../../../../base/common/map.js";
+import { equals } from "../../../../../../base/common/objects.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import { IAgentHostService } from "../../../../../../platform/agentHost/common/agentService.js";
+import {
+	KNOWN_AUTO_APPROVE_VALUES,
+	SessionConfigKey,
+} from "../../../../../../platform/agentHost/common/sessionConfigKeys.js";
+import { ActionType } from "../../../../../../platform/agentHost/common/state/protocol/actions.js";
+import type { ResolveSessionConfigResult } from "../../../../../../platform/agentHost/common/state/protocol/commands.js";
+import { IConfigurationService } from "../../../../../../platform/configuration/common/configuration.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../../../platform/instantiation/common/extensions.js";
+import { createDecorator } from "../../../../../../platform/instantiation/common/instantiation.js";
+import { ILogService } from "../../../../../../platform/log/common/log.js";
+import { IWorkbenchEnvironmentService } from "../../../../../services/environment/common/environmentService.js";
+import { ChatConfiguration } from "../../../common/constants.js";
+import { IChatService } from "../../../common/chatService/chatService.js";
 
 export const IAgentHostUntitledProvisionalSessionService =
-	createDecorator<IAgentHostUntitledProvisionalSessionService>('agentHostUntitledProvisionalSessionService');
+	createDecorator<IAgentHostUntitledProvisionalSessionService>(
+		"agentHostUntitledProvisionalSessionService",
+	);
 
 /**
  * LM contract: maintain one backend provisional session per untitled chat UI
@@ -155,7 +163,9 @@ export interface IAgentHostUntitledProvisionalSessionService {
 	 * `validateOrDefault`, which can clamp now-invalid values or inject
 	 * derived defaults the consumer should prefer over `state.config.values`.
 	 */
-	getResolvedConfig(sessionResource: URI): ResolveSessionConfigResult | undefined;
+	getResolvedConfig(
+		sessionResource: URI,
+	): ResolveSessionConfigResult | undefined;
 }
 
 interface IEntry {
@@ -176,7 +186,10 @@ interface IEntry {
 	resolvedConfig?: ResolveSessionConfigResult;
 }
 
-export class AgentHostUntitledProvisionalSessionService extends Disposable implements IAgentHostUntitledProvisionalSessionService {
+export class AgentHostUntitledProvisionalSessionService
+	extends Disposable
+	implements IAgentHostUntitledProvisionalSessionService
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _entries = new ResourceMap<IEntry>();
@@ -194,8 +207,10 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 		@IAgentHostService private readonly _agentHostService: IAgentHostService,
 		@ILogService private readonly _logService: ILogService,
 		@IChatService chatService: IChatService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IWorkbenchEnvironmentService private readonly _environmentService: IWorkbenchEnvironmentService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IWorkbenchEnvironmentService
+		private readonly _environmentService: IWorkbenchEnvironmentService,
 	) {
 		super();
 
@@ -204,16 +219,18 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 		// without ever sending a message). Without this, untitled chats the
 		// user opens and abandons leak in-memory state-manager entries on
 		// the agent host.
-		this._register(chatService.onDidDisposeSession(e => {
-			for (const sessionResource of e.sessionResources) {
-				if (this._entries.has(sessionResource)) {
-					void this.disposeSession(sessionResource);
+		this._register(
+			chatService.onDidDisposeSession((e) => {
+				for (const sessionResource of e.sessionResources) {
+					if (this._entries.has(sessionResource)) {
+						void this.disposeSession(sessionResource);
+					}
+					// Drop any tombstone for the abandoned untitled URI so the
+					// set doesn't grow unbounded across the workbench lifetime.
+					this._rebound.delete(sessionResource);
 				}
-				// Drop any tombstone for the abandoned untitled URI so the
-				// set doesn't grow unbounded across the workbench lifetime.
-				this._rebound.delete(sessionResource);
-			}
-		}));
+			}),
+		);
 	}
 
 	get(sessionResource: URI): URI | undefined {
@@ -261,11 +278,16 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 					workingDirectory,
 					config: initialConfig,
 				});
-				this._entries.set(sessionResource, { backendSession: created, config: { ...(initialConfig ?? {}) } });
+				this._entries.set(sessionResource, {
+					backendSession: created,
+					config: { ...(initialConfig ?? {}) },
+				});
 				this._onDidChange.fire(sessionResource);
 				return created;
 			} catch (err) {
-				this._logService.warn(`[AgentHostProvisional] Failed to create provisional session for ${sessionResource.toString()}: ${err instanceof Error ? err.message : String(err)}`);
+				this._logService.warn(
+					`[AgentHostProvisional] Failed to create provisional session for ${sessionResource.toString()}: ${err instanceof Error ? err.message : String(err)}`,
+				);
 				return undefined;
 			}
 		});
@@ -318,14 +340,19 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 				config,
 			});
 		} catch (err) {
-			this._logService.warn(`[AgentHostProvisional] Failed to create rebound provisional: ${err instanceof Error ? err.message : String(err)}`);
+			this._logService.warn(
+				`[AgentHostProvisional] Failed to create rebound provisional: ${err instanceof Error ? err.message : String(err)}`,
+			);
 			return undefined;
 		}
 
 		// Atomically swap entries: insert the new entry, drop the old one.
 		// Order matters — the old entry's `dispose` below must not race with
 		// the picker's `onDidChange` re-render reading the new entry.
-		this._entries.set(newSessionResource, { backendSession: created, config: { ...config } });
+		this._entries.set(newSessionResource, {
+			backendSession: created,
+			config: { ...config },
+		});
 		this._entries.delete(oldSessionResource);
 		this._rebound.add(oldSessionResource);
 		// Only notify for the new resource. Firing for `oldSessionResource`
@@ -336,9 +363,13 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 
 		// Dispose the temporary provisional. Best-effort; the agent treats
 		// it as an in-memory drop (no SDK/worktree to tear down).
-		this._agentHostService.disposeSession(oldEntry.backendSession).catch(err => {
-			this._logService.warn(`[AgentHostProvisional] Failed to dispose temporary provisional ${oldEntry.backendSession.toString()}: ${err instanceof Error ? err.message : String(err)}`);
-		});
+		this._agentHostService
+			.disposeSession(oldEntry.backendSession)
+			.catch((err) => {
+				this._logService.warn(
+					`[AgentHostProvisional] Failed to dispose temporary provisional ${oldEntry.backendSession.toString()}: ${err instanceof Error ? err.message : String(err)}`,
+				);
+			});
 
 		return created;
 	}
@@ -354,7 +385,9 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 		try {
 			await this._agentHostService.disposeSession(entry.backendSession);
 		} catch (err) {
-			this._logService.warn(`[AgentHostProvisional] Failed to dispose provisional ${entry.backendSession.toString()}: ${err instanceof Error ? err.message : String(err)}`);
+			this._logService.warn(
+				`[AgentHostProvisional] Failed to dispose provisional ${entry.backendSession.toString()}: ${err instanceof Error ? err.message : String(err)}`,
+			);
 		}
 	}
 
@@ -362,7 +395,9 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 		// Fire-and-forget cleanup for any provisionals still tracked. Avoid
 		// awaiting in `dispose()` to keep workbench teardown synchronous.
 		for (const [, entry] of this._entries) {
-			this._agentHostService.disposeSession(entry.backendSession).catch(() => { /* swallow on shutdown */ });
+			this._agentHostService.disposeSession(entry.backendSession).catch(() => {
+				/* swallow on shutdown */
+			});
 		}
 		this._entries.clear();
 		this._pending.clear();
@@ -375,11 +410,13 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 	 * to the agent-host backend URI (`PROVIDER:/<id>`).
 	 */
 	private _toBackendUri(sessionResource: URI, provider: string): URI {
-		const rawId = sessionResource.path.replace(/^\//, '');
+		const rawId = sessionResource.path.replace(/^\//, "");
 		return URI.from({ scheme: provider, path: `/${rawId}` });
 	}
 
-	getResolvedConfig(sessionResource: URI): ResolveSessionConfigResult | undefined {
+	getResolvedConfig(
+		sessionResource: URI,
+	): ResolveSessionConfigResult | undefined {
 		return this._entries.get(sessionResource)?.resolvedConfig;
 	}
 
@@ -407,7 +444,11 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 				};
 			}
 		}
-		const backend = await this.getOrCreate(sessionResource, provider, workingDirectory);
+		const backend = await this.getOrCreate(
+			sessionResource,
+			provider,
+			workingDirectory,
+		);
 		if (!backend) {
 			return undefined;
 		}
@@ -447,7 +488,10 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 					// doesn't know about survive.
 					const mergedConfig = { ...stillCurrent.config, ...resolvedValues };
 					const configChanged = !equals(stillCurrent.config, mergedConfig);
-					const resolvedChanged = !equals(stillCurrent.resolvedConfig, resolved);
+					const resolvedChanged = !equals(
+						stillCurrent.resolvedConfig,
+						resolved,
+					);
 					if (configChanged || resolvedChanged) {
 						stillCurrent.config = mergedConfig;
 						stillCurrent.resolvedConfig = resolved;
@@ -455,7 +499,9 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 					}
 				}
 			} catch (err) {
-				this._logService.warn(`[AgentHostProvisional] schema re-resolve failed: ${err instanceof Error ? err.message : String(err)}`);
+				this._logService.warn(
+					`[AgentHostProvisional] schema re-resolve failed: ${err instanceof Error ? err.message : String(err)}`,
+				);
 			}
 			return backend;
 		});
@@ -479,12 +525,23 @@ export class AgentHostUntitledProvisionalSessionService extends Disposable imple
 		if (this._environmentService.isSessionsWindow) {
 			return undefined;
 		}
-		const config: Record<string, unknown> = { [SessionConfigKey.Isolation]: 'folder' };
-		const configured = this._configurationService.getValue<string>(ChatConfiguration.DefaultPermissionLevel);
-		const policyValue = this._configurationService.inspect<boolean>(ChatConfiguration.GlobalAutoApprove).policyValue;
-		if (typeof configured === 'string' && KNOWN_AUTO_APPROVE_VALUES.has(configured)) {
+		const config: Record<string, unknown> = {
+			[SessionConfigKey.Isolation]: "folder",
+		};
+		const configured = this._configurationService.getValue<string>(
+			ChatConfiguration.DefaultPermissionLevel,
+		);
+		const policyValue = this._configurationService.inspect<boolean>(
+			ChatConfiguration.GlobalAutoApprove,
+		).policyValue;
+		if (
+			typeof configured === "string" &&
+			KNOWN_AUTO_APPROVE_VALUES.has(configured)
+		) {
 			const policyRestricted = policyValue === false;
-			config[SessionConfigKey.AutoApprove] = policyRestricted ? 'default' : configured;
+			config[SessionConfigKey.AutoApprove] = policyRestricted
+				? "default"
+				: configured;
 		}
 		return config;
 	}

@@ -16,7 +16,6 @@ export interface IUrlOpener {
 }
 
 export class NullUrlOpener implements IUrlOpener {
-
 	declare readonly _serviceBrand: undefined;
 
 	public readonly openedUrls: string[] = [];

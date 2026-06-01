@@ -16,15 +16,27 @@ describe('ExternalEditTracker', () => {
 			const planDir = URI.joinPath(userHome, '.claude', 'plans');
 			const tracker = new ExternalEditTracker([planDir]);
 
-			const planFile = URI.joinPath(userHome, '.claude', 'plans', 'test-plan.md');
+			const planFile = URI.joinPath(
+				userHome,
+				'.claude',
+				'plans',
+				'test-plan.md',
+			);
 			const regularFile = URI.file('/workspace/src/test.ts');
 			const stream = new SpyChatResponseStream();
 
-			await tracker.trackEdit('edit-1', [planFile, regularFile], stream, CancellationToken.None);
+			await tracker.trackEdit(
+				'edit-1',
+				[planFile, regularFile],
+				stream,
+				CancellationToken.None,
+			);
 
 			// Only the regular file should be tracked
 			expect(stream.externalEditUris.length).toBe(1);
-			expect(stream.externalEditUris[0].toString()).toBe(regularFile.toString());
+			expect(stream.externalEditUris[0].toString()).toBe(
+				regularFile.toString(),
+			);
 		});
 
 		it('should not filter files from other .claude subdirectories', async () => {
@@ -32,11 +44,21 @@ describe('ExternalEditTracker', () => {
 			const planDir = URI.joinPath(userHome, '.claude', 'plans');
 			const tracker = new ExternalEditTracker([planDir]);
 
-			const agentFile = URI.joinPath(userHome, '.claude', 'agents', 'my-agent.md');
+			const agentFile = URI.joinPath(
+				userHome,
+				'.claude',
+				'agents',
+				'my-agent.md',
+			);
 			const memoryFile = URI.joinPath(userHome, '.claude', 'CLAUDE.md');
 			const stream = new SpyChatResponseStream();
 
-			await tracker.trackEdit('edit-2', [agentFile, memoryFile], stream, CancellationToken.None);
+			await tracker.trackEdit(
+				'edit-2',
+				[agentFile, memoryFile],
+				stream,
+				CancellationToken.None,
+			);
 
 			// Both files should be tracked
 			expect(stream.externalEditUris.length).toBe(2);
@@ -48,16 +70,28 @@ describe('ExternalEditTracker', () => {
 			const tempDir = URI.file('/tmp/claude-temp');
 			const tracker = new ExternalEditTracker([planDir, tempDir]);
 
-			const planFile = URI.joinPath(userHome, '.claude', 'plans', 'plan.md');
+			const planFile = URI.joinPath(
+				userHome,
+				'.claude',
+				'plans',
+				'plan.md',
+			);
 			const tempFile = URI.joinPath(tempDir, 'temp.txt');
 			const regularFile = URI.file('/workspace/src/test.ts');
 			const stream = new SpyChatResponseStream();
 
-			await tracker.trackEdit('edit-3', [planFile, tempFile, regularFile], stream, CancellationToken.None);
+			await tracker.trackEdit(
+				'edit-3',
+				[planFile, tempFile, regularFile],
+				stream,
+				CancellationToken.None,
+			);
 
 			// Only the regular file should be tracked
 			expect(stream.externalEditUris.length).toBe(1);
-			expect(stream.externalEditUris[0].toString()).toBe(regularFile.toString());
+			expect(stream.externalEditUris[0].toString()).toBe(
+				regularFile.toString(),
+			);
 		});
 
 		it('should handle nested files in ignored directories', async () => {
@@ -65,15 +99,28 @@ describe('ExternalEditTracker', () => {
 			const planDir = URI.joinPath(userHome, '.claude', 'plans');
 			const tracker = new ExternalEditTracker([planDir]);
 
-			const nestedPlanFile = URI.joinPath(userHome, '.claude', 'plans', 'subfolder', 'nested-plan.md');
+			const nestedPlanFile = URI.joinPath(
+				userHome,
+				'.claude',
+				'plans',
+				'subfolder',
+				'nested-plan.md',
+			);
 			const regularFile = URI.file('/workspace/src/test.ts');
 			const stream = new SpyChatResponseStream();
 
-			await tracker.trackEdit('edit-4', [nestedPlanFile, regularFile], stream, CancellationToken.None);
+			await tracker.trackEdit(
+				'edit-4',
+				[nestedPlanFile, regularFile],
+				stream,
+				CancellationToken.None,
+			);
 
 			// Only the regular file should be tracked
 			expect(stream.externalEditUris.length).toBe(1);
-			expect(stream.externalEditUris[0].toString()).toBe(regularFile.toString());
+			expect(stream.externalEditUris[0].toString()).toBe(
+				regularFile.toString(),
+			);
 		});
 
 		it('should not filter files with similar prefix outside ignored directory', async () => {
@@ -81,11 +128,21 @@ describe('ExternalEditTracker', () => {
 			const planDir = URI.joinPath(userHome, '.claude', 'plans');
 			const tracker = new ExternalEditTracker([planDir]);
 
-			const similarFile = URI.joinPath(userHome, '.claude', 'plans-backup', 'file.md');
+			const similarFile = URI.joinPath(
+				userHome,
+				'.claude',
+				'plans-backup',
+				'file.md',
+			);
 			const regularFile = URI.file('/workspace/src/test.ts');
 			const stream = new SpyChatResponseStream();
 
-			await tracker.trackEdit('edit-5', [similarFile, regularFile], stream, CancellationToken.None);
+			await tracker.trackEdit(
+				'edit-5',
+				[similarFile, regularFile],
+				stream,
+				CancellationToken.None,
+			);
 
 			// Both should be tracked because plans-backup is not the plans directory
 			expect(stream.externalEditUris.length).toBe(2);
@@ -97,7 +154,12 @@ describe('ExternalEditTracker', () => {
 			const file2 = URI.file('/workspace/src/file2.ts');
 			const stream = new SpyChatResponseStream();
 
-			await tracker.trackEdit('edit-6', [file1, file2], stream, CancellationToken.None);
+			await tracker.trackEdit(
+				'edit-6',
+				[file1, file2],
+				stream,
+				CancellationToken.None,
+			);
 
 			// All files should be tracked
 			expect(stream.externalEditUris.length).toBe(2);
@@ -108,11 +170,26 @@ describe('ExternalEditTracker', () => {
 			const planDir = URI.joinPath(userHome, '.claude', 'plans');
 			const tracker = new ExternalEditTracker([planDir]);
 
-			const planFile1 = URI.joinPath(userHome, '.claude', 'plans', 'plan1.md');
-			const planFile2 = URI.joinPath(userHome, '.claude', 'plans', 'plan2.md');
+			const planFile1 = URI.joinPath(
+				userHome,
+				'.claude',
+				'plans',
+				'plan1.md',
+			);
+			const planFile2 = URI.joinPath(
+				userHome,
+				'.claude',
+				'plans',
+				'plan2.md',
+			);
 			const stream = new SpyChatResponseStream();
 
-			await tracker.trackEdit('edit-7', [planFile1, planFile2], stream, CancellationToken.None);
+			await tracker.trackEdit(
+				'edit-7',
+				[planFile1, planFile2],
+				stream,
+				CancellationToken.None,
+			);
 
 			// No files should be tracked
 			expect(stream.externalEditUris.length).toBe(0);

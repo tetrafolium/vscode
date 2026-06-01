@@ -25,16 +25,29 @@ export interface ISimilarFilesContextService {
 	 * Computes GhostText-style similar files context (neighbor code snippets via Jaccard similarity).
 	 * @returns JSON-serialized telemetry payload, or `undefined` on any error. Never throws.
 	 */
-	compute(uri: string, languageId: string, source: string, cursorOffset: number): Promise<string | undefined>;
+	compute(
+		uri: string,
+		languageId: string,
+		source: string,
+		cursorOffset: number,
+	): Promise<string | undefined>;
 
 	/**
 	 * Computes neighbor-file snippets (Jaccard-ranked) intended for inclusion in the prompt.
 	 * @returns Snippets ordered with best (highest scores) last, or `undefined` on any error. Never throws.
 	 */
-	getSnippetsForPrompt(uri: string, languageId: string, source: string, cursorOffset: number): Promise<readonly INeighborFileSnippet[] | undefined>;
+	getSnippetsForPrompt(
+		uri: string,
+		languageId: string,
+		source: string,
+		cursorOffset: number,
+	): Promise<readonly INeighborFileSnippet[] | undefined>;
 }
 
-export const ISimilarFilesContextService = createServiceIdentifier<ISimilarFilesContextService>('ISimilarFilesContextService');
+export const ISimilarFilesContextService =
+	createServiceIdentifier<ISimilarFilesContextService>(
+		'ISimilarFilesContextService',
+	);
 
 export class NullSimilarFilesContextService implements ISimilarFilesContextService {
 	declare readonly _serviceBrand: undefined;

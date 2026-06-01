@@ -27,22 +27,30 @@ describe('ClaudePlanFileTracker', () => {
 	it('records markdown files written directly into ~/.claude/plans/', () => {
 		const tracker = createTracker();
 		tracker.recordIfPlanFile(SESSION, `${PLAN_DIR}/plan-a.md`);
-		expect(tracker.getLastPlanFile(SESSION)?.fsPath).toBe(expectedFsPath(`${PLAN_DIR}/plan-a.md`));
+		expect(tracker.getLastPlanFile(SESSION)?.fsPath).toBe(
+			expectedFsPath(`${PLAN_DIR}/plan-a.md`),
+		);
 	});
 
 	it('overwrites the recorded URI with each subsequent record', () => {
 		const tracker = createTracker();
 		tracker.recordIfPlanFile(SESSION, `${PLAN_DIR}/plan-a.md`);
 		tracker.recordIfPlanFile(SESSION, `${PLAN_DIR}/plan-b.md`);
-		expect(tracker.getLastPlanFile(SESSION)?.fsPath).toBe(expectedFsPath(`${PLAN_DIR}/plan-b.md`));
+		expect(tracker.getLastPlanFile(SESSION)?.fsPath).toBe(
+			expectedFsPath(`${PLAN_DIR}/plan-b.md`),
+		);
 	});
 
 	it('keeps per-session state isolated', () => {
 		const tracker = createTracker();
 		tracker.recordIfPlanFile('s1', `${PLAN_DIR}/a.md`);
 		tracker.recordIfPlanFile('s2', `${PLAN_DIR}/b.md`);
-		expect(tracker.getLastPlanFile('s1')?.fsPath).toBe(expectedFsPath(`${PLAN_DIR}/a.md`));
-		expect(tracker.getLastPlanFile('s2')?.fsPath).toBe(expectedFsPath(`${PLAN_DIR}/b.md`));
+		expect(tracker.getLastPlanFile('s1')?.fsPath).toBe(
+			expectedFsPath(`${PLAN_DIR}/a.md`),
+		);
+		expect(tracker.getLastPlanFile('s2')?.fsPath).toBe(
+			expectedFsPath(`${PLAN_DIR}/b.md`),
+		);
 	});
 
 	it('clear() drops state for the given session only', () => {
@@ -51,7 +59,9 @@ describe('ClaudePlanFileTracker', () => {
 		tracker.recordIfPlanFile('s2', `${PLAN_DIR}/b.md`);
 		tracker.clear('s1');
 		expect(tracker.getLastPlanFile('s1')).toBeUndefined();
-		expect(tracker.getLastPlanFile('s2')?.fsPath).toBe(expectedFsPath(`${PLAN_DIR}/b.md`));
+		expect(tracker.getLastPlanFile('s2')?.fsPath).toBe(
+			expectedFsPath(`${PLAN_DIR}/b.md`),
+		);
 	});
 
 	it('ignores non-markdown files', () => {
@@ -62,7 +72,10 @@ describe('ClaudePlanFileTracker', () => {
 
 	it('ignores files outside the plan directory', () => {
 		const tracker = createTracker();
-		tracker.recordIfPlanFile(SESSION, `/home/testuser/.claude/notes/plan.md`);
+		tracker.recordIfPlanFile(
+			SESSION,
+			`/home/testuser/.claude/notes/plan.md`,
+		);
 		tracker.recordIfPlanFile(SESSION, `/tmp/plan.md`);
 		expect(tracker.getLastPlanFile(SESSION)).toBeUndefined();
 	});
@@ -84,10 +97,18 @@ describe('ClaudePlanFileTracker', () => {
 	// hand back the plan path with different casing than `userHome`. On
 	// Linux URI casing is preserved by `extUriBiasedIgnorePathCase`, so
 	// only assert this behavior on platforms that actually ignore case.
-	it.runIf(!isLinux)('matches paths case-insensitively when the platform is case-insensitive', () => {
-		const tracker = createTracker();
-		// `.md` extension still lower-cased so the early-exit doesn't fire.
-		tracker.recordIfPlanFile(SESSION, '/home/TestUser/.Claude/Plans/plan.md');
-		expect(tracker.getLastPlanFile(SESSION)?.fsPath).toBe(expectedFsPath('/home/TestUser/.Claude/Plans/plan.md'));
-	});
+	it.runIf(!isLinux)(
+		'matches paths case-insensitively when the platform is case-insensitive',
+		() => {
+			const tracker = createTracker();
+			// `.md` extension still lower-cased so the early-exit doesn't fire.
+			tracker.recordIfPlanFile(
+				SESSION,
+				'/home/TestUser/.Claude/Plans/plan.md',
+			);
+			expect(tracker.getLastPlanFile(SESSION)?.fsPath).toBe(
+				expectedFsPath('/home/TestUser/.Claude/Plans/plan.md'),
+			);
+		},
+	);
 });

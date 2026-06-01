@@ -11,7 +11,6 @@ import { ChatResponseTextEditPart, TextEdit } from '../../../../vscodeTypes';
 import { ProjectedDocument } from './summarizedDocument/summarizeDocument';
 
 export class WorkingCopyDerivedDocument {
-
 	private readonly _workingCopyOriginalDocument: WorkingCopyOriginalDocument;
 
 	public get originalText(): string {
@@ -41,29 +40,38 @@ export class WorkingCopyDerivedDocument {
 		return this._workingCopyOriginalDocument.appliedEdits;
 	}
 
-	constructor(
-		private _derivedDocument: ProjectedDocument
-	) {
-		this._workingCopyOriginalDocument = new WorkingCopyOriginalDocument(this._derivedDocument.originalText);
+	constructor(private _derivedDocument: ProjectedDocument) {
+		this._workingCopyOriginalDocument = new WorkingCopyOriginalDocument(
+			this._derivedDocument.originalText,
+		);
 	}
 
-	createDerivedDocumentChatResponseStream(outputStream: ChatResponseStream): ChatResponseStream {
-		return new ChatResponseStreamImpl((_value) => {
-			const value = this.applyAndTransformProgressItem(_value);
-			outputStream.push(value);
-		}, (reason) => {
-			outputStream.clearToPreviousToolInvocation(reason);
-		}, undefined, undefined, undefined, (questions, allowSkip) => {
-			return outputStream.questionCarousel(questions, allowSkip);
-		});
+	createDerivedDocumentChatResponseStream(
+		outputStream: ChatResponseStream,
+	): ChatResponseStream {
+		return new ChatResponseStreamImpl(
+			(_value) => {
+				const value = this.applyAndTransformProgressItem(_value);
+				outputStream.push(value);
+			},
+			(reason) => {
+				outputStream.clearToPreviousToolInvocation(reason);
+			},
+			undefined,
+			undefined,
+			undefined,
+			(questions, allowSkip) => {
+				return outputStream.questionCarousel(questions, allowSkip);
+			},
+		);
 	}
 
-	public applyAndTransformProgressItem(value: ExtendedChatResponsePart): ExtendedChatResponsePart {
-
+	public applyAndTransformProgressItem(
+		value: ExtendedChatResponsePart,
+	): ExtendedChatResponsePart {
 		if (!(value instanceof ChatResponseTextEditPart)) {
 			return value;
 		}
-
 
 		//           e_sum
 		//   d0 ---------------> s0
@@ -91,10 +99,17 @@ export class WorkingCopyDerivedDocument {
 		const e_ai_r = e_ai.rebaseSkipConflicting(e_sum.inverse(d0.text));
 		const e_sum_r = e_sum.rebaseSkipConflicting(e_ai_r);
 
-		const transformedProgressItem = new ChatResponseTextEditPart(value.uri, fromOffsetEdits(d0.transformer, e_ai_r));
+		const transformedProgressItem = new ChatResponseTextEditPart(
+			value.uri,
+			fromOffsetEdits(d0.transformer, e_ai_r),
+		);
 
 		this._workingCopyOriginalDocument.applyOffsetEdits(e_ai_r);
-		this._derivedDocument = new ProjectedDocument(this._workingCopyOriginalDocument.text, e_sum_r, this._derivedDocument.languageId);
+		this._derivedDocument = new ProjectedDocument(
+			this._workingCopyOriginalDocument.text,
+			e_sum_r,
+			this._derivedDocument.languageId,
+		);
 
 		return transformedProgressItem;
 	}
@@ -109,7 +124,9 @@ export class WorkingCopyDerivedDocument {
 		return fromOffsetEdits(d0.transformer, e_ai_r);
 	}
 
-	public convertPostEditsOffsetToOriginalOffset(postEditsOffset: number): number {
+	public convertPostEditsOffsetToOriginalOffset(
+		postEditsOffset: number,
+	): number {
 		return this._derivedDocument.projectBack(postEditsOffset);
 	}
 }
@@ -120,7 +137,6 @@ export class WorkingCopyDerivedDocument {
  * of the original document and it does not allow for mixed EOL sequences.
  */
 export class WorkingCopyOriginalDocument {
-
 	public get text(): string {
 		return this._text;
 	}
@@ -140,9 +156,7 @@ export class WorkingCopyOriginalDocument {
 
 	private readonly _eol: '\r\n' | '\n';
 
-	constructor(
-		private _text: string,
-	) {
+	constructor(private _text: string) {
 		// VS Code doesn't allow mixed EOL sequences, so the presence of one \r\n
 		// indicates that the document uses \r\n as EOL sequence.
 		this._eol = _text.includes('\r\n') ? '\r\n' : '\n';
@@ -161,7 +175,10 @@ export class WorkingCopyOriginalDocument {
 		let text = this._text;
 		for (let i = edits.length - 1; i >= 0; i--) {
 			const edit = edits[i];
-			text = text.substring(0, edit.replaceRange.start) + edit.newText + text.substring(edit.replaceRange.endExclusive);
+			text =
+				text.substring(0, edit.replaceRange.start) +
+				edit.newText +
+				text.substring(edit.replaceRange.endExclusive);
 		}
 
 		this._text = text;
@@ -173,7 +190,6 @@ export class WorkingCopyOriginalDocument {
 }
 
 export class DocumentSnapshot {
-
 	public get text(): string {
 		return this._text;
 	}
@@ -186,16 +202,19 @@ export class DocumentSnapshot {
 		return this._transformer;
 	}
 
-	constructor(
-		private readonly _text: string,
-	) { }
-
+	constructor(private readonly _text: string) {}
 }
 
-export function toOffsetEdits(transformer: PositionOffsetTransformer, edits: readonly TextEdit[]): StringEdit {
+export function toOffsetEdits(
+	transformer: PositionOffsetTransformer,
+	edits: readonly TextEdit[],
+): StringEdit {
 	return transformer.toOffsetEdit(edits);
 }
 
-export function fromOffsetEdits(transformer: PositionOffsetTransformer, edit: StringEdit): TextEdit[] {
+export function fromOffsetEdits(
+	transformer: PositionOffsetTransformer,
+	edit: StringEdit,
+): TextEdit[] {
 	return transformer.toTextEdits(edit);
 }

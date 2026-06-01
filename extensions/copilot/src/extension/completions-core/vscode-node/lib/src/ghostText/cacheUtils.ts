@@ -21,6 +21,14 @@ interface CacheContext {
 }
 
 /** Appends completions to existing entry in cache or creates new entry. */
-export function appendToCache(completionsCacheService: ICompletionsCacheService, requestContext: CacheContext, choice: APIChoice) {
-	completionsCacheService.append(requestContext.prefix, requestContext.prompt.suffix, choice);
+export function appendToCache(
+	completionsCacheService: ICompletionsCacheService,
+	requestContext: CacheContext,
+	choice: APIChoice,
+) {
+	completionsCacheService.append(
+		requestContext.prefix,
+		requestContext.prompt.suffix,
+		choice,
+	);
 }

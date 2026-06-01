@@ -5,13 +5,18 @@
 
 // version: 2
 
-declare module 'vscode' {
+declare module "vscode" {
 	// #region Resource Classes
 
 	/**
 	 * Indicates where a chat resource was loaded from.
 	 */
-	export type ChatResourceSource = 'local' | 'user' | 'extension' | 'plugin' | 'builtin';
+	export type ChatResourceSource =
+		| "local"
+		| "user"
+		| "extension"
+		| "plugin"
+		| "builtin";
 
 	/**
 	 * Represents a chat-related resource, such as a custom agent, instructions, prompt file, skill, or slash command.
@@ -271,7 +276,6 @@ declare module 'vscode' {
 		 * The contributing plugin URI when {@link source} is `plugin`.
 		 */
 		readonly pluginUri?: Uri;
-
 	}
 
 	export interface ChatPlugin {
@@ -280,7 +284,6 @@ declare module 'vscode' {
 		 * Optional session types that describe when the plugin should be offered.
 		 */
 		readonly sessionTypes?: readonly string[];
-
 	}
 
 	// #endregion
@@ -302,7 +305,10 @@ declare module 'vscode' {
 		 * @param token A cancellation token.
 		 * @returns An array of custom agents or a promise that resolves to such.
 		 */
-		provideCustomAgents(context: unknown, token: CancellationToken): ProviderResult<ChatResource[]>;
+		provideCustomAgents(
+			context: unknown,
+			token: CancellationToken,
+		): ProviderResult<ChatResource[]>;
 	}
 
 	/**
@@ -320,7 +326,10 @@ declare module 'vscode' {
 		 * @param token A cancellation token.
 		 * @returns An array of instructions or a promise that resolves to such.
 		 */
-		provideInstructions(context: unknown, token: CancellationToken): ProviderResult<ChatResource[]>;
+		provideInstructions(
+			context: unknown,
+			token: CancellationToken,
+		): ProviderResult<ChatResource[]>;
 	}
 
 	/**
@@ -338,7 +347,10 @@ declare module 'vscode' {
 		 * @param token A cancellation token.
 		 * @returns An array of prompt files or a promise that resolves to such.
 		 */
-		providePromptFiles(context: unknown, token: CancellationToken): ProviderResult<ChatResource[]>;
+		providePromptFiles(
+			context: unknown,
+			token: CancellationToken,
+		): ProviderResult<ChatResource[]>;
 	}
 
 	// #endregion
@@ -360,7 +372,10 @@ declare module 'vscode' {
 		 * @param token A cancellation token.
 		 * @returns An array of hook resources or a promise that resolves to such.
 		 */
-		provideHooks(context: unknown, token: CancellationToken): ProviderResult<ChatResource[]>;
+		provideHooks(
+			context: unknown,
+			token: CancellationToken,
+		): ProviderResult<ChatResource[]>;
 	}
 
 	// #endregion
@@ -382,7 +397,10 @@ declare module 'vscode' {
 		 * @param token A cancellation token.
 		 * @returns An array of skill resources or a promise that resolves to such.
 		 */
-		provideSkills(context: unknown, token: CancellationToken): ProviderResult<ChatResource[]>;
+		provideSkills(
+			context: unknown,
+			token: CancellationToken,
+		): ProviderResult<ChatResource[]>;
 	}
 
 	// #endregion
@@ -395,111 +413,127 @@ declare module 'vscode' {
 		 */
 		export const onDidChangeCustomAgents: Event<void>;
 
-
 		/**
 		 * Provide the list of currently available custom agents. These are `.agent.md` files
 		 * from all sources (workspace, user, and extension-provided).
 		 * @param token A cancellation token.
 		 */
-		export function getCustomAgents(token: CancellationToken): Thenable<readonly ChatCustomAgent[]>;
+		export function getCustomAgents(
+			token: CancellationToken,
+		): Thenable<readonly ChatCustomAgent[]>;
 
 		/**
 		 * An event that fires when the list of {@link instructions instructions} changes.
 		 */
 		export const onDidChangeInstructions: Event<void>;
 
-
 		/**
 		 * Provide the list of currently available instructions. These are `.instructions.md` files
 		 * from all sources (workspace, user, and extension-provided).
 		 * @param token A cancellation token.
 		 */
-		export function getInstructions(token: CancellationToken): Thenable<readonly ChatInstruction[]>;
+		export function getInstructions(
+			token: CancellationToken,
+		): Thenable<readonly ChatInstruction[]>;
 
 		/**
 		 * An event that fires when the list of {@link skills skills} changes.
 		 */
 		export const onDidChangeSkills: Event<void>;
 
-
 		/**
 		 * Provide the list of currently available skills. These are `SKILL.md` files
 		 * from all sources (workspace, user, and extension-provided).
 		 * @param token A cancellation token.
 		 */
-		export function getSkills(token: CancellationToken): Thenable<readonly ChatSkill[]>;
+		export function getSkills(
+			token: CancellationToken,
+		): Thenable<readonly ChatSkill[]>;
 
 		/**
 		 * An event that fires when the list of {@link slashCommands slash commands} changes.
 		 */
 		export const onDidChangeSlashCommands: Event<void>;
 
-
 		/**
 		 * Provide the list of currently available slash commands. These are `.prompt.md` files and
 		 * user-invocable `SKILL.md` files from all sources (workspace, user, and extension-provided).
 		 * @param token A cancellation token.
 		 */
-		export function getSlashCommands(token: CancellationToken): Thenable<readonly ChatSlashCommand[]>;
+		export function getSlashCommands(
+			token: CancellationToken,
+		): Thenable<readonly ChatSlashCommand[]>;
 
 		/**
 		 * An event that fires when the list of {@link hooks hooks} changes.
 		 */
 		export const onDidChangeHooks: Event<void>;
 
-
 		/**
 		 * Provide the list of currently available hook configuration files. These are JSON files that define lifecycle hooks from all sources (workspace, user, and extension-provided).
 		 * @param token A cancellation token.
 		 */
-		export function getHooks(token: CancellationToken): Thenable<readonly ChatHook[]>;
+		export function getHooks(
+			token: CancellationToken,
+		): Thenable<readonly ChatHook[]>;
 
 		/**
 		 * An event that fires when the list of {@link plugins plugins} changes.
 		 */
 		export const onDidChangePlugins: Event<void>;
 
-
 		/**
 		 * Provide the list of currently installed agent plugins.
 		 * @param token A cancellation token.
 		 */
-		export function getPlugins(token: CancellationToken): Thenable<readonly ChatPlugin[]>;
+		export function getPlugins(
+			token: CancellationToken,
+		): Thenable<readonly ChatPlugin[]>;
 
 		/**
 		 * Register a provider for custom agents.
 		 * @param provider The custom agent provider.
 		 * @returns A disposable that unregisters the provider when disposed.
 		 */
-		export function registerCustomAgentProvider(provider: ChatCustomAgentProvider): Disposable;
+		export function registerCustomAgentProvider(
+			provider: ChatCustomAgentProvider,
+		): Disposable;
 
 		/**
 		 * Register a provider for instructions.
 		 * @param provider The instructions provider.
 		 * @returns A disposable that unregisters the provider when disposed.
 		 */
-		export function registerInstructionsProvider(provider: ChatInstructionsProvider): Disposable;
+		export function registerInstructionsProvider(
+			provider: ChatInstructionsProvider,
+		): Disposable;
 
 		/**
 		 * Register a provider for prompt files.
 		 * @param provider The prompt file provider.
 		 * @returns A disposable that unregisters the provider when disposed.
 		 */
-		export function registerPromptFileProvider(provider: ChatPromptFileProvider): Disposable;
+		export function registerPromptFileProvider(
+			provider: ChatPromptFileProvider,
+		): Disposable;
 
 		/**
 		 * Register a provider for skills.
 		 * @param provider The skill provider.
 		 * @returns A disposable that unregisters the provider when disposed.
 		 */
-		export function registerSkillProvider(provider: ChatSkillProvider): Disposable;
+		export function registerSkillProvider(
+			provider: ChatSkillProvider,
+		): Disposable;
 
 		/**
 		 * Register a provider for hooks.
 		 * @param provider The hook provider.
 		 * @returns A disposable that unregisters the provider when disposed.
 		 */
-		export function registerHookProvider(provider: ChatHookProvider): Disposable;
+		export function registerHookProvider(
+			provider: ChatHookProvider,
+		): Disposable;
 	}
 
 	// #endregion

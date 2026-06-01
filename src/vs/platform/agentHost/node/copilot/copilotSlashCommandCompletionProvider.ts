@@ -3,27 +3,59 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { localize } from '../../../../nls.js';
-import { AgentSession } from '../../common/agentService.js';
-import { CompletionItem, CompletionItemKind, CompletionsParams } from '../../common/state/protocol/commands.js';
-import { MessageAttachmentKind } from '../../common/state/protocol/state.js';
-import { CompletionTriggerCharacter, IAgentHostCompletionItemProvider } from '../agentHostCompletions.js';
-import { extractLeadingSlashToken } from '../agentHostSlashCompletion.js';
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { localize } from "../../../../nls.js";
+import { AgentSession } from "../../common/agentService.js";
+import {
+	CompletionItem,
+	CompletionItemKind,
+	CompletionsParams,
+} from "../../common/state/protocol/commands.js";
+import { MessageAttachmentKind } from "../../common/state/protocol/state.js";
+import {
+	CompletionTriggerCharacter,
+	IAgentHostCompletionItemProvider,
+} from "../agentHostCompletions.js";
+import { extractLeadingSlashToken } from "../agentHostSlashCompletion.js";
 
 /**
  * Slash-command name and the token we surface to the user / round-trip on
  * the {@link MessageAttachmentKind.Simple} attachment's `_meta`.
  */
-export type CopilotSlashCommandName = 'plan' | 'compact' | 'research' | 'rubber-duck';
+export type CopilotSlashCommandName =
+	| "plan"
+	| "compact"
+	| "research"
+	| "rubber-duck";
 
-const COMMANDS: readonly CopilotSlashCommandName[] = ['plan', 'compact', 'research', 'rubber-duck'];
+const COMMANDS: readonly CopilotSlashCommandName[] = [
+	"plan",
+	"compact",
+	"research",
+	"rubber-duck",
+];
 function getCommandDescription(command: CopilotSlashCommandName): string {
 	switch (command) {
-		case 'plan': return localize('copilotSlashCommand.plan.description', "Create an implementation plan before coding");
-		case 'compact': return localize('copilotSlashCommand.compact.description', "Free up context by compacting the conversation history");
-		case 'research': return localize('copilotSlashCommand.research.description', "Run deep research on a topic using search and web sources");
-		case 'rubber-duck': return localize('copilotSlashCommand.rubberDuck.description', "Get an independent critique of the current approach");
+		case "plan":
+			return localize(
+				"copilotSlashCommand.plan.description",
+				"Create an implementation plan before coding",
+			);
+		case "compact":
+			return localize(
+				"copilotSlashCommand.compact.description",
+				"Free up context by compacting the conversation history",
+			);
+		case "research":
+			return localize(
+				"copilotSlashCommand.research.description",
+				"Run deep research on a topic using search and web sources",
+			);
+		case "rubber-duck":
+			return localize(
+				"copilotSlashCommand.rubberDuck.description",
+				"Get an independent critique of the current approach",
+			);
 	}
 }
 /**
@@ -54,14 +86,18 @@ export interface IParsedLeadingSlashCommand {
  * `/compact-hello`, `/plans`, or a leading-space `/compact` all return
  * `undefined`. Match is case-sensitive.
  */
-export function parseLeadingSlashCommand(prompt: string): IParsedLeadingSlashCommand | undefined {
-	const match = /^\/(plan|compact|research|rubber-duck)(?:$|\s+([\s\S]*))/.exec(prompt);
+export function parseLeadingSlashCommand(
+	prompt: string,
+): IParsedLeadingSlashCommand | undefined {
+	const match = /^\/(plan|compact|research|rubber-duck)(?:$|\s+([\s\S]*))/.exec(
+		prompt,
+	);
 	if (!match) {
 		return undefined;
 	}
 	return {
 		command: match[1] as CopilotSlashCommandName,
-		rest: (match[2] ?? '').trim(),
+		rest: (match[2] ?? "").trim(),
 	};
 }
 
@@ -77,12 +113,20 @@ export function parseLeadingSlashCommand(prompt: string): IParsedLeadingSlashCom
  * feature works whether the user picks the item or types it manually.
  */
 export class CopilotSlashCommandCompletionProvider implements IAgentHostCompletionItemProvider {
-	readonly kinds: ReadonlySet<CompletionItemKind> = new Set([CompletionItemKind.UserMessage]);
+	readonly kinds: ReadonlySet<CompletionItemKind> = new Set([
+		CompletionItemKind.UserMessage,
+	]);
 	readonly triggerCharacters = [CompletionTriggerCharacter.Slash] as const;
 
-	constructor(private readonly copilotcliId: string, private readonly _sessionInfo?: ICopilotSlashCommandSessionInfo) { }
+	constructor(
+		private readonly copilotcliId: string,
+		private readonly _sessionInfo?: ICopilotSlashCommandSessionInfo,
+	) {}
 
-	async provideCompletionItems(params: CompletionsParams, _token: CancellationToken): Promise<readonly CompletionItem[]> {
+	async provideCompletionItems(
+		params: CompletionsParams,
+		_token: CancellationToken,
+	): Promise<readonly CompletionItem[]> {
 		if (AgentSession.provider(params.channel) !== this.copilotcliId) {
 			return [];
 		}
@@ -103,20 +147,20 @@ export class CopilotSlashCommandCompletionProvider implements IAgentHostCompleti
 				continue;
 			}
 			// `/compact` only makes sense once the session has prior turns to compact.
-			if (command === 'compact' && !hasHistory) {
+			if (command === "compact" && !hasHistory) {
 				continue;
 			}
 			// `/rubber-duck` is only available when the feature is enabled.
-			if (command === 'rubber-duck' && !process.env['RUBBER_DUCK_AGENT']) {
+			if (command === "rubber-duck" && !process.env["RUBBER_DUCK_AGENT"]) {
 				continue;
 			}
 			items.push({
-				insertText: command === 'compact' ? '/' + command : '/' + command + ' ',
+				insertText: command === "compact" ? "/" + command : "/" + command + " ",
 				rangeStart: 0,
 				rangeEnd: leading.rangeEnd,
 				attachment: {
 					type: MessageAttachmentKind.Simple,
-					label: '/' + command,
+					label: "/" + command,
 					_meta: { command, description: getCommandDescription(command) },
 				},
 			});

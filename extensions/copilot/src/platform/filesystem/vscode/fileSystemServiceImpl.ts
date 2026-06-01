@@ -5,11 +5,13 @@
 
 import * as vscode from 'vscode';
 import { URI } from '../../../util/vs/base/common/uri';
-import { assertReadFileSizeLimit, IFileSystemService } from '../common/fileSystemService';
+import {
+	assertReadFileSizeLimit,
+	IFileSystemService,
+} from '../common/fileSystemService';
 import { FileType } from '../common/fileTypes';
 
 export class VSCodeFileSystemService implements IFileSystemService {
-
 	declare readonly _serviceBrand: undefined;
 
 	async stat(uri: URI): Promise<vscode.FileStat> {
@@ -33,15 +35,26 @@ export class VSCodeFileSystemService implements IFileSystemService {
 		return vscode.workspace.fs.writeFile(uri, content);
 	}
 
-	async delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
+	async delete(
+		uri: URI,
+		options?: { recursive?: boolean; useTrash?: boolean },
+	): Promise<void> {
 		return vscode.workspace.fs.delete(uri, options);
 	}
 
-	async rename(oldURI: URI, newURI: URI, options?: { overwrite?: boolean }): Promise<void> {
+	async rename(
+		oldURI: URI,
+		newURI: URI,
+		options?: { overwrite?: boolean },
+	): Promise<void> {
 		return vscode.workspace.fs.rename(oldURI, newURI, options);
 	}
 
-	async copy(source: URI, destination: URI, options?: { overwrite?: boolean }): Promise<void> {
+	async copy(
+		source: URI,
+		destination: URI,
+		options?: { overwrite?: boolean },
+	): Promise<void> {
 		return vscode.workspace.fs.copy(source, destination, options);
 	}
 
@@ -49,7 +62,9 @@ export class VSCodeFileSystemService implements IFileSystemService {
 		return !!vscode.workspace.fs.isWritableFileSystem(scheme);
 	}
 
-	createFileSystemWatcher(glob: string | vscode.RelativePattern): vscode.FileSystemWatcher {
+	createFileSystemWatcher(
+		glob: string | vscode.RelativePattern,
+	): vscode.FileSystemWatcher {
 		return vscode.workspace.createFileSystemWatcher(glob);
 	}
 }

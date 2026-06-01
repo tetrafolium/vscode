@@ -6,7 +6,10 @@
 import { assert } from 'chai';
 import { afterEach, beforeEach, suite, test, vi } from 'vitest';
 import type { ExtensionContext } from 'vscode';
-import { INSTRUCTION_FILE_EXTENSION, PromptsType } from '../../../../platform/customInstructions/common/promptTypes';
+import {
+	INSTRUCTION_FILE_EXTENSION,
+	PromptsType,
+} from '../../../../platform/customInstructions/common/promptTypes';
 import { MockFileSystemService } from '../../../../platform/filesystem/node/test/mockFileSystemService';
 import { MockAuthenticationService } from '../../../../platform/ignore/node/test/mockAuthenticationService';
 import { MockGitService } from '../../../../platform/ignore/node/test/mockGitService';
@@ -53,12 +56,15 @@ suite('GitHubOrgInstructionsProvider', () => {
 		mockWorkspaceService.setWorkspaceFolders([URI.file('/workspace')]);
 		mockGitService.setRepositoryFetchUrls({
 			rootUri: URI.file('/workspace'),
-			remoteFetchUrls: ['https://github.com/testorg/repo.git']
+			remoteFetchUrls: ['https://github.com/testorg/repo.git'],
 		});
 
 		// Set up testing services
-		const testingServiceCollection = createExtensionUnitTestingServices(disposables);
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		const testingServiceCollection =
+			createExtensionUnitTestingServices(disposables);
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 	});
 
 	afterEach(() => {
@@ -101,9 +107,17 @@ suite('GitHubOrgInstructionsProvider', () => {
 	/**
 	 * Helper to pre-populate cache files in mock filesystem.
 	 */
-	function prepopulateCache(orgName: string, files: Map<string, string>): void {
-		const cacheDir = URI.file(`${storagePath}/github/${orgName}/instructions`);
-		const dirEntries: [string, import('../../../../platform/filesystem/common/fileTypes').FileType][] = [];
+	function prepopulateCache(
+		orgName: string,
+		files: Map<string, string>,
+	): void {
+		const cacheDir = URI.file(
+			`${storagePath}/github/${orgName}/instructions`,
+		);
+		const dirEntries: [
+			string,
+			import('../../../../platform/filesystem/common/fileTypes').FileType,
+		][] = [];
 		for (const [filename, content] of files) {
 			mockFileSystem.mockFile(URI.joinPath(cacheDir, filename), content);
 			dirEntries.push([filename, 1 /* FileType.File */]);
@@ -125,17 +139,25 @@ suite('GitHubOrgInstructionsProvider', () => {
 		const orgId = 'testorg';
 
 		// Pre-populate cache with instructions
-		const instructionContent = '# Custom Instructions\nThese are custom instructions for the organization.';
-		prepopulateCache(orgId, new Map([
-			[`default${INSTRUCTION_FILE_EXTENSION}`, instructionContent]
-		]));
+		const instructionContent =
+			'# Custom Instructions\nThese are custom instructions for the organization.';
+		prepopulateCache(
+			orgId,
+			new Map([
+				[`default${INSTRUCTION_FILE_EXTENSION}`, instructionContent],
+			]),
+		);
 
 		const provider = createProvider();
 
 		const instructions = await provider.provideInstructions({}, {} as any);
 
 		assert.equal(instructions.length, 1);
-		assert.ok(instructions[0].uri.path.endsWith(`default${INSTRUCTION_FILE_EXTENSION}`));
+		assert.ok(
+			instructions[0].uri.path.endsWith(
+				`default${INSTRUCTION_FILE_EXTENSION}`,
+			),
+		);
 	});
 
 	test('returns empty array when cache is empty', async () => {
@@ -149,7 +171,8 @@ suite('GitHubOrgInstructionsProvider', () => {
 
 	test.skip('pollInstructions writes instructions to cache when found', async () => {
 		const orgId = 'testorg';
-		const instructionContent = '# Organization Instructions\nBe helpful and concise.';
+		const instructionContent =
+			'# Organization Instructions\nBe helpful and concise.';
 
 		mockOctoKitService.setOrgInstructions(orgId, instructionContent);
 
@@ -160,7 +183,7 @@ suite('GitHubOrgInstructionsProvider', () => {
 		const cachedContent = await resourcesService.readCacheFile(
 			PromptsType.instructions,
 			orgId,
-			`default${INSTRUCTION_FILE_EXTENSION}`
+			`default${INSTRUCTION_FILE_EXTENSION}`,
 		);
 
 		// The implementation adds applyTo front matter to the cached content
@@ -178,7 +201,7 @@ suite('GitHubOrgInstructionsProvider', () => {
 		const cachedContent = await resourcesService.readCacheFile(
 			PromptsType.instructions,
 			'testorg',
-			`default${INSTRUCTION_FILE_EXTENSION}`
+			`default${INSTRUCTION_FILE_EXTENSION}`,
 		);
 
 		assert.isUndefined(cachedContent);
@@ -198,20 +221,27 @@ suite('GitHubOrgInstructionsProvider', () => {
 
 		await waitForPolling();
 
-		assert.isTrue(eventFired, 'Change event should fire when instructions are updated');
+		assert.isTrue(
+			eventFired,
+			'Change event should fire when instructions are updated',
+		);
 	});
 
 	test.skip('fires change event on every successful poll with instructions', async () => {
 		// Note: The current implementation does not pass checkForChanges option to writeCacheFile,
 		// so change events fire on every poll even when content is unchanged
-		const instructionContent = '# Stable Instructions\nThis content will not change.';
+		const instructionContent =
+			'# Stable Instructions\nThis content will not change.';
 
 		mockOctoKitService.setOrgInstructions('testorg', instructionContent);
 
 		// Pre-populate cache with the same content
-		prepopulateCache('testorg', new Map([
-			[`default${INSTRUCTION_FILE_EXTENSION}`, instructionContent]
-		]));
+		prepopulateCache(
+			'testorg',
+			new Map([
+				[`default${INSTRUCTION_FILE_EXTENSION}`, instructionContent],
+			]),
+		);
 
 		const provider = createProvider();
 
@@ -222,7 +252,11 @@ suite('GitHubOrgInstructionsProvider', () => {
 
 		await waitForPolling();
 
-		assert.equal(changeEventCount, 1, 'Change event fires on every successful poll');
+		assert.equal(
+			changeEventCount,
+			1,
+			'Change event fires on every successful poll',
+		);
 	});
 
 	test.skip('pollInstructions handles API errors gracefully without throwing', async () => {
@@ -242,23 +276,32 @@ suite('GitHubOrgInstructionsProvider', () => {
 			errorThrown = true;
 		}
 
-		assert.isFalse(errorThrown, 'API errors should be handled internally and not propagate');
+		assert.isFalse(
+			errorThrown,
+			'API errors should be handled internally and not propagate',
+		);
 	});
 
 	test('returns instructions from correct organization', async () => {
 		// Pre-populate different orgs with different instructions
-		prepopulateCache('org1', new Map([
-			[`default${INSTRUCTION_FILE_EXTENSION}`, 'Org1 instructions']
-		]));
-		prepopulateCache('org2', new Map([
-			[`default${INSTRUCTION_FILE_EXTENSION}`, 'Org2 instructions']
-		]));
+		prepopulateCache(
+			'org1',
+			new Map([
+				[`default${INSTRUCTION_FILE_EXTENSION}`, 'Org1 instructions'],
+			]),
+		);
+		prepopulateCache(
+			'org2',
+			new Map([
+				[`default${INSTRUCTION_FILE_EXTENSION}`, 'Org2 instructions'],
+			]),
+		);
 
 		// Set preferred org to org2 by configuring workspace git remote
 		mockOctoKitService.setUserOrganizations(['org1', 'org2']);
 		mockGitService.setRepositoryFetchUrls({
 			rootUri: URI.file('/workspace'),
-			remoteFetchUrls: ['https://github.com/org2/repo.git']
+			remoteFetchUrls: ['https://github.com/org2/repo.git'],
 		});
 
 		const provider = createProvider();
@@ -274,7 +317,8 @@ suite('GitHubOrgInstructionsProvider', () => {
 		const provider = createProvider();
 
 		// Override readDirectory to throw an error
-		const originalReadDirectory = mockFileSystem.readDirectory.bind(mockFileSystem);
+		const originalReadDirectory =
+			mockFileSystem.readDirectory.bind(mockFileSystem);
 		mockFileSystem.readDirectory = async () => {
 			throw new Error('Cache read error');
 		};
@@ -289,19 +333,25 @@ suite('GitHubOrgInstructionsProvider', () => {
 	});
 
 	test('respects cancellation token in provideInstructions', async () => {
-		prepopulateCache('testorg', new Map([
-			[`default${INSTRUCTION_FILE_EXTENSION}`, 'Some instructions']
-		]));
+		prepopulateCache(
+			'testorg',
+			new Map([
+				[`default${INSTRUCTION_FILE_EXTENSION}`, 'Some instructions'],
+			]),
+		);
 
 		const provider = createProvider();
 
 		// Create a cancelled token
 		const cancelledToken = {
 			isCancellationRequested: true,
-			onCancellationRequested: () => ({ dispose: () => { } })
+			onCancellationRequested: () => ({ dispose: () => {} }),
 		};
 
-		const instructions = await provider.provideInstructions({}, cancelledToken as any);
+		const instructions = await provider.provideInstructions(
+			{},
+			cancelledToken as any,
+		);
 
 		// Should return empty array when cancelled
 		assert.deepEqual(instructions, []);
@@ -319,7 +369,7 @@ suite('GitHubOrgInstructionsProvider', () => {
 		const cachedContent = await resourcesService.readCacheFile(
 			PromptsType.instructions,
 			'testorg',
-			`default${INSTRUCTION_FILE_EXTENSION}`
+			`default${INSTRUCTION_FILE_EXTENSION}`,
 		);
 
 		// The implementation adds applyTo front matter to the cached content
@@ -327,13 +377,18 @@ suite('GitHubOrgInstructionsProvider', () => {
 		assert.equal(cachedContent, expectedContent);
 
 		// Prepopulate so we can list it
-		prepopulateCache('testorg', new Map([
-			[`default${INSTRUCTION_FILE_EXTENSION}`, instructionContent]
-		]));
+		prepopulateCache(
+			'testorg',
+			new Map([
+				[`default${INSTRUCTION_FILE_EXTENSION}`, instructionContent],
+			]),
+		);
 
 		const instructions = await provider.provideInstructions({}, {} as any);
 		assert.equal(instructions.length, 1);
-		assert.ok(instructions[0].uri.path.endsWith(INSTRUCTION_FILE_EXTENSION));
+		assert.ok(
+			instructions[0].uri.path.endsWith(INSTRUCTION_FILE_EXTENSION),
+		);
 	});
 
 	test('disposes polling subscription when provider is disposed', () => {
@@ -348,11 +403,17 @@ suite('GitHubOrgInstructionsProvider', () => {
 
 	test('multiple instruction files are returned when present', async () => {
 		// Pre-populate cache with multiple instruction files
-		prepopulateCache('testorg', new Map([
-			[`default${INSTRUCTION_FILE_EXTENSION}`, 'Default instructions'],
-			[`custom${INSTRUCTION_FILE_EXTENSION}`, 'Custom instructions'],
-			[`team${INSTRUCTION_FILE_EXTENSION}`, 'Team instructions'],
-		]));
+		prepopulateCache(
+			'testorg',
+			new Map([
+				[
+					`default${INSTRUCTION_FILE_EXTENSION}`,
+					'Default instructions',
+				],
+				[`custom${INSTRUCTION_FILE_EXTENSION}`, 'Custom instructions'],
+				[`team${INSTRUCTION_FILE_EXTENSION}`, 'Team instructions'],
+			]),
+		);
 
 		const provider = createProvider();
 

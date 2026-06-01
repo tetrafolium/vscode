@@ -8,7 +8,8 @@ import type * as vscode from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { URI } from '../../../util/vs/base/common/uri';
 
-export const needsWorkspaceFolderForTaskError = () => l10n.t`The model asked to run a build task, which requires a workspace folder. Please open a folder and retry.`;
+export const needsWorkspaceFolderForTaskError = () =>
+	l10n.t`The model asked to run a build task, which requires a workspace folder. Please open a folder and retry.`;
 
 export interface ILaunchConfigService {
 	_serviceBrand: undefined;
@@ -31,10 +32,18 @@ export interface ILaunchConfigService {
 	/**
 	 * Resolves the configuration inputs in the given launch.json.
 	 */
-	resolveConfigurationInputs(launchJson: ILaunchJSON, defaults?: Map<string, string>, interactor?: ICommandInteractor): Promise<{ config: vscode.DebugConfiguration; inputs: Map<string, string> } | undefined>;
+	resolveConfigurationInputs(
+		launchJson: ILaunchJSON,
+		defaults?: Map<string, string>,
+		interactor?: ICommandInteractor,
+	): Promise<
+		| { config: vscode.DebugConfiguration; inputs: Map<string, string> }
+		| undefined
+	>;
 }
 
-export const ILaunchConfigService = createServiceIdentifier<ILaunchConfigService>('ILaunchConfigService');
+export const ILaunchConfigService =
+	createServiceIdentifier<ILaunchConfigService>('ILaunchConfigService');
 
 /** Describes the contents of launch.json */
 export interface ILaunchJSON {
@@ -54,5 +63,8 @@ export interface ITasksJSON {
 export interface ICommandInteractor {
 	isGenerating(): void;
 	prompt(text: string, defaultValue?: string): Promise<string | undefined>;
-	ensureTask(workspaceFolder: URI | undefined, definition: vscode.TaskDefinition): Promise<boolean>;
+	ensureTask(
+		workspaceFolder: URI | undefined,
+		definition: vscode.TaskDefinition,
+	): Promise<boolean>;
 }

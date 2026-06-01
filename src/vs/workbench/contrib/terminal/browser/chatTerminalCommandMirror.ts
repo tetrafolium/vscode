@@ -3,25 +3,39 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableStore, toDisposable } from '../../../../base/common/lifecycle.js';
-import { CancellationError } from '../../../../base/common/errors.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import type { IMarker as IXtermMarker, Terminal as RawXtermTerminal } from '@xterm/xterm';
-import type { ITerminalCommand } from '../../../../platform/terminal/common/capabilities/capabilities.js';
-import { ITerminalService, type IDetachedTerminalInstance } from './terminal.js';
-import { DetachedProcessInfo } from './detachedTerminal.js';
-import { XtermTerminal } from './xterm/xtermTerminal.js';
-import { TERMINAL_BACKGROUND_COLOR } from '../common/terminalColorRegistry.js';
-import { PANEL_BACKGROUND } from '../../../common/theme.js';
-import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
-import { ChatContextKeys } from '../../chat/common/actions/chatContextKeys.js';
-import { editorBackground } from '../../../../platform/theme/common/colorRegistry.js';
-import { Color } from '../../../../base/common/color.js';
-import type { IChatTerminalToolInvocationData } from '../../chat/common/chatService/chatService.js';
-import type { IColorTheme } from '../../../../platform/theme/common/themeService.js';
-import { ICurrentPartialCommand } from '../../../../platform/terminal/common/capabilities/commandDetection/terminalCommand.js';
+import {
+	Disposable,
+	DisposableStore,
+	toDisposable,
+} from "../../../../base/common/lifecycle.js";
+import { CancellationError } from "../../../../base/common/errors.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import type {
+	IMarker as IXtermMarker,
+	Terminal as RawXtermTerminal,
+} from "@xterm/xterm";
+import type { ITerminalCommand } from "../../../../platform/terminal/common/capabilities/capabilities.js";
+import {
+	ITerminalService,
+	type IDetachedTerminalInstance,
+} from "./terminal.js";
+import { DetachedProcessInfo } from "./detachedTerminal.js";
+import { XtermTerminal } from "./xterm/xtermTerminal.js";
+import { TERMINAL_BACKGROUND_COLOR } from "../common/terminalColorRegistry.js";
+import { PANEL_BACKGROUND } from "../../../common/theme.js";
+import { IContextKeyService } from "../../../../platform/contextkey/common/contextkey.js";
+import { ChatContextKeys } from "../../chat/common/actions/chatContextKeys.js";
+import { editorBackground } from "../../../../platform/theme/common/colorRegistry.js";
+import { Color } from "../../../../base/common/color.js";
+import type { IChatTerminalToolInvocationData } from "../../chat/common/chatService/chatService.js";
+import type { IColorTheme } from "../../../../platform/theme/common/themeService.js";
+import { ICurrentPartialCommand } from "../../../../platform/terminal/common/capabilities/commandDetection/terminalCommand.js";
 
-function getChatTerminalBackgroundColor(theme: IColorTheme, contextKeyService: IContextKeyService, storedBackground?: string): Color | undefined {
+function getChatTerminalBackgroundColor(
+	theme: IColorTheme,
+	contextKeyService: IContextKeyService,
+	storedBackground?: string,
+): Color | undefined {
 	if (storedBackground) {
 		const color = Color.fromHex(storedBackground);
 		if (color) {
@@ -46,7 +60,20 @@ function getChatTerminalBackgroundColor(theme: IColorTheme, contextKeyService: I
  * @param cols The terminal column count (used to clamp line length)
  * @returns The maximum column width (number of columns used), or 0 if all lines are empty
  */
-export function computeMaxBufferColumnWidth(buffer: { readonly length: number; getLine(y: number): { readonly length: number; getCell(x: number): { getChars(): string } | undefined } | undefined }, cols: number): number {
+export function computeMaxBufferColumnWidth(
+	buffer: {
+		readonly length: number;
+		getLine(
+			y: number,
+		):
+			| {
+					readonly length: number;
+					getCell(x: number): { getChars(): string } | undefined;
+			  }
+			| undefined;
+	},
+	cols: number,
+): number {
 	let maxWidth = 0;
 
 	for (let y = 0; y < buffer.length; y++) {
@@ -79,7 +106,12 @@ export function computeMaxBufferColumnWidth(buffer: { readonly length: number; g
  * @param windowSize The number of characters before slicePoint to check (default 50).
  * @returns True if the boundary matches, false if VT sequences have diverged.
  */
-export function vtBoundaryMatches(newVT: string, oldVT: string, slicePoint: number, windowSize: number = 50): boolean {
+export function vtBoundaryMatches(
+	newVT: string,
+	oldVT: string,
+	slicePoint: number,
+	windowSize: number = 50,
+): boolean {
 	const start = Math.max(0, slicePoint - windowSize);
 	const end = slicePoint;
 	for (let i = start; i < end; i++) {
@@ -97,7 +129,9 @@ export interface IDetachedTerminalCommandMirrorRenderResult {
 
 interface IDetachedTerminalCommandMirror {
 	attach(container: HTMLElement): Promise<void>;
-	renderCommand(): Promise<IDetachedTerminalCommandMirrorRenderResult | undefined>;
+	renderCommand(): Promise<
+		IDetachedTerminalCommandMirrorRenderResult | undefined
+	>;
 	onDidUpdate: Event<IDetachedTerminalCommandMirrorRenderResult>;
 	onDidInput: Event<string>;
 }
@@ -110,7 +144,7 @@ const enum ChatTerminalMirrorMetrics {
 	 * Computing max column width iterates the entire buffer, so we skip it
 	 * for large outputs to avoid performance issues.
 	 */
-	MaxLinesForColumnWidthComputation = 100
+	MaxLinesForColumnWidthComputation = 100,
 }
 
 /**
@@ -124,7 +158,7 @@ function computeOutputLineCount(startLine: number, endLine: number): number {
 export async function getCommandOutputSnapshot(
 	xtermTerminal: XtermTerminal,
 	command: ITerminalCommand,
-	log?: (reason: 'fallback' | 'primary', error: unknown) => void
+	log?: (reason: "fallback" | "primary", error: unknown) => void,
 ): Promise<{ text: string; lineCount: number } | undefined> {
 	const executedMarker = command.executedMarker;
 	const endMarker = command.endMarker;
@@ -136,11 +170,7 @@ export async function getCommandOutputSnapshot(
 	if (!executedMarker || executedMarker.isDisposed) {
 		const raw = xtermTerminal.raw;
 		const buffer = raw.buffer.active;
-		const offsets = [
-			-(buffer.baseY + buffer.cursorY),
-			-buffer.baseY,
-			0
-		];
+		const offsets = [-(buffer.baseY + buffer.cursorY), -buffer.baseY, 0];
 		let startMarker: IXtermMarker | undefined;
 		for (const offset of offsets) {
 			startMarker = raw.registerMarker(offset);
@@ -149,20 +179,20 @@ export async function getCommandOutputSnapshot(
 			}
 		}
 		if (!startMarker || startMarker.isDisposed) {
-			return { text: '', lineCount: 0 };
+			return { text: "", lineCount: 0 };
 		}
 		const startLine = startMarker.line;
 		let text: string | undefined;
 		try {
 			text = await xtermTerminal.getRangeAsVT(startMarker, endMarker, true);
 		} catch (error) {
-			log?.('fallback', error);
+			log?.("fallback", error);
 			return undefined;
 		} finally {
 			startMarker.dispose();
 		}
 		if (!text) {
-			return { text: '', lineCount: 0 };
+			return { text: "", lineCount: 0 };
 		}
 		const endLine = endMarker.line;
 		const lineCount = computeOutputLineCount(startLine, endLine);
@@ -177,11 +207,11 @@ export async function getCommandOutputSnapshot(
 	try {
 		text = await xtermTerminal.getRangeAsVT(executedMarker, endMarker, true);
 	} catch (error) {
-		log?.('primary', error);
+		log?.("primary", error);
 		return undefined;
 	}
 	if (!text) {
-		return { text: '', lineCount: 0 };
+		return { text: "", lineCount: 0 };
 	}
 
 	return { text, lineCount };
@@ -191,7 +221,10 @@ export async function getCommandOutputSnapshot(
  * Mirrors a terminal command's output into a detached terminal instance.
  * Used in the chat terminal tool progress part to show command output.
  */
-export class DetachedTerminalCommandMirror extends Disposable implements IDetachedTerminalCommandMirror {
+export class DetachedTerminalCommandMirror
+	extends Disposable
+	implements IDetachedTerminalCommandMirror
+{
 	// Streaming approach
 	// ------------------
 	// The mirror maintains a VT snapshot of the command's output and incrementally updates a
@@ -219,15 +252,22 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 	//   entire command range and *rewrites* the detached terminal content.
 
 	private _detachedTerminal: IDetachedTerminalInstance | undefined;
-	private _detachedTerminalPromise: Promise<IDetachedTerminalInstance> | undefined;
+	private _detachedTerminalPromise:
+		| Promise<IDetachedTerminalInstance>
+		| undefined;
 	private _attachedContainer: HTMLElement | undefined;
-	private readonly _streamingDisposables = this._register(new DisposableStore());
-	private readonly _onDidUpdateEmitter = this._register(new Emitter<IDetachedTerminalCommandMirrorRenderResult>());
-	public readonly onDidUpdate: Event<IDetachedTerminalCommandMirrorRenderResult> = this._onDidUpdateEmitter.event;
+	private readonly _streamingDisposables = this._register(
+		new DisposableStore(),
+	);
+	private readonly _onDidUpdateEmitter = this._register(
+		new Emitter<IDetachedTerminalCommandMirrorRenderResult>(),
+	);
+	public readonly onDidUpdate: Event<IDetachedTerminalCommandMirrorRenderResult> =
+		this._onDidUpdateEmitter.event;
 	private readonly _onDidInputEmitter = this._register(new Emitter<string>());
 	public readonly onDidInput: Event<string> = this._onDidInputEmitter.event;
 
-	private _lastVT = '';
+	private _lastVT = "";
 	private _lineCount = 0;
 	private _maxColumnWidth = 0;
 	private _lastUpToDateCursorY: number | undefined;
@@ -241,12 +281,14 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 		private readonly _xtermTerminal: XtermTerminal,
 		private readonly _command: ITerminalCommand,
 		@ITerminalService private readonly _terminalService: ITerminalService,
-		@IContextKeyService private readonly _contextKeyService: IContextKeyService
+		@IContextKeyService private readonly _contextKeyService: IContextKeyService,
 	) {
 		super();
-		this._register(toDisposable(() => {
-			this._stopStreaming();
-		}));
+		this._register(
+			toDisposable(() => {
+				this._stopStreaming();
+			}),
+		);
 	}
 
 	async attach(container: HTMLElement): Promise<void> {
@@ -266,13 +308,15 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 			return;
 		}
 		if (this._attachedContainer !== container) {
-			container.classList.add('chat-terminal-output-terminal');
+			container.classList.add("chat-terminal-output-terminal");
 			terminal.attachToElement(container, { enableGpu: false });
 			this._attachedContainer = container;
 		}
 	}
 
-	async renderCommand(): Promise<IDetachedTerminalCommandMirrorRenderResult | undefined> {
+	async renderCommand(): Promise<
+		IDetachedTerminalCommandMirrorRenderResult | undefined
+	> {
 		if (this._store.isDisposed) {
 			return undefined;
 		}
@@ -301,12 +345,15 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 			return undefined;
 		}
 
-		await new Promise<void>(resolve => {
+		await new Promise<void>((resolve) => {
 			// Only append if the boundary around the slice point matches; otherwise rewrite.
 			// This is an efficient constant-time check (checking up to 50 characters) instead of comparing the entire prefix.
 			// On Windows, VT sequences can differ even for equivalent content, causing corruption
 			// if we blindly append.
-			const canAppend = !!this._lastVT && vt.text.length >= this._lastVT.length && this._vtBoundaryMatches(vt.text, this._lastVT.length);
+			const canAppend =
+				!!this._lastVT &&
+				vt.text.length >= this._lastVT.length &&
+				this._vtBoundaryMatches(vt.text, this._lastVT.length);
 			if (!canAppend) {
 				// Use \x1bc (RIS) + new content in one write to avoid a blank frame
 				const payload = this._lastVT ? `\x1bc${vt.text}` : vt.text;
@@ -331,37 +378,54 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 		if (sourceRaw) {
 			this._sourceRaw = sourceRaw;
 			this._lastUpToDateCursorY = this._getAbsoluteCursorY(sourceRaw);
-			if (!this._isStreaming && (!this._command.endMarker || this._command.endMarker.isDisposed)) {
+			if (
+				!this._isStreaming &&
+				(!this._command.endMarker || this._command.endMarker.isDisposed)
+			) {
 				this._startStreaming(sourceRaw);
 			}
 		}
 
 		this._lineCount = this._getRenderedLineCount();
 		// Only compute max column width after the command finishes and for small outputs
-		const commandFinished = this._command.endMarker && !this._command.endMarker.isDisposed;
-		if (commandFinished && this._lineCount <= ChatTerminalMirrorMetrics.MaxLinesForColumnWidthComputation) {
+		const commandFinished =
+			this._command.endMarker && !this._command.endMarker.isDisposed;
+		if (
+			commandFinished &&
+			this._lineCount <=
+				ChatTerminalMirrorMetrics.MaxLinesForColumnWidthComputation
+		) {
 			this._maxColumnWidth = this._computeMaxColumnWidth();
 		}
 
 		return { lineCount: this._lineCount, maxColumnWidth: this._maxColumnWidth };
 	}
 
-	private async _getCommandOutputAsVT(source: XtermTerminal): Promise<{ text: string } | undefined> {
+	private async _getCommandOutputAsVT(
+		source: XtermTerminal,
+	): Promise<{ text: string } | undefined> {
 		if (this._store.isDisposed) {
 			return undefined;
 		}
-		const executedMarker = this._command.executedMarker ?? (this._command as unknown as ICurrentPartialCommand).commandExecutedMarker;
+		const executedMarker =
+			this._command.executedMarker ??
+			(this._command as unknown as ICurrentPartialCommand)
+				.commandExecutedMarker;
 		if (!executedMarker) {
 			return undefined;
 		}
 
 		const endMarker = this._command.endMarker;
-		const text = await source.getRangeAsVT(executedMarker, endMarker, endMarker?.line !== executedMarker.line);
+		const text = await source.getRangeAsVT(
+			executedMarker,
+			endMarker,
+			endMarker?.line !== executedMarker.line,
+		);
 		if (this._store.isDisposed) {
 			return undefined;
 		}
 		if (!text) {
-			return { text: '' };
+			return { text: "" };
 		}
 
 		return { text };
@@ -377,7 +441,10 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 		}
 
 		// During streaming (no end marker), calculate from the source terminal buffer
-		const executedMarker = this._command.executedMarker ?? (this._command as unknown as ICurrentPartialCommand).commandExecutedMarker;
+		const executedMarker =
+			this._command.executedMarker ??
+			(this._command as unknown as ICurrentPartialCommand)
+				.commandExecutedMarker;
 		if (executedMarker && this._sourceRaw) {
 			const buffer = this._sourceRaw.buffer.active;
 			const currentLine = buffer.baseY + buffer.cursorY;
@@ -392,7 +459,10 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 		if (!detached) {
 			return 0;
 		}
-		return computeMaxBufferColumnWidth(detached.xterm.buffer.active, detached.xterm.cols);
+		return computeMaxBufferColumnWidth(
+			detached.xterm.buffer.active,
+			detached.xterm.cols,
+		);
 	}
 
 	private async _getOrCreateTerminal(): Promise<IDetachedTerminalInstance> {
@@ -407,16 +477,19 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 		}
 		const createPromise = (async () => {
 			const colorProvider = {
-				getBackgroundColor: (theme: IColorTheme) => getChatTerminalBackgroundColor(theme, this._contextKeyService)
+				getBackgroundColor: (theme: IColorTheme) =>
+					getChatTerminalBackgroundColor(theme, this._contextKeyService),
 			};
-			const processInfo = new DetachedProcessInfo({ initialCwd: '' });
+			const processInfo = new DetachedProcessInfo({ initialCwd: "" });
 			const detached = await this._terminalService.createDetachedTerminal({
-				cols: this._xtermTerminal.raw.cols ?? ChatTerminalMirrorMetrics.MirrorColCountFallback,
+				cols:
+					this._xtermTerminal.raw.cols ??
+					ChatTerminalMirrorMetrics.MirrorColCountFallback,
 				rows: ChatTerminalMirrorMetrics.MirrorRowCount,
 				readonly: false,
 				processInfo,
 				disableOverviewRuler: true,
-				colorProvider
+				colorProvider,
 			});
 			if (this._store.isDisposed) {
 				processInfo.dispose();
@@ -428,7 +501,9 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 			this._register(detached);
 
 			// Forward input from the mirror terminal to the source terminal
-			this._register(detached.onData(data => this._onDidInputEmitter.fire(data)));
+			this._register(
+				detached.onData((data) => this._onDidInputEmitter.fire(data)),
+			);
 			return detached;
 		})();
 		this._detachedTerminalPromise = createPromise;
@@ -440,7 +515,13 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 			return;
 		}
 		this._isStreaming = true;
-		this._streamingDisposables.add(Event.any(raw.onCursorMove, raw.onLineFeed, raw.onWriteParsed)(() => this._handleCursorEvent()));
+		this._streamingDisposables.add(
+			Event.any(
+				raw.onCursorMove,
+				raw.onLineFeed,
+				raw.onWriteParsed,
+			)(() => this._handleCursorEvent()),
+		);
 		this._streamingDisposables.add(raw.onData(() => this._handleCursorEvent()));
 	}
 
@@ -459,7 +540,10 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 			return;
 		}
 		const cursorY = this._getAbsoluteCursorY(this._sourceRaw);
-		this._lowestDirtyCursorY = this._lowestDirtyCursorY === undefined ? cursorY : Math.min(this._lowestDirtyCursorY, cursorY);
+		this._lowestDirtyCursorY =
+			this._lowestDirtyCursorY === undefined
+				? cursorY
+				: Math.min(this._lowestDirtyCursorY, cursorY);
 		this._scheduleFlush();
 	}
 
@@ -537,8 +621,12 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 		// Only append if: (1) cursor hasn't moved backwards, and (2) boundary around slice point matches.
 		// This is an efficient O(1) check instead of comparing the entire prefix.
 		// On Windows, VT sequences can differ even for equivalent content, so we must verify.
-		const canAppend = !!this._lastVT && startLine >= previousCursor && vt.text.length >= this._lastVT.length && this._vtBoundaryMatches(vt.text, this._lastVT.length);
-		await new Promise<void>(resolve => {
+		const canAppend =
+			!!this._lastVT &&
+			startLine >= previousCursor &&
+			vt.text.length >= this._lastVT.length &&
+			this._vtBoundaryMatches(vt.text, this._lastVT.length);
+		await new Promise<void>((resolve) => {
 			if (!canAppend) {
 				// Use \x1bc (RIS) + new content in one write to avoid a blank frame
 				const payload = this._lastVT ? `\x1bc${vt.text}` : vt.text;
@@ -561,16 +649,23 @@ export class DetachedTerminalCommandMirror extends Disposable implements IDetach
 		this._lineCount = this._getRenderedLineCount();
 		this._lastUpToDateCursorY = currentCursor;
 
-		const commandFinished = this._command.endMarker && !this._command.endMarker.isDisposed;
+		const commandFinished =
+			this._command.endMarker && !this._command.endMarker.isDisposed;
 		if (commandFinished) {
 			// Only compute max column width after the command finishes and for small outputs
-			if (this._lineCount <= ChatTerminalMirrorMetrics.MaxLinesForColumnWidthComputation) {
+			if (
+				this._lineCount <=
+				ChatTerminalMirrorMetrics.MaxLinesForColumnWidthComputation
+			) {
 				this._maxColumnWidth = this._computeMaxColumnWidth();
 			}
 			this._stopStreaming();
 		}
 
-		this._onDidUpdateEmitter.fire({ lineCount: this._lineCount, maxColumnWidth: this._maxColumnWidth });
+		this._onDidUpdateEmitter.fire({
+			lineCount: this._lineCount,
+			maxColumnWidth: this._maxColumnWidth,
+		});
 	}
 
 	private _getAbsoluteCursorY(raw: RawXtermTerminal): number {
@@ -593,51 +688,69 @@ export class DetachedTerminalSnapshotMirror extends Disposable {
 	private _detachedTerminal: Promise<IDetachedTerminalInstance> | undefined;
 	private _attachedContainer: HTMLElement | undefined;
 
-	private _output: IChatTerminalToolInvocationData['terminalCommandOutput'] | undefined;
+	private _output:
+		| IChatTerminalToolInvocationData["terminalCommandOutput"]
+		| undefined;
 	private _container: HTMLElement | undefined;
 	private _dirty = true;
 	private _lastRenderedLineCount: number | undefined;
 	private _lastRenderedMaxColumnWidth: number | undefined;
 
 	constructor(
-		output: IChatTerminalToolInvocationData['terminalCommandOutput'] | undefined,
-		private readonly _getTheme: () => IChatTerminalToolInvocationData['terminalTheme'] | undefined,
+		output:
+			| IChatTerminalToolInvocationData["terminalCommandOutput"]
+			| undefined,
+		private readonly _getTheme: () =>
+			| IChatTerminalToolInvocationData["terminalTheme"]
+			| undefined,
 		@ITerminalService private readonly _terminalService: ITerminalService,
 		@IContextKeyService private readonly _contextKeyService: IContextKeyService,
 	) {
 		super();
 		this._output = output;
-		const processInfo = this._register(new DetachedProcessInfo({ initialCwd: '' }));
-		this._detachedTerminal = this._terminalService.createDetachedTerminal({
-			cols: ChatTerminalMirrorMetrics.MirrorColCountFallback,
-			rows: ChatTerminalMirrorMetrics.MirrorRowCount,
-			readonly: true,
-			processInfo,
-			disableOverviewRuler: true,
-			colorProvider: {
-				getBackgroundColor: theme => {
-					const storedBackground = this._getTheme()?.background;
-					return getChatTerminalBackgroundColor(theme, this._contextKeyService, storedBackground);
+		const processInfo = this._register(
+			new DetachedProcessInfo({ initialCwd: "" }),
+		);
+		this._detachedTerminal = this._terminalService
+			.createDetachedTerminal({
+				cols: ChatTerminalMirrorMetrics.MirrorColCountFallback,
+				rows: ChatTerminalMirrorMetrics.MirrorRowCount,
+				readonly: true,
+				processInfo,
+				disableOverviewRuler: true,
+				colorProvider: {
+					getBackgroundColor: (theme) => {
+						const storedBackground = this._getTheme()?.background;
+						return getChatTerminalBackgroundColor(
+							theme,
+							this._contextKeyService,
+							storedBackground,
+						);
+					},
+				},
+			})
+			.then((terminal) => {
+				// If the store is already disposed, dispose the terminal immediately
+				if (this._store.isDisposed) {
+					terminal.dispose();
+					return terminal;
 				}
-			}
-		}).then(terminal => {
-			// If the store is already disposed, dispose the terminal immediately
-			if (this._store.isDisposed) {
-				terminal.dispose();
-				return terminal;
-			}
-			return this._register(terminal);
-		});
+				return this._register(terminal);
+			});
 	}
 
 	private async _getTerminal(): Promise<IDetachedTerminalInstance> {
 		if (!this._detachedTerminal) {
-			throw new Error('Detached terminal not initialized');
+			throw new Error("Detached terminal not initialized");
 		}
 		return this._detachedTerminal;
 	}
 
-	public setOutput(output: IChatTerminalToolInvocationData['terminalCommandOutput'] | undefined): void {
+	public setOutput(
+		output:
+			| IChatTerminalToolInvocationData["terminalCommandOutput"]
+			| undefined,
+	): void {
 		this._output = output;
 		this._dirty = true;
 	}
@@ -647,8 +760,9 @@ export class DetachedTerminalSnapshotMirror extends Disposable {
 		if (this._store.isDisposed) {
 			return;
 		}
-		container.classList.add('chat-terminal-output-terminal');
-		const needsAttach = this._attachedContainer !== container || container.firstChild === null;
+		container.classList.add("chat-terminal-output-terminal");
+		const needsAttach =
+			this._attachedContainer !== container || container.firstChild === null;
 		if (needsAttach) {
 			terminal.attachToElement(container, { enableGpu: false });
 			this._attachedContainer = container;
@@ -658,13 +772,18 @@ export class DetachedTerminalSnapshotMirror extends Disposable {
 		this._applyTheme(container);
 	}
 
-	public async render(): Promise<{ lineCount?: number; maxColumnWidth?: number } | undefined> {
+	public async render(): Promise<
+		{ lineCount?: number; maxColumnWidth?: number } | undefined
+	> {
 		const output = this._output;
 		if (!output) {
 			return undefined;
 		}
 		if (!this._dirty) {
-			return { lineCount: this._lastRenderedLineCount ?? output.lineCount, maxColumnWidth: this._lastRenderedMaxColumnWidth };
+			return {
+				lineCount: this._lastRenderedLineCount ?? output.lineCount,
+				maxColumnWidth: this._lastRenderedMaxColumnWidth,
+			};
 		}
 		const terminal = await this._getTerminal();
 		if (this._store.isDisposed) {
@@ -673,7 +792,7 @@ export class DetachedTerminalSnapshotMirror extends Disposable {
 		if (this._container) {
 			this._applyTheme(this._container);
 		}
-		const text = output.text ?? '';
+		const text = output.text ?? "";
 		const lineCount = output.lineCount ?? this._estimateLineCount(text);
 		if (!text) {
 			this._dirty = false;
@@ -681,7 +800,7 @@ export class DetachedTerminalSnapshotMirror extends Disposable {
 			this._lastRenderedMaxColumnWidth = 0;
 			return { lineCount: 0, maxColumnWidth: 0 };
 		}
-		await new Promise<void>(resolve => terminal.xterm.write(text, resolve));
+		await new Promise<void>((resolve) => terminal.xterm.write(text, resolve));
 		if (this._store.isDisposed) {
 			return undefined;
 		}
@@ -695,28 +814,35 @@ export class DetachedTerminalSnapshotMirror extends Disposable {
 	}
 
 	private _computeMaxColumnWidth(terminal: IDetachedTerminalInstance): number {
-		return computeMaxBufferColumnWidth(terminal.xterm.buffer.active, terminal.xterm.cols);
+		return computeMaxBufferColumnWidth(
+			terminal.xterm.buffer.active,
+			terminal.xterm.cols,
+		);
 	}
 
 	private _estimateLineCount(text: string): number {
 		if (!text) {
 			return 0;
 		}
-		const sanitized = text.replace(/\r/g, '');
-		const segments = sanitized.split('\n');
-		const count = sanitized.endsWith('\n') ? segments.length - 1 : segments.length;
+		const sanitized = text.replace(/\r/g, "");
+		const segments = sanitized.split("\n");
+		const count = sanitized.endsWith("\n")
+			? segments.length - 1
+			: segments.length;
 		return Math.max(count, 1);
 	}
 
 	private _shouldComputeMaxColumnWidth(lineCount: number): boolean {
-		return lineCount <= ChatTerminalMirrorMetrics.MaxLinesForColumnWidthComputation;
+		return (
+			lineCount <= ChatTerminalMirrorMetrics.MaxLinesForColumnWidthComputation
+		);
 	}
 
 	private _applyTheme(container: HTMLElement): void {
 		const theme = this._getTheme();
 		if (!theme) {
-			container.style.removeProperty('background-color');
-			container.style.removeProperty('color');
+			container.style.removeProperty("background-color");
+			container.style.removeProperty("color");
 			return;
 		}
 		if (theme.background) {

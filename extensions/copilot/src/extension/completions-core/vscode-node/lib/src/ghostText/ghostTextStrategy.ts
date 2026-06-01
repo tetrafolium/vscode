@@ -3,18 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IInstantiationService, ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { isSupportedLanguageId } from '../../../prompt/src/parse';
 import { CompletionState } from '../completionState';
 import { BlockMode } from '../config';
 import { ICompletionsFeaturesService } from '../experiments/featuresService';
 import { FinishedCallback } from '../openai/fetch';
 import { APIChoice } from '../openai/openai';
-import { isEmptyBlockStartUtil, parsingBlockFinished } from '../prompt/parseBlock';
+import {
+	isEmptyBlockStartUtil,
+	parsingBlockFinished,
+} from '../prompt/parseBlock';
 import { Prompt, PromptResponsePresent } from '../prompt/prompt';
 import { telemetry, TelemetryData, TelemetryWithExp } from '../telemetry';
-import { IPosition, LocationFactory, TextDocumentContents } from '../textDocument';
-import { BlockPositionType, BlockTrimmer, getBlockPositionType } from './blockTrimmer';
+import {
+	IPosition,
+	LocationFactory,
+	TextDocumentContents,
+} from '../textDocument';
+import {
+	BlockPositionType,
+	BlockTrimmer,
+	getBlockPositionType,
+} from './blockTrimmer';
 import { appendToCache } from './cacheUtils';
 import { ICompletionsCacheService } from './completionsCache';
 import { ICompletionsBlockModeConfig } from './configBlockMode';
@@ -57,8 +71,13 @@ export async function getGhostTextStrategy(
 	const instantiationService = accessor.get(IInstantiationService);
 	const featuresService = accessor.get(ICompletionsFeaturesService);
 	const blockModeConfig = accessor.get(ICompletionsBlockModeConfig);
-	const multilineAfterAcceptLines = featuresService.multilineAfterAcceptLines(preIssuedTelemetryData);
-	const blockMode = blockModeConfig.forLanguage(completionState.textDocument.detectedLanguageId, preIssuedTelemetryData);
+	const multilineAfterAcceptLines = featuresService.multilineAfterAcceptLines(
+		preIssuedTelemetryData,
+	);
+	const blockMode = blockModeConfig.forLanguage(
+		completionState.textDocument.detectedLanguageId,
+		preIssuedTelemetryData,
+	);
 	switch (blockMode) {
 		case BlockMode.Server:
 			// Override the server-side trimming after accepting a completion
@@ -74,7 +93,7 @@ export async function getGhostTextStrategy(
 			return {
 				blockMode: BlockMode.Server,
 				requestMultiline: true,
-				finishedCb: _ => undefined,
+				finishedCb: (_) => undefined,
 			};
 		case BlockMode.Parsing:
 		case BlockMode.ParsingAndServer:
@@ -83,21 +102,24 @@ export async function getGhostTextStrategy(
 			// we shouldn't drop through to here, but in case we do, be explicit about the behaviour
 			let requestMultiline: MultilineDetermination;
 			try {
-				requestMultiline = await instantiationService.invokeFunction(shouldRequestMultiline,
+				requestMultiline = await instantiationService.invokeFunction(
+					shouldRequestMultiline,
 					blockMode,
 					completionState.textDocument,
 					completionState.position,
 					inlineSuggestion,
 					hasAcceptedCurrentCompletion,
-					prompt
+					prompt,
 				);
 			} catch (err) {
 				// Fallback to non-multiline
 				requestMultiline = { requestMultiline: false };
 			}
-			if (!hasAcceptedCurrentCompletion &&
+			if (
+				!hasAcceptedCurrentCompletion &&
 				requestMultiline.requestMultiline &&
-				featuresService.singleLineUnlessAccepted(preIssuedTelemetryData)) {
+				featuresService.singleLineUnlessAccepted(preIssuedTelemetryData)
+			) {
 				requestMultiline.requestMultiline = false;
 			}
 			if (requestMultiline.requestMultiline) {
@@ -105,11 +127,18 @@ export async function getGhostTextStrategy(
 				// is only trimmed if the entire last line is whitespace.  We have to account for that here when we
 				// check whether the block body is finished.
 				let adjustedPosition;
-				if (prompt.trailingWs.length > 0 && !prompt.prompt.prefix.endsWith(prompt.trailingWs)) {
+				if (
+					prompt.trailingWs.length > 0 &&
+					!prompt.prompt.prefix.endsWith(prompt.trailingWs)
+				) {
 					// Prompt was adjusted, so adjust the position to match
 					adjustedPosition = LocationFactory.position(
 						completionState.position.line,
-						Math.max(completionState.position.character - prompt.trailingWs.length, 0)
+						Math.max(
+							completionState.position.character -
+								prompt.trailingWs.length,
+							0,
+						),
 					);
 				} else {
 					// Otherwise, just use the original position
@@ -118,7 +147,8 @@ export async function getGhostTextStrategy(
 				return {
 					blockMode: blockMode,
 					requestMultiline: true,
-					...instantiationService.invokeFunction(buildFinishedCallback,
+					...instantiationService.invokeFunction(
+						buildFinishedCallback,
 						blockMode,
 						completionState.textDocument,
 						adjustedPosition,
@@ -126,7 +156,7 @@ export async function getGhostTextStrategy(
 						prefix,
 						true,
 						prompt.prompt,
-						preIssuedTelemetryData
+						preIssuedTelemetryData,
 					),
 				};
 			}
@@ -148,7 +178,8 @@ export async function getGhostTextStrategy(
 			return {
 				blockMode: blockMode,
 				requestMultiline: false,
-				...instantiationService.invokeFunction(buildFinishedCallback,
+				...instantiationService.invokeFunction(
+					buildFinishedCallback,
 					blockMode,
 					completionState.textDocument,
 					completionState.position,
@@ -156,7 +187,7 @@ export async function getGhostTextStrategy(
 					prefix,
 					false,
 					prompt.prompt,
-					preIssuedTelemetryData
+					preIssuedTelemetryData,
 				),
 			};
 		}
@@ -172,29 +203,41 @@ function buildFinishedCallback(
 	prefix: string,
 	multiline: boolean,
 	prompt: Prompt,
-	telemetryData: TelemetryWithExp
+	telemetryData: TelemetryWithExp,
 ): { finishedCb: FinishedCallback; maxTokens?: number } {
 	const featuresService = accessor.get(ICompletionsFeaturesService);
 	const instantiationService = accessor.get(IInstantiationService);
-	if (multiline && blockMode === BlockMode.MoreMultiline && BlockTrimmer.isSupported(document.detectedLanguageId)) {
-		const lookAhead = positionType === BlockPositionType.EmptyBlock || positionType === BlockPositionType.BlockEnd
-			? featuresService.longLookaheadSize(telemetryData)
-			: featuresService.shortLookaheadSize(telemetryData);
+	if (
+		multiline &&
+		blockMode === BlockMode.MoreMultiline &&
+		BlockTrimmer.isSupported(document.detectedLanguageId)
+	) {
+		const lookAhead =
+			positionType === BlockPositionType.EmptyBlock ||
+			positionType === BlockPositionType.BlockEnd
+				? featuresService.longLookaheadSize(telemetryData)
+				: featuresService.shortLookaheadSize(telemetryData);
 
 		const completionsCacheService = accessor.get(ICompletionsCacheService);
-		const finishedCb = instantiationService.createInstance(StreamedCompletionSplitter,
-			prefix,
-			document.detectedLanguageId,
-			false,
-			lookAhead,
-			(extraPrefix: string, item: APIChoice) => {
-				const cacheContext = {
-					prefix: prefix + extraPrefix,
-					prompt: { ...prompt, prefix: prompt.prefix + extraPrefix },
-				};
-				appendToCache(completionsCacheService, cacheContext, item);
-			}
-		).getFinishedCallback();
+		const finishedCb = instantiationService
+			.createInstance(
+				StreamedCompletionSplitter,
+				prefix,
+				document.detectedLanguageId,
+				false,
+				lookAhead,
+				(extraPrefix: string, item: APIChoice) => {
+					const cacheContext = {
+						prefix: prefix + extraPrefix,
+						prompt: {
+							...prompt,
+							prefix: prompt.prefix + extraPrefix,
+						},
+					};
+					appendToCache(completionsCacheService, cacheContext, item);
+				},
+			)
+			.getFinishedCallback();
 
 		return {
 			finishedCb,
@@ -202,7 +245,11 @@ function buildFinishedCallback(
 		};
 	}
 
-	return { finishedCb: multiline ? parsingBlockFinished(document, position) : _ => undefined };
+	return {
+		finishedCb: multiline
+			? parsingBlockFinished(document, position)
+			: (_) => undefined,
+	};
 }
 
 type MultilineDetermination = {
@@ -217,9 +264,8 @@ async function shouldRequestMultiline(
 	position: IPosition,
 	inlineSuggestion: boolean,
 	afterAccept: boolean,
-	prompt: PromptResponsePresent
+	prompt: PromptResponsePresent,
 ): Promise<MultilineDetermination> {
-
 	// Parsing long files for multiline completions is slow, so we only do
 	// it for files with less than 8000 lines
 	if (document.lineCount >= 8000) {
@@ -230,14 +276,20 @@ async function shouldRequestMultiline(
 				languageId: document.detectedLanguageId,
 				lineCount: String(document.lineCount),
 				currentLine: String(position.line),
-			})
+			}),
 		);
 	} else {
-		if (blockMode === BlockMode.MoreMultiline && BlockTrimmer.isSupported(document.detectedLanguageId)) {
+		if (
+			blockMode === BlockMode.MoreMultiline &&
+			BlockTrimmer.isSupported(document.detectedLanguageId)
+		) {
 			if (!afterAccept) {
 				return { requestMultiline: false };
 			}
-			const blockPosition = await getBlockPositionType(document, position);
+			const blockPosition = await getBlockPositionType(
+				document,
+				position,
+			);
 			return { requestMultiline: true, blockPosition };
 		}
 
@@ -249,22 +301,38 @@ async function shouldRequestMultiline(
 			}
 		}
 		let requestMultiline = false;
-		if (!inlineSuggestion && isSupportedLanguageId(document.detectedLanguageId)) {
+		if (
+			!inlineSuggestion &&
+			isSupportedLanguageId(document.detectedLanguageId)
+		) {
 			// Can only check block-level nodes of languages we support
 			requestMultiline = await isEmptyBlockStartUtil(document, position);
-		} else if (inlineSuggestion && isSupportedLanguageId(document.detectedLanguageId)) {
+		} else if (
+			inlineSuggestion &&
+			isSupportedLanguageId(document.detectedLanguageId)
+		) {
 			//If we are inline, check if we would suggest multiline for current position or if we would suggest a multiline completion if we were at the end of the line
 			requestMultiline =
 				(await isEmptyBlockStartUtil(document, position)) ||
-				(await isEmptyBlockStartUtil(document, document.lineAt(position).range.end));
+				(await isEmptyBlockStartUtil(
+					document,
+					document.lineAt(position).range.end,
+				));
 		}
 		// If requestMultiline is false, for specific languages check multiline score
 		if (!requestMultiline) {
 			const requestMultiModelThreshold = 0.5;
-			const targetLanguagesModel = ['javascript', 'javascriptreact', 'python'];
+			const targetLanguagesModel = [
+				'javascript',
+				'javascriptreact',
+				'python',
+			];
 			if (targetLanguagesModel.includes(document.detectedLanguageId)) {
 				// Call multiline model if not multiline and EXP flag is set.
-				const multiModelScore = requestMultilineScore(prompt.prompt, document.detectedLanguageId);
+				const multiModelScore = requestMultilineScore(
+					prompt.prompt,
+					document.detectedLanguageId,
+				);
 				requestMultiline = multiModelScore > requestMultiModelThreshold;
 			}
 		}
@@ -274,9 +342,11 @@ async function shouldRequestMultiline(
 }
 
 /** Checks if position is the beginning of an empty line (including indentation) */
-function isNewLine(selectionPosition: IPosition, doc: TextDocumentContents): boolean {
+function isNewLine(
+	selectionPosition: IPosition,
+	doc: TextDocumentContents,
+): boolean {
 	const line = doc.lineAt(selectionPosition);
 	const lineTrimmed = line.text.trim();
 	return lineTrimmed.length === 0;
 }
-

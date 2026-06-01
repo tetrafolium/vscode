@@ -9,13 +9,16 @@ import { Iterable } from '../../../../../base/common/iterator';
 import { dirname, joinPath } from '../../../../../base/common/resources';
 import { splitLinesIncludeSeparators } from '../../../../../base/common/strings';
 import { URI } from '../../../../../base/common/uri';
-import { parse, YamlNode, YamlParseError } from '../../../../../base/common/yaml';
+import {
+	parse,
+	YamlNode,
+	YamlParseError,
+} from '../../../../../base/common/yaml';
 import { Range } from '../../../../../editor/common/core/range';
 import { PositionOffsetTransformer } from '../../../../../editor/common/core/text/positionToOffsetImpl';
 
 export class PromptFileParser {
-	constructor() {
-	}
+	constructor() {}
 
 	public parse(uri: URI, content: string): ParsedPromptFile {
 		const linesWithEOL = splitLinesIncludeSeparators(content);
@@ -26,7 +29,9 @@ export class PromptFileParser {
 		let body: PromptBody | undefined = undefined;
 		let bodyStartLine = 0;
 		if (linesWithEOL[0].match(/^---[\s\r\n]*$/)) {
-			let headerEndLine = linesWithEOL.findIndex((line, index) => index > 0 && line.match(/^---[\s\r\n]*$/));
+			let headerEndLine = linesWithEOL.findIndex(
+				(line, index) => index > 0 && line.match(/^---[\s\r\n]*$/),
+			);
 			if (headerEndLine === -1) {
 				headerEndLine = linesWithEOL.length;
 				bodyStartLine = linesWithEOL.length;
@@ -39,17 +44,24 @@ export class PromptFileParser {
 		}
 		if (bodyStartLine < linesWithEOL.length) {
 			// range starts  on the line after the ---, and ends at the beginning of line after the last line
-			const range = new Range(bodyStartLine + 1, 1, linesWithEOL.length + 1, 1);
+			const range = new Range(
+				bodyStartLine + 1,
+				1,
+				linesWithEOL.length + 1,
+				1,
+			);
 			body = new PromptBody(range, linesWithEOL, uri);
 		}
 		return new ParsedPromptFile(uri, header, body);
 	}
 }
 
-
 export class ParsedPromptFile {
-	constructor(public readonly uri: URI, public readonly header?: PromptHeader, public readonly body?: PromptBody) {
-	}
+	constructor(
+		public readonly uri: URI,
+		public readonly header?: PromptHeader,
+		public readonly body?: PromptBody,
+	) {}
 }
 
 export interface ParseError {
@@ -92,44 +104,91 @@ export namespace PromptHeaderAttributes {
 export class PromptHeader {
 	private _parsed: ParsedHeader | undefined;
 
-	constructor(public readonly range: Range, public readonly uri: URI, private readonly linesWithEOL: string[]) {
-	}
+	constructor(
+		public readonly range: Range,
+		public readonly uri: URI,
+		private readonly linesWithEOL: string[],
+	) {}
 
 	private get _parsedHeader(): ParsedHeader {
 		if (this._parsed === undefined) {
 			const yamlErrors: YamlParseError[] = [];
-			const headerContent = this.linesWithEOL.slice(this.range.startLineNumber - 1, this.range.endLineNumber - 1).join('');
+			const headerContent = this.linesWithEOL
+				.slice(
+					this.range.startLineNumber - 1,
+					this.range.endLineNumber - 1,
+				)
+				.join('');
 			const node = parse(headerContent, yamlErrors);
 			const transformer = new PositionOffsetTransformer(headerContent);
-			const asRange = ({ startOffset, endOffset }: { startOffset: number; endOffset: number }): Range => {
-				const startPos = transformer.getPosition(startOffset), endPos = transformer.getPosition(endOffset);
+			const asRange = ({
+				startOffset,
+				endOffset,
+			}: {
+				startOffset: number;
+				endOffset: number;
+			}): Range => {
+				const startPos = transformer.getPosition(startOffset),
+					endPos = transformer.getPosition(endOffset);
 				const headerDelta = this.range.startLineNumber - 1;
-				return new Range(startPos.lineNumber + headerDelta, startPos.column, endPos.lineNumber + headerDelta, endPos.column);
+				return new Range(
+					startPos.lineNumber + headerDelta,
+					startPos.column,
+					endPos.lineNumber + headerDelta,
+					endPos.column,
+				);
 			};
 			const asValue = (node: YamlNode): IValue => {
 				switch (node.type) {
 					case 'scalar':
-						return { type: 'scalar', value: node.value, range: asRange(node), format: node.format };
+						return {
+							type: 'scalar',
+							value: node.value,
+							range: asRange(node),
+							format: node.format,
+						};
 					case 'sequence':
-						return { type: 'sequence', items: node.items.map(item => asValue(item)), range: asRange(node) };
+						return {
+							type: 'sequence',
+							items: node.items.map((item) => asValue(item)),
+							range: asRange(node),
+						};
 					case 'map': {
-						const properties = node.properties.map(property => ({ key: asValue(property.key) as IScalarValue, value: asValue(property.value) }));
-						return { type: 'map', properties, range: asRange(node) };
+						const properties = node.properties.map((property) => ({
+							key: asValue(property.key) as IScalarValue,
+							value: asValue(property.value),
+						}));
+						return {
+							type: 'map',
+							properties,
+							range: asRange(node),
+						};
 					}
 				}
 			};
 
 			const attributes = [];
-			const errors: ParseError[] = yamlErrors.map(err => ({ message: err.message, range: asRange(err), code: err.code }));
+			const errors: ParseError[] = yamlErrors.map((err) => ({
+				message: err.message,
+				range: asRange(err),
+				code: err.code,
+			}));
 			if (node) {
 				if (node.type !== 'map') {
-					errors.push({ message: 'Invalid header, expecting <key: value> pairs', range: this.range, code: 'INVALID_YAML' });
+					errors.push({
+						message: 'Invalid header, expecting <key: value> pairs',
+						range: this.range,
+						code: 'INVALID_YAML',
+					});
 				} else {
 					for (const property of node.properties) {
 						attributes.push({
 							key: property.key.value,
-							range: asRange({ startOffset: property.key.startOffset, endOffset: property.value.endOffset }),
-							value: asValue(property.value)
+							range: asRange({
+								startOffset: property.key.startOffset,
+								endOffset: property.value.endOffset,
+							}),
+							value: asValue(property.value),
 						});
 					}
 				}
@@ -144,7 +203,7 @@ export class PromptHeader {
 	}
 
 	public getAttribute(key: string): IHeaderAttribute | undefined {
-		return this._parsedHeader.attributes.find(attr => attr.key === key);
+		return this._parsedHeader.attributes.find((attr) => attr.key === key);
 	}
 
 	public get errors(): ParseError[] {
@@ -152,7 +211,9 @@ export class PromptHeader {
 	}
 
 	private getStringAttribute(key: string): string | undefined {
-		const attribute = this._parsedHeader.attributes.find(attr => attr.key === key);
+		const attribute = this._parsedHeader.attributes.find(
+			(attr) => attr.key === key,
+		);
 		if (attribute?.value.type === 'scalar') {
 			return attribute.value.value;
 		}
@@ -168,11 +229,16 @@ export class PromptHeader {
 	}
 
 	public get agent(): string | undefined {
-		return this.getStringAttribute(PromptHeaderAttributes.agent) ?? this.getStringAttribute(PromptHeaderAttributes.mode);
+		return (
+			this.getStringAttribute(PromptHeaderAttributes.agent) ??
+			this.getStringAttribute(PromptHeaderAttributes.mode)
+		);
 	}
 
 	public get model(): readonly string[] | undefined {
-		return this.getStringOrStringArrayAttribute(PromptHeaderAttributes.model);
+		return this.getStringOrStringArrayAttribute(
+			PromptHeaderAttributes.model,
+		);
 	}
 
 	public get applyTo(): string | undefined {
@@ -185,7 +251,9 @@ export class PromptHeader {
 	 * to specific files (used by Claude rules). Returns a string array or undefined.
 	 */
 	public get paths(): readonly string[] | undefined {
-		return this.getStringOrStringArrayAttribute(PromptHeaderAttributes.paths);
+		return this.getStringOrStringArrayAttribute(
+			PromptHeaderAttributes.paths,
+		);
 	}
 
 	public get argumentHint(): string | undefined {
@@ -201,7 +269,9 @@ export class PromptHeader {
 	}
 
 	public get tools(): string[] | undefined {
-		const toolsAttribute = this._parsedHeader.attributes.find(attr => attr.key === PromptHeaderAttributes.tools);
+		const toolsAttribute = this._parsedHeader.attributes.find(
+			(attr) => attr.key === PromptHeaderAttributes.tools,
+		);
 		if (!toolsAttribute) {
 			return undefined;
 		}
@@ -222,7 +292,9 @@ export class PromptHeader {
 	}
 
 	public get handOffs(): IHandOff[] | undefined {
-		const handoffsAttribute = this._parsedHeader.attributes.find(attr => attr.key === PromptHeaderAttributes.handOffs);
+		const handoffsAttribute = this._parsedHeader.attributes.find(
+			(attr) => attr.key === PromptHeaderAttributes.handOffs,
+		);
 		if (!handoffsAttribute) {
 			return undefined;
 		}
@@ -238,17 +310,35 @@ export class PromptHeader {
 					let showContinueOn: boolean | undefined;
 					let model: string | undefined;
 					for (const prop of item.properties) {
-						if (prop.key.value === 'agent' && prop.value.type === 'scalar') {
+						if (
+							prop.key.value === 'agent' &&
+							prop.value.type === 'scalar'
+						) {
 							agent = prop.value.value;
-						} else if (prop.key.value === 'label' && prop.value.type === 'scalar') {
+						} else if (
+							prop.key.value === 'label' &&
+							prop.value.type === 'scalar'
+						) {
 							label = prop.value.value;
-						} else if (prop.key.value === 'prompt' && prop.value.type === 'scalar') {
+						} else if (
+							prop.key.value === 'prompt' &&
+							prop.value.type === 'scalar'
+						) {
 							prompt = prop.value.value;
-						} else if (prop.key.value === 'send' && prop.value.type === 'scalar') {
+						} else if (
+							prop.key.value === 'send' &&
+							prop.value.type === 'scalar'
+						) {
 							send = parseBoolean(prop.value);
-						} else if (prop.key.value === 'showContinueOn' && prop.value.type === 'scalar') {
+						} else if (
+							prop.key.value === 'showContinueOn' &&
+							prop.value.type === 'scalar'
+						) {
 							showContinueOn = parseBoolean(prop.value);
-						} else if (prop.key.value === 'model' && prop.value.type === 'scalar') {
+						} else if (
+							prop.key.value === 'model' &&
+							prop.value.type === 'scalar'
+						) {
 							model = prop.value.value;
 						}
 					}
@@ -258,8 +348,10 @@ export class PromptHeader {
 							label,
 							prompt,
 							...(send !== undefined ? { send } : {}),
-							...(showContinueOn !== undefined ? { showContinueOn } : {}),
-							...(model !== undefined ? { model } : {})
+							...(showContinueOn !== undefined
+								? { showContinueOn }
+								: {}),
+							...(model !== undefined ? { model } : {}),
 						};
 						handoffs.push(handoff);
 					}
@@ -271,7 +363,9 @@ export class PromptHeader {
 	}
 
 	private getStringArrayAttribute(key: string): string[] | undefined {
-		const attribute = this._parsedHeader.attributes.find(attr => attr.key === key);
+		const attribute = this._parsedHeader.attributes.find(
+			(attr) => attr.key === key,
+		);
 		if (!attribute) {
 			return undefined;
 		}
@@ -287,8 +381,12 @@ export class PromptHeader {
 		return undefined;
 	}
 
-	private getStringOrStringArrayAttribute(key: string): readonly string[] | undefined {
-		const attribute = this._parsedHeader.attributes.find(attr => attr.key === key);
+	private getStringOrStringArrayAttribute(
+		key: string,
+	): readonly string[] | undefined {
+		const attribute = this._parsedHeader.attributes.find(
+			(attr) => attr.key === key,
+		);
 		if (!attribute) {
 			return undefined;
 		}
@@ -316,7 +414,9 @@ export class PromptHeader {
 	}
 
 	public get disableModelInvocation(): boolean | undefined {
-		return this.getBooleanAttribute(PromptHeaderAttributes.disableModelInvocation);
+		return this.getBooleanAttribute(
+			PromptHeaderAttributes.disableModelInvocation,
+		);
 	}
 
 	public get context(): string | undefined {
@@ -330,7 +430,9 @@ export class PromptHeader {
 	 * {@link parseSubagentHooksFromYaml}.
 	 */
 	public get hooksRaw(): IMapValue | undefined {
-		const attr = this._parsedHeader.attributes.find(a => a.key === PromptHeaderAttributes.hooks);
+		const attr = this._parsedHeader.attributes.find(
+			(a) => a.key === PromptHeaderAttributes.hooks,
+		);
 		if (attr?.value.type === 'map') {
 			return attr.value;
 		}
@@ -338,7 +440,9 @@ export class PromptHeader {
 	}
 
 	private getBooleanAttribute(key: string): boolean | undefined {
-		const attribute = this._parsedHeader.attributes.find(attr => attr.key === key);
+		const attribute = this._parsedHeader.attributes.find(
+			(attr) => attr.key === key,
+		);
 		if (attribute?.value.type === 'scalar') {
 			return parseBoolean(attribute.value);
 		}
@@ -391,7 +495,6 @@ export interface IMapValue {
 
 export type IValue = IScalarValue | ISequenceValue | IMapValue;
 
-
 interface ParsedBody {
 	readonly fileReferences: readonly IBodyFileReference[];
 	readonly variableReferences: readonly IBodyVariableReference[];
@@ -401,8 +504,11 @@ interface ParsedBody {
 export class PromptBody {
 	private _parsed: ParsedBody | undefined;
 
-	constructor(public readonly range: Range, private readonly linesWithEOL: string[], public readonly uri: URI) {
-	}
+	constructor(
+		public readonly range: Range,
+		private readonly linesWithEOL: string[],
+		public readonly uri: URI,
+	) {}
 
 	public get fileReferences(): readonly IBodyFileReference[] {
 		return this.getParsedBody().fileReferences;
@@ -421,16 +527,31 @@ export class PromptBody {
 			const markdownLinkRanges: Range[] = [];
 			const fileReferences: IBodyFileReference[] = [];
 			const variableReferences: IBodyVariableReference[] = [];
-			const bodyOffset = Iterable.reduce(Iterable.slice(this.linesWithEOL, 0, this.range.startLineNumber - 1), (len, line) => line.length + len, 0);
+			const bodyOffset = Iterable.reduce(
+				Iterable.slice(
+					this.linesWithEOL,
+					0,
+					this.range.startLineNumber - 1,
+				),
+				(len, line) => line.length + len,
+				0,
+			);
 			let inFencedCodeBlock = false;
 			let fencedCodeBlockFenceChar: string | undefined;
 			let fencedCodeBlockFenceLength = 0;
-			for (let i = this.range.startLineNumber - 1, lineStartOffset = bodyOffset; i < this.range.endLineNumber - 1; i++) {
+			for (
+				let i = this.range.startLineNumber - 1,
+					lineStartOffset = bodyOffset;
+				i < this.range.endLineNumber - 1;
+				i++
+			) {
 				const line = this.linesWithEOL[i];
 				const trimmedLine = line.trimStart();
 
 				// Detect fenced code block lines (``` or ~~~, 3 or more chars)
-				const fenceMatch = /^(?<fence>(`{3,}|~{3,}))/u.exec(trimmedLine);
+				const fenceMatch = /^(?<fence>(`{3,}|~{3,}))/u.exec(
+					trimmedLine,
+				);
 				if (fenceMatch) {
 					const fence = fenceMatch.groups!.fence;
 					const fenceChar = fence[0];
@@ -448,7 +569,11 @@ export class PromptBody {
 
 					// Potential closing fence: must match fence char and have at least the same length,
 					// and only whitespace is allowed after the fence.
-					if (fencedCodeBlockFenceChar === fenceChar && fenceLength >= fencedCodeBlockFenceLength && /^\s*$/.test(restOfLine)) {
+					if (
+						fencedCodeBlockFenceChar === fenceChar &&
+						fenceLength >= fencedCodeBlockFenceLength &&
+						/^\s*$/.test(restOfLine)
+					) {
 						inFencedCodeBlock = false;
 						fencedCodeBlockFenceChar = undefined;
 						fencedCodeBlockFenceLength = 0;
@@ -466,11 +591,16 @@ export class PromptBody {
 				// Collect inline code spans (backtick-delimited) to exclude from matching
 				const inlineCodeRanges: { start: number; end: number }[] = [];
 				for (const inlineMatch of line.matchAll(/`[^`]+`/g)) {
-					inlineCodeRanges.push({ start: inlineMatch.index, end: inlineMatch.index + inlineMatch[0].length });
+					inlineCodeRanges.push({
+						start: inlineMatch.index,
+						end: inlineMatch.index + inlineMatch[0].length,
+					});
 				}
 
 				const isInsideInlineCode = (offset: number) => {
-					return inlineCodeRanges.some(r => offset >= r.start && offset < r.end);
+					return inlineCodeRanges.some(
+						(r) => offset >= r.start && offset < r.end,
+					);
 				};
 
 				// Match markdown links: [text](link)
@@ -483,46 +613,98 @@ export class PromptBody {
 						continue; // skip matches inside inline code
 					}
 					const linkEndOffset = match.index + match[0].length - 1; // before the parenthesis
-					const linkStartOffset = match.index + match[0].length - match[2].length - 1;
-					const range = new Range(i + 1, linkStartOffset + 1, i + 1, linkEndOffset + 1);
-					fileReferences.push({ content: match[2], range, isMarkdownLink: true });
-					markdownLinkRanges.push(new Range(i + 1, match.index + 1, i + 1, match.index + match[0].length + 1));
+					const linkStartOffset =
+						match.index + match[0].length - match[2].length - 1;
+					const range = new Range(
+						i + 1,
+						linkStartOffset + 1,
+						i + 1,
+						linkEndOffset + 1,
+					);
+					fileReferences.push({
+						content: match[2],
+						range,
+						isMarkdownLink: true,
+					});
+					markdownLinkRanges.push(
+						new Range(
+							i + 1,
+							match.index + 1,
+							i + 1,
+							match.index + match[0].length + 1,
+						),
+					);
 				}
 				// Match #file:<filePath> and #tool:<toolName>
 				// Regarding the <toolName> pattern below, see also the variableReg regex in chatRequestParser.ts.
-				const reg = /#file:(?<filePath>[^\s#]+)|#tool:(?<toolName>[\w_\-\.\/]+)/gi;
+				const reg =
+					/#file:(?<filePath>[^\s#]+)|#tool:(?<toolName>[\w_\-\.\/]+)/gi;
 				const matches = line.matchAll(reg);
 				for (const match of matches) {
 					const fullMatch = match[0];
-					const fullRange = new Range(i + 1, match.index + 1, i + 1, match.index + fullMatch.length + 1);
-					if (markdownLinkRanges.some(mdRange => Range.areIntersectingOrTouching(mdRange, fullRange))) {
+					const fullRange = new Range(
+						i + 1,
+						match.index + 1,
+						i + 1,
+						match.index + fullMatch.length + 1,
+					);
+					if (
+						markdownLinkRanges.some((mdRange) =>
+							Range.areIntersectingOrTouching(mdRange, fullRange),
+						)
+					) {
 						continue;
 					}
 					if (isInsideInlineCode(match.index)) {
 						continue; // skip matches inside inline code
 					}
-					const contentMatch = match.groups?.['filePath'] || match.groups?.['toolName'];
+					const contentMatch =
+						match.groups?.['filePath'] ||
+						match.groups?.['toolName'];
 					if (!contentMatch) {
 						continue;
 					}
-					const startOffset = match.index + fullMatch.length - contentMatch.length;
+					const startOffset =
+						match.index + fullMatch.length - contentMatch.length;
 					const endOffset = match.index + fullMatch.length;
-					const range = new Range(i + 1, startOffset + 1, i + 1, endOffset + 1);
+					const range = new Range(
+						i + 1,
+						startOffset + 1,
+						i + 1,
+						endOffset + 1,
+					);
 					if (match.groups?.['filePath']) {
-						fileReferences.push({ content: match.groups?.['filePath'], range, isMarkdownLink: false });
+						fileReferences.push({
+							content: match.groups?.['filePath'],
+							range,
+							isMarkdownLink: false,
+						});
 					} else if (match.groups?.['toolName']) {
-						variableReferences.push({ name: match.groups?.['toolName'], range, offset: lineStartOffset + match.index, fullLength: fullMatch.length });
+						variableReferences.push({
+							name: match.groups?.['toolName'],
+							range,
+							offset: lineStartOffset + match.index,
+							fullLength: fullMatch.length,
+						});
 					}
 				}
 				lineStartOffset += line.length;
 			}
-			this._parsed = { fileReferences: fileReferences.sort((a, b) => Range.compareRangesUsingStarts(a.range, b.range)), variableReferences, bodyOffset };
+			this._parsed = {
+				fileReferences: fileReferences.sort((a, b) =>
+					Range.compareRangesUsingStarts(a.range, b.range),
+				),
+				variableReferences,
+				bodyOffset,
+			};
 		}
 		return this._parsed;
 	}
 
 	public getContent(): string {
-		return this.linesWithEOL.slice(this.range.startLineNumber - 1, this.range.endLineNumber - 1).join('');
+		return this.linesWithEOL
+			.slice(this.range.startLineNumber - 1, this.range.endLineNumber - 1)
+			.join('');
 	}
 
 	public resolveFilePath(path: string): URI | undefined {
@@ -561,12 +743,15 @@ export interface IBodyVariableReference {
  * @param input A string containing comma-separated values
  * @returns An ISequenceValue containing the parsed values and their ranges
  */
-export function parseCommaSeparatedList(stringValue: IScalarValue): ISequenceValue {
+export function parseCommaSeparatedList(
+	stringValue: IScalarValue,
+): ISequenceValue {
 	const result: IScalarValue[] = [];
 	const input = stringValue.value;
 	const positionOffset = stringValue.range.getStartPosition();
 	let pos = 0;
-	const isWhitespace = (char: string): boolean => char === ' ' || char === '\t';
+	const isWhitespace = (char: string): boolean =>
+		char === ' ' || char === '\t';
 
 	while (pos < input.length) {
 		// Skip leading whitespace
@@ -611,7 +796,17 @@ export function parseCommaSeparatedList(stringValue: IScalarValue): ISequenceVal
 			quoteStyle = 'none';
 		}
 
-		result.push({ type: 'scalar', value: value, range: new Range(positionOffset.lineNumber, positionOffset.column + startPos, positionOffset.lineNumber, positionOffset.column + endPos), format: quoteStyle });
+		result.push({
+			type: 'scalar',
+			value: value,
+			range: new Range(
+				positionOffset.lineNumber,
+				positionOffset.column + startPos,
+				positionOffset.lineNumber,
+				positionOffset.column + endPos,
+			),
+			format: quoteStyle,
+		});
 
 		// Skip whitespace after value
 		while (pos < input.length && isWhitespace(input[pos])) {
@@ -631,7 +826,10 @@ export function parseCommaSeparatedList(stringValue: IScalarValue): ISequenceVal
  * Returns the effective `applyTo` pattern for an instruction file.
  * Claude rules use `paths` (defaulting to `**`), while regular instructions use `applyTo`.
  */
-export function evaluateApplyToPattern(header: PromptHeader | undefined, isClaudeRules: boolean): string | undefined {
+export function evaluateApplyToPattern(
+	header: PromptHeader | undefined,
+	isClaudeRules: boolean,
+): string | undefined {
 	if (isClaudeRules) {
 		return header?.paths?.join(', ') ?? '**';
 	}

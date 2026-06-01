@@ -5,7 +5,6 @@
 
 import type * as vscode from 'vscode';
 
-
 export interface DiagnosticsTelemetryData {
 	problems: string;
 	problemsCount: number;
@@ -13,29 +12,49 @@ export interface DiagnosticsTelemetryData {
 	diagnosticsCount: number;
 }
 
-export function findDiagnosticsTelemetry(selection: vscode.Selection, fileDiagnostics: vscode.Diagnostic[]): { fileDiagnosticsTelemetry: DiagnosticsTelemetryData; selectionDiagnosticsTelemetry: DiagnosticsTelemetryData; diagnosticsProvider: string } {
-	const selectionDiagnostics = fileDiagnostics.filter(d => selection.intersection(d.range));
+export function findDiagnosticsTelemetry(
+	selection: vscode.Selection,
+	fileDiagnostics: vscode.Diagnostic[],
+): {
+	fileDiagnosticsTelemetry: DiagnosticsTelemetryData;
+	selectionDiagnosticsTelemetry: DiagnosticsTelemetryData;
+	diagnosticsProvider: string;
+} {
+	const selectionDiagnostics = fileDiagnostics.filter((d) =>
+		selection.intersection(d.range),
+	);
 	const fileDiagnosticsTelemetry: DiagnosticsTelemetryData = {
-		problems: fileDiagnostics.map(d => d.message).join(', '),
+		problems: fileDiagnostics.map((d) => d.message).join(', '),
 		problemsCount: fileDiagnostics.length,
 		diagnosticCodes: '',
-		diagnosticsCount: 0
+		diagnosticsCount: 0,
 	};
 	const selectionDiagnosticsTelemetry: DiagnosticsTelemetryData = {
-		problems: selectionDiagnostics.map(d => d.message).join(', '),
+		problems: selectionDiagnostics.map((d) => d.message).join(', '),
 		problemsCount: selectionDiagnostics.length,
 		diagnosticCodes: '',
-		diagnosticsCount: 0
+		diagnosticsCount: 0,
 	};
 	const fileDiagnosticCodesMap = new Map<string, number>();
 	const selectionDiagnosticCodesMap = new Map<string, number>();
 	fileDiagnostics.forEach((d) => {
 		const code = d.code;
-		const codeValue = typeof code === 'string' || typeof code === 'number' ? code.toString() : (code ? code.value.toString() : '');
+		const codeValue =
+			typeof code === 'string' || typeof code === 'number'
+				? code.toString()
+				: code
+					? code.value.toString()
+					: '';
 		const errorId = d.source ? `${d.source}@${codeValue}` : codeValue;
-		fileDiagnosticCodesMap.set(errorId, (fileDiagnosticCodesMap.get(errorId) || 0) + 1);
+		fileDiagnosticCodesMap.set(
+			errorId,
+			(fileDiagnosticCodesMap.get(errorId) || 0) + 1,
+		);
 		if (selection.intersection(d.range)) {
-			selectionDiagnosticCodesMap.set(errorId, (selectionDiagnosticCodesMap.get(errorId) || 0) + 1);
+			selectionDiagnosticCodesMap.set(
+				errorId,
+				(selectionDiagnosticCodesMap.get(errorId) || 0) + 1,
+			);
 		}
 	});
 	const findDiagnosticCodes = (errorMap: Map<string, number>): string => {
@@ -45,10 +64,20 @@ export function findDiagnosticsTelemetry(selection: vscode.Selection, fileDiagno
 		});
 		return diagnosticsCodes;
 	};
-	fileDiagnosticsTelemetry.diagnosticCodes = findDiagnosticCodes(fileDiagnosticCodesMap);
+	fileDiagnosticsTelemetry.diagnosticCodes = findDiagnosticCodes(
+		fileDiagnosticCodesMap,
+	);
 	fileDiagnosticsTelemetry.diagnosticsCount = fileDiagnosticCodesMap.size;
-	selectionDiagnosticsTelemetry.diagnosticCodes = findDiagnosticCodes(selectionDiagnosticCodesMap);
-	selectionDiagnosticsTelemetry.diagnosticsCount = selectionDiagnosticCodesMap.size;
-	const diagnosticsProvider = fileDiagnostics.length > 0 ? (fileDiagnostics[0].source ?? '') : '';
-	return { fileDiagnosticsTelemetry, selectionDiagnosticsTelemetry, diagnosticsProvider };
+	selectionDiagnosticsTelemetry.diagnosticCodes = findDiagnosticCodes(
+		selectionDiagnosticCodesMap,
+	);
+	selectionDiagnosticsTelemetry.diagnosticsCount =
+		selectionDiagnosticCodesMap.size;
+	const diagnosticsProvider =
+		fileDiagnostics.length > 0 ? (fileDiagnostics[0].source ?? '') : '';
+	return {
+		fileDiagnosticsTelemetry,
+		selectionDiagnosticsTelemetry,
+		diagnosticsProvider,
+	};
 }

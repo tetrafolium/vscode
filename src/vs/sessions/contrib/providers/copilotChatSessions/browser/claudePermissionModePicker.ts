@@ -3,28 +3,41 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../base/browser/dom.js';
-import { Gesture, EventType as TouchEventType } from '../../../../../base/browser/touch.js';
-import { renderIcon } from '../../../../../base/browser/ui/iconLabel/iconLabels.js';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { Disposable, DisposableStore } from '../../../../../base/common/lifecycle.js';
-import { IObservable } from '../../../../../base/common/observable.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { localize } from '../../../../../nls.js';
-import { IActionWidgetService } from '../../../../../platform/actionWidget/browser/actionWidget.js';
-import { ActionListItemKind, IActionListDelegate, IActionListItem, IActionListOptions } from '../../../../../platform/actionWidget/browser/actionList.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { observableConfigValue } from '../../../../../platform/observable/common/platformObservableUtils.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { ISessionsManagementService } from '../../../../services/sessions/common/sessionsManagement.js';
-import { ISessionsProvidersService } from '../../../../services/sessions/browser/sessionsProvidersService.js';
-import { CopilotChatSessionsProvider } from './copilotChatSessionsProvider.js';
-import { reportNewChatPickerClosed } from '../../../chat/browser/newChatPickerTelemetry.js';
-import { IChatSessionsService } from '../../../../../workbench/contrib/chat/common/chatSessionsService.js';
+import * as dom from "../../../../../base/browser/dom.js";
+import {
+	Gesture,
+	EventType as TouchEventType,
+} from "../../../../../base/browser/touch.js";
+import { renderIcon } from "../../../../../base/browser/ui/iconLabel/iconLabels.js";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import {
+	Disposable,
+	DisposableStore,
+} from "../../../../../base/common/lifecycle.js";
+import { IObservable } from "../../../../../base/common/observable.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { localize } from "../../../../../nls.js";
+import { IActionWidgetService } from "../../../../../platform/actionWidget/browser/actionWidget.js";
+import {
+	ActionListItemKind,
+	IActionListDelegate,
+	IActionListItem,
+	IActionListOptions,
+} from "../../../../../platform/actionWidget/browser/actionList.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { observableConfigValue } from "../../../../../platform/observable/common/platformObservableUtils.js";
+import { ITelemetryService } from "../../../../../platform/telemetry/common/telemetry.js";
+import { ISessionsManagementService } from "../../../../services/sessions/common/sessionsManagement.js";
+import { ISessionsProvidersService } from "../../../../services/sessions/browser/sessionsProvidersService.js";
+import { CopilotChatSessionsProvider } from "./copilotChatSessionsProvider.js";
+import { reportNewChatPickerClosed } from "../../../chat/browser/newChatPickerTelemetry.js";
+import { IChatSessionsService } from "../../../../../workbench/contrib/chat/common/chatSessionsService.js";
 
-const PERMISSION_MODE_OPTION_ID = 'permissionMode';
-const ALLOW_AUTO_PERMISSIONS_SETTING = 'github.copilot.chat.claudeAgent.allowAutoPermissions';
-const ALLOW_BYPASS_PERMISSIONS_SETTING = 'github.copilot.chat.claudeAgent.allowDangerouslySkipPermissions';
+const PERMISSION_MODE_OPTION_ID = "permissionMode";
+const ALLOW_AUTO_PERMISSIONS_SETTING =
+	"github.copilot.chat.claudeAgent.allowAutoPermissions";
+const ALLOW_BYPASS_PERMISSIONS_SETTING =
+	"github.copilot.chat.claudeAgent.allowDangerouslySkipPermissions";
 
 interface IClaudePermissionModeItem {
 	readonly id: string;
@@ -35,87 +48,120 @@ interface IClaudePermissionModeItem {
 
 const permissionModes: IClaudePermissionModeItem[] = [
 	{
-		id: 'default',
-		label: localize('claude.permissionMode.default', "Ask Before Edits"),
-		description: localize('claude.permissionMode.default.description', "Claude asks for approval before making changes"),
+		id: "default",
+		label: localize("claude.permissionMode.default", "Ask Before Edits"),
+		description: localize(
+			"claude.permissionMode.default.description",
+			"Claude asks for approval before making changes",
+		),
 		icon: Codicon.shield,
 	},
 	{
-		id: 'acceptEdits',
-		label: localize('claude.permissionMode.acceptEdits', "Edit Automatically"),
-		description: localize('claude.permissionMode.acceptEdits.description', "Claude edits files without asking"),
+		id: "acceptEdits",
+		label: localize("claude.permissionMode.acceptEdits", "Edit Automatically"),
+		description: localize(
+			"claude.permissionMode.acceptEdits.description",
+			"Claude edits files without asking",
+		),
 		icon: Codicon.edit,
 	},
 	{
-		id: 'plan',
-		label: localize('claude.permissionMode.plan', "Plan Mode"),
-		description: localize('claude.permissionMode.plan.description', "Claude creates a plan before making changes"),
+		id: "plan",
+		label: localize("claude.permissionMode.plan", "Plan Mode"),
+		description: localize(
+			"claude.permissionMode.plan.description",
+			"Claude creates a plan before making changes",
+		),
 		icon: Codicon.lightbulb,
 	},
 ];
 
 const autoPermissionMode: IClaudePermissionModeItem = {
-	id: 'auto',
-	label: localize('claude.permissionMode.auto', "Auto"),
-	description: localize('claude.permissionMode.auto.description', "A model classifier approves or denies tool operations automatically"),
+	id: "auto",
+	label: localize("claude.permissionMode.auto", "Auto"),
+	description: localize(
+		"claude.permissionMode.auto.description",
+		"A model classifier approves or denies tool operations automatically",
+	),
 	icon: Codicon.sparkle,
 };
 
 const bypassPermissionMode: IClaudePermissionModeItem = {
-	id: 'bypassPermissions',
-	label: localize('claude.permissionMode.bypass', "Bypass Permissions"),
-	description: localize('claude.permissionMode.bypass.description', "All tools run without any confirmation"),
+	id: "bypassPermissions",
+	label: localize("claude.permissionMode.bypass", "Bypass Permissions"),
+	description: localize(
+		"claude.permissionMode.bypass.description",
+		"All tools run without any confirmation",
+	),
 	icon: Codicon.warning,
 };
 
 export class ClaudePermissionModePicker extends Disposable {
-
-	private _currentModeId = 'acceptEdits';
+	private _currentModeId = "acceptEdits";
 	private readonly _autoPermissionsEnabled: IObservable<boolean>;
 	private readonly _bypassPermissionsEnabled: IObservable<boolean>;
 	private _triggerElement: HTMLElement | undefined;
 	private readonly _renderDisposables = this._register(new DisposableStore());
 
 	constructor(
-		@IActionWidgetService private readonly actionWidgetService: IActionWidgetService,
-		@ISessionsManagementService private readonly sessionsManagementService: ISessionsManagementService,
-		@ISessionsProvidersService private readonly sessionsProvidersService: ISessionsProvidersService,
-		@IChatSessionsService private readonly chatSessionsService: IChatSessionsService,
+		@IActionWidgetService
+		private readonly actionWidgetService: IActionWidgetService,
+		@ISessionsManagementService
+		private readonly sessionsManagementService: ISessionsManagementService,
+		@ISessionsProvidersService
+		private readonly sessionsProvidersService: ISessionsProvidersService,
+		@IChatSessionsService
+		private readonly chatSessionsService: IChatSessionsService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super();
-		this._autoPermissionsEnabled = observableConfigValue<boolean>(ALLOW_AUTO_PERMISSIONS_SETTING, false, configurationService);
-		this._bypassPermissionsEnabled = observableConfigValue<boolean>(ALLOW_BYPASS_PERMISSIONS_SETTING, false, configurationService);
+		this._autoPermissionsEnabled = observableConfigValue<boolean>(
+			ALLOW_AUTO_PERMISSIONS_SETTING,
+			false,
+			configurationService,
+		);
+		this._bypassPermissionsEnabled = observableConfigValue<boolean>(
+			ALLOW_BYPASS_PERMISSIONS_SETTING,
+			false,
+			configurationService,
+		);
 	}
 
 	render(container: HTMLElement): HTMLElement {
 		this._renderDisposables.clear();
 
-		const slot = dom.append(container, dom.$('.sessions-chat-picker-slot.sessions-chat-permission-picker'));
+		const slot = dom.append(
+			container,
+			dom.$(".sessions-chat-picker-slot.sessions-chat-permission-picker"),
+		);
 		this._renderDisposables.add({ dispose: () => slot.remove() });
 
-		const trigger = dom.append(slot, dom.$('a.action-label'));
+		const trigger = dom.append(slot, dom.$("a.action-label"));
 		trigger.tabIndex = 0;
-		trigger.role = 'button';
+		trigger.role = "button";
 		this._triggerElement = trigger;
 
 		this._updateTriggerLabel(trigger);
 
 		this._renderDisposables.add(Gesture.addTarget(trigger));
 		for (const eventType of [dom.EventType.CLICK, TouchEventType.Tap]) {
-			this._renderDisposables.add(dom.addDisposableListener(trigger, eventType, (e) => {
-				dom.EventHelper.stop(e, true);
-				this._showPicker();
-			}));
+			this._renderDisposables.add(
+				dom.addDisposableListener(trigger, eventType, (e) => {
+					dom.EventHelper.stop(e, true);
+					this._showPicker();
+				}),
+			);
 		}
 
-		this._renderDisposables.add(dom.addDisposableListener(trigger, dom.EventType.KEY_DOWN, (e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				dom.EventHelper.stop(e, true);
-				this._showPicker();
-			}
-		}));
+		this._renderDisposables.add(
+			dom.addDisposableListener(trigger, dom.EventType.KEY_DOWN, (e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					dom.EventHelper.stop(e, true);
+					this._showPicker();
+				}
+			}),
+		);
 
 		return slot;
 	}
@@ -134,14 +180,15 @@ export class ClaudePermissionModePicker extends Disposable {
 		if (bypassAvailable) {
 			availableModes.push(bypassPermissionMode);
 		}
-		const items: IActionListItem<IClaudePermissionModeItem>[] = availableModes.map(mode => ({
-			kind: ActionListItemKind.Action,
-			group: { kind: ActionListItemKind.Header, title: '', icon: mode.icon },
-			item: mode,
-			label: mode.label,
-			detail: mode.description,
-			disabled: false,
-		}));
+		const items: IActionListItem<IClaudePermissionModeItem>[] =
+			availableModes.map((mode) => ({
+				kind: ActionListItemKind.Action,
+				group: { kind: ActionListItemKind.Header, title: "", icon: mode.icon },
+				item: mode,
+				label: mode.label,
+				detail: mode.description,
+				disabled: false,
+			}));
 
 		const triggerElement = this._triggerElement;
 		const delegate: IActionListDelegate<IClaudePermissionModeItem> = {
@@ -149,12 +196,14 @@ export class ClaudePermissionModePicker extends Disposable {
 				this.actionWidgetService.hide();
 				this._selectMode(item);
 			},
-			onHide: () => { triggerElement.focus(); },
+			onHide: () => {
+				triggerElement.focus();
+			},
 		};
 
 		const listOptions: IActionListOptions = { minWidth: 255 };
 		this.actionWidgetService.show<IClaudePermissionModeItem>(
-			'claudePermissionModePicker',
+			"claudePermissionModePicker",
 			false,
 			items,
 			delegate,
@@ -162,7 +211,8 @@ export class ClaudePermissionModePicker extends Disposable {
 			undefined,
 			[],
 			{
-				getWidgetAriaLabel: () => localize('claudePermissionModePicker.ariaLabel', "Permission Mode"),
+				getWidgetAriaLabel: () =>
+					localize("claudePermissionModePicker.ariaLabel", "Permission Mode"),
 			},
 			listOptions,
 		);
@@ -170,10 +220,14 @@ export class ClaudePermissionModePicker extends Disposable {
 
 	private _selectMode(mode: IClaudePermissionModeItem): void {
 		const beforeId = this._currentModeId;
-		const beforeLabel = [...permissionModes, autoPermissionMode, bypassPermissionMode].find(m => m.id === beforeId)?.label;
+		const beforeLabel = [
+			...permissionModes,
+			autoPermissionMode,
+			bypassPermissionMode,
+		].find((m) => m.id === beforeId)?.label;
 		reportNewChatPickerClosed(this.telemetryService, {
-			id: 'NewChatClaudePermissionModePicker',
-			name: 'NewChatClaudePermissionModePicker',
+			id: "NewChatClaudePermissionModePicker",
+			name: "NewChatClaudePermissionModePicker",
 			optionIdBefore: beforeId,
 			optionIdAfter: mode.id,
 			optionLabelBefore: beforeLabel,
@@ -188,7 +242,9 @@ export class ClaudePermissionModePicker extends Disposable {
 		if (!session) {
 			return;
 		}
-		const provider = this.sessionsProvidersService.getProvider(session.providerId);
+		const provider = this.sessionsProvidersService.getProvider(
+			session.providerId,
+		);
 		if (provider instanceof CopilotChatSessionsProvider) {
 			const chatSession = provider.getSession(session.sessionId);
 			if (!chatSession) {
@@ -198,7 +254,11 @@ export class ClaudePermissionModePicker extends Disposable {
 			if (chatSession.setOption) {
 				chatSession.setOption(PERMISSION_MODE_OPTION_ID, option);
 			} else {
-				this.chatSessionsService.setSessionOption(chatSession.resource, PERMISSION_MODE_OPTION_ID, option);
+				this.chatSessionsService.setSessionOption(
+					chatSession.resource,
+					PERMISSION_MODE_OPTION_ID,
+					option,
+				);
 			}
 		}
 	}
@@ -209,13 +269,23 @@ export class ClaudePermissionModePicker extends Disposable {
 		}
 
 		dom.clearNode(trigger);
-		const currentMode = [...permissionModes, autoPermissionMode, bypassPermissionMode].find(m => m.id === this._currentModeId) ?? permissionModes[1];
+		const currentMode =
+			[...permissionModes, autoPermissionMode, bypassPermissionMode].find(
+				(m) => m.id === this._currentModeId,
+			) ?? permissionModes[1];
 
 		dom.append(trigger, renderIcon(currentMode.icon));
-		const labelSpan = dom.append(trigger, dom.$('span.sessions-chat-dropdown-label'));
+		const labelSpan = dom.append(
+			trigger,
+			dom.$("span.sessions-chat-dropdown-label"),
+		);
 		labelSpan.textContent = currentMode.label;
 		dom.append(trigger, renderIcon(Codicon.chevronDown));
 
-		trigger.ariaLabel = localize('claudePermissionModePicker.triggerAriaLabel', "Pick Permission Mode, {0}", currentMode.label);
+		trigger.ariaLabel = localize(
+			"claudePermissionModePicker.triggerAriaLabel",
+			"Pick Permission Mode, {0}",
+			currentMode.label,
+		);
 	}
 }

@@ -6,19 +6,19 @@
 import { IAuthenticationService } from '../../../../../../platform/authentication/common/authentication';
 import { IExperimentationService } from '../../../../../../platform/telemetry/common/nullExperimentationService';
 import { IDisposable } from '../../../../../../util/vs/base/common/lifecycle';
-import { IInstantiationService, ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { CopilotToken } from '../auth/copilotTokenManager';
 import { getUserKind } from '../auth/orgs';
-import {
-	BuildInfo,
-	BuildType,
-	ConfigKey,
-	getConfig
-} from '../config';
+import { BuildInfo, BuildType, ConfigKey, getConfig } from '../config';
 import { getEngineRequestInfo } from '../openai/config';
 import { Filter, Release } from './filters';
 
-export function setupCompletionsExperimentationService(accessor: ServicesAccessor): IDisposable {
+export function setupCompletionsExperimentationService(
+	accessor: ServicesAccessor,
+): IDisposable {
 	const authService = accessor.get(IAuthenticationService);
 	const instantiationService = accessor.get(IInstantiationService);
 
@@ -26,7 +26,10 @@ export function setupCompletionsExperimentationService(accessor: ServicesAccesso
 	// onDidAuthenticationChange fires AFTER CopilotToken is minted and stored,
 	// ensuring copilotTrackingId is available for experiment assignment.
 	const disposable = authService.onDidAuthenticationChange(() => {
-		instantiationService.invokeFunction(updateCompletionsFilters, authService.copilotToken);
+		instantiationService.invokeFunction(
+			updateCompletionsFilters,
+			authService.copilotToken,
+		);
 	});
 
 	updateCompletionsFilters(accessor, authService.copilotToken);
@@ -41,7 +44,10 @@ function getPluginRelease(accessor: ServicesAccessor): Release {
 	return Release.Stable;
 }
 
-function updateCompletionsFilters(accessor: ServicesAccessor, token: Omit<CopilotToken, 'token'> | undefined) {
+function updateCompletionsFilters(
+	accessor: ServicesAccessor,
+	token: Omit<CopilotToken, 'token'> | undefined,
+) {
 	const exp = accessor.get(IExperimentationService);
 
 	const filters = createCompletionsFilters(accessor, token);
@@ -49,12 +55,22 @@ function updateCompletionsFilters(accessor: ServicesAccessor, token: Omit<Copilo
 	exp.setCompletionsFilters(filters);
 }
 
-export function createCompletionsFilters(accessor: ServicesAccessor, token: Omit<CopilotToken, 'token'> | undefined) {
+export function createCompletionsFilters(
+	accessor: ServicesAccessor,
+	token: Omit<CopilotToken, 'token'> | undefined,
+) {
 	const filters = new Map<Filter, string>();
 
 	filters.set(Filter.ExtensionRelease, getPluginRelease(accessor));
-	filters.set(Filter.CopilotOverrideEngine, getConfig(accessor, ConfigKey.DebugOverrideEngine) || getConfig(accessor, ConfigKey.DebugOverrideEngineLegacy));
-	filters.set(Filter.CopilotClientVersion, BuildInfo.isProduction() ? BuildInfo.getVersion() : '1.999.0');
+	filters.set(
+		Filter.CopilotOverrideEngine,
+		getConfig(accessor, ConfigKey.DebugOverrideEngine) ||
+			getConfig(accessor, ConfigKey.DebugOverrideEngineLegacy),
+	);
+	filters.set(
+		Filter.CopilotClientVersion,
+		BuildInfo.isProduction() ? BuildInfo.getVersion() : '1.999.0',
+	);
 
 	if (token) {
 		const userKind = getUserKind(token);

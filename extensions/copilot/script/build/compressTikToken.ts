@@ -72,5 +72,8 @@ function assertOk(outputFile: string, terms: Buffer[]) {
 		actual[index] = Buffer.from(term).toString('base64');
 	}
 
-	assert.deepStrictEqual(actual, terms.map(t => t.toString('base64')));
+	assert.deepStrictEqual(
+		actual,
+		terms.map((t) => t.toString('base64')),
+	);
 }

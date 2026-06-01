@@ -3,8 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DisposableStore, IDisposable } from '../../../util/vs/base/common/lifecycle';
-import { IInstantiationService, ServicesAccessor } from '../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	DisposableStore,
+	IDisposable,
+} from '../../../util/vs/base/common/lifecycle';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../util/vs/platform/instantiation/common/instantiation';
 import { IConfigurationService } from '../../../platform/configuration/common/configurationService';
 import { IExperimentationService } from '../../../platform/telemetry/common/nullExperimentationService';
 import { RemoteSessionExporter } from './remoteSessionExporter';
@@ -22,7 +28,11 @@ export function create(accessor: ServicesAccessor): IDisposable {
 	disposableStore.add(exporter);
 
 	// Create the status item (renders state in the chat status bar popup)
-	const statusItem = new SessionSyncStatus(exporter, configService, expService);
+	const statusItem = new SessionSyncStatus(
+		exporter,
+		configService,
+		expService,
+	);
 	disposableStore.add(statusItem);
 
 	return disposableStore;

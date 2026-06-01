@@ -8,14 +8,17 @@ import { Completion } from '../common/completionsAPI';
 /**
  * @throws if data line cannot be parsed as JSON or if it contains an error field.
  */
-export async function* jsonlStreamToCompletions(jsonlStream: AsyncIterable<string>): AsyncGenerator<Completion> {
+export async function* jsonlStreamToCompletions(
+	jsonlStream: AsyncIterable<string>,
+): AsyncGenerator<Completion> {
 	for await (const line of jsonlStream) {
 		if (line.trim() === 'data: [DONE]') {
 			continue;
 		}
 
 		if (line.startsWith('data: ')) {
-			const message: Completion & { error?: { message: string } } = JSON.parse(line.substring('data: '.length));
+			const message: Completion & { error?: { message: string } } =
+				JSON.parse(line.substring('data: '.length));
 
 			if (message.error) {
 				throw new Error(message.error.message);

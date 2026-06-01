@@ -4,25 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 const completionSpec: Fig.Spec = {
-	name: 'npx',
-	description: 'Execute binaries from npm packages',
+	name: "npx",
+	description: "Execute binaries from npm packages",
 	args: {
-		name: 'command',
+		name: "command",
 		isCommand: true,
 		generators: {
 			script: [
-				'bash',
-				'-c',
-				'until [[ -d node_modules/ ]] || [[ $PWD = \'/\' ]]; do cd ..; done; ls -1 node_modules/.bin/',
+				"bash",
+				"-c",
+				"until [[ -d node_modules/ ]] || [[ $PWD = '/' ]]; do cd ..; done; ls -1 node_modules/.bin/",
 			],
 			postProcess: function (out) {
-				return out
-					.split('\n')
-					.map((name) => ({
-						name,
-						icon: 'fig://icon?type=command',
-						loadSpec: name,
-					}));
+				return out.split("\n").map((name) => ({
+					name,
+					icon: "fig://icon?type=command",
+					loadSpec: name,
+				}));
 			},
 		},
 		isOptional: true,
@@ -30,114 +28,114 @@ const completionSpec: Fig.Spec = {
 
 	options: [
 		{
-			name: ['--package', '-p'],
-			description: 'Package to be installed',
+			name: ["--package", "-p"],
+			description: "Package to be installed",
 			args: {
-				name: 'package',
+				name: "package",
 			},
 		},
 		{
-			name: '--cache',
+			name: "--cache",
 			args: {
-				name: 'path',
-				template: 'filepaths',
+				name: "path",
+				template: "filepaths",
 			},
-			description: 'Location of the npm cache',
+			description: "Location of the npm cache",
 		},
 		{
-			name: '--always-spawn',
-			description: 'Always spawn a child process to execute the command',
+			name: "--always-spawn",
+			description: "Always spawn a child process to execute the command",
 		},
 		{
-			name: '-y',
-			description: 'Execute npx command without prompting for confirmation',
+			name: "-y",
+			description: "Execute npx command without prompting for confirmation",
 		},
 		{
-			description: 'Skip installation if a package is missing',
-			name: '--no-install',
+			description: "Skip installation if a package is missing",
+			name: "--no-install",
 		},
 		{
 			args: {
-				name: 'path',
-				template: 'filepaths',
+				name: "path",
+				template: "filepaths",
 			},
-			description: 'Path to user npmrc',
-			name: '--userconfig',
+			description: "Path to user npmrc",
+			name: "--userconfig",
 		},
 		{
-			name: ['--call', '-c'],
+			name: ["--call", "-c"],
 			args: {
-				name: 'script',
+				name: "script",
 			},
-			description: 'Execute string as if inside `npm run-script`',
+			description: "Execute string as if inside `npm run-script`",
 		},
 		{
-			name: ['--shell', '-s'],
-			description: 'Shell to execute the command with, if any',
+			name: ["--shell", "-s"],
+			description: "Shell to execute the command with, if any",
 			args: {
-				name: 'shell',
+				name: "shell",
 				suggestions: [
 					{
-						name: 'bash',
+						name: "bash",
 					},
 					{
-						name: 'fish',
+						name: "fish",
 					},
 					{
-						name: 'zsh',
+						name: "zsh",
 					},
 				],
 			},
 		},
 		{
 			args: {
-				name: 'shell-fallback',
+				name: "shell-fallback",
 				suggestions: [
 					{
-						name: 'bash',
+						name: "bash",
 					},
 					{
-						name: 'fish',
+						name: "fish",
 					},
 					{
-						name: 'zsh',
+						name: "zsh",
 					},
 				],
 			},
-			name: '--shell-auto-fallback',
+			name: "--shell-auto-fallback",
 			description:
 				'Generate shell code to use npx as the "command not found" fallback',
 		},
 		{
-			name: '--ignore-existing',
+			name: "--ignore-existing",
 			description:
-				'Ignores existing binaries in $PATH, or in the localproject. This forces npx to do a temporary install and use the latest version',
+				"Ignores existing binaries in $PATH, or in the localproject. This forces npx to do a temporary install and use the latest version",
 		},
 		{
-			name: ['--quiet', '-q'],
+			name: ["--quiet", "-q"],
 			description:
-				'Suppress output from npx itself. Subcommands will not be affected',
+				"Suppress output from npx itself. Subcommands will not be affected",
 		},
 		{
-			name: '--npm',
+			name: "--npm",
 			args: {
-				name: 'path to binary',
-				template: 'filepaths',
+				name: "path to binary",
+				template: "filepaths",
 			},
-			description: 'Npm binary to use for internal operations',
+			description: "Npm binary to use for internal operations",
 		},
 		{
 			args: {},
-			description: 'Extra node argument when calling a node binary',
-			name: ['--node-arg', '-n'],
+			description: "Extra node argument when calling a node binary",
+			name: ["--node-arg", "-n"],
 		},
 		{
-			description: 'Show version number',
-			name: ['--version', '-v'],
+			description: "Show version number",
+			name: ["--version", "-v"],
 		},
 		{
-			description: 'Show help',
-			name: ['--help', '-h'],
+			description: "Show help",
+			name: ["--help", "-h"],
 		},
 	],
 };

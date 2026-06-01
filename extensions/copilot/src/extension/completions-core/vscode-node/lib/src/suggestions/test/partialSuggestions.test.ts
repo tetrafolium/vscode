@@ -27,7 +27,11 @@ suite('partial acceptance utilities', () => {
 
 	test('returns the acceptedLength when compType is partial', () => {
 		const acceptedLength = 5;
-		const suggestionStatus: SuggestionStatus = { compType: 'partial', acceptedLength, acceptedLines: 0 };
+		const suggestionStatus: SuggestionStatus = {
+			compType: 'partial',
+			acceptedLength,
+			acceptedLines: 0,
+		};
 
 		const result = computeCompCharLen(suggestionStatus, 'Hello, World!');
 
@@ -50,7 +54,11 @@ suite('partial acceptance utilities', () => {
 	test('returns the substring of the completion text when compType is partial', () => {
 		const acceptedLength = 5;
 		const completionText = 'Hello, World!';
-		const suggestionStatus: SuggestionStatus = { compType: 'partial', acceptedLength, acceptedLines: 0 };
+		const suggestionStatus: SuggestionStatus = {
+			compType: 'partial',
+			acceptedLength,
+			acceptedLines: 0,
+		};
 
 		const result = computeCompletionText(completionText, suggestionStatus);
 

@@ -6,7 +6,9 @@
 import { readFile } from 'fs/promises';
 import { join } from '../../../../util/vs/base/common/path';
 
-type FileRef = { filePath: string | { fullPath: string } } | {/** Relative */ fileName: string; fileContents: string };
+type FileRef =
+	| { filePath: string | { fullPath: string } }
+	| { /** Relative */ fileName: string; fileContents: string };
 
 export interface ILoadedFile {
 	fileContents: string;
@@ -45,14 +47,17 @@ export async function loadJSON<T>(data: FileRef): Promise<T> {
 }
 
 /** See https://github.com/microsoft/vscode-ts-file-path-support */
-export type RelativeFilePath<T extends string> = string & { baseDir?: T }; export interface IInlineEditBaseFile {
+export type RelativeFilePath<T extends string> = string & { baseDir?: T };
+export interface IInlineEditBaseFile {
 	fileContents: string;
 
 	/** Relative or absolute */
 	virtualFileName: string;
 }
 
-export function relativeFile(relativePath: RelativeFilePath<'$dir'>): { fullPath: string } {
+export function relativeFile(relativePath: RelativeFilePath<'$dir'>): {
+	fullPath: string;
+} {
 	const fullPath = join(__dirname, relativePath);
 	return { fullPath };
 }

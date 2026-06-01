@@ -1691,7 +1691,8 @@ export const cudaCpp: LanguageInput = {
 											name: 'meta.template.call.cuda-cpp',
 											patterns: [
 												{
-													include: '#template_call_range',
+													include:
+														'#template_call_range',
 												},
 											],
 										},
@@ -1705,7 +1706,8 @@ export const cudaCpp: LanguageInput = {
 											name: 'punctuation.section.arguments.end.bracket.round.function.call.initializer.cuda-cpp',
 										},
 									},
-									contentName: 'meta.parameter.initialization',
+									contentName:
+										'meta.parameter.initialization',
 									patterns: [
 										{
 											include: '#evaluation_context',
@@ -1728,7 +1730,8 @@ export const cudaCpp: LanguageInput = {
 											name: 'punctuation.section.arguments.end.bracket.round.function.call.initializer.cuda-cpp',
 										},
 									},
-									contentName: 'meta.parameter.initialization',
+									contentName:
+										'meta.parameter.initialization',
 									patterns: [
 										{
 											include: '#evaluation_context',
@@ -1757,7 +1760,8 @@ export const cudaCpp: LanguageInput = {
 									name: 'punctuation.section.parameters.end.bracket.round.special.constructor.cuda-cpp',
 								},
 							},
-							contentName: 'meta.function.definition.parameters.special.constructor',
+							contentName:
+								'meta.function.definition.parameters.special.constructor',
 							patterns: [
 								{
 									include: '#function_parameter_context',
@@ -2066,7 +2070,8 @@ export const cudaCpp: LanguageInput = {
 											name: 'meta.template.call.cuda-cpp',
 											patterns: [
 												{
-													include: '#template_call_range',
+													include:
+														'#template_call_range',
 												},
 											],
 										},
@@ -2080,7 +2085,8 @@ export const cudaCpp: LanguageInput = {
 											name: 'punctuation.section.arguments.end.bracket.round.function.call.initializer.cuda-cpp',
 										},
 									},
-									contentName: 'meta.parameter.initialization',
+									contentName:
+										'meta.parameter.initialization',
 									patterns: [
 										{
 											include: '#evaluation_context',
@@ -2103,7 +2109,8 @@ export const cudaCpp: LanguageInput = {
 											name: 'punctuation.section.arguments.end.bracket.round.function.call.initializer.cuda-cpp',
 										},
 									},
-									contentName: 'meta.parameter.initialization',
+									contentName:
+										'meta.parameter.initialization',
 									patterns: [
 										{
 											include: '#evaluation_context',
@@ -2132,7 +2139,8 @@ export const cudaCpp: LanguageInput = {
 									name: 'punctuation.section.parameters.end.bracket.round.special.constructor.cuda-cpp',
 								},
 							},
-							contentName: 'meta.function.definition.parameters.special.constructor',
+							contentName:
+								'meta.function.definition.parameters.special.constructor',
 							patterns: [
 								{
 									include: '#function_parameter_context',
@@ -3329,7 +3337,8 @@ export const cudaCpp: LanguageInput = {
 									name: 'punctuation.section.parameters.end.bracket.round.special.member.destructor.cuda-cpp',
 								},
 							},
-							contentName: 'meta.function.definition.parameters.special.member.destructor',
+							contentName:
+								'meta.function.definition.parameters.special.member.destructor',
 							patterns: [],
 						},
 						{
@@ -3620,7 +3629,8 @@ export const cudaCpp: LanguageInput = {
 									name: 'punctuation.section.parameters.end.bracket.round.special.member.destructor.cuda-cpp',
 								},
 							},
-							contentName: 'meta.function.definition.parameters.special.member.destructor',
+							contentName:
+								'meta.function.definition.parameters.special.member.destructor',
 							patterns: [],
 						},
 						{
@@ -4538,7 +4548,8 @@ export const cudaCpp: LanguageInput = {
 				'1': {
 					patterns: [
 						{
-							include: '#scope_resolution_function_call_inner_generated',
+							include:
+								'#scope_resolution_function_call_inner_generated',
 						},
 					],
 				},
@@ -5078,7 +5089,8 @@ export const cudaCpp: LanguageInput = {
 				'57': {
 					patterns: [
 						{
-							include: '#scope_resolution_function_definition_inner_generated',
+							include:
+								'#scope_resolution_function_definition_inner_generated',
 						},
 					],
 				},
@@ -5226,7 +5238,8 @@ export const cudaCpp: LanguageInput = {
 											include: '#comma',
 										},
 										{
-											include: '#scope_resolution_inner_generated',
+											include:
+												'#scope_resolution_inner_generated',
 										},
 										{
 											begin: '<',
@@ -5244,7 +5257,8 @@ export const cudaCpp: LanguageInput = {
 											name: 'meta.template.call.cuda-cpp',
 											patterns: [
 												{
-													include: '#template_call_context',
+													include:
+														'#template_call_context',
 												},
 											],
 										},
@@ -6515,7 +6529,8 @@ export const cudaCpp: LanguageInput = {
 									include: '#comma',
 								},
 								{
-									include: '#scope_resolution_inner_generated',
+									include:
+										'#scope_resolution_inner_generated',
 								},
 								{
 									begin: '<',
@@ -7601,7 +7616,8 @@ export const cudaCpp: LanguageInput = {
 				'5': {
 					patterns: [
 						{
-							include: '#scope_resolution_namespace_alias_inner_generated',
+							include:
+								'#scope_resolution_namespace_alias_inner_generated',
 						},
 					],
 				},
@@ -7661,7 +7677,8 @@ export const cudaCpp: LanguageInput = {
 								'1': {
 									patterns: [
 										{
-											include: '#scope_resolution_namespace_block_inner_generated',
+											include:
+												'#scope_resolution_namespace_block_inner_generated',
 										},
 									],
 								},
@@ -8698,7 +8715,8 @@ export const cudaCpp: LanguageInput = {
 									name: 'punctuation.section.parameters.end.bracket.round.special.operator-overload.cuda-cpp',
 								},
 							},
-							contentName: 'meta.function.definition.parameters.special.operator-overload',
+							contentName:
+								'meta.function.definition.parameters.special.operator-overload',
 							patterns: [
 								{
 									include: '#function_parameter_context',
@@ -8709,7 +8727,8 @@ export const cudaCpp: LanguageInput = {
 							],
 						},
 						{
-							include: '#qualifiers_and_specifiers_post_parameters',
+							include:
+								'#qualifiers_and_specifiers_post_parameters',
 						},
 						{
 							include: '$self',
@@ -13120,7 +13139,8 @@ export const cudaCpp: LanguageInput = {
 				'0': {
 					patterns: [
 						{
-							include: '#scope_resolution_function_call_inner_generated',
+							include:
+								'#scope_resolution_function_call_inner_generated',
 						},
 					],
 				},
@@ -13142,7 +13162,8 @@ export const cudaCpp: LanguageInput = {
 				'1': {
 					patterns: [
 						{
-							include: '#scope_resolution_function_call_inner_generated',
+							include:
+								'#scope_resolution_function_call_inner_generated',
 						},
 					],
 				},
@@ -13180,7 +13201,8 @@ export const cudaCpp: LanguageInput = {
 				'0': {
 					patterns: [
 						{
-							include: '#scope_resolution_function_definition_inner_generated',
+							include:
+								'#scope_resolution_function_definition_inner_generated',
 						},
 					],
 				},
@@ -13202,7 +13224,8 @@ export const cudaCpp: LanguageInput = {
 				'1': {
 					patterns: [
 						{
-							include: '#scope_resolution_function_definition_inner_generated',
+							include:
+								'#scope_resolution_function_definition_inner_generated',
 						},
 					],
 				},
@@ -13240,7 +13263,8 @@ export const cudaCpp: LanguageInput = {
 				'0': {
 					patterns: [
 						{
-							include: '#scope_resolution_function_definition_operator_overload_inner_generated',
+							include:
+								'#scope_resolution_function_definition_operator_overload_inner_generated',
 						},
 					],
 				},
@@ -13256,44 +13280,46 @@ export const cudaCpp: LanguageInput = {
 				},
 			},
 		},
-		scope_resolution_function_definition_operator_overload_inner_generated: {
-			match: '((::)?(?:(?!\\b(?:__has_cpp_attribute|reinterpret_cast|__forceinline__|atomic_noexcept|__has_include|atomic_cancel|atomic_commit|dynamic_cast|__constant__|__restrict__|__noinline__|thread_local|synchronized|static_cast|__managed__|const_cast|__shared__|__global__|__device__|co_return|constexpr|constexpr|constexpr|consteval|protected|namespace|co_return|noexcept|noexcept|continue|co_await|co_yield|volatile|register|restrict|explicit|__host__|volatile|noexcept|template|operator|decltype|typename|requires|co_await|co_yield|reflexpr|alignof|alignas|default|mutable|virtual|mutable|private|include|warning|_Pragma|defined|typedef|__asm__|concept|sizeof|delete|not_eq|bitand|and_eq|xor_eq|typeid|switch|return|struct|static|extern|inline|friend|public|ifndef|define|pragma|export|import|module|compl|bitor|throw|or_eq|while|catch|break|class|union|const|const|endif|ifdef|undef|error|using|else|goto|case|enum|elif|else|line|this|not|new|xor|and|for|try|asm|or|do|if|if)\\b)(?<!\\w)(?:[a-zA-Z_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))(?:[a-zA-Z0-9_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))*(?!\\w)\\s*+(((?<!<)<(?!<)(?:(?:(?:[^\'"<>]*+|"(?:[^"]*|\\\\")")|\'(?:[^\']*|\\\\\')\')\\g<7>?)+>)(?:\\s)*+)?::)*\\s*+)((?!\\b(?:__has_cpp_attribute|reinterpret_cast|__forceinline__|atomic_noexcept|__has_include|atomic_cancel|atomic_commit|dynamic_cast|__constant__|__restrict__|__noinline__|thread_local|synchronized|static_cast|__managed__|const_cast|__shared__|__global__|__device__|co_return|constexpr|constexpr|constexpr|consteval|protected|namespace|co_return|noexcept|noexcept|continue|co_await|co_yield|volatile|register|restrict|explicit|__host__|volatile|noexcept|template|operator|decltype|typename|requires|co_await|co_yield|reflexpr|alignof|alignas|default|mutable|virtual|mutable|private|include|warning|_Pragma|defined|typedef|__asm__|concept|sizeof|delete|not_eq|bitand|and_eq|xor_eq|typeid|switch|return|struct|static|extern|inline|friend|public|ifndef|define|pragma|export|import|module|compl|bitor|throw|or_eq|while|catch|break|class|union|const|const|endif|ifdef|undef|error|using|else|goto|case|enum|elif|else|line|this|not|new|xor|and|for|try|asm|or|do|if|if)\\b)(?<!\\w)(?:[a-zA-Z_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))(?:[a-zA-Z0-9_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))*(?!\\w))\\s*+(((?<!<)<(?!<)(?:(?:(?:[^\'"<>]*+|"(?:[^"]*|\\\\")")|\'(?:[^\']*|\\\\\')\')\\g<7>?)+>)(?:\\s)*+)?(::)',
-			captures: {
-				'1': {
-					patterns: [
-						{
-							include: '#scope_resolution_function_definition_operator_overload_inner_generated',
-						},
-					],
-				},
-				'2': {
-					name: 'punctuation.separator.namespace.access.cuda-cpp punctuation.separator.scope-resolution.function.definition.operator-overload.cuda-cpp',
-				},
-				'3': {
-					patterns: [
-						{
-							include: '#template_call_range',
-						},
-					],
-				},
-				'4': {},
-				'5': {
-					name: 'entity.name.scope-resolution.function.definition.operator-overload.cuda-cpp',
-				},
-				'6': {
-					name: 'meta.template.call.cuda-cpp',
-					patterns: [
-						{
-							include: '#template_call_range',
-						},
-					],
-				},
-				'7': {},
-				'8': {
-					name: 'punctuation.separator.namespace.access.cuda-cpp punctuation.separator.scope-resolution.function.definition.operator-overload.cuda-cpp',
+		scope_resolution_function_definition_operator_overload_inner_generated:
+			{
+				match: '((::)?(?:(?!\\b(?:__has_cpp_attribute|reinterpret_cast|__forceinline__|atomic_noexcept|__has_include|atomic_cancel|atomic_commit|dynamic_cast|__constant__|__restrict__|__noinline__|thread_local|synchronized|static_cast|__managed__|const_cast|__shared__|__global__|__device__|co_return|constexpr|constexpr|constexpr|consteval|protected|namespace|co_return|noexcept|noexcept|continue|co_await|co_yield|volatile|register|restrict|explicit|__host__|volatile|noexcept|template|operator|decltype|typename|requires|co_await|co_yield|reflexpr|alignof|alignas|default|mutable|virtual|mutable|private|include|warning|_Pragma|defined|typedef|__asm__|concept|sizeof|delete|not_eq|bitand|and_eq|xor_eq|typeid|switch|return|struct|static|extern|inline|friend|public|ifndef|define|pragma|export|import|module|compl|bitor|throw|or_eq|while|catch|break|class|union|const|const|endif|ifdef|undef|error|using|else|goto|case|enum|elif|else|line|this|not|new|xor|and|for|try|asm|or|do|if|if)\\b)(?<!\\w)(?:[a-zA-Z_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))(?:[a-zA-Z0-9_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))*(?!\\w)\\s*+(((?<!<)<(?!<)(?:(?:(?:[^\'"<>]*+|"(?:[^"]*|\\\\")")|\'(?:[^\']*|\\\\\')\')\\g<7>?)+>)(?:\\s)*+)?::)*\\s*+)((?!\\b(?:__has_cpp_attribute|reinterpret_cast|__forceinline__|atomic_noexcept|__has_include|atomic_cancel|atomic_commit|dynamic_cast|__constant__|__restrict__|__noinline__|thread_local|synchronized|static_cast|__managed__|const_cast|__shared__|__global__|__device__|co_return|constexpr|constexpr|constexpr|consteval|protected|namespace|co_return|noexcept|noexcept|continue|co_await|co_yield|volatile|register|restrict|explicit|__host__|volatile|noexcept|template|operator|decltype|typename|requires|co_await|co_yield|reflexpr|alignof|alignas|default|mutable|virtual|mutable|private|include|warning|_Pragma|defined|typedef|__asm__|concept|sizeof|delete|not_eq|bitand|and_eq|xor_eq|typeid|switch|return|struct|static|extern|inline|friend|public|ifndef|define|pragma|export|import|module|compl|bitor|throw|or_eq|while|catch|break|class|union|const|const|endif|ifdef|undef|error|using|else|goto|case|enum|elif|else|line|this|not|new|xor|and|for|try|asm|or|do|if|if)\\b)(?<!\\w)(?:[a-zA-Z_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))(?:[a-zA-Z0-9_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))*(?!\\w))\\s*+(((?<!<)<(?!<)(?:(?:(?:[^\'"<>]*+|"(?:[^"]*|\\\\")")|\'(?:[^\']*|\\\\\')\')\\g<7>?)+>)(?:\\s)*+)?(::)',
+				captures: {
+					'1': {
+						patterns: [
+							{
+								include:
+									'#scope_resolution_function_definition_operator_overload_inner_generated',
+							},
+						],
+					},
+					'2': {
+						name: 'punctuation.separator.namespace.access.cuda-cpp punctuation.separator.scope-resolution.function.definition.operator-overload.cuda-cpp',
+					},
+					'3': {
+						patterns: [
+							{
+								include: '#template_call_range',
+							},
+						],
+					},
+					'4': {},
+					'5': {
+						name: 'entity.name.scope-resolution.function.definition.operator-overload.cuda-cpp',
+					},
+					'6': {
+						name: 'meta.template.call.cuda-cpp',
+						patterns: [
+							{
+								include: '#template_call_range',
+							},
+						],
+					},
+					'7': {},
+					'8': {
+						name: 'punctuation.separator.namespace.access.cuda-cpp punctuation.separator.scope-resolution.function.definition.operator-overload.cuda-cpp',
+					},
 				},
 			},
-		},
 		scope_resolution_inner_generated: {
 			match: '((::)?(?:(?!\\b(?:__has_cpp_attribute|reinterpret_cast|__forceinline__|atomic_noexcept|__has_include|atomic_cancel|atomic_commit|dynamic_cast|__constant__|__restrict__|__noinline__|thread_local|synchronized|static_cast|__managed__|const_cast|__shared__|__global__|__device__|co_return|constexpr|constexpr|constexpr|consteval|protected|namespace|co_return|noexcept|noexcept|continue|co_await|co_yield|volatile|register|restrict|explicit|__host__|volatile|noexcept|template|operator|decltype|typename|requires|co_await|co_yield|reflexpr|alignof|alignas|default|mutable|virtual|mutable|private|include|warning|_Pragma|defined|typedef|__asm__|concept|sizeof|delete|not_eq|bitand|and_eq|xor_eq|typeid|switch|return|struct|static|extern|inline|friend|public|ifndef|define|pragma|export|import|module|compl|bitor|throw|or_eq|while|catch|break|class|union|const|const|endif|ifdef|undef|error|using|else|goto|case|enum|elif|else|line|this|not|new|xor|and|for|try|asm|or|do|if|if)\\b)(?<!\\w)(?:[a-zA-Z_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))(?:[a-zA-Z0-9_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))*(?!\\w)\\s*+(((?<!<)<(?!<)(?:(?:(?:[^\'"<>]*+|"(?:[^"]*|\\\\")")|\'(?:[^\']*|\\\\\')\')\\g<7>?)+>)(?:\\s)*+)?::)*\\s*+)((?!\\b(?:__has_cpp_attribute|reinterpret_cast|__forceinline__|atomic_noexcept|__has_include|atomic_cancel|atomic_commit|dynamic_cast|__constant__|__restrict__|__noinline__|thread_local|synchronized|static_cast|__managed__|const_cast|__shared__|__global__|__device__|co_return|constexpr|constexpr|constexpr|consteval|protected|namespace|co_return|noexcept|noexcept|continue|co_await|co_yield|volatile|register|restrict|explicit|__host__|volatile|noexcept|template|operator|decltype|typename|requires|co_await|co_yield|reflexpr|alignof|alignas|default|mutable|virtual|mutable|private|include|warning|_Pragma|defined|typedef|__asm__|concept|sizeof|delete|not_eq|bitand|and_eq|xor_eq|typeid|switch|return|struct|static|extern|inline|friend|public|ifndef|define|pragma|export|import|module|compl|bitor|throw|or_eq|while|catch|break|class|union|const|const|endif|ifdef|undef|error|using|else|goto|case|enum|elif|else|line|this|not|new|xor|and|for|try|asm|or|do|if|if)\\b)(?<!\\w)(?:[a-zA-Z_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))(?:[a-zA-Z0-9_]|(?:\\\\u[0-9a-fA-F]{4}|\\\\U[0-9a-fA-F]{8}))*(?!\\w))\\s*+(((?<!<)<(?!<)(?:(?:(?:[^\'"<>]*+|"(?:[^"]*|\\\\")")|\'(?:[^\']*|\\\\\')\')\\g<7>?)+>)(?:\\s)*+)?(::)',
 			captures: {
@@ -13338,7 +13364,8 @@ export const cudaCpp: LanguageInput = {
 				'0': {
 					patterns: [
 						{
-							include: '#scope_resolution_namespace_alias_inner_generated',
+							include:
+								'#scope_resolution_namespace_alias_inner_generated',
 						},
 					],
 				},
@@ -13360,7 +13387,8 @@ export const cudaCpp: LanguageInput = {
 				'1': {
 					patterns: [
 						{
-							include: '#scope_resolution_namespace_alias_inner_generated',
+							include:
+								'#scope_resolution_namespace_alias_inner_generated',
 						},
 					],
 				},
@@ -13398,7 +13426,8 @@ export const cudaCpp: LanguageInput = {
 				'0': {
 					patterns: [
 						{
-							include: '#scope_resolution_namespace_block_inner_generated',
+							include:
+								'#scope_resolution_namespace_block_inner_generated',
 						},
 					],
 				},
@@ -13420,7 +13449,8 @@ export const cudaCpp: LanguageInput = {
 				'1': {
 					patterns: [
 						{
-							include: '#scope_resolution_namespace_block_inner_generated',
+							include:
+								'#scope_resolution_namespace_block_inner_generated',
 						},
 					],
 				},
@@ -13458,7 +13488,8 @@ export const cudaCpp: LanguageInput = {
 				'0': {
 					patterns: [
 						{
-							include: '#scope_resolution_namespace_using_inner_generated',
+							include:
+								'#scope_resolution_namespace_using_inner_generated',
 						},
 					],
 				},
@@ -13480,7 +13511,8 @@ export const cudaCpp: LanguageInput = {
 				'1': {
 					patterns: [
 						{
-							include: '#scope_resolution_namespace_using_inner_generated',
+							include:
+								'#scope_resolution_namespace_using_inner_generated',
 						},
 					],
 				},
@@ -13518,7 +13550,8 @@ export const cudaCpp: LanguageInput = {
 				'0': {
 					patterns: [
 						{
-							include: '#scope_resolution_parameter_inner_generated',
+							include:
+								'#scope_resolution_parameter_inner_generated',
 						},
 					],
 				},
@@ -13540,7 +13573,8 @@ export const cudaCpp: LanguageInput = {
 				'1': {
 					patterns: [
 						{
-							include: '#scope_resolution_parameter_inner_generated',
+							include:
+								'#scope_resolution_parameter_inner_generated',
 						},
 					],
 				},
@@ -13578,7 +13612,8 @@ export const cudaCpp: LanguageInput = {
 				'0': {
 					patterns: [
 						{
-							include: '#scope_resolution_template_call_inner_generated',
+							include:
+								'#scope_resolution_template_call_inner_generated',
 						},
 					],
 				},
@@ -13600,7 +13635,8 @@ export const cudaCpp: LanguageInput = {
 				'1': {
 					patterns: [
 						{
-							include: '#scope_resolution_template_call_inner_generated',
+							include:
+								'#scope_resolution_template_call_inner_generated',
 						},
 					],
 				},
@@ -13638,7 +13674,8 @@ export const cudaCpp: LanguageInput = {
 				'0': {
 					patterns: [
 						{
-							include: '#scope_resolution_template_definition_inner_generated',
+							include:
+								'#scope_resolution_template_definition_inner_generated',
 						},
 					],
 				},
@@ -13660,7 +13697,8 @@ export const cudaCpp: LanguageInput = {
 				'1': {
 					patterns: [
 						{
-							include: '#scope_resolution_template_definition_inner_generated',
+							include:
+								'#scope_resolution_template_definition_inner_generated',
 						},
 					],
 				},
@@ -16331,7 +16369,8 @@ export const cudaCpp: LanguageInput = {
 		template_definition_context: {
 			patterns: [
 				{
-					include: '#scope_resolution_template_definition_inner_generated',
+					include:
+						'#scope_resolution_template_definition_inner_generated',
 				},
 				{
 					include: '#template_definition_argument',
@@ -17466,7 +17505,8 @@ export const cudaCpp: LanguageInput = {
 														'1': {
 															patterns: [
 																{
-																	include: '#inline_comment',
+																	include:
+																		'#inline_comment',
 																},
 															],
 														},
@@ -17627,7 +17667,8 @@ export const cudaCpp: LanguageInput = {
 									include: '#comma',
 								},
 								{
-									include: '#scope_resolution_inner_generated',
+									include:
+										'#scope_resolution_inner_generated',
 								},
 								{
 									begin: '<',
@@ -18271,7 +18312,8 @@ export const cudaCpp: LanguageInput = {
 														'1': {
 															patterns: [
 																{
-																	include: '#inline_comment',
+																	include:
+																		'#inline_comment',
 																},
 															],
 														},
@@ -18713,7 +18755,8 @@ export const cudaCpp: LanguageInput = {
 														'1': {
 															patterns: [
 																{
-																	include: '#inline_comment',
+																	include:
+																		'#inline_comment',
 																},
 															],
 														},
@@ -19783,7 +19826,8 @@ export const cudaCpp: LanguageInput = {
 				'3': {
 					patterns: [
 						{
-							include: '#scope_resolution_namespace_using_inner_generated',
+							include:
+								'#scope_resolution_namespace_using_inner_generated',
 						},
 					],
 				},

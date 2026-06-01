@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isWeb } from '../../../base/common/platform.js';
-import * as nls from '../../../nls.js';
-import { Extensions as ConfigurationExtensions, IConfigurationRegistry } from '../../configuration/common/configurationRegistry.js';
-import product from '../../product/common/product.js';
-import { Registry } from '../../registry/common/platform.js';
-import { AgentHostEnabledSettingId } from './agentService.js';
+import { isWeb } from "../../../base/common/platform.js";
+import * as nls from "../../../nls.js";
+import {
+	Extensions as ConfigurationExtensions,
+	IConfigurationRegistry,
+} from "../../configuration/common/configurationRegistry.js";
+import product from "../../product/common/product.js";
+import { Registry } from "../../registry/common/platform.js";
+import { AgentHostEnabledSettingId } from "./agentService.js";
 
 // `chat.agentHost.enabled` is read in the desktop main process
 // (`src/vs/code/electron-main/app.ts`) to decide whether to spawn the agent
@@ -23,17 +26,22 @@ import { AgentHostEnabledSettingId } from './agentService.js';
 //   - `src/vs/workbench/contrib/chat/browser/chat.shared.contribution.ts`
 //     (renderer registration for the settings UI).
 
-const configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
+const configurationRegistry = Registry.as<IConfigurationRegistry>(
+	ConfigurationExtensions.Configuration,
+);
 configurationRegistry.registerConfiguration({
-	id: 'chatAgentHost',
-	title: nls.localize('chatAgentHostConfigurationTitle', "Chat Agent Host"),
-	type: 'object',
+	id: "chatAgentHost",
+	title: nls.localize("chatAgentHostConfigurationTitle", "Chat Agent Host"),
+	type: "object",
 	properties: {
 		[AgentHostEnabledSettingId]: {
-			type: 'boolean',
-			description: nls.localize('chat.agentHost.enabled', "When enabled, some agents run in a separate agent host process."),
-			default: !isWeb && product.quality !== 'stable',
-			tags: ['experimental', 'advanced'],
+			type: "boolean",
+			description: nls.localize(
+				"chat.agentHost.enabled",
+				"When enabled, some agents run in a separate agent host process.",
+			),
+			default: !isWeb && product.quality !== "stable",
+			tags: ["experimental", "advanced"],
 		},
-	}
+	},
 });

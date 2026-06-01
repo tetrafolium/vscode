@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 .chat-viewpane {
-
 	.chat-view-title-container {
 		display: none;
 		cursor: pointer;
@@ -66,7 +65,6 @@
  * - the visibility of side by side
  */
 .chat-viewpane {
-
 	/* Default padding for all view locations */
 	&.chat-view-location-sidebar,
 	&.chat-view-location-panel,

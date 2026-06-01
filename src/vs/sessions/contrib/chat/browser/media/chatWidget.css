@@ -96,14 +96,18 @@
 	display: flex;
 }
 
-.new-chat-widget-container .new-chat-bottom-container .new-chat-controls-container {
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.new-chat-controls-container {
 	display: flex;
 	gap: 4px;
 	min-width: 0;
 	overflow: hidden;
 }
 
-.new-chat-widget-container .new-chat-bottom-container .new-chat-repo-config-container {
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.new-chat-repo-config-container {
 	display: flex;
 	align-items: center;
 	gap: 2px;
@@ -114,9 +118,18 @@
 /* Allow nested toolbar items to shrink so labels can ellipsize when space is tight.
  * Mirrors the regular chat-input-toolbar pattern: each flex layer between the
  * bounded container and the ellipsizing label gets `min-width: 0; overflow: hidden`. */
-.new-chat-widget-container .new-chat-bottom-container .new-chat-controls-container > *,
-.new-chat-widget-container .new-chat-bottom-container .new-chat-repo-config-container > *,
-.new-chat-widget-container .new-chat-bottom-container .sessions-chat-picker-slot .action-label {
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.new-chat-controls-container
+	> *,
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.new-chat-repo-config-container
+	> *,
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.sessions-chat-picker-slot
+	.action-label {
 	min-width: 0;
 	overflow: hidden;
 }
@@ -126,9 +139,19 @@
  * label margin + 16px chevron box + 1px padding-right ~= 38px. The floor must
  * be applied to the outermost flex item (.action-item), not just the label,
  * because the parent's `min-width: 0` would otherwise let it clip the chevron. */
-.new-chat-widget-container .new-chat-bottom-container .monaco-action-bar .action-item,
-.new-chat-widget-container .new-chat-bottom-container .sessions-chat-picker-slot .action-label,
-.new-chat-widget-container .new-chat-bottom-container .monaco-action-bar .action-item .action-label {
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-action-bar
+	.action-item,
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.sessions-chat-picker-slot
+	.action-label,
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-action-bar
+	.action-item
+	.action-label {
 	min-width: 30px;
 	overflow: hidden;
 }
@@ -141,38 +164,58 @@
  * important state that is worth preserving as long as there is room. */
 @container (max-width: 330px) {
 	/* Bottom-row pickers (Copilot CLI, Default Approvals, Worktree, branch): icon-only */
-	.new-chat-widget-container .new-chat-bottom-container .sessions-chat-dropdown-label {
+	.new-chat-widget-container
+		.new-chat-bottom-container
+		.sessions-chat-dropdown-label {
 		display: none;
 	}
 
-	.new-chat-widget-container .new-chat-bottom-container .sessions-chat-permission-picker .sessions-chat-dropdown-label {
+	.new-chat-widget-container
+		.new-chat-bottom-container
+		.sessions-chat-permission-picker
+		.sessions-chat-dropdown-label {
 		display: revert;
 	}
 
 	/* Chat input config toolbar: hide mode picker label (uses sessions-chat-dropdown-label),
 	 * but keep the model picker label (uses chat-input-picker-label) visible. */
-	.new-chat-widget-container .sessions-chat-config-toolbar .sessions-chat-dropdown-label {
+	.new-chat-widget-container
+		.sessions-chat-config-toolbar
+		.sessions-chat-dropdown-label {
 		display: none;
 	}
 
 	/* With both chevron and label hidden the only content is the icon. Center
 	 * it instead of leaving the 30px min-width as left-aligned padding.
 	 * Permission picker keeps its label so its action-item is excluded. */
-	.new-chat-widget-container .new-chat-bottom-container .monaco-action-bar .action-item:not(.sessions-chat-permission-picker) .action-label,
-	.new-chat-widget-container .new-chat-bottom-container .sessions-chat-picker-slot:not(.sessions-chat-permission-picker) .action-label {
+	.new-chat-widget-container
+		.new-chat-bottom-container
+		.monaco-action-bar
+		.action-item:not(.sessions-chat-permission-picker)
+		.action-label,
+	.new-chat-widget-container
+		.new-chat-bottom-container
+		.sessions-chat-picker-slot:not(.sessions-chat-permission-picker)
+		.action-label {
 		justify-content: center;
 		padding: 3px;
 	}
 }
 
 @container (max-width: 240px) {
-	.new-chat-widget-container .new-chat-bottom-container .sessions-chat-permission-picker .sessions-chat-dropdown-label {
+	.new-chat-widget-container
+		.new-chat-bottom-container
+		.sessions-chat-permission-picker
+		.sessions-chat-dropdown-label {
 		display: none;
 	}
 }
 
 /* Spacing between action items inside the bottom-row toolbars (e.g. Worktree, branch) */
-.new-chat-widget-container .new-chat-bottom-container .monaco-action-bar .actions-container {
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-action-bar
+	.actions-container {
 	gap: 4px;
 }
 
@@ -190,25 +233,61 @@
 	font-size: 12px;
 }
 
-.new-chat-widget-container .new-chat-bottom-container .action-label > .codicon-chevron-down,
-.new-chat-widget-container .new-chat-bottom-container .sessions-chat-picker-slot .action-label > .codicon-chevron-down,
-.new-chat-widget-container .new-chat-bottom-container .monaco-action-bar .action-item .action-label > .codicon-chevron-down {
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.action-label
+	> .codicon-chevron-down,
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.sessions-chat-picker-slot
+	.action-label
+	> .codicon-chevron-down,
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-action-bar
+	.action-item
+	.action-label
+	> .codicon-chevron-down {
 	display: none;
 }
 
-.new-chat-widget-container .sessions-chat-toolbar .sessions-chat-config-toolbar .monaco-action-bar .action-item .action-label > .codicon-chevron-down {
+.new-chat-widget-container
+	.sessions-chat-toolbar
+	.sessions-chat-config-toolbar
+	.monaco-action-bar
+	.action-item
+	.action-label
+	> .codicon-chevron-down {
 	display: none;
 }
 
-
-.new-chat-widget-container .new-chat-bottom-container .new-chat-controls-container > * + *,
-.new-chat-widget-container .new-chat-bottom-container .new-chat-repo-config-container .monaco-action-bar .actions-container > .action-item + .action-item,
-.new-chat-widget-container .sessions-chat-config-toolbar .monaco-action-bar .actions-container > .action-item + .action-item,
-.new-chat-widget-container .sessions-chat-attach-button + .sessions-chat-config-toolbar {
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.new-chat-controls-container
+	> *
+	+ *,
+.new-chat-widget-container
+	.new-chat-bottom-container
+	.new-chat-repo-config-container
+	.monaco-action-bar
+	.actions-container
+	> .action-item
+	+ .action-item,
+.new-chat-widget-container
+	.sessions-chat-config-toolbar
+	.monaco-action-bar
+	.actions-container
+	> .action-item
+	+ .action-item,
+.new-chat-widget-container
+	.sessions-chat-attach-button
+	+ .sessions-chat-config-toolbar {
 	box-shadow: -5px 0 0 -4px var(--vscode-editorWidget-border);
 }
 
-.new-chat-widget-container .sessions-chat-attach-button + .sessions-chat-config-toolbar {
+.new-chat-widget-container
+	.sessions-chat-attach-button
+	+ .sessions-chat-config-toolbar {
 	padding-left: 4px;
 }
 
@@ -236,7 +315,9 @@
 	white-space: nowrap;
 }
 
-.session-workspace-picker-with-label:has(+ .sessions-chat-session-type-picker .action-label.hidden) {
+.session-workspace-picker-with-label:has(
+	+ .sessions-chat-session-type-picker .action-label.hidden
+) {
 	display: none;
 }
 
@@ -255,24 +336,37 @@
 }
 
 .sessions-chat-picker-slot.sessions-chat-workspace-picker .action-label:hover,
-.sessions-chat-picker-slot.sessions-chat-session-type-picker .action-label:hover {
+.sessions-chat-picker-slot.sessions-chat-session-type-picker
+	.action-label:hover {
 	background-color: var(--vscode-toolbar-hoverBackground);
 	color: var(--vscode-foreground);
 }
 
-.sessions-chat-picker-slot.sessions-chat-workspace-picker .action-label .sessions-chat-dropdown-label,
-.sessions-chat-picker-slot.sessions-chat-session-type-picker .action-label .sessions-chat-dropdown-label {
+.sessions-chat-picker-slot.sessions-chat-workspace-picker
+	.action-label
+	.sessions-chat-dropdown-label,
+.sessions-chat-picker-slot.sessions-chat-session-type-picker
+	.action-label
+	.sessions-chat-dropdown-label {
 	font-size: 18px;
 }
 
-.sessions-chat-picker-slot.sessions-chat-workspace-picker .action-label > .codicon:not(.sessions-chat-dropdown-chevron),
-.sessions-chat-picker-slot.sessions-chat-session-type-picker .action-label > .codicon:not(.codicon-chevron-down) {
+.sessions-chat-picker-slot.sessions-chat-workspace-picker
+	.action-label
+	> .codicon:not(.sessions-chat-dropdown-chevron),
+.sessions-chat-picker-slot.sessions-chat-session-type-picker
+	.action-label
+	> .codicon:not(.codicon-chevron-down) {
 	font-size: 16px;
 	margin: 0;
 }
 
-.sessions-chat-picker-slot.sessions-chat-workspace-picker .action-label .sessions-chat-dropdown-chevron,
-.sessions-chat-picker-slot.sessions-chat-session-type-picker .action-label .sessions-chat-dropdown-chevron {
+.sessions-chat-picker-slot.sessions-chat-workspace-picker
+	.action-label
+	.sessions-chat-dropdown-chevron,
+.sessions-chat-picker-slot.sessions-chat-session-type-picker
+	.action-label
+	.sessions-chat-dropdown-chevron {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -344,7 +438,7 @@
 }
 
 .sessions-chat-picker-slot.loading .action-label::after {
-	content: '';
+	content: "";
 	display: inline-block;
 	width: 12px;
 	height: 12px;
@@ -428,11 +522,21 @@
 /* Inline browse actions (e.g. "Select Folders…" entries in the Remote tab):
  * show the host name as the primary label and only reveal the secondary
  * "Select Folders…" description on hover/focus to reduce repetition. */
-.action-widget .monaco-list-row.action.sessions-browse-inline-item .description {
+.action-widget
+	.monaco-list-row.action.sessions-browse-inline-item
+	.description {
 	visibility: hidden;
 }
 
-.action-widget .monaco-list-row.action.sessions-browse-inline-item:hover:not(.option-disabled) .description,
-.action-widget .monaco-list-row.action.sessions-browse-inline-item.focused:not(.option-disabled) .description {
+.action-widget
+	.monaco-list-row.action.sessions-browse-inline-item:hover:not(
+		.option-disabled
+	)
+	.description,
+.action-widget
+	.monaco-list-row.action.sessions-browse-inline-item.focused:not(
+		.option-disabled
+	)
+	.description {
 	visibility: visible;
 }

@@ -27,17 +27,24 @@
 }
 
 .inline-chat-content-widget .action-label.codicon.codicon-lightbulb-autofix,
-.inline-chat-content-widget .action-label.codicon.codicon-lightbulb-sparkle-autofix,
+.inline-chat-content-widget
+	.action-label.codicon.codicon-lightbulb-sparkle-autofix,
 .inline-edits-view-gutter-indicator .codicon.codicon-lightbulb-autofix,
 .inline-edits-view-gutter-indicator .codicon.codicon-lightbulb-sparkle-autofix {
 	margin: 0;
-	color: var(--vscode-editorLightBulbAutoFix-foreground, var(--vscode-editorLightBulb-foreground));
+	color: var(
+		--vscode-editorLightBulbAutoFix-foreground,
+		var(--vscode-editorLightBulb-foreground)
+	);
 }
 
 .inline-chat-content-widget .action-label.codicon.codicon-sparkle-filled,
 .inline-edits-view-gutter-indicator .codicon.codicon-sparkle-filled {
 	margin: 0;
-	color: var(--vscode-editorLightBulbAi-foreground, var(--vscode-icon-foreground));
+	color: var(
+		--vscode-editorLightBulbAi-foreground,
+		var(--vscode-icon-foreground)
+	);
 }
 
 .inline-chat-content-widget .inline-chat-keybinding {

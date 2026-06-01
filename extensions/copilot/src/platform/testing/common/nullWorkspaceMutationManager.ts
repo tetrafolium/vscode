@@ -3,12 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IWorkspaceMutation, IWorkspaceMutationManager, IWorkspaceMutationOptions } from './workspaceMutationManager';
+import {
+	IWorkspaceMutation,
+	IWorkspaceMutationManager,
+	IWorkspaceMutationOptions,
+} from './workspaceMutationManager';
 
 export class NullWorkspaceMutationManager implements IWorkspaceMutationManager {
 	declare _serviceBrand: undefined;
 
-	create(requestId: string, options: IWorkspaceMutationOptions): IWorkspaceMutation {
+	create(
+		requestId: string,
+		options: IWorkspaceMutationOptions,
+	): IWorkspaceMutation {
 		return null as any;
 	}
 

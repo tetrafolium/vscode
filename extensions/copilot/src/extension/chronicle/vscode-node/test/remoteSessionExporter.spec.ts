@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it, vi } from 'vitest';
-import { RemoteSessionExporter, SAFETY_INTERVAL_MS } from '../remoteSessionExporter';
+import {
+	RemoteSessionExporter,
+	SAFETY_INTERVAL_MS,
+} from '../remoteSessionExporter';
 
 /**
  * Focused tests for the early-return safety re-arm in `_flushBatch`.
@@ -29,7 +32,9 @@ function makeStubExporter(opts: {
 	const scheduleFlush = vi.fn();
 	const cancelProbe = vi.fn();
 
-	const exporter = Object.create(RemoteSessionExporter.prototype) as RemoteSessionExporter;
+	const exporter = Object.create(
+		RemoteSessionExporter.prototype,
+	) as RemoteSessionExporter;
 	const fields = exporter as unknown as {
 		_isFlushing: boolean;
 		_eventBuffer: { chatSessionId: string; event: { type: string } }[];
@@ -39,10 +44,13 @@ function makeStubExporter(opts: {
 	};
 
 	fields._isFlushing = false;
-	fields._eventBuffer = Array.from({ length: opts.bufferLength ?? 1 }, (_, i) => ({
-		chatSessionId: `s${i}`,
-		event: { type: 'assistant.message' },
-	}));
+	fields._eventBuffer = Array.from(
+		{ length: opts.bufferLength ?? 1 },
+		(_, i) => ({
+			chatSessionId: `s${i}`,
+			event: { type: 'assistant.message' },
+		}),
+	);
 	fields._circuitBreaker = {
 		canRequest: () => !opts.breakerOpen,
 		cancelProbe,
@@ -55,8 +63,12 @@ function makeStubExporter(opts: {
 	return { exporter, stubs: { scheduleFlush, cancelProbe } };
 }
 
-async function invokeFlushBatch(exporter: RemoteSessionExporter): Promise<void> {
-	await (exporter as unknown as { _flushBatch: () => Promise<void> })._flushBatch();
+async function invokeFlushBatch(
+	exporter: RemoteSessionExporter,
+): Promise<void> {
+	await (
+		exporter as unknown as { _flushBatch: () => Promise<void> }
+	)._flushBatch();
 }
 
 describe('RemoteSessionExporter._flushBatch early-return safety re-arm', () => {
@@ -66,7 +78,10 @@ describe('RemoteSessionExporter._flushBatch early-return safety re-arm', () => {
 		await invokeFlushBatch(exporter);
 
 		expect(stubs.scheduleFlush).toHaveBeenCalledTimes(1);
-		expect(stubs.scheduleFlush).toHaveBeenCalledWith(SAFETY_INTERVAL_MS, 'safety');
+		expect(stubs.scheduleFlush).toHaveBeenCalledWith(
+			SAFETY_INTERVAL_MS,
+			'safety',
+		);
 	});
 
 	it('arms a safety-cadence flush when the client is rate-limited', async () => {
@@ -75,7 +90,10 @@ describe('RemoteSessionExporter._flushBatch early-return safety re-arm', () => {
 		await invokeFlushBatch(exporter);
 
 		expect(stubs.scheduleFlush).toHaveBeenCalledTimes(1);
-		expect(stubs.scheduleFlush).toHaveBeenCalledWith(SAFETY_INTERVAL_MS, 'safety');
+		expect(stubs.scheduleFlush).toHaveBeenCalledWith(
+			SAFETY_INTERVAL_MS,
+			'safety',
+		);
 		// Probe slot consumed by canRequest() must be released.
 		expect(stubs.cancelProbe).toHaveBeenCalledTimes(1);
 	});

@@ -13,9 +13,12 @@ import { createExtensionTestingServices } from './services';
 
 suite('extension text document manager', () => {
 	test('no workspace folders by default', () => {
-		const accessor = createExtensionTestingServices().createTestingAccessor();
+		const accessor =
+			createExtensionTestingServices().createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
-		const manager = instantiationService.createInstance(ExtensionTextDocumentManager);
+		const manager = instantiationService.createInstance(
+			ExtensionTextDocumentManager,
+		);
 
 		const folders = manager.getWorkspaceFolders();
 
@@ -23,9 +26,12 @@ suite('extension text document manager', () => {
 	});
 
 	test('workspace folders', () => {
-		const accessor = createExtensionTestingServices().createTestingAccessor();
+		const accessor =
+			createExtensionTestingServices().createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
-		const manager = instantiationService.createInstance(ExtensionTextDocumentManager);
+		const manager = instantiationService.createInstance(
+			ExtensionTextDocumentManager,
+		);
 
 		sinon.stub(workspace, 'workspaceFolders').value([
 			{
@@ -43,6 +49,9 @@ suite('extension text document manager', () => {
 
 		const folders = manager.getWorkspaceFolders();
 
-		assert.deepStrictEqual(folders, [URI.parse('file:///path/to/folder1'), URI.parse('file:///path/to/folder2')]);
+		assert.deepStrictEqual(folders, [
+			URI.parse('file:///path/to/folder1'),
+			URI.parse('file:///path/to/folder2'),
+		]);
 	});
 });

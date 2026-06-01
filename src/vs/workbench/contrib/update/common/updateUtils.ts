@@ -3,13 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from '../../../../nls.js';
-import { Downloading } from '../../../../platform/update/common/update.js';
+import { localize } from "../../../../nls.js";
+import { Downloading } from "../../../../platform/update/common/update.js";
 
 /**
  * Returns the progress percentage based on the current and maximum progress values.
  */
-export function computeProgressPercent(current: number | undefined, max: number | undefined): number | undefined {
+export function computeProgressPercent(
+	current: number | undefined,
+	max: number | undefined,
+): number | undefined {
 	if (current === undefined || max === undefined || max <= 0) {
 		return undefined;
 	}
@@ -20,9 +23,15 @@ export function computeProgressPercent(current: number | undefined, max: number 
 /**
  * Computes an estimate of remaining download time in seconds.
  */
-export function computeDownloadTimeRemaining(state: Downloading): number | undefined {
+export function computeDownloadTimeRemaining(
+	state: Downloading,
+): number | undefined {
 	const { downloadedBytes, totalBytes, startTime } = state;
-	if (downloadedBytes === undefined || totalBytes === undefined || startTime === undefined) {
+	if (
+		downloadedBytes === undefined ||
+		totalBytes === undefined ||
+		startTime === undefined
+	) {
 		return undefined;
 	}
 
@@ -67,7 +76,10 @@ export function computeDownloadSpeed(state: Downloading): number | undefined {
  * - If the minor version differs: returns `{major}.{minor}` (e.g., 1.108.2 -> 1.109.5 => 1.109)
  * - If the same minor: returns the target version as-is (e.g., 1.109.2 -> 1.109.5 => 1.109.5)
  */
-export function computeUpdateInfoVersion(currentVersion: string, targetVersion: string): string | undefined {
+export function computeUpdateInfoVersion(
+	currentVersion: string,
+	targetVersion: string,
+): string | undefined {
 	const current = tryParseVersion(currentVersion);
 	const target = tryParseVersion(targetVersion);
 	if (!current || !target) {
@@ -86,7 +98,7 @@ export function computeUpdateInfoVersion(currentVersion: string, targetVersion: 
  * Follows the release notes URL pattern but with `_update` suffix.
  */
 export function getUpdateInfoUrl(version: string): string {
-	const versionLabel = version.replace(/\./g, '_').replace(/_0$/, '');
+	const versionLabel = version.replace(/\./g, "_").replace(/_0$/, "");
 	return `https://code.visualstudio.com/raw/v${versionLabel}_update.md`;
 }
 
@@ -97,19 +109,19 @@ export function formatTimeRemaining(seconds: number): string {
 	const hours = seconds / 3600;
 	if (hours >= 1) {
 		const formattedHours = formatDecimal(hours);
-		if (formattedHours === '1') {
-			return localize('update.timeRemainingHour', "{0} hour", formattedHours);
+		if (formattedHours === "1") {
+			return localize("update.timeRemainingHour", "{0} hour", formattedHours);
 		} else {
-			return localize('update.timeRemainingHours', "{0} hours", formattedHours);
+			return localize("update.timeRemainingHours", "{0} hours", formattedHours);
 		}
 	}
 
 	const minutes = Math.floor(seconds / 60);
 	if (minutes >= 1) {
-		return localize('update.timeRemainingMinutes', "{0} min", minutes);
+		return localize("update.timeRemainingMinutes", "{0} min", minutes);
 	}
 
-	return localize('update.timeRemainingSeconds', "{0}s", seconds);
+	return localize("update.timeRemainingSeconds", "{0}s", seconds);
 }
 
 /**
@@ -117,21 +129,21 @@ export function formatTimeRemaining(seconds: number): string {
  */
 export function formatBytes(bytes: number): string {
 	if (bytes < 1024) {
-		return localize('update.bytes', "{0} B", bytes);
+		return localize("update.bytes", "{0} B", bytes);
 	}
 
 	const kb = bytes / 1024;
 	if (kb < 1024) {
-		return localize('update.kilobytes', "{0} KB", formatDecimal(kb));
+		return localize("update.kilobytes", "{0} KB", formatDecimal(kb));
 	}
 
 	const mb = kb / 1024;
 	if (mb < 1024) {
-		return localize('update.megabytes', "{0} MB", formatDecimal(mb));
+		return localize("update.megabytes", "{0} MB", formatDecimal(mb));
 	}
 
 	const gb = mb / 1024;
-	return localize('update.gigabytes', "{0} GB", formatDecimal(gb));
+	return localize("update.gigabytes", "{0} GB", formatDecimal(gb));
 }
 
 /**
@@ -155,9 +167,9 @@ export function tryParseDate(date: string | undefined): number | undefined {
  */
 export function formatDate(timestamp: number): string {
 	return new Date(timestamp).toLocaleDateString(undefined, {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric'
+		year: "numeric",
+		month: "short",
+		day: "numeric",
 	});
 }
 
@@ -178,7 +190,9 @@ export interface IVersion {
 /**
  * Parses a version string in the format "major.minor.patch" and returns an object with the components.
  */
-export function tryParseVersion(version: string | undefined): IVersion | undefined {
+export function tryParseVersion(
+	version: string | undefined,
+): IVersion | undefined {
 	if (version === undefined) {
 		return undefined;
 	}
@@ -192,7 +206,7 @@ export function tryParseVersion(version: string | undefined): IVersion | undefin
 		return {
 			major: parseInt(match[1]),
 			minor: parseInt(match[2]),
-			patch: parseInt(match[3])
+			patch: parseInt(match[3]),
 		};
 	} catch {
 		return undefined;
@@ -213,15 +227,22 @@ export function preprocessError(error?: string): string | undefined {
 
 	return error.replace(
 		/See https:\/\/github\.com\/Squirrel\/Squirrel\.Mac\/issues\/182 for more information/,
-		'This might mean the application was put on quarantine by macOS. See [this link](https://github.com/microsoft/vscode/issues/7426#issuecomment-425093469) for more information'
+		"This might mean the application was put on quarantine by macOS. See [this link](https://github.com/microsoft/vscode/issues/7426#issuecomment-425093469) for more information",
 	);
 }
 
 /**
  * Determines whether there is a major or minor version change between two versions.
  */
-export function isMajorMinorVersionChange(previousVersion?: string, newVersion?: string): boolean {
+export function isMajorMinorVersionChange(
+	previousVersion?: string,
+	newVersion?: string,
+): boolean {
 	const previous = tryParseVersion(previousVersion);
 	const current = tryParseVersion(newVersion);
-	return !!previous && !!current && (previous.major !== current.major || previous.minor !== current.minor);
+	return (
+		!!previous &&
+		!!current &&
+		(previous.major !== current.major || previous.minor !== current.minor)
+	);
 }

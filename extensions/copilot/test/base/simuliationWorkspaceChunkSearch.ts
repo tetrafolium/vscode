@@ -7,11 +7,32 @@ import { EmbeddingType } from '../../src/platform/embeddings/common/embeddingsCo
 import { GithubRepoId } from '../../src/platform/git/common/gitService';
 import { IIgnoreService } from '../../src/platform/ignore/common/ignoreService';
 import { ILogService } from '../../src/platform/log/common/logService';
-import { GithubCodeSearchScope, IGithubCodeSearchService, parseGithubCodeSearchResponse } from '../../src/platform/remoteCodeSearch/common/githubCodeSearchService';
-import { LexicalCodeSearchResult, RemoteCodeSearchError, RemoteCodeSearchIndexState, RemoteCodeSearchIndexStatus, SemanticCodeSearchResult } from '../../src/platform/remoteCodeSearch/common/remoteCodeSearch';
-import { WorkspaceChunkQuery, WorkspaceChunkSearchOptions } from '../../src/platform/workspaceChunkSearch/common/workspaceChunkSearch';
-import { BuildIndexTriggerReason, TriggerIndexingError } from '../../src/platform/workspaceChunkSearch/node/codeSearch/codeSearchRepo';
-import { IWorkspaceChunkSearchService, WorkspaceChunkSearchResult, WorkspaceChunkSearchSizing, WorkspaceIndexState } from '../../src/platform/workspaceChunkSearch/node/workspaceChunkSearchService';
+import {
+	GithubCodeSearchScope,
+	IGithubCodeSearchService,
+	parseGithubCodeSearchResponse,
+} from '../../src/platform/remoteCodeSearch/common/githubCodeSearchService';
+import {
+	LexicalCodeSearchResult,
+	RemoteCodeSearchError,
+	RemoteCodeSearchIndexState,
+	RemoteCodeSearchIndexStatus,
+	SemanticCodeSearchResult,
+} from '../../src/platform/remoteCodeSearch/common/remoteCodeSearch';
+import {
+	WorkspaceChunkQuery,
+	WorkspaceChunkSearchOptions,
+} from '../../src/platform/workspaceChunkSearch/common/workspaceChunkSearch';
+import {
+	BuildIndexTriggerReason,
+	TriggerIndexingError,
+} from '../../src/platform/workspaceChunkSearch/node/codeSearch/codeSearchRepo';
+import {
+	IWorkspaceChunkSearchService,
+	WorkspaceChunkSearchResult,
+	WorkspaceChunkSearchSizing,
+	WorkspaceIndexState,
+} from '../../src/platform/workspaceChunkSearch/node/workspaceChunkSearchService';
 import { Result } from '../../src/util/common/result';
 import { TelemetryCorrelationId } from '../../src/util/common/telemetryCorrelationId';
 import { CancellationToken } from '../../src/util/vs/base/common/cancellation';
@@ -21,11 +42,11 @@ import { IInstantiationService } from '../../src/util/vs/platform/instantiation/
 
 const searchEndpoint = 'http://localhost:4443/api/embeddings/code/search';
 
-
-class SimulationGithubCodeSearchService extends Disposable implements IGithubCodeSearchService {
-
+class SimulationGithubCodeSearchService
+	extends Disposable
+	implements IGithubCodeSearchService
+{
 	declare readonly _serviceBrand: undefined;
-
 
 	constructor(
 		@IIgnoreService private readonly _ignoreService: IIgnoreService,
@@ -34,58 +55,104 @@ class SimulationGithubCodeSearchService extends Disposable implements IGithubCod
 		super();
 	}
 
-	async lexicalSearch(_authOptions: { silent: boolean }, _scope: GithubCodeSearchScope, _query: string, _maxResults: number, _options: WorkspaceChunkSearchOptions, _telemetryInfo: TelemetryCorrelationId, _token: CancellationToken): Promise<LexicalCodeSearchResult> {
+	async lexicalSearch(
+		_authOptions: { silent: boolean },
+		_scope: GithubCodeSearchScope,
+		_query: string,
+		_maxResults: number,
+		_options: WorkspaceChunkSearchOptions,
+		_telemetryInfo: TelemetryCorrelationId,
+		_token: CancellationToken,
+	): Promise<LexicalCodeSearchResult> {
 		throw new Error('Method not implemented.');
 	}
 
-	async semanticSearch(authOptions: { silent: boolean }, embeddingType: EmbeddingType, repo: GithubCodeSearchScope & { kind: 'repo' }, query: string, maxResults: number, options: WorkspaceChunkSearchOptions, _telemetryInfo: TelemetryCorrelationId, token: CancellationToken): Promise<SemanticCodeSearchResult> {
-		this._logService.trace(`SimulationGithubCodeSearchService::searchRepo(${repo.githubRepoId}, ${query})`);
+	async semanticSearch(
+		authOptions: { silent: boolean },
+		embeddingType: EmbeddingType,
+		repo: GithubCodeSearchScope & { kind: 'repo' },
+		query: string,
+		maxResults: number,
+		options: WorkspaceChunkSearchOptions,
+		_telemetryInfo: TelemetryCorrelationId,
+		token: CancellationToken,
+	): Promise<SemanticCodeSearchResult> {
+		this._logService.trace(
+			`SimulationGithubCodeSearchService::searchRepo(${repo.githubRepoId}, ${query})`,
+		);
 		const response = await fetch(searchEndpoint, {
 			method: 'POST',
 			headers: {
-				'Content-Type': 'application/json'
+				'Content-Type': 'application/json',
 			},
 			body: JSON.stringify({
 				scoping_query: `repo:msbench/workspace`,
 				prompt: query,
-				limit: maxResults
-			})
+				limit: maxResults,
+			}),
 		});
 
 		if (!response.ok) {
-			this._logService.trace(`SimulationGithubCodeSearchService::searchRepo(${repo.githubRepoId}, ${query}) failed. status: ${response.status}`);
+			this._logService.trace(
+				`SimulationGithubCodeSearchService::searchRepo(${repo.githubRepoId}, ${query}) failed. status: ${response.status}`,
+			);
 			const body = await response.text();
-			throw new Error(`Error fetching index status: ${response.status} - ${body}`);
+			throw new Error(
+				`Error fetching index status: ${response.status} - ${body}`,
+			);
 		}
 
 		const json: any = await response.json();
 
-		const result = await parseGithubCodeSearchResponse(json, repo, { ...options, skipVerifyRepo: true }, this._ignoreService);
-		this._logService.trace(`SimulationGithubCodeSearchService::searchRepo(${repo.githubRepoId}, ${query}) success. Found ${result.chunks.length} chunks`);
+		const result = await parseGithubCodeSearchResponse(
+			json,
+			repo,
+			{ ...options, skipVerifyRepo: true },
+			this._ignoreService,
+		);
+		this._logService.trace(
+			`SimulationGithubCodeSearchService::searchRepo(${repo.githubRepoId}, ${query}) success. Found ${result.chunks.length} chunks`,
+		);
 		return result;
 	}
 
-	async getRemoteIndexState(authOptions: { silent: boolean }, githubRepoId: GithubRepoId, _telemetryInfo: TelemetryCorrelationId, token: CancellationToken): Promise<Result<RemoteCodeSearchIndexState, RemoteCodeSearchError>> {
-		return Result.ok({ status: RemoteCodeSearchIndexStatus.Ready, indexedCommit: 'HEAD' });
+	async getRemoteIndexState(
+		authOptions: { silent: boolean },
+		githubRepoId: GithubRepoId,
+		_telemetryInfo: TelemetryCorrelationId,
+		token: CancellationToken,
+	): Promise<Result<RemoteCodeSearchIndexState, RemoteCodeSearchError>> {
+		return Result.ok({
+			status: RemoteCodeSearchIndexStatus.Ready,
+			indexedCommit: 'HEAD',
+		});
 	}
 
-	triggerIndexing(authOptions: { silent: boolean }, triggerReason: 'auto' | 'manual' | 'tool', githubRepoId: GithubRepoId): Promise<Result<true, RemoteCodeSearchError>> {
+	triggerIndexing(
+		authOptions: { silent: boolean },
+		triggerReason: 'auto' | 'manual' | 'tool',
+		githubRepoId: GithubRepoId,
+	): Promise<Result<true, RemoteCodeSearchError>> {
 		throw new Error('Method not implemented.');
 	}
 }
 
-
-export class SimulationCodeSearchChunkSearchService extends Disposable implements IWorkspaceChunkSearchService {
+export class SimulationCodeSearchChunkSearchService
+	extends Disposable
+	implements IWorkspaceChunkSearchService
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _githubCodeSearchService: IGithubCodeSearchService;
 
 	constructor(
-		@IInstantiationService instantiationService: IInstantiationService
+		@IInstantiationService instantiationService: IInstantiationService,
 	) {
 		super();
 
-		this._githubCodeSearchService = instantiationService.createInstance(SimulationGithubCodeSearchService);
+		this._githubCodeSearchService = instantiationService.createInstance(
+			SimulationGithubCodeSearchService,
+		);
 	}
 
 	readonly onDidChangeIndexState = Event.None;
@@ -98,15 +165,31 @@ export class SimulationCodeSearchChunkSearchService extends Disposable implement
 		return true;
 	}
 
-	async searchFileChunks(sizing: WorkspaceChunkSearchSizing, query: WorkspaceChunkQuery, options: WorkspaceChunkSearchOptions, telemetryInfo: TelemetryCorrelationId, progress: Progress<ChatResponsePart> | undefined, token: CancellationToken): Promise<WorkspaceChunkSearchResult> {
+	async searchFileChunks(
+		sizing: WorkspaceChunkSearchSizing,
+		query: WorkspaceChunkQuery,
+		options: WorkspaceChunkSearchOptions,
+		telemetryInfo: TelemetryCorrelationId,
+		progress: Progress<ChatResponsePart> | undefined,
+		token: CancellationToken,
+	): Promise<WorkspaceChunkSearchResult> {
 		const repo = new GithubRepoId('test-org', 'test-repo');
 		try {
-			const results = await this._githubCodeSearchService.semanticSearch({ silent: true }, EmbeddingType.text3small_512, {
-				kind: 'repo',
-				githubRepoId: repo,
-				indexedCommit: undefined,
-				localRepoRoot: undefined,
-			}, query.queryText, sizing.maxResults ?? 128, options, telemetryInfo, token);
+			const results = await this._githubCodeSearchService.semanticSearch(
+				{ silent: true },
+				EmbeddingType.text3small_512,
+				{
+					kind: 'repo',
+					githubRepoId: repo,
+					indexedCommit: undefined,
+					localRepoRoot: undefined,
+				},
+				query.queryText,
+				sizing.maxResults ?? 128,
+				options,
+				telemetryInfo,
+				token,
+			);
 			return {
 				chunks: results.chunks,
 			};
@@ -119,7 +202,12 @@ export class SimulationCodeSearchChunkSearchService extends Disposable implement
 		};
 	}
 
-	triggerIndexing(trigger: BuildIndexTriggerReason, _onProgress?: (message: string) => void, _telemetryInfo?: TelemetryCorrelationId, _token?: CancellationToken): Promise<Result<true, TriggerIndexingError>> {
+	triggerIndexing(
+		trigger: BuildIndexTriggerReason,
+		_onProgress?: (message: string) => void,
+		_telemetryInfo?: TelemetryCorrelationId,
+		_token?: CancellationToken,
+	): Promise<Result<true, TriggerIndexingError>> {
 		throw new Error('Method not implemented.');
 	}
 

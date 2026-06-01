@@ -5,7 +5,10 @@
 import { ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ICompletionsTelemetryService } from '../../../bridge/src/completionsTelemetryServiceBridge';
 import { ICompletionsTelemetryReporters } from '../telemetry';
-import { ICompletionsPromiseQueueService, PromiseQueue } from '../util/promiseQueue';
+import {
+	ICompletionsPromiseQueueService,
+	PromiseQueue,
+} from '../util/promiseQueue';
 import { TelemetrySpy } from './telemetrySpy';
 
 export type EventData = {
@@ -86,15 +89,21 @@ export class TestPromiseQueue extends PromiseQueue {
 //     return message.iKey === APP_INSIGHTS_KEY_SECURE;
 // }
 
-export function isEvent(message: CapturedTelemetry): message is CapturedTelemetry<EventData> {
+export function isEvent(
+	message: CapturedTelemetry,
+): message is CapturedTelemetry<EventData> {
 	return message.data.baseType === 'EventData';
 }
 
-export function isException(message: CapturedTelemetry): message is CapturedTelemetry<ExceptionData> {
+export function isException(
+	message: CapturedTelemetry,
+): message is CapturedTelemetry<ExceptionData> {
 	return message.data.baseType === 'ExceptionData';
 }
 
-export function allEvents(messages: CapturedTelemetry[]): messages is CapturedTelemetry<EventData>[] {
+export function allEvents(
+	messages: CapturedTelemetry[],
+): messages is CapturedTelemetry<EventData>[] {
 	for (const message of messages) {
 		if (!isEvent(message)) {
 			return false;
@@ -105,8 +114,12 @@ export function allEvents(messages: CapturedTelemetry[]): messages is CapturedTe
 
 export async function withInMemoryTelemetry<T>(
 	accessor: ServicesAccessor,
-	work: (accessor: ServicesAccessor) => T | Promise<T>
-): Promise<{ reporter: TelemetrySpy; enhancedReporter: TelemetrySpy; result: T }> {
+	work: (accessor: ServicesAccessor) => T | Promise<T>,
+): Promise<{
+	reporter: TelemetrySpy;
+	enhancedReporter: TelemetrySpy;
+	result: T;
+}> {
 	const reporter = new TelemetrySpy();
 	const enhancedReporter = new TelemetrySpy();
 	const telemetryService = accessor.get(ICompletionsTelemetryService);
@@ -117,7 +130,9 @@ export async function withInMemoryTelemetry<T>(
 		reporters.setEnhancedReporter(enhancedReporter);
 		const result = await work(accessor);
 		// eslint-disable-next-line local/code-no-accessor-after-await
-		const queue = accessor.get(ICompletionsPromiseQueueService) as TestPromiseQueue;
+		const queue = accessor.get(
+			ICompletionsPromiseQueueService,
+		) as TestPromiseQueue;
 		await queue.awaitPromises();
 
 		return { reporter, enhancedReporter: enhancedReporter, result };

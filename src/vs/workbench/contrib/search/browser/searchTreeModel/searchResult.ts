@@ -3,55 +3,107 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event, PauseableEmitter } from '../../../../../base/common/event.js';
-import { Disposable, MutableDisposable } from '../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { ITextModel } from '../../../../../editor/common/model.js';
-import { IModelService } from '../../../../../editor/common/services/model.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IProgress, IProgressStep } from '../../../../../platform/progress/common/progress.js';
-import { NotebookEditorWidget } from '../../../notebook/browser/notebookEditorWidget.js';
-import { INotebookEditorService } from '../../../notebook/browser/services/notebookEditorService.js';
-import { IAITextQuery, IFileMatch, ISearchComplete, ITextQuery, QueryType } from '../../../../services/search/common/search.js';
-import { arrayContainsElementOrParent, IChangeEvent, ISearchTreeFileMatch, ISearchTreeFolderMatch, IPlainTextSearchHeading, ISearchModel, ISearchResult, isSearchTreeFileMatch, isSearchTreeFolderMatch, isSearchTreeFolderMatchNoRoot, isSearchTreeFolderMatchWithResource, isSearchTreeMatch, isTextSearchHeading, ITextSearchHeading, mergeSearchResultEvents, RenderableMatch, SEARCH_RESULT_PREFIX } from './searchTreeCommon.js';
+import { Event, PauseableEmitter } from "../../../../../base/common/event.js";
+import {
+	Disposable,
+	MutableDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { ITextModel } from "../../../../../editor/common/model.js";
+import { IModelService } from "../../../../../editor/common/services/model.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import {
+	IProgress,
+	IProgressStep,
+} from "../../../../../platform/progress/common/progress.js";
+import { NotebookEditorWidget } from "../../../notebook/browser/notebookEditorWidget.js";
+import { INotebookEditorService } from "../../../notebook/browser/services/notebookEditorService.js";
+import {
+	IAITextQuery,
+	IFileMatch,
+	ISearchComplete,
+	ITextQuery,
+	QueryType,
+} from "../../../../services/search/common/search.js";
+import {
+	arrayContainsElementOrParent,
+	IChangeEvent,
+	ISearchTreeFileMatch,
+	ISearchTreeFolderMatch,
+	IPlainTextSearchHeading,
+	ISearchModel,
+	ISearchResult,
+	isSearchTreeFileMatch,
+	isSearchTreeFolderMatch,
+	isSearchTreeFolderMatchNoRoot,
+	isSearchTreeFolderMatchWithResource,
+	isSearchTreeMatch,
+	isTextSearchHeading,
+	ITextSearchHeading,
+	mergeSearchResultEvents,
+	RenderableMatch,
+	SEARCH_RESULT_PREFIX,
+} from "./searchTreeCommon.js";
 
-import { RangeHighlightDecorations } from './rangeDecorations.js';
-import { PlainTextSearchHeadingImpl } from './textSearchHeading.js';
-import { AITextSearchHeadingImpl } from '../AISearch/aiSearchModel.js';
+import { RangeHighlightDecorations } from "./rangeDecorations.js";
+import { PlainTextSearchHeadingImpl } from "./textSearchHeading.js";
+import { AITextSearchHeadingImpl } from "../AISearch/aiSearchModel.js";
 
 export class SearchResultImpl extends Disposable implements ISearchResult {
-
-	private _onChange = this._register(new PauseableEmitter<IChangeEvent>({
-		merge: mergeSearchResultEvents
-	}));
+	private _onChange = this._register(
+		new PauseableEmitter<IChangeEvent>({
+			merge: mergeSearchResultEvents,
+		}),
+	);
 	readonly onChange: Event<IChangeEvent> = this._onChange.event;
-	private readonly _onWillChangeModelListener = this._register(new MutableDisposable());
-	private readonly _onDidChangeModelListener = this._register(new MutableDisposable());
+	private readonly _onWillChangeModelListener = this._register(
+		new MutableDisposable(),
+	);
+	private readonly _onDidChangeModelListener = this._register(
+		new MutableDisposable(),
+	);
 	private _plainTextSearchResult: PlainTextSearchHeadingImpl;
 	private _aiTextSearchResult: AITextSearchHeadingImpl;
 
 	private readonly _id: string;
 	constructor(
 		public readonly searchModel: ISearchModel,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IModelService private readonly modelService: IModelService,
-		@INotebookEditorService private readonly notebookEditorService: INotebookEditorService,
+		@INotebookEditorService
+		private readonly notebookEditorService: INotebookEditorService,
 	) {
 		super();
-		this._plainTextSearchResult = this._register(this.instantiationService.createInstance(PlainTextSearchHeadingImpl, this));
-		this._aiTextSearchResult = this._register(this.instantiationService.createInstance(AITextSearchHeadingImpl, this));
+		this._plainTextSearchResult = this._register(
+			this.instantiationService.createInstance(
+				PlainTextSearchHeadingImpl,
+				this,
+			),
+		);
+		this._aiTextSearchResult = this._register(
+			this.instantiationService.createInstance(AITextSearchHeadingImpl, this),
+		);
 
-		this._register(this._plainTextSearchResult.onChange((e) => this._onChange.fire(e)));
-		this._register(this._aiTextSearchResult.onChange((e) => this._onChange.fire(e)));
+		this._register(
+			this._plainTextSearchResult.onChange((e) => this._onChange.fire(e)),
+		);
+		this._register(
+			this._aiTextSearchResult.onChange((e) => this._onChange.fire(e)),
+		);
 
-		this.modelService.getModels().forEach(model => this.onModelAdded(model));
-		this._register(this.modelService.onModelAdded(model => this.onModelAdded(model)));
+		this.modelService.getModels().forEach((model) => this.onModelAdded(model));
+		this._register(
+			this.modelService.onModelAdded((model) => this.onModelAdded(model)),
+		);
 
-		this._register(this.notebookEditorService.onDidAddNotebookEditor(widget => {
-			if (widget instanceof NotebookEditorWidget) {
-				this.onDidAddNotebookEditorWidget(<NotebookEditorWidget>widget);
-			}
-		}));
+		this._register(
+			this.notebookEditorService.onDidAddNotebookEditor((widget) => {
+				if (widget instanceof NotebookEditorWidget) {
+					this.onDidAddNotebookEditorWidget(<NotebookEditorWidget>widget);
+				}
+			}),
+		);
 
 		this._id = SEARCH_RESULT_PREFIX + Date.now().toString();
 	}
@@ -82,22 +134,28 @@ export class SearchResultImpl extends Disposable implements ISearchResult {
 	async batchReplace(elementsToReplace: RenderableMatch[]) {
 		try {
 			this._onChange.pause();
-			await Promise.all(elementsToReplace.map(async (elem) => {
-				const parent = elem.parent();
+			await Promise.all(
+				elementsToReplace.map(async (elem) => {
+					const parent = elem.parent();
 
-				if ((isSearchTreeFolderMatch(parent) || isSearchTreeFileMatch(parent)) && arrayContainsElementOrParent(parent, elementsToReplace)) {
-					// skip any children who have parents in the array
-					return;
-				}
+					if (
+						(isSearchTreeFolderMatch(parent) ||
+							isSearchTreeFileMatch(parent)) &&
+						arrayContainsElementOrParent(parent, elementsToReplace)
+					) {
+						// skip any children who have parents in the array
+						return;
+					}
 
-				if (isSearchTreeFileMatch(elem)) {
-					await elem.parent().replace(elem);
-				} else if (isSearchTreeMatch(elem)) {
-					await elem.parent().replace(elem);
-				} else if (isSearchTreeFolderMatch(elem)) {
-					await elem.replaceAll();
-				}
-			}));
+					if (isSearchTreeFileMatch(elem)) {
+						await elem.parent().replace(elem);
+					} else if (isSearchTreeMatch(elem)) {
+						await elem.parent().replace(elem);
+					} else if (isSearchTreeFolderMatch(elem)) {
+						await elem.replaceAll();
+					}
+				}),
+			);
 		} finally {
 			this._onChange.resume();
 		}
@@ -113,7 +171,11 @@ export class SearchResultImpl extends Disposable implements ISearchResult {
 				if (!arrayContainsElementOrParent(currentElement, removedElems)) {
 					if (isTextSearchHeading(currentElement)) {
 						currentElement.hide();
-					} else if (!isSearchTreeFolderMatch(currentElement) || isSearchTreeFolderMatchWithResource(currentElement) || isSearchTreeFolderMatchNoRoot(currentElement)) {
+					} else if (
+						!isSearchTreeFolderMatch(currentElement) ||
+						isSearchTreeFolderMatchWithResource(currentElement) ||
+						isSearchTreeFolderMatchNoRoot(currentElement)
+					) {
 						if (isSearchTreeFileMatch(currentElement)) {
 							currentElement.parent().remove(currentElement);
 						} else if (isSearchTreeMatch(currentElement)) {
@@ -129,15 +191,16 @@ export class SearchResultImpl extends Disposable implements ISearchResult {
 						removedElems.push(currentElement);
 					}
 				}
-			}
-			);
+			});
 		} finally {
 			this._onChange.resume();
 		}
 	}
 
 	get isDirty(): boolean {
-		return this._aiTextSearchResult.isDirty || this._plainTextSearchResult.isDirty;
+		return (
+			this._aiTextSearchResult.isDirty || this._plainTextSearchResult.isDirty
+		);
 	}
 
 	get query(): ITextQuery | null {
@@ -156,23 +219,20 @@ export class SearchResultImpl extends Disposable implements ISearchResult {
 	}
 
 	private onDidAddNotebookEditorWidget(widget: NotebookEditorWidget): void {
-
 		this._onWillChangeModelListener.value = widget.onWillChangeModel(
 			(model) => {
 				if (model) {
 					this.onNotebookEditorWidgetRemoved(widget, model?.uri);
 				}
-			}
+			},
 		);
 
 		// listen to view model change as we are searching on both inputs and outputs
-		this._onDidChangeModelListener.value = widget.onDidAttachViewModel(
-			() => {
-				if (widget.hasModel()) {
-					this.onNotebookEditorWidgetAdded(widget, widget.textModel.uri);
-				}
+		this._onDidChangeModelListener.value = widget.onDidAttachViewModel(() => {
+			if (widget.hasModel()) {
+				this.onNotebookEditorWidgetAdded(widget, widget.textModel.uri);
 			}
-		);
+		});
 	}
 
 	folderMatches(ai: boolean = false): ISearchTreeFolderMatch[] {
@@ -187,18 +247,28 @@ export class SearchResultImpl extends Disposable implements ISearchResult {
 		folderMatch?.bindModel(model);
 	}
 
-	private async onNotebookEditorWidgetAdded(editor: NotebookEditorWidget, resource: URI): Promise<void> {
+	private async onNotebookEditorWidgetAdded(
+		editor: NotebookEditorWidget,
+		resource: URI,
+	): Promise<void> {
 		const folderMatch = this._plainTextSearchResult.findFolderSubstr(resource);
 		await folderMatch?.bindNotebookEditorWidget(editor, resource);
 	}
 
-	private onNotebookEditorWidgetRemoved(editor: NotebookEditorWidget, resource: URI): void {
+	private onNotebookEditorWidgetRemoved(
+		editor: NotebookEditorWidget,
+		resource: URI,
+	): void {
 		const folderMatch = this._plainTextSearchResult.findFolderSubstr(resource);
 		folderMatch?.unbindNotebookEditorWidget(editor, resource);
 	}
 
-
-	add(allRaw: IFileMatch[], searchInstanceID: string, ai: boolean, silent: boolean = false): void {
+	add(
+		allRaw: IFileMatch[],
+		searchInstanceID: string,
+		ai: boolean,
+		silent: boolean = false,
+	): void {
 		this._plainTextSearchResult.hidden = false;
 
 		if (ai) {
@@ -213,12 +283,17 @@ export class SearchResultImpl extends Disposable implements ISearchResult {
 		this._aiTextSearchResult.clear();
 	}
 
-	remove(matches: ISearchTreeFileMatch | ISearchTreeFolderMatch | (ISearchTreeFileMatch | ISearchTreeFolderMatch)[], ai = false): void {
+	remove(
+		matches:
+			| ISearchTreeFileMatch
+			| ISearchTreeFolderMatch
+			| (ISearchTreeFileMatch | ISearchTreeFolderMatch)[],
+		ai = false,
+	): void {
 		if (ai) {
 			this._aiTextSearchResult.remove(matches, ai);
 		}
 		this._plainTextSearchResult.remove(matches, ai);
-
 	}
 
 	replace(match: ISearchTreeFileMatch): Promise<any> {
@@ -227,7 +302,9 @@ export class SearchResultImpl extends Disposable implements ISearchResult {
 
 	matches(ai?: boolean): ISearchTreeFileMatch[] {
 		if (ai === undefined) {
-			return this._plainTextSearchResult.matches().concat(this._aiTextSearchResult.matches());
+			return this._plainTextSearchResult
+				.matches()
+				.concat(this._aiTextSearchResult.matches());
 		} else if (ai === true) {
 			return this._aiTextSearchResult.matches();
 		}
@@ -235,24 +312,35 @@ export class SearchResultImpl extends Disposable implements ISearchResult {
 	}
 
 	isEmpty(): boolean {
-		return this._plainTextSearchResult.isEmpty() && this._aiTextSearchResult.isEmpty();
+		return (
+			this._plainTextSearchResult.isEmpty() &&
+			this._aiTextSearchResult.isEmpty()
+		);
 	}
 
 	fileCount(ignoreSemanticSearchResults: boolean = false): number {
 		if (ignoreSemanticSearchResults) {
 			return this._plainTextSearchResult.fileCount();
 		}
-		return this._plainTextSearchResult.fileCount() + this._aiTextSearchResult.fileCount();
+		return (
+			this._plainTextSearchResult.fileCount() +
+			this._aiTextSearchResult.fileCount()
+		);
 	}
 
 	count(ignoreSemanticSearchResults: boolean = false): number {
 		if (ignoreSemanticSearchResults) {
 			return this._plainTextSearchResult.count();
 		}
-		return this._plainTextSearchResult.count() + this._aiTextSearchResult.count();
+		return (
+			this._plainTextSearchResult.count() + this._aiTextSearchResult.count()
+		);
 	}
 
-	setCachedSearchComplete(cachedSearchComplete: ISearchComplete | undefined, ai: boolean) {
+	setCachedSearchComplete(
+		cachedSearchComplete: ISearchComplete | undefined,
+		ai: boolean,
+	) {
 		if (ai) {
 			this._aiTextSearchResult.cachedSearchComplete = cachedSearchComplete;
 		} else {
@@ -293,6 +381,14 @@ export class SearchResultImpl extends Disposable implements ISearchResult {
 	}
 }
 
-function aiTextQueryFromTextQuery(query: ITextQuery | null): IAITextQuery | null {
-	return query === null ? null : { ...query, contentPattern: query.contentPattern.pattern, type: QueryType.aiText };
+function aiTextQueryFromTextQuery(
+	query: ITextQuery | null,
+): IAITextQuery | null {
+	return query === null
+		? null
+		: {
+				...query,
+				contentPattern: query.contentPattern.pattern,
+				type: QueryType.aiText,
+			};
 }

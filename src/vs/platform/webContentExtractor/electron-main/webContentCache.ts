@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LRUCache } from '../../../base/common/map.js';
-import { extUriIgnorePathCase } from '../../../base/common/resources.js';
-import { URI } from '../../../base/common/uri.js';
-import { IWebContentExtractorOptions, WebContentExtractResult } from '../common/webContentExtractor.js';
+import { LRUCache } from "../../../base/common/map.js";
+import { extUriIgnorePathCase } from "../../../base/common/resources.js";
+import { URI } from "../../../base/common/uri.js";
+import {
+	IWebContentExtractorOptions,
+	WebContentExtractResult,
+} from "../common/webContentExtractor.js";
 
 type CacheEntry = Readonly<{
 	result: WebContentExtractResult;
@@ -22,16 +25,22 @@ export class WebContentCache {
 	private static readonly SUCCESS_CACHE_DURATION = 1000 * 60 * 60 * 24; // 24 hours
 	private static readonly ERROR_CACHE_DURATION = 1000 * 60 * 5; // 5 minutes
 
-	private readonly _cache = new LRUCache<string, CacheEntry>(WebContentCache.MAX_CACHE_SIZE);
+	private readonly _cache = new LRUCache<string, CacheEntry>(
+		WebContentCache.MAX_CACHE_SIZE,
+	);
 
 	/**
 	 * Add a web content extraction result to the cache.
 	 */
-	public add(uri: URI, options: IWebContentExtractorOptions | undefined, result: WebContentExtractResult) {
+	public add(
+		uri: URI,
+		options: IWebContentExtractorOptions | undefined,
+		result: WebContentExtractResult,
+	) {
 		let expiration: number;
 		switch (result.status) {
-			case 'ok':
-			case 'redirect':
+			case "ok":
+			case "redirect":
 				expiration = Date.now() + WebContentCache.SUCCESS_CACHE_DURATION;
 				break;
 			default:
@@ -46,7 +55,10 @@ export class WebContentCache {
 	/**
 	 * Try to get a cached web content extraction result for the given URI and options.
 	 */
-	public tryGet(uri: URI, options: IWebContentExtractorOptions | undefined): WebContentExtractResult | undefined {
+	public tryGet(
+		uri: URI,
+		options: IWebContentExtractorOptions | undefined,
+	): WebContentExtractResult | undefined {
 		const key = WebContentCache.getKey(uri, options);
 		const entry = this._cache.get(key);
 		if (entry === undefined) {
@@ -68,7 +80,10 @@ export class WebContentCache {
 		this._cache.clear();
 	}
 
-	private static getKey(uri: URI, options: IWebContentExtractorOptions | undefined): string {
+	private static getKey(
+		uri: URI,
+		options: IWebContentExtractorOptions | undefined,
+	): string {
 		return `${!!options?.followRedirects}${extUriIgnorePathCase.getComparisonKey(uri)}`;
 	}
 }

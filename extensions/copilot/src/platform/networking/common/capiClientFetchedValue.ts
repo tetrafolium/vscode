@@ -17,7 +17,7 @@ export interface CapiClientFetchedValueOptions<T> {
 	/**
 	 * The request options passed to {@link ICAPIClientService.makeRequest}.
 	 */
-	readonly request: (() => MakeRequestOptions | Promise<MakeRequestOptions>);
+	readonly request: () => MakeRequestOptions | Promise<MakeRequestOptions>;
 
 	/**
 	 * Metadata for the CAPI request (e.g. {@link RequestType}).
@@ -74,13 +74,8 @@ export function createCapiClientFetchedValue<T>(
 	envService: IEnvService,
 	options: CapiClientFetchedValueOptions<T>,
 ): FetchedValue<T> {
-	const {
-		request,
-		requestMetadata,
-		parseResponse,
-		isStale,
-		keepCacheHot,
-	} = options;
+	const { request, requestMetadata, parseResponse, isStale, keepCacheHot } =
+		options;
 
 	const fetch = createAdvancedFetch<T>({
 		request: async () => {
@@ -89,17 +84,20 @@ export function createCapiClientFetchedValue<T>(
 				url: `capi:${requestMetadata.type}`,
 				headers: currentRequestOpts.headers ?? {},
 				method: currentRequestOpts.method ?? 'GET',
-				state: currentRequestOpts
+				state: currentRequestOpts,
 			};
 		},
 		httpFetch: async (httpRequest) => {
-			const response = await capiClientService.makeRequest<Response>({
-				...(httpRequest.state ?? {}),
-				method: httpRequest.method,
-				// Use the headers from the middleware pipeline (may include
-				// If-None-Match, If-Modified-Since, etc.)
-				headers: httpRequest.headers,
-			}, requestMetadata);
+			const response = await capiClientService.makeRequest<Response>(
+				{
+					...(httpRequest.state ?? {}),
+					method: httpRequest.method,
+					// Use the headers from the middleware pipeline (may include
+					// If-None-Match, If-Modified-Since, etc.)
+					headers: httpRequest.headers,
+				},
+				requestMetadata,
+			);
 
 			return response;
 		},

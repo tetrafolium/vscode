@@ -3,16 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { ExtHostChatQuotaShape, IMainContext, IQuotaSnapshotsDto, MainContext, MainThreadChatQuotaShape } from './extHost.protocol.js';
+import { Disposable } from "../../../base/common/lifecycle.js";
+import {
+	ExtHostChatQuotaShape,
+	IMainContext,
+	IQuotaSnapshotsDto,
+	MainContext,
+	MainThreadChatQuotaShape,
+} from "./extHost.protocol.js";
 
-export class ExtHostChatQuota extends Disposable implements ExtHostChatQuotaShape {
-
+export class ExtHostChatQuota
+	extends Disposable
+	implements ExtHostChatQuotaShape
+{
 	private readonly _proxy: MainThreadChatQuotaShape;
 
-	constructor(
-		mainContext: IMainContext,
-	) {
+	constructor(mainContext: IMainContext) {
 		super();
 		this._proxy = mainContext.getProxy(MainContext.MainThreadChatQuota);
 	}

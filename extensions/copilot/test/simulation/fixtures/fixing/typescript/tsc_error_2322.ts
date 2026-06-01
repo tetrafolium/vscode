@@ -1,10 +1,6 @@
-export class LineRange {
+export class LineRange {}
 
-}
-
-export class RangeMapping {
-
-}
+export class RangeMapping {}
 
 /**
  * Maps a line range in the original text model to a line range in the modified text model.

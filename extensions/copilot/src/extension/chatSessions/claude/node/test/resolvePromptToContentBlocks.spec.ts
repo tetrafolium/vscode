@@ -17,7 +17,12 @@ function makeRef(
 	value: vscode.ChatPromptReference['value'],
 	range?: [number, number],
 ): vscode.ChatPromptReference {
-	return { id: 'ref', name: 'ref', value, range } as vscode.ChatPromptReference;
+	return {
+		id: 'ref',
+		name: 'ref',
+		value,
+		range,
+	} as vscode.ChatPromptReference;
 }
 
 function makeLocationRef(
@@ -25,16 +30,35 @@ function makeLocationRef(
 	startLine: number,
 	range?: [number, number],
 ): vscode.ChatPromptReference {
-	const location = { uri, range: { start: { line: startLine, character: 0 }, end: { line: startLine, character: 0 } } };
-	return { id: 'loc', name: 'loc', value: location, range } as vscode.ChatPromptReference;
+	const location = {
+		uri,
+		range: {
+			start: { line: startLine, character: 0 },
+			end: { line: startLine, character: 0 },
+		},
+	};
+	return {
+		id: 'loc',
+		name: 'loc',
+		value: location,
+		range,
+	} as vscode.ChatPromptReference;
 }
 
-function textBlocks(blocks: Anthropic.ContentBlockParam[]): Anthropic.TextBlockParam[] {
-	return blocks.filter(b => b.type === 'text') as Anthropic.TextBlockParam[];
+function textBlocks(
+	blocks: Anthropic.ContentBlockParam[],
+): Anthropic.TextBlockParam[] {
+	return blocks.filter(
+		(b) => b.type === 'text',
+	) as Anthropic.TextBlockParam[];
 }
 
-function imageBlocks(blocks: Anthropic.ContentBlockParam[]): Anthropic.ImageBlockParam[] {
-	return blocks.filter(b => b.type === 'image') as Anthropic.ImageBlockParam[];
+function imageBlocks(
+	blocks: Anthropic.ContentBlockParam[],
+): Anthropic.ImageBlockParam[] {
+	return blocks.filter(
+		(b) => b.type === 'image',
+	) as Anthropic.ImageBlockParam[];
 }
 
 // #endregion
@@ -91,7 +115,9 @@ describe('resolvePromptToContentBlocks', () => {
 
 		expect(blocks).toHaveLength(1);
 		// Location refs include `:lineNumber` (1-indexed)
-		expect(textBlocks(blocks)[0].text).toBe(`look at ${fileUri.fsPath}:42 here`);
+		expect(textBlocks(blocks)[0].text).toBe(
+			`look at ${fileUri.fsPath}:42 here`,
+		);
 	});
 
 	it('substitutes multiple inline references correctly', async () => {
@@ -131,11 +157,16 @@ describe('resolvePromptToContentBlocks', () => {
 	it('includes multiple non-inline references in a single system-reminder block', async () => {
 		const uri1 = URI.file('/a.ts');
 		const uri2 = URI.file('/b.ts');
-		const request = new TestChatRequest('check these', [makeRef(uri1), makeRef(uri2)]);
+		const request = new TestChatRequest('check these', [
+			makeRef(uri1),
+			makeRef(uri2),
+		]);
 
 		const blocks = await resolvePromptToContentBlocks(request);
 
-		const reminderBlocks = textBlocks(blocks).filter(b => b.text.includes('<system-reminder>'));
+		const reminderBlocks = textBlocks(blocks).filter((b) =>
+			b.text.includes('<system-reminder>'),
+		);
 		expect(reminderBlocks).toHaveLength(1);
 		expect(reminderBlocks[0].text).toContain(uri1.fsPath);
 		expect(reminderBlocks[0].text).toContain(uri2.fsPath);
@@ -146,8 +177,12 @@ describe('resolvePromptToContentBlocks', () => {
 	// #region Image References
 
 	it('converts a PNG binary reference to an image content block', async () => {
-		const imageData = new Uint8Array([0x89, 0x50, 0x4E, 0x47]);
-		const ref = makeRef(new ChatReferenceBinaryData('image/png', () => Promise.resolve(imageData)));
+		const imageData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+		const ref = makeRef(
+			new ChatReferenceBinaryData('image/png', () =>
+				Promise.resolve(imageData),
+			),
+		);
 		const request = new TestChatRequest('describe this', [ref]);
 
 		const blocks = await resolvePromptToContentBlocks(request);
@@ -155,22 +190,36 @@ describe('resolvePromptToContentBlocks', () => {
 		expect(imageBlocks(blocks)).toHaveLength(1);
 		const img = imageBlocks(blocks)[0];
 		expect(img.source.type).toBe('base64');
-		expect((img.source as Anthropic.Base64ImageSource).media_type).toBe('image/png');
-		expect((img.source as Anthropic.Base64ImageSource).data).toBe(Buffer.from(imageData).toString('base64'));
+		expect((img.source as Anthropic.Base64ImageSource).media_type).toBe(
+			'image/png',
+		);
+		expect((img.source as Anthropic.Base64ImageSource).data).toBe(
+			Buffer.from(imageData).toString('base64'),
+		);
 	});
 
 	it('normalizes image/jpg to image/jpeg', async () => {
-		const ref = makeRef(new ChatReferenceBinaryData('image/jpg', () => Promise.resolve(new Uint8Array([0xFF, 0xD8]))));
+		const ref = makeRef(
+			new ChatReferenceBinaryData('image/jpg', () =>
+				Promise.resolve(new Uint8Array([0xff, 0xd8])),
+			),
+		);
 		const request = new TestChatRequest('check', [ref]);
 
 		const blocks = await resolvePromptToContentBlocks(request);
 
 		const img = imageBlocks(blocks)[0];
-		expect((img.source as Anthropic.Base64ImageSource).media_type).toBe('image/jpeg');
+		expect((img.source as Anthropic.Base64ImageSource).media_type).toBe(
+			'image/jpeg',
+		);
 	});
 
 	it('skips unsupported image MIME types', async () => {
-		const ref = makeRef(new ChatReferenceBinaryData('image/bmp', () => Promise.resolve(new Uint8Array([0x42, 0x4D]))));
+		const ref = makeRef(
+			new ChatReferenceBinaryData('image/bmp', () =>
+				Promise.resolve(new Uint8Array([0x42, 0x4d])),
+			),
+		);
 		const request = new TestChatRequest('check', [ref]);
 
 		const blocks = await resolvePromptToContentBlocks(request);
@@ -181,7 +230,9 @@ describe('resolvePromptToContentBlocks', () => {
 	it('falls back to reference URI when ChatReferenceBinaryData has unsupported MIME but has a reference', async () => {
 		const fileUri = URI.file('/img/photo.bmp');
 		const binaryData = Object.assign(
-			new ChatReferenceBinaryData('image/bmp', () => Promise.resolve(new Uint8Array([]))),
+			new ChatReferenceBinaryData('image/bmp', () =>
+				Promise.resolve(new Uint8Array([])),
+			),
 			{ reference: fileUri },
 		);
 		const ref = makeRef(binaryData);
@@ -191,7 +242,9 @@ describe('resolvePromptToContentBlocks', () => {
 
 		expect(imageBlocks(blocks)).toHaveLength(0);
 		// URI should appear in system-reminder instead
-		expect(textBlocks(blocks).some(b => b.text.includes(fileUri.fsPath))).toBe(true);
+		expect(
+			textBlocks(blocks).some((b) => b.text.includes(fileUri.fsPath)),
+		).toBe(true);
 	});
 
 	// #endregion
@@ -206,9 +259,17 @@ describe('resolvePromptToContentBlocks', () => {
 		const prompt = 'fix #ref and check';
 		const inlineRef = makeRef(inlineUri, [4, 8]);
 		const extraRef = makeRef(extraUri);
-		const imageRef = makeRef(new ChatReferenceBinaryData('image/png', () => Promise.resolve(imageData)));
+		const imageRef = makeRef(
+			new ChatReferenceBinaryData('image/png', () =>
+				Promise.resolve(imageData),
+			),
+		);
 
-		const request = new TestChatRequest(prompt, [inlineRef, extraRef, imageRef]);
+		const request = new TestChatRequest(prompt, [
+			inlineRef,
+			extraRef,
+			imageRef,
+		]);
 		const blocks = await resolvePromptToContentBlocks(request);
 
 		// Text block with inline substitution
@@ -219,7 +280,9 @@ describe('resolvePromptToContentBlocks', () => {
 		expect(imageBlocks(blocks)).toHaveLength(1);
 
 		// System-reminder block for the non-inline ref
-		const reminderBlocks = textBlocks(blocks).filter(b => b.text.includes('<system-reminder>'));
+		const reminderBlocks = textBlocks(blocks).filter((b) =>
+			b.text.includes('<system-reminder>'),
+		);
 		expect(reminderBlocks).toHaveLength(1);
 		expect(reminderBlocks[0].text).toContain(extraUri.fsPath);
 	});
@@ -232,7 +295,9 @@ describe('resolvePromptToContentBlocks', () => {
 
 		const blocks = await resolvePromptToContentBlocks(request);
 
-		const reminderBlocks = textBlocks(blocks).filter(b => b.text.includes('<system-reminder>'));
+		const reminderBlocks = textBlocks(blocks).filter((b) =>
+			b.text.includes('<system-reminder>'),
+		);
 		expect(reminderBlocks).toHaveLength(0);
 	});
 

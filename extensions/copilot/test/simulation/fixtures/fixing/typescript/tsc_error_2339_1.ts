@@ -1,20 +1,18 @@
-
 class DocContext {
 	constructor(
 		public readonly selection: string,
-		public readonly wholeRange: string
-	) { }
+		public readonly wholeRange: string,
+	) {}
 }
 
 class Fetcher {
-
 	private documentContext: any;
 
 	private async fetchResponse(fetchRequest: DocContext) {
 		const documentContext = {
 			selection: fetchRequest.selection,
 			wholeRange: fetchRequest.wholeRange,
-			response: fetchRequest.response
+			response: fetchRequest.response,
 		};
 		this.documentContext = documentContext;
 	}

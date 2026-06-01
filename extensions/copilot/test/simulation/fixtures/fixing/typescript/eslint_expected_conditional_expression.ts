@@ -6,7 +6,7 @@ let HI = 'hi';
 const HELLO = 'hello';
 
 function checkEquality() {
-	if (HI = HELLO) {
+	if ((HI = HELLO)) {
 		return true;
 	}
 	return false;

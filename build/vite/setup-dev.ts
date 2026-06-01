@@ -5,16 +5,24 @@
 
 /// <reference path="../../src/typings/vscode-globals-product.d.ts" />
 
-import { enableHotReload } from '../../src/vs/base/common/hotReload.ts';
-import { getSingletonServiceDescriptors, InstantiationType, registerSingleton } from '../../src/vs/platform/instantiation/common/extensions.ts';
-import { IWebWorkerService } from '../../src/vs/platform/webWorker/browser/webWorkerService.ts';
+import { enableHotReload } from "../../src/vs/base/common/hotReload.ts";
+import {
+	getSingletonServiceDescriptors,
+	InstantiationType,
+	registerSingleton,
+} from "../../src/vs/platform/instantiation/common/extensions.ts";
+import { IWebWorkerService } from "../../src/vs/platform/webWorker/browser/webWorkerService.ts";
 // eslint-disable-next-line local/code-no-standalone-editor
-import { StandaloneWebWorkerService } from '../../src/vs/editor/standalone/browser/services/standaloneWebWorkerService.ts';
-import './style.css';
+import { StandaloneWebWorkerService } from "../../src/vs/editor/standalone/browser/services/standaloneWebWorkerService.ts";
+import "./style.css";
 
 enableHotReload();
 
-registerSingleton(IWebWorkerService, StandaloneWebWorkerService, InstantiationType.Eager);
+registerSingleton(
+	IWebWorkerService,
+	StandaloneWebWorkerService,
+	InstantiationType.Eager,
+);
 const descriptors = getSingletonServiceDescriptors();
 
 // Patch push to ignore future IWebWorkerService registrations.

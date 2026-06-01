@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { IDisposable } from '../../../base/common/lifecycle.js';
-import { IBrowserViewOwner } from './browserView.js';
-import { CDPEvent, CDPRequest, CDPResponse } from './cdp/types.js';
+import { Event } from "../../../base/common/event.js";
+import { IDisposable } from "../../../base/common/lifecycle.js";
+import { IBrowserViewOwner } from "./browserView.js";
+import { CDPEvent, CDPRequest, CDPResponse } from "./cdp/types.js";
 
-export const ipcBrowserViewGroupChannelName = 'browserViewGroup';
+export const ipcBrowserViewGroupChannelName = "browserViewGroup";
 
 /**
  * Fired when a browser view is added to or removed from a group.
@@ -46,7 +46,6 @@ export interface IBrowserViewGroup extends IDisposable {
  * The main-process implementation is {@link BrowserViewGroupMainService}.
  */
 export interface IBrowserViewGroupService {
-
 	// Dynamic events - one per group instance, keyed by group ID.
 	onDynamicDidAddView(groupId: string): Event<IBrowserViewGroupViewEvent>;
 	onDynamicDidRemoveView(groupId: string): Event<IBrowserViewGroupViewEvent>;

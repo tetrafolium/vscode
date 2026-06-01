@@ -12,5 +12,5 @@ export class LineRange0Based {
 		readonly startLine: number,
 		/** 0-based, exclusive. */
 		readonly endLineExcl: number,
-	) { }
+	) {}
 }

@@ -3,29 +3,46 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { IObservable } from '../../../../base/common/observable.js';
-import { URI } from '../../../../base/common/uri.js';
-import { isEqualOrParent } from '../../../../base/common/resources.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { PromptsType } from './promptSyntax/promptTypes.js';
-import { IChatPromptSlashCommand, PromptsStorage } from './promptSyntax/service/promptsService.js';
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { IObservable } from "../../../../base/common/observable.js";
+import { URI } from "../../../../base/common/uri.js";
+import { isEqualOrParent } from "../../../../base/common/resources.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { PromptsType } from "./promptSyntax/promptTypes.js";
+import {
+	IChatPromptSlashCommand,
+	PromptsStorage,
+} from "./promptSyntax/service/promptsService.js";
 
-export const IAICustomizationWorkspaceService = createDecorator<IAICustomizationWorkspaceService>('aiCustomizationWorkspaceService');
+export const IAICustomizationWorkspaceService =
+	createDecorator<IAICustomizationWorkspaceService>(
+		"aiCustomizationWorkspaceService",
+	);
 
 /**
  * Extended storage type for AI Customization that includes built-in prompts
  * shipped with the application, alongside the core `PromptsStorage` values.
  */
-export type AICustomizationSource = 'local' | 'user' | 'extension' | 'plugin' | 'builtin';
+export type AICustomizationSource =
+	| "local"
+	| "user"
+	| "extension"
+	| "plugin"
+	| "builtin";
 
 export namespace AICustomizationSources {
-	export const local: AICustomizationSource = 'local';
-	export const user: AICustomizationSource = 'user';
-	export const extension: AICustomizationSource = 'extension';
-	export const plugin: AICustomizationSource = 'plugin';
-	export const builtin: AICustomizationSource = 'builtin';
-	export const all: AICustomizationSource[] = [local, user, extension, plugin, builtin];
+	export const local: AICustomizationSource = "local";
+	export const user: AICustomizationSource = "user";
+	export const extension: AICustomizationSource = "extension";
+	export const plugin: AICustomizationSource = "plugin";
+	export const builtin: AICustomizationSource = "builtin";
+	export const all: AICustomizationSource[] = [
+		local,
+		user,
+		extension,
+		plugin,
+		builtin,
+	];
 }
 
 /**
@@ -37,17 +54,18 @@ export const BUILTIN_STORAGE = AICustomizationSources.builtin;
  * Possible section IDs for the AI Customization Management Editor sidebar.
  */
 export const AICustomizationManagementSection = {
-	Agents: 'agents',
-	Skills: 'skills',
-	Instructions: 'instructions',
-	Prompts: 'prompts',
-	Hooks: 'hooks',
-	McpServers: 'mcpServers',
-	Plugins: 'plugins',
-	Models: 'models',
+	Agents: "agents",
+	Skills: "skills",
+	Instructions: "instructions",
+	Prompts: "prompts",
+	Hooks: "hooks",
+	McpServers: "mcpServers",
+	Plugins: "plugins",
+	Models: "models",
 } as const;
 
-export type AICustomizationManagementSection = typeof AICustomizationManagementSection[keyof typeof AICustomizationManagementSection];
+export type AICustomizationManagementSection =
+	(typeof AICustomizationManagementSection)[keyof typeof AICustomizationManagementSection];
 
 /**
  * Per-type filter policy controlling which storage sources and user file
@@ -80,14 +98,21 @@ export interface IWelcomePageFeatures {
  * Removes items whose source is not in the filter's source list,
  * and for user-source items, removes those not under an allowed root.
  */
-export function applySourceFilter<T extends { readonly uri: URI; readonly source: AICustomizationSource }>(items: readonly T[], filter: IStorageSourceFilter): readonly T[] {
+export function applySourceFilter<
+	T extends { readonly uri: URI; readonly source: AICustomizationSource },
+>(items: readonly T[], filter: IStorageSourceFilter): readonly T[] {
 	const sourceSet = new Set(filter.sources);
-	return items.filter(item => {
+	return items.filter((item) => {
 		if (!sourceSet.has(item.source)) {
 			return false;
 		}
-		if (item.source === AICustomizationSources.user && filter.includedUserFileRoots) {
-			return filter.includedUserFileRoots.some(root => isEqualOrParent(item.uri, root));
+		if (
+			item.source === AICustomizationSources.user &&
+			filter.includedUserFileRoots
+		) {
+			return filter.includedUserFileRoots.some((root) =>
+				isEqualOrParent(item.uri, root),
+			);
 		}
 		return true;
 	});
@@ -98,14 +123,18 @@ export function applySourceFilter<T extends { readonly uri: URI; readonly source
  * Removes items whose storage is not in the filter's source list,
  * and for user-storage items, removes those not under an allowed root.
  */
-export function applyStorageSourceFilter<T extends { readonly uri: URI; readonly storage: PromptsStorage }>(items: readonly T[], filter: IStorageSourceFilter): readonly T[] {
+export function applyStorageSourceFilter<
+	T extends { readonly uri: URI; readonly storage: PromptsStorage },
+>(items: readonly T[], filter: IStorageSourceFilter): readonly T[] {
 	const sourceSet = new Set(filter.sources);
-	return items.filter(item => {
+	return items.filter((item) => {
 		if (!sourceSet.has(item.storage)) {
 			return false;
 		}
 		if (item.storage === PromptsStorage.user && filter.includedUserFileRoots) {
-			return filter.includedUserFileRoots.some(root => isEqualOrParent(item.uri, root));
+			return filter.includedUserFileRoots.some((root) =>
+				isEqualOrParent(item.uri, root),
+			);
 		}
 		return true;
 	});
@@ -190,7 +219,9 @@ export interface IAICustomizationWorkspaceService {
 	 * service's storage source policy, ensuring the results match the
 	 * customizations visible in the AI Customization views.
 	 */
-	getFilteredPromptSlashCommands(token: CancellationToken): Promise<readonly IChatPromptSlashCommand[]>;
+	getFilteredPromptSlashCommands(
+		token: CancellationToken,
+	): Promise<readonly IChatPromptSlashCommand[]>;
 
 	/**
 	 * Returns a map of built-in skill names that have direct UI integrations

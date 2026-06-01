@@ -11,8 +11,8 @@ import { DisposableStore } from '../../../../../util/vs/base/common/lifecycle';
 import { ClaudeRuntimeDataService } from '../claudeRuntimeDataService';
 
 class TestLogService extends mock<ILogService>() {
-	override trace() { }
-	override error() { }
+	override trace() {}
+	override error() {}
 }
 
 function createMockQuery(agents: AgentInfo[]): Pick<Query, 'supportedAgents'> {
@@ -27,7 +27,9 @@ describe('ClaudeRuntimeDataService', () => {
 
 	beforeEach(() => {
 		disposables = new DisposableStore();
-		service = disposables.add(new ClaudeRuntimeDataService(new TestLogService()));
+		service = disposables.add(
+			new ClaudeRuntimeDataService(new TestLogService()),
+		);
 	});
 
 	afterEach(() => {
@@ -41,7 +43,11 @@ describe('ClaudeRuntimeDataService', () => {
 	it('caches agents after update', async () => {
 		const agents: AgentInfo[] = [
 			{ name: 'Explore', description: 'Fast exploration' },
-			{ name: 'Review', description: 'Code review', model: 'claude-3.5-sonnet' },
+			{
+				name: 'Review',
+				description: 'Code review',
+				model: 'claude-3.5-sonnet',
+			},
 		];
 		await service.update(createMockQuery(agents) as Query);
 
@@ -50,7 +56,11 @@ describe('ClaudeRuntimeDataService', () => {
 
 	it('fires onDidChange after update', async () => {
 		let fired = false;
-		disposables.add(service.onDidChange(() => { fired = true; }));
+		disposables.add(
+			service.onDidChange(() => {
+				fired = true;
+			}),
+		);
 
 		await service.update(createMockQuery([]) as Query);
 		expect(fired).toBe(true);
@@ -58,7 +68,11 @@ describe('ClaudeRuntimeDataService', () => {
 
 	it('fires onDidChange even when supportedAgents fails', async () => {
 		let fired = false;
-		disposables.add(service.onDidChange(() => { fired = true; }));
+		disposables.add(
+			service.onDidChange(() => {
+				fired = true;
+			}),
+		);
 
 		const query = {
 			supportedAgents: vi.fn().mockRejectedValue(new Error('SDK error')),
@@ -83,10 +97,17 @@ describe('ClaudeRuntimeDataService', () => {
 	});
 
 	it('overwrites cache on subsequent updates', async () => {
-		await service.update(createMockQuery([{ name: 'A', description: 'First' }]) as Query);
+		await service.update(
+			createMockQuery([{ name: 'A', description: 'First' }]) as Query,
+		);
 		expect(service.getAgents()).toHaveLength(1);
 
-		await service.update(createMockQuery([{ name: 'B', description: 'Second' }, { name: 'C', description: 'Third' }]) as Query);
+		await service.update(
+			createMockQuery([
+				{ name: 'B', description: 'Second' },
+				{ name: 'C', description: 'Third' },
+			]) as Query,
+		);
 		expect(service.getAgents()).toHaveLength(2);
 		expect(service.getAgents()[0].name).toBe('B');
 	});

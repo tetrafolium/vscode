@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	// @kycutler https://github.com/microsoft/vscode/issues/271523
 
 	export interface TreeItemLabel2 {

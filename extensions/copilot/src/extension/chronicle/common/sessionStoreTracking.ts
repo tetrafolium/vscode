@@ -27,7 +27,10 @@ export const MAX_SUMMARY_LENGTH = 1000;
  * The returned value, including the truncation suffix, never exceeds `maxLength`.
  * Returns `undefined` for falsy input.
  */
-export function truncateForStore(value: string | undefined, maxLength: number): string | undefined {
+export function truncateForStore(
+	value: string | undefined,
+	maxLength: number,
+): string | undefined {
 	if (!value) {
 		return undefined;
 	}
@@ -51,7 +54,9 @@ export function isTerminalTool(toolName: string): boolean {
  * Parses the serialized JSON from gen_ai.tool.call.arguments attribute.
  * @internal Exported for testing.
  */
-export function extractToolArgs(span: ICompletedSpanData): Record<string, unknown> {
+export function extractToolArgs(
+	span: ICompletedSpanData,
+): Record<string, unknown> {
 	const serialized = span.attributes[GenAiAttr.TOOL_CALL_ARGUMENTS];
 	if (typeof serialized === 'string') {
 		try {
@@ -90,22 +95,36 @@ const GH_MCP_PREFIXES = ['mcp_github_', 'github-mcp-server-'];
  * that use `filePath`, as well as `apply_patch` which encodes paths in the patch input.
  * @internal Exported for testing.
  */
-export function extractFilePath(toolName: string, toolArgs: unknown): string | undefined {
-	if (!FILE_TRACKING_TOOLS.has(toolName)) { return undefined; }
-	if (typeof toolArgs !== 'object' || toolArgs === null) { return undefined; }
+export function extractFilePath(
+	toolName: string,
+	toolArgs: unknown,
+): string | undefined {
+	if (!FILE_TRACKING_TOOLS.has(toolName)) {
+		return undefined;
+	}
+	if (typeof toolArgs !== 'object' || toolArgs === null) {
+		return undefined;
+	}
 	const args = toolArgs as Record<string, unknown>;
 
 	// VS Code tools use 'filePath', CLI tools use 'path', list_dir uses 'path',
 	// create_directory uses 'dirPath'
 	const filePath = args.filePath ?? args.path ?? args.dirPath;
-	if (typeof filePath === 'string') { return filePath; }
+	if (typeof filePath === 'string') {
+		return filePath;
+	}
 
 	// multi_replace_string_in_file stores filePath in each replacement item
-	if (toolName === 'multi_replace_string_in_file' && Array.isArray(args.replacements)) {
+	if (
+		toolName === 'multi_replace_string_in_file' &&
+		Array.isArray(args.replacements)
+	) {
 		const first = args.replacements[0];
 		if (typeof first === 'object' && first !== null) {
 			const fp = (first as Record<string, unknown>).filePath;
-			if (typeof fp === 'string') { return fp; }
+			if (typeof fp === 'string') {
+				return fp;
+			}
 		}
 	}
 
@@ -122,7 +141,9 @@ export function extractFilePath(toolName: string, toolArgs: unknown): string | u
  * Matches lines like `*** Update File: /path/to/file` or `*** Add File: /path`.
  */
 function extractFirstFileFromPatch(input: string): string | undefined {
-	const match = input.match(/^\*\*\*\s+(?:Update|Add|Delete)\s+File:\s*(.+)$/m);
+	const match = input.match(
+		/^\*\*\*\s+(?:Update|Add|Delete)\s+File:\s*(.+)$/m,
+	);
 	return match?.[1]?.trim();
 }
 
@@ -130,7 +151,9 @@ function extractFirstFileFromPatch(input: string): string | undefined {
  * Safely extract a string field from an unknown object.
  */
 function getStringField(obj: unknown, field: string): string | undefined {
-	if (typeof obj !== 'object' || obj === null) { return undefined; }
+	if (typeof obj !== 'object' || obj === null) {
+		return undefined;
+	}
 	const val = (obj as Record<string, unknown>)[field];
 	return typeof val === 'string' ? val : undefined;
 }
@@ -139,7 +162,9 @@ function getStringField(obj: unknown, field: string): string | undefined {
  * Safely extract a number field from an unknown object.
  */
 function getNumberField(obj: unknown, field: string): number | undefined {
-	if (typeof obj !== 'object' || obj === null) { return undefined; }
+	if (typeof obj !== 'object' || obj === null) {
+		return undefined;
+	}
 	const val = (obj as Record<string, unknown>)[field];
 	return typeof val === 'number' ? val : undefined;
 }
@@ -153,7 +178,10 @@ export function extractRefsFromMcpTool(
 	toolName: string,
 	toolArgs: unknown,
 ): Array<{ ref_type: 'pr' | 'issue' | 'commit'; ref_value: string }> {
-	const refs: Array<{ ref_type: 'pr' | 'issue' | 'commit'; ref_value: string }> = [];
+	const refs: Array<{
+		ref_type: 'pr' | 'issue' | 'commit';
+		ref_value: string;
+	}> = [];
 
 	// PR tools: pull_request_read, list_pull_requests, search_pull_requests
 	if (toolName.includes('pull_request')) {
@@ -191,13 +219,23 @@ export function extractRefsFromTerminal(
 	resultText: string | undefined,
 ): Array<{ ref_type: 'pr' | 'issue' | 'commit'; ref_value: string }> {
 	const command = getStringField(toolArgs, 'command');
-	if (!command) { return []; }
+	if (!command) {
+		return [];
+	}
 
-	const refs: Array<{ ref_type: 'pr' | 'issue' | 'commit'; ref_value: string }> = [];
+	const refs: Array<{
+		ref_type: 'pr' | 'issue' | 'commit';
+		ref_value: string;
+	}> = [];
 
 	// Detect PR creation/checkout/view/merge — look for PR URL in result
-	if (/\bgh\s+pr\s+(create|checkout|view|merge)\b/.test(command) && resultText) {
-		const prMatch = resultText.match(/https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/(\d+)/);
+	if (
+		/\bgh\s+pr\s+(create|checkout|view|merge)\b/.test(command) &&
+		resultText
+	) {
+		const prMatch = resultText.match(
+			/https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/(\d+)/,
+		);
 		if (prMatch?.[1]) {
 			refs.push({ ref_type: 'pr', ref_value: prMatch[1] });
 		}
@@ -205,7 +243,9 @@ export function extractRefsFromTerminal(
 
 	// Detect issue creation — look for issue URL in result
 	if (command.includes('gh issue create') && resultText) {
-		const issueMatch = resultText.match(/https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/);
+		const issueMatch = resultText.match(
+			/https:\/\/github\.com\/[^/]+\/[^/]+\/issues\/(\d+)/,
+		);
 		if (issueMatch?.[1]) {
 			refs.push({ ref_type: 'issue', ref_value: issueMatch[1] });
 		}
@@ -229,7 +269,9 @@ export function extractRefsFromTerminal(
 export function extractRepoFromMcpTool(toolArgs: unknown): string | undefined {
 	const owner = getStringField(toolArgs, 'owner');
 	const repo = getStringField(toolArgs, 'repo');
-	if (owner && repo) { return `${owner}/${repo}`; }
+	if (owner && repo) {
+		return `${owner}/${repo}`;
+	}
 	return undefined;
 }
 
@@ -238,7 +280,7 @@ export function extractRepoFromMcpTool(toolArgs: unknown): string | undefined {
  * Matches both VS Code-style `mcp_github_*` and CLI-style `github-mcp-server-*` prefixes.
  */
 export function isGitHubMcpTool(toolName: string): boolean {
-	return GH_MCP_PREFIXES.some(prefix => toolName.startsWith(prefix));
+	return GH_MCP_PREFIXES.some((prefix) => toolName.startsWith(prefix));
 }
 
 /** Truncation suffix appended by truncateForOTel. */
@@ -249,7 +291,10 @@ const OTEL_TRUNCATION_MARKER = '...[truncated';
  * Tries the explicit attribute first, then parses it from the span name,
  * finally falls back to 'unknown'.
  */
-export function extractAgentName(span: { name: string; attributes: Record<string, unknown> }): string {
+export function extractAgentName(span: {
+	name: string;
+	attributes: Record<string, unknown>;
+}): string {
 	// 1. Prefer explicit attribute
 	const attr = span.attributes[GenAiAttr.AGENT_NAME] as string | undefined;
 	if (attr?.trim()) {
@@ -269,7 +314,9 @@ export function extractAgentName(span: { name: string; attributes: Record<string
  * Returns undefined for unrecognized JSON (tool results, etc.) to skip the summary write.
  * Returns the original string unchanged if it is not JSON.
  */
-export function extractPlainTextFromContent(content: string): string | undefined {
+export function extractPlainTextFromContent(
+	content: string,
+): string | undefined {
 	const trimmed = content.trim();
 	if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
 		return trimmed || undefined;
@@ -278,16 +325,30 @@ export function extractPlainTextFromContent(content: string): string | undefined
 		const parsed = JSON.parse(trimmed);
 		// Handle [{type:"text", text:"..."}] multi-modal parts array
 		if (Array.isArray(parsed)) {
-			const textPart = parsed.find((p: unknown) => typeof p === 'object' && p !== null && (p as Record<string, unknown>).type === 'text' && typeof (p as Record<string, unknown>).text === 'string');
+			const textPart = parsed.find(
+				(p: unknown) =>
+					typeof p === 'object' &&
+					p !== null &&
+					(p as Record<string, unknown>).type === 'text' &&
+					typeof (p as Record<string, unknown>).text === 'string',
+			);
 			if (textPart) {
-				return ((textPart as Record<string, unknown>).text as string).trim() || undefined;
+				return (
+					(
+						(textPart as Record<string, unknown>).text as string
+					).trim() || undefined
+				);
 			}
 			return undefined; // Array with no text parts (tool results, images, etc.)
 		}
 		// Handle {role:"...", content:"..."} chat messages with string content
 		// Note: content may be an array (multi-modal) — only handle string case
 		if (typeof (parsed as Record<string, unknown>).content === 'string') {
-			return ((parsed as Record<string, unknown>).content as string).trim() || undefined;
+			return (
+				(
+					(parsed as Record<string, unknown>).content as string
+				).trim() || undefined
+			);
 		}
 		return undefined; // Unrecognized JSON structure
 	} catch {
@@ -304,19 +365,24 @@ export function extractPlainTextFromContent(content: string): string | undefined
  *
  * @internal Exported for testing.
  */
-export function extractAssistantResponse(outputMessagesRaw: string | undefined): string | undefined {
+export function extractAssistantResponse(
+	outputMessagesRaw: string | undefined,
+): string | undefined {
 	if (!outputMessagesRaw) {
 		return undefined;
 	}
 
 	// Fast path: try full JSON parse for non-truncated input
 	try {
-		const messages = JSON.parse(outputMessagesRaw) as { role: string; parts: { type: string; content: string }[] }[];
+		const messages = JSON.parse(outputMessagesRaw) as {
+			role: string;
+			parts: { type: string; content: string }[];
+		}[];
 		const parts = messages
-			.filter(m => m.role === 'assistant')
-			.flatMap(m => m.parts)
-			.filter(p => p.type === 'text')
-			.map(p => p.content);
+			.filter((m) => m.role === 'assistant')
+			.flatMap((m) => m.parts)
+			.filter((p) => p.type === 'text')
+			.map((p) => p.content);
 		return parts.length > 0 ? parts.join('\n') : undefined;
 	} catch {
 		// JSON parse failed — likely truncated by truncateForOTel
@@ -333,7 +399,10 @@ export function extractAssistantResponse(outputMessagesRaw: string | undefined):
 		return undefined;
 	}
 	const textStart = prefixStart + assistantTextContentPrefix.length;
-	const truncationIdx = outputMessagesRaw.indexOf(OTEL_TRUNCATION_MARKER, textStart);
+	const truncationIdx = outputMessagesRaw.indexOf(
+		OTEL_TRUNCATION_MARKER,
+		textStart,
+	);
 	if (truncationIdx === -1) {
 		return undefined;
 	}

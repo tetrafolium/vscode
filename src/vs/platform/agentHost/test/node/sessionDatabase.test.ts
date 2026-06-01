@@ -3,19 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { tmpdir } from 'os';
-import * as fs from 'fs/promises';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { SessionDatabase, runMigrations, sessionDatabaseMigrations, type ISessionDatabaseMigration } from '../../node/sessionDatabase.js';
-import { FileEditKind } from '../../common/state/sessionState.js';
-import type { Database } from '@vscode/sqlite3';
-import { generateUuid } from '../../../../base/common/uuid.js';
-import { join } from '../../../../base/common/path.js';
+import assert from "assert";
+import { tmpdir } from "os";
+import * as fs from "fs/promises";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../base/test/common/utils.js";
+import { DisposableStore } from "../../../../base/common/lifecycle.js";
+import {
+	SessionDatabase,
+	runMigrations,
+	sessionDatabaseMigrations,
+	type ISessionDatabaseMigration,
+} from "../../node/sessionDatabase.js";
+import { FileEditKind } from "../../common/state/sessionState.js";
+import type { Database } from "@vscode/sqlite3";
+import { generateUuid } from "../../../../base/common/uuid.js";
+import { join } from "../../../../base/common/path.js";
 
-suite('SessionDatabase', () => {
-
+suite("SessionDatabase", () => {
 	const disposables = new DisposableStore();
 	let db: SessionDatabase | undefined;
 	let db2: SessionDatabase | undefined;
@@ -31,7 +35,10 @@ suite('SessionDatabase', () => {
 	 * Database instance, enabling reopen tests with :memory: databases.
 	 */
 	class TestableSessionDatabase extends SessionDatabase {
-		static override async open(path: string, migrations: readonly ISessionDatabaseMigration[] = sessionDatabaseMigrations): Promise<TestableSessionDatabase> {
+		static override async open(
+			path: string,
+			migrations: readonly ISessionDatabaseMigration[] = sessionDatabaseMigrations,
+		): Promise<TestableSessionDatabase> {
 			const inst = new TestableSessionDatabase(path, migrations);
 			await inst._ensureDb();
 			return inst;
@@ -51,7 +58,7 @@ suite('SessionDatabase', () => {
 			migrations: readonly ISessionDatabaseMigration[] = sessionDatabaseMigrations,
 		): Promise<TestableSessionDatabase> {
 			await runMigrations(rawDb, migrations);
-			const inst = new TestableSessionDatabase(':memory:', migrations);
+			const inst = new TestableSessionDatabase(":memory:", migrations);
 			inst._dbPromise = Promise.resolve(rawDb);
 			return inst;
 		}
@@ -59,411 +66,433 @@ suite('SessionDatabase', () => {
 
 	// ---- Migration system -----------------------------------------------
 
-	suite('migrations', () => {
-
-		test('applies all migrations on a fresh database', async () => {
+	suite("migrations", () => {
+		test("applies all migrations on a fresh database", async () => {
 			const migrations: ISessionDatabaseMigration[] = [
-				{ version: 1, sql: 'CREATE TABLE t1 (id INTEGER PRIMARY KEY)' },
-				{ version: 2, sql: 'CREATE TABLE t2 (id INTEGER PRIMARY KEY)' },
+				{ version: 1, sql: "CREATE TABLE t1 (id INTEGER PRIMARY KEY)" },
+				{ version: 2, sql: "CREATE TABLE t2 (id INTEGER PRIMARY KEY)" },
 			];
 
-			db = disposables.add(await SessionDatabase.open(':memory:', migrations));
+			db = disposables.add(await SessionDatabase.open(":memory:", migrations));
 
 			const tables = (await db.getAllTables()).sort();
-			assert.deepStrictEqual(tables, ['t1', 't2']);
+			assert.deepStrictEqual(tables, ["t1", "t2"]);
 		});
 
-		test('reopening with same migrations is a no-op', async () => {
+		test("reopening with same migrations is a no-op", async () => {
 			const migrations: ISessionDatabaseMigration[] = [
-				{ version: 1, sql: 'CREATE TABLE t1 (id INTEGER PRIMARY KEY)' },
+				{ version: 1, sql: "CREATE TABLE t1 (id INTEGER PRIMARY KEY)" },
 			];
 
-			const db1 = await TestableSessionDatabase.open(':memory:', migrations);
+			const db1 = await TestableSessionDatabase.open(":memory:", migrations);
 			const rawDb = await db1.ejectDb();
 
 			// Reopen — should not throw (table already exists, migration skipped)
-			db2 = disposables.add(await TestableSessionDatabase.fromDb(rawDb, migrations));
-			assert.deepStrictEqual(await db2.getAllTables(), ['t1']);
+			db2 = disposables.add(
+				await TestableSessionDatabase.fromDb(rawDb, migrations),
+			);
+			assert.deepStrictEqual(await db2.getAllTables(), ["t1"]);
 		});
 
-		test('only applies new migrations on reopen', async () => {
+		test("only applies new migrations on reopen", async () => {
 			const v1: ISessionDatabaseMigration[] = [
-				{ version: 1, sql: 'CREATE TABLE t1 (id INTEGER PRIMARY KEY)' },
+				{ version: 1, sql: "CREATE TABLE t1 (id INTEGER PRIMARY KEY)" },
 			];
-			const db1 = await TestableSessionDatabase.open(':memory:', v1);
+			const db1 = await TestableSessionDatabase.open(":memory:", v1);
 			const rawDb = await db1.ejectDb();
 
 			const v2: ISessionDatabaseMigration[] = [
 				...v1,
-				{ version: 2, sql: 'CREATE TABLE t2 (id INTEGER PRIMARY KEY)' },
+				{ version: 2, sql: "CREATE TABLE t2 (id INTEGER PRIMARY KEY)" },
 			];
 			db2 = disposables.add(await TestableSessionDatabase.fromDb(rawDb, v2));
 
 			const tables = (await db2.getAllTables()).sort();
-			assert.deepStrictEqual(tables, ['t1', 't2']);
+			assert.deepStrictEqual(tables, ["t1", "t2"]);
 		});
 
-		test('rolls back on migration failure', async () => {
+		test("rolls back on migration failure", async () => {
 			const migrations: ISessionDatabaseMigration[] = [
-				{ version: 1, sql: 'CREATE TABLE t1 (id INTEGER PRIMARY KEY)' },
-				{ version: 2, sql: 'THIS IS INVALID SQL' },
+				{ version: 1, sql: "CREATE TABLE t1 (id INTEGER PRIMARY KEY)" },
+				{ version: 2, sql: "THIS IS INVALID SQL" },
 			];
 
-			await assert.rejects(() => SessionDatabase.open(':memory:', migrations));
+			await assert.rejects(() => SessionDatabase.open(":memory:", migrations));
 
 			// A fresh :memory: open with valid migrations succeeds
-			db = disposables.add(await SessionDatabase.open(':memory:', [
-				{ version: 1, sql: 'CREATE TABLE t1 (id INTEGER PRIMARY KEY)' },
-			]));
-			assert.deepStrictEqual(await db.getAllTables(), ['t1']);
+			db = disposables.add(
+				await SessionDatabase.open(":memory:", [
+					{ version: 1, sql: "CREATE TABLE t1 (id INTEGER PRIMARY KEY)" },
+				]),
+			);
+			assert.deepStrictEqual(await db.getAllTables(), ["t1"]);
 		});
 	});
 
 	// ---- File edits -----------------------------------------------------
 
-	suite('file edits', () => {
+	suite("file edits", () => {
+		test("store and retrieve a file edit", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 
-		test('store and retrieve a file edit', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-
-			await db.createTurn('turn-1');
+			await db.createTurn("turn-1");
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
+				turnId: "turn-1",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/file.ts',
-				beforeContent: new TextEncoder().encode('before'),
-				afterContent: new TextEncoder().encode('after'),
+				filePath: "/workspace/file.ts",
+				beforeContent: new TextEncoder().encode("before"),
+				afterContent: new TextEncoder().encode("after"),
 				addedLines: 5,
 				removedLines: 2,
 			});
 
-			const edits = await db.getFileEdits(['tc-1']);
-			assert.deepStrictEqual(edits, [{
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
-				kind: FileEditKind.Edit,
-				filePath: '/workspace/file.ts',
-				originalPath: undefined,
-				addedLines: 5,
-				removedLines: 2,
-			}]);
+			const edits = await db.getFileEdits(["tc-1"]);
+			assert.deepStrictEqual(edits, [
+				{
+					turnId: "turn-1",
+					toolCallId: "tc-1",
+					kind: FileEditKind.Edit,
+					filePath: "/workspace/file.ts",
+					originalPath: undefined,
+					addedLines: 5,
+					removedLines: 2,
+				},
+			]);
 		});
 
-		test('retrieve multiple edits for a single tool call', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("retrieve multiple edits for a single tool call", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 
-			await db.createTurn('turn-1');
+			await db.createTurn("turn-1");
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
+				turnId: "turn-1",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/a.ts',
-				beforeContent: new TextEncoder().encode('a-before'),
-				afterContent: new TextEncoder().encode('a-after'),
+				filePath: "/workspace/a.ts",
+				beforeContent: new TextEncoder().encode("a-before"),
+				afterContent: new TextEncoder().encode("a-after"),
 				addedLines: undefined,
 				removedLines: undefined,
 			});
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
+				turnId: "turn-1",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/b.ts',
-				beforeContent: new TextEncoder().encode('b-before'),
-				afterContent: new TextEncoder().encode('b-after'),
+				filePath: "/workspace/b.ts",
+				beforeContent: new TextEncoder().encode("b-before"),
+				afterContent: new TextEncoder().encode("b-after"),
 				addedLines: 1,
 				removedLines: 0,
 			});
 
-			const edits = await db.getFileEdits(['tc-1']);
+			const edits = await db.getFileEdits(["tc-1"]);
 			assert.strictEqual(edits.length, 2);
-			assert.strictEqual(edits[0].filePath, '/workspace/a.ts');
-			assert.strictEqual(edits[1].filePath, '/workspace/b.ts');
+			assert.strictEqual(edits[0].filePath, "/workspace/a.ts");
+			assert.strictEqual(edits[1].filePath, "/workspace/b.ts");
 		});
 
-		test('retrieve edits across multiple tool calls', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("retrieve edits across multiple tool calls", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 
-			await db.createTurn('turn-1');
+			await db.createTurn("turn-1");
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
+				turnId: "turn-1",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/a.ts',
+				filePath: "/workspace/a.ts",
 				beforeContent: new Uint8Array(0),
-				afterContent: new TextEncoder().encode('hello'),
+				afterContent: new TextEncoder().encode("hello"),
 				addedLines: undefined,
 				removedLines: undefined,
 			});
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-2',
+				turnId: "turn-1",
+				toolCallId: "tc-2",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/b.ts',
+				filePath: "/workspace/b.ts",
 				beforeContent: new Uint8Array(0),
-				afterContent: new TextEncoder().encode('world'),
+				afterContent: new TextEncoder().encode("world"),
 				addedLines: undefined,
 				removedLines: undefined,
 			});
 
-			const edits = await db.getFileEdits(['tc-1', 'tc-2']);
+			const edits = await db.getFileEdits(["tc-1", "tc-2"]);
 			assert.strictEqual(edits.length, 2);
 
 			// Only tc-2
-			const edits2 = await db.getFileEdits(['tc-2']);
+			const edits2 = await db.getFileEdits(["tc-2"]);
 			assert.strictEqual(edits2.length, 1);
-			assert.strictEqual(edits2[0].toolCallId, 'tc-2');
+			assert.strictEqual(edits2[0].toolCallId, "tc-2");
 		});
 
-		test('returns empty array for unknown tool call IDs', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			const edits = await db.getFileEdits(['nonexistent']);
+		test("returns empty array for unknown tool call IDs", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			const edits = await db.getFileEdits(["nonexistent"]);
 			assert.deepStrictEqual(edits, []);
 		});
 
-		test('returns empty array when given empty array' /* Regression test for https://github.com/microsoft/vscode/issues/306057 */, async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("returns empty array when given empty array" /* Regression test for https://github.com/microsoft/vscode/issues/306057 */, async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 			const edits = await db.getFileEdits([]);
 			assert.deepStrictEqual(edits, []);
 		});
 
-		test('replace on conflict (same toolCallId + filePath)', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("replace on conflict (same toolCallId + filePath)", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 
-			await db.createTurn('turn-1');
+			await db.createTurn("turn-1");
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
+				turnId: "turn-1",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/file.ts',
-				beforeContent: new TextEncoder().encode('v1'),
-				afterContent: new TextEncoder().encode('v1-after'),
+				filePath: "/workspace/file.ts",
+				beforeContent: new TextEncoder().encode("v1"),
+				afterContent: new TextEncoder().encode("v1-after"),
 				addedLines: 1,
 				removedLines: 0,
 			});
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
+				turnId: "turn-1",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/file.ts',
-				beforeContent: new TextEncoder().encode('v2'),
-				afterContent: new TextEncoder().encode('v2-after'),
+				filePath: "/workspace/file.ts",
+				beforeContent: new TextEncoder().encode("v2"),
+				afterContent: new TextEncoder().encode("v2-after"),
 				addedLines: 3,
 				removedLines: 1,
 			});
 
-			const edits = await db.getFileEdits(['tc-1']);
+			const edits = await db.getFileEdits(["tc-1"]);
 			assert.strictEqual(edits.length, 1);
 			assert.strictEqual(edits[0].addedLines, 3);
 
-			const content = await db.readFileEditContent('tc-1', '/workspace/file.ts');
+			const content = await db.readFileEditContent(
+				"tc-1",
+				"/workspace/file.ts",
+			);
 			assert.ok(content);
-			assert.deepStrictEqual(new TextDecoder().decode(content.beforeContent), 'v2');
+			assert.deepStrictEqual(
+				new TextDecoder().decode(content.beforeContent),
+				"v2",
+			);
 		});
 
-		test('readFileEditContent returns content on demand', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("readFileEditContent returns content on demand", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 
-			await db.createTurn('turn-1');
+			await db.createTurn("turn-1");
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
+				turnId: "turn-1",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/file.ts',
-				beforeContent: new TextEncoder().encode('before'),
-				afterContent: new TextEncoder().encode('after'),
+				filePath: "/workspace/file.ts",
+				beforeContent: new TextEncoder().encode("before"),
+				afterContent: new TextEncoder().encode("after"),
 				addedLines: undefined,
 				removedLines: undefined,
 			});
 
-			const content = await db.readFileEditContent('tc-1', '/workspace/file.ts');
+			const content = await db.readFileEditContent(
+				"tc-1",
+				"/workspace/file.ts",
+			);
 			assert.ok(content);
-			assert.deepStrictEqual(content.beforeContent, new TextEncoder().encode('before'));
-			assert.deepStrictEqual(content.afterContent, new TextEncoder().encode('after'));
+			assert.deepStrictEqual(
+				content.beforeContent,
+				new TextEncoder().encode("before"),
+			);
+			assert.deepStrictEqual(
+				content.afterContent,
+				new TextEncoder().encode("after"),
+			);
 		});
 
-		test('readFileEditContent returns undefined for missing edit', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			const content = await db.readFileEditContent('tc-missing', '/no/such/file');
+		test("readFileEditContent returns undefined for missing edit", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			const content = await db.readFileEditContent(
+				"tc-missing",
+				"/no/such/file",
+			);
 			assert.strictEqual(content, undefined);
 		});
 
-		test('persists binary content correctly', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("persists binary content correctly", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 			const binary = new Uint8Array([0, 1, 2, 255, 128, 64]);
 
-			await db.createTurn('turn-1');
+			await db.createTurn("turn-1");
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-bin',
+				turnId: "turn-1",
+				toolCallId: "tc-bin",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/image.png',
+				filePath: "/workspace/image.png",
 				beforeContent: new Uint8Array(0),
 				afterContent: binary,
 				addedLines: undefined,
 				removedLines: undefined,
 			});
 
-			const content = await db.readFileEditContent('tc-bin', '/workspace/image.png');
+			const content = await db.readFileEditContent(
+				"tc-bin",
+				"/workspace/image.png",
+			);
 			assert.ok(content);
 			assert.deepStrictEqual(content.afterContent, binary);
 		});
 
-		test('auto-creates turn if it does not exist', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("auto-creates turn if it does not exist", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 
 			// storeFileEdit should succeed even without a prior createTurn call
 			await db.storeFileEdit({
-				turnId: 'auto-turn',
-				toolCallId: 'tc-1',
+				turnId: "auto-turn",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/x',
+				filePath: "/x",
 				beforeContent: new Uint8Array(0),
 				afterContent: new Uint8Array(0),
 				addedLines: undefined,
 				removedLines: undefined,
 			});
 
-			const edits = await db.getFileEdits(['tc-1']);
+			const edits = await db.getFileEdits(["tc-1"]);
 			assert.strictEqual(edits.length, 1);
-			assert.strictEqual(edits[0].turnId, 'auto-turn');
+			assert.strictEqual(edits[0].turnId, "auto-turn");
 		});
 	});
 
 	// ---- Turns ----------------------------------------------------------
 
-	suite('turns', () => {
-
-		test('createTurn is idempotent', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			await db.createTurn('turn-1');
-			await db.createTurn('turn-1'); // should not throw
+	suite("turns", () => {
+		test("createTurn is idempotent", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			await db.createTurn("turn-1");
+			await db.createTurn("turn-1"); // should not throw
 		});
 
-		test('deleteTurn cascades to file edits', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("deleteTurn cascades to file edits", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 
-			await db.createTurn('turn-1');
+			await db.createTurn("turn-1");
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
+				turnId: "turn-1",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/a.ts',
-				beforeContent: new TextEncoder().encode('before'),
-				afterContent: new TextEncoder().encode('after'),
+				filePath: "/workspace/a.ts",
+				beforeContent: new TextEncoder().encode("before"),
+				afterContent: new TextEncoder().encode("after"),
 				addedLines: undefined,
 				removedLines: undefined,
 			});
 
 			// Edits exist
-			assert.strictEqual((await db.getFileEdits(['tc-1'])).length, 1);
+			assert.strictEqual((await db.getFileEdits(["tc-1"])).length, 1);
 
 			// Delete the turn — edits should be gone
-			await db.deleteTurn('turn-1');
-			assert.deepStrictEqual(await db.getFileEdits(['tc-1']), []);
+			await db.deleteTurn("turn-1");
+			assert.deepStrictEqual(await db.getFileEdits(["tc-1"]), []);
 		});
 
-		test('deleteTurn only removes its own edits', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("deleteTurn only removes its own edits", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 
-			await db.createTurn('turn-1');
-			await db.createTurn('turn-2');
+			await db.createTurn("turn-1");
+			await db.createTurn("turn-2");
 			await db.storeFileEdit({
-				turnId: 'turn-1',
-				toolCallId: 'tc-1',
+				turnId: "turn-1",
+				toolCallId: "tc-1",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/a.ts',
+				filePath: "/workspace/a.ts",
 				beforeContent: new Uint8Array(0),
-				afterContent: new TextEncoder().encode('a'),
+				afterContent: new TextEncoder().encode("a"),
 				addedLines: undefined,
 				removedLines: undefined,
 			});
 			await db.storeFileEdit({
-				turnId: 'turn-2',
-				toolCallId: 'tc-2',
+				turnId: "turn-2",
+				toolCallId: "tc-2",
 				kind: FileEditKind.Edit,
-				filePath: '/workspace/b.ts',
+				filePath: "/workspace/b.ts",
 				beforeContent: new Uint8Array(0),
-				afterContent: new TextEncoder().encode('b'),
+				afterContent: new TextEncoder().encode("b"),
 				addedLines: undefined,
 				removedLines: undefined,
 			});
 
-			await db.deleteTurn('turn-1');
+			await db.deleteTurn("turn-1");
 
-			assert.deepStrictEqual(await db.getFileEdits(['tc-1']), []);
-			assert.strictEqual((await db.getFileEdits(['tc-2'])).length, 1);
+			assert.deepStrictEqual(await db.getFileEdits(["tc-1"]), []);
+			assert.strictEqual((await db.getFileEdits(["tc-2"])).length, 1);
 		});
 
-		test('deleteTurn is a no-op for unknown turn', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			await db.deleteTurn('nonexistent'); // should not throw
+		test("deleteTurn is a no-op for unknown turn", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			await db.deleteTurn("nonexistent"); // should not throw
 		});
 	});
 
 	// ---- Turn event ids -------------------------------------------------
 
-	suite('turn event ids', () => {
+	suite("turn event ids", () => {
+		test("getNextTurnEventId returns the next turn's event id by `turns.id`", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			await db.createTurn("turn-1");
+			await db.createTurn("turn-2");
+			await db.setTurnEventId("turn-1", "evt-1");
+			await db.setTurnEventId("turn-2", "evt-2");
 
-		test('getNextTurnEventId returns the next turn\'s event id by `turns.id`', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			await db.createTurn('turn-1');
-			await db.createTurn('turn-2');
-			await db.setTurnEventId('turn-1', 'evt-1');
-			await db.setTurnEventId('turn-2', 'evt-2');
-
-			assert.strictEqual(await db.getNextTurnEventId('turn-1'), 'evt-2');
+			assert.strictEqual(await db.getNextTurnEventId("turn-1"), "evt-2");
 		});
 
-		test('getNextTurnEventId falls back to `event_id` when the key is the SDK event id', async () => {
+		test("getNextTurnEventId falls back to `event_id` when the key is the SDK event id", async () => {
 			// Sessions restored from disk surface SDK envelope ids as the
 			// protocol turn id (see mapSessionEvents.ts), but `turns.id`
 			// was populated live with the client-side `request_xxx` id.
 			// The fallback lets fork / truncate resolve the boundary
 			// without forcing every caller to translate.
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			await db.createTurn('request_aaa');
-			await db.createTurn('request_bbb');
-			await db.setTurnEventId('request_aaa', 'sdk-evt-1');
-			await db.setTurnEventId('request_bbb', 'sdk-evt-2');
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			await db.createTurn("request_aaa");
+			await db.createTurn("request_bbb");
+			await db.setTurnEventId("request_aaa", "sdk-evt-1");
+			await db.setTurnEventId("request_bbb", "sdk-evt-2");
 
-			assert.strictEqual(await db.getNextTurnEventId('sdk-evt-1'), 'sdk-evt-2');
+			assert.strictEqual(await db.getNextTurnEventId("sdk-evt-1"), "sdk-evt-2");
 		});
 
-		test('getNextTurnEventId returns undefined for the last turn', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			await db.createTurn('turn-1');
-			await db.setTurnEventId('turn-1', 'evt-1');
+		test("getNextTurnEventId returns undefined for the last turn", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			await db.createTurn("turn-1");
+			await db.setTurnEventId("turn-1", "evt-1");
 
-			assert.strictEqual(await db.getNextTurnEventId('turn-1'), undefined);
-			assert.strictEqual(await db.getNextTurnEventId('evt-1'), undefined);
+			assert.strictEqual(await db.getNextTurnEventId("turn-1"), undefined);
+			assert.strictEqual(await db.getNextTurnEventId("evt-1"), undefined);
 		});
 
-		test('getNextTurnEventId returns undefined for an unknown key', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			await db.createTurn('turn-1');
-			await db.setTurnEventId('turn-1', 'evt-1');
+		test("getNextTurnEventId returns undefined for an unknown key", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			await db.createTurn("turn-1");
+			await db.setTurnEventId("turn-1", "evt-1");
 
-			assert.strictEqual(await db.getNextTurnEventId('does-not-exist'), undefined);
+			assert.strictEqual(
+				await db.getNextTurnEventId("does-not-exist"),
+				undefined,
+			);
 		});
 	});
 
 	// ---- Dispose --------------------------------------------------------
 
-	suite('dispose', () => {
-
-		test('methods throw after dispose', async () => {
-			db = await SessionDatabase.open(':memory:');
+	suite("dispose", () => {
+		test("methods throw after dispose", async () => {
+			db = await SessionDatabase.open(":memory:");
 			db.close();
 
-			await assert.rejects(
-				() => db!.createTurn('turn-1'),
-				/disposed/,
-			);
+			await assert.rejects(() => db!.createTurn("turn-1"), /disposed/);
 		});
 
-		test('double dispose is safe', async () => {
-			db = await SessionDatabase.open(':memory:');
+		test("double dispose is safe", async () => {
+			db = await SessionDatabase.open(":memory:");
 			await db.close();
 			await db.close(); // should not throw
 		});
@@ -471,84 +500,88 @@ suite('SessionDatabase', () => {
 
 	// ---- Lazy open ------------------------------------------------------
 
-	suite('lazy open', () => {
-
-		test('constructor does not open the database', () => {
-			db = new SessionDatabase(':memory:');
+	suite("lazy open", () => {
+		test("constructor does not open the database", () => {
+			db = new SessionDatabase(":memory:");
 			disposables.add(db);
 			// No error — the database is not opened until first use
 		});
 
-		test('first async call opens and migrates the database', async () => {
-			db = disposables.add(new SessionDatabase(':memory:'));
-			await db.createTurn('turn-1');
-			const edits = await db.getFileEdits(['nonexistent']);
+		test("first async call opens and migrates the database", async () => {
+			db = disposables.add(new SessionDatabase(":memory:"));
+			await db.createTurn("turn-1");
+			const edits = await db.getFileEdits(["nonexistent"]);
 			assert.deepStrictEqual(edits, []);
 		});
 
-		test('multiple concurrent calls share the same open promise', async () => {
-			db = disposables.add(new SessionDatabase(':memory:'));
+		test("multiple concurrent calls share the same open promise", async () => {
+			db = disposables.add(new SessionDatabase(":memory:"));
 			// Fire multiple calls concurrently — all should succeed
 			await Promise.all([
-				db.createTurn('turn-1'),
-				db.createTurn('turn-2'),
+				db.createTurn("turn-1"),
+				db.createTurn("turn-2"),
 				db.getFileEdits([]),
 			]);
 		});
 
-		test('dispose during open rejects subsequent calls', async () => {
-			db = new SessionDatabase(':memory:');
+		test("dispose during open rejects subsequent calls", async () => {
+			db = new SessionDatabase(":memory:");
 			await db.close();
-			await assert.rejects(() => db!.createTurn('turn-1'), /disposed/);
+			await assert.rejects(() => db!.createTurn("turn-1"), /disposed/);
 		});
 	});
 
 	// ---- Session metadata -----------------------------------------------
 
-	suite('session metadata', () => {
-
-		test('getMetadata returns undefined for missing key', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			assert.strictEqual(await db.getMetadata('nonexistent'), undefined);
+	suite("session metadata", () => {
+		test("getMetadata returns undefined for missing key", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			assert.strictEqual(await db.getMetadata("nonexistent"), undefined);
 		});
 
-		test('setMetadata and getMetadata round-trip', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			await db.setMetadata('customTitle', 'My Session');
-			assert.strictEqual(await db.getMetadata('customTitle'), 'My Session');
+		test("setMetadata and getMetadata round-trip", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			await db.setMetadata("customTitle", "My Session");
+			assert.strictEqual(await db.getMetadata("customTitle"), "My Session");
 		});
 
-		test('setMetadata overwrites existing value', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			await db.setMetadata('customTitle', 'First');
-			await db.setMetadata('customTitle', 'Second');
-			assert.strictEqual(await db.getMetadata('customTitle'), 'Second');
+		test("setMetadata overwrites existing value", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			await db.setMetadata("customTitle", "First");
+			await db.setMetadata("customTitle", "Second");
+			assert.strictEqual(await db.getMetadata("customTitle"), "Second");
 		});
 
-		test('metadata persists across reopen', async () => {
-			const db1 = disposables.add(await TestableSessionDatabase.open(':memory:'));
-			await db1.setMetadata('customTitle', 'Persistent Title');
+		test("metadata persists across reopen", async () => {
+			const db1 = disposables.add(
+				await TestableSessionDatabase.open(":memory:"),
+			);
+			await db1.setMetadata("customTitle", "Persistent Title");
 			const rawDb = await db1.ejectDb();
 
 			db = disposables.add(await TestableSessionDatabase.fromDb(rawDb));
-			assert.strictEqual(await db.getMetadata('customTitle'), 'Persistent Title');
+			assert.strictEqual(
+				await db.getMetadata("customTitle"),
+				"Persistent Title",
+			);
 		});
 
-		test('migration v2 creates session_metadata table', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
+		test("migration v2 creates session_metadata table", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
 			const tables = await db.getAllTables();
-			assert.ok(tables.includes('session_metadata'));
+			assert.ok(tables.includes("session_metadata"));
 		});
 	});
 
 	// ---- vacuumInto -----------------------------------------------------
 
-	suite('vacuumInto', () => {
-
+	suite("vacuumInto", () => {
 		let tmpDir: string;
 
 		setup(async () => {
-			tmpDir = await fs.mkdtemp(join(tmpdir(), 'session-db-test-' + generateUuid()));
+			tmpDir = await fs.mkdtemp(
+				join(tmpdir(), "session-db-test-" + generateUuid()),
+			);
 		});
 
 		teardown(async () => {
@@ -557,18 +590,18 @@ suite('SessionDatabase', () => {
 			await fs.rm(tmpDir, { recursive: true, force: true });
 		});
 
-		test('produces a copy with the same data', async () => {
-			db = disposables.add(await SessionDatabase.open(':memory:'));
-			await db.createTurn('turn-1');
-			await db.setTurnEventId('turn-1', 'evt-1');
-			await db.setMetadata('key', 'value');
+		test("produces a copy with the same data", async () => {
+			db = disposables.add(await SessionDatabase.open(":memory:"));
+			await db.createTurn("turn-1");
+			await db.setTurnEventId("turn-1", "evt-1");
+			await db.setMetadata("key", "value");
 
-			const targetPath = join(tmpDir, 'copy.db');
+			const targetPath = join(tmpDir, "copy.db");
 			await db.vacuumInto(targetPath);
 
 			db2 = disposables.add(await SessionDatabase.open(targetPath));
-			assert.strictEqual(await db2.getTurnEventId('turn-1'), 'evt-1');
-			assert.strictEqual(await db2.getMetadata('key'), 'value');
+			assert.strictEqual(await db2.getTurnEventId("turn-1"), "evt-1");
+			assert.strictEqual(await db2.getMetadata("key"), "value");
 		});
 	});
 });

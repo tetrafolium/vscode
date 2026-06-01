@@ -3,14 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { memoize } from '../../../../base/common/decorators.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { isMacintosh } from '../../../../base/common/platform.js';
-import { StringBuilder } from '../../../common/core/stringBuilder.js';
-import { ColorId, FontStyle, TokenMetadata } from '../../../common/encodedTokenAttributes.js';
-import type { DecorationStyleCache } from '../css/decorationStyleCache.js';
-import { ensureNonNullable } from '../gpuUtils.js';
-import { type IBoundingBox, type IGlyphRasterizer, type IRasterizedGlyph } from './raster.js';
+import { memoize } from "../../../../base/common/decorators.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { isMacintosh } from "../../../../base/common/platform.js";
+import { StringBuilder } from "../../../common/core/stringBuilder.js";
+import {
+	ColorId,
+	FontStyle,
+	TokenMetadata,
+} from "../../../common/encodedTokenAttributes.js";
+import type { DecorationStyleCache } from "../css/decorationStyleCache.js";
+import { ensureNonNullable } from "../gpuUtils.js";
+import {
+	type IBoundingBox,
+	type IGlyphRasterizer,
+	type IRasterizedGlyph,
+} from "./raster.js";
 
 let nextId = 0;
 
@@ -42,10 +50,16 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		fontBoundingBoxAscent: 0,
 		fontBoundingBoxDescent: 0,
 	};
-	private _workGlyphConfig: { chars: string | undefined; tokenMetadata: number; decorationStyleSetId: number } = { chars: undefined, tokenMetadata: 0, decorationStyleSetId: 0 };
+	private _workGlyphConfig: {
+		chars: string | undefined;
+		tokenMetadata: number;
+		decorationStyleSetId: number;
+	} = { chars: undefined, tokenMetadata: 0, decorationStyleSetId: 0 };
 
 	// TODO: Support workbench.fontAliasing correctly
-	private _antiAliasing: 'subpixel' | 'greyscale' = isMacintosh ? 'greyscale' : 'subpixel';
+	private _antiAliasing: "subpixel" | "greyscale" = isMacintosh
+		? "greyscale"
+		: "subpixel";
 
 	constructor(
 		readonly fontSize: number,
@@ -56,15 +70,20 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		super();
 
 		const devicePixelFontSize = Math.ceil(this.fontSize * devicePixelRatio);
-		this._canvas = new OffscreenCanvas(devicePixelFontSize * 3, devicePixelFontSize * 3);
-		this._ctx = ensureNonNullable(this._canvas.getContext('2d', {
-			willReadFrequently: true,
-			alpha: this._antiAliasing === 'greyscale',
-		}));
-		this._ctx.textBaseline = 'top';
-		this._ctx.fillStyle = '#FFFFFF';
+		this._canvas = new OffscreenCanvas(
+			devicePixelFontSize * 3,
+			devicePixelFontSize * 3,
+		);
+		this._ctx = ensureNonNullable(
+			this._canvas.getContext("2d", {
+				willReadFrequently: true,
+				alpha: this._antiAliasing === "greyscale",
+			}),
+		);
+		this._ctx.textBaseline = "top";
+		this._ctx.fillStyle = "#FFFFFF";
 		this._ctx.font = `${devicePixelFontSize}px ${this.fontFamily}`;
-		this._textMetrics = this._ctx.measureText('A');
+		this._textMetrics = this._ctx.measureText("A");
 	}
 
 	/**
@@ -77,7 +96,7 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		decorationStyleSetId: number,
 		colorMap: string[],
 	): Readonly<IRasterizedGlyph> {
-		if (chars === '') {
+		if (chars === "") {
 			return {
 				source: this._canvas,
 				boundingBox: { top: 0, left: 0, bottom: -1, right: -1 },
@@ -89,13 +108,22 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		// Check if the last glyph matches the config, reuse if so. This helps avoid unnecessary
 		// work when the rasterizer is called multiple times like when the glyph doesn't fit into a
 		// page.
-		if (this._workGlyphConfig.chars === chars && this._workGlyphConfig.tokenMetadata === tokenMetadata && this._workGlyphConfig.decorationStyleSetId === decorationStyleSetId) {
+		if (
+			this._workGlyphConfig.chars === chars &&
+			this._workGlyphConfig.tokenMetadata === tokenMetadata &&
+			this._workGlyphConfig.decorationStyleSetId === decorationStyleSetId
+		) {
 			return this._workGlyph;
 		}
 		this._workGlyphConfig.chars = chars;
 		this._workGlyphConfig.tokenMetadata = tokenMetadata;
 		this._workGlyphConfig.decorationStyleSetId = decorationStyleSetId;
-		return this._rasterizeGlyph(chars, tokenMetadata, decorationStyleSetId, colorMap);
+		return this._rasterizeGlyph(
+			chars,
+			tokenMetadata,
+			decorationStyleSetId,
+			colorMap,
+		);
 	}
 
 	public _rasterizeGlyph(
@@ -104,7 +132,9 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		decorationStyleSetId: number,
 		colorMap: string[],
 	): Readonly<IRasterizedGlyph> {
-		const devicePixelFontSize = Math.ceil(this.fontSize * this.devicePixelRatio);
+		const devicePixelFontSize = Math.ceil(
+			this.fontSize * this.devicePixelRatio,
+		);
 		const canvasDim = devicePixelFontSize * 3;
 		if (this._canvas.width !== canvasDim) {
 			this._canvas.width = canvasDim;
@@ -120,10 +150,11 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		const bgId = TokenMetadata.getBackground(tokenMetadata);
 		const bg = colorMap[bgId] ?? colorMap[ColorId.DefaultBackground];
 
-		const decorationStyleSet = this._decorationStyleCache.getStyleSet(decorationStyleSetId);
+		const decorationStyleSet =
+			this._decorationStyleCache.getStyleSet(decorationStyleSetId);
 
 		// When SPAA is used, the background color must be present to get the right glyph
-		if (this._antiAliasing === 'subpixel') {
+		if (this._antiAliasing === "subpixel") {
 			this._ctx.fillStyle = bg;
 			this._ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
 		} else {
@@ -133,14 +164,14 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		const fontSb = new StringBuilder(200);
 		const fontStyle = TokenMetadata.getFontStyle(tokenMetadata);
 		if (fontStyle & FontStyle.Italic) {
-			fontSb.appendString('italic ');
+			fontSb.appendString("italic ");
 		}
 		if (decorationStyleSet?.bold !== undefined) {
 			if (decorationStyleSet.bold) {
-				fontSb.appendString('bold ');
+				fontSb.appendString("bold ");
 			}
 		} else if (fontStyle & FontStyle.Bold) {
-			fontSb.appendString('bold ');
+			fontSb.appendString("bold ");
 		}
 		fontSb.appendString(`${devicePixelFontSize}px ${this.fontFamily}`);
 		this._ctx.font = fontSb.build();
@@ -153,9 +184,10 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 
 		// Apply text color
 		if (decorationStyleSet?.color !== undefined) {
-			this._ctx.fillStyle = `#${decorationStyleSet.color.toString(16).padStart(8, '0')}`;
+			this._ctx.fillStyle = `#${decorationStyleSet.color.toString(16).padStart(8, "0")}`;
 		} else {
-			this._ctx.fillStyle = colorMap[TokenMetadata.getForeground(tokenMetadata)];
+			this._ctx.fillStyle =
+				colorMap[TokenMetadata.getForeground(tokenMetadata)];
 		}
 
 		// Apply opacity
@@ -166,7 +198,7 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		// The glyph baseline is top, meaning it's drawn at the top-left of the
 		// cell. Add `TextMetrics.alphabeticBaseline` to the drawn position to
 		// get the alphabetic baseline.
-		this._ctx.textBaseline = 'top';
+		this._ctx.textBaseline = "top";
 
 		// Draw the text
 		this._ctx.fillText(chars, originX + subPixelXOffset, originY);
@@ -177,24 +209,39 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 			//       TextMetrics of lowercase letters.
 			// Position strikethrough at approximately the vertical center of
 			// lowercase letters.
-			const strikethroughY = Math.round(originY - this._textMetrics.alphabeticBaseline * 0.65);
-			const lineWidth = decorationStyleSet?.strikethroughThickness !== undefined
-				? Math.round(decorationStyleSet.strikethroughThickness * this.devicePixelRatio)
-				: Math.max(1, Math.floor(devicePixelFontSize / 10));
+			const strikethroughY = Math.round(
+				originY - this._textMetrics.alphabeticBaseline * 0.65,
+			);
+			const lineWidth =
+				decorationStyleSet?.strikethroughThickness !== undefined
+					? Math.round(
+							decorationStyleSet.strikethroughThickness * this.devicePixelRatio,
+						)
+					: Math.max(1, Math.floor(devicePixelFontSize / 10));
 			// Apply strikethrough color if specified
 			if (decorationStyleSet?.strikethroughColor !== undefined) {
-				this._ctx.fillStyle = `#${decorationStyleSet.strikethroughColor.toString(16).padStart(8, '0')}`;
+				this._ctx.fillStyle = `#${decorationStyleSet.strikethroughColor.toString(16).padStart(8, "0")}`;
 			}
 			// Intentionally do not apply the sub pixel x offset to
 			// strikethrough to ensure successive glyphs form a contiguous line.
-			this._ctx.fillRect(originX, strikethroughY - Math.floor(lineWidth / 2), Math.ceil(this._textMetrics.width), lineWidth);
+			this._ctx.fillRect(
+				originX,
+				strikethroughY - Math.floor(lineWidth / 2),
+				Math.ceil(this._textMetrics.width),
+				lineWidth,
+			);
 		}
 
 		this._ctx.restore();
 
 		// Extract the image data and clear the background color
-		const imageData = this._ctx.getImageData(0, 0, this._canvas.width, this._canvas.height);
-		if (this._antiAliasing === 'subpixel') {
+		const imageData = this._ctx.getImageData(
+			0,
+			0,
+			this._canvas.width,
+			this._canvas.height,
+		);
+		if (this._antiAliasing === "subpixel") {
 			const bgR = parseInt(bg.substring(1, 3), 16);
 			const bgG = parseInt(bg.substring(3, 5), 16);
 			const bgB = parseInt(bg.substring(5, 7), 16);
@@ -219,8 +266,10 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		this._workGlyph.source = this._canvas;
 		this._workGlyph.originOffset.x = this._workGlyph.boundingBox.left - originX;
 		this._workGlyph.originOffset.y = this._workGlyph.boundingBox.top - originY;
-		this._workGlyph.fontBoundingBoxAscent = this._textMetrics.fontBoundingBoxAscent;
-		this._workGlyph.fontBoundingBoxDescent = this._textMetrics.fontBoundingBoxDescent;
+		this._workGlyph.fontBoundingBoxAscent =
+			this._textMetrics.fontBoundingBoxAscent;
+		this._workGlyph.fontBoundingBoxDescent =
+			this._textMetrics.fontBoundingBoxDescent;
 
 		// const result2: IRasterizedGlyph = {
 		// 	source: this._canvas,
@@ -254,24 +303,27 @@ export class GlyphRasterizer extends Disposable implements IGlyphRasterizer {
 		// 	debugger;
 		// }
 
-
-
 		return this._workGlyph;
 	}
 
 	private _clearColor(imageData: ImageData, r: number, g: number, b: number) {
 		for (let offset = 0; offset < imageData.data.length; offset += 4) {
 			// Check exact match
-			if (imageData.data[offset] === r &&
+			if (
+				imageData.data[offset] === r &&
 				imageData.data[offset + 1] === g &&
-				imageData.data[offset + 2] === b) {
+				imageData.data[offset + 2] === b
+			) {
 				imageData.data[offset + 3] = 0;
 			}
 		}
 	}
 
 	// TODO: Does this even need to happen when measure text is used?
-	private _findGlyphBoundingBox(imageData: ImageData, outBoundingBox: IBoundingBox) {
+	private _findGlyphBoundingBox(
+		imageData: ImageData,
+		outBoundingBox: IBoundingBox,
+	) {
 		const height = this._canvas.height;
 		const width = this._canvas.width;
 		let found = false;

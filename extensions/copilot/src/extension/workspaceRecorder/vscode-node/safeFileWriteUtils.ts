@@ -5,11 +5,17 @@
 
 import { appendFileSync, renameSync, unlinkSync, writeFileSync } from 'fs';
 import { appendFile, rename, stat, unlink, writeFile } from 'fs/promises';
-import { readFileTextOrUndefined, tryParseJson } from '../../../util/node/jsonFile';
+import {
+	readFileTextOrUndefined,
+	tryParseJson,
+} from '../../../util/node/jsonFile';
 import { BugIndicatingError } from '../../../util/vs/base/common/errors';
 
 export class FlushableJSONFile<T> {
-	public static async loadOrCreate<T>(filePath: string, initialValue: T): Promise<FlushableJSONFile<T>> {
+	public static async loadOrCreate<T>(
+		filePath: string,
+		initialValue: T,
+	): Promise<FlushableJSONFile<T>> {
 		let data: T = initialValue;
 
 		const result = await readFileTextOrUndefined(filePath);
@@ -24,10 +30,11 @@ export class FlushableJSONFile<T> {
 	}
 
 	private _value: T;
-	public get value(): Readonly<T> { return this._value; }
+	public get value(): Readonly<T> {
+		return this._value;
+	}
 
 	private _dirty = false;
-
 
 	private constructor(
 		public readonly filePath: string,
@@ -43,7 +50,9 @@ export class FlushableJSONFile<T> {
 	}
 
 	async flushAsync(): Promise<void> {
-		if (!this._dirty) { return; }
+		if (!this._dirty) {
+			return;
+		}
 
 		const jsonStr = JSON.stringify(this._value, null, 4);
 
@@ -61,7 +70,9 @@ export class FlushableJSONFile<T> {
 	}
 
 	flushSync(): void {
-		if (!this._dirty) { return; }
+		if (!this._dirty) {
+			return;
+		}
 
 		const json = JSON.stringify(this._value, null, 4);
 
@@ -82,28 +93,32 @@ export class FlushableSafeJSONLFile<T> {
 	private _lock = false;
 	private readonly _newEntries: string[] = [];
 
-	constructor(
-		public readonly filePath: string
-	) { }
+	constructor(public readonly filePath: string) {}
 
 	appendEntry(data: T): void {
 		this._newEntries.push(JSON.stringify(data));
 	}
 
 	private _getTextAndClear(): string {
-		const text = this._newEntries.map(l => '\n' + l).join('');
+		const text = this._newEntries.map((l) => '\n' + l).join('');
 		this._newEntries.length = 0;
 		return text;
 	}
 
 	async flushAsync(): Promise<void> {
-		if (this._newEntries.length === 0) { return; }
+		if (this._newEntries.length === 0) {
+			return;
+		}
 
-		if (this._lock) { throw new BugIndicatingError('Locked!'); }
+		if (this._lock) {
+			throw new BugIndicatingError('Locked!');
+		}
 		this._lock = true;
 		try {
 			const text = this._getTextAndClear();
-			if (text === '') { return; }
+			if (text === '') {
+				return;
+			}
 
 			await appendFile(this.filePath, text, { encoding: 'utf8' });
 		} finally {
@@ -112,17 +127,25 @@ export class FlushableSafeJSONLFile<T> {
 	}
 
 	flushSync(): void {
-		if (this._newEntries.length === 0) { return; }
+		if (this._newEntries.length === 0) {
+			return;
+		}
 
-		if (this._lock) { throw new BugIndicatingError('Locked!'); }
+		if (this._lock) {
+			throw new BugIndicatingError('Locked!');
+		}
 
 		const text = this._getTextAndClear();
-		if (text === '') { return; }
+		if (text === '') {
+			return;
+		}
 		appendFileSync(this.filePath, text, { encoding: 'utf8' });
 	}
 }
 
-export async function getFileSize(filePath: string): Promise<number | undefined> {
+export async function getFileSize(
+	filePath: string,
+): Promise<number | undefined> {
 	try {
 		const stats = await stat(filePath);
 		return stats.size;

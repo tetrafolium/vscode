@@ -17,11 +17,18 @@ import { Value } from '@sinclair/typebox/value';
  * expect(assertType(mySchema, { x: 123 })).toEqual({ x: 123 });
  * ```
  **/
-export const assertShape = <S extends TSchema>(schema: S, payload: unknown): Static<S> => {
-	if (Value.Check(schema, payload)) { return payload; }
+export const assertShape = <S extends TSchema>(
+	schema: S,
+	payload: unknown,
+): Static<S> => {
+	if (Value.Check(schema, payload)) {
+		return payload;
+	}
 
-	const error = `Typebox schema validation failed:\n${[...Value.Errors(schema, payload)]
-		.map(i => `${i.path} ${i.message}`)
+	const error = `Typebox schema validation failed:\n${[
+		...Value.Errors(schema, payload),
+	]
+		.map((i) => `${i.path} ${i.message}`)
 		.join('\n')}`;
 
 	throw new Error(error);

@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { SDKSessionInfo, SessionMessage } from '@anthropic-ai/claude-agent-sdk';
+import type {
+	SDKSessionInfo,
+	SessionMessage,
+} from '@anthropic-ai/claude-agent-sdk';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IFileSystemService } from '../../../../../../platform/filesystem/common/fileSystemService';
 import { MockFileSystemService } from '../../../../../../platform/filesystem/node/test/mockFileSystemService';
@@ -11,10 +14,16 @@ import { TestingServiceCollection } from '../../../../../../platform/test/node/s
 import { TestWorkspaceService } from '../../../../../../platform/test/node/testWorkspaceService';
 import { IWorkspaceService } from '../../../../../../platform/workspace/common/workspaceService';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../util/common/test/testUtils';
-import { CancellationToken, CancellationTokenSource } from '../../../../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../../../util/vs/base/common/cancellation';
 import { URI } from '../../../../../../util/vs/base/common/uri';
 import { IInstantiationService } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
-import { IFolderRepositoryManager, FolderRepositoryMRUEntry } from '../../../../../chatSessions/common/folderRepositoryManager';
+import {
+	IFolderRepositoryManager,
+	FolderRepositoryMRUEntry,
+} from '../../../../../chatSessions/common/folderRepositoryManager';
 import { IAgentSessionsWorkspace } from '../../../../../chatSessions/common/agentSessionsWorkspace';
 import { createExtensionUnitTestingServices } from '../../../../../test/node/services';
 import { IClaudeCodeSdkService } from '../../claudeCodeSdkService';
@@ -23,7 +32,9 @@ import { ClaudeCodeSessionService } from '../claudeCodeSessionService';
 
 // #region Test Data Factories
 
-function createSdkSessionInfo(overrides?: Partial<SDKSessionInfo>): SDKSessionInfo {
+function createSdkSessionInfo(
+	overrides?: Partial<SDKSessionInfo>,
+): SDKSessionInfo {
 	return {
 		sessionId: 'test-session-id',
 		summary: 'Test session summary',
@@ -32,7 +43,9 @@ function createSdkSessionInfo(overrides?: Partial<SDKSessionInfo>): SDKSessionIn
 	};
 }
 
-function createUserSessionMessage(overrides?: Partial<SessionMessage>): SessionMessage {
+function createUserSessionMessage(
+	overrides?: Partial<SessionMessage>,
+): SessionMessage {
 	return {
 		type: 'user',
 		uuid: 'user-uuid-1',
@@ -43,7 +56,9 @@ function createUserSessionMessage(overrides?: Partial<SessionMessage>): SessionM
 	};
 }
 
-function createAssistantSessionMessage(overrides?: Partial<SessionMessage>): SessionMessage {
+function createAssistantSessionMessage(
+	overrides?: Partial<SessionMessage>,
+): SessionMessage {
 	return {
 		type: 'assistant',
 		uuid: 'assistant-uuid-1',
@@ -69,13 +84,68 @@ class MockFolderRepositoryManager implements IFolderRepositoryManager {
 		this._mruEntries = entries;
 	}
 
-	setNewSessionFolder(): void { }
-	deleteNewSessionFolder(): void { }
-	async getFolderRepository(): Promise<{ folder: undefined; repository: undefined; worktree: undefined; worktreeProperties: undefined; trusted: undefined }> { return { folder: undefined, repository: undefined, worktree: undefined, worktreeProperties: undefined, trusted: undefined }; }
-	async initializeFolderRepository(): Promise<{ folder: undefined; repository: undefined; worktree: undefined; worktreeProperties: undefined; trusted: undefined }> { return { folder: undefined, repository: undefined, worktree: undefined, worktreeProperties: undefined, trusted: undefined }; }
-	async initializeMultiRootFolderRepositories(): Promise<{ primary: { folder: undefined; repository: undefined; worktree: undefined; worktreeProperties: undefined; trusted: undefined }; additional: never[] }> { return { primary: { folder: undefined, repository: undefined, worktree: undefined, worktreeProperties: undefined, trusted: undefined }, additional: [] }; }
-	async getRepositoryInfo(): Promise<{ repository: undefined; headBranchName: undefined }> { return { repository: undefined, headBranchName: undefined }; }
-	async getFolderMRU(): Promise<FolderRepositoryMRUEntry[]> { return this._mruEntries; }
+	setNewSessionFolder(): void {}
+	deleteNewSessionFolder(): void {}
+	async getFolderRepository(): Promise<{
+		folder: undefined;
+		repository: undefined;
+		worktree: undefined;
+		worktreeProperties: undefined;
+		trusted: undefined;
+	}> {
+		return {
+			folder: undefined,
+			repository: undefined,
+			worktree: undefined,
+			worktreeProperties: undefined,
+			trusted: undefined,
+		};
+	}
+	async initializeFolderRepository(): Promise<{
+		folder: undefined;
+		repository: undefined;
+		worktree: undefined;
+		worktreeProperties: undefined;
+		trusted: undefined;
+	}> {
+		return {
+			folder: undefined,
+			repository: undefined,
+			worktree: undefined,
+			worktreeProperties: undefined,
+			trusted: undefined,
+		};
+	}
+	async initializeMultiRootFolderRepositories(): Promise<{
+		primary: {
+			folder: undefined;
+			repository: undefined;
+			worktree: undefined;
+			worktreeProperties: undefined;
+			trusted: undefined;
+		};
+		additional: never[];
+	}> {
+		return {
+			primary: {
+				folder: undefined,
+				repository: undefined,
+				worktree: undefined,
+				worktreeProperties: undefined,
+				trusted: undefined,
+			},
+			additional: [],
+		};
+	}
+	async getRepositoryInfo(): Promise<{
+		repository: undefined;
+		headBranchName: undefined;
+	}> {
+		return { repository: undefined, headBranchName: undefined };
+	}
+	async getFolderMRU(): Promise<FolderRepositoryMRUEntry[]> {
+		return this._mruEntries;
+	}
 }
 
 // #endregion
@@ -94,14 +164,24 @@ describe('ClaudeCodeSessionService', () => {
 	beforeEach(() => {
 		mockFs = new MockFileSystemService();
 		mockSdkService = new MockClaudeCodeSdkService();
-		testingServiceCollection = store.add(createExtensionUnitTestingServices(store));
+		testingServiceCollection = store.add(
+			createExtensionUnitTestingServices(store),
+		);
 		testingServiceCollection.set(IFileSystemService, mockFs);
 		testingServiceCollection.set(IClaudeCodeSdkService, mockSdkService);
 
-		const workspaceService = store.add(new TestWorkspaceService([folderUri]));
+		const workspaceService = store.add(
+			new TestWorkspaceService([folderUri]),
+		);
 		testingServiceCollection.set(IWorkspaceService, workspaceService);
-		testingServiceCollection.define(IFolderRepositoryManager, new MockFolderRepositoryManager());
-		testingServiceCollection.set(IAgentSessionsWorkspace, { _serviceBrand: undefined, isAgentSessionsWorkspace: false });
+		testingServiceCollection.define(
+			IFolderRepositoryManager,
+			new MockFolderRepositoryManager(),
+		);
+		testingServiceCollection.set(IAgentSessionsWorkspace, {
+			_serviceBrand: undefined,
+			isAgentSessionsWorkspace: false,
+		});
 
 		const accessor = testingServiceCollection.createTestingAccessor();
 		mockFs = accessor.get(IFileSystemService) as MockFileSystemService;
@@ -114,11 +194,19 @@ describe('ClaudeCodeSessionService', () => {
 	describe('getAllSessions', () => {
 		it('returns sessions from SDK for workspace folder', async () => {
 			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId: 'session-1', summary: 'First session' }),
-				createSdkSessionInfo({ sessionId: 'session-2', summary: 'Second session' }),
+				createSdkSessionInfo({
+					sessionId: 'session-1',
+					summary: 'First session',
+				}),
+				createSdkSessionInfo({
+					sessionId: 'session-2',
+					summary: 'Second session',
+				}),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions).toHaveLength(2);
 			expect(sessions[0].id).toBe('session-1');
@@ -130,7 +218,9 @@ describe('ClaudeCodeSessionService', () => {
 		it('returns empty array when SDK returns empty', async () => {
 			mockSdkService.mockSessions = [];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions).toHaveLength(0);
 		});
@@ -144,7 +234,9 @@ describe('ClaudeCodeSessionService', () => {
 				}),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions).toHaveLength(1);
 			expect(sessions[0].created).toBe(1699000000000);
@@ -160,7 +252,9 @@ describe('ClaudeCodeSessionService', () => {
 				}),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions[0].created).toBe(1700000000000);
 		});
@@ -173,7 +267,9 @@ describe('ClaudeCodeSessionService', () => {
 				}),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions[0].label).toBe('My Custom Title');
 		});
@@ -181,11 +277,14 @@ describe('ClaudeCodeSessionService', () => {
 		it('strips system-reminders from summary labels', async () => {
 			mockSdkService.mockSessions = [
 				createSdkSessionInfo({
-					summary: '<system-reminder>This should be removed</system-reminder>Actual summary',
+					summary:
+						'<system-reminder>This should be removed</system-reminder>Actual summary',
 				}),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions[0].label).toBe('Actual summary');
 		});
@@ -194,11 +293,14 @@ describe('ClaudeCodeSessionService', () => {
 			mockSdkService.mockSessions = [
 				createSdkSessionInfo({
 					summary: '',
-					firstPrompt: '<system-reminder>Hidden context</system-reminder>Fix the bug',
+					firstPrompt:
+						'<system-reminder>Hidden context</system-reminder>Fix the bug',
 				}),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions[0].label).toBe('Fix the bug');
 		});
@@ -211,7 +313,9 @@ describe('ClaudeCodeSessionService', () => {
 				}),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions[0].label).toBe('Add dark mode toggle');
 		});
@@ -224,7 +328,9 @@ describe('ClaudeCodeSessionService', () => {
 				}),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions[0].label).toBe('Claude Session');
 		});
@@ -235,7 +341,9 @@ describe('ClaudeCodeSessionService', () => {
 				createSdkSessionInfo({ summary: longSummary }),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions[0].label.length).toBeLessThanOrEqual(51); // 50 + ellipsis char
 			expect(sessions[0].label).toMatch(/^A{50}\u2026$/);
@@ -246,7 +354,9 @@ describe('ClaudeCodeSessionService', () => {
 				createSdkSessionInfo({ sessionId: 'with-folder' }),
 			];
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions[0].folderName).toBe('project');
 		});
@@ -266,9 +376,13 @@ describe('ClaudeCodeSessionService', () => {
 
 		it('handles SDK errors gracefully', async () => {
 			// Override listSessions to throw
-			mockSdkService.listSessions = async () => { throw new Error('SDK error'); };
+			mockSdkService.listSessions = async () => {
+				throw new Error('SDK error');
+			};
 
-			const sessions = await service.getAllSessions(CancellationToken.None);
+			const sessions = await service.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions).toHaveLength(0);
 		});
@@ -282,20 +396,40 @@ describe('ClaudeCodeSessionService', () => {
 				const sc = store.add(createExtensionUnitTestingServices(store));
 				sc.set(IFileSystemService, new MockFileSystemService());
 				sc.set(IClaudeCodeSdkService, agentSessionsSdkService);
-				sc.set(IWorkspaceService, store.add(new TestWorkspaceService([])));
-				sc.define(IFolderRepositoryManager, new MockFolderRepositoryManager());
-				sc.set(IAgentSessionsWorkspace, { _serviceBrand: undefined, isAgentSessionsWorkspace: true });
+				sc.set(
+					IWorkspaceService,
+					store.add(new TestWorkspaceService([])),
+				);
+				sc.define(
+					IFolderRepositoryManager,
+					new MockFolderRepositoryManager(),
+				);
+				sc.set(IAgentSessionsWorkspace, {
+					_serviceBrand: undefined,
+					isAgentSessionsWorkspace: true,
+				});
 
-				agentSessionsService = sc.createTestingAccessor().get(IInstantiationService).createInstance(ClaudeCodeSessionService);
+				agentSessionsService = sc
+					.createTestingAccessor()
+					.get(IInstantiationService)
+					.createInstance(ClaudeCodeSessionService);
 			});
 
 			it('lists all sessions without a dir argument', async () => {
 				agentSessionsSdkService.mockSessions = [
-					createSdkSessionInfo({ sessionId: 'global-1', summary: 'Global session' }),
-					createSdkSessionInfo({ sessionId: 'global-2', summary: 'Another session' }),
+					createSdkSessionInfo({
+						sessionId: 'global-1',
+						summary: 'Global session',
+					}),
+					createSdkSessionInfo({
+						sessionId: 'global-2',
+						summary: 'Another session',
+					}),
 				];
 
-				const sessions = await agentSessionsService.getAllSessions(CancellationToken.None);
+				const sessions = await agentSessionsService.getAllSessions(
+					CancellationToken.None,
+				);
 
 				expect(sessions).toHaveLength(2);
 				expect(sessions[0].id).toBe('global-1');
@@ -303,9 +437,13 @@ describe('ClaudeCodeSessionService', () => {
 			});
 
 			it('returns empty array when SDK throws', async () => {
-				agentSessionsSdkService.listSessions = async () => { throw new Error('SDK failure'); };
+				agentSessionsSdkService.listSessions = async () => {
+					throw new Error('SDK failure');
+				};
 
-				const sessions = await agentSessionsService.getAllSessions(CancellationToken.None);
+				const sessions = await agentSessionsService.getAllSessions(
+					CancellationToken.None,
+				);
 
 				expect(sessions).toHaveLength(0);
 			});
@@ -315,7 +453,9 @@ describe('ClaudeCodeSessionService', () => {
 					createSdkSessionInfo({ sessionId: 'no-folder' }),
 				];
 
-				const sessions = await agentSessionsService.getAllSessions(CancellationToken.None);
+				const sessions = await agentSessionsService.getAllSessions(
+					CancellationToken.None,
+				);
 
 				expect(sessions[0].folderName).toBeUndefined();
 			});
@@ -323,15 +463,30 @@ describe('ClaudeCodeSessionService', () => {
 			it('getSession loads session without dir argument', async () => {
 				const sessionId = 'agent-workspace-session';
 				agentSessionsSdkService.mockSessions = [
-					createSdkSessionInfo({ sessionId, summary: 'Agent workspace session' }),
+					createSdkSessionInfo({
+						sessionId,
+						summary: 'Agent workspace session',
+					}),
 				];
 				agentSessionsSdkService.mockSessionMessages = [
-					createUserSessionMessage({ uuid: 'u1', session_id: sessionId }),
-					createAssistantSessionMessage({ uuid: 'a1', session_id: sessionId }),
+					createUserSessionMessage({
+						uuid: 'u1',
+						session_id: sessionId,
+					}),
+					createAssistantSessionMessage({
+						uuid: 'a1',
+						session_id: sessionId,
+					}),
 				];
 
-				const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-				const session = await agentSessionsService.getSession(resource, CancellationToken.None);
+				const resource = URI.from({
+					scheme: 'claude-code',
+					path: '/' + sessionId,
+				});
+				const session = await agentSessionsService.getSession(
+					resource,
+					CancellationToken.None,
+				);
 
 				expect(session).toBeDefined();
 				expect(session?.id).toBe(sessionId);
@@ -342,17 +497,31 @@ describe('ClaudeCodeSessionService', () => {
 			it('getSession returns undefined when session info is not found', async () => {
 				agentSessionsSdkService.mockSessions = [];
 
-				const resource = URI.from({ scheme: 'claude-code', path: '/non-existent' });
-				const session = await agentSessionsService.getSession(resource, CancellationToken.None);
+				const resource = URI.from({
+					scheme: 'claude-code',
+					path: '/non-existent',
+				});
+				const session = await agentSessionsService.getSession(
+					resource,
+					CancellationToken.None,
+				);
 
 				expect(session).toBeUndefined();
 			});
 
 			it('getSession returns undefined when SDK throws', async () => {
-				agentSessionsSdkService.getSessionInfo = async () => { throw new Error('SDK failure'); };
+				agentSessionsSdkService.getSessionInfo = async () => {
+					throw new Error('SDK failure');
+				};
 
-				const resource = URI.from({ scheme: 'claude-code', path: '/broken-session' });
-				const session = await agentSessionsService.getSession(resource, CancellationToken.None);
+				const resource = URI.from({
+					scheme: 'claude-code',
+					path: '/broken-session',
+				});
+				const session = await agentSessionsService.getSession(
+					resource,
+					CancellationToken.None,
+				);
 
 				expect(session).toBeUndefined();
 			});
@@ -363,15 +532,27 @@ describe('ClaudeCodeSessionService', () => {
 					createSdkSessionInfo({ sessionId }),
 				];
 				agentSessionsSdkService.mockSessionMessages = [
-					createUserSessionMessage({ uuid: 'u1', session_id: sessionId }),
+					createUserSessionMessage({
+						uuid: 'u1',
+						session_id: sessionId,
+					}),
 				];
 				agentSessionsSdkService.mockSubagentIds = ['sub-1'];
 				agentSessionsSdkService.mockSubagentMessages.set('sub-1', [
-					createAssistantSessionMessage({ uuid: 'sa1', session_id: 'sub-session' }),
+					createAssistantSessionMessage({
+						uuid: 'sa1',
+						session_id: 'sub-session',
+					}),
 				]);
 
-				const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-				const session = await agentSessionsService.getSession(resource, CancellationToken.None);
+				const resource = URI.from({
+					scheme: 'claude-code',
+					path: '/' + sessionId,
+				});
+				const session = await agentSessionsService.getSession(
+					resource,
+					CancellationToken.None,
+				);
 
 				expect(session).toBeDefined();
 				expect(session?.subagents).toHaveLength(1);
@@ -392,11 +573,20 @@ describe('ClaudeCodeSessionService', () => {
 			];
 			mockSdkService.mockSessionMessages = [
 				createUserSessionMessage({ uuid: 'u1', session_id: sessionId }),
-				createAssistantSessionMessage({ uuid: 'a1', session_id: sessionId }),
+				createAssistantSessionMessage({
+					uuid: 'a1',
+					session_id: sessionId,
+				}),
 			];
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(resource, CancellationToken.None);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				resource,
+				CancellationToken.None,
+			);
 
 			expect(session).toBeDefined();
 			expect(session?.id).toBe(sessionId);
@@ -407,17 +597,21 @@ describe('ClaudeCodeSessionService', () => {
 		it('returns undefined when session info is not found', async () => {
 			mockSdkService.mockSessions = [];
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/non-existent' });
-			const session = await service.getSession(resource, CancellationToken.None);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/non-existent',
+			});
+			const session = await service.getSession(
+				resource,
+				CancellationToken.None,
+			);
 
 			expect(session).toBeUndefined();
 		});
 
 		it('converts user messages correctly', async () => {
 			const sessionId = 'user-msg-session';
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [
 				createUserSessionMessage({
 					uuid: 'user-1',
@@ -426,8 +620,14 @@ describe('ClaudeCodeSessionService', () => {
 				}),
 			];
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(resource, CancellationToken.None);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				resource,
+				CancellationToken.None,
+			);
 
 			expect(session?.messages).toHaveLength(1);
 			expect(session?.messages[0].type).toBe('user');
@@ -436,22 +636,28 @@ describe('ClaudeCodeSessionService', () => {
 
 		it('converts assistant messages correctly', async () => {
 			const sessionId = 'assistant-msg-session';
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [
 				createAssistantSessionMessage({
 					uuid: 'asst-1',
 					session_id: sessionId,
 					message: {
 						role: 'assistant',
-						content: [{ type: 'text', text: 'Hello from assistant' }],
+						content: [
+							{ type: 'text', text: 'Hello from assistant' },
+						],
 					},
 				}),
 			];
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(resource, CancellationToken.None);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				resource,
+				CancellationToken.None,
+			);
 
 			expect(session?.messages).toHaveLength(1);
 			expect(session?.messages[0].type).toBe('assistant');
@@ -460,35 +666,61 @@ describe('ClaudeCodeSessionService', () => {
 
 		it('handles multi-turn conversations', async () => {
 			const sessionId = 'multi-turn';
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [
 				createUserSessionMessage({ uuid: 'u1', session_id: sessionId }),
-				createAssistantSessionMessage({ uuid: 'a1', session_id: sessionId }),
+				createAssistantSessionMessage({
+					uuid: 'a1',
+					session_id: sessionId,
+				}),
 				createUserSessionMessage({ uuid: 'u2', session_id: sessionId }),
-				createAssistantSessionMessage({ uuid: 'a2', session_id: sessionId }),
+				createAssistantSessionMessage({
+					uuid: 'a2',
+					session_id: sessionId,
+				}),
 			];
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(resource, CancellationToken.None);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				resource,
+				CancellationToken.None,
+			);
 
 			expect(session?.messages).toHaveLength(4);
 		});
 
 		it('skips messages that fail validation', async () => {
 			const sessionId = 'validation-session';
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [
-				createUserSessionMessage({ uuid: 'valid-1', session_id: sessionId }),
-				{ type: 'system', uuid: 'invalid-1', session_id: sessionId, message: 'not a valid message', parent_tool_use_id: null } as unknown as SessionMessage,
-				createAssistantSessionMessage({ uuid: 'valid-2', session_id: sessionId }),
+				createUserSessionMessage({
+					uuid: 'valid-1',
+					session_id: sessionId,
+				}),
+				{
+					type: 'system',
+					uuid: 'invalid-1',
+					session_id: sessionId,
+					message: 'not a valid message',
+					parent_tool_use_id: null,
+				} as unknown as SessionMessage,
+				createAssistantSessionMessage({
+					uuid: 'valid-2',
+					session_id: sessionId,
+				}),
 			];
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(resource, CancellationToken.None);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				resource,
+				CancellationToken.None,
+			);
 
 			expect(session?.messages).toHaveLength(2);
 			expect(session!.messages[0].uuid).toBe('valid-1');
@@ -496,23 +728,35 @@ describe('ClaudeCodeSessionService', () => {
 		});
 
 		it('handles SDK errors in getSession gracefully', async () => {
-			mockSdkService.getSessionInfo = async () => { throw new Error('SDK read failed'); };
+			mockSdkService.getSessionInfo = async () => {
+				throw new Error('SDK read failed');
+			};
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/error-session' });
-			const session = await service.getSession(resource, CancellationToken.None);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/error-session',
+			});
+			const session = await service.getSession(
+				resource,
+				CancellationToken.None,
+			);
 
 			expect(session).toBeUndefined();
 		});
 
 		it('returns empty messages when SDK returns no messages', async () => {
 			const sessionId = 'empty-messages';
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [];
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(resource, CancellationToken.None);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				resource,
+				CancellationToken.None,
+			);
 
 			expect(session).toBeDefined();
 			expect(session?.messages).toHaveLength(0);
@@ -520,22 +764,24 @@ describe('ClaudeCodeSessionService', () => {
 
 		it('sets folderName from the workspace folder basename', async () => {
 			const sessionId = 'folder-session';
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [];
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(resource, CancellationToken.None);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				resource,
+				CancellationToken.None,
+			);
 
 			expect(session?.folderName).toBe('project');
 		});
 
 		it('respects cancellation during getSession', async () => {
 			const sessionId = 'cancel-session';
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [
 				createUserSessionMessage({ session_id: sessionId }),
 			];
@@ -543,14 +789,21 @@ describe('ClaudeCodeSessionService', () => {
 			const tokenSource = new CancellationTokenSource();
 
 			// Override getSessionMessages to cancel the token before returning
-			const originalGetMessages = mockSdkService.getSessionMessages.bind(mockSdkService);
+			const originalGetMessages =
+				mockSdkService.getSessionMessages.bind(mockSdkService);
 			mockSdkService.getSessionMessages = async (id, dir) => {
 				tokenSource.cancel();
 				return originalGetMessages(id, dir);
 			};
 
-			const resource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(resource, tokenSource.token);
+			const resource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				resource,
+				tokenSource.token,
+			);
 
 			expect(session).toBeUndefined();
 		});
@@ -569,30 +822,61 @@ describe('ClaudeCodeSessionService', () => {
 		beforeEach(() => {
 			noWorkspaceSdkService = new MockClaudeCodeSdkService();
 			noWorkspaceFolderManager = new MockFolderRepositoryManager();
-			const noWorkspaceTestingServiceCollection = store.add(createExtensionUnitTestingServices(store));
-			noWorkspaceTestingServiceCollection.set(IFileSystemService, new MockFileSystemService());
-			noWorkspaceTestingServiceCollection.set(IClaudeCodeSdkService, noWorkspaceSdkService);
+			const noWorkspaceTestingServiceCollection = store.add(
+				createExtensionUnitTestingServices(store),
+			);
+			noWorkspaceTestingServiceCollection.set(
+				IFileSystemService,
+				new MockFileSystemService(),
+			);
+			noWorkspaceTestingServiceCollection.set(
+				IClaudeCodeSdkService,
+				noWorkspaceSdkService,
+			);
 
-			const emptyWorkspaceService = store.add(new TestWorkspaceService([]));
-			noWorkspaceTestingServiceCollection.set(IWorkspaceService, emptyWorkspaceService);
-			noWorkspaceTestingServiceCollection.define(IFolderRepositoryManager, noWorkspaceFolderManager);
-			noWorkspaceTestingServiceCollection.set(IAgentSessionsWorkspace, { _serviceBrand: undefined, isAgentSessionsWorkspace: false });
+			const emptyWorkspaceService = store.add(
+				new TestWorkspaceService([]),
+			);
+			noWorkspaceTestingServiceCollection.set(
+				IWorkspaceService,
+				emptyWorkspaceService,
+			);
+			noWorkspaceTestingServiceCollection.define(
+				IFolderRepositoryManager,
+				noWorkspaceFolderManager,
+			);
+			noWorkspaceTestingServiceCollection.set(IAgentSessionsWorkspace, {
+				_serviceBrand: undefined,
+				isAgentSessionsWorkspace: false,
+			});
 
 			noWorkspaceFolderManager.setMRUEntries([
-				{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() },
+				{
+					folder: mruFolder,
+					repository: undefined,
+					lastAccessed: Date.now(),
+				},
 			]);
 
-			const accessor = noWorkspaceTestingServiceCollection.createTestingAccessor();
+			const accessor =
+				noWorkspaceTestingServiceCollection.createTestingAccessor();
 			const instaService = accessor.get(IInstantiationService);
-			noWorkspaceService = instaService.createInstance(ClaudeCodeSessionService);
+			noWorkspaceService = instaService.createInstance(
+				ClaudeCodeSessionService,
+			);
 		});
 
 		it('loads sessions from MRU folder directories', async () => {
 			noWorkspaceSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId: 'mru-session', summary: 'MRU session' }),
+				createSdkSessionInfo({
+					sessionId: 'mru-session',
+					summary: 'MRU session',
+				}),
 			];
 
-			const sessions = await noWorkspaceService.getAllSessions(CancellationToken.None);
+			const sessions = await noWorkspaceService.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions).toHaveLength(1);
 			expect(sessions[0].id).toBe('mru-session');
@@ -601,17 +885,38 @@ describe('ClaudeCodeSessionService', () => {
 
 		it('returns empty array when no MRU entries exist', async () => {
 			noWorkspaceFolderManager.setMRUEntries([]);
-			const noMruServiceCollection = store.add(createExtensionUnitTestingServices(store));
-			noMruServiceCollection.set(IFileSystemService, new MockFileSystemService());
-			noMruServiceCollection.set(IClaudeCodeSdkService, new MockClaudeCodeSdkService());
-			noMruServiceCollection.set(IWorkspaceService, store.add(new TestWorkspaceService([])));
-			noMruServiceCollection.define(IFolderRepositoryManager, noWorkspaceFolderManager);
-			noMruServiceCollection.set(IAgentSessionsWorkspace, { _serviceBrand: undefined, isAgentSessionsWorkspace: false });
+			const noMruServiceCollection = store.add(
+				createExtensionUnitTestingServices(store),
+			);
+			noMruServiceCollection.set(
+				IFileSystemService,
+				new MockFileSystemService(),
+			);
+			noMruServiceCollection.set(
+				IClaudeCodeSdkService,
+				new MockClaudeCodeSdkService(),
+			);
+			noMruServiceCollection.set(
+				IWorkspaceService,
+				store.add(new TestWorkspaceService([])),
+			);
+			noMruServiceCollection.define(
+				IFolderRepositoryManager,
+				noWorkspaceFolderManager,
+			);
+			noMruServiceCollection.set(IAgentSessionsWorkspace, {
+				_serviceBrand: undefined,
+				isAgentSessionsWorkspace: false,
+			});
 
 			const accessor = noMruServiceCollection.createTestingAccessor();
-			const noMruService = accessor.get(IInstantiationService).createInstance(ClaudeCodeSessionService);
+			const noMruService = accessor
+				.get(IInstantiationService)
+				.createInstance(ClaudeCodeSessionService);
 
-			const sessions = await noMruService.getAllSessions(CancellationToken.None);
+			const sessions = await noMruService.getAllSessions(
+				CancellationToken.None,
+			);
 			expect(sessions).toHaveLength(0);
 		});
 
@@ -619,28 +924,63 @@ describe('ClaudeCodeSessionService', () => {
 			const mruFolder2 = URI.file('/another/project');
 
 			noWorkspaceFolderManager.setMRUEntries([
-				{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() },
-				{ folder: mruFolder2, repository: undefined, lastAccessed: Date.now() - 1000 },
+				{
+					folder: mruFolder,
+					repository: undefined,
+					lastAccessed: Date.now(),
+				},
+				{
+					folder: mruFolder2,
+					repository: undefined,
+					lastAccessed: Date.now() - 1000,
+				},
 			]);
 
-			const multiMruServiceCollection = store.add(createExtensionUnitTestingServices(store));
+			const multiMruServiceCollection = store.add(
+				createExtensionUnitTestingServices(store),
+			);
 			const multiSdkService = new MockClaudeCodeSdkService();
 			multiSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId: 'mru-1', summary: 'From MRU 1' }),
-				createSdkSessionInfo({ sessionId: 'mru-2', summary: 'From MRU 2' }),
+				createSdkSessionInfo({
+					sessionId: 'mru-1',
+					summary: 'From MRU 1',
+				}),
+				createSdkSessionInfo({
+					sessionId: 'mru-2',
+					summary: 'From MRU 2',
+				}),
 			];
-			multiMruServiceCollection.set(IFileSystemService, new MockFileSystemService());
-			multiMruServiceCollection.set(IClaudeCodeSdkService, multiSdkService);
-			multiMruServiceCollection.set(IWorkspaceService, store.add(new TestWorkspaceService([])));
-			multiMruServiceCollection.define(IFolderRepositoryManager, noWorkspaceFolderManager);
-			multiMruServiceCollection.set(IAgentSessionsWorkspace, { _serviceBrand: undefined, isAgentSessionsWorkspace: false });
+			multiMruServiceCollection.set(
+				IFileSystemService,
+				new MockFileSystemService(),
+			);
+			multiMruServiceCollection.set(
+				IClaudeCodeSdkService,
+				multiSdkService,
+			);
+			multiMruServiceCollection.set(
+				IWorkspaceService,
+				store.add(new TestWorkspaceService([])),
+			);
+			multiMruServiceCollection.define(
+				IFolderRepositoryManager,
+				noWorkspaceFolderManager,
+			);
+			multiMruServiceCollection.set(IAgentSessionsWorkspace, {
+				_serviceBrand: undefined,
+				isAgentSessionsWorkspace: false,
+			});
 
 			const accessor = multiMruServiceCollection.createTestingAccessor();
-			const multiMruService = accessor.get(IInstantiationService).createInstance(ClaudeCodeSessionService);
-			const sessions = await multiMruService.getAllSessions(CancellationToken.None);
+			const multiMruService = accessor
+				.get(IInstantiationService)
+				.createInstance(ClaudeCodeSessionService);
+			const sessions = await multiMruService.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions).toHaveLength(4); // 2 sessions returned per folder (listSessions called for each)
-			const ids = sessions.map(s => s.id);
+			const ids = sessions.map((s) => s.id);
 			expect(ids).toContain('mru-1');
 			expect(ids).toContain('mru-2');
 		});
@@ -654,26 +994,53 @@ describe('ClaudeCodeSessionService', () => {
 
 		beforeEach(() => {
 			multiRootSdkService = new MockClaudeCodeSdkService();
-			const multiRootTestingServiceCollection = store.add(createExtensionUnitTestingServices(store));
-			multiRootTestingServiceCollection.set(IFileSystemService, new MockFileSystemService());
-			multiRootTestingServiceCollection.set(IClaudeCodeSdkService, multiRootSdkService);
+			const multiRootTestingServiceCollection = store.add(
+				createExtensionUnitTestingServices(store),
+			);
+			multiRootTestingServiceCollection.set(
+				IFileSystemService,
+				new MockFileSystemService(),
+			);
+			multiRootTestingServiceCollection.set(
+				IClaudeCodeSdkService,
+				multiRootSdkService,
+			);
 
-			const multiRootWorkspaceService = store.add(new TestWorkspaceService([folder1, folder2]));
-			multiRootTestingServiceCollection.set(IWorkspaceService, multiRootWorkspaceService);
-			multiRootTestingServiceCollection.define(IFolderRepositoryManager, new MockFolderRepositoryManager());
-			multiRootTestingServiceCollection.set(IAgentSessionsWorkspace, { _serviceBrand: undefined, isAgentSessionsWorkspace: false });
+			const multiRootWorkspaceService = store.add(
+				new TestWorkspaceService([folder1, folder2]),
+			);
+			multiRootTestingServiceCollection.set(
+				IWorkspaceService,
+				multiRootWorkspaceService,
+			);
+			multiRootTestingServiceCollection.define(
+				IFolderRepositoryManager,
+				new MockFolderRepositoryManager(),
+			);
+			multiRootTestingServiceCollection.set(IAgentSessionsWorkspace, {
+				_serviceBrand: undefined,
+				isAgentSessionsWorkspace: false,
+			});
 
-			const accessor = multiRootTestingServiceCollection.createTestingAccessor();
+			const accessor =
+				multiRootTestingServiceCollection.createTestingAccessor();
 			const instaService = accessor.get(IInstantiationService);
-			multiRootService = instaService.createInstance(ClaudeCodeSessionService);
+			multiRootService = instaService.createInstance(
+				ClaudeCodeSessionService,
+			);
 		});
 
 		it('loads sessions from all workspace folder directories', async () => {
 			multiRootSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId: 'multi-1', summary: 'Folder 1 session' }),
+				createSdkSessionInfo({
+					sessionId: 'multi-1',
+					summary: 'Folder 1 session',
+				}),
 			];
 
-			const sessions = await multiRootService.getAllSessions(CancellationToken.None);
+			const sessions = await multiRootService.getAllSessions(
+				CancellationToken.None,
+			);
 
 			// SDK returns the same mock sessions for each folder scan
 			expect(sessions.length).toBeGreaterThan(0);
@@ -683,7 +1050,9 @@ describe('ClaudeCodeSessionService', () => {
 		it('returns empty array when no sessions exist', async () => {
 			multiRootSdkService.mockSessions = [];
 
-			const sessions = await multiRootService.getAllSessions(CancellationToken.None);
+			const sessions = await multiRootService.getAllSessions(
+				CancellationToken.None,
+			);
 
 			expect(sessions).toHaveLength(0);
 		});
@@ -697,22 +1066,36 @@ describe('ClaudeCodeSessionService', () => {
 		it('loads subagents for a session when SDK returns subagent IDs', async () => {
 			const sessionId = 'test-session';
 
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [
-				createUserSessionMessage({ uuid: 'uuid-main', session_id: sessionId }),
+				createUserSessionMessage({
+					uuid: 'uuid-main',
+					session_id: sessionId,
+				}),
 			];
 
 			// Configure subagent data via SDK mock
 			mockSdkService.mockSubagentIds = ['a139fcf'];
 			mockSdkService.mockSubagentMessages.set('a139fcf', [
-				createUserSessionMessage({ uuid: 'uuid-subagent', session_id: 'subagent-session', message: { role: 'user', content: 'subagent task' } }),
-				createAssistantSessionMessage({ uuid: 'uuid-subagent-reply', session_id: 'subagent-session' }),
+				createUserSessionMessage({
+					uuid: 'uuid-subagent',
+					session_id: 'subagent-session',
+					message: { role: 'user', content: 'subagent task' },
+				}),
+				createAssistantSessionMessage({
+					uuid: 'uuid-subagent-reply',
+					session_id: 'subagent-session',
+				}),
 			]);
 
-			const sessionResource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(sessionResource, CancellationToken.None);
+			const sessionResource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				sessionResource,
+				CancellationToken.None,
+			);
 
 			expect(session).toBeDefined();
 			expect(session?.subagents).toHaveLength(1);
@@ -723,16 +1106,20 @@ describe('ClaudeCodeSessionService', () => {
 		it('returns empty subagents when SDK returns no subagent IDs', async () => {
 			const sessionId = 'test-session';
 
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [
 				createUserSessionMessage({ session_id: sessionId }),
 			];
 			mockSdkService.mockSubagentIds = [];
 
-			const sessionResource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(sessionResource, CancellationToken.None);
+			const sessionResource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				sessionResource,
+				CancellationToken.None,
+			);
 
 			expect(session).toBeDefined();
 			expect(session?.subagents).toHaveLength(0);
@@ -741,21 +1128,31 @@ describe('ClaudeCodeSessionService', () => {
 		it('loads multiple subagents and sorts by timestamp', async () => {
 			const sessionId = 'test-session';
 
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [];
 
 			mockSdkService.mockSubagentIds = ['agent-b', 'agent-a'];
 			mockSdkService.mockSubagentMessages.set('agent-a', [
-				createUserSessionMessage({ uuid: 'u-a', session_id: sessionId }),
+				createUserSessionMessage({
+					uuid: 'u-a',
+					session_id: sessionId,
+				}),
 			]);
 			mockSdkService.mockSubagentMessages.set('agent-b', [
-				createUserSessionMessage({ uuid: 'u-b', session_id: sessionId }),
+				createUserSessionMessage({
+					uuid: 'u-b',
+					session_id: sessionId,
+				}),
 			]);
 
-			const sessionResource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(sessionResource, CancellationToken.None);
+			const sessionResource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				sessionResource,
+				CancellationToken.None,
+			);
 
 			expect(session).toBeDefined();
 			expect(session?.subagents).toHaveLength(2);
@@ -764,14 +1161,20 @@ describe('ClaudeCodeSessionService', () => {
 		it('handles SDK errors in listSubagents gracefully', async () => {
 			const sessionId = 'test-session';
 
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [];
-			mockSdkService.listSubagents = async () => { throw new Error('SDK error'); };
+			mockSdkService.listSubagents = async () => {
+				throw new Error('SDK error');
+			};
 
-			const sessionResource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(sessionResource, CancellationToken.None);
+			const sessionResource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				sessionResource,
+				CancellationToken.None,
+			);
 
 			expect(session).toBeDefined();
 			expect(session?.subagents).toHaveLength(0);
@@ -780,15 +1183,21 @@ describe('ClaudeCodeSessionService', () => {
 		it('handles SDK errors in getSubagentMessages gracefully', async () => {
 			const sessionId = 'test-session';
 
-			mockSdkService.mockSessions = [
-				createSdkSessionInfo({ sessionId }),
-			];
+			mockSdkService.mockSessions = [createSdkSessionInfo({ sessionId })];
 			mockSdkService.mockSessionMessages = [];
 			mockSdkService.mockSubagentIds = ['broken-agent'];
-			mockSdkService.getSubagentMessages = async () => { throw new Error('SDK error'); };
+			mockSdkService.getSubagentMessages = async () => {
+				throw new Error('SDK error');
+			};
 
-			const sessionResource = URI.from({ scheme: 'claude-code', path: '/' + sessionId });
-			const session = await service.getSession(sessionResource, CancellationToken.None);
+			const sessionResource = URI.from({
+				scheme: 'claude-code',
+				path: '/' + sessionId,
+			});
+			const session = await service.getSession(
+				sessionResource,
+				CancellationToken.None,
+			);
 
 			expect(session).toBeDefined();
 			expect(session?.subagents).toHaveLength(0);

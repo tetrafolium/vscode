@@ -10,7 +10,10 @@ import { TextEdit, TextReplacement } from '../edits/textEdit';
 import { _setPositionOffsetTransformerDependencies } from './positionToOffsetImpl';
 import { TextLength } from './textLength';
 
-export { PositionOffsetTransformerBase, PositionOffsetTransformer } from './positionToOffsetImpl';
+export {
+	PositionOffsetTransformerBase,
+	PositionOffsetTransformer,
+} from './positionToOffsetImpl';
 
 _setPositionOffsetTransformerDependencies({
 	StringEdit: StringEdit,

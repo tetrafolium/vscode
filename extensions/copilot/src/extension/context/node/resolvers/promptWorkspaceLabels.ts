@@ -3,8 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { IFileSystemService } from '../../../../platform/filesystem/common/fileSystemService';
 import { IIgnoreService } from '../../../../platform/ignore/common/ignoreService';
 import { IExperimentationService } from '../../../../platform/telemetry/common/nullExperimentationService';
@@ -14,7 +16,8 @@ import { createServiceIdentifier } from '../../../../util/common/services';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { Uri } from '../../../../vscodeTypes';
 
-export const IPromptWorkspaceLabels = createServiceIdentifier<IPromptWorkspaceLabels>('IPromptWorkspaceLabels');
+export const IPromptWorkspaceLabels =
+	createServiceIdentifier<IPromptWorkspaceLabels>('IPromptWorkspaceLabels');
 export interface IPromptWorkspaceLabels {
 	readonly _serviceBrand: undefined;
 	/**
@@ -26,7 +29,7 @@ export interface IPromptWorkspaceLabels {
 
 const enum PromptWorkspaceLabelsStrategy {
 	Basic,
-	Expanded
+	Expanded,
 }
 
 export class PromptWorkspaceLabels implements IPromptWorkspaceLabels {
@@ -37,17 +40,28 @@ export class PromptWorkspaceLabels implements IPromptWorkspaceLabels {
 	private strategy = PromptWorkspaceLabelsStrategy.Basic;
 
 	private get workspaceLabels(): IPromptWorkspaceLabelsStrategy {
-		return this.strategy === PromptWorkspaceLabelsStrategy.Basic ? this.basicWorkspaceLabels : this.expandedWorkspaceLabels;
+		return this.strategy === PromptWorkspaceLabelsStrategy.Basic
+			? this.basicWorkspaceLabels
+			: this.expandedWorkspaceLabels;
 	}
 
 	constructor(
-		@IExperimentationService private readonly _experimentationService: IExperimentationService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IExperimentationService
+		private readonly _experimentationService: IExperimentationService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 	) {
-		this.basicWorkspaceLabels = this._instantiationService.createInstance(BasicPromptWorkspaceLabels);
-		this.expandedWorkspaceLabels = this._instantiationService.createInstance(ExpandedPromptWorkspaceLabels);
+		this.basicWorkspaceLabels = this._instantiationService.createInstance(
+			BasicPromptWorkspaceLabels,
+		);
+		this.expandedWorkspaceLabels =
+			this._instantiationService.createInstance(
+				ExpandedPromptWorkspaceLabels,
+			);
 	}
 
 	public get labels(): string[] {
@@ -56,8 +70,14 @@ export class PromptWorkspaceLabels implements IPromptWorkspaceLabels {
 	}
 
 	public async collectContext(): Promise<void> {
-		const expandedLabels = this._configurationService.getExperimentBasedConfig(ConfigKey.Advanced.ProjectLabelsExpanded, this._experimentationService);
-		this.strategy = expandedLabels ? PromptWorkspaceLabelsStrategy.Expanded : PromptWorkspaceLabelsStrategy.Basic;
+		const expandedLabels =
+			this._configurationService.getExperimentBasedConfig(
+				ConfigKey.Advanced.ProjectLabelsExpanded,
+				this._experimentationService,
+			);
+		this.strategy = expandedLabels
+			? PromptWorkspaceLabelsStrategy.Expanded
+			: PromptWorkspaceLabelsStrategy.Basic;
 		await this.workspaceLabels.collectContext();
 
 		const uniqueLabels = [...new Set(this.labels)].sort();
@@ -70,11 +90,15 @@ export class PromptWorkspaceLabels implements IPromptWorkspaceLabels {
 				"count": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Unique workspace labels in context." }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('projectLabels', {
-			labels: uniqueLabels.join(',').replaceAll('@', ' ')
-		}, {
-			count: uniqueLabels.length,
-		});
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'projectLabels',
+			{
+				labels: uniqueLabels.join(',').replaceAll('@', ' '),
+			},
+			{
+				count: uniqueLabels.length,
+			},
+		);
 	}
 }
 
@@ -84,14 +108,18 @@ interface IPromptWorkspaceLabelsStrategy {
 }
 
 class BasicPromptWorkspaceLabels implements IPromptWorkspaceLabelsStrategy {
-
 	indicators: Map<string, string[]> = new Map<string, string[]>();
-	contentIndicators: Map<string, (contents: string) => string[]> = new Map<string, (contents: string) => string[]>();
+	contentIndicators: Map<string, (contents: string) => string[]> = new Map<
+		string,
+		(contents: string) => string[]
+	>();
 	private readonly _labels: string[] = [];
 
 	constructor(
-		@IWorkspaceService private readonly _workspaceService: IWorkspaceService,
-		@IFileSystemService private readonly _fileSystemService: IFileSystemService,
+		@IWorkspaceService
+		private readonly _workspaceService: IWorkspaceService,
+		@IFileSystemService
+		private readonly _fileSystemService: IFileSystemService,
 		@IIgnoreService private readonly _ignoreService: IIgnoreService,
 	) {
 		this.initIndicators();
@@ -100,7 +128,10 @@ class BasicPromptWorkspaceLabels implements IPromptWorkspaceLabelsStrategy {
 	public get labels(): string[] {
 		// Check if labels have both javascript and typescript and remove javascript
 		// This can confuse the LLM and typescript should take precedent so types are returned.
-		if (this._labels.includes('javascript') && this._labels.includes('typescript')) {
+		if (
+			this._labels.includes('javascript') &&
+			this._labels.includes('typescript')
+		) {
 			const index = this._labels.indexOf('javascript');
 			this._labels.splice(index, 1);
 		}
@@ -122,7 +153,11 @@ class BasicPromptWorkspaceLabels implements IPromptWorkspaceLabelsStrategy {
 		}
 	}
 
-	private async addLabelIfApplicable(rootFolder: Uri, filename: string, labels: string[]) {
+	private async addLabelIfApplicable(
+		rootFolder: Uri,
+		filename: string,
+		labels: string[],
+	) {
 		const uri = Uri.joinPath(rootFolder, filename);
 
 		if (await this._ignoreService.isCopilotIgnored(uri)) {
@@ -131,13 +166,15 @@ class BasicPromptWorkspaceLabels implements IPromptWorkspaceLabelsStrategy {
 
 		try {
 			await this._fileSystemService.stat(uri);
-			labels.forEach(label => this._labels.push(label));
+			labels.forEach((label) => this._labels.push(label));
 			const parseCallback = this.contentIndicators.get(filename);
 			if (parseCallback) {
 				const b = await this._fileSystemService.readFile(uri);
 				try {
-					const contentLabels = parseCallback(new TextDecoder().decode(b));
-					contentLabels.forEach(label => this._labels.push(label));
+					const contentLabels = parseCallback(
+						new TextDecoder().decode(b),
+					);
+					contentLabels.forEach((label) => this._labels.push(label));
 				} catch (e) {
 					// it's ok if we can't parse those files
 				}
@@ -169,20 +206,33 @@ class BasicPromptWorkspaceLabels implements IPromptWorkspaceLabelsStrategy {
 		this.addIndicator('CMakeLists.txt', 'c++', 'cmake');
 		this.addIndicator('vcpkg.json', 'c++');
 		this.addIndicator('Makefile', 'c++', 'makefile');
-		this.addContentIndicator('CMakeLists.txt', this.collectCMakeListsTxtIndicators);
-		this.addContentIndicator('package.json', this.collectPackageJsonIndicators);
+		this.addContentIndicator(
+			'CMakeLists.txt',
+			this.collectCMakeListsTxtIndicators,
+		);
+		this.addContentIndicator(
+			'package.json',
+			this.collectPackageJsonIndicators,
+		);
 	}
 
 	private addIndicator(filename: string, ...labels: string[]) {
 		this.indicators.set(filename, labels);
 	}
 
-	protected addContentIndicator(filename: string, callback: (contents: string) => string[]) {
+	protected addContentIndicator(
+		filename: string,
+		callback: (contents: string) => string[],
+	) {
 		this.contentIndicators.set(filename, callback);
 	}
 
 	private collectCMakeListsTxtIndicators(contents: string): string[] {
-		function parseStandardVersion(contents: string, regex: RegExp, allowedList: number[]): number | undefined {
+		function parseStandardVersion(
+			contents: string,
+			regex: RegExp,
+			allowedList: number[],
+		): number | undefined {
 			try {
 				const matchResult = Array.from(contents.matchAll(regex));
 				if (matchResult && matchResult[0] && matchResult[0][1]) {
@@ -198,14 +248,20 @@ class BasicPromptWorkspaceLabels implements IPromptWorkspaceLabelsStrategy {
 		}
 
 		const tags: string[] = [];
-		const cppLangStdVer = parseStandardVersion(contents,
-			/set\s*\(\s*CMAKE_CXX_STANDARD\s*(\d+)/gmi, [98, 11, 14, 17, 20, 23, 26]);
+		const cppLangStdVer = parseStandardVersion(
+			contents,
+			/set\s*\(\s*CMAKE_CXX_STANDARD\s*(\d+)/gim,
+			[98, 11, 14, 17, 20, 23, 26],
+		);
 		if (cppLangStdVer) {
 			tags.push(`C++${cppLangStdVer}`);
 		}
 
-		const cLangStdVer = parseStandardVersion(contents,
-			/set\s*\(\s*CMAKE_C_STANDARD\s*(\d+)/gmi, [90, 99, 11, 17, 23]);
+		const cLangStdVer = parseStandardVersion(
+			contents,
+			/set\s*\(\s*CMAKE_C_STANDARD\s*(\d+)/gim,
+			[90, 99, 11, 17, 23],
+		);
 		if (cLangStdVer) {
 			tags.push(`C${cLangStdVer}`);
 		}
@@ -247,16 +303,24 @@ class BasicPromptWorkspaceLabels implements IPromptWorkspaceLabelsStrategy {
 }
 
 class ExpandedPromptWorkspaceLabels extends BasicPromptWorkspaceLabels {
-
 	constructor(
 		@IWorkspaceService workspaceService: IWorkspaceService,
 		@IFileSystemService fileSystemService: IFileSystemService,
 		@IIgnoreService ignoreService: IIgnoreService,
 	) {
 		super(workspaceService, fileSystemService, ignoreService);
-		this.addContentIndicator('package.json', this.collectPackageJsonIndicatorsExpanded);
-		this.addContentIndicator('requirements.txt', this.collectPythonRequirementsIndicators);
-		this.addContentIndicator('pyproject.toml', this.collectPythonTomlIndicators);
+		this.addContentIndicator(
+			'package.json',
+			this.collectPackageJsonIndicatorsExpanded,
+		);
+		this.addContentIndicator(
+			'requirements.txt',
+			this.collectPythonRequirementsIndicators,
+		);
+		this.addContentIndicator(
+			'pyproject.toml',
+			this.collectPythonTomlIndicators,
+		);
 	}
 
 	protected collectPackageJsonIndicatorsExpanded(contents: string): string[] {
@@ -267,11 +331,18 @@ class ExpandedPromptWorkspaceLabels extends BasicPromptWorkspaceLabels {
 			return `${major.replace(/[^0-9]/g, '')}.${minor.replace(/[^0-9]/g, '')}`;
 		};
 
-		const checkDependencies = (dependencies: Record<string, string> | undefined, list: { dependency: string; prefix?: string }[]) => {
-			if (!dependencies) { return; }
+		const checkDependencies = (
+			dependencies: Record<string, string> | undefined,
+			list: { dependency: string; prefix?: string }[],
+		) => {
+			if (!dependencies) {
+				return;
+			}
 			list.forEach(({ dependency, prefix }) => {
 				if (dependencies[dependency]) {
-					const version = extractMajorMinorVersion(dependencies[dependency]);
+					const version = extractMajorMinorVersion(
+						dependencies[dependency],
+					);
 					tags.push(`${prefix || dependency}@${version}`);
 				}
 			});
@@ -288,7 +359,7 @@ class ExpandedPromptWorkspaceLabels extends BasicPromptWorkspaceLabels {
 			json.dependencies,
 			json.devDependencies,
 			json.peerDependencies,
-			json.optionalDependencies
+			json.optionalDependencies,
 		];
 
 		const dependenciesList = [
@@ -429,55 +500,121 @@ class ExpandedPromptWorkspaceLabels extends BasicPromptWorkspaceLabels {
 		const enginesList = [
 			// Engines
 			{ dependency: 'node' },
-			{ dependency: 'vscode', prefix: 'vscode extension' }
+			{ dependency: 'vscode', prefix: 'vscode extension' },
 		];
 
-		allDependenciesFields.forEach((deps) => checkDependencies(deps, dependenciesList));
+		allDependenciesFields.forEach((deps) =>
+			checkDependencies(deps, dependenciesList),
+		);
 		checkDependencies(json.engines, enginesList);
 
 		return tags;
 	}
 
-
 	private popularPackages: string[] = [
 		// Data Science and Machine Learning
-		'numpy', 'pandas', 'scipy', 'scikit-learn', 'matplotlib', 'tensorflow', 'keras',
-		'torch', 'seaborn', 'plotly', 'dash', 'jupyter', 'notebook', 'ipython', 'openai', 'pyspark',
-		'airflow', 'nltk', 'sympy', 'spacy', 'langchain',
+		'numpy',
+		'pandas',
+		'scipy',
+		'scikit-learn',
+		'matplotlib',
+		'tensorflow',
+		'keras',
+		'torch',
+		'seaborn',
+		'plotly',
+		'dash',
+		'jupyter',
+		'notebook',
+		'ipython',
+		'openai',
+		'pyspark',
+		'airflow',
+		'nltk',
+		'sympy',
+		'spacy',
+		'langchain',
 
 		// Web Development
-		'Flask', 'Django', 'fastapi', 'pydantic', 'requests', 'beautifulsoup4',
-		'gunicorn', 'uvicorn', 'httpx', 'Jinja2', 'aiohttp',
+		'Flask',
+		'Django',
+		'fastapi',
+		'pydantic',
+		'requests',
+		'beautifulsoup4',
+		'gunicorn',
+		'uvicorn',
+		'httpx',
+		'Jinja2',
+		'aiohttp',
 
 		// Testing
-		'pytest', 'tox', 'nox', 'selenium', 'playwright', 'coverage', 'hypothesis',
+		'pytest',
+		'tox',
+		'nox',
+		'selenium',
+		'playwright',
+		'coverage',
+		'hypothesis',
 
 		// Documentation
 		'Sphinx',
 
 		// Task Queue
-		'celery', 'asyncio',
+		'celery',
+		'asyncio',
 
 		// Cloud and DevOps
-		'boto3', 'google-cloud-storage', 'azure-storage-blob', 'docker', 'kubernetes', 'azure', 'google', 'ansible',
+		'boto3',
+		'google-cloud-storage',
+		'azure-storage-blob',
+		'docker',
+		'kubernetes',
+		'azure',
+		'google',
+		'ansible',
 
 		// Security
-		'cryptography', 'paramiko', 'PyJWT',
+		'cryptography',
+		'paramiko',
+		'PyJWT',
 
 		// Enterprise, Legacy & data storage
-		'xlrd', 'xlrd-2024', 'openpyxl', 'pywin32', 'pywin', 'psycopg2', 'mysqlclient', 'SQLite4', 'Werkzeug', 'pymongo', 'redis', 'PyMySQL',
+		'xlrd',
+		'xlrd-2024',
+		'openpyxl',
+		'pywin32',
+		'pywin',
+		'psycopg2',
+		'mysqlclient',
+		'SQLite4',
+		'Werkzeug',
+		'pymongo',
+		'redis',
+		'PyMySQL',
 
 		// Utilities
-		'Pillow', 'SQLAlchemy', 'lxml', 'html5lib', 'Markdown', 'pytz', 'Click',
-		'attrs', 'PyYAML', 'configparser', 'loguru', 'structlog', 'pygame', 'discord'
+		'Pillow',
+		'SQLAlchemy',
+		'lxml',
+		'html5lib',
+		'Markdown',
+		'pytz',
+		'Click',
+		'attrs',
+		'PyYAML',
+		'configparser',
+		'loguru',
+		'structlog',
+		'pygame',
+		'discord',
 	];
-
 
 	private collectPythonRequirementsIndicators(contents: string): string[] {
 		const tags: string[] = [];
 
 		const lines = contents.split('\n');
-		lines.forEach(line => {
+		lines.forEach((line) => {
 			const [pkg, version] = line.split('==');
 			if (this.popularPackages.includes(pkg)) {
 				tags.push(`${pkg}-${version || 'latest'}`);
@@ -494,14 +631,16 @@ class ExpandedPromptWorkspaceLabels extends BasicPromptWorkspaceLabels {
 		let inDependenciesSection = false;
 
 		// TODO@digitarald: Should use npm `toml` package, but this is avoiding a dependency for now
-		lines.forEach(line => {
+		lines.forEach((line) => {
 			line = line.trim();
 			if (line === '[tool.poetry.dependencies]') {
 				inDependenciesSection = true;
 			} else if (line.startsWith('[') && line.endsWith(']')) {
 				inDependenciesSection = false;
 			} else if (inDependenciesSection && line) {
-				const [pkg, version] = line.split('=').map(s => s.trim().replace(/"|'/g, ''));
+				const [pkg, version] = line
+					.split('=')
+					.map((s) => s.trim().replace(/"|'/g, ''));
 				if (this.popularPackages.includes(pkg)) {
 					tags.push(`${pkg}-${version || 'latest'}`);
 				}

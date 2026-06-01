@@ -10,7 +10,10 @@ import { ILogService } from '../../../platform/log/common/logService';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
 import { ResourceMap } from '../../../util/vs/base/common/map';
 import { URI } from '../../../util/vs/base/common/uri';
-import { FileTree, IChatDiskSessionResources } from '../common/chatDiskSessionResources';
+import {
+	FileTree,
+	IChatDiskSessionResources,
+} from '../common/chatDiskSessionResources';
 
 /**
  * Directory name for session resources storage within extension storage.
@@ -35,7 +38,10 @@ function sanitizePathComponent(str: string): string {
 	return str.replace(/[^a-zA-Z0-9_.-]/g, '_');
 }
 
-export class ChatDiskSessionResources extends Disposable implements IChatDiskSessionResources {
+export class ChatDiskSessionResources
+	extends Disposable
+	implements IChatDiskSessionResources
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly baseStorageUri: URI | undefined;
@@ -45,26 +51,34 @@ export class ChatDiskSessionResources extends Disposable implements IChatDiskSes
 	public currentCleanup?: Promise<void>;
 
 	constructor(
-		@IVSCodeExtensionContext private readonly extensionContext: IVSCodeExtensionContext,
+		@IVSCodeExtensionContext
+		private readonly extensionContext: IVSCodeExtensionContext,
 		@IFileSystemService private readonly fileSystem: IFileSystemService,
-		@ILogService private readonly logService: ILogService
+		@ILogService private readonly logService: ILogService,
 	) {
 		super();
 
 		this.baseStorageUri = this.extensionContext.storageUri
-			? URI.joinPath(this.extensionContext.storageUri, SESSION_RESOURCES_DIR_NAME)
+			? URI.joinPath(
+					this.extensionContext.storageUri,
+					SESSION_RESOURCES_DIR_NAME,
+				)
 			: undefined;
 
 		// Schedule periodic cleanup
 		this.cleanupTimer = setInterval(() => {
-			this.currentCleanup = this.cleanupStaleResources().catch(err => {
-				this.logService.warn(`[ChatDiskSessionResources] Cleanup error: ${err}`);
+			this.currentCleanup = this.cleanupStaleResources().catch((err) => {
+				this.logService.warn(
+					`[ChatDiskSessionResources] Cleanup error: ${err}`,
+				);
 			});
 		}, CLEANUP_INTERVAL_MS);
 
 		// Run initial cleanup
-		this.currentCleanup = this.cleanupStaleResources().catch(err => {
-			this.logService.warn(`[ChatDiskSessionResources] Initial cleanup error: ${err}`);
+		this.currentCleanup = this.cleanupStaleResources().catch((err) => {
+			this.logService.warn(
+				`[ChatDiskSessionResources] Initial cleanup error: ${err}`,
+			);
 		});
 	}
 
@@ -76,7 +90,11 @@ export class ChatDiskSessionResources extends Disposable implements IChatDiskSes
 		super.dispose();
 	}
 
-	async ensure(sessionId: string, subdir: string, files: string | FileTree): Promise<URI> {
+	async ensure(
+		sessionId: string,
+		subdir: string,
+		files: string | FileTree,
+	): Promise<URI> {
 		if (!this.baseStorageUri) {
 			throw new Error('Storage URI not available');
 		}
@@ -84,7 +102,11 @@ export class ChatDiskSessionResources extends Disposable implements IChatDiskSes
 		const sanitizedSessionId = sanitizePathComponent(sessionId);
 		const sanitizedSubdir = sanitizePathComponent(subdir);
 
-		const targetDir = URI.joinPath(this.baseStorageUri, sanitizedSessionId, sanitizedSubdir);
+		const targetDir = URI.joinPath(
+			this.baseStorageUri,
+			sanitizedSessionId,
+			sanitizedSubdir,
+		);
 
 		// Ensure directory exists
 		await this.ensureDirectoryExists(targetDir);
@@ -110,7 +132,10 @@ export class ChatDiskSessionResources extends Disposable implements IChatDiskSes
 		// Check if the URI starts with our base storage path
 		const basePath = this.baseStorageUri.path.toLowerCase();
 		const uriPath = uri.path.toLowerCase();
-		return uri.scheme === this.baseStorageUri.scheme && uriPath.startsWith(basePath);
+		return (
+			uri.scheme === this.baseStorageUri.scheme &&
+			uriPath.startsWith(basePath)
+		);
 	}
 
 	private async writeFileTree(baseDir: URI, tree: FileTree): Promise<void> {
@@ -129,14 +154,20 @@ export class ChatDiskSessionResources extends Disposable implements IChatDiskSes
 		}
 	}
 
-	private async writeFileIfNotExists(uri: URI, content: string): Promise<void> {
+	private async writeFileIfNotExists(
+		uri: URI,
+		content: string,
+	): Promise<void> {
 		try {
 			await this.fileSystem.stat(uri);
 			// File exists, just mark as accessed
 			this.markAccessed(uri);
 		} catch {
 			// File doesn't exist, write it
-			await this.fileSystem.writeFile(uri, new TextEncoder().encode(content));
+			await this.fileSystem.writeFile(
+				uri,
+				new TextEncoder().encode(content),
+			);
 			this.markAccessed(uri);
 		}
 	}
@@ -180,33 +211,53 @@ export class ChatDiskSessionResources extends Disposable implements IChatDiskSes
 			const cutoffTime = now - RETENTION_PERIOD_MS;
 
 			// Read all session directories
-			const entries = await this.fileSystem.readDirectory(this.baseStorageUri);
-			const sessionDirs = entries.filter(([, type]) => type === FileType.Directory);
+			const entries = await this.fileSystem.readDirectory(
+				this.baseStorageUri,
+			);
+			const sessionDirs = entries.filter(
+				([, type]) => type === FileType.Directory,
+			);
 
 			for (const [sessionName] of sessionDirs) {
-				const sessionUri = URI.joinPath(this.baseStorageUri, sessionName);
+				const sessionUri = URI.joinPath(
+					this.baseStorageUri,
+					sessionName,
+				);
 				await this.cleanupSessionDirectory(sessionUri, cutoffTime);
 			}
 
 			// Clean up empty session directories
 			for (const [sessionName] of sessionDirs) {
-				const sessionUri = URI.joinPath(this.baseStorageUri, sessionName);
+				const sessionUri = URI.joinPath(
+					this.baseStorageUri,
+					sessionName,
+				);
 				try {
-					const sessionEntries = await this.fileSystem.readDirectory(sessionUri);
+					const sessionEntries =
+						await this.fileSystem.readDirectory(sessionUri);
 					if (sessionEntries.length === 0) {
-						await this.fileSystem.delete(sessionUri, { recursive: true });
-						this.logService.debug(`[ChatDiskSessionResources] Deleted empty session directory: ${sessionUri.fsPath}`);
+						await this.fileSystem.delete(sessionUri, {
+							recursive: true,
+						});
+						this.logService.debug(
+							`[ChatDiskSessionResources] Deleted empty session directory: ${sessionUri.fsPath}`,
+						);
 					}
 				} catch {
 					// Ignore errors when checking/deleting empty directories
 				}
 			}
 		} catch (error) {
-			this.logService.warn(`[ChatDiskSessionResources] Error during cleanup: ${error}`);
+			this.logService.warn(
+				`[ChatDiskSessionResources] Error during cleanup: ${error}`,
+			);
 		}
 	}
 
-	private async cleanupSessionDirectory(sessionUri: URI, cutoffTime: number): Promise<void> {
+	private async cleanupSessionDirectory(
+		sessionUri: URI,
+		cutoffTime: number,
+	): Promise<void> {
 		try {
 			const entries = await this.fileSystem.readDirectory(sessionUri);
 
@@ -232,15 +283,23 @@ export class ChatDiskSessionResources extends Disposable implements IChatDiskSes
 
 				// Delete stale entry
 				try {
-					await this.fileSystem.delete(entryUri, { recursive: type === FileType.Directory });
+					await this.fileSystem.delete(entryUri, {
+						recursive: type === FileType.Directory,
+					});
 					this.accessTimestamps.delete(entryUri);
-					this.logService.debug(`[ChatDiskSessionResources] Deleted stale resource: ${entryUri.fsPath}`);
+					this.logService.debug(
+						`[ChatDiskSessionResources] Deleted stale resource: ${entryUri.fsPath}`,
+					);
 				} catch (error) {
-					this.logService.warn(`[ChatDiskSessionResources] Failed to delete ${entryUri.fsPath}: ${error}`);
+					this.logService.warn(
+						`[ChatDiskSessionResources] Failed to delete ${entryUri.fsPath}: ${error}`,
+					);
 				}
 			}
 		} catch (error) {
-			this.logService.debug(`[ChatDiskSessionResources] Error cleaning session directory ${sessionUri.fsPath}: ${error}`);
+			this.logService.debug(
+				`[ChatDiskSessionResources] Error cleaning session directory ${sessionUri.fsPath}: ${error}`,
+			);
 		}
 	}
 }

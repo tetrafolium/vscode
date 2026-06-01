@@ -38,7 +38,13 @@ class SpacesDiffResult {
 /**
  * Compute the diff in spaces between two line's indentation.
  */
-function spacesDiff(a: string, aLength: number, b: string, bLength: number, result: SpacesDiffResult): void {
+function spacesDiff(
+	a: string,
+	aLength: number,
+	b: string,
+	bLength: number,
+	result: SpacesDiffResult,
+): void {
 	result.spacesDiff = 0;
 	result.looksLikeAlignment = false;
 
@@ -95,8 +101,16 @@ function spacesDiff(a: string, aLength: number, b: string, bLength: number, resu
 		// sometime folks like to align their code, but this should not be used as a hint
 		result.spacesDiff = spacesDiff;
 
-		if (spacesDiff > 0 && 0 <= bSpacesCnt - 1 && bSpacesCnt - 1 < a.length && bSpacesCnt < b.length) {
-			if (b.charCodeAt(bSpacesCnt) !== CharCode.Space && a.charCodeAt(bSpacesCnt - 1) === CharCode.Space) {
+		if (
+			spacesDiff > 0 &&
+			0 <= bSpacesCnt - 1 &&
+			bSpacesCnt - 1 < a.length &&
+			bSpacesCnt < b.length
+		) {
+			if (
+				b.charCodeAt(bSpacesCnt) !== CharCode.Space &&
+				a.charCodeAt(bSpacesCnt - 1) === CharCode.Space
+			) {
 				if (a.charCodeAt(a.length - 1) === CharCode.Comma) {
 					// This looks like an alignment desire: e.g.
 					// const a = b + c,
@@ -127,17 +141,22 @@ export interface IGuessedIndentation {
 	insertSpaces: boolean;
 }
 
-export function guessFileIndentInfo(source: Lines | TextDocument | TextDocumentSnapshot): FormattingOptions {
+export function guessFileIndentInfo(
+	source: Lines | TextDocument | TextDocumentSnapshot,
+): FormattingOptions {
 	return { ...guessIndentation(source, 4, false) };
 }
 
 export function guessIndentation(
 	source: Lines | TextDocument | TextDocumentSnapshot,
 	defaultTabSize: number,
-	defaultInsertSpaces: boolean
+	defaultInsertSpaces: boolean,
 ): IGuessedIndentation {
 	// Look at most at the first 10k lines
-	const linesCount = Math.min(isLines(source) ? source.length : source.lineCount, 10000);
+	const linesCount = Math.min(
+		isLines(source) ? source.length : source.lineCount,
+		10000,
+	);
 
 	let linesIndentedWithTabsCount = 0; // number of lines that contain at least one tab in indentation
 	let linesIndentedWithSpacesCount = 0; // number of lines that contain only spaces in indentation
@@ -152,7 +171,9 @@ export function guessIndentation(
 	const tmp = new SpacesDiffResult();
 
 	for (let lineNumber = 0; lineNumber < linesCount; lineNumber++) {
-		const currentLineText = isLines(source) ? source[lineNumber] : source.lineAt(lineNumber).text;
+		const currentLineText = isLines(source)
+			? source[lineNumber]
+			: source.lineAt(lineNumber).text;
 		const currentLineLength = currentLineText.length;
 
 		let currentLineHasContent = false; // does `currentLineText` contain non-whitespace chars
@@ -185,7 +206,13 @@ export function guessIndentation(
 			linesIndentedWithSpacesCount++;
 		}
 
-		spacesDiff(previousLineText, previousLineIndentation, currentLineText, currentLineIndentation, tmp);
+		spacesDiff(
+			previousLineText,
+			previousLineIndentation,
+			currentLineText,
+			currentLineIndentation,
+			tmp,
+		);
 
 		if (tmp.looksLikeAlignment) {
 			// if defaultInsertSpaces === true && the spaces count == tabSize, we may want to count it as valid indentation
@@ -214,7 +241,8 @@ export function guessIndentation(
 
 	let insertSpaces = defaultInsertSpaces;
 	if (linesIndentedWithTabsCount !== linesIndentedWithSpacesCount) {
-		insertSpaces = linesIndentedWithTabsCount < linesIndentedWithSpacesCount;
+		insertSpaces =
+			linesIndentedWithTabsCount < linesIndentedWithSpacesCount;
 	}
 
 	let tabSize = defaultTabSize;
@@ -225,7 +253,7 @@ export function guessIndentation(
 
 		// console.log("score threshold: " + tabSizeScore);
 
-		ALLOWED_TAB_SIZE_GUESSES.forEach(possibleTabSize => {
+		ALLOWED_TAB_SIZE_GUESSES.forEach((possibleTabSize) => {
 			const possibleTabSizeScore = spacesDiffCount[possibleTabSize];
 			if (possibleTabSizeScore > tabSizeScore) {
 				tabSizeScore = possibleTabSizeScore;
@@ -271,7 +299,7 @@ function computeIndentLevel(line: string, tabSize: number): number {
 		if (chCode === CharCode.Space) {
 			indent++;
 		} else if (chCode === CharCode.Tab) {
-			indent = indent - indent % tabSize + tabSize;
+			indent = indent - (indent % tabSize) + tabSize;
 		} else {
 			break;
 		}
@@ -294,10 +322,14 @@ export function computeIndentLevel2(line: string, tabSize: number): number {
 }
 
 function nextIndentTabStop(visibleColumn: number, indentSize: number): number {
-	return visibleColumn + indentSize - visibleColumn % indentSize;
+	return visibleColumn + indentSize - (visibleColumn % indentSize);
 }
 
-function _normalizeIndentationFromWhitespace(str: string, indentSize: number, insertSpaces: boolean): string {
+function _normalizeIndentationFromWhitespace(
+	str: string,
+	indentSize: number,
+	insertSpaces: boolean,
+): string {
 	let spacesCnt = 0;
 	for (let i = 0; i < str.length; i++) {
 		if (str.charAt(i) === '\t') {
@@ -323,12 +355,22 @@ function _normalizeIndentationFromWhitespace(str: string, indentSize: number, in
 	return result;
 }
 
-export function normalizeIndentation(str: string, indentSize: number, insertSpaces: boolean): string {
+export function normalizeIndentation(
+	str: string,
+	indentSize: number,
+	insertSpaces: boolean,
+): string {
 	let firstNonWhitespaceIndex = strings.firstNonWhitespaceIndex(str);
 	if (firstNonWhitespaceIndex === -1) {
 		firstNonWhitespaceIndex = str.length;
 	}
-	return _normalizeIndentationFromWhitespace(str.substring(0, firstNonWhitespaceIndex), indentSize, insertSpaces) + str.substring(firstNonWhitespaceIndex);
+	return (
+		_normalizeIndentationFromWhitespace(
+			str.substring(0, firstNonWhitespaceIndex),
+			indentSize,
+			insertSpaces,
+		) + str.substring(firstNonWhitespaceIndex)
+	);
 }
 
 export function getIndentationChar(indentation: IGuessedIndentation): string {
@@ -339,8 +381,15 @@ export function getIndentationChar(indentation: IGuessedIndentation): string {
 	}
 }
 
-export function transformIndentation(content: string, fromIndent: IGuessedIndentation, toIndent: IGuessedIndentation): string {
-	if (fromIndent.insertSpaces === toIndent.insertSpaces && fromIndent.tabSize === toIndent.tabSize) {
+export function transformIndentation(
+	content: string,
+	fromIndent: IGuessedIndentation,
+	toIndent: IGuessedIndentation,
+): string {
+	if (
+		fromIndent.insertSpaces === toIndent.insertSpaces &&
+		fromIndent.tabSize === toIndent.tabSize
+	) {
 		return content;
 	}
 

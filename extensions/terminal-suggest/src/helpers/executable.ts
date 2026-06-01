@@ -3,12 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { osIsWindows } from './os';
-import * as fs from 'fs/promises';
+import { osIsWindows } from "./os";
+import * as fs from "fs/promises";
 
-export function isExecutable(filePath: string, windowsExecutableExtensions?: Set<string>): Promise<boolean> | boolean {
+export function isExecutable(
+	filePath: string,
+	windowsExecutableExtensions?: Set<string>,
+): Promise<boolean> | boolean {
 	if (osIsWindows()) {
-		const extensions = windowsExecutableExtensions ?? defaultWindowsExecutableExtensionsSet;
+		const extensions =
+			windowsExecutableExtensions ?? defaultWindowsExecutableExtensionsSet;
 		return hasWindowsExecutableExtension(filePath, extensions);
 	}
 	return isExecutableUnix(filePath);
@@ -26,22 +30,22 @@ export async function isExecutableUnix(filePath: string): Promise<boolean> {
 }
 
 export const windowsDefaultExecutableExtensions: string[] = [
-	'.exe',   // Executable file
-	'.bat',   // Batch file
-	'.cmd',   // Command script
-	'.com',   // Command file
+	".exe", // Executable file
+	".bat", // Batch file
+	".cmd", // Command script
+	".com", // Command file
 
-	'.msi',   // Windows Installer package
+	".msi", // Windows Installer package
 
-	'.ps1',   // PowerShell script
+	".ps1", // PowerShell script
 
-	'.vbs',   // VBScript file
-	'.js',    // JScript file
-	'.jar',   // Java Archive (requires Java runtime)
-	'.py',    // Python script (requires Python interpreter)
-	'.rb',    // Ruby script (requires Ruby interpreter)
-	'.pl',    // Perl script (requires Perl interpreter)
-	'.sh',    // Shell script (via WSL or third-party tools)
+	".vbs", // VBScript file
+	".js", // JScript file
+	".jar", // Java Archive (requires Java runtime)
+	".py", // Python script (requires Python interpreter)
+	".rb", // Ruby script (requires Ruby interpreter)
+	".pl", // Perl script (requires Perl interpreter)
+	".sh", // Shell script (via WSL or third-party tools)
 ];
 
 const defaultWindowsExecutableExtensionsSet = new Set<string>();
@@ -64,14 +68,21 @@ export class WindowsExecutableExtensionsCache {
 
 	getExtensions(): Set<string> {
 		if (!this._cachedExtensions) {
-			this._cachedExtensions = resolveWindowsExecutableExtensions(this._rawConfig);
+			this._cachedExtensions = resolveWindowsExecutableExtensions(
+				this._rawConfig,
+			);
 		}
 		return this._cachedExtensions;
 	}
 }
 
-function hasWindowsExecutableExtension(filePath: string, extensions: Set<string>): boolean {
-	const fileName = filePath.slice(Math.max(filePath.lastIndexOf('\\'), filePath.lastIndexOf('/')) + 1);
+function hasWindowsExecutableExtension(
+	filePath: string,
+	extensions: Set<string>,
+): boolean {
+	const fileName = filePath.slice(
+		Math.max(filePath.lastIndexOf("\\"), filePath.lastIndexOf("/")) + 1,
+	);
 	for (const ext of extensions) {
 		if (fileName.endsWith(ext)) {
 			return true;
@@ -80,7 +91,9 @@ function hasWindowsExecutableExtension(filePath: string, extensions: Set<string>
 	return false;
 }
 
-function resolveWindowsExecutableExtensions(configuredWindowsExecutableExtensions?: { [key: string]: boolean | undefined }): Set<string> {
+function resolveWindowsExecutableExtensions(configuredWindowsExecutableExtensions?: {
+	[key: string]: boolean | undefined;
+}): Set<string> {
 	const extensions = new Set<string>();
 	const configured = configuredWindowsExecutableExtensions ?? {};
 	const excluded = new Set<string>();

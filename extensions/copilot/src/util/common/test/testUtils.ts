@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { afterEach, beforeEach } from 'vitest';
-import { DisposableStore, DisposableTracker, IDisposable, setDisposableTracker } from '../../vs/base/common/lifecycle';
+import {
+	DisposableStore,
+	DisposableTracker,
+	IDisposable,
+	setDisposableTracker,
+} from '../../vs/base/common/lifecycle';
 
 /**
  * Use this function to ensure that all disposables are cleaned up at the end of each test in the current suite.
@@ -14,8 +19,11 @@ import { DisposableStore, DisposableTracker, IDisposable, setDisposableTracker }
  *
  * @returns A {@link DisposableStore} that can optionally be used to track disposables in the test.
  * This will be automatically disposed on test teardown.
-*/
-export function ensureNoDisposablesAreLeakedInTestSuite(): Pick<DisposableStore, 'add'> {
+ */
+export function ensureNoDisposablesAreLeakedInTestSuite(): Pick<
+	DisposableStore,
+	'add'
+> {
 	let tracker: DisposableTracker | undefined;
 	let store: DisposableStore;
 
@@ -31,7 +39,9 @@ export function ensureNoDisposablesAreLeakedInTestSuite(): Pick<DisposableStore,
 		const result = tracker!.computeLeakingDisposables();
 		if (result) {
 			console.error(result.details);
-			throw new Error(`There are ${result.leaks.length} undisposed disposables!${result.details}`);
+			throw new Error(
+				`There are ${result.leaks.length} undisposed disposables!${result.details}`,
+			);
 		}
 	});
 
@@ -39,12 +49,15 @@ export function ensureNoDisposablesAreLeakedInTestSuite(): Pick<DisposableStore,
 	const testContext = {
 		add<T extends IDisposable>(o: T): T {
 			return store.add(o);
-		}
+		},
 	};
 	return testContext;
 }
 
-export function throwIfDisposablesAreLeaked(body: () => void, logToConsole = true): void {
+export function throwIfDisposablesAreLeaked(
+	body: () => void,
+	logToConsole = true,
+): void {
 	const tracker = new DisposableTracker();
 	setDisposableTracker(tracker);
 	body();
@@ -52,7 +65,9 @@ export function throwIfDisposablesAreLeaked(body: () => void, logToConsole = tru
 	computeLeakingDisposables(tracker, logToConsole);
 }
 
-export async function throwIfDisposablesAreLeakedAsync(body: () => Promise<void>): Promise<void> {
+export async function throwIfDisposablesAreLeakedAsync(
+	body: () => Promise<void>,
+): Promise<void> {
 	const tracker = new DisposableTracker();
 	setDisposableTracker(tracker);
 	await body();
@@ -60,12 +75,17 @@ export async function throwIfDisposablesAreLeakedAsync(body: () => Promise<void>
 	computeLeakingDisposables(tracker);
 }
 
-function computeLeakingDisposables(tracker: DisposableTracker, logToConsole = true) {
+function computeLeakingDisposables(
+	tracker: DisposableTracker,
+	logToConsole = true,
+) {
 	const result = tracker.computeLeakingDisposables();
 	if (result) {
 		if (logToConsole) {
 			console.error(result.details);
 		}
-		throw new Error(`There are ${result.leaks.length} undisposed disposables!${result.details}`);
+		throw new Error(
+			`There are ${result.leaks.length} undisposed disposables!${result.details}`,
+		);
 	}
 }

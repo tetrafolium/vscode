@@ -2,9 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { ClickDragMode, MermaidExtensionConfig, ShowControlsMode } from './config';
-import diagramStyles from './diagramStyles.css';
-import { IDisposable } from './disposable';
+import {
+	ClickDragMode,
+	MermaidExtensionConfig,
+	ShowControlsMode,
+} from "./config";
+import diagramStyles from "./diagramStyles.css";
+import { IDisposable } from "./disposable";
 
 const minScale = 0.5;
 const maxScale = 10;
@@ -31,7 +35,6 @@ export interface PanZoomState {
  * Manages all DiagramElement instances within a window/document.
  */
 export class DiagramManager {
-
 	private readonly instances = new Map<string, DiagramElement>();
 	private readonly savedStates = new Map<string, PanZoomState>();
 
@@ -42,8 +45,8 @@ export class DiagramManager {
 	constructor(config: MermaidExtensionConfig) {
 		this.config = config;
 
-		this.diagramStyleSheet = document.createElement('style');
-		this.diagramStyleSheet.className = 'markdown-style mermaid-diagram-styles';
+		this.diagramStyleSheet = document.createElement("style");
+		this.diagramStyleSheet.className = "markdown-style mermaid-diagram-styles";
 		this.diagramStyleSheet.textContent = diagramStyles;
 		document.head.appendChild(this.diagramStyleSheet);
 	}
@@ -66,15 +69,15 @@ export class DiagramManager {
 
 		const parent = mermaidContainer.parentNode;
 		if (!parent) {
-			return { dispose: () => { } };
+			return { dispose: () => {} };
 		}
 
 		// Create wrapper structure
-		const wrapper = document.createElement('div');
-		wrapper.className = 'mermaid-wrapper';
+		const wrapper = document.createElement("div");
+		wrapper.className = "mermaid-wrapper";
 
-		const content = document.createElement('div');
-		content.className = 'mermaid-content';
+		const content = document.createElement("div");
+		content.className = "mermaid-content";
 
 		parent.insertBefore(wrapper, mermaidContainer);
 		content.appendChild(mermaidContainer);
@@ -159,7 +162,7 @@ export class DiagramElement {
 		private readonly container: HTMLElement,
 		private readonly content: HTMLElement,
 		config: MermaidExtensionConfig,
-		initialState?: PanZoomState
+		initialState?: PanZoomState,
 	) {
 		this.showControls = config.showControls;
 		this.clickDrag = config.clickDrag;
@@ -169,15 +172,18 @@ export class DiagramElement {
 		// Restore state if provided
 		if (initialState) {
 			this.scale = initialState.scale;
-			this.translate = { x: initialState.translate.x, y: initialState.translate.y };
+			this.translate = {
+				x: initialState.translate.x,
+				y: initialState.translate.y,
+			};
 			this.hasInteracted = initialState.hasInteracted;
 			this.customHeight = initialState.customHeight;
 		}
 
-		this.content.style.transformOrigin = '0 0';
-		this.container.style.overflow = 'hidden';
+		this.content.style.transformOrigin = "0 0";
+		this.container.style.overflow = "hidden";
 		this.container.tabIndex = 0;
-		this.container.setAttribute('aria-label', 'Mermaid Diagram');
+		this.container.setAttribute("aria-label", "Mermaid Diagram");
 
 		// Apply max height if configured and valid
 		if (this.maxHeight) {
@@ -233,26 +239,47 @@ export class DiagramElement {
 	private setupEventListeners(): void {
 		const signal = this.abortController.signal;
 
-		this.container.addEventListener('mousedown', e => this.handleMouseDown(e), { signal });
-		document.addEventListener('mousemove', e => this.handleMouseMove(e), { signal });
-		document.addEventListener('mouseup', () => this.handleMouseUp(), { signal });
+		this.container.addEventListener(
+			"mousedown",
+			(e) => this.handleMouseDown(e),
+			{ signal },
+		);
+		document.addEventListener("mousemove", (e) => this.handleMouseMove(e), {
+			signal,
+		});
+		document.addEventListener("mouseup", () => this.handleMouseUp(), {
+			signal,
+		});
 
-		this.container.addEventListener('click', e => this.handleClick(e), { signal });
-		this.container.addEventListener('wheel', e => this.handleWheel(e), { passive: false, signal });
+		this.container.addEventListener("click", (e) => this.handleClick(e), {
+			signal,
+		});
+		this.container.addEventListener("wheel", (e) => this.handleWheel(e), {
+			passive: false,
+			signal,
+		});
 
-		this.container.addEventListener('mousemove', e => this.updateCursor(e), { signal });
-		this.container.addEventListener('mouseenter', e => this.updateCursor(e), { signal });
-		window.addEventListener('keydown', e => this.handleKeyChange(e), { signal });
-		window.addEventListener('keyup', e => this.handleKeyChange(e), { signal });
+		this.container.addEventListener("mousemove", (e) => this.updateCursor(e), {
+			signal,
+		});
+		this.container.addEventListener("mouseenter", (e) => this.updateCursor(e), {
+			signal,
+		});
+		window.addEventListener("keydown", (e) => this.handleKeyChange(e), {
+			signal,
+		});
+		window.addEventListener("keyup", (e) => this.handleKeyChange(e), {
+			signal,
+		});
 	}
 
 	private createZoomControls(): void {
 		const signal = this.abortController.signal;
 
-		const controls = document.createElement('div');
-		controls.className = 'mermaid-zoom-controls';
+		const controls = document.createElement("div");
+		controls.className = "mermaid-zoom-controls";
 		if (this.showControls === ShowControlsMode.OnHoverOrFocus) {
-			controls.classList.add('mermaid-zoom-controls-auto-hide');
+			controls.classList.add("mermaid-zoom-controls-auto-hide");
 		}
 		controls.innerHTML = `
 			<button class="pan-mode-btn" title="Toggle Pan Mode" aria-label="Toggle Pan Mode" aria-pressed="false"><span class="codicon codicon-move" aria-hidden="true"></span></button>
@@ -261,27 +288,43 @@ export class DiagramElement {
 			<button class="zoom-reset-btn" title="Reset Zoom" aria-label="Reset Zoom"><span class="codicon codicon-screen-normal" aria-hidden="true"></span></button>
 		`;
 
-		this.panModeButton = controls.querySelector('.pan-mode-btn');
-		this.panModeButton?.addEventListener('click', e => {
-			e.preventDefault();
-			e.stopPropagation();
-			this.togglePanMode();
-		}, { signal });
-		controls.querySelector('.zoom-in-btn')?.addEventListener('click', e => {
-			e.preventDefault();
-			e.stopPropagation();
-			this.zoomIn();
-		}, { signal });
-		controls.querySelector('.zoom-out-btn')?.addEventListener('click', e => {
-			e.preventDefault();
-			e.stopPropagation();
-			this.zoomOut();
-		}, { signal });
-		controls.querySelector('.zoom-reset-btn')?.addEventListener('click', e => {
-			e.preventDefault();
-			e.stopPropagation();
-			this.reset();
-		}, { signal });
+		this.panModeButton = controls.querySelector(".pan-mode-btn");
+		this.panModeButton?.addEventListener(
+			"click",
+			(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.togglePanMode();
+			},
+			{ signal },
+		);
+		controls.querySelector(".zoom-in-btn")?.addEventListener(
+			"click",
+			(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.zoomIn();
+			},
+			{ signal },
+		);
+		controls.querySelector(".zoom-out-btn")?.addEventListener(
+			"click",
+			(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.zoomOut();
+			},
+			{ signal },
+		);
+		controls.querySelector(".zoom-reset-btn")?.addEventListener(
+			"click",
+			(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.reset();
+			},
+			{ signal },
+		);
 
 		this.container.appendChild(controls);
 	}
@@ -289,65 +332,85 @@ export class DiagramElement {
 	private createResizeHandle(): HTMLElement {
 		const signal = this.abortController.signal;
 
-		const resizeHandle = document.createElement('div');
-		resizeHandle.className = 'mermaid-resize-handle';
-		resizeHandle.title = 'Drag to resize';
+		const resizeHandle = document.createElement("div");
+		resizeHandle.className = "mermaid-resize-handle";
+		resizeHandle.title = "Drag to resize";
 		resizeHandle.tabIndex = 0;
-		resizeHandle.setAttribute('role', 'separator');
-		resizeHandle.setAttribute('aria-label', 'Resize Mermaid Diagram');
-		resizeHandle.setAttribute('aria-orientation', 'horizontal');
+		resizeHandle.setAttribute("role", "separator");
+		resizeHandle.setAttribute("aria-label", "Resize Mermaid Diagram");
+		resizeHandle.setAttribute("aria-orientation", "horizontal");
 
-		resizeHandle.addEventListener('mousedown', e => {
-			e.preventDefault();
-			e.stopPropagation();
-			this.isResizing = true;
-			this.resizeStartY = e.clientY;
-			this.resizeStartHeight = this.container.getBoundingClientRect().height;
-			document.body.style.cursor = 'ns-resize';
-		}, { signal });
+		resizeHandle.addEventListener(
+			"mousedown",
+			(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				this.isResizing = true;
+				this.resizeStartY = e.clientY;
+				this.resizeStartHeight = this.container.getBoundingClientRect().height;
+				document.body.style.cursor = "ns-resize";
+			},
+			{ signal },
+		);
 
-		document.addEventListener('mousemove', e => {
-			if (!this.isResizing) {
-				return;
-			}
-			// Check if mouse button was released outside the window
-			if (e.buttons === 0) {
-				this.isResizing = false;
-				document.body.style.cursor = '';
-				return;
-			}
-			const deltaY = e.clientY - this.resizeStartY;
-			this.resizeToHeight(this.resizeStartHeight + deltaY);
-		}, { signal });
+		document.addEventListener(
+			"mousemove",
+			(e) => {
+				if (!this.isResizing) {
+					return;
+				}
+				// Check if mouse button was released outside the window
+				if (e.buttons === 0) {
+					this.isResizing = false;
+					document.body.style.cursor = "";
+					return;
+				}
+				const deltaY = e.clientY - this.resizeStartY;
+				this.resizeToHeight(this.resizeStartHeight + deltaY);
+			},
+			{ signal },
+		);
 
-		resizeHandle.addEventListener('keydown', e => {
-			if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
-				return;
-			}
+		resizeHandle.addEventListener(
+			"keydown",
+			(e) => {
+				if (e.key !== "ArrowUp" && e.key !== "ArrowDown") {
+					return;
+				}
 
-			e.preventDefault();
-			e.stopPropagation();
+				e.preventDefault();
+				e.stopPropagation();
 
-			const currentHeight = this.customHeight ?? this.container.getBoundingClientRect().height;
-			const direction = e.key === 'ArrowUp' ? -1 : 1;
-			const step = e.shiftKey ? 50 : 10;
-			this.resizeToHeight(currentHeight + direction * step);
-		}, { signal });
+				const currentHeight =
+					this.customHeight ?? this.container.getBoundingClientRect().height;
+				const direction = e.key === "ArrowUp" ? -1 : 1;
+				const step = e.shiftKey ? 50 : 10;
+				this.resizeToHeight(currentHeight + direction * step);
+			},
+			{ signal },
+		);
 
-		document.addEventListener('mouseup', () => {
-			if (this.isResizing) {
-				this.isResizing = false;
-				document.body.style.cursor = '';
-			}
-		}, { signal });
+		document.addEventListener(
+			"mouseup",
+			() => {
+				if (this.isResizing) {
+					this.isResizing = false;
+					document.body.style.cursor = "";
+				}
+			},
+			{ signal },
+		);
 
 		return resizeHandle;
 	}
 
 	private togglePanMode(): void {
 		this.panModeEnabled = !this.panModeEnabled;
-		this.panModeButton?.classList.toggle('active', this.panModeEnabled);
-		this.panModeButton?.setAttribute('aria-pressed', String(this.panModeEnabled));
+		this.panModeButton?.classList.toggle("active", this.panModeEnabled);
+		this.panModeButton?.setAttribute(
+			"aria-pressed",
+			String(this.panModeEnabled),
+		);
 		this.setCursor(false, false);
 	}
 
@@ -358,7 +421,7 @@ export class DiagramElement {
 	}
 
 	private handleKeyChange(e: KeyboardEvent): void {
-		if ((e.key === 'Alt' || e.key === 'Shift') && !this.isPanning) {
+		if ((e.key === "Alt" || e.key === "Shift") && !this.isPanning) {
 			e.preventDefault();
 			this.setCursor(e.altKey, e.shiftKey);
 		}
@@ -373,27 +436,27 @@ export class DiagramElement {
 	private setCursor(altKey: boolean, shiftKey: boolean): void {
 		// Pan mode always shows grab cursor
 		if (this.panModeEnabled) {
-			this.container.style.cursor = 'grab';
+			this.container.style.cursor = "grab";
 			return;
 		}
 
 		if (this.clickDrag === ClickDragMode.Alt) {
 			// In Alt mode: default cursor normally, grab when alt is pressed
 			if (altKey && shiftKey) {
-				this.container.style.cursor = 'zoom-out';
+				this.container.style.cursor = "zoom-out";
 			} else if (altKey) {
-				this.container.style.cursor = 'grab';
+				this.container.style.cursor = "grab";
 			} else {
-				this.container.style.cursor = 'default';
+				this.container.style.cursor = "default";
 			}
 		} else {
 			// In Always/Never mode: use grab cursor with zoom modifiers
 			if (altKey && !shiftKey) {
-				this.container.style.cursor = 'zoom-in';
+				this.container.style.cursor = "zoom-in";
 			} else if (altKey && shiftKey) {
-				this.container.style.cursor = 'zoom-out';
+				this.container.style.cursor = "zoom-out";
 			} else {
-				this.container.style.cursor = 'grab';
+				this.container.style.cursor = "grab";
 			}
 		}
 	}
@@ -425,7 +488,10 @@ export class DiagramElement {
 			// so we apply a multiplier to make them feel equally sensitive
 			const pinchMultiplier = isPinchZoom ? 10 : 1;
 			const delta = -e.deltaY * zoomFactor * pinchMultiplier;
-			const newScale = Math.min(maxScale, Math.max(minScale, this.scale * (1 + delta)));
+			const newScale = Math.min(
+				maxScale,
+				Math.max(minScale, this.scale * (1 + delta)),
+			);
 
 			const scaleFactor = newScale / this.scale;
 			this.translate = {
@@ -445,7 +511,11 @@ export class DiagramElement {
 		}
 
 		// Check if panning is allowed based on clickDrag mode or pan mode
-		if (!this.panModeEnabled && this.clickDrag === ClickDragMode.Alt && !e.altKey) {
+		if (
+			!this.panModeEnabled &&
+			this.clickDrag === ClickDragMode.Alt &&
+			!e.altKey
+		) {
 			return;
 		}
 
@@ -455,7 +525,7 @@ export class DiagramElement {
 		this.hasDragged = false;
 		this.startX = e.clientX - this.translate.x;
 		this.startY = e.clientY - this.translate.y;
-		this.container.style.cursor = 'grabbing';
+		this.container.style.cursor = "grabbing";
 	}
 
 	private handleMouseMove(e: MouseEvent): void {
@@ -501,8 +571,12 @@ export class DiagramElement {
 			const svgAtOriginY = -this.translate.y / this.scale;
 
 			// Express as percentage of old SVG dimensions
-			const percentX = this.lastSvgSize.width > 0 ? svgAtOriginX / this.lastSvgSize.width : 0;
-			const percentY = this.lastSvgSize.height > 0 ? svgAtOriginY / this.lastSvgSize.height : 0;
+			const percentX =
+				this.lastSvgSize.width > 0 ? svgAtOriginX / this.lastSvgSize.width : 0;
+			const percentY =
+				this.lastSvgSize.height > 0
+					? svgAtOriginY / this.lastSvgSize.height
+					: 0;
 
 			// Step 2: Resize and update cached SVG dimensions
 			if (!this.tryResizeContainerToFitSvg()) {
@@ -534,16 +608,16 @@ export class DiagramElement {
 	 * @returns true if the SVG was found and dimensions were updated, false otherwise.
 	 */
 	private tryResizeContainerToFitSvg(): boolean {
-		const svg = this.content.querySelector('svg');
+		const svg = this.content.querySelector("svg");
 		if (!svg) {
 			return false;
 		}
 
-		svg.removeAttribute('height');
+		svg.removeAttribute("height");
 
 		// Get the intrinsic size
 		const oldTransform = this.content.style.transform;
-		this.content.style.transform = 'none';
+		this.content.style.transform = "none";
 		const rect = svg.getBoundingClientRect();
 		this.content.style.transform = oldTransform;
 
@@ -592,7 +666,10 @@ export class DiagramElement {
 	}
 
 	private zoomAtPoint(factor: number, x: number, y: number): void {
-		const newScale = Math.min(maxScale, Math.max(minScale, this.scale * factor));
+		const newScale = Math.min(
+			maxScale,
+			Math.max(minScale, this.scale * factor),
+		);
 		const scaleFactor = newScale / this.scale;
 		this.translate = {
 			x: x - (x - this.translate.x) * scaleFactor,
@@ -609,6 +686,6 @@ function sanitizeCssLength(value: string): string {
 		const parsed = CSSNumericValue.parse(value);
 		return parsed.toString();
 	} catch {
-		return '';
+		return "";
 	}
 }

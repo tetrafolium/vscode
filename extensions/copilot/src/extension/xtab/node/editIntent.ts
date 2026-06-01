@@ -19,7 +19,7 @@ export enum EditIntentParseMode {
 	/** Parse using XML-style tags: <|edit_intent|>value<|/edit_intent|> */
 	Tags = 'tags',
 	/** Parse using short names on the first line: N|L|M|H */
-	ShortName = 'shortName'
+	ShortName = 'shortName',
 }
 /**
  * Parses the edit_intent from the first line of the response stream.
@@ -38,7 +38,7 @@ export enum EditIntentParseMode {
 export async function parseEditIntentFromStream(
 	linesStream: AsyncIterable<string>,
 	tracer: ILogger,
-	mode: EditIntentParseMode = EditIntentParseMode.Tags
+	mode: EditIntentParseMode = EditIntentParseMode.Tags,
 ): Promise<ParseEditIntentResult> {
 	if (mode === EditIntentParseMode.ShortName) {
 		return parseEditIntentFromStreamShortName(linesStream, tracer);
@@ -52,9 +52,10 @@ export async function parseEditIntentFromStream(
 
 async function parseEditIntentFromStreamShortName(
 	linesStream: AsyncIterable<string>,
-	tracer: ILogger
+	tracer: ILogger,
 ): Promise<ParseEditIntentResult> {
-	let editIntent: xtabPromptOptions.EditIntent = xtabPromptOptions.EditIntent.High; // Default to high (always show) if no short name found
+	let editIntent: xtabPromptOptions.EditIntent =
+		xtabPromptOptions.EditIntent.High; // Default to high (always show) if no short name found
 	let parseError: string | undefined;
 
 	const linesIter = linesStream[Symbol.asyncIterator]();
@@ -64,7 +65,8 @@ async function parseEditIntentFromStreamShortName(
 		// Empty stream
 		parseError = 'emptyResponse';
 		tracer.warn(`Empty response stream, no edit_intent short name found`);
-		const remainingLinesStream: AsyncIterable<string> = (async function* () { })();
+		const remainingLinesStream: AsyncIterable<string> =
+			(async function* () {})();
 		return { editIntent, remainingLinesStream, parseError };
 	}
 
@@ -75,16 +77,19 @@ async function parseEditIntentFromStreamShortName(
 
 	if (parsedIntent !== undefined) {
 		editIntent = parsedIntent;
-		tracer.trace(`Parsed edit_intent short name from first line: "${firstLine}" -> ${editIntent}`);
+		tracer.trace(
+			`Parsed edit_intent short name from first line: "${firstLine}" -> ${editIntent}`,
+		);
 
 		// Create a new stream with the remaining lines (excluding the short name line)
-		const remainingLinesStream: AsyncIterable<string> = (async function* () {
-			let next = await linesIter.next();
-			while (!next.done) {
-				yield next.value;
-				next = await linesIter.next();
-			}
-		})();
+		const remainingLinesStream: AsyncIterable<string> =
+			(async function* () {
+				let next = await linesIter.next();
+				while (!next.done) {
+					yield next.value;
+					next = await linesIter.next();
+				}
+			})();
 
 		return { editIntent, remainingLinesStream, parseError };
 	}
@@ -92,8 +97,10 @@ async function parseEditIntentFromStreamShortName(
 	// Short name not found or invalid
 	parseError = `unknownIntentValue:${firstLine}`;
 
-	tracer.warn(`Edit intent parse error: ${parseError} (using Xtab275EditIntentShort prompting strategy). ` +
-		`Defaulting to High (always show). First line was: "${firstLine.substring(0, 100)}..."`);
+	tracer.warn(
+		`Edit intent parse error: ${parseError} (using Xtab275EditIntentShort prompting strategy). ` +
+			`Defaulting to High (always show). First line was: "${firstLine.substring(0, 100)}..."`,
+	);
 
 	// Return the first line plus the rest of the stream
 	const remainingLinesStream: AsyncIterable<string> = (async function* () {
@@ -113,12 +120,13 @@ async function parseEditIntentFromStreamShortName(
 
 async function parseEditIntentFromStreamTags(
 	linesStream: AsyncIterable<string>,
-	tracer: ILogger
+	tracer: ILogger,
 ): Promise<ParseEditIntentResult> {
 	const EDIT_INTENT_START_TAG = '<|edit_intent|>';
 	const EDIT_INTENT_END_TAG = '<|/edit_intent|>';
 
-	let editIntent: xtabPromptOptions.EditIntent = xtabPromptOptions.EditIntent.High; // Default to high (always show) if no tag found
+	let editIntent: xtabPromptOptions.EditIntent =
+		xtabPromptOptions.EditIntent.High; // Default to high (always show) if no tag found
 	let parseError: string | undefined;
 
 	const linesIter = linesStream[Symbol.asyncIterator]();
@@ -128,7 +136,8 @@ async function parseEditIntentFromStreamTags(
 		// Empty stream
 		parseError = 'emptyResponse';
 		tracer.warn(`Empty response stream, no edit_intent tag found`);
-		const remainingLinesStream: AsyncIterable<string> = (async function* () { })();
+		const remainingLinesStream: AsyncIterable<string> =
+			(async function* () {})();
 		return { editIntent, remainingLinesStream, parseError };
 	}
 
@@ -140,37 +149,44 @@ async function parseEditIntentFromStreamTags(
 
 	if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
 		// Found complete tag on first line
-		const intentValue = firstLine.substring(
-			startIdx + EDIT_INTENT_START_TAG.length,
-			endIdx
-		).trim().toLowerCase();
+		const intentValue = firstLine
+			.substring(startIdx + EDIT_INTENT_START_TAG.length, endIdx)
+			.trim()
+			.toLowerCase();
 
 		// Check if it's a known intent value
 		const knownIntentValues = ['no_edit', 'low', 'medium', 'high'];
 		if (!knownIntentValues.includes(intentValue)) {
 			parseError = `unknownIntentValue:${intentValue}`;
-			tracer.warn(`Unknown edit_intent value: "${intentValue}", defaulting to High`);
+			tracer.warn(
+				`Unknown edit_intent value: "${intentValue}", defaulting to High`,
+			);
 		}
 
 		editIntent = xtabPromptOptions.EditIntent.fromString(intentValue);
-		tracer.trace(`Parsed edit_intent from first line: "${intentValue}" -> ${editIntent}`);
+		tracer.trace(
+			`Parsed edit_intent from first line: "${intentValue}" -> ${editIntent}`,
+		);
 
 		// Calculate remaining content after the end tag on the first line
-		const afterEndTag = firstLine.substring(endIdx + EDIT_INTENT_END_TAG.length);
+		const afterEndTag = firstLine.substring(
+			endIdx + EDIT_INTENT_END_TAG.length,
+		);
 
 		// Create a new stream that first yields remaining content from first line, then continues
-		const remainingLinesStream: AsyncIterable<string> = (async function* () {
-			// Only yield remaining content from first line if non-empty
-			if (afterEndTag.trim() !== '') {
-				yield afterEndTag;
-			}
-			// Continue with rest of the stream
-			let next = await linesIter.next();
-			while (!next.done) {
-				yield next.value;
-				next = await linesIter.next();
-			}
-		})();
+		const remainingLinesStream: AsyncIterable<string> =
+			(async function* () {
+				// Only yield remaining content from first line if non-empty
+				if (afterEndTag.trim() !== '') {
+					yield afterEndTag;
+				}
+				// Continue with rest of the stream
+				let next = await linesIter.next();
+				while (!next.done) {
+					yield next.value;
+					next = await linesIter.next();
+				}
+			})();
 
 		return { editIntent, remainingLinesStream, parseError };
 	}
@@ -187,8 +203,10 @@ async function parseEditIntentFromStreamTags(
 		parseError = 'noTagFound';
 	}
 
-	tracer.warn(`Edit intent parse error: ${parseError} (using Xtab275EditIntent prompting strategy). ` +
-		`Defaulting to High (always show). First line was: "${firstLine.substring(0, 100)}..."`);
+	tracer.warn(
+		`Edit intent parse error: ${parseError} (using Xtab275EditIntent prompting strategy). ` +
+			`Defaulting to High (always show). First line was: "${firstLine.substring(0, 100)}..."`,
+	);
 
 	// Return the first line plus the rest of the stream
 	const remainingLinesStream: AsyncIterable<string> = (async function* () {
@@ -202,4 +220,3 @@ async function parseEditIntentFromStreamTags(
 
 	return { editIntent, remainingLinesStream, parseError };
 }
-

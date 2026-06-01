@@ -3,22 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../../base/browser/dom.js';
-import { StandardMouseEvent } from '../../../../../../base/browser/mouseEvent.js';
-import { HoverStyle } from '../../../../../../base/browser/ui/hover/hover.js';
-import { HoverPosition } from '../../../../../../base/browser/ui/hover/hoverWidget.js';
-import { Emitter, Event } from '../../../../../../base/common/event.js';
-import { Disposable, MutableDisposable } from '../../../../../../base/common/lifecycle.js';
-import { ThemeIcon } from '../../../../../../base/common/themables.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import { ILanguageService } from '../../../../../../editor/common/languages/language.js';
-import { getIconClasses } from '../../../../../../editor/common/services/getIconClasses.js';
-import { IModelService } from '../../../../../../editor/common/services/model.js';
-import { FileKind } from '../../../../../../platform/files/common/files.js';
-import { IHoverService } from '../../../../../../platform/hover/browser/hover.js';
-import { ILabelService } from '../../../../../../platform/label/common/label.js';
-import { IOpenEditorOptions, registerOpenEditorListeners } from '../../../../../../platform/editor/browser/editor.js';
-import './media/chatCodeBlockPill.css';
+import * as dom from "../../../../../../base/browser/dom.js";
+import { StandardMouseEvent } from "../../../../../../base/browser/mouseEvent.js";
+import { HoverStyle } from "../../../../../../base/browser/ui/hover/hover.js";
+import { HoverPosition } from "../../../../../../base/browser/ui/hover/hoverWidget.js";
+import { Emitter, Event } from "../../../../../../base/common/event.js";
+import {
+	Disposable,
+	MutableDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import { ThemeIcon } from "../../../../../../base/common/themables.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import { ILanguageService } from "../../../../../../editor/common/languages/language.js";
+import { getIconClasses } from "../../../../../../editor/common/services/getIconClasses.js";
+import { IModelService } from "../../../../../../editor/common/services/model.js";
+import { FileKind } from "../../../../../../platform/files/common/files.js";
+import { IHoverService } from "../../../../../../platform/hover/browser/hover.js";
+import { ILabelService } from "../../../../../../platform/label/common/label.js";
+import {
+	IOpenEditorOptions,
+	registerOpenEditorListeners,
+} from "../../../../../../platform/editor/browser/editor.js";
+import "./media/chatCodeBlockPill.css";
 
 const $ = dom.$;
 
@@ -37,7 +43,6 @@ const $ = dom.$;
  *   pill from data already provided by the agent host.
  */
 export class ChatEditPillElement extends Disposable {
-
 	readonly element: HTMLElement;
 	protected readonly pillElement: HTMLElement;
 	protected readonly statusIndicatorContainer: HTMLElement;
@@ -52,7 +57,9 @@ export class ChatEditPillElement extends Disposable {
 	private _tooltip: string | undefined;
 
 	private _uri: URI | undefined;
-	get uri(): URI | undefined { return this._uri; }
+	get uri(): URI | undefined {
+		return this._uri;
+	}
 
 	private _statusIconClasses: string[] = [];
 	private _pillIconClasses: string[] = [];
@@ -60,13 +67,18 @@ export class ChatEditPillElement extends Disposable {
 	private _labelAddedEl: HTMLElement | undefined;
 	private _labelRemovedEl: HTMLElement | undefined;
 
-	private readonly _onDidClick = this._register(new Emitter<IOpenEditorOptions>());
+	private readonly _onDidClick = this._register(
+		new Emitter<IOpenEditorOptions>(),
+	);
 	/** Fires when the pill is activated (click / keyboard). Carries the standard open-editor options. */
 	readonly onDidClick: Event<IOpenEditorOptions> = this._onDidClick.event;
 
-	private readonly _onDidContextMenu = this._register(new Emitter<StandardMouseEvent>());
+	private readonly _onDidContextMenu = this._register(
+		new Emitter<StandardMouseEvent>(),
+	);
 	/** Fires on right-click. Subclasses can present a context menu. */
-	readonly onDidContextMenu: Event<StandardMouseEvent> = this._onDidContextMenu.event;
+	readonly onDidContextMenu: Event<StandardMouseEvent> =
+		this._onDidContextMenu.event;
 
 	constructor(
 		@ILabelService protected readonly labelService: ILabelService,
@@ -76,31 +88,46 @@ export class ChatEditPillElement extends Disposable {
 	) {
 		super();
 
-		this.element = $('div.chat-codeblock-pill-container');
+		this.element = $("div.chat-codeblock-pill-container");
 
-		this.statusIndicatorContainer = $('div.status-indicator-container');
-		this.statusIconEl = $('span.status-icon');
-		this.statusLabelEl = $('span.status-label', {}, '');
+		this.statusIndicatorContainer = $("div.status-indicator-container");
+		this.statusIconEl = $("span.status-icon");
+		this.statusLabelEl = $("span.status-label", {}, "");
 		this.statusIndicatorContainer.append(this.statusIconEl, this.statusLabelEl);
 
-		this.pillElement = $('.chat-codeblock-pill-widget');
+		this.pillElement = $(".chat-codeblock-pill-widget");
 		this.pillElement.tabIndex = 0;
-		this.pillElement.classList.add('show-file-icons');
-		this.pillElement.role = 'button';
-		this.progressFillEl = $('span.progress-fill');
-		this.fileIconEl = $('span.icon');
-		this.fileIconLabelEl = $('span.icon-label', {}, '');
-		this.labelDetailEl = $('span.label-detail', {}, '');
-		this.pillElement.append(this.progressFillEl, this.fileIconEl, this.fileIconLabelEl, this.labelDetailEl);
+		this.pillElement.classList.add("show-file-icons");
+		this.pillElement.role = "button";
+		this.progressFillEl = $("span.progress-fill");
+		this.fileIconEl = $("span.icon");
+		this.fileIconLabelEl = $("span.icon-label", {}, "");
+		this.labelDetailEl = $("span.label-detail", {}, "");
+		this.pillElement.append(
+			this.progressFillEl,
+			this.fileIconEl,
+			this.fileIconLabelEl,
+			this.labelDetailEl,
+		);
 
 		this.element.append(this.statusIndicatorContainer, this.pillElement);
 
-		this._register(registerOpenEditorListeners(this.pillElement, opts => this._onDidClick.fire(opts)));
-		this._register(dom.addDisposableListener(this.pillElement, dom.EventType.CONTEXT_MENU, e => {
-			const event = new StandardMouseEvent(dom.getWindow(e), e);
-			dom.EventHelper.stop(e, true);
-			this._onDidContextMenu.fire(event);
-		}));
+		this._register(
+			registerOpenEditorListeners(this.pillElement, (opts) =>
+				this._onDidClick.fire(opts),
+			),
+		);
+		this._register(
+			dom.addDisposableListener(
+				this.pillElement,
+				dom.EventType.CONTEXT_MENU,
+				(e) => {
+					const event = new StandardMouseEvent(dom.getWindow(e), e);
+					dom.EventHelper.stop(e, true);
+					this._onDidContextMenu.fire(event);
+				},
+			),
+		);
 	}
 
 	/**
@@ -112,9 +139,14 @@ export class ChatEditPillElement extends Disposable {
 		this._uri = uri;
 		const iconText = this.labelService.getUriBasenameLabel(uri);
 		this.fileIconLabelEl.textContent = iconText;
-		const fileKind = uri.path.endsWith('/') ? FileKind.FOLDER : FileKind.FILE;
+		const fileKind = uri.path.endsWith("/") ? FileKind.FOLDER : FileKind.FILE;
 		this.fileIconEl.classList.remove(...this._pillIconClasses);
-		this._pillIconClasses = getIconClasses(this.modelService, this.languageService, uri, fileKind);
+		this._pillIconClasses = getIconClasses(
+			this.modelService,
+			this.languageService,
+			uri,
+			fileKind,
+		);
 		this.fileIconEl.classList.add(...this._pillIconClasses);
 		this.setTooltip(this.labelService.getUriLabel(uri, { relative: true }));
 	}
@@ -145,12 +177,12 @@ export class ChatEditPillElement extends Disposable {
 	 * the range [0, 100]. Pass `undefined` (or omit) to clear.
 	 */
 	setProgressFill(percent: number | undefined): void {
-		if (typeof percent === 'number') {
+		if (typeof percent === "number") {
 			this.progressFillEl.style.width = `${percent}%`;
-			this.pillElement.classList.add('progress-filling');
+			this.pillElement.classList.add("progress-filling");
 		} else {
-			this.progressFillEl.style.width = '0%';
-			this.pillElement.classList.remove('progress-filling');
+			this.progressFillEl.style.width = "0%";
+			this.pillElement.classList.remove("progress-filling");
 		}
 	}
 
@@ -168,10 +200,12 @@ export class ChatEditPillElement extends Disposable {
 			return;
 		}
 		if (!this._labelAddedEl) {
-			this._labelAddedEl = this.pillElement.appendChild($('span.label-added'));
+			this._labelAddedEl = this.pillElement.appendChild($("span.label-added"));
 		}
 		if (!this._labelRemovedEl) {
-			this._labelRemovedEl = this.pillElement.appendChild($('span.label-removed'));
+			this._labelRemovedEl = this.pillElement.appendChild(
+				$("span.label-removed"),
+			);
 		}
 		this._labelAddedEl.textContent = `+${diff.added}`;
 		this._labelRemovedEl.textContent = `-${diff.removed}`;
@@ -191,12 +225,15 @@ export class ChatEditPillElement extends Disposable {
 	setTooltip(tooltip: string): void {
 		this._tooltip = tooltip;
 		if (!this._hover.value) {
-			this._hover.value = this.hoverService.setupDelayedHover(this.pillElement, () => ({
-				content: this._tooltip!,
-				style: HoverStyle.Pointer,
-				position: { hoverPosition: HoverPosition.BELOW },
-				persistence: { hideOnKeyDown: true },
-			}));
+			this._hover.value = this.hoverService.setupDelayedHover(
+				this.pillElement,
+				() => ({
+					content: this._tooltip!,
+					style: HoverStyle.Pointer,
+					position: { hoverPosition: HoverPosition.BELOW },
+					persistence: { hideOnKeyDown: true },
+				}),
+			);
 		}
 	}
 }

@@ -3,56 +3,49 @@ enum MyEnum {
 	One,
 	Two,
 	//// { "title": "Enum - no rename", "oldName": "Three", "newName": "Two", "expected": "no" }
-	Three
+	Three,
 }
 
 class Base {
-	public foo() { }
+	public foo() {}
 }
 
 class Derived extends Base {
 	//// { "title": "Method - rename", "oldName": "bar", "newName": "bazz", "expected": "yes" }
-	bar() { }
+	bar() {}
 
 	//// { "title": "Method - no rename", "oldName": "baz", "newName": "bar", "expected": "no" }
-	baz() { }
+	baz() {}
 
 	//// { "title": "Method - no rename inherited", "oldName": "faz", "newName": "foo", "expected": "no" }
-	faz() { }
+	faz() {}
 }
 
 namespace MyNamespace {
-	function foo() { }
+	function foo() {}
 
-	function
-		//// { "title": "Function - rename", "oldName": "bar", "newName": "bazz", "expected": "yes" }
-		bar() { }
+	function //// { "title": "Function - rename", "oldName": "bar", "newName": "bazz", "expected": "yes" }
+	bar() {}
 
-	function
-		//// { "title": "Function - no rename", "oldName": "baz", "newName": "bar", "expected": "no" }
-		baz() { }
+	function //// { "title": "Function - no rename", "oldName": "baz", "newName": "bar", "expected": "no" }
+	baz() {}
 }
 
 function main() {
-	const
-		//// { "title": "Variable - rename", "oldName": "x", "newName": "y", "expected": "yes" }
+	const //// { "title": "Variable - rename", "oldName": "x", "newName": "y", "expected": "yes" }
 		x = 10;
 
-	const
-		//// { "title": "Variable - no rename", "oldName": "z", "newName": "x", "expected": "no" }
+	const //// { "title": "Variable - no rename", "oldName": "z", "newName": "x", "expected": "no" }
 		z = 20;
 }
 
-type MyType = {
-}
+type MyType = {};
 
 //// { "title": "Type - rename", "oldName": "TypeOne", "newName": "YourType", "expected": "yes", "delta": 5 }
-type TypeOne = {
-}
+type TypeOne = {};
 
 //// { "title": "Type - no rename", "oldName": "TypeTwo", "newName": "MyType", "expected": "no", "delta": 5 }
-type TypeTwo = {
-}
+type TypeTwo = {};
 
 export type EndOfLife = {
 	skuPlan: string | undefined;
@@ -66,7 +59,7 @@ export type EndOfLife = {
 	mark(value: number): void;
 	//// { "title": "Type - method no rename - multiple declarations", "oldName": "mark", "newName": "mark2", "expected": "no" }
 	mark(value: number): void;
-}
+};
 
 export interface I2 {
 	skuPlan: string | undefined;
@@ -138,31 +131,24 @@ export namespace N1 {
 	}
 }
 
-export function sameName(): void {
-}
+export function sameName(): void {}
 
 export namespace N2 {
-	function foo(): void {
-	}
+	function foo(): void {}
 	//// { "title": "Namespace function - rename", "oldName": "bar", "newName": "sameName", "expected": "yes" }
-	function bar(): void {
-	}
+	function bar(): void {}
 
 	//// { "title": "Namespace function - rename", "oldName": "baz", "newName": "foo", "expected": "no" }
-	function baz(): void {
-	}
+	function baz(): void {}
 }
 
 export function myFunc(): void {
-	function foo(): void {
-	}
+	function foo(): void {}
 	//// { "title": "Function function - rename", "oldName": "bar", "newName": "sameName", "expected": "yes" }
-	function bar(): void {
-	}
+	function bar(): void {}
 
 	//// { "title": "Function function - rename", "oldName": "baz", "newName": "foo", "expected": "no" }
-	function baz(): void {
-	}
+	function baz(): void {}
 }
 
 export function redeclaredVariable(): void {

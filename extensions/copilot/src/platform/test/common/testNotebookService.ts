@@ -4,9 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { NotebookCell, Uri } from 'vscode';
-import { INotebookService, PipPackage, VariablesResult } from '../../notebook/common/notebookService';
+import {
+	INotebookService,
+	PipPackage,
+	VariablesResult,
+} from '../../notebook/common/notebookService';
 
-export const mockNotebookService = new class implements INotebookService {
+export const mockNotebookService = new (class implements INotebookService {
 	_serviceBrand: undefined;
 	async getVariables(notebook: Uri): Promise<VariablesResult[]> {
 		return [];
@@ -14,12 +18,15 @@ export const mockNotebookService = new class implements INotebookService {
 	async getPipPackages(notebook: Uri): Promise<PipPackage[]> {
 		return [];
 	}
-	setVariables(notebook: Uri, variables: VariablesResult[]): void {
-	}
+	setVariables(notebook: Uri, variables: VariablesResult[]): void {}
 	getCellExecutions(notebook: Uri): NotebookCell[] {
 		return [];
 	}
-	runCells(notebook: Uri, range: { start: number; end: number }, autoreveal: boolean): Promise<void> {
+	runCells(
+		notebook: Uri,
+		range: { start: number; end: number },
+		autoreveal: boolean,
+	): Promise<void> {
 		return Promise.resolve();
 	}
 	ensureKernelSelected(notebook: Uri): Promise<void> {
@@ -31,9 +38,9 @@ export const mockNotebookService = new class implements INotebookService {
 	hasSupportedNotebooks(uri: Uri): boolean {
 		return false;
 	}
-	trackAgentUsage() { }
-	setFollowState(state: boolean): void { }
+	trackAgentUsage() {}
+	setFollowState(state: boolean): void {}
 	getFollowState(): boolean {
 		return false;
 	}
-}();
+})();

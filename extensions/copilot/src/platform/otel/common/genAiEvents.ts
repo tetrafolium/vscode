@@ -4,9 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { GenAiAttr, GenAiOperationName, StdAttr } from './genAiAttributes';
-import { normalizeProviderMessages, stringifyToolsRawForTelemetry, toSystemInstructions, truncateForOTel } from './messageFormatters';
+import {
+	normalizeProviderMessages,
+	stringifyToolsRawForTelemetry,
+	toSystemInstructions,
+	truncateForOTel,
+} from './messageFormatters';
 import type { IOTelService } from './otelService';
-import { type WorkspaceOTelMetadata, workspaceMetadataToOTelAttributes } from './workspaceOTelMetadata';
+import {
+	type WorkspaceOTelMetadata,
+	workspaceMetadataToOTelAttributes,
+} from './workspaceOTelMetadata';
 
 /**
  * Emit OTel GenAI standard events via the IOTelService abstraction.
@@ -21,13 +29,15 @@ export function emitInferenceDetailsEvent(
 		systemMessage?: unknown;
 		tools?: unknown;
 	},
-	response: {
-		id?: string;
-		model?: string;
-		finishReasons?: string[];
-		inputTokens?: number;
-		outputTokens?: number;
-	} | undefined,
+	response:
+		| {
+				id?: string;
+				model?: string;
+				finishReasons?: string[];
+				inputTokens?: number;
+				outputTokens?: number;
+		  }
+		| undefined,
 	error?: { type: string; message: string },
 ): void {
 	const attributes: Record<string, unknown> = {
@@ -37,15 +47,30 @@ export function emitInferenceDetailsEvent(
 	};
 
 	if (response) {
-		if (response.model) { attributes[GenAiAttr.RESPONSE_MODEL] = response.model; }
-		if (response.id) { attributes[GenAiAttr.RESPONSE_ID] = response.id; }
-		if (response.finishReasons) { attributes[GenAiAttr.RESPONSE_FINISH_REASONS] = response.finishReasons; }
-		if (response.inputTokens !== undefined) { attributes[GenAiAttr.USAGE_INPUT_TOKENS] = response.inputTokens; }
-		if (response.outputTokens !== undefined) { attributes[GenAiAttr.USAGE_OUTPUT_TOKENS] = response.outputTokens; }
+		if (response.model) {
+			attributes[GenAiAttr.RESPONSE_MODEL] = response.model;
+		}
+		if (response.id) {
+			attributes[GenAiAttr.RESPONSE_ID] = response.id;
+		}
+		if (response.finishReasons) {
+			attributes[GenAiAttr.RESPONSE_FINISH_REASONS] =
+				response.finishReasons;
+		}
+		if (response.inputTokens !== undefined) {
+			attributes[GenAiAttr.USAGE_INPUT_TOKENS] = response.inputTokens;
+		}
+		if (response.outputTokens !== undefined) {
+			attributes[GenAiAttr.USAGE_OUTPUT_TOKENS] = response.outputTokens;
+		}
 	}
 
-	if (request.temperature !== undefined) { attributes[GenAiAttr.REQUEST_TEMPERATURE] = request.temperature; }
-	if (request.maxTokens !== undefined) { attributes[GenAiAttr.REQUEST_MAX_TOKENS] = request.maxTokens; }
+	if (request.temperature !== undefined) {
+		attributes[GenAiAttr.REQUEST_TEMPERATURE] = request.temperature;
+	}
+	if (request.maxTokens !== undefined) {
+		attributes[GenAiAttr.REQUEST_MAX_TOKENS] = request.maxTokens;
+	}
 
 	if (error) {
 		attributes[StdAttr.ERROR_TYPE] = error.type;
@@ -56,24 +81,38 @@ export function emitInferenceDetailsEvent(
 	if (otel.config.captureContent) {
 		const maxLen = otel.config.maxAttributeSizeChars;
 		if (request.messages !== undefined) {
-			const msgs = Array.isArray(request.messages) ? request.messages as ReadonlyArray<Record<string, unknown>> : undefined;
-			attributes[GenAiAttr.INPUT_MESSAGES] = truncateForOTel(JSON.stringify(
-				msgs ? normalizeProviderMessages(msgs) : request.messages
-			), maxLen);
+			const msgs = Array.isArray(request.messages)
+				? (request.messages as ReadonlyArray<Record<string, unknown>>)
+				: undefined;
+			attributes[GenAiAttr.INPUT_MESSAGES] = truncateForOTel(
+				JSON.stringify(
+					msgs ? normalizeProviderMessages(msgs) : request.messages,
+				),
+				maxLen,
+			);
 		}
 		if (request.systemMessage !== undefined) {
-			const systemText = typeof request.systemMessage === 'string'
-				? request.systemMessage
-				: JSON.stringify(request.systemMessage);
+			const systemText =
+				typeof request.systemMessage === 'string'
+					? request.systemMessage
+					: JSON.stringify(request.systemMessage);
 			const systemInstructions = toSystemInstructions(systemText);
 			if (systemInstructions !== undefined) {
-				attributes[GenAiAttr.SYSTEM_INSTRUCTIONS] = truncateForOTel(JSON.stringify(systemInstructions), maxLen);
+				attributes[GenAiAttr.SYSTEM_INSTRUCTIONS] = truncateForOTel(
+					JSON.stringify(systemInstructions),
+					maxLen,
+				);
 			}
 		}
 		if (request.tools !== undefined) {
-			const toolsJson = stringifyToolsRawForTelemetry(request.tools as ReadonlyArray<unknown> | undefined);
+			const toolsJson = stringifyToolsRawForTelemetry(
+				request.tools as ReadonlyArray<unknown> | undefined,
+			);
 			if (toolsJson !== undefined) {
-				attributes[GenAiAttr.TOOL_DEFINITIONS] = truncateForOTel(toolsJson, maxLen);
+				attributes[GenAiAttr.TOOL_DEFINITIONS] = truncateForOTel(
+					toolsJson,
+					maxLen,
+				);
 			}
 		}
 	}
@@ -108,8 +147,8 @@ export function emitToolCallEvent(
 	otel.emitLogRecord(`copilot_chat.tool.call: ${toolName}`, {
 		'event.name': 'copilot_chat.tool.call',
 		[GenAiAttr.TOOL_NAME]: toolName,
-		'duration_ms': durationMs,
-		'success': success,
+		duration_ms: durationMs,
+		success: success,
 		...(error ? { [StdAttr.ERROR_TYPE]: error } : {}),
 	});
 }
@@ -126,7 +165,7 @@ export function emitAgentTurnEvent(
 		'turn.index': turnIndex,
 		[GenAiAttr.USAGE_INPUT_TOKENS]: inputTokens,
 		[GenAiAttr.USAGE_OUTPUT_TOKENS]: outputTokens,
-		'tool_call_count': toolCallCount,
+		tool_call_count: toolCallCount,
 	});
 }
 
@@ -145,13 +184,13 @@ export function emitEditFeedbackEvent(
 ): void {
 	otel.emitLogRecord(`copilot_chat.edit.feedback: ${outcome}`, {
 		'event.name': 'copilot_chat.edit.feedback',
-		'outcome': outcome,
-		'language_id': languageId,
-		'participant': participant,
-		'request_id': requestId,
-		'edit_surface': editSurface,
-		'has_remaining_edits': hasRemainingEdits,
-		'is_notebook': isNotebook,
+		outcome: outcome,
+		language_id: languageId,
+		participant: participant,
+		request_id: requestId,
+		edit_surface: editSurface,
+		has_remaining_edits: hasRemainingEdits,
+		is_notebook: isNotebook,
 		...workspaceMetadataToOTelAttributes(workspace),
 	});
 }
@@ -168,12 +207,12 @@ export function emitEditHunkActionEvent(
 ): void {
 	otel.emitLogRecord(`copilot_chat.edit.hunk.action: ${outcome}`, {
 		'event.name': 'copilot_chat.edit.hunk.action',
-		'outcome': outcome,
-		'language_id': languageId,
-		'request_id': requestId,
-		'line_count': lineCount,
-		'lines_added': linesAdded,
-		'lines_removed': linesRemoved,
+		outcome: outcome,
+		language_id: languageId,
+		request_id: requestId,
+		line_count: lineCount,
+		lines_added: linesAdded,
+		lines_removed: linesRemoved,
 		...workspaceMetadataToOTelAttributes(workspace),
 	});
 }
@@ -188,16 +227,19 @@ export function emitInlineDoneEvent(
 	isNotebook: boolean,
 	workspace?: WorkspaceOTelMetadata,
 ): void {
-	otel.emitLogRecord(`copilot_chat.inline.done: ${accepted ? 'accepted' : 'rejected'}`, {
-		'event.name': 'copilot_chat.inline.done',
-		'accepted': accepted,
-		'language_id': languageId,
-		'edit_count': editCount,
-		'edit_line_count': editLineCount,
-		'reply_type': replyType,
-		'is_notebook': isNotebook,
-		...workspaceMetadataToOTelAttributes(workspace),
-	});
+	otel.emitLogRecord(
+		`copilot_chat.inline.done: ${accepted ? 'accepted' : 'rejected'}`,
+		{
+			'event.name': 'copilot_chat.inline.done',
+			accepted: accepted,
+			language_id: languageId,
+			edit_count: editCount,
+			edit_line_count: editLineCount,
+			reply_type: replyType,
+			is_notebook: isNotebook,
+			...workspaceMetadataToOTelAttributes(workspace),
+		},
+	);
 }
 
 export function emitEditSurvivalEvent(
@@ -212,12 +254,12 @@ export function emitEditSurvivalEvent(
 ): void {
 	otel.emitLogRecord(`copilot_chat.edit.survival: ${editSource}`, {
 		'event.name': 'copilot_chat.edit.survival',
-		'edit_source': editSource,
-		'survival_rate_four_gram': survivalRateFourGram,
-		'survival_rate_no_revert': survivalRateNoRevert,
-		'time_delay_ms': timeDelayMs,
-		'did_branch_change': didBranchChange,
-		'request_id': requestId,
+		edit_source: editSource,
+		survival_rate_four_gram: survivalRateFourGram,
+		survival_rate_no_revert: survivalRateNoRevert,
+		time_delay_ms: timeDelayMs,
+		did_branch_change: didBranchChange,
+		request_id: requestId,
 		...workspaceMetadataToOTelAttributes(workspace),
 	});
 }
@@ -231,10 +273,10 @@ export function emitUserFeedbackEvent(
 ): void {
 	otel.emitLogRecord(`copilot_chat.user.feedback: ${rating}`, {
 		'event.name': 'copilot_chat.user.feedback',
-		'rating': rating,
-		'participant': participant,
-		'conversation_id': conversationId,
-		'request_id': requestId,
+		rating: rating,
+		participant: participant,
+		conversation_id: conversationId,
+		request_id: requestId,
 	});
 }
 
@@ -246,8 +288,8 @@ export function emitCloudSessionInvokeEvent(
 ): void {
 	otel.emitLogRecord(`copilot_chat.cloud.session.invoke: ${partnerAgent}`, {
 		'event.name': 'copilot_chat.cloud.session.invoke',
-		'partner_agent': partnerAgent,
-		'model': model,
-		'request_id': requestId,
+		partner_agent: partnerAgent,
+		model: model,
+		request_id: requestId,
 	});
 }

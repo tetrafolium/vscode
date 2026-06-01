@@ -3,23 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OperatingSystem } from '../../../../../../../base/common/platform.js';
-import { isPowerShell } from '../../runInTerminalHelpers.js';
-import type { ICommandLinePresenter, ICommandLinePresenterOptions, ICommandLinePresenterResult } from './commandLinePresenter.js';
+import { OperatingSystem } from "../../../../../../../base/common/platform.js";
+import { isPowerShell } from "../../runInTerminalHelpers.js";
+import type {
+	ICommandLinePresenter,
+	ICommandLinePresenterOptions,
+	ICommandLinePresenterResult,
+} from "./commandLinePresenter.js";
 
 /**
  * Command line presenter for Python inline commands (`python -c "..."`).
  * Extracts the Python code and sets up Python syntax highlighting.
  */
 export class PythonCommandLinePresenter implements ICommandLinePresenter {
-	present(options: ICommandLinePresenterOptions): ICommandLinePresenterResult | undefined {
+	present(
+		options: ICommandLinePresenterOptions,
+	): ICommandLinePresenterResult | undefined {
 		const commandLine = options.commandLine.forDisplay;
-		const extractedPython = extractPythonCommand(commandLine, options.shell, options.os);
+		const extractedPython = extractPythonCommand(
+			commandLine,
+			options.shell,
+			options.os,
+		);
 		if (extractedPython) {
 			return {
 				commandLine: extractedPython,
-				language: 'python',
-				languageDisplayName: 'Python',
+				language: "python",
+				languageDisplayName: "Python",
 			};
 		}
 		return undefined;
@@ -35,9 +45,15 @@ export class PythonCommandLinePresenter implements ICommandLinePresenter {
  * @param os The operating system
  * @returns The extracted Python code, or undefined if not a python -c command
  */
-export function extractPythonCommand(commandLine: string, shell: string, os: OperatingSystem): string | undefined {
+export function extractPythonCommand(
+	commandLine: string,
+	shell: string,
+	os: OperatingSystem,
+): string | undefined {
 	// Match python/python3 -c "..." pattern (double quotes)
-	const doubleQuoteMatch = commandLine.match(/^python(?:3)?\s+-c\s+"(?<python>.+)"$/s);
+	const doubleQuoteMatch = commandLine.match(
+		/^python(?:3)?\s+-c\s+"(?<python>.+)"$/s,
+	);
 	if (doubleQuoteMatch?.groups?.python) {
 		let pythonCode = doubleQuoteMatch.groups.python.trim();
 
@@ -56,7 +72,9 @@ export function extractPythonCommand(commandLine: string, shell: string, os: Ope
 	// Match python/python3 -c '...' pattern (single quotes)
 	// Single quotes in bash/sh/zsh are literal - no escaping inside
 	// Single quotes in PowerShell are also literal
-	const singleQuoteMatch = commandLine.match(/^python(?:3)?\s+-c\s+'(?<python>.+)'$/s);
+	const singleQuoteMatch = commandLine.match(
+		/^python(?:3)?\s+-c\s+'(?<python>.+)'$/s,
+	);
 	if (singleQuoteMatch?.groups?.python) {
 		return singleQuoteMatch.groups.python.trim();
 	}

@@ -3,18 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ILogService, ILoggerService, LogLevel, LogLevelToString, getLogLevel, parseLogLevel } from '../../../../platform/log/common/log.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
-import { FileOperationResult, IFileService, toFileOperationResult } from '../../../../platform/files/common/files.js';
-import { IJSONEditingService } from '../../../services/configuration/common/jsonEditing.js';
-import { isString, isUndefined } from '../../../../base/common/types.js';
-import { EXTENSION_IDENTIFIER_WITH_LOG_REGEX } from '../../../../platform/environment/common/environmentService.js';
-import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
-import { parse } from '../../../../base/common/json.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { equals } from '../../../../base/common/objects.js';
+import {
+	ILogService,
+	ILoggerService,
+	LogLevel,
+	LogLevelToString,
+	getLogLevel,
+	parseLogLevel,
+} from "../../../../platform/log/common/log.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { IWorkbenchEnvironmentService } from "../../../services/environment/common/environmentService.js";
+import {
+	FileOperationResult,
+	IFileService,
+	toFileOperationResult,
+} from "../../../../platform/files/common/files.js";
+import { IJSONEditingService } from "../../../services/configuration/common/jsonEditing.js";
+import { isString, isUndefined } from "../../../../base/common/types.js";
+import { EXTENSION_IDENTIFIER_WITH_LOG_REGEX } from "../../../../platform/environment/common/environmentService.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../platform/instantiation/common/extensions.js";
+import { parse } from "../../../../base/common/json.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { equals } from "../../../../base/common/objects.js";
 
 interface ParsedArgvLogLevels {
 	default?: LogLevel;
@@ -23,10 +37,10 @@ interface ParsedArgvLogLevels {
 
 export type DefaultLogLevels = Required<Readonly<ParsedArgvLogLevels>>;
 
-export const IDefaultLogLevelsService = createDecorator<IDefaultLogLevelsService>('IDefaultLogLevelsService');
+export const IDefaultLogLevelsService =
+	createDecorator<IDefaultLogLevelsService>("IDefaultLogLevelsService");
 
 export interface IDefaultLogLevelsService {
-
 	readonly _serviceBrand: undefined;
 
 	readonly defaultLogLevels: DefaultLogLevels;
@@ -36,32 +50,41 @@ export interface IDefaultLogLevelsService {
 	setDefaultLogLevel(logLevel: LogLevel, extensionId?: string): Promise<void>;
 }
 
-class DefaultLogLevelsService extends Disposable implements IDefaultLogLevelsService {
-
+class DefaultLogLevelsService
+	extends Disposable
+	implements IDefaultLogLevelsService
+{
 	_serviceBrand: undefined;
 
-	private _onDidChangeDefaultLogLevels = this._register(new Emitter<DefaultLogLevels>);
-	readonly onDidChangeDefaultLogLevels = this._onDidChangeDefaultLogLevels.event;
+	private _onDidChangeDefaultLogLevels = this._register(
+		new Emitter<DefaultLogLevels>(),
+	);
+	readonly onDidChangeDefaultLogLevels =
+		this._onDidChangeDefaultLogLevels.event;
 
 	private _defaultLogLevels: DefaultLogLevels;
 
 	constructor(
-		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService,
+		@IWorkbenchEnvironmentService
+		private readonly environmentService: IWorkbenchEnvironmentService,
 		@IFileService private readonly fileService: IFileService,
-		@IJSONEditingService private readonly jsonEditingService: IJSONEditingService,
+		@IJSONEditingService
+		private readonly jsonEditingService: IJSONEditingService,
 		@ILogService private readonly logService: ILogService,
 		@ILoggerService private readonly loggerService: ILoggerService,
 	) {
 		super();
 		this._defaultLogLevels = {
 			default: this._getDefaultLogLevelFromEnv(),
-			extensions: this._getExtensionsDefaultLogLevelsFromEnv()
+			extensions: this._getExtensionsDefaultLogLevelsFromEnv(),
 		};
-		this._register(this.fileService.onDidFilesChange(e => {
-			if (e.contains(this.environmentService.argvResource)) {
-				this.onDidChangeArgv();
-			}
-		}));
+		this._register(
+			this.fileService.onDidFilesChange((e) => {
+				if (e.contains(this.environmentService.argvResource)) {
+					this.onDidChangeArgv();
+				}
+			}),
+		);
 	}
 
 	private async onDidChangeArgv(): Promise<void> {
@@ -73,10 +96,15 @@ class DefaultLogLevelsService extends Disposable implements IDefaultLogLevelsSer
 		return this._defaultLogLevels;
 	}
 
-	private updateDefaultLogLevels(defaultLogLevelsFromArgv: ParsedArgvLogLevels | undefined): void {
+	private updateDefaultLogLevels(
+		defaultLogLevelsFromArgv: ParsedArgvLogLevels | undefined,
+	): void {
 		const defaultLogLevels = {
-			default: defaultLogLevelsFromArgv?.default ?? this._getDefaultLogLevelFromEnv(),
-			extensions: defaultLogLevelsFromArgv?.extensions ?? this._getExtensionsDefaultLogLevelsFromEnv()
+			default:
+				defaultLogLevelsFromArgv?.default ?? this._getDefaultLogLevelFromEnv(),
+			extensions:
+				defaultLogLevelsFromArgv?.extensions ??
+				this._getExtensionsDefaultLogLevelsFromEnv(),
 		};
 		if (!equals(this._defaultLogLevels, defaultLogLevels)) {
 			this._defaultLogLevels = defaultLogLevels;
@@ -93,27 +121,50 @@ class DefaultLogLevelsService extends Disposable implements IDefaultLogLevelsSer
 		}
 	}
 
-	async setDefaultLogLevel(defaultLogLevel: LogLevel, extensionId?: string): Promise<void> {
-		const defaultLogLevelsFromArgv = await this._parseLogLevelsFromArgv() ?? {};
+	async setDefaultLogLevel(
+		defaultLogLevel: LogLevel,
+		extensionId?: string,
+	): Promise<void> {
+		const defaultLogLevelsFromArgv =
+			(await this._parseLogLevelsFromArgv()) ?? {};
 		if (extensionId) {
 			extensionId = extensionId.toLowerCase();
-			const currentDefaultLogLevel = this._getDefaultLogLevel(defaultLogLevelsFromArgv, extensionId);
-			defaultLogLevelsFromArgv.extensions = defaultLogLevelsFromArgv.extensions ?? [];
-			const extension = defaultLogLevelsFromArgv.extensions.find(([extension]) => extension === extensionId);
+			const currentDefaultLogLevel = this._getDefaultLogLevel(
+				defaultLogLevelsFromArgv,
+				extensionId,
+			);
+			defaultLogLevelsFromArgv.extensions =
+				defaultLogLevelsFromArgv.extensions ?? [];
+			const extension = defaultLogLevelsFromArgv.extensions.find(
+				([extension]) => extension === extensionId,
+			);
 			if (extension) {
 				extension[1] = defaultLogLevel;
 			} else {
-				defaultLogLevelsFromArgv.extensions.push([extensionId, defaultLogLevel]);
+				defaultLogLevelsFromArgv.extensions.push([
+					extensionId,
+					defaultLogLevel,
+				]);
 			}
 			await this._writeLogLevelsToArgv(defaultLogLevelsFromArgv);
-			const extensionLoggers = [...this.loggerService.getRegisteredLoggers()].filter(logger => logger.extensionId && logger.extensionId.toLowerCase() === extensionId);
+			const extensionLoggers = [
+				...this.loggerService.getRegisteredLoggers(),
+			].filter(
+				(logger) =>
+					logger.extensionId &&
+					logger.extensionId.toLowerCase() === extensionId,
+			);
 			for (const { resource } of extensionLoggers) {
-				if (this.loggerService.getLogLevel(resource) === currentDefaultLogLevel) {
+				if (
+					this.loggerService.getLogLevel(resource) === currentDefaultLogLevel
+				) {
 					this.loggerService.setLogLevel(resource, defaultLogLevel);
 				}
 			}
 		} else {
-			const currentLogLevel = this._getDefaultLogLevel(defaultLogLevelsFromArgv);
+			const currentLogLevel = this._getDefaultLogLevel(
+				defaultLogLevelsFromArgv,
+			);
 			defaultLogLevelsFromArgv.default = defaultLogLevel;
 			await this._writeLogLevelsToArgv(defaultLogLevelsFromArgv);
 			if (this.loggerService.getLogLevel() === currentLogLevel) {
@@ -123,9 +174,14 @@ class DefaultLogLevelsService extends Disposable implements IDefaultLogLevelsSer
 		this.updateDefaultLogLevels(defaultLogLevelsFromArgv);
 	}
 
-	private _getDefaultLogLevel(argvLogLevels: ParsedArgvLogLevels, extension?: string): LogLevel {
+	private _getDefaultLogLevel(
+		argvLogLevels: ParsedArgvLogLevels,
+		extension?: string,
+	): LogLevel {
 		if (extension) {
-			const extensionLogLevel = argvLogLevels.extensions?.find(([extensionId]) => extensionId === extension);
+			const extensionLogLevel = argvLogLevels.extensions?.find(
+				([extensionId]) => extensionId === extension,
+			);
 			if (extensionLogLevel) {
 				return extensionLogLevel[1];
 			}
@@ -133,7 +189,9 @@ class DefaultLogLevelsService extends Disposable implements IDefaultLogLevelsSer
 		return argvLogLevels.default ?? getLogLevel(this.environmentService);
 	}
 
-	private async _writeLogLevelsToArgv(logLevels: ParsedArgvLogLevels): Promise<void> {
+	private async _writeLogLevelsToArgv(
+		logLevels: ParsedArgvLogLevels,
+	): Promise<void> {
 		const logLevelsValue: string[] = [];
 		if (!isUndefined(logLevels.default)) {
 			logLevelsValue.push(LogLevelToString(logLevels.default));
@@ -141,14 +199,26 @@ class DefaultLogLevelsService extends Disposable implements IDefaultLogLevelsSer
 		for (const [extension, logLevel] of logLevels.extensions ?? []) {
 			logLevelsValue.push(`${extension}=${LogLevelToString(logLevel)}`);
 		}
-		await this.jsonEditingService.write(this.environmentService.argvResource, [{ path: ['log-level'], value: logLevelsValue.length ? logLevelsValue : undefined }], true);
+		await this.jsonEditingService.write(
+			this.environmentService.argvResource,
+			[
+				{
+					path: ["log-level"],
+					value: logLevelsValue.length ? logLevelsValue : undefined,
+				},
+			],
+			true,
+		);
 	}
 
-	private async _parseLogLevelsFromArgv(): Promise<ParsedArgvLogLevels | undefined> {
+	private async _parseLogLevelsFromArgv(): Promise<
+		ParsedArgvLogLevels | undefined
+	> {
 		const result: ParsedArgvLogLevels = { extensions: [] };
 		const logLevels = await this._readLogLevelsFromArgv();
 		for (const extensionLogLevel of logLevels) {
-			const matches = EXTENSION_IDENTIFIER_WITH_LOG_REGEX.exec(extensionLogLevel);
+			const matches =
+				EXTENSION_IDENTIFIER_WITH_LOG_REGEX.exec(extensionLogLevel);
 			if (matches && matches[1] && matches[2]) {
 				const logLevel = parseLogLevel(matches[2]);
 				if (!isUndefined(logLevel)) {
@@ -161,14 +231,24 @@ class DefaultLogLevelsService extends Disposable implements IDefaultLogLevelsSer
 				}
 			}
 		}
-		return !isUndefined(result.default) || result.extensions?.length ? result : undefined;
+		return !isUndefined(result.default) || result.extensions?.length
+			? result
+			: undefined;
 	}
 
 	private async _readLogLevelsFromArgv(): Promise<string[]> {
 		try {
-			const content = await this.fileService.readFile(this.environmentService.argvResource);
-			const argv: { 'log-level'?: string | string[] } = parse(content.value.toString());
-			return isString(argv['log-level']) ? [argv['log-level']] : Array.isArray(argv['log-level']) ? argv['log-level'] : [];
+			const content = await this.fileService.readFile(
+				this.environmentService.argvResource,
+			);
+			const argv: { "log-level"?: string | string[] } = parse(
+				content.value.toString(),
+			);
+			return isString(argv["log-level"])
+				? [argv["log-level"]]
+				: Array.isArray(argv["log-level"])
+					? argv["log-level"]
+					: [];
 		} catch (error) {
 			if (toFileOperationResult(error) !== FileOperationResult.FILE_NOT_FOUND) {
 				this.logService.error(error);
@@ -183,7 +263,8 @@ class DefaultLogLevelsService extends Disposable implements IDefaultLogLevelsSer
 
 	private _getExtensionsDefaultLogLevelsFromEnv(): [string, LogLevel][] {
 		const result: [string, LogLevel][] = [];
-		for (const [extension, logLevelValue] of this.environmentService.extensionLogLevel ?? []) {
+		for (const [extension, logLevelValue] of this.environmentService
+			.extensionLogLevel ?? []) {
 			const logLevel = parseLogLevel(logLevelValue);
 			if (!isUndefined(logLevel)) {
 				result.push([extension, logLevel]);
@@ -193,4 +274,8 @@ class DefaultLogLevelsService extends Disposable implements IDefaultLogLevelsSer
 	}
 }
 
-registerSingleton(IDefaultLogLevelsService, DefaultLogLevelsService, InstantiationType.Delayed);
+registerSingleton(
+	IDefaultLogLevelsService,
+	DefaultLogLevelsService,
+	InstantiationType.Delayed,
+);

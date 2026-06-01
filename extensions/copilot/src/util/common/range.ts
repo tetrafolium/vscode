@@ -5,6 +5,8 @@
 
 import * as vscodeTypes from '../../vscodeTypes';
 
-export function collapseRangeToStart(range: vscodeTypes.Range): vscodeTypes.Range {
+export function collapseRangeToStart(
+	range: vscodeTypes.Range,
+): vscodeTypes.Range {
 	return new vscodeTypes.Range(range.start, range.start);
 }

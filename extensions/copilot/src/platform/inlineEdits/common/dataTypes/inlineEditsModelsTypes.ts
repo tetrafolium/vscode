@@ -3,17 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IValidator, vArray, vObj, vString } from '../../../configuration/common/validator';
+import {
+	IValidator,
+	vArray,
+	vObj,
+	vString,
+} from '../../../configuration/common/validator';
 
 export namespace WireTypes {
-
 	export namespace Capabilities {
 		export type t = {
 			promptStrategy: string;
 		};
 		export function is(obj: unknown): obj is t {
-			return !!obj && typeof obj === 'object' &&
-				typeof (obj as t).promptStrategy === 'string';
+			return (
+				!!obj &&
+				typeof obj === 'object' &&
+				typeof (obj as t).promptStrategy === 'string'
+			);
 		}
 		export const validator: IValidator<t> = vObj({
 			promptStrategy: vString(),
@@ -34,11 +41,14 @@ export namespace WireTypes {
 			capabilities: Capabilities.validator,
 		});
 		export function is(obj: unknown): obj is t {
-			return !!obj && typeof obj === 'object' &&
+			return (
+				!!obj &&
+				typeof obj === 'object' &&
 				typeof (obj as t).serviceType === 'string' &&
 				typeof (obj as t).name === 'string' &&
 				typeof (obj as t).provider === 'string' &&
-				Capabilities.is((obj as t).capabilities);
+				Capabilities.is((obj as t).capabilities)
+			);
 		}
 	}
 
@@ -50,8 +60,12 @@ export namespace WireTypes {
 			models: vArray(Model.validator),
 		});
 		export function is(obj: unknown): obj is t {
-			return !!obj && typeof obj === 'object' && Array.isArray((obj as t).models) && (obj as t).models.every(Model.is);
+			return (
+				!!obj &&
+				typeof obj === 'object' &&
+				Array.isArray((obj as t).models) &&
+				(obj as t).models.every(Model.is)
+			);
 		}
 	}
 }
-

@@ -3,16 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/mobileSessionFilterChips.css';
-import * as DOM from '../../../../base/browser/dom.js';
-import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { Gesture, EventType as TouchEventType } from '../../../../base/browser/touch.js';
-import { EventType } from '../../../../base/browser/dom.js';
-import { Codicon } from '../../../../base/common/codicons.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { localize } from '../../../../nls.js';
-import { SessionStatus } from '../../../services/sessions/common/session.js';
+import "./media/mobileSessionFilterChips.css";
+import * as DOM from "../../../../base/browser/dom.js";
+import {
+	Disposable,
+	DisposableStore,
+} from "../../../../base/common/lifecycle.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import {
+	Gesture,
+	EventType as TouchEventType,
+} from "../../../../base/browser/touch.js";
+import { EventType } from "../../../../base/browser/dom.js";
+import { Codicon } from "../../../../base/common/codicons.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import { localize } from "../../../../nls.js";
+import { SessionStatus } from "../../../services/sessions/common/session.js";
 
 const $ = DOM.$;
 
@@ -47,7 +53,6 @@ export interface IMobileSessionFilterChipHost {
  * internally — the conditional instantiation happens at the call site.
  */
 export class MobileSessionFilterChips extends Disposable {
-
 	private readonly container: HTMLElement;
 	/**
 	 * Inner horizontally scrollable region that hosts the status filter
@@ -59,12 +64,15 @@ export class MobileSessionFilterChips extends Disposable {
 	private readonly chipElements = new Map<string, HTMLElement>();
 	private readonly chipDisposables = this._register(new DisposableStore());
 
-	private readonly _onDidRequestSortGroup = this._register(new Emitter<HTMLElement>());
+	private readonly _onDidRequestSortGroup = this._register(
+		new Emitter<HTMLElement>(),
+	);
 	/**
 	 * Fired when the user taps the "Sort" chip. The argument is
 	 * the chip's DOM element so the host can anchor a sheet/menu to it.
 	 */
-	readonly onDidRequestSortGroup: Event<HTMLElement> = this._onDidRequestSortGroup.event;
+	readonly onDidRequestSortGroup: Event<HTMLElement> =
+		this._onDidRequestSortGroup.event;
 
 	private readonly _onDidRequestFind = this._register(new Emitter<void>());
 	/**
@@ -75,15 +83,15 @@ export class MobileSessionFilterChips extends Disposable {
 
 	private static readonly CHIP_DEFS: readonly IFilterChipDef[] = [
 		{
-			label: localize('chipCompleted', "Completed"),
+			label: localize("chipCompleted", "Completed"),
 			statuses: [SessionStatus.Completed],
 		},
 		{
-			label: localize('chipInProgress', "In Progress"),
+			label: localize("chipInProgress", "In Progress"),
 			statuses: [SessionStatus.InProgress, SessionStatus.NeedsInput],
 		},
 		{
-			label: localize('chipFailed', "Failed"),
+			label: localize("chipFailed", "Failed"),
 			statuses: [SessionStatus.Error],
 		},
 	];
@@ -94,11 +102,17 @@ export class MobileSessionFilterChips extends Disposable {
 	) {
 		super();
 
-		this.container = DOM.append(parent, $('.mobile-session-filter-chips'));
-		this.container.setAttribute('role', 'toolbar');
-		this.container.setAttribute('aria-label', localize('filterChipsLabel', "Session status filters"));
+		this.container = DOM.append(parent, $(".mobile-session-filter-chips"));
+		this.container.setAttribute("role", "toolbar");
+		this.container.setAttribute(
+			"aria-label",
+			localize("filterChipsLabel", "Session status filters"),
+		);
 
-		this.scrollContainer = DOM.append(this.container, $('.mobile-session-filter-chips-scroll'));
+		this.scrollContainer = DOM.append(
+			this.container,
+			$(".mobile-session-filter-chips-scroll"),
+		);
 
 		this.renderChips();
 
@@ -130,92 +144,136 @@ export class MobileSessionFilterChips extends Disposable {
 	}
 
 	private createStatusChip(def: IFilterChipDef): void {
-		const chip = DOM.append(this.scrollContainer, $('.mobile-session-filter-chip'));
-		chip.setAttribute('role', 'button');
-		chip.setAttribute('tabindex', '0');
-		chip.setAttribute('aria-pressed', 'false');
+		const chip = DOM.append(
+			this.scrollContainer,
+			$(".mobile-session-filter-chip"),
+		);
+		chip.setAttribute("role", "button");
+		chip.setAttribute("tabindex", "0");
+		chip.setAttribute("aria-pressed", "false");
 
-		const label = DOM.append(chip, $('span.chip-label'));
+		const label = DOM.append(chip, $("span.chip-label"));
 		label.textContent = def.label;
 
 		this.chipElements.set(def.label, chip);
 
 		// Touch + click handling (iOS requires both per sessions instructions)
 		this.chipDisposables.add(Gesture.addTarget(chip));
-		this.chipDisposables.add(DOM.addDisposableListener(chip, EventType.CLICK, (e) => {
-			e.preventDefault();
-			this.toggleStatusChip(def);
-		}));
-		this.chipDisposables.add(DOM.addDisposableListener(chip, TouchEventType.Tap, () => {
-			this.toggleStatusChip(def);
-		}));
-
-		// Keyboard activation
-		this.chipDisposables.add(DOM.addDisposableListener(chip, EventType.KEY_DOWN, (e: KeyboardEvent) => {
-			if (e.key === 'Enter' || e.key === ' ') {
+		this.chipDisposables.add(
+			DOM.addDisposableListener(chip, EventType.CLICK, (e) => {
 				e.preventDefault();
 				this.toggleStatusChip(def);
-			}
-		}));
+			}),
+		);
+		this.chipDisposables.add(
+			DOM.addDisposableListener(chip, TouchEventType.Tap, () => {
+				this.toggleStatusChip(def);
+			}),
+		);
+
+		// Keyboard activation
+		this.chipDisposables.add(
+			DOM.addDisposableListener(
+				chip,
+				EventType.KEY_DOWN,
+				(e: KeyboardEvent) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						this.toggleStatusChip(def);
+					}
+				},
+			),
+		);
 	}
 
 	private createSortGroupChip(): void {
-		const chip = DOM.append(this.scrollContainer, $('.mobile-session-filter-chip.mobile-session-filter-chip-action'));
-		chip.setAttribute('role', 'button');
-		chip.setAttribute('tabindex', '0');
-		chip.setAttribute('aria-label', localize('sortGroupAriaLabel', "Sort and group options"));
+		const chip = DOM.append(
+			this.scrollContainer,
+			$(".mobile-session-filter-chip.mobile-session-filter-chip-action"),
+		);
+		chip.setAttribute("role", "button");
+		chip.setAttribute("tabindex", "0");
+		chip.setAttribute(
+			"aria-label",
+			localize("sortGroupAriaLabel", "Sort and group options"),
+		);
 
-		const icon = DOM.append(chip, $('span.chip-icon'));
+		const icon = DOM.append(chip, $("span.chip-icon"));
 		icon.classList.add(...ThemeIcon.asClassNameArray(Codicon.listFilter));
 
-		const label = DOM.append(chip, $('span.chip-label'));
-		label.textContent = localize('sortGroup', "Sort");
+		const label = DOM.append(chip, $("span.chip-label"));
+		label.textContent = localize("sortGroup", "Sort");
 
 		const fire = () => this._onDidRequestSortGroup.fire(chip);
 
 		this.chipDisposables.add(Gesture.addTarget(chip));
-		this.chipDisposables.add(DOM.addDisposableListener(chip, EventType.CLICK, (e) => {
-			e.preventDefault();
-			fire();
-		}));
-		this.chipDisposables.add(DOM.addDisposableListener(chip, TouchEventType.Tap, () => {
-			fire();
-		}));
-
-		this.chipDisposables.add(DOM.addDisposableListener(chip, EventType.KEY_DOWN, (e: KeyboardEvent) => {
-			if (e.key === 'Enter' || e.key === ' ') {
+		this.chipDisposables.add(
+			DOM.addDisposableListener(chip, EventType.CLICK, (e) => {
 				e.preventDefault();
 				fire();
-			}
-		}));
+			}),
+		);
+		this.chipDisposables.add(
+			DOM.addDisposableListener(chip, TouchEventType.Tap, () => {
+				fire();
+			}),
+		);
+
+		this.chipDisposables.add(
+			DOM.addDisposableListener(
+				chip,
+				EventType.KEY_DOWN,
+				(e: KeyboardEvent) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						fire();
+					}
+				},
+			),
+		);
 	}
 
 	private createFindChip(): void {
-		const chip = DOM.append(this.container, $('.mobile-session-filter-chip.mobile-session-filter-chip-action.icon-only'));
-		chip.setAttribute('role', 'button');
-		chip.setAttribute('tabindex', '0');
-		chip.setAttribute('aria-label', localize('findAriaLabel', "Find session"));
+		const chip = DOM.append(
+			this.container,
+			$(
+				".mobile-session-filter-chip.mobile-session-filter-chip-action.icon-only",
+			),
+		);
+		chip.setAttribute("role", "button");
+		chip.setAttribute("tabindex", "0");
+		chip.setAttribute("aria-label", localize("findAriaLabel", "Find session"));
 
-		const icon = DOM.append(chip, $('span.chip-icon'));
+		const icon = DOM.append(chip, $("span.chip-icon"));
 		icon.classList.add(...ThemeIcon.asClassNameArray(Codicon.search));
 
 		const fire = () => this._onDidRequestFind.fire();
 
 		this.chipDisposables.add(Gesture.addTarget(chip));
-		this.chipDisposables.add(DOM.addDisposableListener(chip, EventType.CLICK, (e) => {
-			e.preventDefault();
-			fire();
-		}));
-		this.chipDisposables.add(DOM.addDisposableListener(chip, TouchEventType.Tap, () => {
-			fire();
-		}));
-
-		this.chipDisposables.add(DOM.addDisposableListener(chip, EventType.KEY_DOWN, (e: KeyboardEvent) => {
-			if (e.key === 'Enter' || e.key === ' ') {
+		this.chipDisposables.add(
+			DOM.addDisposableListener(chip, EventType.CLICK, (e) => {
 				e.preventDefault();
 				fire();
-			}
-		}));
+			}),
+		);
+		this.chipDisposables.add(
+			DOM.addDisposableListener(chip, TouchEventType.Tap, () => {
+				fire();
+			}),
+		);
+
+		this.chipDisposables.add(
+			DOM.addDisposableListener(
+				chip,
+				EventType.KEY_DOWN,
+				(e: KeyboardEvent) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						fire();
+					}
+				},
+			),
+		);
 	}
 
 	/**
@@ -274,12 +332,16 @@ export class MobileSessionFilterChips extends Disposable {
 	 * filtering).
 	 */
 	private isChipActive(def: IFilterChipDef): boolean {
-		const allStatuses = MobileSessionFilterChips.CHIP_DEFS.flatMap(d => [...d.statuses]);
-		const hasAnyExclusion = allStatuses.some(s => this.host.isStatusExcluded(s));
+		const allStatuses = MobileSessionFilterChips.CHIP_DEFS.flatMap((d) => [
+			...d.statuses,
+		]);
+		const hasAnyExclusion = allStatuses.some((s) =>
+			this.host.isStatusExcluded(s),
+		);
 		if (!hasAnyExclusion) {
 			return false; // no filters active → no chip is "active"
 		}
-		return def.statuses.every(s => !this.host.isStatusExcluded(s));
+		return def.statuses.every((s) => !this.host.isStatusExcluded(s));
 	}
 
 	private syncActiveStates(): void {
@@ -287,8 +349,8 @@ export class MobileSessionFilterChips extends Disposable {
 			const chip = this.chipElements.get(def.label);
 			if (chip) {
 				const active = this.isChipActive(def);
-				chip.classList.toggle('active', active);
-				chip.setAttribute('aria-pressed', String(active));
+				chip.classList.toggle("active", active);
+				chip.setAttribute("aria-pressed", String(active));
 			}
 		}
 	}

@@ -3,14 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { IMarkdownString } from '../../../../base/common/htmlContent.js';
-import { IObservable } from '../../../../base/common/observable.js';
-import { isEqual } from '../../../../base/common/resources.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { URI } from '../../../../base/common/uri.js';
-import { localize } from '../../../../nls.js';
-import { IChatSessionFileChange, IChatSessionFileChange2, isIChatSessionFileChange2 } from '../../../../workbench/contrib/chat/common/chatSessionsService.js';
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { IMarkdownString } from "../../../../base/common/htmlContent.js";
+import { IObservable } from "../../../../base/common/observable.js";
+import { isEqual } from "../../../../base/common/resources.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import { URI } from "../../../../base/common/uri.js";
+import { localize } from "../../../../nls.js";
+import {
+	IChatSessionFileChange,
+	IChatSessionFileChange2,
+	isIChatSessionFileChange2,
+} from "../../../../workbench/contrib/chat/common/chatSessionsService.js";
 
 export interface ISessionType {
 	/** Unique identifier (e.g., 'copilot-cli', 'copilot-cloud', 'claude-code'). */
@@ -21,7 +25,7 @@ export interface ISessionType {
 	readonly icon: ThemeIcon;
 }
 
-export const GITHUB_REMOTE_FILE_SCHEME = 'github-remote-file';
+export const GITHUB_REMOTE_FILE_SCHEME = "github-remote-file";
 
 /**
  * Status of an agent session as reported by the sessions provider.
@@ -140,7 +144,9 @@ export interface ISessionChangesSummary {
 	readonly deletions: number;
 }
 
-export type ISessionFileChange = IChatSessionFileChange | IChatSessionFileChange2;
+export type ISessionFileChange =
+	| IChatSessionFileChange
+	| IChatSessionFileChange2;
 
 export interface ISessionChangeset {
 	/** Unique identifier for the changeset. */
@@ -217,7 +223,9 @@ export interface IChat {
 	/** Currently selected model identifier. */
 	readonly modelId: IObservable<string | undefined>;
 	/** Currently selected mode identifier and kind. */
-	readonly mode: IObservable<{ readonly id: string; readonly kind: string } | undefined>;
+	readonly mode: IObservable<
+		{ readonly id: string; readonly kind: string } | undefined
+	>;
 	/** Whether the chat is archived. */
 	readonly isArchived: IObservable<boolean>;
 	/** Whether the chat has been read. */
@@ -264,7 +272,9 @@ export interface ISession {
 	readonly changesets: IObservable<readonly ISessionChangeset[]>;
 	/** Currently selected model identifier. */
 	readonly modelId: IObservable<string | undefined>;
-	readonly mode: IObservable<{ readonly id: string; readonly kind: string } | undefined>;
+	readonly mode: IObservable<
+		{ readonly id: string; readonly kind: string } | undefined
+	>;
 	/** Whether the session is still initializing (e.g., resolving git repository). */
 	readonly loading: IObservable<boolean>;
 	/** Whether the session is archived. */
@@ -324,8 +334,14 @@ export interface ISessionCapabilities {
  * `ISessionWorkspaceBrowseAction`; the picker discovers tabs from the union
  * of contributed values.
  */
-export const SESSION_WORKSPACE_GROUP_LOCAL = localize('sessionWorkspaceGroup.local', "Local");
-export const SESSION_WORKSPACE_GROUP_REMOTE = localize('sessionWorkspaceGroup.remote', "Remote");
+export const SESSION_WORKSPACE_GROUP_LOCAL = localize(
+	"sessionWorkspaceGroup.local",
+	"Local",
+);
+export const SESSION_WORKSPACE_GROUP_REMOTE = localize(
+	"sessionWorkspaceGroup.remote",
+	"Remote",
+);
 
 export interface ISessionWorkspaceBrowseAction {
 	/** Display label for the browse action. */
@@ -355,7 +371,10 @@ export interface ISessionWorkspaceBrowseAction {
 	 * @param token Cancellation token; the implementation should resolve with
 	 * a partial result or empty array once cancelled.
 	 */
-	listFolders?(query: string, token: CancellationToken): Promise<readonly ISessionWorkspace[]>;
+	listFolders?(
+		query: string,
+		token: CancellationToken,
+	): Promise<readonly ISessionWorkspace[]>;
 }
 
 /**
@@ -364,7 +383,10 @@ export interface ISessionWorkspaceBrowseAction {
  * freshly-built array without notifying observers when the underlying file
  * changes have not actually changed.
  */
-export function sessionFileChangesEqual(a: readonly ISessionFileChange[], b: readonly ISessionFileChange[]): boolean {
+export function sessionFileChangesEqual(
+	a: readonly ISessionFileChange[],
+	b: readonly ISessionFileChange[],
+): boolean {
 	if (a === b) {
 		return true;
 	}
@@ -374,7 +396,8 @@ export function sessionFileChangesEqual(a: readonly ISessionFileChange[], b: rea
 	}
 
 	for (let i = 0; i < a.length; i++) {
-		const x = a[i], y = b[i];
+		const x = a[i],
+			y = b[i];
 		if (x === y) {
 			continue;
 		}
@@ -414,7 +437,10 @@ export function sessionFileChangesEqual(a: readonly ISessionFileChange[], b: rea
  * so that providers can re-publish updated info without notifying observers when the underlying GitHub
  * info has not actually changed.
  */
-export function gitHubInfoEqual(a: IGitHubInfo | undefined, b: IGitHubInfo | undefined): boolean {
+export function gitHubInfoEqual(
+	a: IGitHubInfo | undefined,
+	b: IGitHubInfo | undefined,
+): boolean {
 	if (a === b) {
 		return true;
 	}
@@ -426,11 +452,14 @@ export function gitHubInfoEqual(a: IGitHubInfo | undefined, b: IGitHubInfo | und
 	const aIcon = a.pullRequest?.icon;
 	const bIcon = b.pullRequest?.icon;
 
-	return a.owner === b.owner &&
+	return (
+		a.owner === b.owner &&
 		a.repo === b.repo &&
 		a.pullRequest?.number === b.pullRequest?.number &&
 		isEqual(a.pullRequest?.uri, b.pullRequest?.uri) &&
-		(aIcon === bIcon || (!!aIcon && !!bIcon && ThemeIcon.isEqual(aIcon, bIcon))) &&
+		(aIcon === bIcon ||
+			(!!aIcon && !!bIcon && ThemeIcon.isEqual(aIcon, bIcon))) &&
 		a.pullRequest?.baseRefOid === b.pullRequest?.baseRefOid &&
-		a.pullRequest?.headRefOid === b.pullRequest?.headRefOid;
+		a.pullRequest?.headRefOid === b.pullRequest?.headRefOid
+	);
 }

@@ -5,7 +5,12 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestLogService } from '../../../../../platform/testing/common/testLogService';
-import { MockMcpServer, parseToolResult, createMockUri, createMockDiagnostic } from './testHelpers';
+import {
+	MockMcpServer,
+	parseToolResult,
+	createMockUri,
+	createMockDiagnostic,
+} from './testHelpers';
 
 const { mockGetDiagnostics } = vi.hoisted(() => ({
 	mockGetDiagnostics: vi.fn(),
@@ -62,7 +67,10 @@ describe('getDiagnostics tool', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		server = new MockMcpServer();
-		registerGetDiagnosticsTool(server as unknown as import('@modelcontextprotocol/sdk/server/mcp.js').McpServer, logger);
+		registerGetDiagnosticsTool(
+			server as unknown as import('@modelcontextprotocol/sdk/server/mcp.js').McpServer,
+			logger,
+		);
 	});
 
 	it('should register the get_diagnostics tool', () => {
@@ -70,11 +78,22 @@ describe('getDiagnostics tool', () => {
 	});
 
 	it('should return diagnostics for a specific URI', async () => {
-		const mockDiag = createMockDiagnostic('Test error', 0, 0, 0, 0, 10, 'test-source', 'TEST001');
+		const mockDiag = createMockDiagnostic(
+			'Test error',
+			0,
+			0,
+			0,
+			0,
+			10,
+			'test-source',
+			'TEST001',
+		);
 		mockGetDiagnostics.mockReturnValue([mockDiag]);
 
 		const handler = server.getToolHandler('get_diagnostics')!;
-		const result = parseToolResult<DiagnosticsFileResult[]>(await handler({ uri: 'file:///test/file.ts' }));
+		const result = parseToolResult<DiagnosticsFileResult[]>(
+			await handler({ uri: 'file:///test/file.ts' }),
+		);
 
 		expect(result).toHaveLength(1);
 		expect(result[0].uri).toBe('file:///test/file.ts');
@@ -85,7 +104,9 @@ describe('getDiagnostics tool', () => {
 		mockGetDiagnostics.mockReturnValue([]);
 
 		const handler = server.getToolHandler('get_diagnostics')!;
-		const result = parseToolResult<DiagnosticsFileResult[]>(await handler({ uri: 'file:///clean/file.ts' }));
+		const result = parseToolResult<DiagnosticsFileResult[]>(
+			await handler({ uri: 'file:///clean/file.ts' }),
+		);
 
 		expect(result).toHaveLength(0);
 	});
@@ -101,7 +122,9 @@ describe('getDiagnostics tool', () => {
 		]);
 
 		const handler = server.getToolHandler('get_diagnostics')!;
-		const result = parseToolResult<DiagnosticsFileResult[]>(await handler({}));
+		const result = parseToolResult<DiagnosticsFileResult[]>(
+			await handler({}),
+		);
 
 		expect(result).toHaveLength(2);
 	});
@@ -116,9 +139,11 @@ describe('getDiagnostics tool', () => {
 		mockGetDiagnostics.mockReturnValue(diagnostics);
 
 		const handler = server.getToolHandler('get_diagnostics')!;
-		const result = parseToolResult<DiagnosticsFileResult[]>(await handler({ uri: 'file:///test.ts' }));
+		const result = parseToolResult<DiagnosticsFileResult[]>(
+			await handler({ uri: 'file:///test.ts' }),
+		);
 
-		const severities = result[0].diagnostics.map(d => d.severity);
+		const severities = result[0].diagnostics.map((d) => d.severity);
 		expect(severities).toContain('error');
 		expect(severities).toContain('warning');
 		expect(severities).toContain('information');
@@ -126,11 +151,22 @@ describe('getDiagnostics tool', () => {
 	});
 
 	it('should include diagnostic range, source, and code', async () => {
-		const mockDiag = createMockDiagnostic('Test error', 0, 5, 10, 5, 20, 'test-linter', 'WARN001');
+		const mockDiag = createMockDiagnostic(
+			'Test error',
+			0,
+			5,
+			10,
+			5,
+			20,
+			'test-linter',
+			'WARN001',
+		);
 		mockGetDiagnostics.mockReturnValue([mockDiag]);
 
 		const handler = server.getToolHandler('get_diagnostics')!;
-		const result = parseToolResult<DiagnosticsFileResult[]>(await handler({ uri: 'file:///test.ts' }));
+		const result = parseToolResult<DiagnosticsFileResult[]>(
+			await handler({ uri: 'file:///test.ts' }),
+		);
 
 		const diag = result[0].diagnostics[0];
 		expect(diag.message).toBe('Test error');
@@ -152,7 +188,9 @@ describe('getDiagnostics tool', () => {
 		]);
 
 		const handler = server.getToolHandler('get_diagnostics')!;
-		const result = parseToolResult<DiagnosticsFileResult[]>(await handler({}));
+		const result = parseToolResult<DiagnosticsFileResult[]>(
+			await handler({}),
+		);
 
 		expect(result).toHaveLength(1);
 		expect(result[0].uri).toBe('file:///has-diagnostics.ts');
@@ -172,7 +210,9 @@ describe('getDiagnostics tool', () => {
 		mockGetDiagnostics.mockReturnValue([mockDiag]);
 
 		const handler = server.getToolHandler('get_diagnostics')!;
-		const result = parseToolResult<DiagnosticsFileResult[]>(await handler({ uri: 'file:///test.ts' }));
+		const result = parseToolResult<DiagnosticsFileResult[]>(
+			await handler({ uri: 'file:///test.ts' }),
+		);
 
 		expect(result[0].diagnostics[0].code).toBe(2304);
 	});

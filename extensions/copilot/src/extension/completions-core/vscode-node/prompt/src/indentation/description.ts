@@ -3,7 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IndentationTree, isBlank, isLine, isTop, isVirtual, JsonStable, LineNode } from './classes';
+import {
+	IndentationTree,
+	isBlank,
+	isLine,
+	isTop,
+	isVirtual,
+	JsonStable,
+	LineNode,
+} from './classes';
 import { foldTree } from './manipulation';
 
 /**
@@ -42,7 +50,10 @@ export function deparseTree<L>(tree: IndentationTree<L>): string {
  * contain only a single string for node `A`.
  *
  */
-export function deparseAndCutTree<L>(tree: IndentationTree<L>, cutAt: L[]): { label: L | undefined; source: string }[] {
+export function deparseAndCutTree<L>(
+	tree: IndentationTree<L>,
+	cutAt: L[],
+): { label: L | undefined; source: string }[] {
 	const cutAtSet = new Set(cutAt);
 	const cuts: { label: L | undefined; source: string }[] = [];
 	let curUndef = '';
@@ -86,15 +97,21 @@ export function describeTree<L>(tree: IndentationTree<L>, indent = 0): string {
 	if (tree.subs === undefined) {
 		children = 'UNDEFINED SUBS';
 	} else {
-		children = tree.subs.map(child => describeTree(child, indent + 2)).join(',\n');
+		children = tree.subs
+			.map((child) => describeTree(child, indent + 2))
+			.join(',\n');
 	}
 	if (children === '') {
 		children = '[]';
 	} else {
 		children = `[\n${children}\n      ${ind}]`;
 	}
-	const prefix = (isVirtual(tree) || isTop(tree) ? '   ' : String(tree.lineNumber).padStart(3, ' ')) + `:  ${ind}`;
-	const labelString = tree.label === undefined ? '' : JSON.stringify(tree.label);
+	const prefix =
+		(isVirtual(tree) || isTop(tree)
+			? '   '
+			: String(tree.lineNumber).padStart(3, ' ')) + `:  ${ind}`;
+	const labelString =
+		tree.label === undefined ? '' : JSON.stringify(tree.label);
 	if (isVirtual(tree) || isTop(tree)) {
 		return `${prefix}vnode(${tree.indentation}, ${labelString}, ${children})`;
 	} else if (isBlank(tree)) {
@@ -108,12 +125,16 @@ export function describeTree<L>(tree: IndentationTree<L>, indent = 0): string {
  * Return a string that mimics the call that would construct the tree
  * This is less readable than describeTree, but useful to write code.
  */
-export function encodeTree<T extends JsonStable>(tree: IndentationTree<T>, indent = ''): string {
-	const labelString = tree.label === undefined ? '' : `, ${JSON.stringify(tree.label)}`;
+export function encodeTree<T extends JsonStable>(
+	tree: IndentationTree<T>,
+	indent = '',
+): string {
+	const labelString =
+		tree.label === undefined ? '' : `, ${JSON.stringify(tree.label)}`;
 
 	const subString =
 		!isBlank(tree) && tree.subs.length > 0
-			? `[\n${tree.subs.map(node => encodeTree(node, indent + '  ')).join(', \n')}\n${indent}]`
+			? `[\n${tree.subs.map((node) => encodeTree(node, indent + '  ')).join(', \n')}\n${indent}]`
 			: '[]';
 
 	switch (tree.type) {

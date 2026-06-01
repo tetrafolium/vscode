@@ -37,7 +37,7 @@ const alternateRepoHandleCache = new Map<string, string | null>();
 
 let alternateRepoAvailability: boolean | undefined;
 
-void main().catch(error => {
+void main().catch((error) => {
 	console.error(error instanceof Error ? error.message : error);
 	process.exit(1);
 });
@@ -58,10 +58,15 @@ async function main(): Promise<void> {
 	const reportLines: string[] = [];
 
 	for (const [file, messages] of violatingFiles) {
-		const resolvedMessages: { message: ESLintMessage; username: string }[] = [];
+		const resolvedMessages: { message: ESLintMessage; username: string }[] =
+			[];
 
 		for (const message of messages) {
-			const handle = await resolveHandleForMessage(file, message.line, commitHandles);
+			const handle = await resolveHandleForMessage(
+				file,
+				message.line,
+				commitHandles,
+			);
 			if (handle.commit) {
 				commitHandles[handle.commit] = handle.username;
 			}
@@ -69,7 +74,9 @@ async function main(): Promise<void> {
 			resolvedMessages.push({ message, username: handle.username });
 		}
 
-		const uniqueHandles = new Set(resolvedMessages.map(entry => entry.username));
+		const uniqueHandles = new Set(
+			resolvedMessages.map((entry) => entry.username),
+		);
 		if (uniqueHandles.size === 1 && resolvedMessages.length) {
 			const onlyHandle = resolvedMessages[0].username;
 			reportLines.push(`- [ ] ${file} @${onlyHandle}`);
@@ -83,7 +90,11 @@ async function main(): Promise<void> {
 	}
 
 	if (cacheDirty) {
-		await fs.writeFile(commitHandleCachePath, JSON.stringify(commitHandles, null, 2), 'utf8');
+		await fs.writeFile(
+			commitHandleCachePath,
+			JSON.stringify(commitHandles, null, 2),
+			'utf8',
+		);
 	}
 
 	await updateEslintIgnores(Array.from(violatingFiles.keys()));
@@ -92,10 +103,15 @@ async function main(): Promise<void> {
 	console.log(`Cached lint results key: ${cacheKey}`);
 }
 
-async function getLintResults(): Promise<{ cacheKey: string; results: ESLintResult[] }> {
+async function getLintResults(): Promise<{
+	cacheKey: string;
+	results: ESLintResult[];
+}> {
 	const gitHead = runGit(['rev-parse', 'HEAD']);
 	const gitStatus = runGit(['status', '--porcelain']);
-	const cacheKey = createHash('sha1').update(`${gitHead}\n${gitStatus}`).digest('hex');
+	const cacheKey = createHash('sha1')
+		.update(`${gitHead}\n${gitStatus}`)
+		.digest('hex');
 	const cacheFile = path.join(lintCacheDir, `${cacheKey}.json`);
 
 	if (await fileExists(cacheFile)) {
@@ -115,7 +131,18 @@ async function getLintResults(): Promise<{ cacheKey: string; results: ESLintResu
 
 function runLintCommand(): void {
 	const cacheLocation = path.join(lintCacheDir, '.eslintcache');
-	const args = ['run', 'lint', '--', '--format', 'json', '--output-file', lintOutputPath, '--cache', '--cache-location', cacheLocation];
+	const args = [
+		'run',
+		'lint',
+		'--',
+		'--format',
+		'json',
+		'--output-file',
+		lintOutputPath,
+		'--cache',
+		'--cache-location',
+		cacheLocation,
+	];
 	const result = spawnSync('npm', args, spawnOptions());
 
 	if (result.error) {
@@ -123,28 +150,38 @@ function runLintCommand(): void {
 	}
 
 	if (result.status !== 0 && result.status !== 1) {
-		throw new Error(`npm run lint failed with exit code ${result.status ?? 'unknown'}`);
+		throw new Error(
+			`npm run lint failed with exit code ${result.status ?? 'unknown'}`,
+		);
 	}
 }
 
 function spawnOptions(): SpawnSyncOptions {
 	return {
 		cwd: repoRoot,
-		stdio: 'inherit'
+		stdio: 'inherit',
 	};
 }
 
-function collectViolations(results: ESLintResult[]): Map<string, ESLintMessage[]> {
+function collectViolations(
+	results: ESLintResult[],
+): Map<string, ESLintMessage[]> {
 	const violations = new Map<string, ESLintMessage[]>();
 
 	for (const result of results) {
-		const relevantMessages = result.messages.filter(message => message.severity > 0);
+		const relevantMessages = result.messages.filter(
+			(message) => message.severity > 0,
+		);
 		if (!relevantMessages.length) {
 			continue;
 		}
 
-		const relativeFile = toPosixPath(path.relative(repoRoot, result.filePath));
-		const prefixed = relativeFile.startsWith('.') ? relativeFile : `./${relativeFile}`;
+		const relativeFile = toPosixPath(
+			path.relative(repoRoot, result.filePath),
+		);
+		const prefixed = relativeFile.startsWith('.')
+			? relativeFile
+			: `./${relativeFile}`;
 		violations.set(prefixed, relevantMessages);
 	}
 
@@ -171,17 +208,35 @@ interface HandleResolution {
 	isNew: boolean;
 }
 
-async function resolveHandleForMessage(file: string, line: number, cache: CommitHandleCache): Promise<HandleResolution> {
+async function resolveHandleForMessage(
+	file: string,
+	line: number,
+	cache: CommitHandleCache,
+): Promise<HandleResolution> {
 	let blameCommit: string | undefined;
 	try {
-		blameCommit = extractCommitHash(runGit(['blame', '--line-porcelain', '-L', `${line},${line}`, file]));
+		blameCommit = extractCommitHash(
+			runGit([
+				'blame',
+				'--line-porcelain',
+				'-L',
+				`${line},${line}`,
+				file,
+			]),
+		);
 	} catch (error) {
-		throw new Error(`Failed to run git blame for ${file}:${line}: ${error instanceof Error ? error.message : String(error)}`);
+		throw new Error(
+			`Failed to run git blame for ${file}:${line}: ${error instanceof Error ? error.message : String(error)}`,
+		);
 	}
 	const blameHandle = await getHandleForCommit(blameCommit, cache);
 
 	if (blameHandle && blameHandle.username !== 'kieferrm') {
-		return { commit: blameCommit, username: blameHandle.username, isNew: blameHandle.isNew };
+		return {
+			commit: blameCommit,
+			username: blameHandle.username,
+			isNew: blameHandle.isNew,
+		};
 	}
 
 	if (blameHandle && blameHandle.username === 'kieferrm') {
@@ -193,9 +248,13 @@ async function resolveHandleForMessage(file: string, line: number, cache: Commit
 
 	let lastCommit: string | undefined;
 	try {
-		lastCommit = extractCommitHash(runGit(['log', '-n', '1', '--pretty=format:%H', '--', file]));
+		lastCommit = extractCommitHash(
+			runGit(['log', '-n', '1', '--pretty=format:%H', '--', file]),
+		);
 	} catch (error) {
-		throw new Error(`Failed to find last change for ${file}: ${error instanceof Error ? error.message : String(error)}`);
+		throw new Error(
+			`Failed to find last change for ${file}: ${error instanceof Error ? error.message : String(error)}`,
+		);
 	}
 
 	const fallbackHandle = await getHandleForCommit(lastCommit, cache);
@@ -206,7 +265,11 @@ async function resolveHandleForMessage(file: string, line: number, cache: Commit
 				return { username: alternateHandle, isNew: false };
 			}
 		}
-		return { commit: lastCommit, username: fallbackHandle.username, isNew: fallbackHandle.isNew };
+		return {
+			commit: lastCommit,
+			username: fallbackHandle.username,
+			isNew: fallbackHandle.isNew,
+		};
 	}
 
 	return { username: 'kieferrm', isNew: false };
@@ -217,8 +280,10 @@ interface CommitHandleLookup {
 	isNew: boolean;
 }
 
-
-async function getHandleForCommit(commit: string | undefined, cache: CommitHandleCache): Promise<CommitHandleLookup | undefined> {
+async function getHandleForCommit(
+	commit: string | undefined,
+	cache: CommitHandleCache,
+): Promise<CommitHandleLookup | undefined> {
 	if (!commit) {
 		return undefined;
 	}
@@ -235,25 +300,37 @@ async function getHandleForCommit(commit: string | undefined, cache: CommitHandl
 	const env = {
 		...process.env,
 		GH_PAGER: 'cat',
-		GH_PROMPT_DISABLED: '1'
+		GH_PROMPT_DISABLED: '1',
 	};
 
-	const response = spawnSync('gh', ['api', `/repos/${owner}/${repo}/commits/${commit}`], {
-		cwd: repoRoot,
-		encoding: 'utf8',
-		env
-	});
+	const response = spawnSync(
+		'gh',
+		['api', `/repos/${owner}/${repo}/commits/${commit}`],
+		{
+			cwd: repoRoot,
+			encoding: 'utf8',
+			env,
+		},
+	);
 
 	if (response.status === 0 && response.stdout) {
 		try {
 			const data = JSON.parse(response.stdout);
-			login = data.author?.login ?? data.committer?.login ?? data.commit?.author?.name;
+			login =
+				data.author?.login ??
+				data.committer?.login ??
+				data.commit?.author?.name;
 		} catch (error) {
-			console.warn(`Failed to parse GitHub API response for commit ${commit}`);
+			console.warn(
+				`Failed to parse GitHub API response for commit ${commit}`,
+			);
 		}
 	} else if (response.status !== 0) {
-		const stderr = typeof response.stderr === 'string' ? response.stderr.trim() : '';
-		console.warn(`gh api commit ${commit} exited with code ${response.status}${stderr ? `: ${stderr}` : ''}`);
+		const stderr =
+			typeof response.stderr === 'string' ? response.stderr.trim() : '';
+		console.warn(
+			`gh api commit ${commit} exited with code ${response.status}${stderr ? `: ${stderr}` : ''}`,
+		);
 	}
 
 	if (!login) {
@@ -286,7 +363,8 @@ function getHandleFromLocalGit(commit: string): string | undefined {
 }
 
 function extractHandleFromEmail(email: string): string | undefined {
-	const noreplyPattern = /^(?:\d+\+)?([A-Za-z0-9-]+)@users\.noreply\.github\.com$/;
+	const noreplyPattern =
+		/^(?:\d+\+)?([A-Za-z0-9-]+)@users\.noreply\.github\.com$/;
 	const match = email.match(noreplyPattern);
 	if (match) {
 		return match[1];
@@ -340,7 +418,7 @@ async function updateEslintIgnores(files: string[]): Promise<void> {
 	}
 
 	const configPath = path.join(repoRoot, 'ignores.md');
-	const nextContent = files.map(file => `'${file}'`).join(',\n');
+	const nextContent = files.map((file) => `'${file}'`).join(',\n');
 	await fs.writeFile(configPath, nextContent, 'utf8');
 }
 
@@ -361,7 +439,9 @@ async function fileExists(filePath: string): Promise<boolean> {
 	}
 }
 
-async function resolveHandleFromAlternateRepo(file: string): Promise<string | undefined> {
+async function resolveHandleFromAlternateRepo(
+	file: string,
+): Promise<string | undefined> {
 	if (alternateRepoHandleCache.has(file)) {
 		const cached = alternateRepoHandleCache.get(file);
 		return cached ?? undefined;
@@ -382,18 +462,37 @@ async function resolveHandleFromAlternateRepo(file: string): Promise<string | un
 	}
 
 	try {
-		const lastCommit = runGitCommand(alternateRepoRoot, ['log', '-n', '1', '--pretty=format:%H', '--', fileForGit]);
+		const lastCommit = runGitCommand(alternateRepoRoot, [
+			'log',
+			'-n',
+			'1',
+			'--pretty=format:%H',
+			'--',
+			fileForGit,
+		]);
 		if (!lastCommit) {
 			alternateRepoHandleCache.set(file, null);
 			return undefined;
 		}
 
-		const email = runGitCommand(alternateRepoRoot, ['show', '-s', '--format=%ae', lastCommit]);
+		const email = runGitCommand(alternateRepoRoot, [
+			'show',
+			'-s',
+			'--format=%ae',
+			lastCommit,
+		]);
 		const handleFromEmail = extractHandleFromEmail(email);
-		let resolvedHandle = handleFromEmail ? normalizeHandle(handleFromEmail) : undefined;
+		let resolvedHandle = handleFromEmail
+			? normalizeHandle(handleFromEmail)
+			: undefined;
 
 		if (!resolvedHandle) {
-			const author = runGitCommand(alternateRepoRoot, ['show', '-s', '--format=%an', lastCommit]);
+			const author = runGitCommand(alternateRepoRoot, [
+				'show',
+				'-s',
+				'--format=%an',
+				lastCommit,
+			]);
 			const possibleHandle = normalizePossibleHandle(author);
 			if (possibleHandle) {
 				resolvedHandle = normalizeHandle(possibleHandle);
@@ -405,7 +504,9 @@ async function resolveHandleFromAlternateRepo(file: string): Promise<string | un
 			return resolvedHandle;
 		}
 	} catch (error) {
-		console.warn(`Failed to resolve alternate repo handle for ${file}${error instanceof Error ? `: ${error.message}` : ''}`);
+		console.warn(
+			`Failed to resolve alternate repo handle for ${file}${error instanceof Error ? `: ${error.message}` : ''}`,
+		);
 	}
 
 	alternateRepoHandleCache.set(file, null);
@@ -430,11 +531,13 @@ async function hasAlternateRepo(): Promise<boolean> {
 function runGitCommand(cwd: string, args: string[]): string {
 	const result = spawnSync('git', args, {
 		cwd,
-		encoding: 'utf8'
+		encoding: 'utf8',
 	});
 
 	if (result.status !== 0) {
-		throw new Error(`git ${args.join(' ')} failed: ${result.stderr || result.stdout}`);
+		throw new Error(
+			`git ${args.join(' ')} failed: ${result.stderr || result.stdout}`,
+		);
 	}
 
 	return (result.stdout ?? '').trim();

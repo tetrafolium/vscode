@@ -12,21 +12,19 @@ import { isPreRelease, isProduction, packageJson } from './packagejson';
 export enum OperatingSystem {
 	Windows = 'Windows',
 	Macintosh = 'Mac',
-	Linux = 'Linux'
+	Linux = 'Linux',
 }
-
 
 export class NameAndVersion {
 	constructor(
 		readonly name: string,
-		readonly version: string
-	) { }
+		readonly version: string,
+	) {}
 
 	format(): string {
 		return `${this.name}/${this.version}`;
 	}
 }
-
 
 export const IEnvService = createServiceIdentifier<IEnvService>('IEnvService');
 
@@ -68,7 +66,8 @@ export interface IEnvService {
 	openExternal(target: URI): Promise<boolean>;
 }
 
-export const INativeEnvService = createServiceIdentifier<INativeEnvService>('INativeEnvService');
+export const INativeEnvService =
+	createServiceIdentifier<INativeEnvService>('INativeEnvService');
 export interface INativeEnvService extends IEnvService {
 	readonly _serviceBrand: undefined;
 	userHome: URI;

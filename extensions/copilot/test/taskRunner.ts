@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 class CTask<T> {
-
 	private resolve!: (value: T) => void;
 	private reject!: (err: any) => void;
 	public result: Promise<T>;
@@ -31,9 +30,7 @@ export class TaskRunner {
 
 	private waitResolve: (() => void) | undefined;
 	// private waitPromise: Promise<void> | undefined;
-	constructor(
-		public readonly parallelism: number
-	) { }
+	constructor(public readonly parallelism: number) {}
 
 	run<T>(task: CTask<T> | (() => Promise<T>)): Promise<T> {
 		if (!(task instanceof CTask)) {
@@ -55,7 +52,10 @@ export class TaskRunner {
 		}
 		const task = this.tasks.shift()!;
 		this.pendingTasks++;
-		task.execute().then(() => this.onDidCompleteTask(), () => this.onDidCompleteTask());
+		task.execute().then(
+			() => this.onDidCompleteTask(),
+			() => this.onDidCompleteTask(),
+		);
 	}
 
 	private onDidCompleteTask(): void {

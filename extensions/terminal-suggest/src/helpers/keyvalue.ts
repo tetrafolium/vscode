@@ -6,12 +6,12 @@
 export type KeyValueSuggestions =
 	| string[]
 	| Fig.Suggestion[]
-	| NonNullable<Fig.Generator['custom']>;
+	| NonNullable<Fig.Generator["custom"]>;
 
 /** @deprecated use `KeyValueSuggestions` */
 export type Suggestions = KeyValueSuggestions;
 
-export type CacheValue = boolean | 'keys' | 'values';
+export type CacheValue = boolean | "keys" | "values";
 
 export interface ValueListInit {
 	/** String to use as the separator between keys and values */
@@ -79,25 +79,28 @@ export interface KeyValueListInit {
 /** Cache of Fig suggestions using the string[]/Suggestion[]/function as a key */
 const suggestionCache = new Map<KeyValueSuggestions, Fig.Suggestion[]>();
 
-function appendToInsertValue(append: string, suggestions: Fig.Suggestion[]): Fig.Suggestion[] {
+function appendToInsertValue(
+	append: string,
+	suggestions: Fig.Suggestion[],
+): Fig.Suggestion[] {
 	if (append.length === 0) {
 		return suggestions;
 	}
 	return suggestions.map((item) =>
-		item.insertValue ? item : { ...item, insertValue: item.name + append }
+		item.insertValue ? item : { ...item, insertValue: item.name + append },
 	);
 }
 
 async function kvSuggestionsToFigSuggestions(
 	suggestions: KeyValueSuggestions,
 	append: string,
-	init: Parameters<NonNullable<Fig.Generator['custom']>>
+	init: Parameters<NonNullable<Fig.Generator["custom"]>>,
 ): Promise<Fig.Suggestion[]> {
-	if (typeof suggestions === 'function') {
+	if (typeof suggestions === "function") {
 		const out = await suggestions(...init);
-		return appendToInsertValue(append, out?.filter(e => !!e) ?? []);
+		return appendToInsertValue(append, out?.filter((e) => !!e) ?? []);
 	}
-	if (typeof suggestions[0] === 'string') {
+	if (typeof suggestions[0] === "string") {
 		const out = (suggestions as string[]).map((name) => ({ name }));
 		return appendToInsertValue(append, out);
 	}
@@ -108,7 +111,7 @@ async function getSuggestions(
 	suggestions: KeyValueSuggestions,
 	append: string,
 	useSuggestionCache: boolean,
-	init: Parameters<NonNullable<Fig.Generator['custom']>>
+	init: Parameters<NonNullable<Fig.Generator["custom"]>>,
 ): Promise<Fig.Suggestion[]> {
 	if (useSuggestionCache || Array.isArray(suggestions)) {
 		let value = suggestionCache.get(suggestions);
@@ -122,8 +125,8 @@ async function getSuggestions(
 }
 
 function shouldUseCache(isKey: boolean, cache: CacheValue) {
-	if (typeof cache === 'string') {
-		return (isKey && cache === 'keys') || (!isKey && cache === 'values');
+	if (typeof cache === "string") {
+		return (isKey && cache === "keys") || (!isKey && cache === "values");
 	}
 	return cache;
 }
@@ -135,11 +138,11 @@ function lastIndexOf(haystack: string, ...needles: readonly string[]) {
 
 function removeRepeatSuggestions(
 	alreadyUsed: string[],
-	suggestions: readonly Fig.Suggestion[]
+	suggestions: readonly Fig.Suggestion[],
 ): Fig.Suggestion[] {
 	const seen = new Set(alreadyUsed);
 	return suggestions.filter((suggestion) => {
-		if (typeof suggestion.name === 'string') {
+		if (typeof suggestion.name === "string") {
 			return !seen.has(suggestion.name);
 		}
 		return !suggestion.name?.some((name) => seen.has(name));
@@ -161,7 +164,7 @@ function removeRepeatSuggestions(
  * object literal: `{ template: "filepaths", trigger: ":", getQueryTerm: ":" }`
  */
 export function valueList({
-	delimiter = ',',
+	delimiter = ",",
 	values = [],
 	cache = false,
 	insertDelimiter = false,
@@ -171,10 +174,16 @@ export function valueList({
 		trigger: (newToken, oldToken) =>
 			newToken.lastIndexOf(delimiter) !== oldToken.lastIndexOf(delimiter),
 
-		getQueryTerm: (token) => token.slice(token.lastIndexOf(delimiter) + delimiter.length),
+		getQueryTerm: (token) =>
+			token.slice(token.lastIndexOf(delimiter) + delimiter.length),
 
 		custom: async (...init) => {
-			const out = await getSuggestions(values, insertDelimiter ? delimiter : '', cache, init);
+			const out = await getSuggestions(
+				values,
+				insertDelimiter ? delimiter : "",
+				cache,
+				init,
+			);
 			if (allowRepeatedValues) {
 				return out;
 			}
@@ -231,14 +240,15 @@ export function valueList({
  * ```
  */
 export function keyValue({
-	separator = '=',
+	separator = "=",
 	keys = [],
 	values = [],
 	cache = false,
 	insertSeparator = true,
 }: KeyValueInit): Fig.Generator {
 	return {
-		trigger: (newToken, oldToken) => newToken.indexOf(separator) !== oldToken.indexOf(separator),
+		trigger: (newToken, oldToken) =>
+			newToken.indexOf(separator) !== oldToken.indexOf(separator),
 		getQueryTerm: (token) => token.slice(token.indexOf(separator) + 1),
 		custom: async (...init) => {
 			const [tokens] = init;
@@ -246,7 +256,7 @@ export function keyValue({
 			const isKey = !finalToken.includes(separator);
 			const suggestions = isKey ? keys : values;
 			const useCache = shouldUseCache(isKey, cache);
-			const append = isKey ? (insertSeparator ? separator : '') : '';
+			const append = isKey ? (insertSeparator ? separator : "") : "";
 			return getSuggestions(suggestions, append, useCache, init);
 		},
 	};
@@ -302,8 +312,8 @@ export function keyValue({
  * ```
  */
 export function keyValueList({
-	separator = '=',
-	delimiter = ',',
+	separator = "=",
+	delimiter = ",",
 	keys = [],
 	values = [],
 	cache = false,
@@ -327,11 +337,19 @@ export function keyValueList({
 
 			const finalToken = tokens[tokens.length - 1];
 			const index = lastIndexOf(finalToken, separator, delimiter);
-			const isKey = index === -1 || finalToken.slice(index, index + separator.length) !== separator;
+			const isKey =
+				index === -1 ||
+				finalToken.slice(index, index + separator.length) !== separator;
 
 			const suggestions = isKey ? keys : values;
 			const useCache = shouldUseCache(isKey, cache);
-			const append = isKey ? (insertSeparator ? separator : '') : insertDelimiter ? delimiter : '';
+			const append = isKey
+				? insertSeparator
+					? separator
+					: ""
+				: insertDelimiter
+					? delimiter
+					: "";
 			const out = await getSuggestions(suggestions, append, useCache, init);
 
 			if (isKey) {
@@ -349,7 +367,9 @@ export function keyValueList({
 			}
 			const existingValues = finalToken
 				.split(delimiter)
-				.map((chunk) => chunk.slice(chunk.indexOf(separator) + separator.length));
+				.map((chunk) =>
+					chunk.slice(chunk.indexOf(separator) + separator.length),
+				);
 			return removeRepeatSuggestions(existingValues, out);
 		},
 	};

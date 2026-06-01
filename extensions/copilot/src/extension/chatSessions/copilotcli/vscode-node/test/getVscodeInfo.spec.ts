@@ -40,7 +40,10 @@ describe('getVscodeInfo tool', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		server = new MockMcpServer();
-		registerGetVscodeInfoTool(server as unknown as import('@modelcontextprotocol/sdk/server/mcp.js').McpServer, logger);
+		registerGetVscodeInfoTool(
+			server as unknown as import('@modelcontextprotocol/sdk/server/mcp.js').McpServer,
+			logger,
+		);
 	});
 
 	it('should register the get_vscode_info tool', () => {

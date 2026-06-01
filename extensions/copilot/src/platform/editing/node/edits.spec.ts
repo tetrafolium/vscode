@@ -9,7 +9,6 @@ import { Range, TextEdit } from '../../../vscodeTypes';
 import { computeUpdatedRange } from '../common/edits';
 
 suite('findApproximateRangePostEdits', function () {
-
 	let range: Range;
 	let editText: string;
 	beforeAll(async function () {

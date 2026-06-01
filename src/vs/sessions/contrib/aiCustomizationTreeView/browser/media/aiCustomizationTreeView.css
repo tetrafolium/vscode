@@ -43,9 +43,21 @@
 	max-width: fit-content;
 }
 
-.ai-customization-view .monaco-list .monaco-list-row:hover .ai-customization-tree-item > .actions,
-.ai-customization-view .monaco-list .monaco-list-row.focused .ai-customization-tree-item > .actions,
-.ai-customization-view .monaco-list .monaco-list-row.selected .ai-customization-tree-item > .actions {
+.ai-customization-view
+	.monaco-list
+	.monaco-list-row:hover
+	.ai-customization-tree-item
+	> .actions,
+.ai-customization-view
+	.monaco-list
+	.monaco-list-row.focused
+	.ai-customization-tree-item
+	> .actions,
+.ai-customization-view
+	.monaco-list
+	.monaco-list-row.selected
+	.ai-customization-tree-item
+	> .actions {
 	display: flex;
 }
 

@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ActionItem, ICompletionsNotificationSender } from '../notificationSender';
+import {
+	ActionItem,
+	ICompletionsNotificationSender,
+} from '../notificationSender';
 import { IPosition, IRange } from '../textDocument';
 
 export function positionToString(p: IPosition) {
@@ -47,7 +50,10 @@ export class TestNotificationSender implements ICompletionsNotificationSender {
 		this.actionToPerform = title;
 	}
 
-	showWarningMessage(message: string, ...actions: ActionItem[]): Promise<ActionItem | undefined> {
+	showWarningMessage(
+		message: string,
+		...actions: ActionItem[]
+	): Promise<ActionItem | undefined> {
 		this.sentMessages.push(message);
 
 		let warningPromise: Promise<ActionItem | undefined>;
@@ -55,19 +61,28 @@ export class TestNotificationSender implements ICompletionsNotificationSender {
 			if (this.actionToPerform === 'DISMISS') {
 				warningPromise = Promise.resolve(undefined);
 			} else {
-				const action = actions.find(a => a.title === this.actionToPerform);
-				warningPromise = action ? Promise.resolve(action) : Promise.resolve(undefined);
+				const action = actions.find(
+					(a) => a.title === this.actionToPerform,
+				);
+				warningPromise = action
+					? Promise.resolve(action)
+					: Promise.resolve(undefined);
 			}
 		} else {
 			// If not set, default to the first action
-			warningPromise = actions ? Promise.resolve(actions[0]) : Promise.resolve(undefined);
+			warningPromise = actions
+				? Promise.resolve(actions[0])
+				: Promise.resolve(undefined);
 		}
 
 		this.warningPromises.push(warningPromise);
 		return warningPromise;
 	}
 
-	showInformationMessage(message: string, ...actions: ActionItem[]): Promise<ActionItem | undefined> {
+	showInformationMessage(
+		message: string,
+		...actions: ActionItem[]
+	): Promise<ActionItem | undefined> {
 		this.sentMessages.push(message);
 
 		let informationPromise: Promise<ActionItem | undefined>;
@@ -75,19 +90,28 @@ export class TestNotificationSender implements ICompletionsNotificationSender {
 			if (this.actionToPerform === 'DISMISS') {
 				informationPromise = Promise.resolve(undefined);
 			} else {
-				const action = actions.find(a => a.title === this.actionToPerform);
-				informationPromise = action ? Promise.resolve(action) : Promise.resolve(undefined);
+				const action = actions.find(
+					(a) => a.title === this.actionToPerform,
+				);
+				informationPromise = action
+					? Promise.resolve(action)
+					: Promise.resolve(undefined);
 			}
 		} else {
 			// If not set, default to the first action
-			informationPromise = actions ? Promise.resolve(actions[0]) : Promise.resolve(undefined);
+			informationPromise = actions
+				? Promise.resolve(actions[0])
+				: Promise.resolve(undefined);
 		}
 
 		this.informationPromises.push(informationPromise);
 		return informationPromise;
 	}
 
-	showInformationModal(message: string, ...actions: ActionItem[]): Promise<ActionItem | undefined> {
+	showInformationModal(
+		message: string,
+		...actions: ActionItem[]
+	): Promise<ActionItem | undefined> {
 		return this.showInformationMessage(message, ...actions);
 	}
 

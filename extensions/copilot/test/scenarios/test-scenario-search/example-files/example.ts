@@ -11,7 +11,7 @@ interface MyInterface {
 const myObject: MyInterface = {
 	id: 1,
 	name: 'foo',
-	properties: ['a', 'b', 'c']
+	properties: ['a', 'b', 'c'],
 };
 
 function getValue(value: keyof MyInterface) {
@@ -24,7 +24,7 @@ class Employee {
 	private empCode: number;
 	private empName: string;
 
-	constructor(code: number, name: string) { }
+	constructor(code: number, name: string) {}
 
 	getSalary(): number {
 		return 10000;

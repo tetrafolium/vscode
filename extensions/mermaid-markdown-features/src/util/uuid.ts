@@ -8,7 +8,7 @@
  */
 export function generateUuid(): string {
 	// use `randomUUID` if possible
-	if (typeof crypto.randomUUID === 'function') {
+	if (typeof crypto.randomUUID === "function") {
 		// see https://developer.mozilla.org/en-US/docs/Web/API/Window/crypto
 		// > Although crypto is available on all windows, the returned Crypto object only has one
 		// > usable feature in insecure contexts: the getRandomValues() method.
@@ -21,7 +21,7 @@ export function generateUuid(): string {
 	const _data = new Uint8Array(16);
 	const _hex: string[] = [];
 	for (let i = 0; i < 256; i++) {
-		_hex.push(i.toString(16).padStart(2, '0'));
+		_hex.push(i.toString(16).padStart(2, "0"));
 	}
 
 	// get data
@@ -33,21 +33,21 @@ export function generateUuid(): string {
 
 	// print as string
 	let i = 0;
-	let result = '';
+	let result = "";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];

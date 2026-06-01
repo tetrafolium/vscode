@@ -15,7 +15,6 @@ import { NextEditResult } from './nextEditResult';
  * log context so each cancellation has an attributable cause.
  */
 export const enum SpeculativeCancelReason {
-
 	/** The originating suggestion was rejected by the user. */
 	Rejected = 'rejected',
 
@@ -72,7 +71,6 @@ export interface ScheduledSpeculativeRequest {
  * one path and is logged on the request's log context.
  */
 export class SpeculativeRequestManager extends Disposable {
-
 	private _pending: SpeculativePendingRequest | null = null;
 	private _scheduled: ScheduledSpeculativeRequest | null = null;
 
@@ -110,7 +108,9 @@ export class SpeculativeRequestManager extends Disposable {
 	 * Used by the streaming path so that each stream only ever consumes its own
 	 * schedule, never another stream's.
 	 */
-	consumeScheduled(headerRequestId: string): ScheduledSpeculativeRequest | null {
+	consumeScheduled(
+		headerRequestId: string,
+	): ScheduledSpeculativeRequest | null {
 		if (this._scheduled?.headerRequestId !== headerRequestId) {
 			return null;
 		}
@@ -125,8 +125,16 @@ export class SpeculativeRequestManager extends Disposable {
 	}
 
 	/** Cancels the pending speculative iff `(docId, postEditContent)` doesn't match. */
-	cancelIfMismatch(docId: DocumentId, postEditContent: string, reason: SpeculativeCancelReason): void {
-		if (this._pending && (this._pending.docId !== docId || this._pending.postEditContent !== postEditContent)) {
+	cancelIfMismatch(
+		docId: DocumentId,
+		postEditContent: string,
+		reason: SpeculativeCancelReason,
+	): void {
+		if (
+			this._pending &&
+			(this._pending.docId !== docId ||
+				this._pending.postEditContent !== postEditContent)
+		) {
 			this._cancelPending(reason);
 		}
 	}
@@ -157,21 +165,35 @@ export class SpeculativeRequestManager extends Disposable {
 			return;
 		}
 		// Cheap structural failure: doc shorter than the unedited frame.
-		if (currentDocValue.length < p.trajectoryPrefix.length + p.trajectorySuffix.length) {
-			this._cancelPending(SpeculativeCancelReason.DivergedFromTrajectoryForm);
+		if (
+			currentDocValue.length <
+			p.trajectoryPrefix.length + p.trajectorySuffix.length
+		) {
+			this._cancelPending(
+				SpeculativeCancelReason.DivergedFromTrajectoryForm,
+			);
 			return;
 		}
 		if (!currentDocValue.startsWith(p.trajectoryPrefix)) {
-			this._cancelPending(SpeculativeCancelReason.DivergedFromTrajectoryPrefix);
+			this._cancelPending(
+				SpeculativeCancelReason.DivergedFromTrajectoryPrefix,
+			);
 			return;
 		}
 		if (!currentDocValue.endsWith(p.trajectorySuffix)) {
-			this._cancelPending(SpeculativeCancelReason.DivergedFromTrajectorySuffix);
+			this._cancelPending(
+				SpeculativeCancelReason.DivergedFromTrajectorySuffix,
+			);
 			return;
 		}
-		const middle = currentDocValue.slice(p.trajectoryPrefix.length, currentDocValue.length - p.trajectorySuffix.length);
+		const middle = currentDocValue.slice(
+			p.trajectoryPrefix.length,
+			currentDocValue.length - p.trajectorySuffix.length,
+		);
 		if (!p.trajectoryNewText.startsWith(middle)) {
-			this._cancelPending(SpeculativeCancelReason.DivergedFromTrajectoryMiddle);
+			this._cancelPending(
+				SpeculativeCancelReason.DivergedFromTrajectoryMiddle,
+			);
 		}
 	}
 
@@ -182,7 +204,9 @@ export class SpeculativeRequestManager extends Disposable {
 		}
 		this._pending = null;
 		const headerRequestId = p.request.headerRequestId;
-		this._logger.trace(`cancelling speculative request: ${reason} (headerRequestId=${headerRequestId})`);
+		this._logger.trace(
+			`cancelling speculative request: ${reason} (headerRequestId=${headerRequestId})`,
+		);
 		p.request.logContext.addLog(`speculative request cancelled: ${reason}`);
 		const cts = p.request.cancellationTokenSource;
 		cts.cancel();

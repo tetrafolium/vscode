@@ -3,42 +3,61 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getClientArea, getTopLeftOffset, isHTMLDivElement, isHTMLTextAreaElement } from '../../../../base/browser/dom.js';
-import { mainWindow } from '../../../../base/browser/window.js';
-import { coalesce } from '../../../../base/common/arrays.js';
-import { language, locale } from '../../../../base/common/platform.js';
-import { IEnvironmentService } from '../../../../platform/environment/common/environment.js';
-import { IFileService } from '../../../../platform/files/common/files.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import localizedStrings from '../../../../platform/languagePacks/common/localizedStrings.js';
-import { ILogFile, getLogs } from '../../../../platform/log/browser/log.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { Registry } from '../../../../platform/registry/common/platform.js';
-import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from '../../../common/contributions.js';
-import { IWindowDriver, IElement, ILocaleInfo, ILocalizedStrings } from '../common/driver.js';
-import { ILifecycleService, LifecyclePhase } from '../../lifecycle/common/lifecycle.js';
-import type { Terminal as XtermTerminal } from '@xterm/xterm';
+import {
+	getClientArea,
+	getTopLeftOffset,
+	isHTMLDivElement,
+	isHTMLTextAreaElement,
+} from "../../../../base/browser/dom.js";
+import { mainWindow } from "../../../../base/browser/window.js";
+import { coalesce } from "../../../../base/common/arrays.js";
+import { language, locale } from "../../../../base/common/platform.js";
+import { IEnvironmentService } from "../../../../platform/environment/common/environment.js";
+import { IFileService } from "../../../../platform/files/common/files.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import localizedStrings from "../../../../platform/languagePacks/common/localizedStrings.js";
+import { ILogFile, getLogs } from "../../../../platform/log/browser/log.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { Registry } from "../../../../platform/registry/common/platform.js";
+import {
+	IWorkbenchContributionsRegistry,
+	Extensions as WorkbenchExtensions,
+} from "../../../common/contributions.js";
+import {
+	IWindowDriver,
+	IElement,
+	ILocaleInfo,
+	ILocalizedStrings,
+} from "../common/driver.js";
+import {
+	ILifecycleService,
+	LifecyclePhase,
+} from "../../lifecycle/common/lifecycle.js";
+import type { Terminal as XtermTerminal } from "@xterm/xterm";
 
 export class BrowserWindowDriver implements IWindowDriver {
-
 	constructor(
 		@IFileService private readonly fileService: IFileService,
-		@IEnvironmentService private readonly environmentService: IEnvironmentService,
+		@IEnvironmentService
+		private readonly environmentService: IEnvironmentService,
 		@ILifecycleService private readonly lifecycleService: ILifecycleService,
-		@ILogService private readonly logService: ILogService
-	) {
-	}
+		@ILogService private readonly logService: ILogService,
+	) {}
 
 	async getLogs(): Promise<ILogFile[]> {
 		return getLogs(this.fileService, this.environmentService);
 	}
 
 	async whenWorkbenchRestored(): Promise<void> {
-		this.logService.info('[driver] Waiting for restored lifecycle phase...');
+		this.logService.info("[driver] Waiting for restored lifecycle phase...");
 		await this.lifecycleService.when(LifecyclePhase.Restored);
-		this.logService.info('[driver] Restored lifecycle phase reached. Waiting for contributions...');
-		await Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).whenRestored;
-		this.logService.info('[driver] Workbench contributions created.');
+		this.logService.info(
+			"[driver] Restored lifecycle phase reached. Waiting for contributions...",
+		);
+		await Registry.as<IWorkbenchContributionsRegistry>(
+			WorkbenchExtensions.Workbench,
+		).whenRestored;
+		this.logService.info("[driver] Workbench contributions created.");
 	}
 
 	async setValue(selector: string, text: string): Promise<void> {
@@ -52,7 +71,7 @@ export class BrowserWindowDriver implements IWindowDriver {
 		const inputElement = element as HTMLInputElement;
 		inputElement.value = text;
 
-		const event = new Event('input', { bubbles: true, cancelable: true });
+		const event = new Event("input", { bubbles: true, cancelable: true });
 		inputElement.dispatchEvent(event);
 	}
 
@@ -66,14 +85,20 @@ export class BrowserWindowDriver implements IWindowDriver {
 
 			while (el) {
 				const tagName = el.tagName;
-				const id = el.id ? `#${el.id}` : '';
-				const classes = coalesce(el.className.split(/\s+/g).map(c => c.trim())).map(c => `.${c}`).join('');
+				const id = el.id ? `#${el.id}` : "";
+				const classes = coalesce(
+					el.className.split(/\s+/g).map((c) => c.trim()),
+				)
+					.map((c) => `.${c}`)
+					.join("");
 				chain.unshift(`${tagName}${id}${classes}`);
 
 				el = el.parentElement;
 			}
 
-			throw new Error(`Active element not found. Current active element is '${chain.join(' > ')}'. Looking for ${selector}`);
+			throw new Error(
+				`Active element not found. Current active element is '${chain.join(" > ")}'. Looking for ${selector}`,
+			);
 		}
 
 		return true;
@@ -117,16 +142,23 @@ export class BrowserWindowDriver implements IWindowDriver {
 		return {
 			tagName: element.tagName,
 			className: element.className,
-			textContent: element.textContent || '',
+			textContent: element.textContent || "",
 			attributes,
 			children,
 			left,
-			top
+			top,
 		};
 	}
 
-	async getElementXY(selector: string, xoffset?: number, yoffset?: number): Promise<{ x: number; y: number }> {
-		const offset = typeof xoffset === 'number' && typeof yoffset === 'number' ? { x: xoffset, y: yoffset } : undefined;
+	async getElementXY(
+		selector: string,
+		xoffset?: number,
+		yoffset?: number,
+	): Promise<{ x: number; y: number }> {
+		const offset =
+			typeof xoffset === "number" && typeof yoffset === "number"
+				? { x: xoffset, y: yoffset }
+				: undefined;
 		return this._getElementXY(selector, offset);
 	}
 
@@ -145,14 +177,14 @@ export class BrowserWindowDriver implements IWindowDriver {
 			}
 			const selectionStart = editContext.selectionStart;
 			const selectionEnd = editContext.selectionEnd;
-			const event = new TextUpdateEvent('textupdate', {
+			const event = new TextUpdateEvent("textupdate", {
 				updateRangeStart: selectionStart,
 				updateRangeEnd: selectionEnd,
 				text,
 				selectionStart: selectionStart + text.length,
 				selectionEnd: selectionStart + text.length,
 				compositionStart: 0,
-				compositionEnd: 0
+				compositionEnd: 0,
 			});
 			editContext.dispatchEvent(event);
 		} else if (isHTMLTextAreaElement(element)) {
@@ -164,12 +196,14 @@ export class BrowserWindowDriver implements IWindowDriver {
 			element.value = newValue;
 			element.setSelectionRange(newStart, newStart);
 
-			const event = new Event('input', { 'bubbles': true, 'cancelable': true });
+			const event = new Event("input", { bubbles: true, cancelable: true });
 			element.dispatchEvent(event);
 		}
 	}
 
-	async getEditorSelection(selector: string): Promise<{ selectionStart: number; selectionEnd: number }> {
+	async getEditorSelection(
+		selector: string,
+	): Promise<{ selectionStart: number; selectionEnd: number }> {
 		// eslint-disable-next-line no-restricted-syntax
 		const element = mainWindow.document.querySelector(selector);
 		if (!element) {
@@ -180,9 +214,15 @@ export class BrowserWindowDriver implements IWindowDriver {
 			if (!editContext) {
 				throw new Error(`Edit context not found: ${selector}`);
 			}
-			return { selectionStart: editContext.selectionStart, selectionEnd: editContext.selectionEnd };
+			return {
+				selectionStart: editContext.selectionStart,
+				selectionEnd: editContext.selectionEnd,
+			};
 		} else if (isHTMLTextAreaElement(element)) {
-			return { selectionStart: element.selectionStart, selectionEnd: element.selectionEnd };
+			return {
+				selectionStart: element.selectionStart,
+				selectionEnd: element.selectionEnd,
+			};
 		} else {
 			throw new Error(`Unknown type of element: ${selector}`);
 		}
@@ -220,7 +260,7 @@ export class BrowserWindowDriver implements IWindowDriver {
 		}
 
 		// eslint-disable-next-line local/code-no-any-casts, @typescript-eslint/no-explicit-any
-		const xterm = (element as any).xterm as (XtermTerminal | undefined);
+		const xterm = (element as any).xterm as XtermTerminal | undefined;
 
 		if (!xterm) {
 			throw new Error(`Xterm not found: ${selector}`);
@@ -232,7 +272,7 @@ export class BrowserWindowDriver implements IWindowDriver {
 	getLocaleInfo(): Promise<ILocaleInfo> {
 		return Promise.resolve({
 			language: language,
-			locale: locale
+			locale: locale,
 		});
 	}
 
@@ -240,11 +280,14 @@ export class BrowserWindowDriver implements IWindowDriver {
 		return Promise.resolve({
 			open: localizedStrings.open,
 			close: localizedStrings.close,
-			find: localizedStrings.find
+			find: localizedStrings.find,
 		});
 	}
 
-	protected async _getElementXY(selector: string, offset?: { x: number; y: number }): Promise<{ x: number; y: number }> {
+	protected async _getElementXY(
+		selector: string,
+		offset?: { x: number; y: number },
+	): Promise<{ x: number; y: number }> {
 		// eslint-disable-next-line no-restricted-syntax
 		const element = mainWindow.document.querySelector(selector);
 
@@ -260,8 +303,8 @@ export class BrowserWindowDriver implements IWindowDriver {
 			x = left + offset.x;
 			y = top + offset.y;
 		} else {
-			x = left + (width / 2);
-			y = top + (height / 2);
+			x = left + width / 2;
+			y = top + height / 2;
 		}
 
 		x = Math.round(x);
@@ -271,6 +314,10 @@ export class BrowserWindowDriver implements IWindowDriver {
 	}
 }
 
-export function registerWindowDriver(instantiationService: IInstantiationService): void {
-	Object.assign(mainWindow, { driver: instantiationService.createInstance(BrowserWindowDriver) });
+export function registerWindowDriver(
+	instantiationService: IInstantiationService,
+): void {
+	Object.assign(mainWindow, {
+		driver: instantiationService.createInstance(BrowserWindowDriver),
+	});
 }

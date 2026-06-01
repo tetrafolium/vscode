@@ -3,26 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
-import * as sinon from 'sinon';
-import { upcast } from '../../../../../base/common/types.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { ServiceCollection } from '../../../../../platform/instantiation/common/serviceCollection.js';
-import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { ILoggerService } from '../../../../../platform/log/common/log.js';
-import { IProductService } from '../../../../../platform/product/common/productService.js';
-import { IStorageService } from '../../../../../platform/storage/common/storage.js';
-import { TestLoggerService, TestProductService, TestStorageService } from '../../../../test/common/workbenchTestServices.js';
-import { IMcpHostDelegate } from '../../common/mcpRegistryTypes.js';
-import { McpServerRequestHandler, McpTask } from '../../common/mcpServerRequestHandler.js';
-import { McpConnectionState, McpServerDefinition, McpServerLaunch } from '../../common/mcpTypes.js';
-import { MCP } from '../../common/modelContextProtocol.js';
-import { TestMcpMessageTransport } from './mcpRegistryTypes.js';
-import { IOutputService } from '../../../../services/output/common/output.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { CancellationTokenSource } from '../../../../../base/common/cancellation.js';
-import { McpTaskManager } from '../../common/mcpTaskManager.js';
-import { upcastPartial } from '../../../../../base/test/common/mock.js';
+import * as assert from "assert";
+import * as sinon from "sinon";
+import { upcast } from "../../../../../base/common/types.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../base/test/common/utils.js";
+import { ServiceCollection } from "../../../../../platform/instantiation/common/serviceCollection.js";
+import { TestInstantiationService } from "../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import { ILoggerService } from "../../../../../platform/log/common/log.js";
+import { IProductService } from "../../../../../platform/product/common/productService.js";
+import { IStorageService } from "../../../../../platform/storage/common/storage.js";
+import {
+	TestLoggerService,
+	TestProductService,
+	TestStorageService,
+} from "../../../../test/common/workbenchTestServices.js";
+import { IMcpHostDelegate } from "../../common/mcpRegistryTypes.js";
+import {
+	McpServerRequestHandler,
+	McpTask,
+} from "../../common/mcpServerRequestHandler.js";
+import {
+	McpConnectionState,
+	McpServerDefinition,
+	McpServerLaunch,
+} from "../../common/mcpTypes.js";
+import { MCP } from "../../common/modelContextProtocol.js";
+import { TestMcpMessageTransport } from "./mcpRegistryTypes.js";
+import { IOutputService } from "../../../../services/output/common/output.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { CancellationTokenSource } from "../../../../../base/common/cancellation.js";
+import { McpTaskManager } from "../../common/mcpTaskManager.js";
+import { upcastPartial } from "../../../../../base/test/common/mock.js";
 
 class TestMcpHostDelegate extends Disposable implements IMcpHostDelegate {
 	private readonly _transport: TestMcpMessageTransport;
@@ -34,8 +45,10 @@ class TestMcpHostDelegate extends Disposable implements IMcpHostDelegate {
 		this._transport = this._register(new TestMcpMessageTransport());
 	}
 
-
-	substituteVariables(serverDefinition: McpServerDefinition, launch: McpServerLaunch): Promise<McpServerLaunch> {
+	substituteVariables(
+		serverDefinition: McpServerDefinition,
+		launch: McpServerLaunch,
+	): Promise<McpServerLaunch> {
 		return Promise.resolve(launch);
 	}
 
@@ -56,7 +69,7 @@ class TestMcpHostDelegate extends Disposable implements IMcpHostDelegate {
 	}
 }
 
-suite('Workbench - MCP - ServerRequestHandler', () => {
+suite("Workbench - MCP - ServerRequestHandler", () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
 	let instantiationService: TestInstantiationService;
@@ -73,7 +86,7 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 		// Setup test services
 		const services = new ServiceCollection(
 			[ILoggerService, store.add(new TestLoggerService())],
-			[IOutputService, upcast({ showChannel: () => { } })],
+			[IOutputService, upcast({ showChannel: () => {} })],
 			[IStorageService, store.add(new TestStorageService())],
 			[IProductService, TestProductService],
 		);
@@ -83,17 +96,28 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 		transport.setConnectionState({ state: McpConnectionState.Kind.Running });
 
 		// Manually create the handler since we need the transport already set up
-		const logger = store.add((instantiationService.get(ILoggerService) as TestLoggerService)
-			.createLogger('mcpServerTest', { hidden: true, name: 'MCP Test' }));
+		const logger = store.add(
+			(
+				instantiationService.get(ILoggerService) as TestLoggerService
+			).createLogger("mcpServerTest", { hidden: true, name: "MCP Test" }),
+		);
 
 		// Start the handler creation
-		const handlerPromise = McpServerRequestHandler.create(instantiationService, { logger, launch: transport, taskManager: store.add(new McpTaskManager()) }, cts.token);
+		const handlerPromise = McpServerRequestHandler.create(
+			instantiationService,
+			{
+				logger,
+				launch: transport,
+				taskManager: store.add(new McpTaskManager()),
+			},
+			cts.token,
+		);
 
 		handler = await handlerPromise;
 		store.add(handler);
 	});
 
-	test('should send and receive JSON-RPC requests', async () => {
+	test("should send and receive JSON-RPC requests", async () => {
 		// Setup request
 		const requestPromise = handler.listResources();
 
@@ -103,9 +127,9 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 
 		// Verify listResources request format
 		const listResourcesRequest = sentMessages[2] as MCP.JSONRPCRequest;
-		assert.strictEqual(listResourcesRequest.method, 'resources/list');
+		assert.strictEqual(listResourcesRequest.method, "resources/list");
 		assert.strictEqual(listResourcesRequest.jsonrpc, MCP.JSONRPC_VERSION);
-		assert.ok(typeof listResourcesRequest.id === 'number');
+		assert.ok(typeof listResourcesRequest.id === "number");
 
 		// Simulate server response with mock resources that match the expected Resource interface
 		transport.simulateReceiveMessage({
@@ -113,20 +137,20 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 			id: listResourcesRequest.id,
 			result: {
 				resources: [
-					{ uri: 'resource1', type: 'text/plain', name: 'Test Resource 1' },
-					{ uri: 'resource2', type: 'text/plain', name: 'Test Resource 2' }
-				]
-			}
+					{ uri: "resource1", type: "text/plain", name: "Test Resource 1" },
+					{ uri: "resource2", type: "text/plain", name: "Test Resource 2" },
+				],
+			},
 		});
 
 		// Verify the result
 		const resources = await requestPromise;
 		assert.strictEqual(resources.length, 2);
-		assert.strictEqual(resources[0].uri, 'resource1');
-		assert.strictEqual(resources[1].name, 'Test Resource 2');
+		assert.strictEqual(resources[0].uri, "resource1");
+		assert.strictEqual(resources[1].name, "Test Resource 2");
 	});
 
-	test('should handle paginated requests', async () => {
+	test("should handle paginated requests", async () => {
 		// Setup request
 		const requestPromise = handler.listResources();
 
@@ -140,25 +164,25 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 			id: listResourcesRequest.id,
 			result: {
 				resources: [
-					{ uri: 'resource1', type: 'text/plain', name: 'Test Resource 1' }
+					{ uri: "resource1", type: "text/plain", name: "Test Resource 1" },
 				],
-				nextCursor: 'page2'
-			}
+				nextCursor: "page2",
+			},
 		});
 
 		// Clear the sent messages to only capture the next page request
 		transport.clearSentMessages();
 
 		// Wait a bit to allow the handler to process and send the next request
-		await new Promise(resolve => setTimeout(resolve, 0));
+		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		// Get the second request and verify cursor is included
 		const sentMessages2 = transport.getSentMessages();
 		assert.strictEqual(sentMessages2.length, 1);
 
 		const listResourcesRequest2 = sentMessages2[0] as MCP.JSONRPCRequest;
-		assert.strictEqual(listResourcesRequest2.method, 'resources/list');
-		assert.deepStrictEqual(listResourcesRequest2.params, { cursor: 'page2' });
+		assert.strictEqual(listResourcesRequest2.method, "resources/list");
+		assert.deepStrictEqual(listResourcesRequest2.params, { cursor: "page2" });
 
 		// Send final page with no nextCursor
 		transport.simulateReceiveMessage({
@@ -166,21 +190,21 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 			id: listResourcesRequest2.id,
 			result: {
 				resources: [
-					{ uri: 'resource2', type: 'text/plain', name: 'Test Resource 2' }
-				]
-			}
+					{ uri: "resource2", type: "text/plain", name: "Test Resource 2" },
+				],
+			},
 		});
 
 		// Verify the combined result
 		const resources = await requestPromise;
 		assert.strictEqual(resources.length, 2);
-		assert.strictEqual(resources[0].uri, 'resource1');
-		assert.strictEqual(resources[1].uri, 'resource2');
+		assert.strictEqual(resources[0].uri, "resource1");
+		assert.strictEqual(resources[1].uri, "resource2");
 	});
 
-	test('should handle error responses', async () => {
+	test("should handle error responses", async () => {
 		// Setup request
-		const requestPromise = handler.readResource({ uri: 'non-existent' });
+		const requestPromise = handler.readResource({ uri: "non-existent" });
 
 		// Get the sent message
 		const sentMessages = transport.getSentMessages();
@@ -192,92 +216,104 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 			id: readResourceRequest.id,
 			error: {
 				code: MCP.METHOD_NOT_FOUND,
-				message: 'Resource not found'
-			}
+				message: "Resource not found",
+			},
 		});
 
 		// Verify the error is thrown correctly
 		try {
 			await requestPromise;
-			assert.fail('Expected error was not thrown');
+			assert.fail("Expected error was not thrown");
 		} catch (e: unknown) {
-			assert.strictEqual((e as Error).message, 'MPC -32601: Resource not found');
+			assert.strictEqual(
+				(e as Error).message,
+				"MPC -32601: Resource not found",
+			);
 			assert.strictEqual((e as { code: number }).code, MCP.METHOD_NOT_FOUND);
 		}
 	});
 
-	test('should handle server requests', async () => {
+	test("should handle server requests", async () => {
 		// Simulate ping request from server
 		const pingRequest: MCP.JSONRPCRequest & MCP.PingRequest = {
 			jsonrpc: MCP.JSONRPC_VERSION,
 			id: 100,
-			method: 'ping'
+			method: "ping",
 		};
 
 		transport.simulateReceiveMessage(pingRequest);
 
 		// The handler should have sent a response
 		const sentMessages = transport.getSentMessages();
-		const pingResponse = sentMessages.find(m =>
-			'id' in m && m.id === pingRequest.id && 'result' in m
+		const pingResponse = sentMessages.find(
+			(m) => "id" in m && m.id === pingRequest.id && "result" in m,
 		) as MCP.JSONRPCResultResponse;
 
-		assert.ok(pingResponse, 'No ping response was sent');
+		assert.ok(pingResponse, "No ping response was sent");
 		assert.deepStrictEqual(pingResponse.result, {});
 	});
 
-	test('should handle roots list requests', async () => {
+	test("should handle roots list requests", async () => {
 		// Set roots
 		handler.roots = [
-			{ uri: 'file:///test/root1', name: 'Root 1' },
-			{ uri: 'file:///test/root2', name: 'Root 2' }
+			{ uri: "file:///test/root1", name: "Root 1" },
+			{ uri: "file:///test/root2", name: "Root 2" },
 		];
 
 		// Simulate roots/list request from server
 		const rootsRequest: MCP.JSONRPCRequest & MCP.ListRootsRequest = {
 			jsonrpc: MCP.JSONRPC_VERSION,
 			id: 101,
-			method: 'roots/list'
+			method: "roots/list",
 		};
 
 		transport.simulateReceiveMessage(rootsRequest);
 
 		// The handler should have sent a response
 		const sentMessages = transport.getSentMessages();
-		const rootsResponse = sentMessages.find(m =>
-			'id' in m && m.id === rootsRequest.id && 'result' in m
+		const rootsResponse = sentMessages.find(
+			(m) => "id" in m && m.id === rootsRequest.id && "result" in m,
 		) as MCP.JSONRPCResultResponse;
 
-		assert.ok(rootsResponse, 'No roots/list response was sent');
-		assert.strictEqual((rootsResponse.result as MCP.ListRootsResult).roots.length, 2);
-		assert.strictEqual((rootsResponse.result as MCP.ListRootsResult).roots[0].uri, 'file:///test/root1');
+		assert.ok(rootsResponse, "No roots/list response was sent");
+		assert.strictEqual(
+			(rootsResponse.result as MCP.ListRootsResult).roots.length,
+			2,
+		);
+		assert.strictEqual(
+			(rootsResponse.result as MCP.ListRootsResult).roots[0].uri,
+			"file:///test/root1",
+		);
 	});
 
-	test('should handle server notifications', async () => {
+	test("should handle server notifications", async () => {
 		let progressNotificationReceived = false;
-		store.add(handler.onDidReceiveProgressNotification(notification => {
-			progressNotificationReceived = true;
-			assert.strictEqual(notification.method, 'notifications/progress');
-			assert.strictEqual(notification.params.progressToken, 'token1');
-			assert.strictEqual(notification.params.progress, 50);
-		}));
+		store.add(
+			handler.onDidReceiveProgressNotification((notification) => {
+				progressNotificationReceived = true;
+				assert.strictEqual(notification.method, "notifications/progress");
+				assert.strictEqual(notification.params.progressToken, "token1");
+				assert.strictEqual(notification.params.progress, 50);
+			}),
+		);
 
 		// Simulate progress notification with correct format
-		const progressNotification: MCP.JSONRPCNotification & MCP.ProgressNotification = {
+		const progressNotification: MCP.JSONRPCNotification &
+			MCP.ProgressNotification = {
 			jsonrpc: MCP.JSONRPC_VERSION,
-			method: 'notifications/progress',
+			method: "notifications/progress",
 			params: {
-				progressToken: 'token1',
+				progressToken: "token1",
 				progress: 50,
-				total: 100
-			}
+				total: 100,
+			},
 		};
 
 		transport.simulateReceiveMessage(progressNotification);
 		assert.strictEqual(progressNotificationReceived, true);
 	});
 
-	test('should handle cancellation', async () => {
+	test("should handle cancellation", async () => {
 		// Setup a new cancellation token source for this specific test
 		const testCts = store.add(new CancellationTokenSource());
 		const requestPromise = handler.listResources(undefined, testCts.token);
@@ -291,26 +327,30 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 		testCts.cancel();
 
 		// Check that a cancellation notification was sent
-		const cancelNotification = transport.getSentMessages().find(m =>
-			!('id' in m) &&
-			'method' in m &&
-			m.method === 'notifications/cancelled' &&
-			'params' in m &&
-			m.params && m.params.requestId === requestId
-		);
+		const cancelNotification = transport
+			.getSentMessages()
+			.find(
+				(m) =>
+					!("id" in m) &&
+					"method" in m &&
+					m.method === "notifications/cancelled" &&
+					"params" in m &&
+					m.params &&
+					m.params.requestId === requestId,
+			);
 
-		assert.ok(cancelNotification, 'No cancellation notification was sent');
+		assert.ok(cancelNotification, "No cancellation notification was sent");
 
 		// Verify the promise was cancelled
 		try {
 			await requestPromise;
-			assert.fail('Promise should have been cancelled');
+			assert.fail("Promise should have been cancelled");
 		} catch (e) {
-			assert.strictEqual(e.name, 'Canceled');
+			assert.strictEqual(e.name, "Canceled");
 		}
 	});
 
-	test('should handle cancelled notification from server', async () => {
+	test("should handle cancelled notification from server", async () => {
 		// Setup request
 		const requestPromise = handler.listResources();
 
@@ -320,12 +360,13 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 		const requestId = listResourcesRequest.id;
 
 		// Simulate cancelled notification from server
-		const cancelledNotification: MCP.JSONRPCNotification & MCP.CancelledNotification = {
+		const cancelledNotification: MCP.JSONRPCNotification &
+			MCP.CancelledNotification = {
 			jsonrpc: MCP.JSONRPC_VERSION,
-			method: 'notifications/cancelled',
+			method: "notifications/cancelled",
 			params: {
-				requestId
-			}
+				requestId,
+			},
 		};
 
 		transport.simulateReceiveMessage(cancelledNotification);
@@ -333,13 +374,13 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 		// Verify the promise was cancelled
 		try {
 			await requestPromise;
-			assert.fail('Promise should have been cancelled');
+			assert.fail("Promise should have been cancelled");
 		} catch (e) {
-			assert.strictEqual(e.name, 'Canceled');
+			assert.strictEqual(e.name, "Canceled");
 		}
 	});
 
-	test('should dispose properly and cancel pending requests', async () => {
+	test("should dispose properly and cancel pending requests", async () => {
 		// Setup multiple requests
 		const request1 = handler.listResources();
 		const request2 = handler.listTools();
@@ -350,55 +391,57 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 		// Verify all promises were cancelled
 		try {
 			await request1;
-			assert.fail('Promise 1 should have been cancelled');
+			assert.fail("Promise 1 should have been cancelled");
 		} catch (e) {
-			assert.strictEqual(e.name, 'Canceled');
+			assert.strictEqual(e.name, "Canceled");
 		}
 
 		try {
 			await request2;
-			assert.fail('Promise 2 should have been cancelled');
+			assert.fail("Promise 2 should have been cancelled");
 		} catch (e) {
-			assert.strictEqual(e.name, 'Canceled');
+			assert.strictEqual(e.name, "Canceled");
 		}
 	});
 
-	test('should handle connection error by cancelling requests', async () => {
+	test("should handle connection error by cancelling requests", async () => {
 		// Setup request
 		const requestPromise = handler.listResources();
 
 		// Simulate connection error
 		transport.setConnectionState({
 			state: McpConnectionState.Kind.Error,
-			message: 'Connection lost'
+			message: "Connection lost",
 		});
 
 		// Verify the promise was cancelled
 		try {
 			await requestPromise;
-			assert.fail('Promise should have been cancelled');
+			assert.fail("Promise should have been cancelled");
 		} catch (e) {
-			assert.strictEqual(e.name, 'Canceled');
+			assert.strictEqual(e.name, "Canceled");
 		}
 	});
 
-	test('callTool forwards _meta.traceparent to the JSON-RPC payload (MCP SEP-414)', async () => {
-		const traceparent = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';
-		const tracestate = 'rojo=00f067aa0ba902b7';
+	test("callTool forwards _meta.traceparent to the JSON-RPC payload (MCP SEP-414)", async () => {
+		const traceparent =
+			"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+		const tracestate = "rojo=00f067aa0ba902b7";
 
 		const callPromise = handler.callTool({
-			name: 'echo',
-			arguments: { hello: 'world' },
-			_meta: { traceparent, tracestate, progressToken: 'tok-1' },
+			name: "echo",
+			arguments: { hello: "world" },
+			_meta: { traceparent, tracestate, progressToken: "tok-1" },
 		});
 
 		const sentMessages = transport.getSentMessages();
-		const callRequest = sentMessages[2] as MCP.JSONRPCRequest & MCP.CallToolRequest;
-		assert.strictEqual(callRequest.method, 'tools/call');
+		const callRequest = sentMessages[2] as MCP.JSONRPCRequest &
+			MCP.CallToolRequest;
+		assert.strictEqual(callRequest.method, "tools/call");
 		assert.deepStrictEqual(callRequest.params._meta, {
 			traceparent,
 			tracestate,
-			progressToken: 'tok-1',
+			progressToken: "tok-1",
 		});
 
 		transport.simulateReceiveMessage({
@@ -411,7 +454,8 @@ suite('Workbench - MCP - ServerRequestHandler', () => {
 	});
 });
 
-suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://github.com/microsoft/vscode/issues/280126
+suite.skip("Workbench - MCP - McpTask", () => {
+	// TODO@connor4312 https://github.com/microsoft/vscode/issues/280126
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 	let clock: sinon.SinonFakeTimers;
 
@@ -425,20 +469,22 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 
 	function createTask(overrides: Partial<MCP.Task> = {}): MCP.Task {
 		return {
-			taskId: 'task1',
-			status: 'working',
+			taskId: "task1",
+			status: "working",
 			createdAt: new Date().toISOString(),
 			lastUpdatedAt: new Date().toISOString(),
 			ttl: null,
-			...overrides
+			...overrides,
 		};
 	}
 
-	test('should resolve when task completes', async () => {
-		const getTaskResultStub = sinon.stub().resolves({ content: [{ type: 'text', text: 'result' }] });
+	test("should resolve when task completes", async () => {
+		const getTaskResultStub = sinon
+			.stub()
+			.resolves({ content: [{ type: "text", text: "result" }] });
 		const mockHandler = upcastPartial<McpServerRequestHandler>({
-			getTask: sinon.stub().resolves(createTask({ status: 'completed' })),
-			getTaskResult: getTaskResultStub
+			getTask: sinon.stub().resolves(createTask({ status: "completed" })),
+			getTaskResult: getTaskResultStub,
 		});
 
 		const task = store.add(new McpTask(createTask()));
@@ -448,22 +494,26 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 		await clock.tickAsync(2000);
 
 		// Update to completed state
-		task.onDidUpdateState(createTask({ status: 'completed' }));
+		task.onDidUpdateState(createTask({ status: "completed" }));
 
 		const result = await task.result;
-		assert.deepStrictEqual(result, { content: [{ type: 'text', text: 'result' }] });
-		assert.ok(getTaskResultStub.calledWith({ taskId: 'task1' }));
+		assert.deepStrictEqual(result, {
+			content: [{ type: "text", text: "result" }],
+		});
+		assert.ok(getTaskResultStub.calledWith({ taskId: "task1" }));
 	});
 
-	test('should poll for task updates', async () => {
+	test("should poll for task updates", async () => {
 		const getTaskStub = sinon.stub();
-		getTaskStub.onCall(0).resolves(createTask({ status: 'working' }));
-		getTaskStub.onCall(1).resolves(createTask({ status: 'working' }));
-		getTaskStub.onCall(2).resolves(createTask({ status: 'completed' }));
+		getTaskStub.onCall(0).resolves(createTask({ status: "working" }));
+		getTaskStub.onCall(1).resolves(createTask({ status: "working" }));
+		getTaskStub.onCall(2).resolves(createTask({ status: "completed" }));
 
 		const mockHandler = upcastPartial<McpServerRequestHandler>({
 			getTask: getTaskStub,
-			getTaskResult: sinon.stub().resolves({ content: [{ type: 'text', text: 'result' }] })
+			getTaskResult: sinon
+				.stub()
+				.resolves({ content: [{ type: "text", text: "result" }] }),
 		});
 
 		const task = store.add(new McpTask(createTask({ pollInterval: 1000 })));
@@ -482,12 +532,14 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 		assert.strictEqual(getTaskStub.callCount, 3);
 
 		const result = await task.result;
-		assert.deepStrictEqual(result, { content: [{ type: 'text', text: 'result' }] });
+		assert.deepStrictEqual(result, {
+			content: [{ type: "text", text: "result" }],
+		});
 	});
 
-	test('should use default poll interval if not specified', async () => {
+	test("should use default poll interval if not specified", async () => {
 		const getTaskStub = sinon.stub();
-		getTaskStub.resolves(createTask({ status: 'working' }));
+		getTaskStub.resolves(createTask({ status: "working" }));
 
 		const mockHandler = upcastPartial<McpServerRequestHandler>({
 			getTask: getTaskStub,
@@ -506,65 +558,60 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 		task.dispose();
 	});
 
-	test('should reject when task fails', async () => {
+	test("should reject when task fails", async () => {
 		const mockHandler = upcastPartial<McpServerRequestHandler>({
-			getTask: sinon.stub().resolves(createTask({
-				status: 'failed',
-				statusMessage: 'Something went wrong'
-			}))
+			getTask: sinon.stub().resolves(
+				createTask({
+					status: "failed",
+					statusMessage: "Something went wrong",
+				}),
+			),
 		});
 
 		const task = store.add(new McpTask(createTask()));
 		task.setHandler(mockHandler);
 
 		// Update to failed state
-		task.onDidUpdateState(createTask({
-			status: 'failed',
-			statusMessage: 'Something went wrong'
-		}));
-
-		await assert.rejects(
-			task.result,
-			(error: Error) => {
-				assert.ok(error.message.includes('Task task1 failed'));
-				assert.ok(error.message.includes('Something went wrong'));
-				return true;
-			}
+		task.onDidUpdateState(
+			createTask({
+				status: "failed",
+				statusMessage: "Something went wrong",
+			}),
 		);
+
+		await assert.rejects(task.result, (error: Error) => {
+			assert.ok(error.message.includes("Task task1 failed"));
+			assert.ok(error.message.includes("Something went wrong"));
+			return true;
+		});
 	});
 
-	test('should cancel when task is cancelled', async () => {
+	test("should cancel when task is cancelled", async () => {
 		const task = store.add(new McpTask(createTask()));
 
 		// Update to cancelled state
-		task.onDidUpdateState(createTask({ status: 'cancelled' }));
+		task.onDidUpdateState(createTask({ status: "cancelled" }));
 
-		await assert.rejects(
-			task.result,
-			(error: Error) => {
-				assert.strictEqual(error.name, 'Canceled');
-				return true;
-			}
-		);
+		await assert.rejects(task.result, (error: Error) => {
+			assert.strictEqual(error.name, "Canceled");
+			return true;
+		});
 	});
 
-	test('should cancel when cancellation token is triggered', async () => {
+	test("should cancel when cancellation token is triggered", async () => {
 		const cts = store.add(new CancellationTokenSource());
 		const task = store.add(new McpTask(createTask(), cts.token));
 
 		// Cancel the token
 		cts.cancel();
 
-		await assert.rejects(
-			task.result,
-			(error: Error) => {
-				assert.strictEqual(error.name, 'Canceled');
-				return true;
-			}
-		);
+		await assert.rejects(task.result, (error: Error) => {
+			assert.strictEqual(error.name, "Canceled");
+			return true;
+		});
 	});
 
-	test('should handle TTL expiration', async () => {
+	test("should handle TTL expiration", async () => {
 		const now = Date.now();
 		clock.setSystemTime(now);
 
@@ -573,29 +620,28 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 		// Advance time past TTL
 		await clock.tickAsync(6000);
 
-		await assert.rejects(
-			task.result,
-			(error: Error) => {
-				assert.strictEqual(error.name, 'Canceled');
-				return true;
-			}
-		);
+		await assert.rejects(task.result, (error: Error) => {
+			assert.strictEqual(error.name, "Canceled");
+			return true;
+		});
 	});
 
-	test('should stop polling when in terminal state', async () => {
+	test("should stop polling when in terminal state", async () => {
 		const getTaskStub = sinon.stub();
-		getTaskStub.resolves(createTask({ status: 'completed' }));
+		getTaskStub.resolves(createTask({ status: "completed" }));
 
 		const mockHandler = upcastPartial<McpServerRequestHandler>({
 			getTask: getTaskStub,
-			getTaskResult: sinon.stub().resolves({ content: [{ type: 'text', text: 'result' }] })
+			getTaskResult: sinon
+				.stub()
+				.resolves({ content: [{ type: "text", text: "result" }] }),
 		});
 
 		const task = store.add(new McpTask(createTask({ pollInterval: 1000 })));
 		task.setHandler(mockHandler);
 
 		// Update to completed state immediately
-		task.onDidUpdateState(createTask({ status: 'completed' }));
+		task.onDidUpdateState(createTask({ status: "completed" }));
 
 		await task.result;
 
@@ -605,9 +651,9 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 		assert.strictEqual(getTaskStub.callCount, initialCallCount);
 	});
 
-	test('should handle handler reconnection', async () => {
+	test("should handle handler reconnection", async () => {
 		const getTaskStub1 = sinon.stub();
-		getTaskStub1.resolves(createTask({ status: 'working' }));
+		getTaskStub1.resolves(createTask({ status: "working" }));
 
 		const mockHandler1 = upcastPartial<McpServerRequestHandler>({
 			getTask: getTaskStub1,
@@ -622,11 +668,13 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 
 		// Switch to a new handler
 		const getTaskStub2 = sinon.stub();
-		getTaskStub2.resolves(createTask({ status: 'completed' }));
+		getTaskStub2.resolves(createTask({ status: "completed" }));
 
 		const mockHandler2 = upcastPartial<McpServerRequestHandler>({
 			getTask: getTaskStub2,
-			getTaskResult: sinon.stub().resolves({ content: [{ type: 'text', text: 'result' }] })
+			getTaskResult: sinon
+				.stub()
+				.resolves({ content: [{ type: "text", text: "result" }] }),
 		});
 
 		task.setHandler(mockHandler2);
@@ -637,10 +685,12 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 		assert.strictEqual(getTaskStub2.callCount, 1); // New handler is called
 
 		const result = await task.result;
-		assert.deepStrictEqual(result, { content: [{ type: 'text', text: 'result' }] });
+		assert.deepStrictEqual(result, {
+			content: [{ type: "text", text: "result" }],
+		});
 	});
 
-	test('should not poll when handler is undefined', async () => {
+	test("should not poll when handler is undefined", async () => {
 		const task = store.add(new McpTask(createTask({ pollInterval: 1000 })));
 
 		// Advance time - should not crash
@@ -648,11 +698,13 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 
 		// Now set a handler and it should start polling
 		const getTaskStub = sinon.stub();
-		getTaskStub.resolves(createTask({ status: 'completed' }));
+		getTaskStub.resolves(createTask({ status: "completed" }));
 
 		const mockHandler = upcastPartial<McpServerRequestHandler>({
 			getTask: getTaskStub,
-			getTaskResult: sinon.stub().resolves({ content: [{ type: 'text', text: 'result' }] })
+			getTaskResult: sinon
+				.stub()
+				.resolves({ content: [{ type: "text", text: "result" }] }),
 		});
 
 		task.setHandler(mockHandler);
@@ -662,21 +714,23 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 		task.dispose();
 	});
 
-	test('should handle input_required state', async () => {
+	test("should handle input_required state", async () => {
 		const getTaskStub = sinon.stub();
 		// getTask call returns completed (triggered by input_required handling)
-		getTaskStub.resolves(createTask({ status: 'completed' }));
+		getTaskStub.resolves(createTask({ status: "completed" }));
 
 		const mockHandler = upcastPartial<McpServerRequestHandler>({
 			getTask: getTaskStub,
-			getTaskResult: sinon.stub().resolves({ content: [{ type: 'text', text: 'result' }] })
+			getTaskResult: sinon
+				.stub()
+				.resolves({ content: [{ type: "text", text: "result" }] }),
 		});
 
 		const task = store.add(new McpTask(createTask({ pollInterval: 1000 })));
 		task.setHandler(mockHandler);
 
 		// Update to input_required - this triggers a getTask call
-		task.onDidUpdateState(createTask({ status: 'input_required' }));
+		task.onDidUpdateState(createTask({ status: "input_required" }));
 
 		// Allow the promise to settle
 		await clock.tickAsync(0);
@@ -686,12 +740,14 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 
 		// Once getTask resolves with completed, should fetch result
 		const result = await task.result;
-		assert.deepStrictEqual(result, { content: [{ type: 'text', text: 'result' }] });
+		assert.deepStrictEqual(result, {
+			content: [{ type: "text", text: "result" }],
+		});
 	});
 
-	test('should handle getTask returning cancelled during polling', async () => {
+	test("should handle getTask returning cancelled during polling", async () => {
 		const getTaskStub = sinon.stub();
-		getTaskStub.resolves(createTask({ status: 'cancelled' }));
+		getTaskStub.resolves(createTask({ status: "cancelled" }));
 
 		const mockHandler = upcastPartial<McpServerRequestHandler>({
 			getTask: getTaskStub,
@@ -703,23 +759,20 @@ suite.skip('Workbench - MCP - McpTask', () => { // TODO@connor4312 https://githu
 		// Advance time to trigger polling
 		await clock.tickAsync(1000);
 
-		await assert.rejects(
-			task.result,
-			(error: Error) => {
-				assert.strictEqual(error.name, 'Canceled');
-				return true;
-			}
-		);
+		await assert.rejects(task.result, (error: Error) => {
+			assert.strictEqual(error.name, "Canceled");
+			return true;
+		});
 	});
 
-	test('should return correct task id', () => {
-		const task = store.add(new McpTask(createTask({ taskId: 'my-task-id' })));
-		assert.strictEqual(task.id, 'my-task-id');
+	test("should return correct task id", () => {
+		const task = store.add(new McpTask(createTask({ taskId: "my-task-id" })));
+		assert.strictEqual(task.id, "my-task-id");
 	});
 
-	test('should dispose cleanly', async () => {
+	test("should dispose cleanly", async () => {
 		const getTaskStub = sinon.stub();
-		getTaskStub.resolves(createTask({ status: 'working' }));
+		getTaskStub.resolves(createTask({ status: "working" }));
 
 		const mockHandler = upcastPartial<McpServerRequestHandler>({
 			getTask: getTaskStub,

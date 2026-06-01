@@ -3,16 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
-import * as assert from 'assert';
-import * as sinon from 'sinon';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { IMarkActiveOptions, IUserActivityService, UserActivityService } from '../../common/userActivityService.js';
+import * as assert from "assert";
+import * as sinon from "sinon";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../base/test/common/utils.js";
+import { TestInstantiationService } from "../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import {
+	IMarkActiveOptions,
+	IUserActivityService,
+	UserActivityService,
+} from "../../common/userActivityService.js";
 
 const MARK_INACTIVE_DEBOUNCE = 10_000;
 
-suite('UserActivityService', () => {
+suite("UserActivityService", () => {
 	let userActivityService: IUserActivityService;
 	let clock: sinon.SinonFakeTimers;
 
@@ -20,18 +23,20 @@ suite('UserActivityService', () => {
 
 	setup(() => {
 		clock = sinon.useFakeTimers();
-		userActivityService = ds.add(new UserActivityService(ds.add(new TestInstantiationService())));
+		userActivityService = ds.add(
+			new UserActivityService(ds.add(new TestInstantiationService())),
+		);
 	});
 
 	teardown(() => {
 		clock.restore();
 	});
 
-	test('isActive should be true initially', () => {
+	test("isActive should be true initially", () => {
 		assert.ok(userActivityService.isActive);
 	});
 
-	test('markActive should be inactive when all handles gone', () => {
+	test("markActive should be inactive when all handles gone", () => {
 		const h1 = userActivityService.markActive();
 		const h2 = userActivityService.markActive();
 		assert.strictEqual(userActivityService.isActive, true);
@@ -42,7 +47,7 @@ suite('UserActivityService', () => {
 		assert.strictEqual(userActivityService.isActive, false);
 	});
 
-	test('markActive sets active whenHeldFor', async () => {
+	test("markActive sets active whenHeldFor", async () => {
 		userActivityService.markActive().dispose();
 		clock.tick(MARK_INACTIVE_DEBOUNCE);
 
@@ -60,7 +65,7 @@ suite('UserActivityService', () => {
 		assert.strictEqual(userActivityService.isActive, false);
 	});
 
-	test('markActive whenHeldFor before triggers', async () => {
+	test("markActive whenHeldFor before triggers", async () => {
 		userActivityService.markActive().dispose();
 		clock.tick(MARK_INACTIVE_DEBOUNCE);
 
@@ -72,7 +77,7 @@ suite('UserActivityService', () => {
 		assert.strictEqual(userActivityService.isActive, false);
 	});
 
-	test('markActive with extendOnly only extends if already active', () => {
+	test("markActive with extendOnly only extends if already active", () => {
 		// Make user inactive
 		userActivityService.markActive().dispose();
 		clock.tick(MARK_INACTIVE_DEBOUNCE);

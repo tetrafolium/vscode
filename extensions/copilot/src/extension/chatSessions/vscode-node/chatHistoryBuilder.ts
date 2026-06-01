@@ -6,10 +6,28 @@
 import * as vscode from 'vscode';
 import { coalesce } from '../../../util/vs/base/common/arrays';
 import { URI } from '../../../util/vs/base/common/uri';
-import { ChatReferenceBinaryData, ChatRequestTurn2 } from '../../../vscodeTypes';
+import {
+	ChatReferenceBinaryData,
+	ChatRequestTurn2,
+} from '../../../vscodeTypes';
 import { tryParseClaudeModelId } from '../claude/node/claudeModelId';
-import { completeToolInvocation, createFormattedToolInvocation } from '../claude/common/toolInvocationFormatter';
-import { AssistantMessageContent, ContentBlock, IClaudeCodeSession, ImageBlock, ISubagentSession, StoredMessage, SYNTHETIC_MODEL_ID, TextBlock, ThinkingBlock, ToolResultBlock, ToolUseBlock } from '../claude/node/sessionParser/claudeSessionSchema';
+import {
+	completeToolInvocation,
+	createFormattedToolInvocation,
+} from '../claude/common/toolInvocationFormatter';
+import {
+	AssistantMessageContent,
+	ContentBlock,
+	IClaudeCodeSession,
+	ImageBlock,
+	ISubagentSession,
+	StoredMessage,
+	SYNTHETIC_MODEL_ID,
+	TextBlock,
+	ThinkingBlock,
+	ToolResultBlock,
+	ToolUseBlock,
+} from '../claude/node/sessionParser/claudeSessionSchema';
 
 // #region Types
 
@@ -56,7 +74,8 @@ function isImageBlock(block: ContentBlock): block is ImageBlock {
  *   - <local-command-stdout>...</local-command-stdout>
  */
 const COMMAND_NAME_PATTERN = /<command-name>([\s\S]*?)<\/command-name>/;
-const COMMAND_STDOUT_PATTERN = /<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/;
+const COMMAND_STDOUT_PATTERN =
+	/<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/;
 
 /**
  * Scans user message contents for slash command patterns and extracts
@@ -64,7 +83,9 @@ const COMMAND_STDOUT_PATTERN = /<local-command-stdout>([\s\S]*?)<\/local-command
  *
  * Returns undefined if no command patterns are found.
  */
-function extractCommandInfo(contents: readonly (string | ContentBlock[])[]): { commandName: string; stdout?: string } | undefined {
+function extractCommandInfo(
+	contents: readonly (string | ContentBlock[])[],
+): { commandName: string; stdout?: string } | undefined {
 	let commandName: string | undefined;
 	let stdout: string | undefined;
 
@@ -136,8 +157,8 @@ function extractTextContent(content: string | ContentBlock[]): string {
 	// For array content (new format), filter out entire blocks that are system-reminders
 	return content
 		.filter(isTextBlock)
-		.filter(block => !isSystemReminderBlock(block.text))
-		.map(block => block.text)
+		.filter((block) => !isSystemReminderBlock(block.text))
+		.map((block) => block.text)
 		.join('');
 }
 
@@ -149,24 +170,32 @@ function extractTextContent(content: string | ContentBlock[]): string {
  * Processes tool result blocks from a user message, matching them to pending
  * tool invocations and marking them as complete.
  */
-function processToolResults(content: string | ContentBlock[], toolContext: ToolContext): void {
+function processToolResults(
+	content: string | ContentBlock[],
+	toolContext: ToolContext,
+): void {
 	if (typeof content === 'string') {
 		return;
 	}
 
 	for (const block of content) {
 		if (isToolResultBlock(block)) {
-			const toolUse = toolContext.unprocessedToolCalls.get(block.tool_use_id);
+			const toolUse = toolContext.unprocessedToolCalls.get(
+				block.tool_use_id,
+			);
 			if (toolUse && isToolUseBlock(toolUse)) {
 				toolContext.unprocessedToolCalls.delete(block.tool_use_id);
-				const pendingInvocation = toolContext.pendingToolInvocations.get(block.tool_use_id);
+				const pendingInvocation =
+					toolContext.pendingToolInvocations.get(block.tool_use_id);
 				if (pendingInvocation) {
 					pendingInvocation.isComplete = true;
 					pendingInvocation.isConfirmed = true;
 					pendingInvocation.isError = block.is_error;
 					// Populate tool output for display in chat UI
 					completeToolInvocation(toolUse, block, pendingInvocation);
-					toolContext.pendingToolInvocations.delete(block.tool_use_id);
+					toolContext.pendingToolInvocations.delete(
+						block.tool_use_id,
+					);
 				}
 			}
 		}
@@ -184,7 +213,9 @@ function processToolResults(content: string | ContentBlock[], toolContext: ToolC
  * - Base64 images become ChatReferenceBinaryData values (binary data for display).
  * - URL images become URI values (the API stored a URL rather than inline data).
  */
-function extractImageReferences(contents: readonly (string | ContentBlock[])[]): vscode.ChatPromptReference[] {
+function extractImageReferences(
+	contents: readonly (string | ContentBlock[])[],
+): vscode.ChatPromptReference[] {
 	const references: vscode.ChatPromptReference[] = [];
 	let imageIndex = 0;
 	for (const content of contents) {
@@ -203,9 +234,8 @@ function extractImageReferences(contents: readonly (string | ContentBlock[])[]):
 				references.push({
 					id,
 					name: id,
-					value: new ChatReferenceBinaryData(
-						source.media_type,
-						() => Promise.resolve(Buffer.from(source.data, 'base64'))
+					value: new ChatReferenceBinaryData(source.media_type, () =>
+						Promise.resolve(Buffer.from(source.data, 'base64')),
 					),
 				});
 				imageIndex++;
@@ -230,7 +260,11 @@ function extractImageReferences(contents: readonly (string | ContentBlock[])[]):
  * Extracts a request turn from user message contents, ignoring tool results.
  * Returns undefined if the messages contain only tool results or system reminders.
  */
-function extractUserRequest(contents: readonly (string | ContentBlock[])[], messageId: string, modelId: string | undefined): vscode.ChatRequestTurn2 | undefined {
+function extractUserRequest(
+	contents: readonly (string | ContentBlock[])[],
+	messageId: string,
+	modelId: string | undefined,
+): vscode.ChatRequestTurn2 | undefined {
 	const textParts: string[] = [];
 	for (const content of contents) {
 		const text = extractTextContent(content);
@@ -252,30 +286,60 @@ function extractUserRequest(contents: readonly (string | ContentBlock[])[], mess
 		return;
 	}
 
-	return new ChatRequestTurn2(combinedText, undefined, imageReferences, '', [], undefined, messageId, modelId, undefined);
+	return new ChatRequestTurn2(
+		combinedText,
+		undefined,
+		imageReferences,
+		'',
+		[],
+		undefined,
+		messageId,
+		modelId,
+		undefined,
+	);
 }
 
 /**
  * Extracts response parts from consecutive assistant messages.
  */
-function extractAssistantParts(messages: readonly AssistantMessageContent[], toolContext: ToolContext): (vscode.ChatResponseMarkdownPart | vscode.ChatResponseThinkingProgressPart | vscode.ChatToolInvocationPart)[] {
-	const allParts: (vscode.ChatResponseMarkdownPart | vscode.ChatResponseThinkingProgressPart | vscode.ChatToolInvocationPart)[] = [];
+function extractAssistantParts(
+	messages: readonly AssistantMessageContent[],
+	toolContext: ToolContext,
+): (
+	| vscode.ChatResponseMarkdownPart
+	| vscode.ChatResponseThinkingProgressPart
+	| vscode.ChatToolInvocationPart
+)[] {
+	const allParts: (
+		| vscode.ChatResponseMarkdownPart
+		| vscode.ChatResponseThinkingProgressPart
+		| vscode.ChatToolInvocationPart
+	)[] = [];
 
 	for (const message of messages) {
-		const parts = coalesce(message.content.map(block => {
-			if (isTextBlock(block)) {
-				return new vscode.ChatResponseMarkdownPart(new vscode.MarkdownString(block.text));
-			} else if (isThinkingBlock(block)) {
-				return new vscode.ChatResponseThinkingProgressPart(block.thinking);
-			} else if (isToolUseBlock(block)) {
-				toolContext.unprocessedToolCalls.set(block.id, block);
-				const toolInvocation = createFormattedToolInvocation(block);
-				if (toolInvocation) {
-					toolContext.pendingToolInvocations.set(block.id, toolInvocation);
+		const parts = coalesce(
+			message.content.map((block) => {
+				if (isTextBlock(block)) {
+					return new vscode.ChatResponseMarkdownPart(
+						new vscode.MarkdownString(block.text),
+					);
+				} else if (isThinkingBlock(block)) {
+					return new vscode.ChatResponseThinkingProgressPart(
+						block.thinking,
+					);
+				} else if (isToolUseBlock(block)) {
+					toolContext.unprocessedToolCalls.set(block.id, block);
+					const toolInvocation = createFormattedToolInvocation(block);
+					if (toolInvocation) {
+						toolContext.pendingToolInvocations.set(
+							block.id,
+							toolInvocation,
+						);
+					}
+					return toolInvocation;
 				}
-				return toolInvocation;
-			}
-		}));
+			}),
+		);
 		allParts.push(...parts);
 	}
 
@@ -289,7 +353,9 @@ function extractAssistantParts(messages: readonly AssistantMessageContent[], too
 /**
  * Builds a map from parentToolUseId to ISubagentSession for quick lookup.
  */
-function buildSubagentMap(subagents: readonly ISubagentSession[]): Map<string, ISubagentSession> {
+function buildSubagentMap(
+	subagents: readonly ISubagentSession[],
+): Map<string, ISubagentSession> {
 	const map = new Map<string, ISubagentSession>();
 	for (const subagent of subagents) {
 		if (subagent.parentToolUseId) {
@@ -306,11 +372,11 @@ function buildSubagentMap(subagents: readonly ISubagentSession[]): Map<string, I
  */
 function extractSubagentToolParts(
 	subagent: ISubagentSession,
-	taskToolUseId: string
+	taskToolUseId: string,
 ): vscode.ChatToolInvocationPart[] {
 	const toolContext: ToolContext = {
 		unprocessedToolCalls: new Map(),
-		pendingToolInvocations: new Map()
+		pendingToolInvocations: new Map(),
 	};
 	const parts: vscode.ChatToolInvocationPart[] = [];
 
@@ -320,10 +386,16 @@ function extractSubagentToolParts(
 			for (const block of assistantContent.content) {
 				if (isToolUseBlock(block)) {
 					toolContext.unprocessedToolCalls.set(block.id, block);
-					const toolInvocation = createFormattedToolInvocation(block, true);
+					const toolInvocation = createFormattedToolInvocation(
+						block,
+						true,
+					);
 					if (toolInvocation) {
 						toolInvocation.subAgentInvocationId = taskToolUseId;
-						toolContext.pendingToolInvocations.set(block.id, toolInvocation);
+						toolContext.pendingToolInvocations.set(
+							block.id,
+							toolInvocation,
+						);
 						parts.push(toolInvocation);
 					}
 				}
@@ -360,8 +432,15 @@ function findModelIdForRequest(
 		const msg = messages[j];
 		if (msg.type === 'assistant' && msg.message.role === 'assistant') {
 			const assistantMsg = msg.message as AssistantMessageContent;
-			if (assistantMsg.model && assistantMsg.model !== SYNTHETIC_MODEL_ID) {
-				return tryParseClaudeModelId(assistantMsg.model)?.toEndpointModelId() ?? assistantMsg.model;
+			if (
+				assistantMsg.model &&
+				assistantMsg.model !== SYNTHETIC_MODEL_ID
+			) {
+				return (
+					tryParseClaudeModelId(
+						assistantMsg.model,
+					)?.toEndpointModelId() ?? assistantMsg.model
+				);
 			}
 		}
 	}
@@ -384,19 +463,28 @@ function findModelIdForRequest(
  * @param getModelDetails Optional lookup that returns the display string for a Claude
  * model id (as it appears on stored assistant messages).
  */
-export function buildChatHistory(session: IClaudeCodeSession, getModelDetails?: (modelId: string) => string | undefined): (vscode.ChatRequestTurn2 | vscode.ChatResponseTurn2)[] {
+export function buildChatHistory(
+	session: IClaudeCodeSession,
+	getModelDetails?: (modelId: string) => string | undefined,
+): (vscode.ChatRequestTurn2 | vscode.ChatResponseTurn2)[] {
 	const result: (vscode.ChatRequestTurn2 | vscode.ChatResponseTurn2)[] = [];
 	const toolContext: ToolContext = {
 		unprocessedToolCalls: new Map(),
-		pendingToolInvocations: new Map()
+		pendingToolInvocations: new Map(),
 	};
 	let i = 0;
 	const messages = session.messages;
-	let pendingResponseParts: (vscode.ChatResponseMarkdownPart | vscode.ChatResponseThinkingProgressPart | vscode.ChatToolInvocationPart)[] = [];
+	let pendingResponseParts: (
+		| vscode.ChatResponseMarkdownPart
+		| vscode.ChatResponseThinkingProgressPart
+		| vscode.ChatToolInvocationPart
+	)[] = [];
 	// Tracks the most recent assistant model id observed in the current pending response
 	// group so we can populate `ChatResponseTurn2.result.details` when finalizing it.
 	let pendingResponseModelId: string | undefined;
-	const makeResponseResult = (modelId: string | undefined): vscode.ChatResult => {
+	const makeResponseResult = (
+		modelId: string | undefined,
+	): vscode.ChatResult => {
 		if (!modelId || !getModelDetails) {
 			return {};
 		}
@@ -413,12 +501,18 @@ export function buildChatHistory(session: IClaudeCodeSession, getModelDetails?: 
 		if (currentType === 'user') {
 			// Collect all consecutive user messages (preserving the full StoredMessage for metadata)
 			const userMessages: StoredMessage[] = [];
-			while (i < messages.length && messages[i].type === 'user' && messages[i].message.role === 'user') {
+			while (
+				i < messages.length &&
+				messages[i].type === 'user' &&
+				messages[i].message.role === 'user'
+			) {
 				userMessages.push(messages[i]);
 				i++;
 			}
 
-			const userContents = userMessages.map(m => m.message.content as string | ContentBlock[]);
+			const userContents = userMessages.map(
+				(m) => m.message.content as string | ContentBlock[],
+			);
 
 			// Always process tool results to update pending tool invocations
 			for (const content of userContents) {
@@ -436,7 +530,10 @@ export function buildChatHistory(session: IClaudeCodeSession, getModelDetails?: 
 					if (isToolResultBlock(block)) {
 						const subagent = subagentMap.get(block.tool_use_id);
 						if (subagent) {
-							const subagentParts = extractSubagentToolParts(subagent, block.tool_use_id);
+							const subagentParts = extractSubagentToolParts(
+								subagent,
+								block.tool_use_id,
+							);
 							pendingResponseParts.push(...subagentParts);
 						}
 					}
@@ -449,27 +546,63 @@ export function buildChatHistory(session: IClaudeCodeSession, getModelDetails?: 
 			if (commandInfo) {
 				// Finalize any pending response first
 				if (pendingResponseParts.length > 0) {
-					result.push(new vscode.ChatResponseTurn2(pendingResponseParts, makeResponseResult(pendingResponseModelId), ''));
+					result.push(
+						new vscode.ChatResponseTurn2(
+							pendingResponseParts,
+							makeResponseResult(pendingResponseModelId),
+							'',
+						),
+					);
 					pendingResponseParts = [];
 					pendingResponseModelId = undefined;
 				}
 				// Emit the command as a request turn
-				result.push(new ChatRequestTurn2(commandInfo.commandName, undefined, [], '', [], undefined, currentMessageId, modelId, undefined));
+				result.push(
+					new ChatRequestTurn2(
+						commandInfo.commandName,
+						undefined,
+						[],
+						'',
+						[],
+						undefined,
+						currentMessageId,
+						modelId,
+						undefined,
+					),
+				);
 				// Emit stdout as a response turn if present
 				if (commandInfo.stdout) {
-					result.push(new vscode.ChatResponseTurn2(
-						[new vscode.ChatResponseMarkdownPart(new vscode.MarkdownString(commandInfo.stdout))],
-						{},
-						''
-					));
+					result.push(
+						new vscode.ChatResponseTurn2(
+							[
+								new vscode.ChatResponseMarkdownPart(
+									new vscode.MarkdownString(
+										commandInfo.stdout,
+									),
+								),
+							],
+							{},
+							'',
+						),
+					);
 				}
 			} else {
 				// Check if there's actual user text (not just tool results)
-				const requestTurn = extractUserRequest(userContents, currentMessageId, modelId);
+				const requestTurn = extractUserRequest(
+					userContents,
+					currentMessageId,
+					modelId,
+				);
 				if (requestTurn) {
 					// Real user message — finalize any pending response first
 					if (pendingResponseParts.length > 0) {
-						result.push(new vscode.ChatResponseTurn2(pendingResponseParts, makeResponseResult(pendingResponseModelId), ''));
+						result.push(
+							new vscode.ChatResponseTurn2(
+								pendingResponseParts,
+								makeResponseResult(pendingResponseModelId),
+								'',
+							),
+						);
 						pendingResponseParts = [];
 						pendingResponseModelId = undefined;
 					}
@@ -481,8 +614,13 @@ export function buildChatHistory(session: IClaudeCodeSession, getModelDetails?: 
 			// Collect all consecutive assistant messages, skipping synthetic ones
 			// (e.g., "No response requested." from abort)
 			const assistantMessages: AssistantMessageContent[] = [];
-			while (i < messages.length && messages[i].type === 'assistant' && messages[i].message.role === 'assistant') {
-				const assistantMessage = messages[i].message as AssistantMessageContent;
+			while (
+				i < messages.length &&
+				messages[i].type === 'assistant' &&
+				messages[i].message.role === 'assistant'
+			) {
+				const assistantMessage = messages[i]
+					.message as AssistantMessageContent;
 				if (assistantMessage.model !== SYNTHETIC_MODEL_ID) {
 					assistantMessages.push(assistantMessage);
 					if (assistantMessage.model) {
@@ -503,9 +641,13 @@ export function buildChatHistory(session: IClaudeCodeSession, getModelDetails?: 
 			// which causes the system text to lose its visual separation.
 			const msg = messages[i];
 			if (msg.message.role === 'system') {
-				const content = (msg.message as { role: 'system'; content: string }).content.trim();
+				const content = (
+					msg.message as { role: 'system'; content: string }
+				).content.trim();
 				pendingResponseParts.push(
-					new vscode.ChatResponseMarkdownPart(new vscode.MarkdownString(`\n\n---\n\n*${content}*`))
+					new vscode.ChatResponseMarkdownPart(
+						new vscode.MarkdownString(`\n\n---\n\n*${content}*`),
+					),
 				);
 			}
 			i++;
@@ -517,7 +659,13 @@ export function buildChatHistory(session: IClaudeCodeSession, getModelDetails?: 
 
 	// Finalize any remaining pending response
 	if (pendingResponseParts.length > 0) {
-		result.push(new vscode.ChatResponseTurn2(pendingResponseParts, makeResponseResult(pendingResponseModelId), ''));
+		result.push(
+			new vscode.ChatResponseTurn2(
+				pendingResponseParts,
+				makeResponseResult(pendingResponseModelId),
+				'',
+			),
+		);
 	}
 
 	return result;

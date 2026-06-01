@@ -3,18 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-const { decode_bytes } = require('@vscode/v8-heap-parser');
-import { Code } from './code';
-import { PlaywrightDriver } from './playwrightDriver';
+const { decode_bytes } = require("@vscode/v8-heap-parser");
+import { Code } from "./code";
+import { PlaywrightDriver } from "./playwrightDriver";
 
 export class Profiler {
-	constructor(private readonly code: Code) {
-	}
+	constructor(private readonly code: Code) {}
 
-	async checkObjectLeaks(classNames: string | string[], fn: () => Promise<void>): Promise<void> {
+	async checkObjectLeaks(
+		classNames: string | string[],
+		fn: () => Promise<void>,
+	): Promise<void> {
 		await this.code.driver.startCDP();
 
-		const classNamesArray = Array.isArray(classNames) ? classNames : [classNames];
+		const classNamesArray = Array.isArray(classNames)
+			? classNames
+			: [classNames];
 		const countsBefore = await getInstances(this.code.driver, classNamesArray);
 
 		await fn();
@@ -30,11 +34,14 @@ export class Profiler {
 		}
 
 		if (leaks.length > 0) {
-			throw new Error(leaks.join('\n'));
+			throw new Error(leaks.join("\n"));
 		}
 	}
 
-	async checkHeapLeaks(classNames: string | string[], fn: () => Promise<void>): Promise<void> {
+	async checkHeapLeaks(
+		classNames: string | string[],
+		fn: () => Promise<void>,
+	): Promise<void> {
 		await this.code.driver.startCDP();
 		await fn();
 
@@ -50,7 +57,7 @@ export class Profiler {
 		}
 
 		if (leaks.length > 0) {
-			throw new Error(leaks.join('\n'));
+			throw new Error(leaks.join("\n"));
 		}
 	}
 }
@@ -60,7 +67,7 @@ export class Profiler {
  */
 export function generateUuid(): string {
 	// use `randomUUID` if possible
-	if (typeof crypto.randomUUID === 'function') {
+	if (typeof crypto.randomUUID === "function") {
 		// see https://developer.mozilla.org/en-US/docs/Web/API/Window/crypto
 		// > Although crypto is available on all windows, the returned Crypto object only has one
 		// > usable feature in insecure contexts: the getRandomValues() method.
@@ -73,7 +80,7 @@ export function generateUuid(): string {
 	const _data = new Uint8Array(16);
 	const _hex: string[] = [];
 	for (let i = 0; i < 256; i++) {
-		_hex.push(i.toString(16).padStart(2, '0'));
+		_hex.push(i.toString(16).padStart(2, "0"));
 	}
 
 	// get data
@@ -85,21 +92,21 @@ export function generateUuid(): string {
 
 	// print as string
 	let i = 0;
-	let result = '';
+	let result = "";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
-	result += '-';
+	result += "-";
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
 	result += _hex[_data[i++]];
@@ -109,8 +116,6 @@ export function generateUuid(): string {
 	return result;
 }
 
-
-
 /*---------------------------------------------------------------------------------------------
  *  The MIT License (MIT)
  *  Copyright (c) 2023-present, Simon Siefke
@@ -118,11 +123,14 @@ export function generateUuid(): string {
  *  This code is derived from https://github.com/SimonSiefke/vscode-memory-leak-finder
  *--------------------------------------------------------------------------------------------*/
 
-const getInstances = async (driver: PlaywrightDriver, classNames: string[]): Promise<{ [key: string]: number }> => {
+const getInstances = async (
+	driver: PlaywrightDriver,
+	classNames: string[],
+): Promise<{ [key: string]: number }> => {
 	await driver.collectGarbage();
 	const objectGroup = `og:${generateUuid()}`;
 	const prototypeDescriptor = await driver.evaluate({
-		expression: 'Object.prototype',
+		expression: "Object.prototype",
 		returnByValue: false,
 		objectGroup,
 	});

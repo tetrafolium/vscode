@@ -6,7 +6,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CancellationToken, ChatRequest } from 'vscode';
 import { IChatHookService } from '../../../../platform/chat/common/chatHookService';
-import { ChatFetchResponseType, ChatLocation, ChatResponse } from '../../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+	ChatResponse,
+} from '../../../../platform/chat/common/commonTypes';
 import { CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
 import { generateUuid } from '../../../../util/vs/base/common/uuid';
@@ -41,7 +45,9 @@ class TestSearchSubagentToolCallingLoop extends SearchSubagentToolCallingLoop {
 		},
 	};
 
-	protected override async buildPrompt(buildPromptContext: IBuildPromptContext) {
+	protected override async buildPrompt(
+		buildPromptContext: IBuildPromptContext,
+	) {
 		this.buildPromptCalls++;
 		(this as any)._lastBuildPromptContext = buildPromptContext;
 		return nullRenderPromptResult();
@@ -127,49 +133,70 @@ function successResponse(): ChatResponse {
 
 describe('isContextOverflowBadRequest', () => {
 	it('returns true for BadRequest with context_length_exceeded reason', () => {
-		expect(isContextOverflowBadRequest(badRequest('context_length_exceeded'))).toBe(true);
+		expect(
+			isContextOverflowBadRequest(badRequest('context_length_exceeded')),
+		).toBe(true);
 	});
 
 	it('matches case-insensitively', () => {
-		expect(isContextOverflowBadRequest(badRequest('Context_Length_Exceeded'))).toBe(true);
+		expect(
+			isContextOverflowBadRequest(badRequest('Context_Length_Exceeded')),
+		).toBe(true);
 	});
 
 	it('matches when pattern is in reasonDetail', () => {
-		expect(isContextOverflowBadRequest({
-			type: ChatFetchResponseType.BadRequest,
-			reason: 'invalid_request_error',
-			reasonDetail: 'This model has a maximum context length of 200000 tokens',
-			requestId: 'r',
-			serverRequestId: undefined,
-		} as ChatResponse)).toBe(true);
+		expect(
+			isContextOverflowBadRequest({
+				type: ChatFetchResponseType.BadRequest,
+				reason: 'invalid_request_error',
+				reasonDetail:
+					'This model has a maximum context length of 200000 tokens',
+				requestId: 'r',
+				serverRequestId: undefined,
+			} as ChatResponse),
+		).toBe(true);
 	});
 
 	it('matches the "prompt is too long" pattern', () => {
-		expect(isContextOverflowBadRequest(badRequest('prompt is too long: 250000 > 200000'))).toBe(true);
+		expect(
+			isContextOverflowBadRequest(
+				badRequest('prompt is too long: 250000 > 200000'),
+			),
+		).toBe(true);
 	});
 
 	it('matches the "request too large" pattern', () => {
-		expect(isContextOverflowBadRequest(badRequest('Request too large for model'))).toBe(true);
+		expect(
+			isContextOverflowBadRequest(
+				badRequest('Request too large for model'),
+			),
+		).toBe(true);
 	});
 
 	it('returns false for BadRequest with unrelated reason', () => {
-		expect(isContextOverflowBadRequest(badRequest('invalid_tool_schema'))).toBe(false);
+		expect(
+			isContextOverflowBadRequest(badRequest('invalid_tool_schema')),
+		).toBe(false);
 	});
 
 	it('returns false for non-BadRequest response types', () => {
 		expect(isContextOverflowBadRequest(successResponse())).toBe(false);
-		expect(isContextOverflowBadRequest({
-			type: ChatFetchResponseType.Length,
-			reason: 'context_length_exceeded',
-			requestId: 'r',
-			serverRequestId: undefined,
-		} as ChatResponse)).toBe(false);
-		expect(isContextOverflowBadRequest({
-			type: ChatFetchResponseType.RateLimited,
-			reason: 'r',
-			requestId: 'r',
-			serverRequestId: undefined,
-		} as ChatResponse)).toBe(false);
+		expect(
+			isContextOverflowBadRequest({
+				type: ChatFetchResponseType.Length,
+				reason: 'context_length_exceeded',
+				requestId: 'r',
+				serverRequestId: undefined,
+			} as ChatResponse),
+		).toBe(false);
+		expect(
+			isContextOverflowBadRequest({
+				type: ChatFetchResponseType.RateLimited,
+				reason: 'r',
+				requestId: 'r',
+				serverRequestId: undefined,
+			} as ChatResponse),
+		).toBe(false);
 	});
 });
 
@@ -180,7 +207,9 @@ describe('SearchSubagentToolCallingLoop.fetch context-overflow retry', () => {
 
 	beforeEach(() => {
 		disposables = new DisposableStore();
-		const serviceCollection = disposables.add(createExtensionUnitTestingServices());
+		const serviceCollection = disposables.add(
+			createExtensionUnitTestingServices(),
+		);
 		serviceCollection.define(IChatHookService, new MockChatHookService());
 		const accessor = serviceCollection.createTestingAccessor();
 		instantiationService = accessor.get(IInstantiationService);
@@ -200,7 +229,10 @@ describe('SearchSubagentToolCallingLoop.fetch context-overflow retry', () => {
 			location: ChatLocation.Panel,
 			promptText: 'find things',
 		};
-		const loop = instantiationService.createInstance(TestSearchSubagentToolCallingLoop, options);
+		const loop = instantiationService.createInstance(
+			TestSearchSubagentToolCallingLoop,
+			options,
+		);
 		(loop as any).getEndpoint = async () => loop.fakeEndpoint;
 		loop.primeBuildPromptContext();
 		disposables.add(loop);
@@ -274,7 +306,9 @@ describe('SearchSubagentToolCallingLoop.shouldAutoRetry', () => {
 
 	beforeEach(() => {
 		disposables = new DisposableStore();
-		const serviceCollection = disposables.add(createExtensionUnitTestingServices());
+		const serviceCollection = disposables.add(
+			createExtensionUnitTestingServices(),
+		);
 		serviceCollection.define(IChatHookService, new MockChatHookService());
 		const accessor = serviceCollection.createTestingAccessor();
 		instantiationService = accessor.get(IInstantiationService);
@@ -294,7 +328,10 @@ describe('SearchSubagentToolCallingLoop.shouldAutoRetry', () => {
 			location: ChatLocation.Panel,
 			promptText: 'find things',
 		};
-		const loop = instantiationService.createInstance(TestSearchSubagentToolCallingLoop, options);
+		const loop = instantiationService.createInstance(
+			TestSearchSubagentToolCallingLoop,
+			options,
+		);
 		disposables.add(loop);
 		return loop;
 	}
@@ -306,6 +343,8 @@ describe('SearchSubagentToolCallingLoop.shouldAutoRetry', () => {
 
 	it('still auto-retries on unrelated BadRequest in autopilot mode', () => {
 		const loop = createAutopilotLoop();
-		expect((loop as any).shouldAutoRetry(badRequest('invalid_tool_schema'))).toBe(true);
+		expect(
+			(loop as any).shouldAutoRetry(badRequest('invalid_tool_schema')),
+		).toBe(true);
 	});
 });

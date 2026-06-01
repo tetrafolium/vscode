@@ -41,7 +41,10 @@ export class Position {
 	 * @param newLineNumber new line number
 	 * @param newColumn new column
 	 */
-	with(newLineNumber: number = this.lineNumber, newColumn: number = this.column): Position {
+	with(
+		newLineNumber: number = this.lineNumber,
+		newColumn: number = this.column,
+	): Position {
 		if (newLineNumber === this.lineNumber && newColumn === this.column) {
 			return this;
 		} else {
@@ -56,7 +59,10 @@ export class Position {
 	 * @param deltaColumn column delta
 	 */
 	delta(deltaLineNumber: number = 0, deltaColumn: number = 0): Position {
-		return this.with(Math.max(1, this.lineNumber + deltaLineNumber), Math.max(1, this.column + deltaColumn));
+		return this.with(
+			Math.max(1, this.lineNumber + deltaLineNumber),
+			Math.max(1, this.column + deltaColumn),
+		);
 	}
 
 	/**
@@ -73,12 +79,7 @@ export class Position {
 		if (!a && !b) {
 			return true;
 		}
-		return (
-			!!a &&
-			!!b &&
-			a.lineNumber === b.lineNumber &&
-			a.column === b.column
-		);
+		return !!a && !!b && a.lineNumber === b.lineNumber && a.column === b.column;
 	}
 
 	/**
@@ -152,7 +153,7 @@ export class Position {
 	 * Convert to a human-readable representation.
 	 */
 	public toString(): string {
-		return '(' + this.lineNumber + ',' + this.column + ')';
+		return "(" + this.lineNumber + "," + this.column + ")";
 	}
 
 	// ---
@@ -169,16 +170,16 @@ export class Position {
 	 */
 	public static isIPosition(obj: unknown): obj is IPosition {
 		return (
-			!!obj
-			&& (typeof (obj as IPosition).lineNumber === 'number')
-			&& (typeof (obj as IPosition).column === 'number')
+			!!obj &&
+			typeof (obj as IPosition).lineNumber === "number" &&
+			typeof (obj as IPosition).column === "number"
 		);
 	}
 
 	public toJSON(): IPosition {
 		return {
 			lineNumber: this.lineNumber,
-			column: this.column
+			column: this.column,
 		};
 	}
 }

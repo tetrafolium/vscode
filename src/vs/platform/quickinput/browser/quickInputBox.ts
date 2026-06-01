@@ -3,20 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../base/browser/dom.js';
-import { FindInput } from '../../../base/browser/ui/findinput/findInput.js';
-import { IInputBoxStyles, IRange, MessageType } from '../../../base/browser/ui/inputbox/inputBox.js';
-import { createToggleActionViewItemProvider, IToggleStyles, Toggle } from '../../../base/browser/ui/toggle/toggle.js';
-import { IAction } from '../../../base/common/actions.js';
-import { IActionViewItemProvider } from '../../../base/browser/ui/actionbar/actionbar.js';
-import { Disposable, IDisposable } from '../../../base/common/lifecycle.js';
-import Severity from '../../../base/common/severity.js';
-import './media/quickInput.css';
+import * as dom from "../../../base/browser/dom.js";
+import { FindInput } from "../../../base/browser/ui/findinput/findInput.js";
+import {
+	IInputBoxStyles,
+	IRange,
+	MessageType,
+} from "../../../base/browser/ui/inputbox/inputBox.js";
+import {
+	createToggleActionViewItemProvider,
+	IToggleStyles,
+	Toggle,
+} from "../../../base/browser/ui/toggle/toggle.js";
+import { IAction } from "../../../base/common/actions.js";
+import { IActionViewItemProvider } from "../../../base/browser/ui/actionbar/actionbar.js";
+import { Disposable, IDisposable } from "../../../base/common/lifecycle.js";
+import Severity from "../../../base/common/severity.js";
+import "./media/quickInput.css";
 
 const $ = dom.$;
 
 export class QuickInputBox extends Disposable {
-
 	private container: HTMLElement;
 	private findInput: FindInput;
 	private _listFocusMode: boolean = false;
@@ -24,20 +31,20 @@ export class QuickInputBox extends Disposable {
 	constructor(
 		private parent: HTMLElement,
 		inputBoxStyles: IInputBoxStyles,
-		toggleStyles: IToggleStyles
+		toggleStyles: IToggleStyles,
 	) {
 		super();
-		this.container = dom.append(this.parent, $('.quick-input-box'));
-		this.findInput = this._register(new FindInput(
-			this.container,
-			undefined,
-			{
-				label: '',
+		this.container = dom.append(this.parent, $(".quick-input-box"));
+		this.findInput = this._register(
+			new FindInput(this.container, undefined, {
+				label: "",
 				inputBoxStyles,
 				toggleStyles,
-				actionViewItemProvider: createToggleActionViewItemProvider(toggleStyles),
-				hideHoverOnValueChange: true
-			}));
+				actionViewItemProvider:
+					createToggleActionViewItemProvider(toggleStyles),
+				hideHoverOnValueChange: true,
+			}),
+		);
 		// Don't set role="textbox" - the input element already has that implicit role
 		// Don't set aria-haspopup or aria-autocomplete by default - only add them when list is active
 	}
@@ -79,7 +86,9 @@ export class QuickInputBox extends Disposable {
 	}
 
 	get placeholder() {
-		return this.findInput.inputBox.inputElement.getAttribute('placeholder') || '';
+		return (
+			this.findInput.inputBox.inputElement.getAttribute("placeholder") || ""
+		);
 	}
 
 	set placeholder(placeholder: string) {
@@ -87,11 +96,11 @@ export class QuickInputBox extends Disposable {
 	}
 
 	get password() {
-		return this.findInput.inputBox.inputElement.type === 'password';
+		return this.findInput.inputBox.inputElement.type === "password";
 	}
 
 	set password(password: boolean) {
-		this.findInput.inputBox.inputElement.type = password ? 'password' : 'text';
+		this.findInput.inputBox.inputElement.type = password ? "password" : "text";
 	}
 
 	set enabled(enabled: boolean) {
@@ -100,7 +109,7 @@ export class QuickInputBox extends Disposable {
 		// so that nothing can be selected.
 		// TODO: should this be what we do for all find inputs? Or maybe some _other_ API
 		// on findInput to change it to readonly?
-		this.findInput.inputBox.inputElement.toggleAttribute('readonly', !enabled);
+		this.findInput.inputBox.inputElement.toggleAttribute("readonly", !enabled);
 		// TODO: styles of the quick pick need to be moved to the CSS instead of being in line
 		// so things like this can be done in CSS
 		// this.findInput.inputBox.inputElement.classList.toggle('disabled', !enabled);
@@ -114,16 +123,21 @@ export class QuickInputBox extends Disposable {
 		this.setActions(actions);
 	}
 
-	setActions(actions: ReadonlyArray<IAction> | undefined, actionViewItemProvider?: IActionViewItemProvider): void {
+	setActions(
+		actions: ReadonlyArray<IAction> | undefined,
+		actionViewItemProvider?: IActionViewItemProvider,
+	): void {
 		this.findInput.setActions(actions, actionViewItemProvider);
 	}
 
 	get ariaLabel(): string {
-		return this.findInput.inputBox.inputElement.getAttribute('aria-label') || '';
+		return (
+			this.findInput.inputBox.inputElement.getAttribute("aria-label") || ""
+		);
 	}
 
 	set ariaLabel(ariaLabel: string) {
-		this.findInput.inputBox.inputElement.setAttribute('aria-label', ariaLabel);
+		this.findInput.inputBox.inputElement.setAttribute("aria-label", ariaLabel);
 	}
 
 	hasFocus(): boolean {
@@ -153,12 +167,12 @@ export class QuickInputBox extends Disposable {
 		const input = this.findInput.inputBox.inputElement;
 		if (hasActiveDescendant) {
 			// List item is focused - indicate combobox behavior
-			input.setAttribute('aria-haspopup', 'listbox');
-			input.setAttribute('aria-autocomplete', 'list');
+			input.setAttribute("aria-haspopup", "listbox");
+			input.setAttribute("aria-autocomplete", "list");
 		} else {
 			// No list item focused - remove combobox attributes for normal text input
-			input.removeAttribute('aria-haspopup');
-			input.removeAttribute('aria-autocomplete');
+			input.removeAttribute("aria-haspopup");
+			input.removeAttribute("aria-autocomplete");
 		}
 	}
 
@@ -166,12 +180,26 @@ export class QuickInputBox extends Disposable {
 		if (decoration === Severity.Ignore) {
 			this.findInput.clearMessage();
 		} else {
-			this.findInput.showMessage({ type: decoration === Severity.Info ? MessageType.INFO : decoration === Severity.Warning ? MessageType.WARNING : MessageType.ERROR, content: '' });
+			this.findInput.showMessage({
+				type:
+					decoration === Severity.Info
+						? MessageType.INFO
+						: decoration === Severity.Warning
+							? MessageType.WARNING
+							: MessageType.ERROR,
+				content: "",
+			});
 		}
 	}
 
 	stylesForType(decoration: Severity) {
-		return this.findInput.inputBox.stylesForType(decoration === Severity.Info ? MessageType.INFO : decoration === Severity.Warning ? MessageType.WARNING : MessageType.ERROR);
+		return this.findInput.inputBox.stylesForType(
+			decoration === Severity.Info
+				? MessageType.INFO
+				: decoration === Severity.Warning
+					? MessageType.WARNING
+					: MessageType.ERROR,
+		);
 	}
 
 	setFocus(): void {

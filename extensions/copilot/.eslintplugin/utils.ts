@@ -6,8 +6,9 @@
 import { TSESTree } from '@typescript-eslint/typescript-estree';
 import * as eslint from 'eslint';
 
-export function createImportRuleListener(validateImport: (node: TSESTree.Literal, value: string) => any): eslint.Rule.RuleListener {
-
+export function createImportRuleListener(
+	validateImport: (node: TSESTree.Literal, value: string) => any,
+): eslint.Rule.RuleListener {
 	function _checkImport(node: TSESTree.Node | null) {
 		if (node && node.type === 'Literal' && typeof node.value === 'string') {
 			validateImport(node, node.value);
@@ -20,11 +21,14 @@ export function createImportRuleListener(validateImport: (node: TSESTree.Literal
 			_checkImport((node as TSESTree.ImportDeclaration).source);
 		},
 		// import('module').then(...) OR await import('module')
-		['CallExpression[callee.type="Import"][arguments.length=1] > Literal']: (node: any) => {
-			_checkImport(node);
-		},
+		['CallExpression[callee.type="Import"][arguments.length=1] > Literal']:
+			(node: any) => {
+				_checkImport(node);
+			},
 		// import foo = ...
-		['TSImportEqualsDeclaration > TSExternalModuleReference > Literal']: (node: any) => {
+		['TSImportEqualsDeclaration > TSExternalModuleReference > Literal']: (
+			node: any,
+		) => {
 			_checkImport(node);
 		},
 		// export ?? from 'module'
@@ -35,6 +39,5 @@ export function createImportRuleListener(validateImport: (node: TSESTree.Literal
 		ExportNamedDeclaration: (node: any) => {
 			_checkImport((node as TSESTree.ExportNamedDeclaration).source);
 		},
-
 	};
 }

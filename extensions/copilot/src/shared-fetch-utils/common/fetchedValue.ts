@@ -70,7 +70,9 @@ export class FetchedValue<T> {
 		this._isStale = options.isStale;
 		if (options.keepCacheHot) {
 			this._keepCacheHotTimer = setInterval(() => {
-				this.resolve().catch(() => { /* swallow — next interval will retry */ });
+				this.resolve().catch(() => {
+					/* swallow — next interval will retry */
+				});
 			}, 60_000);
 		}
 	}
@@ -142,5 +144,3 @@ export class FetchedValue<T> {
 		}
 	}
 }
-
-

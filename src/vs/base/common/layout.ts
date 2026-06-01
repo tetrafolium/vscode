@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Range } from './range.js';
+import { Range } from "./range.js";
 
 export interface IAnchor {
 	x: number;
@@ -13,15 +13,18 @@ export interface IAnchor {
 }
 
 export const enum AnchorAlignment {
-	LEFT, RIGHT
+	LEFT,
+	RIGHT,
 }
 
 export const enum AnchorPosition {
-	BELOW, ABOVE
+	BELOW,
+	ABOVE,
 }
 
 export const enum AnchorAxisAlignment {
-	VERTICAL, HORIZONTAL
+	VERTICAL,
+	HORIZONTAL,
 }
 
 interface IPosition {
@@ -34,16 +37,16 @@ interface ISize {
 	readonly height: number;
 }
 
-export interface IRect extends IPosition, ISize { }
+export interface IRect extends IPosition, ISize {}
 
 export const enum LayoutAnchorPosition {
 	Before,
-	After
+	After,
 }
 
 export enum LayoutAnchorMode {
 	AVOID,
-	ALIGN
+	ALIGN,
 }
 
 export interface ILayoutAnchor {
@@ -55,7 +58,7 @@ export interface ILayoutAnchor {
 
 export interface ILayoutResult {
 	position: number;
-	result: 'ok' | 'flipped' | 'overlap';
+	result: "ok" | "flipped" | "overlap";
 }
 
 /**
@@ -63,30 +66,49 @@ export interface ILayoutResult {
  *
  * @returns The view offset within the viewport.
  */
-export function layout(viewportSize: number, viewSize: number, anchor: ILayoutAnchor): ILayoutResult {
-	const layoutAfterAnchorBoundary = anchor.mode === LayoutAnchorMode.ALIGN ? anchor.offset : anchor.offset + anchor.size;
-	const layoutBeforeAnchorBoundary = anchor.mode === LayoutAnchorMode.ALIGN ? anchor.offset + anchor.size : anchor.offset;
+export function layout(
+	viewportSize: number,
+	viewSize: number,
+	anchor: ILayoutAnchor,
+): ILayoutResult {
+	const layoutAfterAnchorBoundary =
+		anchor.mode === LayoutAnchorMode.ALIGN
+			? anchor.offset
+			: anchor.offset + anchor.size;
+	const layoutBeforeAnchorBoundary =
+		anchor.mode === LayoutAnchorMode.ALIGN
+			? anchor.offset + anchor.size
+			: anchor.offset;
 
 	if (anchor.position === LayoutAnchorPosition.Before) {
 		if (viewSize <= viewportSize - layoutAfterAnchorBoundary) {
-			return { position: layoutAfterAnchorBoundary, result: 'ok' }; // happy case, lay it out after the anchor
+			return { position: layoutAfterAnchorBoundary, result: "ok" }; // happy case, lay it out after the anchor
 		}
 
 		if (viewSize <= layoutBeforeAnchorBoundary) {
-			return { position: layoutBeforeAnchorBoundary - viewSize, result: 'flipped' }; // ok case, lay it out before the anchor
+			return {
+				position: layoutBeforeAnchorBoundary - viewSize,
+				result: "flipped",
+			}; // ok case, lay it out before the anchor
 		}
 
-		return { position: Math.max(viewportSize - viewSize, 0), result: 'overlap' }; // sad case, lay it over the anchor
+		return {
+			position: Math.max(viewportSize - viewSize, 0),
+			result: "overlap",
+		}; // sad case, lay it over the anchor
 	} else {
 		if (viewSize <= layoutBeforeAnchorBoundary) {
-			return { position: layoutBeforeAnchorBoundary - viewSize, result: 'ok' }; // happy case, lay it out before the anchor
+			return { position: layoutBeforeAnchorBoundary - viewSize, result: "ok" }; // happy case, lay it out before the anchor
 		}
 
-		if (viewSize <= viewportSize - layoutAfterAnchorBoundary && layoutBeforeAnchorBoundary < viewSize / 2) {
-			return { position: layoutAfterAnchorBoundary, result: 'flipped' }; // ok case, lay it out after the anchor
+		if (
+			viewSize <= viewportSize - layoutAfterAnchorBoundary &&
+			layoutBeforeAnchorBoundary < viewSize / 2
+		) {
+			return { position: layoutAfterAnchorBoundary, result: "flipped" }; // ok case, lay it out after the anchor
 		}
 
-		return { position: 0, result: 'overlap' }; // sad case, lay it over the anchor
+		return { position: 0, result: "overlap" }; // sad case, lay it over the anchor
 	}
 }
 
@@ -105,57 +127,137 @@ export interface ILayout2DResult {
 	anchorPosition: AnchorPosition;
 }
 
-export function layout2d(viewport: IRect, view: ISize, anchor: IRect, options?: ILayout2DOptions): ILayout2DResult {
+export function layout2d(
+	viewport: IRect,
+	view: ISize,
+	anchor: IRect,
+	options?: ILayout2DOptions,
+): ILayout2DResult {
 	let anchorAlignment = options?.anchorAlignment ?? AnchorAlignment.LEFT;
 	let anchorPosition = options?.anchorPosition ?? AnchorPosition.BELOW;
-	const anchorAxisAlignment = options?.anchorAxisAlignment ?? AnchorAxisAlignment.VERTICAL;
+	const anchorAxisAlignment =
+		options?.anchorAxisAlignment ?? AnchorAxisAlignment.VERTICAL;
 
 	let top: number;
 	let left: number;
 
 	if (anchorAxisAlignment === AnchorAxisAlignment.VERTICAL) {
-		const verticalAnchor: ILayoutAnchor = { offset: anchor.top - viewport.top, size: anchor.height, position: anchorPosition === AnchorPosition.BELOW ? LayoutAnchorPosition.Before : LayoutAnchorPosition.After };
-		const horizontalAnchor: ILayoutAnchor = { offset: anchor.left, size: anchor.width, position: anchorAlignment === AnchorAlignment.LEFT ? LayoutAnchorPosition.Before : LayoutAnchorPosition.After, mode: LayoutAnchorMode.ALIGN };
+		const verticalAnchor: ILayoutAnchor = {
+			offset: anchor.top - viewport.top,
+			size: anchor.height,
+			position:
+				anchorPosition === AnchorPosition.BELOW
+					? LayoutAnchorPosition.Before
+					: LayoutAnchorPosition.After,
+		};
+		const horizontalAnchor: ILayoutAnchor = {
+			offset: anchor.left,
+			size: anchor.width,
+			position:
+				anchorAlignment === AnchorAlignment.LEFT
+					? LayoutAnchorPosition.Before
+					: LayoutAnchorPosition.After,
+			mode: LayoutAnchorMode.ALIGN,
+		};
 
-		const verticalLayoutResult = layout(viewport.height, view.height, verticalAnchor);
+		const verticalLayoutResult = layout(
+			viewport.height,
+			view.height,
+			verticalAnchor,
+		);
 		top = verticalLayoutResult.position + viewport.top;
 
-		if (verticalLayoutResult.result === 'flipped') {
-			anchorPosition = anchorPosition === AnchorPosition.BELOW ? AnchorPosition.ABOVE : AnchorPosition.BELOW;
+		if (verticalLayoutResult.result === "flipped") {
+			anchorPosition =
+				anchorPosition === AnchorPosition.BELOW
+					? AnchorPosition.ABOVE
+					: AnchorPosition.BELOW;
 		}
 
 		// if view intersects vertically with anchor, we must avoid the anchor
-		if (Range.intersects({ start: top, end: top + view.height }, { start: verticalAnchor.offset, end: verticalAnchor.offset + verticalAnchor.size })) {
+		if (
+			Range.intersects(
+				{ start: top, end: top + view.height },
+				{
+					start: verticalAnchor.offset,
+					end: verticalAnchor.offset + verticalAnchor.size,
+				},
+			)
+		) {
 			horizontalAnchor.mode = LayoutAnchorMode.AVOID;
 		}
 
-		const horizontalLayoutResult = layout(viewport.width, view.width, horizontalAnchor);
+		const horizontalLayoutResult = layout(
+			viewport.width,
+			view.width,
+			horizontalAnchor,
+		);
 		left = horizontalLayoutResult.position;
 
-		if (horizontalLayoutResult.result === 'flipped') {
-			anchorAlignment = anchorAlignment === AnchorAlignment.LEFT ? AnchorAlignment.RIGHT : AnchorAlignment.LEFT;
+		if (horizontalLayoutResult.result === "flipped") {
+			anchorAlignment =
+				anchorAlignment === AnchorAlignment.LEFT
+					? AnchorAlignment.RIGHT
+					: AnchorAlignment.LEFT;
 		}
 	} else {
-		const horizontalAnchor: ILayoutAnchor = { offset: anchor.left, size: anchor.width, position: anchorAlignment === AnchorAlignment.LEFT ? LayoutAnchorPosition.Before : LayoutAnchorPosition.After };
-		const verticalAnchor: ILayoutAnchor = { offset: anchor.top, size: anchor.height, position: anchorPosition === AnchorPosition.BELOW ? LayoutAnchorPosition.Before : LayoutAnchorPosition.After, mode: LayoutAnchorMode.ALIGN };
+		const horizontalAnchor: ILayoutAnchor = {
+			offset: anchor.left,
+			size: anchor.width,
+			position:
+				anchorAlignment === AnchorAlignment.LEFT
+					? LayoutAnchorPosition.Before
+					: LayoutAnchorPosition.After,
+		};
+		const verticalAnchor: ILayoutAnchor = {
+			offset: anchor.top,
+			size: anchor.height,
+			position:
+				anchorPosition === AnchorPosition.BELOW
+					? LayoutAnchorPosition.Before
+					: LayoutAnchorPosition.After,
+			mode: LayoutAnchorMode.ALIGN,
+		};
 
-		const horizontalLayoutResult = layout(viewport.width, view.width, horizontalAnchor);
+		const horizontalLayoutResult = layout(
+			viewport.width,
+			view.width,
+			horizontalAnchor,
+		);
 		left = horizontalLayoutResult.position;
 
-		if (horizontalLayoutResult.result === 'flipped') {
-			anchorAlignment = anchorAlignment === AnchorAlignment.LEFT ? AnchorAlignment.RIGHT : AnchorAlignment.LEFT;
+		if (horizontalLayoutResult.result === "flipped") {
+			anchorAlignment =
+				anchorAlignment === AnchorAlignment.LEFT
+					? AnchorAlignment.RIGHT
+					: AnchorAlignment.LEFT;
 		}
 
 		// if view intersects horizontally with anchor, we must avoid the anchor
-		if (Range.intersects({ start: left, end: left + view.width }, { start: horizontalAnchor.offset, end: horizontalAnchor.offset + horizontalAnchor.size })) {
+		if (
+			Range.intersects(
+				{ start: left, end: left + view.width },
+				{
+					start: horizontalAnchor.offset,
+					end: horizontalAnchor.offset + horizontalAnchor.size,
+				},
+			)
+		) {
 			verticalAnchor.mode = LayoutAnchorMode.AVOID;
 		}
 
-		const verticalLayoutResult = layout(viewport.height, view.height, verticalAnchor);
+		const verticalLayoutResult = layout(
+			viewport.height,
+			view.height,
+			verticalAnchor,
+		);
 		top = verticalLayoutResult.position + viewport.top;
 
-		if (verticalLayoutResult.result === 'flipped') {
-			anchorPosition = anchorPosition === AnchorPosition.BELOW ? AnchorPosition.ABOVE : AnchorPosition.BELOW;
+		if (verticalLayoutResult.result === "flipped") {
+			anchorPosition =
+				anchorPosition === AnchorPosition.BELOW
+					? AnchorPosition.ABOVE
+					: AnchorPosition.BELOW;
 		}
 	}
 

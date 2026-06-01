@@ -21,7 +21,6 @@ import { NextEditCache } from '../../node/nextEditCache';
 import { NextEditFetchRequest } from '../../node/nextEditProvider';
 
 describe('NextEditCache cursor distance check', () => {
-
 	let configService: InMemoryConfigurationService;
 	let obsWorkspace: MutableObservableWorkspace;
 	let logService: LogServiceImpl;
@@ -34,12 +33,24 @@ describe('NextEditCache cursor distance check', () => {
 	// Line 2: "line2"
 	// ...
 	// Line 10: "line10"
-	const docContent = Array.from({ length: 10 }, (_, i) => `line${i + 1}`).join('\n');
+	const docContent = Array.from(
+		{ length: 10 },
+		(_, i) => `line${i + 1}`,
+	).join('\n');
 	const docText = new StringText(docContent);
 
 	function makeSource(): NextEditFetchRequest {
-		const logContext = new InlineEditRequestLogContext('test', 0, undefined);
-		return new NextEditFetchRequest(generateUuid(), logContext, undefined, false);
+		const logContext = new InlineEditRequestLogContext(
+			'test',
+			0,
+			undefined,
+		);
+		return new NextEditFetchRequest(
+			generateUuid(),
+			logContext,
+			undefined,
+			false,
+		);
 	}
 
 	/** Get the offset of the start of a 1-indexed line in docContent. */
@@ -53,21 +64,33 @@ describe('NextEditCache cursor distance check', () => {
 	}
 
 	beforeEach(() => {
-		configService = new InMemoryConfigurationService(new DefaultsOnlyConfigurationService());
+		configService = new InMemoryConfigurationService(
+			new DefaultsOnlyConfigurationService(),
+		);
 		obsWorkspace = new MutableObservableWorkspace();
 		logService = new LogServiceImpl([]);
 		expService = new NullExperimentationService();
 
-		docId = DocumentId.create(URI.file('/test/cursor-distance.ts').toString());
+		docId = DocumentId.create(
+			URI.file('/test/cursor-distance.ts').toString(),
+		);
 		obsWorkspace.addDocument({ id: docId, initialValue: docContent });
 
-		cache = new NextEditCache(obsWorkspace, logService, configService, expService);
+		cache = new NextEditCache(
+			obsWorkspace,
+			logService,
+			configService,
+			expService,
+		);
 	});
 
 	// Edit targets line 6 (replaces "line6" with "REPLACED")
 	const editStartOffset = docContent.indexOf('line6');
 	const editEndOffset = editStartOffset + 'line6'.length;
-	const edit = new StringReplacement(new OffsetRange(editStartOffset, editEndOffset), 'REPLACED');
+	const edit = new StringReplacement(
+		new OffsetRange(editStartOffset, editEndOffset),
+		'REPLACED',
+	);
 
 	function cacheEditWithCursorAtLine(cursorLine: number) {
 		cache.setKthNextEdit(
@@ -79,7 +102,10 @@ describe('NextEditCache cursor distance check', () => {
 			undefined, // nextEdits
 			undefined, // userEditSince
 			makeSource(),
-			{ isFromCursorJump: false, cursorOffset: lineStartOffset(cursorLine) },
+			{
+				isFromCursorJump: false,
+				cursorOffset: lineStartOffset(cursorLine),
+			},
 		);
 	}
 
@@ -89,14 +115,21 @@ describe('NextEditCache cursor distance check', () => {
 			cacheEditWithCursorAtLine(5);
 
 			// Move cursor to line 1 (5 lines away — farther)
-			const result = cache.lookupNextEdit(docId, docText, cursorAtLine(1));
+			const result = cache.lookupNextEdit(
+				docId,
+				docText,
+				cursorAtLine(1),
+			);
 			assert(result?.edit, 'should serve cached edit when flag is off');
 		});
 	});
 
 	describe('when flag is enabled', () => {
 		beforeEach(async () => {
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsCacheCursorDistanceCheck, true);
+			await configService.setConfig(
+				ConfigKey.TeamInternal.InlineEditsCacheCursorDistanceCheck,
+				true,
+			);
 		});
 
 		it('serves cached edit when cursor moves closer to the edit', () => {
@@ -104,8 +137,15 @@ describe('NextEditCache cursor distance check', () => {
 			cacheEditWithCursorAtLine(4);
 
 			// Move cursor to line 5 (1 line away — closer)
-			const result = cache.lookupNextEdit(docId, docText, cursorAtLine(5));
-			assert(result?.edit, 'should serve cached edit when cursor is closer');
+			const result = cache.lookupNextEdit(
+				docId,
+				docText,
+				cursorAtLine(5),
+			);
+			assert(
+				result?.edit,
+				'should serve cached edit when cursor is closer',
+			);
 		});
 
 		it('serves cached edit when cursor stays at the same distance', () => {
@@ -113,7 +153,11 @@ describe('NextEditCache cursor distance check', () => {
 			cacheEditWithCursorAtLine(4);
 
 			// Move cursor to line 8 (also 2 lines away — same distance, other side)
-			const result = cache.lookupNextEdit(docId, docText, cursorAtLine(8));
+			const result = cache.lookupNextEdit(
+				docId,
+				docText,
+				cursorAtLine(8),
+			);
 			assert(result?.edit, 'should serve cached edit at equal distance');
 		});
 
@@ -122,8 +166,15 @@ describe('NextEditCache cursor distance check', () => {
 			cacheEditWithCursorAtLine(5);
 
 			// Move cursor to line 1 (5 lines away — farther)
-			const result = cache.lookupNextEdit(docId, docText, cursorAtLine(1));
-			assert(result?.rejected === true, 'should return cached edit marked as rejected');
+			const result = cache.lookupNextEdit(
+				docId,
+				docText,
+				cursorAtLine(1),
+			);
+			assert(
+				result?.rejected === true,
+				'should return cached edit marked as rejected',
+			);
 		});
 
 		it('marks the cached edit as rejected when cursor moves farther', () => {
@@ -134,8 +185,15 @@ describe('NextEditCache cursor distance check', () => {
 			cache.lookupNextEdit(docId, docText, cursorAtLine(1));
 
 			// Now even looking up from the original close position should show rejected
-			const result = cache.lookupNextEdit(docId, docText, cursorAtLine(5));
-			assert(result?.rejected === true, 'cached edit should be marked as rejected');
+			const result = cache.lookupNextEdit(
+				docId,
+				docText,
+				cursorAtLine(5),
+			);
+			assert(
+				result?.rejected === true,
+				'cached edit should be marked as rejected',
+			);
 		});
 
 		it('does not apply to subsequent edits (subsequentN > 0)', () => {
@@ -153,8 +211,15 @@ describe('NextEditCache cursor distance check', () => {
 			);
 
 			// Move cursor to line 1 (farther) — should still serve because it's subsequent
-			const result = cache.lookupNextEdit(docId, docText, cursorAtLine(1));
-			assert(result?.edit, 'subsequent edits should not be filtered by cursor distance');
+			const result = cache.lookupNextEdit(
+				docId,
+				docText,
+				cursorAtLine(1),
+			);
+			assert(
+				result?.edit,
+				'subsequent edits should not be filtered by cursor distance',
+			);
 		});
 
 		it('does not apply when cursorOffsetAtCacheTime is not set', () => {
@@ -172,8 +237,15 @@ describe('NextEditCache cursor distance check', () => {
 			);
 
 			// Move cursor to line 1 (farther) — should still serve because no cursor offset recorded
-			const result = cache.lookupNextEdit(docId, docText, cursorAtLine(1));
-			assert(result?.edit, 'should serve when no cursor offset was recorded at cache time');
+			const result = cache.lookupNextEdit(
+				docId,
+				docText,
+				cursorAtLine(1),
+			);
+			assert(
+				result?.edit,
+				'should serve when no cursor offset was recorded at cache time',
+			);
 		});
 
 		it('serves cached edit when cursor is on the same line as the edit', () => {
@@ -181,8 +253,15 @@ describe('NextEditCache cursor distance check', () => {
 			cacheEditWithCursorAtLine(4);
 
 			// Move cursor to line 6 (0 lines away — on the edit itself)
-			const result = cache.lookupNextEdit(docId, docText, cursorAtLine(6));
-			assert(result?.edit, 'should serve cached edit when cursor is on the edit line');
+			const result = cache.lookupNextEdit(
+				docId,
+				docText,
+				cursorAtLine(6),
+			);
+			assert(
+				result?.edit,
+				'should serve cached edit when cursor is on the edit line',
+			);
 		});
 	});
 });

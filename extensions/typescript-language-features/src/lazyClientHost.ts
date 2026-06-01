@@ -3,22 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { CommandManager } from './commands/commandManager';
-import { IExperimentationTelemetryReporter } from './experimentTelemetryReporter';
-import { OngoingRequestCancellerFactory } from './tsServer/cancellation';
-import { ILogDirectoryProvider } from './tsServer/logDirectoryProvider';
-import { TsServerProcessFactory } from './tsServer/server';
-import { ITypeScriptVersionProvider } from './tsServer/versionProvider';
-import TypeScriptServiceClientHost from './typeScriptServiceClientHost';
-import { ActiveJsTsEditorTracker } from './ui/activeJsTsEditorTracker';
-import ManagedFileContextManager from './ui/managedFileContext';
-import { ServiceConfigurationProvider } from './configuration/configuration';
-import * as fileSchemes from './configuration/fileSchemes';
-import { standardLanguageDescriptions, isJsConfigOrTsConfigFileName } from './configuration/languageDescription';
-import { Lazy } from './utils/lazy';
-import { Logger } from './logging/logger';
-import { PluginManager } from './tsServer/plugins';
+import * as vscode from "vscode";
+import { CommandManager } from "./commands/commandManager";
+import { IExperimentationTelemetryReporter } from "./experimentTelemetryReporter";
+import { OngoingRequestCancellerFactory } from "./tsServer/cancellation";
+import { ILogDirectoryProvider } from "./tsServer/logDirectoryProvider";
+import { TsServerProcessFactory } from "./tsServer/server";
+import { ITypeScriptVersionProvider } from "./tsServer/versionProvider";
+import TypeScriptServiceClientHost from "./typeScriptServiceClientHost";
+import { ActiveJsTsEditorTracker } from "./ui/activeJsTsEditorTracker";
+import ManagedFileContextManager from "./ui/managedFileContext";
+import { ServiceConfigurationProvider } from "./configuration/configuration";
+import * as fileSchemes from "./configuration/fileSchemes";
+import {
+	standardLanguageDescriptions,
+	isJsConfigOrTsConfigFileName,
+} from "./configuration/languageDescription";
+import { Lazy } from "./utils/lazy";
+import { Logger } from "./logging/logger";
+import { PluginManager } from "./tsServer/plugins";
 
 export function createLazyClientHost(
 	context: vscode.ExtensionContext,
@@ -43,7 +46,8 @@ export function createLazyClientHost(
 			context,
 			onCaseInsensitiveFileSystem,
 			services,
-			onCompletionAccepted);
+			onCompletionAccepted,
+		);
 	});
 }
 
@@ -56,8 +60,8 @@ export function lazilyActivateClient(
 	const disposables: vscode.Disposable[] = [];
 
 	const supportedLanguage = [
-		...standardLanguageDescriptions.map(x => x.languageIds),
-		...pluginManager.plugins.map(x => x.languages)
+		...standardLanguageDescriptions.map((x) => x.languageIds),
+		...pluginManager.plugins.map((x) => x.languages),
 	].flat();
 
 	let hasActivated = false;
@@ -69,7 +73,9 @@ export function lazilyActivateClient(
 				// Force activation
 				void lazyClientHost.value;
 
-				disposables.push(new ManagedFileContextManager(activeJsTsEditorTracker));
+				disposables.push(
+					new ManagedFileContextManager(activeJsTsEditorTracker),
+				);
 			});
 
 			return true;
@@ -79,22 +85,29 @@ export function lazilyActivateClient(
 
 	const didActivate = vscode.workspace.textDocuments.some(maybeActivate);
 	if (!didActivate) {
-		const openListener = vscode.workspace.onDidOpenTextDocument(doc => {
-			if (maybeActivate(doc)) {
-				openListener.dispose();
-			}
-		}, undefined, disposables);
+		const openListener = vscode.workspace.onDidOpenTextDocument(
+			(doc) => {
+				if (maybeActivate(doc)) {
+					openListener.dispose();
+				}
+			},
+			undefined,
+			disposables,
+		);
 	}
 
 	return new vscode.Disposable(() => {
-		disposables.forEach(d => d.dispose());
+		disposables.forEach((d) => d.dispose());
 	});
 }
 
 function isSupportedDocument(
 	supportedLanguage: readonly string[],
-	document: vscode.TextDocument
+	document: vscode.TextDocument,
 ): boolean {
-	return (supportedLanguage.indexOf(document.languageId) >= 0 || isJsConfigOrTsConfigFileName(document.fileName))
-		&& !fileSchemes.disabledSchemes.has(document.uri.scheme);
+	return (
+		(supportedLanguage.indexOf(document.languageId) >= 0 ||
+			isJsConfigOrTsConfigFileName(document.fileName)) &&
+		!fileSchemes.disabledSchemes.has(document.uri.scheme)
+	);
 }

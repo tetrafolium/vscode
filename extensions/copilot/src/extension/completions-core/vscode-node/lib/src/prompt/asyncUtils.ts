@@ -13,7 +13,9 @@ import { Deferred } from '../util/async';
  * @param subscribe A function that takes a listener and returns a Disposable for cleanup
  * @returns A Promise that resolves with the event data when the event fires
  */
-export async function eventToPromise<T>(subscribe: (listener: (event: T) => void) => Disposable): Promise<T> {
+export async function eventToPromise<T>(
+	subscribe: (listener: (event: T) => void) => Disposable,
+): Promise<T> {
 	const deferred = new Deferred<T>();
 	const disposable = subscribe((event: T) => {
 		deferred.resolve(event);
@@ -27,8 +29,12 @@ export async function eventToPromise<T>(subscribe: (listener: (event: T) => void
  * @param token The CancellationToken to observe
  * @returns A Promise that resolves when the token is canceled
  */
-async function cancellationTokenToPromise(token: CancellationToken): Promise<void> {
-	if (token.isCancellationRequested) { return; }
+async function cancellationTokenToPromise(
+	token: CancellationToken,
+): Promise<void> {
+	if (token.isCancellationRequested) {
+		return;
+	}
 	const deferred = new Deferred<void>();
 	const disposable = token.onCancellationRequested(() => {
 		deferred.resolve();
@@ -37,7 +43,10 @@ async function cancellationTokenToPromise(token: CancellationToken): Promise<voi
 	await deferred.promise;
 }
 
-async function raceCancellation(promise: Promise<void>, token?: CancellationToken): Promise<void> {
+async function raceCancellation(
+	promise: Promise<void>,
+	token?: CancellationToken,
+): Promise<void> {
 	if (token) {
 		const cancellationPromise = cancellationTokenToPromise(token);
 		await Promise.race([promise, cancellationPromise]);
@@ -47,26 +56,28 @@ async function raceCancellation(promise: Promise<void>, token?: CancellationToke
 }
 
 // Workaround for https://github.com/microsoft/TypeScript/issues/17002
-export function isArrayOfT<T>(value: ResolveOnTimeoutResult<T> | undefined): value is readonly T[] {
+export function isArrayOfT<T>(
+	value: ResolveOnTimeoutResult<T> | undefined,
+): value is readonly T[] {
 	return Array.isArray(value);
 }
 
 type ResolvedItem<T> =
 	| {
-		status: 'full' | 'partial';
-		resolutionTime: number;
-		value: T[];
-	}
+			status: 'full' | 'partial';
+			resolutionTime: number;
+			value: T[];
+	  }
 	| {
-		status: 'none';
-		resolutionTime: number;
-		value: null;
-	}
+			status: 'none';
+			resolutionTime: number;
+			value: null;
+	  }
 	| {
-		status: 'error';
-		resolutionTime: number;
-		reason: unknown;
-	};
+			status: 'error';
+			resolutionTime: number;
+			reason: unknown;
+	  };
 
 /**
  * Resolves concurrently all given promises or async iterables, returning a map of their results.
@@ -82,7 +93,7 @@ type ResolvedItem<T> =
  */
 export async function resolveAll<K, T>(
 	resolvables: Map<K, ResolveResult<T>>,
-	cancellationToken?: CancellationToken
+	cancellationToken?: CancellationToken,
 ): Promise<Map<K, ResolvedItem<T>>> {
 	const results: Map<K, ResolvedItem<T>> = new Map();
 	const promises: Promise<void>[] = [];
@@ -99,7 +110,7 @@ export async function resolveAll<K, T>(
 
 async function resolve<T>(
 	resolvable: ResolveResult<T>,
-	cancellationToken?: CancellationToken
+	cancellationToken?: CancellationToken,
 ): Promise<ResolvedItem<T>> {
 	let result: ResolvedItem<T>;
 	if (resolvable instanceof Promise) {
@@ -114,17 +125,25 @@ async function resolve<T>(
  */
 async function resolvePromise<T>(
 	promise: Promise<ResolveOnTimeoutResult<T>>,
-	cancellationToken?: CancellationToken
+	cancellationToken?: CancellationToken,
 ): Promise<ResolvedItem<T>> {
 	const startTime = performance.now();
-	let resolved: ResolvedItem<T> = { status: 'none', resolutionTime: 0, value: null };
+	let resolved: ResolvedItem<T> = {
+		status: 'none',
+		resolutionTime: 0,
+		value: null,
+	};
 	const collectPromise = (async () => {
 		try {
 			const result = await promise;
 			if (cancellationToken?.isCancellationRequested) {
 				return;
 			}
-			resolved = { status: 'full', resolutionTime: 0, value: isArrayOfT<T>(result) ? [...result] : [result] };
+			resolved = {
+				status: 'full',
+				resolutionTime: 0,
+				value: isArrayOfT<T>(result) ? [...result] : [result],
+			};
 		} catch (e) {
 			if (cancellationToken?.isCancellationRequested) {
 				return;
@@ -141,10 +160,14 @@ async function resolvePromise<T>(
  */
 async function resolveIterable<T>(
 	iterable: AsyncIterable<T>,
-	cancellationToken?: CancellationToken
+	cancellationToken?: CancellationToken,
 ): Promise<ResolvedItem<T>> {
 	const startTime = performance.now();
-	let resolved: ResolvedItem<T> = { status: 'none', resolutionTime: 0, value: null };
+	let resolved: ResolvedItem<T> = {
+		status: 'none',
+		resolutionTime: 0,
+		value: null,
+	};
 	const collectPromise = (async () => {
 		try {
 			for await (const item of iterable) {
@@ -152,7 +175,11 @@ async function resolveIterable<T>(
 					return;
 				}
 				if (resolved.status !== 'partial') {
-					resolved = { status: 'partial', resolutionTime: 0, value: [] };
+					resolved = {
+						status: 'partial',
+						resolutionTime: 0,
+						value: [],
+					};
 				}
 				resolved.value.push(item);
 			}

@@ -7,8 +7,14 @@
 	color: var(--vscode-notificationsWarningIcon-foreground) !important;
 }
 
-.chat-thinking-box .chat-used-context.chat-hook-outcome-blocked > .chat-used-context-label .codicon,
-.chat-thinking-box .chat-used-context.chat-hook-outcome-warning > .chat-used-context-label .codicon {
+.chat-thinking-box
+	.chat-used-context.chat-hook-outcome-blocked
+	> .chat-used-context-label
+	.codicon,
+.chat-thinking-box
+	.chat-used-context.chat-hook-outcome-warning
+	> .chat-used-context-label
+	.codicon {
 	display: none;
 }
 
@@ -34,7 +40,8 @@
 
 /* When both reason and message are shown, add a subtle separator */
 .chat-hook-reason + .chat-hook-message {
-	border-top: 1px solid var(--vscode-chat-requestBorder, var(--vscode-editorWidget-border));
+	border-top: 1px solid
+		var(--vscode-chat-requestBorder, var(--vscode-editorWidget-border));
 	margin-top: 2px;
 	padding-top: 6px;
 }

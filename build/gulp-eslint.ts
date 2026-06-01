@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ESLint } from 'eslint';
-import fancyLog from 'fancy-log';
-import { relative } from 'path';
-import { Transform, type TransformOptions } from 'stream';
+import { ESLint } from "eslint";
+import fancyLog from "fancy-log";
+import { relative } from "path";
+import { Transform, type TransformOptions } from "stream";
 
 interface ESLintResults extends Array<ESLint.LintResult> {
 	errorCount: number;
@@ -19,9 +19,12 @@ interface EslintAction {
 
 export default function eslint(action: EslintAction) {
 	const linter = new ESLint({});
-	const formatter = linter.loadFormatter('compact');
+	const formatter = linter.loadFormatter("compact");
 
-	const results: ESLintResults = Object.assign([], { errorCount: 0, warningCount: 0 });
+	const results: ESLintResults = Object.assign([], {
+		errorCount: 0,
+		warningCount: 0,
+	});
 
 	return createTransform(
 		async (file, _enc, cb) => {
@@ -33,7 +36,7 @@ export default function eslint(action: EslintAction) {
 			}
 
 			if (file.isStream()) {
-				cb(new Error('vinyl files with Stream contents are not supported'));
+				cb(new Error("vinyl files with Stream contents are not supported"));
 				return;
 			}
 
@@ -44,7 +47,9 @@ export default function eslint(action: EslintAction) {
 					return;
 				}
 
-				const result = (await linter.lintText(file.contents.toString(), { filePath }))[0];
+				const result = (
+					await linter.lintText(file.contents.toString(), { filePath })
+				)[0];
 				results.push(result);
 				results.errorCount += result.errorCount;
 				results.warningCount += result.warningCount;
@@ -65,16 +70,17 @@ export default function eslint(action: EslintAction) {
 			} catch (error) {
 				done(error);
 			}
-		});
+		},
+	);
 }
 
 function createTransform(
-	transform: TransformOptions['transform'],
-	flush: TransformOptions['flush']
+	transform: TransformOptions["transform"],
+	flush: TransformOptions["flush"],
 ): Transform {
 	return new Transform({
 		objectMode: true,
 		transform,
-		flush
+		flush,
 	});
 }

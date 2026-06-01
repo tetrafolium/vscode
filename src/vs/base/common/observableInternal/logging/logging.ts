@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AutorunObserver } from '../reactions/autorunImpl.js';
-import { IObservable } from '../base.js';
-import { TransactionImpl } from '../transaction.js';
-import type { Derived } from '../observables/derivedImpl.js';
-import { DebugLocation } from '../debugLocation.js';
+import { AutorunObserver } from "../reactions/autorunImpl.js";
+import { IObservable } from "../base.js";
+import { TransactionImpl } from "../transaction.js";
+import type { Derived } from "../observables/derivedImpl.js";
+import { DebugLocation } from "../debugLocation.js";
 
 let globalObservableLogger: IObservableLogger | undefined;
 
@@ -17,7 +17,10 @@ export function addLogger(logger: IObservableLogger): void {
 	} else if (globalObservableLogger instanceof ComposedLogger) {
 		globalObservableLogger.loggers.push(logger);
 	} else {
-		globalObservableLogger = new ComposedLogger([globalObservableLogger, logger]);
+		globalObservableLogger = new ComposedLogger([
+			globalObservableLogger,
+			logger,
+		]);
 	}
 }
 
@@ -25,7 +28,8 @@ export function getLogger(): IObservableLogger | undefined {
 	return globalObservableLogger;
 }
 
-let globalObservableLoggerFn: ((obs: IObservable<any>) => void) | undefined = undefined;
+let globalObservableLoggerFn: ((obs: IObservable<any>) => void) | undefined =
+	undefined;
 export function setLogObservableFn(fn: (obs: IObservable<any>) => void): void {
 	globalObservableLoggerFn = fn;
 }
@@ -45,18 +49,35 @@ export interface IChangeInformation {
 }
 
 export interface IObservableLogger {
-	handleObservableCreated(observable: IObservable<any>, location: DebugLocation): void;
-	handleOnListenerCountChanged(observable: IObservable<any>, newCount: number): void;
+	handleObservableCreated(
+		observable: IObservable<any>,
+		location: DebugLocation,
+	): void;
+	handleOnListenerCountChanged(
+		observable: IObservable<any>,
+		newCount: number,
+	): void;
 
-	handleObservableUpdated(observable: IObservable<any>, info: IChangeInformation): void;
+	handleObservableUpdated(
+		observable: IObservable<any>,
+		info: IChangeInformation,
+	): void;
 
 	handleAutorunCreated(autorun: AutorunObserver, location: DebugLocation): void;
 	handleAutorunDisposed(autorun: AutorunObserver): void;
-	handleAutorunDependencyChanged(autorun: AutorunObserver, observable: IObservable<any>, change: unknown): void;
+	handleAutorunDependencyChanged(
+		autorun: AutorunObserver,
+		observable: IObservable<any>,
+		change: unknown,
+	): void;
 	handleAutorunStarted(autorun: AutorunObserver): void;
 	handleAutorunFinished(autorun: AutorunObserver): void;
 
-	handleDerivedDependencyChanged(derived: Derived<any, any, any>, observable: IObservable<any>, change: unknown): void;
+	handleDerivedDependencyChanged(
+		derived: Derived<any, any, any>,
+		observable: IObservable<any>,
+		change: unknown,
+	): void;
 	handleDerivedCleared(observable: Derived<any, any, any>): void;
 
 	handleBeginTransaction(transaction: TransactionImpl): void;
@@ -64,26 +85,36 @@ export interface IObservableLogger {
 }
 
 class ComposedLogger implements IObservableLogger {
-	constructor(
-		public readonly loggers: IObservableLogger[],
-	) { }
+	constructor(public readonly loggers: IObservableLogger[]) {}
 
-	handleObservableCreated(observable: IObservable<any>, location: DebugLocation): void {
+	handleObservableCreated(
+		observable: IObservable<any>,
+		location: DebugLocation,
+	): void {
 		for (const logger of this.loggers) {
 			logger.handleObservableCreated(observable, location);
 		}
 	}
-	handleOnListenerCountChanged(observable: IObservable<any>, newCount: number): void {
+	handleOnListenerCountChanged(
+		observable: IObservable<any>,
+		newCount: number,
+	): void {
 		for (const logger of this.loggers) {
 			logger.handleOnListenerCountChanged(observable, newCount);
 		}
 	}
-	handleObservableUpdated(observable: IObservable<any>, info: IChangeInformation): void {
+	handleObservableUpdated(
+		observable: IObservable<any>,
+		info: IChangeInformation,
+	): void {
 		for (const logger of this.loggers) {
 			logger.handleObservableUpdated(observable, info);
 		}
 	}
-	handleAutorunCreated(autorun: AutorunObserver, location: DebugLocation): void {
+	handleAutorunCreated(
+		autorun: AutorunObserver,
+		location: DebugLocation,
+	): void {
 		for (const logger of this.loggers) {
 			logger.handleAutorunCreated(autorun, location);
 		}
@@ -93,7 +124,11 @@ class ComposedLogger implements IObservableLogger {
 			logger.handleAutorunDisposed(autorun);
 		}
 	}
-	handleAutorunDependencyChanged(autorun: AutorunObserver, observable: IObservable<any>, change: unknown): void {
+	handleAutorunDependencyChanged(
+		autorun: AutorunObserver,
+		observable: IObservable<any>,
+		change: unknown,
+	): void {
 		for (const logger of this.loggers) {
 			logger.handleAutorunDependencyChanged(autorun, observable, change);
 		}
@@ -108,7 +143,11 @@ class ComposedLogger implements IObservableLogger {
 			logger.handleAutorunFinished(autorun);
 		}
 	}
-	handleDerivedDependencyChanged(derived: Derived<any>, observable: IObservable<any>, change: unknown): void {
+	handleDerivedDependencyChanged(
+		derived: Derived<any>,
+		observable: IObservable<any>,
+		change: unknown,
+	): void {
 		for (const logger of this.loggers) {
 			logger.handleDerivedDependencyChanged(derived, observable, change);
 		}

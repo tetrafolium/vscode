@@ -4,17 +4,25 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
-import { defaultCppSimilarFilesOptions, SimilarFilesOptions } from '../../../prompt/src/snippetInclusion/similarFiles';
+import {
+	defaultCppSimilarFilesOptions,
+	SimilarFilesOptions,
+} from '../../../prompt/src/snippetInclusion/similarFiles';
 import { TelemetryWithExp } from '../telemetry';
 import { useSubsetMatching } from './similarFileOptionsProvider';
 
-export function getCppSimilarFilesOptions(accessor: ServicesAccessor, telemetryWithExp: TelemetryWithExp): SimilarFilesOptions {
+export function getCppSimilarFilesOptions(
+	accessor: ServicesAccessor,
+	telemetryWithExp: TelemetryWithExp,
+): SimilarFilesOptions {
 	return {
 		...defaultCppSimilarFilesOptions,
 		useSubsetMatching: useSubsetMatching(accessor, telemetryWithExp),
 	};
 }
 
-export function getCppNumberOfSnippets(telemetryWithExp: TelemetryWithExp): number {
+export function getCppNumberOfSnippets(
+	telemetryWithExp: TelemetryWithExp,
+): number {
 	return defaultCppSimilarFilesOptions.maxTopSnippets;
 }

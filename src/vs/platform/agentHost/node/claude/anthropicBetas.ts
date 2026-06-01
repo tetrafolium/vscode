@@ -22,9 +22,9 @@
  * `'context-management'` (no date) — date-suffix discipline.
  */
 const SUPPORTED_ANTHROPIC_BETAS: readonly string[] = [
-	'interleaved-thinking',
-	'context-management',
-	'advanced-tool-use',
+	"interleaved-thinking",
+	"context-management",
+	"advanced-tool-use",
 ];
 
 /**
@@ -38,9 +38,15 @@ const SUPPORTED_ANTHROPIC_BETAS: readonly string[] = [
  */
 export function filterSupportedBetas(headerValue: string): string | undefined {
 	const filtered = headerValue
-		.split(',')
-		.map(b => b.trim())
-		.filter(b => b && SUPPORTED_ANTHROPIC_BETAS.some(supported => b.startsWith(supported + '-')));
+		.split(",")
+		.map((b) => b.trim())
+		.filter(
+			(b) =>
+				b &&
+				SUPPORTED_ANTHROPIC_BETAS.some((supported) =>
+					b.startsWith(supported + "-"),
+				),
+		);
 
-	return filtered.length > 0 ? filtered.join(',') : undefined;
+	return filtered.length > 0 ? filtered.join(",") : undefined;
 }

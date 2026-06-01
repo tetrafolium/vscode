@@ -12,7 +12,14 @@ import {
 	type PromptElement,
 	type PromptElementProps,
 } from './components';
-import { DataConsumer, Dispatch, StateUpdater, TypePredicate, UseData, UseState } from './hooks';
+import {
+	DataConsumer,
+	Dispatch,
+	StateUpdater,
+	TypePredicate,
+	UseData,
+	UseState,
+} from './hooks';
 import { DataPipe } from './virtualPrompt';
 
 /**
@@ -43,9 +50,13 @@ export class VirtualPromptReconciler {
 		this.vTree = this.virtualizeElement(prompt, '$', 0);
 	}
 
-	reconcile(cancellationToken?: CancellationToken): VirtualPromptNode | undefined {
+	reconcile(
+		cancellationToken?: CancellationToken,
+	): VirtualPromptNode | undefined {
 		if (!this.vTree) {
-			throw new Error('No tree to reconcile, make sure to pass a valid prompt');
+			throw new Error(
+				'No tree to reconcile, make sure to pass a valid prompt',
+			);
 		}
 		if (cancellationToken?.isCancellationRequested) {
 			return this.vTree;
@@ -58,10 +69,12 @@ export class VirtualPromptReconciler {
 		node: VirtualPromptNode,
 		parentNodePath: string,
 		nodeIndex: number,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): VirtualPromptNodeChild {
 		// If the node has no children or does not have a lifecycle, return it as is (primitive nodes)
-		if (!node.children && !node.lifecycle) { return node; }
+		if (!node.children && !node.lifecycle) {
+			return node;
+		}
 
 		let newNode: VirtualPromptNodeChild = node;
 
@@ -70,7 +83,11 @@ export class VirtualPromptReconciler {
 		// If the node needs reconciliation, virtualize it again
 		if (needsReconciliation) {
 			const oldChildrenPaths = this.collectChildPaths(node);
-			newNode = this.virtualizeElement(node.component, parentNodePath, nodeIndex);
+			newNode = this.virtualizeElement(
+				node.component,
+				parentNodePath,
+				nodeIndex,
+			);
 			const newChildrenPaths = this.collectChildPaths(newNode);
 			this.cleanupState(oldChildrenPaths, newChildrenPaths);
 			// Otherwise, check if the children need reconciliation
@@ -79,7 +96,12 @@ export class VirtualPromptReconciler {
 			for (let i = 0; i < node.children.length; i++) {
 				const child = node.children[i];
 				if (child) {
-					const reconciledChild = this.reconcileNode(child, node.path, i, cancellationToken);
+					const reconciledChild = this.reconcileNode(
+						child,
+						node.path,
+						i,
+						cancellationToken,
+					);
 					if (reconciledChild !== undefined) {
 						children.push(reconciledChild);
 					}
@@ -94,7 +116,7 @@ export class VirtualPromptReconciler {
 	private virtualizeElement(
 		component: PromptComponentChild,
 		parentNodePath: string,
-		nodeIndex: number
+		nodeIndex: number,
 	): VirtualPromptNodeChild {
 		if (typeof component === 'undefined') {
 			return undefined;
@@ -111,35 +133,53 @@ export class VirtualPromptReconciler {
 
 		if (isFragmentFunction(component.type)) {
 			const fragment = component.type(component.props.children);
-			const indexIndicator = parentNodePath !== '$' ? `[${nodeIndex}]` : ``;
+			const indexIndicator =
+				parentNodePath !== '$' ? `[${nodeIndex}]` : ``;
 			const componentPath = `${parentNodePath}${indexIndicator}.${fragment.type}`;
-			const children = fragment.children.map((c, i) => this.virtualizeElement(c, componentPath, i));
+			const children = fragment.children.map((c, i) =>
+				this.virtualizeElement(c, componentPath, i),
+			);
 			this.ensureUniqueKeys(children);
 			return {
 				name: fragment.type,
 				path: componentPath,
-				children: children.flat().filter(c => c !== undefined),
+				children: children.flat().filter((c) => c !== undefined),
 				component,
 			};
 		}
 
-		return this.virtualizeFunctionComponent(parentNodePath, nodeIndex, component, component.type);
+		return this.virtualizeFunctionComponent(
+			parentNodePath,
+			nodeIndex,
+			component,
+			component.type,
+		);
 	}
 
 	private virtualizeFunctionComponent(
 		parentNodePath: string,
 		nodeIndex: number,
 		component: PromptElement,
-		functionComponent: FunctionComponent
+		functionComponent: FunctionComponent,
 	) {
-		const indexIndicator = component.props.key ? `["${component.props.key}"]` : `[${nodeIndex}]`;
+		const indexIndicator = component.props.key
+			? `["${component.props.key}"]`
+			: `[${nodeIndex}]`;
 		const componentPath = `${parentNodePath}${indexIndicator}.${functionComponent.name}`;
-		const lifecycle = new PromptElementLifecycle(this.getOrCreateLifecycleData(componentPath));
+		const lifecycle = new PromptElementLifecycle(
+			this.getOrCreateLifecycleData(componentPath),
+		);
 		const element = functionComponent(component.props, lifecycle);
 
-		const elementToVirtualize = Array.isArray(element) ? element : [element];
-		const virtualizedChildren = elementToVirtualize.map((e, i) => this.virtualizeElement(e, componentPath, i));
-		const children = virtualizedChildren.flat().filter(e => e !== undefined);
+		const elementToVirtualize = Array.isArray(element)
+			? element
+			: [element];
+		const virtualizedChildren = elementToVirtualize.map((e, i) =>
+			this.virtualizeElement(e, componentPath, i),
+		);
+		const children = virtualizedChildren
+			.flat()
+			.filter((e) => e !== undefined);
 		this.ensureUniqueKeys(children);
 		return {
 			name: functionComponent.name,
@@ -154,7 +194,9 @@ export class VirtualPromptReconciler {
 	private ensureUniqueKeys(nodes: VirtualPromptNodeChild[]) {
 		const keyCount = new Map<string | number, number>();
 		for (const node of nodes) {
-			if (!node) { continue; }
+			if (!node) {
+				continue;
+			}
 			const key = node.props?.key;
 			if (key) {
 				keyCount.set(key, (keyCount.get(key) || 0) + 1);
@@ -182,7 +224,10 @@ export class VirtualPromptReconciler {
 		return paths;
 	}
 
-	private cleanupState(oldChildrenPaths: string[], newChildrenPaths: string[]) {
+	private cleanupState(
+		oldChildrenPaths: string[],
+		newChildrenPaths: string[],
+	) {
 		for (const path of oldChildrenPaths) {
 			if (!newChildrenPaths.includes(path)) {
 				this.lifecycleData.delete(path);
@@ -207,7 +252,9 @@ export class VirtualPromptReconciler {
 
 	private async pumpData<T>(data: T) {
 		if (!this.vTree) {
-			throw new Error('No tree to pump data into. Pumping data before initializing?');
+			throw new Error(
+				'No tree to pump data into. Pumping data before initializing?',
+			);
 		}
 		await this.recursivelyPumpData(data, this.vTree);
 	}
@@ -250,13 +297,21 @@ class PromptElementLifecycle implements ComponentContext {
 		});
 	}
 
-	useState<S = undefined>(): [S | undefined, Dispatch<StateUpdater<S | undefined>>];
+	useState<S = undefined>(): [
+		S | undefined,
+		Dispatch<StateUpdater<S | undefined>>,
+	];
 	useState<S>(initialState: S | (() => S)): [S, Dispatch<StateUpdater<S>>];
-	useState<S>(initialState?: S | (() => S)): [S | undefined, Dispatch<StateUpdater<S | undefined>>] {
+	useState<S>(
+		initialState?: S | (() => S),
+	): [S | undefined, Dispatch<StateUpdater<S | undefined>>] {
 		return this.stateHook.useState(initialState);
 	}
 
-	useData<T>(typePredicate: TypePredicate<T>, consumer: DataConsumer<T>): void {
+	useData<T>(
+		typePredicate: TypePredicate<T>,
+		consumer: DataConsumer<T>,
+	): void {
 		this.dataHook.useData(typePredicate, consumer);
 	}
 
@@ -265,6 +320,8 @@ class PromptElementLifecycle implements ComponentContext {
 	}
 }
 
-function isFragmentFunction(element: FragmentFunction | FunctionComponent): element is FragmentFunction {
+function isFragmentFunction(
+	element: FragmentFunction | FunctionComponent,
+): element is FragmentFunction {
 	return typeof element === 'function' && 'isFragmentFunction' in element;
 }

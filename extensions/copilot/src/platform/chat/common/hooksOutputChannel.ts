@@ -5,7 +5,9 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IHooksOutputChannel = createServiceIdentifier<IHooksOutputChannel>('IHooksOutputChannel');
+export const IHooksOutputChannel = createServiceIdentifier<IHooksOutputChannel>(
+	'IHooksOutputChannel',
+);
 
 export interface IHooksOutputChannel {
 	readonly _serviceBrand: undefined;

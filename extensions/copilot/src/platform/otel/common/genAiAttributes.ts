@@ -64,7 +64,8 @@ export const GenAiAttr = {
 	USAGE_INPUT_TOKENS: 'gen_ai.usage.input_tokens',
 	USAGE_OUTPUT_TOKENS: 'gen_ai.usage.output_tokens',
 	USAGE_CACHE_READ_INPUT_TOKENS: 'gen_ai.usage.cache_read.input_tokens',
-	USAGE_CACHE_CREATION_INPUT_TOKENS: 'gen_ai.usage.cache_creation.input_tokens',
+	USAGE_CACHE_CREATION_INPUT_TOKENS:
+		'gen_ai.usage.cache_creation.input_tokens',
 	/** Legacy: reasoning/thinking token count. Prefer `USAGE_REASONING_OUTPUT_TOKENS`; this key is kept for backwards compatibility. */
 	USAGE_REASONING_TOKENS: 'gen_ai.usage.reasoning_tokens',
 	/** Reasoning/thinking output token count (semantic-convention-aligned). Dual-emitted alongside `USAGE_REASONING_TOKENS`. */
@@ -170,7 +171,13 @@ export const CopilotChatAttr = {
 	COPILOT_USAGE_NANO_AIU: 'copilot_chat.copilot_usage_nano_aiu',
 } as const;
 
-export type EditSource = 'inline_chat' | 'chat_editing' | 'chat_editing_hunk' | 'apply_patch' | 'replace_string' | 'code_mapper';
+export type EditSource =
+	| 'inline_chat'
+	| 'chat_editing'
+	| 'chat_editing_hunk'
+	| 'apply_patch'
+	| 'replace_string'
+	| 'code_mapper';
 export type EditOutcome = 'accepted' | 'rejected' | 'saved' | 'unknown';
 
 /**
@@ -231,9 +238,11 @@ export const GitHubCopilotAttr = {
 	/** Skill identifier for the invoked tool. */
 	TOOL_PARAM_SKILL_NAME: 'github.copilot.tool.parameters.skill_name',
 	/** SHA-256 hex of the MCP server name for an MCP tool call (always emitted). */
-	TOOL_PARAM_MCP_SERVER_NAME_HASH: 'github.copilot.tool.parameters.mcp_server_name_hash',
+	TOOL_PARAM_MCP_SERVER_NAME_HASH:
+		'github.copilot.tool.parameters.mcp_server_name_hash',
 	/** Raw MCP server name for an MCP tool call (gated). */
-	TOOL_PARAM_MCP_SERVER_NAME: 'github.copilot.tool.parameters.mcp_server_name',
+	TOOL_PARAM_MCP_SERVER_NAME:
+		'github.copilot.tool.parameters.mcp_server_name',
 	/** MCP tool name (the part after the `mcp_<server>_` prefix). */
 	TOOL_PARAM_MCP_TOOL_NAME: 'github.copilot.tool.parameters.mcp_tool_name',
 } as const;

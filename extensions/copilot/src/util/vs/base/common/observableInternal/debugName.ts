@@ -30,7 +30,7 @@ export class DebugNameData {
 		public readonly owner: DebugOwner | undefined,
 		public readonly debugNameSource: DebugNameSource | undefined,
 		public readonly referenceFn: Function | undefined,
-	) { }
+	) {}
 
 	public getDebugName(target: object): string | undefined {
 		return getDebugName(target, this);
@@ -47,7 +47,10 @@ export type DebugNameSource = string | (() => string | undefined);
 const countPerName = new Map<string, number>();
 const cachedDebugName = new WeakMap<object, string>();
 
-export function getDebugName(target: object, data: DebugNameData): string | undefined {
+export function getDebugName(
+	target: object,
+	data: DebugNameData,
+): string | undefined {
 	const cached = cachedDebugName.get(target);
 	if (cached) {
 		return cached;
@@ -65,7 +68,10 @@ export function getDebugName(target: object, data: DebugNameData): string | unde
 	return undefined;
 }
 
-function computeDebugName(self: object, data: DebugNameData): string | undefined {
+function computeDebugName(
+	self: object,
+	data: DebugNameData,
+): string | undefined {
 	const cached = cachedDebugName.get(self);
 	if (cached) {
 		return cached;

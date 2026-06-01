@@ -10,14 +10,25 @@ import {
 	DEFAULT_MAX_COMPLETION_LENGTH,
 	DEFAULT_MAX_PROMPT_LENGTH,
 	DEFAULT_PROMPT_ALLOCATION_PERCENT,
-	DEFAULT_SUFFIX_MATCH_THRESHOLD
+	DEFAULT_SUFFIX_MATCH_THRESHOLD,
 } from '../../../prompt/src/prompt';
-import { CopilotToken, ICompletionsCopilotTokenManager } from '../auth/copilotTokenManager';
+import {
+	CopilotToken,
+	ICompletionsCopilotTokenManager,
+} from '../auth/copilotTokenManager';
 import { BlockMode } from '../config';
 import { TelemetryData, TelemetryWithExp } from '../telemetry';
 import { createCompletionsFilters } from './defaultExpFilters';
-import { ExpConfig, ExpTreatmentVariables, ExpTreatmentVariableValue } from './expConfig';
-import { CompletionsFiltersInfo, ContextProviderExpSettings, ICompletionsFeaturesService } from './featuresService';
+import {
+	ExpConfig,
+	ExpTreatmentVariables,
+	ExpTreatmentVariableValue,
+} from './expConfig';
+import {
+	CompletionsFiltersInfo,
+	ContextProviderExpSettings,
+	ICompletionsFeaturesService,
+} from './featuresService';
 import { Filter, FilterSettings } from './filters';
 
 type InternalContextProviderExpSettings = {
@@ -37,9 +48,12 @@ export class Features implements ICompletionsFeaturesService {
 	private readonly excludeRelatedFilesDefault: Map<string, boolean>;
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@IExperimentationService private readonly experimentationService: IExperimentationService,
-		@ICompletionsCopilotTokenManager private readonly copilotTokenManager: ICompletionsCopilotTokenManager,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+		@IExperimentationService
+		private readonly experimentationService: IExperimentationService,
+		@ICompletionsCopilotTokenManager
+		private readonly copilotTokenManager: ICompletionsCopilotTokenManager,
 	) {
 		this.includeNeighboringFilesDefault = new Map<string, boolean>();
 		this.excludeRelatedFilesDefault = new Map<string, boolean>();
@@ -73,21 +87,30 @@ export class Features implements ICompletionsFeaturesService {
 	 */
 	async updateExPValuesAndAssignments(
 		filtersInfo?: CompletionsFiltersInfo,
-		telemetryData: TelemetryData = TelemetryData.createAndMarkAsIssued()
+		telemetryData: TelemetryData = TelemetryData.createAndMarkAsIssued(),
 	): Promise<TelemetryWithExp> {
 		// We should not allow accidentally overwriting existing ExP vals/assignments.
 		// This doesn't stop all misuse cases, but should prevent some trivial ones.
 		if (telemetryData instanceof TelemetryWithExp) {
-			throw new Error('updateExPValuesAndAssignments should not be called with TelemetryWithExp');
+			throw new Error(
+				'updateExPValuesAndAssignments should not be called with TelemetryWithExp',
+			);
 		}
 
-		const token = this.copilotTokenManager.token ?? await this.copilotTokenManager.getToken();
+		const token =
+			this.copilotTokenManager.token ??
+			(await this.copilotTokenManager.getToken());
 		const { filters, exp } = this.createExpConfigAndFilters(token);
 
-		return new TelemetryWithExp(telemetryData.properties, telemetryData.measurements, telemetryData.issuedTime, {
-			filters,
-			exp: exp,
-		});
+		return new TelemetryWithExp(
+			telemetryData.properties,
+			telemetryData.measurements,
+			telemetryData.issuedTime,
+			{
+				filters,
+				exp: exp,
+			},
+		);
 	}
 
 	/**
@@ -96,16 +119,23 @@ export class Features implements ICompletionsFeaturesService {
 	 */
 	async fetchTokenAndUpdateExPValuesAndAssignments(
 		filtersInfo?: CompletionsFiltersInfo,
-		telemetryData?: TelemetryData
+		telemetryData?: TelemetryData,
 	) {
-		return await this.updateExPValuesAndAssignments(filtersInfo, telemetryData);
+		return await this.updateExPValuesAndAssignments(
+			filtersInfo,
+			telemetryData,
+		);
 	}
 
 	private createExpConfigAndFilters(token: CopilotToken) {
-
-		const exp2: Partial<Record<ExpTreatmentVariables, ExpTreatmentVariableValue>> = {};
-		for (const varName of Object.values<ExpTreatmentVariables>(ExpTreatmentVariables)) {
-			const value = this.experimentationService.getTreatmentVariable(varName);
+		const exp2: Partial<
+			Record<ExpTreatmentVariables, ExpTreatmentVariableValue>
+		> = {};
+		for (const varName of Object.values<ExpTreatmentVariables>(
+			ExpTreatmentVariables,
+		)) {
+			const value =
+				this.experimentationService.getTreatmentVariable(varName);
 			if (value !== undefined) {
 				exp2[varName] = value;
 			}
@@ -116,7 +146,10 @@ export class Features implements ICompletionsFeaturesService {
 			return name + (value ? '' : 'cf');
 		});
 		const exp = new ExpConfig(exp2, features.join(';'));
-		const filterMap = this.instantiationService.invokeFunction(createCompletionsFilters, token);
+		const filterMap = this.instantiationService.invokeFunction(
+			createCompletionsFilters,
+			token,
+		);
 		const filterRecord: Partial<Record<Filter, string>> = {};
 		for (const [key, value] of filterMap.entries()) {
 			filterRecord[key] = value;
@@ -127,16 +160,24 @@ export class Features implements ICompletionsFeaturesService {
 	}
 
 	/** Get the entries from this.assignments corresponding to given settings. */
-	async getFallbackExpAndFilters(): Promise<{ filters: FilterSettings; exp: ExpConfig }> {
-		const token = this.copilotTokenManager.token ?? await this.copilotTokenManager.getToken();
+	async getFallbackExpAndFilters(): Promise<{
+		filters: FilterSettings;
+		exp: ExpConfig;
+	}> {
+		const token =
+			this.copilotTokenManager.token ??
+			(await this.copilotTokenManager.getToken());
 		return this.createExpConfigAndFilters(token);
 	}
 
 	/** Override for BlockMode to send in the request. */
-	overrideBlockMode(telemetryWithExp: TelemetryWithExp): BlockMode | undefined {
+	overrideBlockMode(
+		telemetryWithExp: TelemetryWithExp,
+	): BlockMode | undefined {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.OverrideBlockMode] as BlockMode) ||
-			undefined
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.OverrideBlockMode
+			] as BlockMode) || undefined
 		);
 	}
 
@@ -144,43 +185,55 @@ export class Features implements ICompletionsFeaturesService {
 
 	/** @returns the string for copilotcustomengine, or "" if none is set. */
 	customEngine(telemetryWithExp: TelemetryWithExp): string {
-		return (telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.CustomEngine] as string) ?? '';
+		return (
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.CustomEngine
+			] as string) ?? ''
+		);
 	}
 
 	/** @returns the string for copilotcustomenginetargetengine, or undefined if none is set. */
-	customEngineTargetEngine(telemetryWithExp: TelemetryWithExp): string | undefined {
-		return telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.CustomEngineTargetEngine] as string;
+	customEngineTargetEngine(
+		telemetryWithExp: TelemetryWithExp,
+	): string | undefined {
+		return telemetryWithExp.filtersAndExp.exp.variables[
+			ExpTreatmentVariables.CustomEngineTargetEngine
+		] as string;
 	}
 
 	/** @returns the percent of prompt tokens to be allocated to the suffix */
 	suffixPercent(telemetryWithExp: TelemetryWithExp): number {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.SuffixPercent] as number) ??
-			DEFAULT_PROMPT_ALLOCATION_PERCENT.suffix
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.SuffixPercent
+			] as number) ?? DEFAULT_PROMPT_ALLOCATION_PERCENT.suffix
 		);
 	}
 
 	/** @returns the percentage match threshold for using the cached suffix */
 	suffixMatchThreshold(telemetryWithExp: TelemetryWithExp): number {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.SuffixMatchThreshold] as number) ??
-			DEFAULT_SUFFIX_MATCH_THRESHOLD
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.SuffixMatchThreshold
+			] as number) ?? DEFAULT_SUFFIX_MATCH_THRESHOLD
 		);
 	}
 
 	/** @returns whether to enable the inclusion of C++ headers as neighbor files. */
 	cppHeadersEnableSwitch(telemetryWithExp: TelemetryWithExp): boolean {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.CppHeadersEnableSwitch] as boolean) ??
-			false
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.CppHeadersEnableSwitch
+			] as boolean) ?? false
 		);
 	}
 
 	/** @returns whether to use included related files as neighbor files for C# (vscode experiment). */
 	relatedFilesVSCodeCSharp(telemetryWithExp: TelemetryWithExp): boolean {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.RelatedFilesVSCodeCSharp] as boolean) ??
-			false
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.RelatedFilesVSCodeCSharp
+			] as boolean) ?? false
 		);
 	}
 
@@ -196,25 +249,31 @@ export class Features implements ICompletionsFeaturesService {
 	/** @returns whether to use included related files as neighbor files (vscode experiment). */
 	relatedFilesVSCode(telemetryWithExp: TelemetryWithExp): boolean {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.RelatedFilesVSCode] as boolean) ?? false
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.RelatedFilesVSCode
+			] as boolean) ?? false
 		);
 	}
 
 	/** @returns the list of context providers IDs to enable. The special value `*` enables all context providers. */
 	contextProviders(telemetryWithExp: TelemetryWithExp): string[] {
-		const providers = (telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.ContextProviders] ??
-			'') as string;
+		const providers = (telemetryWithExp.filtersAndExp.exp.variables[
+			ExpTreatmentVariables.ContextProviders
+		] ?? '') as string;
 		if (!providers) {
 			return [];
 		}
-		return providers.split(',').map(provider => provider.trim());
+		return providers.split(',').map((provider) => provider.trim());
 	}
 
-	contextProviderTimeBudget(languageId: string, telemetryWithExp: TelemetryWithExp): number {
-		const client = (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.ContextProviderTimeBudget] as number) ??
-			150
-		);
+	contextProviderTimeBudget(
+		languageId: string,
+		telemetryWithExp: TelemetryWithExp,
+	): number {
+		const client =
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.ContextProviderTimeBudget
+			] as number) ?? 150;
 		if (client) {
 			return client;
 		}
@@ -222,51 +281,86 @@ export class Features implements ICompletionsFeaturesService {
 		return chat?.timeBudget ?? 150;
 	}
 
-	setIncludeNeighboringFilesDefault(languageId: string, include: boolean): void {
+	setIncludeNeighboringFilesDefault(
+		languageId: string,
+		include: boolean,
+	): void {
 		this.includeNeighboringFilesDefault.set(languageId, include);
 	}
 
-	includeNeighboringFiles(languageId: string, telemetryWithExp: TelemetryWithExp): boolean {
-		const client = (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.IncludeNeighboringFiles] as boolean) ??
-			false
-		);
+	includeNeighboringFiles(
+		languageId: string,
+		telemetryWithExp: TelemetryWithExp,
+	): boolean {
+		const client =
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.IncludeNeighboringFiles
+			] as boolean) ?? false;
 		if (client) {
 			return true;
 		}
 		const chat = this.getContextProviderExpSettings(languageId);
-		return chat?.includeNeighboringFiles ?? this.includeNeighboringFilesDefault.get(languageId) ?? false;
+		return (
+			chat?.includeNeighboringFiles ??
+			this.includeNeighboringFilesDefault.get(languageId) ??
+			false
+		);
 	}
 
 	setExcludeRelatedFilesDefault(languageId: string, exclude: boolean): void {
 		this.excludeRelatedFilesDefault.set(languageId, exclude);
 	}
 
-	excludeRelatedFiles(languageId: string, telemetryWithExp: TelemetryWithExp): boolean {
-		const client = (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.ExcludeRelatedFiles] as boolean) ??
-			false
-		);
+	excludeRelatedFiles(
+		languageId: string,
+		telemetryWithExp: TelemetryWithExp,
+	): boolean {
+		const client =
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.ExcludeRelatedFiles
+			] as boolean) ?? false;
 		if (client) {
 			return true;
 		}
 		const chat = this.getContextProviderExpSettings(languageId);
-		return chat?.excludeRelatedFiles ?? this.excludeRelatedFilesDefault.get(languageId) ?? false;
+		return (
+			chat?.excludeRelatedFiles ??
+			this.excludeRelatedFilesDefault.get(languageId) ??
+			false
+		);
 	}
 
-	getContextProviderExpSettings(languageId: string): ContextProviderExpSettings | undefined {
-		const value = this.experimentationService.getTreatmentVariable<string>(`config.github.copilot.chat.contextprovider.${languageId}`);
+	getContextProviderExpSettings(
+		languageId: string,
+	): ContextProviderExpSettings | undefined {
+		const value = this.experimentationService.getTreatmentVariable<string>(
+			`config.github.copilot.chat.contextprovider.${languageId}`,
+		);
 		if (typeof value === 'string') {
 			try {
-				const parsed: Partial<InternalContextProviderExpSettings> = JSON.parse(value);
+				const parsed: Partial<InternalContextProviderExpSettings> =
+					JSON.parse(value);
 				const ids = this.getProviderIDs(parsed);
 				delete parsed.id;
 				delete parsed.ids;
-				return Object.assign({ ids }, { includeNeighboringFiles: false, excludeRelatedFiles: false, timeBudget: 150 }, parsed as Omit<InternalContextProviderExpSettings, 'id' | 'ids'>);
+				return Object.assign(
+					{ ids },
+					{
+						includeNeighboringFiles: false,
+						excludeRelatedFiles: false,
+						timeBudget: 150,
+					},
+					parsed as Omit<
+						InternalContextProviderExpSettings,
+						'id' | 'ids'
+					>,
+				);
 			} catch (err) {
 				this.instantiationService.invokeFunction((accessor) => {
 					const logService = accessor.get(ILogService);
-					logService.error(`Failed to parse context provider exp settings for language ${languageId}`);
+					logService.error(
+						`Failed to parse context provider exp settings for language ${languageId}`,
+					);
 				});
 				return undefined;
 			}
@@ -293,91 +387,121 @@ export class Features implements ICompletionsFeaturesService {
 	/** @returns the maximal number of tokens of prompt AND completion */
 	maxPromptCompletionTokens(telemetryWithExp: TelemetryWithExp): number {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.MaxPromptCompletionTokens] as number) ??
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.MaxPromptCompletionTokens
+			] as number) ??
 			DEFAULT_MAX_PROMPT_LENGTH + DEFAULT_MAX_COMPLETION_LENGTH
 		);
 	}
 
 	stableContextPercent(telemetryWithExp: TelemetryWithExp): number {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.StableContextPercent] as number) ??
-			DEFAULT_PROMPT_ALLOCATION_PERCENT.stableContext
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.StableContextPercent
+			] as number) ?? DEFAULT_PROMPT_ALLOCATION_PERCENT.stableContext
 		);
 	}
 
 	volatileContextPercent(telemetryWithExp: TelemetryWithExp): number {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.VolatileContextPercent] as number) ??
-			DEFAULT_PROMPT_ALLOCATION_PERCENT.volatileContext
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.VolatileContextPercent
+			] as number) ?? DEFAULT_PROMPT_ALLOCATION_PERCENT.volatileContext
 		);
 	}
 
 	/** Custom parameters for language specific Context Providers. */
-	cppContextProviderParams(telemetryWithExp: TelemetryWithExp): string | undefined {
-		const cppContextProviderParams = telemetryWithExp.filtersAndExp.exp.variables[
+	cppContextProviderParams(
+		telemetryWithExp: TelemetryWithExp,
+	): string | undefined {
+		const cppContextProviderParams = telemetryWithExp.filtersAndExp.exp
+			.variables[
 			ExpTreatmentVariables.CppContextProviderParams
 		] as string;
 		return cppContextProviderParams;
 	}
 
-	csharpContextProviderParams(telemetryWithExp: TelemetryWithExp): string | undefined {
-		const csharpContextProviderParams = telemetryWithExp.filtersAndExp.exp.variables[
+	csharpContextProviderParams(
+		telemetryWithExp: TelemetryWithExp,
+	): string | undefined {
+		const csharpContextProviderParams = telemetryWithExp.filtersAndExp.exp
+			.variables[
 			ExpTreatmentVariables.CSharpContextProviderParams
 		] as string;
 		return csharpContextProviderParams;
 	}
 
-	javaContextProviderParams(telemetryWithExp: TelemetryWithExp): string | undefined {
-		const javaContextProviderParams = telemetryWithExp.filtersAndExp.exp.variables[
+	javaContextProviderParams(
+		telemetryWithExp: TelemetryWithExp,
+	): string | undefined {
+		const javaContextProviderParams = telemetryWithExp.filtersAndExp.exp
+			.variables[
 			ExpTreatmentVariables.JavaContextProviderParams
 		] as string;
 		return javaContextProviderParams;
 	}
 
-	multiLanguageContextProviderParams(telemetryWithExp: TelemetryWithExp): string | undefined {
-		const multiLanguageContextProviderParams = telemetryWithExp.filtersAndExp.exp.variables[
+	multiLanguageContextProviderParams(
+		telemetryWithExp: TelemetryWithExp,
+	): string | undefined {
+		const multiLanguageContextProviderParams = telemetryWithExp
+			.filtersAndExp.exp.variables[
 			ExpTreatmentVariables.MultiLanguageContextProviderParams
 		] as string;
 		return multiLanguageContextProviderParams;
 	}
 
-	tsContextProviderParams(telemetryWithExp: TelemetryWithExp): string | undefined {
-		const tsContextProviderParams = telemetryWithExp.filtersAndExp.exp.variables[
-			ExpTreatmentVariables.TsContextProviderParams
-		] as string;
+	tsContextProviderParams(
+		telemetryWithExp: TelemetryWithExp,
+	): string | undefined {
+		const tsContextProviderParams = telemetryWithExp.filtersAndExp.exp
+			.variables[ExpTreatmentVariables.TsContextProviderParams] as string;
 		return tsContextProviderParams;
 	}
 
-	completionsDebounce(telemetryWithExp: TelemetryWithExp): number | undefined {
-		return telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.CompletionsDebounce] as
-			| number
-			| undefined;
+	completionsDebounce(
+		telemetryWithExp: TelemetryWithExp,
+	): number | undefined {
+		return telemetryWithExp.filtersAndExp.exp.variables[
+			ExpTreatmentVariables.CompletionsDebounce
+		] as number | undefined;
 	}
 
 	enableElectronFetcher(telemetryWithExp: TelemetryWithExp): boolean {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.ElectronFetcher] as boolean) ?? false
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.ElectronFetcher
+			] as boolean) ?? false
 		);
 	}
 
 	enableFetchFetcher(telemetryWithExp: TelemetryWithExp): boolean {
-		return (telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.FetchFetcher] as boolean) ?? false;
+		return (
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.FetchFetcher
+			] as boolean) ?? false
+		);
 	}
 
 	asyncCompletionsTimeout(telemetryWithExp: TelemetryWithExp): number {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.AsyncCompletionsTimeout] as number) ??
-			200
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.AsyncCompletionsTimeout
+			] as number) ?? 200
 		);
 	}
 
 	enableProgressiveReveal(telemetryWithExp: TelemetryWithExp): boolean {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.ProgressiveReveal] as boolean) ?? false
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.ProgressiveReveal
+			] as boolean) ?? false
 		);
 	}
 
-	modelAlwaysTerminatesSingleline(telemetryWithExp: TelemetryWithExp): boolean {
+	modelAlwaysTerminatesSingleline(
+		telemetryWithExp: TelemetryWithExp,
+	): boolean {
 		return (
 			(telemetryWithExp.filtersAndExp.exp.variables[
 				ExpTreatmentVariables.ModelAlwaysTerminatesSingleline
@@ -406,25 +530,33 @@ export class Features implements ICompletionsFeaturesService {
 		// average token length is around 4 characters
 		// the below value has quite a bit of buffer while bringing the limit in significantly from 500
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.MaxMultilineTokens] as number) ?? 200
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.MaxMultilineTokens
+			] as number) ?? 200
 		);
 	}
 
 	multilineAfterAcceptLines(telemetryWithExp: TelemetryWithExp): number {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.MultilineAfterAcceptLines] as number) ??
-			1
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.MultilineAfterAcceptLines
+			] as number) ?? 1
 		);
 	}
 
 	completionsDelay(telemetryWithExp: TelemetryWithExp): number {
-		return (telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.CompletionsDelay] as number) ?? 200;
+		return (
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.CompletionsDelay
+			] as number) ?? 200
+		);
 	}
 
 	singleLineUnlessAccepted(telemetryWithExp: TelemetryWithExp): boolean {
 		return (
-			(telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.SingleLineUnlessAccepted] as boolean) ??
-			false
+			(telemetryWithExp.filtersAndExp.exp.variables[
+				ExpTreatmentVariables.SingleLineUnlessAccepted
+			] as boolean) ?? false
 		);
 	}
 }

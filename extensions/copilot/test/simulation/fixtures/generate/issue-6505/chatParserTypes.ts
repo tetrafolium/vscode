@@ -6,7 +6,11 @@
 import { revive } from 'vs/base/common/marshalling';
 import { IOffsetRange, OffsetRange } from 'vs/editor/common/core/offsetRange';
 import { IRange } from 'vs/editor/common/core/range';
-import { IChatAgentCommand, IChatAgentData, reviveSerializedAgent } from 'vs/workbench/contrib/chat/common/chatAgents';
+import {
+	IChatAgentCommand,
+	IChatAgentData,
+	reviveSerializedAgent,
+} from 'vs/workbench/contrib/chat/common/chatAgents';
 import { IChatSlashData } from 'vs/workbench/contrib/chat/common/chatSlashCommands';
 import { IChatRequestVariableValue } from 'vs/workbench/contrib/chat/common/chatVariables';
 
@@ -26,8 +30,14 @@ export interface IParsedChatRequestPart {
 	readonly promptText: string;
 }
 
-export function getPromptText(request: IParsedChatRequest): { message: string; diff: number } {
-	const message = request.parts.map(r => r.promptText).join('').trimStart();
+export function getPromptText(request: IParsedChatRequest): {
+	message: string;
+	diff: number;
+} {
+	const message = request.parts
+		.map((r) => r.promptText)
+		.join('')
+		.trimStart();
 	const diff = request.text.length - message.length;
 
 	return { message, diff };
@@ -36,7 +46,11 @@ export function getPromptText(request: IParsedChatRequest): { message: string; d
 export class ChatRequestTextPart implements IParsedChatRequestPart {
 	static readonly Kind = 'text';
 	readonly kind = ChatRequestTextPart.Kind;
-	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly text: string) { }
+	constructor(
+		readonly range: OffsetRange,
+		readonly editorRange: IRange,
+		readonly text: string,
+	) {}
 
 	get promptText(): string {
 		return this.text;
@@ -54,7 +68,13 @@ export const chatSubcommandLeader = '/';
 export class ChatRequestVariablePart implements IParsedChatRequestPart {
 	static readonly Kind = 'var';
 	readonly kind = ChatRequestVariablePart.Kind;
-	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly variableName: string, readonly variableArg: string, readonly variableId: string) { }
+	constructor(
+		readonly range: OffsetRange,
+		readonly editorRange: IRange,
+		readonly variableName: string,
+		readonly variableArg: string,
+		readonly variableId: string,
+	) {}
 
 	get text(): string {
 		const argPart = this.variableArg ? `:${this.variableArg}` : '';
@@ -72,7 +92,11 @@ export class ChatRequestVariablePart implements IParsedChatRequestPart {
 export class ChatRequestAgentPart implements IParsedChatRequestPart {
 	static readonly Kind = 'agent';
 	readonly kind = ChatRequestAgentPart.Kind;
-	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly agent: IChatAgentData) { }
+	constructor(
+		readonly range: OffsetRange,
+		readonly editorRange: IRange,
+		readonly agent: IChatAgentData,
+	) {}
 
 	get text(): string {
 		return `${chatAgentLeader}${this.agent.name}`;
@@ -81,8 +105,6 @@ export class ChatRequestAgentPart implements IParsedChatRequestPart {
 	get promptText(): string {
 		return '';
 	}
-
-
 }
 
 /**
@@ -91,7 +113,11 @@ export class ChatRequestAgentPart implements IParsedChatRequestPart {
 export class ChatRequestAgentSubcommandPart implements IParsedChatRequestPart {
 	static readonly Kind = 'subcommand';
 	readonly kind = ChatRequestAgentSubcommandPart.Kind;
-	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly command: IChatAgentCommand) { }
+	constructor(
+		readonly range: OffsetRange,
+		readonly editorRange: IRange,
+		readonly command: IChatAgentCommand,
+	) {}
 
 	get text(): string {
 		return `${chatSubcommandLeader}${this.command.name}`;
@@ -108,7 +134,11 @@ export class ChatRequestAgentSubcommandPart implements IParsedChatRequestPart {
 export class ChatRequestSlashCommandPart implements IParsedChatRequestPart {
 	static readonly Kind = 'slash';
 	readonly kind = ChatRequestSlashCommandPart.Kind;
-	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly slashCommand: IChatSlashData) { }
+	constructor(
+		readonly range: OffsetRange,
+		readonly editorRange: IRange,
+		readonly slashCommand: IChatSlashData,
+	) {}
 
 	get text(): string {
 		return `${chatSubcommandLeader}${this.slashCommand.command}`;
@@ -125,7 +155,14 @@ export class ChatRequestSlashCommandPart implements IParsedChatRequestPart {
 export class ChatRequestDynamicVariablePart implements IParsedChatRequestPart {
 	static readonly Kind = 'dynamic';
 	readonly kind = ChatRequestDynamicVariablePart.Kind;
-	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly text: string, readonly id: string, readonly modelDescription: string | undefined, readonly data: IChatRequestVariableValue) { }
+	constructor(
+		readonly range: OffsetRange,
+		readonly editorRange: IRange,
+		readonly text: string,
+		readonly id: string,
+		readonly modelDescription: string | undefined,
+		readonly data: IChatRequestVariableValue,
+	) {}
 
 	get referenceText(): string {
 		return this.text.replace(chatVariableLeader, '');
@@ -136,15 +173,17 @@ export class ChatRequestDynamicVariablePart implements IParsedChatRequestPart {
 	}
 }
 
-export function reviveParsedChatRequest(serialized: IParsedChatRequest): IParsedChatRequest {
+export function reviveParsedChatRequest(
+	serialized: IParsedChatRequest,
+): IParsedChatRequest {
 	return {
 		text: serialized.text,
-		parts: serialized.parts.map(part => {
+		parts: serialized.parts.map((part) => {
 			if (part.kind === ChatRequestTextPart.Kind) {
 				return new ChatRequestTextPart(
 					new OffsetRange(part.range.start, part.range.endExclusive),
 					part.editorRange,
-					part.text
+					part.text,
 				);
 			} else if (part.kind === ChatRequestVariablePart.Kind) {
 				return new ChatRequestVariablePart(
@@ -161,19 +200,19 @@ export function reviveParsedChatRequest(serialized: IParsedChatRequest): IParsed
 				return new ChatRequestAgentPart(
 					new OffsetRange(part.range.start, part.range.endExclusive),
 					part.editorRange,
-					agent
+					agent,
 				);
 			} else if (part.kind === ChatRequestAgentSubcommandPart.Kind) {
 				return new ChatRequestAgentSubcommandPart(
 					new OffsetRange(part.range.start, part.range.endExclusive),
 					part.editorRange,
-					(part as ChatRequestAgentSubcommandPart).command
+					(part as ChatRequestAgentSubcommandPart).command,
 				);
 			} else if (part.kind === ChatRequestSlashCommandPart.Kind) {
 				return new ChatRequestSlashCommandPart(
 					new OffsetRange(part.range.start, part.range.endExclusive),
 					part.editorRange,
-					(part as ChatRequestSlashCommandPart).slashCommand
+					(part as ChatRequestSlashCommandPart).slashCommand,
 				);
 			} else if (part.kind === ChatRequestDynamicVariablePart.Kind) {
 				return new ChatRequestDynamicVariablePart(
@@ -182,17 +221,25 @@ export function reviveParsedChatRequest(serialized: IParsedChatRequest): IParsed
 					(part as ChatRequestDynamicVariablePart).text,
 					(part as ChatRequestDynamicVariablePart).id,
 					(part as ChatRequestDynamicVariablePart).modelDescription,
-					revive((part as ChatRequestDynamicVariablePart).data)
+					revive((part as ChatRequestDynamicVariablePart).data),
 				);
 			} else {
 				throw new Error(`Unknown chat request part: ${part.kind}`);
 			}
-		})
+		}),
 	};
 }
 
-export function extractAgentAndCommand(parsed: IParsedChatRequest): { agentPart: ChatRequestAgentPart | undefined; commandPart: ChatRequestAgentSubcommandPart | undefined } {
-	const agentPart = parsed.parts.find((r): r is ChatRequestAgentPart => r instanceof ChatRequestAgentPart);
-	const commandPart = parsed.parts.find((r): r is ChatRequestAgentSubcommandPart => r instanceof ChatRequestAgentSubcommandPart);
+export function extractAgentAndCommand(parsed: IParsedChatRequest): {
+	agentPart: ChatRequestAgentPart | undefined;
+	commandPart: ChatRequestAgentSubcommandPart | undefined;
+} {
+	const agentPart = parsed.parts.find(
+		(r): r is ChatRequestAgentPart => r instanceof ChatRequestAgentPart,
+	);
+	const commandPart = parsed.parts.find(
+		(r): r is ChatRequestAgentSubcommandPart =>
+			r instanceof ChatRequestAgentSubcommandPart,
+	);
 	return { agentPart, commandPart };
 }

@@ -3,41 +3,63 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../../../../base/common/event.js';
-import { Disposable } from '../../../../../../base/common/lifecycle.js';
-import { IObservable, observableValue } from '../../../../../../base/common/observable.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import { IChatEditingSession } from '../../../common/editing/chatEditingService.js';
-import { IChatChangeEvent, IChatModel, IChatPendingRequest, IChatRequestModel, IChatRequestNeedsInputInfo, IExportableChatData, IExportableRepoData, IInputModel, ISerializableChatData } from '../../../common/model/chatModel.js';
-import { ChatAgentLocation } from '../../../common/constants.js';
-import { IChatSessionContext, IChatSessionTiming } from '../../../common/chatService/chatService.js';
+import { Emitter, Event } from "../../../../../../base/common/event.js";
+import { Disposable } from "../../../../../../base/common/lifecycle.js";
+import {
+	IObservable,
+	observableValue,
+} from "../../../../../../base/common/observable.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import { IChatEditingSession } from "../../../common/editing/chatEditingService.js";
+import {
+	IChatChangeEvent,
+	IChatModel,
+	IChatPendingRequest,
+	IChatRequestModel,
+	IChatRequestNeedsInputInfo,
+	IExportableChatData,
+	IExportableRepoData,
+	IInputModel,
+	ISerializableChatData,
+} from "../../../common/model/chatModel.js";
+import { ChatAgentLocation } from "../../../common/constants.js";
+import {
+	IChatSessionContext,
+	IChatSessionTiming,
+} from "../../../common/chatService/chatService.js";
 
 export class MockChatModel extends Disposable implements IChatModel {
 	readonly onDidDispose = this._register(new Emitter<void>()).event;
 	readonly onDidChange = this._register(new Emitter<IChatChangeEvent>()).event;
-	sessionId = '';
+	sessionId = "";
 	readonly timestamp = 0;
-	readonly timing: IChatSessionTiming = { created: Date.now(), lastRequestStarted: undefined, lastRequestEnded: undefined };
+	readonly timing: IChatSessionTiming = {
+		created: Date.now(),
+		lastRequestStarted: undefined,
+		lastRequestEnded: undefined,
+	};
 	readonly initialLocation = ChatAgentLocation.Chat;
-	readonly title = '';
+	readonly title = "";
 	readonly hasCustomTitle = false;
 	customTitle: string | undefined;
 	lastMessageDate = Date.now();
 	creationDate = Date.now();
 	requests: IChatRequestModel[] = [];
-	readonly requestInProgress = observableValue('requestInProgress', false);
-	readonly hasActiveRequest = observableValue('hasActiveRequest', false);
-	readonly requestNeedsInput = observableValue<IChatRequestNeedsInputInfo | undefined>('requestNeedsInput', undefined);
+	readonly requestInProgress = observableValue("requestInProgress", false);
+	readonly hasActiveRequest = observableValue("hasActiveRequest", false);
+	readonly requestNeedsInput = observableValue<
+		IChatRequestNeedsInputInfo | undefined
+	>("requestNeedsInput", undefined);
 	readonly inputPlaceholder = undefined;
 	readonly editingSession = undefined;
 	readonly checkpoint = undefined;
 	readonly willKeepAlive = true;
-	readonly responderUsername: string = 'agent';
+	readonly responderUsername: string = "agent";
 	readonly inputModel: IInputModel = {
-		state: observableValue('inputModelState', undefined),
-		setState: () => { },
-		clearState: () => { },
-		toJSON: () => undefined
+		state: observableValue("inputModelState", undefined),
+		setState: () => {},
+		clearState: () => {},
+		toJSON: () => undefined,
 	};
 	readonly contributedChatSession = undefined;
 	repoData: IExportableRepoData | undefined = undefined;
@@ -47,11 +69,11 @@ export class MockChatModel extends Disposable implements IChatModel {
 	constructor(readonly sessionResource: URI) {
 		super();
 		this.lastRequest = undefined;
-		this.lastRequestObs = observableValue('lastRequest', undefined);
+		this.lastRequestObs = observableValue("lastRequest", undefined);
 	}
 
 	setContributedChatSession(session: IChatSessionContext | undefined): void {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	readonly hasRequests = false;
@@ -62,19 +84,32 @@ export class MockChatModel extends Disposable implements IChatModel {
 		super.dispose();
 	}
 
-	startEditingSession(isGlobalEditingSession?: boolean, transferFromSession?: IChatEditingSession): void { }
-	getRequests(): IChatRequestModel[] { return []; }
-	setCheckpoint(requestId: string | undefined): void { }
-	setRepoData(data: IExportableRepoData | undefined): void { this.repoData = data; }
+	startEditingSession(
+		isGlobalEditingSession?: boolean,
+		transferFromSession?: IChatEditingSession,
+	): void {}
+	getRequests(): IChatRequestModel[] {
+		return [];
+	}
+	setCheckpoint(requestId: string | undefined): void {}
+	setRepoData(data: IExportableRepoData | undefined): void {
+		this.repoData = data;
+	}
 	workingDirectory: URI | undefined = undefined;
-	setWorkingDirectory(uri: URI | undefined): void { this.workingDirectory = uri; }
-	readonly onDidChangePendingRequests: Event<void> = this._register(new Emitter<void>()).event;
-	getPendingRequests(): readonly IChatPendingRequest[] { return []; }
+	setWorkingDirectory(uri: URI | undefined): void {
+		this.workingDirectory = uri;
+	}
+	readonly onDidChangePendingRequests: Event<void> = this._register(
+		new Emitter<void>(),
+	).event;
+	getPendingRequests(): readonly IChatPendingRequest[] {
+		return [];
+	}
 	toExport(): IExportableChatData {
 		return {
 			initialLocation: this.initialLocation,
 			requests: [],
-			responderUsername: '',
+			responderUsername: "",
 		};
 	}
 	toJSON(): ISerializableChatData {
@@ -85,8 +120,8 @@ export class MockChatModel extends Disposable implements IChatModel {
 			customTitle: this.customTitle,
 			initialLocation: this.initialLocation,
 			requests: [],
-			responderUsername: '',
-			repoData: this.repoData
+			responderUsername: "",
+			repoData: this.repoData,
 		};
 	}
 }

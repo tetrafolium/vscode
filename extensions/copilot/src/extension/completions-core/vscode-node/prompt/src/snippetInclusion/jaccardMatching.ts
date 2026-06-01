@@ -11,14 +11,18 @@ import { getBasicWindowDelineations } from './windowDelineations';
 export class FixedWindowSizeJaccardMatcher extends WindowedMatcher {
 	private windowLength: number;
 
-	private constructor(referenceDoc: DocumentInfoWithOffset, windowLength: number) {
+	private constructor(
+		referenceDoc: DocumentInfoWithOffset,
+		windowLength: number,
+	) {
 		super(referenceDoc);
 		this.windowLength = windowLength;
 	}
 
 	static FACTORY = (windowLength: number) => {
 		return {
-			to: (referenceDoc: DocumentInfoWithOffset) => new FixedWindowSizeJaccardMatcher(referenceDoc, windowLength),
+			to: (referenceDoc: DocumentInfoWithOffset) =>
+				new FixedWindowSizeJaccardMatcher(referenceDoc, windowLength),
 		};
 	};
 
@@ -30,7 +34,9 @@ export class FixedWindowSizeJaccardMatcher extends WindowedMatcher {
 		return getBasicWindowDelineations(this.windowLength, lines);
 	}
 
-	protected _getCursorContextInfo(referenceDoc: DocumentInfoWithOffset): CursorContextInfo {
+	protected _getCursorContextInfo(
+		referenceDoc: DocumentInfoWithOffset,
+	): CursorContextInfo {
 		return getCursorContext(referenceDoc, {
 			maxLineCount: this.windowLength,
 		});
@@ -47,7 +53,7 @@ export class FixedWindowSizeJaccardMatcher extends WindowedMatcher {
  */
 export function computeScore(a: Set<string>, b: Set<string>) {
 	const intersection = new Set();
-	a.forEach(x => {
+	a.forEach((x) => {
 		if (b.has(x)) {
 			intersection.add(x);
 		}

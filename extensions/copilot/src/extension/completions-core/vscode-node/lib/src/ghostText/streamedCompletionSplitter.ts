@@ -4,7 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 import { CopilotNamedAnnotationList } from '../../../../../../platform/completions-core/common/openai/copilotAnnotations';
 import { IInstantiationService } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
-import { FinishedCallback, RequestDelta, SolutionDecision } from '../openai/fetch';
+import {
+	FinishedCallback,
+	RequestDelta,
+	SolutionDecision,
+} from '../openai/fetch';
 import { APIChoice, convertToAPIChoice } from '../openai/openai';
 import { TerseBlockTrimmer } from './blockTrimmer';
 
@@ -15,8 +19,8 @@ class StreamingCompletion {
 
 	constructor(
 		readonly index: number,
-		readonly documentPrefix: string
-	) { }
+		readonly documentPrefix: string,
+	) {}
 
 	updateText(text: string): void {
 		this.text = text;
@@ -54,9 +58,15 @@ class StreamingCompletion {
 	}
 
 	trimAt(effectiveOffset: number): StreamingCompletion {
-		const trimmed = new StreamingCompletion(this.index, this.documentPrefix);
+		const trimmed = new StreamingCompletion(
+			this.index,
+			this.documentPrefix,
+		);
 		trimmed.startOffset = this.startOffset;
-		trimmed.text = this.text.substring(0, this.startOffset + effectiveOffset);
+		trimmed.text = this.text.substring(
+			0,
+			this.startOffset + effectiveOffset,
+		);
 		trimmed.trimCount = this.trimCount;
 		this.startOffset += effectiveOffset;
 		this.trimCount++;
@@ -73,17 +83,28 @@ export class StreamedCompletionSplitter {
 		private readonly languageId: string,
 		private readonly initialSingleLine: boolean,
 		private readonly trimmerLookahead: number,
-		private readonly cacheFunction: (prefixAddition: string, item: APIChoice) => void,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-	) { }
+		private readonly cacheFunction: (
+			prefixAddition: string,
+			item: APIChoice,
+		) => void,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+	) {}
 
 	getFinishedCallback(): FinishedCallback {
-		return async (completionText: string, delta: RequestDelta): Promise<SolutionDecision> => {
+		return async (
+			completionText: string,
+			delta: RequestDelta,
+		): Promise<SolutionDecision> => {
 			const index = delta.index ?? 0;
 			const completion = this.getCompletion(index, completionText);
 
 			// emmulate single line completion when this.initialSingleLine is set
-			if (completion.isFirstCompletion && this.initialSingleLine && completion.firstNewlineOffset >= 0) {
+			if (
+				completion.isFirstCompletion &&
+				this.initialSingleLine &&
+				completion.firstNewlineOffset >= 0
+			) {
 				const result = {
 					yieldSolution: true,
 					continueStreaming: true,
@@ -96,7 +117,9 @@ export class StreamedCompletionSplitter {
 				return result;
 			}
 
-			return delta.finished ? await this.trimAll(delta, completion) : await this.trimOnce(delta, completion);
+			return delta.finished
+				? await this.trimAll(delta, completion)
+				: await this.trimOnce(delta, completion);
 		};
 	}
 
@@ -110,7 +133,10 @@ export class StreamedCompletionSplitter {
 		return completion;
 	}
 
-	private async trimOnce(delta: RequestDelta, completion: StreamingCompletion): Promise<SolutionDecision> {
+	private async trimOnce(
+		delta: RequestDelta,
+		completion: StreamingCompletion,
+	): Promise<SolutionDecision> {
 		const offset = await this.trim(completion);
 		if (offset === undefined) {
 			return {
@@ -135,7 +161,10 @@ export class StreamedCompletionSplitter {
 		}
 	}
 
-	private async trimAll(delta: RequestDelta, completion: StreamingCompletion): Promise<SolutionDecision> {
+	private async trimAll(
+		delta: RequestDelta,
+		completion: StreamingCompletion,
+	): Promise<SolutionDecision> {
 		let offset: number | undefined;
 		let firstOffset: number | undefined;
 
@@ -164,31 +193,44 @@ export class StreamedCompletionSplitter {
 		};
 	}
 
-	private async trim(completion: StreamingCompletion): Promise<number | undefined> {
+	private async trim(
+		completion: StreamingCompletion,
+	): Promise<number | undefined> {
 		const trimmer = new TerseBlockTrimmer(
 			this.languageId,
 			completion.effectivePrefix,
 			completion.effectiveText,
 			this.lineLimit,
-			this.trimmerLookahead
+			this.trimmerLookahead,
 		);
 		return await trimmer.getCompletionTrimOffset();
 	}
 
-	private cacheCompletion(delta: RequestDelta, completion: StreamingCompletion, offset?: number) {
-		const trimmed = completion.trimAt(offset ?? completion.effectiveText.length);
+	private cacheCompletion(
+		delta: RequestDelta,
+		completion: StreamingCompletion,
+		offset?: number,
+	) {
+		const trimmed = completion.trimAt(
+			offset ?? completion.effectiveText.length,
+		);
 		if (trimmed.effectiveText.trim() === '') {
 			return;
 		}
-		const apiChoice = this.instantiationService.invokeFunction(convertToAPIChoice,
+		const apiChoice = this.instantiationService.invokeFunction(
+			convertToAPIChoice,
 			trimmed.effectiveText.trimEnd(),
 			delta.getAPIJsonData!(), // FIXME@ulugbekna
 			trimmed.index,
 			delta.requestId!, // FIXME@ulugbekna
 			offset !== undefined,
-			delta.telemetryData!
+			delta.telemetryData!,
 		);
-		apiChoice.copilotAnnotations = this.adjustedAnnotations(apiChoice, completion, trimmed);
+		apiChoice.copilotAnnotations = this.adjustedAnnotations(
+			apiChoice,
+			completion,
+			trimmed,
+		);
 		apiChoice.generatedChoiceIndex = trimmed.trimCount;
 
 		this.cacheFunction(trimmed.addedToPrefix, apiChoice);
@@ -197,9 +239,11 @@ export class StreamedCompletionSplitter {
 	private adjustedAnnotations(
 		choice: APIChoice,
 		fullCompletion: StreamingCompletion,
-		trimmedCompletion: StreamingCompletion
+		trimmedCompletion: StreamingCompletion,
 	): CopilotNamedAnnotationList | undefined {
-		if (choice.copilotAnnotations === undefined) { return undefined; }
+		if (choice.copilotAnnotations === undefined) {
+			return undefined;
+		}
 
 		const newStartOffset = trimmedCompletion.addedToPrefix.length;
 		const newEndOffset = newStartOffset + choice.completionText.length;
@@ -207,19 +251,27 @@ export class StreamedCompletionSplitter {
 		const atEnd = newEndOffset >= fullCompletion.text.length;
 
 		const adjusted: CopilotNamedAnnotationList = {};
-		for (const [name, annotationGroup] of Object.entries(choice.copilotAnnotations)) {
+		for (const [name, annotationGroup] of Object.entries(
+			choice.copilotAnnotations,
+		)) {
 			const adjustedAnnotations = annotationGroup
-				.filter(a => {
+				.filter((a) => {
 					return (
-						a.start_offset - newStartOffset < choice.completionText.length &&
+						a.start_offset - newStartOffset <
+							choice.completionText.length &&
 						a.stop_offset - newStartOffset > 0
 					);
 				})
-				.map(a => {
+				.map((a) => {
 					const newA = { ...a };
 					newA.start_offset -= newStartOffset;
 					newA.stop_offset -= newStartOffset;
-					if (!atEnd) { newA.stop_offset = Math.min(newA.stop_offset, choice.completionText.length); }
+					if (!atEnd) {
+						newA.stop_offset = Math.min(
+							newA.stop_offset,
+							choice.completionText.length,
+						);
+					}
 					return newA;
 				});
 			if (adjustedAnnotations.length > 0) {

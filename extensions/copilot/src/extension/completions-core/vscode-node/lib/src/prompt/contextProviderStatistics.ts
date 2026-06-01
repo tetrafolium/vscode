@@ -24,25 +24,37 @@ export type PromptMatcher = {
 	actualTokens: number;
 };
 
-export const ICompletionsContextProviderService = createServiceIdentifier<ICompletionsContextProviderService>('ICompletionsContextProviderService');
+export const ICompletionsContextProviderService =
+	createServiceIdentifier<ICompletionsContextProviderService>(
+		'ICompletionsContextProviderService',
+	);
 export interface ICompletionsContextProviderService {
 	readonly _serviceBrand: undefined;
 
-	getStatisticsForCompletion(completionId: string): PerCompletionContextProviderStatistics;
-	getPreviousStatisticsForCompletion(completionId: string): PerCompletionContextProviderStatistics | undefined;
+	getStatisticsForCompletion(
+		completionId: string,
+	): PerCompletionContextProviderStatistics;
+	getPreviousStatisticsForCompletion(
+		completionId: string,
+	): PerCompletionContextProviderStatistics | undefined;
 }
 
 export class ContextProviderStatistics implements ICompletionsContextProviderService {
 	declare _serviceBrand: undefined;
 
-	private statistics = new LRUCacheMap<string, PerCompletionContextProviderStatistics>(25);
+	private statistics = new LRUCacheMap<
+		string,
+		PerCompletionContextProviderStatistics
+	>(25);
 
 	constructor(
 		private readonly createStatistics: () => PerCompletionContextProviderStatistics = () =>
-			new PerCompletionContextProviderStatistics()
-	) { }
+			new PerCompletionContextProviderStatistics(),
+	) {}
 
-	getStatisticsForCompletion(completionId: string): PerCompletionContextProviderStatistics {
+	getStatisticsForCompletion(
+		completionId: string,
+	): PerCompletionContextProviderStatistics {
 		const statistics = this.statistics.get(completionId);
 		if (statistics) {
 			return statistics;
@@ -65,11 +77,13 @@ export class ContextProviderStatistics implements ICompletionsContextProviderSer
 }
 
 export class PerCompletionContextProviderStatistics {
-
 	public opportunityId: string | undefined;
 
 	// Keyed by the providerId, contains an array of tuples [context item, expectation]
-	protected _expectations = new Map<string, [SupportedContextItemWithId, PromptExpectation][]>();
+	protected _expectations = new Map<
+		string,
+		[SupportedContextItemWithId, PromptExpectation][]
+	>();
 	protected _lastResolution = new Map<string, ResolutionStatus>();
 	protected _statistics = new Map<string, ContextUsageStatistics>();
 
@@ -77,9 +91,15 @@ export class PerCompletionContextProviderStatistics {
 		this.opportunityId = undefined;
 	}
 
-	addExpectations(providerId: string, expectations: [SupportedContextItemWithId, PromptExpectation][]) {
+	addExpectations(
+		providerId: string,
+		expectations: [SupportedContextItemWithId, PromptExpectation][],
+	) {
 		const providerExpectations = this._expectations.get(providerId) ?? [];
-		this._expectations.set(providerId, [...providerExpectations, ...expectations]);
+		this._expectations.set(providerId, [
+			...providerExpectations,
+			...expectations,
+		]);
 	}
 
 	clearExpectations() {
@@ -98,7 +118,9 @@ export class PerCompletionContextProviderStatistics {
 		return this._statistics.get(providerId);
 	}
 
-	getAllUsageStatistics(): IterableIterator<[string, ContextUsageStatistics]> {
+	getAllUsageStatistics(): IterableIterator<
+		[string, ContextUsageStatistics]
+	> {
 		return this._statistics.entries();
 	}
 
@@ -109,7 +131,8 @@ export class PerCompletionContextProviderStatistics {
 					continue;
 				}
 
-				const resolution = this._lastResolution.get(providerId) ?? 'none';
+				const resolution =
+					this._lastResolution.get(providerId) ?? 'none';
 				if (resolution === 'none' || resolution === 'error') {
 					this._statistics.set(providerId, {
 						usage: 'none',
@@ -142,7 +165,9 @@ export class PerCompletionContextProviderStatistics {
 						continue;
 					}
 
-					const itemStatistics = promptMatchers.find(component => component.source === item);
+					const itemStatistics = promptMatchers.find(
+						(component) => component.source === item,
+					);
 
 					if (itemStatistics === undefined) {
 						providerUsageDetails.push({
@@ -155,7 +180,8 @@ export class PerCompletionContextProviderStatistics {
 							...itemDetails,
 							usage:
 								itemStatistics.expectedTokens > 0 &&
-									itemStatistics.expectedTokens === itemStatistics.actualTokens
+								itemStatistics.expectedTokens ===
+									itemStatistics.actualTokens
 									? 'full'
 									: itemStatistics.actualTokens > 0
 										? 'partial'
@@ -175,7 +201,12 @@ export class PerCompletionContextProviderStatistics {
 					return acc;
 				}, 0);
 				const usedPercentage = usedItems / expectations.length;
-				const usage: UsageStatus = usedPercentage === 1 ? 'full' : usedPercentage === 0 ? 'none' : 'partial';
+				const usage: UsageStatus =
+					usedPercentage === 1
+						? 'full'
+						: usedPercentage === 0
+							? 'none'
+							: 'partial';
 				this._statistics.set(providerId, {
 					resolution,
 					usage,
@@ -190,9 +221,11 @@ export class PerCompletionContextProviderStatistics {
 	}
 }
 
-export function componentStatisticsToPromptMatcher(promptComponentStatistics: ComponentStatistics[]): PromptMatcher[] {
+export function componentStatisticsToPromptMatcher(
+	promptComponentStatistics: ComponentStatistics[],
+): PromptMatcher[] {
 	return promptComponentStatistics
-		.map(component => {
+		.map((component) => {
 			if (
 				component.source === undefined ||
 				component.expectedTokens === undefined ||
@@ -207,5 +240,5 @@ export function componentStatisticsToPromptMatcher(promptComponentStatistics: Co
 				actualTokens: component.actualTokens,
 			};
 		})
-		.filter(p => p !== undefined);
+		.filter((p) => p !== undefined);
 }

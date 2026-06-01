@@ -3,19 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { spawn } from 'child_process';
-import { realpath, watch } from 'fs';
-import { timeout } from '../../../base/common/async.js';
-import { Emitter, Event } from '../../../base/common/event.js';
-import * as path from '../../../base/common/path.js';
-import { IEnvironmentMainService } from '../../environment/electron-main/environmentMainService.js';
-import { ILifecycleMainService } from '../../lifecycle/electron-main/lifecycleMainService.js';
-import { ILogService } from '../../log/common/log.js';
-import { AvailableForDownload, IUpdateService, State, StateType, UpdateType } from '../common/update.js';
-import { IMeteredConnectionService } from '../../meteredConnection/common/meteredConnection.js';
+import { spawn } from "child_process";
+import { realpath, watch } from "fs";
+import { timeout } from "../../../base/common/async.js";
+import { Emitter, Event } from "../../../base/common/event.js";
+import * as path from "../../../base/common/path.js";
+import { IEnvironmentMainService } from "../../environment/electron-main/environmentMainService.js";
+import { ILifecycleMainService } from "../../lifecycle/electron-main/lifecycleMainService.js";
+import { ILogService } from "../../log/common/log.js";
+import {
+	AvailableForDownload,
+	IUpdateService,
+	State,
+	StateType,
+	UpdateType,
+} from "../common/update.js";
+import { IMeteredConnectionService } from "../../meteredConnection/common/meteredConnection.js";
 
 abstract class AbstractUpdateService implements IUpdateService {
-
 	declare readonly _serviceBrand: undefined;
 
 	private _state: State = State.Uninitialized;
@@ -28,7 +33,7 @@ abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	protected setState(state: State): void {
-		this.logService.info('update#setState', state.type);
+		this.logService.info("update#setState", state.type);
 		this._state = state;
 		this._onStateChange.fire(state);
 
@@ -40,20 +45,24 @@ abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	constructor(
-		@ILifecycleMainService private readonly lifecycleMainService: ILifecycleMainService,
+		@ILifecycleMainService
+		private readonly lifecycleMainService: ILifecycleMainService,
 		@IEnvironmentMainService environmentMainService: IEnvironmentMainService,
 		@ILogService protected logService: ILogService,
-		@IMeteredConnectionService protected readonly meteredConnectionService: IMeteredConnectionService,
+		@IMeteredConnectionService
+		protected readonly meteredConnectionService: IMeteredConnectionService,
 	) {
 		if (environmentMainService.disableUpdates) {
-			this.logService.info('update#ctor - updates are disabled');
+			this.logService.info("update#ctor - updates are disabled");
 			return;
 		}
 
 		this.setState(State.Idle(this.getUpdateType()));
 
 		// Start checking for updates after 30 seconds
-		this.scheduleCheckForUpdates(30 * 1000).then(undefined, err => this.logService.error(err));
+		this.scheduleCheckForUpdates(30 * 1000).then(undefined, (err) =>
+			this.logService.error(err),
+		);
 	}
 
 	private scheduleCheckForUpdates(delay = 60 * 60 * 1000): Promise<void> {
@@ -66,7 +75,7 @@ abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	async checkForUpdates(explicit: boolean): Promise<void> {
-		this.logService.trace('update#checkForUpdates, state = ', this.state.type);
+		this.logService.trace("update#checkForUpdates, state = ", this.state.type);
 
 		if (this.state.type !== StateType.Idle) {
 			return;
@@ -76,14 +85,16 @@ abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	async downloadUpdate(explicit: boolean): Promise<void> {
-		this.logService.trace('update#downloadUpdate, state = ', this.state.type);
+		this.logService.trace("update#downloadUpdate, state = ", this.state.type);
 
 		if (this.state.type !== StateType.AvailableForDownload) {
 			return;
 		}
 
 		if (!explicit && this.meteredConnectionService.isConnectionMetered) {
-			this.logService.info('update#downloadUpdate - skipping download because connection is metered');
+			this.logService.info(
+				"update#downloadUpdate - skipping download because connection is metered",
+			);
 			return;
 		}
 
@@ -95,7 +106,7 @@ abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	async applyUpdate(): Promise<void> {
-		this.logService.trace('update#applyUpdate, state = ', this.state.type);
+		this.logService.trace("update#applyUpdate, state = ", this.state.type);
 
 		if (this.state.type !== StateType.Downloaded) {
 			return;
@@ -109,7 +120,7 @@ abstract class AbstractUpdateService implements IUpdateService {
 	}
 
 	quitAndInstall(): Promise<void> {
-		this.logService.trace('update#quitAndInstall, state = ', this.state.type);
+		this.logService.trace("update#quitAndInstall, state = ", this.state.type);
 
 		if (this.state.type !== StateType.Ready) {
 			return Promise.resolve(undefined);
@@ -119,23 +130,28 @@ abstract class AbstractUpdateService implements IUpdateService {
 		const readyState = this.state;
 
 		this.setState(State.Restarting(this.state.update));
-		this.logService.trace('update#quitAndInstall(): before lifecycle quit()');
+		this.logService.trace("update#quitAndInstall(): before lifecycle quit()");
 
-		this.lifecycleMainService.quit(true /* will restart */).then(vetod => {
-			this.logService.trace(`update#quitAndInstall(): after lifecycle quit() with veto: ${vetod}`);
+		this.lifecycleMainService.quit(true /* will restart */).then((vetod) => {
+			this.logService.trace(
+				`update#quitAndInstall(): after lifecycle quit() with veto: ${vetod}`,
+			);
 			if (vetod) {
-				this.logService.info('update#quitAndInstall(): quit was vetoed, restoring Ready state');
+				this.logService.info(
+					"update#quitAndInstall(): quit was vetoed, restoring Ready state",
+				);
 				this.setState(readyState);
 				return;
 			}
 
-			this.logService.trace('update#quitAndInstall(): running raw#quitAndInstall()');
+			this.logService.trace(
+				"update#quitAndInstall(): running raw#quitAndInstall()",
+			);
 			this.doQuitAndInstall();
 		});
 
 		return Promise.resolve(undefined);
 	}
-
 
 	protected getUpdateType(): UpdateType {
 		return UpdateType.Snap;
@@ -159,22 +175,37 @@ abstract class AbstractUpdateService implements IUpdateService {
 }
 
 export class SnapUpdateService extends AbstractUpdateService {
-
 	constructor(
 		private snap: string,
 		private snapRevision: string,
 		@ILifecycleMainService lifecycleMainService: ILifecycleMainService,
 		@IEnvironmentMainService environmentMainService: IEnvironmentMainService,
 		@ILogService logService: ILogService,
-		@IMeteredConnectionService meteredConnectionService: IMeteredConnectionService,
+		@IMeteredConnectionService
+		meteredConnectionService: IMeteredConnectionService,
 	) {
-		super(lifecycleMainService, environmentMainService, logService, meteredConnectionService);
+		super(
+			lifecycleMainService,
+			environmentMainService,
+			logService,
+			meteredConnectionService,
+		);
 
 		const watcher = watch(path.dirname(this.snap));
-		const onChange = Event.fromNodeEventEmitter(watcher, 'change', (_, fileName: string) => fileName);
-		const onCurrentChange = Event.filter(onChange, n => n === 'current');
-		const onDebouncedCurrentChange = Event.debounce(onCurrentChange, (_, e) => e, 2000);
-		const listener = onDebouncedCurrentChange(() => this.checkForUpdates(false));
+		const onChange = Event.fromNodeEventEmitter(
+			watcher,
+			"change",
+			(_, fileName: string) => fileName,
+		);
+		const onCurrentChange = Event.filter(onChange, (n) => n === "current");
+		const onDebouncedCurrentChange = Event.debounce(
+			onCurrentChange,
+			(_, e) => e,
+			2000,
+		);
+		const listener = onDebouncedCurrentChange(() =>
+			this.checkForUpdates(false),
+		);
 
 		Event.once(lifecycleMainService.onWillShutdown)(() => {
 			listener.dispose();
@@ -184,38 +215,49 @@ export class SnapUpdateService extends AbstractUpdateService {
 
 	protected doCheckForUpdates(): void {
 		this.setState(State.CheckingForUpdates(false));
-		this.isUpdateAvailable().then(result => {
-			if (result) {
-				this.setState(State.Ready({ version: 'something' }, false, false));
-			} else {
-				this.setState(State.Idle(UpdateType.Snap, undefined, undefined));
-			}
-		}, err => {
-			this.logService.error(err);
-			this.setState(State.Idle(UpdateType.Snap, err.message || err));
-		});
+		this.isUpdateAvailable().then(
+			(result) => {
+				if (result) {
+					this.setState(State.Ready({ version: "something" }, false, false));
+				} else {
+					this.setState(State.Idle(UpdateType.Snap, undefined, undefined));
+				}
+			},
+			(err) => {
+				this.logService.error(err);
+				this.setState(State.Idle(UpdateType.Snap, err.message || err));
+			},
+		);
 	}
 
 	protected override doQuitAndInstall(): void {
-		this.logService.trace('update#quitAndInstall(): running raw#quitAndInstall()');
+		this.logService.trace(
+			"update#quitAndInstall(): running raw#quitAndInstall()",
+		);
 
 		// Allow 3 seconds for VS Code to close
-		spawn('sleep 3 && ' + path.basename(process.argv[0]), {
+		spawn("sleep 3 && " + path.basename(process.argv[0]), {
 			shell: true,
 			detached: true,
-			stdio: 'ignore',
+			stdio: "ignore",
 		});
 	}
 
 	private async isUpdateAvailable(): Promise<boolean> {
-		const resolvedCurrentSnapPath = await new Promise<string>((c, e) => realpath(`${path.dirname(this.snap)}/current`, (err, r) => err ? e(err) : c(r)));
+		const resolvedCurrentSnapPath = await new Promise<string>((c, e) =>
+			realpath(`${path.dirname(this.snap)}/current`, (err, r) =>
+				err ? e(err) : c(r),
+			),
+		);
 		const currentRevision = path.basename(resolvedCurrentSnapPath);
 		return this.snapRevision !== currentRevision;
 	}
 
 	isLatestVersion(): Promise<boolean | undefined> {
-		return this.isUpdateAvailable().then(undefined, err => {
-			this.logService.error('update#checkForSnapUpdate(): Could not get realpath of application.');
+		return this.isUpdateAvailable().then(undefined, (err) => {
+			this.logService.error(
+				"update#checkForSnapUpdate(): Could not get realpath of application.",
+			);
 			return undefined;
 		});
 	}

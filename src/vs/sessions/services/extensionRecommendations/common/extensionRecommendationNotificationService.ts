@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IExtensionRecommendationNotificationService, RecommendationsNotificationResult } from '../../../../platform/extensionRecommendations/common/extensionRecommendations.js';
+import {
+	IExtensionRecommendationNotificationService,
+	RecommendationsNotificationResult,
+} from "../../../../platform/extensionRecommendations/common/extensionRecommendations.js";
 
 export class NullExtensionRecommendationNotificationService implements IExtensionRecommendationNotificationService {
 	readonly _serviceBrand: undefined;

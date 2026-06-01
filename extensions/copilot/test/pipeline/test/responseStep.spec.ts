@@ -18,7 +18,6 @@ function lineOffset(doc: string, line: number): number {
 }
 
 describe('formatAsEditWindowOnly (xtab-275)', () => {
-
 	const docLines = Array.from({ length: 20 }, (_, i) => `L${i}`);
 	const docContent = docLines.join('\n');
 
@@ -48,7 +47,12 @@ describe('formatAsEditWindowOnly (xtab-275)', () => {
 			[inWindowStart2, inWindowEnd2, 'EDITED8'],
 		];
 
-		const result = formatAsEditWindowOnly(edits, docContent, windowStart, windowLineCount);
+		const result = formatAsEditWindowOnly(
+			edits,
+			docContent,
+			windowStart,
+			windowLineCount,
+		);
 
 		// Only the line-15 edit is dropped; the two in-window edits both apply.
 		expect(result).toEqual({
@@ -72,7 +76,12 @@ describe('formatAsEditWindowOnly (xtab-275)', () => {
 			[edit2Start, edit2End, 'EDITED8'],
 		];
 
-		const result = formatAsEditWindowOnly(edits, docContent, windowStart, windowLineCount);
+		const result = formatAsEditWindowOnly(
+			edits,
+			docContent,
+			windowStart,
+			windowLineCount,
+		);
 
 		expect(result).toEqual({
 			assistant: ['L5', 'EDITED6', 'L7', 'EDITED8', 'L9'].join('\n'),
@@ -90,7 +99,12 @@ describe('formatAsEditWindowOnly (xtab-275)', () => {
 
 		const edits: [number, number, string][] = [[start, end, 'A\nB']];
 
-		const result = formatAsEditWindowOnly(edits, docContent, windowStart, windowLineCount);
+		const result = formatAsEditWindowOnly(
+			edits,
+			docContent,
+			windowStart,
+			windowLineCount,
+		);
 
 		expect(result).toEqual({
 			assistant: ['L5', 'A', 'B', 'L7', 'L8', 'L9'].join('\n'),
@@ -108,7 +122,12 @@ describe('formatAsEditWindowOnly (xtab-275)', () => {
 
 		const edits: [number, number, string][] = [[start, end, '']];
 
-		const result = formatAsEditWindowOnly(edits, docContent, windowStart, windowLineCount);
+		const result = formatAsEditWindowOnly(
+			edits,
+			docContent,
+			windowStart,
+			windowLineCount,
+		);
 
 		expect(result).toEqual({
 			assistant: ['L5', 'L7', 'L8', 'L9'].join('\n'),
@@ -128,7 +147,12 @@ describe('formatAsEditWindowOnly (xtab-275)', () => {
 
 		const edits: [number, number, string][] = [[start, end, 'STRADDLE']];
 
-		const result = formatAsEditWindowOnly(edits, docContent, windowStart, windowLineCount);
+		const result = formatAsEditWindowOnly(
+			edits,
+			docContent,
+			windowStart,
+			windowLineCount,
+		);
 
 		expect(result).toEqual({
 			assistant: ['L5', 'L6', 'L7', 'L8', 'L9'].join('\n'),
@@ -146,7 +170,12 @@ describe('formatAsEditWindowOnly (xtab-275)', () => {
 
 		const edits: [number, number, string][] = [[start, end, 'OUTSIDE']];
 
-		const result = formatAsEditWindowOnly(edits, docContent, windowStart, windowLineCount);
+		const result = formatAsEditWindowOnly(
+			edits,
+			docContent,
+			windowStart,
+			windowLineCount,
+		);
 
 		expect(result).toEqual({
 			assistant: ['L5', 'L6', 'L7', 'L8', 'L9'].join('\n'),

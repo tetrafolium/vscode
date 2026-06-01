@@ -6,7 +6,6 @@
 import type { NotebookCell, Uri } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-
 export interface Variable {
 	name: string;
 	value: string;
@@ -25,14 +24,19 @@ export interface PipPackage {
 	version: string;
 }
 
-export const INotebookService = createServiceIdentifier<INotebookService>('INotebookService');
+export const INotebookService =
+	createServiceIdentifier<INotebookService>('INotebookService');
 
 export interface INotebookService {
 	readonly _serviceBrand: undefined;
 	getVariables(notebook: Uri): Promise<VariablesResult[]>;
 	getPipPackages(notebook: Uri): Promise<PipPackage[]>;
 	getCellExecutions(notebook: Uri): NotebookCell[];
-	runCells(notebook: Uri, range: { start: number; end: number }, autoReveal: boolean): Promise<void>;
+	runCells(
+		notebook: Uri,
+		range: { start: number; end: number },
+		autoReveal: boolean,
+	): Promise<void>;
 	trackAgentUsage(): void;
 	setFollowState(state: boolean): void;
 	getFollowState(): boolean;

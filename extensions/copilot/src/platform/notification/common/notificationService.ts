@@ -12,9 +12,11 @@ export interface MessageOptions {
 }
 
 export interface ProgressOptions {
-	location: ProgressLocation | {
-		viewId: string;
-	};
+	location:
+		| ProgressLocation
+		| {
+				viewId: string;
+		  };
 	title?: string;
 	cancellable?: boolean;
 }
@@ -22,7 +24,7 @@ export interface ProgressOptions {
 export enum ProgressLocation {
 	SourceControl = 1,
 	Window = 10,
-	Notification = 15
+	Notification = 15,
 }
 
 export interface Progress<T> {
@@ -32,40 +34,87 @@ export interface Progress<T> {
 export interface INotificationService {
 	readonly _serviceBrand: undefined;
 
-	showInformationMessage(message: string, ...items: string[]): Promise<string | undefined>;
-	showInformationMessage<T extends string>(message: string, options: MessageOptions, ...items: T[]): Promise<T | undefined>;
-	showWarningMessage(message: string, ...items: string[]): Promise<string | undefined>;
-	showQuotaExceededDialog(options: { isNoAuthUser: boolean }): Promise<unknown>;
-	withProgress<R>(options: ProgressOptions, task: (progress: Progress<{
-		message?: string;
-		increment?: number;
-	}>, token: CancellationToken) => Thenable<R>): Promise<R>;
+	showInformationMessage(
+		message: string,
+		...items: string[]
+	): Promise<string | undefined>;
+	showInformationMessage<T extends string>(
+		message: string,
+		options: MessageOptions,
+		...items: T[]
+	): Promise<T | undefined>;
+	showWarningMessage(
+		message: string,
+		...items: string[]
+	): Promise<string | undefined>;
+	showQuotaExceededDialog(options: {
+		isNoAuthUser: boolean;
+	}): Promise<unknown>;
+	withProgress<R>(
+		options: ProgressOptions,
+		task: (
+			progress: Progress<{
+				message?: string;
+				increment?: number;
+			}>,
+			token: CancellationToken,
+		) => Thenable<R>,
+	): Promise<R>;
 }
 
 export class NullNotificationService implements INotificationService {
 	declare readonly _serviceBrand: undefined;
 
-	showInformationMessage<T extends string>(message: string, options: MessageOptions, ...items: T[]): Promise<T | undefined>;
-	showInformationMessage(message: string, ...items: string[]): Promise<string | undefined>;
-	showInformationMessage<T extends string>(message: string, options: MessageOptions, ...items: T[]): Promise<T | undefined>;
-	showInformationMessage(message: string, optionsOrItem?: any, ...items: any[]): Promise<any> {
+	showInformationMessage<T extends string>(
+		message: string,
+		options: MessageOptions,
+		...items: T[]
+	): Promise<T | undefined>;
+	showInformationMessage(
+		message: string,
+		...items: string[]
+	): Promise<string | undefined>;
+	showInformationMessage<T extends string>(
+		message: string,
+		options: MessageOptions,
+		...items: T[]
+	): Promise<T | undefined>;
+	showInformationMessage(
+		message: string,
+		optionsOrItem?: any,
+		...items: any[]
+	): Promise<any> {
 		return Promise.resolve(undefined);
 	}
 
-	showWarningMessage(message: string, ...items: string[]): Promise<string | undefined> {
+	showWarningMessage(
+		message: string,
+		...items: string[]
+	): Promise<string | undefined> {
 		return Promise.resolve(undefined);
 	}
 
-	showQuotaExceededDialog(options: { isNoAuthUser: boolean }): Promise<unknown> {
+	showQuotaExceededDialog(options: {
+		isNoAuthUser: boolean;
+	}): Promise<unknown> {
 		return Promise.resolve();
 	}
 
-	withProgress<R>(options: ProgressOptions, task: (progress: Progress<{
-		message?: string;
-		increment?: number;
-	}>, token: CancellationToken) => Thenable<R>): Promise<R> {
-		return Promise.resolve(task({ report: () => { } }, CancellationToken.None));
+	withProgress<R>(
+		options: ProgressOptions,
+		task: (
+			progress: Progress<{
+				message?: string;
+				increment?: number;
+			}>,
+			token: CancellationToken,
+		) => Thenable<R>,
+	): Promise<R> {
+		return Promise.resolve(
+			task({ report: () => {} }, CancellationToken.None),
+		);
 	}
 }
 
-export const INotificationService = createServiceIdentifier<INotificationService>('INotificationService');
+export const INotificationService =
+	createServiceIdentifier<INotificationService>('INotificationService');

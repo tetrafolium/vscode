@@ -8,7 +8,10 @@ import { Codicon } from '../../../util/vs/base/common/codicons';
 import { IAuthenticationService } from '../../authentication/common/authentication';
 import { ILogService } from '../../log/common/logService';
 import { Response } from '../../networking/common/fetcherService';
-import { IRequestLogger, LoggedRequestKind } from '../../requestLogger/common/requestLogger';
+import {
+	IRequestLogger,
+	LoggedRequestKind,
+} from '../../requestLogger/common/requestLogger';
 import { ITelemetryService } from '../../telemetry/common/telemetry';
 import { ICAPIClientService } from '../common/capiClient';
 
@@ -45,7 +48,10 @@ export interface RoutingContextSignals {
  */
 export class RouterDecisionError extends Error {
 	override readonly name = 'RouterDecisionError';
-	constructor(message: string, public readonly errorCode?: string) {
+	constructor(
+		message: string,
+		public readonly errorCode?: string,
+	) {
 		super(message);
 	}
 }
@@ -63,12 +69,25 @@ export class RouterDecisionFetcher {
 		private readonly _logService: ILogService,
 		private readonly _telemetryService: ITelemetryService,
 		private readonly _requestLogger: IRequestLogger,
-	) {
-	}
+	) {}
 
-	async getRouterDecision(query: string, autoModeToken: string, availableModels: string[], stickyThreshold?: number, contextSignals?: RoutingContextSignals, conversationId?: string, vscodeRequestId?: string, routingMethod?: string, hasImage?: boolean): Promise<RouterDecisionResponse> {
+	async getRouterDecision(
+		query: string,
+		autoModeToken: string,
+		availableModels: string[],
+		stickyThreshold?: number,
+		contextSignals?: RoutingContextSignals,
+		conversationId?: string,
+		vscodeRequestId?: string,
+		routingMethod?: string,
+		hasImage?: boolean,
+	): Promise<RouterDecisionResponse> {
 		const startTime = Date.now();
-		const requestBody: Record<string, unknown> = { prompt: query, available_models: availableModels, ...contextSignals };
+		const requestBody: Record<string, unknown> = {
+			prompt: query,
+			available_models: availableModels,
+			...contextSignals,
+		};
 		if (stickyThreshold !== undefined) {
 			requestBody.sticky_threshold = stickyThreshold;
 		}
@@ -85,15 +104,18 @@ export class RouterDecisionFetcher {
 		const timeout = setTimeout(() => abortController.abort(), 2500);
 		let response: Response;
 		try {
-			response = await this._capiClientService.makeRequest<Response>({
-				method: 'POST',
-				headers: {
-					'Authorization': `Bearer ${copilotToken}`,
-					'Copilot-Session-Token': autoModeToken,
+			response = await this._capiClientService.makeRequest<Response>(
+				{
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${copilotToken}`,
+						'Copilot-Session-Token': autoModeToken,
+					},
+					body: JSON.stringify(requestBody),
+					signal: abortController.signal,
 				},
-				body: JSON.stringify(requestBody),
-				signal: abortController.signal,
-			}, { type: RequestType.ModelRouter });
+				{ type: RequestType.ModelRouter },
+			);
 		} finally {
 			clearTimeout(timeout);
 		}
@@ -103,17 +125,29 @@ export class RouterDecisionFetcher {
 			let errorCode: string | undefined;
 			try {
 				const parsed = JSON.parse(errorText);
-				if (typeof parsed === 'object' && parsed !== null && 'error' in parsed && typeof parsed.error === 'string') {
+				if (
+					typeof parsed === 'object' &&
+					parsed !== null &&
+					'error' in parsed &&
+					typeof parsed.error === 'string'
+				) {
 					errorCode = parsed.error;
 				}
-			} catch { /* not JSON */ }
-			throw new RouterDecisionError(`Router decision request failed with status ${response.status}: ${response.statusText}`, errorCode);
+			} catch {
+				/* not JSON */
+			}
+			throw new RouterDecisionError(
+				`Router decision request failed with status ${response.status}: ${response.statusText}`,
+				errorCode,
+			);
 		}
 
 		const text = await response.text();
 		const result: RouterDecisionResponse = JSON.parse(text);
 		const e2eLatencyMs = Date.now() - startTime;
-		this._logService.trace(`[RouterDecisionFetcher] Prediction: ${result.predicted_label}, (confidence: ${(result.confidence * 100).toFixed(1)}%, scores: needs_reasoning=${(result.scores.needs_reasoning * 100).toFixed(1)}%, no_reasoning=${(result.scores.no_reasoning * 100).toFixed(1)}%) (latency_ms: ${result.latency_ms}, e2e_latency_ms: ${e2eLatencyMs}, candidate models: ${result.candidate_models.join(', ')}, sticky_override: ${result.sticky_override ?? false}, routing_method: ${result.routing_method ?? 'n/a'}, fallback: ${result.fallback ?? false})`);
+		this._logService.trace(
+			`[RouterDecisionFetcher] Prediction: ${result.predicted_label}, (confidence: ${(result.confidence * 100).toFixed(1)}%, scores: needs_reasoning=${(result.scores.needs_reasoning * 100).toFixed(1)}%, no_reasoning=${(result.scores.no_reasoning * 100).toFixed(1)}%) (latency_ms: ${result.latency_ms}, e2e_latency_ms: ${e2eLatencyMs}, candidate models: ${result.candidate_models.join(', ')}, sticky_override: ${result.sticky_override ?? false}, routing_method: ${result.routing_method ?? 'n/a'}, fallback: ${result.fallback ?? false})`,
+		);
 
 		this._requestLogger.addEntry({
 			type: LoggedRequestKind.MarkdownContentRequest,
@@ -133,7 +167,7 @@ export class RouterDecisionFetcher {
 				`- **Router Latency**: ${result.latency_ms}ms`,
 				`- **E2E Latency**: ${e2eLatencyMs}ms`,
 				`## Candidate Models`,
-				...result.candidate_models.map(m => `- ${m}`),
+				...result.candidate_models.map((m) => `- ${m}`),
 				`## Query`,
 				query,
 			].join('\n'),
@@ -159,7 +193,8 @@ export class RouterDecisionFetcher {
 				"scoreToolUse": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Hydra per-dimension score for tool use. -1 if not present in the response." }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('automode.routerDecision',
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'automode.routerDecision',
 			{
 				conversationId: conversationId ?? '',
 				vscodeRequestId: vscodeRequestId ?? '',
@@ -177,10 +212,11 @@ export class RouterDecisionFetcher {
 				scoreCodeGen: result.hydra_scores?.code_gen ?? -1,
 				scoreDebugging: result.hydra_scores?.debugging ?? -1,
 				scoreToolUse: result.hydra_scores?.tool_use ?? -1,
-			}
+			},
 		);
 
-		this._telemetryService.sendEnhancedGHTelemetryEvent('automode.routerDecisionRestricted',
+		this._telemetryService.sendEnhancedGHTelemetryEvent(
+			'automode.routerDecisionRestricted',
 			{
 				conversationId: conversationId ?? '',
 				vscodeRequestId: vscodeRequestId ?? '',
@@ -193,7 +229,9 @@ export class RouterDecisionFetcher {
 				candidateModels: JSON.stringify(result.candidate_models ?? []),
 				availableModels: JSON.stringify(availableModels),
 				stickyOverrideStr: String(result.sticky_override ?? false),
-				hydraScores: result.hydra_scores ? JSON.stringify(result.hydra_scores) : 'null',
+				hydraScores: result.hydra_scores
+					? JSON.stringify(result.hydra_scores)
+					: 'null',
 				binaryScores: JSON.stringify(result.scores),
 			},
 			{
@@ -204,7 +242,7 @@ export class RouterDecisionFetcher {
 				chosenShortfall: result.chosen_shortfall,
 				scoreNeedsReasoning: result.scores.needs_reasoning,
 				scoreNoReasoning: result.scores.no_reasoning,
-			}
+			},
 		);
 
 		return result;

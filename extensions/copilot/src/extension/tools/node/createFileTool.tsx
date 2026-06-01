@@ -10,7 +10,10 @@ import { TextDocumentSnapshot } from '../../../platform/editing/common/textDocum
 import { IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
 import { IFileSystemService } from '../../../platform/filesystem/common/fileSystemService';
 import { IAlternativeNotebookContentService } from '../../../platform/notebook/common/alternativeContent';
-import { IAlternativeNotebookContentEditGenerator, NotebookEditGenrationSource } from '../../../platform/notebook/common/alternativeContentEditGenerator';
+import {
+	IAlternativeNotebookContentEditGenerator,
+	NotebookEditGenrationSource,
+} from '../../../platform/notebook/common/alternativeContentEditGenerator';
 import { INotebookService } from '../../../platform/notebook/common/notebookService';
 import { IPromptPathRepresentationService } from '../../../platform/prompts/common/promptPathRepresentationService';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
@@ -21,7 +24,15 @@ import { extname } from '../../../util/vs/base/common/resources';
 import { count } from '../../../util/vs/base/common/strings';
 import { URI } from '../../../util/vs/base/common/uri';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
-import { Position as ExtPosition, Range as ExtRange, LanguageModelPromptTsxPart, LanguageModelTextPart, LanguageModelToolResult, MarkdownString, TextEdit } from '../../../vscodeTypes';
+import {
+	Position as ExtPosition,
+	Range as ExtRange,
+	LanguageModelPromptTsxPart,
+	LanguageModelTextPart,
+	LanguageModelToolResult,
+	MarkdownString,
+	TextEdit,
+} from '../../../vscodeTypes';
 import { CodeBlockProcessor } from '../../codeBlocks/node/codeBlockProcessor';
 import { IBuildPromptContext } from '../../prompt/common/intents';
 import { renderPromptElementJSON } from '../../prompts/node/base/promptRenderer';
@@ -32,14 +43,16 @@ import { IToolsService } from '../common/toolsService';
 import { formatUriForFileWidget } from '../common/toolUtils';
 import { ActionType } from './applyPatch/parser';
 import { EditFileResult } from './editFileToolResult';
-import { createEditConfirmation, formatDiffAsUnified } from './editFileToolUtils';
+import {
+	createEditConfirmation,
+	formatDiffAsUnified,
+} from './editFileToolUtils';
 import { resolveToolInputPath } from './toolUtils';
 
 export interface ICreateFileParams {
 	filePath: string;
 	content?: string;
 }
-
 
 export class CreateFileTool implements ICopilotTool<ICreateFileParams> {
 	public static toolName = ToolName.CreateFile;
@@ -48,20 +61,33 @@ export class CreateFileTool implements ICopilotTool<ICreateFileParams> {
 	private _promptContext: IBuildPromptContext | undefined;
 
 	constructor(
-		@IPromptPathRepresentationService protected readonly promptPathRepresentationService: IPromptPathRepresentationService,
-		@IInstantiationService protected readonly instantiationService: IInstantiationService,
-		@IWorkspaceService protected readonly workspaceService: IWorkspaceService,
+		@IPromptPathRepresentationService
+		protected readonly promptPathRepresentationService: IPromptPathRepresentationService,
+		@IInstantiationService
+		protected readonly instantiationService: IInstantiationService,
+		@IWorkspaceService
+		protected readonly workspaceService: IWorkspaceService,
 		@IToolsService protected readonly toolsService: IToolsService,
 		@INotebookService protected readonly notebookService: INotebookService,
-		@IAlternativeNotebookContentService protected readonly alternativeNotebookContent: IAlternativeNotebookContentService,
-		@IAlternativeNotebookContentEditGenerator protected readonly alternativeNotebookEditGenerator: IAlternativeNotebookContentEditGenerator,
-		@IFileSystemService protected readonly fileSystemService: IFileSystemService,
-		@ITelemetryService protected readonly telemetryService: ITelemetryService,
-		@IEndpointProvider protected readonly endpointProvider: IEndpointProvider,
-	) { }
+		@IAlternativeNotebookContentService
+		protected readonly alternativeNotebookContent: IAlternativeNotebookContentService,
+		@IAlternativeNotebookContentEditGenerator
+		protected readonly alternativeNotebookEditGenerator: IAlternativeNotebookContentEditGenerator,
+		@IFileSystemService
+		protected readonly fileSystemService: IFileSystemService,
+		@ITelemetryService
+		protected readonly telemetryService: ITelemetryService,
+		@IEndpointProvider
+		protected readonly endpointProvider: IEndpointProvider,
+	) {}
 
-	async invoke(options: vscode.LanguageModelToolInvocationOptions<ICreateFileParams>, token: vscode.CancellationToken) {
-		const uri = this.promptPathRepresentationService.resolveFilePath(options.input.filePath);
+	async invoke(
+		options: vscode.LanguageModelToolInvocationOptions<ICreateFileParams>,
+		token: vscode.CancellationToken,
+	) {
+		const uri = this.promptPathRepresentationService.resolveFilePath(
+			options.input.filePath,
+		);
 		if (!uri) {
 			throw new Error(`Invalid file path`);
 		}
@@ -76,13 +102,24 @@ export class CreateFileTool implements ICopilotTool<ICreateFileParams> {
 		}
 
 		const fileExists = await this.fileExists(uri);
-		const hasSupportedNotebooks = this.notebookService.hasSupportedNotebooks(uri);
-		let doc: undefined | NotebookDocumentSnapshot | TextDocumentSnapshot = undefined;
+		const hasSupportedNotebooks =
+			this.notebookService.hasSupportedNotebooks(uri);
+		let doc: undefined | NotebookDocumentSnapshot | TextDocumentSnapshot =
+			undefined;
 		try {
 			if (hasSupportedNotebooks) {
-				doc = await this.workspaceService.openNotebookDocumentAndSnapshot(uri, this.alternativeNotebookContent.getFormat(this._promptContext?.request?.model));
+				doc =
+					await this.workspaceService.openNotebookDocumentAndSnapshot(
+						uri,
+						this.alternativeNotebookContent.getFormat(
+							this._promptContext?.request?.model,
+						),
+					);
 			} else {
-				doc = await this.workspaceService.openTextDocumentAndSnapshot(uri);
+				doc =
+					await this.workspaceService.openTextDocumentAndSnapshot(
+						uri,
+					);
 			}
 		} catch (e) {
 			// ignored
@@ -91,37 +128,85 @@ export class CreateFileTool implements ICopilotTool<ICreateFileParams> {
 		// note: fileExists could be `false` but we might still get a `doc` if it's held in memory
 		if (fileExists && !!doc?.getText()) {
 			if (hasSupportedNotebooks) {
-				throw new Error(`File already exists. You must use the ${ToolName.EditNotebook} tool to modify it.`);
+				throw new Error(
+					`File already exists. You must use the ${ToolName.EditNotebook} tool to modify it.`,
+				);
 			} else {
-				throw new Error(`File already exists. You must use an edit tool to modify it.`);
+				throw new Error(
+					`File already exists. You must use an edit tool to modify it.`,
+				);
 			}
 		}
 
-		const languageId = doc?.languageId ?? getLanguageForResource(uri).languageId;
+		const languageId =
+			doc?.languageId ?? getLanguageForResource(uri).languageId;
 		const fileExtension = extname(uri);
-		const modelId = options.model && (await this.endpointProvider.getChatEndpoint(options.model)).model;
+		const modelId =
+			options.model &&
+			(await this.endpointProvider.getChatEndpoint(options.model)).model;
 
 		if (hasSupportedNotebooks) {
 			// Its possible we have a code block with a language id
 			// Also possible we have file paths in the content.
 			let content = options.input.content;
-			const processor = new CodeBlockProcessor(() => undefined, () => undefined, (codeBlock) => content = codeBlock.code);
+			const processor = new CodeBlockProcessor(
+				() => undefined,
+				() => undefined,
+				(codeBlock) => (content = codeBlock.code),
+			);
 			processor.processMarkdown(options.input.content);
 			processor.flush();
-			content = removeLeadingFilepathComment(options.input.content, languageId, options.input.filePath);
-			await processFullRewriteNewNotebook(uri, content, this._promptContext.stream, this.alternativeNotebookEditGenerator, { source: NotebookEditGenrationSource.createFile, requestId: options.chatRequestId, model: options.model ? this.endpointProvider.getChatEndpoint(options.model).then(m => m.model) : undefined }, token);
+			content = removeLeadingFilepathComment(
+				options.input.content,
+				languageId,
+				options.input.filePath,
+			);
+			await processFullRewriteNewNotebook(
+				uri,
+				content,
+				this._promptContext.stream,
+				this.alternativeNotebookEditGenerator,
+				{
+					source: NotebookEditGenrationSource.createFile,
+					requestId: options.chatRequestId,
+					model: options.model
+						? this.endpointProvider
+								.getChatEndpoint(options.model)
+								.then((m) => m.model)
+						: undefined,
+				},
+				token,
+			);
 			this._promptContext.stream.notebookEdit(uri, true);
 			this.sendTelemetry(options.chatRequestId, modelId, fileExtension);
 		} else {
-			const content = removeLeadingFilepathComment(options.input.content, languageId, options.input.filePath);
+			const content = removeLeadingFilepathComment(
+				options.input.content,
+				languageId,
+				options.input.filePath,
+			);
 			// When the file has been deleted from disk but VS Code still holds a stale
 			// in-memory doc with content, use a full-document replace so the old buffer
 			// is overwritten rather than prepended to (https://github.com/microsoft/vscode/issues/311043).
 			if (!fileExists && doc && doc.getText().length > 0) {
 				const lastLine = doc.lineCount - 1;
-				this._promptContext.stream.textEdit(uri, TextEdit.replace(new ExtRange(0, 0, lastLine, doc.lineAt(lastLine).text.length), content));
+				this._promptContext.stream.textEdit(
+					uri,
+					TextEdit.replace(
+						new ExtRange(
+							0,
+							0,
+							lastLine,
+							doc.lineAt(lastLine).text.length,
+						),
+						content,
+					),
+				);
 			} else {
-				this._promptContext.stream.textEdit(uri, TextEdit.insert(new ExtPosition(0, 0), content));
+				this._promptContext.stream.textEdit(
+					uri,
+					TextEdit.insert(new ExtPosition(0, 0), content),
+				);
 			}
 			this._promptContext.stream.textEdit(uri, true);
 			this.sendTelemetry(options.chatRequestId, modelId, fileExtension);
@@ -130,21 +215,34 @@ export class CreateFileTool implements ICopilotTool<ICreateFileParams> {
 					await renderPromptElementJSON(
 						this.instantiationService,
 						EditFileResult,
-						{ files: [{ operation: ActionType.ADD, uri, isNotebook: false }], diagnosticsTimeout: 2000, toolName: ToolName.CreateFile, requestId: options.chatRequestId, model: options.model },
+						{
+							files: [
+								{
+									operation: ActionType.ADD,
+									uri,
+									isNotebook: false,
+								},
+							],
+							diagnosticsTimeout: 2000,
+							toolName: ToolName.CreateFile,
+							requestId: options.chatRequestId,
+							model: options.model,
+						},
 						options.tokenizationOptions ?? {
 							tokenBudget: 1000,
-							countTokens: (t) => Promise.resolve(t.length * 3 / 4)
+							countTokens: (t) =>
+								Promise.resolve((t.length * 3) / 4),
 						},
 						token,
 					),
-				)
+				),
 			]);
 		}
 
 		return new LanguageModelToolResult([
 			new LanguageModelTextPart(
 				`File created at ${this.promptPathRepresentationService.getFilePath(uri)}`,
-			)
+			),
 		]);
 	}
 
@@ -160,25 +258,35 @@ export class CreateFileTool implements ICopilotTool<ICreateFileParams> {
 		}
 	}
 
-	async resolveInput(input: ICreateFileParams, promptContext: IBuildPromptContext): Promise<ICreateFileParams> {
+	async resolveInput(
+		input: ICreateFileParams,
+		promptContext: IBuildPromptContext,
+	): Promise<ICreateFileParams> {
 		this._promptContext = promptContext;
 		return input;
 	}
 
-	async prepareInvocation(options: vscode.LanguageModelToolInvocationPrepareOptions<ICreateFileParams>, token: vscode.CancellationToken): Promise<vscode.PreparedToolInvocation> {
-		const uri = resolveToolInputPath(options.input.filePath, this.promptPathRepresentationService);
+	async prepareInvocation(
+		options: vscode.LanguageModelToolInvocationPrepareOptions<ICreateFileParams>,
+		token: vscode.CancellationToken,
+	): Promise<vscode.PreparedToolInvocation> {
+		const uri = resolveToolInputPath(
+			options.input.filePath,
+			this.promptPathRepresentationService,
+		);
 		const content = options.input.content || '';
 
 		const confirmation = await this.instantiationService.invokeFunction(
 			createEditConfirmation,
 			[uri],
 			this._promptContext?.allowedEditUris,
-			async () => this.instantiationService.invokeFunction(
-				formatDiffAsUnified,
-				uri,
-				'', // Empty initial content
-				content
-			),
+			async () =>
+				this.instantiationService.invokeFunction(
+					formatDiffAsUnified,
+					uri,
+					'', // Empty initial content
+					content,
+				),
 			options.forceConfirmationReason,
 			undefined,
 			options.workingDirectory,
@@ -187,28 +295,44 @@ export class CreateFileTool implements ICopilotTool<ICreateFileParams> {
 		return {
 			...confirmation,
 			presentation: undefined,
-			invocationMessage: new MarkdownString(l10n.t`Creating ${formatUriForFileWidget(uri)}`),
-			pastTenseMessage: new MarkdownString(l10n.t`Created ${formatUriForFileWidget(uri)}`)
+			invocationMessage: new MarkdownString(
+				l10n.t`Creating ${formatUriForFileWidget(uri)}`,
+			),
+			pastTenseMessage: new MarkdownString(
+				l10n.t`Created ${formatUriForFileWidget(uri)}`,
+			),
 		};
 	}
 
-	async handleToolStream(options: vscode.LanguageModelToolInvocationStreamOptions<ICreateFileParams>, _token: vscode.CancellationToken): Promise<vscode.LanguageModelToolStreamResult> {
+	async handleToolStream(
+		options: vscode.LanguageModelToolInvocationStreamOptions<ICreateFileParams>,
+		_token: vscode.CancellationToken,
+	): Promise<vscode.LanguageModelToolStreamResult> {
 		let invocationMessage: MarkdownString;
 
 		// rawInput is now a partial object (parsed via tryParsePartialToolInput)
-		const partialInput = options.rawInput as Partial<ICreateFileParams> | undefined;
+		const partialInput = options.rawInput as
+			| Partial<ICreateFileParams>
+			| undefined;
 
 		if (partialInput && typeof partialInput === 'object') {
 			const filePath = partialInput.filePath;
 			const content = partialInput.content;
 
 			if (filePath && content !== undefined) {
-				const uri = resolveToolInputPath(filePath, this.promptPathRepresentationService);
+				const uri = resolveToolInputPath(
+					filePath,
+					this.promptPathRepresentationService,
+				);
 				const lineCount = count(content, '\n') + 1;
-				invocationMessage = new MarkdownString(l10n.t`Creating ${formatUriForFileWidget(uri)} (${lineCount} lines)`);
+				invocationMessage = new MarkdownString(
+					l10n.t`Creating ${formatUriForFileWidget(uri)} (${lineCount} lines)`,
+				);
 			} else if (content !== undefined) {
 				const lineCount = count(content, '\n') + 1;
-				invocationMessage = new MarkdownString(l10n.t`Creating file (${lineCount} lines)`);
+				invocationMessage = new MarkdownString(
+					l10n.t`Creating file (${lineCount} lines)`,
+				);
 			} else {
 				invocationMessage = new MarkdownString(l10n.t`Creating file`);
 			}
@@ -221,7 +345,11 @@ export class CreateFileTool implements ICopilotTool<ICreateFileParams> {
 		};
 	}
 
-	private sendTelemetry(requestId: string | undefined, model: string | undefined, fileExtension: string) {
+	private sendTelemetry(
+		requestId: string | undefined,
+		model: string | undefined,
+		fileExtension: string,
+	) {
 		/* __GDPR__
 			"createFileToolInvoked" : {
 				"owner": "bhavyaus",
@@ -233,7 +361,7 @@ export class CreateFileTool implements ICopilotTool<ICreateFileParams> {
 		this.telemetryService.sendMSFTTelemetryEvent('createFileToolInvoked', {
 			requestId,
 			model,
-			fileExtension
+			fileExtension,
 		});
 	}
 }

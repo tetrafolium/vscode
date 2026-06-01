@@ -3,19 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../base/common/uri.js';
-import { Emitter } from '../../../../../base/common/event.js';
-import { basename } from '../../../../../base/common/resources.js';
-import { IRange } from '../../../../../editor/common/core/range.js';
-import { combinedDisposable, Disposable, DisposableMap, IDisposable } from '../../../../../base/common/lifecycle.js';
-import { IChatRequestFileEntry, IChatRequestVariableEntry, isPromptFileVariableEntry } from '../../common/attachments/chatVariableEntries.js';
-import { FileChangeType, IFileService } from '../../../../../platform/files/common/files.js';
-import { ISharedWebContentExtractorService } from '../../../../../platform/webContentExtractor/common/webContentExtractor.js';
-import { Schemas } from '../../../../../base/common/network.js';
-import { IChatAttachmentResolveService } from './chatAttachmentResolveService.js';
-import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { equals } from '../../../../../base/common/objects.js';
-import { Iterable } from '../../../../../base/common/iterator.js';
+import { URI } from "../../../../../base/common/uri.js";
+import { Emitter } from "../../../../../base/common/event.js";
+import { basename } from "../../../../../base/common/resources.js";
+import { IRange } from "../../../../../editor/common/core/range.js";
+import {
+	combinedDisposable,
+	Disposable,
+	DisposableMap,
+	IDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import {
+	IChatRequestFileEntry,
+	IChatRequestVariableEntry,
+	isPromptFileVariableEntry,
+} from "../../common/attachments/chatVariableEntries.js";
+import {
+	FileChangeType,
+	IFileService,
+} from "../../../../../platform/files/common/files.js";
+import { ISharedWebContentExtractorService } from "../../../../../platform/webContentExtractor/common/webContentExtractor.js";
+import { Schemas } from "../../../../../base/common/network.js";
+import { IChatAttachmentResolveService } from "./chatAttachmentResolveService.js";
+import { CancellationToken } from "../../../../../base/common/cancellation.js";
+import { equals } from "../../../../../base/common/objects.js";
+import { Iterable } from "../../../../../base/common/iterator.js";
 
 export interface IChatAttachmentChangeEvent {
 	readonly deleted: readonly string[];
@@ -24,17 +36,22 @@ export interface IChatAttachmentChangeEvent {
 }
 
 export class ChatAttachmentModel extends Disposable {
-
 	private readonly _attachments = new Map<string, IChatRequestVariableEntry>();
-	private readonly _fileWatchers = this._register(new DisposableMap<IChatRequestFileEntry['id'], IDisposable>());
+	private readonly _fileWatchers = this._register(
+		new DisposableMap<IChatRequestFileEntry["id"], IDisposable>(),
+	);
 
-	private _onDidChange = this._register(new Emitter<IChatAttachmentChangeEvent>());
+	private _onDidChange = this._register(
+		new Emitter<IChatAttachmentChangeEvent>(),
+	);
 	readonly onDidChange = this._onDidChange.event;
 
 	constructor(
 		@IFileService private readonly fileService: IFileService,
-		@ISharedWebContentExtractorService private readonly webContentExtractorService: ISharedWebContentExtractorService,
-		@IChatAttachmentResolveService private readonly chatAttachmentResolveService: IChatAttachmentResolveService,
+		@ISharedWebContentExtractorService
+		private readonly webContentExtractorService: ISharedWebContentExtractorService,
+		@IChatAttachmentResolveService
+		private readonly chatAttachmentResolveService: IChatAttachmentResolveService,
 	) {
 		super();
 	}
@@ -48,8 +65,9 @@ export class ChatAttachmentModel extends Disposable {
 	}
 
 	get fileAttachments(): URI[] {
-		return this.attachments.filter(file => file.kind === 'file' && URI.isUri(file.value))
-			.map(file => file.value as URI);
+		return this.attachments
+			.filter((file) => file.kind === "file" && URI.isUri(file.value))
+			.map((file) => file.value as URI);
 	}
 
 	getAttachmentIDs() {
@@ -64,7 +82,10 @@ export class ChatAttachmentModel extends Disposable {
 			}
 			return;
 		} else if (uri.scheme === Schemas.vscodeBrowser) {
-			const entry = await this.chatAttachmentResolveService.resolveEditorAttachContext({ resource: uri });
+			const entry =
+				await this.chatAttachmentResolveService.resolveEditorAttachContext({
+					resource: uri,
+				});
 			if (entry) {
 				this.addContext(entry);
 			}
@@ -76,7 +97,7 @@ export class ChatAttachmentModel extends Disposable {
 
 	addFolder(uri: URI) {
 		const entry: IChatRequestVariableEntry = {
-			kind: 'directory',
+			kind: "directory",
 			value: uri,
 			id: uri.toString(),
 			name: basename(uri),
@@ -106,7 +127,9 @@ export class ChatAttachmentModel extends Disposable {
 	}
 
 	addContext(...attachments: IChatRequestVariableEntry[]) {
-		attachments = attachments.filter(attachment => !this._attachments.has(attachment.id));
+		attachments = attachments.filter(
+			(attachment) => !this._attachments.has(attachment.id),
+		);
 		this.updateContext(Iterable.empty(), attachments);
 	}
 
@@ -118,7 +141,10 @@ export class ChatAttachmentModel extends Disposable {
 		this.updateContext(variableEntryIds, Iterable.empty());
 	}
 
-	updateContext(toDelete: Iterable<string>, upsert: Iterable<IChatRequestVariableEntry>) {
+	updateContext(
+		toDelete: Iterable<string>,
+		upsert: Iterable<IChatRequestVariableEntry>,
+	) {
 		const deleted: string[] = [];
 		const added: IChatRequestVariableEntry[] = [];
 		const updated: IChatRequestVariableEntry[] = [];
@@ -153,19 +179,36 @@ export class ChatAttachmentModel extends Disposable {
 		}
 	}
 
-	private _maybeResolveDirectoryImageCount(attachment: IChatRequestVariableEntry): void {
+	private _maybeResolveDirectoryImageCount(
+		attachment: IChatRequestVariableEntry,
+	): void {
 		// Resolve the folder's image count asynchronously so the UI can warn when
 		// it exceeds the model's per-request image limit. Skip if already resolved.
-		if (attachment.kind !== 'directory' || typeof attachment.imageCount === 'number' || !URI.isUri(attachment.value)) {
+		if (
+			attachment.kind !== "directory" ||
+			typeof attachment.imageCount === "number" ||
+			!URI.isUri(attachment.value)
+		) {
 			return;
 		}
 		const uri = attachment.value;
-		this.chatAttachmentResolveService.resolveDirectoryImages(uri).then(images => {
-			const current = this._attachments.get(attachment.id);
-			if (current && current.kind === 'directory' && current.value?.toString() === uri.toString()) {
-				this.updateContext(Iterable.empty(), [{ ...current, imageCount: images.length }]);
-			}
-		}, () => { /* ignore */ });
+		this.chatAttachmentResolveService.resolveDirectoryImages(uri).then(
+			(images) => {
+				const current = this._attachments.get(attachment.id);
+				if (
+					current &&
+					current.kind === "directory" &&
+					current.value?.toString() === uri.toString()
+				) {
+					this.updateContext(Iterable.empty(), [
+						{ ...current, imageCount: images.length },
+					]);
+				}
+			},
+			() => {
+				/* ignore */
+			},
+		);
 	}
 
 	private _watchAttachment(attachment: IChatRequestVariableEntry): void {
@@ -174,39 +217,57 @@ export class ChatAttachmentModel extends Disposable {
 			return;
 		}
 
-		const watcher = this.fileService.createWatcher(uri, { recursive: false, excludes: [] });
-		const onDidChangeListener = watcher.onDidChange(e => {
+		const watcher = this.fileService.createWatcher(uri, {
+			recursive: false,
+			excludes: [],
+		});
+		const onDidChangeListener = watcher.onDidChange((e) => {
 			if (e.contains(uri, FileChangeType.DELETED)) {
 				this.updateContext([attachment.id], Iterable.empty());
 			}
 		});
 
-		this._fileWatchers.set(attachment.id, combinedDisposable(onDidChangeListener, watcher));
+		this._fileWatchers.set(
+			attachment.id,
+			combinedDisposable(onDidChangeListener, watcher),
+		);
 	}
 
 	// ---- create utils
 
 	asFileVariableEntry(uri: URI, range?: IRange): IChatRequestFileEntry {
 		return {
-			kind: 'file',
+			kind: "file",
 			value: range ? { uri, range } : uri,
-			id: uri.toString() + (range?.toString() ?? ''),
+			id: uri.toString() + (range?.toString() ?? ""),
 			name: basename(uri),
 		};
 	}
 
 	// Gets an image variable for a given URI, which may be a file or a web URL
-	async asImageVariableEntry(uri: URI): Promise<IChatRequestVariableEntry | undefined> {
-		if (uri.scheme === Schemas.file && await this.fileService.canHandleResource(uri)) {
-			return await this.chatAttachmentResolveService.resolveImageEditorAttachContext(uri);
+	async asImageVariableEntry(
+		uri: URI,
+	): Promise<IChatRequestVariableEntry | undefined> {
+		if (
+			uri.scheme === Schemas.file &&
+			(await this.fileService.canHandleResource(uri))
+		) {
+			return await this.chatAttachmentResolveService.resolveImageEditorAttachContext(
+				uri,
+			);
 		} else if (uri.scheme === Schemas.http || uri.scheme === Schemas.https) {
-			const extractedImages = await this.webContentExtractorService.readImage(uri, CancellationToken.None);
+			const extractedImages = await this.webContentExtractorService.readImage(
+				uri,
+				CancellationToken.None,
+			);
 			if (extractedImages) {
-				return await this.chatAttachmentResolveService.resolveImageEditorAttachContext(uri, extractedImages);
+				return await this.chatAttachmentResolveService.resolveImageEditorAttachContext(
+					uri,
+					extractedImages,
+				);
 			}
 		}
 
 		return undefined;
 	}
-
 }

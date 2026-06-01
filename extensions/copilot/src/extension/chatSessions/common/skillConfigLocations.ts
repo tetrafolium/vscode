@@ -21,7 +21,10 @@ export function resolveSkillConfigLocations(
 	workspaceService: IWorkspaceService,
 ): URI[] {
 	const results: URI[] = [];
-	const locations = configurationService.getNonExtensionConfig<Record<string, boolean>>(SKILLS_LOCATION_KEY);
+	const locations =
+		configurationService.getNonExtensionConfig<Record<string, boolean>>(
+			SKILLS_LOCATION_KEY,
+		);
 	if (!isObject(locations)) {
 		return results;
 	}

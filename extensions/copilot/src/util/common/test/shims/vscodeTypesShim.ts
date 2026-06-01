@@ -7,22 +7,120 @@ import * as vscodeTypes from '../../../../vscodeTypes';
 import { CancellationTokenSource } from '../../../vs/base/common/cancellation';
 import { Emitter as EventEmitter } from '../../../vs/base/common/event';
 import { URI as Uri } from '../../../vs/base/common/uri';
-import { Diagnostic, DiagnosticRelatedInformation } from '../../../vs/workbench/api/common/extHostTypes/diagnostic';
+import {
+	Diagnostic,
+	DiagnosticRelatedInformation,
+} from '../../../vs/workbench/api/common/extHostTypes/diagnostic';
 import { Location } from '../../../vs/workbench/api/common/extHostTypes/location';
 import { MarkdownString } from '../../../vs/workbench/api/common/extHostTypes/markdownString';
-import { NotebookCellData, NotebookCellKind, NotebookData, NotebookEdit, NotebookRange } from '../../../vs/workbench/api/common/extHostTypes/notebooks';
+import {
+	NotebookCellData,
+	NotebookCellKind,
+	NotebookData,
+	NotebookEdit,
+	NotebookRange,
+} from '../../../vs/workbench/api/common/extHostTypes/notebooks';
 import { Position } from '../../../vs/workbench/api/common/extHostTypes/position';
 import { Range } from '../../../vs/workbench/api/common/extHostTypes/range';
 import { Selection } from '../../../vs/workbench/api/common/extHostTypes/selection';
 import { SnippetString } from '../../../vs/workbench/api/common/extHostTypes/snippetString';
 import { SnippetTextEdit } from '../../../vs/workbench/api/common/extHostTypes/snippetTextEdit';
-import { SymbolInformation, SymbolKind } from '../../../vs/workbench/api/common/extHostTypes/symbolInformation';
-import { EndOfLine, TextEdit } from '../../../vs/workbench/api/common/extHostTypes/textEdit';
-import { AISearchKeyword, ChatErrorLevel, ChatInputNotificationSeverity, ChatQuestion, ChatQuestionType, ChatReferenceBinaryData, ChatReferenceDiagnostic, ChatRequestEditedFileEventKind, ChatRequestEditorData, ChatRequestNotebookData, ChatRequestTurn, ChatRequestTurn2, ChatResponseAnchorPart, ChatResponseClearToPreviousToolInvocationReason, ChatResponseCodeblockUriPart, ChatResponseCodeCitationPart, ChatResponseCommandButtonPart, ChatResponseConfirmationPart, ChatResponseExtensionsPart, ChatResponseExternalEditPart, ChatResponseFileTreePart, ChatResponseHookPart, ChatResponseInfoPart, ChatResponseMarkdownPart, ChatResponseMarkdownWithVulnerabilitiesPart, ChatResponseMovePart, ChatResponseNotebookEditPart, ChatResponseProgressPart, ChatResponseProgressPart2, ChatResponsePullRequestPart, ChatResponseQuestionCarouselPart, ChatResponseReferencePart, ChatResponseReferencePart2, ChatResponseTextEditPart, ChatResponseThinkingProgressPart, ChatResponseTurn, ChatResponseTurn2, ChatResponseWarningPart, ChatResponseWorkspaceEditPart, ChatSessionStatus, ChatSubagentToolInvocationData, ChatToolInvocationPart, ExcludeSettingOptions, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatToolMode, LanguageModelDataPart, LanguageModelDataPart2, LanguageModelError, LanguageModelPartAudience, LanguageModelPromptTsxPart, LanguageModelTextPart, LanguageModelTextPart2, LanguageModelThinkingPart, LanguageModelToolCallPart, LanguageModelToolExtensionSource, LanguageModelToolMCPSource, LanguageModelToolResult, LanguageModelToolResult2, LanguageModelToolResultPart, LanguageModelToolResultPart2, McpHttpServerDefinition, McpStdioServerDefinition, McpToolInvocationContentData, TextSearchMatch2 } from './chatTypes';
-import { TextDocumentChangeReason, TextEditorSelectionChangeKind, WorkspaceEdit } from './editing';
-import { ChatLocation, ChatVariableLevel, DiagnosticSeverity, ExtensionMode, FileType, TextEditorCursorStyle, TextEditorLineNumbersStyle, TextEditorRevealType } from './enums';
+import {
+	SymbolInformation,
+	SymbolKind,
+} from '../../../vs/workbench/api/common/extHostTypes/symbolInformation';
+import {
+	EndOfLine,
+	TextEdit,
+} from '../../../vs/workbench/api/common/extHostTypes/textEdit';
+import {
+	AISearchKeyword,
+	ChatErrorLevel,
+	ChatInputNotificationSeverity,
+	ChatQuestion,
+	ChatQuestionType,
+	ChatReferenceBinaryData,
+	ChatReferenceDiagnostic,
+	ChatRequestEditedFileEventKind,
+	ChatRequestEditorData,
+	ChatRequestNotebookData,
+	ChatRequestTurn,
+	ChatRequestTurn2,
+	ChatResponseAnchorPart,
+	ChatResponseClearToPreviousToolInvocationReason,
+	ChatResponseCodeblockUriPart,
+	ChatResponseCodeCitationPart,
+	ChatResponseCommandButtonPart,
+	ChatResponseConfirmationPart,
+	ChatResponseExtensionsPart,
+	ChatResponseExternalEditPart,
+	ChatResponseFileTreePart,
+	ChatResponseHookPart,
+	ChatResponseInfoPart,
+	ChatResponseMarkdownPart,
+	ChatResponseMarkdownWithVulnerabilitiesPart,
+	ChatResponseMovePart,
+	ChatResponseNotebookEditPart,
+	ChatResponseProgressPart,
+	ChatResponseProgressPart2,
+	ChatResponsePullRequestPart,
+	ChatResponseQuestionCarouselPart,
+	ChatResponseReferencePart,
+	ChatResponseReferencePart2,
+	ChatResponseTextEditPart,
+	ChatResponseThinkingProgressPart,
+	ChatResponseTurn,
+	ChatResponseTurn2,
+	ChatResponseWarningPart,
+	ChatResponseWorkspaceEditPart,
+	ChatSessionStatus,
+	ChatSubagentToolInvocationData,
+	ChatToolInvocationPart,
+	ExcludeSettingOptions,
+	LanguageModelChatMessage,
+	LanguageModelChatMessageRole,
+	LanguageModelChatToolMode,
+	LanguageModelDataPart,
+	LanguageModelDataPart2,
+	LanguageModelError,
+	LanguageModelPartAudience,
+	LanguageModelPromptTsxPart,
+	LanguageModelTextPart,
+	LanguageModelTextPart2,
+	LanguageModelThinkingPart,
+	LanguageModelToolCallPart,
+	LanguageModelToolExtensionSource,
+	LanguageModelToolMCPSource,
+	LanguageModelToolResult,
+	LanguageModelToolResult2,
+	LanguageModelToolResultPart,
+	LanguageModelToolResultPart2,
+	McpHttpServerDefinition,
+	McpStdioServerDefinition,
+	McpToolInvocationContentData,
+	TextSearchMatch2,
+} from './chatTypes';
+import {
+	TextDocumentChangeReason,
+	TextEditorSelectionChangeKind,
+	WorkspaceEdit,
+} from './editing';
+import {
+	ChatLocation,
+	ChatVariableLevel,
+	DiagnosticSeverity,
+	ExtensionMode,
+	FileType,
+	TextEditorCursorStyle,
+	TextEditorLineNumbersStyle,
+	TextEditorRevealType,
+} from './enums';
 import { t } from './l10n';
-import { NewSymbolName, NewSymbolNameTag, NewSymbolNameTriggerKind } from './newSymbolName';
+import {
+	NewSymbolName,
+	NewSymbolNameTag,
+	NewSymbolNameTriggerKind,
+} from './newSymbolName';
 import { TerminalShellExecutionCommandLineConfidence } from './terminal';
 import { ThemeIcon } from './themes';
 
@@ -45,7 +143,7 @@ const shim: typeof vscodeTypes = {
 	TextEditorRevealType,
 	EndOfLine,
 	l10n: {
-		t
+		t,
 	},
 	ExtensionMode,
 	ChatVariableLevel,
@@ -131,11 +229,13 @@ const shim: typeof vscodeTypes = {
 	FileType,
 	ChatSessionStatus,
 	authentication: {
-		getSession: async () => { throw new Error('authentication.getSession not mocked in test'); }
+		getSession: async () => {
+			throw new Error('authentication.getSession not mocked in test');
+		},
 	},
 	McpHttpServerDefinition,
 	McpStdioServerDefinition,
-	ThemeIcon
+	ThemeIcon,
 };
 
 export = shim;

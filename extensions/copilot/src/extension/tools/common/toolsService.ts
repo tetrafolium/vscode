@@ -11,11 +11,15 @@ import { LRUCache } from '../../../util/common/cache';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { Emitter, Event } from '../../../util/vs/base/common/event';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
-import { IObservable, ObservableMap } from '../../../util/vs/base/common/observable';
+import {
+	IObservable,
+	ObservableMap,
+} from '../../../util/vs/base/common/observable';
 import { ToolName } from './toolNames';
 import { ICopilotModelSpecificTool, ICopilotTool } from './toolsRegistry';
 
-export const IToolsService = createServiceIdentifier<IToolsService>('IToolsService');
+export const IToolsService =
+	createServiceIdentifier<IToolsService>('IToolsService');
 
 export type IToolValidationResult = IValidatedToolInput | IToolValidationError;
 
@@ -27,11 +31,15 @@ export interface IToolValidationError {
 	error: string;
 }
 
-export function isValidatedToolInput(result: IToolValidationResult): result is IValidatedToolInput {
+export function isValidatedToolInput(
+	result: IToolValidationResult,
+): result is IValidatedToolInput {
 	return 'inputObj' in result;
 }
 
-export function isToolValidationError(result: IToolValidationResult): result is IToolValidationError {
+export function isToolValidationError(
+	result: IToolValidationResult,
+): result is IToolValidationError {
 	return 'error' in result;
 }
 
@@ -64,7 +72,12 @@ export interface IToolsService {
 	 * Model-specific tool instances. These are NOT included in the
 	 * {@link copilotTools} map, and may update at runtime.
 	 */
-	modelSpecificTools: IObservable<{ definition: vscode.LanguageModelToolDefinition; tool: ICopilotTool<unknown> }[]>;
+	modelSpecificTools: IObservable<
+		{
+			definition: vscode.LanguageModelToolDefinition;
+			tool: ICopilotTool<unknown>;
+		}[]
+	>;
 
 	getCopilotTool(name: string): ICopilotTool<unknown> | undefined;
 
@@ -72,17 +85,27 @@ export interface IToolsService {
 	 * Invokes a tool by name with the given options.
 	 * Note that `invokeToolWithEndpoint` should be preferred for most usages.
 	 */
-	invokeTool(name: string, options: vscode.LanguageModelToolInvocationOptions<unknown>, token: vscode.CancellationToken): Thenable<vscode.LanguageModelToolResult2>;
+	invokeTool(
+		name: string,
+		options: vscode.LanguageModelToolInvocationOptions<unknown>,
+		token: vscode.CancellationToken,
+	): Thenable<vscode.LanguageModelToolResult2>;
 
 	/**
 	 * Invokes a tool by name with the given options. Uses any endpoint-specific tool
 	 * overrides as appropriate.
 	 */
-	invokeToolWithEndpoint(name: string, options: vscode.LanguageModelToolInvocationOptions<unknown>, endpoint: IChatEndpoint | undefined, token: vscode.CancellationToken): Thenable<vscode.LanguageModelToolResult2>;
-
+	invokeToolWithEndpoint(
+		name: string,
+		options: vscode.LanguageModelToolInvocationOptions<unknown>,
+		endpoint: IChatEndpoint | undefined,
+		token: vscode.CancellationToken,
+	): Thenable<vscode.LanguageModelToolResult2>;
 
 	getTool(name: string): vscode.LanguageModelToolInformation | undefined;
-	getToolByToolReferenceName(name: string): vscode.LanguageModelToolInformation | undefined;
+	getToolByToolReferenceName(
+		name: string,
+	): vscode.LanguageModelToolInformation | undefined;
 
 	/**
 	 * Validates the input to the tool, returning an error if it's invalid.
@@ -96,14 +119,23 @@ export interface IToolsService {
 	 * pass `filter` function that can explicitl enable (true) or disable (false)
 	 * a tool, or use the default logic (undefined).
 	 */
-	getEnabledTools(request: vscode.ChatRequest, endpoint: IChatEndpoint, filter?: (tool: vscode.LanguageModelToolInformation) => boolean | undefined): vscode.LanguageModelToolInformation[];
+	getEnabledTools(
+		request: vscode.ChatRequest,
+		endpoint: IChatEndpoint,
+		filter?: (
+			tool: vscode.LanguageModelToolInformation,
+		) => boolean | undefined,
+	): vscode.LanguageModelToolInformation[];
 }
 
 /**
  * Navigates to a property in an object using a JSON Pointer path (RFC6901).
  * Returns an object with the parent container and property name, or null if the path is invalid.
  */
-function getObjectPropertyByPath(obj: any, jsonPointerPath: string): { parent: any; propertyName: string } | null {
+function getObjectPropertyByPath(
+	obj: any,
+	jsonPointerPath: string,
+): { parent: any; propertyName: string } | null {
 	// Parse the JSON Pointer path (RFC6901)
 	const pathSegments = jsonPointerPath.split('/').slice(1); // Remove empty first element from leading '/'
 
@@ -115,7 +147,11 @@ function getObjectPropertyByPath(obj: any, jsonPointerPath: string): { parent: a
 	let current: any = obj;
 	for (let i = 0; i < pathSegments.length - 1; i++) {
 		const segment = pathSegments[i];
-		if (current && typeof current === 'object' && Object.prototype.hasOwnProperty.call(current, segment)) {
+		if (
+			current &&
+			typeof current === 'object' &&
+			Object.prototype.hasOwnProperty.call(current, segment)
+		) {
 			current = current[segment];
 		} else {
 			return null;
@@ -130,7 +166,11 @@ function getObjectPropertyByPath(obj: any, jsonPointerPath: string): { parent: a
 	return null;
 }
 
-function ajvValidateForTool(toolName: string, fn: ValidateFunction, inputObj: unknown): IToolValidationResult {
+function ajvValidateForTool(
+	toolName: string,
+	fn: ValidateFunction,
+	inputObj: unknown,
+): IToolValidationResult {
 	// Empty output can be valid when the schema only has optional properties
 	if (fn(inputObj ?? {})) {
 		return { inputObj };
@@ -141,19 +181,29 @@ function ajvValidateForTool(toolName: string, fn: ValidateFunction, inputObj: un
 		let hasNestedJsonStrings = false;
 		for (const error of fn.errors) {
 			// Check if the error is about expecting an object but getting a string
-			const isObjError = error.keyword === 'type' && (error.params?.type === 'object' || error.params?.type === 'array') && error.instancePath;
+			const isObjError =
+				error.keyword === 'type' &&
+				(error.params?.type === 'object' ||
+					error.params?.type === 'array') &&
+				error.instancePath;
 			if (!isObjError) {
 				continue;
 			}
 
-			const pathInfo = getObjectPropertyByPath(inputObj, error.instancePath);
+			const pathInfo = getObjectPropertyByPath(
+				inputObj,
+				error.instancePath,
+			);
 			if (pathInfo) {
 				const { parent, propertyName } = pathInfo;
 				const value = parent[propertyName];
 
 				try {
 					const parsedValue = JSON.parse(value);
-					if (typeof parsedValue === 'object' && parsedValue !== null) {
+					if (
+						typeof parsedValue === 'object' &&
+						parsedValue !== null
+					) {
 						parent[propertyName] = parsedValue;
 						hasNestedJsonStrings = true;
 					}
@@ -168,15 +218,26 @@ function ajvValidateForTool(toolName: string, fn: ValidateFunction, inputObj: un
 		}
 	}
 
-	const errors = fn.errors!.map(e => e.message || `${e.instancePath} is invalid}`);
-	return { error: `ERROR: Your input to the tool was invalid (${errors.join(', ')})` };
+	const errors = fn.errors!.map(
+		(e) => e.message || `${e.instancePath} is invalid}`,
+	);
+	return {
+		error: `ERROR: Your input to the tool was invalid (${errors.join(', ')})`,
+	};
 }
 
-export abstract class BaseToolsService extends Disposable implements IToolsService {
+export abstract class BaseToolsService
+	extends Disposable
+	implements IToolsService
+{
 	abstract readonly _serviceBrand: undefined;
 
-	protected readonly _onWillInvokeTool = this._register(new Emitter<IOnWillInvokeToolEvent>());
-	public get onWillInvokeTool() { return this._onWillInvokeTool.event; }
+	protected readonly _onWillInvokeTool = this._register(
+		new Emitter<IOnWillInvokeToolEvent>(),
+	);
+	public get onWillInvokeTool() {
+		return this._onWillInvokeTool.event;
+	}
 
 	abstract tools: ReadonlyArray<vscode.LanguageModelToolInformation>;
 	abstract copilotTools: ReadonlyMap<ToolName, ICopilotTool<unknown>>;
@@ -185,30 +246,53 @@ export abstract class BaseToolsService extends Disposable implements IToolsServi
 	private didWarnAboutValidationError?: Set<string>;
 	private readonly schemaCache = new LRUCache<ValidateFunction>(16);
 
-	protected readonly _modelSpecificTools = new ObservableMap</* tool name */string, { definition: vscode.LanguageModelToolDefinition; tool: ICopilotModelSpecificTool<unknown> }>();
+	protected readonly _modelSpecificTools = new ObservableMap<
+		/* tool name */ string,
+		{
+			definition: vscode.LanguageModelToolDefinition;
+			tool: ICopilotModelSpecificTool<unknown>;
+		}
+	>();
 	public get modelSpecificTools() {
-		return this._modelSpecificTools.observable.map(v => [...v.values()]);
+		return this._modelSpecificTools.observable.map((v) => [...v.values()]);
 	}
 
 	abstract getCopilotTool(name: string): ICopilotTool<unknown> | undefined;
-	abstract invokeTool(name: string, options: vscode.LanguageModelToolInvocationOptions<Object>, token: vscode.CancellationToken): Thenable<vscode.LanguageModelToolResult2>;
+	abstract invokeTool(
+		name: string,
+		options: vscode.LanguageModelToolInvocationOptions<Object>,
+		token: vscode.CancellationToken,
+	): Thenable<vscode.LanguageModelToolResult2>;
 
-	invokeToolWithEndpoint(name: string, options: vscode.LanguageModelToolInvocationOptions<Object>, endpoint: IChatEndpoint | undefined, token: vscode.CancellationToken): Thenable<vscode.LanguageModelToolResult2> {
+	invokeToolWithEndpoint(
+		name: string,
+		options: vscode.LanguageModelToolInvocationOptions<Object>,
+		endpoint: IChatEndpoint | undefined,
+		token: vscode.CancellationToken,
+	): Thenable<vscode.LanguageModelToolResult2> {
 		return this.invokeTool(name, options, token);
 	}
 
-	abstract getTool(name: string): vscode.LanguageModelToolInformation | undefined;
-	abstract getToolByToolReferenceName(name: string): vscode.LanguageModelToolInformation | undefined;
-	abstract getEnabledTools(request: vscode.ChatRequest, endpoint: IChatEndpoint, filter?: (tool: vscode.LanguageModelToolInformation) => boolean | undefined): vscode.LanguageModelToolInformation[];
+	abstract getTool(
+		name: string,
+	): vscode.LanguageModelToolInformation | undefined;
+	abstract getToolByToolReferenceName(
+		name: string,
+	): vscode.LanguageModelToolInformation | undefined;
+	abstract getEnabledTools(
+		request: vscode.ChatRequest,
+		endpoint: IChatEndpoint,
+		filter?: (
+			tool: vscode.LanguageModelToolInformation,
+		) => boolean | undefined,
+	): vscode.LanguageModelToolInformation[];
 
-	constructor(
-		@ILogService private readonly logService: ILogService
-	) {
+	constructor(@ILogService private readonly logService: ILogService) {
 		super();
 	}
 
 	validateToolInput(name: string, input: string): IToolValidationResult {
-		const tool = this.tools.find(tool => tool.name === name);
+		const tool = this.tools.find((tool) => tool.name === name);
 		if (!tool) {
 			return { error: `ERROR: The tool "${name}" does not exist` };
 		}
@@ -218,7 +302,9 @@ export abstract class BaseToolsService extends Disposable implements IToolsServi
 			inputObj = JSON.parse(input) ?? {};
 		} catch (err) {
 			if (input) {
-				return { error: `ERROR: Your input to the tool was invalid (${err.toString()})` };
+				return {
+					error: `ERROR: Your input to the tool was invalid (${err.toString()})`,
+				};
 			}
 		}
 
@@ -234,7 +320,9 @@ export abstract class BaseToolsService extends Disposable implements IToolsServi
 				if (!this.didWarnAboutValidationError?.has(tool.name)) {
 					this.didWarnAboutValidationError ??= new Set();
 					this.didWarnAboutValidationError.add(tool.name);
-					this.logService.warn(`Error compiling input schema for tool ${tool.name}: ${e}`);
+					this.logService.warn(
+						`Error compiling input schema for tool ${tool.name}: ${e}`,
+					);
 				}
 
 				return { inputObj };
@@ -247,19 +335,26 @@ export abstract class BaseToolsService extends Disposable implements IToolsServi
 	}
 
 	validateToolName(name: string): string | undefined {
-		const tool = this.tools.find(tool => tool.name === name);
+		const tool = this.tools.find((tool) => tool.name === name);
 		if (!tool) {
 			return name.replace(/[^\w-]/g, '_');
 		}
 	}
 }
 
-export class NullToolsService extends BaseToolsService implements IToolsService {
+export class NullToolsService
+	extends BaseToolsService
+	implements IToolsService
+{
 	_serviceBrand: undefined;
 	tools: readonly vscode.LanguageModelToolInformation[] = [];
 	copilotTools = new Map();
 
-	async invokeTool(id: string, options: vscode.LanguageModelToolInvocationOptions<Object>, token: vscode.CancellationToken): Promise<vscode.LanguageModelToolResult2> {
+	async invokeTool(
+		id: string,
+		options: vscode.LanguageModelToolInvocationOptions<Object>,
+		token: vscode.CancellationToken,
+	): Promise<vscode.LanguageModelToolResult2> {
 		return {
 			content: [],
 		};
@@ -273,7 +368,9 @@ export class NullToolsService extends BaseToolsService implements IToolsService 
 		return undefined;
 	}
 
-	getToolByToolReferenceName(name: string): vscode.LanguageModelToolInformation | undefined {
+	getToolByToolReferenceName(
+		name: string,
+	): vscode.LanguageModelToolInformation | undefined {
 		return undefined;
 	}
 

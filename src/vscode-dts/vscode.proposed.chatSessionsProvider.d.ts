@@ -5,7 +5,7 @@
 
 // version: 3
 
-declare module 'vscode' {
+declare module "vscode" {
 	/**
 	 * Represents the status of a chat session.
 	 */
@@ -28,7 +28,7 @@ declare module 'vscode' {
 		/**
 		 * The chat session needs user input (e.g. an unresolved confirmation).
 		 */
-		NeedsInput = 3
+		NeedsInput = 3,
 	}
 
 	export namespace chat {
@@ -44,7 +44,10 @@ declare module 'vscode' {
 		 *
 		 * @returns A disposable that unregisters the provider when disposed.
 		 */
-		export function registerChatSessionItemProvider(chatSessionType: string, provider: ChatSessionItemProvider): Disposable;
+		export function registerChatSessionItemProvider(
+			chatSessionType: string,
+			provider: ChatSessionItemProvider,
+		): Disposable;
 
 		/**
 		 * Creates a new {@link ChatSessionItemController chat session item controller} with the given unique identifier.
@@ -56,7 +59,10 @@ declare module 'vscode' {
 		 *
 		 * @returns A new controller instance that can be used to manage chat session items for the given chat session type.
 		 */
-		export function createChatSessionItemController(chatSessionType: string, refreshHandler: ChatSessionItemControllerRefreshHandler): ChatSessionItemController;
+		export function createChatSessionItemController(
+			chatSessionType: string,
+			refreshHandler: ChatSessionItemControllerRefreshHandler,
+		): ChatSessionItemController;
 	}
 
 	/**
@@ -74,7 +80,9 @@ declare module 'vscode' {
 		 * Provides a list of chat sessions.
 		 */
 		// TODO: Do we need a flag to try auth if needed?
-		provideChatSessionItems(token: CancellationToken): ProviderResult<ChatSessionItem[]>;
+		provideChatSessionItems(
+			token: CancellationToken,
+		): ProviderResult<ChatSessionItem[]>;
 
 		/**
 		 * @deprecated Use {@linkcode ChatSessionItemController.resolveChatSessionItem} instead.
@@ -91,7 +99,10 @@ declare module 'vscode' {
 		 * same `resource` as `item` and any additional properties filled in. When no result is returned,
 		 * the given `item` is left unchanged.
 		 */
-		resolveChatSessionItem?: (item: ChatSessionItem, token: CancellationToken) => ProviderResult<ChatSessionItem>;
+		resolveChatSessionItem?: (
+			item: ChatSessionItem,
+			token: CancellationToken,
+		) => ProviderResult<ChatSessionItem>;
 
 		// #region Unstable parts of API
 
@@ -99,7 +110,10 @@ declare module 'vscode' {
 		 * Event that the provider can fire to signal that the current (original) chat session should be replaced with a new (modified) chat session.
 		 * The UI can use this information to gracefully migrate the user to the new session.
 		 */
-		readonly onDidCommitChatSessionItem: Event<{ original: ChatSessionItem /** untitled */; modified: ChatSessionItem /** newly created */ }>;
+		readonly onDidCommitChatSessionItem: Event<{
+			original: ChatSessionItem /** untitled */;
+			modified: ChatSessionItem; /** newly created */
+		}>;
 
 		// #endregion
 	}
@@ -107,7 +121,9 @@ declare module 'vscode' {
 	/**
 	 * Extension callback invoked to refresh the collection of chat session items for a {@linkcode ChatSessionItemController}.
 	 */
-	export type ChatSessionItemControllerRefreshHandler = (token: CancellationToken) => Thenable<void>;
+	export type ChatSessionItemControllerRefreshHandler = (
+		token: CancellationToken,
+	) => Thenable<void>;
 
 	export interface ChatSessionItemControllerNewItemHandlerContext {
 		// TODO: Use a better type but for now decrease this down to just the prompt and command since that's all we currently need.
@@ -123,7 +139,10 @@ declare module 'vscode' {
 	/**
 	 * Extension callback invoked when a new chat session is started.
 	 */
-	export type ChatSessionItemControllerNewItemHandler = (context: ChatSessionItemControllerNewItemHandlerContext, token: CancellationToken) => Thenable<ChatSessionItem>;
+	export type ChatSessionItemControllerNewItemHandler = (
+		context: ChatSessionItemControllerNewItemHandlerContext,
+		token: CancellationToken,
+	) => Thenable<ChatSessionItem>;
 
 	/**
 	 * Extension callback invoked to get the input state for a chat session.
@@ -135,12 +154,16 @@ declare module 'vscode' {
 	 *
 	 * @return A new chat session input state. This should be created using {@link ChatSessionItemController.createChatSessionInputState}.
 	 */
-	export type ChatSessionControllerGetInputState = (sessionResource: Uri | undefined, context: {
-		/**
-		 * The previous input state for the session.
-		 */
-		readonly previousInputState: ChatSessionInputState | undefined;
-	}, token: CancellationToken) => Thenable<ChatSessionInputState> | ChatSessionInputState;
+	export type ChatSessionControllerGetInputState = (
+		sessionResource: Uri | undefined,
+		context: {
+			/**
+			 * The previous input state for the session.
+			 */
+			readonly previousInputState: ChatSessionInputState | undefined;
+		},
+		token: CancellationToken,
+	) => Thenable<ChatSessionInputState> | ChatSessionInputState;
 
 	/**
 	 * Extension callback invoked to fork an existing chat session item managed by a {@linkcode ChatSessionItemController}.
@@ -154,7 +177,11 @@ declare module 'vscode' {
 	 * @param token A cancellation token.
 	 * @returns The forked session item.
 	 */
-	export type ChatSessionItemControllerForkHandler = (sessionResource: Uri, request: ChatRequestTurn2 | undefined, token: CancellationToken) => Thenable<ChatSessionItem> | ChatSessionItem;
+	export type ChatSessionItemControllerForkHandler = (
+		sessionResource: Uri,
+		request: ChatRequestTurn2 | undefined,
+		token: CancellationToken,
+	) => Thenable<ChatSessionItem> | ChatSessionItem;
 
 	/**
 	 * Manages chat sessions for a specific chat session type
@@ -229,18 +256,25 @@ declare module 'vscode' {
 		 * @param item A chat session item currently visible in the UI.
 		 * @param token A cancellation token.
 		 */
-		resolveChatSessionItem?: (item: ChatSessionItem, token: CancellationToken) => Thenable<void>;
+		resolveChatSessionItem?: (
+			item: ChatSessionItem,
+			token: CancellationToken,
+		) => Thenable<void>;
 
 		/**
 		 * Create a new managed ChatSessionInputState object.
 		 */
-		createChatSessionInputState(groups: ChatSessionProviderOptionGroup[]): ChatSessionInputState;
+		createChatSessionInputState(
+			groups: ChatSessionProviderOptionGroup[],
+		): ChatSessionInputState;
 	}
 
 	/**
 	 * A collection of chat session items. It provides operations for managing and iterating over the items.
 	 */
-	export interface ChatSessionItemCollection extends Iterable<readonly [id: Uri, chatSessionItem: ChatSessionItem]> {
+	export interface ChatSessionItemCollection extends Iterable<
+		readonly [id: Uri, chatSessionItem: ChatSessionItem]
+	> {
 		/**
 		 * Gets the number of items in the collection.
 		 */
@@ -259,7 +293,13 @@ declare module 'vscode' {
 		 * @param callback Function to execute for each entry.
 		 * @param thisArg The `this` context used when invoking the handler function.
 		 */
-		forEach(callback: (item: ChatSessionItem, collection: ChatSessionItemCollection) => unknown, thisArg?: any): void;
+		forEach(
+			callback: (
+				item: ChatSessionItem,
+				collection: ChatSessionItemCollection,
+			) => unknown,
+			thisArg?: any,
+		): void;
 
 		/**
 		 * Adds the chat session item to the collection. If an item with the same resource URI already
@@ -431,7 +471,13 @@ declare module 'vscode' {
 		 */
 		deletions: number;
 
-		constructor(uri: Uri, originalUri: Uri | undefined, modifiedUri: Uri | undefined, insertions: number, deletions: number);
+		constructor(
+			uri: Uri,
+			originalUri: Uri | undefined,
+			modifiedUri: Uri | undefined,
+			insertions: number,
+			deletions: number,
+		);
 	}
 
 	export interface ChatSession {
@@ -470,7 +516,10 @@ declare module 'vscode' {
 		 *
 		 * If not provided, the chat session is assumed to not currently be running.
 		 */
-		readonly activeResponseCallback?: (stream: ChatResponseStream, token: CancellationToken) => Thenable<void>;
+		readonly activeResponseCallback?: (
+			stream: ChatResponseStream,
+			token: CancellationToken,
+		) => Thenable<void>;
 
 		/**
 		 * Handles new request for the session.
@@ -555,9 +604,13 @@ declare module 'vscode' {
 		 *
 		 * @return The {@link ChatSession chat session} associated with the given URI.
 		 */
-		provideChatSessionContent(resource: Uri, token: CancellationToken, context: {
-			readonly inputState: ChatSessionInputState;
-		}): Thenable<ChatSession> | ChatSession;
+		provideChatSessionContent(
+			resource: Uri,
+			token: CancellationToken,
+			context: {
+				readonly inputState: ChatSessionInputState;
+			},
+		): Thenable<ChatSession> | ChatSession;
 
 		/**
 		 * @deprecated
@@ -566,14 +619,20 @@ declare module 'vscode' {
 		 * @param updates Collection of option identifiers and their new values. Only the options that changed are included.
 		 * @param token A cancellation token that can be used to cancel the notification if the session is disposed.
 		 */
-		provideHandleOptionsChange?(resource: Uri, updates: ReadonlyArray<ChatSessionOptionUpdate>, token: CancellationToken): void;
+		provideHandleOptionsChange?(
+			resource: Uri,
+			updates: ReadonlyArray<ChatSessionOptionUpdate>,
+			token: CancellationToken,
+		): void;
 
 		/**
 		 * @deprecated
 		 *
 		 * Called as soon as you register (call me once)
 		 */
-		provideChatSessionProviderOptions?(token: CancellationToken): Thenable<ChatSessionProviderOptions>;
+		provideChatSessionProviderOptions?(
+			token: CancellationToken,
+		): Thenable<ChatSessionProviderOptions>;
 	}
 
 	export interface ChatSessionOptionUpdate {
@@ -598,7 +657,12 @@ declare module 'vscode' {
 		 *
 		 * @returns A disposable that unregisters the provider when disposed.
 		 */
-		export function registerChatSessionContentProvider(scheme: string, provider: ChatSessionContentProvider, defaultChatParticipant: ChatParticipant, capabilities?: ChatSessionCapabilities): Disposable;
+		export function registerChatSessionContentProvider(
+			scheme: string,
+			provider: ChatSessionContentProvider,
+			defaultChatParticipant: ChatParticipant,
+			capabilities?: ChatSessionCapabilities,
+		): Disposable;
 	}
 
 	export interface ChatContext {
@@ -617,7 +681,10 @@ declare module 'vscode' {
 		 *
 		 * @deprecated Use `inputState` instead
 		 */
-		readonly initialSessionOptions?: ReadonlyArray<{ optionId: string; value: string | ChatSessionProviderOptionItem }>;
+		readonly initialSessionOptions?: ReadonlyArray<{
+			optionId: string;
+			value: string | ChatSessionProviderOptionItem;
+		}>;
 
 		/**
 		 * The current input state of the chat session.
@@ -792,7 +859,7 @@ declare module 'vscode' {
 		 *
 		 * When omitted, the group is rendered as a standalone picker as usual.
 		 */
-		readonly kind?: 'permissions';
+		readonly kind?: "permissions";
 	}
 
 	export interface ChatSessionProviderOptions {
@@ -807,7 +874,10 @@ declare module 'vscode' {
 		 *
 		 * Keys correspond to option group IDs (e.g., 'models', 'subagents').
 		 */
-		readonly newSessionOptions?: Record<string, string | ChatSessionProviderOptionItem>;
+		readonly newSessionOptions?: Record<
+			string,
+			string | ChatSessionProviderOptionItem
+		>;
 	}
 
 	/**

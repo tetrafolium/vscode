@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
+import { ITelemetryService } from "../../../../platform/telemetry/common/telemetry.js";
 
 /**
  * Data emitted by a picker in the new chat view pane when the user selects
@@ -34,19 +34,22 @@ export interface INewChatPickerClosedData {
 	readonly isPII: boolean;
 }
 
-export function reportNewChatPickerClosed(telemetryService: ITelemetryService, data: INewChatPickerClosedData): void {
-	telemetryService.publicLog2<NewChatPickerClosedEvent, NewChatPickerClosedClassification>(
-		'newChatPickerClosed',
-		{
-			id: data.id,
-			name: data.name,
-			selectionChanged: data.optionIdBefore !== data.optionIdAfter,
-			optionIdBefore: data.isPII ? undefined : data.optionIdBefore,
-			optionIdAfter: data.isPII ? undefined : data.optionIdAfter,
-			optionLabelBefore: data.isPII ? undefined : data.optionLabelBefore,
-			optionLabelAfter: data.isPII ? undefined : data.optionLabelAfter,
-		},
-	);
+export function reportNewChatPickerClosed(
+	telemetryService: ITelemetryService,
+	data: INewChatPickerClosedData,
+): void {
+	telemetryService.publicLog2<
+		NewChatPickerClosedEvent,
+		NewChatPickerClosedClassification
+	>("newChatPickerClosed", {
+		id: data.id,
+		name: data.name,
+		selectionChanged: data.optionIdBefore !== data.optionIdAfter,
+		optionIdBefore: data.isPII ? undefined : data.optionIdBefore,
+		optionIdAfter: data.isPII ? undefined : data.optionIdAfter,
+		optionLabelBefore: data.isPII ? undefined : data.optionLabelBefore,
+		optionLabelAfter: data.isPII ? undefined : data.optionLabelAfter,
+	});
 }
 
 type NewChatPickerClosedEvent = {
@@ -60,13 +63,42 @@ type NewChatPickerClosedEvent = {
 };
 
 type NewChatPickerClosedClassification = {
-	id: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The telemetry id of the picker.' };
-	name: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The telemetry name of the picker.' };
-	selectionChanged: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Whether the user changed the selected option.' };
-	optionIdBefore: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The option configured before opening the picker.' };
-	optionIdAfter: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The option selected when the picker was closed.' };
-	optionLabelBefore: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The label of the option configured before opening the picker.' };
-	optionLabelAfter: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The label of the option selected when the picker was closed.' };
-	owner: 'benibenj';
-	comment: 'Tracks new chat view pane picker usage and selection changes.';
+	id: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The telemetry id of the picker.";
+	};
+	name: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The telemetry name of the picker.";
+	};
+	selectionChanged: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		isMeasurement: true;
+		comment: "Whether the user changed the selected option.";
+	};
+	optionIdBefore: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The option configured before opening the picker.";
+	};
+	optionIdAfter: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The option selected when the picker was closed.";
+	};
+	optionLabelBefore: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The label of the option configured before opening the picker.";
+	};
+	optionLabelAfter: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The label of the option selected when the picker was closed.";
+	};
+	owner: "benibenj";
+	comment: "Tracks new chat view pane picker usage and selection changes.";
 };

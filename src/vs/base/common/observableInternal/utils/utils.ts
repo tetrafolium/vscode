@@ -3,80 +3,114 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { autorun } from '../reactions/autorun.js';
-import { IObservable, IObservableWithChange, IObserver, IReader, ITransaction } from '../base.js';
-import { observableValue } from '../observables/observableValue.js';
-import { DebugOwner } from '../debugName.js';
-import { DisposableStore, Event, IDisposable, toDisposable } from '../commonFacade/deps.js';
-import { derived, derivedOpts } from '../observables/derived.js';
-import { observableFromEvent } from '../observables/observableFromEvent.js';
-import { observableSignal } from '../observables/observableSignal.js';
-import { _setKeepObserved, _setRecomputeInitiallyAndOnChange } from '../observables/baseObservable.js';
-import { DebugLocation } from '../debugLocation.js';
+import { autorun } from "../reactions/autorun.js";
+import {
+	IObservable,
+	IObservableWithChange,
+	IObserver,
+	IReader,
+	ITransaction,
+} from "../base.js";
+import { observableValue } from "../observables/observableValue.js";
+import { DebugOwner } from "../debugName.js";
+import {
+	DisposableStore,
+	Event,
+	IDisposable,
+	toDisposable,
+} from "../commonFacade/deps.js";
+import { derived, derivedOpts } from "../observables/derived.js";
+import { observableFromEvent } from "../observables/observableFromEvent.js";
+import { observableSignal } from "../observables/observableSignal.js";
+import {
+	_setKeepObserved,
+	_setRecomputeInitiallyAndOnChange,
+} from "../observables/baseObservable.js";
+import { DebugLocation } from "../debugLocation.js";
 
-export function observableFromPromise<T>(promise: Promise<T>): IObservable<{ value?: T }> {
-	const observable = observableValue<{ value?: T }>('promiseValue', {});
+export function observableFromPromise<T>(
+	promise: Promise<T>,
+): IObservable<{ value?: T }> {
+	const observable = observableValue<{ value?: T }>("promiseValue", {});
 	promise.then((value) => {
 		observable.set({ value }, undefined);
 	});
 	return observable;
 }
 
-export function signalFromObservable<T>(owner: DebugOwner | undefined, observable: IObservable<T>): IObservable<void> {
-	return derivedOpts({
-		owner,
-		equalsFn: () => false,
-	}, reader => {
-		observable.read(reader);
-	});
+export function signalFromObservable<T>(
+	owner: DebugOwner | undefined,
+	observable: IObservable<T>,
+): IObservable<void> {
+	return derivedOpts(
+		{
+			owner,
+			equalsFn: () => false,
+		},
+		(reader) => {
+			observable.read(reader);
+		},
+	);
 }
 
 /**
  * Creates an observable that debounces the input observable.
  */
-export function debouncedObservable<T>(observable: IObservable<T>, debounceMs: number | ((lastValue: T | undefined, newValue: T) => number), debugLocation = DebugLocation.ofCaller()): IObservable<T> {
+export function debouncedObservable<T>(
+	observable: IObservable<T>,
+	debounceMs: number | ((lastValue: T | undefined, newValue: T) => number),
+	debugLocation = DebugLocation.ofCaller(),
+): IObservable<T> {
 	let hasValue = false;
 	let lastValue: T | undefined;
 
 	let timeout: Timeout | undefined = undefined;
 
-	return observableFromEvent<T, void>(undefined, cb => {
-		const d = autorun(reader => {
-			const value = observable.read(reader);
+	return observableFromEvent<T, void>(
+		undefined,
+		(cb) => {
+			const d = autorun((reader) => {
+				const value = observable.read(reader);
 
-			if (!hasValue) {
-				hasValue = true;
-				lastValue = value;
+				if (!hasValue) {
+					hasValue = true;
+					lastValue = value;
+				} else {
+					if (timeout) {
+						clearTimeout(timeout);
+					}
+					const debounceDuration =
+						typeof debounceMs === "number"
+							? debounceMs
+							: debounceMs(lastValue, value);
+					if (debounceDuration === 0) {
+						lastValue = value;
+						cb();
+						return;
+					}
+					timeout = setTimeout(() => {
+						lastValue = value;
+						cb();
+					}, debounceDuration);
+				}
+			});
+			return {
+				dispose() {
+					d.dispose();
+					hasValue = false;
+					lastValue = undefined;
+				},
+			};
+		},
+		() => {
+			if (hasValue) {
+				return lastValue!;
 			} else {
-				if (timeout) {
-					clearTimeout(timeout);
-				}
-				const debounceDuration = typeof debounceMs === 'number' ? debounceMs : debounceMs(lastValue, value);
-				if (debounceDuration === 0) {
-					lastValue = value;
-					cb();
-					return;
-				}
-				timeout = setTimeout(() => {
-					lastValue = value;
-					cb();
-				}, debounceDuration);
+				return observable.get();
 			}
-		});
-		return {
-			dispose() {
-				d.dispose();
-				hasValue = false;
-				lastValue = undefined;
-			},
-		};
-	}, () => {
-		if (hasValue) {
-			return lastValue!;
-		} else {
-			return observable.get();
-		}
-	}, debugLocation);
+		},
+		debugLocation,
+	);
 }
 
 /**
@@ -84,104 +118,130 @@ export function debouncedObservable<T>(observable: IObservable<T>, debounceMs: n
  * Unlike {@link debouncedObservable}, the timer starts on the first change
  * and is not reset by subsequent changes, preventing starvation.
  */
-export function throttledObservable<T>(observable: IObservable<T>, throttleMs: number, debugLocation = DebugLocation.ofCaller()): IObservable<T> {
+export function throttledObservable<T>(
+	observable: IObservable<T>,
+	throttleMs: number,
+	debugLocation = DebugLocation.ofCaller(),
+): IObservable<T> {
 	let hasValue = false;
 	let lastValue: T | undefined;
 
 	let timeout: Timeout | undefined = undefined;
 
-	return observableFromEvent<T, void>(undefined, cb => {
-		const d = autorun(reader => {
-			const value = observable.read(reader);
+	return observableFromEvent<T, void>(
+		undefined,
+		(cb) => {
+			const d = autorun((reader) => {
+				const value = observable.read(reader);
 
-			if (!hasValue) {
-				hasValue = true;
-				lastValue = value;
-			} else if (!timeout) {
-				// Only start a timer if one isn't already running
-				timeout = setTimeout(() => {
-					timeout = undefined;
-					lastValue = observable.read(undefined);
-					cb();
-				}, throttleMs);
-			}
-		});
-		return {
-			dispose() {
-				d.dispose();
-				if (timeout) {
-					clearTimeout(timeout);
-					timeout = undefined;
+				if (!hasValue) {
+					hasValue = true;
+					lastValue = value;
+				} else if (!timeout) {
+					// Only start a timer if one isn't already running
+					timeout = setTimeout(() => {
+						timeout = undefined;
+						lastValue = observable.read(undefined);
+						cb();
+					}, throttleMs);
 				}
-				hasValue = false;
-				lastValue = undefined;
-			},
-		};
-	}, () => {
-		if (hasValue) {
-			return lastValue!;
-		} else {
-			return observable.get();
-		}
-	}, debugLocation);
+			});
+			return {
+				dispose() {
+					d.dispose();
+					if (timeout) {
+						clearTimeout(timeout);
+						timeout = undefined;
+					}
+					hasValue = false;
+					lastValue = undefined;
+				},
+			};
+		},
+		() => {
+			if (hasValue) {
+				return lastValue!;
+			} else {
+				return observable.get();
+			}
+		},
+		debugLocation,
+	);
 }
 
 /**
  * Creates an observable that debounces the input observable.
  */
-export function debouncedObservable2<T>(observable: IObservable<T>, debounceMs: number | ((currentValue: T | undefined, newValue: T) => number), debugLocation = DebugLocation.ofCaller()): IObservable<T> {
-	const s = observableSignal('handleTimeout');
+export function debouncedObservable2<T>(
+	observable: IObservable<T>,
+	debounceMs: number | ((currentValue: T | undefined, newValue: T) => number),
+	debugLocation = DebugLocation.ofCaller(),
+): IObservable<T> {
+	const s = observableSignal("handleTimeout");
 
 	let currentValue: T | undefined = undefined;
 	let timeout: Timeout | undefined = undefined;
 
-	const d = derivedOpts({
-		owner: undefined,
-		onLastObserverRemoved: () => {
-			currentValue = undefined;
-		}
-	}, reader => {
-		const val = observable.read(reader);
-		s.read(reader);
+	const d = derivedOpts(
+		{
+			owner: undefined,
+			onLastObserverRemoved: () => {
+				currentValue = undefined;
+			},
+		},
+		(reader) => {
+			const val = observable.read(reader);
+			s.read(reader);
 
-		if (val !== currentValue) {
-			const debounceDuration = typeof debounceMs === 'number' ? debounceMs : debounceMs(currentValue, val);
+			if (val !== currentValue) {
+				const debounceDuration =
+					typeof debounceMs === "number"
+						? debounceMs
+						: debounceMs(currentValue, val);
 
-			if (debounceDuration === 0) {
-				currentValue = val;
-				return val;
+				if (debounceDuration === 0) {
+					currentValue = val;
+					return val;
+				}
+
+				if (timeout) {
+					clearTimeout(timeout);
+				}
+				timeout = setTimeout(() => {
+					currentValue = val;
+					s.trigger(undefined);
+				}, debounceDuration);
 			}
+
+			return currentValue!;
+		},
+		debugLocation,
+	);
+
+	return d;
+}
+
+export function wasEventTriggeredRecently(
+	event: Event<any>,
+	timeoutMs: number,
+	disposableStore: DisposableStore,
+): IObservable<boolean> {
+	const observable = observableValue("triggeredRecently", false);
+
+	let timeout: Timeout | undefined = undefined;
+
+	disposableStore.add(
+		event(() => {
+			observable.set(true, undefined);
 
 			if (timeout) {
 				clearTimeout(timeout);
 			}
 			timeout = setTimeout(() => {
-				currentValue = val;
-				s.trigger(undefined);
-			}, debounceDuration);
-		}
-
-		return currentValue!;
-	}, debugLocation);
-
-	return d;
-}
-
-export function wasEventTriggeredRecently(event: Event<any>, timeoutMs: number, disposableStore: DisposableStore): IObservable<boolean> {
-	const observable = observableValue('triggeredRecently', false);
-
-	let timeout: Timeout | undefined = undefined;
-
-	disposableStore.add(event(() => {
-		observable.set(true, undefined);
-
-		if (timeout) {
-			clearTimeout(timeout);
-		}
-		timeout = setTimeout(() => {
-			observable.set(false, undefined);
-		}, timeoutMs);
-	}));
+				observable.set(false, undefined);
+			}, timeoutMs);
+		}),
+	);
 
 	return observable;
 }
@@ -202,7 +262,10 @@ _setKeepObserved(keepObserved);
 /**
  * This converts the given observable into an autorun.
  */
-export function recomputeInitiallyAndOnChange<T>(observable: IObservable<T>, handleValue?: (value: T) => void): IDisposable {
+export function recomputeInitiallyAndOnChange<T>(
+	observable: IObservable<T>,
+	handleValue?: (value: T) => void,
+): IDisposable {
 	const o = new KeepAliveObserver(true, handleValue);
 	observable.addObserver(o);
 	try {
@@ -224,7 +287,7 @@ export class KeepAliveObserver implements IObserver {
 	constructor(
 		private readonly _forceRecompute: boolean,
 		private readonly _handleValue: ((value: any) => void) | undefined,
-	) { }
+	) {}
 
 	beginUpdate<T>(observable: IObservable<T>): void {
 		this._counter++;
@@ -245,25 +308,39 @@ export class KeepAliveObserver implements IObserver {
 		// NO OP
 	}
 
-	handleChange<T, TChange>(observable: IObservableWithChange<T, TChange>, change: TChange): void {
+	handleChange<T, TChange>(
+		observable: IObservableWithChange<T, TChange>,
+		change: TChange,
+	): void {
 		// NO OP
 	}
 }
 
-export function derivedObservableWithCache<T>(owner: DebugOwner, computeFn: (reader: IReader, lastValue: T | undefined) => T): IObservable<T> {
+export function derivedObservableWithCache<T>(
+	owner: DebugOwner,
+	computeFn: (reader: IReader, lastValue: T | undefined) => T,
+): IObservable<T> {
 	let lastValue: T | undefined = undefined;
-	const observable = derivedOpts({ owner, debugReferenceFn: computeFn }, reader => {
-		lastValue = computeFn(reader, lastValue);
-		return lastValue;
-	});
+	const observable = derivedOpts(
+		{ owner, debugReferenceFn: computeFn },
+		(reader) => {
+			lastValue = computeFn(reader, lastValue);
+			return lastValue;
+		},
+	);
 	return observable;
 }
 
-export function derivedObservableWithWritableCache<T>(owner: object, computeFn: (reader: IReader, lastValue: T | undefined) => T): IObservable<T>
-	& { clearCache(transaction: ITransaction): void; setCache(newValue: T | undefined, tx: ITransaction | undefined): void } {
+export function derivedObservableWithWritableCache<T>(
+	owner: object,
+	computeFn: (reader: IReader, lastValue: T | undefined) => T,
+): IObservable<T> & {
+	clearCache(transaction: ITransaction): void;
+	setCache(newValue: T | undefined, tx: ITransaction | undefined): void;
+} {
 	let lastValue: T | undefined = undefined;
-	const onChange = observableSignal('derivedObservableWithWritableCache');
-	const observable = derived(owner, reader => {
+	const onChange = observableSignal("derivedObservableWithWritableCache");
+	const observable = derived(owner, (reader) => {
 		onChange.read(reader);
 		lastValue = computeFn(reader, lastValue);
 		return lastValue;
@@ -276,41 +353,51 @@ export function derivedObservableWithWritableCache<T>(owner: object, computeFn: 
 		setCache: (newValue: T | undefined, tx: ITransaction | undefined) => {
 			lastValue = newValue;
 			onChange.trigger(tx);
-		}
+		},
 	});
 }
 
 /**
  * When the items array changes, referential equal items are not mapped again.
  */
-export function mapObservableArrayCached<TIn, TOut, TKey = TIn>(owner: DebugOwner, items: IObservable<readonly TIn[]>, map: (input: TIn, store: DisposableStore) => TOut, keySelector?: (input: TIn) => TKey): IObservable<readonly TOut[]> {
+export function mapObservableArrayCached<TIn, TOut, TKey = TIn>(
+	owner: DebugOwner,
+	items: IObservable<readonly TIn[]>,
+	map: (input: TIn, store: DisposableStore) => TOut,
+	keySelector?: (input: TIn) => TKey,
+): IObservable<readonly TOut[]> {
 	let m = new ArrayMap(map, keySelector);
-	const self = derivedOpts({
-		debugReferenceFn: map,
-		owner,
-		onLastObserverRemoved: () => {
-			m.dispose();
-			m = new ArrayMap(map);
-		}
-	}, (reader) => {
-		const i = items.read(reader);
-		m.setItems(i);
-		return m.getItems();
-	});
+	const self = derivedOpts(
+		{
+			debugReferenceFn: map,
+			owner,
+			onLastObserverRemoved: () => {
+				m.dispose();
+				m = new ArrayMap(map);
+			},
+		},
+		(reader) => {
+			const i = items.read(reader);
+			m.setItems(i);
+			return m.getItems();
+		},
+	);
 	return self;
 }
 
 class ArrayMap<TIn, TOut, TKey> implements IDisposable {
-	private readonly _cache = new Map<TKey, { out: TOut; store: DisposableStore }>();
+	private readonly _cache = new Map<
+		TKey,
+		{ out: TOut; store: DisposableStore }
+	>();
 	private _items: TOut[] = [];
 	constructor(
 		private readonly _map: (input: TIn, store: DisposableStore) => TOut,
 		private readonly _keySelector?: (input: TIn) => TKey,
-	) {
-	}
+	) {}
 
 	public dispose(): void {
-		this._cache.forEach(entry => entry.store.dispose());
+		this._cache.forEach((entry) => entry.store.dispose());
 		this._cache.clear();
 	}
 
@@ -319,7 +406,9 @@ class ArrayMap<TIn, TOut, TKey> implements IDisposable {
 		const itemsToRemove = new Set(this._cache.keys());
 
 		for (const item of items) {
-			const key = this._keySelector ? this._keySelector(item) : item as unknown as TKey;
+			const key = this._keySelector
+				? this._keySelector(item)
+				: (item as unknown as TKey);
 
 			let entry = this._cache.get(key);
 			if (!entry) {
@@ -348,5 +437,9 @@ class ArrayMap<TIn, TOut, TKey> implements IDisposable {
 }
 
 export function isObservable<T>(obj: unknown): obj is IObservable<T> {
-	return !!obj && (<IObservable<T>>obj).read !== undefined && (<IObservable<T>>obj).reportChanges !== undefined;
+	return (
+		!!obj &&
+		(<IObservable<T>>obj).read !== undefined &&
+		(<IObservable<T>>obj).reportChanges !== undefined
+	);
 }

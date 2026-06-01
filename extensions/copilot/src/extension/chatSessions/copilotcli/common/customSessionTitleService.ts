@@ -6,12 +6,19 @@
 import type { CancellationToken } from 'vscode';
 import { createServiceIdentifier } from '../../../../util/common/services';
 
-export const ICustomSessionTitleService = createServiceIdentifier<ICustomSessionTitleService>('ICustomSessionTitleService');
+export const ICustomSessionTitleService =
+	createServiceIdentifier<ICustomSessionTitleService>(
+		'ICustomSessionTitleService',
+	);
 
 export interface ICustomSessionTitleService {
 	readonly _serviceBrand: undefined;
 
 	getCustomSessionTitle(sessionId: string): Promise<string | undefined>;
 	setCustomSessionTitle(sessionId: string, title: string): Promise<void>;
-	generateSessionTitle(sessionId: string, request: { prompt?: string; command?: string }, token: CancellationToken): Promise<string | undefined>;
+	generateSessionTitle(
+		sessionId: string,
+		request: { prompt?: string; command?: string },
+		token: CancellationToken,
+	): Promise<string | undefined>;
 }

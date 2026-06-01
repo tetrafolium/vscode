@@ -11,7 +11,10 @@ function textPart(text: string): Raw.ChatCompletionContentPartText {
 	return { type: Raw.ChatCompletionContentPartKind.Text, text };
 }
 
-function assistantMsg(text: string, toolCalls?: Raw.ChatMessageToolCall[]): Raw.AssistantChatMessage {
+function assistantMsg(
+	text: string,
+	toolCalls?: Raw.ChatMessageToolCall[],
+): Raw.AssistantChatMessage {
 	return {
 		role: Raw.ChatRole.Assistant,
 		content: [textPart(text)],
@@ -44,13 +47,17 @@ describe('validateToolMessagesCore', () => {
 	it('passes through valid messages unchanged', () => {
 		const messages: Raw.ChatMessage[] = [
 			userMsg('hello'),
-			assistantMsg('calling tools', [tc('1', 'readFile'), tc('2', 'listDir')]),
+			assistantMsg('calling tools', [
+				tc('1', 'readFile'),
+				tc('2', 'listDir'),
+			]),
 			toolMsg('1', 'file contents'),
 			toolMsg('2', 'dir listing'),
 			assistantMsg('done'),
 		];
 
-		const { messages: result, filterReasons } = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
+		const { messages: result, filterReasons } =
+			ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
 		expect(filterReasons).toHaveLength(0);
 		expect(result).toHaveLength(5);
 	});
@@ -61,7 +68,8 @@ describe('validateToolMessagesCore', () => {
 			toolMsg('1', 'orphaned result'),
 		];
 
-		const { messages: result, filterReasons } = ToolCallingLoop.validateToolMessagesCore(messages);
+		const { messages: result, filterReasons } =
+			ToolCallingLoop.validateToolMessagesCore(messages);
 		expect(result).toHaveLength(1);
 		expect(result[0].role).toBe(Raw.ChatRole.User);
 		expect(filterReasons).toContain('noPreviousAssistantMessage');
@@ -73,7 +81,8 @@ describe('validateToolMessagesCore', () => {
 			toolMsg('1', 'orphaned result'),
 		];
 
-		const { messages: result, filterReasons } = ToolCallingLoop.validateToolMessagesCore(messages);
+		const { messages: result, filterReasons } =
+			ToolCallingLoop.validateToolMessagesCore(messages);
 		expect(result).toHaveLength(1);
 		expect(result[0].role).toBe(Raw.ChatRole.Assistant);
 		expect(filterReasons).toContain('noToolCalls');
@@ -86,7 +95,8 @@ describe('validateToolMessagesCore', () => {
 			toolMsg('999', 'wrong id'),
 		];
 
-		const { messages: result } = ToolCallingLoop.validateToolMessagesCore(messages);
+		const { messages: result } =
+			ToolCallingLoop.validateToolMessagesCore(messages);
 		expect(result).toHaveLength(2);
 		expect(result[0].role).toBe(Raw.ChatRole.Assistant);
 		expect(result[1].role).toBe(Raw.ChatRole.Tool);
@@ -94,12 +104,20 @@ describe('validateToolMessagesCore', () => {
 
 	it('strips orphaned tool_calls from assistant message when results are missing', () => {
 		const messages: Raw.ChatMessage[] = [
-			assistantMsg('calling 3 tools', [tc('1', 'readFile'), tc('2', 'listDir'), tc('3', 'grep')]),
+			assistantMsg('calling 3 tools', [
+				tc('1', 'readFile'),
+				tc('2', 'listDir'),
+				tc('3', 'grep'),
+			]),
 			toolMsg('1', 'result 1'),
 			// tool results for '2' and '3' are missing
 		];
 
-		const { messages: result, filterReasons, strippedToolCallCount } = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
+		const {
+			messages: result,
+			filterReasons,
+			strippedToolCallCount,
+		} = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
 		expect(result).toHaveLength(2);
 		const asstMsg = result[0] as Raw.AssistantChatMessage;
 		expect(asstMsg.toolCalls).toHaveLength(1);
@@ -114,7 +132,11 @@ describe('validateToolMessagesCore', () => {
 			userMsg('next message'),
 		];
 
-		const { messages: result, filterReasons, strippedToolCallCount } = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
+		const {
+			messages: result,
+			filterReasons,
+			strippedToolCallCount,
+		} = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
 		const asstMsg = result[0] as Raw.AssistantChatMessage;
 		expect(asstMsg.toolCalls).toBeUndefined();
 		expect(filterReasons).toHaveLength(0);
@@ -133,7 +155,11 @@ describe('validateToolMessagesCore', () => {
 			// '4' is missing
 		];
 
-		const { messages: result, filterReasons, strippedToolCallCount } = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
+		const {
+			messages: result,
+			filterReasons,
+			strippedToolCallCount,
+		} = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
 		expect(result).toHaveLength(5);
 
 		const round1Asst = result[0] as Raw.AssistantChatMessage;
@@ -152,7 +178,8 @@ describe('validateToolMessagesCore', () => {
 			userMsg('ok'),
 		];
 
-		const { messages: result, filterReasons } = ToolCallingLoop.validateToolMessagesCore(messages);
+		const { messages: result, filterReasons } =
+			ToolCallingLoop.validateToolMessagesCore(messages);
 		expect(result).toHaveLength(2);
 		expect(filterReasons).toHaveLength(0);
 	});
@@ -166,7 +193,8 @@ describe('validateToolMessagesCore', () => {
 			toolMsg('2', 'result for second'),
 		];
 
-		const { messages: result, filterReasons } = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
+		const { messages: result, filterReasons } =
+			ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
 		expect(result).toHaveLength(4);
 		expect(filterReasons).toHaveLength(0);
 	});
@@ -177,11 +205,18 @@ describe('validateToolMessagesCore', () => {
 			userMsg('do something'),
 			assistantMsg('round 1', [tc('1', 'readFile')]),
 			toolMsg('1', 'result'),
-			assistantMsg('round 2 — exceeded', [tc('2', 'listDir'), tc('3', 'grep')]),
+			assistantMsg('round 2 — exceeded', [
+				tc('2', 'listDir'),
+				tc('3', 'grep'),
+			]),
 			// No tool results — tool call limit exceeded
 		];
 
-		const { messages: result, filterReasons, strippedToolCallCount } = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
+		const {
+			messages: result,
+			filterReasons,
+			strippedToolCallCount,
+		} = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
 		expect(result).toHaveLength(4);
 		const lastAsst = result[3] as Raw.AssistantChatMessage;
 		expect(lastAsst.toolCalls).toBeUndefined();
@@ -197,7 +232,8 @@ describe('validateToolMessagesCore', () => {
 			// '2' is missing
 		];
 
-		const { messages: result, filterReasons } = ToolCallingLoop.validateToolMessagesCore(messages);
+		const { messages: result, filterReasons } =
+			ToolCallingLoop.validateToolMessagesCore(messages);
 		expect(result).toHaveLength(2);
 		const asstMsg = result[0] as Raw.AssistantChatMessage;
 		// tool_calls preserved — no stripping for non-Gemini models
@@ -214,7 +250,8 @@ describe('validateToolMessagesCore', () => {
 		];
 
 		// First-pass keeps the tool result (previousAssistantMessage is not reset by user messages)
-		const { messages: result, filterReasons } = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
+		const { messages: result, filterReasons } =
+			ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
 		expect(result).toHaveLength(3);
 		// Second-pass should NOT strip the tool_call — the result exists after the user message
 		const asstMsg = result[0] as Raw.AssistantChatMessage;
@@ -232,7 +269,11 @@ describe('validateToolMessagesCore', () => {
 			toolMsg('2', 'result for second'),
 		];
 
-		const { messages: result, filterReasons, strippedToolCallCount } = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
+		const {
+			messages: result,
+			filterReasons,
+			strippedToolCallCount,
+		} = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
 		expect(result).toHaveLength(4);
 		// First assistant's tool_call '1' has no matching result — should be stripped
 		const firstAsst = result[0] as Raw.AssistantChatMessage;
@@ -252,7 +293,8 @@ describe('validateToolMessagesCore', () => {
 			toolMsg('', 'result'),
 		];
 
-		const { messages: result, strippedToolCallCount } = ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
+		const { messages: result, strippedToolCallCount } =
+			ToolCallingLoop.validateToolMessagesCore(messages, geminiOpts);
 		expect(result).toHaveLength(2);
 		const asstMsg = result[0] as Raw.AssistantChatMessage;
 		expect(asstMsg.toolCalls).toHaveLength(1);

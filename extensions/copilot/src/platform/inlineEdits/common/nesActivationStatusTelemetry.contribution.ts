@@ -3,23 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { IExperimentationService } from '../../telemetry/common/nullExperimentationService';
 import { ITelemetryService } from '../../telemetry/common/telemetry';
 
 export class NesActivationTelemetryContribution {
-
 	constructor(
 		@ITelemetryService _telemetryService: ITelemetryService,
 		@IConfigurationService _configurationService: IConfigurationService,
 		@IExperimentationService _expService: IExperimentationService,
 	) {
-		const completionsConfigValue = _configurationService.getConfig(ConfigKey.Enable);
-		const isCompletionsEnabled = '*' in completionsConfigValue ? completionsConfigValue['*'] : true /* matches ghost-text Copilot extensions behavior */;
-		const isCompletionsUserConfigured = _configurationService.isConfigured(ConfigKey.Enable);
+		const completionsConfigValue = _configurationService.getConfig(
+			ConfigKey.Enable,
+		);
+		const isCompletionsEnabled =
+			'*' in completionsConfigValue
+				? completionsConfigValue['*']
+				: true; /* matches ghost-text Copilot extensions behavior */
+		const isCompletionsUserConfigured = _configurationService.isConfigured(
+			ConfigKey.Enable,
+		);
 
-		const isNesEnabled = _configurationService.getExperimentBasedConfig(ConfigKey.InlineEditsEnabled, _expService);
-		const isNesUserConfigured = _configurationService.isConfigured(ConfigKey.InlineEditsEnabled);
+		const isNesEnabled = _configurationService.getExperimentBasedConfig(
+			ConfigKey.InlineEditsEnabled,
+			_expService,
+		);
+		const isNesUserConfigured = _configurationService.isConfigured(
+			ConfigKey.InlineEditsEnabled,
+		);
 
 		/* __GDPR__
 			"nesStatusOnActivation" : {
@@ -36,10 +50,12 @@ export class NesActivationTelemetryContribution {
 			{},
 			{
 				isCompletionsEnabled: toNumber(isCompletionsEnabled),
-				isCompletionsUserConfigured: toNumber(isCompletionsUserConfigured),
+				isCompletionsUserConfigured: toNumber(
+					isCompletionsUserConfigured,
+				),
 				isNesEnabled: toNumber(isNesEnabled),
 				isNesUserConfigured: toNumber(isNesUserConfigured),
-			}
+			},
 		);
 	}
 }

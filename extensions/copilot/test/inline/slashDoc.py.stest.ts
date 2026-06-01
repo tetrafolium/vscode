@@ -5,17 +5,23 @@
 
 import { guessIndentation } from '../../src/extension/prompt/node/indentationGuesser';
 
-
-export function validateDocstringFormat(fileContents: string, targetLineString: string): void {
+export function validateDocstringFormat(
+	fileContents: string,
+	targetLineString: string,
+): void {
 	const lines = fileContents.split('\n');
-	const targetLineIndex = lines.findIndex(line => line.includes(targetLineString));
+	const targetLineIndex = lines.findIndex((line) =>
+		line.includes(targetLineString),
+	);
 
 	if (targetLineIndex === -1) {
 		throw new Error('Target line not found in the file contents.');
 	}
 
 	if (targetLineIndex === lines.length - 1) {
-		throw new Error('Target line is the last line of the file. No space for a docstring.');
+		throw new Error(
+			'Target line is the last line of the file. No space for a docstring.',
+		);
 	}
 
 	const indentation = guessIndentation(lines, 4, true);
@@ -44,6 +50,8 @@ export function validateDocstringFormat(fileContents: string, targetLineString: 
 
 	// The docstring should have the expected indentation
 	if (docstringIndentation !== expectedIndentation) {
-		throw new Error(`Incorrect docstring indentation. Expected: '${expectedIndentation.replace(/ /g, '·')}', but got: '${docstringIndentation.replace(/ /g, '·')}'`);
+		throw new Error(
+			`Incorrect docstring indentation. Expected: '${expectedIndentation.replace(/ /g, '·')}', but got: '${docstringIndentation.replace(/ /g, '·')}'`,
+		);
 	}
 }

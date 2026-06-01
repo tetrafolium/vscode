@@ -4,10 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 /* Subagent-specific styles */
-.interactive-session .interactive-response .value .chat-thinking-fixed-mode.chat-subagent-part {
-
+.interactive-session
+	.interactive-response
+	.value
+	.chat-thinking-fixed-mode.chat-subagent-part {
 	/* Collapsed + streaming: show only the last item with max-height */
-	&.chat-used-context-collapsed .chat-used-context-list.chat-thinking-collapsible.chat-thinking-streaming {
+	&.chat-used-context-collapsed
+		.chat-used-context-list.chat-thinking-collapsible.chat-thinking-streaming {
 		max-height: var(--chat-subagent-last-item-height, 200px);
 		overflow: hidden;
 		display: block;
@@ -37,7 +40,6 @@
 	}
 
 	.chat-thinking-tool-wrapper {
-
 		/* Hide the collapsible button's icon since we use the thinking icon */
 		.codicon:not(.chat-thinking-icon) {
 			display: none;
@@ -75,7 +77,7 @@
 		position: relative;
 
 		&::before {
-			content: '\2022';
+			content: "\2022";
 			position: absolute;
 			left: 8px;
 			color: var(--vscode-descriptionForeground);

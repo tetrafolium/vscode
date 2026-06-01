@@ -26,7 +26,10 @@ interface Response {
 }
 
 export interface ISimpleRPC extends IDisposable {
-	registerMethod(method: string, handler: (params: any) => Promise<any>): void;
+	registerMethod(
+		method: string,
+		handler: (params: any) => Promise<any>,
+	): void;
 	callMethod(method: string, params?: any): Promise<any>;
 }
 
@@ -35,27 +38,37 @@ const terminator = process.platform === 'win32' ? '\r\n' : '\n';
 export class SimpleRPC implements ISimpleRPC {
 	private idCounter: number;
 	private methods = new Map<string, (...params: any[]) => Promise<any>>();
-	private pendingRequests = new Map<number, { resolve: (result: any) => void; reject: (error: Error) => void }>();
+	private pendingRequests = new Map<
+		number,
+		{ resolve: (result: any) => void; reject: (error: Error) => void }
+	>();
 	private didEnd?: boolean;
 
 	public readonly ended: Promise<void>;
 
 	constructor(private readonly stream: Duplex) {
 		this.idCounter = 0;
-		this.stream.pipe(new StreamSplitter('\n')).on('data', d => this.handleData(d));
-		this.ended = new Promise<void>((resolve) => this.stream.on('end', () => {
-			this.didEnd = true;
-			resolve();
-		}));
+		this.stream
+			.pipe(new StreamSplitter('\n'))
+			.on('data', (d) => this.handleData(d));
+		this.ended = new Promise<void>((resolve) =>
+			this.stream.on('end', () => {
+				this.didEnd = true;
+				resolve();
+			}),
+		);
 	}
 
-	public registerMethod(method: string, handler: (params: any) => Promise<any> | any) {
+	public registerMethod(
+		method: string,
+		handler: (params: any) => Promise<any> | any,
+	) {
 		this.methods.set(method, handler);
 	}
 
 	public async callMethod(method: string, params?: any): Promise<any> {
 		const id = this.idCounter++;
-		const request: Request = { id, method, params, };
+		const request: Request = { id, method, params };
 		const promise = new Promise<any>((resolve, reject) => {
 			this.pendingRequests.set(id, { resolve, reject });
 		});

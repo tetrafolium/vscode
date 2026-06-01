@@ -41,10 +41,16 @@ function getDiagnosticsForUri(uri: vscode.Uri): DiagnosticInfo {
 	const diagnostics = vscode.languages.getDiagnostics(uri);
 	return {
 		uri: uri.toString(),
-		diagnostics: diagnostics.map(d => ({
+		diagnostics: diagnostics.map((d) => ({
 			range: {
-				start: { line: d.range.start.line, character: d.range.start.character },
-				end: { line: d.range.end.line, character: d.range.end.character },
+				start: {
+					line: d.range.start.line,
+					character: d.range.start.character,
+				},
+				end: {
+					line: d.range.end.line,
+					character: d.range.end.character,
+				},
 			},
 			message: d.message,
 			severity: severityToString(d.severity),
@@ -54,20 +60,27 @@ function getDiagnosticsForUri(uri: vscode.Uri): DiagnosticInfo {
 	};
 }
 
-export function registerDiagnosticsChangedNotification(logger: ILogger, httpServer: InProcHttpServer): vscode.Disposable[] {
+export function registerDiagnosticsChangedNotification(
+	logger: ILogger,
+	httpServer: InProcHttpServer,
+): vscode.Disposable[] {
 	const disposables: vscode.Disposable[] = [];
 
 	const diagnosticsDelayer = new Delayer<void>(200);
 	const handleDiagnosticsChange = (event: vscode.DiagnosticChangeEvent) => {
 		diagnosticsDelayer.trigger(() => {
-			const changedDiagnostics: DiagnosticInfo[] = event.uris.map(uri => getDiagnosticsForUri(uri));
+			const changedDiagnostics: DiagnosticInfo[] = event.uris.map((uri) =>
+				getDiagnosticsForUri(uri),
+			);
 			httpServer.broadcastNotification('diagnostics_changed', {
 				uris: changedDiagnostics,
 			} as unknown as Record<string, unknown>);
 		});
 	};
 
-	disposables.push(vscode.languages.onDidChangeDiagnostics(handleDiagnosticsChange));
+	disposables.push(
+		vscode.languages.onDidChangeDiagnostics(handleDiagnosticsChange),
+	);
 	disposables.push(diagnosticsDelayer);
 
 	logger.debug('Registered diagnostics change notification');

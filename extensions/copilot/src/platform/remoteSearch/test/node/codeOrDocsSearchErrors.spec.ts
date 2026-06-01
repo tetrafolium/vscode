@@ -14,7 +14,7 @@ import {
 	SearchErrorType,
 	SearchRepoErrorType,
 	constructSearchError,
-	constructSearchRepoError
+	constructSearchRepoError,
 } from '../../common/codeOrDocsSearchErrors';
 
 suite('Search Client Errors', () => {
@@ -22,7 +22,7 @@ suite('Search Client Errors', () => {
 		const error = constructSearchRepoError({
 			error: SearchRepoErrorType.missingInaccessibleRepoOrg,
 			message: 'Error message',
-			repo: 'microsoft/vscode'
+			repo: 'microsoft/vscode',
 		});
 		assert.ok(error instanceof InaccessibleRepoOrgError);
 	});
@@ -31,7 +31,7 @@ suite('Search Client Errors', () => {
 		const error = constructSearchRepoError({
 			error: SearchRepoErrorType.docsEmbeddingsUnavailable,
 			message: 'Error message',
-			repo: 'microsoft/vscode'
+			repo: 'microsoft/vscode',
 		});
 		assert.ok(error instanceof EmbeddingsUnavailableError);
 	});
@@ -40,7 +40,7 @@ suite('Search Client Errors', () => {
 		const error = constructSearchRepoError({
 			error: SearchRepoErrorType.notIndexed,
 			message: 'Error message',
-			repo: 'microsoft/vscode'
+			repo: 'microsoft/vscode',
 		});
 		assert.ok(error instanceof NotIndexedError);
 	});
@@ -49,7 +49,7 @@ suite('Search Client Errors', () => {
 		const error = constructSearchRepoError({
 			error: 'unknownERror',
 			message: 'Error message',
-			repo: 'microsoft/vscode'
+			repo: 'microsoft/vscode',
 		});
 		assert.ok(error instanceof CodeOrDocsSearchRepoError);
 	});

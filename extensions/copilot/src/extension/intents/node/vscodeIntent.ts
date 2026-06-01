@@ -15,15 +15,26 @@ import { IInstantiationService } from '../../../util/vs/platform/instantiation/c
 import { Intent } from '../../common/constants';
 import { parseSettingsAndCommands } from '../../context/node/resolvers/vscodeContext';
 import { IBuildPromptContext } from '../../prompt/common/intents';
-import { IIntent, IIntentInvocation, IIntentInvocationContext, IIntentSlashCommandInfo, IntentLinkificationOptions, IResponseProcessorContext } from '../../prompt/node/intents';
-import { PromptRenderer, RendererIntentInvocation } from '../../prompts/node/base/promptRenderer';
+import {
+	IIntent,
+	IIntentInvocation,
+	IIntentInvocationContext,
+	IIntentSlashCommandInfo,
+	IntentLinkificationOptions,
+	IResponseProcessorContext,
+} from '../../prompt/node/intents';
+import {
+	PromptRenderer,
+	RendererIntentInvocation,
+} from '../../prompts/node/base/promptRenderer';
 import { VscodePrompt } from '../../prompts/node/panel/vscode';
 import { ToolName } from '../../tools/common/toolNames';
 import { IToolsService } from '../../tools/common/toolsService';
 
-
-class VSCodeIntentInvocation extends RendererIntentInvocation implements IIntentInvocation {
-
+class VSCodeIntentInvocation
+	extends RendererIntentInvocation
+	implements IIntentInvocation
+{
 	readonly linkification: IntentLinkificationOptions = { disable: true };
 
 	constructor(
@@ -31,39 +42,74 @@ class VSCodeIntentInvocation extends RendererIntentInvocation implements IIntent
 		location: ChatLocation,
 		endpoint: IChatEndpoint,
 		private readonly request: vscode.ChatRequest,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IWorkbenchService private readonly workbenchService: IWorkbenchService,
 		@IToolsService private readonly toolsService: IToolsService,
 	) {
 		super(intent, location, endpoint);
 	}
 
-	async createRenderer(promptContext: IBuildPromptContext, endpoint: IChatEndpoint, progress: vscode.Progress<vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart>, token: vscode.CancellationToken) {
-		return PromptRenderer.create(this.instantiationService, endpoint, VscodePrompt, {
+	async createRenderer(
+		promptContext: IBuildPromptContext,
+		endpoint: IChatEndpoint,
+		progress: vscode.Progress<
+			vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart
+		>,
+		token: vscode.CancellationToken,
+	) {
+		return PromptRenderer.create(
+			this.instantiationService,
 			endpoint,
-			promptContext
-		});
+			VscodePrompt,
+			{
+				endpoint,
+				promptContext,
+			},
+		);
 	}
 
-	processResponse(context: IResponseProcessorContext, inputStream: AsyncIterable<IResponsePart>, outputStream: vscode.ChatResponseStream, token: CancellationToken): Promise<void> {
-		const responseProcessor = new VSCodeResponseProcessor(this.workbenchService);
-		return responseProcessor.processResponse(context, inputStream, outputStream, token);
+	processResponse(
+		context: IResponseProcessorContext,
+		inputStream: AsyncIterable<IResponsePart>,
+		outputStream: vscode.ChatResponseStream,
+		token: CancellationToken,
+	): Promise<void> {
+		const responseProcessor = new VSCodeResponseProcessor(
+			this.workbenchService,
+		);
+		return responseProcessor.processResponse(
+			context,
+			inputStream,
+			outputStream,
+			token,
+		);
 	}
 
-	getAvailableTools(): vscode.LanguageModelToolInformation[] | Promise<vscode.LanguageModelToolInformation[]> | undefined {
-		return this.toolsService.getEnabledTools(this.request, this.endpoint, tool =>
-			tool.name === 'vscode_searchExtensions_internal' ||
-			tool.name === ToolName.VSCodeAPI
+	getAvailableTools():
+		| vscode.LanguageModelToolInformation[]
+		| Promise<vscode.LanguageModelToolInformation[]>
+		| undefined {
+		return this.toolsService.getEnabledTools(
+			this.request,
+			this.endpoint,
+			(tool) =>
+				tool.name === 'vscode_searchExtensions_internal' ||
+				tool.name === ToolName.VSCodeAPI,
 		);
 	}
 }
 
 class VSCodeResponseProcessor {
 	private stagedTextToApply = '';
-	constructor(private readonly workbenchService: IWorkbenchService) {
-	}
+	constructor(private readonly workbenchService: IWorkbenchService) {}
 
-	async processResponse(context: IResponseProcessorContext, inputStream: AsyncIterable<IResponsePart>, outputStream: vscode.ChatResponseStream, token: vscode.CancellationToken): Promise<void> {
+	async processResponse(
+		context: IResponseProcessorContext,
+		inputStream: AsyncIterable<IResponsePart>,
+		outputStream: vscode.ChatResponseStream,
+		token: vscode.CancellationToken,
+	): Promise<void> {
 		for await (const { delta } of inputStream) {
 			if (token.isCancellationRequested) {
 				return;
@@ -77,8 +123,14 @@ class VSCodeResponseProcessor {
 	 * @param codeBlock Markdown string containing a single code block surrounded by "```"
 	 */
 	// textDelta is a string with a single Markdown code block (wrapped by ```). It might or might not be of json type.
-	private async processNonReporting(codeBlock: string, progress: vscode.ChatResponseStream) {
-		const parsedCommands = await parseSettingsAndCommands(this.workbenchService, codeBlock);
+	private async processNonReporting(
+		codeBlock: string,
+		progress: vscode.ChatResponseStream,
+	) {
+		const parsedCommands = await parseSettingsAndCommands(
+			this.workbenchService,
+			codeBlock,
+		);
 
 		if (parsedCommands.length === 0) {
 			// Show code block
@@ -94,8 +146,10 @@ class VSCodeResponseProcessor {
 	}
 
 	private _incodeblock = false;
-	private async applyDelta(textDelta: string, progress: vscode.ChatResponseStream) {
-
+	private async applyDelta(
+		textDelta: string,
+		progress: vscode.ChatResponseStream,
+	) {
 		textDelta = this.stagedTextToApply + textDelta;
 		this.stagedTextToApply = '';
 		const codeblockStart = textDelta.indexOf('```');
@@ -106,13 +160,13 @@ class VSCodeResponseProcessor {
 				this.stagedTextToApply = textDelta;
 			} else {
 				this._incodeblock = false;
-				const codeBlock = '```' + textDelta.substring(0, codeblockEnd) + '```';
+				const codeBlock =
+					'```' + textDelta.substring(0, codeblockEnd) + '```';
 				await this.processNonReporting(codeBlock, progress);
 				// Output any text that comes after the code block
 				progress.markdown(textDelta.substring(codeblockEnd + 3));
 			}
-		}
-		else if (codeblockStart !== -1) {
+		} else if (codeblockStart !== -1) {
 			this._incodeblock = true;
 			const codeblockEnd = textDelta.indexOf('```', codeblockStart + 3);
 			if (codeblockEnd !== -1) {
@@ -120,12 +174,17 @@ class VSCodeResponseProcessor {
 				// Output any text that comes before the code block
 				progress.markdown(textDelta.substring(0, codeblockStart));
 				// Process the codeblock
-				const codeBlock = '```' + textDelta.substring(codeblockStart + 3, codeblockEnd) + '```';
+				const codeBlock =
+					'```' +
+					textDelta.substring(codeblockStart + 3, codeblockEnd) +
+					'```';
 				await this.processNonReporting(codeBlock, progress);
 				// Output any text that comes after the code block
 				progress.markdown(textDelta.substring(codeblockEnd + 3));
 			} else {
-				this.stagedTextToApply = textDelta.substring(codeblockStart + 3);
+				this.stagedTextToApply = textDelta.substring(
+					codeblockStart + 3,
+				);
 				// Output any text that comes before the code block
 				const textToReport = textDelta.substring(0, codeblockStart);
 				if (textToReport) {
@@ -140,7 +199,6 @@ class VSCodeResponseProcessor {
 }
 
 export class VscodeIntent implements IIntent {
-
 	static readonly ID = Intent.VSCode;
 	readonly id: string = VscodeIntent.ID;
 	readonly locations = [ChatLocation.Panel];
@@ -151,13 +209,24 @@ export class VscodeIntent implements IIntent {
 	};
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
-	) { }
+	) {}
 
-	async invoke(invocationContext: IIntentInvocationContext): Promise<IIntentInvocation> {
+	async invoke(
+		invocationContext: IIntentInvocationContext,
+	): Promise<IIntentInvocation> {
 		const location = invocationContext.location;
-		const endpoint = await this.endpointProvider.getChatEndpoint(invocationContext.request);
-		return this.instantiationService.createInstance(VSCodeIntentInvocation, this, location, endpoint, invocationContext.request);
+		const endpoint = await this.endpointProvider.getChatEndpoint(
+			invocationContext.request,
+		);
+		return this.instantiationService.createInstance(
+			VSCodeIntentInvocation,
+			this,
+			location,
+			endpoint,
+			invocationContext.request,
+		);
 	}
 }

@@ -8,9 +8,12 @@
 import { isIterable } from './types';
 
 export namespace Iterable {
-
 	export function is<T = unknown>(thing: unknown): thing is Iterable<T> {
-		return !!thing && typeof thing === 'object' && typeof (thing as Iterable<T>)[Symbol.iterator] === 'function';
+		return (
+			!!thing &&
+			typeof thing === 'object' &&
+			typeof (thing as Iterable<T>)[Symbol.iterator] === 'function'
+		);
 	}
 
 	const _empty: Iterable<never> = Object.freeze([]);
@@ -30,7 +33,9 @@ export namespace Iterable {
 		}
 	}
 
-	export function from<T>(iterable: Iterable<T> | undefined | null): Iterable<T> {
+	export function from<T>(
+		iterable: Iterable<T> | undefined | null,
+	): Iterable<T> {
 		return iterable ?? (_empty as Iterable<T>);
 	}
 
@@ -40,7 +45,9 @@ export namespace Iterable {
 		}
 	}
 
-	export function isEmpty<T>(iterable: Iterable<T> | undefined | null): boolean {
+	export function isEmpty<T>(
+		iterable: Iterable<T> | undefined | null,
+	): boolean {
 		return !iterable || iterable[Symbol.iterator]().next().done === true;
 	}
 
@@ -48,7 +55,10 @@ export namespace Iterable {
 		return iterable[Symbol.iterator]().next().value;
 	}
 
-	export function some<T>(iterable: Iterable<T>, predicate: (t: T, i: number) => unknown): boolean {
+	export function some<T>(
+		iterable: Iterable<T>,
+		predicate: (t: T, i: number) => unknown,
+	): boolean {
 		let i = 0;
 		for (const element of iterable) {
 			if (predicate(element, i++)) {
@@ -58,7 +68,10 @@ export namespace Iterable {
 		return false;
 	}
 
-	export function every<T>(iterable: Iterable<T>, predicate: (t: T, i: number) => unknown): boolean {
+	export function every<T>(
+		iterable: Iterable<T>,
+		predicate: (t: T, i: number) => unknown,
+	): boolean {
 		let i = 0;
 		for (const element of iterable) {
 			if (!predicate(element, i++)) {
@@ -68,9 +81,18 @@ export namespace Iterable {
 		return true;
 	}
 
-	export function find<T, R extends T>(iterable: Iterable<T>, predicate: (t: T) => t is R): R | undefined;
-	export function find<T>(iterable: Iterable<T>, predicate: (t: T) => boolean): T | undefined;
-	export function find<T>(iterable: Iterable<T>, predicate: (t: T) => boolean): T | undefined {
+	export function find<T, R extends T>(
+		iterable: Iterable<T>,
+		predicate: (t: T) => t is R,
+	): R | undefined;
+	export function find<T>(
+		iterable: Iterable<T>,
+		predicate: (t: T) => boolean,
+	): T | undefined;
+	export function find<T>(
+		iterable: Iterable<T>,
+		predicate: (t: T) => boolean,
+	): T | undefined {
 		for (const element of iterable) {
 			if (predicate(element)) {
 				return element;
@@ -80,9 +102,18 @@ export namespace Iterable {
 		return undefined;
 	}
 
-	export function filter<T, R extends T>(iterable: Iterable<T>, predicate: (t: T) => t is R): Iterable<R>;
-	export function filter<T>(iterable: Iterable<T>, predicate: (t: T) => boolean): Iterable<T>;
-	export function* filter<T>(iterable: Iterable<T>, predicate: (t: T) => boolean): Iterable<T> {
+	export function filter<T, R extends T>(
+		iterable: Iterable<T>,
+		predicate: (t: T) => t is R,
+	): Iterable<R>;
+	export function filter<T>(
+		iterable: Iterable<T>,
+		predicate: (t: T) => boolean,
+	): Iterable<T>;
+	export function* filter<T>(
+		iterable: Iterable<T>,
+		predicate: (t: T) => boolean,
+	): Iterable<T> {
 		for (const element of iterable) {
 			if (predicate(element)) {
 				yield element;
@@ -90,14 +121,20 @@ export namespace Iterable {
 		}
 	}
 
-	export function* map<T, R>(iterable: Iterable<T>, fn: (t: T, index: number) => R): Iterable<R> {
+	export function* map<T, R>(
+		iterable: Iterable<T>,
+		fn: (t: T, index: number) => R,
+	): Iterable<R> {
 		let index = 0;
 		for (const element of iterable) {
 			yield fn(element, index++);
 		}
 	}
 
-	export function* flatMap<T, R>(iterable: Iterable<T>, fn: (t: T, index: number) => Iterable<R>): Iterable<R> {
+	export function* flatMap<T, R>(
+		iterable: Iterable<T>,
+		fn: (t: T, index: number) => Iterable<R>,
+	): Iterable<R> {
 		let index = 0;
 		for (const element of iterable) {
 			yield* fn(element, index++);
@@ -114,7 +151,11 @@ export namespace Iterable {
 		}
 	}
 
-	export function reduce<T, R>(iterable: Iterable<T>, reducer: (previousValue: R, currentValue: T) => R, initialValue: R): R {
+	export function reduce<T, R>(
+		iterable: Iterable<T>,
+		reducer: (previousValue: R, currentValue: T) => R,
+		initialValue: R,
+	): R {
 		let value = initialValue;
 		for (const element of iterable) {
 			value = reducer(value, element);
@@ -133,7 +174,11 @@ export namespace Iterable {
 	/**
 	 * Returns an iterable slice of the array, with the same semantics as `array.slice()`.
 	 */
-	export function* slice<T>(arr: ReadonlyArray<T>, from: number, to = arr.length): Iterable<T> {
+	export function* slice<T>(
+		arr: ReadonlyArray<T>,
+		from: number,
+		to = arr.length,
+	): Iterable<T> {
 		if (from < -arr.length) {
 			from = 0;
 		}
@@ -156,7 +201,10 @@ export namespace Iterable {
 	 * Consumes `atMost` elements from iterable and returns the consumed elements,
 	 * and an iterable for the rest of the elements.
 	 */
-	export function consume<T>(iterable: Iterable<T>, atMost: number = Number.POSITIVE_INFINITY): [T[], Iterable<T>] {
+	export function consume<T>(
+		iterable: Iterable<T>,
+		atMost: number = Number.POSITIVE_INFINITY,
+	): [T[], Iterable<T>] {
 		const consumed: T[] = [];
 
 		if (atMost === 0) {
@@ -175,10 +223,19 @@ export namespace Iterable {
 			consumed.push(next.value);
 		}
 
-		return [consumed, { [Symbol.iterator]() { return iterator; } }];
+		return [
+			consumed,
+			{
+				[Symbol.iterator]() {
+					return iterator;
+				},
+			},
+		];
 	}
 
-	export async function asyncToArray<T>(iterable: AsyncIterable<T>): Promise<T[]> {
+	export async function asyncToArray<T>(
+		iterable: AsyncIterable<T>,
+	): Promise<T[]> {
 		const result: T[] = [];
 		for await (const item of iterable) {
 			result.push(item);
@@ -186,7 +243,9 @@ export namespace Iterable {
 		return result;
 	}
 
-	export async function asyncToArrayFlat<T>(iterable: AsyncIterable<T[]>): Promise<T[]> {
+	export async function asyncToArrayFlat<T>(
+		iterable: AsyncIterable<T[]>,
+	): Promise<T[]> {
 		let result: T[] = [];
 		for await (const item of iterable) {
 			result = result.concat(item);

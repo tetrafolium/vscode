@@ -30,7 +30,7 @@ const capitalsRe = /([A-Z][a-z]+)/;
 const NAMESPACE = 'code_referencing';
 
 class CodeQuoteTelemetry {
-	constructor(protected readonly baseKey: string) { }
+	constructor(protected readonly baseKey: string) {}
 	buildKey(...keys: string[]) {
 		return [NAMESPACE, this.baseKey, ...keys].join('.');
 	}
@@ -87,19 +87,46 @@ class SnippyTelemetry extends CodeQuoteTelemetry {
 		super('snippy');
 	}
 
-	handleUnexpectedError({ instantiationService, origin, reason }: PostInsertionErrorDetails) {
+	handleUnexpectedError({
+		instantiationService,
+		origin,
+		reason,
+	}: PostInsertionErrorDetails) {
 		const data = TelemetryData.createAndMarkAsIssued({ origin, reason });
-		instantiationService.invokeFunction(telemetryError, this.buildKey('unexpectedError'), data);
+		instantiationService.invokeFunction(
+			telemetryError,
+			this.buildKey('unexpectedError'),
+			data,
+		);
 	}
 
-	handleCompletionMissing({ instantiationService, origin, reason }: PostInsertionErrorDetails) {
+	handleCompletionMissing({
+		instantiationService,
+		origin,
+		reason,
+	}: PostInsertionErrorDetails) {
 		const data = TelemetryData.createAndMarkAsIssued({ origin, reason });
-		instantiationService.invokeFunction(telemetryError, this.buildKey('completionMissing'), data);
+		instantiationService.invokeFunction(
+			telemetryError,
+			this.buildKey('completionMissing'),
+			data,
+		);
 	}
 
-	handleSnippyNetworkError({ instantiationService, origin, reason, message }: SnippyNetworkErrorDetails) {
+	handleSnippyNetworkError({
+		instantiationService,
+		origin,
+		reason,
+		message,
+	}: SnippyNetworkErrorDetails) {
 		if (!origin.match(statusCodeRe)) {
-			instantiationService.invokeFunction(acc => codeReferenceLogger.debug(acc.get(ICompletionsLogTargetService), 'Invalid status code, not sending telemetry', { origin }));
+			instantiationService.invokeFunction((acc) =>
+				codeReferenceLogger.debug(
+					acc.get(ICompletionsLogTargetService),
+					'Invalid status code, not sending telemetry',
+					{ origin },
+				),
+			);
 			return;
 		}
 
@@ -107,11 +134,15 @@ class SnippyTelemetry extends CodeQuoteTelemetry {
 		// is the standard for Copilot telemetry keys.
 		const errorType = reason
 			.split(capitalsRe)
-			.filter(part => Boolean(part))
+			.filter((part) => Boolean(part))
 			.join('_')
 			.toLowerCase();
 		const data = TelemetryData.createAndMarkAsIssued({ message });
-		instantiationService.invokeFunction(telemetryError, this.buildKey(errorType, origin), data);
+		instantiationService.invokeFunction(
+			telemetryError,
+			this.buildKey(errorType, origin),
+			data,
+		);
 	}
 }
 
@@ -122,6 +153,6 @@ export class NoopTelemetryReporter extends CodeQuoteTelemetry {
 	constructor(baseKey = '') {
 		super(baseKey);
 	}
-	telemetry(...args: Parameters<typeof telemetry>) { }
-	telemetryError(...args: Parameters<typeof telemetryError>) { }
+	telemetry(...args: Parameters<typeof telemetry>) {}
+	telemetryError(...args: Parameters<typeof telemetryError>) {}
 }

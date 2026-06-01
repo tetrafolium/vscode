@@ -8,7 +8,6 @@ import { suite, test } from 'vitest';
 import { looksLikeCode } from '../../common/codeGuesser';
 
 suite('codeGuesser', () => {
-
 	test('looksLikeCode - detects JavaScript configuration as code', () => {
 		const jsConfigSnippet = `'prefer-const': 'off',`;
 		assert.strictEqual(looksLikeCode(jsConfigSnippet), true);
@@ -55,7 +54,8 @@ suite('codeGuesser', () => {
 	});
 
 	test('looksLikeCode - detects Java as code', () => {
-		const javaSnippet = 'public class Test { public static void main(String[] args) { } }';
+		const javaSnippet =
+			'public class Test { public static void main(String[] args) { } }';
 		assert.strictEqual(looksLikeCode(javaSnippet), true);
 	});
 
@@ -198,27 +198,32 @@ suite('codeGuesser', () => {
 	});
 
 	test('looksLikeCode - detects natural language response as non-code', () => {
-		const naturalLanguageSnippet = 'Sure, I can help you with that. What do you need assistance with?';
+		const naturalLanguageSnippet =
+			'Sure, I can help you with that. What do you need assistance with?';
 		assert.strictEqual(looksLikeCode(naturalLanguageSnippet), false);
 	});
 
 	test('looksLikeCode - detects natural language explanation as non-code', () => {
-		const naturalLanguageSnippet = 'To create a new React component, you can use the following code snippet:';
+		const naturalLanguageSnippet =
+			'To create a new React component, you can use the following code snippet:';
 		assert.strictEqual(looksLikeCode(naturalLanguageSnippet), false);
 	});
 
 	test('looksLikeCode - detects natural language instruction as non-code', () => {
-		const naturalLanguageSnippet = 'First, install the necessary dependencies using npm or yarn.';
+		const naturalLanguageSnippet =
+			'First, install the necessary dependencies using npm or yarn.';
 		assert.strictEqual(looksLikeCode(naturalLanguageSnippet), false);
 	});
 
 	test('looksLikeCode - detects natural language question as non-code', () => {
-		const naturalLanguageSnippet = 'Have you tried restarting your development server?';
+		const naturalLanguageSnippet =
+			'Have you tried restarting your development server?';
 		assert.strictEqual(looksLikeCode(naturalLanguageSnippet), false);
 	});
 
 	test('looksLikeCode - detects natural language suggestion as non-code', () => {
-		const naturalLanguageSnippet = 'I suggest checking the console for any error messages.';
+		const naturalLanguageSnippet =
+			'I suggest checking the console for any error messages.';
 		assert.strictEqual(looksLikeCode(naturalLanguageSnippet), false);
 	});
 
@@ -228,12 +233,14 @@ suite('codeGuesser', () => {
 	});
 
 	test('looksLikeCode - detects natural language response in French as non-code', () => {
-		const frenchSnippet = 'Bien sûr, je peux vous aider avec cela. Que voulez-vous savoir?';
+		const frenchSnippet =
+			'Bien sûr, je peux vous aider avec cela. Que voulez-vous savoir?';
 		assert.strictEqual(looksLikeCode(frenchSnippet), false);
 	});
 
 	test('looksLikeCode - detects natural language response in German as non-code', () => {
-		const germanSnippet = 'Natürlich kann ich Ihnen dabei helfen. Was brauchen Sie?';
+		const germanSnippet =
+			'Natürlich kann ich Ihnen dabei helfen. Was brauchen Sie?';
 		assert.strictEqual(looksLikeCode(germanSnippet), false);
 	});
 
@@ -251,5 +258,4 @@ suite('codeGuesser', () => {
 		const russianSnippet = 'Конечно, я могу вам помочь. Что вам нужно?';
 		assert.strictEqual(looksLikeCode(russianSnippet), false);
 	});
-
 });

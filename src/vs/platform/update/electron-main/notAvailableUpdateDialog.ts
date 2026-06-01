@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import electron from 'electron';
-import { Event } from '../../../base/common/event.js';
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { isMacintosh } from '../../../base/common/platform.js';
-import { localize } from '../../../nls.js';
-import { IDialogMainService } from '../../dialogs/electron-main/dialogMainService.js';
-import { IUpdateService, StateType } from '../common/update.js';
+import electron from "electron";
+import { Event } from "../../../base/common/event.js";
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { isMacintosh } from "../../../base/common/platform.js";
+import { localize } from "../../../nls.js";
+import { IDialogMainService } from "../../dialogs/electron-main/dialogMainService.js";
+import { IUpdateService, StateType } from "../common/update.js";
 
 /**
  * Shows a native "no updates available" dialog when an explicit update check
@@ -19,7 +19,6 @@ import { IUpdateService, StateType } from '../common/update.js';
  * Updates" invoked from the menu bar with all windows closed/minimized).
  */
 export class NotAvailableUpdateDialog extends Disposable {
-
 	// macOS: tracks whether this app is currently the active app (NSApp is
 	// active) regardless of whether any `BrowserWindow` is focused. Apps start
 	// active when launched.
@@ -32,15 +31,31 @@ export class NotAvailableUpdateDialog extends Disposable {
 		super();
 
 		if (isMacintosh) {
-			this._register(Event.fromNodeEventEmitter(electron.app, 'did-become-active')(() => this.macAppActive = true));
-			this._register(Event.fromNodeEventEmitter(electron.app, 'did-resign-active')(() => this.macAppActive = false));
+			this._register(
+				Event.fromNodeEventEmitter(
+					electron.app,
+					"did-become-active",
+				)(() => (this.macAppActive = true)),
+			);
+			this._register(
+				Event.fromNodeEventEmitter(
+					electron.app,
+					"did-resign-active",
+				)(() => (this.macAppActive = false)),
+			);
 		}
 
-		this._register(updateService.onStateChange(state => {
-			if (state.type === StateType.Idle && state.notAvailable && !state.error) {
-				this.show();
-			}
-		}));
+		this._register(
+			updateService.onStateChange((state) => {
+				if (
+					state.type === StateType.Idle &&
+					state.notAvailable &&
+					!state.error
+				) {
+					this.show();
+				}
+			}),
+		);
 	}
 
 	private show(): void {
@@ -49,9 +64,15 @@ export class NotAvailableUpdateDialog extends Disposable {
 			return; // focus is not in this app — let the focused app show the dialog
 		}
 
-		this.dialogMainService.showMessageBox({
-			type: 'info',
-			message: localize('noUpdatesAvailable', "There are currently no updates available."),
-		}, focusedWindow ?? undefined);
+		this.dialogMainService.showMessageBox(
+			{
+				type: "info",
+				message: localize(
+					"noUpdatesAvailable",
+					"There are currently no updates available.",
+				),
+			},
+			focusedWindow ?? undefined,
+		);
 	}
 }

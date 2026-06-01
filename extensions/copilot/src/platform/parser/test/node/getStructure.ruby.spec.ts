@@ -16,7 +16,6 @@ describe('getStructure - ruby', () => {
 	}
 
 	test('source with different syntax constructs', async () => {
-
 		const source = await fromFixture('test.rb');
 
 		expect(await rubyStruct(source)).toMatchSnapshot();

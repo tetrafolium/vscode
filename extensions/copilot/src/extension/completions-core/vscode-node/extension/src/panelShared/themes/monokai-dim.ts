@@ -71,7 +71,11 @@ export const monokaiDim: ThemeRegistrationAny = {
 	},
 	tokenColors: [
 		{
-			scope: ['meta.embedded', 'source.groovy.embedded', 'variable.legacy.builtin.python'],
+			scope: [
+				'meta.embedded',
+				'source.groovy.embedded',
+				'variable.legacy.builtin.python',
+			],
 			settings: {
 				foreground: '#C5C8C6',
 			},
@@ -355,7 +359,10 @@ export const monokaiDim: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['punctuation.definition.template-expression', 'punctuation.section.embedded.coffee'],
+			scope: [
+				'punctuation.definition.template-expression',
+				'punctuation.section.embedded.coffee',
+			],
 			settings: {
 				foreground: '#D08442',
 			},
@@ -414,7 +421,10 @@ export const monokaiDim: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['punctuation.section.embedded.begin.ruby', 'punctuation.section.embedded.end.ruby'],
+			scope: [
+				'punctuation.section.embedded.begin.ruby',
+				'punctuation.section.embedded.end.ruby',
+			],
 			settings: {
 				foreground: '#D08442',
 			},

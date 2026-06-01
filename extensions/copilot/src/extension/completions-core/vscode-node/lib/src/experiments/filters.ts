@@ -41,19 +41,32 @@ export enum Filter {
 	/** The Copilot Client Version */
 	CopilotClientVersion = 'X-Copilot-ClientVersion',
 
-	CopilotRelatedPluginVersionCppTools = CopilotRelatedPluginVersionPrefix + 'msvscodecpptools',
-	CopilotRelatedPluginVersionCMakeTools = CopilotRelatedPluginVersionPrefix + 'msvscodecmaketools',
-	CopilotRelatedPluginVersionMakefileTools = CopilotRelatedPluginVersionPrefix + 'msvscodemakefiletools',
-	CopilotRelatedPluginVersionCSharpDevKit = CopilotRelatedPluginVersionPrefix + 'msdotnettoolscsdevkit',
-	CopilotRelatedPluginVersionPython = CopilotRelatedPluginVersionPrefix + 'mspythonpython',
-	CopilotRelatedPluginVersionPylance = CopilotRelatedPluginVersionPrefix + 'mspythonvscodepylance',
-	CopilotRelatedPluginVersionJavaPack = CopilotRelatedPluginVersionPrefix + 'vscjavavscodejavapack',
-	CopilotRelatedPluginVersionJavaManager = CopilotRelatedPluginVersionPrefix + 'vscjavavscodejavadependency',
-	CopilotRelatedPluginVersionTypescript = CopilotRelatedPluginVersionPrefix + 'vscodetypescriptlanguagefeatures',
-	CopilotRelatedPluginVersionTypescriptNext = CopilotRelatedPluginVersionPrefix + 'msvscodevscodetypescriptnext',
-	CopilotRelatedPluginVersionCSharp = CopilotRelatedPluginVersionPrefix + 'msdotnettoolscsharp',
-	CopilotRelatedPluginVersionGithubCopilotChat = CopilotRelatedPluginVersionPrefix + 'githubcopilotchat',
-	CopilotRelatedPluginVersionGithubCopilot = CopilotRelatedPluginVersionPrefix + 'githubcopilot',
+	CopilotRelatedPluginVersionCppTools = CopilotRelatedPluginVersionPrefix +
+		'msvscodecpptools',
+	CopilotRelatedPluginVersionCMakeTools = CopilotRelatedPluginVersionPrefix +
+		'msvscodecmaketools',
+	CopilotRelatedPluginVersionMakefileTools = CopilotRelatedPluginVersionPrefix +
+		'msvscodemakefiletools',
+	CopilotRelatedPluginVersionCSharpDevKit = CopilotRelatedPluginVersionPrefix +
+		'msdotnettoolscsdevkit',
+	CopilotRelatedPluginVersionPython = CopilotRelatedPluginVersionPrefix +
+		'mspythonpython',
+	CopilotRelatedPluginVersionPylance = CopilotRelatedPluginVersionPrefix +
+		'mspythonvscodepylance',
+	CopilotRelatedPluginVersionJavaPack = CopilotRelatedPluginVersionPrefix +
+		'vscjavavscodejavapack',
+	CopilotRelatedPluginVersionJavaManager = CopilotRelatedPluginVersionPrefix +
+		'vscjavavscodejavadependency',
+	CopilotRelatedPluginVersionTypescript = CopilotRelatedPluginVersionPrefix +
+		'vscodetypescriptlanguagefeatures',
+	CopilotRelatedPluginVersionTypescriptNext = CopilotRelatedPluginVersionPrefix +
+		'msvscodevscodetypescriptnext',
+	CopilotRelatedPluginVersionCSharp = CopilotRelatedPluginVersionPrefix +
+		'msdotnettoolscsharp',
+	CopilotRelatedPluginVersionGithubCopilotChat = CopilotRelatedPluginVersionPrefix +
+		'githubcopilotchat',
+	CopilotRelatedPluginVersionGithubCopilot = CopilotRelatedPluginVersionPrefix +
+		'githubcopilot',
 }
 
 export enum Release {

@@ -13,31 +13,35 @@ import { runInputPipeline, RunPipelineOptions } from '../pipeline';
 async function extractFromCsv(csvContents: string): Promise<unknown[]> {
 	const options = {
 		columns: true as const, // Use first row as column headers
-		delimiter: ',',         // Comma delimiter
-		quote: '"',             // Double quotes
-		escape: '"',            // Standard CSV escape character
+		delimiter: ',', // Comma delimiter
+		quote: '"', // Double quotes
+		escape: '"', // Standard CSV escape character
 		skip_empty_lines: true, // Skip any empty rows
-		trim: true,             // Remove whitespace around fields
-		relax_quotes: true,     // Handle quotes within fields more flexibly
-		bom: true,              // Handle UTF-8 BOM
-		cast: false             // Keep all values as strings initially
+		trim: true, // Remove whitespace around fields
+		relax_quotes: true, // Handle quotes within fields more flexibly
+		bom: true, // Handle UTF-8 BOM
+		cast: false, // Keep all values as strings initially
 	} as const;
 
 	type CsvRecord = { Data: string };
 
-	const objects = (await new Promise<CsvRecord[]>((resolve, reject) =>
+	const objects = await new Promise<CsvRecord[]>((resolve, reject) =>
 		csvParse.parse<CsvRecord>(csvContents, options, (err, result) => {
 			if (err) {
 				reject(err);
 			} else {
-				if (result.every((item: any) => typeof item === 'object' && item)) {
+				if (
+					result.every(
+						(item: any) => typeof item === 'object' && item,
+					)
+				) {
 					resolve(result);
 				} else {
 					reject(new Error('Invalid CSV format'));
 				}
 			}
-		})
-	));
+		}),
+	);
 
 	return objects;
 }
@@ -53,13 +57,21 @@ function convertToInputRows(csvEntries: unknown[]): Result<IInputRow, Error>[] {
 			['active_document_language_id', 'language'],
 		];
 		if (typeof entry !== 'object' || !entry) {
-			return Result.error(new Error(`Entry not object or falsy - ${JSON.stringify(entry)}`));
+			return Result.error(
+				new Error(
+					`Entry not object or falsy - ${JSON.stringify(entry)}`,
+				),
+			);
 		}
 		const record = entry as Record<string, any>;
 		const obj: Record<string, any> = {};
 		for (const [entryName, fieldName] of fieldReqs) {
 			if (!(entryName in record)) {
-				return Result.error(new Error(`Missing field ${entryName} in ${JSON.stringify(entry)}`));
+				return Result.error(
+					new Error(
+						`Missing field ${entryName} in ${JSON.stringify(entry)}`,
+					),
+				);
 			}
 			try {
 				obj[fieldName] = record[entryName];
@@ -76,7 +88,6 @@ function convertToInputRows(csvEntries: unknown[]): Result<IInputRow, Error>[] {
 }
 
 suite.skip('from csv to input rows to pipeline', () => {
-
 	test.skip('', async () => {
 		const filePath = '';
 
@@ -87,10 +98,14 @@ suite.skip('from csv to input rows to pipeline', () => {
 		await fs.writeFile(
 			inputRowsFilePath,
 			JSON.stringify(
-				inputRowResults.filter(r => r.isOk())
-					.filter(r => (r.val as any).outcome)
-					.map(r => r.val),
-				null, 2));
+				inputRowResults
+					.filter((r) => r.isOk())
+					.filter((r) => (r.val as any).outcome)
+					.map((r) => r.val),
+				null,
+				2,
+			),
+		);
 
 		const configFilePath = path.join(fixtures, 'config.json');
 
@@ -100,19 +115,31 @@ suite.skip('from csv to input rows to pipeline', () => {
 		// }, null, 2));
 
 		const logs: string[] = [];
-		const log = (m: any, ...rest: any[]) => logs.push([m, ...rest].map(s => typeof s === 'object' ? JSON.stringify(s, null, '\t') : s).join(', '));
+		const log = (m: any, ...rest: any[]) =>
+			logs.push(
+				[m, ...rest]
+					.map((s) =>
+						typeof s === 'object'
+							? JSON.stringify(s, null, '\t')
+							: s,
+					)
+					.join(', '),
+			);
 
-		await runInputPipeline({
-			nesDatagen: {
-				input: inputRowsFilePath,
-				output: path.join(fixtures, 'output.json'),
-				rowOffset: 0,
-				workerMode: false
-			},
-			configFile: configFilePath,
-			verbose: true,
-			parallelism: 10,
-		} satisfies RunPipelineOptions, log);
+		await runInputPipeline(
+			{
+				nesDatagen: {
+					input: inputRowsFilePath,
+					output: path.join(fixtures, 'output.json'),
+					rowOffset: 0,
+					workerMode: false,
+				},
+				configFile: configFilePath,
+				verbose: true,
+				parallelism: 10,
+			} satisfies RunPipelineOptions,
+			log,
+		);
 
 		expect(logs).toMatchInlineSnapshot();
 	});

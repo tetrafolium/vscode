@@ -13,7 +13,7 @@ export class ExtHostNotebookEditor {
 
 	constructor(
 		readonly notebookData: ExtHostNotebookDocumentData,
-		selections: vscode.NotebookRange[]
+		selections: vscode.NotebookRange[],
 	) {
 		this._selections = selections;
 	}

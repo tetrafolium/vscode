@@ -42,85 +42,46 @@ export interface ILanguage extends ILanguageInfo {
  * Markdown ids from https://raw.githubusercontent.com/highlightjs/highlight.js/refs/heads/main/SUPPORTED_LANGUAGES.md
  */
 const languages = Object.freeze({
-	'abap': {
-		lineComment: { start: '\'' },
-		markdownLanguageIds: ['abap', 'sap-abap']
+	abap: {
+		lineComment: { start: "'" },
+		markdownLanguageIds: ['abap', 'sap-abap'],
 	},
-	'bat': {
+	bat: {
 		lineComment: { start: 'REM' },
 		alternativeLineComments: [{ start: '::' }],
-		aliases: [
-			'Batch',
-			'bat'
-		],
-		extensions: [
-			'.bat',
-			'.cmd'
-		],
+		aliases: ['Batch', 'bat'],
+		extensions: ['.bat', '.cmd'],
 	},
-	'bibtex': {
+	bibtex: {
 		lineComment: { start: '%' },
-		aliases: [
-			'BibTeX',
-			'bibtex'
-		],
-		extensions: [
-			'.bib'
-		]
+		aliases: ['BibTeX', 'bibtex'],
+		extensions: ['.bib'],
 	},
-	'blade': {
-		lineComment: { start: '#' }
+	blade: {
+		lineComment: { start: '#' },
 	},
-	'c': {
+	c: {
 		lineComment: { start: '//' },
-		aliases: [
-			'C',
-			'c'
-		],
-		extensions: [
-			'.c',
-			'.i'
-		],
-		markdownLanguageIds: ['c', 'h']
+		aliases: ['C', 'c'],
+		extensions: ['.c', '.i'],
+		markdownLanguageIds: ['c', 'h'],
 	},
-	'clojure': {
+	clojure: {
 		lineComment: { start: ';' },
-		aliases: [
-			'Clojure',
-			'clojure'
-		],
-		extensions: [
-			'.clj',
-			'.cljs',
-			'.cljc',
-			'.cljx',
-			'.clojure',
-			'.edn'
-		],
-		markdownLanguageIds: ['clojure', 'clj']
+		aliases: ['Clojure', 'clojure'],
+		extensions: ['.clj', '.cljs', '.cljc', '.cljx', '.clojure', '.edn'],
+		markdownLanguageIds: ['clojure', 'clj'],
 	},
-	'coffeescript': {
+	coffeescript: {
 		lineComment: { start: '//' },
-		aliases: [
-			'CoffeeScript',
-			'coffeescript',
-			'coffee'
-		],
-		extensions: [
-			'.coffee',
-			'.cson',
-			'.iced'
-		],
+		aliases: ['CoffeeScript', 'coffeescript', 'coffee'],
+		extensions: ['.coffee', '.cson', '.iced'],
 		markdownLanguageIds: ['coffeescript', 'coffee', 'cson', 'iced'],
-		blockComment: ['###', '###']
+		blockComment: ['###', '###'],
 	},
-	'cpp': {
+	cpp: {
 		lineComment: { start: '//' },
-		aliases: [
-			'C++',
-			'Cpp',
-			'cpp'
-		],
+		aliases: ['C++', 'Cpp', 'cpp'],
 		extensions: [
 			'.cpp',
 			'.cc',
@@ -139,141 +100,96 @@ const languages = Object.freeze({
 			'.tpp',
 			'.txx',
 			'.hpp.in',
-			'.h.in'
+			'.h.in',
 		],
-		markdownLanguageIds: ['cpp', 'hpp', 'cc', 'hh', 'c++', 'h++', 'cxx', 'hxx'],
-		blockComment: ['/*', '*/']
+		markdownLanguageIds: [
+			'cpp',
+			'hpp',
+			'cc',
+			'hh',
+			'c++',
+			'h++',
+			'cxx',
+			'hxx',
+		],
+		blockComment: ['/*', '*/'],
 	},
-	'csharp': {
+	csharp: {
 		lineComment: { start: '//' },
-		aliases: [
-			'C#',
-			'csharp'
-		],
-		extensions: [
-			'.cs',
-			'.csx',
-			'.cake'
-		],
+		aliases: ['C#', 'csharp'],
+		extensions: ['.cs', '.csx', '.cake'],
 		markdownLanguageIds: ['csharp', 'cs'],
-		blockComment: ['/*', '*/']
+		blockComment: ['/*', '*/'],
 	},
-	'css': {
+	css: {
 		lineComment: { start: '/*', end: '*/' },
-		aliases: [
-			'CSS',
-			'css'
-		],
-		extensions: [
-			'.css'
-		],
-		blockComment: ['/*', '*/']
+		aliases: ['CSS', 'css'],
+		extensions: ['.css'],
+		blockComment: ['/*', '*/'],
 	},
-	'dart': {
+	dart: {
 		lineComment: { start: '//' },
-		aliases: [
-			'Dart'
-		],
-		extensions: [
-			'.dart'
-		],
-		blockComment: ['/*', '*/']
+		aliases: ['Dart'],
+		extensions: ['.dart'],
+		blockComment: ['/*', '*/'],
 	},
-	'dockerfile': {
+	dockerfile: {
 		lineComment: { start: '#' },
-		aliases: [
-			'Docker',
-			'Dockerfile',
-			'Containerfile'
-		],
-		extensions: [
-			'.dockerfile',
-			'.containerfile'
-		],
-		markdownLanguageIds: ['dockerfile', 'docker']
+		aliases: ['Docker', 'Dockerfile', 'Containerfile'],
+		extensions: ['.dockerfile', '.containerfile'],
+		markdownLanguageIds: ['dockerfile', 'docker'],
 	},
-	'elixir': {
+	elixir: {
 		lineComment: { start: '#' },
 	},
-	'erb': {
-		lineComment: { start: '<%#', end: '%>' }
+	erb: {
+		lineComment: { start: '<%#', end: '%>' },
 	},
-	'erlang': {
+	erlang: {
 		lineComment: { start: '%' },
-		markdownLanguageIds: ['erlang', 'erl']
+		markdownLanguageIds: ['erlang', 'erl'],
 	},
-	'fsharp': {
+	fsharp: {
 		lineComment: { start: '//' },
-		aliases: [
-			'F#',
-			'FSharp',
-			'fsharp'
-		],
-		extensions: [
-			'.fs',
-			'.fsi',
-			'.fsx',
-			'.fsscript'
-		],
+		aliases: ['F#', 'FSharp', 'fsharp'],
+		extensions: ['.fs', '.fsi', '.fsx', '.fsscript'],
 		markdownLanguageIds: ['fsharp', 'fs', 'fsx', 'fsi', 'fsscript'],
-		blockComment: ['(*', '*)']
+		blockComment: ['(*', '*)'],
 	},
-	'go': {
+	go: {
 		lineComment: { start: '//' },
-		aliases: [
-			'Go'
-		],
-		extensions: [
-			'.go'
-		],
+		aliases: ['Go'],
+		extensions: ['.go'],
 		markdownLanguageIds: ['go', 'golang'],
-		blockComment: ['/*', '*/']
+		blockComment: ['/*', '*/'],
 	},
-	'groovy': {
+	groovy: {
 		lineComment: { start: '//' },
-		aliases: [
-			'Groovy',
-			'groovy'
-		],
-		extensions: [
-			'.groovy',
-			'.gvy',
-			'.gradle',
-			'.jenkinsfile',
-			'.nf'
-		],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		aliases: ['Groovy', 'groovy'],
+		extensions: ['.groovy', '.gvy', '.gradle', '.jenkinsfile', '.nf'],
+		blockComment: ['/*', '*/'],
 	},
-	'haml': {
-		lineComment: { start: '-#' }
+	haml: {
+		lineComment: { start: '-#' },
 	},
-	'handlebars': {
+	handlebars: {
 		lineComment: { start: '{{!', end: '}}' },
-		extensions: [
-			'.hbs',
-			'.handlebars'
+		extensions: ['.hbs', '.handlebars'],
+		markdownLanguageIds: [
+			'handlebars',
+			'hbs',
+			'html.hbs',
+			'html.handlebars',
 		],
-		markdownLanguageIds: ['handlebars', 'hbs', 'html.hbs', 'html.handlebars'],
-		blockComment: [
-			'{{!--',
-			'--}}'
-		]
+		blockComment: ['{{!--', '--}}'],
 	},
-	'haskell': {
+	haskell: {
 		lineComment: { start: '--' },
-		markdownLanguageIds: ['haskell', 'hs']
+		markdownLanguageIds: ['haskell', 'hs'],
 	},
-	'html': {
+	html: {
 		lineComment: { start: '<!--', end: '-->' },
-		aliases: [
-			'HTML',
-			'htm',
-			'html',
-			'xhtml'
-		],
+		aliases: ['HTML', 'htm', 'html', 'xhtml'],
 		extensions: [
 			'.html',
 			'.htm',
@@ -287,164 +203,86 @@ const languages = Object.freeze({
 			'.jshtm',
 			'.volt',
 			'.ejs',
-			'.rhtml'
+			'.rhtml',
 		],
 		markdownLanguageIds: ['html', 'xhtml'],
-		blockComment: [
-			'<!--',
-			'-->'
-		]
+		blockComment: ['<!--', '-->'],
 	},
-	'ini': {
+	ini: {
 		lineComment: { start: ';' },
-		blockComment: [
-			';',
-			' '
-		]
+		blockComment: [';', ' '],
 	},
-	'java': {
+	java: {
 		lineComment: { start: '//' },
-		extensions: [
-			'.java',
-			'.class'
-		],
+		extensions: ['.java', '.class'],
 		markdownLanguageIds: ['java', 'jsp'],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		blockComment: ['/*', '*/'],
 	},
-	'javascript': {
+	javascript: {
 		lineComment: { start: '//' },
-		aliases: [
-			'JavaScript',
-			'javascript',
-			'js'
-		],
-		extensions: [
-			'.js',
-			'.es6',
-			'.mjs',
-			'.cjs',
-			'.pac'
-		],
+		aliases: ['JavaScript', 'javascript', 'js'],
+		extensions: ['.js', '.es6', '.mjs', '.cjs', '.pac'],
 		markdownLanguageIds: ['javascript', 'js'],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		blockComment: ['/*', '*/'],
 	},
-	'javascriptreact': {
+	javascriptreact: {
 		lineComment: { start: '//' },
-		aliases: [
-			'JavaScript JSX',
-			'JavaScript React',
-			'jsx'
-		],
-		extensions: [
-			'.jsx'
-		],
-		markdownLanguageIds: ['jsx']
+		aliases: ['JavaScript JSX', 'JavaScript React', 'jsx'],
+		extensions: ['.jsx'],
+		markdownLanguageIds: ['jsx'],
 	},
-	'json': {
-		extensions: [
-			'.json',
-		],
+	json: {
+		extensions: ['.json'],
 		lineComment: { start: '//' },
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		blockComment: ['/*', '*/'],
 	},
-	'jsonc': {
-		lineComment: { start: '//' }
-	},
-	'jsx': {
+	jsonc: {
 		lineComment: { start: '//' },
-		markdownLanguageIds: ['jsx']
 	},
-	'julia': {
+	jsx: {
+		lineComment: { start: '//' },
+		markdownLanguageIds: ['jsx'],
+	},
+	julia: {
 		lineComment: { start: '#' },
-		aliases: [
-			'Julia',
-			'julia'
-		],
-		extensions: [
-			'.jl'
-		],
+		aliases: ['Julia', 'julia'],
+		extensions: ['.jl'],
 		markdownLanguageIds: ['julia', 'jl'],
-		blockComment: [
-			'#=',
-			'=#'
-		]
+		blockComment: ['#=', '=#'],
 	},
-	'kotlin': {
+	kotlin: {
 		lineComment: { start: '//' },
-		markdownLanguageIds: ['kotlin', 'kt']
+		markdownLanguageIds: ['kotlin', 'kt'],
 	},
-	'latex': {
+	latex: {
 		lineComment: { start: '%' },
-		aliases: [
-			'LaTeX',
-			'latex'
-		],
-		extensions: [
-			'.tex',
-			'.ltx',
-			'.ctx'
-		],
-		markdownLanguageIds: ['tex']
+		aliases: ['LaTeX', 'latex'],
+		extensions: ['.tex', '.ltx', '.ctx'],
+		markdownLanguageIds: ['tex'],
 	},
-	'less': {
+	less: {
 		lineComment: { start: '//' },
-		aliases: [
-			'Less',
-			'less'
-		],
-		extensions: [
-			'.less'
-		],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		aliases: ['Less', 'less'],
+		extensions: ['.less'],
+		blockComment: ['/*', '*/'],
 	},
-	'lua': {
+	lua: {
 		lineComment: { start: '--' },
-		aliases: [
-			'Lua',
-			'lua'
-		],
-		extensions: [
-			'.lua'
-		],
+		aliases: ['Lua', 'lua'],
+		extensions: ['.lua'],
 		markdownLanguageIds: ['lua', 'pluto'],
-		blockComment: [
-			'--[[',
-			']]'
-		]
+		blockComment: ['--[[', ']]'],
 	},
-	'makefile': {
+	makefile: {
 		lineComment: { start: '#' },
-		aliases: [
-			'Makefile',
-			'makefile'
-		],
-		extensions: [
-			'.mak',
-			'.mk'
-		],
-		markdownLanguageIds: ['makefile', 'mk', 'mak', 'make']
+		aliases: ['Makefile', 'makefile'],
+		extensions: ['.mak', '.mk'],
+		markdownLanguageIds: ['makefile', 'mk', 'mak', 'make'],
 	},
-	'markdown': {
+	markdown: {
 		lineComment: { start: '<!--', end: '-->' },
-		alternativeLineComments: [
-			{ start: '[]: #' }
-		],
-		aliases: [
-			'Markdown',
-			'markdown'
-		],
+		alternativeLineComments: [{ start: '[]: #' }],
+		aliases: ['Markdown', 'markdown'],
 		extensions: [
 			'.md',
 			'.mkd',
@@ -454,98 +292,48 @@ const languages = Object.freeze({
 			'.markdn',
 			'.mdtxt',
 			'.mdtext',
-			'.workbook'
+			'.workbook',
 		],
-		markdownLanguageIds: ['markdown', 'md', 'mkdown', 'mkd']
+		markdownLanguageIds: ['markdown', 'md', 'mkdown', 'mkd'],
 	},
 	'objective-c': {
 		lineComment: { start: '//' },
-		aliases: [
-			'Objective-C'
-		],
-		extensions: [
-			'.m'
-		],
+		aliases: ['Objective-C'],
+		extensions: ['.m'],
 		markdownLanguageIds: ['objectivec', 'mm', 'objc', 'obj-c'],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		blockComment: ['/*', '*/'],
 	},
 	'objective-cpp': {
 		lineComment: { start: '//' },
-		aliases: [
-			'Objective-C++'
-		],
-		extensions: [
-			'.mm'
-		],
-		markdownLanguageIds: ['objectivec++', 'objc+']
+		aliases: ['Objective-C++'],
+		extensions: ['.mm'],
+		markdownLanguageIds: ['objectivec++', 'objc+'],
 	},
-	'perl': {
+	perl: {
 		lineComment: { start: '#' },
-		aliases: [
-			'Perl',
-			'perl'
-		],
-		extensions: [
-			'.pl',
-			'.pm',
-			'.pod',
-			'.t',
-			'.PL',
-			'.psgi'
-		],
-		markdownLanguageIds: ['perl', 'pl', 'pm']
+		aliases: ['Perl', 'perl'],
+		extensions: ['.pl', '.pm', '.pod', '.t', '.PL', '.psgi'],
+		markdownLanguageIds: ['perl', 'pl', 'pm'],
 	},
-	'php': {
+	php: {
 		lineComment: { start: '//' },
-		aliases: [
-			'PHP',
-			'php'
-		],
-		extensions: [
-			'.php',
-			'.php4',
-			'.php5',
-			'.phtml',
-			'.ctp'
-		],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		aliases: ['PHP', 'php'],
+		extensions: ['.php', '.php4', '.php5', '.phtml', '.ctp'],
+		blockComment: ['/*', '*/'],
 	},
-	'powershell': {
+	powershell: {
 		lineComment: { start: '#' },
-		aliases: [
-			'PowerShell',
-			'powershell',
-			'ps',
-			'ps1'
-		],
-		extensions: [
-			'.ps1',
-			'.psm1',
-			'.psd1',
-			'.pssc',
-			'.psrc'
-		],
+		aliases: ['PowerShell', 'powershell', 'ps', 'ps1'],
+		extensions: ['.ps1', '.psm1', '.psd1', '.pssc', '.psrc'],
 		markdownLanguageIds: ['powershell', 'ps', 'ps1'],
-		blockComment: [
-			'<#',
-			'#>'
-		]
+		blockComment: ['<#', '#>'],
 	},
-	'pug': {
-		lineComment: { start: '//' }
+	pug: {
+		lineComment: { start: '//' },
 	},
-	'python': {
+	python: {
 		lineComment: { start: '#' },
-		aliases: [
-			'Python',
-			'py'
-		],
+		aliases: ['Python', 'py'],
 		extensions: [
 			'.py',
 			'.rpy',
@@ -555,52 +343,29 @@ const languages = Object.freeze({
 			'.gypi',
 			'.pyi',
 			'.ipy',
-			'.pyt'
+			'.pyt',
 		],
 		markdownLanguageIds: ['python', 'py', 'gyp'],
-		blockComment: [
-			'"""',
-			'"""'
-		]
+		blockComment: ['"""', '"""'],
 	},
-	'ql': {
-		lineComment: { start: '//' }
+	ql: {
+		lineComment: { start: '//' },
 	},
-	'r': {
+	r: {
 		lineComment: { start: '#' },
-		aliases: [
-			'R',
-			'r'
-		],
-		extensions: [
-			'.r',
-			'.rhistory',
-			'.rprofile',
-			'.rt'
-		]
+		aliases: ['R', 'r'],
+		extensions: ['.r', '.rhistory', '.rprofile', '.rt'],
 	},
-	'razor': {
+	razor: {
 		lineComment: { start: '<!--', end: '-->' },
-		aliases: [
-			'Razor',
-			'razor'
-		],
-		extensions: [
-			'.cshtml',
-			'.razor'
-		],
+		aliases: ['Razor', 'razor'],
+		extensions: ['.cshtml', '.razor'],
 		markdownLanguageIds: ['cshtml', 'razor', 'razor-cshtml'],
-		blockComment: [
-			'<!--',
-			'-->'
-		]
+		blockComment: ['<!--', '-->'],
 	},
-	'ruby': {
+	ruby: {
 		lineComment: { start: '#' },
-		aliases: [
-			'Ruby',
-			'rb'
-		],
+		aliases: ['Ruby', 'rb'],
 		extensions: [
 			'.rb',
 			'.rbx',
@@ -610,50 +375,38 @@ const languages = Object.freeze({
 			'.ru',
 			'.erb',
 			'.podspec',
-			'.rbi'
+			'.rbi',
 		],
-		markdownLanguageIds: ['ruby', 'rb', 'gemspec', 'podspec', 'thor', 'irb'],
-		blockComment: [
-			'=begin',
-			'=end'
-		]
+		markdownLanguageIds: [
+			'ruby',
+			'rb',
+			'gemspec',
+			'podspec',
+			'thor',
+			'irb',
+		],
+		blockComment: ['=begin', '=end'],
 	},
-	'rust': {
+	rust: {
 		lineComment: { start: '//' },
-		aliases: [
-			'Rust',
-			'rust'
-		],
-		extensions: [
-			'.rs'
-		],
+		aliases: ['Rust', 'rust'],
+		extensions: ['.rs'],
 		markdownLanguageIds: ['rust', 'rs'],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		blockComment: ['/*', '*/'],
 	},
-	'sass': {
-		lineComment: { start: '//' }
-	},
-	'scala': {
-		lineComment: { start: '//' }
-	},
-	'scss': {
+	sass: {
 		lineComment: { start: '//' },
-		aliases: [
-			'SCSS',
-			'scss'
-		],
-		extensions: [
-			'.scss'
-		],
-		blockComment: [
-			'/*',
-			'*/'
-		]
 	},
-	'shellscript': {
+	scala: {
+		lineComment: { start: '//' },
+	},
+	scss: {
+		lineComment: { start: '//' },
+		aliases: ['SCSS', 'scss'],
+		extensions: ['.scss'],
+		blockComment: ['/*', '*/'],
+	},
+	shellscript: {
 		lineComment: { start: '#' },
 		aliases: [
 			'Shell Script',
@@ -663,7 +416,7 @@ const languages = Object.freeze({
 			'sh',
 			'zsh',
 			'ksh',
-			'csh'
+			'csh',
 		],
 		extensions: [
 			'.sh',
@@ -692,134 +445,76 @@ const languages = Object.freeze({
 			'.cshrc',
 			'.tcshrc',
 			'.yashrc',
-			'.yash_profile'
+			'.yash_profile',
 		],
-		markdownLanguageIds: ['bash', 'sh', 'zsh']
+		markdownLanguageIds: ['bash', 'sh', 'zsh'],
 	},
-	'slim': {
-		lineComment: { start: '/' }
+	slim: {
+		lineComment: { start: '/' },
 	},
-	'solidity': {
+	solidity: {
 		lineComment: { start: '//' },
-		markdownLanguageIds: ['solidity', 'sol']
+		markdownLanguageIds: ['solidity', 'sol'],
 	},
-	'sql': {
+	sql: {
 		lineComment: { start: '--' },
-		aliases: [
-			'SQL'
-		],
-		extensions: [
-			'.sql',
-			'.dsql'
-		],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		aliases: ['SQL'],
+		extensions: ['.sql', '.dsql'],
+		blockComment: ['/*', '*/'],
 	},
-	'stylus': {
-		lineComment: { start: '//' }
-	},
-	'svelte': {
-		lineComment: { start: '<!--', end: '-->' }
-	},
-	'swift': {
+	stylus: {
 		lineComment: { start: '//' },
-		aliases: [
-			'Swift',
-			'swift'
-		],
-		extensions: [
-			'.swift'
-		],
-		blockComment: [
-			'/*',
-			'*/'
-		]
 	},
-	'terraform': {
-		lineComment: { start: '#' }
+	svelte: {
+		lineComment: { start: '<!--', end: '-->' },
 	},
-	'tex': {
+	swift: {
+		lineComment: { start: '//' },
+		aliases: ['Swift', 'swift'],
+		extensions: ['.swift'],
+		blockComment: ['/*', '*/'],
+	},
+	terraform: {
+		lineComment: { start: '#' },
+	},
+	tex: {
 		lineComment: { start: '%' },
-		aliases: [
-			'TeX',
-			'tex'
-		],
-		extensions: [
-			'.sty',
-			'.cls',
-			'.bbx',
-			'.cbx'
-		]
+		aliases: ['TeX', 'tex'],
+		extensions: ['.sty', '.cls', '.bbx', '.cbx'],
 	},
-	'typescript': {
+	typescript: {
 		lineComment: { start: '//' },
-		aliases: [
-			'TypeScript',
-			'ts',
-			'typescript'
-		],
-		extensions: [
-			'.ts',
-			'.cts',
-			'.mts'
-		],
+		aliases: ['TypeScript', 'ts', 'typescript'],
+		extensions: ['.ts', '.cts', '.mts'],
 		markdownLanguageIds: ['typescript', 'ts'],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		blockComment: ['/*', '*/'],
 	},
-	'typescriptreact': {
+	typescriptreact: {
 		lineComment: { start: '//' },
-		aliases: [
-			'TypeScript JSX',
-			'TypeScript React',
-			'tsx'
-		],
-		extensions: [
-			'.tsx'
-		],
+		aliases: ['TypeScript JSX', 'TypeScript React', 'tsx'],
+		extensions: ['.tsx'],
 		markdownLanguageIds: ['tsx'],
-		blockComment: [
-			'/*',
-			'*/'
-		]
+		blockComment: ['/*', '*/'],
 	},
-	'vb': {
-		lineComment: { start: '\'' },
-		aliases: [
-			'Visual Basic',
-			'vb'
-		],
-		extensions: [
-			'.vb',
-			'.brs',
-			'.vbs',
-			'.bas',
-			'.vba'
-		],
-		markdownLanguageIds: ['vb', 'vbscript']
+	vb: {
+		lineComment: { start: "'" },
+		aliases: ['Visual Basic', 'vb'],
+		extensions: ['.vb', '.brs', '.vbs', '.bas', '.vba'],
+		markdownLanguageIds: ['vb', 'vbscript'],
 	},
-	'verilog': {
-		lineComment: { start: '//' }
+	verilog: {
+		lineComment: { start: '//' },
 	},
 	'vue-html': {
-		lineComment: { start: '<!--', end: '-->' }
-	},
-	'vue': {
-		lineComment: { start: '//' },
-		extensions: [
-			'.vue'
-		]
-	},
-	'xml': {
 		lineComment: { start: '<!--', end: '-->' },
-		aliases: [
-			'XML',
-			'xml'
-		],
+	},
+	vue: {
+		lineComment: { start: '//' },
+		extensions: ['.vue'],
+	},
+	xml: {
+		lineComment: { start: '<!--', end: '-->' },
+		aliases: ['XML', 'xml'],
 		extensions: [
 			'.xml',
 			'.xsd',
@@ -881,38 +576,37 @@ const languages = Object.freeze({
 			'.xliff',
 			'.xpdl',
 			'.xul',
-			'.xoml'
+			'.xoml',
 		],
-		blockComment: [
-			'<!--',
-			'-->'
-		]
+		blockComment: ['<!--', '-->'],
 	},
-	'xsl': {
+	xsl: {
 		lineComment: { start: '<!--', end: '-->' },
-		aliases: [
-			'XSL',
-			'xsl'
-		],
-		extensions: [
-			'.xsl',
-			'.xslt'
-		]
+		aliases: ['XSL', 'xsl'],
+		extensions: ['.xsl', '.xslt'],
 	},
-	'yaml': {
+	yaml: {
 		lineComment: { start: '#' },
-		markdownLanguageIds: ['yaml', 'yml']
-	}
+		markdownLanguageIds: ['yaml', 'yml'],
+	},
 } satisfies Record<string, ILanguageInfo>);
 
 export type WellKnownLanguageId = keyof typeof languages;
 
 export const wellKnownLanguages = new Map<string, ILanguage>(
-	Object.entries(languages).map(([languageId, info]) => [languageId, { languageId, ...info }]));
+	Object.entries(languages).map(([languageId, info]) => [
+		languageId,
+		{ languageId, ...info },
+	]),
+);
 
 export function getLanguage(languageId: string | undefined): ILanguage;
-export function getLanguage(document: { languageId: string } | undefined): ILanguage;
-export function getLanguage(v: string | { languageId: string } | undefined): ILanguage {
+export function getLanguage(
+	document: { languageId: string } | undefined,
+): ILanguage;
+export function getLanguage(
+	v: string | { languageId: string } | undefined,
+): ILanguage {
 	if (typeof v === 'string') {
 		return _getLanguage(v);
 	}
@@ -924,8 +618,10 @@ export function getLanguage(v: string | { languageId: string } | undefined): ILa
 
 function _getLanguage(languageId: string): ILanguage {
 	return (
-		wellKnownLanguages.get(languageId.toLowerCase())
-		?? { languageId, lineComment: { start: '//' } }
+		wellKnownLanguages.get(languageId.toLowerCase()) ?? {
+			languageId,
+			lineComment: { start: '//' },
+		}
 	);
 }
 

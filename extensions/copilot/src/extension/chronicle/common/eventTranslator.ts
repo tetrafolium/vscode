@@ -4,10 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { generateUuid } from '../../../util/vs/base/common/uuid';
-import { CopilotChatAttr, GenAiAttr, GenAiOperationName } from '../../../platform/otel/common/genAiAttributes';
+import {
+	CopilotChatAttr,
+	GenAiAttr,
+	GenAiOperationName,
+} from '../../../platform/otel/common/genAiAttributes';
 import type { ICompletedSpanData } from '../../../platform/otel/common/otelService';
 import type { IDebugLogEntry } from '../../../platform/chat/common/chatDebugFileLoggerService';
-import type { SessionEvent, WorkingDirectoryContext } from './cloudSessionTypes';
+import type {
+	SessionEvent,
+	WorkingDirectoryContext,
+} from './cloudSessionTypes';
 
 /**
  * Per-token streaming events that must never be forwarded to the cloud. The
@@ -74,7 +81,9 @@ function estimateValueSize(value: unknown, limit: number): number {
 	}
 	if (typeof value === 'object') {
 		let size = 2; // { }
-		for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+		for (const [key, v] of Object.entries(
+			value as Record<string, unknown>,
+		)) {
 			if (size >= limit) {
 				return size;
 			}
@@ -116,7 +125,12 @@ export interface SessionTranslationState {
  * Create a fresh translation state for a new session.
  */
 export function createSessionTranslationState(): SessionTranslationState {
-	return { started: false, titleEmitted: false, lastEventId: null, droppedCount: 0 };
+	return {
+		started: false,
+		titleEmitted: false,
+		lastEventId: null,
+		droppedCount: 0,
+	};
 }
 
 /** Maximum length for a session title derived from a user message. */
@@ -127,7 +141,9 @@ const MAX_TITLE_LENGTH = 60;
  * used by the `Delete Cloud Session Data` quick pick so the local UI and the
  * cloud-side title stay in sync.
  */
-export function deriveTitleFromUserMessage(content: string): string | undefined {
+export function deriveTitleFromUserMessage(
+	content: string,
+): string | undefined {
 	if (!content) {
 		return undefined;
 	}
@@ -150,12 +166,16 @@ export function translateSpan(
 	context?: WorkingDirectoryContext,
 	subagentId?: string,
 ): SessionEvent[] {
-	const operationName = span.attributes[GenAiAttr.OPERATION_NAME] as string | undefined;
+	const operationName = span.attributes[GenAiAttr.OPERATION_NAME] as
+		| string
+		| undefined;
 	const events: SessionEvent[] = [];
 
 	if (operationName === GenAiOperationName.INVOKE_AGENT) {
 		// Extract user message first — needed for session.start summary
-		const userRequest = span.attributes[CopilotChatAttr.USER_REQUEST] as string | undefined;
+		const userRequest = span.attributes[CopilotChatAttr.USER_REQUEST] as
+			| string
+			| undefined;
 
 		// First invoke_agent span → session.start.
 		// Skip when this span is from a sub-agent: the parent session owns
@@ -168,7 +188,9 @@ export function translateSpan(
 				producer: 'vscode-copilot-chat',
 				copilotVersion: '1.0.0',
 				startTime: new Date(span.startTime).toISOString(),
-				selectedModel: span.attributes[GenAiAttr.REQUEST_MODEL] as string | undefined,
+				selectedModel: span.attributes[GenAiAttr.REQUEST_MODEL] as
+					| string
+					| undefined,
 				context: {
 					cwd: context?.cwd,
 					repository: context?.repository,
@@ -204,7 +226,13 @@ export function translateSpan(
 				const title = deriveTitleFromUserMessage(userRequest);
 				if (title) {
 					state.titleEmitted = true;
-					pushEvent(events, state, 'session.title_changed', { title }, /*ephemeral*/ true);
+					pushEvent(
+						events,
+						state,
+						'session.title_changed',
+						{ title },
+						/*ephemeral*/ true,
+					);
 				}
 			}
 		}
@@ -213,54 +241,96 @@ export function translateSpan(
 		const assistantText = extractAssistantText(span);
 		const toolRequests = extractToolRequests(span);
 		if (assistantText || toolRequests.length > 0) {
-			pushEvent(events, state, 'assistant.message', {
-				messageId: generateUuid(),
-				content: assistantText ?? '',
-				toolRequests: toolRequests.length > 0 ? toolRequests : undefined,
-			}, /*ephemeral*/ false, subagentId);
+			pushEvent(
+				events,
+				state,
+				'assistant.message',
+				{
+					messageId: generateUuid(),
+					content: assistantText ?? '',
+					toolRequests:
+						toolRequests.length > 0 ? toolRequests : undefined,
+				},
+				/*ephemeral*/ false,
+				subagentId,
+			);
 
 			// Emit tool.execution_start for each tool request (matches CLI pattern)
 			for (const req of toolRequests) {
-				pushEvent(events, state, 'tool.execution_start', {
-					toolCallId: req.toolCallId,
-					toolName: req.name,
-					arguments: req.arguments,
-				}, /*ephemeral*/ false, subagentId);
+				pushEvent(
+					events,
+					state,
+					'tool.execution_start',
+					{
+						toolCallId: req.toolCallId,
+						toolName: req.name,
+						arguments: req.arguments,
+					},
+					/*ephemeral*/ false,
+					subagentId,
+				);
 			}
 		}
 	}
 
 	if (operationName === GenAiOperationName.EXECUTE_TOOL) {
-		const toolName = span.attributes[GenAiAttr.TOOL_NAME] as string | undefined;
+		const toolName = span.attributes[GenAiAttr.TOOL_NAME] as
+			| string
+			| undefined;
 		if (toolName) {
-			const toolCallId = (span.attributes[GenAiAttr.TOOL_CALL_ID] as string | undefined) ?? generateUuid();
-			const resultText = span.attributes['gen_ai.tool.result'] as string | undefined;
+			const toolCallId =
+				(span.attributes[GenAiAttr.TOOL_CALL_ID] as
+					| string
+					| undefined) ?? generateUuid();
+			const resultText = span.attributes['gen_ai.tool.result'] as
+				| string
+				| undefined;
 			const success = span.status.code !== 2; // SpanStatusCode.ERROR = 2
 			const resultContent = resultText ?? '';
 
 			// Emit tool.execution_complete (matches CLI format exactly)
-			pushEvent(events, state, 'tool.execution_complete', {
-				toolCallId,
-				success,
-				result: success ? {
-					content: resultContent,
-					detailedContent: resultContent,
-				} : undefined,
-				error: !success ? {
-					message: resultContent || 'Tool execution failed',
-					code: 'failure',
-				} : undefined,
-			}, /*ephemeral*/ false, subagentId);
+			pushEvent(
+				events,
+				state,
+				'tool.execution_complete',
+				{
+					toolCallId,
+					success,
+					result: success
+						? {
+								content: resultContent,
+								detailedContent: resultContent,
+							}
+						: undefined,
+					error: !success
+						? {
+								message:
+									resultContent || 'Tool execution failed',
+								code: 'failure',
+							}
+						: undefined,
+				},
+				/*ephemeral*/ false,
+				subagentId,
+			);
 		}
 	}
 
 	if (operationName === GenAiOperationName.CHAT) {
-		const inputTokens = span.attributes[GenAiAttr.USAGE_INPUT_TOKENS] as number | undefined;
-		const outputTokens = span.attributes[GenAiAttr.USAGE_OUTPUT_TOKENS] as number | undefined;
-		const model = (span.attributes[GenAiAttr.RESPONSE_MODEL] as string | undefined)
-			?? (span.attributes[GenAiAttr.REQUEST_MODEL] as string | undefined);
+		const inputTokens = span.attributes[GenAiAttr.USAGE_INPUT_TOKENS] as
+			| number
+			| undefined;
+		const outputTokens = span.attributes[GenAiAttr.USAGE_OUTPUT_TOKENS] as
+			| number
+			| undefined;
+		const model =
+			(span.attributes[GenAiAttr.RESPONSE_MODEL] as string | undefined) ??
+			(span.attributes[GenAiAttr.REQUEST_MODEL] as string | undefined);
 
-		if (typeof inputTokens === 'number' && typeof outputTokens === 'number') {
+		if (
+			typeof inputTokens === 'number' &&
+			typeof outputTokens === 'number'
+		) {
 			const data: Record<string, unknown> = {
 				model: model ?? 'unknown',
 				inputTokens,
@@ -268,11 +338,15 @@ export function translateSpan(
 			};
 
 			// Optional fields — include when available
-			const cacheReadTokens = span.attributes[GenAiAttr.USAGE_CACHE_READ_INPUT_TOKENS] as number | undefined;
+			const cacheReadTokens = span.attributes[
+				GenAiAttr.USAGE_CACHE_READ_INPUT_TOKENS
+			] as number | undefined;
 			if (typeof cacheReadTokens === 'number') {
 				data.cacheReadTokens = cacheReadTokens;
 			}
-			const timeToFirstToken = span.attributes[CopilotChatAttr.TIME_TO_FIRST_TOKEN] as number | undefined;
+			const timeToFirstToken = span.attributes[
+				CopilotChatAttr.TIME_TO_FIRST_TOKEN
+			] as number | undefined;
 			if (typeof timeToFirstToken === 'number') {
 				data.timeToFirstTokenMs = timeToFirstToken;
 			}
@@ -280,7 +354,14 @@ export function translateSpan(
 				data.duration = span.endTime - span.startTime;
 			}
 
-			pushEvent(events, state, 'assistant.usage', data, /*ephemeral*/ true, subagentId);
+			pushEvent(
+				events,
+				state,
+				'assistant.usage',
+				data,
+				/*ephemeral*/ true,
+				subagentId,
+			);
 		}
 	}
 
@@ -297,7 +378,9 @@ export function makeIdleEvent(state: SessionTranslationState): SessionEvent {
 /**
  * Create a session.shutdown event (emitted when the chat session is disposed).
  */
-export function makeShutdownEvent(state: SessionTranslationState): SessionEvent {
+export function makeShutdownEvent(
+	state: SessionTranslationState,
+): SessionEvent {
 	return makeEvent(state, 'session.shutdown', {});
 }
 
@@ -328,13 +411,25 @@ export function translateDebugLogEntry(
 					sessionId,
 					version: 1,
 					producer: 'vscode-copilot-chat',
-					copilotVersion: typeof entry.attrs.copilotVersion === 'string' ? entry.attrs.copilotVersion : '1.0.0',
+					copilotVersion:
+						typeof entry.attrs.copilotVersion === 'string'
+							? entry.attrs.copilotVersion
+							: '1.0.0',
 					startTime: ts,
 					context: {
-						cwd: typeof entry.attrs.cwd === 'string' ? entry.attrs.cwd : undefined,
-						repository: typeof entry.attrs.repository === 'string' ? entry.attrs.repository : undefined,
+						cwd:
+							typeof entry.attrs.cwd === 'string'
+								? entry.attrs.cwd
+								: undefined,
+						repository:
+							typeof entry.attrs.repository === 'string'
+								? entry.attrs.repository
+								: undefined,
 						hostType: 'github',
-						branch: typeof entry.attrs.branch === 'string' ? entry.attrs.branch : undefined,
+						branch:
+							typeof entry.attrs.branch === 'string'
+								? entry.attrs.branch
+								: undefined,
 					},
 				});
 			}
@@ -343,11 +438,12 @@ export function translateDebugLogEntry(
 
 		case 'user_message':
 		case 'turn_start': {
-			const content = typeof entry.attrs.content === 'string'
-				? entry.attrs.content
-				: typeof entry.attrs.userRequest === 'string'
-					? entry.attrs.userRequest
-					: undefined;
+			const content =
+				typeof entry.attrs.content === 'string'
+					? entry.attrs.content
+					: typeof entry.attrs.userRequest === 'string'
+						? entry.attrs.userRequest
+						: undefined;
 			if (content) {
 				const beforeLen = events.length;
 				// See translateSpan: do not set `source`, or the cloud renderer
@@ -361,7 +457,14 @@ export function translateDebugLogEntry(
 					const title = deriveTitleFromUserMessage(content);
 					if (title) {
 						state.titleEmitted = true;
-						pushEventAt(events, state, ts, 'session.title_changed', { title }, /*ephemeral*/ true);
+						pushEventAt(
+							events,
+							state,
+							ts,
+							'session.title_changed',
+							{ title },
+							/*ephemeral*/ true,
+						);
 					}
 				}
 			}
@@ -369,7 +472,10 @@ export function translateDebugLogEntry(
 		}
 
 		case 'agent_response': {
-			const response = typeof entry.attrs.response === 'string' ? entry.attrs.response : undefined;
+			const response =
+				typeof entry.attrs.response === 'string'
+					? entry.attrs.response
+					: undefined;
 			if (response) {
 				pushEventAt(events, state, ts, 'assistant.message', {
 					messageId: generateUuid(),
@@ -383,7 +489,10 @@ export function translateDebugLogEntry(
 			const toolName = entry.name;
 			if (toolName) {
 				const toolCallId = entry.spanId || generateUuid();
-				const resultText = typeof entry.attrs.result === 'string' ? entry.attrs.result : undefined;
+				const resultText =
+					typeof entry.attrs.result === 'string'
+						? entry.attrs.result
+						: undefined;
 				const success = entry.status === 'ok';
 				const resultContent = resultText ?? '';
 
@@ -391,14 +500,22 @@ export function translateDebugLogEntry(
 					toolCallId,
 					toolName,
 					success,
-					result: success ? {
-						content: resultContent,
-						detailedContent: resultContent,
-					} : undefined,
-					error: !success ? {
-						message: resultContent || (typeof entry.attrs.error === 'string' ? entry.attrs.error : 'Tool execution failed'),
-						code: 'failure',
-					} : undefined,
+					result: success
+						? {
+								content: resultContent,
+								detailedContent: resultContent,
+							}
+						: undefined,
+					error: !success
+						? {
+								message:
+									resultContent ||
+									(typeof entry.attrs.error === 'string'
+										? entry.attrs.error
+										: 'Tool execution failed'),
+								code: 'failure',
+							}
+						: undefined,
 				});
 			}
 			break;
@@ -407,13 +524,20 @@ export function translateDebugLogEntry(
 		case 'llm_request': {
 			const inputTokens = entry.attrs.inputTokens;
 			const outputTokens = entry.attrs.outputTokens;
-			if (typeof inputTokens === 'number' && typeof outputTokens === 'number') {
+			if (
+				typeof inputTokens === 'number' &&
+				typeof outputTokens === 'number'
+			) {
 				const data: Record<string, unknown> = {
-					model: typeof entry.attrs.model === 'string' ? entry.attrs.model : 'unknown',
+					model:
+						typeof entry.attrs.model === 'string'
+							? entry.attrs.model
+							: 'unknown',
 					inputTokens,
 					outputTokens,
 				};
-				const cacheReadTokens = entry.attrs.cacheReadTokens ?? entry.attrs.cachedTokens;
+				const cacheReadTokens =
+					entry.attrs.cacheReadTokens ?? entry.attrs.cachedTokens;
 				if (typeof cacheReadTokens === 'number') {
 					data.cacheReadTokens = cacheReadTokens;
 				}
@@ -424,7 +548,14 @@ export function translateDebugLogEntry(
 				if (typeof entry.dur === 'number' && entry.dur > 0) {
 					data.duration = entry.dur;
 				}
-				pushEventAt(events, state, ts, 'assistant.usage', data, /*ephemeral*/ true);
+				pushEventAt(
+					events,
+					state,
+					ts,
+					'assistant.usage',
+					data,
+					/*ephemeral*/ true,
+				);
 			}
 			break;
 		}
@@ -481,7 +612,15 @@ function pushEvent(
 	ephemeral?: boolean,
 	agentId?: string,
 ): void {
-	pushEventAt(events, state, new Date().toISOString(), type, data, ephemeral, agentId);
+	pushEventAt(
+		events,
+		state,
+		new Date().toISOString(),
+		type,
+		data,
+		ephemeral,
+		agentId,
+	);
 }
 
 function pushEventAt(
@@ -515,9 +654,13 @@ function pushEventAt(
 }
 
 function getSessionId(span: ICompletedSpanData): string | undefined {
-	return (span.attributes[CopilotChatAttr.CHAT_SESSION_ID] as string | undefined)
-		?? (span.attributes[GenAiAttr.CONVERSATION_ID] as string | undefined)
-		?? (span.attributes[CopilotChatAttr.SESSION_ID] as string | undefined);
+	return (
+		(span.attributes[CopilotChatAttr.CHAT_SESSION_ID] as
+			| string
+			| undefined) ??
+		(span.attributes[GenAiAttr.CONVERSATION_ID] as string | undefined) ??
+		(span.attributes[CopilotChatAttr.SESSION_ID] as string | undefined)
+	);
 }
 
 /**
@@ -525,17 +668,22 @@ function getSessionId(span: ICompletedSpanData): string | undefined {
  * Format: [{"role":"assistant","parts":[{"type":"text","content":"..."}]}]
  */
 function extractAssistantText(span: ICompletedSpanData): string | undefined {
-	const raw = span.attributes[GenAiAttr.OUTPUT_MESSAGES] as string | undefined;
+	const raw = span.attributes[GenAiAttr.OUTPUT_MESSAGES] as
+		| string
+		| undefined;
 	if (!raw) {
 		return undefined;
 	}
 	try {
-		const messages = JSON.parse(raw) as { role: string; parts: { type: string; content: string }[] }[];
+		const messages = JSON.parse(raw) as {
+			role: string;
+			parts: { type: string; content: string }[];
+		}[];
 		const parts = messages
-			.filter(m => m.role === 'assistant')
-			.flatMap(m => m.parts)
-			.filter(p => p.type === 'text')
-			.map(p => p.content);
+			.filter((m) => m.role === 'assistant')
+			.flatMap((m) => m.parts)
+			.filter((p) => p.type === 'text')
+			.map((p) => p.content);
 		return parts.length > 0 ? parts.join('\n') : undefined;
 	} catch {
 		return undefined;
@@ -546,18 +694,32 @@ function extractAssistantText(span: ICompletedSpanData): string | undefined {
  * Extract tool requests from gen_ai.output.messages (assistant messages with tool_calls).
  * CLI format: [{toolCallId, name, arguments, type}]
  */
-function extractToolRequests(span: ICompletedSpanData): { toolCallId: string; name: string; arguments: unknown; type: string }[] {
-	const raw = span.attributes[GenAiAttr.OUTPUT_MESSAGES] as string | undefined;
+function extractToolRequests(
+	span: ICompletedSpanData,
+): { toolCallId: string; name: string; arguments: unknown; type: string }[] {
+	const raw = span.attributes[GenAiAttr.OUTPUT_MESSAGES] as
+		| string
+		| undefined;
 	if (!raw) {
 		return [];
 	}
 	try {
-		const messages = JSON.parse(raw) as { role: string; parts: { type: string; toolCallId?: string; toolName?: string; args?: unknown }[] }[];
+		const messages = JSON.parse(raw) as {
+			role: string;
+			parts: {
+				type: string;
+				toolCallId?: string;
+				toolName?: string;
+				args?: unknown;
+			}[];
+		}[];
 		const toolParts = messages
-			.filter(m => m.role === 'assistant')
-			.flatMap(m => m.parts)
-			.filter(p => p.type === 'tool-call' && p.toolCallId && p.toolName);
-		return toolParts.map(p => ({
+			.filter((m) => m.role === 'assistant')
+			.flatMap((m) => m.parts)
+			.filter(
+				(p) => p.type === 'tool-call' && p.toolCallId && p.toolName,
+			);
+		return toolParts.map((p) => ({
 			toolCallId: p.toolCallId!,
 			name: p.toolName!,
 			arguments: p.args ?? {},

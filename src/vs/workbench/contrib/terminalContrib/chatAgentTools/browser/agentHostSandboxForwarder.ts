@@ -3,17 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, IDisposable } from '../../../../../base/common/lifecycle.js';
-import { equals } from '../../../../../base/common/objects.js';
-import { IAgentConnection, IAgentHostService } from '../../../../../platform/agentHost/common/agentService.js';
-import { IRemoteAgentHostService } from '../../../../../platform/agentHost/common/remoteAgentHostService.js';
-import { AgentHostSandboxConfigKey } from '../../../../../platform/agentHost/common/sandboxConfigSchema.js';
-import { ActionType } from '../../../../../platform/agentHost/common/state/protocol/actions.js';
-import { ROOT_STATE_URI } from '../../../../../platform/agentHost/common/state/sessionState.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { IWorkbenchContribution } from '../../../../common/contributions.js';
-import { readAgentHostSandboxValues, SANDBOX_SETTING_KEYS } from '../common/sandboxSettingsReader.js';
+import {
+	Disposable,
+	IDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { equals } from "../../../../../base/common/objects.js";
+import {
+	IAgentConnection,
+	IAgentHostService,
+} from "../../../../../platform/agentHost/common/agentService.js";
+import { IRemoteAgentHostService } from "../../../../../platform/agentHost/common/remoteAgentHostService.js";
+import { AgentHostSandboxConfigKey } from "../../../../../platform/agentHost/common/sandboxConfigSchema.js";
+import { ActionType } from "../../../../../platform/agentHost/common/state/protocol/actions.js";
+import { ROOT_STATE_URI } from "../../../../../platform/agentHost/common/state/sessionState.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import { IWorkbenchContribution } from "../../../../common/contributions.js";
+import {
+	readAgentHostSandboxValues,
+	SANDBOX_SETTING_KEYS,
+} from "../common/sandboxSettingsReader.js";
 
 /**
  * Forwards the workbench user's sandbox setting values into every connected
@@ -31,8 +40,11 @@ import { readAgentHostSandboxValues, SANDBOX_SETTING_KEYS } from '../common/sand
  * is schema-guarded so older hosts that don't advertise the sandbox keys
  * are skipped silently.
  */
-export class AgentHostSandboxForwarder extends Disposable implements IWorkbenchContribution {
-	static readonly ID = 'workbench.contrib.agentHostSandboxForwarder';
+export class AgentHostSandboxForwarder
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	static readonly ID = "workbench.contrib.agentHostSandboxForwarder";
 
 	/**
 	 * Connections that have already had their initial push attempted
@@ -45,23 +57,30 @@ export class AgentHostSandboxForwarder extends Disposable implements IWorkbenchC
 	private _desired: Record<string, unknown> | undefined;
 
 	constructor(
-		@IAgentHostService private readonly _localAgentHostService: IAgentHostService,
-		@IRemoteAgentHostService private readonly _remoteAgentHostService: IRemoteAgentHostService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
+		@IAgentHostService
+		private readonly _localAgentHostService: IAgentHostService,
+		@IRemoteAgentHostService
+		private readonly _remoteAgentHostService: IRemoteAgentHostService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
 		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
 
-		this._register(this._configurationService.onDidChangeConfiguration(e => {
-			if (SANDBOX_SETTING_KEYS.some(key => e.affectsConfiguration(key))) {
-				this._desired = undefined;
-				this._pushToAllConnections();
-			}
-		}));
+		this._register(
+			this._configurationService.onDidChangeConfiguration((e) => {
+				if (SANDBOX_SETTING_KEYS.some((key) => e.affectsConfiguration(key))) {
+					this._desired = undefined;
+					this._pushToAllConnections();
+				}
+			}),
+		);
 
-		this._register(this._remoteAgentHostService.onDidChangeConnections(() => {
-			this._syncConnectionListeners();
-		}));
+		this._register(
+			this._remoteAgentHostService.onDidChangeConnections(() => {
+				this._syncConnectionListeners();
+			}),
+		);
 		this._syncConnectionListeners();
 	}
 
@@ -75,7 +94,9 @@ export class AgentHostSandboxForwarder extends Disposable implements IWorkbenchC
 		};
 		ensureScheduled(this._localAgentHostService);
 		for (const info of this._remoteAgentHostService.connections) {
-			const connection = this._remoteAgentHostService.getConnection(info.address);
+			const connection = this._remoteAgentHostService.getConnection(
+				info.address,
+			);
 			if (connection) {
 				ensureScheduled(connection);
 			}
@@ -110,7 +131,9 @@ export class AgentHostSandboxForwarder extends Disposable implements IWorkbenchC
 	private _pushToAllConnections(): void {
 		this._tryPush(this._localAgentHostService);
 		for (const info of this._remoteAgentHostService.connections) {
-			const connection = this._remoteAgentHostService.getConnection(info.address);
+			const connection = this._remoteAgentHostService.getConnection(
+				info.address,
+			);
 			if (connection) {
 				this._tryPush(connection);
 			}
@@ -133,7 +156,10 @@ export class AgentHostSandboxForwarder extends Disposable implements IWorkbenchC
 			return false;
 		}
 		const desired = this._getDesired();
-		const current = (rootState.config?.values?.[AgentHostSandboxConfigKey.Sandbox] as Record<string, unknown> | undefined) ?? {};
+		const current =
+			(rootState.config?.values?.[AgentHostSandboxConfigKey.Sandbox] as
+				| Record<string, unknown>
+				| undefined) ?? {};
 		if (!equals(current, desired)) {
 			connection.dispatch(ROOT_STATE_URI, {
 				type: ActionType.RootConfigChanged,
@@ -145,7 +171,10 @@ export class AgentHostSandboxForwarder extends Disposable implements IWorkbenchC
 
 	private _getDesired(): Record<string, unknown> {
 		if (this._desired === undefined) {
-			this._desired = readAgentHostSandboxValues(this._configurationService, this._logService);
+			this._desired = readAgentHostSandboxValues(
+				this._configurationService,
+				this._logService,
+			);
 		}
 		return this._desired;
 	}

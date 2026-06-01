@@ -6,7 +6,10 @@
 import { createServiceIdentifier } from '../../../util/common/services';
 import { URI } from '../../../util/vs/base/common/uri';
 
-export const ISessionTranscriptService = createServiceIdentifier<ISessionTranscriptService>('ISessionTranscriptService');
+export const ISessionTranscriptService =
+	createServiceIdentifier<ISessionTranscriptService>(
+		'ISessionTranscriptService',
+	);
 
 // #region Transcript Entry Types
 
@@ -182,13 +185,21 @@ export interface ISessionTranscriptService {
 	 * @param context Optional context about the session environment.
 	 * @param history Previous turns to replay if the transcript must be created from scratch.
 	 */
-	startSession(sessionId: string, context?: { cwd?: string }, history?: readonly IHistoricalTurn[]): Promise<void>;
+	startSession(
+		sessionId: string,
+		context?: { cwd?: string },
+		history?: readonly IHistoricalTurn[],
+	): Promise<void>;
 
 	/**
 	 * Record the user's prompt message.
 	 * Entries are buffered; call {@link flush} to write to disk.
 	 */
-	logUserMessage(sessionId: string, content: string, attachments?: readonly unknown[]): void;
+	logUserMessage(
+		sessionId: string,
+		content: string,
+		attachments?: readonly unknown[],
+	): void;
 
 	/**
 	 * Record the start of an assistant turn (one iteration of the tool calling loop).
@@ -200,19 +211,34 @@ export interface ISessionTranscriptService {
 	 * Record an assistant message containing text and/or tool call requests.
 	 * Entries are buffered; call {@link flush} to write to disk.
 	 */
-	logAssistantMessage(sessionId: string, content: string, toolRequests: readonly ToolRequest[], reasoningText?: string): void;
+	logAssistantMessage(
+		sessionId: string,
+		content: string,
+		toolRequests: readonly ToolRequest[],
+		reasoningText?: string,
+	): void;
 
 	/**
 	 * Record the start of a tool execution.
 	 * Entries are buffered; call {@link flush} to write to disk.
 	 */
-	logToolExecutionStart(sessionId: string, toolCallId: string, toolName: string, args: unknown): void;
+	logToolExecutionStart(
+		sessionId: string,
+		toolCallId: string,
+		toolName: string,
+		args: unknown,
+	): void;
 
 	/**
 	 * Record the completion of a tool execution.
 	 * Entries are buffered; call {@link flush} to write to disk.
 	 */
-	logToolExecutionComplete(sessionId: string, toolCallId: string, success: boolean, resultContent?: string): void;
+	logToolExecutionComplete(
+		sessionId: string,
+		toolCallId: string,
+		success: boolean,
+		resultContent?: string,
+	): void;
 
 	/**
 	 * Record the end of an assistant turn.
@@ -259,17 +285,23 @@ export interface ISessionTranscriptService {
 export class NullSessionTranscriptService implements ISessionTranscriptService {
 	declare readonly _serviceBrand: undefined;
 
-	async startSession(): Promise<void> { }
-	logUserMessage(): void { }
-	logAssistantTurnStart(): void { }
-	logAssistantMessage(): void { }
-	logToolExecutionStart(): void { }
-	logToolExecutionComplete(): void { }
-	logAssistantTurnEnd(): void { }
-	async flush(): Promise<void> { }
-	async endSession(): Promise<void> { }
-	getTranscriptPath(): URI | undefined { return undefined; }
-	getLineCount(): number | undefined { return undefined; }
-	async cleanupOldTranscripts(): Promise<void> { }
-	isTranscriptUri(): boolean { return false; }
+	async startSession(): Promise<void> {}
+	logUserMessage(): void {}
+	logAssistantTurnStart(): void {}
+	logAssistantMessage(): void {}
+	logToolExecutionStart(): void {}
+	logToolExecutionComplete(): void {}
+	logAssistantTurnEnd(): void {}
+	async flush(): Promise<void> {}
+	async endSession(): Promise<void> {}
+	getTranscriptPath(): URI | undefined {
+		return undefined;
+	}
+	getLineCount(): number | undefined {
+		return undefined;
+	}
+	async cleanupOldTranscripts(): Promise<void> {}
+	isTranscriptUri(): boolean {
+		return false;
+	}
 }

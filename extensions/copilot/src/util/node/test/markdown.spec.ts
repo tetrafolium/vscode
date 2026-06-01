@@ -5,26 +5,26 @@
 
 import assert from 'assert';
 import { suite, test } from 'vitest';
-import { createFilepathRegexp, extractCodeBlocks, mdCodeBlockLangToLanguageId } from '../../common/markdown';
+import {
+	createFilepathRegexp,
+	extractCodeBlocks,
+	mdCodeBlockLangToLanguageId,
+} from '../../common/markdown';
 
 suite('markdown', () => {
 	suite('extractCodeBlocks', () => {
 		test('should extract single code block', () => {
 			{
-				const result = extractCodeBlocks([
-					'```',
-					'single',
-					'```',
-				].join('\n'));
+				const result = extractCodeBlocks(
+					['```', 'single', '```'].join('\n'),
+				);
 				assert.strictEqual(result.length, 1);
 				assert.deepStrictEqual(result[0].code, 'single');
 			}
 			{
-				const result = extractCodeBlocks([
-					'```ts',
-					'single',
-					'```',
-				].join('\n'));
+				const result = extractCodeBlocks(
+					['```ts', 'single', '```'].join('\n'),
+				);
 				assert.strictEqual(result.length, 1);
 				assert.deepStrictEqual(result[0].code, 'single');
 				assert.deepStrictEqual(result[0].language, 'ts');
@@ -32,17 +32,19 @@ suite('markdown', () => {
 		});
 
 		test('should extract multiple code blocks', () => {
-			const result = extractCodeBlocks([
-				'```',
-				'one',
-				'```',
-				'',
-				'code',
-				'',
-				'```php',
-				'two',
-				'```',
-			].join('\n'));
+			const result = extractCodeBlocks(
+				[
+					'```',
+					'one',
+					'```',
+					'',
+					'code',
+					'',
+					'```php',
+					'two',
+					'```',
+				].join('\n'),
+			);
 			assert.strictEqual(result.length, 2);
 			assert.deepStrictEqual(result[0].code, 'one');
 			assert.deepStrictEqual(result[0].language, '');
@@ -52,17 +54,19 @@ suite('markdown', () => {
 		});
 
 		test('should detect nested code blocks', () => {
-			const result = extractCodeBlocks([
-				'```',
-				'one',
-				'```',
-				'',
-				'- code',
-				'  ',
-				'  ```php',
-				'  two',
-				'  ```',
-			].join('\n'));
+			const result = extractCodeBlocks(
+				[
+					'```',
+					'one',
+					'```',
+					'',
+					'- code',
+					'  ',
+					'  ```php',
+					'  two',
+					'  ```',
+				].join('\n'),
+			);
 			assert.strictEqual(result.length, 2);
 			assert.deepStrictEqual(result[0].code, 'one');
 			assert.deepStrictEqual(result[0].language, '');
@@ -117,21 +121,27 @@ suite('markdown', () => {
 
 		test('should match filepath comment with <!-- and spaces in path', () => {
 			const regexp = createFilepathRegexp('html');
-			const result = regexp.exec('<!-- filepath: /path/to/file with spaces -->');
+			const result = regexp.exec(
+				'<!-- filepath: /path/to/file with spaces -->',
+			);
 			assert.ok(result);
 			assert.strictEqual(result[1], '/path/to/file with spaces');
 		});
 
 		test('should match filepath comment with <!-- and spaces in path no spaces at end', () => {
 			const regexp = createFilepathRegexp('html');
-			const result = regexp.exec('<!-- filepath: /path/to/file with spaces-->');
+			const result = regexp.exec(
+				'<!-- filepath: /path/to/file with spaces-->',
+			);
 			assert.ok(result);
 			assert.strictEqual(result[1], '/path/to/file with spaces');
 		});
 
 		test('should match filepath comment with <!-- and spaces in path no spaces at end with newline', () => {
 			const regexp = createFilepathRegexp('html');
-			const result = regexp.exec('<!-- filepath: /path/to/file with spaces-->\n');
+			const result = regexp.exec(
+				'<!-- filepath: /path/to/file with spaces-->\n',
+			);
 			assert.ok(result);
 			assert.strictEqual(result[1], '/path/to/file with spaces');
 		});
@@ -173,14 +183,18 @@ suite('markdown', () => {
 
 		test('should accept extra whitespaces in path', () => {
 			const regexp = createFilepathRegexp('html');
-			const result = regexp.exec(' //   filepath:/path/to/file with spaces.py   ');
+			const result = regexp.exec(
+				' //   filepath:/path/to/file with spaces.py   ',
+			);
 			assert.ok(result);
 			assert.strictEqual(result[1], '/path/to/file with spaces.py');
 		});
 
 		test('should accept extra whitespaces in path and newline', () => {
 			const regexp = createFilepathRegexp('html');
-			const result = regexp.exec(' //   filepath:/path/to/file with spaces.py   \n');
+			const result = regexp.exec(
+				' //   filepath:/path/to/file with spaces.py   \n',
+			);
 			assert.ok(result);
 			assert.strictEqual(result[1], '/path/to/file with spaces.py');
 		});
@@ -208,7 +222,5 @@ suite('markdown', () => {
 			const result = mdCodeBlockLangToLanguageId('python');
 			assert.strictEqual(result, 'python');
 		});
-
 	});
 });
-

@@ -6,7 +6,9 @@
 import { createServiceIdentifier } from '../../../util/common/services';
 import { generateUuid } from '../../../util/vs/base/common/uuid';
 
-export const IInteractionService = createServiceIdentifier<IInteractionService>('IInteractionService');
+export const IInteractionService = createServiceIdentifier<IInteractionService>(
+	'IInteractionService',
+);
 
 export interface IInteractionService {
 	readonly _serviceBrand: undefined;

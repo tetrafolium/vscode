@@ -5,8 +5,14 @@
 
 import { Command, commands, InlineCompletionItem, Uri } from 'vscode';
 import { Disposable } from '../../../../../util/vs/base/common/lifecycle';
-import { IInstantiationService, ServicesAccessor } from '../../../../../util/vs/platform/instantiation/common/instantiation';
-import { collectCompletionDiagnostics, formatDiagnosticsAsMarkdown } from '../../lib/src/diagnostics';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	collectCompletionDiagnostics,
+	formatDiagnosticsAsMarkdown,
+} from '../../lib/src/diagnostics';
 import { telemetry, TelemetryData } from '../../lib/src/telemetry';
 import { CMDSendCompletionsFeedbackChat } from './constants';
 
@@ -19,20 +25,42 @@ export const sendCompletionFeedbackCommand: Command = {
 export class CopilotCompletionFeedbackTracker extends Disposable {
 	private lastShownCopilotCompletionItem: InlineCompletionItem | undefined;
 
-	constructor(@IInstantiationService private readonly instantiationService: IInstantiationService) {
+	constructor(
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+	) {
 		super();
-		this._register(commands.registerCommand(sendCompletionFeedbackCommand.command, async () => {
-			const commandArg: unknown = this.lastShownCopilotCompletionItem?.command?.arguments?.[0];
-			let telemetryArg: TelemetryData | undefined;
-			if (commandArg && typeof commandArg === 'object' && 'telemetry' in commandArg) {
-				if (commandArg.telemetry instanceof TelemetryData) {
-					telemetryArg = commandArg.telemetry;
-				}
-			}
-			this.instantiationService.invokeFunction(telemetry, 'ghostText.sentFeedback', telemetryArg);
+		this._register(
+			commands.registerCommand(
+				sendCompletionFeedbackCommand.command,
+				async () => {
+					const commandArg: unknown =
+						this.lastShownCopilotCompletionItem?.command
+							?.arguments?.[0];
+					let telemetryArg: TelemetryData | undefined;
+					if (
+						commandArg &&
+						typeof commandArg === 'object' &&
+						'telemetry' in commandArg
+					) {
+						if (commandArg.telemetry instanceof TelemetryData) {
+							telemetryArg = commandArg.telemetry;
+						}
+					}
+					this.instantiationService.invokeFunction(
+						telemetry,
+						'ghostText.sentFeedback',
+						telemetryArg,
+					);
 
-			await this.instantiationService.invokeFunction(openGitHubIssue, this.lastShownCopilotCompletionItem, telemetryArg);
-		}));
+					await this.instantiationService.invokeFunction(
+						openGitHubIssue,
+						this.lastShownCopilotCompletionItem,
+						telemetryArg,
+					);
+				},
+			),
+		);
 	}
 
 	trackItem(item: InlineCompletionItem) {
@@ -43,7 +71,7 @@ export class CopilotCompletionFeedbackTracker extends Disposable {
 async function openGitHubIssue(
 	accessor: ServicesAccessor,
 	item: InlineCompletionItem | undefined,
-	telemetry: TelemetryData | undefined
+	telemetry: TelemetryData | undefined,
 ) {
 	const body = generateGitHubIssueBody(accessor, item, telemetry);
 	await commands.executeCommand('workbench.action.openIssueReporter', {
@@ -56,7 +84,7 @@ async function openGitHubIssue(
 function generateGitHubIssueBody(
 	accessor: ServicesAccessor,
 	item: InlineCompletionItem | undefined,
-	telemetry: TelemetryData | undefined
+	telemetry: TelemetryData | undefined,
 ) {
 	const diagnostics = collectCompletionDiagnostics(accessor, telemetry);
 	const formattedDiagnostics = formatDiagnosticsAsMarkdown(diagnostics);

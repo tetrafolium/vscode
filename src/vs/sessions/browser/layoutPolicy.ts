@@ -3,14 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../base/common/lifecycle.js';
-import { observableValue, derived, IObservable } from '../../base/common/observable.js';
-import { isIOS, isMobile } from '../../base/common/platform.js';
-import { isAndroid } from '../../base/browser/browser.js';
-import { Gesture } from '../../base/browser/touch.js';
+import { Disposable } from "../../base/common/lifecycle.js";
+import {
+	observableValue,
+	derived,
+	IObservable,
+} from "../../base/common/observable.js";
+import { isIOS, isMobile } from "../../base/common/platform.js";
+import { isAndroid } from "../../base/browser/browser.js";
+import { Gesture } from "../../base/browser/touch.js";
 
 /** Viewport classification based on container width. */
-export type ViewportClass = 'phone' | 'tablet' | 'desktop';
+export type ViewportClass = "phone" | "tablet" | "desktop";
 
 /** Default visibility for each workbench part. */
 export interface IPartVisibilityDefaults {
@@ -46,15 +50,15 @@ const isMobilePlatform = isMobile;
  */
 function classifyViewport(width: number): ViewportClass {
 	if (!isMobilePlatform) {
-		return 'desktop';
+		return "desktop";
 	}
 	if (width < PHONE_MAX_WIDTH) {
-		return 'phone';
+		return "phone";
 	}
 	if (width < TABLET_MAX_WIDTH) {
-		return 'tablet';
+		return "tablet";
 	}
-	return 'desktop';
+	return "desktop";
 }
 
 /**
@@ -64,7 +68,6 @@ function classifyViewport(width: number): ViewportClass {
  * and platform.
  */
 export class SessionsLayoutPolicy extends Disposable {
-
 	// --- Platform flags (static, read once) ---
 
 	/** Whether the current platform is iOS. */
@@ -78,14 +81,17 @@ export class SessionsLayoutPolicy extends Disposable {
 
 	// --- Observables ---
 
-	private readonly _viewportClass = observableValue<ViewportClass>(this, 'desktop');
+	private readonly _viewportClass = observableValue<ViewportClass>(
+		this,
+		"desktop",
+	);
 
 	/** Current viewport class derived from the most recent `update()` call. */
 	readonly viewportClass: IObservable<ViewportClass> = this._viewportClass;
 
 	/** `true` when the viewport class is `phone`. */
-	readonly isPhoneLayout: IObservable<boolean> = derived(this, reader => {
-		return this._viewportClass.read(reader) === 'phone';
+	readonly isPhoneLayout: IObservable<boolean> = derived(this, (reader) => {
+		return this._viewportClass.read(reader) === "phone";
 	});
 
 	constructor() {
@@ -114,16 +120,30 @@ export class SessionsLayoutPolicy extends Disposable {
 	 * Returns the default part visibility for the given viewport class.
 	 * If no class is supplied the current observed class is used.
 	 */
-	getPartVisibilityDefaults(viewportClass?: ViewportClass): IPartVisibilityDefaults {
+	getPartVisibilityDefaults(
+		viewportClass?: ViewportClass,
+	): IPartVisibilityDefaults {
 		const vc = viewportClass ?? this._viewportClass.get();
 		switch (vc) {
-			case 'phone':
-				return { sidebar: false, auxiliaryBar: false, panel: false, sessions: true, editor: false };
-			case 'tablet':
-			case 'desktop':
+			case "phone":
+				return {
+					sidebar: false,
+					auxiliaryBar: false,
+					panel: false,
+					sessions: true,
+					editor: false,
+				};
+			case "tablet":
+			case "desktop":
 				// Tablet and desktop share the standard multi-part workbench defaults.
 				// A dedicated tablet layout has not been designed yet.
-				return { sidebar: true, auxiliaryBar: true, panel: false, sessions: true, editor: false };
+				return {
+					sidebar: true,
+					auxiliaryBar: true,
+					panel: false,
+					sessions: true,
+					editor: false,
+				};
 		}
 	}
 
@@ -135,18 +155,22 @@ export class SessionsLayoutPolicy extends Disposable {
 	 * @param height Container height in pixels (reserved for future use).
 	 * @param viewportClass Optional explicit viewport class override.
 	 */
-	getPartSizes(width: number, _height: number, viewportClass?: ViewportClass): IPartSizeDefaults {
+	getPartSizes(
+		width: number,
+		_height: number,
+		viewportClass?: ViewportClass,
+	): IPartSizeDefaults {
 		const vc = viewportClass ?? this._viewportClass.get();
 		switch (vc) {
-			case 'phone':
+			case "phone":
 				return {
 					sideBarSize: 0,
 					auxiliaryBarSize: 0,
 					panelSize: 0,
 					sessionsWidth: width,
 				};
-			case 'tablet':
-			case 'desktop':
+			case "tablet":
+			case "desktop":
 				// Tablet currently falls back to desktop sizing.
 				return {
 					sideBarSize: 300,

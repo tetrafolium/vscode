@@ -14,7 +14,10 @@ import { TelemetryWithExp } from '../telemetry';
 import { BlockTrimmer } from './blockTrimmer';
 import { StatementTree } from './statementTree';
 
-export const ICompletionsBlockModeConfig = createServiceIdentifier<ICompletionsBlockModeConfig>('ICompletionsBlockModeConfig');
+export const ICompletionsBlockModeConfig =
+	createServiceIdentifier<ICompletionsBlockModeConfig>(
+		'ICompletionsBlockModeConfig',
+	);
 export interface ICompletionsBlockModeConfig {
 	readonly _serviceBrand: undefined;
 	forLanguage(languageId: string, telemetryData: TelemetryWithExp): BlockMode;
@@ -23,17 +26,27 @@ export interface ICompletionsBlockModeConfig {
 export class ConfigBlockModeConfig implements ICompletionsBlockModeConfig {
 	declare _serviceBrand: undefined;
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@ICompletionsFeaturesService private readonly featuresService: ICompletionsFeaturesService,
-	) { }
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+		@ICompletionsFeaturesService
+		private readonly featuresService: ICompletionsFeaturesService,
+	) {}
 
-	forLanguage(languageId: string, telemetryData: TelemetryWithExp): BlockMode {
-		const overrideBlockMode = this.featuresService.overrideBlockMode(telemetryData);
+	forLanguage(
+		languageId: string,
+		telemetryData: TelemetryWithExp,
+	): BlockMode {
+		const overrideBlockMode =
+			this.featuresService.overrideBlockMode(telemetryData);
 		if (overrideBlockMode) {
 			return toApplicableBlockMode(overrideBlockMode, languageId);
 		}
-		const progressiveReveal = this.featuresService.enableProgressiveReveal(telemetryData);
-		const config = this.instantiationService.invokeFunction(getConfig, ConfigKey.AlwaysRequestMultiline);
+		const progressiveReveal =
+			this.featuresService.enableProgressiveReveal(telemetryData);
+		const config = this.instantiationService.invokeFunction(
+			getConfig,
+			ConfigKey.AlwaysRequestMultiline,
+		);
 		if (config ?? progressiveReveal) {
 			return toApplicableBlockMode(BlockMode.MoreMultiline, languageId);
 		}
@@ -56,18 +69,31 @@ export class ConfigBlockModeConfig implements ICompletionsBlockModeConfig {
 }
 
 function blockModeRequiresTreeSitter(blockMode: BlockMode): boolean {
-	return [BlockMode.Parsing, BlockMode.ParsingAndServer, BlockMode.MoreMultiline].includes(blockMode);
+	return [
+		BlockMode.Parsing,
+		BlockMode.ParsingAndServer,
+		BlockMode.MoreMultiline,
+	].includes(blockMode);
 }
 
 /**
  * Prevents tree-sitter parsing from being applied to languages we don't include
  * parsers for.
  */
-function toApplicableBlockMode(blockMode: BlockMode, languageId: string): BlockMode {
-	if (blockMode === BlockMode.MoreMultiline && StatementTree.isSupported(languageId)) {
+function toApplicableBlockMode(
+	blockMode: BlockMode,
+	languageId: string,
+): BlockMode {
+	if (
+		blockMode === BlockMode.MoreMultiline &&
+		StatementTree.isSupported(languageId)
+	) {
 		return blockMode;
 	}
-	if (blockModeRequiresTreeSitter(blockMode) && !isSupportedLanguageId(languageId)) {
+	if (
+		blockModeRequiresTreeSitter(blockMode) &&
+		!isSupportedLanguageId(languageId)
+	) {
 		return BlockMode.Server;
 	}
 	return blockMode;

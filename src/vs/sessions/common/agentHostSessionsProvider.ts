@@ -3,14 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../base/common/event.js';
-import { IObservable } from '../../base/common/observable.js';
-import { equals } from '../../base/common/objects.js';
-import { RemoteAgentHostConnectionStatus } from '../../platform/agentHost/common/remoteAgentHostService.js';
-import { ResolveSessionConfigResult, SessionConfigValueItem } from '../../platform/agentHost/common/state/protocol/commands.js';
-import { AgentCustomization, Customization, RootConfigState } from '../../platform/agentHost/common/state/protocol/state.js';
-import { ISessionsProvider } from '../services/sessions/common/sessionsProvider.js';
-import { ISessionAgentRef } from '../services/sessions/common/session.js';
+import { Event } from "../../base/common/event.js";
+import { IObservable } from "../../base/common/observable.js";
+import { equals } from "../../base/common/objects.js";
+import { RemoteAgentHostConnectionStatus } from "../../platform/agentHost/common/remoteAgentHostService.js";
+import {
+	ResolveSessionConfigResult,
+	SessionConfigValueItem,
+} from "../../platform/agentHost/common/state/protocol/commands.js";
+import {
+	AgentCustomization,
+	Customization,
+	RootConfigState,
+} from "../../platform/agentHost/common/state/protocol/state.js";
+import { ISessionsProvider } from "../services/sessions/common/sessionsProvider.js";
+import { ISessionAgentRef } from "../services/sessions/common/session.js";
 
 /**
  * Extended sessions provider for agent host providers (local and remote).
@@ -52,7 +59,11 @@ export interface IAgentHostSessionsProvider extends ISessionsProvider {
 	 */
 	isSessionConfigResolving(sessionId: string): IObservable<boolean>;
 	/** Sets one dynamic configuration property and re-resolves the schema. */
-	setSessionConfigValue(sessionId: string, property: string, value: unknown): Promise<void>;
+	setSessionConfigValue(
+		sessionId: string,
+		property: string,
+		value: unknown,
+	): Promise<void>;
 	/**
 	 * Replaces the full set of running-session config values atomically.
 	 *
@@ -67,11 +78,20 @@ export interface IAgentHostSessionsProvider extends ISessionsProvider {
 	 * No-op for pre-creation (new) sessions — use {@link setSessionConfigValue}
 	 * there since the schema is still being resolved.
 	 */
-	replaceSessionConfig(sessionId: string, values: Record<string, unknown>): Promise<void>;
+	replaceSessionConfig(
+		sessionId: string,
+		values: Record<string, unknown>,
+	): Promise<void>;
 	/** Returns dynamic completions for a configuration property. */
-	getSessionConfigCompletions(sessionId: string, property: string, query?: string): Promise<readonly SessionConfigValueItem[]>;
+	getSessionConfigCompletions(
+		sessionId: string,
+		property: string,
+		query?: string,
+	): Promise<readonly SessionConfigValueItem[]>;
 	/** Returns the resolved config that should be sent to createSession. */
-	getCreateSessionConfig(sessionId: string): Record<string, unknown> | undefined;
+	getCreateSessionConfig(
+		sessionId: string,
+	): Record<string, unknown> | undefined;
 	/** Clears dynamic configuration state for an abandoned new session. */
 	clearSessionConfig(sessionId: string): void;
 
@@ -133,11 +153,10 @@ export interface IAgentHostSessionsProvider extends ISessionsProvider {
 	 *              and use the provider's default behavior.
 	 */
 	setAgent?(sessionId: string, agent: ISessionAgentRef | undefined): void;
-
 }
 
-export const LOCAL_AGENT_HOST_PROVIDER_ID = 'local-agent-host';
-export const REMOTE_AGENT_HOST_PROVIDER_PREFIX = 'agenthost-';
+export const LOCAL_AGENT_HOST_PROVIDER_ID = "local-agent-host";
+export const REMOTE_AGENT_HOST_PROVIDER_PREFIX = "agenthost-";
 export const REMOTE_AGENT_HOST_PROVIDER_RE = /^agenthost-/;
 export const ANY_AGENT_HOST_PROVIDER_RE = /^(local-agent-host|agenthost-)/;
 
@@ -145,7 +164,9 @@ export const ANY_AGENT_HOST_PROVIDER_RE = /^(local-agent-host|agenthost-)/;
  * Checks whether a provider is an agent host provider based on its
  * reserved provider ID (`local-agent-host` or `agenthost-*` prefix).
  */
-export function isAgentHostProvider(provider: ISessionsProvider): provider is IAgentHostSessionsProvider {
+export function isAgentHostProvider(
+	provider: ISessionsProvider,
+): provider is IAgentHostSessionsProvider {
 	return isAgentHostProviderId(provider.id);
 }
 
@@ -154,7 +175,10 @@ export function isAgentHostProvider(provider: ISessionsProvider): provider is IA
  * (`local-agent-host` or any `agenthost-*` provider).
  */
 export function isAgentHostProviderId(providerId: string): boolean {
-	return providerId === LOCAL_AGENT_HOST_PROVIDER_ID || providerId.startsWith(REMOTE_AGENT_HOST_PROVIDER_PREFIX);
+	return (
+		providerId === LOCAL_AGENT_HOST_PROVIDER_ID ||
+		providerId.startsWith(REMOTE_AGENT_HOST_PROVIDER_PREFIX)
+	);
 }
 
 /**
@@ -166,7 +190,10 @@ export function isAgentHostProviderId(providerId: string): boolean {
  * are deep-compared via {@link equals} so non-string entries (e.g. permission
  * objects) compare correctly.
  */
-export function resolvedConfigsEqual(a: ResolveSessionConfigResult, b: ResolveSessionConfigResult): boolean {
+export function resolvedConfigsEqual(
+	a: ResolveSessionConfigResult,
+	b: ResolveSessionConfigResult,
+): boolean {
 	const aValueKeys = Object.keys(a.values);
 	const bValueKeys = Object.keys(b.values);
 	if (aValueKeys.length !== bValueKeys.length) {
@@ -191,35 +218,38 @@ export function resolvedConfigsEqual(a: ResolveSessionConfigResult, b: ResolveSe
 }
 
 /** Known auto-approve config values. */
-const AUTO_APPROVE_ENUM = ['default', 'autoApprove', 'autopilot'];
+const AUTO_APPROVE_ENUM = ["default", "autoApprove", "autopilot"];
 
 type MutableConfigSchemaItem =
-	| { type: 'string'; title: string; sessionMutable: true; enum: string[] }
-	| { type: 'number'; title: string; sessionMutable: true }
-	| { type: 'boolean'; title: string; sessionMutable: true }
-	| { type: 'array'; title: string; sessionMutable: true }
-	| { type: 'object'; title: string; sessionMutable: true };
+	| { type: "string"; title: string; sessionMutable: true; enum: string[] }
+	| { type: "number"; title: string; sessionMutable: true }
+	| { type: "boolean"; title: string; sessionMutable: true }
+	| { type: "array"; title: string; sessionMutable: true }
+	| { type: "object"; title: string; sessionMutable: true };
 
-function buildMutableConfigSchemaItem(key: string, value: unknown): MutableConfigSchemaItem | undefined {
-	if (typeof value === 'string') {
+function buildMutableConfigSchemaItem(
+	key: string,
+	value: unknown,
+): MutableConfigSchemaItem | undefined {
+	if (typeof value === "string") {
 		return {
-			type: 'string',
+			type: "string",
 			title: key,
 			sessionMutable: true,
-			enum: key === 'autoApprove' ? AUTO_APPROVE_ENUM : [value],
+			enum: key === "autoApprove" ? AUTO_APPROVE_ENUM : [value],
 		};
 	}
-	if (typeof value === 'number') {
-		return { type: 'number', title: key, sessionMutable: true };
+	if (typeof value === "number") {
+		return { type: "number", title: key, sessionMutable: true };
 	}
-	if (typeof value === 'boolean') {
-		return { type: 'boolean', title: key, sessionMutable: true };
+	if (typeof value === "boolean") {
+		return { type: "boolean", title: key, sessionMutable: true };
 	}
 	if (Array.isArray(value)) {
-		return { type: 'array', title: key, sessionMutable: true };
+		return { type: "array", title: key, sessionMutable: true };
 	}
-	if (value && typeof value === 'object') {
-		return { type: 'object', title: key, sessionMutable: true };
+	if (value && typeof value === "object") {
+		return { type: "object", title: key, sessionMutable: true };
 	}
 	return undefined;
 }
@@ -231,7 +261,9 @@ function buildMutableConfigSchemaItem(key: string, value: unknown): MutableConfi
  * representable in the config schema (e.g. `null`, `undefined`) are
  * omitted.
  */
-export function buildMutableConfigSchema(config: Record<string, unknown>): Record<string, MutableConfigSchemaItem> {
+export function buildMutableConfigSchema(
+	config: Record<string, unknown>,
+): Record<string, MutableConfigSchemaItem> {
 	const properties: Record<string, MutableConfigSchemaItem> = {};
 	for (const key of Object.keys(config)) {
 		const property = buildMutableConfigSchemaItem(key, config[key]);

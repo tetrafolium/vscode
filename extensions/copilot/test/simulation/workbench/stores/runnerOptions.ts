@@ -26,10 +26,18 @@ export class RunnerOptions {
 
 	constructor(storage: SimulationStorage) {
 		this.grep = new SimulationStorageValue(storage, 'grep', '');
-		this.cacheMode = new SimulationStorageValue(storage, 'cacheMode', CacheMode.Default);
+		this.cacheMode = new SimulationStorageValue(
+			storage,
+			'cacheMode',
+			CacheMode.Default,
+		);
 		this.noFetch = new SimulationStorageValue(storage, 'noFetch', false);
 		this.n = new SimulationStorageValue(storage, 'n', '');
-		this.additionalArgs = new SimulationStorageValue(storage, 'additionalArgs', '');
+		this.additionalArgs = new SimulationStorageValue(
+			storage,
+			'additionalArgs',
+			'',
+		);
 		mobx.makeObservable(this);
 	}
 }

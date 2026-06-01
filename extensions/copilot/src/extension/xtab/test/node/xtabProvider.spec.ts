@@ -4,19 +4,49 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Raw } from '@vscode/prompt-tsx';
-import { afterEach, beforeEach, describe, expect, it, suite, test, vi } from 'vitest';
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	suite,
+	test,
+	vi,
+} from 'vitest';
 import { IChatMLFetcher } from '../../../../platform/chat/common/chatMLFetcher';
-import { ChatFetchResponseType, RESPONSE_CONTAINED_NO_CHOICES } from '../../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	RESPONSE_CONTAINED_NO_CHOICES,
+} from '../../../../platform/chat/common/commonTypes';
 import { StreamingMockChatMLFetcher } from '../../../../platform/chat/test/common/streamingMockChatMLFetcher';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { InMemoryConfigurationService } from '../../../../platform/configuration/test/common/inMemoryConfigurationService';
 import { DocumentId } from '../../../../platform/inlineEdits/common/dataTypes/documentId';
 import { Edits } from '../../../../platform/inlineEdits/common/dataTypes/edit';
 import { LanguageId } from '../../../../platform/inlineEdits/common/dataTypes/languageId';
-import { DEFAULT_OPTIONS, EarlyDivergenceCancellationMode, LanguageContextLanguages, LintOptionShowCode, LintOptionWarning, ModelConfiguration, PromptingStrategy, ResponseFormat } from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	DEFAULT_OPTIONS,
+	EarlyDivergenceCancellationMode,
+	LanguageContextLanguages,
+	LintOptionShowCode,
+	LintOptionWarning,
+	ModelConfiguration,
+	PromptingStrategy,
+	ResponseFormat,
+} from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { InlineEditRequestLogContext } from '../../../../platform/inlineEdits/common/inlineEditLogContext';
 import { IInlineEditsModelService } from '../../../../platform/inlineEdits/common/inlineEditsModelService';
-import { NoNextEditReason, StatelessNextEditDocument, StatelessNextEditRequest, StreamedEdit, WithStatelessProviderTelemetry } from '../../../../platform/inlineEdits/common/statelessNextEditProvider';
+import {
+	NoNextEditReason,
+	StatelessNextEditDocument,
+	StatelessNextEditRequest,
+	StreamedEdit,
+	WithStatelessProviderTelemetry,
+} from '../../../../platform/inlineEdits/common/statelessNextEditProvider';
 import { ILogger } from '../../../../platform/log/common/logService';
 import { FilterReason } from '../../../../platform/networking/common/openai';
 import { ISimulationTestContext } from '../../../../platform/simulationTestContext/common/simulationTestContext';
@@ -24,12 +54,21 @@ import { TestLogService } from '../../../../platform/testing/common/testLogServi
 import { AsyncIterUtils } from '../../../../util/common/asyncIterableUtils';
 import { Result } from '../../../../util/common/result';
 import { DeferredPromise } from '../../../../util/vs/base/common/async';
-import { CancellationToken, CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../util/vs/base/common/cancellation';
 import { Emitter, Event } from '../../../../util/vs/base/common/event';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
 import { URI } from '../../../../util/vs/base/common/uri';
-import { LineEdit, LineReplacement } from '../../../../util/vs/editor/common/core/edits/lineEdit';
-import { StringEdit, StringReplacement } from '../../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	LineEdit,
+	LineReplacement,
+} from '../../../../util/vs/editor/common/core/edits/lineEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { Position } from '../../../../util/vs/editor/common/core/position';
 import { LineRange } from '../../../../util/vs/editor/common/core/ranges/lineRange';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
@@ -38,7 +77,13 @@ import { IInstantiationService } from '../../../../util/vs/platform/instantiatio
 import { DelaySession } from '../../../inlineEdits/common/delay';
 import { createExtensionUnitTestingServices } from '../../../test/node/services';
 import { N_LINES_AS_CONTEXT } from '../../common/promptCrafting';
-import { nes41Miniv3SystemPrompt, simplifiedPrompt, systemPromptTemplate, unifiedModelSystemPrompt, xtab275SystemPrompt } from '../../common/systemMessages';
+import {
+	nes41Miniv3SystemPrompt,
+	simplifiedPrompt,
+	systemPromptTemplate,
+	unifiedModelSystemPrompt,
+	xtab275SystemPrompt,
+} from '../../common/systemMessages';
 import { CurrentDocument } from '../../common/xtabCurrentDocument';
 import {
 	computeAreaAroundEditWindowLinesRange,
@@ -60,12 +105,22 @@ function createMockLogger(): ILogger {
 	return new TestLogService();
 }
 
-function makeCurrentDocument(lines: string[], cursorLineOneBased: number, cursorColumn = 1): CurrentDocument {
+function makeCurrentDocument(
+	lines: string[],
+	cursorLineOneBased: number,
+	cursorColumn = 1,
+): CurrentDocument {
 	const text = new StringText(lines.join('\n'));
-	return new CurrentDocument(text, new Position(cursorLineOneBased, cursorColumn));
+	return new CurrentDocument(
+		text,
+		new Position(cursorLineOneBased, cursorColumn),
+	);
 }
 
-function makeActiveDocument(lines: string[], opts?: { workspaceRoot?: URI; languageId?: string }): StatelessNextEditDocument {
+function makeActiveDocument(
+	lines: string[],
+	opts?: { workspaceRoot?: URI; languageId?: string },
+): StatelessNextEditDocument {
 	const text = new StringText(lines.join('\n'));
 	return new StatelessNextEditDocument(
 		DocumentId.create('file:///test/file.ts'),
@@ -114,7 +169,7 @@ class MockInlineEditsModelService implements IInlineEditsModelService {
 		lintOptions: undefined,
 	};
 
-	async setCurrentModelId(_modelId: string): Promise<void> { }
+	async setCurrentModelId(_modelId: string): Promise<void> {}
 
 	selectedModelConfiguration(): ModelConfiguration {
 		return this._selectedConfig;
@@ -139,7 +194,9 @@ class MockInlineEditsModelService implements IInlineEditsModelService {
 
 describe('pickSystemPrompt', () => {
 	it('returns systemPromptTemplate for CopilotNesXtab', () => {
-		expect(pickSystemPrompt(PromptingStrategy.CopilotNesXtab)).toBe(systemPromptTemplate);
+		expect(pickSystemPrompt(PromptingStrategy.CopilotNesXtab)).toBe(
+			systemPromptTemplate,
+		);
 	});
 
 	it('returns systemPromptTemplate for undefined', () => {
@@ -147,15 +204,21 @@ describe('pickSystemPrompt', () => {
 	});
 
 	it('returns unifiedModelSystemPrompt for UnifiedModel', () => {
-		expect(pickSystemPrompt(PromptingStrategy.UnifiedModel)).toBe(unifiedModelSystemPrompt);
+		expect(pickSystemPrompt(PromptingStrategy.UnifiedModel)).toBe(
+			unifiedModelSystemPrompt,
+		);
 	});
 
 	it('returns simplifiedPrompt for Codexv21NesUnified', () => {
-		expect(pickSystemPrompt(PromptingStrategy.Codexv21NesUnified)).toBe(simplifiedPrompt);
+		expect(pickSystemPrompt(PromptingStrategy.Codexv21NesUnified)).toBe(
+			simplifiedPrompt,
+		);
 	});
 
 	it('returns simplifiedPrompt for SimplifiedSystemPrompt', () => {
-		expect(pickSystemPrompt(PromptingStrategy.SimplifiedSystemPrompt)).toBe(simplifiedPrompt);
+		expect(pickSystemPrompt(PromptingStrategy.SimplifiedSystemPrompt)).toBe(
+			simplifiedPrompt,
+		);
 	});
 
 	it.each([
@@ -175,7 +238,9 @@ describe('pickSystemPrompt', () => {
 	});
 
 	it('returns nes41Miniv3SystemPrompt for Nes41Miniv3', () => {
-		expect(pickSystemPrompt(PromptingStrategy.Nes41Miniv3)).toBe(nes41Miniv3SystemPrompt);
+		expect(pickSystemPrompt(PromptingStrategy.Nes41Miniv3)).toBe(
+			nes41Miniv3SystemPrompt,
+		);
 	});
 
 	it('each strategy produces a non-empty string', () => {
@@ -204,16 +269,55 @@ describe('mapChatFetcherErrorToNoNextEditReason', () => {
 
 	it.each([
 		{ type: ChatFetchResponseType.OffTopic, ...baseRequestFields },
-		{ type: ChatFetchResponseType.Filtered, ...baseRequestFields, category: FilterReason.Hate },
-		{ type: ChatFetchResponseType.PromptFiltered, ...baseRequestFields, category: FilterReason.Hate },
-		{ type: ChatFetchResponseType.Length, ...baseRequestFields, truncatedValue: '' },
-		{ type: ChatFetchResponseType.RateLimited, ...baseRequestFields, retryAfter: undefined, rateLimitKey: 'k', isAuto: false },
-		{ type: ChatFetchResponseType.QuotaExceeded, ...baseRequestFields, retryAfter: new Date() },
-		{ type: ChatFetchResponseType.ExtensionBlocked, ...baseRequestFields, retryAfter: 0, learnMoreLink: '' },
-		{ type: ChatFetchResponseType.AgentUnauthorized, ...baseRequestFields, authorizationUrl: '' },
-		{ type: ChatFetchResponseType.AgentFailedDependency, ...baseRequestFields },
-		{ type: ChatFetchResponseType.InvalidStatefulMarker, ...baseRequestFields },
-	] satisfies ReadonlyArray<Parameters<typeof mapChatFetcherErrorToNoNextEditReason>[0]>)('maps $type to Uncategorized', (error) => {
+		{
+			type: ChatFetchResponseType.Filtered,
+			...baseRequestFields,
+			category: FilterReason.Hate,
+		},
+		{
+			type: ChatFetchResponseType.PromptFiltered,
+			...baseRequestFields,
+			category: FilterReason.Hate,
+		},
+		{
+			type: ChatFetchResponseType.Length,
+			...baseRequestFields,
+			truncatedValue: '',
+		},
+		{
+			type: ChatFetchResponseType.RateLimited,
+			...baseRequestFields,
+			retryAfter: undefined,
+			rateLimitKey: 'k',
+			isAuto: false,
+		},
+		{
+			type: ChatFetchResponseType.QuotaExceeded,
+			...baseRequestFields,
+			retryAfter: new Date(),
+		},
+		{
+			type: ChatFetchResponseType.ExtensionBlocked,
+			...baseRequestFields,
+			retryAfter: 0,
+			learnMoreLink: '',
+		},
+		{
+			type: ChatFetchResponseType.AgentUnauthorized,
+			...baseRequestFields,
+			authorizationUrl: '',
+		},
+		{
+			type: ChatFetchResponseType.AgentFailedDependency,
+			...baseRequestFields,
+		},
+		{
+			type: ChatFetchResponseType.InvalidStatefulMarker,
+			...baseRequestFields,
+		},
+	] satisfies ReadonlyArray<
+		Parameters<typeof mapChatFetcherErrorToNoNextEditReason>[0]
+	>)('maps $type to Uncategorized', (error) => {
 		const result = mapChatFetcherErrorToNoNextEditReason(error);
 		expect(result).toBeInstanceOf(NoNextEditReason.Uncategorized);
 	});
@@ -224,7 +328,9 @@ describe('mapChatFetcherErrorToNoNextEditReason', () => {
 		{ type: ChatFetchResponseType.Failed, ...baseRequestFields },
 		{ type: ChatFetchResponseType.NetworkError, ...baseRequestFields },
 		{ type: ChatFetchResponseType.Unknown, ...baseRequestFields },
-	] satisfies ReadonlyArray<Parameters<typeof mapChatFetcherErrorToNoNextEditReason>[0]>)('maps $type to FetchFailure', (error) => {
+	] satisfies ReadonlyArray<
+		Parameters<typeof mapChatFetcherErrorToNoNextEditReason>[0]
+	>)('maps $type to FetchFailure', (error) => {
 		const result = mapChatFetcherErrorToNoNextEditReason(error);
 		expect(result).toBeInstanceOf(NoNextEditReason.FetchFailure);
 	});
@@ -264,17 +370,33 @@ describe('overrideModelConfig', () => {
 
 		expect(result.includePostScript).toBe(base.includePostScript);
 		expect(result.pagedClipping).toEqual(base.pagedClipping);
-		expect(result.recentlyViewedDocuments).toEqual(base.recentlyViewedDocuments);
+		expect(result.recentlyViewedDocuments).toEqual(
+			base.recentlyViewedDocuments,
+		);
 		expect(result.diffHistory).toEqual(base.diffHistory);
 	});
 
 	it('merges lintOptions when overridingConfig has lintOptions', () => {
-		const testLintOptions = { tagName: 'lint', warnings: LintOptionWarning.YES, showCode: LintOptionShowCode.YES, maxLints: 5, maxLineDistance: 10, nRecentFiles: 0 };
+		const testLintOptions = {
+			tagName: 'lint',
+			warnings: LintOptionWarning.YES,
+			showCode: LintOptionShowCode.YES,
+			maxLints: 5,
+			maxLineDistance: 10,
+			nRecentFiles: 0,
+		};
 		const base: ModelConfig = {
 			...makeBaseModelConfig(),
 			lintOptions: testLintOptions,
 		};
-		const overrideLintOptions = { tagName: 'diag', warnings: LintOptionWarning.NO, showCode: LintOptionShowCode.NO, maxLints: 3, maxLineDistance: 5, nRecentFiles: 0 };
+		const overrideLintOptions = {
+			tagName: 'diag',
+			warnings: LintOptionWarning.NO,
+			showCode: LintOptionShowCode.NO,
+			maxLints: 3,
+			maxLineDistance: 5,
+			nRecentFiles: 0,
+		};
 		const override: ModelConfiguration = {
 			modelName: 'test',
 			promptingStrategy: undefined,
@@ -288,7 +410,14 @@ describe('overrideModelConfig', () => {
 	});
 
 	it('keeps base lintOptions when override has no lintOptions', () => {
-		const testLintOptions = { tagName: 'lint', warnings: LintOptionWarning.YES, showCode: LintOptionShowCode.YES, maxLints: 5, maxLineDistance: 10, nRecentFiles: 0 };
+		const testLintOptions = {
+			tagName: 'lint',
+			warnings: LintOptionWarning.YES,
+			showCode: LintOptionShowCode.YES,
+			maxLints: 5,
+			maxLineDistance: 10,
+			nRecentFiles: 0,
+		};
 		const base: ModelConfig = {
 			...makeBaseModelConfig(),
 			lintOptions: testLintOptions,
@@ -337,8 +466,12 @@ describe('overrideModelConfig', () => {
 		// includeTags comes from includeTagsInCurrentFile, applied last
 		expect(result.currentFile.includeTags).toBe(false);
 		// Other fields preserved from base
-		expect(result.currentFile.includeLineNumbers).toBe(base.currentFile.includeLineNumbers);
-		expect(result.currentFile.includeCursorTag).toBe(base.currentFile.includeCursorTag);
+		expect(result.currentFile.includeLineNumbers).toBe(
+			base.currentFile.includeLineNumbers,
+		);
+		expect(result.currentFile.includeCursorTag).toBe(
+			base.currentFile.includeCursorTag,
+		);
 	});
 
 	it('merges recentlyViewedDocuments partial overrides with base', () => {
@@ -355,8 +488,12 @@ describe('overrideModelConfig', () => {
 
 		expect(result.recentlyViewedDocuments.maxTokens).toBe(3000);
 		// Other fields preserved from base
-		expect(result.recentlyViewedDocuments.nDocuments).toBe(base.recentlyViewedDocuments.nDocuments);
-		expect(result.recentlyViewedDocuments.includeViewedFiles).toBe(base.recentlyViewedDocuments.includeViewedFiles);
+		expect(result.recentlyViewedDocuments.nDocuments).toBe(
+			base.recentlyViewedDocuments.nDocuments,
+		);
+		expect(result.recentlyViewedDocuments.includeViewedFiles).toBe(
+			base.recentlyViewedDocuments.includeViewedFiles,
+		);
 	});
 });
 
@@ -376,7 +513,10 @@ describe('determineLanguageContextOptions', () => {
 	it('uses explicit language entry when language is in enabledLanguages', () => {
 		const result = determineLanguageContextOptions(
 			LanguageId.create('python'),
-			{ ...baseOpts, enabledLanguages: { python: true } as LanguageContextLanguages },
+			{
+				...baseOpts,
+				enabledLanguages: { python: true } as LanguageContextLanguages,
+			},
 		);
 		expect(result).toMatchInlineSnapshot(`
 			{
@@ -390,7 +530,10 @@ describe('determineLanguageContextOptions', () => {
 	it('uses false from enabledLanguages when explicitly disabled for language', () => {
 		const result = determineLanguageContextOptions(
 			LanguageId.create('python'),
-			{ ...baseOpts, enabledLanguages: { python: false } as LanguageContextLanguages },
+			{
+				...baseOpts,
+				enabledLanguages: { python: false } as LanguageContextLanguages,
+			},
 		);
 		expect(result.enabled).toBe(false);
 	});
@@ -422,7 +565,12 @@ describe('determineLanguageContextOptions', () => {
 	it('passes through maxTokens and traitPosition', () => {
 		const result = determineLanguageContextOptions(
 			LanguageId.create('typescript'),
-			{ ...baseOpts, enabled: true, maxTokens: 1000, traitPosition: 'after' },
+			{
+				...baseOpts,
+				enabled: true,
+				maxTokens: 1000,
+				traitPosition: 'after',
+			},
 		);
 		expect(result).toMatchInlineSnapshot(`
 			{
@@ -455,7 +603,13 @@ describe('getPredictionContents', () => {
 	const doc = makeActiveDocument(['line0', ...editWindowLines, 'line3']);
 
 	it('returns correct content for UnifiedWithXml', () => {
-		expect(getPredictionContents(doc, editWindowLines, ResponseFormat.UnifiedWithXml)).toMatchInlineSnapshot(`
+		expect(
+			getPredictionContents(
+				doc,
+				editWindowLines,
+				ResponseFormat.UnifiedWithXml,
+			),
+		).toMatchInlineSnapshot(`
 			"<EDIT>
 			const x = 1;
 			const y = 2;
@@ -464,14 +618,26 @@ describe('getPredictionContents', () => {
 	});
 
 	it('returns correct content for EditWindowOnly', () => {
-		expect(getPredictionContents(doc, editWindowLines, ResponseFormat.EditWindowOnly)).toMatchInlineSnapshot(`
+		expect(
+			getPredictionContents(
+				doc,
+				editWindowLines,
+				ResponseFormat.EditWindowOnly,
+			),
+		).toMatchInlineSnapshot(`
 			"const x = 1;
 			const y = 2;"
 		`);
 	});
 
 	it('returns correct content for EditWindowWithEditIntent', () => {
-		expect(getPredictionContents(doc, editWindowLines, ResponseFormat.EditWindowWithEditIntent)).toMatchInlineSnapshot(`
+		expect(
+			getPredictionContents(
+				doc,
+				editWindowLines,
+				ResponseFormat.EditWindowWithEditIntent,
+			),
+		).toMatchInlineSnapshot(`
 			"<|edit_intent|>high<|/edit_intent|>
 			const x = 1;
 			const y = 2;"
@@ -479,7 +645,13 @@ describe('getPredictionContents', () => {
 	});
 
 	it('returns correct content for EditWindowWithEditIntentShort', () => {
-		expect(getPredictionContents(doc, editWindowLines, ResponseFormat.EditWindowWithEditIntentShort)).toMatchInlineSnapshot(`
+		expect(
+			getPredictionContents(
+				doc,
+				editWindowLines,
+				ResponseFormat.EditWindowWithEditIntentShort,
+			),
+		).toMatchInlineSnapshot(`
 			"H
 			const x = 1;
 			const y = 2;"
@@ -487,7 +659,13 @@ describe('getPredictionContents', () => {
 	});
 
 	it('returns correct content for CodeBlock', () => {
-		expect(getPredictionContents(doc, editWindowLines, ResponseFormat.CodeBlock)).toMatchInlineSnapshot(`
+		expect(
+			getPredictionContents(
+				doc,
+				editWindowLines,
+				ResponseFormat.CodeBlock,
+			),
+		).toMatchInlineSnapshot(`
 			"\`\`\`
 			const x = 1;
 			const y = 2;
@@ -496,25 +674,40 @@ describe('getPredictionContents', () => {
 	});
 
 	it('returns correct content for CustomDiffPatch with workspace root', () => {
-		const docWithRoot = makeActiveDocument(
-			['line0', 'line1'],
-			{ workspaceRoot: URI.file('/workspace/project') },
+		const docWithRoot = makeActiveDocument(['line0', 'line1'], {
+			workspaceRoot: URI.file('/workspace/project'),
+		});
+		const result = getPredictionContents(
+			docWithRoot,
+			['line0'],
+			ResponseFormat.CustomDiffPatch,
 		);
-		const result = getPredictionContents(docWithRoot, ['line0'], ResponseFormat.CustomDiffPatch);
 		expect(result.endsWith(':')).toBe(true);
 	});
 
 	it('returns correct content for CustomDiffPatch without workspace root', () => {
-		const result = getPredictionContents(doc, editWindowLines, ResponseFormat.CustomDiffPatch);
+		const result = getPredictionContents(
+			doc,
+			editWindowLines,
+			ResponseFormat.CustomDiffPatch,
+		);
 		expect(result.endsWith(':')).toBe(true);
 	});
 
 	it('handles empty editWindowLines', () => {
-		expect(getPredictionContents(doc, [], ResponseFormat.EditWindowOnly)).toBe('');
+		expect(
+			getPredictionContents(doc, [], ResponseFormat.EditWindowOnly),
+		).toBe('');
 	});
 
 	it('handles single-line editWindowLines', () => {
-		expect(getPredictionContents(doc, ['only line'], ResponseFormat.EditWindowOnly)).toBe('only line');
+		expect(
+			getPredictionContents(
+				doc,
+				['only line'],
+				ResponseFormat.EditWindowOnly,
+			),
+		).toBe('only line');
 	});
 });
 
@@ -605,17 +798,25 @@ describe('XtabProvider integration', () => {
 	let configService: InMemoryConfigurationService;
 
 	beforeEach(() => {
-		const testingServiceCollection = createExtensionUnitTestingServices(disposables);
+		const testingServiceCollection =
+			createExtensionUnitTestingServices(disposables);
 
 		mockModelService = new MockInlineEditsModelService();
-		testingServiceCollection.set(IInlineEditsModelService, mockModelService);
+		testingServiceCollection.set(
+			IInlineEditsModelService,
+			mockModelService,
+		);
 
 		streamingFetcher = new StreamingMockChatMLFetcher();
 		testingServiceCollection.set(IChatMLFetcher, streamingFetcher);
 
-		const accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		const accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 		instaService = accessor.get(IInstantiationService);
-		configService = accessor.get(IConfigurationService) as InMemoryConfigurationService;
+		configService = accessor.get(
+			IConfigurationService,
+		) as InMemoryConfigurationService;
 	});
 
 	afterEach(() => {
@@ -637,23 +838,32 @@ describe('XtabProvider integration', () => {
 	 * so that `recentEdits.apply(beforeText) === afterText`.
 	 * If `insertedText` is not provided, it defaults to the single character at `insertionOffset`.
 	 */
-	function makeDocumentWithEdit(lines: string[], opts?: {
-		insertionOffset?: number;
-		insertedText?: string;
-		languageId?: string;
-		workspaceRoot?: URI;
-	}): StatelessNextEditDocument {
+	function makeDocumentWithEdit(
+		lines: string[],
+		opts?: {
+			insertionOffset?: number;
+			insertedText?: string;
+			languageId?: string;
+			workspaceRoot?: URI;
+		},
+	): StatelessNextEditDocument {
 		const afterText = lines.join('\n');
 		const insertionOffset = opts?.insertionOffset ?? 0;
 		// Default insertedText to the actual character at the insertion offset
-		const insertedText = opts?.insertedText ?? afterText[insertionOffset] ?? 'x';
+		const insertedText =
+			opts?.insertedText ?? afterText[insertionOffset] ?? 'x';
 
-		const beforeText = afterText.slice(0, insertionOffset) + afterText.slice(insertionOffset + insertedText.length);
+		const beforeText =
+			afterText.slice(0, insertionOffset) +
+			afterText.slice(insertionOffset + insertedText.length);
 		const beforeStringText = new StringText(beforeText);
 		const beforeLines = beforeText.split('\n');
 
 		const recentStringEdit = StringEdit.single(
-			new StringReplacement(OffsetRange.emptyAt(insertionOffset), insertedText)
+			new StringReplacement(
+				OffsetRange.emptyAt(insertionOffset),
+				insertedText,
+			),
 		);
 		const recentEdits = new Edits(StringEdit, [recentStringEdit]);
 
@@ -672,13 +882,16 @@ describe('XtabProvider integration', () => {
 	 * Creates a full `StatelessNextEditRequest` with non-empty xtabEditHistory and a
 	 * document that has a recent edit (so selection deduction succeeds).
 	 */
-	function createRequestWithEdit(lines: string[], opts?: {
-		insertionOffset?: number;
-		insertedText?: string;
-		languageId?: string;
-		expandedEditWindowNLines?: number;
-		isSpeculative?: boolean;
-	}): StatelessNextEditRequest {
+	function createRequestWithEdit(
+		lines: string[],
+		opts?: {
+			insertionOffset?: number;
+			insertedText?: string;
+			languageId?: string;
+			expandedEditWindowNLines?: number;
+			isSpeculative?: boolean;
+		},
+	): StatelessNextEditRequest {
 		const doc = makeDocumentWithEdit(lines, opts);
 		const beforeText = new StringText(doc.documentBeforeEdits.value);
 		const docId = doc.id;
@@ -689,11 +902,22 @@ describe('XtabProvider integration', () => {
 			beforeText,
 			[doc],
 			0,
-			[{ docId, kind: 'visibleRanges', visibleRanges: [new OffsetRange(0, 100)], documentContent: doc.documentAfterEdits }],
+			[
+				{
+					docId,
+					kind: 'visibleRanges',
+					visibleRanges: [new OffsetRange(0, 100)],
+					documentContent: doc.documentAfterEdits,
+				},
+			],
 			new DeferredPromise<Result<unknown, NoNextEditReason>>(),
 			opts?.expandedEditWindowNLines,
 			opts?.isSpeculative ?? false,
-			new InlineEditRequestLogContext('file:///test/file.ts', 1, undefined),
+			new InlineEditRequestLogContext(
+				'file:///test/file.ts',
+				1,
+				undefined,
+			),
 			undefined,
 			undefined,
 			Date.now(),
@@ -703,13 +927,20 @@ describe('XtabProvider integration', () => {
 	/** Extracts the text content from a ChatMessage's content array. */
 	function getMessageText(message: Raw.ChatMessage): string {
 		return message.content
-			.filter(part => part.type === Raw.ChatCompletionContentPartKind.Text)
-			.map(part => (part as { text: string }).text)
+			.filter(
+				(part) => part.type === Raw.ChatCompletionContentPartKind.Text,
+			)
+			.map((part) => (part as { text: string }).text)
 			.join('');
 	}
 
 	/** Collects all yielded edits and the final return value. */
-	async function collectEdits(gen: AsyncGenerator<WithStatelessProviderTelemetry<StreamedEdit>, WithStatelessProviderTelemetry<NoNextEditReason>>): Promise<{
+	async function collectEdits(
+		gen: AsyncGenerator<
+			WithStatelessProviderTelemetry<StreamedEdit>,
+			WithStatelessProviderTelemetry<NoNextEditReason>
+		>,
+	): Promise<{
 		edits: WithStatelessProviderTelemetry<StreamedEdit>[];
 		finalReason: WithStatelessProviderTelemetry<NoNextEditReason>;
 	}> {
@@ -723,7 +954,11 @@ describe('XtabProvider integration', () => {
 	}
 
 	function createLogContext(): InlineEditRequestLogContext {
-		return new InlineEditRequestLogContext('file:///test/file.ts', 1, undefined);
+		return new InlineEditRequestLogContext(
+			'file:///test/file.ts',
+			1,
+			undefined,
+		);
 	}
 
 	describe('static properties', () => {
@@ -763,17 +998,32 @@ describe('XtabProvider integration', () => {
 			);
 
 			const request = new StatelessNextEditRequest(
-				'req-1', 'opp-1', text, [doc], 0,
+				'req-1',
+				'opp-1',
+				text,
+				[doc],
+				0,
 				[], // empty history
-				new DeferredPromise<Result<unknown, NoNextEditReason>>(), undefined,
+				new DeferredPromise<Result<unknown, NoNextEditReason>>(),
+				undefined,
 				false, // isSpeculative
-				createLogContext(), undefined, undefined, Date.now(),
+				createLogContext(),
+				undefined,
+				undefined,
+				Date.now(),
 			);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
-			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.ActiveDocumentHasNoEdits);
+			expect(finalValue.v).toBeInstanceOf(
+				NoNextEditReason.ActiveDocumentHasNoEdits,
+			);
 		});
 
 		it('returns Uncategorized(NoSelection) when selection cannot be deduced', async () => {
@@ -791,68 +1041,130 @@ describe('XtabProvider integration', () => {
 			);
 
 			const request = new StatelessNextEditRequest(
-				'req-1', 'opp-1', text, [doc], 0,
-				[{ docId: doc.id, kind: 'visibleRanges', visibleRanges: [new OffsetRange(0, 50)], documentContent: text }],
-				new DeferredPromise<Result<unknown, NoNextEditReason>>(), undefined,
+				'req-1',
+				'opp-1',
+				text,
+				[doc],
+				0,
+				[
+					{
+						docId: doc.id,
+						kind: 'visibleRanges',
+						visibleRanges: [new OffsetRange(0, 50)],
+						documentContent: text,
+					},
+				],
+				new DeferredPromise<Result<unknown, NoNextEditReason>>(),
+				undefined,
 				false, // isSpeculative
-				createLogContext(), undefined, undefined, Date.now(),
+				createLogContext(),
+				undefined,
+				undefined,
+				Date.now(),
 			);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.Uncategorized);
-			expect((finalValue.v as NoNextEditReason.Uncategorized).error.message).toContain('NoSelection');
+			expect(
+				(finalValue.v as NoNextEditReason.Uncategorized).error.message,
+			).toContain('NoSelection');
 		});
 
 		it('returns PromptTooLarge(editWindow) when edit window exceeds token limit', async () => {
 			const provider = createProvider();
 			// Set very small token limit for edit window
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsXtabEditWindowMaxTokens, 1);
+			await configService.setConfig(
+				ConfigKey.TeamInternal.InlineEditsXtabEditWindowMaxTokens,
+				1,
+			);
 
 			// Create a document with long enough lines to exceed 1 token limit
-			const lines = ['function foo() {', '  return someVeryLongVariableName + anotherLongVariableName;', '}'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 5, insertedText: 'c' });
+			const lines = [
+				'function foo() {',
+				'  return someVeryLongVariableName + anotherLongVariableName;',
+				'}',
+			];
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 5,
+				insertedText: 'c',
+			});
 
 			streamingFetcher.setStreamingLines(['should not reach here']);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
-			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.PromptTooLarge);
-			expect((finalValue.v as NoNextEditReason.PromptTooLarge).message).toBe('editWindow');
+			expect(finalValue.v).toBeInstanceOf(
+				NoNextEditReason.PromptTooLarge,
+			);
+			expect(
+				(finalValue.v as NoNextEditReason.PromptTooLarge).message,
+			).toBe('editWindow');
 		});
 
 		it('wraps unexpected errors in NoNextEditReason.Unexpected', async () => {
 			const provider = createProvider();
 
 			const lines = ['function foo() {', '  return 1;', '}'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 5, insertedText: 'c' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 5,
+				insertedText: 'c',
+			});
 
 			// Make the model service throw during config assembly
-			vi.spyOn(mockModelService, 'selectedModelConfiguration').mockImplementation(() => {
+			vi.spyOn(
+				mockModelService,
+				'selectedModelConfiguration',
+			).mockImplementation(() => {
 				throw new Error('test-unexpected-error');
 			});
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.Unexpected);
-			expect((finalValue.v as NoNextEditReason.Unexpected).error.message).toContain('test-unexpected-error');
+			expect(
+				(finalValue.v as NoNextEditReason.Unexpected).error.message,
+			).toContain('test-unexpected-error');
 		});
 
 		it('returns GotCancelled when token is already cancelled', async () => {
 			const provider = createProvider();
 
 			const lines = ['function foo() {', '  return 1;', '}'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 5, insertedText: 'c' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 5,
+				insertedText: 'c',
+			});
 
 			streamingFetcher.setStreamingLines(['modified line']);
 
 			const cts = new CancellationTokenSource();
 			cts.cancel(); // cancel immediately
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), cts.token);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				cts.token,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			// Should be cancelled at some point during processing
@@ -862,7 +1174,10 @@ describe('XtabProvider integration', () => {
 		it('every yield is wrapped in WithStatelessProviderTelemetry', async () => {
 			const provider = createProvider();
 
-			const lines = Array.from({ length: 30 }, (_, i) => `line ${i} content`);
+			const lines = Array.from(
+				{ length: 30 },
+				(_, i) => `line ${i} content`,
+			);
 			const request = createRequestWithEdit(lines, {
 				insertionOffset: 10,
 				insertedText: 'x',
@@ -873,7 +1188,12 @@ describe('XtabProvider integration', () => {
 			editWindowLines[0] = 'MODIFIED line 0 content';
 			streamingFetcher.setStreamingLines(editWindowLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			// If edits were yielded, each should be a WithStatelessProviderTelemetry
@@ -908,7 +1228,12 @@ describe('XtabProvider integration', () => {
 			// Stream back identity (no change) — we care about the window calc, not the edit
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			// With expandedEditWindowNLines=40 and cursor near line 4, the window should be large
@@ -922,7 +1247,10 @@ describe('XtabProvider integration', () => {
 
 		it('merge conflict markers expand the edit window when configured', async () => {
 			const provider = createProvider();
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsXtabMaxMergeConflictLines, 20);
+			await configService.setConfig(
+				ConfigKey.TeamInternal.InlineEditsXtabMaxMergeConflictLines,
+				20,
+			);
 
 			// Place cursor near the start of a merge conflict
 			const lines = [
@@ -944,12 +1272,19 @@ describe('XtabProvider integration', () => {
 
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const result = await collectEdits(gen);
 
 			// The edit window should have been expanded to include the merge conflict
 			// We check this implicitly: the provider processed without error
-			expect(result.finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(result.finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 		});
 	});
 
@@ -966,20 +1301,31 @@ describe('XtabProvider integration', () => {
 			});
 
 			const lines = ['const x = 1;', 'const y = 2;', 'const z = 3;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			await AsyncIterUtils.drainUntilReturn(gen);
 
 			// Verify the fetcher was called (meaning we got past config assembly)
 			expect(streamingFetcher.callCount).toBeGreaterThan(0);
 
 			// Verify the system message corresponds to Xtab275 strategy
-			const capturedMessages = streamingFetcher.capturedOptions[0]?.messages;
+			const capturedMessages =
+				streamingFetcher.capturedOptions[0]?.messages;
 			expect(capturedMessages).toBeDefined();
-			const systemMessage = capturedMessages?.find(m => m.role === Raw.ChatRole.System);
+			const systemMessage = capturedMessages?.find(
+				(m) => m.role === Raw.ChatRole.System,
+			);
 			expect(systemMessage).toBeDefined();
 			expect(getMessageText(systemMessage!)).toBe(xtab275SystemPrompt);
 		});
@@ -988,7 +1334,10 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			// First call → NotFound, second call → Success with streaming lines
 			streamingFetcher.enqueueResponse({
@@ -1000,7 +1349,12 @@ describe('XtabProvider integration', () => {
 			// After NotFound, the provider retries with the default model; configure streaming response for that
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			await AsyncIterUtils.drainUntilReturn(gen);
 
 			// Should have made two calls - first failed with NotFound, second retried
@@ -1011,7 +1365,10 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			// Both calls → NotFound (queue two NotFound responses)
 			const notFoundResponse = {
@@ -1023,7 +1380,12 @@ describe('XtabProvider integration', () => {
 			streamingFetcher.enqueueResponse(notFoundResponse);
 			streamingFetcher.enqueueResponse(notFoundResponse);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			// After retrying with default model (which also returns NotFound),
@@ -1037,7 +1399,10 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			streamingFetcher.enqueueResponse({
 				type: ChatFetchResponseType.Unknown,
@@ -1046,7 +1411,12 @@ describe('XtabProvider integration', () => {
 				serverRequestId: undefined,
 			});
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
@@ -1056,7 +1426,10 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			streamingFetcher.enqueueResponse({
 				type: ChatFetchResponseType.Unknown,
@@ -1065,7 +1438,12 @@ describe('XtabProvider integration', () => {
 				serverRequestId: undefined,
 			});
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.FetchFailure);
@@ -1099,7 +1477,12 @@ describe('XtabProvider integration', () => {
 			responseLines[0] = 'import { foo, baz } from "bar";';
 			streamingFetcher.setStreamingLines(responseLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			// Import-only changes should be filtered out
@@ -1109,25 +1492,22 @@ describe('XtabProvider integration', () => {
 		it('passes through substantive code edits', async () => {
 			const provider = createProvider();
 
-			const lines = [
-				'function main() {',
-				'  return 1;',
-				'}',
-			];
+			const lines = ['function main() {', '  return 1;', '}'];
 			const request = createRequestWithEdit(lines, {
 				insertionOffset: 30, // inside "return 1"
 				insertedText: 'x',
 			});
 
 			// Respond with a substantive code change
-			const responseLines = [
-				'function main() {',
-				'  return 42;',
-				'}',
-			];
+			const responseLines = ['function main() {', '  return 42;', '}'];
 			streamingFetcher.setStreamingLines(responseLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			// Substantive edits should pass through filters
@@ -1155,7 +1535,12 @@ describe('XtabProvider integration', () => {
 			];
 			streamingFetcher.setStreamingLines(responseLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
@@ -1163,7 +1548,10 @@ describe('XtabProvider integration', () => {
 
 		it('allows whitespace-only changes when config enables them', async () => {
 			const provider = createProvider();
-			await configService.setConfig(ConfigKey.InlineEditsAllowWhitespaceOnlyChanges, true);
+			await configService.setConfig(
+				ConfigKey.InlineEditsAllowWhitespaceOnlyChanges,
+				true,
+			);
 
 			const lines = [
 				'function main() {',
@@ -1184,7 +1572,12 @@ describe('XtabProvider integration', () => {
 			];
 			streamingFetcher.setStreamingLines(responseLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			// With the config enabled, whitespace changes should pass through
@@ -1203,7 +1596,9 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			// Default prompting strategy uses EditWindowOnly response format
-			mockModelService.setSelectedConfig({ promptingStrategy: undefined });
+			mockModelService.setSelectedConfig({
+				promptingStrategy: undefined,
+			});
 
 			const lines = [
 				'function hello() {',
@@ -1222,13 +1617,20 @@ describe('XtabProvider integration', () => {
 			];
 			streamingFetcher.setStreamingLines(responseLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			expect(edits.length).toBeGreaterThan(0);
 			// Verify the edit targets the modified line
 			const firstEdit = edits[0].v.edit;
-			expect(firstEdit.newLines.some(line => line.includes('world'))).toBe(true);
+			expect(
+				firstEdit.newLines.some((line) => line.includes('world')),
+			).toBe(true);
 		});
 
 		it('UnifiedWithXml NO_CHANGE triggers cursor jump path (returns NoSuggestions when disabled)', async () => {
@@ -1239,7 +1641,10 @@ describe('XtabProvider integration', () => {
 			});
 
 			// Disable cursor prediction so the cursor jump path returns NoSuggestions
-			await configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, false);
+			await configService.setConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				false,
+			);
 
 			const lines = ['const a = 1;', 'const b = 2;'];
 			const request = createRequestWithEdit(lines, {
@@ -1250,11 +1655,18 @@ describe('XtabProvider integration', () => {
 			// NO_CHANGE tag
 			streamingFetcher.setStreamingLines(['<NO_CHANGE>']);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 		});
 
 		it('UnifiedWithXml INSERT yields insertion edit at cursor line', async () => {
@@ -1277,7 +1689,12 @@ describe('XtabProvider integration', () => {
 				'</INSERT>',
 			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			// Should have yielded at least one edit (the cursor line modification)
@@ -1306,13 +1723,20 @@ describe('XtabProvider integration', () => {
 				'</EDIT>',
 			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			expect(edits.length).toBeGreaterThan(0);
 			// Verify the edit modifies the first line
 			const firstEdit = edits[0].v.edit;
-			expect(firstEdit.newLines.some(line => line.includes('42'))).toBe(true);
+			expect(firstEdit.newLines.some((line) => line.includes('42'))).toBe(
+				true,
+			);
 		});
 
 		it('UnifiedWithXml unexpected tag returns Unexpected error', async () => {
@@ -1330,7 +1754,12 @@ describe('XtabProvider integration', () => {
 
 			streamingFetcher.setStreamingLines(['<UNKNOWN_TAG>']);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.Unexpected);
@@ -1343,11 +1772,7 @@ describe('XtabProvider integration', () => {
 				promptingStrategy: PromptingStrategy.Xtab275EditIntent,
 			});
 
-			const lines = [
-				'function hello() {',
-				'  return 1;',
-				'}',
-			];
+			const lines = ['function hello() {', '  return 1;', '}'];
 			const request = createRequestWithEdit(lines, {
 				insertionOffset: 25,
 				insertedText: 'x',
@@ -1362,7 +1787,12 @@ describe('XtabProvider integration', () => {
 			];
 			streamingFetcher.setStreamingLines(responseLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			expect(edits.length).toBeGreaterThan(0);
@@ -1375,11 +1805,7 @@ describe('XtabProvider integration', () => {
 				promptingStrategy: PromptingStrategy.Xtab275EditIntent,
 			});
 
-			const lines = [
-				'function hello() {',
-				'  return 1;',
-				'}',
-			];
+			const lines = ['function hello() {', '  return 1;', '}'];
 			const request = createRequestWithEdit(lines, {
 				insertionOffset: 25,
 				insertedText: 'x',
@@ -1394,7 +1820,12 @@ describe('XtabProvider integration', () => {
 			];
 			streamingFetcher.setStreamingLines(responseLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
@@ -1408,11 +1839,7 @@ describe('XtabProvider integration', () => {
 				promptingStrategy: PromptingStrategy.Xtab275EditIntentShort,
 			});
 
-			const lines = [
-				'function hello() {',
-				'  return 1;',
-				'}',
-			];
+			const lines = ['function hello() {', '  return 1;', '}'];
 			const request = createRequestWithEdit(lines, {
 				insertionOffset: 25,
 				insertedText: 'x',
@@ -1426,7 +1853,12 @@ describe('XtabProvider integration', () => {
 			];
 			streamingFetcher.setStreamingLines(responseLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits } = await collectEdits(gen);
 
 			expect(edits.length).toBeGreaterThan(0);
@@ -1439,11 +1871,7 @@ describe('XtabProvider integration', () => {
 				promptingStrategy: PromptingStrategy.Xtab275EditIntentShort,
 			});
 
-			const lines = [
-				'function hello() {',
-				'  return 1;',
-				'}',
-			];
+			const lines = ['function hello() {', '  return 1;', '}'];
 			const request = createRequestWithEdit(lines, {
 				insertionOffset: 25,
 				insertedText: 'x',
@@ -1457,7 +1885,12 @@ describe('XtabProvider integration', () => {
 			];
 			streamingFetcher.setStreamingLines(responseLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
@@ -1476,30 +1909,49 @@ describe('XtabProvider integration', () => {
 			// Empty response → no lines streamed
 			streamingFetcher.setStreamingLines([]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 		});
 
 		it('identical response (no diff) returns NoSuggestions', async () => {
 			const provider = createProvider();
 
 			// Disable cursor prediction so we get a clean NoSuggestions
-			await configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, false);
+			await configService.setConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				false,
+			);
 
 			const lines = ['function hello() {', '  return 1;', '}'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 5 });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 5,
+			});
 
 			// Stream back the exact same lines → no diff
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 		});
 	});
 
@@ -1510,39 +1962,64 @@ describe('XtabProvider integration', () => {
 	describe('cursor jump retry logic', () => {
 		it('no edits + cursor prediction disabled → returns NoSuggestions', async () => {
 			const provider = createProvider();
-			await configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, false);
+			await configService.setConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				false,
+			);
 
 			const lines = ['line 0', 'line 1', 'line 2'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3 });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+			});
 
 			// Stream back identical content → no diff → triggers cursor jump path
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 		});
 
 		it('no edits + cursor prediction enabled + user typed during request → skips cursor prediction', async () => {
 			const provider = createProvider();
-			await configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, true);
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName, 'test-model');
+			await configService.setConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				true,
+			);
+			await configService.setConfig(
+				ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName,
+				'test-model',
+			);
 
 			const lines = ['line 0', 'line 1', 'line 2'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3 });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+			});
 
 			// Simulate the user typing after the request was created
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(0), 'x')
+				new StringReplacement(OffsetRange.emptyAt(0), 'x'),
 			);
 
 			// Stream back identical content → no diff → would trigger cursor jump path,
 			// but intermediateUserEdit is non-empty so cursor prediction should be skipped
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
@@ -1553,18 +2030,31 @@ describe('XtabProvider integration', () => {
 
 		it('no edits + cursor prediction enabled + intermediateUserEdit undefined → skips cursor prediction', async () => {
 			const provider = createProvider();
-			await configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, true);
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName, 'test-model');
+			await configService.setConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				true,
+			);
+			await configService.setConfig(
+				ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName,
+				'test-model',
+			);
 
 			const lines = ['line 0', 'line 1', 'line 2'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3 });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+			});
 
 			// intermediateUserEdit = undefined means consistency check failed (user typed and edits diverged)
 			request.intermediateUserEdit = undefined;
 
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
@@ -1575,13 +2065,22 @@ describe('XtabProvider integration', () => {
 
 		it('same-file cursor jump with edit: retry yields edits with isFromCursorJump', async () => {
 			const provider = createProvider();
-			await configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, true);
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName, 'test-model');
+			await configService.setConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				true,
+			);
+			await configService.setConfig(
+				ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName,
+				'test-model',
+			);
 
 			// Document with 30 lines; cursor near the top.
 			// Cursor is after the inserted '\n' at the end of line 4 → cursorLineOffset=5.
 			// Edit window: [max(0,5-2), min(30,5+5+1)) = [3, 11) → lines 3..10.
-			const lines = Array.from({ length: 30 }, (_, i) => `line ${i} content`);
+			const lines = Array.from(
+				{ length: 30 },
+				(_, i) => `line ${i} content`,
+			);
 			const cursorOffset = lines.slice(0, 5).join('\n').length;
 			const request = createRequestWithEdit(lines, {
 				insertionOffset: cursorOffset,
@@ -1594,7 +2093,12 @@ describe('XtabProvider integration', () => {
 				type: ChatFetchResponseType.Success,
 				requestId: 'req-main',
 				serverRequestId: 'srv-main',
-				usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, prompt_tokens_details: { cached_tokens: 0 } },
+				usage: {
+					prompt_tokens: 0,
+					completion_tokens: 0,
+					total_tokens: 0,
+					prompt_tokens_details: { cached_tokens: 0 },
+				},
 				value: mainEditWindowLines.join('\n'),
 				resolvedModel: 'test-model',
 			});
@@ -1604,7 +2108,12 @@ describe('XtabProvider integration', () => {
 				type: ChatFetchResponseType.Success,
 				requestId: 'req-cursor',
 				serverRequestId: 'srv-cursor',
-				usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, prompt_tokens_details: { cached_tokens: 0 } },
+				usage: {
+					prompt_tokens: 0,
+					completion_tokens: 0,
+					total_tokens: 0,
+					prompt_tokens_details: { cached_tokens: 0 },
+				},
 				value: '20',
 				resolvedModel: 'test-model',
 			});
@@ -1612,10 +2121,17 @@ describe('XtabProvider integration', () => {
 			// 3rd call (retry at predicted cursor line 20):
 			// Retry edit window: [max(0,20-2), min(30,20+5+1)) = [18, 26) → lines 18..25.
 			// Return modified edit-window lines.
-			const retryEditWindowLines = lines.slice(18, 26).map((l, i) => i === 2 ? 'MODIFIED line 20 content' : l);
+			const retryEditWindowLines = lines
+				.slice(18, 26)
+				.map((l, i) => (i === 2 ? 'MODIFIED line 20 content' : l));
 			streamingFetcher.setStreamingLines(retryEditWindowLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			// Edits should have been yielded from the retry
@@ -1628,17 +2144,28 @@ describe('XtabProvider integration', () => {
 			for (const edit of edits) {
 				expect(edit.v.originalWindow).toBeDefined();
 			}
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 			// 3 total calls: main LLM + cursor prediction + retry
 			expect(streamingFetcher.callCount).toBe(3);
 		});
 
 		it('cursor jump retry does not double-retry when second call also yields no edits', async () => {
 			const provider = createProvider();
-			await configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, true);
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName, 'test-model');
+			await configService.setConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				true,
+			);
+			await configService.setConfig(
+				ConfigKey.TeamInternal.InlineEditsNextCursorPredictionModelName,
+				'test-model',
+			);
 
-			const lines = Array.from({ length: 30 }, (_, i) => `line ${i} content`);
+			const lines = Array.from(
+				{ length: 30 },
+				(_, i) => `line ${i} content`,
+			);
 			const cursorOffset = lines.slice(0, 5).join('\n').length;
 			const request = createRequestWithEdit(lines, {
 				insertionOffset: cursorOffset,
@@ -1650,7 +2177,12 @@ describe('XtabProvider integration', () => {
 				type: ChatFetchResponseType.Success,
 				requestId: 'req-main',
 				serverRequestId: 'srv-main',
-				usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, prompt_tokens_details: { cached_tokens: 0 } },
+				usage: {
+					prompt_tokens: 0,
+					completion_tokens: 0,
+					total_tokens: 0,
+					prompt_tokens_details: { cached_tokens: 0 },
+				},
 				value: mainEditWindowLines.join('\n'),
 				resolvedModel: 'test-model',
 			});
@@ -1660,7 +2192,12 @@ describe('XtabProvider integration', () => {
 				type: ChatFetchResponseType.Success,
 				requestId: 'req-cursor',
 				serverRequestId: 'srv-cursor',
-				usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, prompt_tokens_details: { cached_tokens: 0 } },
+				usage: {
+					prompt_tokens: 0,
+					completion_tokens: 0,
+					total_tokens: 0,
+					prompt_tokens_details: { cached_tokens: 0 },
+				},
 				value: '20',
 				resolvedModel: 'test-model',
 			});
@@ -1671,11 +2208,18 @@ describe('XtabProvider integration', () => {
 			const retryEditWindowLines = lines.slice(18, 26);
 			streamingFetcher.setStreamingLines(retryEditWindowLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 			// Exactly 3 calls: main + cursor prediction + retry (no further retry)
 			expect(streamingFetcher.callCount).toBe(3);
 		});
@@ -1684,7 +2228,9 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['function foo() {', '  return 1;', '}'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 5 });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 5,
+			});
 
 			// 1st call → NotFound, triggers fallback to default model
 			streamingFetcher.enqueueResponse({
@@ -1698,7 +2244,12 @@ describe('XtabProvider integration', () => {
 			const modifiedLines = ['function foo() {', '  return 42;', '}'];
 			streamingFetcher.setStreamingLines(modifiedLines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			// Should have produced edits from the retry
@@ -1707,16 +2258,23 @@ describe('XtabProvider integration', () => {
 			for (const edit of edits) {
 				expect(edit.v.isFromCursorJump).toBe(false);
 			}
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 			expect(streamingFetcher.callCount).toBe(2);
 		});
 
 		it('model fallback + identical content → NoSuggestions without looping', async () => {
 			const provider = createProvider();
-			await configService.setConfig(ConfigKey.InlineEditsNextCursorPredictionEnabled, false);
+			await configService.setConfig(
+				ConfigKey.InlineEditsNextCursorPredictionEnabled,
+				false,
+			);
 
 			const lines = ['const a = 1;', 'const b = 2;', 'const c = 3;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3 });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+			});
 
 			// 1st call → NotFound
 			streamingFetcher.enqueueResponse({
@@ -1730,11 +2288,18 @@ describe('XtabProvider integration', () => {
 			// With cursor prediction disabled, should return NoSuggestions directly
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 			// Exactly 2 calls: initial NotFound + retry with default model
 			expect(streamingFetcher.callCount).toBe(2);
 		});
@@ -1747,8 +2312,12 @@ describe('XtabProvider integration', () => {
 	describe('debounce behavior', () => {
 		it('debounce is skipped in simulation tests', async () => {
 			// Override the simulation test context to indicate we're in sim tests
-			const testingServiceCollection = createExtensionUnitTestingServices(disposables);
-			testingServiceCollection.set(IInlineEditsModelService, mockModelService);
+			const testingServiceCollection =
+				createExtensionUnitTestingServices(disposables);
+			testingServiceCollection.set(
+				IInlineEditsModelService,
+				mockModelService,
+			);
 			streamingFetcher = new StreamingMockChatMLFetcher();
 			testingServiceCollection.set(IChatMLFetcher, streamingFetcher);
 			testingServiceCollection.set(ISimulationTestContext, {
@@ -1757,25 +2326,55 @@ describe('XtabProvider integration', () => {
 				writeFile: async () => '',
 			} satisfies ISimulationTestContext);
 
-			const accessor2 = disposables.add(testingServiceCollection.createTestingAccessor());
-			const simProvider = accessor2.get(IInstantiationService).createInstance(XtabProvider);
+			const accessor2 = disposables.add(
+				testingServiceCollection.createTestingAccessor(),
+			);
+			const simProvider = accessor2
+				.get(IInstantiationService)
+				.createInstance(XtabProvider);
 
 			const lines = ['const x = 1;', 'const y = 2;'];
-			const doc = makeDocumentWithEdit(lines, { insertionOffset: 5, insertedText: 'a' });
+			const doc = makeDocumentWithEdit(lines, {
+				insertionOffset: 5,
+				insertedText: 'a',
+			});
 			const beforeText = new StringText(doc.documentBeforeEdits.value);
 			const request = new StatelessNextEditRequest(
-				'req-sim', 'opp-sim', beforeText, [doc], 0,
-				[{ docId: doc.id, kind: 'visibleRanges', visibleRanges: [new OffsetRange(0, 100)], documentContent: doc.documentAfterEdits }],
-				new DeferredPromise<Result<unknown, NoNextEditReason>>(), undefined,
+				'req-sim',
+				'opp-sim',
+				beforeText,
+				[doc],
+				0,
+				[
+					{
+						docId: doc.id,
+						kind: 'visibleRanges',
+						visibleRanges: [new OffsetRange(0, 100)],
+						documentContent: doc.documentAfterEdits,
+					},
+				],
+				new DeferredPromise<Result<unknown, NoNextEditReason>>(),
+				undefined,
 				false, // isSpeculative
-				createLogContext(), undefined, undefined, Date.now(),
+				createLogContext(),
+				undefined,
+				undefined,
+				Date.now(),
 			);
 
 			// Response with a change
-			streamingFetcher.setStreamingLines(['const x = 42;', 'const y = 2;']);
+			streamingFetcher.setStreamingLines([
+				'const x = 42;',
+				'const y = 2;',
+			]);
 
 			const startTime = Date.now();
-			const gen = simProvider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = simProvider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			await AsyncIterUtils.drainUntilReturn(gen);
 			const elapsed = Date.now() - startTime;
 
@@ -1790,10 +2389,18 @@ describe('XtabProvider integration', () => {
 			const spy = vi.spyOn(DelaySession.prototype, 'setExtraDebounce');
 
 			// Cursor at end of line (insertionOffset = 12 inserts ';' at end → cursor after last char)
-			const request = createRequestWithEdit(['const x = 1;'], { insertionOffset: 12, isSpeculative: true });
+			const request = createRequestWithEdit(['const x = 1;'], {
+				insertionOffset: 12,
+				isSpeculative: true,
+			});
 			streamingFetcher.setStreamingLines(['const x = 42;']);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(spy).not.toHaveBeenCalled();
@@ -1805,10 +2412,18 @@ describe('XtabProvider integration', () => {
 			const spy = vi.spyOn(DelaySession.prototype, 'setExtraDebounce');
 
 			// Same cursor-at-end-of-line setup, but non-speculative
-			const request = createRequestWithEdit(['const x = 1;'], { insertionOffset: 12, isSpeculative: false });
+			const request = createRequestWithEdit(['const x = 1;'], {
+				insertionOffset: 12,
+				isSpeculative: false,
+			});
 			streamingFetcher.setStreamingLines(['const x = 42;']);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(spy).toHaveBeenCalled();
@@ -1817,18 +2432,29 @@ describe('XtabProvider integration', () => {
 
 		it('cancellation during debounce exits early with GotCancelled before LLM fetch', async () => {
 			const debounceMs = 500;
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsDebounce, debounceMs);
+			await configService.setConfig(
+				ConfigKey.TeamInternal.InlineEditsDebounce,
+				debounceMs,
+			);
 
 			const provider = createProvider();
 			const lines = ['function foo() {', '  return 1;', '}'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 5, insertedText: 'c' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 5,
+				insertedText: 'c',
+			});
 			streamingFetcher.setStreamingLines(lines);
 
 			const cts = new CancellationTokenSource();
 			vi.useFakeTimers();
 			try {
 				const genPromise = AsyncIterUtils.drainUntilReturn(
-					provider.provideNextEdit(request, createMockLogger(), createLogContext(), cts.token)
+					provider.provideNextEdit(
+						request,
+						createMockLogger(),
+						createLogContext(),
+						cts.token,
+					),
 				);
 
 				// Flush pending microtasks so the provider reaches the debounce await
@@ -1838,7 +2464,9 @@ describe('XtabProvider integration', () => {
 
 				const finalValue = await genPromise;
 
-				expect(finalValue.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
+				expect(finalValue.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
 				// LLM fetch must not have been issued — cancelled before the fetch phase
 				expect(streamingFetcher.callCount).toBe(0);
 			} finally {
@@ -1849,11 +2477,17 @@ describe('XtabProvider integration', () => {
 
 		it('pre-cancelled token resolves without waiting for debounce', async () => {
 			const debounceMs = 500;
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsDebounce, debounceMs);
+			await configService.setConfig(
+				ConfigKey.TeamInternal.InlineEditsDebounce,
+				debounceMs,
+			);
 
 			const provider = createProvider();
 			const lines = ['function foo() {', '  return 1;', '}'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 5, insertedText: 'c' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 5,
+				insertedText: 'c',
+			});
 			streamingFetcher.setStreamingLines(lines);
 
 			const cts = new CancellationTokenSource();
@@ -1861,10 +2495,17 @@ describe('XtabProvider integration', () => {
 
 			vi.useFakeTimers();
 			try {
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), cts.token);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					cts.token,
+				);
 				const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
-				expect(finalValue.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
+				expect(finalValue.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
 			} finally {
 				vi.useRealTimers();
 				cts.dispose();
@@ -1881,7 +2522,10 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			streamingFetcher.setErrorResponse({
 				type: ChatFetchResponseType.RateLimited,
@@ -1893,7 +2537,12 @@ describe('XtabProvider integration', () => {
 				isAuto: false,
 			});
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.Uncategorized);
@@ -1903,7 +2552,10 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			streamingFetcher.setErrorResponse({
 				type: ChatFetchResponseType.NetworkError,
@@ -1912,7 +2564,12 @@ describe('XtabProvider integration', () => {
 				serverRequestId: undefined,
 			});
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.FetchFailure);
@@ -1922,7 +2579,10 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			streamingFetcher.setErrorResponse({
 				type: ChatFetchResponseType.Canceled,
@@ -1931,7 +2591,12 @@ describe('XtabProvider integration', () => {
 				serverRequestId: undefined,
 			});
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const finalValue = await AsyncIterUtils.drainUntilReturn(gen);
 
 			expect(finalValue.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
@@ -1953,20 +2618,32 @@ describe('XtabProvider integration', () => {
 
 			for (const [strategy, expectedSystemPrompt] of strategies) {
 				const provider = createProvider();
-				mockModelService.setSelectedConfig({ promptingStrategy: strategy });
+				mockModelService.setSelectedConfig({
+					promptingStrategy: strategy,
+				});
 
 				const lines = ['const x = 1;', 'const y = 2;'];
-				const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+				const request = createRequestWithEdit(lines, {
+					insertionOffset: 3,
+					insertedText: 'a',
+				});
 
 				streamingFetcher.setStreamingLines(lines);
 				streamingFetcher.resetTracking();
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				await AsyncIterUtils.drainUntilReturn(gen);
 
 				const captured = streamingFetcher.capturedOptions[0];
 				expect(captured).toBeDefined();
-				const systemMsg = captured.messages.find(m => m.role === Raw.ChatRole.System);
+				const systemMsg = captured.messages.find(
+					(m) => m.role === Raw.ChatRole.System,
+				);
 				expect(systemMsg).toBeDefined();
 				expect(getMessageText(systemMsg!)).toBe(expectedSystemPrompt);
 			}
@@ -1976,16 +2653,24 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;', 'const y = 2;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			await AsyncIterUtils.drainUntilReturn(gen);
 
 			const captured = streamingFetcher.capturedOptions[0];
 			expect(captured).toBeDefined();
-			const roles = captured.messages.map(m => m.role);
+			const roles = captured.messages.map((m) => m.role);
 			expect(roles).toContain(Raw.ChatRole.System);
 			expect(roles).toContain(Raw.ChatRole.User);
 		});
@@ -1994,11 +2679,19 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			await AsyncIterUtils.drainUntilReturn(gen);
 
 			const captured = streamingFetcher.capturedOptions[0];
@@ -2009,11 +2702,19 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			const lines = ['const x = 1;'];
-			const request = createRequestWithEdit(lines, { insertionOffset: 3, insertedText: 'a' });
+			const request = createRequestWithEdit(lines, {
+				insertionOffset: 3,
+				insertedText: 'a',
+			});
 
 			streamingFetcher.setStreamingLines(lines);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			await AsyncIterUtils.drainUntilReturn(gen);
 
 			const captured = streamingFetcher.capturedOptions[0];
@@ -2026,7 +2727,6 @@ describe('XtabProvider integration', () => {
 	// ========================================================================
 
 	describe('cursor-line divergence cancellation', () => {
-
 		/**
 		 * Creates a request for divergence tests.
 		 *
@@ -2059,7 +2759,11 @@ describe('XtabProvider integration', () => {
 		}
 
 		beforeEach(async () => {
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsXtabEarlyCursorLineDivergenceCancellation, EarlyDivergenceCancellationMode.Cursor);
+			await configService.setConfig(
+				ConfigKey.TeamInternal
+					.InlineEditsXtabEarlyCursorLineDivergenceCancellation,
+				EarlyDivergenceCancellationMode.Cursor,
+			);
 		});
 
 		it('cancels when user typed a character that diverges from model output', async () => {
@@ -2069,22 +2773,31 @@ describe('XtabProvider integration', () => {
 			//  User typed `x` after request → document becomes `function fix`
 			//  Model replies `function fibonacci(n: number): number`
 			//  → "x" not in model's new text → cancel
-			const request = createDivergenceRequest(
-				['function fi'],
-				{ insertionOffset: 10, insertedText: 'i' },
-			);
+			const request = createDivergenceRequest(['function fi'], {
+				insertionOffset: 10,
+				insertedText: 'i',
+			});
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(11), 'x')
+				new StringReplacement(OffsetRange.emptyAt(11), 'x'),
 			);
 
-			streamingFetcher.setStreamingLines(['function fibonacci(n: number): number']);
+			streamingFetcher.setStreamingLines([
+				'function fibonacci(n: number): number',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
 			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-			expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('cursorLineDiverged');
+			expect(
+				(finalReason.v as NoNextEditReason.GotCancelled).message,
+			).toBe('cursorLineDiverged');
 		});
 
 		it('does not cancel when user typed a character consistent with model output', async () => {
@@ -2094,23 +2807,32 @@ describe('XtabProvider integration', () => {
 			//  User typed `b` after request → document becomes `function fib`
 			//  Model replies `function fibonacci(n: number): number`
 			//  → "b" is in model's new text → no cancel
-			const request = createDivergenceRequest(
-				['function fi'],
-				{ insertionOffset: 10, insertedText: 'i' },
-			);
+			const request = createDivergenceRequest(['function fi'], {
+				insertionOffset: 10,
+				insertedText: 'i',
+			});
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(11), 'b')
+				new StringReplacement(OffsetRange.emptyAt(11), 'b'),
 			);
 
 			// Model output is a superset of user's typing
-			streamingFetcher.setStreamingLines(['function fibonacci(n: number): number']);
+			streamingFetcher.setStreamingLines([
+				'function fibonacci(n: number): number',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			// Should produce an edit (the rest of the completion), not cancel
 			expect(edits.length).toBeGreaterThan(0);
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 		});
 
 		it('does not cancel when user has not typed since request started', async () => {
@@ -2126,14 +2848,25 @@ describe('XtabProvider integration', () => {
 			// The default is StringEdit.empty, so no divergence check should trigger
 
 			// Model responds with a completely different line
-			streamingFetcher.setStreamingLines(['function bar() {', '  return 2;', '}']);
+			streamingFetcher.setStreamingLines([
+				'function bar() {',
+				'  return 2;',
+				'}',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			// Should proceed normally with the edit, not cancel
 			expect(edits.length).toBeGreaterThan(0);
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 		});
 
 		it('does not cancel when intermediateUserEdit is undefined (consistency check failed)', async () => {
@@ -2149,40 +2882,61 @@ describe('XtabProvider integration', () => {
 			// attempt the divergence check
 			request.intermediateUserEdit = undefined;
 
-			streamingFetcher.setStreamingLines(['completely different', 'content here']);
+			streamingFetcher.setStreamingLines([
+				'completely different',
+				'content here',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			// Should proceed normally, not cancel via divergence
 			expect(edits.length).toBeGreaterThan(0);
-			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.NoSuggestions);
+			expect(finalReason.v).toBeInstanceOf(
+				NoNextEditReason.NoSuggestions,
+			);
 		});
 
 		it('does not cancel the request token (only the internal fetch token)', async () => {
 			const provider = createProvider();
 
-			const request = createDivergenceRequest(
-				['hello world'],
-				{ insertionOffset: 5, insertedText: ' ' },
-			);
+			const request = createDivergenceRequest(['hello world'], {
+				insertionOffset: 5,
+				insertedText: ' ',
+			});
 
 			// User typed 'Z', diverging from model
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(11), 'Z')
+				new StringReplacement(OffsetRange.emptyAt(11), 'Z'),
 			);
 
-			streamingFetcher.setStreamingLines(['hello worlQ completely different']);
+			streamingFetcher.setStreamingLines([
+				'hello worlQ completely different',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { finalReason } = await collectEdits(gen);
 
 			// The provider should NOT cancel the request's token — it doesn't own it.
 			// It creates its own internal CancellationTokenSource for the fetch.
-			expect(request.cancellationTokenSource.token.isCancellationRequested).toBe(false);
+			expect(
+				request.cancellationTokenSource.token.isCancellationRequested,
+			).toBe(false);
 			// But it should still report the divergence
 			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-			expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('cursorLineDiverged');
+			expect(
+				(finalReason.v as NoNextEditReason.GotCancelled).message,
+			).toBe('cursorLineDiverged');
 		});
 
 		it('does not false-cancel when user inserted a line above the cursor', async () => {
@@ -2214,9 +2968,18 @@ describe('XtabProvider integration', () => {
 			]);
 
 			// Model output: compatible with user's typing ("b" → "bonacci…")
-			streamingFetcher.setStreamingLines(['import foo', 'function fibonacci(n): number', '}']);
+			streamingFetcher.setStreamingLines([
+				'import foo',
+				'function fibonacci(n): number',
+				'}',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { finalReason } = await collectEdits(gen);
 
 			// The key assertion: no false cancellation due to line-shift
@@ -2242,17 +3005,28 @@ describe('XtabProvider integration', () => {
 			);
 
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(24), 'x')
+				new StringReplacement(OffsetRange.emptyAt(24), 'x'),
 			);
 
-			streamingFetcher.setStreamingLines(['const a = 1;', 'function fibonacci(n): number', '}']);
+			streamingFetcher.setStreamingLines([
+				'const a = 1;',
+				'function fibonacci(n): number',
+				'}',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
 			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-			expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('cursorLineDiverged');
+			expect(
+				(finalReason.v as NoNextEditReason.GotCancelled).message,
+			).toBe('cursorLineDiverged');
 		});
 
 		it('does not cancel on compatible typing when cursor is not on the first line', async () => {
@@ -2265,12 +3039,21 @@ describe('XtabProvider integration', () => {
 			);
 
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(24), 'b')
+				new StringReplacement(OffsetRange.emptyAt(24), 'b'),
 			);
 
-			streamingFetcher.setStreamingLines(['const a = 1;', 'function fibonacci(n): number', '}']);
+			streamingFetcher.setStreamingLines([
+				'const a = 1;',
+				'function fibonacci(n): number',
+				'}',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { finalReason } = await collectEdits(gen);
 
 			// Should not be cancelled due to cursor-line divergence
@@ -2281,22 +3064,33 @@ describe('XtabProvider integration', () => {
 
 		it('does not cancel when feature is disabled, even with divergent typing', async () => {
 			// Explicitly disable the feature
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsXtabEarlyCursorLineDivergenceCancellation, EarlyDivergenceCancellationMode.Off);
+			await configService.setConfig(
+				ConfigKey.TeamInternal
+					.InlineEditsXtabEarlyCursorLineDivergenceCancellation,
+				EarlyDivergenceCancellationMode.Off,
+			);
 
 			const provider = createProvider();
 
-			const request = createDivergenceRequest(
-				['function fi'],
-				{ insertionOffset: 10, insertedText: 'i' },
-			);
+			const request = createDivergenceRequest(['function fi'], {
+				insertionOffset: 10,
+				insertedText: 'i',
+			});
 			// User typed 'x' — divergent from model's 'bonacci...'
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(11), 'x')
+				new StringReplacement(OffsetRange.emptyAt(11), 'x'),
 			);
 
-			streamingFetcher.setStreamingLines(['function fibonacci(n: number): number']);
+			streamingFetcher.setStreamingLines([
+				'function fibonacci(n: number): number',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			// With the feature disabled, the divergent typing should NOT cause cancellation
@@ -2319,13 +3113,21 @@ describe('XtabProvider integration', () => {
 			);
 			// User typed divergently on cursor line
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(17), 'Z')
+				new StringReplacement(OffsetRange.emptyAt(17), 'Z'),
 			);
 
 			// Model only returns first 2 lines (fewer than the 3-line edit window)
-			streamingFetcher.setStreamingLines(['line0', 'COMPLETELY DIFFERENT']);
+			streamingFetcher.setStreamingLines([
+				'line0',
+				'COMPLETELY DIFFERENT',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { finalReason } = await collectEdits(gen);
 
 			// Should NOT cancel due to cursorLineDiverged — cursor line was never streamed
@@ -2339,23 +3141,28 @@ describe('XtabProvider integration', () => {
 
 			//  Doc: "aaa\nbbb"  (cursor on line 1 = "bbb")
 			//  insertionOffset 4 = start of "bbb"
-			const request = createDivergenceRequest(
-				['aaa', 'bbb'],
-				{ insertionOffset: 4, insertedText: 'b' },
-			);
+			const request = createDivergenceRequest(['aaa', 'bbb'], {
+				insertionOffset: 4,
+				insertedText: 'b',
+			});
 
 			// The intermediateUserEdit replaces a range that spans across
 			// the cursor line boundary, making getCurrentCursorLine return undefined.
 			// Offsets in "aaa\nbbb": 'a'=0,1,2, '\n'=3, 'b'=4,5,6
 			// Replace offsets 2..6 (spans line boundary) with "Z"
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(new OffsetRange(2, 6), 'Z')
+				new StringReplacement(new OffsetRange(2, 6), 'Z'),
 			);
 
 			// Model produces different content
 			streamingFetcher.setStreamingLines(['aaa', 'COMPLETELY DIFFERENT']);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { finalReason } = await collectEdits(gen);
 
 			// Should NOT cancel via cursorLineDiverged — getCurrentCursorLine returned
@@ -2369,10 +3176,10 @@ describe('XtabProvider integration', () => {
 			const provider = createProvider();
 
 			//  Doc: "hello world"  (single line, cursor on line 0)
-			const request = createDivergenceRequest(
-				['hello world'],
-				{ insertionOffset: 5, insertedText: ' ' },
-			);
+			const request = createDivergenceRequest(['hello world'], {
+				insertionOffset: 5,
+				insertedText: ' ',
+			});
 
 			// intermediateUserEdit is empty → user's net change is zero
 			// (e.g. user typed and then backspaced)
@@ -2381,7 +3188,12 @@ describe('XtabProvider integration', () => {
 			// Model produces completely different content
 			streamingFetcher.setStreamingLines(['COMPLETELY DIFFERENT']);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			// Empty intermediateUserEdit → isEmpty() returns true → divergence check skipped
@@ -2404,16 +3216,27 @@ describe('XtabProvider integration', () => {
 			);
 			// User typed 'x' on the cursor line — divergent
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(24), 'x')
+				new StringReplacement(OffsetRange.emptyAt(24), 'x'),
 			);
 
 			// Model changes line 0 (so we get an edit yielded) and has divergent cursor line
-			streamingFetcher.setStreamingLines(['const b = 2;', 'function fibonacci(n): number', '}']);
+			streamingFetcher.setStreamingLines([
+				'const b = 2;',
+				'function fibonacci(n): number',
+				'}',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { finalReason } = await collectEdits(gen);
 			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-			expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('cursorLineDiverged');
+			expect(
+				(finalReason.v as NoNextEditReason.GotCancelled).message,
+			).toBe('cursorLineDiverged');
 		});
 
 		it('compatible with auto-close pair typing end-to-end', async () => {
@@ -2422,18 +3245,23 @@ describe('XtabProvider integration', () => {
 			//  Doc: "foo"  (single line, cursor at end)
 			//  User typed `(` which auto-closed to `()` → "foo()"
 			//  Model: "foo(x, y)" — fills the parens
-			const request = createDivergenceRequest(
-				['foo'],
-				{ insertionOffset: 2, insertedText: 'o' },
-			);
+			const request = createDivergenceRequest(['foo'], {
+				insertionOffset: 2,
+				insertedText: 'o',
+			});
 			// User typed "()" (auto-close pair)
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(3), '()')
+				new StringReplacement(OffsetRange.emptyAt(3), '()'),
 			);
 
 			streamingFetcher.setStreamingLines(['foo(x, y)']);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { finalReason } = await collectEdits(gen);
 
 			// Should NOT cancel — "()" is an auto-close pair and is a subsequence of "(x, y)"
@@ -2445,43 +3273,67 @@ describe('XtabProvider integration', () => {
 		it('backward compat: boolean true activates cursor-mode divergence', async () => {
 			// Old experiments set the config to `true` (boolean). This should
 			// be treated as EarlyDivergenceCancellationMode.Cursor.
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsXtabEarlyCursorLineDivergenceCancellation, true as any);
+			await configService.setConfig(
+				ConfigKey.TeamInternal
+					.InlineEditsXtabEarlyCursorLineDivergenceCancellation,
+				true as any,
+			);
 
 			const provider = createProvider();
 
-			const request = createDivergenceRequest(
-				['function fi'],
-				{ insertionOffset: 10, insertedText: 'i' },
-			);
+			const request = createDivergenceRequest(['function fi'], {
+				insertionOffset: 10,
+				insertedText: 'i',
+			});
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(11), 'x')
+				new StringReplacement(OffsetRange.emptyAt(11), 'x'),
 			);
 
-			streamingFetcher.setStreamingLines(['function fibonacci(n: number): number']);
+			streamingFetcher.setStreamingLines([
+				'function fibonacci(n: number): number',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBe(0);
 			expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-			expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('cursorLineDiverged');
+			expect(
+				(finalReason.v as NoNextEditReason.GotCancelled).message,
+			).toBe('cursorLineDiverged');
 		});
 
 		it('backward compat: boolean false disables divergence', async () => {
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsXtabEarlyCursorLineDivergenceCancellation, false as any);
+			await configService.setConfig(
+				ConfigKey.TeamInternal
+					.InlineEditsXtabEarlyCursorLineDivergenceCancellation,
+				false as any,
+			);
 
 			const provider = createProvider();
-			const request = createDivergenceRequest(
-				['function fi'],
-				{ insertionOffset: 10, insertedText: 'i' },
-			);
+			const request = createDivergenceRequest(['function fi'], {
+				insertionOffset: 10,
+				insertedText: 'i',
+			});
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(11), 'x')
+				new StringReplacement(OffsetRange.emptyAt(11), 'x'),
 			);
 
-			streamingFetcher.setStreamingLines(['function fibonacci(n: number): number']);
+			streamingFetcher.setStreamingLines([
+				'function fibonacci(n: number): number',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBeGreaterThan(0);
@@ -2491,20 +3343,31 @@ describe('XtabProvider integration', () => {
 		});
 
 		it('backward compat: undefined disables divergence', async () => {
-			await configService.setConfig(ConfigKey.TeamInternal.InlineEditsXtabEarlyCursorLineDivergenceCancellation, undefined as any);
+			await configService.setConfig(
+				ConfigKey.TeamInternal
+					.InlineEditsXtabEarlyCursorLineDivergenceCancellation,
+				undefined as any,
+			);
 
 			const provider = createProvider();
-			const request = createDivergenceRequest(
-				['function fi'],
-				{ insertionOffset: 10, insertedText: 'i' },
-			);
+			const request = createDivergenceRequest(['function fi'], {
+				insertionOffset: 10,
+				insertedText: 'i',
+			});
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(11), 'x')
+				new StringReplacement(OffsetRange.emptyAt(11), 'x'),
 			);
 
-			streamingFetcher.setStreamingLines(['function fibonacci(n: number): number']);
+			streamingFetcher.setStreamingLines([
+				'function fibonacci(n: number): number',
+			]);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { edits, finalReason } = await collectEdits(gen);
 
 			expect(edits.length).toBeGreaterThan(0);
@@ -2514,7 +3377,6 @@ describe('XtabProvider integration', () => {
 		});
 
 		describe('cursor mode — adversarial scenarios', () => {
-
 			it('ignores divergence on line BEFORE the cursor', async () => {
 				const provider = createProvider();
 
@@ -2526,16 +3388,23 @@ describe('XtabProvider integration', () => {
 				);
 				// User inserts 'Z' at offset 4 (in "line0") → "lineZ0"
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(4), 'Z')
+					new StringReplacement(OffsetRange.emptyAt(4), 'Z'),
 				);
 
 				streamingFetcher.setStreamingLines(['line0', 'line1', 'line2']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('cursorLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'cursorLineDiverged',
+					);
 				}
 			});
 
@@ -2550,16 +3419,23 @@ describe('XtabProvider integration', () => {
 				);
 				// User inserts 'Z' at offset 16 (in "line2") → "lineZ2"
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(16), 'Z')
+					new StringReplacement(OffsetRange.emptyAt(16), 'Z'),
 				);
 
 				streamingFetcher.setStreamingLines(['line0', 'line1', 'line2']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('cursorLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'cursorLineDiverged',
+					);
 				}
 			});
 
@@ -2568,21 +3444,30 @@ describe('XtabProvider integration', () => {
 
 				//  Doc: "aaa\nbbb\nccc"  cursor on line 2 = last line
 				//  User typed 'X' on cursor line, model has different text
-				const request = createDivergenceRequest(
-					['aaa', 'bbb', 'ccc'],
-					{ insertionOffset: 10, insertedText: 'c' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb', 'ccc'], {
+					insertionOffset: 10,
+					insertedText: 'c',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(11), 'X')
+					new StringReplacement(OffsetRange.emptyAt(11), 'X'),
 				);
 
 				streamingFetcher.setStreamingLines(['aaa', 'bbb', 'cccY']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('cursorLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('cursorLineDiverged');
 			});
 
 			it('does not cancel when user deleted text on cursor line but model matches result', async () => {
@@ -2591,21 +3476,28 @@ describe('XtabProvider integration', () => {
 				//  Doc: "foobar"  cursor on line 0
 				//  User deleted "bar" (offsets 3..6) → "foo"
 				//  Model also produces "foo"
-				const request = createDivergenceRequest(
-					['foobar'],
-					{ insertionOffset: 5, insertedText: 'r' },
-				);
+				const request = createDivergenceRequest(['foobar'], {
+					insertionOffset: 5,
+					insertedText: 'r',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(new OffsetRange(3, 6), '')
+					new StringReplacement(new OffsetRange(3, 6), ''),
 				);
 
 				streamingFetcher.setStreamingLines(['foo']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('cursorLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'cursorLineDiverged',
+					);
 				}
 			});
 
@@ -2615,21 +3507,30 @@ describe('XtabProvider integration', () => {
 				//  Doc: "hello world"  cursor on line 0
 				//  User replaced "world" (5..11) with "earth" → "hello earth"
 				//  Model: "hello mars"
-				const request = createDivergenceRequest(
-					['hello world'],
-					{ insertionOffset: 10, insertedText: 'd' },
-				);
+				const request = createDivergenceRequest(['hello world'], {
+					insertionOffset: 10,
+					insertedText: 'd',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(new OffsetRange(6, 11), 'earth')
+					new StringReplacement(new OffsetRange(6, 11), 'earth'),
 				);
 
 				streamingFetcher.setStreamingLines(['hello mars']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('cursorLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('cursorLineDiverged');
 			});
 
 			it('does not cancel when user typed multiple compatible chars', async () => {
@@ -2638,21 +3539,28 @@ describe('XtabProvider integration', () => {
 				//  Doc: "let "  cursor on line 0
 				//  User typed "abc" → "let abc"
 				//  Model: "let abcdef = 1;" — continues the user's text
-				const request = createDivergenceRequest(
-					['let '],
-					{ insertionOffset: 3, insertedText: ' ' },
-				);
+				const request = createDivergenceRequest(['let '], {
+					insertionOffset: 3,
+					insertedText: ' ',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(4), 'abc')
+					new StringReplacement(OffsetRange.emptyAt(4), 'abc'),
 				);
 
 				streamingFetcher.setStreamingLines(['let abcdef = 1;']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('cursorLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'cursorLineDiverged',
+					);
 				}
 			});
 
@@ -2662,28 +3570,40 @@ describe('XtabProvider integration', () => {
 				//  Doc: "foo"  cursor on line 0
 				//  User typed 'b' → "foob"
 				//  Model: "" (empty line)
-				const request = createDivergenceRequest(
-					['foo'],
-					{ insertionOffset: 2, insertedText: 'o' },
-				);
+				const request = createDivergenceRequest(['foo'], {
+					insertionOffset: 2,
+					insertedText: 'o',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(3), 'b')
+					new StringReplacement(OffsetRange.emptyAt(3), 'b'),
 				);
 
 				streamingFetcher.setStreamingLines(['']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('cursorLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('cursorLineDiverged');
 			});
 		});
 
 		describe('editWindow mode', () => {
-
 			beforeEach(async () => {
-				await configService.setConfig(ConfigKey.TeamInternal.InlineEditsXtabEarlyCursorLineDivergenceCancellation, EarlyDivergenceCancellationMode.EditWindow);
+				await configService.setConfig(
+					ConfigKey.TeamInternal
+						.InlineEditsXtabEarlyCursorLineDivergenceCancellation,
+					EarlyDivergenceCancellationMode.EditWindow,
+				);
 			});
 
 			// ── Basic divergence detection ──────────────────────────────────
@@ -2703,38 +3623,62 @@ describe('XtabProvider integration', () => {
 
 				// User edits line 0 (non-cursor) divergently
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(11), 'Z')
+					new StringReplacement(OffsetRange.emptyAt(11), 'Z'),
 				);
 
-				streamingFetcher.setStreamingLines(['const a = 1;', 'function fibonacci(n): number', '}']);
+				streamingFetcher.setStreamingLines([
+					'const a = 1;',
+					'function fibonacci(n): number',
+					'}',
+				]);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { edits, finalReason } = await collectEdits(gen);
 
 				expect(edits.length).toBe(0);
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			it('cancels on cursor-line divergence in editWindow mode', async () => {
 				const provider = createProvider();
 
-				const request = createDivergenceRequest(
-					['function fi'],
-					{ insertionOffset: 10, insertedText: 'i' },
-				);
+				const request = createDivergenceRequest(['function fi'], {
+					insertionOffset: 10,
+					insertedText: 'i',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(11), 'x')
+					new StringReplacement(OffsetRange.emptyAt(11), 'x'),
 				);
 
-				streamingFetcher.setStreamingLines(['function fibonacci(n: number): number']);
+				streamingFetcher.setStreamingLines([
+					'function fibonacci(n: number): number',
+				]);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { edits, finalReason } = await collectEdits(gen);
 
 				expect(edits.length).toBe(0);
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			// ── Compatible edits — no cancellation ──────────────────────────
@@ -2752,16 +3696,27 @@ describe('XtabProvider integration', () => {
 				);
 
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(11), '2')
+					new StringReplacement(OffsetRange.emptyAt(11), '2'),
 				);
 
-				streamingFetcher.setStreamingLines(['const a = 123;', 'function fibonacci(n): number', '}']);
+				streamingFetcher.setStreamingLines([
+					'const a = 123;',
+					'function fibonacci(n): number',
+					'}',
+				]);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -2769,38 +3724,56 @@ describe('XtabProvider integration', () => {
 				const provider = createProvider();
 
 				//  intermediateUserEdit is empty → no user typing since request
-				const request = createDivergenceRequest(
-					['aaa', 'bbb', 'ccc'],
-					{ insertionOffset: 4, insertedText: 'b' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb', 'ccc'], {
+					insertionOffset: 4,
+					insertedText: 'b',
+				});
 				// Default: StringEdit.empty (no changes)
 
-				streamingFetcher.setStreamingLines(['COMPLETELY', 'DIFFERENT', 'LINES']);
+				streamingFetcher.setStreamingLines([
+					'COMPLETELY',
+					'DIFFERENT',
+					'LINES',
+				]);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
 			it('does not cancel when intermediateUserEdit is undefined', async () => {
 				const provider = createProvider();
 
-				const request = createDivergenceRequest(
-					['aaa', 'bbb'],
-					{ insertionOffset: 4, insertedText: 'b' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb'], {
+					insertionOffset: 4,
+					insertedText: 'b',
+				});
 				request.intermediateUserEdit = undefined;
 
 				streamingFetcher.setStreamingLines(['COMPLETELY', 'DIFFERENT']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -2823,13 +3796,24 @@ describe('XtabProvider integration', () => {
 					new StringReplacement(OffsetRange.emptyAt(17), '2'),
 				]);
 
-				streamingFetcher.setStreamingLines(['let a12 = 1;', 'let b', 'let c23 = 3;']);
+				streamingFetcher.setStreamingLines([
+					'let a12 = 1;',
+					'let b',
+					'let c23 = 3;',
+				]);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -2840,23 +3824,32 @@ describe('XtabProvider integration', () => {
 
 				//  Doc: "aaa\nbbb\nccc"  cursor on line 1
 				//  User changed line 0 divergently
-				const request = createDivergenceRequest(
-					['aaa', 'bbb', 'ccc'],
-					{ insertionOffset: 5, insertedText: 'b' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb', 'ccc'], {
+					insertionOffset: 5,
+					insertedText: 'b',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(2), 'Z')
+					new StringReplacement(OffsetRange.emptyAt(2), 'Z'),
 				);
 
 				// Model keeps "aaa" unchanged — diverges from user's "aaZa"
 				streamingFetcher.setStreamingLines(['aaa', 'bbb', 'ccc']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { edits, finalReason } = await collectEdits(gen);
 
 				expect(edits.length).toBe(0);
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			it('cancels on divergence at the very last line of the edit window', async () => {
@@ -2864,23 +3857,32 @@ describe('XtabProvider integration', () => {
 
 				//  Doc: "aaa\nbbb\nccc"  cursor on line 0
 				//  User changed last line (line 2) divergently
-				const request = createDivergenceRequest(
-					['aaa', 'bbb', 'ccc'],
-					{ insertionOffset: 2, insertedText: 'a' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb', 'ccc'], {
+					insertionOffset: 2,
+					insertedText: 'a',
+				});
 				// Insert 'Z' at offset 10 (in "ccc") → "ccZc"
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(10), 'Z')
+					new StringReplacement(OffsetRange.emptyAt(10), 'Z'),
 				);
 
 				// Model keeps "ccc" unchanged — diverges from user's "ccZc"
 				streamingFetcher.setStreamingLines(['aaa', 'bbb', 'ccc']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			it('cancels at the first divergent line when multiple lines diverge', async () => {
@@ -2889,25 +3891,34 @@ describe('XtabProvider integration', () => {
 				//  Doc: "aaa\nbbb\nccc"  cursor on line 1
 				//  User edited BOTH line 0 and line 2 divergently.
 				//  Divergence should be detected at line 0 (first streamed line).
-				const request = createDivergenceRequest(
-					['aaa', 'bbb', 'ccc'],
-					{ insertionOffset: 5, insertedText: 'b' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb', 'ccc'], {
+					insertionOffset: 5,
+					insertedText: 'b',
+				});
 				request.intermediateUserEdit = StringEdit.create([
-					new StringReplacement(OffsetRange.emptyAt(2), 'X'),   // line 0: "aaXa"
-					new StringReplacement(OffsetRange.emptyAt(10), 'Y'),  // line 2: "ccYc"
+					new StringReplacement(OffsetRange.emptyAt(2), 'X'), // line 0: "aaXa"
+					new StringReplacement(OffsetRange.emptyAt(10), 'Y'), // line 2: "ccYc"
 				]);
 
 				// Model keeps both lines unchanged
 				streamingFetcher.setStreamingLines(['aaa', 'bbb', 'ccc']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { edits, finalReason } = await collectEdits(gen);
 
 				// Cancelled at line 0 — no edits should have been yielded
 				expect(edits.length).toBe(0);
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			it('cancels on second line when first line is compatible but second diverges', async () => {
@@ -2915,23 +3926,32 @@ describe('XtabProvider integration', () => {
 
 				//  Doc: "aaa\nbbb\nccc"  cursor on line 2
 				//  User edited line 0 compatibly ("a" → "ab...") and line 1 divergently
-				const request = createDivergenceRequest(
-					['aaa', 'bbb', 'ccc'],
-					{ insertionOffset: 10, insertedText: 'c' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb', 'ccc'], {
+					insertionOffset: 10,
+					insertedText: 'c',
+				});
 				request.intermediateUserEdit = StringEdit.create([
-					new StringReplacement(OffsetRange.emptyAt(3), 'b'),   // line 0: "aaab" — compatible with "aaabcd"
-					new StringReplacement(OffsetRange.emptyAt(6), 'Z'),   // line 1: "bbbZ" — diverges from model's "bbb"
+					new StringReplacement(OffsetRange.emptyAt(3), 'b'), // line 0: "aaab" — compatible with "aaabcd"
+					new StringReplacement(OffsetRange.emptyAt(6), 'Z'), // line 1: "bbbZ" — diverges from model's "bbb"
 				]);
 
 				// Model: line 0 is a continuation, line 1 unchanged
 				streamingFetcher.setStreamingLines(['aaabcd', 'bbb', 'ccc']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			// ── Line-shift scenarios ────────────────────────────────────────
@@ -2951,13 +3971,24 @@ describe('XtabProvider integration', () => {
 					new StringReplacement(OffsetRange.emptyAt(22), 'b'),
 				]);
 
-				streamingFetcher.setStreamingLines(['import foo', 'function fibonacci(n): number', '}']);
+				streamingFetcher.setStreamingLines([
+					'import foo',
+					'function fibonacci(n): number',
+					'}',
+				]);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -2974,18 +4005,32 @@ describe('XtabProvider integration', () => {
 					{ insertionOffset: 14, insertedText: 'd' },
 				);
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(new OffsetRange(4, 8), '')
+					new StringReplacement(new OffsetRange(4, 8), ''),
 				);
 
 				// Model produces lines matching the original (not the shifted doc)
-				streamingFetcher.setStreamingLines(['aaa', 'bbb', 'ccc', 'ddd']);
+				streamingFetcher.setStreamingLines([
+					'aaa',
+					'bbb',
+					'ccc',
+					'ddd',
+				]);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				// In editWindow mode, the shifted content causes divergence at line 1
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			// ── Ambiguous mapping → skip (no false cancel) ──────────────────
@@ -3003,24 +4048,35 @@ describe('XtabProvider integration', () => {
 				//
 				//  However, line 0 is also affected: "aaa" → "aaZZb", so model
 				//  must be compatible with line 0's change.
-				const request = createDivergenceRequest(
-					['aaa', 'bbb', 'ccc'],
-					{ insertionOffset: 10, insertedText: 'c' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb', 'ccc'], {
+					insertionOffset: 10,
+					insertedText: 'c',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(new OffsetRange(2, 6), 'ZZ')
+					new StringReplacement(new OffsetRange(2, 6), 'ZZ'),
 				);
 
 				// Model's line 0 is a compatible continuation of the user's change
 				// (user changed "aaa" → "aaZZb", model has "aaZZb..." starting with that)
-				streamingFetcher.setStreamingLines(['aaZZb_more', 'ANYTHING', 'ccc']);
+				streamingFetcher.setStreamingLines([
+					'aaZZb_more',
+					'ANYTHING',
+					'ccc',
+				]);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				// Line 1 is skipped (ambiguous), line 0 is compatible → no cancel
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -3036,17 +4092,24 @@ describe('XtabProvider integration', () => {
 					{ insertionOffset: 10, insertedText: '1' },
 				);
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(16), 'Z')
+					new StringReplacement(OffsetRange.emptyAt(16), 'Z'),
 				);
 
 				// Model only returns 2 lines — line 2 is never streamed
 				streamingFetcher.setStreamingLines(['line0', 'line1']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -3058,21 +4121,30 @@ describe('XtabProvider integration', () => {
 				//  Doc: "foobar\ncursor"  cursor on line 1
 				//  User deleted "bar" from line 0 (offsets 3..6) → "foo"
 				//  Model echoes "foobar" unchanged
-				const request = createDivergenceRequest(
-					['foobar', 'cursor'],
-					{ insertionOffset: 7, insertedText: 'c' },
-				);
+				const request = createDivergenceRequest(['foobar', 'cursor'], {
+					insertionOffset: 7,
+					insertedText: 'c',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(new OffsetRange(3, 6), '')
+					new StringReplacement(new OffsetRange(3, 6), ''),
 				);
 
 				streamingFetcher.setStreamingLines(['foobar', 'cursor']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			it('does not cancel when user deleted text on non-cursor line and model matches result', async () => {
@@ -3081,21 +4153,28 @@ describe('XtabProvider integration', () => {
 				//  Doc: "foobar\ncursor"  cursor on line 1
 				//  User deleted "bar" from line 0 (offsets 3..6) → "foo"
 				//  Model also produces "foo" → identical to current state
-				const request = createDivergenceRequest(
-					['foobar', 'cursor'],
-					{ insertionOffset: 7, insertedText: 'c' },
-				);
+				const request = createDivergenceRequest(['foobar', 'cursor'], {
+					insertionOffset: 7,
+					insertedText: 'c',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(new OffsetRange(3, 6), '')
+					new StringReplacement(new OffsetRange(3, 6), ''),
 				);
 
 				streamingFetcher.setStreamingLines(['foo', 'cursor']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -3110,17 +4189,26 @@ describe('XtabProvider integration', () => {
 					{ insertionOffset: 13, insertedText: 'u' },
 				);
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(new OffsetRange(6, 11), 'earth')
+					new StringReplacement(new OffsetRange(6, 11), 'earth'),
 				);
 
 				streamingFetcher.setStreamingLines(['hello mars', 'cursor']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { edits, finalReason } = await collectEdits(gen);
 
 				expect(edits.length).toBe(0);
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			// ── Auto-close pairs on non-cursor lines ────────────────────────
@@ -3131,21 +4219,28 @@ describe('XtabProvider integration', () => {
 				//  Doc: "foo\ncursor"  cursor on line 1
 				//  User typed "()" on line 0 (auto-close pair) → "foo()"
 				//  Model: "foo(x, y)" — fills the parens
-				const request = createDivergenceRequest(
-					['foo', 'cursor'],
-					{ insertionOffset: 5, insertedText: 'u' },
-				);
+				const request = createDivergenceRequest(['foo', 'cursor'], {
+					insertionOffset: 5,
+					insertedText: 'u',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(3), '()')
+					new StringReplacement(OffsetRange.emptyAt(3), '()'),
 				);
 
 				streamingFetcher.setStreamingLines(['foo(x, y)', 'cursor']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -3155,22 +4250,31 @@ describe('XtabProvider integration', () => {
 				//  Doc: "foo\ncursor"  cursor on line 1
 				//  User typed "()" on line 0 → "foo()"
 				//  Model: "foo(x, y" — no closing paren
-				const request = createDivergenceRequest(
-					['foo', 'cursor'],
-					{ insertionOffset: 5, insertedText: 'u' },
-				);
+				const request = createDivergenceRequest(['foo', 'cursor'], {
+					insertionOffset: 5,
+					insertedText: 'u',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(3), '()')
+					new StringReplacement(OffsetRange.emptyAt(3), '()'),
 				);
 
 				streamingFetcher.setStreamingLines(['foo(x, y', 'cursor']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { edits, finalReason } = await collectEdits(gen);
 
 				expect(edits.length).toBe(0);
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			// ── Single-line edit window ─────────────────────────────────────
@@ -3178,41 +4282,57 @@ describe('XtabProvider integration', () => {
 			it('cancels on divergence in a single-line edit window', async () => {
 				const provider = createProvider();
 
-				const request = createDivergenceRequest(
-					['hello'],
-					{ insertionOffset: 4, insertedText: 'o' },
-				);
+				const request = createDivergenceRequest(['hello'], {
+					insertionOffset: 4,
+					insertedText: 'o',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(5), 'X')
+					new StringReplacement(OffsetRange.emptyAt(5), 'X'),
 				);
 
 				streamingFetcher.setStreamingLines(['helloY']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			it('does not cancel compatible edit in a single-line edit window', async () => {
 				const provider = createProvider();
 
-				const request = createDivergenceRequest(
-					['hello'],
-					{ insertionOffset: 4, insertedText: 'o' },
-				);
+				const request = createDivergenceRequest(['hello'], {
+					insertionOffset: 4,
+					insertedText: 'o',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(5), ' w')
+					new StringReplacement(OffsetRange.emptyAt(5), ' w'),
 				);
 
 				streamingFetcher.setStreamingLines(['hello world!']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -3224,22 +4344,31 @@ describe('XtabProvider integration', () => {
 				//  Doc: "foo\ncursor"  cursor on line 1
 				//  User typed 'b' on line 0 → "foob"
 				//  Model: "" (empty) for line 0
-				const request = createDivergenceRequest(
-					['foo', 'cursor'],
-					{ insertionOffset: 5, insertedText: 'u' },
-				);
+				const request = createDivergenceRequest(['foo', 'cursor'], {
+					insertionOffset: 5,
+					insertedText: 'u',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(3), 'b')
+					new StringReplacement(OffsetRange.emptyAt(3), 'b'),
 				);
 
 				streamingFetcher.setStreamingLines(['', 'cursor']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { edits, finalReason } = await collectEdits(gen);
 
 				expect(edits.length).toBe(0);
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			// ── Net-zero user edit → no cancellation ────────────────────────
@@ -3247,19 +4376,26 @@ describe('XtabProvider integration', () => {
 			it('does not cancel when user edit is net-zero (typed then backspaced)', async () => {
 				const provider = createProvider();
 
-				const request = createDivergenceRequest(
-					['aaa', 'bbb'],
-					{ insertionOffset: 5, insertedText: 'b' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb'], {
+					insertionOffset: 5,
+					insertedText: 'b',
+				});
 				request.intermediateUserEdit = StringEdit.empty;
 
 				streamingFetcher.setStreamingLines(['COMPLETELY', 'DIFFERENT']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -3276,16 +4412,23 @@ describe('XtabProvider integration', () => {
 					{ insertionOffset: 11, insertedText: 'u' },
 				);
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(0), '  ')
+					new StringReplacement(OffsetRange.emptyAt(0), '  '),
 				);
 
 				streamingFetcher.setStreamingLines(['  return 42;', 'cursor']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -3294,29 +4437,45 @@ describe('XtabProvider integration', () => {
 			it('does not cancel the request token, only the internal fetch token', async () => {
 				const provider = createProvider();
 
-				const request = createDivergenceRequest(
-					['aaa', 'bbb'],
-					{ insertionOffset: 5, insertedText: 'b' },
-				);
+				const request = createDivergenceRequest(['aaa', 'bbb'], {
+					insertionOffset: 5,
+					insertedText: 'b',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(2), 'Z')
+					new StringReplacement(OffsetRange.emptyAt(2), 'Z'),
 				);
 
 				streamingFetcher.setStreamingLines(['aaa', 'bbb']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
-				expect(request.cancellationTokenSource.token.isCancellationRequested).toBe(false);
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				expect((finalReason.v as NoNextEditReason.GotCancelled).message).toBe('editWindowLineDiverged');
+				expect(
+					request.cancellationTokenSource.token
+						.isCancellationRequested,
+				).toBe(false);
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				expect(
+					(finalReason.v as NoNextEditReason.GotCancelled).message,
+				).toBe('editWindowLineDiverged');
 			});
 
 			// ── Mode contrast: cursor mode ignores non-cursor lines ─────────
 
 			it('does not cancel non-cursor line divergence in cursor mode', async () => {
 				// Switch to cursor mode — only cursor line should be checked
-				await configService.setConfig(ConfigKey.TeamInternal.InlineEditsXtabEarlyCursorLineDivergenceCancellation, EarlyDivergenceCancellationMode.Cursor);
+				await configService.setConfig(
+					ConfigKey.TeamInternal
+						.InlineEditsXtabEarlyCursorLineDivergenceCancellation,
+					EarlyDivergenceCancellationMode.Cursor,
+				);
 
 				const provider = createProvider();
 
@@ -3330,18 +4489,31 @@ describe('XtabProvider integration', () => {
 				);
 
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(11), 'Z')
+					new StringReplacement(OffsetRange.emptyAt(11), 'Z'),
 				);
 
-				streamingFetcher.setStreamingLines(['const a = 1;', 'function fibonacci(n): number', '}']);
+				streamingFetcher.setStreamingLines([
+					'const a = 1;',
+					'function fibonacci(n): number',
+					'}',
+				]);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
 				// Cursor mode: only cursor line is checked, and cursor line wasn't changed
 				if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
-					expect(finalReason.v.message).not.toBe('cursorLineDiverged');
-					expect(finalReason.v.message).not.toBe('editWindowLineDiverged');
+					expect(finalReason.v.message).not.toBe(
+						'cursorLineDiverged',
+					);
+					expect(finalReason.v.message).not.toBe(
+						'editWindowLineDiverged',
+					);
 				}
 			});
 
@@ -3351,21 +4523,29 @@ describe('XtabProvider integration', () => {
 				const provider = createProvider();
 
 				// Same simple divergence scenario but verify the reason string specifically
-				const request = createDivergenceRequest(
-					['abc'],
-					{ insertionOffset: 2, insertedText: 'c' },
-				);
+				const request = createDivergenceRequest(['abc'], {
+					insertionOffset: 2,
+					insertedText: 'c',
+				});
 				request.intermediateUserEdit = StringEdit.single(
-					new StringReplacement(OffsetRange.emptyAt(3), 'X')
+					new StringReplacement(OffsetRange.emptyAt(3), 'X'),
 				);
 
 				streamingFetcher.setStreamingLines(['abcY']);
 
-				const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+				const gen = provider.provideNextEdit(
+					request,
+					createMockLogger(),
+					createLogContext(),
+					CancellationToken.None,
+				);
 				const { finalReason } = await collectEdits(gen);
 
-				expect(finalReason.v).toBeInstanceOf(NoNextEditReason.GotCancelled);
-				const msg = (finalReason.v as NoNextEditReason.GotCancelled).message;
+				expect(finalReason.v).toBeInstanceOf(
+					NoNextEditReason.GotCancelled,
+				);
+				const msg = (finalReason.v as NoNextEditReason.GotCancelled)
+					.message;
 				expect(msg).toBe('editWindowLineDiverged');
 				expect(msg).not.toBe('cursorLineDiverged');
 			});
@@ -3378,17 +4558,22 @@ describe('XtabProvider integration', () => {
 			//  User typed `t` after request → document becomes `class Point`
 			//  Model replies `class Point {`
 			//  → "t" starts "t {" → compatible, no cancel
-			const request = createDivergenceRequest(
-				['class Poin'],
-				{ insertionOffset: 9, insertedText: 'n' },
-			);
+			const request = createDivergenceRequest(['class Poin'], {
+				insertionOffset: 9,
+				insertedText: 'n',
+			});
 			request.intermediateUserEdit = StringEdit.single(
-				new StringReplacement(OffsetRange.emptyAt(10), 't')
+				new StringReplacement(OffsetRange.emptyAt(10), 't'),
 			);
 
 			streamingFetcher.setStreamingLines(['class Point {']);
 
-			const gen = provider.provideNextEdit(request, createMockLogger(), createLogContext(), CancellationToken.None);
+			const gen = provider.provideNextEdit(
+				request,
+				createMockLogger(),
+				createLogContext(),
+				CancellationToken.None,
+			);
 			const { finalReason } = await collectEdits(gen);
 
 			if (finalReason.v instanceof NoNextEditReason.GotCancelled) {
@@ -3398,16 +4583,12 @@ describe('XtabProvider integration', () => {
 	});
 });
 suite('filterOutEditsWithSubstrings', () => {
-
 	function makeEdit(newLines: string[]): LineReplacement {
 		return new LineReplacement(new LineRange(1, 2), newLines);
 	}
 
 	test('should return all edits when no lines contain any forbidden substring', () => {
-		const edits = [
-			makeEdit(['const x = 1;']),
-			makeEdit(['const y = 2;']),
-		];
+		const edits = [makeEdit(['const x = 1;']), makeEdit(['const y = 2;'])];
 		const result = filterOutEditsWithSubstrings(edits, ['<|forbidden|>']);
 		expect(result).toEqual(edits);
 	});
@@ -3415,7 +4596,10 @@ suite('filterOutEditsWithSubstrings', () => {
 	test('should filter out edits where a line contains a forbidden substring', () => {
 		const kept = makeEdit(['const x = 1;']);
 		const filtered = makeEdit(['<|current_file_content|>some text']);
-		const result = filterOutEditsWithSubstrings([kept, filtered], ['<|current_file_content|>']);
+		const result = filterOutEditsWithSubstrings(
+			[kept, filtered],
+			['<|current_file_content|>'],
+		);
 		expect(result).toEqual([kept]);
 	});
 
@@ -3423,19 +4607,28 @@ suite('filterOutEditsWithSubstrings', () => {
 		const e1 = makeEdit(['hello world']);
 		const e2 = makeEdit(['<|diff_marker|>']);
 		const e3 = makeEdit(['<|current_file_content|>']);
-		const result = filterOutEditsWithSubstrings([e1, e2, e3], ['<|diff_marker|>', '<|current_file_content|>']);
+		const result = filterOutEditsWithSubstrings(
+			[e1, e2, e3],
+			['<|diff_marker|>', '<|current_file_content|>'],
+		);
 		expect(result).toEqual([e1]);
 	});
 
 	test('should filter out edit if any line in newLines contains a forbidden substring', () => {
 		const edit = makeEdit(['line 1', '<|diff_marker|> line 2', 'line 3']);
-		const result = filterOutEditsWithSubstrings([edit], ['<|diff_marker|>']);
+		const result = filterOutEditsWithSubstrings(
+			[edit],
+			['<|diff_marker|>'],
+		);
 		expect(result).toEqual([]);
 	});
 
 	test('should keep edit when lines are close to but do not match the substring', () => {
 		const edit = makeEdit(['<|diff_marke|>']);
-		const result = filterOutEditsWithSubstrings([edit], ['<|diff_marker|>']);
+		const result = filterOutEditsWithSubstrings(
+			[edit],
+			['<|diff_marker|>'],
+		);
 		expect(result).toEqual([edit]);
 	});
 
@@ -3444,7 +4637,10 @@ suite('filterOutEditsWithSubstrings', () => {
 			makeEdit(['<|current_file_content|>']),
 			makeEdit(['<|diff_marker|>']),
 		];
-		const result = filterOutEditsWithSubstrings(edits, ['<|current_file_content|>', '<|diff_marker|>']);
+		const result = filterOutEditsWithSubstrings(edits, [
+			'<|current_file_content|>',
+			'<|diff_marker|>',
+		]);
 		expect(result).toEqual([]);
 	});
 
@@ -3464,13 +4660,15 @@ suite('filterOutEditsWithSubstrings', () => {
 
 	test('should keep edits with empty newLines', () => {
 		const edit = makeEdit([]);
-		const result = filterOutEditsWithSubstrings([edit], ['<|diff_marker|>']);
+		const result = filterOutEditsWithSubstrings(
+			[edit],
+			['<|diff_marker|>'],
+		);
 		expect(result).toEqual([edit]);
 	});
 });
 
 suite('getNextCursorColumn', () => {
-
 	/** Inserts a `|` cursor marker at the computed column position (1-based). */
 	function colWithMarker(line: string | undefined): string {
 		const column = XtabProvider.getNextCursorColumn(line);
@@ -3479,15 +4677,21 @@ suite('getNextCursorColumn', () => {
 	}
 
 	test('indented with spaces', () => {
-		expect(colWithMarker('    const x = 1;')).toMatchInlineSnapshot(`"    |const x = 1;"`);
+		expect(colWithMarker('    const x = 1;')).toMatchInlineSnapshot(
+			`"    |const x = 1;"`,
+		);
 	});
 
 	test('indented with tabs', () => {
-		expect(colWithMarker('\t\treturn;')).toMatchInlineSnapshot(`"		|return;"`);
+		expect(colWithMarker('\t\treturn;')).toMatchInlineSnapshot(
+			`"		|return;"`,
+		);
 	});
 
 	test('no leading whitespace', () => {
-		expect(colWithMarker('function foo() {')).toMatchInlineSnapshot(`"|function foo() {"`);
+		expect(colWithMarker('function foo() {')).toMatchInlineSnapshot(
+			`"|function foo() {"`,
+		);
 	});
 
 	test('empty string', () => {

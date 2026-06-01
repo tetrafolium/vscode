@@ -3,31 +3,50 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { suite, test } from 'node:test';
-import assert from 'node:assert/strict';
-import { WorkspaceEdit, TextDocument, getLanguageModes, ClientCapabilities } from '../modes/languageModes.js';
-import { getNodeFileFS } from '../node/nodeFs.js';
+import { suite, test } from "node:test";
+import assert from "node:assert/strict";
+import {
+	WorkspaceEdit,
+	TextDocument,
+	getLanguageModes,
+	ClientCapabilities,
+} from "../modes/languageModes.js";
+import { getNodeFileFS } from "../node/nodeFs.js";
 
-
-async function testRename(value: string, newName: string, expectedDocContent: string): Promise<void> {
-	const offset = value.indexOf('|');
+async function testRename(
+	value: string,
+	newName: string,
+	expectedDocContent: string,
+): Promise<void> {
+	const offset = value.indexOf("|");
 	value = value.substr(0, offset) + value.substr(offset + 1);
 
-	const document = TextDocument.create('test://test/test.html', 'html', 0, value);
+	const document = TextDocument.create(
+		"test://test/test.html",
+		"html",
+		0,
+		value,
+	);
 	const workspace = {
 		settings: {},
-		folders: [{ name: 'foo', uri: 'test://foo' }]
+		folders: [{ name: "foo", uri: "test://foo" }],
 	};
-	const languageModes = getLanguageModes({ css: true, javascript: true }, workspace, ClientCapabilities.LATEST, getNodeFileFS());
-	const javascriptMode = languageModes.getMode('javascript');
+	const languageModes = getLanguageModes(
+		{ css: true, javascript: true },
+		workspace,
+		ClientCapabilities.LATEST,
+		getNodeFileFS(),
+	);
+	const javascriptMode = languageModes.getMode("javascript");
 	const position = document.positionAt(offset);
 
 	try {
 		if (javascriptMode) {
-			const workspaceEdit: WorkspaceEdit | null = await javascriptMode.doRename!(document, position, newName);
+			const workspaceEdit: WorkspaceEdit | null =
+				await javascriptMode.doRename!(document, position, newName);
 
 			if (!workspaceEdit || !workspaceEdit.changes) {
-				assert.fail('No workspace edits');
+				assert.fail("No workspace edits");
 			}
 
 			const edits = workspaceEdit.changes[document.uri.toString()];
@@ -36,9 +55,13 @@ async function testRename(value: string, newName: string, expectedDocContent: st
 			}
 
 			const newDocContent = TextDocument.applyEdits(document, edits);
-			assert.strictEqual(newDocContent, expectedDocContent, `Expected: ${expectedDocContent}\nActual: ${newDocContent}`);
+			assert.strictEqual(
+				newDocContent,
+				expectedDocContent,
+				`Expected: ${expectedDocContent}\nActual: ${newDocContent}`,
+			);
 		} else {
-			assert.fail('should have javascriptMode but no');
+			assert.fail("should have javascriptMode but no");
 		}
 	} finally {
 		languageModes.dispose();
@@ -46,169 +69,183 @@ async function testRename(value: string, newName: string, expectedDocContent: st
 }
 
 async function testNoRename(value: string, newName: string): Promise<void> {
-	const offset = value.indexOf('|');
+	const offset = value.indexOf("|");
 	value = value.substr(0, offset) + value.substr(offset + 1);
 
-	const document = TextDocument.create('test://test/test.html', 'html', 0, value);
+	const document = TextDocument.create(
+		"test://test/test.html",
+		"html",
+		0,
+		value,
+	);
 	const workspace = {
 		settings: {},
-		folders: [{ name: 'foo', uri: 'test://foo' }]
+		folders: [{ name: "foo", uri: "test://foo" }],
 	};
-	const languageModes = getLanguageModes({ css: true, javascript: true }, workspace, ClientCapabilities.LATEST, getNodeFileFS());
-	const javascriptMode = languageModes.getMode('javascript');
+	const languageModes = getLanguageModes(
+		{ css: true, javascript: true },
+		workspace,
+		ClientCapabilities.LATEST,
+		getNodeFileFS(),
+	);
+	const javascriptMode = languageModes.getMode("javascript");
 	const position = document.positionAt(offset);
 
 	try {
 		if (javascriptMode) {
-			const workspaceEdit: WorkspaceEdit | null = await javascriptMode.doRename!(document, position, newName);
+			const workspaceEdit: WorkspaceEdit | null =
+				await javascriptMode.doRename!(document, position, newName);
 
-			assert.ok(workspaceEdit?.changes === undefined, 'Should not rename but rename happened');
+			assert.ok(
+				workspaceEdit?.changes === undefined,
+				"Should not rename but rename happened",
+			);
 		} else {
-			assert.fail('should have javascriptMode but no');
+			assert.fail("should have javascriptMode but no");
 		}
 	} finally {
 		languageModes.dispose();
 	}
 }
 
-suite('HTML Javascript Rename', () => {
-	test('Rename Variable', async () => {
+suite("HTML Javascript Rename", () => {
+	test("Rename Variable", async () => {
 		const input = [
-			'<html>',
-			'<head>',
-			'<script>',
-			'const |a = 2;',
-			'const b = a + 2',
-			'</script>',
-			'</head>',
-			'</html>'
+			"<html>",
+			"<head>",
+			"<script>",
+			"const |a = 2;",
+			"const b = a + 2",
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 
 		const output = [
-			'<html>',
-			'<head>',
-			'<script>',
-			'const h = 2;',
-			'const b = h + 2',
-			'</script>',
-			'</head>',
-			'</html>'
+			"<html>",
+			"<head>",
+			"<script>",
+			"const h = 2;",
+			"const b = h + 2",
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 
-		await testRename(input.join('\n'), 'h', output.join('\n'));
+		await testRename(input.join("\n"), "h", output.join("\n"));
 	});
 
-	test('Rename Function', async () => {
+	test("Rename Function", async () => {
 		const input = [
-			'<html>',
-			'<head>',
-			'<script>',
+			"<html>",
+			"<head>",
+			"<script>",
 			`const name = 'cjg';`,
-			'function |sayHello(name) {',
+			"function |sayHello(name) {",
 			`console.log('hello', name)`,
-			'}',
-			'sayHello(name)',
-			'</script>',
-			'</head>',
-			'</html>'
+			"}",
+			"sayHello(name)",
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 
 		const output = [
-			'<html>',
-			'<head>',
-			'<script>',
+			"<html>",
+			"<head>",
+			"<script>",
 			`const name = 'cjg';`,
-			'function sayName(name) {',
+			"function sayName(name) {",
 			`console.log('hello', name)`,
-			'}',
-			'sayName(name)',
-			'</script>',
-			'</head>',
-			'</html>'
+			"}",
+			"sayName(name)",
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 
-		await testRename(input.join('\n'), 'sayName', output.join('\n'));
+		await testRename(input.join("\n"), "sayName", output.join("\n"));
 	});
 
-	test('Rename Function Params', async () => {
+	test("Rename Function Params", async () => {
 		const input = [
-			'<html>',
-			'<head>',
-			'<script>',
+			"<html>",
+			"<head>",
+			"<script>",
 			`const name = 'cjg';`,
-			'function sayHello(|name) {',
+			"function sayHello(|name) {",
 			`console.log('hello', name)`,
-			'}',
-			'sayHello(name)',
-			'</script>',
-			'</head>',
-			'</html>'
+			"}",
+			"sayHello(name)",
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 
 		const output = [
-			'<html>',
-			'<head>',
-			'<script>',
+			"<html>",
+			"<head>",
+			"<script>",
 			`const name = 'cjg';`,
-			'function sayHello(newName) {',
+			"function sayHello(newName) {",
 			`console.log('hello', newName)`,
-			'}',
-			'sayHello(name)',
-			'</script>',
-			'</head>',
-			'</html>'
+			"}",
+			"sayHello(name)",
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 
-		await testRename(input.join('\n'), 'newName', output.join('\n'));
+		await testRename(input.join("\n"), "newName", output.join("\n"));
 	});
 
-	test('Rename Class', async () => {
+	test("Rename Class", async () => {
 		const input = [
-			'<html>',
-			'<head>',
-			'<script>',
+			"<html>",
+			"<head>",
+			"<script>",
 			`class |Foo {}`,
 			`const foo = new Foo()`,
-			'</script>',
-			'</head>',
-			'</html>'
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 
 		const output = [
-			'<html>',
-			'<head>',
-			'<script>',
+			"<html>",
+			"<head>",
+			"<script>",
 			`class Bar {}`,
 			`const foo = new Bar()`,
-			'</script>',
-			'</head>',
-			'</html>'
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 
-		await testRename(input.join('\n'), 'Bar', output.join('\n'));
+		await testRename(input.join("\n"), "Bar", output.join("\n"));
 	});
 
-	test('Cannot Rename literal', async () => {
+	test("Cannot Rename literal", async () => {
 		const stringLiteralInput = [
-			'<html>',
-			'<head>',
-			'<script>',
+			"<html>",
+			"<head>",
+			"<script>",
 			`const name = |'cjg';`,
-			'</script>',
-			'</head>',
-			'</html>'
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 		const numberLiteralInput = [
-			'<html>',
-			'<head>',
-			'<script>',
+			"<html>",
+			"<head>",
+			"<script>",
 			`const num = |2;`,
-			'</script>',
-			'</head>',
-			'</html>'
+			"</script>",
+			"</head>",
+			"</html>",
 		];
 
-		await testNoRename(stringLiteralInput.join('\n'), 'something');
-		await testNoRename(numberLiteralInput.join('\n'), 'hhhh');
+		await testNoRename(stringLiteralInput.join("\n"), "something");
+		await testNoRename(numberLiteralInput.join("\n"), "hhhh");
 	});
 });

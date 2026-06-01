@@ -20,7 +20,6 @@ import { IChatModelInformation } from '../../common/endpointProvider';
 import { ChatEndpoint } from '../../node/chatEndpoint';
 
 export class CAPITestEndpoint extends ChatEndpoint {
-
 	constructor(
 		modelMetadata: IChatModelInformation,
 		private readonly _isModelLablModel: boolean,
@@ -33,11 +32,13 @@ export class CAPITestEndpoint extends ChatEndpoint {
 		@ITokenizerProvider tokenizerProvider: ITokenizerProvider,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IExperimentationService experimentationService: IExperimentationService,
+		@IExperimentationService
+		experimentationService: IExperimentationService,
 		@IChatWebSocketManager chatWebSocketService: IChatWebSocketManager,
-		@ILogService logService: ILogService
+		@ILogService logService: ILogService,
 	) {
-		super(modelMetadata,
+		super(
+			modelMetadata,
 			domainService,
 			chatMLFetcher,
 			tokenizerProvider,
@@ -45,7 +46,7 @@ export class CAPITestEndpoint extends ChatEndpoint {
 			configurationService,
 			experimentationService,
 			chatWebSocketService,
-			logService
+			logService,
 		);
 	}
 

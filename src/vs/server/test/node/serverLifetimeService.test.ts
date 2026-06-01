@@ -3,35 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../base/test/common/utils.js';
-import { NullLogService } from '../../../platform/log/common/log.js';
-import { IServerLifetimeOptions, ServerLifetimeService } from '../../node/serverLifetimeService.js';
+import assert from "assert";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../base/test/common/utils.js";
+import { NullLogService } from "../../../platform/log/common/log.js";
+import {
+	IServerLifetimeOptions,
+	ServerLifetimeService,
+} from "../../node/serverLifetimeService.js";
 
-suite('ServerLifetimeService', () => {
+suite("ServerLifetimeService", () => {
 	const ds = ensureNoDisposablesAreLeakedInTestSuite();
 
 	function create(opts: IServerLifetimeOptions = {}): ServerLifetimeService {
 		return ds.add(new ServerLifetimeService(opts, new NullLogService()));
 	}
 
-	test('starts with no active consumers', () => {
+	test("starts with no active consumers", () => {
 		const service = create();
 		assert.strictEqual(service.hasActiveConsumers, false);
 	});
 
-	test('active() marks a consumer and dispose releases it', () => {
+	test("active() marks a consumer and dispose releases it", () => {
 		const service = create();
-		const d = service.active('test');
+		const d = service.active("test");
 		assert.strictEqual(service.hasActiveConsumers, true);
 		d.dispose();
 		assert.strictEqual(service.hasActiveConsumers, false);
 	});
 
-	test('multiple active consumers require all to dispose', () => {
+	test("multiple active consumers require all to dispose", () => {
 		const service = create();
-		const d1 = service.active('a');
-		const d2 = service.active('b');
+		const d1 = service.active("a");
+		const d2 = service.active("b");
 		assert.strictEqual(service.hasActiveConsumers, true);
 		d1.dispose();
 		assert.strictEqual(service.hasActiveConsumers, true);
@@ -39,10 +42,10 @@ suite('ServerLifetimeService', () => {
 		assert.strictEqual(service.hasActiveConsumers, false);
 	});
 
-	test('same consumer name counted multiple times', () => {
+	test("same consumer name counted multiple times", () => {
 		const service = create();
-		const d1 = service.active('ext');
-		const d2 = service.active('ext');
+		const d1 = service.active("ext");
+		const d2 = service.active("ext");
 		assert.strictEqual(service.hasActiveConsumers, true);
 		d1.dispose();
 		assert.strictEqual(service.hasActiveConsumers, true);
@@ -50,10 +53,10 @@ suite('ServerLifetimeService', () => {
 		assert.strictEqual(service.hasActiveConsumers, false);
 	});
 
-	test('dispose is idempotent', () => {
+	test("dispose is idempotent", () => {
 		const service = create();
-		const d1 = service.active('a');
-		const d2 = service.active('a');
+		const d1 = service.active("a");
+		const d2 = service.active("a");
 		d1.dispose();
 		d1.dispose();
 		assert.strictEqual(service.hasActiveConsumers, true);

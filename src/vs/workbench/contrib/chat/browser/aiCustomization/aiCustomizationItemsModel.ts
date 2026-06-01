@@ -3,28 +3,52 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { RunOnceScheduler } from '../../../../../base/common/async.js';
-import { onUnexpectedError } from '../../../../../base/common/errors.js';
-import { Disposable, MutableDisposable } from '../../../../../base/common/lifecycle.js';
-import { autorun, derived, IObservable, ISettableObservable, observableValue } from '../../../../../base/common/observable.js';
-import { basename, isEqual } from '../../../../../base/common/resources.js';
-import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { InstantiationType, registerSingleton } from '../../../../../platform/instantiation/common/extensions.js';
-import { IFileService } from '../../../../../platform/files/common/files.js';
-import { ILabelService } from '../../../../../platform/label/common/label.js';
-import { IProductService } from '../../../../../platform/product/common/productService.js';
-import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
-import { IPathService } from '../../../../services/path/common/pathService.js';
-import { IAICustomizationWorkspaceService, AICustomizationManagementSection } from '../../common/aiCustomizationWorkspaceService.js';
-import { ICustomizationHarnessService, isPluginCustomizationItem } from '../../common/customizationHarnessService.js';
-import { IAgentPluginService } from '../../common/plugins/agentPluginService.js';
-import { PromptsType } from '../../common/promptSyntax/promptTypes.js';
-import { IPromptsService } from '../../common/promptSyntax/service/promptsService.js';
-import { AICustomizationItemNormalizer, IAICustomizationItemSource, IAICustomizationListItem, ItemProviderItemSource, PureItemProviderItemSource } from './aiCustomizationItemSource.js';
-import { PromptsServiceCustomizationItemProvider } from './promptsServiceCustomizationItemProvider.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { getChatSessionType } from '../../common/model/chatUri.js';
-import { isAgentHostTarget } from '../agentSessions/agentSessions.js';
+import { RunOnceScheduler } from "../../../../../base/common/async.js";
+import { onUnexpectedError } from "../../../../../base/common/errors.js";
+import {
+	Disposable,
+	MutableDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import {
+	autorun,
+	derived,
+	IObservable,
+	ISettableObservable,
+	observableValue,
+} from "../../../../../base/common/observable.js";
+import { basename, isEqual } from "../../../../../base/common/resources.js";
+import { createDecorator } from "../../../../../platform/instantiation/common/instantiation.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../../platform/instantiation/common/extensions.js";
+import { IFileService } from "../../../../../platform/files/common/files.js";
+import { ILabelService } from "../../../../../platform/label/common/label.js";
+import { IProductService } from "../../../../../platform/product/common/productService.js";
+import { IWorkspaceContextService } from "../../../../../platform/workspace/common/workspace.js";
+import { IPathService } from "../../../../services/path/common/pathService.js";
+import {
+	IAICustomizationWorkspaceService,
+	AICustomizationManagementSection,
+} from "../../common/aiCustomizationWorkspaceService.js";
+import {
+	ICustomizationHarnessService,
+	isPluginCustomizationItem,
+} from "../../common/customizationHarnessService.js";
+import { IAgentPluginService } from "../../common/plugins/agentPluginService.js";
+import { PromptsType } from "../../common/promptSyntax/promptTypes.js";
+import { IPromptsService } from "../../common/promptSyntax/service/promptsService.js";
+import {
+	AICustomizationItemNormalizer,
+	IAICustomizationItemSource,
+	IAICustomizationListItem,
+	ItemProviderItemSource,
+	PureItemProviderItemSource,
+} from "./aiCustomizationItemSource.js";
+import { PromptsServiceCustomizationItemProvider } from "./promptsServiceCustomizationItemProvider.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { getChatSessionType } from "../../common/model/chatUri.js";
+import { isAgentHostTarget } from "../agentSessions/agentSessions.js";
 
 /**
  * The set of sections whose items are sourced from the customization
@@ -42,9 +66,10 @@ export const ITEMS_MODEL_SECTIONS = [
 	AICustomizationManagementSection.Hooks,
 ] as const;
 
-export type ItemsModelSection = typeof ITEMS_MODEL_SECTIONS[number];
+export type ItemsModelSection = (typeof ITEMS_MODEL_SECTIONS)[number];
 
-export const IAICustomizationItemsModel = createDecorator<IAICustomizationItemsModel>('aiCustomizationItemsModel');
+export const IAICustomizationItemsModel =
+	createDecorator<IAICustomizationItemsModel>("aiCustomizationItemsModel");
 
 /**
  * Single source of truth for the items rendered by the AI Customizations
@@ -62,7 +87,9 @@ export interface IAICustomizationItemsModel {
 	 * Returns an observable of the unfiltered, normalized list items for the
 	 * given prompts-based section under the currently active harness.
 	 */
-	getItems(section: ItemsModelSection): IObservable<readonly IAICustomizationListItem[]>;
+	getItems(
+		section: ItemsModelSection,
+	): IObservable<readonly IAICustomizationListItem[]>;
 
 	/**
 	 * Returns the live item source for the active harness.
@@ -93,7 +120,10 @@ export interface IAICustomizationItemsModel {
 	whenSectionLoaded(section: ItemsModelSection): Promise<void>;
 }
 
-export class AICustomizationItemsModel extends Disposable implements IAICustomizationItemsModel {
+export class AICustomizationItemsModel
+	extends Disposable
+	implements IAICustomizationItemsModel
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly itemNormalizer: AICustomizationItemNormalizer;
@@ -105,31 +135,51 @@ export class AICustomizationItemsModel extends Disposable implements IAICustomiz
 	 * fresh source bound to the new provider. Pruned when its descriptor is no longer
 	 * present in `availableHarnesses`.
 	 */
-	private readonly sourceCache = this._register(new MutableDisposable<IAICustomizationItemSource>());
+	private readonly sourceCache = this._register(
+		new MutableDisposable<IAICustomizationItemSource>(),
+	);
 	private pendingRefetchSource: IAICustomizationItemSource | undefined;
-	private readonly refetchObservedScheduler = this._register(new RunOnceScheduler(() => {
-		const source = this.pendingRefetchSource;
-		if (!source || this._store.isDisposed) {
-			return;
-		}
-		this.refetchObserved(source);
-	}, 0));
+	private readonly refetchObservedScheduler = this._register(
+		new RunOnceScheduler(() => {
+			const source = this.pendingRefetchSource;
+			if (!source || this._store.isDisposed) {
+				return;
+			}
+			this.refetchObserved(source);
+		}, 0),
+	);
 
-	private readonly perSection = new Map<ItemsModelSection, ISettableObservable<readonly IAICustomizationListItem[]>>();
-	private readonly perSectionCount = new Map<ItemsModelSection, IObservable<number>>();
+	private readonly perSection = new Map<
+		ItemsModelSection,
+		ISettableObservable<readonly IAICustomizationListItem[]>
+	>();
+	private readonly perSectionCount = new Map<
+		ItemsModelSection,
+		IObservable<number>
+	>();
 	private readonly fetchSeq = new Map<ItemsModelSection, number>();
 	/** Promise of the most recent fetch per section (resolves regardless of stale-discard). */
-	private readonly perSectionPending = new Map<ItemsModelSection, Promise<void>>();
-	private readonly remotePluginNames = observableValue<readonly string[]>('aiCustomizationRemotePluginNames', []);
-	private readonly pluginCount = derived(reader => {
+	private readonly perSectionPending = new Map<
+		ItemsModelSection,
+		Promise<void>
+	>();
+	private readonly remotePluginNames = observableValue<readonly string[]>(
+		"aiCustomizationRemotePluginNames",
+		[],
+	);
+	private readonly pluginCount = derived((reader) => {
 		const installed = this.agentPluginService.plugins.read(reader);
 		// Match PluginListWidget's installed-name derivation
 		// (see installedPluginToItem in pluginListWidget.ts) so the model and
 		// editor widget agree on what counts as a duplicate when a plugin's
 		// `label` is empty/undefined.
-		const installedNames = new Set(installed.map(p => (p.label || basename(p.uri)).toLowerCase()));
+		const installedNames = new Set(
+			installed.map((p) => (p.label || basename(p.uri)).toLowerCase()),
+		);
 		const remoteNames = this.remotePluginNames.read(reader);
-		const uniqueRemote = remoteNames.filter(name => name && !installedNames.has(name.toLowerCase()));
+		const uniqueRemote = remoteNames.filter(
+			(name) => name && !installedNames.has(name.toLowerCase()),
+		);
 		return installed.length + uniqueRemote.length;
 	});
 	private pluginCountObserved = false;
@@ -143,30 +193,43 @@ export class AICustomizationItemsModel extends Disposable implements IAICustomiz
 	private readonly observedSections = new Set<ItemsModelSection>();
 
 	constructor(
-		@ICustomizationHarnessService private readonly harnessService: ICustomizationHarnessService,
+		@ICustomizationHarnessService
+		private readonly harnessService: ICustomizationHarnessService,
 		@IPromptsService private readonly promptsService: IPromptsService,
-		@IAICustomizationWorkspaceService private readonly workspaceService: IAICustomizationWorkspaceService,
+		@IAICustomizationWorkspaceService
+		private readonly workspaceService: IAICustomizationWorkspaceService,
 		@IWorkspaceContextService workspaceContextService: IWorkspaceContextService,
 		@ILabelService labelService: ILabelService,
-		@IAgentPluginService private readonly agentPluginService: IAgentPluginService,
+		@IAgentPluginService
+		private readonly agentPluginService: IAgentPluginService,
 		@IProductService productService: IProductService,
 		@IFileService private readonly fileService: IFileService,
 		@IPathService private readonly pathService: IPathService,
 	) {
 		super();
 
-		this.itemNormalizer = new AICustomizationItemNormalizer(labelService, productService);
-		this.promptsServiceItemProvider = new PromptsServiceCustomizationItemProvider(
-			() => this.harnessService.getActiveDescriptor(),
-			this.promptsService,
-			this.workspaceService,
+		this.itemNormalizer = new AICustomizationItemNormalizer(
+			labelService,
 			productService,
 		);
+		this.promptsServiceItemProvider =
+			new PromptsServiceCustomizationItemProvider(
+				() => this.harnessService.getActiveDescriptor(),
+				this.promptsService,
+				this.workspaceService,
+				productService,
+			);
 
 		for (const section of ITEMS_MODEL_SECTIONS) {
-			const items = observableValue<readonly IAICustomizationListItem[]>(`aiCustomizationItems:${section}`, []);
+			const items = observableValue<readonly IAICustomizationListItem[]>(
+				`aiCustomizationItems:${section}`,
+				[],
+			);
 			this.perSection.set(section, items);
-			this.perSectionCount.set(section, derived(reader => items.read(reader).length));
+			this.perSectionCount.set(
+				section,
+				derived((reader) => items.read(reader).length),
+			);
 			this.fetchSeq.set(section, 0);
 		}
 
@@ -174,25 +237,38 @@ export class AICustomizationItemsModel extends Disposable implements IAICustomiz
 		// harnesses changes (a new external provider may have registered for the already-
 		// active id), prune the source cache, and refetch any observed sections.
 		const sourceChangeListener = this._register(new MutableDisposable());
-		this._register(autorun(reader => {
-			const activeSessionResource = this.harnessService.activeSessionResource.read(reader);
-			const source = this.getOrCreateSource(activeSessionResource);
-			sourceChangeListener.value = source.onDidAICustomizationItemsChange(() => {
+		this._register(
+			autorun((reader) => {
+				const activeSessionResource =
+					this.harnessService.activeSessionResource.read(reader);
+				const source = this.getOrCreateSource(activeSessionResource);
+				sourceChangeListener.value = source.onDidAICustomizationItemsChange(
+					() => {
+						this.scheduleRefetchObserved(source);
+					},
+				);
 				this.scheduleRefetchObserved(source);
-			});
-			this.scheduleRefetchObserved(source);
-		}));
+			}),
+		);
 
 		// Workspace folder changes / active project root changes affect the items the
 		// prompts service surfaces (e.g. workspace vs. user classification).
-		this._register(workspaceContextService.onDidChangeWorkspaceFolders(() => this.scheduleRefetchObserved(this.getActiveItemSource())));
-		this._register(autorun(reader => {
-			this.workspaceService.activeProjectRoot.read(reader);
-			this.scheduleRefetchObserved(this.getActiveItemSource());
-		}));
+		this._register(
+			workspaceContextService.onDidChangeWorkspaceFolders(() =>
+				this.scheduleRefetchObserved(this.getActiveItemSource()),
+			),
+		);
+		this._register(
+			autorun((reader) => {
+				this.workspaceService.activeProjectRoot.read(reader);
+				this.scheduleRefetchObserved(this.getActiveItemSource());
+			}),
+		);
 	}
 
-	getItems(section: ItemsModelSection): IObservable<readonly IAICustomizationListItem[]> {
+	getItems(
+		section: ItemsModelSection,
+	): IObservable<readonly IAICustomizationListItem[]> {
 		this.markObserved(section);
 		return this.perSection.get(section)!;
 	}
@@ -208,7 +284,9 @@ export class AICustomizationItemsModel extends Disposable implements IAICustomiz
 	}
 
 	getActiveItemSource(): IAICustomizationItemSource {
-		return this.getOrCreateSource(this.harnessService.activeSessionResource.get());
+		return this.getOrCreateSource(
+			this.harnessService.activeSessionResource.get(),
+		);
 	}
 
 	whenSectionLoaded(section: ItemsModelSection): Promise<void> {
@@ -233,7 +311,10 @@ export class AICustomizationItemsModel extends Disposable implements IAICustomiz
 	}
 
 	private getOrCreateSource(sessionResource: URI): IAICustomizationItemSource {
-		if (this.sourceCache.value && isEqual(sessionResource, this.sourceCache.value.sessionResource)) {
+		if (
+			this.sourceCache.value &&
+			isEqual(sessionResource, this.sourceCache.value.sessionResource)
+		) {
 			return this.sourceCache.value;
 		}
 		const sessionType = getChatSessionType(sessionResource);
@@ -244,9 +325,14 @@ export class AICustomizationItemsModel extends Disposable implements IAICustomiz
 				if (!descriptor?.itemProvider) {
 					throw new Error(`Agent host targets must have an item provider`);
 				}
-				return new PureItemProviderItemSource(sessionResource, descriptor.itemProvider, this.itemNormalizer);
+				return new PureItemProviderItemSource(
+					sessionResource,
+					descriptor.itemProvider,
+					this.itemNormalizer,
+				);
 			} else {
-				const itemProvider = descriptor?.itemProvider ?? this.promptsServiceItemProvider;
+				const itemProvider =
+					descriptor?.itemProvider ?? this.promptsServiceItemProvider;
 				return new ItemProviderItemSource(
 					sessionResource,
 					itemProvider,
@@ -277,69 +363,91 @@ export class AICustomizationItemsModel extends Disposable implements IAICustomiz
 		}
 	}
 
-	private refetchSection(section: ItemsModelSection, source: IAICustomizationItemSource): void {
+	private refetchSection(
+		section: ItemsModelSection,
+		source: IAICustomizationItemSource,
+	): void {
 		const seq = (this.fetchSeq.get(section) ?? 0) + 1;
 		this.fetchSeq.set(section, seq);
 		const promptType = sectionToPromptType(section);
 		const observable = this.perSection.get(section)!;
-		const pending = source.fetchAICustomizationItems(promptType).then(items => {
-			if (this._store.isDisposed) {
-				return;
-			}
-			// Discard stale results (a newer fetch superseded this one).
-			if (this.fetchSeq.get(section) !== seq) {
-				return;
-			}
-			// Discard if the active source changed mid-fetch.
-			if (this.getActiveItemSource() !== source) {
-				return;
-			}
-			observable.set(items, undefined);
-		}, e => {
-			if (this._store.isDisposed) {
-				return;
-			}
-			onUnexpectedError(e);
-		});
+		const pending = source.fetchAICustomizationItems(promptType).then(
+			(items) => {
+				if (this._store.isDisposed) {
+					return;
+				}
+				// Discard stale results (a newer fetch superseded this one).
+				if (this.fetchSeq.get(section) !== seq) {
+					return;
+				}
+				// Discard if the active source changed mid-fetch.
+				if (this.getActiveItemSource() !== source) {
+					return;
+				}
+				observable.set(items, undefined);
+			},
+			(e) => {
+				if (this._store.isDisposed) {
+					return;
+				}
+				onUnexpectedError(e);
+			},
+		);
 		this.perSectionPending.set(section, pending);
 	}
 
 	private refetchPluginCount(source: IAICustomizationItemSource): void {
 		const seq = ++this.pluginFetchSeq;
-		const pending = source.fetchProviderItems().then(items => {
+		const pending = source.fetchProviderItems().then((items) => {
 			return items
-				.filter(item => isPluginCustomizationItem(item) && item.groupKey !== 'remote-client')
-				.map(item => item.name ?? '');
+				.filter(
+					(item) =>
+						isPluginCustomizationItem(item) &&
+						item.groupKey !== "remote-client",
+				)
+				.map((item) => item.name ?? "");
 		});
 
-		pending.then(names => {
-			if (this._store.isDisposed) {
-				return;
-			}
-			if (this.pluginFetchSeq !== seq) {
-				return;
-			}
-			if (this.getActiveItemSource() !== source) {
-				return;
-			}
-			this.remotePluginNames.set(names, undefined);
-		}, e => {
-			if (!this._store.isDisposed) {
-				onUnexpectedError(e);
-			}
-		});
+		pending.then(
+			(names) => {
+				if (this._store.isDisposed) {
+					return;
+				}
+				if (this.pluginFetchSeq !== seq) {
+					return;
+				}
+				if (this.getActiveItemSource() !== source) {
+					return;
+				}
+				this.remotePluginNames.set(names, undefined);
+			},
+			(e) => {
+				if (!this._store.isDisposed) {
+					onUnexpectedError(e);
+				}
+			},
+		);
 	}
 }
 
 function sectionToPromptType(section: ItemsModelSection): PromptsType {
 	switch (section) {
-		case AICustomizationManagementSection.Agents: return PromptsType.agent;
-		case AICustomizationManagementSection.Skills: return PromptsType.skill;
-		case AICustomizationManagementSection.Instructions: return PromptsType.instructions;
-		case AICustomizationManagementSection.Hooks: return PromptsType.hook;
+		case AICustomizationManagementSection.Agents:
+			return PromptsType.agent;
+		case AICustomizationManagementSection.Skills:
+			return PromptsType.skill;
+		case AICustomizationManagementSection.Instructions:
+			return PromptsType.instructions;
+		case AICustomizationManagementSection.Hooks:
+			return PromptsType.hook;
 		case AICustomizationManagementSection.Prompts:
-		default: return PromptsType.prompt;
+		default:
+			return PromptsType.prompt;
 	}
 }
 
-registerSingleton(IAICustomizationItemsModel, AICustomizationItemsModel, InstantiationType.Delayed);
+registerSingleton(
+	IAICustomizationItemsModel,
+	AICustomizationItemsModel,
+	InstantiationType.Delayed,
+);

@@ -5,7 +5,10 @@
 
 import { createServiceIdentifier } from '../../../../../../util/common/services';
 
-export const ICompletionsPromiseQueueService = createServiceIdentifier<ICompletionsPromiseQueueService>('completionsPromiseQueueService');
+export const ICompletionsPromiseQueueService =
+	createServiceIdentifier<ICompletionsPromiseQueueService>(
+		'completionsPromiseQueueService',
+	);
 export interface ICompletionsPromiseQueueService {
 	readonly _serviceBrand: undefined;
 

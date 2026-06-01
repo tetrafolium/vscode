@@ -14,7 +14,7 @@ import { FilePathCodeMarker } from '../../context/node/resolvers/selectionContex
 export class CodeContextTracker {
 	private _totalChars = 0;
 
-	constructor(private readonly charLimit: number) { }
+	constructor(private readonly charLimit: number) {}
 
 	public get totalChars(): number {
 		return this._totalChars;
@@ -62,7 +62,9 @@ export class CodeContextRegion {
 		}
 		const result: string[] = [];
 		result.push('```' + this.language.languageId); // TODO@ulugbekna: use languageIdToMDCodeBlockLang & createFencedCodeBlock
-		result.push(FilePathCodeMarker.forDocument(this.language, this.document));//
+		result.push(
+			FilePathCodeMarker.forDocument(this.language, this.document),
+		); //
 		result.push(...this.lines);
 		result.push('```');
 		return result;
@@ -104,18 +106,28 @@ export class CodeContextRegion {
 	public trim(rangeToNotModify?: vscode.Range): void {
 		// remove empty lines from the beginning
 		// but do not trim away lines included in `rangeToNotModify`
-		const maxFirstLineIndex = rangeToNotModify ? Math.min(this.lastLineIndex, rangeToNotModify.start.line) : this.lastLineIndex;
-		while (this.firstLineIndex < maxFirstLineIndex && this.lines.length > 0 && this.lines[0].trim().length === 0) {
+		const maxFirstLineIndex = rangeToNotModify
+			? Math.min(this.lastLineIndex, rangeToNotModify.start.line)
+			: this.lastLineIndex;
+		while (
+			this.firstLineIndex < maxFirstLineIndex &&
+			this.lines.length > 0 &&
+			this.lines[0].trim().length === 0
+		) {
 			this.firstLineIndex++;
 			this.lines.shift();
 		}
 
 		// remove empty lines from the end
 		// but do not trim away lines included in `rangeToNotModify`
-		const minLastLineIndex = rangeToNotModify ? Math.max(this.firstLineIndex, rangeToNotModify.end.line) : this.firstLineIndex;
-		while (minLastLineIndex < this.lastLineIndex &&
+		const minLastLineIndex = rangeToNotModify
+			? Math.max(this.firstLineIndex, rangeToNotModify.end.line)
+			: this.firstLineIndex;
+		while (
+			minLastLineIndex < this.lastLineIndex &&
 			this.lines.length > 0 &&
-			this.lines[this.lines.length - 1].trim().length === 0) {
+			this.lines[this.lines.length - 1].trim().length === 0
+		) {
 			this.lastLineIndex--;
 			this.lines.pop();
 		}

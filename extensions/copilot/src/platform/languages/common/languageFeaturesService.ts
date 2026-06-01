@@ -6,14 +6,25 @@
 import type * as vscode from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-
-export const ILanguageFeaturesService = createServiceIdentifier<ILanguageFeaturesService>('ILanguageFeaturesService');
+export const ILanguageFeaturesService =
+	createServiceIdentifier<ILanguageFeaturesService>(
+		'ILanguageFeaturesService',
+	);
 
 export interface ILanguageFeaturesService {
 	_serviceBrand: undefined;
-	getDefinitions(uri: vscode.Uri, position: vscode.Position): Promise<(vscode.LocationLink | vscode.Location)[]>;
-	getImplementations(uri: vscode.Uri, position: vscode.Position): Promise<(vscode.LocationLink | vscode.Location)[]>;
-	getReferences(uri: vscode.Uri, position: vscode.Position): Promise<vscode.Location[]>;
+	getDefinitions(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<(vscode.LocationLink | vscode.Location)[]>;
+	getImplementations(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<(vscode.LocationLink | vscode.Location)[]>;
+	getReferences(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<vscode.Location[]>;
 	getWorkspaceSymbols(query: string): Promise<vscode.SymbolInformation[]>;
 	getDocumentSymbols(uri: vscode.Uri): Promise<vscode.DocumentSymbol[]>;
 	getDiagnostics(uri: vscode.Uri): vscode.Diagnostic[];
@@ -24,13 +35,22 @@ export class NoopLanguageFeaturesService implements ILanguageFeaturesService {
 	getDocumentSymbols(uri: vscode.Uri): Promise<vscode.DocumentSymbol[]> {
 		return Promise.resolve([]);
 	}
-	getDefinitions(uri: vscode.Uri, position: vscode.Position): Promise<(vscode.LocationLink | vscode.Location)[]> {
+	getDefinitions(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<(vscode.LocationLink | vscode.Location)[]> {
 		return Promise.resolve([]);
 	}
-	getImplementations(uri: vscode.Uri, position: vscode.Position): Promise<(vscode.LocationLink | vscode.Location)[]> {
+	getImplementations(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<(vscode.LocationLink | vscode.Location)[]> {
 		return Promise.resolve([]);
 	}
-	getReferences(uri: vscode.Uri, position: vscode.Position): Promise<vscode.Location[]> {
+	getReferences(
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<vscode.Location[]> {
 		return Promise.resolve([]);
 	}
 	getWorkspaceSymbols(query: string): Promise<vscode.SymbolInformation[]> {

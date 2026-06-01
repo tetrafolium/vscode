@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { PermissionMode, PermissionUpdate } from '@anthropic-ai/claude-agent-sdk';
+import {
+	PermissionMode,
+	PermissionUpdate,
+} from '@anthropic-ai/claude-agent-sdk';
 import type * as vscode from 'vscode';
 import { ClaudeToolInputMap, ClaudeToolNames } from './claudeTools';
 
@@ -11,7 +14,11 @@ import { ClaudeToolInputMap, ClaudeToolNames } from './claudeTools';
  * Result type for tool permission checks, matching the Claude SDK canUseTool return type
  */
 export type ClaudeToolPermissionResult =
-	| { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: PermissionUpdate[] }
+	| {
+			behavior: 'allow';
+			updatedInput: Record<string, unknown>;
+			updatedPermissions?: PermissionUpdate[];
+	  }
 	| { behavior: 'deny'; message: string };
 
 /**
@@ -42,7 +49,9 @@ export interface IClaudeToolConfirmationParams {
  *
  * @template TToolName The tool name(s) this handler supports
  */
-export interface IClaudeToolPermissionHandler<TToolName extends ClaudeToolNames = ClaudeToolNames> {
+export interface IClaudeToolPermissionHandler<
+	TToolName extends ClaudeToolNames = ClaudeToolNames,
+> {
 	/**
 	 * The tool name(s) this handler is registered for
 	 */
@@ -55,7 +64,7 @@ export interface IClaudeToolPermissionHandler<TToolName extends ClaudeToolNames 
 	canAutoApprove?(
 		toolName: TToolName,
 		input: ClaudeToolInputMap[TToolName],
-		context: ClaudeToolPermissionContext
+		context: ClaudeToolPermissionContext,
 	): Promise<boolean>;
 
 	/**
@@ -64,7 +73,7 @@ export interface IClaudeToolPermissionHandler<TToolName extends ClaudeToolNames 
 	 */
 	getConfirmationParams?(
 		toolName: TToolName,
-		input: ClaudeToolInputMap[TToolName]
+		input: ClaudeToolInputMap[TToolName],
 	): IClaudeToolConfirmationParams;
 
 	/**
@@ -75,13 +84,15 @@ export interface IClaudeToolPermissionHandler<TToolName extends ClaudeToolNames 
 	handle?(
 		toolName: TToolName,
 		input: ClaudeToolInputMap[TToolName],
-		context: ClaudeToolPermissionContext
+		context: ClaudeToolPermissionContext,
 	): Promise<ClaudeToolPermissionResult>;
 }
 
 /**
  * Constructor type for tool permission handlers
  */
-export type IClaudeToolPermissionHandlerCtor<TToolName extends ClaudeToolNames = ClaudeToolNames> =
+export type IClaudeToolPermissionHandlerCtor<
+	TToolName extends ClaudeToolNames = ClaudeToolNames,
+> =
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Constructor types for DI require 'any' for parameter compatibility
 	new (...args: any[]) => IClaudeToolPermissionHandler<TToolName>;

@@ -7,13 +7,13 @@ import { createServiceIdentifier } from '../../../util/common/services';
 import { Event } from '../../../util/vs/base/common/event';
 import { CopilotToken, TokenError, TokenErrorReason } from './copilotToken';
 
-export const ICopilotTokenManager = createServiceIdentifier<ICopilotTokenManager>('ICopilotTokenManager');
+export const ICopilotTokenManager =
+	createServiceIdentifier<ICopilotTokenManager>('ICopilotTokenManager');
 
 /**
  * @deprecated Use `IAuthenticationService` instead
  */
 export interface ICopilotTokenManager {
-
 	readonly _serviceBrand: undefined;
 
 	/**
@@ -46,7 +46,12 @@ export function nowSeconds(): number {
 	return Math.floor(Date.now() / 1000);
 }
 
-export type NotGitHubLoginFailed = { kind: 'success' } | { kind: 'failure'; reason: Exclude<TokenErrorReason, 'GitHubLoginFailed'> };
+export type NotGitHubLoginFailed =
+	| { kind: 'success' }
+	| {
+			kind: 'failure';
+			reason: Exclude<TokenErrorReason, 'GitHubLoginFailed'>;
+	  };
 
 //#region Testing Copilot Token Mangers
 
@@ -55,5 +60,10 @@ export type NotGitHubLoginFailed = { kind: 'success' } | { kind: 'failure'; reas
  */
 export interface CheckCopilotToken {
 	/** Check that the object has access to a valid Copilot token. */
-	checkCopilotToken(): Promise<{ status: 'OK' } | (TokenError & { reason: Exclude<TokenErrorReason, 'GitHubLoginFailed'> })>;
+	checkCopilotToken(): Promise<
+		| { status: 'OK' }
+		| (TokenError & {
+				reason: Exclude<TokenErrorReason, 'GitHubLoginFailed'>;
+		  })
+	>;
 }

@@ -1,4 +1,4 @@
-import { filepaths } from '../../helpers/filepaths';
+import { filepaths } from "../../helpers/filepaths";
 
 const packages: Fig.Generator = {
 	// only trigger when the token length transitions to or from 0

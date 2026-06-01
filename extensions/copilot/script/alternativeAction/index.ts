@@ -12,41 +12,58 @@ import { Processor } from '../../test/pipeline/alternativeAction/processor';
 import { IData, Scoring } from '../../test/pipeline/alternativeAction/types';
 import { Either, log } from '../../test/pipeline/alternativeAction/util';
 
-async function extractFromCsv(csvContents: string): Promise<(Scoring.t | undefined)[]> {
+async function extractFromCsv(
+	csvContents: string,
+): Promise<(Scoring.t | undefined)[]> {
 	const options = {
 		columns: true as const, // Use first row as column headers
-		delimiter: ',',         // Comma delimiter
-		quote: '"',             // Double quotes
-		escape: '"',            // Standard CSV escape character
+		delimiter: ',', // Comma delimiter
+		quote: '"', // Double quotes
+		escape: '"', // Standard CSV escape character
 		skip_empty_lines: true, // Skip any empty rows
-		trim: true,             // Remove whitespace around fields
-		relax_quotes: true,     // Handle quotes within fields more flexibly
-		bom: true,              // Handle UTF-8 BOM
-		cast: false             // Keep all values as strings initially
+		trim: true, // Remove whitespace around fields
+		relax_quotes: true, // Handle quotes within fields more flexibly
+		bom: true, // Handle UTF-8 BOM
+		cast: false, // Keep all values as strings initially
 	} as const;
 
 	type CsvRecord = { Data: string };
 
-	const objects = (await new Promise<CsvRecord[]>((resolve, reject) =>
-		csvParse.parse<CsvRecord>(csvContents, options, (err, result) => {
-			if (err) {
-				reject(err);
-			} else {
-				if (result.every((item: any) => typeof item === 'object' && 'Data' in item && typeof item['Data'] === 'string')) {
-					resolve(result);
+	const objects = (
+		await new Promise<CsvRecord[]>((resolve, reject) =>
+			csvParse.parse<CsvRecord>(csvContents, options, (err, result) => {
+				if (err) {
+					reject(err);
 				} else {
-					reject(new Error('Invalid CSV format'));
+					if (
+						result.every(
+							(item: any) =>
+								typeof item === 'object' &&
+								'Data' in item &&
+								typeof item['Data'] === 'string',
+						)
+					) {
+						resolve(result);
+					} else {
+						reject(new Error('Invalid CSV format'));
+					}
 				}
-			}
-		})
-	)).map(record => JSON.parse(record.Data) as IData);
+			}),
+		)
+	).map((record) => JSON.parse(record.Data) as IData);
 
 	const scoredEdits = objects.map((obj: IData) => {
 		const altAction: IAlternativeAction = obj.altAction;
 		if (!altAction || !altAction.recording) {
 			return undefined;
 		}
-		return Processor.createScoringForAlternativeAction(altAction, coalesce([parseSuggestedEdit(obj.postProcessingOutcome.suggestedEdit)]), false);
+		return Processor.createScoringForAlternativeAction(
+			altAction,
+			coalesce([
+				parseSuggestedEdit(obj.postProcessingOutcome.suggestedEdit),
+			]),
+			false,
+		);
 	});
 
 	return scoredEdits;
@@ -54,8 +71,14 @@ async function extractFromCsv(csvContents: string): Promise<(Scoring.t | undefin
 
 function writeFiles(basename: string, scoring: Scoring.t) {
 	return [
-		fs.writeFile(`${basename}.scoredEdits.w.json`, JSON.stringify(scoring, null, 2)),
-		fs.writeFile(`${basename}.recording.w.json`, JSON.stringify(scoring.scoringContext.recording, null, 2)),
+		fs.writeFile(
+			`${basename}.scoredEdits.w.json`,
+			JSON.stringify(scoring, null, 2),
+		),
+		fs.writeFile(
+			`${basename}.recording.w.json`,
+			JSON.stringify(scoring.scoringContext.recording, null, 2),
+		),
 	];
 }
 
@@ -64,21 +87,28 @@ async function handleCsv(inputFilePath: string) {
 	const csvContents = await fs.readFile(inputFilePath, 'utf8');
 	log('CSV contents read, length:', csvContents.length);
 	const extracted = await extractFromCsv(csvContents);
-	log('Extraction complete, number of scored edits:', extracted.filter(e => e).length);
+	log(
+		'Extraction complete, number of scored edits:',
+		extracted.filter((e) => e).length,
+	);
 	try {
-		await Promise.all(extracted.flatMap((obj: Scoring.t | undefined, idx: number) => {
-			if (!obj) {
-				return [];
-			}
-			return writeFiles(idx.toString(), obj);
-		}));
+		await Promise.all(
+			extracted.flatMap((obj: Scoring.t | undefined, idx: number) => {
+				if (!obj) {
+					return [];
+				}
+				return writeFiles(idx.toString(), obj);
+			}),
+		);
 		log('All files written successfully');
 	} catch (e) {
 		log('Error writing files:', e);
 	}
 }
 
-function parseFile(fileContents: string): Either<IData, IAlternativeAction> | undefined {
+function parseFile(
+	fileContents: string,
+): Either<IData, IAlternativeAction> | undefined {
 	let parsedObj: unknown;
 	try {
 		parsedObj = JSON.parse(fileContents);
@@ -107,23 +137,36 @@ async function handleAlternativeActionJson(inputFilePath: string) {
 	let isAccepted = false;
 	if (obj.isLeft()) {
 		const data = obj.value;
-		const parsedEdit = parseSuggestedEdit(data.postProcessingOutcome.suggestedEdit);
+		const parsedEdit = parseSuggestedEdit(
+			data.postProcessingOutcome.suggestedEdit,
+		);
 		if (parsedEdit) {
 			edits.push(parsedEdit);
 		}
 		isAccepted = data.suggestionStatus === 'accepted';
 	}
-	const scoring = Processor.createScoringForAlternativeAction(altAction, edits, isAccepted);
+	const scoring = Processor.createScoringForAlternativeAction(
+		altAction,
+		edits,
+		isAccepted,
+	);
 	if (!scoring) {
 		console.error('Failed to create scoring from alternative action');
 		return;
 	}
-	const outputFilePath = inputFilePath.replace(/\.json$/, '.scoredEdits.json');
-	await Promise.all(writeFiles(outputFilePath.replace(/\.scoredEdits\.json$/, ''), scoring));
+	const outputFilePath = inputFilePath.replace(
+		/\.json$/,
+		'.scoredEdits.json',
+	);
+	await Promise.all(
+		writeFiles(outputFilePath.replace(/\.scoredEdits\.json$/, ''), scoring),
+	);
 	log('Scoring written to:', outputFilePath);
 }
 
-function parseSuggestedEdit(suggestedEditStr: string): [number, number, string] | null {
+function parseSuggestedEdit(
+	suggestedEditStr: string,
+): [number, number, string] | null {
 	const [stringifiedRange, quotedText] = suggestedEditStr.split(' -> ');
 	const match = stringifiedRange.match(/^\[(\d+), (\d+)\)$/);
 	if (match) {
@@ -140,14 +183,16 @@ async function main() {
 		alias: {
 			p: 'path',
 			s: 'single',
-			c: 'csv'
+			c: 'csv',
 		},
 		boolean: ['single', 'csv'],
-		string: ['path']
+		string: ['path'],
 	});
 
 	if (!argv.path) {
-		console.error('Please provide a path to an alternative action JSON file using --path or -p');
+		console.error(
+			'Please provide a path to an alternative action JSON file using --path or -p',
+		);
 		process.exit(1);
 	}
 

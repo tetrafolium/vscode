@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 'use strict';
 
-
 export const enum ScanError {
 	None = 0,
 	UnexpectedEndOfComment = 1,
@@ -12,7 +11,7 @@ export const enum ScanError {
 	UnexpectedEndOfNumber = 3,
 	InvalidUnicode = 4,
 	InvalidEscapeCharacter = 5,
-	InvalidCharacter = 6
+	InvalidCharacter = 6,
 }
 
 export const enum SyntaxKind {
@@ -32,7 +31,7 @@ export const enum SyntaxKind {
 	LineBreakTrivia = 14,
 	Trivia = 15,
 	Unknown = 16,
-	EOF = 17
+	EOF = 17,
 }
 
 /**

@@ -137,7 +137,7 @@
 }
 
 .mobile-picker-sheet-header-action::before {
-	content: '';
+	content: "";
 	position: absolute;
 	inset: 6px;
 	border-radius: 50%;
@@ -290,7 +290,10 @@
 }
 
 .mobile-picker-sheet-item.checked {
-	background: var(--vscode-list-activeSelectionBackground, var(--vscode-toolbar-hoverBackground));
+	background: var(
+		--vscode-list-activeSelectionBackground,
+		var(--vscode-toolbar-hoverBackground)
+	);
 	color: var(--vscode-list-activeSelectionForeground, inherit);
 }
 
@@ -323,7 +326,11 @@
 }
 
 .mobile-picker-sheet-item.checked .mobile-picker-sheet-icon {
-	background: color-mix(in srgb, var(--vscode-textLink-foreground, var(--vscode-button-background)) 18%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--vscode-textLink-foreground, var(--vscode-button-background)) 18%,
+		transparent
+	);
 	color: var(--vscode-textLink-foreground, var(--vscode-button-background));
 }
 

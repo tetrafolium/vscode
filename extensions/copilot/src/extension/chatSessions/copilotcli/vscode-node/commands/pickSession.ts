@@ -14,12 +14,18 @@ import { InProcHttpServer } from '../inProcHttpServer';
  * Returns the sessionId, or undefined if none are connected or the user dismissed the picker.
  * If only one session is connected, returns it directly without showing a picker.
  */
-export async function pickSession(logger: ILogger, httpServer: InProcHttpServer, sessionTracker: ICopilotCLISessionTracker): Promise<string | undefined> {
+export async function pickSession(
+	logger: ILogger,
+	httpServer: InProcHttpServer,
+	sessionTracker: ICopilotCLISessionTracker,
+): Promise<string | undefined> {
 	const sessionIds = httpServer.getConnectedSessionIds();
 
 	if (sessionIds.length === 0) {
 		logger.debug('No connected CLI sessions');
-		vscode.window.showWarningMessage(l10n.t('No Copilot CLI sessions are connected.'));
+		vscode.window.showWarningMessage(
+			l10n.t('No Copilot CLI sessions are connected.'),
+		);
 		return undefined;
 	}
 
@@ -27,9 +33,10 @@ export async function pickSession(logger: ILogger, httpServer: InProcHttpServer,
 		return sessionIds[0];
 	}
 
-	const items = sessionIds.map(id => ({
+	const items = sessionIds.map((id) => ({
 		label: sessionTracker.getSessionDisplayName(id),
-		description: sessionTracker.getSessionDisplayName(id) !== id ? id : undefined,
+		description:
+			sessionTracker.getSessionDisplayName(id) !== id ? id : undefined,
 		sessionId: id,
 	}));
 

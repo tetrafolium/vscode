@@ -12,16 +12,21 @@
 // `src/vs/platform/agentHost/browser/`. Together they reuse the existing
 // `RemoteAgentHostProtocolClient` over IPC instead of a raw WebSocket.
 
-import { Emitter, Event } from '../../base/common/event.js';
-import { Disposable, IDisposable, MutableDisposable } from '../../base/common/lifecycle.js';
-import { connectionTokenQueryName } from '../../base/common/network.js';
-import { IPCServer, IServerChannel } from '../../base/parts/ipc/common/ipc.js';
-import { ILogService } from '../../platform/log/common/log.js';
-import { IServerLifetimeService } from './serverLifetimeService.js';
-import type * as wsTypes from 'ws';
-import type * as netTypes from 'net';
+import { Emitter, Event } from "../../base/common/event.js";
+import {
+	Disposable,
+	IDisposable,
+	MutableDisposable,
+} from "../../base/common/lifecycle.js";
+import { connectionTokenQueryName } from "../../base/common/network.js";
+import { IPCServer, IServerChannel } from "../../base/parts/ipc/common/ipc.js";
+import { ILogService } from "../../platform/log/common/log.js";
+import { IServerLifetimeService } from "./serverLifetimeService.js";
+import type * as wsTypes from "ws";
+import type * as netTypes from "net";
 
-const agentHostProxyUnavailableMessage = 'Agent host proxy is not available because no upstream agent host endpoint was configured.';
+const agentHostProxyUnavailableMessage =
+	"Agent host proxy is not available because no upstream agent host endpoint was configured.";
 
 /**
  * Endpoint description for the upstream agent host. One of `port` or
@@ -41,12 +46,12 @@ export interface IAgentHostUpstreamEndpoint {
  */
 let _wsModule: typeof wsTypes | undefined;
 async function loadWs(): Promise<typeof wsTypes> {
-	return _wsModule ??= await import('ws');
+	return (_wsModule ??= await import("ws"));
 }
 
 let _netModule: typeof netTypes | undefined;
 async function loadNet(): Promise<typeof netTypes> {
-	return _netModule ??= await import('net');
+	return (_netModule ??= await import("net"));
 }
 
 /**
@@ -61,19 +66,22 @@ export interface IUpstreamConnection extends IDisposable {
 	send(frame: string): void;
 }
 
-export type UpstreamConnectionFactory = (endpoint: IAgentHostUpstreamEndpoint) => IUpstreamConnection;
+export type UpstreamConnectionFactory = (
+	endpoint: IAgentHostUpstreamEndpoint,
+) => IUpstreamConnection;
 
 /**
  * IPC channel registered when the remote server has no agent host upstream.
  * Keeping the channel present lets renderers fail explicitly without making
  * the IPC layer report `Unknown channel: agentHostProxy`.
  */
-export class UnavailableAgentHostChannel<TContext> implements IServerChannel<TContext> {
-
+export class UnavailableAgentHostChannel<
+	TContext,
+> implements IServerChannel<TContext> {
 	listen<T>(_ctx: TContext, event: string): Event<T> {
 		switch (event) {
-			case 'frame':
-			case 'close':
+			case "frame":
+			case "close":
 				return Event.None;
 		}
 		throw new Error(`Invalid listen: ${event}`);
@@ -81,10 +89,10 @@ export class UnavailableAgentHostChannel<TContext> implements IServerChannel<TCo
 
 	call<T>(_ctx: TContext, command: string): Promise<T> {
 		switch (command) {
-			case 'connect':
+			case "connect":
 				return Promise.reject(new Error(agentHostProxyUnavailableMessage));
-			case 'send':
-			case 'close':
+			case "send":
+			case "close":
 				return Promise.resolve(undefined as T);
 		}
 		return Promise.reject(new Error(`Invalid call: ${command}`));
@@ -94,10 +102,18 @@ export class UnavailableAgentHostChannel<TContext> implements IServerChannel<TCo
 /**
  * Default upstream factory: opens an AHP WebSocket to the local agent host.
  */
-const defaultUpstreamFactory = (logService: ILogService, lifetime: IServerLifetimeService): UpstreamConnectionFactory =>
-	(endpoint) => new WebSocketUpstreamConnection(endpoint, logService, lifetime);
+const defaultUpstreamFactory =
+	(
+		logService: ILogService,
+		lifetime: IServerLifetimeService,
+	): UpstreamConnectionFactory =>
+	(endpoint) =>
+		new WebSocketUpstreamConnection(endpoint, logService, lifetime);
 
-class WebSocketUpstreamConnection extends Disposable implements IUpstreamConnection {
+class WebSocketUpstreamConnection
+	extends Disposable
+	implements IUpstreamConnection
+{
 	private readonly _onFrame = this._register(new Emitter<string>());
 	readonly onFrame: Event<string> = this._onFrame.event;
 
@@ -119,9 +135,9 @@ class WebSocketUpstreamConnection extends Disposable implements IUpstreamConnect
 
 	connect(): Promise<void> {
 		if (this._store.isDisposed) {
-			return Promise.reject(new Error('UpstreamConnection is disposed'));
+			return Promise.reject(new Error("UpstreamConnection is disposed"));
 		}
-		return this._connectPromise ??= this._doConnect();
+		return (this._connectPromise ??= this._doConnect());
 	}
 
 	private async _doConnect(): Promise<void> {
@@ -129,22 +145,25 @@ class WebSocketUpstreamConnection extends Disposable implements IUpstreamConnect
 		const url = this._buildUrl();
 		const wsOptions = await this._buildWsOptions();
 
-		this._logService.info(`[AgentHostChannel] Opening upstream to ${this._endpoint.socketPath ?? url}`);
+		this._logService.info(
+			`[AgentHostChannel] Opening upstream to ${this._endpoint.socketPath ?? url}`,
+		);
 		const socket = new ws.WebSocket(url, wsOptions);
 		this._ws = socket;
 
 		return new Promise<void>((resolve, reject) => {
 			const onOpen = () => {
 				cleanup();
-				this._logService.trace('[AgentHostChannel] Upstream open');
-				this._lifetimeToken.value = this._serverLifetimeService.active('AgentHostChannel');
-				socket.on('message', (data: Buffer | string) => {
-					const text = typeof data === 'string' ? data : data.toString('utf-8');
+				this._logService.trace("[AgentHostChannel] Upstream open");
+				this._lifetimeToken.value =
+					this._serverLifetimeService.active("AgentHostChannel");
+				socket.on("message", (data: Buffer | string) => {
+					const text = typeof data === "string" ? data : data.toString("utf-8");
 					this._onFrame.fire(text);
 				});
-				socket.on('close', () => this._fireClose());
-				socket.on('error', err => {
-					this._logService.warn('[AgentHostChannel] Upstream error', err);
+				socket.on("close", () => this._fireClose());
+				socket.on("error", (err) => {
+					this._logService.warn("[AgentHostChannel] Upstream error", err);
 					this._fireClose();
 				});
 				resolve();
@@ -152,7 +171,10 @@ class WebSocketUpstreamConnection extends Disposable implements IUpstreamConnect
 
 			const onError = (err: Error) => {
 				cleanup();
-				this._logService.warn('[AgentHostChannel] Upstream connection failed', err);
+				this._logService.warn(
+					"[AgentHostChannel] Upstream connection failed",
+					err,
+				);
 				this._fireClose();
 				reject(err);
 			};
@@ -160,25 +182,25 @@ class WebSocketUpstreamConnection extends Disposable implements IUpstreamConnect
 			const onClose = () => {
 				cleanup();
 				this._fireClose();
-				reject(new Error('Upstream closed before connect'));
+				reject(new Error("Upstream closed before connect"));
 			};
 
 			const cleanup = () => {
-				socket.removeListener('open', onOpen);
-				socket.removeListener('error', onError);
-				socket.removeListener('close', onClose);
+				socket.removeListener("open", onOpen);
+				socket.removeListener("error", onError);
+				socket.removeListener("close", onClose);
 			};
 
-			socket.on('open', onOpen);
-			socket.on('error', onError);
-			socket.on('close', onClose);
+			socket.on("open", onOpen);
+			socket.on("error", onError);
+			socket.on("close", onClose);
 		});
 	}
 
 	send(frame: string): void {
 		const ws = this._ws;
 		if (!ws || ws.readyState !== ws.OPEN) {
-			this._logService.warn('[AgentHostChannel] Drop send: upstream not open');
+			this._logService.warn("[AgentHostChannel] Drop send: upstream not open");
 			this._fireClose();
 			return;
 		}
@@ -201,8 +223,8 @@ class WebSocketUpstreamConnection extends Disposable implements IUpstreamConnect
 	}
 
 	private _buildUrl(): string {
-		const host = this._endpoint.host ?? 'localhost';
-		const port = this._endpoint.port ?? '0';
+		const host = this._endpoint.host ?? "localhost";
+		const port = this._endpoint.port ?? "0";
 		let url = `ws://${host}:${port}`;
 		if (this._endpoint.connectionToken) {
 			url += `?${connectionTokenQueryName}=${encodeURIComponent(this._endpoint.connectionToken)}`;
@@ -218,7 +240,10 @@ class WebSocketUpstreamConnection extends Disposable implements IUpstreamConnect
 		const socketPath = this._endpoint.socketPath;
 		// Note: `createConnection` shape required by `ws` differs slightly
 		// across versions; we cast through `unknown` to match the local typings.
-		const createConnection = (() => net.createConnection(socketPath)) as unknown as wsTypes.ClientOptions['createConnection'];
+		const createConnection = (() =>
+			net.createConnection(
+				socketPath,
+			)) as unknown as wsTypes.ClientOptions["createConnection"];
 		return { createConnection } satisfies wsTypes.ClientOptions;
 	}
 }
@@ -227,8 +252,10 @@ class WebSocketUpstreamConnection extends Disposable implements IUpstreamConnect
  * IPC channel that proxies the agent host protocol. One channel instance
  * serves all renderer clients; per-context state is tracked in `_perCtx`.
  */
-export class AgentHostChannel<TContext> extends Disposable implements IServerChannel<TContext> {
-
+export class AgentHostChannel<TContext>
+	extends Disposable
+	implements IServerChannel<TContext>
+{
 	private readonly _perCtx = new Map<TContext, IUpstreamConnection>();
 	private readonly _upstreamFactory: UpstreamConnectionFactory;
 
@@ -240,15 +267,23 @@ export class AgentHostChannel<TContext> extends Disposable implements IServerCha
 		upstreamFactory?: UpstreamConnectionFactory,
 	) {
 		super();
-		this._upstreamFactory = upstreamFactory ?? defaultUpstreamFactory(_logService, serverLifetimeService);
-		this._register(ipcServer.onDidRemoveConnection(c => this._disposeCtx(c.ctx as unknown as TContext)));
+		this._upstreamFactory =
+			upstreamFactory ??
+			defaultUpstreamFactory(_logService, serverLifetimeService);
+		this._register(
+			ipcServer.onDidRemoveConnection((c) =>
+				this._disposeCtx(c.ctx as unknown as TContext),
+			),
+		);
 	}
 
 	listen<T>(ctx: TContext, event: string): Event<T> {
 		const conn = this._getOrCreate(ctx);
 		switch (event) {
-			case 'frame': return conn.onFrame as Event<unknown> as Event<T>;
-			case 'close': return conn.onClose as Event<unknown> as Event<T>;
+			case "frame":
+				return conn.onFrame as Event<unknown> as Event<T>;
+			case "close":
+				return conn.onClose as Event<unknown> as Event<T>;
 		}
 		throw new Error(`Invalid listen: ${event}`);
 	}
@@ -256,17 +291,19 @@ export class AgentHostChannel<TContext> extends Disposable implements IServerCha
 	async call<T>(ctx: TContext, command: string, arg?: unknown): Promise<T> {
 		const conn = this._getOrCreate(ctx);
 		switch (command) {
-			case 'connect':
-				this._logService.info(`[AgentHostChannel] Renderer ctx=${String(ctx)} requested connect to upstream`);
+			case "connect":
+				this._logService.info(
+					`[AgentHostChannel] Renderer ctx=${String(ctx)} requested connect to upstream`,
+				);
 				await conn.connect();
 				return undefined as T;
-			case 'send':
-				if (typeof arg !== 'string') {
-					throw new Error('send: arg must be a string frame');
+			case "send":
+				if (typeof arg !== "string") {
+					throw new Error("send: arg must be a string frame");
 				}
 				conn.send(arg);
 				return undefined as T;
-			case 'close':
+			case "close":
 				this._disposeCtx(ctx);
 				return undefined as T;
 		}

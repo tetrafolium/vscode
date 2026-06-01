@@ -3,8 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken, CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
-import { ChatFetchResponseType, ChatLocation, ChatResponse } from '../../../../platform/chat/common/commonTypes';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../util/vs/base/common/cancellation';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+	ChatResponse,
+} from '../../../../platform/chat/common/commonTypes';
 import { IEndpointProvider } from '../../../../platform/endpoint/common/endpointProvider';
 import { ILogService } from '../../../../platform/log/common/logService';
 import { IChatEndpoint } from '../../../../platform/networking/common/networking';
@@ -12,13 +19,21 @@ import { ITelemetryService } from '../../../../platform/telemetry/common/telemet
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { ToolCallingLoop } from '../../../intents/node/toolCallingLoop';
 import { Turn } from '../../../prompt/common/conversation';
-import { IBuildPromptContext, IToolCall, IToolCallRound } from '../../../prompt/common/intents';
+import {
+	IBuildPromptContext,
+	IToolCall,
+	IToolCallRound,
+} from '../../../prompt/common/intents';
 import { ITodoListContextProvider } from '../../../prompt/node/todoListContextProvider';
 import { normalizeToolSchema } from '../../../tools/common/toolSchemaNormalizer';
 import { ToolName } from '../../../tools/common/toolNames';
 import { IToolsService } from '../../../tools/common/toolsService';
 import { renderPromptElement } from '../base/promptRenderer';
-import { BackgroundTodoDeltaTracker, extractSessionResource, IBackgroundTodoDelta } from './backgroundTodoDelta';
+import {
+	BackgroundTodoDeltaTracker,
+	extractSessionResource,
+	IBackgroundTodoDelta,
+} from './backgroundTodoDelta';
 import { BackgroundTodoPrompt } from './backgroundTodoPrompt';
 
 /**
@@ -130,7 +145,6 @@ export interface IBackgroundTodoResult {
  *   2. Pending final review (at most once per turn).
  */
 export class BackgroundTodoProcessor {
-
 	/** Minimum number of substantive tool calls to trigger the very first
 	 *  background pass (no todo list exists yet). The fast model can still no-op if there's nothing to track. */
 	static readonly INITIAL_SUBSTANTIVE_THRESHOLD = 3;
@@ -149,7 +163,8 @@ export class BackgroundTodoProcessor {
 	 *  stopping entirely. */
 	static readonly MAX_INITIAL_BACKOFF_THRESHOLD = 48;
 
-	private _state: BackgroundTodoProcessorState = BackgroundTodoProcessorState.Idle;
+	private _state: BackgroundTodoProcessorState =
+		BackgroundTodoProcessorState.Idle;
 	private _promise: Promise<void> | undefined;
 	private _cts: CancellationTokenSource | undefined;
 	private _lastError: unknown;
@@ -178,14 +193,18 @@ export class BackgroundTodoProcessor {
 	private _finalReviewAttemptedTurnId: string | undefined;
 	readonly deltaTracker = new BackgroundTodoDeltaTracker();
 
-	constructor(
-		private readonly _logService?: ILogService,
-	) { }
+	constructor(private readonly _logService?: ILogService) {}
 
-	get state(): BackgroundTodoProcessorState { return this._state; }
-	get lastError(): unknown { return this._lastError; }
+	get state(): BackgroundTodoProcessorState {
+		return this._state;
+	}
+	get lastError(): unknown {
+		return this._lastError;
+	}
 	/** Whether the processor has ever successfully invoked the todo tool in this session. */
-	get hasCreatedTodos(): boolean { return this._hasCreatedTodos; }
+	get hasCreatedTodos(): boolean {
+		return this._hasCreatedTodos;
+	}
 
 	// ── Invocation policy ───────────────────────────────────────
 
@@ -196,18 +215,29 @@ export class BackgroundTodoProcessor {
 	 * next to the state it depends on (processor state, delta tracker).
 	 * Callers supply only the external context they already have.
 	 */
-	shouldRun(input: IBackgroundTodoPolicyInput): IBackgroundTodoDecisionResult {
+	shouldRun(
+		input: IBackgroundTodoPolicyInput,
+	): IBackgroundTodoDecisionResult {
 		this._resetInitialBackoffForTurn(input.turnId);
 
 		// ── Hard gates ────────────────────────────────────────────
 		if (input.todoToolExplicitlyEnabled) {
-			return { decision: BackgroundTodoDecision.Skip, reason: 'todoToolExplicitlyEnabled' };
+			return {
+				decision: BackgroundTodoDecision.Skip,
+				reason: 'todoToolExplicitlyEnabled',
+			};
 		}
 		if (!input.backgroundTodoAgentEnabled) {
-			return { decision: BackgroundTodoDecision.Skip, reason: 'experimentDisabled' };
+			return {
+				decision: BackgroundTodoDecision.Skip,
+				reason: 'experimentDisabled',
+			};
 		}
 		if (!input.isAgentPrompt) {
-			return { decision: BackgroundTodoDecision.Skip, reason: 'nonAgentPrompt' };
+			return {
+				decision: BackgroundTodoDecision.Skip,
+				reason: 'nonAgentPrompt',
+			};
 		}
 
 		const delta = this.deltaTracker.peekDelta(input.promptContext);
@@ -216,18 +246,32 @@ export class BackgroundTodoProcessor {
 		}
 
 		if (this._state === BackgroundTodoProcessorState.InProgress) {
-			this._logService?.debug(`[BackgroundTodo] policy: Wait (processorInProgress) — substantive=${delta.metadata.substantiveToolCallCount}, rounds=${delta.metadata.newRoundCount}`);
-			return { decision: BackgroundTodoDecision.Wait, reason: 'processorInProgress', delta };
+			this._logService?.debug(
+				`[BackgroundTodo] policy: Wait (processorInProgress) — substantive=${delta.metadata.substantiveToolCallCount}, rounds=${delta.metadata.newRoundCount}`,
+			);
+			return {
+				decision: BackgroundTodoDecision.Wait,
+				reason: 'processorInProgress',
+				delta,
+			};
 		}
 
-		const { currentTurnSubstantiveToolCallCount, isInitialDelta, isRequestOnly } = delta.metadata;
+		const {
+			currentTurnSubstantiveToolCallCount,
+			isInitialDelta,
+			isRequestOnly,
+		} = delta.metadata;
 
 		// ── Initial request (no tool calls yet) ────────────────────
 		if (isRequestOnly && isInitialDelta) {
 			// No tool activity yet — wait for any work before creating
 			// a plan. Running here would force the fast model to guess a plan
 			// from the user request alone, which is too early.
-			return { decision: BackgroundTodoDecision.Wait, reason: 'initialPlanNeeded', delta };
+			return {
+				decision: BackgroundTodoDecision.Wait,
+				reason: 'initialPlanNeeded',
+				delta,
+			};
 		}
 
 		// ── First-pass fast path / progressive backoff ─────────────
@@ -247,26 +291,53 @@ export class BackgroundTodoProcessor {
 		//   noop 4+ → threshold 48 (MAX_INITIAL_BACKOFF_THRESHOLD, then steady)
 		if (!this._hasCreatedTodos) {
 			const effectiveThreshold = Math.min(
-				BackgroundTodoProcessor.INITIAL_SUBSTANTIVE_THRESHOLD << this._consecutiveInitialNoops,
+				BackgroundTodoProcessor.INITIAL_SUBSTANTIVE_THRESHOLD <<
+					this._consecutiveInitialNoops,
 				BackgroundTodoProcessor.MAX_INITIAL_BACKOFF_THRESHOLD,
 			);
 			if (currentTurnSubstantiveToolCallCount >= effectiveThreshold) {
-				this._logService?.debug(`[BackgroundTodo] policy: Run (initialActivity) — substantive=${currentTurnSubstantiveToolCallCount} >= effective threshold=${effectiveThreshold} (noops=${this._consecutiveInitialNoops}), rounds=${delta.metadata.newRoundCount}`);
-				return { decision: BackgroundTodoDecision.Run, reason: 'initialActivity', delta };
+				this._logService?.debug(
+					`[BackgroundTodo] policy: Run (initialActivity) — substantive=${currentTurnSubstantiveToolCallCount} >= effective threshold=${effectiveThreshold} (noops=${this._consecutiveInitialNoops}), rounds=${delta.metadata.newRoundCount}`,
+				);
+				return {
+					decision: BackgroundTodoDecision.Run,
+					reason: 'initialActivity',
+					delta,
+				};
 			}
-			const reason = this._consecutiveInitialNoops > 0 ? 'initialBackoff' : 'belowThreshold';
-			this._logService?.debug(`[BackgroundTodo] policy: Wait (${reason}) — substantive=${currentTurnSubstantiveToolCallCount} < effective threshold=${effectiveThreshold} (noops=${this._consecutiveInitialNoops}), rounds=${delta.metadata.newRoundCount}`);
+			const reason =
+				this._consecutiveInitialNoops > 0
+					? 'initialBackoff'
+					: 'belowThreshold';
+			this._logService?.debug(
+				`[BackgroundTodo] policy: Wait (${reason}) — substantive=${currentTurnSubstantiveToolCallCount} < effective threshold=${effectiveThreshold} (noops=${this._consecutiveInitialNoops}), rounds=${delta.metadata.newRoundCount}`,
+			);
 			return { decision: BackgroundTodoDecision.Wait, reason, delta };
 		}
 
 		// ── Subsequent passes (todos already exist) ─────────────────
-		if (currentTurnSubstantiveToolCallCount >= BackgroundTodoProcessor.SUBSEQUENT_SUBSTANTIVE_THRESHOLD) {
-			this._logService?.debug(`[BackgroundTodo] policy: Run (substantiveActivity) — substantive=${currentTurnSubstantiveToolCallCount} >= threshold=${BackgroundTodoProcessor.SUBSEQUENT_SUBSTANTIVE_THRESHOLD}, rounds=${delta.metadata.newRoundCount}`);
-			return { decision: BackgroundTodoDecision.Run, reason: 'substantiveActivity', delta };
+		if (
+			currentTurnSubstantiveToolCallCount >=
+			BackgroundTodoProcessor.SUBSEQUENT_SUBSTANTIVE_THRESHOLD
+		) {
+			this._logService?.debug(
+				`[BackgroundTodo] policy: Run (substantiveActivity) — substantive=${currentTurnSubstantiveToolCallCount} >= threshold=${BackgroundTodoProcessor.SUBSEQUENT_SUBSTANTIVE_THRESHOLD}, rounds=${delta.metadata.newRoundCount}`,
+			);
+			return {
+				decision: BackgroundTodoDecision.Run,
+				reason: 'substantiveActivity',
+				delta,
+			};
 		}
 
-		this._logService?.debug(`[BackgroundTodo] policy: Wait (belowThreshold) — substantive=${currentTurnSubstantiveToolCallCount}, rounds=${delta.metadata.newRoundCount}`);
-		return { decision: BackgroundTodoDecision.Wait, reason: 'belowThreshold', delta };
+		this._logService?.debug(
+			`[BackgroundTodo] policy: Wait (belowThreshold) — substantive=${currentTurnSubstantiveToolCallCount}, rounds=${delta.metadata.newRoundCount}`,
+		);
+		return {
+			decision: BackgroundTodoDecision.Wait,
+			reason: 'belowThreshold',
+			delta,
+		};
 	}
 
 	private _resetInitialBackoffForTurn(turnId: string | undefined): void {
@@ -293,7 +364,9 @@ export class BackgroundTodoProcessor {
 		turnId?: string,
 	): void {
 		this._resetInitialBackoffForTurn(turnId);
-		this._logService?.debug(`[BackgroundTodo] requestRegularPass — newRounds=${delta.metadata.newRoundCount}, substantive=${delta.metadata.substantiveToolCallCount}, state=${this._state}, turnId=${turnId}`);
+		this._logService?.debug(
+			`[BackgroundTodo] requestRegularPass — newRounds=${delta.metadata.newRoundCount}, substantive=${delta.metadata.substantiveToolCallCount}, state=${this._state}, turnId=${turnId}`,
+		);
 		this._pendingRegularDelta = delta;
 		this._pendingRegularContext = context;
 		this._pendingRegularToken = parentToken;
@@ -309,17 +382,27 @@ export class BackgroundTodoProcessor {
 	 * - No todos have been created yet (nothing to finalize).
 	 * - Final review was already requested for the given {@link turnId}.
 	 */
-	requestFinalReview(turnId: string, context: IBackgroundTodoExecutionContext, parentToken?: CancellationToken): void {
+	requestFinalReview(
+		turnId: string,
+		context: IBackgroundTodoExecutionContext,
+		parentToken?: CancellationToken,
+	): void {
 		if (!this._hasCreatedTodos) {
-			this._logService?.debug('[BackgroundTodo] final review skipped - no todos have been created');
+			this._logService?.debug(
+				'[BackgroundTodo] final review skipped - no todos have been created',
+			);
 			return;
 		}
 		if (this._finalReviewAttemptedTurnId === turnId) {
-			this._logService?.debug(`[BackgroundTodo] final review skipped — already attempted for turn ${turnId}`);
+			this._logService?.debug(
+				`[BackgroundTodo] final review skipped — already attempted for turn ${turnId}`,
+			);
 			return;
 		}
 		this._finalReviewAttemptedTurnId = turnId;
-		this._logService?.debug(`[BackgroundTodo] final review requested for turn ${turnId} — currentState=${this._state}`);
+		this._logService?.debug(
+			`[BackgroundTodo] final review requested for turn ${turnId} — currentState=${this._state}`,
+		);
 
 		this._pendingFinalReview = { ...context, isFinalReview: true };
 		this._pendingFinalReviewToken = parentToken;
@@ -361,13 +444,18 @@ export class BackgroundTodoProcessor {
 	 */
 	start(
 		delta: IBackgroundTodoDelta,
-		work: (delta: IBackgroundTodoDelta, token: CancellationToken) => Promise<IBackgroundTodoResult>,
+		work: (
+			delta: IBackgroundTodoDelta,
+			token: CancellationToken,
+		) => Promise<IBackgroundTodoResult>,
 		parentToken?: CancellationToken,
 		advanceCursor: boolean = true,
 	): void {
 		if (this._state === BackgroundTodoProcessorState.InProgress) {
 			// Coalesce into the regular-pass slot so _drainQueue picks it up.
-			this._logService?.debug(`[BackgroundTodo] coalescing delta (pass #${this._passCount} in progress) — newRounds=${delta.metadata.newRoundCount}, substantive=${delta.metadata.substantiveToolCallCount}`);
+			this._logService?.debug(
+				`[BackgroundTodo] coalescing delta (pass #${this._passCount} in progress) — newRounds=${delta.metadata.newRoundCount}, substantive=${delta.metadata.substantiveToolCallCount}`,
+			);
 			this._pendingRegularDelta = delta;
 			this._pendingRegularContext = undefined; // will use work callback directly
 			this._pendingRegularToken = parentToken;
@@ -382,7 +470,12 @@ export class BackgroundTodoProcessor {
 	}
 
 	/** Stashed work callback for coalesced start() calls. */
-	private _pendingRegularWork: ((delta: IBackgroundTodoDelta, token: CancellationToken) => Promise<IBackgroundTodoResult>) | undefined;
+	private _pendingRegularWork:
+		| ((
+				delta: IBackgroundTodoDelta,
+				token: CancellationToken,
+		  ) => Promise<IBackgroundTodoResult>)
+		| undefined;
 	private _pendingRegularAdvanceCursor: boolean = true;
 
 	// ── Internal execution ──────────────────────────────────────
@@ -421,9 +514,13 @@ export class BackgroundTodoProcessor {
 				// This avoids replaying the in-flight delta when no new rounds arrived
 				// while the previous pass was running, and retries the full delta if the
 				// previous pass failed and did not advance the cursor.
-				const latestDelta = this.deltaTracker.peekDelta(ctx.promptContext);
+				const latestDelta = this.deltaTracker.peekDelta(
+					ctx.promptContext,
+				);
 				if (!latestDelta) {
-					this._logService?.debug('[BackgroundTodo] queued regular pass skipped: no new delta remains after in-flight pass');
+					this._logService?.debug(
+						'[BackgroundTodo] queued regular pass skipped: no new delta remains after in-flight pass',
+					);
 				} else {
 					this._runPass(
 						latestDelta,
@@ -434,7 +531,9 @@ export class BackgroundTodoProcessor {
 					return;
 				}
 			} else {
-				this._logService?.debug('[BackgroundTodo] queued regular pass skipped: missing execution context');
+				this._logService?.debug(
+					'[BackgroundTodo] queued regular pass skipped: missing execution context',
+				);
 			}
 		}
 
@@ -454,7 +553,7 @@ export class BackgroundTodoProcessor {
 			if (allRoundsWithTurns.length === 0) {
 				return;
 			}
-			const allRounds = allRoundsWithTurns.map(r => r.round);
+			const allRounds = allRoundsWithTurns.map((r) => r.round);
 			let substantive = 0;
 			for (const round of allRounds) {
 				for (const call of round.toolCalls) {
@@ -478,7 +577,9 @@ export class BackgroundTodoProcessor {
 				},
 			};
 
-			this._logService?.debug(`[BackgroundTodo] draining final review — rounds=${allRounds.length}, substantive=${substantive}`);
+			this._logService?.debug(
+				`[BackgroundTodo] draining final review — rounds=${allRounds.length}, substantive=${substantive}`,
+			);
 			this._runPass(
 				delta,
 				(d, t) => BackgroundTodoProcessor._doExecute(d, finalCtx, t),
@@ -491,7 +592,10 @@ export class BackgroundTodoProcessor {
 
 	private _runPass(
 		delta: IBackgroundTodoDelta,
-		work: (delta: IBackgroundTodoDelta, token: CancellationToken) => Promise<IBackgroundTodoResult>,
+		work: (
+			delta: IBackgroundTodoDelta,
+			token: CancellationToken,
+		) => Promise<IBackgroundTodoResult>,
 		parentToken?: CancellationToken,
 		advanceCursor: boolean = true,
 	): void {
@@ -503,12 +607,19 @@ export class BackgroundTodoProcessor {
 		this._cts = cts;
 		const token = cts.token;
 
-		this._logService?.debug(`[BackgroundTodo] starting pass #${passNum} — newRounds=${delta.metadata.newRoundCount}, substantive=${delta.metadata.substantiveToolCallCount}, advanceCursor=${advanceCursor}`);
+		this._logService?.debug(
+			`[BackgroundTodo] starting pass #${passNum} — newRounds=${delta.metadata.newRoundCount}, substantive=${delta.metadata.substantiveToolCallCount}, advanceCursor=${advanceCursor}`,
+		);
 
 		const passPromise = work(delta, token).then(
 			(result) => {
-				if (this._state !== BackgroundTodoProcessorState.InProgress || this._cts !== cts) {
-					this._logService?.debug(`[BackgroundTodo] pass #${passNum} completed but state was ${this._state} (cancelled?)`);
+				if (
+					this._state !== BackgroundTodoProcessorState.InProgress ||
+					this._cts !== cts
+				) {
+					this._logService?.debug(
+						`[BackgroundTodo] pass #${passNum} completed but state was ${this._state} (cancelled?)`,
+					);
 					return; // cancelled while in flight
 				}
 				if (result.outcome === 'success') {
@@ -519,7 +630,9 @@ export class BackgroundTodoProcessor {
 					// don't re-invoke copilot-utility-small every INITIAL_SUBSTANTIVE_THRESHOLD reads.
 					this._consecutiveInitialNoops++;
 				}
-				this._logService?.debug(`[BackgroundTodo] pass #${passNum} completed: outcome=${result.outcome}, durationMs=${result.durationMs ?? '?'}, model=${result.model ?? '?'}, promptTokens=${result.promptTokens ?? '?'}, completionTokens=${result.completionTokens ?? '?'}`);
+				this._logService?.debug(
+					`[BackgroundTodo] pass #${passNum} completed: outcome=${result.outcome}, durationMs=${result.durationMs ?? '?'}, model=${result.model ?? '?'}, promptTokens=${result.promptTokens ?? '?'}, completionTokens=${result.completionTokens ?? '?'}`,
+				);
 				if (advanceCursor) {
 					this.deltaTracker.markProcessed(delta);
 				}
@@ -531,13 +644,18 @@ export class BackgroundTodoProcessor {
 				}
 			},
 			(err) => {
-				if (this._state !== BackgroundTodoProcessorState.InProgress || this._cts !== cts) {
+				if (
+					this._state !== BackgroundTodoProcessorState.InProgress ||
+					this._cts !== cts
+				) {
 					return; // cancelled while in flight
 				}
 				this._lastError = err;
 				this._disposeCts(cts);
 				this._state = BackgroundTodoProcessorState.Failed;
-				this._logService?.warn(`[BackgroundTodo] pass #${passNum} failed: ${err}`);
+				this._logService?.warn(
+					`[BackgroundTodo] pass #${passNum} failed: ${err}`,
+				);
 				// Do NOT advance the cursor — the delta's rounds remain unprocessed
 				// so a subsequent pass can retry with fresh or coalesced activity.
 				this._drainQueue();
@@ -567,29 +685,49 @@ export class BackgroundTodoProcessor {
 	): Promise<IBackgroundTodoResult> {
 		const startTime = Date.now();
 		const conversationId = context.promptContext.conversation?.sessionId;
-		const associatedRequestId = context.promptContext.conversation?.getLatestTurn()?.id;
+		const associatedRequestId =
+			context.promptContext.conversation?.getLatestTurn()?.id;
 
-		context.logService.debug(`[BackgroundTodo] executing pass — session=${conversationId}, requestId=${associatedRequestId}, newRounds=${delta.metadata.newRoundCount}, substantive=${delta.metadata.substantiveToolCallCount}`);
+		context.logService.debug(
+			`[BackgroundTodo] executing pass — session=${conversationId}, requestId=${associatedRequestId}, newRounds=${delta.metadata.newRoundCount}, substantive=${delta.metadata.substantiveToolCallCount}`,
+		);
 
 		let fastEndpoint: IChatEndpoint;
 		try {
-			fastEndpoint = await context.instantiationService.invokeFunction(async (accessor) => {
-				const ep = accessor.get(IEndpointProvider);
-				return ep.getChatEndpoint('copilot-utility-small');
-			});
+			fastEndpoint = await context.instantiationService.invokeFunction(
+				async (accessor) => {
+					const ep = accessor.get(IEndpointProvider);
+					return ep.getChatEndpoint('copilot-utility-small');
+				},
+			);
 		} catch (err) {
-			context.logService.warn(`[BackgroundTodo] copilot-utility-small endpoint unavailable, skipping pass: ${err}`);
-			BackgroundTodoProcessor._sendTelemetry(context.telemetryService, 'skipped', conversationId, associatedRequestId, Date.now() - startTime);
+			context.logService.warn(
+				`[BackgroundTodo] copilot-utility-small endpoint unavailable, skipping pass: ${err}`,
+			);
+			BackgroundTodoProcessor._sendTelemetry(
+				context.telemetryService,
+				'skipped',
+				conversationId,
+				associatedRequestId,
+				Date.now() - startTime,
+			);
 			return { outcome: 'noop' };
 		}
 
 		// Read current todo state
 		const sessionResource = delta.sessionResource;
 		const todoContext = sessionResource
-			? await context.instantiationService.invokeFunction(async (accessor) => {
-				const todoProvider = accessor.get<ITodoListContextProvider>(ITodoListContextProvider);
-				return todoProvider.getCurrentTodoContext(sessionResource.toString());
-			})
+			? await context.instantiationService.invokeFunction(
+					async (accessor) => {
+						const todoProvider =
+							accessor.get<ITodoListContextProvider>(
+								ITodoListContextProvider,
+							);
+						return todoProvider.getCurrentTodoContext(
+							sessionResource.toString(),
+						);
+					},
+				)
 			: undefined;
 
 		// Use the full trajectory (history + current turn rounds) so the model
@@ -600,81 +738,116 @@ export class BackgroundTodoProcessor {
 		// successful background pass so the prompt can flag them as NEW. For
 		// final-review passes the synthetic delta contains every round, so
 		// pass an empty set instead of marking everything new.
-		const allRounds = collectAllRounds(context.promptContext.history, context.promptContext.toolCallRounds ?? []);
+		const allRounds = collectAllRounds(
+			context.promptContext.history,
+			context.promptContext.toolCallRounds ?? [],
+		);
 		const newRoundIds: ReadonlySet<string> = context.isFinalReview
 			? new Set<string>()
-			: new Set(delta.newRounds.map(round => round.id));
+			: new Set(delta.newRounds.map((round) => round.id));
 		const history = buildBackgroundTodoHistory({ allRounds, newRoundIds });
-		const allHistoryRounds = [...history.previousRounds, ...history.newRounds];
-		const withThinkingCount = allHistoryRounds.reduce((acc, r) => acc + (r.thinking ? 1 : 0), 0);
-		const withResponseCount = allHistoryRounds.reduce((acc, r) => acc + (r.response ? 1 : 0), 0);
-		context.logService.debug(`[BackgroundTodo] history — previousRounds=${history.previousRounds.length}, newRounds=${history.newRounds.length}, withThinking=${withThinkingCount}, withResponse=${withResponseCount}, hasTodos=${todoContext !== undefined}, isFinalReview=${!!context.isFinalReview}`);
+		const allHistoryRounds = [
+			...history.previousRounds,
+			...history.newRounds,
+		];
+		const withThinkingCount = allHistoryRounds.reduce(
+			(acc, r) => acc + (r.thinking ? 1 : 0),
+			0,
+		);
+		const withResponseCount = allHistoryRounds.reduce(
+			(acc, r) => acc + (r.response ? 1 : 0),
+			0,
+		);
+		context.logService.debug(
+			`[BackgroundTodo] history — previousRounds=${history.previousRounds.length}, newRounds=${history.newRounds.length}, withThinking=${withThinkingCount}, withResponse=${withResponseCount}, hasTodos=${todoContext !== undefined}, isFinalReview=${!!context.isFinalReview}`,
+		);
 
 		// Render the prompt
 		const { messages } = await renderPromptElement(
 			context.instantiationService,
 			fastEndpoint,
 			BackgroundTodoPrompt,
-			{ currentTodos: todoContext, userRequest: delta.userRequest, history, isFinalReview: !!context.isFinalReview },
+			{
+				currentTodos: todoContext,
+				userRequest: delta.userRequest,
+				history,
+				isFinalReview: !!context.isFinalReview,
+			},
 			undefined,
 			token,
 		);
 
 		// Build the single-tool schema for manage_todo_list
-		const todoToolSchema = [{
-			function: {
-				name: ToolName.CoreManageTodoList,
-				description: 'Update the todo list with current progress.',
-				parameters: {
-					type: 'object',
-					properties: {
-						todoList: {
-							type: 'array',
-							items: {
-								type: 'object',
-								properties: {
-									id: { type: 'number' },
-									title: { type: 'string' },
-									status: { type: 'string', enum: ['not-started', 'in-progress', 'completed'] },
+		const todoToolSchema = [
+			{
+				function: {
+					name: ToolName.CoreManageTodoList,
+					description: 'Update the todo list with current progress.',
+					parameters: {
+						type: 'object',
+						properties: {
+							todoList: {
+								type: 'array',
+								items: {
+									type: 'object',
+									properties: {
+										id: { type: 'number' },
+										title: { type: 'string' },
+										status: {
+											type: 'string',
+											enum: [
+												'not-started',
+												'in-progress',
+												'completed',
+											],
+										},
+									},
+									required: ['id', 'title', 'status'],
 								},
-								required: ['id', 'title', 'status'],
 							},
 						},
+						required: ['todoList'],
 					},
-					required: ['todoList'],
 				},
+				type: 'function' as const,
 			},
-			type: 'function' as const,
-		}];
+		];
 
 		const normalizedTools = normalizeToolSchema(
 			fastEndpoint.family,
 			todoToolSchema,
 			(tool, rule) => {
-				context.logService.warn(`[BackgroundTodo] Tool ${tool} failed validation: ${rule}`);
+				context.logService.warn(
+					`[BackgroundTodo] Tool ${tool} failed validation: ${rule}`,
+				);
 			},
 		);
 
 		// Make the request
 		const toolCalls: { name: string; arguments: string; id: string }[] = [];
-		const response: ChatResponse = await fastEndpoint.makeChatRequest2({
-			debugName: 'backgroundTodoAgent',
-			messages: ToolCallingLoop.stripInternalToolCallIds(messages),
-			finishedCb: async (_text, _index, fetchDelta) => {
-				if (fetchDelta.copilotToolCalls) {
-					toolCalls.push(...fetchDelta.copilotToolCalls);
-				}
-				return undefined;
+		const response: ChatResponse = await fastEndpoint.makeChatRequest2(
+			{
+				debugName: 'backgroundTodoAgent',
+				messages: ToolCallingLoop.stripInternalToolCallIds(messages),
+				finishedCb: async (_text, _index, fetchDelta) => {
+					if (fetchDelta.copilotToolCalls) {
+						toolCalls.push(...fetchDelta.copilotToolCalls);
+					}
+					return undefined;
+				},
+				location: ChatLocation.Other,
+				requestOptions: {
+					temperature: 0,
+					tools: normalizedTools,
+				},
+				userInitiatedRequest: false,
+				interactionTypeOverride: 'conversation-background',
+				telemetryProperties: associatedRequestId
+					? { associatedRequestId }
+					: undefined,
 			},
-			location: ChatLocation.Other,
-			requestOptions: {
-				temperature: 0,
-				tools: normalizedTools,
-			},
-			userInitiatedRequest: false,
-			interactionTypeOverride: 'conversation-background',
-			telemetryProperties: associatedRequestId ? { associatedRequestId } : undefined,
-		}, token);
+			token,
+		);
 
 		const durationMs = Date.now() - startTime;
 
@@ -682,9 +855,19 @@ export class BackgroundTodoProcessor {
 		// propagate as errors so the delta is NOT marked processed — a later pass
 		// can retry with fresh or coalesced activity.
 		if (response.type !== ChatFetchResponseType.Success) {
-			context.logService.warn(`[BackgroundTodo] copilot-utility-small returned non-success response: ${response.type}`);
-			BackgroundTodoProcessor._sendTelemetry(context.telemetryService, 'modelError', conversationId, associatedRequestId, durationMs);
-			throw new Error(`Background todo model request failed: ${response.type}`);
+			context.logService.warn(
+				`[BackgroundTodo] copilot-utility-small returned non-success response: ${response.type}`,
+			);
+			BackgroundTodoProcessor._sendTelemetry(
+				context.telemetryService,
+				'modelError',
+				conversationId,
+				associatedRequestId,
+				durationMs,
+			);
+			throw new Error(
+				`Background todo model request failed: ${response.type}`,
+			);
 		}
 
 		const usage = response.usage;
@@ -694,7 +877,7 @@ export class BackgroundTodoProcessor {
 		// in a single response (e.g. an intermediate snapshot followed by the
 		// finalized list). The last one represents the model's intended end state;
 		// applying an earlier one would leave the list stale.
-		let todoCall: typeof toolCalls[number] | undefined;
+		let todoCall: (typeof toolCalls)[number] | undefined;
 		for (let i = toolCalls.length - 1; i >= 0; i--) {
 			if (toolCalls[i].name === ToolName.CoreManageTodoList) {
 				todoCall = toolCalls[i];
@@ -702,9 +885,26 @@ export class BackgroundTodoProcessor {
 			}
 		}
 		if (!todoCall) {
-			context.logService.debug('[BackgroundTodo] model returned no todo tool call (no-op)');
-			BackgroundTodoProcessor._sendTelemetry(context.telemetryService, 'noop', conversationId, associatedRequestId, durationMs, usage?.prompt_tokens, usage?.completion_tokens, fastEndpoint.model);
-			return { outcome: 'noop', promptTokens: usage?.prompt_tokens, completionTokens: usage?.completion_tokens, durationMs, model: fastEndpoint.model };
+			context.logService.debug(
+				'[BackgroundTodo] model returned no todo tool call (no-op)',
+			);
+			BackgroundTodoProcessor._sendTelemetry(
+				context.telemetryService,
+				'noop',
+				conversationId,
+				associatedRequestId,
+				durationMs,
+				usage?.prompt_tokens,
+				usage?.completion_tokens,
+				fastEndpoint.model,
+			);
+			return {
+				outcome: 'noop',
+				promptTokens: usage?.prompt_tokens,
+				completionTokens: usage?.completion_tokens,
+				durationMs,
+				model: fastEndpoint.model,
+			};
 		}
 
 		// Validate and invoke the tool
@@ -712,31 +912,90 @@ export class BackgroundTodoProcessor {
 		try {
 			parsedInput = JSON.parse(todoCall.arguments);
 		} catch {
-			context.logService.warn('[BackgroundTodo] failed to parse tool call arguments');
-			BackgroundTodoProcessor._sendTelemetry(context.telemetryService, 'toolInvokeError', conversationId, associatedRequestId, durationMs, usage?.prompt_tokens, usage?.completion_tokens, fastEndpoint.model);
+			context.logService.warn(
+				'[BackgroundTodo] failed to parse tool call arguments',
+			);
+			BackgroundTodoProcessor._sendTelemetry(
+				context.telemetryService,
+				'toolInvokeError',
+				conversationId,
+				associatedRequestId,
+				durationMs,
+				usage?.prompt_tokens,
+				usage?.completion_tokens,
+				fastEndpoint.model,
+			);
 			return { outcome: 'noop', durationMs, model: fastEndpoint.model };
 		}
 
 		try {
-			const toolInvocationToken = context.promptContext.tools?.toolInvocationToken;
+			const toolInvocationToken =
+				context.promptContext.tools?.toolInvocationToken;
 			if (!toolInvocationToken) {
-				context.logService.warn('[BackgroundTodo] todo tool invocation skipped: missing tool invocation token');
-				BackgroundTodoProcessor._sendTelemetry(context.telemetryService, 'toolInvokeError', conversationId, associatedRequestId, durationMs, usage?.prompt_tokens, usage?.completion_tokens, fastEndpoint.model);
-				return { outcome: 'noop', durationMs, model: fastEndpoint.model };
+				context.logService.warn(
+					'[BackgroundTodo] todo tool invocation skipped: missing tool invocation token',
+				);
+				BackgroundTodoProcessor._sendTelemetry(
+					context.telemetryService,
+					'toolInvokeError',
+					conversationId,
+					associatedRequestId,
+					durationMs,
+					usage?.prompt_tokens,
+					usage?.completion_tokens,
+					fastEndpoint.model,
+				);
+				return {
+					outcome: 'noop',
+					durationMs,
+					model: fastEndpoint.model,
+				};
 			}
-			await context.toolsService.invokeTool(ToolName.CoreManageTodoList, {
-				input: parsedInput,
-				toolInvocationToken,
-			}, token);
+			await context.toolsService.invokeTool(
+				ToolName.CoreManageTodoList,
+				{
+					input: parsedInput,
+					toolInvocationToken,
+				},
+				token,
+			);
 		} catch (err) {
-			context.logService.warn(`[BackgroundTodo] tool invocation failed: ${err}`);
-			BackgroundTodoProcessor._sendTelemetry(context.telemetryService, 'toolInvokeError', conversationId, associatedRequestId, durationMs, usage?.prompt_tokens, usage?.completion_tokens, fastEndpoint.model);
+			context.logService.warn(
+				`[BackgroundTodo] tool invocation failed: ${err}`,
+			);
+			BackgroundTodoProcessor._sendTelemetry(
+				context.telemetryService,
+				'toolInvokeError',
+				conversationId,
+				associatedRequestId,
+				durationMs,
+				usage?.prompt_tokens,
+				usage?.completion_tokens,
+				fastEndpoint.model,
+			);
 			return { outcome: 'noop', durationMs, model: fastEndpoint.model };
 		}
 
-		context.logService.debug(`[BackgroundTodo] todo list updated successfully (${durationMs}ms)`);
-		BackgroundTodoProcessor._sendTelemetry(context.telemetryService, 'success', conversationId, associatedRequestId, durationMs, usage?.prompt_tokens, usage?.completion_tokens, fastEndpoint.model);
-		return { outcome: 'success', promptTokens: usage?.prompt_tokens, completionTokens: usage?.completion_tokens, durationMs, model: fastEndpoint.model };
+		context.logService.debug(
+			`[BackgroundTodo] todo list updated successfully (${durationMs}ms)`,
+		);
+		BackgroundTodoProcessor._sendTelemetry(
+			context.telemetryService,
+			'success',
+			conversationId,
+			associatedRequestId,
+			durationMs,
+			usage?.prompt_tokens,
+			usage?.completion_tokens,
+			fastEndpoint.model,
+		);
+		return {
+			outcome: 'success',
+			promptTokens: usage?.prompt_tokens,
+			completionTokens: usage?.completion_tokens,
+			durationMs,
+			model: fastEndpoint.model,
+		};
 	}
 
 	private static _sendTelemetry(
@@ -762,16 +1021,20 @@ export class BackgroundTodoProcessor {
 				"completionTokenCount": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true, "comment": "Completion token count." }
 			}
 		*/
-		telemetryService.sendMSFTTelemetryEvent('backgroundTodoAgent', {
-			outcome,
-			conversationId,
-			chatRequestId,
-			model,
-		}, {
-			duration: durationMs,
-			promptTokenCount: promptTokens,
-			completionTokenCount: completionTokens,
-		});
+		telemetryService.sendMSFTTelemetryEvent(
+			'backgroundTodoAgent',
+			{
+				outcome,
+				conversationId,
+				chatRequestId,
+				model,
+			},
+			{
+				duration: durationMs,
+				promptTokenCount: promptTokens,
+				completionTokenCount: completionTokens,
+			},
+		);
 	}
 
 	/**
@@ -873,35 +1136,54 @@ export function extractToolNote(call: IToolCall): string | undefined {
  */
 export function extractTarget(call: IToolCall): string {
 	// Terminal tools → group as "terminal"
-	if (call.name === ToolName.CoreRunInTerminal ||
+	if (
+		call.name === ToolName.CoreRunInTerminal ||
 		call.name === ToolName.CoreGetTerminalOutput ||
 		call.name === ToolName.CoreSendToTerminal ||
 		call.name === ToolName.CoreKillTerminal ||
 		call.name === ToolName.CoreTerminalLastCommand ||
-		call.name === ToolName.CoreTerminalSelection) {
+		call.name === ToolName.CoreTerminalSelection
+	) {
 		return 'terminal';
 	}
 
 	// Test tools → group as "tests"
-	if (call.name === ToolName.CoreRunTest || call.name === ToolName.CoreRunTask ||
-		call.name === ToolName.CoreGetTaskOutput || call.name === ToolName.CoreCreateAndRunTask) {
+	if (
+		call.name === ToolName.CoreRunTest ||
+		call.name === ToolName.CoreRunTask ||
+		call.name === ToolName.CoreGetTaskOutput ||
+		call.name === ToolName.CoreCreateAndRunTask
+	) {
 		return 'tests/tasks';
 	}
 
 	// Browser tools → group as "browser"
-	if (call.name.startsWith('open_browser') || call.name.startsWith('click_') ||
-		call.name.startsWith('screenshot_') || call.name.startsWith('navigate_') ||
-		call.name.startsWith('read_page') || call.name.startsWith('hover_') ||
-		call.name.startsWith('drag_') || call.name.startsWith('type_in_') ||
-		call.name.startsWith('handle_dialog') || call.name.startsWith('run_playwright')) {
+	if (
+		call.name.startsWith('open_browser') ||
+		call.name.startsWith('click_') ||
+		call.name.startsWith('screenshot_') ||
+		call.name.startsWith('navigate_') ||
+		call.name.startsWith('read_page') ||
+		call.name.startsWith('hover_') ||
+		call.name.startsWith('drag_') ||
+		call.name.startsWith('type_in_') ||
+		call.name.startsWith('handle_dialog') ||
+		call.name.startsWith('run_playwright')
+	) {
 		return 'browser';
 	}
 
 	// Subagent tools → group by subagent type
-	if (call.name === ToolName.SearchSubagent || call.name === ToolName.ExploreSubagent) {
+	if (
+		call.name === ToolName.SearchSubagent ||
+		call.name === ToolName.ExploreSubagent
+	) {
 		return 'search subagent';
 	}
-	if (call.name === ToolName.ExecutionSubagent || call.name === ToolName.CoreRunSubagent) {
+	if (
+		call.name === ToolName.ExecutionSubagent ||
+		call.name === ToolName.CoreRunSubagent
+	) {
 		return 'subagent';
 	}
 
@@ -913,24 +1195,32 @@ export function extractTarget(call: IToolCall): string {
 			// paths inside replacements[]. Surface them so progress isn't bucketed
 			// under the bare tool name.
 			if (Array.isArray(args.replacements)) {
-				const paths: string[] = [...new Set(
-					(args.replacements as Array<Record<string, unknown> | undefined>)
-						.map((r): string | undefined => {
-							for (const key of FILE_PATH_KEYS) {
-								const v = r?.[key];
-								if (typeof v === 'string' && v.length > 0) {
-									return v;
+				const paths: string[] = [
+					...new Set(
+						(
+							args.replacements as Array<
+								Record<string, unknown> | undefined
+							>
+						)
+							.map((r): string | undefined => {
+								for (const key of FILE_PATH_KEYS) {
+									const v = r?.[key];
+									if (typeof v === 'string' && v.length > 0) {
+										return v;
+									}
 								}
-							}
-							return undefined;
-						})
-						.filter((p): p is string => typeof p === 'string')
-				)];
+								return undefined;
+							})
+							.filter((p): p is string => typeof p === 'string'),
+					),
+				];
 				if (paths.length === 1) {
 					return paths[0];
 				}
 				if (paths.length > 1) {
-					return paths.length <= 3 ? paths.join(', ') : `${paths.length} files`;
+					return paths.length <= 3
+						? paths.join(', ')
+						: `${paths.length} files`;
 				}
 			}
 			for (const key of FILE_PATH_KEYS) {
@@ -1001,7 +1291,9 @@ export interface IBuildBackgroundTodoHistoryOptions {
 }
 
 /** Build a chronological round-first history for the background todo agent. */
-export function buildBackgroundTodoHistory(opts: IBuildBackgroundTodoHistoryOptions): IBackgroundTodoHistory {
+export function buildBackgroundTodoHistory(
+	opts: IBuildBackgroundTodoHistoryOptions,
+): IBackgroundTodoHistory {
 	const { allRounds, newRoundIds } = opts;
 	const previousRounds: IBackgroundTodoHistoryRound[] = [];
 	const newRounds: IBackgroundTodoHistoryRound[] = [];
@@ -1011,7 +1303,8 @@ export function buildBackgroundTodoHistory(opts: IBuildBackgroundTodoHistoryOpti
 		const round = roundWithTurn.round;
 		const summaries = summarizeToolCalls(round.toolCalls);
 		const thinking = serializeThinking(round.thinking);
-		const response = round.response.trim().length > 0 ? round.response : undefined;
+		const response =
+			round.response.trim().length > 0 ? round.response : undefined;
 
 		// Skip completely empty rounds (no tools, no thinking, no response).
 		if (summaries.length === 0 && !thinking && !response) {
@@ -1038,7 +1331,9 @@ export function buildBackgroundTodoHistory(opts: IBuildBackgroundTodoHistoryOpti
 	return { previousRounds, newRounds };
 }
 
-function summarizeToolCalls(calls: readonly IToolCall[]): IBackgroundTodoToolCallSummary[] {
+function summarizeToolCalls(
+	calls: readonly IToolCall[],
+): IBackgroundTodoToolCallSummary[] {
 	const result: IBackgroundTodoToolCallSummary[] = [];
 	for (const call of calls) {
 		const category = classifyTool(call.name);
@@ -1047,12 +1342,18 @@ function summarizeToolCalls(calls: readonly IToolCall[]): IBackgroundTodoToolCal
 		}
 		const note = extractToolNote(call);
 		const target = extractTarget(call);
-		result.push(note ? { name: call.name, target, note, category } : { name: call.name, target, category });
+		result.push(
+			note
+				? { name: call.name, target, note, category }
+				: { name: call.name, target, category },
+		);
 	}
 	return result;
 }
 
-function serializeThinking(thinking: IToolCallRound['thinking']): string | undefined {
+function serializeThinking(
+	thinking: IToolCallRound['thinking'],
+): string | undefined {
 	if (!thinking) {
 		return undefined;
 	}
@@ -1102,7 +1403,9 @@ function escapeInlineForPromptTag(text: string): string {
  * Render a round into a stable, parseable text block. Used by the
  * prompt-tsx round chunk so the model sees a uniform shape per round.
  */
-export function renderBackgroundTodoRound(round: IBackgroundTodoHistoryRound): string {
+export function renderBackgroundTodoRound(
+	round: IBackgroundTodoHistoryRound,
+): string {
 	const lines: string[] = [`<round index="${round.index}">`];
 
 	if (round.thinking) {
@@ -1115,7 +1418,9 @@ export function renderBackgroundTodoRound(round: IBackgroundTodoHistoryRound): s
 		lines.push('<tool-calls>');
 		for (const tc of round.toolCalls) {
 			const name = escapeInlineForPromptTag(tc.name);
-			const target = tc.target ? escapeInlineForPromptTag(tc.target) : undefined;
+			const target = tc.target
+				? escapeInlineForPromptTag(tc.target)
+				: undefined;
 			const head = target ? `- ${name} → ${target}` : `- ${name}`;
 			lines.push(head);
 			if (tc.note) {
@@ -1140,7 +1445,9 @@ export function renderBackgroundTodoRound(round: IBackgroundTodoHistoryRound): s
  * same-turn rounds inside `<turn index="N">…</turn>` tags.  This saves
  * tokens compared to repeating a `turn` attribute on every `<round>`.
  */
-export function renderRoundsGroupedByTurn(rounds: readonly IBackgroundTodoHistoryRound[]): string {
+export function renderRoundsGroupedByTurn(
+	rounds: readonly IBackgroundTodoHistoryRound[],
+): string {
 	if (rounds.length === 0) {
 		return '';
 	}
@@ -1170,7 +1477,10 @@ export function renderRoundsGroupedByTurn(rounds: readonly IBackgroundTodoHistor
  * new-activity block (880). New-activity rounds are rendered without
  * pruning so they don't need a priority helper.
  */
-export function computeRoundPriority(round: IBackgroundTodoHistoryRound, totalPreviousRounds: number): number {
+export function computeRoundPriority(
+	round: IBackgroundTodoHistoryRound,
+	totalPreviousRounds: number,
+): number {
 	// 700 base + monotonic index boost so newer context survives longer,
 	// capped strictly below the new-activity priority.
 	return Math.min(879, 700 + Math.min(round.index, totalPreviousRounds));
@@ -1186,7 +1496,10 @@ export interface IToolCallRoundWithTurn {
  * Collect all tool-call rounds from history turns and current-turn rounds
  * in chronological order, annotated with 1-based turn indices.
  */
-export function collectAllRounds(history: readonly Turn[], currentRounds: readonly IToolCallRound[]): IToolCallRoundWithTurn[] {
+export function collectAllRounds(
+	history: readonly Turn[],
+	currentRounds: readonly IToolCallRound[],
+): IToolCallRoundWithTurn[] {
 	const all: IToolCallRoundWithTurn[] = [];
 	for (let i = 0; i < history.length; i++) {
 		const turnIndex = i + 1;

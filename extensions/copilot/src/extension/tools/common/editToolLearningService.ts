@@ -12,15 +12,26 @@ import { createServiceIdentifier } from '../../../util/common/services';
 import { LRUCache } from '../../../util/vs/base/common/map';
 import { mapValues } from '../../../util/vs/base/common/objects';
 import { isDefined } from '../../../util/vs/base/common/types';
-import { EditTools as _EditTools, EDIT_TOOL_LEARNING_STATES, IEditToolLearningData, LearningConfig, State } from './editToolLearningStates';
+import {
+	EditTools as _EditTools,
+	EDIT_TOOL_LEARNING_STATES,
+	IEditToolLearningData,
+	LearningConfig,
+	State,
+} from './editToolLearningStates';
 import { byokEditToolNamesToToolNames, ToolName } from './toolNames';
 
 export type EditTools = _EditTools;
 
 const CACHE_STORAGE_KEY = 'editToolLearning_cache';
 
-function mapToolsRecord<I, O>(record: { [K in EditTools]?: I }, fn: (input: I, tool: EditTools) => O) {
-	return mapValues(record, (value, key) => fn(value!, key as EditTools)) as { [K in EditTools]?: O };
+function mapToolsRecord<I, O>(
+	record: { [K in EditTools]?: I },
+	fn: (input: I, tool: EditTools) => O,
+) {
+	return mapValues(record, (value, key) => fn(value!, key as EditTools)) as {
+		[K in EditTools]?: O;
+	};
 }
 
 interface IStoredToolData {
@@ -28,13 +39,22 @@ interface IStoredToolData {
 	tools: { [K in EditTools]?: { successBitset: string; attempts: number } };
 }
 
-export const IEditToolLearningService = createServiceIdentifier<IEditToolLearningService>('IEditToolLearningService');
+export const IEditToolLearningService =
+	createServiceIdentifier<IEditToolLearningService>(
+		'IEditToolLearningService',
+	);
 
 export interface IEditToolLearningService {
 	readonly _serviceBrand: undefined;
-	getPreferredEditTool(model: LanguageModelChat): Promise<EditTools[] | undefined>;
+	getPreferredEditTool(
+		model: LanguageModelChat,
+	): Promise<EditTools[] | undefined>;
 	getPreferredEndpointEditTool(model: IChatEndpoint): EditTools[] | undefined;
-	didMakeEdit(model: LanguageModelChat, tool: EditTools, success: boolean): void;
+	didMakeEdit(
+		model: LanguageModelChat,
+		tool: EditTools,
+		success: boolean,
+	): void;
 }
 
 function addToWindow(window: bigint, bit: bigint): bigint {
@@ -49,23 +69,34 @@ export class EditToolLearningService implements IEditToolLearningService {
 	private _cache?: LRUCache<string, IEditToolLearningData>;
 
 	constructor(
-		@IVSCodeExtensionContext private readonly _context: IVSCodeExtensionContext,
-		@IEndpointProvider private readonly _endpointProvider: IEndpointProvider,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
-	) { }
+		@IVSCodeExtensionContext
+		private readonly _context: IVSCodeExtensionContext,
+		@IEndpointProvider
+		private readonly _endpointProvider: IEndpointProvider,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
+	) {}
 
-	async getPreferredEditTool(model: LanguageModelChat): Promise<EditTools[] | undefined> {
+	async getPreferredEditTool(
+		model: LanguageModelChat,
+	): Promise<EditTools[] | undefined> {
 		const endpoint = await this._endpointProvider.getChatEndpoint(model);
 		return this.getPreferredEndpointEditTool(endpoint);
 	}
 
-	getPreferredEndpointEditTool(endpoint: IChatEndpoint): EditTools[] | undefined {
+	getPreferredEndpointEditTool(
+		endpoint: IChatEndpoint,
+	): EditTools[] | undefined {
 		if (!endpoint.isExtensionContributed) {
 			return undefined;
 		}
 
 		const fromEndpoint = endpoint.supportedEditTools
-			?.map(e => byokEditToolNamesToToolNames.hasOwnProperty(e) ? byokEditToolNamesToToolNames[e] : undefined)
+			?.map((e) =>
+				byokEditToolNamesToToolNames.hasOwnProperty(e)
+					? byokEditToolNamesToToolNames[e]
+					: undefined,
+			)
 			.filter(isDefined);
 		if (fromEndpoint?.length) {
 			return fromEndpoint;
@@ -82,10 +113,17 @@ export class EditToolLearningService implements IEditToolLearningService {
 		return this._computePreferences(learningData);
 	}
 
-	async didMakeEdit(model: LanguageModelChat, tool: EditTools, success: boolean): Promise<void> {
+	async didMakeEdit(
+		model: LanguageModelChat,
+		tool: EditTools,
+		success: boolean,
+	): Promise<void> {
 		const endpoint = await this._endpointProvider.getChatEndpoint(model);
 
-		if (!endpoint.isExtensionContributed || this._getHardcodedPreferences(endpoint.family)) {
+		if (
+			!endpoint.isExtensionContributed ||
+			this._getHardcodedPreferences(endpoint.family)
+		) {
 			return;
 		}
 
@@ -108,18 +146,25 @@ export class EditToolLearningService implements IEditToolLearningService {
 		return undefined;
 	}
 
-	private _computePreferences(data: IEditToolLearningData): EditTools[] | undefined {
+	private _computePreferences(
+		data: IEditToolLearningData,
+	): EditTools[] | undefined {
 		return EDIT_TOOL_LEARNING_STATES[data.state].allowedTools;
 	}
 
-	private _checkStateTransitions(modelId: string, data: IEditToolLearningData): State {
+	private _checkStateTransitions(
+		modelId: string,
+		data: IEditToolLearningData,
+	): State {
 		const currentConfig = EDIT_TOOL_LEARNING_STATES[data.state];
 
 		if (!currentConfig.transitions) {
 			return data.state;
 		}
 
-		for (const [targetState, condition] of Object.entries(currentConfig.transitions)) {
+		for (const [targetState, condition] of Object.entries(
+			currentConfig.transitions,
+		)) {
 			if (!condition(data)) {
 				continue;
 			}
@@ -134,9 +179,13 @@ export class EditToolLearningService implements IEditToolLearningService {
 					"state": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "comment": "State the model transitioned to", "isMeasurement": true }
 				}
 			*/
-			this._telemetryService.sendMSFTTelemetryEvent('editToolLearning.transition', { modelId }, {
-				state: target,
-			});
+			this._telemetryService.sendMSFTTelemetryEvent(
+				'editToolLearning.transition',
+				{ modelId },
+				{
+					state: target,
+				},
+			);
 
 			return target;
 		}
@@ -144,10 +193,21 @@ export class EditToolLearningService implements IEditToolLearningService {
 		return data.state; // No transition
 	}
 
-	private _recordEdit(modelId: string, data: IEditToolLearningData, tool: EditTools, success: boolean): void {
+	private _recordEdit(
+		modelId: string,
+		data: IEditToolLearningData,
+		tool: EditTools,
+		success: boolean,
+	): void {
 		const successBit = success ? 1n : 0n;
-		const toolData = (data.tools[tool] ??= { successBitset: 0n, attempts: 0 });
-		toolData.successBitset = addToWindow(toolData.successBitset, successBit);
+		const toolData = (data.tools[tool] ??= {
+			successBitset: 0n,
+			attempts: 0,
+		});
+		toolData.successBitset = addToWindow(
+			toolData.successBitset,
+			successBit,
+		);
 		toolData.attempts++;
 
 		const newState = this._checkStateTransitions(modelId, data);
@@ -165,8 +225,12 @@ export class EditToolLearningService implements IEditToolLearningService {
 	}
 
 	private _loadCacheFromStorage(): LRUCache<string, IEditToolLearningData> {
-		const cache = new LRUCache<string, IEditToolLearningData>(LearningConfig.CACHE_SIZE);
-		const storedCacheData = this._context.globalState.get<{ entries: [string, IStoredToolData][] }>(CACHE_STORAGE_KEY);
+		const cache = new LRUCache<string, IEditToolLearningData>(
+			LearningConfig.CACHE_SIZE,
+		);
+		const storedCacheData = this._context.globalState.get<{
+			entries: [string, IStoredToolData][];
+		}>(CACHE_STORAGE_KEY);
 
 		if (!storedCacheData?.entries) {
 			return cache;
@@ -175,7 +239,7 @@ export class EditToolLearningService implements IEditToolLearningService {
 		for (const [modelId, storedData] of storedCacheData.entries) {
 			const data: IEditToolLearningData = {
 				state: storedData.state,
-				tools: mapToolsRecord(storedData.tools, r => ({
+				tools: mapToolsRecord(storedData.tools, (r) => ({
 					successBitset: BigInt(r.successBitset),
 					attempts: r.attempts,
 				})),
@@ -191,21 +255,27 @@ export class EditToolLearningService implements IEditToolLearningService {
 			return;
 		}
 
-		const entries: [string, IStoredToolData][] = Array.from(this._cache.entries(), ([modelId, data]) => {
-			const storedData = {
-				state: data.state,
-				tools: mapToolsRecord(data.tools, r => ({
-					successBitset: '0x' + r.successBitset.toString(16),
-					attempts: r.attempts
-				})),
-			};
-			return [modelId, storedData];
-		});
+		const entries: [string, IStoredToolData][] = Array.from(
+			this._cache.entries(),
+			([modelId, data]) => {
+				const storedData = {
+					state: data.state,
+					tools: mapToolsRecord(data.tools, (r) => ({
+						successBitset: '0x' + r.successBitset.toString(16),
+						attempts: r.attempts,
+					})),
+				};
+				return [modelId, storedData];
+			},
+		);
 
 		await this._context.globalState.update(CACHE_STORAGE_KEY, { entries });
 	}
 
-	private async _saveModelLearningData(modelId: string, data: IEditToolLearningData): Promise<void> {
+	private async _saveModelLearningData(
+		modelId: string,
+		data: IEditToolLearningData,
+	): Promise<void> {
 		const cache = this._getCache();
 		cache.set(modelId, data);
 		await this._saveCacheToStorage();

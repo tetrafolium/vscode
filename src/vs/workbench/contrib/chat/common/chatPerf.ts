@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { mark, clearMarks } from '../../../../base/common/performance.js';
-import { URI } from '../../../../base/common/uri.js';
-import { chatSessionResourceToId } from './model/chatUri.js';
+import { mark, clearMarks } from "../../../../base/common/performance.js";
+import { URI } from "../../../../base/common/uri.js";
+import { chatSessionResourceToId } from "./model/chatUri.js";
 
-const chatPerfPrefix = 'code/chat/';
+const chatPerfPrefix = "code/chat/";
 
 /** Tracks all mark names emitted per session so they can be cleared individually. */
 const chatMarksBySession = new Map<string, Set<string>>();
@@ -40,21 +40,21 @@ const chatMarksBySession = new Map<string, Set<string>>();
  */
 export const ChatPerfMark = {
 	/** User pressed Enter / request initiated */
-	RequestStart: 'request/start',
+	RequestStart: "request/start",
 	/** Request added to model → UI shows the message */
-	RequestUiUpdated: 'request/uiUpdated',
+	RequestUiUpdated: "request/uiUpdated",
 	/** Begin collecting .instructions.md / skills / hooks */
-	WillCollectInstructions: 'request/willCollectInstructions',
+	WillCollectInstructions: "request/willCollectInstructions",
 	/** Done collecting instructions */
-	DidCollectInstructions: 'request/didCollectInstructions',
+	DidCollectInstructions: "request/didCollectInstructions",
 	/** First streamed response content received */
-	FirstToken: 'request/firstToken',
+	FirstToken: "request/firstToken",
 	/** Response fully complete */
-	RequestComplete: 'request/complete',
+	RequestComplete: "request/complete",
 	/** Agent invoke begins (LLM round-trip start) */
-	AgentWillInvoke: 'agent/willInvoke',
+	AgentWillInvoke: "agent/willInvoke",
 	/** Agent invoke returns (LLM round-trip end) */
-	AgentDidInvoke: 'agent/didInvoke',
+	AgentDidInvoke: "agent/didInvoke",
 } as const;
 
 /**
@@ -97,9 +97,9 @@ export function clearChatMarks(sessionResource: URI): void {
  */
 export const ChatGlobalPerfMark = {
 	/** Begin waiting for chat extension activation (SetupAgent) */
-	WillWaitForActivation: 'willWaitForActivation',
+	WillWaitForActivation: "willWaitForActivation",
 	/** Extension activation + readiness complete (SetupAgent) */
-	DidWaitForActivation: 'didWaitForActivation',
+	DidWaitForActivation: "didWaitForActivation",
 } as const;
 
 /**

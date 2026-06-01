@@ -26,9 +26,11 @@ export namespace NesChangeHint {
 		return (
 			typeof maybeChangeHint.data === 'object' &&
 			maybeChangeHint.data !== null &&
-			typeof (maybeChangeHint.data as NesChangeHintPayload).uuid === 'string' &&
-			Object.values(NesTriggerReason).includes((maybeChangeHint.data as NesChangeHintPayload).reason)
+			typeof (maybeChangeHint.data as NesChangeHintPayload).uuid ===
+				'string' &&
+			Object.values(NesTriggerReason).includes(
+				(maybeChangeHint.data as NesChangeHintPayload).reason,
+			)
 		);
 	}
 }
-

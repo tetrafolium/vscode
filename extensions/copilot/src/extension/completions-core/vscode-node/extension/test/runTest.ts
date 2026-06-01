@@ -13,9 +13,17 @@ import { runTests } from '@vscode/test-electron';
 
 async function cleanupTestDirectory(dir: string): Promise<void> {
 	try {
-		await fs.rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+		await fs.rm(dir, {
+			recursive: true,
+			force: true,
+			maxRetries: 10,
+			retryDelay: 200,
+		});
 	} catch (error) {
-		console.warn(`Failed to clean up temporary test directory ${dir}`, error);
+		console.warn(
+			`Failed to clean up temporary test directory ${dir}`,
+			error,
+		);
 	}
 }
 
@@ -56,16 +64,27 @@ async function main() {
 			.parse();
 		const extensionTestsEnv: typeof process.env = {};
 		// Pass arguments to mocha by environment variables
-		if (argv.grep) { extensionTestsEnv.MOCHA_GREP = argv.grep; }
-		if (argv._.length > 0) { extensionTestsEnv.MOCHA_FILES = argv._.join('\n'); }
-		if (!process.stdout.isTTY) { extensionTestsEnv.NO_COLOR = 'true'; }
-		workspaceFolder = await fs.mkdtemp(path.join(os.tmpdir(), 'copilot-extension-test-'));
+		if (argv.grep) {
+			extensionTestsEnv.MOCHA_GREP = argv.grep;
+		}
+		if (argv._.length > 0) {
+			extensionTestsEnv.MOCHA_FILES = argv._.join('\n');
+		}
+		if (!process.stdout.isTTY) {
+			extensionTestsEnv.NO_COLOR = 'true';
+		}
+		workspaceFolder = await fs.mkdtemp(
+			path.join(os.tmpdir(), 'copilot-extension-test-'),
+		);
 		launchArgs.push(workspaceFolder);
 
 		extensionTestsEnv.CORETEST = 'true';
 		//@dbaeumer This can be removed as soon as we have the cache handle CORETEST
 		extensionTestsEnv.VITEST = 'true';
-		extensionTestsEnv.TSX_TSCONFIG_PATH = path.resolve(__dirname, '../../../../../../tsconfig.json');
+		extensionTestsEnv.TSX_TSCONFIG_PATH = path.resolve(
+			__dirname,
+			'../../../../../../tsconfig.json',
+		);
 
 		const testOptions: Parameters<typeof runTests>[0] = {
 			extensionDevelopmentPath,
@@ -88,7 +107,9 @@ async function main() {
 	} finally {
 		await Promise.all([
 			cleanupTestDirectory(tempdir),
-			workspaceFolder ? cleanupTestDirectory(workspaceFolder) : Promise.resolve(),
+			workspaceFolder
+				? cleanupTestDirectory(workspaceFolder)
+				: Promise.resolve(),
 		]);
 	}
 	process.exit(exitCode);

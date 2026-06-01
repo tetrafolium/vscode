@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 export interface WebviewResourceProvider {
 	asWebviewUri(resource: vscode.Uri): vscode.Uri;
@@ -20,8 +20,8 @@ export function areUrisEqual(uri1: vscode.Uri, uri2: vscode.Uri): boolean {
 		return false;
 	}
 
-	if (uri1.scheme === 'file') {
-		if (process.platform === 'win32' || process.platform === 'darwin') {
+	if (uri1.scheme === "file") {
+		if (process.platform === "win32" || process.platform === "darwin") {
 			return uri1.fsPath.toLowerCase() === uri2.fsPath.toLowerCase();
 		}
 

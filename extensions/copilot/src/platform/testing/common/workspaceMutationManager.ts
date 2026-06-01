@@ -30,7 +30,10 @@ export interface IWorkspaceMutation {
 	 * Applies all mutations to the workspace.
 	 * @throws if the edits have already beed applied
 	 */
-	apply(progress: undefined | vscode.Progress<{ message: string }>, token: vscode.CancellationToken): Promise<void>;
+	apply(
+		progress: undefined | vscode.Progress<{ message: string }>,
+		token: vscode.CancellationToken,
+	): Promise<void>;
 }
 
 /**
@@ -45,11 +48,17 @@ export interface IWorkspaceMutationManager {
 	 * Starts tracking a new mutation. This immediately will trigger a background
 	 * prompt to collect preliminary information for the generation.
 	 */
-	create(requestId: string, options: IWorkspaceMutationOptions): IWorkspaceMutation;
+	create(
+		requestId: string,
+		options: IWorkspaceMutationOptions,
+	): IWorkspaceMutation;
 	/**
 	 * @throws if the mutation does not exist
 	 */
 	get(requestId: string): IWorkspaceMutation;
 }
 
-export const IWorkspaceMutationManager = createServiceIdentifier<IWorkspaceMutationManager>('IWorkspaceMutationManager');
+export const IWorkspaceMutationManager =
+	createServiceIdentifier<IWorkspaceMutationManager>(
+		'IWorkspaceMutationManager',
+	);

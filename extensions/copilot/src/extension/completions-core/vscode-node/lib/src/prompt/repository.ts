@@ -3,7 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AdoRepoId, getAdoRepoIdFromFetchUrl, getGithubRepoIdFromFetchUrl, GithubRepoId, parseRemoteUrl } from '../../../../../../platform/git/common/gitService';
+import {
+	AdoRepoId,
+	getAdoRepoIdFromFetchUrl,
+	getGithubRepoIdFromFetchUrl,
+	GithubRepoId,
+	parseRemoteUrl,
+} from '../../../../../../platform/git/common/gitService';
 import { ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { FileIdentifier, ICompletionsFileSystemService } from '../fileSystem';
 import { LRUCacheMap } from '../helpers/cache';
@@ -55,7 +61,10 @@ export function tryGetGitHubNWO(repoInfo: MaybeRepoInfo): string | undefined {
  *  - If a file from this path has been looked at before, and no repository has been identified, returns undefined.
  *  - If a file from this path has been looked at before, and a repository has been identified, returns the repo info.
  */
-export function extractRepoInfoInBackground(accessor: ServicesAccessor, uri: FileIdentifier): MaybeRepoInfo {
+export function extractRepoInfoInBackground(
+	accessor: ServicesAccessor,
+	uri: FileIdentifier,
+): MaybeRepoInfo {
 	const baseFolder = dirname(uri);
 	return backgroundRepoInfo(accessor, baseFolder);
 }
@@ -63,10 +72,10 @@ export function extractRepoInfoInBackground(accessor: ServicesAccessor, uri: Fil
 // Note that we assume that the same filesystem path always returns the same repository information.
 // If this changes on disk, or if two different contexts with different FileSystem implementations
 // are passed for the same path, such as for a test, then the cached value may be incorrect
-const backgroundRepoInfo = computeInBackgroundAndMemoize<RepoInfo | undefined, [FileIdentifier]>(
-	extractRepoInfo,
-	10000
-);
+const backgroundRepoInfo = computeInBackgroundAndMemoize<
+	RepoInfo | undefined,
+	[FileIdentifier]
+>(extractRepoInfo, 10000);
 
 /**
  * If the file is part of a git repository, return the information about the repository.
@@ -76,11 +85,16 @@ const backgroundRepoInfo = computeInBackgroundAndMemoize<RepoInfo | undefined, [
  * If it does appear to be part of a git repository, but its information is not parsable,
  * it returns a RepoInfo object with hostname, user and repo set to "".
  */
-export async function extractRepoInfo(accessor: ServicesAccessor, uri: FileIdentifier): Promise<RepoInfo | undefined> {
+export async function extractRepoInfo(
+	accessor: ServicesAccessor,
+	uri: FileIdentifier,
+): Promise<RepoInfo | undefined> {
 	const fs = accessor.get(ICompletionsFileSystemService);
 
 	const fsUri = getFsUri(uri);
-	if (!fsUri) { return undefined; }
+	if (!fsUri) {
+		return undefined;
+	}
 
 	const baseUri = await getRepoBaseUri(fs, fsUri);
 	if (!baseUri) {
@@ -98,20 +112,39 @@ export async function extractRepoInfo(accessor: ServicesAccessor, uri: FileIdent
 	const parsedResult = parseRepoUrl(url);
 	const baseFolder = { uri: baseUri };
 	if (parsedResult === undefined) {
-		return { baseFolder, url, hostname: '', pathname: '', repoId: undefined };
+		return {
+			baseFolder,
+			url,
+			hostname: '',
+			pathname: '',
+			repoId: undefined,
+		};
 	} else {
-		return { baseFolder, url, hostname: parsedResult.host, pathname: parsedResult.path, repoId: parsedResult.repoId };
+		return {
+			baseFolder,
+			url,
+			hostname: parsedResult.host,
+			pathname: parsedResult.path,
+			repoId: parsedResult.repoId,
+		};
 	}
 }
 
 function parseRepoUrl(
-	url: string
-): { host: string; path: string; repoId: GithubRepoId | AdoRepoId | undefined } | undefined {
+	url: string,
+):
+	| {
+			host: string;
+			path: string;
+			repoId: GithubRepoId | AdoRepoId | undefined;
+	  }
+	| undefined {
 	const res = parseRemoteUrl(url);
 	if (!res) {
 		return undefined;
 	}
-	const repoId = getGithubRepoIdFromFetchUrl(url) ?? getAdoRepoIdFromFetchUrl(url);
+	const repoId =
+		getGithubRepoIdFromFetchUrl(url) ?? getAdoRepoIdFromFetchUrl(url);
 	return { ...res, repoId };
 }
 
@@ -119,7 +152,10 @@ function parseRepoUrl(
  * Returns the base folder of the git repository containing the file, or undefined if none is found.
  * Will search recursively for a .git folder containing a config file.
  */
-async function getRepoBaseUri(fileSystemService: ICompletionsFileSystemService, uri: string): Promise<string | undefined> {
+async function getRepoBaseUri(
+	fileSystemService: ICompletionsFileSystemService,
+	uri: string,
+): Promise<string | undefined> {
 	// to make sure the while loop terminates, we make sure the path variable decreases in length
 	let previousUri = uri + '_add_to_make_longer';
 	while (uri !== 'file:///' && uri.length < previousUri.length) {
@@ -194,7 +230,9 @@ function getRepoUrlFromConfigText(gitConfig: string): string | undefined {
 			}
 		} else {
 			// check whether a new section starts
-			const remoteSectionMatch = line.match(remoteSectionRegex) ?? line.match(deprecatedRemoteSectionRegex);
+			const remoteSectionMatch =
+				line.match(remoteSectionRegex) ??
+				line.match(deprecatedRemoteSectionRegex);
 			if (remoteSectionMatch) {
 				remoteSection = remoteSectionMatch[1];
 			} else if (line.match(newSectionRegex)) {
@@ -207,7 +245,10 @@ function getRepoUrlFromConfigText(gitConfig: string): string | undefined {
 				if (urlMatch) {
 					remoteUrl = urlMatch[1];
 					if (remoteUrl.endsWith('\\')) {
-						remoteUrl = remoteUrl.substring(0, remoteUrl.length - 1);
+						remoteUrl = remoteUrl.substring(
+							0,
+							remoteUrl.length - 1,
+						);
 						isWithinMultilineUrl = true;
 					} else if (remoteSection === 'origin') {
 						// we're already finished
@@ -246,9 +287,11 @@ class CompletedComputation<T> {
  */
 function computeInBackgroundAndMemoize<S, P extends unknown[]>(
 	fct: (accessor: ServicesAccessor, ...args: P) => Promise<S>,
-	cacheSize: number
+	cacheSize: number,
 ): (accessor: ServicesAccessor, ...args: P) => S | ComputationStatus {
-	const resultsCache = new LRUCacheMap<string, CompletedComputation<S>>(cacheSize);
+	const resultsCache = new LRUCacheMap<string, CompletedComputation<S>>(
+		cacheSize,
+	);
 	const inComputation: Set<string> = new Set();
 	return (accessor: ServicesAccessor, ...args: P) => {
 		const key = JSON.stringify(args);
@@ -262,7 +305,7 @@ function computeInBackgroundAndMemoize<S, P extends unknown[]>(
 		}
 		const computation = fct(accessor, ...args);
 		inComputation.add(key);
-		void computation.then(computedResult => {
+		void computation.then((computedResult) => {
 			// remove from inComputation
 			resultsCache.set(key, new CompletedComputation(computedResult));
 			inComputation.delete(key);

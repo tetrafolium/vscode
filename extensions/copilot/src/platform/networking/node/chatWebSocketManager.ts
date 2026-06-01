@@ -9,18 +9,35 @@ import { createServiceIdentifier } from '../../../util/common/services';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { CancellationError } from '../../../util/vs/base/common/errors';
 import { Emitter, Event } from '../../../util/vs/base/common/event';
-import { Disposable, IDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	IDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 import { QuotaSnapshots } from '../../chat/common/chatQuotaService';
-import { ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { ICAPIClientService } from '../../endpoint/common/capiClient';
-import { ILogService, collectSingleLineErrorMessage } from '../../log/common/logService';
+import {
+	ILogService,
+	collectSingleLineErrorMessage,
+} from '../../log/common/logService';
 import { ITelemetryService } from '../../telemetry/common/telemetry';
-import { HeadersImpl, IHeaders, WebSocketConnection } from '../common/fetcherService';
+import {
+	HeadersImpl,
+	IHeaders,
+	WebSocketConnection,
+} from '../common/fetcherService';
 import { IEndpointBody } from '../common/networking';
 import { getResponsesApiCompactionThresholdFromBody } from '../../endpoint/node/responsesApi';
-import { ChatWebSocketRequestOutcome, ChatWebSocketTelemetrySender } from './chatWebSocketTelemetry';
+import {
+	ChatWebSocketRequestOutcome,
+	ChatWebSocketTelemetrySender,
+} from './chatWebSocketTelemetry';
 
-export const IChatWebSocketManager = createServiceIdentifier<IChatWebSocketManager>('IChatWebSocketManager');
+export const IChatWebSocketManager =
+	createServiceIdentifier<IChatWebSocketManager>('IChatWebSocketManager');
 
 export interface IChatWebSocketManager {
 	readonly _serviceBrand: undefined;
@@ -30,7 +47,11 @@ export interface IChatWebSocketManager {
 	 * The connection is shared across turns and tool call rounds within
 	 * the same conversation, keeping server-side context alive.
 	 */
-	getOrCreateConnection(conversationId: string, headers: Record<string, string>, initiatingRequestId: string): IChatWebSocketConnection;
+	getOrCreateConnection(
+		conversationId: string,
+		headers: Record<string, string>,
+		initiatingRequestId: string,
+	): IChatWebSocketConnection;
 
 	/**
 	 * Returns true if there is an open WebSocket connection for the given
@@ -68,14 +89,24 @@ export interface IChatWebSocketManager {
  */
 export class NullChatWebSocketManager implements IChatWebSocketManager {
 	declare readonly _serviceBrand: undefined;
-	getOrCreateConnection(_conversationId: string, _headers?: Record<string, string>, _initiatingRequestId?: string): IChatWebSocketConnection {
+	getOrCreateConnection(
+		_conversationId: string,
+		_headers?: Record<string, string>,
+		_initiatingRequestId?: string,
+	): IChatWebSocketConnection {
 		throw new Error('WebSocket not available');
 	}
-	hasActiveConnection(_conversationId: string): boolean { return false; }
-	getStatefulMarker(_conversationId: string): string | undefined { return undefined; }
-	getSummarizedAtRoundId(_conversationId: string): string | undefined { return undefined; }
-	closeConnection(_conversationId: string): void { }
-	closeAll(): void { }
+	hasActiveConnection(_conversationId: string): boolean {
+		return false;
+	}
+	getStatefulMarker(_conversationId: string): string | undefined {
+		return undefined;
+	}
+	getSummarizedAtRoundId(_conversationId: string): string | undefined {
+		return undefined;
+	}
+	closeConnection(_conversationId: string): void {}
+	closeAll(): void {}
 }
 
 export interface IChatWebSocketRequestOptions {
@@ -137,7 +168,9 @@ export interface IChatWebSocketRequestHandle {
 	 * Consumers can inspect the event type to decide the response kind
 	 * (success stream vs. CAPI error) before processing remaining events.
 	 */
-	readonly firstEvent: Promise<OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent>;
+	readonly firstEvent: Promise<
+		OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent
+	>;
 	/** Resolves when the request has finished (completed or errored). */
 	readonly done: Promise<void>;
 }
@@ -159,37 +192,57 @@ export interface CAPIWebSocketErrorEvent {
 	readonly copilot_quota_snapshots?: QuotaSnapshots;
 }
 
-export function isCAPIWebSocketError(event: OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent): event is CAPIWebSocketErrorEvent {
-	return event.type === 'error' && 'error' in event && typeof (event as CAPIWebSocketErrorEvent).error?.code === 'string';
+export function isCAPIWebSocketError(
+	event: OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent,
+): event is CAPIWebSocketErrorEvent {
+	return (
+		event.type === 'error' &&
+		'error' in event &&
+		typeof (event as CAPIWebSocketErrorEvent).error?.code === 'string'
+	);
 }
 
-const streamTerminatingOutcomes: Readonly<Record<string, ChatWebSocketRequestOutcome>> = {
+const streamTerminatingOutcomes: Readonly<
+	Record<string, ChatWebSocketRequestOutcome>
+> = {
 	'response.completed': 'completed',
 	'response.failed': 'response_failed',
 	'response.incomplete': 'response_incomplete',
 	'response.cancelled': 'response_cancelled',
-	'error': 'upstream_error',
+	error: 'upstream_error',
 };
 
-function getStreamTerminatingOutcome(event: OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent): ChatWebSocketRequestOutcome | undefined {
+function getStreamTerminatingOutcome(
+	event: OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent,
+): ChatWebSocketRequestOutcome | undefined {
 	return streamTerminatingOutcomes[event.type];
 }
 
-export class ChatWebSocketManager extends Disposable implements IChatWebSocketManager {
+export class ChatWebSocketManager
+	extends Disposable
+	implements IChatWebSocketManager
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _connections = new Map<string, ChatWebSocketConnection>();
 
 	constructor(
 		@ILogService private readonly _logService: ILogService,
-		@ICAPIClientService private readonly _capiClientService: ICAPIClientService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
+		@ICAPIClientService
+		private readonly _capiClientService: ICAPIClientService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
 	) {
 		super();
 	}
 
-	getOrCreateConnection(conversationId: string, headers: Record<string, string>, initiatingRequestId: string): IChatWebSocketConnection {
+	getOrCreateConnection(
+		conversationId: string,
+		headers: Record<string, string>,
+		initiatingRequestId: string,
+	): IChatWebSocketConnection {
 		const existing = this._connections.get(conversationId);
 
 		// Reuse the connection if it's still open, even across turns.
@@ -198,13 +251,25 @@ export class ChatWebSocketManager extends Disposable implements IChatWebSocketMa
 		}
 
 		if (existing) {
-			this._logService.debug(`[ChatWebSocketManager] Replacing closed connection for conversation ${conversationId}`);
+			this._logService.debug(
+				`[ChatWebSocketManager] Replacing closed connection for conversation ${conversationId}`,
+			);
 			existing.dispose();
 			this._connections.delete(conversationId);
 		}
 
-		const connection = new ChatWebSocketConnection(this._capiClientService, this._logService, this._telemetryService, this._configurationService, conversationId, headers, initiatingRequestId);
-		this._logService.debug(`[ChatWebSocketManager] Creating new connection for conversation ${conversationId}`);
+		const connection = new ChatWebSocketConnection(
+			this._capiClientService,
+			this._logService,
+			this._telemetryService,
+			this._configurationService,
+			conversationId,
+			headers,
+			initiatingRequestId,
+		);
+		this._logService.debug(
+			`[ChatWebSocketManager] Creating new connection for conversation ${conversationId}`,
+		);
 		this._connections.set(conversationId, connection);
 
 		// Remove from map when disposed externally
@@ -237,9 +302,13 @@ export class ChatWebSocketManager extends Disposable implements IChatWebSocketMa
 		const connection = this._connections.get(conversationId);
 		if (connection) {
 			if (connection.hasActiveRequest) {
-				this._logService.warn(`[ChatWebSocketManager] Closing connection for conversation ${conversationId} while turn ${connection.turnId} still has an active request`);
+				this._logService.warn(
+					`[ChatWebSocketManager] Closing connection for conversation ${conversationId} while turn ${connection.turnId} still has an active request`,
+				);
 			} else {
-				this._logService.debug(`[ChatWebSocketManager] Closing connection for conversation ${conversationId}`);
+				this._logService.debug(
+					`[ChatWebSocketManager] Closing connection for conversation ${conversationId}`,
+				);
 			}
 			connection.dispose();
 			this._connections.delete(conversationId);
@@ -267,26 +336,45 @@ const enum ConnectionState {
 
 function wsCloseCodeToString(code: number): string {
 	switch (code) {
-		case 1000: return 'Normal Closure';
-		case 1001: return 'Going Away';
-		case 1002: return 'Protocol Error';
-		case 1003: return 'Unsupported Data';
-		case 1005: return 'No Status Received';
-		case 1006: return 'Abnormal Closure';
-		case 1007: return 'Invalid Payload';
-		case 1008: return 'Policy Violation';
-		case 1009: return 'Message Too Big';
-		case 1010: return 'Missing Extension';
-		case 1011: return 'Internal Error';
-		case 1012: return 'Service Restart';
-		case 1013: return 'Try Again Later';
-		case 1014: return 'Bad Gateway';
-		case 1015: return 'TLS Handshake Failed';
-		default: return 'Unknown';
+		case 1000:
+			return 'Normal Closure';
+		case 1001:
+			return 'Going Away';
+		case 1002:
+			return 'Protocol Error';
+		case 1003:
+			return 'Unsupported Data';
+		case 1005:
+			return 'No Status Received';
+		case 1006:
+			return 'Abnormal Closure';
+		case 1007:
+			return 'Invalid Payload';
+		case 1008:
+			return 'Policy Violation';
+		case 1009:
+			return 'Message Too Big';
+		case 1010:
+			return 'Missing Extension';
+		case 1011:
+			return 'Internal Error';
+		case 1012:
+			return 'Service Restart';
+		case 1013:
+			return 'Try Again Later';
+		case 1014:
+			return 'Bad Gateway';
+		case 1015:
+			return 'TLS Handshake Failed';
+		default:
+			return 'Unknown';
 	}
 }
 
-class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnection {
+class ChatWebSocketConnection
+	extends Disposable
+	implements IChatWebSocketConnection
+{
 	private _ws: WebSocket | undefined;
 	private _state: ConnectionState = ConnectionState.Closed;
 	private _activeRequest: ChatWebSocketActiveRequest | undefined;
@@ -365,11 +453,14 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 
 		this._state = ConnectionState.Connecting;
 		this._connectStartTime = Date.now();
-		this._logService.debug(`[ChatWebSocketManager] Connecting WebSocket for conversation ${this._conversationId}`);
+		this._logService.debug(
+			`[ChatWebSocketManager] Connecting WebSocket for conversation ${this._conversationId}`,
+		);
 
-		const connection: WebSocketConnection = await this._capiClientService.createResponsesWebSocket({
-			headers: this._headers,
-		});
+		const connection: WebSocketConnection =
+			await this._capiClientService.createResponsesWebSocket({
+				headers: this._headers,
+			});
 
 		return new Promise<void>((resolve, reject) => {
 			const ws = connection.webSocket;
@@ -383,14 +474,21 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 				this._responseStatusCode = connection.responseStatusCode;
 				this._responseStatusText = connection.responseStatusText;
 				this._setupMessageHandlers(ws);
-				const connectDurationMs = this._connectedTime - (this._connectStartTime ?? this._connectedTime);
-				this._logService.debug(`[ChatWebSocketManager] Connected for conversation ${this._conversationId}`);
-				ChatWebSocketTelemetrySender.sendConnectedTelemetry(this._telemetryService, {
-					conversationId: this._conversationId,
-					initiatingRequestId: this._initiatingRequestId,
-					gitHubRequestId: this.gitHubRequestId,
-					connectDurationMs,
-				});
+				const connectDurationMs =
+					this._connectedTime -
+					(this._connectStartTime ?? this._connectedTime);
+				this._logService.debug(
+					`[ChatWebSocketManager] Connected for conversation ${this._conversationId}`,
+				);
+				ChatWebSocketTelemetrySender.sendConnectedTelemetry(
+					this._telemetryService,
+					{
+						conversationId: this._conversationId,
+						initiatingRequestId: this._initiatingRequestId,
+						gitHubRequestId: this.gitHubRequestId,
+						connectDurationMs,
+					},
+				);
 				resolve();
 			};
 
@@ -400,21 +498,32 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 				this._responseHeaders = connection.responseHeaders;
 				this._responseStatusCode = connection.responseStatusCode;
 				this._responseStatusText = connection.responseStatusText;
-				const errorMessage = event.error ? `${event.message}: ${collectSingleLineErrorMessage(event.error)}` : event.message || 'WebSocket error';
-				const networkError = event.error?.cause ?? connection.networkError;
-				const networkErrorMessage = networkError ? collectSingleLineErrorMessage(networkError) : undefined;
-				const connectDurationMs = Date.now() - (this._connectStartTime ?? Date.now());
-				this._logService.error(`[ChatWebSocketManager] Connection error for conversation ${this._conversationId}: ${errorMessage}${networkErrorMessage ? ` (cause: ${networkErrorMessage})` : ''}`);
-				ChatWebSocketTelemetrySender.sendConnectErrorTelemetry(this._telemetryService, {
-					conversationId: this._conversationId,
-					initiatingRequestId: this._initiatingRequestId,
-					gitHubRequestId: this.gitHubRequestId,
-					error: errorMessage,
-					connectDurationMs,
-					responseStatusCode: this._responseStatusCode,
-					responseStatusText: this._responseStatusText,
-					networkError: networkErrorMessage,
-				});
+				const errorMessage = event.error
+					? `${event.message}: ${collectSingleLineErrorMessage(event.error)}`
+					: event.message || 'WebSocket error';
+				const networkError =
+					event.error?.cause ?? connection.networkError;
+				const networkErrorMessage = networkError
+					? collectSingleLineErrorMessage(networkError)
+					: undefined;
+				const connectDurationMs =
+					Date.now() - (this._connectStartTime ?? Date.now());
+				this._logService.error(
+					`[ChatWebSocketManager] Connection error for conversation ${this._conversationId}: ${errorMessage}${networkErrorMessage ? ` (cause: ${networkErrorMessage})` : ''}`,
+				);
+				ChatWebSocketTelemetrySender.sendConnectErrorTelemetry(
+					this._telemetryService,
+					{
+						conversationId: this._conversationId,
+						initiatingRequestId: this._initiatingRequestId,
+						gitHubRequestId: this.gitHubRequestId,
+						error: errorMessage,
+						connectDurationMs,
+						responseStatusCode: this._responseStatusCode,
+						responseStatusText: this._responseStatusText,
+						networkError: networkErrorMessage,
+					},
+				);
 				reject(new Error(errorMessage));
 			};
 
@@ -424,19 +533,25 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 				this._responseHeaders = connection.responseHeaders;
 				this._responseStatusCode = connection.responseStatusCode;
 				this._responseStatusText = connection.responseStatusText;
-				const connectDurationMs = Date.now() - (this._connectStartTime ?? Date.now());
+				const connectDurationMs =
+					Date.now() - (this._connectStartTime ?? Date.now());
 				const closeCodeDescription = wsCloseCodeToString(event.code);
-				this._logService.debug(`[ChatWebSocketManager] Connection closed during setup for conversation ${this._conversationId} (code: ${event.code} ${closeCodeDescription}, reason: ${event.reason || '<empty>'}, wasClean: ${event.wasClean})`);
-				ChatWebSocketTelemetrySender.sendCloseDuringSetupTelemetry(this._telemetryService, {
-					conversationId: this._conversationId,
-					initiatingRequestId: this._initiatingRequestId,
-					gitHubRequestId: this.gitHubRequestId,
-					closeCode: event.code,
-					closeReason: closeCodeDescription,
-					closeEventReason: event.reason,
-					closeEventWasClean: String(event.wasClean),
-					connectDurationMs,
-				});
+				this._logService.debug(
+					`[ChatWebSocketManager] Connection closed during setup for conversation ${this._conversationId} (code: ${event.code} ${closeCodeDescription}, reason: ${event.reason || '<empty>'}, wasClean: ${event.wasClean})`,
+				);
+				ChatWebSocketTelemetrySender.sendCloseDuringSetupTelemetry(
+					this._telemetryService,
+					{
+						conversationId: this._conversationId,
+						initiatingRequestId: this._initiatingRequestId,
+						gitHubRequestId: this.gitHubRequestId,
+						closeCode: event.code,
+						closeReason: closeCodeDescription,
+						closeEventReason: event.reason,
+						closeEventWasClean: String(event.wasClean),
+						connectDurationMs,
+					},
+				);
 				reject(new Error('WebSocket closed during connection setup'));
 			};
 
@@ -461,15 +576,68 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 			const receivedMessageCharacters = event.data.length;
 			this._totalReceivedMessageCount += 1;
 			this._totalReceivedCharacters += receivedMessageCharacters;
-			const connectionDurationMs = Date.now() - (this._connectedTime ?? Date.now());
+			const connectionDurationMs =
+				Date.now() - (this._connectedTime ?? Date.now());
 
-			let parsed: OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent;
+			let parsed:
+				| OpenAI.Responses.ResponseStreamEvent
+				| CAPIWebSocketErrorEvent;
 			try {
 				parsed = JSON.parse(event.data);
 			} catch (error) {
-				const parseErrorMessage = collectSingleLineErrorMessage(error) || 'Failed to parse websocket message';
-				this._logService.error(`[ChatWebSocketManager] Failed to parse message for conversation ${this._conversationId} turn ${this._turnId}: ${parseErrorMessage}`);
-				ChatWebSocketTelemetrySender.sendMessageParseErrorTelemetry(this._telemetryService, {
+				const parseErrorMessage =
+					collectSingleLineErrorMessage(error) ||
+					'Failed to parse websocket message';
+				this._logService.error(
+					`[ChatWebSocketManager] Failed to parse message for conversation ${this._conversationId} turn ${this._turnId}: ${parseErrorMessage}`,
+				);
+				ChatWebSocketTelemetrySender.sendMessageParseErrorTelemetry(
+					this._telemetryService,
+					{
+						conversationId: this._conversationId,
+						initiatingRequestId: this._initiatingRequestId,
+						turnId: this._turnId,
+						previousTurnId: this._previousTurnId,
+						hadActiveRequest: this._hadActiveRequest,
+						requestId: this._activeRequest?.requestId,
+						gitHubRequestId: this.gitHubRequestId,
+						modelId: this._activeRequest?.modelId,
+						error: parseErrorMessage,
+						connectionDurationMs,
+						totalSentMessageCount: this._totalSentMessageCount,
+						totalReceivedMessageCount:
+							this._totalReceivedMessageCount,
+						receivedMessageCharacters,
+						totalSentCharacters: this._totalSentCharacters,
+						totalReceivedCharacters: this._totalReceivedCharacters,
+					},
+				);
+				return;
+			}
+
+			if (
+				!isCAPIWebSocketError(parsed) &&
+				parsed.type === 'response.completed'
+			) {
+				this._statefulMarker = parsed.response.id;
+				this._summarizedAtRoundId =
+					this._activeRequest?.summarizedAtRoundId;
+			}
+
+			this._activeRequest?.handleEvent(parsed);
+		});
+
+		ws.addEventListener('close', (event) => {
+			this._state = ConnectionState.Closed;
+			const connectionDurationMs =
+				Date.now() - (this._connectedTime ?? Date.now());
+			const closeCodeDescription = wsCloseCodeToString(event.code);
+			this._logService.debug(
+				`[ChatWebSocketManager] Connection closed for conversation ${this._conversationId} turn ${this._turnId} (code: ${event.code} ${closeCodeDescription}, reason: ${event.reason || '<empty>'}, wasClean: ${event.wasClean})`,
+			);
+			ChatWebSocketTelemetrySender.sendCloseTelemetry(
+				this._telemetryService,
+				{
 					conversationId: this._conversationId,
 					initiatingRequestId: this._initiatingRequestId,
 					turnId: this._turnId,
@@ -478,105 +646,104 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 					requestId: this._activeRequest?.requestId,
 					gitHubRequestId: this.gitHubRequestId,
 					modelId: this._activeRequest?.modelId,
-					error: parseErrorMessage,
+					closeCode: event.code,
+					closeReason: closeCodeDescription,
+					closeEventReason: event.reason,
+					closeEventWasClean: String(event.wasClean),
 					connectionDurationMs,
 					totalSentMessageCount: this._totalSentMessageCount,
 					totalReceivedMessageCount: this._totalReceivedMessageCount,
-					receivedMessageCharacters,
 					totalSentCharacters: this._totalSentCharacters,
 					totalReceivedCharacters: this._totalReceivedCharacters,
-				});
-				return;
-			}
-
-			if (!isCAPIWebSocketError(parsed) && parsed.type === 'response.completed') {
-				this._statefulMarker = parsed.response.id;
-				this._summarizedAtRoundId = this._activeRequest?.summarizedAtRoundId;
-			}
-
-			this._activeRequest?.handleEvent(parsed);
-		});
-
-		ws.addEventListener('close', (event) => {
-			this._state = ConnectionState.Closed;
-			const connectionDurationMs = Date.now() - (this._connectedTime ?? Date.now());
-			const closeCodeDescription = wsCloseCodeToString(event.code);
-			this._logService.debug(`[ChatWebSocketManager] Connection closed for conversation ${this._conversationId} turn ${this._turnId} (code: ${event.code} ${closeCodeDescription}, reason: ${event.reason || '<empty>'}, wasClean: ${event.wasClean})`);
-			ChatWebSocketTelemetrySender.sendCloseTelemetry(this._telemetryService, {
-				conversationId: this._conversationId,
-				initiatingRequestId: this._initiatingRequestId,
-				turnId: this._turnId,
-				previousTurnId: this._previousTurnId,
-				hadActiveRequest: this._hadActiveRequest,
-				requestId: this._activeRequest?.requestId,
-				gitHubRequestId: this.gitHubRequestId,
-				modelId: this._activeRequest?.modelId,
-				closeCode: event.code,
-				closeReason: closeCodeDescription,
-				closeEventReason: event.reason,
-				closeEventWasClean: String(event.wasClean),
-				connectionDurationMs,
-				totalSentMessageCount: this._totalSentMessageCount,
-				totalReceivedMessageCount: this._totalReceivedMessageCount,
-				totalSentCharacters: this._totalSentCharacters,
-				totalReceivedCharacters: this._totalReceivedCharacters,
-			});
+				},
+			);
 			const errorMessage = this._pendingErrorMessage;
 			this._pendingErrorMessage = undefined;
-			this._activeRequest?.handleConnectionClose(event.code, event.reason, errorMessage);
+			this._activeRequest?.handleConnectionClose(
+				event.code,
+				event.reason,
+				errorMessage,
+			);
 			this._activeRequest = undefined;
 		});
 
 		ws.addEventListener('error', (event) => {
-			const errorMessage = event.error ? `${event.message}: ${collectSingleLineErrorMessage(event.error)}` : event.message || 'WebSocket error';
-			const connectionDurationMs = Date.now() - (this._connectedTime ?? Date.now());
-			this._logService.error(`[ChatWebSocketManager] Error for conversation ${this._conversationId} turn ${this._turnId}: ${errorMessage}`);
-			ChatWebSocketTelemetrySender.sendErrorTelemetry(this._telemetryService, {
-				conversationId: this._conversationId,
-				initiatingRequestId: this._initiatingRequestId,
-				turnId: this._turnId,
-				previousTurnId: this._previousTurnId,
-				hadActiveRequest: this._hadActiveRequest,
-				requestId: this._activeRequest?.requestId,
-				gitHubRequestId: this.gitHubRequestId,
-				modelId: this._activeRequest?.modelId,
-				error: errorMessage,
-				connectionDurationMs,
-				totalSentMessageCount: this._totalSentMessageCount,
-				totalReceivedMessageCount: this._totalReceivedMessageCount,
-				totalSentCharacters: this._totalSentCharacters,
-				totalReceivedCharacters: this._totalReceivedCharacters,
-			});
+			const errorMessage = event.error
+				? `${event.message}: ${collectSingleLineErrorMessage(event.error)}`
+				: event.message || 'WebSocket error';
+			const connectionDurationMs =
+				Date.now() - (this._connectedTime ?? Date.now());
+			this._logService.error(
+				`[ChatWebSocketManager] Error for conversation ${this._conversationId} turn ${this._turnId}: ${errorMessage}`,
+			);
+			ChatWebSocketTelemetrySender.sendErrorTelemetry(
+				this._telemetryService,
+				{
+					conversationId: this._conversationId,
+					initiatingRequestId: this._initiatingRequestId,
+					turnId: this._turnId,
+					previousTurnId: this._previousTurnId,
+					hadActiveRequest: this._hadActiveRequest,
+					requestId: this._activeRequest?.requestId,
+					gitHubRequestId: this.gitHubRequestId,
+					modelId: this._activeRequest?.modelId,
+					error: errorMessage,
+					connectionDurationMs,
+					totalSentMessageCount: this._totalSentMessageCount,
+					totalReceivedMessageCount: this._totalReceivedMessageCount,
+					totalSentCharacters: this._totalSentCharacters,
+					totalReceivedCharacters: this._totalReceivedCharacters,
+				},
+			);
 			this._pendingErrorMessage ??= errorMessage;
 		});
 	}
 
-	sendRequest(body: IEndpointBody, options: IChatWebSocketRequestOptions, token: CancellationToken): IChatWebSocketRequestHandle {
+	sendRequest(
+		body: IEndpointBody,
+		options: IChatWebSocketRequestOptions,
+		token: CancellationToken,
+	): IChatWebSocketRequestHandle {
 		if (!this._ws || this._state !== ConnectionState.Open) {
 			throw new Error('WebSocket is not connected');
 		}
 
-		const statefulMarkerMatched = this._statefulMarker === body.previous_response_id;
+		const statefulMarkerMatched =
+			this._statefulMarker === body.previous_response_id;
 		const previousResponseIdUnset = body.previous_response_id === undefined;
-		const hasCompactionData = body.input?.some(item => item?.type === 'compaction') ?? false;
-		const summarizedAtRoundIdSet = options.summarizedAtRoundId !== undefined;
-		const summarizedAtRoundIdMatched = options.summarizedAtRoundId === this._summarizedAtRoundId;
-		const compactionThreshold = getResponsesApiCompactionThresholdFromBody(body);
-		const statefulMarkerPrefix = this._statefulMarker?.slice(0, 5).concat('...') ?? '<none>';
-		const previousResponsePrefix = body.previous_response_id?.slice(0, 5).concat('...') ?? '<none>';
+		const hasCompactionData =
+			body.input?.some((item) => item?.type === 'compaction') ?? false;
+		const summarizedAtRoundIdSet =
+			options.summarizedAtRoundId !== undefined;
+		const summarizedAtRoundIdMatched =
+			options.summarizedAtRoundId === this._summarizedAtRoundId;
+		const compactionThreshold =
+			getResponsesApiCompactionThresholdFromBody(body);
+		const statefulMarkerPrefix =
+			this._statefulMarker?.slice(0, 5).concat('...') ?? '<none>';
+		const previousResponsePrefix =
+			body.previous_response_id?.slice(0, 5).concat('...') ?? '<none>';
 		if (statefulMarkerMatched) {
-			this._logService.trace(`[ChatWebSocketManager] WebSocket stateful marker matches previous_response_id (${previousResponsePrefix}), summarizedAtRoundIdMatched: ${summarizedAtRoundIdMatched}`);
+			this._logService.trace(
+				`[ChatWebSocketManager] WebSocket stateful marker matches previous_response_id (${previousResponsePrefix}), summarizedAtRoundIdMatched: ${summarizedAtRoundIdMatched}`,
+			);
 		} else {
-			this._logService.debug(`[ChatWebSocketManager] WebSocket stateful marker (${statefulMarkerPrefix}) does not match previous_response_id (${previousResponsePrefix}), summarizedAtRoundIdMatched: ${summarizedAtRoundIdMatched}`);
+			this._logService.debug(
+				`[ChatWebSocketManager] WebSocket stateful marker (${statefulMarkerPrefix}) does not match previous_response_id (${previousResponsePrefix}), summarizedAtRoundIdMatched: ${summarizedAtRoundIdMatched}`,
+			);
 		}
 
 		// Supersede any in-flight request before updating turn state
 		const hadActiveRequest = !!this._activeRequest;
 		if (hadActiveRequest) {
-			this._logService.warn(`[ChatWebSocketManager] New request for conversation ${this._conversationId} turn ${options.turnId} while turn ${this._turnId} still has an active request`);
+			this._logService.warn(
+				`[ChatWebSocketManager] New request for conversation ${this._conversationId} turn ${options.turnId} while turn ${this._turnId} still has an active request`,
+			);
 			this._activeRequest!.handleSuperseded();
 		} else {
-			this._logService.debug(`[ChatWebSocketManager] New request for conversation ${this._conversationId} turn ${options.turnId} (previous turn: ${this._turnId})`);
+			this._logService.debug(
+				`[ChatWebSocketManager] New request for conversation ${this._conversationId} turn ${options.turnId} (previous turn: ${this._turnId})`,
+			);
 		}
 
 		// Update turn state after superseding so the old request's settle
@@ -592,59 +759,92 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 
 		const requestStartTime = Date.now();
 		const requestStartSentMessageCount = this._totalSentMessageCount;
-		const requestStartReceivedMessageCount = this._totalReceivedMessageCount;
+		const requestStartReceivedMessageCount =
+			this._totalReceivedMessageCount;
 		const requestStartSentCharacters = this._totalSentCharacters;
 		const requestStartReceivedCharacters = this._totalReceivedCharacters;
 		const promptTokenCountPromise = options.countTokens();
 		let promptTokenCount = -1;
-		promptTokenCountPromise.then(count => { promptTokenCount = count; }, () => { promptTokenCount = -2; });
-		const request = new ChatWebSocketActiveRequest(requestId, options.model, options.summarizedAtRoundId, this._configurationService, this._logService);
-		request.onDidSettle(({ outcome, closeCode, closeReason, serverErrorMessage, serverErrorCode }) => {
-			if (this._activeRequest === request) {
-				this._activeRequest = undefined;
-			}
-			const connectionDurationMs = Date.now() - (this._connectedTime ?? Date.now());
-			const requestDurationMs = Date.now() - requestStartTime;
-			const requestSentMessageCount = this._totalSentMessageCount - requestStartSentMessageCount;
-			const requestReceivedMessageCount = this._totalReceivedMessageCount - requestStartReceivedMessageCount;
-			const requestSentCharacters = this._totalSentCharacters - requestStartSentCharacters;
-			const requestReceivedCharacters = this._totalReceivedCharacters - requestStartReceivedCharacters;
-			ChatWebSocketTelemetrySender.sendRequestOutcomeTelemetry(this._telemetryService, {
-				conversationId: this._conversationId,
-				initiatingRequestId: this._initiatingRequestId,
-				turnId,
-				previousTurnId,
-				hadActiveRequest,
-				requestId,
-				gitHubRequestId: this.gitHubRequestId,
-				modelId: options.model,
-				requestOutcome: outcome,
-				statefulMarkerMatched,
-				previousResponseIdUnset,
-				hasCompactionData,
-				summarizedAtRoundIdSet,
-				summarizedAtRoundIdMatched,
-				modeChanged: options.modeChanged,
-				compactionThreshold,
-				promptTokenCount,
-				tokenCountMax: options.tokenCountMax,
-				modelMaxPromptTokens: options.modelMaxPromptTokens,
-				connectionDurationMs,
-				requestDurationMs,
-				totalSentMessageCount: this._totalSentMessageCount,
-				totalReceivedMessageCount: this._totalReceivedMessageCount,
-				totalSentCharacters: this._totalSentCharacters,
-				totalReceivedCharacters: this._totalReceivedCharacters,
-				requestSentMessageCount,
-				requestReceivedMessageCount,
-				requestSentCharacters,
-				requestReceivedCharacters,
+		promptTokenCountPromise.then(
+			(count) => {
+				promptTokenCount = count;
+			},
+			() => {
+				promptTokenCount = -2;
+			},
+		);
+		const request = new ChatWebSocketActiveRequest(
+			requestId,
+			options.model,
+			options.summarizedAtRoundId,
+			this._configurationService,
+			this._logService,
+		);
+		request.onDidSettle(
+			({
+				outcome,
 				closeCode,
 				closeReason,
 				serverErrorMessage,
 				serverErrorCode,
-			});
-		});
+			}) => {
+				if (this._activeRequest === request) {
+					this._activeRequest = undefined;
+				}
+				const connectionDurationMs =
+					Date.now() - (this._connectedTime ?? Date.now());
+				const requestDurationMs = Date.now() - requestStartTime;
+				const requestSentMessageCount =
+					this._totalSentMessageCount - requestStartSentMessageCount;
+				const requestReceivedMessageCount =
+					this._totalReceivedMessageCount -
+					requestStartReceivedMessageCount;
+				const requestSentCharacters =
+					this._totalSentCharacters - requestStartSentCharacters;
+				const requestReceivedCharacters =
+					this._totalReceivedCharacters -
+					requestStartReceivedCharacters;
+				ChatWebSocketTelemetrySender.sendRequestOutcomeTelemetry(
+					this._telemetryService,
+					{
+						conversationId: this._conversationId,
+						initiatingRequestId: this._initiatingRequestId,
+						turnId,
+						previousTurnId,
+						hadActiveRequest,
+						requestId,
+						gitHubRequestId: this.gitHubRequestId,
+						modelId: options.model,
+						requestOutcome: outcome,
+						statefulMarkerMatched,
+						previousResponseIdUnset,
+						hasCompactionData,
+						summarizedAtRoundIdSet,
+						summarizedAtRoundIdMatched,
+						modeChanged: options.modeChanged,
+						compactionThreshold,
+						promptTokenCount,
+						tokenCountMax: options.tokenCountMax,
+						modelMaxPromptTokens: options.modelMaxPromptTokens,
+						connectionDurationMs,
+						requestDurationMs,
+						totalSentMessageCount: this._totalSentMessageCount,
+						totalReceivedMessageCount:
+							this._totalReceivedMessageCount,
+						totalSentCharacters: this._totalSentCharacters,
+						totalReceivedCharacters: this._totalReceivedCharacters,
+						requestSentMessageCount,
+						requestReceivedMessageCount,
+						requestSentCharacters,
+						requestReceivedCharacters,
+						closeCode,
+						closeReason,
+						serverErrorMessage,
+						serverErrorCode,
+					},
+				);
+			},
+		);
 		this._activeRequest = request;
 
 		// Handle cancellation
@@ -654,7 +854,7 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 				this._activeRequest = undefined;
 			}
 		});
-		request.done.finally(() => cancelDisposable.dispose()).catch(() => { });
+		request.done.finally(() => cancelDisposable.dispose()).catch(() => {});
 
 		const { stream: _, ...rest } = body;
 		const message = {
@@ -667,33 +867,39 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 		this._totalSentMessageCount += 1;
 		this._totalSentCharacters += sentMessageCharacters;
 
-		const connectionDurationMs = Date.now() - (this._connectedTime ?? Date.now());
-		this._logService.debug(`[ChatWebSocketManager] Sending request for conversation ${this._conversationId} turn ${this._turnId} (totalSentMessageCount: ${this._totalSentMessageCount}, sentMessageCharacters: ${sentMessageCharacters})`);
-		ChatWebSocketTelemetrySender.sendRequestSentTelemetry(this._telemetryService, {
-			conversationId: this._conversationId,
-			initiatingRequestId: this._initiatingRequestId,
-			turnId,
-			previousTurnId,
-			hadActiveRequest,
-			requestId,
-			gitHubRequestId: this.gitHubRequestId,
-			modelId: options.model,
-			statefulMarkerMatched,
-			previousResponseIdUnset,
-			hasCompactionData,
-			summarizedAtRoundIdSet,
-			summarizedAtRoundIdMatched,
-			modeChanged: options.modeChanged,
-			compactionThreshold,
-			tokenCountMax: options.tokenCountMax,
-			modelMaxPromptTokens: options.modelMaxPromptTokens,
-			connectionDurationMs,
-			totalSentMessageCount: this._totalSentMessageCount,
-			totalReceivedMessageCount: this._totalReceivedMessageCount,
-			sentMessageCharacters,
-			totalSentCharacters: this._totalSentCharacters,
-			totalReceivedCharacters: this._totalReceivedCharacters,
-		});
+		const connectionDurationMs =
+			Date.now() - (this._connectedTime ?? Date.now());
+		this._logService.debug(
+			`[ChatWebSocketManager] Sending request for conversation ${this._conversationId} turn ${this._turnId} (totalSentMessageCount: ${this._totalSentMessageCount}, sentMessageCharacters: ${sentMessageCharacters})`,
+		);
+		ChatWebSocketTelemetrySender.sendRequestSentTelemetry(
+			this._telemetryService,
+			{
+				conversationId: this._conversationId,
+				initiatingRequestId: this._initiatingRequestId,
+				turnId,
+				previousTurnId,
+				hadActiveRequest,
+				requestId,
+				gitHubRequestId: this.gitHubRequestId,
+				modelId: options.model,
+				statefulMarkerMatched,
+				previousResponseIdUnset,
+				hasCompactionData,
+				summarizedAtRoundIdSet,
+				summarizedAtRoundIdMatched,
+				modeChanged: options.modeChanged,
+				compactionThreshold,
+				tokenCountMax: options.tokenCountMax,
+				modelMaxPromptTokens: options.modelMaxPromptTokens,
+				connectionDurationMs,
+				totalSentMessageCount: this._totalSentMessageCount,
+				totalReceivedMessageCount: this._totalReceivedMessageCount,
+				sentMessageCharacters,
+				totalSentCharacters: this._totalSentCharacters,
+				totalReceivedCharacters: this._totalReceivedCharacters,
+			},
+		);
 		this._ws.send(serializedMessage);
 
 		return request;
@@ -714,7 +920,8 @@ class ChatWebSocketConnection extends Disposable implements IChatWebSocketConnec
 }
 
 class ChatWebSocketActiveRequest implements IChatWebSocketRequestHandle {
-	private readonly _onEvent = new Emitter<OpenAI.Responses.ResponseStreamEvent>();
+	private readonly _onEvent =
+		new Emitter<OpenAI.Responses.ResponseStreamEvent>();
 	readonly onEvent = this._onEvent.event;
 
 	private readonly _onCAPIError = new Emitter<CAPIWebSocketErrorEvent>();
@@ -723,15 +930,25 @@ class ChatWebSocketActiveRequest implements IChatWebSocketRequestHandle {
 	private readonly _onError = new Emitter<Error>();
 	readonly onError = this._onError.event;
 
-	private _resolveFirstEvent!: (event: OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent) => void;
+	private _resolveFirstEvent!: (
+		event: OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent,
+	) => void;
 	private _rejectFirstEvent!: (err: Error) => void;
 	private _firstEventSettled = false;
-	readonly firstEvent: Promise<OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent>;
+	readonly firstEvent: Promise<
+		OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent
+	>;
 
 	private _resolve!: () => void;
 	private _reject!: (err: Error) => void;
 	private _settled = false;
-	private _onDidSettle?: (result: { outcome: ChatWebSocketRequestOutcome; closeCode?: number; closeReason?: string; serverErrorMessage?: string; serverErrorCode?: string }) => void;
+	private _onDidSettle?: (result: {
+		outcome: ChatWebSocketRequestOutcome;
+		closeCode?: number;
+		closeReason?: string;
+		serverErrorMessage?: string;
+		serverErrorCode?: string;
+	}) => void;
 
 	readonly done: Promise<void>;
 
@@ -746,30 +963,48 @@ class ChatWebSocketActiveRequest implements IChatWebSocketRequestHandle {
 			this._resolve = resolve;
 			this._reject = reject;
 		});
-		this.firstEvent = new Promise<OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent>((resolve, reject) => {
+		this.firstEvent = new Promise<
+			OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent
+		>((resolve, reject) => {
 			this._resolveFirstEvent = resolve;
 			this._rejectFirstEvent = reject;
 		});
 	}
 
-	onDidSettle(callback: (result: { outcome: ChatWebSocketRequestOutcome; closeCode?: number; closeReason?: string; serverErrorMessage?: string; serverErrorCode?: string }) => void): void {
+	onDidSettle(
+		callback: (result: {
+			outcome: ChatWebSocketRequestOutcome;
+			closeCode?: number;
+			closeReason?: string;
+			serverErrorMessage?: string;
+			serverErrorCode?: string;
+		}) => void,
+	): void {
 		this._onDidSettle = callback;
 	}
 
-	handleEvent(event: OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent): void {
+	handleEvent(
+		event: OpenAI.Responses.ResponseStreamEvent | CAPIWebSocketErrorEvent,
+	): void {
 		if (this._settled) {
 			return;
 		}
 
 		// E.g.: "github.copilot.chat.advanced.debug.simulateWebSocketResponse": "{\"type\":\"error\",\"error\":{\"code\":\"user_global_rate_limited:enterprise\",\"message\":\"Rate limit exceeded\"}}"
 		// E.g.: "github.copilot.chat.advanced.debug.simulateWebSocketResponse": "{\"type\":\"error\",\"error\":{\"code\":\"service_unavailable\",\"message\":\"service temporarily unavailable, please retry\"}}"
-		const simulateResponse = this._configurationService.getConfig(ConfigKey.TeamInternal.DebugSimulateWebSocketResponse);
+		const simulateResponse = this._configurationService.getConfig(
+			ConfigKey.TeamInternal.DebugSimulateWebSocketResponse,
+		);
 		if (simulateResponse) {
 			try {
 				event = JSON.parse(simulateResponse);
-				this._logService.info(`[ChatWebSocketManager] Simulating WebSocket response event: ${simulateResponse}`);
+				this._logService.info(
+					`[ChatWebSocketManager] Simulating WebSocket response event: ${simulateResponse}`,
+				);
 			} catch (e) {
-				this._logService.error(`[ChatWebSocketManager] Failed to parse simulated WebSocket response: ${collectSingleLineErrorMessage(e)}`);
+				this._logService.error(
+					`[ChatWebSocketManager] Failed to parse simulated WebSocket response: ${collectSingleLineErrorMessage(e)}`,
+				);
 			}
 		}
 
@@ -791,13 +1026,21 @@ class ChatWebSocketActiveRequest implements IChatWebSocketRequestHandle {
 		}
 	}
 
-	handleConnectionClose(code: number, reason: string, errorMessage?: string): void {
+	handleConnectionClose(
+		code: number,
+		reason: string,
+		errorMessage?: string,
+	): void {
 		if (this._settled) {
 			return;
 		}
 		const error = errorMessage
-			? new Error(`${errorMessage} (close code: ${code} ${wsCloseCodeToString(code)}${reason ? `, reason: ${reason}` : ''})`)
-			: new Error(`WebSocket closed (code: ${code} ${wsCloseCodeToString(code)}${reason ? `, reason: ${reason}` : ''})`);
+			? new Error(
+					`${errorMessage} (close code: ${code} ${wsCloseCodeToString(code)}${reason ? `, reason: ${reason}` : ''})`,
+				)
+			: new Error(
+					`WebSocket closed (code: ${code} ${wsCloseCodeToString(code)}${reason ? `, reason: ${reason}` : ''})`,
+				);
 		this._finalizeError('connection_closed', error, code, reason);
 	}
 
@@ -805,7 +1048,10 @@ class ChatWebSocketActiveRequest implements IChatWebSocketRequestHandle {
 		if (this._settled) {
 			return;
 		}
-		this._finalizeError('superseded', new Error('Request superseded by new request'));
+		this._finalizeError(
+			'superseded',
+			new Error('Request superseded by new request'),
+		);
 	}
 
 	handleCancellation(): void {
@@ -819,7 +1065,10 @@ class ChatWebSocketActiveRequest implements IChatWebSocketRequestHandle {
 		if (this._settled) {
 			return;
 		}
-		this._finalizeError('connection_disposed', new Error('Connection disposed'));
+		this._finalizeError(
+			'connection_disposed',
+			new Error('Connection disposed'),
+		);
 	}
 
 	private _finalizeSuccess(outcome: ChatWebSocketRequestOutcome): void {
@@ -833,19 +1082,36 @@ class ChatWebSocketActiveRequest implements IChatWebSocketRequestHandle {
 		const { code, message } = event.error;
 		this._onCAPIError.fire(event);
 		this._settled = true;
-		this._onDidSettle?.({ outcome: 'error_response', serverErrorMessage: message, serverErrorCode: code });
+		this._onDidSettle?.({
+			outcome: 'error_response',
+			serverErrorMessage: message,
+			serverErrorCode: code,
+		});
 		this._reject(new Error(`${message} (${code})`));
 		this._dispose();
 	}
 
-	private _finalizeError(outcome: ChatWebSocketRequestOutcome, error: Error, closeCode?: number, closeReason?: string, serverErrorMessage?: string, serverErrorCode?: string): void {
+	private _finalizeError(
+		outcome: ChatWebSocketRequestOutcome,
+		error: Error,
+		closeCode?: number,
+		closeReason?: string,
+		serverErrorMessage?: string,
+		serverErrorCode?: string,
+	): void {
 		if (!this._firstEventSettled) {
 			this._firstEventSettled = true;
 			this._rejectFirstEvent(error);
 		}
 		this._onError.fire(error);
 		this._settled = true;
-		this._onDidSettle?.({ outcome, closeCode, closeReason, serverErrorMessage, serverErrorCode });
+		this._onDidSettle?.({
+			outcome,
+			closeCode,
+			closeReason,
+			serverErrorMessage,
+			serverErrorCode,
+		});
 		this._reject(error);
 		this._dispose();
 	}

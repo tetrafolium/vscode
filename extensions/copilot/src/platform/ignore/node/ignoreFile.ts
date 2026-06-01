@@ -5,7 +5,13 @@
 
 import { gitignoreToMinimatch } from '@humanwhocodes/gitignore-to-minimatch';
 import ignore, { Ignore } from 'ignore';
-import { dirname, normalize, posix, relative, sep } from '../../../util/vs/base/common/path';
+import {
+	dirname,
+	normalize,
+	posix,
+	relative,
+	sep,
+} from '../../../util/vs/base/common/path';
 import { splitLines } from '../../../util/vs/base/common/strings';
 import { URI } from '../../../util/vs/base/common/uri';
 
@@ -15,17 +21,20 @@ type IgnoreEntry = {
 };
 
 export class IgnoreFile {
-
 	private readonly _ignoreMap = new Map<string, IgnoreEntry>();
 	private _ignoreCache = new Map<string, boolean>();
 	private _searchRankCache: string[] | null = null;
 
-	constructor() { }
+	constructor() {}
 
 	/**
 	 * With a given ignore file, create the ignore instance and add its contents
 	 */
-	setIgnoreFile(workspaceRoot: URI | undefined, ignoreFile: URI, contents: string) {
+	setIgnoreFile(
+		workspaceRoot: URI | undefined,
+		ignoreFile: URI,
+		contents: string,
+	) {
 		let scope = '';
 		if (workspaceRoot) {
 			scope = relative(workspaceRoot.fsPath, dirname(ignoreFile.fsPath));
@@ -38,10 +47,11 @@ export class IgnoreFile {
 			ignore: ignore().add(contents),
 			patterns: splitLines(contents)
 				// Remove comments and empty lines
-				.filter(x => x.trim() && !x.startsWith('#'))
+				.filter((x) => x.trim() && !x.startsWith('#'))
 				.map(gitignoreToMinimatch)
-				.map(pattern => scope ? posix.join(scope, pattern) : pattern)
-
+				.map((pattern) =>
+					scope ? posix.join(scope, pattern) : pattern,
+				),
 		});
 		this._searchRankCache = null;
 		this._ignoreCache.clear();
@@ -58,8 +68,8 @@ export class IgnoreFile {
 	}
 
 	/**
-		* Remove all ignore instances for a given workspace
-	*/
+	 * Remove all ignore instances for a given workspace
+	 */
 	removeWorkspace(workspace: URI) {
 		let count = 0;
 		for (const f of this._ignoreMap.keys()) {
@@ -76,7 +86,7 @@ export class IgnoreFile {
 	}
 
 	asMinimatchPatterns(): string[] {
-		return [...this._ignoreMap.values()].flatMap(x => x.patterns);
+		return [...this._ignoreMap.values()].flatMap((x) => x.patterns);
 	}
 
 	/**
@@ -134,7 +144,7 @@ export class IgnoreFile {
 		const cache: Record<string, number> = {};
 		const toRank = (value: string) => value.split(sep).length;
 		return (this._searchRankCache = [...this._ignoreMap.keys()].sort(
-			(a, b) => (cache[b] ||= toRank(b)) - (cache[a] ||= toRank(a))
+			(a, b) => (cache[b] ||= toRank(b)) - (cache[a] ||= toRank(a)),
 		));
 	}
 }

@@ -27,7 +27,11 @@ const configs: RepetitionConfig[] = [
  * @param text The string to analyze
  * @returns The repeating line, the number of times it repeats, total number of lines
  */
-export function calculateLineRepetitionStats(text: string): { numberOfRepetitions: number; mostRepeatedLine: string; totalLines: number } {
+export function calculateLineRepetitionStats(text: string): {
+	numberOfRepetitions: number;
+	mostRepeatedLine: string;
+	totalLines: number;
+} {
 	if (text.length === 0) {
 		return { numberOfRepetitions: 0, mostRepeatedLine: '', totalLines: 0 };
 	}
@@ -51,7 +55,11 @@ export function calculateLineRepetitionStats(text: string): { numberOfRepetition
 		}
 	}
 
-	return { numberOfRepetitions: maxRepetitions, mostRepeatedLine, totalLines: lines.length };
+	return {
+		numberOfRepetitions: maxRepetitions,
+		mostRepeatedLine,
+		totalLines: lines.length,
+	};
 }
 
 /**
@@ -63,7 +71,9 @@ export function isRepetitive(tokens: readonly string[]): boolean {
 	tokensBackwards.reverse();
 	return (
 		isRepeatedPattern(tokensBackwards) ||
-		isRepeatedPattern(tokensBackwards.filter(token => token.trim().length > 0))
+		isRepeatedPattern(
+			tokensBackwards.filter((token) => token.trim().length > 0),
+		)
 	);
 }
 
@@ -80,7 +90,10 @@ function isRepeatedPattern<T>(s: ArrayLike<T>): boolean {
 		// This is the smallest number of characters that one may shift `s` so that it
 		// overlaps with itself. That is also the smallest length of a repeated
 		// pattern that makes up `s`, where the last repetition is possibly truncated.
-		const patternLength = config.last_tokens_to_consider - 1 - prefix[config.last_tokens_to_consider - 1];
+		const patternLength =
+			config.last_tokens_to_consider -
+			1 -
+			prefix[config.last_tokens_to_consider - 1];
 		if (patternLength <= config.max_token_sequence_length) {
 			return true;
 		}

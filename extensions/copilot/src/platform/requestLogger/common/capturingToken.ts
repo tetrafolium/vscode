@@ -44,5 +44,5 @@ export class CapturingToken {
 		 * Used to name the child log file within the parent session's directory.
 		 */
 		public readonly debugLogLabel?: string,
-	) { }
+	) {}
 }

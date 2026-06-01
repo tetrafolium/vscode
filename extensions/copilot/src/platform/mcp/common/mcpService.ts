@@ -6,7 +6,10 @@
 import type { Event, McpGateway, McpServerDefinition } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { Emitter } from '../../../util/vs/base/common/event';
-import { DisposableStore, IDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	DisposableStore,
+	IDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 import { URI } from '../../../util/vs/base/common/uri';
 
 export const IMcpService = createServiceIdentifier<IMcpService>('IMcpService');
@@ -29,7 +32,8 @@ export class NullMcpService extends AbstractMcpService implements IDisposable {
 	private readonly disposables = new DisposableStore();
 
 	readonly mcpServerDefinitions: McpServerDefinition[] = [];
-	readonly onDidChangeMcpServerDefinitions: Event<void> = this.disposables.add(new Emitter<void>()).event;
+	readonly onDidChangeMcpServerDefinitions: Event<void> =
+		this.disposables.add(new Emitter<void>()).event;
 	async startMcpGateway(_resource: URI): Promise<McpGateway | undefined> {
 		return undefined;
 	}

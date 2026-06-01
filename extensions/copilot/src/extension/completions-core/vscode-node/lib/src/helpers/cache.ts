@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 /**
  * This implements the Map interface. Note that in all methods that iterate or return an iterator, a copy of the underlying data is
  * returned so that if you call `get`, `set`, or `delete` while iterating, the iterator will not be invalidated.
@@ -85,7 +84,10 @@ export class LRUCacheMap<K, T> implements Map<K, T> {
 		return this.valueMap.has(key);
 	}
 
-	forEach(callbackfn: (value: T, key: K, map: Map<K, T>) => void, thisArg?: unknown): void {
+	forEach(
+		callbackfn: (value: T, key: K, map: Map<K, T>) => void,
+		thisArg?: unknown,
+	): void {
 		new Map(this.valueMap).forEach(callbackfn, thisArg);
 	}
 

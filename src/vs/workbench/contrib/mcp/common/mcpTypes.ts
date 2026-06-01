@@ -3,42 +3,70 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { equals as arraysEqual } from '../../../../base/common/arrays.js';
-import { assertNever } from '../../../../base/common/assert.js';
-import { decodeHex, encodeHex, VSBuffer } from '../../../../base/common/buffer.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { Event } from '../../../../base/common/event.js';
-import { IMarkdownString } from '../../../../base/common/htmlContent.js';
-import { Disposable, IDisposable } from '../../../../base/common/lifecycle.js';
-import { equals as objectsEqual } from '../../../../base/common/objects.js';
-import { IObservable, ObservableMap } from '../../../../base/common/observable.js';
-import { IIterativePager } from '../../../../base/common/paging.js';
-import Severity from '../../../../base/common/severity.js';
-import { URI, UriComponents } from '../../../../base/common/uri.js';
-import { Location } from '../../../../editor/common/languages.js';
-import { localize } from '../../../../nls.js';
-import { ConfigurationTarget } from '../../../../platform/configuration/common/configuration.js';
-import { RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
-import { IEditorOptions } from '../../../../platform/editor/common/editor.js';
-import { ExtensionIdentifier } from '../../../../platform/extensions/common/extensions.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { McpGalleryManifestStatus } from '../../../../platform/mcp/common/mcpGalleryManifest.js';
-import { IGalleryMcpServer, IGalleryMcpServerConfiguration, IInstallableMcpServer, IQueryOptions } from '../../../../platform/mcp/common/mcpManagement.js';
-import { IMcpDevModeConfig, IMcpSandboxConfiguration, IMcpServerConfiguration } from '../../../../platform/mcp/common/mcpPlatformTypes.js';
-import { StorageScope } from '../../../../platform/storage/common/storage.js';
-import { IWorkspaceFolder, IWorkspaceFolderData } from '../../../../platform/workspace/common/workspace.js';
-import { IWorkbenchLocalMcpServer, IWorkbencMcpServerInstallOptions } from '../../../services/mcp/common/mcpWorkbenchManagementService.js';
-import { ContributionEnablementState, IEnablementModel } from '../../chat/common/enablement.js';
-import { ToolProgress } from '../../chat/common/tools/languageModelToolsService.js';
-import { IMcpServerSamplingConfiguration } from './mcpConfiguration.js';
-import { McpServerRequestHandler } from './mcpServerRequestHandler.js';
-import { MCP } from './modelContextProtocol.js';
-import { UriTemplate } from '../../../../base/common/uriTemplate.js';
+import { equals as arraysEqual } from "../../../../base/common/arrays.js";
+import { assertNever } from "../../../../base/common/assert.js";
+import {
+	decodeHex,
+	encodeHex,
+	VSBuffer,
+} from "../../../../base/common/buffer.js";
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { Event } from "../../../../base/common/event.js";
+import { IMarkdownString } from "../../../../base/common/htmlContent.js";
+import { Disposable, IDisposable } from "../../../../base/common/lifecycle.js";
+import { equals as objectsEqual } from "../../../../base/common/objects.js";
+import {
+	IObservable,
+	ObservableMap,
+} from "../../../../base/common/observable.js";
+import { IIterativePager } from "../../../../base/common/paging.js";
+import Severity from "../../../../base/common/severity.js";
+import { URI, UriComponents } from "../../../../base/common/uri.js";
+import { Location } from "../../../../editor/common/languages.js";
+import { localize } from "../../../../nls.js";
+import { ConfigurationTarget } from "../../../../platform/configuration/common/configuration.js";
+import { RawContextKey } from "../../../../platform/contextkey/common/contextkey.js";
+import { IEditorOptions } from "../../../../platform/editor/common/editor.js";
+import { ExtensionIdentifier } from "../../../../platform/extensions/common/extensions.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { McpGalleryManifestStatus } from "../../../../platform/mcp/common/mcpGalleryManifest.js";
+import {
+	IGalleryMcpServer,
+	IGalleryMcpServerConfiguration,
+	IInstallableMcpServer,
+	IQueryOptions,
+} from "../../../../platform/mcp/common/mcpManagement.js";
+import {
+	IMcpDevModeConfig,
+	IMcpSandboxConfiguration,
+	IMcpServerConfiguration,
+} from "../../../../platform/mcp/common/mcpPlatformTypes.js";
+import { StorageScope } from "../../../../platform/storage/common/storage.js";
+import {
+	IWorkspaceFolder,
+	IWorkspaceFolderData,
+} from "../../../../platform/workspace/common/workspace.js";
+import {
+	IWorkbenchLocalMcpServer,
+	IWorkbencMcpServerInstallOptions,
+} from "../../../services/mcp/common/mcpWorkbenchManagementService.js";
+import {
+	ContributionEnablementState,
+	IEnablementModel,
+} from "../../chat/common/enablement.js";
+import { ToolProgress } from "../../chat/common/tools/languageModelToolsService.js";
+import { IMcpServerSamplingConfiguration } from "./mcpConfiguration.js";
+import { McpServerRequestHandler } from "./mcpServerRequestHandler.js";
+import { MCP } from "./modelContextProtocol.js";
+import { UriTemplate } from "../../../../base/common/uriTemplate.js";
 
-export const extensionMcpCollectionPrefix = 'ext.';
+export const extensionMcpCollectionPrefix = "ext.";
 
-export function extensionPrefixedIdentifier(identifier: ExtensionIdentifier, id: string): string {
-	return ExtensionIdentifier.toKey(identifier) + '/' + id;
+export function extensionPrefixedIdentifier(
+	identifier: ExtensionIdentifier,
+	id: string,
+): string {
+	return ExtensionIdentifier.toKey(identifier) + "/" + id;
 }
 
 /**
@@ -58,7 +86,9 @@ export interface McpCollectionDefinition {
 	 * Trust behavior of the servers. `Trusted` means it will run without a prompt, always.
 	 * `TrustedOnNonce` means it will run without a prompt as long as the nonce matches.
 	 */
-	readonly trustBehavior: McpServerTrust.Kind.Trusted | McpServerTrust.Kind.TrustedOnNonce;
+	readonly trustBehavior:
+		| McpServerTrust.Kind.Trusted
+		| McpServerTrust.Kind.TrustedOnNonce;
 	/** Scope where associated collection info should be stored. */
 	readonly scope: StorageScope;
 	/** Configuration target where configuration related to this server should be stored. */
@@ -67,7 +97,9 @@ export interface McpCollectionDefinition {
 	readonly sandbox?: IMcpSandboxConfiguration;
 
 	/** Resolves a server definition. If present, always called before a server starts. */
-	resolveServerLanch?(definition: McpServerDefinition): Promise<McpServerLaunch | undefined>;
+	resolveServerLanch?(
+		definition: McpServerDefinition,
+	): Promise<McpServerLaunch | undefined>;
 
 	/** For lazy-loaded collections only: */
 	readonly lazy?: {
@@ -112,12 +144,17 @@ export namespace McpCollectionDefinition {
 		readonly configTarget: ConfigurationTarget;
 	}
 
-	export function equals(a: McpCollectionDefinition, b: McpCollectionDefinition): boolean {
-		return a.id === b.id
-			&& a.remoteAuthority === b.remoteAuthority
-			&& a.label === b.label
-			&& a.trustBehavior === b.trustBehavior
-			&& objectsEqual(a.sandbox, b.sandbox);
+	export function equals(
+		a: McpCollectionDefinition,
+		b: McpCollectionDefinition,
+	): boolean {
+		return (
+			a.id === b.id &&
+			a.remoteAuthority === b.remoteAuthority &&
+			a.label === b.label &&
+			a.trustBehavior === b.trustBehavior &&
+			objectsEqual(a.sandbox, b.sandbox)
+		);
 	}
 }
 
@@ -141,7 +178,6 @@ export interface McpServerDefinition {
 	/** Indicates if the sandbox is enabled for this server. */
 	readonly sandboxEnabled?: boolean;
 
-
 	readonly presentation?: {
 		/** Sort order of the definition. */
 		readonly order?: number;
@@ -158,7 +194,10 @@ export const enum McpServerStaticToolAvailability {
 }
 
 export interface McpServerStaticMetadata {
-	tools?: { availability: McpServerStaticToolAvailability; definition: MCP.Tool }[];
+	tools?: {
+		availability: McpServerStaticToolAvailability;
+		definition: MCP.Tool;
+	}[];
 	instructions?: string;
 	capabilities?: MCP.ServerCapabilities;
 	serverInfo?: MCP.Implementation;
@@ -175,11 +214,15 @@ export namespace McpServerDefinition {
 		readonly sandboxEnabled?: boolean;
 	}
 
-	export function toSerialized(def: McpServerDefinition): McpServerDefinition.Serialized {
+	export function toSerialized(
+		def: McpServerDefinition,
+	): McpServerDefinition.Serialized {
 		return def;
 	}
 
-	export function fromSerialized(def: McpServerDefinition.Serialized): McpServerDefinition {
+	export function fromSerialized(
+		def: McpServerDefinition.Serialized,
+	): McpServerDefinition {
 		return {
 			id: def.id,
 			label: def.label,
@@ -187,24 +230,31 @@ export namespace McpServerDefinition {
 			staticMetadata: def.staticMetadata,
 			launch: McpServerLaunch.fromSerialized(def.launch),
 			sandboxEnabled: def.sandboxEnabled,
-			variableReplacement: def.variableReplacement ? McpServerDefinitionVariableReplacement.fromSerialized(def.variableReplacement) : undefined,
+			variableReplacement: def.variableReplacement
+				? McpServerDefinitionVariableReplacement.fromSerialized(
+						def.variableReplacement,
+					)
+				: undefined,
 		};
 	}
 
-	export function equals(a: McpServerDefinition, b: McpServerDefinition): boolean {
-		return a.id === b.id
-			&& a.label === b.label
-			&& a.cacheNonce === b.cacheNonce
-			&& arraysEqual(a.roots, b.roots, (a, b) => a.toString() === b.toString())
-			&& objectsEqual(a.launch, b.launch)
-			&& objectsEqual(a.presentation, b.presentation)
-			&& objectsEqual(a.variableReplacement, b.variableReplacement)
-			&& objectsEqual(a.devMode, b.devMode)
-			&& a.sandboxEnabled === b.sandboxEnabled;
-
+	export function equals(
+		a: McpServerDefinition,
+		b: McpServerDefinition,
+	): boolean {
+		return (
+			a.id === b.id &&
+			a.label === b.label &&
+			a.cacheNonce === b.cacheNonce &&
+			arraysEqual(a.roots, b.roots, (a, b) => a.toString() === b.toString()) &&
+			objectsEqual(a.launch, b.launch) &&
+			objectsEqual(a.presentation, b.presentation) &&
+			objectsEqual(a.variableReplacement, b.variableReplacement) &&
+			objectsEqual(a.devMode, b.devMode) &&
+			a.sandboxEnabled === b.sandboxEnabled
+		);
 	}
 }
-
 
 export interface McpServerDefinitionVariableReplacement {
 	section?: string; // e.g. 'mcp'
@@ -219,14 +269,20 @@ export namespace McpServerDefinitionVariableReplacement {
 		folder?: { name: string; index: number; uri: UriComponents };
 	}
 
-	export function toSerialized(def: McpServerDefinitionVariableReplacement): McpServerDefinitionVariableReplacement.Serialized {
+	export function toSerialized(
+		def: McpServerDefinitionVariableReplacement,
+	): McpServerDefinitionVariableReplacement.Serialized {
 		return def;
 	}
 
-	export function fromSerialized(def: McpServerDefinitionVariableReplacement.Serialized): McpServerDefinitionVariableReplacement {
+	export function fromSerialized(
+		def: McpServerDefinitionVariableReplacement.Serialized,
+	): McpServerDefinitionVariableReplacement {
 		return {
 			section: def.section,
-			folder: def.folder ? { ...def.folder, uri: URI.revive(def.folder.uri) } : undefined,
+			folder: def.folder
+				? { ...def.folder, uri: URI.revive(def.folder.uri) }
+				: undefined,
 			target: def.target,
 		};
 	}
@@ -236,11 +292,17 @@ export namespace McpServerDefinitionVariableReplacement {
 export interface IAutostartResult {
 	working: boolean;
 	starting: McpDefinitionReference[];
-	serversRequiringInteraction: Array<McpDefinitionReference & { errorMessage?: string }>;
+	serversRequiringInteraction: Array<
+		McpDefinitionReference & { errorMessage?: string }
+	>;
 }
 
 export namespace IAutostartResult {
-	export const Empty: IAutostartResult = { working: false, starting: [], serversRequiringInteraction: [] };
+	export const Empty: IAutostartResult = {
+		working: false,
+		starting: [],
+		serversRequiringInteraction: [],
+	};
 }
 
 export interface IMcpService {
@@ -257,7 +319,10 @@ export interface IMcpService {
 	resetTrust(): void;
 
 	/** Set if there are extensions that register MCP servers that have never been activated. */
-	readonly lazyCollectionState: IObservable<{ state: LazyCollectionState; collections: McpCollectionDefinition[] }>;
+	readonly lazyCollectionState: IObservable<{
+		state: LazyCollectionState;
+		collections: McpCollectionDefinition[];
+	}>;
 
 	/** Auto-starts pending servers based on user settings. */
 	autostart(token?: CancellationToken): IObservable<IAutostartResult>;
@@ -275,13 +340,13 @@ export const enum LazyCollectionState {
 	AllKnown,
 }
 
-export const IMcpService = createDecorator<IMcpService>('IMcpService');
+export const IMcpService = createDecorator<IMcpService>("IMcpService");
 
 export interface McpCollectionReference {
 	id: string;
 	label: string;
 	order: number;
-	presentation?: McpCollectionDefinition['presentation'];
+	presentation?: McpCollectionDefinition["presentation"];
 }
 
 export interface McpDefinitionReference {
@@ -291,7 +356,15 @@ export interface McpDefinitionReference {
 
 export class McpStartServerInteraction {
 	/** @internal */
-	public readonly participants = new ObservableMap</* server definition ID */ string, { s: 'unknown' | 'resolved' } | { s: 'waiting'; definition: McpServerDefinition; collection: McpCollectionDefinition }>();
+	public readonly participants = new ObservableMap<
+		/* server definition ID */ string,
+		| { s: "unknown" | "resolved" }
+		| {
+				s: "waiting";
+				definition: McpServerDefinition;
+				collection: McpCollectionDefinition;
+		  }
+	>();
 	choice?: Promise<string[] | undefined>;
 }
 
@@ -307,7 +380,7 @@ export interface IMcpServerStartOpts {
 	 * - all-untrusted: prompt for all servers that are not trusted
 	 * - never: don't prompt, fail silently when trying to start an untrusted server
 	 */
-	promptType?: 'only-new' | 'all-untrusted' | 'never';
+	promptType?: "only-new" | "all-untrusted" | "never";
 	/** True if th servre should be launched with debugging. */
 	debug?: boolean;
 	/** Correlate multiple interactions such that any trust prompts are presented in combination. */
@@ -338,17 +411,23 @@ export interface IMcpServer extends IDisposable {
 	readonly enablement: IObservable<ContributionEnablementState>;
 	readonly connection: IObservable<IMcpServerConnection | undefined>;
 	readonly connectionState: IObservable<McpConnectionState>;
-	readonly serverMetadata: IObservable<{
-		serverName?: string;
-		serverInstructions?: string;
-		icons: IMcpIcons;
-	} | undefined>;
+	readonly serverMetadata: IObservable<
+		| {
+				serverName?: string;
+				serverInstructions?: string;
+				icons: IMcpIcons;
+		  }
+		| undefined
+	>;
 
 	/**
 	 * Full definition as it exists in the MCP registry. Unlike the references
 	 * in `collection` and `definition`, this may change over time.
 	 */
-	readDefinitions(): IObservable<{ server: McpServerDefinition | undefined; collection: McpCollectionDefinition | undefined }>;
+	readDefinitions(): IObservable<{
+		server: McpServerDefinition | undefined;
+		collection: McpCollectionDefinition | undefined;
+	}>;
 
 	showOutput(preserveFocus?: boolean): Promise<void>;
 	/**
@@ -402,16 +481,25 @@ export interface IMcpResourceTemplate {
 	readonly icons: IMcpIcons;
 
 	/** Gets string completions for the given template part. */
-	complete(templatePart: string, prefix: string, alreadyResolved: Record<string, string | string[]>, token: CancellationToken): Promise<string[]>;
+	complete(
+		templatePart: string,
+		prefix: string,
+		alreadyResolved: Record<string, string | string[]>,
+		token: CancellationToken,
+	): Promise<string[]>;
 
 	/** Gets the resolved URI from template parts. */
 	resolveURI(vars: Record<string, unknown>): URI;
 }
 
-export const isMcpResourceTemplate = (obj: IMcpResource | IMcpResourceTemplate): obj is IMcpResourceTemplate => {
+export const isMcpResourceTemplate = (
+	obj: IMcpResource | IMcpResourceTemplate,
+): obj is IMcpResourceTemplate => {
 	return (obj as IMcpResourceTemplate).template !== undefined;
 };
-export const isMcpResource = (obj: IMcpResource | IMcpResourceTemplate): obj is IMcpResource => {
+export const isMcpResource = (
+	obj: IMcpResource | IMcpResourceTemplate,
+): obj is IMcpResource => {
 	return (obj as IMcpResource).mcpUri !== undefined;
 };
 
@@ -438,17 +526,26 @@ export interface IMcpPrompt {
 	readonly arguments: readonly MCP.PromptArgument[];
 
 	/** Gets string completions for the given prompt part. */
-	complete(argument: string, prefix: string, alreadyResolved: Record<string, string>, token: CancellationToken): Promise<string[]>;
+	complete(
+		argument: string,
+		prefix: string,
+		alreadyResolved: Record<string, string>,
+		token: CancellationToken,
+	): Promise<string[]>;
 
-	resolve(args: Record<string, string | undefined>, token?: CancellationToken): Promise<IMcpPromptMessage[]>;
+	resolve(
+		args: Record<string, string | undefined>,
+		token?: CancellationToken,
+	): Promise<IMcpPromptMessage[]>;
 }
 
-export const mcpPromptReplaceSpecialChars = (s: string) => s.replace(/[^a-z0-9_.-]/gi, '_');
+export const mcpPromptReplaceSpecialChars = (s: string) =>
+	s.replace(/[^a-z0-9_.-]/gi, "_");
 
 export const mcpPromptPrefix = (definition: McpDefinitionReference) =>
 	`/mcp.` + mcpPromptReplaceSpecialChars(definition.label);
 
-export interface IMcpPromptMessage extends MCP.PromptMessage { }
+export interface IMcpPromptMessage extends MCP.PromptMessage {}
 
 export interface IMcpToolCallContext {
 	chatSessionResource: URI | undefined;
@@ -487,7 +584,6 @@ export interface IMcpToolCallUIData {
 }
 
 export interface IMcpTool {
-
 	readonly id: string;
 	/** Name for #referencing in chat */
 	readonly referenceName: string;
@@ -503,12 +599,21 @@ export interface IMcpTool {
 	 * @throws {@link MpcResponseError} if the tool fails to execute
 	 * @throws {@link McpConnectionFailedError} if the connection to the server fails
 	 */
-	call(params: Record<string, unknown>, context?: IMcpToolCallContext, token?: CancellationToken): Promise<MCP.CallToolResult>;
+	call(
+		params: Record<string, unknown>,
+		context?: IMcpToolCallContext,
+		token?: CancellationToken,
+	): Promise<MCP.CallToolResult>;
 
 	/**
 	 * Identical to {@link call}, but reports progress.
 	 */
-	callWithProgress(params: Record<string, unknown>, progress: ToolProgress, context?: IMcpToolCallContext, token?: CancellationToken): Promise<MCP.CallToolResult>;
+	callWithProgress(
+		params: Record<string, unknown>,
+		progress: ToolProgress,
+		context?: IMcpToolCallContext,
+		token?: CancellationToken,
+	): Promise<MCP.CallToolResult>;
 }
 
 export const enum McpServerTransportType {
@@ -563,7 +668,10 @@ export interface McpServerTransportHTTPOAuth {
  * mcp.json and read at authentication time so that client secrets are never stored in
  * plain-text config files.
  */
-export function mcpOAuthClientSecretStorageKey(mcpServerUrl: string, clientId: string): string {
+export function mcpOAuthClientSecretStorageKey(
+	mcpServerUrl: string,
+	clientId: string,
+): string {
 	return `mcp.oauth.clientSecret:${mcpServerUrl}:${clientId}`;
 }
 
@@ -584,23 +692,45 @@ export interface McpServerTransportHTTP {
 	readonly authentication?: McpServerTransportHTTPAuthentication;
 }
 
-export type McpServerLaunch =
-	| McpServerTransportStdio
-	| McpServerTransportHTTP;
+export type McpServerLaunch = McpServerTransportStdio | McpServerTransportHTTP;
 
 export namespace McpServerLaunch {
 	export type Serialized =
-		| { type: McpServerTransportType.HTTP; uri: UriComponents; headers: [string, string][]; oauth?: McpServerTransportHTTPOAuth; authentication?: McpServerTransportHTTPAuthentication }
-		| { type: McpServerTransportType.Stdio; cwd: string | undefined; command: string; args: readonly string[]; env: Record<string, string | number | null>; envFile: string | undefined; sandbox: IMcpSandboxConfiguration | undefined };
+		| {
+				type: McpServerTransportType.HTTP;
+				uri: UriComponents;
+				headers: [string, string][];
+				oauth?: McpServerTransportHTTPOAuth;
+				authentication?: McpServerTransportHTTPAuthentication;
+		  }
+		| {
+				type: McpServerTransportType.Stdio;
+				cwd: string | undefined;
+				command: string;
+				args: readonly string[];
+				env: Record<string, string | number | null>;
+				envFile: string | undefined;
+				sandbox: IMcpSandboxConfiguration | undefined;
+		  };
 
-	export function toSerialized(launch: McpServerLaunch): McpServerLaunch.Serialized {
+	export function toSerialized(
+		launch: McpServerLaunch,
+	): McpServerLaunch.Serialized {
 		return launch;
 	}
 
-	export function fromSerialized(launch: McpServerLaunch.Serialized): McpServerLaunch {
+	export function fromSerialized(
+		launch: McpServerLaunch.Serialized,
+	): McpServerLaunch {
 		switch (launch.type) {
 			case McpServerTransportType.HTTP:
-				return { type: launch.type, uri: URI.revive(launch.uri), headers: launch.headers, oauth: launch.oauth, authentication: launch.authentication };
+				return {
+					type: launch.type,
+					uri: URI.revive(launch.uri),
+					headers: launch.headers,
+					oauth: launch.oauth,
+					authentication: launch.authentication,
+				};
 			case McpServerTransportType.Stdio:
 				return {
 					type: launch.type,
@@ -609,13 +739,16 @@ export namespace McpServerLaunch {
 					args: launch.args,
 					env: launch.env,
 					envFile: launch.envFile,
-					sandbox: launch.sandbox
+					sandbox: launch.sandbox,
 				};
 		}
 	}
 
 	export async function hash(launch: McpServerLaunch): Promise<string> {
-		const nonce = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(launch)));
+		const nonce = await crypto.subtle.digest(
+			"SHA-256",
+			new TextEncoder().encode(JSON.stringify(launch)),
+		);
 		return encodeHex(VSBuffer.wrap(new Uint8Array(nonce)));
 	}
 }
@@ -626,7 +759,7 @@ export namespace McpServerLaunch {
  * eventually build a {@link IMcpServerConnection.handler}.
  */
 export interface IMcpPotentialSandboxBlock {
-	readonly kind: 'network' | 'filesystem';
+	readonly kind: "network" | "filesystem";
 	readonly message: string;
 	readonly host?: string;
 	readonly path?: string;
@@ -659,9 +792,15 @@ export interface IMcpServerConnection extends IDisposable {
 /** Client methods whose implementations are passed through the server connection. */
 export interface IMcpClientMethods {
 	/** Handler for `sampling/createMessage` */
-	createMessageRequestHandler?(req: MCP.CreateMessageRequest['params'], token?: CancellationToken): Promise<MCP.CreateMessageResult>;
+	createMessageRequestHandler?(
+		req: MCP.CreateMessageRequest["params"],
+		token?: CancellationToken,
+	): Promise<MCP.CreateMessageResult>;
 	/** Handler for `elicitation/create` */
-	elicitationRequestHandler?(req: MCP.ElicitRequest['params'], token?: CancellationToken): Promise<MCP.ElicitResult>;
+	elicitationRequestHandler?(
+		req: MCP.ElicitRequest["params"],
+		token?: CancellationToken,
+	): Promise<MCP.ElicitResult>;
 }
 
 /**
@@ -679,13 +818,13 @@ export namespace McpConnectionState {
 	export const toString = (s: McpConnectionState): string => {
 		switch (s.state) {
 			case Kind.Stopped:
-				return localize('mcpstate.stopped', 'Stopped');
+				return localize("mcpstate.stopped", "Stopped");
 			case Kind.Starting:
-				return localize('mcpstate.starting', 'Starting');
+				return localize("mcpstate.starting", "Starting");
 			case Kind.Running:
-				return localize('mcpstate.running', 'Running');
+				return localize("mcpstate.running", "Running");
 			case Kind.Error:
-				return localize('mcpstate.error', 'Error {0}', s.message);
+				return localize("mcpstate.error", "Error {0}", s.message);
 			default:
 				assertNever(s);
 		}
@@ -694,27 +833,28 @@ export namespace McpConnectionState {
 	export const toKindString = (s: McpConnectionState.Kind): string => {
 		switch (s) {
 			case Kind.Stopped:
-				return 'stopped';
+				return "stopped";
 			case Kind.Starting:
-				return 'starting';
+				return "starting";
 			case Kind.Running:
-				return 'running';
+				return "running";
 			case Kind.Error:
-				return 'error';
+				return "error";
 			default:
 				assertNever(s);
 		}
 	};
 
 	/** Returns if the MCP state is one where starting a new server is valid */
-	export const canBeStarted = (s: Kind) => s === Kind.Error || s === Kind.Stopped;
+	export const canBeStarted = (s: Kind) =>
+		s === Kind.Error || s === Kind.Stopped;
 
 	/** Gets whether the state is a running state. */
 	export const isRunning = (s: McpConnectionState) => !canBeStarted(s.state);
 
 	export interface Stopped {
 		readonly state: Kind.Stopped;
-		readonly reason?: 'needs-user-interaction';
+		readonly reason?: "needs-user-interaction";
 	}
 
 	export interface Starting {
@@ -740,15 +880,19 @@ export type McpConnectionState =
 	| McpConnectionState.Error;
 
 export class MpcResponseError extends Error {
-	constructor(message: string, public readonly code: number, public readonly data: unknown) {
+	constructor(
+		message: string,
+		public readonly code: number,
+		public readonly data: unknown,
+	) {
 		super(`MPC ${code}: ${message}`);
 	}
 }
 
-export class McpConnectionFailedError extends Error { }
+export class McpConnectionFailedError extends Error {}
 
 export class UserInteractionRequiredError extends Error {
-	private static readonly prefix = 'User interaction required: ';
+	private static readonly prefix = "User interaction required: ";
 
 	public static is(error: Error): boolean {
 		return error.message.startsWith(this.prefix);
@@ -761,7 +905,11 @@ export class UserInteractionRequiredError extends Error {
 
 export interface IMcpConfigPath {
 	id: string;
-	key: 'userLocalValue' | 'userRemoteValue' | 'workspaceValue' | 'workspaceFolderValue';
+	key:
+		| "userLocalValue"
+		| "userRemoteValue"
+		| "workspaceValue"
+		| "workspaceFolderValue";
 	label: string;
 	scope: StorageScope;
 	target: ConfigurationTarget;
@@ -794,13 +942,13 @@ export const enum McpServerInstallState {
 	Installing,
 	Installed,
 	Uninstalling,
-	Uninstalled
+	Uninstalled,
 }
 
 export const enum McpServerEditorTab {
-	Readme = 'readme',
-	Manifest = 'manifest',
-	Configuration = 'configuration',
+	Readme = "readme",
+	Manifest = "manifest",
+	Configuration = "configuration",
 }
 
 export type McpServerEnablementStatus = {
@@ -834,10 +982,14 @@ export interface IWorkbenchMcpServer {
 	readonly config?: IMcpServerConfiguration | undefined;
 	readonly readmeUrl?: URI;
 	getReadme(token: CancellationToken): Promise<string>;
-	getManifest(token: CancellationToken): Promise<IGalleryMcpServerConfiguration>;
+	getManifest(
+		token: CancellationToken,
+	): Promise<IGalleryMcpServerConfiguration>;
 }
 
-export const IMcpWorkbenchService = createDecorator<IMcpWorkbenchService>('IMcpWorkbenchService');
+export const IMcpWorkbenchService = createDecorator<IMcpWorkbenchService>(
+	"IMcpWorkbenchService",
+);
 export interface IMcpWorkbenchService {
 	readonly _serviceBrand: undefined;
 	readonly onChange: Event<IWorkbenchMcpServer | undefined>;
@@ -845,27 +997,36 @@ export interface IMcpWorkbenchService {
 	readonly local: readonly IWorkbenchMcpServer[];
 	getEnabledLocalMcpServers(): IWorkbenchLocalMcpServer[];
 	queryLocal(): Promise<IWorkbenchMcpServer[]>;
-	queryGallery(options?: IQueryOptions, token?: CancellationToken): Promise<IIterativePager<IWorkbenchMcpServer>>;
+	queryGallery(
+		options?: IQueryOptions,
+		token?: CancellationToken,
+	): Promise<IIterativePager<IWorkbenchMcpServer>>;
 	canInstall(mcpServer: IWorkbenchMcpServer): true | IMarkdownString;
-	install(server: IWorkbenchMcpServer, installOptions?: IWorkbencMcpServerInstallOptions): Promise<IWorkbenchMcpServer>;
+	install(
+		server: IWorkbenchMcpServer,
+		installOptions?: IWorkbencMcpServerInstallOptions,
+	): Promise<IWorkbenchMcpServer>;
 	uninstall(mcpServer: IWorkbenchMcpServer): Promise<void>;
 	getMcpConfigPath(arg: IWorkbenchLocalMcpServer): IMcpConfigPath | undefined;
 	getMcpConfigPath(arg: URI): Promise<IMcpConfigPath | undefined>;
 	openSearch(searchValue: string, preserveFocus?: boolean): Promise<void>;
-	open(extension: IWorkbenchMcpServer | string, options?: IMcpServerEditorOptions): Promise<void>;
+	open(
+		extension: IWorkbenchMcpServer | string,
+		options?: IMcpServerEditorOptions,
+	): Promise<void>;
 }
 
 export class McpServerContainers extends Disposable {
 	constructor(
 		private readonly containers: IMcpServerContainer[],
-		@IMcpWorkbenchService mcpWorkbenchService: IMcpWorkbenchService
+		@IMcpWorkbenchService mcpWorkbenchService: IMcpWorkbenchService,
 	) {
 		super();
 		this._register(mcpWorkbenchService.onChange(this.update, this));
 	}
 
 	set mcpServer(extension: IWorkbenchMcpServer | null) {
-		this.containers.forEach(c => c.mcpServer = extension);
+		this.containers.forEach((c) => (c.mcpServer = extension));
 	}
 
 	update(server: IWorkbenchMcpServer | undefined): void {
@@ -881,44 +1042,63 @@ export class McpServerContainers extends Disposable {
 	}
 }
 
-export const McpServersGalleryStatusContext = new RawContextKey<string>('mcpServersGalleryStatus', McpGalleryManifestStatus.Unavailable);
-export const HasInstalledMcpServersContext = new RawContextKey<boolean>('hasInstalledMcpServers', true);
-export const InstalledMcpServersViewId = 'workbench.views.mcp.installed';
+export const McpServersGalleryStatusContext = new RawContextKey<string>(
+	"mcpServersGalleryStatus",
+	McpGalleryManifestStatus.Unavailable,
+);
+export const HasInstalledMcpServersContext = new RawContextKey<boolean>(
+	"hasInstalledMcpServers",
+	true,
+);
+export const InstalledMcpServersViewId = "workbench.views.mcp.installed";
 
 export namespace McpResourceURI {
-	export const scheme = 'mcp-resource';
+	export const scheme = "mcp-resource";
 
 	// Random placeholder for empty authorities, otherwise they're represente as
 	// `scheme//path/here` in the URI which would get normalized to `scheme/path/here`.
-	const emptyAuthorityPlaceholder = 'dylo78gyp'; // chosen by a fair dice roll. Guaranteed to be random.
+	const emptyAuthorityPlaceholder = "dylo78gyp"; // chosen by a fair dice roll. Guaranteed to be random.
 
-	export function fromServer(def: McpDefinitionReference, resourceURI: URI | string): URI {
-		if (typeof resourceURI === 'string') {
+	export function fromServer(
+		def: McpDefinitionReference,
+		resourceURI: URI | string,
+	): URI {
+		if (typeof resourceURI === "string") {
 			resourceURI = URI.parse(resourceURI);
 		}
 		return resourceURI.with({
 			scheme,
 			authority: encodeHex(VSBuffer.fromString(def.id)),
-			path: ['', resourceURI.scheme, resourceURI.authority || emptyAuthorityPlaceholder].join('/') + resourceURI.path,
+			path:
+				[
+					"",
+					resourceURI.scheme,
+					resourceURI.authority || emptyAuthorityPlaceholder,
+				].join("/") + resourceURI.path,
 		});
 	}
 
-	export function toServer(uri: URI | string): { definitionId: string; resourceURL: URL } {
-		if (typeof uri === 'string') {
+	export function toServer(uri: URI | string): {
+		definitionId: string;
+		resourceURL: URL;
+	} {
+		if (typeof uri === "string") {
 			uri = URI.parse(uri);
 		}
 		if (uri.scheme !== scheme) {
 			throw new Error(`Invalid MCP resource URI: ${uri.toString()}`);
 		}
-		const parts = uri.path.split('/');
+		const parts = uri.path.split("/");
 		if (parts.length < 3) {
 			throw new Error(`Invalid MCP resource URI: ${uri.toString()}`);
 		}
 		const [, serverScheme, authority, ...path] = parts;
 
 		// URI cannot correctly stringify empty authorities (#250905) so we use URL instead to construct
-		const url = new URL(`${serverScheme}://${authority.toLowerCase() === emptyAuthorityPlaceholder ? '' : authority}`);
-		url.pathname = path.length ? ('/' + path.join('/')) : '';
+		const url = new URL(
+			`${serverScheme}://${authority.toLowerCase() === emptyAuthorityPlaceholder ? "" : authority}`,
+		);
+		url.pathname = path.length ? "/" + path.join("/") : "";
 		url.search = uri.query;
 		url.hash = uri.fragment;
 
@@ -927,7 +1107,6 @@ export namespace McpResourceURI {
 			resourceURL: url,
 		};
 	}
-
 }
 
 /** Warning: this enum is cached in `mcpServer.ts` and all changes MUST only be additive. */
@@ -946,7 +1125,7 @@ export const enum McpCapability {
 export interface ISamplingOptions {
 	server: IMcpServer;
 	isDuringToolCall: boolean;
-	params: MCP.CreateMessageRequest['params'];
+	params: MCP.CreateMessageRequest["params"];
 }
 
 export interface ISamplingResult {
@@ -956,7 +1135,10 @@ export interface ISamplingResult {
 export interface IMcpSamplingService {
 	_serviceBrand: undefined;
 
-	sample(opts: ISamplingOptions, token?: CancellationToken): Promise<ISamplingResult>;
+	sample(
+		opts: ISamplingOptions,
+		token?: CancellationToken,
+	): Promise<ISamplingResult>;
 
 	/** Whether MCP sampling logs are available for this server */
 	hasLogs(server: IMcpServer): boolean;
@@ -964,10 +1146,14 @@ export interface IMcpSamplingService {
 	getLogText(server: IMcpServer): string;
 
 	getConfig(server: IMcpServer): IMcpServerSamplingConfiguration;
-	updateConfig(server: IMcpServer, mutate: (r: IMcpServerSamplingConfiguration) => unknown): Promise<IMcpServerSamplingConfiguration>;
+	updateConfig(
+		server: IMcpServer,
+		mutate: (r: IMcpServerSamplingConfiguration) => unknown,
+	): Promise<IMcpServerSamplingConfiguration>;
 }
 
-export const IMcpSamplingService = createDecorator<IMcpSamplingService>('IMcpServerSampling');
+export const IMcpSamplingService =
+	createDecorator<IMcpSamplingService>("IMcpServerSampling");
 
 export class McpError extends Error {
 	public static methodNotFound(method: string) {
@@ -975,11 +1161,17 @@ export class McpError extends Error {
 	}
 
 	public static notAllowed() {
-		return new McpError(-32000, 'The user has denied permission to call this method.');
+		return new McpError(
+			-32000,
+			"The user has denied permission to call this method.",
+		);
 	}
 
 	public static unknown(e: Error) {
-		const mcpError = new McpError(MCP.INTERNAL_ERROR, `Unknown error: ${e.stack}`);
+		const mcpError = new McpError(
+			MCP.INTERNAL_ERROR,
+			`Unknown error: ${e.stack}`,
+		);
 		mcpError.cause = e;
 		return mcpError;
 	}
@@ -987,18 +1179,17 @@ export class McpError extends Error {
 	constructor(
 		public readonly code: number,
 		message: string,
-		public readonly data?: unknown
+		public readonly data?: unknown,
 	) {
 		super(message);
 	}
 }
 
 export const enum McpToolName {
-	Prefix = 'mcp_',
+	Prefix = "mcp_",
 	MaxPrefixLen = 18,
 	MaxLength = 64,
 }
-
 
 export interface IMcpElicitationService {
 	_serviceBrand: undefined;
@@ -1011,7 +1202,12 @@ export interface IMcpElicitationService {
 	 * @param elicitation Request to elicit a response.
 	 * @returns A promise that resolves to an {@link ElicitationResult}.
 	 */
-	elicit(server: IMcpServer, context: IMcpToolCallContext | undefined, elicitation: MCP.ElicitRequest['params'], token: CancellationToken): Promise<ElicitResult>;
+	elicit(
+		server: IMcpServer,
+		context: IMcpToolCallContext | undefined,
+		elicitation: MCP.ElicitRequest["params"],
+		token: CancellationToken,
+	): Promise<ElicitResult>;
 }
 
 export const enum ElicitationKind {
@@ -1037,9 +1233,11 @@ export interface IFormModeElicitResult extends IDisposable {
 
 export type ElicitResult = IUrlModeElicitResult | IFormModeElicitResult;
 
-export const IMcpElicitationService = createDecorator<IMcpElicitationService>('IMcpElicitationService');
+export const IMcpElicitationService = createDecorator<IMcpElicitationService>(
+	"IMcpElicitationService",
+);
 
-export const McpToolResourceLinkMimeType = 'application/vnd.code.resource-link';
+export const McpToolResourceLinkMimeType = "application/vnd.code.resource-link";
 
 export interface IMcpToolResourceLinkContents {
 	uri: UriComponents;

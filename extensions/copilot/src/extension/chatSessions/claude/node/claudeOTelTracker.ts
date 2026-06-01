@@ -5,7 +5,24 @@
 
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { IGitService } from '../../../../platform/git/common/gitService';
-import { CopilotChatAttr, emitSessionStartEvent, GenAiAttr, GenAiMetrics, GenAiOperationName, GenAiProviderName, GitHubCopilotAttr, IOTelService, type ISpanHandle, normalizeResponseModel, resolveWorkspaceOTelMetadata, SpanKind, SpanStatusCode, type TraceContext, truncateForOTel, workspaceMetadataToOTelAttributes } from '../../../../platform/otel/common/index';
+import {
+	CopilotChatAttr,
+	emitSessionStartEvent,
+	GenAiAttr,
+	GenAiMetrics,
+	GenAiOperationName,
+	GenAiProviderName,
+	GitHubCopilotAttr,
+	IOTelService,
+	type ISpanHandle,
+	normalizeResponseModel,
+	resolveWorkspaceOTelMetadata,
+	SpanKind,
+	SpanStatusCode,
+	type TraceContext,
+	truncateForOTel,
+	workspaceMetadataToOTelAttributes,
+} from '../../../../platform/otel/common/index';
 import { IClaudeSessionStateService } from '../common/claudeSessionStateService';
 
 /**
@@ -32,7 +49,7 @@ export class ClaudeOTelTracker {
 		private readonly _otelService: IOTelService,
 		private readonly _sessionStateService: IClaudeSessionStateService,
 		private readonly _gitService: IGitService,
-	) { }
+	) {}
 
 	/** The trace context of the current invoke_agent span, used to parent child spans. */
 	get traceContext(): TraceContext | undefined {
@@ -57,7 +74,9 @@ export class ClaudeOTelTracker {
 				[CopilotChatAttr.CHAT_SESSION_ID]: this._sessionId,
 				[GenAiAttr.REQUEST_MODEL]: modelId,
 				[GitHubCopilotAttr.AGENT_TYPE]: 'builtin',
-				...workspaceMetadataToOTelAttributes(resolveWorkspaceOTelMetadata(this._gitService)),
+				...workspaceMetadataToOTelAttributes(
+					resolveWorkspaceOTelMetadata(this._gitService),
+				),
 			},
 		});
 		this._currentTraceContext = this._currentSpan.getSpanContext();
@@ -70,13 +89,21 @@ export class ClaudeOTelTracker {
 		this._parentCacheCreationTokens = 0;
 
 		// Store trace context so the language model server can parent chat spans
-		this._sessionStateService.setTraceContextForSession(this._sessionId, this._currentTraceContext);
+		this._sessionStateService.setTraceContextForSession(
+			this._sessionId,
+			this._currentTraceContext,
+		);
 
 		// Emit session start event and metric for the first request
 		if (this._isFirstRequest) {
 			this._isFirstRequest = false;
 			GenAiMetrics.incrementSessionCount(this._otelService);
-			emitSessionStartEvent(this._otelService, this._sessionId, modelId, 'claude');
+			emitSessionStartEvent(
+				this._otelService,
+				this._sessionId,
+				modelId,
+				'claude',
+			);
 		}
 	}
 
@@ -92,9 +119,15 @@ export class ClaudeOTelTracker {
 			},
 			parentTraceContext: this._currentTraceContext,
 		});
-		const userContent = truncateForOTel(promptLabel, this._otelService.config.maxAttributeSizeChars);
+		const userContent = truncateForOTel(
+			promptLabel,
+			this._otelService.config.maxAttributeSizeChars,
+		);
 		userMsgSpan.setAttribute(CopilotChatAttr.USER_REQUEST, userContent);
-		userMsgSpan.addEvent('user_message', { content: userContent, [CopilotChatAttr.CHAT_SESSION_ID]: this._sessionId });
+		userMsgSpan.addEvent('user_message', {
+			content: userContent,
+			[CopilotChatAttr.CHAT_SESSION_ID]: this._sessionId,
+		});
 		userMsgSpan.end();
 	}
 
@@ -102,7 +135,10 @@ export class ClaudeOTelTracker {
 	 * Processes an SDK message for OTel tracking.
 	 * Call this for every message in the processing loop.
 	 */
-	onMessage(message: SDKMessage, subagentTraceContexts: Map<string, TraceContext>): void {
+	onMessage(
+		message: SDKMessage,
+		subagentTraceContexts: Map<string, TraceContext>,
+	): void {
 		if (message.type === 'assistant') {
 			this._turnCount++;
 			this._accumulateParentTokenUsage(message);
@@ -131,7 +167,10 @@ export class ClaudeOTelTracker {
 
 	// ── Private ──────────────────────────────────────────────────────────────
 
-	private _endSpan(statusCode?: SpanStatusCode, statusMessage?: string): void {
+	private _endSpan(
+		statusCode?: SpanStatusCode,
+		statusMessage?: string,
+	): void {
 		if (!this._currentSpan) {
 			return;
 		}
@@ -142,8 +181,18 @@ export class ClaudeOTelTracker {
 		span.setAttributes({
 			[GenAiAttr.USAGE_INPUT_TOKENS]: this._parentInputTokens,
 			[GenAiAttr.USAGE_OUTPUT_TOKENS]: this._parentOutputTokens,
-			...(this._parentCacheReadTokens ? { [GenAiAttr.USAGE_CACHE_READ_INPUT_TOKENS]: this._parentCacheReadTokens } : {}),
-			...(this._parentCacheCreationTokens ? { [GenAiAttr.USAGE_CACHE_CREATION_INPUT_TOKENS]: this._parentCacheCreationTokens } : {}),
+			...(this._parentCacheReadTokens
+				? {
+						[GenAiAttr.USAGE_CACHE_READ_INPUT_TOKENS]:
+							this._parentCacheReadTokens,
+					}
+				: {}),
+			...(this._parentCacheCreationTokens
+				? {
+						[GenAiAttr.USAGE_CACHE_CREATION_INPUT_TOKENS]:
+							this._parentCacheCreationTokens,
+					}
+				: {}),
 		});
 
 		if (statusCode !== undefined) {
@@ -156,15 +205,26 @@ export class ClaudeOTelTracker {
 		// Record agent-level metrics
 		if (this._startTime) {
 			const durationSec = (Date.now() - this._startTime) / 1000;
-			GenAiMetrics.recordAgentDuration(this._otelService, 'claude', durationSec);
+			GenAiMetrics.recordAgentDuration(
+				this._otelService,
+				'claude',
+				durationSec,
+			);
 		}
-		GenAiMetrics.recordAgentTurnCount(this._otelService, 'claude', this._turnCount);
+		GenAiMetrics.recordAgentTurnCount(
+			this._otelService,
+			'claude',
+			this._turnCount,
+		);
 
 		this._currentSpan = undefined;
 		this._currentTraceContext = undefined;
 		this._startTime = undefined;
 		this._currentRequestModel = undefined;
-		this._sessionStateService.setTraceContextForSession(this._sessionId, undefined);
+		this._sessionStateService.setTraceContextForSession(
+			this._sessionId,
+			undefined,
+		);
 	}
 
 	/**
@@ -172,38 +232,59 @@ export class ClaudeOTelTracker {
 	 * Excludes subagent turns so gen_ai.usage.* on the root span is comparable
 	 * with the foreground agent.
 	 */
-	private _accumulateParentTokenUsage(message: SDKMessage & { type: 'assistant' }): void {
+	private _accumulateParentTokenUsage(
+		message: SDKMessage & { type: 'assistant' },
+	): void {
 		if (message.parent_tool_use_id) {
 			return;
 		}
 		const msgUsage = message.message?.usage;
 		if (msgUsage) {
-			this._parentInputTokens += (msgUsage.input_tokens ?? 0)
-				+ (msgUsage.cache_creation_input_tokens ?? 0)
-				+ (msgUsage.cache_read_input_tokens ?? 0);
-			this._parentOutputTokens += (msgUsage.output_tokens ?? 0);
-			this._parentCacheReadTokens += (msgUsage.cache_read_input_tokens ?? 0);
-			this._parentCacheCreationTokens += (msgUsage.cache_creation_input_tokens ?? 0);
+			this._parentInputTokens +=
+				(msgUsage.input_tokens ?? 0) +
+				(msgUsage.cache_creation_input_tokens ?? 0) +
+				(msgUsage.cache_read_input_tokens ?? 0);
+			this._parentOutputTokens += msgUsage.output_tokens ?? 0;
+			this._parentCacheReadTokens +=
+				msgUsage.cache_read_input_tokens ?? 0;
+			this._parentCacheCreationTokens +=
+				msgUsage.cache_creation_input_tokens ?? 0;
 		}
 	}
 
 	/**
 	 * Sets cost, turn count, and response model on the invoke_agent span from a result message.
 	 */
-	private _setResultAttributes(message: SDKMessage & { type: 'result' }): void {
+	private _setResultAttributes(
+		message: SDKMessage & { type: 'result' },
+	): void {
 		if (!this._currentSpan) {
 			return;
 		}
 		if (message.num_turns !== undefined) {
-			this._currentSpan.setAttribute(CopilotChatAttr.TURN_COUNT, message.num_turns);
+			this._currentSpan.setAttribute(
+				CopilotChatAttr.TURN_COUNT,
+				message.num_turns,
+			);
 		}
 		if (message.total_cost_usd !== undefined) {
-			this._currentSpan.setAttribute(CopilotChatAttr.TOTAL_COST_USD, message.total_cost_usd);
+			this._currentSpan.setAttribute(
+				CopilotChatAttr.TOTAL_COST_USD,
+				message.total_cost_usd,
+			);
 		}
-		const rawResponseModel = message.modelUsage ? Object.keys(message.modelUsage)[0] : undefined;
-		const responseModel = normalizeResponseModel(this._currentRequestModel, rawResponseModel);
+		const rawResponseModel = message.modelUsage
+			? Object.keys(message.modelUsage)[0]
+			: undefined;
+		const responseModel = normalizeResponseModel(
+			this._currentRequestModel,
+			rawResponseModel,
+		);
 		if (responseModel) {
-			this._currentSpan.setAttribute(GenAiAttr.RESPONSE_MODEL, responseModel);
+			this._currentSpan.setAttribute(
+				GenAiAttr.RESPONSE_MODEL,
+				responseModel,
+			);
 		}
 	}
 
@@ -212,17 +293,28 @@ export class ClaudeOTelTracker {
 	 * Ensures chat spans created by chatMLFetcher are parented under the correct
 	 * Agent tool span during subagent execution.
 	 */
-	private _updateTraceContextForMessage(message: SDKMessage, subagentTraceContexts: Map<string, TraceContext>): void {
+	private _updateTraceContextForMessage(
+		message: SDKMessage,
+		subagentTraceContexts: Map<string, TraceContext>,
+	): void {
 		if (!('parent_tool_use_id' in message)) {
 			return;
 		}
 		if (message.parent_tool_use_id) {
-			const subagentCtx = subagentTraceContexts.get(message.parent_tool_use_id);
+			const subagentCtx = subagentTraceContexts.get(
+				message.parent_tool_use_id,
+			);
 			if (subagentCtx) {
-				this._sessionStateService.setTraceContextForSession(this._sessionId, subagentCtx);
+				this._sessionStateService.setTraceContextForSession(
+					this._sessionId,
+					subagentCtx,
+				);
 			}
 		} else {
-			this._sessionStateService.setTraceContextForSession(this._sessionId, this._currentTraceContext);
+			this._sessionStateService.setTraceContextForSession(
+				this._sessionId,
+				this._currentTraceContext,
+			);
 		}
 	}
 }

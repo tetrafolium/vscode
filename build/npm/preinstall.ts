@@ -2,13 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import path from 'path';
-import * as fs from 'fs';
-import * as child_process from 'child_process';
-import * as os from 'os';
-import { isUpToDate, forceInstallMessage } from './installStateHash.ts';
+import path from "path";
+import * as fs from "fs";
+import * as child_process from "child_process";
+import * as os from "os";
+import { isUpToDate, forceInstallMessage } from "./installStateHash.ts";
 
-if (!process.env['VSCODE_SKIP_NODE_VERSION_CHECK']) {
+if (!process.env["VSCODE_SKIP_NODE_VERSION_CHECK"]) {
 	// Get the running Node.js version
 	const nodeVersion = /^(\d+)\.(\d+)\.(\d+)/.exec(process.versions.node);
 	const majorNodeVersion = parseInt(nodeVersion![1]);
@@ -16,12 +16,14 @@ if (!process.env['VSCODE_SKIP_NODE_VERSION_CHECK']) {
 	const patchNodeVersion = parseInt(nodeVersion![3]);
 
 	// Get the required Node.js version from .nvmrc
-	const nvmrcPath = path.join(import.meta.dirname, '..', '..', '.nvmrc');
-	const requiredVersion = fs.readFileSync(nvmrcPath, 'utf8').trim();
+	const nvmrcPath = path.join(import.meta.dirname, "..", "..", ".nvmrc");
+	const requiredVersion = fs.readFileSync(nvmrcPath, "utf8").trim();
 	const requiredVersionMatch = /^(\d+)\.(\d+)\.(\d+)/.exec(requiredVersion);
 
 	if (!requiredVersionMatch) {
-		console.error('\x1b[1;31m*** Unable to parse required Node.js version from .nvmrc\x1b[0;0m');
+		console.error(
+			"\x1b[1;31m*** Unable to parse required Node.js version from .nvmrc\x1b[0;0m",
+		);
 		throw new Error();
 	}
 
@@ -29,16 +31,22 @@ if (!process.env['VSCODE_SKIP_NODE_VERSION_CHECK']) {
 	const requiredMinor = parseInt(requiredVersionMatch[2]);
 	const requiredPatch = parseInt(requiredVersionMatch[3]);
 
-	if (majorNodeVersion !== requiredMajor ||
+	if (
+		majorNodeVersion !== requiredMajor ||
 		minorNodeVersion < requiredMinor ||
-		(minorNodeVersion === requiredMinor && patchNodeVersion < requiredPatch)) {
-		console.error(`\x1b[1;31m*** Please use Node.js v${requiredVersion} or newer with the same major version (${requiredMajor}) as specified in .nvmrc. Currently using v${process.versions.node}.\x1b[0;0m`);
+		(minorNodeVersion === requiredMinor && patchNodeVersion < requiredPatch)
+	) {
+		console.error(
+			`\x1b[1;31m*** Please use Node.js v${requiredVersion} or newer with the same major version (${requiredMajor}) as specified in .nvmrc. Currently using v${process.versions.node}.\x1b[0;0m`,
+		);
 		throw new Error();
 	}
 }
 
-if (process.env.npm_execpath?.includes('yarn')) {
-	console.error('\x1b[1;31m*** Seems like you are using `yarn` which is not supported in this repo any more, please use `npm i` instead. ***\x1b[0;0m');
+if (process.env.npm_execpath?.includes("yarn")) {
+	console.error(
+		"\x1b[1;31m*** Seems like you are using `yarn` which is not supported in this repo any more, please use `npm i` instead. ***\x1b[0;0m",
+	);
 	throw new Error();
 }
 
@@ -47,23 +55,33 @@ const npmVersionMatch = npmUserAgent?.match(/npm\/(\d+)\.(\d+)\.(\d+)/);
 if (npmVersionMatch) {
 	const npmMajor = parseInt(npmVersionMatch[1]);
 	if (npmMajor >= 12) {
-		console.error(`\x1b[1;31m*** Please use npm version < 12.0.0. Currently using v${npmUserAgent}.\x1b[0;0m`);
+		console.error(
+			`\x1b[1;31m*** Please use npm version < 12.0.0. Currently using v${npmUserAgent}.\x1b[0;0m`,
+		);
 		throw new Error();
 	}
 }
 
 // Fast path: if nothing changed since last successful install, skip everything.
 // This makes `npm i` near-instant when dependencies haven't changed.
-if (!process.env['VSCODE_FORCE_INSTALL'] && isUpToDate()) {
-	console.log(`\x1b[32mAll dependencies up to date.\x1b[0m ${forceInstallMessage}`);
+if (!process.env["VSCODE_FORCE_INSTALL"] && isUpToDate()) {
+	console.log(
+		`\x1b[32mAll dependencies up to date.\x1b[0m ${forceInstallMessage}`,
+	);
 	process.exit(0);
 }
 
-if (process.platform === 'win32') {
+if (process.platform === "win32") {
 	if (!hasSupportedVisualStudioVersion()) {
-		console.error('\x1b[1;31m*** Invalid C/C++ Compiler Toolchain. Please check https://github.com/microsoft/vscode/wiki/How-to-Contribute#prerequisites.\x1b[0;0m');
-		console.error('\x1b[1;31m*** If you have Visual Studio installed in a custom location, you can specify it via the environment variable:\x1b[0;0m');
-		console.error('\x1b[1;31m*** set vs2022_install=<path> (or vs2019_install for older versions)\x1b[0;0m');
+		console.error(
+			"\x1b[1;31m*** Invalid C/C++ Compiler Toolchain. Please check https://github.com/microsoft/vscode/wiki/How-to-Contribute#prerequisites.\x1b[0;0m",
+		);
+		console.error(
+			"\x1b[1;31m*** If you have Visual Studio installed in a custom location, you can specify it via the environment variable:\x1b[0;0m",
+		);
+		console.error(
+			"\x1b[1;31m*** set vs2022_install=<path> (or vs2019_install for older versions)\x1b[0;0m",
+		);
 		throw new Error();
 	}
 }
@@ -71,14 +89,18 @@ if (process.platform === 'win32') {
 installHeaders();
 
 if (process.arch !== os.arch()) {
-	console.error(`\x1b[1;31m*** ARCHITECTURE MISMATCH: The node.js process is ${process.arch}, but your OS architecture is ${os.arch()}. ***\x1b[0;0m`);
-	console.error(`\x1b[1;31m*** This can greatly increase the build time of vs code. ***\x1b[0;0m`);
+	console.error(
+		`\x1b[1;31m*** ARCHITECTURE MISMATCH: The node.js process is ${process.arch}, but your OS architecture is ${os.arch()}. ***\x1b[0;0m`,
+	);
+	console.error(
+		`\x1b[1;31m*** This can greatly increase the build time of vs code. ***\x1b[0;0m`,
+	);
 }
 
 function hasSupportedVisualStudioVersion() {
 	// Translated over from
 	// https://source.chromium.org/chromium/chromium/src/+/master:build/vs_toolchain.py;l=140-175
-	const supportedVersions = ['2022', '2019'];
+	const supportedVersions = ["2022", "2019"];
 
 	const availableVersions = [];
 	for (const version of supportedVersions) {
@@ -90,13 +112,20 @@ function hasSupportedVisualStudioVersion() {
 		}
 
 		// Check default installation paths
-		const programFiles86Path = process.env['ProgramFiles(x86)'];
-		const programFiles64Path = process.env['ProgramFiles'];
+		const programFiles86Path = process.env["ProgramFiles(x86)"];
+		const programFiles64Path = process.env["ProgramFiles"];
 
-		const vsTypes = ['Enterprise', 'Professional', 'Community', 'Preview', 'BuildTools', 'IntPreview'];
+		const vsTypes = [
+			"Enterprise",
+			"Professional",
+			"Community",
+			"Preview",
+			"BuildTools",
+			"IntPreview",
+		];
 		if (programFiles64Path) {
 			vsPath = `${programFiles64Path}/Microsoft Visual Studio/${version}`;
-			if (vsTypes.some(vsType => fs.existsSync(path.join(vsPath!, vsType)))) {
+			if (vsTypes.some((vsType) => fs.existsSync(path.join(vsPath!, vsType)))) {
 				availableVersions.push(version);
 				break;
 			}
@@ -104,7 +133,7 @@ function hasSupportedVisualStudioVersion() {
 
 		if (programFiles86Path) {
 			vsPath = `${programFiles86Path}/Microsoft Visual Studio/${version}`;
-			if (vsTypes.some(vsType => fs.existsSync(path.join(vsPath!, vsType)))) {
+			if (vsTypes.some((vsType) => fs.existsSync(path.join(vsPath!, vsType)))) {
 				availableVersions.push(version);
 				break;
 			}
@@ -115,31 +144,56 @@ function hasSupportedVisualStudioVersion() {
 }
 
 function installHeaders() {
-	const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-	child_process.execSync(`${npm} ${process.env.npm_command || 'ci'}`, {
+	const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+	child_process.execSync(`${npm} ${process.env.npm_command || "ci"}`, {
 		env: process.env,
-		cwd: path.join(import.meta.dirname, 'gyp'),
-		stdio: 'inherit'
+		cwd: path.join(import.meta.dirname, "gyp"),
+		stdio: "inherit",
 	});
 
 	// The node gyp package got installed using the above npm command using the gyp/package.json
 	// file checked into our repository. So from that point it is safe to construct the path
 	// to that executable
-	const node_gyp = process.platform === 'win32'
-		? path.join(import.meta.dirname, 'gyp', 'node_modules', '.bin', 'node-gyp.cmd')
-		: path.join(import.meta.dirname, 'gyp', 'node_modules', '.bin', 'node-gyp');
+	const node_gyp =
+		process.platform === "win32"
+			? path.join(
+					import.meta.dirname,
+					"gyp",
+					"node_modules",
+					".bin",
+					"node-gyp.cmd",
+				)
+			: path.join(
+					import.meta.dirname,
+					"gyp",
+					"node_modules",
+					".bin",
+					"node-gyp",
+				);
 
-	const local = getHeaderInfo(path.join(import.meta.dirname, '..', '..', '.npmrc'));
-	const remote = getHeaderInfo(path.join(import.meta.dirname, '..', '..', 'remote', '.npmrc'));
+	const local = getHeaderInfo(
+		path.join(import.meta.dirname, "..", "..", ".npmrc"),
+	);
+	const remote = getHeaderInfo(
+		path.join(import.meta.dirname, "..", "..", "remote", ".npmrc"),
+	);
 
 	if (local !== undefined) {
 		// Both disturl and target come from a file checked into our repository
-		child_process.execFileSync(node_gyp, ['install', '--dist-url', local.disturl, local.target], { shell: true });
+		child_process.execFileSync(
+			node_gyp,
+			["install", "--dist-url", local.disturl, local.target],
+			{ shell: true },
+		);
 	}
 
 	if (remote !== undefined) {
 		// Both disturl and target come from a file checked into our repository
-		child_process.execFileSync(node_gyp, ['install', '--dist-url', remote.disturl, remote.target], { shell: true });
+		child_process.execFileSync(
+			node_gyp,
+			["install", "--dist-url", remote.disturl, remote.target],
+			{ shell: true },
+		);
 	}
 
 	// Overlay any custom headers shipped in build/npm/gyp/custom-headers on top of
@@ -149,7 +203,10 @@ function installHeaders() {
 	if (local !== undefined) {
 		const localHeaderPath = getLocalHeaderPath(local.target);
 		if (localHeaderPath && fs.existsSync(localHeaderPath)) {
-			copyCustomHeaders(path.join(import.meta.dirname, 'gyp', 'custom-headers'), localHeaderPath);
+			copyCustomHeaders(
+				path.join(import.meta.dirname, "gyp", "custom-headers"),
+				localHeaderPath,
+			);
 		}
 	}
 }
@@ -162,27 +219,36 @@ function copyCustomHeaders(sourceDir: string, targetDir: string): void {
 			fs.mkdirSync(targetPath, { recursive: true });
 			copyCustomHeaders(sourcePath, targetPath);
 		} else if (entry.isFile()) {
-			console.log('Overlaying custom header', targetPath);
+			console.log("Overlaying custom header", targetPath);
 			fs.copyFileSync(sourcePath, targetPath);
 		}
 	}
 }
 
 function getLocalHeaderPath(target: string): string | undefined {
-	if (process.platform === 'win32') {
+	if (process.platform === "win32") {
 		const localAppData = process.env.LOCALAPPDATA;
 		if (!localAppData) {
 			return undefined;
 		}
-		return path.join(localAppData, 'node-gyp', 'Cache', target, 'include', 'node');
+		return path.join(
+			localAppData,
+			"node-gyp",
+			"Cache",
+			target,
+			"include",
+			"node",
+		);
 	}
 	const homedir = os.homedir();
-	const cachePath = process.env.XDG_CACHE_HOME || path.join(homedir, '.cache');
-	return path.join(cachePath, 'node-gyp', target, 'include', 'node');
+	const cachePath = process.env.XDG_CACHE_HOME || path.join(homedir, ".cache");
+	return path.join(cachePath, "node-gyp", target, "include", "node");
 }
 
-function getHeaderInfo(rcFile: string): { disturl: string; target: string } | undefined {
-	const lines = fs.readFileSync(rcFile, 'utf8').split(/\r\n|\n/g);
+function getHeaderInfo(
+	rcFile: string,
+): { disturl: string; target: string } | undefined {
+	const lines = fs.readFileSync(rcFile, "utf8").split(/\r\n|\n/g);
 	let disturl: string | undefined;
 	let target: string | undefined;
 	for (const line of lines) {

@@ -3,33 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { BinarySizeStatusBarEntry } from './binarySizeStatusBarEntry';
-import { MediaPreview, isGitLfsPointer, reopenAsText } from './mediaPreview';
-import { escapeAttribute } from './util/dom';
-import { generateUuid } from './util/uuid';
+import * as vscode from "vscode";
+import { BinarySizeStatusBarEntry } from "./binarySizeStatusBarEntry";
+import { MediaPreview, isGitLfsPointer, reopenAsText } from "./mediaPreview";
+import { escapeAttribute } from "./util/dom";
+import { generateUuid } from "./util/uuid";
 
 class AudioPreviewProvider implements vscode.CustomReadonlyEditorProvider {
-
-	public static readonly viewType = 'vscode.audioPreview';
+	public static readonly viewType = "vscode.audioPreview";
 
 	constructor(
 		private readonly extensionRoot: vscode.Uri,
 		private readonly binarySizeStatusBarEntry: BinarySizeStatusBarEntry,
-	) { }
+	) {}
 
 	public async openCustomDocument(uri: vscode.Uri) {
-		return { uri, dispose: () => { } };
+		return { uri, dispose: () => {} };
 	}
 
-	public async resolveCustomEditor(document: vscode.CustomDocument, webviewEditor: vscode.WebviewPanel): Promise<void> {
-		new AudioPreview(this.extensionRoot, document.uri, webviewEditor, this.binarySizeStatusBarEntry);
+	public async resolveCustomEditor(
+		document: vscode.CustomDocument,
+		webviewEditor: vscode.WebviewPanel,
+	): Promise<void> {
+		new AudioPreview(
+			this.extensionRoot,
+			document.uri,
+			webviewEditor,
+			this.binarySizeStatusBarEntry,
+		);
 	}
 }
 
-
 class AudioPreview extends MediaPreview {
-
 	constructor(
 		private readonly extensionRoot: vscode.Uri,
 		resource: vscode.Uri,
@@ -38,14 +43,16 @@ class AudioPreview extends MediaPreview {
 	) {
 		super(extensionRoot, resource, webviewEditor, binarySizeStatusBarEntry);
 
-		this._register(webviewEditor.webview.onDidReceiveMessage(message => {
-			switch (message.type) {
-				case 'reopen-as-text': {
-					reopenAsText(resource, webviewEditor.viewColumn);
-					break;
+		this._register(
+			webviewEditor.webview.onDidReceiveMessage((message) => {
+				switch (message.type) {
+					case "reopen-as-text": {
+						reopenAsText(resource, webviewEditor.viewColumn);
+						break;
+					}
 				}
-			}
-		}));
+			}),
+		);
 
 		this.updateBinarySize();
 		this.render();
@@ -54,7 +61,11 @@ class AudioPreview extends MediaPreview {
 
 	protected async getWebviewContents(): Promise<string> {
 		const version = Date.now().toString();
-		const src = await this.getResourcePath(this._webviewEditor, this._resource, version);
+		const src = await this.getResourcePath(
+			this._webviewEditor,
+			this._resource,
+			version,
+		);
 		const settings = {
 			src,
 			isGitLfs: src === null,
@@ -63,7 +74,7 @@ class AudioPreview extends MediaPreview {
 		const nonce = generateUuid();
 
 		const cspSource = this._webviewEditor.webview.cspSource;
-		return /* html */`<!DOCTYPE html>
+		return /* html */ `<!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
@@ -74,7 +85,7 @@ class AudioPreview extends MediaPreview {
 
 	<title>Audio Preview</title>
 
-	<link rel="stylesheet" href="${escapeAttribute(this.extensionResource('media', 'audioPreview.css'))}" type="text/css" media="screen" nonce="${nonce}">
+	<link rel="stylesheet" href="${escapeAttribute(this.extensionResource("media", "audioPreview.css"))}" type="text/css" media="screen" nonce="${nonce}">
 
 	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: ${cspSource}; media-src ${cspSource}; script-src 'nonce-${nonce}'; style-src ${cspSource} 'nonce-${nonce}';">
 	<meta id="settings" data-settings="${escapeAttribute(JSON.stringify(settings))}">
@@ -89,12 +100,16 @@ class AudioPreview extends MediaPreview {
 		<p>${vscode.l10n.t("The audio file is stored with Git LFS and is not available for preview.")}</p>
 		<a href="#" class="open-file-link">${vscode.l10n.t("Open file using VS Code's standard text/binary editor?")}</a>
 	</div>
-	<script src="${escapeAttribute(this.extensionResource('media', 'audioPreview.js'))}" nonce="${nonce}"></script>
+	<script src="${escapeAttribute(this.extensionResource("media", "audioPreview.js"))}" nonce="${nonce}"></script>
 </body>
 </html>`;
 	}
 
-	private async getResourcePath(webviewEditor: vscode.WebviewPanel, resource: vscode.Uri, version: string): Promise<string | null> {
+	private async getResourcePath(
+		webviewEditor: vscode.WebviewPanel,
+		resource: vscode.Uri,
+		version: string,
+	): Promise<string | null> {
 		if (await isGitLfsPointer(resource)) {
 			return null;
 		}
@@ -103,20 +118,35 @@ class AudioPreview extends MediaPreview {
 		if (resource.query) {
 			return webviewEditor.webview.asWebviewUri(resource).toString();
 		}
-		return webviewEditor.webview.asWebviewUri(resource).with({ query: `version=${version}` }).toString();
+		return webviewEditor.webview
+			.asWebviewUri(resource)
+			.with({ query: `version=${version}` })
+			.toString();
 	}
 
 	private extensionResource(...parts: string[]) {
-		return this._webviewEditor.webview.asWebviewUri(vscode.Uri.joinPath(this.extensionRoot, ...parts));
+		return this._webviewEditor.webview.asWebviewUri(
+			vscode.Uri.joinPath(this.extensionRoot, ...parts),
+		);
 	}
 }
 
-export function registerAudioPreviewSupport(context: vscode.ExtensionContext, binarySizeStatusBarEntry: BinarySizeStatusBarEntry): vscode.Disposable {
-	const provider = new AudioPreviewProvider(context.extensionUri, binarySizeStatusBarEntry);
-	return vscode.window.registerCustomEditorProvider(AudioPreviewProvider.viewType, provider, {
-		supportsMultipleEditorsPerDocument: true,
-		webviewOptions: {
-			retainContextWhenHidden: true,
-		}
-	});
+export function registerAudioPreviewSupport(
+	context: vscode.ExtensionContext,
+	binarySizeStatusBarEntry: BinarySizeStatusBarEntry,
+): vscode.Disposable {
+	const provider = new AudioPreviewProvider(
+		context.extensionUri,
+		binarySizeStatusBarEntry,
+	);
+	return vscode.window.registerCustomEditorProvider(
+		AudioPreviewProvider.viewType,
+		provider,
+		{
+			supportsMultipleEditorsPerDocument: true,
+			webviewOptions: {
+				retainContextWhenHidden: true,
+			},
+		},
+	);
 }

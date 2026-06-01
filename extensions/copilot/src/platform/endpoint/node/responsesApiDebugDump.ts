@@ -16,27 +16,34 @@ import { ILogService } from '../../log/common/logService';
  *
  * **Do not commit with this set to `true`.**
  */
-const ENABLE_RESPONSES_STREAM_DUMP = false
-	// || Boolean("true") // this's done this way to easily uncomment but also to not let you commit it due to internationalized string doublequote use
-	;
-
+const ENABLE_RESPONSES_STREAM_DUMP = false;
+// || Boolean("true") // this's done this way to easily uncomment but also to not let you commit it due to internationalized string doublequote use
 export interface IResponsesStreamDumper {
 	/** Append a single SSE event to the dump file. */
 	logEvent(responseStreamEvent: OpenAI.Responses.ResponseStreamEvent): void;
 }
 
 const noopDumper: IResponsesStreamDumper = {
-	logEvent() { /* noop */ }
+	logEvent() {
+		/* noop */
+	},
 };
 
 class ResponsesStreamDumper implements IResponsesStreamDumper {
-	constructor(private readonly filePath: string) { }
+	constructor(private readonly filePath: string) {}
 
 	logEvent(responseStreamEvent: OpenAI.Responses.ResponseStreamEvent): void {
 		const timestamp = new Date();
 		try {
-			const prettyData = JSON.stringify({ ...responseStreamEvent, type: undefined }, null, 2);
-			fs.appendFileSync(this.filePath, `${timestamp.toISOString()} ${responseStreamEvent.type}\n${prettyData}\n\n`);
+			const prettyData = JSON.stringify(
+				{ ...responseStreamEvent, type: undefined },
+				null,
+				2,
+			);
+			fs.appendFileSync(
+				this.filePath,
+				`${timestamp.toISOString()} ${responseStreamEvent.type}\n${prettyData}\n\n`,
+			);
 		} catch {
 			// Swallow write errors so debugging never breaks real functionality.
 		}
@@ -47,7 +54,10 @@ class ResponsesStreamDumper implements IResponsesStreamDumper {
  * Creates a dumper for the given request. When {@link ENABLE_RESPONSES_STREAM_DUMP}
  * is `false` this returns a no-op implementation with zero overhead.
  */
-export function createResponsesStreamDumper(requestId: string, logService: ILogService): IResponsesStreamDumper {
+export function createResponsesStreamDumper(
+	requestId: string,
+	logService: ILogService,
+): IResponsesStreamDumper {
 	if (!ENABLE_RESPONSES_STREAM_DUMP) {
 		return noopDumper;
 	}
@@ -60,8 +70,14 @@ export function createResponsesStreamDumper(requestId: string, logService: ILogS
 		const dumpDir = path.join(repoRoot, '.responses-stream-dumps');
 		fs.mkdirSync(dumpDir, { recursive: true });
 		const ts = new Date().toISOString().replace(/[:.]/g, '-');
-		const filePath = path.join(dumpDir, `responses-stream-${ts}-${requestId.slice(0, 4)}.log`);
-		fs.writeFileSync(filePath, `# Responses API SSE stream dump\n# requestId=${requestId}\n# started=${new Date().toISOString()}\n\n`);
+		const filePath = path.join(
+			dumpDir,
+			`responses-stream-${ts}-${requestId.slice(0, 4)}.log`,
+		);
+		fs.writeFileSync(
+			filePath,
+			`# Responses API SSE stream dump\n# requestId=${requestId}\n# started=${new Date().toISOString()}\n\n`,
+		);
 		logService.info(`[responsesAPI] Dumping SSE stream to ${filePath}`);
 		return new ResponsesStreamDumper(filePath);
 	} catch {

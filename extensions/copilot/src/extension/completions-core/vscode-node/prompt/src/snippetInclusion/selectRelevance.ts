@@ -3,9 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DocumentInfo, DocumentInfoWithOffset, SimilarFileInfo } from '../prompt';
+import {
+	DocumentInfo,
+	DocumentInfoWithOffset,
+	SimilarFileInfo,
+} from '../prompt';
 import { CursorContextInfo } from './cursorContext';
-import { SnippetProviderType, SnippetSemantics, SnippetWithProviderInfo } from './snippets';
+import {
+	SnippetProviderType,
+	SnippetSemantics,
+	SnippetWithProviderInfo,
+} from './snippets';
 
 class FifoCache<T> {
 	private keys: string[] = [];
@@ -52,10 +60,13 @@ export enum SortOptions {
 class Tokenizer {
 	private readonly stopsForLanguage: Set<string>;
 	constructor(doc: DocumentInfo) {
-		this.stopsForLanguage = SPECIFIC_STOPS.get(doc.languageId) ?? GENERIC_STOPS;
+		this.stopsForLanguage =
+			SPECIFIC_STOPS.get(doc.languageId) ?? GENERIC_STOPS;
 	}
 	tokenize(a: string): Set<string> {
-		return new Set<string>(splitIntoWords(a).filter(x => !this.stopsForLanguage.has(x)));
+		return new Set<string>(
+			splitIntoWords(a).filter((x) => !this.stopsForLanguage.has(x)),
+		);
 	}
 }
 
@@ -86,7 +97,9 @@ export abstract class WindowedMatcher {
 	 * startLine is inclusive, endLine is exclusive.
 	 * @param lines Lines of a source text, in order
 	 */
-	protected abstract getWindowsDelineations(lines: string[]): [number, number][];
+	protected abstract getWindowsDelineations(
+		lines: string[],
+	): [number, number][];
 
 	/**
 	 * Subclasses should implement this method to return the desired context info for tokenization
@@ -94,7 +107,9 @@ export abstract class WindowedMatcher {
 	 * The tokenizer used in WindowedMatcher is a simple tokenizer for Jaccard similarity, NOT an
 	 * OpenAI model tokenizer.
 	 */
-	protected abstract _getCursorContextInfo(referenceDoc: DocumentInfoWithOffset): CursorContextInfo;
+	protected abstract _getCursorContextInfo(
+		referenceDoc: DocumentInfoWithOffset,
+	): CursorContextInfo;
 
 	protected constructor(referenceDoc: DocumentInfoWithOffset) {
 		this.referenceDoc = referenceDoc;
@@ -113,7 +128,7 @@ export abstract class WindowedMatcher {
 
 	private createReferenceTokens(): Set<string> {
 		return (this.referenceTokensCache ??= this.tokenizer.tokenize(
-			this._getCursorContextInfo(this.referenceDoc).context
+			this._getCursorContextInfo(this.referenceDoc).context,
 		));
 	}
 
@@ -122,11 +137,18 @@ export abstract class WindowedMatcher {
 	 * @param snippets ScoredSnippet[]
 	 *
 	 */
-	sortScoredSnippets(snippets: ScoredSnippetMarker[], sortOption = SortOptions.Descending): ScoredSnippetMarker[] {
+	sortScoredSnippets(
+		snippets: ScoredSnippetMarker[],
+		sortOption = SortOptions.Descending,
+	): ScoredSnippetMarker[] {
 		return sortOption === SortOptions.Ascending
-			? snippets.sort((snippetA, snippetB) => (snippetA.score > snippetB.score ? 1 : -1))
+			? snippets.sort((snippetA, snippetB) =>
+					snippetA.score > snippetB.score ? 1 : -1,
+				)
 			: sortOption === SortOptions.Descending
-				? snippets.sort((snippetA, snippetB) => (snippetA.score > snippetB.score ? -1 : 1))
+				? snippets.sort((snippetA, snippetB) =>
+						snippetA.score > snippetB.score ? -1 : 1,
+					)
 				: snippets;
 	}
 	/**
@@ -136,11 +158,14 @@ export abstract class WindowedMatcher {
 	 */
 	async retrieveAllSnippets(
 		objectDoc: SimilarFileInfo,
-		sortOption = SortOptions.Descending
+		sortOption = SortOptions.Descending,
 	): Promise<ScoredSnippetMarker[]> {
 		const snippets: ScoredSnippetMarker[] = [];
 
-		if (objectDoc.source.length === 0 || (await this.referenceTokens).size === 0) {
+		if (
+			objectDoc.source.length === 0 ||
+			(await this.referenceTokens).size === 0
+		) {
 			return snippets;
 		}
 
@@ -149,24 +174,37 @@ export abstract class WindowedMatcher {
 		const tokensInWindows = WINDOWED_TOKEN_SET_CACHE.get(key) ?? [];
 		// if the tokens are not cached, we need to compute them
 		const needToComputeTokens = tokensInWindows.length === 0;
-		const tokenizedLines = needToComputeTokens ? lines.map(l => this.tokenizer.tokenize(l), this.tokenizer) : [];
+		const tokenizedLines = needToComputeTokens
+			? lines.map((l) => this.tokenizer.tokenize(l), this.tokenizer)
+			: [];
 
 		// Compute the windows with the score
-		for (const [index, [startLine, endLine]] of this.getWindowsDelineations(lines).entries()) {
+		for (const [index, [startLine, endLine]] of this.getWindowsDelineations(
+			lines,
+		).entries()) {
 			if (needToComputeTokens) {
 				const tokensInWindow = new Set<string>();
 				tokenizedLines
 					.slice(startLine, endLine)
-					.forEach(x => x.forEach(s => tokensInWindow.add(s), tokensInWindow));
+					.forEach((x) =>
+						x.forEach((s) => tokensInWindow.add(s), tokensInWindow),
+					);
 				tokensInWindows.push(tokensInWindow);
 			}
 			// Now tokensInWindows[index] contains the tokens in the window, whether we just computed them or not
 			const tokensInWindow = tokensInWindows[index];
-			const score = this.similarityScore(tokensInWindow, await this.referenceTokens);
+			const score = this.similarityScore(
+				tokensInWindow,
+				await this.referenceTokens,
+			);
 
 			// If snippets overlap, keep the one with highest score.
 			// Note: Assuming the getWindowsDelineations function returns windows in sorted ascending line ranges.
-			if (snippets.length && startLine > 0 && snippets[snippets.length - 1].endLine > startLine) {
+			if (
+				snippets.length &&
+				startLine > 0 &&
+				snippets[snippets.length - 1].endLine > startLine
+			) {
 				if (snippets[snippets.length - 1].score < score) {
 					snippets[snippets.length - 1].score = score;
 					snippets[snippets.length - 1].startLine = startLine;
@@ -190,7 +228,10 @@ export abstract class WindowedMatcher {
 		return this.sortScoredSnippets(snippets, sortOption);
 	}
 
-	findMatches(objectDoc: SimilarFileInfo, maxSnippetsPerFile: number): Promise<SnippetWithProviderInfo[]> {
+	findMatches(
+		objectDoc: SimilarFileInfo,
+		maxSnippetsPerFile: number,
+	): Promise<SnippetWithProviderInfo[]> {
 		const snippet = this.findBestMatch(objectDoc, maxSnippetsPerFile);
 		return snippet;
 	}
@@ -202,12 +243,21 @@ export abstract class WindowedMatcher {
 	 *
 	 * @param objectDoc
 	 */
-	async findBestMatch(objectDoc: SimilarFileInfo, maxSnippetsPerFile: number): Promise<SnippetWithProviderInfo[]> {
-		if (objectDoc.source.length === 0 || (await this.referenceTokens).size === 0) {
+	async findBestMatch(
+		objectDoc: SimilarFileInfo,
+		maxSnippetsPerFile: number,
+	): Promise<SnippetWithProviderInfo[]> {
+		if (
+			objectDoc.source.length === 0 ||
+			(await this.referenceTokens).size === 0
+		) {
 			return [];
 		}
 		const lines = objectDoc.source.split('\n');
-		const snippets = await this.retrieveAllSnippets(objectDoc, SortOptions.Descending);
+		const snippets = await this.retrieveAllSnippets(
+			objectDoc,
+			SortOptions.Descending,
+		);
 
 		// safe guard against empty lists
 		if (snippets.length === 0) {
@@ -220,7 +270,9 @@ export abstract class WindowedMatcher {
 			// Skip null scored snippets.
 			if (snippets[i].score !== 0) {
 				// Get the snippet's text.
-				const snippetCode = lines.slice(snippets[i].startLine, snippets[i].endLine).join('\n');
+				const snippetCode = lines
+					.slice(snippets[i].startLine, snippets[i].endLine)
+					.join('\n');
 				bestSnippets.push({
 					snippet: snippetCode,
 					semantics: SnippetSemantics.Snippet,
@@ -238,7 +290,7 @@ export abstract class WindowedMatcher {
  * Split by non-alphanumeric characters
  */
 export function splitIntoWords(a: string): string[] {
-	return a.split(/[^a-zA-Z0-9]/).filter(x => x.length > 0);
+	return a.split(/[^a-zA-Z0-9]/).filter((x) => x.length > 0);
 }
 
 const ENGLISH_STOPS = new Set([

@@ -57,7 +57,10 @@ export interface FileStat {
 
 export type FileIdentifier = string | { readonly uri: string };
 
-export const ICompletionsFileSystemService = createServiceIdentifier<ICompletionsFileSystemService>('ICompletionsFileSystemService');
+export const ICompletionsFileSystemService =
+	createServiceIdentifier<ICompletionsFileSystemService>(
+		'ICompletionsFileSystemService',
+	);
 export interface ICompletionsFileSystemService {
 	readonly _serviceBrand: undefined;
 

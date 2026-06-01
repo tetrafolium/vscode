@@ -71,11 +71,16 @@ class ChatLibExtractor {
 
 	private async loadPathMappings(): Promise<void> {
 		const tsconfigPath = path.join(REPO_ROOT, 'tsconfig.json');
-		const tsconfigContent = await fs.promises.readFile(tsconfigPath, 'utf-8');
+		const tsconfigContent = await fs.promises.readFile(
+			tsconfigPath,
+			'utf-8',
+		);
 		const tsconfig = jsonc.parse(tsconfigContent);
 
 		if (tsconfig.compilerOptions?.paths) {
-			for (const [alias, targets] of Object.entries(tsconfig.compilerOptions.paths)) {
+			for (const [alias, targets] of Object.entries(
+				tsconfig.compilerOptions.paths,
+			)) {
 				// Skip the 'vscode' mapping as it's handled separately
 				if (alias === 'vscode') {
 					continue;
@@ -86,14 +91,19 @@ class ChatLibExtractor {
 				if (Array.isArray(targets) && targets.length > 0) {
 					const target = targets[0]; // Use the first target
 					// Remove leading './' and trailing '/*' if present
-					const cleanTarget = target.replace(/^\.\//, '').replace(/\/\*$/, '');
+					const cleanTarget = target
+						.replace(/^\.\//, '')
+						.replace(/\/\*$/, '');
 					const cleanAlias = alias.replace(/\/\*$/, '');
 					this.pathMappings.set(cleanAlias, cleanTarget);
 				}
 			}
 		}
 
-		console.log('Loaded path mappings:', Array.from(this.pathMappings.entries()));
+		console.log(
+			'Loaded path mappings:',
+			Array.from(this.pathMappings.entries()),
+		);
 	}
 
 	private async cleanTargetDir(): Promise<void> {
@@ -108,7 +118,9 @@ class ChatLibExtractor {
 		console.log('Processing entry points and dependencies...');
 
 		// Start with static entry points and dynamically add all test files
-		const testFiles = await glob('src/lib/vscode-node/test/*.ts', { cwd: REPO_ROOT });
+		const testFiles = await glob('src/lib/vscode-node/test/*.ts', {
+			cwd: REPO_ROOT,
+		});
 		const queue = [...entryPoints, ...testFiles];
 
 		while (queue.length > 0) {
@@ -130,13 +142,13 @@ class ChatLibExtractor {
 				srcPath: fullPath,
 				destPath,
 				relativePath: filePath,
-				dependencies
+				dependencies,
 			});
 
 			this.processedFiles.add(filePath);
 
 			// Add dependencies to queue
-			dependencies.forEach(dep => {
+			dependencies.forEach((dep) => {
 				if (!this.processedFiles.has(dep)) {
 					queue.push(dep);
 				}
@@ -158,7 +170,12 @@ class ChatLibExtractor {
 			// Track block comments
 			if (line.trim().startsWith('/*')) {
 				// preserve pragmas in tsx files
-				if (!(filePath.endsWith('.tsx') && line.match(/\/\*\*\s+@jsxImportSource\s+\S+/))) {
+				if (
+					!(
+						filePath.endsWith('.tsx') &&
+						line.match(/\/\*\*\s+@jsxImportSource\s+\S+/)
+					)
+				) {
 					inBlockComment = true;
 				}
 			}
@@ -180,14 +197,19 @@ class ChatLibExtractor {
 			let processedLine = line;
 			// Simple heuristic: if the line contains import/export, keep everything up to //
 			// that's outside of string literals
-			if (trimmedLine.includes('import') || trimmedLine.includes('export')) {
+			if (
+				trimmedLine.includes('import') ||
+				trimmedLine.includes('export')
+			) {
 				// Remove inline comments (this is a simple approach - could be improved)
 				const commentIndex = line.indexOf('//');
 				if (commentIndex !== -1) {
 					// Check if // is inside a string by counting quotes before it
 					const beforeComment = line.substring(0, commentIndex);
-					const singleQuotes = (beforeComment.match(/'/g) || []).length;
-					const doubleQuotes = (beforeComment.match(/"/g) || []).length;
+					const singleQuotes = (beforeComment.match(/'/g) || [])
+						.length;
+					const doubleQuotes = (beforeComment.match(/"/g) || [])
+						.length;
 					// If even number of quotes, the comment is outside strings
 					if (singleQuotes % 2 === 0 && doubleQuotes % 2 === 0) {
 						processedLine = beforeComment;
@@ -206,7 +228,8 @@ class ChatLibExtractor {
 		// - export ... from './path'
 		// - export { ... } from './path'
 		// Updated regex to match all relative imports (including multiple ../ segments)
-		const relativeImportRegex = /(?:import(?:\s+type)?|export)\s+(?:(?:\{[^}]*\}|\*(?:\s+as\s+\w+)?|\w+)\s+from\s+)?['"](\.\.?\/[^'"]*)['"]/g;
+		const relativeImportRegex =
+			/(?:import(?:\s+type)?|export)\s+(?:(?:\{[^}]*\}|\*(?:\s+as\s+\w+)?|\w+)\s+from\s+)?['"](\.\.?\/[^'"]*)['"]/g;
 		let match;
 
 		while ((match = relativeImportRegex.exec(activeContent)) !== null) {
@@ -220,7 +243,8 @@ class ChatLibExtractor {
 
 		// Also match path alias imports like: import ... from '#lib/...' or '#types'
 		// We need to resolve these to follow their dependencies
-		const aliasImportRegex = /(?:import(?:\s+type)?|export)\s+(?:(?:\{[^}]*\}|\*(?:\s+as\s+\w+)?|\w+)\s+from\s+)?['"]([#][^'"]*)['"]/g;
+		const aliasImportRegex =
+			/(?:import(?:\s+type)?|export)\s+(?:(?:\{[^}]*\}|\*(?:\s+as\s+\w+)?|\w+)\s+from\s+)?['"]([#][^'"]*)['"]/g;
 
 		while ((match = aliasImportRegex.exec(activeContent)) !== null) {
 			const importPath = match[1];
@@ -233,11 +257,17 @@ class ChatLibExtractor {
 
 		// For tsx files process JSX imports as well
 		if (filePath.endsWith('.tsx')) {
-			const jsxRelativeImportRegex = /\/\*\*\s+@jsxImportSource\s+(\.\.?\/\S+)\s+\*\//g;
+			const jsxRelativeImportRegex =
+				/\/\*\*\s+@jsxImportSource\s+(\.\.?\/\S+)\s+\*\//g;
 
-			while ((match = jsxRelativeImportRegex.exec(activeContent)) !== null) {
+			while (
+				(match = jsxRelativeImportRegex.exec(activeContent)) !== null
+			) {
 				const importPath = match[1];
-				const resolvedPath = this.resolveImportPath(filePath, path.join(importPath, 'jsx-runtime'));
+				const resolvedPath = this.resolveImportPath(
+					filePath,
+					path.join(importPath, 'jsx-runtime'),
+				);
 
 				if (resolvedPath) {
 					dependencies.push(resolvedPath);
@@ -254,7 +284,9 @@ class ChatLibExtractor {
 		for (const [alias, targetPath] of this.pathMappings.entries()) {
 			if (importPath === alias) {
 				// Exact match for aliases without wildcards (e.g., '#types')
-				return this.resolveFileWithExtensions(path.join(REPO_ROOT, targetPath));
+				return this.resolveFileWithExtensions(
+					path.join(REPO_ROOT, targetPath),
+				);
 			} else if (importPath.startsWith(alias + '/')) {
 				// Wildcard match for aliases with /* (e.g., '#lib/foo' matches '#lib')
 				const remainder = importPath.substring(alias.length + 1); // +1 to skip the '/'
@@ -271,32 +303,44 @@ class ChatLibExtractor {
 	private resolveFileWithExtensions(basePath: string): string | null {
 		// Try with .ts extension
 		if (fs.existsSync(basePath + '.ts')) {
-			return this.normalizePath(path.relative(REPO_ROOT, basePath + '.ts'));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, basePath + '.ts'),
+			);
 		}
 
 		// Try with .tsx extension
 		if (fs.existsSync(basePath + '.tsx')) {
-			return this.normalizePath(path.relative(REPO_ROOT, basePath + '.tsx'));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, basePath + '.tsx'),
+			);
 		}
 
 		// Try with .d.ts extension
 		if (fs.existsSync(basePath + '.d.ts')) {
-			return this.normalizePath(path.relative(REPO_ROOT, basePath + '.d.ts'));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, basePath + '.d.ts'),
+			);
 		}
 
 		// Try with index.ts
 		if (fs.existsSync(path.join(basePath, 'index.ts'))) {
-			return this.normalizePath(path.relative(REPO_ROOT, path.join(basePath, 'index.ts')));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, path.join(basePath, 'index.ts')),
+			);
 		}
 
 		// Try with index.tsx
 		if (fs.existsSync(path.join(basePath, 'index.tsx'))) {
-			return this.normalizePath(path.relative(REPO_ROOT, path.join(basePath, 'index.tsx')));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, path.join(basePath, 'index.tsx')),
+			);
 		}
 
 		// Try with index.d.ts
 		if (fs.existsSync(path.join(basePath, 'index.d.ts'))) {
-			return this.normalizePath(path.relative(REPO_ROOT, path.join(basePath, 'index.d.ts')));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, path.join(basePath, 'index.d.ts')),
+			);
 		}
 
 		// Try as-is
@@ -307,7 +351,10 @@ class ChatLibExtractor {
 		return null;
 	}
 
-	private resolveImportPath(fromFile: string, importPath: string): string | null {
+	private resolveImportPath(
+		fromFile: string,
+		importPath: string,
+	): string | null {
 		const fromDir = path.dirname(fromFile);
 		const resolved = path.resolve(fromDir, importPath);
 
@@ -315,41 +362,57 @@ class ChatLibExtractor {
 		if (importPath.endsWith('.js')) {
 			const baseResolved = resolved.slice(0, -3); // Remove .js
 			if (fs.existsSync(baseResolved + '.ts')) {
-				return this.normalizePath(path.relative(REPO_ROOT, baseResolved + '.ts'));
+				return this.normalizePath(
+					path.relative(REPO_ROOT, baseResolved + '.ts'),
+				);
 			}
 			if (fs.existsSync(baseResolved + '.tsx')) {
-				return this.normalizePath(path.relative(REPO_ROOT, baseResolved + '.tsx'));
+				return this.normalizePath(
+					path.relative(REPO_ROOT, baseResolved + '.tsx'),
+				);
 			}
 		}
 
 		// Try with .ts extension
 		if (fs.existsSync(resolved + '.ts')) {
-			return this.normalizePath(path.relative(REPO_ROOT, resolved + '.ts'));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, resolved + '.ts'),
+			);
 		}
 
 		// Try with .tsx extension
 		if (fs.existsSync(resolved + '.tsx')) {
-			return this.normalizePath(path.relative(REPO_ROOT, resolved + '.tsx'));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, resolved + '.tsx'),
+			);
 		}
 
 		// Try with .d.ts extension
 		if (fs.existsSync(resolved + '.d.ts')) {
-			return this.normalizePath(path.relative(REPO_ROOT, resolved + '.d.ts'));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, resolved + '.d.ts'),
+			);
 		}
 
 		// Try with index.ts
 		if (fs.existsSync(path.join(resolved, 'index.ts'))) {
-			return this.normalizePath(path.relative(REPO_ROOT, path.join(resolved, 'index.ts')));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, path.join(resolved, 'index.ts')),
+			);
 		}
 
 		// Try with index.tsx
 		if (fs.existsSync(path.join(resolved, 'index.tsx'))) {
-			return this.normalizePath(path.relative(REPO_ROOT, path.join(resolved, 'index.tsx')));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, path.join(resolved, 'index.tsx')),
+			);
 		}
 
 		// Try with index.d.ts
 		if (fs.existsSync(path.join(resolved, 'index.d.ts'))) {
-			return this.normalizePath(path.relative(REPO_ROOT, path.join(resolved, 'index.d.ts')));
+			return this.normalizePath(
+				path.relative(REPO_ROOT, path.join(resolved, 'index.d.ts')),
+			);
 		}
 
 		// Try as-is
@@ -358,7 +421,9 @@ class ChatLibExtractor {
 		}
 
 		// If we get here, the file was not found - throw an error
-		throw new Error(`Import file not found: ${importPath} (resolved to ${resolved}) imported from ${fromFile}`);
+		throw new Error(
+			`Import file not found: ${importPath} (resolved to ${resolved}) imported from ${fromFile}`,
+		);
 	}
 
 	private normalizePath(filePath: string): string {
@@ -382,18 +447,24 @@ class ChatLibExtractor {
 				continue;
 			}
 
-			await fs.promises.mkdir(path.dirname(fileInfo.destPath), { recursive: true });			// Read source file
-			const content = await fs.promises.readFile(fileInfo.srcPath, 'utf-8');
+			await fs.promises.mkdir(path.dirname(fileInfo.destPath), {
+				recursive: true,
+			}); // Read source file
+			const content = await fs.promises.readFile(
+				fileInfo.srcPath,
+				'utf-8',
+			);
 
 			// Transform content to replace vscode imports and fix relative paths
-			const transformedContent = this.transformFileContent(content, fileInfo.relativePath);
+			const transformedContent = this.transformFileContent(
+				content,
+				fileInfo.relativePath,
+			);
 
 			// Write to destination
 			await fs.promises.writeFile(fileInfo.destPath, transformedContent);
 		}
 	}
-
-
 
 	private transformFileContent(content: string, filePath: string): string {
 		let transformed = content;
@@ -402,16 +473,22 @@ class ChatLibExtractor {
 		const normalizedFilePath = this.normalizePath(filePath);
 
 		// Rewrite non-type imports of 'vscode' to use vscodeTypesShim
-		transformed = this.rewriteVscodeImports(transformed, normalizedFilePath);
+		transformed = this.rewriteVscodeImports(
+			transformed,
+			normalizedFilePath,
+		);
 
 		// Rewrite imports from local vscodeTypes to use vscodeTypesShim
-		transformed = this.rewriteVscodeTypesImports(transformed, normalizedFilePath);
+		transformed = this.rewriteVscodeTypesImports(
+			transformed,
+			normalizedFilePath,
+		);
 
 		// Rewrite imports in test files: '../../node/chatLibMain' -> '../../../../main'
 		if (normalizedFilePath.startsWith('src/lib/vscode-node/test/')) {
 			transformed = transformed.replace(
 				/(from\s+['"])\.\.\/\.\.\/node\/chatLibMain(['"])/g,
-				'$1../../../../main$2'
+				'$1../../../../main$2',
 			);
 		}
 
@@ -420,9 +497,12 @@ class ChatLibExtractor {
 			transformed = transformed.replace(
 				/import\s+([^'"]*)\s+from\s+['"](\.\/[^'"]*|\.\.\/[^'"]*)['"]/g,
 				(match, importClause, importPath) => {
-					const rewrittenPath = this.rewriteImportPath(filePath, importPath);
+					const rewrittenPath = this.rewriteImportPath(
+						filePath,
+						importPath,
+					);
 					return `import ${importClause} from '${rewrittenPath}'`;
-				}
+				},
 			);
 		}
 
@@ -443,16 +523,23 @@ class ChatLibExtractor {
 		// But NOT type-only imports like:
 		// - import type { Uri } from 'vscode'
 		// - import type * as vscode from 'vscode'
-		const vscodeImportRegex = /^(\s*import\s+)(?!type\s+)([^'"]*)\s+from\s+['"]vscode['"];?\s*$/gm;
+		const vscodeImportRegex =
+			/^(\s*import\s+)(?!type\s+)([^'"]*)\s+from\s+['"]vscode['"];?\s*$/gm;
 
-		return content.replace(vscodeImportRegex, (match, importPrefix, importClause) => {
-			// Calculate the relative path to vscodeTypesShim based on the current file location
-			const shimPath = this.getVscodeTypesShimPath(filePath);
-			return `${importPrefix}${importClause.trim()} from '${shimPath}';`;
-		});
+		return content.replace(
+			vscodeImportRegex,
+			(match, importPrefix, importClause) => {
+				// Calculate the relative path to vscodeTypesShim based on the current file location
+				const shimPath = this.getVscodeTypesShimPath(filePath);
+				return `${importPrefix}${importClause.trim()} from '${shimPath}';`;
+			},
+		);
 	}
 
-	private rewriteVscodeTypesImports(content: string, filePath: string): string {
+	private rewriteVscodeTypesImports(
+		content: string,
+		filePath: string,
+	): string {
 		// Don't rewrite vscodeTypes imports in the main vscodeTypes.ts file itself
 		if (filePath === 'src/vscodeTypes.ts') {
 			return content;
@@ -469,13 +556,17 @@ class ChatLibExtractor {
 		// - import * as vscodeTypes from '../../../vscodeTypes'
 		// But NOT type-only imports like:
 		// - import type { ChatErrorLevel } from '../../../vscodeTypes'
-		const vscodeTypesImportRegex = /^(\s*import\s+)(?!type\s+)([^'"]*)\s+from\s+['"]([^'"]*\/vscodeTypes)['"];?\s*$/gm;
+		const vscodeTypesImportRegex =
+			/^(\s*import\s+)(?!type\s+)([^'"]*)\s+from\s+['"]([^'"]*\/vscodeTypes)['"];?\s*$/gm;
 
-		return content.replace(vscodeTypesImportRegex, (match, importPrefix, importClause, importPath) => {
-			// Calculate the relative path to vscodeTypesShim based on the current file location
-			const shimPath = this.getVscodeTypesShimPath(filePath);
-			return `${importPrefix}${importClause.trim()} from '${shimPath}';`;
-		});
+		return content.replace(
+			vscodeTypesImportRegex,
+			(match, importPrefix, importClause, importPath) => {
+				// Calculate the relative path to vscodeTypesShim based on the current file location
+				const shimPath = this.getVscodeTypesShimPath(filePath);
+				return `${importPrefix}${importClause.trim()} from '${shimPath}';`;
+			},
+		);
 	}
 
 	private getVscodeTypesShimPath(filePath: string): string {
@@ -512,13 +603,27 @@ class ChatLibExtractor {
 	}
 
 	private async generateModuleFiles(): Promise<void> {
-		console.log('Using static module files already present in chat-lib directory...');
+		console.log(
+			'Using static module files already present in chat-lib directory...',
+		);
 
 		// Copy main.ts from src/lib/node/chatLibMain.ts
-		const mainTsPath = path.join(REPO_ROOT, 'src', 'lib', 'node', 'chatLibMain.ts');
+		const mainTsPath = path.join(
+			REPO_ROOT,
+			'src',
+			'lib',
+			'node',
+			'chatLibMain.ts',
+		);
 		const mainTsContent = await fs.promises.readFile(mainTsPath, 'utf-8');
-		const transformedMainTs = this.transformFileContent(mainTsContent, 'src/lib/node/chatLibMain.ts');
-		await fs.promises.writeFile(path.join(TARGET_DIR, 'main.ts'), transformedMainTs);
+		const transformedMainTs = this.transformFileContent(
+			mainTsContent,
+			'src/lib/node/chatLibMain.ts',
+		);
+		await fs.promises.writeFile(
+			path.join(TARGET_DIR, 'main.ts'),
+			transformedMainTs,
+		);
 
 		// Copy root package.json to chat-lib/src
 		await this.copyRootPackageJson();
@@ -540,14 +645,29 @@ class ChatLibExtractor {
 		console.log('Copying test reply files...');
 
 		// Find all .reply.txt files in src/lib/vscode-node/test/
-		const testDir = path.join(REPO_ROOT, 'src', 'lib', 'vscode-node', 'test');
+		const testDir = path.join(
+			REPO_ROOT,
+			'src',
+			'lib',
+			'vscode-node',
+			'test',
+		);
 		const replyFiles = await glob('*.reply.txt', { cwd: testDir });
 
 		for (const file of replyFiles) {
 			const srcPath = path.join(testDir, file);
-			const destPath = path.join(TARGET_DIR, '_internal', 'lib', 'vscode-node', 'test', file);
+			const destPath = path.join(
+				TARGET_DIR,
+				'_internal',
+				'lib',
+				'vscode-node',
+				'test',
+				file,
+			);
 
-			await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
+			await fs.promises.mkdir(path.dirname(destPath), {
+				recursive: true,
+			});
 			await fs.promises.copyFile(srcPath, destPath);
 		}
 
@@ -558,7 +678,10 @@ class ChatLibExtractor {
 		console.log('Updating chat-lib tsconfig.json with path mappings...');
 
 		const chatLibTsconfigPath = path.join(CHAT_LIB_DIR, 'tsconfig.json');
-		const tsconfigContent = await fs.promises.readFile(chatLibTsconfigPath, 'utf-8');
+		const tsconfigContent = await fs.promises.readFile(
+			chatLibTsconfigPath,
+			'utf-8',
+		);
 		const tsconfig = jsonc.parse(tsconfigContent);
 
 		// Ensure compilerOptions exists
@@ -573,7 +696,10 @@ class ChatLibExtractor {
 
 		// Read the root tsconfig once to check for wildcards
 		const rootTsconfigPath = path.join(REPO_ROOT, 'tsconfig.json');
-		const rootTsconfigContent = await fs.promises.readFile(rootTsconfigPath, 'utf-8');
+		const rootTsconfigContent = await fs.promises.readFile(
+			rootTsconfigPath,
+			'utf-8',
+		);
 		const rootTsconfig = jsonc.parse(rootTsconfigContent);
 
 		// Add path mappings from the root tsconfig, adjusted for chat-lib structure
@@ -590,7 +716,9 @@ class ChatLibExtractor {
 
 			// Check if the original mapping had a wildcard
 			if (rootTsconfig.compilerOptions?.paths) {
-				for (const key of Object.keys(rootTsconfig.compilerOptions.paths)) {
+				for (const key of Object.keys(
+					rootTsconfig.compilerOptions.paths,
+				)) {
 					const keyWithoutWildcard = key.replace(/\/\*$/, '');
 					if (keyWithoutWildcard === alias && key.endsWith('/*')) {
 						aliasWithWildcard = alias + '/*';
@@ -600,23 +728,33 @@ class ChatLibExtractor {
 				}
 			}
 
-			tsconfig.compilerOptions.paths[aliasWithWildcard] = [pathWithWildcard];
+			tsconfig.compilerOptions.paths[aliasWithWildcard] = [
+				pathWithWildcard,
+			];
 		}
 
 		// Write the updated tsconfig back
 		await fs.promises.writeFile(
 			chatLibTsconfigPath,
-			JSON.stringify(tsconfig, null, '\t') + '\n'
+			JSON.stringify(tsconfig, null, '\t') + '\n',
 		);
 
-		console.log('Chat-lib tsconfig.json updated with path mappings:', Object.keys(tsconfig.compilerOptions.paths));
+		console.log(
+			'Chat-lib tsconfig.json updated with path mappings:',
+			Object.keys(tsconfig.compilerOptions.paths),
+		);
 	}
 
 	private async validateModule(): Promise<void> {
 		console.log('Validating module...');
 
 		// Check if static files exist in chat-lib directory
-		const staticFiles = ['package.json', 'tsconfig.json', 'README.md', 'LICENSE.txt'];
+		const staticFiles = [
+			'package.json',
+			'tsconfig.json',
+			'README.md',
+			'LICENSE.txt',
+		];
 		for (const file of staticFiles) {
 			const filePath = path.join(CHAT_LIB_DIR, file);
 			if (!fs.existsSync(filePath)) {
@@ -634,9 +772,16 @@ class ChatLibExtractor {
 	}
 
 	private async copyVSCodeProposedTypes(): Promise<void> {
-		console.log('Copying vscode*.d.ts files referenced by vscode-api.d.ts...');
+		console.log(
+			'Copying vscode*.d.ts files referenced by vscode-api.d.ts...',
+		);
 
-		const vscodeApiSrcPath = path.join(REPO_ROOT, 'src', 'extension', 'vscode-api.d.ts');
+		const vscodeApiSrcPath = path.join(
+			REPO_ROOT,
+			'src',
+			'extension',
+			'vscode-api.d.ts',
+		);
 		if (!fs.existsSync(vscodeApiSrcPath)) {
 			throw new Error(`vscode-api.d.ts not found at ${vscodeApiSrcPath}`);
 		}
@@ -655,12 +800,19 @@ class ChatLibExtractor {
 		}
 
 		// Copy each referenced .d.ts file from the vscode repo
-		const vscodeDtsDestDir = path.join(TARGET_DIR, '_internal', 'vscode-dts');
+		const vscodeDtsDestDir = path.join(
+			TARGET_DIR,
+			'_internal',
+			'vscode-dts',
+		);
 		await fs.promises.mkdir(vscodeDtsDestDir, { recursive: true });
 
 		for (const { refPath, fileName } of referencedFiles) {
 			// Resolve the reference path relative to the source file
-			const srcPath = path.resolve(path.dirname(vscodeApiSrcPath), refPath);
+			const srcPath = path.resolve(
+				path.dirname(vscodeApiSrcPath),
+				refPath,
+			);
 			if (!fs.existsSync(srcPath)) {
 				console.warn(`Warning: Referenced file not found: ${srcPath}`);
 				continue;
@@ -676,37 +828,68 @@ class ChatLibExtractor {
 			(_match, refPath: string) => {
 				const fileName = path.basename(refPath);
 				return `/// <reference path="./vscode-dts/${fileName}" />`;
-			}
+			},
 		);
 
-		const vscodeApiDestPath = path.join(TARGET_DIR, '_internal', 'vscode-api.d.ts');
+		const vscodeApiDestPath = path.join(
+			TARGET_DIR,
+			'_internal',
+			'vscode-api.d.ts',
+		);
 		await fs.promises.writeFile(vscodeApiDestPath, updatedContent);
 
 		// Also copy thenable.d.ts which is referenced by vscode.d.ts
 		const vscodeRepoRoot = path.join(REPO_ROOT, '..', '..');
-		const thenableSrcPath = path.join(vscodeRepoRoot, 'src', 'typings', 'thenable.d.ts');
+		const thenableSrcPath = path.join(
+			vscodeRepoRoot,
+			'src',
+			'typings',
+			'thenable.d.ts',
+		);
 		if (fs.existsSync(thenableSrcPath)) {
-			await fs.promises.copyFile(thenableSrcPath, path.join(vscodeDtsDestDir, 'thenable.d.ts'));
+			await fs.promises.copyFile(
+				thenableSrcPath,
+				path.join(vscodeDtsDestDir, 'thenable.d.ts'),
+			);
 			console.log('Copied thenable.d.ts');
 		} else {
-			console.warn(`Warning: thenable.d.ts not found at ${thenableSrcPath}`);
+			console.warn(
+				`Warning: thenable.d.ts not found at ${thenableSrcPath}`,
+			);
 		}
 
-		console.log(`Copied vscode-api.d.ts and ${referencedFiles.length} referenced .d.ts files`);
+		console.log(
+			`Copied vscode-api.d.ts and ${referencedFiles.length} referenced .d.ts files`,
+		);
 	}
 
 	private async copyTikTokenFiles(): Promise<void> {
 		console.log('Copying tiktoken files...');
 
 		// Find all .tiktoken files in src/platform/tokenizer/node/
-		const tokenizerDir = path.join(REPO_ROOT, 'src', 'platform', 'tokenizer', 'node');
+		const tokenizerDir = path.join(
+			REPO_ROOT,
+			'src',
+			'platform',
+			'tokenizer',
+			'node',
+		);
 		const tikTokenFiles = await glob('*.tiktoken', { cwd: tokenizerDir });
 
 		for (const file of tikTokenFiles) {
 			const srcPath = path.join(tokenizerDir, file);
-			const destPath = path.join(TARGET_DIR, '_internal', 'platform', 'tokenizer', 'node', file);
+			const destPath = path.join(
+				TARGET_DIR,
+				'_internal',
+				'platform',
+				'tokenizer',
+				'node',
+				file,
+			);
 
-			await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
+			await fs.promises.mkdir(path.dirname(destPath), {
+				recursive: true,
+			});
 			await fs.promises.copyFile(srcPath, destPath);
 		}
 
@@ -732,16 +915,23 @@ class ChatLibExtractor {
 		const rootPackageJsonPath = path.join(REPO_ROOT, 'package.json');
 		const chatLibPackageJsonPath = path.join(CHAT_LIB_DIR, 'package.json');
 		const rootPackageLockPath = path.join(REPO_ROOT, 'package-lock.json');
-		const chatLibPackageLockPath = path.join(CHAT_LIB_DIR, 'package-lock.json');
+		const chatLibPackageLockPath = path.join(
+			CHAT_LIB_DIR,
+			'package-lock.json',
+		);
 
 		// Read both package.json files
-		const rootPackageJson = JSON.parse(await fs.promises.readFile(rootPackageJsonPath, 'utf-8'));
-		const chatLibPackageJson = JSON.parse(await fs.promises.readFile(chatLibPackageJsonPath, 'utf-8'));
+		const rootPackageJson = JSON.parse(
+			await fs.promises.readFile(rootPackageJsonPath, 'utf-8'),
+		);
+		const chatLibPackageJson = JSON.parse(
+			await fs.promises.readFile(chatLibPackageJsonPath, 'utf-8'),
+		);
 
 		// Combine all dependencies and devDependencies from root
 		const rootDependencies = {
 			...(rootPackageJson.dependencies || {}),
-			...(rootPackageJson.devDependencies || {})
+			...(rootPackageJson.devDependencies || {}),
 		};
 
 		let updatedCount = 0;
@@ -752,7 +942,9 @@ class ChatLibExtractor {
 		// Update existing dependencies in chat-lib with versions from root
 		for (const depType of ['dependencies', 'devDependencies']) {
 			if (chatLibPackageJson[depType]) {
-				const dependencyNames = Object.keys(chatLibPackageJson[depType]);
+				const dependencyNames = Object.keys(
+					chatLibPackageJson[depType],
+				);
 
 				for (const depName of dependencyNames) {
 					if (rootDependencies[depName]) {
@@ -762,14 +954,18 @@ class ChatLibExtractor {
 
 						if (oldVersion !== newVersion) {
 							chatLibPackageJson[depType][depName] = newVersion;
-							changes.push(`  Updated ${depName}: ${oldVersion} → ${newVersion}`);
+							changes.push(
+								`  Updated ${depName}: ${oldVersion} → ${newVersion}`,
+							);
 							updatedCount++;
 							updatedPackages.add(depName);
 						}
 					} else {
 						// Remove dependency if it no longer exists in root
 						delete chatLibPackageJson[depType][depName];
-						changes.push(`  Removed ${depName} (no longer in root package.json)`);
+						changes.push(
+							`  Removed ${depName} (no longer in root package.json)`,
+						);
 						removedCount++;
 					}
 				}
@@ -784,26 +980,43 @@ class ChatLibExtractor {
 		// Write the updated chat-lib package.json
 		await fs.promises.writeFile(
 			chatLibPackageJsonPath,
-			JSON.stringify(chatLibPackageJson, null, '\t') + '\n'
+			JSON.stringify(chatLibPackageJson, null, '\t') + '\n',
 		);
 
-		console.log(`Chat-lib dependencies updated: ${updatedCount} updated, ${removedCount} removed`);
+		console.log(
+			`Chat-lib dependencies updated: ${updatedCount} updated, ${removedCount} removed`,
+		);
 		if (changes.length > 0) {
 			console.log('Changes made:');
-			changes.forEach(change => console.log(change));
+			changes.forEach((change) => console.log(change));
 		}
 
 		// Update package-lock.json for changed dependencies and their transitive dependencies
-		if (updatedPackages.size > 0 && fs.existsSync(rootPackageLockPath) && fs.existsSync(chatLibPackageLockPath)) {
-			console.log('Updating chat-lib package-lock.json for changed dependencies...');
+		if (
+			updatedPackages.size > 0 &&
+			fs.existsSync(rootPackageLockPath) &&
+			fs.existsSync(chatLibPackageLockPath)
+		) {
+			console.log(
+				'Updating chat-lib package-lock.json for changed dependencies...',
+			);
 
-			const rootPackageLock = JSON.parse(await fs.promises.readFile(rootPackageLockPath, 'utf-8'));
-			const chatLibPackageLock = JSON.parse(await fs.promises.readFile(chatLibPackageLockPath, 'utf-8'));
+			const rootPackageLock = JSON.parse(
+				await fs.promises.readFile(rootPackageLockPath, 'utf-8'),
+			);
+			const chatLibPackageLock = JSON.parse(
+				await fs.promises.readFile(chatLibPackageLockPath, 'utf-8'),
+			);
 
 			// Update the root package entry with new dependencies
-			if (chatLibPackageLock.packages && chatLibPackageLock.packages['']) {
-				chatLibPackageLock.packages[''].dependencies = chatLibPackageJson.dependencies || {};
-				chatLibPackageLock.packages[''].devDependencies = chatLibPackageJson.devDependencies || {};
+			if (
+				chatLibPackageLock.packages &&
+				chatLibPackageLock.packages['']
+			) {
+				chatLibPackageLock.packages[''].dependencies =
+					chatLibPackageJson.dependencies || {};
+				chatLibPackageLock.packages[''].devDependencies =
+					chatLibPackageJson.devDependencies || {};
 			}
 
 			// Collect all packages to update (direct dependencies + their transitive dependencies)
@@ -827,7 +1040,7 @@ class ChatLibExtractor {
 					const deps = {
 						...pkgInfo.dependencies,
 						...pkgInfo.optionalDependencies,
-						...pkgInfo.devDependencies
+						...pkgInfo.devDependencies,
 					};
 
 					for (const depName of Object.keys(deps)) {
@@ -844,8 +1057,12 @@ class ChatLibExtractor {
 							// Walk up the parent chain
 							const pathParts = pkgPath.split('/node_modules/');
 							for (let i = pathParts.length - 1; i >= 0; i--) {
-								const parentPath = pathParts.slice(0, i).join('/node_modules/');
-								const candidatePath = parentPath ? `${parentPath}/node_modules/${depName}` : `node_modules/${depName}`;
+								const parentPath = pathParts
+									.slice(0, i)
+									.join('/node_modules/');
+								const candidatePath = parentPath
+									? `${parentPath}/node_modules/${depName}`
+									: `node_modules/${depName}`;
 								if (rootPackageLock.packages[candidatePath]) {
 									actualDepPath = candidatePath;
 									break;
@@ -853,7 +1070,10 @@ class ChatLibExtractor {
 							}
 						}
 
-						if (actualDepPath && !packagesToUpdate.has(actualDepPath)) {
+						if (
+							actualDepPath &&
+							!packagesToUpdate.has(actualDepPath)
+						) {
 							packagesToUpdate.add(actualDepPath);
 							queue.push(actualDepPath);
 						}
@@ -864,8 +1084,12 @@ class ChatLibExtractor {
 			// Update package entries in chat-lib lock file
 			let lockUpdatedCount = 0;
 			for (const pkgPath of packagesToUpdate) {
-				if (rootPackageLock.packages[pkgPath] && chatLibPackageLock.packages[pkgPath]) {
-					chatLibPackageLock.packages[pkgPath] = rootPackageLock.packages[pkgPath];
+				if (
+					rootPackageLock.packages[pkgPath] &&
+					chatLibPackageLock.packages[pkgPath]
+				) {
+					chatLibPackageLock.packages[pkgPath] =
+						rootPackageLock.packages[pkgPath];
 					lockUpdatedCount++;
 				}
 			}
@@ -873,10 +1097,12 @@ class ChatLibExtractor {
 			// Write the updated chat-lib package-lock.json
 			await fs.promises.writeFile(
 				chatLibPackageLockPath,
-				JSON.stringify(chatLibPackageLock, null, '\t') + '\n'
+				JSON.stringify(chatLibPackageLock, null, '\t') + '\n',
 			);
 
-			console.log(`Chat-lib package-lock.json updated: ${lockUpdatedCount} package entries updated`);
+			console.log(
+				`Chat-lib package-lock.json updated: ${lockUpdatedCount} package entries updated`,
+			);
 		}
 	}
 
@@ -887,7 +1113,7 @@ class ChatLibExtractor {
 			// Change to the chat-lib directory and run TypeScript compiler
 			const { stdout, stderr } = await execAsync('npx tsc --noEmit', {
 				cwd: CHAT_LIB_DIR,
-				timeout: 60000 // 60 second timeout
+				timeout: 60000, // 60 second timeout
 			});
 
 			if (stderr) {
@@ -896,8 +1122,13 @@ class ChatLibExtractor {
 
 			console.log('TypeScript compilation successful!');
 		} catch (error: any) {
-			console.error('TypeScript compilation failed:', error.stdout || error.message);
-			throw new Error(`TypeScript compilation failed: ${error.stdout || error.message}`);
+			console.error(
+				'TypeScript compilation failed:',
+				error.stdout || error.message,
+			);
+			throw new Error(
+				`TypeScript compilation failed: ${error.stdout || error.message}`,
+			);
 		}
 	}
 }

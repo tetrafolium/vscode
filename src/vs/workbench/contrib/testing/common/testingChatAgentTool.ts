@@ -3,20 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { disposableTimeout, RunOnceScheduler } from '../../../../base/common/async.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { Codicon } from '../../../../base/common/codicons.js';
-import { Emitter } from '../../../../base/common/event.js';
-import { MarkdownString } from '../../../../base/common/htmlContent.js';
-import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
-import { basename, isAbsolute } from '../../../../base/common/path.js';
-import { isDefined, Mutable } from '../../../../base/common/types.js';
-import { URI } from '../../../../base/common/uri.js';
-import { localize } from '../../../../nls.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
-import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
-import { IWorkbenchContribution } from '../../../common/contributions.js';
+import {
+	disposableTimeout,
+	RunOnceScheduler,
+} from "../../../../base/common/async.js";
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { Codicon } from "../../../../base/common/codicons.js";
+import { Emitter } from "../../../../base/common/event.js";
+import { MarkdownString } from "../../../../base/common/htmlContent.js";
+import {
+	Disposable,
+	DisposableStore,
+} from "../../../../base/common/lifecycle.js";
+import { basename, isAbsolute } from "../../../../base/common/path.js";
+import { isDefined, Mutable } from "../../../../base/common/types.js";
+import { URI } from "../../../../base/common/uri.js";
+import { localize } from "../../../../nls.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import { IUriIdentityService } from "../../../../platform/uriIdentity/common/uriIdentity.js";
+import { IWorkspaceContextService } from "../../../../platform/workspace/common/workspace.js";
+import { IWorkbenchContribution } from "../../../common/contributions.js";
 import {
 	CountTokensCallback,
 	ILanguageModelToolsService,
@@ -28,20 +34,41 @@ import {
 	IToolResult,
 	ToolDataSource,
 	ToolProgress,
-} from '../../chat/common/tools/languageModelToolsService.js';
-import { TestId } from './testId.js';
-import { FileCoverage, TestCoverage, getTotalCoveragePercent } from './testCoverage.js';
-import { collectTestStateCounts, getTestProgressText } from './testingProgressMessages.js';
-import { isFailedState } from './testingStates.js';
-import { ITestResult, LiveTestResult } from './testResult.js';
-import { ITestResultService } from './testResultService.js';
-import { ITestService, testsInFile, waitForTestToBeIdle } from './testService.js';
-import { DetailType, IncrementalTestCollectionItem, TestItemExpandState, TestMessageType, TestResultState, TestRunProfileBitset } from './testTypes.js';
-import { Position } from '../../../../editor/common/core/position.js';
-import { ITestProfileService } from './testProfileService.js';
+} from "../../chat/common/tools/languageModelToolsService.js";
+import { TestId } from "./testId.js";
+import {
+	FileCoverage,
+	TestCoverage,
+	getTotalCoveragePercent,
+} from "./testCoverage.js";
+import {
+	collectTestStateCounts,
+	getTestProgressText,
+} from "./testingProgressMessages.js";
+import { isFailedState } from "./testingStates.js";
+import { ITestResult, LiveTestResult } from "./testResult.js";
+import { ITestResultService } from "./testResultService.js";
+import {
+	ITestService,
+	testsInFile,
+	waitForTestToBeIdle,
+} from "./testService.js";
+import {
+	DetailType,
+	IncrementalTestCollectionItem,
+	TestItemExpandState,
+	TestMessageType,
+	TestResultState,
+	TestRunProfileBitset,
+} from "./testTypes.js";
+import { Position } from "../../../../editor/common/core/position.js";
+import { ITestProfileService } from "./testProfileService.js";
 
-export class TestingChatAgentToolContribution extends Disposable implements IWorkbenchContribution {
-	public static readonly ID = 'workbench.contrib.testing.chatAgentTool';
+export class TestingChatAgentToolContribution
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	public static readonly ID = "workbench.contrib.testing.chatAgentTool";
 
 	constructor(
 		@IInstantiationService instantiationService: IInstantiationService,
@@ -49,16 +76,23 @@ export class TestingChatAgentToolContribution extends Disposable implements IWor
 	) {
 		super();
 		const runTestsTool = instantiationService.createInstance(RunTestTool);
-		this._register(toolsService.registerTool(RunTestTool.DEFINITION, runTestsTool));
+		this._register(
+			toolsService.registerTool(RunTestTool.DEFINITION, runTestsTool),
+		);
 		this._register(toolsService.executeToolSet.addTool(RunTestTool.DEFINITION));
 
-		const testFailureTool = instantiationService.createInstance(TestFailureTool);
-		this._register(toolsService.registerTool(TestFailureTool.DEFINITION, testFailureTool));
-		this._register(toolsService.executeToolSet.addTool(TestFailureTool.DEFINITION));
+		const testFailureTool =
+			instantiationService.createInstance(TestFailureTool);
+		this._register(
+			toolsService.registerTool(TestFailureTool.DEFINITION, testFailureTool),
+		);
+		this._register(
+			toolsService.executeToolSet.addTool(TestFailureTool.DEFINITION),
+		);
 	}
 }
 
-type Mode = 'run' | 'coverage';
+type Mode = "run" | "coverage";
 
 interface IRunTestToolParams {
 	files?: string[];
@@ -69,80 +103,125 @@ interface IRunTestToolParams {
 }
 
 export class RunTestTool implements IToolImpl {
-	public static readonly ID = 'runTests';
+	public static readonly ID = "runTests";
 	public static readonly DEFINITION: IToolData = {
 		id: this.ID,
-		toolReferenceName: 'runTests',
-		legacyToolReferenceFullNames: ['runTests'],
-		displayName: 'Run tests',
-		modelDescription: 'Runs unit tests in files. Use this tool if the user asks to run tests or when you want to validate changes using unit tests, and prefer using this tool instead of the terminal tool. When possible, always try to provide `files` paths containing the relevant unit tests in order to avoid unnecessarily long test runs. This tool outputs detailed information about the results of the test run. Set mode="coverage" to also collect coverage and optionally provide coverageFiles for focused reporting.',
+		toolReferenceName: "runTests",
+		legacyToolReferenceFullNames: ["runTests"],
+		displayName: "Run tests",
+		modelDescription:
+			'Runs unit tests in files. Use this tool if the user asks to run tests or when you want to validate changes using unit tests, and prefer using this tool instead of the terminal tool. When possible, always try to provide `files` paths containing the relevant unit tests in order to avoid unnecessarily long test runs. This tool outputs detailed information about the results of the test run. Set mode="coverage" to also collect coverage and optionally provide coverageFiles for focused reporting.',
 		icon: Codicon.beaker,
 		inputSchema: {
-			type: 'object',
+			type: "object",
 			properties: {
 				files: {
-					type: 'array',
-					items: { type: 'string' },
-					description: 'Absolute paths to the test files to run. If not provided, all test files will be run.',
+					type: "array",
+					items: { type: "string" },
+					description:
+						"Absolute paths to the test files to run. If not provided, all test files will be run.",
 				},
 				testNames: {
-					type: 'array',
-					items: { type: 'string' },
-					description: 'An array of test names to run. Depending on the context, test names defined in code may be strings or the names of functions or classes containing the test cases. If not provided, all tests in the files will be run.',
+					type: "array",
+					items: { type: "string" },
+					description:
+						"An array of test names to run. Depending on the context, test names defined in code may be strings or the names of functions or classes containing the test cases. If not provided, all tests in the files will be run.",
 				},
 				mode: {
-					type: 'string',
-					enum: ['run', 'coverage'],
-					description: 'Execution mode: "run" (default) runs tests normally, "coverage" collects coverage.',
+					type: "string",
+					enum: ["run", "coverage"],
+					description:
+						'Execution mode: "run" (default) runs tests normally, "coverage" collects coverage.',
 				},
 				coverageFiles: {
-					type: 'array',
-					items: { type: 'string' },
-					description: 'When mode="coverage": absolute file paths to include detailed coverage info for. If not provided, a file-level summary of all files with incomplete coverage is shown.'
-				}
+					type: "array",
+					items: { type: "string" },
+					description:
+						'When mode="coverage": absolute file paths to include detailed coverage info for. If not provided, a file-level summary of all files with incomplete coverage is shown.',
+				},
 			},
 		},
-		userDescription: localize('runTestTool.userDescription', 'Run unit tests (optionally with coverage)'),
+		userDescription: localize(
+			"runTestTool.userDescription",
+			"Run unit tests (optionally with coverage)",
+		),
 		source: ToolDataSource.Internal,
 		tags: [
-			'vscode_editing_with_tests',
-			'enable_other_tool_copilot_readFile',
-			'enable_other_tool_copilot_listDirectory',
-			'enable_other_tool_copilot_findFiles',
-			'enable_other_tool_copilot_runTests',
-			'enable_other_tool_copilot_runTestsWithCoverage',
-			'enable_other_tool_testFailure',
+			"vscode_editing_with_tests",
+			"enable_other_tool_copilot_readFile",
+			"enable_other_tool_copilot_listDirectory",
+			"enable_other_tool_copilot_findFiles",
+			"enable_other_tool_copilot_runTests",
+			"enable_other_tool_copilot_runTestsWithCoverage",
+			"enable_other_tool_testFailure",
 		],
 	};
 
 	constructor(
 		@ITestService private readonly _testService: ITestService,
-		@IUriIdentityService private readonly _uriIdentityService: IUriIdentityService,
-		@IWorkspaceContextService private readonly _workspaceContextService: IWorkspaceContextService,
+		@IUriIdentityService
+		private readonly _uriIdentityService: IUriIdentityService,
+		@IWorkspaceContextService
+		private readonly _workspaceContextService: IWorkspaceContextService,
 		@ITestResultService private readonly _testResultService: ITestResultService,
-		@ITestProfileService private readonly _testProfileService: ITestProfileService,
-	) { }
+		@ITestProfileService
+		private readonly _testProfileService: ITestProfileService,
+	) {}
 
-	async invoke(invocation: IToolInvocation, countTokens: CountTokensCallback, progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
+	async invoke(
+		invocation: IToolInvocation,
+		countTokens: CountTokensCallback,
+		progress: ToolProgress,
+		token: CancellationToken,
+	): Promise<IToolResult> {
 		const params: IRunTestToolParams = invocation.parameters;
-		const mode: Mode = (params.mode === 'coverage' ? 'coverage' : 'run');
-		let group = (mode === 'coverage' ? TestRunProfileBitset.Coverage : TestRunProfileBitset.Run);
-		const coverageFiles = (mode === 'coverage' ? (params.coverageFiles && params.coverageFiles.length ? params.coverageFiles : undefined) : undefined);
+		const mode: Mode = params.mode === "coverage" ? "coverage" : "run";
+		let group =
+			mode === "coverage"
+				? TestRunProfileBitset.Coverage
+				: TestRunProfileBitset.Run;
+		const coverageFiles =
+			mode === "coverage"
+				? params.coverageFiles && params.coverageFiles.length
+					? params.coverageFiles
+					: undefined
+				: undefined;
 
 		const testFiles = await this._getFileTestsToRun(params, progress);
-		const testCases = await this._getTestCasesToRun(params, testFiles, progress);
+		const testCases = await this._getTestCasesToRun(
+			params,
+			testFiles,
+			progress,
+		);
 		if (!testCases.length) {
 			return {
-				content: [{ kind: 'text', value: 'No tests found in the files. Ensure the correct absolute paths are passed to the tool.' }],
-				toolResultError: localize('runTestTool.noTests', 'No tests found in the files'),
+				content: [
+					{
+						kind: "text",
+						value:
+							"No tests found in the files. Ensure the correct absolute paths are passed to the tool.",
+					},
+				],
+				toolResultError: localize(
+					"runTestTool.noTests",
+					"No tests found in the files",
+				),
 			};
 		}
 
-		progress.report({ message: localize('runTestTool.invoke.progress', 'Starting test run...') });
+		progress.report({
+			message: localize("runTestTool.invoke.progress", "Starting test run..."),
+		});
 
 		// If the model asks for coverage but the test provider doesn't support it, use normal 'run' mode
 		if (group === TestRunProfileBitset.Coverage) {
-			if (!testCases.some(tc => this._testProfileService.capabilitiesForTest(tc.item) & TestRunProfileBitset.Coverage)) {
+			if (
+				!testCases.some(
+					(tc) =>
+						this._testProfileService.capabilitiesForTest(tc.item) &
+						TestRunProfileBitset.Coverage,
+				)
+			) {
 				group = TestRunProfileBitset.Run;
 			}
 		}
@@ -150,8 +229,17 @@ export class RunTestTool implements IToolImpl {
 		const result = await this._captureTestResult(testCases, group, token);
 		if (!result) {
 			return {
-				content: [{ kind: 'text', value: 'No test run was started. Instruct the user to ensure their test runner is correctly configured' }],
-				toolResultError: localize('runTestTool.noRunStarted', 'No test run was started. This may be an issue with your test runner or extension.'),
+				content: [
+					{
+						kind: "text",
+						value:
+							"No test run was started. Instruct the user to ensure their test runner is correctly configured",
+					},
+				],
+				toolResultError: localize(
+					"runTestTool.noRunStarted",
+					"No test run was started. This may be an issue with your test runner or extension.",
+				),
 			};
 		}
 
@@ -160,48 +248,74 @@ export class RunTestTool implements IToolImpl {
 		if (token.isCancellationRequested) {
 			this._testService.cancelTestRun(result.id);
 			return {
-				content: [{ kind: 'text', value: localize('runTestTool.invoke.cancelled', 'Test run was cancelled.') }],
-				toolResultMessage: localize('runTestTool.invoke.cancelled', 'Test run was cancelled.'),
+				content: [
+					{
+						kind: "text",
+						value: localize(
+							"runTestTool.invoke.cancelled",
+							"Test run was cancelled.",
+						),
+					},
+				],
+				toolResultMessage: localize(
+					"runTestTool.invoke.cancelled",
+					"Test run was cancelled.",
+				),
 			};
 		}
 
 		const summary = await buildTestRunSummary(result, mode, coverageFiles);
-		const content = [{ kind: 'text', value: summary } as const];
+		const content = [{ kind: "text", value: summary } as const];
 
 		return {
-			content: content as Mutable<IToolResult['content']>,
-			toolResultMessage: getTestProgressText(collectTestStateCounts(false, [result])),
+			content: content as Mutable<IToolResult["content"]>,
+			toolResultMessage: getTestProgressText(
+				collectTestStateCounts(false, [result]),
+			),
 		};
 	}
 
 	/** Updates the UI progress as the test runs, resolving when the run is finished. */
-	private async _monitorRunProgress(result: LiveTestResult, progress: ToolProgress, token: CancellationToken): Promise<void> {
+	private async _monitorRunProgress(
+		result: LiveTestResult,
+		progress: ToolProgress,
+		token: CancellationToken,
+	): Promise<void> {
 		const store = new DisposableStore();
 
 		const update = () => {
 			const counts = collectTestStateCounts(!result.completedAt, [result]);
 			const text = getTestProgressText(counts);
-			progress.report({ message: text, progress: counts.runSoFar / counts.totalWillBeRun });
+			progress.report({
+				message: text,
+				progress: counts.runSoFar / counts.totalWillBeRun,
+			});
 		};
 
 		const throttler = store.add(new RunOnceScheduler(update, 500));
 
-		return new Promise<void>(resolve => {
-			store.add(result.onChange(() => {
-				if (!throttler.isScheduled) {
-					throttler.schedule();
-				}
-			}));
+		return new Promise<void>((resolve) => {
+			store.add(
+				result.onChange(() => {
+					if (!throttler.isScheduled) {
+						throttler.schedule();
+					}
+				}),
+			);
 
-			store.add(token.onCancellationRequested(() => {
-				this._testService.cancelTestRun(result.id);
-				resolve();
-			}));
+			store.add(
+				token.onCancellationRequested(() => {
+					this._testService.cancelTestRun(result.id);
+					resolve();
+				}),
+			);
 
-			store.add(result.onComplete(() => {
-				update();
-				resolve();
-			}));
+			store.add(
+				result.onComplete(() => {
+					update();
+					resolve();
+				}),
+			);
 		}).finally(() => store.dispose());
 	}
 
@@ -211,49 +325,73 @@ export class RunTestTool implements IToolImpl {
 	 * test run to come in that contains one or more tasks and treat that as the
 	 * one we're looking for.
 	 */
-	private async _captureTestResult(testCases: IncrementalTestCollectionItem[], group: TestRunProfileBitset, token: CancellationToken): Promise<LiveTestResult | undefined> {
+	private async _captureTestResult(
+		testCases: IncrementalTestCollectionItem[],
+		group: TestRunProfileBitset,
+		token: CancellationToken,
+	): Promise<LiveTestResult | undefined> {
 		const store = new DisposableStore();
 		const onDidTimeout = store.add(new Emitter<void>());
 
-		return new Promise<LiveTestResult | undefined>(resolve => {
-			store.add(onDidTimeout.event(() => {
-				resolve(undefined);
-			}));
+		return new Promise<LiveTestResult | undefined>((resolve) => {
+			store.add(
+				onDidTimeout.event(() => {
+					resolve(undefined);
+				}),
+			);
 
-			store.add(this._testResultService.onResultsChanged(ev => {
-				if ('started' in ev) {
-					store.add(ev.started.onNewTask(() => {
-						store.dispose();
-						resolve(ev.started);
-					}));
-				}
-			}));
+			store.add(
+				this._testResultService.onResultsChanged((ev) => {
+					if ("started" in ev) {
+						store.add(
+							ev.started.onNewTask(() => {
+								store.dispose();
+								resolve(ev.started);
+							}),
+						);
+					}
+				}),
+			);
 
-			this._testService.runTests({
-				group,
-				tests: testCases,
-				preserveFocus: true,
-			}, token).then(() => {
-				if (!store.isDisposed) {
-					store.add(disposableTimeout(() => onDidTimeout.fire(), 5_000));
-				}
-			});
+			this._testService
+				.runTests(
+					{
+						group,
+						tests: testCases,
+						preserveFocus: true,
+					},
+					token,
+				)
+				.then(() => {
+					if (!store.isDisposed) {
+						store.add(disposableTimeout(() => onDidTimeout.fire(), 5_000));
+					}
+				});
 		}).finally(() => store.dispose());
 	}
 
 	/** Filters the test files to individual test cases based on the provided parameters. */
-	private async _getTestCasesToRun(params: IRunTestToolParams, tests: IncrementalTestCollectionItem[], progress: ToolProgress): Promise<IncrementalTestCollectionItem[]> {
+	private async _getTestCasesToRun(
+		params: IRunTestToolParams,
+		tests: IncrementalTestCollectionItem[],
+		progress: ToolProgress,
+	): Promise<IncrementalTestCollectionItem[]> {
 		if (!params.testNames?.length) {
 			return tests;
 		}
 
-		progress.report({ message: localize('runTestTool.invoke.filterProgress', 'Filtering tests...') });
+		progress.report({
+			message: localize(
+				"runTestTool.invoke.filterProgress",
+				"Filtering tests...",
+			),
+		});
 
-		const testNames = params.testNames.map(t => t.toLowerCase().trim());
+		const testNames = params.testNames.map((t) => t.toLowerCase().trim());
 		const filtered: IncrementalTestCollectionItem[] = [];
 		const doFilter = async (test: IncrementalTestCollectionItem) => {
 			const name = test.item.label.toLowerCase().trim();
-			if (testNames.some(tn => name.includes(tn))) {
+			if (testNames.some((tn) => name.includes(tn))) {
 				filtered.push(test);
 				return;
 			}
@@ -262,12 +400,14 @@ export class RunTestTool implements IToolImpl {
 				await this._testService.collection.expand(test.item.extId, 1);
 			}
 			await waitForTestToBeIdle(this._testService, test);
-			await Promise.all([...test.children].map(async id => {
-				const item = this._testService.collection.getNodeById(id);
-				if (item) {
-					await doFilter(item);
-				}
-			}));
+			await Promise.all(
+				[...test.children].map(async (id) => {
+					const item = this._testService.collection.getNodeById(id);
+					if (item) {
+						await doFilter(item);
+					}
+				}),
+			);
 		};
 
 		await Promise.all(tests.map(doFilter));
@@ -275,27 +415,45 @@ export class RunTestTool implements IToolImpl {
 	}
 
 	/** Gets the file tests to run based on the provided parameters. */
-	private async _getFileTestsToRun(params: IRunTestToolParams, progress: ToolProgress): Promise<IncrementalTestCollectionItem[]> {
+	private async _getFileTestsToRun(
+		params: IRunTestToolParams,
+		progress: ToolProgress,
+	): Promise<IncrementalTestCollectionItem[]> {
 		if (!params.files?.length) {
 			return [...this._testService.collection.rootItems];
 		}
 
-		progress.report({ message: localize('runTestTool.invoke.filesProgress', 'Discovering tests...') });
+		progress.report({
+			message: localize(
+				"runTestTool.invoke.filesProgress",
+				"Discovering tests...",
+			),
+		});
 
-		const firstWorkspaceFolder = this._workspaceContextService.getWorkspace().folders.at(0)?.uri;
-		const uris = params.files.map(f => {
-			if (isAbsolute(f)) {
-				return URI.file(f);
-			} else if (firstWorkspaceFolder) {
-				return URI.joinPath(firstWorkspaceFolder, f);
-			} else {
-				return undefined;
-			}
-		}).filter(isDefined);
+		const firstWorkspaceFolder = this._workspaceContextService
+			.getWorkspace()
+			.folders.at(0)?.uri;
+		const uris = params.files
+			.map((f) => {
+				if (isAbsolute(f)) {
+					return URI.file(f);
+				} else if (firstWorkspaceFolder) {
+					return URI.joinPath(firstWorkspaceFolder, f);
+				} else {
+					return undefined;
+				}
+			})
+			.filter(isDefined);
 
 		const tests: IncrementalTestCollectionItem[] = [];
 		for (const uri of uris) {
-			for await (const files of testsInFile(this._testService, this._uriIdentityService, uri, undefined, false)) {
+			for await (const files of testsInFile(
+				this._testService,
+				this._uriIdentityService,
+				uri,
+				undefined,
+				false,
+			)) {
 				for (const file of files) {
 					tests.push(file);
 				}
@@ -305,18 +463,33 @@ export class RunTestTool implements IToolImpl {
 		return tests;
 	}
 
-	prepareToolInvocation(context: IToolInvocationPreparationContext, token: CancellationToken): Promise<IPreparedToolInvocation | undefined> {
+	prepareToolInvocation(
+		context: IToolInvocationPreparationContext,
+		token: CancellationToken,
+	): Promise<IPreparedToolInvocation | undefined> {
 		const params: IRunTestToolParams = context.parameters;
-		const title = localize('runTestTool.confirm.title', 'Allow test run?');
-		const inFiles = params.files?.map((f: string) => '`' + basename(f) + '`');
+		const title = localize("runTestTool.confirm.title", "Allow test run?");
+		const inFiles = params.files?.map((f: string) => "`" + basename(f) + "`");
 
 		return Promise.resolve({
-			invocationMessage: localize('runTestTool.confirm.invocation', 'Running tests...'),
+			invocationMessage: localize(
+				"runTestTool.confirm.invocation",
+				"Running tests...",
+			),
 			confirmationMessages: {
 				title,
 				message: inFiles?.length
-					? new MarkdownString().appendMarkdown(localize('runTestTool.confirm.message', 'The model wants to run tests in {0}.', inFiles.join(', ')))
-					: localize('runTestTool.confirm.all', 'The model wants to run all tests.'),
+					? new MarkdownString().appendMarkdown(
+							localize(
+								"runTestTool.confirm.message",
+								"The model wants to run tests in {0}.",
+								inFiles.join(", "),
+							),
+						)
+					: localize(
+							"runTestTool.confirm.all",
+							"The model wants to run all tests.",
+						),
 				allowAutoConfirm: true,
 			},
 		});
@@ -324,71 +497,106 @@ export class RunTestTool implements IToolImpl {
 }
 
 export class TestFailureTool implements IToolImpl {
-	public static readonly ID = 'testFailure';
+	public static readonly ID = "testFailure";
 	public static readonly DEFINITION: IToolData = {
 		id: this.ID,
-		toolReferenceName: 'testFailure',
-		legacyToolReferenceFullNames: ['copilot_testFailure'],
-		displayName: localize('testFailureTool.displayName', 'Test failures'),
-		modelDescription: 'Includes test failure information in the prompt. Use this tool to get the details of test failures from the most recent test run. If there are no failures yet, suggest running tests first.',
+		toolReferenceName: "testFailure",
+		legacyToolReferenceFullNames: ["copilot_testFailure"],
+		displayName: localize("testFailureTool.displayName", "Test failures"),
+		modelDescription:
+			"Includes test failure information in the prompt. Use this tool to get the details of test failures from the most recent test run. If there are no failures yet, suggest running tests first.",
 		icon: Codicon.beaker,
 		inputSchema: {
-			type: 'object',
+			type: "object",
 			properties: {},
 		},
-		userDescription: localize('testFailureTool.userDescription', 'Include test failure information'),
+		userDescription: localize(
+			"testFailureTool.userDescription",
+			"Include test failure information",
+		),
 		source: ToolDataSource.Internal,
 		tags: [
-			'vscode_editing_with_tests',
-			'enable_other_tool_copilot_readFile',
-			'enable_other_tool_copilot_listDirectory',
-			'enable_other_tool_copilot_findFiles',
-			'enable_other_tool_copilot_runTests',
+			"vscode_editing_with_tests",
+			"enable_other_tool_copilot_readFile",
+			"enable_other_tool_copilot_listDirectory",
+			"enable_other_tool_copilot_findFiles",
+			"enable_other_tool_copilot_runTests",
 		],
 	};
 
 	constructor(
 		@ITestResultService private readonly _testResultService: ITestResultService,
-	) { }
+	) {}
 
-	async invoke(invocation: IToolInvocation, countTokens: CountTokensCallback, progress: ToolProgress, token: CancellationToken): Promise<IToolResult> {
-		const result = this._testResultService.results.find(r => r.tasks.length > 0);
+	async invoke(
+		invocation: IToolInvocation,
+		countTokens: CountTokensCallback,
+		progress: ToolProgress,
+		token: CancellationToken,
+	): Promise<IToolResult> {
+		const result = this._testResultService.results.find(
+			(r) => r.tasks.length > 0,
+		);
 		if (!result) {
 			return {
-				content: [{ kind: 'text', value: 'No test failures were found yet, call the runTests tool to run tests and find failures.' }],
+				content: [
+					{
+						kind: "text",
+						value:
+							"No test failures were found yet, call the runTests tool to run tests and find failures.",
+					},
+				],
 			};
 		}
 
 		const details = await getFailureDetails(result);
 		return {
-			content: [{ kind: 'text', value: details }],
+			content: [{ kind: "text", value: details }],
 		};
 	}
 
-	prepareToolInvocation(context: IToolInvocationPreparationContext, token: CancellationToken): Promise<IPreparedToolInvocation | undefined> {
+	prepareToolInvocation(
+		context: IToolInvocationPreparationContext,
+		token: CancellationToken,
+	): Promise<IPreparedToolInvocation | undefined> {
 		return Promise.resolve({
-			invocationMessage: localize('testFailureTool.invocation', 'Finding test failures'),
-			pastTenseMessage: localize('testFailureTool.pastTense', 'Found test failures'),
+			invocationMessage: localize(
+				"testFailureTool.invocation",
+				"Finding test failures",
+			),
+			pastTenseMessage: localize(
+				"testFailureTool.pastTense",
+				"Found test failures",
+			),
 		});
 	}
 }
 
 /** Builds the full summary string for a completed test run. */
-export async function buildTestRunSummary(result: LiveTestResult, mode: Mode, coverageFiles: string[] | undefined): Promise<string> {
-	const failures = result.counts[TestResultState.Errored] + result.counts[TestResultState.Failed];
+export async function buildTestRunSummary(
+	result: LiveTestResult,
+	mode: Mode,
+	coverageFiles: string[] | undefined,
+): Promise<string> {
+	const failures =
+		result.counts[TestResultState.Errored] +
+		result.counts[TestResultState.Failed];
 	let str = `<summary passed=${result.counts[TestResultState.Passed]} failed=${failures} />\n`;
 	if (failures !== 0) {
 		str += await getFailureDetails(result);
 	}
-	if (mode === 'coverage') {
+	if (mode === "coverage") {
 		str += await getCoverageSummary(result, coverageFiles);
 	}
 	return str;
 }
 
 /** Gets a coverage summary from a test result, either overall or per-file. */
-export async function getCoverageSummary(result: LiveTestResult, coverageFiles: string[] | undefined): Promise<string> {
-	let str = '';
+export async function getCoverageSummary(
+	result: LiveTestResult,
+	coverageFiles: string[] | undefined,
+): Promise<string> {
+	let str = "";
 	for (const task of result.tasks) {
 		const coverage = task.coverage.get();
 		if (!coverage) {
@@ -400,7 +608,7 @@ export async function getCoverageSummary(result: LiveTestResult, coverageFiles: 
 			continue;
 		}
 
-		const normalized = coverageFiles.map(file => URI.file(file).fsPath);
+		const normalized = coverageFiles.map((file) => URI.file(file).fsPath);
 		const coveredFilesMap = new Map<string, FileCoverage>();
 		for (const file of coverage.getAllFiles().values()) {
 			coveredFilesMap.set(file.uri.fsPath, file);
@@ -420,25 +628,33 @@ export async function getCoverageSummary(result: LiveTestResult, coverageFiles: 
 /** Gets a file-level coverage overview sorted by lowest coverage first. */
 export function getOverallCoverageSummary(coverage: TestCoverage): string {
 	const files = [...coverage.getAllFiles().values()]
-		.map(f => ({ path: f.uri.fsPath, pct: getTotalCoveragePercent(f.statement, f.branch, f.declaration) * 100 }))
-		.filter(f => f.pct < 100)
+		.map((f) => ({
+			path: f.uri.fsPath,
+			pct: getTotalCoveragePercent(f.statement, f.branch, f.declaration) * 100,
+		}))
+		.filter((f) => f.pct < 100)
 		.sort((a, b) => a.pct - b.pct);
 
 	if (!files.length) {
-		return '<coverageSummary>All files have 100% coverage.</coverageSummary>\n';
+		return "<coverageSummary>All files have 100% coverage.</coverageSummary>\n";
 	}
 
-	let str = '<coverageSummary>\n';
+	let str = "<coverageSummary>\n";
 	for (const f of files) {
 		str += `<file path="${f.path}" percent=${f.pct.toFixed(1)} />\n`;
 	}
-	str += '</coverageSummary>\n';
+	str += "</coverageSummary>\n";
 	return str;
 }
 
 /** Gets detailed coverage information for a single file including uncovered items. */
-export async function getFileCoverageDetails(file: FileCoverage, path: string): Promise<string> {
-	const pct = getTotalCoveragePercent(file.statement, file.branch, file.declaration) * 100;
+export async function getFileCoverageDetails(
+	file: FileCoverage,
+	path: string,
+): Promise<string> {
+	const pct =
+		getTotalCoveragePercent(file.statement, file.branch, file.declaration) *
+		100;
 	let str = `<coverage path="${path}" percent=${pct.toFixed(1)} statements=${file.statement.covered}/${file.statement.total}`;
 	if (file.branch) {
 		str += ` branches=${file.branch.covered}/${file.branch.total}`;
@@ -446,7 +662,7 @@ export async function getFileCoverageDetails(file: FileCoverage, path: string): 
 	if (file.declaration) {
 		str += ` declarations=${file.declaration.covered}/${file.declaration.total}`;
 	}
-	str += '>\n';
+	str += ">\n";
 
 	try {
 		const details = await file.details();
@@ -458,13 +674,19 @@ export async function getFileCoverageDetails(file: FileCoverage, path: string): 
 		for (const detail of details) {
 			if (detail.type === DetailType.Declaration) {
 				if (!detail.count) {
-					const line = Position.isIPosition(detail.location) ? detail.location.lineNumber : detail.location.startLineNumber;
+					const line = Position.isIPosition(detail.location)
+						? detail.location.lineNumber
+						: detail.location.startLineNumber;
 					uncoveredDeclarations.push({ name: detail.name, line });
 				}
 			} else {
 				if (!detail.count) {
-					const startLine = Position.isIPosition(detail.location) ? detail.location.lineNumber : detail.location.startLineNumber;
-					const endLine = Position.isIPosition(detail.location) ? detail.location.lineNumber : detail.location.endLineNumber;
+					const startLine = Position.isIPosition(detail.location)
+						? detail.location.lineNumber
+						: detail.location.startLineNumber;
+					const endLine = Position.isIPosition(detail.location)
+						? detail.location.lineNumber
+						: detail.location.endLineNumber;
 					uncoveredLines.push([startLine, endLine]);
 				}
 				if (detail.branches) {
@@ -472,9 +694,13 @@ export async function getFileCoverageDetails(file: FileCoverage, path: string): 
 						if (!branch.count) {
 							let line: number;
 							if (branch.location) {
-								line = Position.isIPosition(branch.location) ? branch.location.lineNumber : branch.location.startLineNumber;
+								line = Position.isIPosition(branch.location)
+									? branch.location.lineNumber
+									: branch.location.startLineNumber;
 							} else {
-								line = Position.isIPosition(detail.location) ? detail.location.lineNumber : detail.location.startLineNumber;
+								line = Position.isIPosition(detail.location)
+									? detail.location.lineNumber
+									: detail.location.startLineNumber;
 							}
 							uncoveredBranches.push({ line, label: branch.label });
 						}
@@ -484,24 +710,34 @@ export async function getFileCoverageDetails(file: FileCoverage, path: string): 
 		}
 
 		if (uncoveredDeclarations.length) {
-			str += 'uncovered functions: ' + uncoveredDeclarations.map(d => `${d.name}(L${d.line})`).join(', ') + '\n';
+			str +=
+				"uncovered functions: " +
+				uncoveredDeclarations.map((d) => `${d.name}(L${d.line})`).join(", ") +
+				"\n";
 		}
 		if (uncoveredBranches.length) {
-			str += 'uncovered branches: ' + uncoveredBranches.map(b => b.label ? `L${b.line}(${b.label})` : `L${b.line}`).join(', ') + '\n';
+			str +=
+				"uncovered branches: " +
+				uncoveredBranches
+					.map((b) => (b.label ? `L${b.line}(${b.label})` : `L${b.line}`))
+					.join(", ") +
+				"\n";
 		}
 		if (uncoveredLines.length) {
-			str += 'uncovered lines: ' + mergeLineRanges(uncoveredLines) + '\n';
+			str += "uncovered lines: " + mergeLineRanges(uncoveredLines) + "\n";
 		}
-	} catch { /* ignore - details not available */ }
+	} catch {
+		/* ignore - details not available */
+	}
 
-	str += '</coverage>\n';
+	str += "</coverage>\n";
 	return str;
 }
 
 /** Merges overlapping/contiguous line ranges and formats them compactly. */
 export function mergeLineRanges(ranges: [number, number][]): string {
 	if (!ranges.length) {
-		return '';
+		return "";
 	}
 	ranges.sort((a, b) => a[0] - b[0]);
 	const merged: [number, number][] = [ranges[0]];
@@ -514,12 +750,12 @@ export function mergeLineRanges(ranges: [number, number][]): string {
 			merged.push([start, end]);
 		}
 	}
-	return merged.map(([s, e]) => s === e ? `${s}` : `${s}-${e}`).join(', ');
+	return merged.map(([s, e]) => (s === e ? `${s}` : `${s}-${e}`)).join(", ");
 }
 
 /** Formats failure details from a test result into an XML-like string. */
 export async function getFailureDetails(result: ITestResult): Promise<string> {
-	let str = '';
+	let str = "";
 	let hadMessages = false;
 	for (const failure of result.tests) {
 		if (!isFailedState(failure.ownComputedState)) {
@@ -528,16 +764,21 @@ export async function getFailureDetails(result: ITestResult): Promise<string> {
 
 		const [, ...testPath] = TestId.split(failure.item.extId);
 		const testName = testPath.pop();
-		str += `<testFailure name=${JSON.stringify(testName)} path=${JSON.stringify(testPath.join(' > '))}>\n`;
+		str += `<testFailure name=${JSON.stringify(testName)} path=${JSON.stringify(testPath.join(" > "))}>\n`;
 		for (const task of failure.tasks) {
-			for (const message of task.messages.filter(m => m.type === TestMessageType.Error)) {
+			for (const message of task.messages.filter(
+				(m) => m.type === TestMessageType.Error,
+			)) {
 				hadMessages = true;
 
 				if (message.expected !== undefined && message.actual !== undefined) {
 					str += `<expectedOutput>\n${message.expected}\n</expectedOutput>\n`;
 					str += `<actualOutput>\n${message.actual}\n</actualOutput>\n`;
 				} else {
-					const messageText = typeof message.message === 'string' ? message.message : message.message.value;
+					const messageText =
+						typeof message.message === "string"
+							? message.message
+							: message.message.value;
 					str += `<message>\n${messageText}\n</message>\n`;
 				}
 
@@ -563,7 +804,9 @@ export async function getFailureDetails(result: ITestResult): Promise<string> {
 	}
 
 	if (!hadMessages) {
-		const output = result.tasks.map(t => t.output.getRange(0, t.output.length).toString().trim()).join('\n');
+		const output = result.tasks
+			.map((t) => t.output.getRange(0, t.output.length).toString().trim())
+			.join("\n");
 		if (output) {
 			str += `<output>\n${output}\n</output>\n`;
 		}

@@ -12,7 +12,6 @@ import { CapturingOTelService } from './capturingOTelService';
  * and capturing service correctness.
  */
 describe('OTel Service Robustness', () => {
-
 	describe('CapturingOTelService basics', () => {
 		it('reset clears all captured data', () => {
 			const otel = new CapturingOTelService();
@@ -46,7 +45,10 @@ describe('OTel Service Robustness', () => {
 	describe('runWithTraceContext', () => {
 		it('executes the function and returns its result', async () => {
 			const otel = new CapturingOTelService();
-			const ctx = { traceId: 'aaaa0000bbbb1111cccc2222dddd3333', spanId: 'eeee4444ffff5555' };
+			const ctx = {
+				traceId: 'aaaa0000bbbb1111cccc2222dddd3333',
+				spanId: 'eeee4444ffff5555',
+			};
 
 			const result = await otel.runWithTraceContext(ctx, async () => {
 				return 42;
@@ -57,11 +59,16 @@ describe('OTel Service Robustness', () => {
 
 		it('propagates errors from the wrapped function', async () => {
 			const otel = new CapturingOTelService();
-			const ctx = { traceId: '00000000000000000000000000000000', spanId: '0000000000000000' };
+			const ctx = {
+				traceId: '00000000000000000000000000000000',
+				spanId: '0000000000000000',
+			};
 
-			await expect(otel.runWithTraceContext(ctx, async () => {
-				throw new Error('test error');
-			})).rejects.toThrow('test error');
+			await expect(
+				otel.runWithTraceContext(ctx, async () => {
+					throw new Error('test error');
+				}),
+			).rejects.toThrow('test error');
 		});
 	});
 
@@ -69,9 +76,11 @@ describe('OTel Service Robustness', () => {
 		it('ends span even when fn throws', async () => {
 			const otel = new CapturingOTelService();
 
-			await expect(otel.startActiveSpan('test', { attributes: {} }, async () => {
-				throw new Error('boom');
-			})).rejects.toThrow('boom');
+			await expect(
+				otel.startActiveSpan('test', { attributes: {} }, async () => {
+					throw new Error('boom');
+				}),
+			).rejects.toThrow('boom');
 
 			expect(otel.spans[0].ended).toBe(true);
 		});
@@ -79,10 +88,14 @@ describe('OTel Service Robustness', () => {
 		it('returns fn result on success', async () => {
 			const otel = new CapturingOTelService();
 
-			const result = await otel.startActiveSpan('test', { attributes: {} }, async (span) => {
-				span.setStatus(SpanStatusCode.OK);
-				return 'hello';
-			});
+			const result = await otel.startActiveSpan(
+				'test',
+				{ attributes: {} },
+				async (span) => {
+					span.setStatus(SpanStatusCode.OK);
+					return 'hello';
+				},
+			);
 
 			expect(result).toBe('hello');
 			expect(otel.spans[0].statusCode).toBe(SpanStatusCode.OK);

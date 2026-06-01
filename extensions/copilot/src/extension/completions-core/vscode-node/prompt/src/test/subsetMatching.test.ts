@@ -14,7 +14,7 @@ import { SnippetWithProviderInfo } from '../snippetInclusion/snippets';
 async function findAndScoreBlocks(
 	referenceDoc: DocumentInfoWithOffset,
 	relatedFiles: SimilarFileInfo[],
-	useSubsetMatching: boolean
+	useSubsetMatching: boolean,
 ): Promise<SnippetWithProviderInfo[]> {
 	const options: SimilarFilesOptions = {
 		snippetLength: defaultSimilarFilesOptions.snippetLength,
@@ -29,7 +29,10 @@ async function findAndScoreBlocks(
 	return getSimilarSnippets(referenceDoc, relatedFiles, options);
 }
 
-function fileScore(snippets: SnippetWithProviderInfo[], partialFileName: string): number {
+function fileScore(
+	snippets: SnippetWithProviderInfo[],
+	partialFileName: string,
+): number {
 	for (const snippet of snippets) {
 		if (snippet.relativePath?.indexOf(partialFileName) !== -1) {
 			return snippet.score;
@@ -111,42 +114,76 @@ suite('Similar files with subset matching Test Suite', function () {
 		// **********************************************************
 		// Score with the old 60-line-delimited reference token chunk.
 		const oldScores = await findAndScoreBlocks(
-			{ source: file0, uri: 'file:///home/user/file0.js', languageId: 'csharp', offset: file0.indexOf('|') },
+			{
+				source: file0,
+				uri: 'file:///home/user/file0.js',
+				languageId: 'csharp',
+				offset: file0.indexOf('|'),
+			},
 			[
-				{ source: file1, uri: 'file:///home/user/file1.js', relativePath: 'file1' },
-				{ source: file2, uri: 'file:///home/user/file2.js', relativePath: 'file2' },
-				{ source: file3, uri: 'file:///home/user/file3.js', relativePath: 'file3' },
+				{
+					source: file1,
+					uri: 'file:///home/user/file1.js',
+					relativePath: 'file1',
+				},
+				{
+					source: file2,
+					uri: 'file:///home/user/file2.js',
+					relativePath: 'file2',
+				},
+				{
+					source: file3,
+					uri: 'file:///home/user/file3.js',
+					relativePath: 'file3',
+				},
 			],
-			false
+			false,
 		);
 
 		// We expect the old way to prefer the distraction class, which has lots of terms that look like stuff from
 		// the neighboring methods.
 		assert(
 			fileScore(oldScores, 'file3') > fileScore(oldScores, 'file2') &&
-			fileScore(oldScores, 'file2') > fileScore(oldScores, 'file1'),
-			'Expected 60-line-delimited reference chunks to prefer the distraction class because it resembles neighboring methods'
+				fileScore(oldScores, 'file2') > fileScore(oldScores, 'file1'),
+			'Expected 60-line-delimited reference chunks to prefer the distraction class because it resembles neighboring methods',
 		);
 		// **********************************************************
 
 		// **********************************************************
 		// Score with the new subset matching mechanism.
 		const newScores = await findAndScoreBlocks(
-			{ source: file0, uri: 'file:///home/user/file0.js', languageId: 'csharp', offset: file0.indexOf('|') },
+			{
+				source: file0,
+				uri: 'file:///home/user/file0.js',
+				languageId: 'csharp',
+				offset: file0.indexOf('|'),
+			},
 			[
-				{ source: file1, uri: 'file:///home/user/file1.js', relativePath: 'file1' },
-				{ source: file2, uri: 'file:///home/user/file2.js', relativePath: 'file2' },
-				{ source: file3, uri: 'file:///home/user/file3.js', relativePath: 'file3' },
+				{
+					source: file1,
+					uri: 'file:///home/user/file1.js',
+					relativePath: 'file1',
+				},
+				{
+					source: file2,
+					uri: 'file:///home/user/file2.js',
+					relativePath: 'file2',
+				},
+				{
+					source: file3,
+					uri: 'file:///home/user/file3.js',
+					relativePath: 'file3',
+				},
 			],
-			true
+			true,
 		);
 
 		// We expect the new way to prefer the second file because it contains the most tokens that match
 		// the method enclosing the caret.
 		assert(
 			fileScore(newScores, 'file2') > fileScore(newScores, 'file1') &&
-			fileScore(newScores, 'file1') > fileScore(newScores, 'file3'),
-			'Expected that the file containing IBaz interface would be the best match'
+				fileScore(newScores, 'file1') > fileScore(newScores, 'file3'),
+			'Expected that the file containing IBaz interface would be the best match',
 		);
 		// **********************************************************
 	});
@@ -206,42 +243,76 @@ suite('Similar files with subset matching Test Suite', function () {
 		// **********************************************************
 		// Score with the old 60-line-delimited reference token chunk.
 		const oldScores = await findAndScoreBlocks(
-			{ source: file0, uri: 'file:///home/user/file0.js', languageId: 'csharp', offset: file0.indexOf('|') },
+			{
+				source: file0,
+				uri: 'file:///home/user/file0.js',
+				languageId: 'csharp',
+				offset: file0.indexOf('|'),
+			},
 			[
-				{ source: file1, uri: 'file:///home/user/file1.js', relativePath: 'file1' },
-				{ source: file2, uri: 'file:///home/user/file2.js', relativePath: 'file2' },
-				{ source: file3, uri: 'file:///home/user/file3.js', relativePath: 'file3' },
+				{
+					source: file1,
+					uri: 'file:///home/user/file1.js',
+					relativePath: 'file1',
+				},
+				{
+					source: file2,
+					uri: 'file:///home/user/file2.js',
+					relativePath: 'file2',
+				},
+				{
+					source: file3,
+					uri: 'file:///home/user/file3.js',
+					relativePath: 'file3',
+				},
 			],
-			false
+			false,
 		);
 
 		// We expect the old way to prefer the simpler code samples, even when they match fewer tokens,
 		// because there are fewer non-matching additional tokens.
 		assert(
 			fileScore(oldScores, 'file2') > fileScore(oldScores, 'file1') &&
-			fileScore(oldScores, 'file1') === fileScore(oldScores, 'file3'),
-			'Expected 60-line-delimited reference chunks to prefer the distraction class because it resembles neighboring methods'
+				fileScore(oldScores, 'file1') === fileScore(oldScores, 'file3'),
+			'Expected 60-line-delimited reference chunks to prefer the distraction class because it resembles neighboring methods',
 		);
 		// **********************************************************
 
 		// **********************************************************
 		// Score with the new method.
 		const newScores = await findAndScoreBlocks(
-			{ source: file0, uri: 'file:///home/user/file0.js', languageId: 'csharp', offset: file0.indexOf('|') },
+			{
+				source: file0,
+				uri: 'file:///home/user/file0.js',
+				languageId: 'csharp',
+				offset: file0.indexOf('|'),
+			},
 			[
-				{ source: file1, uri: 'file:///home/user/file1.js', relativePath: 'file1' },
-				{ source: file2, uri: 'file:///home/user/file2.js', relativePath: 'file2' },
-				{ source: file3, uri: 'file:///home/user/file3.js', relativePath: 'file3' },
+				{
+					source: file1,
+					uri: 'file:///home/user/file1.js',
+					relativePath: 'file1',
+				},
+				{
+					source: file2,
+					uri: 'file:///home/user/file2.js',
+					relativePath: 'file2',
+				},
+				{
+					source: file3,
+					uri: 'file:///home/user/file3.js',
+					relativePath: 'file3',
+				},
 			],
-			true
+			true,
 		);
 
 		// We expect the new way to prefer the file with matching class and method names because we're no longer
 		// penalizing samples for having different tokens.
 		assert(
 			fileScore(newScores, 'file1') > fileScore(newScores, 'file2') &&
-			fileScore(newScores, 'file2') > fileScore(newScores, 'file3'),
-			'Expected subset matching method to prefer the file with the most token matches'
+				fileScore(newScores, 'file2') > fileScore(newScores, 'file3'),
+			'Expected subset matching method to prefer the file with the most token matches',
 		);
 		// **********************************************************
 	});
@@ -325,42 +396,76 @@ suite('Similar files with subset matching Test Suite', function () {
 		// **********************************************************
 		// Score with the old 60-line-delimited reference token chunk.
 		const oldScores = await findAndScoreBlocks(
-			{ source: file0, uri: 'file:///home/user/file0.js', languageId: 'csharp', offset: file0.indexOf('|') },
+			{
+				source: file0,
+				uri: 'file:///home/user/file0.js',
+				languageId: 'csharp',
+				offset: file0.indexOf('|'),
+			},
 			[
-				{ source: file1, uri: 'file:///home/user/file1.js', relativePath: 'file1' },
-				{ source: file2, uri: 'file:///home/user/file2.js', relativePath: 'file2' },
-				{ source: file3, uri: 'file:///home/user/file3.js', relativePath: 'file3' },
+				{
+					source: file1,
+					uri: 'file:///home/user/file1.js',
+					relativePath: 'file1',
+				},
+				{
+					source: file2,
+					uri: 'file:///home/user/file2.js',
+					relativePath: 'file2',
+				},
+				{
+					source: file3,
+					uri: 'file:///home/user/file3.js',
+					relativePath: 'file3',
+				},
 			],
-			false
+			false,
 		);
 
 		// We expect the old way to prefer the distraction class, which has lots of terms that look like stuff from
 		// the neighboring methods.
 		assert(
 			fileScore(oldScores, 'file3') > fileScore(oldScores, 'file2') &&
-			fileScore(oldScores, 'file2') > fileScore(oldScores, 'file1'),
-			'Expected 60-line-delimited reference chunks to prefer the distraction class because it resembles neighboring methods'
+				fileScore(oldScores, 'file2') > fileScore(oldScores, 'file1'),
+			'Expected 60-line-delimited reference chunks to prefer the distraction class because it resembles neighboring methods',
 		);
 		// **********************************************************
 
 		// **********************************************************
 		// Score with the new subset matching mechanism.
 		const newScores = await findAndScoreBlocks(
-			{ source: file0, uri: 'file:///home/user/file0.js', languageId: 'csharp', offset: file0.indexOf('|') },
+			{
+				source: file0,
+				uri: 'file:///home/user/file0.js',
+				languageId: 'csharp',
+				offset: file0.indexOf('|'),
+			},
 			[
-				{ source: file1, uri: 'file:///home/user/file1.js', relativePath: 'file1' },
-				{ source: file2, uri: 'file:///home/user/file2.js', relativePath: 'file2' },
-				{ source: file3, uri: 'file:///home/user/file3.js', relativePath: 'file3' },
+				{
+					source: file1,
+					uri: 'file:///home/user/file1.js',
+					relativePath: 'file1',
+				},
+				{
+					source: file2,
+					uri: 'file:///home/user/file2.js',
+					relativePath: 'file2',
+				},
+				{
+					source: file3,
+					uri: 'file:///home/user/file3.js',
+					relativePath: 'file3',
+				},
 			],
-			true
+			true,
 		);
 
 		// We expect the new way to prefer the second file because it contains the most tokens that match
 		// the method enclosing the caret.
 		assert(
 			fileScore(newScores, 'file2') > fileScore(newScores, 'file3') &&
-			fileScore(newScores, 'file3') === fileScore(newScores, 'file1'),
-			'Expected that the file containing IBaz interface would be the best match'
+				fileScore(newScores, 'file3') === fileScore(newScores, 'file1'),
+			'Expected that the file containing IBaz interface would be the best match',
 		);
 		// **********************************************************
 	});

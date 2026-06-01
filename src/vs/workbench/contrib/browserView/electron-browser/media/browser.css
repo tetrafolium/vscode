@@ -4,13 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 @property --animation-angle {
-	syntax: '<angle>';
+	syntax: "<angle>";
 	inherits: false;
 	initial-value: 135deg;
 }
 
 @property --animation-opacity {
-	syntax: '<percentage>';
+	syntax: "<percentage>";
 	inherits: false;
 	initial-value: 0%;
 }
@@ -138,8 +138,13 @@
 			flex-shrink: 0;
 		}
 
-		.browser-emulation-toolbar-preset { min-width: 150px; max-width: 220px; }
-		.browser-emulation-toolbar-zoom { min-width: 78px; }
+		.browser-emulation-toolbar-preset {
+			min-width: 150px;
+			max-width: 220px;
+		}
+		.browser-emulation-toolbar-zoom {
+			min-width: 78px;
+		}
 
 		.browser-emulation-toolbar-label {
 			opacity: 0.8;
@@ -165,8 +170,12 @@
 			}
 		}
 
-		.browser-emulation-toolbar-dimensions .browser-emulation-toolbar-input { width: 56px; }
-		.browser-emulation-toolbar-dpr .browser-emulation-toolbar-input { width: 44px; }
+		.browser-emulation-toolbar-dimensions .browser-emulation-toolbar-input {
+			width: 56px;
+		}
+		.browser-emulation-toolbar-dpr .browser-emulation-toolbar-input {
+			width: 44px;
+		}
 
 		.browser-emulation-toolbar-spacer {
 			flex: 1;
@@ -177,7 +186,9 @@
 			align-items: center;
 			flex-shrink: 0;
 
-			.actions-container { gap: 2px; }
+			.actions-container {
+				gap: 2px;
+			}
 		}
 	}
 
@@ -198,7 +209,12 @@
 		cursor: pointer;
 		overflow: hidden;
 		max-width: 14px;
-		transition: max-width 0.3s ease, padding 0.3s ease, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+		transition:
+			max-width 0.3s ease,
+			padding 0.3s ease,
+			background-color 0.3s ease,
+			color 0.3s ease,
+			border-color 0.3s ease;
 		position: relative;
 
 		&.attention {
@@ -304,7 +320,8 @@
 			}
 
 			&.checked {
-				background: linear-gradient(135deg in lab,
+				background: linear-gradient(
+					135deg in lab,
 					color-mix(in srgb, #51a2ff 25%, transparent),
 					color-mix(in srgb, #4af0c0 25%, transparent),
 					color-mix(in srgb, #b44aff 25%, transparent)
@@ -312,7 +329,8 @@
 				color: var(--vscode-foreground);
 
 				&:hover {
-					background: linear-gradient(135deg in lab,
+					background: linear-gradient(
+						135deg in lab,
 						color-mix(in srgb, #51a2ff 35%, transparent),
 						color-mix(in srgb, #4af0c0 35%, transparent),
 						color-mix(in srgb, #b44aff 35%, transparent)
@@ -342,7 +360,7 @@
 		z-index: 0; /* Important: creates a new stacking context for the gradient border trick */
 
 		&::before {
-			content: '';
+			content: "";
 			position: absolute;
 			--animation-angle: 135deg;
 			--animation-opacity: 0%;
@@ -352,12 +370,33 @@
 			bottom: -1px;
 			z-index: -2;
 			border-radius: calc(var(--vscode-cornerRadius-small) + 1px);
-			background: conic-gradient(from var(--animation-angle),
-				color-mix(in srgb, #b44aff var(--animation-opacity), var(--vscode-browser-border, transparent)),
-				color-mix(in srgb, #4af0c0 var(--animation-opacity), var(--vscode-browser-border, transparent)),
-				color-mix(in srgb, #51a2ff var(--animation-opacity), var(--vscode-browser-border, transparent)),
-				color-mix(in srgb, #4af0c0 var(--animation-opacity), var(--vscode-browser-border, transparent)),
-				color-mix(in srgb, #b44aff var(--animation-opacity), var(--vscode-browser-border, transparent))
+			background: conic-gradient(
+				from var(--animation-angle),
+				color-mix(
+					in srgb,
+					#b44aff var(--animation-opacity),
+					var(--vscode-browser-border, transparent)
+				),
+				color-mix(
+					in srgb,
+					#4af0c0 var(--animation-opacity),
+					var(--vscode-browser-border, transparent)
+				),
+				color-mix(
+					in srgb,
+					#51a2ff var(--animation-opacity),
+					var(--vscode-browser-border, transparent)
+				),
+				color-mix(
+					in srgb,
+					#4af0c0 var(--animation-opacity),
+					var(--vscode-browser-border, transparent)
+				),
+				color-mix(
+					in srgb,
+					#b44aff var(--animation-opacity),
+					var(--vscode-browser-border, transparent)
+				)
 			);
 			pointer-events: none;
 		}
@@ -373,7 +412,8 @@
 		}
 
 		&.animate::before {
-			transition: top 350ms cubic-bezier(0.2, 0, 0, 1),
+			transition:
+				top 350ms cubic-bezier(0.2, 0, 0, 1),
 				left 350ms cubic-bezier(0.2, 0, 0, 1),
 				right 350ms cubic-bezier(0.2, 0, 0, 1),
 				bottom 350ms cubic-bezier(0.2, 0, 0, 1),
@@ -382,12 +422,13 @@
 		}
 
 		&.shared.animate::before {
-			animation: browser-shared-border-spin 1500ms cubic-bezier(0, 0.2, 0, 1) 1 forwards,
+			animation:
+				browser-shared-border-spin 1500ms cubic-bezier(0, 0.2, 0, 1) 1 forwards,
 				browser-shared-border-spin 45s linear 1500ms infinite;
 		}
 
 		&::after {
-			content: '';
+			content: "";
 			position: absolute;
 			top: 1px;
 			left: 1px;
@@ -406,7 +447,10 @@
 
 		&:not(.disabled)::before {
 			border-radius: 2px;
-			background: var(--vscode-editorWidget-resizeBorder, var(--vscode-editorWidget-border));
+			background: var(
+				--vscode-editorWidget-resizeBorder,
+				var(--vscode-editorWidget-border)
+			);
 			transition: background-color 0.1s ease-out;
 		}
 
@@ -427,21 +471,31 @@
 
 		&.horizontal > .orthogonal-drag-handle.end {
 			&::before {
-				content: '';
+				content: "";
 				position: absolute;
-				color: var(--vscode-editorWidget-resizeBorder, var(--vscode-editorWidget-border));
+				color: var(
+					--vscode-editorWidget-resizeBorder,
+					var(--vscode-editorWidget-border)
+				);
 				left: 10px;
 				top: 2px;
 				width: 8px;
 				height: 8px;
-				background: repeating-linear-gradient(135deg, transparent 0px 4px, currentColor 4px 20px);
+				background: repeating-linear-gradient(
+					135deg,
+					transparent 0px 4px,
+					currentColor 4px 20px
+				);
 				border-radius: 2px;
 				transition: color 0.1s ease-out;
 			}
 		}
 	}
 
-	.browser-container > .monaco-sash.vertical:is(.hover, .active) + .monaco-sash.horizontal:is(.hover, .active) > .orthogonal-drag-handle.end::before {
+	.browser-container
+		> .monaco-sash.vertical:is(.hover, .active)
+		+ .monaco-sash.horizontal:is(.hover, .active)
+		> .orthogonal-drag-handle.end::before {
 		color: var(--vscode-sash-hoverBorder);
 	}
 
@@ -481,7 +535,11 @@
 		justify-content: center;
 		pointer-events: none;
 		color: var(--vscode-foreground);
-		background-color: color-mix(in srgb, var(--vscode-editor-background) 15%, transparent);
+		background-color: color-mix(
+			in srgb,
+			var(--vscode-editor-background) 15%,
+			transparent
+		);
 		opacity: 0;
 		visibility: hidden;
 		transition: opacity 200ms ease-in;
@@ -492,7 +550,11 @@
 		}
 
 		&.show-message {
-			background-color: color-mix(in srgb, var(--vscode-editor-background) 60%, transparent);
+			background-color: color-mix(
+				in srgb,
+				var(--vscode-editor-background) 60%,
+				transparent
+			);
 		}
 	}
 
@@ -670,7 +732,6 @@
 				margin-bottom: 8px;
 			}
 		}
-
 	}
 
 	/* Site info indicator in URL bar */
@@ -748,7 +809,8 @@
 	.browser-cert-details-table {
 		margin-top: 16px;
 		padding: 8px 4px;
-		border: 1px solid var(--vscode-widget-border, var(--vscode-contrastBorder, transparent));
+		border: 1px solid
+			var(--vscode-widget-border, var(--vscode-contrastBorder, transparent));
 		border-radius: var(--vscode-cornerRadius-medium);
 		background-color: var(--vscode-editorWidget-background);
 	}

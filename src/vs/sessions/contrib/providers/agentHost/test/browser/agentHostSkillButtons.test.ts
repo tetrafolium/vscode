@@ -3,51 +3,70 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { Codicon } from '../../../../../../base/common/codicons.js';
-import { constObservable, observableValue } from '../../../../../../base/common/observable.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import { mock } from '../../../../../../base/test/common/mock.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { isIMenuItem, isISubmenuItem, MenuId, MenuRegistry } from '../../../../../../platform/actions/common/actions.js';
-import { CommandsRegistry } from '../../../../../../platform/commands/common/commands.js';
-import { ContextKeyExpression, IContextKeyService } from '../../../../../../platform/contextkey/common/contextkey.js';
-import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { MockContextKeyService } from '../../../../../../platform/keybinding/test/common/mockKeybindingService.js';
-import { IChat } from '../../../../../services/sessions/common/session.js';
-import { ISessionsProvidersService } from '../../../../../services/sessions/browser/sessionsProvidersService.js';
-import { ISessionsProvider } from '../../../../../services/sessions/common/sessionsProvider.js';
-import { IActiveSession, ISessionsManagementService } from '../../../../../services/sessions/common/sessionsManagement.js';
-import { AGENT_HOST_SKILL_BUTTON_UPDATE_PR_ID, IsAgentHostSession, IsAgentHostSessionContextContribution, isAgentHostSkillButtonId } from '../../browser/agentHostSkillButtons.js';
-import { BaseAgentHostSessionsProvider } from '../../browser/baseAgentHostSessionsProvider.js';
+import assert from "assert";
+import { Codicon } from "../../../../../../base/common/codicons.js";
+import {
+	constObservable,
+	observableValue,
+} from "../../../../../../base/common/observable.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import { mock } from "../../../../../../base/test/common/mock.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import {
+	isIMenuItem,
+	isISubmenuItem,
+	MenuId,
+	MenuRegistry,
+} from "../../../../../../platform/actions/common/actions.js";
+import { CommandsRegistry } from "../../../../../../platform/commands/common/commands.js";
+import {
+	ContextKeyExpression,
+	IContextKeyService,
+} from "../../../../../../platform/contextkey/common/contextkey.js";
+import { TestInstantiationService } from "../../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import { MockContextKeyService } from "../../../../../../platform/keybinding/test/common/mockKeybindingService.js";
+import { IChat } from "../../../../../services/sessions/common/session.js";
+import { ISessionsProvidersService } from "../../../../../services/sessions/browser/sessionsProvidersService.js";
+import { ISessionsProvider } from "../../../../../services/sessions/common/sessionsProvider.js";
+import {
+	IActiveSession,
+	ISessionsManagementService,
+} from "../../../../../services/sessions/common/sessionsManagement.js";
+import {
+	AGENT_HOST_SKILL_BUTTON_UPDATE_PR_ID,
+	IsAgentHostSession,
+	IsAgentHostSessionContextContribution,
+	isAgentHostSkillButtonId,
+} from "../../browser/agentHostSkillButtons.js";
+import { BaseAgentHostSessionsProvider } from "../../browser/baseAgentHostSessionsProvider.js";
 // Importing this contribution registers the apply submenu on the changes toolbar,
 // which is the slot that hosts our skill buttons as a dropdown.
-import '../../../../applyCommitsToParentRepo/browser/applyChangesToParentRepo.js';
+import "../../../../applyCommitsToParentRepo/browser/applyChangesToParentRepo.js";
 
 function makeActiveSession(providerId: string): IActiveSession {
 	const chat = {
-		resource: URI.parse('file:///session'),
+		resource: URI.parse("file:///session"),
 		createdAt: new Date(),
-		title: observableValue('t', 'Test'),
-		updatedAt: observableValue('u', new Date()),
-		status: observableValue('s', 0),
-		changes: observableValue('c', []),
-		modelId: observableValue('m', undefined),
-		mode: observableValue('mo', undefined),
-		isArchived: observableValue('ia', false),
-		isRead: observableValue('ir', true),
-		checkpoints: observableValue('cp', undefined),
-		lastTurnEnd: observableValue('lte', undefined),
-		description: observableValue('d', undefined),
+		title: observableValue("t", "Test"),
+		updatedAt: observableValue("u", new Date()),
+		status: observableValue("s", 0),
+		changes: observableValue("c", []),
+		modelId: observableValue("m", undefined),
+		mode: observableValue("mo", undefined),
+		isArchived: observableValue("ia", false),
+		isRead: observableValue("ir", true),
+		checkpoints: observableValue("cp", undefined),
+		lastTurnEnd: observableValue("lte", undefined),
+		description: observableValue("d", undefined),
 	} satisfies IChat;
 	return {
 		sessionId: `${providerId}:x`,
 		resource: chat.resource,
 		providerId,
-		sessionType: 'copilotcli',
+		sessionType: "copilotcli",
 		icon: Codicon.copilot,
 		createdAt: chat.createdAt,
-		workspace: observableValue('w', undefined),
+		workspace: observableValue("w", undefined),
 		title: chat.title,
 		updatedAt: chat.updatedAt,
 		status: chat.status,
@@ -55,33 +74,39 @@ function makeActiveSession(providerId: string): IActiveSession {
 		changes: chat.changes,
 		modelId: chat.modelId,
 		mode: chat.mode,
-		loading: observableValue('l', false),
+		loading: observableValue("l", false),
 		isArchived: chat.isArchived,
 		isRead: chat.isRead,
 		lastTurnEnd: chat.lastTurnEnd,
 		description: chat.description,
-		chats: observableValue('chats', [chat]),
-		activeChat: observableValue('ac', chat),
+		chats: observableValue("chats", [chat]),
+		activeChat: observableValue("ac", chat),
 		mainChat: constObservable(chat),
 		capabilities: { supportsMultipleChats: false },
-		isCreated: observableValue('isCreated', true),
-		sticky: observableValue('sticky', false),
+		isCreated: observableValue("isCreated", true),
+		sticky: observableValue("sticky", false),
 	} satisfies IActiveSession;
 }
 
 class FakeAgentHostProvider {
-	constructor(public readonly id: string) { }
+	constructor(public readonly id: string) {}
 }
 // Make `instanceof BaseAgentHostSessionsProvider` return true without actually constructing one.
-Object.setPrototypeOf(FakeAgentHostProvider.prototype, BaseAgentHostSessionsProvider.prototype);
+Object.setPrototypeOf(
+	FakeAgentHostProvider.prototype,
+	BaseAgentHostSessionsProvider.prototype,
+);
 
 class FakeNonAgentHostProvider {
-	constructor(public readonly id: string) { }
+	constructor(public readonly id: string) {}
 }
 
 class FakeSessionsManagementService extends mock<ISessionsManagementService>() {
 	declare readonly _serviceBrand: undefined;
-	override readonly activeSession = observableValue<IActiveSession | undefined>('activeSession', undefined);
+	override readonly activeSession = observableValue<IActiveSession | undefined>(
+		"activeSession",
+		undefined,
+	);
 	override setActive(s: IActiveSession | undefined): void {
 		this.activeSession.set(s, undefined);
 	}
@@ -101,8 +126,7 @@ class FakeSessionsProvidersService extends mock<ISessionsProvidersService>() {
 	}
 }
 
-suite('agentHostSkillButtons - IsAgentHostSession context key', () => {
-
+suite("agentHostSkillButtons - IsAgentHostSession context key", () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
 	function setup() {
@@ -115,59 +139,88 @@ suite('agentHostSkillButtons - IsAgentHostSession context key', () => {
 		instantiationService.stub(ISessionsManagementService, sessions);
 		instantiationService.stub(ISessionsProvidersService, providers);
 
-		store.add(instantiationService.createInstance(IsAgentHostSessionContextContribution));
+		store.add(
+			instantiationService.createInstance(
+				IsAgentHostSessionContextContribution,
+			),
+		);
 
 		return { contextKeyService, sessions, providers };
 	}
 
-	test('is false when no active session', () => {
+	test("is false when no active session", () => {
 		const { contextKeyService } = setup();
-		assert.strictEqual(contextKeyService.getContextKeyValue(IsAgentHostSession.key), false);
+		assert.strictEqual(
+			contextKeyService.getContextKeyValue(IsAgentHostSession.key),
+			false,
+		);
 	});
 
-	test('is true when active session comes from an agent-host provider', () => {
+	test("is true when active session comes from an agent-host provider", () => {
 		const { contextKeyService, sessions, providers } = setup();
-		providers.register(new FakeAgentHostProvider('local-agent-host'));
-		sessions.setActive(makeActiveSession('local-agent-host'));
-		assert.strictEqual(contextKeyService.getContextKeyValue(IsAgentHostSession.key), true);
+		providers.register(new FakeAgentHostProvider("local-agent-host"));
+		sessions.setActive(makeActiveSession("local-agent-host"));
+		assert.strictEqual(
+			contextKeyService.getContextKeyValue(IsAgentHostSession.key),
+			true,
+		);
 	});
 
-	test('is false when active session comes from a non agent-host provider', () => {
+	test("is false when active session comes from a non agent-host provider", () => {
 		const { contextKeyService, sessions, providers } = setup();
-		providers.register(new FakeNonAgentHostProvider('copilot-cloud-agent'));
-		sessions.setActive(makeActiveSession('copilot-cloud-agent'));
-		assert.strictEqual(contextKeyService.getContextKeyValue(IsAgentHostSession.key), false);
+		providers.register(new FakeNonAgentHostProvider("copilot-cloud-agent"));
+		sessions.setActive(makeActiveSession("copilot-cloud-agent"));
+		assert.strictEqual(
+			contextKeyService.getContextKeyValue(IsAgentHostSession.key),
+			false,
+		);
 	});
 
-	test('is false when active session references an unknown provider', () => {
+	test("is false when active session references an unknown provider", () => {
 		const { contextKeyService, sessions } = setup();
-		sessions.setActive(makeActiveSession('no-such-provider'));
-		assert.strictEqual(contextKeyService.getContextKeyValue(IsAgentHostSession.key), false);
+		sessions.setActive(makeActiveSession("no-such-provider"));
+		assert.strictEqual(
+			contextKeyService.getContextKeyValue(IsAgentHostSession.key),
+			false,
+		);
 	});
 
-	test('updates reactively when active session changes', () => {
+	test("updates reactively when active session changes", () => {
 		const { contextKeyService, sessions, providers } = setup();
-		providers.register(new FakeAgentHostProvider('local-agent-host'));
-		providers.register(new FakeNonAgentHostProvider('copilot-cloud-agent'));
+		providers.register(new FakeAgentHostProvider("local-agent-host"));
+		providers.register(new FakeNonAgentHostProvider("copilot-cloud-agent"));
 
-		sessions.setActive(makeActiveSession('local-agent-host'));
-		assert.strictEqual(contextKeyService.getContextKeyValue(IsAgentHostSession.key), true);
+		sessions.setActive(makeActiveSession("local-agent-host"));
+		assert.strictEqual(
+			contextKeyService.getContextKeyValue(IsAgentHostSession.key),
+			true,
+		);
 
-		sessions.setActive(makeActiveSession('copilot-cloud-agent'));
-		assert.strictEqual(contextKeyService.getContextKeyValue(IsAgentHostSession.key), false);
+		sessions.setActive(makeActiveSession("copilot-cloud-agent"));
+		assert.strictEqual(
+			contextKeyService.getContextKeyValue(IsAgentHostSession.key),
+			false,
+		);
 
 		sessions.setActive(undefined);
-		assert.strictEqual(contextKeyService.getContextKeyValue(IsAgentHostSession.key), false);
+		assert.strictEqual(
+			contextKeyService.getContextKeyValue(IsAgentHostSession.key),
+			false,
+		);
 	});
 });
 
-suite('agentHostSkillButtons - menu registration', () => {
-
+suite("agentHostSkillButtons - menu registration", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
 	function skillButtonItems() {
-		const all = MenuRegistry.getMenuItems(MenuId.AgentsChangesPrimaryActionSubMenu);
-		const menuItems: { command: { id: string }; when?: ContextKeyExpression }[] = [];
+		const all = MenuRegistry.getMenuItems(
+			MenuId.AgentsChangesPrimaryActionSubMenu,
+		);
+		const menuItems: {
+			command: { id: string };
+			when?: ContextKeyExpression;
+		}[] = [];
 		for (const item of all) {
 			if (!isIMenuItem(item)) {
 				continue;
@@ -179,46 +232,66 @@ suite('agentHostSkillButtons - menu registration', () => {
 		return menuItems;
 	}
 
-	test('registers four skill button menu items on the apply submenu', () => {
-		const ids = skillButtonItems().map(item => item.command.id).sort();
+	test("registers four skill button menu items on the apply submenu", () => {
+		const ids = skillButtonItems()
+			.map((item) => item.command.id)
+			.sort();
 		assert.deepStrictEqual(ids, [
-			'workbench.action.agentSessions.runSkill.createDraftPR',
-			'workbench.action.agentSessions.runSkill.createPR',
-			'workbench.action.agentSessions.runSkill.merge',
-			'workbench.action.agentSessions.runSkill.updatePR',
+			"workbench.action.agentSessions.runSkill.createDraftPR",
+			"workbench.action.agentSessions.runSkill.createPR",
+			"workbench.action.agentSessions.runSkill.merge",
+			"workbench.action.agentSessions.runSkill.updatePR",
 		]);
 	});
 
-	test('every skill button `when` clause includes sessions.isAgentHostSession and isSessionsWindow', () => {
+	test("every skill button `when` clause includes sessions.isAgentHostSession and isSessionsWindow", () => {
 		for (const item of skillButtonItems()) {
-			const whenStr = item.when?.serialize() ?? '';
+			const whenStr = item.when?.serialize() ?? "";
 			assert.ok(
 				whenStr.includes(IsAgentHostSession.key),
 				`expected ${item.command.id} to gate on ${IsAgentHostSession.key}, got: ${whenStr}`,
 			);
 			assert.ok(
-				whenStr.includes('isSessionsWindow'),
+				whenStr.includes("isSessionsWindow"),
 				`expected ${item.command.id} to gate on isSessionsWindow, got: ${whenStr}`,
 			);
 		}
 	});
 
-	test('exported updatePR id matches the registered command', () => {
+	test("exported updatePR id matches the registered command", () => {
 		assert.ok(isAgentHostSkillButtonId(AGENT_HOST_SKILL_BUTTON_UPDATE_PR_ID));
-		assert.ok(CommandsRegistry.getCommand(AGENT_HOST_SKILL_BUTTON_UPDATE_PR_ID),
-			`expected command ${AGENT_HOST_SKILL_BUTTON_UPDATE_PR_ID} to be registered`);
+		assert.ok(
+			CommandsRegistry.getCommand(AGENT_HOST_SKILL_BUTTON_UPDATE_PR_ID),
+			`expected command ${AGENT_HOST_SKILL_BUTTON_UPDATE_PR_ID} to be registered`,
+		);
 	});
 
-	test('the apply submenu is contributed to the changes toolbar in the navigation group', () => {
+	test("the apply submenu is contributed to the changes toolbar in the navigation group", () => {
 		const toolbarItems = MenuRegistry.getMenuItems(MenuId.AgentsChangesToolbar);
-		const submenuEntry = toolbarItems.find(item => isISubmenuItem(item) && item.submenu === MenuId.AgentsChangesPrimaryActionSubMenu);
-		assert.ok(submenuEntry, 'expected AgentsChangesPrimaryActionSubMenu to be registered on AgentsChangesToolbar');
-		assert.strictEqual((submenuEntry as { group?: string }).group, 'navigation');
+		const submenuEntry = toolbarItems.find(
+			(item) =>
+				isISubmenuItem(item) &&
+				item.submenu === MenuId.AgentsChangesPrimaryActionSubMenu,
+		);
+		assert.ok(
+			submenuEntry,
+			"expected AgentsChangesPrimaryActionSubMenu to be registered on AgentsChangesToolbar",
+		);
+		assert.strictEqual(
+			(submenuEntry as { group?: string }).group,
+			"navigation",
+		);
 	});
 
-	test('isAgentHostSkillButtonId only matches our prefix', () => {
-		assert.strictEqual(isAgentHostSkillButtonId('workbench.action.agentSessions.runSkill.merge'), true);
-		assert.strictEqual(isAgentHostSkillButtonId('github.copilot.sessions.commit'), false);
-		assert.strictEqual(isAgentHostSkillButtonId(''), false);
+	test("isAgentHostSkillButtonId only matches our prefix", () => {
+		assert.strictEqual(
+			isAgentHostSkillButtonId("workbench.action.agentSessions.runSkill.merge"),
+			true,
+		);
+		assert.strictEqual(
+			isAgentHostSkillButtonId("github.copilot.sessions.commit"),
+			false,
+		);
+		assert.strictEqual(isAgentHostSkillButtonId(""), false);
 	});
 });

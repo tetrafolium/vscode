@@ -73,18 +73,32 @@ export class MockFileSystemService implements IFileSystemService {
 		if (this.mockFiles.has(uriString)) {
 			const contents = this.mockFiles.get(uriString)!;
 			const mtime = this.mockMtimes.get(uriString) ?? Date.now();
-			return { type: FileType.File as unknown as FileType, ctime: Date.now() - 1000, mtime, size: contents.length };
+			return {
+				type: FileType.File as unknown as FileType,
+				ctime: Date.now() - 1000,
+				mtime,
+				size: contents.length,
+			};
 		}
 		if (this.mockDirs.has(uriString)) {
 			const mtime = this.mockMtimes.get(uriString) ?? Date.now();
-			return { type: FileType.Directory as unknown as FileType, ctime: Date.now() - 1000, mtime, size: 0 };
+			return {
+				type: FileType.Directory as unknown as FileType,
+				ctime: Date.now() - 1000,
+				mtime,
+				size: 0,
+			};
 		}
 		throw new Error('ENOENT');
 	}
 
 	// Required interface methods
-	isWritableFileSystem(): boolean | undefined { return true; }
-	createFileSystemWatcher(): FileSystemWatcher { throw new Error('not implemented'); }
+	isWritableFileSystem(): boolean | undefined {
+		return true;
+	}
+	createFileSystemWatcher(): FileSystemWatcher {
+		throw new Error('not implemented');
+	}
 
 	async createDirectory(uri: URI): Promise<void> {
 		const uriString = uri.toString();
@@ -98,7 +112,7 @@ export class MockFileSystemService implements IFileSystemService {
 
 			const entries = this.mockDirs.get(parentUri.toString())!;
 			const bname = basename(uri);
-			if (!entries.find(e => e[0] === bname)) {
+			if (!entries.find((e) => e[0] === bname)) {
 				entries.push([bname, FileType.Directory]);
 			}
 		}
@@ -122,16 +136,26 @@ export class MockFileSystemService implements IFileSystemService {
 		const parentUri = uriString.substring(0, uriString.lastIndexOf('/'));
 		if (this.mockDirs.has(parentUri)) {
 			const entries = this.mockDirs.get(parentUri)!;
-			const fileName = uriString.substring(uriString.lastIndexOf('/') + 1);
-			if (!entries.find(e => e[0] === fileName)) {
+			const fileName = uriString.substring(
+				uriString.lastIndexOf('/') + 1,
+			);
+			if (!entries.find((e) => e[0] === fileName)) {
 				entries.push([fileName, FileType.File]);
 			}
 		} else {
-			this.mockDirs.set(parentUri, [[uriString.substring(uriString.lastIndexOf('/') + 1), FileType.File]]);
+			this.mockDirs.set(parentUri, [
+				[
+					uriString.substring(uriString.lastIndexOf('/') + 1),
+					FileType.File,
+				],
+			]);
 		}
 	}
 
-	async delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
+	async delete(
+		uri: URI,
+		options?: { recursive?: boolean; useTrash?: boolean },
+	): Promise<void> {
 		const uriString = uri.toString();
 		this.mockFiles.delete(uriString);
 		this.mockDirs.delete(uriString);
@@ -142,16 +166,27 @@ export class MockFileSystemService implements IFileSystemService {
 		if (parentUri && this.mockDirs.has(parentUri.toString())) {
 			const entries = this.mockDirs.get(parentUri.toString())!;
 			const bname = basename(uri);
-			this.mockDirs.set(parentUri.toString(), entries.filter(e => e[0] !== bname));
+			this.mockDirs.set(
+				parentUri.toString(),
+				entries.filter((e) => e[0] !== bname),
+			);
 		}
 	}
 
-	async rename(oldURI: URI, newURI: URI, options?: { overwrite?: boolean }): Promise<void> {
+	async rename(
+		oldURI: URI,
+		newURI: URI,
+		options?: { overwrite?: boolean },
+	): Promise<void> {
 		const oldUriString = oldURI.toString();
 		const newUriString = newURI.toString();
 
 		// Check if target exists and overwrite is not allowed
-		if (!options?.overwrite && (this.mockFiles.has(newUriString) || this.mockDirs.has(newUriString))) {
+		if (
+			!options?.overwrite &&
+			(this.mockFiles.has(newUriString) ||
+				this.mockDirs.has(newUriString))
+		) {
 			throw new Error('EEXIST: File exists');
 		}
 
@@ -174,7 +209,11 @@ export class MockFileSystemService implements IFileSystemService {
 			throw new Error('ENOENT: File not found');
 		}
 	}
-	copy(source: URI, destination: URI, options?: { overwrite?: boolean }): Promise<void> {
+	copy(
+		source: URI,
+		destination: URI,
+		options?: { overwrite?: boolean },
+	): Promise<void> {
 		throw new Error('Method not implemented.');
 	}
 }

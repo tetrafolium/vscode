@@ -7,8 +7,14 @@ import { StringEdit } from '../../../../util/vs/editor/common/core/edits/stringE
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { IEventFetchEnd } from '../workspaceLog';
 
-export type Operation = DocumentSetContentOperation | DocumentOpenedOperation | DocumentClosedOperation
-	| DocumentChangedOperation | DocumentFocusChangedOperation | DocumentSelectionChangedOperation | DocumentRestoreContentOperation;
+export type Operation =
+	| DocumentSetContentOperation
+	| DocumentOpenedOperation
+	| DocumentClosedOperation
+	| DocumentChangedOperation
+	| DocumentFocusChangedOperation
+	| DocumentSelectionChangedOperation
+	| DocumentRestoreContentOperation;
 
 export const enum OperationKind {
 	SetContent = 0,
@@ -34,17 +40,18 @@ export abstract class BaseOperation {
 		public readonly documentStateIdBefore: DocumentStateId,
 		public readonly documentStateIdAfter: DocumentStateId,
 		public readonly logEventIdx: number,
-	) { }
+	) {}
 
 	public reason: string | undefined = undefined;
-	public readonly inlineCompletionFetchRequests: InlineCompletionFetchRequest[] = [];
+	public readonly inlineCompletionFetchRequests: InlineCompletionFetchRequest[] =
+		[];
 }
 
 export class InlineCompletionFetchRequest {
 	constructor(
 		public readonly requestId: number,
 		public result?: IEventFetchEnd,
-	) { }
+	) {}
 }
 
 export class DocumentSetContentOperation extends BaseOperation {
@@ -60,7 +67,14 @@ export class DocumentSetContentOperation extends BaseOperation {
 		/* If undefined, sets a rollback-point */
 		public readonly content: string | undefined,
 	) {
-		super(operationIdx, time, documentId, documentStateIdBefore, documentStateIdAfter, logEventIdx);
+		super(
+			operationIdx,
+			time,
+			documentId,
+			documentStateIdBefore,
+			documentStateIdAfter,
+			logEventIdx,
+		);
 	}
 }
 
@@ -75,7 +89,14 @@ export class DocumentOpenedOperation extends BaseOperation {
 		documentStateIdAfter: DocumentStateId,
 		logEventIdx: number,
 	) {
-		super(operationIdx, time, documentId, documentStateIdBefore, documentStateIdAfter, logEventIdx);
+		super(
+			operationIdx,
+			time,
+			documentId,
+			documentStateIdBefore,
+			documentStateIdAfter,
+			logEventIdx,
+		);
 	}
 }
 
@@ -90,7 +111,14 @@ export class DocumentClosedOperation extends BaseOperation {
 		documentStateIdAfter: DocumentStateId,
 		logEventIdx: number,
 	) {
-		super(operationIdx, time, documentId, documentStateIdBefore, documentStateIdAfter, logEventIdx);
+		super(
+			operationIdx,
+			time,
+			documentId,
+			documentStateIdBefore,
+			documentStateIdAfter,
+			logEventIdx,
+		);
 	}
 }
 
@@ -106,7 +134,14 @@ export class DocumentChangedOperation extends BaseOperation {
 		logEventIdx: number,
 		public readonly edit: StringEdit,
 	) {
-		super(operationIdx, time, documentId, documentStateIdBefore, documentStateIdAfter, logEventIdx);
+		super(
+			operationIdx,
+			time,
+			documentId,
+			documentStateIdBefore,
+			documentStateIdAfter,
+			logEventIdx,
+		);
 	}
 }
 
@@ -121,7 +156,14 @@ export class DocumentFocusChangedOperation extends BaseOperation {
 		documentStateIdAfter: DocumentStateId,
 		logEventIdx: number,
 	) {
-		super(operationIdx, time, documentId, documentStateIdBefore, documentStateIdAfter, logEventIdx);
+		super(
+			operationIdx,
+			time,
+			documentId,
+			documentStateIdBefore,
+			documentStateIdAfter,
+			logEventIdx,
+		);
 	}
 }
 
@@ -137,7 +179,14 @@ export class DocumentSelectionChangedOperation extends BaseOperation {
 		logEventIdx: number,
 		public readonly selection: readonly OffsetRange[],
 	) {
-		super(operationIdx, time, documentId, documentStateIdBefore, documentStateIdAfter, logEventIdx);
+		super(
+			operationIdx,
+			time,
+			documentId,
+			documentStateIdBefore,
+			documentStateIdAfter,
+			logEventIdx,
+		);
 	}
 }
 
@@ -152,6 +201,13 @@ export class DocumentRestoreContentOperation extends BaseOperation {
 		documentStateIdAfter: DocumentStateId,
 		logEventIdx: number,
 	) {
-		super(operationIdx, time, documentId, documentStateIdBefore, documentStateIdAfter, logEventIdx);
+		super(
+			operationIdx,
+			time,
+			documentId,
+			documentStateIdBefore,
+			documentStateIdAfter,
+			logEventIdx,
+		);
 	}
 }

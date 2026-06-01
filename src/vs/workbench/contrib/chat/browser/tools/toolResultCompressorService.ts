@@ -3,23 +3,55 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { getErrorMessage } from '../../../../../base/common/errors.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { ChatConfiguration } from '../../common/constants.js';
-import { IToolResult, IToolResultTextPart } from '../../common/tools/languageModelToolsService.js';
-import { formatCompressionBanner, IToolResultCache, IToolResultCompressor, IToolResultFilter, isProtectedFromCompression, MIN_COMPRESSIBLE_LENGTH } from '../../common/tools/toolResultCompressor.js';
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { getErrorMessage } from "../../../../../base/common/errors.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import { ITelemetryService } from "../../../../../platform/telemetry/common/telemetry.js";
+import { ChatConfiguration } from "../../common/constants.js";
+import {
+	IToolResult,
+	IToolResultTextPart,
+} from "../../common/tools/languageModelToolsService.js";
+import {
+	formatCompressionBanner,
+	IToolResultCache,
+	IToolResultCompressor,
+	IToolResultFilter,
+	isProtectedFromCompression,
+	MIN_COMPRESSIBLE_LENGTH,
+} from "../../common/tools/toolResultCompressor.js";
 
 type ToolResultCompressedClassification = {
-	owner: 'meganrogge';
-	comment: 'Reports tool output compression savings.';
-	toolId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The tool whose output was compressed.' };
-	filters: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Comma-separated filter ids that fired.' };
-	beforeChars: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; isMeasurement: true; comment: 'Total text part length in UTF-16 code units before compression.' };
-	afterChars: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; isMeasurement: true; comment: 'Total text part length in UTF-16 code units after compression.' };
-	cacheHit: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'True when the compressed result came from a session-memory cache hit (response dedup) rather than from filters.' };
+	owner: "meganrogge";
+	comment: "Reports tool output compression savings.";
+	toolId: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "The tool whose output was compressed.";
+	};
+	filters: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "Comma-separated filter ids that fired.";
+	};
+	beforeChars: {
+		classification: "SystemMetaData";
+		purpose: "PerformanceAndHealth";
+		isMeasurement: true;
+		comment: "Total text part length in UTF-16 code units before compression.";
+	};
+	afterChars: {
+		classification: "SystemMetaData";
+		purpose: "PerformanceAndHealth";
+		isMeasurement: true;
+		comment: "Total text part length in UTF-16 code units after compression.";
+	};
+	cacheHit: {
+		classification: "SystemMetaData";
+		purpose: "FeatureInsight";
+		comment: "True when the compressed result came from a session-memory cache hit (response dedup) rather than from filters.";
+	};
 };
 
 type ToolResultCompressedEvent = {
@@ -30,14 +62,18 @@ type ToolResultCompressedEvent = {
 	cacheHit: boolean;
 };
 
-export class ToolResultCompressorService extends Disposable implements IToolResultCompressor {
+export class ToolResultCompressorService
+	extends Disposable
+	implements IToolResultCompressor
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _filters = new Map<string, IToolResultFilter[]>();
 	private readonly _caches = new Map<string, IToolResultCache[]>();
 
 	constructor(
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
 		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@ILogService private readonly _logService: ILogService,
 	) {
@@ -66,8 +102,16 @@ export class ToolResultCompressorService extends Disposable implements IToolResu
 		}
 	}
 
-	maybeCompress(toolId: string, input: unknown, result: IToolResult): IToolResult | undefined {
-		if (!this._configurationService.getValue<boolean>(ChatConfiguration.CompressOutputEnabled)) {
+	maybeCompress(
+		toolId: string,
+		input: unknown,
+		result: IToolResult,
+	): IToolResult | undefined {
+		if (
+			!this._configurationService.getValue<boolean>(
+				ChatConfiguration.CompressOutputEnabled,
+			)
+		) {
 			return undefined;
 		}
 
@@ -76,46 +120,74 @@ export class ToolResultCompressorService extends Disposable implements IToolResu
 		const caches = this._caches.get(toolId);
 		if (caches && caches.length > 0) {
 			for (const c of caches) {
-				try { c.observe(toolId, input); } catch (err) {
-					this._logService.warn(`[ToolResultCompressor] cache ${c.id} threw in observe on tool ${toolId}: ${getErrorMessage(err)}`, err);
+				try {
+					c.observe(toolId, input);
+				} catch (err) {
+					this._logService.warn(
+						`[ToolResultCompressor] cache ${c.id} threw in observe on tool ${toolId}: ${getErrorMessage(err)}`,
+						err,
+					);
 				}
 			}
 			for (const c of caches) {
 				let hit;
-				try { hit = c.lookup(toolId, input); } catch (err) {
-					this._logService.warn(`[ToolResultCompressor] cache ${c.id} threw in lookup on tool ${toolId}: ${getErrorMessage(err)}`, err);
+				try {
+					hit = c.lookup(toolId, input);
+				} catch (err) {
+					this._logService.warn(
+						`[ToolResultCompressor] cache ${c.id} threw in lookup on tool ${toolId}: ${getErrorMessage(err)}`,
+						err,
+					);
 					continue;
 				}
 				if (hit) {
-					const totalBefore = result.content.reduce((acc, p) => acc + (p.kind === 'text' ? p.value.length : 0), 0);
+					const totalBefore = result.content.reduce(
+						(acc, p) => acc + (p.kind === "text" ? p.value.length : 0),
+						0,
+					);
 					// Guard: don't replace small outputs or structured data.
 					if (totalBefore < MIN_COMPRESSIBLE_LENGTH) {
 						continue;
 					}
-					const hasProtectedContent = result.content.some(p => p.kind === 'text' && isProtectedFromCompression(p.value));
+					const hasProtectedContent = result.content.some(
+						(p) => p.kind === "text" && isProtectedFromCompression(p.value),
+					);
 					if (hasProtectedContent) {
 						continue;
 					}
 					const cachedResult = this._buildCacheHitResult(result, hit);
-					const totalAfter = cachedResult.content.reduce((acc, p) => acc + (p.kind === 'text' ? p.value.length : 0), 0);
+					const totalAfter = cachedResult.content.reduce(
+						(acc, p) => acc + (p.kind === "text" ? p.value.length : 0),
+						0,
+					);
 					if (totalAfter >= totalBefore) {
 						continue;
 					}
-					this._sendTelemetry(toolId, [`cache:${c.id}`], totalBefore, totalAfter, true);
+					this._sendTelemetry(
+						toolId,
+						[`cache:${c.id}`],
+						totalBefore,
+						totalAfter,
+						true,
+					);
 					return cachedResult;
 				}
 			}
 		}
 
 		const filters = this._filters.get(toolId);
-		const matchingFilters = filters?.filter(f => {
-			try {
-				return f.matches(toolId, input);
-			} catch (err) {
-				this._logService.warn(`[ToolResultCompressor] filter ${f.id} threw in matches on tool ${toolId}: ${getErrorMessage(err)}`, err);
-				return false;
-			}
-		}) ?? [];
+		const matchingFilters =
+			filters?.filter((f) => {
+				try {
+					return f.matches(toolId, input);
+				} catch (err) {
+					this._logService.warn(
+						`[ToolResultCompressor] filter ${f.id} threw in matches on tool ${toolId}: ${getErrorMessage(err)}`,
+						err,
+					);
+					return false;
+				}
+			}) ?? [];
 		if (matchingFilters.length === 0) {
 			// No filters matched, but we may still want to record the raw output
 			// in the caches so the next read-only call can hit.
@@ -133,8 +205,8 @@ export class ToolResultCompressorService extends Disposable implements IToolResu
 		let anyCompressed = false;
 		const usedFilterIds = new Set<string>();
 
-		const newContent = result.content.map(part => {
-			if (part.kind !== 'text') {
+		const newContent = result.content.map((part) => {
+			if (part.kind !== "text") {
 				return part;
 			}
 			const original = part.value;
@@ -153,7 +225,7 @@ export class ToolResultCompressorService extends Disposable implements IToolResu
 
 			let current = original;
 			const partFilterIds: string[] = [];
-			for (let i = 0; i < activeFilters.length; /* manual increment */) {
+			for (let i = 0; i < activeFilters.length /* manual increment */; ) {
 				const filter = activeFilters[i];
 				try {
 					const out = filter.apply(current, input);
@@ -170,7 +242,10 @@ export class ToolResultCompressorService extends Disposable implements IToolResu
 					activeFilters.splice(i, 1);
 					if (!disabledFilterIds.has(filter.id)) {
 						disabledFilterIds.add(filter.id);
-						this._logService.warn(`[ToolResultCompressor] filter ${filter.id} threw on tool ${toolId}; disabled for this pass: ${getErrorMessage(err)}`, err);
+						this._logService.warn(
+							`[ToolResultCompressor] filter ${filter.id} threw on tool ${toolId}; disabled for this pass: ${getErrorMessage(err)}`,
+							err,
+						);
 					}
 				}
 			}
@@ -182,10 +257,14 @@ export class ToolResultCompressorService extends Disposable implements IToolResu
 				// which filters, and how to disable compression. We only annotate
 				// the parts we actually changed — non-compressed parts pass through
 				// untouched.
-				const banner = formatCompressionBanner(partFilterIds, original.length, current.length);
+				const banner = formatCompressionBanner(
+					partFilterIds,
+					original.length,
+					current.length,
+				);
 				const annotated = `${banner}\n${current}`;
 				const rewritten: IToolResultTextPart = {
-					kind: 'text',
+					kind: "text",
 					value: annotated,
 					audience: part.audience,
 					title: part.title,
@@ -200,7 +279,13 @@ export class ToolResultCompressorService extends Disposable implements IToolResu
 			return undefined;
 		}
 
-		this._sendTelemetry(toolId, [...usedFilterIds], totalBefore, totalAfter, false);
+		this._sendTelemetry(
+			toolId,
+			[...usedFilterIds],
+			totalBefore,
+			totalAfter,
+			false,
+		);
 
 		const finalResult: IToolResult = {
 			...result,
@@ -210,32 +295,42 @@ export class ToolResultCompressorService extends Disposable implements IToolResu
 		return finalResult;
 	}
 
-	private _buildCacheHitResult(original: IToolResult, hit: { text: string; timestamp: number }): IToolResult {
+	private _buildCacheHitResult(
+		original: IToolResult,
+		hit: { text: string; timestamp: number },
+	): IToolResult {
 		const iso = new Date(hit.timestamp).toISOString();
 		const text = `Same output as last run (${iso}). To disable, set ${ChatConfiguration.CompressOutputEnabled} to false.`;
 		// Preserve the first text part's audience metadata so downstream
 		// model-routing logic still behaves the same way.
-		const firstText = original.content.find((p): p is IToolResultTextPart => p.kind === 'text');
+		const firstText = original.content.find(
+			(p): p is IToolResultTextPart => p.kind === "text",
+		);
 		const replacement: IToolResultTextPart = {
-			kind: 'text',
+			kind: "text",
 			value: text,
 			audience: firstText?.audience,
 			title: firstText?.title,
 		};
 		// Drop other text parts but keep non-text parts (e.g. binary data) so
 		// downstream consumers don't lose attachments.
-		const nonText = original.content.filter(p => p.kind !== 'text');
+		const nonText = original.content.filter((p) => p.kind !== "text");
 		return { ...original, content: [replacement, ...nonText] };
 	}
 
-	private _recordInCaches(toolId: string, input: unknown, result: IToolResult, caches: readonly IToolResultCache[] | undefined): void {
+	private _recordInCaches(
+		toolId: string,
+		input: unknown,
+		result: IToolResult,
+		caches: readonly IToolResultCache[] | undefined,
+	): void {
 		if (!caches || caches.length === 0) {
 			return;
 		}
 		const text = result.content
-			.filter((p): p is IToolResultTextPart => p.kind === 'text')
-			.map(p => p.value)
-			.join('\n');
+			.filter((p): p is IToolResultTextPart => p.kind === "text")
+			.map((p) => p.value)
+			.join("\n");
 		if (!text) {
 			return;
 		}
@@ -243,21 +338,30 @@ export class ToolResultCompressorService extends Disposable implements IToolResu
 			try {
 				c.record(toolId, input, text);
 			} catch (err) {
-				this._logService.warn(`[ToolResultCompressor] cache ${c.id} threw in record on tool ${toolId}: ${getErrorMessage(err)}`, err);
+				this._logService.warn(
+					`[ToolResultCompressor] cache ${c.id} threw in record on tool ${toolId}: ${getErrorMessage(err)}`,
+					err,
+				);
 			}
 		}
 	}
 
-	private _sendTelemetry(toolId: string, filterIds: string[], beforeChars: number, afterChars: number, cacheHit: boolean) {
-		this._telemetryService.publicLog2<ToolResultCompressedEvent, ToolResultCompressedClassification>(
-			'toolResultCompressed',
-			{
-				toolId,
-				filters: filterIds.join(','),
-				beforeChars,
-				afterChars,
-				cacheHit,
-			},
-		);
+	private _sendTelemetry(
+		toolId: string,
+		filterIds: string[],
+		beforeChars: number,
+		afterChars: number,
+		cacheHit: boolean,
+	) {
+		this._telemetryService.publicLog2<
+			ToolResultCompressedEvent,
+			ToolResultCompressedClassification
+		>("toolResultCompressed", {
+			toolId,
+			filters: filterIds.join(","),
+			beforeChars,
+			afterChars,
+			cacheHit,
+		});
 	}
 }

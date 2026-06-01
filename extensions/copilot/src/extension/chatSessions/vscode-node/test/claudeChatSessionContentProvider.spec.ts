@@ -3,13 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from 'vitest';
 import * as path from 'path';
 import type * as vscode from 'vscode';
 // eslint-disable-next-line no-duplicate-imports
 import * as vscodeShim from 'vscode';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
-import { IGitService, RepoContext } from '../../../../platform/git/common/gitService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
+import {
+	IGitService,
+	RepoContext,
+} from '../../../../platform/git/common/gitService';
 import { Change, Repository } from '../../../../platform/git/vscode/git';
 import { MockGitService } from '../../../../platform/ignore/node/test/mockGitService';
 import { ITestingServicesAccessor } from '../../../../platform/test/node/services';
@@ -22,9 +36,16 @@ import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
 import { observableValue } from '../../../../util/vs/base/common/observableInternal/observables/observableValue';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
-import { ChatSessionStatus, MarkdownString, ThemeIcon } from '../../../../vscodeTypes';
+import {
+	ChatSessionStatus,
+	MarkdownString,
+	ThemeIcon,
+} from '../../../../vscodeTypes';
 import { createExtensionUnitTestingServices } from '../../../test/node/services';
-import { MockChatResponseStream, TestChatRequest } from '../../../test/node/testHelpers';
+import {
+	MockChatResponseStream,
+	TestChatRequest,
+} from '../../../test/node/testHelpers';
 import { ClaudeFolderInfo } from '../../claude/common/claudeFolderInfo';
 import { ClaudeSessionUri } from '../../claude/common/claudeSessionUri';
 import type { ClaudeAgentManager } from '../../claude/node/claudeCodeAgent';
@@ -34,22 +55,36 @@ import { IClaudeSessionStateService } from '../../claude/common/claudeSessionSta
 import { IClaudeCodeSessionService } from '../../claude/node/sessionParser/claudeCodeSessionService';
 import { IClaudeCodeSessionInfo } from '../../claude/node/sessionParser/claudeSessionSchema';
 import { IClaudeSlashCommandService } from '../../claude/vscode-node/claudeSlashCommandService';
-import { FolderRepositoryMRUEntry, IChatFolderMruService } from '../../common/folderRepositoryManager';
+import {
+	FolderRepositoryMRUEntry,
+	IChatFolderMruService,
+} from '../../common/folderRepositoryManager';
 import { IClaudeWorkspaceFolderService } from '../../common/claudeWorkspaceFolderService';
 import { builtinSlashCommands } from '../../common/builtinSlashCommands';
-import { ClaudeChatSessionContentProvider, ClaudeChatSessionItemController } from '../claudeChatSessionContentProvider';
+import {
+	ClaudeChatSessionContentProvider,
+	ClaudeChatSessionItemController,
+} from '../claudeChatSessionContentProvider';
 
 // Expose the most recently created items map so tests can inspect controller items.
 let lastCreatedItemsMap: Map<string, vscode.ChatSessionItem>;
 // Expose the most recently registered fork handler so tests can invoke it directly.
-let lastForkHandler: ((sessionResource: vscode.Uri, request: vscode.ChatRequestTurn2 | undefined, token: CancellationToken) => Thenable<vscode.ChatSessionItem>) | undefined;
+let lastForkHandler:
+	| ((
+			sessionResource: vscode.Uri,
+			request: vscode.ChatRequestTurn2 | undefined,
+			token: CancellationToken,
+	  ) => Thenable<vscode.ChatSessionItem>)
+	| undefined;
 // Expose the most recently registered getChatSessionInputState handler so tests can invoke it.
-let lastGetChatSessionInputState: vscode.ChatSessionControllerGetInputState | undefined;
+let lastGetChatSessionInputState:
+	| vscode.ChatSessionControllerGetInputState
+	| undefined;
 
 // Patch vscode shim with missing namespaces before any production code imports it.
 beforeAll(() => {
 	(vscodeShim as Record<string, unknown>).commands = {
-		registerCommand: vi.fn().mockReturnValue({ dispose: () => { } }),
+		registerCommand: vi.fn().mockReturnValue({ dispose: () => {} }),
 		executeCommand: vi.fn().mockResolvedValue(undefined),
 	};
 	(vscodeShim as Record<string, unknown>).chat = {
@@ -62,23 +97,35 @@ beforeAll(() => {
 				id: 'claude-code',
 				items: {
 					get: (resource: URI) => itemsMap.get(resource.toString()),
-					add: (item: vscode.ChatSessionItem) => { itemsMap.set(item.resource.toString(), item); },
-					delete: (resource: URI) => { itemsMap.delete(resource.toString()); },
+					add: (item: vscode.ChatSessionItem) => {
+						itemsMap.set(item.resource.toString(), item);
+					},
+					delete: (resource: URI) => {
+						itemsMap.delete(resource.toString());
+					},
 					replace: (items: vscode.ChatSessionItem[]) => {
 						itemsMap.clear();
 						for (const item of items) {
 							itemsMap.set(item.resource.toString(), item);
 						}
 					},
-					get size() { return itemsMap.size; },
-					[Symbol.iterator]: function* () { yield* itemsMap.values(); },
-					forEach: (cb: (item: vscode.ChatSessionItem) => void) => { itemsMap.forEach(cb); },
+					get size() {
+						return itemsMap.size;
+					},
+					[Symbol.iterator]: function* () {
+						yield* itemsMap.values();
+					},
+					forEach: (cb: (item: vscode.ChatSessionItem) => void) => {
+						itemsMap.forEach(cb);
+					},
 				},
 				createChatSessionItem: (resource: unknown, label: string) => ({
 					resource,
 					label,
 				}),
-				createChatSessionInputState: (groups: vscode.ChatSessionProviderOptionGroup[]) => {
+				createChatSessionInputState: (
+					groups: vscode.ChatSessionProviderOptionGroup[],
+				) => {
 					const emitter = new Emitter<void>();
 					const state: vscode.ChatSessionInputState = {
 						groups,
@@ -97,11 +144,17 @@ beforeAll(() => {
 						},
 					});
 				},
-				set getChatSessionInputState(handler: vscode.ChatSessionControllerGetInputState) { lastGetChatSessionInputState = handler; },
-				set forkHandler(handler: typeof lastForkHandler) { lastForkHandler = handler; },
+				set getChatSessionInputState(
+					handler: vscode.ChatSessionControllerGetInputState,
+				) {
+					lastGetChatSessionInputState = handler;
+				},
+				set forkHandler(handler: typeof lastForkHandler) {
+					lastForkHandler = handler;
+				},
 				refreshHandler: () => Promise.resolve(),
-				dispose: () => { },
-				onDidArchiveChatSessionItem: () => ({ dispose: () => { } }),
+				dispose: () => {},
+				onDidArchiveChatSessionItem: () => ({ dispose: () => {} }),
 			};
 		},
 	};
@@ -120,12 +173,12 @@ class MockChatFolderMruService implements IChatFolderMruService {
 		return this._mruEntries;
 	}
 
-	async deleteRecentlyUsedFolder(): Promise<void> { }
+	async deleteRecentlyUsedFolder(): Promise<void> {}
 }
 
 function createDefaultMocks() {
 	const mockSessionService: IClaudeCodeSessionService = {
-		getSession: vi.fn()
+		getSession: vi.fn(),
 	} as any;
 
 	const mockFolderMruService = new MockChatFolderMruService();
@@ -142,7 +195,11 @@ function createMockAgentManager(): ClaudeAgentManager {
 /** Creates a TestChatRequest with a mock model that has an id property */
 function createTestRequest(prompt: string): TestChatRequest {
 	const request = new TestChatRequest(prompt);
-	(request as any).model = { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', family: 'claude' };
+	(request as any).model = {
+		id: 'claude-3-5-sonnet-20241022',
+		name: 'Claude 3.5 Sonnet',
+		family: 'claude',
+	};
 	return request;
 }
 
@@ -163,15 +220,17 @@ function seedSessionItem(sessionId: string): void {
  * Builds a minimal permission mode input state group with the given mode selected.
  * Defaults to 'acceptEdits' if no mode specified.
  */
-function buildPermissionModeGroup(selectedMode: string = 'acceptEdits'): vscode.ChatSessionProviderOptionGroup {
+function buildPermissionModeGroup(
+	selectedMode: string = 'acceptEdits',
+): vscode.ChatSessionProviderOptionGroup {
 	const items = [
 		{ id: 'default', name: 'Ask before edits' },
 		{ id: 'acceptEdits', name: 'Edit automatically' },
 		{ id: 'plan', name: 'Plan mode' },
 		{ id: 'bypassPermissions', name: 'Yolo mode' },
-		{ id: 'dontAsk', name: 'Don\'t ask' },
+		{ id: 'dontAsk', name: "Don't ask" },
 	];
-	const selected = items.find(i => i.id === selectedMode) ?? items[1];
+	const selected = items.find((i) => i.id === selectedMode) ?? items[1];
 	return {
 		id: 'permissionMode',
 		name: 'Permission Mode',
@@ -183,10 +242,13 @@ function buildPermissionModeGroup(selectedMode: string = 'acceptEdits'): vscode.
 /**
  * Builds a minimal folder input state group with the given folder selected.
  */
-function buildFolderGroup(selectedFolderPath: string, allFolderPaths?: string[]): vscode.ChatSessionProviderOptionGroup {
+function buildFolderGroup(
+	selectedFolderPath: string,
+	allFolderPaths?: string[],
+): vscode.ChatSessionProviderOptionGroup {
 	const paths = allFolderPaths ?? [selectedFolderPath];
-	const items = paths.map(p => ({ id: p, name: path.basename(p) }));
-	const selected = items.find(i => i.id === selectedFolderPath) ?? items[0];
+	const items = paths.map((p) => ({ id: p, name: path.basename(p) }));
+	const selected = items.find((i) => i.id === selectedFolderPath) ?? items[0];
 	return {
 		id: 'folder',
 		name: 'Folder',
@@ -199,12 +261,18 @@ function buildFolderGroup(selectedFolderPath: string, allFolderPaths?: string[])
  * Builds inputState groups for test chat contexts.
  * Always includes a permission mode group. Folder group is added when folderPath is provided.
  */
-function buildInputStateGroups(options?: { permissionMode?: string; folderPath?: string; allFolderPaths?: string[] }): vscode.ChatSessionProviderOptionGroup[] {
+function buildInputStateGroups(options?: {
+	permissionMode?: string;
+	folderPath?: string;
+	allFolderPaths?: string[];
+}): vscode.ChatSessionProviderOptionGroup[] {
 	const groups: vscode.ChatSessionProviderOptionGroup[] = [
 		buildPermissionModeGroup(options?.permissionMode),
 	];
 	if (options?.folderPath) {
-		groups.push(buildFolderGroup(options.folderPath, options.allFolderPaths));
+		groups.push(
+			buildFolderGroup(options.folderPath, options.allFolderPaths),
+		);
 	}
 	return groups;
 }
@@ -227,7 +295,10 @@ class MutableWorkspaceService extends TestWorkspaceService {
 
 	setFolders(folders: URI[]): void {
 		this._folders = [...folders];
-		this.didChangeWorkspaceFoldersEmitter.fire({ added: [], removed: [] } as any);
+		this.didChangeWorkspaceFoldersEmitter.fire({
+			added: [],
+			removed: [],
+		} as any);
 	}
 }
 
@@ -237,14 +308,23 @@ function createProviderWithServices(
 	mocks: ReturnType<typeof createDefaultMocks>,
 	agentManager?: ClaudeAgentManager,
 	workspaceServiceOverride?: TestWorkspaceService,
-): { provider: ClaudeChatSessionContentProvider; accessor: ITestingServicesAccessor } {
-	const serviceCollection = store.add(createExtensionUnitTestingServices(store));
+): {
+	provider: ClaudeChatSessionContentProvider;
+	accessor: ITestingServicesAccessor;
+} {
+	const serviceCollection = store.add(
+		createExtensionUnitTestingServices(store),
+	);
 
-	const workspaceService = workspaceServiceOverride ?? new TestWorkspaceService(workspaceFolders);
+	const workspaceService =
+		workspaceServiceOverride ?? new TestWorkspaceService(workspaceFolders);
 	serviceCollection.set(IWorkspaceService, workspaceService);
 	serviceCollection.set(IGitService, new MockGitService());
 
-	serviceCollection.define(IClaudeCodeSessionService, mocks.mockSessionService);
+	serviceCollection.define(
+		IClaudeCodeSessionService,
+		mocks.mockSessionService,
+	);
 	serviceCollection.define(IChatFolderMruService, mocks.mockFolderMruService);
 	serviceCollection.define(IClaudeSlashCommandService, {
 		_serviceBrand: undefined,
@@ -269,7 +349,10 @@ function createProviderWithServices(
 
 	const accessor = serviceCollection.createTestingAccessor();
 	const instaService = accessor.get(IInstantiationService);
-	const provider = instaService.createInstance(ClaudeChatSessionContentProvider, agentManager ?? createMockAgentManager());
+	const provider = instaService.createInstance(
+		ClaudeChatSessionContentProvider,
+		agentManager ?? createMockAgentManager(),
+	);
 	return { provider, accessor };
 }
 
@@ -286,13 +369,18 @@ async function getInputState(
 	}
 	return lastGetChatSessionInputState(
 		sessionResource,
-		{ previousInputState: previousInputState ?? undefined } as Parameters<vscode.ChatSessionControllerGetInputState>[1],
+		{
+			previousInputState: previousInputState ?? undefined,
+		} as Parameters<vscode.ChatSessionControllerGetInputState>[1],
 		CancellationToken.None,
 	);
 }
 
-function getGroup(state: vscode.ChatSessionInputState, groupId: string): vscode.ChatSessionProviderOptionGroup | undefined {
-	return state.groups.find(g => g.id === groupId);
+function getGroup(
+	state: vscode.ChatSessionInputState,
+	groupId: string,
+): vscode.ChatSessionProviderOptionGroup | undefined {
+	return state.groups.find((g) => g.id === groupId);
 }
 
 /**
@@ -304,16 +392,30 @@ async function runHandlerAndCapture(
 	testAccessor: ITestingServicesAccessor,
 	sessionId: string,
 	sessionService: IClaudeCodeSessionService,
-	options?: { permissionMode?: string; folderPath?: string; allFolderPaths?: string[] },
+	options?: {
+		permissionMode?: string;
+		folderPath?: string;
+		allFolderPaths?: string[];
+	},
 ): Promise<{ permissionMode: string; folderInfo: ClaudeFolderInfo }> {
 	vi.mocked(sessionService.getSession).mockResolvedValue(undefined);
-	if (!lastCreatedItemsMap.has(ClaudeSessionUri.forSessionId(sessionId).toString())) {
+	if (
+		!lastCreatedItemsMap.has(
+			ClaudeSessionUri.forSessionId(sessionId).toString(),
+		)
+	) {
 		seedSessionItem(sessionId);
 	}
 
 	const sessionStateService = testAccessor.get(IClaudeSessionStateService);
-	const setPermissionSpy = vi.spyOn(sessionStateService, 'setPermissionModeForSession');
-	const setFolderInfoSpy = vi.spyOn(sessionStateService, 'setFolderInfoForSession');
+	const setPermissionSpy = vi.spyOn(
+		sessionStateService,
+		'setPermissionModeForSession',
+	);
+	const setFolderInfoSpy = vi.spyOn(
+		sessionStateService,
+		'setFolderInfoForSession',
+	);
 
 	const handler = contentProvider.createHandler();
 	const groups = buildInputStateGroups(options);
@@ -326,15 +428,29 @@ async function runHandlerAndCapture(
 				resource: ClaudeSessionUri.forSessionId(sessionId),
 				label: 'Test Session',
 			},
-			inputState: { groups, sessionResource: undefined, onDidChange: Event.None, onDidDispose: Event.None },
+			inputState: {
+				groups,
+				sessionResource: undefined,
+				onDidChange: Event.None,
+				onDidDispose: Event.None,
+			},
 		},
 	} as vscode.ChatContext;
 
 	const stream = new MockChatResponseStream();
-	await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+	await handler(
+		createTestRequest('hello'),
+		context,
+		stream,
+		CancellationToken.None,
+	);
 
-	const permissionCall = setPermissionSpy.mock.calls.find(c => c[0] === sessionId);
-	const folderCall = setFolderInfoSpy.mock.calls.find(c => c[0] === sessionId);
+	const permissionCall = setPermissionSpy.mock.calls.find(
+		(c) => c[0] === sessionId,
+	);
+	const folderCall = setFolderInfoSpy.mock.calls.find(
+		(c) => c[0] === sessionId,
+	);
 
 	return {
 		permissionMode: permissionCall![1],
@@ -355,7 +471,11 @@ describe('ChatSessionContentProvider', () => {
 		mockSessionService = mocks.mockSessionService;
 		mockFolderMruService = mocks.mockFolderMruService;
 
-		const result = createProviderWithServices(store, [workspaceFolderUri], mocks);
+		const result = createProviderWithServices(
+			store,
+			[workspaceFolderUri],
+			mocks,
+		);
 		provider = result.provider;
 		accessor = result.accessor;
 	});
@@ -369,13 +489,21 @@ describe('ChatSessionContentProvider', () => {
 
 	describe('provideChatSessionContent', () => {
 		it('returns empty history when no existing session', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 
 			const sessionUri = createClaudeSessionUri('test-session');
-			const result = await provider.provideChatSessionContent(sessionUri, CancellationToken.None);
+			const result = await provider.provideChatSessionContent(
+				sessionUri,
+				CancellationToken.None,
+			);
 
 			expect(result.history).toEqual([]);
-			expect(mockSessionService.getSession).toHaveBeenCalledWith(sessionUri, CancellationToken.None);
+			expect(mockSessionService.getSession).toHaveBeenCalledWith(
+				sessionUri,
+				CancellationToken.None,
+			);
 		});
 	});
 
@@ -395,9 +523,11 @@ describe('ChatSessionContentProvider', () => {
 			// First, get an initial state and change the permission mode
 			const initialState = await getInputState();
 			const permissionGroup = getGroup(initialState, 'permissionMode');
-			const planItem = permissionGroup!.items.find(i => i.id === 'plan');
-			initialState.groups = initialState.groups.map(g =>
-				g.id === 'permissionMode' ? { ...g, selected: planItem } : g
+			const planItem = permissionGroup!.items.find(
+				(i) => i.id === 'plan',
+			);
+			initialState.groups = initialState.groups.map((g) =>
+				g.id === 'permissionMode' ? { ...g, selected: planItem } : g,
 			);
 
 			// Now get a new state that restores from the previous one
@@ -443,15 +573,25 @@ describe('ChatSessionContentProvider', () => {
 		});
 
 		it('handler commits single workspace folder as cwd', async () => {
-			const { folderInfo } = await runHandlerAndCapture(provider, accessor, 'test-session', mockSessionService);
+			const { folderInfo } = await runHandlerAndCapture(
+				provider,
+				accessor,
+				'test-session',
+				mockSessionService,
+			);
 			expect(folderInfo.cwd).toBe(workspaceFolderUri.fsPath);
 			expect(folderInfo.additionalDirectories).toEqual([]);
 		});
 
 		it('does NOT include folder in provideChatSessionContent options', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 			const sessionUri = createClaudeSessionUri('test-session');
-			const result = await provider.provideChatSessionContent(sessionUri, CancellationToken.None);
+			const result = await provider.provideChatSessionContent(
+				sessionUri,
+				CancellationToken.None,
+			);
 			expect(result.options?.['folder']).toBeUndefined();
 		});
 	});
@@ -469,7 +609,11 @@ describe('ChatSessionContentProvider', () => {
 
 			mockFolderMruService = mocks.mockFolderMruService;
 
-			const result = createProviderWithServices(store, [folderA, folderB, folderC], mocks);
+			const result = createProviderWithServices(
+				store,
+				[folderA, folderB, folderC],
+				mocks,
+			);
 			multiRootProvider = result.provider;
 			multiRootAccessor = result.accessor;
 		});
@@ -480,7 +624,7 @@ describe('ChatSessionContentProvider', () => {
 
 			expect(folderGroup).toBeDefined();
 			expect(folderGroup!.items).toHaveLength(3);
-			expect(folderGroup!.items.map(i => i.id)).toEqual([
+			expect(folderGroup!.items.map((i) => i.id)).toEqual([
 				folderA.fsPath,
 				folderB.fsPath,
 				folderC.fsPath,
@@ -488,26 +632,52 @@ describe('ChatSessionContentProvider', () => {
 		});
 
 		it('defaults cwd to first workspace folder when no selection made', async () => {
-			const { folderInfo } = await runHandlerAndCapture(multiRootProvider, multiRootAccessor, 'test-session', mockSessionService);
+			const { folderInfo } = await runHandlerAndCapture(
+				multiRootProvider,
+				multiRootAccessor,
+				'test-session',
+				mockSessionService,
+			);
 			expect(folderInfo.cwd).toBe(folderA.fsPath);
-			expect(folderInfo.additionalDirectories).toEqual([folderB.fsPath, folderC.fsPath]);
+			expect(folderInfo.additionalDirectories).toEqual([
+				folderB.fsPath,
+				folderC.fsPath,
+			]);
 		});
 
 		it('uses selected folder from inputState as cwd', async () => {
 			seedSessionItem('test-session');
 
-			const { folderInfo } = await runHandlerAndCapture(multiRootProvider, multiRootAccessor, 'test-session', mockSessionService, {
-				folderPath: folderB.fsPath,
-				allFolderPaths: [folderA.fsPath, folderB.fsPath, folderC.fsPath],
-			});
+			const { folderInfo } = await runHandlerAndCapture(
+				multiRootProvider,
+				multiRootAccessor,
+				'test-session',
+				mockSessionService,
+				{
+					folderPath: folderB.fsPath,
+					allFolderPaths: [
+						folderA.fsPath,
+						folderB.fsPath,
+						folderC.fsPath,
+					],
+				},
+			);
 			expect(folderInfo.cwd).toBe(folderB.fsPath);
-			expect(folderInfo.additionalDirectories).toEqual([folderA.fsPath, folderC.fsPath]);
+			expect(folderInfo.additionalDirectories).toEqual([
+				folderA.fsPath,
+				folderC.fsPath,
+			]);
 		});
 
 		it('includes default folder in provideChatSessionContent options for new session', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 			const sessionUri = createClaudeSessionUri('test-session');
-			const result = await multiRootProvider.provideChatSessionContent(sessionUri, CancellationToken.None);
+			const result = await multiRootProvider.provideChatSessionContent(
+				sessionUri,
+				CancellationToken.None,
+			);
 
 			// Without input state context, options should be empty
 			expect(result.options).toEqual({});
@@ -516,13 +686,17 @@ describe('ChatSessionContentProvider', () => {
 		it('locks folder but not permission mode for existing sessions', async () => {
 			const session = {
 				id: 'test-session',
-				messages: [{
-					type: 'user',
-					message: { role: 'user', content: 'Hello' },
-				}],
+				messages: [
+					{
+						type: 'user',
+						message: { role: 'user', content: 'Hello' },
+					},
+				],
 				subagents: [],
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(session as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				session as any,
+			);
 
 			const sessionUri = createClaudeSessionUri('test-session');
 			const state = await getInputState(sessionUri);
@@ -530,17 +704,19 @@ describe('ChatSessionContentProvider', () => {
 			const permissionGroup = getGroup(state, 'permissionMode');
 			expect(permissionGroup).toBeDefined();
 			expect(permissionGroup!.selected?.locked).toBeUndefined();
-			expect(permissionGroup!.items.every(i => !i.locked)).toBe(true);
+			expect(permissionGroup!.items.every((i) => !i.locked)).toBe(true);
 
 			const folderGroup = getGroup(state, 'folder');
 			expect(folderGroup).toBeDefined();
 			expect(folderGroup!.selected?.locked).toBe(true);
-			expect(folderGroup!.items.every(i => i.locked)).toBe(true);
+			expect(folderGroup!.items.every((i) => i.locked)).toBe(true);
 		});
 
 		it('locked folder option preserves the selected folder, not the first one', async () => {
 			// Set folderB as the session's folder via sessionStateService
-			const sessionStateService = multiRootAccessor.get(IClaudeSessionStateService);
+			const sessionStateService = multiRootAccessor.get(
+				IClaudeSessionStateService,
+			);
 			sessionStateService.setFolderInfoForSession('pre-created-session', {
 				cwd: folderB.fsPath,
 				additionalDirectories: [folderA.fsPath],
@@ -549,13 +725,17 @@ describe('ChatSessionContentProvider', () => {
 			// Now load the same session as an existing session
 			const session = {
 				id: 'pre-created-session',
-				messages: [{
-					type: 'user',
-					message: { role: 'user', content: 'Hello' },
-				}],
+				messages: [
+					{
+						type: 'user',
+						message: { role: 'user', content: 'Hello' },
+					},
+				],
 				subagents: [],
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(session as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				session as any,
+			);
 
 			const sessionUri = createClaudeSessionUri('pre-created-session');
 			const state = await getInputState(sessionUri);
@@ -586,8 +766,16 @@ describe('ChatSessionContentProvider', () => {
 			const mruFolder = URI.file('/recent/project');
 			const mruRepo = URI.file('/recent/repo');
 			mockFolderMruService.setMRUEntries([
-				{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() },
-				{ folder: mruRepo, repository: mruRepo, lastAccessed: Date.now() - 1000 },
+				{
+					folder: mruFolder,
+					repository: undefined,
+					lastAccessed: Date.now(),
+				},
+				{
+					folder: mruRepo,
+					repository: mruRepo,
+					lastAccessed: Date.now() - 1000,
+				},
 			]);
 
 			const state = await getInputState();
@@ -610,16 +798,30 @@ describe('ChatSessionContentProvider', () => {
 		it('handler commits MRU fallback folder when no selection', async () => {
 			const mruFolder = URI.file('/recent/project');
 			mockFolderMruService.setMRUEntries([
-				{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() },
+				{
+					folder: mruFolder,
+					repository: undefined,
+					lastAccessed: Date.now(),
+				},
 			]);
 
-			const { folderInfo } = await runHandlerAndCapture(emptyWorkspaceProvider, emptyAccessor, 'test-session', mockSessionService);
+			const { folderInfo } = await runHandlerAndCapture(
+				emptyWorkspaceProvider,
+				emptyAccessor,
+				'test-session',
+				mockSessionService,
+			);
 			expect(folderInfo.cwd).toBe(mruFolder.fsPath);
 			expect(folderInfo.additionalDirectories).toEqual([]);
 		});
 
 		it('handler commits home directory fallback when no folder available', async () => {
-			const { folderInfo } = await runHandlerAndCapture(emptyWorkspaceProvider, emptyAccessor, 'test-session', mockSessionService);
+			const { folderInfo } = await runHandlerAndCapture(
+				emptyWorkspaceProvider,
+				emptyAccessor,
+				'test-session',
+				mockSessionService,
+			);
 			expect(folderInfo.cwd).toBe(URI.file('/home/testuser').fsPath);
 			expect(folderInfo.additionalDirectories).toEqual([]);
 		});
@@ -628,14 +830,24 @@ describe('ChatSessionContentProvider', () => {
 			const mruFolder = URI.file('/recent/project');
 			const selectedFolder = URI.file('/selected/project');
 			mockFolderMruService.setMRUEntries([
-				{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() },
+				{
+					folder: mruFolder,
+					repository: undefined,
+					lastAccessed: Date.now(),
+				},
 			]);
 
 			seedSessionItem('test-session');
 
-			const { folderInfo } = await runHandlerAndCapture(emptyWorkspaceProvider, emptyAccessor, 'test-session', mockSessionService, {
-				folderPath: selectedFolder.fsPath,
-			});
+			const { folderInfo } = await runHandlerAndCapture(
+				emptyWorkspaceProvider,
+				emptyAccessor,
+				'test-session',
+				mockSessionService,
+				{
+					folderPath: selectedFolder.fsPath,
+				},
+			);
 			expect(folderInfo.cwd).toBe(selectedFolder.fsPath);
 		});
 	});
@@ -651,7 +863,10 @@ describe('ChatSessionContentProvider', () => {
 		let handlerProvider: ClaudeChatSessionContentProvider;
 		let handlerAccessor: ITestingServicesAccessor;
 
-		function createChatContext(sessionId: string, options?: { permissionMode?: string }): vscode.ChatContext {
+		function createChatContext(
+			sessionId: string,
+			options?: { permissionMode?: string },
+		): vscode.ChatContext {
 			return {
 				history: [],
 				yieldRequested: false,
@@ -661,7 +876,12 @@ describe('ChatSessionContentProvider', () => {
 						resource: ClaudeSessionUri.forSessionId(sessionId),
 						label: 'Test Session',
 					},
-					inputState: { groups: buildInputStateGroups(options), sessionResource: undefined, onDidChange: Event.None, onDidDispose: Event.None },
+					inputState: {
+						groups: buildInputStateGroups(options),
+						sessionResource: undefined,
+						onDidChange: Event.None,
+						onDidDispose: Event.None,
+					},
 				},
 			} as vscode.ChatContext;
 		}
@@ -673,81 +893,152 @@ describe('ChatSessionContentProvider', () => {
 			mockFolderMruService = mocks.mockFolderMruService;
 			mockAgentManager = createMockAgentManager();
 
-			const result = createProviderWithServices(store, [workspaceFolderUri], mocks, mockAgentManager);
+			const result = createProviderWithServices(
+				store,
+				[workspaceFolderUri],
+				mocks,
+				mockAgentManager,
+			);
 			handlerProvider = result.provider;
 			handlerAccessor = result.accessor;
 		});
 
 		it('sets permission mode from inputState on new session', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 
 			seedSessionItem('new-session-1');
 
-			const sessionStateService = handlerAccessor.get(IClaudeSessionStateService);
-			const setPermissionSpy = vi.spyOn(sessionStateService, 'setPermissionModeForSession');
+			const sessionStateService = handlerAccessor.get(
+				IClaudeSessionStateService,
+			);
+			const setPermissionSpy = vi.spyOn(
+				sessionStateService,
+				'setPermissionModeForSession',
+			);
 
 			const handler = handlerProvider.createHandler();
-			const context = createChatContext('new-session-1', { permissionMode: 'plan' });
+			const context = createChatContext('new-session-1', {
+				permissionMode: 'plan',
+			});
 			const stream = new MockChatResponseStream();
 
-			await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('hello'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
-			expect(setPermissionSpy).toHaveBeenCalledWith('new-session-1', 'plan');
+			expect(setPermissionSpy).toHaveBeenCalledWith(
+				'new-session-1',
+				'plan',
+			);
 		});
 
 		it('defaults to acceptEdits when inputState has default permission mode', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 
 			seedSessionItem('new-session-2');
 
-			const sessionStateService = handlerAccessor.get(IClaudeSessionStateService);
-			const setPermissionSpy = vi.spyOn(sessionStateService, 'setPermissionModeForSession');
+			const sessionStateService = handlerAccessor.get(
+				IClaudeSessionStateService,
+			);
+			const setPermissionSpy = vi.spyOn(
+				sessionStateService,
+				'setPermissionModeForSession',
+			);
 
 			const handler = handlerProvider.createHandler();
 			const context = createChatContext('new-session-2');
 			const stream = new MockChatResponseStream();
 
-			await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('hello'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
-			expect(setPermissionSpy).toHaveBeenCalledWith('new-session-2', 'acceptEdits');
+			expect(setPermissionSpy).toHaveBeenCalledWith(
+				'new-session-2',
+				'acceptEdits',
+			);
 		});
 
 		it('commits the inputState permission mode to session state service', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 
 			seedSessionItem('pre-set-session');
 
-			const sessionStateService = handlerAccessor.get(IClaudeSessionStateService);
-			const setPermissionSpy = vi.spyOn(sessionStateService, 'setPermissionModeForSession');
+			const sessionStateService = handlerAccessor.get(
+				IClaudeSessionStateService,
+			);
+			const setPermissionSpy = vi.spyOn(
+				sessionStateService,
+				'setPermissionModeForSession',
+			);
 
 			const handler = handlerProvider.createHandler();
-			const context = createChatContext('pre-set-session', { permissionMode: 'default' });
+			const context = createChatContext('pre-set-session', {
+				permissionMode: 'default',
+			});
 			const stream = new MockChatResponseStream();
 
-			await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('hello'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
-			expect(setPermissionSpy).toHaveBeenCalledWith('pre-set-session', 'default');
+			expect(setPermissionSpy).toHaveBeenCalledWith(
+				'pre-set-session',
+				'default',
+			);
 		});
 
 		it('commits inputState permission mode on resumed sessions', async () => {
 			vi.mocked(mockSessionService.getSession).mockResolvedValue({
 				id: 'existing-session',
-				messages: [{ type: 'user', message: { role: 'user', content: 'Hello' } }],
+				messages: [
+					{
+						type: 'user',
+						message: { role: 'user', content: 'Hello' },
+					},
+				],
 				subagents: [],
 			} as any);
 
 			seedSessionItem('existing-session');
 
-			const sessionStateService = handlerAccessor.get(IClaudeSessionStateService);
-			const setPermissionSpy = vi.spyOn(sessionStateService, 'setPermissionModeForSession');
+			const sessionStateService = handlerAccessor.get(
+				IClaudeSessionStateService,
+			);
+			const setPermissionSpy = vi.spyOn(
+				sessionStateService,
+				'setPermissionModeForSession',
+			);
 
 			const handler = handlerProvider.createHandler();
 			const context = createChatContext('existing-session');
 			const stream = new MockChatResponseStream();
 
-			await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('hello'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
-			const committedMode = setPermissionSpy.mock.calls.find(c => c[0] === 'existing-session')?.[1];
+			const committedMode = setPermissionSpy.mock.calls.find(
+				(c) => c[0] === 'existing-session',
+			)?.[1];
 			expect(committedMode).toBe('acceptEdits');
 		});
 	});
@@ -759,7 +1050,10 @@ describe('ChatSessionContentProvider', () => {
 		let multiRootProvider: ClaudeChatSessionContentProvider;
 		let multiRootAccessor: ITestingServicesAccessor;
 
-		function createChatContext(sessionId: string, options?: { folderPath?: string }): vscode.ChatContext {
+		function createChatContext(
+			sessionId: string,
+			options?: { folderPath?: string },
+		): vscode.ChatContext {
 			return {
 				history: [],
 				yieldRequested: false,
@@ -787,44 +1081,81 @@ describe('ChatSessionContentProvider', () => {
 			mockSessionService = mocks.mockSessionService;
 			mockAgentManager = createMockAgentManager();
 
-			const result = createProviderWithServices(store, [folderA, folderB], mocks, mockAgentManager);
+			const result = createProviderWithServices(
+				store,
+				[folderA, folderB],
+				mocks,
+				mockAgentManager,
+			);
 			multiRootProvider = result.provider;
 			multiRootAccessor = result.accessor;
 		});
 
 		it('sets folder from inputState on new session', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 
 			seedSessionItem('new-folder-session');
 
-			const sessionStateService = multiRootAccessor.get(IClaudeSessionStateService);
-			const setFolderInfoSpy = vi.spyOn(sessionStateService, 'setFolderInfoForSession');
+			const sessionStateService = multiRootAccessor.get(
+				IClaudeSessionStateService,
+			);
+			const setFolderInfoSpy = vi.spyOn(
+				sessionStateService,
+				'setFolderInfoForSession',
+			);
 
 			const handler = multiRootProvider.createHandler();
-			const context = createChatContext('new-folder-session', { folderPath: folderB.fsPath });
+			const context = createChatContext('new-folder-session', {
+				folderPath: folderB.fsPath,
+			});
 			const stream = new MockChatResponseStream();
 
-			await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('hello'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
-			const folderInfo = setFolderInfoSpy.mock.calls.find(c => c[0] === 'new-folder-session')?.[1];
+			const folderInfo = setFolderInfoSpy.mock.calls.find(
+				(c) => c[0] === 'new-folder-session',
+			)?.[1];
 			expect(folderInfo?.cwd).toBe(folderB.fsPath);
 		});
 
 		it('commits inputState folder selection to session state service', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 
 			seedSessionItem('pre-folder-session');
 
-			const sessionStateService = multiRootAccessor.get(IClaudeSessionStateService);
-			const setFolderInfoSpy = vi.spyOn(sessionStateService, 'setFolderInfoForSession');
+			const sessionStateService = multiRootAccessor.get(
+				IClaudeSessionStateService,
+			);
+			const setFolderInfoSpy = vi.spyOn(
+				sessionStateService,
+				'setFolderInfoForSession',
+			);
 
 			const handler = multiRootProvider.createHandler();
-			const context = createChatContext('pre-folder-session', { folderPath: folderA.fsPath });
+			const context = createChatContext('pre-folder-session', {
+				folderPath: folderA.fsPath,
+			});
 			const stream = new MockChatResponseStream();
 
-			await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('hello'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
-			const folderInfo = setFolderInfoSpy.mock.calls.find(c => c[0] === 'pre-folder-session')?.[1];
+			const folderInfo = setFolderInfoSpy.mock.calls.find(
+				(c) => c[0] === 'pre-folder-session',
+			)?.[1];
 			expect(folderInfo?.cwd).toBe(folderA.fsPath);
 		});
 	});
@@ -847,7 +1178,12 @@ describe('ChatSessionContentProvider', () => {
 						resource: ClaudeSessionUri.forSessionId(sessionId),
 						label: 'Test Session',
 					},
-					inputState: { groups: buildInputStateGroups(), sessionResource: undefined, onDidChange: Event.None, onDidDispose: Event.None },
+					inputState: {
+						groups: buildInputStateGroups(),
+						sessionResource: undefined,
+						onDidChange: Event.None,
+						onDidDispose: Event.None,
+					},
 				},
 			} as vscode.ChatContext;
 		}
@@ -859,24 +1195,37 @@ describe('ChatSessionContentProvider', () => {
 			mockFolderMruService = mocks.mockFolderMruService;
 			mockAgentManager = createMockAgentManager();
 
-			const result = createProviderWithServices(store, [workspaceFolderUri], mocks, mockAgentManager);
+			const result = createProviderWithServices(
+				store,
+				[workspaceFolderUri],
+				mocks,
+				mockAgentManager,
+			);
 			handlerProvider = result.provider;
 		});
 
 		it('treats session as new when no session exists on disk', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 			seedSessionItem('real-uuid-123');
 
 			const handler = handlerProvider.createHandler();
 			const context = createChatContext('real-uuid-123');
 			const stream = new MockChatResponseStream();
 
-			await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('hello'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
 			const handleRequestMock = vi.mocked(mockAgentManager.handleRequest);
 			expect(handleRequestMock).toHaveBeenCalledOnce();
 
-			const [sessionId, , , , isNewSession] = handleRequestMock.mock.calls[0];
+			const [sessionId, , , , isNewSession] =
+				handleRequestMock.mock.calls[0];
 			expect(sessionId).toBe('real-uuid-123');
 			expect(isNewSession).toBe(true);
 		});
@@ -885,7 +1234,12 @@ describe('ChatSessionContentProvider', () => {
 			seedSessionItem('real-uuid-123');
 			vi.mocked(mockSessionService.getSession).mockResolvedValue({
 				id: 'real-uuid-123',
-				messages: [{ type: 'user', message: { role: 'user', content: 'Hello' } }],
+				messages: [
+					{
+						type: 'user',
+						message: { role: 'user', content: 'Hello' },
+					},
+				],
 				subagents: [],
 			} as any);
 
@@ -893,12 +1247,18 @@ describe('ChatSessionContentProvider', () => {
 			const context = createChatContext('real-uuid-123');
 			const stream = new MockChatResponseStream();
 
-			await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('hello'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
 			const handleRequestMock = vi.mocked(mockAgentManager.handleRequest);
 			expect(handleRequestMock).toHaveBeenCalledOnce();
 
-			const [sessionId, , , , isNewSession] = handleRequestMock.mock.calls[0];
+			const [sessionId, , , , isNewSession] =
+				handleRequestMock.mock.calls[0];
 			expect(sessionId).toBe('real-uuid-123');
 			expect(isNewSession).toBe(false);
 		});
@@ -909,18 +1269,35 @@ describe('ChatSessionContentProvider', () => {
 			const stream = new MockChatResponseStream();
 
 			// First request: no session on disk yet → new session
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 			const firstContext = createChatContext('real-uuid-123');
-			await handler(createTestRequest('first'), firstContext, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('first'),
+				firstContext,
+				stream,
+				CancellationToken.None,
+			);
 
 			// Second request: session now exists on disk → resumed
 			vi.mocked(mockSessionService.getSession).mockResolvedValue({
 				id: 'real-uuid-123',
-				messages: [{ type: 'user', message: { role: 'user', content: 'first' } }],
+				messages: [
+					{
+						type: 'user',
+						message: { role: 'user', content: 'first' },
+					},
+				],
 				subagents: [],
 			} as any);
 			const secondContext = createChatContext('real-uuid-123');
-			await handler(createTestRequest('second'), secondContext, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('second'),
+				secondContext,
+				stream,
+				CancellationToken.None,
+			);
 
 			const handleRequestMock = vi.mocked(mockAgentManager.handleRequest);
 			const [, , , , secondIsNew] = handleRequestMock.mock.calls[1];
@@ -947,7 +1324,12 @@ describe('ChatSessionContentProvider', () => {
 						resource: ClaudeSessionUri.forSessionId(sessionId),
 						label: 'Test Session',
 					},
-					inputState: { groups: buildInputStateGroups(), sessionResource: undefined, onDidChange: Event.None, onDidDispose: Event.None },
+					inputState: {
+						groups: buildInputStateGroups(),
+						sessionResource: undefined,
+						onDidChange: Event.None,
+						onDidDispose: Event.None,
+					},
 				},
 			} as vscode.ChatContext;
 		}
@@ -959,29 +1341,51 @@ describe('ChatSessionContentProvider', () => {
 			mockFolderMruService = mocks.mockFolderMruService;
 			mockAgentManager = createMockAgentManager();
 
-			const result = createProviderWithServices(store, [workspaceFolderUri], mocks, mockAgentManager);
+			const result = createProviderWithServices(
+				store,
+				[workspaceFolderUri],
+				mocks,
+				mockAgentManager,
+			);
 			handlerProvider = result.provider;
 			handlerAccessor = result.accessor;
 		});
 
 		it('commits request.model.id to session state service', async () => {
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 			seedSessionItem('session-1');
 
 			const handler = handlerProvider.createHandler();
 			const context = createChatContext('session-1');
 			const stream = new MockChatResponseStream();
 
-			const mockSessionStateService = handlerAccessor.get(IClaudeSessionStateService);
-			const setModelSpy = vi.spyOn(mockSessionStateService, 'setModelIdForSession');
+			const mockSessionStateService = handlerAccessor.get(
+				IClaudeSessionStateService,
+			);
+			const setModelSpy = vi.spyOn(
+				mockSessionStateService,
+				'setModelIdForSession',
+			);
 
-			await handler(createTestRequest('hello'), context, stream, CancellationToken.None);
+			await handler(
+				createTestRequest('hello'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
-			expect(setModelSpy).toHaveBeenCalledWith('session-1', parseClaudeModelId('claude-3-5-sonnet-20241022'));
+			expect(setModelSpy).toHaveBeenCalledWith(
+				'session-1',
+				parseClaudeModelId('claude-3-5-sonnet-20241022'),
+			);
 		});
 
 		it('short-circuits before session resolution when slash command is handled', async () => {
-			const slashCommandService = handlerAccessor.get(IClaudeSlashCommandService);
+			const slashCommandService = handlerAccessor.get(
+				IClaudeSlashCommandService,
+			);
 			vi.mocked(slashCommandService.tryHandleCommand).mockResolvedValue({
 				handled: true,
 				result: { metadata: { command: '/test' } },
@@ -991,10 +1395,17 @@ describe('ChatSessionContentProvider', () => {
 			const context = createChatContext('session-1');
 			const stream = new MockChatResponseStream();
 
-			const result = await handler(new TestChatRequest('/test'), context, stream, CancellationToken.None);
+			const result = await handler(
+				new TestChatRequest('/test'),
+				context,
+				stream,
+				CancellationToken.None,
+			);
 
 			// Slash command handled → no agent call
-			expect(vi.mocked(mockAgentManager.handleRequest)).not.toHaveBeenCalled();
+			expect(
+				vi.mocked(mockAgentManager.handleRequest),
+			).not.toHaveBeenCalled();
 			expect(result).toEqual({ metadata: { command: '/test' } });
 		});
 	});
@@ -1023,20 +1434,36 @@ describe('ChatSessionContentProvider', () => {
 
 		it('toggling bypass-permissions config adds/removes the bypass item reactively', async () => {
 			const mocks = createDefaultMocks();
-			const { accessor: localAccessor } = createProviderWithServices(store, [folderA, folderB], mocks);
+			const { accessor: localAccessor } = createProviderWithServices(
+				store,
+				[folderA, folderB],
+				mocks,
+			);
 			const configService = localAccessor.get(IConfigurationService);
 
 			const state = await getInputState();
 			let permissionGroup = getGroup(state, 'permissionMode')!;
-			expect(permissionGroup.items.map(i => i.id)).not.toContain('bypassPermissions');
+			expect(permissionGroup.items.map((i) => i.id)).not.toContain(
+				'bypassPermissions',
+			);
 
-			await configService.setConfig(ConfigKey.ClaudeAgentAllowDangerouslySkipPermissions, true);
+			await configService.setConfig(
+				ConfigKey.ClaudeAgentAllowDangerouslySkipPermissions,
+				true,
+			);
 			permissionGroup = getGroup(state, 'permissionMode')!;
-			expect(permissionGroup.items.map(i => i.id)).toContain('bypassPermissions');
+			expect(permissionGroup.items.map((i) => i.id)).toContain(
+				'bypassPermissions',
+			);
 
-			await configService.setConfig(ConfigKey.ClaudeAgentAllowDangerouslySkipPermissions, false);
+			await configService.setConfig(
+				ConfigKey.ClaudeAgentAllowDangerouslySkipPermissions,
+				false,
+			);
 			permissionGroup = getGroup(state, 'permissionMode')!;
-			expect(permissionGroup.items.map(i => i.id)).not.toContain('bypassPermissions');
+			expect(permissionGroup.items.map((i) => i.id)).not.toContain(
+				'bypassPermissions',
+			);
 		});
 
 		it('workspace folder changes reshape the folder group', async () => {
@@ -1047,13 +1474,20 @@ describe('ChatSessionContentProvider', () => {
 			const state = await getInputState();
 			let folderGroup = getGroup(state, 'folder');
 			expect(folderGroup).toBeDefined();
-			expect(folderGroup!.items.map(i => i.id)).toEqual([folderA.fsPath, folderB.fsPath]);
+			expect(folderGroup!.items.map((i) => i.id)).toEqual([
+				folderA.fsPath,
+				folderB.fsPath,
+			]);
 
 			// Add a third folder
 			const folderC = URI.file('/project-c');
 			mutableWs.setFolders([folderA, folderB, folderC]);
 			folderGroup = getGroup(state, 'folder');
-			expect(folderGroup!.items.map(i => i.id)).toEqual([folderA.fsPath, folderB.fsPath, folderC.fsPath]);
+			expect(folderGroup!.items.map((i) => i.id)).toEqual([
+				folderA.fsPath,
+				folderB.fsPath,
+				folderC.fsPath,
+			]);
 
 			// Transition to a single folder → group hides
 			mutableWs.setFolders([folderA]);
@@ -1063,7 +1497,10 @@ describe('ChatSessionContentProvider', () => {
 			// Back to multi-root
 			mutableWs.setFolders([folderA, folderB]);
 			folderGroup = getGroup(state, 'folder');
-			expect(folderGroup!.items.map(i => i.id)).toEqual([folderA.fsPath, folderB.fsPath]);
+			expect(folderGroup!.items.map((i) => i.id)).toEqual([
+				folderA.fsPath,
+				folderB.fsPath,
+			]);
 		});
 
 		it('emptying the workspace falls back to MRU items', async () => {
@@ -1071,7 +1508,11 @@ describe('ChatSessionContentProvider', () => {
 			const mutableWs = new MutableWorkspaceService([folderA, folderB]);
 			const mruFolder = URI.file('/recent/project');
 			mocks.mockFolderMruService.setMRUEntries([
-				{ folder: mruFolder, repository: undefined, lastAccessed: Date.now() },
+				{
+					folder: mruFolder,
+					repository: undefined,
+					lastAccessed: Date.now(),
+				},
 			]);
 			createProviderWithServices(store, [], mocks, undefined, mutableWs);
 
@@ -1081,50 +1522,101 @@ describe('ChatSessionContentProvider', () => {
 
 			const folderGroup = getGroup(state, 'folder');
 			expect(folderGroup).toBeDefined();
-			expect(folderGroup!.items.map(i => i.id)).toEqual([mruFolder.fsPath]);
+			expect(folderGroup!.items.map((i) => i.id)).toEqual([
+				mruFolder.fsPath,
+			]);
 		});
 
 		it('external session-state permission change syncs into the input state', async () => {
 			const mocks = createDefaultMocks();
-			const { accessor: localAccessor } = createProviderWithServices(store, [workspaceFolderUri], mocks);
-			const sessionStateService = localAccessor.get(IClaudeSessionStateService);
+			const { accessor: localAccessor } = createProviderWithServices(
+				store,
+				[workspaceFolderUri],
+				mocks,
+			);
+			const sessionStateService = localAccessor.get(
+				IClaudeSessionStateService,
+			);
 
 			// Mark as existing so the pipeline wires up the external permission autorun
-			const existingSession = { id: 'external-session', messages: [], subagents: [] };
-			vi.mocked(mocks.mockSessionService.getSession).mockResolvedValue(existingSession as any);
+			const existingSession = {
+				id: 'external-session',
+				messages: [],
+				subagents: [],
+			};
+			vi.mocked(mocks.mockSessionService.getSession).mockResolvedValue(
+				existingSession as any,
+			);
 
 			const sessionUri = createClaudeSessionUri('external-session');
 			const state = await getInputState(sessionUri);
-			expect(getGroup(state, 'permissionMode')!.selected?.id).not.toBe('plan');
+			expect(getGroup(state, 'permissionMode')!.selected?.id).not.toBe(
+				'plan',
+			);
 
-			sessionStateService.setPermissionModeForSession('external-session', 'plan');
-			expect(getGroup(state, 'permissionMode')!.selected?.id).toBe('plan');
+			sessionStateService.setPermissionModeForSession(
+				'external-session',
+				'plan',
+			);
+			expect(getGroup(state, 'permissionMode')!.selected?.id).toBe(
+				'plan',
+			);
 
-			sessionStateService.setPermissionModeForSession('external-session', 'default');
-			expect(getGroup(state, 'permissionMode')!.selected?.id).toBe('default');
+			sessionStateService.setPermissionModeForSession(
+				'external-session',
+				'default',
+			);
+			expect(getGroup(state, 'permissionMode')!.selected?.id).toBe(
+				'default',
+			);
 		});
 
 		it('live permission option changes update session state', async () => {
 			const mocks = createDefaultMocks();
-			const { provider, accessor: localAccessor } = createProviderWithServices(store, [workspaceFolderUri], mocks);
-			const sessionStateService = localAccessor.get(IClaudeSessionStateService);
-			const setPermissionSpy = vi.spyOn(sessionStateService, 'setPermissionModeForSession');
+			const { provider, accessor: localAccessor } =
+				createProviderWithServices(store, [workspaceFolderUri], mocks);
+			const sessionStateService = localAccessor.get(
+				IClaudeSessionStateService,
+			);
+			const setPermissionSpy = vi.spyOn(
+				sessionStateService,
+				'setPermissionModeForSession',
+			);
 
-			provider.provideHandleOptionsChange(createClaudeSessionUri('live-session'), [
-				{ optionId: 'permissionMode', value: 'plan' }
-			], CancellationToken.None);
+			provider.provideHandleOptionsChange(
+				createClaudeSessionUri('live-session'),
+				[{ optionId: 'permissionMode', value: 'plan' }],
+				CancellationToken.None,
+			);
 
-			expect(setPermissionSpy).toHaveBeenCalledWith('live-session', 'plan');
-			expect(sessionStateService.getPermissionModeForSession('live-session')).toBe('plan');
+			expect(setPermissionSpy).toHaveBeenCalledWith(
+				'live-session',
+				'plan',
+			);
+			expect(
+				sessionStateService.getPermissionModeForSession('live-session'),
+			).toBe('plan');
 		});
 
 		it('external permission change syncs into a previousInputState-restored pipeline', async () => {
 			const mocks = createDefaultMocks();
-			const { accessor: localAccessor } = createProviderWithServices(store, [workspaceFolderUri], mocks);
-			const sessionStateService = localAccessor.get(IClaudeSessionStateService);
+			const { accessor: localAccessor } = createProviderWithServices(
+				store,
+				[workspaceFolderUri],
+				mocks,
+			);
+			const sessionStateService = localAccessor.get(
+				IClaudeSessionStateService,
+			);
 
-			const existingSession = { id: 'prev-state-session', messages: [], subagents: [] };
-			vi.mocked(mocks.mockSessionService.getSession).mockResolvedValue(existingSession as any);
+			const existingSession = {
+				id: 'prev-state-session',
+				messages: [],
+				subagents: [],
+			};
+			vi.mocked(mocks.mockSessionService.getSession).mockResolvedValue(
+				existingSession as any,
+			);
 
 			const sessionUri = createClaudeSessionUri('prev-state-session');
 			const firstState = await getInputState(sessionUri);
@@ -1132,14 +1624,26 @@ describe('ChatSessionContentProvider', () => {
 			// Simulate getChatSessionInputState being called again with previousInputState
 			// (e.g. user refocuses the chat window). The pipeline is rebuilt from scratch.
 			const restoredState = await getInputState(sessionUri, firstState);
-			expect(getGroup(restoredState, 'permissionMode')!.selected?.id).not.toBe('plan');
+			expect(
+				getGroup(restoredState, 'permissionMode')!.selected?.id,
+			).not.toBe('plan');
 
 			// Permission mode changes externally (e.g. EnterPlanMode tool call)
-			sessionStateService.setPermissionModeForSession('prev-state-session', 'plan');
-			expect(getGroup(restoredState, 'permissionMode')!.selected?.id).toBe('plan');
+			sessionStateService.setPermissionModeForSession(
+				'prev-state-session',
+				'plan',
+			);
+			expect(
+				getGroup(restoredState, 'permissionMode')!.selected?.id,
+			).toBe('plan');
 
-			sessionStateService.setPermissionModeForSession('prev-state-session', 'acceptEdits');
-			expect(getGroup(restoredState, 'permissionMode')!.selected?.id).toBe('acceptEdits');
+			sessionStateService.setPermissionModeForSession(
+				'prev-state-session',
+				'acceptEdits',
+			);
+			expect(
+				getGroup(restoredState, 'permissionMode')!.selected?.id,
+			).toBe('acceptEdits');
 		});
 
 		it('sessionResource locks the folder group for existing sessions', async () => {
@@ -1149,20 +1653,27 @@ describe('ChatSessionContentProvider', () => {
 			// New session (no sessionResource) — folder is unlocked
 			const newState = await getInputState();
 			let folderGroup = getGroup(newState, 'folder')!;
-			expect(folderGroup.items.every(i => !i.locked)).toBe(true);
+			expect(folderGroup.items.every((i) => !i.locked)).toBe(true);
 			expect(folderGroup.selected?.locked).toBeUndefined();
 
 			// Existing session (sessionResource provided) — folder is locked
 			vi.mocked(mocks.mockSessionService.getSession).mockResolvedValue({
 				id: 'started-session',
-				messages: [{ type: 'user', message: { role: 'user', content: 'Hello' } }],
+				messages: [
+					{
+						type: 'user',
+						message: { role: 'user', content: 'Hello' },
+					},
+				],
 				subagents: [],
 			} as any);
 			const sessionUri = createClaudeSessionUri('started-session');
 			const startedState = await getInputState(sessionUri);
 
 			folderGroup = getGroup(startedState, 'folder')!;
-			expect(folderGroup.items.every(i => i.locked === true)).toBe(true);
+			expect(folderGroup.items.every((i) => i.locked === true)).toBe(
+				true,
+			);
 			expect(folderGroup.selected?.locked).toBe(true);
 		});
 
@@ -1175,15 +1686,21 @@ describe('ChatSessionContentProvider', () => {
 			const initialState = await getInputState();
 			const initialGroup = getGroup(initialState, 'folder')!;
 			// Synthesize a locked previousInputState (matching what a started session looks like)
-			const lockedGroups: vscode.ChatSessionProviderOptionGroup[] = initialState.groups.map(g =>
-				g.id === 'folder'
-					? {
-						...g,
-						items: g.items.map(i => ({ ...i, locked: true })),
-						selected: g.selected ? { ...g.selected, locked: true } : undefined,
-					}
-					: g
-			);
+			const lockedGroups: vscode.ChatSessionProviderOptionGroup[] =
+				initialState.groups.map((g) =>
+					g.id === 'folder'
+						? {
+								...g,
+								items: g.items.map((i) => ({
+									...i,
+									locked: true,
+								})),
+								selected: g.selected
+									? { ...g.selected, locked: true }
+									: undefined,
+							}
+						: g,
+				);
 			const lockedPrevious: vscode.ChatSessionInputState = {
 				groups: lockedGroups,
 				sessionResource: undefined,
@@ -1191,19 +1708,29 @@ describe('ChatSessionContentProvider', () => {
 				onDidDispose: Event.None,
 			};
 			// sanity check
-			expect(initialGroup.items.map(i => i.id)).toEqual([folderA.fsPath, folderB.fsPath]);
+			expect(initialGroup.items.map((i) => i.id)).toEqual([
+				folderA.fsPath,
+				folderB.fsPath,
+			]);
 
 			// Restore from the locked previous state
-			const restoredState = await getInputState(undefined, lockedPrevious);
+			const restoredState = await getInputState(
+				undefined,
+				lockedPrevious,
+			);
 			let restoredGroup = getGroup(restoredState, 'folder')!;
-			expect(restoredGroup.items.every(i => i.locked === true)).toBe(true);
+			expect(restoredGroup.items.every((i) => i.locked === true)).toBe(
+				true,
+			);
 
 			// Now workspace folders change — lock must persist
 			const folderC = URI.file('/project-c');
 			mutableWs.setFolders([folderA, folderB, folderC]);
 			restoredGroup = getGroup(restoredState, 'folder')!;
 			expect(restoredGroup.items).toHaveLength(3);
-			expect(restoredGroup.items.every(i => i.locked === true)).toBe(true);
+			expect(restoredGroup.items.every((i) => i.locked === true)).toBe(
+				true,
+			);
 		});
 	});
 
@@ -1247,16 +1774,18 @@ class FakeGitService extends mock<IGitService>() {
 
 // #region Test helpers
 
-function buildRepoContext(overrides: {
-	rootUri?: URI;
-	headBranchName?: string;
-	upstreamRemote?: string;
-	upstreamBranchName?: string;
-	headIncomingChanges?: number;
-	headOutgoingChanges?: number;
-	changes?: RepoContext['changes'];
-	remoteFetchUrls?: Array<string | undefined>;
-} = {}): RepoContext {
+function buildRepoContext(
+	overrides: {
+		rootUri?: URI;
+		headBranchName?: string;
+		upstreamRemote?: string;
+		upstreamBranchName?: string;
+		headIncomingChanges?: number;
+		headOutgoingChanges?: number;
+		changes?: RepoContext['changes'];
+		remoteFetchUrls?: Array<string | undefined>;
+	} = {},
+): RepoContext {
 	return {
 		rootUri: overrides.rootUri ?? URI.file('/project'),
 		kind: 'repository',
@@ -1272,9 +1801,15 @@ function buildRepoContext(overrides: {
 		remotes: [],
 		worktrees: [],
 		changes: overrides.changes,
-		headBranchNameObs: observableValue('test', overrides.headBranchName ?? 'main'),
+		headBranchNameObs: observableValue(
+			'test',
+			overrides.headBranchName ?? 'main',
+		),
 		headCommitHashObs: observableValue('test', 'abc123'),
-		upstreamBranchNameObs: observableValue('test', overrides.upstreamBranchName),
+		upstreamBranchNameObs: observableValue(
+			'test',
+			overrides.upstreamBranchName,
+		),
 		upstreamRemoteObs: observableValue('test', overrides.upstreamRemote),
 		isRebasingObs: observableValue('test', false),
 		isIgnored: () => Promise.resolve(false),
@@ -1286,9 +1821,11 @@ function mockChange(): Change {
 	return new MockChange();
 }
 
-function findCommandHandler(commandId: string): (...args: unknown[]) => Promise<void> {
+function findCommandHandler(
+	commandId: string,
+): (...args: unknown[]) => Promise<void> {
 	const calls = vi.mocked(vscodeShim.commands.registerCommand).mock.calls;
-	const matchingCalls = calls.filter(c => c[0] === commandId);
+	const matchingCalls = calls.filter((c) => c[0] === commandId);
 	const call = matchingCalls[matchingCalls.length - 1];
 	if (!call) {
 		throw new Error(`Command ${commandId} was not registered`);
@@ -1296,7 +1833,10 @@ function findCommandHandler(commandId: string): (...args: unknown[]) => Promise<
 	return call[1];
 }
 
-function buildDiskSession(id: string, overrides: Partial<IClaudeCodeSessionInfo> = {}): IClaudeCodeSessionInfo {
+function buildDiskSession(
+	id: string,
+	overrides: Partial<IClaudeCodeSessionInfo> = {},
+): IClaudeCodeSessionInfo {
 	return {
 		id,
 		label: id,
@@ -1318,16 +1858,26 @@ describe('ClaudeChatSessionItemController', () => {
 	let lastControllerAccessor: ITestingServicesAccessor;
 
 	function getItem(sessionId: string): vscode.ChatSessionItem | undefined {
-		return lastCreatedItemsMap.get(ClaudeSessionUri.forSessionId(sessionId).toString());
+		return lastCreatedItemsMap.get(
+			ClaudeSessionUri.forSessionId(sessionId).toString(),
+		);
 	}
 
-	function createController(workspaceFolders: URI[], gitService?: IGitService): ClaudeChatSessionItemController {
-		const serviceCollection = store.add(createExtensionUnitTestingServices());
+	function createController(
+		workspaceFolders: URI[],
+		gitService?: IGitService,
+	): ClaudeChatSessionItemController {
+		const serviceCollection = store.add(
+			createExtensionUnitTestingServices(),
+		);
 		const workspaceService = new TestWorkspaceService(workspaceFolders);
 		serviceCollection.set(IWorkspaceService, workspaceService);
 		serviceCollection.set(IGitService, gitService ?? new MockGitService());
 		serviceCollection.define(IClaudeCodeSessionService, mockSessionService);
-		serviceCollection.define(IChatFolderMruService, new MockChatFolderMruService());
+		serviceCollection.define(
+			IChatFolderMruService,
+			new MockChatFolderMruService(),
+		);
 		mockSdkService = {
 			_serviceBrand: undefined,
 			query: vi.fn(),
@@ -1335,7 +1885,9 @@ describe('ClaudeChatSessionItemController', () => {
 			getSessionInfo: vi.fn().mockResolvedValue(undefined),
 			getSessionMessages: vi.fn().mockResolvedValue([]),
 			renameSession: vi.fn().mockResolvedValue(undefined),
-			forkSession: vi.fn().mockResolvedValue({ sessionId: 'forked-session-id' }),
+			forkSession: vi
+				.fn()
+				.mockResolvedValue({ sessionId: 'forked-session-id' }),
 			listSubagents: vi.fn().mockResolvedValue([]),
 			getSubagentMessages: vi.fn().mockResolvedValue([]),
 		};
@@ -1346,7 +1898,9 @@ describe('ClaudeChatSessionItemController', () => {
 		});
 		const accessor = serviceCollection.createTestingAccessor();
 		lastControllerAccessor = accessor;
-		const ctrl = accessor.get(IInstantiationService).createInstance(ClaudeChatSessionItemController);
+		const ctrl = accessor
+			.get(IInstantiationService)
+			.createInstance(ClaudeChatSessionItemController);
 		store.add(ctrl);
 		return ctrl;
 	}
@@ -1372,7 +1926,11 @@ describe('ClaudeChatSessionItemController', () => {
 		});
 
 		it('creates a new item with the provided label when no disk session exists', async () => {
-			await controller.updateItemStatus('new-session', ChatSessionStatus.InProgress, 'Hello world');
+			await controller.updateItemStatus(
+				'new-session',
+				ChatSessionStatus.InProgress,
+				'Hello world',
+			);
 
 			const item = getItem('new-session');
 			expect(item).toBeDefined();
@@ -1382,32 +1940,62 @@ describe('ClaudeChatSessionItemController', () => {
 
 		it('sets timing.lastRequestStarted and clears lastRequestEnded for InProgress', async () => {
 			const before = Date.now();
-			await controller.updateItemStatus('session-1', ChatSessionStatus.InProgress, 'Test prompt');
+			await controller.updateItemStatus(
+				'session-1',
+				ChatSessionStatus.InProgress,
+				'Test prompt',
+			);
 			const after = Date.now();
 
 			const item = getItem('session-1');
 			expect(item!.timing).toBeDefined();
-			expect(item!.timing!.lastRequestStarted).toBeGreaterThanOrEqual(before);
+			expect(item!.timing!.lastRequestStarted).toBeGreaterThanOrEqual(
+				before,
+			);
 			expect(item!.timing!.lastRequestStarted).toBeLessThanOrEqual(after);
 			expect(item!.timing!.lastRequestEnded).toBeUndefined();
 		});
 
 		it('sets timing.lastRequestEnded for Completed status', async () => {
-			await controller.updateItemStatus('session-1', ChatSessionStatus.InProgress, 'Test prompt');
+			await controller.updateItemStatus(
+				'session-1',
+				ChatSessionStatus.InProgress,
+				'Test prompt',
+			);
 
 			const beforeComplete = Date.now();
-			await controller.updateItemStatus('session-1', ChatSessionStatus.Completed, 'Test prompt');
+			await controller.updateItemStatus(
+				'session-1',
+				ChatSessionStatus.Completed,
+				'Test prompt',
+			);
 			const afterComplete = Date.now();
 
 			const item = getItem('session-1');
-			expect(item!.timing!.lastRequestEnded).toBeGreaterThanOrEqual(beforeComplete);
-			expect(item!.timing!.lastRequestEnded).toBeLessThanOrEqual(afterComplete);
+			expect(item!.timing!.lastRequestEnded).toBeGreaterThanOrEqual(
+				beforeComplete,
+			);
+			expect(item!.timing!.lastRequestEnded).toBeLessThanOrEqual(
+				afterComplete,
+			);
 		});
 
 		it('clears lastRequestEnded on second InProgress after Completed', async () => {
-			await controller.updateItemStatus('session-1', ChatSessionStatus.InProgress, 'Test prompt');
-			await controller.updateItemStatus('session-1', ChatSessionStatus.Completed, 'Test prompt');
-			await controller.updateItemStatus('session-1', ChatSessionStatus.InProgress, 'Test prompt');
+			await controller.updateItemStatus(
+				'session-1',
+				ChatSessionStatus.InProgress,
+				'Test prompt',
+			);
+			await controller.updateItemStatus(
+				'session-1',
+				ChatSessionStatus.Completed,
+				'Test prompt',
+			);
+			await controller.updateItemStatus(
+				'session-1',
+				ChatSessionStatus.InProgress,
+				'Test prompt',
+			);
 
 			const item = getItem('session-1');
 			expect(item!.timing!.lastRequestEnded).toBeUndefined();
@@ -1416,14 +2004,20 @@ describe('ClaudeChatSessionItemController', () => {
 
 		it('creates timing with lastRequestEnded when Completed is called without prior InProgress', async () => {
 			const before = Date.now();
-			await controller.updateItemStatus('session-1', ChatSessionStatus.Completed, 'Test prompt');
+			await controller.updateItemStatus(
+				'session-1',
+				ChatSessionStatus.Completed,
+				'Test prompt',
+			);
 			const after = Date.now();
 
 			const item = getItem('session-1');
 			expect(item!.timing).toBeDefined();
 			expect(item!.timing!.created).toBeGreaterThanOrEqual(before);
 			expect(item!.timing!.created).toBeLessThanOrEqual(after);
-			expect(item!.timing!.lastRequestEnded).toBeGreaterThanOrEqual(before);
+			expect(item!.timing!.lastRequestEnded).toBeGreaterThanOrEqual(
+				before,
+			);
 			expect(item!.timing!.lastRequestEnded).toBeLessThanOrEqual(after);
 		});
 
@@ -1435,25 +2029,46 @@ describe('ClaudeChatSessionItemController', () => {
 				lastRequestEnded: new Date('2024-01-01T01:00:00Z').getTime(),
 				folderName: 'my-project',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			await controller.updateItemStatus('disk-session', ChatSessionStatus.InProgress, 'Ignored label');
+			await controller.updateItemStatus(
+				'disk-session',
+				ChatSessionStatus.InProgress,
+				'Ignored label',
+			);
 
 			const item = getItem('disk-session');
 			expect(item).toBeDefined();
 			expect(item!.label).toBe('Disk Session Label');
-			expect(item!.tooltip).toBe('Claude Code session: Disk Session Label');
+			expect(item!.tooltip).toBe(
+				'Claude Code session: Disk Session Label',
+			);
 
 			expect(mockSessionService.getSession).toHaveBeenCalledOnce();
-			const [calledUri] = vi.mocked(mockSessionService.getSession).mock.calls[0];
+			const [calledUri] = vi.mocked(mockSessionService.getSession).mock
+				.calls[0];
 			expect(calledUri.scheme).toBe('claude-code');
 			expect(calledUri.path).toBe('/disk-session');
 		});
 
 		it('handles multiple independent sessions', async () => {
-			await controller.updateItemStatus('session-a', ChatSessionStatus.InProgress, 'Prompt A');
-			await controller.updateItemStatus('session-b', ChatSessionStatus.InProgress, 'Prompt B');
-			await controller.updateItemStatus('session-a', ChatSessionStatus.Completed, 'Prompt A');
+			await controller.updateItemStatus(
+				'session-a',
+				ChatSessionStatus.InProgress,
+				'Prompt A',
+			);
+			await controller.updateItemStatus(
+				'session-b',
+				ChatSessionStatus.InProgress,
+				'Prompt B',
+			);
+			await controller.updateItemStatus(
+				'session-a',
+				ChatSessionStatus.Completed,
+				'Prompt A',
+			);
 
 			const itemA = getItem('session-a');
 			const itemB = getItem('session-b');
@@ -1471,16 +2086,34 @@ describe('ClaudeChatSessionItemController', () => {
 				cwd: '/home/user/my-project',
 				gitBranch: 'feature-branch',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			const mockChanges = [{ uri: URI.file('/home/user/my-project/file.ts') }];
-			const workspaceFolderService = lastControllerAccessor.get(IClaudeWorkspaceFolderService);
-			vi.mocked(workspaceFolderService.getWorkspaceChanges).mockResolvedValue(mockChanges as any);
+			const mockChanges = [
+				{ uri: URI.file('/home/user/my-project/file.ts') },
+			];
+			const workspaceFolderService = lastControllerAccessor.get(
+				IClaudeWorkspaceFolderService,
+			);
+			vi.mocked(
+				workspaceFolderService.getWorkspaceChanges,
+			).mockResolvedValue(mockChanges as any);
 
-			await controller.updateItemStatus('changes-session', ChatSessionStatus.InProgress, 'Prompt');
-			await controller.updateItemStatus('changes-session', ChatSessionStatus.Completed, 'Prompt');
+			await controller.updateItemStatus(
+				'changes-session',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
+			await controller.updateItemStatus(
+				'changes-session',
+				ChatSessionStatus.Completed,
+				'Prompt',
+			);
 
-			expect(workspaceFolderService.getWorkspaceChanges).toHaveBeenCalledWith(
+			expect(
+				workspaceFolderService.getWorkspaceChanges,
+			).toHaveBeenCalledWith(
 				'/home/user/my-project',
 				'feature-branch',
 				undefined,
@@ -1498,14 +2131,28 @@ describe('ClaudeChatSessionItemController', () => {
 				lastRequestEnded: Date.now(),
 				folderName: undefined,
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			const workspaceFolderService = lastControllerAccessor.get(IClaudeWorkspaceFolderService);
+			const workspaceFolderService = lastControllerAccessor.get(
+				IClaudeWorkspaceFolderService,
+			);
 
-			await controller.updateItemStatus('no-cwd', ChatSessionStatus.InProgress, 'Prompt');
-			await controller.updateItemStatus('no-cwd', ChatSessionStatus.Completed, 'Prompt');
+			await controller.updateItemStatus(
+				'no-cwd',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
+			await controller.updateItemStatus(
+				'no-cwd',
+				ChatSessionStatus.Completed,
+				'Prompt',
+			);
 
-			expect(workspaceFolderService.getWorkspaceChanges).not.toHaveBeenCalled();
+			expect(
+				workspaceFolderService.getWorkspaceChanges,
+			).not.toHaveBeenCalled();
 		});
 
 		it('does not call getWorkspaceChanges with forceRefresh on InProgress status', async () => {
@@ -1518,13 +2165,23 @@ describe('ClaudeChatSessionItemController', () => {
 				cwd: '/home/user/my-project',
 				gitBranch: 'feature-branch',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			const workspaceFolderService = lastControllerAccessor.get(IClaudeWorkspaceFolderService);
+			const workspaceFolderService = lastControllerAccessor.get(
+				IClaudeWorkspaceFolderService,
+			);
 
-			await controller.updateItemStatus('in-progress', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'in-progress',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
-			expect(workspaceFolderService.getWorkspaceChanges).not.toHaveBeenCalledWith(
+			expect(
+				workspaceFolderService.getWorkspaceChanges,
+			).not.toHaveBeenCalledWith(
 				expect.anything(),
 				expect.anything(),
 				expect.anything(),
@@ -1543,7 +2200,11 @@ describe('ClaudeChatSessionItemController', () => {
 		});
 
 		it('sets resource with correct scheme and path', async () => {
-			await controller.updateItemStatus('my-session', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'my-session',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 
 			const item = getItem('my-session');
 			expect(item!.resource.scheme).toBe('claude-code');
@@ -1551,14 +2212,22 @@ describe('ClaudeChatSessionItemController', () => {
 		});
 
 		it('sets tooltip to formatted session name', async () => {
-			await controller.updateItemStatus('my-session', ChatSessionStatus.InProgress, 'fix the bug');
+			await controller.updateItemStatus(
+				'my-session',
+				ChatSessionStatus.InProgress,
+				'fix the bug',
+			);
 
 			const item = getItem('my-session');
 			expect(item!.tooltip).toBe('Claude Code session: fix the bug');
 		});
 
 		it('sets iconPath to claude ThemeIcon', async () => {
-			await controller.updateItemStatus('my-session', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'my-session',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 
 			const item = getItem('my-session');
 			expect(item!.iconPath).toBeDefined();
@@ -1574,15 +2243,23 @@ describe('ClaudeChatSessionItemController', () => {
 				lastRequestEnded: new Date('2024-06-01T13:00:00Z').getTime(),
 				folderName: undefined,
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			await controller.updateItemStatus('disk-session', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'disk-session',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
 			const item = getItem('disk-session');
 			expect(item!.label).toBe('Disk Label');
 			expect(item!.tooltip).toBe('Claude Code session: Disk Label');
 			// timing.created is derived from created
-			expect(item!.timing!.created).toBe(new Date('2024-06-01T12:00:00Z').getTime());
+			expect(item!.timing!.created).toBe(
+				new Date('2024-06-01T12:00:00Z').getTime(),
+			);
 		});
 
 		it('sets metadata with workingDirectoryPath when session has cwd', async () => {
@@ -1594,16 +2271,28 @@ describe('ClaudeChatSessionItemController', () => {
 				folderName: 'my-project',
 				cwd: '/home/user/my-project',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			await controller.updateItemStatus('cwd-session', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'cwd-session',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
 			const item = getItem('cwd-session');
-			expect(item!.metadata).toEqual({ workingDirectoryPath: '/home/user/my-project' });
+			expect(item!.metadata).toEqual({
+				workingDirectoryPath: '/home/user/my-project',
+			});
 		});
 
 		it('does not set metadata when session has no cwd', async () => {
-			await controller.updateItemStatus('no-cwd-session', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'no-cwd-session',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
 			const item = getItem('no-cwd-session');
 			expect(item!.metadata).toBeUndefined();
@@ -1619,15 +2308,29 @@ describe('ClaudeChatSessionItemController', () => {
 				cwd: '/home/user/my-project',
 				gitBranch: 'feature-branch',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			const mockChanges = [{ uri: URI.file('/home/user/my-project/file.ts') }];
-			const workspaceFolderService = lastControllerAccessor.get(IClaudeWorkspaceFolderService);
-			vi.mocked(workspaceFolderService.getWorkspaceChanges).mockResolvedValue(mockChanges as any);
+			const mockChanges = [
+				{ uri: URI.file('/home/user/my-project/file.ts') },
+			];
+			const workspaceFolderService = lastControllerAccessor.get(
+				IClaudeWorkspaceFolderService,
+			);
+			vi.mocked(
+				workspaceFolderService.getWorkspaceChanges,
+			).mockResolvedValue(mockChanges as any);
 
-			await controller.updateItemStatus('changes-item', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'changes-item',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
-			expect(workspaceFolderService.getWorkspaceChanges).toHaveBeenCalledWith(
+			expect(
+				workspaceFolderService.getWorkspaceChanges,
+			).toHaveBeenCalledWith(
 				'/home/user/my-project',
 				'feature-branch',
 				undefined,
@@ -1652,16 +2355,25 @@ describe('ClaudeChatSessionItemController', () => {
 				lastRequestEnded: Date.now(),
 				folderName: 'project',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(sessionInfo as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				sessionInfo as any,
+			);
 
-			await controller.updateItemStatus('test', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 
 			const item = getItem('test');
 			expect(item!.badge).toBeUndefined();
 		});
 
 		it('shows badge in multi-root workspace', async () => {
-			controller = createController([URI.file('/project-a'), URI.file('/project-b')]);
+			controller = createController([
+				URI.file('/project-a'),
+				URI.file('/project-b'),
+			]);
 
 			const sessionInfo: IClaudeCodeSessionInfo = {
 				id: 'test',
@@ -1670,14 +2382,22 @@ describe('ClaudeChatSessionItemController', () => {
 				lastRequestEnded: Date.now(),
 				folderName: 'project-a',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(sessionInfo as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				sessionInfo as any,
+			);
 
-			await controller.updateItemStatus('test', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 
 			const item = getItem('test');
 			expect(item!.badge).toBeDefined();
 			expect(item!.badge).toBeInstanceOf(MarkdownString);
-			expect((item!.badge as MarkdownString).value).toBe('$(folder) project-a');
+			expect((item!.badge as MarkdownString).value).toBe(
+				'$(folder) project-a',
+			);
 		});
 
 		it('shows badge in empty workspace', async () => {
@@ -1690,13 +2410,21 @@ describe('ClaudeChatSessionItemController', () => {
 				lastRequestEnded: Date.now(),
 				folderName: 'my-folder',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(sessionInfo as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				sessionInfo as any,
+			);
 
-			await controller.updateItemStatus('test', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 
 			const item = getItem('test');
 			expect(item!.badge).toBeDefined();
-			expect((item!.badge as MarkdownString).value).toBe('$(folder) my-folder');
+			expect((item!.badge as MarkdownString).value).toBe(
+				'$(folder) my-folder',
+			);
 		});
 
 		it('badge has supportThemeIcons set to true', async () => {
@@ -1709,18 +2437,30 @@ describe('ClaudeChatSessionItemController', () => {
 				lastRequestEnded: Date.now(),
 				folderName: 'project',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(sessionInfo as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				sessionInfo as any,
+			);
 
-			await controller.updateItemStatus('test', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 
 			const item = getItem('test');
-			expect((item!.badge as MarkdownString).supportThemeIcons).toBe(true);
+			expect((item!.badge as MarkdownString).supportThemeIcons).toBe(
+				true,
+			);
 		});
 
 		it('badge is undefined when session has no folderName', async () => {
 			controller = createController([URI.file('/a'), URI.file('/b')]);
 
-			await controller.updateItemStatus('test', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 
 			const item = getItem('test');
 			// No disk session → no folderName → no badge even though multi-root
@@ -1732,61 +2472,107 @@ describe('ClaudeChatSessionItemController', () => {
 
 			vi.mocked(mockSessionService.getSession)
 				.mockResolvedValueOnce({
-					id: 'session-1', label: 'S1',
-					created: Date.now(), lastRequestEnded: Date.now(),
+					id: 'session-1',
+					label: 'S1',
+					created: Date.now(),
+					lastRequestEnded: Date.now(),
 					folderName: 'frontend',
 				} as any)
 				.mockResolvedValueOnce({
-					id: 'session-2', label: 'S2',
-					created: Date.now(), lastRequestEnded: Date.now(),
+					id: 'session-2',
+					label: 'S2',
+					created: Date.now(),
+					lastRequestEnded: Date.now(),
 					folderName: 'backend',
 				} as any);
 
-			await controller.updateItemStatus('session-1', ChatSessionStatus.InProgress, 'S1');
-			await controller.updateItemStatus('session-2', ChatSessionStatus.InProgress, 'S2');
+			await controller.updateItemStatus(
+				'session-1',
+				ChatSessionStatus.InProgress,
+				'S1',
+			);
+			await controller.updateItemStatus(
+				'session-2',
+				ChatSessionStatus.InProgress,
+				'S2',
+			);
 
-			expect((getItem('session-1')!.badge as MarkdownString).value).toBe('$(folder) frontend');
-			expect((getItem('session-2')!.badge as MarkdownString).value).toBe('$(folder) backend');
+			expect((getItem('session-1')!.badge as MarkdownString).value).toBe(
+				'$(folder) frontend',
+			);
+			expect((getItem('session-2')!.badge as MarkdownString).value).toBe(
+				'$(folder) backend',
+			);
 		});
 
 		it('shows badge in single-root workspace with multiple non-worktree repos', async () => {
 			const fakeGit = new FakeGitService();
 			fakeGit.repositories = [
-				{ rootUri: URI.file('/project/repo1'), kind: 'repository' } as unknown as RepoContext,
-				{ rootUri: URI.file('/project/repo2'), kind: 'repository' } as unknown as RepoContext,
+				{
+					rootUri: URI.file('/project/repo1'),
+					kind: 'repository',
+				} as unknown as RepoContext,
+				{
+					rootUri: URI.file('/project/repo2'),
+					kind: 'repository',
+				} as unknown as RepoContext,
 			];
 			controller = createController([URI.file('/project')], fakeGit);
 
 			const sessionInfo: IClaudeCodeSessionInfo = {
-				id: 'test', label: 'Test',
-				created: Date.now(), lastRequestEnded: Date.now(),
+				id: 'test',
+				label: 'Test',
+				created: Date.now(),
+				lastRequestEnded: Date.now(),
 				folderName: 'repo1',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(sessionInfo as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				sessionInfo as any,
+			);
 
-			await controller.updateItemStatus('test', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 
 			const item = getItem('test');
 			expect(item!.badge).toBeDefined();
-			expect((item!.badge as MarkdownString).value).toBe('$(folder) repo1');
+			expect((item!.badge as MarkdownString).value).toBe(
+				'$(folder) repo1',
+			);
 		});
 
 		it('does not show badge when extra repos are worktrees', async () => {
 			const fakeGit = new FakeGitService();
 			fakeGit.repositories = [
-				{ rootUri: URI.file('/project/main'), kind: 'repository' } as unknown as RepoContext,
-				{ rootUri: URI.file('/project/wt'), kind: 'worktree' } as unknown as RepoContext,
+				{
+					rootUri: URI.file('/project/main'),
+					kind: 'repository',
+				} as unknown as RepoContext,
+				{
+					rootUri: URI.file('/project/wt'),
+					kind: 'worktree',
+				} as unknown as RepoContext,
 			];
 			controller = createController([URI.file('/project')], fakeGit);
 
 			const sessionInfo: IClaudeCodeSessionInfo = {
-				id: 'test', label: 'Test',
-				created: Date.now(), lastRequestEnded: Date.now(),
+				id: 'test',
+				label: 'Test',
+				created: Date.now(),
+				lastRequestEnded: Date.now(),
 				folderName: 'main',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(sessionInfo as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				sessionInfo as any,
+			);
 
-			await controller.updateItemStatus('test', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 
 			const item = getItem('test');
 			// Only 1 non-worktree repo → no badge
@@ -1805,48 +2591,82 @@ describe('ClaudeChatSessionItemController', () => {
 			controller = createController([URI.file('/project')], fakeGit);
 
 			const sessionInfo: IClaudeCodeSessionInfo = {
-				id: 'test', label: 'Test',
-				created: Date.now(), lastRequestEnded: Date.now(),
+				id: 'test',
+				label: 'Test',
+				created: Date.now(),
+				lastRequestEnded: Date.now(),
 				folderName: 'repo1',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(sessionInfo as any);
-			vi.mocked(mockSessionService.getAllSessions).mockResolvedValue([sessionInfo]);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				sessionInfo as any,
+			);
+			vi.mocked(mockSessionService.getAllSessions).mockResolvedValue([
+				sessionInfo,
+			]);
 
 			// Initially no repos → single-root with 0 repos, _computeShowBadge returns false
-			await controller.updateItemStatus('test', ChatSessionStatus.Completed, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.Completed,
+				'hello',
+			);
 			expect(getItem('test')!.badge).toBeUndefined();
 
 			// Now simulate two repos opening (monorepo scenario)
-			const repo1 = { rootUri: URI.file('/project/r1'), kind: 'repository' } as unknown as RepoContext;
-			const repo2 = { rootUri: URI.file('/project/r2'), kind: 'repository' } as unknown as RepoContext;
+			const repo1 = {
+				rootUri: URI.file('/project/r1'),
+				kind: 'repository',
+			} as unknown as RepoContext;
+			const repo2 = {
+				rootUri: URI.file('/project/r2'),
+				kind: 'repository',
+			} as unknown as RepoContext;
 			fakeGit.repositories = [repo1, repo2];
 			fakeGit.fireOpenRepository(repo2);
 
 			// Flush microtask queue so the async _refreshItems completes.
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
 			const refreshedItem = getItem('test');
 			expect(refreshedItem).toBeDefined();
 			expect(refreshedItem!.badge).toBeDefined();
-			expect((refreshedItem!.badge as MarkdownString).value).toBe('$(folder) repo1');
+			expect((refreshedItem!.badge as MarkdownString).value).toBe(
+				'$(folder) repo1',
+			);
 		});
 
 		it('recomputes badge when a repository closes', async () => {
 			const fakeGit = new FakeGitService();
-			const repo1 = { rootUri: URI.file('/project/r1'), kind: 'repository' } as unknown as RepoContext;
-			const repo2 = { rootUri: URI.file('/project/r2'), kind: 'repository' } as unknown as RepoContext;
+			const repo1 = {
+				rootUri: URI.file('/project/r1'),
+				kind: 'repository',
+			} as unknown as RepoContext;
+			const repo2 = {
+				rootUri: URI.file('/project/r2'),
+				kind: 'repository',
+			} as unknown as RepoContext;
 			fakeGit.repositories = [repo1, repo2];
 			controller = createController([URI.file('/project')], fakeGit);
 
 			const sessionInfo: IClaudeCodeSessionInfo = {
-				id: 'test', label: 'Test',
-				created: Date.now(), lastRequestEnded: Date.now(),
+				id: 'test',
+				label: 'Test',
+				created: Date.now(),
+				lastRequestEnded: Date.now(),
 				folderName: 'repo1',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(sessionInfo as any);
-			vi.mocked(mockSessionService.getAllSessions).mockResolvedValue([sessionInfo]);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				sessionInfo as any,
+			);
+			vi.mocked(mockSessionService.getAllSessions).mockResolvedValue([
+				sessionInfo,
+			]);
 
-			await controller.updateItemStatus('test', ChatSessionStatus.Completed, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.Completed,
+				'hello',
+			);
 			expect(getItem('test')!.badge).toBeDefined();
 
 			// Close one repo → single non-worktree repo → badge should disappear
@@ -1854,7 +2674,7 @@ describe('ClaudeChatSessionItemController', () => {
 			fakeGit.fireCloseRepository(repo2);
 
 			// Flush microtask queue so the async _refreshItems completes.
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
 			const refreshedItem = getItem('test');
 			expect(refreshedItem).toBeDefined();
@@ -1867,24 +2687,39 @@ describe('ClaudeChatSessionItemController', () => {
 			controller = createController([URI.file('/project')], fakeGit);
 
 			const sessionInfo: IClaudeCodeSessionInfo = {
-				id: 'test', label: 'Test',
-				created: Date.now(), lastRequestEnded: Date.now(),
+				id: 'test',
+				label: 'Test',
+				created: Date.now(),
+				lastRequestEnded: Date.now(),
 				folderName: 'repo1',
 			};
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(sessionInfo as any);
-			vi.mocked(mockSessionService.getAllSessions).mockResolvedValue([sessionInfo]);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				sessionInfo as any,
+			);
+			vi.mocked(mockSessionService.getAllSessions).mockResolvedValue([
+				sessionInfo,
+			]);
 
-			await controller.updateItemStatus('test', ChatSessionStatus.InProgress, 'hello');
+			await controller.updateItemStatus(
+				'test',
+				ChatSessionStatus.InProgress,
+				'hello',
+			);
 			const itemBeforeRefresh = getItem('test');
 			expect(itemBeforeRefresh).toBeDefined();
-			expect(itemBeforeRefresh!.status).toBe(ChatSessionStatus.InProgress);
+			expect(itemBeforeRefresh!.status).toBe(
+				ChatSessionStatus.InProgress,
+			);
 
 			// Trigger a refresh via git event
-			const repo1 = { rootUri: URI.file('/project/r1'), kind: 'repository' } as unknown as RepoContext;
+			const repo1 = {
+				rootUri: URI.file('/project/r1'),
+				kind: 'repository',
+			} as unknown as RepoContext;
 			fakeGit.repositories = [repo1];
 			fakeGit.fireOpenRepository(repo1);
 
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
 			const refreshedItem = getItem('test');
 			expect(refreshedItem).toBeDefined();
@@ -1903,13 +2738,16 @@ describe('ClaudeChatSessionItemController', () => {
 			controller = createController([URI.file('/project')]);
 		});
 
-		function makeSession(id: string, messages: Array<{ uuid: string; type: string }>) {
+		function makeSession(
+			id: string,
+			messages: Array<{ uuid: string; type: string }>,
+		) {
 			return {
 				id,
 				label: 'Test session',
 				created: Date.now(),
 				lastRequestEnded: Date.now(),
-				messages: messages.map(m => ({
+				messages: messages.map((m) => ({
 					...m,
 					sessionId: id,
 					timestamp: new Date(),
@@ -1927,9 +2765,16 @@ describe('ClaudeChatSessionItemController', () => {
 				label: 'Original',
 			});
 
-			const result = await lastForkHandler!(sessionResource, undefined, CancellationToken.None);
+			const result = await lastForkHandler!(
+				sessionResource,
+				undefined,
+				CancellationToken.None,
+			);
 
-			expect(mockSdkService.forkSession).toHaveBeenCalledWith('sess-1', { upToMessageId: undefined, title: expect.any(String) });
+			expect(mockSdkService.forkSession).toHaveBeenCalledWith('sess-1', {
+				upToMessageId: undefined,
+				title: expect.any(String),
+			});
 			expect(result.resource.toString()).toContain('forked-session-id');
 			expect(result.label).toContain('Forked');
 		});
@@ -1942,19 +2787,34 @@ describe('ClaudeChatSessionItemController', () => {
 			});
 
 			// Seed the parent session with non-default state
-			const sessionStateService = lastControllerAccessor.get(IClaudeSessionStateService);
+			const sessionStateService = lastControllerAccessor.get(
+				IClaudeSessionStateService,
+			);
 			sessionStateService.setPermissionModeForSession('sess-1', 'plan');
 			sessionStateService.setFolderInfoForSession('sess-1', {
 				cwd: '/custom/folder',
 				additionalDirectories: ['/extra'],
 			});
 
-			const setPermissionSpy = vi.spyOn(sessionStateService, 'setPermissionModeForSession');
-			const setFolderInfoSpy = vi.spyOn(sessionStateService, 'setFolderInfoForSession');
+			const setPermissionSpy = vi.spyOn(
+				sessionStateService,
+				'setPermissionModeForSession',
+			);
+			const setFolderInfoSpy = vi.spyOn(
+				sessionStateService,
+				'setFolderInfoForSession',
+			);
 
-			await lastForkHandler!(sessionResource, undefined, CancellationToken.None);
+			await lastForkHandler!(
+				sessionResource,
+				undefined,
+				CancellationToken.None,
+			);
 
-			expect(setPermissionSpy).toHaveBeenCalledWith('forked-session-id', 'plan');
+			expect(setPermissionSpy).toHaveBeenCalledWith(
+				'forked-session-id',
+				'plan',
+			);
 			expect(setFolderInfoSpy).toHaveBeenCalledWith('forked-session-id', {
 				cwd: '/custom/folder',
 				additionalDirectories: ['/extra'],
@@ -1963,57 +2823,125 @@ describe('ClaudeChatSessionItemController', () => {
 
 		it('forks at the message before the specified request', async () => {
 			const sessionResource = ClaudeSessionUri.forSessionId('sess-1');
-			lastCreatedItemsMap.set(sessionResource.toString(), { resource: sessionResource, label: 'Original' });
+			lastCreatedItemsMap.set(sessionResource.toString(), {
+				resource: sessionResource,
+				label: 'Original',
+			});
 
 			const session = makeSession('sess-1', [
 				{ uuid: 'msg-1', type: 'user' },
 				{ uuid: 'msg-2', type: 'assistant' },
 				{ uuid: 'msg-3', type: 'user' },
 			]);
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(session as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				session as any,
+			);
 
-			const request = { id: 'msg-3', prompt: 'test' } as vscode.ChatRequestTurn2;
-			await lastForkHandler!(sessionResource, request, CancellationToken.None);
+			const request = {
+				id: 'msg-3',
+				prompt: 'test',
+			} as vscode.ChatRequestTurn2;
+			await lastForkHandler!(
+				sessionResource,
+				request,
+				CancellationToken.None,
+			);
 
-			expect(mockSdkService.forkSession).toHaveBeenCalledWith('sess-1', { upToMessageId: 'msg-2', title: expect.any(String) });
+			expect(mockSdkService.forkSession).toHaveBeenCalledWith('sess-1', {
+				upToMessageId: 'msg-2',
+				title: expect.any(String),
+			});
 		});
 
 		it('throws when session is not found for a specific request fork', async () => {
 			const sessionResource = ClaudeSessionUri.forSessionId('sess-1');
-			lastCreatedItemsMap.set(sessionResource.toString(), { resource: sessionResource, label: 'Original' });
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(undefined);
+			lastCreatedItemsMap.set(sessionResource.toString(), {
+				resource: sessionResource,
+				label: 'Original',
+			});
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				undefined,
+			);
 
-			const request = { id: 'msg-1', prompt: 'test' } as vscode.ChatRequestTurn2;
-			await expect(lastForkHandler!(sessionResource, request, CancellationToken.None)).rejects.toThrow(/session not found/i);
+			const request = {
+				id: 'msg-1',
+				prompt: 'test',
+			} as vscode.ChatRequestTurn2;
+			await expect(
+				lastForkHandler!(
+					sessionResource,
+					request,
+					CancellationToken.None,
+				),
+			).rejects.toThrow(/session not found/i);
 		});
 
 		it('throws when request message is not found in session', async () => {
 			const sessionResource = ClaudeSessionUri.forSessionId('sess-1');
-			lastCreatedItemsMap.set(sessionResource.toString(), { resource: sessionResource, label: 'Original' });
+			lastCreatedItemsMap.set(sessionResource.toString(), {
+				resource: sessionResource,
+				label: 'Original',
+			});
 
-			const session = makeSession('sess-1', [{ uuid: 'msg-1', type: 'user' }]);
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(session as any);
+			const session = makeSession('sess-1', [
+				{ uuid: 'msg-1', type: 'user' },
+			]);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				session as any,
+			);
 
-			const request = { id: 'nonexistent', prompt: 'test' } as vscode.ChatRequestTurn2;
-			await expect(lastForkHandler!(sessionResource, request, CancellationToken.None)).rejects.toThrow(/could not be found/i);
+			const request = {
+				id: 'nonexistent',
+				prompt: 'test',
+			} as vscode.ChatRequestTurn2;
+			await expect(
+				lastForkHandler!(
+					sessionResource,
+					request,
+					CancellationToken.None,
+				),
+			).rejects.toThrow(/could not be found/i);
 		});
 
 		it('throws when trying to fork at the first message', async () => {
 			const sessionResource = ClaudeSessionUri.forSessionId('sess-1');
-			lastCreatedItemsMap.set(sessionResource.toString(), { resource: sessionResource, label: 'Original' });
+			lastCreatedItemsMap.set(sessionResource.toString(), {
+				resource: sessionResource,
+				label: 'Original',
+			});
 
-			const session = makeSession('sess-1', [{ uuid: 'msg-1', type: 'user' }]);
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(session as any);
+			const session = makeSession('sess-1', [
+				{ uuid: 'msg-1', type: 'user' },
+			]);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				session as any,
+			);
 
-			const request = { id: 'msg-1', prompt: 'test' } as vscode.ChatRequestTurn2;
-			await expect(lastForkHandler!(sessionResource, request, CancellationToken.None)).rejects.toThrow(/first message/i);
+			const request = {
+				id: 'msg-1',
+				prompt: 'test',
+			} as vscode.ChatRequestTurn2;
+			await expect(
+				lastForkHandler!(
+					sessionResource,
+					request,
+					CancellationToken.None,
+				),
+			).rejects.toThrow(/first message/i);
 		});
 
 		it('adds the forked item to the controller items', async () => {
 			const sessionResource = ClaudeSessionUri.forSessionId('sess-1');
-			lastCreatedItemsMap.set(sessionResource.toString(), { resource: sessionResource, label: 'Original' });
+			lastCreatedItemsMap.set(sessionResource.toString(), {
+				resource: sessionResource,
+				label: 'Original',
+			});
 
-			await lastForkHandler!(sessionResource, undefined, CancellationToken.None);
+			await lastForkHandler!(
+				sessionResource,
+				undefined,
+				CancellationToken.None,
+			);
 
 			const forkedItem = getItem('forked-session-id');
 			expect(forkedItem).toBeDefined();
@@ -2048,9 +2976,15 @@ describe('ClaudeChatSessionItemController', () => {
 			controller = createController([URI.file('/project')], gitService);
 
 			const diskSession = buildDiskSession('enriched-meta');
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			await controller.updateItemStatus('enriched-meta', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'enriched-meta',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
 			const item = getItem('enriched-meta');
 			expect(item!.metadata).toEqual({
@@ -2077,9 +3011,15 @@ describe('ClaudeChatSessionItemController', () => {
 			controller = createController([URI.file('/project')], gitService);
 
 			const diskSession = buildDiskSession('no-upstream');
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			await controller.updateItemStatus('no-upstream', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'no-upstream',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
 			const item = getItem('no-upstream');
 			expect(item!.metadata).toMatchObject({
@@ -2096,16 +3036,27 @@ describe('ClaudeChatSessionItemController', () => {
 					mergeChanges: [mockChange(), mockChange()],
 					indexChanges: [mockChange(), mockChange(), mockChange()],
 					workingTree: [mockChange()],
-					untrackedChanges: [mockChange(), mockChange(), mockChange(), mockChange()],
+					untrackedChanges: [
+						mockChange(),
+						mockChange(),
+						mockChange(),
+						mockChange(),
+					],
 				},
 			});
 			vi.spyOn(gitService, 'getRepository').mockResolvedValue(repoCtx);
 			controller = createController([URI.file('/project')], gitService);
 
 			const diskSession = buildDiskSession('many-changes');
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			await controller.updateItemStatus('many-changes', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'many-changes',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
 			const item = getItem('many-changes');
 			expect(item!.metadata).toMatchObject({ uncommittedChanges: 10 });
@@ -2121,9 +3072,15 @@ describe('ClaudeChatSessionItemController', () => {
 			controller = createController([URI.file('/project')], gitService);
 
 			const diskSession = buildDiskSession('no-changes');
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			await controller.updateItemStatus('no-changes', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'no-changes',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
 			const item = getItem('no-changes');
 			expect(item!.metadata).toMatchObject({ uncommittedChanges: 0 });
@@ -2139,9 +3096,15 @@ describe('ClaudeChatSessionItemController', () => {
 			controller = createController([URI.file('/project')], gitService);
 
 			const diskSession = buildDiskSession('no-github');
-			vi.mocked(mockSessionService.getSession).mockResolvedValue(diskSession as any);
+			vi.mocked(mockSessionService.getSession).mockResolvedValue(
+				diskSession as any,
+			);
 
-			await controller.updateItemStatus('no-github', ChatSessionStatus.InProgress, 'Prompt');
+			await controller.updateItemStatus(
+				'no-github',
+				ChatSessionStatus.InProgress,
+				'Prompt',
+			);
 
 			const item = getItem('no-github');
 			expect(item!.metadata).toMatchObject({ hasGitHubRemote: false });
@@ -2157,7 +3120,9 @@ describe('ClaudeChatSessionItemController', () => {
 			createController([URI.file('/project')]);
 			const resource = ClaudeSessionUri.forSessionId('test-session');
 
-			await findCommandHandler('github.copilot.claude.sessions.commit')(resource);
+			await findCommandHandler('github.copilot.claude.sessions.commit')(
+				resource,
+			);
 
 			expect(vscodeShim.commands.executeCommand).toHaveBeenCalledWith(
 				'workbench.action.chat.openSessionWithPrompt.claude-code',
@@ -2169,11 +3134,16 @@ describe('ClaudeChatSessionItemController', () => {
 			createController([URI.file('/project')]);
 			const resource = ClaudeSessionUri.forSessionId('test-session');
 
-			await findCommandHandler('github.copilot.claude.sessions.commitAndSync')(resource);
+			await findCommandHandler(
+				'github.copilot.claude.sessions.commitAndSync',
+			)(resource);
 
 			expect(vscodeShim.commands.executeCommand).toHaveBeenCalledWith(
 				'workbench.action.chat.openSessionWithPrompt.claude-code',
-				{ resource, prompt: `${builtinSlashCommands.commit} and ${builtinSlashCommands.sync}` },
+				{
+					resource,
+					prompt: `${builtinSlashCommands.commit} and ${builtinSlashCommands.sync}`,
+				},
 			);
 		});
 
@@ -2181,7 +3151,9 @@ describe('ClaudeChatSessionItemController', () => {
 			createController([URI.file('/project')]);
 			const resource = ClaudeSessionUri.forSessionId('test-session');
 
-			await findCommandHandler('github.copilot.claude.sessions.sync')(resource);
+			await findCommandHandler('github.copilot.claude.sessions.sync')(
+				resource,
+			);
 
 			expect(vscodeShim.commands.executeCommand).toHaveBeenCalledWith(
 				'workbench.action.chat.openSessionWithPrompt.claude-code',
@@ -2194,7 +3166,9 @@ describe('ClaudeChatSessionItemController', () => {
 			const resource = ClaudeSessionUri.forSessionId('test-session');
 			const sessionItem = { resource, label: 'Test' };
 
-			await findCommandHandler('github.copilot.claude.sessions.commit')(sessionItem);
+			await findCommandHandler('github.copilot.claude.sessions.commit')(
+				sessionItem,
+			);
 
 			expect(vscodeShim.commands.executeCommand).toHaveBeenCalledWith(
 				'workbench.action.chat.openSessionWithPrompt.claude-code',
@@ -2205,29 +3179,43 @@ describe('ClaudeChatSessionItemController', () => {
 		it('commands do not execute when resource is undefined', async () => {
 			createController([URI.file('/project')]);
 
-			await findCommandHandler('github.copilot.claude.sessions.commit')(undefined);
-			await findCommandHandler('github.copilot.claude.sessions.commitAndSync')(undefined);
-			await findCommandHandler('github.copilot.claude.sessions.sync')(undefined);
+			await findCommandHandler('github.copilot.claude.sessions.commit')(
+				undefined,
+			);
+			await findCommandHandler(
+				'github.copilot.claude.sessions.commitAndSync',
+			)(undefined);
+			await findCommandHandler('github.copilot.claude.sessions.sync')(
+				undefined,
+			);
 
 			expect(vscodeShim.commands.executeCommand).not.toHaveBeenCalled();
 		});
 
 		it('initializeRepository calls gitService.initRepository with workspace folder', async () => {
 			const gitService = new MockGitService();
-			const initSpy = vi.spyOn(gitService, 'initRepository').mockResolvedValue({} as Repository);
+			const initSpy = vi
+				.spyOn(gitService, 'initRepository')
+				.mockResolvedValue({} as Repository);
 			controller = createController([], gitService);
 
 			const sessionId = 'init-repo-session';
-			const sessionStateService = lastControllerAccessor.get(IClaudeSessionStateService);
+			const sessionStateService = lastControllerAccessor.get(
+				IClaudeSessionStateService,
+			);
 			sessionStateService.setFolderInfoForSession(sessionId, {
 				cwd: '/home/user/my-project',
 				additionalDirectories: [],
 			});
 
 			const resource = ClaudeSessionUri.forSessionId(sessionId);
-			await findCommandHandler('github.copilot.claude.sessions.initializeRepository')(resource);
+			await findCommandHandler(
+				'github.copilot.claude.sessions.initializeRepository',
+			)(resource);
 
-			expect(initSpy).toHaveBeenCalledWith(URI.file('/home/user/my-project'));
+			expect(initSpy).toHaveBeenCalledWith(
+				URI.file('/home/user/my-project'),
+			);
 		});
 
 		it('initializeRepository does not throw when init returns undefined', async () => {
@@ -2236,14 +3224,18 @@ describe('ClaudeChatSessionItemController', () => {
 			controller = createController([], gitService);
 
 			const sessionId = 'init-fail-session';
-			const sessionStateService = lastControllerAccessor.get(IClaudeSessionStateService);
+			const sessionStateService = lastControllerAccessor.get(
+				IClaudeSessionStateService,
+			);
 			sessionStateService.setFolderInfoForSession(sessionId, {
 				cwd: '/home/user/my-project',
 				additionalDirectories: [],
 			});
 
 			const resource = ClaudeSessionUri.forSessionId(sessionId);
-			await findCommandHandler('github.copilot.claude.sessions.initializeRepository')(resource);
+			await findCommandHandler(
+				'github.copilot.claude.sessions.initializeRepository',
+			)(resource);
 		});
 	});
 

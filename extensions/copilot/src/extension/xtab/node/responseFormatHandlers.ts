@@ -5,7 +5,10 @@
 
 import { DocumentId } from '../../../platform/inlineEdits/common/dataTypes/documentId';
 import * as xtabPromptOptions from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
-import { NoNextEditReason, StreamedEdit } from '../../../platform/inlineEdits/common/statelessNextEditProvider';
+import {
+	NoNextEditReason,
+	StreamedEdit,
+} from '../../../platform/inlineEdits/common/statelessNextEditProvider';
 import { ILogger } from '../../../platform/log/common/logService';
 import { LineReplacement } from '../../../util/vs/editor/common/core/edits/lineEdit';
 import { LineRange } from '../../../util/vs/editor/common/core/ranges/lineRange';
@@ -20,7 +23,6 @@ import { linesWithBackticksRemoved } from './xtabUtils';
 // ============================================================================
 
 export namespace ResponseParseResult {
-
 	export interface EditIntentMetadata {
 		readonly intent: xtabPromptOptions.EditIntent;
 		readonly parseError?: string;
@@ -33,14 +35,14 @@ export namespace ResponseParseResult {
 		constructor(
 			readonly lines: AsyncIterable<string>,
 			readonly editIntentMetadata?: EditIntentMetadata,
-		) { }
+		) {}
 	}
 
 	/**
 	 * The handler has finished — no more processing needed. Carries a {@link NoNextEditReason}.
 	 */
 	export class Done {
-		constructor(readonly reason: NoNextEditReason) { }
+		constructor(readonly reason: NoNextEditReason) {}
 	}
 
 	/**
@@ -48,7 +50,13 @@ export namespace ResponseParseResult {
 	 * The coordinator should `yield*` the stream.
 	 */
 	export class DirectEdits {
-		constructor(readonly stream: AsyncGenerator<StreamedEdit, NoNextEditReason, void>) { }
+		constructor(
+			readonly stream: AsyncGenerator<
+				StreamedEdit,
+				NoNextEditReason,
+				void
+			>,
+		) {}
 	}
 
 	export type t = EditWindowLines | Done | DirectEdits;
@@ -58,7 +66,9 @@ export namespace ResponseParseResult {
 // Handler: EditWindowOnly
 // ============================================================================
 
-export function handleEditWindowOnly(linesStream: AsyncIterable<string>): ResponseParseResult.EditWindowLines {
+export function handleEditWindowOnly(
+	linesStream: AsyncIterable<string>,
+): ResponseParseResult.EditWindowLines {
 	return new ResponseParseResult.EditWindowLines(linesStream);
 }
 
@@ -66,8 +76,12 @@ export function handleEditWindowOnly(linesStream: AsyncIterable<string>): Respon
 // Handler: CodeBlock
 // ============================================================================
 
-export function handleCodeBlock(linesStream: AsyncIterable<string>): ResponseParseResult.EditWindowLines {
-	return new ResponseParseResult.EditWindowLines(linesWithBackticksRemoved(linesStream));
+export function handleCodeBlock(
+	linesStream: AsyncIterable<string>,
+): ResponseParseResult.EditWindowLines {
+	return new ResponseParseResult.EditWindowLines(
+		linesWithBackticksRemoved(linesStream),
+	);
 }
 
 // ============================================================================
@@ -79,12 +93,13 @@ export async function handleEditWindowWithEditIntent(
 	tracer: ILogger,
 	parseMode: EditIntentParseMode,
 ): Promise<ResponseParseResult.EditWindowLines | ResponseParseResult.Done> {
-	const { editIntent, remainingLinesStream, parseError } = await parseEditIntentFromStream(linesStream, tracer, parseMode);
+	const { editIntent, remainingLinesStream, parseError } =
+		await parseEditIntentFromStream(linesStream, tracer, parseMode);
 
-	return new ResponseParseResult.EditWindowLines(
-		remainingLinesStream,
-		{ intent: editIntent, parseError },
-	);
+	return new ResponseParseResult.EditWindowLines(remainingLinesStream, {
+		intent: editIntent,
+		parseError,
+	});
 }
 
 // ============================================================================
@@ -113,7 +128,10 @@ export async function handleUnifiedWithXml(
 
 	if (firstLine.done) {
 		return new ResponseParseResult.Done(
-			new NoNextEditReason.NoSuggestions(documentBeforeEdits, ctx.editWindow),
+			new NoNextEditReason.NoSuggestions(
+				documentBeforeEdits,
+				ctx.editWindow,
+			),
 		);
 	}
 
@@ -121,7 +139,10 @@ export async function handleUnifiedWithXml(
 
 	if (trimmedFirstLine === ResponseTags.NO_CHANGE.start) {
 		return new ResponseParseResult.Done(
-			new NoNextEditReason.NoSuggestions(documentBeforeEdits, ctx.editWindow),
+			new NoNextEditReason.NoSuggestions(
+				documentBeforeEdits,
+				ctx.editWindow,
+			),
 		);
 	}
 
@@ -137,7 +158,9 @@ export async function handleUnifiedWithXml(
 	}
 
 	return new ResponseParseResult.Done(
-		new NoNextEditReason.Unexpected(new Error(`unexpected tag ${trimmedFirstLine}`)),
+		new NoNextEditReason.Unexpected(
+			new Error(`unexpected tag ${trimmedFirstLine}`),
+		),
 	);
 }
 
@@ -150,22 +173,49 @@ async function* generateInsertEdits(
 	ctx: UnifiedXmlInsertContext,
 	documentBeforeEdits: StringText,
 ): AsyncGenerator<StreamedEdit, NoNextEditReason, void> {
-	const { editWindowLines, editWindowLineRange, cursorOriginalLinesOffset, cursorColumnZeroBased, editWindow, originalEditWindow, targetDocument, isFromCursorJump } = ctx;
+	const {
+		editWindowLines,
+		editWindowLineRange,
+		cursorOriginalLinesOffset,
+		cursorColumnZeroBased,
+		editWindow,
+		originalEditWindow,
+		targetDocument,
+		isFromCursorJump,
+	} = ctx;
 
 	const lineWithCursorContinued = await linesIter.next();
-	if (lineWithCursorContinued.done || lineWithCursorContinued.value.includes(ResponseTags.INSERT.end)) {
-		return new NoNextEditReason.NoSuggestions(documentBeforeEdits, editWindow);
+	if (
+		lineWithCursorContinued.done ||
+		lineWithCursorContinued.value.includes(ResponseTags.INSERT.end)
+	) {
+		return new NoNextEditReason.NoSuggestions(
+			documentBeforeEdits,
+			editWindow,
+		);
 	}
 
 	const cursorLineContent = editWindowLines[cursorOriginalLinesOffset];
 	const edit = new LineReplacement(
 		new LineRange(
-			editWindowLineRange.start + cursorOriginalLinesOffset + 1 /* 0-based to 1-based */,
+			editWindowLineRange.start +
+				cursorOriginalLinesOffset +
+				1 /* 0-based to 1-based */,
 			editWindowLineRange.start + cursorOriginalLinesOffset + 2,
 		),
-		[cursorLineContent.slice(0, cursorColumnZeroBased) + lineWithCursorContinued.value + cursorLineContent.slice(cursorColumnZeroBased)],
+		[
+			cursorLineContent.slice(0, cursorColumnZeroBased) +
+				lineWithCursorContinued.value +
+				cursorLineContent.slice(cursorColumnZeroBased),
+		],
 	);
-	yield { edit, isFromCursorJump, window: editWindow, originalWindow: originalEditWindow, targetDocument };
+	yield {
+		edit,
+		isFromCursorJump,
+		window: editWindow,
+		originalWindow: originalEditWindow,
+		targetDocument,
+	};
 
 	const lines: string[] = [];
 	let v = await linesIter.next();
@@ -180,10 +230,7 @@ async function* generateInsertEdits(
 
 	const line = editWindowLineRange.start + cursorOriginalLinesOffset + 2;
 	yield {
-		edit: new LineReplacement(
-			new LineRange(line, line),
-			lines,
-		),
+		edit: new LineReplacement(new LineRange(line, line), lines),
 		isFromCursorJump,
 		window: editWindow,
 		originalWindow: originalEditWindow,

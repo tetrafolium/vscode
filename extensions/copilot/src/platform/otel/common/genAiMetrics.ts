@@ -3,7 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CopilotChatAttr, type EditOutcome, type EditSource, GenAiAttr, StdAttr } from './genAiAttributes';
+import {
+	CopilotChatAttr,
+	type EditOutcome,
+	type EditSource,
+	GenAiAttr,
+	StdAttr,
+} from './genAiAttributes';
 import type { IOTelService } from './otelService';
 
 /**
@@ -11,7 +17,6 @@ import type { IOTelService } from './otelService';
  * All methods are static to avoid per-call allocations (aligned with gemini-cli pattern).
  */
 export class GenAiMetrics {
-
 	// ── GenAI Convention Metrics ──
 
 	static recordOperationDuration(
@@ -31,10 +36,18 @@ export class GenAiMetrics {
 			[GenAiAttr.OPERATION_NAME]: attrs.operationName,
 			[GenAiAttr.PROVIDER_NAME]: attrs.providerName,
 			[GenAiAttr.REQUEST_MODEL]: attrs.requestModel,
-			...(attrs.responseModel ? { [GenAiAttr.RESPONSE_MODEL]: attrs.responseModel } : {}),
-			...(attrs.serverAddress ? { [StdAttr.SERVER_ADDRESS]: attrs.serverAddress } : {}),
-			...(attrs.serverPort ? { [StdAttr.SERVER_PORT]: attrs.serverPort } : {}),
-			...(attrs.errorType ? { [StdAttr.ERROR_TYPE]: attrs.errorType } : {}),
+			...(attrs.responseModel
+				? { [GenAiAttr.RESPONSE_MODEL]: attrs.responseModel }
+				: {}),
+			...(attrs.serverAddress
+				? { [StdAttr.SERVER_ADDRESS]: attrs.serverAddress }
+				: {}),
+			...(attrs.serverPort
+				? { [StdAttr.SERVER_PORT]: attrs.serverPort }
+				: {}),
+			...(attrs.errorType
+				? { [StdAttr.ERROR_TYPE]: attrs.errorType }
+				: {}),
 		});
 	}
 
@@ -55,39 +68,67 @@ export class GenAiMetrics {
 			[GenAiAttr.PROVIDER_NAME]: attrs.providerName,
 			[GenAiAttr.TOKEN_TYPE]: tokenType,
 			[GenAiAttr.REQUEST_MODEL]: attrs.requestModel,
-			...(attrs.responseModel ? { [GenAiAttr.RESPONSE_MODEL]: attrs.responseModel } : {}),
-			...(attrs.serverAddress ? { [StdAttr.SERVER_ADDRESS]: attrs.serverAddress } : {}),
+			...(attrs.responseModel
+				? { [GenAiAttr.RESPONSE_MODEL]: attrs.responseModel }
+				: {}),
+			...(attrs.serverAddress
+				? { [StdAttr.SERVER_ADDRESS]: attrs.serverAddress }
+				: {}),
 		});
 	}
 
 	// ── Extension-Specific Metrics ──
 
-	static recordToolCallCount(otel: IOTelService, toolName: string, success: boolean): void {
+	static recordToolCallCount(
+		otel: IOTelService,
+		toolName: string,
+		success: boolean,
+	): void {
 		otel.incrementCounter('copilot_chat.tool.call.count', 1, {
 			[GenAiAttr.TOOL_NAME]: toolName,
 			success,
 		});
 	}
 
-	static recordToolCallDuration(otel: IOTelService, toolName: string, durationMs: number): void {
+	static recordToolCallDuration(
+		otel: IOTelService,
+		toolName: string,
+		durationMs: number,
+	): void {
 		otel.recordMetric('copilot_chat.tool.call.duration', durationMs, {
 			[GenAiAttr.TOOL_NAME]: toolName,
 		});
 	}
 
-	static recordAgentDuration(otel: IOTelService, agentName: string, durationSec: number): void {
-		otel.recordMetric('copilot_chat.agent.invocation.duration', durationSec, {
-			[GenAiAttr.AGENT_NAME]: agentName,
-		});
+	static recordAgentDuration(
+		otel: IOTelService,
+		agentName: string,
+		durationSec: number,
+	): void {
+		otel.recordMetric(
+			'copilot_chat.agent.invocation.duration',
+			durationSec,
+			{
+				[GenAiAttr.AGENT_NAME]: agentName,
+			},
+		);
 	}
 
-	static recordAgentTurnCount(otel: IOTelService, agentName: string, turnCount: number): void {
+	static recordAgentTurnCount(
+		otel: IOTelService,
+		agentName: string,
+		turnCount: number,
+	): void {
 		otel.recordMetric('copilot_chat.agent.turn.count', turnCount, {
 			[GenAiAttr.AGENT_NAME]: agentName,
 		});
 	}
 
-	static recordTimeToFirstToken(otel: IOTelService, model: string, ttftSec: number): void {
+	static recordTimeToFirstToken(
+		otel: IOTelService,
+		model: string,
+		ttftSec: number,
+	): void {
 		otel.recordMetric('copilot_chat.time_to_first_token', ttftSec, {
 			[GenAiAttr.REQUEST_MODEL]: model,
 		});
@@ -100,26 +141,48 @@ export class GenAiMetrics {
 	// ── Agent Activity & Outcome Metrics ──
 
 	/** Accept/reject counter for inline chat and chat editing edits */
-	static recordEditAcceptance(otel: IOTelService, source: EditSource, outcome: EditOutcome, languageId?: string): void {
+	static recordEditAcceptance(
+		otel: IOTelService,
+		source: EditSource,
+		outcome: EditOutcome,
+		languageId?: string,
+	): void {
 		otel.incrementCounter('copilot_chat.edit.acceptance.count', 1, {
 			[CopilotChatAttr.EDIT_SOURCE]: source,
 			[CopilotChatAttr.EDIT_OUTCOME]: outcome,
-			...(languageId ? { [CopilotChatAttr.LANGUAGE_ID]: languageId } : {}),
+			...(languageId
+				? { [CopilotChatAttr.LANGUAGE_ID]: languageId }
+				: {}),
 		});
 	}
 
 	/** File-level chat editing session outcome (accepted/rejected/saved) */
-	static recordChatEditOutcome(otel: IOTelService, source: EditSource, outcome: EditOutcome, languageId?: string, hasRemainingEdits?: boolean): void {
+	static recordChatEditOutcome(
+		otel: IOTelService,
+		source: EditSource,
+		outcome: EditOutcome,
+		languageId?: string,
+		hasRemainingEdits?: boolean,
+	): void {
 		otel.incrementCounter('copilot_chat.chat_edit.outcome.count', 1, {
 			[CopilotChatAttr.EDIT_SOURCE]: source,
 			[CopilotChatAttr.EDIT_OUTCOME]: outcome,
-			...(languageId ? { [CopilotChatAttr.LANGUAGE_ID]: languageId } : {}),
-			...(hasRemainingEdits !== undefined ? { [CopilotChatAttr.HAS_REMAINING_EDITS]: hasRemainingEdits } : {}),
+			...(languageId
+				? { [CopilotChatAttr.LANGUAGE_ID]: languageId }
+				: {}),
+			...(hasRemainingEdits !== undefined
+				? { [CopilotChatAttr.HAS_REMAINING_EDITS]: hasRemainingEdits }
+				: {}),
 		});
 	}
 
 	/** 4-gram text similarity survival score */
-	static recordEditSurvivalFourGram(otel: IOTelService, source: EditSource, score: number, timeDelayMs: number): void {
+	static recordEditSurvivalFourGram(
+		otel: IOTelService,
+		source: EditSource,
+		score: number,
+		timeDelayMs: number,
+	): void {
 		otel.recordMetric('copilot_chat.edit.survival.four_gram', score, {
 			[CopilotChatAttr.EDIT_SOURCE]: source,
 			[CopilotChatAttr.TIME_DELAY_MS]: timeDelayMs,
@@ -127,7 +190,12 @@ export class GenAiMetrics {
 	}
 
 	/** No-revert survival score */
-	static recordEditSurvivalNoRevert(otel: IOTelService, source: EditSource, score: number, timeDelayMs: number): void {
+	static recordEditSurvivalNoRevert(
+		otel: IOTelService,
+		source: EditSource,
+		score: number,
+		timeDelayMs: number,
+	): void {
 		otel.recordMetric('copilot_chat.edit.survival.no_revert', score, {
 			[CopilotChatAttr.EDIT_SOURCE]: source,
 			[CopilotChatAttr.TIME_DELAY_MS]: timeDelayMs,
@@ -135,10 +203,17 @@ export class GenAiMetrics {
 	}
 
 	/** Lines of code added/removed by accepted agent edits */
-	static incrementLinesOfCode(otel: IOTelService, type: 'added' | 'removed', languageId: string | undefined, count: number): void {
+	static incrementLinesOfCode(
+		otel: IOTelService,
+		type: 'added' | 'removed',
+		languageId: string | undefined,
+		count: number,
+	): void {
 		otel.incrementCounter('copilot_chat.lines_of_code.count', count, {
-			'type': type,
-			...(languageId ? { [CopilotChatAttr.LANGUAGE_ID]: languageId } : {}),
+			type: type,
+			...(languageId
+				? { [CopilotChatAttr.LANGUAGE_ID]: languageId }
+				: {}),
 		});
 	}
 
@@ -146,27 +221,36 @@ export class GenAiMetrics {
 
 	static incrementUserActionCount(otel: IOTelService, action: string): void {
 		otel.incrementCounter('copilot_chat.user.action.count', 1, {
-			'action': action,
+			action: action,
 		});
 	}
 
-	static incrementUserFeedbackCount(otel: IOTelService, rating: string): void {
+	static incrementUserFeedbackCount(
+		otel: IOTelService,
+		rating: string,
+	): void {
 		otel.incrementCounter('copilot_chat.user.feedback.count', 1, {
-			'rating': rating,
+			rating: rating,
 		});
 	}
 
 	// ── Agent Internals Metrics ──
 
-	static incrementAgentEditResponseCount(otel: IOTelService, outcome: string): void {
+	static incrementAgentEditResponseCount(
+		otel: IOTelService,
+		outcome: string,
+	): void {
 		otel.incrementCounter('copilot_chat.agent.edit_response.count', 1, {
-			'outcome': outcome,
+			outcome: outcome,
 		});
 	}
 
-	static incrementAgentSummarizationCount(otel: IOTelService, outcome: string): void {
+	static incrementAgentSummarizationCount(
+		otel: IOTelService,
+		outcome: string,
+	): void {
 		otel.incrementCounter('copilot_chat.agent.summarization.count', 1, {
-			'outcome': outcome,
+			outcome: outcome,
 		});
 	}
 
@@ -176,9 +260,12 @@ export class GenAiMetrics {
 		otel.incrementCounter('copilot_chat.pull_request.count');
 	}
 
-	static incrementCloudSessionCount(otel: IOTelService, partnerAgent: string): void {
+	static incrementCloudSessionCount(
+		otel: IOTelService,
+		partnerAgent: string,
+	): void {
 		otel.incrementCounter('copilot_chat.cloud.session.count', 1, {
-			'partner_agent': partnerAgent,
+			partner_agent: partnerAgent,
 		});
 	}
 

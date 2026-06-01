@@ -3,35 +3,72 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../../../base/common/cancellation.js';
-import { Codicon } from '../../../../../../base/common/codicons.js';
-import { Disposable, MutableDisposable } from '../../../../../../base/common/lifecycle.js';
-import { revive } from '../../../../../../base/common/marshalling.js';
-import { Schemas } from '../../../../../../base/common/network.js';
-import { isEqual } from '../../../../../../base/common/resources.js';
-import { truncate } from '../../../../../../base/common/strings.js';
-import { ThemeIcon } from '../../../../../../base/common/themables.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import * as nls from '../../../../../../nls.js';
-import { ConfirmResult, IDialogService } from '../../../../../../platform/dialogs/common/dialogs.js';
-import { IInstantiationService } from '../../../../../../platform/instantiation/common/instantiation.js';
-import { registerIcon } from '../../../../../../platform/theme/common/iconRegistry.js';
-import { EditorInputCapabilities, IEditorIdentifier, IEditorSerializer, IUntypedEditorInput, Verbosity } from '../../../../../common/editor.js';
-import { EditorInput, IEditorCloseHandler } from '../../../../../common/editor/editorInput.js';
-import { IChatModelReference, IChatService } from '../../../common/chatService/chatService.js';
-import { IChatSessionsService, localChatSessionType } from '../../../common/chatSessionsService.js';
-import { ChatAgentLocation, ChatEditorTitleMaxLength } from '../../../common/constants.js';
-import { IChatEditingSession, ModifiedFileEntryState } from '../../../common/editing/chatEditingService.js';
-import { IChatModel } from '../../../common/model/chatModel.js';
-import { LocalChatSessionUri, getChatSessionType } from '../../../common/model/chatUri.js';
-import { IClearEditingSessionConfirmationOptions } from '../../actions/chatActions.js';
-import type { IChatEditorOptions } from './chatEditor.js';
+import { CancellationToken } from "../../../../../../base/common/cancellation.js";
+import { Codicon } from "../../../../../../base/common/codicons.js";
+import {
+	Disposable,
+	MutableDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import { revive } from "../../../../../../base/common/marshalling.js";
+import { Schemas } from "../../../../../../base/common/network.js";
+import { isEqual } from "../../../../../../base/common/resources.js";
+import { truncate } from "../../../../../../base/common/strings.js";
+import { ThemeIcon } from "../../../../../../base/common/themables.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import * as nls from "../../../../../../nls.js";
+import {
+	ConfirmResult,
+	IDialogService,
+} from "../../../../../../platform/dialogs/common/dialogs.js";
+import { IInstantiationService } from "../../../../../../platform/instantiation/common/instantiation.js";
+import { registerIcon } from "../../../../../../platform/theme/common/iconRegistry.js";
+import {
+	EditorInputCapabilities,
+	IEditorIdentifier,
+	IEditorSerializer,
+	IUntypedEditorInput,
+	Verbosity,
+} from "../../../../../common/editor.js";
+import {
+	EditorInput,
+	IEditorCloseHandler,
+} from "../../../../../common/editor/editorInput.js";
+import {
+	IChatModelReference,
+	IChatService,
+} from "../../../common/chatService/chatService.js";
+import {
+	IChatSessionsService,
+	localChatSessionType,
+} from "../../../common/chatSessionsService.js";
+import {
+	ChatAgentLocation,
+	ChatEditorTitleMaxLength,
+} from "../../../common/constants.js";
+import {
+	IChatEditingSession,
+	ModifiedFileEntryState,
+} from "../../../common/editing/chatEditingService.js";
+import { IChatModel } from "../../../common/model/chatModel.js";
+import {
+	LocalChatSessionUri,
+	getChatSessionType,
+} from "../../../common/model/chatUri.js";
+import { IClearEditingSessionConfirmationOptions } from "../../actions/chatActions.js";
+import type { IChatEditorOptions } from "./chatEditor.js";
 
-const ChatEditorIcon = registerIcon('chat-editor-label-icon', Codicon.chatSparkle, nls.localize('chatEditorLabelIcon', 'Icon of the chat editor label.'));
+const ChatEditorIcon = registerIcon(
+	"chat-editor-label-icon",
+	Codicon.chatSparkle,
+	nls.localize("chatEditorLabelIcon", "Icon of the chat editor label."),
+);
 
-export class ChatEditorInput extends EditorInput implements IEditorCloseHandler {
-	static readonly TypeID: string = 'workbench.input.chatSession';
-	static readonly EditorID: string = 'workbench.editor.chatSession';
+export class ChatEditorInput
+	extends EditorInput
+	implements IEditorCloseHandler
+{
+	static readonly TypeID: string = "workbench.input.chatSession";
+	static readonly EditorID: string = "workbench.editor.chatSession";
 
 	private _sessionResource: URI | undefined;
 
@@ -40,13 +77,19 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 	 *
 	 * This should be preferred over using `resource` directly, as it handles cases where a chat editor becomes a session
 	 */
-	public get sessionResource(): URI | undefined { return this._sessionResource; }
+	public get sessionResource(): URI | undefined {
+		return this._sessionResource;
+	}
 
 	private didTransferOutEditingSession = false;
 	private cachedIcon: ThemeIcon | URI | undefined;
 
-	private readonly modelRef = this._register(new MutableDisposable<IChatModelReference>());
-	private readonly _modelChangeListener = this._register(new MutableDisposable());
+	private readonly modelRef = this._register(
+		new MutableDisposable<IChatModelReference>(),
+	);
+	private readonly _modelChangeListener = this._register(
+		new MutableDisposable(),
+	);
 
 	private get model(): IChatModel | undefined {
 		return this.modelRef.value?.object;
@@ -61,20 +104,22 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 		readonly options: IChatEditorOptions,
 		@IChatService private readonly chatService: IChatService,
 		@IDialogService private readonly dialogService: IDialogService,
-		@IChatSessionsService private readonly chatSessionsService: IChatSessionsService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IChatSessionsService
+		private readonly chatSessionsService: IChatSessionsService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super();
 
 		if (resource.scheme === Schemas.vscodeChatEditor) {
 			const parsed = ChatEditorUri.parse(resource);
-			if (!parsed || typeof parsed !== 'number') {
-				throw new Error('Invalid chat URI');
+			if (!parsed || typeof parsed !== "number") {
+				throw new Error("Invalid chat URI");
 			}
 		} else if (resource.scheme === Schemas.vscodeLocalChatSession) {
 			const localSessionId = LocalChatSessionUri.parseLocalSessionId(resource);
 			if (!localSessionId) {
-				throw new Error('Invalid local chat session URI');
+				throw new Error("Invalid local chat session URI");
 			}
 			this._sessionResource = resource;
 		} else {
@@ -85,7 +130,9 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 	override closeHandler = this;
 
 	showConfirm(): boolean {
-		return !!(this.model && shouldShowClearEditingSessionConfirmation(this.model));
+		return !!(
+			this.model && shouldShowClearEditingSessionConfirmation(this.model)
+		);
 	}
 
 	transferOutEditingSession(): IChatEditingSession | undefined {
@@ -93,14 +140,30 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 		return this.model?.editingSession;
 	}
 
-	async confirm(editors: ReadonlyArray<IEditorIdentifier>): Promise<ConfirmResult> {
-		if (!this.model?.editingSession || this.didTransferOutEditingSession || this.getSessionType() !== localChatSessionType) {
+	async confirm(
+		editors: ReadonlyArray<IEditorIdentifier>,
+	): Promise<ConfirmResult> {
+		if (
+			!this.model?.editingSession ||
+			this.didTransferOutEditingSession ||
+			this.getSessionType() !== localChatSessionType
+		) {
 			return ConfirmResult.SAVE;
 		}
 
-		const titleOverride = nls.localize('chatEditorConfirmTitle', "Close Chat Editor");
-		const messageOverride = nls.localize('chat.startEditing.confirmation.pending.message.default', "Closing the chat editor will end your current edit session.");
-		const result = await showClearEditingSessionConfirmation(this.model, this.dialogService, { titleOverride, messageOverride });
+		const titleOverride = nls.localize(
+			"chatEditorConfirmTitle",
+			"Close Chat Editor",
+		);
+		const messageOverride = nls.localize(
+			"chat.startEditing.confirmation.pending.message.default",
+			"Closing the chat editor will end your current edit session.",
+		);
+		const result = await showClearEditingSessionConfirmation(
+			this.model,
+			this.dialogService,
+			{ titleOverride, messageOverride },
+		);
 		return result ? ConfirmResult.SAVE : ConfirmResult.CANCEL;
 	}
 
@@ -109,11 +172,19 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 	}
 
 	override get capabilities(): EditorInputCapabilities {
-		return super.capabilities | EditorInputCapabilities.ForceReveal | EditorInputCapabilities.CanDropIntoEditor;
+		return (
+			super.capabilities |
+			EditorInputCapabilities.ForceReveal |
+			EditorInputCapabilities.CanDropIntoEditor
+		);
 	}
 
 	override copy(): EditorInput {
-		return this.instantiationService.createInstance(ChatEditorInput, ChatEditorInput.getNewEditorUri(), {});
+		return this.instantiationService.createInstance(
+			ChatEditorInput,
+			ChatEditorInput.getNewEditorUri(),
+			{},
+		);
 	}
 
 	override matches(otherInput: EditorInput | IUntypedEditorInput): boolean {
@@ -132,20 +203,27 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 		// If we have a resolved model, use its title
 		if (this.model?.title) {
 			// Only truncate if the default title is being used (don't truncate custom titles)
-			return this.model.hasCustomTitle ? this.model.title : truncate(this.model.title, ChatEditorTitleMaxLength);
+			return this.model.hasCustomTitle
+				? this.model.title
+				: truncate(this.model.title, ChatEditorTitleMaxLength);
 		}
 
 		// If we have a sessionId but no resolved model, try to get the title from persisted sessions
 		if (this._sessionResource) {
 			// First try the active session registry
-			const existingSession = this.chatService.getSession(this._sessionResource);
+			const existingSession = this.chatService.getSession(
+				this._sessionResource,
+			);
 			if (existingSession?.title) {
 				return existingSession.title;
 			}
 
 			// If not in active registry, try persisted session data
-			const persistedTitle = this.chatService.getSessionTitle(this._sessionResource);
-			if (persistedTitle && persistedTitle.trim()) { // Only use non-empty persisted titles
+			const persistedTitle = this.chatService.getSessionTitle(
+				this._sessionResource,
+			);
+			if (persistedTitle && persistedTitle.trim()) {
+				// Only use non-empty persisted titles
 				return persistedTitle;
 			}
 		}
@@ -156,12 +234,15 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 		}
 
 		// Fall back to default naming pattern
-		return this.options.title?.fallback ?? nls.localize('chatEditorName', "Chat");
+		return (
+			this.options.title?.fallback ?? nls.localize("chatEditorName", "Chat")
+		);
 	}
 
 	override getTitle(verbosity?: Verbosity): string {
 		const name = this.getName();
-		if (verbosity === Verbosity.LONG) { // Verbosity LONG is used for tooltips
+		if (verbosity === Verbosity.LONG) {
+			// Verbosity LONG is used for tooltips
 			const sessionTypeDisplayName = this.getSessionTypeDisplayName();
 			if (sessionTypeDisplayName) {
 				return `${name} | ${sessionTypeDisplayName}`;
@@ -175,8 +256,9 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 		if (sessionType === localChatSessionType) {
 			return;
 		}
-		const contributions = this.chatSessionsService.getAllChatSessionContributions();
-		const contribution = contributions.find(c => c.type === sessionType);
+		const contributions =
+			this.chatSessionsService.getAllChatSessionContributions();
+		const contribution = contributions.find((c) => c.type === sessionType);
 		return contribution?.displayName;
 	}
 
@@ -195,7 +277,8 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 		// TODO@osortega,@rebornix double check: Chat Session Item icon is reserved for chat session list and deprecated for chat session status. thus here we use session type icon. We may want to show status for the Editor Title.
 		const sessionType = this.getSessionType();
 		if (sessionType !== localChatSessionType) {
-			return this.chatSessionsService.getChatSessionContribution(sessionType)?.icon;
+			return this.chatSessionsService.getChatSessionContribution(sessionType)
+				?.icon;
 		}
 
 		return undefined;
@@ -210,20 +293,43 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 
 	override async resolve(): Promise<ChatEditorModel | null> {
 		const searchParams = new URLSearchParams(this.resource.query);
-		const chatSessionType = searchParams.get('chatSessionType');
+		const chatSessionType = searchParams.get("chatSessionType");
 		const inputType = chatSessionType ?? this.resource.authority;
 
 		if (this._sessionResource) {
-			this.modelRef.value = await this.chatService.acquireOrLoadSession(this._sessionResource, ChatAgentLocation.Chat, CancellationToken.None, 'ChatEditorInput#resolve');
+			this.modelRef.value = await this.chatService.acquireOrLoadSession(
+				this._sessionResource,
+				ChatAgentLocation.Chat,
+				CancellationToken.None,
+				"ChatEditorInput#resolve",
+			);
 
 			// For local session only, if we find no existing session, create a new one
-			if (!this.model && LocalChatSessionUri.parseLocalSessionId(this._sessionResource)) {
-				this.modelRef.value = this.chatService.startNewLocalSession(ChatAgentLocation.Chat, { canUseTools: true, debugOwner: 'ChatEditorInput#resolveNewLocalSession' });
+			if (
+				!this.model &&
+				LocalChatSessionUri.parseLocalSessionId(this._sessionResource)
+			) {
+				this.modelRef.value = this.chatService.startNewLocalSession(
+					ChatAgentLocation.Chat,
+					{
+						canUseTools: true,
+						debugOwner: "ChatEditorInput#resolveNewLocalSession",
+					},
+				);
 			}
 		} else if (!this.options.target) {
-			this.modelRef.value = this.chatService.startNewLocalSession(ChatAgentLocation.Chat, { canUseTools: !inputType, debugOwner: 'ChatEditorInput#resolveUntitled' });
+			this.modelRef.value = this.chatService.startNewLocalSession(
+				ChatAgentLocation.Chat,
+				{
+					canUseTools: !inputType,
+					debugOwner: "ChatEditorInput#resolveUntitled",
+				},
+			);
 		} else if (this.options.target.data) {
-			this.modelRef.value = this.chatService.loadSessionFromData(this.options.target.data, 'ChatEditorInput#resolveImportedData');
+			this.modelRef.value = this.chatService.loadSessionFromData(
+				this.options.target.data,
+				"ChatEditorInput#resolveImportedData",
+			);
 		}
 
 		if (!this.model || this.isDisposed()) {
@@ -236,7 +342,10 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 
 		// Check if icon has changed after model resolution
 		const newIcon = this.resolveIcon();
-		if (newIcon && (!this.cachedIcon || !this.iconsEqual(this.cachedIcon, newIcon))) {
+		if (
+			newIcon &&
+			(!this.cachedIcon || !this.iconsEqual(this.cachedIcon, newIcon))
+		) {
 			this.cachedIcon = newIcon;
 		}
 
@@ -251,7 +360,10 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 	 */
 	updateModel(model: IChatModel): void {
 		this._sessionResource = model.sessionResource;
-		this.modelRef.value = this.chatService.acquireExistingSession(model.sessionResource, 'ChatEditorInput#updateModel');
+		this.modelRef.value = this.chatService.acquireExistingSession(
+			model.sessionResource,
+			"ChatEditorInput#updateModel",
+		);
 		this._trackModelChanges();
 		this.cachedIcon = undefined;
 		this._onDidChangeLabel.fire();
@@ -276,15 +388,14 @@ export class ChatEditorInput extends EditorInput implements IEditorCloseHandler 
 		}
 		return false;
 	}
-
 }
 
 export class ChatEditorModel extends Disposable {
 	private _isResolved = false;
 
-	constructor(
-		readonly model: IChatModel
-	) { super(); }
+	constructor(readonly model: IChatModel) {
+		super();
+	}
 
 	async resolve(): Promise<void> {
 		this._isResolved = true;
@@ -299,9 +410,7 @@ export class ChatEditorModel extends Disposable {
 	}
 }
 
-
 namespace ChatEditorUri {
-
 	const scheme = Schemas.vscodeChatEditor;
 
 	export function getNewEditorUri(): URI {
@@ -316,7 +425,7 @@ namespace ChatEditorUri {
 
 		const match = resource.path.match(/chat-(\d+)/);
 		const handleStr = match?.[1];
-		if (typeof handleStr !== 'string') {
+		if (typeof handleStr !== "string") {
 			return undefined;
 		}
 
@@ -349,12 +458,14 @@ export class ChatEditorInputSerializer implements IEditorSerializer {
 			options: input.options,
 			sessionResource: input.sessionResource,
 			resource: input.resource,
-
 		};
 		return JSON.stringify(obj);
 	}
 
-	deserialize(instantiationService: IInstantiationService, serializedEditor: string): EditorInput | undefined {
+	deserialize(
+		instantiationService: IInstantiationService,
+		serializedEditor: string,
+	): EditorInput | undefined {
 		try {
 			// Old inputs have a session id for local session
 			// Use revive to properly restore URIs and other special objects in options.target.data
@@ -363,7 +474,11 @@ export class ChatEditorInputSerializer implements IEditorSerializer {
 			// First if we have a modern session resource, use that
 			if (parsed.sessionResource) {
 				const sessionResource = URI.revive(parsed.sessionResource);
-				return instantiationService.createInstance(ChatEditorInput, sessionResource, parsed.options);
+				return instantiationService.createInstance(
+					ChatEditorInput,
+					sessionResource,
+					parsed.options,
+				);
 			}
 
 			// Otherwise check to see if we're a chat editor with a local session id
@@ -372,44 +487,74 @@ export class ChatEditorInputSerializer implements IEditorSerializer {
 				resource = LocalChatSessionUri.forSession(parsed.sessionId);
 			}
 
-			return instantiationService.createInstance(ChatEditorInput, resource, parsed.options);
+			return instantiationService.createInstance(
+				ChatEditorInput,
+				resource,
+				parsed.options,
+			);
 		} catch (err) {
 			return undefined;
 		}
 	}
 }
 
-export async function showClearEditingSessionConfirmation(model: IChatModel, dialogService: IDialogService, options?: IClearEditingSessionConfirmationOptions): Promise<boolean> {
-	const undecidedEdits = shouldShowClearEditingSessionConfirmation(model, options);
+export async function showClearEditingSessionConfirmation(
+	model: IChatModel,
+	dialogService: IDialogService,
+	options?: IClearEditingSessionConfirmationOptions,
+): Promise<boolean> {
+	const undecidedEdits = shouldShowClearEditingSessionConfirmation(
+		model,
+		options,
+	);
 	if (!undecidedEdits) {
 		return true; // safe to dispose without confirmation
 	}
 
-	const defaultPhrase = nls.localize('chat.startEditing.confirmation.pending.message.default1', "Starting a new chat will end your current edit session.");
-	const defaultTitle = nls.localize('chat.startEditing.confirmation.title', "Start new chat?");
+	const defaultPhrase = nls.localize(
+		"chat.startEditing.confirmation.pending.message.default1",
+		"Starting a new chat will end your current edit session.",
+	);
+	const defaultTitle = nls.localize(
+		"chat.startEditing.confirmation.title",
+		"Start new chat?",
+	);
 	const phrase = options?.messageOverride ?? defaultPhrase;
 	const title = options?.titleOverride ?? defaultTitle;
 
 	const { result } = await dialogService.prompt({
 		title,
-		message: phrase + ' ' + nls.localize('chat.startEditing.confirmation.pending.message.2', "Do you want to keep pending edits to {0} files?", undecidedEdits),
-		type: 'info',
+		message:
+			phrase +
+			" " +
+			nls.localize(
+				"chat.startEditing.confirmation.pending.message.2",
+				"Do you want to keep pending edits to {0} files?",
+				undecidedEdits,
+			),
+		type: "info",
 		cancelButton: true,
 		buttons: [
 			{
-				label: nls.localize('chat.startEditing.confirmation.acceptEdits', "Keep & Continue"),
+				label: nls.localize(
+					"chat.startEditing.confirmation.acceptEdits",
+					"Keep & Continue",
+				),
 				run: async () => {
 					await model.editingSession!.accept();
 					return true;
-				}
+				},
 			},
 			{
-				label: nls.localize('chat.startEditing.confirmation.discardEdits', "Undo & Continue"),
+				label: nls.localize(
+					"chat.startEditing.confirmation.discardEdits",
+					"Undo & Continue",
+				),
 				run: async () => {
 					await model.editingSession!.reject();
 					return true;
-				}
-			}
+				},
+			},
 		],
 	});
 
@@ -417,12 +562,20 @@ export async function showClearEditingSessionConfirmation(model: IChatModel, dia
 }
 
 /** Returns the number of files in the  model's modifications that need a prompt before saving */
-export function shouldShowClearEditingSessionConfirmation(model: IChatModel, options?: IClearEditingSessionConfirmationOptions): number {
-	if (!model.editingSession || (model.willKeepAlive && !options?.isArchiveAction)) {
+export function shouldShowClearEditingSessionConfirmation(
+	model: IChatModel,
+	options?: IClearEditingSessionConfirmationOptions,
+): number {
+	if (
+		!model.editingSession ||
+		(model.willKeepAlive && !options?.isArchiveAction)
+	) {
 		return 0; // safe to dispose without confirmation
 	}
 
 	const currentEdits = model.editingSession.entries.get();
-	const undecidedEdits = currentEdits.filter((edit) => edit.state.get() === ModifiedFileEntryState.Modified);
+	const undecidedEdits = currentEdits.filter(
+		(edit) => edit.state.get() === ModifiedFileEntryState.Modified,
+	);
 	return undecidedEdits.length;
 }

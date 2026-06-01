@@ -3,9 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ChatEntitlement, IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
+import {
+	ChatEntitlement,
+	IChatEntitlementService,
+} from "../../../../services/chat/common/chatEntitlementService.js";
 
-export function isNewUser(chatEntitlementService: IChatEntitlementService): boolean {
-	return !chatEntitlementService.sentiment.completed ||					// setup not completed
-		chatEntitlementService.entitlement === ChatEntitlement.Available;	// not yet signed up to chat
+export function isNewUser(
+	chatEntitlementService: IChatEntitlementService,
+): boolean {
+	return (
+		!chatEntitlementService.sentiment.completed || // setup not completed
+		chatEntitlementService.entitlement === ChatEntitlement.Available
+	); // not yet signed up to chat
 }

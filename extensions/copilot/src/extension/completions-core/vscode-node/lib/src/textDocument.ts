@@ -7,9 +7,16 @@ import { normalizeUri } from './util/uri';
 import { TextEdit } from '../../types/src';
 import { TextDocumentContentChangeEvent } from 'vscode-languageserver-protocol';
 import { TextDocument as LspTextDocument } from 'vscode-languageserver-textdocument';
-import { Position, Range, SelectedCompletionInfo } from 'vscode-languageserver-types';
+import {
+	Position,
+	Range,
+	SelectedCompletionInfo,
+} from 'vscode-languageserver-types';
 
-export { type Position as IPosition, type Range as IRange } from '../../types/src';
+export {
+	type Position as IPosition,
+	type Range as IRange,
+} from '../../types/src';
 
 export class LocationFactory {
 	static range = Range.create.bind(Range);
@@ -195,22 +202,30 @@ export class CopilotTextDocument implements ITextDocument {
 	private constructor(
 		readonly uri: string,
 		private readonly _textDocument: LspTextDocument,
-		readonly detectedLanguageId: string
-	) { }
+		readonly detectedLanguageId: string,
+	) {}
 
 	/**
 	 * Return a copy of a document with a new version number and changes applied. Used when a document is changed
 	 * canonically (e.g., synced via textDocument/didChange).
 	 */
-	static withChanges(textDocument: ITextDocument, changes: TextDocumentContentChangeEvent[], version: number) {
+	static withChanges(
+		textDocument: ITextDocument,
+		changes: TextDocumentContentChangeEvent[],
+		version: number,
+	) {
 		const lspDoc = LspTextDocument.create(
 			textDocument.clientUri,
 			textDocument.clientLanguageId,
 			version,
-			textDocument.getText()
+			textDocument.getText(),
 		);
 		LspTextDocument.update(lspDoc, changes, version);
-		return new CopilotTextDocument(textDocument.uri, lspDoc, textDocument.detectedLanguageId);
+		return new CopilotTextDocument(
+			textDocument.uri,
+			lspDoc,
+			textDocument.detectedLanguageId,
+		);
 	}
 
 	/**
@@ -218,13 +233,22 @@ export class CopilotTextDocument implements ITextDocument {
 	 * Used when the changes *aren't* canonical (e.g., a speculative completion request).
 	 */
 	applyEdits(edits: TextEdit[]) {
-		const lspDoc = LspTextDocument.create(this.clientUri, this.clientLanguageId, this.version, this.getText());
+		const lspDoc = LspTextDocument.create(
+			this.clientUri,
+			this.clientLanguageId,
+			this.version,
+			this.getText(),
+		);
 		LspTextDocument.update(
 			lspDoc,
-			edits.map(c => ({ text: c.newText, range: c.range })),
-			this.version
+			edits.map((c) => ({ text: c.newText, range: c.range })),
+			this.version,
 		);
-		return new CopilotTextDocument(this.uri, lspDoc, this.detectedLanguageId);
+		return new CopilotTextDocument(
+			this.uri,
+			lspDoc,
+			this.detectedLanguageId,
+		);
 	}
 
 	static create(
@@ -232,12 +256,12 @@ export class CopilotTextDocument implements ITextDocument {
 		languageId: string,
 		version: number,
 		text: string,
-		detectedLanguageId = detectLanguage({ uri, languageId })
+		detectedLanguageId = detectLanguage({ uri, languageId }),
 	) {
 		return new CopilotTextDocument(
 			normalizeUri(uri),
 			LspTextDocument.create(uri, languageId, version, text),
-			detectedLanguageId
+			detectedLanguageId,
 		);
 	}
 
@@ -274,13 +298,20 @@ export class CopilotTextDocument implements ITextDocument {
 	}
 
 	lineAt(position: number | Position) {
-		const lineNumber = typeof position === 'number' ? position : position.line;
+		const lineNumber =
+			typeof position === 'number' ? position : position.line;
 		if (lineNumber < 0 || lineNumber >= this.lineCount) {
 			throw new RangeError('Illegal value for lineNumber');
 		}
 		const rangeWithNewline = Range.create(lineNumber, 0, lineNumber + 1, 0);
-		const text = this.getText(rangeWithNewline).replace(/\r\n$|\r$|\n$/g, '');
-		const range = Range.create(Position.create(lineNumber, 0), Position.create(lineNumber, text.length));
+		const text = this.getText(rangeWithNewline).replace(
+			/\r\n$|\r$|\n$/g,
+			'',
+		);
+		const range = Range.create(
+			Position.create(lineNumber, 0),
+			Position.create(lineNumber, text.length),
+		);
 
 		const isEmptyOrWhitespace = text.trim().length === 0;
 		return { text, range, isEmptyOrWhitespace };

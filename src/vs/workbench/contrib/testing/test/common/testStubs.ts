@@ -3,23 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../base/common/uri.js';
-import { MainThreadTestCollection } from '../../common/mainThreadTestCollection.js';
-import { ITestItem, TestsDiff } from '../../common/testTypes.js';
-import { TestId } from '../../common/testId.js';
-import { createTestItemChildren, ITestItemApi, ITestItemChildren, ITestItemLike, TestItemCollection, TestItemEventOp } from '../../common/testItemCollection.js';
+import { URI } from "../../../../../base/common/uri.js";
+import { MainThreadTestCollection } from "../../common/mainThreadTestCollection.js";
+import { ITestItem, TestsDiff } from "../../common/testTypes.js";
+import { TestId } from "../../common/testId.js";
+import {
+	createTestItemChildren,
+	ITestItemApi,
+	ITestItemChildren,
+	ITestItemLike,
+	TestItemCollection,
+	TestItemEventOp,
+} from "../../common/testItemCollection.js";
 
 export class TestTestItem implements ITestItemLike {
 	private readonly props: ITestItem;
 	private _canResolveChildren = false;
 
 	public get tags() {
-		return this.props.tags.map(id => ({ id }));
+		return this.props.tags.map((id) => ({ id }));
 	}
 
 	public set tags(value) {
-		this.api.listener?.({ op: TestItemEventOp.SetTags, new: value, old: this.props.tags.map(t => ({ id: t })) });
-		this.props.tags = value.map(tag => tag.id);
+		this.api.listener?.({
+			op: TestItemEventOp.SetTags,
+			new: value,
+			old: this.props.tags.map((t) => ({ id: t })),
+		});
+		this.props.tags = value.map((tag) => tag.id);
 	}
 
 	public get canResolveChildren() {
@@ -28,7 +39,10 @@ export class TestTestItem implements ITestItemLike {
 
 	public set canResolveChildren(value: boolean) {
 		this._canResolveChildren = value;
-		this.api.listener?.({ op: TestItemEventOp.UpdateCanResolveChildren, state: value });
+		this.api.listener?.({
+			op: TestItemEventOp.UpdateCanResolveChildren,
+			state: value,
+		});
 	}
 
 	public get parent() {
@@ -49,7 +63,11 @@ export class TestTestItem implements ITestItemLike {
 		uri?: URI,
 	) {
 		this.api = { controllerId: this._extId.controllerId };
-		this.children = createTestItemChildren(this.api, i => i.api, TestTestItem);
+		this.children = createTestItemChildren(
+			this.api,
+			(i) => i.api,
+			TestTestItem,
+		);
 		this.props = {
 			extId: _extId.toString(),
 			busy: false,
@@ -69,7 +87,10 @@ export class TestTestItem implements ITestItemLike {
 
 	public set<K extends keyof ITestItem>(key: K, value: ITestItem[K]) {
 		this.props[key] = value;
-		this.api.listener?.({ op: TestItemEventOp.SetProp, update: { [key]: value } });
+		this.api.listener?.({
+			op: TestItemEventOp.SetProp,
+			update: { [key]: value },
+		});
 	}
 
 	public toTestItem(): ITestItem {
@@ -80,15 +101,15 @@ export class TestTestItem implements ITestItemLike {
 }
 
 export class TestTestCollection extends TestItemCollection<TestTestItem> {
-	constructor(controllerId = 'ctrlId') {
-		const root = new TestTestItem(new TestId([controllerId]), 'root');
+	constructor(controllerId = "ctrlId") {
+		const root = new TestTestItem(new TestId([controllerId]), "root");
 		(root as TestTestItem & { _isRoot: boolean })._isRoot = true;
 
 		super({
 			controllerId,
-			getApiFor: t => t.api,
-			toITestItem: t => t.toTestItem(),
-			getChildren: t => t.children,
+			getApiFor: (t) => t.api,
+			toITestItem: (t) => t.toTestItem(),
+			getChildren: (t) => t.children,
 			getDocumentVersion: () => undefined,
 			root,
 		});
@@ -107,8 +128,13 @@ export class TestTestCollection extends TestItemCollection<TestTestItem> {
  * Gets a main thread test collection initialized with the given set of
  * roots/stubs.
  */
-export const getInitializedMainTestCollection = async (singleUse = testStubs.nested()) => {
-	const c = new MainThreadTestCollection({ asCanonicalUri: u => u }, async (t, l) => singleUse.expand(t, l));
+export const getInitializedMainTestCollection = async (
+	singleUse = testStubs.nested(),
+) => {
+	const c = new MainThreadTestCollection(
+		{ asCanonicalUri: (u) => u },
+		async (t, l) => singleUse.expand(t, l),
+	);
 	await singleUse.expand(singleUse.root.id, Infinity);
 	c.apply(singleUse.collectDiff());
 	singleUse.dispose();
@@ -120,7 +146,11 @@ type StubTreeIds = Readonly<{ [id: string]: StubTreeIds | undefined }>;
 export const makeSimpleStubTree = (ids: StubTreeIds): TestTestCollection => {
 	const collection = new TestTestCollection();
 
-	const add = (parent: TestTestItem, children: StubTreeIds, path: readonly string[]) => {
+	const add = (
+		parent: TestTestItem,
+		children: StubTreeIds,
+		path: readonly string[],
+	) => {
 		for (const id of Object.keys(children)) {
 			const item = new TestTestItem(new TestId([...path, id]), id);
 			parent.children.add(item);
@@ -130,24 +160,44 @@ export const makeSimpleStubTree = (ids: StubTreeIds): TestTestCollection => {
 		}
 	};
 
-	add(collection.root, ids, ['ctrlId']);
+	add(collection.root, ids, ["ctrlId"]);
 
 	return collection;
 };
 
 export const testStubs = {
-	nested: (idPrefix = 'id-') => {
+	nested: (idPrefix = "id-") => {
 		const collection = new TestTestCollection();
-		collection.resolveHandler = item => {
+		collection.resolveHandler = (item) => {
 			if (item === undefined) {
-				const a = new TestTestItem(new TestId(['ctrlId', 'id-a']), 'a', URI.file('/'));
+				const a = new TestTestItem(
+					new TestId(["ctrlId", "id-a"]),
+					"a",
+					URI.file("/"),
+				);
 				a.canResolveChildren = true;
-				const b = new TestTestItem(new TestId(['ctrlId', 'id-b']), 'b', URI.file('/'));
+				const b = new TestTestItem(
+					new TestId(["ctrlId", "id-b"]),
+					"b",
+					URI.file("/"),
+				);
 				collection.root.children.add(a);
 				collection.root.children.add(b);
-			} else if (item.id === idPrefix + 'a') {
-				item.children.add(new TestTestItem(new TestId(['ctrlId', 'id-a', 'id-aa']), 'aa', URI.file('/')));
-				item.children.add(new TestTestItem(new TestId(['ctrlId', 'id-a', 'id-ab']), 'ab', URI.file('/')));
+			} else if (item.id === idPrefix + "a") {
+				item.children.add(
+					new TestTestItem(
+						new TestId(["ctrlId", "id-a", "id-aa"]),
+						"aa",
+						URI.file("/"),
+					),
+				);
+				item.children.add(
+					new TestTestItem(
+						new TestId(["ctrlId", "id-a", "id-ab"]),
+						"ab",
+						URI.file("/"),
+					),
+				);
 			}
 		};
 

@@ -16,16 +16,36 @@ import { LlmNESTelemetryBuilder } from '../../../../../../inlineEdits/node/nextE
 import { GhostTextLogContext } from '../../../../../common/ghostTextContext';
 import { initializeTokenizers } from '../../../../prompt/src/tokenization';
 import { CompletionState, createCompletionState } from '../../completionState';
-import { ConfigKey, ICompletionsConfigProvider, InMemoryConfigProvider } from '../../config';
+import {
+	ConfigKey,
+	ICompletionsConfigProvider,
+	InMemoryConfigProvider,
+} from '../../config';
 import { ICompletionsFetcherService, Response } from '../../networking';
-import { ICompletionsOpenAIFetcherService, LiveOpenAIFetcher } from '../../openai/fetch';
-import { fakeAPIChoice, fakeAPIChoiceFromCompletion } from '../../openai/fetch.fake';
+import {
+	ICompletionsOpenAIFetcherService,
+	LiveOpenAIFetcher,
+} from '../../openai/fetch';
+import {
+	fakeAPIChoice,
+	fakeAPIChoiceFromCompletion,
+} from '../../openai/fetch.fake';
 import { APIChoice } from '../../openai/openai';
-import { extractPrompt, PromptResponsePresent, trimLastLine } from '../../prompt/prompt';
+import {
+	extractPrompt,
+	PromptResponsePresent,
+	trimLastLine,
+} from '../../prompt/prompt';
 import { getGhostTextInternal } from '../../prompt/test/prompt';
 import { TelemetryWithExp } from '../../telemetry';
 import { createLibTestingContext } from '../../test/context';
-import { createFakeCompletionResponse, fakeCodeReference, NoFetchFetcher, StaticCompletionsFetchService, StaticFetcher } from '../../test/fetcher';
+import {
+	createFakeCompletionResponse,
+	fakeCodeReference,
+	NoFetchFetcher,
+	StaticCompletionsFetchService,
+	StaticFetcher,
+} from '../../test/fetcher';
 import { withInMemoryTelemetry } from '../../test/telemetry';
 import { createTextDocument } from '../../test/textDocument';
 import { ITextDocument, LocationFactory } from '../../textDocument';
@@ -45,8 +65,11 @@ suite('Isolated GhostText tests', function () {
 	function getPrefix(completionState: CompletionState): string {
 		return trimLastLine(
 			completionState.textDocument.getText(
-				LocationFactory.range(LocationFactory.position(0, 0), completionState.position)
-			)
+				LocationFactory.range(
+					LocationFactory.position(0, 0),
+					completionState.position,
+				),
+			),
 		)[0];
 	}
 
@@ -55,12 +78,18 @@ suite('Isolated GhostText tests', function () {
 		docText = 'import "fmt"\n\nfunc fizzbuzz(n int) {\n\n}\n',
 		position = LocationFactory.position(3, 0),
 		languageId = 'go',
-		token?: CancellationToken
+		token?: CancellationToken,
 	) {
 		const serviceCollection = createLibTestingContext();
 		serviceCollection.define(ICompletionsFetcherService, fetcher);
-		serviceCollection.define(ICompletionsFetchService, new StaticCompletionsFetchService(fetcher));
-		serviceCollection.define(ICompletionsOpenAIFetcherService, new SyncDescriptor(LiveOpenAIFetcher));
+		serviceCollection.define(
+			ICompletionsFetchService,
+			new StaticCompletionsFetchService(fetcher),
+		);
+		serviceCollection.define(
+			ICompletionsOpenAIFetcherService,
+			new SyncDescriptor(LiveOpenAIFetcher),
+		);
 		const accessor = serviceCollection.createTestingAccessor();
 
 		const filePath = 'file:///fizzbuzz.go';
@@ -70,13 +99,32 @@ suite('Isolated GhostText tests', function () {
 
 		// Setup closures with the state as default
 		function requestGhostText(completionState = state) {
-			const telemetryBuilder = new LlmNESTelemetryBuilder(undefined, undefined, undefined, 'ghostText', undefined);
+			const telemetryBuilder = new LlmNESTelemetryBuilder(
+				undefined,
+				undefined,
+				undefined,
+				'ghostText',
+				undefined,
+			);
 			const logService = accessor.get(ILogService);
-			return getGhostText(accessor, completionState, token, {}, new GhostTextLogContext(filePath, doc.version, undefined), telemetryBuilder, logService);
+			return getGhostText(
+				accessor,
+				completionState,
+				token,
+				{},
+				new GhostTextLogContext(filePath, doc.version, undefined),
+				telemetryBuilder,
+				logService,
+			);
 		}
 		async function requestPrompt(completionState = state) {
 			const telemExp = TelemetryWithExp.createEmptyConfigForTesting();
-			const result = await extractPrompt(accessor, 'COMPLETION_ID', completionState, telemExp);
+			const result = await extractPrompt(
+				accessor,
+				'COMPLETION_ID',
+				completionState,
+				telemExp,
+			);
 			return (result as PromptResponsePresent).prompt;
 		}
 
@@ -92,7 +140,12 @@ suite('Isolated GhostText tests', function () {
 		};
 	}
 
-	function addToCache(accessor: ServicesAccessor, prefix: string, suffix: string, completion: string | APIChoice) {
+	function addToCache(
+		accessor: ServicesAccessor,
+		prefix: string,
+		suffix: string,
+		completion: string | APIChoice,
+	) {
 		let choice: APIChoice;
 		if (typeof completion === 'string') {
 			choice = fakeAPIChoiceFromCompletion(completion);
@@ -107,17 +160,29 @@ suite('Isolated GhostText tests', function () {
 		accessor: ServicesAccessor,
 		origDoc: ITextDocument,
 		origPosition: Position,
-		completion: GhostCompletion
+		completion: GhostCompletion,
 	) {
 		const doc = createTextDocument(
 			origDoc.uri,
 			origDoc.clientLanguageId,
 			origDoc.version + 1,
-			origDoc.getText(LocationFactory.range(LocationFactory.position(0, 0), origPosition)) +
-			completion.completionText +
-			origDoc.getText(LocationFactory.range(origPosition, origDoc.positionAt(origDoc.getText().length)))
+			origDoc.getText(
+				LocationFactory.range(
+					LocationFactory.position(0, 0),
+					origPosition,
+				),
+			) +
+				completion.completionText +
+				origDoc.getText(
+					LocationFactory.range(
+						origPosition,
+						origDoc.positionAt(origDoc.getText().length),
+					),
+				),
 		);
-		const position = doc.positionAt(doc.offsetAt(origPosition) + completion.completionText.length);
+		const position = doc.positionAt(
+			doc.offsetAt(origPosition) + completion.completionText.length,
+		);
 		const result = await getGhostTextInternal(accessor, doc, position);
 		return { doc, position, result };
 	}
@@ -130,27 +195,44 @@ suite('Isolated GhostText tests', function () {
 		const { requestGhostText } = setupCompletion(
 			new StaticFetcher(() =>
 				createFakeCompletionResponse('\tfor i := 1; i<= n; i++ {\n', {
-					annotations: fakeCodeReference(-18, 26, 'NOASSERTION', 'https://github.com/github/example'),
-				})
-			)
+					annotations: fakeCodeReference(
+						-18,
+						26,
+						'NOASSERTION',
+						'https://github.com/github/example',
+					),
+				}),
+			),
 		);
 
 		const responseWithTelemetry = await requestGhostText();
 
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(responseWithTelemetry.value[0].length, 1);
-		assert.deepStrictEqual(responseWithTelemetry.value[0][0].copilotAnnotations?.ip_code_citations, [
-			{
-				id: 5,
-				start_offset: -18,
-				stop_offset: 26,
-				details: { citations: [{ url: 'https://github.com/github/example', license: 'NOASSERTION' }] },
-			},
-		]);
+		assert.deepStrictEqual(
+			responseWithTelemetry.value[0][0].copilotAnnotations
+				?.ip_code_citations,
+			[
+				{
+					id: 5,
+					start_offset: -18,
+					stop_offset: 26,
+					details: {
+						citations: [
+							{
+								url: 'https://github.com/github/example',
+								license: 'NOASSERTION',
+							},
+						],
+					},
+				},
+			],
+		);
 	});
 
 	test('returns cached completion', async function () {
-		const { accessor, requestGhostText, prefix, requestPrompt } = setupCompletion(new NoFetchFetcher());
+		const { accessor, requestGhostText, prefix, requestPrompt } =
+			setupCompletion(new NoFetchFetcher());
 		const completionText = '\tfor i := 1; i<= n; i++ {';
 		const { suffix } = await requestPrompt();
 		addToCache(accessor, prefix, suffix, completionText);
@@ -159,26 +241,40 @@ suite('Isolated GhostText tests', function () {
 
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(responseWithTelemetry.value[0].length, 1);
-		assert.strictEqual(responseWithTelemetry.value[0][0].completion.completionText, completionText);
-		assert.strictEqual(responseWithTelemetry.value[1], ResultType.Cache, 'result type should be cache');
+		assert.strictEqual(
+			responseWithTelemetry.value[0][0].completion.completionText,
+			completionText,
+		);
+		assert.strictEqual(
+			responseWithTelemetry.value[1],
+			ResultType.Cache,
+			'result type should be cache',
+		);
 	});
 
 	test('returns empty response when cached completion is filtered by post-processing', async function () {
 		const completionText = '\tvar i int';
-		const { accessor, requestGhostText, prefix, requestPrompt } = setupCompletion(
-			new StaticFetcher(() => createFakeCompletionResponse(completionText))
-		);
+		const { accessor, requestGhostText, prefix, requestPrompt } =
+			setupCompletion(
+				new StaticFetcher(() =>
+					createFakeCompletionResponse(completionText),
+				),
+			);
 		const { suffix } = await requestPrompt();
 		addToCache(accessor, prefix, suffix, '}'); // Completion matches next line of document
 
 		const responseWithTelemetry = await requestGhostText();
 
 		assert.strictEqual(responseWithTelemetry.type, 'empty');
-		assert.strictEqual(responseWithTelemetry.reason, 'cached results empty after post-processing');
+		assert.strictEqual(
+			responseWithTelemetry.reason,
+			'cached results empty after post-processing',
+		);
 	});
 
 	test('returns typing as suggested', async function () {
-		const { accessor, requestGhostText, requestPrompt, prefix } = setupCompletion(new NoFetchFetcher());
+		const { accessor, requestGhostText, requestPrompt, prefix } =
+			setupCompletion(new NoFetchFetcher());
 		const { suffix } = await requestPrompt();
 		addToCache(accessor, prefix, suffix, '\tfor i := 1; i<= n; i++ {');
 		await requestGhostText();
@@ -186,22 +282,26 @@ suite('Isolated GhostText tests', function () {
 		const secondText = 'import "fmt"\n\nfunc fizzbuzz(n int) {\n\tfor\n}\n';
 		const second = createCompletionState(
 			createTextDocument('file:///fizzbuzz.go', 'go', 1, secondText),
-			LocationFactory.position(3, 4)
+			LocationFactory.position(3, 4),
 		);
 		const responseWithTelemetry = await requestGhostText(second);
 
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(responseWithTelemetry.value[0].length, 1);
-		assert.strictEqual(responseWithTelemetry.value[0][0].completion.completionText, ' i := 1; i<= n; i++ {');
+		assert.strictEqual(
+			responseWithTelemetry.value[0][0].completion.completionText,
+			' i := 1; i<= n; i++ {',
+		);
 		assert.strictEqual(
 			responseWithTelemetry.value[1],
 			ResultType.TypingAsSuggested,
-			'result type should be typing as suggested'
+			'result type should be typing as suggested',
 		);
 	});
 
 	test('returns multiline typing as suggested when typing into single line context', async function () {
-		const { accessor, requestGhostText, requestPrompt, prefix } = setupCompletion(new NoFetchFetcher());
+		const { accessor, requestGhostText, requestPrompt, prefix } =
+			setupCompletion(new NoFetchFetcher());
 		const currentGhostText = accessor.get(ICompletionsCurrentGhostText);
 		currentGhostText.hasAcceptedCurrentCompletion = () => true;
 		const { suffix } = await requestPrompt();
@@ -209,54 +309,79 @@ suite('Isolated GhostText tests', function () {
 		addToCache(accessor, prefix, suffix, completionText);
 		const firstRes = await requestGhostText();
 		assert.strictEqual(firstRes.type, 'success');
-		assert.strictEqual(firstRes.value[0][0].completion.completionText, completionText);
+		assert.strictEqual(
+			firstRes.value[0][0].completion.completionText,
+			completionText,
+		);
 
 		// Request a second completion typing into a non-multiline context:
 		// the addition of `\tfmt.` to the current line changes the completion
 		// context (via the `isEmptyBlockStart` computed in prompt/) from
 		// multiline to single line.
-		const secondText = 'import "fmt"\n\nfunc fizzbuzz(n int) {\n\tfmt.\n}\n';
+		const secondText =
+			'import "fmt"\n\nfunc fizzbuzz(n int) {\n\tfmt.\n}\n';
 		const second = createCompletionState(
 			createTextDocument('file:///fizzbuzz.go', 'go', 1, secondText),
-			LocationFactory.position(3, 9)
+			LocationFactory.position(3, 9),
 		);
 		const secondRes = await requestGhostText(second);
 
 		assert.strictEqual(secondRes.type, 'success');
-		assert.strictEqual(secondRes.value[0][0].completion.completionText, 'Println("hi")\n\tfmt.Print("hello")');
+		assert.strictEqual(
+			secondRes.value[0][0].completion.completionText,
+			'Println("hi")\n\tfmt.Print("hello")',
+		);
 		assert.strictEqual(secondRes.value[1], ResultType.TypingAsSuggested);
 	});
 
 	test('trims multiline async completion into single line context', async function () {
-		const { accessor, doc, position, requestGhostText, requestPrompt } = setupCompletion(new NoFetchFetcher());
+		const { accessor, doc, position, requestGhostText, requestPrompt } =
+			setupCompletion(new NoFetchFetcher());
 		const asyncManager = accessor.get(ICompletionsAsyncManagerService);
 		const prompt = await requestPrompt();
-		const [prefix] = trimLastLine(doc.getText(LocationFactory.range(LocationFactory.position(0, 0), position)));
-		const response = fakeResult('\tfmt.Println("hi")\n\tfmt.Print("hello")');
-		void asyncManager.queueCompletionRequest('0', prefix, prompt, new CancellationTokenSource(), response);
+		const [prefix] = trimLastLine(
+			doc.getText(
+				LocationFactory.range(LocationFactory.position(0, 0), position),
+			),
+		);
+		const response = fakeResult(
+			'\tfmt.Println("hi")\n\tfmt.Print("hello")',
+		);
+		void asyncManager.queueCompletionRequest(
+			'0',
+			prefix,
+			prompt,
+			new CancellationTokenSource(),
+			response,
+		);
 
 		// Request a single completion by typing into a non-multiline context:
 		// the addition of `\tfmt.` to the current line changes the completion
 		// context (via the `isEmptyBlockStart` computed in prompt/) from
 		// multiline to single line.
-		const secondText = 'import "fmt"\n\nfunc fizzbuzz(n int) {\n\tfmt.\n}\n';
+		const secondText =
+			'import "fmt"\n\nfunc fizzbuzz(n int) {\n\tfmt.\n}\n';
 		const second = createCompletionState(
 			createTextDocument('file:///fizzbuzz.go', 'go', 1, secondText),
-			LocationFactory.position(3, 9)
+			LocationFactory.position(3, 9),
 		);
 		const secondRes = await requestGhostText(second);
 
 		assert.strictEqual(secondRes.type, 'success');
-		assert.strictEqual(secondRes.value[0][0].completion.completionText, 'Println("hi")');
+		assert.strictEqual(
+			secondRes.value[0][0].completion.completionText,
+			'Println("hi")',
+		);
 		assert.strictEqual(secondRes.value[1], ResultType.Async);
 	});
 
 	test('returns cached single-line completion that starts with newline', async function () {
-		const { accessor, requestGhostText, requestPrompt, prefix } = setupCompletion(
-			new NoFetchFetcher(),
-			'import "fmt"\n\nfunc fizzbuzz(n int) {\n\ti := 0\n}\n',
-			LocationFactory.position(3, '\ti := 0'.length)
-		);
+		const { accessor, requestGhostText, requestPrompt, prefix } =
+			setupCompletion(
+				new NoFetchFetcher(),
+				'import "fmt"\n\nfunc fizzbuzz(n int) {\n\ti := 0\n}\n',
+				LocationFactory.position(3, '\ti := 0'.length),
+			);
 		const { suffix } = await requestPrompt();
 		const completionText = '\n\tj := 0';
 		addToCache(accessor, prefix, suffix, completionText);
@@ -265,34 +390,58 @@ suite('Isolated GhostText tests', function () {
 
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(responseWithTelemetry.value[0].length, 1);
-		assert.strictEqual(responseWithTelemetry.value[0][0].completion.completionText, completionText);
-		assert.strictEqual(responseWithTelemetry.value[1], ResultType.Cache, 'result type should be cache');
+		assert.strictEqual(
+			responseWithTelemetry.value[0][0].completion.completionText,
+			completionText,
+		);
+		assert.strictEqual(
+			responseWithTelemetry.value[1],
+			ResultType.Cache,
+			'result type should be cache',
+		);
 	});
 
 	test('returns prefixed cached completion', async function () {
-		const { accessor, requestGhostText, requestPrompt, prefix } = setupCompletion(new NoFetchFetcher());
+		const { accessor, requestGhostText, requestPrompt, prefix } =
+			setupCompletion(new NoFetchFetcher());
 		const { suffix } = await requestPrompt();
 		const earlierPrefix = prefix.substring(0, prefix.length - 3);
 		const remainingPrefix = prefix.substring(prefix.length - 3);
 		const completionText = '\tfor i := 1; i<= n; i++ {';
-		addToCache(accessor, earlierPrefix, suffix, remainingPrefix + completionText);
+		addToCache(
+			accessor,
+			earlierPrefix,
+			suffix,
+			remainingPrefix + completionText,
+		);
 
 		const responseWithTelemetry = await requestGhostText();
 
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(responseWithTelemetry.value[0].length, 1);
-		assert.strictEqual(responseWithTelemetry.value[0][0].completion.completionText, completionText);
-		assert.strictEqual(responseWithTelemetry.value[1], ResultType.Cache, 'result type should be cache');
-		assert.strictEqual(responseWithTelemetry.telemetryBlob.measurements.foundOffset, 3);
+		assert.strictEqual(
+			responseWithTelemetry.value[0][0].completion.completionText,
+			completionText,
+		);
+		assert.strictEqual(
+			responseWithTelemetry.value[1],
+			ResultType.Cache,
+			'result type should be cache',
+		);
+		assert.strictEqual(
+			responseWithTelemetry.telemetryBlob.measurements.foundOffset,
+			3,
+		);
 	});
 
 	test('does not return cached completion when exhausted', async function () {
 		const networkCompletionText = '\tfor i := 1; i<= n; i++ {';
-		const { accessor, requestGhostText, requestPrompt, prefix } = setupCompletion(
-			new StaticFetcher(() => {
-				return createFakeCompletionResponse(networkCompletionText);
-			})
-		);
+		const { accessor, requestGhostText, requestPrompt, prefix } =
+			setupCompletion(
+				new StaticFetcher(() => {
+					return createFakeCompletionResponse(networkCompletionText);
+				}),
+			);
 		const { suffix } = await requestPrompt();
 		const earlierPrefix = prefix.substring(0, prefix.length - 3);
 		const remainingPrefix = prefix.substring(prefix.length - 3);
@@ -302,8 +451,15 @@ suite('Isolated GhostText tests', function () {
 
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(responseWithTelemetry.value[0].length, 1);
-		assert.strictEqual(responseWithTelemetry.value[0][0].completion.completionText, networkCompletionText);
-		assert.strictEqual(responseWithTelemetry.value[1], ResultType.Async, 'result type should be async');
+		assert.strictEqual(
+			responseWithTelemetry.value[0][0].completion.completionText,
+			networkCompletionText,
+		);
+		assert.strictEqual(
+			responseWithTelemetry.value[1],
+			ResultType.Async,
+			'result type should be async',
+		);
 	});
 
 	test('Multiline requests return multiple completions on second invocation', async function () {
@@ -318,22 +474,31 @@ suite('Isolated GhostText tests', function () {
 				}
 				serverSentResponse = true;
 				return createFakeCompletionResponse(completions);
-			})
+			}),
 		);
 		// Get the completion from the server, do the processing of the responses
 		// this is a multiline request, so it'll request multiple completions, but whatever our cycling specification, it'll not _wait_ for those, c.f isCyclingRequest in getGhostTextStrategy.
 		const firstResponse = await requestGhostText();
 		assert.strictEqual(firstResponse.type, 'success');
 		assert.strictEqual(firstResponse.value[0].length, 1);
-		assert.strictEqual(firstResponse.value[0][0].completion.completionText, firstCompletionText.trimEnd());
+		assert.strictEqual(
+			firstResponse.value[0][0].completion.completionText,
+			firstCompletionText.trimEnd(),
+		);
 		// therefore, request the same prompt again, this time with cycling specified, to get all completions from the cache
 		const secondResponse = await requestGhostText();
 		assert.strictEqual(secondResponse.type, 'success');
 		// two completion results returned
 		assert.strictEqual(secondResponse.value[0].length, 2);
 		// the second one is the second completion, but with whitespace trimmed
-		assert.strictEqual(secondResponse.value[0][0].completion.completionText, firstCompletionText.trimEnd());
-		assert.strictEqual(secondResponse.value[0][1].completion.completionText, secondCompletionText.trimEnd());
+		assert.strictEqual(
+			secondResponse.value[0][0].completion.completionText,
+			firstCompletionText.trimEnd(),
+		);
+		assert.strictEqual(
+			secondResponse.value[0][1].completion.completionText,
+			secondCompletionText.trimEnd(),
+		);
 	});
 
 	test('Responses with duplicate content (modulo whitespace) are deduplicated', async function () {
@@ -348,20 +513,26 @@ suite('Isolated GhostText tests', function () {
 				}
 				serverSentResponse = true;
 				return createFakeCompletionResponse(completions);
-			})
+			}),
 		);
 		// Get the completion from the server, do the processing of the responses
 		// this is a multiline request, so it'll request multiple completions, but whatever our cycling specification, it'll not _wait_ for those, c.f isCyclingRequest in getGhostTextStrategy.
 		const firstResponse = await requestGhostText();
 		assert.strictEqual(firstResponse.type, 'success');
 		assert.strictEqual(firstResponse.value[0].length, 1);
-		assert.strictEqual(firstResponse.value[0][0].completion.completionText, firstCompletionText.trimEnd());
+		assert.strictEqual(
+			firstResponse.value[0][0].completion.completionText,
+			firstCompletionText.trimEnd(),
+		);
 		// therefore, request the same prompt again, this time with cycling specified, to get all completions from the cache
 		const secondResponse = await requestGhostText();
 		assert.strictEqual(secondResponse.type, 'success');
 		// still only one completion result returned
 		assert.strictEqual(secondResponse.value[0].length, 1);
-		assert.strictEqual(secondResponse.value[0][0].completion.completionText, firstCompletionText.trimEnd());
+		assert.strictEqual(
+			secondResponse.value[0][0].completion.completionText,
+			firstCompletionText.trimEnd(),
+		);
 	});
 
 	test('adds prompt metadata to telemetry', async function () {
@@ -369,12 +540,15 @@ suite('Isolated GhostText tests', function () {
 		const { accessor, requestGhostText } = setupCompletion(
 			new StaticFetcher(() => {
 				return createFakeCompletionResponse(networkCompletionText);
-			})
+			}),
 		);
 
-		const { result, reporter } = await withInMemoryTelemetry(accessor, async () => {
-			return await requestGhostText();
-		});
+		const { result, reporter } = await withInMemoryTelemetry(
+			accessor,
+			async () => {
+				return await requestGhostText();
+			},
+		);
 
 		// The returned object (used for all other telemetry events) does not have the prompt metadata
 		assert.deepStrictEqual(result.type, 'success');
@@ -385,7 +559,9 @@ suite('Isolated GhostText tests', function () {
 		assert.ok(issuedTelemetry.properties.promptMetadata);
 
 		// Double check that the other events don't have it
-		const events = reporter.events.filter(e => e.name !== 'ghostText.issued');
+		const events = reporter.events.filter(
+			(e) => e.name !== 'ghostText.issued',
+		);
 		assert.ok(events.length > 0);
 		for (const event of events) {
 			assert.ok(!event.properties.promptMetadata);
@@ -393,7 +569,8 @@ suite('Isolated GhostText tests', function () {
 	});
 
 	test('cache hits use issuedTime in telemetry from current request, not cache', async function () {
-		const { accessor, requestGhostText, requestPrompt, prefix } = setupCompletion(new NoFetchFetcher());
+		const { accessor, requestGhostText, requestPrompt, prefix } =
+			setupCompletion(new NoFetchFetcher());
 		const { suffix } = await requestPrompt();
 		const completionText = '\tfor i := 1; i<= n; i++ {';
 		const choice = fakeAPIChoiceFromCompletion(completionText);
@@ -405,7 +582,7 @@ suite('Isolated GhostText tests', function () {
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(
 			responseWithTelemetry.value[0][0].telemetry.issuedTime,
-			responseWithTelemetry.telemetryBlob.issuedTime
+			responseWithTelemetry.telemetryBlob.issuedTime,
 		);
 	});
 
@@ -414,12 +591,15 @@ suite('Isolated GhostText tests', function () {
 		const { accessor, requestGhostText } = setupCompletion(
 			new StaticFetcher(() => {
 				return createFakeCompletionResponse(networkCompletionText);
-			})
+			}),
 		);
 
-		const { result, reporter } = await withInMemoryTelemetry(accessor, async () => {
-			return await requestGhostText();
-		});
+		const { result, reporter } = await withInMemoryTelemetry(
+			accessor,
+			async () => {
+				return await requestGhostText();
+			},
+		);
 
 		assert.strictEqual(result.type, 'success');
 		const issuedTelemetry = reporter.eventByName('ghostText.issued');
@@ -433,11 +613,11 @@ suite('Isolated GhostText tests', function () {
 			'isMultiline',
 			'blockMode',
 			'isCycling',
-		].forEach(prop => {
+		].forEach((prop) => {
 			assert.strictEqual(
 				typeof issuedTelemetry.properties[prop],
 				'string',
-				`Expected telemetry property ${prop}`
+				`Expected telemetry property ${prop}`,
 			);
 		});
 		[
@@ -447,11 +627,11 @@ suite('Isolated GhostText tests', function () {
 			'documentLength',
 			'documentLineCount',
 			'promptComputeTimeMs',
-		].forEach(prop => {
+		].forEach((prop) => {
 			assert.strictEqual(
 				typeof issuedTelemetry.measurements[prop],
 				'number',
-				`Expected telemetry measurement ${prop}`
+				`Expected telemetry measurement ${prop}`,
 			);
 		});
 	});
@@ -461,7 +641,7 @@ suite('Isolated GhostText tests', function () {
 		const { requestGhostText } = setupCompletion(
 			new StaticFetcher(() => {
 				return createFakeCompletionResponse(networkCompletionText);
-			})
+			}),
 		);
 
 		const responseWithTelemetry = await requestGhostText();
@@ -475,32 +655,36 @@ suite('Isolated GhostText tests', function () {
 			'promptBackground',
 			'neighborSource',
 			'blockMode',
-		].forEach(prop => {
+		].forEach((prop) => {
 			assert.strictEqual(
 				responseWithTelemetry.value[0][0].telemetry.properties[prop],
 				undefined,
-				`Did not expect telemetry property ${prop}`
+				`Did not expect telemetry property ${prop}`,
 			);
 			assert.strictEqual(
 				responseWithTelemetry.telemetryBlob.properties[prop],
 				undefined,
-				`Did not expect telemetry property ${prop}`
+				`Did not expect telemetry property ${prop}`,
 			);
 		});
-		['promptCharLen', 'promptSuffixCharLen', 'promptCharLen', 'promptEndPos', 'promptComputeTimeMs'].forEach(
-			prop => {
-				assert.strictEqual(
-					responseWithTelemetry.value[0][0].telemetry.measurements[prop],
-					undefined,
-					`Did not expect telemetry measurement ${prop}`
-				);
-				assert.strictEqual(
-					responseWithTelemetry.telemetryBlob.measurements[prop],
-					undefined,
-					`Did not expect telemetry measurement ${prop}`
-				);
-			}
-		);
+		[
+			'promptCharLen',
+			'promptSuffixCharLen',
+			'promptCharLen',
+			'promptEndPos',
+			'promptComputeTimeMs',
+		].forEach((prop) => {
+			assert.strictEqual(
+				responseWithTelemetry.value[0][0].telemetry.measurements[prop],
+				undefined,
+				`Did not expect telemetry measurement ${prop}`,
+			);
+			assert.strictEqual(
+				responseWithTelemetry.telemetryBlob.measurements[prop],
+				undefined,
+				`Did not expect telemetry measurement ${prop}`,
+			);
+		});
 	});
 
 	test('includes document information in returned telemetry', async function () {
@@ -508,28 +692,37 @@ suite('Isolated GhostText tests', function () {
 		const { requestGhostText } = setupCompletion(
 			new StaticFetcher(() => {
 				return createFakeCompletionResponse(networkCompletionText);
-			})
+			}),
 		);
 		const responseWithTelemetry = await requestGhostText();
 
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(responseWithTelemetry.value[0].length, 1);
-		['languageId', 'gitRepoInformation', 'engineName', 'isMultiline', 'isCycling'].forEach(prop => {
+		[
+			'languageId',
+			'gitRepoInformation',
+			'engineName',
+			'isMultiline',
+			'isCycling',
+		].forEach((prop) => {
 			assert.strictEqual(
-				typeof responseWithTelemetry.value[0][0].telemetry.properties[prop],
+				typeof responseWithTelemetry.value[0][0].telemetry.properties[
+					prop
+				],
 				'string',
-				`Expected telemetry property ${prop}`
+				`Expected telemetry property ${prop}`,
 			);
 			assert.strictEqual(
 				typeof responseWithTelemetry.telemetryBlob.properties[prop],
 				'string',
-				`Expected telemetry property ${prop}`
+				`Expected telemetry property ${prop}`,
 			);
 		});
 	});
 
 	test('updates transient document information in telemetry of cached choices', async function () {
-		const { accessor, requestGhostText, requestPrompt, prefix } = setupCompletion(new NoFetchFetcher());
+		const { accessor, requestGhostText, requestPrompt, prefix } =
+			setupCompletion(new NoFetchFetcher());
 		const { suffix } = await requestPrompt();
 		const completionText = '\tfor i := 1; i<= n; i++ {';
 		addToCache(accessor, prefix, suffix, completionText);
@@ -538,16 +731,16 @@ suite('Isolated GhostText tests', function () {
 
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(responseWithTelemetry.value[0].length, 1);
-		['documentLength', 'documentLineCount'].forEach(prop => {
+		['documentLength', 'documentLineCount'].forEach((prop) => {
 			assert.strictEqual(
 				typeof responseWithTelemetry.telemetryBlob.measurements[prop],
 				'number',
-				`Expected telemetry measurement ${prop}`
+				`Expected telemetry measurement ${prop}`,
 			);
 			assert.strictEqual(
 				responseWithTelemetry.value[0][0].telemetry.measurements[prop],
 				responseWithTelemetry.telemetryBlob.measurements[prop],
-				`Expected telemetry measurement ${prop} to be ${responseWithTelemetry.telemetryBlob.measurements[prop]}`
+				`Expected telemetry measurement ${prop} to be ${responseWithTelemetry.telemetryBlob.measurements[prop]}`,
 			);
 		});
 	});
@@ -560,7 +753,7 @@ suite('Isolated GhostText tests', function () {
 			undefined,
 			undefined,
 			undefined,
-			tokenSource.token
+			tokenSource.token,
 		);
 
 		const requestPromise = requestGhostText();
@@ -576,17 +769,26 @@ suite('Isolated GhostText tests', function () {
 		const firstResponseDeferred = new Deferred<Response>();
 		const secondResponseDeferred = new Deferred<Response>();
 		const deferreds = [firstResponseDeferred, secondResponseDeferred];
-		const { requestGhostText } = setupCompletion(new StaticFetcher(() => deferreds.shift()!.promise));
+		const { requestGhostText } = setupCompletion(
+			new StaticFetcher(() => deferreds.shift()!.promise),
+		);
 
 		const firstResponsePromise = requestGhostText();
 		const secondResponsePromise = requestGhostText();
-		firstResponseDeferred.resolve(createFakeCompletionResponse('var i int'));
-		secondResponseDeferred.resolve(createFakeCompletionResponse('var j int'));
+		firstResponseDeferred.resolve(
+			createFakeCompletionResponse('var i int'),
+		);
+		secondResponseDeferred.resolve(
+			createFakeCompletionResponse('var j int'),
+		);
 		const firstResponse = await firstResponsePromise;
 		const secondResponse = await secondResponsePromise;
 
 		assert.strictEqual(firstResponse.type, 'abortedBeforeIssued');
-		assert.strictEqual(firstResponse.reason, 'cancelled before extractPrompt');
+		assert.strictEqual(
+			firstResponse.reason,
+			'cancelled before extractPrompt',
+		);
 		assert.strictEqual(secondResponse.type, 'success');
 	});
 
@@ -601,16 +803,21 @@ suite('Isolated GhostText tests', function () {
 				}
 			`,
 			LocationFactory.position(3, 0),
-			'typescript'
+			'typescript',
 		);
-		const configProvider = accessor.get(ICompletionsConfigProvider) as InMemoryConfigProvider;
+		const configProvider = accessor.get(
+			ICompletionsConfigProvider,
+		) as InMemoryConfigProvider;
 		configProvider.setConfig(ConfigKey.AlwaysRequestMultiline, true);
 
 		const responseWithTelemetry = await requestGhostText();
 
 		assert.strictEqual(responseWithTelemetry.type, 'success');
 		assert.strictEqual(responseWithTelemetry.value[0].length, 1);
-		assert.strictEqual(responseWithTelemetry.value[0][0].completion.completionText, '    }');
+		assert.strictEqual(
+			responseWithTelemetry.value[0][0].completion.completionText,
+			'    }',
+		);
 	});
 
 	test('filters out a duplicate brace (when using progressive reveal)', async function () {
@@ -625,9 +832,11 @@ suite('Isolated GhostText tests', function () {
 				}
 			`,
 			LocationFactory.position(4, 0),
-			'typescript'
+			'typescript',
 		);
-		const configProvider = accessor.get(ICompletionsConfigProvider) as InMemoryConfigProvider;
+		const configProvider = accessor.get(
+			ICompletionsConfigProvider,
+		) as InMemoryConfigProvider;
 		configProvider.setConfig(ConfigKey.AlwaysRequestMultiline, true);
 
 		const responseWithTelemetry = await requestGhostText();
@@ -649,38 +858,76 @@ suite('Isolated GhostText tests', function () {
 				}
 				fmt.Println(output)
 			`;
-		const lines = raw.split('\n').map(line => `    ${line}`);
+		const lines = raw.split('\n').map((line) => `    ${line}`);
 		const multilineCompletion = lines.join('\n');
 		const { accessor, doc, position, state } = setupCompletion(
-			new StaticFetcher(() => createFakeCompletionResponse(multilineCompletion))
+			new StaticFetcher(() =>
+				createFakeCompletionResponse(multilineCompletion),
+			),
 		);
-		const configProvider = accessor.get(ICompletionsConfigProvider) as InMemoryConfigProvider;
+		const configProvider = accessor.get(
+			ICompletionsConfigProvider,
+		) as InMemoryConfigProvider;
 		const currentGhostText = accessor.get(ICompletionsCurrentGhostText);
 		configProvider.setConfig(ConfigKey.AlwaysRequestMultiline, true);
 		currentGhostText.hasAcceptedCurrentCompletion = () => true;
 
-		const telemetryBuilder = new LlmNESTelemetryBuilder(undefined, undefined, undefined, 'ghostText', undefined);
+		const telemetryBuilder = new LlmNESTelemetryBuilder(
+			undefined,
+			undefined,
+			undefined,
+			'ghostText',
+			undefined,
+		);
 		const logService = accessor.get(ILogService);
-		const response = await getGhostText(accessor, state, undefined, { isSpeculative: true }, new GhostTextLogContext('file:///fizzbuzz.go', doc.version, undefined), telemetryBuilder, logService);
+		const response = await getGhostText(
+			accessor,
+			state,
+			undefined,
+			{ isSpeculative: true },
+			new GhostTextLogContext(
+				'file:///fizzbuzz.go',
+				doc.version,
+				undefined,
+			),
+			telemetryBuilder,
+			logService,
+		);
 
 		assert.strictEqual(response.type, 'success');
 		assert.strictEqual(response.value[0].length, 1);
-		assert.strictEqual(response.value[0][0].completion.completionText, lines.slice(0, 9).join('\n'));
+		assert.strictEqual(
+			response.value[0][0].completion.completionText,
+			lines.slice(0, 9).join('\n'),
+		);
 
-		const { result } = await acceptAndRequestNextCompletion(accessor, doc, position, response.value[0][0].completion);
+		const { result } = await acceptAndRequestNextCompletion(
+			accessor,
+			doc,
+			position,
+			response.value[0][0].completion,
+		);
 
 		assert.strictEqual(result.type, 'success');
 		assert.strictEqual(result.value[0].length, 1);
-		assert.strictEqual(result.value[0][0].completion.completionText, '\n' + lines.slice(9).join('\n'));
+		assert.strictEqual(
+			result.value[0][0].completion.completionText,
+			'\n' + lines.slice(9).join('\n'),
+		);
 		assert.strictEqual(result.resultType, ResultType.Cache);
 	});
 });
 
-function fakeResult(completionText: string): Promise<GetNetworkCompletionsType> {
+function fakeResult(
+	completionText: string,
+): Promise<GetNetworkCompletionsType> {
 	const telemetryBlob = TelemetryWithExp.createEmptyConfigForTesting();
 	return Promise.resolve({
 		type: 'success',
-		value: [fakeAPIChoice(generateUuid(), 0, completionText), Promise.resolve()],
+		value: [
+			fakeAPIChoice(generateUuid(), 0, completionText),
+			Promise.resolve(),
+		],
 		telemetryData: mkBasicResultTelemetry(telemetryBlob),
 		telemetryBlob,
 		resultType: ResultType.Async,

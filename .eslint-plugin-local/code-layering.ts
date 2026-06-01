@@ -3,39 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as eslint from 'eslint';
-import { join, dirname } from 'path';
-import { createImportRuleListener } from './utils.ts';
+import * as eslint from "eslint";
+import { join, dirname } from "path";
+import { createImportRuleListener } from "./utils.ts";
 
 type Config = {
 	allowed: Set<string>;
 	disallowed: Set<string>;
 };
 
-export default new class implements eslint.Rule.RuleModule {
-
+export default new (class implements eslint.Rule.RuleModule {
 	readonly meta: eslint.Rule.RuleMetaData = {
 		messages: {
-			layerbreaker: 'Bad layering. You are not allowed to access {{from}} from here, allowed layers are: [{{allowed}}]'
+			layerbreaker:
+				"Bad layering. You are not allowed to access {{from}} from here, allowed layers are: [{{allowed}}]",
 		},
 		docs: {
-			url: 'https://github.com/microsoft/vscode/wiki/Source-Code-Organization'
+			url: "https://github.com/microsoft/vscode/wiki/Source-Code-Organization",
 		},
 		schema: [
 			{
-				type: 'object',
+				type: "object",
 				additionalProperties: {
-					type: 'array',
+					type: "array",
 					items: {
-						type: 'string'
-					}
-				}
-			}
-		]
+						type: "string",
+					},
+				},
+			},
+		],
 	};
 
 	create(context: eslint.Rule.RuleContext): eslint.Rule.RuleListener {
-
 		const fileDirname = dirname(context.getFilename());
 		const parts = fileDirname.split(/\\|\//);
 		const ruleArgs = context.options[0] as Record<string, string[]>;
@@ -44,9 +43,9 @@ export default new class implements eslint.Rule.RuleModule {
 			if (ruleArgs[parts[i]]) {
 				config = {
 					allowed: new Set(ruleArgs[parts[i]]).add(parts[i]),
-					disallowed: new Set()
+					disallowed: new Set(),
 				};
-				Object.keys(ruleArgs).forEach(key => {
+				Object.keys(ruleArgs).forEach((key) => {
 					if (!config!.allowed.has(key)) {
 						config!.disallowed.add(key);
 					}
@@ -61,7 +60,7 @@ export default new class implements eslint.Rule.RuleModule {
 		}
 
 		return createImportRuleListener((node, path) => {
-			if (path[0] === '.') {
+			if (path[0] === ".") {
 				path = join(dirname(context.getFilename()), path);
 			}
 
@@ -78,15 +77,15 @@ export default new class implements eslint.Rule.RuleModule {
 					// BAD - wrong layer
 					context.report({
 						loc: node.loc,
-						messageId: 'layerbreaker',
+						messageId: "layerbreaker",
 						data: {
 							from: part,
-							allowed: [...config!.allowed.keys()].join(', ')
-						}
+							allowed: [...config!.allowed.keys()].join(", "),
+						},
 					});
 					break;
 				}
 			}
 		});
 	}
-};
+})();

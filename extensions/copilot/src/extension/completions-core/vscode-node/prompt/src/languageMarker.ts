@@ -81,7 +81,16 @@ export const languageMarkers: { [language: string]: ILanguageInfo } = {
 	},
 	cpp: {
 		lineComment: { start: '//', end: '' },
-		markdownLanguageIds: ['cpp', 'hpp', 'cc', 'hh', 'c++', 'h++', 'cxx', 'hxx'],
+		markdownLanguageIds: [
+			'cpp',
+			'hpp',
+			'cc',
+			'hh',
+			'c++',
+			'h++',
+			'cxx',
+			'hxx',
+		],
 	},
 	csharp: {
 		lineComment: { start: '//', end: '' },
@@ -132,7 +141,12 @@ export const languageMarkers: { [language: string]: ILanguageInfo } = {
 	},
 	handlebars: {
 		lineComment: { start: '{{!', end: '}}' },
-		markdownLanguageIds: ['handlebars', 'hbs', 'html.hbs', 'html.handlebars'],
+		markdownLanguageIds: [
+			'handlebars',
+			'hbs',
+			'html.hbs',
+			'html.handlebars',
+		],
 	},
 	haskell: {
 		lineComment: { start: '--', end: '' },
@@ -235,7 +249,14 @@ export const languageMarkers: { [language: string]: ILanguageInfo } = {
 	},
 	ruby: {
 		lineComment: { start: '#', end: '' },
-		markdownLanguageIds: ['ruby', 'rb', 'gemspec', 'podspec', 'thor', 'irb'],
+		markdownLanguageIds: [
+			'ruby',
+			'rb',
+			'gemspec',
+			'podspec',
+			'thor',
+			'irb',
+		],
 	},
 	rust: {
 		lineComment: { start: '//', end: '' },
@@ -329,7 +350,9 @@ for (const [languageId, info] of Object.entries(languageMarkers)) {
 	}
 }
 
-export function mdCodeBlockLangToLanguageId(mdLanguageId: string): string | undefined {
+export function mdCodeBlockLangToLanguageId(
+	mdLanguageId: string,
+): string | undefined {
 	return mdLanguageIdToLanguageId[mdLanguageId];
 }
 
@@ -377,7 +400,9 @@ export function hasLanguageMarker({ source }: DocumentInfo): boolean {
  * that case, use {@link commentBlockAsSingles} instead.
  */
 export function comment(text: string, languageId: string) {
-	const markers = languageMarkers[languageId] ? languageMarkers[languageId].lineComment : defaultCommentMarker;
+	const markers = languageMarkers[languageId]
+		? languageMarkers[languageId].lineComment
+		: defaultCommentMarker;
 	if (markers) {
 		const end = markers.end === '' ? '' : ' ' + markers.end;
 		return `${markers.start} ${text}${end}`;
@@ -398,7 +423,7 @@ export function commentBlockAsSingles(text: string, languageId: string) {
 	}
 	const trailingNewline = text.endsWith('\n');
 	const lines = (trailingNewline ? text.slice(0, -1) : text).split('\n');
-	const commented = lines.map(line => comment(line, languageId)).join('\n');
+	const commented = lines.map((line) => comment(line, languageId)).join('\n');
 	return trailingNewline ? commented + '\n' : commented;
 }
 
@@ -411,7 +436,10 @@ export function commentBlockAsSingles(text: string, languageId: string) {
  */
 export function getLanguageMarker(doc: DocumentInfo): string {
 	const { languageId } = doc;
-	if (dontAddLanguageMarker.indexOf(languageId) === -1 && !hasLanguageMarker(doc)) {
+	if (
+		dontAddLanguageMarker.indexOf(languageId) === -1 &&
+		!hasLanguageMarker(doc)
+	) {
 		if (languageId in shebangLines) {
 			return shebangLines[languageId];
 		} else {

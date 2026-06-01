@@ -3,25 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type * as vscode from 'vscode';
-import { es5ClassCompat } from './es5ClassCompat.js';
-import { Position } from './position.js';
-import { getDebugDescriptionOfRange, Range } from './range.js';
+import type * as vscode from "vscode";
+import { es5ClassCompat } from "./es5ClassCompat.js";
+import { Position } from "./position.js";
+import { getDebugDescriptionOfRange, Range } from "./range.js";
 
 @es5ClassCompat
 export class Selection extends Range {
-
 	static isSelection(thing: unknown): thing is Selection {
 		if (thing instanceof Selection) {
 			return true;
 		}
-		if (!thing || typeof thing !== 'object') {
+		if (!thing || typeof thing !== "object") {
 			return false;
 		}
-		return Range.isRange(thing)
-			&& Position.isPosition((<Selection>thing).anchor)
-			&& Position.isPosition((<Selection>thing).active)
-			&& typeof (<Selection>thing).isReversed === 'boolean';
+		return (
+			Range.isRange(thing) &&
+			Position.isPosition((<Selection>thing).anchor) &&
+			Position.isPosition((<Selection>thing).active) &&
+			typeof (<Selection>thing).isReversed === "boolean"
+		);
 	}
 
 	private _anchor: Position;
@@ -37,21 +38,39 @@ export class Selection extends Range {
 	}
 
 	constructor(anchor: Position, active: Position);
-	constructor(anchorLine: number, anchorColumn: number, activeLine: number, activeColumn: number);
-	constructor(anchorLineOrAnchor: number | Position, anchorColumnOrActive: number | Position, activeLine?: number, activeColumn?: number) {
+	constructor(
+		anchorLine: number,
+		anchorColumn: number,
+		activeLine: number,
+		activeColumn: number,
+	);
+	constructor(
+		anchorLineOrAnchor: number | Position,
+		anchorColumnOrActive: number | Position,
+		activeLine?: number,
+		activeColumn?: number,
+	) {
 		let anchor: Position | undefined;
 		let active: Position | undefined;
 
-		if (typeof anchorLineOrAnchor === 'number' && typeof anchorColumnOrActive === 'number' && typeof activeLine === 'number' && typeof activeColumn === 'number') {
+		if (
+			typeof anchorLineOrAnchor === "number" &&
+			typeof anchorColumnOrActive === "number" &&
+			typeof activeLine === "number" &&
+			typeof activeColumn === "number"
+		) {
 			anchor = new Position(anchorLineOrAnchor, anchorColumnOrActive);
 			active = new Position(activeLine, activeColumn);
-		} else if (Position.isPosition(anchorLineOrAnchor) && Position.isPosition(anchorColumnOrActive)) {
+		} else if (
+			Position.isPosition(anchorLineOrAnchor) &&
+			Position.isPosition(anchorColumnOrActive)
+		) {
 			anchor = Position.of(anchorLineOrAnchor);
 			active = Position.of(anchorColumnOrActive);
 		}
 
 		if (!anchor || !active) {
-			throw new Error('Invalid arguments');
+			throw new Error("Invalid arguments");
 		}
 
 		super(anchor, active);
@@ -69,17 +88,18 @@ export class Selection extends Range {
 			start: this.start,
 			end: this.end,
 			active: this.active,
-			anchor: this.anchor
+			anchor: this.anchor,
 		};
 	}
 
-
-	[Symbol.for('debug.description')]() {
+	[Symbol.for("debug.description")]() {
 		return getDebugDescriptionOfSelection(this);
 	}
 }
 
-export function getDebugDescriptionOfSelection(selection: vscode.Selection): string {
+export function getDebugDescriptionOfSelection(
+	selection: vscode.Selection,
+): string {
 	let rangeStr = getDebugDescriptionOfRange(selection);
 	if (!selection.isEmpty) {
 		if (selection.active.isEqual(selection.start)) {

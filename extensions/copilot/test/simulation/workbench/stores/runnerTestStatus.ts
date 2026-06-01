@@ -6,9 +6,7 @@
 import * as mobx from 'mobx';
 import { TestRun } from './testRun';
 
-
 export class RunnerTestStatus {
-
 	@mobx.observable
 	public readonly runs: TestRun[];
 
@@ -27,7 +25,7 @@ export class RunnerTestStatus {
 		runs: TestRun[],
 		isNowRunning: number = 0,
 		isCancelled: boolean = false,
-		isSkipped: boolean = false
+		isSkipped: boolean = false,
 	) {
 		this.runs = runs;
 		this.isNowRunning = isNowRunning;

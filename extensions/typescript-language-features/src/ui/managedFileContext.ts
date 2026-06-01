@@ -3,24 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { disabledSchemes } from '../configuration/fileSchemes';
-import { isJsConfigOrTsConfigFileName } from '../configuration/languageDescription';
-import { isSupportedLanguageMode } from '../configuration/languageIds';
-import { Disposable } from '../utils/dispose';
-import { ActiveJsTsEditorTracker } from './activeJsTsEditorTracker';
+import * as vscode from "vscode";
+import { disabledSchemes } from "../configuration/fileSchemes";
+import { isJsConfigOrTsConfigFileName } from "../configuration/languageDescription";
+import { isSupportedLanguageMode } from "../configuration/languageIds";
+import { Disposable } from "../utils/dispose";
+import { ActiveJsTsEditorTracker } from "./activeJsTsEditorTracker";
 
 /**
  * When clause context set when the current file is managed by vscode's built-in typescript extension.
  */
 export default class ManagedFileContextManager extends Disposable {
-	private static readonly contextName = 'typescript.isManagedFile';
+	private static readonly contextName = "typescript.isManagedFile";
 
 	private isInManagedFileContext: boolean = false;
 
 	constructor(activeJsTsEditorTracker: ActiveJsTsEditorTracker) {
 		super();
-		activeJsTsEditorTracker.onDidChangeActiveJsTsEditor(this.onDidChangeActiveTextEditor, this, this._disposables);
+		activeJsTsEditorTracker.onDidChangeActiveJsTsEditor(
+			this.onDidChangeActiveTextEditor,
+			this,
+			this._disposables,
+		);
 
 		this.onDidChangeActiveTextEditor(activeJsTsEditorTracker.activeJsTsEditor);
 	}
@@ -45,7 +49,11 @@ export default class ManagedFileContextManager extends Disposable {
 			return;
 		}
 
-		vscode.commands.executeCommand('setContext', ManagedFileContextManager.contextName, newValue);
+		vscode.commands.executeCommand(
+			"setContext",
+			ManagedFileContextManager.contextName,
+			newValue,
+		);
 		this.isInManagedFileContext = newValue;
 	}
 
@@ -54,11 +62,13 @@ export default class ManagedFileContextManager extends Disposable {
 	}
 
 	private isManagedScriptFile(editor: vscode.TextEditor): boolean {
-		return isSupportedLanguageMode(editor.document) && !disabledSchemes.has(editor.document.uri.scheme);
+		return (
+			isSupportedLanguageMode(editor.document) &&
+			!disabledSchemes.has(editor.document.uri.scheme)
+		);
 	}
 
 	private isManagedConfigFile(editor: vscode.TextEditor): boolean {
 		return isJsConfigOrTsConfigFileName(editor.document.fileName);
 	}
 }
-

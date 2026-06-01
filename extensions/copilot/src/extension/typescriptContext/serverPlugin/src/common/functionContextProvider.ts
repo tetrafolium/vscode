@@ -5,20 +5,39 @@
 import tt from 'typescript/lib/tsserverlibrary';
 
 import { FunctionLikeContextProvider } from './baseContextProviders';
-import { type ComputeContextSession, type ContextRunnableCollector, type ProviderComputeContext, type RequestContext } from './contextProvider';
+import {
+	type ComputeContextSession,
+	type ContextRunnableCollector,
+	type ProviderComputeContext,
+	type RequestContext,
+} from './contextProvider';
 import type tss from './typescripts';
 
 export class FunctionContextProvider extends FunctionLikeContextProvider {
+	protected readonly functionDeclaration:
+		| tt.FunctionDeclaration
+		| tt.ArrowFunction
+		| tt.FunctionExpression;
 
-
-	protected readonly functionDeclaration: tt.FunctionDeclaration | tt.ArrowFunction | tt.FunctionExpression;
-
-	constructor(functionDeclaration: tt.FunctionDeclaration | tt.ArrowFunction | tt.FunctionExpression, tokenInfo: tss.TokenInfo, computeContext: ProviderComputeContext) {
+	constructor(
+		functionDeclaration:
+			| tt.FunctionDeclaration
+			| tt.ArrowFunction
+			| tt.FunctionExpression,
+		tokenInfo: tss.TokenInfo,
+		computeContext: ProviderComputeContext,
+	) {
 		super(functionDeclaration, tokenInfo, computeContext);
 		this.functionDeclaration = functionDeclaration;
 	}
 
-	public override provide(result: ContextRunnableCollector, session: ComputeContextSession, languageService: tt.LanguageService, context: RequestContext, token: tt.CancellationToken): void {
+	public override provide(
+		result: ContextRunnableCollector,
+		session: ComputeContextSession,
+		languageService: tt.LanguageService,
+		context: RequestContext,
+		token: tt.CancellationToken,
+	): void {
 		super.provide(result, session, languageService, context, token);
 	}
 

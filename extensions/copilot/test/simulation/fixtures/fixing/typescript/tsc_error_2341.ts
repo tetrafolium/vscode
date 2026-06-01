@@ -1,5 +1,5 @@
 class Bar {
-	private hi() { }
+	private hi() {}
 }
 
 class Foo extends Bar {

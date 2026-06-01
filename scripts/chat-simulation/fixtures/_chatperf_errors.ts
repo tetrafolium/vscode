@@ -20,7 +20,9 @@ export interface ErrorListenerUnbind {
 
 const _errorListeners: ErrorListenerCallback[] = [];
 
-export function setUnexpectedErrorHandler(handler: ErrorListenerCallback): void {
+export function setUnexpectedErrorHandler(
+	handler: ErrorListenerCallback,
+): void {
 	_errorListeners.length = 0;
 	_errorListeners.push(handler);
 }
@@ -28,7 +30,9 @@ export function setUnexpectedErrorHandler(handler: ErrorListenerCallback): void 
 export function onUnexpectedError(e: any): void {
 	if (!isCancellationError(e)) {
 		for (const listener of _errorListeners) {
-			try { listener(e); } catch { }
+			try {
+				listener(e);
+			} catch {}
 		}
 	}
 }
@@ -36,7 +40,9 @@ export function onUnexpectedError(e: any): void {
 export function onUnexpectedExternalError(e: any): void {
 	if (!isCancellationError(e)) {
 		for (const listener of _errorListeners) {
-			try { listener(e); } catch { }
+			try {
+				listener(e);
+			} catch {}
 		}
 	}
 }
@@ -49,11 +55,17 @@ export function transformErrorForSerialization(error: any): any {
 	return error;
 }
 
-const canceledName = 'Canceled';
+const canceledName = "Canceled";
 
 export function isCancellationError(error: any): boolean {
-	if (error instanceof CancellationError) { return true; }
-	return error instanceof Error && error.name === canceledName && error.message === canceledName;
+	if (error instanceof CancellationError) {
+		return true;
+	}
+	return (
+		error instanceof Error &&
+		error.name === canceledName &&
+		error.message === canceledName
+	);
 }
 
 export class CancellationError extends Error {
@@ -65,24 +77,24 @@ export class CancellationError extends Error {
 
 export class NotSupportedError extends Error {
 	constructor(message?: string) {
-		super(message || 'NotSupported');
+		super(message || "NotSupported");
 	}
 }
 
 export class NotImplementedError extends Error {
 	constructor(message?: string) {
-		super(message || 'NotImplemented');
+		super(message || "NotImplemented");
 	}
 }
 
 export class IllegalArgumentError extends Error {
 	constructor(message?: string) {
-		super(message || 'Illegal argument');
+		super(message || "Illegal argument");
 	}
 }
 
 export class BugIndicatingError extends Error {
 	constructor(message?: string) {
-		super(message || 'Bug Indicating Error');
+		super(message || "Bug Indicating Error");
 	}
 }

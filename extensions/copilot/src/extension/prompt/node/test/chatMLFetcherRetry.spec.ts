@@ -9,7 +9,10 @@ import { IAuthenticationService } from '../../../../platform/authentication/comm
 import { CopilotToken } from '../../../../platform/authentication/common/copilotToken';
 import { IFetchMLOptions } from '../../../../platform/chat/common/chatMLFetcher';
 import { IChatQuotaService } from '../../../../platform/chat/common/chatQuotaService';
-import { ChatFetchResponseType, ChatLocation } from '../../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+} from '../../../../platform/chat/common/commonTypes';
 import { IInteractionService } from '../../../../platform/chat/common/interactionService';
 import { ConfigKey } from '../../../../platform/configuration/common/configurationService';
 import { DefaultsOnlyConfigurationService } from '../../../../platform/configuration/common/defaultsOnlyConfigurationService';
@@ -17,9 +20,16 @@ import { InMemoryConfigurationService } from '../../../../platform/configuration
 import { ICAPIClientService } from '../../../../platform/endpoint/common/capiClient';
 import { MockAuthenticationService } from '../../../../platform/ignore/node/test/mockAuthenticationService';
 import { MockCAPIClientService } from '../../../../platform/ignore/node/test/mockCAPIClientService';
-import { ElectronFetchErrorChromiumDetails, ILogService } from '../../../../platform/log/common/logService';
+import {
+	ElectronFetchErrorChromiumDetails,
+	ILogService,
+} from '../../../../platform/log/common/logService';
 import { FinishedCallback } from '../../../../platform/networking/common/fetch';
-import { IFetcherService, IHeaders, Response } from '../../../../platform/networking/common/fetcherService';
+import {
+	IFetcherService,
+	IHeaders,
+	Response,
+} from '../../../../platform/networking/common/fetcherService';
 import { IChatEndpoint } from '../../../../platform/networking/common/networking';
 import { NullChatWebSocketManager } from '../../../../platform/networking/node/chatWebSocketManager';
 import { NoopOTelService } from '../../../../platform/otel/common/noopOtelService';
@@ -31,11 +41,17 @@ import { ITelemetryService } from '../../../../platform/telemetry/common/telemet
 import { TelemetryData } from '../../../../platform/telemetry/common/telemetryData';
 import { TestLogService } from '../../../../platform/testing/common/testLogService';
 import { InstantiationServiceBuilder } from '../../../../util/common/services';
-import { CancellationToken, CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../util/vs/base/common/cancellation';
 import { Event } from '../../../../util/vs/base/common/event';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
-import { IPowerService, NullPowerService } from '../../../power/common/powerService';
+import {
+	IPowerService,
+	NullPowerService,
+} from '../../../power/common/powerService';
 import { ChatMLFetcherImpl } from '../chatMLFetcher';
 
 describe('ChatMLFetcherImpl retry logic', () => {
@@ -48,12 +64,22 @@ describe('ChatMLFetcherImpl retry logic', () => {
 
 	beforeEach(() => {
 		disposables = new DisposableStore();
-		cancellationTokenSource = disposables.add(new CancellationTokenSource());
+		cancellationTokenSource = disposables.add(
+			new CancellationTokenSource(),
+		);
 
 		mockFetcherService = new MockFetcherService();
-		configurationService = new InMemoryConfigurationService(new DefaultsOnlyConfigurationService());
-		configurationService.setConfig(ConfigKey.TeamInternal.RetryServerErrorStatusCodes, '500,502');
-		configurationService.setConfig(ConfigKey.TeamInternal.RetryNetworkErrors, true);
+		configurationService = new InMemoryConfigurationService(
+			new DefaultsOnlyConfigurationService(),
+		);
+		configurationService.setConfig(
+			ConfigKey.TeamInternal.RetryServerErrorStatusCodes,
+			'500,502',
+		);
+		configurationService.setConfig(
+			ConfigKey.TeamInternal.RetryNetworkErrors,
+			true,
+		);
 
 		const logService = new TestLogService();
 		const telemetryService = new NullTelemetryService();
@@ -75,12 +101,24 @@ describe('ChatMLFetcherImpl retry logic', () => {
 			experimentationService,
 			createMockPowerService(),
 			new InstantiationServiceBuilder([
-				[IFetcherService, mockFetcherService as unknown as IFetcherService],
+				[
+					IFetcherService,
+					mockFetcherService as unknown as IFetcherService,
+				],
 				[ITelemetryService, telemetryService],
-				[ICAPIClientService, new TestCAPIClientService() as unknown as ICAPIClientService],
+				[
+					ICAPIClientService,
+					new TestCAPIClientService() as unknown as ICAPIClientService,
+				],
 			]).seal() as unknown as IInstantiationService,
 			new NullChatWebSocketManager(),
-			new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })),
+			new NoopOTelService(
+				resolveOTelConfig({
+					env: {},
+					extensionVersion: '0.0.0',
+					sessionId: 'test',
+				}),
+			),
 		);
 
 		// Skip delays in tests for faster execution
@@ -94,7 +132,17 @@ describe('ChatMLFetcherImpl retry logic', () => {
 	function createBaseOpts(): IFetchMLOptions {
 		return {
 			debugName: 'test',
-			messages: [{ role: Raw.ChatRole.User, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'Hello' }] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [
+						{
+							type: Raw.ChatCompletionContentPartKind.Text,
+							text: 'Hello',
+						},
+					],
+				},
+			],
 			endpoint,
 			location: ChatLocation.Panel,
 			enableRetryOnError: true,
@@ -106,11 +154,16 @@ describe('ChatMLFetcherImpl retry logic', () => {
 	describe('server error retry with configured status codes', () => {
 		it('retries on 500 status code when configured', async () => {
 			// Order: 1) initial fetch → 500, 2) connectivity check → 200, 3) retry → success
-			mockFetcherService.queueResponse(createErrorResponse(500, 'Internal Server Error'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(500, 'Internal Server Error'),
+			);
 			mockFetcherService.queueResponse(createSuccessResponse('{}')); // connectivity check
 			mockFetcherService.queueResponse(createSuccessResponse('Hello!')); // retry
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.Success);
 			expect(mockFetcherService.fetchCallCount).toBeGreaterThanOrEqual(2);
@@ -118,30 +171,45 @@ describe('ChatMLFetcherImpl retry logic', () => {
 
 		it('retries on 502 status code when configured', async () => {
 			// Order: 1) initial fetch → 502, 2) connectivity check → 200, 3) retry → success
-			mockFetcherService.queueResponse(createErrorResponse(502, 'Bad Gateway'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(502, 'Bad Gateway'),
+			);
 			mockFetcherService.queueResponse(createSuccessResponse('{}')); // connectivity check
 			mockFetcherService.queueResponse(createSuccessResponse('Success!')); // retry
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.Success);
 		});
 
 		it('does not retry on 404 status code', async () => {
-			mockFetcherService.queueResponse(createErrorResponse(404, 'Not Found'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(404, 'Not Found'),
+			);
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.NotFound);
 			expect(mockFetcherService.fetchCallCount).toBe(1);
 		});
 
 		it('does not retry when enableRetryOnError is false', async () => {
-			mockFetcherService.queueResponse(createErrorResponse(500, 'Internal Server Error'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(500, 'Internal Server Error'),
+			);
 
 			const opts = createBaseOpts();
 			opts.enableRetryOnError = false;
-			const result = await fetcher.fetchMany(opts, cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				opts,
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.Failed);
 			expect(mockFetcherService.fetchCallCount).toBe(1);
@@ -149,11 +217,19 @@ describe('ChatMLFetcherImpl retry logic', () => {
 
 		it('respects custom status codes from configuration', async () => {
 			// Configure to only retry on 503
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryServerErrorStatusCodes, '503');
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryServerErrorStatusCodes,
+				'503',
+			);
 
-			mockFetcherService.queueResponse(createErrorResponse(500, 'Internal Server Error'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(500, 'Internal Server Error'),
+			);
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			// Should NOT retry because 500 is not in the configured list
 			expect(result.type).toBe(ChatFetchResponseType.Failed);
@@ -163,7 +239,10 @@ describe('ChatMLFetcherImpl retry logic', () => {
 
 	describe('network error retry', () => {
 		it('retries after connectivity check succeeds', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryNetworkErrors, true);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryNetworkErrors,
+				true,
+			);
 
 			// Use ENOTFOUND instead of ECONNRESET - ECONNRESET triggers auto-retry in networking.ts
 			// Order: 1) initial fetch → error, 2) connectivity check → 200, 3) retry → success
@@ -171,18 +250,27 @@ describe('ChatMLFetcherImpl retry logic', () => {
 			mockFetcherService.queueResponse(createSuccessResponse('{}')); // connectivity check
 			mockFetcherService.queueResponse(createSuccessResponse('Success!')); // retry
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.Success);
 		});
 
 		it('does not retry when RetryNetworkErrors is disabled', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryNetworkErrors, false);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryNetworkErrors,
+				false,
+			);
 
 			// Use ENOTFOUND instead of ECONNRESET - ECONNRESET triggers auto-retry in networking.ts
 			mockFetcherService.queueError(createNetworkError('ENOTFOUND'));
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.NetworkError);
 			expect(mockFetcherService.fetchCallCount).toBe(1);
@@ -191,36 +279,60 @@ describe('ChatMLFetcherImpl retry logic', () => {
 
 	describe('status code parsing', () => {
 		it('handles comma-separated status codes with spaces', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryServerErrorStatusCodes, '500, 502 , 503');
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryServerErrorStatusCodes,
+				'500, 502 , 503',
+			);
 
-			mockFetcherService.queueResponse(createErrorResponse(502, 'Bad Gateway'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(502, 'Bad Gateway'),
+			);
 			mockFetcherService.queueResponse(createSuccessResponse('{}')); // connectivity check
 			mockFetcherService.queueResponse(createSuccessResponse('Success!')); // retry
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.Success);
 		});
 
 		it('handles invalid status codes gracefully', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryServerErrorStatusCodes, '500,invalid,502');
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryServerErrorStatusCodes,
+				'500,invalid,502',
+			);
 
-			mockFetcherService.queueResponse(createErrorResponse(500, 'Internal Server Error'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(500, 'Internal Server Error'),
+			);
 			mockFetcherService.queueResponse(createSuccessResponse('{}')); // connectivity check
 			mockFetcherService.queueResponse(createSuccessResponse('Success!')); // retry
 
 			// Should still retry on 500 even with invalid entry in config
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.Success);
 		});
 
 		it('does not retry when configuration is empty string', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryServerErrorStatusCodes, '');
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryServerErrorStatusCodes,
+				'',
+			);
 
-			mockFetcherService.queueResponse(createErrorResponse(500, 'Internal Server Error'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(500, 'Internal Server Error'),
+			);
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			// Empty config means no status codes to retry - should fail without retry
 			expect(result.type).toBe(ChatFetchResponseType.Failed);
@@ -228,11 +340,19 @@ describe('ChatMLFetcherImpl retry logic', () => {
 		});
 
 		it('does not retry when configuration contains only invalid values', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryServerErrorStatusCodes, 'invalid,abc,xyz');
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryServerErrorStatusCodes,
+				'invalid,abc,xyz',
+			);
 
-			mockFetcherService.queueResponse(createErrorResponse(500, 'Internal Server Error'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(500, 'Internal Server Error'),
+			);
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			// All invalid means no valid status codes - should fail without retry
 			expect(result.type).toBe(ChatFetchResponseType.Failed);
@@ -242,16 +362,24 @@ describe('ChatMLFetcherImpl retry logic', () => {
 
 	describe('connectivity check failure', () => {
 		it('does not retry server error when connectivity check fails', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryServerErrorStatusCodes, '500,502');
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryServerErrorStatusCodes,
+				'500,502',
+			);
 
 			// Order: 1) initial fetch → 500, 2) connectivity checks fail (3 attempts)
-			mockFetcherService.queueResponse(createErrorResponse(500, 'Internal Server Error'));
+			mockFetcherService.queueResponse(
+				createErrorResponse(500, 'Internal Server Error'),
+			);
 			// Connectivity check retries 3 times (with 0ms delays in tests)
 			mockFetcherService.queueError(createNetworkError('ENOTFOUND')); // 1st connectivity check
 			mockFetcherService.queueError(createNetworkError('ENOTFOUND')); // 2nd connectivity check
 			mockFetcherService.queueError(createNetworkError('ENOTFOUND')); // 3rd connectivity check
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			// Should fail because connectivity check never succeeded
 			expect(result.type).toBe(ChatFetchResponseType.Failed);
@@ -260,17 +388,28 @@ describe('ChatMLFetcherImpl retry logic', () => {
 
 	describe('network process crash fallback to node-fetch', () => {
 		it('falls back to node-fetch and retries when network process crashed and flag is enabled', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryNetworkErrors, true);
-			configurationService.setConfig(ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash, true);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryNetworkErrors,
+				true,
+			);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash,
+				true,
+			);
 
 			// 1) initial fetch → network process crash error
 			// 2) connectivity check via node-fetch → success
 			// 3) retry via node-fetch → success
 			mockFetcherService.queueError(createNetworkProcessCrashedError());
 			mockFetcherService.queueResponse(createSuccessResponse('{}')); // connectivity check
-			mockFetcherService.queueResponse(createSuccessResponse('Recovered!')); // retry
+			mockFetcherService.queueResponse(
+				createSuccessResponse('Recovered!'),
+			); // retry
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.Success);
 			// Verify that connectivity check and retry used node-fetch
@@ -283,8 +422,14 @@ describe('ChatMLFetcherImpl retry logic', () => {
 		});
 
 		it('does NOT fall back to node-fetch when flag is disabled', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryNetworkErrors, true);
-			configurationService.setConfig(ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash, false);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryNetworkErrors,
+				true,
+			);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash,
+				false,
+			);
 
 			// 1) initial fetch → network process crash error
 			// 2-4) connectivity checks via default fetcher → all fail (dead network process)
@@ -293,7 +438,10 @@ describe('ChatMLFetcherImpl retry logic', () => {
 			mockFetcherService.queueError(createNetworkError('ENOTFOUND')); // 2nd connectivity check
 			mockFetcherService.queueError(createNetworkError('ENOTFOUND')); // 3rd connectivity check
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			// Should fail: the connectivity checks used the dead default fetcher
 			expect(result.type).toBe(ChatFetchResponseType.NetworkError);
@@ -303,15 +451,24 @@ describe('ChatMLFetcherImpl retry logic', () => {
 		});
 
 		it('does NOT fall back to node-fetch for non-crash network errors', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryNetworkErrors, true);
-			configurationService.setConfig(ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash, true);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryNetworkErrors,
+				true,
+			);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash,
+				true,
+			);
 
 			// Regular network error (not a crash) — should NOT trigger node-fetch fallback
 			mockFetcherService.queueError(createNetworkError('ENOTFOUND'));
 			mockFetcherService.queueResponse(createSuccessResponse('{}')); // connectivity check
 			mockFetcherService.queueResponse(createSuccessResponse('Success!')); // retry
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.Success);
 			// Verify that connectivity check used the default fetcher, not node-fetch
@@ -320,12 +477,21 @@ describe('ChatMLFetcherImpl retry logic', () => {
 		});
 
 		it('does NOT fall back when RetryNetworkErrors is disabled even if crash flag is enabled', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryNetworkErrors, false);
-			configurationService.setConfig(ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash, true);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryNetworkErrors,
+				false,
+			);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash,
+				true,
+			);
 
 			mockFetcherService.queueError(createNetworkProcessCrashedError());
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			// Should fail without retry: the general retry-on-network-error flag is off
 			expect(result.type).toBe(ChatFetchResponseType.NetworkError);
@@ -333,12 +499,21 @@ describe('ChatMLFetcherImpl retry logic', () => {
 		});
 
 		it('sets isNetworkProcessCrash flag on the error result', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryNetworkErrors, false);
-			configurationService.setConfig(ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash, false);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryNetworkErrors,
+				false,
+			);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash,
+				false,
+			);
 
 			mockFetcherService.queueError(createNetworkProcessCrashedError());
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.NetworkError);
 			if (result.type === ChatFetchResponseType.NetworkError) {
@@ -347,11 +522,17 @@ describe('ChatMLFetcherImpl retry logic', () => {
 		});
 
 		it('does not set isNetworkProcessCrash flag for regular network errors', async () => {
-			configurationService.setConfig(ConfigKey.TeamInternal.RetryNetworkErrors, false);
+			configurationService.setConfig(
+				ConfigKey.TeamInternal.RetryNetworkErrors,
+				false,
+			);
 
 			mockFetcherService.queueError(createNetworkError('ENOTFOUND'));
 
-			const result = await fetcher.fetchMany(createBaseOpts(), cancellationTokenSource.token);
+			const result = await fetcher.fetchMany(
+				createBaseOpts(),
+				cancellationTokenSource.token,
+			);
 
 			expect(result.type).toBe(ChatFetchResponseType.NetworkError);
 			if (result.type === ChatFetchResponseType.NetworkError) {
@@ -430,8 +611,13 @@ class MockFetcherService {
 	}
 
 	isNetworkProcessCrashedError(err: unknown): boolean {
-		return !!(err && typeof err === 'object' && 'chromiumDetails' in err &&
-			(err as { chromiumDetails?: ElectronFetchErrorChromiumDetails }).chromiumDetails?.network_process_crashed === true);
+		return !!(
+			err &&
+			typeof err === 'object' &&
+			'chromiumDetails' in err &&
+			(err as { chromiumDetails?: ElectronFetchErrorChromiumDetails })
+				.chromiumDetails?.network_process_crashed === true
+		);
 	}
 
 	getUserMessageForFetcherError(_err: unknown): string {
@@ -468,7 +654,7 @@ function createMockInteractionService(): IInteractionService {
 	return {
 		_serviceBrand: undefined,
 		onInteractionStateChanged: Event.None,
-		sendChatInteraction: () => { },
+		sendChatInteraction: () => {},
 		getInteractionState: () => undefined,
 	} as unknown as IInteractionService;
 }
@@ -491,14 +677,22 @@ function createMockEndpoint(): IChatEndpoint {
 		createRequestBody: () => ({
 			model: 'test-model',
 			messages: [],
-			stream: true
+			stream: true,
 		}),
 		acquireTokenizer: () => ({
 			countMessagesTokens: async () => 100,
 			countTokens: async () => 100,
 			tokenize: async () => [],
 		}),
-		processResponseFromChatEndpoint: async (_telemetryService: ITelemetryService, _logService: ILogService, response: Response, _expectedNumChoices: number, finishedCb: FinishedCallback, telemetryData: TelemetryData, _cancellationToken?: CancellationToken) => {
+		processResponseFromChatEndpoint: async (
+			_telemetryService: ITelemetryService,
+			_logService: ILogService,
+			response: Response,
+			_expectedNumChoices: number,
+			finishedCb: FinishedCallback,
+			telemetryData: TelemetryData,
+			_cancellationToken?: CancellationToken,
+		) => {
 			// Stream the response text through the callback
 			const text = await response.text();
 			if (finishedCb) {
@@ -508,11 +702,24 @@ function createMockEndpoint(): IChatEndpoint {
 			return {
 				[Symbol.asyncIterator]: async function* () {
 					yield {
-						message: { role: Raw.ChatRole.Assistant, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }] },
+						message: {
+							role: Raw.ChatRole.Assistant,
+							content: [
+								{
+									type: Raw.ChatCompletionContentPartKind
+										.Text,
+									text,
+								},
+							],
+						},
 						choiceIndex: 0,
 						requestId: {
-							headerRequestId: response.headers.get('x-request-id') || 'test-request-id',
-							gitHubRequestId: response.headers.get('x-github-request-id') || '',
+							headerRequestId:
+								response.headers.get('x-request-id') ||
+								'test-request-id',
+							gitHubRequestId:
+								response.headers.get('x-github-request-id') ||
+								'',
 							completionId: '',
 							created: 0,
 							serverExperiments: '',
@@ -525,7 +732,7 @@ function createMockEndpoint(): IChatEndpoint {
 						finishReason: 'stop',
 						telemetryData: telemetryData,
 					};
-				}
+				},
 			};
 		},
 		acceptChatPolicy: async () => true,
@@ -538,7 +745,7 @@ function createMockEndpoint(): IChatEndpoint {
 function createMockChatQuotaService(): IChatQuotaService {
 	return {
 		_serviceBrand: undefined,
-		processQuotaHeaders: () => { },
+		processQuotaHeaders: () => {},
 	} as unknown as IChatQuotaService;
 }
 
@@ -560,7 +767,7 @@ function createMockPowerService(): IPowerService {
  * Simple FakeHeaders implementation that accepts initial headers.
  */
 class FakeHeaders implements IHeaders {
-	constructor(private readonly headers = new Map<string, string>()) { }
+	constructor(private readonly headers = new Map<string, string>()) {}
 	get(name: string): string | null {
 		return this.headers.get(name.toLowerCase()) ?? null;
 	}
@@ -574,11 +781,9 @@ function createSuccessResponse(content: string): Response {
 	return Response.fromText(
 		200,
 		'OK',
-		new FakeHeaders(new Map([
-			['content-type', 'text/event-stream'],
-		])),
+		new FakeHeaders(new Map([['content-type', 'text/event-stream']])),
 		streamContent,
-		'node-fetch'
+		'node-fetch',
 	);
 }
 
@@ -588,12 +793,14 @@ function createErrorResponse(status: number, statusText: string): Response {
 		statusText,
 		new FakeHeaders(),
 		JSON.stringify({ error: { message: statusText } }),
-		'node-fetch'
+		'node-fetch',
 	);
 }
 
 function createNetworkError(code: string): Error & { code: string } {
-	const error = new Error(`Network error: ${code}`) as Error & { code: string };
+	const error = new Error(`Network error: ${code}`) as Error & {
+		code: string;
+	};
 	error.code = code;
 	return error;
 }
@@ -602,9 +809,15 @@ function createNetworkError(code: string): Error & { code: string } {
  * Creates an error that simulates Electron's network process crashing.
  * Electron attaches `chromiumDetails` with structured error info to the error object.
  */
-function createNetworkProcessCrashedError(): Error & { code: string; chromiumDetails: ElectronFetchErrorChromiumDetails } {
+function createNetworkProcessCrashedError(): Error & {
+	code: string;
+	chromiumDetails: ElectronFetchErrorChromiumDetails;
+} {
 	const error = new Error('net::ERR_FAILED') as any;
 	error.code = 'ERR_FAILED';
-	error.chromiumDetails = { is_request_error: true, network_process_crashed: true } satisfies ElectronFetchErrorChromiumDetails;
+	error.chromiumDetails = {
+		is_request_error: true,
+		network_process_crashed: true,
+	} satisfies ElectronFetchErrorChromiumDetails;
 	return error;
 }

@@ -4,5 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 export function isUntitledSessionId(sessionId: string): boolean {
-	return sessionId.startsWith('untitled:') || sessionId.startsWith('untitled-');
+	return (
+		sessionId.startsWith('untitled:') || sessionId.startsWith('untitled-')
+	);
 }

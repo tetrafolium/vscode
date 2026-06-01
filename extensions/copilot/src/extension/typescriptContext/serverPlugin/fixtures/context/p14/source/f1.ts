@@ -18,7 +18,7 @@ export class Calculator {
 	public getResult(): Result {
 		return {
 			value: this.result,
-			message: `Result is ${this.result}`
+			message: `Result is ${this.result}`,
 		};
 	}
 }

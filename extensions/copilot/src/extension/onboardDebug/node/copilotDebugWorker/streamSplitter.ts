@@ -46,7 +46,11 @@ export class StreamSplitter extends Transform {
 			const thisChunk = chunk.subarray(offset, index);
 			const toEmit =
 				this.prefix.length || this.splitSuffix.length
-					? Buffer.concat([...this.prefix, thisChunk, this.splitSuffix])
+					? Buffer.concat([
+							...this.prefix,
+							thisChunk,
+							this.splitSuffix,
+						])
 					: thisChunk;
 
 			this.push(toEmit);
@@ -61,7 +65,9 @@ export class StreamSplitter extends Transform {
 		callback();
 	}
 
-	override _flush(callback: (error?: Error | null, data?: unknown) => void): void {
+	override _flush(
+		callback: (error?: Error | null, data?: unknown) => void,
+	): void {
 		if (this.prefix.length) {
 			this.push(Buffer.concat([...this.prefix, this.splitSuffix]));
 		}

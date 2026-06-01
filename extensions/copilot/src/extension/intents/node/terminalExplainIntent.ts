@@ -13,10 +13,13 @@ import { ITerminalService } from '../../../platform/terminal/common/terminalServ
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { Intent } from '../../common/constants';
 import { IBuildPromptContext } from '../../prompt/common/intents';
-import { IIntent, IIntentInvocation, IIntentInvocationContext } from '../../prompt/node/intents';
+import {
+	IIntent,
+	IIntentInvocation,
+	IIntentInvocationContext,
+} from '../../prompt/node/intents';
 import { PromptRenderer } from '../../prompts/node/base/promptRenderer';
 import { TerminalExplainPrompt } from '../../prompts/node/panel/terminalExplain';
-
 
 export class TerminalExplainIntent implements IIntent {
 	static readonly ID = Intent.TerminalExplain;
@@ -27,42 +30,63 @@ export class TerminalExplainIntent implements IIntent {
 	readonly commandInfo = {
 		allowsEmptyArgs: true,
 		defaultEnablement: true,
-		sampleRequest: l10n.t('What did the last command do?')
+		sampleRequest: l10n.t('What did the last command do?'),
 	};
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
-	) { }
+	) {}
 
-	async invoke(invocationContext: IIntentInvocationContext): Promise<IIntentInvocation> {
+	async invoke(
+		invocationContext: IIntentInvocationContext,
+	): Promise<IIntentInvocation> {
 		const location = invocationContext.location;
-		const endpoint = await this.endpointProvider.getChatEndpoint(invocationContext.request);
-		return this.instantiationService.createInstance(TerminalExplainIntentInvocation, this, endpoint, location);
+		const endpoint = await this.endpointProvider.getChatEndpoint(
+			invocationContext.request,
+		);
+		return this.instantiationService.createInstance(
+			TerminalExplainIntentInvocation,
+			this,
+			endpoint,
+			location,
+		);
 	}
 }
 
 class TerminalExplainIntentInvocation implements IIntentInvocation {
-
 	constructor(
 		readonly intent: TerminalExplainIntent,
 		readonly endpoint: IChatEndpoint,
 		readonly location: ChatLocation,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IEnvService private readonly envService: IEnvService,
 		@ITerminalService private readonly terminalService: ITerminalService,
-	) { }
+	) {}
 
-	async buildPrompt(promptContext: IBuildPromptContext, progress: vscode.Progress<vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart>, token: vscode.CancellationToken) {
+	async buildPrompt(
+		promptContext: IBuildPromptContext,
+		progress: vscode.Progress<
+			vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart
+		>,
+		token: vscode.CancellationToken,
+	) {
 		const osName = this.envService.OS;
 		const shellType = this.terminalService.terminalShellType;
 
-		const renderer = PromptRenderer.create(this.instantiationService, this.endpoint, TerminalExplainPrompt, {
-			promptContext,
-			osName,
-			shellType,
-			endpoint: this.endpoint,
-		});
+		const renderer = PromptRenderer.create(
+			this.instantiationService,
+			this.endpoint,
+			TerminalExplainPrompt,
+			{
+				promptContext,
+				osName,
+				shellType,
+				endpoint: this.endpoint,
+			},
+		);
 
 		const result = await renderer.render(progress, token);
 

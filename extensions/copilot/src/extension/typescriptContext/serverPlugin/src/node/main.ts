@@ -23,7 +23,9 @@ function init(module: { typescript: typeof tt }) {
 	}
 
 	if (create === undefined) {
-		throw new Error(`Couldn't initialize TypeScript Context Server Plugin.`);
+		throw new Error(
+			`Couldn't initialize TypeScript Context Server Plugin.`,
+		);
 	}
 
 	return { create };

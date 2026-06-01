@@ -3,14 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AuthError, ClientAuthError } from '@azure/msal-node';
-import TelemetryReporter, { TelemetryEventProperties } from '@vscode/extension-telemetry';
-import { IExperimentationTelemetry } from 'vscode-tas-client';
+import { AuthError, ClientAuthError } from "@azure/msal-node";
+import TelemetryReporter, {
+	TelemetryEventProperties,
+} from "@vscode/extension-telemetry";
+import { IExperimentationTelemetry } from "vscode-tas-client";
 
 export const enum MicrosoftAccountType {
-	AAD = 'aad',
-	MSA = 'msa',
-	Unknown = 'unknown'
+	AAD = "aad",
+	MSA = "msa",
+	Unknown = "unknown",
 }
 
 export class MicrosoftAuthenticationTelemetryReporter implements IExperimentationTelemetry {
@@ -29,18 +31,18 @@ export class MicrosoftAuthenticationTelemetryReporter implements IExperimentatio
 	}
 
 	postEvent(eventName: string, props: Map<string, string>): void {
-		const eventProperties: TelemetryEventProperties = { ...this.sharedProperties, ...Object.fromEntries(props) };
-		this._telemetryReporter.sendTelemetryEvent(
-			eventName,
-			eventProperties
-		);
+		const eventProperties: TelemetryEventProperties = {
+			...this.sharedProperties,
+			...Object.fromEntries(props),
+		};
+		this._telemetryReporter.sendTelemetryEvent(eventName, eventProperties);
 	}
 
 	sendActivatedWithMsalNoBrokerEvent(): void {
 		/* __GDPR__
 			"activatingMsalNoBroker" : { "owner": "TylerLeonhardt", "comment": "Used to determine how often users use the msal-no-broker login flow. This only fires if the user explictly opts in to this." }
 		*/
-		this._telemetryReporter.sendTelemetryEvent('activatingmsalnobroker');
+		this._telemetryReporter.sendTelemetryEvent("activatingmsalnobroker");
 	}
 
 	sendLoginEvent(scopes: readonly string[]): void {
@@ -51,7 +53,7 @@ export class MicrosoftAuthenticationTelemetryReporter implements IExperimentatio
 				"scopes": { "classification": "PublicNonPersonalData", "purpose": "FeatureInsight", "comment": "Used to determine what scope combinations are being requested." }
 			}
 		*/
-		this._telemetryReporter.sendTelemetryEvent('login', {
+		this._telemetryReporter.sendTelemetryEvent("login", {
 			// Get rid of guids from telemetry.
 			scopes: JSON.stringify(this._scrubGuids(scopes)),
 		});
@@ -60,19 +62,19 @@ export class MicrosoftAuthenticationTelemetryReporter implements IExperimentatio
 		/* __GDPR__
 			"loginFailed" : { "owner": "TylerLeonhardt", "comment": "Used to determine how often users run into issues with the login flow." }
 		*/
-		this._telemetryReporter.sendTelemetryEvent('loginFailed');
+		this._telemetryReporter.sendTelemetryEvent("loginFailed");
 	}
 	sendLogoutEvent(): void {
 		/* __GDPR__
 			"logout" : { "owner": "TylerLeonhardt", "comment": "Used to determine how often users log out." }
 		*/
-		this._telemetryReporter.sendTelemetryEvent('logout');
+		this._telemetryReporter.sendTelemetryEvent("logout");
 	}
 	sendLogoutFailedEvent(): void {
 		/* __GDPR__
 			"logoutFailed" : { "owner": "TylerLeonhardt", "comment": "Used to determine how often fail to log out." }
 		*/
-		this._telemetryReporter.sendTelemetryEvent('logoutFailed');
+		this._telemetryReporter.sendTelemetryEvent("logoutFailed");
 	}
 
 	sendTelemetryErrorEvent(error: Error | string): void {
@@ -80,7 +82,7 @@ export class MicrosoftAuthenticationTelemetryReporter implements IExperimentatio
 		let errorName: string | undefined;
 		let errorCode: string | undefined;
 		let errorCorrelationId: string | undefined;
-		if (typeof error === 'string') {
+		if (typeof error === "string") {
 			errorMessage = error;
 		} else {
 			const authError: AuthError = error as AuthError;
@@ -100,7 +102,7 @@ export class MicrosoftAuthenticationTelemetryReporter implements IExperimentatio
 				"errorCorrelationId": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The error correlation id." }
 			}
 		*/
-		this._telemetryReporter.sendTelemetryErrorEvent('msalError', {
+		this._telemetryReporter.sendTelemetryErrorEvent("msalError", {
 			errorMessage,
 			errorName,
 			errorCode,
@@ -135,13 +137,13 @@ export class MicrosoftAuthenticationTelemetryReporter implements IExperimentatio
 				"brokerTag": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The broker error tag." }
 			}
 		*/
-		this._telemetryReporter.sendTelemetryErrorEvent('msalClientAuthError', {
+		this._telemetryReporter.sendTelemetryErrorEvent("msalClientAuthError", {
 			errorName,
 			errorCode,
 			correlationId,
 			brokerErrorCode,
 			brokerStatusCode,
-			brokerTag
+			brokerTag,
 		});
 	}
 
@@ -160,15 +162,20 @@ export class MicrosoftAuthenticationTelemetryReporter implements IExperimentatio
 				"accountType": { "classification": "PublicNonPersonalData", "purpose": "FeatureInsight", "comment": "Used to determine what account types are being used." }
 			}
 		*/
-		this._telemetryReporter.sendTelemetryEvent('account', {
+		this._telemetryReporter.sendTelemetryEvent("account", {
 			// Get rid of guids from telemetry.
 			scopes: JSON.stringify(this._scrubGuids(scopes)),
-			accountType
+			accountType,
 		});
 	}
 
 	protected _scrubGuids(scopes: readonly string[]): string[] {
-		return scopes.map(s => s.replace(/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/i, '{guid}'));
+		return scopes.map((s) =>
+			s.replace(
+				/[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}/i,
+				"{guid}",
+			),
+		);
 	}
 }
 
@@ -181,7 +188,7 @@ export class MicrosoftSovereignCloudAuthenticationTelemetryReporter extends Micr
 				"scopes": { "classification": "PublicNonPersonalData", "purpose": "FeatureInsight", "comment": "Used to determine what scope combinations are being requested." }
 			}
 		*/
-		this._telemetryReporter.sendTelemetryEvent('loginMicrosoftSovereignCloud', {
+		this._telemetryReporter.sendTelemetryEvent("loginMicrosoftSovereignCloud", {
 			// Get rid of guids from telemetry.
 			scopes: JSON.stringify(this._scrubGuids(scopes)),
 		});
@@ -190,18 +197,22 @@ export class MicrosoftSovereignCloudAuthenticationTelemetryReporter extends Micr
 		/* __GDPR__
 			"loginMicrosoftSovereignCloudFailed" : { "owner": "TylerLeonhardt", "comment": "Used to determine how often users run into issues with the login flow." }
 		*/
-		this._telemetryReporter.sendTelemetryEvent('loginMicrosoftSovereignCloudFailed');
+		this._telemetryReporter.sendTelemetryEvent(
+			"loginMicrosoftSovereignCloudFailed",
+		);
 	}
 	override sendLogoutEvent(): void {
 		/* __GDPR__
 			"logoutMicrosoftSovereignCloud" : { "owner": "TylerLeonhardt", "comment": "Used to determine how often users log out." }
 		*/
-		this._telemetryReporter.sendTelemetryEvent('logoutMicrosoftSovereignCloud');
+		this._telemetryReporter.sendTelemetryEvent("logoutMicrosoftSovereignCloud");
 	}
 	override sendLogoutFailedEvent(): void {
 		/* __GDPR__
 			"logoutMicrosoftSovereignCloudFailed" : { "owner": "TylerLeonhardt", "comment": "Used to determine how often fail to log out." }
 		*/
-		this._telemetryReporter.sendTelemetryEvent('logoutMicrosoftSovereignCloudFailed');
+		this._telemetryReporter.sendTelemetryEvent(
+			"logoutMicrosoftSovereignCloudFailed",
+		);
 	}
 }

@@ -12,11 +12,23 @@ import { IChatMLFetcher, Source } from '../../../chat/common/chatMLFetcher';
 import { ChatLocation, ChatResponse } from '../../../chat/common/commonTypes';
 import { CHAT_MODEL } from '../../../configuration/common/configurationService';
 import { ILogService } from '../../../log/common/logService';
-import { FinishedCallback, OptionalChatRequestParams } from '../../../networking/common/fetch';
+import {
+	FinishedCallback,
+	OptionalChatRequestParams,
+} from '../../../networking/common/fetch';
 import { Response } from '../../../networking/common/fetcherService';
-import { createCapiRequestBody, IChatEndpoint, ICreateEndpointBodyOptions, IEndpointBody, IMakeChatRequestOptions } from '../../../networking/common/networking';
+import {
+	createCapiRequestBody,
+	IChatEndpoint,
+	ICreateEndpointBodyOptions,
+	IEndpointBody,
+	IMakeChatRequestOptions,
+} from '../../../networking/common/networking';
 import { ChatCompletion } from '../../../networking/common/openai';
-import { ITelemetryService, TelemetryProperties } from '../../../telemetry/common/telemetry';
+import {
+	ITelemetryService,
+	TelemetryProperties,
+} from '../../../telemetry/common/telemetry';
 import { TelemetryData } from '../../../telemetry/common/telemetryData';
 import { ITokenizerProvider } from '../../../tokenizer/node/tokenizer';
 
@@ -24,7 +36,8 @@ export class MockEndpoint implements IChatEndpoint {
 	constructor(
 		family: string | undefined,
 		@IChatMLFetcher private readonly _chatMLFetcher: IChatMLFetcher,
-		@ITokenizerProvider private readonly _tokenizerProvider: ITokenizerProvider,
+		@ITokenizerProvider
+		private readonly _tokenizerProvider: ITokenizerProvider,
 	) {
 		if (family !== undefined) {
 			this.family = family;
@@ -55,7 +68,15 @@ export class MockEndpoint implements IChatEndpoint {
 	version: string = '1.0';
 	tokenizer: TokenizerType = TokenizerType.O200K;
 
-	processResponseFromChatEndpoint(telemetryService: ITelemetryService, logService: ILogService, response: Response, expectedNumChoices: number, finishCallback: FinishedCallback, telemetryData: TelemetryData, cancellationToken?: CancellationToken): Promise<AsyncIterableObject<ChatCompletion>> {
+	processResponseFromChatEndpoint(
+		telemetryService: ITelemetryService,
+		logService: ILogService,
+		response: Response,
+		expectedNumChoices: number,
+		finishCallback: FinishedCallback,
+		telemetryData: TelemetryData,
+		cancellationToken?: CancellationToken,
+	): Promise<AsyncIterableObject<ChatCompletion>> {
 		throw new Error('Method not implemented.');
 	}
 
@@ -63,12 +84,18 @@ export class MockEndpoint implements IChatEndpoint {
 		throw new Error('Method not implemented.');
 	}
 
-	makeChatRequest2(options: IMakeChatRequestOptions, token: CancellationToken): Promise<ChatResponse> {
-		return this._chatMLFetcher.fetchOne({
-			requestOptions: {},
-			...options,
-			endpoint: this,
-		}, token);
+	makeChatRequest2(
+		options: IMakeChatRequestOptions,
+		token: CancellationToken,
+	): Promise<ChatResponse> {
+		return this._chatMLFetcher.fetchOne(
+			{
+				requestOptions: {},
+				...options,
+				endpoint: this,
+			},
+			token,
+		);
 	}
 
 	createRequestBody(options: ICreateEndpointBodyOptions): IEndpointBody {
@@ -86,16 +113,19 @@ export class MockEndpoint implements IChatEndpoint {
 		userInitiatedRequest?: boolean,
 		telemetryProperties?: TelemetryProperties,
 	): Promise<ChatResponse> {
-		return this.makeChatRequest2({
-			debugName,
-			messages,
-			finishedCb,
-			location,
-			source,
-			requestOptions,
-			userInitiatedRequest,
-			telemetryProperties,
-		}, token);
+		return this.makeChatRequest2(
+			{
+				debugName,
+				messages,
+				finishedCb,
+				location,
+				source,
+				requestOptions,
+				userInitiatedRequest,
+				telemetryProperties,
+			},
+			token,
+		);
 	}
 
 	cloneWithTokenOverride(modelMaxPromptTokens: number): IChatEndpoint {

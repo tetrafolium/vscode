@@ -8,12 +8,15 @@
  * Entries are evicted lazily on access when their TTL has elapsed.
  */
 export class TtlCache<V> {
-	private readonly _entries = new Map<string, { value: V; timestamp: number; ttlMs?: number }>();
+	private readonly _entries = new Map<
+		string,
+		{ value: V; timestamp: number; ttlMs?: number }
+	>();
 
 	/**
 	 * @param _ttlMs The time-to-live in milliseconds for cache entries.
 	 */
-	constructor(private readonly _ttlMs: number) { }
+	constructor(private readonly _ttlMs: number) {}
 
 	/**
 	 * Returns the cached value if it exists and has not expired, otherwise `undefined`.
@@ -71,7 +74,7 @@ export class SingleSlotTtlCache<V> {
 	/**
 	 * @param _ttlMs The time-to-live in milliseconds for the cached entry.
 	 */
-	constructor(private readonly _ttlMs: number) { }
+	constructor(private readonly _ttlMs: number) {}
 
 	/**
 	 * Returns the cached value if the key matches and the TTL has not expired, otherwise `undefined`.

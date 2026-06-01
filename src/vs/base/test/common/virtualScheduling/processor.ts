@@ -3,12 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../common/cancellation.js';
-import { Disposable, DisposableStore, IDisposable } from '../../../common/lifecycle.js';
-import { Embedding, nextMacrotask } from './embedding.js';
-import { TimeApi } from './timeApi.js';
-import { ROOT_TRACE, TraceContext } from './trace.js';
-import { EventSource, VirtualClock, VirtualEvent, VirtualTime } from './virtualClock.js';
+import { CancellationToken } from "../../../common/cancellation.js";
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+} from "../../../common/lifecycle.js";
+import { Embedding, nextMacrotask } from "./embedding.js";
+import { TimeApi } from "./timeApi.js";
+import { ROOT_TRACE, TraceContext } from "./trace.js";
+import {
+	EventSource,
+	VirtualClock,
+	VirtualEvent,
+	VirtualTime,
+} from "./virtualClock.js";
 
 // ============================================================================
 // Termination policy
@@ -24,17 +33,21 @@ import { EventSource, VirtualClock, VirtualEvent, VirtualTime } from './virtualC
  */
 export type TerminationPolicy =
 	/** Resolve as soon as the virtual queue is empty. */
-	| { readonly kind: 'idle' }
+	| { readonly kind: "idle" }
 	/** Resolve when the token is cancelled AND the queue is empty. */
-	| { readonly kind: 'token'; readonly token: CancellationToken }
+	| { readonly kind: "token"; readonly token: CancellationToken }
 	/** Resolve when virtual time has reached `time` and all events scheduled
 	 *  at or before `time` have been processed. A sentinel event at `time`
 	 *  is scheduled by the processor so virtual time always reaches it. */
-	| { readonly kind: 'time'; readonly time: VirtualTime };
+	| { readonly kind: "time"; readonly time: VirtualTime };
 
-export const untilIdle: TerminationPolicy = { kind: 'idle' };
-export function untilToken(token: CancellationToken): TerminationPolicy { return { kind: 'token', token }; }
-export function untilTime(time: VirtualTime): TerminationPolicy { return { kind: 'time', time }; }
+export const untilIdle: TerminationPolicy = { kind: "idle" };
+export function untilToken(token: CancellationToken): TerminationPolicy {
+	return { kind: "token", token };
+}
+export function untilTime(time: VirtualTime): TerminationPolicy {
+	return { kind: "time", time };
+}
 
 export interface RunOptions {
 	readonly until: TerminationPolicy;
@@ -49,7 +62,7 @@ export interface RunOptions {
 // Run — internal state for a single processor.run() invocation
 // ============================================================================
 
-type RunStatus = 'continue' | 'done' | { readonly error: Error };
+type RunStatus = "continue" | "done" | { readonly error: Error };
 
 class Run {
 	private static _idCounter = 0;
@@ -59,23 +72,38 @@ class Run {
 	private _resolve!: () => void;
 	private _reject!: (e: Error) => void;
 	private _settled = false;
-	public get settled(): boolean { return this._settled; }
+	public get settled(): boolean {
+		return this._settled;
+	}
 
 	constructor(
 		public readonly options: RunOptions,
 		public readonly executedAtStart: number,
 		public readonly maxEvents: number,
 	) {
-		this.promise = new Promise<void>((res, rej) => { this._resolve = res; this._reject = rej; });
+		this.promise = new Promise<void>((res, rej) => {
+			this._resolve = res;
+			this._reject = rej;
+		});
 	}
 
 	settle(error?: Error): void {
-		if (this._settled) { return; }
+		if (this._settled) {
+			return;
+		}
 		this._settled = true;
-		if (error) { this._reject(error); } else { this._resolve(); }
+		if (error) {
+			this._reject(error);
+		} else {
+			this._resolve();
+		}
 	}
 
-	evaluate(clock: VirtualClock, executedTotal: number, makeOverflow: () => Error): RunStatus {
+	evaluate(
+		clock: VirtualClock,
+		executedTotal: number,
+		makeOverflow: () => Error,
+	): RunStatus {
 		const local = executedTotal - this.executedAtStart;
 		if (local >= this.maxEvents && clock.hasEvents) {
 			return { error: makeOverflow() };
@@ -83,17 +111,19 @@ class Run {
 
 		const u = this.options.until;
 		switch (u.kind) {
-			case 'idle':
-				return clock.hasEvents ? 'continue' : 'done';
-			case 'token':
-				return u.token.isCancellationRequested && !clock.hasEvents ? 'done' : 'continue';
-			case 'time': {
+			case "idle":
+				return clock.hasEvents ? "continue" : "done";
+			case "token":
+				return u.token.isCancellationRequested && !clock.hasEvents
+					? "done"
+					: "continue";
+			case "time": {
 				// Done iff every remaining event is strictly past the deadline.
 				// The sentinel guarantees the queue is non-empty until at
 				// least the deadline is reached, so we never resolve "early"
 				// just because nothing has been scheduled yet.
 				const next = clock.peekNext();
-				return next === undefined || next.time > u.time ? 'done' : 'continue';
+				return next === undefined || next.time > u.time ? "done" : "continue";
 			}
 		}
 	}
@@ -107,12 +137,12 @@ type StepOutcome =
 	/** Either a virtual event was executed, or a run was rejected for a
 	 *  bookkeeping reason (depth/event overflow). The trampoline should let
 	 *  the embedding decide how to reach the next step. */
-	| 'progress'
+	| "progress"
 	/** No actionable event under any active deadline. The trampoline should
 	 *  park until something wakes the processor. */
-	| 'park'
+	| "park"
 	/** No active runs. The trampoline should stop driving. */
-	| 'quiesce';
+	| "quiesce";
 
 // ============================================================================
 // VirtualTimeProcessor
@@ -171,7 +201,6 @@ export interface VirtualTimeProcessorOptions {
  * any race between the processor's hops and the trace-reset timer.
  */
 export class VirtualTimeProcessor extends Disposable {
-
 	private readonly _runs = new Map<Run, IDisposable>();
 	private readonly _history: VirtualEvent[] = [];
 	private _executedTotal = 0;
@@ -182,8 +211,12 @@ export class VirtualTimeProcessor extends Disposable {
 
 	private readonly _defaultMaxEvents: number;
 
-	public get history(): readonly VirtualEvent[] { return this._history; }
-	public get executedTotal(): number { return this._executedTotal; }
+	public get history(): readonly VirtualEvent[] {
+		return this._history;
+	}
+	public get executedTotal(): number {
+		return this._executedTotal;
+	}
 
 	constructor(
 		private readonly _clock: VirtualClock,
@@ -200,25 +233,37 @@ export class VirtualTimeProcessor extends Disposable {
 
 	/** Start a run with the given termination policy. */
 	run(options: RunOptions): Promise<void> {
-		const run = new Run(options, this._executedTotal, options.maxEvents ?? this._defaultMaxEvents);
+		const run = new Run(
+			options,
+			this._executedTotal,
+			options.maxEvents ?? this._defaultMaxEvents,
+		);
 		const cleanup = new DisposableStore();
 
 		// Wake the loop on token cancellation so the run can re-evaluate.
-		if (options.until.kind === 'token') {
-			cleanup.add(options.until.token.onCancellationRequested(() => this._wake()));
+		if (options.until.kind === "token") {
+			cleanup.add(
+				options.until.token.onCancellationRequested(() => this._wake()),
+			);
 		}
 
 		// For time-based termination, schedule a sentinel event at the
 		// deadline. This guarantees virtual time reaches the deadline even if
 		// the user never schedules anything else, and that the run does not
 		// resolve early just because the queue happens to be empty *now*.
-		if (options.until.kind === 'time' && options.until.time > this._clock.now) {
-			const source: EventSource = { toString: () => `<deadline of run #${run.id}>` };
-			cleanup.add(this._clock.schedule({
-				time: options.until.time,
-				source,
-				run: () => { /* sentinel: no-op */ },
-			}));
+		if (options.until.kind === "time" && options.until.time > this._clock.now) {
+			const source: EventSource = {
+				toString: () => `<deadline of run #${run.id}>`,
+			};
+			cleanup.add(
+				this._clock.schedule({
+					time: options.until.time,
+					source,
+					run: () => {
+						/* sentinel: no-op */
+					},
+				}),
+			);
 		}
 
 		this._runs.set(run, cleanup);
@@ -229,13 +274,19 @@ export class VirtualTimeProcessor extends Disposable {
 	// ---- The pure step --------------------------------------------------
 
 	private _step(): StepOutcome {
-		if (this._disposed) { return 'quiesce'; }
+		if (this._disposed) {
+			return "quiesce";
+		}
 
 		this._settleFinishedRuns();
-		if (this._runs.size === 0) { return 'quiesce'; }
+		if (this._runs.size === 0) {
+			return "quiesce";
+		}
 
 		const next = this._clock.peekNext();
-		if (next === undefined) { return 'park'; }
+		if (next === undefined) {
+			return "park";
+		}
 
 		// Per-run trace-depth check: reject any run whose limit this event
 		// would exceed, before executing.
@@ -248,10 +299,12 @@ export class VirtualTimeProcessor extends Disposable {
 				depthOverflow = true;
 			}
 		}
-		if (depthOverflow) { return 'progress'; }
+		if (depthOverflow) {
+			return "progress";
+		}
 
 		this._executeOne(next);
-		return 'progress';
+		return "progress";
 	}
 
 	private _executeOne(event: VirtualEvent): void {
@@ -269,36 +322,49 @@ export class VirtualTimeProcessor extends Disposable {
 					// Route the trace-reset through the same host primitive
 					// the embedding uses, so there is no race between this
 					// timer and the embedding's next hop.
-					afterMicrotaskClosure: cb => nextMacrotask(this._realApi, cb),
+					afterMicrotaskClosure: (cb) => nextMacrotask(this._realApi, cb),
 				},
 			);
 		} catch (e) {
 			const err = e instanceof Error ? e : new Error(String(e));
 			// We can't tell which run "owned" the throwing event. Reject all
 			// active runs so the failure is observed exactly once per caller.
-			for (const run of [...this._runs.keys()]) { this._settleRun(run, err); }
+			for (const run of [...this._runs.keys()]) {
+				this._settleRun(run, err);
+			}
 		}
 	}
 
 	// ---- The trampoline -------------------------------------------------
 
 	private readonly _drive = (): void => {
-		if (this._inDrive) { return; }
+		if (this._inDrive) {
+			return;
+		}
 		this._inDrive = true;
 		try {
 			while (true) {
 				const outcome = this._step();
-				if (outcome === 'quiesce') { return; }
-				if (outcome === 'park') { this._park(); return; }
+				if (outcome === "quiesce") {
+					return;
+				}
+				if (outcome === "park") {
+					this._park();
+					return;
+				}
 
 				// 'progress': read the next event so the embedding can pick a
 				// per-event primitive. If there is none, loop and let the next
 				// `_step` decide between 'park' and 'quiesce'.
 				const next = this._clock.peekNext();
-				if (next === undefined) { continue; }
+				if (next === undefined) {
+					continue;
+				}
 
 				const choice = this._embedding(next, this._drive);
-				if (choice === 'cbScheduled') { return; }
+				if (choice === "cbScheduled") {
+					return;
+				}
 				// 'continueSync': loop in place.
 			}
 		} finally {
@@ -321,7 +387,9 @@ export class VirtualTimeProcessor extends Disposable {
 	}
 
 	private _wake(): void {
-		if (this._disposed) { return; }
+		if (this._disposed) {
+			return;
+		}
 		this._unpark();
 		// Re-enter the trampoline on a host macrotask, NOT a microtask. This:
 		//  - coalesces multiple wake() calls in the same tick,
@@ -341,11 +409,15 @@ export class VirtualTimeProcessor extends Disposable {
 
 	private _settleFinishedRuns(): void {
 		for (const run of [...this._runs.keys()]) {
-			if (run.settled) { continue; }
-			const status = run.evaluate(this._clock, this._executedTotal, () => this._buildOverflow(run));
-			if (status === 'done') {
+			if (run.settled) {
+				continue;
+			}
+			const status = run.evaluate(this._clock, this._executedTotal, () =>
+				this._buildOverflow(run),
+			);
+			if (status === "done") {
 				this._settleRun(run);
-			} else if (typeof status === 'object') {
+			} else if (typeof status === "object") {
 				this._settleRun(run, status.error);
 			}
 		}
@@ -353,7 +425,9 @@ export class VirtualTimeProcessor extends Disposable {
 
 	private _settleRun(run: Run, error?: Error): void {
 		const cleanup = this._runs.get(run);
-		if (!cleanup) { return; }
+		if (!cleanup) {
+			return;
+		}
 		this._runs.delete(run);
 		cleanup.dispose();
 		run.settle(error);
@@ -363,22 +437,24 @@ export class VirtualTimeProcessor extends Disposable {
 		const local = this._executedTotal - run.executedAtStart;
 		return new Error(
 			`[VirtualTimeProcessor] Run #${run.id} exceeded maxEvents (${run.maxEvents}) — ` +
-			`executed ${local} virtual event(s) and the queue is still not empty.`
+				`executed ${local} virtual event(s) and the queue is still not empty.`,
 		);
 	}
 
 	private _buildDepthOverflow(run: Run, depth: number): Error {
 		return new Error(
 			`[VirtualTimeProcessor] Run #${run.id} exceeded maxTraceDepth (${run.options.maxTraceDepth}) — ` +
-			`next event has trace depth ${depth}. ` +
-			`This usually indicates a runaway self-rescheduling timer.`
+				`next event has trace depth ${depth}. ` +
+				`This usually indicates a runaway self-rescheduling timer.`,
 		);
 	}
 
 	private _onDispose(): void {
 		this._disposed = true;
 		this._unpark();
-		const err = new Error('VirtualTimeProcessor disposed');
-		for (const run of [...this._runs.keys()]) { this._settleRun(run, err); }
+		const err = new Error("VirtualTimeProcessor disposed");
+		for (const run of [...this._runs.keys()]) {
+			this._settleRun(run, err);
+		}
 	}
 }

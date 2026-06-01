@@ -5,7 +5,10 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MockFileSystemService } from '../../../../../platform/filesystem/node/test/mockFileSystemService';
-import { IIgnoreService, NullIgnoreService } from '../../../../../platform/ignore/common/ignoreService';
+import {
+	IIgnoreService,
+	NullIgnoreService,
+} from '../../../../../platform/ignore/common/ignoreService';
 import { ILogService } from '../../../../../platform/log/common/logService';
 import { NullWorkspaceService } from '../../../../../platform/workspace/common/workspaceService';
 import { CancellationToken } from '../../../../../util/vs/base/common/cancellation';
@@ -23,7 +26,14 @@ import { MockSkillLocations, NullICopilotCLIImageSupport } from './testHelpers';
 
 // Mock generateUserPrompt to avoid TSX rendering complexity in unit tests
 vi.mock('../../../../prompts/node/agent/copilotCLIPrompt', () => ({
-	generateUserPrompt: vi.fn(async (_request: unknown, prompt: string | undefined, _variables: unknown, _instantiationService: unknown) => prompt ?? ''),
+	generateUserPrompt: vi.fn(
+		async (
+			_request: unknown,
+			prompt: string | undefined,
+			_variables: unknown,
+			_instantiationService: unknown,
+		) => prompt ?? '',
+	),
 }));
 
 const noopWorkspaceInfo: IWorkspaceInfo = {
@@ -61,12 +71,17 @@ describe('CopilotCLIPromptResolver', () => {
 		disposables.dispose();
 	});
 
-	function createResolver(overrideSkillLocations?: MockSkillLocations, overrideExtensionContext?: IVSCodeExtensionContext) {
+	function createResolver(
+		overrideSkillLocations?: MockSkillLocations,
+		overrideExtensionContext?: IVSCodeExtensionContext,
+	) {
 		const imageSupport = new NullICopilotCLIImageSupport();
 		const workspaceService = new NullWorkspaceService();
 		const ignoreService = new NullIgnoreService();
 		const fileSystemService = new MockFileSystemService();
-		const extensionContext = overrideExtensionContext ?? new MockExtensionContext() as unknown as IVSCodeExtensionContext;
+		const extensionContext =
+			overrideExtensionContext ??
+			(new MockExtensionContext() as unknown as IVSCodeExtensionContext);
 		return new CopilotCLIPromptResolver(
 			imageSupport as unknown as ICopilotCLIImageSupport,
 			logService,
@@ -83,7 +98,14 @@ describe('CopilotCLIPromptResolver', () => {
 		it('returns the prompt and empty attachments for a basic request with no references', async () => {
 			resolver = createResolver();
 			const request = new TestChatRequest('hello world');
-			const result = await resolver.resolvePrompt(request, undefined, [], noopWorkspaceInfo, [], CancellationToken.None);
+			const result = await resolver.resolvePrompt(
+				request,
+				undefined,
+				[],
+				noopWorkspaceInfo,
+				[],
+				CancellationToken.None,
+			);
 			expect(result.prompt).toBe('hello world');
 			expect(result.attachments).toHaveLength(0);
 			expect(result.references).toHaveLength(0);
@@ -92,7 +114,14 @@ describe('CopilotCLIPromptResolver', () => {
 		it('uses the provided prompt override instead of request.prompt', async () => {
 			resolver = createResolver();
 			const request = new TestChatRequest('original prompt');
-			const result = await resolver.resolvePrompt(request, 'override prompt', [], noopWorkspaceInfo, [], CancellationToken.None);
+			const result = await resolver.resolvePrompt(
+				request,
+				'override prompt',
+				[],
+				noopWorkspaceInfo,
+				[],
+				CancellationToken.None,
+			);
 			expect(result.prompt).toBe('override prompt');
 		});
 
@@ -100,7 +129,14 @@ describe('CopilotCLIPromptResolver', () => {
 			resolver = createResolver();
 			const request = new TestChatRequest('hello');
 			const cancelledToken = CancellationToken.Cancelled;
-			const result = await resolver.resolvePrompt(request, undefined, [], noopWorkspaceInfo, [], cancelledToken);
+			const result = await resolver.resolvePrompt(
+				request,
+				undefined,
+				[],
+				noopWorkspaceInfo,
+				[],
+				cancelledToken,
+			);
 			expect(result.attachments).toHaveLength(0);
 			expect(result.references).toHaveLength(0);
 		});
@@ -113,8 +149,17 @@ describe('CopilotCLIPromptResolver', () => {
 			skillLocations = new MockSkillLocations([skillsDir]);
 			resolver = createResolver(skillLocations);
 
-			const request = new TestChatRequest('use the skill', [makePromptFileReference(skillFile)]);
-			const result = await resolver.resolvePrompt(request, undefined, [], noopWorkspaceInfo, [], CancellationToken.None);
+			const request = new TestChatRequest('use the skill', [
+				makePromptFileReference(skillFile),
+			]);
+			const result = await resolver.resolvePrompt(
+				request,
+				undefined,
+				[],
+				noopWorkspaceInfo,
+				[],
+				CancellationToken.None,
+			);
 
 			// The prompt file is within the known skill location, so it should not appear in references
 			expect(result.references).toHaveLength(0);
@@ -123,26 +168,52 @@ describe('CopilotCLIPromptResolver', () => {
 
 		it('includes prompt file references that are NOT within known skill locations', async () => {
 			const skillsDir = URI.file('/home/user/.skills');
-			const nonSkillPromptFile = URI.file('/workspace/some-other.prompt.md');
+			const nonSkillPromptFile = URI.file(
+				'/workspace/some-other.prompt.md',
+			);
 			skillLocations = new MockSkillLocations([skillsDir]);
 			resolver = createResolver(skillLocations);
 
-			const request = new TestChatRequest('use a prompt file', [makePromptFileReference(nonSkillPromptFile)]);
-			const result = await resolver.resolvePrompt(request, undefined, [], noopWorkspaceInfo, [], CancellationToken.None);
+			const request = new TestChatRequest('use a prompt file', [
+				makePromptFileReference(nonSkillPromptFile),
+			]);
+			const result = await resolver.resolvePrompt(
+				request,
+				undefined,
+				[],
+				noopWorkspaceInfo,
+				[],
+				CancellationToken.None,
+			);
 
 			// The prompt file is NOT in a skill location, so it should appear in references
 			expect(result.references).toHaveLength(1);
-			expect((result.references[0].value as URI).fsPath).toBe(nonSkillPromptFile.fsPath);
+			expect((result.references[0].value as URI).fsPath).toBe(
+				nonSkillPromptFile.fsPath,
+			);
 		});
 
 		it('excludes prompt file when it is in a subdirectory of a known skill location', async () => {
 			const skillsDir = URI.file('/home/user/.skills');
-			const nestedSkillFile = URI.joinPath(skillsDir, 'subdir', 'nested.prompt.md');
+			const nestedSkillFile = URI.joinPath(
+				skillsDir,
+				'subdir',
+				'nested.prompt.md',
+			);
 			skillLocations = new MockSkillLocations([skillsDir]);
 			resolver = createResolver(skillLocations);
 
-			const request = new TestChatRequest('use nested skill', [makePromptFileReference(nestedSkillFile)]);
-			const result = await resolver.resolvePrompt(request, undefined, [], noopWorkspaceInfo, [], CancellationToken.None);
+			const request = new TestChatRequest('use nested skill', [
+				makePromptFileReference(nestedSkillFile),
+			]);
+			const result = await resolver.resolvePrompt(
+				request,
+				undefined,
+				[],
+				noopWorkspaceInfo,
+				[],
+				CancellationToken.None,
+			);
 
 			expect(result.references).toHaveLength(0);
 		});
@@ -152,8 +223,17 @@ describe('CopilotCLIPromptResolver', () => {
 			resolver = createResolver(skillLocations);
 
 			const promptFile = URI.file('/workspace/my.prompt.md');
-			const request = new TestChatRequest('use prompt', [makePromptFileReference(promptFile)]);
-			const result = await resolver.resolvePrompt(request, undefined, [], noopWorkspaceInfo, [], CancellationToken.None);
+			const request = new TestChatRequest('use prompt', [
+				makePromptFileReference(promptFile),
+			]);
+			const result = await resolver.resolvePrompt(
+				request,
+				undefined,
+				[],
+				noopWorkspaceInfo,
+				[],
+				CancellationToken.None,
+			);
 
 			// No skill locations match, so prompt file goes through the full pipeline
 			expect(result.references).toHaveLength(1);
@@ -161,7 +241,8 @@ describe('CopilotCLIPromptResolver', () => {
 
 		it('excludes plan.prompt.md when it is in the prompts directory that is a parent of the extension', async () => {
 			skillLocations = new MockSkillLocations([]);
-			const extensionContext = new MockExtensionContext() as unknown as IVSCodeExtensionContext;
+			const extensionContext =
+				new MockExtensionContext() as unknown as IVSCodeExtensionContext;
 			resolver = createResolver(skillLocations, extensionContext);
 
 			// The condition checks isEqualOrParent(extensionUri, directory), meaning
@@ -172,12 +253,24 @@ describe('CopilotCLIPromptResolver', () => {
 			// which means extensionUri must be under that. Construct extensionUri accordingly.
 			const prompts = URI.file('/test-ext/prompts');
 			// Override extensionUri to be a child of /test-ext/prompts
-			(extensionContext as any).extensionUri = URI.joinPath(prompts, 'inner-ext');
+			(extensionContext as any).extensionUri = URI.joinPath(
+				prompts,
+				'inner-ext',
+			);
 			resolver = createResolver(skillLocations, extensionContext);
 
 			const planPromptFile = URI.joinPath(prompts, 'plan.prompt.md');
-			const request = new TestChatRequest('implement this', [makePromptFileReference(planPromptFile)]);
-			const result = await resolver.resolvePrompt(request, undefined, [], noopWorkspaceInfo, [], CancellationToken.None);
+			const request = new TestChatRequest('implement this', [
+				makePromptFileReference(planPromptFile),
+			]);
+			const result = await resolver.resolvePrompt(
+				request,
+				undefined,
+				[],
+				noopWorkspaceInfo,
+				[],
+				CancellationToken.None,
+			);
 
 			// plan.prompt.md from a prompts directory that is a parent of extensionUri should be excluded
 			expect(result.references).toHaveLength(0);
@@ -186,12 +279,22 @@ describe('CopilotCLIPromptResolver', () => {
 
 		it('includes plan.prompt.md when it is NOT in the extension prompts directory', async () => {
 			skillLocations = new MockSkillLocations([]);
-			const extensionContext = new MockExtensionContext() as unknown as IVSCodeExtensionContext;
+			const extensionContext =
+				new MockExtensionContext() as unknown as IVSCodeExtensionContext;
 			resolver = createResolver(skillLocations, extensionContext);
 
 			const planPromptFile = URI.file('/workspace/plan.prompt.md');
-			const request = new TestChatRequest('implement this', [makePromptFileReference(planPromptFile)]);
-			const result = await resolver.resolvePrompt(request, undefined, [], noopWorkspaceInfo, [], CancellationToken.None);
+			const request = new TestChatRequest('implement this', [
+				makePromptFileReference(planPromptFile),
+			]);
+			const result = await resolver.resolvePrompt(
+				request,
+				undefined,
+				[],
+				noopWorkspaceInfo,
+				[],
+				CancellationToken.None,
+			);
 
 			// plan.prompt.md from a workspace directory (not extension prompts dir) should be included
 			expect(result.references).toHaveLength(1);

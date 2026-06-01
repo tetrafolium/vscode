@@ -10,7 +10,11 @@ import { expect, it, suite } from 'vitest';
 import { StringTextDocumentWithLanguageId } from '../../../../../platform/editing/common/abstractText';
 import { findLast } from '../../../../../util/vs/base/common/arraysFind';
 import { URI } from '../../../../../util/vs/base/common/uri';
-import { patch_to_commit, replace_explicit_tabs, text_to_patch } from '../../../node/applyPatch/parser';
+import {
+	patch_to_commit,
+	replace_explicit_tabs,
+	text_to_patch,
+} from '../../../node/applyPatch/parser';
 
 suite('applyPatch parser', () => {
 	it('replace_explicit_tabs', () => {
@@ -25,17 +29,28 @@ suite('applyPatch parser', () => {
 		expect(replace_explicit_tabs('////\\tfoo')).toBe('////\tfoo');
 		expect(replace_explicit_tabs('  #////\\tfoo')).toBe('  #////\tfoo');
 		expect(replace_explicit_tabs('\\tfoo\n\\tbar')).toBe('\tfoo\n\tbar');
-		expect(replace_explicit_tabs('  \\tfoo\n  \\tbar')).toBe('  \tfoo\n  \tbar');
-		expect(replace_explicit_tabs('\\t\\tfoo\n  #\\tbar')).toBe('\t\tfoo\n  #\tbar');
-		expect(replace_explicit_tabs('\\t\\tfoo\n\\tbar\n#\\tbaz')).toBe('\t\tfoo\n\tbar\n#\tbaz');
+		expect(replace_explicit_tabs('  \\tfoo\n  \\tbar')).toBe(
+			'  \tfoo\n  \tbar',
+		);
+		expect(replace_explicit_tabs('\\t\\tfoo\n  #\\tbar')).toBe(
+			'\t\tfoo\n  #\tbar',
+		);
+		expect(replace_explicit_tabs('\\t\\tfoo\n\\tbar\n#\\tbaz')).toBe(
+			'\t\tfoo\n\tbar\n#\tbaz',
+		);
 	});
 
 	it('fixes an issue', () => {
 		const input = `*** Begin Patch\n*** Update File: /path/to/file.ts\n@@section1\n-[old code1]\n+[new code1}\n@@section2\n-[old code2]\n+[new code2}\n*** End Patch`;
 
-		expect(text_to_patch(input, {
-			'/path/to/file.ts': new StringTextDocumentWithLanguageId('section1\n[old code1]\nsection2\n[old code2]', 'text/plain')
-		})).toMatchInlineSnapshot(`
+		expect(
+			text_to_patch(input, {
+				'/path/to/file.ts': new StringTextDocumentWithLanguageId(
+					'section1\n[old code1]\nsection2\n[old code2]',
+					'text/plain',
+				),
+			}),
+		).toMatchInlineSnapshot(`
 			[
 			  {
 			    "actions": {
@@ -73,9 +88,14 @@ suite('applyPatch parser', () => {
 	it('tolerates out-of-order patch sections', () => {
 		const input = `*** Begin Patch\n*** Update File: a.txt\n@@\n-world\n+world hello\n@@\n-hello\n+hello world\n*** End Patch`;
 
-		expect(text_to_patch(input, {
-			'a.txt': new StringTextDocumentWithLanguageId('hello\nworld', 'text/plain')
-		})).toMatchObject([
+		expect(
+			text_to_patch(input, {
+				'a.txt': new StringTextDocumentWithLanguageId(
+					'hello\nworld',
+					'text/plain',
+				),
+			}),
+		).toMatchObject([
 			{
 				actions: {
 					'a.txt': {
@@ -92,10 +112,10 @@ suite('applyPatch parser', () => {
 							},
 						],
 						type: 'update',
-					}
-				}
+					},
+				},
 			},
-			0
+			0,
 		]);
 	});
 
@@ -106,11 +126,16 @@ suite('applyPatch parser', () => {
 			'@@',
 			'-world!',
 			'+everyone',
-			'*** End Patch'
+			'*** End Patch',
 		].join('\n');
-		expect(() => text_to_patch(input, {
-			'a.txt': new StringTextDocumentWithLanguageId('hello\nworld', 'text/plain')
-		})).toThrowErrorMatchingInlineSnapshot(`
+		expect(() =>
+			text_to_patch(input, {
+				'a.txt': new StringTextDocumentWithLanguageId(
+					'hello\nworld',
+					'text/plain',
+				),
+			}),
+		).toThrowErrorMatchingInlineSnapshot(`
 			[Error: Invalid context at character 0:
 			world!]
 		`);
@@ -126,11 +151,16 @@ suite('applyPatch parser', () => {
 			'-more',
 			'-context',
 			'+everyone',
-			'*** End Patch'
+			'*** End Patch',
 		].join('\n');
-		expect(text_to_patch(input, {
-			'a.txt': new StringTextDocumentWithLanguageId('hello\nworld\nlots\nmore\ncontext\nhere\n', 'text/plain')
-		})).toMatchInlineSnapshot(`
+		expect(
+			text_to_patch(input, {
+				'a.txt': new StringTextDocumentWithLanguageId(
+					'hello\nworld\nlots\nmore\ncontext\nhere\n',
+					'text/plain',
+				),
+			}),
+		).toMatchInlineSnapshot(`
 			[
 			  {
 			    "actions": {
@@ -162,9 +192,14 @@ suite('applyPatch parser', () => {
 	it('tolerates missing patch end', () => {
 		const input = `*** Begin Patch\n*** Update File: a.txt\n@@\n-world\n+world hello\n@@\n-hello\n+hello world`;
 
-		expect(text_to_patch(input, {
-			'a.txt': new StringTextDocumentWithLanguageId('hello\nworld', 'text/plain')
-		})).toMatchObject([
+		expect(
+			text_to_patch(input, {
+				'a.txt': new StringTextDocumentWithLanguageId(
+					'hello\nworld',
+					'text/plain',
+				),
+			}),
+		).toMatchObject([
 			{
 				actions: {
 					'a.txt': {
@@ -181,10 +216,10 @@ suite('applyPatch parser', () => {
 							},
 						],
 						type: 'update',
-					}
-				}
+					},
+				},
 			},
-			0
+			0,
 		]);
 	});
 
@@ -199,12 +234,17 @@ suite('applyPatch parser', () => {
 			'+',
 			'def greet():',
 			'+  print("Hello, world!")',
-			'*** End Patch'
+			'*** End Patch',
 		].join('\n');
 
-		expect(text_to_patch(input, {
-			'a.txt': new StringTextDocumentWithLanguageId('hello\nworld', 'text/plain')
-		})).toMatchInlineSnapshot(`
+		expect(
+			text_to_patch(input, {
+				'a.txt': new StringTextDocumentWithLanguageId(
+					'hello\nworld',
+					'text/plain',
+				),
+			}),
+		).toMatchInlineSnapshot(`
 			[
 			  {
 			    "actions": {
@@ -235,9 +275,14 @@ suite('applyPatch parser', () => {
 	it('tolerate to extra whitespace in delimited sections', () => {
 		const input = `*** Begin Patch\n*** Update File: a.txt\n@@\n-world\n+world hello\n\n@@\n-hello\n+hello world\n*** End Patch`;
 
-		expect(text_to_patch(input, {
-			'a.txt': new StringTextDocumentWithLanguageId('hello\nworld', 'text/plain')
-		})).toMatchObject([
+		expect(
+			text_to_patch(input, {
+				'a.txt': new StringTextDocumentWithLanguageId(
+					'hello\nworld',
+					'text/plain',
+				),
+			}),
+		).toMatchObject([
 			{
 				actions: {
 					'a.txt': {
@@ -254,10 +299,10 @@ suite('applyPatch parser', () => {
 							},
 						],
 						type: 'update',
-					}
-				}
+					},
+				},
 			},
-			0
+			0,
 		]);
 	});
 
@@ -265,9 +310,14 @@ suite('applyPatch parser', () => {
 		// 4.1 likes to explicitly put tabs as `\\t` in its patches
 		const input = `*** Begin Patch\n*** Update File: a.txt\n@@\n-\\t\\tworld\n+\\t\\tworld hello\n*** End Patch`;
 
-		expect(text_to_patch(input, {
-			'a.txt': new StringTextDocumentWithLanguageId('\t\thello\n\t\tworld', 'text/plain')
-		})).toMatchObject([
+		expect(
+			text_to_patch(input, {
+				'a.txt': new StringTextDocumentWithLanguageId(
+					'\t\thello\n\t\tworld',
+					'text/plain',
+				),
+			}),
+		).toMatchObject([
 			{
 				actions: {
 					'a.txt': {
@@ -276,13 +326,13 @@ suite('applyPatch parser', () => {
 								delLines: ['\t\tworld'],
 								insLines: ['\t\tworld hello'],
 								origIndex: 1,
-							}
+							},
 						],
 						type: 'update',
-					}
-				}
+					},
+				},
 			},
-			6
+			6,
 		]);
 	});
 
@@ -294,12 +344,17 @@ suite('applyPatch parser', () => {
 			'hello',
 			'-\tworld',
 			'+\t\\textbf{world}',
-			'*** End Patch'
+			'*** End Patch',
 		].join('\n');
 
-		expect(text_to_patch(input, {
-			'a.tex': new StringTextDocumentWithLanguageId('prefix\nhello\n\tworld\nwoo\nsuffix', 'text/plain')
-		})).toMatchInlineSnapshot(`
+		expect(
+			text_to_patch(input, {
+				'a.tex': new StringTextDocumentWithLanguageId(
+					'prefix\nhello\n\tworld\nwoo\nsuffix',
+					'text/plain',
+				),
+			}),
+		).toMatchInlineSnapshot(`
 			[
 			  {
 			    "actions": {
@@ -332,12 +387,17 @@ suite('applyPatch parser', () => {
 			'@@',
 			'-hello\\n\\tworld\\nwoo',
 			'+hello\\n\\tcode!\\nwoo',
-			'*** End Patch'
+			'*** End Patch',
 		].join('\n');
 
-		expect(text_to_patch(input, {
-			'a.txt': new StringTextDocumentWithLanguageId('prefix\nhello\n\tworld\nwoo\nsuffix', 'text/plain')
-		})).toMatchInlineSnapshot(`
+		expect(
+			text_to_patch(input, {
+				'a.txt': new StringTextDocumentWithLanguageId(
+					'prefix\nhello\n\tworld\nwoo\nsuffix',
+					'text/plain',
+				),
+			}),
+		).toMatchInlineSnapshot(`
 			[
 			  {
 			    "actions": {
@@ -371,9 +431,14 @@ suite('applyPatch parser', () => {
 		// 4.1 likes to explicitly put tabs as `\\t` in its patches
 		const input = `*** Begin Patch\n*** Update File: a.txt\n@@\n-hello\n+\\t\\tworld\n*** End Patch`;
 
-		expect(text_to_patch(input, {
-			'a.txt': new StringTextDocumentWithLanguageId('hello', 'text/plain')
-		})).toMatchInlineSnapshot(`
+		expect(
+			text_to_patch(input, {
+				'a.txt': new StringTextDocumentWithLanguageId(
+					'hello',
+					'text/plain',
+				),
+			}),
+		).toMatchInlineSnapshot(`
 			[
 			  {
 			    "actions": {
@@ -400,28 +465,49 @@ suite('applyPatch parser', () => {
 	});
 
 	it('issue#262549', async () => {
-		const input = await fs.readFile(`${__dirname}/corpus/262549-input.txt`, 'utf-8');
-		const patchFmt = await fs.readFile(`${__dirname}/corpus/262549-call.txt`, 'utf-8');
-		const patch = JSON.parse('"' + patchFmt.replaceAll('\n', '\\n').replaceAll('\t', '\\t') + '"');
+		const input = await fs.readFile(
+			`${__dirname}/corpus/262549-input.txt`,
+			'utf-8',
+		);
+		const patchFmt = await fs.readFile(
+			`${__dirname}/corpus/262549-call.txt`,
+			'utf-8',
+		);
+		const patch = JSON.parse(
+			'"' +
+				patchFmt.replaceAll('\n', '\\n').replaceAll('\t', '\\t') +
+				'"',
+		);
 
 		const docs = {
-			'/Users/omitted/projects/flagship/edge-ai/scripts/Fix-VisuallySimilarUnicode.ps1': new StringTextDocumentWithLanguageId(input, 'text/plain')
+			'/Users/omitted/projects/flagship/edge-ai/scripts/Fix-VisuallySimilarUnicode.ps1':
+				new StringTextDocumentWithLanguageId(input, 'text/plain'),
 		};
 		const [parsed] = text_to_patch(patch, docs);
 		const commit = patch_to_commit(parsed, docs);
-		await expect(Object.values(commit.changes).at(0)?.newContent).toMatchFileSnapshot(`${__dirname}/corpus/262549-output.txt`);
+		await expect(
+			Object.values(commit.changes).at(0)?.newContent,
+		).toMatchFileSnapshot(`${__dirname}/corpus/262549-output.txt`);
 	});
 
 	it('reindents unindented code', async () => {
-		const input = await fs.readFile(`${__dirname}/corpus/reindent-input.txt`, 'utf-8');
-		const patch = await fs.readFile(`${__dirname}/corpus/reindent-call.txt`, 'utf-8');
+		const input = await fs.readFile(
+			`${__dirname}/corpus/reindent-input.txt`,
+			'utf-8',
+		);
+		const patch = await fs.readFile(
+			`${__dirname}/corpus/reindent-call.txt`,
+			'utf-8',
+		);
 
 		const docs = {
-			'/Users/connor/Downloads/hello.yml': new StringTextDocumentWithLanguageId(input, 'text/plain')
+			'/Users/connor/Downloads/hello.yml':
+				new StringTextDocumentWithLanguageId(input, 'text/plain'),
 		};
 		const [parsed] = text_to_patch(patch, docs);
 		const commit = patch_to_commit(parsed, docs);
-		expect(Object.values(commit.changes).at(0)?.newContent).toMatchInlineSnapshot(`
+		expect(Object.values(commit.changes).at(0)?.newContent)
+			.toMatchInlineSnapshot(`
 			"- hello
 			- world
 			- list:
@@ -447,82 +533,150 @@ suite('applyPatch parser', () => {
 	});
 
 	it('issue#267547', async () => {
-		const input = await fs.readFile(`${__dirname}/corpus/267547-input.txt`, 'utf-8');
-		let patchFmt = await fs.readFile(`${__dirname}/corpus/267547-call.txt`, 'utf-8');
+		const input = await fs.readFile(
+			`${__dirname}/corpus/267547-input.txt`,
+			'utf-8',
+		);
+		let patchFmt = await fs.readFile(
+			`${__dirname}/corpus/267547-call.txt`,
+			'utf-8',
+		);
 		patchFmt = patchFmt.replaceAll('\r\n', '\n');
-		const expectedOutput = await fs.readFile(`${__dirname}/corpus/267547-output.txt`, 'utf-8');
+		const expectedOutput = await fs.readFile(
+			`${__dirname}/corpus/267547-output.txt`,
+			'utf-8',
+		);
 
 		const docs = {
-			'267547.txt': new StringTextDocumentWithLanguageId(input.replaceAll('\r\n', '\n'), 'text/plain')
+			'267547.txt': new StringTextDocumentWithLanguageId(
+				input.replaceAll('\r\n', '\n'),
+				'text/plain',
+			),
 		};
 		const [parsed] = text_to_patch(patchFmt, docs);
 		const commit = patch_to_commit(parsed, docs);
 		const actualOutput = Object.values(commit.changes).at(0)?.newContent;
 
 		// Normalize line endings for consistent comparison
-		expect(actualOutput?.replaceAll('\r\n', '\n')).toBe(expectedOutput.replaceAll('\r\n', '\n'));
+		expect(actualOutput?.replaceAll('\r\n', '\n')).toBe(
+			expectedOutput.replaceAll('\r\n', '\n'),
+		);
 	});
 
 	it('indent when multiple sections are updated', async () => {
-		const input = await fs.readFile(`${__dirname}/corpus/multipleSections-input.txt`, 'utf-8');
-		let patchFmt = await fs.readFile(`${__dirname}/corpus/multipleSections-call.txt`, 'utf-8');
+		const input = await fs.readFile(
+			`${__dirname}/corpus/multipleSections-input.txt`,
+			'utf-8',
+		);
+		let patchFmt = await fs.readFile(
+			`${__dirname}/corpus/multipleSections-call.txt`,
+			'utf-8',
+		);
 		patchFmt = patchFmt.replaceAll('\r\n', '\n');
-		const expectedOutput = await fs.readFile(`${__dirname}/corpus/multipleSections-output.txt`, 'utf-8');
+		const expectedOutput = await fs.readFile(
+			`${__dirname}/corpus/multipleSections-output.txt`,
+			'utf-8',
+		);
 
 		const docs = {
-			'multipleSections.txt': new StringTextDocumentWithLanguageId(input.replaceAll('\r\n', '\n'), 'text/plain')
+			'multipleSections.txt': new StringTextDocumentWithLanguageId(
+				input.replaceAll('\r\n', '\n'),
+				'text/plain',
+			),
 		};
 		const [parsed] = text_to_patch(patchFmt, docs);
 		const commit = patch_to_commit(parsed, docs);
 		const actualOutput = Object.values(commit.changes).at(0)?.newContent;
 
 		// Normalize line endings for consistent comparison
-		expect(actualOutput?.replaceAll('\r\n', '\n')).toBe(expectedOutput.replaceAll('\r\n', '\n'));
+		expect(actualOutput?.replaceAll('\r\n', '\n')).toBe(
+			expectedOutput.replaceAll('\r\n', '\n'),
+		);
 	});
 
 	it('multiple indented lines update', async () => {
-		const input = await fs.readFile(`${__dirname}/corpus/multipleIndentedLines-input.txt`, 'utf-8');
-		let patchFmt = await fs.readFile(`${__dirname}/corpus/multipleIndentedLines-call.txt`, 'utf-8');
+		const input = await fs.readFile(
+			`${__dirname}/corpus/multipleIndentedLines-input.txt`,
+			'utf-8',
+		);
+		let patchFmt = await fs.readFile(
+			`${__dirname}/corpus/multipleIndentedLines-call.txt`,
+			'utf-8',
+		);
 		patchFmt = patchFmt.replaceAll('\r\n', '\n');
-		const expectedOutput = await fs.readFile(`${__dirname}/corpus/multipleIndentedLines-output.txt`, 'utf-8');
+		const expectedOutput = await fs.readFile(
+			`${__dirname}/corpus/multipleIndentedLines-output.txt`,
+			'utf-8',
+		);
 
 		const docs = {
-			'multipleIndentedLines.txt': new StringTextDocumentWithLanguageId(input.replaceAll('\r\n', '\n'), 'text/plain')
+			'multipleIndentedLines.txt': new StringTextDocumentWithLanguageId(
+				input.replaceAll('\r\n', '\n'),
+				'text/plain',
+			),
 		};
 		const [parsed] = text_to_patch(patchFmt, docs);
 		const commit = patch_to_commit(parsed, docs);
 		const actualOutput = Object.values(commit.changes).at(0)?.newContent;
 
 		// Normalize line endings for consistent comparison
-		expect(actualOutput?.replaceAll('\r\n', '\n')).toBe(expectedOutput.replaceAll('\r\n', '\n'));
+		expect(actualOutput?.replaceAll('\r\n', '\n')).toBe(
+			expectedOutput.replaceAll('\r\n', '\n'),
+		);
 	});
 
 	suite('corpus', () => {
 		const corpusPath = path.join(__dirname, 'corpus');
 		it('applies corpus', async () => {
-			const patches = (await fs.readdir(corpusPath)).filter(f => f.endsWith('.patch')).sort();
+			const patches = (await fs.readdir(corpusPath))
+				.filter((f) => f.endsWith('.patch'))
+				.sort();
 			for (const patchFile of patches) {
-				const patchContent = await fs.readFile(path.join(corpusPath, patchFile), 'utf8');
-				const { patch, original, expected, fpath, docs } = JSON.parse(patchContent);
+				const patchContent = await fs.readFile(
+					path.join(corpusPath, patchFile),
+					'utf8',
+				);
+				const { patch, original, expected, fpath, docs } =
+					JSON.parse(patchContent);
 
-				const inputDocs: Record<string, StringTextDocumentWithLanguageId> = {};
+				const inputDocs: Record<
+					string,
+					StringTextDocumentWithLanguageId
+				> = {};
 				if (original && fpath) {
-					inputDocs[fpath] = new StringTextDocumentWithLanguageId(original, 'text/plain');
+					inputDocs[fpath] = new StringTextDocumentWithLanguageId(
+						original,
+						'text/plain',
+					);
 				} else {
 					for (const [uri, text] of Object.entries(docs)) {
-						inputDocs[URI.parse(uri).path] = new StringTextDocumentWithLanguageId(text as string, 'text/plain');
+						inputDocs[URI.parse(uri).path] =
+							new StringTextDocumentWithLanguageId(
+								text as string,
+								'text/plain',
+							);
 					}
 				}
 				try {
 					const [parsed] = text_to_patch(patch, inputDocs);
 					if (expected !== undefined) {
 						const commit = patch_to_commit(parsed, inputDocs);
-						expect(commit.changes[fpath].newContent).toEqual(expected);
+						expect(commit.changes[fpath].newContent).toEqual(
+							expected,
+						);
 					}
 				} catch (e) {
-					console.error(`Failed to apply patch from ${patchFile} (${e}):\n`, patch);
+					console.error(
+						`Failed to apply patch from ${patchFile} (${e}):\n`,
+						patch,
+					);
 					const originalsPath = path.join(os.tmpdir(), patchFile);
-					await fs.writeFile(originalsPath, Object.entries(inputDocs).map(([uri, doc]) => `// ${uri}\n${doc.getText()}`).join('\n\n'));
+					await fs.writeFile(
+						originalsPath,
+						Object.entries(inputDocs)
+							.map(([uri, doc]) => `// ${uri}\n${doc.getText()}`)
+							.join('\n\n'),
+					);
 					console.error(`\nOriginals written to ${originalsPath}`);
 					throw e;
 				}
@@ -535,8 +689,20 @@ suite('applyPatch parser', () => {
 			const maxEditsPerFile = 3;
 			const contextLines = 3;
 
-			const random = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-			const src = path.join(__dirname, '..', '..', '..', '..', '..', '..', '..', 'vscode', 'src');
+			const random = (min: number, max: number) =>
+				Math.floor(Math.random() * (max - min + 1)) + min;
+			const src = path.join(
+				__dirname,
+				'..',
+				'..',
+				'..',
+				'..',
+				'..',
+				'..',
+				'..',
+				'vscode',
+				'src',
+			);
 			const allFiles = [];
 			for await (const file of fs.glob('**/*.ts', { cwd: src })) {
 				allFiles.push(path.join(src, file));
@@ -555,7 +721,8 @@ suite('applyPatch parser', () => {
 					continue; // Skip files that are too short
 				}
 
-				const fpath = '/' + path.relative(src, file).replaceAll('\\', '/');
+				const fpath =
+					'/' + path.relative(src, file).replaceAll('\\', '/');
 				const patch = [
 					'*** Begin Patch',
 					`*** Update File: ${fpath}`,
@@ -563,7 +730,10 @@ suite('applyPatch parser', () => {
 				];
 
 				const linesToModify: number[] = [];
-				for (let i = random(1, maxEditsPerFile); linesToModify.length < i;) {
+				for (
+					let i = random(1, maxEditsPerFile);
+					linesToModify.length < i;
+				) {
 					const r = random(0, lines.length - 1);
 					if (!linesToModify.includes(r)) {
 						linesToModify.push(r);
@@ -574,18 +744,29 @@ suite('applyPatch parser', () => {
 				const modified: string[] = [];
 				let wasEmittingContext = false;
 				for (let ln = 0; ln < lines.length; ln++) {
-					const nextToModify = linesToModify.find(l => l > ln);
-					const prevModified = findLast(linesToModify, l => l <= ln);
+					const nextToModify = linesToModify.find((l) => l > ln);
+					const prevModified = findLast(
+						linesToModify,
+						(l) => l <= ln,
+					);
 					const emitContext =
-						(nextToModify !== undefined && nextToModify - ln < contextLines) ||
-						(prevModified !== undefined && ln - prevModified < contextLines);
+						(nextToModify !== undefined &&
+							nextToModify - ln < contextLines) ||
+						(prevModified !== undefined &&
+							ln - prevModified < contextLines);
 
 					if (emitContext && !wasEmittingContext) {
 						if (ln > 0) {
 							patch.push('');
 						}
 						const currentIndent = lines[ln].match(/^\s*/)?.[0];
-						const contextLine = currentIndent && findLast(lines, i => !i.startsWith(currentIndent), ln - 1);
+						const contextLine =
+							currentIndent &&
+							findLast(
+								lines,
+								(i) => !i.startsWith(currentIndent),
+								ln - 1,
+							);
 						if (contextLine) {
 							patch.push(`@@ ${contextLine.trim()}`);
 						} else {
@@ -596,17 +777,20 @@ suite('applyPatch parser', () => {
 
 					if (prevModified === ln) {
 						switch (random(0, 2)) {
-							case 0: {//insert
+							case 0: {
+								//insert
 								const insertText = `// Inserted line ${ln}`;
 								modified.push(insertText, lines[ln]);
 								patch.push(`+${insertText}`, lines[ln]);
 								break;
 							}
-							case 1: {//delete
+							case 1: {
+								//delete
 								patch.push(`-${lines[ln]}`);
 								break;
 							}
-							case 2: {//replace
+							case 2: {
+								//replace
 								const newText = `// Replaced line ${ln}`;
 								patch.push(`-${lines[ln]}`);
 								patch.push(`+${newText}`);
@@ -619,14 +803,22 @@ suite('applyPatch parser', () => {
 							patch.push(`${lines[ln]}`);
 						}
 					}
-
 				}
 
 				patch.push('*** End Patch');
 
 				await fs.writeFile(
 					path.join(__dirname, 'corpus', `${caseNo++}.patch`),
-					JSON.stringify({ patch: patch.join('\n'), original: content, expected: modified.join('\n'), fpath }, null, 2)
+					JSON.stringify(
+						{
+							patch: patch.join('\n'),
+							original: content,
+							expected: modified.join('\n'),
+							fpath,
+						},
+						null,
+						2,
+					),
 				);
 			}
 		});

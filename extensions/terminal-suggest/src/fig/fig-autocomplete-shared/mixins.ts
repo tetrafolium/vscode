@@ -3,28 +3,39 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { makeArray } from './utils';
+import { makeArray } from "./utils";
 
 export type SpecMixin =
 	| Fig.Subcommand
-	| ((currentSpec: Fig.Subcommand, context: Fig.ShellContext) => Fig.Subcommand);
+	| ((
+			currentSpec: Fig.Subcommand,
+			context: Fig.ShellContext,
+	  ) => Fig.Subcommand);
 
 type NamedObject = { name: Fig.SingleOrArray<string> };
 
-const concatArrays = <T>(a: T[] | undefined, b: T[] | undefined): T[] | undefined =>
-	a && b ? [...a, ...b] : a || b;
+const concatArrays = <T>(
+	a: T[] | undefined,
+	b: T[] | undefined,
+): T[] | undefined => (a && b ? [...a, ...b] : a || b);
 
 const mergeNames = <T = string>(a: T | T[], b: T | T[]): T | T[] => [
 	...new Set(concatArrays(makeArray(a), makeArray(b))),
 ];
 
-const mergeArrays = <T>(a: T[] | undefined, b: T[] | undefined): T[] | undefined =>
+const mergeArrays = <T>(
+	a: T[] | undefined,
+	b: T[] | undefined,
+): T[] | undefined =>
 	a && b ? [...new Set(concatArrays(makeArray(a), makeArray(b)))] : a || b;
 
 const mergeArgs = (arg: Fig.Arg, partial: Fig.Arg): Fig.Arg => ({
 	...arg,
 	...partial,
-	suggestions: concatArrays<Fig.Suggestion | string>(arg.suggestions, partial.suggestions),
+	suggestions: concatArrays<Fig.Suggestion | string>(
+		arg.suggestions,
+		partial.suggestions,
+	),
 	generators:
 		arg.generators && partial.generators
 			? concatArrays(makeArray(arg.generators), makeArray(partial.generators))
@@ -37,7 +48,7 @@ const mergeArgs = (arg: Fig.Arg, partial: Fig.Arg): Fig.Arg => ({
 
 const mergeArgArrays = (
 	args: Fig.SingleOrArray<Fig.Arg> | undefined,
-	partials: Fig.SingleOrArray<Fig.Arg> | undefined
+	partials: Fig.SingleOrArray<Fig.Arg> | undefined,
 ): Fig.SingleOrArray<Fig.Arg> | undefined => {
 	if (!args || !partials) {
 		return args || partials;
@@ -69,7 +80,7 @@ const mergeOptions = (option: Fig.Option, partial: Fig.Option): Fig.Option => ({
 const mergeNamedObjectArrays = <T extends NamedObject>(
 	objects: T[] | undefined,
 	partials: T[] | undefined,
-	mergeItems: (a: T, b: T) => T
+	mergeItems: (a: T, b: T) => T,
 ): T[] | undefined => {
 	if (!objects || !partials) {
 		return objects || partials;
@@ -86,15 +97,19 @@ const mergeNamedObjectArrays = <T extends NamedObject>(
 	for (let i = 0; i < partials.length; i += 1) {
 		const partial = partials[i];
 		if (!partial) {
-			throw new Error('Invalid object passed to merge');
+			throw new Error("Invalid object passed to merge");
 		}
-		const existingNames = makeArray(partial.name).filter((name) => Object.hasOwn(existingNameIndexMap, name));
+		const existingNames = makeArray(partial.name).filter((name) =>
+			Object.hasOwn(existingNameIndexMap, name),
+		);
 		if (existingNames.length === 0) {
 			mergedObjects.push(partial);
 		} else {
 			const index = existingNameIndexMap[existingNames[0]];
 			if (existingNames.some((name) => existingNameIndexMap[name] !== index)) {
-				throw new Error('Names provided for option matched multiple existing options');
+				throw new Error(
+					"Names provided for option matched multiple existing options",
+				);
 			}
 			mergedObjects[index] = mergeItems(mergedObjects[index], partial);
 		}
@@ -104,21 +119,21 @@ const mergeNamedObjectArrays = <T extends NamedObject>(
 
 function mergeOptionArrays(
 	options: Fig.Option[] | undefined,
-	partials: Fig.Option[] | undefined
+	partials: Fig.Option[] | undefined,
 ): Fig.Option[] | undefined {
 	return mergeNamedObjectArrays(options, partials, mergeOptions);
 }
 
 function mergeSubcommandArrays(
 	subcommands: Fig.Subcommand[] | undefined,
-	partials: Fig.Subcommand[] | undefined
+	partials: Fig.Subcommand[] | undefined,
 ): Fig.Subcommand[] | undefined {
 	return mergeNamedObjectArrays(subcommands, partials, mergeSubcommands);
 }
 
 export function mergeSubcommands(
 	subcommand: Fig.Subcommand,
-	partial: Fig.Subcommand
+	partial: Fig.Subcommand,
 ): Fig.Subcommand {
 	return {
 		...subcommand,
@@ -127,9 +142,12 @@ export function mergeSubcommands(
 		args: mergeArgArrays(subcommand.args, partial.args),
 		additionalSuggestions: concatArrays<Fig.Suggestion | string>(
 			subcommand.additionalSuggestions,
-			partial.additionalSuggestions
+			partial.additionalSuggestions,
 		),
-		subcommands: mergeSubcommandArrays(subcommand.subcommands, partial.subcommands),
+		subcommands: mergeSubcommandArrays(
+			subcommand.subcommands,
+			partial.subcommands,
+		),
 		options: mergeOptionArrays(subcommand.options, partial.options),
 		parserDirectives:
 			subcommand.parserDirectives && partial.parserDirectives
@@ -141,9 +159,9 @@ export function mergeSubcommands(
 export const applyMixin = (
 	spec: Fig.Subcommand,
 	context: Fig.ShellContext,
-	mixin: SpecMixin
+	mixin: SpecMixin,
 ): Fig.Subcommand => {
-	if (typeof mixin === 'function') {
+	if (typeof mixin === "function") {
 		return mixin(spec, context);
 	}
 	const partial = mixin;

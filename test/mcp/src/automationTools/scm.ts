@@ -3,14 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ApplicationService } from '../application';
-import { z } from 'zod';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ApplicationService } from "../application";
+import { z } from "zod";
 
 /**
  * Source Control Management Tools
  */
-export function applySCMTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applySCMTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	const tools: RegisteredTool[] = [];
 
 	// Playwright can probably figure this one out
@@ -120,24 +126,28 @@ export function applySCMTools(server: McpServer, appService: ApplicationService)
 	// 	}
 	// );
 
-	tools.push(server.tool(
-		'vscode_automation_scm_commit',
-		'Commit staged changes with a message',
-		{
-			message: z.string().describe('Commit message')
-		},
-		async (args) => {
-			const { message } = args;
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.scm.commit(message);
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `Committed changes with message: "${message}"`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_scm_commit",
+			"Commit staged changes with a message",
+			{
+				message: z.string().describe("Commit message"),
+			},
+			async (args) => {
+				const { message } = args;
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.scm.commit(message);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Committed changes with message: "${message}"`,
+						},
+					],
+				};
+			},
+		),
+	);
 
 	return tools;
 }

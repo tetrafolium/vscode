@@ -3,24 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import * as platform from '../../../base/common/platform.js';
-import type { IExperimentationFilterProvider } from 'tas-client';
+import { Event } from "../../../base/common/event.js";
+import * as platform from "../../../base/common/platform.js";
+import type { IExperimentationFilterProvider } from "tas-client";
 
-export const ASSIGNMENT_STORAGE_KEY = 'VSCode.ABExp.FeatureData';
+export const ASSIGNMENT_STORAGE_KEY = "VSCode.ABExp.FeatureData";
 export const ASSIGNMENT_REFETCH_INTERVAL = 60 * 60 * 1000; // 1 hour
 
 export interface IAssignmentService {
 	readonly _serviceBrand: undefined;
 
 	readonly onDidRefetchAssignments: Event<void>;
-	getTreatment<T extends string | number | boolean>(name: string): Promise<T | undefined>;
+	getTreatment<T extends string | number | boolean>(
+		name: string,
+	): Promise<T | undefined>;
 }
 
 export enum TargetPopulation {
-	Insiders = 'insider',
-	Public = 'public',
-	Exploration = 'exploration'
+	Insiders = "insider",
+	Public = "public",
+	Exploration = "exploration",
 }
 
 /*
@@ -43,63 +45,63 @@ export enum Filters {
 	/**
 	 * The market in which the extension is distributed.
 	 */
-	Market = 'X-MSEdge-Market',
+	Market = "X-MSEdge-Market",
 
 	/**
 	 * The corporation network.
 	 */
-	CorpNet = 'X-FD-Corpnet',
+	CorpNet = "X-FD-Corpnet",
 
 	/**
 	 * Version of the application which uses experimentation service.
 	 */
-	ApplicationVersion = 'X-VSCode-AppVersion',
+	ApplicationVersion = "X-VSCode-AppVersion",
 
 	/**
 	 * Insiders vs Stable.
 	 */
-	Build = 'X-VSCode-Build',
+	Build = "X-VSCode-Build",
 
 	/**
 	 * Client Id which is used as primary unit for the experimentation.
 	 */
-	ClientId = 'X-MSEdge-ClientId',
+	ClientId = "X-MSEdge-ClientId",
 
 	/**
 	 * Developer Device Id which can be used as an alternate unit for experimentation.
 	 */
-	DeveloperDeviceId = 'X-VSCode-DevDeviceId',
+	DeveloperDeviceId = "X-VSCode-DevDeviceId",
 
 	/**
 	 * Extension header.
 	 */
-	ExtensionName = 'X-VSCode-ExtensionName',
+	ExtensionName = "X-VSCode-ExtensionName",
 
 	/**
 	 * The version of the extension.
 	 */
-	ExtensionVersion = 'X-VSCode-ExtensionVersion',
+	ExtensionVersion = "X-VSCode-ExtensionVersion",
 
 	/**
 	 * The language in use by VS Code
 	 */
-	Language = 'X-VSCode-Language',
+	Language = "X-VSCode-Language",
 
 	/**
 	 * The target population.
 	 * This is used to separate internal, early preview, GA, etc.
 	 */
-	TargetPopulation = 'X-VSCode-TargetPopulation',
+	TargetPopulation = "X-VSCode-TargetPopulation",
 
 	/**
 	 * The platform (OS) on which VS Code is running.
 	 */
-	Platform = 'X-VSCode-Platform',
+	Platform = "X-VSCode-Platform",
 
 	/**
 	 * The release/build date of VS Code (UTC) in the format yyyymmddHH.
 	 */
-	ReleaseDate = 'X-VSCode-ReleaseDate',
+	ReleaseDate = "X-VSCode-ReleaseDate",
 }
 
 export class AssignmentFilterProvider implements IExperimentationFilterProvider {
@@ -109,8 +111,8 @@ export class AssignmentFilterProvider implements IExperimentationFilterProvider 
 		private machineId: string,
 		private devDeviceId: string,
 		private targetPopulation: TargetPopulation,
-		private releaseDate: string
-	) { }
+		private releaseDate: string,
+	) {}
 
 	/**
 	 * Returns a version string that can be parsed by the TAS client.
@@ -118,7 +120,7 @@ export class AssignmentFilterProvider implements IExperimentationFilterProvider 
 	 * Ref: https://github.com/microsoft/tas-client/blob/30340d5e1da37c2789049fcf45928b954680606f/vscode-tas-client/src/vscode-tas-client/VSCodeFilterProvider.ts#L35
 	 *
 	 * @param version Version string to be trimmed.
-	*/
+	 */
 	private static trimVersionSuffix(version: string): string {
 		const regex = /\-[a-zA-Z0-9]+$/;
 		const result = version.split(regex);
@@ -139,9 +141,9 @@ export class AssignmentFilterProvider implements IExperimentationFilterProvider 
 			case Filters.Language:
 				return platform.language;
 			case Filters.ExtensionName:
-				return 'vscode-core'; // always return vscode-core for exp service
+				return "vscode-core"; // always return vscode-core for exp service
 			case Filters.ExtensionVersion:
-				return '999999.0'; // always return a very large number for cross-extension experimentation
+				return "999999.0"; // always return a very large number for cross-extension experimentation
 			case Filters.TargetPopulation:
 				return this.targetPopulation;
 			case Filters.Platform:
@@ -149,22 +151,22 @@ export class AssignmentFilterProvider implements IExperimentationFilterProvider 
 			case Filters.ReleaseDate:
 				return AssignmentFilterProvider.formatReleaseDate(this.releaseDate);
 			default:
-				return '';
+				return "";
 		}
 	}
 
 	private static formatReleaseDate(iso: string): string {
 		// Expect ISO format, fall back to empty string if not provided
 		if (!iso) {
-			return '';
+			return "";
 		}
 		// Remove separators and milliseconds: YYYY-MM-DDTHH:MM:SS.sssZ -> YYYYMMDDHH
 		// Trimmed to 10 digits to fit within int32 bounds (ExP requirement)
 		const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2})/.exec(iso);
 		if (!match) {
-			return '';
+			return "";
 		}
-		return match.slice(1, 5).join('');
+		return match.slice(1, 5).join("");
 	}
 
 	getFilters(): Map<string, unknown> {
@@ -178,9 +180,20 @@ export class AssignmentFilterProvider implements IExperimentationFilterProvider 
 	}
 }
 
-export function getInternalOrg(organisations: string[] | undefined): 'vscode' | 'github' | 'microsoft' | undefined {
-	const isVSCodeInternal = organisations?.includes('Visual-Studio-Code');
-	const isGitHubInternal = organisations?.includes('github');
-	const isMicrosoftInternal = organisations?.includes('microsoft') || organisations?.includes('ms-copilot') || organisations?.includes('MicrosoftCopilot');
-	return isVSCodeInternal ? 'vscode' : isGitHubInternal ? 'github' : isMicrosoftInternal ? 'microsoft' : undefined;
+export function getInternalOrg(
+	organisations: string[] | undefined,
+): "vscode" | "github" | "microsoft" | undefined {
+	const isVSCodeInternal = organisations?.includes("Visual-Studio-Code");
+	const isGitHubInternal = organisations?.includes("github");
+	const isMicrosoftInternal =
+		organisations?.includes("microsoft") ||
+		organisations?.includes("ms-copilot") ||
+		organisations?.includes("MicrosoftCopilot");
+	return isVSCodeInternal
+		? "vscode"
+		: isGitHubInternal
+			? "github"
+			: isMicrosoftInternal
+				? "microsoft"
+				: undefined;
 }

@@ -3,7 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, Disposable, languages, LanguageStatusItem, LanguageStatusSeverity, window, workspace } from 'vscode';
+import {
+	commands,
+	Disposable,
+	languages,
+	LanguageStatusItem,
+	LanguageStatusSeverity,
+	window,
+	workspace,
+} from 'vscode';
 import { IDisposable } from '../../../../../util/vs/base/common/lifecycle';
 import { IInstantiationService } from '../../../../../util/vs/platform/instantiation/common/instantiation';
 import { CopilotConfigPrefix } from '../../lib/src/constants';
@@ -21,9 +29,10 @@ export class CopilotStatusBar extends StatusReporter implements IDisposable {
 
 	constructor(
 		id: string,
-		@ICompletionsExtensionStatus private readonly extensionStatusService: ICompletionsExtensionStatus,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-
+		@ICompletionsExtensionStatus
+		private readonly extensionStatusService: ICompletionsExtensionStatus,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super();
 
@@ -35,26 +44,28 @@ export class CopilotStatusBar extends StatusReporter implements IDisposable {
 		this.disposables.push(
 			window.onDidChangeActiveTextEditor(() => {
 				this.updateStatusBarIndicator();
-			})
+			}),
 		);
 
 		this.disposables.push(
 			workspace.onDidCloseTextDocument(() => {
 				this.updateStatusBarIndicator();
-			})
+			}),
 		);
 
 		this.disposables.push(
 			workspace.onDidOpenTextDocument(() => {
 				this.updateStatusBarIndicator();
-			})
+			}),
 		);
 
 		this.disposables.push(
-			workspace.onDidChangeConfiguration(e => {
-				if (!e.affectsConfiguration(CopilotConfigPrefix)) { return; }
+			workspace.onDidChangeConfiguration((e) => {
+				if (!e.affectsConfiguration(CopilotConfigPrefix)) {
+					return;
+				}
 				this.updateStatusBarIndicator();
-			})
+			}),
 		);
 	}
 
@@ -66,7 +77,10 @@ export class CopilotStatusBar extends StatusReporter implements IDisposable {
 	}
 
 	private checkEnabledForLanguage(): boolean {
-		return this.instantiationService.invokeFunction(isCompletionEnabled) ?? true;
+		return (
+			this.instantiationService.invokeFunction(isCompletionEnabled) ??
+			true
+		);
 	}
 
 	protected updateStatusBarIndicator() {
@@ -76,11 +90,18 @@ export class CopilotStatusBar extends StatusReporter implements IDisposable {
 		void commands.executeCommand(
 			'setContext',
 			'github.copilot.completions.quotaExceeded',
-			this.extensionStatusService.command?.command === CMDQuotaExceeded
+			this.extensionStatusService.command?.command === CMDQuotaExceeded,
 		);
 		const enabled = this.checkEnabledForLanguage();
-		void commands.executeCommand('setContext', 'github.copilot.completions.enabled', enabled);
-		this.item.command = { command: CMDToggleStatusMenuChat, title: 'View Details' };
+		void commands.executeCommand(
+			'setContext',
+			'github.copilot.completions.enabled',
+			enabled,
+		);
+		this.item.command = {
+			command: CMDToggleStatusMenuChat,
+			title: 'View Details',
+		};
 		switch (this.extensionStatusService.kind) {
 			case 'Error':
 				this.item.severity = LanguageStatusSeverity.Error;

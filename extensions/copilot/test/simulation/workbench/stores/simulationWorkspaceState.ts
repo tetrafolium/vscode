@@ -7,7 +7,11 @@ import * as fs from 'fs';
 import * as mobx from 'mobx';
 import * as path from 'path';
 import { Lazy } from '../../../../src/util/vs/base/common/lazy';
-import { IInitialWorkspaceState, IInteractionWorkspaceState, IWorkspaceStateFile } from '../../shared/sharedTypes';
+import {
+	IInitialWorkspaceState,
+	IInteractionWorkspaceState,
+	IWorkspaceStateFile,
+} from '../../shared/sharedTypes';
 import { ObservablePromise } from '../utils/utils';
 
 export interface IResolvedFile {
@@ -17,7 +21,6 @@ export interface IResolvedFile {
 }
 
 export class InitialWorkspaceState {
-
 	public _source: IInitialWorkspaceState;
 
 	@mobx.computed
@@ -68,30 +71,35 @@ export class InitialWorkspaceState {
 		if (!file) {
 			return null;
 		}
-		const contents = await fs.promises.readFile(path.join(this.writtenFilesBaseDir, file.relativeDiskPath), 'utf8');
+		const contents = await fs.promises.readFile(
+			path.join(this.writtenFilesBaseDir, file.relativeDiskPath),
+			'utf8',
+		);
 		return {
 			workspacePath: file.workspacePath,
 			contents: contents,
-			languageId: file.languageId
+			languageId: file.languageId,
 		};
 	}
 
 	private async getOtherFiles(): Promise<IResolvedFile[]> {
 		return Promise.all(
 			(this._source.additionalFiles ?? []).map(async (file) => {
-				const contents = await fs.promises.readFile(path.join(this.writtenFilesBaseDir, file.relativeDiskPath), 'utf8');
+				const contents = await fs.promises.readFile(
+					path.join(this.writtenFilesBaseDir, file.relativeDiskPath),
+					'utf8',
+				);
 				return {
 					workspacePath: file.workspacePath,
 					contents: contents,
-					languageId: file.languageId
+					languageId: file.languageId,
 				};
-			})
+			}),
 		);
 	}
 }
 
 export class InteractionWorkspaceState {
-
 	public _source: IInteractionWorkspaceState;
 
 	@mobx.computed
@@ -134,7 +142,13 @@ export class InteractionWorkspaceState {
 		return this._source.requestCount;
 	}
 
-	private readonly _changedFiles = new Lazy(() => new ObservablePromise(this._resolveFiles(this._source.changedFiles), []));
+	private readonly _changedFiles = new Lazy(
+		() =>
+			new ObservablePromise(
+				this._resolveFiles(this._source.changedFiles),
+				[],
+			),
+	);
 
 	@mobx.computed
 	public get changedFiles(): ObservablePromise<IResolvedFile[]> {
@@ -149,16 +163,21 @@ export class InteractionWorkspaceState {
 		mobx.makeObservable(this);
 	}
 
-	private async _resolveFiles(files: IWorkspaceStateFile[]): Promise<IResolvedFile[]> {
+	private async _resolveFiles(
+		files: IWorkspaceStateFile[],
+	): Promise<IResolvedFile[]> {
 		return Promise.all(
 			files.map(async (file) => {
-				const contents = await fs.promises.readFile(path.join(this.writtenFilesBaseDir, file.relativeDiskPath), 'utf8');
+				const contents = await fs.promises.readFile(
+					path.join(this.writtenFilesBaseDir, file.relativeDiskPath),
+					'utf8',
+				);
 				return {
 					workspacePath: file.workspacePath,
 					contents: contents,
-					languageId: file.languageId
+					languageId: file.languageId,
 				};
-			})
+			}),
 		);
 	}
 }

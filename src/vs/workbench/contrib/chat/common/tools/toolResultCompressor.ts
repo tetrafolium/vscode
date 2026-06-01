@@ -3,10 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IToolResult } from './languageModelToolsService.js';
+import { createDecorator } from "../../../../../platform/instantiation/common/instantiation.js";
+import { IToolResult } from "./languageModelToolsService.js";
 
-export const IToolResultCompressor = createDecorator<IToolResultCompressor>('IToolResultCompressor');
+export const IToolResultCompressor = createDecorator<IToolResultCompressor>(
+	"IToolResultCompressor",
+);
 
 /**
  * Result of running a {@link IToolResultFilter}.
@@ -78,7 +80,11 @@ export interface IToolResultCompressor {
 	 * Returns a possibly-compressed copy of `result`, or `undefined` if no
 	 * compression was applied (caller should pass through the original).
 	 */
-	maybeCompress(toolId: string, input: unknown, result: IToolResult): IToolResult | undefined;
+	maybeCompress(
+		toolId: string,
+		input: unknown,
+		result: IToolResult,
+	): IToolResult | undefined;
 }
 
 /**
@@ -105,7 +111,7 @@ export function isProtectedFromCompression(text: string): boolean {
 	// Top-level JSON object or array — refuse to touch.
 	const first = trimmed[0];
 	const last = trimmed[trimmed.length - 1];
-	if ((first === '{' && last === '}') || (first === '[' && last === ']')) {
+	if ((first === "{" && last === "}") || (first === "[" && last === "]")) {
 		try {
 			JSON.parse(trimmed);
 			return true;
@@ -116,7 +122,10 @@ export function isProtectedFromCompression(text: string): boolean {
 	// TOML / YAML-style documents at the top level: a line `---` opener or
 	// a file-level table header like `[section]`.
 	// These are cheap heuristics — we don't try to parse YAML/TOML.
-	if (/^---\s*\n/.test(trimmed) || /^\[[A-Za-z_][A-Za-z0-9_.-]*\]\s*\n/.test(trimmed)) {
+	if (
+		/^---\s*\n/.test(trimmed) ||
+		/^\[[A-Za-z_][A-Za-z0-9_.-]*\]\s*\n/.test(trimmed)
+	) {
 		return true;
 	}
 	return false;
@@ -135,7 +144,11 @@ export const MIN_COMPRESSIBLE_LENGTH = 1024;
  * Format the banner that gets prepended to compressed text parts so the
  * model knows compression happened, which filters fired, and how to opt out.
  */
-export function formatCompressionBanner(filterIds: readonly string[], beforeChars: number, afterChars: number): string {
-	const ids = filterIds.length > 0 ? filterIds.join(', ') : 'unknown';
+export function formatCompressionBanner(
+	filterIds: readonly string[],
+	beforeChars: number,
+	afterChars: number,
+): string {
+	const ids = filterIds.length > 0 ? filterIds.join(", ") : "unknown";
 	return `[Output compressed by ${ids} (${beforeChars} → ${afterChars} chars). To disable, set chat.tools.compressOutput.enabled to false.]`;
 }

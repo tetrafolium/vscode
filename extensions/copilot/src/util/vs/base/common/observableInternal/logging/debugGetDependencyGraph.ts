@@ -17,8 +17,12 @@ interface IOptions {
 	debugNamePostProcessor?: (name: string) => string;
 }
 
-export function debugGetObservableGraph(obs: IObservable<any> | IObserver, options: IOptions): string {
-	const debugNamePostProcessor = options?.debugNamePostProcessor ?? ((str: string) => str);
+export function debugGetObservableGraph(
+	obs: IObservable<any> | IObserver,
+	options: IOptions,
+): string {
+	const debugNamePostProcessor =
+		options?.debugNamePostProcessor ?? ((str: string) => str);
 	const info = Info.from(obs, debugNamePostProcessor);
 	if (!info) {
 		return '';
@@ -27,13 +31,28 @@ export function debugGetObservableGraph(obs: IObservable<any> | IObserver, optio
 	const alreadyListed = new Set<IObservable<any> | IObserver>();
 
 	if (options.type === 'observers') {
-		return formatObservableInfoWithObservers(info, 0, alreadyListed, options).trim();
+		return formatObservableInfoWithObservers(
+			info,
+			0,
+			alreadyListed,
+			options,
+		).trim();
 	} else {
-		return formatObservableInfoWithDependencies(info, 0, alreadyListed, options).trim();
+		return formatObservableInfoWithDependencies(
+			info,
+			0,
+			alreadyListed,
+			options,
+		).trim();
 	}
 }
 
-function formatObservableInfoWithDependencies(info: Info, indentLevel: number, alreadyListed: Set<IObservable<any> | IObserver>, options: IOptions): string {
+function formatObservableInfoWithDependencies(
+	info: Info,
+	indentLevel: number,
+	alreadyListed: Set<IObservable<any> | IObserver>,
+	options: IOptions,
+): string {
 	const indent = '\t\t'.repeat(indentLevel);
 	const lines: string[] = [];
 
@@ -52,15 +71,31 @@ function formatObservableInfoWithDependencies(info: Info, indentLevel: number, a
 	if (info.dependencies.length > 0) {
 		lines.push(`${indent}  dependencies:`);
 		for (const dep of info.dependencies) {
-			const info = Info.from(dep, options.debugNamePostProcessor ?? (name => name)) ?? Info.unknown(dep);
-			lines.push(formatObservableInfoWithDependencies(info, indentLevel + 1, alreadyListed, options));
+			const info =
+				Info.from(
+					dep,
+					options.debugNamePostProcessor ?? ((name) => name),
+				) ?? Info.unknown(dep);
+			lines.push(
+				formatObservableInfoWithDependencies(
+					info,
+					indentLevel + 1,
+					alreadyListed,
+					options,
+				),
+			);
 		}
 	}
 
 	return lines.join('\n');
 }
 
-function formatObservableInfoWithObservers(info: Info, indentLevel: number, alreadyListed: Set<IObservable<any> | IObserver>, options: IOptions): string {
+function formatObservableInfoWithObservers(
+	info: Info,
+	indentLevel: number,
+	alreadyListed: Set<IObservable<any> | IObserver>,
+	options: IOptions,
+): string {
 	const indent = '\t\t'.repeat(indentLevel);
 	const lines: string[] = [];
 
@@ -79,8 +114,19 @@ function formatObservableInfoWithObservers(info: Info, indentLevel: number, alre
 	if (info.observers.length > 0) {
 		lines.push(`${indent}  observers:`);
 		for (const observer of info.observers) {
-			const info = Info.from(observer, options.debugNamePostProcessor ?? (name => name)) ?? Info.unknown(observer);
-			lines.push(formatObservableInfoWithObservers(info, indentLevel + 1, alreadyListed, options));
+			const info =
+				Info.from(
+					observer,
+					options.debugNamePostProcessor ?? ((name) => name),
+				) ?? Info.unknown(observer);
+			lines.push(
+				formatObservableInfoWithObservers(
+					info,
+					indentLevel + 1,
+					alreadyListed,
+					options,
+				),
+			);
 		}
 	}
 
@@ -88,7 +134,10 @@ function formatObservableInfoWithObservers(info: Info, indentLevel: number, alre
 }
 
 class Info {
-	public static from(obs: IObservable<any> | IObserver, debugNamePostProcessor: (name: string) => string): Info | undefined {
+	public static from(
+		obs: IObservable<any> | IObserver,
+		debugNamePostProcessor: (name: string) => string,
+	): Info | undefined {
 		if (obs instanceof AutorunObserver) {
 			const state = obs.debugGetState();
 			return new Info(
@@ -98,7 +147,7 @@ class Info {
 				undefined,
 				state.stateStr,
 				Array.from(state.dependencies),
-				[]
+				[],
 			);
 		} else if (obs instanceof Derived) {
 			const state = obs.debugGetState();
@@ -109,7 +158,7 @@ class Info {
 				state.value,
 				state.stateStr,
 				Array.from(state.dependencies),
-				Array.from(obs.debugGetObservers())
+				Array.from(obs.debugGetObservers()),
 			);
 		} else if (obs instanceof ObservableValue) {
 			const state = obs.debugGetState();
@@ -120,7 +169,7 @@ class Info {
 				state.value,
 				'upToDate',
 				[],
-				Array.from(obs.debugGetObservers())
+				Array.from(obs.debugGetObservers()),
 			);
 		} else if (obs instanceof FromEventObservable) {
 			const state = obs.debugGetState();
@@ -131,7 +180,7 @@ class Info {
 				state.value,
 				state.hasValue ? 'upToDate' : 'initial',
 				[],
-				Array.from(obs.debugGetObservers())
+				Array.from(obs.debugGetObservers()),
 			);
 		}
 		return undefined;
@@ -145,7 +194,7 @@ class Info {
 			undefined,
 			'unknown',
 			[],
-			[]
+			[],
 		);
 	}
 
@@ -157,5 +206,5 @@ class Info {
 		public readonly state: string,
 		public readonly dependencies: (IObservable<any> | IObserver)[],
 		public readonly observers: (IObservable<any> | IObserver)[],
-	) { }
+	) {}
 }

@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { Event } from "../../../../base/common/event.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
 
-export const IOnboardingService = createDecorator<IOnboardingService>('onboardingService');
+export const IOnboardingService =
+	createDecorator<IOnboardingService>("onboardingService");
 
 export interface IOnboardingService {
 	readonly _serviceBrand: undefined;

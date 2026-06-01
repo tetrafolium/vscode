@@ -3,18 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IObservable, IObservableWithChange, IObserver, IReaderWithStore, ISettableObservable, ITransaction, } from '../base.js';
-import { BaseObservable } from './baseObservable.js';
-import { DebugNameData } from '../debugName.js';
-import { BugIndicatingError, DisposableStore, EqualityComparer, assertFn, onBugIndicatingError } from '../commonFacade/deps.js';
-import { getLogger } from '../logging/logging.js';
-import { IChangeTracker } from '../changeTracker.js';
-import { DebugLocation } from '../debugLocation.js';
+import {
+	IObservable,
+	IObservableWithChange,
+	IObserver,
+	IReaderWithStore,
+	ISettableObservable,
+	ITransaction,
+} from "../base.js";
+import { BaseObservable } from "./baseObservable.js";
+import { DebugNameData } from "../debugName.js";
+import {
+	BugIndicatingError,
+	DisposableStore,
+	EqualityComparer,
+	assertFn,
+	onBugIndicatingError,
+} from "../commonFacade/deps.js";
+import { getLogger } from "../logging/logging.js";
+import { IChangeTracker } from "../changeTracker.js";
+import { DebugLocation } from "../debugLocation.js";
 
 export interface IDerivedReader<TChange = void> extends IReaderWithStore {
 	/**
 	 * Call this to report a change delta or to force report a change, even if the new value is the same as the old value.
-	*/
+	 */
 	reportChange(change: TChange): void;
 }
 
@@ -42,15 +55,23 @@ export const enum DerivedState {
 
 function derivedStateToString(state: DerivedState): string {
 	switch (state) {
-		case DerivedState.initial: return 'initial';
-		case DerivedState.dependenciesMightHaveChanged: return 'dependenciesMightHaveChanged';
-		case DerivedState.stale: return 'stale';
-		case DerivedState.upToDate: return 'upToDate';
-		default: return '<unknown>';
+		case DerivedState.initial:
+			return "initial";
+		case DerivedState.dependenciesMightHaveChanged:
+			return "dependenciesMightHaveChanged";
+		case DerivedState.stale:
+			return "stale";
+		case DerivedState.upToDate:
+			return "upToDate";
+		default:
+			return "<unknown>";
 	}
 }
 
-export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObservable<T, TChange> implements IDerivedReader<TChange>, IObserver {
+export class Derived<T, TChangeSummary = any, TChange = void>
+	extends BaseObservable<T, TChange>
+	implements IDerivedReader<TChange>, IObserver
+{
 	private _state = DerivedState.initial;
 	private _value: T | undefined = undefined;
 	private _updateCount = 0;
@@ -67,14 +88,19 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 	private _removedObserverToCallEndUpdateOn: Set<IObserver> | null = null;
 
 	public override get debugName(): string {
-		return this._debugNameData.getDebugName(this) ?? '(anonymous)';
+		return this._debugNameData.getDebugName(this) ?? "(anonymous)";
 	}
 
 	constructor(
 		public readonly _debugNameData: DebugNameData,
-		public readonly _computeFn: (reader: IDerivedReader<TChange>, changeSummary: TChangeSummary) => T,
+		public readonly _computeFn: (
+			reader: IDerivedReader<TChange>,
+			changeSummary: TChangeSummary,
+		) => T,
 		private readonly _changeTracker: IChangeTracker<TChangeSummary> | undefined,
-		private readonly _handleLastObserverRemoved: (() => void) | undefined = undefined,
+		private readonly _handleLastObserverRemoved:
+			| (() => void)
+			| undefined = undefined,
 		private readonly _equalityComparator: EqualityComparer<T>,
 		debugLocation: DebugLocation,
 	) {
@@ -111,7 +137,7 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 		const checkEnabled = false; // TODO set to true
 		if (this._isComputing && checkEnabled) {
 			// investigate why this fails in the diff editor!
-			throw new BugIndicatingError('Cyclic deriveds are not supported yet!');
+			throw new BugIndicatingError("Cyclic deriveds are not supported yet!");
 		}
 
 		if (this._observers.size === 0) {
@@ -132,7 +158,6 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 			// Clear new dependencies
 			this.onLastObserverRemoved();
 			return result;
-
 		} else {
 			do {
 				// We might not get a notification for a dependency that changed while it is updating,
@@ -142,7 +167,7 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 						/** might call {@link handleChange} indirectly, which could make us stale */
 						d.reportChanges();
 
-						if (this._state as DerivedState === DerivedState.stale) {
+						if ((this._state as DerivedState) === DerivedState.stale) {
 							// The other dependencies will refresh on demand, so early break
 							break;
 						}
@@ -181,7 +206,8 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 				this._isInBeforeUpdate = true;
 				this._changeTracker.beforeUpdate?.(this, changeSummary);
 				this._isInBeforeUpdate = false;
-				this._changeSummary = this._changeTracker?.createChangeSummary(changeSummary);
+				this._changeSummary =
+					this._changeTracker?.createChangeSummary(changeSummary);
 			}
 
 			const hadValue = this._state !== DerivedState.initial;
@@ -199,7 +225,6 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 				}
 				/** might call {@link handleChange} indirectly, which could invalidate us */
 				this._value = this._computeFn(this, changeSummary);
-
 			} finally {
 				this._isReaderValid = false;
 				// We don't want our observed observables to think that they are (not even temporarily) not being observed.
@@ -214,7 +239,9 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 				}
 			}
 
-			didChange = this._didReportChange || (hadValue && !(this._equalityComparator(oldValue!, this._value)));
+			didChange =
+				this._didReportChange ||
+				(hadValue && !this._equalityComparator(oldValue!, this._value));
 
 			getLogger()?.handleObservableUpdated(this, {
 				oldValue,
@@ -246,7 +273,7 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 
 	public beginUpdate<T>(_observable: IObservable<T>): void {
 		if (this._isUpdating) {
-			throw new BugIndicatingError('Cyclic deriveds are not supported yet!');
+			throw new BugIndicatingError("Cyclic deriveds are not supported yet!");
 		}
 
 		this._updateCount++;
@@ -293,7 +320,11 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 
 	public handlePossibleChange<T>(observable: IObservable<T>): void {
 		// In all other states, observers already know that we might have changed.
-		if (this._state === DerivedState.upToDate && this._dependencies.has(observable) && !this._dependenciesToBeRemoved.has(observable)) {
+		if (
+			this._state === DerivedState.upToDate &&
+			this._dependencies.has(observable) &&
+			!this._dependenciesToBeRemoved.has(observable)
+		) {
 			this._state = DerivedState.dependenciesMightHaveChanged;
 			for (const r of this._observers) {
 				r.handlePossibleChange(this);
@@ -301,24 +332,40 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 		}
 	}
 
-	public handleChange<T, TChange>(observable: IObservableWithChange<T, TChange>, change: TChange): void {
-		if (this._dependencies.has(observable) && !this._dependenciesToBeRemoved.has(observable) || this._isInBeforeUpdate) {
+	public handleChange<T, TChange>(
+		observable: IObservableWithChange<T, TChange>,
+		change: TChange,
+	): void {
+		if (
+			(this._dependencies.has(observable) &&
+				!this._dependenciesToBeRemoved.has(observable)) ||
+			this._isInBeforeUpdate
+		) {
 			getLogger()?.handleDerivedDependencyChanged(this, observable, change);
 
 			let shouldReact = false;
 			try {
-				shouldReact = this._changeTracker ? this._changeTracker.handleChange({
-					changedObservable: observable,
-					change,
-					// eslint-disable-next-line local/code-no-any-casts
-					didChange: (o): this is any => o === observable as any,
-				}, this._changeSummary!) : true;
+				shouldReact = this._changeTracker
+					? this._changeTracker.handleChange(
+							{
+								changedObservable: observable,
+								change,
+								// eslint-disable-next-line local/code-no-any-casts
+								didChange: (o): this is any => o === (observable as any),
+							},
+							this._changeSummary!,
+						)
+					: true;
 			} catch (e) {
 				onBugIndicatingError(e);
 			}
 
 			const wasUpToDate = this._state === DerivedState.upToDate;
-			if (shouldReact && (this._state === DerivedState.dependenciesMightHaveChanged || wasUpToDate)) {
+			if (
+				shouldReact &&
+				(this._state === DerivedState.dependenciesMightHaveChanged ||
+					wasUpToDate)
+			) {
 				this._state = DerivedState.stale;
 				if (wasUpToDate) {
 					for (const r of this._observers) {
@@ -332,7 +379,11 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 	// IReader Implementation
 
 	private _ensureReaderValid(): void {
-		if (!this._isReaderValid) { throw new BugIndicatingError('The reader object cannot be used outside its compute function!'); }
+		if (!this._isReaderValid) {
+			throw new BugIndicatingError(
+				"The reader object cannot be used outside its compute function!",
+			);
+		}
 	}
 
 	public readObservable<T>(observable: IObservable<T>): T {
@@ -377,7 +428,8 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 	}
 
 	public override addObserver(observer: IObserver): void {
-		const shouldCallBeginUpdate = !this._observers.has(observer) && this._updateCount > 0;
+		const shouldCallBeginUpdate =
+			!this._observers.has(observer) && this._updateCount > 0;
 		super.addObserver(observer);
 
 		if (shouldCallBeginUpdate) {
@@ -436,15 +488,24 @@ export class Derived<T, TChangeSummary = any, TChange = void> extends BaseObserv
 	}
 }
 
-
-export class DerivedWithSetter<T, TChangeSummary = any, TOutChanges = any> extends Derived<T, TChangeSummary, TOutChanges> implements ISettableObservable<T, TOutChanges> {
+export class DerivedWithSetter<T, TChangeSummary = any, TOutChanges = any>
+	extends Derived<T, TChangeSummary, TOutChanges>
+	implements ISettableObservable<T, TOutChanges>
+{
 	constructor(
 		debugNameData: DebugNameData,
-		computeFn: (reader: IDerivedReader<TOutChanges>, changeSummary: TChangeSummary) => T,
+		computeFn: (
+			reader: IDerivedReader<TOutChanges>,
+			changeSummary: TChangeSummary,
+		) => T,
 		changeTracker: IChangeTracker<TChangeSummary> | undefined,
 		handleLastObserverRemoved: (() => void) | undefined = undefined,
 		equalityComparator: EqualityComparer<T>,
-		public readonly set: (value: T, tx: ITransaction | undefined, change: TOutChanges) => void,
+		public readonly set: (
+			value: T,
+			tx: ITransaction | undefined,
+			change: TOutChanges,
+		) => void,
 		debugLocation: DebugLocation,
 	) {
 		super(

@@ -3,13 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Position } from '../../../../../../../editor/common/core/position.js';
-import { Range } from '../../../../../../../editor/common/core/range.js';
-import { IWordAtPosition, getWordAtText } from '../../../../../../../editor/common/core/wordHelper.js';
-import { ITextModel } from '../../../../../../../editor/common/model.js';
+import { Position } from "../../../../../../../editor/common/core/position.js";
+import { Range } from "../../../../../../../editor/common/core/range.js";
+import {
+	IWordAtPosition,
+	getWordAtText,
+} from "../../../../../../../editor/common/core/wordHelper.js";
+import { ITextModel } from "../../../../../../../editor/common/model.js";
 
 export function escapeForCharClass(text: string): string {
-	return text.replace(/[-\\^\]]/g, '\\$&');
+	return text.replace(/[-\\^\]]/g, "\\$&");
 }
 
 export interface IChatCompletionRangeResult {
@@ -18,22 +21,42 @@ export interface IChatCompletionRangeResult {
 	varWord: IWordAtPosition | null;
 }
 
-export function computeCompletionRanges(model: ITextModel, position: Position, reg: RegExp, onlyOnWordStart = false): IChatCompletionRangeResult | undefined {
-	const varWord = getWordAtText(position.column, reg, model.getLineContent(position.lineNumber), 0);
+export function computeCompletionRanges(
+	model: ITextModel,
+	position: Position,
+	reg: RegExp,
+	onlyOnWordStart = false,
+): IChatCompletionRangeResult | undefined {
+	const varWord = getWordAtText(
+		position.column,
+		reg,
+		model.getLineContent(position.lineNumber),
+		0,
+	);
 	if (!varWord && model.getWordUntilPosition(position).word) {
 		// inside a "normal" word
 		return;
 	}
 
 	if (!varWord && position.column > 1) {
-		const textBefore = model.getValueInRange(new Range(position.lineNumber, position.column - 1, position.lineNumber, position.column));
-		if (textBefore !== ' ') {
+		const textBefore = model.getValueInRange(
+			new Range(
+				position.lineNumber,
+				position.column - 1,
+				position.lineNumber,
+				position.column,
+			),
+		);
+		if (textBefore !== " ") {
 			return;
 		}
 	}
 
 	if (varWord && onlyOnWordStart) {
-		const wordBefore = model.getWordUntilPosition({ lineNumber: position.lineNumber, column: varWord.startColumn });
+		const wordBefore = model.getWordUntilPosition({
+			lineNumber: position.lineNumber,
+			column: varWord.startColumn,
+		});
 		if (wordBefore.word) {
 			// inside a word
 			return;
@@ -45,15 +68,33 @@ export function computeCompletionRanges(model: ITextModel, position: Position, r
 	if (!varWord) {
 		insert = replace = Range.fromPositions(position);
 	} else {
-		insert = new Range(position.lineNumber, varWord.startColumn, position.lineNumber, position.column);
-		replace = new Range(position.lineNumber, varWord.startColumn, position.lineNumber, varWord.endColumn);
+		insert = new Range(
+			position.lineNumber,
+			varWord.startColumn,
+			position.lineNumber,
+			position.column,
+		);
+		replace = new Range(
+			position.lineNumber,
+			varWord.startColumn,
+			position.lineNumber,
+			varWord.endColumn,
+		);
 	}
 
 	return { insert, replace, varWord };
 }
 
-export function isEmptyUpToCompletionWord(model: ITextModel, rangeResult: IChatCompletionRangeResult): boolean {
-	const startToCompletionWordStart = new Range(1, 1, rangeResult.replace.startLineNumber, rangeResult.replace.startColumn);
+export function isEmptyUpToCompletionWord(
+	model: ITextModel,
+	rangeResult: IChatCompletionRangeResult,
+): boolean {
+	const startToCompletionWordStart = new Range(
+		1,
+		1,
+		rangeResult.replace.startLineNumber,
+		rangeResult.replace.startColumn,
+	);
 	return !!model.getValueInRange(startToCompletionWordStart).match(/^\s*$/);
 }
 
@@ -63,7 +104,11 @@ export function isEmptyUpToCompletionWord(model: ITextModel, rangeResult: IChatC
  * after such a token). Used to gate completion providers so they only run
  * when the user is actively editing a trigger-led token.
  */
-export function isAtTriggerCharacterToken(model: ITextModel, position: Position, triggerCharacters: readonly string[]): boolean {
+export function isAtTriggerCharacterToken(
+	model: ITextModel,
+	position: Position,
+	triggerCharacters: readonly string[],
+): boolean {
 	if (triggerCharacters.length === 0) {
 		return false;
 	}

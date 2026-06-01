@@ -11,9 +11,14 @@ export interface IFile {
 }
 
 export abstract class DiagnosticsProvider {
-	abstract getDiagnostics(accessor: ITestingServicesAccessor, files: IFile[]): Promise<ITestDiagnostic[]>;
+	abstract getDiagnostics(
+		accessor: ITestingServicesAccessor,
+		files: IFile[],
+	): Promise<ITestDiagnostic[]>;
 
-	protected isInstalled(): boolean { return true; }
+	protected isInstalled(): boolean {
+		return true;
+	}
 }
 
 /**

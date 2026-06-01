@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	/**
 	 * @deprecated Part of MappedEditsProvider, use `MappedEditsProvider2` instead.
 	 */
@@ -19,7 +18,7 @@ declare module 'vscode' {
 	 */
 	export interface ConversationRequest {
 		// eslint-disable-next-line local/vscode-dts-string-type-literals
-		readonly type: 'request';
+		readonly type: "request";
 		readonly message: string;
 	}
 
@@ -28,7 +27,7 @@ declare module 'vscode' {
 	 */
 	export interface ConversationResponse {
 		// eslint-disable-next-line local/vscode-dts-string-type-literals
-		readonly type: 'response';
+		readonly type: "response";
 		readonly message: string;
 		readonly result?: ChatResult;
 		readonly references?: DocumentContextItem[];
@@ -64,7 +63,7 @@ declare module 'vscode' {
 			document: TextDocument,
 			codeBlocks: string[],
 			context: MappedEditsContext,
-			token: CancellationToken
+			token: CancellationToken,
 		): ProviderResult<WorkspaceEdit | null>;
 	}
 
@@ -72,7 +71,11 @@ declare module 'vscode' {
 	 * Interface for providing mapped edits for a given document.
 	 */
 	export interface MappedEditsRequest {
-		readonly codeBlocks: { code: string; resource: Uri; markdownBeforeBlock?: string }[];
+		readonly codeBlocks: {
+			code: string;
+			resource: Uri;
+			markdownBeforeBlock?: string;
+		}[];
 		readonly location?: string;
 		readonly chatRequestId?: string;
 		readonly chatRequestModel?: string;
@@ -95,7 +98,7 @@ declare module 'vscode' {
 		provideMappedEdits(
 			request: MappedEditsRequest,
 			result: MappedEditsResponseStream,
-			token: CancellationToken
+			token: CancellationToken,
 		): ProviderResult<MappedEditsResult>;
 	}
 
@@ -103,8 +106,13 @@ declare module 'vscode' {
 		/**
 		 * @deprecated Use `MappedEditsProvider2` instead.
 		 */
-		export function registerMappedEditsProvider(documentSelector: DocumentSelector, provider: MappedEditsProvider): Disposable;
+		export function registerMappedEditsProvider(
+			documentSelector: DocumentSelector,
+			provider: MappedEditsProvider,
+		): Disposable;
 
-		export function registerMappedEditsProvider2(provider: MappedEditsProvider2): Disposable;
+		export function registerMappedEditsProvider2(
+			provider: MappedEditsProvider2,
+		): Disposable;
 	}
 }

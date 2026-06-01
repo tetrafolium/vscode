@@ -22,7 +22,10 @@ import { URI } from '../../../../../util/vs/base/common/uri';
 import { Location } from '../../../../../util/vs/workbench/api/common/extHostTypes/location';
 import { Range } from '../../../../../util/vs/workbench/api/common/extHostTypes/range';
 import { ChatReferenceDiagnostic } from '../../../../../vscodeTypes';
-import { emptyWorkspaceInfo, IWorkspaceInfo } from '../../../../chatSessions/common/workspaceInfo';
+import {
+	emptyWorkspaceInfo,
+	IWorkspaceInfo,
+} from '../../../../chatSessions/common/workspaceInfo';
 import { extractChatPromptReferences } from '../../../../chatSessions/copilotcli/common/copilotCLIPrompt';
 import { CopilotCLIImageSupport } from '../../../../chatSessions/copilotcli/node/copilotCLIImageSupport';
 import { CopilotCLIPromptResolver } from '../../../../chatSessions/copilotcli/node/copilotcliPromptResolver';
@@ -32,501 +35,780 @@ import { TestChatRequest } from '../../../../test/node/testHelpers';
 import { MockExtensionContext } from '../../../../../platform/test/node/extensionContext';
 import { IVSCodeExtensionContext } from '../../../../../platform/extContext/common/extensionContext';
 
-
 suite('CopilotCLI Generate & parse prompts', () => {
-	(['emptyWorkspace', 'workspace', 'worktree'] as const).forEach(workspaceType => {
-		suite(workspaceType, () => {
-			const disposables = new DisposableStore();
-			let fileSystem: MockFileSystemService;
-			let workspaceService: TestWorkspaceService;
-			let resolver: CopilotCLIPromptResolver;
-			const workspaceInfo = createWorkspaceInfo(workspaceType);
-			beforeEach(() => {
-				const services = createExtensionUnitTestingServices(disposables);
-				const accessor = disposables.add(services.createTestingAccessor());
-				fileSystem = accessor.get(IFileSystemService) as MockFileSystemService;
-				workspaceService = accessor.get(IWorkspaceService) as TestWorkspaceService;
-				const logService = accessor.get(ILogService);
-				const imageSupport = new class extends mock<CopilotCLIImageSupport>() {
-					override storeImage(imageData: Uint8Array, mimeType: string): Promise<URI> {
-						throw new Error('Method not implemented.');
+	(['emptyWorkspace', 'workspace', 'worktree'] as const).forEach(
+		(workspaceType) => {
+			suite(workspaceType, () => {
+				const disposables = new DisposableStore();
+				let fileSystem: MockFileSystemService;
+				let workspaceService: TestWorkspaceService;
+				let resolver: CopilotCLIPromptResolver;
+				const workspaceInfo = createWorkspaceInfo(workspaceType);
+				beforeEach(() => {
+					const services =
+						createExtensionUnitTestingServices(disposables);
+					const accessor = disposables.add(
+						services.createTestingAccessor(),
+					);
+					fileSystem = accessor.get(
+						IFileSystemService,
+					) as MockFileSystemService;
+					workspaceService = accessor.get(
+						IWorkspaceService,
+					) as TestWorkspaceService;
+					const logService = accessor.get(ILogService);
+					const imageSupport =
+						new (class extends mock<CopilotCLIImageSupport>() {
+							override storeImage(
+								imageData: Uint8Array,
+								mimeType: string,
+							): Promise<URI> {
+								throw new Error('Method not implemented.');
+							}
+						})();
+					if (
+						workspaceType === 'workspace' ||
+						workspaceType === 'worktree'
+					) {
+						workspaceService
+							.getWorkspaceFolders()
+							.push(URI.file('/workspace'));
 					}
-				};
-				if (workspaceType === 'workspace' || workspaceType === 'worktree') {
-					workspaceService.getWorkspaceFolders().push(URI.file('/workspace'));
-				}
-				resolver = new CopilotCLIPromptResolver(imageSupport, logService, fileSystem, workspaceService, services.seal(), accessor.get(IIgnoreService), new MockSkillLocations(), new MockExtensionContext() as unknown as IVSCodeExtensionContext);
-			});
-			afterEach(() => {
-				disposables.clear();
-				vi.resetAllMocks();
-			});
-			test('just the prompt without anything else', async () => {
-				const req = new TestChatRequest('hello world');
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					resolver = new CopilotCLIPromptResolver(
+						imageSupport,
+						logService,
+						fileSystem,
+						workspaceService,
+						services.seal(),
+						accessor.get(IIgnoreService),
+						new MockSkillLocations(),
+						new MockExtensionContext() as unknown as IVSCodeExtensionContext,
+					);
+				});
+				afterEach(() => {
+					disposables.clear();
+					vi.resetAllMocks();
+				});
+				test('just the prompt without anything else', async () => {
+					const req = new TestChatRequest('hello world');
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('returns original prompt unchanged for slash command', async () => {
-				const req = new TestChatRequest('/help something');
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+				test('returns original prompt unchanged for slash command', async () => {
+					const req = new TestChatRequest('/help something');
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('returns overridden prompt instead of using the request prompt', async () => {
-				const req = new TestChatRequest('/help something');
-				const resolved = await resolver.resolvePrompt(req, 'What is 1+2', [], workspaceInfo, [], CancellationToken.None);
+				test('returns overridden prompt instead of using the request prompt', async () => {
+					const req = new TestChatRequest('/help something');
+					const resolved = await resolver.resolvePrompt(
+						req,
+						'What is 1+2',
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('files are attached as just references without content', async () => {
-				const tsUri = URI.file('/workspace/file.ts');
-				createMockFile(tsUri,
-					`function add(a: number, b: number) {
+				test('files are attached as just references without content', async () => {
+					const tsUri = URI.file('/workspace/file.ts');
+					createMockFile(
+						tsUri,
+						`function add(a: number, b: number) {
 				return a + b;
 			}
 
 			function subtract(a: number, b: number) {
 				return a - b;
 			}
-			`);
-				const pyUri = URI.file('/workspace/sample.py');
-				createMockFile(pyUri,
-					`deff add(a, b):
+			`,
+					);
+					const pyUri = URI.file('/workspace/sample.py');
+					createMockFile(
+						pyUri,
+						`deff add(a, b):
 				return a + b;
 
 			def subtract(a, b):
 				return a - b
-			`);
+			`,
+					);
 
-				const req = new TestChatRequest('explain contents of #file:file.ts and other files', [
-					{
-						id: tsUri.toString(),
-						name: 'file:file.ts',
-						range: [20, 32],
-						value: tsUri
-					},
-					{
-						id: pyUri.toString(),
-						name: 'sample.py',
-						value: pyUri
-					}
-				]);
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const req = new TestChatRequest(
+						'explain contents of #file:file.ts and other files',
+						[
+							{
+								id: tsUri.toString(),
+								name: 'file:file.ts',
+								range: [20, 32],
+								value: tsUri,
+							},
+							{
+								id: pyUri.toString(),
+								name: 'sample.py',
+								value: pyUri,
+							},
+						],
+					);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
-			test('Folders are attached with just references', async () => {
-				const folderUri = URI.file('/workspace/folder');
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
+				test('Folders are attached with just references', async () => {
+					const folderUri = URI.file('/workspace/folder');
 
-				fileSystem.mockDirectory(folderUri, [
-					['file1.txt', FileType.File],
-					['file2.txt', FileType.File],
-				]);
-				if (workspaceType === 'worktree') {
-					fileSystem.mockDirectory(URI.file('/worktree/folder'), [
+					fileSystem.mockDirectory(folderUri, [
 						['file1.txt', FileType.File],
 						['file2.txt', FileType.File],
 					]);
-				}
-				const req = new TestChatRequest('list files in #file:folder', [
-					{
-						id: folderUri.toString(),
-						name: 'file:folder',
-						value: folderUri
+					if (workspaceType === 'worktree') {
+						fileSystem.mockDirectory(URI.file('/worktree/folder'), [
+							['file1.txt', FileType.File],
+							['file2.txt', FileType.File],
+						]);
 					}
-				]);
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const req = new TestChatRequest(
+						'list files in #file:folder',
+						[
+							{
+								id: folderUri.toString(),
+								name: 'file:folder',
+								value: folderUri,
+							},
+						],
+					);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('parses single error diagnostic', async () => {
-				createMockFile(URI.file('/workspace/file.py'), `pass`);
-				const req = new TestChatRequest('Fix this error', [
-					{
-						id: new Location(URI.file('/workspace/file.py'), new Range(12, 0, 12, 20)).toString(),
-						name: 'Unterminated string',
-						value: new ChatReferenceDiagnostic([
-							[
+				test('parses single error diagnostic', async () => {
+					createMockFile(URI.file('/workspace/file.py'), `pass`);
+					const req = new TestChatRequest('Fix this error', [
+						{
+							id: new Location(
 								URI.file('/workspace/file.py'),
-								[{
-									message: 'Unterminated string',
-									severity: DiagnosticSeverity.Error,
-									range: new Range(12, 0, 12, 20),
-									code: 'E001'
-								}]
-							]])
-					}
-				]);
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+								new Range(12, 0, 12, 20),
+							).toString(),
+							name: 'Unterminated string',
+							value: new ChatReferenceDiagnostic([
+								[
+									URI.file('/workspace/file.py'),
+									[
+										{
+											message: 'Unterminated string',
+											severity: DiagnosticSeverity.Error,
+											range: new Range(12, 0, 12, 20),
+											code: 'E001',
+										},
+									],
+								],
+							]),
+						},
+					]);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('groups diagnostics based on same range', async () => {
-				createMockFile(URI.file('/workspace/file.py'), `pass`);
-				const req = new TestChatRequest('Fix these errors', [
-					{
-						id: new Location(URI.file('/workspace/file.py'), new Range(12, 0, 12, 20)).toString(),
-						name: 'Unterminated string',
-						value: new ChatReferenceDiagnostic([
-							[
+				test('groups diagnostics based on same range', async () => {
+					createMockFile(URI.file('/workspace/file.py'), `pass`);
+					const req = new TestChatRequest('Fix these errors', [
+						{
+							id: new Location(
 								URI.file('/workspace/file.py'),
+								new Range(12, 0, 12, 20),
+							).toString(),
+							name: 'Unterminated string',
+							value: new ChatReferenceDiagnostic([
 								[
-									{
-										message: 'Msg1',
-										severity: DiagnosticSeverity.Warning,
-										range: new Range(1, 0, 1, 20),
-										code: 'E001'
-									},
-									{
-										message: 'MsgB',
-										severity: DiagnosticSeverity.Error,
-										range: new Range(1, 0, 4, 20),
-										code: 'E002'
-									},
-									{
-										message: 'MsgC',
-										severity: DiagnosticSeverity.Information,
-										range: new Range(6, 1, 6, 20),
-										code: 'E003'
-									},
-									{
-										message: 'MsgD',
-										severity: DiagnosticSeverity.Hint,
-										range: new Range(6, 10, 6, 15),
-										code: 'E004',
-									},
-								]
-							]
-						])
-					}
-				]);
+									URI.file('/workspace/file.py'),
+									[
+										{
+											message: 'Msg1',
+											severity:
+												DiagnosticSeverity.Warning,
+											range: new Range(1, 0, 1, 20),
+											code: 'E001',
+										},
+										{
+											message: 'MsgB',
+											severity: DiagnosticSeverity.Error,
+											range: new Range(1, 0, 4, 20),
+											code: 'E002',
+										},
+										{
+											message: 'MsgC',
+											severity:
+												DiagnosticSeverity.Information,
+											range: new Range(6, 1, 6, 20),
+											code: 'E003',
+										},
+										{
+											message: 'MsgD',
+											severity: DiagnosticSeverity.Hint,
+											range: new Range(6, 10, 6, 15),
+											code: 'E004',
+										},
+									],
+								],
+							]),
+						},
+					]);
 
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
-			test('aggregates multiple errors across same and different files', async () => {
-				createMockFile(URI.file('/workspace/file.py'), `pass`);
-				createMockFile(URI.file('/workspace/sample.py'), `pass`);
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
+				test('aggregates multiple errors across same and different files', async () => {
+					createMockFile(URI.file('/workspace/file.py'), `pass`);
+					createMockFile(URI.file('/workspace/sample.py'), `pass`);
 
-				const req = new TestChatRequest('Fix these errors', [
-					{
-						id: new Location(URI.file('/workspace/file.py'), new Range(12, 0, 12, 20)).toString(),
-						name: 'Unterminated string',
-						value: new ChatReferenceDiagnostic([
-							[
+					const req = new TestChatRequest('Fix these errors', [
+						{
+							id: new Location(
 								URI.file('/workspace/file.py'),
+								new Range(12, 0, 12, 20),
+							).toString(),
+							name: 'Unterminated string',
+							value: new ChatReferenceDiagnostic([
 								[
-									{
-										message: 'Msg1',
-										severity: DiagnosticSeverity.Warning,
-										range: new Range(1, 0, 1, 20),
-										code: 'E001'
-									},
-									{
-										message: 'MsgB',
-										severity: DiagnosticSeverity.Error,
-										range: new Range(4, 0, 4, 20),
-										code: 'E002'
-									},
-									{
-										message: 'MsgC',
-										severity: DiagnosticSeverity.Information,
-										range: new Range(6, 1, 6, 20),
-										code: 'E003'
-									},
-									{
-										message: 'MsgD',
-										severity: DiagnosticSeverity.Hint,
-										range: new Range(1, 1, 1, 10),
-										code: 'E004',
-									},
-								]
-							],
-							[
-								URI.file('/workspace/sample.py'),
+									URI.file('/workspace/file.py'),
+									[
+										{
+											message: 'Msg1',
+											severity:
+												DiagnosticSeverity.Warning,
+											range: new Range(1, 0, 1, 20),
+											code: 'E001',
+										},
+										{
+											message: 'MsgB',
+											severity: DiagnosticSeverity.Error,
+											range: new Range(4, 0, 4, 20),
+											code: 'E002',
+										},
+										{
+											message: 'MsgC',
+											severity:
+												DiagnosticSeverity.Information,
+											range: new Range(6, 1, 6, 20),
+											code: 'E003',
+										},
+										{
+											message: 'MsgD',
+											severity: DiagnosticSeverity.Hint,
+											range: new Range(1, 1, 1, 10),
+											code: 'E004',
+										},
+									],
+								],
 								[
-									{
-										message: 'Msg2',
-										severity: DiagnosticSeverity.Warning,
-										range: new Range(20, 0, 21, 10),
-										code: 'W001'
-									},
-								]
-							]])
-					}
-				]);
+									URI.file('/workspace/sample.py'),
+									[
+										{
+											message: 'Msg2',
+											severity:
+												DiagnosticSeverity.Warning,
+											range: new Range(20, 0, 21, 10),
+											code: 'W001',
+										},
+									],
+								],
+							]),
+						},
+					]);
 
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
-			test('parses locations including files with spaces', async () => {
-				const tsUri = URI.file('/workspace/file.ts');
-				createMockFile(tsUri,
-					`function add(a: number, b: number) {
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
+				test('parses locations including files with spaces', async () => {
+					const tsUri = URI.file('/workspace/file.ts');
+					createMockFile(
+						tsUri,
+						`function add(a: number, b: number) {
 				return a + b;
 			}
 
 			function subtract(a: number, b: number) {
 				return a - b;
 			}
-			`);
-				const tsWithSpacesUri = URI.file('/workspace/hello world/sample.ts');
-				createMockFile(tsWithSpacesUri,
-					`function mod(a: number) {
+			`,
+					);
+					const tsWithSpacesUri = URI.file(
+						'/workspace/hello world/sample.ts',
+					);
+					createMockFile(
+						tsWithSpacesUri,
+						`function mod(a: number) {
 				return a;
-			}`);
-				const pyUri = URI.file('/workspace/sample.py');
-				createMockFile(pyUri,
-					`deff add(a, b):
+			}`,
+					);
+					const pyUri = URI.file('/workspace/sample.py');
+					createMockFile(
+						pyUri,
+						`deff add(a, b):
 				return a + b;
 
 			def subtract(a, b):
 				return a - b
-			`);
-				const req = new TestChatRequest('base', [
-					{
-						id: tsUri.toString(),
-						name: 'file:file.ts',
-						value: new Location(tsUri, new Range(4, 0, 4, 15))
-					},
-					{
-						id: tsWithSpacesUri.toString(),
-						name: 'file:sample.ts',
-						value: new Location(tsWithSpacesUri, new Range(4, 0, 4, 15))
-					},
-					{
-						id: pyUri.toString(),
-						name: 'file:sample.py',
-						value: new Location(pyUri, new Range(3, 0, 3, 15))
-					}
-				]);
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+			`,
+					);
+					const req = new TestChatRequest('base', [
+						{
+							id: tsUri.toString(),
+							name: 'file:file.ts',
+							value: new Location(tsUri, new Range(4, 0, 4, 15)),
+						},
+						{
+							id: tsWithSpacesUri.toString(),
+							name: 'file:sample.ts',
+							value: new Location(
+								tsWithSpacesUri,
+								new Range(4, 0, 4, 15),
+							),
+						},
+						{
+							id: pyUri.toString(),
+							name: 'file:sample.py',
+							value: new Location(pyUri, new Range(3, 0, 3, 15)),
+						},
+					]);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('uses attachment id attribute for name/id', async () => {
-				const tsUri = URI.file('/workspace/add.py');
-				createMockFile(tsUri,
-					`# Basic arithmetic ops
+				test('uses attachment id attribute for name/id', async () => {
+					const tsUri = URI.file('/workspace/add.py');
+					createMockFile(
+						tsUri,
+						`# Basic arithmetic ops
 			def add(a, b):
 				return a + b
 			}
 
 			def subtract(a, b):
 				return a - b
-			`);
-				const req = new TestChatRequest('explain #sym:add', [
-					{
-						id: 'sym:add',
-						name: 'sym:add',
-						value: new Location(URI.file('/workspace/add.py'), new Range(1, 0, 3, 15)),
-						range: [1, 3]
-					}
-				]);
+			`,
+					);
+					const req = new TestChatRequest('explain #sym:add', [
+						{
+							id: 'sym:add',
+							name: 'sym:add',
+							value: new Location(
+								URI.file('/workspace/add.py'),
+								new Range(1, 0, 3, 15),
+							),
+							range: [1, 3],
+						},
+					]);
 
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('includes contents of untitled file', async () => {
-				const untitledTsFile = {
-					id: 'file:untitled-1',
-					name: 'file:untitled-1',
-					value: URI.from({ scheme: Schemas.untitled, path: 'untitled-1' })
-				};
-				createMockFile(untitledTsFile.value, `function example() {
+				test('includes contents of untitled file', async () => {
+					const untitledTsFile = {
+						id: 'file:untitled-1',
+						name: 'file:untitled-1',
+						value: URI.from({
+							scheme: Schemas.untitled,
+							path: 'untitled-1',
+						}),
+					};
+					createMockFile(
+						untitledTsFile.value,
+						`function example() {
 	console.log("This is an example");
-}`);
-				const req = new TestChatRequest('Process these files', [
-					untitledTsFile
-				]);
+}`,
+					);
+					const req = new TestChatRequest('Process these files', [
+						untitledTsFile,
+					]);
 
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('includes contents of untitled prompt files', async () => {
-				const untitledPromptFile = {
-					id: 'vscode.prompt.file__untitled:untitled-1',
-					name: 'prompt:Untitled-2',
-					value: URI.from({ scheme: Schemas.untitled, path: 'untitled-1' })
-				};
-				const regularFileRef = {
-					id: 'regular-file',
-					name: 'regular.ts',
-					value: URI.file('/workspace/regular.ts')
-				};
-				createMockFile(untitledPromptFile.value, `This is a prompt file`);
-				createMockFile(regularFileRef.value, `This is a regular file`);
+				test('includes contents of untitled prompt files', async () => {
+					const untitledPromptFile = {
+						id: 'vscode.prompt.file__untitled:untitled-1',
+						name: 'prompt:Untitled-2',
+						value: URI.from({
+							scheme: Schemas.untitled,
+							path: 'untitled-1',
+						}),
+					};
+					const regularFileRef = {
+						id: 'regular-file',
+						name: 'regular.ts',
+						value: URI.file('/workspace/regular.ts'),
+					};
+					createMockFile(
+						untitledPromptFile.value,
+						`This is a prompt file`,
+					);
+					createMockFile(
+						regularFileRef.value,
+						`This is a regular file`,
+					);
 
-				const req = new TestChatRequest('Process these files', [
-					untitledPromptFile,
-					regularFileRef
-				]);
+					const req = new TestChatRequest('Process these files', [
+						untitledPromptFile,
+						regularFileRef,
+					]);
 
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('includes contents of regular prompt files', async () => {
-				const promptFile = {
-					id: 'vscode.prompt.file__file:doit.prompt.md',
-					name: 'prompt:doit.prompt.md',
-					value: URI.file('doit.prompt.md')
-				};
-				createMockFile(promptFile.value, `This is a prompt file`);
+				test('includes contents of regular prompt files', async () => {
+					const promptFile = {
+						id: 'vscode.prompt.file__file:doit.prompt.md',
+						name: 'prompt:doit.prompt.md',
+						value: URI.file('doit.prompt.md'),
+					};
+					createMockFile(promptFile.value, `This is a prompt file`);
 
-				const req = new TestChatRequest('Process these files', [
-					promptFile
-				]);
+					const req = new TestChatRequest('Process these files', [
+						promptFile,
+					]);
 
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				const result = extractChatPromptReferences(resolved.prompt);
-				expect(resolved.prompt).toMatchSnapshot();
-				expect(fixFilePathsForTestComparison(resolved.attachments)).toMatchSnapshot();
-				expect(result).toMatchSnapshot();
-			});
+					const result = extractChatPromptReferences(resolved.prompt);
+					expect(resolved.prompt).toMatchSnapshot();
+					expect(
+						fixFilePathsForTestComparison(resolved.attachments),
+					).toMatchSnapshot();
+					expect(result).toMatchSnapshot();
+				});
 
-			test('excludes instruction files from references and attachments', async () => {
-				const instructionFile = {
-					id: 'vscode.instructions.file__file:/workspace/my.instructions.md',
-					name: 'my.instructions.md',
-					value: URI.file('/workspace/my.instructions.md')
-				};
-				const regularFileRef = {
-					id: 'regular-file',
-					name: 'regular.ts',
-					value: URI.file('/workspace/regular.ts')
-				};
-				createMockFile(instructionFile.value, `# Instructions\nDo things this way.`);
-				createMockFile(regularFileRef.value, `const x = 1;`);
+				test('excludes instruction files from references and attachments', async () => {
+					const instructionFile = {
+						id: 'vscode.instructions.file__file:/workspace/my.instructions.md',
+						name: 'my.instructions.md',
+						value: URI.file('/workspace/my.instructions.md'),
+					};
+					const regularFileRef = {
+						id: 'regular-file',
+						name: 'regular.ts',
+						value: URI.file('/workspace/regular.ts'),
+					};
+					createMockFile(
+						instructionFile.value,
+						`# Instructions\nDo things this way.`,
+					);
+					createMockFile(regularFileRef.value, `const x = 1;`);
 
-				const req = new TestChatRequest('Process these files', [
-					instructionFile,
-					regularFileRef
-				]);
+					const req = new TestChatRequest('Process these files', [
+						instructionFile,
+						regularFileRef,
+					]);
 
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				// Instruction file should be excluded from references and attachments
-				const instructionRef = resolved.references.find(r => URI.isUri(r.value) && (r.value as URI).fsPath.includes('my.instructions.md'));
-				expect(instructionRef).toBeUndefined();
-				// Regular file reference should still be included
-				const regularRef = resolved.references.find(r => URI.isUri(r.value) && (r.value as URI).fsPath.includes('regular.ts'));
-				expect(regularRef).toBeDefined();
-				// Attachment for instruction file should not be present
-				const instructionAttachment = resolved.attachments.find(a => a.type === 'file' && a.path.includes('my.instructions.md'));
-				expect(instructionAttachment).toBeUndefined();
-			});
+					// Instruction file should be excluded from references and attachments
+					const instructionRef = resolved.references.find(
+						(r) =>
+							URI.isUri(r.value) &&
+							(r.value as URI).fsPath.includes(
+								'my.instructions.md',
+							),
+					);
+					expect(instructionRef).toBeUndefined();
+					// Regular file reference should still be included
+					const regularRef = resolved.references.find(
+						(r) =>
+							URI.isUri(r.value) &&
+							(r.value as URI).fsPath.includes('regular.ts'),
+					);
+					expect(regularRef).toBeDefined();
+					// Attachment for instruction file should not be present
+					const instructionAttachment = resolved.attachments.find(
+						(a) =>
+							a.type === 'file' &&
+							a.path.includes('my.instructions.md'),
+					);
+					expect(instructionAttachment).toBeUndefined();
+				});
 
-			test('excludes customizations index from references and attachments', async () => {
-				const customizationsIndex = {
-					id: 'vscode.customizations.index',
-					name: 'customizations',
-					value: URI.file('/workspace/.github/copilot-instructions.md')
-				};
-				const regularFileRef = {
-					id: 'regular-file',
-					name: 'regular.ts',
-					value: URI.file('/workspace/regular.ts')
-				};
-				createMockFile(customizationsIndex.value, `# Customizations\nSome instructions.`);
-				createMockFile(regularFileRef.value, `const x = 1;`);
+				test('excludes customizations index from references and attachments', async () => {
+					const customizationsIndex = {
+						id: 'vscode.customizations.index',
+						name: 'customizations',
+						value: URI.file(
+							'/workspace/.github/copilot-instructions.md',
+						),
+					};
+					const regularFileRef = {
+						id: 'regular-file',
+						name: 'regular.ts',
+						value: URI.file('/workspace/regular.ts'),
+					};
+					createMockFile(
+						customizationsIndex.value,
+						`# Customizations\nSome instructions.`,
+					);
+					createMockFile(regularFileRef.value, `const x = 1;`);
 
-				const req = new TestChatRequest('Process these files', [
-					customizationsIndex,
-					regularFileRef
-				]);
+					const req = new TestChatRequest('Process these files', [
+						customizationsIndex,
+						regularFileRef,
+					]);
 
-				const resolved = await resolver.resolvePrompt(req, undefined, [], workspaceInfo, [], CancellationToken.None);
+					const resolved = await resolver.resolvePrompt(
+						req,
+						undefined,
+						[],
+						workspaceInfo,
+						[],
+						CancellationToken.None,
+					);
 
-				// Customizations index should be excluded from references and attachments
-				const customizationsRef = resolved.references.find(r => URI.isUri(r.value) && (r.value as URI).fsPath.includes('copilot-instructions.md'));
-				expect(customizationsRef).toBeUndefined();
-				// Regular file reference should still be included
-				const regularRef = resolved.references.find(r => URI.isUri(r.value) && (r.value as URI).fsPath.includes('regular.ts'));
-				expect(regularRef).toBeDefined();
-				// Attachment for customizations index should not be present
-				const customizationsAttachment = resolved.attachments.find(a => a.type === 'file' && a.path.includes('copilot-instructions.md'));
-				expect(customizationsAttachment).toBeUndefined();
-			});
+					// Customizations index should be excluded from references and attachments
+					const customizationsRef = resolved.references.find(
+						(r) =>
+							URI.isUri(r.value) &&
+							(r.value as URI).fsPath.includes(
+								'copilot-instructions.md',
+							),
+					);
+					expect(customizationsRef).toBeUndefined();
+					// Regular file reference should still be included
+					const regularRef = resolved.references.find(
+						(r) =>
+							URI.isUri(r.value) &&
+							(r.value as URI).fsPath.includes('regular.ts'),
+					);
+					expect(regularRef).toBeDefined();
+					// Attachment for customizations index should not be present
+					const customizationsAttachment = resolved.attachments.find(
+						(a) =>
+							a.type === 'file' &&
+							a.path.includes('copilot-instructions.md'),
+					);
+					expect(customizationsAttachment).toBeUndefined();
+				});
 
-			test('extract GitHub PR/Issues', async () => {
-				const result = extractChatPromptReferences(getPromptTextWithGithubIssuePR());
-				expect(result).toMatchSnapshot();
-			});
-			test('extract Git Commit', async () => {
-				const result = extractChatPromptReferences(getPromptTextWithGitCommit());
-				expect(result).toMatchSnapshot();
-			});
-			function createMockFile(uri: URI, text: string) {
-				const doc = createTextDocumentData(uri, text, 'plaintext', '\n').document;
-				workspaceService.textDocuments.push(doc);
-				if (workspaceService.getWorkspaceFolders().length === 0) {
-					workspaceService.getWorkspaceFolders().push(URI.file('/workspace'));
-				}
-				if (uri.scheme !== Schemas.untitled) {
-					fileSystem.mockFile(uri, text);
-					if (workspaceType === 'worktree') {
-						if (uri.fsPath.startsWith('/workspace')) {
-							fileSystem.mockFile(URI.file(uri.fsPath.replace('/workspace', '/worktree')), text);
-						} else if (uri.fsPath.startsWith('\\workspace')) {
-							fileSystem.mockFile(URI.file(uri.fsPath.replace('\\workspace', '\\worktree')), text);
+				test('extract GitHub PR/Issues', async () => {
+					const result = extractChatPromptReferences(
+						getPromptTextWithGithubIssuePR(),
+					);
+					expect(result).toMatchSnapshot();
+				});
+				test('extract Git Commit', async () => {
+					const result = extractChatPromptReferences(
+						getPromptTextWithGitCommit(),
+					);
+					expect(result).toMatchSnapshot();
+				});
+				function createMockFile(uri: URI, text: string) {
+					const doc = createTextDocumentData(
+						uri,
+						text,
+						'plaintext',
+						'\n',
+					).document;
+					workspaceService.textDocuments.push(doc);
+					if (workspaceService.getWorkspaceFolders().length === 0) {
+						workspaceService
+							.getWorkspaceFolders()
+							.push(URI.file('/workspace'));
+					}
+					if (uri.scheme !== Schemas.untitled) {
+						fileSystem.mockFile(uri, text);
+						if (workspaceType === 'worktree') {
+							if (uri.fsPath.startsWith('/workspace')) {
+								fileSystem.mockFile(
+									URI.file(
+										uri.fsPath.replace(
+											'/workspace',
+											'/worktree',
+										),
+									),
+									text,
+								);
+							} else if (uri.fsPath.startsWith('\\workspace')) {
+								fileSystem.mockFile(
+									URI.file(
+										uri.fsPath.replace(
+											'\\workspace',
+											'\\worktree',
+										),
+									),
+									text,
+								);
+							}
 						}
 					}
 				}
-			}
-		});
-	});
+			});
+		},
+	);
 });
 
 suite('multi-workspace with additionalWorkspaces', () => {
@@ -539,16 +821,30 @@ suite('multi-workspace with additionalWorkspaces', () => {
 		const services = createExtensionUnitTestingServices(disposables);
 		const accessor = disposables.add(services.createTestingAccessor());
 		fileSystem = accessor.get(IFileSystemService) as MockFileSystemService;
-		workspaceService = accessor.get(IWorkspaceService) as TestWorkspaceService;
+		workspaceService = accessor.get(
+			IWorkspaceService,
+		) as TestWorkspaceService;
 		const logService = accessor.get(ILogService);
-		const imageSupport = new class extends mock<CopilotCLIImageSupport>() {
-			override storeImage(_imageData: Uint8Array, _mimeType: string): Promise<URI> {
+		const imageSupport = new (class extends mock<CopilotCLIImageSupport>() {
+			override storeImage(
+				_imageData: Uint8Array,
+				_mimeType: string,
+			): Promise<URI> {
 				throw new Error('Method not implemented.');
 			}
-		};
+		})();
 		workspaceService.getWorkspaceFolders().push(URI.file('/workspace'));
 		workspaceService.getWorkspaceFolders().push(URI.file('/workspace2'));
-		resolver = new CopilotCLIPromptResolver(imageSupport, logService, fileSystem, workspaceService, services.seal(), accessor.get(IIgnoreService), new MockSkillLocations(), new MockExtensionContext() as unknown as IVSCodeExtensionContext);
+		resolver = new CopilotCLIPromptResolver(
+			imageSupport,
+			logService,
+			fileSystem,
+			workspaceService,
+			services.seal(),
+			accessor.get(IIgnoreService),
+			new MockSkillLocations(),
+			new MockExtensionContext() as unknown as IVSCodeExtensionContext,
+		);
 	});
 
 	afterEach(() => {
@@ -591,11 +887,20 @@ suite('multi-workspace with additionalWorkspaces', () => {
 			},
 		]);
 
-		const resolved = await resolver.resolvePrompt(req, undefined, [], primaryWorkspaceInfo, [additionalWorkspace], CancellationToken.None);
+		const resolved = await resolver.resolvePrompt(
+			req,
+			undefined,
+			[],
+			primaryWorkspaceInfo,
+			[additionalWorkspace],
+			CancellationToken.None,
+		);
 
 		// File reference should be translated to the worktree path of additionalWorkspace
-		const fileRef = resolved.references.find(r => URI.isUri(r.value));
-		expect((fileRef?.value as {}).toString()).toBe(worktreeFileUri.toString());
+		const fileRef = resolved.references.find((r) => URI.isUri(r.value));
+		expect((fileRef?.value as {}).toString()).toBe(
+			worktreeFileUri.toString(),
+		);
 	});
 
 	test('falls back to original URI when worktree file does not exist for additionalWorkspaces', async () => {
@@ -632,17 +937,26 @@ suite('multi-workspace with additionalWorkspaces', () => {
 			},
 		]);
 
-		const resolved = await resolver.resolvePrompt(req, undefined, [], primaryWorkspaceInfo, [additionalWorkspace], CancellationToken.None);
+		const resolved = await resolver.resolvePrompt(
+			req,
+			undefined,
+			[],
+			primaryWorkspaceInfo,
+			[additionalWorkspace],
+			CancellationToken.None,
+		);
 
 		// File reference should remain at original URI since worktree file doesn't exist
-		const fileRef = resolved.references.find(r => URI.isUri(r.value));
+		const fileRef = resolved.references.find((r) => URI.isUri(r.value));
 		expect((fileRef?.value as {}).toString()).toBe(fileUri.toString());
 	});
 
 	test('uses findMatchingWorktree fallback when file is under repository but not in workspace service', async () => {
 		// Remove /workspace2 from workspace service so getWorkspaceFolder returns undefined
 		const folders = workspaceService.getWorkspaceFolders();
-		const idx = folders.findIndex(f => f.toString() === URI.file('/workspace2').toString());
+		const idx = folders.findIndex(
+			(f) => f.toString() === URI.file('/workspace2').toString(),
+		);
 		if (idx >= 0) {
 			folders.splice(idx, 1);
 		}
@@ -682,17 +996,28 @@ suite('multi-workspace with additionalWorkspaces', () => {
 			},
 		]);
 
-		const resolved = await resolver.resolvePrompt(req, undefined, [], primaryWorkspaceInfo, [additionalWorkspace], CancellationToken.None);
+		const resolved = await resolver.resolvePrompt(
+			req,
+			undefined,
+			[],
+			primaryWorkspaceInfo,
+			[additionalWorkspace],
+			CancellationToken.None,
+		);
 
 		// findMatchingWorktree should map /workspace2/src/main.ts -> /worktree2/src/main.ts
-		const fileRef = resolved.references.find(r => URI.isUri(r.value));
-		expect((fileRef?.value as {}).toString()).toBe(worktreeFileUri.toString());
+		const fileRef = resolved.references.find((r) => URI.isUri(r.value));
+		expect((fileRef?.value as {}).toString()).toBe(
+			worktreeFileUri.toString(),
+		);
 	});
 
 	test('falls back to original URI when findMatchingWorktree candidate does not exist', async () => {
 		// Remove /workspace2 from workspace service so getWorkspaceFolder returns undefined → triggers findMatchingWorktree
 		const folders = workspaceService.getWorkspaceFolders();
-		const idx = folders.findIndex(f => f.toString() === URI.file('/workspace2').toString());
+		const idx = folders.findIndex(
+			(f) => f.toString() === URI.file('/workspace2').toString(),
+		);
 		if (idx >= 0) {
 			folders.splice(idx, 1);
 		}
@@ -729,10 +1054,17 @@ suite('multi-workspace with additionalWorkspaces', () => {
 			},
 		]);
 
-		const resolved = await resolver.resolvePrompt(req, undefined, [], primaryWorkspaceInfo, [additionalWorkspace], CancellationToken.None);
+		const resolved = await resolver.resolvePrompt(
+			req,
+			undefined,
+			[],
+			primaryWorkspaceInfo,
+			[additionalWorkspace],
+			CancellationToken.None,
+		);
 
 		// findMatchingWorktree candidate stat fails → original URI returned unchanged
-		const fileRef = resolved.references.find(r => URI.isUri(r.value));
+		const fileRef = resolved.references.find((r) => URI.isUri(r.value));
 		expect((fileRef?.value as {}).toString()).toBe(fileUri.toString());
 	});
 
@@ -762,15 +1094,24 @@ suite('multi-workspace with additionalWorkspaces', () => {
 			},
 		]);
 
-		const resolved = await resolver.resolvePrompt(req, undefined, [], primaryWorkspaceInfo, [additionalWorkspace], CancellationToken.None);
+		const resolved = await resolver.resolvePrompt(
+			req,
+			undefined,
+			[],
+			primaryWorkspaceInfo,
+			[additionalWorkspace],
+			CancellationToken.None,
+		);
 
 		// No translation should occur
-		const fileRef = resolved.references.find(r => URI.isUri(r.value));
+		const fileRef = resolved.references.find((r) => URI.isUri(r.value));
 		expect((fileRef?.value as {}).toString()).toBe(fileUri.toString());
 	});
 });
 
-function createWorkspaceInfo(workspaceType: 'emptyWorkspace' | 'workspace' | 'worktree'): IWorkspaceInfo {
+function createWorkspaceInfo(
+	workspaceType: 'emptyWorkspace' | 'workspace' | 'worktree',
+): IWorkspaceInfo {
 	if (workspaceType === 'workspace') {
 		return {
 			...emptyWorkspaceInfo(),
@@ -802,8 +1143,10 @@ function createWorkspaceInfo(workspaceType: 'emptyWorkspace' | 'workspace' | 'wo
  * As we want test to run on all platforms, we need to fix file paths in attachments
  * to use forward slashes for comparison.
  */
-function fixFilePathsForTestComparison(attachments: Attachment[]): Attachment[] {
-	attachments.forEach(attachment => {
+function fixFilePathsForTestComparison(
+	attachments: Attachment[],
+): Attachment[] {
+	attachments.forEach((attachment) => {
 		if (attachment.type === 'file') {
 			attachment.path = attachment.path.replace(/\\/g, '/');
 		} else if (attachment.type === 'directory') {
@@ -814,7 +1157,6 @@ function fixFilePathsForTestComparison(attachments: Attachment[]): Attachment[] 
 	});
 	return attachments;
 }
-
 
 function getPromptTextWithGithubIssuePR() {
 	return `

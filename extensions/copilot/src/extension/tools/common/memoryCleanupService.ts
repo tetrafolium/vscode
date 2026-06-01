@@ -29,7 +29,8 @@ export interface IMemoryCleanupService {
 	isMemoryUri(uri: URI): boolean;
 }
 
-export const IMemoryCleanupService = createServiceIdentifier<IMemoryCleanupService>('IMemoryCleanupService');
+export const IMemoryCleanupService =
+	createServiceIdentifier<IMemoryCleanupService>('IMemoryCleanupService');
 
 /**
  * Retention period in milliseconds (14 days).
@@ -41,7 +42,10 @@ const RETENTION_PERIOD_MS = 14 * 24 * 60 * 60 * 1000;
  */
 const MEMORY_BASE_DIR = 'memory-tool/memories';
 
-export class MemoryCleanupService extends Disposable implements IMemoryCleanupService {
+export class MemoryCleanupService
+	extends Disposable
+	implements IMemoryCleanupService
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly baseStorageUri: URI | undefined;
@@ -50,7 +54,8 @@ export class MemoryCleanupService extends Disposable implements IMemoryCleanupSe
 	private started = false;
 
 	constructor(
-		@IVSCodeExtensionContext private readonly extensionContext: IVSCodeExtensionContext,
+		@IVSCodeExtensionContext
+		private readonly extensionContext: IVSCodeExtensionContext,
 		@IFileSystemService private readonly fileSystem: IFileSystemService,
 		@ILogService private readonly logService: ILogService,
 	) {
@@ -61,7 +66,10 @@ export class MemoryCleanupService extends Disposable implements IMemoryCleanupSe
 			: undefined;
 
 		this.globalBaseStorageUri = this.extensionContext.globalStorageUri
-			? URI.joinPath(this.extensionContext.globalStorageUri, MEMORY_BASE_DIR)
+			? URI.joinPath(
+					this.extensionContext.globalStorageUri,
+					MEMORY_BASE_DIR,
+				)
 			: undefined;
 	}
 
@@ -77,14 +85,20 @@ export class MemoryCleanupService extends Disposable implements IMemoryCleanupSe
 		if (this.baseStorageUri) {
 			const basePath = this.baseStorageUri.path.toLowerCase();
 			const uriPath = uri.path.toLowerCase();
-			if (uri.scheme === this.baseStorageUri.scheme && uriPath.startsWith(basePath)) {
+			if (
+				uri.scheme === this.baseStorageUri.scheme &&
+				uriPath.startsWith(basePath)
+			) {
 				return true;
 			}
 		}
 		if (this.globalBaseStorageUri) {
 			const basePath = this.globalBaseStorageUri.path.toLowerCase();
 			const uriPath = uri.path.toLowerCase();
-			if (uri.scheme === this.globalBaseStorageUri.scheme && uriPath.startsWith(basePath)) {
+			if (
+				uri.scheme === this.globalBaseStorageUri.scheme &&
+				uriPath.startsWith(basePath)
+			) {
 				return true;
 			}
 		}
@@ -98,8 +112,10 @@ export class MemoryCleanupService extends Disposable implements IMemoryCleanupSe
 		this.started = true;
 
 		// Run cleanup on startup (in background)
-		this.cleanupStaleResources().catch(err => {
-			this.logService.warn(`[MemoryCleanupService] Cleanup error: ${err}`);
+		this.cleanupStaleResources().catch((err) => {
+			this.logService.warn(
+				`[MemoryCleanupService] Cleanup error: ${err}`,
+			);
 		});
 	}
 
@@ -124,33 +140,54 @@ export class MemoryCleanupService extends Disposable implements IMemoryCleanupSe
 			const cutoffTime = now - RETENTION_PERIOD_MS;
 
 			// Read all session directories (exclude 'repo' which is managed separately)
-			const entries = await this.fileSystem.readDirectory(this.baseStorageUri);
-			const sessionDirs = entries.filter(([name, type]) => type === FileType.Directory && name !== 'repo');
+			const entries = await this.fileSystem.readDirectory(
+				this.baseStorageUri,
+			);
+			const sessionDirs = entries.filter(
+				([name, type]) =>
+					type === FileType.Directory && name !== 'repo',
+			);
 
 			for (const [sessionName] of sessionDirs) {
-				const sessionUri = URI.joinPath(this.baseStorageUri, sessionName);
+				const sessionUri = URI.joinPath(
+					this.baseStorageUri,
+					sessionName,
+				);
 				await this.cleanupSessionDirectory(sessionUri, cutoffTime);
 			}
 
 			// Clean up empty session directories
 			for (const [sessionName] of sessionDirs) {
-				const sessionUri = URI.joinPath(this.baseStorageUri, sessionName);
+				const sessionUri = URI.joinPath(
+					this.baseStorageUri,
+					sessionName,
+				);
 				try {
-					const sessionEntries = await this.fileSystem.readDirectory(sessionUri);
+					const sessionEntries =
+						await this.fileSystem.readDirectory(sessionUri);
 					if (sessionEntries.length === 0) {
-						await this.fileSystem.delete(sessionUri, { recursive: true });
-						this.logService.debug(`[MemoryCleanupService] Deleted empty session directory: ${sessionUri.fsPath}`);
+						await this.fileSystem.delete(sessionUri, {
+							recursive: true,
+						});
+						this.logService.debug(
+							`[MemoryCleanupService] Deleted empty session directory: ${sessionUri.fsPath}`,
+						);
 					}
 				} catch {
 					// Ignore errors when checking/deleting empty directories
 				}
 			}
 		} catch (error) {
-			this.logService.warn(`[MemoryCleanupService] Error during cleanup: ${error}`);
+			this.logService.warn(
+				`[MemoryCleanupService] Error during cleanup: ${error}`,
+			);
 		}
 	}
 
-	private async cleanupSessionDirectory(sessionUri: URI, cutoffTime: number): Promise<void> {
+	private async cleanupSessionDirectory(
+		sessionUri: URI,
+		cutoffTime: number,
+	): Promise<void> {
 		try {
 			const entries = await this.fileSystem.readDirectory(sessionUri);
 
@@ -176,15 +213,23 @@ export class MemoryCleanupService extends Disposable implements IMemoryCleanupSe
 
 				// Delete stale entry
 				try {
-					await this.fileSystem.delete(entryUri, { recursive: type === FileType.Directory });
+					await this.fileSystem.delete(entryUri, {
+						recursive: type === FileType.Directory,
+					});
 					this.accessTimestamps.delete(entryUri);
-					this.logService.debug(`[MemoryCleanupService] Deleted stale memory file: ${entryUri.fsPath}`);
+					this.logService.debug(
+						`[MemoryCleanupService] Deleted stale memory file: ${entryUri.fsPath}`,
+					);
 				} catch (error) {
-					this.logService.warn(`[MemoryCleanupService] Failed to delete ${entryUri.fsPath}: ${error}`);
+					this.logService.warn(
+						`[MemoryCleanupService] Failed to delete ${entryUri.fsPath}: ${error}`,
+					);
 				}
 			}
 		} catch (error) {
-			this.logService.debug(`[MemoryCleanupService] Error cleaning session directory ${sessionUri.fsPath}: ${error}`);
+			this.logService.debug(
+				`[MemoryCleanupService] Error cleaning session directory ${sessionUri.fsPath}: ${error}`,
+			);
 		}
 	}
 }

@@ -13,10 +13,17 @@ import { ThemeIcon } from '../../../util/vs/base/common/themables';
 import { SerializedLineEdit } from '../../../util/vs/editor/common/core/edits/lineEdit';
 import { SerializedEdit } from './dataTypes/editUtils';
 import { FetchCancellationError } from './dataTypes/fetchCancellationError';
-import { LanguageContextResponse, SerializedContextResponse, serializeLanguageContext } from './dataTypes/languageContext';
+import {
+	LanguageContextResponse,
+	SerializedContextResponse,
+	serializeLanguageContext,
+} from './dataTypes/languageContext';
 import { RootedLineEdit } from './dataTypes/rootedLineEdit';
 import { DebugRecorderBookmark } from './debugRecorderBookmark';
-import { ISerializedNextEditRequest, StatelessNextEditRequest } from './statelessNextEditProvider';
+import {
+	ISerializedNextEditRequest,
+	StatelessNextEditRequest,
+} from './statelessNextEditProvider';
 import { stringifyChatMessages } from './utils/stringifyChatMessages';
 import { Icon, now } from './utils/utils';
 import { HistoryContext } from './workspaceEditTracker/historyContextProvider';
@@ -37,10 +44,19 @@ export interface MarkdownLoggable {
  * - `errored`: an error occurred
  * - `previouslyRejected`: result matches a suggestion that was previously rejected
  */
-type LogContextOutcome = 'pending' | 'succeeded' | 'noSuggestions' | 'cached' | 'cachedFromGhostText' | 'reusedInFlight' | 'skipped' | 'cancelled' | 'errored' | 'previouslyRejected';
+type LogContextOutcome =
+	| 'pending'
+	| 'succeeded'
+	| 'noSuggestions'
+	| 'cached'
+	| 'cachedFromGhostText'
+	| 'reusedInFlight'
+	| 'skipped'
+	| 'cancelled'
+	| 'errored'
+	| 'previouslyRejected';
 
 export class InlineEditRequestLogContext {
-
 	private static _id = 0;
 
 	public readonly requestId = InlineEditRequestLogContext._id++;
@@ -59,7 +75,9 @@ export class InlineEditRequestLogContext {
 	/** Mark this request as completed (no longer in progress). */
 	markCompleted(): void {
 		if (this._isCompleted) {
-			console.warn(`[InlineEditRequestLogContext] markCompleted called twice (request #${this.requestId})`);
+			console.warn(
+				`[InlineEditRequestLogContext] markCompleted called twice (request #${this.requestId})`,
+			);
 		}
 		this._isCompleted = true;
 		this.fireDidChange();
@@ -77,43 +95,61 @@ export class InlineEditRequestLogContext {
 		public readonly filePath: string,
 		public readonly version: number,
 		private _context: InlineCompletionContext | undefined,
-	) { }
+	) {}
 
 	public recordingBookmark: DebugRecorderBookmark | undefined = undefined;
 
 	toLogDocument(): string {
 		const lines: string[] = [];
-		lines.push('# ' + this.getMarkdownTitle() + ` (Request #${this.requestId})`);
+		lines.push(
+			'# ' + this.getMarkdownTitle() + ` (Request #${this.requestId})`,
+		);
 
 		if (!this._isCompleted) {
 			lines.push('\n⏳ **In progress…**\n');
 		}
 
-		lines.push('💡 Tip: double-click anywhere to open this file as text to copy-paste content into an issue.\n');
+		lines.push(
+			'💡 Tip: double-click anywhere to open this file as text to copy-paste content into an issue.\n',
+		);
 
 		lines.push('<details><summary>Explanation for icons</summary>\n');
 		lines.push(`- ${Icon.lightbulbFull.svg} - model had suggestions\n`);
 		lines.push(`- ${Icon.circleSlash.svg} - model had NO suggestions\n`);
 		lines.push(`- ${Icon.database.svg} - response is from cache\n`);
-		lines.push(`- ${Icon.gitMerge.svg} - joined an in-flight request (async or speculative reuse)\n`);
+		lines.push(
+			`- ${Icon.gitMerge.svg} - joined an in-flight request (async or speculative reuse)\n`,
+		);
 		lines.push(`- ${Icon.error.svg} - error happened\n`);
-		lines.push(`- ${Icon.skipped.svg} - fetching started but got cancelled\n`);
+		lines.push(
+			`- ${Icon.skipped.svg} - fetching started but got cancelled\n`,
+		);
 		lines.push('</details>\n');
 
-		lines.push(`Inline Edit Provider: ${this._statelessNextEditProviderId ?? '<NOT-SET>'}\n`);
+		lines.push(
+			`Inline Edit Provider: ${this._statelessNextEditProviderId ?? '<NOT-SET>'}\n`,
+		);
 
 		lines.push(`Chat Endpoint`);
 		lines.push('```');
-		lines.push(`Model name: ${this._endpointInfo?.modelName ?? '<NOT-SET>'}`);
+		lines.push(
+			`Model name: ${this._endpointInfo?.modelName ?? '<NOT-SET>'}`,
+		);
 		lines.push(`URL: ${this._endpointInfo?.url ?? '<NOT-SET>'}`);
 		lines.push('```');
 
-		const fromCacheStatus = this._logContextOfCachedEdit ? `(cached #${this._logContextOfCachedEdit.requestId})` : '(not cached)';
+		const fromCacheStatus = this._logContextOfCachedEdit
+			? `(cached #${this._logContextOfCachedEdit.requestId})`
+			: '(not cached)';
 
-		lines.push(`Opportunity ID: ${this._context ? this._context.requestUuid : '<NOT-SET>'}`);
+		lines.push(
+			`Opportunity ID: ${this._context ? this._context.requestUuid : '<NOT-SET>'}`,
+		);
 		if (this.headerRequestId) {
 			lines.push('');
-			lines.push(`Header Request ID: ${this.headerRequestId} ${fromCacheStatus}`);
+			lines.push(
+				`Header Request ID: ${this.headerRequestId} ${fromCacheStatus}`,
+			);
 		}
 
 		if (this._nextEditRequest) {
@@ -124,7 +160,9 @@ export class InlineEditRequestLogContext {
 		}
 
 		if (this._diagnosticsResultEdit) {
-			lines.push(`## Proposed diagnostics suggestion ${this._nesTypePicked === 'diagnostics' ? '(Picked)' : '(Not Picked)'}`);
+			lines.push(
+				`## Proposed diagnostics suggestion ${this._nesTypePicked === 'diagnostics' ? '(Picked)' : '(Not Picked)'}`,
+			);
 			lines.push('<details open><summary>Edit</summary>\n');
 			lines.push('``` patch');
 			lines.push(this._diagnosticsResultEdit.toString());
@@ -212,7 +250,10 @@ export class InlineEditRequestLogContext {
 		// Does not include the users files, but just the relevant edits
 		const lines: string[] = [];
 
-		if (this._nesTypePicked === 'diagnostics' && this._diagnosticsResultEdit) {
+		if (
+			this._nesTypePicked === 'diagnostics' &&
+			this._diagnosticsResultEdit
+		) {
 			lines.push(`## Result (Diagnostics):`);
 			lines.push('``` patch');
 			lines.push(this._diagnosticsResultEdit.toString());
@@ -238,9 +279,13 @@ export class InlineEditRequestLogContext {
 		}
 
 		lines.push(`### Info:`);
-		lines.push(`**From cache:** ${this._logContextOfCachedEdit ? `YES (Request: ${this._logContextOfCachedEdit.requestId})` : 'NO'}`);
+		lines.push(
+			`**From cache:** ${this._logContextOfCachedEdit ? `YES (Request: ${this._logContextOfCachedEdit.requestId})` : 'NO'}`,
+		);
 		if (this._context) {
-			lines.push(`**Trigger Kind:** ${this._context.triggerKind === 0 ? 'Manual' : 'Automatic'}`);
+			lines.push(
+				`**Trigger Kind:** ${this._context.triggerKind === 0 ? 'Manual' : 'Automatic'}`,
+			);
 			lines.push(`**Request UUID:** ${this._context.requestUuid}`);
 		}
 
@@ -284,25 +329,35 @@ export class InlineEditRequestLogContext {
 		return this;
 	}
 
-	private _logContextOfCachedEdit: InlineEditRequestLogContext | undefined = undefined;
+	private _logContextOfCachedEdit: InlineEditRequestLogContext | undefined =
+		undefined;
 
-	setIsCachedResult(logContextOfCachedEdit: InlineEditRequestLogContext): void {
+	setIsCachedResult(
+		logContextOfCachedEdit: InlineEditRequestLogContext,
+	): void {
 		this._logContextOfCachedEdit = logContextOfCachedEdit;
 
 		// Direct field copy — avoids triggering outcome transitions from the
 		// public setters (e.g. setResponseResults -> succeeded, setError -> errored).
 		// The final outcome is always 'cached'.
 		this.recordingBookmark = logContextOfCachedEdit.recordingBookmark;
-		this._nextEditRequest = logContextOfCachedEdit._nextEditRequest ?? this._nextEditRequest;
-		this._resultEdit = logContextOfCachedEdit._resultEdit ?? this._resultEdit;
-		this._diagnosticsResultEdit = logContextOfCachedEdit._diagnosticsResultEdit ?? this._diagnosticsResultEdit;
-		this._endpointInfo = logContextOfCachedEdit._endpointInfo ?? this._endpointInfo;
-		this._headerRequestId = logContextOfCachedEdit._headerRequestId ?? this._headerRequestId;
+		this._nextEditRequest =
+			logContextOfCachedEdit._nextEditRequest ?? this._nextEditRequest;
+		this._resultEdit =
+			logContextOfCachedEdit._resultEdit ?? this._resultEdit;
+		this._diagnosticsResultEdit =
+			logContextOfCachedEdit._diagnosticsResultEdit ??
+			this._diagnosticsResultEdit;
+		this._endpointInfo =
+			logContextOfCachedEdit._endpointInfo ?? this._endpointInfo;
+		this._headerRequestId =
+			logContextOfCachedEdit._headerRequestId ?? this._headerRequestId;
 		if (logContextOfCachedEdit._prompt) {
 			this._prompt = logContextOfCachedEdit._prompt;
 		}
 		this.response = logContextOfCachedEdit.response ?? this.response;
-		this._responseResults = logContextOfCachedEdit._responseResults ?? this._responseResults;
+		this._responseResults =
+			logContextOfCachedEdit._responseResults ?? this._responseResults;
 		if (logContextOfCachedEdit.fullResponsePromise) {
 			this.setFullResponse(logContextOfCachedEdit.fullResponsePromise);
 		}
@@ -318,20 +373,29 @@ export class InlineEditRequestLogContext {
 	 * (async pending or speculative). The icon shows git-merge to distinguish
 	 * from a true cache hit.
 	 */
-	setIsReusedInFlightResult(logContextOfReusedRequest: InlineEditRequestLogContext): void {
+	setIsReusedInFlightResult(
+		logContextOfReusedRequest: InlineEditRequestLogContext,
+	): void {
 		this._logContextOfCachedEdit = logContextOfReusedRequest;
 
 		this.recordingBookmark = logContextOfReusedRequest.recordingBookmark;
-		this._nextEditRequest = logContextOfReusedRequest._nextEditRequest ?? this._nextEditRequest;
-		this._resultEdit = logContextOfReusedRequest._resultEdit ?? this._resultEdit;
-		this._diagnosticsResultEdit = logContextOfReusedRequest._diagnosticsResultEdit ?? this._diagnosticsResultEdit;
-		this._endpointInfo = logContextOfReusedRequest._endpointInfo ?? this._endpointInfo;
-		this._headerRequestId = logContextOfReusedRequest._headerRequestId ?? this._headerRequestId;
+		this._nextEditRequest =
+			logContextOfReusedRequest._nextEditRequest ?? this._nextEditRequest;
+		this._resultEdit =
+			logContextOfReusedRequest._resultEdit ?? this._resultEdit;
+		this._diagnosticsResultEdit =
+			logContextOfReusedRequest._diagnosticsResultEdit ??
+			this._diagnosticsResultEdit;
+		this._endpointInfo =
+			logContextOfReusedRequest._endpointInfo ?? this._endpointInfo;
+		this._headerRequestId =
+			logContextOfReusedRequest._headerRequestId ?? this._headerRequestId;
 		if (logContextOfReusedRequest._prompt) {
 			this._prompt = logContextOfReusedRequest._prompt;
 		}
 		this.response = logContextOfReusedRequest.response ?? this.response;
-		this._responseResults = logContextOfReusedRequest._responseResults ?? this._responseResults;
+		this._responseResults =
+			logContextOfReusedRequest._responseResults ?? this._responseResults;
 		if (logContextOfReusedRequest.fullResponsePromise) {
 			this.setFullResponse(logContextOfReusedRequest.fullResponsePromise);
 		}
@@ -396,23 +460,33 @@ export class InlineEditRequestLogContext {
 		// request (before the result arrives), so it can legitimately transition
 		// to the final outcome (skipped, errored, etc.) just like 'pending'.
 		if (this._outcome !== 'pending' && this._outcome !== 'reusedInFlight') {
-			console.warn(`[InlineEditRequestLogContext] outcome transition from '${this._outcome}' to '${outcome}' (request #${this.requestId})`);
+			console.warn(
+				`[InlineEditRequestLogContext] outcome transition from '${this._outcome}' to '${outcome}' (request #${this.requestId})`,
+			);
 		}
 		this._outcome = outcome;
 	}
 
 	private _resolveIcon(): Icon.t {
 		switch (this._outcome) {
-			case 'pending': return this._isCompleted ? Icon.check : Icon.loading;
-			case 'succeeded': return Icon.lightbulbFull;
-			case 'noSuggestions': return Icon.circleSlash;
+			case 'pending':
+				return this._isCompleted ? Icon.check : Icon.loading;
+			case 'succeeded':
+				return Icon.lightbulbFull;
+			case 'noSuggestions':
+				return Icon.circleSlash;
 			case 'cached':
-			case 'cachedFromGhostText': return Icon.database;
-			case 'reusedInFlight': return Icon.gitMerge;
+			case 'cachedFromGhostText':
+				return Icon.database;
+			case 'reusedInFlight':
+				return Icon.gitMerge;
 			case 'skipped':
-			case 'cancelled': return Icon.skipped;
-			case 'errored': return Icon.error;
-			case 'previouslyRejected': return Icon.thumbsdown;
+			case 'cancelled':
+				return Icon.skipped;
+			case 'errored':
+				return Icon.error;
+			case 'previouslyRejected':
+				return Icon.thumbsdown;
 		}
 	}
 
@@ -477,11 +551,12 @@ export class InlineEditRequestLogContext {
 		this.fireDidChange();
 	}
 
-	private fullResponsePromise: Promise<string | undefined> | undefined = undefined;
+	private fullResponsePromise: Promise<string | undefined> | undefined =
+		undefined;
 	private fullResponse: string | undefined = undefined;
 	setFullResponse(promise: Promise<string | undefined>): void {
 		this.fullResponsePromise = promise;
-		promise.then(response => this.fullResponse = response);
+		promise.then((response) => (this.fullResponse = response));
 	}
 
 	async allPromisesResolved(): Promise<void> {
@@ -562,7 +637,7 @@ export class InlineEditRequestLogContext {
 		lines.push('```');
 
 		// Parse trace lines into structured data
-		const parsedTraces = this._trace.map(line => {
+		const parsedTraces = this._trace.map((line) => {
 			const timeMatch = line.match(/^\[\s*(\d+)ms\]/);
 			const timestamp = timeMatch ? parseInt(timeMatch[1], 10) : 0;
 
@@ -588,12 +663,21 @@ export class InlineEditRequestLogContext {
 		}
 
 		// Find the maximum timestamp for time width calculation
-		const maxTime = Math.max(...parsedTraces.map(t => t.timestamp));
+		const maxTime = Math.max(...parsedTraces.map((t) => t.timestamp));
 		const timeWidth = Math.max(6, String(maxTime).length + 3);
 
 		// Build a map of segment paths to track when they start/end
-		const activeSegments = new Map<string, { startTime: number; depth: number }>();
-		const segmentLifetimes: { path: string; startTime: number; endTime: number; depth: number; name: string }[] = [];
+		const activeSegments = new Map<
+			string,
+			{ startTime: number; depth: number }
+		>();
+		const segmentLifetimes: {
+			path: string;
+			startTime: number;
+			endTime: number;
+			depth: number;
+			name: string;
+		}[] = [];
 
 		parsedTraces.forEach((trace, idx) => {
 			const currentPath = trace.segments.join('|');
@@ -606,7 +690,7 @@ export class InlineEditRequestLogContext {
 						startTime: info.startTime,
 						endTime: trace.timestamp,
 						depth: info.depth,
-						name: path.split('|').pop() || ''
+						name: path.split('|').pop() || '',
 					});
 					activeSegments.delete(path);
 				}
@@ -617,20 +701,24 @@ export class InlineEditRequestLogContext {
 			trace.segments.forEach((segment, depth) => {
 				pathSoFar = pathSoFar ? `${pathSoFar}|${segment}` : segment;
 				if (!activeSegments.has(pathSoFar)) {
-					activeSegments.set(pathSoFar, { startTime: trace.timestamp, depth });
+					activeSegments.set(pathSoFar, {
+						startTime: trace.timestamp,
+						depth,
+					});
 				}
 			});
 		});
 
 		// Close any remaining active segments
-		const lastTimestamp = parsedTraces[parsedTraces.length - 1]?.timestamp || 0;
+		const lastTimestamp =
+			parsedTraces[parsedTraces.length - 1]?.timestamp || 0;
 		for (const [path, info] of activeSegments) {
 			segmentLifetimes.push({
 				path,
 				startTime: info.startTime,
 				endTime: lastTimestamp,
 				depth: info.depth,
-				name: path.split('|').pop() || ''
+				name: path.split('|').pop() || '',
 			});
 		}
 
@@ -673,7 +761,9 @@ export class InlineEditRequestLogContext {
 				lines.push(`${timeStr} ${prefix}[${displaySegment}]`);
 				if (trace.message) {
 					const msgIndent = indentUnit.repeat(trace.segments.length);
-					lines.push(`${' '.repeat(timeWidth + 1)} ${msgIndent}↳ ${trace.message}`);
+					lines.push(
+						`${' '.repeat(timeWidth + 1)} ${msgIndent}↳ ${trace.message}`,
+					);
 				}
 			} else if (trace.message) {
 				// Just a message at the current depth
@@ -691,7 +781,12 @@ export class InlineEditRequestLogContext {
 
 	private _logs: string[] = [];
 	addLog(content: string): void {
-		this._logs.push(content.replace('\n', '\\n').replace('\t', '\\t').replace('`', '\`') + '\n');
+		this._logs.push(
+			content
+				.replace('\n', '\\n')
+				.replace('\t', '\\t')
+				.replace('`', '\`') + '\n',
+		);
 		this.fireDidChange();
 	}
 
@@ -701,14 +796,13 @@ export class InlineEditRequestLogContext {
 		this._rebaseFailure = failure;
 	}
 
-
 	private _isAccepted: boolean | undefined = undefined;
 	setAccepted(isAccepted: boolean): void {
 		this._isAccepted = isAccepted;
 	}
 
 	addListToLog(list: string[]): void {
-		list.forEach(l => this.addLog(`- ${l}`));
+		list.forEach((l) => this.addLog(`- ${l}`));
 	}
 
 	addCodeblockToLog(code: string, language: string = ''): void {
@@ -755,7 +849,9 @@ export class InlineEditRequestLogContext {
 			fetchEndTime: this.fetchEndTime,
 			logs: this._logs,
 			isAccepted: this._isAccepted,
-			languageContext: this._languageContext ? serializeLanguageContext(this._languageContext) : undefined,
+			languageContext: this._languageContext
+				? serializeLanguageContext(this._languageContext)
+				: undefined,
 			diagnostics: this._fileDiagnostics,
 			terminalOutput: this._terminalOutput,
 		};
@@ -764,13 +860,19 @@ export class InlineEditRequestLogContext {
 
 function basename(path: string): string {
 	const slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-	if (slash === -1) { return path; }
+	if (slash === -1) {
+		return path;
+	}
 	return path.slice(slash + 1);
 }
 
 export interface INextEditProviderTest {
 	// from least recent to most recent
-	recentWorkspaceEdits: { path: string; initialText: string; edit: SerializedEdit }[];
+	recentWorkspaceEdits: {
+		path: string;
+		initialText: string;
+		edit: SerializedEdit;
+	}[];
 	recentWorkspaceEditsActiveDocumentIdx?: number; // by default the last document
 	statelessDocuments?: { initialText: string; edit: SerializedLineEdit }[];
 	statelessActiveDocumentIdx?: number; // by default the last document

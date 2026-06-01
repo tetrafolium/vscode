@@ -6,7 +6,11 @@
 import type { WindowState } from 'vscode';
 import { Event } from '../../../util/vs/base/common/event';
 import { URI } from '../../../util/vs/base/common/uri';
-import { AbstractEnvService, NameAndVersion, OperatingSystem } from './envService';
+import {
+	AbstractEnvService,
+	NameAndVersion,
+	OperatingSystem,
+} from './envService';
 import { packageJson } from './packagejson';
 
 export class NullEnvService extends AbstractEnvService {
@@ -69,7 +73,10 @@ export class NullEnvService extends AbstractEnvService {
 	}
 
 	override getEditorInfo(): NameAndVersion {
-		return new NameAndVersion('simulation-tests-editor', packageJson.engines.vscode.match(/\d+\.\d+/)?.[0] ?? '1.89');
+		return new NameAndVersion(
+			'simulation-tests-editor',
+			packageJson.engines.vscode.match(/\d+\.\d+/)?.[0] ?? '1.89',
+		);
 	}
 
 	override getEditorPluginInfo(): NameAndVersion {

@@ -25,14 +25,20 @@ export class MockTraitsProvider extends RelatedFilesProvider {
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IIgnoreService ignoreService: IIgnoreService,
 		@ICompletionsLogTargetService logTarget: ICompletionsLogTargetService,
-		@ICompletionsFileSystemService fileSystemService: ICompletionsFileSystemService,
+		@ICompletionsFileSystemService
+		fileSystemService: ICompletionsFileSystemService,
 	) {
-		super(instantiationService, ignoreService, logTarget, fileSystemService);
+		super(
+			instantiationService,
+			ignoreService,
+			logTarget,
+			fileSystemService,
+		);
 	}
 
 	async getRelatedFilesResponse(
 		docInfo: RelatedFilesDocumentInfo,
-		telemetryData: TelemetryWithExp
+		telemetryData: TelemetryWithExp,
 	): Promise<RelatedFilesResponse | undefined> {
 		return Promise.resolve({
 			entries: [],

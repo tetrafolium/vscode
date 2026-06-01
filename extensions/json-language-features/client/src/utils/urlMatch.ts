@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Uri } from 'vscode';
+import { Uri } from "vscode";
 
 /**
  * Check whether a URL matches the list of trusted domains or URIs.
@@ -16,19 +16,22 @@ import { Uri } from 'vscode';
  * @param url The URL to check
  * @param trustedDomains Object mapping domain patterns to boolean trust values
  */
-export function matchesUrlPattern(url: Uri, trustedDomains: Record<string, boolean>): boolean {
+export function matchesUrlPattern(
+	url: Uri,
+	trustedDomains: Record<string, boolean>,
+): boolean {
 	// Check localhost
 	if (isLocalhostAuthority(url.authority)) {
 		return true;
 	}
 
 	for (const [pattern, isTrusted] of Object.entries(trustedDomains)) {
-		if (typeof pattern !== 'string' || pattern.trim() === '') {
+		if (typeof pattern !== "string" || pattern.trim() === "") {
 			continue;
 		}
 
 		// Wildcard matches everything
-		if (pattern === '*') {
+		if (pattern === "*") {
 			return isTrusted;
 		}
 
@@ -60,7 +63,10 @@ export function matchesUrlPattern(url: Uri, trustedDomains: Record<string, boole
 	return false;
 }
 
-function matchesAuthority(urlAuthority: string, patternAuthority: string): boolean {
+function matchesAuthority(
+	urlAuthority: string,
+	patternAuthority: string,
+): boolean {
 	urlAuthority = urlAuthority.toLowerCase();
 	patternAuthority = patternAuthority.toLowerCase();
 
@@ -68,10 +74,13 @@ function matchesAuthority(urlAuthority: string, patternAuthority: string): boole
 		return true;
 	}
 	// Handle wildcard subdomains (e.g., *.github.com)
-	if (patternAuthority.startsWith('*.')) {
+	if (patternAuthority.startsWith("*.")) {
 		const patternDomain = patternAuthority.substring(2);
 		// Exact match or subdomain match
-		return urlAuthority === patternDomain || urlAuthority.endsWith('.' + patternDomain);
+		return (
+			urlAuthority === patternDomain ||
+			urlAuthority.endsWith("." + patternDomain)
+		);
 	}
 
 	return false;
@@ -79,7 +88,7 @@ function matchesAuthority(urlAuthority: string, patternAuthority: string): boole
 
 function matchesPath(urlPath: string, patternPath: string): boolean {
 	// Empty pattern path or just "/" matches any path
-	if (!patternPath || patternPath === '/') {
+	if (!patternPath || patternPath === "/") {
 		return true;
 	}
 
@@ -89,19 +98,22 @@ function matchesPath(urlPath: string, patternPath: string): boolean {
 	}
 
 	// If pattern ends with '/', it matches any path starting with it
-	if (patternPath.endsWith('/')) {
+	if (patternPath.endsWith("/")) {
 		return urlPath.startsWith(patternPath);
 	}
 
 	// Otherwise, pattern must be a prefix
-	return urlPath.startsWith(patternPath + '/') || urlPath === patternPath;
+	return urlPath.startsWith(patternPath + "/") || urlPath === patternPath;
 }
-
 
 const rLocalhost = /^(.+\.)?localhost(:\d+)?$/i;
 const r127 = /^127\.0\.0\.1(:\d+)?$/;
 const rIPv6Localhost = /^\[::1\](:\d+)?$/;
 
 function isLocalhostAuthority(authority: string): boolean {
-	return rLocalhost.test(authority) || r127.test(authority) || rIPv6Localhost.test(authority);
+	return (
+		rLocalhost.test(authority) ||
+		r127.test(authority) ||
+		rIPv6Localhost.test(authority)
+	);
 }

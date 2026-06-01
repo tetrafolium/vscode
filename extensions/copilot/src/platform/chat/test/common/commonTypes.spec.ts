@@ -4,10 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, test } from 'vitest';
-import { ChatFetchResponseType, getErrorDetailsFromChatFetchError, type ChatFetchError } from '../../common/commonTypes';
+import {
+	ChatFetchResponseType,
+	getErrorDetailsFromChatFetchError,
+	type ChatFetchError,
+} from '../../common/commonTypes';
 import { GitHubOutageStatus } from '../../../github/common/githubService';
 
-function makeQuotaExceededError(capiError?: { code?: string; message?: string }): ChatFetchError {
+function makeQuotaExceededError(capiError?: {
+	code?: string;
+	message?: string;
+}): ChatFetchError {
 	return {
 		type: ChatFetchResponseType.QuotaExceeded,
 		reason: 'quota exceeded',
@@ -22,7 +29,10 @@ describe('getErrorDetailsFromChatFetchError', () => {
 	describe('QuotaExceeded with additional_spend_limit_reached', () => {
 		test('returns upgrade message and additional_spend_limit_reached code', () => {
 			const result = getErrorDetailsFromChatFetchError(
-				makeQuotaExceededError({ code: 'additional_spend_limit_reached', message: 'Spend limit reached' }),
+				makeQuotaExceededError({
+					code: 'additional_spend_limit_reached',
+					message: 'Spend limit reached',
+				}),
 				'individual',
 				GitHubOutageStatus.None,
 			);
@@ -37,7 +47,10 @@ describe('getErrorDetailsFromChatFetchError', () => {
 	describe('QuotaExceeded with quota_exceeded', () => {
 		test('returns per-plan message for individual plan', () => {
 			const result = getErrorDetailsFromChatFetchError(
-				makeQuotaExceededError({ code: 'quota_exceeded', message: 'Quota exceeded' }),
+				makeQuotaExceededError({
+					code: 'quota_exceeded',
+					message: 'Quota exceeded',
+				}),
 				'individual',
 				GitHubOutageStatus.None,
 			);
@@ -48,7 +61,10 @@ describe('getErrorDetailsFromChatFetchError', () => {
 
 		test('returns per-plan message for free plan', () => {
 			const result = getErrorDetailsFromChatFetchError(
-				makeQuotaExceededError({ code: 'quota_exceeded', message: 'Quota exceeded' }),
+				makeQuotaExceededError({
+					code: 'quota_exceeded',
+					message: 'Quota exceeded',
+				}),
 				'free',
 				GitHubOutageStatus.None,
 			);
@@ -61,7 +77,10 @@ describe('getErrorDetailsFromChatFetchError', () => {
 	describe('QuotaExceeded with free_quota_exceeded', () => {
 		test('remaps to quota_exceeded and returns per-plan message', () => {
 			const result = getErrorDetailsFromChatFetchError(
-				makeQuotaExceededError({ code: 'free_quota_exceeded', message: 'Free quota exceeded' }),
+				makeQuotaExceededError({
+					code: 'free_quota_exceeded',
+					message: 'Free quota exceeded',
+				}),
 				'free',
 				GitHubOutageStatus.None,
 			);
@@ -74,7 +93,10 @@ describe('getErrorDetailsFromChatFetchError', () => {
 	describe('QuotaExceeded with overage_limit_reached', () => {
 		test('returns support contact message', () => {
 			const result = getErrorDetailsFromChatFetchError(
-				makeQuotaExceededError({ code: 'overage_limit_reached', message: 'Overage limit reached' }),
+				makeQuotaExceededError({
+					code: 'overage_limit_reached',
+					message: 'Overage limit reached',
+				}),
 				'individual',
 				GitHubOutageStatus.None,
 			);
@@ -111,7 +133,10 @@ describe('getErrorDetailsFromChatFetchError', () => {
 	describe('QuotaExceeded with unknown CAPI error code', () => {
 		test('shows server error message with unknown code', () => {
 			const result = getErrorDetailsFromChatFetchError(
-				makeQuotaExceededError({ code: 'unknown_error', message: 'Something went wrong' }),
+				makeQuotaExceededError({
+					code: 'unknown_error',
+					message: 'Something went wrong',
+				}),
 				'individual',
 				GitHubOutageStatus.None,
 			);

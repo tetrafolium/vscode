@@ -5,8 +5,14 @@
 
 import * as assert from 'assert';
 import Sinon from 'sinon';
-import { IInstantiationService, ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
-import { CompletionNotifier, CompletionRequestedEvent } from '../completionNotifier';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	CompletionNotifier,
+	CompletionRequestedEvent,
+} from '../completionNotifier';
 import { CompletionState, createCompletionState } from '../completionState';
 import { TelemetryWithExp } from '../telemetry';
 import { createLibTestingContext } from './context';
@@ -25,7 +31,12 @@ suite('Completion Notifier', function () {
 		const instantiationService = accessor.get(IInstantiationService);
 		notifier = instantiationService.createInstance(CompletionNotifier);
 
-		const textDocument = createTextDocument('file:///test.ts', 'typescript', 1, 'const x = ');
+		const textDocument = createTextDocument(
+			'file:///test.ts',
+			'typescript',
+			1,
+			'const x = ',
+		);
 		const position = { line: 0, character: 10 };
 		completionState = createCompletionState(textDocument, position);
 		telemetryData = TelemetryWithExp.createEmptyConfigForTesting();
@@ -39,13 +50,19 @@ suite('Completion Notifier', function () {
 
 	test('should notify about requests', function () {
 		let notifiedEvent: CompletionRequestedEvent | undefined;
-		const disposable = notifier.onRequest((event: CompletionRequestedEvent) => {
-			notifiedEvent = event;
-		});
+		const disposable = notifier.onRequest(
+			(event: CompletionRequestedEvent) => {
+				notifiedEvent = event;
+			},
+		);
 
 		for (let i = 0; i < 3; i++) {
 			const completionId = `test-completion-id-${i}`;
-			notifier.notifyRequest(completionState, completionId, telemetryData);
+			notifier.notifyRequest(
+				completionState,
+				completionId,
+				telemetryData,
+			);
 			assert.ok(notifiedEvent, 'Expected event to be notified');
 			assert.strictEqual(notifiedEvent.completionId, completionId);
 			assert.strictEqual(notifiedEvent.completionState, completionState);
@@ -64,13 +81,21 @@ suite('Completion Notifier', function () {
 		});
 
 		try {
-			notifier.notifyRequest(completionState, 'test-completion-id', telemetryData);
+			notifier.notifyRequest(
+				completionState,
+				'test-completion-id',
+				telemetryData,
+			);
 			// If we reach here, the error was caught and handled properly
 		} catch (error) {
 			errorThrown = true;
 		}
 
-		assert.strictEqual(errorThrown, false, 'Error should be caught and not propagated');
+		assert.strictEqual(
+			errorThrown,
+			false,
+			'Error should be caught and not propagated',
+		);
 		disposable.dispose();
 	});
 
@@ -85,8 +110,16 @@ suite('Completion Notifier', function () {
 		requestDisposable.dispose();
 
 		// Make a request - should not trigger any listeners
-		notifier.notifyRequest(completionState, 'test-completion-id', telemetryData);
+		notifier.notifyRequest(
+			completionState,
+			'test-completion-id',
+			telemetryData,
+		);
 
-		assert.strictEqual(requestCount, 0, 'Request listener should be disposed');
+		assert.strictEqual(
+			requestCount,
+			0,
+			'Request listener should be disposed',
+		);
 	});
 });

@@ -37,20 +37,22 @@ export interface RawThinkingDelta {
 	signature?: string;
 }
 
-export type ThinkingDelta = {
-	text?: string | string[];
-	id: string;
-	metadata?: { readonly [key: string]: any };
-} | {
-	text?: string | string[];
-	id?: string;
-	metadata: { readonly [key: string]: any };
-} |
-{
-	text: string | string[];
-	id?: string;
-	metadata?: { readonly [key: string]: any };
-};
+export type ThinkingDelta =
+	| {
+			text?: string | string[];
+			id: string;
+			metadata?: { readonly [key: string]: any };
+	  }
+	| {
+			text?: string | string[];
+			id?: string;
+			metadata: { readonly [key: string]: any };
+	  }
+	| {
+			text: string | string[];
+			id?: string;
+			metadata?: { readonly [key: string]: any };
+	  };
 
 export type EncryptedThinkingDelta = {
 	id: string;
@@ -58,7 +60,9 @@ export type EncryptedThinkingDelta = {
 	encrypted: string;
 };
 
-export function isEncryptedThinkingDelta(delta: ThinkingDelta | EncryptedThinkingDelta): delta is EncryptedThinkingDelta {
+export function isEncryptedThinkingDelta(
+	delta: ThinkingDelta | EncryptedThinkingDelta,
+): delta is EncryptedThinkingDelta {
 	return (delta as EncryptedThinkingDelta).encrypted !== undefined;
 }
 

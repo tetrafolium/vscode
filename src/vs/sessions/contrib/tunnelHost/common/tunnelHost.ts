@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { ITunnelHostInfo } from '../../../../platform/agentHost/common/tunnelAgentHost.js';
+import { Event } from "../../../../base/common/event.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { ITunnelHostInfo } from "../../../../platform/agentHost/common/tunnelAgentHost.js";
 
-export const ITunnelHostService = createDecorator<ITunnelHostService>('tunnelHostService');
+export const ITunnelHostService =
+	createDecorator<ITunnelHostService>("tunnelHostService");
 
 export interface ITunnelHostService {
 	readonly _serviceBrand: undefined;

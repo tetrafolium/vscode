@@ -21,19 +21,30 @@
 	pointer-events: none;
 }
 
-.agent-sessions-workbench .sessions-loading-overlay .sessions-loading-icon.codicon {
+.agent-sessions-workbench
+	.sessions-loading-overlay
+	.sessions-loading-icon.codicon {
 	font-size: 112px;
 	color: var(--vscode-foreground);
 	animation: sessions-loading-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes sessions-loading-pulse {
-	0%, 100% { opacity: 0.4; transform: scale(0.95); }
-	50%      { opacity: 1;   transform: scale(1.05); }
+	0%,
+	100% {
+		opacity: 0.4;
+		transform: scale(0.95);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1.05);
+	}
 }
 
 .monaco-reduce-motion .sessions-loading-overlay .sessions-loading-icon,
-.agent-sessions-workbench.monaco-reduce-motion .sessions-loading-overlay .sessions-loading-icon {
+.agent-sessions-workbench.monaco-reduce-motion
+	.sessions-loading-overlay
+	.sessions-loading-icon {
 	animation: none;
 	opacity: 0.7;
 }
@@ -41,11 +52,8 @@
 /* ---- Welcome Dialog ---- */
 
 .chat-setup-dialog.sessions-main-welcome-dialog {
-
 	/* Icon spacing in vertical layout */
 	&.align-vertical .dialog-message-row > .dialog-icon.codicon {
 		margin-bottom: 12px;
 	}
-
 }
-

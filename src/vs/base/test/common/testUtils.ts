@@ -3,10 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 export function flakySuite(title: string, fn: () => void) /* Suite */ {
 	return suite(title, function () {
-
 		// Flaky suites need retries and timeout to complete
 		// e.g. because they access browser features which can
 		// be unreliable depending on the environment.

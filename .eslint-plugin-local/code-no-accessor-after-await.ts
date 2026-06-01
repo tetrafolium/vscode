@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { TSESTree } from '@typescript-eslint/utils';
-import * as eslint from 'eslint';
+import { TSESTree } from "@typescript-eslint/utils";
+import * as eslint from "eslint";
 
 /**
  * Lint rule that prevents using a `ServicesAccessor` after an `await` expression.
@@ -21,11 +21,13 @@ import * as eslint from 'eslint';
  *    always called through `invokeFunction` at runtime (e.g. `Action2.run`,
  *    `ICommandHandler`).
  */
-export default new class NoAccessorAfterAwait implements eslint.Rule.RuleModule {
-
+export default new (class NoAccessorAfterAwait
+	implements eslint.Rule.RuleModule
+{
 	readonly meta: eslint.Rule.RuleMetaData = {
 		messages: {
-			accessorAfterAwait: 'ServicesAccessor \'{{name}}\' must not be used after \'await\'. The accessor is only valid synchronously. Extract needed services before any async operation.',
+			accessorAfterAwait:
+				"ServicesAccessor '{{name}}' must not be used after 'await'. The accessor is only valid synchronously. Extract needed services before any async operation.",
 		},
 		schema: false,
 	};
@@ -33,16 +35,21 @@ export default new class NoAccessorAfterAwait implements eslint.Rule.RuleModule 
 	create(context: eslint.Rule.RuleContext): eslint.Rule.RuleListener {
 		return {
 			// Strategy 1: invokeFunction / invokeWithinContext calls
-			'CallExpression': (node: eslint.Rule.Node) => {
+			CallExpression: (node: eslint.Rule.Node) => {
 				const callExpression = node as unknown as TSESTree.CallExpression;
 
 				if (!isInvokeFunctionCall(callExpression.callee)) {
 					return;
 				}
 
-				const functionArg = callExpression.arguments.find(arg =>
-					arg.type === 'ArrowFunctionExpression' || arg.type === 'FunctionExpression'
-				) as TSESTree.ArrowFunctionExpression | TSESTree.FunctionExpression | undefined;
+				const functionArg = callExpression.arguments.find(
+					(arg) =>
+						arg.type === "ArrowFunctionExpression" ||
+						arg.type === "FunctionExpression",
+				) as
+					| TSESTree.ArrowFunctionExpression
+					| TSESTree.FunctionExpression
+					| undefined;
 
 				if (!functionArg || functionArg.params.length === 0) {
 					return;
@@ -57,25 +64,37 @@ export default new class NoAccessorAfterAwait implements eslint.Rule.RuleModule 
 			},
 
 			// Strategy 2: functions/methods with a `ServicesAccessor` typed parameter
-			'FunctionDeclaration': (node: eslint.Rule.Node) => {
-				checkFunctionWithAccessorParam(node as unknown as TSESTree.FunctionDeclaration, context);
+			FunctionDeclaration: (node: eslint.Rule.Node) => {
+				checkFunctionWithAccessorParam(
+					node as unknown as TSESTree.FunctionDeclaration,
+					context,
+				);
 			},
-			'FunctionExpression': (node: eslint.Rule.Node) => {
-				checkFunctionWithAccessorParam(node as unknown as TSESTree.FunctionExpression, context);
+			FunctionExpression: (node: eslint.Rule.Node) => {
+				checkFunctionWithAccessorParam(
+					node as unknown as TSESTree.FunctionExpression,
+					context,
+				);
 			},
-			'ArrowFunctionExpression': (node: eslint.Rule.Node) => {
-				checkFunctionWithAccessorParam(node as unknown as TSESTree.ArrowFunctionExpression, context);
+			ArrowFunctionExpression: (node: eslint.Rule.Node) => {
+				checkFunctionWithAccessorParam(
+					node as unknown as TSESTree.ArrowFunctionExpression,
+					context,
+				);
 			},
 		};
 	}
-};
+})();
 
 function checkFunctionWithAccessorParam(
-	fn: TSESTree.FunctionDeclaration | TSESTree.FunctionExpression | TSESTree.ArrowFunctionExpression,
-	context: eslint.Rule.RuleContext
+	fn:
+		| TSESTree.FunctionDeclaration
+		| TSESTree.FunctionExpression
+		| TSESTree.ArrowFunctionExpression,
+	context: eslint.Rule.RuleContext,
 ) {
 	for (const param of fn.params) {
-		if (param.type === 'Identifier' && hasServicesAccessorAnnotation(param)) {
+		if (param.type === "Identifier" && hasServicesAccessorAnnotation(param)) {
 			// Skip if this function is the direct callback of an invokeFunction call
 			// (already handled by strategy 1)
 			if (isDirectInvokeFunctionCallback(fn)) {
@@ -92,31 +111,43 @@ function checkFunctionWithAccessorParam(
  * `invokeFunction` / `invokeWithinContext` call.
  */
 function isDirectInvokeFunctionCallback(
-	fn: TSESTree.FunctionDeclaration | TSESTree.FunctionExpression | TSESTree.ArrowFunctionExpression
+	fn:
+		| TSESTree.FunctionDeclaration
+		| TSESTree.FunctionExpression
+		| TSESTree.ArrowFunctionExpression,
 ): boolean {
 	const parent = fn.parent;
-	if (parent?.type === 'CallExpression' && isInvokeFunctionCall(parent.callee)) {
-		return parent.arguments.some(arg => arg === fn);
+	if (
+		parent?.type === "CallExpression" &&
+		isInvokeFunctionCall(parent.callee)
+	) {
+		return parent.arguments.some((arg) => arg === fn);
 	}
 	return false;
 }
 
 function hasServicesAccessorAnnotation(param: TSESTree.Identifier): boolean {
 	const annotation = param.typeAnnotation;
-	if (!annotation || annotation.type !== 'TSTypeAnnotation') {
+	if (!annotation || annotation.type !== "TSTypeAnnotation") {
 		return false;
 	}
 	const typeNode = annotation.typeAnnotation;
-	if (typeNode.type === 'TSTypeReference' && typeNode.typeName.type === 'Identifier') {
-		return typeNode.typeName.name === 'ServicesAccessor';
+	if (
+		typeNode.type === "TSTypeReference" &&
+		typeNode.typeName.type === "Identifier"
+	) {
+		return typeNode.typeName.name === "ServicesAccessor";
 	}
 	return false;
 }
 
 function checkForAccessorAfterAwait(
-	fn: TSESTree.ArrowFunctionExpression | TSESTree.FunctionExpression | TSESTree.FunctionDeclaration,
+	fn:
+		| TSESTree.ArrowFunctionExpression
+		| TSESTree.FunctionExpression
+		| TSESTree.FunctionDeclaration,
 	accessorName: string,
-	context: eslint.Rule.RuleContext
+	context: eslint.Rule.RuleContext,
 ) {
 	let sawAwait = false;
 	const visited = new Set<TSESTree.Node>();
@@ -129,14 +160,16 @@ function checkForAccessorAfterAwait(
 
 		// Don't descend into nested function scopes — they have their own
 		// async context and the accessor name may be shadowed.
-		if (node !== fn &&
-			(node.type === 'ArrowFunctionExpression' ||
-				node.type === 'FunctionExpression' ||
-				node.type === 'FunctionDeclaration')) {
+		if (
+			node !== fn &&
+			(node.type === "ArrowFunctionExpression" ||
+				node.type === "FunctionExpression" ||
+				node.type === "FunctionDeclaration")
+		) {
 			return;
 		}
 
-		if (node.type === 'AwaitExpression') {
+		if (node.type === "AwaitExpression") {
 			// Walk the argument first (it is evaluated before the await suspends)
 			if (node.argument) {
 				walk(node.argument);
@@ -148,7 +181,7 @@ function checkForAccessorAfterAwait(
 		if (isAccessorUsage(node, accessorName) && sawAwait) {
 			context.report({
 				node: node as unknown as eslint.Rule.Node,
-				messageId: 'accessorAfterAwait',
+				messageId: "accessorAfterAwait",
 				data: { name: accessorName },
 			});
 			return;
@@ -156,7 +189,7 @@ function checkForAccessorAfterAwait(
 
 		// Branch-aware walking: isolate await state across branches so an
 		// await in one branch does not taint the other branch.
-		if (node.type === 'IfStatement') {
+		if (node.type === "IfStatement") {
 			walk(node.test);
 			const beforeBranches = sawAwait;
 
@@ -171,7 +204,9 @@ function checkForAccessorAfterAwait(
 				walk(node.alternate);
 			}
 			const awaitAfterAlternate = sawAwait;
-			const alternateExits = node.alternate ? blockAlwaysExits(node.alternate) : false;
+			const alternateExits = node.alternate
+				? blockAlwaysExits(node.alternate)
+				: false;
 
 			// Determine sawAwait for code after the if-statement.
 			// If a branch always exits (return/throw), code after is only
@@ -191,7 +226,7 @@ function checkForAccessorAfterAwait(
 			return;
 		}
 
-		if (node.type === 'ConditionalExpression') {
+		if (node.type === "ConditionalExpression") {
 			walk(node.test);
 			const beforeBranches = sawAwait;
 			walk(node.consequent);
@@ -202,13 +237,15 @@ function checkForAccessorAfterAwait(
 			return;
 		}
 
-		if (node.type === 'SwitchStatement') {
+		if (node.type === "SwitchStatement") {
 			walk(node.discriminant);
 			const beforeCases = sawAwait;
 			let anyCaseHadAwait = false;
 			for (const c of node.cases) {
 				sawAwait = beforeCases;
-				if (c.test) { walk(c.test); }
+				if (c.test) {
+					walk(c.test);
+				}
 				c.consequent.forEach(walk);
 				anyCaseHadAwait = anyCaseHadAwait || sawAwait;
 			}
@@ -216,22 +253,26 @@ function checkForAccessorAfterAwait(
 			return;
 		}
 
-		if (node.type === 'TryStatement') {
+		if (node.type === "TryStatement") {
 			const beforeTry = sawAwait;
 			walk(node.block);
 			const awaitAfterTry = sawAwait;
 			// Catch: an exception may have been thrown before or after an await
 			// in the try block, so we conservatively use the before-try state.
 			sawAwait = beforeTry;
-			if (node.handler) { walk(node.handler.body); }
+			if (node.handler) {
+				walk(node.handler.body);
+			}
 			const awaitAfterCatch = sawAwait;
 			sawAwait = awaitAfterTry || awaitAfterCatch;
-			if (node.finalizer) { walk(node.finalizer); }
+			if (node.finalizer) {
+				walk(node.finalizer);
+			}
 			return;
 		}
 
 		// `for await...of` suspends on each iteration
-		if (node.type === 'ForOfStatement' && node.await) {
+		if (node.type === "ForOfStatement" && node.await) {
 			walkChildren(node, (child) => {
 				if (child === node.right) {
 					walk(child);
@@ -258,15 +299,18 @@ function checkForAccessorAfterAwait(
  * enclosing function, so they are intentionally excluded.
  */
 function blockAlwaysExits(node: TSESTree.Node): boolean {
-	if (node.type === 'ReturnStatement' || node.type === 'ThrowStatement') {
+	if (node.type === "ReturnStatement" || node.type === "ThrowStatement") {
 		return true;
 	}
-	if (node.type === 'BlockStatement' && node.body.length > 0) {
+	if (node.type === "BlockStatement" && node.body.length > 0) {
 		return blockAlwaysExits(node.body[node.body.length - 1]);
 	}
-	if (node.type === 'IfStatement') {
-		return blockAlwaysExits(node.consequent) &&
-			!!node.alternate && blockAlwaysExits(node.alternate);
+	if (node.type === "IfStatement") {
+		return (
+			blockAlwaysExits(node.consequent) &&
+			!!node.alternate &&
+			blockAlwaysExits(node.alternate)
+		);
 	}
 	return false;
 }
@@ -277,118 +321,141 @@ function blockAlwaysExits(node: TSESTree.Node): boolean {
  */
 function isAccessorUsage(node: TSESTree.Node, accessorName: string): boolean {
 	// accessor.get(...)
-	if (node.type === 'CallExpression' &&
-		node.callee.type === 'MemberExpression' &&
-		node.callee.object.type === 'Identifier' &&
-		node.callee.object.name === accessorName) {
+	if (
+		node.type === "CallExpression" &&
+		node.callee.type === "MemberExpression" &&
+		node.callee.object.type === "Identifier" &&
+		node.callee.object.name === accessorName
+	) {
 		return true;
 	}
 	// Passing accessor as an argument: someFunction(accessor)
-	if (node.type === 'Identifier' && node.name === accessorName) {
+	if (node.type === "Identifier" && node.name === accessorName) {
 		// Only flag when used as a call argument or assignment, not in
 		// the function's own parameter list
 		const parent = node.parent;
-		if (parent?.type === 'CallExpression' && parent.arguments.includes(node)) {
+		if (parent?.type === "CallExpression" && parent.arguments.includes(node)) {
 			return true;
 		}
 	}
 	return false;
 }
 
-function walkChildren(node: TSESTree.Node, visit: (child: TSESTree.Node) => void) {
+function walkChildren(
+	node: TSESTree.Node,
+	visit: (child: TSESTree.Node) => void,
+) {
 	switch (node.type) {
-		case 'BlockStatement':
+		case "BlockStatement":
 			node.body.forEach(visit);
 			break;
-		case 'ExpressionStatement':
+		case "ExpressionStatement":
 			visit(node.expression);
 			break;
-		case 'VariableDeclaration':
-			node.declarations.forEach(decl => {
-				if (decl.init) { visit(decl.init); }
+		case "VariableDeclaration":
+			node.declarations.forEach((decl) => {
+				if (decl.init) {
+					visit(decl.init);
+				}
 			});
 			break;
-		case 'CallExpression':
+		case "CallExpression":
 			visit(node.callee);
 			node.arguments.forEach(visit);
 			break;
-		case 'MemberExpression':
+		case "MemberExpression":
 			visit(node.object);
-			if (node.computed) { visit(node.property); }
+			if (node.computed) {
+				visit(node.property);
+			}
 			break;
 
-		case 'ReturnStatement':
-			if (node.argument) { visit(node.argument); }
+		case "ReturnStatement":
+			if (node.argument) {
+				visit(node.argument);
+			}
 			break;
-		case 'BinaryExpression':
-		case 'LogicalExpression':
+		case "BinaryExpression":
+		case "LogicalExpression":
 			visit(node.left);
 			visit(node.right);
 			break;
-		case 'AssignmentExpression':
+		case "AssignmentExpression":
 			visit(node.left);
 			visit(node.right);
 			break;
-		case 'TemplateLiteral':
+		case "TemplateLiteral":
 			node.expressions.forEach(visit);
 			break;
-		case 'TaggedTemplateExpression':
+		case "TaggedTemplateExpression":
 			visit(node.tag);
 			visit(node.quasi);
 			break;
-		case 'ArrayExpression':
-			node.elements.forEach(e => { if (e) { visit(e); } });
+		case "ArrayExpression":
+			node.elements.forEach((e) => {
+				if (e) {
+					visit(e);
+				}
+			});
 			break;
-		case 'ObjectExpression':
-			node.properties.forEach(p => {
-				if (p.type === 'Property') {
+		case "ObjectExpression":
+			node.properties.forEach((p) => {
+				if (p.type === "Property") {
 					visit(p.value);
 				} else {
 					visit(p);
 				}
 			});
 			break;
-		case 'SpreadElement':
+		case "SpreadElement":
 			visit(node.argument);
 			break;
-		case 'UnaryExpression':
-		case 'UpdateExpression':
+		case "UnaryExpression":
+		case "UpdateExpression":
 			visit(node.argument);
 			break;
 
-		case 'ForStatement':
-			if (node.init) { visit(node.init); }
-			if (node.test) { visit(node.test); }
-			if (node.update) { visit(node.update); }
+		case "ForStatement":
+			if (node.init) {
+				visit(node.init);
+			}
+			if (node.test) {
+				visit(node.test);
+			}
+			if (node.update) {
+				visit(node.update);
+			}
 			visit(node.body);
 			break;
-		case 'ForInStatement':
+		case "ForInStatement":
 			visit(node.left);
 			visit(node.right);
 			visit(node.body);
 			break;
-		case 'ForOfStatement':
+		case "ForOfStatement":
 			visit(node.left);
 			visit(node.right);
 			visit(node.body);
 			break;
-		case 'WhileStatement':
-		case 'DoWhileStatement':
+		case "WhileStatement":
+		case "DoWhileStatement":
 			visit(node.test);
 			visit(node.body);
 			break;
-		case 'ThrowStatement':
-			if (node.argument) { visit(node.argument); }
+		case "ThrowStatement":
+			if (node.argument) {
+				visit(node.argument);
+			}
 			break;
-		case 'NewExpression':
+		case "NewExpression":
 			visit(node.callee);
 			node.arguments.forEach(visit);
 			break;
-		case 'SequenceExpression':
+		case "SequenceExpression":
 			node.expressions.forEach(visit);
 			break;
-		case 'TSAsExpression':
-		case 'TSNonNullExpression':
+		case "TSAsExpression":
+		case "TSNonNullExpression":
 			visit(node.expression);
 			break;
 		// Leaf / unhandled nodes — nothing to traverse
@@ -398,23 +465,25 @@ function walkChildren(node: TSESTree.Node, visit: (child: TSESTree.Node) => void
 }
 
 function getParamName(param: TSESTree.Parameter): string | null {
-	if (param.type === 'Identifier') {
+	if (param.type === "Identifier") {
 		return param.name;
 	}
 	return null;
 }
 
-const invokeFunctionNames = new Set(['invokeFunction', 'invokeWithinContext']);
+const invokeFunctionNames = new Set(["invokeFunction", "invokeWithinContext"]);
 
 function isInvokeFunctionCall(callee: TSESTree.Expression): boolean {
 	// object.invokeFunction(...)
-	if (callee.type === 'MemberExpression' &&
-		callee.property.type === 'Identifier' &&
-		invokeFunctionNames.has(callee.property.name)) {
+	if (
+		callee.type === "MemberExpression" &&
+		callee.property.type === "Identifier" &&
+		invokeFunctionNames.has(callee.property.name)
+	) {
 		return true;
 	}
 	// Standalone invokeFunction(...) — unlikely but handle it
-	if (callee.type === 'Identifier' && invokeFunctionNames.has(callee.name)) {
+	if (callee.type === "Identifier" && invokeFunctionNames.has(callee.name)) {
 		return true;
 	}
 	return false;

@@ -22,7 +22,8 @@ async function main() {
 
 	if (filePath) {
 		try {
-			const resolvedFileContents = await resolveMergeConflictFromFile(filePath);
+			const resolvedFileContents =
+				await resolveMergeConflictFromFile(filePath);
 			await fs.promises.writeFile(filePath, resolvedFileContents, 'utf8');
 		} catch (e: unknown) {
 			throw e;
@@ -32,18 +33,24 @@ async function main() {
 
 	if (reconcileUsingGit) {
 		try {
-			await Promise.all(filesWithMergeConflicts.map(async (filePath) => {
-				const resolvedFileContents = await resolveMergeConflictFromFile(filePath);
-				return fs.promises.writeFile(filePath, resolvedFileContents);
-			}));
+			await Promise.all(
+				filesWithMergeConflicts.map(async (filePath) => {
+					const resolvedFileContents =
+						await resolveMergeConflictFromFile(filePath);
+					return fs.promises.writeFile(
+						filePath,
+						resolvedFileContents,
+					);
+				}),
+			);
 			return;
 		} catch (e: unknown) {
 			throw e;
 		}
 	}
 
-
-	console.log(`
+	console.log(
+		`
 Usage: scoredEditReconciler [options]
 
 Options:
@@ -51,23 +58,28 @@ Options:
   --file <path>    Path to the file to resolve merge conflicts
   --list           List files with merge conflicts
   --help           Show help
-		`.trim());
+		`.trim(),
+	);
 }
 
 async function scoredEditsWithMergeConflicts(): Promise<string[]> /* paths */ {
 	const files = await findFilesWithMergeConflicts();
-	return files.filter(file => file.endsWith('scoredEdits.w.json'));
+	return files.filter((file) => file.endsWith('scoredEdits.w.json'));
 }
 
 async function findFilesWithMergeConflicts() {
 	try {
 		// Get files with merge conflicts using git command
-		const gitOutput = execSync('git diff --name-only --diff-filter=U').toString();
+		const gitOutput = execSync(
+			'git diff --name-only --diff-filter=U',
+		).toString();
 
 		// Split output into array of file paths
-		const conflictFiles = gitOutput.split('\n').filter(file => file.trim().length > 0);
+		const conflictFiles = gitOutput
+			.split('\n')
+			.filter((file) => file.trim().length > 0);
 
-		return conflictFiles.map(file => path.resolve(file));
+		return conflictFiles.map((file) => path.resolve(file));
 	} catch (error) {
 		console.error('Error finding files with merge conflicts:', error);
 		return [];
@@ -80,28 +92,40 @@ async function resolveMergeConflictFromFile(filePath: string) {
 }
 
 export function resolveMergeConflict(fileContents: string): string {
-
 	const headFileContents = removeNonHeadSections(fileContents);
 	const nonHeadFileContents = removeHeadSections(fileContents);
 
 	const headFileAsObject = JSON.parse(headFileContents);
 	const nonHeadfileAsObject = JSON.parse(nonHeadFileContents);
-	if (JSON.stringify({ ...headFileAsObject, edits: [] }) !== JSON.stringify({ ...nonHeadfileAsObject, edits: [] })) {
-		throw new Error('There seems to be merge conflict outside `edits` field which this script can resolve automatically.');
+	if (
+		JSON.stringify({ ...headFileAsObject, edits: [] }) !==
+		JSON.stringify({ ...nonHeadfileAsObject, edits: [] })
+	) {
+		throw new Error(
+			'There seems to be merge conflict outside `edits` field which this script can resolve automatically.',
+		);
 	}
 
 	const mergedEdits = [...headFileAsObject.edits];
 
 	for (const edit of nonHeadfileAsObject.edits) {
-		if (!mergedEdits.some(headEdit => JSON.stringify(headEdit) === JSON.stringify(edit))) {
+		if (
+			!mergedEdits.some(
+				(headEdit) => JSON.stringify(headEdit) === JSON.stringify(edit),
+			)
+		) {
 			mergedEdits.push(edit);
 		}
 	}
 
-	const resolvedFileContents = JSON.stringify({
-		...headFileAsObject,
-		edits: mergedEdits
-	}, null, '\t');
+	const resolvedFileContents = JSON.stringify(
+		{
+			...headFileAsObject,
+			edits: mergedEdits,
+		},
+		null,
+		'\t',
+	);
 
 	return resolvedFileContents;
 }

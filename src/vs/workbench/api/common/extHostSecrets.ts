@@ -3,29 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type * as vscode from 'vscode';
+import type * as vscode from "vscode";
 
-import { ExtHostSecretState } from './extHostSecretState.js';
-import { ExtensionIdentifier, IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
-import { Event } from '../../../base/common/event.js';
-import { DisposableStore } from '../../../base/common/lifecycle.js';
+import { ExtHostSecretState } from "./extHostSecretState.js";
+import {
+	ExtensionIdentifier,
+	IExtensionDescription,
+} from "../../../platform/extensions/common/extensions.js";
+import { Event } from "../../../base/common/event.js";
+import { DisposableStore } from "../../../base/common/lifecycle.js";
 
 export class ExtensionSecrets implements vscode.SecretStorage {
-
 	protected readonly _id: string;
 	readonly #secretState: ExtHostSecretState;
 
 	readonly onDidChange: Event<vscode.SecretStorageChangeEvent>;
 	readonly disposables = new DisposableStore();
 
-	constructor(extensionDescription: IExtensionDescription, secretState: ExtHostSecretState) {
+	constructor(
+		extensionDescription: IExtensionDescription,
+		secretState: ExtHostSecretState,
+	) {
 		this._id = ExtensionIdentifier.toKey(extensionDescription.identifier);
 		this.#secretState = secretState;
 
 		this.onDidChange = Event.map(
-			Event.filter(this.#secretState.onDidChangePassword, e => e.extensionId === this._id),
-			e => ({ key: e.key }),
-			this.disposables
+			Event.filter(
+				this.#secretState.onDidChangePassword,
+				(e) => e.extensionId === this._id,
+			),
+			(e) => ({ key: e.key }),
+			this.disposables,
 		);
 	}
 

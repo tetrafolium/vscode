@@ -20,7 +20,7 @@
 }
 
 .agent-sessions-workbench.shell-gradient-background::before {
-	content: '';
+	content: "";
 	position: absolute;
 	inset: 0;
 	z-index: 0;
@@ -33,9 +33,24 @@
 		background:
 			radial-gradient(
 				ellipse 128% 102% at 100% 100%,
-				color-mix(in srgb, var(--vscode-agentsGradient-tintColor) 9%, transparent) 0%,
-				color-mix(in srgb, var(--vscode-agentsGradient-tintColor) 7%, transparent) 16%,
-				color-mix(in srgb, var(--vscode-agentsGradient-tintColor) 5%, transparent) 30%,
+				color-mix(
+						in srgb,
+						var(--vscode-agentsGradient-tintColor) 9%,
+						transparent
+					)
+					0%,
+				color-mix(
+						in srgb,
+						var(--vscode-agentsGradient-tintColor) 7%,
+						transparent
+					)
+					16%,
+				color-mix(
+						in srgb,
+						var(--vscode-agentsGradient-tintColor) 5%,
+						transparent
+					)
+					30%,
 				transparent 60%
 			),
 			var(--vscode-agents-background);
@@ -45,9 +60,24 @@
 		background:
 			radial-gradient(
 				ellipse 128% 102% at 100% 100%,
-				color-mix(in srgb, var(--vscode-agentsGradient-tintColor) 12%, transparent) 0%,
-				color-mix(in srgb, var(--vscode-agentsGradient-tintColor) 6%, transparent) 18%,
-				color-mix(in srgb, var(--vscode-agentsGradient-tintColor) 1%, transparent) 32%,
+				color-mix(
+						in srgb,
+						var(--vscode-agentsGradient-tintColor) 12%,
+						transparent
+					)
+					0%,
+				color-mix(
+						in srgb,
+						var(--vscode-agentsGradient-tintColor) 6%,
+						transparent
+					)
+					18%,
+				color-mix(
+						in srgb,
+						var(--vscode-agentsGradient-tintColor) 1%,
+						transparent
+					)
+					32%,
 				transparent 58%
 			),
 			var(--vscode-agents-background);
@@ -56,9 +86,24 @@
 	.monaco-workbench.vs-dark.agent-sessions-workbench.shell-gradient-background::before {
 		background: radial-gradient(
 			ellipse 128% 102% at 100% 100%,
-			color-mix(in srgb, var(--vscode-agentsGradient-tintColor) 13%, var(--vscode-agents-background)) 0%,
-			color-mix(in srgb, var(--vscode-agentsGradient-tintColor) 10%, var(--vscode-agents-background)) 17%,
-			color-mix(in srgb, var(--vscode-agentsGradient-tintColor) 7%, var(--vscode-agents-background)) 31%,
+			color-mix(
+					in srgb,
+					var(--vscode-agentsGradient-tintColor) 13%,
+					var(--vscode-agents-background)
+				)
+				0%,
+			color-mix(
+					in srgb,
+					var(--vscode-agentsGradient-tintColor) 10%,
+					var(--vscode-agents-background)
+				)
+				17%,
+			color-mix(
+					in srgb,
+					var(--vscode-agentsGradient-tintColor) 7%,
+					var(--vscode-agents-background)
+				)
+				31%,
 			var(--vscode-agents-background) 60%
 		);
 	}
@@ -128,11 +173,19 @@
 .agent-sessions-workbench.shell-gradient-background .part.titlebar,
 .agent-sessions-workbench.shell-gradient-background .part.sidebar,
 .agent-sessions-workbench.shell-gradient-background .part.titlebar > .content,
-.agent-sessions-workbench.shell-gradient-background .part.titlebar > .titlebar-container,
-.agent-sessions-workbench.shell-gradient-background .part.titlebar > .sessions-titlebar-container,
-.agent-sessions-workbench.shell-gradient-background .part.sidebar > .composite.title,
+.agent-sessions-workbench.shell-gradient-background
+	.part.titlebar
+	> .titlebar-container,
+.agent-sessions-workbench.shell-gradient-background
+	.part.titlebar
+	> .sessions-titlebar-container,
+.agent-sessions-workbench.shell-gradient-background
+	.part.sidebar
+	> .composite.title,
 .agent-sessions-workbench.shell-gradient-background .part.sidebar > .content,
-.agent-sessions-workbench.shell-gradient-background .part.sidebar > .sidebar-footer {
+.agent-sessions-workbench.shell-gradient-background
+	.part.sidebar
+	> .sidebar-footer {
 	background: transparent !important;
 }
 
@@ -156,7 +209,9 @@
 	margin-right: 0;
 }
 
-.agent-sessions-workbench .monaco-grid-view .part.editor:not(.modal-editor-part) {
+.agent-sessions-workbench
+	.monaco-grid-view
+	.part.editor:not(.modal-editor-part) {
 	/*
 	 * No right margin so the editor flushes against the auxiliary bar (whose
 	 * `margin-left` is 0 in this state). The grid sash sits at the visual
@@ -183,7 +238,9 @@
 	overflow: hidden;
 }
 
-.agent-sessions-workbench .monaco-grid-view .part.editor:not(.modal-editor-part)::after {
+.agent-sessions-workbench
+	.monaco-grid-view
+	.part.editor:not(.modal-editor-part)::after {
 	box-shadow: none;
 }
 
@@ -199,7 +256,7 @@
 }
 
 .agent-sessions-workbench .part.editor .multiDiffEntry .header::before {
-	content: '';
+	content: "";
 	position: absolute;
 	inset: 0;
 	background: var(--vscode-agentsPanel-background);
@@ -215,11 +272,20 @@
 	align-items: center;
 }
 
-.agent-sessions-workbench .part.editor .multiDiffEntry .header:not(.collapsed) .header-content {
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header:not(.collapsed)
+	.header-content {
 	border-bottom: none;
 }
 
-.agent-sessions-workbench .part.editor .multiDiffEntry .header-content .file-path .title {
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header-content
+	.file-path
+	.title {
 	font-size: 13px;
 	line-height: 22px;
 }
@@ -229,19 +295,41 @@
 	outline: none;
 }
 
-.agent-sessions-workbench .part.editor .multiDiffEntry .header:focus .header-content,
-.agent-sessions-workbench .part.editor .multiDiffEntry .header:focus-visible .header-content {
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header:focus
+	.header-content,
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header:focus-visible
+	.header-content {
 	box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
 }
 
-.agent-sessions-workbench .part.editor .multiDiffEntry .header-content .actions {
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header-content
+	.actions {
 	opacity: 0;
 	pointer-events: none;
 	padding: 0 0 0 8px;
 }
 
-.agent-sessions-workbench .part.editor .multiDiffEntry .header:hover .header-content .actions,
-.agent-sessions-workbench .part.editor .multiDiffEntry .header:focus-within .header-content .actions {
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header:hover
+	.header-content
+	.actions,
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header:focus-within
+	.header-content
+	.actions {
 	opacity: 1;
 	pointer-events: auto;
 }
@@ -261,12 +349,20 @@
 
 /* The hidden-lines bar is split into two halves (original / modified) sitting
  * side by side. Round only the outer corners so the pair forms a single pill. */
-.agent-sessions-workbench .part.editor .editor.original .diff-hidden-lines .center {
+.agent-sessions-workbench
+	.part.editor
+	.editor.original
+	.diff-hidden-lines
+	.center {
 	border-top-left-radius: 6px;
 	border-bottom-left-radius: 6px;
 }
 
-.agent-sessions-workbench .part.editor .editor.modified .diff-hidden-lines .center {
+.agent-sessions-workbench
+	.part.editor
+	.editor.modified
+	.diff-hidden-lines
+	.center {
 	border-top-right-radius: 6px;
 	border-bottom-right-radius: 6px;
 }
@@ -282,15 +378,27 @@
 	opacity: 0.9;
 }
 
-.agent-sessions-workbench .part.editor .multiDiffEntry .header-content .status.added {
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header-content
+	.status.added {
 	color: var(--vscode-gitDecoration-addedResourceForeground);
 }
 
-.agent-sessions-workbench .part.editor .multiDiffEntry .header-content .status.deleted {
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header-content
+	.status.deleted {
 	color: var(--vscode-gitDecoration-deletedResourceForeground);
 }
 
-.agent-sessions-workbench .part.editor .multiDiffEntry .header-content .status.renamed {
+.agent-sessions-workbench
+	.part.editor
+	.multiDiffEntry
+	.header-content
+	.status.renamed {
 	color: var(--vscode-gitDecoration-modifiedResourceForeground);
 }
 
@@ -322,8 +430,17 @@
 	flex: 0 1 auto !important;
 }
 
-.agent-sessions-workbench .part.editor .tabs-container > .tab.sizing-fit .monaco-icon-label,
-.agent-sessions-workbench .part.editor .tabs-container > .tab.sizing-fit .monaco-icon-label > .monaco-icon-label-container {
+.agent-sessions-workbench
+	.part.editor
+	.tabs-container
+	> .tab.sizing-fit
+	.monaco-icon-label,
+.agent-sessions-workbench
+	.part.editor
+	.tabs-container
+	> .tab.sizing-fit
+	.monaco-icon-label
+	> .monaco-icon-label-container {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	min-width: 0;
@@ -345,11 +462,23 @@
 }
 
 .agent-sessions-workbench .part.editor .tabs-container > .tab.active {
-	background-color: color-mix(in srgb, var(--vscode-foreground) 5%, transparent) !important;
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-foreground) 5%,
+		transparent
+	) !important;
 }
 
-.agent-sessions-workbench .part.editor .tabs-container > .tab .tab-border-top-container,
-.agent-sessions-workbench .part.editor .tabs-container > .tab .tab-border-bottom-container {
+.agent-sessions-workbench
+	.part.editor
+	.tabs-container
+	> .tab
+	.tab-border-top-container,
+.agent-sessions-workbench
+	.part.editor
+	.tabs-container
+	> .tab
+	.tab-border-bottom-container {
 	display: none !important;
 }
 
@@ -392,7 +521,9 @@
 }
 
 .agent-sessions-workbench.nopanel .part.auxiliarybar,
-.agent-sessions-workbench.nopanel .monaco-grid-view .part.editor:not(.modal-editor-part) {
+.agent-sessions-workbench.nopanel
+	.monaco-grid-view
+	.part.editor:not(.modal-editor-part) {
 	margin-bottom: 0;
 }
 
@@ -416,7 +547,9 @@
 	border-radius: calc(var(--vscode-sash-hover-size) / 2);
 }
 
-.agent-sessions-workbench .monaco-sash:not(.disabled) > .orthogonal-drag-handle {
+.agent-sessions-workbench
+	.monaco-sash:not(.disabled)
+	> .orthogonal-drag-handle {
 	border-radius: var(--vscode-sash-size);
 }
 
@@ -431,27 +564,42 @@
 	background: transparent !important;
 }
 
-.agent-sessions-workbench .monaco-scrollable-element > .scrollbar.vertical > .slider::before,
-.agent-sessions-workbench .monaco-scrollable-element > .scrollbar.horizontal > .slider::before {
-	content: '';
+.agent-sessions-workbench
+	.monaco-scrollable-element
+	> .scrollbar.vertical
+	> .slider::before,
+.agent-sessions-workbench
+	.monaco-scrollable-element
+	> .scrollbar.horizontal
+	> .slider::before {
+	content: "";
 	position: absolute;
 	inset: 1px;
 	border-radius: 999px;
 	background: var(--vscode-scrollbarSlider-background);
 }
 
-.agent-sessions-workbench .monaco-scrollable-element > .scrollbar > .slider:hover::before {
+.agent-sessions-workbench
+	.monaco-scrollable-element
+	> .scrollbar
+	> .slider:hover::before {
 	background: var(--vscode-scrollbarSlider-hoverBackground);
 }
 
-.agent-sessions-workbench .monaco-scrollable-element > .scrollbar > .slider.active::before {
+.agent-sessions-workbench
+	.monaco-scrollable-element
+	> .scrollbar
+	> .slider.active::before {
 	background: var(--vscode-scrollbarSlider-activeBackground);
 }
 
 .monaco-workbench.vs.agent-sessions-workbench .part.sessionspart,
 .monaco-workbench.vs.agent-sessions-workbench .part.auxiliarybar,
 .monaco-workbench.vs.agent-sessions-workbench .part.panel {
-	border-color: var(--vscode-editorWidget-border, var(--vscode-widget-border, transparent));
+	border-color: var(
+		--vscode-editorWidget-border,
+		var(--vscode-widget-border, transparent)
+	);
 }
 
 /* ---- Chat Layout ---- */
@@ -461,16 +609,57 @@
 	max-width: none;
 }
 
-.monaco-workbench.vs.agent-sessions-workbench .part.sessionspart .interactive-list > .monaco-list > .monaco-scrollable-element > .monaco-list-rows {
+.monaco-workbench.vs.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-list
+	> .monaco-list
+	> .monaco-scrollable-element
+	> .monaco-list-rows {
 	background: transparent !important;
 }
 
-.monaco-workbench.vs.agent-sessions-workbench .part.sessionspart .interactive-list > .monaco-list > .monaco-scrollable-element > .monaco-list-rows > .monaco-list-row.request:hover,
-.monaco-workbench.vs.agent-sessions-workbench .part.sessionspart .interactive-list > .monaco-list > .monaco-scrollable-element > .monaco-list-rows > .monaco-list-row.response:hover,
-.monaco-workbench.vs.agent-sessions-workbench .part.sessionspart .interactive-list > .monaco-list > .monaco-scrollable-element > .monaco-list-rows > .monaco-list-row.focused.request,
-.monaco-workbench.vs.agent-sessions-workbench .part.sessionspart .interactive-list > .monaco-list > .monaco-scrollable-element > .monaco-list-rows > .monaco-list-row.focused.response,
-.monaco-workbench.vs.agent-sessions-workbench .part.sessionspart .interactive-list > .monaco-list > .monaco-scrollable-element > .monaco-list-rows > .monaco-list-row.selected.request,
-.monaco-workbench.vs.agent-sessions-workbench .part.sessionspart .interactive-list > .monaco-list > .monaco-scrollable-element > .monaco-list-rows > .monaco-list-row.selected.response {
+.monaco-workbench.vs.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-list
+	> .monaco-list
+	> .monaco-scrollable-element
+	> .monaco-list-rows
+	> .monaco-list-row.request:hover,
+.monaco-workbench.vs.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-list
+	> .monaco-list
+	> .monaco-scrollable-element
+	> .monaco-list-rows
+	> .monaco-list-row.response:hover,
+.monaco-workbench.vs.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-list
+	> .monaco-list
+	> .monaco-scrollable-element
+	> .monaco-list-rows
+	> .monaco-list-row.focused.request,
+.monaco-workbench.vs.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-list
+	> .monaco-list
+	> .monaco-scrollable-element
+	> .monaco-list-rows
+	> .monaco-list-row.focused.response,
+.monaco-workbench.vs.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-list
+	> .monaco-list
+	> .monaco-scrollable-element
+	> .monaco-list-rows
+	> .monaco-list-row.selected.request,
+.monaco-workbench.vs.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-list
+	> .monaco-list
+	> .monaco-scrollable-element
+	> .monaco-list-rows
+	> .monaco-list-row.selected.response {
 	background: transparent !important;
 }
 
@@ -479,8 +668,14 @@
  * (`.chat-editor-relative`) so the "card style" doesn't leak into other chat
  * surfaces that reuse `.interactive-item-container` — notably the terminal
  * and editor inline chat widgets and the agent-session hover widget. */
-.agent-sessions-workbench .part.sessionspart .interactive-session .interactive-item-container,
-.agent-sessions-workbench .chat-editor-relative .interactive-session .interactive-item-container {
+.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-session
+	.interactive-item-container,
+.agent-sessions-workbench
+	.chat-editor-relative
+	.interactive-session
+	.interactive-item-container {
 	max-width: 950px;
 	margin: 0 auto;
 	padding-left: 12px;
@@ -488,8 +683,14 @@
 	box-sizing: border-box;
 }
 
-.agent-sessions-workbench .part.sessionspart .interactive-session > .chat-suggest-next-widget,
-.agent-sessions-workbench .chat-editor-relative .interactive-session > .chat-suggest-next-widget {
+.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-session
+	> .chat-suggest-next-widget,
+.agent-sessions-workbench
+	.chat-editor-relative
+	.interactive-session
+	> .chat-suggest-next-widget {
 	max-width: 950px;
 	margin: 0 auto;
 	padding-left: 12px;
@@ -501,16 +702,27 @@
 
 /* Top fade overlay: dims content scrolled near the top edge of the chat bar card.
  * Use the Monaco scroll shadow element, which is only shown when scrollTop > 0. */
-.agent-sessions-workbench .part.sessionspart .monaco-scrollable-element > .shadow.top {
+.agent-sessions-workbench
+	.part.sessionspart
+	.monaco-scrollable-element
+	> .shadow.top {
 	height: 16px;
 	background: linear-gradient(to bottom, var(--part-background), transparent);
 	box-shadow: none;
 }
 
 /* Same fade overlay for the chat renderer inside an editor (e.g. floating aux window). */
-.agent-sessions-workbench .chat-editor-relative .interactive-list .monaco-scrollable-element > .shadow.top {
+.agent-sessions-workbench
+	.chat-editor-relative
+	.interactive-list
+	.monaco-scrollable-element
+	> .shadow.top {
 	height: 16px;
-	background: linear-gradient(to bottom, var(--vscode-editor-background), transparent);
+	background: linear-gradient(
+		to bottom,
+		var(--vscode-editor-background),
+		transparent
+	);
 	box-shadow: none;
 }
 
@@ -524,7 +736,10 @@
 }
 
 .agent-sessions-workbench .interactive-session .chat-input-container.focused {
-	border-color: var(--vscode-agentsChatInput-focusBorder, var(--vscode-focusBorder)) !important;
+	border-color: var(
+		--vscode-agentsChatInput-focusBorder,
+		var(--vscode-focusBorder)
+	) !important;
 }
 
 /* While the developer-joy animated border is active, keep a faint
@@ -532,27 +747,52 @@
 	the comet animation (improves visuals + accessibility). The spinning
 	gradient ring overlays this. When focused, the regular focus border
 	is blended/dimmed during the animation to avoid competing visually. */
-.agent-sessions-workbench .interactive-session .chat-input-container.working:not(.focused) {
+.agent-sessions-workbench
+	.interactive-session
+	.chat-input-container.working:not(.focused) {
 	border-color: var(--vscode-agentsChatInput-border) !important;
 }
 
 /* Dim the focus border while the comet is animating so the bright focus
 	ring doesn't visually fight with the spinning gradient. */
-.agent-sessions-workbench .interactive-session .chat-input-container.working.focused {
-	border-color: color-mix(in srgb, var(--vscode-agentsChatInput-focusBorder, var(--vscode-focusBorder)) 40%, transparent) !important;
+.agent-sessions-workbench
+	.interactive-session
+	.chat-input-container.working.focused {
+	border-color: color-mix(
+		in srgb,
+		var(--vscode-agentsChatInput-focusBorder, var(--vscode-focusBorder)) 40%,
+		transparent
+	) !important;
 }
 
 /* Make the Monaco editor inside the chat input transparent so it inherits the chatInput.background */
-.agent-sessions-workbench .interactive-session .interactive-input-part .chat-editor-container .interactive-input-editor .monaco-editor,
-.agent-sessions-workbench .interactive-session .interactive-input-part .chat-editor-container .interactive-input-editor .monaco-editor .monaco-editor-background {
+.agent-sessions-workbench
+	.interactive-session
+	.interactive-input-part
+	.chat-editor-container
+	.interactive-input-editor
+	.monaco-editor,
+.agent-sessions-workbench
+	.interactive-session
+	.interactive-input-part
+	.chat-editor-container
+	.interactive-input-editor
+	.monaco-editor
+	.monaco-editor-background {
 	background-color: transparent !important;
 }
 
 /* Scoped to the chat panel (`.part.sessionspart`) and the chat editor host
  * (`.chat-editor-relative`) to avoid leaking into other chat surfaces such as
  * the inline chat widgets and agent-session hover widget. */
-.agent-sessions-workbench .part.sessionspart .interactive-session .interactive-input-part,
-.agent-sessions-workbench .chat-editor-relative .interactive-session .interactive-input-part {
+.agent-sessions-workbench
+	.part.sessionspart
+	.interactive-session
+	.interactive-input-part,
+.agent-sessions-workbench
+	.chat-editor-relative
+	.interactive-session
+	.interactive-input-part {
 	width: 100%;
 	max-width: 950px;
 	margin: 0 auto;
@@ -565,7 +805,10 @@
 /* Hide shared chat-session option-group pickers in the sessions app active chat UI.
  * The sessions workbench provides its own new-session configuration controls and
  * should not surface the shared workbench chat session pickers here. */
-.agent-sessions-workbench .interactive-session .chat-input-toolbars .chat-sessionPicker-container {
+.agent-sessions-workbench
+	.interactive-session
+	.chat-input-toolbars
+	.chat-sessionPicker-container {
 	display: none;
 }
 
@@ -584,7 +827,10 @@
 	padding-right: 0;
 }
 
-.agent-sessions-workbench .action-widget .monaco-scrollable-element > .monaco-list-rows {
+.agent-sessions-workbench
+	.action-widget
+	.monaco-scrollable-element
+	> .monaco-list-rows {
 	background-color: var(--vscode-agentsPanel-background) !important;
 }
 
@@ -597,8 +843,14 @@
 
 .agent-sessions-workbench .quick-input-header,
 .agent-sessions-workbench .quick-input-html-widget,
-.agent-sessions-workbench .quick-input-list .monaco-scrollable-element > .monaco-list-rows,
-.agent-sessions-workbench .quick-input-tree .monaco-scrollable-element > .monaco-list-rows {
+.agent-sessions-workbench
+	.quick-input-list
+	.monaco-scrollable-element
+	> .monaco-list-rows,
+.agent-sessions-workbench
+	.quick-input-tree
+	.monaco-scrollable-element
+	> .monaco-list-rows {
 	background-color: var(--vscode-agentsPanel-background) !important;
 }
 
@@ -610,12 +862,17 @@
 
 .agent-sessions-workbench .context-view.monaco-menu-container,
 .agent-sessions-workbench .context-view.monaco-menu-container .monaco-menu,
-.agent-sessions-workbench .context-view.monaco-menu-container .monaco-scrollable-element {
+.agent-sessions-workbench
+	.context-view.monaco-menu-container
+	.monaco-scrollable-element {
 	background-color: var(--vscode-agentsPanel-background) !important;
 }
 
 /* Keep code block backgrounds stable across themes; add separation in older light themes via border only */
-.agent-sessions-workbench .interactive-session .interactive-response .interactive-result-code-block {
+.agent-sessions-workbench
+	.interactive-session
+	.interactive-response
+	.interactive-result-code-block {
 	border-color: var(--vscode-editorWidget-border, var(--vscode-widget-border));
 }
 
@@ -625,24 +882,33 @@
 	background: rgba(0, 0, 0, 0.5);
 }
 
-.agent-sessions-workbench .monaco-modal-editor-block .modal-editor-sidebar .monaco-tl-twistie.force-no-twistie {
+.agent-sessions-workbench
+	.monaco-modal-editor-block
+	.modal-editor-sidebar
+	.monaco-tl-twistie.force-no-twistie {
 	width: 0 !important;
 	padding-left: 0 !important;
 	padding-right: 0 !important;
 }
 
-
 /* ---- Customization Empty State ---- */
 
 /* Icon + title side by side in a row, description underneath */
-.agent-sessions-workbench .ai-customization-list-widget .list-empty-state .empty-state-header {
+.agent-sessions-workbench
+	.ai-customization-list-widget
+	.list-empty-state
+	.empty-state-header {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	gap: 6px;
 }
 
-.agent-sessions-workbench .ai-customization-list-widget .list-empty-state .empty-state-header > .empty-state-icon {
+.agent-sessions-workbench
+	.ai-customization-list-widget
+	.list-empty-state
+	.empty-state-header
+	> .empty-state-icon {
 	font-size: 16px;
 	margin-bottom: 0;
 	flex-shrink: 0;
@@ -696,7 +962,6 @@
 }
 
 @starting-style {
-
 	/* Shared starting values */
 	.agent-sessions-workbench .part.auxiliarybar,
 	.agent-sessions-workbench .part.panel,
@@ -709,7 +974,11 @@
 	.agent-sessions-workbench .part.auxiliarybar,
 	.agent-sessions-workbench .part.panel,
 	.agent-sessions-workbench .part.sessionspart {
-		background: color-mix(in srgb, var(--part-background) 60%, var(--vscode-sideBar-background));
+		background: color-mix(
+			in srgb,
+			var(--part-background) 60%,
+			var(--vscode-sideBar-background)
+		);
 	}
 
 	.agent-sessions-workbench .part.sidebar > .content {
@@ -734,7 +1003,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-
 	.agent-sessions-workbench .part.auxiliarybar,
 	.agent-sessions-workbench .part.panel,
 	.agent-sessions-workbench .part.sessionspart {
@@ -770,7 +1038,9 @@
 /* ---- Phone Layout: Overscroll Containment ---- */
 
 /* Prevent body rubber-band on iOS and Chrome pull-to-refresh on Android */
-.agent-sessions-workbench.phone-layout .monaco-scrollable-element > .scrollable-element {
+.agent-sessions-workbench.phone-layout
+	.monaco-scrollable-element
+	> .scrollable-element {
 	overscroll-behavior: contain;
 }
 
@@ -796,8 +1066,14 @@
 	min-width: 44px;
 }
 
-.agent-sessions-workbench.phone-layout .quick-input-widget .action-item > .action-label,
-.agent-sessions-workbench.phone-layout .chat-input-toolbars .action-item > .action-label {
+.agent-sessions-workbench.phone-layout
+	.quick-input-widget
+	.action-item
+	> .action-label,
+.agent-sessions-workbench.phone-layout
+	.chat-input-toolbars
+	.action-item
+	> .action-label {
 	min-height: 0;
 	min-width: 0;
 }
@@ -837,8 +1113,14 @@
 	max-height: 50vh;
 }
 
-.agent-sessions-workbench.phone-layout .quick-input-widget .quick-input-list .monaco-list-row,
-.agent-sessions-workbench.phone-layout .quick-input-widget .quick-input-tree .monaco-list-row {
+.agent-sessions-workbench.phone-layout
+	.quick-input-widget
+	.quick-input-list
+	.monaco-list-row,
+.agent-sessions-workbench.phone-layout
+	.quick-input-widget
+	.quick-input-tree
+	.monaco-list-row {
 	min-height: 44px;
 }
 
@@ -850,7 +1132,10 @@
 	max-width: calc(100% - 32px);
 }
 
-.agent-sessions-workbench.phone-layout .monaco-dialog-box .dialog-buttons-row .monaco-button {
+.agent-sessions-workbench.phone-layout
+	.monaco-dialog-box
+	.dialog-buttons-row
+	.monaco-button {
 	min-height: 44px;
 	font-size: 16px;
 }
@@ -866,12 +1151,17 @@
 	width: auto !important;
 }
 
-.agent-sessions-workbench.phone-layout .notifications-toasts .notification-toast {
+.agent-sessions-workbench.phone-layout
+	.notifications-toasts
+	.notification-toast {
 	width: 100%;
 	max-width: 100%;
 }
 
-.agent-sessions-workbench.phone-layout .notifications-toasts .notification-toast .notification-toast-container {
+.agent-sessions-workbench.phone-layout
+	.notifications-toasts
+	.notification-toast
+	.notification-toast-container {
 	border-radius: 12px;
 }
 
@@ -939,7 +1229,9 @@
 
 /* Ensure chat content uses momentum scrolling on phone.
 	The -webkit-overflow-scrolling property is needed for older iOS. */
-.agent-sessions-workbench.phone-layout .interactive-session .monaco-scrollable-element {
+.agent-sessions-workbench.phone-layout
+	.interactive-session
+	.monaco-scrollable-element {
 	-webkit-overflow-scrolling: touch;
 }
 
@@ -972,7 +1264,7 @@
 
 /* Panel drag handle visual indicator */
 .agent-sessions-workbench.phone-layout .part.panel::before {
-	content: '';
+	content: "";
 	display: block;
 	width: 36px;
 	height: 5px;
@@ -985,7 +1277,8 @@
 /* ---- Phone Layout: Auxiliary Bar Overlay ---- */
 
 /* Auxiliary bar slides in from the right as a full-height overlay on phone */
-.agent-sessions-workbench.phone-layout .split-view-view:has(> .part.auxiliarybar) {
+.agent-sessions-workbench.phone-layout
+	.split-view-view:has(> .part.auxiliarybar) {
 	position: absolute !important;
 	top: 0 !important;
 	right: 0 !important;

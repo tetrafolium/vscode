@@ -2,14 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as vscode from 'vscode';
-import { generateUuid } from './util/uuid';
-import { MermaidWebviewManager } from './webviewManager';
-import { escapeHtmlText } from './util/html';
-import { Disposable } from './util/dispose';
-import { renderMermaidConfigSpan } from './markdownMermaid/config';
+import * as vscode from "vscode";
+import { generateUuid } from "./util/uuid";
+import { MermaidWebviewManager } from "./webviewManager";
+import { escapeHtmlText } from "./util/html";
+import { Disposable } from "./util/dispose";
+import { renderMermaidConfigSpan } from "./markdownMermaid/config";
 
-export const mermaidEditorViewType = 'vscode.mermaid-markdown-features.preview';
+export const mermaidEditorViewType = "vscode.mermaid-markdown-features.preview";
 
 interface MermaidPreviewState {
 	readonly webviewId: string;
@@ -19,17 +19,21 @@ interface MermaidPreviewState {
 /**
  * Manages mermaid diagram editor panels, ensuring only one editor per diagram.
  */
-export class MermaidEditorManager extends Disposable implements vscode.WebviewPanelSerializer {
-
+export class MermaidEditorManager
+	extends Disposable
+	implements vscode.WebviewPanelSerializer
+{
 	private readonly _previews = new Map<string, MermaidPreview>();
 
 	constructor(
 		private readonly _extensionUri: vscode.Uri,
-		private readonly _webviewManager: MermaidWebviewManager
+		private readonly _webviewManager: MermaidWebviewManager,
 	) {
 		super();
 
-		this._register(vscode.window.registerWebviewPanelSerializer(mermaidEditorViewType, this));
+		this._register(
+			vscode.window.registerWebviewPanelSerializer(mermaidEditorViewType, this),
+		);
 	}
 
 	/**
@@ -51,14 +55,15 @@ export class MermaidEditorManager extends Disposable implements vscode.WebviewPa
 			title,
 			this._extensionUri,
 			this._webviewManager,
-			vscode.ViewColumn.Active);
+			vscode.ViewColumn.Active,
+		);
 
 		this._registerPreview(preview);
 	}
 
 	public async deserializeWebviewPanel(
 		webviewPanel: vscode.WebviewPanel,
-		state: MermaidPreviewState
+		state: MermaidPreviewState,
 	): Promise<void> {
 		if (!state?.mermaidSource) {
 			webviewPanel.webview.html = this._getErrorHtml();
@@ -72,7 +77,7 @@ export class MermaidEditorManager extends Disposable implements vscode.WebviewPa
 			webviewId,
 			state.mermaidSource,
 			this._extensionUri,
-			this._webviewManager
+			this._webviewManager,
 		);
 
 		this._registerPreview(preview);
@@ -87,7 +92,7 @@ export class MermaidEditorManager extends Disposable implements vscode.WebviewPa
 	}
 
 	private _getErrorHtml(): string {
-		return /* html */`<!DOCTYPE html>
+		return /* html */ `<!DOCTYPE html>
 			<html lang="en">
 			<head>
 				<meta charset="UTF-8">
@@ -121,8 +126,9 @@ export class MermaidEditorManager extends Disposable implements vscode.WebviewPa
 }
 
 class MermaidPreview extends Disposable {
-
-	private readonly _onDisposeEmitter = this._register(new vscode.EventEmitter<void>());
+	private readonly _onDisposeEmitter = this._register(
+		new vscode.EventEmitter<void>(),
+	);
 	public readonly onDispose = this._onDisposeEmitter.event;
 
 	public static create(
@@ -131,18 +137,24 @@ class MermaidPreview extends Disposable {
 		title: string | undefined,
 		extensionUri: vscode.Uri,
 		webviewManager: MermaidWebviewManager,
-		viewColumn: vscode.ViewColumn
+		viewColumn: vscode.ViewColumn,
 	): MermaidPreview {
 		const webviewPanel = vscode.window.createWebviewPanel(
 			mermaidEditorViewType,
-			title ?? vscode.l10n.t('Mermaid Diagram'),
+			title ?? vscode.l10n.t("Mermaid Diagram"),
 			viewColumn,
 			{
 				retainContextWhenHidden: false,
-			}
+			},
 		);
 
-		return new MermaidPreview(webviewPanel, diagramId, mermaidSource, extensionUri, webviewManager);
+		return new MermaidPreview(
+			webviewPanel,
+			diagramId,
+			mermaidSource,
+			extensionUri,
+			webviewManager,
+		);
 	}
 
 	public static revive(
@@ -150,9 +162,15 @@ class MermaidPreview extends Disposable {
 		diagramId: string,
 		mermaidSource: string,
 		extensionUri: vscode.Uri,
-		webviewManager: MermaidWebviewManager
+		webviewManager: MermaidWebviewManager,
 	): MermaidPreview {
-		return new MermaidPreview(webviewPanel, diagramId, mermaidSource, extensionUri, webviewManager);
+		return new MermaidPreview(
+			webviewPanel,
+			diagramId,
+			mermaidSource,
+			extensionUri,
+			webviewManager,
+		);
 	}
 
 	private constructor(
@@ -160,34 +178,46 @@ class MermaidPreview extends Disposable {
 		public readonly diagramId: string,
 		private readonly _mermaidSource: string,
 		private readonly _extensionUri: vscode.Uri,
-		private readonly _webviewManager: MermaidWebviewManager
+		private readonly _webviewManager: MermaidWebviewManager,
 	) {
 		super();
 
-		this._webviewPanel.iconPath = new vscode.ThemeIcon('graph');
+		this._webviewPanel.iconPath = new vscode.ThemeIcon("graph");
 
 		this._webviewPanel.webview.options = {
 			enableScripts: true,
 			localResourceRoots: [
-				vscode.Uri.joinPath(this._extensionUri, 'chat-webview-out')
+				vscode.Uri.joinPath(this._extensionUri, "chat-webview-out"),
 			],
 		};
 
 		this._webviewPanel.webview.html = this._getHtml();
 
 		// Register with the webview manager
-		this._register(this._webviewManager.registerWebview(this.diagramId, this._webviewPanel.webview, this._mermaidSource, undefined, 'editor'));
+		this._register(
+			this._webviewManager.registerWebview(
+				this.diagramId,
+				this._webviewPanel.webview,
+				this._mermaidSource,
+				undefined,
+				"editor",
+			),
+		);
 
-		this._register(this._webviewPanel.onDidChangeViewState(e => {
-			if (e.webviewPanel.active) {
-				this._webviewManager.setActiveWebview(this.diagramId);
-			}
-		}));
+		this._register(
+			this._webviewPanel.onDidChangeViewState((e) => {
+				if (e.webviewPanel.active) {
+					this._webviewManager.setActiveWebview(this.diagramId);
+				}
+			}),
+		);
 
-		this._register(this._webviewPanel.onDidDispose(() => {
-			this._onDisposeEmitter.fire();
-			this.dispose();
-		}));
+		this._register(
+			this._webviewPanel.onDidDispose(() => {
+				this._onDisposeEmitter.fire();
+				this.dispose();
+			}),
+		);
 	}
 
 	public reveal(): void {
@@ -205,19 +235,22 @@ class MermaidPreview extends Disposable {
 	private _getHtml(): string {
 		const nonce = generateUuid();
 
-		const mediaRoot = vscode.Uri.joinPath(this._extensionUri, 'chat-webview-out');
+		const mediaRoot = vscode.Uri.joinPath(
+			this._extensionUri,
+			"chat-webview-out",
+		);
 		const scriptUri = this._webviewPanel.webview.asWebviewUri(
-			vscode.Uri.joinPath(mediaRoot, 'index-editor.js')
+			vscode.Uri.joinPath(mediaRoot, "index-editor.js"),
 		);
 		const codiconsUri = this._webviewPanel.webview.asWebviewUri(
-			vscode.Uri.joinPath(mediaRoot, 'codicon.css')
+			vscode.Uri.joinPath(mediaRoot, "codicon.css"),
 		);
-		const togglePanModeLabel = vscode.l10n.t('Toggle Pan Mode');
-		const zoomOutLabel = vscode.l10n.t('Zoom Out');
-		const zoomInLabel = vscode.l10n.t('Zoom In');
-		const resetPanZoomLabel = vscode.l10n.t('Reset Pan and Zoom');
+		const togglePanModeLabel = vscode.l10n.t("Toggle Pan Mode");
+		const zoomOutLabel = vscode.l10n.t("Zoom Out");
+		const zoomInLabel = vscode.l10n.t("Zoom In");
+		const resetPanZoomLabel = vscode.l10n.t("Reset Pan and Zoom");
 
-		return /* html */`<!DOCTYPE html>
+		return /* html */ `<!DOCTYPE html>
 			<html lang="en">
 			<head>
 				<meta charset="UTF-8">
@@ -293,7 +326,6 @@ class MermaidPreview extends Disposable {
 	}
 }
 
-
 /**
  * Generates a unique ID for a diagram based on its content.
  * This ensures the same diagram content always gets the same ID.
@@ -303,7 +335,7 @@ function getWebviewId(source: string): string {
 	let hash = 0;
 	for (let i = 0; i < source.length; i++) {
 		const char = source.charCodeAt(i);
-		hash = ((hash << 5) - hash) + char;
+		hash = (hash << 5) - hash + char;
 		hash = hash & hash; // Convert to 32-bit integer
 	}
 	return Math.abs(hash).toString(16);

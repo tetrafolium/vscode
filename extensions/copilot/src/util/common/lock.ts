@@ -7,7 +7,6 @@
  * A class representing a lock that can be acquired and released.
  */
 export class Lock {
-
 	private _locked = false;
 	private _queue: (() => void)[] = [];
 
@@ -48,7 +47,6 @@ export class Lock {
 }
 
 export class LockMap {
-
 	private _locks: Map<string, Lock> = new Map();
 
 	async withLock<T>(key: string, fn: () => Promise<T>): Promise<T> {

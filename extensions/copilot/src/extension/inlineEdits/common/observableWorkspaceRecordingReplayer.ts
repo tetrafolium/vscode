@@ -4,10 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { DocumentId } from '../../../platform/inlineEdits/common/dataTypes/documentId';
-import { deserializeStringEdit, SerializedEdit } from '../../../platform/inlineEdits/common/dataTypes/editUtils';
+import {
+	deserializeStringEdit,
+	SerializedEdit,
+} from '../../../platform/inlineEdits/common/dataTypes/editUtils';
 import { LanguageId } from '../../../platform/inlineEdits/common/dataTypes/languageId';
-import { IObservableDocument, MutableObservableDocument, MutableObservableWorkspace } from '../../../platform/inlineEdits/common/observableWorkspace';
-import { deserializeOffsetRange, DocumentEventLogEntry, DocumentEventLogEntryData, LogEntry } from '../../../platform/workspaceRecorder/common/workspaceLog';
+import {
+	IObservableDocument,
+	MutableObservableDocument,
+	MutableObservableWorkspace,
+} from '../../../platform/inlineEdits/common/observableWorkspace';
+import {
+	deserializeOffsetRange,
+	DocumentEventLogEntry,
+	DocumentEventLogEntryData,
+	LogEntry,
+} from '../../../platform/workspaceRecorder/common/workspaceLog';
 import { assert } from '../../../util/vs/base/common/assert';
 import { BugIndicatingError } from '../../../util/vs/base/common/errors';
 import { Emitter } from '../../../util/vs/base/common/event';
@@ -24,11 +36,14 @@ export interface IRecordingInformation {
 
 export class ObservableWorkspaceRecordingReplayer extends Disposable {
 	private readonly _workspace = new MutableObservableWorkspace();
-	public get workspace(): MutableObservableWorkspace { return this._workspace; }
-
+	public get workspace(): MutableObservableWorkspace {
+		return this._workspace;
+	}
 
 	private _stepIdx = 0;
-	public get stepIdx() { return this._stepIdx; }
+	public get stepIdx() {
+		return this._stepIdx;
+	}
 	constructor(
 		private readonly _recording: IRecordingInformation,
 		private readonly _includeNextEditSelection: boolean = false,
@@ -38,12 +53,24 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 
 	private _lastId: DocumentId | undefined = undefined;
 	private _repoRootUri: string | undefined = undefined;
-	private readonly _documents = new Map<number, { id: DocumentId; workspaceRoot: string | undefined; initialized: boolean }>();
+	private readonly _documents = new Map<
+		number,
+		{
+			id: DocumentId;
+			workspaceRoot: string | undefined;
+			initialized: boolean;
+		}
+	>();
 
 	private readonly _states = new Map<string, string>();
 
-
-	private readonly _onDocumentEvent = this._register(new Emitter<{ logEntry: DocumentEventLogEntry; data: DocumentEventLogEntryData; doc: MutableObservableDocument }>());
+	private readonly _onDocumentEvent = this._register(
+		new Emitter<{
+			logEntry: DocumentEventLogEntry;
+			data: DocumentEventLogEntryData;
+			doc: MutableObservableDocument;
+		}>(),
+	);
 	public readonly onDocumentEvent = this._onDocumentEvent.event;
 
 	getPreviousLogEntry(): LogEntry | undefined {
@@ -52,7 +79,6 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 		}
 		return this._recording.log[this._stepIdx - 1];
 	}
-
 
 	step(): boolean {
 		return this._step((e, cont) => cont());
@@ -70,10 +96,15 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 
 	private _lastTime: number | undefined = undefined;
 	public stepSimulateTime(): Promise<boolean> {
-		return new Promise(res => {
+		return new Promise((res) => {
 			const r = this._step((entry, cont) => {
 				if ('time' in entry) {
-					const diff = Math.max(0, this._lastTime !== undefined ? (entry.time - this._lastTime) : 0);
+					const diff = Math.max(
+						0,
+						this._lastTime !== undefined
+							? entry.time - this._lastTime
+							: 0,
+					);
 					this._lastTime = entry.time;
 					setTimeout(() => {
 						cont();
@@ -92,7 +123,10 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 	}
 
 	private _step(cb: (entry: LogEntry, cont: () => void) => void): boolean {
-		if (this._stepIdx === this._recording.log.length && this._includeNextEditSelection) {
+		if (
+			this._stepIdx === this._recording.log.length &&
+			this._includeNextEditSelection
+		) {
 			this._stepIdx++;
 
 			const nextEdit = this._recording.nextUserEdit;
@@ -100,11 +134,14 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 				return false;
 			}
 			// we assume that the next edit refers to the last document! This might be wrong.
-			const range = deserializeStringEdit(nextEdit.edit).replacements[0]?.replaceRange;
+			const range = deserializeStringEdit(nextEdit.edit).replacements[0]
+				?.replaceRange;
 			if (!this._lastId) {
 				throw new BugIndicatingError();
 			}
-			this._workspace.getDocument(this._lastId)?.setSelection([range], undefined);
+			this._workspace
+				.getDocument(this._lastId)
+				?.setSelection([range], undefined);
 			return true;
 		}
 
@@ -135,25 +172,40 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 					break;
 				}
 				case 'documentEncountered': {
-					const pathUri = joinUriWithRelativePath(assertReturnsDefined(this._repoRootUri), entry.relativePath);
+					const pathUri = joinUriWithRelativePath(
+						assertReturnsDefined(this._repoRootUri),
+						entry.relativePath,
+					);
 					const id = DocumentId.create(pathUri);
-					this._documents.set(entry.id, { id: id, workspaceRoot: this._repoRootUri, initialized: false });
+					this._documents.set(entry.id, {
+						id: id,
+						workspaceRoot: this._repoRootUri,
+						initialized: false,
+					});
 					break;
 				}
 				case 'setContent': {
 					const doc = this._documents.get(entry.id);
-					if (!doc) { throw new BugIndicatingError(); }
+					if (!doc) {
+						throw new BugIndicatingError();
+					}
 
 					if (doc.initialized) {
 						const d = this._workspace.getDocument(doc.id);
-						d!.setValue(new StringText(entry.content), undefined, entry.v);
+						d!.setValue(
+							new StringText(entry.content),
+							undefined,
+							entry.v,
+						);
 					} else {
 						doc.initialized = true;
 						const d = this._workspace.addDocument({
 							id: doc.id,
-							workspaceRoot: doc.workspaceRoot ? URI.parse(doc.workspaceRoot) : undefined,
+							workspaceRoot: doc.workspaceRoot
+								? URI.parse(doc.workspaceRoot)
+								: undefined,
 							initialValue: entry.content,
-							languageId: guessLanguageId(doc.id)
+							languageId: guessLanguageId(doc.id),
 						});
 						d.setSelection([new OffsetRange(0, 0)]);
 					}
@@ -161,21 +213,35 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 				}
 				case 'changed': {
 					const doc = this._documents.get(entry.id);
-					if (!doc || !doc.initialized) { throw new BugIndicatingError(); }
+					if (!doc || !doc.initialized) {
+						throw new BugIndicatingError();
+					}
 
 					const e = deserializeStringEdit(entry.edit);
-					this._workspace.getDocument(doc.id)?.applyEdit(e, undefined, entry.v);
+					this._workspace
+						.getDocument(doc.id)
+						?.applyEdit(e, undefined, entry.v);
 					this._lastId = doc.id;
 					break;
 				}
 				case 'selectionChanged': {
 					const doc = this._documents.get(entry.id);
-					if (!doc || !doc.initialized) { throw new BugIndicatingError(); }
+					if (!doc || !doc.initialized) {
+						throw new BugIndicatingError();
+					}
 
 					const selection = entry.selection;
-					const docFromWorkspace = this._workspace.getDocument(doc.id);
-					assert(docFromWorkspace !== undefined, 'Document should be in workspace');
-					docFromWorkspace.updateSelection(selection.map(s => deserializeOffsetRange(s)), undefined);
+					const docFromWorkspace = this._workspace.getDocument(
+						doc.id,
+					);
+					assert(
+						docFromWorkspace !== undefined,
+						'Document should be in workspace',
+					);
+					docFromWorkspace.updateSelection(
+						selection.map((s) => deserializeOffsetRange(s)),
+						undefined,
+					);
 
 					this._lastId = doc.id;
 
@@ -188,7 +254,10 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 
 				case 'storeContent': {
 					const doc = this._documents.get(entry.id)!;
-					this._states.set(entry.contentId, this._workspace.getDocument(doc.id)!.value.get().value);
+					this._states.set(
+						entry.contentId,
+						this._workspace.getDocument(doc.id)!.value.get().value,
+					);
 					break;
 				}
 				case 'restoreContent': {
@@ -198,7 +267,9 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 						throw new BugIndicatingError();
 					}
 
-					this._workspace.getDocument(doc.id)!.setValue(new StringText(content), undefined, entry.v);
+					this._workspace
+						.getDocument(doc.id)!
+						.setValue(new StringText(content), undefined, entry.v);
 					break;
 				}
 				case 'documentEvent': {
@@ -212,10 +283,11 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 					break;
 				}
 				default:
-					throw new BugIndicatingError(`'${entry.kind}' not supported`);
+					throw new BugIndicatingError(
+						`'${entry.kind}' not supported`,
+					);
 			}
 		});
-
 
 		return true;
 	}
@@ -241,7 +313,7 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 	}
 
 	replay(): { lastDocId: DocumentId } {
-		while (this.step()) { }
+		while (this.step()) {}
 
 		if (!this._lastId) {
 			throw new BugIndicatingError();
@@ -251,14 +323,16 @@ export class ObservableWorkspaceRecordingReplayer extends Disposable {
 	}
 }
 
-function joinUriWithRelativePath(baseUri: string, relativePath: string): string {
+function joinUriWithRelativePath(
+	baseUri: string,
+	relativePath: string,
+): string {
 	// TODO@hediet: use return URI.parse(join(baseUri, relativePath).replaceAll('\\', '/'));
 	if (baseUri.endsWith('/')) {
 		baseUri = baseUri.substring(0, baseUri.length - 1);
 	}
 	return baseUri + '/' + relativePath.replaceAll('\\', '/');
 }
-
 
 // TODO: This should be centralized in languages.ts
 function guessLanguageId(docId: DocumentId): LanguageId {

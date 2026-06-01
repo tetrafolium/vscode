@@ -7,7 +7,11 @@ import type * as vscode from 'vscode';
 import { IEditSurvivalTrackingSession } from '../../../platform/editSurvivalTracking/common/editSurvivalTrackerService';
 import { ChatResponseStreamImpl } from '../../../util/common/chatResponseStreamImpl';
 import { ResourceSet } from '../../../util/vs/base/common/map';
-import { ChatResponseMarkdownPart, ChatResponseNotebookEditPart, ChatResponseTextEditPart } from '../../../vscodeTypes';
+import {
+	ChatResponseMarkdownPart,
+	ChatResponseNotebookEditPart,
+	ChatResponseTextEditPart,
+} from '../../../vscodeTypes';
 import { ChatTelemetry } from '../../prompt/node/chatParticipantTelemetry';
 import { IDocumentContext } from '../../prompt/node/documentContext';
 import { IIntent } from '../../prompt/node/intents';
@@ -18,7 +22,6 @@ import { IIntent } from '../../prompt/node/intents';
  * Determines the interaction outcome based on what passes through the stream.
  */
 export class InteractionOutcomeComputer {
-
 	private _annotations: OutcomeAnnotation[] = [];
 	private _seenMarkdown = false;
 	private _seenEdits = new ResourceSet();
@@ -28,11 +31,11 @@ export class InteractionOutcomeComputer {
 	private get _interactionOutcomeKind(): InteractionOutcomeKind {
 		if (this._seenEdits.size > 0) {
 			// edits have been sent to the response stream
-			return (
-				this._seenEdits.size === 1 && this._currentDocument && this._seenEdits.has(this._currentDocument)
-					? 'inlineEdit'
-					: 'workspaceEdit'
-			);
+			return this._seenEdits.size === 1 &&
+				this._currentDocument &&
+				this._seenEdits.has(this._currentDocument)
+				? 'inlineEdit'
+				: 'workspaceEdit';
 		}
 		if (this._seenMarkdown) {
 			return 'conversational';
@@ -44,13 +47,17 @@ export class InteractionOutcomeComputer {
 	}
 
 	public get interactionOutcome(): InteractionOutcome {
-		return new InteractionOutcome(this._interactionOutcomeKind, this._annotations);
+		return new InteractionOutcome(
+			this._interactionOutcomeKind,
+			this._annotations,
+		);
 	}
 
-	constructor(private readonly _currentDocument: vscode.Uri | undefined) {
-	}
+	constructor(private readonly _currentDocument: vscode.Uri | undefined) {}
 
-	public spyOnStream(outStream: vscode.ChatResponseStream): vscode.ChatResponseStream {
+	public spyOnStream(
+		outStream: vscode.ChatResponseStream,
+	): vscode.ChatResponseStream {
 		return ChatResponseStreamImpl.spy(outStream, (part) => {
 			if (part instanceof ChatResponseMarkdownPart) {
 				this._markEmittedMarkdown(part.value);
@@ -72,12 +79,20 @@ export class InteractionOutcomeComputer {
 		this._seenEdits.add(uri);
 	}
 
-	private _markEmittedNotebookEdits(uri: vscode.Uri, edits: vscode.NotebookEdit[]) {
+	private _markEmittedNotebookEdits(
+		uri: vscode.Uri,
+		edits: vscode.NotebookEdit[],
+	) {
 		this._seenEdits.add(uri);
 	}
 
 	public addAnnotations(annotations: OutcomeAnnotation[] = []): void {
-		this._seenNoOpEdits = this._seenNoOpEdits || annotations.some(annotation => annotation.label === OutcomeAnnotationLabel.NOOP_EDITS);
+		this._seenNoOpEdits =
+			this._seenNoOpEdits ||
+			annotations.some(
+				(annotation) =>
+					annotation.label === OutcomeAnnotationLabel.NOOP_EDITS,
+			);
 		this._annotations = this._annotations.concat(annotations);
 	}
 
@@ -89,11 +104,16 @@ export class InteractionOutcomeComputer {
 export class InteractionOutcome {
 	constructor(
 		public readonly kind: InteractionOutcomeKind,
-		public readonly annotations: OutcomeAnnotation[]
-	) { }
+		public readonly annotations: OutcomeAnnotation[],
+	) {}
 }
 
-export type InteractionOutcomeKind = 'noopEdit' | 'inlineEdit' | 'workspaceEdit' | 'none' | 'conversational';
+export type InteractionOutcomeKind =
+	| 'noopEdit'
+	| 'inlineEdit'
+	| 'workspaceEdit'
+	| 'none'
+	| 'conversational';
 
 export interface OutcomeAnnotation {
 	label: string;
@@ -113,7 +133,7 @@ export enum OutcomeAnnotationLabel {
 	INVALID_PATCH_SMALL = 'patch small',
 	INVALID_PATCH_NOOP = 'patch no op',
 	SUMMARIZE_CONFLICT = 'summarize conflict',
-	NOOP_EDITS = 'noop edits'
+	NOOP_EDITS = 'noop edits',
 }
 
 /**
@@ -137,6 +157,6 @@ export class CopilotInteractiveEditorResponse {
 		readonly promptQuery: PromptQuery,
 		readonly messageId: string,
 		readonly telemetry: ChatTelemetry | undefined,
-		readonly editSurvivalTracker: IEditSurvivalTrackingSession
-	) { }
+		readonly editSurvivalTracker: IEditSurvivalTrackingSession,
+	) {}
 }

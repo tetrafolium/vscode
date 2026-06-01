@@ -30,7 +30,6 @@ interface XAIModelData {
 }
 
 export class XAIBYOKLMProvider extends AbstractOpenAICompatibleLMProvider {
-
 	public static readonly providerName = 'xAI';
 	public static readonly providerId = this.providerName.toLowerCase();
 
@@ -41,7 +40,7 @@ export class XAIBYOKLMProvider extends AbstractOpenAICompatibleLMProvider {
 		@ILogService logService: ILogService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IExperimentationService expService: IExperimentationService
+		@IExperimentationService expService: IExperimentationService,
 	) {
 		super(
 			XAIBYOKLMProvider.providerId,
@@ -52,7 +51,7 @@ export class XAIBYOKLMProvider extends AbstractOpenAICompatibleLMProvider {
 			logService,
 			instantiationService,
 			configurationService,
-			expService
+			expService,
 		);
 	}
 
@@ -64,7 +63,9 @@ export class XAIBYOKLMProvider extends AbstractOpenAICompatibleLMProvider {
 		return `${modelsBaseUrl}/language-models`;
 	}
 
-	protected override resolveModelCapabilities(modelData: unknown): BYOKModelCapabilities | undefined {
+	protected override resolveModelCapabilities(
+		modelData: unknown,
+	): BYOKModelCapabilities | undefined {
 		const xaiModelData = modelData as XAIModelData;
 		// Add new model with reasonable defaults
 		let maxInputTokens;
@@ -95,12 +96,14 @@ export class XAIBYOKLMProvider extends AbstractOpenAICompatibleLMProvider {
 	}
 
 	private humanizeXAIModelId(modelId: string): string {
-		const parts = modelId.split('-').filter(p => p.length > 0);
-		return parts.map(p => {
-			if (/^\d+$/.test(p)) {
-				return p; // keep pure numbers as-is
-			}
-			return p.charAt(0).toUpperCase() + p.slice(1);
-		}).join(' ');
+		const parts = modelId.split('-').filter((p) => p.length > 0);
+		return parts
+			.map((p) => {
+				if (/^\d+$/.test(p)) {
+					return p; // keep pure numbers as-is
+				}
+				return p.charAt(0).toUpperCase() + p.slice(1);
+			})
+			.join(' ');
 	}
 }

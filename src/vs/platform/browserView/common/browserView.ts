@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { VSBuffer } from '../../../base/common/buffer.js';
-import { localize } from '../../../nls.js';
+import { Event } from "../../../base/common/event.js";
+import { VSBuffer } from "../../../base/common/buffer.js";
+import { localize } from "../../../nls.js";
 
-const commandPrefix = 'workbench.action.browser';
+const commandPrefix = "workbench.action.browser";
 export enum BrowserViewCommandId {
 	// Tab management
 	Open = `${commandPrefix}.open`,
@@ -65,11 +65,21 @@ export interface IElementData {
 	readonly url?: string;
 	readonly outerHTML: string;
 	readonly computedStyle: string;
-	readonly bounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+	readonly bounds: {
+		readonly x: number;
+		readonly y: number;
+		readonly width: number;
+		readonly height: number;
+	};
 	readonly ancestors?: IElementAncestor[];
 	readonly attributes?: Record<string, string>;
 	readonly computedStyles?: Record<string, string>;
-	readonly dimensions?: { readonly top: number; readonly left: number; readonly width: number; readonly height: number };
+	readonly dimensions?: {
+		readonly top: number;
+		readonly left: number;
+		readonly width: number;
+		readonly height: number;
+	};
 	readonly innerText?: string;
 }
 
@@ -113,7 +123,7 @@ export interface IBrowserViewCaptureScreenshotOptions {
 	 * Encoding for the captured image. Defaults to `'jpeg'`.
 	 * `'png'` is lossless (no compression artifacts) at the cost of a larger buffer.
 	 */
-	format?: 'jpeg' | 'png';
+	format?: "jpeg" | "png";
 	screenRect?: IBrowserViewRect;
 	pageRect?: IBrowserViewRect;
 	/**
@@ -164,7 +174,12 @@ export interface IBrowserViewOpenOptions {
 	/** The parent view ID. Used by the workbench to place the new tab in the same editor group. */
 	readonly parentViewId?: string;
 	/** When set, open in an auxiliary (new) window with these bounds. */
-	readonly auxiliaryWindow?: { x?: number; y?: number; width?: number; height?: number };
+	readonly auxiliaryWindow?: {
+		x?: number;
+		y?: number;
+		width?: number;
+		height?: number;
+	};
 }
 
 export interface IBrowserViewCreatedEvent {
@@ -277,24 +292,46 @@ export interface IBrowserViewFindInPageResult {
 }
 
 export enum BrowserViewStorageScope {
-	Global = 'global',
-	Workspace = 'workspace',
-	Ephemeral = 'ephemeral'
+	Global = "global",
+	Workspace = "workspace",
+	Ephemeral = "ephemeral",
 }
 
-export const ipcBrowserViewChannelName = 'browserView';
+export const ipcBrowserViewChannelName = "browserView";
 
 /**
  * Discrete zoom levels matching Edge/Chrome.
  * Note: When those browsers say "33%" and "67%" zoom, they really mean 33.33...% and 66.66...%
  */
-export const browserZoomFactors = [0.25, 1 / 3, 0.5, 2 / 3, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5] as const;
+export const browserZoomFactors = [
+	0.25,
+	1 / 3,
+	0.5,
+	2 / 3,
+	0.75,
+	0.8,
+	0.9,
+	1,
+	1.1,
+	1.25,
+	1.5,
+	1.75,
+	2,
+	2.5,
+	3,
+	4,
+	5,
+] as const;
 export const browserZoomDefaultIndex = browserZoomFactors.indexOf(1);
 export function browserZoomLabel(zoomFactor: number): string {
-	return localize('browserZoomPercent', "{0}%", Math.round(zoomFactor * 100));
+	return localize("browserZoomPercent", "{0}%", Math.round(zoomFactor * 100));
 }
 export function browserZoomAccessibilityLabel(zoomFactor: number): string {
-	return localize('browserZoomAccessibilityLabel', "Page Zoom: {0}%", Math.round(zoomFactor * 100));
+	return localize(
+		"browserZoomAccessibilityLabel",
+		"Page Zoom: {0}%",
+		Math.round(zoomFactor * 100),
+	);
 }
 
 /**
@@ -326,7 +363,9 @@ export interface IBrowserViewService {
 	onDynamicDidChangeLoadingState(id: string): Event<IBrowserViewLoadingEvent>;
 	onDynamicDidChangeFocus(id: string): Event<IBrowserViewFocusEvent>;
 	onDynamicDidChangeVisibility(id: string): Event<IBrowserViewVisibilityEvent>;
-	onDynamicDidChangeDevToolsState(id: string): Event<IBrowserViewDevToolsStateEvent>;
+	onDynamicDidChangeDevToolsState(
+		id: string,
+	): Event<IBrowserViewDevToolsStateEvent>;
 	onDynamicDidKeyCommand(id: string): Event<IBrowserViewKeyDownEvent>;
 	onDynamicDidChangeTitle(id: string): Event<IBrowserViewTitleChangeEvent>;
 	onDynamicDidChangeFavicon(id: string): Event<IBrowserViewFaviconChangeEvent>;
@@ -340,7 +379,9 @@ export interface IBrowserViewService {
 	 */
 	onDynamicDidPickArea(id: string): Event<IBrowserViewRect | undefined>;
 	onDynamicDidChangeAreaSelectionActive(id: string): Event<boolean>;
-	onDynamicDidChangeDeviceEmulation(id: string): Event<IBrowserDeviceProfile | undefined>;
+	onDynamicDidChangeDeviceEmulation(
+		id: string,
+	): Event<IBrowserDeviceProfile | undefined>;
 
 	/**
 	 * Get all known browser views with their ownership and state information.
@@ -353,7 +394,10 @@ export interface IBrowserViewService {
 	 * @param id The browser view identifier
 	 * @param options Creation options. If a view with the given ID already exists, these options are ignored.
 	 */
-	getOrCreateBrowserView(id: string, options: IBrowserViewCreateOptions): Promise<IBrowserViewState>;
+	getOrCreateBrowserView(
+		id: string,
+		options: IBrowserViewCreateOptions,
+	): Promise<IBrowserViewState>;
 
 	/**
 	 * Destroy a browser view instance
@@ -439,7 +483,10 @@ export interface IBrowserViewService {
 	 * @param options Screenshot options (quality and rect)
 	 * @returns Screenshot as a buffer
 	 */
-	captureScreenshot(id: string, options?: IBrowserViewCaptureScreenshotOptions): Promise<VSBuffer>;
+	captureScreenshot(
+		id: string,
+		options?: IBrowserViewCaptureScreenshotOptions,
+	): Promise<VSBuffer>;
 
 	/**
 	 * Focus the browser view
@@ -454,7 +501,11 @@ export interface IBrowserViewService {
 	 * @param text The text to search for
 	 * @param options Find options (forward direction, find next)
 	 */
-	findInPage(id: string, text: string, options?: IBrowserViewFindInPageOptions): Promise<void>;
+	findInPage(
+		id: string,
+		text: string,
+		options?: IBrowserViewFindInPageOptions,
+	): Promise<void>;
 
 	/**
 	 * Stop the find in page session
@@ -492,7 +543,10 @@ export interface IBrowserViewService {
 	setBrowserZoomIndex(id: string, zoomIndex: number): Promise<void>;
 
 	/** Set or clear the active device profile for a browser view. */
-	setDeviceEmulation(id: string, device: IBrowserDeviceProfile | undefined): Promise<void>;
+	setDeviceEmulation(
+		id: string,
+		device: IBrowserDeviceProfile | undefined,
+	): Promise<void>;
 
 	/**
 	 * Trust a certificate for a given host in the browser view's session.
@@ -501,7 +555,11 @@ export interface IBrowserViewService {
 	 * @param host The hostname that presented the certificate
 	 * @param fingerprint The SHA-256 fingerprint of the certificate to trust
 	 */
-	trustCertificate(id: string, host: string, fingerprint: string): Promise<void>;
+	trustCertificate(
+		id: string,
+		host: string,
+		fingerprint: string,
+	): Promise<void>;
 
 	/**
 	 * Revoke trust for a previously trusted certificate.
@@ -510,7 +568,11 @@ export interface IBrowserViewService {
 	 * @param host The hostname to revoke the certificate for
 	 * @param fingerprint The SHA-256 fingerprint of the certificate to revoke
 	 */
-	untrustCertificate(id: string, host: string, fingerprint: string): Promise<void>;
+	untrustCertificate(
+		id: string,
+		host: string,
+		fingerprint: string,
+	): Promise<void>;
 
 	/**
 	 * Get captured console logs for a browser view.
@@ -551,7 +613,9 @@ export interface IBrowserViewService {
 	 * Update the keybinding accelerators used in browser view context menus.
 	 * @param keybindings A map of command ID to accelerator label
 	 */
-	updateKeybindings(keybindings: { [commandId: string]: string }): Promise<void>;
+	updateKeybindings(keybindings: {
+		[commandId: string]: string;
+	}): Promise<void>;
 
 	/**
 	 * Update workbench configuration that affect browser view behavior.

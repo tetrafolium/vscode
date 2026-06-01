@@ -9,7 +9,10 @@ export namespace ClaudeSessionUri {
 	export const scheme = 'claude-code';
 
 	export function forSessionId(sessionId: string): URI {
-		return URI.from({ scheme: ClaudeSessionUri.scheme, path: '/' + sessionId });
+		return URI.from({
+			scheme: ClaudeSessionUri.scheme,
+			path: '/' + sessionId,
+		});
 	}
 
 	export function getSessionId(resource: URI): string {

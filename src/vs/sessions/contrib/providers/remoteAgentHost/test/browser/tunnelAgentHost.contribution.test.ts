@@ -3,45 +3,64 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { Emitter, Event } from '../../../../../../base/common/event.js';
-import { Disposable, IDisposable, toDisposable } from '../../../../../../base/common/lifecycle.js';
-import { observableValue } from '../../../../../../base/common/observable.js';
-import { mock } from '../../../../../../base/test/common/mock.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { IAgentConnection } from '../../../../../../platform/agentHost/common/agentService.js';
+import assert from "assert";
+import { Emitter, Event } from "../../../../../../base/common/event.js";
+import {
+	Disposable,
+	IDisposable,
+	toDisposable,
+} from "../../../../../../base/common/lifecycle.js";
+import { observableValue } from "../../../../../../base/common/observable.js";
+import { mock } from "../../../../../../base/test/common/mock.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import { IAgentConnection } from "../../../../../../platform/agentHost/common/agentService.js";
 import {
 	IRemoteAgentHostConnectionInfo,
 	IRemoteAgentHostService,
 	RemoteAgentHostConnectionStatus,
 	RemoteAgentHostsEnabledSettingId,
-} from '../../../../../../platform/agentHost/common/remoteAgentHostService.js';
+} from "../../../../../../platform/agentHost/common/remoteAgentHostService.js";
 import {
 	ICachedTunnel,
 	ITunnelAgentHostService,
 	TUNNEL_ADDRESS_PREFIX,
-} from '../../../../../../platform/agentHost/common/tunnelAgentHost.js';
-import { ConfigurationTarget, IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
-import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { ILogService, NullLogService } from '../../../../../../platform/log/common/log.js';
-import { INotificationService } from '../../../../../../platform/notification/common/notification.js';
-import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
-import { IAuthenticationService } from '../../../../../../workbench/services/authentication/common/authentication.js';
-import { ISessionsProvider } from '../../../../../services/sessions/common/sessionsProvider.js';
-import { ISessionsProvidersChangeEvent, ISessionsProvidersService } from '../../../../../services/sessions/browser/sessionsProvidersService.js';
-import { IAgentHostFilterService } from '../../../../../services/agentHostFilter/common/agentHostFilter.js';
-import { RemoteAgentHostSessionsProvider } from '../../browser/remoteAgentHostSessionsProvider.js';
-import { TunnelAgentHostContribution } from '../../browser/tunnelAgentHost.contribution.js';
+} from "../../../../../../platform/agentHost/common/tunnelAgentHost.js";
+import {
+	ConfigurationTarget,
+	IConfigurationService,
+} from "../../../../../../platform/configuration/common/configuration.js";
+import { TestConfigurationService } from "../../../../../../platform/configuration/test/common/testConfigurationService.js";
+import { TestInstantiationService } from "../../../../../../platform/instantiation/test/common/instantiationServiceMock.js";
+import {
+	ILogService,
+	NullLogService,
+} from "../../../../../../platform/log/common/log.js";
+import { INotificationService } from "../../../../../../platform/notification/common/notification.js";
+import { ITelemetryService } from "../../../../../../platform/telemetry/common/telemetry.js";
+import { IAuthenticationService } from "../../../../../../workbench/services/authentication/common/authentication.js";
+import { ISessionsProvider } from "../../../../../services/sessions/common/sessionsProvider.js";
+import {
+	ISessionsProvidersChangeEvent,
+	ISessionsProvidersService,
+} from "../../../../../services/sessions/browser/sessionsProvidersService.js";
+import { IAgentHostFilterService } from "../../../../../services/agentHostFilter/common/agentHostFilter.js";
+import { RemoteAgentHostSessionsProvider } from "../../browser/remoteAgentHostSessionsProvider.js";
+import { TunnelAgentHostContribution } from "../../browser/tunnelAgentHost.contribution.js";
 
 class StubProvider extends mock<RemoteAgentHostSessionsProvider>() {
-	readonly setConnectionCalls: Array<{ connection: IAgentConnection; defaultDirectory: string | undefined }> = [];
+	readonly setConnectionCalls: Array<{
+		connection: IAgentConnection;
+		defaultDirectory: string | undefined;
+	}> = [];
 
 	override readonly id: string;
 	override readonly remoteAddress: string;
 	override readonly label: string;
 
-	private readonly _status = observableValue<RemoteAgentHostConnectionStatus>('status', RemoteAgentHostConnectionStatus.connecting);
+	private readonly _status = observableValue<RemoteAgentHostConnectionStatus>(
+		"status",
+		RemoteAgentHostConnectionStatus.connecting,
+	);
 	override readonly connectionStatus = this._status;
 
 	constructor(address: string, name: string) {
@@ -55,13 +74,20 @@ class StubProvider extends mock<RemoteAgentHostSessionsProvider>() {
 		this._status.set(status, undefined);
 	}
 
-	override setConnection(connection: IAgentConnection, defaultDirectory?: string): void {
+	override setConnection(
+		connection: IAgentConnection,
+		defaultDirectory?: string,
+	): void {
 		this.setConnectionCalls.push({ connection, defaultDirectory });
 	}
 
-	override unpublishCachedSessions(): void { /* noop */ }
+	override unpublishCachedSessions(): void {
+		/* noop */
+	}
 
-	override dispose(): void { /* noop */ }
+	override dispose(): void {
+		/* noop */
+	}
 }
 
 class StubTunnelService extends Disposable {
@@ -78,28 +104,43 @@ class StubTunnelService extends Disposable {
 		this._onDidChangeTunnels.fire();
 	}
 
-	getCachedTunnels(): ICachedTunnel[] { return this._cached; }
-	isAutoConnectSuppressed(id: string): boolean { return this._suppressed.has(id); }
-	suppressAutoConnect(id: string): void { this._suppressed.add(id); }
-	clearAutoConnectSuppression(id: string): void { this._suppressed.delete(id); }
+	getCachedTunnels(): ICachedTunnel[] {
+		return this._cached;
+	}
+	isAutoConnectSuppressed(id: string): boolean {
+		return this._suppressed.has(id);
+	}
+	suppressAutoConnect(id: string): void {
+		this._suppressed.add(id);
+	}
+	clearAutoConnectSuppression(id: string): void {
+		this._suppressed.delete(id);
+	}
 }
 
 class StubRemoteAgentHostService extends Disposable {
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidChangeConnections = this._register(new Emitter<void>());
+	private readonly _onDidChangeConnections = this._register(
+		new Emitter<void>(),
+	);
 	readonly onDidChangeConnections = this._onDidChangeConnections.event;
 
 	private readonly _connections: IRemoteAgentHostConnectionInfo[] = [];
 	private readonly _agentConnections = new Map<string, IAgentConnection>();
 
-	get connections(): readonly IRemoteAgentHostConnectionInfo[] { return this._connections; }
+	get connections(): readonly IRemoteAgentHostConnectionInfo[] {
+		return this._connections;
+	}
 
 	getConnection(address: string): IAgentConnection | undefined {
 		return this._agentConnections.get(address);
 	}
 
-	addConnection(info: IRemoteAgentHostConnectionInfo, connection: IAgentConnection): void {
+	addConnection(
+		info: IRemoteAgentHostConnectionInfo,
+		connection: IAgentConnection,
+	): void {
 		this._connections.push(info);
 		this._agentConnections.set(info.address, connection);
 		this._onDidChangeConnections.fire();
@@ -109,7 +150,9 @@ class StubRemoteAgentHostService extends Disposable {
 class StubSessionsProvidersService extends Disposable {
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidChange = this._register(new Emitter<ISessionsProvidersChangeEvent>());
+	private readonly _onDidChange = this._register(
+		new Emitter<ISessionsProvidersChangeEvent>(),
+	);
 	readonly onDidChangeProviders = this._onDidChange.event;
 
 	private readonly _providers = new Map<string, ISessionsProvider>();
@@ -131,25 +174,31 @@ class StubSessionsProvidersService extends Disposable {
 
 class StubFilterService {
 	declare readonly _serviceBrand: undefined;
-	registerDiscoveryHandler(_handler: () => Promise<void>): IDisposable { return toDisposable(() => { }); }
-	async rediscover(): Promise<void> { /* noop — production routes through the discovery handler */ }
+	registerDiscoveryHandler(_handler: () => Promise<void>): IDisposable {
+		return toDisposable(() => {});
+	}
+	async rediscover(): Promise<void> {
+		/* noop — production routes through the discovery handler */
+	}
 }
 
 class TestTunnelContribution extends TunnelAgentHostContribution {
 	readonly stubProviders = new Map<string, StubProvider>();
 
-	protected override _instantiateProvider(address: string, name: string): RemoteAgentHostSessionsProvider {
+	protected override _instantiateProvider(
+		address: string,
+		name: string,
+	): RemoteAgentHostSessionsProvider {
 		const stub = new StubProvider(address, name);
 		this.stubProviders.set(address, stub);
 		return stub as unknown as RemoteAgentHostSessionsProvider;
 	}
 }
 
-suite('TunnelAgentHostContribution', () => {
-
+suite("TunnelAgentHostContribution", () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('newly-cached tunnel binds to subsequent live connection', async () => {
+	test("newly-cached tunnel binds to subsequent live connection", async () => {
 		// Regression guard for the picker flow: `tunnelService.connect()` is
 		// contractually obligated to cache the tunnel BEFORE announcing the
 		// live connection via `addManagedConnection`. That ordering lets the
@@ -159,44 +208,81 @@ suite('TunnelAgentHostContribution', () => {
 		const tunnelService = store.add(new StubTunnelService());
 		const remoteService = store.add(new StubRemoteAgentHostService());
 		const providersService = store.add(new StubSessionsProvidersService());
-		const configurationService = new TestConfigurationService({ [RemoteAgentHostsEnabledSettingId]: true });
+		const configurationService = new TestConfigurationService({
+			[RemoteAgentHostsEnabledSettingId]: true,
+		});
 
 		const instantiationService = store.add(new TestInstantiationService());
-		instantiationService.stub(ITunnelAgentHostService, tunnelService as unknown as ITunnelAgentHostService);
-		instantiationService.stub(IRemoteAgentHostService, remoteService as unknown as IRemoteAgentHostService);
-		instantiationService.stub(ISessionsProvidersService, providersService as unknown as ISessionsProvidersService);
+		instantiationService.stub(
+			ITunnelAgentHostService,
+			tunnelService as unknown as ITunnelAgentHostService,
+		);
+		instantiationService.stub(
+			IRemoteAgentHostService,
+			remoteService as unknown as IRemoteAgentHostService,
+		);
+		instantiationService.stub(
+			ISessionsProvidersService,
+			providersService as unknown as ISessionsProvidersService,
+		);
 		instantiationService.stub(IConfigurationService, configurationService);
-		instantiationService.stub(INotificationService, { notify: () => ({ close() { } }) } as unknown as INotificationService);
+		instantiationService.stub(INotificationService, {
+			notify: () => ({ close() {} }),
+		} as unknown as INotificationService);
 		instantiationService.stub(ILogService, new NullLogService());
-		instantiationService.stub(IAuthenticationService, { onDidChangeSessions: Event.None } as unknown as IAuthenticationService);
-		instantiationService.stub(ITelemetryService, { publicLog2: () => { } } as unknown as ITelemetryService);
-		instantiationService.stub(IAgentHostFilterService, new StubFilterService() as unknown as IAgentHostFilterService);
+		instantiationService.stub(IAuthenticationService, {
+			onDidChangeSessions: Event.None,
+		} as unknown as IAuthenticationService);
+		instantiationService.stub(ITelemetryService, {
+			publicLog2: () => {},
+		} as unknown as ITelemetryService);
+		instantiationService.stub(
+			IAgentHostFilterService,
+			new StubFilterService() as unknown as IAgentHostFilterService,
+		);
 
-		const contribution = store.add(instantiationService.createInstance(TestTunnelContribution));
+		const contribution = store.add(
+			instantiationService.createInstance(TestTunnelContribution),
+		);
 
-		const tunnelId = 'tunnel-abc';
+		const tunnelId = "tunnel-abc";
 		const address = `${TUNNEL_ADDRESS_PREFIX}${tunnelId}`;
 		const fakeConnection = {} as IAgentConnection;
 
 		// Step 1: cache the tunnel — creates the provider via `_reconcileProviders`.
-		tunnelService.setCached([{ tunnelId, clusterId: 'use', name: 'My Tunnel' }]);
+		tunnelService.setCached([
+			{ tunnelId, clusterId: "use", name: "My Tunnel" },
+		]);
 		const provider = contribution.stubProviders.get(address);
-		assert.ok(provider, 'provider should be created for the cached tunnel');
-		assert.strictEqual(provider!.setConnectionCalls.length, 0, 'no live connection yet — wire-up must wait');
+		assert.ok(provider, "provider should be created for the cached tunnel");
+		assert.strictEqual(
+			provider!.setConnectionCalls.length,
+			0,
+			"no live connection yet — wire-up must wait",
+		);
 
 		// Step 2: announce the live connection — `_wireConnections` should bind it.
-		remoteService.addConnection({
-			address,
-			name: 'My Tunnel',
-			clientId: 'client-1',
-			status: RemoteAgentHostConnectionStatus.connected,
-		}, fakeConnection);
+		remoteService.addConnection(
+			{
+				address,
+				name: "My Tunnel",
+				clientId: "client-1",
+				status: RemoteAgentHostConnectionStatus.connected,
+			},
+			fakeConnection,
+		);
 
-		assert.deepStrictEqual(provider!.setConnectionCalls.map(c => c.connection), [fakeConnection]);
+		assert.deepStrictEqual(
+			provider!.setConnectionCalls.map((c) => c.connection),
+			[fakeConnection],
+		);
 
-		await configurationService.setUserConfiguration(RemoteAgentHostsEnabledSettingId, false);
+		await configurationService.setUserConfiguration(
+			RemoteAgentHostsEnabledSettingId,
+			false,
+		);
 		configurationService.onDidChangeConfigurationEmitter.fire({
-			affectsConfiguration: key => key === RemoteAgentHostsEnabledSettingId,
+			affectsConfiguration: (key) => key === RemoteAgentHostsEnabledSettingId,
 			affectedKeys: new Set([RemoteAgentHostsEnabledSettingId]),
 			change: { keys: [RemoteAgentHostsEnabledSettingId], overrides: [] },
 			source: ConfigurationTarget.USER,

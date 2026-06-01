@@ -9,7 +9,10 @@ import { solutionCountTarget } from '../lib/copilotPanel/common';
 import { runSolutions } from '../lib/copilotPanel/panel';
 import { UnformattedSolution } from '../lib/panelShared/panelTypes';
 import { BaseListDocument } from '../panelShared/baseListDocument';
-import { BasePanelCompletion, ISuggestionsPanel } from '../panelShared/basePanelTypes';
+import {
+	BasePanelCompletion,
+	ISuggestionsPanel,
+} from '../panelShared/basePanelTypes';
 import { PanelCompletion } from './common';
 
 /**
@@ -22,14 +25,14 @@ export class CopilotListDocument extends BaseListDocument<PanelCompletion> {
 		position: IPosition,
 		panel: ISuggestionsPanel,
 		countTarget = solutionCountTarget,
-		@IInstantiationService instantiationService: IInstantiationService
+		@IInstantiationService instantiationService: IInstantiationService,
 	) {
 		super(textDocument, position, panel, countTarget, instantiationService);
 	}
 
 	protected createPanelCompletion(
 		unformatted: UnformattedSolution,
-		baseCompletion: BasePanelCompletion
+		baseCompletion: BasePanelCompletion,
 	): PanelCompletion {
 		return {
 			insertText: baseCompletion.insertText,
@@ -44,6 +47,10 @@ export class CopilotListDocument extends BaseListDocument<PanelCompletion> {
 	}
 
 	protected runSolutionsImpl(): Promise<void> {
-		return this.instantiationService.invokeFunction(runSolutions, this, this);
+		return this.instantiationService.invokeFunction(
+			runSolutions,
+			this,
+			this,
+		);
 	}
 }

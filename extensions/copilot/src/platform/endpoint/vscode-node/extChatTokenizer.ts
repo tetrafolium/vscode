@@ -7,7 +7,10 @@ import { OutputMode, Raw } from '@vscode/prompt-tsx';
 import { LanguageModelChat, LanguageModelChatTool } from 'vscode';
 import { ITokenizer } from '../../../util/common/tokenizer';
 import { assertNever } from '../../../util/vs/base/common/assert';
-import { calculateImageTokenCost, estimateDocumentTokenCost } from '../../tokenizer/node/tokenizer';
+import {
+	calculateImageTokenCost,
+	estimateDocumentTokenCost,
+} from '../../tokenizer/node/tokenizer';
 import { convertToApiChatMessage } from './extChatEndpoint';
 
 /**
@@ -22,13 +25,14 @@ const BaseTokensPerCompletion = 3;
  */
 const BaseTokensPerMessage = 3;
 
-
 export class ExtensionContributedChatTokenizer implements ITokenizer {
 	public readonly mode = OutputMode.Raw;
 
-	constructor(private readonly languageModel: LanguageModelChat) { }
+	constructor(private readonly languageModel: LanguageModelChat) {}
 
-	async tokenLength(text: string | Raw.ChatCompletionContentPart): Promise<number> {
+	async tokenLength(
+		text: string | Raw.ChatCompletionContentPart,
+	): Promise<number> {
 		if (typeof text === 'string') {
 			return this._textTokenLength(text);
 		}
@@ -41,7 +45,10 @@ export class ExtensionContributedChatTokenizer implements ITokenizer {
 			case Raw.ChatCompletionContentPartKind.Image:
 				if (text.imageUrl.url.startsWith('data:image/')) {
 					try {
-						return calculateImageTokenCost(text.imageUrl.url, text.imageUrl.detail);
+						return calculateImageTokenCost(
+							text.imageUrl.url,
+							text.imageUrl.detail,
+						);
 					} catch {
 						return this._textTokenLength(text.imageUrl.url);
 					}
@@ -52,7 +59,10 @@ export class ExtensionContributedChatTokenizer implements ITokenizer {
 			case Raw.ChatCompletionContentPartKind.Document:
 				return estimateDocumentTokenCost(text.documentData.data);
 			default:
-				assertNever(text, `unknown content part (${JSON.stringify(text)})`);
+				assertNever(
+					text,
+					`unknown content part (${JSON.stringify(text)})`,
+				);
 		}
 	}
 
@@ -72,7 +82,9 @@ export class ExtensionContributedChatTokenizer implements ITokenizer {
 		}
 
 		// Count tokens for the message using VS Code API
-		const messageTokens = await this.languageModel.countTokens(apiMessages[0]);
+		const messageTokens = await this.languageModel.countTokens(
+			apiMessages[0],
+		);
 		return BaseTokensPerMessage + messageTokens;
 	}
 
@@ -84,7 +96,9 @@ export class ExtensionContributedChatTokenizer implements ITokenizer {
 		return numTokens;
 	}
 
-	async countToolTokens(tools: readonly LanguageModelChatTool[]): Promise<number> {
+	async countToolTokens(
+		tools: readonly LanguageModelChatTool[],
+	): Promise<number> {
 		const baseToolTokens = 16;
 		let numTokens = 0;
 		if (tools.length) {
@@ -94,14 +108,20 @@ export class ExtensionContributedChatTokenizer implements ITokenizer {
 		const baseTokensPerTool = 8;
 		for (const tool of tools) {
 			numTokens += baseTokensPerTool;
-			numTokens += await this._countObjectTokens({ name: tool.name, description: tool.description, parameters: tool.inputSchema });
+			numTokens += await this._countObjectTokens({
+				name: tool.name,
+				description: tool.description,
+				parameters: tool.inputSchema,
+			});
 		}
 
 		// This is an estimate, so give a little safety margin
 		return Math.floor(numTokens * 1.1);
 	}
 
-	private async _countObjectTokens(obj: Record<string, unknown>): Promise<number> {
+	private async _countObjectTokens(
+		obj: Record<string, unknown>,
+	): Promise<number> {
 		let numTokens = 0;
 		for (const [key, value] of Object.entries(obj)) {
 			if (!value) {
@@ -112,7 +132,9 @@ export class ExtensionContributedChatTokenizer implements ITokenizer {
 			if (typeof value === 'string') {
 				numTokens += await this._textTokenLength(value);
 			} else if (typeof value === 'object') {
-				numTokens += await this._countObjectTokens(value as Record<string, unknown>);
+				numTokens += await this._countObjectTokens(
+					value as Record<string, unknown>,
+				);
 			}
 		}
 

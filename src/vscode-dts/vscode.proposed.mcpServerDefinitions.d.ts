@@ -5,8 +5,7 @@
 
 // version: 1
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	// https://github.com/microsoft/vscode/issues/288777 @DonJayamanne
 
 	/**
@@ -83,6 +82,8 @@ declare module 'vscode' {
 		 * @returns A promise that resolves to an {@link McpGateway} if successful,
 		 * or `undefined` if no Node process is available (e.g., in serverless web environments).
 		 */
-		export function startMcpGateway(chatSessionResource?: Uri): Thenable<McpGateway | undefined>;
+		export function startMcpGateway(
+			chatSessionResource?: Uri,
+		): Thenable<McpGateway | undefined>;
 	}
 }

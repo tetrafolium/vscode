@@ -4,16 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 /* Hide the container when no notification is active */
-.interactive-session .interactive-input-part > .chat-input-notification-container:not(.has-notification) {
+.interactive-session
+	.interactive-input-part
+	> .chat-input-notification-container:not(.has-notification) {
 	display: none;
 }
 
 /* Counteract the `.interactive-input-part` `gap: 4px` so the notification attaches to the input. Add extra -6px to account for rounded corners. */
-.interactive-session .interactive-input-part > .chat-input-notification-container {
+.interactive-session
+	.interactive-input-part
+	> .chat-input-notification-container {
 	margin-bottom: -10px;
 }
 
-.interactive-session .interactive-input-part > .chat-input-notification-container .chat-input-notification {
+.interactive-session
+	.interactive-input-part
+	> .chat-input-notification-container
+	.chat-input-notification {
 	/* Padding needs to be -6px for top to account for -10px margin in parent container and 4px for half of chat border radius. */
 	padding: 10px 16px 16px 16px;
 	box-sizing: border-box;
@@ -27,29 +34,56 @@
 }
 
 /* Severity variants */
-.interactive-session .interactive-input-part > .chat-input-notification-container .chat-input-notification.severity-info {
+.interactive-session
+	.interactive-input-part
+	> .chat-input-notification-container
+	.chat-input-notification.severity-info {
 	border-color: var(--vscode-input-border, transparent);
-	background-color: color-mix(in srgb, var(--vscode-focusBorder) 6%, var(--vscode-editorWidget-background));
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-focusBorder) 6%,
+		var(--vscode-editorWidget-background)
+	);
 }
 
 /* Match the chat input's focus ring so the notification merges with it. */
-.interactive-session .interactive-input-part:has(.chat-input-container.focused) > .chat-input-notification-container .chat-input-notification.severity-info {
+.interactive-session
+	.interactive-input-part:has(.chat-input-container.focused)
+	> .chat-input-notification-container
+	.chat-input-notification.severity-info {
 	border-color: var(--vscode-focusBorder);
 }
 
 /* Working+focused: the chat input dims its focus border; match it here. */
-.interactive-session .interactive-input-part:has(.chat-input-container.working.focused) > .chat-input-notification-container .chat-input-notification.severity-info {
+.interactive-session
+	.interactive-input-part:has(.chat-input-container.working.focused)
+	> .chat-input-notification-container
+	.chat-input-notification.severity-info {
 	border-color: color-mix(in srgb, var(--vscode-focusBorder) 40%, transparent);
 }
 
-.interactive-session .interactive-input-part > .chat-input-notification-container .chat-input-notification.severity-warning {
+.interactive-session
+	.interactive-input-part
+	> .chat-input-notification-container
+	.chat-input-notification.severity-warning {
 	border-color: var(--vscode-editorWarning-foreground);
-	background-color: color-mix(in srgb, var(--vscode-editorWarning-foreground) 6%, var(--vscode-editorWidget-background));
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-editorWarning-foreground) 6%,
+		var(--vscode-editorWidget-background)
+	);
 }
 
-.interactive-session .interactive-input-part > .chat-input-notification-container .chat-input-notification.severity-error {
+.interactive-session
+	.interactive-input-part
+	> .chat-input-notification-container
+	.chat-input-notification.severity-error {
 	border-color: var(--vscode-editorError-foreground);
-	background-color: color-mix(in srgb, var(--vscode-editorError-foreground) 6%, var(--vscode-editorWidget-background));
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-editorError-foreground) 6%,
+		var(--vscode-editorWidget-background)
+	);
 }
 
 /* Header row: icon + title + dismiss */
@@ -158,7 +192,8 @@
 	opacity: 0.8;
 }
 
-.chat-input-notification .chat-input-notification-action-button.secondary:hover {
+.chat-input-notification
+	.chat-input-notification-action-button.secondary:hover {
 	background: var(--vscode-toolbar-hoverBackground);
 	opacity: 1;
 }
@@ -190,12 +225,19 @@
 }
 
 /* Cascade styling — remove top border-radius from sibling containers when notification is visible */
-.interactive-session .interactive-input-part > .chat-input-notification-container.has-notification + .chat-todo-list-widget-container .chat-todo-list-widget {
+.interactive-session
+	.interactive-input-part
+	> .chat-input-notification-container.has-notification
+	+ .chat-todo-list-widget-container
+	.chat-todo-list-widget {
 	border-top-left-radius: 0;
 	border-top-right-radius: 0;
 }
 
 /* Hide the getting-started tip when a notification is visible */
-.interactive-session .interactive-input-part > .chat-input-notification-container.has-notification ~ .chat-getting-started-tip-container {
+.interactive-session
+	.interactive-input-part
+	> .chat-input-notification-container.has-notification
+	~ .chat-getting-started-tip-container {
 	display: none !important;
 }

@@ -16,7 +16,7 @@ export interface Observer<T> {
 export class Subject<T> {
 	private observers = new Set<Observer<T>>();
 
-	constructor() { }
+	constructor() {}
 
 	subscribe(observer: Observer<T>): () => void {
 		this.observers.add(observer);
@@ -48,7 +48,9 @@ export class ReplaySubject<T> extends Subject<T> {
 
 	override subscribe(observer: Observer<T>): () => void {
 		const subscription = super.subscribe(observer);
-		if (this._value !== undefined) { observer.next(this._value); }
+		if (this._value !== undefined) {
+			observer.next(this._value);
+		}
 		return subscription;
 	}
 

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDimension } from './dimension.js';
+import { IDimension } from "./dimension.js";
 
 export class Size2D {
 	static equals(a: Size2D, b: Size2D): boolean {
@@ -13,7 +13,7 @@ export class Size2D {
 	constructor(
 		public readonly width: number,
 		public readonly height: number,
-	) { }
+	) {}
 
 	public add(other: Size2D): Size2D {
 		return new Size2D(this.width + other.width, this.height + other.height);

@@ -12,24 +12,41 @@ import { SequencerByKey } from '../../../../util/vs/base/common/async';
 import { Event } from '../../../../util/vs/base/common/event';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { IAuthenticationService } from '../../../authentication/common/authentication';
-import { CHAT_MODEL, IConfigurationService } from '../../../configuration/common/configurationService';
+import {
+	CHAT_MODEL,
+	IConfigurationService,
+} from '../../../configuration/common/configurationService';
 import { LEGACY_EMBEDDING_MODEL_ID } from '../../../embeddings/common/embeddingsComputer';
 import { IEnvService } from '../../../env/common/envService';
 import { IOctoKitService } from '../../../github/common/githubService';
 import { ILogService } from '../../../log/common/logService';
-import { IChatEndpoint, IEmbeddingsEndpoint } from '../../../networking/common/networking';
+import {
+	IChatEndpoint,
+	IEmbeddingsEndpoint,
+} from '../../../networking/common/networking';
 import { IRequestLogger } from '../../../requestLogger/common/requestLogger';
 import { IExperimentationService } from '../../../telemetry/common/nullExperimentationService';
-import { ChatEndpointFamily, EmbeddingsEndpointFamily, IChatModelInformation, ICompletionModelInformation, IEmbeddingModelInformation, IEndpointProvider } from '../../common/endpointProvider';
+import {
+	ChatEndpointFamily,
+	EmbeddingsEndpointFamily,
+	IChatModelInformation,
+	ICompletionModelInformation,
+	IEmbeddingModelInformation,
+	IEndpointProvider,
+} from '../../common/endpointProvider';
 import { EmbeddingEndpoint } from '../../node/embeddingsEndpoint';
 import { ModelMetadataFetcher } from '../../node/modelMetadataFetcher';
 import { AzureTestEndpoint } from './azureEndpoint';
 import { CAPITestEndpoint } from './capiEndpoint';
 import { CustomNesEndpoint } from './customNesEndpoint';
-import { IModelConfig, OpenAICompatibleTestEndpoint } from './openaiCompatibleEndpoint';
+import {
+	IModelConfig,
+	OpenAICompatibleTestEndpoint,
+} from './openaiCompatibleEndpoint';
 
-
-async function getModelMetadataMap(modelMetadataFetcher: TestModelMetadataFetcher): Promise<Map<string, IChatModelInformation>> {
+async function getModelMetadataMap(
+	modelMetadataFetcher: TestModelMetadataFetcher,
+): Promise<Map<string, IChatModelInformation>> {
 	let metadataArray: IChatModelInformation[] = [];
 	try {
 		metadataArray = await modelMetadataFetcher.getAllChatModels();
@@ -41,7 +58,7 @@ async function getModelMetadataMap(modelMetadataFetcher: TestModelMetadataFetche
 		}
 	}
 	const metadataMap = new Map<string, IChatModelInformation>();
-	metadataArray.forEach(metadata => {
+	metadataArray.forEach((metadata) => {
 		metadataMap.set(metadata.id, metadata);
 	});
 	return metadataMap;
@@ -50,16 +67,20 @@ async function getModelMetadataMap(modelMetadataFetcher: TestModelMetadataFetche
 type ModelMetadataType = 'prod' | 'modelLab';
 
 class ModelMetadataRequest implements CacheableRequest {
-	constructor(readonly hash: string) { }
+	constructor(readonly hash: string) {}
 }
 
 export class TestModelMetadataFetcher extends ModelMetadataFetcher {
-
 	private static Queues = new SequencerByKey<ModelMetadataType>();
 
-	get isModelLab(): boolean { return this._isModelLab; }
+	get isModelLab(): boolean {
+		return this._isModelLab;
+	}
 
-	private readonly cache: SQLiteCache<ModelMetadataRequest, IChatModelInformation[]>;
+	private readonly cache: SQLiteCache<
+		ModelMetadataRequest,
+		IChatModelInformation[]
+	>;
 
 	constructor(
 		_isModelLab: boolean,
@@ -86,7 +107,10 @@ export class TestModelMetadataFetcher extends ModelMetadataFetcher {
 			_instantiationService,
 		);
 
-		this.cache = new SQLiteCache<ModelMetadataRequest, IChatModelInformation[]>('modelMetadata', TestingCacheSalts.modelMetadata, info);
+		this.cache = new SQLiteCache<
+			ModelMetadataRequest,
+			IChatModelInformation[]
+		>('modelMetadata', TestingCacheSalts.modelMetadata, info);
 	}
 
 	override async getAllChatModels(): Promise<IChatModelInformation[]> {
@@ -111,7 +135,6 @@ export class TestModelMetadataFetcher extends ModelMetadataFetcher {
 }
 
 export class TestEndpointProvider implements IEndpointProvider {
-
 	declare readonly _serviceBrand: undefined;
 
 	readonly onDidModelsRefresh = Event.None;
@@ -119,7 +142,9 @@ export class TestEndpointProvider implements IEndpointProvider {
 	private _testEmbeddingEndpoint: IEmbeddingsEndpoint | undefined;
 	private _chatEndpoints: Map<string, IChatEndpoint> = new Map();
 	private _prodChatModelMetadata: Promise<Map<string, IChatModelInformation>>;
-	private _modelLabChatModelMetadata: Promise<Map<string, IChatModelInformation>>;
+	private _modelLabChatModelMetadata: Promise<
+		Map<string, IChatModelInformation>
+	>;
 
 	constructor(
 		private readonly gpt4ModelToRunAgainst: string | undefined,
@@ -127,55 +152,95 @@ export class TestEndpointProvider implements IEndpointProvider {
 		_fastRewriteModelToRunAgainst: string | undefined,
 		info: CurrentTestRunInfo | undefined,
 		skipModelMetadataCache: boolean,
-		private readonly customModelConfigs: Map<string, IModelConfig> = new Map(),
-		@IInstantiationService private readonly _instantiationService: IInstantiationService
+		private readonly customModelConfigs: Map<
+			string,
+			IModelConfig
+		> = new Map(),
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 	) {
-		const prodModelMetadata = this._instantiationService.createInstance(TestModelMetadataFetcher, false, info, skipModelMetadataCache);
-		const modelLabModelMetadata = this._instantiationService.createInstance(TestModelMetadataFetcher, true, info, skipModelMetadataCache);
+		const prodModelMetadata = this._instantiationService.createInstance(
+			TestModelMetadataFetcher,
+			false,
+			info,
+			skipModelMetadataCache,
+		);
+		const modelLabModelMetadata = this._instantiationService.createInstance(
+			TestModelMetadataFetcher,
+			true,
+			info,
+			skipModelMetadataCache,
+		);
 		this._prodChatModelMetadata = getModelMetadataMap(prodModelMetadata);
-		this._modelLabChatModelMetadata = getModelMetadataMap(modelLabModelMetadata);
+		this._modelLabChatModelMetadata = getModelMetadataMap(
+			modelLabModelMetadata,
+		);
 	}
 
-	private async getChatEndpointInfo(model: string, modelLabMetadata: Map<string, IChatModelInformation>, prodMetadata: Map<string, IChatModelInformation>): Promise<IChatEndpoint> {
+	private async getChatEndpointInfo(
+		model: string,
+		modelLabMetadata: Map<string, IChatModelInformation>,
+		prodMetadata: Map<string, IChatModelInformation>,
+	): Promise<IChatEndpoint> {
 		let chatEndpoint = this._chatEndpoints.get(model);
 		if (!chatEndpoint) {
 			const customModel = this.customModelConfigs.get(model);
 			if (customModel !== undefined) {
-				chatEndpoint = this._instantiationService.createInstance(OpenAICompatibleTestEndpoint, customModel);
+				chatEndpoint = this._instantiationService.createInstance(
+					OpenAICompatibleTestEndpoint,
+					customModel,
+				);
 			} else if (model === CHAT_MODEL.CUSTOM_NES) {
-				chatEndpoint = this._instantiationService.createInstance(CustomNesEndpoint);
+				chatEndpoint =
+					this._instantiationService.createInstance(
+						CustomNesEndpoint,
+					);
 			} else if (model === CHAT_MODEL.EXPERIMENTAL) {
-				chatEndpoint = this._instantiationService.createInstance(AzureTestEndpoint, model);
+				chatEndpoint = this._instantiationService.createInstance(
+					AzureTestEndpoint,
+					model,
+				);
 			} else {
 				const isProdModel = prodMetadata.has(model);
-				const modelMetadata: IChatModelInformation | undefined = isProdModel ? prodMetadata.get(model) : modelLabMetadata.get(model);
+				const modelMetadata: IChatModelInformation | undefined =
+					isProdModel
+						? prodMetadata.get(model)
+						: modelLabMetadata.get(model);
 				if (!modelMetadata) {
 					throw new Error(`Model ${model} not found`);
 				}
-				chatEndpoint = this._instantiationService.createInstance(CAPITestEndpoint, modelMetadata, !isProdModel);
+				chatEndpoint = this._instantiationService.createInstance(
+					CAPITestEndpoint,
+					modelMetadata,
+					!isProdModel,
+				);
 			}
 			this._chatEndpoints.set(model, chatEndpoint);
 		}
 		return chatEndpoint;
 	}
 
-	async getAllCompletionModels(forceRefresh?: boolean): Promise<ICompletionModelInformation[]> {
-		throw new Error('getAllCompletionModels is not implemented in TestEndpointProvider');
+	async getAllCompletionModels(
+		forceRefresh?: boolean,
+	): Promise<ICompletionModelInformation[]> {
+		throw new Error(
+			'getAllCompletionModels is not implemented in TestEndpointProvider',
+		);
 	}
 
 	async getAllChatEndpoints(): Promise<IChatEndpoint[]> {
-		const modelIDs: Set<string> = new Set([
-			CHAT_MODEL.CUSTOM_NES
-		]);
+		const modelIDs: Set<string> = new Set([CHAT_MODEL.CUSTOM_NES]);
 
 		if (this.customModelConfigs.size > 0) {
-			this.customModelConfigs.forEach(config => {
+			this.customModelConfigs.forEach((config) => {
 				modelIDs.add(config.name);
 			});
 		}
 
-		const modelLabMetadata: Map<string, IChatModelInformation> = await this._modelLabChatModelMetadata;
-		const prodMetadata: Map<string, IChatModelInformation> = await this._prodChatModelMetadata;
+		const modelLabMetadata: Map<string, IChatModelInformation> =
+			await this._modelLabChatModelMetadata;
+		const prodMetadata: Map<string, IChatModelInformation> =
+			await this._prodChatModelMetadata;
 		modelLabMetadata.forEach((modelMetadata) => {
 			modelIDs.add(modelMetadata.id);
 		});
@@ -183,23 +248,49 @@ export class TestEndpointProvider implements IEndpointProvider {
 			modelIDs.add(modelMetadata.id);
 		});
 		for (const model of modelIDs) {
-			this._chatEndpoints.set(model, await this.getChatEndpointInfo(model, modelLabMetadata, prodMetadata));
+			this._chatEndpoints.set(
+				model,
+				await this.getChatEndpointInfo(
+					model,
+					modelLabMetadata,
+					prodMetadata,
+				),
+			);
 		}
 		return Array.from(this._chatEndpoints.values());
 	}
-	getChatEndpoint(requestOrModel: LanguageModelChat | ChatRequest): Promise<IChatEndpoint>;
-	getChatEndpoint(family: ChatEndpointFamily): Promise<IChatEndpoint | undefined>;
-	async getChatEndpoint(requestOrFamilyOrModel: LanguageModelChat | ChatRequest | ChatEndpointFamily): Promise<IChatEndpoint | undefined> {
+	getChatEndpoint(
+		requestOrModel: LanguageModelChat | ChatRequest,
+	): Promise<IChatEndpoint>;
+	getChatEndpoint(
+		family: ChatEndpointFamily,
+	): Promise<IChatEndpoint | undefined>;
+	async getChatEndpoint(
+		requestOrFamilyOrModel:
+			| LanguageModelChat
+			| ChatRequest
+			| ChatEndpointFamily,
+	): Promise<IChatEndpoint | undefined> {
 		if (typeof requestOrFamilyOrModel !== 'string') {
 			requestOrFamilyOrModel = 'copilot-utility';
 		}
 		if (requestOrFamilyOrModel === 'copilot-utility') {
-			return await this.getChatEndpointInfo(this.gpt4ModelToRunAgainst ?? CHAT_MODEL.GPT41, await this._modelLabChatModelMetadata, await this._prodChatModelMetadata);
+			return await this.getChatEndpointInfo(
+				this.gpt4ModelToRunAgainst ?? CHAT_MODEL.GPT41,
+				await this._modelLabChatModelMetadata,
+				await this._prodChatModelMetadata,
+			);
 		} else {
-			return await this.getChatEndpointInfo(this.gpt4oMiniModelToRunAgainst ?? CHAT_MODEL.GPT4OMINI, await this._modelLabChatModelMetadata, await this._prodChatModelMetadata);
+			return await this.getChatEndpointInfo(
+				this.gpt4oMiniModelToRunAgainst ?? CHAT_MODEL.GPT4OMINI,
+				await this._modelLabChatModelMetadata,
+				await this._prodChatModelMetadata,
+			);
 		}
 	}
-	async getEmbeddingsEndpoint(family?: EmbeddingsEndpointFamily): Promise<IEmbeddingsEndpoint> {
+	async getEmbeddingsEndpoint(
+		family?: EmbeddingsEndpointFamily,
+	): Promise<IEmbeddingsEndpoint> {
 		const id = LEGACY_EMBEDDING_MODEL_ID.TEXT3SMALL;
 		const modelInformation: IEmbeddingModelInformation = {
 			id: id,
@@ -213,10 +304,14 @@ export class TestEndpointProvider implements IEndpointProvider {
 			capabilities: {
 				type: 'embeddings',
 				tokenizer: TokenizerType.O200K,
-				family: 'test'
-			}
+				family: 'test',
+			},
 		};
-		this._testEmbeddingEndpoint ??= this._instantiationService.createInstance(EmbeddingEndpoint, modelInformation);
+		this._testEmbeddingEndpoint ??=
+			this._instantiationService.createInstance(
+				EmbeddingEndpoint,
+				modelInformation,
+			);
 		return this._testEmbeddingEndpoint;
 	}
 }

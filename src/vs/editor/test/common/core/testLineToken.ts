@@ -3,15 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IViewLineTokens } from '../../../common/tokens/lineTokens.js';
-import { ColorId, TokenMetadata, ITokenPresentation, StandardTokenType } from '../../../common/encodedTokenAttributes.js';
-import { ILanguageIdCodec } from '../../../common/languages.js';
+import { IViewLineTokens } from "../../../common/tokens/lineTokens.js";
+import {
+	ColorId,
+	TokenMetadata,
+	ITokenPresentation,
+	StandardTokenType,
+} from "../../../common/encodedTokenAttributes.js";
+import { ILanguageIdCodec } from "../../../common/languages.js";
 
 /**
  * A token on a line.
  */
 export class TestLineToken {
-
 	/**
 	 * last char index of this token (not inclusive).
 	 */
@@ -44,10 +48,7 @@ export class TestLineToken {
 	}
 
 	private static _equals(a: TestLineToken, b: TestLineToken): boolean {
-		return (
-			a.endIndex === b.endIndex
-			&& a._metadata === b._metadata
-		);
+		return a.endIndex === b.endIndex && a._metadata === b._metadata;
 	}
 
 	public static equalsArr(a: TestLineToken[], b: TestLineToken[]): boolean {
@@ -66,7 +67,6 @@ export class TestLineToken {
 }
 
 export class TestLineTokens implements IViewLineTokens {
-
 	private readonly _actual: TestLineToken[];
 
 	constructor(actual: TestLineToken[]) {
@@ -109,38 +109,37 @@ export class TestLineTokens implements IViewLineTokens {
 	}
 
 	public findTokenIndexAtOffset(offset: number): number {
-		throw new Error('Not implemented');
+		throw new Error("Not implemented");
 	}
 
 	public getLineContent(): string {
-		throw new Error('Not implemented');
+		throw new Error("Not implemented");
 	}
 
 	public getMetadata(tokenIndex: number): number {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	public getLanguageId(tokenIndex: number): string {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	public getTokenText(tokenIndex: number): string {
-		throw new Error('Method not implemented.');
+		throw new Error("Method not implemented.");
 	}
 
 	public forEach(callback: (tokenIndex: number) => void): void {
-		throw new Error('Not implemented');
+		throw new Error("Not implemented");
 	}
 
 	public get languageIdCodec(): ILanguageIdCodec {
-		throw new Error('Not implemented');
+		throw new Error("Not implemented");
 	}
 }
 
 export class TestLineTokenFactory {
-
 	public static inflateArr(tokens: Uint32Array): TestLineToken[] {
-		const tokensCount = (tokens.length >>> 1);
+		const tokensCount = tokens.length >>> 1;
 
 		const result: TestLineToken[] = new Array<TestLineToken>(tokensCount);
 		for (let i = 0; i < tokensCount; i++) {
@@ -152,5 +151,4 @@ export class TestLineTokenFactory {
 
 		return result;
 	}
-
 }

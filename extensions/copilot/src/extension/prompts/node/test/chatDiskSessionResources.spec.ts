@@ -37,7 +37,7 @@ describe('ChatDiskSessionResources', () => {
 		service = new ChatDiskSessionResources(
 			mockContext as any,
 			mockFs,
-			logService
+			logService,
 		);
 	});
 
@@ -76,12 +76,12 @@ describe('ChatDiskSessionResources', () => {
 			const subdir = 'complex-result';
 			const files = {
 				'readme.txt': 'This is a readme',
-				'src': {
+				src: {
 					'main.ts': 'console.log("hello")',
-					'utils': {
-						'helper.ts': 'export function help() {}'
-					}
-				}
+					utils: {
+						'helper.ts': 'export function help() {}',
+					},
+				},
 			};
 
 			const resultUri = await service.ensure(sessionId, subdir, files);
@@ -204,8 +204,13 @@ describe('ChatDiskSessionResources', () => {
 			mockContext = new MockExtensionContextWithStorage();
 			logService = new TestLogService();
 			// Mock the storage directory AND the session resources subdirectory
-			mockFs.mockDirectory(mockContext.storageUri, [['chat-session-resources', FileType.Directory]]);
-			mockFs.mockDirectory(URI.joinPath(mockContext.storageUri, 'chat-session-resources'), []);
+			mockFs.mockDirectory(mockContext.storageUri, [
+				['chat-session-resources', FileType.Directory],
+			]);
+			mockFs.mockDirectory(
+				URI.joinPath(mockContext.storageUri, 'chat-session-resources'),
+				[],
+			);
 		});
 
 		afterEach(() => {
@@ -219,18 +224,24 @@ describe('ChatDiskSessionResources', () => {
 			const testService = new ChatDiskSessionResources(
 				mockContext as any,
 				mockFs,
-				logService
+				logService,
 			);
 
 			// Create a resource at time T=0
-			const resultUri = await testService.ensure('session-1', 'tool-1', 'content');
+			const resultUri = await testService.ensure(
+				'session-1',
+				'tool-1',
+				'content',
+			);
 
 			// Verify directory exists
 			const stat = await mockFs.stat(resultUri);
 			expect(stat.type).toBe(FileType.Directory);
 
 			// Advance time past retention period AND cleanup interval
-			await vi.advanceTimersByTimeAsync(RETENTION_PERIOD_MS + CLEANUP_INTERVAL_MS + 1000);
+			await vi.advanceTimersByTimeAsync(
+				RETENTION_PERIOD_MS + CLEANUP_INTERVAL_MS + 1000,
+			);
 			await testService.currentCleanup;
 
 			// The directory should be cleaned up now (cleanup deletes at directory level)
@@ -245,11 +256,15 @@ describe('ChatDiskSessionResources', () => {
 			const testService = new ChatDiskSessionResources(
 				mockContext as any,
 				mockFs,
-				logService
+				logService,
 			);
 
 			// Create a resource
-			const resultUri = await testService.ensure('session-fresh', 'tool-fresh', 'fresh content');
+			const resultUri = await testService.ensure(
+				'session-fresh',
+				'tool-fresh',
+				'fresh content',
+			);
 
 			// Advance time but not past retention
 			await vi.advanceTimersByTimeAsync(RETENTION_PERIOD_MS / 2);
@@ -271,18 +286,24 @@ describe('ChatDiskSessionResources', () => {
 			const testService = new ChatDiskSessionResources(
 				mockContext as any,
 				mockFs,
-				logService
+				logService,
 			);
 
 			// Create a resource
-			const resultUri = await testService.ensure('session-old', 'tool-old', 'old content');
+			const resultUri = await testService.ensure(
+				'session-old',
+				'tool-old',
+				'old content',
+			);
 
 			// Verify directory exists initially
 			const stat = await mockFs.stat(resultUri);
 			expect(stat.type).toBe(FileType.Directory);
 
 			// Advance time past retention period AND trigger cleanup
-			await vi.advanceTimersByTimeAsync(RETENTION_PERIOD_MS + CLEANUP_INTERVAL_MS + 1000);
+			await vi.advanceTimersByTimeAsync(
+				RETENTION_PERIOD_MS + CLEANUP_INTERVAL_MS + 1000,
+			);
 			await testService.currentCleanup;
 
 			// Old resource directory should be cleaned up
@@ -297,19 +318,25 @@ describe('ChatDiskSessionResources', () => {
 			const testService = new ChatDiskSessionResources(
 				mockContext as any,
 				mockFs,
-				logService
+				logService,
 			);
 
 			// Create a resource
 			await testService.ensure('session-empty-dir', 'tool-1', 'content');
 
 			// Advance time past retention to trigger cleanup of the tool
-			await vi.advanceTimersByTimeAsync(RETENTION_PERIOD_MS + CLEANUP_INTERVAL_MS + 1000);
+			await vi.advanceTimersByTimeAsync(
+				RETENTION_PERIOD_MS + CLEANUP_INTERVAL_MS + 1000,
+			);
 
 			await testService.currentCleanup;
 
 			// The session directory should be gone since the tool was cleaned up
-			const sessionUri = URI.joinPath(mockContext.storageUri, 'chat-session-resources', 'session-empty-dir');
+			const sessionUri = URI.joinPath(
+				mockContext.storageUri,
+				'chat-session-resources',
+				'session-empty-dir',
+			);
 			await expect(mockFs.stat(sessionUri)).rejects.toThrow();
 
 			testService.dispose();
@@ -321,7 +348,7 @@ describe('ChatDiskSessionResources', () => {
 			const testService = new ChatDiskSessionResources(
 				mockContext as any,
 				mockFs,
-				logService
+				logService,
 			);
 
 			// Create a resource
@@ -330,7 +357,7 @@ describe('ChatDiskSessionResources', () => {
 				'chat-session-resources',
 				'session-dispose',
 				'tool-1',
-				'content.txt'
+				'content.txt',
 			);
 			await testService.ensure('session-dispose', 'tool-1', 'content');
 
@@ -338,7 +365,9 @@ describe('ChatDiskSessionResources', () => {
 			testService.dispose();
 
 			// Advance time past retention + cleanup interval
-			await vi.advanceTimersByTimeAsync(RETENTION_PERIOD_MS + CLEANUP_INTERVAL_MS + 1000);
+			await vi.advanceTimersByTimeAsync(
+				RETENTION_PERIOD_MS + CLEANUP_INTERVAL_MS + 1000,
+			);
 
 			await testService.currentCleanup;
 
@@ -353,17 +382,25 @@ describe('ChatDiskSessionResources', () => {
 			const testService = new ChatDiskSessionResources(
 				mockContext as any,
 				mockFs,
-				logService
+				logService,
 			);
 
 			// Create a resource at T=0
-			const resultUri = await testService.ensure('session-refresh', 'tool-refresh', 'content v1');
+			const resultUri = await testService.ensure(
+				'session-refresh',
+				'tool-refresh',
+				'content v1',
+			);
 
 			// Advance time to just before retention expires (7.9 hours)
 			await vi.advanceTimersByTimeAsync(RETENTION_PERIOD_MS - 1000);
 
 			// Access/update the resource - this should reset the access timestamp
-			await testService.ensure('session-refresh', 'tool-refresh', 'content v2');
+			await testService.ensure(
+				'session-refresh',
+				'tool-refresh',
+				'content v2',
+			);
 
 			// Advance time past what would have been the original expiration + cleanup
 			await vi.advanceTimersByTimeAsync(CLEANUP_INTERVAL_MS + 2000);
@@ -379,4 +416,3 @@ describe('ChatDiskSessionResources', () => {
 		});
 	});
 });
-

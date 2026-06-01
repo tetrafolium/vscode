@@ -4,8 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ClaudeToolPermissionResult, IClaudeToolPermissionHandler } from '../claudeToolPermission';
-import { getToolPermissionHandlerRegistry, registerToolPermissionHandler } from '../claudeToolPermissionRegistry';
+import {
+	ClaudeToolPermissionResult,
+	IClaudeToolPermissionHandler,
+} from '../claudeToolPermission';
+import {
+	getToolPermissionHandlerRegistry,
+	registerToolPermissionHandler,
+} from '../claudeToolPermissionRegistry';
 import { ClaudeToolNames } from '../claudeTools';
 
 // Import handlers to ensure they're registered
@@ -41,15 +47,26 @@ describe('claudeToolPermissionRegistry', () => {
 		});
 
 		it('registers a handler for multiple tools', () => {
-			class MultiToolHandler implements IClaudeToolPermissionHandler<ClaudeToolNames.Read | ClaudeToolNames.LS> {
-				readonly toolNames = [ClaudeToolNames.Read, ClaudeToolNames.LS] as const;
+			class MultiToolHandler implements IClaudeToolPermissionHandler<
+				ClaudeToolNames.Read | ClaudeToolNames.LS
+			> {
+				readonly toolNames = [
+					ClaudeToolNames.Read,
+					ClaudeToolNames.LS,
+				] as const;
 			}
 
-			registerToolPermissionHandler([ClaudeToolNames.Read, ClaudeToolNames.LS], MultiToolHandler);
+			registerToolPermissionHandler(
+				[ClaudeToolNames.Read, ClaudeToolNames.LS],
+				MultiToolHandler,
+			);
 
 			const registry = getToolPermissionHandlerRegistry();
 			const lastRegistration = registry[registry.length - 1];
-			expect(lastRegistration.toolNames).toEqual([ClaudeToolNames.Read, ClaudeToolNames.LS]);
+			expect(lastRegistration.toolNames).toEqual([
+				ClaudeToolNames.Read,
+				ClaudeToolNames.LS,
+			]);
 		});
 
 		it('allows registering handlers with custom methods', () => {
@@ -63,7 +80,7 @@ describe('claudeToolPermissionRegistry', () => {
 				getConfirmationParams() {
 					return {
 						title: 'Test',
-						message: 'Test message'
+						message: 'Test message',
 					};
 				}
 
@@ -72,7 +89,10 @@ describe('claudeToolPermissionRegistry', () => {
 				}
 			}
 
-			registerToolPermissionHandler([ClaudeToolNames.Grep], CustomHandler);
+			registerToolPermissionHandler(
+				[ClaudeToolNames.Grep],
+				CustomHandler,
+			);
 
 			const registry = getToolPermissionHandlerRegistry();
 			const lastRegistration = registry[registry.length - 1];
@@ -97,8 +117,12 @@ describe('claudeToolPermissionRegistry', () => {
 			const registry = getToolPermissionHandlerRegistry();
 
 			// Should have at least the Bash and ExitPlanMode handlers
-			const hasBashHandler = registry.some(r => r.toolNames.includes(ClaudeToolNames.Bash));
-			const hasExitPlanModeHandler = registry.some(r => r.toolNames.includes(ClaudeToolNames.ExitPlanMode));
+			const hasBashHandler = registry.some((r) =>
+				r.toolNames.includes(ClaudeToolNames.Bash),
+			);
+			const hasExitPlanModeHandler = registry.some((r) =>
+				r.toolNames.includes(ClaudeToolNames.ExitPlanMode),
+			);
 
 			expect(hasBashHandler).toBe(true);
 			expect(hasExitPlanModeHandler).toBe(true);
@@ -118,7 +142,10 @@ describe('claudeToolPermissionRegistry', () => {
 			const startLength = getToolPermissionHandlerRegistry().length;
 
 			registerToolPermissionHandler([ClaudeToolNames.WebFetch], Handler1);
-			registerToolPermissionHandler([ClaudeToolNames.WebSearch], Handler2);
+			registerToolPermissionHandler(
+				[ClaudeToolNames.WebSearch],
+				Handler2,
+			);
 
 			const registry = getToolPermissionHandlerRegistry();
 			expect(registry.length).toBe(startLength + 2);
@@ -136,7 +163,10 @@ describe('claudeToolPermissionRegistry', () => {
 			const startLength = getToolPermissionHandlerRegistry().length;
 
 			registerToolPermissionHandler([ClaudeToolNames.Task], FirstHandler);
-			registerToolPermissionHandler([ClaudeToolNames.TodoWrite], SecondHandler);
+			registerToolPermissionHandler(
+				[ClaudeToolNames.TodoWrite],
+				SecondHandler,
+			);
 
 			const registry = getToolPermissionHandlerRegistry();
 			expect(registry[startLength].ctor).toBe(FirstHandler);

@@ -6,18 +6,37 @@
 import { expect, suite, test } from 'vitest';
 import { DocumentId } from '../../../../platform/inlineEdits/common/dataTypes/documentId';
 import { RootedEdit } from '../../../../platform/inlineEdits/common/dataTypes/edit';
-import { DEFAULT_OPTIONS, IncludeLineNumbersOption, PromptOptions, RecentFileClippingStrategy } from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
-import { IXtabHistoryEditEntry, IXtabHistoryVisibleRangesEntry } from '../../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
+import {
+	DEFAULT_OPTIONS,
+	IncludeLineNumbersOption,
+	PromptOptions,
+	RecentFileClippingStrategy,
+} from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	IXtabHistoryEditEntry,
+	IXtabHistoryVisibleRangesEntry,
+} from '../../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
 import { splitLines } from '../../../../util/vs/base/common/strings';
 import { StringEdit } from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { StringText } from '../../../../util/vs/editor/common/core/text/abstractText';
 import { LineRange0Based } from '../../common/lineRange';
-import { appendNeighborFileSnippets, buildCodeSnippetsUsingPagedClipping, computeFocalPageCost, historyEntriesToCodeSnippet, selectFocalRangesWithinSpanCap } from '../../common/recentFilesForPrompt';
+import {
+	appendNeighborFileSnippets,
+	buildCodeSnippetsUsingPagedClipping,
+	computeFocalPageCost,
+	historyEntriesToCodeSnippet,
+	selectFocalRangesWithinSpanCap,
+} from '../../common/recentFilesForPrompt';
 import { INeighborFileSnippet } from '../../common/similarFilesContextService';
 
 function nLines(n: number): StringText {
-	return new StringText(new Array(n).fill(0).map((_, i) => `${i + 1}`).join('\n'));
+	return new StringText(
+		new Array(n)
+			.fill(0)
+			.map((_, i) => `${i + 1}`)
+			.join('\n'),
+	);
 }
 
 function computeTokens(s: string) {
@@ -39,19 +58,29 @@ function makeOpts(overrides: {
 		...DEFAULT_OPTIONS,
 		recentlyViewedDocuments: {
 			...DEFAULT_OPTIONS.recentlyViewedDocuments,
-			...(overrides.maxTokens !== undefined && { maxTokens: overrides.maxTokens }),
-			...(overrides.recentlyViewedFilesIncludeLineNumbers !== undefined && { includeLineNumbers: overrides.recentlyViewedFilesIncludeLineNumbers }),
-			...(overrides.includeViewedFiles !== undefined && { includeViewedFiles: overrides.includeViewedFiles }),
-			...(overrides.clippingStrategy !== undefined && { clippingStrategy: overrides.clippingStrategy }),
+			...(overrides.maxTokens !== undefined && {
+				maxTokens: overrides.maxTokens,
+			}),
+			...(overrides.recentlyViewedFilesIncludeLineNumbers !==
+				undefined && {
+				includeLineNumbers:
+					overrides.recentlyViewedFilesIncludeLineNumbers,
+			}),
+			...(overrides.includeViewedFiles !== undefined && {
+				includeViewedFiles: overrides.includeViewedFiles,
+			}),
+			...(overrides.clippingStrategy !== undefined && {
+				clippingStrategy: overrides.clippingStrategy,
+			}),
 		},
 		pagedClipping: {
-			pageSize: overrides.pageSize ?? DEFAULT_OPTIONS.pagedClipping.pageSize,
+			pageSize:
+				overrides.pageSize ?? DEFAULT_OPTIONS.pagedClipping.pageSize,
 		},
 	};
 }
 
 suite('Paged clipping - recently viewed files', () => {
-
 	type FileEntry = {
 		id: DocumentId;
 		content: StringText;
@@ -60,8 +89,8 @@ suite('Paged clipping - recently viewed files', () => {
 	};
 
 	/**
-		 * Helper to build code snippets with less boilerplate.
-		 */
+	 * Helper to build code snippets with less boilerplate.
+	 */
 	function buildSnippets(
 		files: FileEntry[],
 		opts: PromptOptions,
@@ -109,11 +138,15 @@ suite('Paged clipping - recently viewed files', () => {
 	});
 
 	suite('includeLineNumbers', () => {
-
 		test('includes line numbers starting from 0 when enabled and not truncated', () => {
 			const { snippets } = buildSnippets(
 				[{ id, content: nLines(4) }],
-				makeOpts({ maxTokens: 2000, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter, pageSize: 2 }),
+				makeOpts({
+					maxTokens: 2000,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.WithSpaceAfter,
+					pageSize: 2,
+				}),
 			);
 
 			expect(snippets).toMatchInlineSnapshot(`
@@ -132,7 +165,12 @@ suite('Paged clipping - recently viewed files', () => {
 		test('includes line numbers starting from 0 when truncated from beginning', () => {
 			const { snippets } = buildSnippets(
 				[{ id, content: nLines(10) }],
-				makeOpts({ maxTokens: 4, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter, pageSize: 2 }),
+				makeOpts({
+					maxTokens: 4,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.WithSpaceAfter,
+					pageSize: 2,
+				}),
 			);
 
 			expect(snippets).toMatchInlineSnapshot(`
@@ -148,13 +186,22 @@ suite('Paged clipping - recently viewed files', () => {
 
 		test('includes line numbers with correct offset when using visible ranges', () => {
 			// Create content: line0\nline1\n...\nline9 (each line is 6 chars including newline)
-			const content = new StringText('line0\nline1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9');
+			const content = new StringText(
+				'line0\nline1\nline2\nline3\nline4\nline5\nline6\nline7\nline8\nline9',
+			);
 			// line4 starts at offset 24 (4 lines * 6 chars each)
 			const focalRanges = [new OffsetRange(24, 30)];
 
 			const { snippets } = buildSnippets(
 				[{ id, content, focalRanges }],
-				makeOpts({ maxTokens: 15, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter, pageSize: 2, clippingStrategy: RecentFileClippingStrategy.AroundEditRange }),
+				makeOpts({
+					maxTokens: 15,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.WithSpaceAfter,
+					pageSize: 2,
+					clippingStrategy:
+						RecentFileClippingStrategy.AroundEditRange,
+				}),
 			);
 
 			// Line numbers start from 4 (not 0) because lines 0-3 are truncated
@@ -170,15 +217,27 @@ suite('Paged clipping - recently viewed files', () => {
 		});
 
 		test('includes line numbers with offset when visible range is in middle of file', () => {
-			const lines = Array.from({ length: 20 }, (_, i) => `content_line_${i}`);
+			const lines = Array.from(
+				{ length: 20 },
+				(_, i) => `content_line_${i}`,
+			);
 			const content = new StringText(lines.join('\n'));
 			const lineLength = 'content_line_0\n'.length;
 			const line10Start = 10 * lineLength;
-			const focalRanges = [new OffsetRange(line10Start, line10Start + lineLength)];
+			const focalRanges = [
+				new OffsetRange(line10Start, line10Start + lineLength),
+			];
 
 			const { snippets } = buildSnippets(
 				[{ id, content, focalRanges }],
-				makeOpts({ maxTokens: 50, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.AroundEditRange }),
+				makeOpts({
+					maxTokens: 50,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.WithSpaceAfter,
+					pageSize: 5,
+					clippingStrategy:
+						RecentFileClippingStrategy.AroundEditRange,
+				}),
 			);
 
 			// Line numbers start from 10 (page containing line 10)
@@ -199,7 +258,12 @@ suite('Paged clipping - recently viewed files', () => {
 		test('does not include line numbers when disabled', () => {
 			const { snippets } = buildSnippets(
 				[{ id, content: nLines(4) }],
-				makeOpts({ maxTokens: 2000, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.None, pageSize: 2 }),
+				makeOpts({
+					maxTokens: 2000,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.None,
+					pageSize: 2,
+				}),
 			);
 
 			expect(snippets).toMatchInlineSnapshot(`
@@ -221,7 +285,12 @@ suite('Paged clipping - recently viewed files', () => {
 					{ id, content: nLines(3) },
 					{ id: id2, content: nLines(3) },
 				],
-				makeOpts({ maxTokens: 2000, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter, pageSize: 10 }),
+				makeOpts({
+					maxTokens: 2000,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.WithSpaceAfter,
+					pageSize: 10,
+				}),
 			);
 
 			expect(snippets).toMatchInlineSnapshot(`
@@ -248,7 +317,12 @@ suite('Paged clipping - recently viewed files', () => {
 					{ id, content: nLines(6) },
 					{ id: id2, content: nLines(4) },
 				],
-				makeOpts({ maxTokens: 10, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter, pageSize: 2 }),
+				makeOpts({
+					maxTokens: 10,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.WithSpaceAfter,
+					pageSize: 2,
+				}),
 			);
 
 			// First file gets truncated, second file doesn't fit in budget
@@ -268,7 +342,12 @@ suite('Paged clipping - recently viewed files', () => {
 		test('handles empty content gracefully with line numbers enabled', () => {
 			const { snippets } = buildSnippets(
 				[{ id, content: new StringText('') }],
-				makeOpts({ maxTokens: 2000, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter, pageSize: 2 }),
+				makeOpts({
+					maxTokens: 2000,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.WithSpaceAfter,
+					pageSize: 2,
+				}),
 			);
 
 			// Empty string content produces a single empty line
@@ -287,7 +366,12 @@ suite('Paged clipping - recently viewed files', () => {
 		test('handles single line content with line numbers', () => {
 			const { snippets } = buildSnippets(
 				[{ id, content: new StringText('single line') }],
-				makeOpts({ maxTokens: 2000, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter, pageSize: 2 }),
+				makeOpts({
+					maxTokens: 2000,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.WithSpaceAfter,
+					pageSize: 2,
+				}),
 			);
 
 			expect(snippets).toMatchInlineSnapshot(`
@@ -303,7 +387,12 @@ suite('Paged clipping - recently viewed files', () => {
 		test('line numbers are formatted correctly for double-digit line numbers', () => {
 			const { snippets } = buildSnippets(
 				[{ id, content: nLines(15) }],
-				makeOpts({ maxTokens: 2000, recentlyViewedFilesIncludeLineNumbers: IncludeLineNumbersOption.WithSpaceAfter, pageSize: 20 }),
+				makeOpts({
+					maxTokens: 2000,
+					recentlyViewedFilesIncludeLineNumbers:
+						IncludeLineNumbersOption.WithSpaceAfter,
+					pageSize: 20,
+				}),
 			);
 
 			expect(snippets).toMatchInlineSnapshot(`
@@ -332,10 +421,12 @@ suite('Paged clipping - recently viewed files', () => {
 	});
 
 	suite('AroundEditRange strategy', () => {
-
 		test('centers snippet on focal range instead of top of file', () => {
 			// 100-line file with a "focal range" (edit) near the bottom
-			const lines = Array.from({ length: 100 }, (_, i) => `line_${String(i).padStart(3, '0')}`);
+			const lines = Array.from(
+				{ length: 100 },
+				(_, i) => `line_${String(i).padStart(3, '0')}`,
+			);
 			const content = new StringText(lines.join('\n'));
 			const lineLen = 'line_000\n'.length;
 			// Focal range at line 80
@@ -343,7 +434,12 @@ suite('Paged clipping - recently viewed files', () => {
 
 			const { snippets } = buildSnippets(
 				[{ id, content, focalRanges }],
-				makeOpts({ maxTokens: 30, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.AroundEditRange }),
+				makeOpts({
+					maxTokens: 30,
+					pageSize: 5,
+					clippingStrategy:
+						RecentFileClippingStrategy.AroundEditRange,
+				}),
 			);
 
 			// Should include lines around line 80, not from the top
@@ -355,7 +451,12 @@ suite('Paged clipping - recently viewed files', () => {
 		test('falls back to top-to-bottom for entries without focal ranges', () => {
 			const { snippets } = buildSnippets(
 				[{ id, content: nLines(20) }],
-				makeOpts({ maxTokens: 10, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.AroundEditRange }),
+				makeOpts({
+					maxTokens: 10,
+					pageSize: 5,
+					clippingStrategy:
+						RecentFileClippingStrategy.AroundEditRange,
+				}),
 			);
 
 			// No focal ranges → falls through to clipFullDocument (top-to-bottom)
@@ -367,45 +468,71 @@ suite('Paged clipping - recently viewed files', () => {
 			const lines1 = Array.from({ length: 50 }, (_, i) => `fileA_${i}`);
 			const content1 = new StringText(lines1.join('\n'));
 			const lineLen1 = 'fileA_0\n'.length;
-			const focalRanges1 = [new OffsetRange(40 * lineLen1, 41 * lineLen1)]; // near bottom
+			const focalRanges1 = [
+				new OffsetRange(40 * lineLen1, 41 * lineLen1),
+			]; // near bottom
 
 			const lines2 = Array.from({ length: 50 }, (_, i) => `fileB_${i}`);
 			const content2 = new StringText(lines2.join('\n'));
 			const lineLen2 = 'fileB_0\n'.length;
-			const focalRanges2 = [new OffsetRange(10 * lineLen2, 11 * lineLen2)]; // near top
+			const focalRanges2 = [
+				new OffsetRange(10 * lineLen2, 11 * lineLen2),
+			]; // near top
 
 			const { snippets, docsInPrompt } = buildSnippets(
 				[
 					{ id, content: content1, focalRanges: focalRanges1 },
 					{ id: id2, content: content2, focalRanges: focalRanges2 },
 				],
-				makeOpts({ maxTokens: 200, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.AroundEditRange }),
+				makeOpts({
+					maxTokens: 200,
+					pageSize: 5,
+					clippingStrategy:
+						RecentFileClippingStrategy.AroundEditRange,
+				}),
 			);
 
 			expect(docsInPrompt.size).toBe(2);
 			// File 1 should contain content near line 40, not line 0
-			expect(snippets.find(s => s.includes('fileA_40'))).toBeDefined();
+			expect(snippets.find((s) => s.includes('fileA_40'))).toBeDefined();
 			// File 2 should contain content near line 10
-			expect(snippets.find(s => s.includes('fileB_10'))).toBeDefined();
+			expect(snippets.find((s) => s.includes('fileB_10'))).toBeDefined();
 		});
 	});
 
 	suite('Proportional strategy', () => {
-
 		test('distributes budget across files instead of greedily consuming', () => {
 			// Two files, each 50 lines. With greedy, the first file would consume everything.
 			// With proportional, each gets ~half.
-			const content1 = new StringText(Array.from({ length: 50 }, (_, i) => `A${i}`).join('\n'));
+			const content1 = new StringText(
+				Array.from({ length: 50 }, (_, i) => `A${i}`).join('\n'),
+			);
 			const lineLen1 = 'A0\n'.length;
-			const content2 = new StringText(Array.from({ length: 50 }, (_, i) => `B${i}`).join('\n'));
+			const content2 = new StringText(
+				Array.from({ length: 50 }, (_, i) => `B${i}`).join('\n'),
+			);
 			const lineLen2 = 'B0\n'.length;
 
 			const { snippets, docsInPrompt } = buildSnippets(
 				[
-					{ id, content: content1, focalRanges: [new OffsetRange(0, lineLen1)], editEntryCount: 1 },
-					{ id: id2, content: content2, focalRanges: [new OffsetRange(0, lineLen2)], editEntryCount: 1 },
+					{
+						id,
+						content: content1,
+						focalRanges: [new OffsetRange(0, lineLen1)],
+						editEntryCount: 1,
+					},
+					{
+						id: id2,
+						content: content2,
+						focalRanges: [new OffsetRange(0, lineLen2)],
+						editEntryCount: 1,
+					},
 				],
-				makeOpts({ maxTokens: 40, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.Proportional }),
+				makeOpts({
+					maxTokens: 40,
+					pageSize: 5,
+					clippingStrategy: RecentFileClippingStrategy.Proportional,
+				}),
 			);
 
 			// Both files should be represented in the prompt
@@ -415,22 +542,42 @@ suite('Paged clipping - recently viewed files', () => {
 
 		test('gives more budget to files with more edit locations', () => {
 			// File A has 3 edits, File B has 1 edit. File A should get more content.
-			const content = new StringText(Array.from({ length: 40 }, (_, i) => `x${i}`).join('\n'));
+			const content = new StringText(
+				Array.from({ length: 40 }, (_, i) => `x${i}`).join('\n'),
+			);
 			const lineLen = 'x0\n'.length;
 
 			const { snippets } = buildSnippets(
 				[
-					{ id, content, focalRanges: [new OffsetRange(0, lineLen)], editEntryCount: 3 },
-					{ id: id2, content, focalRanges: [new OffsetRange(0, lineLen)], editEntryCount: 1 },
+					{
+						id,
+						content,
+						focalRanges: [new OffsetRange(0, lineLen)],
+						editEntryCount: 3,
+					},
+					{
+						id: id2,
+						content,
+						focalRanges: [new OffsetRange(0, lineLen)],
+						editEntryCount: 1,
+					},
 				],
-				makeOpts({ maxTokens: 60, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.Proportional }),
+				makeOpts({
+					maxTokens: 60,
+					pageSize: 5,
+					clippingStrategy: RecentFileClippingStrategy.Proportional,
+				}),
 			);
 
 			// Both files should appear
 			expect(snippets.length).toBe(2);
 			// File A (first in order = id, 3 edits) should have more content than File B (id2, 1 edit)
-			const fileASnippet = snippets.find(s => s.includes('/src/first.txt'))!;
-			const fileBSnippet = snippets.find(s => s.includes('/src/second.txt'))!;
+			const fileASnippet = snippets.find((s) =>
+				s.includes('/src/first.txt'),
+			)!;
+			const fileBSnippet = snippets.find((s) =>
+				s.includes('/src/second.txt'),
+			)!;
 			expect(fileASnippet.length).toBeGreaterThan(fileBSnippet.length);
 		});
 
@@ -441,10 +588,24 @@ suite('Paged clipping - recently viewed files', () => {
 
 			const { snippets, docsInPrompt } = buildSnippets(
 				[
-					{ id, content: nLines(50), focalRanges: [new OffsetRange(0, 5)], editEntryCount: 10 },
-					{ id: id2, content: smallContent, focalRanges: [new OffsetRange(0, 3)], editEntryCount: 1 },
+					{
+						id,
+						content: nLines(50),
+						focalRanges: [new OffsetRange(0, 5)],
+						editEntryCount: 10,
+					},
+					{
+						id: id2,
+						content: smallContent,
+						focalRanges: [new OffsetRange(0, 3)],
+						editEntryCount: 1,
+					},
 				],
-				makeOpts({ maxTokens: 100, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.Proportional }),
+				makeOpts({
+					maxTokens: 100,
+					pageSize: 5,
+					clippingStrategy: RecentFileClippingStrategy.Proportional,
+				}),
 			);
 
 			// Both files should be included even though weights are heavily skewed
@@ -454,15 +615,21 @@ suite('Paged clipping - recently viewed files', () => {
 	});
 
 	suite('RC1: budget enforcement in clipAroundFocalRanges', () => {
-
 		test('does not include content when budget is exhausted', () => {
-			const content = new StringText(Array.from({ length: 20 }, (_, i) => `line${i}`).join('\n'));
+			const content = new StringText(
+				Array.from({ length: 20 }, (_, i) => `line${i}`).join('\n'),
+			);
 			const lineLen = 'line0\n'.length;
 			const focalRanges = [new OffsetRange(5 * lineLen, 6 * lineLen)];
 
 			const { snippets, docsInPrompt } = buildSnippets(
 				[{ id, content, focalRanges }],
-				makeOpts({ maxTokens: 0, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.AroundEditRange }),
+				makeOpts({
+					maxTokens: 0,
+					pageSize: 5,
+					clippingStrategy:
+						RecentFileClippingStrategy.AroundEditRange,
+				}),
 			);
 
 			expect(snippets.length).toBe(0);
@@ -474,20 +641,33 @@ suite('Paged clipping - recently viewed files', () => {
 			// Both files should be skipped — the first because its focal pages
 			// exceed the budget, the second because there's nothing left.
 			const bigLine = 'x'.repeat(400); // ~100 tokens per line
-			const bigContent = new StringText(Array.from({ length: 50 }, () => bigLine).join('\n'));
+			const bigContent = new StringText(
+				Array.from({ length: 50 }, () => bigLine).join('\n'),
+			);
 			const bigLineLen = bigLine.length + 1;
 			const bigFocalRanges = [new OffsetRange(0, bigLineLen)];
 
-			const smallContent = new StringText(Array.from({ length: 10 }, (_, i) => `small${i}`).join('\n'));
+			const smallContent = new StringText(
+				Array.from({ length: 10 }, (_, i) => `small${i}`).join('\n'),
+			);
 			const smallLineLen = 'small0\n'.length;
 			const smallFocalRanges = [new OffsetRange(0, smallLineLen)];
 
 			const { snippets } = buildSnippets(
 				[
 					{ id, content: bigContent, focalRanges: bigFocalRanges },
-					{ id: id2, content: smallContent, focalRanges: smallFocalRanges },
+					{
+						id: id2,
+						content: smallContent,
+						focalRanges: smallFocalRanges,
+					},
 				],
-				makeOpts({ maxTokens: 5, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.AroundEditRange }),
+				makeOpts({
+					maxTokens: 5,
+					pageSize: 5,
+					clippingStrategy:
+						RecentFileClippingStrategy.AroundEditRange,
+				}),
 			);
 
 			// Neither file fits — first file's focal pages exceed budget, loop breaks.
@@ -496,18 +676,36 @@ suite('Paged clipping - recently viewed files', () => {
 
 		test('proportional strategy drops oldest files when focal costs exceed budget', () => {
 			const bigLine = 'x'.repeat(400);
-			const bigContent = new StringText(Array.from({ length: 50 }, () => bigLine).join('\n'));
+			const bigContent = new StringText(
+				Array.from({ length: 50 }, () => bigLine).join('\n'),
+			);
 			const bigLineLen = bigLine.length + 1;
 
-			const smallContent = new StringText(Array.from({ length: 10 }, (_, i) => `s${i}`).join('\n'));
+			const smallContent = new StringText(
+				Array.from({ length: 10 }, (_, i) => `s${i}`).join('\n'),
+			);
 			const smallLineLen = 's0\n'.length;
 
 			const { snippets, docsInPrompt } = buildSnippets(
 				[
-					{ id, content: bigContent, focalRanges: [new OffsetRange(0, bigLineLen)], editEntryCount: 1 },
-					{ id: id2, content: smallContent, focalRanges: [new OffsetRange(0, smallLineLen)], editEntryCount: 1 },
+					{
+						id,
+						content: bigContent,
+						focalRanges: [new OffsetRange(0, bigLineLen)],
+						editEntryCount: 1,
+					},
+					{
+						id: id2,
+						content: smallContent,
+						focalRanges: [new OffsetRange(0, smallLineLen)],
+						editEntryCount: 1,
+					},
 				],
-				makeOpts({ maxTokens: 100, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.Proportional }),
+				makeOpts({
+					maxTokens: 100,
+					pageSize: 5,
+					clippingStrategy: RecentFileClippingStrategy.Proportional,
+				}),
 			);
 
 			// The big file's focal pages alone exceed the budget, so the
@@ -526,40 +724,92 @@ suite('Paged clipping - recently viewed files', () => {
 			// code tokens, not the formatted wrapper.
 			const id3 = DocumentId.create('file:///src/third.txt');
 			const makeContent = (prefix: string) =>
-				new StringText(Array.from({ length: 30 }, (_, i) => `${prefix}${i}`).join('\n'));
+				new StringText(
+					Array.from({ length: 30 }, (_, i) => `${prefix}${i}`).join(
+						'\n',
+					),
+				);
 			const lineLen = 'A0\n'.length;
 
 			const maxTokens = 300;
 			const { snippets } = buildSnippets(
 				[
-					{ id, content: makeContent('A'), focalRanges: [new OffsetRange(0, lineLen)], editEntryCount: 2 },
-					{ id: id2, content: makeContent('B'), focalRanges: [new OffsetRange(0, lineLen)], editEntryCount: 1 },
-					{ id: id3, content: makeContent('C'), focalRanges: [new OffsetRange(0, lineLen)], editEntryCount: 1 },
+					{
+						id,
+						content: makeContent('A'),
+						focalRanges: [new OffsetRange(0, lineLen)],
+						editEntryCount: 2,
+					},
+					{
+						id: id2,
+						content: makeContent('B'),
+						focalRanges: [new OffsetRange(0, lineLen)],
+						editEntryCount: 1,
+					},
+					{
+						id: id3,
+						content: makeContent('C'),
+						focalRanges: [new OffsetRange(0, lineLen)],
+						editEntryCount: 1,
+					},
 				],
-				makeOpts({ maxTokens, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.Proportional }),
+				makeOpts({
+					maxTokens,
+					pageSize: 5,
+					clippingStrategy: RecentFileClippingStrategy.Proportional,
+				}),
 			);
 
-			const totalTokens = snippets.reduce((sum, s) => sum + computeTokens(s), 0);
+			const totalTokens = snippets.reduce(
+				(sum, s) => sum + computeTokens(s),
+				0,
+			);
 			expect(totalTokens).toBeLessThanOrEqual(maxTokens);
 		});
 
 		test('proportional strategy drops oldest files first when over budget', () => {
 			// 3 files ordered most-recent-first. If we can only fit 2, the third (oldest) is dropped.
 			const id3 = DocumentId.create('file:///src/third.txt');
-			const content = new StringText(Array.from({ length: 20 }, (_, i) => `line${i}`).join('\n'));
+			const content = new StringText(
+				Array.from({ length: 20 }, (_, i) => `line${i}`).join('\n'),
+			);
 			const lineLen = 'line0\n'.length;
 
 			// Budget is enough for 2 files' focal pages but not 3
-			const focalCost = computeFocalPageCost(content, [new OffsetRange(0, lineLen)], 5, computeTokens)!;
+			const focalCost = computeFocalPageCost(
+				content,
+				[new OffsetRange(0, lineLen)],
+				5,
+				computeTokens,
+			)!;
 			const maxTokens = focalCost * 2 + 1; // fits exactly 2 focal costs
 
 			const { docsInPrompt } = buildSnippets(
 				[
-					{ id, content, focalRanges: [new OffsetRange(0, lineLen)], editEntryCount: 1 },
-					{ id: id2, content, focalRanges: [new OffsetRange(0, lineLen)], editEntryCount: 1 },
-					{ id: id3, content, focalRanges: [new OffsetRange(0, lineLen)], editEntryCount: 1 },
+					{
+						id,
+						content,
+						focalRanges: [new OffsetRange(0, lineLen)],
+						editEntryCount: 1,
+					},
+					{
+						id: id2,
+						content,
+						focalRanges: [new OffsetRange(0, lineLen)],
+						editEntryCount: 1,
+					},
+					{
+						id: id3,
+						content,
+						focalRanges: [new OffsetRange(0, lineLen)],
+						editEntryCount: 1,
+					},
 				],
-				makeOpts({ maxTokens, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.Proportional }),
+				makeOpts({
+					maxTokens,
+					pageSize: 5,
+					clippingStrategy: RecentFileClippingStrategy.Proportional,
+				}),
 			);
 
 			// Third (oldest) file dropped; first two included
@@ -570,12 +820,25 @@ suite('Paged clipping - recently viewed files', () => {
 		});
 
 		test('single file gets full budget', () => {
-			const content = new StringText(Array.from({ length: 50 }, (_, i) => `x${i}`).join('\n'));
+			const content = new StringText(
+				Array.from({ length: 50 }, (_, i) => `x${i}`).join('\n'),
+			);
 			const lineLen = 'x0\n'.length;
 
 			const { snippets, docsInPrompt } = buildSnippets(
-				[{ id, content, focalRanges: [new OffsetRange(0, lineLen)], editEntryCount: 1 }],
-				makeOpts({ maxTokens: 200, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.Proportional }),
+				[
+					{
+						id,
+						content,
+						focalRanges: [new OffsetRange(0, lineLen)],
+						editEntryCount: 1,
+					},
+				],
+				makeOpts({
+					maxTokens: 200,
+					pageSize: 5,
+					clippingStrategy: RecentFileClippingStrategy.Proportional,
+				}),
 			);
 
 			expect(docsInPrompt.size).toBe(1);
@@ -586,12 +849,14 @@ suite('Paged clipping - recently viewed files', () => {
 	});
 
 	suite('RC3: focal range span capping', () => {
-
 		test('wide-scatter focal ranges are capped to prioritize the most recent', () => {
 			// File with edits at line 5 and line 95, spanning nearly the whole file.
 			// With the span cap, only the most recent focal range (first in array)
 			// determines the clip center.
-			const lines = Array.from({ length: 100 }, (_, i) => `line_${String(i).padStart(3, '0')}`);
+			const lines = Array.from(
+				{ length: 100 },
+				(_, i) => `line_${String(i).padStart(3, '0')}`,
+			);
 			const content = new StringText(lines.join('\n'));
 			const lineLen = 'line_000\n'.length;
 
@@ -603,7 +868,12 @@ suite('Paged clipping - recently viewed files', () => {
 
 			const { snippets } = buildSnippets(
 				[{ id, content, focalRanges }],
-				makeOpts({ maxTokens: 30, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.AroundEditRange }),
+				makeOpts({
+					maxTokens: 30,
+					pageSize: 5,
+					clippingStrategy:
+						RecentFileClippingStrategy.AroundEditRange,
+				}),
 			);
 
 			const snippet = snippets[0];
@@ -612,7 +882,10 @@ suite('Paged clipping - recently viewed files', () => {
 		});
 
 		test('nearby focal ranges are all included within span cap', () => {
-			const lines = Array.from({ length: 100 }, (_, i) => `line_${String(i).padStart(3, '0')}`);
+			const lines = Array.from(
+				{ length: 100 },
+				(_, i) => `line_${String(i).padStart(3, '0')}`,
+			);
 			const content = new StringText(lines.join('\n'));
 			const lineLen = 'line_000\n'.length;
 
@@ -624,7 +897,12 @@ suite('Paged clipping - recently viewed files', () => {
 
 			const { snippets } = buildSnippets(
 				[{ id, content, focalRanges }],
-				makeOpts({ maxTokens: 50, pageSize: 5, clippingStrategy: RecentFileClippingStrategy.AroundEditRange }),
+				makeOpts({
+					maxTokens: 50,
+					pageSize: 5,
+					clippingStrategy:
+						RecentFileClippingStrategy.AroundEditRange,
+				}),
 			);
 
 			const snippet = snippets[0];
@@ -636,23 +914,32 @@ suite('Paged clipping - recently viewed files', () => {
 
 suite('selectFocalRangesWithinSpanCap', () => {
 	const charsPerLine = 10;
-	const getLineNumber = (offset: number) => Math.floor(offset / charsPerLine) + 1;
+	const getLineNumber = (offset: number) =>
+		Math.floor(offset / charsPerLine) + 1;
 
 	test('returns all ranges when span fits within cap', () => {
 		const ranges = [
-			new OffsetRange(10, 20),  // line 2
-			new OffsetRange(20, 30),  // line 3
+			new OffsetRange(10, 20), // line 2
+			new OffsetRange(20, 30), // line 3
 		];
-		const result = selectFocalRangesWithinSpanCap(ranges, getLineNumber, 10);
+		const result = selectFocalRangesWithinSpanCap(
+			ranges,
+			getLineNumber,
+			10,
+		);
 		expect(result).toEqual(ranges);
 	});
 
 	test('returns only the first range when adding the second exceeds span cap', () => {
 		const ranges = [
-			new OffsetRange(10, 20),   // line 2
+			new OffsetRange(10, 20), // line 2
 			new OffsetRange(500, 510), // line 51
 		];
-		const result = selectFocalRangesWithinSpanCap(ranges, getLineNumber, 10);
+		const result = selectFocalRangesWithinSpanCap(
+			ranges,
+			getLineNumber,
+			10,
+		);
 		expect(result).toEqual([ranges[0]]);
 	});
 
@@ -663,7 +950,11 @@ suite('selectFocalRangesWithinSpanCap', () => {
 			new OffsetRange(150, 160), // line 16
 			new OffsetRange(500, 510), // line 51 — too far
 		];
-		const result = selectFocalRangesWithinSpanCap(ranges, getLineNumber, 10);
+		const result = selectFocalRangesWithinSpanCap(
+			ranges,
+			getLineNumber,
+			10,
+		);
 		expect(result).toEqual([ranges[0], ranges[1], ranges[2]]);
 	});
 
@@ -680,13 +971,15 @@ suite('selectFocalRangesWithinSpanCap', () => {
 });
 
 suite('historyEntriesToCodeSnippet', () => {
-
 	const docId = DocumentId.create('file:///src/example.txt');
 
 	/**
 	 * Helper to create an edit entry from a base text and a StringEdit.
 	 */
-	function makeEditEntry(base: string, edit: StringEdit): IXtabHistoryEditEntry {
+	function makeEditEntry(
+		base: string,
+		edit: StringEdit,
+	): IXtabHistoryEditEntry {
 		return {
 			kind: 'edit',
 			docId,
@@ -697,7 +990,10 @@ suite('historyEntriesToCodeSnippet', () => {
 	/**
 	 * Helper to create a visibleRanges entry.
 	 */
-	function makeVisibleEntry(content: string, visibleRanges: readonly OffsetRange[]): IXtabHistoryVisibleRangesEntry {
+	function makeVisibleEntry(
+		content: string,
+		visibleRanges: readonly OffsetRange[],
+	): IXtabHistoryVisibleRangesEntry {
 		return {
 			kind: 'visibleRanges',
 			docId,
@@ -740,8 +1036,8 @@ suite('historyEntriesToCodeSnippet', () => {
 		// Newer edit's own range: [0,2) for "YY"
 		// Older edit's range transformed forward: [0,3) → applyToOffsetRange via newerEdit → [2,5)
 		expect(result.focalRanges).toEqual([
-			new OffsetRange(0, 2),  // from newerEntry
-			new OffsetRange(2, 5),  // from olderEntry, transformed
+			new OffsetRange(0, 2), // from newerEntry
+			new OffsetRange(2, 5), // from olderEntry, transformed
 		]);
 		expect(result.editEntryCount).toBe(2);
 	});
@@ -756,7 +1052,10 @@ suite('historyEntriesToCodeSnippet', () => {
 		// E0 (newest): insert "Z" at offset 5  ⇒  "XYdefZ"
 		//   E0.base = "XYdef"
 		//   New ranges in E0 post-edit: [5,6) for "Z"
-		const e2 = makeEditEntry('abcdef', StringEdit.delete(new OffsetRange(0, 3)));
+		const e2 = makeEditEntry(
+			'abcdef',
+			StringEdit.delete(new OffsetRange(0, 3)),
+		);
 		const e1 = makeEditEntry('def', StringEdit.insert(0, 'XY'));
 		const e0 = makeEditEntry('XYdef', StringEdit.insert(5, 'Z'));
 
@@ -769,9 +1068,9 @@ suite('historyEntriesToCodeSnippet', () => {
 		//   Through E1 (insert 2 chars at 0): [0,0) → [2,2)
 		//   Through E0 (insert 1 char at 5): [2,2) → [2,2) (before insertion point)
 		expect(result.focalRanges).toEqual([
-			new OffsetRange(5, 6),  // E0
-			new OffsetRange(0, 2),  // E1, transformed through E0
-			new OffsetRange(2, 2),  // E2, transformed through E1 and E0
+			new OffsetRange(5, 6), // E0
+			new OffsetRange(0, 2), // E1, transformed through E0
+			new OffsetRange(2, 2), // E2, transformed through E1 and E0
 		]);
 		expect(result.editEntryCount).toBe(3);
 	});
@@ -781,7 +1080,9 @@ suite('historyEntriesToCodeSnippet', () => {
 		// Only the edit entry should contribute focal ranges.
 		const edit = StringEdit.insert(5, ' world');
 		const editEntry = makeEditEntry('hello', edit);
-		const visibleEntry = makeVisibleEntry('hello world', [new OffsetRange(0, 5)]);
+		const visibleEntry = makeVisibleEntry('hello world', [
+			new OffsetRange(0, 5),
+		]);
 
 		// visibleEntry is most recent
 		const result = historyEntriesToCodeSnippet([visibleEntry, editEntry]);
@@ -822,17 +1123,27 @@ suite('historyEntriesToCodeSnippet', () => {
 
 		expect(result.content.value).toBe('XXccc');
 		expect(result.focalRanges).toEqual([
-			new OffsetRange(0, 2),  // newerEntry's "XX"
-			new OffsetRange(2, 2),  // olderEntry's deletion point, shifted
+			new OffsetRange(0, 2), // newerEntry's "XX"
+			new OffsetRange(2, 2), // olderEntry's deletion point, shifted
 		]);
 	});
 });
 
 suite('appendNeighborFileSnippets', () => {
-
-	function makeNeighbor(uri: string, snippet: string, startLine: number, score = 0.5): INeighborFileSnippet {
+	function makeNeighbor(
+		uri: string,
+		snippet: string,
+		startLine: number,
+		score = 0.5,
+	): INeighborFileSnippet {
 		const lineCount = snippet.split(/\r?\n/).length;
-		return { uri, relativePath: uri, snippet, lineRange: new LineRange0Based(startLine, startLine + lineCount), score };
+		return {
+			uri,
+			relativePath: uri,
+			snippet,
+			lineRange: new LineRange0Based(startLine, startLine + lineCount),
+			score,
+		};
 	}
 
 	test('appends snippets formatted like recent files', () => {
@@ -855,7 +1166,9 @@ suite('appendNeighborFileSnippets', () => {
 			<|/recently_viewed_code_snippet|>",
 			]
 		`);
-		expect(docsInPrompt.has(DocumentId.create('file:///src/n1.ts'))).toBe(true);
+		expect(docsInPrompt.has(DocumentId.create('file:///src/n1.ts'))).toBe(
+			true,
+		);
 	});
 
 	test('skips oversize snippets but keeps trying smaller ones', () => {
@@ -899,9 +1212,21 @@ suite('appendNeighborFileSnippets', () => {
 	test('no-op when no snippets provided', () => {
 		const snippets: string[] = [];
 		const docsInPrompt = new Set<DocumentId>();
-		const result = appendNeighborFileSnippets([], snippets, docsInPrompt, 100, computeTokens, IncludeLineNumbersOption.None);
+		const result = appendNeighborFileSnippets(
+			[],
+			snippets,
+			docsInPrompt,
+			100,
+			computeTokens,
+			IncludeLineNumbersOption.None,
+		);
 		expect(snippets).toEqual([]);
-		expect(result).toEqual({ nComputed: 0, nIncluded: 0, includedIndices: [], tokensConsumed: 0 });
+		expect(result).toEqual({
+			nComputed: 0,
+			nIncluded: 0,
+			includedIndices: [],
+			tokensConsumed: 0,
+		});
 	});
 
 	test('selects highest-score snippets first when budget is tight', () => {
@@ -911,8 +1236,18 @@ suite('appendNeighborFileSnippets', () => {
 		// The highest-score one (last in input) must win.
 		appendNeighborFileSnippets(
 			[
-				makeNeighbor('file:///src/low.ts', 'l'.repeat(32), 0, /*score*/ 0.1),
-				makeNeighbor('file:///src/high.ts', 'h'.repeat(32), 0, /*score*/ 0.9),
+				makeNeighbor(
+					'file:///src/low.ts',
+					'l'.repeat(32),
+					0,
+					/*score*/ 0.1,
+				),
+				makeNeighbor(
+					'file:///src/high.ts',
+					'h'.repeat(32),
+					0,
+					/*score*/ 0.9,
+				),
 			],
 			snippets,
 			docsInPrompt,
@@ -958,7 +1293,12 @@ suite('appendNeighborFileSnippets', () => {
 				makeNeighbor('file:///src/i2.ts', 'c', 0, /*score*/ 0.3),
 				makeNeighbor('file:///src/i3.ts', 'd', 0, /*score*/ 0.4),
 				makeNeighbor('file:///src/i4.ts', 'e', 0, /*score*/ 0.5),
-				makeNeighbor('file:///src/i5.ts', 'h'.repeat(64), 0, /*score*/ 0.6),
+				makeNeighbor(
+					'file:///src/i5.ts',
+					'h'.repeat(64),
+					0,
+					/*score*/ 0.6,
+				),
 				makeNeighbor('file:///src/i6.ts', 'g', 0, /*score*/ 0.9),
 			],
 			snippets,
@@ -967,6 +1307,11 @@ suite('appendNeighborFileSnippets', () => {
 			computeTokens,
 			IncludeLineNumbersOption.None,
 		);
-		expect(result).toEqual({ nComputed: 7, nIncluded: 4, includedIndices: [2, 3, 4, 6], tokensConsumed: 4 });
+		expect(result).toEqual({
+			nComputed: 7,
+			nIncluded: 4,
+			includedIndices: [2, 3, 4, 6],
+			tokensConsumed: 4,
+		});
 	});
 });

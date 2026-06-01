@@ -12,11 +12,12 @@ export interface IStatCache {
 }
 
 export class StatCache implements IStatCache {
-	private readonly cache = new Map<string, Promise<{ type: FileType } | undefined>>();
+	private readonly cache = new Map<
+		string,
+		Promise<{ type: FileType } | undefined>
+	>();
 
-	constructor(
-		private readonly fileSystem: IFileSystemService,
-	) { }
+	constructor(private readonly fileSystem: IFileSystemService) {}
 
 	stat(uri: Uri): Promise<{ type: FileType } | undefined> {
 		const key = uri.toString();
@@ -24,7 +25,10 @@ export class StatCache implements IStatCache {
 		if (existing) {
 			return existing;
 		}
-		const result = this.fileSystem.stat(uri).then(s => s, () => undefined);
+		const result = this.fileSystem.stat(uri).then(
+			(s) => s,
+			() => undefined,
+		);
 		this.cache.set(key, result);
 		return result;
 	}

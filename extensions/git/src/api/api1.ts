@@ -3,36 +3,94 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Model } from '../model';
-import { Repository as BaseRepository, Resource } from '../repository';
-import type { InputBox, Git, API, Repository, Remote, RepositoryState, Branch, Ref, Submodule, Commit, Change, RepositoryUIState, LogOptions, APIState, CommitOptions, CredentialsProvider, BranchQuery, PushErrorHandler, PublishEvent, FetchOptions, RemoteSourceProvider, RemoteSourcePublisher, PostCommitCommandsProvider, RefQuery, BranchProtectionProvider, InitOptions, SourceControlHistoryItemDetailsProvider, CloneOptions, CommitShortStat, DiffChange, Worktree, RepositoryKind, RepositoryAccessDetails } from './git';
-import { ForcePushMode, GitErrorCodes, RefType, Status } from './git.constants';
-import { Event, SourceControlInputBox, Uri, SourceControl, Disposable, commands, CancellationToken } from 'vscode';
-import { combinedDisposable, filterEvent, mapEvent } from '../util';
-import { toGitUri } from '../uri';
-import { GitExtensionImpl } from './extension';
-import { GitBaseApi } from '../git-base';
-import { PickRemoteSourceOptions } from '../typings/git-base';
-import { OperationKind, OperationResult } from '../operation';
-import { CloneManager } from '../cloneManager';
+import { Model } from "../model";
+import { Repository as BaseRepository, Resource } from "../repository";
+import type {
+	InputBox,
+	Git,
+	API,
+	Repository,
+	Remote,
+	RepositoryState,
+	Branch,
+	Ref,
+	Submodule,
+	Commit,
+	Change,
+	RepositoryUIState,
+	LogOptions,
+	APIState,
+	CommitOptions,
+	CredentialsProvider,
+	BranchQuery,
+	PushErrorHandler,
+	PublishEvent,
+	FetchOptions,
+	RemoteSourceProvider,
+	RemoteSourcePublisher,
+	PostCommitCommandsProvider,
+	RefQuery,
+	BranchProtectionProvider,
+	InitOptions,
+	SourceControlHistoryItemDetailsProvider,
+	CloneOptions,
+	CommitShortStat,
+	DiffChange,
+	Worktree,
+	RepositoryKind,
+	RepositoryAccessDetails,
+} from "./git";
+import { ForcePushMode, GitErrorCodes, RefType, Status } from "./git.constants";
+import {
+	Event,
+	SourceControlInputBox,
+	Uri,
+	SourceControl,
+	Disposable,
+	commands,
+	CancellationToken,
+} from "vscode";
+import { combinedDisposable, filterEvent, mapEvent } from "../util";
+import { toGitUri } from "../uri";
+import { GitExtensionImpl } from "./extension";
+import { GitBaseApi } from "../git-base";
+import { PickRemoteSourceOptions } from "../typings/git-base";
+import { OperationKind, OperationResult } from "../operation";
+import { CloneManager } from "../cloneManager";
 
 class ApiInputBox implements InputBox {
 	#inputBox: SourceControlInputBox;
 
-	constructor(inputBox: SourceControlInputBox) { this.#inputBox = inputBox; }
+	constructor(inputBox: SourceControlInputBox) {
+		this.#inputBox = inputBox;
+	}
 
-	set value(value: string) { this.#inputBox.value = value; }
-	get value(): string { return this.#inputBox.value; }
+	set value(value: string) {
+		this.#inputBox.value = value;
+	}
+	get value(): string {
+		return this.#inputBox.value;
+	}
 }
 
 export class ApiChange implements Change {
 	#resource: Resource;
-	constructor(resource: Resource) { this.#resource = resource; }
+	constructor(resource: Resource) {
+		this.#resource = resource;
+	}
 
-	get uri(): Uri { return this.#resource.resourceUri; }
-	get originalUri(): Uri { return this.#resource.original; }
-	get renameUri(): Uri | undefined { return this.#resource.renameResourceUri; }
-	get status(): Status { return this.#resource.type; }
+	get uri(): Uri {
+		return this.#resource.resourceUri;
+	}
+	get originalUri(): Uri {
+		return this.#resource.original;
+	}
+	get renameUri(): Uri | undefined {
+		return this.#resource.renameResourceUri;
+	}
+	get status(): Status {
+		return this.#resource.type;
+	}
 }
 
 export class ApiRepositoryState implements RepositoryState {
@@ -44,20 +102,49 @@ export class ApiRepositoryState implements RepositoryState {
 		this.onDidChange = this.#repository.onDidRunGitStatus;
 	}
 
-	get HEAD(): Branch | undefined { return this.#repository.HEAD; }
+	get HEAD(): Branch | undefined {
+		return this.#repository.HEAD;
+	}
 	/**
 	 * @deprecated Use ApiRepository.getRefs() instead.
 	 */
-	get refs(): Ref[] { console.warn('Deprecated. Use ApiRepository.getRefs() instead.'); return []; }
-	get remotes(): Remote[] { return [...this.#repository.remotes]; }
-	get submodules(): Submodule[] { return [...this.#repository.submodules]; }
-	get worktrees(): Worktree[] { return this.#repository.worktrees; }
-	get rebaseCommit(): Commit | undefined { return this.#repository.rebaseCommit; }
+	get refs(): Ref[] {
+		console.warn("Deprecated. Use ApiRepository.getRefs() instead.");
+		return [];
+	}
+	get remotes(): Remote[] {
+		return [...this.#repository.remotes];
+	}
+	get submodules(): Submodule[] {
+		return [...this.#repository.submodules];
+	}
+	get worktrees(): Worktree[] {
+		return this.#repository.worktrees;
+	}
+	get rebaseCommit(): Commit | undefined {
+		return this.#repository.rebaseCommit;
+	}
 
-	get mergeChanges(): Change[] { return this.#repository.mergeGroup.resourceStates.map(r => new ApiChange(r)); }
-	get indexChanges(): Change[] { return this.#repository.indexGroup.resourceStates.map(r => new ApiChange(r)); }
-	get workingTreeChanges(): Change[] { return this.#repository.workingTreeGroup.resourceStates.map(r => new ApiChange(r)); }
-	get untrackedChanges(): Change[] { return this.#repository.untrackedGroup.resourceStates.map(r => new ApiChange(r)); }
+	get mergeChanges(): Change[] {
+		return this.#repository.mergeGroup.resourceStates.map(
+			(r) => new ApiChange(r),
+		);
+	}
+	get indexChanges(): Change[] {
+		return this.#repository.indexGroup.resourceStates.map(
+			(r) => new ApiChange(r),
+		);
+	}
+	get workingTreeChanges(): Change[] {
+		return this.#repository.workingTreeGroup.resourceStates.map(
+			(r) => new ApiChange(r),
+		);
+	}
+	get untrackedChanges(): Change[] {
+		return this.#repository.untrackedGroup.resourceStates.map(
+			(r) => new ApiChange(r),
+		);
+	}
 }
 
 export class ApiRepositoryUIState implements RepositoryUIState {
@@ -66,10 +153,15 @@ export class ApiRepositoryUIState implements RepositoryUIState {
 
 	constructor(sourceControl: SourceControl) {
 		this.#sourceControl = sourceControl;
-		this.onDidChange = mapEvent<boolean, void>(this.#sourceControl.onDidChangeSelection, () => null);
+		this.onDidChange = mapEvent<boolean, void>(
+			this.#sourceControl.onDidChangeSelection,
+			() => null,
+		);
 	}
 
-	get selected(): boolean { return this.#sourceControl.selected; }
+	get selected(): boolean {
+		return this.#sourceControl.selected;
+	}
 }
 
 export class ApiRepository implements Repository {
@@ -96,15 +188,38 @@ export class ApiRepository implements Repository {
 		this.isUsingVirtualFileSystem = this.#repository.isUsingVirtualFileSystem;
 
 		this.onDidCommit = mapEvent<OperationResult, void>(
-			filterEvent(this.#repository.onDidRunOperation, e => e.operation.kind === OperationKind.Commit), () => null);
+			filterEvent(
+				this.#repository.onDidRunOperation,
+				(e) => e.operation.kind === OperationKind.Commit,
+			),
+			() => null,
+		);
 		this.onDidCheckout = mapEvent<OperationResult, void>(
-			filterEvent(this.#repository.onDidRunOperation, e => e.operation.kind === OperationKind.Checkout || e.operation.kind === OperationKind.CheckoutTracking), () => null);
+			filterEvent(
+				this.#repository.onDidRunOperation,
+				(e) =>
+					e.operation.kind === OperationKind.Checkout ||
+					e.operation.kind === OperationKind.CheckoutTracking,
+			),
+			() => null,
+		);
 	}
 
 	apply(patch: string, reverse?: boolean): Promise<void>;
-	apply(patch: string, options?: { allowEmpty?: boolean; reverse?: boolean; threeWay?: boolean }): Promise<void>;
-	apply(patch: string, reverseOrOptions?: boolean | { allowEmpty?: boolean; reverse?: boolean; threeWay?: boolean }): Promise<void> {
-		const options = typeof reverseOrOptions === 'boolean' ? { reverse: reverseOrOptions } : reverseOrOptions;
+	apply(
+		patch: string,
+		options?: { allowEmpty?: boolean; reverse?: boolean; threeWay?: boolean },
+	): Promise<void>;
+	apply(
+		patch: string,
+		reverseOrOptions?:
+			| boolean
+			| { allowEmpty?: boolean; reverse?: boolean; threeWay?: boolean },
+	): Promise<void> {
+		const options =
+			typeof reverseOrOptions === "boolean"
+				? { reverse: reverseOrOptions }
+				: reverseOrOptions;
 		return this.#repository.apply(patch, options);
 	}
 
@@ -128,11 +243,16 @@ export class ApiRepository implements Repository {
 		return this.#repository.getGlobalConfig(key);
 	}
 
-	getObjectDetails(treeish: string, path: string): Promise<{ mode: string; object: string; size: number }> {
+	getObjectDetails(
+		treeish: string,
+		path: string,
+	): Promise<{ mode: string; object: string; size: number }> {
 		return this.#repository.getObjectDetails(treeish, path);
 	}
 
-	detectObjectType(object: string): Promise<{ mimetype: string; encoding?: string }> {
+	detectObjectType(
+		object: string,
+	): Promise<{ mimetype: string; encoding?: string }> {
 		return this.#repository.detectObjectType(object);
 	}
 
@@ -149,19 +269,22 @@ export class ApiRepository implements Repository {
 	}
 
 	add(paths: string[]) {
-		return this.#repository.add(paths.map(p => Uri.file(p)));
+		return this.#repository.add(paths.map((p) => Uri.file(p)));
 	}
 
 	revert(paths: string[]) {
-		return this.#repository.revert(paths.map(p => Uri.file(p)));
+		return this.#repository.revert(paths.map((p) => Uri.file(p)));
 	}
 
 	clean(paths: string[]) {
-		return this.#repository.clean(paths.map(p => Uri.file(p)));
+		return this.#repository.clean(paths.map((p) => Uri.file(p)));
 	}
 
 	restore(paths: string[], options?: { staged?: boolean; ref?: string }) {
-		return this.#repository.restore(paths.map(p => Uri.file(p)), options);
+		return this.#repository.restore(
+			paths.map((p) => Uri.file(p)),
+			options,
+		);
 	}
 
 	diff(cached?: boolean) {
@@ -206,7 +329,11 @@ export class ApiRepository implements Repository {
 
 	diffBetween(ref1: string, ref2: string): Promise<Change[]>;
 	diffBetween(ref1: string, ref2: string, path: string): Promise<string>;
-	diffBetween(ref1: string, ref2: string, path?: string): Promise<string | Change[]> {
+	diffBetween(
+		ref1: string,
+		ref2: string,
+		path?: string,
+	): Promise<string | Change[]> {
 		return this.#repository.diffBetween(ref1, ref2, path);
 	}
 
@@ -214,7 +341,11 @@ export class ApiRepository implements Repository {
 		return this.#repository.diffBetweenPatch(ref1, ref2, path);
 	}
 
-	diffBetweenWithStats(ref1: string, ref2: string, path?: string): Promise<DiffChange[]> {
+	diffBetweenWithStats(
+		ref1: string,
+		ref2: string,
+		path?: string,
+	): Promise<DiffChange[]> {
 		return this.#repository.diffBetweenWithStats(ref1, ref2, path);
 	}
 
@@ -226,7 +357,11 @@ export class ApiRepository implements Repository {
 		return this.#repository.hashObject(data);
 	}
 
-	createBranch(name: string, checkout: boolean, ref?: string | undefined): Promise<void> {
+	createBranch(
+		name: string,
+		checkout: boolean,
+		ref?: string | undefined,
+	): Promise<void> {
 		return this.#repository.branch(name, checkout, ref);
 	}
 
@@ -238,7 +373,10 @@ export class ApiRepository implements Repository {
 		return this.#repository.getBranch(name);
 	}
 
-	getBranches(query: BranchQuery, cancellationToken?: CancellationToken): Promise<Ref[]> {
+	getBranches(
+		query: BranchQuery,
+		cancellationToken?: CancellationToken,
+	): Promise<Ref[]> {
 		return this.#repository.getBranches(query, cancellationToken);
 	}
 
@@ -250,7 +388,10 @@ export class ApiRepository implements Repository {
 		return this.#repository.setBranchUpstream(name, upstream);
 	}
 
-	getRefs(query: RefQuery, cancellationToken?: CancellationToken): Promise<Ref[]> {
+	getRefs(
+		query: RefQuery,
+		cancellationToken?: CancellationToken,
+	): Promise<Ref[]> {
 		return this.#repository.getRefs(query, cancellationToken);
 	}
 
@@ -290,12 +431,13 @@ export class ApiRepository implements Repository {
 		return this.#repository.renameRemote(name, newName);
 	}
 
-	fetch(arg0?: FetchOptions | string | undefined,
+	fetch(
+		arg0?: FetchOptions | string | undefined,
 		ref?: string | undefined,
 		depth?: number | undefined,
-		prune?: boolean | undefined
+		prune?: boolean | undefined,
 	): Promise<void> {
-		if (arg0 !== undefined && typeof arg0 !== 'string') {
+		if (arg0 !== undefined && typeof arg0 !== "string") {
 			return this.#repository.fetch(arg0);
 		}
 
@@ -306,7 +448,12 @@ export class ApiRepository implements Repository {
 		return this.#repository.pull(undefined, unshallow);
 	}
 
-	push(remoteName?: string, branchName?: string, setUpstream: boolean = false, force?: ForcePushMode): Promise<void> {
+	push(
+		remoteName?: string,
+		branchName?: string,
+		setUpstream: boolean = false,
+		force?: ForcePushMode,
+	): Promise<void> {
 		return this.#repository.pushTo(remoteName, branchName, setUpstream, force);
 	}
 
@@ -319,7 +466,10 @@ export class ApiRepository implements Repository {
 	}
 
 	commit(message: string, opts?: CommitOptions): Promise<void> {
-		return this.#repository.commit(message, { ...opts, postCommitCommand: null });
+		return this.#repository.commit(message, {
+			...opts,
+			postCommitCommand: null,
+		});
 	}
 
 	merge(ref: string): Promise<void> {
@@ -334,8 +484,16 @@ export class ApiRepository implements Repository {
 		return this.#repository.rebase(branch);
 	}
 
-	createStash(options?: { message?: string; includeUntracked?: boolean; staged?: boolean }): Promise<void> {
-		return this.#repository.createStash(options?.message, options?.includeUntracked, options?.staged);
+	createStash(options?: {
+		message?: string;
+		includeUntracked?: boolean;
+		staged?: boolean;
+	}): Promise<void> {
+		return this.#repository.createStash(
+			options?.message,
+			options?.includeUntracked,
+			options?.staged,
+		);
 	}
 
 	applyStash(index?: number): Promise<void> {
@@ -350,7 +508,12 @@ export class ApiRepository implements Repository {
 		return this.#repository.dropStash(index);
 	}
 
-	createWorktree(options?: { path?: string; commitish?: string; branch?: string; noTrack?: boolean }): Promise<string> {
+	createWorktree(options?: {
+		path?: string;
+		commitish?: string;
+		branch?: string;
+		noTrack?: boolean;
+	}): Promise<string> {
 		return this.#repository.createWorktree(options);
 	}
 
@@ -358,7 +521,14 @@ export class ApiRepository implements Repository {
 		return this.#repository.deleteWorktree(path, options);
 	}
 
-	migrateChanges(sourceRepositoryPath: string, options?: { confirmation?: boolean; deleteFromSource?: boolean; untracked?: boolean }): Promise<void> {
+	migrateChanges(
+		sourceRepositoryPath: string,
+		options?: {
+			confirmation?: boolean;
+			deleteFromSource?: boolean;
+			untracked?: boolean;
+		},
+	): Promise<void> {
 		return this.#repository.migrateChanges(sourceRepositoryPath, options);
 	}
 
@@ -376,9 +546,13 @@ export class ApiGit implements Git {
 
 	private _env: { [key: string]: string } | undefined;
 
-	constructor(model: Model) { this.#model = model; }
+	constructor(model: Model) {
+		this.#model = model;
+	}
 
-	get path(): string { return this.#model.git.path; }
+	get path(): string {
+		return this.#model.git.path;
+	}
 
 	get env(): { [key: string]: string } {
 		if (this._env === undefined) {
@@ -413,15 +587,21 @@ export class ApiImpl implements API {
 	}
 
 	get onDidOpenRepository(): Event<Repository> {
-		return mapEvent(this.#model.onDidOpenRepository, r => new ApiRepository(r));
+		return mapEvent(
+			this.#model.onDidOpenRepository,
+			(r) => new ApiRepository(r),
+		);
 	}
 
 	get onDidCloseRepository(): Event<Repository> {
-		return mapEvent(this.#model.onDidCloseRepository, r => new ApiRepository(r));
+		return mapEvent(
+			this.#model.onDidCloseRepository,
+			(r) => new ApiRepository(r),
+		);
 	}
 
 	get repositories(): Repository[] {
-		return this.#model.repositories.map(r => new ApiRepository(r));
+		return this.#model.repositories.map((r) => new ApiRepository(r));
 	}
 
 	get recentRepositories(): Iterable<RepositoryAccessDetails> {
@@ -460,7 +640,7 @@ export class ApiImpl implements API {
 
 	async getRepositoryWorkspace(uri: Uri): Promise<Uri[] | null> {
 		const workspaces = this.#model.repositoryCache.get(uri.toString());
-		return workspaces ? workspaces.map(r => Uri.file(r.workspacePath)) : null;
+		return workspaces ? workspaces.map((r) => Uri.file(r.workspacePath)) : null;
 	}
 
 	async init(root: Uri, options?: InitOptions): Promise<Repository | null> {
@@ -472,12 +652,17 @@ export class ApiImpl implements API {
 
 	async clone(uri: Uri, options?: CloneOptions): Promise<Uri | null> {
 		const parentPath = options?.parentPath?.fsPath;
-		const result = await this.#cloneManager.clone(uri.toString(), { parentPath, recursive: options?.recursive, ref: options?.ref, postCloneAction: options?.postCloneAction });
+		const result = await this.#cloneManager.clone(uri.toString(), {
+			parentPath,
+			recursive: options?.recursive,
+			ref: options?.ref,
+			postCloneAction: options?.postCloneAction,
+		});
 		return result ? Uri.file(result) : null;
 	}
 
 	async openRepository(root: Uri): Promise<Repository | null> {
-		if (root.scheme !== 'file') {
+		if (root.scheme !== "file") {
 			return null;
 		}
 
@@ -489,9 +674,15 @@ export class ApiImpl implements API {
 		const disposables: Disposable[] = [];
 
 		if (provider.publishRepository) {
-			disposables.push(this.#model.registerRemoteSourcePublisher(provider as RemoteSourcePublisher));
+			disposables.push(
+				this.#model.registerRemoteSourcePublisher(
+					provider as RemoteSourcePublisher,
+				),
+			);
 		}
-		disposables.push(GitBaseApi.getAPI().registerRemoteSourceProvider(provider));
+		disposables.push(
+			GitBaseApi.getAPI().registerRemoteSourceProvider(provider),
+		);
 
 		return combinedDisposable(disposables);
 	}
@@ -504,7 +695,9 @@ export class ApiImpl implements API {
 		return this.#model.registerCredentialsProvider(provider);
 	}
 
-	registerPostCommitCommandsProvider(provider: PostCommitCommandsProvider): Disposable {
+	registerPostCommitCommandsProvider(
+		provider: PostCommitCommandsProvider,
+	): Disposable {
 		return this.#model.registerPostCommitCommandsProvider(provider);
 	}
 
@@ -512,93 +705,132 @@ export class ApiImpl implements API {
 		return this.#model.registerPushErrorHandler(handler);
 	}
 
-	registerSourceControlHistoryItemDetailsProvider(provider: SourceControlHistoryItemDetailsProvider): Disposable {
-		return this.#model.registerSourceControlHistoryItemDetailsProvider(provider);
+	registerSourceControlHistoryItemDetailsProvider(
+		provider: SourceControlHistoryItemDetailsProvider,
+	): Disposable {
+		return this.#model.registerSourceControlHistoryItemDetailsProvider(
+			provider,
+		);
 	}
 
-	registerBranchProtectionProvider(root: Uri, provider: BranchProtectionProvider): Disposable {
+	registerBranchProtectionProvider(
+		root: Uri,
+		provider: BranchProtectionProvider,
+	): Disposable {
 		return this.#model.registerBranchProtectionProvider(root, provider);
 	}
 }
 
 function getRefType(type: RefType): string {
 	switch (type) {
-		case RefType.Head: return 'Head';
-		case RefType.RemoteHead: return 'RemoteHead';
-		case RefType.Tag: return 'Tag';
+		case RefType.Head:
+			return "Head";
+		case RefType.RemoteHead:
+			return "RemoteHead";
+		case RefType.Tag:
+			return "Tag";
 	}
 
-	return 'unknown';
+	return "unknown";
 }
 
 function getStatus(status: Status): string {
 	switch (status) {
-		case Status.INDEX_MODIFIED: return 'INDEX_MODIFIED';
-		case Status.INDEX_ADDED: return 'INDEX_ADDED';
-		case Status.INDEX_DELETED: return 'INDEX_DELETED';
-		case Status.INDEX_RENAMED: return 'INDEX_RENAMED';
-		case Status.INDEX_COPIED: return 'INDEX_COPIED';
-		case Status.MODIFIED: return 'MODIFIED';
-		case Status.DELETED: return 'DELETED';
-		case Status.UNTRACKED: return 'UNTRACKED';
-		case Status.IGNORED: return 'IGNORED';
-		case Status.INTENT_TO_ADD: return 'INTENT_TO_ADD';
-		case Status.INTENT_TO_RENAME: return 'INTENT_TO_RENAME';
-		case Status.TYPE_CHANGED: return 'TYPE_CHANGED';
-		case Status.ADDED_BY_US: return 'ADDED_BY_US';
-		case Status.ADDED_BY_THEM: return 'ADDED_BY_THEM';
-		case Status.DELETED_BY_US: return 'DELETED_BY_US';
-		case Status.DELETED_BY_THEM: return 'DELETED_BY_THEM';
-		case Status.BOTH_ADDED: return 'BOTH_ADDED';
-		case Status.BOTH_DELETED: return 'BOTH_DELETED';
-		case Status.BOTH_MODIFIED: return 'BOTH_MODIFIED';
+		case Status.INDEX_MODIFIED:
+			return "INDEX_MODIFIED";
+		case Status.INDEX_ADDED:
+			return "INDEX_ADDED";
+		case Status.INDEX_DELETED:
+			return "INDEX_DELETED";
+		case Status.INDEX_RENAMED:
+			return "INDEX_RENAMED";
+		case Status.INDEX_COPIED:
+			return "INDEX_COPIED";
+		case Status.MODIFIED:
+			return "MODIFIED";
+		case Status.DELETED:
+			return "DELETED";
+		case Status.UNTRACKED:
+			return "UNTRACKED";
+		case Status.IGNORED:
+			return "IGNORED";
+		case Status.INTENT_TO_ADD:
+			return "INTENT_TO_ADD";
+		case Status.INTENT_TO_RENAME:
+			return "INTENT_TO_RENAME";
+		case Status.TYPE_CHANGED:
+			return "TYPE_CHANGED";
+		case Status.ADDED_BY_US:
+			return "ADDED_BY_US";
+		case Status.ADDED_BY_THEM:
+			return "ADDED_BY_THEM";
+		case Status.DELETED_BY_US:
+			return "DELETED_BY_US";
+		case Status.DELETED_BY_THEM:
+			return "DELETED_BY_THEM";
+		case Status.BOTH_ADDED:
+			return "BOTH_ADDED";
+		case Status.BOTH_DELETED:
+			return "BOTH_DELETED";
+		case Status.BOTH_MODIFIED:
+			return "BOTH_MODIFIED";
 	}
 
-	return 'UNKNOWN';
+	return "UNKNOWN";
 }
 
 export function registerAPICommands(extension: GitExtensionImpl): Disposable {
 	const disposables: Disposable[] = [];
 
-	disposables.push(commands.registerCommand('git.api.getRepositories', () => {
-		const api = extension.getAPI(1);
-		return api.repositories.map(r => r.rootUri.toString());
-	}));
+	disposables.push(
+		commands.registerCommand("git.api.getRepositories", () => {
+			const api = extension.getAPI(1);
+			return api.repositories.map((r) => r.rootUri.toString());
+		}),
+	);
 
-	disposables.push(commands.registerCommand('git.api.getRepositoryState', (uri: string) => {
-		const api = extension.getAPI(1);
-		const repository = api.getRepository(Uri.parse(uri));
+	disposables.push(
+		commands.registerCommand("git.api.getRepositoryState", (uri: string) => {
+			const api = extension.getAPI(1);
+			const repository = api.getRepository(Uri.parse(uri));
 
-		if (!repository) {
-			return null;
-		}
+			if (!repository) {
+				return null;
+			}
 
-		const state = repository.state;
+			const state = repository.state;
 
-		const ref = (ref: Ref | undefined) => (ref && { ...ref, type: getRefType(ref.type) });
-		const change = (change: Change) => ({
-			uri: change.uri.toString(),
-			originalUri: change.originalUri.toString(),
-			renameUri: change.renameUri?.toString(),
-			status: getStatus(change.status)
-		});
+			const ref = (ref: Ref | undefined) =>
+				ref && { ...ref, type: getRefType(ref.type) };
+			const change = (change: Change) => ({
+				uri: change.uri.toString(),
+				originalUri: change.originalUri.toString(),
+				renameUri: change.renameUri?.toString(),
+				status: getStatus(change.status),
+			});
 
-		return {
-			HEAD: ref(state.HEAD),
-			refs: state.refs.map(ref),
-			remotes: state.remotes,
-			submodules: state.submodules,
-			worktrees: state.worktrees,
-			rebaseCommit: state.rebaseCommit,
-			mergeChanges: state.mergeChanges.map(change),
-			indexChanges: state.indexChanges.map(change),
-			workingTreeChanges: state.workingTreeChanges.map(change)
-		};
-	}));
+			return {
+				HEAD: ref(state.HEAD),
+				refs: state.refs.map(ref),
+				remotes: state.remotes,
+				submodules: state.submodules,
+				worktrees: state.worktrees,
+				rebaseCommit: state.rebaseCommit,
+				mergeChanges: state.mergeChanges.map(change),
+				indexChanges: state.indexChanges.map(change),
+				workingTreeChanges: state.workingTreeChanges.map(change),
+			};
+		}),
+	);
 
-	disposables.push(commands.registerCommand('git.api.getRemoteSources', (opts?: PickRemoteSourceOptions) => {
-		return commands.executeCommand('git-base.api.getRemoteSources', opts);
-	}));
+	disposables.push(
+		commands.registerCommand(
+			"git.api.getRemoteSources",
+			(opts?: PickRemoteSourceOptions) => {
+				return commands.executeCommand("git-base.api.getRemoteSources", opts);
+			},
+		),
+	);
 
 	return Disposable.from(...disposables);
 }

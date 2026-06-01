@@ -4,7 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it } from 'vitest';
-import { vBoolean, vNumber, vObj, vRequired, vString } from '../../common/validator';
+import {
+	vBoolean,
+	vNumber,
+	vObj,
+	vRequired,
+	vString,
+} from '../../common/validator';
 
 describe('vRequired', () => {
 	it('should mark a field as required', () => {
@@ -16,7 +22,9 @@ describe('vRequired', () => {
 		// Missing required field should fail
 		const result1 = validator.validate({ age: 25 });
 		expect(result1.error).toBeDefined();
-		expect(result1.error?.message).toContain(`Required field 'name' is missing`);
+		expect(result1.error?.message).toContain(
+			`Required field 'name' is missing`,
+		);
 
 		// Providing required field should succeed
 		const result2 = validator.validate({ name: 'John', age: 25 });
@@ -58,17 +66,30 @@ describe('vRequired', () => {
 		// Missing one required field
 		const result1 = validator.validate({ firstName: 'John' });
 		expect(result1.error).toBeDefined();
-		expect(result1.error?.message).toContain(`Required field 'lastName' is missing`);
+		expect(result1.error?.message).toContain(
+			`Required field 'lastName' is missing`,
+		);
 
 		// All required fields provided
-		const result2 = validator.validate({ firstName: 'John', lastName: 'Doe' });
+		const result2 = validator.validate({
+			firstName: 'John',
+			lastName: 'Doe',
+		});
 		expect(result2.error).toBeUndefined();
 		expect(result2.content).toEqual({ firstName: 'John', lastName: 'Doe' });
 
 		// All fields provided
-		const result3 = validator.validate({ firstName: 'John', lastName: 'Doe', age: 30 });
+		const result3 = validator.validate({
+			firstName: 'John',
+			lastName: 'Doe',
+			age: 30,
+		});
 		expect(result3.error).toBeUndefined();
-		expect(result3.content).toEqual({ firstName: 'John', lastName: 'Doe', age: 30 });
+		expect(result3.content).toEqual({
+			firstName: 'John',
+			lastName: 'Doe',
+			age: 30,
+		});
 	});
 
 	it('should generate correct JSON schema with required fields', () => {
@@ -109,10 +130,12 @@ describe('vRequired', () => {
 
 	it('should handle nested objects with required fields', () => {
 		const validator = vObj({
-			user: vRequired(vObj({
-				name: vRequired(vString()),
-				email: vString(), // optional
-			})),
+			user: vRequired(
+				vObj({
+					name: vRequired(vString()),
+					email: vString(), // optional
+				}),
+			),
 			metadata: vObj({
 				created: vString(),
 			}),
@@ -121,12 +144,16 @@ describe('vRequired', () => {
 		// Missing required nested object
 		const result1 = validator.validate({});
 		expect(result1.error).toBeDefined();
-		expect(result1.error?.message).toContain(`Required field 'user' is missing`);
+		expect(result1.error?.message).toContain(
+			`Required field 'user' is missing`,
+		);
 
 		// Required object present but missing required nested field
 		const result2 = validator.validate({ user: {} });
 		expect(result2.error).toBeDefined();
-		expect(result2.error?.message).toContain(`Required field 'name' is missing`);
+		expect(result2.error?.message).toContain(
+			`Required field 'name' is missing`,
+		);
 
 		// Valid nested structure
 		const result3 = validator.validate({ user: { name: 'John' } });
@@ -142,7 +169,9 @@ describe('vRequired', () => {
 		// Explicitly setting to undefined should fail
 		const result = validator.validate({ name: undefined });
 		expect(result.error).toBeDefined();
-		expect(result.error?.message).toContain(`Required field 'name' is missing`);
+		expect(result.error?.message).toContain(
+			`Required field 'name' is missing`,
+		);
 	});
 
 	it('should allow null for optional fields but not required fields', () => {
@@ -156,7 +185,10 @@ describe('vRequired', () => {
 		expect(result1.error).toBeDefined();
 
 		// null for optional field when optional field is present should validate as wrong type
-		const result2 = validator.validate({ requiredField: 'test', optionalField: null });
+		const result2 = validator.validate({
+			requiredField: 'test',
+			optionalField: null,
+		});
 		expect(result2.error).toBeDefined();
 	});
 });

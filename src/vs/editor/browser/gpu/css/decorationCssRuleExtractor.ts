@@ -3,9 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { $, getActiveDocument, getActiveWindow } from '../../../../base/browser/dom.js';
-import { Disposable, toDisposable } from '../../../../base/common/lifecycle.js';
-import './media/decorationCssRuleExtractor.css';
+import {
+	$,
+	getActiveDocument,
+	getActiveWindow,
+} from "../../../../base/browser/dom.js";
+import { Disposable, toDisposable } from "../../../../base/common/lifecycle.js";
+import "./media/decorationCssRuleExtractor.css";
 
 /**
  * Extracts CSS rules that would be applied to certain decoration classes.
@@ -14,20 +18,26 @@ export class DecorationCssRuleExtractor extends Disposable {
 	private _container: HTMLElement;
 	private _dummyElement: HTMLSpanElement;
 
-	private _ruleCache: Map</* className */string, CSSStyleRule[]> = new Map();
-	private _cssVariableCache: Map</* variableName */string, /* value */string> = new Map();
+	private _ruleCache: Map</* className */ string, CSSStyleRule[]> = new Map();
+	private _cssVariableCache: Map<
+		/* variableName */ string,
+		/* value */ string
+	> = new Map();
 
 	constructor() {
 		super();
 
-		this._container = $('div.monaco-decoration-css-rule-extractor');
-		this._dummyElement = $('span');
+		this._container = $("div.monaco-decoration-css-rule-extractor");
+		this._dummyElement = $("span");
 		this._container.appendChild(this._dummyElement);
 
 		this._register(toDisposable(() => this._container.remove()));
 	}
 
-	getStyleRules(canvas: HTMLElement, decorationClassName: string): CSSStyleRule[] {
+	getStyleRules(
+		canvas: HTMLElement,
+		decorationClassName: string,
+	): CSSStyleRule[] {
 		// Check cache
 		const existing = this._ruleCache.get(decorationClassName);
 		if (existing) {
@@ -56,7 +66,7 @@ export class DecorationCssRuleExtractor extends Disposable {
 
 		// className can be space-separated (e.g., 'ghost-text-decoration syntax-highlighted')
 		// We need to search for each individual class
-		const classNames = className.split(' ').filter(c => c.length > 0);
+		const classNames = className.split(" ").filter((c) => c.length > 0);
 
 		for (let i = 0; i < stylesheets.length; i++) {
 			const stylesheet = stylesheets[i];
@@ -66,11 +76,19 @@ export class DecorationCssRuleExtractor extends Disposable {
 		return rules;
 	}
 
-	private _collectMatchingRules(cssRules: CSSRuleList, classNames: string[], result: CSSStyleRule[]): void {
+	private _collectMatchingRules(
+		cssRules: CSSRuleList,
+		classNames: string[],
+		result: CSSStyleRule[],
+	): void {
 		for (const rule of cssRules) {
 			if (rule instanceof CSSImportRule) {
 				if (rule.styleSheet) {
-					this._collectMatchingRules(rule.styleSheet.cssRules, classNames, result);
+					this._collectMatchingRules(
+						rule.styleSheet.cssRules,
+						classNames,
+						result,
+					);
 				}
 			} else if (rule instanceof CSSStyleRule) {
 				// Note that originally `.matches(rule.selectorText)` was used but this would
@@ -85,7 +103,12 @@ export class DecorationCssRuleExtractor extends Disposable {
 					const index = rule.selectorText.indexOf(searchTerm);
 					if (index !== -1) {
 						const endOfResult = index + searchTerm.length;
-						if (rule.selectorText.length === endOfResult || rule.selectorText.substring(endOfResult, endOfResult + 1).match(/[ :.]/)) {
+						if (
+							rule.selectorText.length === endOfResult ||
+							rule.selectorText
+								.substring(endOfResult, endOfResult + 1)
+								.match(/[ :.]/)
+						) {
 							result.push(rule);
 							break; // Don't add the same rule multiple times
 						}
@@ -106,7 +129,10 @@ export class DecorationCssRuleExtractor extends Disposable {
 		let result = this._cssVariableCache.get(variableName);
 		if (result === undefined) {
 			canvas.appendChild(this._container);
-			result = getActiveWindow().getComputedStyle(this._container).getPropertyValue(variableName).trim();
+			result = getActiveWindow()
+				.getComputedStyle(this._container)
+				.getPropertyValue(variableName)
+				.trim();
 			canvas.removeChild(this._container);
 			this._cssVariableCache.set(variableName, result);
 		}

@@ -15,24 +15,23 @@ import { LintingDiagnosticsProvider } from './utils';
  * Class which finds eslint diagnostic erors
  */
 export class EslintDiagnosticsProvider extends LintingDiagnosticsProvider {
-
 	override readonly id = 'eslint';
 	override readonly cacheSalt = TestingCacheSalts.eslintCacheSalt;
 	override readonly cacheScope = CacheScope.ESLint;
 
 	private get eslintConfig(): any {
 		return {
-			'parser': '@typescript-eslint/parser',
-			'plugins': ['@typescript-eslint'],
-			'extends': [],
-			'parserOptions': {
-				'warnOnUnsupportedTypeScriptVersion': false,
-				'sourceType': 'module',
-				'ecmaVersion': 'latest',
-				'ecmaFeatures': { 'jsx': true, 'experimentalObjectRestSpread': true },
+			parser: '@typescript-eslint/parser',
+			plugins: ['@typescript-eslint'],
+			extends: [],
+			parserOptions: {
+				warnOnUnsupportedTypeScriptVersion: false,
+				sourceType: 'module',
+				ecmaVersion: 'latest',
+				ecmaFeatures: { jsx: true, experimentalObjectRestSpread: true },
 			},
-			'ignorePatterns': ['!+'],
-			'rules': {
+			ignorePatterns: ['!+'],
+			rules: {
 				'constructor-super': 'error',
 				'for-direction': 'error',
 				'getter-return': 'error',
@@ -58,26 +57,50 @@ export class EslintDiagnosticsProvider extends LintingDiagnosticsProvider {
 				'no-unsafe-negation': 'error',
 				'no-unsafe-optional-chaining': 'error',
 				'use-isnan': 'error',
-				'indent': 'off'
+				indent: 'off',
 			},
 		};
 	}
 
-	protected override async fetchCommand(temporaryDirectory: string, filePath: string) {
-		const eslintConfigFile = path.join(temporaryDirectory, '.eslintrc.json');
-		await fs.promises.writeFile(eslintConfigFile, JSON.stringify(this.eslintConfig));
+	protected override async fetchCommand(
+		temporaryDirectory: string,
+		filePath: string,
+	) {
+		const eslintConfigFile = path.join(
+			temporaryDirectory,
+			'.eslintrc.json',
+		);
+		await fs.promises.writeFile(
+			eslintConfigFile,
+			JSON.stringify(this.eslintConfig),
+		);
 		return {
 			command: 'npx',
-			arguments: ['eslint', '--no-eslintrc', '--config', eslintConfigFile, '--no-ignore', '-f', 'json', filePath]
+			arguments: [
+				'eslint',
+				'--no-eslintrc',
+				'--config',
+				eslintConfigFile,
+				'--no-ignore',
+				'-f',
+				'json',
+				filePath,
+			],
 		};
 	}
 
-	protected override processDiagnostics(fileName: string, stdoutResult: any): ITestDiagnostic[] {
+	protected override processDiagnostics(
+		fileName: string,
+		stdoutResult: any,
+	): ITestDiagnostic[] {
 		assert(Array.isArray(stdoutResult));
 		if (stdoutResult.length === 0) {
 			return [];
 		}
-		const sanitizeLineOrColumn = (lineOrColumn: any) => typeof lineOrColumn !== 'number' || Number.isNaN(lineOrColumn) ? 0 : Math.max(0, lineOrColumn - 1);
+		const sanitizeLineOrColumn = (lineOrColumn: any) =>
+			typeof lineOrColumn !== 'number' || Number.isNaN(lineOrColumn)
+				? 0
+				: Math.max(0, lineOrColumn - 1);
 		const diagnostics = [];
 		const messages = stdoutResult[0].messages;
 		assert(Array.isArray(messages));
@@ -93,7 +116,7 @@ export class EslintDiagnosticsProvider extends LintingDiagnosticsProvider {
 				message: messageText,
 				code: message.ruleId,
 				relatedInformation: undefined,
-				source: 'eslint'
+				source: 'eslint',
 			});
 		}
 		return diagnostics;

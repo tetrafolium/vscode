@@ -202,7 +202,7 @@ suite('Snapshot Walker', function () {
 	function createTestSnapshot(
 		depth: number,
 		childrenCount: number = 3,
-		currentPath: string = ''
+		currentPath: string = '',
 	): PromptSnapshotNode {
 		if (depth <= 0) {
 			return {
@@ -219,7 +219,9 @@ suite('Snapshot Walker', function () {
 		// Create configurable number of children at each level
 		for (let i = 0; i < childrenCount; i++) {
 			const childPath = `${nodeIndex}.${i}`;
-			children.push(createTestSnapshot(depth - 1, childrenCount, childPath));
+			children.push(
+				createTestSnapshot(depth - 1, childrenCount, childPath),
+			);
 		}
 
 		return {

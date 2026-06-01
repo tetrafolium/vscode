@@ -28,7 +28,13 @@ export class LockFileHandle {
 	private readonly timestamp: number;
 	private readonly logger: ILogger;
 
-	constructor(lockFilePath: string, serverUri: vscode.Uri, headers: Record<string, string>, timestamp: number, logger: ILogger) {
+	constructor(
+		lockFilePath: string,
+		serverUri: vscode.Uri,
+		headers: Record<string, string>,
+		timestamp: number,
+		logger: ILogger,
+	) {
 		this.lockFilePath = lockFilePath;
 		this.serverUri = serverUri;
 		this.headers = headers;
@@ -42,7 +48,9 @@ export class LockFileHandle {
 
 	async update(): Promise<void> {
 		try {
-			const workspaceFolders = vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath) || [];
+			const workspaceFolders =
+				vscode.workspace.workspaceFolders?.map((f) => f.uri.fsPath) ||
+				[];
 
 			const lockInfo: LockFileInfo = {
 				socketPath: this.serverUri.path,
@@ -55,10 +63,16 @@ export class LockFileHandle {
 				isTrusted: vscode.workspace.isTrusted,
 			};
 
-			await fs.writeFile(this.lockFilePath, JSON.stringify(lockInfo, null, 2), { mode: 0o600 });
+			await fs.writeFile(
+				this.lockFilePath,
+				JSON.stringify(lockInfo, null, 2),
+				{ mode: 0o600 },
+			);
 			this.logger.trace(`Lock file updated: ${this.lockFilePath}`);
 		} catch (error) {
-			this.logger.debug(`Failed to update lock file: ${error instanceof Error ? error.message : String(error)}`);
+			this.logger.debug(
+				`Failed to update lock file: ${error instanceof Error ? error.message : String(error)}`,
+			);
 		}
 	}
 
@@ -68,13 +82,19 @@ export class LockFileHandle {
 			this.logger.debug(`Lock file removed: ${this.lockFilePath}`);
 		} catch (error) {
 			if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-				this.logger.debug(`Failed to remove lock file: ${error instanceof Error ? error.message : String(error)}`);
+				this.logger.debug(
+					`Failed to remove lock file: ${error instanceof Error ? error.message : String(error)}`,
+				);
 			}
 		}
 	}
 }
 
-export async function createLockFile(serverUri: vscode.Uri, headers: Record<string, string>, logger: ILogger): Promise<LockFileHandle> {
+export async function createLockFile(
+	serverUri: vscode.Uri,
+	headers: Record<string, string>,
+	logger: ILogger,
+): Promise<LockFileHandle> {
 	const copilotDir = getCopilotCliStateDir();
 	logger.trace(`Creating lock file in: ${copilotDir}`);
 
@@ -83,7 +103,8 @@ export async function createLockFile(serverUri: vscode.Uri, headers: Record<stri
 	const uuid = generateUuid();
 	const lockFilePath = path.join(copilotDir, `${uuid}.lock`);
 
-	const workspaceFolders = vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath) || [];
+	const workspaceFolders =
+		vscode.workspace.workspaceFolders?.map((f) => f.uri.fsPath) || [];
 	const timestamp = Date.now();
 
 	const lockInfo: LockFileInfo = {
@@ -97,10 +118,18 @@ export async function createLockFile(serverUri: vscode.Uri, headers: Record<stri
 		isTrusted: vscode.workspace.isTrusted,
 	};
 
-	await fs.writeFile(lockFilePath, JSON.stringify(lockInfo, null, 2), { mode: 0o600 });
+	await fs.writeFile(lockFilePath, JSON.stringify(lockInfo, null, 2), {
+		mode: 0o600,
+	});
 	logger.debug(`Created lock file: ${lockFilePath}`);
 
-	return new LockFileHandle(lockFilePath, serverUri, headers, timestamp, logger);
+	return new LockFileHandle(
+		lockFilePath,
+		serverUri,
+		headers,
+		timestamp,
+		logger,
+	);
 }
 
 /**
@@ -131,24 +160,28 @@ export async function cleanupStaleLockFiles(logger: ILogger): Promise<number> {
 		return 0;
 	}
 
-	const lockFiles = files.filter(file => file.endsWith('.lock'));
+	const lockFiles = files.filter((file) => file.endsWith('.lock'));
 
-	const results = await Promise.all(lockFiles.map(async (file) => {
-		const filePath = path.join(copilotDir, file);
-		try {
-			const content = await fs.readFile(filePath, 'utf-8');
-			const info = JSON.parse(content) as LockFileInfo;
+	const results = await Promise.all(
+		lockFiles.map(async (file) => {
+			const filePath = path.join(copilotDir, file);
+			try {
+				const content = await fs.readFile(filePath, 'utf-8');
+				const info = JSON.parse(content) as LockFileInfo;
 
-			if (!isProcessRunning(info.pid)) {
-				await fs.unlink(filePath);
-				logger.debug(`Removed stale lock file for PID ${info.pid}: ${filePath}`);
-				return true;
+				if (!isProcessRunning(info.pid)) {
+					await fs.unlink(filePath);
+					logger.debug(
+						`Removed stale lock file for PID ${info.pid}: ${filePath}`,
+					);
+					return true;
+				}
+			} catch {
+				// Skip files that can't be read or parsed
 			}
-		} catch {
-			// Skip files that can't be read or parsed
-		}
-		return false;
-	}));
+			return false;
+		}),
+	);
 
 	return results.filter(Boolean).length;
 }

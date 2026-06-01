@@ -13,11 +13,13 @@ describe('CloudSessionIdStore', () => {
 	let tmpDir: string;
 
 	beforeEach(async () => {
-		tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'cloud-session-store-test-'));
+		tmpDir = await fsp.mkdtemp(
+			path.join(os.tmpdir(), 'cloud-session-store-test-'),
+		);
 	});
 
 	afterEach(async () => {
-		await fsp.rm(tmpDir, { recursive: true, force: true }).catch(() => { });
+		await fsp.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
 	});
 
 	it('starts empty when no file exists', async () => {
@@ -30,17 +32,26 @@ describe('CloudSessionIdStore', () => {
 	it('set and get work correctly', async () => {
 		const store = new CloudSessionIdStore(tmpDir);
 		await store.load();
-		store.set('session-1', { cloudSessionId: 'cloud-1', cloudTaskId: 'task-1' });
+		store.set('session-1', {
+			cloudSessionId: 'cloud-1',
+			cloudTaskId: 'task-1',
+		});
 
 		expect(store.has('session-1')).toBe(true);
-		expect(store.get('session-1')).toEqual({ cloudSessionId: 'cloud-1', cloudTaskId: 'task-1' });
+		expect(store.get('session-1')).toEqual({
+			cloudSessionId: 'cloud-1',
+			cloudTaskId: 'task-1',
+		});
 		expect(store.size).toBe(1);
 	});
 
 	it('delete removes entry and returns true', async () => {
 		const store = new CloudSessionIdStore(tmpDir);
 		await store.load();
-		store.set('session-1', { cloudSessionId: 'cloud-1', cloudTaskId: 'task-1' });
+		store.set('session-1', {
+			cloudSessionId: 'cloud-1',
+			cloudTaskId: 'task-1',
+		});
 
 		const existed = store.delete('session-1');
 		expect(existed).toBe(true);
@@ -57,31 +68,46 @@ describe('CloudSessionIdStore', () => {
 	it('persists data and survives reload', async () => {
 		const store1 = new CloudSessionIdStore(tmpDir);
 		await store1.load();
-		store1.set('session-1', { cloudSessionId: 'cloud-1', cloudTaskId: 'task-1' });
-		store1.set('session-2', { cloudSessionId: 'cloud-2', cloudTaskId: 'task-2' });
+		store1.set('session-1', {
+			cloudSessionId: 'cloud-1',
+			cloudTaskId: 'task-1',
+		});
+		store1.set('session-2', {
+			cloudSessionId: 'cloud-2',
+			cloudTaskId: 'task-2',
+		});
 
 		// Wait for async persist
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		const store2 = new CloudSessionIdStore(tmpDir);
 		await store2.load();
 		expect(store2.size).toBe(2);
-		expect(store2.get('session-1')).toEqual({ cloudSessionId: 'cloud-1', cloudTaskId: 'task-1' });
-		expect(store2.get('session-2')).toEqual({ cloudSessionId: 'cloud-2', cloudTaskId: 'task-2' });
+		expect(store2.get('session-1')).toEqual({
+			cloudSessionId: 'cloud-1',
+			cloudTaskId: 'task-1',
+		});
+		expect(store2.get('session-2')).toEqual({
+			cloudSessionId: 'cloud-2',
+			cloudTaskId: 'task-2',
+		});
 	});
 
 	it('delete persists removal', async () => {
 		const store1 = new CloudSessionIdStore(tmpDir);
 		await store1.load();
-		store1.set('session-1', { cloudSessionId: 'cloud-1', cloudTaskId: 'task-1' });
+		store1.set('session-1', {
+			cloudSessionId: 'cloud-1',
+			cloudTaskId: 'task-1',
+		});
 
 		// Wait for persist
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		store1.delete('session-1');
 
 		// Wait for persist
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		const store2 = new CloudSessionIdStore(tmpDir);
 		await store2.load();
@@ -91,7 +117,10 @@ describe('CloudSessionIdStore', () => {
 	it('mergeFromCloud adds new entries without removing existing', async () => {
 		const store = new CloudSessionIdStore(tmpDir);
 		await store.load();
-		store.set('local-1', { cloudSessionId: 'cloud-local', cloudTaskId: 'local-1' });
+		store.set('local-1', {
+			cloudSessionId: 'cloud-local',
+			cloudTaskId: 'local-1',
+		});
 
 		store.mergeFromCloud([
 			{ id: 'cloud-remote', agent_task_id: 'remote-1' },
@@ -99,9 +128,15 @@ describe('CloudSessionIdStore', () => {
 		]);
 
 		expect(store.size).toBe(2);
-		expect(store.get('remote-1')).toEqual({ cloudSessionId: 'cloud-remote', cloudTaskId: 'remote-1' });
+		expect(store.get('remote-1')).toEqual({
+			cloudSessionId: 'cloud-remote',
+			cloudTaskId: 'remote-1',
+		});
 		// Original entry preserved
-		expect(store.get('local-1')).toEqual({ cloudSessionId: 'cloud-local', cloudTaskId: 'local-1' });
+		expect(store.get('local-1')).toEqual({
+			cloudSessionId: 'cloud-local',
+			cloudTaskId: 'local-1',
+		});
 	});
 
 	it('mergeFromCloud skips entries without agent_task_id', async () => {
@@ -123,12 +158,22 @@ describe('CloudSessionIdStore', () => {
 		await store.load();
 
 		store.mergeFromCloud([
-			{ id: 'cloud-with-task', agent_task_id: 'local-a', task_id: 'server-task-a' },
+			{
+				id: 'cloud-with-task',
+				agent_task_id: 'local-a',
+				task_id: 'server-task-a',
+			},
 			{ id: 'cloud-no-task', agent_task_id: 'local-b' },
 		]);
 
-		expect(store.get('local-a')).toEqual({ cloudSessionId: 'cloud-with-task', cloudTaskId: 'server-task-a' });
-		expect(store.get('local-b')).toEqual({ cloudSessionId: 'cloud-no-task', cloudTaskId: 'local-b' });
+		expect(store.get('local-a')).toEqual({
+			cloudSessionId: 'cloud-with-task',
+			cloudTaskId: 'server-task-a',
+		});
+		expect(store.get('local-b')).toEqual({
+			cloudSessionId: 'cloud-no-task',
+			cloudTaskId: 'local-b',
+		});
 	});
 
 	it('mergeFromCloud refreshes stale cloudTaskId when the cloud listing later provides task_id', async () => {
@@ -138,12 +183,24 @@ describe('CloudSessionIdStore', () => {
 		// Simulate an entry reconciled before task_id was exposed (cloudTaskId
 		// fell back to agent_task_id).
 		store.mergeFromCloud([{ id: 'cloud-1', agent_task_id: 'local-1' }]);
-		expect(store.get('local-1')).toEqual({ cloudSessionId: 'cloud-1', cloudTaskId: 'local-1' });
+		expect(store.get('local-1')).toEqual({
+			cloudSessionId: 'cloud-1',
+			cloudTaskId: 'local-1',
+		});
 
 		// Cloud listing now returns a real server task_id — the entry should
 		// be refreshed so delete uses the correct identifier.
-		store.mergeFromCloud([{ id: 'cloud-1', agent_task_id: 'local-1', task_id: 'server-task-1' }]);
-		expect(store.get('local-1')).toEqual({ cloudSessionId: 'cloud-1', cloudTaskId: 'server-task-1' });
+		store.mergeFromCloud([
+			{
+				id: 'cloud-1',
+				agent_task_id: 'local-1',
+				task_id: 'server-task-1',
+			},
+		]);
+		expect(store.get('local-1')).toEqual({
+			cloudSessionId: 'cloud-1',
+			cloudTaskId: 'server-task-1',
+		});
 	});
 
 	it('keys returns all session IDs', async () => {
@@ -173,7 +230,7 @@ describe('CloudSessionIdStore', () => {
 		store.set('session-1', { cloudSessionId: 'c1', cloudTaskId: 't1' });
 
 		// Wait for persist
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		await store.load();
 		await store.load(); // Second call should be no-op
@@ -181,7 +238,11 @@ describe('CloudSessionIdStore', () => {
 	});
 
 	it('handles corrupted JSON file gracefully', async () => {
-		await fsp.writeFile(path.join(tmpDir, 'cloudSessions.json'), 'not valid json', 'utf-8');
+		await fsp.writeFile(
+			path.join(tmpDir, 'cloudSessions.json'),
+			'not valid json',
+			'utf-8',
+		);
 
 		const store = new CloudSessionIdStore(tmpDir);
 		await store.load();
@@ -190,12 +251,16 @@ describe('CloudSessionIdStore', () => {
 
 	it('handles malformed entries in JSON file', async () => {
 		const data = {
-			'valid': { cloudSessionId: 'c1', cloudTaskId: 't1' },
+			valid: { cloudSessionId: 'c1', cloudTaskId: 't1' },
 			'missing-cloud-id': { cloudTaskId: 't2' },
 			'missing-task-id': { cloudSessionId: 'c3' },
 			'null-entry': null,
 		};
-		await fsp.writeFile(path.join(tmpDir, 'cloudSessions.json'), JSON.stringify(data), 'utf-8');
+		await fsp.writeFile(
+			path.join(tmpDir, 'cloudSessions.json'),
+			JSON.stringify(data),
+			'utf-8',
+		);
 
 		const store = new CloudSessionIdStore(tmpDir);
 		await store.load();

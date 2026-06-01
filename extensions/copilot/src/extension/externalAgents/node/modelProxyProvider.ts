@@ -9,26 +9,35 @@ import { URI } from '../../../util/vs/base/common/uri';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { OpenAILanguageModelServer } from './oaiLanguageModelServer';
 
-export class LanguageModelProxyProvider implements vscode.LanguageModelProxyProvider {
+export class LanguageModelProxyProvider
+	implements vscode.LanguageModelProxyProvider
+{
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService
-	) { }
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+	) {}
 
-	async provideModelProxy(forExtensionId: string, token: vscode.CancellationToken): Promise<vscode.LanguageModelProxy | undefined> {
-		const server = this.instantiationService.createInstance(OpenAILanguageModelServer);
+	async provideModelProxy(
+		forExtensionId: string,
+		token: vscode.CancellationToken,
+	): Promise<vscode.LanguageModelProxy | undefined> {
+		const server = this.instantiationService.createInstance(
+			OpenAILanguageModelServer,
+		);
 		await server.start();
 
 		return new OpenAILanguageModelProxy(server);
 	}
 }
 
-class OpenAILanguageModelProxy extends Disposable implements vscode.LanguageModelProxy {
+class OpenAILanguageModelProxy
+	extends Disposable
+	implements vscode.LanguageModelProxy
+{
 	public readonly uri: vscode.Uri;
 	public readonly key: string;
 
-	constructor(
-		runningServer: OpenAILanguageModelServer,
-	) {
+	constructor(runningServer: OpenAILanguageModelServer) {
 		super();
 		this._register(runningServer);
 

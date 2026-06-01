@@ -13,19 +13,28 @@ import { IMergeConflictService } from '../common/mergeConflictService';
 import { MergeConflictParser } from './mergeConflictParser';
 
 type HistoryItemChange = { uri: vscode.Uri; historyItemId: string };
-type HistoryItemChangeRange = { start: HistoryItemChange; end: HistoryItemChange };
+type HistoryItemChangeRange = {
+	start: HistoryItemChange;
+	end: HistoryItemChange;
+};
 
-export class MergeConflictServiceImpl extends Disposable implements IMergeConflictService {
+export class MergeConflictServiceImpl
+	extends Disposable
+	implements IMergeConflictService
+{
 	readonly _serviceBrand: undefined;
 
 	constructor(
 		@IGitService private readonly gitService: IGitService,
-		@IIgnoreService private readonly ignoreService: IIgnoreService
+		@IIgnoreService private readonly ignoreService: IIgnoreService,
 	) {
 		super();
 	}
 
-	async resolveMergeConflicts(resources: vscode.Uri[], cancellationToken: vscode.CancellationToken | undefined): Promise<void> {
+	async resolveMergeConflicts(
+		resources: vscode.Uri[],
+		cancellationToken: vscode.CancellationToken | undefined,
+	): Promise<void> {
 		if (cancellationToken?.isCancellationRequested) {
 			return;
 		}
@@ -37,12 +46,18 @@ export class MergeConflictServiceImpl extends Disposable implements IMergeConfli
 
 		for (const resource of resources) {
 			// Copilot ignored
-			if (await this.ignoreService.isCopilotIgnored(resource, cancellationToken)) {
+			if (
+				await this.ignoreService.isCopilotIgnored(
+					resource,
+					cancellationToken,
+				)
+			) {
 				continue;
 			}
 
 			// No merge conflicts
-			const textDocument = await vscode.workspace.openTextDocument(resource);
+			const textDocument =
+				await vscode.workspace.openTextDocument(resource);
 			if (!MergeConflictParser.containsConflict(textDocument)) {
 				continue;
 			}
@@ -59,36 +74,40 @@ export class MergeConflictServiceImpl extends Disposable implements IMergeConfli
 			const incomingName = conflicts[0].incoming.name;
 
 			// Get merge base
-			const mergeBase = await this.gitService.getMergeBase(resource, currentName, incomingName);
+			const mergeBase = await this.gitService.getMergeBase(
+				resource,
+				currentName,
+				incomingName,
+			);
 			if (mergeBase) {
 				// Attach merge base
 				attachHistoryItemChanges.push({
 					uri: toGitUri(resource, mergeBase),
-					historyItemId: mergeBase
+					historyItemId: mergeBase,
 				});
 
 				// Attach merge base -> current
 				attachHistoryItemChangeRanges.push({
 					start: {
 						uri: toGitUri(resource, mergeBase),
-						historyItemId: mergeBase
+						historyItemId: mergeBase,
 					},
 					end: {
 						uri: toGitUri(resource, currentName),
-						historyItemId: currentName
-					}
+						historyItemId: currentName,
+					},
 				});
 
 				// Attach merge base -> incoming
 				attachHistoryItemChangeRanges.push({
 					start: {
 						uri: toGitUri(resource, mergeBase),
-						historyItemId: mergeBase
+						historyItemId: mergeBase,
 					},
 					end: {
 						uri: toGitUri(resource, incomingName),
-						historyItemId: incomingName
-					}
+						historyItemId: incomingName,
+					},
 				});
 			}
 		}
@@ -103,7 +122,7 @@ export class MergeConflictServiceImpl extends Disposable implements IMergeConfli
 				attachFiles,
 				attachHistoryItemChanges,
 				attachHistoryItemChangeRanges,
-				query: 'Resolve all merge conflicts'
+				query: 'Resolve all merge conflicts',
 			});
 		}
 	}
@@ -112,5 +131,8 @@ export class MergeConflictServiceImpl extends Disposable implements IMergeConfli
 export class TestMergeConflictServiceImpl implements IMergeConflictService {
 	_serviceBrand: undefined;
 
-	async resolveMergeConflicts(resources: vscode.Uri[], cancellationToken: vscode.CancellationToken | undefined): Promise<void> { }
+	async resolveMergeConflicts(
+		resources: vscode.Uri[],
+		cancellationToken: vscode.CancellationToken | undefined,
+	): Promise<void> {}
 }

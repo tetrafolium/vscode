@@ -7,30 +7,48 @@ import * as fs from 'fs/promises';
 import { afterEach, describe, expect, it } from 'vitest';
 import { DefaultsOnlyConfigurationService } from '../../../../platform/configuration/common/defaultsOnlyConfigurationService';
 import { overrideNowValue } from '../../../../platform/inlineEdits/common/utils/utils';
-import { NesXtabHistoryTracker, XtabEditMergeStrategy } from '../../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
+import {
+	NesXtabHistoryTracker,
+	XtabEditMergeStrategy,
+} from '../../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
 import { NullExperimentationService } from '../../../../platform/telemetry/common/nullExperimentationService';
 import { assert } from '../../../../util/vs/base/common/assert';
 import { observableValue } from '../../../../util/vs/base/common/observable';
 import * as path from '../../../../util/vs/base/common/path';
-import { IRecordingInformation, ObservableWorkspaceRecordingReplayer } from '../../common/observableWorkspaceRecordingReplayer';
-
+import {
+	IRecordingInformation,
+	ObservableWorkspaceRecordingReplayer,
+} from '../../common/observableWorkspaceRecordingReplayer';
 
 describe('NesXtabHistoryTracker', () => {
-
 	afterEach(() => {
 		overrideNowValue(-1);
 	});
 
-	function createTracker(replayerWorkspace: any, maxHistorySize?: number | undefined, mergeStrategy = XtabEditMergeStrategy.sameStartLine) {
+	function createTracker(
+		replayerWorkspace: any,
+		maxHistorySize?: number | undefined,
+		mergeStrategy = XtabEditMergeStrategy.sameStartLine,
+	) {
 		return new (class extends NesXtabHistoryTracker {
-			protected override readonly mergeStrategy = observableValue(this, mergeStrategy);
-		})(replayerWorkspace, maxHistorySize, new DefaultsOnlyConfigurationService(), new NullExperimentationService());
+			protected override readonly mergeStrategy = observableValue(
+				this,
+				mergeStrategy,
+			);
+		})(
+			replayerWorkspace,
+			maxHistorySize,
+			new DefaultsOnlyConfigurationService(),
+			new NullExperimentationService(),
+		);
 	}
 
 	function historyToString(tracker: NesXtabHistoryTracker): string {
 		const history = tracker.getHistory();
-		assert(history.every(e => e.kind === 'edit'));
-		return stripTrailingWhitespace(history.map(h => h.edit.toString()).join('\n---\n'));
+		assert(history.every((e) => e.kind === 'edit'));
+		return stripTrailingWhitespace(
+			history.map((h) => h.edit.toString()).join('\n---\n'),
+		);
 	}
 
 	/** Strip trailing whitespace from each line to avoid fragile snapshots. */
@@ -41,11 +59,34 @@ describe('NesXtabHistoryTracker', () => {
 	it('1 line, 1 edit', () => {
 		const recording: IRecordingInformation = {
 			log: [
-				{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-				{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-				{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'hemmo world\ngoodbye' },
-				{ time: 11, id: 0, v: 1, kind: 'changed', edit: [[2, 4, 'll']] },
-			]
+				{
+					documentType: 'workspaceRecording@1.0',
+					kind: 'header',
+					repoRootUri: 'file:///Users/john/myProject',
+					time: 0,
+					uuid: '',
+				},
+				{
+					time: 10,
+					id: 0,
+					kind: 'documentEncountered',
+					relativePath: 'src/a.ts',
+				},
+				{
+					time: 11,
+					id: 0,
+					v: 1,
+					kind: 'setContent',
+					content: 'hemmo world\ngoodbye',
+				},
+				{
+					time: 11,
+					id: 0,
+					v: 1,
+					kind: 'changed',
+					edit: [[2, 4, 'll']],
+				},
+			],
 		};
 		const replayer = new ObservableWorkspaceRecordingReplayer(recording);
 		const tracker = createTracker(replayer.workspace);
@@ -60,12 +101,41 @@ describe('NesXtabHistoryTracker', () => {
 	it('1 line, 2 edits', () => {
 		const recording: IRecordingInformation = {
 			log: [
-				{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-				{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-				{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'hemmo world\ngoodbye' },
-				{ time: 11, id: 0, v: 1, kind: 'changed', edit: [[2, 4, 'll']] },
-				{ time: 11, id: 0, v: 1, kind: 'changed', edit: [[8, 8, 'ooooo']] },
-			]
+				{
+					documentType: 'workspaceRecording@1.0',
+					kind: 'header',
+					repoRootUri: 'file:///Users/john/myProject',
+					time: 0,
+					uuid: '',
+				},
+				{
+					time: 10,
+					id: 0,
+					kind: 'documentEncountered',
+					relativePath: 'src/a.ts',
+				},
+				{
+					time: 11,
+					id: 0,
+					v: 1,
+					kind: 'setContent',
+					content: 'hemmo world\ngoodbye',
+				},
+				{
+					time: 11,
+					id: 0,
+					v: 1,
+					kind: 'changed',
+					edit: [[2, 4, 'll']],
+				},
+				{
+					time: 11,
+					id: 0,
+					v: 1,
+					kind: 'changed',
+					edit: [[8, 8, 'ooooo']],
+				},
+			],
 		};
 		const replayer = new ObservableWorkspaceRecordingReplayer(recording);
 		const tracker = createTracker(replayer.workspace);
@@ -80,13 +150,42 @@ describe('NesXtabHistoryTracker', () => {
 	it('handles simple history', () => {
 		const recording: IRecordingInformation = {
 			log: [
-				{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-				{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
+				{
+					documentType: 'workspaceRecording@1.0',
+					kind: 'header',
+					repoRootUri: 'file:///Users/john/myProject',
+					time: 0,
+					uuid: '',
+				},
+				{
+					time: 10,
+					id: 0,
+					kind: 'documentEncountered',
+					relativePath: 'src/a.ts',
+				},
 				{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'hemmo' },
-				{ time: 11, id: 0, v: 1, kind: 'changed', edit: [[5, 5, '\n']] },
-				{ time: 11, id: 0, v: 1, kind: 'changed', edit: [[2, 4, 'll']] },
-				{ time: 11, id: 0, v: 1, kind: 'changed', edit: [[6, 6, 'world']] },
-			]
+				{
+					time: 11,
+					id: 0,
+					v: 1,
+					kind: 'changed',
+					edit: [[5, 5, '\n']],
+				},
+				{
+					time: 11,
+					id: 0,
+					v: 1,
+					kind: 'changed',
+					edit: [[2, 4, 'll']],
+				},
+				{
+					time: 11,
+					id: 0,
+					v: 1,
+					kind: 'changed',
+					edit: [[6, 6, 'world']],
+				},
+			],
 		};
 		const replayer = new ObservableWorkspaceRecordingReplayer(recording);
 		const tracker = createTracker(replayer.workspace);
@@ -108,14 +207,49 @@ describe('NesXtabHistoryTracker', () => {
 	it('handles simple history with small maxHistorySize', () => {
 		const recording: IRecordingInformation = {
 			log: [
-				{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-				{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
+				{
+					documentType: 'workspaceRecording@1.0',
+					kind: 'header',
+					repoRootUri: 'file:///Users/john/myProject',
+					time: 0,
+					uuid: '',
+				},
+				{
+					time: 10,
+					id: 0,
+					kind: 'documentEncountered',
+					relativePath: 'src/a.ts',
+				},
 				{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'hemmo' },
-				{ time: 12, id: 0, v: 2, kind: 'changed', edit: [[5, 5, '\n']] },
-				{ time: 13, id: 0, v: 3, kind: 'changed', edit: [[2, 4, 'll']] },
-				{ time: 14, id: 0, v: 4, kind: 'changed', edit: [[6, 6, 'world']] },
-				{ time: 15, id: 0, v: 5, kind: 'changed', edit: [[0, 5, 'goodbye']] },
-			]
+				{
+					time: 12,
+					id: 0,
+					v: 2,
+					kind: 'changed',
+					edit: [[5, 5, '\n']],
+				},
+				{
+					time: 13,
+					id: 0,
+					v: 3,
+					kind: 'changed',
+					edit: [[2, 4, 'll']],
+				},
+				{
+					time: 14,
+					id: 0,
+					v: 4,
+					kind: 'changed',
+					edit: [[6, 6, 'world']],
+				},
+				{
+					time: 15,
+					id: 0,
+					v: 5,
+					kind: 'changed',
+					edit: [[0, 5, 'goodbye']],
+				},
+			],
 		};
 		const replayer = new ObservableWorkspaceRecordingReplayer(recording);
 		const tracker = createTracker(replayer.workspace, 2);
@@ -132,7 +266,15 @@ describe('NesXtabHistoryTracker', () => {
 	});
 
 	it('add new lines and edit one of them', async () => {
-		const recording: IRecordingInformation = await fs.readFile(path.join(__dirname, 'recordings/ArrayToObject.recording.w.json'), 'utf8').then(JSON.parse);
+		const recording: IRecordingInformation = await fs
+			.readFile(
+				path.join(
+					__dirname,
+					'recordings/ArrayToObject.recording.w.json',
+				),
+				'utf8',
+			)
+			.then(JSON.parse);
 		const replayer = new ObservableWorkspaceRecordingReplayer(recording);
 		const tracker = createTracker(replayer.workspace);
 		replayer.replay();
@@ -218,13 +360,27 @@ describe('NesXtabHistoryTracker', () => {
 	});
 
 	it('doesnt throw with empty line edit', async () => {
-		const recording: IRecordingInformation = await fs.readFile(path.join(__dirname, 'recordings/DeclaringConstructorArgument.recording.w.json'), 'utf8').then(JSON.parse);
+		const recording: IRecordingInformation = await fs
+			.readFile(
+				path.join(
+					__dirname,
+					'recordings/DeclaringConstructorArgument.recording.w.json',
+				),
+				'utf8',
+			)
+			.then(JSON.parse);
 		const replayer = new ObservableWorkspaceRecordingReplayer(recording);
 		const tracker = createTracker(replayer.workspace);
 		replayer.replay();
 		const history = tracker.getHistory();
-		assert(history.every(e => e.kind === 'edit'));
-		expect(stripTrailingWhitespace(history.map(h => `${h.docId.path}\n---\n${h.edit.toString()}`).join('\n--------------\n'))).toMatchInlineSnapshot(`
+		assert(history.every((e) => e.kind === 'edit'));
+		expect(
+			stripTrailingWhitespace(
+				history
+					.map((h) => `${h.docId.path}\n---\n${h.edit.toString()}`)
+					.join('\n--------------\n'),
+			),
+		).toMatchInlineSnapshot(`
 			"/c:/code/src/platform/inlineEdits/common/workspaceEditTracker/nesWorkspaceEditTracker.ts
 			---
 			   36  36 }
@@ -562,7 +718,6 @@ describe('NesXtabHistoryTracker', () => {
 	});
 
 	describe('proximity strategy', () => {
-
 		/**
 		 * Content layout (5 lines):
 		 * line 1: "aaa"
@@ -576,17 +731,52 @@ describe('NesXtabHistoryTracker', () => {
 		it('merges edits within lineGap', () => {
 			const recording: IRecordingInformation = {
 				log: [
-					{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-					{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-					{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'aaa\nbbb\nccc\nddd\neee' },
+					{
+						documentType: 'workspaceRecording@1.0',
+						kind: 'header',
+						repoRootUri: 'file:///Users/john/myProject',
+						time: 0,
+						uuid: '',
+					},
+					{
+						time: 10,
+						id: 0,
+						kind: 'documentEncountered',
+						relativePath: 'src/a.ts',
+					},
+					{
+						time: 11,
+						id: 0,
+						v: 1,
+						kind: 'setContent',
+						content: 'aaa\nbbb\nccc\nddd\neee',
+					},
 					// Replace line 1: "aaa" → "AAA" (offset 0-3)
-					{ time: 12, id: 0, v: 2, kind: 'changed', edit: [[0, 3, 'AAA']] },
+					{
+						time: 12,
+						id: 0,
+						v: 2,
+						kind: 'changed',
+						edit: [[0, 3, 'AAA']],
+					},
 					// Replace line 2: "bbb" → "BBB" (offset 4-7, after "AAA\n")
-					{ time: 13, id: 0, v: 3, kind: 'changed', edit: [[4, 7, 'BBB']] },
-				]
+					{
+						time: 13,
+						id: 0,
+						v: 3,
+						kind: 'changed',
+						edit: [[4, 7, 'BBB']],
+					},
+				],
 			};
-			const replayer = new ObservableWorkspaceRecordingReplayer(recording);
-			const tracker = createTracker(replayer.workspace, undefined, XtabEditMergeStrategy.proximity(1));
+			const replayer = new ObservableWorkspaceRecordingReplayer(
+				recording,
+			);
+			const tracker = createTracker(
+				replayer.workspace,
+				undefined,
+				XtabEditMergeStrategy.proximity(1),
+			);
 			replayer.replay();
 
 			// Should produce 1 merged entry (adjacent lines, gap=0 ≤ 1)
@@ -608,17 +798,52 @@ describe('NesXtabHistoryTracker', () => {
 		it('does not merge edits beyond lineGap', () => {
 			const recording: IRecordingInformation = {
 				log: [
-					{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-					{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-					{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'aaa\nbbb\nccc\nddd\neee' },
+					{
+						documentType: 'workspaceRecording@1.0',
+						kind: 'header',
+						repoRootUri: 'file:///Users/john/myProject',
+						time: 0,
+						uuid: '',
+					},
+					{
+						time: 10,
+						id: 0,
+						kind: 'documentEncountered',
+						relativePath: 'src/a.ts',
+					},
+					{
+						time: 11,
+						id: 0,
+						v: 1,
+						kind: 'setContent',
+						content: 'aaa\nbbb\nccc\nddd\neee',
+					},
 					// Replace line 1: "aaa" → "AAA" (offset 0-3)
-					{ time: 12, id: 0, v: 2, kind: 'changed', edit: [[0, 3, 'AAA']] },
+					{
+						time: 12,
+						id: 0,
+						v: 2,
+						kind: 'changed',
+						edit: [[0, 3, 'AAA']],
+					},
 					// Replace line 5: "eee" → "EEE" (offset 16-19, after "AAA\nbbb\nccc\nddd\n")
-					{ time: 13, id: 0, v: 3, kind: 'changed', edit: [[16, 19, 'EEE']] },
-				]
+					{
+						time: 13,
+						id: 0,
+						v: 3,
+						kind: 'changed',
+						edit: [[16, 19, 'EEE']],
+					},
+				],
 			};
-			const replayer = new ObservableWorkspaceRecordingReplayer(recording);
-			const tracker = createTracker(replayer.workspace, undefined, XtabEditMergeStrategy.proximity(1));
+			const replayer = new ObservableWorkspaceRecordingReplayer(
+				recording,
+			);
+			const tracker = createTracker(
+				replayer.workspace,
+				undefined,
+				XtabEditMergeStrategy.proximity(1),
+			);
 			replayer.replay();
 
 			// Should produce 2 separate entries (distance = 3 > 1)
@@ -642,17 +867,52 @@ describe('NesXtabHistoryTracker', () => {
 		it('merges edits exactly at lineGap boundary', () => {
 			const recording: IRecordingInformation = {
 				log: [
-					{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-					{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-					{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'aaa\nbbb\nccc\nddd\neee' },
+					{
+						documentType: 'workspaceRecording@1.0',
+						kind: 'header',
+						repoRootUri: 'file:///Users/john/myProject',
+						time: 0,
+						uuid: '',
+					},
+					{
+						time: 10,
+						id: 0,
+						kind: 'documentEncountered',
+						relativePath: 'src/a.ts',
+					},
+					{
+						time: 11,
+						id: 0,
+						v: 1,
+						kind: 'setContent',
+						content: 'aaa\nbbb\nccc\nddd\neee',
+					},
 					// Replace line 1
-					{ time: 12, id: 0, v: 2, kind: 'changed', edit: [[0, 3, 'AAA']] },
+					{
+						time: 12,
+						id: 0,
+						v: 2,
+						kind: 'changed',
+						edit: [[0, 3, 'AAA']],
+					},
 					// Replace line 3 (offset 8-11, after "AAA\nbbb\n")
-					{ time: 13, id: 0, v: 3, kind: 'changed', edit: [[8, 11, 'CCC']] },
-				]
+					{
+						time: 13,
+						id: 0,
+						v: 3,
+						kind: 'changed',
+						edit: [[8, 11, 'CCC']],
+					},
+				],
 			};
-			const replayer = new ObservableWorkspaceRecordingReplayer(recording);
-			const tracker = createTracker(replayer.workspace, undefined, XtabEditMergeStrategy.proximity(2));
+			const replayer = new ObservableWorkspaceRecordingReplayer(
+				recording,
+			);
+			const tracker = createTracker(
+				replayer.workspace,
+				undefined,
+				XtabEditMergeStrategy.proximity(2),
+			);
 			replayer.replay();
 
 			// distance between line 1 and line 3 is 1 (one line apart), which is ≤ 2
@@ -671,17 +931,52 @@ describe('NesXtabHistoryTracker', () => {
 		it('lineGap=0 does not merge edits on non-adjacent lines', () => {
 			const recording: IRecordingInformation = {
 				log: [
-					{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-					{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-					{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'aaa\nbbb\nccc' },
+					{
+						documentType: 'workspaceRecording@1.0',
+						kind: 'header',
+						repoRootUri: 'file:///Users/john/myProject',
+						time: 0,
+						uuid: '',
+					},
+					{
+						time: 10,
+						id: 0,
+						kind: 'documentEncountered',
+						relativePath: 'src/a.ts',
+					},
+					{
+						time: 11,
+						id: 0,
+						v: 1,
+						kind: 'setContent',
+						content: 'aaa\nbbb\nccc',
+					},
 					// Replace on line 1
-					{ time: 12, id: 0, v: 2, kind: 'changed', edit: [[0, 3, 'AAA']] },
+					{
+						time: 12,
+						id: 0,
+						v: 2,
+						kind: 'changed',
+						edit: [[0, 3, 'AAA']],
+					},
 					// Replace on line 3 (offset 8-11)
-					{ time: 13, id: 0, v: 3, kind: 'changed', edit: [[8, 11, 'CCC']] },
-				]
+					{
+						time: 13,
+						id: 0,
+						v: 3,
+						kind: 'changed',
+						edit: [[8, 11, 'CCC']],
+					},
+				],
 			};
-			const replayer = new ObservableWorkspaceRecordingReplayer(recording);
-			const tracker = createTracker(replayer.workspace, undefined, XtabEditMergeStrategy.proximity(0));
+			const replayer = new ObservableWorkspaceRecordingReplayer(
+				recording,
+			);
+			const tracker = createTracker(
+				replayer.workspace,
+				undefined,
+				XtabEditMergeStrategy.proximity(0),
+			);
 			replayer.replay();
 
 			// distance=1 > 0 → should NOT merge
@@ -700,24 +995,58 @@ describe('NesXtabHistoryTracker', () => {
 	});
 
 	describe('hybrid strategy', () => {
-
 		/**
 		 * Two rapid edits on adjacent lines → should merge
 		 */
 		it('merges rapid edits in same region', () => {
 			const recording: IRecordingInformation = {
 				log: [
-					{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-					{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-					{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'aaa\nbbb\nccc\nddd\neee' },
-					{ time: 12, id: 0, v: 2, kind: 'changed', edit: [[0, 3, 'AAA']] },
-					{ time: 13, id: 0, v: 3, kind: 'changed', edit: [[4, 7, 'BBB']] },
-				]
+					{
+						documentType: 'workspaceRecording@1.0',
+						kind: 'header',
+						repoRootUri: 'file:///Users/john/myProject',
+						time: 0,
+						uuid: '',
+					},
+					{
+						time: 10,
+						id: 0,
+						kind: 'documentEncountered',
+						relativePath: 'src/a.ts',
+					},
+					{
+						time: 11,
+						id: 0,
+						v: 1,
+						kind: 'setContent',
+						content: 'aaa\nbbb\nccc\nddd\neee',
+					},
+					{
+						time: 12,
+						id: 0,
+						v: 2,
+						kind: 'changed',
+						edit: [[0, 3, 'AAA']],
+					},
+					{
+						time: 13,
+						id: 0,
+						v: 3,
+						kind: 'changed',
+						edit: [[4, 7, 'BBB']],
+					},
+				],
 			};
 
 			overrideNowValue(1000);
-			const replayer = new ObservableWorkspaceRecordingReplayer(recording);
-			const tracker = createTracker(replayer.workspace, undefined, XtabEditMergeStrategy.hybrid(1, 2000));
+			const replayer = new ObservableWorkspaceRecordingReplayer(
+				recording,
+			);
+			const tracker = createTracker(
+				replayer.workspace,
+				undefined,
+				XtabEditMergeStrategy.hybrid(1, 2000),
+			);
 			replayer.replay();
 
 			// Both edits arrive at the same overridden time, within splitAfterMs and within lineGap → merge
@@ -739,17 +1068,52 @@ describe('NesXtabHistoryTracker', () => {
 		it('splits edits separated by long pause', () => {
 			const recording: IRecordingInformation = {
 				log: [
-					{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-					{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-					{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'aaa\nbbb\nccc\nddd\neee' },
-					{ time: 12, id: 0, v: 2, kind: 'changed', edit: [[0, 3, 'AAA']] },
-					{ time: 13, id: 0, v: 3, kind: 'changed', edit: [[4, 7, 'BBB']] },
-				]
+					{
+						documentType: 'workspaceRecording@1.0',
+						kind: 'header',
+						repoRootUri: 'file:///Users/john/myProject',
+						time: 0,
+						uuid: '',
+					},
+					{
+						time: 10,
+						id: 0,
+						kind: 'documentEncountered',
+						relativePath: 'src/a.ts',
+					},
+					{
+						time: 11,
+						id: 0,
+						v: 1,
+						kind: 'setContent',
+						content: 'aaa\nbbb\nccc\nddd\neee',
+					},
+					{
+						time: 12,
+						id: 0,
+						v: 2,
+						kind: 'changed',
+						edit: [[0, 3, 'AAA']],
+					},
+					{
+						time: 13,
+						id: 0,
+						v: 3,
+						kind: 'changed',
+						edit: [[4, 7, 'BBB']],
+					},
+				],
 			};
 
 			overrideNowValue(1000);
-			const replayer = new ObservableWorkspaceRecordingReplayer(recording);
-			const tracker = createTracker(replayer.workspace, undefined, XtabEditMergeStrategy.hybrid(1, 500));
+			const replayer = new ObservableWorkspaceRecordingReplayer(
+				recording,
+			);
+			const tracker = createTracker(
+				replayer.workspace,
+				undefined,
+				XtabEditMergeStrategy.hybrid(1, 500),
+			);
 
 			// Replay header + document + setContent
 			replayer.step(); // header
@@ -789,17 +1153,52 @@ describe('NesXtabHistoryTracker', () => {
 
 			const recording: IRecordingInformation = {
 				log: [
-					{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-					{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-					{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'aaa\nbbb\nccc\nddd\neee' },
+					{
+						documentType: 'workspaceRecording@1.0',
+						kind: 'header',
+						repoRootUri: 'file:///Users/john/myProject',
+						time: 0,
+						uuid: '',
+					},
+					{
+						time: 10,
+						id: 0,
+						kind: 'documentEncountered',
+						relativePath: 'src/a.ts',
+					},
+					{
+						time: 11,
+						id: 0,
+						v: 1,
+						kind: 'setContent',
+						content: 'aaa\nbbb\nccc\nddd\neee',
+					},
 					// Line 1 edit
-					{ time: 12, id: 0, v: 2, kind: 'changed', edit: [[0, 3, 'AAA']] },
+					{
+						time: 12,
+						id: 0,
+						v: 2,
+						kind: 'changed',
+						edit: [[0, 3, 'AAA']],
+					},
 					// Line 5 edit (offset 16-19, distance=3 > lineGap=1)
-					{ time: 13, id: 0, v: 3, kind: 'changed', edit: [[16, 19, 'EEE']] },
-				]
+					{
+						time: 13,
+						id: 0,
+						v: 3,
+						kind: 'changed',
+						edit: [[16, 19, 'EEE']],
+					},
+				],
 			};
-			const replayer = new ObservableWorkspaceRecordingReplayer(recording);
-			const tracker = createTracker(replayer.workspace, undefined, XtabEditMergeStrategy.hybrid(1, 5000));
+			const replayer = new ObservableWorkspaceRecordingReplayer(
+				recording,
+			);
+			const tracker = createTracker(
+				replayer.workspace,
+				undefined,
+				XtabEditMergeStrategy.hybrid(1, 5000),
+			);
 			replayer.replay();
 
 			// Even though both are rapid (same overrideNowValue), distance=3 > lineGap=1 → split
@@ -823,20 +1222,61 @@ describe('NesXtabHistoryTracker', () => {
 		it('creates separate entries per logical burst', () => {
 			const recording: IRecordingInformation = {
 				log: [
-					{ documentType: 'workspaceRecording@1.0', kind: 'header', repoRootUri: 'file:///Users/john/myProject', time: 0, uuid: '' },
-					{ time: 10, id: 0, kind: 'documentEncountered', relativePath: 'src/a.ts' },
-					{ time: 11, id: 0, v: 1, kind: 'setContent', content: 'aaa\nbbb\nccc' },
+					{
+						documentType: 'workspaceRecording@1.0',
+						kind: 'header',
+						repoRootUri: 'file:///Users/john/myProject',
+						time: 0,
+						uuid: '',
+					},
+					{
+						time: 10,
+						id: 0,
+						kind: 'documentEncountered',
+						relativePath: 'src/a.ts',
+					},
+					{
+						time: 11,
+						id: 0,
+						v: 1,
+						kind: 'setContent',
+						content: 'aaa\nbbb\nccc',
+					},
 					// Burst 1: two rapid edits on line 1
-					{ time: 12, id: 0, v: 2, kind: 'changed', edit: [[0, 1, 'A']] },
-					{ time: 13, id: 0, v: 3, kind: 'changed', edit: [[1, 2, 'A']] },
+					{
+						time: 12,
+						id: 0,
+						v: 2,
+						kind: 'changed',
+						edit: [[0, 1, 'A']],
+					},
+					{
+						time: 13,
+						id: 0,
+						v: 3,
+						kind: 'changed',
+						edit: [[1, 2, 'A']],
+					},
 					// Burst 2: edit on line 1 again, after pause
-					{ time: 14, id: 0, v: 4, kind: 'changed', edit: [[2, 3, 'A']] },
-				]
+					{
+						time: 14,
+						id: 0,
+						v: 4,
+						kind: 'changed',
+						edit: [[2, 3, 'A']],
+					},
+				],
 			};
 
 			overrideNowValue(1000);
-			const replayer = new ObservableWorkspaceRecordingReplayer(recording);
-			const tracker = createTracker(replayer.workspace, undefined, XtabEditMergeStrategy.hybrid(1, 500));
+			const replayer = new ObservableWorkspaceRecordingReplayer(
+				recording,
+			);
+			const tracker = createTracker(
+				replayer.workspace,
+				undefined,
+				XtabEditMergeStrategy.hybrid(1, 500),
+			);
 
 			// Replay header + document + setContent
 			replayer.step(); // header

@@ -13,11 +13,17 @@ function isOomError(error: NodeJS.ErrnoException) {
 	return (
 		oomCodes.has(error.code ?? '') ||
 		// happens in loadWasmLanguage
-		(error.name === 'RangeError' && error.message === 'WebAssembly.Memory(): could not allocate memory')
+		(error.name === 'RangeError' &&
+			error.message === 'WebAssembly.Memory(): could not allocate memory')
 	);
 }
 
-export function handleException(accessor: ServicesAccessor, err: unknown, origin: string, _logger: Logger = logger): void {
+export function handleException(
+	accessor: ServicesAccessor,
+	err: unknown,
+	origin: string,
+	_logger: Logger = logger,
+): void {
 	if (isAbortError(err)) {
 		// ignore cancelled fetch requests
 		return;
@@ -34,7 +40,9 @@ export function handleException(accessor: ServicesAccessor, err: unknown, origin
 		} else if (`${error.code}`.startsWith('CopilotPromptWorkerExit')) {
 			statusReporter.setWarning('Worker unexpectedly exited');
 		} else if (error.syscall === 'uv_cwd' && error.code === 'ENOENT') {
-			statusReporter.setWarning('Current working directory does not exist');
+			statusReporter.setWarning(
+				'Current working directory does not exist',
+			);
 		}
 	}
 	_logger.exception(accessor, err, origin);

@@ -3,30 +3,60 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/sessionsPart.css';
-import { IContextKey, IContextKeyService } from '../../../platform/contextkey/common/contextkey.js';
-import { IInstantiationService } from '../../../platform/instantiation/common/instantiation.js';
-import { IStorageService } from '../../../platform/storage/common/storage.js';
-import { IThemeService } from '../../../platform/theme/common/themeService.js';
-import { agentsPanelBackground, agentsPanelBorder, agentsPanelForeground } from '../../common/theme.js';
-import { IWorkbenchLayoutService, Parts } from '../../../workbench/services/layout/browser/layoutService.js';
-import { assertReturnsDefined } from '../../../base/common/types.js';
-import { LayoutPriority } from '../../../base/browser/ui/splitview/splitview.js';
-import { Direction, SerializableGrid, Sizing } from '../../../base/browser/ui/grid/grid.js';
-import { Part } from '../../../workbench/browser/part.js';
-import { ActiveSessionsContext, MultipleSessionsVisibleContext, SessionsFocusContext } from '../../common/contextkeys.js';
-import { $, addDisposableGenericMouseDownListener, addDisposableListener, EventType, isAncestor } from '../../../base/browser/dom.js';
-import { IActiveSession } from '../../services/sessions/common/sessionsManagement.js';
-import { SessionView } from './sessionView.js';
-import { DisposableStore } from '../../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../../base/common/event.js';
-import { Color } from '../../../base/common/color.js';
-import { contrastBorder } from '../../../platform/theme/common/colorRegistry.js';
-import { SessionDropTarget, ISessionDropTargetDelegate } from './sessionDropTarget.js';
-import { ProgressBar } from '../../../base/browser/ui/progressbar/progressbar.js';
-import { defaultProgressBarStyles } from '../../../platform/theme/browser/defaultStyles.js';
-import { IProgressIndicator } from '../../../platform/progress/common/progress.js';
-import { AbstractProgressScope, ScopedProgressIndicator } from '../../../workbench/services/progress/browser/progressIndicator.js';
+import "./media/sessionsPart.css";
+import {
+	IContextKey,
+	IContextKeyService,
+} from "../../../platform/contextkey/common/contextkey.js";
+import { IInstantiationService } from "../../../platform/instantiation/common/instantiation.js";
+import { IStorageService } from "../../../platform/storage/common/storage.js";
+import { IThemeService } from "../../../platform/theme/common/themeService.js";
+import {
+	agentsPanelBackground,
+	agentsPanelBorder,
+	agentsPanelForeground,
+} from "../../common/theme.js";
+import {
+	IWorkbenchLayoutService,
+	Parts,
+} from "../../../workbench/services/layout/browser/layoutService.js";
+import { assertReturnsDefined } from "../../../base/common/types.js";
+import { LayoutPriority } from "../../../base/browser/ui/splitview/splitview.js";
+import {
+	Direction,
+	SerializableGrid,
+	Sizing,
+} from "../../../base/browser/ui/grid/grid.js";
+import { Part } from "../../../workbench/browser/part.js";
+import {
+	ActiveSessionsContext,
+	MultipleSessionsVisibleContext,
+	SessionsFocusContext,
+} from "../../common/contextkeys.js";
+import {
+	$,
+	addDisposableGenericMouseDownListener,
+	addDisposableListener,
+	EventType,
+	isAncestor,
+} from "../../../base/browser/dom.js";
+import { IActiveSession } from "../../services/sessions/common/sessionsManagement.js";
+import { SessionView } from "./sessionView.js";
+import { DisposableStore } from "../../../base/common/lifecycle.js";
+import { Emitter, Event } from "../../../base/common/event.js";
+import { Color } from "../../../base/common/color.js";
+import { contrastBorder } from "../../../platform/theme/common/colorRegistry.js";
+import {
+	SessionDropTarget,
+	ISessionDropTargetDelegate,
+} from "./sessionDropTarget.js";
+import { ProgressBar } from "../../../base/browser/ui/progressbar/progressbar.js";
+import { defaultProgressBarStyles } from "../../../platform/theme/browser/defaultStyles.js";
+import { IProgressIndicator } from "../../../platform/progress/common/progress.js";
+import {
+	AbstractProgressScope,
+	ScopedProgressIndicator,
+} from "../../../workbench/services/progress/browser/progressIndicator.js";
 
 interface IGridSlot {
 	readonly view: SessionView;
@@ -36,12 +66,13 @@ interface IGridSlot {
 }
 
 export class SessionsPart extends Part {
-
 	override readonly minimumWidth: number = 300;
 	override readonly maximumWidth: number = Number.POSITIVE_INFINITY;
 	override readonly minimumHeight: number = 0;
 	override readonly maximumHeight: number = Number.POSITIVE_INFINITY;
-	get snap(): boolean { return false; }
+	get snap(): boolean {
+		return false;
+	}
 
 	/** Visual margin values for the card-like appearance */
 	static readonly MARGIN_TOP = 0;
@@ -73,7 +104,14 @@ export class SessionsPart extends Part {
 	/** Fired when a session view in the grid receives keyboard focus. */
 	readonly onDidFocusSession: Event<string> = this._onDidFocusSession.event;
 
-	protected _lastLayout: { readonly width: number; readonly height: number; readonly top: number; readonly left: number } | undefined;
+	protected _lastLayout:
+		| {
+				readonly width: number;
+				readonly height: number;
+				readonly top: number;
+				readonly left: number;
+		  }
+		| undefined;
 
 	private readonly _multipleSessionsVisibleKey: IContextKey<boolean>;
 
@@ -88,59 +126,79 @@ export class SessionsPart extends Part {
 		@IStorageService storageService: IStorageService,
 		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService,
 		@IContextKeyService contextKeyService: IContextKeyService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super(
 			Parts.SESSIONS_PART,
 			{ hasTitle: false, borderWidth: () => 0 },
 			themeService,
 			storageService,
-			layoutService
+			layoutService,
 		);
 
 		// Bind context keys for compatibility with existing when-clauses
 		ActiveSessionsContext.bindTo(contextKeyService);
 		SessionsFocusContext.bindTo(contextKeyService);
-		this._multipleSessionsVisibleKey = MultipleSessionsVisibleContext.bindTo(contextKeyService);
+		this._multipleSessionsVisibleKey =
+			MultipleSessionsVisibleContext.bindTo(contextKeyService);
 	}
 
 	override create(parent: HTMLElement): void {
 		this.element = parent;
-		parent.classList.add('sessionspart');
+		parent.classList.add("sessionspart");
 
 		super.create(parent);
 	}
 
 	protected override createContentArea(parent: HTMLElement): HTMLElement {
-		const contentArea = $('.content');
+		const contentArea = $(".content");
 		parent.appendChild(contentArea);
 
 		// Progress bar pinned to the top of the content area (see sessionsPart.css
 		// rule `.part.sessionspart > .content > .monaco-progress-container`).
-		this._progressBar = this._register(new ProgressBar(contentArea, defaultProgressBarStyles));
+		this._progressBar = this._register(
+			new ProgressBar(contentArea, defaultProgressBarStyles),
+		);
 		this._progressBar.hide();
 
 		// Seed the grid with a placeholder slot so SerializableGrid always has
 		// at least one leaf. Rebound to a session when visible sessions appear.
 		const placeholder = this._createSlot();
-		this._gridWidget = this._register(new SerializableGrid(placeholder.view, { styles: { separatorBorder: this._gridSeparatorBorder } }));
+		this._gridWidget = this._register(
+			new SerializableGrid(placeholder.view, {
+				styles: { separatorBorder: this._gridSeparatorBorder },
+			}),
+		);
 		this._slots.push(placeholder);
 		contentArea.appendChild(this._gridWidget.element);
 
 		// Propagate the grid's maximized-view state to each session view so the
 		// per-view toolbars can render the maximize action in its toggled state.
-		this._register(this._gridWidget.onDidChangeViewMaximized(() => this._updateMaximizedState()));
+		this._register(
+			this._gridWidget.onDidChangeViewMaximized(() =>
+				this._updateMaximizedState(),
+			),
+		);
 
 		// Drop target for receiving sessions dragged from the sessions list.
 		const dropDelegate: ISessionDropTargetDelegate = {
 			findTargetView: (child: HTMLElement) => this._findTargetView(child),
 		};
-		this._register(this.instantiationService.createInstance(SessionDropTarget, contentArea, dropDelegate));
+		this._register(
+			this.instantiationService.createInstance(
+				SessionDropTarget,
+				contentArea,
+				dropDelegate,
+			),
+		);
 
 		return contentArea;
 	}
 
-	private _findTargetView(child: HTMLElement): { readonly sessionId: string; readonly element: HTMLElement } | undefined {
+	private _findTargetView(
+		child: HTMLElement,
+	): { readonly sessionId: string; readonly element: HTMLElement } | undefined {
 		for (const slot of this._slots) {
 			if (slot.boundSessionId === undefined) {
 				continue;
@@ -158,7 +216,10 @@ export class SessionsPart extends Part {
 	 * the number of visible sessions changes, and rebinds each slot to its
 	 * session by position via {@link SessionView.openSession}.
 	 */
-	updateVisibleSessions(visible: readonly (IActiveSession | undefined)[], active: IActiveSession | undefined): void {
+	updateVisibleSessions(
+		visible: readonly (IActiveSession | undefined)[],
+		active: IActiveSession | undefined,
+	): void {
 		if (!this._gridWidget) {
 			return;
 		}
@@ -170,7 +231,12 @@ export class SessionsPart extends Part {
 		while (this._slots.length < desiredCount) {
 			const slot = this._createSlot();
 			const reference = this._slots[this._slots.length - 1].view;
-			this._gridWidget.addView(slot.view, Sizing.Distribute, reference, Direction.Right);
+			this._gridWidget.addView(
+				slot.view,
+				Sizing.Distribute,
+				reference,
+				Direction.Right,
+			);
 			this._slots.push(slot);
 		}
 
@@ -192,8 +258,11 @@ export class SessionsPart extends Part {
 		// Mark the active session's element for styling/focus indication.
 		const activeId = active?.sessionId;
 		for (const slot of this._slots) {
-			const isActive = (slot.boundSessionId !== undefined && slot.boundSessionId === activeId) || this._slots.length === 1;
-			slot.view.element.classList.toggle('is-active', isActive);
+			const isActive =
+				(slot.boundSessionId !== undefined &&
+					slot.boundSessionId === activeId) ||
+				this._slots.length === 1;
+			slot.view.element.classList.toggle("is-active", isActive);
 			slot.view.setActive(isActive);
 		}
 
@@ -201,7 +270,9 @@ export class SessionsPart extends Part {
 		// different slot than the maximized one. Opening a session into the
 		// currently-maximized slot preserves the maximized state.
 		if (this._gridWidget.hasMaximizedView()) {
-			const maximizedSlot = this._slots.find(s => this._gridWidget!.isViewMaximized(s.view));
+			const maximizedSlot = this._slots.find((s) =>
+				this._gridWidget!.isViewMaximized(s.view),
+			);
 			if (maximizedSlot && maximizedSlot.boundSessionId !== activeId) {
 				this._gridWidget.exitMaximizedView();
 			}
@@ -210,7 +281,9 @@ export class SessionsPart extends Part {
 		this._updateContextKeys(visible);
 	}
 
-	private _updateContextKeys(visible: readonly (IActiveSession | undefined)[]): void {
+	private _updateContextKeys(
+		visible: readonly (IActiveSession | undefined)[],
+	): void {
 		this._multipleSessionsVisibleKey.set(visible.length > 1);
 	}
 
@@ -240,14 +313,16 @@ export class SessionsPart extends Part {
 		if (!this._gridWidget) {
 			return undefined;
 		}
-		const slot = this._slots.find(s => s.boundSessionId === sessionId);
+		const slot = this._slots.find((s) => s.boundSessionId === sessionId);
 		if (!slot) {
 			return undefined;
 		}
 		if (this._gridWidget.isViewMaximized(slot.view)) {
 			this._gridWidget.exitMaximizedView();
 			return false;
-		} else if (this._slots.filter(s => s.boundSessionId !== undefined).length >= 2) {
+		} else if (
+			this._slots.filter((s) => s.boundSessionId !== undefined).length >= 2
+		) {
 			this._gridWidget.maximizeView(slot.view);
 			slot.view.focus();
 			return true;
@@ -261,7 +336,7 @@ export class SessionsPart extends Part {
 	 * `undefined` if no matching slot exists in the grid.
 	 */
 	getSessionView(sessionId: string | undefined): SessionView | undefined {
-		return this._slots.find(s => s.boundSessionId === sessionId)?.view;
+		return this._slots.find((s) => s.boundSessionId === sessionId)?.view;
 	}
 
 	/**
@@ -275,20 +350,32 @@ export class SessionsPart extends Part {
 			const scopeId = Parts.SESSIONS_PART;
 			const isVisible = this.layoutService.isVisible(scopeId);
 			const onDidVisibilityChange = this.onDidVisibilityChange;
-			const scope = this._register(new class extends AbstractProgressScope {
-				constructor() {
-					super(scopeId, isVisible);
-					this._register(onDidVisibilityChange(visible => visible ? this.onScopeOpened(scopeId) : this.onScopeClosed(scopeId)));
-				}
-			}());
-			this._progressIndicator = this._register(new ScopedProgressIndicator(progressBar, scope));
+			const scope = this._register(
+				new (class extends AbstractProgressScope {
+					constructor() {
+						super(scopeId, isVisible);
+						this._register(
+							onDidVisibilityChange((visible) =>
+								visible
+									? this.onScopeOpened(scopeId)
+									: this.onScopeClosed(scopeId),
+							),
+						);
+					}
+				})(),
+			);
+			this._progressIndicator = this._register(
+				new ScopedProgressIndicator(progressBar, scope),
+			);
 		}
 		return this._progressIndicator;
 	}
 
 	private _createSlot(): IGridSlot {
 		const disposables = new DisposableStore();
-		const view = disposables.add(this.instantiationService.createInstance(SessionView));
+		const view = disposables.add(
+			this.instantiationService.createInstance(SessionView),
+		);
 		const slot: IGridSlot = { view, disposables, boundSessionId: undefined };
 		// Promote a visible session to the active session when its view receives
 		// focus or is clicked. Pointer-down covers clicks on non-focusable chrome
@@ -300,13 +387,21 @@ export class SessionsPart extends Part {
 				this._onDidFocusSession.fire(slot.boundSessionId);
 			}
 		};
-		disposables.add(addDisposableListener(view.element, EventType.FOCUS_IN, fireFocus, true));
-		disposables.add(addDisposableGenericMouseDownListener(view.element, fireFocus, true));
+		disposables.add(
+			addDisposableListener(view.element, EventType.FOCUS_IN, fireFocus, true),
+		);
+		disposables.add(
+			addDisposableGenericMouseDownListener(view.element, fireFocus, true),
+		);
 		return slot;
 	}
 
 	private get _gridSeparatorBorder(): Color {
-		return this.theme.getColor(agentsPanelBorder) || this.theme.getColor(contrastBorder) || Color.transparent;
+		return (
+			this.theme.getColor(agentsPanelBorder) ||
+			this.theme.getColor(contrastBorder) ||
+			Color.transparent
+		);
 	}
 
 	override updateStyles(): void {
@@ -315,15 +410,30 @@ export class SessionsPart extends Part {
 		const container = assertReturnsDefined(this.getContainer());
 
 		// Store background and border as CSS variables for the card styling on .part
-		container.style.setProperty('--part-background', this.getColor(agentsPanelBackground) || '');
-		container.style.setProperty('--part-border-color', this.getColor(agentsPanelBorder) || 'transparent');
-		container.style.setProperty('--part-foreground', this.getColor(agentsPanelForeground) || '');
-		container.style.backgroundColor = this.getColor(agentsPanelBackground) || '';
+		container.style.setProperty(
+			"--part-background",
+			this.getColor(agentsPanelBackground) || "",
+		);
+		container.style.setProperty(
+			"--part-border-color",
+			this.getColor(agentsPanelBorder) || "transparent",
+		);
+		container.style.setProperty(
+			"--part-foreground",
+			this.getColor(agentsPanelForeground) || "",
+		);
+		container.style.backgroundColor =
+			this.getColor(agentsPanelBackground) || "";
 
 		this._gridWidget?.style({ separatorBorder: this._gridSeparatorBorder });
 	}
 
-	override layout(width: number, height: number, top: number, left: number): void {
+	override layout(
+		width: number,
+		height: number,
+		top: number,
+		left: number,
+	): void {
 		if (!this.layoutService.isVisible(Parts.SESSIONS_PART)) {
 			return;
 		}
@@ -335,14 +445,20 @@ export class SessionsPart extends Part {
 		// 5px top margin to center the sash). When the panel is hidden the card fills its
 		// cell; the workbench grid's 10px bottom gutter provides the visible gap.
 		const borderTotal = SessionsPart.BORDER_WIDTH * 2;
-		const marginLeft = this.layoutService.isVisible(Parts.SIDEBAR_PART) ? 0 : SessionsPart.MARGIN_LEFT;
-		const marginBottom = this.layoutService.isVisible(Parts.PANEL_PART) ? SessionsPart.MARGIN_BOTTOM : 0;
-		const marginRight = this.layoutService.isVisible(Parts.AUXILIARYBAR_PART) ? SessionsPart.MARGIN_RIGHT : 0;
+		const marginLeft = this.layoutService.isVisible(Parts.SIDEBAR_PART)
+			? 0
+			: SessionsPart.MARGIN_LEFT;
+		const marginBottom = this.layoutService.isVisible(Parts.PANEL_PART)
+			? SessionsPart.MARGIN_BOTTOM
+			: 0;
+		const marginRight = this.layoutService.isVisible(Parts.AUXILIARYBAR_PART)
+			? SessionsPart.MARGIN_RIGHT
+			: 0;
 
 		// Size the content area with the reduced dimensions.
 		const { contentSize } = this.layoutContents(
 			width - marginLeft - marginRight - borderTotal,
-			height - SessionsPart.MARGIN_TOP - marginBottom - borderTotal
+			height - SessionsPart.MARGIN_TOP - marginBottom - borderTotal,
 		);
 
 		// Layout the internal grid widget within the content area.
@@ -362,7 +478,7 @@ export class SessionsPart extends Part {
 
 	toJSON(): object {
 		return {
-			type: Parts.SESSIONS_PART
+			type: Parts.SESSIONS_PART,
 		};
 	}
 }

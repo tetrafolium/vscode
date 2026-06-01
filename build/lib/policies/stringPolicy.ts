@@ -3,21 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BasePolicy } from './basePolicy.ts';
-import type { CategoryDto, PolicyDto } from './policyDto.ts';
-import { renderProfileString } from './render.ts';
-import { PolicyType, type Category, type LanguageTranslations, type NlsString } from './types.ts';
+import { BasePolicy } from "./basePolicy.ts";
+import type { CategoryDto, PolicyDto } from "./policyDto.ts";
+import { renderProfileString } from "./render.ts";
+import {
+	PolicyType,
+	type Category,
+	type LanguageTranslations,
+	type NlsString,
+} from "./types.ts";
 
 export class StringPolicy extends BasePolicy {
-
-	static from(category: CategoryDto, policy: PolicyDto): StringPolicy | undefined {
+	static from(
+		category: CategoryDto,
+		policy: PolicyDto,
+	): StringPolicy | undefined {
 		const { type, name, minimumVersion, localization } = policy;
 
-		if (type !== 'string') {
+		if (type !== "string") {
 			return undefined;
 		}
 
-		return new StringPolicy(name, { moduleName: '', name: { nlsKey: category.name.key, value: category.name.value } }, minimumVersion, { nlsKey: localization.description.key, value: localization.description.value }, '');
+		return new StringPolicy(
+			name,
+			{
+				moduleName: "",
+				name: { nlsKey: category.name.key, value: category.name.value },
+			},
+			minimumVersion,
+			{
+				nlsKey: localization.description.key,
+				value: localization.description.value,
+			},
+			"",
+		);
 	}
 
 	private constructor(
@@ -27,15 +46,24 @@ export class StringPolicy extends BasePolicy {
 		description: NlsString,
 		moduleName: string,
 	) {
-		super(PolicyType.String, name, category, minimumVersion, description, moduleName);
+		super(
+			PolicyType.String,
+			name,
+			category,
+			minimumVersion,
+			description,
+			moduleName,
+		);
 	}
 
 	protected renderADMXElements(): string[] {
-		return [`<text id="${this.name}" valueName="${this.name}" required="true" />`];
+		return [
+			`<text id="${this.name}" valueName="${this.name}" required="true" />`,
+		];
 	}
 
 	renderJsonValue() {
-		return '';
+		return "";
 	}
 
 	renderADMLPresentationContents() {

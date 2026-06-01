@@ -3,24 +3,42 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Action, IAction, IActionChangeEvent } from '../../../../base/common/actions.js';
-import { Emitter } from '../../../../base/common/event.js';
-import { IActionViewItemOptions } from '../../../../base/browser/ui/actionbar/actionViewItems.js';
-import { ActionWithDropdownActionViewItem, IActionWithDropdownActionViewItemOptions } from '../../../../base/browser/ui/dropdown/dropdownActionViewItem.js';
-import { IContextMenuProvider } from '../../../../base/browser/contextmenu.js';
-import { localize } from '../../../../nls.js';
-import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { INotificationService } from '../../../../platform/notification/common/notification.js';
-import { IOpenerService } from '../../../../platform/opener/common/opener.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { IWorkspaceContextService, WorkbenchState } from '../../../../platform/workspace/common/workspace.js';
-import { dirname, joinPath } from '../../../../base/common/resources.js';
-import { ContributionEnablementState, IEnablementModel, isContributionDisabled, isContributionEnabled } from '../common/enablement.js';
-import { IAgentPlugin, IAgentPluginService } from '../common/plugins/agentPluginService.js';
-import { IPluginInstallService } from '../common/plugins/pluginInstallService.js';
-import { IMarketplacePluginItem } from './agentPluginEditor/agentPluginItems.js';
-import { buildEnablementContextMenuGroup } from './enablementActions.js';
-import { hasKey } from '../../../../base/common/types.js';
+import {
+	Action,
+	IAction,
+	IActionChangeEvent,
+} from "../../../../base/common/actions.js";
+import { Emitter } from "../../../../base/common/event.js";
+import { IActionViewItemOptions } from "../../../../base/browser/ui/actionbar/actionViewItems.js";
+import {
+	ActionWithDropdownActionViewItem,
+	IActionWithDropdownActionViewItemOptions,
+} from "../../../../base/browser/ui/dropdown/dropdownActionViewItem.js";
+import { IContextMenuProvider } from "../../../../base/browser/contextmenu.js";
+import { localize } from "../../../../nls.js";
+import { ICommandService } from "../../../../platform/commands/common/commands.js";
+import { INotificationService } from "../../../../platform/notification/common/notification.js";
+import { IOpenerService } from "../../../../platform/opener/common/opener.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import {
+	IWorkspaceContextService,
+	WorkbenchState,
+} from "../../../../platform/workspace/common/workspace.js";
+import { dirname, joinPath } from "../../../../base/common/resources.js";
+import {
+	ContributionEnablementState,
+	IEnablementModel,
+	isContributionDisabled,
+	isContributionEnabled,
+} from "../common/enablement.js";
+import {
+	IAgentPlugin,
+	IAgentPluginService,
+} from "../common/plugins/agentPluginService.js";
+import { IPluginInstallService } from "../common/plugins/pluginInstallService.js";
+import { IMarketplacePluginItem } from "./agentPluginEditor/agentPluginItems.js";
+import { buildEnablementContextMenuGroup } from "./enablementActions.js";
+import { hasKey } from "../../../../base/common/types.js";
 
 //#region Simple actions
 
@@ -29,25 +47,39 @@ export class InstallPluginAction extends Action {
 		item: IMarketplacePluginItem,
 		@IPluginInstallService pluginInstallService: IPluginInstallService,
 	) {
-		super('agentPlugin.install', localize('install', "Install"), 'extension-action label prominent install', true,
-			() => pluginInstallService.installPlugin({
-				name: item.name,
-				description: item.description,
-				version: '',
-				source: item.source,
-				sourceDescriptor: item.sourceDescriptor,
-				marketplace: item.marketplace,
-				marketplaceReference: item.marketplaceReference,
-				marketplaceType: item.marketplaceType,
-				readmeUri: item.readmeUri,
-			}));
+		super(
+			"agentPlugin.install",
+			localize("install", "Install"),
+			"extension-action label prominent install",
+			true,
+			() =>
+				pluginInstallService.installPlugin({
+					name: item.name,
+					description: item.description,
+					version: "",
+					source: item.source,
+					sourceDescriptor: item.sourceDescriptor,
+					marketplace: item.marketplace,
+					marketplaceReference: item.marketplaceReference,
+					marketplaceType: item.marketplaceType,
+					readmeUri: item.readmeUri,
+				}),
+		);
 	}
 }
 
 export class UninstallPluginAction extends Action {
 	constructor(plugin: IAgentPlugin) {
-		super('agentPlugin.uninstall', localize('uninstall', "Uninstall"), 'extension-action label uninstall', true,
-			() => { plugin.remove?.(); return Promise.resolve(); });
+		super(
+			"agentPlugin.uninstall",
+			localize("uninstall", "Uninstall"),
+			"extension-action label uninstall",
+			true,
+			() => {
+				plugin.remove?.();
+				return Promise.resolve();
+			},
+		);
 	}
 }
 
@@ -57,24 +89,34 @@ export class OpenPluginFolderAction extends Action {
 		@ICommandService commandService: ICommandService,
 		@IOpenerService openerService: IOpenerService,
 	) {
-		super('agentPlugin.openFolder', localize('openPluginFolder', "Open Plugin Folder"), undefined, true,
+		super(
+			"agentPlugin.openFolder",
+			localize("openPluginFolder", "Open Plugin Folder"),
+			undefined,
+			true,
 			async () => {
 				try {
-					await commandService.executeCommand('revealFileInOS', plugin.uri);
+					await commandService.executeCommand("revealFileInOS", plugin.uri);
 				} catch {
 					await openerService.open(dirname(plugin.uri));
 				}
-			});
+			},
+		);
 	}
 }
 
 export class OpenPluginReadmeAction extends Action {
 	constructor(
-		readmeUri: import('../../../../base/common/uri.js').URI,
+		readmeUri: import("../../../../base/common/uri.js").URI,
 		@IOpenerService openerService: IOpenerService,
 	) {
-		super('agentPlugin.openReadme', localize('openReadme', "Open README"), undefined, true,
-			() => openerService.open(readmeUri));
+		super(
+			"agentPlugin.openReadme",
+			localize("openReadme", "Open README"),
+			undefined,
+			true,
+			() => openerService.open(readmeUri),
+		);
 	}
 }
 
@@ -88,41 +130,74 @@ export function isPluginPolicyBlocked(plugin: IAgentPlugin): boolean {
 }
 
 /** Notifies the user that a plugin is managed by their organization and cannot be enabled. */
-export function notifyPluginPolicyBlocked(notificationService: INotificationService, pluginName: string): void {
-	notificationService.warn(localize('pluginPolicyBlocked', "The plugin \"{0}\" has been disabled by your organization and cannot be enabled.", pluginName));
+export function notifyPluginPolicyBlocked(
+	notificationService: INotificationService,
+	pluginName: string,
+): void {
+	notificationService.warn(
+		localize(
+			"pluginPolicyBlocked",
+			'The plugin "{0}" has been disabled by your organization and cannot be enabled.',
+			pluginName,
+		),
+	);
 }
 
 /**
  * An "Enable" action for a policy-blocked plugin: instead of enabling, it
  * explains via a notification that the plugin is managed by the organization.
  */
-export function createPolicyBlockedEnableAction(plugin: IAgentPlugin, notificationService: INotificationService): Action {
-	return new Action('agentPlugin.enableBlocked', localize('enable', "Enable"), undefined, true,
-		() => { notifyPluginPolicyBlocked(notificationService, plugin.label); return Promise.resolve(); });
+export function createPolicyBlockedEnableAction(
+	plugin: IAgentPlugin,
+	notificationService: INotificationService,
+): Action {
+	return new Action(
+		"agentPlugin.enableBlocked",
+		localize("enable", "Enable"),
+		undefined,
+		true,
+		() => {
+			notifyPluginPolicyBlocked(notificationService, plugin.label);
+			return Promise.resolve();
+		},
+	);
 }
 
 /**
  * Builds the standard context menu action groups for an installed plugin.
  */
-export function getInstalledPluginContextMenuActions(plugin: IAgentPlugin, instantiationService: IInstantiationService): IAction[][] {
-	return instantiationService.invokeFunction(accessor => {
+export function getInstalledPluginContextMenuActions(
+	plugin: IAgentPlugin,
+	instantiationService: IInstantiationService,
+): IAction[][] {
+	return instantiationService.invokeFunction((accessor) => {
 		const agentPluginService = accessor.get(IAgentPluginService);
 		const workspaceService = accessor.get(IWorkspaceContextService);
 		const groups: IAction[][] = [];
 		if (isPluginPolicyBlocked(plugin)) {
-			groups.push([createPolicyBlockedEnableAction(plugin, accessor.get(INotificationService))]);
+			groups.push([
+				createPolicyBlockedEnableAction(
+					plugin,
+					accessor.get(INotificationService),
+				),
+			]);
 		} else {
-			groups.push(buildEnablementContextMenuGroup(
-				plugin.enablement.get(),
-				plugin.uri.toString(),
-				agentPluginService.enablementModel,
-				workspaceService,
-				'agentPlugin',
-			));
+			groups.push(
+				buildEnablementContextMenuGroup(
+					plugin.enablement.get(),
+					plugin.uri.toString(),
+					agentPluginService.enablementModel,
+					workspaceService,
+					"agentPlugin",
+				),
+			);
 		}
 		groups.push([
 			instantiationService.createInstance(OpenPluginFolderAction, plugin),
-			instantiationService.createInstance(OpenPluginReadmeAction, joinPath(plugin.uri, 'README.md')),
+			instantiationService.createInstance(
+				OpenPluginReadmeAction,
+				joinPath(plugin.uri, "README.md"),
+			),
 		]);
 		if (plugin.fromMarketplace) {
 			groups.push([new UninstallPluginAction(plugin)]);
@@ -141,10 +216,20 @@ export function getInstalledPluginContextMenuActions(plugin: IAgentPlugin, insta
  */
 class EnablementSubAction extends Action {
 	private _hidden: boolean;
-	get hidden(): boolean { return this._hidden; }
-	set hidden(v: boolean) { this._hidden = v; }
+	get hidden(): boolean {
+		return this._hidden;
+	}
+	set hidden(v: boolean) {
+		this._hidden = v;
+	}
 
-	constructor(id: string, label: string, cssClass: string, enabled: boolean, actionCallback: () => Promise<void>) {
+	constructor(
+		id: string,
+		label: string,
+		cssClass: string,
+		enabled: boolean,
+		actionCallback: () => Promise<void>,
+	) {
 		super(id, label, cssClass, enabled, actionCallback);
 		this._hidden = !enabled;
 	}
@@ -165,20 +250,31 @@ interface IEnablementActionChangeEvent extends IActionChangeEvent {
  * Hides itself entirely when all sub-actions are hidden.
  */
 export class EnablementDropDownAction extends Action {
-	readonly menuActionClassNames = ['extension-action', 'label', 'action-dropdown'];
+	readonly menuActionClassNames = [
+		"extension-action",
+		"label",
+		"action-dropdown",
+	];
 	private _menuActions: IAction[] = [];
-	get menuActions(): IAction[] { return [...this._menuActions]; }
+	get menuActions(): IAction[] {
+		return [...this._menuActions];
+	}
 
 	private _isHidden = false;
-	get isHidden(): boolean { return this._isHidden; }
+	get isHidden(): boolean {
+		return this._isHidden;
+	}
 
-	protected override readonly _onDidChange = new Emitter<IEnablementActionChangeEvent>();
-	override get onDidChange() { return this._onDidChange.event; }
+	protected override readonly _onDidChange =
+		new Emitter<IEnablementActionChangeEvent>();
+	override get onDidChange() {
+		return this._onDidChange.event;
+	}
 
 	private readonly subActions: EnablementSubAction[];
 
 	constructor(id: string, subActions: EnablementSubAction[]) {
-		super(id, undefined, 'extension-action label action-dropdown');
+		super(id, undefined, "extension-action label action-dropdown");
 		this.subActions = subActions;
 		for (const a of subActions) {
 			a.onDidChange(() => this._updateDropdown());
@@ -187,7 +283,7 @@ export class EnablementDropDownAction extends Action {
 	}
 
 	private _updateDropdown(): void {
-		const visible = this.subActions.filter(a => !a.hidden);
+		const visible = this.subActions.filter((a) => !a.hidden);
 		const primary = visible[0];
 		this._menuActions = visible.length > 1 ? [...visible] : [];
 
@@ -204,7 +300,7 @@ export class EnablementDropDownAction extends Action {
 	}
 
 	override async run(): Promise<void> {
-		const primary = this.subActions.find(a => !a.hidden);
+		const primary = this.subActions.find((a) => !a.hidden);
 		await primary?.run();
 	}
 
@@ -227,11 +323,13 @@ export class EnablementDropdownActionViewItem extends ActionWithDropdownActionVi
 		contextMenuProvider: IContextMenuProvider,
 	) {
 		super(null, action, options, contextMenuProvider);
-		this._register(action.onDidChange(e => {
-			if (hasKey(e, { menuActions: true })) {
-				this.updateClass();
-			}
-		}));
+		this._register(
+			action.onDidChange((e) => {
+				if (hasKey(e, { menuActions: true })) {
+					this.updateClass();
+				}
+			}),
+		);
 	}
 
 	override render(container: HTMLElement): void {
@@ -243,10 +341,13 @@ export class EnablementDropdownActionViewItem extends ActionWithDropdownActionVi
 		super.updateClass();
 		if (this.element && this.dropdownMenuActionViewItem?.element) {
 			const action = this._action as EnablementDropDownAction;
-			this.element.classList.toggle('hide', action.isHidden);
+			this.element.classList.toggle("hide", action.isHidden);
 			const isMenuEmpty = action.menuActions.length === 0;
-			this.element.classList.toggle('empty', isMenuEmpty);
-			this.dropdownMenuActionViewItem.element.classList.toggle('hide', isMenuEmpty);
+			this.element.classList.toggle("empty", isMenuEmpty);
+			this.dropdownMenuActionViewItem.element.classList.toggle(
+				"hide",
+				isMenuEmpty,
+			);
 		}
 	}
 }
@@ -261,17 +362,41 @@ export function createEnablePluginDropDown(
 	workspaceContextService: IWorkspaceContextService,
 ): EnablementDropDownAction {
 	const key = plugin.uri.toString();
-	const hasWorkspace = workspaceContextService.getWorkbenchState() !== WorkbenchState.EMPTY;
+	const hasWorkspace =
+		workspaceContextService.getWorkbenchState() !== WorkbenchState.EMPTY;
 
-	const enable = new EnablementSubAction('agentPlugin.enable', localize('enable', "Enable"), 'extension-action label prominent',
+	const enable = new EnablementSubAction(
+		"agentPlugin.enable",
+		localize("enable", "Enable"),
+		"extension-action label prominent",
 		isContributionDisabled(plugin.enablement.get()),
-		() => { enablementModel.setEnabled(key, ContributionEnablementState.EnabledProfile); return Promise.resolve(); });
+		() => {
+			enablementModel.setEnabled(
+				key,
+				ContributionEnablementState.EnabledProfile,
+			);
+			return Promise.resolve();
+		},
+	);
 
-	const enableWorkspace = new EnablementSubAction('agentPlugin.enableForWorkspace', localize('enableForWorkspace', "Enable (Workspace)"), 'extension-action label',
+	const enableWorkspace = new EnablementSubAction(
+		"agentPlugin.enableForWorkspace",
+		localize("enableForWorkspace", "Enable (Workspace)"),
+		"extension-action label",
 		isContributionDisabled(plugin.enablement.get()) && hasWorkspace,
-		() => { enablementModel.setEnabled(key, ContributionEnablementState.EnabledWorkspace); return Promise.resolve(); });
+		() => {
+			enablementModel.setEnabled(
+				key,
+				ContributionEnablementState.EnabledWorkspace,
+			);
+			return Promise.resolve();
+		},
+	);
 
-	return new EnablementDropDownAction('agentPlugin.enableDropdown', [enable, enableWorkspace]);
+	return new EnablementDropDownAction("agentPlugin.enableDropdown", [
+		enable,
+		enableWorkspace,
+	]);
 }
 
 /**
@@ -284,17 +409,41 @@ export function createDisablePluginDropDown(
 	workspaceContextService: IWorkspaceContextService,
 ): EnablementDropDownAction {
 	const key = plugin.uri.toString();
-	const hasWorkspace = workspaceContextService.getWorkbenchState() !== WorkbenchState.EMPTY;
+	const hasWorkspace =
+		workspaceContextService.getWorkbenchState() !== WorkbenchState.EMPTY;
 
-	const disable = new EnablementSubAction('agentPlugin.disable', localize('disable', "Disable"), 'extension-action label disable',
+	const disable = new EnablementSubAction(
+		"agentPlugin.disable",
+		localize("disable", "Disable"),
+		"extension-action label disable",
 		isContributionEnabled(plugin.enablement.get()),
-		() => { enablementModel.setEnabled(key, ContributionEnablementState.DisabledProfile); return Promise.resolve(); });
+		() => {
+			enablementModel.setEnabled(
+				key,
+				ContributionEnablementState.DisabledProfile,
+			);
+			return Promise.resolve();
+		},
+	);
 
-	const disableWorkspace = new EnablementSubAction('agentPlugin.disableForWorkspace', localize('disableForWorkspace', "Disable (Workspace)"), 'extension-action label disable',
+	const disableWorkspace = new EnablementSubAction(
+		"agentPlugin.disableForWorkspace",
+		localize("disableForWorkspace", "Disable (Workspace)"),
+		"extension-action label disable",
 		isContributionEnabled(plugin.enablement.get()) && hasWorkspace,
-		() => { enablementModel.setEnabled(key, ContributionEnablementState.DisabledWorkspace); return Promise.resolve(); });
+		() => {
+			enablementModel.setEnabled(
+				key,
+				ContributionEnablementState.DisabledWorkspace,
+			);
+			return Promise.resolve();
+		},
+	);
 
-	return new EnablementDropDownAction('agentPlugin.disableDropdown', [disable, disableWorkspace]);
+	return new EnablementDropDownAction("agentPlugin.disableDropdown", [
+		disable,
+		disableWorkspace,
+	]);
 }
 
 //#endregion

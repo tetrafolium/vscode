@@ -15,14 +15,16 @@ import { DiagnosticsCollection } from '../../vscode-node/features/diagnosticsCom
 
 // Helper function to create a Diagnostic from a mock VS Code diagnostic
 function createDiagnostic(message: string, range: OffsetRange): Diagnostic {
-	return new Diagnostic(new DiagnosticData(
-		URI.parse('file:///test/document.ts'),
-		message,
-		'error',
-		range,
-		undefined,
-		undefined
-	));
+	return new Diagnostic(
+		new DiagnosticData(
+			URI.parse('file:///test/document.ts'),
+			message,
+			'error',
+			range,
+			undefined,
+			undefined,
+		),
+	);
 }
 
 suite('DiagnosticsCollection', () => {
@@ -35,7 +37,7 @@ suite('DiagnosticsCollection', () => {
 		const collection = new DiagnosticsCollection();
 		const diagnostic = createDiagnostic(
 			'Test error',
-			new OffsetRange(0, 4)
+			new OffsetRange(0, 4),
 		);
 
 		const result = collection.isEqualAndUpdate([diagnostic]);
@@ -44,8 +46,14 @@ suite('DiagnosticsCollection', () => {
 	});
 	test('isEqualAndUpdate should return true when diagnostics are equal', () => {
 		const collection = new DiagnosticsCollection();
-		const diagnostic1 = createDiagnostic('Test error', new OffsetRange(0, 4));
-		const diagnostic2 = createDiagnostic('Test error', new OffsetRange(0, 4));
+		const diagnostic1 = createDiagnostic(
+			'Test error',
+			new OffsetRange(0, 4),
+		);
+		const diagnostic2 = createDiagnostic(
+			'Test error',
+			new OffsetRange(0, 4),
+		);
 
 		collection.isEqualAndUpdate([diagnostic1]);
 		const result = collection.isEqualAndUpdate([diagnostic2]);
@@ -54,8 +62,14 @@ suite('DiagnosticsCollection', () => {
 	});
 	test('isEqualAndUpdate should return false when a diagnostics is invalidated', () => {
 		const collection = new DiagnosticsCollection();
-		const diagnostic1 = createDiagnostic('Test error', new OffsetRange(0, 4));
-		const diagnostic2 = createDiagnostic('Test error', new OffsetRange(0, 4));
+		const diagnostic1 = createDiagnostic(
+			'Test error',
+			new OffsetRange(0, 4),
+		);
+		const diagnostic2 = createDiagnostic(
+			'Test error',
+			new OffsetRange(0, 4),
+		);
 
 		collection.isEqualAndUpdate([diagnostic1]);
 
@@ -69,7 +83,10 @@ suite('DiagnosticsCollection', () => {
 	suite('applyEdit', () => {
 		test('should invalidate when typing numbers at the end of a diagnostic range', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 17)); // "test" = positions 12-15 (0-based)
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 17),
+			); // "test" = positions 12-15 (0-based)
 			collection.isEqualAndUpdate([diagnostic]);
 
 			// Replace "test" with "test123"
@@ -84,7 +101,10 @@ suite('DiagnosticsCollection', () => {
 
 		test('should invalidate diagnostic when range shrinks', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(6, 11)); // "world"
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(6, 11),
+			); // "world"
 			collection.isEqualAndUpdate([diagnostic]);
 
 			// Create an edit that removes "w"
@@ -100,7 +120,10 @@ suite('DiagnosticsCollection', () => {
 
 		test('should update range when content stays the same and range length unchanged', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 16));
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 16),
+			);
 			collection.isEqualAndUpdate([diagnostic]);
 
 			// Insert " big" without touching the diagnostic range
@@ -116,7 +139,10 @@ suite('DiagnosticsCollection', () => {
 
 		test('should invalidate diagnostic when content at range changes with same length', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 16)); // "test"
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 16),
+			); // "test"
 			collection.isEqualAndUpdate([diagnostic]);
 
 			// Replace "test" with "best"
@@ -131,7 +157,10 @@ suite('DiagnosticsCollection', () => {
 		});
 		test('should handle range growth with same prefix content', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 16));
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 16),
+			);
 			collection.isEqualAndUpdate([diagnostic]);
 
 			// "test" becomes "test!" (non-alphanumeric edge)
@@ -151,7 +180,10 @@ suite('DiagnosticsCollection', () => {
 
 		test('should handle range growth with same suffix content', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 16)); // "test"
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 16),
+			); // "test"
 			collection.isEqualAndUpdate([diagnostic]);
 
 			const before = new StringText('hello world test');
@@ -166,7 +198,10 @@ suite('DiagnosticsCollection', () => {
 
 		test('should invalidate when edge character is alphanumeric with prefix match', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 16)); // "test"
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 16),
+			); // "test"
 			collection.isEqualAndUpdate([diagnostic]);
 
 			const before = new StringText('hello world test');
@@ -183,7 +218,10 @@ suite('DiagnosticsCollection', () => {
 
 		test('should not invalidate when edge character is non-alphanumeric with prefix match', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 16)); // "test" = positions 12-15 (0-based)
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 16),
+			); // "test" = positions 12-15 (0-based)
 			collection.isEqualAndUpdate([diagnostic]);
 
 			// Replace "test" with "test!"
@@ -199,8 +237,14 @@ suite('DiagnosticsCollection', () => {
 
 		test('should handle multiple diagnostics correctly', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic1 = createDiagnostic('Error 1', new OffsetRange(0, 5));   // "hello" = positions 0-4 (0-based)
-			const diagnostic2 = createDiagnostic('Error 2', new OffsetRange(12, 16)); // "test" = positions 12-15 (0-based)
+			const diagnostic1 = createDiagnostic(
+				'Error 1',
+				new OffsetRange(0, 5),
+			); // "hello" = positions 0-4 (0-based)
+			const diagnostic2 = createDiagnostic(
+				'Error 2',
+				new OffsetRange(12, 16),
+			); // "test" = positions 12-15 (0-based)
 			collection.isEqualAndUpdate([diagnostic1, diagnostic2]);
 
 			const before = new StringText('hello world test');
@@ -224,7 +268,10 @@ suite('DiagnosticsCollection', () => {
 
 		test('should handle edge case with empty edge character', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 16)); // "test" = positions 12-15 (0-based)
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 16),
+			); // "test" = positions 12-15 (0-based)
 			collection.isEqualAndUpdate([diagnostic]);
 
 			const before = new StringText('hello world test');
@@ -242,7 +289,10 @@ suite('DiagnosticsCollection', () => {
 
 		test('should handle suffix match with non-alphanumeric edge character', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 16)); // "test" = positions 12-15 (0-based)
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 16),
+			); // "test" = positions 12-15 (0-based)
 			collection.isEqualAndUpdate([diagnostic]);
 
 			const before = new StringText('hello world test');
@@ -257,12 +307,15 @@ suite('DiagnosticsCollection', () => {
 			assert.strictEqual(diagnostic.isValid(), true);
 			// Range should point to the suffix "test" part
 			assert.strictEqual(diagnostic.range.start, 13);
-			assert.strictEqual(diagnostic.range.endExclusive, 17);   // 17 + 1 (".")
+			assert.strictEqual(diagnostic.range.endExclusive, 17); // 17 + 1 (".")
 		});
 
 		test('should handle case where newOffsetRange is null', () => {
 			const collection = new DiagnosticsCollection();
-			const diagnostic = createDiagnostic('Test error', new OffsetRange(12, 16)); // "test" = positions 12-15 (0-based)
+			const diagnostic = createDiagnostic(
+				'Test error',
+				new OffsetRange(12, 16),
+			); // "test" = positions 12-15 (0-based)
 			collection.isEqualAndUpdate([diagnostic]);
 
 			// Mock applyEditsToRanges to return null (would happen if range is completely removed)

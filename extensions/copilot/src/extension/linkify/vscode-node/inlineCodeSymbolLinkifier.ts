@@ -9,8 +9,15 @@ import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { CancellationError } from '../../../util/vs/base/common/errors';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { SymbolInformation } from '../../../vscodeTypes';
-import { LinkifiedPart, LinkifiedText, LinkifySymbolAnchor } from '../common/linkifiedText';
-import { IContributedLinkifier, LinkifierContext } from '../common/linkifyService';
+import {
+	LinkifiedPart,
+	LinkifiedText,
+	LinkifySymbolAnchor,
+} from '../common/linkifiedText';
+import {
+	IContributedLinkifier,
+	LinkifierContext,
+} from '../common/linkifyService';
 import { resolveSymbolFromReferences } from './commands';
 import { ReferencesSymbolResolver } from './findWord';
 
@@ -27,10 +34,20 @@ export class InlineCodeSymbolLinkifier implements IContributedLinkifier {
 	constructor(
 		@IInstantiationService instantiationService: IInstantiationService,
 	) {
-		this.resolver = instantiationService.createInstance(ReferencesSymbolResolver, { symbolMatchesOnly: true, maxResultCount: maxPotentialWordMatches });
+		this.resolver = instantiationService.createInstance(
+			ReferencesSymbolResolver,
+			{
+				symbolMatchesOnly: true,
+				maxResultCount: maxPotentialWordMatches,
+			},
+		);
 	}
 
-	async linkify(text: string, context: LinkifierContext, token: CancellationToken): Promise<LinkifiedText | undefined> {
+	async linkify(
+		text: string,
+		context: LinkifierContext,
+		token: CancellationToken,
+	): Promise<LinkifiedText | undefined> {
 		if (!context.references.length || vscode.version.startsWith('1.94')) {
 			return;
 		}
@@ -42,10 +59,15 @@ export class InlineCodeSymbolLinkifier implements IContributedLinkifier {
 		}
 
 		// Resolve unique symbol texts in parallel, then map results back to each match
-		const uniqueSymbols = [...new Set(matches.map(m => m[1]))];
-		const resolvedMap = new Map<string, readonly vscode.Location[] | undefined>();
+		const uniqueSymbols = [...new Set(matches.map((m) => m[1]))];
+		const resolvedMap = new Map<
+			string,
+			readonly vscode.Location[] | undefined
+		>();
 		const results = await Promise.all(
-			uniqueSymbols.map(sym => this.tryResolveSymbol(sym, context, token))
+			uniqueSymbols.map((sym) =>
+				this.tryResolveSymbol(sym, context, token),
+			),
 		);
 		for (let i = 0; i < uniqueSymbols.length; i++) {
 			resolvedMap.set(uniqueSymbols[i], results[i]);
@@ -73,20 +95,34 @@ export class InlineCodeSymbolLinkifier implements IContributedLinkifier {
 					name: symbolText,
 					containerName: '',
 					kind: vscode.SymbolKind.Variable,
-					location: loc[0]
+					location: loc[0],
 				};
 
-				out.push(new LinkifySymbolAnchor(info, async (token) => {
-					const dest = await resolveSymbolFromReferences(loc.map(l => ({ uri: l.uri, pos: l.range.start })), symbolText, token);
-					if (dest) {
-						const selectionRange = dest.loc.targetSelectionRange ?? dest.loc.targetRange;
-						info.location = new vscode.Location(dest.loc.targetUri, collapseRangeToStart(selectionRange));
+				out.push(
+					new LinkifySymbolAnchor(info, async (token) => {
+						const dest = await resolveSymbolFromReferences(
+							loc.map((l) => ({
+								uri: l.uri,
+								pos: l.range.start,
+							})),
+							symbolText,
+							token,
+						);
+						if (dest) {
+							const selectionRange =
+								dest.loc.targetSelectionRange ??
+								dest.loc.targetRange;
+							info.location = new vscode.Location(
+								dest.loc.targetUri,
+								collapseRangeToStart(selectionRange),
+							);
 
-						// TODO: Figure out how to get the actual symbol kind here and update it
-					}
+							// TODO: Figure out how to get the actual symbol kind here and update it
+						}
 
-					return info;
-				}));
+						return info;
+					}),
+				);
 			} else {
 				out.push(match[0]);
 			}
@@ -102,7 +138,11 @@ export class InlineCodeSymbolLinkifier implements IContributedLinkifier {
 		return { parts: out };
 	}
 
-	private async tryResolveSymbol(symbolText: string, context: LinkifierContext, token: CancellationToken): Promise<vscode.Location[] | undefined> {
+	private async tryResolveSymbol(
+		symbolText: string,
+		context: LinkifierContext,
+		token: CancellationToken,
+	): Promise<vscode.Location[] | undefined> {
 		if (/^https?:\/\//i.test(symbolText)) {
 			return;
 		}

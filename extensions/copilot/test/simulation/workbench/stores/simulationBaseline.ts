@@ -7,7 +7,10 @@ import * as fs from 'fs';
 import * as mobx from 'mobx';
 import * as path from 'path';
 import { RunOnceScheduler } from '../../../../src/util/vs/base/common/async';
-import { Disposable, toDisposable } from '../../../../src/util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	toDisposable,
+} from '../../../../src/util/vs/base/common/lifecycle';
 import { RUN_METADATA, SIMULATION_FOLDER_NAME } from '../../shared/sharedTypes';
 import { REPO_ROOT, genericEquals } from '../utils/utils';
 import { SimulationRunner } from './simulationRunner';
@@ -16,7 +19,6 @@ import { SimulationStorage, SimulationStorageValue } from './simulationStorage';
 const SIMULATION_FOLDER_PATH = path.join(REPO_ROOT, SIMULATION_FOLDER_NAME);
 
 class SimulationRun {
-
 	/** Shown in UI */
 	public readonly friendlyName: string;
 
@@ -25,10 +27,12 @@ class SimulationRun {
 	 */
 	constructor(
 		public readonly name: string,
-		public readonly label?: string
+		public readonly label?: string,
 	) {
 		// example: out-20230804-105913 or out-external-20230804-105913
-		const m = name.match(/^out-(?:\w+-)?(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/);
+		const m = name.match(
+			/^out-(?:\w+-)?(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})$/,
+		);
 		if (m) {
 			const year = m ? parseInt(m[1], 10) : 0;
 			const month = m ? parseInt(m[2], 10) : 0;
@@ -47,14 +51,16 @@ class SimulationRun {
 	}
 }
 
-
 /**
  * Detects possible baseline runs
  */
 export class SimulationRunsProvider extends Disposable {
-	private static readonly COMPARE_AGAINST_RUN_STORAGE_KEY = 'selectedBaseline';
+	private static readonly COMPARE_AGAINST_RUN_STORAGE_KEY =
+		'selectedBaseline';
 
-	private readonly _updateSoon = this._register(new RunOnceScheduler(() => this._update(), 50));
+	private readonly _updateSoon = this._register(
+		new RunOnceScheduler(() => this._update(), 50),
+	);
 
 	@mobx.observable
 	public runs: SimulationRun[] = [];
@@ -63,17 +69,23 @@ export class SimulationRunsProvider extends Disposable {
 
 	@mobx.computed
 	public get selectedBaselineRun(): SimulationRun | undefined {
-		return this.runs.find(r => r.name === this.selectedBaselineRunName.value);
+		return this.runs.find(
+			(r) => r.name === this.selectedBaselineRunName.value,
+		);
 	}
 
 	constructor(
 		_storage: SimulationStorage,
-		private readonly _runner: SimulationRunner
+		private readonly _runner: SimulationRunner,
 	) {
 		super();
 		mobx.makeObservable(this);
 
-		this.selectedBaselineRunName = new SimulationStorageValue(_storage, SimulationRunsProvider.COMPARE_AGAINST_RUN_STORAGE_KEY, '');
+		this.selectedBaselineRunName = new SimulationStorageValue(
+			_storage,
+			SimulationRunsProvider.COMPARE_AGAINST_RUN_STORAGE_KEY,
+			'',
+		);
 
 		const listener = () => {
 			if (!this._updateSoon.isScheduled()) {
@@ -81,37 +93,75 @@ export class SimulationRunsProvider extends Disposable {
 			}
 		};
 
-		fs.promises.mkdir(SIMULATION_FOLDER_PATH, { recursive: true }).then(() => {
-			fs.watch(SIMULATION_FOLDER_PATH, { recursive: false }, listener);
-			this._register(toDisposable(() => fs.unwatchFile(SIMULATION_FOLDER_PATH, listener)));
-			this._update();
-		});
+		fs.promises
+			.mkdir(SIMULATION_FOLDER_PATH, { recursive: true })
+			.then(() => {
+				fs.watch(
+					SIMULATION_FOLDER_PATH,
+					{ recursive: false },
+					listener,
+				);
+				this._register(
+					toDisposable(() =>
+						fs.unwatchFile(SIMULATION_FOLDER_PATH, listener),
+					),
+				);
+				this._update();
+			});
 	}
 
-	private _excludedFiles = new Set(['cache.sqlite', 'cache.version', 'token_cache.json']);
+	private _excludedFiles = new Set([
+		'cache.sqlite',
+		'cache.version',
+		'token_cache.json',
+	]);
 
 	private async _update(): Promise<void> {
-		let entries = (await fs.promises.readdir(SIMULATION_FOLDER_PATH)).map((e) => ({ timestamp: e, label: undefined }));
-		entries = entries.filter(entry => !entry.timestamp.startsWith('.') && !entry.timestamp.startsWith('tmp-') && !this._excludedFiles.has(entry.timestamp)); // ignore hidden & tmp- directories & cache-related files
+		let entries = (await fs.promises.readdir(SIMULATION_FOLDER_PATH)).map(
+			(e) => ({ timestamp: e, label: undefined }),
+		);
+		entries = entries.filter(
+			(entry) =>
+				!entry.timestamp.startsWith('.') &&
+				!entry.timestamp.startsWith('tmp-') &&
+				!this._excludedFiles.has(entry.timestamp),
+		); // ignore hidden & tmp- directories & cache-related files
 		// Sort descending
 		entries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
-		if (genericEquals(entries, this.runs.map(r => r.name))) {
+		if (
+			genericEquals(
+				entries,
+				this.runs.map((r) => r.name),
+			)
+		) {
 			return;
 		}
 
 		for (const entry of entries) {
-			const runMetadata = path.join(SIMULATION_FOLDER_PATH, entry.timestamp, RUN_METADATA);
+			const runMetadata = path.join(
+				SIMULATION_FOLDER_PATH,
+				entry.timestamp,
+				RUN_METADATA,
+			);
 			try {
-				const data = (await fs.promises.readFile(runMetadata, 'utf-8')).toString();
+				const data = (
+					await fs.promises.readFile(runMetadata, 'utf-8')
+				).toString();
 				entry.label = JSON.parse(data).label;
-			} catch { }
+			} catch {}
 		}
 
 		mobx.runInAction(() => {
 			// Try to reuse the old objects
-			const existingRuns = new Map<string, SimulationRun>(this.runs.map(r => [r.name, r]));
-			this.runs = entries.map(entry => existingRuns.get(entry.timestamp) ?? new SimulationRun(entry.timestamp, entry.label));
+			const existingRuns = new Map<string, SimulationRun>(
+				this.runs.map((r) => [r.name, r]),
+			);
+			this.runs = entries.map(
+				(entry) =>
+					existingRuns.get(entry.timestamp) ??
+					new SimulationRun(entry.timestamp, entry.label),
+			);
 		});
 	}
 
@@ -127,7 +177,12 @@ export class SimulationRunsProvider extends Disposable {
 		if (success) {
 			// Update selected baseline if it was renamed
 			if (this.selectedBaselineRunName.value === oldName) {
-				console.log('Updating selected baseline name from', oldName, 'to', newName);
+				console.log(
+					'Updating selected baseline name from',
+					oldName,
+					'to',
+					newName,
+				);
 				mobx.runInAction(() => {
 					this.selectedBaselineRunName.value = newName;
 				});

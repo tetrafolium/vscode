@@ -3,12 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ChatParticipantToolToken, commands, LanguageModelTextPart } from 'vscode';
+import {
+	ChatParticipantToolToken,
+	commands,
+	LanguageModelTextPart,
+} from 'vscode';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { ToolName } from '../../../tools/common/toolNames';
 import { IToolsService } from '../../../tools/common/toolsService';
-import { IQuestion, IQuestionAnswer, IUserQuestionHandler, UserInputResponse } from '../../copilotcli/node/userInputHelpers';
-
+import {
+	IQuestion,
+	IQuestionAnswer,
+	IUserQuestionHandler,
+	UserInputResponse,
+} from '../../copilotcli/node/userInputHelpers';
 
 export interface IAskQuestionsParams {
 	readonly questions: IQuestion[];
@@ -18,9 +26,17 @@ export interface IAnswerResult {
 	readonly answers: Record<string, IQuestionAnswer>;
 }
 
-const NotifyQuestionCarouselAnswerCommandId = '_chat.notifyQuestionCarouselAnswer';
+const NotifyQuestionCarouselAnswerCommandId =
+	'_chat.notifyQuestionCarouselAnswer';
 
-function toCarouselAnswerValue(question: IQuestion, response: UserInputResponse): string | { selectedValue?: string; freeformValue?: string } | { selectedValues: string[]; freeformValue?: string } | undefined {
+function toCarouselAnswerValue(
+	question: IQuestion,
+	response: UserInputResponse,
+):
+	| string
+	| { selectedValue?: string; freeformValue?: string }
+	| { selectedValues: string[]; freeformValue?: string }
+	| undefined {
 	if (!response.answer) {
 		return undefined;
 	}
@@ -30,9 +46,14 @@ function toCarouselAnswerValue(question: IQuestion, response: UserInputResponse)
 	}
 
 	if (question.multiSelect) {
-		const selectedValues = question.options.some(option => option.label === response.answer)
+		const selectedValues = question.options.some(
+			(option) => option.label === response.answer,
+		)
 			? [response.answer]
-			: response.answer.split(',').map(value => value.trim()).filter(Boolean);
+			: response.answer
+					.split(',')
+					.map((value) => value.trim())
+					.filter(Boolean);
 		return response.wasFreeform
 			? { selectedValues, freeformValue: response.answer }
 			: { selectedValues };
@@ -45,18 +66,23 @@ function toCarouselAnswerValue(question: IQuestion, response: UserInputResponse)
 
 export class UserQuestionHandler implements IUserQuestionHandler {
 	declare _serviceBrand: undefined;
-	constructor(
-		@IToolsService private readonly _toolsService: IToolsService,
-	) {
-	}
-	async askUserQuestion(question: IQuestion, toolInvocationToken: ChatParticipantToolToken, token: CancellationToken, toolCallId?: string): Promise<IQuestionAnswer | undefined> {
+	constructor(@IToolsService private readonly _toolsService: IToolsService) {}
+	async askUserQuestion(
+		question: IQuestion,
+		toolInvocationToken: ChatParticipantToolToken,
+		token: CancellationToken,
+		toolCallId?: string,
+	): Promise<IQuestionAnswer | undefined> {
 		const input: IAskQuestionsParams = { questions: [question] };
-		const result = await this._toolsService.invokeTool(ToolName.CoreAskQuestions, {
-			input,
-			toolInvocationToken,
-			chatStreamToolCallId: toolCallId,
-		}, token);
-
+		const result = await this._toolsService.invokeTool(
+			ToolName.CoreAskQuestions,
+			{
+				input,
+				toolInvocationToken,
+				chatStreamToolCallId: toolCallId,
+			},
+			token,
+		);
 
 		// Parse the result
 		const firstPart = result?.content.at(0);
@@ -66,7 +92,9 @@ export class UserQuestionHandler implements IUserQuestionHandler {
 
 		const carouselAnswers = JSON.parse(firstPart.value) as IAnswerResult;
 
-		const answer = carouselAnswers.answers[question.question] ?? carouselAnswers.answers[question.header];
+		const answer =
+			carouselAnswers.answers[question.question] ??
+			carouselAnswers.answers[question.header];
 		if (answer === undefined) {
 			return undefined;
 		} else if (answer.freeText) {
@@ -77,10 +105,20 @@ export class UserQuestionHandler implements IUserQuestionHandler {
 		return undefined;
 	}
 
-	async notifyQuestionCarouselAnswer(toolCallId: string, question: IQuestion, response: UserInputResponse): Promise<void> {
+	async notifyQuestionCarouselAnswer(
+		toolCallId: string,
+		question: IQuestion,
+		response: UserInputResponse,
+	): Promise<void> {
 		const answerValue = toCarouselAnswerValue(question, response);
-		await commands.executeCommand(NotifyQuestionCarouselAnswerCommandId, toolCallId, answerValue === undefined ? undefined : {
-			[`${toolCallId}:0`]: answerValue,
-		});
+		await commands.executeCommand(
+			NotifyQuestionCarouselAnswerCommandId,
+			toolCallId,
+			answerValue === undefined
+				? undefined
+				: {
+						[`${toolCallId}:0`]: answerValue,
+					},
+		);
 	}
 }

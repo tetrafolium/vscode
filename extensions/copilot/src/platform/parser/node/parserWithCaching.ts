@@ -10,17 +10,22 @@ import { LanguageLoader } from './languageLoader';
 import { WASMLanguage } from './treeSitterLanguages';
 
 export class ParserWithCaching implements IDisposable {
-
 	public static INSTANCE = new ParserWithCaching();
 
 	static CACHE_SIZE_PER_LANGUAGE = 5;
 
-	private readonly caches: Map<WASMLanguage, DisposablesLRUCache<CacheableParseTree>>;
+	private readonly caches: Map<
+		WASMLanguage,
+		DisposablesLRUCache<CacheableParseTree>
+	>;
 	private readonly languageLoader: LanguageLoader;
 	private _parser: Parser | null;
 
 	constructor() {
-		this.caches = new Map<WASMLanguage, DisposablesLRUCache<CacheableParseTree>>();
+		this.caches = new Map<
+			WASMLanguage,
+			DisposablesLRUCache<CacheableParseTree>
+		>();
 		this.languageLoader = new LanguageLoader();
 		this._parser = null;
 	}
@@ -36,8 +41,10 @@ export class ParserWithCaching implements IDisposable {
 	/**
 	 * @remarks Do not `delete()` the returned parse tree manually.
 	 */
-	async parse(lang: WASMLanguage, source: string): Promise<ParseTreeReference> {
-
+	async parse(
+		lang: WASMLanguage,
+		source: string,
+	): Promise<ParseTreeReference> {
 		await Parser.init();
 
 		const cache = this.getParseTreeCache(lang);
@@ -76,7 +83,9 @@ export class ParserWithCaching implements IDisposable {
 	private getParseTreeCache(lang: WASMLanguage) {
 		let cache = this.caches.get(lang);
 		if (!cache) {
-			cache = new DisposablesLRUCache<CacheableParseTree>(ParserWithCaching.CACHE_SIZE_PER_LANGUAGE);
+			cache = new DisposablesLRUCache<CacheableParseTree>(
+				ParserWithCaching.CACHE_SIZE_PER_LANGUAGE,
+			);
 			this.caches.set(lang, cache);
 		}
 		return cache;
@@ -89,7 +98,6 @@ export class ParserWithCaching implements IDisposable {
  * references to it are also disposed.
  */
 class CacheableParseTree implements IDisposable {
-
 	private readonly _tree: RefCountedParseTree;
 
 	constructor(tree: Parser.Tree) {
@@ -110,14 +118,11 @@ class CacheableParseTree implements IDisposable {
  * You must call `dispose()` when you're done with it.
  */
 export class ParseTreeReference implements IDisposable {
-
 	public get tree() {
 		return this._parseTree.tree;
 	}
 
-	constructor(
-		private readonly _parseTree: RefCountedParseTree
-	) {
+	constructor(private readonly _parseTree: RefCountedParseTree) {
 		this._parseTree.ref();
 	}
 
@@ -131,7 +136,6 @@ export class ParseTreeReference implements IDisposable {
  * The ref count is initialized to 1.
  */
 class RefCountedParseTree {
-
 	private _refCount = 1;
 
 	public get tree(): Parser.Tree {
@@ -141,9 +145,7 @@ class RefCountedParseTree {
 		return this._tree;
 	}
 
-	constructor(
-		private readonly _tree: Parser.Tree
-	) { }
+	constructor(private readonly _tree: Parser.Tree) {}
 
 	ref(): void {
 		if (this._refCount === 0) {
@@ -170,6 +172,9 @@ export function _dispose() {
 /**
  * Parses the given source code and returns the root node of the resulting syntax tree.
  */
-export function _parse(language: WASMLanguage, source: string): Promise<ParseTreeReference> {
+export function _parse(
+	language: WASMLanguage,
+	source: string,
+): Promise<ParseTreeReference> {
 	return ParserWithCaching.INSTANCE.parse(language, source);
 }

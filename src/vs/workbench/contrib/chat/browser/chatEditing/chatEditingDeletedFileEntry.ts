@@ -3,32 +3,49 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { VSBuffer } from '../../../../../base/common/buffer.js';
-import { constObservable, IObservable, ITransaction, observableValue, transaction } from '../../../../../base/common/observable.js';
-import { isEqual } from '../../../../../base/common/resources.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { LineRange } from '../../../../../editor/common/core/ranges/lineRange.js';
-import { IDocumentDiff } from '../../../../../editor/common/diff/documentDiffProvider.js';
-import { DetailedLineRangeMapping } from '../../../../../editor/common/diff/rangeMapping.js';
-import { TextEdit } from '../../../../../editor/common/languages.js';
-import { ILanguageService } from '../../../../../editor/common/languages/language.js';
-import { ITextModel } from '../../../../../editor/common/model.js';
-import { createTextBufferFactoryFromSnapshot } from '../../../../../editor/common/model/textModel.js';
-import { IModelService } from '../../../../../editor/common/services/model.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { IFileService } from '../../../../../platform/files/common/files.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IUndoRedoElement, IUndoRedoService, UndoRedoElementType } from '../../../../../platform/undoRedo/common/undoRedo.js';
-import { IEditorPane } from '../../../../common/editor.js';
-import { IFilesConfigurationService } from '../../../../services/filesConfiguration/common/filesConfigurationService.js';
-import { stringToSnapshot } from '../../../../services/textfile/common/textfiles.js';
-import { IAiEditTelemetryService } from '../../../editTelemetry/browser/telemetry/aiEditTelemetry/aiEditTelemetryService.js';
-import { ICellEditOperation } from '../../../notebook/common/notebookCommon.js';
-import { IChatService } from '../../common/chatService/chatService.js';
-import { ChatEditKind, IModifiedEntryTelemetryInfo, IModifiedFileEntry, IModifiedFileEntryEditorIntegration, ISnapshotEntry, ModifiedFileEntryState } from '../../common/editing/chatEditingService.js';
-import { IChatResponseModel } from '../../common/model/chatModel.js';
-import { AbstractChatEditingModifiedFileEntry } from './chatEditingModifiedFileEntry.js';
-import { ChatEditingTextModelContentProvider } from './chatEditingTextModelContentProviders.js';
+import { VSBuffer } from "../../../../../base/common/buffer.js";
+import {
+	constObservable,
+	IObservable,
+	ITransaction,
+	observableValue,
+	transaction,
+} from "../../../../../base/common/observable.js";
+import { isEqual } from "../../../../../base/common/resources.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { LineRange } from "../../../../../editor/common/core/ranges/lineRange.js";
+import { IDocumentDiff } from "../../../../../editor/common/diff/documentDiffProvider.js";
+import { DetailedLineRangeMapping } from "../../../../../editor/common/diff/rangeMapping.js";
+import { TextEdit } from "../../../../../editor/common/languages.js";
+import { ILanguageService } from "../../../../../editor/common/languages/language.js";
+import { ITextModel } from "../../../../../editor/common/model.js";
+import { createTextBufferFactoryFromSnapshot } from "../../../../../editor/common/model/textModel.js";
+import { IModelService } from "../../../../../editor/common/services/model.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { IFileService } from "../../../../../platform/files/common/files.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import {
+	IUndoRedoElement,
+	IUndoRedoService,
+	UndoRedoElementType,
+} from "../../../../../platform/undoRedo/common/undoRedo.js";
+import { IEditorPane } from "../../../../common/editor.js";
+import { IFilesConfigurationService } from "../../../../services/filesConfiguration/common/filesConfigurationService.js";
+import { stringToSnapshot } from "../../../../services/textfile/common/textfiles.js";
+import { IAiEditTelemetryService } from "../../../editTelemetry/browser/telemetry/aiEditTelemetry/aiEditTelemetryService.js";
+import { ICellEditOperation } from "../../../notebook/common/notebookCommon.js";
+import { IChatService } from "../../common/chatService/chatService.js";
+import {
+	ChatEditKind,
+	IModifiedEntryTelemetryInfo,
+	IModifiedFileEntry,
+	IModifiedFileEntryEditorIntegration,
+	ISnapshotEntry,
+	ModifiedFileEntryState,
+} from "../../common/editing/chatEditingService.js";
+import { IChatResponseModel } from "../../common/model/chatModel.js";
+import { AbstractChatEditingModifiedFileEntry } from "./chatEditingModifiedFileEntry.js";
+import { ChatEditingTextModelContentProvider } from "./chatEditingTextModelContentProviders.js";
 
 interface IMultiDiffEntryDelegate {
 	collapse: (transaction: ITransaction | undefined) => void;
@@ -39,8 +56,10 @@ interface IMultiDiffEntryDelegate {
  * Unlike ChatEditingModifiedDocumentEntry, this doesn't maintain a live model
  * since the file no longer exists on disk.
  */
-export class ChatEditingDeletedFileEntry extends AbstractChatEditingModifiedFileEntry implements IModifiedFileEntry {
-
+export class ChatEditingDeletedFileEntry
+	extends AbstractChatEditingModifiedFileEntry
+	implements IModifiedFileEntry
+{
 	readonly initialContent: string;
 
 	/**
@@ -99,9 +118,15 @@ export class ChatEditingDeletedFileEntry extends AbstractChatEditingModifiedFile
 
 		this._originalContent = originalContent;
 		this.initialContent = originalContent;
-		this.originalURI = ChatEditingTextModelContentProvider.getFileURI(telemetryInfo.sessionResource, this.entryId, resource.path);
+		this.originalURI = ChatEditingTextModelContentProvider.getFileURI(
+			telemetryInfo.sessionResource,
+			this.entryId,
+			resource.path,
+		);
 		this.diffInfo = constObservable(this._diffInfo());
-		this.linesRemoved = constObservable(this._getOrCreateOriginalModel().getLineCount());
+		this.linesRemoved = constObservable(
+			this._getOrCreateOriginalModel().getLineCount(),
+		);
 	}
 
 	override dispose(): void {
@@ -116,10 +141,12 @@ export class ChatEditingDeletedFileEntry extends AbstractChatEditingModifiedFile
 	private _getOrCreateOriginalModel(): ITextModel {
 		if (!this._originalModel || this._originalModel.isDisposed()) {
 			this._originalModel = this._modelService.createModel(
-				createTextBufferFactoryFromSnapshot(stringToSnapshot(this._originalContent)),
+				createTextBufferFactoryFromSnapshot(
+					stringToSnapshot(this._originalContent),
+				),
 				this._languageService.createById(this._languageId),
 				this.originalURI,
-				false
+				false,
 			);
 		}
 		return this._originalModel;
@@ -132,10 +159,10 @@ export class ChatEditingDeletedFileEntry extends AbstractChatEditingModifiedFile
 		if (!this._modifiedModel || this._modifiedModel.isDisposed()) {
 			// Create empty model - file is deleted so content is empty
 			this._modifiedModel = this._modelService.createModel(
-				'',
+				"",
 				this._languageService.createById(this._languageId),
-				this.modifiedURI.with({ scheme: 'deleted-file' }),
-				false
+				this.modifiedURI.with({ scheme: "deleted-file" }),
+				false,
 			);
 		}
 		return this._modifiedModel;
@@ -148,14 +175,16 @@ export class ChatEditingDeletedFileEntry extends AbstractChatEditingModifiedFile
 		const originalLineCount = originalModel.getLineCount();
 
 		return {
-			changes: [new DetailedLineRangeMapping(
-				new LineRange(1, originalLineCount + 1),
-				new LineRange(1, 1),
-				undefined
-			)],
+			changes: [
+				new DetailedLineRangeMapping(
+					new LineRange(1, originalLineCount + 1),
+					new LineRange(1, 1),
+					undefined,
+				),
+			],
 			quitEarly: false,
 			identical: false,
-			moves: []
+			moves: [],
 		};
 	}
 
@@ -164,39 +193,54 @@ export class ChatEditingDeletedFileEntry extends AbstractChatEditingModifiedFile
 	}
 
 	equalsSnapshot(snapshot: ISnapshotEntry | undefined): boolean {
-		return !!snapshot &&
+		return (
+			!!snapshot &&
 			isEqual(this.modifiedURI, snapshot.resource) &&
 			this._languageId === snapshot.languageId &&
 			this._originalContent === snapshot.original &&
-			snapshot.current === '' &&
-			this.state.get() === snapshot.state;
+			snapshot.current === "" &&
+			this.state.get() === snapshot.state
+		);
 	}
 
-	createSnapshot(chatSessionResource: URI, requestId: string | undefined, undoStop: string | undefined): ISnapshotEntry {
+	createSnapshot(
+		chatSessionResource: URI,
+		requestId: string | undefined,
+		undoStop: string | undefined,
+	): ISnapshotEntry {
 		return {
 			resource: this.modifiedURI,
 			languageId: this._languageId,
 			snapshotUri: this.originalURI,
 			original: this._originalContent,
-			current: '', // File is deleted, so current content is empty
+			current: "", // File is deleted, so current content is empty
 			state: this.state.get(),
 			telemetryInfo: this._telemetryInfo,
 			isDeleted: true,
 		};
 	}
 
-	async restoreFromSnapshot(snapshot: ISnapshotEntry, restoreToDisk = true): Promise<void> {
+	async restoreFromSnapshot(
+		snapshot: ISnapshotEntry,
+		restoreToDisk = true,
+	): Promise<void> {
 		this._stateObs.set(snapshot.state, undefined);
 
-		if (restoreToDisk && snapshot.current !== '') {
+		if (restoreToDisk && snapshot.current !== "") {
 			// Restore file to disk with the snapshot content
-			await this._fileService.writeFile(this.modifiedURI, VSBuffer.fromString(snapshot.current));
+			await this._fileService.writeFile(
+				this.modifiedURI,
+				VSBuffer.fromString(snapshot.current),
+			);
 		}
 	}
 
 	async resetToInitialContent(): Promise<void> {
 		// Restore the file with original content
-		await this._fileService.writeFile(this.modifiedURI, VSBuffer.fromString(this._originalContent));
+		await this._fileService.writeFile(
+			this.modifiedURI,
+			VSBuffer.fromString(this._originalContent),
+		);
 	}
 
 	resetEditTrackerToInitialContent(): Promise<void> {
@@ -205,27 +249,37 @@ export class ChatEditingDeletedFileEntry extends AbstractChatEditingModifiedFile
 
 	protected override async _areOriginalAndModifiedIdentical(): Promise<boolean> {
 		// A deleted file is never identical to its original (unless original was empty)
-		return this._originalContent === '';
+		return this._originalContent === "";
 	}
 
-	protected override _createUndoRedoElement(response: IChatResponseModel): IUndoRedoElement {
+	protected override _createUndoRedoElement(
+		response: IChatResponseModel,
+	): IUndoRedoElement {
 		return {
 			type: UndoRedoElementType.Resource,
 			resource: this.modifiedURI,
-			label: 'Chat File Deletion',
-			code: 'chat.delete',
+			label: "Chat File Deletion",
+			code: "chat.delete",
 			undo: async () => {
 				// Restore the file
-				await this._fileService.writeFile(this.modifiedURI, VSBuffer.fromString(this._originalContent));
+				await this._fileService.writeFile(
+					this.modifiedURI,
+					VSBuffer.fromString(this._originalContent),
+				);
 			},
 			redo: async () => {
 				// Delete the file again
 				await this._fileService.del(this.modifiedURI, { useTrash: false });
-			}
+			},
 		};
 	}
 
-	async acceptAgentEdits(_uri: URI, _edits: (TextEdit | ICellEditOperation)[], isLastEdits: boolean, _responseModel: IChatResponseModel | undefined): Promise<void> {
+	async acceptAgentEdits(
+		_uri: URI,
+		_edits: (TextEdit | ICellEditOperation)[],
+		isLastEdits: boolean,
+		_responseModel: IChatResponseModel | undefined,
+	): Promise<void> {
 		// For deleted files, there are no incremental edits - the file is just deleted
 		transaction((tx) => {
 			this._waitsForLastEdits.set(!isLastEdits, tx);
@@ -245,26 +299,34 @@ export class ChatEditingDeletedFileEntry extends AbstractChatEditingModifiedFile
 
 	protected override async _doReject(): Promise<void> {
 		// Restore the file from original content
-		await this._fileService.writeFile(this.modifiedURI, VSBuffer.fromString(this._originalContent));
+		await this._fileService.writeFile(
+			this.modifiedURI,
+			VSBuffer.fromString(this._originalContent),
+		);
 		this._multiDiffEntryDelegate.collapse(undefined);
 	}
 
-	protected _createEditorIntegration(_editor: IEditorPane): IModifiedFileEntryEditorIntegration {
+	protected _createEditorIntegration(
+		_editor: IEditorPane,
+	): IModifiedFileEntryEditorIntegration {
 		// Deleted files don't need complex editor integration since there's nothing to navigate
 		return {
 			currentIndex: observableValue(this, 0),
-			reveal: () => { },
+			reveal: () => {},
 			next: () => false,
 			previous: () => false,
-			enableAccessibleDiffView: () => { },
-			acceptNearestChange: async () => { },
-			rejectNearestChange: async () => { },
-			toggleDiff: async () => { },
-			dispose: () => { }
+			enableAccessibleDiffView: () => {},
+			acceptNearestChange: async () => {},
+			rejectNearestChange: async () => {},
+			toggleDiff: async () => {},
+			dispose: () => {},
 		};
 	}
 
-	async computeEditsFromSnapshots(_beforeSnapshot: string, _afterSnapshot: string): Promise<(TextEdit | ICellEditOperation)[]> {
+	async computeEditsFromSnapshots(
+		_beforeSnapshot: string,
+		_afterSnapshot: string,
+	): Promise<(TextEdit | ICellEditOperation)[]> {
 		// For deleted files, we don't compute incremental edits
 		return [];
 	}

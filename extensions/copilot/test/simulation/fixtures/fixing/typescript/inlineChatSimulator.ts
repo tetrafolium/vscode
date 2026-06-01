@@ -8,9 +8,16 @@ import * as path from 'path';
 import { TextEncoder } from 'util';
 import type * as vscode from 'vscode';
 import { ChatResponseStreamImpl } from '../../src/extension/conversation/node/chatResponseStreamImpl';
-import { CopilotInteractiveEditorSession, CopilotInteractiveEditorSessionProvider, InteractiveEditorRequest } from '../../src/extension/inlineChat/node/inlineChat';
+import {
+	CopilotInteractiveEditorSession,
+	CopilotInteractiveEditorSessionProvider,
+	InteractiveEditorRequest,
+} from '../../src/extension/inlineChat/node/inlineChat';
 import { InlineChatConstants } from '../../src/extension/inlineChat/node/inlineChatConstants';
-import { ITestDepsResolver, TestDepsResolver } from '../../src/extension/intents/node/testIntent/testDepsResolver';
+import {
+	ITestDepsResolver,
+	TestDepsResolver,
+} from '../../src/extension/intents/node/testIntent/testDepsResolver';
 import { detectIndentationStyle } from '../../src/extension/prompt/node/editGeneration';
 import { WorkingCopyOriginalDocument } from '../../src/extension/prompts/node/inline/workingCopies';
 import { editorAgentName } from '../../src/platform/chat/common/chatAgents';
@@ -20,52 +27,135 @@ import { ConfigKey } from '../../src/platform/configuration/common/configuration
 import { IFileSystemService } from '../../src/platform/filesystem/common/fileSystemService';
 import { FileType } from '../../src/platform/filesystem/common/fileTypes';
 import { IIgnoreService } from '../../src/platform/ignore/common/ignoreService';
-import { AbstractLanguageDiagnosticsService, ILanguageDiagnosticsService } from '../../src/platform/languages/common/languageDiagnosticsService';
+import {
+	AbstractLanguageDiagnosticsService,
+	ILanguageDiagnosticsService,
+} from '../../src/platform/languages/common/languageDiagnosticsService';
 import { ILanguageFeaturesService } from '../../src/platform/languages/common/languageFeaturesService';
-import { INotebookService, PipPackage, VariablesResult } from '../../src/platform/notebook/common/notebookService';
-import { IReviewService, ReviewComment, ReviewDiagnosticCollection } from '../../src/platform/review/common/reviewService';
+import {
+	INotebookService,
+	PipPackage,
+	VariablesResult,
+} from '../../src/platform/notebook/common/notebookService';
+import {
+	IReviewService,
+	ReviewComment,
+	ReviewDiagnosticCollection,
+} from '../../src/platform/review/common/reviewService';
 import { ISearchService } from '../../src/platform/search/common/searchService';
 import { ITabsAndEditorsService } from '../../src/platform/tabs/common/tabsAndEditorsService';
-import { SnapshotSearchService, TestingTabsAndEditorsService } from '../../src/platform/test/node/promptContextModel';
-import { AbstractWorkspaceService, IWorkspaceService } from '../../src/platform/workspace/common/workspaceService';
-import { getLanguage, getLanguageForResource } from '../../src/util/common/languages';
+import {
+	SnapshotSearchService,
+	TestingTabsAndEditorsService,
+} from '../../src/platform/test/node/promptContextModel';
+import {
+	AbstractWorkspaceService,
+	IWorkspaceService,
+} from '../../src/platform/workspace/common/workspaceService';
+import {
+	getLanguage,
+	getLanguageForResource,
+} from '../../src/util/common/languages';
 import { IServicesAccessor } from '../../src/util/common/services';
 import { ExtHostNotebookRange } from '../../src/util/common/test/shims/notebookDocument';
 import { ExtHostDocumentData } from '../../src/util/common/test/shims/textDocument';
 import { CancellationToken } from '../../src/util/vs/common/cancellation';
 import { Event } from '../../src/util/vs/common/event';
 import { ResourceMap } from '../../src/util/vs/common/map';
-import { commonPrefixLength, commonSuffixLength } from '../../src/util/vs/common/strings';
+import {
+	commonPrefixLength,
+	commonSuffixLength,
+} from '../../src/util/vs/common/strings';
 import { URI } from '../../src/util/vs/common/uri';
 import { SyncDescriptor } from '../../src/util/vs/platform/common/descriptors';
 import { IInstantiationService } from '../../src/util/vs/platform/common/instantiation';
-import { ChatLocation, ChatResponseMarkdownPart, ChatResponseTextEditPart, Diagnostic, DiagnosticRelatedInformation, Location, Range, Selection, TextEdit, Uri, WorkspaceEdit } from '../../src/vscodeTypes';
+import {
+	ChatLocation,
+	ChatResponseMarkdownPart,
+	ChatResponseTextEditPart,
+	Diagnostic,
+	DiagnosticRelatedInformation,
+	Location,
+	Range,
+	Selection,
+	TextEdit,
+	Uri,
+	WorkspaceEdit,
+} from '../../src/vscodeTypes';
 import { SpyingChatMLFetcher } from '../base/spyingChatMLFetcher';
 import { ISimulationTestRuntime } from '../base/stest';
 import { getDiagnostics } from './diagnosticProviders';
 import { convertTestToVSCodeDiagnostics } from './diagnosticProviders/utils';
 import { SimulationLanguageFeaturesService } from './language/simulationLanguageFeatureService';
-import { IDiagnostic, IDiagnosticComparison, INLINE_CHANGED_DOC_TAG, INLINE_INITIAL_DOC_TAG, INLINE_STATE_TAG, IRange, IWorkspaceState, IWorkspaceStateFile } from './shared/sharedTypes';
-import { SimulationWorkspace, WORKSPACE_PATH, isNotebook } from './simulationWorkspace';
-import { DiagnosticProviderId, IFile, IInlineEdit, IOutcome, IScenario, IScenarioDiagnostic } from './types';
+import {
+	IDiagnostic,
+	IDiagnosticComparison,
+	INLINE_CHANGED_DOC_TAG,
+	INLINE_INITIAL_DOC_TAG,
+	INLINE_STATE_TAG,
+	IRange,
+	IWorkspaceState,
+	IWorkspaceStateFile,
+} from './shared/sharedTypes';
+import {
+	SimulationWorkspace,
+	WORKSPACE_PATH,
+	isNotebook,
+} from './simulationWorkspace';
+import {
+	DiagnosticProviderId,
+	IFile,
+	IInlineEdit,
+	IOutcome,
+	IScenario,
+	IScenarioDiagnostic,
+} from './types';
 
-export function setUpSimulationWorkspace(accessor: IServicesAccessor, files: IFile[], workspaceFolders?: Uri[]): SimulationWorkspace {
+export function setUpSimulationWorkspace(
+	accessor: IServicesAccessor,
+	files: IFile[],
+	workspaceFolders?: Uri[],
+): SimulationWorkspace {
 	const workspace = new SimulationWorkspace(files, workspaceFolders);
 	const workspaceService = new SimulationWorkspaceService(workspace);
 	accessor.define(IWorkspaceService, workspaceService);
-	const fs = new SimulationFileSystemAdaptor(workspaceService, accessor.get(IFileSystemService));
+	const fs = new SimulationFileSystemAdaptor(
+		workspaceService,
+		accessor.get(IFileSystemService),
+	);
 	accessor.define(IFileSystemService, fs);
-	accessor.define(ISearchService, new SnapshotSearchService(fs, workspaceService));
-	accessor.define(ITabsAndEditorsService, new TestingTabsAndEditorsService(() => workspace.activeTextEditor, () => workspace.activeNotebookEditor));
+	accessor.define(
+		ISearchService,
+		new SnapshotSearchService(fs, workspaceService),
+	);
+	accessor.define(
+		ITabsAndEditorsService,
+		new TestingTabsAndEditorsService(
+			() => workspace.activeTextEditor,
+			() => workspace.activeNotebookEditor,
+		),
+	);
 	accessor.define(ITestDepsResolver, new SyncDescriptor(TestDepsResolver));
-	accessor.define(ILanguageDiagnosticsService, new SimulationLanguageDiagnosticsService(workspace, accessor.get(IIgnoreService)));
-	accessor.define(ILanguageFeaturesService, new SimulationLanguageFeaturesService(accessor, workspace));
+	accessor.define(
+		ILanguageDiagnosticsService,
+		new SimulationLanguageDiagnosticsService(
+			workspace,
+			accessor.get(IIgnoreService),
+		),
+	);
+	accessor.define(
+		ILanguageFeaturesService,
+		new SimulationLanguageFeaturesService(accessor, workspace),
+	);
 	accessor.define(IReviewService, new SimulationReviewService());
 	accessor.define(INotebookService, new SimulationNotebookService(workspace));
 	return workspace;
 }
 
-export async function teardownSimulationWorkspace(accessor: IServicesAccessor, _workbench: SimulationWorkspace): Promise<void> {
+export async function teardownSimulationWorkspace(
+	accessor: IServicesAccessor,
+	_workbench: SimulationWorkspace,
+): Promise<void> {
 	const ls = accessor.get(ILanguageFeaturesService);
 	if (ls instanceof SimulationLanguageFeaturesService) {
 		await ls.teardown();
@@ -74,12 +164,19 @@ export async function teardownSimulationWorkspace(accessor: IServicesAccessor, _
 
 export async function simulateInlineChat(
 	accessor: IServicesAccessor,
-	scenario: IScenario
+	scenario: IScenario,
 ): Promise<void> {
-	assert(scenario.queries.length > 0, `Cannot simulate scenario with no queries`);
+	assert(
+		scenario.queries.length > 0,
+		`Cannot simulate scenario with no queries`,
+	);
 	assert(scenario.files.length > 0, `Cannot simulate scenario with no files`);
 
-	const workspace = setUpSimulationWorkspace(accessor, scenario.files, scenario.workspaceFolders);
+	const workspace = setUpSimulationWorkspace(
+		accessor,
+		scenario.files,
+		scenario.workspaceFolders,
+	);
 	scenario.extraWorkspaceSetup?.(workspace);
 
 	const instaService = accessor.get(IInstantiationService);
@@ -90,10 +187,14 @@ export async function simulateInlineChat(
 		temperature: InlineChatConstants.temperature,
 		topP: InlineChatConstants.top_p,
 		maxResponseTokens: undefined,
-		rejectionMessage: ''
+		rejectionMessage: '',
 	};
 
-	const provider = instaService.createInstance(CopilotInteractiveEditorSessionProvider, editorAgentName, options.rejectionMessage);
+	const provider = instaService.createInstance(
+		CopilotInteractiveEditorSessionProvider,
+		editorAgentName,
+		options.rejectionMessage,
+	);
 	let session: CopilotInteractiveEditorSession | undefined;
 
 	const states: IWorkspaceState[] = [];
@@ -103,7 +204,6 @@ export async function simulateInlineChat(
 	// run each query for the scenario
 	try {
 		for (const query of scenario.queries) {
-
 			if (query.file) {
 				if (isNotebook(query.file)) {
 					const notebook = workspace.getNotebook(query.file);
@@ -113,7 +213,9 @@ export async function simulateInlineChat(
 
 					const cell = notebook.cellAt(query.activeCell ?? 0);
 					if (!cell) {
-						throw new Error(`Missing cell ${query.activeCell} in notebook file ${query.file}`);
+						throw new Error(
+							`Missing cell ${query.activeCell} in notebook file ${query.file}`,
+						);
 					}
 
 					workspace.addNotebookDocument(notebook);
@@ -123,7 +225,8 @@ export async function simulateInlineChat(
 					workspace.setCurrentDocument(query.file);
 				} else {
 					workspace.setCurrentDocument(
-						workspace.getDocument(query.file).document.uri);
+						workspace.getDocument(query.file).document.uri,
+					);
 				}
 			}
 
@@ -133,55 +236,91 @@ export async function simulateInlineChat(
 			}
 
 			if (query.activeCell) {
-				const cellSelection = new ExtHostNotebookRange(query.activeCell, query.activeCell + 1);
+				const cellSelection = new ExtHostNotebookRange(
+					query.activeCell,
+					query.activeCell + 1,
+				);
 				workspace.setCurrentNotebookSelection(cellSelection);
 			}
 
-			const queryWholeRange = query.wholeRange ? toSelection(query.wholeRange) : undefined;
+			const queryWholeRange = query.wholeRange
+				? toSelection(query.wholeRange)
+				: undefined;
 
-			const editor = accessor.get(ITabsAndEditorsService).activeTextEditor;
+			const editor = accessor.get(
+				ITabsAndEditorsService,
+			).activeTextEditor;
 			const document = editor?.document;
 			if (!editor || !document) {
 				throw new Error(`No file specified for query ${query.query}`);
 			}
 
 			const language = getLanguage(document.languageId);
-			let initialDiagnostics: ResourceMap<vscode.Diagnostic[]> | undefined;
+			let initialDiagnostics:
+				| ResourceMap<vscode.Diagnostic[]>
+				| undefined;
 
 			if (typeof query.diagnostics === 'string') {
 				// diagnostics are computed
 				try {
-					initialDiagnostics = await fetchDiagnostics(accessor, workspace, query.diagnostics);
+					initialDiagnostics = await fetchDiagnostics(
+						accessor,
+						workspace,
+						query.diagnostics,
+					);
 					workspace.setDiagnostics(initialDiagnostics);
 				} catch (error) {
-					throw new Error(`Error obtained while fetching the diagnostics: ${error}`);
+					throw new Error(
+						`Error obtained while fetching the diagnostics: ${error}`,
+					);
 				}
 			} else {
 				// diagnostics are set explicitly
 				const diagnostics = new ResourceMap<vscode.Diagnostic[]>();
-				diagnostics.set(document.uri, convertToDiagnostics(workspace, query.diagnostics));
+				diagnostics.set(
+					document.uri,
+					convertToDiagnostics(workspace, query.diagnostics),
+				);
 				workspace.setDiagnostics(diagnostics);
 			}
 
-			const fileIndentInfo = query.fileIndentInfo ?? { ...detectIndentationStyle(document.getText().split('\n')) };
+			const fileIndentInfo = query.fileIndentInfo ?? {
+				...detectIndentationStyle(document.getText().split('\n')),
+			};
 			workspace.setCurrentDocumentIndentInfo(fileIndentInfo);
 
 			if (isFirst) {
 				isFirst = false;
-				session = await provider.prepareInteractiveEditorSession({ document, selection: editor.selection });
+				session = await provider.prepareInteractiveEditorSession({
+					document,
+					selection: editor.selection,
+				});
 
-				range = session.wholeRange ?? queryWholeRange ?? editor.selection;
+				range =
+					session.wholeRange ?? queryWholeRange ?? editor.selection;
 				const workspacePath = workspace.getFilePath(document.uri);
 				let relativeDiskPath: string | undefined;
 				if (isNotebook(document.uri)) {
-					const notebookDocument = workspace.getNotebook(document.uri);
+					const notebookDocument = workspace.getNotebook(
+						document.uri,
+					);
 					if (!notebookDocument) {
-						throw new Error(`Missing notebook document ${document.uri}`);
+						throw new Error(
+							`Missing notebook document ${document.uri}`,
+						);
 					}
 
-					relativeDiskPath = await testRuntime.writeFile(workspacePath + '.txt', notebookDocument.getText(), INLINE_INITIAL_DOC_TAG); // TODO@aml: using .txt instead of real file extension to avoid breaking AML scripts
+					relativeDiskPath = await testRuntime.writeFile(
+						workspacePath + '.txt',
+						notebookDocument.getText(),
+						INLINE_INITIAL_DOC_TAG,
+					); // TODO@aml: using .txt instead of real file extension to avoid breaking AML scripts
 				} else {
-					relativeDiskPath = await testRuntime.writeFile(workspacePath + '.txt', document.getText(), INLINE_INITIAL_DOC_TAG); // TODO@aml: using .txt instead of real file extension to avoid breaking AML scripts
+					relativeDiskPath = await testRuntime.writeFile(
+						workspacePath + '.txt',
+						document.getText(),
+						INLINE_INITIAL_DOC_TAG,
+					); // TODO@aml: using .txt instead of real file extension to avoid breaking AML scripts
 				}
 
 				if (!relativeDiskPath) {
@@ -192,12 +331,13 @@ export async function simulateInlineChat(
 					kind: 'initial',
 					file: {
 						workspacePath,
-						relativeDiskPath
+						relativeDiskPath,
 					},
 					languageId: language.languageId,
 					selection: toIRange(editor.selection),
 					range: toIRange(range),
-					diagnostics: workspace.activeFileDiagnostics.map(toIDiagnostic),
+					diagnostics:
+						workspace.activeFileDiagnostics.map(toIDiagnostic),
 				});
 			} else {
 				range = queryWholeRange ?? range;
@@ -210,7 +350,9 @@ export async function simulateInlineChat(
 			let command: string | undefined;
 			let prompt = query.query;
 			if (prompt.startsWith('/')) {
-				const groups = /\/(?<intentId>\w+)(?<restOfQuery>\s.*)?/s.exec(query.query)?.groups;
+				const groups = /\/(?<intentId>\w+)(?<restOfQuery>\s.*)?/s.exec(
+					query.query,
+				)?.groups;
 				command = groups?.intentId ?? undefined;
 				prompt = groups?.restOfQuery?.trim() ?? '';
 			}
@@ -228,9 +370,13 @@ export async function simulateInlineChat(
 			};
 			const markdownChunks: string[] = [];
 			let receivedStreamingEdits = false;
-			const changedDocuments = new ResourceMap<WorkingCopyOriginalDocument>();
+			const changedDocuments =
+				new ResourceMap<WorkingCopyOriginalDocument>();
 			const stream = new ChatResponseStreamImpl((value) => {
-				if (value instanceof ChatResponseTextEditPart && value.edits.length > 0) {
+				if (
+					value instanceof ChatResponseTextEditPart &&
+					value.edits.length > 0
+				) {
 					const { uri, edits } = value;
 					receivedStreamingEdits = true;
 
@@ -238,7 +384,11 @@ export async function simulateInlineChat(
 					if (!workspace.hasDocument(uri)) {
 						// this is a new file
 						const language = getLanguageForResource(uri);
-						doc = ExtHostDocumentData.create(uri, '', language.languageId);
+						doc = ExtHostDocumentData.create(
+							uri,
+							'',
+							language.languageId,
+						);
 						workspace.addDocument(doc);
 					} else {
 						doc = workspace.getDocument(uri);
@@ -246,19 +396,29 @@ export async function simulateInlineChat(
 
 					let workingCopyDocument = changedDocuments.get(uri);
 					if (!workingCopyDocument) {
-						workingCopyDocument = new WorkingCopyOriginalDocument(doc.document.getText());
+						workingCopyDocument = new WorkingCopyOriginalDocument(
+							doc.document.getText(),
+						);
 						changedDocuments.set(uri, workingCopyDocument);
 					}
 
-					workingCopyDocument.applyOffsetEdits(workingCopyDocument.transformer.toOffsetEdit(edits));
+					workingCopyDocument.applyOffsetEdits(
+						workingCopyDocument.transformer.toOffsetEdit(edits),
+					);
 					changedDocs.push(doc.document);
-					if (doc.document.uri.toString() === document.uri.toString()) {
+					if (
+						doc.document.uri.toString() === document.uri.toString()
+					) {
 						// edit in the same document, adjust the range
-						range = applyEditsAndExpandRange(workspace, document, edits, range);
+						range = applyEditsAndExpandRange(
+							workspace,
+							document,
+							edits,
+							range,
+						);
 					} else {
 						workspace.applyEdits(doc.document.uri, edits);
 					}
-
 				} else if (value instanceof ChatResponseMarkdownPart) {
 					markdownChunks.push(value.value.value);
 				}
@@ -266,7 +426,12 @@ export async function simulateInlineChat(
 
 			const documentStateBeforeInvocation = document.getText();
 
-			const response = await provider.provideInteractiveEditorResponse(session!, request, stream, CancellationToken.None);
+			const response = await provider.provideInteractiveEditorResponse(
+				session!,
+				request,
+				stream,
+				CancellationToken.None,
+			);
 
 			const intent = response?.promptQuery.intent;
 
@@ -274,26 +439,31 @@ export async function simulateInlineChat(
 			let outcome: IOutcome;
 			if (!response) {
 				outcome = { type: 'none' };
-			} else if (receivedStreamingEdits || 'edits' in response) { // TODO@ulugbekna: we should be able to use `instanceof` when the proposed API adopts classes instead of interfaces
+			} else if (receivedStreamingEdits || 'edits' in response) {
+				// TODO@ulugbekna: we should be able to use `instanceof` when the proposed API adopts classes instead of interfaces
 				const outcomeFiles: IFile[] = [];
 				const workspaceEdit = new WorkspaceEdit();
 				const outcomeEdits: IInlineEdit[] = [];
-				for (const [uri, workingCopyDoc] of changedDocuments.entries()) {
+				for (const [
+					uri,
+					workingCopyDoc,
+				] of changedDocuments.entries()) {
 					if (uri.scheme === 'file') {
 						outcomeFiles.push({
 							kind: 'relativeFile',
 							fileName: path.basename(uri.fsPath),
-							fileContents: workspace.getDocument(uri).getText()
+							fileContents: workspace.getDocument(uri).getText(),
 						});
 					} else {
 						outcomeFiles.push({
 							kind: 'qualifiedFile',
 							uri: uri,
-							fileContents: workspace.getDocument(uri).getText()
+							fileContents: workspace.getDocument(uri).getText(),
 						});
 					}
 					const offsetEdits = workingCopyDoc.appliedEdits;
-					const textEdits = workingCopyDoc.transformer.toTextEdits(offsetEdits);
+					const textEdits =
+						workingCopyDoc.transformer.toTextEdits(offsetEdits);
 					if (uri.toString() === document.uri.toString()) {
 						// edit in the same document
 						for (let i = 0; i < offsetEdits.edits.length; i++) {
@@ -318,12 +488,12 @@ export async function simulateInlineChat(
 						originalFileContents: documentStateBeforeInvocation,
 						fileContents: document.getText(),
 						markdownMessage: markdownChunks.join(''),
-						annotations: response.reply.annotations
+						annotations: response.reply.annotations,
 					};
 				}
 				const edits = response.edits;
 				if (Array.isArray(edits)) {
-					const outcomeEdits: IInlineEdit[] = edits.map(edit => {
+					const outcomeEdits: IInlineEdit[] = edits.map((edit) => {
 						const startOffset = document.offsetAt(edit.range.start);
 						const endOffset = document.offsetAt(edit.range.end);
 						return {
@@ -333,14 +503,22 @@ export async function simulateInlineChat(
 							newText: edit.newText,
 						};
 					});
-
 				} else {
-
-					outcome = { type: 'workspaceEdit', files: outcomeFiles, annotations: response.reply.annotations, edits: workspaceEdit, content: markdownChunks.join('') };
+					outcome = {
+						type: 'workspaceEdit',
+						files: outcomeFiles,
+						annotations: response.reply.annotations,
+						edits: workspaceEdit,
+						content: markdownChunks.join(''),
+					};
 				}
 			} else {
 				goToChat = true;
-				outcome = { type: 'conversational', content: markdownChunks.join(''), annotations: response.reply.annotations };
+				outcome = {
+					type: 'conversational',
+					content: markdownChunks.join(''),
+					annotations: response.reply.annotations,
+				};
 			}
 
 			const changedFilePaths: IWorkspaceStateFile[] = [];
@@ -357,12 +535,20 @@ export async function simulateInlineChat(
 						const notebook = workspace.getNotebook(changedDoc.uri);
 						changedFilePaths.push({
 							workspacePath,
-							relativeDiskPath: await testRuntime.writeFile(workspacePath, notebook.getText(), INLINE_CHANGED_DOC_TAG)
+							relativeDiskPath: await testRuntime.writeFile(
+								workspacePath,
+								notebook.getText(),
+								INLINE_CHANGED_DOC_TAG,
+							),
 						});
 					} else {
 						changedFilePaths.push({
 							workspacePath,
-							relativeDiskPath: await testRuntime.writeFile(workspacePath, changedDoc.getText(), INLINE_CHANGED_DOC_TAG)
+							relativeDiskPath: await testRuntime.writeFile(
+								workspacePath,
+								changedDoc.getText(),
+								INLINE_CHANGED_DOC_TAG,
+							),
 						});
 					}
 				}
@@ -370,21 +556,27 @@ export async function simulateInlineChat(
 				// We managed to edit some files!
 				testRuntime.setOutcome({
 					kind: 'edit',
-					files: changedFilePaths.map(f => f.relativeDiskPath),
-					annotations: outcome.annotations
+					files: changedFilePaths.map((f) => f.relativeDiskPath),
+					annotations: outcome.annotations,
 				});
 			} else {
-				const workspacePath = workspace.getFilePath(editor.document.uri);
+				const workspacePath = workspace.getFilePath(
+					editor.document.uri,
+				);
 				changedFilePaths.push({
 					workspacePath,
-					relativeDiskPath: await testRuntime.writeFile(workspacePath, editor.document.getText(), INLINE_CHANGED_DOC_TAG)
+					relativeDiskPath: await testRuntime.writeFile(
+						workspacePath,
+						editor.document.getText(),
+						INLINE_CHANGED_DOC_TAG,
+					),
 				});
 
 				if (response && 'contents' in response) {
 					testRuntime.setOutcome({
 						kind: 'answer',
 						content: markdownChunks.join(''),
-						annotations: outcome.annotations
+						annotations: outcome.annotations,
 					});
 				} else {
 					const chatMLFetcher = accessor.get(IChatMLFetcher);
@@ -396,7 +588,7 @@ export async function simulateInlineChat(
 						kind: 'failed',
 						hitContentFilter: contentFilterCount > 0,
 						error: 'No contents.',
-						annotations: outcome.annotations
+						annotations: outcome.annotations,
 					});
 				}
 			}
@@ -407,15 +599,30 @@ export async function simulateInlineChat(
 				requestCount = fetcher.interceptedRequests.length;
 			}
 
-			let diagnostics: { [workspacePath: string]: IDiagnosticComparison } | undefined = undefined;
+			let diagnostics:
+				| { [workspacePath: string]: IDiagnosticComparison }
+				| undefined = undefined;
 			if (typeof query.diagnostics === 'string') {
-				const diagnosticsAfter = await fetchDiagnostics(accessor, workspace, query.diagnostics);
+				const diagnosticsAfter = await fetchDiagnostics(
+					accessor,
+					workspace,
+					query.diagnostics,
+				);
 				diagnostics = {};
 				for (const changedFilePath of changedFilePaths) {
-					const uri = workspace.getUriFromFilePath(changedFilePath.workspacePath);
-					const before = (initialDiagnostics?.get(uri) ?? []).map(toIDiagnostic);
-					const after = (diagnosticsAfter.get(uri) ?? []).map(toIDiagnostic);
-					diagnostics[changedFilePath.workspacePath] = { before, after };
+					const uri = workspace.getUriFromFilePath(
+						changedFilePath.workspacePath,
+					);
+					const before = (initialDiagnostics?.get(uri) ?? []).map(
+						toIDiagnostic,
+					);
+					const after = (diagnosticsAfter.get(uri) ?? []).map(
+						toIDiagnostic,
+					);
+					diagnostics[changedFilePath.workspacePath] = {
+						before,
+						after,
+					};
 				}
 			}
 
@@ -441,16 +648,26 @@ export async function simulateInlineChat(
 		}
 	} finally {
 		await teardownSimulationWorkspace(accessor, workspace);
-		await testRuntime.writeFile('inline-simulator.txt', JSON.stringify(states, undefined, 2), INLINE_STATE_TAG); // TODO@aml: using .txt instead of .json to avoid breaking AML scripts
+		await testRuntime.writeFile(
+			'inline-simulator.txt',
+			JSON.stringify(states, undefined, 2),
+			INLINE_STATE_TAG,
+		); // TODO@aml: using .txt instead of .json to avoid breaking AML scripts
 	}
 }
 
-function computeMoreMinimalEdit(document: vscode.TextDocument, edit: vscode.TextEdit): vscode.TextEdit {
+function computeMoreMinimalEdit(
+	document: vscode.TextDocument,
+	edit: vscode.TextEdit,
+): vscode.TextEdit {
 	edit = reduceCommonPrefix(document, edit);
 	edit = reduceCommonSuffix(document, edit);
 	return edit;
 
-	function reduceCommonPrefix(document: vscode.TextDocument, edit: vscode.TextEdit): vscode.TextEdit {
+	function reduceCommonPrefix(
+		document: vscode.TextDocument,
+		edit: vscode.TextEdit,
+	): vscode.TextEdit {
 		const start = document.offsetAt(edit.range.start);
 		const end = document.offsetAt(edit.range.end);
 		const oldText = document.getText().substring(start, end);
@@ -460,13 +677,16 @@ function computeMoreMinimalEdit(document: vscode.TextDocument, edit: vscode.Text
 		return new TextEdit(
 			new Range(
 				document.positionAt(start + commonPrefixLen),
-				edit.range.end
+				edit.range.end,
 			),
-			edit.newText.substring(commonPrefixLen)
+			edit.newText.substring(commonPrefixLen),
 		);
 	}
 
-	function reduceCommonSuffix(document: vscode.TextDocument, edit: vscode.TextEdit): vscode.TextEdit {
+	function reduceCommonSuffix(
+		document: vscode.TextDocument,
+		edit: vscode.TextEdit,
+	): vscode.TextEdit {
 		const start = document.offsetAt(edit.range.start);
 		const end = document.offsetAt(edit.range.end);
 		const oldText = document.getText().substring(start, end);
@@ -476,22 +696,37 @@ function computeMoreMinimalEdit(document: vscode.TextDocument, edit: vscode.Text
 		return new TextEdit(
 			new Range(
 				edit.range.start,
-				document.positionAt(end - commonSuffixLen)
+				document.positionAt(end - commonSuffixLen),
 			),
-			edit.newText.substring(0, newText.length - commonSuffixLen)
+			edit.newText.substring(0, newText.length - commonSuffixLen),
 		);
 	}
 }
 
-function applyEditsAndExpandRange(workspace: SimulationWorkspace, document: vscode.TextDocument, edits: vscode.TextEdit[], range: vscode.Range): vscode.Range;
-function applyEditsAndExpandRange(workspace: SimulationWorkspace, document: vscode.TextDocument, edits: vscode.TextEdit[], range: vscode.Range | undefined): vscode.Range | undefined;
-function applyEditsAndExpandRange(workspace: SimulationWorkspace, document: vscode.TextDocument, edits: vscode.TextEdit[], range: vscode.Range | undefined): vscode.Range | undefined {
+function applyEditsAndExpandRange(
+	workspace: SimulationWorkspace,
+	document: vscode.TextDocument,
+	edits: vscode.TextEdit[],
+	range: vscode.Range,
+): vscode.Range;
+function applyEditsAndExpandRange(
+	workspace: SimulationWorkspace,
+	document: vscode.TextDocument,
+	edits: vscode.TextEdit[],
+	range: vscode.Range | undefined,
+): vscode.Range | undefined;
+function applyEditsAndExpandRange(
+	workspace: SimulationWorkspace,
+	document: vscode.TextDocument,
+	edits: vscode.TextEdit[],
+	range: vscode.Range | undefined,
+): vscode.Range | undefined {
 	if (typeof range === 'undefined') {
 		workspace.applyEdits(document.uri, edits, range);
 		return undefined;
 	}
 
-	edits = edits.map(edit => computeMoreMinimalEdit(document, edit));
+	edits = edits.map((edit) => computeMoreMinimalEdit(document, edit));
 
 	const touchedRanges = new Set<[number, number]>();
 	let deltaOffset = 0;
@@ -515,23 +750,46 @@ function applyEditsAndExpandRange(workspace: SimulationWorkspace, document: vsco
 	return range;
 }
 
-function convertToDiagnostics(workspace: SimulationWorkspace, diagnostics: IScenarioDiagnostic[] | undefined): vscode.Diagnostic[] {
+function convertToDiagnostics(
+	workspace: SimulationWorkspace,
+	diagnostics: IScenarioDiagnostic[] | undefined,
+): vscode.Diagnostic[] {
 	return (diagnostics ?? []).map((d) => {
-		const diagnostic = new Diagnostic(new Range(d.startLine, d.startCharacter, d.endLine, d.endCharacter), d.message);
-		diagnostic.relatedInformation = d.relatedInformation?.map(r => {
-			const range = new Range(r.location.startLine, r.location.startCharacter, r.location.endLine, r.location.endCharacter);
+		const diagnostic = new Diagnostic(
+			new Range(d.startLine, d.startCharacter, d.endLine, d.endCharacter),
+			d.message,
+		);
+		diagnostic.relatedInformation = d.relatedInformation?.map((r) => {
+			const range = new Range(
+				r.location.startLine,
+				r.location.startCharacter,
+				r.location.endLine,
+				r.location.endCharacter,
+			);
 			const relatedDocument = workspace.getDocument(r.location.path);
-			const relatedLocation = new Location(relatedDocument.document.uri, range);
+			const relatedLocation = new Location(
+				relatedDocument.document.uri,
+				range,
+			);
 			return new DiagnosticRelatedInformation(relatedLocation, r.message);
 		});
 		return diagnostic;
 	});
 }
 
-async function fetchDiagnostics(accessor: IServicesAccessor, workspace: SimulationWorkspace, providerId: DiagnosticProviderId) {
-	const files = workspace.documents.map(doc => ({ fileName: workspace.getFilePath(doc.document.uri), fileContents: doc.document.getText() }));
+async function fetchDiagnostics(
+	accessor: IServicesAccessor,
+	workspace: SimulationWorkspace,
+	providerId: DiagnosticProviderId,
+) {
+	const files = workspace.documents.map((doc) => ({
+		fileName: workspace.getFilePath(doc.document.uri),
+		fileContents: doc.document.getText(),
+	}));
 	const diagnostics = await getDiagnostics(accessor, files, providerId);
-	return convertTestToVSCodeDiagnostics(diagnostics, path => workspace.getUriFromFilePath(path));
+	return convertTestToVSCodeDiagnostics(diagnostics, (path) =>
+		workspace.getUriFromFilePath(path),
+	);
 }
 
 function toIDiagnostic(diagnostic: vscode.Diagnostic): IDiagnostic {
@@ -550,39 +808,59 @@ export interface OffsetBasedRange {
 	readonly length: number;
 }
 
-export function toSelection(selection: [number, number] | [number, number, number, number]): vscode.Selection {
+export function toSelection(
+	selection: [number, number] | [number, number, number, number],
+): vscode.Selection {
 	if (selection.length === 2) {
-		return new Selection(selection[0], selection[1], selection[0], selection[1]);
+		return new Selection(
+			selection[0],
+			selection[1],
+			selection[0],
+			selection[1],
+		);
 	} else {
-		return new Selection(selection[0], selection[1], selection[2], selection[3]);
+		return new Selection(
+			selection[0],
+			selection[1],
+			selection[2],
+			selection[3],
+		);
 	}
 }
 
 class SimulationLanguageDiagnosticsService extends AbstractLanguageDiagnosticsService {
-
-	constructor(private workspace: SimulationWorkspace, ignoreService: IIgnoreService) {
+	constructor(
+		private workspace: SimulationWorkspace,
+		ignoreService: IIgnoreService,
+	) {
 		super(ignoreService);
 	}
 
-	override onDidChangeDiagnostics: vscode.Event<vscode.DiagnosticChangeEvent> = this.workspace.onDidChangeDiagnostics;
-	override getDiagnostics: (resource: vscode.Uri) => vscode.Diagnostic[] = this.workspace.getDiagnostics.bind(this.workspace);
+	override onDidChangeDiagnostics: vscode.Event<vscode.DiagnosticChangeEvent> =
+		this.workspace.onDidChangeDiagnostics;
+	override getDiagnostics: (resource: vscode.Uri) => vscode.Diagnostic[] =
+		this.workspace.getDiagnostics.bind(this.workspace);
 }
 
 class SimulationWorkspaceService extends AbstractWorkspaceService {
-
 	constructor(private readonly workspace: SimulationWorkspace) {
 		super();
 	}
 
 	override get textDocuments(): readonly vscode.TextDocument[] {
-		return this.workspace.documents.map(d => d.document);
+		return this.workspace.documents.map((d) => d.document);
 	}
 
-	override onDidOpenTextDocument: vscode.Event<vscode.TextDocument> = Event.None;
-	override onDidCloseTextDocument: vscode.Event<vscode.TextDocument> = Event.None;
-	override onDidChangeTextDocument: vscode.Event<vscode.TextDocumentChangeEvent> = Event.None;
+	override onDidOpenTextDocument: vscode.Event<vscode.TextDocument> =
+		Event.None;
+	override onDidCloseTextDocument: vscode.Event<vscode.TextDocument> =
+		Event.None;
+	override onDidChangeTextDocument: vscode.Event<vscode.TextDocumentChangeEvent> =
+		Event.None;
 
-	override async openTextDocument(uri: vscode.Uri): Promise<vscode.TextDocument> {
+	override async openTextDocument(
+		uri: vscode.Uri,
+	): Promise<vscode.TextDocument> {
 		if (this.workspace.hasDocument(uri)) {
 			return this.workspace.getDocument(uri).document;
 		}
@@ -591,7 +869,11 @@ class SimulationWorkspaceService extends AbstractWorkspaceService {
 			const filePath = uri.fsPath;
 			const fileContents = await fs.readFile(filePath, 'utf8');
 			const language = getLanguageForResource(uri);
-			return ExtHostDocumentData.create(uri, fileContents, language.languageId).document;
+			return ExtHostDocumentData.create(
+				uri,
+				fileContents,
+				language.languageId,
+			).document;
 		}
 
 		throw new Error(`File not found ${uri}`);
@@ -612,15 +894,14 @@ class SimulationWorkspaceService extends AbstractWorkspaceService {
 }
 
 class SimulationFileSystemAdaptor implements IFileSystemService {
-
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _time = Date.now();
 
 	constructor(
 		@IWorkspaceService private _workspace: IWorkspaceService,
-		@IFileSystemService private _delegate: IFileSystemService
-	) { }
+		@IFileSystemService private _delegate: IFileSystemService,
+	) {}
 
 	async stat(uri: URI): Promise<vscode.FileStat> {
 		const doc = await this._workspace.openTextDocument(uri);
@@ -629,7 +910,7 @@ class SimulationFileSystemAdaptor implements IFileSystemService {
 				type: FileType.File,
 				ctime: this._time,
 				mtime: this._time,
-				size: new TextEncoder().encode(doc.getText()).byteLength
+				size: new TextEncoder().encode(doc.getText()).byteLength,
 			};
 		}
 		return await this._delegate.stat(uri);
@@ -645,8 +926,11 @@ class SimulationFileSystemAdaptor implements IFileSystemService {
 
 	async readDirectory(uri: URI): Promise<[string, FileType][]> {
 		if (uri.path === WORKSPACE_PATH) {
-			return this._workspace.textDocuments.map(doc => {
-				const relativePath = path.relative(WORKSPACE_PATH, doc.uri.path);
+			return this._workspace.textDocuments.map((doc) => {
+				const relativePath = path.relative(
+					WORKSPACE_PATH,
+					doc.uri.path,
+				);
 				return [relativePath, FileType.File];
 			});
 		}
@@ -661,15 +945,31 @@ class SimulationFileSystemAdaptor implements IFileSystemService {
 		return await this._delegate.writeFile(uri, content);
 	}
 
-	async delete(uri: URI, options?: { recursive?: boolean | undefined; useTrash?: boolean | undefined } | undefined): Promise<void> {
+	async delete(
+		uri: URI,
+		options?:
+			| {
+					recursive?: boolean | undefined;
+					useTrash?: boolean | undefined;
+			  }
+			| undefined,
+	): Promise<void> {
 		return await this._delegate.delete(uri, options);
 	}
 
-	async rename(oldURI: URI, newURI: URI, options?: { overwrite?: boolean | undefined } | undefined): Promise<void> {
+	async rename(
+		oldURI: URI,
+		newURI: URI,
+		options?: { overwrite?: boolean | undefined } | undefined,
+	): Promise<void> {
 		return await this._delegate.rename(oldURI, newURI, options);
 	}
 
-	async copy(source: URI, destination: URI, options?: { overwrite?: boolean | undefined } | undefined): Promise<void> {
+	async copy(
+		source: URI,
+		destination: URI,
+		options?: { overwrite?: boolean | undefined } | undefined,
+	): Promise<void> {
 		return await this._delegate.copy(source, destination, options);
 	}
 
@@ -690,19 +990,21 @@ class SimulationReviewService implements IReviewService {
 		get(uri: vscode.Uri) {
 			return this.diagnosticCollection.get(uri.toString());
 		},
-		set(uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[] | undefined) {
+		set(
+			uri: vscode.Uri,
+			diagnostics: readonly vscode.Diagnostic[] | undefined,
+		) {
 			if (diagnostics?.length) {
 				this.diagnosticCollection.set(uri.toString(), diagnostics);
 			} else {
 				this.diagnosticCollection.delete(uri.toString());
 			}
-		}
+		},
 	};
 
 	private _comments: ReviewComment[] = [];
 
-	updateContextValues(): void {
-	}
+	updateContextValues(): void {}
 
 	isIntentEnabled(): boolean {
 		return ConfigKey.ReviewIntent.defaultValue;
@@ -720,8 +1022,7 @@ class SimulationReviewService implements IReviewService {
 		this._comments.push(...comments);
 	}
 
-	collapseReviewComment(_comment: ReviewComment): void {
-	}
+	collapseReviewComment(_comment: ReviewComment): void {}
 
 	removeReviewComments(comments: ReviewComment[]) {
 		for (const comment of comments) {
@@ -732,21 +1033,24 @@ class SimulationReviewService implements IReviewService {
 		}
 	}
 
-	findReviewComment(_threadOrComment: vscode.CommentThread | vscode.Comment): ReviewComment | undefined {
+	findReviewComment(
+		_threadOrComment: vscode.CommentThread | vscode.Comment,
+	): ReviewComment | undefined {
 		return undefined;
 	}
 
-	findCommentThread(comment: ReviewComment): vscode.CommentThread | undefined {
+	findCommentThread(
+		comment: ReviewComment,
+	): vscode.CommentThread | undefined {
 		return undefined;
 	}
 }
 
 class SimulationNotebookService implements INotebookService {
-
 	declare _serviceBrand: undefined;
 	private _variablesMap = new ResourceMap<VariablesResult[]>();
 
-	constructor(private _workspace: SimulationWorkspace) { }
+	constructor(private _workspace: SimulationWorkspace) {}
 
 	getCellExecutions(notebook: vscode.Uri): vscode.NotebookCell[] {
 		return [];

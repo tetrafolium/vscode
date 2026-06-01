@@ -6,29 +6,46 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatRequest, LanguageModelToolInformation } from 'vscode';
 import { IChatHookService } from '../../../../platform/chat/common/chatHookService';
-import { ChatFetchResponseType, ChatResponse } from '../../../../platform/chat/common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatResponse,
+} from '../../../../platform/chat/common/commonTypes';
 import { CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
 import { generateUuid } from '../../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { Conversation, Turn } from '../../../prompt/common/conversation';
-import { IBuildPromptContext, IToolCallRound } from '../../../prompt/common/intents';
-import { IBuildPromptResult, nullRenderPromptResult } from '../../../prompt/node/intents';
+import {
+	IBuildPromptContext,
+	IToolCallRound,
+} from '../../../prompt/common/intents';
+import {
+	IBuildPromptResult,
+	nullRenderPromptResult,
+} from '../../../prompt/node/intents';
 import { createExtensionUnitTestingServices } from '../../../test/node/services';
 import { IToolsService } from '../../../tools/common/toolsService';
 import { TestToolsService } from '../../../tools/node/test/testToolsService';
-import { IToolCallingLoopOptions, IToolCallSingleResult, ToolCallingLoop } from '../../node/toolCallingLoop';
+import {
+	IToolCallingLoopOptions,
+	IToolCallSingleResult,
+	ToolCallingLoop,
+} from '../../node/toolCallingLoop';
 import { MockChatHookService } from './mockChatHookService';
 
 /**
  * Concrete test implementation that exposes autopilot-related protected methods.
  */
 class AutopilotTestToolCallingLoop extends ToolCallingLoop<IToolCallingLoopOptions> {
-	protected override async buildPrompt(_buildPromptContext: IBuildPromptContext): Promise<IBuildPromptResult> {
+	protected override async buildPrompt(
+		_buildPromptContext: IBuildPromptContext,
+	): Promise<IBuildPromptResult> {
 		return nullRenderPromptResult();
 	}
 
-	protected override async getAvailableTools(): Promise<LanguageModelToolInformation[]> {
+	protected override async getAvailableTools(): Promise<
+		LanguageModelToolInformation[]
+	> {
 		return [];
 	}
 
@@ -36,7 +53,9 @@ class AutopilotTestToolCallingLoop extends ToolCallingLoop<IToolCallingLoopOptio
 		throw new Error('fetch should not be called in these tests');
 	}
 
-	public testShouldAutopilotContinue(result: IToolCallSingleResult): string | undefined {
+	public testShouldAutopilotContinue(
+		result: IToolCallSingleResult,
+	): string | undefined {
 		return this.shouldAutopilotContinue(result);
 	}
 
@@ -66,12 +85,16 @@ class AutopilotTestToolCallingLoop extends ToolCallingLoop<IToolCallingLoopOptio
 	/**
 	 * Expose ensureAutopilotTools for testing.
 	 */
-	public testEnsureAutopilotTools(tools: LanguageModelToolInformation[]): LanguageModelToolInformation[] {
+	public testEnsureAutopilotTools(
+		tools: LanguageModelToolInformation[],
+	): LanguageModelToolInformation[] {
 		return this.ensureAutopilotTools(tools);
 	}
 }
 
-function createMockChatRequest(overrides: Partial<ChatRequest> = {}): ChatRequest {
+function createMockChatRequest(
+	overrides: Partial<ChatRequest> = {},
+): ChatRequest {
 	return {
 		prompt: 'test prompt',
 		command: undefined,
@@ -94,20 +117,25 @@ function createMockChatRequest(overrides: Partial<ChatRequest> = {}): ChatReques
 function createTestConversation(turnCount: number = 1): Conversation {
 	const turns: Turn[] = [];
 	for (let i = 0; i < turnCount; i++) {
-		turns.push(new Turn(
-			generateUuid(),
-			{ message: `test message ${i}`, type: 'user' }
-		));
+		turns.push(
+			new Turn(generateUuid(), {
+				message: `test message ${i}`,
+				type: 'user',
+			}),
+		);
 	}
 	return new Conversation(generateUuid(), turns);
 }
 
-function createMockRound(toolCallNames: string[] = [], response: string = ''): IToolCallRound {
+function createMockRound(
+	toolCallNames: string[] = [],
+	response: string = '',
+): IToolCallRound {
 	return {
 		id: generateUuid(),
 		response,
 		toolInputRetry: 0,
-		toolCalls: toolCallNames.map(name => ({
+		toolCalls: toolCallNames.map((name) => ({
 			id: generateUuid(),
 			name,
 			arguments: '{}',
@@ -115,7 +143,9 @@ function createMockRound(toolCallNames: string[] = [], response: string = ''): I
 	};
 }
 
-function createMockSingleResult(overrides: Partial<IToolCallSingleResult> = {}): IToolCallSingleResult {
+function createMockSingleResult(
+	overrides: Partial<IToolCallSingleResult> = {},
+): IToolCallSingleResult {
 	return {
 		response: { type: 0, value: '' } as any,
 		round: createMockRound(),
@@ -135,7 +165,9 @@ describe('ToolCallingLoop autopilot', () => {
 		disposables = new DisposableStore();
 		const mockChatHookService = new MockChatHookService();
 
-		const serviceCollection = disposables.add(createExtensionUnitTestingServices());
+		const serviceCollection = disposables.add(
+			createExtensionUnitTestingServices(),
+		);
 		serviceCollection.define(IChatHookService, mockChatHookService);
 
 		const accessor = serviceCollection.createTestingAccessor();
@@ -150,7 +182,10 @@ describe('ToolCallingLoop autopilot', () => {
 		vi.restoreAllMocks();
 	});
 
-	function createLoop(permissionLevel?: string, requestOverrides: Partial<ChatRequest> = {}): AutopilotTestToolCallingLoop {
+	function createLoop(
+		permissionLevel?: string,
+		requestOverrides: Partial<ChatRequest> = {},
+	): AutopilotTestToolCallingLoop {
 		const conversation = createTestConversation(1);
 		const request = createMockChatRequest({
 			permissionLevel,
@@ -162,7 +197,7 @@ describe('ToolCallingLoop autopilot', () => {
 				conversation,
 				toolCallLimit: 10,
 				request,
-			}
+			},
 		);
 		disposables.add(loop);
 		return loop;
@@ -171,7 +206,9 @@ describe('ToolCallingLoop autopilot', () => {
 	describe('shouldAutopilotContinue', () => {
 		it('should return a nudge message when task_complete was not called', () => {
 			const loop = createLoop('autopilot');
-			const result = loop.testShouldAutopilotContinue(createMockSingleResult());
+			const result = loop.testShouldAutopilotContinue(
+				createMockSingleResult(),
+			);
 			expect(result).toContain('task_complete');
 		});
 
@@ -179,7 +216,9 @@ describe('ToolCallingLoop autopilot', () => {
 			const loop = createLoop('autopilot');
 			loop.addToolCallRound(createMockRound(['task_complete']));
 
-			const result = loop.testShouldAutopilotContinue(createMockSingleResult());
+			const result = loop.testShouldAutopilotContinue(
+				createMockSingleResult(),
+			);
 			expect(result).toBeUndefined();
 		});
 
@@ -188,12 +227,16 @@ describe('ToolCallingLoop autopilot', () => {
 
 			// Iterate 5 times (MAX_AUTOPILOT_ITERATIONS = 5)
 			for (let i = 0; i < 5; i++) {
-				const msg = loop.testShouldAutopilotContinue(createMockSingleResult());
+				const msg = loop.testShouldAutopilotContinue(
+					createMockSingleResult(),
+				);
 				expect(msg).toContain('task_complete');
 			}
 
 			// 6th call should return undefined — hit the cap
-			const msg = loop.testShouldAutopilotContinue(createMockSingleResult());
+			const msg = loop.testShouldAutopilotContinue(
+				createMockSingleResult(),
+			);
 			expect(msg).toBeUndefined();
 		});
 
@@ -205,15 +248,22 @@ describe('ToolCallingLoop autopilot', () => {
 
 			// Should bail — the previous nudge produced no tool calls, so further nudges
 			// would just waste tokens (the model is effectively done).
-			const result = loop.testShouldAutopilotContinue(createMockSingleResult());
+			const result = loop.testShouldAutopilotContinue(
+				createMockSingleResult(),
+			);
 			expect(result).toBeUndefined();
 		});
 
 		it('should skip the nudge when the model returned a text-only response (no tool calls)', () => {
 			const loop = createLoop('autopilot');
-			const result = loop.testShouldAutopilotContinue(createMockSingleResult({
-				round: createMockRound([], 'Here is a summary of what I did.'),
-			}));
+			const result = loop.testShouldAutopilotContinue(
+				createMockSingleResult({
+					round: createMockRound(
+						[],
+						'Here is a summary of what I did.',
+					),
+				}),
+			);
 			expect(result).toBeUndefined();
 		});
 
@@ -221,7 +271,9 @@ describe('ToolCallingLoop autopilot', () => {
 			const loop = createLoop('autopilot');
 
 			// First nudge
-			const msg1 = loop.testShouldAutopilotContinue(createMockSingleResult());
+			const msg1 = loop.testShouldAutopilotContinue(
+				createMockSingleResult(),
+			);
 			expect(msg1).toContain('task_complete');
 
 			// Simulate the run() loop setting the flag then the model making progress
@@ -230,59 +282,102 @@ describe('ToolCallingLoop autopilot', () => {
 			loop.setAutopilotStopHookActive(false);
 
 			// Second nudge should work
-			const msg2 = loop.testShouldAutopilotContinue(createMockSingleResult());
+			const msg2 = loop.testShouldAutopilotContinue(
+				createMockSingleResult(),
+			);
 			expect(msg2).toContain('task_complete');
 		});
 	});
 
 	describe('shouldAutoRetry', () => {
 		function mockResponse(type: ChatFetchResponseType): ChatResponse {
-			return { type, reason: 'test', requestId: 'req-1', serverRequestId: undefined } as any;
+			return {
+				type,
+				reason: 'test',
+				requestId: 'req-1',
+				serverRequestId: undefined,
+			} as any;
 		}
 
 		it('should retry on network error in autoApprove mode', () => {
 			const loop = createLoop('autoApprove');
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.NetworkError))).toBe(true);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.NetworkError),
+				),
+			).toBe(true);
 		});
 
 		it('should retry on Failed in autopilot mode', () => {
 			const loop = createLoop('autopilot');
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.Failed))).toBe(true);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.Failed),
+				),
+			).toBe(true);
 		});
 
 		it('should retry on BadRequest', () => {
 			const loop = createLoop('autoApprove');
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.BadRequest))).toBe(true);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.BadRequest),
+				),
+			).toBe(true);
 		});
 
 		it('should not retry on RateLimited', () => {
 			const loop = createLoop('autoApprove');
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.RateLimited))).toBe(false);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.RateLimited),
+				),
+			).toBe(false);
 		});
 
 		it('should not retry on QuotaExceeded', () => {
 			const loop = createLoop('autopilot');
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.QuotaExceeded))).toBe(false);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.QuotaExceeded),
+				),
+			).toBe(false);
 		});
 
 		it('should not retry on Canceled', () => {
 			const loop = createLoop('autoApprove');
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.Canceled))).toBe(false);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.Canceled),
+				),
+			).toBe(false);
 		});
 
 		it('should not retry on OffTopic', () => {
 			const loop = createLoop('autopilot');
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.OffTopic))).toBe(false);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.OffTopic),
+				),
+			).toBe(false);
 		});
 
 		it('should not retry on Success', () => {
 			const loop = createLoop('autoApprove');
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.Success))).toBe(false);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.Success),
+				),
+			).toBe(false);
 		});
 
 		it('should not retry without autoApprove or autopilot permission', () => {
 			const loop = createLoop(undefined);
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.NetworkError))).toBe(false);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.NetworkError),
+				),
+			).toBe(false);
 		});
 
 		it('should not retry after hitting MAX_AUTOPILOT_RETRIES', () => {
@@ -290,7 +385,11 @@ describe('ToolCallingLoop autopilot', () => {
 			for (let i = 0; i < 3; i++) {
 				loop.incrementAutopilotRetryCount();
 			}
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.NetworkError))).toBe(false);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.NetworkError),
+				),
+			).toBe(false);
 		});
 
 		it('should allow retries up to the limit', () => {
@@ -299,7 +398,11 @@ describe('ToolCallingLoop autopilot', () => {
 				loop.incrementAutopilotRetryCount();
 			}
 			// 2 retries done, still under the cap of 3
-			expect(loop.testShouldAutoRetry(mockResponse(ChatFetchResponseType.Failed))).toBe(true);
+			expect(
+				loop.testShouldAutoRetry(
+					mockResponse(ChatFetchResponseType.Failed),
+				),
+			).toBe(true);
 		});
 	});
 
@@ -315,7 +418,7 @@ describe('ToolCallingLoop autopilot', () => {
 					conversation,
 					toolCallLimit: 150,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
@@ -336,7 +439,7 @@ describe('ToolCallingLoop autopilot', () => {
 					conversation,
 					toolCallLimit: 150,
 					request,
-				}
+				},
 			);
 			disposables.add(loop);
 
@@ -354,25 +457,37 @@ describe('ToolCallingLoop autopilot', () => {
 		};
 
 		function registerTaskCompleteTool(): void {
-			const toolsService = instantiationService.invokeFunction(acc => acc.get(IToolsService)) as TestToolsService;
-			toolsService.addTestToolOverride(mockTaskCompleteTool, { invoke: () => ({ content: [] }) });
+			const toolsService = instantiationService.invokeFunction((acc) =>
+				acc.get(IToolsService),
+			) as TestToolsService;
+			toolsService.addTestToolOverride(mockTaskCompleteTool, {
+				invoke: () => ({ content: [] }),
+			});
 		}
 
 		it('should add task_complete when missing in autopilot mode', () => {
 			registerTaskCompleteTool();
 			const loop = createLoop('autopilot');
 			const tools: LanguageModelToolInformation[] = [
-				{ name: 'read_file', description: '', inputSchema: undefined, tags: [], source: undefined },
+				{
+					name: 'read_file',
+					description: '',
+					inputSchema: undefined,
+					tags: [],
+					source: undefined,
+				},
 			];
 			const result = loop.testEnsureAutopilotTools(tools);
 			expect(result).toHaveLength(2);
-			expect(result.some(t => t.name === 'task_complete')).toBe(true);
+			expect(result.some((t) => t.name === 'task_complete')).toBe(true);
 		});
 
 		it('should not duplicate task_complete when already present', () => {
 			registerTaskCompleteTool();
 			const loop = createLoop('autopilot');
-			const tools: LanguageModelToolInformation[] = [mockTaskCompleteTool];
+			const tools: LanguageModelToolInformation[] = [
+				mockTaskCompleteTool,
+			];
 			const result = loop.testEnsureAutopilotTools(tools);
 			expect(result).toHaveLength(1);
 		});
@@ -388,7 +503,13 @@ describe('ToolCallingLoop autopilot', () => {
 		it('should return tools unchanged when not in autopilot mode', () => {
 			const loop = createLoop(undefined);
 			const tools: LanguageModelToolInformation[] = [
-				{ name: 'read_file', description: '', inputSchema: undefined, tags: [], source: undefined },
+				{
+					name: 'read_file',
+					description: '',
+					inputSchema: undefined,
+					tags: [],
+					source: undefined,
+				},
 			];
 			const result = loop.testEnsureAutopilotTools(tools);
 			expect(result).toBe(tools);

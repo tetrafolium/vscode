@@ -7,7 +7,6 @@ import * as path from 'path';
 import { IBaselineTestSummary } from '../simulation/shared/sharedTypes';
 
 export class SimulationBaseline {
-
 	private prevBaseline = new Map<string, IBaselineTestSummary>();
 	private currBaseline = new Map<string, IBaselineTestSummary>();
 	private currSkipped = new Set<string>();
@@ -29,37 +28,52 @@ export class SimulationBaseline {
 		return (totalScore / summaries.length) * 100;
 	}
 
-	public static DEFAULT_BASELINE_PATH = path.join(__dirname, '../test/simulation', 'baseline.json');
+	public static DEFAULT_BASELINE_PATH = path.join(
+		__dirname,
+		'../test/simulation',
+		'baseline.json',
+	);
 
-	public static async readFromDisk(baselinePath: string, runningAllTests: boolean): Promise<SimulationBaseline> {
+	public static async readFromDisk(
+		baselinePath: string,
+		runningAllTests: boolean,
+	): Promise<SimulationBaseline> {
 		let baselineFileContents = '[]';
 		try {
-			baselineFileContents = (await fs.promises.readFile(baselinePath)).toString();
+			baselineFileContents = (
+				await fs.promises.readFile(baselinePath)
+			).toString();
 		} catch {
 			// No baseline file exists yet, create one
 			await fs.promises.writeFile(baselinePath, '[]');
 		}
-		const parsedBaseline = JSON.parse(baselineFileContents) as IBaselineTestSummary[];
-		return new SimulationBaseline(baselinePath, parsedBaseline, runningAllTests);
+		const parsedBaseline = JSON.parse(
+			baselineFileContents,
+		) as IBaselineTestSummary[];
+		return new SimulationBaseline(
+			baselinePath,
+			parsedBaseline,
+			runningAllTests,
+		);
 	}
 
 	constructor(
 		public readonly baselinePath: string,
 		parsedBaseline: IBaselineTestSummary[],
-		private readonly _runningAllTests: boolean
+		private readonly _runningAllTests: boolean,
 	) {
 		this.prevBaseline = new Map<string, IBaselineTestSummary>();
-		parsedBaseline.forEach(el => this.prevBaseline.set(el.name, el));
+		parsedBaseline.forEach((el) => this.prevBaseline.set(el.name, el));
 	}
 
-	public setCurrentResult(testSummary: IBaselineTestSummary): TestBaselineComparison {
+	public setCurrentResult(
+		testSummary: IBaselineTestSummary,
+	): TestBaselineComparison {
 		this.currBaseline.set(testSummary.name, testSummary);
 		const prevBaseline = this.prevBaseline.get(testSummary.name);
-		return (
-			prevBaseline
-				? new ExistingBaselineComparison(prevBaseline, testSummary)
-				: { isNew: true }
-		);
+		return prevBaseline
+			? new ExistingBaselineComparison(prevBaseline, testSummary)
+			: { isNew: true };
 	}
 
 	public setSkippedTest(name: string): void {
@@ -68,7 +82,10 @@ export class SimulationBaseline {
 
 	public async writeToDisk(pathToWriteTo?: string): Promise<void> {
 		const path = pathToWriteTo ?? this.baselinePath;
-		await fs.promises.writeFile(path, JSON.stringify(this.testSummaries, undefined, 2));
+		await fs.promises.writeFile(
+			path,
+			JSON.stringify(this.testSummaries, undefined, 2),
+		);
 	}
 
 	/**
@@ -88,7 +105,7 @@ export class SimulationBaseline {
 
 		if (!this._runningAllTests) {
 			// When running a subset of tests, we will copy over the old existing test results for tests that were not executed
-			const executedTests = new Set(testSummaries.map(el => el.name));
+			const executedTests = new Set(testSummaries.map((el) => el.name));
 			for (const testSummary of this.prevBaseline.values()) {
 				if (!executedTests.has(testSummary.name)) {
 					testSummaries.push(testSummary);
@@ -120,8 +137,16 @@ export class SimulationBaseline {
 				currMandatory.set(value.name, value);
 			}
 		}
-		const mandatory = SimulationBaseline.compare(prevMandatory, currMandatory, this.currSkipped);
-		const optional = SimulationBaseline.compare(prevOptional, currOptional, this.currSkipped);
+		const mandatory = SimulationBaseline.compare(
+			prevMandatory,
+			currMandatory,
+			this.currSkipped,
+		);
+		const optional = SimulationBaseline.compare(
+			prevOptional,
+			currOptional,
+			this.currSkipped,
+		);
 		return {
 			mandatory,
 			optional,
@@ -129,14 +154,24 @@ export class SimulationBaseline {
 			nImproved: mandatory.nImproved + optional.nImproved,
 			nWorsened: mandatory.nWorsened + optional.nWorsened,
 			addedScenarios: mandatory.addedScenarios + optional.addedScenarios,
-			removedScenarios: mandatory.removedScenarios + optional.removedScenarios,
-			skippedScenarios: mandatory.skippedScenarios + optional.skippedScenarios,
-			improvedScenarios: mandatory.improvedScenarios.concat(optional.improvedScenarios),
-			worsenedScenarios: mandatory.worsenedScenarios.concat(optional.worsenedScenarios)
+			removedScenarios:
+				mandatory.removedScenarios + optional.removedScenarios,
+			skippedScenarios:
+				mandatory.skippedScenarios + optional.skippedScenarios,
+			improvedScenarios: mandatory.improvedScenarios.concat(
+				optional.improvedScenarios,
+			),
+			worsenedScenarios: mandatory.worsenedScenarios.concat(
+				optional.worsenedScenarios,
+			),
 		};
 	}
 
-	private static compare(prevMap: Map<string, IBaselineTestSummary>, currMap: Map<string, IBaselineTestSummary>, currSkipped: Set<string>): IBaselineComparison {
+	private static compare(
+		prevMap: Map<string, IBaselineTestSummary>,
+		currMap: Map<string, IBaselineTestSummary>,
+		currSkipped: Set<string>,
+	): IBaselineComparison {
 		let nUnchanged = 0;
 		let nImproved = 0;
 		let nWorsened = 0;
@@ -152,10 +187,18 @@ export class SimulationBaseline {
 				const comparison = new ExistingBaselineComparison(prev, curr);
 				if (comparison.isImproved) {
 					nImproved++;
-					improvedScenarios.push({ prevScore: prev.score, currScore: curr.score, name: curr.name });
+					improvedScenarios.push({
+						prevScore: prev.score,
+						currScore: curr.score,
+						name: curr.name,
+					});
 				} else if (comparison.isWorsened) {
 					nWorsened++;
-					worsenedScenarios.push({ prevScore: prev.score, currScore: curr.score, name: curr.name });
+					worsenedScenarios.push({
+						prevScore: prev.score,
+						currScore: curr.score,
+						name: curr.name,
+					});
 				} else {
 					nUnchanged++;
 				}
@@ -175,7 +218,16 @@ export class SimulationBaseline {
 			}
 		}
 
-		return { nUnchanged, nImproved, nWorsened, addedScenarios, removedScenarios, skippedScenarios, improvedScenarios, worsenedScenarios };
+		return {
+			nUnchanged,
+			nImproved,
+			nWorsened,
+			addedScenarios,
+			removedScenarios,
+			skippedScenarios,
+			improvedScenarios,
+			worsenedScenarios,
+		};
 	}
 
 	public clear() {
@@ -206,10 +258,16 @@ export interface ICompleteBaselineComparison extends IBaselineComparison {
 	optional: IBaselineComparison;
 }
 
-export type TestBaselineComparison = (
-	{ isNew: true }
-	| { isNew: false; isImproved: boolean; isWorsened: boolean; isUnchanged: boolean; prevScore: number; currScore: number }
-);
+export type TestBaselineComparison =
+	| { isNew: true }
+	| {
+			isNew: false;
+			isImproved: boolean;
+			isWorsened: boolean;
+			isUnchanged: boolean;
+			prevScore: number;
+			currScore: number;
+	  };
 
 export class ExistingBaselineComparison {
 	public readonly isNew = false;
@@ -220,10 +278,7 @@ export class ExistingBaselineComparison {
 	public readonly prevScore: number;
 	public readonly currScore: number;
 
-	constructor(
-		prev: IBaselineTestSummary,
-		curr: IBaselineTestSummary,
-	) {
+	constructor(prev: IBaselineTestSummary, curr: IBaselineTestSummary) {
 		this.prevScore = prev.score;
 		const prevN = prev.passCount + prev.failCount;
 		this.currScore = curr.score;

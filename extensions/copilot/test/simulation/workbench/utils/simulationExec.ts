@@ -6,65 +6,90 @@ import * as cp from 'child_process';
 import { ipcRenderer } from 'electron';
 import { IDisposable } from 'monaco-editor';
 import * as path from 'path';
-import { AsyncIterableEmitter, AsyncIterableObject } from '../../../../src/util/vs/base/common/async';
+import {
+	AsyncIterableEmitter,
+	AsyncIterableObject,
+} from '../../../../src/util/vs/base/common/async';
 import { CancellationToken } from '../../../../src/util/vs/base/common/cancellation';
 import { REPO_ROOT } from './utils';
 
-export const SIMULATION_MAIN_PATH = path.join(REPO_ROOT, './dist/simulationMain.js');
+export const SIMULATION_MAIN_PATH = path.join(
+	REPO_ROOT,
+	'./dist/simulationMain.js',
+);
 
 export interface ISpawnSimulationOptions {
 	args: string[];
 	ignoreNonJSONLines?: boolean;
 }
 
-export function spawnSimulation<T>(options: ISpawnSimulationOptions, token: CancellationToken = CancellationToken.None): AsyncIterableObject<T> {
+export function spawnSimulation<T>(
+	options: ISpawnSimulationOptions,
+	token: CancellationToken = CancellationToken.None,
+): AsyncIterableObject<T> {
 	return extractJSONL<T>(forkSimulationMain(options.args, token), options);
 }
 
 /** spawn `npm run simulate` from Electron main process */
-export function spawnSimulationFromMainProcess<T>(options: ISpawnSimulationOptions, token: CancellationToken = CancellationToken.None): AsyncIterableObject<T> {
-	return extractJSONL<T>(forkSimulationMainFromMainProcess(options.args, token), options);
+export function spawnSimulationFromMainProcess<T>(
+	options: ISpawnSimulationOptions,
+	token: CancellationToken = CancellationToken.None,
+): AsyncIterableObject<T> {
+	return extractJSONL<T>(
+		forkSimulationMainFromMainProcess(options.args, token),
+		options,
+	);
 }
 
 let mainRendererEventProcessor: MainProcessEventHandler | undefined;
 
-function forkSimulationMainFromMainProcess(args: string[], token: CancellationToken): AsyncIterableObject<string> {
+function forkSimulationMainFromMainProcess(
+	args: string[],
+	token: CancellationToken,
+): AsyncIterableObject<string> {
 	if (!mainRendererEventProcessor) {
 		mainRendererEventProcessor = new MainProcessEventHandler();
 	}
 	return mainRendererEventProcessor.spawn(args, token);
 }
 
-export function extractJSONL<T>(source: AsyncIterableObject<string>, options?: ISpawnSimulationOptions): AsyncIterableObject<T> {
-	return splitToLines(source).map((line): T | null => {
-		if (line.length === 0) {
-			// always ignore empty lines
-			return null;
-		}
-
-		if (!line.startsWith('{') || !line.endsWith('}')) {
-			if (!options?.ignoreNonJSONLines) {
-				console.warn(line);
+export function extractJSONL<T>(
+	source: AsyncIterableObject<string>,
+	options?: ISpawnSimulationOptions,
+): AsyncIterableObject<T> {
+	return splitToLines(source)
+		.map((line): T | null => {
+			if (line.length === 0) {
+				// always ignore empty lines
+				return null;
 			}
-			return null;
-		}
 
-		try {
-			const obj = JSON.parse(line);
-			return obj as T;
-		} catch (err) {
-			if (!options?.ignoreNonJSONLines) {
-				console.error(`ignoring invalid line: ${line}`);
+			if (!line.startsWith('{') || !line.endsWith('}')) {
+				if (!options?.ignoreNonJSONLines) {
+					console.warn(line);
+				}
+				return null;
 			}
-			return null;
-		}
-	}).coalesce();
+
+			try {
+				const obj = JSON.parse(line);
+				return obj as T;
+			} catch (err) {
+				if (!options?.ignoreNonJSONLines) {
+					console.error(`ignoring invalid line: ${line}`);
+				}
+				return null;
+			}
+		})
+		.coalesce();
 }
 
 /**
  * Split an incoming stream of text to a stream of lines.
  */
-function splitToLines(source: AsyncIterable<string>): AsyncIterableObject<string> {
+function splitToLines(
+	source: AsyncIterable<string>,
+): AsyncIterableObject<string> {
 	return new AsyncIterableObject<string>(async (emitter) => {
 		let buffer = '';
 		for await (const str of source) {
@@ -90,10 +115,15 @@ function splitToLines(source: AsyncIterable<string>): AsyncIterableObject<string
 	});
 }
 
-function forkSimulationMain(args: string[], token: CancellationToken): AsyncIterableObject<string> {
+function forkSimulationMain(
+	args: string[],
+	token: CancellationToken,
+): AsyncIterableObject<string> {
 	return new AsyncIterableObject<string>((emitter) => {
 		return new Promise<void>((resolve, reject) => {
-			const proc = cp.spawn('node', [SIMULATION_MAIN_PATH, ...args], { stdio: 'pipe' });
+			const proc = cp.spawn('node', [SIMULATION_MAIN_PATH, ...args], {
+				stdio: 'pipe',
+			});
 			const listener = token.onCancellationRequested(() => {
 				proc.kill('SIGTERM');
 				// FIXME@ulugbekna: let's not reject the promise for now -- otherwise, stdout.json.txt isn't written
@@ -134,11 +164,10 @@ type MainProcessEventHandle = {
 
 // change to configure logging, e.g., to `console.debug`
 const log = {
-	debug: (...args: any) => { }
+	debug: (...args: any) => {},
 };
 
 class MainProcessEventHandler {
-
 	private i: number;
 	private idMap: Map<number, MainProcessEventHandle>;
 
@@ -181,11 +210,19 @@ class MainProcessEventHandler {
 
 		return new AsyncIterableObject<string>((emitter) => {
 			return new Promise<void>((resolve, reject) => {
-				const cancellationListener = token.onCancellationRequested(() => {
-					ipcRenderer.send('kill-process', { id });
-				});
+				const cancellationListener = token.onCancellationRequested(
+					() => {
+						ipcRenderer.send('kill-process', { id });
+					},
+				);
 
-				idMap.set(id, { emitter, cancellationListener, resolve, reject, stderrChunks: [] });
+				idMap.set(id, {
+					emitter,
+					cancellationListener,
+					resolve,
+					reject,
+					stderrChunks: [],
+				});
 				ipcRenderer.send('spawn-process', { id, processArgs });
 			});
 		});
@@ -194,7 +231,9 @@ class MainProcessEventHandler {
 	private getHandleOrThrow(id: number) {
 		const handle = this.idMap.get(id);
 		if (!handle) {
-			throw new Error(`[MainProcessEventHandler] No handle found for ID ${id}`);
+			throw new Error(
+				`[MainProcessEventHandler] No handle found for ID ${id}`,
+			);
 		}
 		return handle;
 	}

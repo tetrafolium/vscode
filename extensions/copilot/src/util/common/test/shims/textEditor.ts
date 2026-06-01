@@ -26,7 +26,6 @@ interface IEditData {
 }
 
 class TextEditorEdit {
-
 	private readonly _document: vscode.TextDocument;
 	private readonly _documentVersionId: number;
 	private readonly _undoStopBefore: boolean;
@@ -35,7 +34,10 @@ class TextEditorEdit {
 	private _setEndOfLine: vscode.EndOfLine | undefined = undefined;
 	private _finalized: boolean = false;
 
-	constructor(document: vscode.TextDocument, options: { undoStopBefore: boolean; undoStopAfter: boolean }) {
+	constructor(
+		document: vscode.TextDocument,
+		options: { undoStopBefore: boolean; undoStopAfter: boolean },
+	) {
 		this._document = document;
 		this._documentVersionId = document.version;
 		this._undoStopBefore = options.undoStopBefore;
@@ -49,7 +51,7 @@ class TextEditorEdit {
 			edits: this._collectedEdits,
 			setEndOfLine: this._setEndOfLine,
 			undoStopBefore: this._undoStopBefore,
-			undoStopAfter: this._undoStopAfter
+			undoStopAfter: this._undoStopAfter,
 		};
 	}
 
@@ -92,12 +94,16 @@ class TextEditorEdit {
 		this._pushEdit(range, null, true);
 	}
 
-	private _pushEdit(range: Range, text: string | null, forceMoveMarkers: boolean): void {
+	private _pushEdit(
+		range: Range,
+		text: string | null,
+		forceMoveMarkers: boolean,
+	): void {
 		const validRange = this._document.validateRange(range);
 		this._collectedEdits.push({
 			range: validRange,
 			text: text,
-			forceMoveMarkers: forceMoveMarkers
+			forceMoveMarkers: forceMoveMarkers,
 		});
 	}
 
@@ -112,7 +118,6 @@ class TextEditorEdit {
 }
 
 export class ExtHostTextEditor {
-
 	private _selections: vscode.Selection[];
 	private _options: vscode.TextEditorOptions;
 	private _visibleRanges: vscode.Range[];
@@ -125,7 +130,7 @@ export class ExtHostTextEditor {
 		selections: vscode.Selection[],
 		options: vscode.TextEditorOptions,
 		visibleRanges: vscode.Range[],
-		viewColumn: vscode.ViewColumn | undefined
+		viewColumn: vscode.ViewColumn | undefined,
 	) {
 		this._selections = selections;
 		this._options = options;
@@ -155,7 +160,10 @@ export class ExtHostTextEditor {
 				return that._selections;
 			},
 			set selections(value: Selection[]) {
-				if (!Array.isArray(value) || value.some(a => !(a instanceof Selection))) {
+				if (
+					!Array.isArray(value) ||
+					value.some((a) => !(a instanceof Selection))
+				) {
 					throw illegalArgument('selections');
 				}
 				that._selections = value;
@@ -182,17 +190,40 @@ export class ExtHostTextEditor {
 				throw new ReadonlyError('viewColumn');
 			},
 			// --- edit
-			edit(callback: (edit: TextEditorEdit) => void, options: { undoStopBefore: boolean; undoStopAfter: boolean } = { undoStopBefore: true, undoStopAfter: true }): Promise<boolean> {
+			edit(
+				callback: (edit: TextEditorEdit) => void,
+				options: { undoStopBefore: boolean; undoStopAfter: boolean } = {
+					undoStopBefore: true,
+					undoStopAfter: true,
+				},
+			): Promise<boolean> {
 				throw new Error('Not implemented');
 			},
 			// --- snippet edit
-			insertSnippet(snippet: SnippetString, where?: Position | readonly Position[] | Range | readonly Range[], options: { undoStopBefore: boolean; undoStopAfter: boolean } = { undoStopBefore: true, undoStopAfter: true }): Promise<boolean> {
+			insertSnippet(
+				snippet: SnippetString,
+				where?:
+					| Position
+					| readonly Position[]
+					| Range
+					| readonly Range[],
+				options: { undoStopBefore: boolean; undoStopAfter: boolean } = {
+					undoStopBefore: true,
+					undoStopAfter: true,
+				},
+			): Promise<boolean> {
 				throw new Error('Not implemented');
 			},
-			setDecorations(decorationType: vscode.TextEditorDecorationType, ranges: Range[] | vscode.DecorationOptions[]): void {
+			setDecorations(
+				decorationType: vscode.TextEditorDecorationType,
+				ranges: Range[] | vscode.DecorationOptions[],
+			): void {
 				throw new Error('Not implemented');
 			},
-			revealRange(range: Range, revealType: vscode.TextEditorRevealType): void {
+			revealRange(
+				range: Range,
+				revealType: vscode.TextEditorRevealType,
+			): void {
 				throw new Error('Not implemented');
 			},
 			show(column: vscode.ViewColumn) {
@@ -200,7 +231,7 @@ export class ExtHostTextEditor {
 			},
 			hide() {
 				throw new Error('Not implemented');
-			}
+			},
 		});
 	}
 

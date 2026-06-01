@@ -6,7 +6,10 @@
 import { VSBuffer } from '../vs/base/common/buffer';
 
 /** Reads a 32-bit integer from the buffer */
-export function readVariableLengthQuantity(buffer: VSBuffer, offset: number): { value: number; consumed: number } {
+export function readVariableLengthQuantity(
+	buffer: VSBuffer,
+	offset: number,
+): { value: number; consumed: number } {
 	let result = 0;
 	let consumed = 0;
 	let byte: number;

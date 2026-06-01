@@ -10,7 +10,11 @@ export interface IEntryPoint {
 }
 
 export function removeAllTSBoilerplate(source: string) {
-	const seen = new Array<boolean>(BOILERPLATE.length).fill(true, 0, BOILERPLATE.length);
+	const seen = new Array<boolean>(BOILERPLATE.length).fill(
+		true,
+		0,
+		BOILERPLATE.length,
+	);
 	return removeDuplicateTSBoilerplate(source, seen);
 }
 
@@ -30,15 +34,19 @@ const BOILERPLATE = [
 	{ start: /^var __disposeResources/, end: /^}\);$/ },
 ];
 
-function removeDuplicateTSBoilerplate(source: string, SEEN_BOILERPLATE: boolean[] = []): string {
+function removeDuplicateTSBoilerplate(
+	source: string,
+	SEEN_BOILERPLATE: boolean[] = [],
+): string {
 	const lines = source.split(/\r\n|\n|\r/);
 	const newLines: string[] = [];
-	let IS_REMOVING_BOILERPLATE = false, END_BOILERPLATE: RegExp;
+	let IS_REMOVING_BOILERPLATE = false,
+		END_BOILERPLATE: RegExp;
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 		if (IS_REMOVING_BOILERPLATE) {
-			newLines.push('');
+			newLines.push("");
 			if (END_BOILERPLATE!.test(line)) {
 				IS_REMOVING_BOILERPLATE = false;
 			}
@@ -55,11 +63,11 @@ function removeDuplicateTSBoilerplate(source: string, SEEN_BOILERPLATE: boolean[
 				}
 			}
 			if (IS_REMOVING_BOILERPLATE) {
-				newLines.push('');
+				newLines.push("");
 			} else {
 				newLines.push(line);
 			}
 		}
 	}
-	return newLines.join('\n');
+	return newLines.join("\n");
 }

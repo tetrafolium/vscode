@@ -3,18 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import * as uri from 'vscode-uri';
-import { ILogger } from '../logging';
-import { MarkdownItEngine } from '../markdownEngine';
-import { MarkdownContributionProvider } from '../markdownExtensions';
-import { escapeAttribute } from '../util/dom';
-import { WebviewResourceProvider } from '../util/resources';
-import { generateUuid } from '../util/uuid';
-import { MarkdownPreviewConfiguration, MarkdownPreviewConfigurationManager } from './previewConfig';
-import { ContentSecurityPolicyArbiter, MarkdownPreviewSecurityLevel } from './security';
-import type { DiffScrollSyncData, MarkdownPreviewInnerChange, MarkdownPreviewLineChanges } from '../../types/previewMessaging';
-
+import * as vscode from "vscode";
+import * as uri from "vscode-uri";
+import { ILogger } from "../logging";
+import { MarkdownItEngine } from "../markdownEngine";
+import { MarkdownContributionProvider } from "../markdownExtensions";
+import { escapeAttribute } from "../util/dom";
+import { WebviewResourceProvider } from "../util/resources";
+import { generateUuid } from "../util/uuid";
+import {
+	MarkdownPreviewConfiguration,
+	MarkdownPreviewConfigurationManager,
+} from "./previewConfig";
+import {
+	ContentSecurityPolicyArbiter,
+	MarkdownPreviewSecurityLevel,
+} from "./security";
+import type {
+	DiffScrollSyncData,
+	MarkdownPreviewInnerChange,
+	MarkdownPreviewLineChanges,
+} from "../../types/previewMessaging";
 
 /**
  * Strings used inside the markdown preview.
@@ -23,9 +32,13 @@ import type { DiffScrollSyncData, MarkdownPreviewInnerChange, MarkdownPreviewLin
  * can be localized using our normal localization process.
  */
 const previewStrings = {
-	cspAlertMessageText: vscode.l10n.t("Some content has been disabled in this document"),
+	cspAlertMessageText: vscode.l10n.t(
+		"Some content has been disabled in this document",
+	),
 
-	cspAlertMessageTitle: vscode.l10n.t("Potentially unsafe or insecure content has been disabled in the Markdown preview. Change the Markdown preview security setting to allow insecure content or enable scripts"),
+	cspAlertMessageTitle: vscode.l10n.t(
+		"Potentially unsafe or insecure content has been disabled in the Markdown preview. Change the Markdown preview security setting to allow insecure content or enable scripts",
+	),
 
 	cspAlertMessageLabel: vscode.l10n.t("Content Disabled Security Warning"),
 };
@@ -42,19 +55,18 @@ export interface ImageInfo {
 }
 
 export class MdDocumentRenderer {
-
 	readonly #engine: MarkdownItEngine;
-	readonly #context: Pick<vscode.ExtensionContext, 'extensionUri'>;
+	readonly #context: Pick<vscode.ExtensionContext, "extensionUri">;
 	readonly #cspArbiter: ContentSecurityPolicyArbiter;
 	readonly #contributionProvider: MarkdownContributionProvider;
 	readonly #logger: ILogger;
 
 	constructor(
 		engine: MarkdownItEngine,
-		context: Pick<vscode.ExtensionContext, 'extensionUri'>,
+		context: Pick<vscode.ExtensionContext, "extensionUri">,
 		cspArbiter: ContentSecurityPolicyArbiter,
 		contributionProvider: MarkdownContributionProvider,
-		logger: ILogger
+		logger: ILogger,
 	) {
 		this.#engine = engine;
 		this.#context = context;
@@ -62,8 +74,16 @@ export class MdDocumentRenderer {
 		this.#contributionProvider = contributionProvider;
 		this.#logger = logger;
 		this.iconPath = {
-			dark: vscode.Uri.joinPath(this.#context.extensionUri, 'media', 'preview-dark.svg'),
-			light: vscode.Uri.joinPath(this.#context.extensionUri, 'media', 'preview-light.svg'),
+			dark: vscode.Uri.joinPath(
+				this.#context.extensionUri,
+				"media",
+				"preview-dark.svg",
+			),
+			light: vscode.Uri.joinPath(
+				this.#context.extensionUri,
+				"media",
+				"preview-light.svg",
+			),
 		};
 	}
 
@@ -79,7 +99,7 @@ export class MdDocumentRenderer {
 		imageInfo: readonly ImageInfo[],
 		lineChanges: MarkdownPreviewLineChanges | undefined,
 		diffScrollSync: DiffScrollSyncData | undefined,
-		token: vscode.CancellationToken
+		token: vscode.CancellationToken,
 	): Promise<MarkdownContentProviderOutput> {
 		const sourceUri = markdownDocument.uri;
 		const config = previewConfigurations.loadAndCacheConfiguration(sourceUri);
@@ -94,18 +114,28 @@ export class MdDocumentRenderer {
 			scrollEditorWithPreview: config.scrollEditorWithPreview,
 			doubleClickToSwitchToEditor: config.doubleClickToSwitchToEditor,
 			disableSecurityWarnings: this.#cspArbiter.shouldDisableSecurityWarnings(),
-			webviewResourceRoot: resourceProvider.asWebviewUri(markdownDocument.uri).toString(),
+			webviewResourceRoot: resourceProvider
+				.asWebviewUri(markdownDocument.uri)
+				.toString(),
 		};
 
-		this.#logger.trace('DocumentRenderer', `provideTextDocumentContent - ${markdownDocument.uri}`, initialData);
+		this.#logger.trace(
+			"DocumentRenderer",
+			`provideTextDocumentContent - ${markdownDocument.uri}`,
+			initialData,
+		);
 
 		// Content Security Policy
 		const nonce = generateUuid();
 		const csp = this.#getCsp(resourceProvider, sourceUri, nonce);
 
-		const body = await this.renderBody(markdownDocument, resourceProvider, lineChanges);
+		const body = await this.renderBody(
+			markdownDocument,
+			resourceProvider,
+			lineChanges,
+		);
 		if (token.isCancellationRequested) {
-			return { html: '', containingImages: new Set() };
+			return { html: "", containingImages: new Set() };
 		}
 
 		const html = `<!DOCTYPE html>
@@ -118,11 +148,11 @@ export class MdDocumentRenderer {
 					data-strings="${escapeAttribute(JSON.stringify(previewStrings))}"
 					data-state="${escapeAttribute(JSON.stringify(state || {}))}"
 					data-initial-md-content="${escapeAttribute(body.html)}">
-				<script src="${this.#extensionResourcePath(resourceProvider, 'pre.js')}" nonce="${nonce}"></script>
+				<script src="${this.#extensionResourcePath(resourceProvider, "pre.js")}" nonce="${nonce}"></script>
 				${this.#getStyles(resourceProvider, sourceUri, config, imageInfo)}
 				<base href="${resourceProvider.asWebviewUri(markdownDocument.uri)}">
 			</head>
-			<body class="vscode-body ${config.scrollBeyondLastLine ? 'scrollBeyondLastLine' : ''} ${config.wordWrap ? 'wordWrap' : ''} ${config.markEditorSelection ? 'showEditorSelection' : ''}">
+			<body class="vscode-body ${config.scrollBeyondLastLine ? "scrollBeyondLastLine" : ""} ${config.wordWrap ? "wordWrap" : ""} ${config.markEditorSelection ? "showEditorSelection" : ""}">
 				${this.#getScripts(resourceProvider, nonce)}
 			</body>
 			</html>`;
@@ -150,13 +180,13 @@ export class MdDocumentRenderer {
 		const html = `<div class="markdown-body" dir="auto">${rendered.html}<div class="code-line" data-line="${markdownDocument.lineCount}"></div></div>`;
 		return {
 			html,
-			containingImages: rendered.containingImages
+			containingImages: rendered.containingImages,
 		};
 	}
 
 	public renderFileNotFoundDocument(resource: vscode.Uri): string {
 		const resourcePath = uri.Utils.basename(resource);
-		const body = vscode.l10n.t('{0} cannot be found', resourcePath);
+		const body = vscode.l10n.t("{0} cannot be found", resourcePath);
 		return `<!DOCTYPE html>
 			<html>
 			<body class="vscode-body">
@@ -165,101 +195,139 @@ export class MdDocumentRenderer {
 			</html>`;
 	}
 
-	#extensionResourcePath(resourceProvider: WebviewResourceProvider, mediaFile: string): string {
+	#extensionResourcePath(
+		resourceProvider: WebviewResourceProvider,
+		mediaFile: string,
+	): string {
 		const webviewResource = resourceProvider.asWebviewUri(
-			vscode.Uri.joinPath(this.#context.extensionUri, 'media', mediaFile));
+			vscode.Uri.joinPath(this.#context.extensionUri, "media", mediaFile),
+		);
 		return webviewResource.toString();
 	}
 
-	#fixHref(resourceProvider: WebviewResourceProvider, resource: vscode.Uri, href: string): string {
+	#fixHref(
+		resourceProvider: WebviewResourceProvider,
+		resource: vscode.Uri,
+		href: string,
+	): string {
 		if (!href) {
 			return href;
 		}
 
-		if (href.startsWith('http:') || href.startsWith('https:') || href.startsWith('file:')) {
+		if (
+			href.startsWith("http:") ||
+			href.startsWith("https:") ||
+			href.startsWith("file:")
+		) {
 			return href;
 		}
 
 		// Assume it must be a local file
-		if (href.startsWith('/') || /^[a-z]:\\/i.test(href)) {
+		if (href.startsWith("/") || /^[a-z]:\\/i.test(href)) {
 			return resourceProvider.asWebviewUri(vscode.Uri.file(href)).toString();
 		}
 
 		// Use a workspace relative path if there is a workspace
 		const root = vscode.workspace.getWorkspaceFolder(resource);
 		if (root) {
-			return resourceProvider.asWebviewUri(vscode.Uri.joinPath(root.uri, href)).toString();
+			return resourceProvider
+				.asWebviewUri(vscode.Uri.joinPath(root.uri, href))
+				.toString();
 		}
 
 		// Otherwise look relative to the markdown file
-		return resourceProvider.asWebviewUri(vscode.Uri.joinPath(uri.Utils.dirname(resource), href)).toString();
+		return resourceProvider
+			.asWebviewUri(vscode.Uri.joinPath(uri.Utils.dirname(resource), href))
+			.toString();
 	}
 
-	#computeCustomStyleSheetIncludes(resourceProvider: WebviewResourceProvider, resource: vscode.Uri, config: MarkdownPreviewConfiguration): string {
+	#computeCustomStyleSheetIncludes(
+		resourceProvider: WebviewResourceProvider,
+		resource: vscode.Uri,
+		config: MarkdownPreviewConfiguration,
+	): string {
 		if (!Array.isArray(config.styles)) {
-			return '';
+			return "";
 		}
 		const out: string[] = [];
 		for (const style of config.styles) {
-			out.push(`<link rel="stylesheet" class="code-user-style" data-source="${escapeAttribute(style)}" href="${escapeAttribute(this.#fixHref(resourceProvider, resource, style))}" type="text/css" media="screen">`);
+			out.push(
+				`<link rel="stylesheet" class="code-user-style" data-source="${escapeAttribute(style)}" href="${escapeAttribute(this.#fixHref(resourceProvider, resource, style))}" type="text/css" media="screen">`,
+			);
 		}
-		return out.join('\n');
+		return out.join("\n");
 	}
 
 	#getSettingsOverrideStyles(config: MarkdownPreviewConfiguration): string {
 		return [
-			config.fontFamily ? `--markdown-font-family: ${config.fontFamily};` : '',
-			isNaN(config.fontSize) ? '' : `--markdown-font-size: ${config.fontSize}px;`,
-			isNaN(config.lineHeight) ? '' : `--markdown-line-height: ${config.lineHeight};`,
-		].join(' ');
+			config.fontFamily ? `--markdown-font-family: ${config.fontFamily};` : "",
+			isNaN(config.fontSize)
+				? ""
+				: `--markdown-font-size: ${config.fontSize}px;`,
+			isNaN(config.lineHeight)
+				? ""
+				: `--markdown-line-height: ${config.lineHeight};`,
+		].join(" ");
 	}
 
 	#getImageStabilizerStyles(imageInfo: readonly ImageInfo[]): string {
 		if (!imageInfo.length) {
-			return '';
+			return "";
 		}
 
-		let ret = '<style>\n';
+		let ret = "<style>\n";
 		for (const imgInfo of imageInfo) {
 			ret += `#${imgInfo.id}.loading {
 					height: ${imgInfo.height}px;
 					width: ${imgInfo.width}px;
 				}\n`;
 		}
-		ret += '</style>\n';
+		ret += "</style>\n";
 
 		return ret;
 	}
 
-	#getStyles(resourceProvider: WebviewResourceProvider, resource: vscode.Uri, config: MarkdownPreviewConfiguration, imageInfo: readonly ImageInfo[]): string {
+	#getStyles(
+		resourceProvider: WebviewResourceProvider,
+		resource: vscode.Uri,
+		config: MarkdownPreviewConfiguration,
+		imageInfo: readonly ImageInfo[],
+	): string {
 		const baseStyles: string[] = [];
-		for (const resource of this.#contributionProvider.contributions.previewStyles) {
-			baseStyles.push(`<link rel="stylesheet" type="text/css" href="${escapeAttribute(resourceProvider.asWebviewUri(resource))}">`);
+		for (const resource of this.#contributionProvider.contributions
+			.previewStyles) {
+			baseStyles.push(
+				`<link rel="stylesheet" type="text/css" href="${escapeAttribute(resourceProvider.asWebviewUri(resource))}">`,
+			);
 		}
 
-		return `${baseStyles.join('\n')}
+		return `${baseStyles.join("\n")}
 			${this.#computeCustomStyleSheetIncludes(resourceProvider, resource, config)}
 			${this.#getImageStabilizerStyles(imageInfo)}`;
 	}
 
-	#getScripts(resourceProvider: WebviewResourceProvider, nonce: string): string {
+	#getScripts(
+		resourceProvider: WebviewResourceProvider,
+		nonce: string,
+	): string {
 		const out: string[] = [];
-		for (const script of this.#contributionProvider.contributions.previewScripts) {
-			const type = script.type ? ` type="${escapeAttribute(script.type)}"` : '';
+		for (const script of this.#contributionProvider.contributions
+			.previewScripts) {
+			const type = script.type ? ` type="${escapeAttribute(script.type)}"` : "";
 			out.push(`<script async${type}
 				src="${escapeAttribute(resourceProvider.asWebviewUri(script.resource))}"
 				nonce="${nonce}"
 				charset="UTF-8"></script>`);
 		}
-		return out.join('\n');
+		return out.join("\n");
 	}
 
 	#getCsp(
 		provider: WebviewResourceProvider,
 		resource: vscode.Uri,
-		nonce: string
+		nonce: string,
 	): string {
-		const rule = provider.cspSource.split(';')[0];
+		const rule = provider.cspSource.split(";")[0];
 		switch (this.#cspArbiter.getSecurityLevelForResource(resource)) {
 			case MarkdownPreviewSecurityLevel.AllowInsecureContent:
 				return `default-src 'none'; img-src 'self' ${rule} http: https: data:; media-src 'self' ${rule} http: https: data:; script-src 'nonce-${nonce}'; style-src 'self' ${rule} 'unsafe-inline' http: https: data:; font-src 'self' ${rule} http: https: data:;`;
@@ -280,11 +348,17 @@ export class MdDocumentRenderer {
 /**
  * Injects empty marker `<span>` elements into the markdown source text at inner change positions.
  */
-function injectInnerChangeMarkers(text: string, innerChanges: readonly MarkdownPreviewInnerChange[]): string {
-	const lines = text.split('\n');
+function injectInnerChangeMarkers(
+	text: string,
+	innerChanges: readonly MarkdownPreviewInnerChange[],
+): string {
+	const lines = text.split("\n");
 
 	// Group inner changes by line
-	const changesByLine = new Map<number, { index: number; change: MarkdownPreviewInnerChange }[]>();
+	const changesByLine = new Map<
+		number,
+		{ index: number; change: MarkdownPreviewInnerChange }[]
+	>();
 	for (let i = 0; i < innerChanges.length; i++) {
 		const change = innerChanges[i];
 		let lineChanges = changesByLine.get(change.line);
@@ -314,11 +388,16 @@ function injectInnerChangeMarkers(text: string, innerChanges: readonly MarkdownP
 
 			const endMarker = `<span data-diff-end="${index}"></span>`;
 			const startMarker = `<span data-diff-start="${index}"></span>`;
-			line = line.slice(0, start) + startMarker + line.slice(start, end) + endMarker + line.slice(end);
+			line =
+				line.slice(0, start) +
+				startMarker +
+				line.slice(start, end) +
+				endMarker +
+				line.slice(end);
 		}
 
 		lines[lineNum] = line;
 	}
 
-	return lines.join('\n');
+	return lines.join("\n");
 }

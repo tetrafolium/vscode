@@ -7,13 +7,22 @@ import { createServiceIdentifier } from '../../../util/common/services';
 import { CallTracker } from '../../../util/common/telemetryCorrelationId';
 import { raceCancellationError } from '../../../util/vs/base/common/async';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
-import { CancellationError, isCancellationError } from '../../../util/vs/base/common/errors';
-import { Disposable, IDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	CancellationError,
+	isCancellationError,
+} from '../../../util/vs/base/common/errors';
+import {
+	Disposable,
+	IDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 import { IEnvService } from '../../env/common/envService';
 import { ILogService } from '../../log/common/logService';
 import { ITelemetryService } from '../../telemetry/common/telemetry';
 
-export const IGithubApiFetcherService = createServiceIdentifier<IGithubApiFetcherService>('IGithubApiFetcherService');
+export const IGithubApiFetcherService =
+	createServiceIdentifier<IGithubApiFetcherService>(
+		'IGithubApiFetcherService',
+	);
 
 export interface GithubRequestOptions {
 	readonly method: string;
@@ -46,7 +55,10 @@ export const githubHeaders = Object.freeze({
 export interface IGithubApiFetcherService extends IDisposable {
 	readonly _serviceBrand: undefined;
 
-	makeRequest(options: GithubRequestOptions, token: CancellationToken): Promise<Response>;
+	makeRequest(
+		options: GithubRequestOptions,
+		token: CancellationToken,
+	): Promise<Response>;
 }
 
 /**
@@ -182,7 +194,10 @@ class Throttler {
 		let shouldSend = false;
 
 		// If there have been no requests, send one.
-		if (this.totalQuotaUsedWindow.get() === 0 || this.sendPeriodWindow.size() === 0) {
+		if (
+			this.totalQuotaUsedWindow.get() === 0 ||
+			this.sendPeriodWindow.size() === 0
+		) {
 			shouldSend = true;
 		} else if (this.sendPeriodWindow.average() > 0) {
 			const integral =
@@ -204,7 +219,10 @@ class Throttler {
 	}
 }
 
-export class GithubApiFetcherService extends Disposable implements IGithubApiFetcherService {
+export class GithubApiFetcherService
+	extends Disposable
+	implements IGithubApiFetcherService
+{
 	declare readonly _serviceBrand: undefined;
 
 	/**
@@ -252,7 +270,10 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 	 * up its quota bucket. Returns `undefined` for endpoints whose bucket is not
 	 * yet known (i.e. no prior response has provided the bucket header).
 	 */
-	private getThrottlerForEndpoint(method: string, url: string): Throttler | undefined {
+	private getThrottlerForEndpoint(
+		method: string,
+		url: string,
+	): Throttler | undefined {
 		const endpointKey = this.getEndpointKey(method, url);
 		const bucket = this.endpointBuckets.get(endpointKey);
 		return bucket ? this.throttlers.get(bucket) : undefined;
@@ -263,7 +284,12 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 	 * response headers. Creates a new throttler on demand when a bucket is seen
 	 * for the first time.
 	 */
-	private updateThrottlers(method: string, url: string, bucket: string, quotaUsed: number): void {
+	private updateThrottlers(
+		method: string,
+		url: string,
+		bucket: string,
+		quotaUsed: number,
+	): void {
 		if (!this.throttlers.has(bucket)) {
 			this.throttlers.set(bucket, new Throttler(this.throttlerTarget));
 		}
@@ -272,8 +298,16 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 		this.endpointBuckets.set(endpointKey, bucket);
 	}
 
-	async makeRequest(options: GithubRequestOptions, token: CancellationToken): Promise<Response> {
-		return this.makeRequestWithRetries(options, token, options.retriesOn500 ?? 0, options.retriesOnRateLimiting ?? 5);
+	async makeRequest(
+		options: GithubRequestOptions,
+		token: CancellationToken,
+	): Promise<Response> {
+		return this.makeRequestWithRetries(
+			options,
+			token,
+			options.retriesOn500 ?? 0,
+			options.retriesOnRateLimiting ?? 5,
+		);
 	}
 
 	private async makeRequestWithRetries(
@@ -283,7 +317,10 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 		retryOnRateLimitedRemaining: number,
 	): Promise<Response> {
 		// Throttle based on the URL's quota bucket (if known from prior responses)
-		const throttler = this.getThrottlerForEndpoint(options.method, options.url);
+		const throttler = this.getThrottlerForEndpoint(
+			options.method,
+			options.url,
+		);
 		if (throttler) {
 			while (!throttler.shouldSendRequest()) {
 				await raceCancellationError(sleep(5), token);
@@ -299,8 +336,11 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 				method: options.method,
 				headers: {
 					...options.headers,
-					'Authorization': `Bearer ${options.authToken}`,
-					...getGithubMetadataHeaders(options.telemetry.callerInfo, this.envService),
+					Authorization: `Bearer ${options.authToken}`,
+					...getGithubMetadataHeaders(
+						options.telemetry.callerInfo,
+						this.envService,
+					),
 				},
 				body: options.body ? JSON.stringify(options.body) : undefined,
 			});
@@ -308,20 +348,34 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 			// Record quota usage for throttle calibration
 			// Record quota usage for throttle calibration, keyed by bucket. If the bucket name is not in the headers use a
 			// fake __global__ bucket.
-			const bucketNameHeader = res.headers.get(githubHeaders.quotaBucketName);
+			const bucketNameHeader = res.headers.get(
+				githubHeaders.quotaBucketName,
+			);
 			const bucketName = bucketNameHeader || '__global__';
-			const quotaUsedHeader = res.headers.get(githubHeaders.totalQuotaUsed);
+			const quotaUsedHeader = res.headers.get(
+				githubHeaders.totalQuotaUsed,
+			);
 
 			// Learn the endpoint → bucket mapping whenever we have a bucket header, even if quota-used is missing.
 			if (bucketNameHeader && quotaUsedHeader === null) {
-				this.updateThrottlers(options.method, options.url, bucketName, 0);
+				this.updateThrottlers(
+					options.method,
+					options.url,
+					bucketName,
+					0,
+				);
 			}
 
 			// Only record quota usage when the parsed value is finite and greater than zero.
 			if (quotaUsedHeader !== null) {
 				const quotaUsed = parseFloat(quotaUsedHeader);
 				if (Number.isFinite(quotaUsed) && quotaUsed > 0) {
-					this.updateThrottlers(options.method, options.url, bucketName, quotaUsed);
+					this.updateThrottlers(
+						options.method,
+						options.url,
+						bucketName,
+						quotaUsed,
+					);
 				}
 			}
 
@@ -331,17 +385,32 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 					const retryAfterHeader = res.headers.get('Retry-After');
 					if (retryAfterHeader) {
 						const waitSeconds = parseInt(retryAfterHeader, 10) || 1;
-						this.logService.info(`GithubApiFetcherService: ${options.method} ${options.telemetry.urlId} returned 429, waiting ${waitSeconds}s (Retry-After). ${retryOnRateLimitedRemaining - 1} retries remaining`);
-						await raceCancellationError(sleep(waitSeconds * 1000), token);
-						return this.makeRequestWithRetries(options, token, retriesOn500Remaining, retryOnRateLimitedRemaining - 1);
+						this.logService.info(
+							`GithubApiFetcherService: ${options.method} ${options.telemetry.urlId} returned 429, waiting ${waitSeconds}s (Retry-After). ${retryOnRateLimitedRemaining - 1} retries remaining`,
+						);
+						await raceCancellationError(
+							sleep(waitSeconds * 1000),
+							token,
+						);
+						return this.makeRequestWithRetries(
+							options,
+							token,
+							retriesOn500Remaining,
+							retryOnRateLimitedRemaining - 1,
+						);
 					}
 				}
 
-				const willRetryAfterError = res.status >= 500 && res.status < 600 && retriesOn500Remaining > 0;
+				const willRetryAfterError =
+					res.status >= 500 &&
+					res.status < 600 &&
+					retriesOn500Remaining > 0;
 				const requestId = res.headers.get(githubHeaders.requestId);
 
 				if (willRetryAfterError) {
-					this.logService.warn(`GithubApiFetcherService: ${options.method} ${options.telemetry.urlId} returned ${res.status}, github requestId: '${requestId}'. Retrying (${retriesOn500Remaining} retries remaining)`,);
+					this.logService.warn(
+						`GithubApiFetcherService: ${options.method} ${options.telemetry.urlId} returned ${res.status}, github requestId: '${requestId}'. Retrying (${retriesOn500Remaining} retries remaining)`,
+					);
 				} else {
 					let responseBody = '';
 					try {
@@ -349,7 +418,9 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 					} catch {
 						// noop
 					}
-					this.logService.error(`GithubApiFetcherService: ${options.method} ${options.telemetry.urlId} failed with status '${res.status}', github requestId: '${requestId}', body: ${responseBody}`,);
+					this.logService.error(
+						`GithubApiFetcherService: ${options.method} ${options.telemetry.urlId} failed with status '${res.status}', github requestId: '${requestId}', body: ${responseBody}`,
+					);
 				}
 
 				/* __GDPR__
@@ -363,24 +434,35 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 						"willRetry": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Whether the request will be retried" }
 					}
 				*/
-				this.telemetryService.sendMSFTTelemetryEvent('githubApiFetcherService.request.error', {
-					urlId: options.telemetry.urlId,
-					method: options.method,
-					caller: options.telemetry.callerInfo.toString(),
-				}, {
-					statusCode: res.status,
-					willRetry: willRetryAfterError ? 1 : 0,
-				});
+				this.telemetryService.sendMSFTTelemetryEvent(
+					'githubApiFetcherService.request.error',
+					{
+						urlId: options.telemetry.urlId,
+						method: options.method,
+						caller: options.telemetry.callerInfo.toString(),
+					},
+					{
+						statusCode: res.status,
+						willRetry: willRetryAfterError ? 1 : 0,
+					},
+				);
 
 				if (willRetryAfterError) {
-					return this.makeRequestWithRetries(options, token, retriesOn500Remaining - 1, retryOnRateLimitedRemaining);
+					return this.makeRequestWithRetries(
+						options,
+						token,
+						retriesOn500Remaining - 1,
+						retryOnRateLimitedRemaining,
+					);
 				}
 			}
 
 			return res;
 		} catch (e) {
 			if (!isCancellationError(e)) {
-				this.logService.error(`GithubApiFetcherService: ${options.method} ${options.telemetry.urlId} threw: ${e}`);
+				this.logService.error(
+					`GithubApiFetcherService: ${options.method} ${options.telemetry.urlId} threw: ${e}`,
+				);
 			}
 			throw e;
 		} finally {
@@ -390,17 +472,23 @@ export class GithubApiFetcherService extends Disposable implements IGithubApiFet
 }
 
 async function sleep(ms: number): Promise<void> {
-	return new Promise(resolve => setTimeout(resolve, ms));
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function getGithubMetadataHeaders(callerInfo: CallTracker, envService: IEnvService): Record<string, string> | undefined {
+export function getGithubMetadataHeaders(
+	callerInfo: CallTracker,
+	envService: IEnvService,
+): Record<string, string> | undefined {
 	const editorInfo = envService.getEditorInfo();
 
 	// Try converting vscode/1.xxx-insiders to vscode-insiders/1.xxx
-	const versionNumberAndSubName = editorInfo.version.match(/^(?<version>.+?)(\-(?<subName>\w+?))?$/);
-	const application = versionNumberAndSubName && versionNumberAndSubName.groups?.subName
-		? `${editorInfo.name}-${versionNumberAndSubName.groups.subName}/${versionNumberAndSubName.groups.version}`
-		: editorInfo.format();
+	const versionNumberAndSubName = editorInfo.version.match(
+		/^(?<version>.+?)(\-(?<subName>\w+?))?$/,
+	);
+	const application =
+		versionNumberAndSubName && versionNumberAndSubName.groups?.subName
+			? `${editorInfo.name}-${versionNumberAndSubName.groups.subName}/${versionNumberAndSubName.groups.version}`
+			: editorInfo.format();
 
 	return {
 		'X-Client-Application': application,

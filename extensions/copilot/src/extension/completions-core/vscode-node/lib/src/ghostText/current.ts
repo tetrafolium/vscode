@@ -6,7 +6,10 @@ import { createServiceIdentifier } from '../../../../../../util/common/services'
 import { APIChoice } from '../openai/openai';
 import { ResultType } from './resultType';
 
-export const ICompletionsCurrentGhostText = createServiceIdentifier<ICompletionsCurrentGhostText>('ICompletionsCurrentGhostText');
+export const ICompletionsCurrentGhostText =
+	createServiceIdentifier<ICompletionsCurrentGhostText>(
+		'ICompletionsCurrentGhostText',
+	);
 export interface ICompletionsCurrentGhostText {
 	readonly _serviceBrand: undefined;
 
@@ -14,8 +17,16 @@ export interface ICompletionsCurrentGhostText {
 
 	currentRequestId: string | undefined;
 
-	setGhostText(prefix: string, suffix: string, choices: APIChoice[], resultType: ResultType): void;
-	getCompletionsForUserTyping(prefix: string, suffix: string): APIChoice[] | undefined;
+	setGhostText(
+		prefix: string,
+		suffix: string,
+		choices: APIChoice[],
+		resultType: ResultType,
+	): void;
+	getCompletionsForUserTyping(
+		prefix: string,
+		suffix: string,
+	): APIChoice[] | undefined;
 	hasAcceptedCurrentCompletion(prefix: string, suffix: string): boolean;
 }
 
@@ -49,27 +60,48 @@ export class CurrentGhostText implements ICompletionsCurrentGhostText {
 
 	/** Updates the current ghost text if it was not produced via
 	 * TypingAsSuggested. Should only be called from the end of getGhostText. */
-	setGhostText(prefix: string, suffix: string, choices: APIChoice[], resultType: ResultType) {
-		if (resultType === ResultType.TypingAsSuggested) { return; }
+	setGhostText(
+		prefix: string,
+		suffix: string,
+		choices: APIChoice[],
+		resultType: ResultType,
+	) {
+		if (resultType === ResultType.TypingAsSuggested) {
+			return;
+		}
 		this.prefix = prefix;
 		this.suffix = suffix;
 		this.choices = choices;
 	}
 
 	/** Returns the current choices if the request context matches.  */
-	getCompletionsForUserTyping(prefix: string, suffix: string): APIChoice[] | undefined {
+	getCompletionsForUserTyping(
+		prefix: string,
+		suffix: string,
+	): APIChoice[] | undefined {
 		const remainingPrefix = this.getRemainingPrefix(prefix, suffix);
-		if (remainingPrefix === undefined) { return; }
+		if (remainingPrefix === undefined) {
+			return;
+		}
 		// If the first choice text does not match return empty to fall through
 		// to either the cache or network.
-		if (!startsWithAndExceeds(this.choices[0].completionText, remainingPrefix)) { return; }
+		if (
+			!startsWithAndExceeds(
+				this.choices[0].completionText,
+				remainingPrefix,
+			)
+		) {
+			return;
+		}
 		return adjustChoicesStart(this.choices, remainingPrefix);
 	}
 
 	/** Returns whether the current completion is fully completed, and covers a full line. */
 	hasAcceptedCurrentCompletion(prefix: string, suffix: string): boolean {
 		const remainingPrefix = this.getRemainingPrefix(prefix, suffix);
-		if (remainingPrefix === undefined) { return false; }
+		if (remainingPrefix === undefined) {
+			return false;
+		}
 
 		// Check if the completion text matches exactly
 		const exactMatch = remainingPrefix === this.choices?.[0].completionText;
@@ -82,15 +114,28 @@ export class CurrentGhostText implements ICompletionsCurrentGhostText {
 	/** If the given document prefix and prompt suffix match the current
 	 * completion returns the remaining prefix of the document after the stored
 	 * prefix. Returns undefined if the completion does not match. */
-	private getRemainingPrefix(prefix: string, suffix: string): string | undefined {
+	private getRemainingPrefix(
+		prefix: string,
+		suffix: string,
+	): string | undefined {
 		// Check that there is a current completion.
-		if (this.prefix === undefined || this.suffix === undefined || this.choices.length === 0) { return; }
+		if (
+			this.prefix === undefined ||
+			this.suffix === undefined ||
+			this.choices.length === 0
+		) {
+			return;
+		}
 		// Check that the prompt suffixes are an exact match.
-		if (this.suffix !== suffix) { return; }
+		if (this.suffix !== suffix) {
+			return;
+		}
 		// Check that the document prefix is a prefix of the new prefix.
 		// This doesn't use the prompt prefix since the ellision means that
 		// subsequent prefixes will not be a prefix of earlier ones.
-		if (!prefix.startsWith(this.prefix)) { return; }
+		if (!prefix.startsWith(this.prefix)) {
+			return;
+		}
 		// Return the remaining new document prefix after the prefix stored for
 		// the current completion.
 		return prefix.substring(this.prefix.length);
@@ -99,12 +144,19 @@ export class CurrentGhostText implements ICompletionsCurrentGhostText {
 
 /** Returns choices adjusted to remove the remainingPrefix from the start of the
  * completionText if it matches. */
-function adjustChoicesStart(choices: APIChoice[], remainingPrefix: string): APIChoice[] {
+function adjustChoicesStart(
+	choices: APIChoice[],
+	remainingPrefix: string,
+): APIChoice[] {
 	return choices
-		.filter(choice => startsWithAndExceeds(choice.completionText, remainingPrefix))
-		.map(choice => ({
+		.filter((choice) =>
+			startsWithAndExceeds(choice.completionText, remainingPrefix),
+		)
+		.map((choice) => ({
 			...choice,
-			completionText: choice.completionText.substring(remainingPrefix.length),
+			completionText: choice.completionText.substring(
+				remainingPrefix.length,
+			),
 		}));
 }
 

@@ -3,50 +3,62 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { graphql } from '@octokit/graphql';
+import * as vscode from "vscode";
+import { graphql } from "@octokit/graphql";
 
 export function activate(context: vscode.ExtensionContext) {
-
-	const item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 1);
+	const item = vscode.window.createStatusBarItem(
+		vscode.StatusBarAlignment.Left,
+		1,
+	);
 	context.subscriptions.push(item);
 
 	let session: vscode.AuthenticationSession | undefined;
 
-	context.subscriptions.push(vscode.commands.registerCommand('pr.promptLogin', async () => {
-		session = await vscode.authentication.getSession('github', ['repo'], { createIfNone: true });
-		updateItem();
-	}));
+	context.subscriptions.push(
+		vscode.commands.registerCommand("pr.promptLogin", async () => {
+			session = await vscode.authentication.getSession("github", ["repo"], {
+				createIfNone: true,
+			});
+			updateItem();
+		}),
+	);
 
-	context.subscriptions.push(vscode.commands.registerCommand('pr.show', async (pr: PrInfo) => {
-		vscode.env.openExternal(vscode.Uri.parse(pr.url));
-		item.hide();
-	}));
+	context.subscriptions.push(
+		vscode.commands.registerCommand("pr.show", async (pr: PrInfo) => {
+			vscode.env.openExternal(vscode.Uri.parse(pr.url));
+			item.hide();
+		}),
+	);
 
 	let currentShow: vscode.Disposable | undefined = undefined;
-	context.subscriptions.push(new vscode.Disposable(() => currentShow?.dispose()));
+	context.subscriptions.push(
+		new vscode.Disposable(() => currentShow?.dispose()),
+	);
 
 	// monitor focus/unfocus to "nudge harder" after a context switch
 	let lastGone: number | undefined;
-	context.subscriptions.push(vscode.window.onDidChangeWindowState(e => {
-		if (!e.focused) {
-			// gone
-			lastGone = Date.now();
-			return;
-		}
+	context.subscriptions.push(
+		vscode.window.onDidChangeWindowState((e) => {
+			if (!e.focused) {
+				// gone
+				lastGone = Date.now();
+				return;
+			}
 
-		if (lastGone && Date.now() - lastGone > 1000 * 60 * 5) {
-			// back after 5 minutes
-			updateItem(true);
-		}
-	}));
+			if (lastGone && Date.now() - lastGone > 1000 * 60 * 5) {
+				// back after 5 minutes
+				updateItem(true);
+			}
+		}),
+	);
 
 	async function updateItem(afterAway?: boolean) {
 		const currentSession = session;
 
 		if (!currentSession) {
-			item.text = 'Not Logged In';
-			item.command = 'pr.promptLogin';
+			item.text = "Not Logged In";
+			item.command = "pr.promptLogin";
 			item.show();
 			return;
 		}
@@ -57,12 +69,15 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		const tooLongAgo = Date.now() - 1000 * 60 * 60 * 24 * 4;
-		const data: Query = await graphql(query, { headers: { authorization: `Bearer ${currentSession.accessToken}` } });
+		const data: Query = await graphql(query, {
+			headers: { authorization: `Bearer ${currentSession.accessToken}` },
+		});
 
-		const prs = data.repository.pullRequests.edges.map(edge => edge.node)
+		const prs = data.repository.pullRequests.edges
+			.map((edge) => edge.node)
 			.filter(needsTeamReview) // from team
-			.filter(pr => pr.author.login !== currentSession.account.label) // not YOU
-			.map(pr => ({ pr, date: new Date(pr.createdAt) }))
+			.filter((pr) => pr.author.login !== currentSession.account.label) // not YOU
+			.map((pr) => ({ pr, date: new Date(pr.createdAt) }))
 			.filter(({ date }) => date.getTime() > tooLongAgo) // not dated
 			.sort((a, b) => b.date.getTime() - a.date.getTime()); // sorted
 
@@ -83,9 +98,14 @@ export function activate(context: vscode.ExtensionContext) {
 		const pr = prs[n].pr;
 
 		item.text = makeLabel(pr);
-		item.tooltip = new vscode.MarkdownString(`[${pr.title}](${pr.url}) needs your review. Thanks $(heart-filled)`, true);
-		item.command = { command: 'pr.show', title: 'Show PR', arguments: [pr] };
-		item.backgroundColor = afterAway ? new vscode.ThemeColor('statusBarItem.warningBackground') : undefined;
+		item.tooltip = new vscode.MarkdownString(
+			`[${pr.title}](${pr.url}) needs your review. Thanks $(heart-filled)`,
+			true,
+		);
+		item.command = { command: "pr.show", title: "Show PR", arguments: [pr] };
+		item.backgroundColor = afterAway
+			? new vscode.ThemeColor("statusBarItem.warningBackground")
+			: undefined;
 		item.show();
 
 		// refresh every 20 seconds
@@ -105,23 +125,27 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 	}
 
-	vscode.authentication.getSession('github', ['repo']).then(_session => {
+	vscode.authentication.getSession("github", ["repo"]).then((_session) => {
 		session = _session;
 		updateItem();
 	});
 
 	const handle = setInterval(updateItem, 1000 * 60 * 10); // update every 10 minutes
-	context.subscriptions.push(new vscode.Disposable(() => clearInterval(handle)));
+	context.subscriptions.push(
+		new vscode.Disposable(() => clearInterval(handle)),
+	);
 }
 
 function makeLabel(pr: PrInfo): string {
-	const style = vscode.workspace.getConfiguration('prpinger').get<'short' | 'number'>('presentation');
-	if (style === 'number') {
+	const style = vscode.workspace
+		.getConfiguration("prpinger")
+		.get<"short" | "number">("presentation");
+	if (style === "number") {
 		return `$(git-pull-request) #${pr.number}`;
 	}
 
-	const ignore = new Set(['`', '.', ':']);
-	const vowels = new Set(['a', 'e', 'i', 'o', 'u']);
+	const ignore = new Set(["`", ".", ":"]);
+	const vowels = new Set(["a", "e", "i", "o", "u"]);
 	const newTitle: string[] = [];
 	for (const ch of pr.title) {
 		if (ignore.has(ch)) {
@@ -138,21 +162,24 @@ function makeLabel(pr: PrInfo): string {
 		}
 	}
 
-	return `$(git-pull-request) ${newTitle.join('')}`;
+	return `$(git-pull-request) ${newTitle.join("")}`;
 }
 
 function needsTeamReview(pr: PrInfo): boolean {
-	return pr.authorAssociation === 'MEMBER'
-		&& !pr.isDraft
-		&& pr.reviewRequests.totalCount === 0
-		&& pr.reviews.totalCount === 0
-		&& pr.assignees.nodes.length === 1 && pr.assignees.nodes[0].login === pr.author.login; // our PR bot assigns the poster as owner -> we use that as filter
+	return (
+		pr.authorAssociation === "MEMBER" &&
+		!pr.isDraft &&
+		pr.reviewRequests.totalCount === 0 &&
+		pr.reviews.totalCount === 0 &&
+		pr.assignees.nodes.length === 1 &&
+		pr.assignees.nodes[0].login === pr.author.login
+	); // our PR bot assigns the poster as owner -> we use that as filter
 }
 
 type PrInfo = {
 	number: number;
 	author: { login: string };
-	authorAssociation: 'MEMBER' | string;
+	authorAssociation: "MEMBER" | string;
 	assignees: { nodes: { login: string }[] };
 	createdAt: string;
 	isDraft: string;
@@ -161,7 +188,6 @@ type PrInfo = {
 	title: string;
 	url: string;
 };
-
 
 // ---- query
 
@@ -215,7 +241,6 @@ type Check = {
 		pullRequest: PrInfo;
 	};
 };
-
 
 const check = `query validate($pr: Int!) {
   repository(owner: "microsoft", name: "vscode") {

@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import { LRURadixTrie } from '../radix';
 import * as assert from 'assert';
 
@@ -17,7 +16,9 @@ suite('LRURadixTrie', function () {
 	suite('set', function () {
 		test('stores a single value', function () {
 			trie.set('test', 'value');
-			assert.deepStrictEqual(trie.findAll('test'), [{ remainingKey: '', value: 'value' }]);
+			assert.deepStrictEqual(trie.findAll('test'), [
+				{ remainingKey: '', value: 'value' },
+			]);
 		});
 
 		test('splits edges when inserting', function () {
@@ -37,9 +38,15 @@ suite('LRURadixTrie', function () {
 			trie.set('d', 'fourth');
 
 			assert.deepStrictEqual(trie.findAll('a'), []);
-			assert.deepStrictEqual(trie.findAll('b'), [{ remainingKey: '', value: 'second' }]);
-			assert.deepStrictEqual(trie.findAll('c'), [{ remainingKey: '', value: 'third' }]);
-			assert.deepStrictEqual(trie.findAll('d'), [{ remainingKey: '', value: 'fourth' }]);
+			assert.deepStrictEqual(trie.findAll('b'), [
+				{ remainingKey: '', value: 'second' },
+			]);
+			assert.deepStrictEqual(trie.findAll('c'), [
+				{ remainingKey: '', value: 'third' },
+			]);
+			assert.deepStrictEqual(trie.findAll('d'), [
+				{ remainingKey: '', value: 'fourth' },
+			]);
 		});
 
 		test('shorter key as prefix of longer key', function () {
@@ -67,7 +74,10 @@ suite('LRURadixTrie', function () {
 				{ remainingKey: '', value: '1' },
 				{ remainingKey: 'est', value: '2' },
 			]);
-			assert.deepStrictEqual(trie1.findAll('test'), trie2.findAll('test'));
+			assert.deepStrictEqual(
+				trie1.findAll('test'),
+				trie2.findAll('test'),
+			);
 		});
 	});
 
@@ -102,9 +112,15 @@ suite('LRURadixTrie', function () {
 			trie.findAll('a');
 			trie.set('d', 'fourth');
 			assert.deepStrictEqual(trie.findAll('b'), []);
-			assert.deepStrictEqual(trie.findAll('c'), [{ remainingKey: '', value: 'third' }]);
-			assert.deepStrictEqual(trie.findAll('d'), [{ remainingKey: '', value: 'fourth' }]);
-			assert.deepStrictEqual(trie.findAll('a'), [{ remainingKey: '', value: 'first' }]);
+			assert.deepStrictEqual(trie.findAll('c'), [
+				{ remainingKey: '', value: 'third' },
+			]);
+			assert.deepStrictEqual(trie.findAll('d'), [
+				{ remainingKey: '', value: 'fourth' },
+			]);
+			assert.deepStrictEqual(trie.findAll('a'), [
+				{ remainingKey: '', value: 'first' },
+			]);
 		});
 	});
 
@@ -122,7 +138,9 @@ suite('LRURadixTrie', function () {
 			trie.delete('test');
 
 			assert.deepStrictEqual(trie.findAll('test'), []);
-			assert.deepStrictEqual(trie.findAll('testing'), [{ remainingKey: '', value: 'second' }]);
+			assert.deepStrictEqual(trie.findAll('testing'), [
+				{ remainingKey: '', value: 'second' },
+			]);
 		});
 
 		test('handles merging sibling node after delete', function () {
@@ -135,13 +153,17 @@ suite('LRURadixTrie', function () {
 
 			assert.deepStrictEqual(trie.findAll('test'), []);
 			assert.deepStrictEqual(trie.findAll('testing'), []);
-			assert.deepStrictEqual(trie.findAll('testy'), [{ remainingKey: '', value: 'third' }]);
+			assert.deepStrictEqual(trie.findAll('testy'), [
+				{ remainingKey: '', value: 'third' },
+			]);
 		});
 
 		test('does nothing when key not found', function () {
 			trie.set('test', 'value');
 			trie.delete('other');
-			assert.deepStrictEqual(trie.findAll('test'), [{ remainingKey: '', value: 'value' }]);
+			assert.deepStrictEqual(trie.findAll('test'), [
+				{ remainingKey: '', value: 'value' },
+			]);
 		});
 	});
 

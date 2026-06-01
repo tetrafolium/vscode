@@ -30,7 +30,7 @@ const mapExtToTextMimes: Record<string, string> = {
 	'.js': 'text/javascript',
 	'.mjs': 'text/javascript',
 	'.txt': 'text/plain',
-	'.xml': 'text/xml'
+	'.xml': 'text/xml',
 };
 
 // Known media mimes that we can handle
@@ -105,7 +105,9 @@ export function getMediaMime(path: string): string | undefined {
 export function getExtensionForMimeType(mimeType: string): string | undefined {
 	for (const extension in mapExtToMediaMimes) {
 		const value = mapExtToMediaMimes[extension];
-		if (Array.isArray(value) ? value.includes(mimeType) : value === mimeType) {
+		if (
+			Array.isArray(value) ? value.includes(mimeType) : value === mimeType
+		) {
 			return extension;
 		}
 	}
@@ -116,14 +118,17 @@ export function getExtensionForMimeType(mimeType: string): string | undefined {
 const _simplePattern = /^(.+)\/(.+?)(;.+)?$/;
 
 export function normalizeMimeType(mimeType: string): string;
-export function normalizeMimeType(mimeType: string, strict: true): string | undefined;
-export function normalizeMimeType(mimeType: string, strict?: true): string | undefined {
-
+export function normalizeMimeType(
+	mimeType: string,
+	strict: true,
+): string | undefined;
+export function normalizeMimeType(
+	mimeType: string,
+	strict?: true,
+): string | undefined {
 	const match = _simplePattern.exec(mimeType);
 	if (!match) {
-		return strict
-			? undefined
-			: mimeType;
+		return strict ? undefined : mimeType;
 	}
 	// https://datatracker.ietf.org/doc/html/rfc2045#section-5.1
 	// media and subtype must ALWAYS be lowercase, parameter not
@@ -134,5 +139,8 @@ export function normalizeMimeType(mimeType: string, strict?: true): string | und
  * Whether the provided mime type is a text stream like `stdout`, `stderr`.
  */
 export function isTextStreamMime(mimeType: string) {
-	return ['application/vnd.code.notebook.stdout', 'application/vnd.code.notebook.stderr'].includes(mimeType);
+	return [
+		'application/vnd.code.notebook.stdout',
+		'application/vnd.code.notebook.stderr',
+	].includes(mimeType);
 }

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from '../../../nls.js';
-import type { ChangesetSummary, URI } from './state/sessionState.js';
+import { localize } from "../../../nls.js";
+import type { ChangesetSummary, URI } from "./state/sessionState.js";
 
 /**
  * Helpers for building / parsing the URI clients subscribe to in order to
@@ -28,34 +28,40 @@ import type { ChangesetSummary, URI } from './state/sessionState.js';
  */
 
 /** Stable id of the catalogue entry for the session-wide changeset. */
-const SESSION_CHANGESET_ID = 'session';
+const SESSION_CHANGESET_ID = "session";
 
 /** Stable id of the catalogue entry for the uncommitted-changes changeset. */
-const UNCOMMITTED_CHANGESET_ID = 'uncommitted';
+const UNCOMMITTED_CHANGESET_ID = "uncommitted";
 
 /** Path prefix used by per-turn changeset URIs (`turn/<turnId>`). */
-const TURN_CHANGESET_PREFIX = 'turn/';
+const TURN_CHANGESET_PREFIX = "turn/";
 
 /** Template variable name used inside the per-turn URI template. */
-const TURN_TEMPLATE_VARIABLE = '{turnId}';
+const TURN_TEMPLATE_VARIABLE = "{turnId}";
 
 /** Path prefix used by compare-turns changeset URIs (`compare/<originalTurnId>/<modifiedTurnId>`). */
-const COMPARE_CHANGESET_PREFIX = 'compare/';
+const COMPARE_CHANGESET_PREFIX = "compare/";
 
 /** Template variable name for the original turn in the compare-turns URI template. */
-const COMPARE_ORIGINAL_TEMPLATE_VARIABLE = '{originalTurnId}';
+const COMPARE_ORIGINAL_TEMPLATE_VARIABLE = "{originalTurnId}";
 
 /** Template variable name for the modified turn in the compare-turns URI template. */
-const COMPARE_MODIFIED_TEMPLATE_VARIABLE = '{modifiedTurnId}';
+const COMPARE_MODIFIED_TEMPLATE_VARIABLE = "{modifiedTurnId}";
 
 /** Localized human-readable label for the session-wide changeset entry. */
-export const sessionChangesetLabel = (): string => localize('branchChangeset.label', "Branch Changes");
+export const sessionChangesetLabel = (): string =>
+	localize("branchChangeset.label", "Branch Changes");
 
 /** Localized human-readable label for the uncommitted-changes changeset entry. */
-export const uncommittedChangesetLabel = (): string => localize('uncommittedChangeset.label', "Uncommitted Changes");
+export const uncommittedChangesetLabel = (): string =>
+	localize("uncommittedChangeset.label", "Uncommitted Changes");
 
 /** Localized human-readable description for the uncommitted-changes changeset entry. */
-export const uncommittedChangesetDescription = (): string => localize('uncommittedChangeset.description', "Show uncommitted changes in this session");
+export const uncommittedChangesetDescription = (): string =>
+	localize(
+		"uncommittedChangeset.description",
+		"Show uncommitted changes in this session",
+	);
 
 /**
  * Returns the description shown next to the `Branch Changes` catalogue
@@ -66,7 +72,10 @@ export const uncommittedChangesetDescription = (): string => localize('uncommitt
  * `refs/remotes/origin/HEAD`). Returns `undefined` only when no branch
  * name is known at all, so callers can omit the description entirely.
  */
-export function formatSessionChangesetDescription(branchName: string | undefined, baseBranchName: string | undefined): string | undefined {
+export function formatSessionChangesetDescription(
+	branchName: string | undefined,
+	baseBranchName: string | undefined,
+): string | undefined {
 	if (!branchName || !baseBranchName) {
 		return branchName;
 	}
@@ -77,16 +86,16 @@ export function formatSessionChangesetDescription(branchName: string | undefined
 }
 
 /** Marker injected into a changeset URI's path. */
-const CHANGESET_PATH_SEGMENT = '/changeset/';
+const CHANGESET_PATH_SEGMENT = "/changeset/";
 
 /** Discriminates the well-known changeset URI shapes. */
 export const enum ChangesetKind {
-	Session = 'session',
-	Uncommitted = 'uncommitted',
-	Turn = 'turn',
-	Compare = 'compare',
+	Session = "session",
+	Uncommitted = "uncommitted",
+	Turn = "turn",
+	Compare = "compare",
 	/** Producer-defined id we don't recognise (single-segment only). */
-	Unknown = 'unknown',
+	Unknown = "unknown",
 }
 
 /** Returns the subscribable URI for the session-wide changeset. */
@@ -110,8 +119,10 @@ export function buildTurnChangesetUriTemplate(sessionUri: URI): URI {
 
 /** Returns the subscribable URI for the per-turn changeset of `turnId`. */
 export function buildTurnChangesetUri(sessionUri: URI, turnId: string): URI {
-	if (!turnId || turnId.includes('/')) {
-		throw new Error(`buildTurnChangesetUri: turnId must be non-empty and not contain '/' (got ${JSON.stringify(turnId)})`);
+	if (!turnId || turnId.includes("/")) {
+		throw new Error(
+			`buildTurnChangesetUri: turnId must be non-empty and not contain '/' (got ${JSON.stringify(turnId)})`,
+		);
 	}
 	return `${sessionUri}${CHANGESET_PATH_SEGMENT}${TURN_CHANGESET_PREFIX}${turnId}`;
 }
@@ -131,12 +142,20 @@ export function buildCompareTurnsChangesetUriTemplate(sessionUri: URI): URI {
  * `originalTurnId` (the "from" endpoint) and `modifiedTurnId` (the "to"
  * endpoint). Diff direction is `originalTurnId → modifiedTurnId`.
  */
-export function buildCompareTurnsChangesetUri(sessionUri: URI, originalTurnId: string, modifiedTurnId: string): URI {
-	if (!originalTurnId || originalTurnId.includes('/')) {
-		throw new Error(`buildCompareTurnsChangesetUri: originalTurnId must be non-empty and not contain '/' (got ${JSON.stringify(originalTurnId)})`);
+export function buildCompareTurnsChangesetUri(
+	sessionUri: URI,
+	originalTurnId: string,
+	modifiedTurnId: string,
+): URI {
+	if (!originalTurnId || originalTurnId.includes("/")) {
+		throw new Error(
+			`buildCompareTurnsChangesetUri: originalTurnId must be non-empty and not contain '/' (got ${JSON.stringify(originalTurnId)})`,
+		);
 	}
-	if (!modifiedTurnId || modifiedTurnId.includes('/')) {
-		throw new Error(`buildCompareTurnsChangesetUri: modifiedTurnId must be non-empty and not contain '/' (got ${JSON.stringify(modifiedTurnId)})`);
+	if (!modifiedTurnId || modifiedTurnId.includes("/")) {
+		throw new Error(
+			`buildCompareTurnsChangesetUri: modifiedTurnId must be non-empty and not contain '/' (got ${JSON.stringify(modifiedTurnId)})`,
+		);
 	}
 	return `${sessionUri}${CHANGESET_PATH_SEGMENT}${COMPARE_CHANGESET_PREFIX}${originalTurnId}/${modifiedTurnId}`;
 }
@@ -148,10 +167,12 @@ export function buildCompareTurnsChangesetUri(sessionUri: URI, originalTurnId: s
  */
 export function buildChangesetUri(sessionUri: URI, changesetId: string): URI {
 	if (!changesetId) {
-		throw new Error('buildChangesetUri: changesetId must be non-empty');
+		throw new Error("buildChangesetUri: changesetId must be non-empty");
 	}
-	if (changesetId.includes('/')) {
-		throw new Error(`buildChangesetUri: changesetId must not contain '/' (got ${JSON.stringify(changesetId)})`);
+	if (changesetId.includes("/")) {
+		throw new Error(
+			`buildChangesetUri: changesetId must not contain '/' (got ${JSON.stringify(changesetId)})`,
+		);
 	}
 	return `${sessionUri}${CHANGESET_PATH_SEGMENT}${changesetId}`;
 }
@@ -160,7 +181,18 @@ export function buildChangesetUri(sessionUri: URI, changesetId: string): URI {
  * Parses a changeset URI back into `(sessionUri, changesetId, kind)`,
  * or returns `undefined` if `uri` is not a changeset URI we recognise.
  */
-export function parseChangesetUri(uri: URI): { sessionUri: URI; changesetId: string; kind: ChangesetKind; turnId?: string; originalTurnId?: string; modifiedTurnId?: string } | undefined {
+export function parseChangesetUri(
+	uri: URI,
+):
+	| {
+			sessionUri: URI;
+			changesetId: string;
+			kind: ChangesetKind;
+			turnId?: string;
+			originalTurnId?: string;
+			modifiedTurnId?: string;
+	  }
+	| undefined {
 	const idx = uri.lastIndexOf(CHANGESET_PATH_SEGMENT);
 	if (idx < 0) {
 		return undefined;
@@ -179,28 +211,37 @@ export function parseChangesetUri(uri: URI): { sessionUri: URI; changesetId: str
 	if (changesetId.startsWith(TURN_CHANGESET_PREFIX)) {
 		const turnId = changesetId.slice(TURN_CHANGESET_PREFIX.length);
 		// Reject the unexpanded template and any tail with extra segments.
-		if (!turnId || turnId.includes('/') || turnId === TURN_TEMPLATE_VARIABLE) {
+		if (!turnId || turnId.includes("/") || turnId === TURN_TEMPLATE_VARIABLE) {
 			return undefined;
 		}
 		return { sessionUri, changesetId, kind: ChangesetKind.Turn, turnId };
 	}
 	if (changesetId.startsWith(COMPARE_CHANGESET_PREFIX)) {
 		const tail = changesetId.slice(COMPARE_CHANGESET_PREFIX.length);
-		const parts = tail.split('/');
+		const parts = tail.split("/");
 		// Reject anything that isn't exactly `<originalTurnId>/<modifiedTurnId>`,
 		// and reject unexpanded template variables on either side.
 		if (parts.length !== 2) {
 			return undefined;
 		}
 		const [originalTurnId, modifiedTurnId] = parts;
-		if (!originalTurnId || !modifiedTurnId
-			|| originalTurnId === COMPARE_ORIGINAL_TEMPLATE_VARIABLE
-			|| modifiedTurnId === COMPARE_MODIFIED_TEMPLATE_VARIABLE) {
+		if (
+			!originalTurnId ||
+			!modifiedTurnId ||
+			originalTurnId === COMPARE_ORIGINAL_TEMPLATE_VARIABLE ||
+			modifiedTurnId === COMPARE_MODIFIED_TEMPLATE_VARIABLE
+		) {
 			return undefined;
 		}
-		return { sessionUri, changesetId, kind: ChangesetKind.Compare, originalTurnId, modifiedTurnId };
+		return {
+			sessionUri,
+			changesetId,
+			kind: ChangesetKind.Compare,
+			originalTurnId,
+			modifiedTurnId,
+		};
 	}
-	if (changesetId.includes('/')) {
+	if (changesetId.includes("/")) {
 		return undefined;
 	}
 	return { sessionUri, changesetId, kind: ChangesetKind.Unknown };
@@ -222,7 +263,9 @@ export function isUncommittedChangesetUri(uri: URI): boolean {
 }
 
 /** Returns the parsed turn id when `uri` is a per-turn changeset URI. */
-export function parseTurnChangesetUri(uri: URI): { sessionUri: URI; turnId: string } | undefined {
+export function parseTurnChangesetUri(
+	uri: URI,
+): { sessionUri: URI; turnId: string } | undefined {
 	const parsed = parseChangesetUri(uri);
 	if (parsed?.kind !== ChangesetKind.Turn || parsed.turnId === undefined) {
 		return undefined;
@@ -231,12 +274,24 @@ export function parseTurnChangesetUri(uri: URI): { sessionUri: URI; turnId: stri
 }
 
 /** Returns the parsed turn ids when `uri` is a compare-turns changeset URI. */
-export function parseCompareTurnsChangesetUri(uri: URI): { sessionUri: URI; originalTurnId: string; modifiedTurnId: string } | undefined {
+export function parseCompareTurnsChangesetUri(
+	uri: URI,
+):
+	| { sessionUri: URI; originalTurnId: string; modifiedTurnId: string }
+	| undefined {
 	const parsed = parseChangesetUri(uri);
-	if (parsed?.kind !== ChangesetKind.Compare || parsed.originalTurnId === undefined || parsed.modifiedTurnId === undefined) {
+	if (
+		parsed?.kind !== ChangesetKind.Compare ||
+		parsed.originalTurnId === undefined ||
+		parsed.modifiedTurnId === undefined
+	) {
 		return undefined;
 	}
-	return { sessionUri: parsed.sessionUri, originalTurnId: parsed.originalTurnId, modifiedTurnId: parsed.modifiedTurnId };
+	return {
+		sessionUri: parsed.sessionUri,
+		originalTurnId: parsed.originalTurnId,
+		modifiedTurnId: parsed.modifiedTurnId,
+	};
 }
 
 /**
@@ -257,9 +312,18 @@ export function parseCompareTurnsChangesetUri(uri: URI): { sessionUri: URI; orig
  * compare-turns diffs construct the URI themselves from two known
  * turn ids and subscribe directly.
  */
-export function buildDefaultChangesetCatalogue(sessionUri: URI): ChangesetSummary[] {
+export function buildDefaultChangesetCatalogue(
+	sessionUri: URI,
+): ChangesetSummary[] {
 	return [
-		{ label: sessionChangesetLabel(), uriTemplate: buildSessionChangesetUri(sessionUri) },
-		{ label: uncommittedChangesetLabel(), uriTemplate: buildUncommittedChangesetUri(sessionUri), description: uncommittedChangesetDescription() }
+		{
+			label: sessionChangesetLabel(),
+			uriTemplate: buildSessionChangesetUri(sessionUri),
+		},
+		{
+			label: uncommittedChangesetLabel(),
+			uriTemplate: buildUncommittedChangesetUri(sessionUri),
+			description: uncommittedChangesetDescription(),
+		},
 	];
 }

@@ -19,12 +19,13 @@ const SOURCE = {
 
 suite('Test window delineation', function () {
 	test('Correct line number range, standard input', function () {
-		const testLineNumbers: [number, number][] = getIndentationWindowsDelineations(
-			SOURCE.source.split('\n'),
-			'python',
-			1,
-			3
-		);
+		const testLineNumbers: [number, number][] =
+			getIndentationWindowsDelineations(
+				SOURCE.source.split('\n'),
+				'python',
+				1,
+				3,
+			);
 		const correctLineNumbers: [number, number][] = [
 			[0, 2], // f1: a1
 			[1, 2], // a1
@@ -32,15 +33,19 @@ suite('Test window delineation', function () {
 			[3, 4], // a2
 			[4, 5], // a3
 		];
-		assert.deepStrictEqual(testLineNumbers.sort(), correctLineNumbers.sort());
+		assert.deepStrictEqual(
+			testLineNumbers.sort(),
+			correctLineNumbers.sort(),
+		);
 	});
 	test('Correct line number range, standard input, decreased maxLength', function () {
-		const testLineNumbers: [number, number][] = getIndentationWindowsDelineations(
-			SOURCE.source.split('\n'),
-			'python',
-			1,
-			2
-		);
+		const testLineNumbers: [number, number][] =
+			getIndentationWindowsDelineations(
+				SOURCE.source.split('\n'),
+				'python',
+				1,
+				2,
+			);
 		const correctLineNumbers: [number, number][] = [
 			[0, 2], // f1: a1
 			[1, 2], // a1
@@ -51,15 +56,19 @@ suite('Test window delineation', function () {
 			[2, 4], // f2: a2
 			[3, 5], // a2 a3
 		];
-		assert.deepStrictEqual(testLineNumbers.sort(), correctLineNumbers.sort());
+		assert.deepStrictEqual(
+			testLineNumbers.sort(),
+			correctLineNumbers.sort(),
+		);
 	});
 	test('Correct line number range, standard input, increased minLength', function () {
-		const testLineNumbers: [number, number][] = getIndentationWindowsDelineations(
-			SOURCE.source.split('\n'),
-			'python',
-			2,
-			3
-		);
+		const testLineNumbers: [number, number][] =
+			getIndentationWindowsDelineations(
+				SOURCE.source.split('\n'),
+				'python',
+				2,
+				3,
+			);
 		const correctLineNumbers: [number, number][] = [
 			[0, 2], // f1: a1
 			[2, 5], // f2: a2 a3
@@ -68,7 +77,10 @@ suite('Test window delineation', function () {
 			// [3, 4] a2
 			// [4, 5] a3
 		];
-		assert.deepStrictEqual(testLineNumbers.sort(), correctLineNumbers.sort());
+		assert.deepStrictEqual(
+			testLineNumbers.sort(),
+			correctLineNumbers.sort(),
+		);
 	});
 
 	test('Correct line number range, flat input', function () {
@@ -77,12 +89,13 @@ suite('Test window delineation', function () {
 		a2
 		a3
 		`;
-		const testLineNumbers: [number, number][] = getIndentationWindowsDelineations(
-			source.split('\n'),
-			'python',
-			1,
-			3
-		);
+		const testLineNumbers: [number, number][] =
+			getIndentationWindowsDelineations(
+				source.split('\n'),
+				'python',
+				1,
+				3,
+			);
 		const correctLineNumbers: [number, number][] = [
 			[0, 1], // a1
 			[1, 2], // a2
@@ -90,17 +103,24 @@ suite('Test window delineation', function () {
 			[0, 3], // a1 a2 a3
 			// Don't get [0, 2] nor [1, 3] because they not single children nor the whole tree
 		];
-		assert.deepStrictEqual(testLineNumbers.sort(), correctLineNumbers.sort());
+		assert.deepStrictEqual(
+			testLineNumbers.sort(),
+			correctLineNumbers.sort(),
+		);
 	});
 
 	test('Check degenerate case', function () {
-		const testLineNumbers: [number, number][] = getIndentationWindowsDelineations(
-			SOURCE.source.split('\n'),
-			'python',
-			0,
-			0
-		);
+		const testLineNumbers: [number, number][] =
+			getIndentationWindowsDelineations(
+				SOURCE.source.split('\n'),
+				'python',
+				0,
+				0,
+			);
 		const correctLineNumbers: [number, number][] = [];
-		assert.deepStrictEqual(testLineNumbers.sort(), correctLineNumbers.sort());
+		assert.deepStrictEqual(
+			testLineNumbers.sort(),
+			correctLineNumbers.sort(),
+		);
 	});
 });

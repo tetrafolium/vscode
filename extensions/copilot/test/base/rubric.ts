@@ -5,7 +5,10 @@
 import { ITestingServicesAccessor } from '../../src/platform/test/node/services';
 import { ISimulationTestRuntime } from './stest';
 
-export function rubric(accessor: ITestingServicesAccessor, ...assertions: (() => void)[]) {
+export function rubric(
+	accessor: ITestingServicesAccessor,
+	...assertions: (() => void)[]
+) {
 	const runtime = accessor.get(ISimulationTestRuntime);
 
 	let passed = 0;
@@ -20,7 +23,12 @@ export function rubric(accessor: ITestingServicesAccessor, ...assertions: (() =>
 	}
 
 	if (passed === 0) {
-		runtime.setOutcome({ kind: 'failed', hitContentFilter: false, error: 'no passed assertions', critical: false });
+		runtime.setOutcome({
+			kind: 'failed',
+			hitContentFilter: false,
+			error: 'no passed assertions',
+			critical: false,
+		});
 	} else {
 		runtime.setExplicitScore(passed / assertions.length);
 	}

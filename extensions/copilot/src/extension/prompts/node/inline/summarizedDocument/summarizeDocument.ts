@@ -7,10 +7,17 @@ import { TextDocumentSnapshot } from '../../../../../platform/editing/common/tex
 import { OverlayNode } from '../../../../../platform/parser/node/nodes';
 import { StringEdit } from '../../../../../util/vs/editor/common/core/edits/stringEdit';
 import { Range } from '../../../../../vscodeTypes';
-import { ICostFnFactory, IProjectedDocumentDebugInfo, ISummarizedDocumentSettings as ISummarizedDocumentSettingsImpl, RemovableNode, summarizeDocumentsSyncImpl } from './implementation';
+import {
+	ICostFnFactory,
+	IProjectedDocumentDebugInfo,
+	ISummarizedDocumentSettings as ISummarizedDocumentSettingsImpl,
+	RemovableNode,
+	summarizeDocumentsSyncImpl,
+} from './implementation';
 import { ProjectedText } from './projectedText';
 
-export type ISummarizedDocumentSettings = ISummarizedDocumentSettingsImpl<VsCodeTextDocument>;
+export type ISummarizedDocumentSettings =
+	ISummarizedDocumentSettingsImpl<VsCodeTextDocument>;
 
 export class ProjectedDocument extends ProjectedText {
 	constructor(
@@ -35,14 +42,24 @@ export function summarizeDocumentsSync(
 	settings: ISummarizedDocumentSettings,
 	items: IDocumentSummarizationItem[],
 ): ProjectedDocument[] {
-	const result = summarizeDocumentsSyncImpl(charLimit, settings, items.map(i => ({
-		document: new VsCodeTextDocument(i.document),
-		selection: i.selection,
-		overlayNodeRoot: i.overlayNodeRoot,
-	})));
-	return result.map(r => {
-		const d = new ProjectedDocument(r.originalText, r.edits, r.baseDocument.languageId);
-		(d as IProjectedDocumentDebugInfo).getVisualization = (r as IProjectedDocumentDebugInfo).getVisualization;
+	const result = summarizeDocumentsSyncImpl(
+		charLimit,
+		settings,
+		items.map((i) => ({
+			document: new VsCodeTextDocument(i.document),
+			selection: i.selection,
+			overlayNodeRoot: i.overlayNodeRoot,
+		})),
+	);
+	return result.map((r) => {
+		const d = new ProjectedDocument(
+			r.originalText,
+			r.edits,
+			r.baseDocument.languageId,
+		);
+		(d as IProjectedDocumentDebugInfo).getVisualization = (
+			r as IProjectedDocumentDebugInfo
+		).getVisualization;
 		return d;
 	});
 }

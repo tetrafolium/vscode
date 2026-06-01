@@ -21,7 +21,7 @@ export class VirtualPrompt {
 
 	private snapshotNode(
 		node: VirtualPromptNode,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): PromptSnapshotNode | 'cancelled' | undefined {
 		if (!node) {
 			return;
@@ -49,7 +49,8 @@ export class VirtualPrompt {
 			props: node.props,
 			children,
 			statistics: {
-				updateDataTimeMs: node.lifecycle?.lifecycleData.getUpdateTimeMsAndReset(),
+				updateDataTimeMs:
+					node.lifecycle?.lifecycleData.getUpdateTimeMsAndReset(),
 			},
 		};
 	}
@@ -68,7 +69,10 @@ export class VirtualPrompt {
 
 			const snapshotNode = this.snapshotNode(vTree, cancellationToken);
 
-			if (snapshotNode === 'cancelled' || cancellationToken?.isCancellationRequested) {
+			if (
+				snapshotNode === 'cancelled' ||
+				cancellationToken?.isCancellationRequested
+			) {
 				return { snapshot: undefined, status: 'cancelled' };
 			}
 

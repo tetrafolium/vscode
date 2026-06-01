@@ -10,22 +10,32 @@ export class UseState {
 	private currentIndex: number = 0;
 	private stateChanged: boolean = false;
 
-	constructor(private readonly states: unknown[]) { }
+	constructor(private readonly states: unknown[]) {}
 
-	useState<S = undefined>(): [S | undefined, Dispatch<StateUpdater<S | undefined>>];
+	useState<S = undefined>(): [
+		S | undefined,
+		Dispatch<StateUpdater<S | undefined>>,
+	];
 	useState<S>(initialState: S | (() => S)): [S, Dispatch<StateUpdater<S>>];
-	useState<S>(initialState?: S | (() => S)): [S | undefined, Dispatch<StateUpdater<S | undefined>>] {
+	useState<S>(
+		initialState?: S | (() => S),
+	): [S | undefined, Dispatch<StateUpdater<S | undefined>>] {
 		const index = this.currentIndex;
 
 		// Initialize state if not exists
 		if (this.states[index] === undefined) {
-			const initial = typeof initialState === 'function' ? (initialState as () => S)() : initialState;
+			const initial =
+				typeof initialState === 'function'
+					? (initialState as () => S)()
+					: initialState;
 			this.states[index] = initial;
 		}
 
 		const setState = (newState: StateUpdater<S | undefined>) => {
 			const nextState =
-				typeof newState === 'function' ? (newState as (prevState: S) => S)(this.states[index] as S) : newState;
+				typeof newState === 'function'
+					? (newState as (prevState: S) => S)(this.states[index] as S)
+					: newState;
 			this.states[index] = nextState;
 			this.stateChanged = true;
 		};
@@ -45,9 +55,14 @@ export type DataConsumer<T> = (data: T) => void | Promise<void>;
 export class UseData {
 	private consumers: DataConsumer<unknown>[] = [];
 
-	constructor(private readonly measureUpdateTime: (updateTimeMs: number) => void) { }
+	constructor(
+		private readonly measureUpdateTime: (updateTimeMs: number) => void,
+	) {}
 
-	useData<T>(typePredicate: TypePredicate<T>, consumer: DataConsumer<T>): void {
+	useData<T>(
+		typePredicate: TypePredicate<T>,
+		consumer: DataConsumer<T>,
+	): void {
 		this.consumers.push((data: unknown) => {
 			if (typePredicate(data)) {
 				return consumer(data);

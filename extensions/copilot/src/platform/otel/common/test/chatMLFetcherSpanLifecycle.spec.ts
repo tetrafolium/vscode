@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it } from 'vitest';
-import { CopilotChatAttr, GenAiAttr, GenAiOperationName, GenAiProviderName } from '../genAiAttributes';
+import {
+	CopilotChatAttr,
+	GenAiAttr,
+	GenAiOperationName,
+	GenAiProviderName,
+} from '../genAiAttributes';
 import { SpanKind, SpanStatusCode } from '../otelService';
 import { CapturingOTelService } from './capturingOTelService';
 
@@ -54,8 +59,12 @@ describe('chatMLFetcher Span Lifecycle', () => {
 		span.end();
 
 		expect(s.attributes[GenAiAttr.USAGE_INPUT_TOKENS]).toBe(1500);
-		expect(s.attributes[GenAiAttr.RESPONSE_MODEL]).toBe('gpt-4o-2024-08-06');
-		expect(s.attributes[CopilotChatAttr.COPILOT_USAGE_NANO_AIU]).toBe(3_500_000_000);
+		expect(s.attributes[GenAiAttr.RESPONSE_MODEL]).toBe(
+			'gpt-4o-2024-08-06',
+		);
+		expect(s.attributes[CopilotChatAttr.COPILOT_USAGE_NANO_AIU]).toBe(
+			3_500_000_000,
+		);
 		expect(s.statusCode).toBe(SpanStatusCode.OK);
 		expect(s.ended).toBe(true);
 	});
@@ -109,6 +118,8 @@ describe('chatMLFetcher Span Lifecycle', () => {
 		span.setAttribute(GenAiAttr.AGENT_NAME, 'agentMode');
 		span.end();
 
-		expect(otel.spans[0].attributes[GenAiAttr.AGENT_NAME]).toBe('agentMode');
+		expect(otel.spans[0].attributes[GenAiAttr.AGENT_NAME]).toBe(
+			'agentMode',
+		);
 	});
 });

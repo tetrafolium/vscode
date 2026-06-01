@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IIncrementalRenderingBuffer } from './buffer.js';
+import { IIncrementalRenderingBuffer } from "./buffer.js";
 
 /**
  * No buffering — renders everything immediately as tokens arrive.

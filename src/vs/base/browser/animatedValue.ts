@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getActiveWindow } from './dom.js';
-import { IReader, observableSignal } from '../common/observable.js';
+import { getActiveWindow } from "./dom.js";
+import { IReader, observableSignal } from "../common/observable.js";
 
 export interface IAnimatedValue {
 	/**
 	 * Once true, it can never become false again.
-	*/
+	 */
 	isFinished(nowMs: number): boolean;
 	getValue(nowMs: number): number;
 }
@@ -19,8 +19,19 @@ export class AnimatedValue implements IAnimatedValue {
 		return new AnimatedValue(value, value, 0, Date.now());
 	}
 
-	public static startNow(startValue: number, endValue: number, durationMs: number, interpolationFunction: InterpolationFunction = easeOutExpo): AnimatedValue {
-		return new AnimatedValue(startValue, endValue, durationMs, Date.now(), interpolationFunction);
+	public static startNow(
+		startValue: number,
+		endValue: number,
+		durationMs: number,
+		interpolationFunction: InterpolationFunction = easeOutExpo,
+	): AnimatedValue {
+		return new AnimatedValue(
+			startValue,
+			endValue,
+			durationMs,
+			Date.now(),
+			interpolationFunction,
+		);
 	}
 
 	constructor(
@@ -44,30 +55,71 @@ export class AnimatedValue implements IAnimatedValue {
 		if (timePassed >= this.durationMs) {
 			return this.endValue;
 		}
-		const value = this._interpolationFunction(timePassed, this.startValue, this.endValue - this.startValue, this.durationMs);
+		const value = this._interpolationFunction(
+			timePassed,
+			this.startValue,
+			this.endValue - this.startValue,
+			this.durationMs,
+		);
 		return value;
 	}
 }
 
-export type InterpolationFunction = (passedTime: number, start: number, length: number, totalDuration: number) => number;
+export type InterpolationFunction = (
+	passedTime: number,
+	start: number,
+	length: number,
+	totalDuration: number,
+) => number;
 
-export function easeOutExpo(passedTime: number, start: number, length: number, totalDuration: number): number {
+export function easeOutExpo(
+	passedTime: number,
+	start: number,
+	length: number,
+	totalDuration: number,
+): number {
 	return passedTime === totalDuration
 		? start + length
-		: length * (-Math.pow(2, -10 * passedTime / totalDuration) + 1) + start;
+		: length * (-Math.pow(2, (-10 * passedTime) / totalDuration) + 1) + start;
 }
 
-export function easeOutCubic(passedTime: number, start: number, length: number, totalDuration: number): number {
-	return length * ((passedTime = passedTime / totalDuration - 1) * passedTime * passedTime + 1) + start;
+export function easeOutCubic(
+	passedTime: number,
+	start: number,
+	length: number,
+	totalDuration: number,
+): number {
+	return (
+		length *
+			((passedTime = passedTime / totalDuration - 1) * passedTime * passedTime +
+				1) +
+		start
+	);
 }
 
-export function linear(passedTime: number, start: number, length: number, totalDuration: number): number {
-	return length * passedTime / totalDuration + start;
+export function linear(
+	passedTime: number,
+	start: number,
+	length: number,
+	totalDuration: number,
+): number {
+	return (length * passedTime) / totalDuration + start;
 }
 
 export class LoopingAnimatedValue implements IAnimatedValue {
-	public static startNow(startValue: number, endValue: number, durationMs: number, interpolationFunction: InterpolationFunction): LoopingAnimatedValue {
-		return new LoopingAnimatedValue(startValue, endValue, durationMs, Date.now(), interpolationFunction);
+	public static startNow(
+		startValue: number,
+		endValue: number,
+		durationMs: number,
+		interpolationFunction: InterpolationFunction,
+	): LoopingAnimatedValue {
+		return new LoopingAnimatedValue(
+			startValue,
+			endValue,
+			durationMs,
+			Date.now(),
+			interpolationFunction,
+		);
 	}
 
 	constructor(
@@ -76,7 +128,7 @@ export class LoopingAnimatedValue implements IAnimatedValue {
 		private readonly _durationMs: number,
 		private readonly _startTimeMs: number,
 		private readonly _interpolationFunction: InterpolationFunction,
-	) { }
+	) {}
 
 	isFinished(nowMs: number): boolean {
 		return false;
@@ -84,18 +136,23 @@ export class LoopingAnimatedValue implements IAnimatedValue {
 
 	getValue(nowMs: number): number {
 		const timePassed = (nowMs - this._startTimeMs) % this._durationMs;
-		return this._interpolationFunction(timePassed, this._startValue, this._endValue - this._startValue, this._durationMs);
+		return this._interpolationFunction(
+			timePassed,
+			this._startValue,
+			this._endValue - this._startValue,
+			this._durationMs,
+		);
 	}
 }
 
-export class ObservableAnimatedValue<T extends IAnimatedValue = IAnimatedValue> {
+export class ObservableAnimatedValue<
+	T extends IAnimatedValue = IAnimatedValue,
+> {
 	public static const(value: number): ObservableAnimatedValue {
 		return new ObservableAnimatedValue(AnimatedValue.const(value));
 	}
 
-	constructor(
-		private readonly _value: T,
-	) { }
+	constructor(private readonly _value: T) {}
 
 	getValue(reader: IReader | undefined): number {
 		const nowMs = Date.now();

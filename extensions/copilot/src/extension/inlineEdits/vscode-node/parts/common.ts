@@ -5,15 +5,29 @@
 
 import { TextDocument, TextDocumentContentChangeEvent } from 'vscode';
 import { IAlternativeNotebookDocument } from '../../../../platform/notebook/common/alternativeNotebookTextDocument';
-import { StringEdit, StringReplacement } from '../../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { StringText } from '../../../../util/vs/editor/common/core/text/abstractText';
 
-export function stringValueFromDoc(doc: TextDocument | IAlternativeNotebookDocument): StringText {
+export function stringValueFromDoc(
+	doc: TextDocument | IAlternativeNotebookDocument,
+): StringText {
 	return new StringText(doc.getText());
 }
 
-export function editFromTextDocumentContentChangeEvents(events: readonly TextDocumentContentChangeEvent[]): StringEdit {
-	const replacementsInApplicationOrder = events.map(e => StringReplacement.replace(OffsetRange.ofStartAndLength(e.rangeOffset, e.rangeLength), e.text));
-	return StringEdit.composeSequentialReplacements(replacementsInApplicationOrder);
+export function editFromTextDocumentContentChangeEvents(
+	events: readonly TextDocumentContentChangeEvent[],
+): StringEdit {
+	const replacementsInApplicationOrder = events.map((e) =>
+		StringReplacement.replace(
+			OffsetRange.ofStartAndLength(e.rangeOffset, e.rangeLength),
+			e.text,
+		),
+	);
+	return StringEdit.composeSequentialReplacements(
+		replacementsInApplicationOrder,
+	);
 }

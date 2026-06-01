@@ -35,15 +35,24 @@ export class ResponseStream {
 	 */
 	public readonly stream: AsyncIterable<Completion>;
 
-	constructor(private readonly fetcherResponse: Response, stream: AsyncIterable<Completion>, public readonly requestId: RequestId, public readonly headers: IHeaders) {
-		const tokensDeferredPromise = new DeferredPromise<Result<Completion[], Error>>();
+	constructor(
+		private readonly fetcherResponse: Response,
+		stream: AsyncIterable<Completion>,
+		public readonly requestId: RequestId,
+		public readonly headers: IHeaders,
+	) {
+		const tokensDeferredPromise = new DeferredPromise<
+			Result<Completion[], Error>
+		>();
 		this.aggregatedStream = tokensDeferredPromise.p;
 		this.response = this.aggregatedStream.then((completions) => {
 			if (completions.isError()) {
 				return completions;
 			}
 			try {
-				return Result.ok(ResponseStream.aggregateCompletionsStream(completions.val));
+				return Result.ok(
+					ResponseStream.aggregateCompletionsStream(completions.val),
+				);
 			} catch (err) {
 				return Result.error(err);
 			}
@@ -59,7 +68,9 @@ export class ResponseStream {
 		await this.fetcherResponse.body.destroy();
 	}
 
-	private static aggregateCompletionsStream(stream: Completion[]): Completion {
+	private static aggregateCompletionsStream(
+		stream: Completion[],
+	): Completion {
 		let text = '';
 		let finishReason: Completion.FinishReason | null = null;
 		let aggregatedLogsProbs: Completion.LogProbs | null = null;
@@ -78,9 +89,15 @@ export class ResponseStream {
 					};
 				} else {
 					aggregatedLogsProbs.tokens.push(...choice.logprobs.tokens);
-					aggregatedLogsProbs.token_logprobs.push(...choice.logprobs.token_logprobs);
-					aggregatedLogsProbs.text_offset.push(...choice.logprobs.text_offset);
-					aggregatedLogsProbs.top_logprobs.push(...choice.logprobs.top_logprobs);
+					aggregatedLogsProbs.token_logprobs.push(
+						...choice.logprobs.token_logprobs,
+					);
+					aggregatedLogsProbs.text_offset.push(
+						...choice.logprobs.text_offset,
+					);
+					aggregatedLogsProbs.top_logprobs.push(
+						...choice.logprobs.top_logprobs,
+					);
 				}
 			}
 			if (completion.usage) {
@@ -90,28 +107,43 @@ export class ResponseStream {
 						prompt_tokens: completion.usage.prompt_tokens,
 						total_tokens: completion.usage.total_tokens,
 						completion_tokens_details: {
-							audio_tokens: completion.usage.completion_tokens_details.audio_tokens,
-							reasoning_tokens: completion.usage.completion_tokens_details.reasoning_tokens,
+							audio_tokens:
+								completion.usage.completion_tokens_details
+									.audio_tokens,
+							reasoning_tokens:
+								completion.usage.completion_tokens_details
+									.reasoning_tokens,
 						},
 						prompt_tokens_details: {
-							audio_tokens: completion.usage.prompt_tokens_details.audio_tokens,
-							reasoning_tokens: completion.usage.prompt_tokens_details.reasoning_tokens,
-						}
+							audio_tokens:
+								completion.usage.prompt_tokens_details
+									.audio_tokens,
+							reasoning_tokens:
+								completion.usage.prompt_tokens_details
+									.reasoning_tokens,
+						},
 					};
 				} else {
-					aggregatedUsage.completion_tokens += completion.usage.completion_tokens;
-					aggregatedUsage.prompt_tokens += completion.usage.prompt_tokens;
-					aggregatedUsage.total_tokens += completion.usage.total_tokens;
-					aggregatedUsage.completion_tokens_details.audio_tokens += completion.usage.completion_tokens_details.audio_tokens;
-					aggregatedUsage.completion_tokens_details.reasoning_tokens += completion.usage.completion_tokens_details.reasoning_tokens;
-					aggregatedUsage.prompt_tokens_details.audio_tokens += completion.usage.prompt_tokens_details.audio_tokens;
-					aggregatedUsage.prompt_tokens_details.reasoning_tokens += completion.usage.prompt_tokens_details.reasoning_tokens;
+					aggregatedUsage.completion_tokens +=
+						completion.usage.completion_tokens;
+					aggregatedUsage.prompt_tokens +=
+						completion.usage.prompt_tokens;
+					aggregatedUsage.total_tokens +=
+						completion.usage.total_tokens;
+					aggregatedUsage.completion_tokens_details.audio_tokens +=
+						completion.usage.completion_tokens_details.audio_tokens;
+					aggregatedUsage.completion_tokens_details.reasoning_tokens +=
+						completion.usage.completion_tokens_details.reasoning_tokens;
+					aggregatedUsage.prompt_tokens_details.audio_tokens +=
+						completion.usage.prompt_tokens_details.audio_tokens;
+					aggregatedUsage.prompt_tokens_details.reasoning_tokens +=
+						completion.usage.prompt_tokens_details.reasoning_tokens;
 				}
 			}
 			if (choice.finish_reason) {
 				assertType(
 					finishReason === null,
-					'cannot already have finishReason if just seeing choice.finish_reason'
+					'cannot already have finishReason if just seeing choice.finish_reason',
 				);
 				finishReason = choice.finish_reason;
 			}
@@ -147,7 +179,7 @@ export class ResponseStream {
  */
 async function* streamWithAggregation(
 	stream: AsyncIterable<Completion>,
-	deferredPromise: DeferredPromise<Result<Completion[], Error>>
+	deferredPromise: DeferredPromise<Result<Completion[], Error>>,
 ): AsyncGenerator<Completion> {
 	const completions: Completion[] = [];
 	let error: Error | undefined;
@@ -161,7 +193,7 @@ async function* streamWithAggregation(
 		throw error;
 	} finally {
 		deferredPromise.complete(
-			error ? Result.error(error) : Result.ok(completions)
+			error ? Result.error(error) : Result.ok(completions),
 		);
 	}
 }

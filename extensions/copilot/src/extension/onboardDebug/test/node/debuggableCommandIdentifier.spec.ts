@@ -4,10 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable local/code-no-unused-expressions */
 
-
 import { SinonStub, stub } from 'sinon';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { ITestingServicesAccessor } from '../../../../platform/test/node/services';
 import { TestWorkspaceService } from '../../../../platform/test/node/testWorkspaceService';
 import { IWorkspaceService } from '../../../../platform/workspace/common/workspaceService';
@@ -25,14 +27,19 @@ describe('DebuggableCommandIdentifier', () => {
 	let getToolsForLanguages: SinonStub;
 
 	const setConfigEnabled = (enabled: boolean) =>
-		accessor.get(IConfigurationService).setConfig(ConfigKey.TerminalToDebuggerEnabled, enabled);
+		accessor
+			.get(IConfigurationService)
+			.setConfig(ConfigKey.TerminalToDebuggerEnabled, enabled);
 
 	beforeEach(() => {
-		getToolsForLanguages = stub().resolves({ ok: true, commands: ['mytool'] });
+		getToolsForLanguages = stub().resolves({
+			ok: true,
+			commands: ['mytool'],
+		});
 		const testingServiceCollection = createExtensionUnitTestingServices();
 		testingServiceCollection.define(ILanguageToolsProvider, {
 			_serviceBrand: undefined,
-			getToolsForLanguages
+			getToolsForLanguages,
 		});
 		accessor = testingServiceCollection.createTestingAccessor();
 
@@ -48,70 +55,124 @@ describe('DebuggableCommandIdentifier', () => {
 
 	it('should return false if globally disabled', async () => {
 		setConfigEnabled(false);
-		const result = await debuggableCommandIdentifier.isDebuggable(undefined, 'node index.js', CancellationToken.None);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			'node index.js',
+			CancellationToken.None,
+		);
 		expect(result).to.be.false;
 	});
 
 	it('should return true for well-known commands', async () => {
-		const result = await debuggableCommandIdentifier.isDebuggable(undefined, 'node index.js', CancellationToken.None);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			'node index.js',
+			CancellationToken.None,
+		);
 		expect(result).to.be.true;
 	});
 
 	it('should return false for unknown commands', async () => {
-		const result = await debuggableCommandIdentifier.isDebuggable(undefined, 'mytool', CancellationToken.None);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			'mytool',
+			CancellationToken.None,
+		);
 		expect(result).to.be.false;
 		expect(getToolsForLanguages.called).to.be.false;
 	});
 
 	it('should return true for locals', async () => {
-		const result = await debuggableCommandIdentifier.isDebuggable(undefined, 'mytool', CancellationToken.None);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			'mytool',
+			CancellationToken.None,
+		);
 		expect(result).to.be.false;
 		expect(getToolsForLanguages.called).to.be.false;
 	});
 
 	// todo@connor4312: these work on macos locally but fail in CI, look into it
 	it.skip('should return true if referencing an absolute path', async () => {
-		const result = await debuggableCommandIdentifier.isDebuggable(undefined, __filename, CancellationToken.None);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			__filename,
+			CancellationToken.None,
+		);
 		expect(result).to.be.true;
 	});
 
 	// todo@connor4312: these work on macos locally but fail in CI, look into it
 	it.skip('should return true if referencing a relative path in a cwd', async () => {
-		const result = await debuggableCommandIdentifier.isDebuggable(URI.file(__dirname), basename(__filename), CancellationToken.None);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			URI.file(__dirname),
+			basename(__filename),
+			CancellationToken.None,
+		);
 		expect(result).to.be.true;
 	});
 
 	it('should not call the model tools for known languages', async () => {
-		(accessor.get(IWorkspaceService) as TestWorkspaceService)
-			.didOpenTextDocumentEmitter.fire({ languageId: 'javascript' } as any);
+		(
+			accessor.get(IWorkspaceService) as TestWorkspaceService
+		).didOpenTextDocumentEmitter.fire({ languageId: 'javascript' } as any);
 
-		const result = await debuggableCommandIdentifier.isDebuggable(undefined, 'othertool hello', CancellationToken.None);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			'othertool hello',
+			CancellationToken.None,
+		);
 		expect(result).to.be.false;
 		expect(getToolsForLanguages.callCount).to.equal(0);
 	});
 
 	it('should return true for model provided commands', async () => {
-		(accessor.get(IWorkspaceService) as TestWorkspaceService)
-			.didOpenTextDocumentEmitter.fire({ languageId: 'mylang' } as any);
-		const result = await debuggableCommandIdentifier.isDebuggable(undefined, 'mytool hello', CancellationToken.None);
+		(
+			accessor.get(IWorkspaceService) as TestWorkspaceService
+		).didOpenTextDocumentEmitter.fire({ languageId: 'mylang' } as any);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			'mytool hello',
+			CancellationToken.None,
+		);
 		expect(result).to.be.true;
 		expect(getToolsForLanguages.calledWith(['mylang'])).to.be.true;
 
 		// should not call again because no new langauge was seen:
-		const result2 = await debuggableCommandIdentifier.isDebuggable(undefined, 'othertool hello', CancellationToken.None);
+		const result2 = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			'othertool hello',
+			CancellationToken.None,
+		);
 		expect(result2).to.be.false;
 		expect(getToolsForLanguages.callCount).to.equal(1);
 	});
 
 	it('returns treatment value 1', async () => {
-		accessor.get(IConfigurationService).setConfig(ConfigKey.Advanced.TerminalToDebuggerPatterns, ['othert']);
-		const result = await debuggableCommandIdentifier.isDebuggable(undefined, 'othert hello', CancellationToken.None);
+		accessor
+			.get(IConfigurationService)
+			.setConfig(ConfigKey.Advanced.TerminalToDebuggerPatterns, [
+				'othert',
+			]);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			'othert hello',
+			CancellationToken.None,
+		);
 		expect(result).to.be.true;
 	});
 
 	it('return treatment value 2', async () => {
-		accessor.get(IConfigurationService).setConfig(ConfigKey.Advanced.TerminalToDebuggerPatterns, ['!mytool']);
-		const result = await debuggableCommandIdentifier.isDebuggable(undefined, 'mytool hello', CancellationToken.None);
+		accessor
+			.get(IConfigurationService)
+			.setConfig(ConfigKey.Advanced.TerminalToDebuggerPatterns, [
+				'!mytool',
+			]);
+		const result = await debuggableCommandIdentifier.isDebuggable(
+			undefined,
+			'mytool hello',
+			CancellationToken.None,
+		);
 		expect(result).to.be.false;
 	});
 

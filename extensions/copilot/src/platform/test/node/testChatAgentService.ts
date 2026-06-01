@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DisposableStore, IDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	DisposableStore,
+	IDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 import { IChatAgentService } from '../../chat/common/chatAgents';
 import { IConversationOptions } from '../../chat/common/conversationOptions';
 

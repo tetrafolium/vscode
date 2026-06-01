@@ -3,14 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/mobilePickerSheet.css';
-import * as DOM from '../../../../base/browser/dom.js';
-import { Codicon } from '../../../../base/common/codicons.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { Gesture, EventType as TouchEventType } from '../../../../base/browser/touch.js';
-import { CancellationToken, CancellationTokenSource } from '../../../../base/common/cancellation.js';
-import { DisposableStore, toDisposable } from '../../../../base/common/lifecycle.js';
-import { localize } from '../../../../nls.js';
+import "./media/mobilePickerSheet.css";
+import * as DOM from "../../../../base/browser/dom.js";
+import { Codicon } from "../../../../base/common/codicons.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import {
+	Gesture,
+	EventType as TouchEventType,
+} from "../../../../base/browser/touch.js";
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from "../../../../base/common/cancellation.js";
+import {
+	DisposableStore,
+	toDisposable,
+} from "../../../../base/common/lifecycle.js";
+import { localize } from "../../../../nls.js";
 
 const $ = DOM.$;
 
@@ -118,7 +127,10 @@ export interface IMobilePickerSheetSearchSource {
 	/** Message rendered inside the result list when zero results are returned. */
 	readonly emptyMessage?: string;
 	/** Loads the result rows for the given query. */
-	loadItems(query: string, token: CancellationToken): Promise<readonly IMobilePickerSheetItem[]>;
+	loadItems(
+		query: string,
+		token: CancellationToken,
+	): Promise<readonly IMobilePickerSheetItem[]>;
 }
 
 /**
@@ -126,7 +138,7 @@ export interface IMobilePickerSheetSearchSource {
  * mobile picker sheet, so callers can disambiguate header taps from
  * regular row selections.
  */
-export const MOBILE_PICKER_SHEET_HEADER_ACTION_PREFIX = 'headerAction:';
+export const MOBILE_PICKER_SHEET_HEADER_ACTION_PREFIX = "headerAction:";
 
 /**
  * Show a phone-friendly bottom sheet for picker-style choices.
@@ -148,7 +160,7 @@ export function showMobilePickerSheet(
 	items: readonly IMobilePickerSheetItem[],
 	options?: IMobilePickerSheetOptions,
 ): Promise<string | undefined> {
-	return new Promise<string | undefined>(resolve => {
+	return new Promise<string | undefined>((resolve) => {
 		const disposables = new DisposableStore();
 		let resolved = false;
 
@@ -157,8 +169,8 @@ export function showMobilePickerSheet(
 				return;
 			}
 			resolved = true;
-			sheet.classList.add('closing');
-			backdrop.classList.add('closing');
+			sheet.classList.add("closing");
+			backdrop.classList.add("closing");
 			// Dispose all event listeners and inflight queries immediately
 			// so nothing fires during the 180ms close animation. The DOM
 			// node itself is removed at the end of the animation.
@@ -170,18 +182,21 @@ export function showMobilePickerSheet(
 		};
 
 		// -- DOM: backdrop + sheet -------------------------------------
-		const overlay = DOM.append(workbenchContainer, $('div.mobile-picker-sheet-overlay'));
-		const backdrop = DOM.append(overlay, $('div.mobile-picker-sheet-backdrop'));
-		const sheet = DOM.append(overlay, $('div.mobile-picker-sheet'));
-		sheet.setAttribute('role', 'dialog');
-		sheet.setAttribute('aria-modal', 'true');
-		sheet.setAttribute('aria-label', title);
+		const overlay = DOM.append(
+			workbenchContainer,
+			$("div.mobile-picker-sheet-overlay"),
+		);
+		const backdrop = DOM.append(overlay, $("div.mobile-picker-sheet-backdrop"));
+		const sheet = DOM.append(overlay, $("div.mobile-picker-sheet"));
+		sheet.setAttribute("role", "dialog");
+		sheet.setAttribute("aria-modal", "true");
+		sheet.setAttribute("aria-label", title);
 
 		// -- Header (drag handle + title row + caption) ----------------
-		DOM.append(sheet, $('div.mobile-picker-sheet-handle'));
+		DOM.append(sheet, $("div.mobile-picker-sheet-handle"));
 
-		const titleRow = DOM.append(sheet, $('div.mobile-picker-sheet-title-row'));
-		const titleEl = DOM.append(titleRow, $('div.mobile-picker-sheet-title'));
+		const titleRow = DOM.append(sheet, $("div.mobile-picker-sheet-title-row"));
+		const titleEl = DOM.append(titleRow, $("div.mobile-picker-sheet-title"));
 		titleEl.textContent = title;
 
 		// Optional header actions (icon buttons) rendered between the
@@ -189,40 +204,70 @@ export function showMobilePickerSheet(
 		// like "browse for a folder" that aren't a single picker row.
 		if (options?.headerActions) {
 			for (const action of options.headerActions) {
-				const btn = DOM.append(titleRow, $('button.mobile-picker-sheet-header-action', { type: 'button' })) as HTMLButtonElement;
-				btn.setAttribute('aria-label', action.label);
+				const btn = DOM.append(
+					titleRow,
+					$("button.mobile-picker-sheet-header-action", { type: "button" }),
+				) as HTMLButtonElement;
+				btn.setAttribute("aria-label", action.label);
 				btn.title = action.label;
-				const iconHost = DOM.append(btn, $('span.mobile-picker-sheet-header-action-icon'));
-				const iconEl = DOM.append(iconHost, $('span.mobile-picker-sheet-header-action-icon-glyph'));
+				const iconHost = DOM.append(
+					btn,
+					$("span.mobile-picker-sheet-header-action-icon"),
+				);
+				const iconEl = DOM.append(
+					iconHost,
+					$("span.mobile-picker-sheet-header-action-icon-glyph"),
+				);
 				iconEl.classList.add(...ThemeIcon.asClassNameArray(action.icon));
 				const btnGesture = Gesture.addTarget(btn);
 				disposables.add(btnGesture);
-				const onActivate = () => finish(`${MOBILE_PICKER_SHEET_HEADER_ACTION_PREFIX}${action.id}`);
-				const btnClick = DOM.addDisposableListener(btn, DOM.EventType.CLICK, (e: MouseEvent) => {
-					e.preventDefault();
-					onActivate();
-				});
+				const onActivate = () =>
+					finish(`${MOBILE_PICKER_SHEET_HEADER_ACTION_PREFIX}${action.id}`);
+				const btnClick = DOM.addDisposableListener(
+					btn,
+					DOM.EventType.CLICK,
+					(e: MouseEvent) => {
+						e.preventDefault();
+						onActivate();
+					},
+				);
 				disposables.add(btnClick);
-				const btnTap = DOM.addDisposableListener(btn, TouchEventType.Tap, onActivate);
+				const btnTap = DOM.addDisposableListener(
+					btn,
+					TouchEventType.Tap,
+					onActivate,
+				);
 				disposables.add(btnTap);
 			}
 		}
 
-		const doneBtn = DOM.append(titleRow, $('button.mobile-picker-sheet-done', { type: 'button' })) as HTMLButtonElement;
-		doneBtn.textContent = localize('mobilePickerSheet.done', "Done");
-		doneBtn.setAttribute('aria-label', localize('mobilePickerSheet.doneAriaLabel', "Close {0}", title));
+		const doneBtn = DOM.append(
+			titleRow,
+			$("button.mobile-picker-sheet-done", { type: "button" }),
+		) as HTMLButtonElement;
+		doneBtn.textContent = localize("mobilePickerSheet.done", "Done");
+		doneBtn.setAttribute(
+			"aria-label",
+			localize("mobilePickerSheet.doneAriaLabel", "Close {0}", title),
+		);
 		const doneGesture = Gesture.addTarget(doneBtn);
 		disposables.add(doneGesture);
-		const doneClick = DOM.addDisposableListener(doneBtn, DOM.EventType.CLICK, (e: MouseEvent) => {
-			e.preventDefault();
-			finish(undefined);
-		});
+		const doneClick = DOM.addDisposableListener(
+			doneBtn,
+			DOM.EventType.CLICK,
+			(e: MouseEvent) => {
+				e.preventDefault();
+				finish(undefined);
+			},
+		);
 		disposables.add(doneClick);
-		const doneTap = DOM.addDisposableListener(doneBtn, TouchEventType.Tap, () => finish(undefined));
+		const doneTap = DOM.addDisposableListener(doneBtn, TouchEventType.Tap, () =>
+			finish(undefined),
+		);
 		disposables.add(doneTap);
 
 		if (options?.caption) {
-			const caption = DOM.append(sheet, $('div.mobile-picker-sheet-caption'));
+			const caption = DOM.append(sheet, $("div.mobile-picker-sheet-caption"));
 			caption.textContent = options.caption;
 		}
 
@@ -232,18 +277,36 @@ export function showMobilePickerSheet(
 		// and the results are appended below the static items list.
 		let searchInput: HTMLInputElement | undefined;
 		if (options?.search) {
-			const searchRow = DOM.append(sheet, $('div.mobile-picker-sheet-search'));
-			const iconHost = DOM.append(searchRow, $('span.mobile-picker-sheet-search-icon'));
-			const iconEl = DOM.append(iconHost, $('span.mobile-picker-sheet-search-icon-glyph'));
+			const searchRow = DOM.append(sheet, $("div.mobile-picker-sheet-search"));
+			const iconHost = DOM.append(
+				searchRow,
+				$("span.mobile-picker-sheet-search-icon"),
+			);
+			const iconEl = DOM.append(
+				iconHost,
+				$("span.mobile-picker-sheet-search-icon-glyph"),
+			);
 			iconEl.classList.add(...ThemeIcon.asClassNameArray(Codicon.search));
-			searchInput = DOM.append(searchRow, $('input.mobile-picker-sheet-search-input', { type: 'search', autocomplete: 'off', autocorrect: 'off', autocapitalize: 'off', spellcheck: 'false' })) as HTMLInputElement;
+			searchInput = DOM.append(
+				searchRow,
+				$("input.mobile-picker-sheet-search-input", {
+					type: "search",
+					autocomplete: "off",
+					autocorrect: "off",
+					autocapitalize: "off",
+					spellcheck: "false",
+				}),
+			) as HTMLInputElement;
 			searchInput.placeholder = options.search.placeholder;
-			searchInput.setAttribute('aria-label', options.search.ariaLabel ?? options.search.placeholder);
+			searchInput.setAttribute(
+				"aria-label",
+				options.search.ariaLabel ?? options.search.placeholder,
+			);
 		}
 
 		// -- Items list ------------------------------------------------
-		const list = DOM.append(sheet, $('div.mobile-picker-sheet-list'));
-		list.setAttribute('role', 'list');
+		const list = DOM.append(sheet, $("div.mobile-picker-sheet-list"));
+		list.setAttribute("role", "list");
 
 		// When `stayOpenOnSelect` is true, row taps call the caller's
 		// `onDidSelect` callback and leave the sheet open. The visual
@@ -254,41 +317,70 @@ export function showMobilePickerSheet(
 
 		// Registry of rendered rows keyed by section index, used to
 		// toggle checkmarks within a section on tap.
-		const rowsBySection = new Map<number, { row: HTMLButtonElement; checkSlot: HTMLElement; id: string }[]>();
+		const rowsBySection = new Map<
+			number,
+			{ row: HTMLButtonElement; checkSlot: HTMLElement; id: string }[]
+		>();
 
 		// Mutable reference so handleRowTap can trigger a search-query
 		// update when onDidSelect returns a drill-down string. Populated
 		// after the search section is created below.
 		let setSearchQuery: ((query: string) => void) | undefined;
 
-		const handleRowTap = options?.stayOpenOnSelect && options.onDidSelect
-			? (id: string, _row: HTMLElement, sectionIndex: number) => {
-				// Update visual: uncheck all rows in the same section,
-				// then check the tapped row.
-				const sectionRows = rowsBySection.get(sectionIndex);
-				if (sectionRows) {
-					for (const entry of sectionRows) {
-						const isTarget = entry.id === id;
-						entry.row.classList.toggle('checked', isTarget);
-						entry.row.setAttribute('aria-current', isTarget ? 'true' : 'false');
-						DOM.clearNode(entry.checkSlot);
-						if (isTarget) {
-							const checkGlyph = DOM.append(entry.checkSlot, $('span.mobile-picker-sheet-check-glyph'));
-							checkGlyph.classList.add(...ThemeIcon.asClassNameArray(Codicon.check));
+		const handleRowTap =
+			options?.stayOpenOnSelect && options.onDidSelect
+				? (id: string, _row: HTMLElement, sectionIndex: number) => {
+						// Update visual: uncheck all rows in the same section,
+						// then check the tapped row.
+						const sectionRows = rowsBySection.get(sectionIndex);
+						if (sectionRows) {
+							for (const entry of sectionRows) {
+								const isTarget = entry.id === id;
+								entry.row.classList.toggle("checked", isTarget);
+								entry.row.setAttribute(
+									"aria-current",
+									isTarget ? "true" : "false",
+								);
+								DOM.clearNode(entry.checkSlot);
+								if (isTarget) {
+									const checkGlyph = DOM.append(
+										entry.checkSlot,
+										$("span.mobile-picker-sheet-check-glyph"),
+									);
+									checkGlyph.classList.add(
+										...ThemeIcon.asClassNameArray(Codicon.check),
+									);
+								}
+							}
+						}
+						const drillDown = options.onDidSelect!(id);
+						if (
+							typeof drillDown === "string" &&
+							searchInput &&
+							setSearchQuery
+						) {
+							searchInput.value = drillDown;
+							setSearchQuery(drillDown);
 						}
 					}
-				}
-				const drillDown = options.onDidSelect!(id);
-				if (typeof drillDown === 'string' && searchInput && setSearchQuery) {
-					searchInput.value = drillDown;
-					setSearchQuery(drillDown);
-				}
-			}
-			: (id: string, _row: HTMLElement, _sectionIndex: number) => { finish(id); };
+				: (id: string, _row: HTMLElement, _sectionIndex: number) => {
+						finish(id);
+					};
 
-		const renderState: IRenderState = { firstRow: undefined, firstCheckedRow: undefined, sectionCount: 0 };
+		const renderState: IRenderState = {
+			firstRow: undefined,
+			firstCheckedRow: undefined,
+			sectionCount: 0,
+		};
 		for (const item of items) {
-			renderRow(list, item, renderState, handleRowTap, disposables, rowsBySection);
+			renderRow(
+				list,
+				item,
+				renderState,
+				handleRowTap,
+				disposables,
+				rowsBySection,
+			);
 		}
 
 		// -- Dynamic search results -----------------------------------
@@ -298,7 +390,10 @@ export function showMobilePickerSheet(
 		// queries don't surface after the user has typed more.
 		const search = options?.search;
 		if (search && searchInput) {
-			const resultsContainer = DOM.append(list, $('div.mobile-picker-sheet-search-results'));
+			const resultsContainer = DOM.append(
+				list,
+				$("div.mobile-picker-sheet-search-results"),
+			);
 			let currentQueryTokens: CancellationTokenSource | undefined;
 			let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -318,8 +413,14 @@ export function showMobilePickerSheet(
 				const tokens = new CancellationTokenSource();
 				currentQueryTokens = tokens;
 				DOM.clearNode(resultsContainer);
-				const status = DOM.append(resultsContainer, $('div.mobile-picker-sheet-search-status'));
-				status.textContent = localize('mobilePickerSheet.searching', "Searching…");
+				const status = DOM.append(
+					resultsContainer,
+					$("div.mobile-picker-sheet-search-status"),
+				);
+				status.textContent = localize(
+					"mobilePickerSheet.searching",
+					"Searching…",
+				);
 
 				let results: readonly IMobilePickerSheetItem[];
 				try {
@@ -332,18 +433,37 @@ export function showMobilePickerSheet(
 				}
 				DOM.clearNode(resultsContainer);
 
-				const localState: IRenderState = { firstRow: undefined, firstCheckedRow: undefined, sectionCount: 0 };
+				const localState: IRenderState = {
+					firstRow: undefined,
+					firstCheckedRow: undefined,
+					sectionCount: 0,
+				};
 				if (search.resultsSectionTitle) {
-					const sectionTitle = DOM.append(resultsContainer, $('div.mobile-picker-sheet-section-title'));
+					const sectionTitle = DOM.append(
+						resultsContainer,
+						$("div.mobile-picker-sheet-section-title"),
+					);
 					sectionTitle.textContent = search.resultsSectionTitle;
 				}
 				if (results.length === 0) {
-					const empty = DOM.append(resultsContainer, $('div.mobile-picker-sheet-search-empty'));
-					empty.textContent = search.emptyMessage ?? localize('mobilePickerSheet.noResults', "No results");
+					const empty = DOM.append(
+						resultsContainer,
+						$("div.mobile-picker-sheet-search-empty"),
+					);
+					empty.textContent =
+						search.emptyMessage ??
+						localize("mobilePickerSheet.noResults", "No results");
 					return;
 				}
 				for (const item of results) {
-					renderRow(resultsContainer, item, localState, handleRowTap, disposables, rowsBySection);
+					renderRow(
+						resultsContainer,
+						item,
+						localState,
+						handleRowTap,
+						disposables,
+						rowsBySection,
+					);
 				}
 			};
 
@@ -360,11 +480,15 @@ export function showMobilePickerSheet(
 					renderResults(value);
 				}, 150);
 			};
-			const inputListener = DOM.addDisposableListener(searchInput, 'input', onInput);
+			const inputListener = DOM.addDisposableListener(
+				searchInput,
+				"input",
+				onInput,
+			);
 			disposables.add(inputListener);
 
 			// Initial population (empty query).
-			renderResults('');
+			renderResults("");
 
 			// Expose a programmatic setter so handleRowTap can drive
 			// drill-down navigation when onDidSelect returns a string.
@@ -372,20 +496,33 @@ export function showMobilePickerSheet(
 		}
 
 		// -- Dismissal: backdrop + Escape ------------------------------
-		const backdropClick = DOM.addDisposableListener(backdrop, DOM.EventType.CLICK, () => finish(undefined));
+		const backdropClick = DOM.addDisposableListener(
+			backdrop,
+			DOM.EventType.CLICK,
+			() => finish(undefined),
+		);
 		disposables.add(backdropClick);
 		const backdropGesture = Gesture.addTarget(backdrop);
 		disposables.add(backdropGesture);
-		const backdropTap = DOM.addDisposableListener(backdrop, TouchEventType.Tap, () => finish(undefined));
+		const backdropTap = DOM.addDisposableListener(
+			backdrop,
+			TouchEventType.Tap,
+			() => finish(undefined),
+		);
 		disposables.add(backdropTap);
 
-		const keyHandler = DOM.addDisposableListener(DOM.getWindow(workbenchContainer), DOM.EventType.KEY_DOWN, (e: KeyboardEvent) => {
-			if (e.key === 'Escape') {
-				e.preventDefault();
-				e.stopPropagation();
-				finish(undefined);
-			}
-		}, true);
+		const keyHandler = DOM.addDisposableListener(
+			DOM.getWindow(workbenchContainer),
+			DOM.EventType.KEY_DOWN,
+			(e: KeyboardEvent) => {
+				if (e.key === "Escape") {
+					e.preventDefault();
+					e.stopPropagation();
+					finish(undefined);
+				}
+			},
+			true,
+		);
 		disposables.add(keyHandler);
 
 		// -- iOS keyboard avoidance -----------------------------------
@@ -411,14 +548,16 @@ export function showMobilePickerSheet(
 				overlay.style.bottom = `${Math.max(0, keyboardHeight)}px`;
 				overlay.style.height = `${vv.height}px`;
 			};
-			vv.addEventListener('resize', adjustForKeyboard);
-			vv.addEventListener('scroll', adjustForKeyboard);
-			disposables.add(toDisposable(() => {
-				vv.removeEventListener('resize', adjustForKeyboard);
-				vv.removeEventListener('scroll', adjustForKeyboard);
-				overlay.style.bottom = '';
-				overlay.style.height = '';
-			}));
+			vv.addEventListener("resize", adjustForKeyboard);
+			vv.addEventListener("scroll", adjustForKeyboard);
+			disposables.add(
+				toDisposable(() => {
+					vv.removeEventListener("resize", adjustForKeyboard);
+					vv.removeEventListener("scroll", adjustForKeyboard);
+					overlay.style.bottom = "";
+					overlay.style.height = "";
+				}),
+			);
 			// Run once immediately in case the keyboard is already
 			// visible (e.g., sheet opened while another input had focus).
 			adjustForKeyboard();
@@ -453,29 +592,38 @@ function renderRow(
 	state: IRenderState,
 	onTap: (id: string, row: HTMLButtonElement, sectionIndex: number) => void,
 	disposables: DisposableStore,
-	rowsBySection?: Map<number, { row: HTMLButtonElement; checkSlot: HTMLElement; id: string }[]>,
+	rowsBySection?: Map<
+		number,
+		{ row: HTMLButtonElement; checkSlot: HTMLElement; id: string }[]
+	>,
 ): void {
 	if (item.sectionTitle !== undefined) {
 		if (state.sectionCount > 0) {
-			DOM.append(list, $('div.mobile-picker-sheet-divider'));
+			DOM.append(list, $("div.mobile-picker-sheet-divider"));
 		}
 		if (item.sectionTitle) {
-			const sectionTitle = DOM.append(list, $('div.mobile-picker-sheet-section-title'));
+			const sectionTitle = DOM.append(
+				list,
+				$("div.mobile-picker-sheet-section-title"),
+			);
 			sectionTitle.textContent = item.sectionTitle;
 		}
 		state.sectionCount++;
 	}
 
-	const row = DOM.append(list, $('button.mobile-picker-sheet-item', { type: 'button' })) as HTMLButtonElement;
-	row.setAttribute('role', 'listitem');
-	row.setAttribute('aria-current', item.checked ? 'true' : 'false');
+	const row = DOM.append(
+		list,
+		$("button.mobile-picker-sheet-item", { type: "button" }),
+	) as HTMLButtonElement;
+	row.setAttribute("role", "listitem");
+	row.setAttribute("aria-current", item.checked ? "true" : "false");
 	if (item.checked) {
-		row.classList.add('checked');
+		row.classList.add("checked");
 	}
 	if (item.disabled) {
-		row.classList.add('disabled');
+		row.classList.add("disabled");
 		row.disabled = true;
-		row.setAttribute('aria-disabled', 'true');
+		row.setAttribute("aria-disabled", "true");
 	}
 	state.firstRow ??= row;
 	if (item.checked && !state.firstCheckedRow) {
@@ -487,24 +635,32 @@ function renderRow(
 	// can actually center it; codicon's own `display: inline-block` would
 	// otherwise win on specificity and break vertical centering.
 	if (item.icon) {
-		const iconSlot = DOM.append(row, $('span.mobile-picker-sheet-icon'));
-		const iconGlyph = DOM.append(iconSlot, $('span.mobile-picker-sheet-icon-glyph'));
+		const iconSlot = DOM.append(row, $("span.mobile-picker-sheet-icon"));
+		const iconGlyph = DOM.append(
+			iconSlot,
+			$("span.mobile-picker-sheet-icon-glyph"),
+		);
 		iconGlyph.classList.add(...ThemeIcon.asClassNameArray(item.icon));
 	}
 
 	// Text column — label on top, optional description beneath.
-	const textCol = DOM.append(row, $('span.mobile-picker-sheet-text'));
-	DOM.append(textCol, $('span.mobile-picker-sheet-label')).textContent = item.label;
+	const textCol = DOM.append(row, $("span.mobile-picker-sheet-text"));
+	DOM.append(textCol, $("span.mobile-picker-sheet-label")).textContent =
+		item.label;
 	if (item.description) {
-		DOM.append(textCol, $('span.mobile-picker-sheet-description')).textContent = item.description;
+		DOM.append(textCol, $("span.mobile-picker-sheet-description")).textContent =
+			item.description;
 	}
 
 	// Trailing checkmark for the currently-selected row. Same child-span
 	// pattern as the icon slot so flex centering wins over codicon's
 	// `display: inline-block`.
-	const checkSlot = DOM.append(row, $('span.mobile-picker-sheet-check'));
+	const checkSlot = DOM.append(row, $("span.mobile-picker-sheet-check"));
 	if (item.checked) {
-		const checkGlyph = DOM.append(checkSlot, $('span.mobile-picker-sheet-check-glyph'));
+		const checkGlyph = DOM.append(
+			checkSlot,
+			$("span.mobile-picker-sheet-check-glyph"),
+		);
 		checkGlyph.classList.add(...ThemeIcon.asClassNameArray(Codicon.check));
 	}
 
@@ -527,10 +683,14 @@ function renderRow(
 		// inside the sheet's scrollable list container. The browser's
 		// built-in `click` event fires on touch-tap in mobile Safari
 		// and Chrome Android, so Gesture isn't needed here.
-		const rowClick = DOM.addDisposableListener(row, DOM.EventType.CLICK, (e: MouseEvent) => {
-			e.preventDefault();
-			onTap(item.id, row, currentSectionIndex);
-		});
+		const rowClick = DOM.addDisposableListener(
+			row,
+			DOM.EventType.CLICK,
+			(e: MouseEvent) => {
+				e.preventDefault();
+				onTap(item.id, row, currentSectionIndex);
+			},
+		);
 		disposables.add(rowClick);
 	}
 }

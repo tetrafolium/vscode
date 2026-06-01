@@ -6,11 +6,17 @@
 import { outdent } from 'outdent';
 import { describe, expect, test } from 'vitest';
 import { DocumentId } from '../../../../platform/inlineEdits/common/dataTypes/documentId';
-import { IObservableDocument, MutableObservableWorkspace } from '../../../../platform/inlineEdits/common/observableWorkspace';
+import {
+	IObservableDocument,
+	MutableObservableWorkspace,
+} from '../../../../platform/inlineEdits/common/observableWorkspace';
 import { TestLogService } from '../../../../platform/testing/common/testLogService';
 import { runOnChange } from '../../../../util/vs/base/common/observableInternal';
 import { URI } from '../../../../util/vs/base/common/uri';
-import { StringEdit, StringReplacement } from '../../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { IRecordingInformation } from '../../common/observableWorkspaceRecordingReplayer';
 import { RejectionCollector } from '../../common/rejectionCollector';
@@ -21,16 +27,24 @@ describe('RejectionCollector[visualizable]', () => {
 	test('test1', async () => {
 		const result = await runRecording(
 			await loadJSON<IRecordingInformation>({
-				filePath: relativeFile('recordings/RejectionCollector.test1.w.json'),
+				filePath: relativeFile(
+					'recordings/RejectionCollector.test1.w.json',
+				),
 			}),
-			ctx => {
+			(ctx) => {
 				const rejs: (boolean | string)[] = [];
 
-				const rejectionCollector = ctx.store.add(new RejectionCollector(ctx.workspace, new TestLogService()));
+				const rejectionCollector = ctx.store.add(
+					new RejectionCollector(ctx.workspace, new TestLogService()),
+				);
 
-				ctx.workspace.lastActiveDocument.recomputeInitiallyAndOnChange(ctx.store);
+				ctx.workspace.lastActiveDocument.recomputeInitiallyAndOnChange(
+					ctx.store,
+				);
 
-				const getEdit = (doc: IObservableDocument | undefined = undefined) => {
+				const getEdit = (
+					doc: IObservableDocument | undefined = undefined,
+				) => {
 					if (!doc) {
 						doc = ctx.workspace.lastActiveDocument.get();
 					}
@@ -57,14 +71,18 @@ describe('RejectionCollector[visualizable]', () => {
 				}
 				const { doc } = getEdit()!;
 
-				ctx.store.add(runOnChange(ctx.workspace.onDidOpenDocumentChange, () => {
-					const e = getEdit(doc);
-					if (e) {
-						rejs.push(rejectionCollector.isRejected(doc.id, e.edit));
-					} else {
-						rejs.push('edit not found');
-					}
-				}));
+				ctx.store.add(
+					runOnChange(ctx.workspace.onDidOpenDocumentChange, () => {
+						const e = getEdit(doc);
+						if (e) {
+							rejs.push(
+								rejectionCollector.isRejected(doc.id, e.edit),
+							);
+						} else {
+							rejs.push('edit not found');
+						}
+					}),
+				);
 
 				ctx.stepSkipNonContentChanges();
 
@@ -74,7 +92,7 @@ describe('RejectionCollector[visualizable]', () => {
 				ctx.finishReplay();
 
 				return { rejs };
-			}
+			},
 		);
 
 		expect(result.rejs).toMatchInlineSnapshot(`
@@ -132,42 +150,84 @@ class Point {
 		return Math.sqrt(this.x ** 2 + this.y ** 2);
 	}
 }
-`.trim()
+`.trim(),
 		});
 
-		const rejectionCollector = new RejectionCollector(observableWorkspace, new TestLogService());
+		const rejectionCollector = new RejectionCollector(
+			observableWorkspace,
+			new TestLogService(),
+		);
 		try {
-			const edit1 = StringReplacement.replace(OffsetRange.fromTo(96, 107), 'fo');
+			const edit1 = StringReplacement.replace(
+				OffsetRange.fromTo(96, 107),
+				'fo',
+			);
 			expect(rejectionCollector.isRejected(doc.id, edit1)).toBe(false);
-			const rej1 = StringReplacement.replace(OffsetRange.fromTo(96, 107), 'foobar');
+			const rej1 = StringReplacement.replace(
+				OffsetRange.fromTo(96, 107),
+				'foobar',
+			);
 			rejectionCollector.reject(doc.id, rej1);
 			expect(rejectionCollector.isRejected(doc.id, rej1)).toBe(true);
 
 			expect(rejectionCollector.isRejected(doc.id, edit1)).toBe(false);
 			doc.applyEdit(StringEdit.single(edit1));
-			expect(rejectionCollector.isRejected(doc.id, StringReplacement.replace(OffsetRange.fromTo(98, 98), 'obar'))).toBe(true);
+			expect(
+				rejectionCollector.isRejected(
+					doc.id,
+					StringReplacement.replace(
+						OffsetRange.fromTo(98, 98),
+						'obar',
+					),
+				),
+			).toBe(true);
 
-			const edit2 = StringReplacement.replace(OffsetRange.fromTo(98, 98), 'ob');
+			const edit2 = StringReplacement.replace(
+				OffsetRange.fromTo(98, 98),
+				'ob',
+			);
 			expect(rejectionCollector.isRejected(doc.id, edit2)).toBe(false);
 			doc.applyEdit(StringEdit.single(edit2));
-			expect(rejectionCollector.isRejected(doc.id, StringReplacement.replace(OffsetRange.fromTo(100, 100), 'ar'))).toBe(true);
+			expect(
+				rejectionCollector.isRejected(
+					doc.id,
+					StringReplacement.replace(
+						OffsetRange.fromTo(100, 100),
+						'ar',
+					),
+				),
+			).toBe(true);
 
-			const edit3 = StringReplacement.replace(OffsetRange.fromTo(100, 100), 'A');
+			const edit3 = StringReplacement.replace(
+				OffsetRange.fromTo(100, 100),
+				'A',
+			);
 			expect(rejectionCollector.isRejected(doc.id, edit3)).toBe(false);
 			doc.applyEdit(StringEdit.single(edit3));
 			// now evicted
-			expect(rejectionCollector.isRejected(doc.id, StringReplacement.replace(OffsetRange.fromTo(101, 101), 'r'))).toBe(false);
+			expect(
+				rejectionCollector.isRejected(
+					doc.id,
+					StringReplacement.replace(
+						OffsetRange.fromTo(101, 101),
+						'r',
+					),
+				),
+			).toBe(false);
 		} finally {
 			rejectionCollector.dispose();
 		}
 	});
 });
 
-
 /**
  * Match is context[[valueToReplace]]context
-*/
-function createEdit(base: string, match: string, newValue: string): StringReplacement | undefined {
+ */
+function createEdit(
+	base: string,
+	match: string,
+	newValue: string,
+): StringReplacement | undefined {
 	let cleanedMatch: string;
 	const idxStart = match.indexOf('[[');
 	const idxEnd = match.indexOf(']]') - 2;

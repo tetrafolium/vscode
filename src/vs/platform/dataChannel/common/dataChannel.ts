@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
+import { Event } from "../../../base/common/event.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
 
-export const IDataChannelService = createDecorator<IDataChannelService>('dataChannelService');
+export const IDataChannelService =
+	createDecorator<IDataChannelService>("dataChannelService");
 
 export interface IDataChannelService {
 	readonly _serviceBrand: undefined;
@@ -32,7 +33,7 @@ export class NullDataChannelService implements IDataChannelService {
 	}
 	getDataChannel<T>(_channelId: string): CoreDataChannel<T> {
 		return {
-			sendData: () => { },
+			sendData: () => {},
 		};
 	}
 }

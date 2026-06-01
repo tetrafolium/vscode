@@ -3,25 +3,49 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ChatQuestion, ChatResponseClearToPreviousToolInvocationReason, ChatResponsePart, ChatResponseStream, ChatVulnerability, ThinkingDelta, Uri } from 'vscode';
+import type {
+	ChatQuestion,
+	ChatResponseClearToPreviousToolInvocationReason,
+	ChatResponsePart,
+	ChatResponseStream,
+	ChatVulnerability,
+	ThinkingDelta,
+	Uri,
+} from 'vscode';
 
-import { createFilepathRegexp, mdCodeBlockLangToLanguageId } from '../../../util/common/markdown';
+import {
+	createFilepathRegexp,
+	mdCodeBlockLangToLanguageId,
+} from '../../../util/common/markdown';
 import { CharCode } from '../../../util/vs/base/common/charCode';
-import { isFalsyOrWhitespace, splitLinesIncludeSeparators } from '../../../util/vs/base/common/strings';
+import {
+	isFalsyOrWhitespace,
+	splitLinesIncludeSeparators,
+} from '../../../util/vs/base/common/strings';
 
 import { IPromptPathRepresentationService } from '../../../platform/prompts/common/promptPathRepresentationService';
-import { ChatResponseCodeblockUriPart, ChatResponseMarkdownPart, ChatResponseMarkdownWithVulnerabilitiesPart, MarkdownString } from '../../../vscodeTypes';
+import {
+	ChatResponseCodeblockUriPart,
+	ChatResponseMarkdownPart,
+	ChatResponseMarkdownWithVulnerabilitiesPart,
+	MarkdownString,
+} from '../../../vscodeTypes';
 import { CodeBlock } from '../../prompt/common/conversation';
 
-export type CodeBlockWithResource = { readonly code: string; readonly language?: string; readonly resource: Uri; readonly markdownBeforeBlock?: string };
+export type CodeBlockWithResource = {
+	readonly code: string;
+	readonly language?: string;
+	readonly resource: Uri;
+	readonly markdownBeforeBlock?: string;
+};
 
 export class CodeBlocksMetadata {
-	constructor(
-		readonly codeBlocks: readonly CodeBlock[]
-	) { }
+	constructor(readonly codeBlocks: readonly CodeBlock[]) {}
 }
 
-export function isCodeBlockWithResource(codeBlock: CodeBlock): codeBlock is CodeBlockWithResource {
+export function isCodeBlockWithResource(
+	codeBlock: CodeBlock,
+): codeBlock is CodeBlockWithResource {
 	return codeBlock.resource !== undefined;
 }
 
@@ -30,38 +54,54 @@ export function isCodeBlockWithResource(codeBlock: CodeBlock): codeBlock is Code
  * Filepaths are removed from the Markdown, resolved and reported as codeblockUri
  */
 export class CodeBlockTrackingChatResponseStream implements ChatResponseStream {
-
 	private readonly _codeBlockProcessor;
 	private readonly _codeBlocks: CodeBlock[] = [];
 
 	constructor(
 		private readonly _wrapped: ChatResponseStream,
 		codeblocksRepresentEdits: boolean | undefined,
-		@IPromptPathRepresentationService _promptPathRepresentationService: IPromptPathRepresentationService,
+		@IPromptPathRepresentationService
+		_promptPathRepresentationService: IPromptPathRepresentationService,
 	) {
 		let uriReportedForIndex = -1;
 		this._codeBlockProcessor = new CodeBlockProcessor(
-			path => {
+			(path) => {
 				return _promptPathRepresentationService.resolveFilePath(path);
 			},
-			(text: MarkdownString, codeBlockInfo: CodeBlockInfo | undefined, vulnerabilities: ChatVulnerability[] | undefined) => {
+			(
+				text: MarkdownString,
+				codeBlockInfo: CodeBlockInfo | undefined,
+				vulnerabilities: ChatVulnerability[] | undefined,
+			) => {
 				if (vulnerabilities) {
-					this._wrapped.markdownWithVulnerabilities(text, vulnerabilities);
+					this._wrapped.markdownWithVulnerabilities(
+						text,
+						vulnerabilities,
+					);
 				} else {
 					this._wrapped.markdown(text);
 				}
-				if (codeBlockInfo && codeBlockInfo.resource && codeBlockInfo.index !== uriReportedForIndex) {
-					this._wrapped.codeblockUri(codeBlockInfo.resource, codeblocksRepresentEdits);
+				if (
+					codeBlockInfo &&
+					codeBlockInfo.resource &&
+					codeBlockInfo.index !== uriReportedForIndex
+				) {
+					this._wrapped.codeblockUri(
+						codeBlockInfo.resource,
+						codeblocksRepresentEdits,
+					);
 					uriReportedForIndex = codeBlockInfo.index;
 				}
 			},
-			codeblock => {
+			(codeblock) => {
 				this._codeBlocks.push(codeblock);
-			}
+			},
 		);
 	}
 
-	clearToPreviousToolInvocation(reason: ChatResponseClearToPreviousToolInvocationReason): void {
+	clearToPreviousToolInvocation(
+		reason: ChatResponseClearToPreviousToolInvocationReason,
+	): void {
 		this._codeBlockProcessor.flush();
 		this._wrapped.clearToPreviousToolInvocation(reason);
 		this._codeBlocks.length = 0;
@@ -71,7 +111,10 @@ export class CodeBlockTrackingChatResponseStream implements ChatResponseStream {
 		this._codeBlockProcessor.processMarkdown(value);
 	}
 
-	markdownWithVulnerabilities(value: string | MarkdownString, vulnerabilities: ChatVulnerability[]): void {
+	markdownWithVulnerabilities(
+		value: string | MarkdownString,
+		vulnerabilities: ChatVulnerability[],
+	): void {
 		this._codeBlockProcessor.processMarkdown(value, vulnerabilities);
 	}
 
@@ -87,8 +130,13 @@ export class CodeBlockTrackingChatResponseStream implements ChatResponseStream {
 	push(part: ChatResponsePart): void {
 		if (part instanceof ChatResponseMarkdownPart) {
 			this._codeBlockProcessor.processMarkdown(part.value, undefined);
-		} else if (part instanceof ChatResponseMarkdownWithVulnerabilitiesPart) {
-			this._codeBlockProcessor.processMarkdown(part.value, part.vulnerabilities);
+		} else if (
+			part instanceof ChatResponseMarkdownWithVulnerabilitiesPart
+		) {
+			this._codeBlockProcessor.processMarkdown(
+				part.value,
+				part.vulnerabilities,
+			);
 		} else if (part instanceof ChatResponseCodeblockUriPart) {
 			this._codeBlockProcessor.processCodeblockUri(part.value);
 		} else {
@@ -122,7 +170,9 @@ export class CodeBlockTrackingChatResponseStream implements ChatResponseStream {
 	reference = this.forward(this._wrapped.reference.bind(this._wrapped));
 	textEdit = this.forward(this._wrapped.textEdit.bind(this._wrapped));
 	notebookEdit = this.forward(this._wrapped.notebookEdit.bind(this._wrapped));
-	workspaceEdit = this.forward(this._wrapped.workspaceEdit?.bind(this._wrapped) || (() => { }));
+	workspaceEdit = this.forward(
+		this._wrapped.workspaceEdit?.bind(this._wrapped) || (() => {}),
+	);
 	confirmation = this.forward(this._wrapped.confirmation.bind(this._wrapped));
 	warning = this.forward(this._wrapped.warning.bind(this._wrapped));
 	info = this.forward(this._wrapped.info.bind(this._wrapped));
@@ -131,16 +181,22 @@ export class CodeBlockTrackingChatResponseStream implements ChatResponseStream {
 	codeCitation = this.forward(this._wrapped.codeCitation.bind(this._wrapped));
 	anchor = this.forward(this._wrapped.anchor.bind(this._wrapped));
 	externalEdit = this.forward(this._wrapped.externalEdit.bind(this._wrapped));
-	beginToolInvocation = this.forward(this._wrapped.beginToolInvocation.bind(this._wrapped));
-	updateToolInvocation = this.forward(this._wrapped.updateToolInvocation.bind(this._wrapped));
+	beginToolInvocation = this.forward(
+		this._wrapped.beginToolInvocation.bind(this._wrapped),
+	);
+	updateToolInvocation = this.forward(
+		this._wrapped.updateToolInvocation.bind(this._wrapped),
+	);
 	usage = this.forward(this._wrapped.usage.bind(this._wrapped));
 
-	questionCarousel(questions: ChatQuestion[], allowSkip?: boolean): Thenable<Record<string, unknown> | undefined> {
+	questionCarousel(
+		questions: ChatQuestion[],
+		allowSkip?: boolean,
+	): Thenable<Record<string, unknown> | undefined> {
 		this._codeBlockProcessor.flush();
 		return this._wrapped.questionCarousel(questions, allowSkip);
 	}
 }
-
 
 const fenceLanguageRegex = /^(`{3,}|~{3,})(\w*)/;
 
@@ -169,19 +225,20 @@ export interface LineProcessor {
  * - An optional line processor can be used to replace the content of a full line
  */
 export class CodeBlockProcessor {
-
 	private _lastIncompleteLine: MarkdownString | undefined;
 	private _canEmitIncompleteLine: boolean = false;
-	private _currentBlock: {
-		readonly info: {
-			readonly language?: string;
-			resource?: Uri;
-			readonly index: number;
-		};
-		readonly fence: string;
-		readonly vulnerabilities?: ChatVulnerability[];
-		readonly firstLine: MarkdownString;
-	} | undefined;
+	private _currentBlock:
+		| {
+				readonly info: {
+					readonly language?: string;
+					resource?: Uri;
+					readonly index: number;
+				};
+				readonly fence: string;
+				readonly vulnerabilities?: ChatVulnerability[];
+				readonly firstLine: MarkdownString;
+		  }
+		| undefined;
 	private readonly _code: string[] = [];
 	private readonly _markdownBeforeBlock: string[] = [];
 	private _nestingLevel: number = 0;
@@ -189,25 +246,42 @@ export class CodeBlockProcessor {
 	private _state: State = State.OutsideCodeBlock;
 
 	constructor(
-		private readonly _resolveCodeblockPath: (path: string) => Uri | undefined,
-		private readonly _emitMarkdown: (markdown: MarkdownString, codeBlockInfo: CodeBlockInfo | undefined, vulnerabilities?: ChatVulnerability[]) => void,
+		private readonly _resolveCodeblockPath: (
+			path: string,
+		) => Uri | undefined,
+		private readonly _emitMarkdown: (
+			markdown: MarkdownString,
+			codeBlockInfo: CodeBlockInfo | undefined,
+			vulnerabilities?: ChatVulnerability[],
+		) => void,
 		private readonly _emitCodeblock: (codeblock: CodeBlock) => void,
 		private readonly _lineProcessor?: LineProcessor,
-	) {
-	}
+	) {}
 
-	processMarkdown(markdown: string | MarkdownString, vulnerabilities?: ChatVulnerability[]): void {
+	processMarkdown(
+		markdown: string | MarkdownString,
+		vulnerabilities?: ChatVulnerability[],
+	): void {
 		const text = typeof markdown === 'string' ? markdown : markdown.value;
 		if (text.length === 0) {
 			return;
 		}
 
-		const lines = splitLinesIncludeSeparators(text).map(line => toMarkdownString(line, markdown));
+		const lines = splitLinesIncludeSeparators(text).map((line) =>
+			toMarkdownString(line, markdown),
+		);
 		if (lines.length > 0) {
 			if (this._lastIncompleteLine) {
-				lines[0] = appendMarkdownString(this._lastIncompleteLine, lines[0]);
+				lines[0] = appendMarkdownString(
+					this._lastIncompleteLine,
+					lines[0],
+				);
 			}
-			this._lastIncompleteLine = !endsWithLineDelimiter(lines[lines.length - 1].value) ? lines.pop() : undefined;
+			this._lastIncompleteLine = !endsWithLineDelimiter(
+				lines[lines.length - 1].value,
+			)
+				? lines.pop()
+				: undefined;
 			if (this._lastIncompleteLine?.value === '') {
 				this._lastIncompleteLine = undefined;
 			}
@@ -222,7 +296,10 @@ export class CodeBlockProcessor {
 			this._processLine(lines[i], vulnerabilities);
 		}
 
-		if (this._lastIncompleteLine && !this._requiresFullLine(this._lastIncompleteLine)) {
+		if (
+			this._lastIncompleteLine &&
+			!this._requiresFullLine(this._lastIncompleteLine)
+		) {
 			this._processLinePart(this._lastIncompleteLine, vulnerabilities);
 			this._lastIncompleteLine = undefined;
 			this._canEmitIncompleteLine = true;
@@ -232,16 +309,32 @@ export class CodeBlockProcessor {
 	}
 
 	private _requiresFullLine(markdown: MarkdownString) {
-		if (this._state === State.OutsideCodeBlock || this._state === State.InCodeBlock) {
-			return mightBeFence(markdown.value) || this._lineProcessor?.matchesLineStart(markdown.value, this._state === State.InCodeBlock);
+		if (
+			this._state === State.OutsideCodeBlock ||
+			this._state === State.InCodeBlock
+		) {
+			return (
+				mightBeFence(markdown.value) ||
+				this._lineProcessor?.matchesLineStart(
+					markdown.value,
+					this._state === State.InCodeBlock,
+				)
+			);
 		}
 		return true;
 	}
 
-	private _processLinePart(incompleteLine: MarkdownString, vulnerabilities?: ChatVulnerability[]) {
+	private _processLinePart(
+		incompleteLine: MarkdownString,
+		vulnerabilities?: ChatVulnerability[],
+	) {
 		if (this._currentBlock) {
 			this._code.push(incompleteLine.value);
-			this._emitMarkdown(incompleteLine, this._currentBlock.info, vulnerabilities);
+			this._emitMarkdown(
+				incompleteLine,
+				this._currentBlock.info,
+				vulnerabilities,
+			);
 		} else {
 			this._markdownBeforeBlock.push(incompleteLine.value);
 			this._emitMarkdown(incompleteLine, undefined, vulnerabilities);
@@ -263,20 +356,32 @@ export class CodeBlockProcessor {
 	 * @param line The line to process. The line includes the line delimiters, unless it is the last line of the document.
 	 * @param vulnerabilities Optional set of vulnerabilities to associate with the line.
 	 */
-	private _processLine(line: MarkdownString, vulnerabilities?: ChatVulnerability[]): void {
+	private _processLine(
+		line: MarkdownString,
+		vulnerabilities?: ChatVulnerability[],
+	): void {
 		if (this._state === State.LineAfterFence) {
 			const codeBlock = this._currentBlock!; // must be set in that state
 			const filePath = getFilePath(line.value, codeBlock.info.language);
 			if (filePath) {
 				if (!codeBlock.info.resource) {
-					codeBlock.info.resource = this._resolveCodeblockPath(filePath);
+					codeBlock.info.resource =
+						this._resolveCodeblockPath(filePath);
 				}
 				this._state = State.LineAfterFilePath;
-				this._emitMarkdown(codeBlock.firstLine, codeBlock.info, codeBlock.vulnerabilities);
+				this._emitMarkdown(
+					codeBlock.firstLine,
+					codeBlock.info,
+					codeBlock.vulnerabilities,
+				);
 				return;
 			} else {
 				this._state = State.InCodeBlock;
-				this._emitMarkdown(codeBlock.firstLine, codeBlock.info, codeBlock.vulnerabilities);
+				this._emitMarkdown(
+					codeBlock.firstLine,
+					codeBlock.info,
+					codeBlock.vulnerabilities,
+				);
 				// this was a normal line, not a file path. Continue handling the line
 			}
 		} else if (this._state === State.LineAfterFilePath) {
@@ -312,8 +417,17 @@ export class CodeBlockProcessor {
 					this._nestingLevel--;
 				} else {
 					// the fence matches the opening fence. It does not have a language id, and the nesting level is 1. -> Close the code block
-					this._emitMarkdown(line, this._currentBlock.info, vulnerabilities);
-					this._emitCodeblock({ code: this._code.join(''), resource: this._currentBlock.info.resource, language: this._currentBlock.info.language, markdownBeforeBlock: this._markdownBeforeBlock.join('') });
+					this._emitMarkdown(
+						line,
+						this._currentBlock.info,
+						vulnerabilities,
+					);
+					this._emitCodeblock({
+						code: this._code.join(''),
+						resource: this._currentBlock.info.resource,
+						language: this._currentBlock.info.language,
+						markdownBeforeBlock: this._markdownBeforeBlock.join(''),
+					});
 					this._code.length = 0;
 					this._markdownBeforeBlock.length = 0;
 					this._currentBlock = undefined;
@@ -324,8 +438,16 @@ export class CodeBlockProcessor {
 			}
 		}
 
-		if (this._lineProcessor?.matchesLineStart(line.value, this._state === State.InCodeBlock)) {
-			line = this._lineProcessor.process(line, this._state === State.InCodeBlock);
+		if (
+			this._lineProcessor?.matchesLineStart(
+				line.value,
+				this._state === State.InCodeBlock,
+			)
+		) {
+			line = this._lineProcessor.process(
+				line,
+				this._state === State.InCodeBlock,
+			);
 		}
 
 		// the current line is not opening or closing a code block
@@ -336,9 +458,7 @@ export class CodeBlockProcessor {
 			this._markdownBeforeBlock.push(line.value);
 			this._emitMarkdown(line, undefined, vulnerabilities);
 		}
-
 	}
-
 
 	flush(): void {
 		if (this._lastIncompleteLine) {
@@ -346,21 +466,32 @@ export class CodeBlockProcessor {
 			this._lastIncompleteLine = undefined;
 		}
 		if (this._state === State.LineAfterFence && this._currentBlock) {
-			this._emitMarkdown(this._currentBlock.firstLine, this._currentBlock.info, this._currentBlock.vulnerabilities);
+			this._emitMarkdown(
+				this._currentBlock.firstLine,
+				this._currentBlock.info,
+				this._currentBlock.vulnerabilities,
+			);
 		}
 	}
 }
 
 function getFilePath(line: string, mdLanguage: string | undefined) {
-	const languageId = mdLanguage ? mdCodeBlockLangToLanguageId(mdLanguage) : mdLanguage;
+	const languageId = mdLanguage
+		? mdCodeBlockLangToLanguageId(mdLanguage)
+		: mdLanguage;
 	return createFilepathRegexp(languageId).exec(line)?.[1];
 }
 
 function endsWithLineDelimiter(line: string) {
-	return [CharCode.LineFeed, CharCode.CarriageReturn].includes(line.charCodeAt(line.length - 1));
+	return [CharCode.LineFeed, CharCode.CarriageReturn].includes(
+		line.charCodeAt(line.length - 1),
+	);
 }
 
-function toMarkdownString(text: string, template: MarkdownString | string): MarkdownString {
+function toMarkdownString(
+	text: string,
+	template: MarkdownString | string,
+): MarkdownString {
 	const markdownString = new MarkdownString(text);
 	if (typeof template === 'object') {
 		markdownString.isTrusted = template.isTrusted;
@@ -371,10 +502,14 @@ function toMarkdownString(text: string, template: MarkdownString | string): Mark
 	return markdownString;
 }
 
-function appendMarkdownString(target: MarkdownString, value: MarkdownString): MarkdownString {
+function appendMarkdownString(
+	target: MarkdownString,
+	value: MarkdownString,
+): MarkdownString {
 	const markdownString = new MarkdownString(target.value + value.value);
 	markdownString.isTrusted = target.isTrusted || value.isTrusted;
-	markdownString.supportThemeIcons = target.supportThemeIcons || value.supportThemeIcons;
+	markdownString.supportThemeIcons =
+		target.supportThemeIcons || value.supportThemeIcons;
 	markdownString.supportHtml = target.supportHtml || value.supportHtml;
 	markdownString.baseUri = target.baseUri || value.baseUri;
 	return markdownString;
@@ -387,7 +522,10 @@ function mightBeFence(line: string) {
 		if (ch1 !== CharCode.BackTick && ch1 !== CharCode.Tilde) {
 			return false;
 		}
-		if ((len > 1 && line.charCodeAt(1) !== ch1) || (len > 2 && line.charCodeAt(2) !== ch1)) {
+		if (
+			(len > 1 && line.charCodeAt(1) !== ch1) ||
+			(len > 2 && line.charCodeAt(2) !== ch1)
+		) {
 			return false;
 		}
 	}

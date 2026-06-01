@@ -29,7 +29,11 @@ if (process.env.VSCODE_FORWARDING_IS_DEV) {
 	let binPath: string;
 	if (process.platform === 'darwin') {
 		binPath = 'bin';
-	} else if (process.platform === 'win32' && versionFolder && vscode.env.appRoot.includes(versionFolder)) {
+	} else if (
+		process.platform === 'win32' &&
+		versionFolder &&
+		vscode.env.appRoot.includes(versionFolder)
+	) {
 		binPath = '../../../bin';
 	} else {
 		binPath = '../../bin';
@@ -50,7 +54,7 @@ class Tunnel implements vscode.Tunnel {
 		public readonly remoteAddress: { port: number; host: string },
 		public readonly privacy: TunnelPrivacyId,
 		public readonly protocol: 'http' | 'https',
-	) { }
+	) {}
 
 	public setPortFormat(formatString: string) {
 		this.localAddress = formatString.replace('{port}', String(this.remoteAddress.port));
@@ -70,8 +74,17 @@ const enum State {
 
 type StateT =
 	| { state: State.Inactive }
-	| { state: State.Starting; process: ChildProcessWithoutNullStreams; cleanupTimeout?: NodeJS.Timeout }
-	| { state: State.Active; portFormat: string; process: ChildProcessWithoutNullStreams; cleanupTimeout?: NodeJS.Timeout }
+	| {
+			state: State.Starting;
+			process: ChildProcessWithoutNullStreams;
+			cleanupTimeout?: NodeJS.Timeout;
+	  }
+	| {
+			state: State.Active;
+			portFormat: string;
+			process: ChildProcessWithoutNullStreams;
+			cleanupTimeout?: NodeJS.Timeout;
+	  }
 	| { state: State.Error; error: string };
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -87,31 +100,32 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.commands.registerCommand('tunnel-forwarding.restart', () => provider.restart()),
 
 		provider.onDidStateChange(s => {
-			vscode.commands.executeCommand('setContext', 'tunnelForwardingIsRunning', s.state !== State.Inactive);
+			vscode.commands.executeCommand(
+				'setContext',
+				'tunnelForwardingIsRunning',
+				s.state !== State.Inactive,
+			);
 		}),
 
-		await vscode.workspace.registerTunnelProvider(
-			provider,
-			{
-				tunnelFeatures: {
-					elevation: false,
-					protocol: true,
-					privacyOptions: [
-						{ themeIcon: 'globe', id: TunnelPrivacyId.Public, label: vscode.l10n.t('Public') },
-						{ themeIcon: 'lock', id: TunnelPrivacyId.Private, label: vscode.l10n.t('Private') },
-					],
-				},
+		await vscode.workspace.registerTunnelProvider(provider, {
+			tunnelFeatures: {
+				elevation: false,
+				protocol: true,
+				privacyOptions: [
+					{ themeIcon: 'globe', id: TunnelPrivacyId.Public, label: vscode.l10n.t('Public') },
+					{ themeIcon: 'lock', id: TunnelPrivacyId.Private, label: vscode.l10n.t('Private') },
+				],
 			},
-		),
+		}),
 	);
 }
 
-export function deactivate() { }
+export function deactivate() {}
 
 class Logger {
 	private outputChannel?: vscode.LogOutputChannel;
 
-	constructor(private readonly label: string) { }
+	constructor(private readonly label: string) {}
 
 	public show(): void {
 		return this.outputChannel?.show();
@@ -152,10 +166,15 @@ class TunnelProvider implements vscode.TunnelProvider {
 
 	public readonly onDidStateChange = this.stateChange.event;
 
-	constructor(private readonly logger: Logger, private readonly context: vscode.ExtensionContext) { }
+	constructor(
+		private readonly logger: Logger,
+		private readonly context: vscode.ExtensionContext,
+	) {}
 
 	/** @inheritdoc */
-	public async provideTunnel(tunnelOptions: vscode.TunnelOptions): Promise<vscode.Tunnel | undefined> {
+	public async provideTunnel(
+		tunnelOptions: vscode.TunnelOptions,
+	): Promise<vscode.Tunnel | undefined> {
 		if (tunnelOptions.privacy === TunnelPrivacyId.Public) {
 			if (!(await this.consentPublicPort(tunnelOptions.remoteAddress.port))) {
 				return;
@@ -216,7 +235,10 @@ class TunnelProvider implements vscode.TunnelProvider {
 		const continueOpt = vscode.l10n.t('Continue');
 		const dontShowAgain = vscode.l10n.t("Don't show again");
 		const r = await vscode.window.showWarningMessage(
-			vscode.l10n.t("You're about to create a publicly forwarded port. Anyone on the internet will be able to connect to the service listening on port {0}. You should only proceed if this service is secure and non-sensitive.", portNumber),
+			vscode.l10n.t(
+				"You're about to create a publicly forwarded port. Anyone on the internet will be able to connect to the service listening on port {0}. You should only proceed if this service is secure and non-sensitive.",
+				portNumber,
+			),
 			{ modal: true },
 			continueOpt,
 			dontShowAgain,
@@ -252,7 +274,11 @@ class TunnelProvider implements vscode.TunnelProvider {
 			return;
 		}
 
-		const ports = [...this.tunnels].map(t => ({ number: t.remoteAddress.port, privacy: t.privacy, protocol: t.protocol }));
+		const ports = [...this.tunnels].map(t => ({
+			number: t.remoteAddress.port,
+			privacy: t.privacy,
+			protocol: t.protocol,
+		}));
 		this.state.process.stdin.write(`${JSON.stringify(ports)}\n`);
 
 		if (ports.length === 0 && !this.state.cleanupTimeout) {
@@ -268,16 +294,13 @@ class TunnelProvider implements vscode.TunnelProvider {
 			createIfNone: true,
 		});
 
-		const args = [
-			'--verbose',
-			'tunnel',
-			'forward-internal',
-			'--provider',
-			'github',
-		];
+		const args = ['--verbose', 'tunnel', 'forward-internal', '--provider', 'github'];
 
 		this.logger.log('info', '[forwarding] starting CLI');
-		const child = spawn(cliPath, args, { stdio: 'pipe', env: { ...process.env, NO_COLOR: '1', VSCODE_CLI_ACCESS_TOKEN: session.accessToken } });
+		const child = spawn(cliPath, args, {
+			stdio: 'pipe',
+			env: { ...process.env, NO_COLOR: '1', VSCODE_CLI_ACCESS_TOKEN: session.accessToken },
+		});
 		this.state = { state: State.Starting, process: child };
 
 		const progressP = new DeferredPromise<void>();
@@ -285,9 +308,11 @@ class TunnelProvider implements vscode.TunnelProvider {
 			{
 				location: vscode.ProgressLocation.Notification,
 				title: vscode.l10n.t({
-					comment: ['do not change link format [Show Log](command), only change the text "Show Log"'],
+					comment: [
+						'do not change link format [Show Log](command), only change the text "Show Log"',
+					],
 					message: 'Starting port forwarding system ([Show Log]({0}))',
-					args: ['command:tunnel-forwarding.showLog']
+					args: ['command:tunnel-forwarding.showLog'],
 				}),
 			},
 			() => progressP.p,
@@ -324,8 +349,10 @@ class TunnelProvider implements vscode.TunnelProvider {
 					if (l.port_format && l.port_format !== lastPortFormat) {
 						this.state = {
 							state: State.Active,
-							portFormat: l.port_format, process: child,
-							cleanupTimeout: 'cleanupTimeout' in this.state ? this.state.cleanupTimeout : undefined,
+							portFormat: l.port_format,
+							process: child,
+							cleanupTimeout:
+								'cleanupTimeout' in this.state ? this.state.cleanupTimeout : undefined,
 						};
 						progressP.complete();
 					}

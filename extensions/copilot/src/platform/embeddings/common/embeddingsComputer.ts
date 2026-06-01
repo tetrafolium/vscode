@@ -13,12 +13,14 @@ import { TelemetryCorrelationId } from '../../../util/common/telemetryCorrelatio
  * This includes both the model identifier and the dimensions.
  */
 export class EmbeddingType {
-	public static readonly text3small_512 = new EmbeddingType('text-embedding-3-small-512');
-	public static readonly metis_1024_I16_Binary = new EmbeddingType('metis-1024-I16-Binary');
+	public static readonly text3small_512 = new EmbeddingType(
+		'text-embedding-3-small-512',
+	);
+	public static readonly metis_1024_I16_Binary = new EmbeddingType(
+		'metis-1024-I16-Binary',
+	);
 
-	constructor(
-		public readonly id: string
-	) { }
+	constructor(public readonly id: string) {}
 
 	public toString(): string {
 		return this.id;
@@ -33,7 +35,7 @@ export class EmbeddingType {
 // These values are used in the request and are case sensitive. Do not change them unless advised by CAPI.
 export const enum LEGACY_EMBEDDING_MODEL_ID {
 	TEXT3SMALL = 'text-embedding-3-small',
-	Metis_I16_Binary = 'metis-I16-Binary'
+	Metis_I16_Binary = 'metis-I16-Binary',
 }
 
 type EmbeddingQuantization = 'float32' | 'float16' | 'binary';
@@ -47,13 +49,15 @@ export interface EmbeddingTypeInfo {
 	};
 }
 
-const wellKnownEmbeddingMetadata = Object.freeze<Record<string, EmbeddingTypeInfo>>({
+const wellKnownEmbeddingMetadata = Object.freeze<
+	Record<string, EmbeddingTypeInfo>
+>({
 	[EmbeddingType.text3small_512.id]: {
 		model: LEGACY_EMBEDDING_MODEL_ID.TEXT3SMALL,
 		dimensions: 512,
 		quantization: {
 			query: 'float32',
-			document: 'float32'
+			document: 'float32',
 		},
 	},
 	[EmbeddingType.metis_1024_I16_Binary.id]: {
@@ -61,12 +65,14 @@ const wellKnownEmbeddingMetadata = Object.freeze<Record<string, EmbeddingTypeInf
 		dimensions: 1024,
 		quantization: {
 			query: 'float16',
-			document: 'binary'
+			document: 'binary',
 		},
 	},
 });
 
-export function getWellKnownEmbeddingTypeInfo(type: EmbeddingType): EmbeddingTypeInfo | undefined {
+export function getWellKnownEmbeddingTypeInfo(
+	type: EmbeddingType,
+): EmbeddingTypeInfo | undefined {
 	return wellKnownEmbeddingMetadata[type.id];
 }
 
@@ -104,7 +110,9 @@ export interface EmbeddingDistance {
 	readonly value: number;
 }
 
-export const IEmbeddingsComputer = createServiceIdentifier<IEmbeddingsComputer>('IEmbeddingsComputer');
+export const IEmbeddingsComputer = createServiceIdentifier<IEmbeddingsComputer>(
+	'IEmbeddingsComputer',
+);
 
 export type EmbeddingInputType = 'document' | 'query';
 
@@ -113,7 +121,6 @@ export type ComputeEmbeddingsOptions = {
 };
 
 export interface IEmbeddingsComputer {
-
 	readonly _serviceBrand: undefined;
 
 	/**
@@ -134,7 +141,9 @@ export interface IEmbeddingsComputer {
 
 function dotProduct(a: EmbeddingVector, b: EmbeddingVector): number {
 	if (a.length !== b.length) {
-		console.warn('Embeddings do not have same length for computing dot product');
+		console.warn(
+			'Embeddings do not have same length for computing dot product',
+		);
 	}
 
 	let dotProduct = 0;
@@ -148,9 +157,14 @@ function dotProduct(a: EmbeddingVector, b: EmbeddingVector): number {
 /**
  * Gets the similarity score from 0-1 between two embeddings.
  */
-export function distance(queryEmbedding: Embedding, otherEmbedding: Embedding): EmbeddingDistance {
+export function distance(
+	queryEmbedding: Embedding,
+	otherEmbedding: Embedding,
+): EmbeddingDistance {
 	if (!queryEmbedding.type.equals(otherEmbedding.type)) {
-		throw new Error(`Embeddings must be of the same type to compute similarity. Got: ${queryEmbedding.type.id} and ${otherEmbedding.type.id}`);
+		throw new Error(
+			`Embeddings must be of the same type to compute similarity. Got: ${queryEmbedding.type.id} and ${otherEmbedding.type.id}`,
+		);
 	}
 
 	return {
@@ -171,18 +185,23 @@ export function rankEmbeddings<T>(
 	options?: {
 		readonly minDistance?: number;
 		readonly maxSpread?: number;
-	}
+	},
 ): Array<{ readonly value: T; readonly distance: EmbeddingDistance }> {
 	const minThreshold = options?.minDistance ?? 0;
 
 	const results = items
-		.map(([value, embedding]): { readonly distance: EmbeddingDistance; readonly value: T } => {
-			return { distance: distance(embedding, queryEmbedding), value };
-		})
-		.filter(entry => entry.distance.value > minThreshold)
+		.map(
+			([value, embedding]): {
+				readonly distance: EmbeddingDistance;
+				readonly value: T;
+			} => {
+				return { distance: distance(embedding, queryEmbedding), value };
+			},
+		)
+		.filter((entry) => entry.distance.value > minThreshold)
 		.sort((a, b) => b.distance.value - a.distance.value)
 		.slice(0, maxResults)
-		.map(entry => {
+		.map((entry) => {
 			return {
 				distance: entry.distance,
 				value: entry.value,
@@ -190,8 +209,9 @@ export function rankEmbeddings<T>(
 		});
 
 	if (results.length && typeof options?.maxSpread === 'number') {
-		const minScore = results.at(0)!.distance.value * (1.0 - options.maxSpread);
-		const out = results.filter(x => x.distance.value >= minScore);
+		const minScore =
+			results.at(0)!.distance.value * (1.0 - options.maxSpread);
+		const out = results.filter((x) => x.distance.value >= minScore);
 		return out;
 	}
 

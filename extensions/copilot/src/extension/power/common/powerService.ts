@@ -43,6 +43,6 @@ export class NullPowerService implements IPowerService {
 	readonly onDidResume = Event.None;
 
 	acquirePowerSaveBlocker(): IDisposable {
-		return { dispose: () => { } };
+		return { dispose: () => {} };
 	}
 }

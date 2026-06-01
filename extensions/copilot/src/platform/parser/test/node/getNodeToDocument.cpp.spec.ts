@@ -5,15 +5,11 @@
 
 import { outdent } from 'outdent';
 import { afterAll, expect, suite, test } from 'vitest';
-import {
-	_dispose
-} from '../../node/parserImpl';
+import { _dispose } from '../../node/parserImpl';
 import { WASMLanguage } from '../../node/treeSitterLanguages';
 import { srcWithAnnotatedNodeToDoc } from './getNodeToDocument.util';
 
-
 suite('getNodeToDocument - cpp', () => {
-
 	afterAll(() => _dispose());
 
 	async function run(annotatedSrc: string, includeSelection = false) {
@@ -31,7 +27,7 @@ suite('getNodeToDocument - cpp', () => {
 				<<>>
 			}
 			`,
-			true
+			true,
 		);
 		expect(result).toMatchInlineSnapshot(`
 			"<FUNCTION_DEFINITION>void <IDENT>foo</IDENT>() {
@@ -47,7 +43,7 @@ suite('getNodeToDocument - cpp', () => {
 				<<>>
 			}
 			`,
-			true
+			true,
 		);
 		expect(result).toMatchInlineSnapshot(`
 			"<FUNCTION_DEFINITION>Foo::Bar <IDENT>baz::foo</IDENT>() {
@@ -62,7 +58,7 @@ suite('getNodeToDocument - cpp', () => {
 			<<Foo::Bar>> baz::foo() {
 
 			}
-			`
+			`,
 		);
 		expect(result).toMatchInlineSnapshot(`
 			"<FUNCTION_DEFINITION>Foo::Bar <IDENT>baz::foo</IDENT>() {
@@ -77,7 +73,7 @@ suite('getNodeToDocument - cpp', () => {
 			Foo::Bar baz<<>>::foo() {
 
 			}
-			`
+			`,
 		);
 		expect(result).toMatchInlineSnapshot(`
 			"<FUNCTION_DEFINITION>Foo::Bar <IDENT>baz::foo</IDENT>() {

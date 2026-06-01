@@ -33,7 +33,10 @@ export type CopilotNamedAnnotationList = { [key: string]: CopilotAnnotation[] };
 export interface CopilotAnnotations {
 	current: CopilotNamedAnnotationList;
 	update: (annotations: CopilotNamedAnnotationList) => void;
-	update_namespace: (namespace: string, annotation: CopilotAnnotation) => void;
+	update_namespace: (
+		namespace: string,
+		annotation: CopilotAnnotation,
+	) => void;
 	for: (namespace: string) => CopilotAnnotation[];
 }
 
@@ -42,7 +45,7 @@ export class StreamCopilotAnnotations implements CopilotAnnotations {
 
 	update(annotations: CopilotNamedAnnotationList) {
 		Object.entries(annotations).forEach(([namespace, annotations]) => {
-			annotations.forEach(a => this.update_namespace(namespace, a));
+			annotations.forEach((a) => this.update_namespace(namespace, a));
 		});
 	}
 
@@ -51,7 +54,9 @@ export class StreamCopilotAnnotations implements CopilotAnnotations {
 			this.current[namespace] = [];
 		}
 		const annotationToUpdate = this.current[namespace];
-		const index = annotationToUpdate.findIndex(a => a.id === annotation.id);
+		const index = annotationToUpdate.findIndex(
+			(a) => a.id === annotation.id,
+		);
 		if (index >= 0) {
 			annotationToUpdate[index] = annotation;
 		} else {
@@ -63,4 +68,3 @@ export class StreamCopilotAnnotations implements CopilotAnnotations {
 		return this.current[namespace] ?? [];
 	}
 }
-

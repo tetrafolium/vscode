@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { MobileSessionsPart } from '../../browser/parts/mobile/mobileSessionsPart.js';
-import { Parts } from '../../../workbench/services/layout/browser/layoutService.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../base/test/common/utils.js';
+import assert from "assert";
+import { MobileSessionsPart } from "../../browser/parts/mobile/mobileSessionsPart.js";
+import { Parts } from "../../../workbench/services/layout/browser/layoutService.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../base/test/common/utils.js";
 
-suite('Sessions - Mobile Sessions Part', () => {
+suite("Sessions - Mobile Sessions Part", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('layouts the internal session grid at full phone dimensions', () => {
+	test("layouts the internal session grid at full phone dimensions", () => {
 		let layoutContentsArgs: readonly [number, number] | undefined;
 		let gridLayoutArgs: readonly [number, number, number, number] | undefined;
 
@@ -19,7 +19,7 @@ suite('Sessions - Mobile Sessions Part', () => {
 			layoutService: {
 				mainContainer: {
 					classList: {
-						contains: (className: string) => className === 'phone-layout',
+						contains: (className: string) => className === "phone-layout",
 					},
 				},
 				isVisible: (partId: string) => partId === Parts.SESSIONS_PART,
@@ -37,7 +37,13 @@ suite('Sessions - Mobile Sessions Part', () => {
 			},
 		};
 
-		MobileSessionsPart.prototype.layout.call(part as unknown as MobileSessionsPart, 390, 796, 48, 0);
+		MobileSessionsPart.prototype.layout.call(
+			part as unknown as MobileSessionsPart,
+			390,
+			796,
+			48,
+			0,
+		);
 
 		assert.deepStrictEqual(layoutContentsArgs, [390, 796]);
 		assert.deepStrictEqual(gridLayoutArgs, [388, 792, 48, 0]);

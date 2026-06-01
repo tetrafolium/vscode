@@ -103,7 +103,12 @@ export class SSEParser {
 		while (offset < chunk.length) {
 			const indexCR = chunk.indexOf(Chr.CR, offset);
 			const indexLF = chunk.indexOf(Chr.LF, offset);
-			const index = indexCR === -1 ? indexLF : (indexLF === -1 ? indexCR : Math.min(indexCR, indexLF));
+			const index =
+				indexCR === -1
+					? indexLF
+					: indexLF === -1
+						? indexCR
+						: Math.min(indexCR, indexLF);
 			if (index === -1) {
 				break;
 			}
@@ -116,9 +121,12 @@ export class SSEParser {
 			this.processLine(str);
 
 			this.buffer.length = 0;
-			offset = index + (chunk[index] === Chr.CR && chunk[index + 1] === Chr.LF ? 2 : 1);
+			offset =
+				index +
+				(chunk[index] === Chr.CR && chunk[index + 1] === Chr.LF
+					? 2
+					: 1);
 		}
-
 
 		if (offset < chunk.length) {
 			this.buffer.push(chunk.subarray(offset));
@@ -208,7 +216,10 @@ export class SSEParser {
 
 		// If the data buffer's last character is a newline, remove it
 		if (this.dataBuffer.endsWith('\n')) {
-			this.dataBuffer = this.dataBuffer.substring(0, this.dataBuffer.length - 1);
+			this.dataBuffer = this.dataBuffer.substring(
+				0,
+				this.dataBuffer.length - 1,
+			);
 		}
 
 		// Create and dispatch the event
@@ -243,5 +254,3 @@ export class SSEParser {
 		// Note: lastEventIdBuffer is not reset as it's used for reconnection
 	}
 }
-
-

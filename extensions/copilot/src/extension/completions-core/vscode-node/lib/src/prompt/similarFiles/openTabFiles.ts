@@ -16,19 +16,23 @@ import {
 
 export class OpenTabFiles implements INeighborSource {
 	constructor(
-		@ICompletionsTextDocumentManagerService private readonly docManager: ICompletionsTextDocumentManagerService
-	) { }
+		@ICompletionsTextDocumentManagerService
+		private readonly docManager: ICompletionsTextDocumentManagerService,
+	) {}
 
 	private truncateDocs(
 		docs: readonly TextDocumentContents[],
 		uri: string,
 		languageId: string,
-		maxNumNeighborFiles: number
+		maxNumNeighborFiles: number,
 	): NeighborsCollection {
 		const openFiles: NeighborsCollection = new Map();
 		let totalLen = 0;
 		for (const doc of docs) {
-			if (totalLen + doc.getText().length > NeighborSource.MAX_NEIGHBOR_AGGREGATE_LENGTH) {
+			if (
+				totalLen + doc.getText().length >
+				NeighborSource.MAX_NEIGHBOR_AGGREGATE_LENGTH
+			) {
 				continue;
 			}
 
@@ -65,19 +69,22 @@ export class OpenTabFiles implements INeighborSource {
 	async getNeighborFiles(
 		uri: string,
 		languageId: string,
-		maxNumNeighborFiles: number
-	): Promise<{ docs: NeighborsCollection; neighborSource: Map<NeighboringFileType, string[]> }> {
+		maxNumNeighborFiles: number,
+	): Promise<{
+		docs: NeighborsCollection;
+		neighborSource: Map<NeighboringFileType, string[]>;
+	}> {
 		let neighborFiles: NeighborsCollection = new Map();
 		const neighborSource = new Map<NeighboringFileType, string[]>();
 		neighborFiles = this.truncateDocs(
 			sortByAccessTimes(await this.docManager.textDocuments()),
 			uri,
 			languageId,
-			maxNumNeighborFiles
+			maxNumNeighborFiles,
 		);
 		neighborSource.set(
 			NeighboringFileType.OpenTabs,
-			Array.from(neighborFiles.keys()).map(uri => uri.toString())
+			Array.from(neighborFiles.keys()).map((uri) => uri.toString()),
 		);
 		return {
 			docs: neighborFiles,

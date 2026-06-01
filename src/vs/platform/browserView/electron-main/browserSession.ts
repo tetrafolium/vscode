@@ -3,19 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { session } from 'electron';
-import { joinPath } from '../../../base/common/resources.js';
-import { URI } from '../../../base/common/uri.js';
-import { IApplicationStorageMainService } from '../../storage/electron-main/storageMainService.js';
-import { BrowserViewStorageScope } from '../common/browserView.js';
-import { BrowserSessionTrust, IBrowserSessionTrust } from './browserSessionTrust.js';
-import { FileAccess } from '../../../base/common/network.js';
+import { session } from "electron";
+import { joinPath } from "../../../base/common/resources.js";
+import { URI } from "../../../base/common/uri.js";
+import { IApplicationStorageMainService } from "../../storage/electron-main/storageMainService.js";
+import { BrowserViewStorageScope } from "../common/browserView.js";
+import {
+	BrowserSessionTrust,
+	IBrowserSessionTrust,
+} from "./browserSessionTrust.js";
+import { FileAccess } from "../../../base/common/network.js";
 
 // Same as webviews, minus clipboard-read
 const allowedPermissions = new Set([
-	'pointerLock',
-	'notifications',
-	'clipboard-sanitized-write'
+	"pointerLock",
+	"notifications",
+	"clipboard-sanitized-write",
 ]);
 
 /**
@@ -34,7 +37,6 @@ const allowedPermissions = new Set([
  * obtain instances.
  */
 export class BrowserSession {
-
 	// #region Static registry
 
 	/**
@@ -43,7 +45,10 @@ export class BrowserSession {
 	 *
 	 * The goal is to ensure that BrowserSessions have the exact same lifespan as their Electron sessions.
 	 */
-	private static readonly _bySession = new WeakMap<Electron.Session, BrowserSession>();
+	private static readonly _bySession = new WeakMap<
+		Electron.Session,
+		BrowserSession
+	>();
 
 	/**
 	 * String-keyed lookup for {@link get} and {@link getBrowserContextIds}.
@@ -61,9 +66,11 @@ export class BrowserSession {
 	 * Cleans up stale {@link _byId} entries when the Electron session
 	 * they point to is garbage-collected.
 	 */
-	private static readonly _finalizer = new FinalizationRegistry<string>((id) => {
-		BrowserSession._byId.delete(id);
-	});
+	private static readonly _finalizer = new FinalizationRegistry<string>(
+		(id) => {
+			BrowserSession._byId.delete(id);
+		},
+	);
 
 	/**
 	 * Weak set mirroring the Electron sessions owned by any BrowserSession.
@@ -114,33 +121,60 @@ export class BrowserSession {
 	 * Get or create the singleton global-scope session.
 	 */
 	static getOrCreateGlobal(): BrowserSession {
-		const electronSession = session.fromPartition('persist:vscode-browser');
-		return BrowserSession._bySession.get(electronSession)
-			?? new BrowserSession('global', electronSession, BrowserViewStorageScope.Global);
+		const electronSession = session.fromPartition("persist:vscode-browser");
+		return (
+			BrowserSession._bySession.get(electronSession) ??
+			new BrowserSession(
+				"global",
+				electronSession,
+				BrowserViewStorageScope.Global,
+			)
+		);
 	}
 
 	/**
 	 * Get or create a workspace-scope session for the given workspace.
 	 */
-	static getOrCreateWorkspace(workspaceId: string, workspaceStorageHome: URI): BrowserSession {
-		const storage = joinPath(workspaceStorageHome, workspaceId, 'browserStorage');
+	static getOrCreateWorkspace(
+		workspaceId: string,
+		workspaceStorageHome: URI,
+	): BrowserSession {
+		const storage = joinPath(
+			workspaceStorageHome,
+			workspaceId,
+			"browserStorage",
+		);
 		const electronSession = session.fromPath(storage.fsPath);
-		return BrowserSession._bySession.get(electronSession)
-			?? new BrowserSession(`workspace:${workspaceId}`, electronSession, BrowserViewStorageScope.Workspace);
+		return (
+			BrowserSession._bySession.get(electronSession) ??
+			new BrowserSession(
+				`workspace:${workspaceId}`,
+				electronSession,
+				BrowserViewStorageScope.Workspace,
+			)
+		);
 	}
 
 	/**
 	 * Get or create an ephemeral session for the given view / target id.
 	 */
 	static getOrCreateEphemeral(viewId: string, type?: string): BrowserSession {
-		if (type === 'workspace' || type === 'ephemeral') {
+		if (type === "workspace" || type === "ephemeral") {
 			throw new Error(`Cannot create session with reserved type '${type}'`);
 		}
 
-		const sessionId = `${type ?? 'ephemeral'}:${viewId}`;
-		const electronSession = session.fromPartition(`vscode-browser-${type}${viewId}`);
-		return BrowserSession._bySession.get(electronSession)
-			?? new BrowserSession(sessionId, electronSession, BrowserViewStorageScope.Ephemeral);
+		const sessionId = `${type ?? "ephemeral"}:${viewId}`;
+		const electronSession = session.fromPartition(
+			`vscode-browser-${type}${viewId}`,
+		);
+		return (
+			BrowserSession._bySession.get(electronSession) ??
+			new BrowserSession(
+				sessionId,
+				electronSession,
+				BrowserViewStorageScope.Ephemeral,
+			)
+		);
 	}
 
 	/**
@@ -168,7 +202,10 @@ export class BrowserSession {
 				return BrowserSession.getOrCreateGlobal();
 			case BrowserViewStorageScope.Workspace:
 				if (workspaceId) {
-					return BrowserSession.getOrCreateWorkspace(workspaceId, workspaceStorageHome);
+					return BrowserSession.getOrCreateWorkspace(
+						workspaceId,
+						workspaceStorageHome,
+					);
 				}
 			// fallthrough -- no workspace context -> ephemeral
 			case BrowserViewStorageScope.Ephemeral:
@@ -222,15 +259,21 @@ export class BrowserSession {
 	 * Apply the permission policy and preload scripts to the session.
 	 */
 	private configure(): void {
-		this.electronSession.setPermissionRequestHandler((_webContents, permission, callback) => {
-			return callback(allowedPermissions.has(permission));
-		});
-		this.electronSession.setPermissionCheckHandler((_webContents, permission, _origin) => {
-			return allowedPermissions.has(permission);
-		});
+		this.electronSession.setPermissionRequestHandler(
+			(_webContents, permission, callback) => {
+				return callback(allowedPermissions.has(permission));
+			},
+		);
+		this.electronSession.setPermissionCheckHandler(
+			(_webContents, permission, _origin) => {
+				return allowedPermissions.has(permission);
+			},
+		);
 		this.electronSession.registerPreloadScript({
-			type: 'frame',
-			filePath: FileAccess.asFileUri('vs/platform/browserView/electron-browser/preload-browserView.js').fsPath
+			type: "frame",
+			filePath: FileAccess.asFileUri(
+				"vs/platform/browserView/electron-browser/preload-browserView.js",
+			).fsPath,
 		});
 	}
 

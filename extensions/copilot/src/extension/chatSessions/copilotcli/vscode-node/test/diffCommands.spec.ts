@@ -12,8 +12,8 @@ const { mockRegisterCommand, mockTabGroups } = vi.hoisted(() => ({
 		activeTabGroup: { activeTab: null as unknown },
 		all: [] as unknown[],
 		close: vi.fn().mockResolvedValue(undefined),
-		onDidChangeTabGroups: () => ({ dispose: () => { } }),
-		onDidChangeTabs: vi.fn(() => ({ dispose: () => { } })),
+		onDidChangeTabGroups: () => ({ dispose: () => {} }),
+		onDidChangeTabs: vi.fn(() => ({ dispose: () => {} })),
 	},
 }));
 
@@ -26,17 +26,28 @@ vi.mock('vscode', () => ({
 		executeCommand: vi.fn().mockResolvedValue(undefined),
 	},
 	TabInputTextDiff: class TabInputTextDiff {
-		constructor(public original: unknown, public modified: unknown) { }
+		constructor(
+			public original: unknown,
+			public modified: unknown,
+		) {}
 	},
 }));
 
 import * as vscode from 'vscode';
 import { DiffStateManager, type ActiveDiff } from '../diffState';
-import { registerDiffCommands, ACCEPT_DIFF_COMMAND, REJECT_DIFF_COMMAND } from '../commands/diffCommands';
+import {
+	registerDiffCommands,
+	ACCEPT_DIFF_COMMAND,
+	REJECT_DIFF_COMMAND,
+} from '../commands/diffCommands';
 
 function createTestDiff(tabName: string): ActiveDiff {
-	const modifiedUri = { toString: () => 'modified://' + tabName } as unknown as vscode.Uri;
-	const originalUri = { toString: () => 'original://' + tabName } as unknown as vscode.Uri;
+	const modifiedUri = {
+		toString: () => 'modified://' + tabName,
+	} as unknown as vscode.Uri;
+	const originalUri = {
+		toString: () => 'original://' + tabName,
+	} as unknown as vscode.Uri;
 	return {
 		diffId: 'diff-' + tabName,
 		tabName,
@@ -68,10 +79,12 @@ describe('diff accept/reject commands', () => {
 		diffState = new DiffStateManager(logger);
 		registeredCommands = new Map();
 
-		mockRegisterCommand.mockImplementation((name: string, callback: (...args: unknown[]) => void) => {
-			registeredCommands.set(name, callback);
-			return { dispose: () => { } };
-		});
+		mockRegisterCommand.mockImplementation(
+			(name: string, callback: (...args: unknown[]) => void) => {
+				registeredCommands.set(name, callback);
+				return { dispose: () => {} };
+			},
+		);
 
 		mockTabGroups.activeTabGroup = { activeTab: null };
 		mockTabGroups.all = [];
@@ -97,7 +110,10 @@ describe('diff accept/reject commands', () => {
 
 		expect(diff.cleanup).toHaveBeenCalled();
 		expect(diff.resolve).toHaveBeenCalledWith(
-			expect.objectContaining({ status: 'SAVED', trigger: 'accepted_via_button' }),
+			expect.objectContaining({
+				status: 'SAVED',
+				trigger: 'accepted_via_button',
+			}),
 		);
 	});
 
@@ -114,14 +130,19 @@ describe('diff accept/reject commands', () => {
 
 		expect(diff.cleanup).toHaveBeenCalled();
 		expect(diff.resolve).toHaveBeenCalledWith(
-			expect.objectContaining({ status: 'REJECTED', trigger: 'rejected_via_button' }),
+			expect.objectContaining({
+				status: 'REJECTED',
+				trigger: 'rejected_via_button',
+			}),
 		);
 	});
 
 	it('should not resolve when active tab is not a diff tab', () => {
 		registerDiffCommands(logger, diffState);
 
-		mockTabGroups.activeTabGroup = { activeTab: { label: 'Not A Diff', input: {} } };
+		mockTabGroups.activeTabGroup = {
+			activeTab: { label: 'Not A Diff', input: {} },
+		};
 
 		// Should not throw
 		registeredCommands.get(ACCEPT_DIFF_COMMAND)!();

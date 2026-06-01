@@ -4,8 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it } from 'vitest';
-import { CopilotChatAttr, GenAiAttr, GenAiOperationName } from '../../../../platform/otel/common/genAiAttributes';
-import { SpanStatusCode, type ICompletedSpanData } from '../../../../platform/otel/common/otelService';
+import {
+	CopilotChatAttr,
+	GenAiAttr,
+	GenAiOperationName,
+} from '../../../../platform/otel/common/genAiAttributes';
+import {
+	SpanStatusCode,
+	type ICompletedSpanData,
+} from '../../../../platform/otel/common/otelService';
 import {
 	completedSpanToOtlpSpan,
 	otlpSpanToCompletedSpan,
@@ -13,7 +20,9 @@ import {
 	wrapInResourceSpans,
 } from '../otlpFormatConversion';
 
-function makeSpan(overrides: Partial<ICompletedSpanData> = {}): ICompletedSpanData {
+function makeSpan(
+	overrides: Partial<ICompletedSpanData> = {},
+): ICompletedSpanData {
 	return {
 		name: 'test-span',
 		spanId: 'abcdef0123456789',
@@ -30,16 +39,26 @@ function makeSpan(overrides: Partial<ICompletedSpanData> = {}): ICompletedSpanDa
 describe('OTLP Format Conversion', () => {
 	describe('completedSpanToOtlpSpan', () => {
 		it('converts basic span', () => {
-			const span = makeSpan({ name: 'chat gpt-4o', attributes: { 'gen_ai.request.model': 'gpt-4o' } });
+			const span = makeSpan({
+				name: 'chat gpt-4o',
+				attributes: { 'gen_ai.request.model': 'gpt-4o' },
+			});
 			const otlp = completedSpanToOtlpSpan(span);
 
 			expect(otlp.name).toBe('chat gpt-4o');
 			expect(otlp.traceId).toBe('0123456789abcdef0123456789abcdef');
 			expect(otlp.spanId).toBe('abcdef0123456789');
-			expect(otlp.startTimeUnixNano).toBe(String(1709472000000 * 1_000_000));
-			expect(otlp.endTimeUnixNano).toBe(String(1709472001000 * 1_000_000));
+			expect(otlp.startTimeUnixNano).toBe(
+				String(1709472000000 * 1_000_000),
+			);
+			expect(otlp.endTimeUnixNano).toBe(
+				String(1709472001000 * 1_000_000),
+			);
 			expect(otlp.attributes).toEqual([
-				{ key: 'gen_ai.request.model', value: { stringValue: 'gpt-4o' } },
+				{
+					key: 'gen_ai.request.model',
+					value: { stringValue: 'gpt-4o' },
+				},
 			]);
 		});
 
@@ -56,38 +75,63 @@ describe('OTLP Format Conversion', () => {
 		});
 
 		it('converts integer attributes to intValue strings', () => {
-			const span = makeSpan({ attributes: { 'token_count': 42 } });
+			const span = makeSpan({ attributes: { token_count: 42 } });
 			const otlp = completedSpanToOtlpSpan(span);
-			expect(otlp.attributes![0]).toEqual({ key: 'token_count', value: { intValue: '42' } });
+			expect(otlp.attributes![0]).toEqual({
+				key: 'token_count',
+				value: { intValue: '42' },
+			});
 		});
 
 		it('converts boolean attributes', () => {
-			const span = makeSpan({ attributes: { 'canceled': true } });
+			const span = makeSpan({ attributes: { canceled: true } });
 			const otlp = completedSpanToOtlpSpan(span);
-			expect(otlp.attributes![0]).toEqual({ key: 'canceled', value: { boolValue: true } });
+			expect(otlp.attributes![0]).toEqual({
+				key: 'canceled',
+				value: { boolValue: true },
+			});
 		});
 
 		it('converts array attributes', () => {
-			const span = makeSpan({ attributes: { 'reasons': ['stop', 'tool_calls'] } });
+			const span = makeSpan({
+				attributes: { reasons: ['stop', 'tool_calls'] },
+			});
 			const otlp = completedSpanToOtlpSpan(span);
 			expect(otlp.attributes![0]).toEqual({
 				key: 'reasons',
-				value: { arrayValue: { values: [{ stringValue: 'stop' }, { stringValue: 'tool_calls' }] } },
+				value: {
+					arrayValue: {
+						values: [
+							{ stringValue: 'stop' },
+							{ stringValue: 'tool_calls' },
+						],
+					},
+				},
 			});
 		});
 
 		it('converts span events', () => {
 			const span = makeSpan({
-				events: [{ name: 'user_message', timestamp: 1709472000500, attributes: { content: 'hello' } }],
+				events: [
+					{
+						name: 'user_message',
+						timestamp: 1709472000500,
+						attributes: { content: 'hello' },
+					},
+				],
 			});
 			const otlp = completedSpanToOtlpSpan(span);
 			expect(otlp.events!.length).toBe(1);
 			expect(otlp.events![0].name).toBe('user_message');
-			expect(otlp.events![0].timeUnixNano).toBe(String(1709472000500 * 1_000_000));
+			expect(otlp.events![0].timeUnixNano).toBe(
+				String(1709472000500 * 1_000_000),
+			);
 		});
 
 		it('converts status', () => {
-			const span = makeSpan({ status: { code: SpanStatusCode.ERROR, message: 'timeout' } });
+			const span = makeSpan({
+				status: { code: SpanStatusCode.ERROR, message: 'timeout' },
+			});
 			const otlp = completedSpanToOtlpSpan(span);
 			expect(otlp.status).toEqual({ code: 2, message: 'timeout' });
 		});
@@ -101,8 +145,8 @@ describe('OTLP Format Conversion', () => {
 				attributes: {
 					[GenAiAttr.OPERATION_NAME]: GenAiOperationName.EXECUTE_TOOL,
 					[GenAiAttr.TOOL_NAME]: 'readFile',
-					'token_count': 100,
-					'canceled': false,
+					token_count: 100,
+					canceled: false,
 				},
 				events: [{ name: 'started', timestamp: 1709472000100 }],
 				status: { code: SpanStatusCode.OK },
@@ -118,8 +162,12 @@ describe('OTLP Format Conversion', () => {
 			expect(roundTripped.startTime).toBe(original.startTime);
 			expect(roundTripped.endTime).toBe(original.endTime);
 			expect(roundTripped.status.code).toBe(original.status.code);
-			expect(roundTripped.attributes[GenAiAttr.OPERATION_NAME]).toBe(GenAiOperationName.EXECUTE_TOOL);
-			expect(roundTripped.attributes[GenAiAttr.TOOL_NAME]).toBe('readFile');
+			expect(roundTripped.attributes[GenAiAttr.OPERATION_NAME]).toBe(
+				GenAiOperationName.EXECUTE_TOOL,
+			);
+			expect(roundTripped.attributes[GenAiAttr.TOOL_NAME]).toBe(
+				'readFile',
+			);
 			expect(roundTripped.events.length).toBe(1);
 			expect(roundTripped.events[0].name).toBe('started');
 		});
@@ -128,11 +176,21 @@ describe('OTLP Format Conversion', () => {
 	describe('wrapInResourceSpans + parseResourceSpans', () => {
 		it('round-trips spans through OTLP envelope', () => {
 			const spans = [
-				makeSpan({ name: 'invoke_agent copilot', attributes: { [CopilotChatAttr.SESSION_ID]: 'sess-1' } }),
-				makeSpan({ name: 'chat gpt-4o', spanId: 'span2id234567890', parentSpanId: 'abcdef0123456789' }),
+				makeSpan({
+					name: 'invoke_agent copilot',
+					attributes: { [CopilotChatAttr.SESSION_ID]: 'sess-1' },
+				}),
+				makeSpan({
+					name: 'chat gpt-4o',
+					spanId: 'span2id234567890',
+					parentSpanId: 'abcdef0123456789',
+				}),
 			];
 
-			const exported = wrapInResourceSpans(spans, { 'service.name': 'copilot-chat', 'service.version': '1.0.0' });
+			const exported = wrapInResourceSpans(spans, {
+				'service.name': 'copilot-chat',
+				'service.version': '1.0.0',
+			});
 			const json = JSON.stringify(exported);
 			const imported = parseResourceSpans(json);
 
@@ -144,7 +202,10 @@ describe('OTLP Format Conversion', () => {
 
 		it('parses JSON lines format', () => {
 			const span1 = makeSpan({ name: 'span1' });
-			const span2 = makeSpan({ name: 'span2', spanId: '1234567890abcdef' });
+			const span2 = makeSpan({
+				name: 'span2',
+				spanId: '1234567890abcdef',
+			});
 
 			const line1 = JSON.stringify(wrapInResourceSpans([span1], {}));
 			const line2 = JSON.stringify(wrapInResourceSpans([span2], {}));

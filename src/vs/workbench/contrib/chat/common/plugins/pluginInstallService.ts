@@ -3,12 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IMarketplacePlugin } from './pluginMarketplaceService.js';
+import { CancellationToken } from "../../../../../base/common/cancellation.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { createDecorator } from "../../../../../platform/instantiation/common/instantiation.js";
+import { IMarketplacePlugin } from "./pluginMarketplaceService.js";
 
-export const IPluginInstallService = createDecorator<IPluginInstallService>('pluginInstallService');
+export const IPluginInstallService = createDecorator<IPluginInstallService>(
+	"pluginInstallService",
+);
 
 export interface IUpdateAllPluginsOptions {
 	/**
@@ -70,7 +72,10 @@ export interface IPluginInstallService {
 	 * When {@link IInstallPluginFromSourceOptions.plugin} is set, targets
 	 * a specific plugin, installs it, and returns it.
 	 */
-	installPluginFromSource(source: string, options?: IInstallPluginFromSourceOptions): Promise<void>;
+	installPluginFromSource(
+		source: string,
+		options?: IInstallPluginFromSourceOptions,
+	): Promise<void>;
 
 	/**
 	 * Synchronously validates the format of a plugin source string.
@@ -87,7 +92,10 @@ export interface IPluginInstallService {
 	 * a specific plugin, installs it, and returns it in
 	 * {@link IInstallPluginFromSourceResult.matchedPlugin}.
 	 */
-	installPluginFromValidatedSource(source: string, options?: IInstallPluginFromSourceOptions): Promise<IInstallPluginFromSourceResult>;
+	installPluginFromValidatedSource(
+		source: string,
+		options?: IInstallPluginFromSourceOptions,
+	): Promise<IInstallPluginFromSourceResult>;
 
 	/**
 	 * Pulls the latest changes for an already-cloned marketplace repository.
@@ -99,7 +107,10 @@ export interface IPluginInstallService {
 	 * repository, then updates non-relative-path plugins individually
 	 * (git pull, npm install, pip install, etc.).
 	 */
-	updateAllPlugins(options: IUpdateAllPluginsOptions, token: CancellationToken): Promise<IUpdateAllPluginsResult>;
+	updateAllPlugins(
+		options: IUpdateAllPluginsOptions,
+		token: CancellationToken,
+	): Promise<IUpdateAllPluginsResult>;
 
 	/**
 	 * Returns the URI where a marketplace plugin would be installed on disk.

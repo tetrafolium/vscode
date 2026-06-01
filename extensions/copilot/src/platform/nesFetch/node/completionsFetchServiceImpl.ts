@@ -12,10 +12,21 @@ import { IDisposable } from '../../../util/vs/base/common/lifecycle';
 import { ThemeIcon } from '../../../util/vs/base/common/themables';
 import { IAuthenticationService } from '../../authentication/common/authentication';
 import { getRequestId, RequestId } from '../../networking/common/fetch';
-import { FetchOptions, IFetcherService, IHeaders, Response } from '../../networking/common/fetcherService';
-import { IRequestLogger, LoggedRequestKind } from '../../requestLogger/common/requestLogger';
+import {
+	FetchOptions,
+	IFetcherService,
+	IHeaders,
+	Response,
+} from '../../networking/common/fetcherService';
+import {
+	IRequestLogger,
+	LoggedRequestKind,
+} from '../../requestLogger/common/requestLogger';
 import { Completion } from '../common/completionsAPI';
-import { Completions, ICompletionsFetchService } from '../common/completionsFetchService';
+import {
+	Completions,
+	ICompletionsFetchService,
+} from '../common/completionsFetchService';
 import { ResponseStream } from '../common/responseStream';
 import { jsonlStreamToCompletions } from './streamTransformer';
 
@@ -28,7 +39,7 @@ export type FetchResponse = {
 	response: Response;
 };
 
-export interface IFetchRequestParams extends Completions.ModelParams { }
+export interface IFetchRequestParams extends Completions.ModelParams {}
 
 export class CompletionsFetchService implements ICompletionsFetchService {
 	readonly _serviceBrand: undefined;
@@ -37,8 +48,7 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 		@IAuthenticationService private authService: IAuthenticationService,
 		@IFetcherService private fetcherService: IFetcherService,
 		@IRequestLogger private readonly requestLogger: IRequestLogger,
-	) {
-	}
+	) {}
 
 	public disconnectAll(): Promise<unknown> {
 		return this.fetcherService.disconnectAll();
@@ -56,7 +66,13 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 
 		if (ct.isCancellationRequested) {
 			const result = Result.error(new Completions.RequestCancelled());
-			this._logCompletionsRequest(url, params, requestId, startTimeMs, result);
+			this._logCompletionsRequest(
+				url,
+				params,
+				requestId,
+				startTimeMs,
+				result,
+			);
 			return result;
 		}
 
@@ -66,43 +82,73 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 			body: JSON.stringify({
 				...params,
 				stream: true,
-			})
+			}),
 		};
 
 		const fetchResponse = await this._fetchFromUrl(url, options, ct);
 
 		if (fetchResponse.isError()) {
-			this._logCompletionsRequest(url, params, requestId, startTimeMs, fetchResponse);
+			this._logCompletionsRequest(
+				url,
+				params,
+				requestId,
+				startTimeMs,
+				fetchResponse,
+			);
 			return fetchResponse;
 		}
 
 		if (fetchResponse.val.status === 200) {
-
-			const jsonlStream = AsyncIterUtilsExt.splitLines(fetchResponse.val.body);
+			const jsonlStream = AsyncIterUtilsExt.splitLines(
+				fetchResponse.val.body,
+			);
 			const completionsStream = jsonlStreamToCompletions(jsonlStream);
 
-			const response = new ResponseStream(fetchResponse.val.response, completionsStream, fetchResponse.val.requestId, fetchResponse.val.headers);
-
-			const result = Result.ok(response);
-			this._logCompletionsRequest(url, params, requestId, startTimeMs, result);
-			return result;
-
-		} else {
-			const error: Completions.CompletionsFetchFailure = new Completions.UnsuccessfulResponse(
-				fetchResponse.val.status,
-				fetchResponse.val.statusText,
+			const response = new ResponseStream(
+				fetchResponse.val.response,
+				completionsStream,
+				fetchResponse.val.requestId,
 				fetchResponse.val.headers,
-				() => collectAsyncIterableToString(fetchResponse.val.body).catch(() => ''),
 			);
 
+			const result = Result.ok(response);
+			this._logCompletionsRequest(
+				url,
+				params,
+				requestId,
+				startTimeMs,
+				result,
+			);
+			return result;
+		} else {
+			const error: Completions.CompletionsFetchFailure =
+				new Completions.UnsuccessfulResponse(
+					fetchResponse.val.status,
+					fetchResponse.val.statusText,
+					fetchResponse.val.headers,
+					() =>
+						collectAsyncIterableToString(
+							fetchResponse.val.body,
+						).catch(() => ''),
+				);
+
 			const result = Result.error(error);
-			this._logCompletionsRequest(url, params, requestId, startTimeMs, result);
+			this._logCompletionsRequest(
+				url,
+				params,
+				requestId,
+				startTimeMs,
+				result,
+			);
 			return result;
 		}
 	}
 
-	protected async _fetchFromUrl(url: string, options: Completions.Internal.FetchOptions, ct: CancellationToken): Promise<Result<FetchResponse, Completions.CompletionsFetchFailure>> {
-
+	protected async _fetchFromUrl(
+		url: string,
+		options: Completions.Internal.FetchOptions,
+		ct: CancellationToken,
+	): Promise<Result<FetchResponse, Completions.CompletionsFetchFailure>> {
 		const fetchAbortCtl = this.fetcherService.makeAbortController();
 
 		const onCancellationDisposable = ct.onCancellationRequested(() => {
@@ -110,7 +156,6 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 		});
 
 		try {
-
 			const request: FetchOptions = {
 				headers: options.headers,
 				body: options.body,
@@ -121,7 +166,11 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 
 			const response = await this.fetcherService.fetch(url, request);
 
-			if (response.status === 200 && this.authService.copilotToken?.isFreeUser && this.authService.copilotToken?.isChatQuotaExceeded) {
+			if (
+				response.status === 200 &&
+				this.authService.copilotToken?.isFreeUser &&
+				this.authService.copilotToken?.isChatQuotaExceeded
+			) {
 				this.authService.resetCopilotToken();
 			}
 
@@ -129,18 +178,31 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 				if (response.status === 402) {
 					// When we receive a 402, we have exceed the free tier quota
 					// This is stored on the token so let's refresh it
-					if (!this.authService.copilotToken?.isCompletionsQuotaExceeded) {
+					if (
+						!this.authService.copilotToken
+							?.isCompletionsQuotaExceeded
+					) {
 						this.authService.resetCopilotToken(response.status);
 						await this.authService.getCopilotToken();
 					}
 				}
 
-				return Result.error(new Completions.UnsuccessfulResponse(response.status, response.statusText, response.headers, () => response.text().catch(() => '')));
+				return Result.error(
+					new Completions.UnsuccessfulResponse(
+						response.status,
+						response.statusText,
+						response.headers,
+						() => response.text().catch(() => ''),
+					),
+				);
 			}
 
 			const body = response.body.pipeThrough(new TextDecoderStream());
 
-			const responseStream = streamWithCleanup(body, onCancellationDisposable);
+			const responseStream = streamWithCleanup(
+				body,
+				onCancellationDisposable,
+			);
 
 			return Result.ok({
 				status: response.status,
@@ -150,12 +212,13 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 				requestId: getRequestId(response.headers),
 				response,
 			});
-
 		} catch (reason: unknown) {
-
 			onCancellationDisposable.dispose();
 
-			if (reason instanceof Error && reason.message === 'This operation was aborted') {
+			if (
+				reason instanceof Error &&
+				reason.message === 'This operation was aborted'
+			) {
 				return Result.error(new Completions.RequestCancelled());
 			}
 
@@ -174,18 +237,50 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 		if (result.isOk()) {
 			// For successful requests, wait for the stream to complete so we can log the response
 			const responseStream = result.val;
-			void responseStream.response.then(aggregated => {
-				const aggregationStatus = aggregated.isOk() ? 'success' : 'failed';
-				this._emitCompletionsLogEntry(url, params, requestId, startTimeMs, aggregationStatus, aggregated);
+			void responseStream.response.then((aggregated) => {
+				const aggregationStatus = aggregated.isOk()
+					? 'success'
+					: 'failed';
+				this._emitCompletionsLogEntry(
+					url,
+					params,
+					requestId,
+					startTimeMs,
+					aggregationStatus,
+					aggregated,
+				);
 			});
 		} else {
 			const err = result.err;
 			if (err instanceof Completions.RequestCancelled) {
-				this._emitCompletionsLogEntry(url, params, requestId, startTimeMs, 'cancelled', undefined);
+				this._emitCompletionsLogEntry(
+					url,
+					params,
+					requestId,
+					startTimeMs,
+					'cancelled',
+					undefined,
+				);
 			} else if (err instanceof Completions.UnsuccessfulResponse) {
-				this._emitCompletionsLogEntry(url, params, requestId, startTimeMs, 'failed', undefined, `${err.status} ${err.statusText}`);
+				this._emitCompletionsLogEntry(
+					url,
+					params,
+					requestId,
+					startTimeMs,
+					'failed',
+					undefined,
+					`${err.status} ${err.statusText}`,
+				);
 			} else if (err instanceof Completions.Unexpected) {
-				this._emitCompletionsLogEntry(url, params, requestId, startTimeMs, 'failed', undefined, err.error.message);
+				this._emitCompletionsLogEntry(
+					url,
+					params,
+					requestId,
+					startTimeMs,
+					'failed',
+					undefined,
+					err.error.message,
+				);
 			}
 		}
 	}
@@ -202,7 +297,9 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 		const durationMs = Date.now() - startTimeMs;
 		const lines: string[] = [];
 
-		lines.push(`> 🚨 Note: This log may contain personal information such as the contents of your files. Please review the contents carefully before sharing.`);
+		lines.push(
+			`> 🚨 Note: This log may contain personal information such as the contents of your files. Please review the contents carefully before sharing.`,
+		);
 		lines.push(`# completions`);
 		lines.push(``);
 
@@ -255,7 +352,8 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 			if (aggregatedResponse.isOk()) {
 				const completion = aggregatedResponse.val;
 				const text = completion.choices[0]?.text ?? '';
-				const finishReason = completion.choices[0]?.finish_reason ?? 'unknown';
+				const finishReason =
+					completion.choices[0]?.finish_reason ?? 'unknown';
 				lines.push(`~~~`);
 				lines.push(text || '<EMPTY RESPONSE>');
 				lines.push(`~~~`);
@@ -263,17 +361,26 @@ export class CompletionsFetchService implements ICompletionsFetchService {
 				lines.push(`<pre><code>`);
 				lines.push(`finishReason     : ${finishReason}`);
 				if (completion.usage) {
-					lines.push(`promptTokens     : ${completion.usage.prompt_tokens}`);
-					lines.push(`completionTokens : ${completion.usage.completion_tokens}`);
-					lines.push(`totalTokens      : ${completion.usage.total_tokens}`);
+					lines.push(
+						`promptTokens     : ${completion.usage.prompt_tokens}`,
+					);
+					lines.push(
+						`completionTokens : ${completion.usage.completion_tokens}`,
+					);
+					lines.push(
+						`totalTokens      : ${completion.usage.total_tokens}`,
+					);
 				}
 				lines.push(`</code></pre>`);
 			} else {
-				lines.push(`## FAILED: stream error - ${aggregatedResponse.err.message}`);
+				lines.push(
+					`## FAILED: stream error - ${aggregatedResponse.err.message}`,
+				);
 			}
 		}
 
-		const icon: ThemeIcon | undefined = status === 'success' ? undefined : Codicon.error;
+		const icon: ThemeIcon | undefined =
+			status === 'success' ? undefined : Codicon.error;
 
 		this.requestLogger.addEntry({
 			type: LoggedRequestKind.MarkdownContentRequest,
@@ -307,7 +414,7 @@ export class CompletionsFetchService implements ICompletionsFetchService {
  */
 async function* streamWithCleanup(
 	stream: AsyncIterable<string>,
-	cleanupDisposable: IDisposable
+	cleanupDisposable: IDisposable,
 ): AsyncGenerator<string> {
 	try {
 		for await (const str of stream) {
@@ -324,7 +431,9 @@ async function* streamWithCleanup(
 /**
  * Collects all strings from an async iterable and joins them into a single string.
  */
-async function collectAsyncIterableToString(iterable: AsyncIterable<string>): Promise<string> {
+async function collectAsyncIterableToString(
+	iterable: AsyncIterable<string>,
+): Promise<string> {
 	const parts: string[] = [];
 	for await (const part of iterable) {
 		parts.push(part);

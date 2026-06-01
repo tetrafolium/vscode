@@ -3,25 +3,46 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDiffService, IDocumentDiff } from '../../../../platform/diff/common/diffService';
+import {
+	IDiffService,
+	IDocumentDiff,
+} from '../../../../platform/diff/common/diffService';
 import { computeDiffSync } from '../../../../platform/diff/common/diffWorker';
 import { toLineRangeMappings } from '../../../../platform/diff/node/diffServiceImpl';
 import { ObservableWorkspace } from '../../../../platform/inlineEdits/common/observableWorkspace';
-import { createPlatformServices, TestingServiceCollection } from '../../../../platform/test/node/services';
+import {
+	createPlatformServices,
+	TestingServiceCollection,
+} from '../../../../platform/test/node/services';
 import { LogEntry } from '../../../../platform/workspaceRecorder/common/workspaceLog';
 import { runWithFakedTimers } from '../../../../util/common/timeTravelScheduler';
 import { Emitter } from '../../../../util/vs/base/common/event';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
-import { derived, observableValue, transaction } from '../../../../util/vs/base/common/observableInternal';
+import {
+	derived,
+	observableValue,
+	transaction,
+} from '../../../../util/vs/base/common/observableInternal';
 import { isDefined } from '../../../../util/vs/base/common/types';
 import { LineRange } from '../../../../util/vs/editor/common/core/ranges/lineRange';
-import { ILinesDiffComputerOptions, MovedText } from '../../../../util/vs/editor/common/diff/linesDiffComputer';
+import {
+	ILinesDiffComputerOptions,
+	MovedText,
+} from '../../../../util/vs/editor/common/diff/linesDiffComputer';
 import { LineRangeMapping } from '../../../../util/vs/editor/common/diff/rangeMapping';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { VisualizationTestRun } from '../../../inlineChat/node/rendererVisualization';
 import { waitForStateOrReturn } from '../../../prompts/node/test/summarizeDocumentPlayground';
-import { IRecordableEditorLogEntry, IRecordableLogEntry, ITextModelEditReasonMetadata, IWorkspaceListenerService } from '../../../workspaceRecorder/common/workspaceListenerService';
-import { IRecordingInformation, ObservableWorkspaceRecordingReplayer } from '../../common/observableWorkspaceRecordingReplayer';
+import {
+	IRecordableEditorLogEntry,
+	IRecordableLogEntry,
+	ITextModelEditReasonMetadata,
+	IWorkspaceListenerService,
+} from '../../../workspaceRecorder/common/workspaceListenerService';
+import {
+	IRecordingInformation,
+	ObservableWorkspaceRecordingReplayer,
+} from '../../common/observableWorkspaceRecordingReplayer';
 
 export interface IRunRecordingContext {
 	testingServiceCollection: TestingServiceCollection;
@@ -36,24 +57,32 @@ export interface IRunRecordingContext {
 
 export async function runRecording<T>(
 	recording: IRecordingInformation | LogEntry[],
-	run: ((ctx: IRunRecordingContext) => T | Promise<T>)
+	run: (ctx: IRunRecordingContext) => T | Promise<T>,
 ): Promise<T> {
 	const globalStore = new DisposableStore();
 
 	async function playRecordingWithFakedTimers(rec: IRecordingInformation) {
 		globalStore.clear();
 
-		return await runWithFakedTimers({ maxTaskCount: 10_000_000 }, async () => {
-			return await playRecording(rec);
-		});
+		return await runWithFakedTimers(
+			{ maxTaskCount: 10_000_000 },
+			async () => {
+				return await playRecording(rec);
+			},
+		);
 	}
 
 	async function playRecording(rec: IRecordingInformation) {
 		VisualizationTestRun.startRun();
 
-		VisualizationTestRun.instance!.addData('recording', () => {
-			return playground;
-		}, undefined, '.recording');
+		VisualizationTestRun.instance!.addData(
+			'recording',
+			() => {
+				return playground;
+			},
+			undefined,
+			'.recording',
+		);
 
 		VisualizationTestRun.instance!.addData('result', () => {
 			return playground.getResult();
@@ -63,10 +92,17 @@ export async function runRecording<T>(
 		const store = new DisposableStore();
 		store.add(r);
 
-		const _onStructuredData = new Emitter<IRecordableLogEntry | IRecordableEditorLogEntry>();
+		const _onStructuredData = new Emitter<
+			IRecordableLogEntry | IRecordableEditorLogEntry
+		>();
 		const onStructuredData = _onStructuredData.event;
 
-		const _onHandleChangeReason = new Emitter<{ documentUri: string; documentVersion: number; reason: string; metadata: ITextModelEditReasonMetadata }>();
+		const _onHandleChangeReason = new Emitter<{
+			documentUri: string;
+			documentVersion: number;
+			reason: string;
+			metadata: ITextModelEditReasonMetadata;
+		}>();
 		const onHandleChangeReason = _onHandleChangeReason.event;
 
 		const myS: IWorkspaceListenerService = {
@@ -75,17 +111,19 @@ export async function runRecording<T>(
 			onStructuredData: onStructuredData,
 		};
 
-		store.add(r.onDocumentEvent(e => {
-			// TODO: _onStructuredData.fire(e);
-			if (e.data.sourceId === 'TextModel.setChangeReason') {
-				_onHandleChangeReason.fire({
-					documentUri: e.doc.id.toUri().toString(),
-					documentVersion: e.data.v,
-					reason: e.data.source,
-					metadata: e.data,
-				});
-			}
-		}));
+		store.add(
+			r.onDocumentEvent((e) => {
+				// TODO: _onStructuredData.fire(e);
+				if (e.data.sourceId === 'TextModel.setChangeReason') {
+					_onHandleChangeReason.fire({
+						documentUri: e.doc.id.toUri().toString(),
+						documentVersion: e.data.v,
+						reason: e.data.source,
+						metadata: e.data,
+					});
+				}
+			}),
+		);
 
 		const s = createPlatformServices();
 		s.define(IWorkspaceListenerService, myS);
@@ -101,7 +139,9 @@ export async function runRecording<T>(
 			},
 			get instantiationService() {
 				if (!instantiationService) {
-					instantiationService = s.createTestingAccessor().get(IInstantiationService);
+					instantiationService = s
+						.createTestingAccessor()
+						.get(IInstantiationService);
 				}
 				return instantiationService;
 			},
@@ -124,7 +164,7 @@ export async function runRecording<T>(
 					}
 				}
 				return false;
-			}
+			},
 		});
 
 		globalStore.add(store);
@@ -143,7 +183,9 @@ export async function runRecording<T>(
 		recording.log,
 		async (recording, logEntryIdx) => {
 			try {
-				const result = await playRecordingWithFakedTimers({ log: recording.slice(0, logEntryIdx + 1) });
+				const result = await playRecordingWithFakedTimers({
+					log: recording.slice(0, logEntryIdx + 1),
+				});
 				if (typeof result === 'string') {
 					return result;
 				}
@@ -152,7 +194,7 @@ export async function runRecording<T>(
 				console.error(e);
 				return JSON.stringify({ error: e });
 			}
-		}
+		},
 	);
 
 	return result;
@@ -160,16 +202,21 @@ export async function runRecording<T>(
 
 export class RecordingPlayground<T> {
 	private readonly _logEntryIdx = observableValue<number>(this, 0);
-	private readonly _initialResult = observableValue<T | undefined>(this, undefined);
+	private readonly _initialResult = observableValue<T | undefined>(
+		this,
+		undefined,
+	);
 
 	constructor(
 		result: T,
 		logEntryIdx: number,
 		private readonly _recording: readonly LogEntry[],
-		private readonly _getUpdatedResult: (recording: readonly LogEntry[], stepIdx: number) => T | Promise<T>
-
+		private readonly _getUpdatedResult: (
+			recording: readonly LogEntry[],
+			stepIdx: number,
+		) => T | Promise<T>,
 	) {
-		transaction(tx => {
+		transaction((tx) => {
 			this._initialResult.set(result, tx);
 			this._logEntryIdx.set(logEntryIdx, tx);
 		});
@@ -187,7 +234,7 @@ export class RecordingPlayground<T> {
 	}
 
 	set recording(value: IRecordingDoc) {
-		transaction(tx => {
+		transaction((tx) => {
 			this._initialResult.set(undefined, tx);
 			this._logEntryIdx.set(value.logEntryIdx ?? 0, tx);
 		});
@@ -195,11 +242,16 @@ export class RecordingPlayground<T> {
 
 	private readonly _store = new DisposableStore();
 
-	private readonly _result = derived(this, reader => {
+	private readonly _result = derived(this, (reader) => {
 		const r = this._initialResult.read(reader);
-		if (r) { return r; }
+		if (r) {
+			return r;
+		}
 
-		return this._getUpdatedResult(this._recording, this._logEntryIdx.read(reader));
+		return this._getUpdatedResult(
+			this._recording,
+			this._logEntryIdx.read(reader),
+		);
 	});
 
 	getResult() {
@@ -217,17 +269,27 @@ interface IRecordingDoc {
 export class SyncDiffService implements IDiffService {
 	readonly _serviceBrand: undefined;
 
-	computeDiff(original: string, modified: string, options: ILinesDiffComputerOptions): Promise<IDocumentDiff> {
+	computeDiff(
+		original: string,
+		modified: string,
+		options: ILinesDiffComputerOptions,
+	): Promise<IDocumentDiff> {
 		const result = computeDiffSync(original, modified, options);
 		// Convert from space efficient JSON data to rich objects.
 		const diff: IDocumentDiff = {
 			identical: result.identical,
 			quitEarly: result.quitEarly,
 			changes: toLineRangeMappings(result.changes),
-			moves: result.moves.map(m => new MovedText(
-				new LineRangeMapping(new LineRange(m[0], m[1]), new LineRange(m[2], m[3])),
-				toLineRangeMappings(m[4])
-			))
+			moves: result.moves.map(
+				(m) =>
+					new MovedText(
+						new LineRangeMapping(
+							new LineRange(m[0], m[1]),
+							new LineRange(m[2], m[3]),
+						),
+						toLineRangeMappings(m[4]),
+					),
+			),
 		};
 		return Promise.resolve(diff);
 	}

@@ -3,20 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { CancellationToken } from '../../../../base/common/cancellation.js';
-import { URI } from '../../../../base/common/uri.js';
-import { vObjAny, vString as vStringValidator } from '../../../../base/common/validation.js';
-import { ILogService } from '../../../log/common/log.js';
-import { AgentSession } from '../../common/agentService.js';
-import { parseSubagentSessionUri } from '../../common/state/sessionState.js';
+import type { CancellationToken } from "../../../../base/common/cancellation.js";
+import { URI } from "../../../../base/common/uri.js";
+import {
+	vObjAny,
+	vString as vStringValidator,
+} from "../../../../base/common/validation.js";
+import { ILogService } from "../../../log/common/log.js";
+import { AgentSession } from "../../common/agentService.js";
+import { parseSubagentSessionUri } from "../../common/state/sessionState.js";
 import {
 	ResponsePartKind,
 	ToolCallStatus,
 	type Turn,
-} from '../../common/state/protocol/state.js';
-import { IClaudeAgentSdkService } from './claudeAgentSdkService.js';
-import { mapSessionMessagesToTurns } from './claudeReplayMapper.js';
-import { scanTranscriptForAgentIds, SUBAGENT_TOOL_NAMES, type SubagentRegistry } from './claudeSubagentRegistry.js';
+} from "../../common/state/protocol/state.js";
+import { IClaudeAgentSdkService } from "./claudeAgentSdkService.js";
+import { mapSessionMessagesToTurns } from "./claudeReplayMapper.js";
+import {
+	scanTranscriptForAgentIds,
+	SUBAGENT_TOOL_NAMES,
+	type SubagentRegistry,
+} from "./claudeSubagentRegistry.js";
 
 /**
  * One link in the resolver chain. Each strategy consults a different
@@ -28,7 +35,10 @@ export interface ISubagentLookupStrategy {
 	/** Short label, used as a category in any future telemetry counter. */
 	readonly name: string;
 	/** Returns the agentId or `undefined` if this strategy cannot resolve the input. */
-	lookup(toolCallId: string, ctx: ISubagentLookupContext): Promise<string | undefined>;
+	lookup(
+		toolCallId: string,
+		ctx: ISubagentLookupContext,
+	): Promise<string | undefined>;
 }
 
 export interface ISubagentLookupContext {
@@ -46,15 +56,23 @@ export interface ISubagentLookupContext {
  * from the live session or the parent's own replay fetch.
  */
 export class TextSuffixStrategy implements ISubagentLookupStrategy {
-	readonly name = 'text_suffix';
+	readonly name = "text_suffix";
 
 	constructor(
 		private readonly _sdk: IClaudeAgentSdkService,
 		private readonly _logService: ILogService,
-	) { }
+	) {}
 
-	async lookup(toolCallId: string, ctx: ISubagentLookupContext): Promise<string | undefined> {
-		const transcript = await fetchParentTurns(this._sdk, this._logService, ctx, 'TextSuffix');
+	async lookup(
+		toolCallId: string,
+		ctx: ISubagentLookupContext,
+	): Promise<string | undefined> {
+		const transcript = await fetchParentTurns(
+			this._sdk,
+			this._logService,
+			ctx,
+			"TextSuffix",
+		);
 		if (!transcript) {
 			return undefined;
 		}
@@ -78,10 +96,14 @@ export async function fetchParentTurns(
 		return ctx.parentTranscript;
 	}
 	try {
-		const messages = await sdk.getSessionMessages(ctx.parentSessionId, { includeSystemMessages: true });
+		const messages = await sdk.getSessionMessages(ctx.parentSessionId, {
+			includeSystemMessages: true,
+		});
 		return mapSessionMessagesToTurns(messages, ctx.parentUri, logService);
 	} catch (err) {
-		logService.warn(`[claudeSubagentResolver] ${strategyLabel}: parent transcript fetch failed: ${err}`);
+		logService.warn(
+			`[claudeSubagentResolver] ${strategyLabel}: parent transcript fetch failed: ${err}`,
+		);
 		return undefined;
 	}
 }
@@ -118,14 +140,17 @@ function vObj(input: unknown): Record<string, unknown> | undefined {
  * (e.g. SDK reformats the suffix) at the cost of two extra SDK calls.
  */
 export class PromptMatchStrategy implements ISubagentLookupStrategy {
-	readonly name = 'prompt_match';
+	readonly name = "prompt_match";
 
 	constructor(
 		private readonly _sdk: IClaudeAgentSdkService,
 		private readonly _logService: ILogService,
-	) { }
+	) {}
 
-	async lookup(toolCallId: string, ctx: ISubagentLookupContext): Promise<string | undefined> {
+	async lookup(
+		toolCallId: string,
+		ctx: ISubagentLookupContext,
+	): Promise<string | undefined> {
 		const prompt = await this._loadParentPrompt(toolCallId, ctx);
 		if (!prompt) {
 			return undefined;
@@ -134,7 +159,9 @@ export class PromptMatchStrategy implements ISubagentLookupStrategy {
 		try {
 			agentIds = await this._sdk.listSubagents(ctx.parentSessionId);
 		} catch (err) {
-			this._logService.warn(`[claudeSubagentResolver] PromptMatch: listSubagents failed: ${err}`);
+			this._logService.warn(
+				`[claudeSubagentResolver] PromptMatch: listSubagents failed: ${err}`,
+			);
 			return undefined;
 		}
 		for (const agentId of agentIds) {
@@ -143,9 +170,14 @@ export class PromptMatchStrategy implements ISubagentLookupStrategy {
 			}
 			let messages;
 			try {
-				messages = await this._sdk.getSubagentMessages(ctx.parentSessionId, agentId);
+				messages = await this._sdk.getSubagentMessages(
+					ctx.parentSessionId,
+					agentId,
+				);
 			} catch (err) {
-				this._logService.warn(`[claudeSubagentResolver] PromptMatch: getSubagentMessages(${agentId}) failed: ${err}`);
+				this._logService.warn(
+					`[claudeSubagentResolver] PromptMatch: getSubagentMessages(${agentId}) failed: ${err}`,
+				);
 				continue;
 			}
 			const firstMessage = extractFirstUserText(messages);
@@ -159,8 +191,16 @@ export class PromptMatchStrategy implements ISubagentLookupStrategy {
 		return undefined;
 	}
 
-	private async _loadParentPrompt(toolCallId: string, ctx: ISubagentLookupContext): Promise<string | undefined> {
-		const transcript = await fetchParentTurns(this._sdk, this._logService, ctx, 'PromptMatch');
+	private async _loadParentPrompt(
+		toolCallId: string,
+		ctx: ISubagentLookupContext,
+	): Promise<string | undefined> {
+		const transcript = await fetchParentTurns(
+			this._sdk,
+			this._logService,
+			ctx,
+			"PromptMatch",
+		);
 		if (!transcript) {
 			return undefined;
 		}
@@ -174,7 +214,10 @@ export class PromptMatchStrategy implements ISubagentLookupStrategy {
  * subagent tool, still streaming, or input is malformed. Exported so
  * it can be tested independently of SDK fetch behavior.
  */
-export function extractSpawningPromptFromTranscript(transcript: readonly Turn[], toolCallId: string): string | undefined {
+export function extractSpawningPromptFromTranscript(
+	transcript: readonly Turn[],
+	toolCallId: string,
+): string | undefined {
 	for (const turn of transcript) {
 		for (const part of turn.responseParts) {
 			if (part.kind !== ResponsePartKind.ToolCall) {
@@ -191,7 +234,7 @@ export function extractSpawningPromptFromTranscript(transcript: readonly Turn[],
 				return undefined;
 			}
 			const inputRaw = state.toolInput;
-			if (typeof inputRaw !== 'string') {
+			if (typeof inputRaw !== "string") {
 				return undefined;
 			}
 			let parsed: unknown;
@@ -210,9 +253,11 @@ export function extractSpawningPromptFromTranscript(transcript: readonly Turn[],
 	return undefined;
 }
 
-function extractFirstUserText(messages: readonly { readonly type?: string; readonly message?: unknown }[]): string | undefined {
+function extractFirstUserText(
+	messages: readonly { readonly type?: string; readonly message?: unknown }[],
+): string | undefined {
 	for (const msg of messages) {
-		if (msg.type !== 'user') {
+		if (msg.type !== "user") {
 			continue;
 		}
 		const inner = vObj(msg.message);
@@ -220,7 +265,7 @@ function extractFirstUserText(messages: readonly { readonly type?: string; reado
 			continue;
 		}
 		const content = inner.content;
-		if (typeof content === 'string') {
+		if (typeof content === "string") {
 			return content;
 		}
 		if (!Array.isArray(content)) {
@@ -228,7 +273,7 @@ function extractFirstUserText(messages: readonly { readonly type?: string; reado
 		}
 		for (const block of content) {
 			const obj = vObj(block);
-			if (!obj || obj.type !== 'text') {
+			if (!obj || obj.type !== "text") {
 				continue;
 			}
 			const text = vString(obj.text);
@@ -247,7 +292,7 @@ function extractFirstUserText(messages: readonly { readonly type?: string; reado
  * falls back to the other strategies.
  */
 export class NativeStrategy implements ISubagentLookupStrategy {
-	readonly name = 'native';
+	readonly name = "native";
 	async lookup(): Promise<string | undefined> {
 		return undefined;
 	}
@@ -300,7 +345,10 @@ export async function resolveAgentIdViaChain(
  * ({@link getSubagentTranscript}, tests, etc.) construct a single
  * canonical ordering instead of inlining it.
  */
-function buildDefaultStrategies(sdk: IClaudeAgentSdkService, logService: ILogService): readonly ISubagentLookupStrategy[] {
+function buildDefaultStrategies(
+	sdk: IClaudeAgentSdkService,
+	logService: ILogService,
+): readonly ISubagentLookupStrategy[] {
 	return [
 		new TextSuffixStrategy(sdk, logService),
 		new PromptMatchStrategy(sdk, logService),
@@ -328,19 +376,27 @@ export async function getSubagentTranscript(
 ): Promise<readonly Turn[]> {
 	const parsed = parseSubagentSessionUri(subagentUri);
 	if (!parsed) {
-		throw new Error(`getSubagentTranscript: not a subagent URI: ${subagentUri.toString()}`);
+		throw new Error(
+			`getSubagentTranscript: not a subagent URI: ${subagentUri.toString()}`,
+		);
 	}
 	const { parentSession, toolCallId } = parsed;
 	const parentSessionId = AgentSession.id(parentSession);
-	const agentId = await resolveAgentIdViaChain(toolCallId, {
-		parentUri: parentSession,
-		parentSessionId,
-		token,
-	}, {
-		strategies: buildDefaultStrategies(sdk, logService),
-		cacheGet: id => parentRegistry.getSpawn(id)?.agentId,
-		cacheSet: (id, resolved) => { parentRegistry.recordSpawn(id, { agentId: resolved }); },
-	});
+	const agentId = await resolveAgentIdViaChain(
+		toolCallId,
+		{
+			parentUri: parentSession,
+			parentSessionId,
+			token,
+		},
+		{
+			strategies: buildDefaultStrategies(sdk, logService),
+			cacheGet: (id) => parentRegistry.getSpawn(id)?.agentId,
+			cacheSet: (id, resolved) => {
+				parentRegistry.recordSpawn(id, { agentId: resolved });
+			},
+		},
+	);
 	if (!agentId) {
 		return [];
 	}
@@ -348,7 +404,9 @@ export async function getSubagentTranscript(
 	try {
 		messages = await sdk.getSubagentMessages(parentSessionId, agentId);
 	} catch (err) {
-		logService.warn(`[getSubagentTranscript] getSubagentMessages(${agentId}) failed: ${err}`);
+		logService.warn(
+			`[getSubagentTranscript] getSubagentMessages(${agentId}) failed: ${err}`,
+		);
 		return [];
 	}
 	return mapSessionMessagesToTurns(messages, subagentUri, logService);

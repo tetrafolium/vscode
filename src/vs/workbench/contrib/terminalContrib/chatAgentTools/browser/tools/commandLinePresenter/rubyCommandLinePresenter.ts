@@ -3,23 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OperatingSystem } from '../../../../../../../base/common/platform.js';
-import { isPowerShell } from '../../runInTerminalHelpers.js';
-import type { ICommandLinePresenter, ICommandLinePresenterOptions, ICommandLinePresenterResult } from './commandLinePresenter.js';
+import { OperatingSystem } from "../../../../../../../base/common/platform.js";
+import { isPowerShell } from "../../runInTerminalHelpers.js";
+import type {
+	ICommandLinePresenter,
+	ICommandLinePresenterOptions,
+	ICommandLinePresenterResult,
+} from "./commandLinePresenter.js";
 
 /**
  * Command line presenter for Ruby inline commands (`ruby -e "..."`).
  * Extracts the Ruby code and sets up Ruby syntax highlighting.
  */
 export class RubyCommandLinePresenter implements ICommandLinePresenter {
-	present(options: ICommandLinePresenterOptions): ICommandLinePresenterResult | undefined {
+	present(
+		options: ICommandLinePresenterOptions,
+	): ICommandLinePresenterResult | undefined {
 		const commandLine = options.commandLine.forDisplay;
-		const extractedRuby = extractRubyCommand(commandLine, options.shell, options.os);
+		const extractedRuby = extractRubyCommand(
+			commandLine,
+			options.shell,
+			options.os,
+		);
 		if (extractedRuby) {
 			return {
 				commandLine: extractedRuby,
-				language: 'ruby',
-				languageDisplayName: 'Ruby',
+				language: "ruby",
+				languageDisplayName: "Ruby",
 			};
 		}
 		return undefined;
@@ -35,7 +45,11 @@ export class RubyCommandLinePresenter implements ICommandLinePresenter {
  * @param os The operating system
  * @returns The extracted Ruby code, or undefined if not a ruby -e command
  */
-export function extractRubyCommand(commandLine: string, shell: string, os: OperatingSystem): string | undefined {
+export function extractRubyCommand(
+	commandLine: string,
+	shell: string,
+	os: OperatingSystem,
+): string | undefined {
 	// Match ruby -e "..." pattern (double quotes)
 	const doubleQuoteMatch = commandLine.match(/^ruby\s+-e\s+"(?<code>.+)"$/s);
 	if (doubleQuoteMatch?.groups?.code) {

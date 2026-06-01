@@ -8,34 +8,65 @@ import type { IChatEndpoint } from '../../../../platform/networking/common/netwo
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { CopilotIdentityRules } from '../base/copilotIdentity';
 import { SafetyRules } from '../base/safetyRules';
-import { DefaultAgentPrompt, DefaultAgentPromptProps, DefaultReminderInstructions, DefaultToolReferencesHint, ReminderInstructionsProps, ToolReferencesHintProps } from './defaultAgentInstructions';
+import {
+	DefaultAgentPrompt,
+	DefaultAgentPromptProps,
+	DefaultReminderInstructions,
+	DefaultToolReferencesHint,
+	ReminderInstructionsProps,
+	ToolReferencesHintProps,
+} from './defaultAgentInstructions';
 
-export type SystemPrompt = new (props: DefaultAgentPromptProps, ...args: any[]) => PromptElement<DefaultAgentPromptProps>;
+export type SystemPrompt = new (
+	props: DefaultAgentPromptProps,
+	...args: any[]
+) => PromptElement<DefaultAgentPromptProps>;
 
-export type ReminderInstructionsConstructor = new (props: ReminderInstructionsProps, ...args: any[]) => PromptElement<ReminderInstructionsProps>;
+export type ReminderInstructionsConstructor = new (
+	props: ReminderInstructionsProps,
+	...args: any[]
+) => PromptElement<ReminderInstructionsProps>;
 
-export type ToolReferencesHintConstructor = new (props: ToolReferencesHintProps, ...args: any[]) => PromptElement<ToolReferencesHintProps>;
+export type ToolReferencesHintConstructor = new (
+	props: ToolReferencesHintProps,
+	...args: any[]
+) => PromptElement<ToolReferencesHintProps>;
 
-export type CopilotIdentityRulesConstructor = new (props: BasePromptElementProps, ...args: any[]) => PromptElement<BasePromptElementProps>;
+export type CopilotIdentityRulesConstructor = new (
+	props: BasePromptElementProps,
+	...args: any[]
+) => PromptElement<BasePromptElementProps>;
 
-export type SafetyRulesConstructor = new (props: BasePromptElementProps, ...args: any[]) => PromptElement<BasePromptElementProps>;
+export type SafetyRulesConstructor = new (
+	props: BasePromptElementProps,
+	...args: any[]
+) => PromptElement<BasePromptElementProps>;
 
 export interface IAgentPrompt {
 	resolveSystemPrompt(endpoint: IChatEndpoint): SystemPrompt | undefined;
-	resolveReminderInstructions?(endpoint: IChatEndpoint): ReminderInstructionsConstructor | undefined;
-	resolveToolReferencesHint?(endpoint: IChatEndpoint): ToolReferencesHintConstructor | undefined;
-	resolveCopilotIdentityRules?(endpoint: IChatEndpoint): CopilotIdentityRulesConstructor | undefined;
-	resolveSafetyRules?(endpoint: IChatEndpoint): SafetyRulesConstructor | undefined;
+	resolveReminderInstructions?(
+		endpoint: IChatEndpoint,
+	): ReminderInstructionsConstructor | undefined;
+	resolveToolReferencesHint?(
+		endpoint: IChatEndpoint,
+	): ToolReferencesHintConstructor | undefined;
+	resolveCopilotIdentityRules?(
+		endpoint: IChatEndpoint,
+	): CopilotIdentityRulesConstructor | undefined;
+	resolveSafetyRules?(
+		endpoint: IChatEndpoint,
+	): SafetyRulesConstructor | undefined;
 	resolveUserQueryTagName?(endpoint: IChatEndpoint): string | undefined;
 }
 
 export interface IAgentPromptCtor {
 	readonly familyPrefixes: readonly string[];
 	matchesModel?(endpoint: IChatEndpoint): Promise<boolean> | boolean;
-	new(...args: any[]): IAgentPrompt;
+	new (...args: any[]): IAgentPrompt;
 }
 
-export type AgentPromptClass = IAgentPromptCtor & (new (...args: any[]) => IAgentPrompt);
+export type AgentPromptClass = IAgentPromptCtor &
+	(new (...args: any[]) => IAgentPrompt);
 
 type PromptWithMatcher = IAgentPromptCtor & {
 	matchesModel: (endpoint: IChatEndpoint) => Promise<boolean> | boolean;
@@ -50,9 +81,12 @@ export interface AgentPromptCustomizations {
 	readonly userQueryTagName?: string;
 }
 
-export const PromptRegistry = new class {
+export const PromptRegistry = new (class {
 	private readonly promptsWithMatcher: PromptWithMatcher[] = [];
-	private readonly familyPrefixList: { prefix: string; prompt: IAgentPromptCtor }[] = [];
+	private readonly familyPrefixList: {
+		prefix: string;
+		prompt: IAgentPromptCtor;
+	}[] = [];
 
 	registerPrompt(prompt: IAgentPromptCtor): void {
 		if (prompt.matchesModel) {
@@ -65,9 +99,8 @@ export const PromptRegistry = new class {
 	}
 
 	private async getPromptResolver(
-		endpoint: IChatEndpoint
+		endpoint: IChatEndpoint,
 	): Promise<IAgentPromptCtor | undefined> {
-
 		for (const prompt of this.promptsWithMatcher) {
 			const matches = await prompt.matchesModel(endpoint);
 			if (matches) {
@@ -96,15 +129,28 @@ export const PromptRegistry = new class {
 		endpoint: IChatEndpoint,
 	): Promise<AgentPromptCustomizations> {
 		const promptResolverCtor = await this.getPromptResolver(endpoint);
-		const agentPrompt = promptResolverCtor ? instantiationService.createInstance(promptResolverCtor) : undefined;
+		const agentPrompt = promptResolverCtor
+			? instantiationService.createInstance(promptResolverCtor)
+			: undefined;
 
 		return {
-			SystemPrompt: agentPrompt?.resolveSystemPrompt(endpoint) ?? DefaultAgentPrompt,
-			ReminderInstructionsClass: agentPrompt?.resolveReminderInstructions?.(endpoint) ?? DefaultReminderInstructions,
-			ToolReferencesHintClass: agentPrompt?.resolveToolReferencesHint?.(endpoint) ?? DefaultToolReferencesHint,
-			CopilotIdentityRulesClass: agentPrompt?.resolveCopilotIdentityRules?.(endpoint) ?? CopilotIdentityRules,
-			SafetyRulesClass: agentPrompt?.resolveSafetyRules?.(endpoint) ?? SafetyRules,
-			userQueryTagName: agentPrompt?.resolveUserQueryTagName?.(endpoint) ?? 'userRequest',
+			SystemPrompt:
+				agentPrompt?.resolveSystemPrompt(endpoint) ??
+				DefaultAgentPrompt,
+			ReminderInstructionsClass:
+				agentPrompt?.resolveReminderInstructions?.(endpoint) ??
+				DefaultReminderInstructions,
+			ToolReferencesHintClass:
+				agentPrompt?.resolveToolReferencesHint?.(endpoint) ??
+				DefaultToolReferencesHint,
+			CopilotIdentityRulesClass:
+				agentPrompt?.resolveCopilotIdentityRules?.(endpoint) ??
+				CopilotIdentityRules,
+			SafetyRulesClass:
+				agentPrompt?.resolveSafetyRules?.(endpoint) ?? SafetyRules,
+			userQueryTagName:
+				agentPrompt?.resolveUserQueryTagName?.(endpoint) ??
+				'userRequest',
 		};
 	}
-}();
+})();

@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { IChatModelInformation, ModelSupportedEndpoint } from '../../../../platform/endpoint/common/endpointProvider';
+import {
+	IChatModelInformation,
+	ModelSupportedEndpoint,
+} from '../../../../platform/endpoint/common/endpointProvider';
 import { ITestingServicesAccessor } from '../../../../platform/test/node/services';
 import { TokenizerType } from '../../../../util/common/tokenizer';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
@@ -19,7 +22,9 @@ describe('OpenRouterEndpoint', () => {
 
 	beforeEach(() => {
 		const testingServiceCollection = createExtensionUnitTestingServices();
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 		instaService = accessor.get(IInstantiationService);
 	});
 
@@ -50,26 +55,27 @@ describe('OpenRouterEndpoint', () => {
 						tool_calls: true,
 						vision: true,
 						prediction: false,
-						thinking: false
+						thinking: false,
 					},
 					limits: {
 						max_prompt_tokens: 200000,
 						max_output_tokens: 16000,
-						max_context_window_tokens: 200000
-					}
-				}
+						max_context_window_tokens: 200000,
+					},
+				},
 			};
 		});
 
 		it('should use Messages API when supported_endpoints includes Messages', () => {
-			const endpoint = instaService.createInstance(OpenRouterEndpoint,
+			const endpoint = instaService.createInstance(
+				OpenRouterEndpoint,
 				anthropicMetadata,
 				'test-api-key',
-				'https://openrouter.ai/api/v1/messages');
+				'https://openrouter.ai/api/v1/messages',
+			);
 
 			expect(endpoint.apiType).toBe('messages');
 		});
-
 	});
 
 	describe('Non-Anthropic models — Chat Completions', () => {
@@ -95,22 +101,24 @@ describe('OpenRouterEndpoint', () => {
 						tool_calls: true,
 						vision: true,
 						prediction: false,
-						thinking: false
+						thinking: false,
 					},
 					limits: {
 						max_prompt_tokens: 128000,
 						max_output_tokens: 16000,
-						max_context_window_tokens: 128000
-					}
-				}
+						max_context_window_tokens: 128000,
+					},
+				},
 			};
 		});
 
 		it('should use Chat Completions API for non-Anthropic models', () => {
-			const endpoint = instaService.createInstance(OpenRouterEndpoint,
+			const endpoint = instaService.createInstance(
+				OpenRouterEndpoint,
 				nonAnthropicMetadata,
 				'test-api-key',
-				'https://openrouter.ai/api/v1/chat/completions');
+				'https://openrouter.ai/api/v1/chat/completions',
+			);
 
 			expect(endpoint.apiType).toBe('chatCompletions');
 		});

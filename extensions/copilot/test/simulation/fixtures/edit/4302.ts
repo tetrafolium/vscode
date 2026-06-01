@@ -9,7 +9,10 @@ export interface ISimpleTextModel {
 	getOptions(): { tabSize: number };
 }
 
-export function computeRanges(model: ISimpleTextModel, languageId: string): FoldingRegions {
+export function computeRanges(
+	model: ISimpleTextModel,
+	languageId: string,
+): FoldingRegions {
 	const offSide = [
 		'clojure',
 		'coffeescript',
@@ -24,7 +27,10 @@ export function computeRanges(model: ISimpleTextModel, languageId: string): Fold
 	return _computeRanges(model, offSide);
 }
 
-function _computeRanges(model: ISimpleTextModel, offSide: boolean): FoldingRegions {
+function _computeRanges(
+	model: ISimpleTextModel,
+	offSide: boolean,
+): FoldingRegions {
 	const tabSize = model.getOptions().tabSize;
 	const result = new RangesCollector();
 	const previousRegions: PreviousRegion[] = [];
@@ -51,13 +57,15 @@ function _computeRanges(model: ISimpleTextModel, offSide: boolean): FoldingRegio
 			} while (previous.indent > indent);
 			// new folding range
 			const endLineNumber = previous.endAbove - 1;
-			if (endLineNumber - line >= 1) { // needs at east size 1
+			if (endLineNumber - line >= 1) {
+				// needs at east size 1
 				result.insertFirst(line, endLineNumber, indent);
 			}
 		}
 		if (previous.indent === indent) {
 			previous.endAbove = line;
-		} else { // previous.indent < indent
+		} else {
+			// previous.indent < indent
 			// new region with a bigger indent
 			previousRegions.push({ indent, endAbove: line, line });
 		}
@@ -71,9 +79,9 @@ interface PreviousRegion {
 	line: number; // start line of the region. Only used for marker regions.
 }
 
-const MAX_FOLDING_REGIONS = 0xFFFF;
-const MAX_LINE_NUMBER = 0xFFFFFF;
-const MASK_INDENT = 0xFF000000;
+const MAX_FOLDING_REGIONS = 0xffff;
+const MAX_LINE_NUMBER = 0xffffff;
+const MASK_INDENT = 0xff000000;
 
 class RangesCollector {
 	private readonly _startIndexes: number[];
@@ -87,8 +95,15 @@ class RangesCollector {
 		this._indentOccurrences = [];
 		this._length = 0;
 	}
-	public insertFirst(startLineNumber: number, endLineNumber: number, indent: number) {
-		if (startLineNumber > MAX_LINE_NUMBER || endLineNumber > MAX_LINE_NUMBER) {
+	public insertFirst(
+		startLineNumber: number,
+		endLineNumber: number,
+		indent: number,
+	) {
+		if (
+			startLineNumber > MAX_LINE_NUMBER ||
+			endLineNumber > MAX_LINE_NUMBER
+		) {
 			return;
 		}
 		const index = this._length;
@@ -96,7 +111,8 @@ class RangesCollector {
 		this._endIndexes[index] = endLineNumber;
 		this._length++;
 		if (indent < 1000) {
-			this._indentOccurrences[indent] = (this._indentOccurrences[indent] || 0) + 1;
+			this._indentOccurrences[indent] =
+				(this._indentOccurrences[indent] || 0) + 1;
 		}
 	}
 	public toIndentRanges() {
@@ -125,7 +141,7 @@ export function computeIndentLevel(line: string, tabSize: number): number {
 		if (chCode === CharCode.Space) {
 			indent++;
 		} else if (chCode === CharCode.Tab) {
-			indent = indent - indent % tabSize + tabSize;
+			indent = indent - (indent % tabSize) + tabSize;
 		} else {
 			break;
 		}
@@ -154,23 +170,43 @@ export class FoldingRegions {
 		if (!this._parentsComputed) {
 			this._parentsComputed = true;
 			const parentIndexes: number[] = [];
-			const isInsideLast = (startLineNumber: number, endLineNumber: number) => {
+			const isInsideLast = (
+				startLineNumber: number,
+				endLineNumber: number,
+			) => {
 				const index = parentIndexes[parentIndexes.length - 1];
-				return this.getStartLineNumber(index) <= startLineNumber && this.getEndLineNumber(index) >= endLineNumber;
+				return (
+					this.getStartLineNumber(index) <= startLineNumber &&
+					this.getEndLineNumber(index) >= endLineNumber
+				);
 			};
 			for (let i = 0, len = this._startIndexes.length; i < len; i++) {
 				const startLineNumber = this._startIndexes[i];
 				const endLineNumber = this._endIndexes[i];
-				if (startLineNumber > MAX_LINE_NUMBER || endLineNumber > MAX_LINE_NUMBER) {
-					throw new Error('startLineNumber or endLineNumber must not exceed ' + MAX_LINE_NUMBER);
+				if (
+					startLineNumber > MAX_LINE_NUMBER ||
+					endLineNumber > MAX_LINE_NUMBER
+				) {
+					throw new Error(
+						'startLineNumber or endLineNumber must not exceed ' +
+							MAX_LINE_NUMBER,
+					);
 				}
-				while (parentIndexes.length > 0 && !isInsideLast(startLineNumber, endLineNumber)) {
+				while (
+					parentIndexes.length > 0 &&
+					!isInsideLast(startLineNumber, endLineNumber)
+				) {
 					parentIndexes.pop();
 				}
-				const parentIndex = parentIndexes.length > 0 ? parentIndexes[parentIndexes.length - 1] : -1;
+				const parentIndex =
+					parentIndexes.length > 0
+						? parentIndexes[parentIndexes.length - 1]
+						: -1;
 				parentIndexes.push(i);
-				this._startIndexes[i] = startLineNumber + ((parentIndex & 0xFF) << 24);
-				this._endIndexes[i] = endLineNumber + ((parentIndex & 0xFF00) << 16);
+				this._startIndexes[i] =
+					startLineNumber + ((parentIndex & 0xff) << 24);
+				this._endIndexes[i] =
+					endLineNumber + ((parentIndex & 0xff00) << 16);
 			}
 		}
 	}
@@ -188,17 +224,23 @@ export class FoldingRegions {
 	// }
 	public getParentIndex(index: number) {
 		this.ensureParentIndices();
-		const parent = ((this._startIndexes[index] & MASK_INDENT) >>> 24) + ((this._endIndexes[index] & MASK_INDENT) >>> 16);
+		const parent =
+			((this._startIndexes[index] & MASK_INDENT) >>> 24) +
+			((this._endIndexes[index] & MASK_INDENT) >>> 16);
 		if (parent === MAX_FOLDING_REGIONS) {
 			return -1;
 		}
 		return parent;
 	}
 	public contains(index: number, line: number) {
-		return this.getStartLineNumber(index) <= line && this.getEndLineNumber(index) >= line;
+		return (
+			this.getStartLineNumber(index) <= line &&
+			this.getEndLineNumber(index) >= line
+		);
 	}
 	private findIndex(line: number) {
-		let low = 0, high = this._startIndexes.length;
+		let low = 0,
+			high = this._startIndexes.length;
 		if (high === 0) {
 			return -1; // no children
 		}

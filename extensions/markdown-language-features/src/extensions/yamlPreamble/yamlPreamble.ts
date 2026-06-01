@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type MarkdownIt from 'markdown-it';
-import type Token from 'markdown-it/lib/token.mjs';
-import * as vscode from 'vscode';
-import * as yaml from 'yaml';
-import { escapeHtml } from '../../util/dom';
+import type MarkdownIt from "markdown-it";
+import type Token from "markdown-it/lib/token.mjs";
+import * as vscode from "vscode";
+import * as yaml from "yaml";
+import { escapeHtml } from "../../util/dom";
 
-export type FrontMatterRenderStyle = 'hide' | 'codeBlock' | 'table';
+export type FrontMatterRenderStyle = "hide" | "codeBlock" | "table";
 
-const FRONT_MATTER_TOKEN = 'front_matter';
-const MARKER = '---';
-const FRONT_MATTER_CONTEXT = JSON.stringify({ webviewSection: 'frontMatter' });
+const FRONT_MATTER_TOKEN = "front_matter";
+const MARKER = "---";
+const FRONT_MATTER_CONTEXT = JSON.stringify({ webviewSection: "frontMatter" });
 
 interface IFrontMatterMeta {
 	readonly content: string;
@@ -28,8 +28,8 @@ interface IFrontMatterMeta {
  * setting.
  */
 export function extendMarkdownIt(md: MarkdownIt): MarkdownIt {
-	md.block.ruler.before('fence', FRONT_MATTER_TOKEN, frontMatterRule, {
-		alt: ['paragraph', 'reference', 'blockquote', 'list']
+	md.block.ruler.before("fence", FRONT_MATTER_TOKEN, frontMatterRule, {
+		alt: ["paragraph", "reference", "blockquote", "list"],
 	});
 
 	md.renderer.rules[FRONT_MATTER_TOKEN] = renderFrontMatter;
@@ -37,14 +37,21 @@ export function extendMarkdownIt(md: MarkdownIt): MarkdownIt {
 	return md;
 }
 
-const frontMatterRule = (state: MarkdownIt.StateBlock, startLine: number, endLine: number, silent: boolean): boolean => {
+const frontMatterRule = (
+	state: MarkdownIt.StateBlock,
+	startLine: number,
+	endLine: number,
+	silent: boolean,
+): boolean => {
 	if (startLine !== 0 || state.tShift[startLine] !== 0) {
 		return false;
 	}
 
 	const firstLineStart = state.bMarks[startLine];
 	const firstLineEnd = state.eMarks[startLine];
-	const firstLine = state.src.slice(firstLineStart, firstLineEnd).replace(/\s+$/, '');
+	const firstLine = state.src
+		.slice(firstLineStart, firstLineEnd)
+		.replace(/\s+$/, "");
 
 	if (firstLine !== MARKER) {
 		return false;
@@ -58,7 +65,7 @@ const frontMatterRule = (state: MarkdownIt.StateBlock, startLine: number, endLin
 		}
 		const lineStart = state.bMarks[nextLine];
 		const lineEnd = state.eMarks[nextLine];
-		const line = state.src.slice(lineStart, lineEnd).replace(/\s+$/, '');
+		const line = state.src.slice(lineStart, lineEnd).replace(/\s+$/, "");
 		if (line === MARKER) {
 			foundEnd = true;
 			break;
@@ -75,9 +82,11 @@ const frontMatterRule = (state: MarkdownIt.StateBlock, startLine: number, endLin
 
 	const contentStart = state.bMarks[startLine + 1];
 	const contentEnd = state.bMarks[nextLine];
-	const rawContent = state.src.slice(contentStart, contentEnd).replace(/\n$/, '');
+	const rawContent = state.src
+		.slice(contentStart, contentEnd)
+		.replace(/\n$/, "");
 
-	const token = state.push(FRONT_MATTER_TOKEN, '', 0);
+	const token = state.push(FRONT_MATTER_TOKEN, "", 0);
 	token.block = true;
 	token.hidden = false;
 	token.markup = MARKER;
@@ -89,50 +98,66 @@ const frontMatterRule = (state: MarkdownIt.StateBlock, startLine: number, endLin
 	return true;
 };
 
-function renderFrontMatter(tokens: Token[], idx: number, options: MarkdownIt.Options, env: unknown): string {
+function renderFrontMatter(
+	tokens: Token[],
+	idx: number,
+	options: MarkdownIt.Options,
+	env: unknown,
+): string {
 	const meta = tokens[idx].meta as IFrontMatterMeta | undefined;
 	if (!meta) {
-		return '';
+		return "";
 	}
 
-	const currentDocument = (env as { currentDocument?: vscode.Uri } | undefined)?.currentDocument;
+	const currentDocument = (env as { currentDocument?: vscode.Uri } | undefined)
+		?.currentDocument;
 	const style = getFrontMatterRenderStyle(currentDocument);
 
 	switch (style) {
-		case 'codeBlock':
+		case "codeBlock":
 			return renderAsCodeBlock(meta, options);
-		case 'table':
+		case "table":
 			return renderAsTable(meta);
-		case 'hide':
+		case "hide":
 		default:
-			return '';
+			return "";
 	}
 }
 
-function getFrontMatterRenderStyle(resource: vscode.Uri | undefined): FrontMatterRenderStyle {
-	const config = vscode.workspace.getConfiguration('markdown', resource ?? null);
-	const value = config.get<string>('preview.frontMatter', 'table');
+function getFrontMatterRenderStyle(
+	resource: vscode.Uri | undefined,
+): FrontMatterRenderStyle {
+	const config = vscode.workspace.getConfiguration(
+		"markdown",
+		resource ?? null,
+	);
+	const value = config.get<string>("preview.frontMatter", "table");
 	switch (value) {
-		case 'codeBlock':
-		case 'table':
-		case 'hide':
+		case "codeBlock":
+		case "table":
+		case "hide":
 			return value;
 		default:
-			return 'table';
+			return "table";
 	}
 }
 
-function renderAsCodeBlock(meta: IFrontMatterMeta, options: MarkdownIt.Options): string {
+function renderAsCodeBlock(
+	meta: IFrontMatterMeta,
+	options: MarkdownIt.Options,
+): string {
 	let highlighted: string | undefined;
-	if (typeof options.highlight === 'function') {
+	if (typeof options.highlight === "function") {
 		try {
-			highlighted = options.highlight(meta.content, 'yaml', '') || undefined;
+			highlighted = options.highlight(meta.content, "yaml", "") || undefined;
 		} catch {
 			highlighted = undefined;
 		}
 	}
-	if (highlighted?.startsWith('<pre')) {
-		return highlighted.replace(/^<pre\b/, `<pre ${frontMatterAttributes()}`) + '\n';
+	if (highlighted?.startsWith("<pre")) {
+		return (
+			highlighted.replace(/^<pre\b/, `<pre ${frontMatterAttributes()}`) + "\n"
+		);
 	}
 	const body = highlighted ?? escapeHtml(meta.content);
 	return `<pre class="frontmatter hljs" ${frontMatterAttributes()}><code class="language-yaml">${body}</code></pre>\n`;
@@ -144,21 +169,24 @@ function renderAsTable(meta: IFrontMatterMeta): string {
 		return renderError(result.error);
 	}
 	if (!result.entries.length) {
-		return '';
+		return "";
 	}
-	const rows = result.entries.map(([key, value]) =>
-		`<tr><th>${escapeHtml(key)}</th><td>${formatValueHtml(value)}</td></tr>`
-	).join('');
+	const rows = result.entries
+		.map(
+			([key, value]) =>
+				`<tr><th>${escapeHtml(key)}</th><td>${formatValueHtml(value)}</td></tr>`,
+		)
+		.join("");
 	return `<table class="frontmatter" ${frontMatterAttributes()}><tbody>${rows}</tbody></table>\n`;
 }
 
 function renderError(message: string): string {
-	const label = vscode.l10n.t('Failed to parse frontmatter');
+	const label = vscode.l10n.t("Failed to parse frontmatter");
 	return `<div class="frontmatter-error" role="alert" ${frontMatterAttributes()}><strong>${escapeHtml(label)}</strong><pre>${escapeHtml(message)}</pre></div>\n`;
 }
 
 function frontMatterAttributes(): string {
-	const label = escapeHtml(vscode.l10n.t('Frontmatter'));
+	const label = escapeHtml(vscode.l10n.t("Frontmatter"));
 	return `title="${label}" data-vscode-context='${escapeHtml(FRONT_MATTER_CONTEXT)}'`;
 }
 
@@ -173,8 +201,8 @@ function parseEntries(meta: IFrontMatterMeta): IParseResult {
 		if (parsed === null || parsed === undefined) {
 			return { entries: [] };
 		}
-		if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-			return { entries: [['', parsed]] };
+		if (typeof parsed !== "object" || Array.isArray(parsed)) {
+			return { entries: [["", parsed]] };
 		}
 		return { entries: Object.entries(parsed as Record<string, unknown>) };
 	} catch (e) {
@@ -184,15 +212,15 @@ function parseEntries(meta: IFrontMatterMeta): IParseResult {
 
 function formatValueHtml(value: unknown): string {
 	if (value === null || value === undefined) {
-		return '';
+		return "";
 	}
 	if (Array.isArray(value)) {
 		if (!value.length) {
-			return '';
+			return "";
 		}
-		return `<ul>${value.map(v => `<li>${formatValueHtml(v)}</li>`).join('')}</ul>`;
+		return `<ul>${value.map((v) => `<li>${formatValueHtml(v)}</li>`).join("")}</ul>`;
 	}
-	if (typeof value === 'object') {
+	if (typeof value === "object") {
 		return `<code>${escapeHtml(yaml.stringify(value).trimEnd())}</code>`;
 	}
 	return escapeHtml(formatScalar(value));

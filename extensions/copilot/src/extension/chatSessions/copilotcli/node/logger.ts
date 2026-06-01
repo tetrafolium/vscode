@@ -11,10 +11,13 @@ export function getCopilotLogger(logService: ILogService) {
 		debug: (msg: string) => logService.debug(msg),
 		log: (msg: string) => logService.trace(msg),
 		info: (msg: string) => logService.info(msg),
-		notice: (msg: string | Error) => logService.info(typeof msg === 'string' ? msg : msg.message),
-		warning: (msg: string | Error) => logService.warn(typeof msg === 'string' ? msg : msg.message),
-		error: (msg: string | Error) => logService.error(typeof msg === 'string' ? msg : msg.message),
-		startGroup: () => { },
-		endGroup: () => { }
+		notice: (msg: string | Error) =>
+			logService.info(typeof msg === 'string' ? msg : msg.message),
+		warning: (msg: string | Error) =>
+			logService.warn(typeof msg === 'string' ? msg : msg.message),
+		error: (msg: string | Error) =>
+			logService.error(typeof msg === 'string' ? msg : msg.message),
+		startGroup: () => {},
+		endGroup: () => {},
 	};
 }

@@ -3,18 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { startProfiling, ProfilingSession } from '../../../base/node/profiling.js';
-import { generateUuid } from '../../../base/common/uuid.js';
-import { IV8InspectProfilingService, IV8Profile } from '../common/profiling.js';
+import {
+	startProfiling,
+	ProfilingSession,
+} from "../../../base/node/profiling.js";
+import { generateUuid } from "../../../base/common/uuid.js";
+import { IV8InspectProfilingService, IV8Profile } from "../common/profiling.js";
 
 export class InspectProfilingService implements IV8InspectProfilingService {
-
 	_serviceBrand: undefined;
 
 	private readonly _sessions = new Map<string, ProfilingSession>();
 
-	async startProfiling(options: { host: string; port: number }): Promise<string> {
-		const session = await startProfiling({ host: options.host, port: options.port, checkForPaused: true });
+	async startProfiling(options: {
+		host: string;
+		port: number;
+	}): Promise<string> {
+		const session = await startProfiling({
+			host: options.host,
+			port: options.port,
+			checkForPaused: true,
+		});
 		const id = generateUuid();
 		this._sessions.set(id, session);
 		return id;

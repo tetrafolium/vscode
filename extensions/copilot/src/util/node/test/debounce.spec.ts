@@ -39,7 +39,7 @@ suite('Debouncing', function () {
 				result = false;
 			}
 		})();
-		await new Promise(resolve => setTimeout(resolve, 5));
+		await new Promise((resolve) => setTimeout(resolve, 5));
 		await debouncer.debounce(1);
 		assert.deepStrictEqual(result, true);
 	});
@@ -58,7 +58,7 @@ suite('Debouncing', function () {
 			}
 		})();
 		await debouncer2.debounce(1);
-		await new Promise(resolve => setTimeout(resolve, 20));
+		await new Promise((resolve) => setTimeout(resolve, 20));
 		assert.deepStrictEqual(result, true);
 	});
 });

@@ -34,8 +34,13 @@ suite('contextItemSchemas', function () {
 		};
 
 		// Since they are homogeneous, it's either all or nothing.
-		assert.deepStrictEqual(filterContextItemsByType([badItem], 'Trait'), []);
-		assert.deepStrictEqual(filterContextItemsByType([goodItem], 'Trait'), [goodItem]);
+		assert.deepStrictEqual(
+			filterContextItemsByType([badItem], 'Trait'),
+			[],
+		);
+		assert.deepStrictEqual(filterContextItemsByType([goodItem], 'Trait'), [
+			goodItem,
+		]);
 	});
 
 	test('can filter homogeneous context item lists by schema', function () {
@@ -59,13 +64,21 @@ suite('contextItemSchemas', function () {
 			},
 		];
 
-		assert.deepStrictEqual(filterContextItemsByType(resolvedContextItems, 'Trait'), [resolvedContextItems[1]]);
+		assert.deepStrictEqual(
+			filterContextItemsByType(resolvedContextItems, 'Trait'),
+			[resolvedContextItems[1]],
+		);
 	});
 
 	test('can filter heterogeneous context item schema', function () {
 		const data: SupportedContextItemWithId[] = [
 			{ name: 'trait1', value: 'value1', id: '1', type: 'Trait' },
-			{ uri: 'file:///foo', value: 'filevalue1', id: '2', type: 'CodeSnippet' },
+			{
+				uri: 'file:///foo',
+				value: 'filevalue1',
+				id: '2',
+				type: 'CodeSnippet',
+			},
 		];
 		const mixedContextItem: ResolvedContextItem = {
 			providerId: 'doesntmatter',
@@ -75,11 +88,17 @@ suite('contextItemSchemas', function () {
 			data,
 		};
 
-		const filteredTraits = filterContextItemsByType([mixedContextItem], 'Trait');
+		const filteredTraits = filterContextItemsByType(
+			[mixedContextItem],
+			'Trait',
+		);
 		assert.deepStrictEqual(filteredTraits.length, 1);
 		assert.deepStrictEqual(filteredTraits[0].data, [data[0]]);
 
-		const filteredFileSnippets = filterContextItemsByType([mixedContextItem], 'CodeSnippet');
+		const filteredFileSnippets = filterContextItemsByType(
+			[mixedContextItem],
+			'CodeSnippet',
+		);
 		assert.deepStrictEqual(filteredFileSnippets.length, 1);
 		assert.deepStrictEqual(filteredFileSnippets[0].data, [data[1]]);
 	});
@@ -93,7 +112,12 @@ suite('contextItemSchemas', function () {
 				resolutionTimeMs: 10,
 				data: [
 					{ name: 'trait1', value: 'value1', id: '1', type: 'Trait' },
-					{ uri: 'file:///foo', value: 'filevalue1', id: '2', type: 'CodeSnippet' },
+					{
+						uri: 'file:///foo',
+						value: 'filevalue1',
+						id: '2',
+						type: 'CodeSnippet',
+					},
 				],
 			},
 			{
@@ -101,14 +125,23 @@ suite('contextItemSchemas', function () {
 				matchScore: 1,
 				resolution: 'full',
 				resolutionTimeMs: 10,
-				data: [{ name: 'trait2', value: 'value2', id: '3', type: 'Trait' }],
+				data: [
+					{ name: 'trait2', value: 'value2', id: '3', type: 'Trait' },
+				],
 			},
 		];
 
-		const filteredTraits = filterContextItemsByType(resolvedContextItems, 'Trait');
+		const filteredTraits = filterContextItemsByType(
+			resolvedContextItems,
+			'Trait',
+		);
 		assert.deepStrictEqual(filteredTraits.length, 2);
-		assert.deepStrictEqual(filteredTraits[0].data, [{ name: 'trait1', value: 'value1', id: '1', type: 'Trait' }]);
-		assert.deepStrictEqual(filteredTraits[1].data, [{ name: 'trait2', value: 'value2', id: '3', type: 'Trait' }]);
+		assert.deepStrictEqual(filteredTraits[0].data, [
+			{ name: 'trait1', value: 'value1', id: '1', type: 'Trait' },
+		]);
+		assert.deepStrictEqual(filteredTraits[1].data, [
+			{ name: 'trait2', value: 'value2', id: '3', type: 'Trait' },
+		]);
 	});
 
 	test('validates context items schema', function () {
@@ -117,21 +150,31 @@ suite('contextItemSchemas', function () {
 			{ uri: 'file:///foo', value: 'filevalue1' },
 		];
 
-		const [validItems, invalidItems] = filterSupportedContextItems(resolvedContextItems);
+		const [validItems, invalidItems] =
+			filterSupportedContextItems(resolvedContextItems);
 		assert.deepStrictEqual(invalidItems, 0);
 		assert.deepStrictEqual(validItems.length, 2);
 	});
 
 	test('items can have optional properties', function () {
 		const resolvedContextItems = [
-			{ uri: 'file:///foo', value: 'filevaluewithoptionalprop', optionalProp: 'optional' },
+			{
+				uri: 'file:///foo',
+				value: 'filevaluewithoptionalprop',
+				optionalProp: 'optional',
+			},
 			{ uri: 'file:///foo', value: 'filevaluewithoutag' },
 		];
 
-		const [validItems, invalidItems] = filterSupportedContextItems(resolvedContextItems);
+		const [validItems, invalidItems] =
+			filterSupportedContextItems(resolvedContextItems);
 		assert.deepStrictEqual(invalidItems, 0);
 		assert.deepStrictEqual(validItems.length, 2);
 		// Keeps all optional properties
-		assert.deepStrictEqual((validItems[0] as unknown as { [key: string]: unknown }).optionalProp, 'optional');
+		assert.deepStrictEqual(
+			(validItems[0] as unknown as { [key: string]: unknown })
+				.optionalProp,
+			'optional',
+		);
 	});
 });

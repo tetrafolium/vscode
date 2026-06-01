@@ -49,8 +49,14 @@ line3`;
 
 	it('should apply offset edits correctly', () => {
 		const edits = [
-			new TextEdit(new Range(new Position(0, 0), new Position(0, 5)), 'Hello'),
-			new TextEdit(new Range(new Position(1, 0), new Position(1, 5)), 'World')
+			new TextEdit(
+				new Range(new Position(0, 0), new Position(0, 5)),
+				'Hello',
+			),
+			new TextEdit(
+				new Range(new Position(1, 0), new Position(1, 5)),
+				'World',
+			),
 		];
 		const offsetEdit = transformer.toOffsetEdit(edits);
 		transformer.applyOffsetEdits(offsetEdit);
@@ -67,7 +73,10 @@ line3`;
 	});
 
 	it('should validate range correctly', () => {
-		const invalidRange = new Range(new Position(10, 10), new Position(20, 20));
+		const invalidRange = new Range(
+			new Position(10, 10),
+			new Position(20, 20),
+		);
 		const validRange = transformer.validateRange(invalidRange);
 		expect(validRange.start.line).to.equal(2);
 		expect(validRange.start.character).to.equal(5);

@@ -3,22 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import path from 'path';
-import { dirs } from './dirs.ts';
+import * as crypto from "crypto";
+import * as fs from "fs";
+import path from "path";
+import { dirs } from "./dirs.ts";
 
-export const root = fs.realpathSync.native(path.dirname(path.dirname(import.meta.dirname)));
-export const stateFile = path.join(root, 'node_modules', '.postinstall-state');
-export const stateContentsFile = path.join(root, 'node_modules', '.postinstall-state-contents');
-export const forceInstallMessage = 'Run \x1b[36mnode build/npm/fast-install.ts --force\x1b[0m to force a full install.';
+export const root = fs.realpathSync.native(
+	path.dirname(path.dirname(import.meta.dirname)),
+);
+export const stateFile = path.join(root, "node_modules", ".postinstall-state");
+export const stateContentsFile = path.join(
+	root,
+	"node_modules",
+	".postinstall-state-contents",
+);
+export const forceInstallMessage =
+	"Run \x1b[36mnode build/npm/fast-install.ts --force\x1b[0m to force a full install.";
 
 export function collectInputFiles(): string[] {
 	const files: string[] = [];
 
 	for (const dir of dirs) {
-		const base = dir === '' ? root : path.join(root, dir);
-		for (const file of ['package.json', 'package-lock.json', '.npmrc']) {
+		const base = dir === "" ? root : path.join(root, dir);
+		for (const file of ["package.json", "package-lock.json", ".npmrc"]) {
 			const filePath = path.join(base, file);
 			if (fs.existsSync(filePath)) {
 				files.push(filePath);
@@ -26,7 +33,7 @@ export function collectInputFiles(): string[] {
 		}
 	}
 
-	files.push(path.join(root, '.nvmrc'));
+	files.push(path.join(root, ".nvmrc"));
 
 	return files;
 }
@@ -37,25 +44,25 @@ export interface PostinstallState {
 }
 
 const packageJsonRelevantKeys = new Set([
-	'name',
-	'dependencies',
-	'devDependencies',
-	'optionalDependencies',
-	'peerDependencies',
-	'peerDependenciesMeta',
-	'overrides',
-	'engines',
-	'workspaces',
-	'bundledDependencies',
-	'bundleDependencies',
+	"name",
+	"dependencies",
+	"devDependencies",
+	"optionalDependencies",
+	"peerDependencies",
+	"peerDependenciesMeta",
+	"overrides",
+	"engines",
+	"workspaces",
+	"bundledDependencies",
+	"bundleDependencies",
 ]);
 
-const packageLockJsonIgnoredKeys = new Set(['version']);
+const packageLockJsonIgnoredKeys = new Set(["version"]);
 
 function normalizeFileContent(filePath: string): string {
-	const raw = fs.readFileSync(filePath, 'utf8');
+	const raw = fs.readFileSync(filePath, "utf8");
 	const basename = path.basename(filePath);
-	if (basename === 'package.json') {
+	if (basename === "package.json") {
 		const json = JSON.parse(raw);
 		const filtered: Record<string, unknown> = {};
 		for (const key of packageJsonRelevantKeys) {
@@ -64,30 +71,32 @@ function normalizeFileContent(filePath: string): string {
 				filtered[key] = json[key];
 			}
 		}
-		return JSON.stringify(filtered, null, '\t') + '\n';
+		return JSON.stringify(filtered, null, "\t") + "\n";
 	}
-	if (basename === 'package-lock.json') {
+	if (basename === "package-lock.json") {
 		const json = JSON.parse(raw);
 		for (const key of packageLockJsonIgnoredKeys) {
 			delete json[key];
 		}
-		if (json.packages?.['']) {
+		if (json.packages?.[""]) {
 			for (const key of packageLockJsonIgnoredKeys) {
-				delete json.packages[''][key];
+				delete json.packages[""][key];
 			}
 		}
-		return JSON.stringify(json, null, '\t') + '\n';
+		return JSON.stringify(json, null, "\t") + "\n";
 	}
 	return raw;
 }
 
 function hashContent(content: string): string {
-	const hash = crypto.createHash('sha256');
+	const hash = crypto.createHash("sha256");
 	hash.update(content);
-	return hash.digest('hex');
+	return hash.digest("hex");
 }
 
-export function computeState(options?: { ignoreNodeVersion?: boolean }): PostinstallState {
+export function computeState(options?: {
+	ignoreNodeVersion?: boolean;
+}): PostinstallState {
 	const fileHashes: Record<string, string> = {};
 	for (const filePath of collectInputFiles()) {
 		const key = path.relative(root, filePath);
@@ -97,14 +106,18 @@ export function computeState(options?: { ignoreNodeVersion?: boolean }): Postins
 			// file may not be readable
 		}
 	}
-	return { nodeVersion: options?.ignoreNodeVersion ? '' : process.versions.node, fileHashes };
+	return {
+		nodeVersion: options?.ignoreNodeVersion ? "" : process.versions.node,
+		fileHashes,
+	};
 }
 
 export function computeContents(): Record<string, string> {
 	const fileContents: Record<string, string> = {};
 	for (const filePath of collectInputFiles()) {
 		try {
-			fileContents[path.relative(root, filePath)] = normalizeFileContent(filePath);
+			fileContents[path.relative(root, filePath)] =
+				normalizeFileContent(filePath);
 		} catch {
 			// file may not be readable
 		}
@@ -114,7 +127,9 @@ export function computeContents(): Record<string, string> {
 
 export function readSavedState(): PostinstallState | undefined {
 	try {
-		const { nodeVersion, fileHashes } = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+		const { nodeVersion, fileHashes } = JSON.parse(
+			fs.readFileSync(stateFile, "utf8"),
+		);
 		return { nodeVersion, fileHashes };
 	} catch {
 		return undefined;
@@ -127,13 +142,15 @@ export function isUpToDate(): boolean {
 		return false;
 	}
 	const current = computeState();
-	return saved.nodeVersion === current.nodeVersion
-		&& JSON.stringify(saved.fileHashes) === JSON.stringify(current.fileHashes);
+	return (
+		saved.nodeVersion === current.nodeVersion &&
+		JSON.stringify(saved.fileHashes) === JSON.stringify(current.fileHashes)
+	);
 }
 
 export function readSavedContents(): Record<string, string> | undefined {
 	try {
-		return JSON.parse(fs.readFileSync(stateContentsFile, 'utf8'));
+		return JSON.parse(fs.readFileSync(stateContentsFile, "utf8"));
 	} catch {
 		return undefined;
 	}
@@ -143,22 +160,27 @@ export function readSavedContents(): Record<string, string> | undefined {
 if (import.meta.filename === process.argv[1]) {
 	const args = new Set(process.argv.slice(2));
 
-	if (args.has('--normalize-file')) {
-		const filePath = process.argv[process.argv.indexOf('--normalize-file') + 1];
+	if (args.has("--normalize-file")) {
+		const filePath = process.argv[process.argv.indexOf("--normalize-file") + 1];
 		if (!filePath) {
 			process.exit(1);
 		}
 		process.stdout.write(normalizeFileContent(filePath));
 	} else {
-		const ignoreNodeVersion = args.has('--ignore-node-version');
+		const ignoreNodeVersion = args.has("--ignore-node-version");
 		const current = computeState({ ignoreNodeVersion });
 		const saved = readSavedState();
-		console.log(JSON.stringify({
-			root,
-			stateContentsFile,
-			current,
-			saved: saved && ignoreNodeVersion ? { nodeVersion: '', fileHashes: saved.fileHashes } : saved,
-			files: [...collectInputFiles(), stateFile],
-		}));
+		console.log(
+			JSON.stringify({
+				root,
+				stateContentsFile,
+				current,
+				saved:
+					saved && ignoreNodeVersion
+						? { nodeVersion: "", fileHashes: saved.fileHashes }
+						: saved,
+				files: [...collectInputFiles(), stateFile],
+			}),
+		);
 	}
 }

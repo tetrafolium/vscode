@@ -12,7 +12,11 @@ export const lightHC: ThemeRegistrationAny = {
 	},
 	tokenColors: [
 		{
-			scope: ['meta.embedded', 'source.groovy.embedded', 'variable.legacy.builtin.python'],
+			scope: [
+				'meta.embedded',
+				'source.groovy.embedded',
+				'variable.legacy.builtin.python',
+			],
 			settings: {
 				foreground: '#292929',
 			},
@@ -154,7 +158,10 @@ export const lightHC: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['punctuation.definition.quote.begin.markdown', 'punctuation.definition.list.begin.markdown'],
+			scope: [
+				'punctuation.definition.quote.begin.markdown',
+				'punctuation.definition.list.begin.markdown',
+			],
 			settings: {
 				foreground: '#0451A5',
 			},
@@ -338,7 +345,10 @@ export const lightHC: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['punctuation.section.embedded.begin.php', 'punctuation.section.embedded.end.php'],
+			scope: [
+				'punctuation.section.embedded.begin.php',
+				'punctuation.section.embedded.end.php',
+			],
 			settings: {
 				foreground: '#0F4A85',
 			},
@@ -356,7 +366,11 @@ export const lightHC: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['storage.modifier.import.java', 'variable.language.wildcard.java', 'storage.modifier.package.java'],
+			scope: [
+				'storage.modifier.import.java',
+				'variable.language.wildcard.java',
+				'storage.modifier.package.java',
+			],
 			settings: {
 				foreground: '#000000',
 			},
@@ -515,7 +529,10 @@ export const lightHC: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['keyword.operator.or.regexp', 'keyword.control.anchor.regexp'],
+			scope: [
+				'keyword.operator.or.regexp',
+				'keyword.control.anchor.regexp',
+			],
 			settings: {
 				foreground: '#EE0000',
 			},

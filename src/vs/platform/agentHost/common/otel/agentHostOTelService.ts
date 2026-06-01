@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { URI } from '../../../../base/common/uri.js';
-import { createDecorator } from '../../../instantiation/common/instantiation.js';
+import type { URI } from "../../../../base/common/uri.js";
+import { createDecorator } from "../../../instantiation/common/instantiation.js";
 
 /**
  * Structural mirror of `@github/copilot-sdk`'s `TelemetryConfig` (kept in
@@ -59,4 +59,6 @@ export interface IAgentHostOTelService {
 	flush(): Promise<void>;
 }
 
-export const IAgentHostOTelService = createDecorator<IAgentHostOTelService>('agentHostOTelService');
+export const IAgentHostOTelService = createDecorator<IAgentHostOTelService>(
+	"agentHostOTelService",
+);

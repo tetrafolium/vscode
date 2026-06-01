@@ -22,7 +22,11 @@ export interface ISampleMetadata {
 	readonly suggestionStatus: string;
 	readonly filePath: string;
 	readonly docContent: string;
-	readonly oracleEdits: readonly (readonly [start: number, endEx: number, text: string])[];
+	readonly oracleEdits: readonly (readonly [
+		start: number,
+		endEx: number,
+		text: string,
+	])[];
 	readonly originalPrompt: unknown[];
 	readonly modelResponse: string;
 }
@@ -87,13 +91,16 @@ interface IStructuralValidationResult {
 export function validateSample(sample: ISample): IStructuralValidationResult {
 	for (const msg of sample.messages) {
 		if (msg.content === undefined || msg.content === null) {
-			return { valid: false, reason: `${msg.role} message content is null/undefined` };
+			return {
+				valid: false,
+				reason: `${msg.role} message content is null/undefined`,
+			};
 		}
 	}
 
-	const system = sample.messages.find(m => m.role === 'system');
-	const user = sample.messages.find(m => m.role === 'user');
-	const assistant = sample.messages.find(m => m.role === 'assistant');
+	const system = sample.messages.find((m) => m.role === 'system');
+	const user = sample.messages.find((m) => m.role === 'user');
+	const assistant = sample.messages.find((m) => m.role === 'assistant');
 
 	if (!system || !system.content.trim()) {
 		return { valid: false, reason: 'Empty system message' };
@@ -108,7 +115,10 @@ export function validateSample(sample: ISample): IStructuralValidationResult {
 	return { valid: true };
 }
 
-export function resolveOutputPath(inputPath: string, explicitPath: string | undefined): string {
+export function resolveOutputPath(
+	inputPath: string,
+	explicitPath: string | undefined,
+): string {
 	if (explicitPath) {
 		return path.resolve(explicitPath);
 	}
@@ -141,8 +151,11 @@ export async function writeSamples(
 
 	validSamples.sort((a, b) => a.metadata.rowIndex - b.metadata.rowIndex);
 
-	const output = validSamples.map(sample => ({
-		messages: sample.messages.map(m => ({ role: m.role, content: m.content })),
+	const output = validSamples.map((sample) => ({
+		messages: sample.messages.map((m) => ({
+			role: m.role,
+			content: m.content,
+		})),
 		metadata: sample.metadata,
 	}));
 	const content = JSON.stringify(output, null, 2);

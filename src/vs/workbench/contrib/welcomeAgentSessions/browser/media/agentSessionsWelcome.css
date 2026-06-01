@@ -119,7 +119,8 @@
 
 .agentSessionsWelcome-suggestedPrompt {
 	padding: 8px 16px;
-	border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+	border: 1px solid
+		var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
 	border-radius: 20px;
 	background-color: var(--vscode-button-secondaryBackground);
 	color: var(--vscode-button-secondaryForeground);
@@ -153,7 +154,10 @@
 }
 
 /* Hide scrollbars in welcome page sessions list */
-.agentSessionsWelcome-sessionsGrid .agent-sessions-viewer .monaco-scrollable-element > .scrollbar {
+.agentSessionsWelcome-sessionsGrid
+	.agent-sessions-viewer
+	.monaco-scrollable-element
+	> .scrollbar {
 	display: none !important;
 }
 
@@ -265,7 +269,11 @@
 	display: flex;
 	align-items: center;
 	padding: 15px;
-	border: 1px solid var(--vscode-welcomePage-tileBorder, var(--vscode-contrastBorder, transparent));
+	border: 1px solid
+		var(
+			--vscode-welcomePage-tileBorder,
+			var(--vscode-contrastBorder, transparent)
+		);
 	border-radius: 8px;
 	background-color: transparent;
 	cursor: pointer;
@@ -414,7 +422,11 @@
 	padding: 15px;
 	box-sizing: border-box;
 	cursor: default;
-	border: 1px solid var(--vscode-welcomePage-tileBorder, var(--vscode-contrastBorder, transparent));
+	border: 1px solid
+		var(
+			--vscode-welcomePage-tileBorder,
+			var(--vscode-contrastBorder, transparent)
+		);
 	border-radius: 8px;
 	background-color: transparent;
 }
@@ -429,7 +441,9 @@
 	flex-shrink: 0;
 }
 
-.agentSessionsWelcome-tosCard .agentSessionsWelcome-walkthroughCard-icon .codicon {
+.agentSessionsWelcome-tosCard
+	.agentSessionsWelcome-walkthroughCard-icon
+	.codicon {
 	font-size: 20px;
 	color: var(--vscode-descriptionForeground);
 }
@@ -445,17 +459,22 @@
 	line-height: 1.4;
 }
 
-.agentSessionsWelcome-tosCard .agentSessionsWelcome-walkthroughCard-description {
+.agentSessionsWelcome-tosCard
+	.agentSessionsWelcome-walkthroughCard-description {
 	font-size: 13px;
 	margin: 0;
 	line-height: 1.4;
 }
 
-.agentSessionsWelcome-tosCard .agentSessionsWelcome-walkthroughCard-description p {
+.agentSessionsWelcome-tosCard
+	.agentSessionsWelcome-walkthroughCard-description
+	p {
 	margin: 0;
 }
 
-.agentSessionsWelcome-tosCard .agentSessionsWelcome-walkthroughCard-description a {
+.agentSessionsWelcome-tosCard
+	.agentSessionsWelcome-walkthroughCard-description
+	a {
 	color: var(--vscode-textLink-foreground);
 }
 
@@ -515,7 +534,10 @@
 	width: 20px;
 	height: 20px;
 	border-radius: 4px;
-	background: var(--vscode-welcomePage-tileBorder, var(--vscode-contrastBorder, rgba(128, 128, 128, 0.2)));
+	background: var(
+		--vscode-welcomePage-tileBorder,
+		var(--vscode-contrastBorder, rgba(128, 128, 128, 0.2))
+	);
 	animation: agentSessionsWelcome-shimmer 1.5s ease-in-out infinite;
 }
 
@@ -529,7 +551,10 @@
 .agentSessionsWelcome-sessionSkeleton-title {
 	height: 12px;
 	border-radius: 2px;
-	background: var(--vscode-welcomePage-tileBorder, var(--vscode-contrastBorder, rgba(128, 128, 128, 0.2)));
+	background: var(
+		--vscode-welcomePage-tileBorder,
+		var(--vscode-contrastBorder, rgba(128, 128, 128, 0.2))
+	);
 	animation: agentSessionsWelcome-shimmer 1.5s ease-in-out infinite;
 	animation-delay: 0.1s;
 }
@@ -538,13 +563,17 @@
 	height: 10px;
 	width: 60%;
 	border-radius: 2px;
-	background: var(--vscode-welcomePage-tileBorder, var(--vscode-contrastBorder, rgba(128, 128, 128, 0.2)));
+	background: var(
+		--vscode-welcomePage-tileBorder,
+		var(--vscode-contrastBorder, rgba(128, 128, 128, 0.2))
+	);
 	animation: agentSessionsWelcome-shimmer 1.5s ease-in-out infinite;
 	animation-delay: 0.2s;
 }
 
 @keyframes agentSessionsWelcome-shimmer {
-	0%, 100% {
+	0%,
+	100% {
 		opacity: 0.3;
 	}
 	50% {

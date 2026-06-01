@@ -3,22 +3,45 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as browser from './browser.js';
-import { BrowserFeatures } from './canIUse.js';
-import { hasModifierKeys, IKeyboardEvent, StandardKeyboardEvent } from './keyboardEvent.js';
-import { IMouseEvent, StandardMouseEvent } from './mouseEvent.js';
-import { AbstractIdleValue, IntervalTimer, TimeoutTimer, _runWhenIdle, IdleDeadline } from '../common/async.js';
-import { BugIndicatingError, onUnexpectedError } from '../common/errors.js';
-import * as event from '../common/event.js';
-import { KeyCode } from '../common/keyCodes.js';
-import { Disposable, DisposableStore, IDisposable, MutableDisposable, toDisposable } from '../common/lifecycle.js';
-import { RemoteAuthorities } from '../common/network.js';
-import * as platform from '../common/platform.js';
-import { URI } from '../common/uri.js';
-import { hash } from '../common/hash.js';
-import { CodeWindow, ensureCodeWindow, mainWindow } from './window.js';
-import { isPointWithinTriangle } from '../common/numbers.js';
-import { IObservable, derived, derivedOpts, IReader, observableValue, isObservable } from '../common/observable.js';
+import * as browser from "./browser.js";
+import { BrowserFeatures } from "./canIUse.js";
+import {
+	hasModifierKeys,
+	IKeyboardEvent,
+	StandardKeyboardEvent,
+} from "./keyboardEvent.js";
+import { IMouseEvent, StandardMouseEvent } from "./mouseEvent.js";
+import {
+	AbstractIdleValue,
+	IntervalTimer,
+	TimeoutTimer,
+	_runWhenIdle,
+	IdleDeadline,
+} from "../common/async.js";
+import { BugIndicatingError, onUnexpectedError } from "../common/errors.js";
+import * as event from "../common/event.js";
+import { KeyCode } from "../common/keyCodes.js";
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+	MutableDisposable,
+	toDisposable,
+} from "../common/lifecycle.js";
+import { RemoteAuthorities } from "../common/network.js";
+import * as platform from "../common/platform.js";
+import { URI } from "../common/uri.js";
+import { hash } from "../common/hash.js";
+import { CodeWindow, ensureCodeWindow, mainWindow } from "./window.js";
+import { isPointWithinTriangle } from "../common/numbers.js";
+import {
+	IObservable,
+	derived,
+	derivedOpts,
+	IReader,
+	observableValue,
+	isObservable,
+} from "../common/observable.js";
 
 export interface IRegisteredCodeWindow {
 	readonly window: CodeWindow;
@@ -38,12 +61,15 @@ export const {
 	hasWindow,
 	onDidRegisterWindow,
 	onWillUnregisterWindow,
-	onDidUnregisterWindow
+	onDidUnregisterWindow,
 } = (function () {
 	const windows = new Map<number, IRegisteredCodeWindow>();
 
 	ensureCodeWindow(mainWindow, 1);
-	const mainWindowRegistration = { window: mainWindow, disposables: new DisposableStore() };
+	const mainWindowRegistration = {
+		window: mainWindow,
+		disposables: new DisposableStore(),
+	};
 	windows.set(mainWindow.vscodeWindowId, mainWindowRegistration);
 
 	const onDidRegisterWindow = new event.Emitter<IRegisteredCodeWindow>();
@@ -51,9 +77,16 @@ export const {
 	const onWillUnregisterWindow = new event.Emitter<CodeWindow>();
 
 	function getWindowById(windowId: number): IRegisteredCodeWindow | undefined;
-	function getWindowById(windowId: number | undefined, fallbackToMain: true): IRegisteredCodeWindow;
-	function getWindowById(windowId: number | undefined, fallbackToMain?: boolean): IRegisteredCodeWindow | undefined {
-		const window = typeof windowId === 'number' ? windows.get(windowId) : undefined;
+	function getWindowById(
+		windowId: number | undefined,
+		fallbackToMain: true,
+	): IRegisteredCodeWindow;
+	function getWindowById(
+		windowId: number | undefined,
+		fallbackToMain?: boolean,
+	): IRegisteredCodeWindow | undefined {
+		const window =
+			typeof windowId === "number" ? windows.get(windowId) : undefined;
 
 		return window ?? (fallbackToMain ? mainWindowRegistration : undefined);
 	}
@@ -71,18 +104,22 @@ export const {
 
 			const registeredWindow = {
 				window,
-				disposables: disposables.add(new DisposableStore())
+				disposables: disposables.add(new DisposableStore()),
 			};
 			windows.set(window.vscodeWindowId, registeredWindow);
 
-			disposables.add(toDisposable(() => {
-				windows.delete(window.vscodeWindowId);
-				onDidUnregisterWindow.fire(window);
-			}));
+			disposables.add(
+				toDisposable(() => {
+					windows.delete(window.vscodeWindowId);
+					onDidUnregisterWindow.fire(window);
+				}),
+			);
 
-			disposables.add(addDisposableListener(window, EventType.BEFORE_UNLOAD, () => {
-				onWillUnregisterWindow.fire(window);
-			}));
+			disposables.add(
+				addDisposableListener(window, EventType.BEFORE_UNLOAD, () => {
+					onWillUnregisterWindow.fire(window);
+				}),
+			);
 
 			onDidRegisterWindow.fire(registeredWindow);
 
@@ -117,7 +154,7 @@ export const {
 		getDocument(e: Node | UIEvent | undefined | null): Document {
 			const candidateNode = e as Node | undefined | null;
 			return getWindow(candidateNode).document;
-		}
+		},
 	};
 })();
 
@@ -154,7 +191,9 @@ const externalFocusCheckers = new Set<ExternalFocusChecker>();
  * @param checker A function that returns focus info for the component
  * @returns A disposable to unregister the checker
  */
-export function registerExternalFocusChecker(checker: ExternalFocusChecker): IDisposable {
+export function registerExternalFocusChecker(
+	checker: ExternalFocusChecker,
+): IDisposable {
 	externalFocusCheckers.add(checker);
 
 	return toDisposable(() => {
@@ -222,17 +261,21 @@ export function clearNode(node: HTMLElement): void {
 }
 
 class DomListener implements IDisposable {
-
 	private _handler: (e: any) => void;
 	private _node: EventTarget;
 	private readonly _type: string;
 	private readonly _options: boolean | AddEventListenerOptions;
 
-	constructor(node: EventTarget, type: string, handler: (e: any) => void, options?: boolean | AddEventListenerOptions) {
+	constructor(
+		node: EventTarget,
+		type: string,
+		handler: (e: any) => void,
+		options?: boolean | AddEventListenerOptions,
+	) {
 		this._node = node;
 		this._type = type;
 		this._handler = handler;
-		this._options = (options || false);
+		this._options = options || false;
 		this._node.addEventListener(this._type, this._handler, this._options);
 	}
 
@@ -250,67 +293,188 @@ class DomListener implements IDisposable {
 	}
 }
 
-export function addDisposableListener<K extends keyof GlobalEventHandlersEventMap>(node: EventTarget, type: K, handler: (event: GlobalEventHandlersEventMap[K]) => void, useCapture?: boolean): IDisposable;
-export function addDisposableListener(node: EventTarget, type: string, handler: (event: any) => void, useCapture?: boolean): IDisposable;
-export function addDisposableListener(node: EventTarget, type: string, handler: (event: any) => void, options: AddEventListenerOptions): IDisposable;
-export function addDisposableListener(node: EventTarget, type: string, handler: (event: any) => void, useCaptureOrOptions?: boolean | AddEventListenerOptions): IDisposable {
+export function addDisposableListener<
+	K extends keyof GlobalEventHandlersEventMap,
+>(
+	node: EventTarget,
+	type: K,
+	handler: (event: GlobalEventHandlersEventMap[K]) => void,
+	useCapture?: boolean,
+): IDisposable;
+export function addDisposableListener(
+	node: EventTarget,
+	type: string,
+	handler: (event: any) => void,
+	useCapture?: boolean,
+): IDisposable;
+export function addDisposableListener(
+	node: EventTarget,
+	type: string,
+	handler: (event: any) => void,
+	options: AddEventListenerOptions,
+): IDisposable;
+export function addDisposableListener(
+	node: EventTarget,
+	type: string,
+	handler: (event: any) => void,
+	useCaptureOrOptions?: boolean | AddEventListenerOptions,
+): IDisposable {
 	return new DomListener(node, type, handler, useCaptureOrOptions);
 }
 
 export interface IAddStandardDisposableListenerSignature {
-	(node: HTMLElement | Element | Document, type: 'click', handler: (event: IMouseEvent) => void, useCapture?: boolean): IDisposable;
-	(node: HTMLElement | Element | Document, type: 'mousedown', handler: (event: IMouseEvent) => void, useCapture?: boolean): IDisposable;
-	(node: HTMLElement | Element | Document, type: 'keydown', handler: (event: IKeyboardEvent) => void, useCapture?: boolean): IDisposable;
-	(node: HTMLElement | Element | Document, type: 'keypress', handler: (event: IKeyboardEvent) => void, useCapture?: boolean): IDisposable;
-	(node: HTMLElement | Element | Document, type: 'keyup', handler: (event: IKeyboardEvent) => void, useCapture?: boolean): IDisposable;
-	(node: HTMLElement | Element | Document, type: 'pointerdown', handler: (event: PointerEvent) => void, useCapture?: boolean): IDisposable;
-	(node: HTMLElement | Element | Document, type: 'pointermove', handler: (event: PointerEvent) => void, useCapture?: boolean): IDisposable;
-	(node: HTMLElement | Element | Document, type: 'pointerup', handler: (event: PointerEvent) => void, useCapture?: boolean): IDisposable;
-	(node: HTMLElement | Element | Document, type: string, handler: (event: any) => void, useCapture?: boolean): IDisposable;
+	(
+		node: HTMLElement | Element | Document,
+		type: "click",
+		handler: (event: IMouseEvent) => void,
+		useCapture?: boolean,
+	): IDisposable;
+	(
+		node: HTMLElement | Element | Document,
+		type: "mousedown",
+		handler: (event: IMouseEvent) => void,
+		useCapture?: boolean,
+	): IDisposable;
+	(
+		node: HTMLElement | Element | Document,
+		type: "keydown",
+		handler: (event: IKeyboardEvent) => void,
+		useCapture?: boolean,
+	): IDisposable;
+	(
+		node: HTMLElement | Element | Document,
+		type: "keypress",
+		handler: (event: IKeyboardEvent) => void,
+		useCapture?: boolean,
+	): IDisposable;
+	(
+		node: HTMLElement | Element | Document,
+		type: "keyup",
+		handler: (event: IKeyboardEvent) => void,
+		useCapture?: boolean,
+	): IDisposable;
+	(
+		node: HTMLElement | Element | Document,
+		type: "pointerdown",
+		handler: (event: PointerEvent) => void,
+		useCapture?: boolean,
+	): IDisposable;
+	(
+		node: HTMLElement | Element | Document,
+		type: "pointermove",
+		handler: (event: PointerEvent) => void,
+		useCapture?: boolean,
+	): IDisposable;
+	(
+		node: HTMLElement | Element | Document,
+		type: "pointerup",
+		handler: (event: PointerEvent) => void,
+		useCapture?: boolean,
+	): IDisposable;
+	(
+		node: HTMLElement | Element | Document,
+		type: string,
+		handler: (event: any) => void,
+		useCapture?: boolean,
+	): IDisposable;
 }
-function _wrapAsStandardMouseEvent(targetWindow: Window, handler: (e: IMouseEvent) => void): (e: MouseEvent) => void {
+function _wrapAsStandardMouseEvent(
+	targetWindow: Window,
+	handler: (e: IMouseEvent) => void,
+): (e: MouseEvent) => void {
 	return function (e: MouseEvent) {
 		return handler(new StandardMouseEvent(targetWindow, e));
 	};
 }
-function _wrapAsStandardKeyboardEvent(handler: (e: IKeyboardEvent) => void): (e: KeyboardEvent) => void {
+function _wrapAsStandardKeyboardEvent(
+	handler: (e: IKeyboardEvent) => void,
+): (e: KeyboardEvent) => void {
 	return function (e: KeyboardEvent) {
 		return handler(new StandardKeyboardEvent(e));
 	};
 }
-export const addStandardDisposableListener: IAddStandardDisposableListenerSignature = function addStandardDisposableListener(node: HTMLElement | Element | Document, type: string, handler: (event: any) => void, useCapture?: boolean): IDisposable {
-	let wrapHandler = handler;
+export const addStandardDisposableListener: IAddStandardDisposableListenerSignature =
+	function addStandardDisposableListener(
+		node: HTMLElement | Element | Document,
+		type: string,
+		handler: (event: any) => void,
+		useCapture?: boolean,
+	): IDisposable {
+		let wrapHandler = handler;
 
-	if (type === 'click' || type === 'mousedown' || type === 'contextmenu') {
-		wrapHandler = _wrapAsStandardMouseEvent(getWindow(node), handler);
-	} else if (type === 'keydown' || type === 'keypress' || type === 'keyup') {
-		wrapHandler = _wrapAsStandardKeyboardEvent(handler);
-	}
+		if (type === "click" || type === "mousedown" || type === "contextmenu") {
+			wrapHandler = _wrapAsStandardMouseEvent(getWindow(node), handler);
+		} else if (type === "keydown" || type === "keypress" || type === "keyup") {
+			wrapHandler = _wrapAsStandardKeyboardEvent(handler);
+		}
 
-	return addDisposableListener(node, type, wrapHandler, useCapture);
-};
+		return addDisposableListener(node, type, wrapHandler, useCapture);
+	};
 
-export const addStandardDisposableGenericMouseDownListener = function addStandardDisposableListener(node: HTMLElement, handler: (event: any) => void, useCapture?: boolean): IDisposable {
-	const wrapHandler = _wrapAsStandardMouseEvent(getWindow(node), handler);
+export const addStandardDisposableGenericMouseDownListener =
+	function addStandardDisposableListener(
+		node: HTMLElement,
+		handler: (event: any) => void,
+		useCapture?: boolean,
+	): IDisposable {
+		const wrapHandler = _wrapAsStandardMouseEvent(getWindow(node), handler);
 
-	return addDisposableGenericMouseDownListener(node, wrapHandler, useCapture);
-};
+		return addDisposableGenericMouseDownListener(node, wrapHandler, useCapture);
+	};
 
-export const addStandardDisposableGenericMouseUpListener = function addStandardDisposableListener(node: HTMLElement, handler: (event: any) => void, useCapture?: boolean): IDisposable {
-	const wrapHandler = _wrapAsStandardMouseEvent(getWindow(node), handler);
+export const addStandardDisposableGenericMouseUpListener =
+	function addStandardDisposableListener(
+		node: HTMLElement,
+		handler: (event: any) => void,
+		useCapture?: boolean,
+	): IDisposable {
+		const wrapHandler = _wrapAsStandardMouseEvent(getWindow(node), handler);
 
-	return addDisposableGenericMouseUpListener(node, wrapHandler, useCapture);
-};
-export function addDisposableGenericMouseDownListener(node: EventTarget, handler: (event: any) => void, useCapture?: boolean): IDisposable {
-	return addDisposableListener(node, platform.isIOS && BrowserFeatures.pointerEvents ? EventType.POINTER_DOWN : EventType.MOUSE_DOWN, handler, useCapture);
+		return addDisposableGenericMouseUpListener(node, wrapHandler, useCapture);
+	};
+export function addDisposableGenericMouseDownListener(
+	node: EventTarget,
+	handler: (event: any) => void,
+	useCapture?: boolean,
+): IDisposable {
+	return addDisposableListener(
+		node,
+		platform.isIOS && BrowserFeatures.pointerEvents
+			? EventType.POINTER_DOWN
+			: EventType.MOUSE_DOWN,
+		handler,
+		useCapture,
+	);
 }
 
-export function addDisposableGenericMouseMoveListener(node: EventTarget, handler: (event: any) => void, useCapture?: boolean): IDisposable {
-	return addDisposableListener(node, platform.isIOS && BrowserFeatures.pointerEvents ? EventType.POINTER_MOVE : EventType.MOUSE_MOVE, handler, useCapture);
+export function addDisposableGenericMouseMoveListener(
+	node: EventTarget,
+	handler: (event: any) => void,
+	useCapture?: boolean,
+): IDisposable {
+	return addDisposableListener(
+		node,
+		platform.isIOS && BrowserFeatures.pointerEvents
+			? EventType.POINTER_MOVE
+			: EventType.MOUSE_MOVE,
+		handler,
+		useCapture,
+	);
 }
 
-export function addDisposableGenericMouseUpListener(node: EventTarget, handler: (event: any) => void, useCapture?: boolean): IDisposable {
-	return addDisposableListener(node, platform.isIOS && BrowserFeatures.pointerEvents ? EventType.POINTER_UP : EventType.MOUSE_UP, handler, useCapture);
+export function addDisposableGenericMouseUpListener(
+	node: EventTarget,
+	handler: (event: any) => void,
+	useCapture?: boolean,
+): IDisposable {
+	return addDisposableListener(
+		node,
+		platform.isIOS && BrowserFeatures.pointerEvents
+			? EventType.POINTER_UP
+			: EventType.MOUSE_UP,
+		handler,
+		useCapture,
+	);
 }
 
 /**
@@ -332,7 +496,11 @@ export function addDisposableGenericMouseUpListener(node: EventTarget, handler: 
  * [requestIdleCallback]: https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback
  * [setTimeout]: https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout
  */
-export function runWhenWindowIdle(targetWindow: Window | typeof globalThis, callback: (idle: IdleDeadline) => void, timeout?: number): IDisposable {
+export function runWhenWindowIdle(
+	targetWindow: Window | typeof globalThis,
+	callback: (idle: IdleDeadline) => void,
+	timeout?: number,
+): IDisposable {
 	return _runWhenIdle(targetWindow, callback, timeout);
 }
 
@@ -352,20 +520,36 @@ export class WindowIdleValue<T> extends AbstractIdleValue<T> {
  * If currently in an animation frame, `runner` will be executed immediately.
  * @return token that can be used to cancel the scheduled runner (only if `runner` was not executed immediately).
  */
-export let runAtThisOrScheduleAtNextAnimationFrame: (targetWindow: Window, runner: () => void, priority?: number) => IDisposable;
+export let runAtThisOrScheduleAtNextAnimationFrame: (
+	targetWindow: Window,
+	runner: () => void,
+	priority?: number,
+) => IDisposable;
 /**
  * Schedule a callback to be run at the next animation frame.
  * This allows multiple parties to register callbacks that should run at the next animation frame.
  * If currently in an animation frame, `runner` will be executed at the next animation frame.
  * @return token that can be used to cancel the scheduled runner.
  */
-export let scheduleAtNextAnimationFrame: (targetWindow: Window, runner: () => void, priority?: number) => IDisposable;
+export let scheduleAtNextAnimationFrame: (
+	targetWindow: Window,
+	runner: () => void,
+	priority?: number,
+) => IDisposable;
 
-export function disposableWindowInterval(targetWindow: Window, handler: () => void | boolean /* stop interval */ | Promise<unknown>, interval: number, iterations?: number): IDisposable {
+export function disposableWindowInterval(
+	targetWindow: Window,
+	handler: () => void | boolean /* stop interval */ | Promise<unknown>,
+	interval: number,
+	iterations?: number,
+): IDisposable {
 	let iteration = 0;
 	const timer = targetWindow.setInterval(() => {
 		iteration++;
-		if ((typeof iterations === 'number' && iteration >= iterations) || handler() === true) {
+		if (
+			(typeof iterations === "number" && iteration >= iterations) ||
+			handler() === true
+		) {
 			disposable.dispose();
 		}
 	}, interval);
@@ -376,7 +560,6 @@ export function disposableWindowInterval(targetWindow: Window, handler: () => vo
 }
 
 export class WindowIntervalTimer extends IntervalTimer {
-
 	private readonly defaultTarget?: Window & typeof globalThis;
 
 	/**
@@ -388,13 +571,20 @@ export class WindowIntervalTimer extends IntervalTimer {
 		this.defaultTarget = node && getWindow(node);
 	}
 
-	override cancelAndSet(runner: () => void, interval: number, targetWindow?: Window & typeof globalThis): void {
-		return super.cancelAndSet(runner, interval, targetWindow ?? this.defaultTarget);
+	override cancelAndSet(
+		runner: () => void,
+		interval: number,
+		targetWindow?: Window & typeof globalThis,
+	): void {
+		return super.cancelAndSet(
+			runner,
+			interval,
+			targetWindow ?? this.defaultTarget,
+		);
 	}
 }
 
 class AnimationFrameQueueItem implements IDisposable {
-
 	private _runner: () => void;
 	public priority: number;
 	private _canceled: boolean;
@@ -431,11 +621,17 @@ class AnimationFrameQueueItem implements IDisposable {
 	/**
 	 * The runners scheduled at the next animation frame
 	 */
-	const NEXT_QUEUE = new Map<number /* window ID */, AnimationFrameQueueItem[]>();
+	const NEXT_QUEUE = new Map<
+		number /* window ID */,
+		AnimationFrameQueueItem[]
+	>();
 	/**
 	 * The runners scheduled at the current animation frame
 	 */
-	const CURRENT_QUEUE = new Map<number /* window ID */, AnimationFrameQueueItem[]>();
+	const CURRENT_QUEUE = new Map<
+		number /* window ID */,
+		AnimationFrameQueueItem[]
+	>();
 	/**
 	 * A flag to keep track if the native requestAnimationFrame was already called
 	 */
@@ -461,7 +657,11 @@ class AnimationFrameQueueItem implements IDisposable {
 		inAnimationFrameRunner.set(targetWindowId, false);
 	};
 
-	scheduleAtNextAnimationFrame = (targetWindow: Window, runner: () => void, priority: number = 0) => {
+	scheduleAtNextAnimationFrame = (
+		targetWindow: Window,
+		runner: () => void,
+		priority: number = 0,
+	) => {
 		const targetWindowId = getWindowId(targetWindow);
 		const item = new AnimationFrameQueueItem(runner, priority);
 
@@ -474,13 +674,19 @@ class AnimationFrameQueueItem implements IDisposable {
 
 		if (!animFrameRequested.get(targetWindowId)) {
 			animFrameRequested.set(targetWindowId, true);
-			targetWindow.requestAnimationFrame(() => animationFrameRunner(targetWindowId));
+			targetWindow.requestAnimationFrame(() =>
+				animationFrameRunner(targetWindowId),
+			);
 		}
 
 		return item;
 	};
 
-	runAtThisOrScheduleAtNextAnimationFrame = (targetWindow: Window, runner: () => void, priority?: number) => {
+	runAtThisOrScheduleAtNextAnimationFrame = (
+		targetWindow: Window,
+		runner: () => void,
+		priority?: number,
+	) => {
 		const targetWindowId = getWindowId(targetWindow);
 		if (inAnimationFrameRunner.get(targetWindowId)) {
 			const item = new AnimationFrameQueueItem(runner, priority);
@@ -497,12 +703,26 @@ class AnimationFrameQueueItem implements IDisposable {
 	};
 })();
 
-export function measure(targetWindow: Window, callback: () => void): IDisposable {
-	return scheduleAtNextAnimationFrame(targetWindow, callback, 10000 /* must be early */);
+export function measure(
+	targetWindow: Window,
+	callback: () => void,
+): IDisposable {
+	return scheduleAtNextAnimationFrame(
+		targetWindow,
+		callback,
+		10000 /* must be early */,
+	);
 }
 
-export function modify(targetWindow: Window, callback: () => void): IDisposable {
-	return scheduleAtNextAnimationFrame(targetWindow, callback, -10000 /* must be late */);
+export function modify(
+	targetWindow: Window,
+	callback: () => void,
+): IDisposable {
+	return scheduleAtNextAnimationFrame(
+		targetWindow,
+		callback,
+		-10000 /* must be late */,
+	);
 }
 
 /**
@@ -511,7 +731,6 @@ export function modify(targetWindow: Window, callback: () => void): IDisposable 
  * instead of timeouts.
  */
 export class AnimationFrameScheduler implements IDisposable {
-
 	private readonly runner: () => void;
 	private readonly node: Node;
 	private readonly pendingRunner = new MutableDisposable<IDisposable>();
@@ -542,10 +761,13 @@ export class AnimationFrameScheduler implements IDisposable {
 			return; // Already scheduled
 		}
 
-		this.pendingRunner.value = runAtThisOrScheduleAtNextAnimationFrame(getWindow(this.node), () => {
-			this.pendingRunner.clear();
-			this.runner();
-		});
+		this.pendingRunner.value = runAtThisOrScheduleAtNextAnimationFrame(
+			getWindow(this.node),
+			() => {
+				this.pendingRunner.clear();
+				this.runner();
+			},
+		);
 	}
 
 	/**
@@ -569,8 +791,16 @@ function DEFAULT_EVENT_MERGER<T>(_lastEvent: unknown, currentEvent: T) {
 }
 
 class TimeoutThrottledDomListener<R, E extends Event> extends Disposable {
-
-	constructor(node: Node, type: string, handler: (event: R) => void, eventMerger: IEventMerger<R, E> = DEFAULT_EVENT_MERGER as IEventMerger<R, E>, minimumTimeMs: number = MINIMUM_TIME_MS) {
+	constructor(
+		node: Node,
+		type: string,
+		handler: (event: R) => void,
+		eventMerger: IEventMerger<R, E> = DEFAULT_EVENT_MERGER as IEventMerger<
+			R,
+			E
+		>,
+		minimumTimeMs: number = MINIMUM_TIME_MS,
+	) {
 		super();
 
 		let lastEvent: R | null = null;
@@ -578,35 +808,52 @@ class TimeoutThrottledDomListener<R, E extends Event> extends Disposable {
 		const timeout = this._register(new TimeoutTimer());
 
 		const invokeHandler = () => {
-			lastHandlerTime = (new Date()).getTime();
+			lastHandlerTime = new Date().getTime();
 			handler(<R>lastEvent);
 			lastEvent = null;
 		};
 
-		this._register(addDisposableListener(node, type, (e) => {
+		this._register(
+			addDisposableListener(node, type, (e) => {
+				lastEvent = eventMerger(lastEvent, e);
+				const elapsedTime = new Date().getTime() - lastHandlerTime;
 
-			lastEvent = eventMerger(lastEvent, e);
-			const elapsedTime = (new Date()).getTime() - lastHandlerTime;
-
-			if (elapsedTime >= minimumTimeMs) {
-				timeout.cancel();
-				invokeHandler();
-			} else {
-				timeout.setIfNotSet(invokeHandler, minimumTimeMs - elapsedTime);
-			}
-		}));
+				if (elapsedTime >= minimumTimeMs) {
+					timeout.cancel();
+					invokeHandler();
+				} else {
+					timeout.setIfNotSet(invokeHandler, minimumTimeMs - elapsedTime);
+				}
+			}),
+		);
 	}
 }
 
-export function addDisposableThrottledListener<R, E extends Event = Event>(node: any, type: string, handler: (event: R) => void, eventMerger?: IEventMerger<R, E>, minimumTimeMs?: number): IDisposable {
-	return new TimeoutThrottledDomListener<R, E>(node, type, handler, eventMerger, minimumTimeMs);
+export function addDisposableThrottledListener<R, E extends Event = Event>(
+	node: any,
+	type: string,
+	handler: (event: R) => void,
+	eventMerger?: IEventMerger<R, E>,
+	minimumTimeMs?: number,
+): IDisposable {
+	return new TimeoutThrottledDomListener<R, E>(
+		node,
+		type,
+		handler,
+		eventMerger,
+		minimumTimeMs,
+	);
 }
 
 export function getComputedStyle(el: HTMLElement): CSSStyleDeclaration {
 	return getWindow(el).getComputedStyle(el, null);
 }
 
-export function getClientArea(element: HTMLElement, defaultValue?: Dimension, fallbackElement?: HTMLElement): Dimension {
+export function getClientArea(
+	element: HTMLElement,
+	defaultValue?: Dimension,
+	fallbackElement?: HTMLElement,
+): Dimension {
 	const elWindow = getWindow(element);
 	const elDocument = elWindow.document;
 
@@ -617,7 +864,10 @@ export function getClientArea(element: HTMLElement, defaultValue?: Dimension, fa
 
 	// If visual view port exits and it's on mobile, it should be used instead of window innerWidth / innerHeight, or document.body.clientWidth / document.body.clientHeight
 	if (platform.isIOS && elWindow?.visualViewport) {
-		return new Dimension(elWindow.visualViewport.width, elWindow.visualViewport.height);
+		return new Dimension(
+			elWindow.visualViewport.width,
+			elWindow.visualViewport.height,
+		);
 	}
 
 	// Try innerWidth / innerHeight
@@ -626,13 +876,27 @@ export function getClientArea(element: HTMLElement, defaultValue?: Dimension, fa
 	}
 
 	// Try with document.body.clientWidth / document.body.clientHeight
-	if (elDocument.body && elDocument.body.clientWidth && elDocument.body.clientHeight) {
-		return new Dimension(elDocument.body.clientWidth, elDocument.body.clientHeight);
+	if (
+		elDocument.body &&
+		elDocument.body.clientWidth &&
+		elDocument.body.clientHeight
+	) {
+		return new Dimension(
+			elDocument.body.clientWidth,
+			elDocument.body.clientHeight,
+		);
 	}
 
 	// Try with document.documentElement.clientWidth / document.documentElement.clientHeight
-	if (elDocument.documentElement && elDocument.documentElement.clientWidth && elDocument.documentElement.clientHeight) {
-		return new Dimension(elDocument.documentElement.clientWidth, elDocument.documentElement.clientHeight);
+	if (
+		elDocument.documentElement &&
+		elDocument.documentElement.clientWidth &&
+		elDocument.documentElement.clientHeight
+	) {
+		return new Dimension(
+			elDocument.documentElement.clientWidth,
+			elDocument.documentElement.clientHeight,
+		);
 	}
 
 	if (fallbackElement) {
@@ -643,7 +907,7 @@ export function getClientArea(element: HTMLElement, defaultValue?: Dimension, fa
 		return defaultValue;
 	}
 
-	throw new Error('Unable to figure out browser width and height');
+	throw new Error("Unable to figure out browser width and height");
 }
 
 class SizeUtils {
@@ -653,49 +917,54 @@ class SizeUtils {
 		return parseFloat(value) || 0;
 	}
 
-	private static getDimension(element: HTMLElement, cssPropertyName: string): number {
+	private static getDimension(
+		element: HTMLElement,
+		cssPropertyName: string,
+	): number {
 		const computedStyle = getComputedStyle(element);
-		const value = computedStyle ? computedStyle.getPropertyValue(cssPropertyName) : '0';
+		const value = computedStyle
+			? computedStyle.getPropertyValue(cssPropertyName)
+			: "0";
 		return SizeUtils.convertToPixels(element, value);
 	}
 
 	static getBorderLeftWidth(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'border-left-width');
+		return SizeUtils.getDimension(element, "border-left-width");
 	}
 	static getBorderRightWidth(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'border-right-width');
+		return SizeUtils.getDimension(element, "border-right-width");
 	}
 	static getBorderTopWidth(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'border-top-width');
+		return SizeUtils.getDimension(element, "border-top-width");
 	}
 	static getBorderBottomWidth(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'border-bottom-width');
+		return SizeUtils.getDimension(element, "border-bottom-width");
 	}
 
 	static getPaddingLeft(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'padding-left');
+		return SizeUtils.getDimension(element, "padding-left");
 	}
 	static getPaddingRight(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'padding-right');
+		return SizeUtils.getDimension(element, "padding-right");
 	}
 	static getPaddingTop(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'padding-top');
+		return SizeUtils.getDimension(element, "padding-top");
 	}
 	static getPaddingBottom(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'padding-bottom');
+		return SizeUtils.getDimension(element, "padding-bottom");
 	}
 
 	static getMarginLeft(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'margin-left');
+		return SizeUtils.getDimension(element, "margin-left");
 	}
 	static getMarginTop(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'margin-top');
+		return SizeUtils.getDimension(element, "margin-top");
 	}
 	static getMarginRight(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'margin-right');
+		return SizeUtils.getDimension(element, "margin-right");
 	}
 	static getMarginBottom(element: HTMLElement): number {
-		return SizeUtils.getDimension(element, 'margin-bottom');
+		return SizeUtils.getDimension(element, "margin-bottom");
 	}
 }
 
@@ -708,13 +977,12 @@ export interface IDimension {
 }
 
 export class Dimension implements IDimension {
-
 	static readonly None = new Dimension(0, 0);
 
 	constructor(
 		readonly width: number,
 		readonly height: number,
-	) { }
+	) {}
 
 	with(width: number = this.width, height: number = this.height): Dimension {
 		if (width !== this.width || height !== this.height) {
@@ -725,7 +993,11 @@ export class Dimension implements IDimension {
 	}
 
 	static is(obj: unknown): obj is IDimension {
-		return typeof obj === 'object' && typeof (<IDimension>obj).height === 'number' && typeof (<IDimension>obj).width === 'number';
+		return (
+			typeof obj === "object" &&
+			typeof (<IDimension>obj).height === "number" &&
+			typeof (<IDimension>obj).width === "number"
+		);
 	}
 
 	static lift(obj: IDimension): Dimension {
@@ -761,14 +1033,14 @@ export function getTopLeftOffset(element: HTMLElement): IDomPosition {
 	let left = element.offsetLeft;
 
 	while (
-		(element = <HTMLElement>element.parentNode) !== null
-		&& element !== element.ownerDocument.body
-		&& element !== element.ownerDocument.documentElement
+		(element = <HTMLElement>element.parentNode) !== null &&
+		element !== element.ownerDocument.body &&
+		element !== element.ownerDocument.documentElement
 	) {
 		top -= element.scrollTop;
 		const c = isShadowRoot(element) ? null : getComputedStyle(element);
 		if (c) {
-			left -= c.direction !== 'rtl' ? element.scrollLeft : -element.scrollLeft;
+			left -= c.direction !== "rtl" ? element.scrollLeft : -element.scrollLeft;
 		}
 
 		if (element === offsetParent) {
@@ -782,7 +1054,7 @@ export function getTopLeftOffset(element: HTMLElement): IDomPosition {
 
 	return {
 		left: left,
-		top: top
+		top: top,
 	};
 }
 
@@ -793,30 +1065,41 @@ export interface IDomNodePagePosition {
 	height: number;
 }
 
-export function size(element: HTMLElement, width: number | null, height: number | null): void {
-	if (typeof width === 'number') {
+export function size(
+	element: HTMLElement,
+	width: number | null,
+	height: number | null,
+): void {
+	if (typeof width === "number") {
 		element.style.width = `${width}px`;
 	}
 
-	if (typeof height === 'number') {
+	if (typeof height === "number") {
 		element.style.height = `${height}px`;
 	}
 }
 
-export function position(element: HTMLElement, top: number, right?: number, bottom?: number, left?: number, position: string = 'absolute'): void {
-	if (typeof top === 'number') {
+export function position(
+	element: HTMLElement,
+	top: number,
+	right?: number,
+	bottom?: number,
+	left?: number,
+	position: string = "absolute",
+): void {
+	if (typeof top === "number") {
 		element.style.top = `${top}px`;
 	}
 
-	if (typeof right === 'number') {
+	if (typeof right === "number") {
 		element.style.right = `${right}px`;
 	}
 
-	if (typeof bottom === 'number') {
+	if (typeof bottom === "number") {
 		element.style.bottom = `${bottom}px`;
 	}
 
-	if (typeof left === 'number') {
+	if (typeof left === "number") {
 		element.style.left = `${left}px`;
 	}
 
@@ -826,14 +1109,16 @@ export function position(element: HTMLElement, top: number, right?: number, bott
 /**
  * Returns the position of a dom node relative to the entire page.
  */
-export function getDomNodePagePosition(domNode: HTMLElement): IDomNodePagePosition {
+export function getDomNodePagePosition(
+	domNode: HTMLElement,
+): IDomNodePagePosition {
 	const bb = domNode.getBoundingClientRect();
 	const window = getWindow(domNode);
 	return {
 		left: bb.left + window.scrollX,
 		top: bb.top + window.scrollY,
 		width: bb.width,
-		height: bb.height
+		height: bb.height,
 	};
 }
 
@@ -846,47 +1131,62 @@ export function getDomNodeZoomLevel(domNode: HTMLElement): number {
 	do {
 		// eslint-disable-next-line local/code-no-any-casts
 		const elementZoomLevel = (getComputedStyle(testElement) as any).zoom;
-		if (elementZoomLevel !== null && elementZoomLevel !== undefined && elementZoomLevel !== '1') {
+		if (
+			elementZoomLevel !== null &&
+			elementZoomLevel !== undefined &&
+			elementZoomLevel !== "1"
+		) {
 			zoom *= elementZoomLevel;
 		}
 
 		testElement = testElement.parentElement;
-	} while (testElement !== null && testElement !== testElement.ownerDocument.documentElement);
+	} while (
+		testElement !== null &&
+		testElement !== testElement.ownerDocument.documentElement
+	);
 
 	return zoom;
 }
 
-
 // Adapted from WinJS
 // Gets the width of the element, including margins.
 export function getTotalWidth(element: HTMLElement): number {
-	const margin = SizeUtils.getMarginLeft(element) + SizeUtils.getMarginRight(element);
+	const margin =
+		SizeUtils.getMarginLeft(element) + SizeUtils.getMarginRight(element);
 	return element.offsetWidth + margin;
 }
 
 export function getContentWidth(element: HTMLElement): number {
-	const border = SizeUtils.getBorderLeftWidth(element) + SizeUtils.getBorderRightWidth(element);
-	const padding = SizeUtils.getPaddingLeft(element) + SizeUtils.getPaddingRight(element);
+	const border =
+		SizeUtils.getBorderLeftWidth(element) +
+		SizeUtils.getBorderRightWidth(element);
+	const padding =
+		SizeUtils.getPaddingLeft(element) + SizeUtils.getPaddingRight(element);
 	return element.offsetWidth - border - padding;
 }
 
 export function getTotalScrollWidth(element: HTMLElement): number {
-	const margin = SizeUtils.getMarginLeft(element) + SizeUtils.getMarginRight(element);
+	const margin =
+		SizeUtils.getMarginLeft(element) + SizeUtils.getMarginRight(element);
 	return element.scrollWidth + margin;
 }
 
 // Adapted from WinJS
 // Gets the height of the content of the specified element. The content height does not include borders or padding.
 export function getContentHeight(element: HTMLElement): number {
-	const border = SizeUtils.getBorderTopWidth(element) + SizeUtils.getBorderBottomWidth(element);
-	const padding = SizeUtils.getPaddingTop(element) + SizeUtils.getPaddingBottom(element);
+	const border =
+		SizeUtils.getBorderTopWidth(element) +
+		SizeUtils.getBorderBottomWidth(element);
+	const padding =
+		SizeUtils.getPaddingTop(element) + SizeUtils.getPaddingBottom(element);
 	return element.offsetHeight - border - padding;
 }
 
 // Adapted from WinJS
 // Gets the height of the element, including its margins.
 export function getTotalHeight(element: HTMLElement): number {
-	const margin = SizeUtils.getMarginTop(element) + SizeUtils.getMarginBottom(element);
+	const margin =
+		SizeUtils.getMarginTop(element) + SizeUtils.getMarginBottom(element);
 	return element.offsetHeight + margin;
 }
 
@@ -901,9 +1201,15 @@ function getRelativeLeft(element: HTMLElement, parent: HTMLElement): number {
 	return elementPosition.left - parentPosition.left;
 }
 
-export function getLargestChildWidth(parent: HTMLElement, children: HTMLElement[]): number {
+export function getLargestChildWidth(
+	parent: HTMLElement,
+	children: HTMLElement[],
+): number {
 	const childWidths = children.map((child) => {
-		return Math.max(getTotalScrollWidth(child), getTotalWidth(child)) + getRelativeLeft(child, parent) || 0;
+		return (
+			Math.max(getTotalScrollWidth(child), getTotalWidth(child)) +
+				getRelativeLeft(child, parent) || 0
+		);
 	});
 	const maxWidth = Math.max(...childWidths);
 	return maxWidth;
@@ -911,23 +1217,29 @@ export function getLargestChildWidth(parent: HTMLElement, children: HTMLElement[
 
 // ----------------------------------------------------------------------------------------
 
-export function isAncestor(testChild: Node | null, testAncestor: Node | null): boolean {
+export function isAncestor(
+	testChild: Node | null,
+	testAncestor: Node | null,
+): boolean {
 	return Boolean(testAncestor?.contains(testChild));
 }
 
-const parentFlowToDataKey = 'parentFlowToElementId';
+const parentFlowToDataKey = "parentFlowToElementId";
 
 /**
  * Set an explicit parent to use for nodes that are not part of the
  * regular dom structure.
  */
-export function setParentFlowTo(fromChildElement: HTMLElement, toParentElement: Element): void {
+export function setParentFlowTo(
+	fromChildElement: HTMLElement,
+	toParentElement: Element,
+): void {
 	fromChildElement.dataset[parentFlowToDataKey] = toParentElement.id;
 }
 
 function getParentFlowToElement(node: HTMLElement): HTMLElement | null {
 	const flowToParentId = node.dataset[parentFlowToDataKey];
-	if (typeof flowToParentId === 'string') {
+	if (typeof flowToParentId === "string") {
 		// eslint-disable-next-line no-restricted-syntax
 		return node.ownerDocument.getElementById(flowToParentId);
 	}
@@ -938,7 +1250,10 @@ function getParentFlowToElement(node: HTMLElement): HTMLElement | null {
  * Check if `testAncestor` is an ancestor of `testChild`, observing the explicit
  * parents set by `setParentFlowTo`.
  */
-export function isAncestorUsingFlowTo(testChild: Node, testAncestor: Node): boolean {
+export function isAncestorUsingFlowTo(
+	testChild: Node,
+	testAncestor: Node,
+): boolean {
 	let node: Node | null = testChild;
 	while (node) {
 		if (node === testAncestor) {
@@ -958,14 +1273,18 @@ export function isAncestorUsingFlowTo(testChild: Node, testAncestor: Node): bool
 	return false;
 }
 
-export function findParentWithClass(node: HTMLElement, clazz: string, stopAtClazzOrNode?: string | HTMLElement): HTMLElement | null {
+export function findParentWithClass(
+	node: HTMLElement,
+	clazz: string,
+	stopAtClazzOrNode?: string | HTMLElement,
+): HTMLElement | null {
 	while (node && node.nodeType === node.ELEMENT_NODE) {
 		if (node.classList.contains(clazz)) {
 			return node;
 		}
 
 		if (stopAtClazzOrNode) {
-			if (typeof stopAtClazzOrNode === 'string') {
+			if (typeof stopAtClazzOrNode === "string") {
 				if (node.classList.contains(stopAtClazzOrNode)) {
 					return null;
 				}
@@ -982,14 +1301,16 @@ export function findParentWithClass(node: HTMLElement, clazz: string, stopAtClaz
 	return null;
 }
 
-export function hasParentWithClass(node: HTMLElement, clazz: string, stopAtClazzOrNode?: string | HTMLElement): boolean {
+export function hasParentWithClass(
+	node: HTMLElement,
+	clazz: string,
+	stopAtClazzOrNode?: string | HTMLElement,
+): boolean {
 	return !!findParentWithClass(node, clazz, stopAtClazzOrNode);
 }
 
 export function isShadowRoot(node: Node): node is ShadowRoot {
-	return (
-		node && !!(<ShadowRoot>node).host && !!(<ShadowRoot>node).mode
-	);
+	return node && !!(<ShadowRoot>node).host && !!(<ShadowRoot>node).mode;
 }
 
 export function isInShadowDOM(domNode: Node): boolean {
@@ -1057,8 +1378,10 @@ export function getActiveDocument(): Document {
 		return mainWindow.document;
 	}
 
-	const documents = Array.from(getWindows()).map(({ window }) => window.document);
-	const focusedDoc = documents.find(doc => doc.hasFocus());
+	const documents = Array.from(getWindows()).map(
+		({ window }) => window.document,
+	);
+	const focusedDoc = documents.find((doc) => doc.hasFocus());
 	if (focusedDoc) {
 		return focusedDoc;
 	}
@@ -1088,11 +1411,14 @@ interface IMutationObserver {
 	readonly onDidMutate: event.Event<MutationRecord[]>;
 }
 
-export const sharedMutationObserver = new class {
-
+export const sharedMutationObserver = new (class {
 	readonly mutationObservers = new Map<Node, Map<number, IMutationObserver>>();
 
-	observe(target: Node, disposables: DisposableStore, options?: MutationObserverInit): event.Event<MutationRecord[]> {
+	observe(
+		target: Node,
+		disposables: DisposableStore,
+		options?: MutationObserverInit,
+	): event.Event<MutationRecord[]> {
 		let mutationObserversPerTarget = this.mutationObservers.get(target);
 		if (!mutationObserversPerTarget) {
 			mutationObserversPerTarget = new Map<number, IMutationObserver>();
@@ -1100,31 +1426,36 @@ export const sharedMutationObserver = new class {
 		}
 
 		const optionsHash = hash(options);
-		let mutationObserverPerOptions = mutationObserversPerTarget.get(optionsHash);
+		let mutationObserverPerOptions =
+			mutationObserversPerTarget.get(optionsHash);
 		if (!mutationObserverPerOptions) {
 			const onDidMutate = new event.Emitter<MutationRecord[]>();
-			const observer = new MutationObserver(mutations => onDidMutate.fire(mutations));
+			const observer = new MutationObserver((mutations) =>
+				onDidMutate.fire(mutations),
+			);
 			observer.observe(target, options);
 
-			const resolvedMutationObserverPerOptions = mutationObserverPerOptions = {
+			const resolvedMutationObserverPerOptions = (mutationObserverPerOptions = {
 				users: 1,
 				observer,
-				onDidMutate: onDidMutate.event
-			};
+				onDidMutate: onDidMutate.event,
+			});
 
-			disposables.add(toDisposable(() => {
-				resolvedMutationObserverPerOptions.users -= 1;
+			disposables.add(
+				toDisposable(() => {
+					resolvedMutationObserverPerOptions.users -= 1;
 
-				if (resolvedMutationObserverPerOptions.users === 0) {
-					onDidMutate.dispose();
-					observer.disconnect();
+					if (resolvedMutationObserverPerOptions.users === 0) {
+						onDidMutate.dispose();
+						observer.disconnect();
 
-					mutationObserversPerTarget?.delete(optionsHash);
-					if (mutationObserversPerTarget?.size === 0) {
-						this.mutationObservers.delete(target);
+						mutationObserversPerTarget?.delete(optionsHash);
+						if (mutationObserversPerTarget?.size === 0) {
+							this.mutationObservers.delete(target);
+						}
 					}
-				}
-			}));
+				}),
+			);
 
 			mutationObserversPerTarget.set(optionsHash, mutationObserverPerOptions);
 		} else {
@@ -1133,17 +1464,24 @@ export const sharedMutationObserver = new class {
 
 		return mutationObserverPerOptions.onDidMutate;
 	}
-};
+})();
 
-export function createMetaElement(container: HTMLElement = mainWindow.document.head): HTMLMetaElement {
-	return createHeadElement('meta', container);
+export function createMetaElement(
+	container: HTMLElement = mainWindow.document.head,
+): HTMLMetaElement {
+	return createHeadElement("meta", container);
 }
 
-export function createLinkElement(container: HTMLElement = mainWindow.document.head): HTMLLinkElement {
-	return createHeadElement('link', container);
+export function createLinkElement(
+	container: HTMLElement = mainWindow.document.head,
+): HTMLLinkElement {
+	return createHeadElement("link", container);
 }
 
-function createHeadElement<K extends keyof HTMLElementTagNameMap>(tagName: K, container: HTMLElement = mainWindow.document.head): HTMLElementTagNameMap[K] {
+function createHeadElement<K extends keyof HTMLElementTagNameMap>(
+	tagName: K,
+	container: HTMLElement = mainWindow.document.head,
+): HTMLElementTagNameMap[K] {
 	const element = document.createElement(tagName);
 	container.appendChild(element);
 	return element;
@@ -1151,124 +1489,158 @@ function createHeadElement<K extends keyof HTMLElementTagNameMap>(tagName: K, co
 
 export function isHTMLElement(e: unknown): e is HTMLElement {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof HTMLElement || e instanceof getWindow(e as Node).HTMLElement;
+	return (
+		e instanceof HTMLElement || e instanceof getWindow(e as Node).HTMLElement
+	);
 }
 
 export function isHTMLAnchorElement(e: unknown): e is HTMLAnchorElement {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof HTMLAnchorElement || e instanceof getWindow(e as Node).HTMLAnchorElement;
+	return (
+		e instanceof HTMLAnchorElement ||
+		e instanceof getWindow(e as Node).HTMLAnchorElement
+	);
 }
 
 export function isHTMLSpanElement(e: unknown): e is HTMLSpanElement {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof HTMLSpanElement || e instanceof getWindow(e as Node).HTMLSpanElement;
+	return (
+		e instanceof HTMLSpanElement ||
+		e instanceof getWindow(e as Node).HTMLSpanElement
+	);
 }
 
 export function isHTMLTextAreaElement(e: unknown): e is HTMLTextAreaElement {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof HTMLTextAreaElement || e instanceof getWindow(e as Node).HTMLTextAreaElement;
+	return (
+		e instanceof HTMLTextAreaElement ||
+		e instanceof getWindow(e as Node).HTMLTextAreaElement
+	);
 }
 
 export function isHTMLInputElement(e: unknown): e is HTMLInputElement {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof HTMLInputElement || e instanceof getWindow(e as Node).HTMLInputElement;
+	return (
+		e instanceof HTMLInputElement ||
+		e instanceof getWindow(e as Node).HTMLInputElement
+	);
 }
 
 export function isHTMLButtonElement(e: unknown): e is HTMLButtonElement {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof HTMLButtonElement || e instanceof getWindow(e as Node).HTMLButtonElement;
+	return (
+		e instanceof HTMLButtonElement ||
+		e instanceof getWindow(e as Node).HTMLButtonElement
+	);
 }
 
 export function isHTMLDivElement(e: unknown): e is HTMLDivElement {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof HTMLDivElement || e instanceof getWindow(e as Node).HTMLDivElement;
+	return (
+		e instanceof HTMLDivElement ||
+		e instanceof getWindow(e as Node).HTMLDivElement
+	);
 }
 
 export function isSVGElement(e: unknown): e is SVGElement {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof SVGElement || e instanceof getWindow(e as Node).SVGElement;
+	return (
+		e instanceof SVGElement || e instanceof getWindow(e as Node).SVGElement
+	);
 }
 
 export function isMouseEvent(e: unknown): e is MouseEvent {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof MouseEvent || e instanceof getWindow(e as UIEvent).MouseEvent;
+	return (
+		e instanceof MouseEvent || e instanceof getWindow(e as UIEvent).MouseEvent
+	);
 }
 
 export function isKeyboardEvent(e: unknown): e is KeyboardEvent {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof KeyboardEvent || e instanceof getWindow(e as UIEvent).KeyboardEvent;
+	return (
+		e instanceof KeyboardEvent ||
+		e instanceof getWindow(e as UIEvent).KeyboardEvent
+	);
 }
 
 export function isPointerEvent(e: unknown): e is PointerEvent {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof PointerEvent || e instanceof getWindow(e as UIEvent).PointerEvent;
+	return (
+		e instanceof PointerEvent ||
+		e instanceof getWindow(e as UIEvent).PointerEvent
+	);
 }
 
 export function isDragEvent(e: unknown): e is DragEvent {
 	// eslint-disable-next-line no-restricted-syntax
-	return e instanceof DragEvent || e instanceof getWindow(e as UIEvent).DragEvent;
+	return (
+		e instanceof DragEvent || e instanceof getWindow(e as UIEvent).DragEvent
+	);
 }
 
 export const EventType = {
 	// Mouse
-	CLICK: 'click',
-	AUXCLICK: 'auxclick',
-	DBLCLICK: 'dblclick',
-	MOUSE_UP: 'mouseup',
-	MOUSE_DOWN: 'mousedown',
-	MOUSE_OVER: 'mouseover',
-	MOUSE_MOVE: 'mousemove',
-	MOUSE_OUT: 'mouseout',
-	MOUSE_ENTER: 'mouseenter',
-	MOUSE_LEAVE: 'mouseleave',
-	MOUSE_WHEEL: 'wheel',
-	POINTER_UP: 'pointerup',
-	POINTER_DOWN: 'pointerdown',
-	POINTER_MOVE: 'pointermove',
-	POINTER_LEAVE: 'pointerleave',
-	CONTEXT_MENU: 'contextmenu',
-	WHEEL: 'wheel',
+	CLICK: "click",
+	AUXCLICK: "auxclick",
+	DBLCLICK: "dblclick",
+	MOUSE_UP: "mouseup",
+	MOUSE_DOWN: "mousedown",
+	MOUSE_OVER: "mouseover",
+	MOUSE_MOVE: "mousemove",
+	MOUSE_OUT: "mouseout",
+	MOUSE_ENTER: "mouseenter",
+	MOUSE_LEAVE: "mouseleave",
+	MOUSE_WHEEL: "wheel",
+	POINTER_UP: "pointerup",
+	POINTER_DOWN: "pointerdown",
+	POINTER_MOVE: "pointermove",
+	POINTER_LEAVE: "pointerleave",
+	CONTEXT_MENU: "contextmenu",
+	WHEEL: "wheel",
 	// Keyboard
-	KEY_DOWN: 'keydown',
-	KEY_PRESS: 'keypress',
-	KEY_UP: 'keyup',
+	KEY_DOWN: "keydown",
+	KEY_PRESS: "keypress",
+	KEY_UP: "keyup",
 	// HTML Document
-	LOAD: 'load',
-	BEFORE_UNLOAD: 'beforeunload',
-	UNLOAD: 'unload',
-	PAGE_SHOW: 'pageshow',
-	PAGE_HIDE: 'pagehide',
-	PASTE: 'paste',
-	ABORT: 'abort',
-	ERROR: 'error',
-	RESIZE: 'resize',
-	SCROLL: 'scroll',
-	FULLSCREEN_CHANGE: 'fullscreenchange',
-	WK_FULLSCREEN_CHANGE: 'webkitfullscreenchange',
+	LOAD: "load",
+	BEFORE_UNLOAD: "beforeunload",
+	UNLOAD: "unload",
+	PAGE_SHOW: "pageshow",
+	PAGE_HIDE: "pagehide",
+	PASTE: "paste",
+	ABORT: "abort",
+	ERROR: "error",
+	RESIZE: "resize",
+	SCROLL: "scroll",
+	FULLSCREEN_CHANGE: "fullscreenchange",
+	WK_FULLSCREEN_CHANGE: "webkitfullscreenchange",
 	// Form
-	SELECT: 'select',
-	CHANGE: 'change',
-	SUBMIT: 'submit',
-	RESET: 'reset',
-	FOCUS: 'focus',
-	FOCUS_IN: 'focusin',
-	FOCUS_OUT: 'focusout',
-	BLUR: 'blur',
-	INPUT: 'input',
+	SELECT: "select",
+	CHANGE: "change",
+	SUBMIT: "submit",
+	RESET: "reset",
+	FOCUS: "focus",
+	FOCUS_IN: "focusin",
+	FOCUS_OUT: "focusout",
+	BLUR: "blur",
+	INPUT: "input",
 	// Local Storage
-	STORAGE: 'storage',
+	STORAGE: "storage",
 	// Drag
-	DRAG_START: 'dragstart',
-	DRAG: 'drag',
-	DRAG_ENTER: 'dragenter',
-	DRAG_LEAVE: 'dragleave',
-	DRAG_OVER: 'dragover',
-	DROP: 'drop',
-	DRAG_END: 'dragend',
+	DRAG_START: "dragstart",
+	DRAG: "drag",
+	DRAG_ENTER: "dragenter",
+	DRAG_LEAVE: "dragleave",
+	DRAG_OVER: "dragover",
+	DROP: "drop",
+	DRAG_END: "dragend",
 	// Animation
-	ANIMATION_START: browser.isWebKit ? 'webkitAnimationStart' : 'animationstart',
-	ANIMATION_END: browser.isWebKit ? 'webkitAnimationEnd' : 'animationend',
-	ANIMATION_ITERATION: browser.isWebKit ? 'webkitAnimationIteration' : 'animationiteration'
+	ANIMATION_START: browser.isWebKit ? "webkitAnimationStart" : "animationstart",
+	ANIMATION_END: browser.isWebKit ? "webkitAnimationEnd" : "animationend",
+	ANIMATION_ITERATION: browser.isWebKit
+		? "webkitAnimationIteration"
+		: "animationiteration",
 } as const;
 
 export interface EventLike {
@@ -1279,7 +1651,11 @@ export interface EventLike {
 export function isEventLike(obj: unknown): obj is EventLike {
 	const candidate = obj as EventLike | undefined;
 
-	return !!(candidate && typeof candidate.preventDefault === 'function' && typeof candidate.stopPropagation === 'function');
+	return !!(
+		candidate &&
+		typeof candidate.preventDefault === "function" &&
+		typeof candidate.stopPropagation === "function"
+	);
 }
 
 export const EventHelper = {
@@ -1289,7 +1665,7 @@ export const EventHelper = {
 			e.stopPropagation();
 		}
 		return e;
-	}
+	},
 };
 
 export interface IFocusTracker extends Disposable {
@@ -1317,19 +1693,24 @@ export function restoreParentsScrollTop(node: Element, state: number[]): void {
 }
 
 class FocusTracker extends Disposable implements IFocusTracker {
-
 	private readonly _onDidFocus = this._register(new event.Emitter<void>());
-	get onDidFocus() { return this._onDidFocus.event; }
+	get onDidFocus() {
+		return this._onDidFocus.event;
+	}
 
 	private readonly _onDidBlur = this._register(new event.Emitter<void>());
-	get onDidBlur() { return this._onDidBlur.event; }
+	get onDidBlur() {
+		return this._onDidBlur.event;
+	}
 
 	private _refreshStateHandler: () => void;
 
 	private static hasFocusWithin(element: HTMLElement | Window): boolean {
 		if (isHTMLElement(element)) {
 			const shadowRoot = getShadowRoot(element);
-			const activeElement = (shadowRoot ? shadowRoot.activeElement : element.ownerDocument.activeElement);
+			const activeElement = shadowRoot
+				? shadowRoot.activeElement
+				: element.ownerDocument.activeElement;
 			return isAncestor(activeElement, element);
 		} else {
 			const window = element;
@@ -1353,18 +1734,23 @@ class FocusTracker extends Disposable implements IFocusTracker {
 		const onBlur = () => {
 			if (hasFocus) {
 				loosingFocus = true;
-				(isHTMLElement(element) ? getWindow(element) : element).setTimeout(() => {
-					if (loosingFocus) {
-						loosingFocus = false;
-						hasFocus = false;
-						this._onDidBlur.fire();
-					}
-				}, 0);
+				(isHTMLElement(element) ? getWindow(element) : element).setTimeout(
+					() => {
+						if (loosingFocus) {
+							loosingFocus = false;
+							hasFocus = false;
+							this._onDidBlur.fire();
+						}
+					},
+					0,
+				);
 			}
 		};
 
 		this._refreshStateHandler = () => {
-			const currentNodeHasFocus = FocusTracker.hasFocusWithin(<HTMLElement>element);
+			const currentNodeHasFocus = FocusTracker.hasFocusWithin(
+				<HTMLElement>element,
+			);
 			if (currentNodeHasFocus !== hasFocus) {
 				if (hasFocus) {
 					onBlur();
@@ -1374,13 +1760,24 @@ class FocusTracker extends Disposable implements IFocusTracker {
 			}
 		};
 
-		this._register(addDisposableListener(element, EventType.FOCUS, onFocus, true));
-		this._register(addDisposableListener(element, EventType.BLUR, onBlur, true));
+		this._register(
+			addDisposableListener(element, EventType.FOCUS, onFocus, true),
+		);
+		this._register(
+			addDisposableListener(element, EventType.BLUR, onBlur, true),
+		);
 		if (isHTMLElement(element)) {
-			this._register(addDisposableListener(element, EventType.FOCUS_IN, () => this._refreshStateHandler()));
-			this._register(addDisposableListener(element, EventType.FOCUS_OUT, () => this._refreshStateHandler()));
+			this._register(
+				addDisposableListener(element, EventType.FOCUS_IN, () =>
+					this._refreshStateHandler(),
+				),
+			);
+			this._register(
+				addDisposableListener(element, EventType.FOCUS_OUT, () =>
+					this._refreshStateHandler(),
+				),
+			);
 		}
-
 	}
 
 	refreshState() {
@@ -1404,10 +1801,16 @@ export function after<T extends Node>(sibling: HTMLElement, child: T): T {
 }
 
 export function append<T extends Node>(parent: HTMLElement, child: T): T;
-export function append<T extends Node>(parent: HTMLElement, ...children: (T | string)[]): void;
-export function append<T extends Node>(parent: HTMLElement, ...children: (T | string)[]): T | void {
+export function append<T extends Node>(
+	parent: HTMLElement,
+	...children: (T | string)[]
+): void;
+export function append<T extends Node>(
+	parent: HTMLElement,
+	...children: (T | string)[]
+): T | void {
 	parent.append(...children);
-	if (children.length === 1 && typeof children[0] !== 'string') {
+	if (children.length === 1 && typeof children[0] !== "string") {
 		return children[0];
 	}
 }
@@ -1420,26 +1823,34 @@ export function prepend<T extends Node>(parent: HTMLElement, child: T): T {
 /**
  * Removes all children from `parent` and appends `children`
  */
-export function reset(parent: HTMLElement, ...children: Array<Node | string>): void {
-	parent.textContent = '';
+export function reset(
+	parent: HTMLElement,
+	...children: Array<Node | string>
+): void {
+	parent.textContent = "";
 	append(parent, ...children);
 }
 
 const SELECTOR_REGEX = /([\w\-]+)?(#([\w\-]+))?((\.([\w\-]+))*)/;
 
 export enum Namespace {
-	HTML = 'http://www.w3.org/1999/xhtml',
-	SVG = 'http://www.w3.org/2000/svg'
+	HTML = "http://www.w3.org/1999/xhtml",
+	SVG = "http://www.w3.org/2000/svg",
 }
 
-function _$<T extends Element>(namespace: Namespace, description: string, attrs?: { [key: string]: any }, ...children: Array<Node | string>): T {
+function _$<T extends Element>(
+	namespace: Namespace,
+	description: string,
+	attrs?: { [key: string]: any },
+	...children: Array<Node | string>
+): T {
 	const match = SELECTOR_REGEX.exec(description);
 
 	if (!match) {
-		throw new Error('Bad use of emmet');
+		throw new Error("Bad use of emmet");
 	}
 
-	const tagName = match[1] || 'div';
+	const tagName = match[1] || "div";
 	let result: T;
 
 	if (namespace !== Namespace.HTML) {
@@ -1452,23 +1863,22 @@ function _$<T extends Element>(namespace: Namespace, description: string, attrs?
 		result.id = match[3];
 	}
 	if (match[4]) {
-		result.className = match[4].replace(/\./g, ' ').trim();
+		result.className = match[4].replace(/\./g, " ").trim();
 	}
 
 	if (attrs) {
 		Object.entries(attrs).forEach(([name, value]) => {
-			if (typeof value === 'undefined') {
+			if (typeof value === "undefined") {
 				return;
 			}
 
 			if (/^on\w+$/.test(name)) {
 				// eslint-disable-next-line local/code-no-any-casts
 				(<any>result)[name] = value;
-			} else if (name === 'selected') {
+			} else if (name === "selected") {
 				if (value) {
-					result.setAttribute(name, 'true');
+					result.setAttribute(name, "true");
 				}
-
 			} else {
 				result.setAttribute(name, value);
 			}
@@ -1480,11 +1890,19 @@ function _$<T extends Element>(namespace: Namespace, description: string, attrs?
 	return result;
 }
 
-export function $<T extends HTMLElement>(description: string, attrs?: { [key: string]: any }, ...children: Array<Node | string>): T {
+export function $<T extends HTMLElement>(
+	description: string,
+	attrs?: { [key: string]: any },
+	...children: Array<Node | string>
+): T {
 	return _$(Namespace.HTML, description, attrs, ...children);
 }
 
-$.SVG = function <T extends SVGElement>(description: string, attrs?: { [key: string]: any }, ...children: Array<Node | string>): T {
+$.SVG = function <T extends SVGElement>(
+	description: string,
+	attrs?: { [key: string]: any },
+	...children: Array<Node | string>
+): T {
 	return _$(Namespace.SVG, description, attrs, ...children);
 };
 
@@ -1506,7 +1924,10 @@ export function join(nodes: Node[], separator: Node | string): Node[] {
 	return result;
 }
 
-export function setVisibility(visible: boolean, ...elements: HTMLElement[]): void {
+export function setVisibility(
+	visible: boolean,
+	...elements: HTMLElement[]
+): void {
 	if (visible) {
 		show(...elements);
 	} else {
@@ -1516,19 +1937,22 @@ export function setVisibility(visible: boolean, ...elements: HTMLElement[]): voi
 
 export function show(...elements: HTMLElement[]): void {
 	for (const element of elements) {
-		element.style.display = '';
-		element.removeAttribute('aria-hidden');
+		element.style.display = "";
+		element.removeAttribute("aria-hidden");
 	}
 }
 
 export function hide(...elements: HTMLElement[]): void {
 	for (const element of elements) {
-		element.style.display = 'none';
-		element.setAttribute('aria-hidden', 'true');
+		element.style.display = "none";
+		element.setAttribute("aria-hidden", "true");
 	}
 }
 
-function findParentWithAttribute(node: Node | null, attribute: string): HTMLElement | null {
+function findParentWithAttribute(
+	node: Node | null,
+	attribute: string,
+): HTMLElement | null {
 	while (node && node.nodeType === node.ELEMENT_NODE) {
 		if (isHTMLElement(node) && node.hasAttribute(attribute)) {
 			return node;
@@ -1541,7 +1965,7 @@ function findParentWithAttribute(node: Node | null, attribute: string): HTMLElem
 }
 
 export function removeTabIndexAndUpdateFocus(node: HTMLElement): void {
-	if (!node || !node.hasAttribute('tabIndex')) {
+	if (!node || !node.hasAttribute("tabIndex")) {
 		return;
 	}
 
@@ -1550,15 +1974,20 @@ export function removeTabIndexAndUpdateFocus(node: HTMLElement): void {
 	// typically never want that, rather put focus to the closest element
 	// in the hierarchy of the parent DOM nodes.
 	if (node.ownerDocument.activeElement === node) {
-		const parentFocusable = findParentWithAttribute(node.parentElement, 'tabIndex');
+		const parentFocusable = findParentWithAttribute(
+			node.parentElement,
+			"tabIndex",
+		);
 		parentFocusable?.focus();
 	}
 
-	node.removeAttribute('tabindex');
+	node.removeAttribute("tabindex");
 }
 
-export function finalHandler<T extends Event>(fn: (event: T) => unknown): (event: T) => unknown {
-	return e => {
+export function finalHandler<T extends Event>(
+	fn: (event: T) => unknown,
+): (event: T) => unknown {
+	return (e) => {
 		e.preventDefault();
 		e.stopPropagation();
 		fn(e);
@@ -1566,17 +1995,24 @@ export function finalHandler<T extends Event>(fn: (event: T) => unknown): (event
 }
 
 export function domContentLoaded(targetWindow: Window): Promise<void> {
-	return new Promise<void>(resolve => {
+	return new Promise<void>((resolve) => {
 		const readyState = targetWindow.document.readyState;
-		if (readyState === 'complete' || (targetWindow.document && targetWindow.document.body !== null)) {
+		if (
+			readyState === "complete" ||
+			(targetWindow.document && targetWindow.document.body !== null)
+		) {
 			resolve(undefined);
 		} else {
 			const listener = () => {
-				targetWindow.window.removeEventListener('DOMContentLoaded', listener, false);
+				targetWindow.window.removeEventListener(
+					"DOMContentLoaded",
+					listener,
+					false,
+				);
 				resolve();
 			};
 
-			targetWindow.window.addEventListener('DOMContentLoaded', listener, false);
+			targetWindow.window.addEventListener("DOMContentLoaded", listener, false);
 		}
 	});
 }
@@ -1612,7 +2048,7 @@ export function windowOpenNoOpener(url: string): void {
 	// See https://developer.mozilla.org/en-US/docs/Web/API/Window/open#noopener
 	// However, this also doesn't allow us to realize if the browser blocked
 	// the creation of the window.
-	mainWindow.open(url, '_blank', 'noopener');
+	mainWindow.open(url, "_blank", "noopener");
 }
 
 /**
@@ -1626,14 +2062,19 @@ export function windowOpenNoOpener(url: string): void {
  *
  * In otherwords, you should almost always use {@link windowOpenNoOpener} instead of this function.
  */
-const popupWidth = 780, popupHeight = 640;
+const popupWidth = 780,
+	popupHeight = 640;
 export function windowOpenPopup(url: string): void {
-	const left = Math.floor(mainWindow.screenLeft + mainWindow.innerWidth / 2 - popupWidth / 2);
-	const top = Math.floor(mainWindow.screenTop + mainWindow.innerHeight / 2 - popupHeight / 2);
+	const left = Math.floor(
+		mainWindow.screenLeft + mainWindow.innerWidth / 2 - popupWidth / 2,
+	);
+	const top = Math.floor(
+		mainWindow.screenTop + mainWindow.innerHeight / 2 - popupHeight / 2,
+	);
 	mainWindow.open(
 		url,
-		'_blank',
-		`width=${popupWidth},height=${popupHeight},top=${top},left=${left}`
+		"_blank",
+		`width=${popupWidth},height=${popupHeight},top=${top},left=${left}`,
 	);
 }
 
@@ -1676,10 +2117,14 @@ export function animate(targetWindow: Window, fn: () => void): IDisposable {
 	return toDisposable(() => stepDisposable.dispose());
 }
 
-RemoteAuthorities.setPreferredWebSchema(/^https:/.test(mainWindow.location.href) ? 'https' : 'http');
+RemoteAuthorities.setPreferredWebSchema(
+	/^https:/.test(mainWindow.location.href) ? "https" : "http",
+);
 
-export function triggerDownload(dataOrUri: Uint8Array | URI, name: string): void {
-
+export function triggerDownload(
+	dataOrUri: Uint8Array | URI,
+	name: string,
+): void {
 	// If the data is provided as Buffer, we create a
 	// blob URL out of it to produce a valid link
 	let url: string;
@@ -1698,7 +2143,7 @@ export function triggerDownload(dataOrUri: Uint8Array | URI, name: string): void
 	// points to the file to download.
 	// See also https://developers.google.com/web/updates/2011/08/Downloading-resources-in-HTML5-a-download
 	const activeWindow = getActiveWindow();
-	const anchor = document.createElement('a');
+	const anchor = document.createElement("a");
 	activeWindow.document.body.appendChild(anchor);
 	anchor.download = name;
 	anchor.href = url;
@@ -1709,19 +2154,18 @@ export function triggerDownload(dataOrUri: Uint8Array | URI, name: string): void
 }
 
 export function triggerUpload(): Promise<FileList | undefined> {
-	return new Promise<FileList | undefined>(resolve => {
-
+	return new Promise<FileList | undefined>((resolve) => {
 		// In order to upload to the browser, create a
 		// input element of type `file` and click it
 		// to gather the selected files
 		const activeWindow = getActiveWindow();
-		const input = document.createElement('input');
+		const input = document.createElement("input");
 		activeWindow.document.body.appendChild(input);
-		input.type = 'file';
+		input.type = "file";
 		input.multiple = true;
 
 		// Resolve once the input event has fired once
-		event.Event.once(event.Event.fromDOMEventEmitter(input, 'input'))(() => {
+		event.Event.once(event.Event.fromDOMEventEmitter(input, "input"))(() => {
 			resolve(input.files ?? undefined);
 		});
 
@@ -1733,7 +2177,6 @@ export function triggerUpload(): Promise<FileList | undefined> {
 }
 
 export enum DetectedFullscreenMode {
-
 	/**
 	 * The document is fullscreen, e.g. because an element
 	 * in the document requested to be fullscreen.
@@ -1744,11 +2187,10 @@ export enum DetectedFullscreenMode {
 	 * The browser is fullscreen, e.g. because the user enabled
 	 * native window fullscreen for it.
 	 */
-	BROWSER
+	BROWSER,
 }
 
 export interface IDetectedFullscreen {
-
 	/**
 	 * Figure out if the document is fullscreen or the browser.
 	 */
@@ -1761,11 +2203,16 @@ export interface IDetectedFullscreen {
 	guess: boolean;
 }
 
-export function detectFullscreen(targetWindow: Window): IDetectedFullscreen | null {
-
+export function detectFullscreen(
+	targetWindow: Window,
+): IDetectedFullscreen | null {
 	// Browser fullscreen: use DOM APIs to detect
 	// eslint-disable-next-line local/code-no-any-casts
-	if (targetWindow.document.fullscreenElement || (<any>targetWindow.document).webkitFullscreenElement || (<any>targetWindow.document).webkitIsFullScreen) {
+	if (
+		targetWindow.document.fullscreenElement ||
+		(<any>targetWindow.document).webkitFullscreenElement ||
+		(<any>targetWindow.document).webkitIsFullScreen
+	) {
 		return { mode: DetectedFullscreenMode.DOCUMENT, guess: false };
 	}
 
@@ -1783,7 +2230,10 @@ export function detectFullscreen(targetWindow: Window): IDetectedFullscreen | nu
 
 	if (platform.isMacintosh || platform.isLinux) {
 		// macOS and Linux do not properly report `innerHeight`, only Windows does
-		if (targetWindow.outerHeight === targetWindow.screen.height && targetWindow.outerWidth === targetWindow.screen.width) {
+		if (
+			targetWindow.outerHeight === targetWindow.screen.height &&
+			targetWindow.outerWidth === targetWindow.screen.width
+		) {
 			// if the height of the browser matches the screen height, we can
 			// only guess that we are in fullscreen. It is also possible that
 			// the user has turned off taskbars in the OS and the browser is
@@ -1796,7 +2246,7 @@ export function detectFullscreen(targetWindow: Window): IDetectedFullscreen | nu
 	return null;
 }
 
-type ModifierKey = 'alt' | 'ctrl' | 'shift' | 'meta';
+type ModifierKey = "alt" | "ctrl" | "shift" | "meta";
 
 export interface IModifierKeyStatus {
 	altKey: boolean;
@@ -1809,7 +2259,6 @@ export interface IModifierKeyStatus {
 }
 
 export class ModifierKeyEmitter extends event.Emitter<IModifierKeyStatus> {
-
 	private readonly _subscriptions = new DisposableStore();
 	private _keyStatus: IModifierKeyStatus;
 	private static instance: ModifierKeyEmitter | undefined;
@@ -1821,99 +2270,148 @@ export class ModifierKeyEmitter extends event.Emitter<IModifierKeyStatus> {
 			altKey: false,
 			shiftKey: false,
 			ctrlKey: false,
-			metaKey: false
+			metaKey: false,
 		};
 
-		this._subscriptions.add(event.Event.runAndSubscribe(onDidRegisterWindow, ({ window, disposables }) => this.registerListeners(window, disposables), { window: mainWindow, disposables: this._subscriptions }));
+		this._subscriptions.add(
+			event.Event.runAndSubscribe(
+				onDidRegisterWindow,
+				({ window, disposables }) =>
+					this.registerListeners(window, disposables),
+				{ window: mainWindow, disposables: this._subscriptions },
+			),
+		);
 	}
 
-	private registerListeners(window: Window, disposables: DisposableStore): void {
-		disposables.add(addDisposableListener(window, 'keydown', e => {
-			if (e.defaultPrevented) {
-				return;
-			}
+	private registerListeners(
+		window: Window,
+		disposables: DisposableStore,
+	): void {
+		disposables.add(
+			addDisposableListener(
+				window,
+				"keydown",
+				(e) => {
+					if (e.defaultPrevented) {
+						return;
+					}
 
-			const event = new StandardKeyboardEvent(e);
-			// If Alt-key keydown event is repeated, ignore it #112347
-			// Only known to be necessary for Alt-Key at the moment #115810
-			if (event.keyCode === KeyCode.Alt && e.repeat) {
-				return;
-			}
+					const event = new StandardKeyboardEvent(e);
+					// If Alt-key keydown event is repeated, ignore it #112347
+					// Only known to be necessary for Alt-Key at the moment #115810
+					if (event.keyCode === KeyCode.Alt && e.repeat) {
+						return;
+					}
 
-			if (e.altKey && !this._keyStatus.altKey) {
-				this._keyStatus.lastKeyPressed = 'alt';
-			} else if (e.ctrlKey && !this._keyStatus.ctrlKey) {
-				this._keyStatus.lastKeyPressed = 'ctrl';
-			} else if (e.metaKey && !this._keyStatus.metaKey) {
-				this._keyStatus.lastKeyPressed = 'meta';
-			} else if (e.shiftKey && !this._keyStatus.shiftKey) {
-				this._keyStatus.lastKeyPressed = 'shift';
-			} else if (event.keyCode !== KeyCode.Alt) {
-				this._keyStatus.lastKeyPressed = undefined;
-			} else {
-				return;
-			}
+					if (e.altKey && !this._keyStatus.altKey) {
+						this._keyStatus.lastKeyPressed = "alt";
+					} else if (e.ctrlKey && !this._keyStatus.ctrlKey) {
+						this._keyStatus.lastKeyPressed = "ctrl";
+					} else if (e.metaKey && !this._keyStatus.metaKey) {
+						this._keyStatus.lastKeyPressed = "meta";
+					} else if (e.shiftKey && !this._keyStatus.shiftKey) {
+						this._keyStatus.lastKeyPressed = "shift";
+					} else if (event.keyCode !== KeyCode.Alt) {
+						this._keyStatus.lastKeyPressed = undefined;
+					} else {
+						return;
+					}
 
-			this._keyStatus.altKey = e.altKey;
-			this._keyStatus.ctrlKey = e.ctrlKey;
-			this._keyStatus.metaKey = e.metaKey;
-			this._keyStatus.shiftKey = e.shiftKey;
+					this._keyStatus.altKey = e.altKey;
+					this._keyStatus.ctrlKey = e.ctrlKey;
+					this._keyStatus.metaKey = e.metaKey;
+					this._keyStatus.shiftKey = e.shiftKey;
 
-			if (this._keyStatus.lastKeyPressed) {
-				this._keyStatus.event = e;
-				this.fire(this._keyStatus);
-			}
-		}, true));
+					if (this._keyStatus.lastKeyPressed) {
+						this._keyStatus.event = e;
+						this.fire(this._keyStatus);
+					}
+				},
+				true,
+			),
+		);
 
-		disposables.add(addDisposableListener(window, 'keyup', e => {
-			if (e.defaultPrevented) {
-				return;
-			}
+		disposables.add(
+			addDisposableListener(
+				window,
+				"keyup",
+				(e) => {
+					if (e.defaultPrevented) {
+						return;
+					}
 
-			if (!e.altKey && this._keyStatus.altKey) {
-				this._keyStatus.lastKeyReleased = 'alt';
-			} else if (!e.ctrlKey && this._keyStatus.ctrlKey) {
-				this._keyStatus.lastKeyReleased = 'ctrl';
-			} else if (!e.metaKey && this._keyStatus.metaKey) {
-				this._keyStatus.lastKeyReleased = 'meta';
-			} else if (!e.shiftKey && this._keyStatus.shiftKey) {
-				this._keyStatus.lastKeyReleased = 'shift';
-			} else {
-				this._keyStatus.lastKeyReleased = undefined;
-			}
+					if (!e.altKey && this._keyStatus.altKey) {
+						this._keyStatus.lastKeyReleased = "alt";
+					} else if (!e.ctrlKey && this._keyStatus.ctrlKey) {
+						this._keyStatus.lastKeyReleased = "ctrl";
+					} else if (!e.metaKey && this._keyStatus.metaKey) {
+						this._keyStatus.lastKeyReleased = "meta";
+					} else if (!e.shiftKey && this._keyStatus.shiftKey) {
+						this._keyStatus.lastKeyReleased = "shift";
+					} else {
+						this._keyStatus.lastKeyReleased = undefined;
+					}
 
-			if (this._keyStatus.lastKeyPressed !== this._keyStatus.lastKeyReleased) {
-				this._keyStatus.lastKeyPressed = undefined;
-			}
+					if (
+						this._keyStatus.lastKeyPressed !== this._keyStatus.lastKeyReleased
+					) {
+						this._keyStatus.lastKeyPressed = undefined;
+					}
 
-			this._keyStatus.altKey = e.altKey;
-			this._keyStatus.ctrlKey = e.ctrlKey;
-			this._keyStatus.metaKey = e.metaKey;
-			this._keyStatus.shiftKey = e.shiftKey;
+					this._keyStatus.altKey = e.altKey;
+					this._keyStatus.ctrlKey = e.ctrlKey;
+					this._keyStatus.metaKey = e.metaKey;
+					this._keyStatus.shiftKey = e.shiftKey;
 
-			if (this._keyStatus.lastKeyReleased) {
-				this._keyStatus.event = e;
-				this.fire(this._keyStatus);
-			}
-		}, true));
+					if (this._keyStatus.lastKeyReleased) {
+						this._keyStatus.event = e;
+						this.fire(this._keyStatus);
+					}
+				},
+				true,
+			),
+		);
 
-		disposables.add(addDisposableListener(window.document.body, 'mousedown', () => {
-			this._keyStatus.lastKeyPressed = undefined;
-		}, true));
+		disposables.add(
+			addDisposableListener(
+				window.document.body,
+				"mousedown",
+				() => {
+					this._keyStatus.lastKeyPressed = undefined;
+				},
+				true,
+			),
+		);
 
-		disposables.add(addDisposableListener(window.document.body, 'mouseup', () => {
-			this._keyStatus.lastKeyPressed = undefined;
-		}, true));
+		disposables.add(
+			addDisposableListener(
+				window.document.body,
+				"mouseup",
+				() => {
+					this._keyStatus.lastKeyPressed = undefined;
+				},
+				true,
+			),
+		);
 
-		disposables.add(addDisposableListener(window.document.body, 'mousemove', e => {
-			if (e.buttons) {
-				this._keyStatus.lastKeyPressed = undefined;
-			}
-		}, true));
+		disposables.add(
+			addDisposableListener(
+				window.document.body,
+				"mousemove",
+				(e) => {
+					if (e.buttons) {
+						this._keyStatus.lastKeyPressed = undefined;
+					}
+				},
+				true,
+			),
+		);
 
-		disposables.add(addDisposableListener(window, 'blur', () => {
-			this.resetKeyStatus();
-		}));
+		disposables.add(
+			addDisposableListener(window, "blur", () => {
+				this.resetKeyStatus();
+			}),
+		);
 	}
 
 	get keyStatus(): IModifierKeyStatus {
@@ -1937,7 +2435,7 @@ export class ModifierKeyEmitter extends event.Emitter<IModifierKeyStatus> {
 			altKey: false,
 			shiftKey: false,
 			ctrlKey: false,
-			metaKey: false
+			metaKey: false,
 		};
 	}
 
@@ -1963,7 +2461,9 @@ export class ModifierKeyEmitter extends event.Emitter<IModifierKeyStatus> {
 }
 
 export function getCookieValue(name: string): string | undefined {
-	const match = document.cookie.match('(^|[^;]+)\\s*' + name + '\\s*=\\s*([^;]+)'); // See https://stackoverflow.com/a/25490531
+	const match = document.cookie.match(
+		"(^|[^;]+)\\s*" + name + "\\s*=\\s*([^;]+)",
+	); // See https://stackoverflow.com/a/25490531
 
 	return match ? match.pop() : undefined;
 }
@@ -1979,7 +2479,6 @@ export interface IDragAndDropObserverCallbacks {
 }
 
 export class DragAndDropObserver extends Disposable {
-
 	// A helper to fix issues with repeated DRAG_ENTER / DRAG_LEAVE
 	// calls see https://github.com/microsoft/vscode/issues/14470
 	// when the element has child elements where the events are fired
@@ -1989,7 +2488,10 @@ export class DragAndDropObserver extends Disposable {
 	// Allows to measure the duration of the drag operation.
 	private dragStartTime = 0;
 
-	constructor(private readonly element: HTMLElement, private readonly callbacks: IDragAndDropObserverCallbacks) {
+	constructor(
+		private readonly element: HTMLElement,
+		private readonly callbacks: IDragAndDropObserverCallbacks,
+	) {
 		super();
 
 		this.registerListeners();
@@ -1997,53 +2499,87 @@ export class DragAndDropObserver extends Disposable {
 
 	private registerListeners(): void {
 		if (this.callbacks.onDragStart) {
-			this._register(addDisposableListener(this.element, EventType.DRAG_START, (e: DragEvent) => {
-				this.callbacks.onDragStart?.(e);
-			}));
+			this._register(
+				addDisposableListener(
+					this.element,
+					EventType.DRAG_START,
+					(e: DragEvent) => {
+						this.callbacks.onDragStart?.(e);
+					},
+				),
+			);
 		}
 
 		if (this.callbacks.onDrag) {
-			this._register(addDisposableListener(this.element, EventType.DRAG, (e: DragEvent) => {
-				this.callbacks.onDrag?.(e);
-			}));
+			this._register(
+				addDisposableListener(this.element, EventType.DRAG, (e: DragEvent) => {
+					this.callbacks.onDrag?.(e);
+				}),
+			);
 		}
 
-		this._register(addDisposableListener(this.element, EventType.DRAG_ENTER, (e: DragEvent) => {
-			this.counter++;
-			this.dragStartTime = e.timeStamp;
+		this._register(
+			addDisposableListener(
+				this.element,
+				EventType.DRAG_ENTER,
+				(e: DragEvent) => {
+					this.counter++;
+					this.dragStartTime = e.timeStamp;
 
-			this.callbacks.onDragEnter?.(e);
-		}));
+					this.callbacks.onDragEnter?.(e);
+				},
+			),
+		);
 
-		this._register(addDisposableListener(this.element, EventType.DRAG_OVER, (e: DragEvent) => {
-			e.preventDefault(); // needed so that the drop event fires (https://stackoverflow.com/questions/21339924/drop-event-not-firing-in-chrome)
+		this._register(
+			addDisposableListener(
+				this.element,
+				EventType.DRAG_OVER,
+				(e: DragEvent) => {
+					e.preventDefault(); // needed so that the drop event fires (https://stackoverflow.com/questions/21339924/drop-event-not-firing-in-chrome)
 
-			this.callbacks.onDragOver?.(e, e.timeStamp - this.dragStartTime);
-		}));
+					this.callbacks.onDragOver?.(e, e.timeStamp - this.dragStartTime);
+				},
+			),
+		);
 
-		this._register(addDisposableListener(this.element, EventType.DRAG_LEAVE, (e: DragEvent) => {
-			this.counter--;
+		this._register(
+			addDisposableListener(
+				this.element,
+				EventType.DRAG_LEAVE,
+				(e: DragEvent) => {
+					this.counter--;
 
-			if (this.counter === 0) {
+					if (this.counter === 0) {
+						this.dragStartTime = 0;
+
+						this.callbacks.onDragLeave?.(e);
+					}
+				},
+			),
+		);
+
+		this._register(
+			addDisposableListener(
+				this.element,
+				EventType.DRAG_END,
+				(e: DragEvent) => {
+					this.counter = 0;
+					this.dragStartTime = 0;
+
+					this.callbacks.onDragEnd?.(e);
+				},
+			),
+		);
+
+		this._register(
+			addDisposableListener(this.element, EventType.DROP, (e: DragEvent) => {
+				this.counter = 0;
 				this.dragStartTime = 0;
 
-				this.callbacks.onDragLeave?.(e);
-			}
-		}));
-
-		this._register(addDisposableListener(this.element, EventType.DRAG_END, (e: DragEvent) => {
-			this.counter = 0;
-			this.dragStartTime = 0;
-
-			this.callbacks.onDragEnd?.(e);
-		}));
-
-		this._register(addDisposableListener(this.element, EventType.DROP, (e: DragEvent) => {
-			this.counter = 0;
-			this.dragStartTime = 0;
-
-			this.callbacks.onDrop?.(e);
-		}));
+				this.callbacks.onDrop?.(e);
+			}),
+		);
 	}
 }
 
@@ -2080,7 +2616,6 @@ export class DragAndDropObserver extends Disposable {
  * seam that defaults to `targetWindow.ResizeObserver`.
  */
 export class DisposableResizeObserver extends Disposable {
-
 	private readonly observer: ResizeObserver;
 	readonly name: string;
 
@@ -2145,8 +2680,10 @@ let _lastInvokedDisposableResizeObserver: DisposableResizeObserver | undefined;
  * stackless callstack with the offending observer's `name`. Returns
  * `undefined` for unrelated messages or when no observer has fired yet.
  */
-export function getRecentDisposableResizeObserverAttributionForLoopError(message: string | undefined | null): string | undefined {
-	if (typeof message !== 'string' || !message.includes('ResizeObserver loop')) {
+export function getRecentDisposableResizeObserverAttributionForLoopError(
+	message: string | undefined | null,
+): string | undefined {
+	if (typeof message !== "string" || !message.includes("ResizeObserver loop")) {
 		return undefined;
 	}
 	const observer = _lastInvokedDisposableResizeObserver;
@@ -2156,36 +2693,50 @@ export function getRecentDisposableResizeObserverAttributionForLoopError(message
 	return `[DisposableResizeObserver(${observer.name})] ${message}`;
 }
 
-type HTMLElementAttributeKeys<T> = Partial<{ [K in keyof T]: T[K] extends Function ? never : T[K] extends object ? HTMLElementAttributeKeys<T[K]> : T[K] }>;
+type HTMLElementAttributeKeys<T> = Partial<{
+	[K in keyof T]: T[K] extends Function
+		? never
+		: T[K] extends object
+			? HTMLElementAttributeKeys<T[K]>
+			: T[K];
+}>;
 type ElementAttributes<T> = HTMLElementAttributeKeys<T> & Record<string, any>;
 type RemoveHTMLElement<T> = T extends HTMLElement ? never : T;
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
-type ArrayToObj<T extends readonly any[]> = UnionToIntersection<RemoveHTMLElement<T[number]>>;
-type HHTMLElementTagNameMap = HTMLElementTagNameMap & { '': HTMLDivElement };
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+	k: infer I,
+) => void
+	? I
+	: never;
+type ArrayToObj<T extends readonly any[]> = UnionToIntersection<
+	RemoveHTMLElement<T[number]>
+>;
+type HHTMLElementTagNameMap = HTMLElementTagNameMap & { "": HTMLDivElement };
 
 type TagToElement<T> = T extends `${infer TStart}#${string}`
 	? TStart extends keyof HHTMLElementTagNameMap
-	? HHTMLElementTagNameMap[TStart]
-	: HTMLElement
+		? HHTMLElementTagNameMap[TStart]
+		: HTMLElement
 	: T extends `${infer TStart}.${string}`
-	? TStart extends keyof HHTMLElementTagNameMap
-	? HHTMLElementTagNameMap[TStart]
-	: HTMLElement
-	: T extends keyof HTMLElementTagNameMap
-	? HTMLElementTagNameMap[T]
-	: HTMLElement;
+		? TStart extends keyof HHTMLElementTagNameMap
+			? HHTMLElementTagNameMap[TStart]
+			: HTMLElement
+		: T extends keyof HTMLElementTagNameMap
+			? HTMLElementTagNameMap[T]
+			: HTMLElement;
 
 type TagToElementAndId<TTag> = TTag extends `${infer TTag}@${infer TId}`
 	? { element: TagToElement<TTag>; id: TId }
-	: { element: TagToElement<TTag>; id: 'root' };
+	: { element: TagToElement<TTag>; id: "root" };
 
-type TagToRecord<TTag> = TagToElementAndId<TTag> extends { element: infer TElement; id: infer TId }
-	? Record<(TId extends string ? TId : never) | 'root', TElement>
-	: never;
+type TagToRecord<TTag> =
+	TagToElementAndId<TTag> extends { element: infer TElement; id: infer TId }
+		? Record<(TId extends string ? TId : never) | "root", TElement>
+		: never;
 
 type Child = HTMLElement | string | Record<string, HTMLElement>;
 
-const H_REGEX = /(?<tag>[\w\-]+)?(?:#(?<id>[\w\-]+))?(?<class>(?:\.(?:[\w\-]+))*)(?:@(?<name>(?:[\w\_])+))?/;
+const H_REGEX =
+	/(?<tag>[\w\-]+)?(?:#(?<id>[\w\-]+))?(?<class>(?:\.(?:[\w\-]+))*)(?:@(?<name>(?:[\w\_])+))?/;
 
 /**
  * A helper function to create nested dom nodes.
@@ -2201,24 +2752,43 @@ const H_REGEX = /(?<tag>[\w\-]+)?(?:#(?<id>[\w\-]+))?(?<class>(?:\.(?:[\w\-]+))*
  * ]);
  * const editor = createEditor(elements.editor);
  * ```
-*/
-export function h<TTag extends string>
-	(tag: TTag):
-	TagToRecord<TTag> extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
+ */
+export function h<TTag extends string>(
+	tag: TTag,
+): TagToRecord<TTag> extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
 
-export function h<TTag extends string, T extends Child[]>
-	(tag: TTag, children: [...T]):
-	(ArrayToObj<T> & TagToRecord<TTag>) extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
+export function h<TTag extends string, T extends Child[]>(
+	tag: TTag,
+	children: [...T],
+): ArrayToObj<T> & TagToRecord<TTag> extends infer Y
+	? { [TKey in keyof Y]: Y[TKey] }
+	: never;
 
-export function h<TTag extends string>
-	(tag: TTag, attributes: Partial<ElementAttributes<TagToElement<TTag>>>):
-	TagToRecord<TTag> extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
+export function h<TTag extends string>(
+	tag: TTag,
+	attributes: Partial<ElementAttributes<TagToElement<TTag>>>,
+): TagToRecord<TTag> extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
 
-export function h<TTag extends string, T extends Child[]>
-	(tag: TTag, attributes: Partial<ElementAttributes<TagToElement<TTag>>>, children: [...T]):
-	(ArrayToObj<T> & TagToRecord<TTag>) extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
+export function h<TTag extends string, T extends Child[]>(
+	tag: TTag,
+	attributes: Partial<ElementAttributes<TagToElement<TTag>>>,
+	children: [...T],
+): ArrayToObj<T> & TagToRecord<TTag> extends infer Y
+	? { [TKey in keyof Y]: Y[TKey] }
+	: never;
 
-export function h(tag: string, ...args: [] | [attributes: { $: string } & Partial<ElementAttributes<HTMLElement>> | Record<string, any>, children?: any[]] | [children: any[]]): Record<string, HTMLElement> {
+export function h(
+	tag: string,
+	...args:
+		| []
+		| [
+				attributes:
+					| ({ $: string } & Partial<ElementAttributes<HTMLElement>>)
+					| Record<string, any>,
+				children?: any[],
+		  ]
+		| [children: any[]]
+): Record<string, HTMLElement> {
 	let attributes: { $?: string } & Partial<ElementAttributes<HTMLElement>>;
 	let children: (Record<string, HTMLElement> | HTMLElement)[] | undefined;
 
@@ -2227,55 +2797,55 @@ export function h(tag: string, ...args: [] | [attributes: { $: string } & Partia
 		children = args[0];
 	} else {
 		// eslint-disable-next-line local/code-no-any-casts
-		attributes = args[0] as any || {};
+		attributes = (args[0] as any) || {};
 		children = args[1];
 	}
 
 	const match = H_REGEX.exec(tag);
 
 	if (!match || !match.groups) {
-		throw new Error('Bad use of h');
+		throw new Error("Bad use of h");
 	}
 
-	const tagName = match.groups['tag'] || 'div';
+	const tagName = match.groups["tag"] || "div";
 	const el = document.createElement(tagName);
 
-	if (match.groups['id']) {
-		el.id = match.groups['id'];
+	if (match.groups["id"]) {
+		el.id = match.groups["id"];
 	}
 
 	const classNames = [];
-	if (match.groups['class']) {
-		for (const className of match.groups['class'].split('.')) {
-			if (className !== '') {
+	if (match.groups["class"]) {
+		for (const className of match.groups["class"].split(".")) {
+			if (className !== "") {
 				classNames.push(className);
 			}
 		}
 	}
 	if (attributes.className !== undefined) {
-		for (const className of attributes.className.split('.')) {
-			if (className !== '') {
+		for (const className of attributes.className.split(".")) {
+			if (className !== "") {
 				classNames.push(className);
 			}
 		}
 	}
 	if (classNames.length > 0) {
-		el.className = classNames.join(' ');
+		el.className = classNames.join(" ");
 	}
 
 	const result: Record<string, HTMLElement> = {};
 
-	if (match.groups['name']) {
-		result[match.groups['name']] = el;
+	if (match.groups["name"]) {
+		result[match.groups["name"]] = el;
 	}
 
 	if (children) {
 		for (const c of children) {
 			if (isHTMLElement(c)) {
 				el.appendChild(c);
-			} else if (typeof c === 'string') {
+			} else if (typeof c === "string") {
 				el.append(c);
-			} else if ('root' in c) {
+			} else if ("root" in c) {
 				Object.assign(result, c);
 				el.appendChild(c.root);
 			}
@@ -2283,45 +2853,64 @@ export function h(tag: string, ...args: [] | [attributes: { $: string } & Partia
 	}
 
 	for (const [key, value] of Object.entries(attributes)) {
-		if (key === 'className') {
+		if (key === "className") {
 			continue;
-		} else if (key === 'style') {
+		} else if (key === "style") {
 			for (const [cssKey, cssValue] of Object.entries(value)) {
 				el.style.setProperty(
 					camelCaseToHyphenCase(cssKey),
-					typeof cssValue === 'number' ? cssValue + 'px' : '' + cssValue
+					typeof cssValue === "number" ? cssValue + "px" : "" + cssValue,
 				);
 			}
-		} else if (key === 'tabIndex') {
+		} else if (key === "tabIndex") {
 			el.tabIndex = value;
 		} else {
 			el.setAttribute(camelCaseToHyphenCase(key), value.toString());
 		}
 	}
 
-	result['root'] = el;
+	result["root"] = el;
 
 	return result;
 }
 
 /** @deprecated This is a duplication of the h function. Needs cleanup. */
-export function svgElem<TTag extends string>
-	(tag: TTag):
-	TagToRecord<TTag> extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
+export function svgElem<TTag extends string>(
+	tag: TTag,
+): TagToRecord<TTag> extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
 /** @deprecated This is a duplication of the h function. Needs cleanup. */
-export function svgElem<TTag extends string, T extends Child[]>
-	(tag: TTag, children: [...T]):
-	(ArrayToObj<T> & TagToRecord<TTag>) extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
+export function svgElem<TTag extends string, T extends Child[]>(
+	tag: TTag,
+	children: [...T],
+): ArrayToObj<T> & TagToRecord<TTag> extends infer Y
+	? { [TKey in keyof Y]: Y[TKey] }
+	: never;
 /** @deprecated This is a duplication of the h function. Needs cleanup. */
-export function svgElem<TTag extends string>
-	(tag: TTag, attributes: Partial<ElementAttributes<TagToElement<TTag>>>):
-	TagToRecord<TTag> extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
+export function svgElem<TTag extends string>(
+	tag: TTag,
+	attributes: Partial<ElementAttributes<TagToElement<TTag>>>,
+): TagToRecord<TTag> extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
 /** @deprecated This is a duplication of the h function. Needs cleanup. */
-export function svgElem<TTag extends string, T extends Child[]>
-	(tag: TTag, attributes: Partial<ElementAttributes<TagToElement<TTag>>>, children: [...T]):
-	(ArrayToObj<T> & TagToRecord<TTag>) extends infer Y ? { [TKey in keyof Y]: Y[TKey] } : never;
+export function svgElem<TTag extends string, T extends Child[]>(
+	tag: TTag,
+	attributes: Partial<ElementAttributes<TagToElement<TTag>>>,
+	children: [...T],
+): ArrayToObj<T> & TagToRecord<TTag> extends infer Y
+	? { [TKey in keyof Y]: Y[TKey] }
+	: never;
 /** @deprecated This is a duplication of the h function. Needs cleanup. */
-export function svgElem(tag: string, ...args: [] | [attributes: { $: string } & Partial<ElementAttributes<HTMLElement>> | Record<string, any>, children?: any[]] | [children: any[]]): Record<string, HTMLElement> {
+export function svgElem(
+	tag: string,
+	...args:
+		| []
+		| [
+				attributes:
+					| ({ $: string } & Partial<ElementAttributes<HTMLElement>>)
+					| Record<string, any>,
+				children?: any[],
+		  ]
+		| [children: any[]]
+): Record<string, HTMLElement> {
 	let attributes: { $?: string } & Partial<ElementAttributes<HTMLElement>>;
 	let children: (Record<string, HTMLElement> | HTMLElement)[] | undefined;
 
@@ -2330,56 +2919,59 @@ export function svgElem(tag: string, ...args: [] | [attributes: { $: string } & 
 		children = args[0];
 	} else {
 		// eslint-disable-next-line local/code-no-any-casts
-		attributes = args[0] as any || {};
+		attributes = (args[0] as any) || {};
 		children = args[1];
 	}
 
 	const match = H_REGEX.exec(tag);
 
 	if (!match || !match.groups) {
-		throw new Error('Bad use of h');
+		throw new Error("Bad use of h");
 	}
 
-	const tagName = match.groups['tag'] || 'div';
+	const tagName = match.groups["tag"] || "div";
 	// eslint-disable-next-line local/code-no-any-casts
-	const el = document.createElementNS('http://www.w3.org/2000/svg', tagName) as any as HTMLElement;
+	const el = document.createElementNS(
+		"http://www.w3.org/2000/svg",
+		tagName,
+	) as any as HTMLElement;
 
-	if (match.groups['id']) {
-		el.id = match.groups['id'];
+	if (match.groups["id"]) {
+		el.id = match.groups["id"];
 	}
 
 	const classNames = [];
-	if (match.groups['class']) {
-		for (const className of match.groups['class'].split('.')) {
-			if (className !== '') {
+	if (match.groups["class"]) {
+		for (const className of match.groups["class"].split(".")) {
+			if (className !== "") {
 				classNames.push(className);
 			}
 		}
 	}
 	if (attributes.className !== undefined) {
-		for (const className of attributes.className.split('.')) {
-			if (className !== '') {
+		for (const className of attributes.className.split(".")) {
+			if (className !== "") {
 				classNames.push(className);
 			}
 		}
 	}
 	if (classNames.length > 0) {
-		el.className = classNames.join(' ');
+		el.className = classNames.join(" ");
 	}
 
 	const result: Record<string, HTMLElement> = {};
 
-	if (match.groups['name']) {
-		result[match.groups['name']] = el;
+	if (match.groups["name"]) {
+		result[match.groups["name"]] = el;
 	}
 
 	if (children) {
 		for (const c of children) {
 			if (isHTMLElement(c)) {
 				el.appendChild(c);
-			} else if (typeof c === 'string') {
+			} else if (typeof c === "string") {
 				el.append(c);
-			} else if ('root' in c) {
+			} else if ("root" in c) {
 				Object.assign(result, c);
 				el.appendChild(c.root);
 			}
@@ -2387,32 +2979,36 @@ export function svgElem(tag: string, ...args: [] | [attributes: { $: string } & 
 	}
 
 	for (const [key, value] of Object.entries(attributes)) {
-		if (key === 'className') {
+		if (key === "className") {
 			continue;
-		} else if (key === 'style') {
+		} else if (key === "style") {
 			for (const [cssKey, cssValue] of Object.entries(value)) {
 				el.style.setProperty(
 					camelCaseToHyphenCase(cssKey),
-					typeof cssValue === 'number' ? cssValue + 'px' : '' + cssValue
+					typeof cssValue === "number" ? cssValue + "px" : "" + cssValue,
 				);
 			}
-		} else if (key === 'tabIndex') {
+		} else if (key === "tabIndex") {
 			el.tabIndex = value;
 		} else {
 			el.setAttribute(camelCaseToHyphenCase(key), value.toString());
 		}
 	}
 
-	result['root'] = el;
+	result["root"] = el;
 
 	return result;
 }
 
 function camelCaseToHyphenCase(str: string) {
-	return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+	return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
-export function copyAttributes(from: Element, to: Element, filter?: string[]): void {
+export function copyAttributes(
+	from: Element,
+	to: Element,
+	filter?: string[],
+): void {
 	for (const { name, value } of from.attributes) {
 		if (!filter || filter.includes(name)) {
 			to.setAttribute(name, value);
@@ -2429,24 +3025,37 @@ function copyAttribute(from: Element, to: Element, name: string): void {
 	}
 }
 
-export function trackAttributes(from: Element, to: Element, filter?: string[]): IDisposable {
+export function trackAttributes(
+	from: Element,
+	to: Element,
+	filter?: string[],
+): IDisposable {
 	copyAttributes(from, to, filter);
 
 	const disposables = new DisposableStore();
 
-	disposables.add(sharedMutationObserver.observe(from, disposables, { attributes: true, attributeFilter: filter })(mutations => {
-		for (const mutation of mutations) {
-			if (mutation.type === 'attributes' && mutation.attributeName) {
-				copyAttribute(from, to, mutation.attributeName);
+	disposables.add(
+		sharedMutationObserver.observe(from, disposables, {
+			attributes: true,
+			attributeFilter: filter,
+		})((mutations) => {
+			for (const mutation of mutations) {
+				if (mutation.type === "attributes" && mutation.attributeName) {
+					copyAttribute(from, to, mutation.attributeName);
+				}
 			}
-		}
-	}));
+		}),
+	);
 
 	return disposables;
 }
 
 export function isEditableElement(element: Element): boolean {
-	return element.tagName.toLowerCase() === 'input' || element.tagName.toLowerCase() === 'textarea' || isHTMLElement(element) && !!element.editContext;
+	return (
+		element.tagName.toLowerCase() === "input" ||
+		element.tagName.toLowerCase() === "textarea" ||
+		(isHTMLElement(element) && !!element.editContext)
+	);
 }
 
 /**
@@ -2460,7 +3069,7 @@ export class SafeTriangle {
 	constructor(
 		private readonly originX: number,
 		private readonly originY: number,
-		target: HTMLElement
+		target: HTMLElement,
 	) {
 		const { top, left, right, bottom } = target.getBoundingClientRect();
 		const t = this.points;
@@ -2484,7 +3093,18 @@ export class SafeTriangle {
 		for (let i = 0; i < 4; i++) {
 			const p1 = 2 * i;
 			const p2 = 2 * ((i + 1) % 4);
-			if (isPointWithinTriangle(x, y, originX, originY, points[p1], points[p1 + 1], points[p2], points[p2 + 1])) {
+			if (
+				isPointWithinTriangle(
+					x,
+					y,
+					originX,
+					originY,
+					points[p1],
+					points[p1 + 1],
+					points[p2],
+					points[p2 + 1],
+				)
+			) {
 				return true;
 			}
 		}
@@ -2493,9 +3113,10 @@ export class SafeTriangle {
 	}
 }
 
-
 export namespace n {
-	function nodeNs<TMap extends Record<string, any>>(elementNs: string | undefined = undefined): DomTagCreateFn<TMap> {
+	function nodeNs<TMap extends Record<string, any>>(
+		elementNs: string | undefined = undefined,
+	): DomTagCreateFn<TMap> {
 		return (tag, attributes, children) => {
 			const className = attributes.class;
 			delete attributes.class;
@@ -2505,11 +3126,22 @@ export namespace n {
 			delete attributes.obsRef;
 
 			// eslint-disable-next-line local/code-no-any-casts
-			return new ObserverNodeWithElement(tag as any, ref, obsRef, elementNs, className, attributes, children);
+			return new ObserverNodeWithElement(
+				tag as any,
+				ref,
+				obsRef,
+				elementNs,
+				className,
+				attributes,
+				children,
+			);
 		};
 	}
 
-	function node<TMap extends Record<string, any>, TKey extends keyof TMap>(tag: TKey, elementNs: string | undefined = undefined): DomCreateFn<TMap[TKey], TMap[TKey]> {
+	function node<TMap extends Record<string, any>, TKey extends keyof TMap>(
+		tag: TKey,
+		elementNs: string | undefined = undefined,
+	): DomCreateFn<TMap[TKey], TMap[TKey]> {
 		// eslint-disable-next-line local/code-no-any-casts
 		const f = nodeNs(elementNs) as any;
 		return (attributes, children) => {
@@ -2517,26 +3149,34 @@ export namespace n {
 		};
 	}
 
-	export const div: DomCreateFn<HTMLDivElement, HTMLDivElement> = node<HTMLElementTagNameMap, 'div'>('div');
+	export const div: DomCreateFn<HTMLDivElement, HTMLDivElement> = node<
+		HTMLElementTagNameMap,
+		"div"
+	>("div");
 
 	export const elem = nodeNs<HTMLElementTagNameMap>(undefined);
 
-	export const svg: DomCreateFn<SVGElementTagNameMap2['svg'], SVGElement> = node<SVGElementTagNameMap2, 'svg'>('svg', 'http://www.w3.org/2000/svg');
+	export const svg: DomCreateFn<SVGElementTagNameMap2["svg"], SVGElement> =
+		node<SVGElementTagNameMap2, "svg">("svg", "http://www.w3.org/2000/svg");
 
-	export const svgElem = nodeNs<SVGElementTagNameMap2>('http://www.w3.org/2000/svg');
+	export const svgElem = nodeNs<SVGElementTagNameMap2>(
+		"http://www.w3.org/2000/svg",
+	);
 
 	export function ref<T = HTMLOrSVGElement>(): IRefWithVal<T> {
 		let value: T | undefined = undefined;
 		const result: IRef<T> = function (val: T) {
 			value = val;
 		};
-		Object.defineProperty(result, 'element', {
+		Object.defineProperty(result, "element", {
 			get() {
 				if (!value) {
-					throw new BugIndicatingError('Make sure the ref is set before accessing the element. Maybe wrong initialization order?');
+					throw new BugIndicatingError(
+						"Make sure the ref is set before accessing the element. Maybe wrong initialization order?",
+					);
 				}
 				return value;
-			}
+			},
 		});
 		// eslint-disable-next-line local/code-no-any-casts
 		return result as any;
@@ -2576,17 +3216,29 @@ type SVGElementTagNameMap2 = {
 	};
 	defs: SVGElement;
 };
-type DomTagCreateFn<TMap extends Record<string, any>> = <TTag extends keyof TMap>(
+type DomTagCreateFn<TMap extends Record<string, any>> = <
+	TTag extends keyof TMap,
+>(
 	tag: TTag,
-	attributes: ElementAttributeKeys<TMap[TTag]> & { class?: ValueOrList<string | false | undefined>; ref?: IRef<TMap[TTag]>; obsRef?: IRef<ObserverNodeWithElement<TMap[TTag]> | null> },
-	children?: ChildNode
+	attributes: ElementAttributeKeys<TMap[TTag]> & {
+		class?: ValueOrList<string | false | undefined>;
+		ref?: IRef<TMap[TTag]>;
+		obsRef?: IRef<ObserverNodeWithElement<TMap[TTag]> | null>;
+	},
+	children?: ChildNode,
 ) => ObserverNode<TMap[TTag]>;
 type DomCreateFn<TAttributes, TResult extends HTMLOrSVGElement> = (
-	attributes: ElementAttributeKeys<TAttributes> & { class?: ValueOrList<string | false | undefined>; ref?: IRef<TResult>; obsRef?: IRef<ObserverNodeWithElement<TResult> | null> },
-	children?: ChildNode
+	attributes: ElementAttributeKeys<TAttributes> & {
+		class?: ValueOrList<string | false | undefined>;
+		ref?: IRef<TResult>;
+		obsRef?: IRef<ObserverNodeWithElement<TResult> | null>;
+	},
+	children?: ChildNode,
 ) => ObserverNode<TResult>;
 
-export type ChildNode = ValueOrList2<HTMLOrSVGElement | string | ObserverNode | undefined>;
+export type ChildNode = ValueOrList2<
+	HTMLOrSVGElement | string | ObserverNode | undefined
+>;
 
 export type IRef<T> = (value: T) => void;
 
@@ -2594,8 +3246,10 @@ export interface IRefWithVal<T> extends IRef<T> {
 	readonly element: T;
 }
 
-export abstract class ObserverNode<T extends HTMLOrSVGElement = HTMLOrSVGElement> {
-	private readonly _deriveds: (IObservable<any>)[] = [];
+export abstract class ObserverNode<
+	T extends HTMLOrSVGElement = HTMLOrSVGElement,
+> {
+	private readonly _deriveds: IObservable<any>[] = [];
 
 	protected readonly _element: T;
 
@@ -2606,64 +3260,85 @@ export abstract class ObserverNode<T extends HTMLOrSVGElement = HTMLOrSVGElement
 		ns: string | undefined,
 		className: ValueOrList<string | undefined | false> | undefined,
 		attributes: ElementAttributeKeys<T>,
-		children: ChildNode
+		children: ChildNode,
 	) {
-		this._element = (ns ? document.createElementNS(ns, tag) : document.createElement(tag)) as unknown as T;
+		this._element = (ns
+			? document.createElementNS(ns, tag)
+			: document.createElement(tag)) as unknown as T;
 		if (ref) {
 			ref(this._element);
 		}
 		if (obsRef) {
-			this._deriveds.push(derived((_reader) => {
-				obsRef(this as unknown as ObserverNodeWithElement<T>);
-				_reader.store.add({
-					dispose: () => {
-						obsRef(null);
-					}
-				});
-			}));
+			this._deriveds.push(
+				derived((_reader) => {
+					obsRef(this as unknown as ObserverNodeWithElement<T>);
+					_reader.store.add({
+						dispose: () => {
+							obsRef(null);
+						},
+					});
+				}),
+			);
 		}
 
 		if (className) {
 			if (hasObservable(className)) {
-				this._deriveds.push(derived(this, reader => {
-					/** @description set.class */
-					setClassName(this._element, getClassName(className, reader));
-				}));
+				this._deriveds.push(
+					derived(this, (reader) => {
+						/** @description set.class */
+						setClassName(this._element, getClassName(className, reader));
+					}),
+				);
 			} else {
 				setClassName(this._element, getClassName(className, undefined));
 			}
 		}
 
 		for (const [key, value] of Object.entries(attributes)) {
-			if (key === 'style') {
+			if (key === "style") {
 				for (const [cssKey, cssValue] of Object.entries(value)) {
 					const key = camelCaseToHyphenCase(cssKey);
 					if (isObservable(cssValue)) {
-						this._deriveds.push(derivedOpts({ owner: this, debugName: () => `set.style.${key}` }, reader => {
-							this._element.style.setProperty(key, convertCssValue(cssValue.read(reader)));
-						}));
+						this._deriveds.push(
+							derivedOpts(
+								{ owner: this, debugName: () => `set.style.${key}` },
+								(reader) => {
+									this._element.style.setProperty(
+										key,
+										convertCssValue(cssValue.read(reader)),
+									);
+								},
+							),
+						);
 					} else {
 						this._element.style.setProperty(key, convertCssValue(cssValue));
 					}
 				}
-			} else if (key === 'tabIndex') {
+			} else if (key === "tabIndex") {
 				if (isObservable(value)) {
-					this._deriveds.push(derived(this, reader => {
-						/** @description set.tabIndex */
-						// eslint-disable-next-line local/code-no-any-casts
-						this._element.tabIndex = value.read(reader) as any;
-					}));
+					this._deriveds.push(
+						derived(this, (reader) => {
+							/** @description set.tabIndex */
+							// eslint-disable-next-line local/code-no-any-casts
+							this._element.tabIndex = value.read(reader) as any;
+						}),
+					);
 				} else {
 					this._element.tabIndex = value;
 				}
-			} else if (key.startsWith('on')) {
+			} else if (key.startsWith("on")) {
 				// eslint-disable-next-line local/code-no-any-casts
 				(this._element as any)[key] = value;
 			} else {
 				if (isObservable(value)) {
-					this._deriveds.push(derivedOpts({ owner: this, debugName: () => `set.${key}` }, reader => {
-						setOrRemoveAttribute(this._element, key, value.read(reader));
-					}));
+					this._deriveds.push(
+						derivedOpts(
+							{ owner: this, debugName: () => `set.${key}` },
+							(reader) => {
+								setOrRemoveAttribute(this._element, key, value.read(reader));
+							},
+						),
+					);
 				} else {
 					setOrRemoveAttribute(this._element, key, value);
 				}
@@ -2671,12 +3346,17 @@ export abstract class ObserverNode<T extends HTMLOrSVGElement = HTMLOrSVGElement
 		}
 
 		if (children) {
-			function getChildren(reader: IReader | undefined, children: ValueOrList2<HTMLOrSVGElement | string | ObserverNode | undefined>): (HTMLOrSVGElement | string)[] {
+			function getChildren(
+				reader: IReader | undefined,
+				children: ValueOrList2<
+					HTMLOrSVGElement | string | ObserverNode | undefined
+				>,
+			): (HTMLOrSVGElement | string)[] {
 				if (isObservable(children)) {
 					return getChildren(reader, children.read(reader));
 				}
 				if (Array.isArray(children)) {
-					return children.flatMap(c => getChildren(reader, c));
+					return children.flatMap((c) => getChildren(reader, c));
 				}
 				if (children instanceof ObserverNode) {
 					if (reader) {
@@ -2690,7 +3370,7 @@ export abstract class ObserverNode<T extends HTMLOrSVGElement = HTMLOrSVGElement
 				return [];
 			}
 
-			const d = derived(this, reader => {
+			const d = derived(this, (reader) => {
 				/** @description set.children */
 				this._element.replaceChildren(...getChildren(reader, children));
 			});
@@ -2708,7 +3388,7 @@ export abstract class ObserverNode<T extends HTMLOrSVGElement = HTMLOrSVGElement
 	}
 
 	keepUpdated(store: DisposableStore): ObserverNodeWithElement<T> {
-		derived(reader => {
+		derived((reader) => {
 			/** update */
 			this.readEffect(reader);
 		}).recomputeInitiallyAndOnChange(store);
@@ -2717,7 +3397,7 @@ export abstract class ObserverNode<T extends HTMLOrSVGElement = HTMLOrSVGElement
 
 	/**
 	 * Creates a live element that will keep the element updated as long as the returned object is not disposed.
-	*/
+	 */
 	toDisposableLiveElement() {
 		const store = new DisposableStore();
 		this.keepUpdated(store);
@@ -2728,29 +3408,37 @@ export abstract class ObserverNode<T extends HTMLOrSVGElement = HTMLOrSVGElement
 
 	get isHovered(): IObservable<boolean> {
 		if (!this._isHovered) {
-			const hovered = observableValue<boolean>('hovered', false);
-			this._element.addEventListener('mouseenter', (_e) => hovered.set(true, undefined));
-			this._element.addEventListener('mouseleave', (_e) => hovered.set(false, undefined));
+			const hovered = observableValue<boolean>("hovered", false);
+			this._element.addEventListener("mouseenter", (_e) =>
+				hovered.set(true, undefined),
+			);
+			this._element.addEventListener("mouseleave", (_e) =>
+				hovered.set(false, undefined),
+			);
 			this._isHovered = hovered;
 		}
 		return this._isHovered;
 	}
 
-	private _didMouseMoveDuringHover: IObservable<boolean> | undefined = undefined;
+	private _didMouseMoveDuringHover: IObservable<boolean> | undefined =
+		undefined;
 
 	get didMouseMoveDuringHover(): IObservable<boolean> {
 		if (!this._didMouseMoveDuringHover) {
 			let _hovering = false;
-			const hovered = observableValue<boolean>('didMouseMoveDuringHover', false);
-			this._element.addEventListener('mouseenter', (_e) => {
+			const hovered = observableValue<boolean>(
+				"didMouseMoveDuringHover",
+				false,
+			);
+			this._element.addEventListener("mouseenter", (_e) => {
 				_hovering = true;
 			});
-			this._element.addEventListener('mousemove', (_e) => {
+			this._element.addEventListener("mousemove", (_e) => {
 				if (_hovering) {
 					hovered.set(true, undefined);
 				}
 			});
-			this._element.addEventListener('mouseleave', (_e) => {
+			this._element.addEventListener("mouseleave", (_e) => {
 				_hovering = false;
 				hovered.set(false, undefined);
 			});
@@ -2762,13 +3450,17 @@ export abstract class ObserverNode<T extends HTMLOrSVGElement = HTMLOrSVGElement
 
 function setClassName(domNode: HTMLOrSVGElement, className: string) {
 	if (isSVGElement(domNode)) {
-		domNode.setAttribute('class', className);
+		domNode.setAttribute("class", className);
 	} else {
 		domNode.className = className;
 	}
 }
 
-function resolve<T>(value: ValueOrList<T>, reader: IReader | undefined, cb: (val: T) => void): void {
+function resolve<T>(
+	value: ValueOrList<T>,
+	reader: IReader | undefined,
+	cb: (val: T) => void,
+): void {
 	if (isObservable(value)) {
 		cb(value.read(reader));
 		return;
@@ -2782,14 +3474,17 @@ function resolve<T>(value: ValueOrList<T>, reader: IReader | undefined, cb: (val
 	// eslint-disable-next-line local/code-no-any-casts
 	cb(value as any);
 }
-function getClassName(className: ValueOrList<string | undefined | false> | undefined, reader: IReader | undefined): string {
-	let result = '';
-	resolve(className, reader, val => {
+function getClassName(
+	className: ValueOrList<string | undefined | false> | undefined,
+	reader: IReader | undefined,
+): string {
+	let result = "";
+	resolve(className, reader, (val) => {
 		if (val) {
 			if (result.length === 0) {
 				result = val;
 			} else {
-				result += ' ' + val;
+				result += " " + val;
 			}
 		}
 	});
@@ -2800,22 +3495,24 @@ function hasObservable(value: ValueOrList<unknown>): boolean {
 		return true;
 	}
 	if (Array.isArray(value)) {
-		return value.some(v => hasObservable(v));
+		return value.some((v) => hasObservable(v));
 	}
 	return false;
 }
 function convertCssValue(value: any): string {
-	if (typeof value === 'number') {
-		return value + 'px';
+	if (typeof value === "number") {
+		return value + "px";
 	}
 	return value;
 }
-function childrenIsObservable(children: ValueOrList2<HTMLOrSVGElement | string | ObserverNode | undefined>): boolean {
+function childrenIsObservable(
+	children: ValueOrList2<HTMLOrSVGElement | string | ObserverNode | undefined>,
+): boolean {
 	if (isObservable(children)) {
 		return true;
 	}
 	if (Array.isArray(children)) {
-		return children.some(c => childrenIsObservable(c));
+		return children.some((c) => childrenIsObservable(c));
 	}
 	return false;
 }
@@ -2823,20 +3520,26 @@ function childrenIsObservable(children: ValueOrList2<HTMLOrSVGElement | string |
 export class LiveElement<T extends HTMLOrSVGElement = HTMLElement> {
 	constructor(
 		public readonly element: T,
-		private readonly _disposable: IDisposable
-	) { }
+		private readonly _disposable: IDisposable,
+	) {}
 
 	dispose() {
 		this._disposable.dispose();
 	}
 }
 
-export class ObserverNodeWithElement<T extends HTMLOrSVGElement = HTMLOrSVGElement> extends ObserverNode<T> {
+export class ObserverNodeWithElement<
+	T extends HTMLOrSVGElement = HTMLOrSVGElement,
+> extends ObserverNode<T> {
 	public get element() {
 		return this._element;
 	}
 }
-function setOrRemoveAttribute(element: HTMLOrSVGElement, key: string, value: unknown) {
+function setOrRemoveAttribute(
+	element: HTMLOrSVGElement,
+	key: string,
+	value: unknown,
+) {
 	if (value === null || value === undefined) {
 		element.removeAttribute(camelCaseToHyphenCase(key));
 	} else {
@@ -2845,7 +3548,11 @@ function setOrRemoveAttribute(element: HTMLOrSVGElement, key: string, value: unk
 }
 
 type ElementAttributeKeys<T> = Partial<{
-	[K in keyof T]: T[K] extends Function ? never : T[K] extends object ? ElementAttributeKeys<T[K]> : Value<number | T[K] | undefined | null>;
+	[K in keyof T]: T[K] extends Function
+		? never
+		: T[K] extends object
+			? ElementAttributeKeys<T[K]>
+			: Value<number | T[K] | undefined | null>;
 }>;
 
 /**
@@ -2874,6 +3581,6 @@ export class ConnectionObserverElement extends HTMLElement {
 	}
 }
 
-if (!customElements.get('connection-observer')) {
-	customElements.define('connection-observer', ConnectionObserverElement);
+if (!customElements.get("connection-observer")) {
+	customElements.define("connection-observer", ConnectionObserverElement);
 }

@@ -9,9 +9,11 @@ import { IWorkspaceService } from '../../../../platform/workspace/common/workspa
 import { raceTimeout } from '../../../../util/vs/base/common/async';
 import { ResourceMap, ResourceSet } from '../../../../util/vs/base/common/map';
 import { ChatSessionStatus } from '../../../../vscodeTypes';
-import { FolderRepositoryMRUEntry, IChatFolderMruService } from '../../common/folderRepositoryManager';
+import {
+	FolderRepositoryMRUEntry,
+	IChatFolderMruService,
+} from '../../common/folderRepositoryManager';
 import { ICopilotCLISessionService } from '../../copilotcli/node/copilotcliSessionService';
-
 
 type Mutable<T> = {
 	-readonly [K in keyof T]: T[K];
@@ -22,19 +24,24 @@ export class CopilotCLIFolderMruService implements IChatFolderMruService {
 	private readonly removedFolders = new ResourceSet();
 	private cachedEntries: FolderRepositoryMRUEntry[] | undefined = undefined;
 	constructor(
-		@ICopilotCLISessionService private readonly sessionService: ICopilotCLISessionService,
+		@ICopilotCLISessionService
+		private readonly sessionService: ICopilotCLISessionService,
 		@IGitService private readonly gitService: IGitService,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-	) { }
+	) {}
 
-	async getRecentlyUsedFolders(token: CancellationToken): Promise<FolderRepositoryMRUEntry[]> {
+	async getRecentlyUsedFolders(
+		token: CancellationToken,
+	): Promise<FolderRepositoryMRUEntry[]> {
 		const cachedEntries = this.cachedEntries;
-		const entries = this.getRecentlyUsedFoldersImpl(token).then(entries => {
-			this.cachedEntries = entries;
-			return entries;
-		});
+		const entries = this.getRecentlyUsedFoldersImpl(token).then(
+			(entries) => {
+				this.cachedEntries = entries;
+				return entries;
+			},
+		);
 
-		return (cachedEntries ? cachedEntries : await entries).filter(e => {
+		return (cachedEntries ? cachedEntries : await entries).filter((e) => {
 			if (this.removedFolders.has(e.folder)) {
 				return false;
 			}
@@ -42,13 +49,18 @@ export class CopilotCLIFolderMruService implements IChatFolderMruService {
 		});
 	}
 
-	async getRecentlyUsedFoldersImpl(token: CancellationToken): Promise<FolderRepositoryMRUEntry[]> {
+	async getRecentlyUsedFoldersImpl(
+		token: CancellationToken,
+	): Promise<FolderRepositoryMRUEntry[]> {
 		const mruEntries = new ResourceMap<Mutable<FolderRepositoryMRUEntry>>();
 
 		// We're getting MRU, don't delay session retrieve by more than 5s
-		const sessions = await raceTimeout(this.sessionService.getAllSessions(token), 5_000);
+		const sessions = await raceTimeout(
+			this.sessionService.getAllSessions(token),
+			5_000,
+		);
 
-		for (const session of (sessions ?? [])) {
+		for (const session of sessions ?? []) {
 			if (!session.workingDirectory) {
 				continue;
 			}
@@ -56,7 +68,12 @@ export class CopilotCLIFolderMruService implements IChatFolderMruService {
 				continue;
 			}
 			const isActive = session.status === ChatSessionStatus.InProgress;
-			const lastAccessed = session.timing?.lastRequestEnded ?? session.timing?.endTime ?? session.timing?.lastRequestStarted ?? session.timing?.startTime ?? (isActive ? Date.now() : 0);
+			const lastAccessed =
+				session.timing?.lastRequestEnded ??
+				session.timing?.endTime ??
+				session.timing?.lastRequestStarted ??
+				session.timing?.startTime ??
+				(isActive ? Date.now() : 0);
 			mruEntries.set(session.workingDirectory, {
 				folder: session.workingDirectory,
 				repository: undefined,
@@ -71,7 +88,10 @@ export class CopilotCLIFolderMruService implements IChatFolderMruService {
 			}
 			const existingEntry = mruEntries.get(repo.rootUri);
 			if (existingEntry) {
-				existingEntry.lastAccessed = Math.max(existingEntry.lastAccessed, repo.lastAccessTime);
+				existingEntry.lastAccessed = Math.max(
+					existingEntry.lastAccessed,
+					repo.lastAccessTime,
+				);
 				existingEntry.repository = repo.rootUri;
 				continue;
 			}
@@ -95,8 +115,9 @@ export class CopilotCLIFolderMruService implements IChatFolderMruService {
 			});
 		}
 
-		return Array.from(mruEntries.values())
-			.sort((a, b) => b.lastAccessed - a.lastAccessed);
+		return Array.from(mruEntries.values()).sort(
+			(a, b) => b.lastAccessed - a.lastAccessed,
+		);
 	}
 
 	async deleteRecentlyUsedFolder(folder: Uri): Promise<void> {

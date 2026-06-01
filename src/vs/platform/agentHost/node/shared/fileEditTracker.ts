@@ -3,22 +3,35 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { decodeHex, encodeHex, VSBuffer } from '../../../../base/common/buffer.js';
-import { basename } from '../../../../base/common/path.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IFileService } from '../../../files/common/files.js';
-import { ILogService } from '../../../log/common/log.js';
-import { IDiffComputeService } from '../../common/diffComputeService.js';
-import { ISessionDatabase } from '../../common/sessionDataService.js';
-import { FileEditKind, ToolResultContentType, type ToolResultFileEditContent } from '../../common/state/sessionState.js';
+import {
+	decodeHex,
+	encodeHex,
+	VSBuffer,
+} from "../../../../base/common/buffer.js";
+import { basename } from "../../../../base/common/path.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IFileService } from "../../../files/common/files.js";
+import { ILogService } from "../../../log/common/log.js";
+import { IDiffComputeService } from "../../common/diffComputeService.js";
+import { ISessionDatabase } from "../../common/sessionDataService.js";
+import {
+	FileEditKind,
+	ToolResultContentType,
+	type ToolResultFileEditContent,
+} from "../../common/state/sessionState.js";
 
-const SESSION_DB_SCHEME = 'session-db';
+const SESSION_DB_SCHEME = "session-db";
 
 /**
  * Builds a `session-db:` URI that references a file-edit content blob
  * stored in the session database. Parsed by {@link parseSessionDbUri}.
  */
-export function buildSessionDbUri(sessionUri: string, toolCallId: string, filePath: string, part: 'before' | 'after'): string {
+export function buildSessionDbUri(
+	sessionUri: string,
+	toolCallId: string,
+	filePath: string,
+	part: "before" | "after",
+): string {
 	return URI.from({
 		scheme: SESSION_DB_SCHEME,
 		authority: encodeHex(VSBuffer.fromString(sessionUri)).toString(),
@@ -31,20 +44,22 @@ export interface ISessionDbUriFields {
 	sessionUri: string;
 	toolCallId: string;
 	filePath: string;
-	part: 'before' | 'after';
+	part: "before" | "after";
 }
 
 /**
  * Parses a `session-db:` URI produced by {@link buildSessionDbUri}.
  * Returns `undefined` if the URI is not a valid `session-db:` URI.
  */
-export function parseSessionDbUri(raw: string): ISessionDbUriFields | undefined {
+export function parseSessionDbUri(
+	raw: string,
+): ISessionDbUriFields | undefined {
 	const parsed = URI.parse(raw);
 	if (parsed.scheme !== SESSION_DB_SCHEME) {
 		return undefined;
 	}
-	const [, toolCallId, filePath, part] = parsed.path.split('/');
-	if (!toolCallId || !filePath || (part !== 'before' && part !== 'after')) {
+	const [, toolCallId, filePath, part] = parsed.path.split("/");
+	if (!toolCallId || !filePath || (part !== "before" && part !== "after")) {
 		return undefined;
 	}
 	try {
@@ -52,7 +67,7 @@ export function parseSessionDbUri(raw: string): ISessionDbUriFields | undefined 
 			sessionUri: decodeHex(parsed.authority).toString(),
 			toolCallId: decodeURIComponent(toolCallId),
 			filePath: decodeHex(filePath).toString(),
-			part
+			part,
 		};
 	} catch {
 		return undefined;
@@ -65,28 +80,38 @@ export function parseSessionDbUri(raw: string): ISessionDbUriFields | undefined 
  * session database.
  */
 export class FileEditTracker {
-
 	/**
 	 * Pending edits keyed by file path. Populated by {@link trackEditStart}
 	 * before the edit tool runs; popped by {@link completeEdit} when it
 	 * finishes.
 	 */
-	private readonly _pendingEdits = new Map<string, { beforeContent: VSBuffer; beforeExisted: boolean; snapshotDone: Promise<void> }>();
+	private readonly _pendingEdits = new Map<
+		string,
+		{
+			beforeContent: VSBuffer;
+			beforeExisted: boolean;
+			snapshotDone: Promise<void>;
+		}
+	>();
 
 	/**
 	 * Completed edits keyed by file path. Populated by {@link completeEdit};
 	 * drained by {@link takeCompletedEdit}, which persists the entry to
 	 * the database.
 	 */
-	private readonly _completedEdits = new Map<string, { beforeContent: VSBuffer; beforeExisted: boolean; afterContent: VSBuffer }>();
+	private readonly _completedEdits = new Map<
+		string,
+		{ beforeContent: VSBuffer; beforeExisted: boolean; afterContent: VSBuffer }
+	>();
 
 	constructor(
 		private readonly _sessionUri: string,
 		private readonly _db: ISessionDatabase,
 		@IFileService private readonly _fileService: IFileService,
 		@ILogService private readonly _logService: ILogService,
-		@IDiffComputeService private readonly _diffComputeService: IDiffComputeService,
-	) { }
+		@IDiffComputeService
+		private readonly _diffComputeService: IDiffComputeService,
+	) {}
 
 	/**
 	 * Call before an edit tool runs. Reads the file's current content
@@ -99,7 +124,7 @@ export class FileEditTracker {
 	async trackEditStart(filePath: string): Promise<void> {
 		const snapshotDone = this._readFileWithExistence(filePath);
 		const entry = {
-			beforeContent: VSBuffer.fromString(''),
+			beforeContent: VSBuffer.fromString(""),
 			beforeExisted: false,
 			snapshotDone: snapshotDone.then(({ content, existed }) => {
 				entry.beforeContent = content;
@@ -144,7 +169,11 @@ export class FileEditTracker {
 	 * @param toolCallId - The tool call that produced this edit.
 	 * @param filePath - Absolute path of the edited file.
 	 */
-	async takeCompletedEdit(turnId: string, toolCallId: string, filePath: string): Promise<ToolResultFileEditContent | undefined> {
+	async takeCompletedEdit(
+		turnId: string,
+		toolCallId: string,
+		filePath: string,
+	): Promise<ToolResultFileEditContent | undefined> {
 		const edit = this._completedEdits.get(filePath);
 		if (!edit) {
 			return undefined;
@@ -161,11 +190,17 @@ export class FileEditTracker {
 		let addedLines: number | undefined;
 		let removedLines: number | undefined;
 		try {
-			const counts = await this._diffComputeService.computeDiffCounts(beforeText, afterText);
+			const counts = await this._diffComputeService.computeDiffCounts(
+				beforeText,
+				afterText,
+			);
 			addedLines = counts.added;
 			removedLines = isCreate ? 0 : counts.removed;
 		} catch (err) {
-			this._logService.warn(`[FileEditTracker] Failed to compute diff counts: ${filePath}`, err);
+			this._logService.warn(
+				`[FileEditTracker] Failed to compute diff counts: ${filePath}`,
+				err,
+			);
 		}
 
 		try {
@@ -180,20 +215,40 @@ export class FileEditTracker {
 				removedLines,
 			});
 		} catch (err) {
-			this._logService.warn(`[FileEditTracker] Failed to persist file edit to database: ${filePath}`, err);
+			this._logService.warn(
+				`[FileEditTracker] Failed to persist file edit to database: ${filePath}`,
+				err,
+			);
 		}
 
 		return {
 			type: ToolResultContentType.FileEdit,
 			before: {
 				uri: URI.file(filePath).toString(),
-				content: { uri: buildSessionDbUri(this._sessionUri, toolCallId, filePath, 'before') },
+				content: {
+					uri: buildSessionDbUri(
+						this._sessionUri,
+						toolCallId,
+						filePath,
+						"before",
+					),
+				},
 			},
 			after: {
 				uri: URI.file(filePath).toString(),
-				content: { uri: buildSessionDbUri(this._sessionUri, toolCallId, filePath, 'after') },
+				content: {
+					uri: buildSessionDbUri(
+						this._sessionUri,
+						toolCallId,
+						filePath,
+						"after",
+					),
+				},
 			},
-			diff: addedLines !== undefined ? { added: addedLines, removed: removedLines } : undefined,
+			diff:
+				addedLines !== undefined
+					? { added: addedLines, removed: removedLines }
+					: undefined,
 		};
 	}
 
@@ -202,18 +257,26 @@ export class FileEditTracker {
 			const content = await this._fileService.readFile(URI.file(filePath));
 			return content.value;
 		} catch (err) {
-			this._logService.trace(`[FileEditTracker] Could not read file for snapshot: ${filePath}`, err);
-			return VSBuffer.fromString('');
+			this._logService.trace(
+				`[FileEditTracker] Could not read file for snapshot: ${filePath}`,
+				err,
+			);
+			return VSBuffer.fromString("");
 		}
 	}
 
-	private async _readFileWithExistence(filePath: string): Promise<{ content: VSBuffer; existed: boolean }> {
+	private async _readFileWithExistence(
+		filePath: string,
+	): Promise<{ content: VSBuffer; existed: boolean }> {
 		try {
 			const content = await this._fileService.readFile(URI.file(filePath));
 			return { content: content.value, existed: true };
 		} catch (err) {
-			this._logService.trace(`[FileEditTracker] Could not read file for snapshot: ${filePath}`, err);
-			return { content: VSBuffer.fromString(''), existed: false };
+			this._logService.trace(
+				`[FileEditTracker] Could not read file for snapshot: ${filePath}`,
+				err,
+			);
+			return { content: VSBuffer.fromString(""), existed: false };
 		}
 	}
 }

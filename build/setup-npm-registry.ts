@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from "fs";
+import path from "path";
 
 /**
  * Recursively find all package-lock.json files in a directory
@@ -18,7 +18,7 @@ async function* getPackageLockFiles(dir: string): AsyncGenerator<string> {
 
 		if (stat.isDirectory()) {
 			yield* getPackageLockFiles(fullPath);
-		} else if (file === 'package-lock.json') {
+		} else if (file === "package-lock.json") {
 			yield fullPath;
 		}
 	}
@@ -28,7 +28,7 @@ async function* getPackageLockFiles(dir: string): AsyncGenerator<string> {
  * Replace the registry URL in a package-lock.json file
  */
 async function setup(url: string, file: string): Promise<void> {
-	let contents = await fs.readFile(file, 'utf8');
+	let contents = await fs.readFile(file, "utf8");
 	contents = contents.replace(/https:\/\/registry\.[^.]+\.org\//g, url);
 	await fs.writeFile(file, contents);
 }

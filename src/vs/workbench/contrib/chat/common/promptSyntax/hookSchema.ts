@@ -3,17 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IJSONSchema } from '../../../../../base/common/jsonSchema.js';
-import * as nls from '../../../../../nls.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { joinPath } from '../../../../../base/common/resources.js';
-import { isAbsolute } from '../../../../../base/common/path.js';
-import { untildify } from '../../../../../base/common/labels.js';
-import { OperatingSystem } from '../../../../../base/common/platform.js';
-import { IParsedHookCommand } from '../../../../../platform/agentPlugins/common/pluginParsers.js';
-import { HookType, HOOKS_BY_TARGET, HOOK_METADATA } from './hookTypes.js';
-import { Target } from './promptTypes.js';
-import { IValue, IMapValue } from './promptFileParser.js';
+import { IJSONSchema } from "../../../../../base/common/jsonSchema.js";
+import * as nls from "../../../../../nls.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { joinPath } from "../../../../../base/common/resources.js";
+import { isAbsolute } from "../../../../../base/common/path.js";
+import { untildify } from "../../../../../base/common/labels.js";
+import { OperatingSystem } from "../../../../../base/common/platform.js";
+import { IParsedHookCommand } from "../../../../../platform/agentPlugins/common/pluginParsers.js";
+import { HookType, HOOKS_BY_TARGET, HOOK_METADATA } from "./hookTypes.js";
+import { Target } from "./promptTypes.js";
+import { IValue, IMapValue } from "./promptFileParser.js";
 
 /**
  * A single hook command configuration.
@@ -21,13 +21,13 @@ import { IValue, IMapValue } from './promptFileParser.js';
  * metadata used for UI display and field highlighting.
  */
 export interface IHookCommand extends IParsedHookCommand {
-	readonly type: 'command';
+	readonly type: "command";
 	/** Original JSON field name that provided the windows command. */
-	readonly windowsSource?: 'windows' | 'powershell';
+	readonly windowsSource?: "windows" | "powershell";
 	/** Original JSON field name that provided the linux command. */
-	readonly linuxSource?: 'linux' | 'bash';
+	readonly linuxSource?: "linux" | "bash";
 	/** Original JSON field name that provided the osx command. */
-	readonly osxSource?: 'osx' | 'bash';
+	readonly osxSource?: "osx" | "bash";
 }
 
 /**
@@ -42,17 +42,24 @@ export type ChatRequestHooks = {
  * Merges two sets of hooks by concatenating the command arrays for each hook type.
  * Additional hooks are appended after the base hooks.
  */
-export function mergeHooks(base: ChatRequestHooks | undefined, additional: ChatRequestHooks): ChatRequestHooks {
+export function mergeHooks(
+	base: ChatRequestHooks | undefined,
+	additional: ChatRequestHooks,
+): ChatRequestHooks {
 	if (!base) {
 		return additional;
 	}
 
-	const result: Partial<Record<HookType, readonly IParsedHookCommand[]>> = { ...base };
+	const result: Partial<Record<HookType, readonly IParsedHookCommand[]>> = {
+		...base,
+	};
 	for (const hookType of Object.values(HookType)) {
 		const baseArr = base[hookType];
 		const additionalArr = additional[hookType];
 		if (additionalArr && additionalArr.length > 0) {
-			result[hookType] = baseArr ? [...baseArr, ...additionalArr] : additionalArr;
+			result[hookType] = baseArr
+				? [...baseArr, ...additionalArr]
+				: additionalArr;
 		}
 	}
 	return result as ChatRequestHooks;
@@ -62,17 +69,44 @@ export function mergeHooks(base: ChatRequestHooks | undefined, additional: ChatR
  * Descriptions for hook command fields, used by both the JSON schema and the hover provider.
  */
 export const HOOK_COMMAND_FIELD_DESCRIPTIONS: Record<string, string> = {
-	type: nls.localize('hook.type', 'Must be "command".'),
-	command: nls.localize('hook.command', 'The command to execute. This is the default cross-platform command.'),
-	windows: nls.localize('hook.windows', 'Windows-specific command. If specified and running on Windows, this overrides the "command" field.'),
-	linux: nls.localize('hook.linux', 'Linux-specific command. If specified and running on Linux, this overrides the "command" field.'),
-	osx: nls.localize('hook.osx', 'macOS-specific command. If specified and running on macOS, this overrides the "command" field.'),
-	bash: nls.localize('hook.bash', 'Bash command for Linux and macOS.'),
-	powershell: nls.localize('hook.powershell', 'PowerShell command for Windows.'),
-	cwd: nls.localize('hook.cwd', 'Working directory for the script (relative to repository root).'),
-	env: nls.localize('hook.env', 'Additional environment variables that are merged with the existing environment.'),
-	timeout: nls.localize('hook.timeout', 'Maximum execution time in seconds (default: 30).'),
-	timeoutSec: nls.localize('hook.timeoutSec', 'Maximum execution time in seconds (default: 10).'),
+	type: nls.localize("hook.type", 'Must be "command".'),
+	command: nls.localize(
+		"hook.command",
+		"The command to execute. This is the default cross-platform command.",
+	),
+	windows: nls.localize(
+		"hook.windows",
+		'Windows-specific command. If specified and running on Windows, this overrides the "command" field.',
+	),
+	linux: nls.localize(
+		"hook.linux",
+		'Linux-specific command. If specified and running on Linux, this overrides the "command" field.',
+	),
+	osx: nls.localize(
+		"hook.osx",
+		'macOS-specific command. If specified and running on macOS, this overrides the "command" field.',
+	),
+	bash: nls.localize("hook.bash", "Bash command for Linux and macOS."),
+	powershell: nls.localize(
+		"hook.powershell",
+		"PowerShell command for Windows.",
+	),
+	cwd: nls.localize(
+		"hook.cwd",
+		"Working directory for the script (relative to repository root).",
+	),
+	env: nls.localize(
+		"hook.env",
+		"Additional environment variables that are merged with the existing environment.",
+	),
+	timeout: nls.localize(
+		"hook.timeout",
+		"Maximum execution time in seconds (default: 30).",
+	),
+	timeoutSec: nls.localize(
+		"hook.timeoutSec",
+		"Maximum execution time in seconds (default: 10).",
+	),
 };
 
 /**
@@ -80,204 +114,226 @@ export const HOOK_COMMAND_FIELD_DESCRIPTIONS: Record<string, string> = {
  * Hooks enable executing custom shell commands at strategic points in an agent's workflow.
  */
 const vscodeHookCommandSchema: IJSONSchema = {
-	type: 'object',
+	type: "object",
 	additionalProperties: true,
-	required: ['type'],
+	required: ["type"],
 	anyOf: [
-		{ required: ['command'] },
-		{ required: ['windows'] },
-		{ required: ['linux'] },
-		{ required: ['osx'] },
-		{ required: ['bash'] },
-		{ required: ['powershell'] }
+		{ required: ["command"] },
+		{ required: ["windows"] },
+		{ required: ["linux"] },
+		{ required: ["osx"] },
+		{ required: ["bash"] },
+		{ required: ["powershell"] },
 	],
-	errorMessage: nls.localize('hook.commandRequired', 'At least one of "command", "windows", "linux", or "osx" must be specified.'),
+	errorMessage: nls.localize(
+		"hook.commandRequired",
+		'At least one of "command", "windows", "linux", or "osx" must be specified.',
+	),
 	properties: {
 		type: {
-			type: 'string',
-			enum: ['command'],
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.type
+			type: "string",
+			enum: ["command"],
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.type,
 		},
 		command: {
-			type: 'string',
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.command
+			type: "string",
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.command,
 		},
 		windows: {
-			type: 'string',
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.windows
+			type: "string",
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.windows,
 		},
 		linux: {
-			type: 'string',
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.linux
+			type: "string",
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.linux,
 		},
 		osx: {
-			type: 'string',
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.osx
+			type: "string",
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.osx,
 		},
 		cwd: {
-			type: 'string',
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.cwd
+			type: "string",
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.cwd,
 		},
 		env: {
-			type: 'object',
-			additionalProperties: { type: 'string' },
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.env
+			type: "object",
+			additionalProperties: { type: "string" },
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.env,
 		},
 		timeout: {
-			type: 'number',
+			type: "number",
 			default: 30,
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.timeout
-		}
-	}
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.timeout,
+		},
+	},
 };
 
 const hookArraySchema: IJSONSchema = {
-	type: 'array',
-	items: vscodeHookCommandSchema
+	type: "array",
+	items: vscodeHookCommandSchema,
 };
 
 /**
  * Builds JSON Schema hook properties for a given target by looking up
  * the hook keys from HOOKS_BY_TARGET and descriptions from HOOK_METADATA.
  */
-function buildHookProperties(target: Target, arraySchema: IJSONSchema): Record<string, IJSONSchema> {
+function buildHookProperties(
+	target: Target,
+	arraySchema: IJSONSchema,
+): Record<string, IJSONSchema> {
 	return Object.fromEntries(
 		Object.entries(HOOKS_BY_TARGET[target]).map(([key, hookType]) => [
 			key,
-			{ ...arraySchema, description: HOOK_METADATA[hookType]?.description }
-		])
+			{ ...arraySchema, description: HOOK_METADATA[hookType]?.description },
+		]),
 	);
 }
 
 /**
  * Hook properties for the VS Code format.
  */
-const vscodeHookProperties: Record<string, IJSONSchema> = buildHookProperties(Target.VSCode, hookArraySchema);
+const vscodeHookProperties: Record<string, IJSONSchema> = buildHookProperties(
+	Target.VSCode,
+	hookArraySchema,
+);
 
 /**
  * Hook command schema for the Copilot CLI format.
  * Adds `bash`, `powershell`, and `timeoutSec` fields alongside the standard ones.
  */
 const copilotCliHookCommandSchema: IJSONSchema = {
-	type: 'object',
+	type: "object",
 	additionalProperties: true,
-	required: ['type'],
-	anyOf: [
-		{ required: ['bash'] },
-		{ required: ['powershell'] }
-	],
-	errorMessage: nls.localize('hook.cliCommandRequired', 'At least one of "bash" or "powershell" must be specified.'),
+	required: ["type"],
+	anyOf: [{ required: ["bash"] }, { required: ["powershell"] }],
+	errorMessage: nls.localize(
+		"hook.cliCommandRequired",
+		'At least one of "bash" or "powershell" must be specified.',
+	),
 	properties: {
 		type: {
-			type: 'string',
-			enum: ['command'],
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.type
+			type: "string",
+			enum: ["command"],
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.type,
 		},
 		bash: {
-			type: 'string',
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.bash
+			type: "string",
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.bash,
 		},
 		powershell: {
-			type: 'string',
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.powershell
+			type: "string",
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.powershell,
 		},
 		cwd: {
-			type: 'string',
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.cwd
+			type: "string",
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.cwd,
 		},
 		env: {
-			type: 'object',
-			additionalProperties: { type: 'string' },
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.env
+			type: "object",
+			additionalProperties: { type: "string" },
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.env,
 		},
 		timeoutSec: {
-			type: 'number',
+			type: "number",
 			default: 10,
-			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.timeoutSec
-		}
-	}
+			description: HOOK_COMMAND_FIELD_DESCRIPTIONS.timeoutSec,
+		},
+	},
 };
 
 const copilotCliHookArraySchema: IJSONSchema = {
-	type: 'array',
-	items: copilotCliHookCommandSchema
+	type: "array",
+	items: copilotCliHookCommandSchema,
 };
 
 /**
  * Hook properties for the Copilot CLI format.
  */
-const copilotCliHookProperties: Record<string, IJSONSchema> = buildHookProperties(Target.GitHubCopilot, copilotCliHookArraySchema);
+const copilotCliHookProperties: Record<string, IJSONSchema> =
+	buildHookProperties(Target.GitHubCopilot, copilotCliHookArraySchema);
 
 export const hookFileSchema: IJSONSchema = {
-	$schema: 'http://json-schema.org/draft-07/schema#',
-	type: 'object',
-	description: nls.localize('hookFile.description', 'GitHub Copilot hook configuration file. Hooks enable executing custom shell commands at strategic points in an agent\'s workflow.'),
+	$schema: "http://json-schema.org/draft-07/schema#",
+	type: "object",
+	description: nls.localize(
+		"hookFile.description",
+		"GitHub Copilot hook configuration file. Hooks enable executing custom shell commands at strategic points in an agent's workflow.",
+	),
 	additionalProperties: true,
-	required: ['hooks'],
+	required: ["hooks"],
 	properties: {
 		hooks: {
-			type: 'object',
-			description: nls.localize('hookFile.hooks', 'Hook definitions organized by type.'),
+			type: "object",
+			description: nls.localize(
+				"hookFile.hooks",
+				"Hook definitions organized by type.",
+			),
 			additionalProperties: true,
-		}
+		},
 	},
 	// Conditionally apply PascalCase or camelCase hook properties based on
 	// whether the file uses the Copilot CLI format (detected by the "version" field).
 	if: {
-		required: ['version'],
+		required: ["version"],
 		properties: {
-			version: { type: 'number' }
-		}
+			version: { type: "number" },
+		},
 	},
 	then: {
 		// Copilot CLI format: camelCase hook names, bash/powershell/timeoutSec fields
 		properties: {
 			version: {
-				type: 'number',
-				description: nls.localize('hookFile.version', 'Hook configuration format version.'),
+				type: "number",
+				description: nls.localize(
+					"hookFile.version",
+					"Hook configuration format version.",
+				),
 			},
 			hooks: {
-				properties: copilotCliHookProperties
-			}
-		}
+				properties: copilotCliHookProperties,
+			},
+		},
 	},
 	else: {
 		// VS Code / PascalCase format
 		properties: {
 			hooks: {
-				properties: vscodeHookProperties
-			}
-		}
+				properties: vscodeHookProperties,
+			},
+		},
 	},
 	defaultSnippets: [
 		{
-			label: nls.localize('hookFile.snippet.basic', 'Basic hook configuration'),
-			description: nls.localize('hookFile.snippet.basic.description', 'A basic hook configuration with common hooks'),
+			label: nls.localize("hookFile.snippet.basic", "Basic hook configuration"),
+			description: nls.localize(
+				"hookFile.snippet.basic.description",
+				"A basic hook configuration with common hooks",
+			),
 			body: {
 				hooks: {
 					SessionStart: [
 						{
-							type: 'command',
+							type: "command",
 							command: '${1:echo "Session started" >> session.log}',
-						}
+						},
 					],
 					PreToolUse: [
 						{
-							type: 'command',
-							command: '${2:./scripts/validate.sh}',
-							timeout: 15
-						}
-					]
-				}
-			}
-		}
-	]
+							type: "command",
+							command: "${2:./scripts/validate.sh}",
+							timeout: 15,
+						},
+					],
+				},
+			},
+		},
+	],
 };
 
 /**
  * URI for the hook schema registration.
  */
-export const HOOK_SCHEMA_URI = 'vscode://schemas/hooks';
+export const HOOK_SCHEMA_URI = "vscode://schemas/hooks";
 
 /**
  * Normalizes a raw hook type identifier to the canonical HookType enum value.
@@ -298,30 +354,73 @@ export function toHookType(rawHookTypeId: string): HookType | undefined {
  * - powershell -> windows
  * This is an internal helper - use resolveHookCommand for the full resolution.
  */
-function normalizeHookCommand(raw: Record<string, unknown>): { command?: string; windows?: string; linux?: string; osx?: string; windowsSource?: 'windows' | 'powershell'; linuxSource?: 'linux' | 'bash'; osxSource?: 'osx' | 'bash'; cwd?: string; env?: Record<string, string>; timeout?: number } | undefined {
-	if (raw.type !== 'command') {
+function normalizeHookCommand(
+	raw: Record<string, unknown>,
+):
+	| {
+			command?: string;
+			windows?: string;
+			linux?: string;
+			osx?: string;
+			windowsSource?: "windows" | "powershell";
+			linuxSource?: "linux" | "bash";
+			osxSource?: "osx" | "bash";
+			cwd?: string;
+			env?: Record<string, string>;
+			timeout?: number;
+	  }
+	| undefined {
+	if (raw.type !== "command") {
 		return undefined;
 	}
 
-	const hasCommand = typeof raw.command === 'string' && raw.command.length > 0;
-	const hasBash = typeof raw.bash === 'string' && (raw.bash as string).length > 0;
-	const hasPowerShell = typeof raw.powershell === 'string' && (raw.powershell as string).length > 0;
+	const hasCommand = typeof raw.command === "string" && raw.command.length > 0;
+	const hasBash =
+		typeof raw.bash === "string" && (raw.bash as string).length > 0;
+	const hasPowerShell =
+		typeof raw.powershell === "string" && (raw.powershell as string).length > 0;
 
 	// Platform overrides can be strings directly
-	const hasWindows = typeof raw.windows === 'string' && (raw.windows as string).length > 0;
-	const hasLinux = typeof raw.linux === 'string' && (raw.linux as string).length > 0;
-	const hasOsx = typeof raw.osx === 'string' && (raw.osx as string).length > 0;
+	const hasWindows =
+		typeof raw.windows === "string" && (raw.windows as string).length > 0;
+	const hasLinux =
+		typeof raw.linux === "string" && (raw.linux as string).length > 0;
+	const hasOsx = typeof raw.osx === "string" && (raw.osx as string).length > 0;
 
 	// Map bash -> linux + osx (if not already specified)
 	// Map powershell -> windows (if not already specified)
-	const windows = hasWindows ? raw.windows as string : (hasPowerShell ? raw.powershell as string : undefined);
-	const linux = hasLinux ? raw.linux as string : (hasBash ? raw.bash as string : undefined);
-	const osx = hasOsx ? raw.osx as string : (hasBash ? raw.bash as string : undefined);
+	const windows = hasWindows
+		? (raw.windows as string)
+		: hasPowerShell
+			? (raw.powershell as string)
+			: undefined;
+	const linux = hasLinux
+		? (raw.linux as string)
+		: hasBash
+			? (raw.bash as string)
+			: undefined;
+	const osx = hasOsx
+		? (raw.osx as string)
+		: hasBash
+			? (raw.bash as string)
+			: undefined;
 
 	// Track source field names for editor focus (which JSON field to highlight)
-	const windowsSource: 'windows' | 'powershell' | undefined = hasWindows ? 'windows' : (hasPowerShell ? 'powershell' : undefined);
-	const linuxSource: 'linux' | 'bash' | undefined = hasLinux ? 'linux' : (hasBash ? 'bash' : undefined);
-	const osxSource: 'osx' | 'bash' | undefined = hasOsx ? 'osx' : (hasBash ? 'bash' : undefined);
+	const windowsSource: "windows" | "powershell" | undefined = hasWindows
+		? "windows"
+		: hasPowerShell
+			? "powershell"
+			: undefined;
+	const linuxSource: "linux" | "bash" | undefined = hasLinux
+		? "linux"
+		: hasBash
+			? "bash"
+			: undefined;
+	const osxSource: "osx" | "bash" | undefined = hasOsx
+		? "osx"
+		: hasBash
+			? "bash"
+			: undefined;
 
 	return {
 		...(hasCommand && { command: raw.command as string }),
@@ -331,10 +430,12 @@ function normalizeHookCommand(raw: Record<string, unknown>): { command?: string;
 		...(windowsSource && { windowsSource }),
 		...(linuxSource && { linuxSource }),
 		...(osxSource && { osxSource }),
-		...(typeof raw.cwd === 'string' && { cwd: raw.cwd }),
-		...(typeof raw.env === 'object' && raw.env !== null && { env: raw.env as Record<string, string> }),
-		...(typeof raw.timeout !== 'number' && typeof raw.timeoutSec === 'number' && { timeout: raw.timeoutSec }),
-		...(typeof raw.timeout === 'number' && { timeout: raw.timeout }),
+		...(typeof raw.cwd === "string" && { cwd: raw.cwd }),
+		...(typeof raw.env === "object" &&
+			raw.env !== null && { env: raw.env as Record<string, string> }),
+		...(typeof raw.timeout !== "number" &&
+			typeof raw.timeoutSec === "number" && { timeout: raw.timeoutSec }),
+		...(typeof raw.timeout === "number" && { timeout: raw.timeout }),
 	};
 }
 
@@ -343,13 +444,13 @@ function normalizeHookCommand(raw: Record<string, unknown>): { command?: string;
  */
 export function getPlatformLabel(os: OperatingSystem): string {
 	if (os === OperatingSystem.Windows) {
-		return 'Windows';
+		return "Windows";
 	} else if (os === OperatingSystem.Macintosh) {
-		return 'macOS';
+		return "macOS";
 	} else if (os === OperatingSystem.Linux) {
-		return 'Linux';
+		return "Linux";
 	}
-	return '';
+	return "";
 }
 
 /**
@@ -357,7 +458,10 @@ export function getPlatformLabel(os: OperatingSystem): string {
  * This applies OS-specific overrides (windows, linux, osx) to get the actual command that will be executed.
  * Similar to how launch.json handles platform-specific configurations in debugAdapter.ts.
  */
-export function resolveEffectiveCommand(hook: IParsedHookCommand, os: OperatingSystem): string | undefined {
+export function resolveEffectiveCommand(
+	hook: IParsedHookCommand,
+	os: OperatingSystem,
+): string | undefined {
 	// Select the platform-specific override based on the OS
 	if (os === OperatingSystem.Windows && hook.windows) {
 		return hook.windows;
@@ -374,7 +478,10 @@ export function resolveEffectiveCommand(hook: IParsedHookCommand, os: OperatingS
 /**
  * Checks if the hook is using a platform-specific command override.
  */
-export function isUsingPlatformOverride(hook: IParsedHookCommand, os: OperatingSystem): boolean {
+export function isUsingPlatformOverride(
+	hook: IParsedHookCommand,
+	os: OperatingSystem,
+): boolean {
 	if (os === OperatingSystem.Windows && hook.windows) {
 		return true;
 	} else if (os === OperatingSystem.Macintosh && hook.osx) {
@@ -391,13 +498,28 @@ export function isUsingPlatformOverride(hook: IParsedHookCommand, os: OperatingS
  * 'bash' if the Linux/macOS command came from a bash field,
  * or undefined for default shell handling.
  */
-export function getEffectiveCommandSource(hook: IHookCommand, os: OperatingSystem): 'powershell' | 'bash' | undefined {
-	if (os === OperatingSystem.Windows && hook.windows && hook.windowsSource === 'powershell') {
-		return 'powershell';
-	} else if (os === OperatingSystem.Macintosh && hook.osx && hook.osxSource === 'bash') {
-		return 'bash';
-	} else if (os === OperatingSystem.Linux && hook.linux && hook.linuxSource === 'bash') {
-		return 'bash';
+export function getEffectiveCommandSource(
+	hook: IHookCommand,
+	os: OperatingSystem,
+): "powershell" | "bash" | undefined {
+	if (
+		os === OperatingSystem.Windows &&
+		hook.windows &&
+		hook.windowsSource === "powershell"
+	) {
+		return "powershell";
+	} else if (
+		os === OperatingSystem.Macintosh &&
+		hook.osx &&
+		hook.osxSource === "bash"
+	) {
+		return "bash";
+	} else if (
+		os === OperatingSystem.Linux &&
+		hook.linux &&
+		hook.linuxSource === "bash"
+	) {
+		return "bash";
 	}
 	return undefined;
 }
@@ -407,16 +529,19 @@ export function getEffectiveCommandSource(hook: IHookCommand, os: OperatingSyste
  * Returns the actual field name from the JSON (e.g., 'bash' instead of 'osx' if bash was used).
  * This is used for editor focus to highlight the correct field.
  */
-export function getEffectiveCommandFieldKey(hook: IHookCommand | IParsedHookCommand, os: OperatingSystem): string {
+export function getEffectiveCommandFieldKey(
+	hook: IHookCommand | IParsedHookCommand,
+	os: OperatingSystem,
+): string {
 	const h = hook as Partial<IHookCommand>;
 	if (os === OperatingSystem.Windows && hook.windows) {
-		return h.windowsSource ?? 'windows';
+		return h.windowsSource ?? "windows";
 	} else if (os === OperatingSystem.Macintosh && hook.osx) {
-		return h.osxSource ?? 'osx';
+		return h.osxSource ?? "osx";
 	} else if (os === OperatingSystem.Linux && hook.linux) {
-		return h.linuxSource ?? 'linux';
+		return h.linuxSource ?? "linux";
 	}
-	return 'command';
+	return "command";
 }
 
 /**
@@ -424,10 +549,13 @@ export function getEffectiveCommandFieldKey(hook: IHookCommand | IParsedHookComm
  * Resolves OS-specific overrides to show the effective command for the given platform.
  * If using a platform-specific override, includes the platform as a prefix badge.
  */
-export function formatHookCommandLabel(hook: IParsedHookCommand, os: OperatingSystem): string {
+export function formatHookCommandLabel(
+	hook: IParsedHookCommand,
+	os: OperatingSystem,
+): string {
 	const command = resolveEffectiveCommand(hook, os);
 	if (!command) {
-		return '';
+		return "";
 	}
 	return command;
 }
@@ -439,7 +567,11 @@ export function formatHookCommandLabel(hook: IParsedHookCommand, os: OperatingSy
  * @param workspaceRootUri The workspace root URI to resolve relative cwd paths against
  * @param userHome The user's home directory path for tilde expansion
  */
-export function resolveHookCommand(raw: Record<string, unknown>, workspaceRootUri: URI | undefined, userHome: string): IHookCommand | undefined {
+export function resolveHookCommand(
+	raw: Record<string, unknown>,
+	workspaceRootUri: URI | undefined,
+	userHome: string,
+): IHookCommand | undefined {
 	const normalized = normalizeHookCommand(raw);
 	if (!normalized) {
 		return undefined;
@@ -461,12 +593,14 @@ export function resolveHookCommand(raw: Record<string, unknown>, workspaceRootUr
 	}
 
 	return {
-		type: 'command',
+		type: "command",
 		...(normalized.command && { command: normalized.command }),
 		...(normalized.windows && { windows: normalized.windows }),
 		...(normalized.linux && { linux: normalized.linux }),
 		...(normalized.osx && { osx: normalized.osx }),
-		...(normalized.windowsSource && { windowsSource: normalized.windowsSource }),
+		...(normalized.windowsSource && {
+			windowsSource: normalized.windowsSource,
+		}),
 		...(normalized.linuxSource && { linuxSource: normalized.linuxSource }),
 		...(normalized.osxSource && { osxSource: normalized.osxSource }),
 		...(cwdUri && { cwd: cwdUri }),
@@ -486,9 +620,9 @@ export function resolveHookCommand(raw: Record<string, unknown>, workspaceRootUr
 export function extractHookCommandsFromItem(
 	item: unknown,
 	workspaceRootUri: URI | undefined,
-	userHome: string
+	userHome: string,
 ): IHookCommand[] {
-	if (!item || typeof item !== 'object') {
+	if (!item || typeof item !== "object") {
 		return [];
 	}
 
@@ -499,11 +633,17 @@ export function extractHookCommandsFromItem(
 	const nestedHooks = itemObj.hooks;
 	if (nestedHooks !== undefined && Array.isArray(nestedHooks)) {
 		for (const nestedHook of nestedHooks) {
-			if (!nestedHook || typeof nestedHook !== 'object') {
+			if (!nestedHook || typeof nestedHook !== "object") {
 				continue;
 			}
-			const normalized = normalizeForResolve(nestedHook as Record<string, unknown>);
-			const resolved = resolveHookCommand(normalized, workspaceRootUri, userHome);
+			const normalized = normalizeForResolve(
+				nestedHook as Record<string, unknown>,
+			);
+			const resolved = resolveHookCommand(
+				normalized,
+				workspaceRootUri,
+				userHome,
+			);
 			if (resolved) {
 				commands.push(resolved);
 			}
@@ -525,10 +665,12 @@ export function extractHookCommandsFromItem(
  * Claude format allows omitting the 'type' field, treating it as 'command'.
  * This ensures compatibility when Claude-style hooks are pasted into Copilot format.
  */
-function normalizeForResolve(raw: Record<string, unknown>): Record<string, unknown> {
+function normalizeForResolve(
+	raw: Record<string, unknown>,
+): Record<string, unknown> {
 	// If type is missing or already 'command', ensure it's set to 'command'
-	if (raw.type === undefined || raw.type === 'command') {
-		return { ...raw, type: 'command' };
+	if (raw.type === undefined || raw.type === "command") {
+		return { ...raw, type: "command" };
 	}
 	return raw;
 }
@@ -539,11 +681,11 @@ function normalizeForResolve(raw: Record<string, unknown>): Record<string, unkno
  */
 function yamlValueToPlain(value: IValue): unknown {
 	switch (value.type) {
-		case 'scalar':
+		case "scalar":
 			return value.value;
-		case 'sequence':
+		case "sequence":
 			return value.items.map(yamlValueToPlain);
-		case 'map': {
+		case "map": {
 			const obj: Record<string, unknown> = {};
 			for (const prop of value.properties) {
 				obj[prop.key.value] = yamlValueToPlain(prop.value);
@@ -589,7 +731,8 @@ export function parseSubagentHooksFromYaml(
 	target: Target = Target.Undefined,
 ): ChatRequestHooks {
 	const result: Record<string, IHookCommand[]> = {};
-	const targetHookMap = HOOKS_BY_TARGET[target] ?? HOOKS_BY_TARGET[Target.Undefined];
+	const targetHookMap =
+		HOOKS_BY_TARGET[target] ?? HOOKS_BY_TARGET[Target.Undefined];
 
 	for (const prop of hooksMap.properties) {
 		const hookTypeName = prop.key.value;
@@ -601,7 +744,7 @@ export function parseSubagentHooksFromYaml(
 		}
 
 		// The value must be a sequence (array of hook entries)
-		if (prop.value.type !== 'sequence') {
+		if (prop.value.type !== "sequence") {
 			continue;
 		}
 
@@ -612,7 +755,11 @@ export function parseSubagentHooksFromYaml(
 			// extractHookCommandsFromItem helper can handle both direct
 			// commands and nested matcher structures.
 			const plainItem = yamlValueToPlain(item);
-			const extracted = extractHookCommandsFromItem(plainItem, workspaceRootUri, userHome);
+			const extracted = extractHookCommandsFromItem(
+				plainItem,
+				workspaceRootUri,
+				userHome,
+			);
 			commands.push(...extracted);
 		}
 

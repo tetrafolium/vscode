@@ -18,7 +18,6 @@ const NUM_SCENARIOS = 26;
  * Configuration object for a search test.
  */
 interface ISearchTestConfig {
-
 	/**
 	 * The question to ask the AI.
 	 * ie: question: "find all links"
@@ -70,7 +69,6 @@ interface ISearchTestConfig {
 	shouldFail?: boolean;
 }
 
-
 interface ISearchArg {
 	filesToInclude?: string;
 	filesToExclude?: string;
@@ -93,7 +91,11 @@ interface ISimplifiedSearchArg {
 	onlyOpenEditors: boolean;
 }
 
-const scenarioFolder = path.join(__dirname, '..', 'test/scenarios/test-scenario-search/');
+const scenarioFolder = path.join(
+	__dirname,
+	'..',
+	'test/scenarios/test-scenario-search/',
+);
 const exampleFolder = path.join(scenarioFolder, 'example-files');
 const replaceSamples = path.join(scenarioFolder, 'replace-samples');
 
@@ -103,10 +105,19 @@ const replaceSamples = path.join(scenarioFolder, 'replace-samples');
 		for (let i = 0; i < NUM_SCENARIOS; i++) {
 			const testCase = getTestInfoFromFile(`search${i}.testArgs.json`);
 			const testName = testCase.question;
-			stest({ description: testName }, generateScenarioTestRunner(
-				[{ question: '@vscode /search ' + testCase.question, name: testName, scenarioFolderPath: scenarioFolder }],
-				generateEvaluate(testCase)
-			));
+			stest(
+				{ description: testName },
+				generateScenarioTestRunner(
+					[
+						{
+							question: '@vscode /search ' + testCase.question,
+							name: testName,
+							scenarioFolderPath: scenarioFolder,
+						},
+					],
+					generateEvaluate(testCase),
+				),
+			);
 		}
 	});
 })();
@@ -129,7 +140,15 @@ function getTestInfoFromFile(fileName: string): ISearchTestConfig {
 }
 
 function generateEvaluate(testInfo: ISearchTestConfig) {
-	return async function evaluate(accessor: ITestingServicesAccessor, question: string, answer: string, _rawResponse: string, turn: Turn | undefined, _scenarioIndex: number, commands: Command[]): Promise<{ success: boolean; errorMessage?: string }> {
+	return async function evaluate(
+		accessor: ITestingServicesAccessor,
+		question: string,
+		answer: string,
+		_rawResponse: string,
+		turn: Turn | undefined,
+		_scenarioIndex: number,
+		commands: Command[],
+	): Promise<{ success: boolean; errorMessage?: string }> {
 		try {
 			let args: ISimplifiedSearchArg | undefined;
 			try {
@@ -138,15 +157,25 @@ function generateEvaluate(testInfo: ISearchTestConfig) {
 				if (testInfo.shouldFail) {
 					return Promise.resolve({ success: true, errorMessage: '' });
 				} else {
-					return Promise.resolve({ success: false, errorMessage: 'Parsing the search query failed.' });
+					return Promise.resolve({
+						success: false,
+						errorMessage: 'Parsing the search query failed.',
+					});
 				}
 			}
 
 			if (testInfo.shouldFail) {
-				return Promise.resolve({ success: false, errorMessage: 'Parsing the search query should have failed.' });
+				return Promise.resolve({
+					success: false,
+					errorMessage:
+						'Parsing the search query should have failed.',
+				});
 			}
 
-			assert(testInfo.isRegex === undefined || args.isRegex === testInfo.isRegex);
+			assert(
+				testInfo.isRegex === undefined ||
+					args.isRegex === testInfo.isRegex,
+			);
 			if (testInfo.onlyOpenEditors !== undefined) {
 				assert(args.onlyOpenEditors === testInfo.onlyOpenEditors);
 			}
@@ -155,13 +184,22 @@ function generateEvaluate(testInfo: ISearchTestConfig) {
 				assert(!args.replace);
 			}
 
-			const actualTargets = getTargetFiles(args.filesToInclude, args.filesToExclude);
-			const expectedTargets = getTargetFiles(testInfo.exampleIncludeGlobs ?? ['*'], testInfo.exampleExcludeGlobs ?? []);
+			const actualTargets = getTargetFiles(
+				args.filesToInclude,
+				args.filesToExclude,
+			);
+			const expectedTargets = getTargetFiles(
+				testInfo.exampleIncludeGlobs ?? ['*'],
+				testInfo.exampleExcludeGlobs ?? [],
+			);
 
 			assert.deepEqual(actualTargets, expectedTargets);
 
 			if (!args?.query) {
-				return Promise.resolve({ success: false, errorMessage: 'No query field on args' });
+				return Promise.resolve({
+					success: false,
+					errorMessage: 'No query field on args',
+				});
 			}
 
 			const query = args.query;
@@ -176,8 +214,16 @@ function generateEvaluate(testInfo: ISearchTestConfig) {
 
 			testInfo.replaceResult?.forEach((fileNameExpected, fileName) => {
 				const file = path.join(exampleFolder, fileName);
-				const result = getStringFromReplace(file, query, replace, preserveCase);
-				const expected = fs.readFileSync(path.join(replaceSamples, fileNameExpected), 'utf8');
+				const result = getStringFromReplace(
+					file,
+					query,
+					replace,
+					preserveCase,
+				);
+				const expected = fs.readFileSync(
+					path.join(replaceSamples, fileNameExpected),
+					'utf8',
+				);
 				assert(result === expected);
 			});
 		} catch (e) {
@@ -189,25 +235,26 @@ function generateEvaluate(testInfo: ISearchTestConfig) {
 	};
 }
 
-
-function getTargetFiles(fileGlobs: string | string[], ignoreGlobs: string | string[]): string[] {
+function getTargetFiles(
+	fileGlobs: string | string[],
+	ignoreGlobs: string | string[],
+): string[] {
 	if (!Array.isArray(fileGlobs)) {
-		fileGlobs = (fileGlobs.length === 0) ? ['*'] : fileGlobs.split(',');
+		fileGlobs = fileGlobs.length === 0 ? ['*'] : fileGlobs.split(',');
 	}
 
 	if (!Array.isArray(ignoreGlobs)) {
-		ignoreGlobs = (ignoreGlobs.length === 0) ? [] : ignoreGlobs.split(',');
+		ignoreGlobs = ignoreGlobs.length === 0 ? [] : ignoreGlobs.split(',');
 	}
 
 	const included: string[] = [];
 	fileGlobs.forEach((fileGlob) => {
-		const matches = glob.sync(fileGlob, { cwd: exampleFolder, ignore: ignoreGlobs }).filter((file) =>
-			(!included.includes(file))
-		);
+		const matches = glob
+			.sync(fileGlob, { cwd: exampleFolder, ignore: ignoreGlobs })
+			.filter((file) => !included.includes(file));
 		included.push(...matches);
 	});
 	return included;
-
 }
 
 function createSimplifiedSearchArgs(args: ISearchArg): ISimplifiedSearchArg {
@@ -218,7 +265,7 @@ function createSimplifiedSearchArgs(args: ISearchArg): ISimplifiedSearchArg {
 		replace: args.replace ?? '',
 		isRegex: args.isRegex ?? false,
 		preserveCase: args.preserveCase ?? false,
-		onlyOpenEditors: args.onlyOpenEditors ?? false
+		onlyOpenEditors: args.onlyOpenEditors ?? false,
 	};
 }
 
@@ -237,26 +284,40 @@ function getFunctionFromQuery(query: string, isCaseSensitive: boolean): RegExp {
 	return new RegExp(query, flags);
 }
 
-function testOnlyQueryOnFiles(fileName: string, query: string, isCaseSensitive: boolean): string[] {
+function testOnlyQueryOnFiles(
+	fileName: string,
+	query: string,
+	isCaseSensitive: boolean,
+): string[] {
 	const file = fs.readFileSync(fileName, 'utf8');
 	const re = getFunctionFromQuery(query, isCaseSensitive);
 	const results = file.match(re)?.values();
 	return results ? Array.from(results) : [];
 }
 
-function getStringFromReplace(fileName: string, query: string, replace: string, isCaseSensitive: boolean): string {
+function getStringFromReplace(
+	fileName: string,
+	query: string,
+	replace: string,
+	isCaseSensitive: boolean,
+): string {
 	const file = fs.readFileSync(fileName, 'utf8');
 	const re = getFunctionFromQuery(query, isCaseSensitive);
 	const str = file.replace(re, replace);
 	return str;
 }
 
-function resultMatchesQuery(actual: string[], expected: string[] | string[][]): boolean {
+function resultMatchesQuery(
+	actual: string[],
+	expected: string[] | string[][],
+): boolean {
 	if (expected.length === 0) {
-		return (actual.length === 0);
+		return actual.length === 0;
 	}
 
-	const possibilitiesOfExpected: string[][] = (Array.isArray(expected[0]) ? expected : [expected]) as string[][];
+	const possibilitiesOfExpected: string[][] = (
+		Array.isArray(expected[0]) ? expected : [expected]
+	) as string[][];
 
 	const resultMatchesQuerySingle = (possibleExpected: string[]) => {
 		if (actual.length !== possibleExpected.length) {

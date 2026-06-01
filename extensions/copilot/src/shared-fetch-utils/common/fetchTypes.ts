@@ -50,7 +50,10 @@ export interface WindowStateProvider {
 }
 
 export class FetchBlockedError extends Error {
-	constructor(message: string, readonly retryAfterMs: number) {
+	constructor(
+		message: string,
+		readonly retryAfterMs: number,
+	) {
 		super(message);
 	}
 }

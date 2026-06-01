@@ -78,7 +78,10 @@ export interface IChatQuotaService {
 	readonly _serviceBrand: undefined;
 	readonly onDidChange: Event<void>;
 	readonly quotaInfo: IChatQuota | undefined;
-	readonly rateLimitInfo: { readonly session: IChatQuota | undefined; readonly weekly: IChatQuota | undefined };
+	readonly rateLimitInfo: {
+		readonly session: IChatQuota | undefined;
+		readonly weekly: IChatQuota | undefined;
+	};
 	quotaExhausted: boolean;
 	additionalUsageEnabled: boolean;
 	/** AIC credits accumulated for the given turn, from copilot_usage.total_nano_aiu. */
@@ -97,4 +100,5 @@ export interface IChatQuotaService {
 	refreshQuota(): Promise<void>;
 }
 
-export const IChatQuotaService = createServiceIdentifier<IChatQuotaService>('IChatQuotaService');
+export const IChatQuotaService =
+	createServiceIdentifier<IChatQuotaService>('IChatQuotaService');

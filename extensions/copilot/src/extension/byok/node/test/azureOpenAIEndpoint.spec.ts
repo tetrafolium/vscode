@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { IChatModelInformation, ModelSupportedEndpoint } from '../../../../platform/endpoint/common/endpointProvider';
+import {
+	IChatModelInformation,
+	ModelSupportedEndpoint,
+} from '../../../../platform/endpoint/common/endpointProvider';
 import { ITestingServicesAccessor } from '../../../../platform/test/node/services';
 import { TokenizerType } from '../../../../util/common/tokenizer';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
@@ -38,18 +41,20 @@ describe('AzureOpenAIEndpoint', () => {
 					tool_calls: false,
 					vision: false,
 					prediction: false,
-					thinking: false
+					thinking: false,
 				},
 				limits: {
 					max_prompt_tokens: 128000,
 					max_output_tokens: 4096,
-					max_context_window_tokens: 132096
-				}
-			}
+					max_context_window_tokens: 132096,
+				},
+			},
 		};
 
 		const testingServiceCollection = createExtensionUnitTestingServices();
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 		instaService = accessor.get(IInstantiationService);
 	});
 
@@ -64,7 +69,7 @@ describe('AzureOpenAIEndpoint', () => {
 				AzureOpenAIEndpoint,
 				modelMetadata,
 				entraToken,
-				'https://example-endpoint.example.com/v1/chat/completions'
+				'https://example-endpoint.example.com/v1/chat/completions',
 			);
 			const headers = endpoint.getExtraHeaders();
 
@@ -84,7 +89,7 @@ describe('AzureOpenAIEndpoint', () => {
 				AzureOpenAIEndpoint,
 				modelMetadata,
 				entraToken,
-				'https://example-endpoint.example.com/v1/chat/completions'
+				'https://example-endpoint.example.com/v1/chat/completions',
 			);
 			const headers = endpoint.getExtraHeaders();
 
@@ -101,7 +106,7 @@ describe('AzureOpenAIEndpoint', () => {
 			const urls = [
 				'https://example-endpoint-1.example.com/v1/chat/completions',
 				'https://example-endpoint-2.example.com/v1/chat/completions',
-				'https://example-endpoint-3.example.com/v1/chat/completions'
+				'https://example-endpoint-3.example.com/v1/chat/completions',
 			];
 
 			for (const url of urls) {
@@ -109,7 +114,7 @@ describe('AzureOpenAIEndpoint', () => {
 					AzureOpenAIEndpoint,
 					modelMetadata,
 					entraToken,
-					url
+					url,
 				);
 
 				const headers = endpoint.getExtraHeaders();
@@ -125,7 +130,7 @@ describe('AzureOpenAIEndpoint', () => {
 				AzureOpenAIEndpoint,
 				modelMetadata,
 				entraToken,
-				'https://example-endpoint.example.com/v1/chat/completions'
+				'https://example-endpoint.example.com/v1/chat/completions',
 			);
 
 			const headers = endpoint.getExtraHeaders();
@@ -148,7 +153,7 @@ describe('AzureOpenAIEndpoint', () => {
 				AzureOpenAIEndpoint,
 				modelMetadata,
 				entraToken,
-				'https://example-endpoint.example.com/v1/chat/completions'
+				'https://example-endpoint.example.com/v1/chat/completions',
 			);
 
 			// Should be an instance of AzureOpenAIEndpoint

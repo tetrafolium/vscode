@@ -11,7 +11,7 @@ export abstract class StatementNode {
 	nextSibling: StatementNode | undefined;
 	protected collapsed = false;
 
-	constructor(readonly node: SyntaxNode) { }
+	constructor(readonly node: SyntaxNode) {}
 
 	addChild(child: StatementNode) {
 		child.parent = this;
@@ -28,17 +28,22 @@ export abstract class StatementNode {
 	 * processing once this branch of the tree is complete. The default behavior
 	 * is to do nothing.
 	 */
-	childrenFinished() { }
+	childrenFinished() {}
 
 	containsStatement(stmt: StatementNode): boolean {
-		return this.node.startIndex <= stmt.node.startIndex && this.node.endIndex >= stmt.node.endIndex;
+		return (
+			this.node.startIndex <= stmt.node.startIndex &&
+			this.node.endIndex >= stmt.node.endIndex
+		);
 	}
 
 	statementAt(offset: number): StatementNode | undefined {
-		if (this.node.startIndex > offset || this.node.endIndex < offset) { return undefined; }
+		if (this.node.startIndex > offset || this.node.endIndex < offset) {
+			return undefined;
+		}
 
 		let innerMatch: StatementNode | undefined = undefined;
-		this.children.find(stmt => {
+		this.children.find((stmt) => {
 			innerMatch = stmt.statementAt(offset);
 			return innerMatch !== undefined;
 		});
@@ -59,18 +64,28 @@ export abstract class StatementNode {
 
 	dump(prefix1: string = '', prefix2: string = ''): string {
 		const result = [`${prefix1}${this.description}`];
-		this.children.forEach(child => {
+		this.children.forEach((child) => {
 			result.push(
-				child.dump(`${prefix2}+- `, child.nextSibling === undefined ? `${prefix2}   ` : `${prefix2}|  `)
+				child.dump(
+					`${prefix2}+- `,
+					child.nextSibling === undefined
+						? `${prefix2}   `
+						: `${prefix2}|  `,
+				),
 			);
 		});
 		return result.join('\n');
 	}
 
-	dumpPath(prefix1: string = '', prefix2: string = '', forChild = false): string {
+	dumpPath(
+		prefix1: string = '',
+		prefix2: string = '',
+		forChild = false,
+	): string {
 		if (this.parent) {
 			const path = this.parent.dumpPath(prefix1, prefix2, true);
-			const indentSize = path.length - path.lastIndexOf('\n') - 1 - prefix2.length;
+			const indentSize =
+				path.length - path.lastIndexOf('\n') - 1 - prefix2.length;
 			const indent = ' '.repeat(indentSize);
 			const nextPrefix = forChild ? `\n${prefix2}${indent}+- ` : '';
 			return path + this.description + nextPrefix;
@@ -132,23 +147,68 @@ export abstract class StatementTree implements Disposable {
 		);
 	}
 
-	static create(languageId: string, text: string, startOffset: number, endOffset: number): StatementTree {
+	static create(
+		languageId: string,
+		text: string,
+		startOffset: number,
+		endOffset: number,
+	): StatementTree {
 		if (JSStatementTree.languageIds.has(languageId)) {
-			return new JSStatementTree(languageId, text, startOffset, endOffset);
+			return new JSStatementTree(
+				languageId,
+				text,
+				startOffset,
+				endOffset,
+			);
 		} else if (TSStatementTree.languageIds.has(languageId)) {
-			return new TSStatementTree(languageId, text, startOffset, endOffset);
+			return new TSStatementTree(
+				languageId,
+				text,
+				startOffset,
+				endOffset,
+			);
 		} else if (PyStatementTree.languageIds.has(languageId)) {
-			return new PyStatementTree(languageId, text, startOffset, endOffset);
+			return new PyStatementTree(
+				languageId,
+				text,
+				startOffset,
+				endOffset,
+			);
 		} else if (GoStatementTree.languageIds.has(languageId)) {
-			return new GoStatementTree(languageId, text, startOffset, endOffset);
+			return new GoStatementTree(
+				languageId,
+				text,
+				startOffset,
+				endOffset,
+			);
 		} else if (JavaStatementTree.languageIds.has(languageId)) {
-			return new JavaStatementTree(languageId, text, startOffset, endOffset);
+			return new JavaStatementTree(
+				languageId,
+				text,
+				startOffset,
+				endOffset,
+			);
 		} else if (PhpStatementTree.languageIds.has(languageId)) {
-			return new PhpStatementTree(languageId, text, startOffset, endOffset);
+			return new PhpStatementTree(
+				languageId,
+				text,
+				startOffset,
+				endOffset,
+			);
 		} else if (RubyStatementTree.languageIds.has(languageId)) {
-			return new RubyStatementTree(languageId, text, startOffset, endOffset);
+			return new RubyStatementTree(
+				languageId,
+				text,
+				startOffset,
+				endOffset,
+			);
 		} else if (CSharpStatementTree.languageIds.has(languageId)) {
-			return new CSharpStatementTree(languageId, text, startOffset, endOffset);
+			return new CSharpStatementTree(
+				languageId,
+				text,
+				startOffset,
+				endOffset,
+			);
 		} else if (CStatementTree.languageIds.has(languageId)) {
 			return new CStatementTree(languageId, text, startOffset, endOffset);
 		} else {
@@ -160,8 +220,8 @@ export abstract class StatementTree implements Disposable {
 		private readonly languageId: string,
 		private readonly text: string,
 		private readonly startOffset: number,
-		private readonly endOffset: number
-	) { }
+		private readonly endOffset: number,
+	) {}
 
 	[Symbol.dispose]() {
 		if (this.tree) {
@@ -176,7 +236,7 @@ export abstract class StatementTree implements Disposable {
 
 	statementAt(offset: number): StatementNode | undefined {
 		let match: StatementNode | undefined = undefined;
-		this.statements.find(stmt => {
+		this.statements.find((stmt) => {
 			match = stmt.statementAt(offset);
 			return match !== undefined;
 		});
@@ -193,9 +253,12 @@ export abstract class StatementTree implements Disposable {
 				startPosition: this.offsetToPosition(this.startOffset),
 				endPosition: this.offsetToPosition(this.endOffset),
 			})
-			.forEach(capture => {
+			.forEach((capture) => {
 				const stmt = this.createNode(capture.node);
-				while (parents.length > 0 && !parents[0].containsStatement(stmt)) {
+				while (
+					parents.length > 0 &&
+					!parents[0].containsStatement(stmt)
+				) {
 					const completed = parents.shift(); // not a parent
 					completed?.childrenFinished();
 				}
@@ -207,7 +270,7 @@ export abstract class StatementTree implements Disposable {
 				parents.unshift(stmt); // add to the stack
 			});
 		// finish up
-		parents.forEach(stmt => stmt.childrenFinished());
+		parents.forEach((stmt) => stmt.childrenFinished());
 	}
 
 	protected abstract createNode(node: SyntaxNode): StatementNode;
@@ -233,7 +296,10 @@ export abstract class StatementTree implements Disposable {
 		return this.getQuery(tree.getLanguage(), this.getStatementQueryText());
 	}
 
-	protected getQuery(language: Parser.Language, queryText: string): Parser.Query {
+	protected getQuery(
+		language: Parser.Language,
+		queryText: string,
+	): Parser.Query {
 		// TODO: query objects can be cached and reused
 		return language.query(queryText);
 	}
@@ -250,7 +316,9 @@ export abstract class StatementTree implements Disposable {
 		this.statements.forEach((stmt, idx) => {
 			const idxStr = `[${idx}]`;
 			const idxSpaces = ' '.repeat(idxStr.length);
-			result.push(stmt.dump(`${prefix} ${idxStr} `, `${prefix} ${idxSpaces} `));
+			result.push(
+				stmt.dump(`${prefix} ${idxStr} `, `${prefix} ${idxSpaces} `),
+			);
 		});
 		return result.join('\n');
 	}
@@ -280,21 +348,35 @@ class JSStatementNode extends StatementNode {
 	]);
 
 	get isCompoundStatementType(): boolean {
-		return !this.collapsed && JSStatementNode.compoundTypeNames.has(this.node.type);
+		return (
+			!this.collapsed &&
+			JSStatementNode.compoundTypeNames.has(this.node.type)
+		);
 	}
 
 	override childrenFinished() {
-		if (this.isSingleLineIfStatement()) { this.collapse(); }
+		if (this.isSingleLineIfStatement()) {
+			this.collapse();
+		}
 	}
 
 	private isSingleLineIfStatement(): boolean {
 		// must be an if statement
-		if (this.node.type !== 'if_statement') { return false; }
+		if (this.node.type !== 'if_statement') {
+			return false;
+		}
 		// must be a single line
-		if (this.node.startPosition.row !== this.node.endPosition.row) { return false; }
+		if (this.node.startPosition.row !== this.node.endPosition.row) {
+			return false;
+		}
 		// Exclude if statements with braces so that block position is correct:
 		// can have a single statement without braces
-		if (this.children.length === 1 && this.children[0].node.type !== 'statement_block') { return true; }
+		if (
+			this.children.length === 1 &&
+			this.children[0].node.type !== 'statement_block'
+		) {
+			return true;
+		}
 		// or two statements without braces if an else is present
 		if (
 			this.children.length === 2 &&
@@ -310,7 +392,11 @@ class JSStatementNode extends StatementNode {
 }
 
 class JSStatementTree extends StatementTree {
-	static readonly languageIds = new Set(['javascript', 'javascriptreact', 'jsx']);
+	static readonly languageIds = new Set([
+		'javascript',
+		'javascriptreact',
+		'jsx',
+	]);
 
 	protected createNode(node: SyntaxNode): StatementNode {
 		return new JSStatementNode(node);
@@ -405,16 +491,23 @@ class PyStatementNode extends StatementNode {
 	]);
 
 	get isCompoundStatementType(): boolean {
-		return !this.collapsed && PyStatementNode.compoundTypeNames.has(this.node.type);
+		return (
+			!this.collapsed &&
+			PyStatementNode.compoundTypeNames.has(this.node.type)
+		);
 	}
 
 	override childrenFinished() {
-		if (this.isSingleLineIfStatement()) { this.collapse(); }
+		if (this.isSingleLineIfStatement()) {
+			this.collapse();
+		}
 	}
 
 	private isSingleLineIfStatement(): boolean {
 		// must be an if statement
-		if (this.node.type !== 'if_statement') { return false; }
+		if (this.node.type !== 'if_statement') {
+			return false;
+		}
 		// must be a single line
 		return this.node.startPosition.row === this.node.endPosition.row;
 	}
@@ -481,7 +574,10 @@ class GoStatementNode extends StatementNode {
 	]);
 
 	get isCompoundStatementType(): boolean {
-		return !this.collapsed && GoStatementNode.compoundTypeNames.has(this.node.type);
+		return (
+			!this.collapsed &&
+			GoStatementNode.compoundTypeNames.has(this.node.type)
+		);
 	}
 }
 
@@ -531,7 +627,10 @@ class PhpStatementNode extends StatementNode {
 	]);
 
 	get isCompoundStatementType(): boolean {
-		return !this.collapsed && PhpStatementNode.compoundTypeNames.has(this.node.type);
+		return (
+			!this.collapsed &&
+			PhpStatementNode.compoundTypeNames.has(this.node.type)
+		);
 	}
 }
 
@@ -562,10 +661,23 @@ class PhpStatementTree extends StatementTree {
  */
 
 class RubyStatementNode extends StatementNode {
-	static compoundTypeNames = new Set(['if', 'case', 'while', 'until', 'for', 'begin', 'module', 'class', 'method']);
+	static compoundTypeNames = new Set([
+		'if',
+		'case',
+		'while',
+		'until',
+		'for',
+		'begin',
+		'module',
+		'class',
+		'method',
+	]);
 
 	get isCompoundStatementType(): boolean {
-		return !this.collapsed && RubyStatementNode.compoundTypeNames.has(this.node.type);
+		return (
+			!this.collapsed &&
+			RubyStatementNode.compoundTypeNames.has(this.node.type)
+		);
 	}
 }
 
@@ -611,22 +723,36 @@ class JavaStatementNode extends StatementNode {
 	]);
 
 	get isCompoundStatementType(): boolean {
-		return !this.collapsed && JavaStatementNode.compoundTypeNames.has(this.node.type);
+		return (
+			!this.collapsed &&
+			JavaStatementNode.compoundTypeNames.has(this.node.type)
+		);
 	}
 
 	override childrenFinished() {
 		// Collapse if_statements on a single line
-		if (this.isSingleLineIfStatement()) { this.collapse(); }
+		if (this.isSingleLineIfStatement()) {
+			this.collapse();
+		}
 	}
 
 	private isSingleLineIfStatement(): boolean {
 		// must be an if statement
-		if (this.node.type !== 'if_statement') { return false; }
+		if (this.node.type !== 'if_statement') {
+			return false;
+		}
 		// must be a single line
-		if (this.node.startPosition.row !== this.node.endPosition.row) { return false; }
+		if (this.node.startPosition.row !== this.node.endPosition.row) {
+			return false;
+		}
 		// Exclude if statements with braces so that block position is correct:
 		// can have a single statement without braces
-		if (this.children.length === 1 && this.children[0].node.type !== 'block') { return true; }
+		if (
+			this.children.length === 1 &&
+			this.children[0].node.type !== 'block'
+		) {
+			return true;
+		}
 
 		return false;
 	}
@@ -686,21 +812,35 @@ class CSharpStatementNode extends StatementNode {
 	]);
 
 	get isCompoundStatementType(): boolean {
-		return !this.collapsed && CSharpStatementNode.compoundTypeNames.has(this.node.type);
+		return (
+			!this.collapsed &&
+			CSharpStatementNode.compoundTypeNames.has(this.node.type)
+		);
 	}
 
 	override childrenFinished() {
-		if (this.isSingleLineIfStatement()) { this.collapse(); }
+		if (this.isSingleLineIfStatement()) {
+			this.collapse();
+		}
 	}
 
 	private isSingleLineIfStatement(): boolean {
 		// must be an if statement
-		if (this.node.type !== 'if_statement') { return false; }
+		if (this.node.type !== 'if_statement') {
+			return false;
+		}
 		// must be a single line
-		if (this.node.startPosition.row !== this.node.endPosition.row) { return false; }
+		if (this.node.startPosition.row !== this.node.endPosition.row) {
+			return false;
+		}
 		// Exclude if statements with braces so that block position is correct:
 		// can have a single statement without braces
-		if (this.children.length === 1 && this.children[0].node.type !== 'block') { return true; }
+		if (
+			this.children.length === 1 &&
+			this.children[0].node.type !== 'block'
+		) {
+			return true;
+		}
 
 		return false;
 	}
@@ -759,26 +899,42 @@ class CStatementNode extends StatementNode {
 	]);
 
 	get isCompoundStatementType(): boolean {
-		return !this.collapsed && CStatementNode.compoundTypeNames.has(this.node.type);
+		return (
+			!this.collapsed &&
+			CStatementNode.compoundTypeNames.has(this.node.type)
+		);
 	}
 
 	override childrenFinished() {
-		if (this.isSingleLineDeclarationStatement() || this.isSingleLineConceptDefinition()) { this.collapse(); }
+		if (
+			this.isSingleLineDeclarationStatement() ||
+			this.isSingleLineConceptDefinition()
+		) {
+			this.collapse();
+		}
 	}
 
 	private isSingleLineDeclarationStatement(): boolean {
 		// must be an declaration statement
-		if (this.node.type !== 'declaration') { return false; }
+		if (this.node.type !== 'declaration') {
+			return false;
+		}
 		// must be a single line
-		if (this.node.startPosition.row !== this.node.endPosition.row) { return false; }
+		if (this.node.startPosition.row !== this.node.endPosition.row) {
+			return false;
+		}
 		return true;
 	}
 
 	private isSingleLineConceptDefinition(): boolean {
 		// must be a concept definition
-		if (this.node.type !== 'concept_definition') { return false; }
+		if (this.node.type !== 'concept_definition') {
+			return false;
+		}
 		// must be a single line
-		if (this.node.startPosition.row !== this.node.endPosition.row) { return false; }
+		if (this.node.startPosition.row !== this.node.endPosition.row) {
+			return false;
+		}
 		return true;
 	}
 }

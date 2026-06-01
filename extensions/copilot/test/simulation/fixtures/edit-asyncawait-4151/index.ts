@@ -32,7 +32,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpecification));
 app.get('/shows', async (_req: Request, res: Response) => {
 	const params = new URLSearchParams({
 		limit: '6',
-		categoryId
+		categoryId,
 	});
 	const response = await fetch(`${process.env.PODCAST_URL}shows?${params}`);
 	const json = await response.json();
@@ -40,21 +40,26 @@ app.get('/shows', async (_req: Request, res: Response) => {
 });
 
 app.get('/shows/:id', async (req: Request, res: Response) => {
-	const response = await fetch(`${process.env.PODCAST_URL}shows/${req.params.id}`);
+	const response = await fetch(
+		`${process.env.PODCAST_URL}shows/${req.params.id}`,
+	);
 	const json: Show = await response.json();
 	res.send(json);
 });
 
 app.get('/episodes/:id/summary', (req: Request, res: Response) => {
-	fetch(`${process.env.PODCAST_URL}episodes/${req.params.id}`).then((response) => {
-		response.json().then((json: Episode) => {
-			const summary = json.description;
-			res.send({ summary });
-		});
-	}, (error) => {
-		console.log(error);
-		res.status(500).send({ error });
-	});
+	fetch(`${process.env.PODCAST_URL}episodes/${req.params.id}`).then(
+		(response) => {
+			response.json().then((json: Episode) => {
+				const summary = json.description;
+				res.send({ summary });
+			});
+		},
+		(error) => {
+			console.log(error);
+			res.status(500).send({ error });
+		},
+	);
 });
 
 app.get('/', (_req: Request, res: Response) => {
@@ -66,7 +71,7 @@ app.use(
 		apiSpec: './.well-known/openapi.json',
 		validateRequests: true,
 		validateResponses: true,
-		ignorePaths: /\/\.well-known\// // Add this line to ignore the .well-known folder
+		ignorePaths: /\/\.well-known\//, // Add this line to ignore the .well-known folder
 	}),
 );
 

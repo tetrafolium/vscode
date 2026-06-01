@@ -9,7 +9,8 @@
 	max-width: 280px;
 	min-width: 180px;
 	background-color: var(--vscode-editorWidget-background);
-	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-contrastBorder));
+	border: 1px solid
+		var(--vscode-editorWidget-border, var(--vscode-contrastBorder));
 	border-radius: 8px;
 	box-shadow: var(--vscode-shadow-lg);
 	font-size: 12px;
@@ -28,8 +29,12 @@
 }
 
 @keyframes chatExplanationFadeOut {
-	from { opacity: 1; }
-	to { opacity: 0; }
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
 }
 
 /* Arrow pointer pointing left toward the code */
@@ -41,11 +46,12 @@
 	height: 0;
 	border-top: 8px solid transparent;
 	border-bottom: 8px solid transparent;
-	border-right: 8px solid var(--vscode-editorWidget-border, var(--vscode-contrastBorder));
+	border-right: 8px solid
+		var(--vscode-editorWidget-border, var(--vscode-contrastBorder));
 }
 
 .chat-explanation-arrow::after {
-	content: '';
+	content: "";
 	position: absolute;
 	left: 2px;
 	top: -7px;
@@ -61,7 +67,8 @@
 	display: flex;
 	align-items: center;
 	padding: 8px 10px;
-	border-bottom: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border));
+	border-bottom: 1px solid
+		var(--vscode-editorWidget-border, var(--vscode-widget-border));
 	cursor: pointer;
 	gap: 6px;
 }
@@ -164,7 +171,9 @@
 
 /* Body - collapsible */
 .chat-explanation-body {
-	transition: max-height 0.2s ease-in-out, padding 0.2s ease-in-out;
+	transition:
+		max-height 0.2s ease-in-out,
+		padding 0.2s ease-in-out;
 }
 
 .chat-explanation-body.collapsed {
@@ -178,7 +187,8 @@
 	display: flex;
 	flex-direction: column;
 	padding: 8px 10px;
-	border-bottom: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border));
+	border-bottom: 1px solid
+		var(--vscode-editorWidget-border, var(--vscode-widget-border));
 	cursor: pointer;
 	position: relative;
 }
@@ -256,7 +266,9 @@
 	cursor: pointer;
 	color: var(--vscode-foreground);
 	opacity: 0;
-	transition: opacity 0.1s, background-color 0.1s;
+	transition:
+		opacity 0.1s,
+		background-color 0.1s;
 }
 
 .chat-explanation-item:hover .chat-explanation-reply-button {

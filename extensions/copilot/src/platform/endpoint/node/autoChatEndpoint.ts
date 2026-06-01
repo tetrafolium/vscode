@@ -48,7 +48,11 @@ export class AutoChatEndpoint extends CopilotChatEndpoint {
 		@ILogService _logService: ILogService,
 	) {
 		super(
-			calculateAutoModelInfo(_wrappedEndpoint, _sessionToken, _discountPercent),
+			calculateAutoModelInfo(
+				_wrappedEndpoint,
+				_sessionToken,
+				_discountPercent,
+			),
 			_domainService,
 			_capiClientService,
 			_fetcherService,
@@ -61,12 +65,16 @@ export class AutoChatEndpoint extends CopilotChatEndpoint {
 			_configurationService,
 			_expService,
 			_chatWebSocketService,
-			_logService
+			_logService,
 		);
 	}
 }
 
-function calculateAutoModelInfo(endpoint: IChatEndpoint, sessionToken: string, discountPercent: number): IChatModelInformation {
+function calculateAutoModelInfo(
+	endpoint: IChatEndpoint,
+	sessionToken: string,
+	discountPercent: number,
+): IChatModelInformation {
 	let originalModelInfo: IChatModelInformation;
 	if (endpoint instanceof ChatEndpoint) {
 		originalModelInfo = endpoint.modelMetadata;
@@ -94,20 +102,25 @@ function calculateAutoModelInfo(endpoint: IChatEndpoint, sessionToken: string, d
 					streaming: true, // Assume streaming support for non-ChatEndpoint instances
 				},
 			},
-			billing: endpoint.isPremium !== undefined || endpoint.multiplier !== undefined || endpoint.restrictedToSkus !== undefined
-				? {
-					is_premium: endpoint.isPremium ?? false,
-					multiplier: endpoint.multiplier ?? 0,
-					restricted_to: endpoint.restrictedToSkus,
-				}
-				: undefined,
+			billing:
+				endpoint.isPremium !== undefined ||
+				endpoint.multiplier !== undefined ||
+				endpoint.restrictedToSkus !== undefined
+					? {
+							is_premium: endpoint.isPremium ?? false,
+							multiplier: endpoint.multiplier ?? 0,
+							restricted_to: endpoint.restrictedToSkus,
+						}
+					: undefined,
 			custom_model: endpoint.customModel,
 		};
 	}
 	// Calculate the multiplier including the discount percent, rounding to two decimal places
-	const newMultiplier = endpoint.multiplier !== undefined
-		? Math.round(endpoint.multiplier * (1 - discountPercent) * 100) / 100
-		: undefined;
+	const newMultiplier =
+		endpoint.multiplier !== undefined
+			? Math.round(endpoint.multiplier * (1 - discountPercent) * 100) /
+				100
+			: undefined;
 	const newModelInfo: IChatModelInformation = {
 		...originalModelInfo,
 		warning_messages: undefined,
@@ -116,12 +129,12 @@ function calculateAutoModelInfo(endpoint: IChatEndpoint, sessionToken: string, d
 		billing: {
 			is_premium: originalModelInfo.billing?.is_premium,
 			multiplier: newMultiplier,
-			restricted_to: originalModelInfo.billing?.restricted_to
+			restricted_to: originalModelInfo.billing?.restricted_to,
 		},
 		requestHeaders: {
 			...(originalModelInfo.requestHeaders || {}),
-			'Copilot-Session-Token': sessionToken
-		}
+			'Copilot-Session-Token': sessionToken,
+		},
 	};
 	return newModelInfo;
 }
@@ -130,5 +143,8 @@ export function isAutoModel(endpoint: IChatEndpoint | undefined): number {
 	if (!endpoint) {
 		return -1;
 	}
-	return (endpoint.model === AutoChatEndpoint.pseudoModelId || endpoint instanceof AutoChatEndpoint) ? 1 : -1;
+	return endpoint.model === AutoChatEndpoint.pseudoModelId ||
+		endpoint instanceof AutoChatEndpoint
+		? 1
+		: -1;
 }

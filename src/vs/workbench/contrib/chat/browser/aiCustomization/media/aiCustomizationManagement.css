@@ -85,7 +85,9 @@
 	gap: 10px;
 	cursor: pointer;
 	border-radius: 4px;
-	transition: background-color 0.1s ease, opacity 0.1s ease;
+	transition:
+		background-color 0.1s ease,
+		opacity 0.1s ease;
 }
 
 .ai-customization-management-editor .section-list-item:hover {
@@ -93,12 +95,18 @@
 }
 
 /* Selected section - using list selection */
-.ai-customization-management-editor .monaco-list .monaco-list-row.section-list-item.selected .section-icon {
+.ai-customization-management-editor
+	.monaco-list
+	.monaco-list-row.section-list-item.selected
+	.section-icon {
 	color: inherit;
 	opacity: 1;
 }
 
-.ai-customization-management-editor .monaco-list .monaco-list-row.section-list-item.selected .section-count {
+.ai-customization-management-editor
+	.monaco-list
+	.monaco-list-row.section-list-item.selected
+	.section-count {
 	color: inherit;
 }
 
@@ -174,11 +182,16 @@
 	cursor: pointer;
 	font-family: inherit;
 	opacity: 0.8;
-	transition: background-color 0.1s ease, opacity 0.1s ease;
+	transition:
+		background-color 0.1s ease,
+		opacity 0.1s ease;
 }
 
 .ai-customization-management-editor .section-back-arrow-button:hover {
-	background-color: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+	background-color: var(
+		--vscode-toolbar-hoverBackground,
+		var(--vscode-list-hoverBackground)
+	);
 	opacity: 1;
 }
 
@@ -220,7 +233,8 @@
 	width: 100%;
 	padding: 2px 6px;
 	min-height: 26px;
-	border: 1px solid var(--vscode-dropdown-border, var(--vscode-dropdown-background));
+	border: 1px solid
+		var(--vscode-dropdown-border, var(--vscode-dropdown-background));
 	font-size: 12px;
 	border-radius: var(--vscode-cornerRadius-small);
 	color: var(--vscode-dropdown-foreground);
@@ -286,7 +300,10 @@
 	white-space: nowrap;
 }
 
-.ai-customization-list-widget .list-add-button .monaco-button-dropdown .monaco-button:first-child {
+.ai-customization-list-widget
+	.list-add-button
+	.monaco-button-dropdown
+	.monaco-button:first-child {
 	flex: 1;
 }
 
@@ -387,7 +404,10 @@
 .ai-customization-group-header .group-label {
 	font-weight: var(--vscode-agents-fontWeight-medium);
 	text-transform: capitalize;
-	color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+	color: var(
+		--vscode-sideBarSectionHeader-foreground,
+		var(--vscode-foreground)
+	);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -607,7 +627,9 @@
 	align-items: center;
 }
 
-.ai-customization-list-widget .section-title-header .section-title-back-slot:empty,
+.ai-customization-list-widget
+	.section-title-header
+	.section-title-back-slot:empty,
 .mcp-list-widget .section-title-header .section-title-back-slot:empty {
 	display: none;
 }
@@ -694,7 +716,6 @@
 	gap: 8px;
 }
 
-
 .ai-customization-overview .overview-section {
 	display: flex;
 	align-items: center;
@@ -740,15 +761,16 @@
 	white-space: nowrap;
 }
 
-
-
 .ai-customization-overview .overview-section .section-count {
 	flex-shrink: 0;
 	font-size: 9px;
 	font-weight: 500;
 	padding: 1px 5px;
 	background-color: var(--vscode-list-inactiveSelectionBackground);
-	color: var(--vscode-list-inactiveSelectionForeground, var(--vscode-foreground));
+	color: var(
+		--vscode-list-inactiveSelectionForeground,
+		var(--vscode-foreground)
+	);
 	border-radius: 8px;
 	min-width: 14px;
 	text-align: center;
@@ -807,18 +829,34 @@
 }
 
 /* Inline back button with the embedded detail header */
-.ai-customization-management-editor .mcp-detail-container .ai-customization-embedded-detail,
-.ai-customization-management-editor .plugin-detail-container .ai-customization-embedded-detail {
+.ai-customization-management-editor
+	.mcp-detail-container
+	.ai-customization-embedded-detail,
+.ai-customization-management-editor
+	.plugin-detail-container
+	.ai-customization-embedded-detail {
 	padding: 0;
 }
 
-.ai-customization-management-editor .mcp-detail-container .ai-customization-embedded-detail .embedded-detail-header,
-.ai-customization-management-editor .plugin-detail-container .ai-customization-embedded-detail .embedded-detail-header {
+.ai-customization-management-editor
+	.mcp-detail-container
+	.ai-customization-embedded-detail
+	.embedded-detail-header,
+.ai-customization-management-editor
+	.plugin-detail-container
+	.ai-customization-embedded-detail
+	.embedded-detail-header {
 	align-items: center;
 }
 
-.ai-customization-management-editor .mcp-detail-container .ai-customization-embedded-detail .embedded-detail-leading-slot:not(:empty),
-.ai-customization-management-editor .plugin-detail-container .ai-customization-embedded-detail .embedded-detail-leading-slot:not(:empty) {
+.ai-customization-management-editor
+	.mcp-detail-container
+	.ai-customization-embedded-detail
+	.embedded-detail-leading-slot:not(:empty),
+.ai-customization-management-editor
+	.plugin-detail-container
+	.ai-customization-embedded-detail
+	.embedded-detail-leading-slot:not(:empty) {
 	display: flex;
 	align-items: center;
 	margin-inline-end: 4px;
@@ -840,19 +878,27 @@
 	min-width: 0;
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail.is-empty .embedded-detail-header,
-.ai-customization-management-editor .ai-customization-embedded-detail.is-empty .embedded-detail-description {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail.is-empty
+	.embedded-detail-header,
+.ai-customization-management-editor
+	.ai-customization-embedded-detail.is-empty
+	.embedded-detail-description {
 	display: none;
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail .embedded-detail-header {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail
+	.embedded-detail-header {
 	display: flex;
 	align-items: flex-start;
 	gap: 4px;
 	min-width: 0;
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail .embedded-detail-icon {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail
+	.embedded-detail-icon {
 	flex: 0 0 auto;
 	width: 32px;
 	height: 32px;
@@ -862,11 +908,15 @@
 	color: var(--vscode-foreground);
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail .embedded-detail-icon.codicon::before {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail
+	.embedded-detail-icon.codicon::before {
 	font-size: 28px;
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail .embedded-detail-header-text {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail
+	.embedded-detail-header-text {
 	flex: 1;
 	min-width: 0;
 	display: flex;
@@ -874,7 +924,9 @@
 	gap: 4px;
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail .embedded-detail-name {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail
+	.embedded-detail-name {
 	margin: 0;
 	font-size: var(--vscode-agents-fontSize-heading2);
 	line-height: 22px;
@@ -882,7 +934,9 @@
 	word-break: break-word;
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail .embedded-detail-scope {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail
+	.embedded-detail-scope {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
@@ -890,11 +944,16 @@
 	font-size: 12px;
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail .embedded-detail-scope .codicon {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail
+	.embedded-detail-scope
+	.codicon {
 	font-size: 12px;
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail .embedded-detail-description {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail
+	.embedded-detail-description {
 	color: var(--vscode-foreground);
 	font-size: var(--vscode-agents-fontSize-body1);
 	line-height: 1.4;
@@ -903,7 +962,9 @@
 	padding-inline-start: 32px;
 }
 
-.ai-customization-management-editor .ai-customization-embedded-detail .embedded-detail-empty {
+.ai-customization-management-editor
+	.ai-customization-embedded-detail
+	.embedded-detail-empty {
 	color: var(--vscode-descriptionForeground);
 	font-size: var(--vscode-agents-fontSize-body1);
 	padding: 8px 0;
@@ -916,14 +977,18 @@
 	border-top: 1px solid var(--vscode-widget-border);
 }
 
-.ai-customization-management-editor .models-content-container .section-footer-description {
+.ai-customization-management-editor
+	.models-content-container
+	.section-footer-description {
 	font-size: var(--vscode-agents-fontSize-body1);
 	color: var(--vscode-descriptionForeground);
 	line-height: 1.5;
 	margin: 0 0 8px 0;
 }
 
-.ai-customization-management-editor .models-content-container .section-footer-link {
+.ai-customization-management-editor
+	.models-content-container
+	.section-footer-link {
 	font-size: var(--vscode-agents-fontSize-body1);
 	color: var(--vscode-textLink-foreground);
 	text-decoration: none;
@@ -933,7 +998,9 @@
 	gap: 4px;
 }
 
-.ai-customization-management-editor .models-content-container .section-footer-link:hover {
+.ai-customization-management-editor
+	.models-content-container
+	.section-footer-link:hover {
 	text-decoration: underline;
 	color: var(--vscode-textLink-activeForeground);
 }
@@ -1123,22 +1190,38 @@
 }
 
 .mcp-server-item .mcp-server-status.running {
-	background-color: color-mix(in srgb, var(--vscode-terminal-ansiGreen) 50%, transparent);
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-terminal-ansiGreen) 50%,
+		transparent
+	);
 	color: var(--vscode-editor-background);
 }
 
 .mcp-server-item .mcp-server-status.starting {
-	background-color: color-mix(in srgb, var(--vscode-terminal-ansiYellow) 50%, transparent);
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-terminal-ansiYellow) 50%,
+		transparent
+	);
 	color: var(--vscode-editor-background);
 }
 
 .mcp-server-item .mcp-server-status.error {
-	background-color: color-mix(in srgb, var(--vscode-terminal-ansiRed) 50%, transparent);
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-terminal-ansiRed) 50%,
+		transparent
+	);
 	color: var(--vscode-editor-background);
 }
 
 .mcp-server-item .mcp-server-status.stopped {
-	background-color: color-mix(in srgb, var(--vscode-badge-background) 50%, transparent);
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-badge-background) 50%,
+		transparent
+	);
 	color: var(--vscode-badge-foreground);
 }
 
@@ -1147,7 +1230,11 @@
 }
 
 .mcp-server-item .mcp-server-status.disabled {
-	background-color: color-mix(in srgb, var(--vscode-badge-background) 50%, transparent);
+	background-color: color-mix(
+		in srgb,
+		var(--vscode-badge-background) 50%,
+		transparent
+	);
 	color: var(--vscode-badge-foreground);
 }
 
@@ -1249,7 +1336,9 @@
 	border: none;
 	color: var(--vscode-foreground);
 	opacity: 0.8;
-	transition: background-color 0.1s ease, opacity 0.1s ease;
+	transition:
+		background-color 0.1s ease,
+		opacity 0.1s ease;
 }
 
 .ai-customization-management-editor .editor-back-button:hover:not(:disabled) {
@@ -1330,7 +1419,9 @@
 	cursor: pointer;
 	font-size: 12px;
 	line-height: 24px;
-	transition: background-color 0.1s ease, border-color 0.1s ease;
+	transition:
+		background-color 0.1s ease,
+		border-color 0.1s ease;
 }
 
 .ai-customization-management-editor .editor-mode-button:hover {
@@ -1450,7 +1541,9 @@
 	border-radius: 6px;
 }
 
-.ai-customization-management-editor .editor-preview-body-content > :first-child {
+.ai-customization-management-editor
+	.editor-preview-body-content
+	> :first-child {
 	margin-top: 0;
 }
 

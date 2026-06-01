@@ -8,7 +8,8 @@ const postProcessDockerPs: Fig.Generator["postProcess"] = (out) => {
 				icon: "fig://icon?type=docker",
 			};
 		} catch (error) {
-			console.error(error); return null!;
+			console.error(error);
+			return null!;
 		}
 	});
 };

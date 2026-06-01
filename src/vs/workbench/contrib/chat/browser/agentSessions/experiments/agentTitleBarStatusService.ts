@@ -3,20 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../../../../base/common/event.js';
-import { Disposable } from '../../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../../base/common/uri.js';
-import { createDecorator } from '../../../../../../platform/instantiation/common/instantiation.js';
+import { Emitter, Event } from "../../../../../../base/common/event.js";
+import { Disposable } from "../../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../../base/common/uri.js";
+import { createDecorator } from "../../../../../../platform/instantiation/common/instantiation.js";
 
 //#region Agent Status Mode
 
 export enum AgentStatusMode {
 	/** Default mode showing workspace name + session stats */
-	Default = 'default',
+	Default = "default",
 	/** Session ready mode showing session title + Enter button (before entering projection) */
-	SessionReady = 'sessionReady',
+	SessionReady = "sessionReady",
 	/** Session mode showing session title + Esc button (inside projection) */
-	Session = 'session',
+	Session = "session",
 }
 
 export interface IAgentStatusSessionInfo {
@@ -81,26 +81,37 @@ export interface IAgentTitleBarStatusService {
 	updateSessionTitle(title: string): void;
 }
 
-export const IAgentTitleBarStatusService = createDecorator<IAgentTitleBarStatusService>('agentTitleBarStatusService');
+export const IAgentTitleBarStatusService =
+	createDecorator<IAgentTitleBarStatusService>("agentTitleBarStatusService");
 
 //#endregion
 
 //#region Agent Status Service Implementation
 
-export class AgentTitleBarStatusService extends Disposable implements IAgentTitleBarStatusService {
-
+export class AgentTitleBarStatusService
+	extends Disposable
+	implements IAgentTitleBarStatusService
+{
 	declare readonly _serviceBrand: undefined;
 
 	private _mode: AgentStatusMode = AgentStatusMode.Default;
-	get mode(): AgentStatusMode { return this._mode; }
+	get mode(): AgentStatusMode {
+		return this._mode;
+	}
 
 	private _sessionInfo: IAgentStatusSessionInfo | undefined;
-	get sessionInfo(): IAgentStatusSessionInfo | undefined { return this._sessionInfo; }
+	get sessionInfo(): IAgentStatusSessionInfo | undefined {
+		return this._sessionInfo;
+	}
 
-	private readonly _onDidChangeMode = this._register(new Emitter<AgentStatusMode>());
+	private readonly _onDidChangeMode = this._register(
+		new Emitter<AgentStatusMode>(),
+	);
 	readonly onDidChangeMode = this._onDidChangeMode.event;
 
-	private readonly _onDidChangeSessionInfo = this._register(new Emitter<IAgentStatusSessionInfo | undefined>());
+	private readonly _onDidChangeSessionInfo = this._register(
+		new Emitter<IAgentStatusSessionInfo | undefined>(),
+	);
 	readonly onDidChangeSessionInfo = this._onDidChangeSessionInfo.event;
 
 	enterSessionMode(sessionResource: URI, title: string): void {

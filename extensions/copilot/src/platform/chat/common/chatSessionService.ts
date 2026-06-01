@@ -6,7 +6,9 @@
 import { createServiceIdentifier } from '../../../util/common/services';
 import { Event } from '../../../util/vs/base/common/event';
 
-export const IChatSessionService = createServiceIdentifier<IChatSessionService>('IChatSessionService');
+export const IChatSessionService = createServiceIdentifier<IChatSessionService>(
+	'IChatSessionService',
+);
 
 export interface IChatSessionService {
 	readonly _serviceBrand: undefined;

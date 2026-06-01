@@ -5,8 +5,15 @@
 
 import type { EndOfLine, TextDocument, TextLine, Uri } from 'vscode';
 import { isNumber, isString } from '../../../util/vs/base/common/types';
-import { isUriComponents, URI, UriComponents } from '../../../util/vs/base/common/uri';
-import { DEFAULT_WORD_REGEXP, getWordAtText } from '../../../util/vs/editor/common/core/wordHelper';
+import {
+	isUriComponents,
+	URI,
+	UriComponents,
+} from '../../../util/vs/base/common/uri';
+import {
+	DEFAULT_WORD_REGEXP,
+	getWordAtText,
+} from '../../../util/vs/editor/common/core/wordHelper';
 import { Position, Range } from '../../../vscodeTypes';
 import { PositionOffsetTransformer } from './positionOffsetTransformer';
 
@@ -18,15 +25,22 @@ export interface ITextDocumentSnapshotJSON {
 	readonly eol: EndOfLine;
 }
 
-export function isTextDocumentSnapshotJSON(thing: any): thing is ITextDocumentSnapshotJSON {
+export function isTextDocumentSnapshotJSON(
+	thing: any,
+): thing is ITextDocumentSnapshotJSON {
 	if (!thing || typeof thing !== 'object') {
 		return false;
 	}
-	return isUriComponents(thing.uri) && isString(thing._text) && isString(thing.languageId) && isNumber(thing.version) && isNumber(thing.eol);
+	return (
+		isUriComponents(thing.uri) &&
+		isString(thing._text) &&
+		isString(thing.languageId) &&
+		isNumber(thing.version) &&
+		isNumber(thing.eol)
+	);
 }
 
 export class TextDocumentSnapshot {
-
 	_textDocumentSnapshot: undefined;
 
 	static create(doc: TextDocument): TextDocumentSnapshot {
@@ -51,7 +65,10 @@ export class TextDocumentSnapshot {
 		);
 	}
 
-	static fromJSON(doc: TextDocument, json: ITextDocumentSnapshotJSON): TextDocumentSnapshot {
+	static fromJSON(
+		doc: TextDocument,
+		json: ITextDocumentSnapshotJSON,
+	): TextDocumentSnapshot {
 		return new TextDocumentSnapshot(
 			doc,
 			URI.from(json.uri),
@@ -97,7 +114,14 @@ export class TextDocumentSnapshot {
 		return this._lines;
 	}
 
-	private constructor(document: TextDocument, uri: Uri, text: string, languageId: string, eol: EndOfLine, version: number) {
+	private constructor(
+		document: TextDocument,
+		uri: Uri,
+		text: string,
+		languageId: string,
+		eol: EndOfLine,
+		version: number,
+	) {
 		this.document = document;
 		this.uri = uri;
 		this._text = text;
@@ -121,7 +145,11 @@ export class TextDocumentSnapshot {
 			throw new Error('Illegal value for `line`');
 		}
 
-		return new SnapshotDocumentLine(line, this.lines[line], line === this.lines.length - 1);
+		return new SnapshotDocumentLine(
+			line,
+			this.lines[line],
+			line === this.lines.length - 1,
+		);
 	}
 
 	offsetAt(position: Position): number {
@@ -160,7 +188,10 @@ export class TextDocumentSnapshot {
 		}
 
 		const offsetRange = this.transformer.toOffsetRange(range);
-		return this._text.substring(offsetRange.start, offsetRange.endExclusive);
+		return this._text.substring(
+			offsetRange.start,
+			offsetRange.endExclusive,
+		);
 	}
 
 	getWordRangeAtPosition(_position: Position): Range | undefined {
@@ -170,11 +201,16 @@ export class TextDocumentSnapshot {
 			position.character + 1,
 			DEFAULT_WORD_REGEXP,
 			this.lines[position.line],
-			0
+			0,
 		);
 
 		if (wordAtText) {
-			return new Range(position.line, wordAtText.startColumn - 1, position.line, wordAtText.endColumn - 1);
+			return new Range(
+				position.line,
+				wordAtText.startColumn - 1,
+				position.line,
+				wordAtText.endColumn - 1,
+			);
 		}
 		return undefined;
 	}
@@ -228,7 +264,7 @@ export class TextDocumentSnapshot {
 			languageId: this.languageId,
 			version: this.version,
 			eol: this.eol,
-			_text: this._text
+			_text: this._text,
 		};
 	}
 }

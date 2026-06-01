@@ -7,7 +7,11 @@ import { IVSCodeExtensionContext } from '../../../../platform/extContext/common/
 import { encodeBase64, VSBuffer } from '../../../../util/vs/base/common/buffer';
 import { LRUCache } from '../../../../util/vs/base/common/map';
 import { LanguageModelToolInformation } from '../../../../vscodeTypes';
-import { ISummarizedToolCategory, ISummarizedToolCategoryUpdatable, IToolGroupingCache } from './virtualToolTypes';
+import {
+	ISummarizedToolCategory,
+	ISummarizedToolCategoryUpdatable,
+	IToolGroupingCache,
+} from './virtualToolTypes';
 
 const GROUP_CACHE_SIZE = 128;
 const GROUP_CACHE_NAME = 'virtToolGroupCache';
@@ -25,13 +29,17 @@ interface StoredValue {
 export class ToolGroupingCache implements IToolGroupingCache {
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _value = new LRUCache<string, CachedValue>(GROUP_CACHE_SIZE);
+	private readonly _value = new LRUCache<string, CachedValue>(
+		GROUP_CACHE_SIZE,
+	);
 	private _changed = false;
 
 	constructor(
-		@IVSCodeExtensionContext private readonly _extContext: IVSCodeExtensionContext,
+		@IVSCodeExtensionContext
+		private readonly _extContext: IVSCodeExtensionContext,
 	) {
-		const cached = _extContext.globalState.get<StoredValue>(GROUP_CACHE_NAME);
+		const cached =
+			_extContext.globalState.get<StoredValue>(GROUP_CACHE_NAME);
 		if (cached?.version === 2) {
 			try {
 				cached.lru.forEach(([k, v]) => this._value.set(k, v));
@@ -61,7 +69,9 @@ export class ToolGroupingCache implements IToolGroupingCache {
 		await this._extContext.globalState.update(GROUP_CACHE_NAME, value);
 	}
 
-	public async getDescription(tools: LanguageModelToolInformation[]): Promise<ISummarizedToolCategoryUpdatable> {
+	public async getDescription(
+		tools: LanguageModelToolInformation[],
+	): Promise<ISummarizedToolCategoryUpdatable> {
 		const key = await this.getKey(tools);
 		const existing = this._value.get(key);
 		return {
@@ -73,12 +83,14 @@ export class ToolGroupingCache implements IToolGroupingCache {
 					summary: r.summary,
 					name: r.name,
 				});
-			}
+			},
 		};
 	}
 
-
-	private hydrate(tools: LanguageModelToolInformation[], g: CachedValue): ISummarizedToolCategory {
+	private hydrate(
+		tools: LanguageModelToolInformation[],
+		g: CachedValue,
+	): ISummarizedToolCategory {
 		return {
 			summary: g.summary,
 			name: g.name,
@@ -86,9 +98,17 @@ export class ToolGroupingCache implements IToolGroupingCache {
 		};
 	}
 
-	private async getKey(tools: LanguageModelToolInformation[]): Promise<string> {
-		const str = tools.map(t => t.name + '\0' + t.description).sort().join(',');
-		const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+	private async getKey(
+		tools: LanguageModelToolInformation[],
+	): Promise<string> {
+		const str = tools
+			.map((t) => t.name + '\0' + t.description)
+			.sort()
+			.join(',');
+		const hashBuf = await crypto.subtle.digest(
+			'SHA-256',
+			new TextEncoder().encode(str),
+		);
 		return encodeBase64(VSBuffer.wrap(new Uint8Array(hashBuf)));
 	}
 }

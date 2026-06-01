@@ -3,11 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DisposableStore } from '../../base/common/lifecycle.js';
-import { InstantiationType, registerSingleton } from '../../platform/instantiation/common/extensions.js';
-import { createDecorator } from '../../platform/instantiation/common/instantiation.js';
+import { DisposableStore } from "../../base/common/lifecycle.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../platform/instantiation/common/extensions.js";
+import { createDecorator } from "../../platform/instantiation/common/instantiation.js";
 
-export const IChatDashboardService = createDecorator<IChatDashboardService>('chatDashboardService');
+export const IChatDashboardService = createDecorator<IChatDashboardService>(
+	"chatDashboardService",
+);
 
 export interface IChatDashboardService {
 	readonly _serviceBrand: undefined;
@@ -21,7 +26,13 @@ export interface IChatDashboardService {
 
 class NullChatDashboardService implements IChatDashboardService {
 	readonly _serviceBrand: undefined;
-	createDashboardElement(): HTMLElement | undefined { return undefined; }
+	createDashboardElement(): HTMLElement | undefined {
+		return undefined;
+	}
 }
 
-registerSingleton(IChatDashboardService, NullChatDashboardService, InstantiationType.Delayed);
+registerSingleton(
+	IChatDashboardService,
+	NullChatDashboardService,
+	InstantiationType.Delayed,
+);

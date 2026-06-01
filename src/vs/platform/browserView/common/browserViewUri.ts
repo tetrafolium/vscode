@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Schemas } from '../../../base/common/network.js';
-import { URI } from '../../../base/common/uri.js';
+import { Schemas } from "../../../base/common/network.js";
+import { URI } from "../../../base/common/uri.js";
 
 /**
  * Helper for creating and parsing browser view URIs.
  */
 export namespace BrowserViewUri {
-
 	export const scheme = Schemas.vscodeBrowser;
 
 	/**
@@ -29,7 +28,9 @@ export namespace BrowserViewUri {
 		}
 
 		// Remove leading slash if present
-		const id = resource.path.startsWith('/') ? resource.path.substring(1) : resource.path;
+		const id = resource.path.startsWith("/")
+			? resource.path.substring(1)
+			: resource.path;
 		if (!id) {
 			return undefined;
 		}

@@ -3,21 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableStore, IDisposable } from '../../../base/common/lifecycle.js';
-import { equals } from '../../../base/common/objects.js';
-import { autorun, IObservable, IReader } from '../../../base/common/observable.js';
-import { hasKey } from '../../../base/common/types.js';
-import { URI } from '../../../base/common/uri.js';
-import { generateUuid } from '../../../base/common/uuid.js';
-import { IInstantiationService } from '../../instantiation/common/instantiation.js';
-import { ILogService } from '../../log/common/log.js';
-import { AgentSignal, IAgent, IAgentToolPendingConfirmationSignal } from '../common/agentService.js';
-import { IAgentHostChangesetService } from './agentHostChangesetService.js';
-import { IAgentHostCheckpointService } from '../common/agentHostCheckpointService.js';
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+} from "../../../base/common/lifecycle.js";
+import { equals } from "../../../base/common/objects.js";
+import {
+	autorun,
+	IObservable,
+	IReader,
+} from "../../../base/common/observable.js";
+import { hasKey } from "../../../base/common/types.js";
+import { URI } from "../../../base/common/uri.js";
+import { generateUuid } from "../../../base/common/uuid.js";
+import { IInstantiationService } from "../../instantiation/common/instantiation.js";
+import { ILogService } from "../../log/common/log.js";
+import {
+	AgentSignal,
+	IAgent,
+	IAgentToolPendingConfirmationSignal,
+} from "../common/agentService.js";
+import { IAgentHostChangesetService } from "./agentHostChangesetService.js";
+import { IAgentHostCheckpointService } from "../common/agentHostCheckpointService.js";
 
-import { ISessionDataService } from '../common/sessionDataService.js';
-import type { AgentInfo } from '../common/state/protocol/state.js';
-import { ActionType, StateAction, type SessionToolCallCompleteAction } from '../common/state/sessionActions.js';
+import { ISessionDataService } from "../common/sessionDataService.js";
+import type { AgentInfo } from "../common/state/protocol/state.js";
+import {
+	ActionType,
+	StateAction,
+	type SessionToolCallCompleteAction,
+} from "../common/state/sessionActions.js";
 import {
 	buildSubagentSessionUri,
 	getToolFileEdits,
@@ -30,13 +46,13 @@ import {
 	ToolResultContentType,
 	type URI as ProtocolURI,
 	type SessionState,
-	type ToolResultContent
-} from '../common/state/sessionState.js';
-import { AgentHostStateManager } from './agentHostStateManager.js';
-import { SessionPermissionManager } from './sessionPermissions.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
-import { updateAgentHostTelemetryLevelFromConfig } from './agentHostTelemetryService.js';
-import { AgentHostTelemetryReporter } from './agentHostTelemetryReporter.js';
+	type ToolResultContent,
+} from "../common/state/sessionState.js";
+import { AgentHostStateManager } from "./agentHostStateManager.js";
+import { SessionPermissionManager } from "./sessionPermissions.js";
+import { ITelemetryService } from "../../telemetry/common/telemetry.js";
+import { updateAgentHostTelemetryLevelFromConfig } from "./agentHostTelemetryService.js";
+import { AgentHostTelemetryReporter } from "./agentHostTelemetryReporter.js";
 
 /**
  * Options for constructing an {@link AgentSideEffects} instance.
@@ -73,7 +89,6 @@ interface IPendingSubagentSignal {
  * Session create/dispose/list and auth are handled by {@link AgentService}.
  */
 export class AgentSideEffects extends Disposable {
-
 	/** Maps tool call IDs to the agent that owns them, for routing confirmations. */
 	private readonly _toolCallAgents = new Map<string, string>();
 	private _lastAgentInfos: readonly AgentInfo[] = [];
@@ -97,7 +112,10 @@ export class AgentSideEffects extends Disposable {
 	 *
 	 * Key: `${parentSession}:${parentToolCallId}`.
 	 */
-	private readonly _pendingSubagentSignals = new Map<string, IPendingSubagentSignal[]>();
+	private readonly _pendingSubagentSignals = new Map<
+		string,
+		IPendingSubagentSignal[]
+	>();
 	private readonly _telemetryReporter: AgentHostTelemetryReporter;
 
 	constructor(
@@ -105,44 +123,70 @@ export class AgentSideEffects extends Disposable {
 		private readonly _options: IAgentSideEffectsOptions,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@ILogService private readonly _logService: ILogService,
-		@IAgentHostChangesetService private readonly _changesets: IAgentHostChangesetService,
+		@IAgentHostChangesetService
+		private readonly _changesets: IAgentHostChangesetService,
 		@ITelemetryService private readonly _telemetryService: ITelemetryService,
-		@IAgentHostCheckpointService private readonly _checkpointService: IAgentHostCheckpointService,
+		@IAgentHostCheckpointService
+		private readonly _checkpointService: IAgentHostCheckpointService,
 	) {
 		super();
-		this._telemetryReporter = new AgentHostTelemetryReporter(this._telemetryService);
-		this._permissionManager = this._register(instantiationService.createInstance(SessionPermissionManager, this._stateManager));
+		this._telemetryReporter = new AgentHostTelemetryReporter(
+			this._telemetryService,
+		);
+		this._permissionManager = this._register(
+			instantiationService.createInstance(
+				SessionPermissionManager,
+				this._stateManager,
+			),
+		);
 
 		// Whenever the agents observable changes, publish to root state.
-		this._register(autorun(reader => {
-			const agents = this._options.agents.read(reader);
-			this._publishAgentInfos(agents, reader);
-		}));
+		this._register(
+			autorun((reader) => {
+				const agents = this._options.agents.read(reader);
+				this._publishAgentInfos(agents, reader);
+			}),
+		);
 
 		// Server-dispatched SessionToolCallComplete actions (e.g. from
 		// the disconnect timeout in ProtocolServerHandler) bypass
 		// handleAction, so the agent's SDK deferred never resolves.
 		// Listen for these envelopes and notify the agent directly.
-		this._register(this._stateManager.onDidEmitEnvelope(envelope => {
-			if (!envelope.origin && envelope.action.type === ActionType.SessionToolCallComplete) {
-				const action = envelope.action;
-				const agent = this._options.getAgent(envelope.channel);
-				agent?.onClientToolCallComplete(URI.parse(envelope.channel), action.toolCallId, action.result);
-			}
-		}));
+		this._register(
+			this._stateManager.onDidEmitEnvelope((envelope) => {
+				if (
+					!envelope.origin &&
+					envelope.action.type === ActionType.SessionToolCallComplete
+				) {
+					const action = envelope.action;
+					const agent = this._options.getAgent(envelope.channel);
+					agent?.onClientToolCallComplete(
+						URI.parse(envelope.channel),
+						action.toolCallId,
+						action.result,
+					);
+				}
+			}),
+		);
 	}
 
 	/**
 	 * Publishes agent descriptors using the last known model lists.
 	 */
-	private _publishAgentInfos(agents: readonly IAgent[], reader?: IReader): void {
-		const infos: AgentInfo[] = agents.map(a => {
+	private _publishAgentInfos(
+		agents: readonly IAgent[],
+		reader?: IReader,
+	): void {
+		const infos: AgentInfo[] = agents.map((a) => {
 			const d = a.getDescriptor();
 			const protectedResources = a.getProtectedResources();
 			const models = reader ? a.models.read(reader) : a.models.get();
 			const customizations = a.getCustomizations?.();
 			return {
-				provider: d.provider, displayName: d.displayName, description: d.description, models: models.map(m => ({
+				provider: d.provider,
+				displayName: d.displayName,
+				description: d.description,
+				models: models.map((m) => ({
 					id: m.id,
 					provider: m.provider,
 					name: m.name,
@@ -152,32 +196,49 @@ export class AgentSideEffects extends Disposable {
 					configSchema: m.configSchema,
 					_meta: m._meta,
 				})),
-				customizations: customizations?.length ? [...customizations] : undefined,
-				protectedResources: protectedResources.length > 0 ? protectedResources : undefined,
+				customizations: customizations?.length
+					? [...customizations]
+					: undefined,
+				protectedResources:
+					protectedResources.length > 0 ? protectedResources : undefined,
 			};
 		});
 		if (equals(this._lastAgentInfos, infos)) {
 			return;
 		}
 		this._lastAgentInfos = infos;
-		this._stateManager.dispatchServerAction(ROOT_STATE_URI, { type: ActionType.RootAgentsChanged, agents: infos });
+		this._stateManager.dispatchServerAction(ROOT_STATE_URI, {
+			type: ActionType.RootAgentsChanged,
+			agents: infos,
+		});
 	}
 
-	private async _publishSessionCustomizations(agent: IAgent, session: ProtocolURI): Promise<void> {
+	private async _publishSessionCustomizations(
+		agent: IAgent,
+		session: ProtocolURI,
+	): Promise<void> {
 		if (!agent.getSessionCustomizations) {
 			return;
 		}
 
-		const customizations = await agent.getSessionCustomizations(URI.parse(session));
+		const customizations = await agent.getSessionCustomizations(
+			URI.parse(session),
+		);
 		this._stateManager.dispatchServerAction(session, {
 			type: ActionType.SessionCustomizationsChanged,
 			customizations: [...customizations],
 		});
 	}
 
-	private _publishSessionCustomizationsSoon(agent: IAgent, session: ProtocolURI): void {
-		void this._publishSessionCustomizations(agent, session).catch(err => {
-			this._logService.error('[AgentSideEffects] getSessionCustomizations failed', err);
+	private _publishSessionCustomizationsSoon(
+		agent: IAgent,
+		session: ProtocolURI,
+	): void {
+		void this._publishSessionCustomizations(agent, session).catch((err) => {
+			this._logService.error(
+				"[AgentSideEffects] getSessionCustomizations failed",
+				err,
+			);
 		});
 	}
 
@@ -218,14 +279,18 @@ export class AgentSideEffects extends Disposable {
 	 */
 	registerProgressListener(agent: IAgent): IDisposable {
 		const disposables = new DisposableStore();
-		disposables.add(agent.onDidSessionProgress(signal => {
-			this._handleAgentSignal(agent, signal);
-		}));
+		disposables.add(
+			agent.onDidSessionProgress((signal) => {
+				this._handleAgentSignal(agent, signal);
+			}),
+		);
 		if (agent.onDidCustomizationsChange) {
-			disposables.add(agent.onDidCustomizationsChange(() => {
-				this._publishAgentInfos(this._options.agents.get());
-				this._publishSessionCustomizationsForAgent(agent);
-			}));
+			disposables.add(
+				agent.onDidCustomizationsChange(() => {
+					this._publishAgentInfos(this._options.agents.get());
+					this._publishSessionCustomizationsForAgent(agent);
+				}),
+			);
 		}
 		return disposables;
 	}
@@ -248,25 +313,35 @@ export class AgentSideEffects extends Disposable {
 		// under the parent session key and a later `pending_confirmation`
 		// (which lacks
 		// `parentToolCallId`) could be routed against the wrong session.
-		if (signal.kind === 'action'
-			&& signal.action.type === ActionType.SessionToolCallStart
-			&& !signal.parentToolCallId
+		if (
+			signal.kind === "action" &&
+			signal.action.type === ActionType.SessionToolCallStart &&
+			!signal.parentToolCallId
 		) {
-			this._toolCallAgents.set(`${sessionKey}:${signal.action.toolCallId}`, agent.id);
+			this._toolCallAgents.set(
+				`${sessionKey}:${signal.action.toolCallId}`,
+				agent.id,
+			);
 		}
 
-		if (signal.kind === 'subagent_started') {
-			this._handleSubagentStarted(sessionKey, signal.toolCallId, signal.agentName, signal.agentDisplayName, signal.agentDescription);
+		if (signal.kind === "subagent_started") {
+			this._handleSubagentStarted(
+				sessionKey,
+				signal.toolCallId,
+				signal.agentName,
+				signal.agentDisplayName,
+				signal.agentDescription,
+			);
 			this._drainPendingSubagentSignals(sessionKey, signal.toolCallId);
 			return;
 		}
 
-		if (signal.kind === 'subagent_completed') {
+		if (signal.kind === "subagent_completed") {
 			this.completeSubagentSession(sessionKey, signal.toolCallId);
 			return;
 		}
 
-		if (signal.kind === 'steering_consumed') {
+		if (signal.kind === "steering_consumed") {
 			this._stateManager.dispatchServerAction(sessionKey, {
 				type: ActionType.SessionPendingMessageRemoved,
 				kind: PendingMessageKind.Steering,
@@ -282,27 +357,41 @@ export class AgentSideEffects extends Disposable {
 		// call, and that signal must be routed to the subagent session
 		// (otherwise the resulting SessionToolCallReady would land on the
 		// parent session, which has no matching SessionToolCallStart).
-		const parentToolCallId = signal.kind === 'action' || signal.kind === 'pending_confirmation'
-			? signal.parentToolCallId
-			: undefined;
+		const parentToolCallId =
+			signal.kind === "action" || signal.kind === "pending_confirmation"
+				? signal.parentToolCallId
+				: undefined;
 		if (parentToolCallId) {
 			const subagentKey = `${sessionKey}:${parentToolCallId}`;
 			const subagentSession = this._subagentSessions.get(subagentKey);
 			if (subagentSession) {
 				// Track tool calls in subagent context for confirmation routing.
-				if (signal.kind === 'action' && signal.action.type === ActionType.SessionToolCallStart) {
-					this._toolCallAgents.set(`${subagentSession}:${signal.action.toolCallId}`, agent.id);
+				if (
+					signal.kind === "action" &&
+					signal.action.type === ActionType.SessionToolCallStart
+				) {
+					this._toolCallAgents.set(
+						`${subagentSession}:${signal.action.toolCallId}`,
+						agent.id,
+					);
 				}
 				const subTurnId = this._stateManager.getActiveTurnId(subagentSession);
 				if (subTurnId) {
-					this._dispatchActionForSession(signal, subagentSession, subTurnId, agent);
+					this._dispatchActionForSession(
+						signal,
+						subagentSession,
+						subTurnId,
+						agent,
+					);
 				}
 				return;
 			}
 
 			// Subagent session does not exist yet — buffer the signal so we can
 			// replay it after `subagent_started` arrives.
-			this._logService.trace(`[AgentSideEffects] Buffering ${this._describeSignal(signal)} for pending subagent ${subagentKey}`);
+			this._logService.trace(
+				`[AgentSideEffects] Buffering ${this._describeSignal(signal)} for pending subagent ${subagentKey}`,
+			);
 			let buffer = this._pendingSubagentSignals.get(subagentKey);
 			if (!buffer) {
 				buffer = [];
@@ -316,8 +405,11 @@ export class AgentSideEffects extends Disposable {
 		// (legacy path for signals without an explicit parentToolCallId — the
 		// tool was previously registered under its subagent session key in
 		// _toolCallAgents).
-		if (signal.kind === 'pending_confirmation') {
-			const subagentSession = this._findSubagentSessionForToolCall(sessionKey, signal.state.toolCallId);
+		if (signal.kind === "pending_confirmation") {
+			const subagentSession = this._findSubagentSessionForToolCall(
+				sessionKey,
+				signal.state.toolCallId,
+			);
 			if (subagentSession) {
 				const subTurnId = this._stateManager.getActiveTurnId(subagentSession);
 				if (subTurnId) {
@@ -338,7 +430,7 @@ export class AgentSideEffects extends Disposable {
 		// such as customizations, title, or configuration. A turnComplete
 		// action also drives post-turn side effects even when the matching
 		// turnStarted was not observed by this side-effects instance.
-		if (signal.kind === 'action') {
+		if (signal.kind === "action") {
 			this._stateManager.dispatchServerAction(sessionKey, signal.action);
 			if (signal.action.type === ActionType.SessionTurnComplete) {
 				this._runTurnCompleteSideEffects(sessionKey, undefined);
@@ -350,14 +442,19 @@ export class AgentSideEffects extends Disposable {
 	 * Dispatches a signal against a resolved session+turn. Performs the
 	 * subagent-content merge for tool_complete and the related side effects.
 	 */
-	private _dispatchActionForSession(signal: AgentSignal, sessionKey: ProtocolURI, turnId: string, agent?: IAgent): void {
-		if (signal.kind === 'pending_confirmation') {
+	private _dispatchActionForSession(
+		signal: AgentSignal,
+		sessionKey: ProtocolURI,
+		turnId: string,
+		agent?: IAgent,
+	): void {
+		if (signal.kind === "pending_confirmation") {
 			if (agent) {
 				this._handleToolReady(signal, sessionKey, turnId, agent);
 			}
 			return;
 		}
-		if (signal.kind !== 'action') {
+		if (signal.kind !== "action") {
 			return;
 		}
 		// The agent emits actions with its own view of the active turnId
@@ -383,11 +480,25 @@ export class AgentSideEffects extends Disposable {
 			const subagentUri = this._subagentSessions.get(subagentKey);
 			if (subagentUri) {
 				const parentState = this._stateManager.getSessionState(sessionKey);
-				const runningContent = this._getRunningToolCallContent(parentState, turnId, action.toolCallId);
-				const subagentEntry = runningContent.find(c => hasKey(c, { type: true }) && c.type === ToolResultContentType.Subagent);
+				const runningContent = this._getRunningToolCallContent(
+					parentState,
+					turnId,
+					action.toolCallId,
+				);
+				const subagentEntry = runningContent.find(
+					(c) =>
+						hasKey(c, { type: true }) &&
+						c.type === ToolResultContentType.Subagent,
+				);
 				if (subagentEntry) {
-					const mergedContent = [...(action.result.content ?? []), subagentEntry];
-					const merged: SessionToolCallCompleteAction = { ...action, result: { ...action.result, content: mergedContent } };
+					const mergedContent = [
+						...(action.result.content ?? []),
+						subagentEntry,
+					];
+					const merged: SessionToolCallCompleteAction = {
+						...action,
+						result: { ...action.result, content: mergedContent },
+					};
 					action = merged;
 				}
 			}
@@ -418,7 +529,10 @@ export class AgentSideEffects extends Disposable {
 	 * compute final diffs immediately, drain the next queued message, and
 	 * notify the host so it can refresh git state.
 	 */
-	private _runTurnCompleteSideEffects(sessionKey: ProtocolURI, turnId: string | undefined): void {
+	private _runTurnCompleteSideEffects(
+		sessionKey: ProtocolURI,
+		turnId: string | undefined,
+	): void {
 		// Capture the end-of-turn git checkpoint BEFORE notifying the
 		// changeset service so the per-turn changeset recompute can take
 		// the authoritative git-diff fast path (which includes terminal-tool
@@ -429,12 +543,19 @@ export class AgentSideEffects extends Disposable {
 		// completion since those have always been fire-and-forget; the
 		// ordering guarantee we care about is checkpoint-then-changeset.
 		if (turnId !== undefined) {
-			this._checkpointService.captureTurnCheckpoint(URI.parse(sessionKey), turnId).then(() => {
-				this._changesets.onTurnComplete(sessionKey, turnId);
-			}, err => {
-				this._logService.warn(`[AgentSideEffects] Turn checkpoint capture failed for ${sessionKey}/${turnId}: ${err instanceof Error ? err.message : String(err)}`);
-				this._changesets.onTurnComplete(sessionKey, turnId);
-			});
+			this._checkpointService
+				.captureTurnCheckpoint(URI.parse(sessionKey), turnId)
+				.then(
+					() => {
+						this._changesets.onTurnComplete(sessionKey, turnId);
+					},
+					(err) => {
+						this._logService.warn(
+							`[AgentSideEffects] Turn checkpoint capture failed for ${sessionKey}/${turnId}: ${err instanceof Error ? err.message : String(err)}`,
+						);
+						this._changesets.onTurnComplete(sessionKey, turnId);
+					},
+				);
 		} else {
 			this._changesets.onTurnComplete(sessionKey, turnId);
 		}
@@ -443,7 +564,9 @@ export class AgentSideEffects extends Disposable {
 	}
 
 	private _describeSignal(signal: AgentSignal): string {
-		return signal.kind === 'action' ? `action(${signal.action.type})` : signal.kind;
+		return signal.kind === "action"
+			? `action(${signal.action.type})`
+			: signal.kind;
 	}
 
 	/**
@@ -451,14 +574,19 @@ export class AgentSideEffects extends Disposable {
 	 * `subagent_started` to create the subagent session. Called immediately
 	 * after `_handleSubagentStarted`.
 	 */
-	private _drainPendingSubagentSignals(parentSession: ProtocolURI, parentToolCallId: string): void {
+	private _drainPendingSubagentSignals(
+		parentSession: ProtocolURI,
+		parentToolCallId: string,
+	): void {
 		const subagentKey = `${parentSession}:${parentToolCallId}`;
 		const buffer = this._pendingSubagentSignals.get(subagentKey);
 		if (!buffer) {
 			return;
 		}
 		this._pendingSubagentSignals.delete(subagentKey);
-		this._logService.trace(`[AgentSideEffects] Draining ${buffer.length} buffered signal(s) for subagent ${subagentKey}`);
+		this._logService.trace(
+			`[AgentSideEffects] Draining ${buffer.length} buffered signal(s) for subagent ${subagentKey}`,
+		);
 		for (const { signal, agent } of buffer) {
 			this._handleAgentSignal(agent, signal);
 		}
@@ -478,7 +606,10 @@ export class AgentSideEffects extends Disposable {
 		agentDisplayName: string,
 		agentDescription?: string,
 	): void {
-		const subagentSessionUri = buildSubagentSessionUri(parentSession, toolCallId);
+		const subagentSessionUri = buildSubagentSessionUri(
+			parentSession,
+			toolCallId,
+		);
 		const subagentKey = `${parentSession}:${toolCallId}`;
 
 		// Already tracking this subagent
@@ -486,19 +617,23 @@ export class AgentSideEffects extends Disposable {
 			return;
 		}
 
-		this._logService.info(`[AgentSideEffects] Creating subagent session: ${subagentSessionUri} (parent=${parentSession}, toolCallId=${toolCallId})`);
+		this._logService.info(
+			`[AgentSideEffects] Creating subagent session: ${subagentSessionUri} (parent=${parentSession}, toolCallId=${toolCallId})`,
+		);
 		const parentState = this._stateManager.getSessionState(parentSession);
 
 		// Create the subagent session silently (restoreSession skips notification)
 		this._stateManager.restoreSession(
 			{
 				resource: subagentSessionUri,
-				provider: 'subagent',
+				provider: "subagent",
 				title: agentDisplayName,
 				status: SessionStatus.Idle,
 				createdAt: Date.now(),
 				modifiedAt: Date.now(),
-				...(parentState?.summary.project ? { project: parentState.summary.project } : {}),
+				...(parentState?.summary.project
+					? { project: parentState.summary.project }
+					: {}),
 			},
 			[],
 		);
@@ -508,7 +643,7 @@ export class AgentSideEffects extends Disposable {
 		this._stateManager.dispatchServerAction(subagentSessionUri, {
 			type: ActionType.SessionTurnStarted,
 			turnId,
-			message: { text: '', origin: { kind: MessageKind.User } },
+			message: { text: "", origin: { kind: MessageKind.User } },
 		});
 
 		this._subagentSessions.set(subagentKey, subagentSessionUri);
@@ -518,7 +653,11 @@ export class AgentSideEffects extends Disposable {
 		const parentTurnId = this._stateManager.getActiveTurnId(parentSession);
 		if (parentTurnId) {
 			const parentState = this._stateManager.getSessionState(parentSession);
-			const existingContent = this._getRunningToolCallContent(parentState, parentTurnId, toolCallId);
+			const existingContent = this._getRunningToolCallContent(
+				parentState,
+				parentTurnId,
+				toolCallId,
+			);
 			const mergedContent = [
 				...existingContent,
 				{
@@ -550,7 +689,11 @@ export class AgentSideEffects extends Disposable {
 			return [];
 		}
 		for (const rp of state.activeTurn.responseParts) {
-			if (rp.kind === ResponsePartKind.ToolCall && rp.toolCall.toolCallId === toolCallId && rp.toolCall.status === ToolCallStatus.Running) {
+			if (
+				rp.kind === ResponsePartKind.ToolCall &&
+				rp.toolCall.toolCallId === toolCallId &&
+				rp.toolCall.status === ToolCallStatus.Running
+			) {
 				return rp.toolCall.content ? [...rp.toolCall.content] : [];
 			}
 		}
@@ -588,7 +731,10 @@ export class AgentSideEffects extends Disposable {
 	 * parent tool call completion — background subagents keep running after
 	 * their parent tool returns.
 	 */
-	completeSubagentSession(parentSession: ProtocolURI, toolCallId: string): void {
+	completeSubagentSession(
+		parentSession: ProtocolURI,
+		toolCallId: string,
+	): void {
 		const key = `${parentSession}:${toolCallId}`;
 
 		// Drop any events that were buffered waiting for a `subagent_started`
@@ -651,10 +797,16 @@ export class AgentSideEffects extends Disposable {
 	 * session key in `_toolCallAgents`. Scoped to subagent sessions owned
 	 * by the given parent to avoid cross-session collisions.
 	 */
-	private _findSubagentSessionForToolCall(parentSession: ProtocolURI, toolCallId: string): ProtocolURI | undefined {
+	private _findSubagentSessionForToolCall(
+		parentSession: ProtocolURI,
+		toolCallId: string,
+	): ProtocolURI | undefined {
 		const prefix = `${parentSession}:`;
 		for (const [key, subagentUri] of this._subagentSessions) {
-			if (key.startsWith(prefix) && this._toolCallAgents.has(`${subagentUri}:${toolCallId}`)) {
+			if (
+				key.startsWith(prefix) &&
+				this._toolCallAgents.has(`${subagentUri}:${toolCallId}`)
+			) {
 				return subagentUri;
 			}
 		}
@@ -669,7 +821,12 @@ export class AgentSideEffects extends Disposable {
 	 * dispatches the `SessionToolCallReady` action with confirmation options
 	 * for the client.
 	 */
-	private _handleToolReady(e: IAgentToolPendingConfirmationSignal, sessionKey: ProtocolURI, turnId: string, agent: IAgent): void {
+	private _handleToolReady(
+		e: IAgentToolPendingConfirmationSignal,
+		sessionKey: ProtocolURI,
+		turnId: string,
+		agent: IAgent,
+	): void {
 		const approvalEvent = {
 			toolCallId: e.state.toolCallId,
 			session: e.session,
@@ -677,7 +834,10 @@ export class AgentSideEffects extends Disposable {
 			permissionPath: e.permissionPath,
 			toolInput: e.state.toolInput,
 		};
-		const autoApproval = this._permissionManager.getAutoApproval(approvalEvent, sessionKey);
+		const autoApproval = this._permissionManager.getAutoApproval(
+			approvalEvent,
+			sessionKey,
+		);
 		let effective = e;
 		if (autoApproval !== undefined) {
 			this._toolCallAgents.delete(`${sessionKey}:${e.state.toolCallId}`);
@@ -691,7 +851,11 @@ export class AgentSideEffects extends Disposable {
 		}
 		this._stateManager.dispatchServerAction(
 			sessionKey,
-			this._permissionManager.createToolReadyAction(effective, sessionKey, turnId)
+			this._permissionManager.createToolReadyAction(
+				effective,
+				sessionKey,
+				turnId,
+			),
 		);
 	}
 
@@ -707,8 +871,16 @@ export class AgentSideEffects extends Disposable {
 				// title is still the default placeholder to avoid clobbering a
 				// title set by the user or provider before the first turn.
 				const state = this._stateManager.getSessionState(channel);
-				const fallbackTitle = action.message.text.trim().replace(/\s+/g, ' ').slice(0, 200);
-				if (state && state.turns.length === 0 && !state.summary.title && fallbackTitle.length > 0) {
+				const fallbackTitle = action.message.text
+					.trim()
+					.replace(/\s+/g, " ")
+					.slice(0, 200);
+				if (
+					state &&
+					state.turns.length === 0 &&
+					!state.summary.title &&
+					fallbackTitle.length > 0
+				) {
 					this._stateManager.dispatchServerAction(channel, {
 						type: ActionType.SessionTitleChanged,
 						title: fallbackTitle,
@@ -720,21 +892,40 @@ export class AgentSideEffects extends Disposable {
 					this._stateManager.dispatchServerAction(channel, {
 						type: ActionType.SessionError,
 						turnId: action.turnId,
-						error: { errorType: 'noAgent', message: 'No agent found for session' },
+						error: {
+							errorType: "noAgent",
+							message: "No agent found for session",
+						},
 					});
 					return;
 				}
 				const attachments = action.message.attachments;
-				this._telemetryReporter.userMessageSent(agent.id, channel, state, 'direct', attachments);
-				agent.sendMessage(URI.parse(channel), action.message.text, attachments, action.turnId).catch(err => {
-					const errCode = (err as { code?: number })?.code;
-					this._logService.error(`[AgentSideEffects] sendMessage failed for session=${channel}: code=${errCode}, message=${err instanceof Error ? err.message : String(err)}, type=${err?.constructor?.name}`, err);
-					this._stateManager.dispatchServerAction(channel, {
-						type: ActionType.SessionError,
-						turnId: action.turnId,
-						error: { errorType: 'sendFailed', message: String(err) },
+				this._telemetryReporter.userMessageSent(
+					agent.id,
+					channel,
+					state,
+					"direct",
+					attachments,
+				);
+				agent
+					.sendMessage(
+						URI.parse(channel),
+						action.message.text,
+						attachments,
+						action.turnId,
+					)
+					.catch((err) => {
+						const errCode = (err as { code?: number })?.code;
+						this._logService.error(
+							`[AgentSideEffects] sendMessage failed for session=${channel}: code=${errCode}, message=${err instanceof Error ? err.message : String(err)}, type=${err?.constructor?.name}`,
+							err,
+						);
+						this._stateManager.dispatchServerAction(channel, {
+							type: ActionType.SessionError,
+							turnId: action.turnId,
+							error: { errorType: "sendFailed", message: String(err) },
+						});
 					});
-				});
 				break;
 			}
 			case ActionType.SessionToolCallConfirmed: {
@@ -742,49 +933,61 @@ export class AgentSideEffects extends Disposable {
 				const agentId = this._toolCallAgents.get(toolCallKey);
 				if (agentId) {
 					this._toolCallAgents.delete(toolCallKey);
-					const agent = this._options.agents.get().find(a => a.id === agentId);
+					const agent = this._options.agents
+						.get()
+						.find((a) => a.id === agentId);
 					agent?.respondToPermissionRequest(action.toolCallId, action.approved);
 				} else {
-					this._logService.warn(`[AgentSideEffects] No agent for tool call confirmation: ${action.toolCallId}`);
+					this._logService.warn(
+						`[AgentSideEffects] No agent for tool call confirmation: ${action.toolCallId}`,
+					);
 				}
 
 				// When the user chose "Allow in this Session", add the tool
 				// to the session's permissions so future calls are auto-approved.
 				if (action.approved) {
-					this._permissionManager.handleToolCallConfirmed(channel, action.toolCallId, action.selectedOptionId);
+					this._permissionManager.handleToolCallConfirmed(
+						channel,
+						action.toolCallId,
+						action.selectedOptionId,
+					);
 				}
 				break;
 			}
 			case ActionType.SessionInputCompleted: {
 				const agent = this._options.getAgent(channel);
-				agent?.respondToUserInputRequest(action.requestId, action.response, action.answers);
+				agent?.respondToUserInputRequest(
+					action.requestId,
+					action.response,
+					action.answers,
+				);
 				break;
 			}
 			case ActionType.SessionTurnCancelled: {
 				// Cancel all subagent sessions for this parent
 				this.cancelSubagentSessions(channel);
 				const agent = this._options.getAgent(channel);
-				agent?.abortSession(URI.parse(channel)).catch(err => {
-					this._logService.error('[AgentSideEffects] abortSession failed', err);
+				agent?.abortSession(URI.parse(channel)).catch((err) => {
+					this._logService.error("[AgentSideEffects] abortSession failed", err);
 				});
 				break;
 			}
 			case ActionType.SessionModelChanged: {
 				const agent = this._options.getAgent(channel);
-				agent?.changeModel?.(URI.parse(channel), action.model).catch(err => {
-					this._logService.error('[AgentSideEffects] changeModel failed', err);
+				agent?.changeModel?.(URI.parse(channel), action.model).catch((err) => {
+					this._logService.error("[AgentSideEffects] changeModel failed", err);
 				});
 				break;
 			}
 			case ActionType.SessionAgentChanged: {
 				const agent = this._options.getAgent(channel);
-				agent?.changeAgent?.(URI.parse(channel), action.agent).catch(err => {
-					this._logService.error('[AgentSideEffects] changeAgent failed', err);
+				agent?.changeAgent?.(URI.parse(channel), action.agent).catch((err) => {
+					this._logService.error("[AgentSideEffects] changeAgent failed", err);
 				});
 				break;
 			}
 			case ActionType.SessionTitleChanged: {
-				this._persistSessionFlag(channel, 'customTitle', action.title);
+				this._persistSessionFlag(channel, "customTitle", action.title);
 				break;
 			}
 			case ActionType.SessionPendingMessageSet:
@@ -795,9 +998,14 @@ export class AgentSideEffects extends Disposable {
 			}
 			case ActionType.SessionTruncated: {
 				const agent = this._options.getAgent(channel);
-				agent?.truncateSession?.(URI.parse(channel), action.turnId).catch(err => {
-					this._logService.error('[AgentSideEffects] truncateSession failed', err);
-				});
+				agent
+					?.truncateSession?.(URI.parse(channel), action.turnId)
+					.catch((err) => {
+						this._logService.error(
+							"[AgentSideEffects] truncateSession failed",
+							err,
+						);
+					});
 				this._changesets.onSessionTruncated(channel);
 				break;
 			}
@@ -807,17 +1015,29 @@ export class AgentSideEffects extends Disposable {
 					break;
 				}
 				// Always forward client tools, even if empty, to clear previous client's tools
-				const clientId = action.activeClient?.clientId ?? '';
-				agent.setClientTools(URI.parse(channel), clientId, action.activeClient?.tools ?? []);
+				const clientId = action.activeClient?.clientId ?? "";
+				agent.setClientTools(
+					URI.parse(channel),
+					clientId,
+					action.activeClient?.tools ?? [],
+				);
 
 				const refs = action.activeClient?.customizations ?? [];
-				agent.setClientCustomizations(URI.parse(channel), clientId, refs).catch(err => {
-					this._logService.error('[AgentSideEffects] setClientCustomizations failed', err);
-				});
+				agent
+					.setClientCustomizations(URI.parse(channel), clientId, refs)
+					.catch((err) => {
+						this._logService.error(
+							"[AgentSideEffects] setClientCustomizations failed",
+							err,
+						);
+					});
 				break;
 			}
 			case ActionType.RootConfigChanged: {
-				updateAgentHostTelemetryLevelFromConfig(this._telemetryService, action.config);
+				updateAgentHostTelemetryLevelFromConfig(
+					this._telemetryService,
+					action.config,
+				);
 				// Host customizations are self-managed by each agent's
 				// PluginController via IAgentConfigurationService.onDidRootConfigChange.
 				// Republish agent infos for non-customization schema changes
@@ -832,7 +1052,11 @@ export class AgentSideEffects extends Disposable {
 					const sessionState = this._stateManager.getSessionState(channel);
 					const toolClientId = sessionState?.activeClient?.clientId;
 					if (toolClientId) {
-						agent.setClientTools(URI.parse(channel), toolClientId, action.tools);
+						agent.setClientTools(
+							URI.parse(channel),
+							toolClientId,
+							action.tools,
+						);
 					}
 				}
 				break;
@@ -843,15 +1067,28 @@ export class AgentSideEffects extends Disposable {
 				break;
 			}
 			case ActionType.SessionIsReadChanged: {
-				this._persistSessionFlag(channel, 'isRead', action.isRead ? 'true' : '');
+				this._persistSessionFlag(
+					channel,
+					"isRead",
+					action.isRead ? "true" : "",
+				);
 				break;
 			}
 			case ActionType.SessionIsArchivedChanged: {
-				this._persistSessionFlag(channel, 'isArchived', action.isArchived ? 'true' : '');
+				this._persistSessionFlag(
+					channel,
+					"isArchived",
+					action.isArchived ? "true" : "",
+				);
 				const agent = this._options.getAgent(channel);
-				agent?.onArchivedChanged?.(URI.parse(channel), action.isArchived).catch(err => {
-					this._logService.warn(`[AgentSideEffects] onArchivedChanged failed for ${channel}`, err);
-				});
+				agent
+					?.onArchivedChanged?.(URI.parse(channel), action.isArchived)
+					.catch((err) => {
+						this._logService.warn(
+							`[AgentSideEffects] onArchivedChanged failed for ${channel}`,
+							err,
+						);
+					});
 				break;
 			}
 			case ActionType.SessionConfigChanged: {
@@ -860,13 +1097,21 @@ export class AgentSideEffects extends Disposable {
 				const sessionState = this._stateManager.getSessionState(channel);
 				const values = sessionState?.config?.values;
 				if (values) {
-					this._persistSessionFlag(channel, 'configValues', JSON.stringify(values));
+					this._persistSessionFlag(
+						channel,
+						"configValues",
+						JSON.stringify(values),
+					);
 				}
 				break;
 			}
 			case ActionType.SessionToolCallComplete: {
 				const agent = this._options.getAgent(channel);
-				agent?.onClientToolCallComplete(URI.parse(channel), action.toolCallId, action.result);
+				agent?.onClientToolCallComplete(
+					URI.parse(channel),
+					action.toolCallId,
+					action.result,
+				);
 				break;
 			}
 		}
@@ -883,13 +1128,25 @@ export class AgentSideEffects extends Disposable {
 	 * (changeset diffs there vs. customTitle / isRead / isArchived /
 	 * configValues here) and a shared util would only have two callers.
 	 */
-	private _persistSessionFlag(session: ProtocolURI, key: string, value: string): void {
-		const ref = this._options.sessionDataService.openDatabase(URI.parse(session));
-		ref.object.setMetadata(key, value).catch(err => {
-			this._logService.warn(`[AgentSideEffects] Failed to persist ${key}`, err);
-		}).finally(() => {
-			ref.dispose();
-		});
+	private _persistSessionFlag(
+		session: ProtocolURI,
+		key: string,
+		value: string,
+	): void {
+		const ref = this._options.sessionDataService.openDatabase(
+			URI.parse(session),
+		);
+		ref.object
+			.setMetadata(key, value)
+			.catch((err) => {
+				this._logService.warn(
+					`[AgentSideEffects] Failed to persist ${key}`,
+					err,
+				);
+			})
+			.finally(() => {
+				ref.dispose();
+			});
 	}
 
 	/**
@@ -903,11 +1160,7 @@ export class AgentSideEffects extends Disposable {
 			return;
 		}
 		const agent = this._options.getAgent(session);
-		agent?.setPendingMessages?.(
-			URI.parse(session),
-			state.steeringMessage,
-			[],
-		);
+		agent?.setPendingMessages?.(URI.parse(session), state.steeringMessage, []);
 
 		// Steering message removal is now dispatched by the agent
 		// via the 'steering_consumed' progress event once the message
@@ -954,22 +1207,32 @@ export class AgentSideEffects extends Disposable {
 			this._stateManager.dispatchServerAction(session, {
 				type: ActionType.SessionError,
 				turnId,
-				error: { errorType: 'noAgent', message: 'No agent found for session' },
+				error: { errorType: "noAgent", message: "No agent found for session" },
 			});
 			return;
 		}
 		const attachments = msg.message.attachments;
-		this._telemetryReporter.userMessageSent(agent.id, session, this._stateManager.getSessionState(session), 'queued', attachments);
-		agent.sendMessage(URI.parse(session), msg.message.text, attachments, turnId).catch(err => {
-			this._logService.error('[AgentSideEffects] sendMessage failed (queued)', err);
-			this._stateManager.dispatchServerAction(session, {
-				type: ActionType.SessionError,
-				turnId,
-				error: { errorType: 'sendFailed', message: String(err) },
+		this._telemetryReporter.userMessageSent(
+			agent.id,
+			session,
+			this._stateManager.getSessionState(session),
+			"queued",
+			attachments,
+		);
+		agent
+			.sendMessage(URI.parse(session), msg.message.text, attachments, turnId)
+			.catch((err) => {
+				this._logService.error(
+					"[AgentSideEffects] sendMessage failed (queued)",
+					err,
+				);
+				this._stateManager.dispatchServerAction(session, {
+					type: ActionType.SessionError,
+					turnId,
+					error: { errorType: "sendFailed", message: String(err) },
+				});
 			});
-		});
 	}
-
 
 	override dispose(): void {
 		this._toolCallAgents.clear();

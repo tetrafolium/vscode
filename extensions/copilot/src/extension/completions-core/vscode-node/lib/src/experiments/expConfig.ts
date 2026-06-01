@@ -124,18 +124,25 @@ export enum ExpTreatmentVariables {
 export type ExpTreatmentVariableValue = boolean | string | number;
 
 export class ExpConfig {
-	variables: Partial<Record<ExpTreatmentVariables, ExpTreatmentVariableValue>>; // for the 'vscode' config
+	variables: Partial<
+		Record<ExpTreatmentVariables, ExpTreatmentVariableValue>
+	>; // for the 'vscode' config
 	features: string; // semicolon-separated feature IDs
 
 	constructor(
-		variables: Partial<Record<ExpTreatmentVariables, ExpTreatmentVariableValue>>,
-		features: string
+		variables: Partial<
+			Record<ExpTreatmentVariables, ExpTreatmentVariableValue>
+		>,
+		features: string,
 	) {
 		this.variables = variables;
 		this.features = features;
 	}
 
-	static createFallbackConfig(accessor: ServicesAccessor, reason: string): ExpConfig {
+	static createFallbackConfig(
+		accessor: ServicesAccessor,
+		reason: string,
+	): ExpConfig {
 		telemetryExpProblem(accessor, { reason });
 		return this.createEmptyConfig();
 	}
@@ -149,6 +156,8 @@ export class ExpConfig {
 	 * @param telemetryData telemetryData object. If previous ExpConfigs are already present, they will be overwritten.
 	 */
 	addToTelemetry(telemetryData: TelemetryData): void {
-		telemetryData.properties[ExpServiceTelemetryNames.featuresTelemetryPropertyName] = this.features;
+		telemetryData.properties[
+			ExpServiceTelemetryNames.featuresTelemetryPropertyName
+		] = this.features;
 	}
 }

@@ -3,19 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAICustomizationWorkspaceService } from '../../common/aiCustomizationWorkspaceService.js';
-import { IChatWidgetService } from '../chat.js';
-import { IChatService } from '../../common/chatService/chatService.js';
-import { ChatModeKind } from '../../common/constants.js';
-import { PromptsType } from '../../common/promptSyntax/promptTypes.js';
-import { getPromptFileDefaultLocations } from '../../common/promptSyntax/config/promptFileLocations.js';
-import { IPromptsService, PromptsStorage } from '../../common/promptSyntax/service/promptsService.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { isEqualOrParent } from '../../../../../base/common/resources.js';
-import { ICommandService } from '../../../../../platform/commands/common/commands.js';
-import { IQuickInputService } from '../../../../../platform/quickinput/common/quickInput.js';
-import { localize } from '../../../../../nls.js';
-import { ICustomizationHarnessService, matchesWorkspaceSubpath } from '../../common/customizationHarnessService.js';
+import { IAICustomizationWorkspaceService } from "../../common/aiCustomizationWorkspaceService.js";
+import { IChatWidgetService } from "../chat.js";
+import { IChatService } from "../../common/chatService/chatService.js";
+import { ChatModeKind } from "../../common/constants.js";
+import { PromptsType } from "../../common/promptSyntax/promptTypes.js";
+import { getPromptFileDefaultLocations } from "../../common/promptSyntax/config/promptFileLocations.js";
+import {
+	IPromptsService,
+	PromptsStorage,
+} from "../../common/promptSyntax/service/promptsService.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { isEqualOrParent } from "../../../../../base/common/resources.js";
+import { ICommandService } from "../../../../../platform/commands/common/commands.js";
+import { IQuickInputService } from "../../../../../platform/quickinput/common/quickInput.js";
+import { localize } from "../../../../../nls.js";
+import {
+	ICustomizationHarnessService,
+	matchesWorkspaceSubpath,
+} from "../../common/customizationHarnessService.js";
 
 /**
  * Service that opens an AI-guided chat session to help the user create
@@ -26,29 +32,34 @@ import { ICustomizationHarnessService, matchesWorkspaceSubpath } from '../../com
  * the creation process. The user sees only their message.
  */
 export class CustomizationCreatorService {
-
 	constructor(
 		@ICommandService private readonly commandService: ICommandService,
 		@IChatService private readonly chatService: IChatService,
 		@IChatWidgetService private readonly chatWidgetService: IChatWidgetService,
-		@IAICustomizationWorkspaceService private readonly workspaceService: IAICustomizationWorkspaceService,
+		@IAICustomizationWorkspaceService
+		private readonly workspaceService: IAICustomizationWorkspaceService,
 		@IPromptsService private readonly promptsService: IPromptsService,
 		@IQuickInputService private readonly quickInputService: IQuickInputService,
-		@ICustomizationHarnessService private readonly harnessService: ICustomizationHarnessService,
-	) { }
+		@ICustomizationHarnessService
+		private readonly harnessService: ICustomizationHarnessService,
+	) {}
 
 	async createWithAI(type: PromptsType): Promise<void> {
 		// Ask for the name before entering chat
 		const typeLabel = getTypeLabel(type);
 		const name = await this.quickInputService.input({
-			prompt: localize('generateName', "Name for the new {0}", typeLabel),
-			placeHolder: localize('generateNamePlaceholder', "e.g., my-{0}", typeLabel),
+			prompt: localize("generateName", "Name for the new {0}", typeLabel),
+			placeHolder: localize(
+				"generateNamePlaceholder",
+				"e.g., my-{0}",
+				typeLabel,
+			),
 			validateInput: async (value) => {
 				if (!value || !value.trim()) {
-					return localize('nameRequired', "Name is required");
+					return localize("nameRequired", "Name is required");
 				}
 				return undefined;
-			}
+			},
 		});
 		if (!name) {
 			return;
@@ -65,11 +76,15 @@ export class CustomizationCreatorService {
 		if (targetDir === null) {
 			return; // User cancelled the picker
 		}
-		const systemInstructions = buildAgentInstructions(type, targetDir, trimmedName);
+		const systemInstructions = buildAgentInstructions(
+			type,
+			targetDir,
+			trimmedName,
+		);
 		const userMessage = buildUserMessage(type, targetDir, trimmedName);
 
 		// Start a new chat, then send the request with hidden instructions
-		await this.commandService.executeCommand('workbench.action.chat.newChat');
+		await this.commandService.executeCommand("workbench.action.chat.newChat");
 
 		// Grab the now-active widget's session and send with hidden instructions
 		const widget = this.chatWidgetService.lastFocusedWidget;
@@ -82,10 +97,10 @@ export class CustomizationCreatorService {
 			modeInfo: {
 				kind: ChatModeKind.Agent,
 				isBuiltin: false,
-				modeId: 'custom',
+				modeId: "custom",
 				applyCodeBlockSuggestionId: undefined,
 				modeInstructions: {
-					name: 'customization-creator',
+					name: "customization-creator",
 					content: systemInstructions,
 					toolReferences: [],
 				},
@@ -108,7 +123,9 @@ export class CustomizationCreatorService {
 	 * @returns the resolved URI, `undefined` when no folder is available,
 	 *          or `null` when the user cancelled the picker.
 	 */
-	private async resolveTargetDirectoryWithPicker(type: PromptsType): Promise<URI | undefined | null> {
+	private async resolveTargetDirectoryWithPicker(
+		type: PromptsType,
+	): Promise<URI | undefined | null> {
 		const allFolders = await this.promptsService.getSourceFolders(type);
 		const projectRoot = this.workspaceService.getActiveProjectRoot();
 		const descriptor = this.harnessService.getActiveDescriptor();
@@ -121,20 +138,20 @@ export class CustomizationCreatorService {
 		// directories whose path includes one of those sub-paths (e.g. `.claude`).
 		const seen = new Set<string>();
 		const workspaceFolders = projectRoot
-			? allFolders.filter(f => {
-				if (!isEqualOrParent(f.uri, projectRoot)) {
-					return false;
-				}
-				const key = f.uri.toString();
-				if (seen.has(key)) {
-					return false;
-				}
-				seen.add(key);
-				if (subpaths) {
-					return matchesWorkspaceSubpath(f.uri.path, subpaths);
-				}
-				return true;
-			})
+			? allFolders.filter((f) => {
+					if (!isEqualOrParent(f.uri, projectRoot)) {
+						return false;
+					}
+					const key = f.uri.toString();
+					if (seen.has(key)) {
+						return false;
+					}
+					seen.add(key);
+					if (subpaths) {
+						return matchesWorkspaceSubpath(f.uri.path, subpaths);
+					}
+					return true;
+				})
 			: [];
 
 		if (workspaceFolders.length === 0) {
@@ -147,14 +164,17 @@ export class CustomizationCreatorService {
 		}
 
 		// Multiple directories — ask the user which one to use
-		const items = workspaceFolders.map(folder => ({
+		const items = workspaceFolders.map((folder) => ({
 			label: this.promptsService.getPromptLocationLabel(folder),
 			description: folder.uri.fsPath,
 			uri: folder.uri,
 		}));
 
 		const picked = await this.quickInputService.pick(items, {
-			placeHolder: localize('selectTargetDirectory', "Select a directory for the new customization file"),
+			placeHolder: localize(
+				"selectTargetDirectory",
+				"Select a directory for the new customization file",
+			),
 		});
 
 		return picked?.uri ?? null;
@@ -171,13 +191,18 @@ export class CustomizationCreatorService {
 /**
  * Resolves the workspace directory for a new customization file based on the active project root.
  */
-export function resolveWorkspaceTargetDirectory(workspaceService: IAICustomizationWorkspaceService, type: PromptsType): URI | undefined {
+export function resolveWorkspaceTargetDirectory(
+	workspaceService: IAICustomizationWorkspaceService,
+	type: PromptsType,
+): URI | undefined {
 	const basePath = workspaceService.getActiveProjectRoot();
 	if (!basePath) {
 		return undefined;
 	}
 	const defaultLocations = getPromptFileDefaultLocations(type);
-	const localLocation = defaultLocations.find(loc => loc.storage === PromptsStorage.local);
+	const localLocation = defaultLocations.find(
+		(loc) => loc.storage === PromptsStorage.local,
+	);
 	if (!localLocation) {
 		return basePath;
 	}
@@ -194,7 +219,7 @@ export async function resolveUserTargetDirectory(
 	type: PromptsType,
 ): Promise<URI | undefined> {
 	const folders = await promptsService.getSourceFolders(type);
-	const userFolder = folders.find(f => f.storage === PromptsStorage.user);
+	const userFolder = folders.find((f) => f.storage === PromptsStorage.user);
 	return userFolder?.uri;
 }
 
@@ -204,7 +229,11 @@ export async function resolveUserTargetDirectory(
  * Builds the hidden system instructions for the customization creator agent.
  * Sent as modeInstructions - invisible to the user.
  */
-function buildAgentInstructions(type: PromptsType, targetDir: URI | undefined, name: string): string {
+function buildAgentInstructions(
+	type: PromptsType,
+	targetDir: URI | undefined,
+	name: string,
+): string {
 	const targetHint = targetDir
 		? `\nIMPORTANT: Save the file to this directory: ${targetDir.fsPath}. The name is "${name}".`
 		: `\nThe name is "${name}".`;
@@ -257,8 +286,12 @@ Ask the user what they want to create, then guide them step by step.`;
  * Builds the user-visible message that opens the chat.
  * Includes the target path so the agent knows where to write the file.
  */
-function buildUserMessage(type: PromptsType, targetDir: URI | undefined, name: string): string {
-	const pathHint = targetDir ? ` Write it to \`${targetDir.fsPath}\`.` : '';
+function buildUserMessage(
+	type: PromptsType,
+	targetDir: URI | undefined,
+	name: string,
+): string {
+	const pathHint = targetDir ? ` Write it to \`${targetDir.fsPath}\`.` : "";
 
 	switch (type) {
 		case PromptsType.agent:
@@ -278,12 +311,18 @@ function buildUserMessage(type: PromptsType, targetDir: URI | undefined, name: s
 
 function getTypeLabel(type: PromptsType): string {
 	switch (type) {
-		case PromptsType.agent: return 'agent';
-		case PromptsType.skill: return 'skill';
-		case PromptsType.instructions: return 'instructions';
-		case PromptsType.prompt: return 'prompt';
-		case PromptsType.hook: return 'hook';
-		default: return 'customization';
+		case PromptsType.agent:
+			return "agent";
+		case PromptsType.skill:
+			return "skill";
+		case PromptsType.instructions:
+			return "instructions";
+		case PromptsType.prompt:
+			return "prompt";
+		case PromptsType.hook:
+			return "hook";
+		default:
+			return "customization";
 	}
 }
 

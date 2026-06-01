@@ -3,13 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IObservable, observableValue } from '../../../base/common/observable.js';
-import { Position } from '../../common/core/position.js';
-import { Range } from '../../common/core/range.js';
-import { ITextModel } from '../../common/model.js';
-import { createDecorator } from '../../../platform/instantiation/common/instantiation.js';
+import {
+	IObservable,
+	observableValue,
+} from "../../../base/common/observable.js";
+import { Position } from "../../common/core/position.js";
+import { Range } from "../../common/core/range.js";
+import { ITextModel } from "../../common/model.js";
+import { createDecorator } from "../../../platform/instantiation/common/instantiation.js";
 
-export const IRenameSymbolTrackerService = createDecorator<IRenameSymbolTrackerService>('renameSymbolTrackerService');
+export const IRenameSymbolTrackerService =
+	createDecorator<IRenameSymbolTrackerService>("renameSymbolTrackerService");
 
 /**
  * Represents a tracked word that is being edited by the user.
@@ -53,8 +57,12 @@ export interface IRenameSymbolTrackerService {
 export class NullRenameSymbolTrackerService implements IRenameSymbolTrackerService {
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _trackedWord = observableValue<ITrackedWord | undefined>(this, undefined);
-	public readonly trackedWord: IObservable<ITrackedWord | undefined> = this._trackedWord;
+	private readonly _trackedWord = observableValue<ITrackedWord | undefined>(
+		this,
+		undefined,
+	);
+	public readonly trackedWord: IObservable<ITrackedWord | undefined> =
+		this._trackedWord;
 	constructor() {
 		this._trackedWord.set(undefined, undefined);
 	}

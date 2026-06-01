@@ -4,17 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createServiceIdentifier } from '../../../util/common/services';
-import { ILinesDiffComputerOptions, MovedText } from '../../../util/vs/editor/common/diff/linesDiffComputer';
+import {
+	ILinesDiffComputerOptions,
+	MovedText,
+} from '../../../util/vs/editor/common/diff/linesDiffComputer';
 import { DetailedLineRangeMapping } from '../../../util/vs/editor/common/diff/rangeMapping';
 
-
-export const IDiffService = createServiceIdentifier<IDiffService>('IDiffService');
+export const IDiffService =
+	createServiceIdentifier<IDiffService>('IDiffService');
 
 export interface IDiffService {
-
 	readonly _serviceBrand: undefined;
 
-	computeDiff(original: string, modified: string, options: ILinesDiffComputerOptions): Promise<IDocumentDiff>;
+	computeDiff(
+		original: string,
+		modified: string,
+		options: ILinesDiffComputerOptions,
+	): Promise<IDocumentDiff>;
 }
 
 export interface IDocumentDiff {

@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { RefRow, SessionRow } from '../../../platform/chronicle/common/sessionStore';
+import type {
+	RefRow,
+	SessionRow,
+} from '../../../platform/chronicle/common/sessionStore';
 
 /** A session row annotated with its source. */
 export interface AnnotatedSession extends SessionRow {
@@ -24,19 +27,19 @@ export const SESSIONS_QUERY_SQLITE = `SELECT *
 
 /** Build refs query for a list of session IDs */
 export function buildRefsQuery(sessionIds: string[]): string {
-	const ids = sessionIds.map(s => `'${s.replace(/'/g, '\'\'')}'`).join(',');
+	const ids = sessionIds.map((s) => `'${s.replace(/'/g, "''")}'`).join(',');
 	return `SELECT session_id, ref_type, ref_value FROM session_refs WHERE session_id IN (${ids})`;
 }
 
 /** Build files query for a list of session IDs */
 export function buildFilesQuery(sessionIds: string[]): string {
-	const ids = sessionIds.map(s => `'${s.replace(/'/g, '\'\'')}'`).join(',');
+	const ids = sessionIds.map((s) => `'${s.replace(/'/g, "''")}'`).join(',');
 	return `SELECT session_id, file_path, tool_name FROM session_files WHERE session_id IN (${ids})`;
 }
 
 /** Build turns query for a list of session IDs (user messages + assistant response summaries, truncated) */
 export function buildTurnsQuery(sessionIds: string[]): string {
-	const ids = sessionIds.map(s => `'${s.replace(/'/g, '\'\'')}'`).join(',');
+	const ids = sessionIds.map((s) => `'${s.replace(/'/g, "''")}'`).join(',');
 	return `SELECT session_id, turn_index, substr(user_message, 1, 120) as user_message, substr(assistant_response, 1, 200) as assistant_response FROM turns WHERE session_id IN (${ids}) AND (user_message IS NOT NULL OR assistant_response IS NOT NULL) ORDER BY session_id, turn_index`;
 }
 
@@ -66,37 +69,46 @@ export function buildStandupPrompt(
 	extra?: string,
 ): string {
 	if (sessions.length === 0) {
-		return 'The user ran /standup but no sessions were found. Let them know there\'s no recent activity to report.';
+		return "The user ran /standup but no sessions were found. Let them know there's no recent activity to report.";
 	}
 
-	const sessionLines = sessions.map(s => {
+	const sessionLines = sessions.map((s) => {
 		const branch = s.branch ?? 'unknown';
 		const repo = s.repository ?? 'unknown';
 		const agent = s.agent_name ?? s.source;
 
 		// Include turn summaries for this session (first few user messages + assistant responses)
-		const sessionTurns = turns.filter(t => t.session_id === s.id).slice(0, 5);
+		const sessionTurns = turns
+			.filter((t) => t.session_id === s.id)
+			.slice(0, 5);
 
 		// Use first turn's user_message as summary when sessions.summary is empty
 		const firstTurnMessage = sessionTurns[0]?.user_message;
 		const summary = s.summary || firstTurnMessage || 'No summary';
 
 		const turnLines = sessionTurns
-			.filter(t => t.user_message || t.assistant_response)
-			.map(t => {
+			.filter((t) => t.user_message || t.assistant_response)
+			.map((t) => {
 				const parts: string[] = [];
-				if (t.user_message) { parts.push(`User: ${t.user_message}`); }
-				if (t.assistant_response) { parts.push(`Assistant: ${t.assistant_response}`); }
+				if (t.user_message) {
+					parts.push(`User: ${t.user_message}`);
+				}
+				if (t.assistant_response) {
+					parts.push(`Assistant: ${t.assistant_response}`);
+				}
 				return `    - ${parts.join(' → ')}`;
 			});
 
 		// Include files touched in this session (capped to avoid noise)
-		const sessionFiles = files.filter(f => f.session_id === s.id);
-		const uniqueFiles = [...new Set(sessionFiles.map(f => f.file_path))];
+		const sessionFiles = files.filter((f) => f.session_id === s.id);
+		const uniqueFiles = [...new Set(sessionFiles.map((f) => f.file_path))];
 		const shownFiles = uniqueFiles.slice(0, 5);
-		const fileLines = shownFiles.length > 0
-			? [`    - Files (${uniqueFiles.length} total): ${shownFiles.join(', ')}${uniqueFiles.length > 5 ? `, +${uniqueFiles.length - 5} more` : ''}`]
-			: [];
+		const fileLines =
+			shownFiles.length > 0
+				? [
+						`    - Files (${uniqueFiles.length} total): ${shownFiles.join(', ')}${uniqueFiles.length > 5 ? `, +${uniqueFiles.length - 5} more` : ''}`,
+					]
+				: [];
 
 		return [
 			`- ${s.id} | ${repo} (${branch}) | ${agent} | ${summary} | updated ${s.updated_at}`,
@@ -105,7 +117,9 @@ export function buildStandupPrompt(
 		].join('\n');
 	});
 
-	const refLines = refs.map(r => `- ${r.session_id} | ${r.ref_type}: ${r.ref_value}`);
+	const refLines = refs.map(
+		(r) => `- ${r.session_id} | ${r.ref_type}: ${r.ref_value}`,
+	);
 
 	let prompt = `The user ran /chronicle standup. Generate a concise standup update from the pre-fetched data below.
 

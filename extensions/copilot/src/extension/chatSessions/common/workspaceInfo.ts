@@ -38,10 +38,16 @@ export interface IWorkspaceInfo {
 	readonly worktreeProperties: ChatSessionWorktreeProperties | undefined;
 }
 
-export function getWorkingDirectory(workspaceInfo: IWorkspaceInfo): vscode.Uri | undefined {
+export function getWorkingDirectory(
+	workspaceInfo: IWorkspaceInfo,
+): vscode.Uri | undefined {
 	// Give the folder higher priority over repository, as the user may have selected the folder directly,
 	// & if we don't create a worktree, then the folder is the working directory.
-	return workspaceInfo.worktree ?? workspaceInfo.folder ?? workspaceInfo.repository;
+	return (
+		workspaceInfo.worktree ??
+		workspaceInfo.folder ??
+		workspaceInfo.repository
+	);
 }
 
 export function isIsolationEnabled(workspaceInfo: IWorkspaceInfo): boolean {
@@ -65,17 +71,24 @@ export function emptyWorkspaceInfo(): IWorkspaceInfo {
 export function findOwningWorkspace(
 	file: vscode.Uri,
 	primaryWorkspace: IWorkspaceInfo,
-	additionalWorkspaces: IWorkspaceInfo[]
+	additionalWorkspaces: IWorkspaceInfo[],
 ): IWorkspaceInfo | undefined {
 	for (const ws of [primaryWorkspace, ...additionalWorkspaces]) {
 		const wd = getWorkingDirectory(ws);
 		if (wd && extUriBiasedIgnorePathCase.isEqualOrParent(file, wd)) {
 			return ws;
 		}
-		if (ws.folder && extUriBiasedIgnorePathCase.isEqualOrParent(file, ws.folder)) {
+		if (
+			ws.folder &&
+			extUriBiasedIgnorePathCase.isEqualOrParent(file, ws.folder)
+		) {
 			return ws;
 		}
-		if (ws.worktree && ws.repository && extUriBiasedIgnorePathCase.isEqualOrParent(file, ws.repository)) {
+		if (
+			ws.worktree &&
+			ws.repository &&
+			extUriBiasedIgnorePathCase.isEqualOrParent(file, ws.repository)
+		) {
 			return ws;
 		}
 	}

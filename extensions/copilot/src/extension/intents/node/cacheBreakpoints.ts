@@ -34,18 +34,28 @@ export function addCacheBreakpoints(messages: Raw.ChatMessage[]) {
 	const reversedMsgs = [...messages].reverse();
 	for (const [idx, msg] of reversedMsgs.entries()) {
 		const prevMsg = reversedMsgs.at(idx - 1);
-		const hasCacheBreakpoint = msg.content.some(part => part.type === Raw.ChatCompletionContentPartKind.CacheBreakpoint);
+		const hasCacheBreakpoint = msg.content.some(
+			(part) =>
+				part.type === Raw.ChatCompletionContentPartKind.CacheBreakpoint,
+		);
 		if (hasCacheBreakpoint) {
 			continue;
 		}
 
-		const isLastToolResultInRound = msg.role === Raw.ChatRole.Tool && prevMsg?.role !== Raw.ChatRole.Tool;
-		const isAsstMsgWithNoTools = msg.role === Raw.ChatRole.Assistant && !msg.toolCalls?.length;
-		if (isBelowCurrentUserMessage && (isLastToolResultInRound || msg.role === Raw.ChatRole.User) || isAsstMsgWithNoTools) {
+		const isLastToolResultInRound =
+			msg.role === Raw.ChatRole.Tool &&
+			prevMsg?.role !== Raw.ChatRole.Tool;
+		const isAsstMsgWithNoTools =
+			msg.role === Raw.ChatRole.Assistant && !msg.toolCalls?.length;
+		if (
+			(isBelowCurrentUserMessage &&
+				(isLastToolResultInRound || msg.role === Raw.ChatRole.User)) ||
+			isAsstMsgWithNoTools
+		) {
 			count--;
 			msg.content.push({
 				type: Raw.ChatCompletionContentPartKind.CacheBreakpoint,
-				cacheType: CacheType
+				cacheType: CacheType,
 			});
 
 			if (count <= 0) {
@@ -64,16 +74,26 @@ export function addCacheBreakpoints(messages: Raw.ChatMessage[]) {
 			break;
 		}
 
-		const hasCacheBreakpoint = msg.content.some(part => part.type === Raw.ChatCompletionContentPartKind.CacheBreakpoint);
-		if ((msg.role === Raw.ChatRole.User || msg.role === Raw.ChatRole.System) && !hasCacheBreakpoint) {
+		const hasCacheBreakpoint = msg.content.some(
+			(part) =>
+				part.type === Raw.ChatCompletionContentPartKind.CacheBreakpoint,
+		);
+		if (
+			(msg.role === Raw.ChatRole.User ||
+				msg.role === Raw.ChatRole.System) &&
+			!hasCacheBreakpoint
+		) {
 			count--;
 			msg.content.push({
 				type: Raw.ChatCompletionContentPartKind.CacheBreakpoint,
-				cacheType: CacheType
+				cacheType: CacheType,
 			});
 		}
 
-		if (msg.role !== Raw.ChatRole.User && msg.role !== Raw.ChatRole.System) {
+		if (
+			msg.role !== Raw.ChatRole.User &&
+			msg.role !== Raw.ChatRole.System
+		) {
 			break;
 		}
 	}
@@ -82,7 +102,10 @@ export function addCacheBreakpoints(messages: Raw.ChatMessage[]) {
 function countCacheBreakpoints(messages: Raw.ChatMessage[]) {
 	let count = 0;
 	for (const msg of messages) {
-		count += msg.content.filter(part => part.type === Raw.ChatCompletionContentPartKind.CacheBreakpoint).length;
+		count += msg.content.filter(
+			(part) =>
+				part.type === Raw.ChatCompletionContentPartKind.CacheBreakpoint,
+		).length;
 	}
 	return count;
 }

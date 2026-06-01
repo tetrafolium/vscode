@@ -3,21 +3,52 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize, localize2 } from '../../../../../nls.js';
-import { Registry } from '../../../../../platform/registry/common/platform.js';
-import { BrowserEditor, BrowserEditorContribution, BrowserActionCategory, BrowserActionGroup } from '../browserEditor.js';
-import { IConfigurationRegistry, Extensions as ConfigurationExtensions, ConfigurationScope } from '../../../../../platform/configuration/common/configurationRegistry.js';
-import { workbenchConfigurationNodeBase } from '../../../../common/configuration.js';
-import { IBrowserViewModel, IBrowserViewWorkbenchService } from '../../common/browserView.js';
-import { BrowserViewCommandId, BrowserViewStorageScope } from '../../../../../platform/browserView/common/browserView.js';
-import { IContextKey, IContextKeyService, ContextKeyExpr, RawContextKey } from '../../../../../platform/contextkey/common/contextkey.js';
-import { Action2, registerAction2, MenuId } from '../../../../../platform/actions/common/actions.js';
-import { IEditorService } from '../../../../services/editor/common/editorService.js';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import type { ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
-import { DisposableStore } from '../../../../../base/common/lifecycle.js';
+import { localize, localize2 } from "../../../../../nls.js";
+import { Registry } from "../../../../../platform/registry/common/platform.js";
+import {
+	BrowserEditor,
+	BrowserEditorContribution,
+	BrowserActionCategory,
+	BrowserActionGroup,
+} from "../browserEditor.js";
+import {
+	IConfigurationRegistry,
+	Extensions as ConfigurationExtensions,
+	ConfigurationScope,
+} from "../../../../../platform/configuration/common/configurationRegistry.js";
+import { workbenchConfigurationNodeBase } from "../../../../common/configuration.js";
+import {
+	IBrowserViewModel,
+	IBrowserViewWorkbenchService,
+} from "../../common/browserView.js";
+import {
+	BrowserViewCommandId,
+	BrowserViewStorageScope,
+} from "../../../../../platform/browserView/common/browserView.js";
+import {
+	IContextKey,
+	IContextKeyService,
+	ContextKeyExpr,
+	RawContextKey,
+} from "../../../../../platform/contextkey/common/contextkey.js";
+import {
+	Action2,
+	registerAction2,
+	MenuId,
+} from "../../../../../platform/actions/common/actions.js";
+import { IEditorService } from "../../../../services/editor/common/editorService.js";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import type { ServicesAccessor } from "../../../../../platform/instantiation/common/instantiation.js";
+import { DisposableStore } from "../../../../../base/common/lifecycle.js";
 
-const CONTEXT_BROWSER_STORAGE_SCOPE = new RawContextKey<string>('browserStorageScope', '', localize('browser.storageScope', "The storage scope of the current browser view"));
+const CONTEXT_BROWSER_STORAGE_SCOPE = new RawContextKey<string>(
+	"browserStorageScope",
+	"",
+	localize(
+		"browser.storageScope",
+		"The storage scope of the current browser view",
+	),
+);
 
 class BrowserEditorStorageScopeContribution extends BrowserEditorContribution {
 	private readonly _storageScopeContext: IContextKey<string>;
@@ -27,10 +58,14 @@ class BrowserEditorStorageScopeContribution extends BrowserEditorContribution {
 		@IContextKeyService contextKeyService: IContextKeyService,
 	) {
 		super(editor);
-		this._storageScopeContext = CONTEXT_BROWSER_STORAGE_SCOPE.bindTo(contextKeyService);
+		this._storageScopeContext =
+			CONTEXT_BROWSER_STORAGE_SCOPE.bindTo(contextKeyService);
 	}
 
-	protected override onModelAttached(model: IBrowserViewModel, _store: DisposableStore): void {
+	protected override onModelAttached(
+		model: IBrowserViewModel,
+		_store: DisposableStore,
+	): void {
 		this._storageScopeContext.set(model.storageScope);
 	}
 
@@ -47,7 +82,10 @@ class ClearGlobalBrowserStorageAction extends Action2 {
 	constructor() {
 		super({
 			id: ClearGlobalBrowserStorageAction.ID,
-			title: localize2('browser.clearGlobalStorageAction', 'Clear Storage (Global)'),
+			title: localize2(
+				"browser.clearGlobalStorageAction",
+				"Clear Storage (Global)",
+			),
 			category: BrowserActionCategory,
 			icon: Codicon.clearAll,
 			f1: true,
@@ -55,13 +93,18 @@ class ClearGlobalBrowserStorageAction extends Action2 {
 				id: MenuId.BrowserActionsToolbar,
 				group: BrowserActionGroup.Page,
 				order: 20,
-				when: ContextKeyExpr.equals(CONTEXT_BROWSER_STORAGE_SCOPE.key, BrowserViewStorageScope.Global)
-			}
+				when: ContextKeyExpr.equals(
+					CONTEXT_BROWSER_STORAGE_SCOPE.key,
+					BrowserViewStorageScope.Global,
+				),
+			},
 		});
 	}
 
 	async run(accessor: ServicesAccessor): Promise<void> {
-		const browserViewWorkbenchService = accessor.get(IBrowserViewWorkbenchService);
+		const browserViewWorkbenchService = accessor.get(
+			IBrowserViewWorkbenchService,
+		);
 		await browserViewWorkbenchService.clearGlobalStorage();
 	}
 }
@@ -72,7 +115,10 @@ class ClearWorkspaceBrowserStorageAction extends Action2 {
 	constructor() {
 		super({
 			id: ClearWorkspaceBrowserStorageAction.ID,
-			title: localize2('browser.clearWorkspaceStorageAction', 'Clear Storage (Workspace)'),
+			title: localize2(
+				"browser.clearWorkspaceStorageAction",
+				"Clear Storage (Workspace)",
+			),
 			category: BrowserActionCategory,
 			icon: Codicon.clearAll,
 			f1: true,
@@ -80,13 +126,18 @@ class ClearWorkspaceBrowserStorageAction extends Action2 {
 				id: MenuId.BrowserActionsToolbar,
 				group: BrowserActionGroup.Page,
 				order: 20,
-				when: ContextKeyExpr.equals(CONTEXT_BROWSER_STORAGE_SCOPE.key, BrowserViewStorageScope.Workspace)
-			}
+				when: ContextKeyExpr.equals(
+					CONTEXT_BROWSER_STORAGE_SCOPE.key,
+					BrowserViewStorageScope.Workspace,
+				),
+			},
 		});
 	}
 
 	async run(accessor: ServicesAccessor): Promise<void> {
-		const browserViewWorkbenchService = accessor.get(IBrowserViewWorkbenchService);
+		const browserViewWorkbenchService = accessor.get(
+			IBrowserViewWorkbenchService,
+		);
 		await browserViewWorkbenchService.clearWorkspaceStorage();
 	}
 }
@@ -97,21 +148,33 @@ class ClearEphemeralBrowserStorageAction extends Action2 {
 	constructor() {
 		super({
 			id: ClearEphemeralBrowserStorageAction.ID,
-			title: localize2('browser.clearEphemeralStorageAction', 'Clear Storage (Ephemeral)'),
+			title: localize2(
+				"browser.clearEphemeralStorageAction",
+				"Clear Storage (Ephemeral)",
+			),
 			category: BrowserActionCategory,
 			icon: Codicon.clearAll,
 			f1: true,
-			precondition: ContextKeyExpr.equals(CONTEXT_BROWSER_STORAGE_SCOPE.key, BrowserViewStorageScope.Ephemeral),
+			precondition: ContextKeyExpr.equals(
+				CONTEXT_BROWSER_STORAGE_SCOPE.key,
+				BrowserViewStorageScope.Ephemeral,
+			),
 			menu: {
 				id: MenuId.BrowserActionsToolbar,
 				group: BrowserActionGroup.Page,
 				order: 20,
-				when: ContextKeyExpr.equals(CONTEXT_BROWSER_STORAGE_SCOPE.key, BrowserViewStorageScope.Ephemeral)
-			}
+				when: ContextKeyExpr.equals(
+					CONTEXT_BROWSER_STORAGE_SCOPE.key,
+					BrowserViewStorageScope.Ephemeral,
+				),
+			},
 		});
 	}
 
-	async run(accessor: ServicesAccessor, browserEditor = accessor.get(IEditorService).activeEditorPane): Promise<void> {
+	async run(
+		accessor: ServicesAccessor,
+		browserEditor = accessor.get(IEditorService).activeEditorPane,
+	): Promise<void> {
 		if (browserEditor instanceof BrowserEditor) {
 			await browserEditor.model?.clearStorage();
 		}
@@ -122,29 +185,60 @@ registerAction2(ClearGlobalBrowserStorageAction);
 registerAction2(ClearWorkspaceBrowserStorageAction);
 registerAction2(ClearEphemeralBrowserStorageAction);
 
-Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).registerConfiguration({
+Registry.as<IConfigurationRegistry>(
+	ConfigurationExtensions.Configuration,
+).registerConfiguration({
 	...workbenchConfigurationNodeBase,
 	properties: {
-		'workbench.browser.dataStorage': {
-			type: 'string',
+		"workbench.browser.dataStorage": {
+			type: "string",
 			enum: [
 				BrowserViewStorageScope.Global,
 				BrowserViewStorageScope.Workspace,
-				BrowserViewStorageScope.Ephemeral
+				BrowserViewStorageScope.Ephemeral,
 			],
 			markdownEnumDescriptions: [
-				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'browser.dataStorage.global' }, 'All browser views share a single persistent session across all workspaces.'),
-				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'browser.dataStorage.workspace' }, 'Browser views within the same workspace share a persistent session. If no workspace is opened, `ephemeral` storage is used.'),
-				localize({ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'browser.dataStorage.ephemeral' }, 'Each browser view has its own session that is cleaned up when closed.')
+				localize(
+					{
+						comment: [
+							"This is the description for a setting. Values surrounded by single quotes are not to be translated.",
+						],
+						key: "browser.dataStorage.global",
+					},
+					"All browser views share a single persistent session across all workspaces.",
+				),
+				localize(
+					{
+						comment: [
+							"This is the description for a setting. Values surrounded by single quotes are not to be translated.",
+						],
+						key: "browser.dataStorage.workspace",
+					},
+					"Browser views within the same workspace share a persistent session. If no workspace is opened, `ephemeral` storage is used.",
+				),
+				localize(
+					{
+						comment: [
+							"This is the description for a setting. Values surrounded by single quotes are not to be translated.",
+						],
+						key: "browser.dataStorage.ephemeral",
+					},
+					"Each browser view has its own session that is cleaned up when closed.",
+				),
 			],
 			restricted: true,
 			default: BrowserViewStorageScope.Global,
 			markdownDescription: localize(
-				{ comment: ['This is the description for a setting. Values surrounded by single quotes are not to be translated.'], key: 'browser.dataStorage' },
-				'Controls how browser data (cookies, cache, storage) is shared between browser views.\n\n**Note**: In untrusted workspaces, this setting is ignored and `ephemeral` storage is always used.'
+				{
+					comment: [
+						"This is the description for a setting. Values surrounded by single quotes are not to be translated.",
+					],
+					key: "browser.dataStorage",
+				},
+				"Controls how browser data (cookies, cache, storage) is shared between browser views.\n\n**Note**: In untrusted workspaces, this setting is ignored and `ephemeral` storage is always used.",
 			),
 			scope: ConfigurationScope.WINDOW,
-			order: 100
-		}
-	}
+			order: 100,
+		},
+	},
 });

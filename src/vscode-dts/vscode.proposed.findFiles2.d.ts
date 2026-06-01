@@ -5,8 +5,7 @@
 
 // version: 2
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	export interface FindFiles2Options {
 		/**
 		 * An array of {@link GlobPattern} that defines files to exclude.
@@ -94,7 +93,7 @@ declare module 'vscode' {
 		/**
 		 * Use the `files.exclude` and `search.exclude` settings
 		 */
-		SearchAndFilesExclude = 3
+		SearchAndFilesExclude = 3,
 	}
 
 	export namespace workspace {
@@ -124,6 +123,10 @@ declare module 'vscode' {
 		 * @returns A thenable that resolves to an array of resource identifiers. Will return no results if no
 		 * {@link workspace.workspaceFolders workspace folders} are opened.
 		 */
-		export function findFiles2(filePattern: GlobPattern[], options?: FindFiles2Options, token?: CancellationToken): Thenable<Uri[]>;
+		export function findFiles2(
+			filePattern: GlobPattern[],
+			options?: FindFiles2Options,
+			token?: CancellationToken,
+		): Thenable<Uri[]>;
 	}
 }

@@ -3,21 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as esbuild from 'esbuild';
-import * as fs from 'fs';
-import * as path from 'path';
-import { promisify } from 'util';
+import * as esbuild from "esbuild";
+import * as fs from "fs";
+import * as path from "path";
+import { promisify } from "util";
 
-import glob from 'glob';
-import gulpWatch from '../lib/watch/index.ts';
-import { nlsPlugin, createNLSCollector, finalizeNLS, postProcessNLS } from './nls-plugin.ts';
-import { convertPrivateFields, adjustSourceMap, type ConvertPrivateFieldsResult } from './private-to-property.ts';
-import { getVersion } from '../lib/getVersion.ts';
-import { getGitCommitDate } from '../lib/date.ts';
-import product from '../../product.json' with { type: 'json' };
-import packageJson from '../../package.json' with { type: 'json' };
-import { useEsbuildTranspile } from '../buildConfig.ts';
-import { isWebExtension, type IScannedBuiltinExtension } from '../lib/extensions.ts';
+import glob from "glob";
+import gulpWatch from "../lib/watch/index.ts";
+import {
+	nlsPlugin,
+	createNLSCollector,
+	finalizeNLS,
+	postProcessNLS,
+} from "./nls-plugin.ts";
+import {
+	convertPrivateFields,
+	adjustSourceMap,
+	type ConvertPrivateFieldsResult,
+} from "./private-to-property.ts";
+import { getVersion } from "../lib/getVersion.ts";
+import { getGitCommitDate } from "../lib/date.ts";
+import product from "../../product.json" with { type: "json" };
+import packageJson from "../../package.json" with { type: "json" };
+import { useEsbuildTranspile } from "../buildConfig.ts";
+import {
+	isWebExtension,
+	type IScannedBuiltinExtension,
+} from "../lib/extensions.ts";
 
 const globAsync = promisify(glob);
 
@@ -28,7 +40,10 @@ const globAsync = promisify(glob);
 const REPO_ROOT = path.dirname(path.dirname(import.meta.dirname));
 const commit = getVersion(REPO_ROOT);
 const quality = (product as { quality?: string }).quality;
-const version = (quality && quality !== 'stable') ? `${packageJson.version}-${quality}` : packageJson.version;
+const version =
+	quality && quality !== "stable"
+		? `${packageJson.version}-${quality}`
+		: packageJson.version;
 
 // CLI: transpile [--watch] | bundle [--minify] [--nls] [--out <dir>]
 const command = process.argv[2]; // 'transpile' or 'bundle'
@@ -42,22 +57,22 @@ function getArgValue(name: string): string | undefined {
 }
 
 const options = {
-	watch: process.argv.includes('--watch'),
-	minify: process.argv.includes('--minify'),
-	nls: process.argv.includes('--nls'),
-	manglePrivates: process.argv.includes('--mangle-privates'),
-	excludeTests: process.argv.includes('--exclude-tests'),
-	out: getArgValue('--out'),
-	target: getArgValue('--target') ?? 'desktop', // 'desktop' | 'server' | 'server-web' | 'web'
-	sourceMapBaseUrl: getArgValue('--source-map-base-url'),
+	watch: process.argv.includes("--watch"),
+	minify: process.argv.includes("--minify"),
+	nls: process.argv.includes("--nls"),
+	manglePrivates: process.argv.includes("--mangle-privates"),
+	excludeTests: process.argv.includes("--exclude-tests"),
+	out: getArgValue("--out"),
+	target: getArgValue("--target") ?? "desktop", // 'desktop' | 'server' | 'server-web' | 'web'
+	sourceMapBaseUrl: getArgValue("--source-map-base-url"),
 };
 
 // Build targets
-type BuildTarget = 'desktop' | 'server' | 'server-web' | 'web';
+type BuildTarget = "desktop" | "server" | "server-web" | "web";
 
-const SRC_DIR = 'src';
-const OUT_DIR = 'out';
-const OUT_VSCODE_DIR = 'out-vscode';
+const SRC_DIR = "src";
+const OUT_DIR = "out";
+const OUT_VSCODE_DIR = "out-vscode";
 
 // UTF-8 BOM - added to test files with 'utf8' in the path (matches gulp build behavior)
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
@@ -69,87 +84,81 @@ const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 // Extension host bundles are excluded from private field mangling because they
 // expose API surface to extensions where encapsulation matters.
 const extensionHostEntryPoints = [
-	'vs/workbench/api/node/extensionHostProcess',
-	'vs/workbench/api/worker/extensionHostWorkerMain',
+	"vs/workbench/api/node/extensionHostProcess",
+	"vs/workbench/api/worker/extensionHostWorkerMain",
 ];
 
 function isExtensionHostBundle(filePath: string): boolean {
-	const normalized = filePath.replaceAll('\\', '/');
-	return extensionHostEntryPoints.some(ep => normalized.endsWith(`${ep}.js`));
+	const normalized = filePath.replaceAll("\\", "/");
+	return extensionHostEntryPoints.some((ep) => normalized.endsWith(`${ep}.js`));
 }
 
 // Workers - shared between targets
 const workerEntryPoints = [
-	'vs/editor/common/services/editorWebWorkerMain',
-	'vs/workbench/api/worker/extensionHostWorkerMain',
-	'vs/workbench/contrib/notebook/common/services/notebookWebWorkerMain',
-	'vs/workbench/services/languageDetection/browser/languageDetectionWebWorkerMain',
-	'vs/workbench/services/search/worker/localFileSearchMain',
-	'vs/workbench/contrib/output/common/outputLinkComputerMain',
-	'vs/workbench/services/textMate/browser/backgroundTokenization/worker/textMateTokenizationWorker.workerMain',
+	"vs/editor/common/services/editorWebWorkerMain",
+	"vs/workbench/api/worker/extensionHostWorkerMain",
+	"vs/workbench/contrib/notebook/common/services/notebookWebWorkerMain",
+	"vs/workbench/services/languageDetection/browser/languageDetectionWebWorkerMain",
+	"vs/workbench/services/search/worker/localFileSearchMain",
+	"vs/workbench/contrib/output/common/outputLinkComputerMain",
+	"vs/workbench/services/textMate/browser/backgroundTokenization/worker/textMateTokenizationWorker.workerMain",
 ];
 
 // Desktop-only workers (use electron-browser)
 const desktopWorkerEntryPoints = [
-	'vs/platform/profiling/electron-browser/profileAnalysisWorkerMain',
+	"vs/platform/profiling/electron-browser/profileAnalysisWorkerMain",
 ];
 
 // Desktop workbench and code entry points
 const desktopEntryPoints = [
-	'vs/workbench/workbench.desktop.main',
-	'vs/sessions/sessions.desktop.main',
-	'vs/workbench/contrib/debug/node/telemetryApp',
-	'vs/platform/files/node/watcher/watcherMain',
-	'vs/platform/terminal/node/ptyHostMain',
-	'vs/platform/agentHost/node/agentHostMain',
-	'vs/platform/agentHost/node/diffWorkerMain',
-	'vs/workbench/api/node/extensionHostProcess',
+	"vs/workbench/workbench.desktop.main",
+	"vs/sessions/sessions.desktop.main",
+	"vs/workbench/contrib/debug/node/telemetryApp",
+	"vs/platform/files/node/watcher/watcherMain",
+	"vs/platform/terminal/node/ptyHostMain",
+	"vs/platform/agentHost/node/agentHostMain",
+	"vs/platform/agentHost/node/diffWorkerMain",
+	"vs/workbench/api/node/extensionHostProcess",
 ];
 
 const codeEntryPoints = [
-	'vs/code/node/cliProcessMain',
-	'vs/code/electron-utility/sharedProcess/sharedProcessMain',
-	'vs/code/electron-browser/workbench/workbench',
-	'vs/sessions/electron-browser/sessions',
+	"vs/code/node/cliProcessMain",
+	"vs/code/electron-utility/sharedProcess/sharedProcessMain",
+	"vs/code/electron-browser/workbench/workbench",
+	"vs/sessions/electron-browser/sessions",
 ];
 
 // Web entry points (used in server-web and vscode-web)
 const webEntryPoints = [
-	'vs/workbench/workbench.web.main.internal',
-	'vs/code/browser/workbench/workbench',
+	"vs/workbench/workbench.web.main.internal",
+	"vs/code/browser/workbench/workbench",
 ];
 
 // Additional web-only entry points (CDN build only, not in server-web)
-const webOnlyEntryPoints = [
-	'vs/sessions/sessions.web.main.internal',
-];
+const webOnlyEntryPoints = ["vs/sessions/sessions.web.main.internal"];
 
 const keyboardMapEntryPoints = [
-	'vs/workbench/services/keybinding/browser/keyboardLayouts/layout.contribution.linux',
-	'vs/workbench/services/keybinding/browser/keyboardLayouts/layout.contribution.darwin',
-	'vs/workbench/services/keybinding/browser/keyboardLayouts/layout.contribution.win',
+	"vs/workbench/services/keybinding/browser/keyboardLayouts/layout.contribution.linux",
+	"vs/workbench/services/keybinding/browser/keyboardLayouts/layout.contribution.darwin",
+	"vs/workbench/services/keybinding/browser/keyboardLayouts/layout.contribution.win",
 ];
 
 // Server entry points (reh)
 const serverEntryPoints = [
-	'vs/workbench/api/node/extensionHostProcess',
-	'vs/platform/files/node/watcher/watcherMain',
-	'vs/platform/terminal/node/ptyHostMain',
-	'vs/platform/agentHost/node/agentHostMain',
-	'vs/platform/agentHost/node/diffWorkerMain',
+	"vs/workbench/api/node/extensionHostProcess",
+	"vs/platform/files/node/watcher/watcherMain",
+	"vs/platform/terminal/node/ptyHostMain",
+	"vs/platform/agentHost/node/agentHostMain",
+	"vs/platform/agentHost/node/diffWorkerMain",
 ];
 
 // Bootstrap files per target
-const bootstrapEntryPointsDesktop = [
-	'main',
-	'cli',
-	'bootstrap-fork',
-];
+const bootstrapEntryPointsDesktop = ["main", "cli", "bootstrap-fork"];
 
 const bootstrapEntryPointsServer = [
-	'server-main',
-	'server-cli',
-	'bootstrap-fork',
+	"server-main",
+	"server-cli",
+	"bootstrap-fork",
 ];
 
 /**
@@ -157,29 +166,27 @@ const bootstrapEntryPointsServer = [
  */
 function getEntryPointsForTarget(target: BuildTarget): string[] {
 	switch (target) {
-		case 'desktop':
+		case "desktop":
 			return [
 				...workerEntryPoints,
 				...desktopWorkerEntryPoints,
 				...desktopEntryPoints,
 				...codeEntryPoints,
 			];
-		case 'server':
-			return [
-				...serverEntryPoints,
-			];
-		case 'server-web':
+		case "server":
+			return [...serverEntryPoints];
+		case "server-web":
 			return [
 				...serverEntryPoints,
 				...workerEntryPoints,
 				...webEntryPoints,
 				...keyboardMapEntryPoints,
 			];
-		case 'web':
+		case "web":
 			return [
 				...workerEntryPoints,
 				...webOnlyEntryPoints,
-				'vs/workbench/workbench.web.main.internal', // web workbench only (no browser shell)
+				"vs/workbench/workbench.web.main.internal", // web workbench only (no browser shell)
 				...keyboardMapEntryPoints,
 			];
 		default:
@@ -192,12 +199,12 @@ function getEntryPointsForTarget(target: BuildTarget): string[] {
  */
 function getBootstrapEntryPointsForTarget(target: BuildTarget): string[] {
 	switch (target) {
-		case 'desktop':
+		case "desktop":
 			return bootstrapEntryPointsDesktop;
-		case 'server':
-		case 'server-web':
+		case "server":
+		case "server-web":
 			return bootstrapEntryPointsServer;
-		case 'web':
+		case "web":
 			return []; // Web has no bootstrap files (served by external server)
 		default:
 			throw new Error(`Unknown target: ${target}`);
@@ -209,24 +216,24 @@ function getBootstrapEntryPointsForTarget(target: BuildTarget): string[] {
  */
 function getCssBundleEntryPointsForTarget(target: BuildTarget): Set<string> {
 	switch (target) {
-		case 'desktop':
+		case "desktop":
 			return new Set([
-				'vs/workbench/workbench.desktop.main',
-				'vs/code/electron-browser/workbench/workbench',
-				'vs/sessions/sessions.desktop.main',
-				'vs/sessions/electron-browser/sessions',
+				"vs/workbench/workbench.desktop.main",
+				"vs/code/electron-browser/workbench/workbench",
+				"vs/sessions/sessions.desktop.main",
+				"vs/sessions/electron-browser/sessions",
 			]);
-		case 'server':
+		case "server":
 			return new Set(); // Server has no UI
-		case 'server-web':
+		case "server-web":
 			return new Set([
-				'vs/workbench/workbench.web.main.internal',
-				'vs/code/browser/workbench/workbench',
+				"vs/workbench/workbench.web.main.internal",
+				"vs/code/browser/workbench/workbench",
 			]);
-		case 'web':
+		case "web":
 			return new Set([
-				'vs/workbench/workbench.web.main.internal',
-				'vs/sessions/sessions.web.main.internal',
+				"vs/workbench/workbench.web.main.internal",
+				"vs/sessions/sessions.web.main.internal",
 			]);
 		default:
 			throw new Error(`Unknown target: ${target}`);
@@ -240,14 +247,14 @@ function getCssBundleEntryPointsForTarget(target: BuildTarget): Set<string> {
 // Common resources needed by all targets
 const commonResourcePatterns = [
 	// Tree-sitter queries
-	'vs/editor/common/languages/highlights/*.scm',
-	'vs/editor/common/languages/injections/*.scm',
+	"vs/editor/common/languages/highlights/*.scm",
+	"vs/editor/common/languages/injections/*.scm",
 
 	// SVGs referenced from CSS (needed for transpile/dev builds where CSS is copied as-is)
-	'vs/workbench/browser/media/code-icon.svg',
-	'vs/workbench/browser/parts/editor/media/letterpress*.svg',
-	'vs/sessions/contrib/chat/browser/media/*.svg',
-	'vs/sessions/contrib/welcome/browser/media/themePreviews/*.svg'
+	"vs/workbench/browser/media/code-icon.svg",
+	"vs/workbench/browser/parts/editor/media/letterpress*.svg",
+	"vs/sessions/contrib/chat/browser/media/*.svg",
+	"vs/sessions/contrib/welcome/browser/media/themePreviews/*.svg",
 ];
 
 // Resources for desktop target
@@ -255,74 +262,74 @@ const desktopResourcePatterns = [
 	...commonResourcePatterns,
 
 	// HTML
-	'vs/code/electron-browser/workbench/workbench.html',
-	'vs/code/electron-browser/workbench/workbench-dev.html',
-	'vs/sessions/electron-browser/sessions.html',
-	'vs/sessions/electron-browser/sessions-dev.html',
-	'vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html',
-	'vs/workbench/contrib/webview/browser/pre/*.html',
+	"vs/code/electron-browser/workbench/workbench.html",
+	"vs/code/electron-browser/workbench/workbench-dev.html",
+	"vs/sessions/electron-browser/sessions.html",
+	"vs/sessions/electron-browser/sessions-dev.html",
+	"vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html",
+	"vs/workbench/contrib/webview/browser/pre/*.html",
 
 	// Webview pre scripts
-	'vs/workbench/contrib/webview/browser/pre/*.js',
+	"vs/workbench/contrib/webview/browser/pre/*.js",
 
 	// Shell scripts
-	'vs/base/node/*.sh',
-	'vs/workbench/contrib/terminal/common/scripts/*.sh',
-	'vs/workbench/contrib/terminal/common/scripts/*.ps1',
-	'vs/workbench/contrib/terminal/common/scripts/*.psm1',
-	'vs/workbench/contrib/terminal/common/scripts/*.fish',
-	'vs/workbench/contrib/terminal/common/scripts/*.zsh',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/*.psd1',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/*.psm1',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/*.dll',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/*.ps1xml',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/net6plus/*.dll',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/netstd/*.dll',
-	'vs/workbench/contrib/externalTerminal/**/*.scpt',
+	"vs/base/node/*.sh",
+	"vs/workbench/contrib/terminal/common/scripts/*.sh",
+	"vs/workbench/contrib/terminal/common/scripts/*.ps1",
+	"vs/workbench/contrib/terminal/common/scripts/*.psm1",
+	"vs/workbench/contrib/terminal/common/scripts/*.fish",
+	"vs/workbench/contrib/terminal/common/scripts/*.zsh",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/*.psd1",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/*.psm1",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/*.dll",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/*.ps1xml",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/net6plus/*.dll",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/netstd/*.dll",
+	"vs/workbench/contrib/externalTerminal/**/*.scpt",
 
 	// Media - audio
-	'vs/platform/accessibilitySignal/browser/media/*.mp3',
+	"vs/platform/accessibilitySignal/browser/media/*.mp3",
 
 	// Media - images
-	'vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.svg',
-	'vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.png',
-	'vs/workbench/contrib/welcomeOnboarding/browser/media/*.svg',
-	'vs/workbench/contrib/extensions/browser/media/{theme-icon.png,language-icon.svg}',
-	'vs/workbench/services/extensionManagement/common/media/*.svg',
-	'vs/workbench/services/extensionManagement/common/media/*.png',
-	'vs/workbench/browser/parts/editor/media/*.png',
-	'vs/workbench/contrib/debug/browser/media/*.png',
+	"vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.svg",
+	"vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.png",
+	"vs/workbench/contrib/welcomeOnboarding/browser/media/*.svg",
+	"vs/workbench/contrib/extensions/browser/media/{theme-icon.png,language-icon.svg}",
+	"vs/workbench/services/extensionManagement/common/media/*.svg",
+	"vs/workbench/services/extensionManagement/common/media/*.png",
+	"vs/workbench/browser/parts/editor/media/*.png",
+	"vs/workbench/contrib/debug/browser/media/*.png",
 
 	// Sessions - built-in prompts and skills
-	'vs/sessions/prompts/*.prompt.md',
-	'vs/sessions/skills/**/SKILL.md',
+	"vs/sessions/prompts/*.prompt.md",
+	"vs/sessions/skills/**/SKILL.md",
 ];
 
 // Resources for server target (minimal - no UI)
 const serverResourcePatterns = [
 	// Shell scripts for process monitoring
-	'vs/base/node/cpuUsage.sh',
-	'vs/base/node/ps.sh',
+	"vs/base/node/cpuUsage.sh",
+	"vs/base/node/ps.sh",
 
 	// External Terminal
-	'vs/workbench/contrib/externalTerminal/**/*.scpt',
+	"vs/workbench/contrib/externalTerminal/**/*.scpt",
 
 	// Terminal shell integration
-	'vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1',
-	'vs/workbench/contrib/terminal/common/scripts/CodeTabExpansion.psm1',
-	'vs/workbench/contrib/terminal/common/scripts/GitTabExpansion.psm1',
-	'vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh',
-	'vs/workbench/contrib/terminal/common/scripts/shellIntegration-env.zsh',
-	'vs/workbench/contrib/terminal/common/scripts/shellIntegration-profile.zsh',
-	'vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh',
-	'vs/workbench/contrib/terminal/common/scripts/shellIntegration-login.zsh',
-	'vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/*.psd1',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/*.psm1',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/*.dll',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/*.ps1xml',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/net6plus/*.dll',
-	'vs/workbench/contrib/terminal/common/scripts/psreadline/netstd/*.dll',
+	"vs/workbench/contrib/terminal/common/scripts/shellIntegration.ps1",
+	"vs/workbench/contrib/terminal/common/scripts/CodeTabExpansion.psm1",
+	"vs/workbench/contrib/terminal/common/scripts/GitTabExpansion.psm1",
+	"vs/workbench/contrib/terminal/common/scripts/shellIntegration-bash.sh",
+	"vs/workbench/contrib/terminal/common/scripts/shellIntegration-env.zsh",
+	"vs/workbench/contrib/terminal/common/scripts/shellIntegration-profile.zsh",
+	"vs/workbench/contrib/terminal/common/scripts/shellIntegration-rc.zsh",
+	"vs/workbench/contrib/terminal/common/scripts/shellIntegration-login.zsh",
+	"vs/workbench/contrib/terminal/common/scripts/shellIntegration.fish",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/*.psd1",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/*.psm1",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/*.dll",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/*.ps1xml",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/net6plus/*.dll",
+	"vs/workbench/contrib/terminal/common/scripts/psreadline/netstd/*.dll",
 ];
 
 // Resources for server-web target (server + web UI)
@@ -331,26 +338,26 @@ const serverWebResourcePatterns = [
 	...commonResourcePatterns,
 
 	// Web HTML
-	'vs/code/browser/workbench/workbench.html',
-	'vs/code/browser/workbench/workbench-dev.html',
-	'vs/code/browser/workbench/callback.html',
-	'vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html',
-	'vs/workbench/contrib/webview/browser/pre/*.html',
+	"vs/code/browser/workbench/workbench.html",
+	"vs/code/browser/workbench/workbench-dev.html",
+	"vs/code/browser/workbench/callback.html",
+	"vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html",
+	"vs/workbench/contrib/webview/browser/pre/*.html",
 
 	// Webview pre scripts
-	'vs/workbench/contrib/webview/browser/pre/*.js',
+	"vs/workbench/contrib/webview/browser/pre/*.js",
 
 	// Media - audio
-	'vs/platform/accessibilitySignal/browser/media/*.mp3',
+	"vs/platform/accessibilitySignal/browser/media/*.mp3",
 
 	// Media - images
-	'vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.svg',
-	'vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.png',
-	'vs/workbench/contrib/welcomeOnboarding/browser/media/*.svg',
-	'vs/workbench/contrib/extensions/browser/media/*.svg',
-	'vs/workbench/contrib/extensions/browser/media/*.png',
-	'vs/workbench/services/extensionManagement/common/media/*.svg',
-	'vs/workbench/services/extensionManagement/common/media/*.png',
+	"vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.svg",
+	"vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.png",
+	"vs/workbench/contrib/welcomeOnboarding/browser/media/*.svg",
+	"vs/workbench/contrib/extensions/browser/media/*.svg",
+	"vs/workbench/contrib/extensions/browser/media/*.png",
+	"vs/workbench/services/extensionManagement/common/media/*.svg",
+	"vs/workbench/services/extensionManagement/common/media/*.png",
 ];
 
 // Resources for standalone web target (browser-only, no server)
@@ -358,26 +365,26 @@ const webResourcePatterns = [
 	...commonResourcePatterns,
 
 	// Web HTML
-	'vs/code/browser/workbench/workbench.html',
-	'vs/code/browser/workbench/workbench-dev.html',
-	'vs/code/browser/workbench/callback.html',
-	'vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html',
-	'vs/workbench/contrib/webview/browser/pre/*.html',
+	"vs/code/browser/workbench/workbench.html",
+	"vs/code/browser/workbench/workbench-dev.html",
+	"vs/code/browser/workbench/callback.html",
+	"vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html",
+	"vs/workbench/contrib/webview/browser/pre/*.html",
 
 	// Webview pre scripts
-	'vs/workbench/contrib/webview/browser/pre/*.js',
+	"vs/workbench/contrib/webview/browser/pre/*.js",
 
 	// Media - audio
-	'vs/platform/accessibilitySignal/browser/media/*.mp3',
+	"vs/platform/accessibilitySignal/browser/media/*.mp3",
 
 	// Media - images
-	'vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.svg',
-	'vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.png',
-	'vs/workbench/contrib/welcomeOnboarding/browser/media/*.svg',
-	'vs/workbench/contrib/extensions/browser/media/*.svg',
-	'vs/workbench/contrib/extensions/browser/media/*.png',
-	'vs/workbench/services/extensionManagement/common/media/*.svg',
-	'vs/workbench/services/extensionManagement/common/media/*.png',
+	"vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.svg",
+	"vs/workbench/contrib/welcomeGettingStarted/common/media/**/*.png",
+	"vs/workbench/contrib/welcomeOnboarding/browser/media/*.svg",
+	"vs/workbench/contrib/extensions/browser/media/*.svg",
+	"vs/workbench/contrib/extensions/browser/media/*.png",
+	"vs/workbench/services/extensionManagement/common/media/*.svg",
+	"vs/workbench/services/extensionManagement/common/media/*.png",
 ];
 
 /**
@@ -385,13 +392,13 @@ const webResourcePatterns = [
  */
 function getResourcePatternsForTarget(target: BuildTarget): string[] {
 	switch (target) {
-		case 'desktop':
+		case "desktop":
 			return desktopResourcePatterns;
-		case 'server':
+		case "server":
 			return serverResourcePatterns;
-		case 'server-web':
+		case "server-web":
 			return serverWebResourcePatterns;
-		case 'web':
+		case "web":
 			return webResourcePatterns;
 		default:
 			throw new Error(`Unknown target: ${target}`);
@@ -413,7 +420,9 @@ async function cleanDir(dir: string): Promise<void> {
  * Scan for built-in extensions in the given directory.
  * Returns an array of extension entries for the builtinExtensionsScannerService.
  */
-function scanBuiltinExtensions(extensionsRoot: string): Array<IScannedBuiltinExtension> {
+function scanBuiltinExtensions(
+	extensionsRoot: string,
+): Array<IScannedBuiltinExtension> {
 	const scannedExtensions: Array<IScannedBuiltinExtension> = [];
 	const extensionsPath = path.join(REPO_ROOT, extensionsRoot);
 
@@ -422,27 +431,48 @@ function scanBuiltinExtensions(extensionsRoot: string): Array<IScannedBuiltinExt
 	}
 
 	for (const extensionFolder of fs.readdirSync(extensionsPath)) {
-		const packageJSONPath = path.join(extensionsPath, extensionFolder, 'package.json');
+		const packageJSONPath = path.join(
+			extensionsPath,
+			extensionFolder,
+			"package.json",
+		);
 		if (!fs.existsSync(packageJSONPath)) {
 			continue;
 		}
 		try {
-			const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, 'utf8'));
+			const packageJSON = JSON.parse(fs.readFileSync(packageJSONPath, "utf8"));
 			if (!isWebExtension(packageJSON)) {
 				continue;
 			}
-			const children = fs.readdirSync(path.join(extensionsPath, extensionFolder));
-			const packageNLSPath = children.filter(child => child === 'package.nls.json')[0];
-			const packageNLS = packageNLSPath ? JSON.parse(fs.readFileSync(path.join(extensionsPath, extensionFolder, packageNLSPath), 'utf8')) : undefined;
-			const readme = children.filter(child => /^readme(\.txt|\.md|)$/i.test(child))[0];
-			const changelog = children.filter(child => /^changelog(\.txt|\.md|)$/i.test(child))[0];
+			const children = fs.readdirSync(
+				path.join(extensionsPath, extensionFolder),
+			);
+			const packageNLSPath = children.filter(
+				(child) => child === "package.nls.json",
+			)[0];
+			const packageNLS = packageNLSPath
+				? JSON.parse(
+						fs.readFileSync(
+							path.join(extensionsPath, extensionFolder, packageNLSPath),
+							"utf8",
+						),
+					)
+				: undefined;
+			const readme = children.filter((child) =>
+				/^readme(\.txt|\.md|)$/i.test(child),
+			)[0];
+			const changelog = children.filter((child) =>
+				/^changelog(\.txt|\.md|)$/i.test(child),
+			)[0];
 
 			scannedExtensions.push({
 				extensionPath: extensionFolder,
 				packageJSON,
 				packageNLS,
 				readmePath: readme ? path.join(extensionFolder, readme) : undefined,
-				changelogPath: changelog ? path.join(extensionFolder, changelog) : undefined,
+				changelogPath: changelog
+					? path.join(extensionFolder, changelog)
+					: undefined,
 			});
 		} catch (e) {
 			// Skip invalid extensions
@@ -457,7 +487,7 @@ function scanBuiltinExtensions(extensionsRoot: string): Array<IScannedBuiltinExt
  */
 function readISODate(outDir: string): string {
 	try {
-		return fs.readFileSync(path.join(REPO_ROOT, outDir, 'date'), 'utf8');
+		return fs.readFileSync(path.join(REPO_ROOT, outDir, "date"), "utf8");
 	} catch {
 		return getGitCommitDate();
 	}
@@ -490,41 +520,53 @@ async function copyFile(srcPath: string, destPath: string): Promise<void> {
  * Only needed for desktop target.
  */
 const desktopStandaloneFiles = [
-	'vs/base/parts/sandbox/electron-browser/preload.ts',
-	'vs/base/parts/sandbox/electron-browser/preload-aux.ts',
-	'vs/platform/browserView/electron-browser/preload-browserView.ts',
+	"vs/base/parts/sandbox/electron-browser/preload.ts",
+	"vs/base/parts/sandbox/electron-browser/preload-aux.ts",
+	"vs/platform/browserView/electron-browser/preload-browserView.ts",
 ];
 
-async function compileStandaloneFiles(outDir: string, doMinify: boolean, target: BuildTarget): Promise<void> {
+async function compileStandaloneFiles(
+	outDir: string,
+	doMinify: boolean,
+	target: BuildTarget,
+): Promise<void> {
 	// Only desktop needs preload scripts
-	if (target !== 'desktop') {
+	if (target !== "desktop") {
 		return;
 	}
 
-	console.log(`[standalone] Compiling ${desktopStandaloneFiles.length} standalone files...`);
+	console.log(
+		`[standalone] Compiling ${desktopStandaloneFiles.length} standalone files...`,
+	);
 
 	const banner = `/*!--------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/`;
 
-	await Promise.all(desktopStandaloneFiles.map(async (file) => {
-		const entryPath = path.join(REPO_ROOT, SRC_DIR, file);
-		const outPath = path.join(REPO_ROOT, outDir, file.replace(/\.ts$/, '.js'));
+	await Promise.all(
+		desktopStandaloneFiles.map(async (file) => {
+			const entryPath = path.join(REPO_ROOT, SRC_DIR, file);
+			const outPath = path.join(
+				REPO_ROOT,
+				outDir,
+				file.replace(/\.ts$/, ".js"),
+			);
 
-		await esbuild.build({
-			entryPoints: [entryPath],
-			outfile: outPath,
-			bundle: false, // Don't bundle - these are standalone scripts
-			format: 'cjs', // CommonJS for Electron preload
-			platform: 'node',
-			target: ['es2024'],
-			sourcemap: 'linked',
-			sourcesContent: false,
-			minify: doMinify,
-			banner: { js: banner },
-			logLevel: 'warning',
-		});
-	}));
+			await esbuild.build({
+				entryPoints: [entryPath],
+				outfile: outPath,
+				bundle: false, // Don't bundle - these are standalone scripts
+				format: "cjs", // CommonJS for Electron preload
+				platform: "node",
+				target: ["es2024"],
+				sourcemap: "linked",
+				sourcesContent: false,
+				minify: doMinify,
+				banner: { js: banner },
+				logLevel: "warning",
+			});
+		}),
+	);
 
 	console.log(`[standalone] Done`);
 }
@@ -536,36 +578,41 @@ async function compileStandaloneFiles(outDir: string, doMinify: boolean, target:
  * Used for development/transpile builds only - production bundles use
  * copyResources() with curated per-target patterns instead.
  */
-async function copyAllNonTsFiles(outDir: string, excludeTests: boolean): Promise<void> {
+async function copyAllNonTsFiles(
+	outDir: string,
+	excludeTests: boolean,
+): Promise<void> {
 	console.log(`[resources] Copying all non-TS files to ${outDir}...`);
 
 	const ignorePatterns = [
 		// Exclude .ts files but keep .d.ts files (they're needed at runtime for type references)
-		'**/*.ts',
+		"**/*.ts",
 	];
 	if (excludeTests) {
-		ignorePatterns.push('**/test/**');
+		ignorePatterns.push("**/test/**");
 	}
 
-	const files = await globAsync('**/*', {
+	const files = await globAsync("**/*", {
 		cwd: path.join(REPO_ROOT, SRC_DIR),
 		nodir: true,
 		ignore: ignorePatterns,
 	});
 
 	// Re-include .d.ts files that were excluded by the *.ts ignore
-	const dtsFiles = await globAsync('**/*.d.ts', {
+	const dtsFiles = await globAsync("**/*.d.ts", {
 		cwd: path.join(REPO_ROOT, SRC_DIR),
-		ignore: excludeTests ? ['**/test/**'] : [],
+		ignore: excludeTests ? ["**/test/**"] : [],
 	});
 
 	const allFiles = [...new Set([...files, ...dtsFiles])];
 
-	await Promise.all(allFiles.map(file => {
-		const srcPath = path.join(REPO_ROOT, SRC_DIR, file);
-		const destPath = path.join(REPO_ROOT, outDir, file);
-		return copyFile(srcPath, destPath);
-	}));
+	await Promise.all(
+		allFiles.map((file) => {
+			const srcPath = path.join(REPO_ROOT, SRC_DIR, file);
+			const destPath = path.join(REPO_ROOT, outDir, file);
+			return copyFile(srcPath, destPath);
+		}),
+	);
 
 	console.log(`[resources] Copied ${allFiles.length} files`);
 }
@@ -575,11 +622,14 @@ async function copyAllNonTsFiles(outDir: string, excludeTests: boolean): Promise
  * Uses specific per-target patterns matching the old build's vscodeResourceIncludes,
  * serverResourceIncludes, etc. Only called by bundle() - transpile uses copyAllNonTsFiles().
  */
-async function copyResources(outDir: string, target: BuildTarget): Promise<void> {
+async function copyResources(
+	outDir: string,
+	target: BuildTarget,
+): Promise<void> {
 	console.log(`[resources] Copying to ${outDir} for target '${target}'...`);
 	let copied = 0;
 
-	const ignorePatterns = ['**/test/**', '**/*-dev.html'];
+	const ignorePatterns = ["**/test/**", "**/*-dev.html"];
 
 	const resourcePatterns = getResourcePatternsForTarget(target);
 	for (const pattern of resourcePatterns) {
@@ -606,10 +656,10 @@ async function copyResources(outDir: string, target: BuildTarget): Promise<void>
 
 function inlineMinimistPlugin(): esbuild.Plugin {
 	return {
-		name: 'inline-minimist',
+		name: "inline-minimist",
 		setup(build) {
 			build.onResolve({ filter: /^minimist$/ }, () => ({
-				path: path.join(REPO_ROOT, 'node_modules/minimist/index.js'),
+				path: path.join(REPO_ROOT, "node_modules/minimist/index.js"),
 				external: false,
 			}));
 		},
@@ -620,7 +670,7 @@ function cssExternalPlugin(): esbuild.Plugin {
 	// Mark CSS imports as external so they stay as import statements
 	// The CSS files are copied separately and loaded by the browser at runtime
 	return {
-		name: 'css-external',
+		name: "css-external",
 		setup(build) {
 			build.onResolve({ filter: /\.css$/ }, (args) => ({
 				path: args.path,
@@ -636,59 +686,78 @@ function cssExternalPlugin(): esbuild.Plugin {
  * ensuring placeholders like `/*BUILD->INSERT_PRODUCT_CONFIGURATION* /` are replaced
  * before esbuild strips them as non-legal comments.
  */
-function fileContentMapperPlugin(outDir: string, target: BuildTarget): esbuild.Plugin {
+function fileContentMapperPlugin(
+	outDir: string,
+	target: BuildTarget,
+): esbuild.Plugin {
 	// Cache the replacement strings (computed once)
 	let productConfigReplacement: string | undefined;
 	let builtinExtensionsReplacement: string | undefined;
 
 	return {
-		name: 'file-content-mapper',
+		name: "file-content-mapper",
 		setup(build) {
 			build.onLoad({ filter: /\.ts$/ }, async (args) => {
 				// Skip .d.ts files
-				if (args.path.endsWith('.d.ts')) {
+				if (args.path.endsWith(".d.ts")) {
 					return undefined;
 				}
 
-				let contents = await fs.promises.readFile(args.path, 'utf-8');
+				let contents = await fs.promises.readFile(args.path, "utf-8");
 				let modified = false;
 
 				// Inject product configuration
-				if (contents.includes('/*BUILD->INSERT_PRODUCT_CONFIGURATION*/')) {
+				if (contents.includes("/*BUILD->INSERT_PRODUCT_CONFIGURATION*/")) {
 					if (productConfigReplacement === undefined) {
 						// For server-web, remove webEndpointUrlTemplate
-						const productForTarget = target === 'server-web'
-							? { ...product, webEndpointUrlTemplate: undefined }
-							: product;
+						const productForTarget =
+							target === "server-web"
+								? { ...product, webEndpointUrlTemplate: undefined }
+								: product;
 						const productConfiguration = JSON.stringify({
 							...productForTarget,
 							version,
 							commit,
-							date: readISODate(outDir)
+							date: readISODate(outDir),
 						});
 						// Remove the outer braces since the placeholder is inside an object literal
-						productConfigReplacement = productConfiguration.substring(1, productConfiguration.length - 1);
+						productConfigReplacement = productConfiguration.substring(
+							1,
+							productConfiguration.length - 1,
+						);
 					}
-					contents = contents.replace('/*BUILD->INSERT_PRODUCT_CONFIGURATION*/', () => productConfigReplacement!);
+					contents = contents.replace(
+						"/*BUILD->INSERT_PRODUCT_CONFIGURATION*/",
+						() => productConfigReplacement!,
+					);
 					modified = true;
 				}
 
 				// Inject built-in extensions list
-				if (contents.includes('/*BUILD->INSERT_BUILTIN_EXTENSIONS*/')) {
+				if (contents.includes("/*BUILD->INSERT_BUILTIN_EXTENSIONS*/")) {
 					if (builtinExtensionsReplacement === undefined) {
 						// Web target uses .build/web/extensions (from compileWebExtensionsBuildTask)
 						// Other targets use .build/extensions
-						const extensionsRoot = target === 'web' ? '.build/web/extensions' : '.build/extensions';
-						const builtinExtensions = JSON.stringify(scanBuiltinExtensions(extensionsRoot));
+						const extensionsRoot =
+							target === "web" ? ".build/web/extensions" : ".build/extensions";
+						const builtinExtensions = JSON.stringify(
+							scanBuiltinExtensions(extensionsRoot),
+						);
 						// Remove the outer brackets since the placeholder is inside an array literal
-						builtinExtensionsReplacement = builtinExtensions.substring(1, builtinExtensions.length - 1);
+						builtinExtensionsReplacement = builtinExtensions.substring(
+							1,
+							builtinExtensions.length - 1,
+						);
 					}
-					contents = contents.replace('/*BUILD->INSERT_BUILTIN_EXTENSIONS*/', () => builtinExtensionsReplacement!);
+					contents = contents.replace(
+						"/*BUILD->INSERT_BUILTIN_EXTENSIONS*/",
+						() => builtinExtensionsReplacement!,
+					);
 					modified = true;
 				}
 
 				if (modified) {
-					return { contents, loader: 'ts' };
+					return { contents, loader: "ts" };
 				}
 
 				// No modifications, let esbuild handle normally
@@ -704,21 +773,21 @@ function fileContentMapperPlugin(outDir: string, target: BuildTarget): esbuild.P
 
 // Shared transform options for single-file transpilation
 const transformOptions: esbuild.TransformOptions = {
-	loader: 'ts',
-	format: 'esm',
-	target: 'es2024',
-	sourcemap: 'inline',
+	loader: "ts",
+	format: "esm",
+	target: "es2024",
+	sourcemap: "inline",
 	sourcesContent: false,
 	tsconfigRaw: JSON.stringify({
 		compilerOptions: {
 			experimentalDecorators: true,
-			useDefineForClassFields: false
-		}
+			useDefineForClassFields: false,
+		},
 	}),
 };
 
 async function transpileFile(srcPath: string, destPath: string): Promise<void> {
-	const source = await fs.promises.readFile(srcPath, 'utf-8');
+	const source = await fs.promises.readFile(srcPath, "utf-8");
 	const result = await esbuild.transform(source, {
 		...transformOptions,
 		sourcefile: srcPath,
@@ -739,18 +808,18 @@ async function transpileFile(srcPath: string, destPath: string): Promise<void> {
  * +  esmModuleLocationBundler: () => new URL("../../../api/worker/extensionHostWorkerMain.js?esm", import.meta.url)
  */
 function adjustEsmUrl(code: string): string {
-	const fixedCode = code.replace(/\.ts(\?esm['"])/g, '.js$1');
+	const fixedCode = code.replace(/\.ts(\?esm['"])/g, ".js$1");
 	return fixedCode;
 }
 
 async function transpile(outDir: string, excludeTests: boolean): Promise<void> {
 	// Find all .ts files
-	const ignorePatterns = ['**/*.d.ts'];
+	const ignorePatterns = ["**/*.d.ts"];
 	if (excludeTests) {
-		ignorePatterns.push('**/test/**');
+		ignorePatterns.push("**/test/**");
 	}
 
-	const files = await globAsync('**/*.ts', {
+	const files = await globAsync("**/*.ts", {
 		cwd: path.join(REPO_ROOT, SRC_DIR),
 		ignore: ignorePatterns,
 	});
@@ -758,18 +827,31 @@ async function transpile(outDir: string, excludeTests: boolean): Promise<void> {
 	console.log(`[transpile] Found ${files.length} files`);
 
 	// Transpile all files in parallel using esbuild.transform (fastest approach)
-	await Promise.all(files.map(file => {
-		const srcPath = path.join(REPO_ROOT, SRC_DIR, file);
-		const destPath = path.join(REPO_ROOT, outDir, file.replace(/\.ts$/, '.js'));
-		return transpileFile(srcPath, destPath);
-	}));
+	await Promise.all(
+		files.map((file) => {
+			const srcPath = path.join(REPO_ROOT, SRC_DIR, file);
+			const destPath = path.join(
+				REPO_ROOT,
+				outDir,
+				file.replace(/\.ts$/, ".js"),
+			);
+			return transpileFile(srcPath, destPath);
+		}),
+	);
 }
 
 // ============================================================================
 // Bundle (Goal 2: JS → bundled JS)
 // ============================================================================
 
-async function bundle(outDir: string, doMinify: boolean, doNls: boolean, doManglePrivates: boolean, target: BuildTarget, sourceMapBaseUrl?: string): Promise<void> {
+async function bundle(
+	outDir: string,
+	doMinify: boolean,
+	doNls: boolean,
+	doManglePrivates: boolean,
+	target: BuildTarget,
+	sourceMapBaseUrl?: string,
+): Promise<void> {
 	await cleanDir(outDir);
 
 	// Write build date file (used by packaging to embed in product.json).
@@ -780,18 +862,23 @@ async function bundle(outDir: string, doMinify: boolean, doNls: boolean, doMangl
 	await fs.promises.mkdir(outDirPath, { recursive: true });
 	let buildDate: string;
 	try {
-		buildDate = await fs.promises.readFile(path.join(REPO_ROOT, 'out-build', 'date'), 'utf8');
+		buildDate = await fs.promises.readFile(
+			path.join(REPO_ROOT, "out-build", "date"),
+			"utf8",
+		);
 	} catch {
 		buildDate = getGitCommitDate();
 	}
-	await fs.promises.writeFile(path.join(outDirPath, 'date'), buildDate, 'utf8');
+	await fs.promises.writeFile(path.join(outDirPath, "date"), buildDate, "utf8");
 
-	console.log(`[bundle] ${SRC_DIR} → ${outDir} (target: ${target})${doMinify ? ' (minify)' : ''}${doNls ? ' (nls)' : ''}${doManglePrivates ? ' (mangle-privates)' : ''}`);
+	console.log(
+		`[bundle] ${SRC_DIR} → ${outDir} (target: ${target})${doMinify ? " (minify)" : ""}${doNls ? " (nls)" : ""}${doManglePrivates ? " (mangle-privates)" : ""}`,
+	);
 	const t1 = Date.now();
 
 	// Read TSLib for banner
-	const tslibPath = path.join(REPO_ROOT, 'node_modules/tslib/tslib.es6.js');
-	const tslib = await fs.promises.readFile(tslibPath, 'utf-8');
+	const tslibPath = path.join(REPO_ROOT, "node_modules/tslib/tslib.es6.js");
+	const tslib = await fs.promises.readFile(tslibPath, "utf-8");
 	const banner = {
 		js: `/*!--------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
@@ -806,8 +893,8 @@ ${tslib}`,
 	const tsconfigRaw = JSON.stringify({
 		compilerOptions: {
 			experimentalDecorators: true,
-			useDefineForClassFields: false
-		}
+			useDefineForClassFields: false,
+		},
 	});
 
 	// Create shared NLS collector (only used if doNls is true)
@@ -826,62 +913,68 @@ ${tslib}`,
 	const contentMapperPlugin = fileContentMapperPlugin(outDir, target);
 
 	// Bundle each entry point directly from TypeScript source
-	await Promise.all(allEntryPoints.map(async (entryPoint) => {
-		const entryPath = path.join(REPO_ROOT, SRC_DIR, `${entryPoint}.ts`);
-		const outPath = path.join(REPO_ROOT, outDir, `${entryPoint}.js`);
+	await Promise.all(
+		allEntryPoints.map(async (entryPoint) => {
+			const entryPath = path.join(REPO_ROOT, SRC_DIR, `${entryPoint}.ts`);
+			const outPath = path.join(REPO_ROOT, outDir, `${entryPoint}.js`);
 
-		// Use CSS external plugin for entry points that don't need bundled CSS
-		const plugins: esbuild.Plugin[] = bundleCssEntryPoints.has(entryPoint) ? [] : [cssExternalPlugin()];
-		// Add content mapper plugin to inject product config and builtin extensions
-		plugins.push(contentMapperPlugin);
-		if (doNls) {
-			plugins.unshift(nlsPlugin({
-				baseDir: path.join(REPO_ROOT, SRC_DIR),
-				collector: nlsCollector,
-			}));
-		}
+			// Use CSS external plugin for entry points that don't need bundled CSS
+			const plugins: esbuild.Plugin[] = bundleCssEntryPoints.has(entryPoint)
+				? []
+				: [cssExternalPlugin()];
+			// Add content mapper plugin to inject product config and builtin extensions
+			plugins.push(contentMapperPlugin);
+			if (doNls) {
+				plugins.unshift(
+					nlsPlugin({
+						baseDir: path.join(REPO_ROOT, SRC_DIR),
+						collector: nlsCollector,
+					}),
+				);
+			}
 
-		// For entry points that bundle CSS, we need to use outdir instead of outfile
-		// because esbuild can't produce multiple output files (JS + CSS) with outfile
-		const needsCssBundling = bundleCssEntryPoints.has(entryPoint);
+			// For entry points that bundle CSS, we need to use outdir instead of outfile
+			// because esbuild can't produce multiple output files (JS + CSS) with outfile
+			const needsCssBundling = bundleCssEntryPoints.has(entryPoint);
 
-		const buildOptions: esbuild.BuildOptions = {
-			entryPoints: needsCssBundling
-				? [{ in: entryPath, out: entryPoint }]
-				: [entryPath],
-			...(needsCssBundling
-				? { outdir: path.join(REPO_ROOT, outDir) }
-				: { outfile: outPath }),
-			bundle: true,
-			format: 'esm',
-			platform: 'neutral',
-			target: ['es2024'],
-			packages: 'external',
-			sourcemap: 'linked',
-			sourcesContent: true,
-			minify: doMinify,
-			treeShaking: true,
-			banner,
-			loader: {
-				'.ttf': 'file',
-				'.svg': 'file',
-				'.png': 'file',
-				'.sh': 'file',
-			},
-			assetNames: 'media/[name]',
-			plugins,
-			write: false, // Don't write yet, we need to post-process
-			logLevel: 'warning',
-			logOverride: {
-				'unsupported-require-call': 'silent',
-			},
-			tsconfigRaw,
-		};
+			const buildOptions: esbuild.BuildOptions = {
+				entryPoints: needsCssBundling
+					? [{ in: entryPath, out: entryPoint }]
+					: [entryPath],
+				...(needsCssBundling
+					? { outdir: path.join(REPO_ROOT, outDir) }
+					: { outfile: outPath }),
+				bundle: true,
+				format: "esm",
+				platform: "neutral",
+				target: ["es2024"],
+				packages: "external",
+				sourcemap: "linked",
+				sourcesContent: true,
+				minify: doMinify,
+				treeShaking: true,
+				banner,
+				loader: {
+					".ttf": "file",
+					".svg": "file",
+					".png": "file",
+					".sh": "file",
+				},
+				assetNames: "media/[name]",
+				plugins,
+				write: false, // Don't write yet, we need to post-process
+				logLevel: "warning",
+				logOverride: {
+					"unsupported-require-call": "silent",
+				},
+				tsconfigRaw,
+			};
 
-		const result = await esbuild.build(buildOptions);
+			const result = await esbuild.build(buildOptions);
 
-		buildResults.push({ outPath, result });
-	}));
+			buildResults.push({ outPath, result });
+		}),
+	);
 
 	// Bundle bootstrap files (with minimist inlined) directly from TypeScript source
 	for (const entry of bootstrapEntryPoints) {
@@ -893,32 +986,37 @@ ${tslib}`,
 
 		const outPath = path.join(REPO_ROOT, outDir, `${entry}.js`);
 
-		const bootstrapPlugins: esbuild.Plugin[] = [inlineMinimistPlugin(), contentMapperPlugin];
+		const bootstrapPlugins: esbuild.Plugin[] = [
+			inlineMinimistPlugin(),
+			contentMapperPlugin,
+		];
 		if (doNls) {
-			bootstrapPlugins.unshift(nlsPlugin({
-				baseDir: path.join(REPO_ROOT, SRC_DIR),
-				collector: nlsCollector,
-			}));
+			bootstrapPlugins.unshift(
+				nlsPlugin({
+					baseDir: path.join(REPO_ROOT, SRC_DIR),
+					collector: nlsCollector,
+				}),
+			);
 		}
 
 		const result = await esbuild.build({
 			entryPoints: [entryPath],
 			outfile: outPath,
 			bundle: true,
-			format: 'esm',
-			platform: 'node',
-			target: ['es2024'],
-			packages: 'external',
-			sourcemap: 'linked',
+			format: "esm",
+			platform: "node",
+			target: ["es2024"],
+			packages: "external",
+			sourcemap: "linked",
 			sourcesContent: true,
 			minify: doMinify,
 			treeShaking: true,
 			banner,
 			plugins: bootstrapPlugins,
 			write: false, // Don't write yet, we need to post-process
-			logLevel: 'warning',
+			logLevel: "warning",
 			logOverride: {
-				'unsupported-require-call': 'silent',
+				"unsupported-require-call": "silent",
 			},
 			tsconfigRaw,
 		});
@@ -933,23 +1031,37 @@ ${tslib}`,
 		const nlsResult = await finalizeNLS(
 			nlsCollector,
 			path.join(REPO_ROOT, outDir),
-			[path.join(REPO_ROOT, 'out-build')]
+			[path.join(REPO_ROOT, "out-build")],
 		);
 		indexMap = nlsResult.indexMap;
 	}
 
 	// Post-process and write all output files
 	let bundled = 0;
-	const mangleStats: { file: string; result: ConvertPrivateFieldsResult }[] = [];
+	const mangleStats: { file: string; result: ConvertPrivateFieldsResult }[] =
+		[];
 	// Map from JS file path to pre-mangle content + edits, for source map adjustment
-	const mangleEdits = new Map<string, { preMangleCode: string; edits: readonly import('./private-to-property.ts').TextEdit[] }>();
+	const mangleEdits = new Map<
+		string,
+		{
+			preMangleCode: string;
+			edits: readonly import("./private-to-property.ts").TextEdit[];
+		}
+	>();
 	// Map from JS file path to pre-NLS content + edits, for source map adjustment
-	const nlsEdits = new Map<string, { preNLSCode: string; edits: readonly import('./private-to-property.ts').TextEdit[] }>();
+	const nlsEdits = new Map<
+		string,
+		{
+			preNLSCode: string;
+			edits: readonly import("./private-to-property.ts").TextEdit[];
+		}
+	>();
 	// Defer .map files until all .js files are processed, because esbuild may
 	// emit the .map file in a different build result than the .js file (e.g.
 	// code-split chunks), and we need the NLS/mangle edits from the .js pass
 	// to be available when adjusting the .map.
-	const deferredMaps: { path: string; text: string; contents: Uint8Array }[] = [];
+	const deferredMaps: { path: string; text: string; contents: Uint8Array }[] =
+		[];
 	for (const { result } of buildResults) {
 		if (!result.outputFiles) {
 			continue;
@@ -958,7 +1070,7 @@ ${tslib}`,
 		for (const file of result.outputFiles) {
 			await fs.promises.mkdir(path.dirname(file.path), { recursive: true });
 
-			if (file.path.endsWith('.js') || file.path.endsWith('.css')) {
+			if (file.path.endsWith(".js") || file.path.endsWith(".css")) {
 				let content = file.text;
 
 				// Convert native #private fields to regular properties BEFORE NLS
@@ -966,18 +1078,28 @@ ${tslib}`,
 				// source map coordinate system (both reference the raw esbuild output).
 				// Skip extension host bundles - they expose API surface to extensions
 				// where true encapsulation matters more than the perf gain.
-				if (file.path.endsWith('.js') && doManglePrivates && !isExtensionHostBundle(file.path)) {
+				if (
+					file.path.endsWith(".js") &&
+					doManglePrivates &&
+					!isExtensionHostBundle(file.path)
+				) {
 					const preMangleCode = content;
 					const mangleResult = convertPrivateFields(content, file.path);
 					content = mangleResult.code;
 					if (mangleResult.editCount > 0) {
-						mangleStats.push({ file: path.relative(path.join(REPO_ROOT, outDir), file.path), result: mangleResult });
-						mangleEdits.set(file.path, { preMangleCode, edits: mangleResult.edits });
+						mangleStats.push({
+							file: path.relative(path.join(REPO_ROOT, outDir), file.path),
+							result: mangleResult,
+						});
+						mangleEdits.set(file.path, {
+							preMangleCode,
+							edits: mangleResult.edits,
+						});
 					}
 				}
 
 				// Apply NLS post-processing if enabled (JS only)
-				if (file.path.endsWith('.js') && doNls && indexMap.size > 0) {
+				if (file.path.endsWith(".js") && doNls && indexMap.size > 0) {
 					const preNLSCode = content;
 					const nlsResult = postProcessNLS(content, indexMap, preserveEnglish);
 					content = nlsResult.code;
@@ -988,21 +1110,28 @@ ${tslib}`,
 
 				// Rewrite sourceMappingURL to CDN URL if configured
 				if (sourceMapBaseUrl) {
-					const relativePath = path.relative(path.join(REPO_ROOT, outDir), file.path);
+					const relativePath = path.relative(
+						path.join(REPO_ROOT, outDir),
+						file.path,
+					);
 					content = content.replace(
 						/\/\/# sourceMappingURL=.+$/m,
-						`//# sourceMappingURL=${sourceMapBaseUrl}/${relativePath}.map`
+						`//# sourceMappingURL=${sourceMapBaseUrl}/${relativePath}.map`,
 					);
 					content = content.replace(
 						/\/\*# sourceMappingURL=.+\*\/$/m,
-						`/*# sourceMappingURL=${sourceMapBaseUrl}/${relativePath}.map*/`
+						`/*# sourceMappingURL=${sourceMapBaseUrl}/${relativePath}.map*/`,
 					);
 				}
 
 				await fs.promises.writeFile(file.path, content);
-			} else if (file.path.endsWith('.map')) {
+			} else if (file.path.endsWith(".map")) {
 				// Defer .map processing until all .js files have been handled
-				deferredMaps.push({ path: file.path, text: file.text, contents: file.contents });
+				deferredMaps.push({
+					path: file.path,
+					text: file.text,
+					contents: file.contents,
+				});
 			} else {
 				// Write other files (assets, etc.) as-is
 				await fs.promises.writeFile(file.path, file.contents);
@@ -1014,7 +1143,7 @@ ${tslib}`,
 	// Second pass: process deferred .map files now that all mangle/NLS edits
 	// have been collected from .js processing above.
 	for (const mapFile of deferredMaps) {
-		const jsPath = mapFile.path.replace(/\.map$/, '');
+		const jsPath = mapFile.path.replace(/\.map$/, "");
 		const mangle = mangleEdits.get(jsPath);
 		const nls = nlsEdits.get(jsPath);
 
@@ -1036,36 +1165,56 @@ ${tslib}`,
 	// These steps do raw string surgery on bundled JS so a bug could silently
 	// produce syntactically broken output. Catch it here at build time.
 	// Uses esbuild.transform() as a parser since the bundles are ESM.
-	const postProcessedFiles = new Set([...mangleEdits.keys(), ...nlsEdits.keys()]);
+	const postProcessedFiles = new Set([
+		...mangleEdits.keys(),
+		...nlsEdits.keys(),
+	]);
 	if (postProcessedFiles.size > 0) {
-		const errors = (await Promise.all([...postProcessedFiles].map(async jsPath => {
-			try {
-				const src = await fs.promises.readFile(jsPath, 'utf-8');
-				await esbuild.transform(src, { loader: 'js', format: 'esm' });
-				return undefined;
-			} catch (e: unknown) {
-				const rel = path.relative(path.join(REPO_ROOT, outDir), jsPath);
-				const message = e instanceof Error ? e.message : String(e);
-				return { rel, message };
-			}
-		}))).filter(error => error !== undefined).sort((a, b) => a.rel.localeCompare(b.rel));
+		const errors = (
+			await Promise.all(
+				[...postProcessedFiles].map(async (jsPath) => {
+					try {
+						const src = await fs.promises.readFile(jsPath, "utf-8");
+						await esbuild.transform(src, { loader: "js", format: "esm" });
+						return undefined;
+					} catch (e: unknown) {
+						const rel = path.relative(path.join(REPO_ROOT, outDir), jsPath);
+						const message = e instanceof Error ? e.message : String(e);
+						return { rel, message };
+					}
+				}),
+			)
+		)
+			.filter((error) => error !== undefined)
+			.sort((a, b) => a.rel.localeCompare(b.rel));
 		if (errors.length > 0) {
-			throw new Error(`[bundle] Syntax errors in post-processed JS files:\n${errors.map(e => `${e.rel}: ${e.message}`).join('\n')}`);
+			throw new Error(
+				`[bundle] Syntax errors in post-processed JS files:\n${errors.map((e) => `${e.rel}: ${e.message}`).join("\n")}`,
+			);
 		}
-		console.log(`[bundle] Syntax check passed for ${postProcessedFiles.size} post-processed JS files`);
+		console.log(
+			`[bundle] Syntax check passed for ${postProcessedFiles.size} post-processed JS files`,
+		);
 	}
 
 	// Log mangle-privates stats
 	if (doManglePrivates && mangleStats.length > 0) {
-		let totalClasses = 0, totalFields = 0, totalEdits = 0, totalElapsed = 0;
+		let totalClasses = 0,
+			totalFields = 0,
+			totalEdits = 0,
+			totalElapsed = 0;
 		for (const { file, result } of mangleStats) {
-			console.log(`[mangle-privates] ${file}: ${result.classCount} classes, ${result.fieldCount} fields, ${result.editCount} edits, ${result.elapsed}ms`);
+			console.log(
+				`[mangle-privates] ${file}: ${result.classCount} classes, ${result.fieldCount} fields, ${result.editCount} edits, ${result.elapsed}ms`,
+			);
 			totalClasses += result.classCount;
 			totalFields += result.fieldCount;
 			totalEdits += result.editCount;
 			totalElapsed += result.elapsed;
 		}
-		console.log(`[mangle-privates] Total: ${totalClasses} classes, ${totalFields} fields, ${totalEdits} edits, ${totalElapsed}ms`);
+		console.log(
+			`[mangle-privates] Total: ${totalClasses} classes, ${totalFields} fields, ${totalEdits} edits, ${totalElapsed}ms`,
+		);
 	}
 
 	// Copy resources (curated per-target patterns for production)
@@ -1083,14 +1232,16 @@ ${tslib}`,
 
 async function watch(): Promise<void> {
 	if (!useEsbuildTranspile) {
-		console.log('Starting transpilation...');
-		console.log('Finished transpilation with 0 errors after 0 ms');
-		console.log('[watch] esbuild transpile disabled (useEsbuildTranspile=false). Keeping process alive as no-op.');
-		await new Promise(() => { }); // keep alive
+		console.log("Starting transpilation...");
+		console.log("Finished transpilation with 0 errors after 0 ms");
+		console.log(
+			"[watch] esbuild transpile disabled (useEsbuildTranspile=false). Keeping process alive as no-op.",
+		);
+		await new Promise(() => {}); // keep alive
 		return;
 	}
 
-	console.log('Starting transpilation...');
+	console.log("Starting transpilation...");
 
 	const outDir = OUT_DIR;
 
@@ -1103,10 +1254,14 @@ async function watch(): Promise<void> {
 	try {
 		await transpile(outDir, false);
 		await copyAllNonTsFiles(outDir, false);
-		console.log(`Finished transpilation with 0 errors after ${Date.now() - t1} ms`);
+		console.log(
+			`Finished transpilation with 0 errors after ${Date.now() - t1} ms`,
+		);
 	} catch (err) {
-		console.error('[watch] Initial build failed:', err);
-		console.log(`Finished transpilation with 1 errors after ${Date.now() - t1} ms`);
+		console.error("[watch] Initial build failed:", err);
+		console.log(
+			`Finished transpilation with 1 errors after ${Date.now() - t1} ms`,
+		);
 		// Continue watching anyway
 	}
 
@@ -1114,7 +1269,7 @@ async function watch(): Promise<void> {
 	let pendingCopyFiles: Set<string> = new Set();
 
 	const processChanges = async () => {
-		console.log('Starting transpilation...');
+		console.log("Starting transpilation...");
 		const t1 = Date.now();
 		const tsFiles = [...pendingTsFiles];
 		const filesToCopy = [...pendingCopyFiles];
@@ -1125,30 +1280,50 @@ async function watch(): Promise<void> {
 			// Transform changed TypeScript files in parallel
 			if (tsFiles.length > 0) {
 				console.log(`[watch] Transpiling ${tsFiles.length} file(s)...`);
-				await Promise.all(tsFiles.map(srcPath => {
-					const relativePath = path.relative(path.join(REPO_ROOT, SRC_DIR), srcPath);
-					const destPath = path.join(REPO_ROOT, outDir, relativePath.replace(/\.ts$/, '.js'));
-					return transpileFile(srcPath, destPath);
-				}));
+				await Promise.all(
+					tsFiles.map((srcPath) => {
+						const relativePath = path.relative(
+							path.join(REPO_ROOT, SRC_DIR),
+							srcPath,
+						);
+						const destPath = path.join(
+							REPO_ROOT,
+							outDir,
+							relativePath.replace(/\.ts$/, ".js"),
+						);
+						return transpileFile(srcPath, destPath);
+					}),
+				);
 			}
 
 			// Copy changed resource files in parallel
 			if (filesToCopy.length > 0) {
-				await Promise.all(filesToCopy.map(async (srcPath) => {
-					const relativePath = path.relative(path.join(REPO_ROOT, SRC_DIR), srcPath);
-					const destPath = path.join(REPO_ROOT, outDir, relativePath);
-					await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
-					await fs.promises.copyFile(srcPath, destPath);
-					console.log(`[watch] Copied ${relativePath}`);
-				}));
+				await Promise.all(
+					filesToCopy.map(async (srcPath) => {
+						const relativePath = path.relative(
+							path.join(REPO_ROOT, SRC_DIR),
+							srcPath,
+						);
+						const destPath = path.join(REPO_ROOT, outDir, relativePath);
+						await fs.promises.mkdir(path.dirname(destPath), {
+							recursive: true,
+						});
+						await fs.promises.copyFile(srcPath, destPath);
+						console.log(`[watch] Copied ${relativePath}`);
+					}),
+				);
 			}
 
 			if (tsFiles.length > 0 || filesToCopy.length > 0) {
-				console.log(`Finished transpilation with 0 errors after ${Date.now() - t1} ms`);
+				console.log(
+					`Finished transpilation with 0 errors after ${Date.now() - t1} ms`,
+				);
 			}
 		} catch (err) {
-			console.error('[watch] Rebuild failed:', err);
-			console.log(`Finished transpilation with 1 errors after ${Date.now() - t1} ms`);
+			console.error("[watch] Rebuild failed:", err);
+			console.log(
+				`Finished transpilation with 1 errors after ${Date.now() - t1} ms`,
+			);
 			// Continue watching
 		}
 	};
@@ -1156,10 +1331,10 @@ async function watch(): Promise<void> {
 	// Watch src directory using existing gulp-watch based watcher
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 	const srcDir = path.join(REPO_ROOT, SRC_DIR);
-	const watchStream = gulpWatch('src/**', { base: srcDir, readDelay: 200 });
+	const watchStream = gulpWatch("src/**", { base: srcDir, readDelay: 200 });
 
-	watchStream.on('data', (file: { path: string }) => {
-		if (file.path.endsWith('.ts') && !file.path.endsWith('.d.ts')) {
+	watchStream.on("data", (file: { path: string }) => {
+		if (file.path.endsWith(".ts") && !file.path.endsWith(".d.ts")) {
 			pendingTsFiles.add(file.path);
 		} else {
 			// Copy any non-TS file (matches old gulp build's `src/**` behavior)
@@ -1172,11 +1347,11 @@ async function watch(): Promise<void> {
 		}
 	});
 
-	console.log('[watch] Watching src/**/*.{ts,css,...} (Ctrl+C to stop)');
+	console.log("[watch] Watching src/**/*.{ts,css,...} (Ctrl+C to stop)");
 
 	// Keep process alive
-	process.on('SIGINT', () => {
-		console.log('\n[watch] Stopping...');
+	process.on("SIGINT", () => {
+		console.log("\n[watch] Stopping...");
 		watchStream.end();
 		process.exit(0);
 	});
@@ -1224,7 +1399,7 @@ async function main(): Promise<void> {
 
 	try {
 		switch (command) {
-			case 'transpile':
+			case "transpile":
 				if (options.watch) {
 					await watch();
 				} else {
@@ -1234,9 +1409,15 @@ async function main(): Promise<void> {
 					// Write build date file (used by packaging to embed in product.json)
 					const outDirPath = path.join(REPO_ROOT, outDir);
 					await fs.promises.mkdir(outDirPath, { recursive: true });
-					await fs.promises.writeFile(path.join(outDirPath, 'date'), getGitCommitDate(), 'utf8');
+					await fs.promises.writeFile(
+						path.join(outDirPath, "date"),
+						getGitCommitDate(),
+						"utf8",
+					);
 
-					console.log(`[transpile] ${SRC_DIR} → ${outDir}${options.excludeTests ? ' (excluding tests)' : ''}`);
+					console.log(
+						`[transpile] ${SRC_DIR} → ${outDir}${options.excludeTests ? " (excluding tests)" : ""}`,
+					);
 					const t1 = Date.now();
 					await transpile(outDir, options.excludeTests);
 					await copyAllNonTsFiles(outDir, options.excludeTests);
@@ -1244,8 +1425,15 @@ async function main(): Promise<void> {
 				}
 				break;
 
-			case 'bundle':
-				await bundle(options.out ?? OUT_VSCODE_DIR, options.minify, options.nls, options.manglePrivates, options.target as BuildTarget, options.sourceMapBaseUrl);
+			case "bundle":
+				await bundle(
+					options.out ?? OUT_VSCODE_DIR,
+					options.minify,
+					options.nls,
+					options.manglePrivates,
+					options.target as BuildTarget,
+					options.sourceMapBaseUrl,
+				);
 				break;
 
 			default:
@@ -1257,7 +1445,7 @@ async function main(): Promise<void> {
 			console.log(`\n✓ Total: ${Date.now() - t1}ms`);
 		}
 	} catch (err) {
-		console.error('Build failed:', err);
+		console.error("Build failed:", err);
 		process.exit(1);
 	}
 }

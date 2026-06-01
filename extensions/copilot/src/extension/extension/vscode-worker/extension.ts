@@ -21,6 +21,6 @@ export function activate(context: ExtensionContext, forceActivation?: boolean) {
 		context,
 		registerServices,
 		contributions: vscodeWebContributions,
-		forceActivation
+		forceActivation,
 	});
 }

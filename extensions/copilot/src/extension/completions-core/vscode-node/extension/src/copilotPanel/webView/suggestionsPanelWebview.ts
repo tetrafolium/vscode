@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /// <reference types="@types/vscode-webview" />
-import { provideVSCodeDesignSystem, vsCodeButton } from '@vscode/webview-ui-toolkit';
+import {
+	provideVSCodeDesignSystem,
+	vsCodeButton,
+} from '@vscode/webview-ui-toolkit';
 import DOMPurify from 'dompurify';
 
 const solutionsContainer = document.getElementById('solutionsContainer');
@@ -60,28 +63,36 @@ function handleSolutionUpdate(message: Message) {
 						<a href="${DOMPurify.sanitize(solution.citation.url)}" target="_blank">Inspect source code</a>
 					  </p>`
 					: '';
-				const sanitizedSnippet = DOMPurify.sanitize(solution.htmlSnippet);
+				const sanitizedSnippet = DOMPurify.sanitize(
+					solution.htmlSnippet,
+				);
 
 				return `<h3 class='solutionHeading' id="solution-${index + 1}-heading">Suggestion ${index + 1}</h3>
-				<div class='snippetContainer' aria-labelledby="solution-${index + 1}-heading" role="group" data-solution-index="${index}">${sanitizedSnippet
-					}</div>
+				<div class='snippetContainer' aria-labelledby="solution-${index + 1}-heading" role="group" data-solution-index="${index}">${
+					sanitizedSnippet
+				}</div>
 				${DOMPurify.sanitize(renderedCitation)}
-				<vscode-button role="button" class="acceptButton" id="acceptButton${index}" appearance="secondary" data-solution-index="${index}">Accept suggestion ${index + 1
-					}</vscode-button>`;
+				<vscode-button role="button" class="acceptButton" id="acceptButton${index}" appearance="secondary" data-solution-index="${index}">Accept suggestion ${
+					index + 1
+				}</vscode-button>`;
 			})
 			.join('');
 	}
 }
 
 function navigatePreviousSolution() {
-	const snippets = document.querySelectorAll<HTMLElement>('.snippetContainer pre');
+	const snippets = document.querySelectorAll<HTMLElement>(
+		'.snippetContainer pre',
+	);
 	const prevIndex = currentFocusIndex - 1;
 
 	snippets[prevIndex]?.focus();
 }
 
 function navigateNextSolution() {
-	const snippets = document.querySelectorAll<HTMLElement>('.snippetContainer pre');
+	const snippets = document.querySelectorAll<HTMLElement>(
+		'.snippetContainer pre',
+	);
 	const nextIndex = (currentFocusIndex ?? -1) + 1;
 
 	if (snippets[nextIndex]) {
@@ -92,22 +103,27 @@ function navigateNextSolution() {
 }
 
 function updateLoadingContainer(message: Message) {
-	const progressBar = document.getElementById('progress-bar') as HTMLProgressElement;
-	const loadingContainer = document.getElementById('loadingContainer') as HTMLDivElement;
+	const progressBar = document.getElementById(
+		'progress-bar',
+	) as HTMLProgressElement;
+	const loadingContainer = document.getElementById(
+		'loadingContainer',
+	) as HTMLDivElement;
 	if (!progressBar || !loadingContainer) {
 		return;
 	}
 	if (message.percentage >= 100) {
 		loadingContainer.innerHTML = `${message.solutions.length} Suggestions`;
 	} else {
-		const loadingLabelElement = loadingContainer.querySelector('label') as HTMLLabelElement;
+		const loadingLabelElement = loadingContainer.querySelector(
+			'label',
+		) as HTMLLabelElement;
 		if (loadingLabelElement.textContent !== 'Loading suggestions:\u00A0') {
 			loadingLabelElement.textContent = 'Loading suggestions:\u00A0';
 		}
 		progressBar.value = message.percentage;
 	}
 }
-
 
 function initializeSolutionEventHandlers(): void {
 	if (solutionEventHandlersInitialized || solutionsContainer === null) {
@@ -163,4 +179,3 @@ function handleClick(index: number) {
 		solutionIndex: index,
 	});
 }
-

@@ -20,7 +20,8 @@ interface PromptAttributes {
 	source?: unknown;
 }
 
-export type PromptElementProps<P = object> = P & Readonly<PromptAttributes & { children?: PromptComponentChildren }>;
+export type PromptElementProps<P = object> = P &
+	Readonly<PromptAttributes & { children?: PromptComponentChildren }>;
 
 export interface ComponentContext {
 	/**
@@ -33,7 +34,10 @@ export interface ComponentContext {
 	 *   return <Text>Count: {count}</Text>;
 	 * }
 	 */
-	useState<S = undefined>(): [S | undefined, Dispatch<StateUpdater<S | undefined>>];
+	useState<S = undefined>(): [
+		S | undefined,
+		Dispatch<StateUpdater<S | undefined>>,
+	];
 	useState<S>(initialState: S | (() => S)): [S, Dispatch<StateUpdater<S>>];
 
 	/**
@@ -57,7 +61,10 @@ export interface ComponentContext {
 	 *   );
 	 * }
 	 */
-	useData<T>(typePredicate: TypePredicate<T>, consumer: DataConsumer<T>): void;
+	useData<T>(
+		typePredicate: TypePredicate<T>,
+		consumer: DataConsumer<T>,
+	): void;
 }
 
 export interface PromptFragment {
@@ -70,7 +77,10 @@ export interface FragmentFunction {
 }
 
 export interface FunctionComponent<P = PromptAttributes> {
-	(props: PromptElementProps<P>, context: ComponentContext): PromptComponentChildren;
+	(
+		props: PromptElementProps<P>,
+		context: ComponentContext,
+	): PromptComponentChildren;
 }
 
 /**
@@ -98,8 +108,15 @@ export interface PromptSnapshotNode {
 	statistics: PromptSnapshotNodeStatistics;
 }
 
-export interface PromptRenderer<T extends Prompt, P extends PromptRenderOptions> {
-	render(snapshot: PromptSnapshotNode, options: P, cancellationToken?: CancellationToken): T;
+export interface PromptRenderer<
+	T extends Prompt,
+	P extends PromptRenderOptions,
+> {
+	render(
+		snapshot: PromptSnapshotNode,
+		options: P,
+		cancellationToken?: CancellationToken,
+	): T;
 }
 
 export type PromptMetadata = {
@@ -122,7 +139,9 @@ export type ComponentStatistics = {
 };
 
 type StatusOk = { status: 'ok' };
-export type StatusNotOk = { status: 'cancelled' } | { status: 'error'; error: Error };
+export type StatusNotOk =
+	| { status: 'cancelled' }
+	| { status: 'error'; error: Error };
 export type Status = StatusOk | StatusNotOk;
 
 export type PromptOk = StatusOk & {

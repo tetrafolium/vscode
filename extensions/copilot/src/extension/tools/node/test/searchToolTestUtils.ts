@@ -6,8 +6,14 @@
 import { OutputMode } from '@vscode/prompt-tsx';
 import type * as vscode from 'vscode';
 import { IEndpointProvider } from '../../../../platform/endpoint/common/endpointProvider';
-import { IChatEndpoint, IEmbeddingsEndpoint } from '../../../../platform/networking/common/networking';
-import { ITokenizer as IUtilTokenizer, TokenizerType } from '../../../../util/common/tokenizer';
+import {
+	IChatEndpoint,
+	IEmbeddingsEndpoint,
+} from '../../../../platform/networking/common/networking';
+import {
+	ITokenizer as IUtilTokenizer,
+	TokenizerType,
+} from '../../../../util/common/tokenizer';
 import { Event } from '../../../../util/vs/base/common/event';
 
 /**
@@ -27,35 +33,39 @@ function createMockTokenizer(): IUtilTokenizer {
 /**
  * Creates a mock endpoint provider for search tool tests
  */
-export function createMockEndpointProvider(modelFamily: string): IEndpointProvider {
+export function createMockEndpointProvider(
+	modelFamily: string,
+): IEndpointProvider {
 	return {
 		_serviceBrand: undefined,
 		onDidModelsRefresh: Event.None,
-		getChatEndpoint: async () => ({
-			family: modelFamily,
-			model: 'test-model',
-			maxOutputTokens: 1000,
-			supportsToolCalls: true,
-			supportsVision: true,
-			supportsPrediction: true,
-			showInModelPicker: true,
-		} as IChatEndpoint),
+		getChatEndpoint: async () =>
+			({
+				family: modelFamily,
+				model: 'test-model',
+				maxOutputTokens: 1000,
+				supportsToolCalls: true,
+				supportsVision: true,
+				supportsPrediction: true,
+				showInModelPicker: true,
+			}) as IChatEndpoint,
 		getAllChatEndpoints: async () => [],
 		getAllCompletionModels: async () => [],
-		getEmbeddingsEndpoint: async () => ({
-			urlOrRequestMetadata: 'https://mock-embeddings-endpoint',
-			acquireTokenizer: createMockTokenizer,
-			modelMaxPromptTokens: 1000,
-			modelMaxOutputTokens: 1000,
-			model: 'test-embeddings-model',
-			family: modelFamily,
-			showInModelPicker: true,
-			embeddingDimensions: 768,
-			maxBatchSize: 16,
-			name: 'Test Embeddings Model',
-			version: '1.0',
-			tokenizer: TokenizerType.CL100K
-		} as IEmbeddingsEndpoint),
+		getEmbeddingsEndpoint: async () =>
+			({
+				urlOrRequestMetadata: 'https://mock-embeddings-endpoint',
+				acquireTokenizer: createMockTokenizer,
+				modelMaxPromptTokens: 1000,
+				modelMaxOutputTokens: 1000,
+				model: 'test-embeddings-model',
+				family: modelFamily,
+				showInModelPicker: true,
+				embeddingDimensions: 768,
+				maxBatchSize: 16,
+				name: 'Test Embeddings Model',
+				version: '1.0',
+				tokenizer: TokenizerType.CL100K,
+			}) as IEmbeddingsEndpoint,
 	} as IEndpointProvider;
 }
 
@@ -70,13 +80,16 @@ export const mockLanguageModelChat: vscode.LanguageModelChat = {
 	version: 'test-version',
 	maxInputTokens: 1000,
 	maxOutputTokens: 1000,
-	sendRequest: async () => ({
-		text: (async function* () { yield ''; })(),
-		stream: (async function* () { })()
-	} as vscode.LanguageModelChatResponse),
+	sendRequest: async () =>
+		({
+			text: (async function* () {
+				yield '';
+			})(),
+			stream: (async function* () {})(),
+		}) as vscode.LanguageModelChatResponse,
 	countTokens: async () => 0,
 	capabilities: {
 		supportsToolCalling: true,
-		supportsImageToText: true
+		supportsImageToText: true,
 	},
 } as vscode.LanguageModelChat;

@@ -5,13 +5,14 @@
 
 import * as eslint from 'eslint';
 
-export default new class MissingTSXLinebreak implements eslint.Rule.RuleModule {
-
+export default new (class MissingTSXLinebreak
+	implements eslint.Rule.RuleModule
+{
 	readonly meta: eslint.Rule.RuleMetaData = {
-		type: "problem",
-		fixable: "code",
+		type: 'problem',
+		fixable: 'code',
 		hasSuggestions: true,
-	}
+	};
 
 	create(context: eslint.Rule.RuleContext): eslint.Rule.RuleListener {
 		return {
@@ -61,13 +62,17 @@ export default new class MissingTSXLinebreak implements eslint.Rule.RuleModule {
 				for (const errorLoc of errorLocs) {
 					context.report({
 						loc: context.sourceCode.getLocFromIndex(errorLoc),
-						message: "Use `<br />` linebreak to enforce newline in TSX string literal. Whitespace is removed from TSX during transpilation.",
+						message:
+							'Use `<br />` linebreak to enforce newline in TSX string literal. Whitespace is removed from TSX during transpilation.',
 						fix: (fixer) => {
-							return fixer.insertTextAfterRange([errorLoc, errorLoc], '<br />');
-						}
+							return fixer.insertTextAfterRange(
+								[errorLoc, errorLoc],
+								'<br />',
+							);
+						},
 					});
 				}
-			}
+			},
 		};
 	}
-};
+})();

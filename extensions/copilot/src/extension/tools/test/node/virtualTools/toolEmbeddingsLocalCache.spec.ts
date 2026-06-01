@@ -5,7 +5,10 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { LanguageModelToolInformation } from 'vscode';
-import { Embedding, EmbeddingType } from '../../../../../platform/embeddings/common/embeddingsComputer';
+import {
+	Embedding,
+	EmbeddingType,
+} from '../../../../../platform/embeddings/common/embeddingsComputer';
 import { IVSCodeExtensionContext } from '../../../../../platform/extContext/common/extensionContext';
 import { IFileSystemService } from '../../../../../platform/filesystem/common/fileSystemService';
 import { MockFileSystemService } from '../../../../../platform/filesystem/node/test/mockFileSystemService';
@@ -39,7 +42,10 @@ class TestableFileSystemService extends MockFileSystemService {
 		// Fall back to mocked files (return as base64 decoded)
 		try {
 			const base64Content = await super.readFile(uri);
-			return Buffer.from(new TextDecoder().decode(base64Content), 'base64');
+			return Buffer.from(
+				new TextDecoder().decode(base64Content),
+				'base64',
+			);
 		} catch {
 			throw new Error('ENOENT');
 		}
@@ -59,24 +65,37 @@ describe('ToolEmbeddingLocalCache', () => {
 	let embeddingType: EmbeddingType;
 
 	// Sample test data
-	const createSampleTool = (name: string, description: string = `Description for ${name}`): LanguageModelToolInformation => ({
-		name,
-		description
-	} as LanguageModelToolInformation);
+	const createSampleTool = (
+		name: string,
+		description: string = `Description for ${name}`,
+	): LanguageModelToolInformation =>
+		({
+			name,
+			description,
+		}) as LanguageModelToolInformation;
 
-	const createSampleEmbedding = (type: EmbeddingType, values: number[] = [0.1, 0.2, 0.3, 0.4]): Embedding => ({
+	const createSampleEmbedding = (
+		type: EmbeddingType,
+		values: number[] = [0.1, 0.2, 0.3, 0.4],
+	): Embedding => ({
 		type,
-		value: values
+		value: values,
 	});
 
 	// Helper to create embeddings with Float32 precision for accurate testing
-	const createFloat32Embedding = (type: EmbeddingType, values: number[]): Embedding => ({
+	const createFloat32Embedding = (
+		type: EmbeddingType,
+		values: number[],
+	): Embedding => ({
 		type,
-		value: Array.from(Float32Array.from(values))
+		value: Array.from(Float32Array.from(values)),
 	});
 
 	// Helper to compare embeddings with Float32 tolerance
-	const expectEmbeddingToEqual = (actual: Embedding | undefined, expected: Embedding) => {
+	const expectEmbeddingToEqual = (
+		actual: Embedding | undefined,
+		expected: Embedding,
+	) => {
 		expect(actual).toBeDefined();
 		expect(actual!.type).toEqual(expected.type);
 		expect(actual!.value.length).toBe(expected.value.length);
@@ -89,20 +108,26 @@ describe('ToolEmbeddingLocalCache', () => {
 
 	beforeEach(() => {
 		disposables = new DisposableStore();
-		const testingServiceCollection = disposables.add(createExtensionUnitTestingServices());
+		const testingServiceCollection = disposables.add(
+			createExtensionUnitTestingServices(),
+		);
 		mockFileSystem = new TestableFileSystemService();
 		testingServiceCollection.set(IFileSystemService, mockFileSystem);
-		testingServiceCollection.set(IVSCodeExtensionContext, { globalStorageUri: URI.file('/tmp') } as any);
+		testingServiceCollection.set(IVSCodeExtensionContext, {
+			globalStorageUri: URI.file('/tmp'),
+		} as any);
 		accessor = testingServiceCollection.createTestingAccessor();
 		mockContext = accessor.get(IVSCodeExtensionContext);
 		embeddingType = EmbeddingType.text3small_512;
 
 		// Create cache instance
-		cache = disposables.add(new ToolEmbeddingLocalCache(
-			embeddingType,
-			mockFileSystem,
-			mockContext
-		));
+		cache = disposables.add(
+			new ToolEmbeddingLocalCache(
+				embeddingType,
+				mockFileSystem,
+				mockContext,
+			),
+		);
 	});
 
 	afterEach(() => {
@@ -158,8 +183,14 @@ describe('ToolEmbeddingLocalCache', () => {
 		it('should save and load cache to/from binary format', async () => {
 			const tool1 = createSampleTool('persistent-tool-1');
 			const tool2 = createSampleTool('persistent-tool-2');
-			const embedding1 = createFloat32Embedding(embeddingType, [0.1, 0.2, 0.3, 0.4]);
-			const embedding2 = createFloat32Embedding(embeddingType, [0.5, 0.6, 0.7, 0.8]);
+			const embedding1 = createFloat32Embedding(
+				embeddingType,
+				[0.1, 0.2, 0.3, 0.4],
+			);
+			const embedding2 = createFloat32Embedding(
+				embeddingType,
+				[0.5, 0.6, 0.7, 0.8],
+			);
 
 			// Store embeddings
 			cache.set(tool1, embedding1);
@@ -169,17 +200,22 @@ describe('ToolEmbeddingLocalCache', () => {
 			cache.save();
 
 			// Verify file was written
-			const cacheUri = URI.joinPath(mockContext.globalStorageUri, 'toolEmbeddingsCache.bin');
+			const cacheUri = URI.joinPath(
+				mockContext.globalStorageUri,
+				'toolEmbeddingsCache.bin',
+			);
 			const writtenContent = mockFileSystem.getWrittenContent(cacheUri);
 			expect(writtenContent).toBeDefined();
 			expect(writtenContent!.length).toBeGreaterThan(0);
 
 			// Create new cache and load
-			const newCache = disposables.add(new ToolEmbeddingLocalCache(
-				embeddingType,
-				mockFileSystem,
-				mockContext
-			));
+			const newCache = disposables.add(
+				new ToolEmbeddingLocalCache(
+					embeddingType,
+					mockFileSystem,
+					mockContext,
+				),
+			);
 
 			await newCache.initialize();
 
@@ -198,11 +234,13 @@ describe('ToolEmbeddingLocalCache', () => {
 
 			// Create cache with different embedding type
 			const differentType = EmbeddingType.metis_1024_I16_Binary;
-			const newCache = disposables.add(new ToolEmbeddingLocalCache(
-				differentType,
-				mockFileSystem,
-				mockContext
-			));
+			const newCache = disposables.add(
+				new ToolEmbeddingLocalCache(
+					differentType,
+					mockFileSystem,
+					mockContext,
+				),
+			);
 
 			await newCache.initialize();
 
@@ -211,10 +249,13 @@ describe('ToolEmbeddingLocalCache', () => {
 		});
 
 		it('should handle corrupted cache file gracefully', async () => {
-			const cacheUri = URI.joinPath(mockContext.globalStorageUri, 'toolEmbeddingsCache.bin');
+			const cacheUri = URI.joinPath(
+				mockContext.globalStorageUri,
+				'toolEmbeddingsCache.bin',
+			);
 
 			// Write corrupted data
-			const corruptedData = new Uint8Array([0xFF, 0xFF, 0xFF, 0xFF]);
+			const corruptedData = new Uint8Array([0xff, 0xff, 0xff, 0xff]);
 			await mockFileSystem.writeFile(cacheUri, corruptedData);
 
 			// Should not throw and should start with empty cache
@@ -233,18 +274,23 @@ describe('ToolEmbeddingLocalCache', () => {
 			cache.save();
 
 			// Modify the saved file to have wrong version (overwrite first bytes)
-			const cacheUri = URI.joinPath(mockContext.globalStorageUri, 'toolEmbeddingsCache.bin');
+			const cacheUri = URI.joinPath(
+				mockContext.globalStorageUri,
+				'toolEmbeddingsCache.bin',
+			);
 			const currentContent = mockFileSystem.getWrittenContent(cacheUri)!;
 			const modifiedContent = new Uint8Array(currentContent);
 			modifiedContent[0] = 99; // Invalid version
 			await mockFileSystem.writeFile(cacheUri, modifiedContent);
 
 			// Create new cache
-			const newCache = disposables.add(new ToolEmbeddingLocalCache(
-				embeddingType,
-				mockFileSystem,
-				mockContext
-			));
+			const newCache = disposables.add(
+				new ToolEmbeddingLocalCache(
+					embeddingType,
+					mockFileSystem,
+					mockContext,
+				),
+			);
 
 			await newCache.initialize();
 
@@ -256,12 +302,18 @@ describe('ToolEmbeddingLocalCache', () => {
 	describe('Binary Format Efficiency', () => {
 		it('should use binary format with fixed-length keys', async () => {
 			const tool = createSampleTool('efficiency-test');
-			const embedding = createSampleEmbedding(embeddingType, new Array(512).fill(0).map((_, i) => i / 512));
+			const embedding = createSampleEmbedding(
+				embeddingType,
+				new Array(512).fill(0).map((_, i) => i / 512),
+			);
 
 			cache.set(tool, embedding);
 			cache.save();
 
-			const cacheUri = URI.joinPath(mockContext.globalStorageUri, 'toolEmbeddingsCache.bin');
+			const cacheUri = URI.joinPath(
+				mockContext.globalStorageUri,
+				'toolEmbeddingsCache.bin',
+			);
 			const content = mockFileSystem.getWrittenContent(cacheUri)!;
 
 			// Should be much smaller than JSON would be
@@ -278,8 +330,16 @@ describe('ToolEmbeddingLocalCache', () => {
 
 			// Create 50 tools with different embeddings
 			for (let i = 0; i < 50; i++) {
-				const tool = createSampleTool(`bulk-tool-${i}`, `Description ${i}`);
-				const embedding = createSampleEmbedding(embeddingType, [i, i + 0.1, i + 0.2, i + 0.3]);
+				const tool = createSampleTool(
+					`bulk-tool-${i}`,
+					`Description ${i}`,
+				);
+				const embedding = createSampleEmbedding(embeddingType, [
+					i,
+					i + 0.1,
+					i + 0.2,
+					i + 0.3,
+				]);
 
 				tools.push(tool);
 				embeddings.push(embedding);
@@ -288,11 +348,13 @@ describe('ToolEmbeddingLocalCache', () => {
 
 			await cache.save();
 
-			const newCache = disposables.add(new ToolEmbeddingLocalCache(
-				embeddingType,
-				mockFileSystem,
-				mockContext
-			));
+			const newCache = disposables.add(
+				new ToolEmbeddingLocalCache(
+					embeddingType,
+					mockFileSystem,
+					mockContext,
+				),
+			);
 
 			await newCache.initialize();
 

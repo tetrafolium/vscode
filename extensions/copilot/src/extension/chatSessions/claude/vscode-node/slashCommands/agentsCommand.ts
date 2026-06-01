@@ -5,13 +5,19 @@
 
 import * as vscode from 'vscode';
 import { INativeEnvService } from '../../../../../platform/env/common/envService';
-import { createDirectoryIfNotExists, IFileSystemService } from '../../../../../platform/filesystem/common/fileSystemService';
+import {
+	createDirectoryIfNotExists,
+	IFileSystemService,
+} from '../../../../../platform/filesystem/common/fileSystemService';
 import { ILogService } from '../../../../../platform/log/common/logService';
 import { IWorkspaceService } from '../../../../../platform/workspace/common/workspaceService';
 import { CancellationToken } from '../../../../../util/vs/base/common/cancellation';
 import { DisposableStore } from '../../../../../util/vs/base/common/lifecycle';
 import { URI } from '../../../../../util/vs/base/common/uri';
-import { IClaudeSlashCommandHandler, registerClaudeSlashCommand } from './claudeSlashCommandRegistry';
+import {
+	IClaudeSlashCommandHandler,
+	registerClaudeSlashCommand,
+} from './claudeSlashCommandRegistry';
 
 /**
  * AGENTS CONFIGURATION WIZARD
@@ -140,11 +146,23 @@ const AGENT_MODELS = [
  * Tool categories for selection
  */
 const TOOL_CATEGORIES = [
-	{ id: 'readonly', label: 'Read-only tools', tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'] },
-	{ id: 'edit', label: 'Edit tools', tools: ['Edit', 'Write', 'NotebookEdit'] },
+	{
+		id: 'readonly',
+		label: 'Read-only tools',
+		tools: ['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'],
+	},
+	{
+		id: 'edit',
+		label: 'Edit tools',
+		tools: ['Edit', 'Write', 'NotebookEdit'],
+	},
 	{ id: 'execution', label: 'Execution tools', tools: ['Bash'] },
 	{ id: 'mcp', label: 'MCP tools', tools: [] }, // Populated dynamically
-	{ id: 'other', label: 'Other tools', tools: ['Skill', 'Agent', 'Task', 'TodoWrite'] },
+	{
+		id: 'other',
+		label: 'Other tools',
+		tools: ['Skill', 'Agent', 'Task', 'TodoWrite'],
+	},
 ] as const;
 
 /**
@@ -177,23 +195,30 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 
 	constructor(
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
 		@INativeEnvService private readonly envService: INativeEnvService,
 		@ILogService private readonly logService: ILogService,
-	) { }
+	) {}
 
 	async handle(
 		_args: string,
 		stream: vscode.ChatResponseStream | undefined,
-		_token: CancellationToken
+		_token: CancellationToken,
 	): Promise<vscode.ChatResult> {
 		stream?.markdown(vscode.l10n.t('Opening agents configuration...'));
 
 		// Fire and forget - wizard runs in background
-		this._runWizard().catch(error => {
-			this.logService.error('[AgentsSlashCommand] Error running agents wizard:', error);
+		this._runWizard().catch((error) => {
+			this.logService.error(
+				'[AgentsSlashCommand] Error running agents wizard:',
+				error,
+			);
 			vscode.window.showErrorMessage(
-				vscode.l10n.t('Error configuring agent: {0}', error instanceof Error ? error.message : String(error))
+				vscode.l10n.t(
+					'Error configuring agent: {0}',
+					error instanceof Error ? error.message : String(error),
+				),
 			);
 		});
 
@@ -217,7 +242,9 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 	/**
 	 * Shows the main agents list menu.
 	 */
-	private async _showMainMenu(): Promise<{ action: 'create' | 'select'; agent?: AgentWithSource } | undefined> {
+	private async _showMainMenu(): Promise<
+		{ action: 'create' | 'select'; agent?: AgentWithSource } | undefined
+	> {
 		const projectAgents = await this._loadProjectAgents();
 		const userAgents = await this._loadUserAgents();
 
@@ -269,15 +296,18 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 		}
 
 		// Show placeholder text if no custom agents
-		const placeholderText = projectAgents.length === 0 && userAgents.length === 0
-			? vscode.l10n.t('No agents found. Create specialized subagents that Claude can delegate to.')
-			: vscode.l10n.t('Select an agent to view, edit, or delete');
+		const placeholderText =
+			projectAgents.length === 0 && userAgents.length === 0
+				? vscode.l10n.t(
+						'No agents found. Create specialized subagents that Claude can delegate to.',
+					)
+				: vscode.l10n.t('Select an agent to view, edit, or delete');
 
-		const selected = await vscode.window.showQuickPick(items, {
+		const selected = (await vscode.window.showQuickPick(items, {
 			title: vscode.l10n.t('Agents'),
 			placeHolder: placeholderText,
 			ignoreFocusOut: true,
-		}) as AgentMenuItem | undefined;
+		})) as AgentMenuItem | undefined;
 
 		if (!selected) {
 			return undefined;
@@ -338,7 +368,11 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 			location: {
 				type: 'user',
 				label: vscode.l10n.t('Personal'),
-				agentsDir: URI.joinPath(this.envService.userHome, '.claude', 'agents'),
+				agentsDir: URI.joinPath(
+					this.envService.userHome,
+					'.claude',
+					'agents',
+				),
 			},
 		});
 
@@ -354,8 +388,12 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 	/**
 	 * Step 2: Select creation method.
 	 */
-	private async _selectCreationMethod(): Promise<'generate' | 'manual' | undefined> {
-		const items: (vscode.QuickPickItem & { method: 'generate' | 'manual' })[] = [
+	private async _selectCreationMethod(): Promise<
+		'generate' | 'manual' | undefined
+	> {
+		const items: (vscode.QuickPickItem & {
+			method: 'generate' | 'manual';
+		})[] = [
 			{
 				label: vscode.l10n.t('1. Generate with Claude (recommended)'),
 				method: 'generate',
@@ -382,8 +420,12 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 		// Step 3: Enter description
 		const description = await vscode.window.showInputBox({
 			title: vscode.l10n.t('Create new agent'),
-			prompt: vscode.l10n.t('Describe what this agent should do and when it should be used (be comprehensive for best results)'),
-			placeHolder: vscode.l10n.t('e.g., Help me write unit tests for my code...'),
+			prompt: vscode.l10n.t(
+				'Describe what this agent should do and when it should be used (be comprehensive for best results)',
+			),
+			placeHolder: vscode.l10n.t(
+				'e.g., Help me write unit tests for my code...',
+			),
 			ignoreFocusOut: true,
 		});
 
@@ -392,13 +434,16 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 		}
 
 		// Step 4: Generate agent with Claude
-		const generated = await vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
-			title: vscode.l10n.t('Generating agent from description...'),
-			cancellable: true,
-		}, async (_progress, token) => {
-			return this._generateAgentConfig(description, token);
-		});
+		const generated = await vscode.window.withProgress(
+			{
+				location: vscode.ProgressLocation.Notification,
+				title: vscode.l10n.t('Generating agent from description...'),
+				cancellable: true,
+			},
+			async (_progress, token) => {
+				return this._generateAgentConfig(description, token);
+			},
+		);
 
 		if (!generated) {
 			return;
@@ -421,7 +466,8 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 			name: generated.name,
 			description: generated.description,
 			model,
-			allowedTools: tools.length > 0 && !tools.includes('*') ? tools : undefined,
+			allowedTools:
+				tools.length > 0 && !tools.includes('*') ? tools : undefined,
 			systemPrompt: generated.systemPrompt,
 		};
 
@@ -441,12 +487,14 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 			prompt: vscode.l10n.t('Enter a unique identifier for your agent:'),
 			placeHolder: vscode.l10n.t('e.g., test-runner, tech-lead, etc'),
 			ignoreFocusOut: true,
-			validateInput: value => {
+			validateInput: (value) => {
 				if (!value) {
 					return vscode.l10n.t('Agent name is required');
 				}
 				if (!/^[a-z0-9-]+$/.test(value)) {
-					return vscode.l10n.t('Use lowercase letters, numbers, and hyphens only');
+					return vscode.l10n.t(
+						'Use lowercase letters, numbers, and hyphens only',
+					);
 				}
 				return null;
 			},
@@ -459,8 +507,13 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 		// Step 4: Enter system prompt
 		const systemPrompt = await vscode.window.showInputBox({
 			title: vscode.l10n.t('Create new agent'),
-			prompt: vscode.l10n.t('Enter the system prompt for your agent:') + '\n' + vscode.l10n.t('Be comprehensive for best results'),
-			placeHolder: vscode.l10n.t('You are a helpful code reviewer who...'),
+			prompt:
+				vscode.l10n.t('Enter the system prompt for your agent:') +
+				'\n' +
+				vscode.l10n.t('Be comprehensive for best results'),
+			placeHolder: vscode.l10n.t(
+				'You are a helpful code reviewer who...',
+			),
 			ignoreFocusOut: true,
 		});
 
@@ -472,7 +525,9 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 		const description = await vscode.window.showInputBox({
 			title: vscode.l10n.t('Create new agent'),
 			prompt: vscode.l10n.t('When should Claude use this agent?'),
-			placeHolder: vscode.l10n.t("e.g., use this agent after you're done writing code..."),
+			placeHolder: vscode.l10n.t(
+				"e.g., use this agent after you're done writing code...",
+			),
 			ignoreFocusOut: true,
 		});
 
@@ -497,7 +552,8 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 			name,
 			description,
 			model,
-			allowedTools: tools.length > 0 && !tools.includes('*') ? tools : undefined,
+			allowedTools:
+				tools.length > 0 && !tools.includes('*') ? tools : undefined,
 			systemPrompt,
 		};
 
@@ -512,8 +568,10 @@ export class AgentsSlashCommand implements IClaudeSlashCommandHandler {
 	 */
 	private async _generateAgentConfig(
 		description: string,
-		token: vscode.CancellationToken
-	): Promise<{ name: string; description: string; systemPrompt: string } | undefined> {
+		token: vscode.CancellationToken,
+	): Promise<
+		{ name: string; description: string; systemPrompt: string } | undefined
+	> {
 		try {
 			const prompt = `Based on the following description, generate a Claude agent configuration.
 
@@ -529,16 +587,27 @@ Keep the systemPrompt focused but thorough. Include specific instructions for ho
 Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 
 			// Use claude-sonnet-4.5 for agent generation (fast and efficient for structured output)
-			let models = await vscode.lm.selectChatModels({ family: 'claude-sonnet-4.5', vendor: 'copilot' });
+			let models = await vscode.lm.selectChatModels({
+				family: 'claude-sonnet-4.5',
+				vendor: 'copilot',
+			});
 			if (models.length === 0) {
 				// Fallback to any available model
-				models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+				models = await vscode.lm.selectChatModels({
+					vendor: 'copilot',
+				});
 				// Get latest claude-sonnet- model
 				models = models
-					.filter(model => model.family.startsWith('claude-sonnet-'))
+					.filter((model) =>
+						model.family.startsWith('claude-sonnet-'),
+					)
 					.sort((a, b) => b.family.localeCompare(a.family));
 				if (models.length === 0) {
-					vscode.window.showErrorMessage(vscode.l10n.t('No language model available for agent generation'));
+					vscode.window.showErrorMessage(
+						vscode.l10n.t(
+							'No language model available for agent generation',
+						),
+					);
 					return undefined;
 				}
 			}
@@ -546,7 +615,7 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 			const response = await models[0].sendRequest(
 				[vscode.LanguageModelChatMessage.User(prompt)],
 				{},
-				token
+				token,
 			);
 
 			let responseText = '';
@@ -558,7 +627,9 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 
 			// Strip markdown code blocks if present
 			let jsonText = responseText.trim();
-			const codeBlockMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+			const codeBlockMatch = jsonText.match(
+				/```(?:json)?\s*([\s\S]*?)```/,
+			);
 			if (codeBlockMatch) {
 				jsonText = codeBlockMatch[1].trim();
 			}
@@ -571,9 +642,15 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 				systemPrompt: parsed.systemPrompt,
 			};
 		} catch (error) {
-			this.logService.error('[AgentsSlashCommand] Failed to generate agent:', error);
+			this.logService.error(
+				'[AgentsSlashCommand] Failed to generate agent:',
+				error,
+			);
 			vscode.window.showErrorMessage(
-				vscode.l10n.t('Failed to generate agent: {0}', error instanceof Error ? error.message : String(error))
+				vscode.l10n.t(
+					'Failed to generate agent: {0}',
+					error instanceof Error ? error.message : String(error),
+				),
 			);
 			return undefined;
 		}
@@ -639,13 +716,15 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 
 				// Preserve selection when updating items
 				const previouslySelectedIds = new Set(
-					quickPick.selectedItems.map(item => item.categoryId || item.toolId)
+					quickPick.selectedItems.map(
+						(item) => item.categoryId || item.toolId,
+					),
 				);
 
 				quickPick.items = items;
 
 				// Restore selection
-				quickPick.selectedItems = items.filter(item => {
+				quickPick.selectedItems = items.filter((item) => {
 					const id = item.categoryId || item.toolId;
 					return id && previouslySelectedIds.has(id);
 				});
@@ -653,60 +732,81 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 
 			// Initialize with all categories selected
 			updateItems();
-			quickPick.selectedItems = quickPick.items.filter(item => item.categoryId);
+			quickPick.selectedItems = quickPick.items.filter(
+				(item) => item.categoryId,
+			);
 
-			disposables.add(quickPick.onDidTriggerButton((button) => {
-				if (button === showAdvancedButton || button === hideAdvancedButton) {
-					showAdvanced = !showAdvanced;
-					quickPick.buttons = [showAdvanced ? hideAdvancedButton : showAdvancedButton];
-					updateItems();
-				}
-			}));
-
-			disposables.add(quickPick.onDidAccept(() => {
-				if (resolved) {
-					return;
-				}
-				resolved = true;
-
-				const selectedItems = quickPick.selectedItems;
-				disposables.dispose();
-
-				// Check if all categories are selected - treat as "all tools"
-				const selectedCategoryIds = new Set(
-					selectedItems.filter(item => item.categoryId).map(item => item.categoryId)
-				);
-				const allCategoriesSelected = TOOL_CATEGORIES.every(cat => selectedCategoryIds.has(cat.id));
-				if (allCategoriesSelected) {
-					resolve(['*']);
-					return;
-				}
-
-				// Collect selected tools from categories and individual tools
-				const tools = new Set<string>();
-				for (const item of selectedItems) {
-					if (item.categoryId) {
-						const cat = TOOL_CATEGORIES.find(c => c.id === item.categoryId);
-						if (cat) {
-							for (const tool of cat.tools) {
-								tools.add(tool);
-							}
-						}
-					} else if (item.toolId) {
-						tools.add(item.toolId);
+			disposables.add(
+				quickPick.onDidTriggerButton((button) => {
+					if (
+						button === showAdvancedButton ||
+						button === hideAdvancedButton
+					) {
+						showAdvanced = !showAdvanced;
+						quickPick.buttons = [
+							showAdvanced
+								? hideAdvancedButton
+								: showAdvancedButton,
+						];
+						updateItems();
 					}
-				}
+				}),
+			);
 
-				resolve(Array.from(tools));
-			}));
-
-			disposables.add(quickPick.onDidHide(() => {
-				disposables.dispose();
-				if (!resolved) {
+			disposables.add(
+				quickPick.onDidAccept(() => {
+					if (resolved) {
+						return;
+					}
 					resolved = true;
-					resolve(undefined);
-				}
-			}));
+
+					const selectedItems = quickPick.selectedItems;
+					disposables.dispose();
+
+					// Check if all categories are selected - treat as "all tools"
+					const selectedCategoryIds = new Set(
+						selectedItems
+							.filter((item) => item.categoryId)
+							.map((item) => item.categoryId),
+					);
+					const allCategoriesSelected = TOOL_CATEGORIES.every((cat) =>
+						selectedCategoryIds.has(cat.id),
+					);
+					if (allCategoriesSelected) {
+						resolve(['*']);
+						return;
+					}
+
+					// Collect selected tools from categories and individual tools
+					const tools = new Set<string>();
+					for (const item of selectedItems) {
+						if (item.categoryId) {
+							const cat = TOOL_CATEGORIES.find(
+								(c) => c.id === item.categoryId,
+							);
+							if (cat) {
+								for (const tool of cat.tools) {
+									tools.add(tool);
+								}
+							}
+						} else if (item.toolId) {
+							tools.add(item.toolId);
+						}
+					}
+
+					resolve(Array.from(tools));
+				}),
+			);
+
+			disposables.add(
+				quickPick.onDidHide(() => {
+					disposables.dispose();
+					if (!resolved) {
+						resolved = true;
+						resolve(undefined);
+					}
+				}),
+			);
 
 			quickPick.show();
 		});
@@ -724,7 +824,12 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 
 		const selected = await vscode.window.showQuickPick(items, {
 			title: vscode.l10n.t('Create new agent'),
-			placeHolder: vscode.l10n.t('Select model') + '\n' + vscode.l10n.t("Model determines the agent's reasoning capabilities and speed."),
+			placeHolder:
+				vscode.l10n.t('Select model') +
+				'\n' +
+				vscode.l10n.t(
+					"Model determines the agent's reasoning capabilities and speed.",
+				),
 			ignoreFocusOut: true,
 		});
 
@@ -735,7 +840,9 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 	 * Shows the action menu for a selected agent.
 	 */
 	private async _runAgentActionMenu(agent: AgentWithSource): Promise<void> {
-		type ActionItem = vscode.QuickPickItem & { action: 'view' | 'edit' | 'delete' | 'back' };
+		type ActionItem = vscode.QuickPickItem & {
+			action: 'view' | 'edit' | 'delete' | 'back';
+		};
 
 		const items: ActionItem[] = [
 			{ label: vscode.l10n.t('1. View agent'), action: 'view' },
@@ -774,12 +881,23 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 	 * Shows the edit menu for an agent.
 	 */
 	private async _runEditMenu(agent: AgentWithSource): Promise<void> {
-		type EditItem = vscode.QuickPickItem & { action: 'open' | 'tools' | 'model' };
+		type EditItem = vscode.QuickPickItem & {
+			action: 'open' | 'tools' | 'model';
+		};
 
 		const items: EditItem[] = [
-			{ label: '$(edit) ' + vscode.l10n.t('Open in editor'), action: 'open' },
-			{ label: '$(tools) ' + vscode.l10n.t('Edit tools'), action: 'tools' },
-			{ label: '$(symbol-misc) ' + vscode.l10n.t('Edit model'), action: 'model' },
+			{
+				label: '$(edit) ' + vscode.l10n.t('Open in editor'),
+				action: 'open',
+			},
+			{
+				label: '$(tools) ' + vscode.l10n.t('Edit tools'),
+				action: 'tools',
+			},
+			{
+				label: '$(symbol-misc) ' + vscode.l10n.t('Edit model'),
+				action: 'model',
+			},
 		];
 
 		const selected = await vscode.window.showQuickPick(items, {
@@ -828,14 +946,19 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 	 */
 	private async _deleteAgent(agent: AgentWithSource): Promise<void> {
 		const confirm = await vscode.window.showWarningMessage(
-			vscode.l10n.t('Are you sure you want to delete the agent "{0}"?', agent.config.name),
+			vscode.l10n.t(
+				'Are you sure you want to delete the agent "{0}"?',
+				agent.config.name,
+			),
 			{ modal: true },
-			vscode.l10n.t('Delete')
+			vscode.l10n.t('Delete'),
 		);
 
 		if (confirm === vscode.l10n.t('Delete')) {
 			await this.fileSystemService.delete(agent.filePath);
-			vscode.window.showInformationMessage(vscode.l10n.t('Agent "{0}" deleted', agent.config.name));
+			vscode.window.showInformationMessage(
+				vscode.l10n.t('Agent "{0}" deleted', agent.config.name),
+			);
 			// Return to main menu
 			await this._runWizard();
 		}
@@ -857,7 +980,10 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 				workspaceFolder: folder,
 			};
 
-			const loaded = await this._loadAgentsFromDirectory(agentsDir, location);
+			const loaded = await this._loadAgentsFromDirectory(
+				agentsDir,
+				location,
+			);
 			agents.push(...loaded);
 		}
 
@@ -868,7 +994,11 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 	 * Load all user/personal agents from ~/.claude/agents/.
 	 */
 	private async _loadUserAgents(): Promise<AgentWithSource[]> {
-		const agentsDir = URI.joinPath(this.envService.userHome, '.claude', 'agents');
+		const agentsDir = URI.joinPath(
+			this.envService.userHome,
+			'.claude',
+			'agents',
+		);
 		const location: AgentLocation = {
 			type: 'user',
 			label: vscode.l10n.t('Personal'),
@@ -881,7 +1011,10 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 	/**
 	 * Load agents from a specific directory.
 	 */
-	private async _loadAgentsFromDirectory(dir: URI, location: AgentLocation): Promise<AgentWithSource[]> {
+	private async _loadAgentsFromDirectory(
+		dir: URI,
+		location: AgentLocation,
+	): Promise<AgentWithSource[]> {
 		const agents: AgentWithSource[] = [];
 
 		try {
@@ -896,7 +1029,9 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 							agents.push({ config, location, filePath });
 						}
 					} catch (error) {
-						this.logService.warn(`[AgentsSlashCommand] Failed to parse agent file ${filePath.fsPath}: ${error}`);
+						this.logService.warn(
+							`[AgentsSlashCommand] Failed to parse agent file ${filePath.fsPath}: ${error}`,
+						);
 					}
 				}
 			}
@@ -910,13 +1045,17 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 	/**
 	 * Parse an agent markdown file with YAML frontmatter.
 	 */
-	private async _parseAgentFile(filePath: URI): Promise<AgentConfig | undefined> {
+	private async _parseAgentFile(
+		filePath: URI,
+	): Promise<AgentConfig | undefined> {
 		try {
 			const content = await this.fileSystemService.readFile(filePath);
 			const text = new TextDecoder().decode(content);
 
 			// Parse YAML frontmatter
-			const frontmatterMatch = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+			const frontmatterMatch = text.match(
+				/^---\n([\s\S]*?)\n---\n([\s\S]*)$/,
+			);
 			if (!frontmatterMatch) {
 				return undefined;
 			}
@@ -926,16 +1065,20 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 
 			// Simple YAML parsing for the fields we need
 			const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
-			const descMatch = frontmatter.match(/^description:\s*["']?([\s\S]*?)["']?$/m);
+			const descMatch = frontmatter.match(
+				/^description:\s*["']?([\s\S]*?)["']?$/m,
+			);
 			const modelMatch = frontmatter.match(/^model:\s*(.+)$/m);
 
 			// Parse allowedTools if present
-			const toolsMatch = frontmatter.match(/^allowedTools:\s*\n((?:\s+-\s+.+\n?)+)/m);
+			const toolsMatch = frontmatter.match(
+				/^allowedTools:\s*\n((?:\s+-\s+.+\n?)+)/m,
+			);
 			let allowedTools: string[] | undefined;
 			if (toolsMatch) {
 				allowedTools = toolsMatch[1]
 					.split('\n')
-					.map(line => line.match(/^\s+-\s+(.+)$/)?.[1])
+					.map((line) => line.match(/^\s+-\s+(.+)$/)?.[1])
 					.filter((t): t is string => !!t);
 			}
 
@@ -958,7 +1101,10 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 	/**
 	 * Save an agent to a markdown file.
 	 */
-	private async _saveAgent(filePath: URI, config: AgentConfig): Promise<void> {
+	private async _saveAgent(
+		filePath: URI,
+		config: AgentConfig,
+	): Promise<void> {
 		// Ensure directory exists
 		const dir = URI.joinPath(filePath, '..');
 		await createDirectoryIfNotExists(this.fileSystemService, dir);
@@ -975,14 +1121,19 @@ Respond ONLY with the JSON object, no markdown code blocks or other text.`;
 
 		content += `---\n\n${config.systemPrompt}\n`;
 
-		await this.fileSystemService.writeFile(filePath, new TextEncoder().encode(content));
+		await this.fileSystemService.writeFile(
+			filePath,
+			new TextEncoder().encode(content),
+		);
 	}
 
 	/**
 	 * Open an agent file in the editor.
 	 */
 	private async _openAgentFile(filePath: URI): Promise<void> {
-		const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath.fsPath));
+		const doc = await vscode.workspace.openTextDocument(
+			vscode.Uri.file(filePath.fsPath),
+		);
 		await vscode.window.showTextDocument(doc);
 	}
 }

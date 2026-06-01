@@ -16,7 +16,10 @@ function decodeURIComponentGraceful(str: string): string {
 		return decodeURIComponent(str);
 	} catch {
 		if (str.length > 3) {
-			return str.substring(0, 3) + decodeURIComponentGraceful(str.substring(3));
+			return (
+				str.substring(0, 3) +
+				decodeURIComponentGraceful(str.substring(3))
+			);
 		} else {
 			return str;
 		}
@@ -27,7 +30,9 @@ function percentDecode(str: string): string {
 	if (!str.match(_rEncodedAsHex)) {
 		return str;
 	}
-	return str.replace(_rEncodedAsHex, match => decodeURIComponentGraceful(match));
+	return str.replace(_rEncodedAsHex, (match) =>
+		decodeURIComponentGraceful(match),
+	);
 }
 
 export function makeFsUri(fsPath: string): string {
@@ -40,7 +45,9 @@ export function makeFsUri(fsPath: string): string {
 }
 
 function parseUri(uri: URIContainer | string): URI {
-	if (typeof uri !== 'string') { uri = uri.uri; }
+	if (typeof uri !== 'string') {
+		uri = uri.uri;
+	}
 	if (/^[A-Za-z]:\\/.test(uri)) {
 		throw new Error(`Could not parse <${uri}>: Windows-style path`);
 	}
@@ -78,7 +85,12 @@ export function normalizeUri(uri: string): string {
 /**
  * URI schemes that map to real file system paths.
  */
-const fsSchemes = new Set(['file', 'notebook', 'vscode-notebook', 'vscode-notebook-cell']);
+const fsSchemes = new Set([
+	'file',
+	'notebook',
+	'vscode-notebook',
+	'vscode-notebook-cell',
+]);
 
 /**
  * For a file system URI, returns the corresponding file system path. Otherwise
@@ -88,7 +100,9 @@ export function fsPath(arg: URIContainer | string): string {
 	const uri = parseUri(arg);
 
 	if (!fsSchemes.has(uri.scheme)) {
-		throw new Error(`Copilot currently does not support URI with scheme: ${uri.scheme}`);
+		throw new Error(
+			`Copilot currently does not support URI with scheme: ${uri.scheme}`,
+		);
 	}
 
 	if (platform() === 'win32') {
@@ -135,9 +149,18 @@ export function getFsUri(uri: URIContainer | string): string | undefined {
  */
 export function joinPath(uri: string, ...paths: string[]): string;
 export function joinPath(uri: URIContainer, ...paths: string[]): URIContainer;
-export function joinPath(uri: URIContainer | string, ...paths: string[]): URIContainer | string;
-export function joinPath(arg: URIContainer | string, ...paths: string[]): URIContainer | string {
-	const uri = URI.joinPath(parseUri(arg), ...paths.map(pathToURIPath)).toString();
+export function joinPath(
+	uri: URIContainer | string,
+	...paths: string[]
+): URIContainer | string;
+export function joinPath(
+	arg: URIContainer | string,
+	...paths: string[]
+): URIContainer | string {
+	const uri = URI.joinPath(
+		parseUri(arg),
+		...paths.map(pathToURIPath),
+	).toString();
 	return typeof arg === 'string' ? uri : { uri };
 }
 
@@ -169,7 +192,7 @@ export function basename(uri: URIContainer | string): string {
 		(typeof uri === 'string' ? uri : uri.uri)
 			.replace(/[#?].*$/, '')
 			.replace(/\/$/, '')
-			.replace(/^.*[/:]/, '')
+			.replace(/^.*[/:]/, ''),
 	);
 }
 
@@ -183,7 +206,10 @@ export function dirname(uri: URIContainer | string): URIContainer | string;
 export function dirname(arg: URIContainer | string): URIContainer | string {
 	const directoryName = VSCODE_dirname(parseUri(arg));
 	let uri: string;
-	if (fsSchemes.has(directoryName.scheme) && directoryName.scheme !== 'file') {
+	if (
+		fsSchemes.has(directoryName.scheme) &&
+		directoryName.scheme !== 'file'
+	) {
 		uri = directoryName.with({ scheme: 'file', fragment: '' }).toString();
 	} else {
 		uri = directoryName.toString();

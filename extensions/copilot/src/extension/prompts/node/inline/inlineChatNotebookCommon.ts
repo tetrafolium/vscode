@@ -28,5 +28,5 @@ export const promptPriorities: NotebookPromptPriority = {
 	context: 800,
 	runtimeCore: 600,
 	history: 500,
-	other: 100
+	other: 100,
 };

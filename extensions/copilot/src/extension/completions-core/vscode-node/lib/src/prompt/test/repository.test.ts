@@ -14,7 +14,11 @@ import { IInstantiationService } from '../../../../../../../util/vs/platform/ins
 
 function findGitRoot(startDir: string): string {
 	let dir = startDir;
-	while (!fs.statSync(path.join(dir, '.git'), { throwIfNoEntry: false })?.isDirectory()) {
+	while (
+		!fs
+			.statSync(path.join(dir, '.git'), { throwIfNoEntry: false })
+			?.isDirectory()
+	) {
 		const parent = path.dirname(dir);
 		if (parent === dir) {
 			throw new Error('Could not find git root');
@@ -25,8 +29,13 @@ function findGitRoot(startDir: string): string {
 }
 
 function getOriginInfo(gitRoot: string): { org: string; repo: string } {
-	const originUrl = execSync('git config --get remote.origin.url', { cwd: gitRoot, encoding: 'utf-8' }).trim();
-	const match = originUrl.match(/github\.com[:/](?<org>[^/]+)\/(?<repo>[^/.]+)/);
+	const originUrl = execSync('git config --get remote.origin.url', {
+		cwd: gitRoot,
+		encoding: 'utf-8',
+	}).trim();
+	const match = originUrl.match(
+		/github\.com[:/](?<org>[^/]+)\/(?<repo>[^/.]+)/,
+	);
 	if (!match?.groups) {
 		throw new Error(`Could not parse origin URL: ${originUrl}`);
 	}
@@ -49,12 +58,12 @@ suite('Extract repo info tests', function () {
 
 		assert.deepStrictEqual(repoInfo, {
 			baseFolder,
-			hostname: 'github.com'
+			hostname: 'github.com',
 		});
 		assert.ok(repoId);
 		assert.deepStrictEqual(
 			{ org: repoId.org, repo: repoId.repo, type: repoId.type },
-			{ org: origin.org, repo: origin.repo, type: 'github' }
+			{ org: origin.org, repo: origin.repo, type: 'github' },
 		);
 		assert.ok(
 			[
@@ -62,15 +71,24 @@ suite('Extract repo info tests', function () {
 				`https://github.com/${origin.org}/${origin.repo}`,
 				`https://github.com/${origin.org}/${origin.repo}.git`,
 			].includes(url),
-			`url is ${url}`
+			`url is ${url}`,
 		);
 		assert.ok(pathname.includes(`/${origin.repo}`));
 
-		assert.deepStrictEqual(await extractRepoInfo(accessor, 'file:///tmp/does/not/exist/.git/config'), undefined);
+		assert.deepStrictEqual(
+			await extractRepoInfo(
+				accessor,
+				'file:///tmp/does/not/exist/.git/config',
+			),
+			undefined,
+		);
 	});
 
 	test('Extract repo info - Jupyter Notebook vscode-notebook-cell ', async function () {
-		const cellUri = baseFolder.uri.replace(/^file:/, 'vscode-notebook-cell:');
+		const cellUri = baseFolder.uri.replace(
+			/^file:/,
+			'vscode-notebook-cell:',
+		);
 		assert.ok(cellUri.startsWith('vscode-notebook-cell:'));
 		const accessor = createLibTestingContext().createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
@@ -83,12 +101,12 @@ suite('Extract repo info tests', function () {
 
 		assert.deepStrictEqual(repoInfo, {
 			baseFolder,
-			hostname: 'github.com'
+			hostname: 'github.com',
 		});
 		assert.ok(repoId);
 		assert.deepStrictEqual(
 			{ org: repoId.org, repo: repoId.repo, type: repoId.type },
-			{ org: origin.org, repo: origin.repo, type: 'github' }
+			{ org: origin.org, repo: origin.repo, type: 'github' },
 		);
 		assert.ok(
 			[
@@ -96,10 +114,16 @@ suite('Extract repo info tests', function () {
 				`https://github.com/${origin.org}/${origin.repo}`,
 				`https://github.com/${origin.org}/${origin.repo}.git`,
 			].includes(url),
-			`url is ${url}`
+			`url is ${url}`,
 		);
 		assert.ok(pathname.includes(`/${origin.repo}`));
 
-		assert.deepStrictEqual(await instantiationService.invokeFunction(extractRepoInfo, 'file:///tmp/does/not/exist/.git/config'), undefined);
+		assert.deepStrictEqual(
+			await instantiationService.invokeFunction(
+				extractRepoInfo,
+				'file:///tmp/does/not/exist/.git/config',
+			),
+			undefined,
+		);
 	});
 });

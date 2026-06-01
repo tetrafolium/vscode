@@ -22,5 +22,8 @@ type CopilotIPCodeCitationNotificationParams = {
 
 export namespace CopilotIPCodeCitationNotification {
 	export const method = 'copilot/ipCodeCitation';
-	export const type = new lsp.NotificationType<CopilotIPCodeCitationNotificationParams>(method);
+	export const type =
+		new lsp.NotificationType<CopilotIPCodeCitationNotificationParams>(
+			method,
+		);
 }

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { getNWords } from '../../../../../common/model/chatWordCounter.js';
-import { IIncrementalRenderingBuffer } from './buffer.js';
+import { getNWords } from "../../../../../common/model/chatWordCounter.js";
+import { IIncrementalRenderingBuffer } from "./buffer.js";
 
 /**
  * Minimum reveal rate in words/sec. Ensures content always progresses
@@ -43,13 +43,13 @@ export class WordBuffer implements IIncrementalRenderingBuffer {
 	readonly handlesFlush = true;
 
 	/** The full markdown received so far. */
-	private _fullMarkdown: string = '';
+	private _fullMarkdown: string = "";
 
 	/** Number of words currently revealed to the DOM. */
 	private _revealedWordCount: number = 0;
 
 	/** The markdown string last committed to the DOM. */
-	private _lastCommittedMarkdown: string = '';
+	private _lastCommittedMarkdown: string = "";
 
 	/** Whether there are still unrevealed words to show. */
 	private _needsNextFrame: boolean = false;
@@ -70,13 +70,15 @@ export class WordBuffer implements IIncrementalRenderingBuffer {
 	 */
 	setRate(rate: number | undefined, isComplete: boolean): void {
 		if (isComplete) {
-			this._rate = typeof rate === 'number'
-				? Math.max(rate, MIN_RATE_AFTER_COMPLETE)
-				: MIN_RATE_AFTER_COMPLETE;
+			this._rate =
+				typeof rate === "number"
+					? Math.max(rate, MIN_RATE_AFTER_COMPLETE)
+					: MIN_RATE_AFTER_COMPLETE;
 		} else {
-			this._rate = typeof rate === 'number'
-				? Math.min(Math.max(rate, MIN_RATE), MAX_RATE)
-				: DEFAULT_RATE;
+			this._rate =
+				typeof rate === "number"
+					? Math.min(Math.max(rate, MIN_RATE), MAX_RATE)
+					: DEFAULT_RATE;
 		}
 	}
 
@@ -97,7 +99,7 @@ export class WordBuffer implements IIncrementalRenderingBuffer {
 			// Compute how many words to reveal based on elapsed time
 			// and the estimated rate, matching the original approach.
 			const elapsed = now - this._lastCommitTime;
-			const newWords = Math.floor(elapsed / 1000 * this._rate);
+			const newWords = Math.floor((elapsed / 1000) * this._rate);
 			if (newWords > 0) {
 				this._revealedWordCount += newWords;
 				this._lastCommitTime = now;

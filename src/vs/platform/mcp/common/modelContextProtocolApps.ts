@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { MCP } from './modelContextProtocol.js';
+import { MCP } from "./modelContextProtocol.js";
 
 type CallToolResult = MCP.CallToolResult;
 type ContentBlock = MCP.ContentBlock;
@@ -52,10 +52,9 @@ export namespace McpApps {
 
 	export type HostMessage = HostResult | HostNotification;
 
-
 	/** Custom notification used for bubbling up sandbox wheel events. */
 	export interface CustomSandboxWheelNotification {
-		method: 'ui/notifications/sandbox-wheel';
+		method: "ui/notifications/sandbox-wheel";
 		params: {
 			deltaMode: number;
 			deltaX: number;
@@ -66,7 +65,6 @@ export namespace McpApps {
 }
 
 /* eslint-disable local/code-no-unexternalized-strings */
-
 
 /**
  * Schema updated from the Model Context Protocol Apps repository at
@@ -412,24 +410,24 @@ export namespace McpApps {
 		 */
 		containerDimensions?: (
 			| {
-				/** @description Fixed container height in pixels. */
-				height: number;
-			}
+					/** @description Fixed container height in pixels. */
+					height: number;
+			  }
 			| {
-				/** @description Maximum container height in pixels. */
-				maxHeight?: number | undefined;
-			}
+					/** @description Maximum container height in pixels. */
+					maxHeight?: number | undefined;
+			  }
 		) &
-		(
-			| {
-				/** @description Fixed container width in pixels. */
-				width: number;
-			}
-			| {
-				/** @description Maximum container width in pixels. */
-				maxWidth?: number | undefined;
-			}
-		);
+			(
+				| {
+						/** @description Fixed container width in pixels. */
+						width: number;
+				  }
+				| {
+						/** @description Maximum container width in pixels. */
+						maxWidth?: number | undefined;
+				  }
+			);
 		/** @description User's language and region preference in BCP 47 format. */
 		locale?: string;
 		/** @description User's timezone in IANA format. */
@@ -737,7 +735,8 @@ export namespace McpApps {
 	 * }
 	 * ```
 	 */
-	export const OPEN_LINK_METHOD: McpUiOpenLinkRequest["method"] = "ui/open-link";
+	export const OPEN_LINK_METHOD: McpUiOpenLinkRequest["method"] =
+		"ui/open-link";
 	export const MESSAGE_METHOD: McpUiMessageRequest["method"] = "ui/message";
 	export const SANDBOX_PROXY_READY_METHOD: McpUiSandboxProxyReadyNotification["method"] =
 		"ui/notifications/sandbox-proxy-ready";

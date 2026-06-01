@@ -2,42 +2,99 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as dom from '../../../base/browser/dom.js';
-import { ActionBar } from '../../../base/browser/ui/actionbar/actionbar.js';
-import { IAnchor } from '../../../base/browser/ui/contextview/contextview.js';
-import { IAction } from '../../../base/common/actions.js';
-import { KeyCode, KeyMod } from '../../../base/common/keyCodes.js';
-import { Disposable, DisposableStore, IDisposable, MutableDisposable } from '../../../base/common/lifecycle.js';
-import './actionWidget.css';
-import { localize, localize2 } from '../../../nls.js';
-import { acceptSelectedActionCommand, ActionList, IActionListDelegate, IActionListItem, IActionListOptions, previewSelectedActionCommand } from './actionList.js';
-import { Action2, registerAction2 } from '../../actions/common/actions.js';
-import { ContextKeyExpr, IContextKeyService, RawContextKey } from '../../contextkey/common/contextkey.js';
-import { IContextViewService } from '../../contextview/browser/contextView.js';
-import { InstantiationType, registerSingleton } from '../../instantiation/common/extensions.js';
-import { createDecorator, IInstantiationService, ServicesAccessor } from '../../instantiation/common/instantiation.js';
-import { KeybindingWeight } from '../../keybinding/common/keybindingsRegistry.js';
-import { inputActiveOptionBackground, registerColor } from '../../theme/common/colorRegistry.js';
-import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
-import { IListAccessibilityProvider } from '../../../base/browser/ui/list/listWidget.js';
+import * as dom from "../../../base/browser/dom.js";
+import { ActionBar } from "../../../base/browser/ui/actionbar/actionbar.js";
+import { IAnchor } from "../../../base/browser/ui/contextview/contextview.js";
+import { IAction } from "../../../base/common/actions.js";
+import { KeyCode, KeyMod } from "../../../base/common/keyCodes.js";
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+	MutableDisposable,
+} from "../../../base/common/lifecycle.js";
+import "./actionWidget.css";
+import { localize, localize2 } from "../../../nls.js";
+import {
+	acceptSelectedActionCommand,
+	ActionList,
+	IActionListDelegate,
+	IActionListItem,
+	IActionListOptions,
+	previewSelectedActionCommand,
+} from "./actionList.js";
+import { Action2, registerAction2 } from "../../actions/common/actions.js";
+import {
+	ContextKeyExpr,
+	IContextKeyService,
+	RawContextKey,
+} from "../../contextkey/common/contextkey.js";
+import { IContextViewService } from "../../contextview/browser/contextView.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../instantiation/common/extensions.js";
+import {
+	createDecorator,
+	IInstantiationService,
+	ServicesAccessor,
+} from "../../instantiation/common/instantiation.js";
+import { KeybindingWeight } from "../../keybinding/common/keybindingsRegistry.js";
+import {
+	inputActiveOptionBackground,
+	registerColor,
+} from "../../theme/common/colorRegistry.js";
+import { StandardMouseEvent } from "../../../base/browser/mouseEvent.js";
+import { IListAccessibilityProvider } from "../../../base/browser/ui/list/listWidget.js";
 
 registerColor(
-	'actionBar.toggledBackground',
+	"actionBar.toggledBackground",
 	inputActiveOptionBackground,
-	localize('actionBar.toggledBackground', 'Background color for toggled action items in action bar.')
+	localize(
+		"actionBar.toggledBackground",
+		"Background color for toggled action items in action bar.",
+	),
 );
 
 const ActionWidgetContextKeys = {
-	Visible: new RawContextKey<boolean>('codeActionMenuVisible', false, localize('codeActionMenuVisible', "Whether the action widget list is visible")),
-	FilterFocused: new RawContextKey<boolean>('codeActionMenuFilterFocused', false, localize('codeActionMenuFilterFocused', "Whether the action widget filter input is focused")),
+	Visible: new RawContextKey<boolean>(
+		"codeActionMenuVisible",
+		false,
+		localize(
+			"codeActionMenuVisible",
+			"Whether the action widget list is visible",
+		),
+	),
+	FilterFocused: new RawContextKey<boolean>(
+		"codeActionMenuFilterFocused",
+		false,
+		localize(
+			"codeActionMenuFilterFocused",
+			"Whether the action widget filter input is focused",
+		),
+	),
 };
 
-export const IActionWidgetService = createDecorator<IActionWidgetService>('actionWidgetService');
+export const IActionWidgetService = createDecorator<IActionWidgetService>(
+	"actionWidgetService",
+);
 
 export interface IActionWidgetService {
 	readonly _serviceBrand: undefined;
 
-	show<T>(user: string, supportsPreview: boolean, items: readonly IActionListItem<T>[], delegate: IActionListDelegate<T>, anchor: HTMLElement | StandardMouseEvent | IAnchor, container: HTMLElement | undefined, actionBarActions?: readonly IAction[], accessibilityProvider?: Partial<IListAccessibilityProvider<IActionListItem<T>>>, listOptions?: IActionListOptions): void;
+	show<T>(
+		user: string,
+		supportsPreview: boolean,
+		items: readonly IActionListItem<T>[],
+		delegate: IActionListDelegate<T>,
+		anchor: HTMLElement | StandardMouseEvent | IAnchor,
+		container: HTMLElement | undefined,
+		actionBarActions?: readonly IAction[],
+		accessibilityProvider?: Partial<
+			IListAccessibilityProvider<IActionListItem<T>>
+		>,
+		listOptions?: IActionListOptions,
+	): void;
 
 	hide(didCancel?: boolean): void;
 
@@ -48,35 +105,70 @@ class ActionWidgetService extends Disposable implements IActionWidgetService {
 	declare readonly _serviceBrand: undefined;
 
 	get isVisible() {
-		return ActionWidgetContextKeys.Visible.getValue(this._contextKeyService) || false;
+		return (
+			ActionWidgetContextKeys.Visible.getValue(this._contextKeyService) || false
+		);
 	}
 
-	private readonly _list = this._register(new MutableDisposable<ActionList<unknown>>());
+	private readonly _list = this._register(
+		new MutableDisposable<ActionList<unknown>>(),
+	);
 
 	constructor(
-		@IContextViewService private readonly _contextViewService: IContextViewService,
+		@IContextViewService
+		private readonly _contextViewService: IContextViewService,
 		@IContextKeyService private readonly _contextKeyService: IContextKeyService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 	) {
 		super();
 	}
 
-	show<T>(user: string, supportsPreview: boolean, items: readonly IActionListItem<T>[], delegate: IActionListDelegate<T>, anchor: HTMLElement | StandardMouseEvent | IAnchor, container: HTMLElement | undefined, actionBarActions?: readonly IAction[], accessibilityProvider?: Partial<IListAccessibilityProvider<IActionListItem<T>>>, listOptions?: IActionListOptions): void {
-		const visibleContext = ActionWidgetContextKeys.Visible.bindTo(this._contextKeyService);
+	show<T>(
+		user: string,
+		supportsPreview: boolean,
+		items: readonly IActionListItem<T>[],
+		delegate: IActionListDelegate<T>,
+		anchor: HTMLElement | StandardMouseEvent | IAnchor,
+		container: HTMLElement | undefined,
+		actionBarActions?: readonly IAction[],
+		accessibilityProvider?: Partial<
+			IListAccessibilityProvider<IActionListItem<T>>
+		>,
+		listOptions?: IActionListOptions,
+	): void {
+		const visibleContext = ActionWidgetContextKeys.Visible.bindTo(
+			this._contextKeyService,
+		);
 
-		const list = this._instantiationService.createInstance(ActionList, user, supportsPreview, items, delegate, accessibilityProvider, listOptions, anchor);
-		this._contextViewService.showContextView({
-			getAnchor: () => anchor,
-			render: (container: HTMLElement) => {
-				visibleContext.set(true);
-				return this._renderWidget(container, list, actionBarActions ?? []);
+		const list = this._instantiationService.createInstance(
+			ActionList,
+			user,
+			supportsPreview,
+			items,
+			delegate,
+			accessibilityProvider,
+			listOptions,
+			anchor,
+		);
+		this._contextViewService.showContextView(
+			{
+				getAnchor: () => anchor,
+				render: (container: HTMLElement) => {
+					visibleContext.set(true);
+					return this._renderWidget(container, list, actionBarActions ?? []);
+				},
+				onHide: (didCancel) => {
+					visibleContext.reset();
+					this._onWidgetClosed(didCancel);
+				},
+				get anchorPosition() {
+					return list.anchorPosition;
+				},
 			},
-			onHide: (didCancel) => {
-				visibleContext.reset();
-				this._onWidgetClosed(didCancel);
-			},
-			get anchorPosition() { return list.anchorPosition; },
-		}, container, false);
+			container,
+			false,
+		);
 	}
 
 	acceptSelected(preview?: boolean) {
@@ -116,9 +208,13 @@ class ActionWidgetService extends Disposable implements IActionWidgetService {
 		this._list.clear();
 	}
 
-	private _renderWidget(element: HTMLElement, list: ActionList<unknown>, actionBarActions: readonly IAction[]): IDisposable {
-		const widget = document.createElement('div');
-		widget.classList.add('action-widget');
+	private _renderWidget(
+		element: HTMLElement,
+		list: ActionList<unknown>,
+		actionBarActions: readonly IAction[],
+	): IDisposable {
+		const widget = document.createElement("div");
+		widget.classList.add("action-widget");
 		element.appendChild(widget);
 
 		this._list.value = list;
@@ -131,29 +227,44 @@ class ActionWidgetService extends Disposable implements IActionWidgetService {
 				widget.appendChild(this._list.value.footerContainer);
 			}
 		} else {
-			throw new Error('List has no value');
+			throw new Error("List has no value");
 		}
 		const renderDisposables = new DisposableStore();
 
 		// Invisible div to block mouse interaction in the rest of the UI
-		const menuBlock = document.createElement('div');
+		const menuBlock = document.createElement("div");
 		const block = element.appendChild(menuBlock);
-		block.classList.add('context-view-block');
-		renderDisposables.add(dom.addDisposableGenericMouseDownListener(block, e => e.stopPropagation()));
+		block.classList.add("context-view-block");
+		renderDisposables.add(
+			dom.addDisposableGenericMouseDownListener(block, (e) =>
+				e.stopPropagation(),
+			),
+		);
 
 		// Invisible div to block mouse interaction with the menu
-		const pointerBlockDiv = document.createElement('div');
+		const pointerBlockDiv = document.createElement("div");
 		const pointerBlock = element.appendChild(pointerBlockDiv);
-		pointerBlock.classList.add('context-view-pointerBlock');
+		pointerBlock.classList.add("context-view-pointerBlock");
 
 		// Removes block on click INSIDE widget or ANY mouse movement
-		renderDisposables.add(dom.addDisposableListener(pointerBlock, dom.EventType.POINTER_MOVE, () => pointerBlock.remove()));
-		renderDisposables.add(dom.addDisposableGenericMouseDownListener(pointerBlock, () => pointerBlock.remove()));
+		renderDisposables.add(
+			dom.addDisposableListener(pointerBlock, dom.EventType.POINTER_MOVE, () =>
+				pointerBlock.remove(),
+			),
+		);
+		renderDisposables.add(
+			dom.addDisposableGenericMouseDownListener(pointerBlock, () =>
+				pointerBlock.remove(),
+			),
+		);
 
 		// Action bar
 		let actionBarWidth = 0;
 		if (actionBarActions.length) {
-			const actionBar = this._createActionBar('.action-widget-action-bar', actionBarActions);
+			const actionBar = this._createActionBar(
+				".action-widget-action-bar",
+				actionBarActions,
+			);
 			if (actionBar) {
 				widget.appendChild(actionBar.getContainer().parentElement!);
 				renderDisposables.add(actionBar);
@@ -167,28 +278,46 @@ class ActionWidgetService extends Disposable implements IActionWidgetService {
 		this._list.value?.focus();
 
 		// Track filter input focus state
-		const filterFocusedContext = ActionWidgetContextKeys.FilterFocused.bindTo(this._contextKeyService);
+		const filterFocusedContext = ActionWidgetContextKeys.FilterFocused.bindTo(
+			this._contextKeyService,
+		);
 		renderDisposables.add({ dispose: () => filterFocusedContext.reset() });
 		if (this._list.value?.filterInput) {
 			const filterInput = this._list.value.filterInput;
-			renderDisposables.add(dom.addDisposableListener(filterInput, 'focus', () => filterFocusedContext.set(true)));
-			renderDisposables.add(dom.addDisposableListener(filterInput, 'blur', () => filterFocusedContext.set(false)));
+			renderDisposables.add(
+				dom.addDisposableListener(filterInput, "focus", () =>
+					filterFocusedContext.set(true),
+				),
+			);
+			renderDisposables.add(
+				dom.addDisposableListener(filterInput, "blur", () =>
+					filterFocusedContext.set(false),
+				),
+			);
 		}
 
 		const focusTracker = renderDisposables.add(dom.trackFocus(element));
-		renderDisposables.add(focusTracker.onDidBlur(() => {
-			// Don't hide if focus moved to a hover or submenu that belongs to this action widget
-			const activeElement = dom.getActiveElement();
-			if (activeElement?.closest('.action-widget-hover') || activeElement?.closest('.action-list-submenu-panel')) {
-				return;
-			}
-			this.hide(true);
-		}));
+		renderDisposables.add(
+			focusTracker.onDidBlur(() => {
+				// Don't hide if focus moved to a hover or submenu that belongs to this action widget
+				const activeElement = dom.getActiveElement();
+				if (
+					activeElement?.closest(".action-widget-hover") ||
+					activeElement?.closest(".action-list-submenu-panel")
+				) {
+					return;
+				}
+				this.hide(true);
+			}),
+		);
 
 		return renderDisposables;
 	}
 
-	private _createActionBar(className: string, actions: readonly IAction[]): ActionBar | undefined {
+	private _createActionBar(
+		className: string,
+		actions: readonly IAction[],
+	): ActionBar | undefined {
 		if (!actions.length) {
 			return undefined;
 		}
@@ -204,202 +333,254 @@ class ActionWidgetService extends Disposable implements IActionWidgetService {
 	}
 }
 
-registerSingleton(IActionWidgetService, ActionWidgetService, InstantiationType.Delayed);
+registerSingleton(
+	IActionWidgetService,
+	ActionWidgetService,
+	InstantiationType.Delayed,
+);
 
 const weight = KeybindingWeight.EditorContrib + 1000;
 
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: 'hideCodeActionWidget',
-			title: localize2('hideCodeActionWidget.title', "Hide action widget"),
-			precondition: ActionWidgetContextKeys.Visible,
-			keybinding: {
-				weight,
-				primary: KeyCode.Escape,
-				secondary: [KeyMod.Shift | KeyCode.Escape]
-			},
-		});
-	}
+registerAction2(
+	class extends Action2 {
+		constructor() {
+			super({
+				id: "hideCodeActionWidget",
+				title: localize2("hideCodeActionWidget.title", "Hide action widget"),
+				precondition: ActionWidgetContextKeys.Visible,
+				keybinding: {
+					weight,
+					primary: KeyCode.Escape,
+					secondary: [KeyMod.Shift | KeyCode.Escape],
+				},
+			});
+		}
 
-	run(accessor: ServicesAccessor): void {
-		accessor.get(IActionWidgetService).hide(true);
-	}
-});
+		run(accessor: ServicesAccessor): void {
+			accessor.get(IActionWidgetService).hide(true);
+		}
+	},
+);
 
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: 'clearFilterCodeActionWidget',
-			title: localize2('clearFilterCodeActionWidget.title', "Clear action widget filter"),
-			precondition: ContextKeyExpr.and(ActionWidgetContextKeys.Visible, ActionWidgetContextKeys.FilterFocused),
-			keybinding: {
-				weight: weight + 1,
-				primary: KeyCode.Escape,
-			}
-		});
-	}
+registerAction2(
+	class extends Action2 {
+		constructor() {
+			super({
+				id: "clearFilterCodeActionWidget",
+				title: localize2(
+					"clearFilterCodeActionWidget.title",
+					"Clear action widget filter",
+				),
+				precondition: ContextKeyExpr.and(
+					ActionWidgetContextKeys.Visible,
+					ActionWidgetContextKeys.FilterFocused,
+				),
+				keybinding: {
+					weight: weight + 1,
+					primary: KeyCode.Escape,
+				},
+			});
+		}
 
-	run(accessor: ServicesAccessor): void {
-		const widgetService = accessor.get(IActionWidgetService);
-		if (widgetService instanceof ActionWidgetService) {
-			if (!widgetService.clearFilter()) {
-				widgetService.hide(true);
+		run(accessor: ServicesAccessor): void {
+			const widgetService = accessor.get(IActionWidgetService);
+			if (widgetService instanceof ActionWidgetService) {
+				if (!widgetService.clearFilter()) {
+					widgetService.hide(true);
+				}
 			}
 		}
-	}
-});
+	},
+);
 
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: 'selectPrevCodeAction',
-			title: localize2('selectPrevCodeAction.title', "Select previous action"),
-			precondition: ActionWidgetContextKeys.Visible,
-			keybinding: {
-				weight,
-				primary: KeyCode.UpArrow,
-				secondary: [KeyMod.CtrlCmd | KeyCode.UpArrow],
-				mac: { primary: KeyCode.UpArrow, secondary: [KeyMod.CtrlCmd | KeyCode.UpArrow, KeyMod.WinCtrl | KeyCode.KeyP] },
-			}
-		});
-	}
-
-	run(accessor: ServicesAccessor): void {
-		const widgetService = accessor.get(IActionWidgetService);
-		if (widgetService instanceof ActionWidgetService) {
-			widgetService.focusPrevious();
+registerAction2(
+	class extends Action2 {
+		constructor() {
+			super({
+				id: "selectPrevCodeAction",
+				title: localize2(
+					"selectPrevCodeAction.title",
+					"Select previous action",
+				),
+				precondition: ActionWidgetContextKeys.Visible,
+				keybinding: {
+					weight,
+					primary: KeyCode.UpArrow,
+					secondary: [KeyMod.CtrlCmd | KeyCode.UpArrow],
+					mac: {
+						primary: KeyCode.UpArrow,
+						secondary: [
+							KeyMod.CtrlCmd | KeyCode.UpArrow,
+							KeyMod.WinCtrl | KeyCode.KeyP,
+						],
+					},
+				},
+			});
 		}
-	}
-});
 
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: 'selectNextCodeAction',
-			title: localize2('selectNextCodeAction.title', "Select next action"),
-			precondition: ActionWidgetContextKeys.Visible,
-			keybinding: {
-				weight,
-				primary: KeyCode.DownArrow,
-				secondary: [KeyMod.CtrlCmd | KeyCode.DownArrow],
-				mac: { primary: KeyCode.DownArrow, secondary: [KeyMod.CtrlCmd | KeyCode.DownArrow, KeyMod.WinCtrl | KeyCode.KeyN] }
+		run(accessor: ServicesAccessor): void {
+			const widgetService = accessor.get(IActionWidgetService);
+			if (widgetService instanceof ActionWidgetService) {
+				widgetService.focusPrevious();
 			}
-		});
-	}
-
-	run(accessor: ServicesAccessor): void {
-		const widgetService = accessor.get(IActionWidgetService);
-		if (widgetService instanceof ActionWidgetService) {
-			widgetService.focusNext();
 		}
-	}
-});
+	},
+);
 
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: 'collapseSectionCodeAction',
-			title: localize2('collapseSectionCodeAction.title', "Collapse section"),
-			precondition: ContextKeyExpr.and(ActionWidgetContextKeys.Visible, ActionWidgetContextKeys.FilterFocused.negate()),
-			keybinding: {
-				weight,
-				primary: KeyCode.LeftArrow,
-			}
-		});
-	}
-
-	run(accessor: ServicesAccessor): void {
-		const widgetService = accessor.get(IActionWidgetService);
-		if (widgetService instanceof ActionWidgetService) {
-			widgetService.collapseSection();
+registerAction2(
+	class extends Action2 {
+		constructor() {
+			super({
+				id: "selectNextCodeAction",
+				title: localize2("selectNextCodeAction.title", "Select next action"),
+				precondition: ActionWidgetContextKeys.Visible,
+				keybinding: {
+					weight,
+					primary: KeyCode.DownArrow,
+					secondary: [KeyMod.CtrlCmd | KeyCode.DownArrow],
+					mac: {
+						primary: KeyCode.DownArrow,
+						secondary: [
+							KeyMod.CtrlCmd | KeyCode.DownArrow,
+							KeyMod.WinCtrl | KeyCode.KeyN,
+						],
+					},
+				},
+			});
 		}
-	}
-});
 
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: 'expandSectionCodeAction',
-			title: localize2('expandSectionCodeAction.title', "Expand section"),
-			precondition: ContextKeyExpr.and(ActionWidgetContextKeys.Visible, ActionWidgetContextKeys.FilterFocused.negate()),
-			keybinding: {
-				weight,
-				primary: KeyCode.RightArrow,
+		run(accessor: ServicesAccessor): void {
+			const widgetService = accessor.get(IActionWidgetService);
+			if (widgetService instanceof ActionWidgetService) {
+				widgetService.focusNext();
 			}
-		});
-	}
-
-	run(accessor: ServicesAccessor): void {
-		const widgetService = accessor.get(IActionWidgetService);
-		if (widgetService instanceof ActionWidgetService) {
-			widgetService.expandSection();
 		}
-	}
-});
+	},
+);
 
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: 'toggleSectionCodeAction',
-			title: localize2('toggleSectionCodeAction.title', "Toggle section"),
-			precondition: ContextKeyExpr.and(ActionWidgetContextKeys.Visible, ActionWidgetContextKeys.FilterFocused.negate()),
-			keybinding: {
-				weight,
-				primary: KeyCode.Space,
+registerAction2(
+	class extends Action2 {
+		constructor() {
+			super({
+				id: "collapseSectionCodeAction",
+				title: localize2("collapseSectionCodeAction.title", "Collapse section"),
+				precondition: ContextKeyExpr.and(
+					ActionWidgetContextKeys.Visible,
+					ActionWidgetContextKeys.FilterFocused.negate(),
+				),
+				keybinding: {
+					weight,
+					primary: KeyCode.LeftArrow,
+				},
+			});
+		}
+
+		run(accessor: ServicesAccessor): void {
+			const widgetService = accessor.get(IActionWidgetService);
+			if (widgetService instanceof ActionWidgetService) {
+				widgetService.collapseSection();
 			}
-		});
-	}
+		}
+	},
+);
 
-	run(accessor: ServicesAccessor): void {
-		const widgetService = accessor.get(IActionWidgetService);
-		if (widgetService instanceof ActionWidgetService) {
-			if (!widgetService.toggleSection()) {
+registerAction2(
+	class extends Action2 {
+		constructor() {
+			super({
+				id: "expandSectionCodeAction",
+				title: localize2("expandSectionCodeAction.title", "Expand section"),
+				precondition: ContextKeyExpr.and(
+					ActionWidgetContextKeys.Visible,
+					ActionWidgetContextKeys.FilterFocused.negate(),
+				),
+				keybinding: {
+					weight,
+					primary: KeyCode.RightArrow,
+				},
+			});
+		}
+
+		run(accessor: ServicesAccessor): void {
+			const widgetService = accessor.get(IActionWidgetService);
+			if (widgetService instanceof ActionWidgetService) {
+				widgetService.expandSection();
+			}
+		}
+	},
+);
+
+registerAction2(
+	class extends Action2 {
+		constructor() {
+			super({
+				id: "toggleSectionCodeAction",
+				title: localize2("toggleSectionCodeAction.title", "Toggle section"),
+				precondition: ContextKeyExpr.and(
+					ActionWidgetContextKeys.Visible,
+					ActionWidgetContextKeys.FilterFocused.negate(),
+				),
+				keybinding: {
+					weight,
+					primary: KeyCode.Space,
+				},
+			});
+		}
+
+		run(accessor: ServicesAccessor): void {
+			const widgetService = accessor.get(IActionWidgetService);
+			if (widgetService instanceof ActionWidgetService) {
+				if (!widgetService.toggleSection()) {
+					widgetService.acceptSelected();
+				}
+			}
+		}
+	},
+);
+
+registerAction2(
+	class extends Action2 {
+		constructor() {
+			super({
+				id: acceptSelectedActionCommand,
+				title: localize2("acceptSelected.title", "Accept selected action"),
+				precondition: ActionWidgetContextKeys.Visible,
+				keybinding: {
+					weight,
+					primary: KeyCode.Enter,
+					secondary: [KeyMod.CtrlCmd | KeyCode.Period],
+				},
+			});
+		}
+
+		run(accessor: ServicesAccessor): void {
+			const widgetService = accessor.get(IActionWidgetService);
+			if (widgetService instanceof ActionWidgetService) {
 				widgetService.acceptSelected();
 			}
 		}
-	}
-});
+	},
+);
 
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: acceptSelectedActionCommand,
-			title: localize2('acceptSelected.title', "Accept selected action"),
-			precondition: ActionWidgetContextKeys.Visible,
-			keybinding: {
-				weight,
-				primary: KeyCode.Enter,
-				secondary: [KeyMod.CtrlCmd | KeyCode.Period],
-			}
-		});
-	}
-
-	run(accessor: ServicesAccessor): void {
-		const widgetService = accessor.get(IActionWidgetService);
-		if (widgetService instanceof ActionWidgetService) {
-			widgetService.acceptSelected();
+registerAction2(
+	class extends Action2 {
+		constructor() {
+			super({
+				id: previewSelectedActionCommand,
+				title: localize2("previewSelected.title", "Preview selected action"),
+				precondition: ActionWidgetContextKeys.Visible,
+				keybinding: {
+					weight,
+					primary: KeyMod.CtrlCmd | KeyCode.Enter,
+				},
+			});
 		}
-	}
-});
 
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: previewSelectedActionCommand,
-			title: localize2('previewSelected.title', "Preview selected action"),
-			precondition: ActionWidgetContextKeys.Visible,
-			keybinding: {
-				weight,
-				primary: KeyMod.CtrlCmd | KeyCode.Enter,
+		run(accessor: ServicesAccessor): void {
+			const widgetService = accessor.get(IActionWidgetService);
+			if (widgetService instanceof ActionWidgetService) {
+				widgetService.acceptSelected(true);
 			}
-		});
-	}
-
-	run(accessor: ServicesAccessor): void {
-		const widgetService = accessor.get(IActionWidgetService);
-		if (widgetService instanceof ActionWidgetService) {
-			widgetService.acceptSelected(true);
 		}
-	}
-});
+	},
+);

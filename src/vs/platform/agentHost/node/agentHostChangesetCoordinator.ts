@@ -3,22 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { URI } from '../../../base/common/uri.js';
-import { IAgentSessionMetadata } from '../common/agentService.js';
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { URI } from "../../../base/common/uri.js";
+import { IAgentSessionMetadata } from "../common/agentService.js";
 import {
 	buildSessionChangesetUri,
 	buildUncommittedChangesetUri,
 	ChangesetKind,
 	parseChangesetUri,
-} from '../common/changesetUri.js';
-import { ChangesetStatus } from '../common/state/sessionState.js';
-import { IAgentConfigurationService } from './agentConfigurationService.js';
-import { ChangesetFileMonitorCoordinator } from './agentHostChangesetFileMonitorCoordinator.js';
-import { IAgentHostFileMonitorService } from './agentHostFileMonitorService.js';
-import { IAgentHostGitService } from './agentHostGitService.js';
-import { AgentHostStateManager } from './agentHostStateManager.js';
-import { ILogService } from '../../log/common/log.js';
+} from "../common/changesetUri.js";
+import { ChangesetStatus } from "../common/state/sessionState.js";
+import { IAgentConfigurationService } from "./agentConfigurationService.js";
+import { ChangesetFileMonitorCoordinator } from "./agentHostChangesetFileMonitorCoordinator.js";
+import { IAgentHostFileMonitorService } from "./agentHostFileMonitorService.js";
+import { IAgentHostGitService } from "./agentHostGitService.js";
+import { AgentHostStateManager } from "./agentHostStateManager.js";
+import { ILogService } from "../../log/common/log.js";
 import {
 	buildCatalogueFromLiveState,
 	buildCatalogueFromPersistedDiffs,
@@ -26,7 +26,7 @@ import {
 	META_CHANGESET_SESSION,
 	META_CHANGESET_UNCOMMITTED,
 	META_LEGACY_DIFFS,
-} from './agentHostChangesetService.js';
+} from "./agentHostChangesetService.js";
 
 /**
  * Raw metadata blob values for the session DB, batch-read by the caller.
@@ -65,7 +65,6 @@ export const CHANGESET_DB_METADATA_KEYS: Record<string, true> = {
  * coordinator with internal maps is simpler than per-session RAII.
  */
 export class ChangesetSessionCoordinator extends Disposable {
-
 	/**
 	 * Sessions that subscribed to their uncommitted changeset before the
 	 * working directory was known (provisional / not-yet-materialized
@@ -93,15 +92,29 @@ export class ChangesetSessionCoordinator extends Disposable {
 
 	constructor(
 		private readonly _stateManager: AgentHostStateManager,
-		@IAgentHostChangesetService private readonly _changesets: IAgentHostChangesetService,
-		@IAgentConfigurationService private readonly _configurationService: IAgentConfigurationService,
-		@IAgentHostFileMonitorService fileMonitorService: IAgentHostFileMonitorService,
+		@IAgentHostChangesetService
+		private readonly _changesets: IAgentHostChangesetService,
+		@IAgentConfigurationService
+		private readonly _configurationService: IAgentConfigurationService,
+		@IAgentHostFileMonitorService
+		fileMonitorService: IAgentHostFileMonitorService,
 		@IAgentHostGitService gitService: IAgentHostGitService,
 		@ILogService logService: ILogService,
 	) {
 		super();
-		this._changesetFileMonitor = this._register(new ChangesetFileMonitorCoordinator(this._stateManager, this._changesets, this._configurationService, fileMonitorService, gitService, logService));
-		this._changesets.setTurnSubscriberProbe((session, turnId) => this.hasTurnSubscribers(session, turnId));
+		this._changesetFileMonitor = this._register(
+			new ChangesetFileMonitorCoordinator(
+				this._stateManager,
+				this._changesets,
+				this._configurationService,
+				fileMonitorService,
+				gitService,
+				logService,
+			),
+		);
+		this._changesets.setTurnSubscriberProbe((session, turnId) =>
+			this.hasTurnSubscribers(session, turnId),
+		);
 	}
 
 	/**
@@ -137,7 +150,10 @@ export class ChangesetSessionCoordinator extends Disposable {
 	 * `AgentService` already issues for title / read / archive / config
 	 * keys.
 	 */
-	onSessionRestored(sessionStr: string, metadata: IChangesetSessionMetadata): void {
+	onSessionRestored(
+		sessionStr: string,
+		metadata: IChangesetSessionMetadata,
+	): void {
 		this._changesets.registerStaticChangesets(sessionStr);
 		this._changesets.restorePersistedStaticChangesets(sessionStr, {
 			uncommittedRaw: metadata[META_CHANGESET_UNCOMMITTED],
@@ -193,12 +209,18 @@ export class ChangesetSessionCoordinator extends Disposable {
 		const parsed = parseChangesetUri(resourceStr);
 		if (parsed?.kind === ChangesetKind.Uncommitted) {
 			this._triggerUncommittedRefresh(parsed.sessionUri);
-			this._changesetFileMonitor.trackSessionChanges(resourceStr, parsed.sessionUri);
+			this._changesetFileMonitor.trackSessionChanges(
+				resourceStr,
+				parsed.sessionUri,
+			);
 			return;
 		}
 		if (parsed?.kind === ChangesetKind.Session) {
 			this._triggerSessionRefresh(parsed.sessionUri);
-			this._changesetFileMonitor.trackSessionChanges(resourceStr, parsed.sessionUri);
+			this._changesetFileMonitor.trackSessionChanges(
+				resourceStr,
+				parsed.sessionUri,
+			);
 			return;
 		}
 		if (parsed?.kind === ChangesetKind.Turn && parsed.turnId !== undefined) {
@@ -270,14 +292,19 @@ export class ChangesetSessionCoordinator extends Disposable {
 	 * `addSubscriber` may have already created a placeholder changeset snapshot
 	 * before the parent session restore had a chance to apply persisted diffs.
 	 */
-	async restoreSessionIfChangesetSubscription(resource: URI, restoreSession: (session: URI) => Promise<void>): Promise<void> {
+	async restoreSessionIfChangesetSubscription(
+		resource: URI,
+		restoreSession: (session: URI) => Promise<void>,
+	): Promise<void> {
 		const resourceStr = resource.toString();
 		const parsed = parseChangesetUri(resourceStr);
 		if (!parsed) {
 			return;
 		}
 		if (parsed.kind === ChangesetKind.Unknown) {
-			throw new Error(`Cannot subscribe to unknown changeset resource: ${resourceStr}`);
+			throw new Error(
+				`Cannot subscribe to unknown changeset resource: ${resourceStr}`,
+			);
 		}
 		if (!this._stateManager.getSessionState(parsed.sessionUri)) {
 			await restoreSession(URI.parse(parsed.sessionUri));
@@ -299,24 +326,40 @@ export class ChangesetSessionCoordinator extends Disposable {
 	 * rejection MUST fire before any parent-session restore so subscribing
 	 * to a bogus child URI cannot materialize the parent as a side effect.
 	 */
-	async tryHandleSubscribe(resource: URI, restoreSession: (session: URI) => Promise<void>): Promise<boolean> {
+	async tryHandleSubscribe(
+		resource: URI,
+		restoreSession: (session: URI) => Promise<void>,
+	): Promise<boolean> {
 		const resourceStr = resource.toString();
 		const parsed = parseChangesetUri(resourceStr);
 		if (!parsed) {
 			return false;
 		}
 		if (parsed.kind === ChangesetKind.Unknown) {
-			throw new Error(`Cannot subscribe to unknown changeset resource: ${resourceStr}`);
+			throw new Error(
+				`Cannot subscribe to unknown changeset resource: ${resourceStr}`,
+			);
 		}
 		await this.restoreSessionIfChangesetSubscription(resource, restoreSession);
 		if (parsed.kind === ChangesetKind.Turn && parsed.turnId) {
-			await this._changesets.computeTurnChangeset(parsed.sessionUri, parsed.turnId);
-		} else if (parsed.kind === ChangesetKind.Compare && parsed.originalTurnId && parsed.modifiedTurnId) {
+			await this._changesets.computeTurnChangeset(
+				parsed.sessionUri,
+				parsed.turnId,
+			);
+		} else if (
+			parsed.kind === ChangesetKind.Compare &&
+			parsed.originalTurnId &&
+			parsed.modifiedTurnId
+		) {
 			// Compare-turns is computed once on subscribe. Both turns are
 			// typically historical so the snapshot doesn't need to track
 			// live edits; `onFirstSubscriber` / `onLastSubscriber` do not
 			// need to participate.
-			await this._changesets.computeCompareTurnsChangeset(parsed.sessionUri, parsed.originalTurnId, parsed.modifiedTurnId);
+			await this._changesets.computeCompareTurnsChangeset(
+				parsed.sessionUri,
+				parsed.originalTurnId,
+				parsed.modifiedTurnId,
+			);
 		} else {
 			// Static changesets are seeded by `onSessionRestored` /
 			// `onSessionCreated`. Re-register defensively in case the
@@ -362,19 +405,31 @@ export class ChangesetSessionCoordinator extends Disposable {
 	 * > parsed persisted blobs > undefined (no catalogue advertised).
 	 * This mirrors the inline pre-coordinator logic.
 	 */
-	decorateListEntry(entry: IAgentSessionMetadata, metadata: IChangesetSessionMetadata): IAgentSessionMetadata {
+	decorateListEntry(
+		entry: IAgentSessionMetadata,
+		metadata: IChangesetSessionMetadata,
+	): IAgentSessionMetadata {
 		const sessionStr = entry.session.toString();
 		const liveSessionState = this._stateManager.getSessionState(sessionStr);
-		const liveUncommitted = this._stateManager.getChangesetState(buildUncommittedChangesetUri(sessionStr));
-		const liveSession = this._stateManager.getChangesetState(buildSessionChangesetUri(sessionStr));
-		const hasReadyLiveCatalogue = liveUncommitted?.status === ChangesetStatus.Ready
-			|| liveSession?.status === ChangesetStatus.Ready;
+		const liveUncommitted = this._stateManager.getChangesetState(
+			buildUncommittedChangesetUri(sessionStr),
+		);
+		const liveSession = this._stateManager.getChangesetState(
+			buildSessionChangesetUri(sessionStr),
+		);
+		const hasReadyLiveCatalogue =
+			liveUncommitted?.status === ChangesetStatus.Ready ||
+			liveSession?.status === ChangesetStatus.Ready;
 
 		// Ready live state for an unopened session: synthesise the catalogue
 		// from that live state. Counts stay in lockstep with the actual
 		// changeset state for the session-list chip.
 		if (!liveSessionState && hasReadyLiveCatalogue) {
-			const catalogue = buildCatalogueFromLiveState(sessionStr, liveUncommitted, liveSession);
+			const catalogue = buildCatalogueFromLiveState(
+				sessionStr,
+				liveUncommitted,
+				liveSession,
+			);
 			if (catalogue) {
 				return { ...entry, changesets: catalogue };
 			}
@@ -385,20 +440,31 @@ export class ChangesetSessionCoordinator extends Disposable {
 		const uncommittedRaw = metadata[META_CHANGESET_UNCOMMITTED];
 		const sessionRaw = metadata[META_CHANGESET_SESSION];
 		const legacyRaw = metadata[META_LEGACY_DIFFS];
-		if (uncommittedRaw === undefined && sessionRaw === undefined && legacyRaw === undefined) {
+		if (
+			uncommittedRaw === undefined &&
+			sessionRaw === undefined &&
+			legacyRaw === undefined
+		) {
 			return entry;
 		}
-		const restored = this._changesets.parsePersistedStaticChangesets(sessionStr, {
-			uncommittedRaw,
-			sessionRaw,
-			legacyRaw,
-		});
+		const restored = this._changesets.parsePersistedStaticChangesets(
+			sessionStr,
+			{
+				uncommittedRaw,
+				sessionRaw,
+				legacyRaw,
+			},
+		);
 		// `listSessions` must not seed full changeset state for every row;
 		// it only parses persisted blobs enough to render catalogue counts.
 		// Once the session is opened via `restoreSession`, the live overlay in
 		// `AgentService.listSessions` replaces this parse-only catalogue.
 		if (!liveSessionState) {
-			const catalogue = buildCatalogueFromPersistedDiffs(sessionStr, restored.uncommitted, restored.session);
+			const catalogue = buildCatalogueFromPersistedDiffs(
+				sessionStr,
+				restored.uncommitted,
+				restored.session,
+			);
 			if (catalogue) {
 				return { ...entry, changesets: catalogue };
 			}
@@ -409,11 +475,15 @@ export class ChangesetSessionCoordinator extends Disposable {
 	// ---- Internal -----------------------------------------------------------
 
 	private _readyLiveCatalogueExists(sessionStr: string): boolean {
-		const uncommitted = this._stateManager.getChangesetState(buildUncommittedChangesetUri(sessionStr));
+		const uncommitted = this._stateManager.getChangesetState(
+			buildUncommittedChangesetUri(sessionStr),
+		);
 		if (uncommitted?.status === ChangesetStatus.Ready) {
 			return true;
 		}
-		const session = this._stateManager.getChangesetState(buildSessionChangesetUri(sessionStr));
+		const session = this._stateManager.getChangesetState(
+			buildSessionChangesetUri(sessionStr),
+		);
 		return session?.status === ChangesetStatus.Ready;
 	}
 
@@ -429,7 +499,8 @@ export class ChangesetSessionCoordinator extends Disposable {
 	 * closed.
 	 */
 	private _triggerUncommittedRefresh(sessionStr: string): void {
-		const wd = this._configurationService.getEffectiveWorkingDirectory(sessionStr);
+		const wd =
+			this._configurationService.getEffectiveWorkingDirectory(sessionStr);
 		if (!wd) {
 			this._pendingUncommittedRefreshes.add(sessionStr);
 			return;
@@ -438,7 +509,8 @@ export class ChangesetSessionCoordinator extends Disposable {
 	}
 
 	private _triggerSessionRefresh(sessionStr: string): void {
-		const wd = this._configurationService.getEffectiveWorkingDirectory(sessionStr);
+		const wd =
+			this._configurationService.getEffectiveWorkingDirectory(sessionStr);
 		if (!wd) {
 			this._pendingSessionRefreshes.add(sessionStr);
 			return;

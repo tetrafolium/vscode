@@ -21,22 +21,35 @@ import {
 } from './relatedFiles';
 
 const cppLanguageIds = ['cpp', 'c', 'cuda-cpp'];
-const typescriptLanguageIds = ['typescript', 'javascript', 'typescriptreact', 'javascriptreact'];
+const typescriptLanguageIds = [
+	'typescript',
+	'javascript',
+	'typescriptreact',
+	'javascriptreact',
+];
 const csharpLanguageIds = ['csharp'];
 const neighborFileTypeMap = new Map<string, NeighboringFileType>([
-	...cppLanguageIds.map(id => [id, NeighboringFileType.RelatedCpp] as const),
-	...typescriptLanguageIds.map(id => [id, NeighboringFileType.RelatedTypeScript] as const),
-	...csharpLanguageIds.map(id => [id, NeighboringFileType.RelatedCSharpRoslyn] as const),
+	...cppLanguageIds.map(
+		(id) => [id, NeighboringFileType.RelatedCpp] as const,
+	),
+	...typescriptLanguageIds.map(
+		(id) => [id, NeighboringFileType.RelatedTypeScript] as const,
+	),
+	...csharpLanguageIds.map(
+		(id) => [id, NeighboringFileType.RelatedCSharpRoslyn] as const,
+	),
 ]);
 
 function getNeighboringFileType(languageId: string): NeighboringFileType {
-	return neighborFileTypeMap.get(languageId) ?? NeighboringFileType.RelatedOther;
+	return (
+		neighborFileTypeMap.get(languageId) ?? NeighboringFileType.RelatedOther
+	);
 }
 
 export type ProviderCallback = (
 	uri: string,
 	context: { flags: Record<string, unknown> },
-	cancellationToken: ICancellationToken
+	cancellationToken: ICancellationToken,
 ) => Promise<RelatedFilesResponse | undefined>;
 
 type Provider = {
@@ -52,29 +65,48 @@ export class CompositeRelatedFilesProvider extends RelatedFilesProvider {
 	constructor(
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IIgnoreService ignoreService: IIgnoreService,
-		@ICompletionsFeaturesService private featuresService: ICompletionsFeaturesService,
+		@ICompletionsFeaturesService
+		private featuresService: ICompletionsFeaturesService,
 		@ICompletionsLogTargetService logTarget: ICompletionsLogTargetService,
-		@ICompletionsFileSystemService fileSystemService: ICompletionsFileSystemService,
+		@ICompletionsFileSystemService
+		fileSystemService: ICompletionsFileSystemService,
 	) {
-		super(instantiationService, ignoreService, logTarget, fileSystemService);
+		super(
+			instantiationService,
+			ignoreService,
+			logTarget,
+			fileSystemService,
+		);
 	}
 	override async getRelatedFilesResponse(
 		docInfo: RelatedFilesDocumentInfo,
 		telemetryData: TelemetryWithExp,
-		cancellationToken: ICancellationToken | undefined
+		cancellationToken: ICancellationToken | undefined,
 	) {
 		const startTime = Date.now();
 		const languageId = docInfo.clientLanguageId.toLowerCase();
 		const fileType = getNeighboringFileType(languageId);
-		if (fileType === NeighboringFileType.RelatedOther && !this.reportedUnknownProviders.has(languageId)) {
+		if (
+			fileType === NeighboringFileType.RelatedOther &&
+			!this.reportedUnknownProviders.has(languageId)
+		) {
 			this.reportedUnknownProviders.add(languageId);
-			relatedFilesLogger.warn(this.logTarget, `unknown language ${languageId}`);
+			relatedFilesLogger.warn(
+				this.logTarget,
+				`unknown language ${languageId}`,
+			);
 		}
 		this.relatedFilesTelemetry(telemetryData);
 
-		relatedFilesLogger.debug(this.logTarget, `Fetching related files for ${docInfo.uri}`);
+		relatedFilesLogger.debug(
+			this.logTarget,
+			`Fetching related files for ${docInfo.uri}`,
+		);
 		if (!this.isActive(languageId, telemetryData)) {
-			relatedFilesLogger.debug(this.logTarget, 'language-server related-files experiment is not active.');
+			relatedFilesLogger.debug(
+				this.logTarget,
+				'language-server related-files experiment is not active.',
+			);
 			return EmptyRelatedFilesResponse;
 		}
 
@@ -83,7 +115,13 @@ export class CompositeRelatedFilesProvider extends RelatedFilesProvider {
 			return EmptyRelatedFilesResponse;
 		}
 		try {
-			return this.convert(docInfo.uri, languageProviders, startTime, telemetryData, cancellationToken);
+			return this.convert(
+				docInfo.uri,
+				languageProviders,
+				startTime,
+				telemetryData,
+				cancellationToken,
+			);
 		} catch (error) {
 			// When the command returns an empty std::optional, we get an Error exception with message:
 			// "Received message which is neither a response nor a notification message: {"jsonrpc": "2.0","id": 22}"
@@ -97,12 +135,12 @@ export class CompositeRelatedFilesProvider extends RelatedFilesProvider {
 		providers: Map<string, Provider>,
 		startTime: number,
 		telemetryData: TelemetryWithExp,
-		token: ICancellationToken | undefined
+		token: ICancellationToken | undefined,
 	): Promise<RelatedFilesResponse | undefined> {
 		if (!token) {
 			token = {
 				isCancellationRequested: false,
-				onCancellationRequested: () => ({ dispose() { } }),
+				onCancellationRequested: () => ({ dispose() {} }),
 			};
 		}
 		const combined: RelatedFilesResponse = { entries: [], traits: [] };
@@ -117,7 +155,10 @@ export class CompositeRelatedFilesProvider extends RelatedFilesProvider {
 				}
 				for (const entry of response.entries) {
 					for (const uri of entry.uris) {
-						relatedFilesLogger.debug(this.logTarget, uri.toString());
+						relatedFilesLogger.debug(
+							this.logTarget,
+							uri.toString(),
+						);
 					}
 				}
 			}
@@ -125,15 +166,35 @@ export class CompositeRelatedFilesProvider extends RelatedFilesProvider {
 		this.performanceTelemetry(Date.now() - startTime, telemetryData);
 		return allProvidersReturnedUndefined ? undefined : combined;
 	}
-	registerRelatedFilesProvider(extensionId: string, languageId: string, provider: ProviderCallback) {
+	registerRelatedFilesProvider(
+		extensionId: string,
+		languageId: string,
+		provider: ProviderCallback,
+	) {
 		const languageProvider = this.providers.get(languageId);
 		if (languageProvider) {
-			languageProvider.set(extensionId, { extensionId, languageId, callback: provider });
+			languageProvider.set(extensionId, {
+				extensionId,
+				languageId,
+				callback: provider,
+			});
 		} else {
-			this.providers.set(languageId, new Map([[extensionId, { extensionId, languageId, callback: provider }]]));
+			this.providers.set(
+				languageId,
+				new Map([
+					[
+						extensionId,
+						{ extensionId, languageId, callback: provider },
+					],
+				]),
+			);
 		}
 	}
-	unregisterRelatedFilesProvider(extensionId: string, languageId: string, callback: ProviderCallback) {
+	unregisterRelatedFilesProvider(
+		extensionId: string,
+		languageId: string,
+		callback: ProviderCallback,
+	) {
 		const languageProvider = this.providers.get(languageId);
 		if (languageProvider) {
 			const currentProvider = languageProvider.get(extensionId);
@@ -150,24 +211,36 @@ export class CompositeRelatedFilesProvider extends RelatedFilesProvider {
 		if (csharpLanguageIds.includes(languageId)) {
 			return (
 				this.featuresService.relatedFilesVSCodeCSharp(telemetryData) ||
-				this.instantiationService.invokeFunction(getConfig<boolean>, ConfigKey.RelatedFilesVSCodeCSharp)
+				this.instantiationService.invokeFunction(
+					getConfig<boolean>,
+					ConfigKey.RelatedFilesVSCodeCSharp,
+				)
 			);
 		} else if (typescriptLanguageIds.includes(languageId)) {
 			return (
-				this.featuresService.relatedFilesVSCodeTypeScript(telemetryData) ||
-				this.instantiationService.invokeFunction(getConfig<boolean>, ConfigKey.RelatedFilesVSCodeTypeScript)
+				this.featuresService.relatedFilesVSCodeTypeScript(
+					telemetryData,
+				) ||
+				this.instantiationService.invokeFunction(
+					getConfig<boolean>,
+					ConfigKey.RelatedFilesVSCodeTypeScript,
+				)
 			);
 		} else if (cppLanguageIds.includes(languageId)) {
-			return (
-				this.featuresService.cppHeadersEnableSwitch(telemetryData)
-			);
+			return this.featuresService.cppHeadersEnableSwitch(telemetryData);
 		}
 		return (
 			this.featuresService.relatedFilesVSCode(telemetryData) ||
-			this.instantiationService.invokeFunction(getConfig<boolean>, ConfigKey.RelatedFilesVSCode)
+			this.instantiationService.invokeFunction(
+				getConfig<boolean>,
+				ConfigKey.RelatedFilesVSCode,
+			)
 		);
 	}
-	relatedFilesTelemetry(telemetryData: TelemetryWithExp) { }
-	relatedFileNonresponseTelemetry(language: string, telemetryData: TelemetryWithExp) { }
-	performanceTelemetry(duration: number, telemetryData: TelemetryWithExp) { }
+	relatedFilesTelemetry(telemetryData: TelemetryWithExp) {}
+	relatedFileNonresponseTelemetry(
+		language: string,
+		telemetryData: TelemetryWithExp,
+	) {}
+	performanceTelemetry(duration: number, telemetryData: TelemetryWithExp) {}
 }

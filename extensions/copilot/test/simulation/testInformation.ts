@@ -5,7 +5,8 @@
 import { createServiceIdentifier } from '../../src/util/common/services';
 import { SimulationTest } from '../base/stest';
 
-export const ITestInformation = createServiceIdentifier<ITestInformation>('ITestInformation');
+export const ITestInformation =
+	createServiceIdentifier<ITestInformation>('ITestInformation');
 
 export interface ITestInformation {
 	fullTestName: string;
@@ -13,9 +14,7 @@ export interface ITestInformation {
 }
 
 export class TestInformation implements ITestInformation {
-	constructor(
-		private readonly _testInfo: SimulationTest,
-	) { }
+	constructor(private readonly _testInfo: SimulationTest) {}
 
 	get fullTestName(): string {
 		return this._testInfo.fullName;

@@ -12,5 +12,9 @@ export enum DiffHistoryMergeStrategy {
 }
 
 export namespace DiffHistoryMergeStrategy {
-	export const VALIDATOR = vEnum(DiffHistoryMergeStrategy.SameStartLine, DiffHistoryMergeStrategy.Proximity, DiffHistoryMergeStrategy.Hybrid);
+	export const VALIDATOR = vEnum(
+		DiffHistoryMergeStrategy.SameStartLine,
+		DiffHistoryMergeStrategy.Proximity,
+		DiffHistoryMergeStrategy.Hybrid,
+	);
 }

@@ -3,14 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import { createSingleCallFunction } from '../common/functional.js';
+import * as crypto from "crypto";
+import * as fs from "fs";
+import { createSingleCallFunction } from "../common/functional.js";
 
-export async function checksum(path: string, sha256hash: string | undefined): Promise<void> {
+export async function checksum(
+	path: string,
+	sha256hash: string | undefined,
+): Promise<void> {
 	const checksumPromise = new Promise<string | undefined>((resolve, reject) => {
 		const input = fs.createReadStream(path);
-		const hash = crypto.createHash('sha256');
+		const hash = crypto.createHash("sha256");
 		input.pipe(hash);
 
 		const done = createSingleCallFunction((err?: Error, result?: string) => {
@@ -25,15 +28,15 @@ export async function checksum(path: string, sha256hash: string | undefined): Pr
 			}
 		});
 
-		input.once('error', done);
-		input.once('end', done);
-		hash.once('error', done);
-		hash.once('data', (data: Buffer) => done(undefined, data.toString('hex')));
+		input.once("error", done);
+		input.once("end", done);
+		hash.once("error", done);
+		hash.once("data", (data: Buffer) => done(undefined, data.toString("hex")));
 	});
 
 	const hash = await checksumPromise;
 
 	if (hash !== sha256hash) {
-		throw new Error('Hash mismatch');
+		throw new Error("Hash mismatch");
 	}
 }

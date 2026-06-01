@@ -3,13 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as DOM from '../../../../../base/browser/dom.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { localize } from '../../../../../nls.js';
-import { LocalMcpServerScope } from '../../../../services/mcp/common/mcpWorkbenchManagementService.js';
-import { IMcpWorkbenchService, IWorkbenchMcpServer } from '../../../mcp/common/mcpTypes.js';
-import { userIcon, workspaceIcon } from './aiCustomizationIcons.js';
+import * as DOM from "../../../../../base/browser/dom.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { localize } from "../../../../../nls.js";
+import { LocalMcpServerScope } from "../../../../services/mcp/common/mcpWorkbenchManagementService.js";
+import {
+	IMcpWorkbenchService,
+	IWorkbenchMcpServer,
+} from "../../../mcp/common/mcpTypes.js";
+import { userIcon, workspaceIcon } from "./aiCustomizationIcons.js";
 
 const $ = DOM.$;
 
@@ -21,7 +24,6 @@ const $ = DOM.$;
  * row's existing context menu, so this component intentionally stays small.
  */
 export class EmbeddedMcpServerDetail extends Disposable {
-
 	private readonly root: HTMLElement;
 	private readonly headerEl: HTMLElement;
 	private readonly leadingSlotEl: HTMLElement;
@@ -34,33 +36,51 @@ export class EmbeddedMcpServerDetail extends Disposable {
 
 	constructor(
 		parent: HTMLElement,
-		@IMcpWorkbenchService private readonly mcpWorkbenchService: IMcpWorkbenchService,
+		@IMcpWorkbenchService
+		private readonly mcpWorkbenchService: IMcpWorkbenchService,
 	) {
 		super();
 
-		this.root = DOM.append(parent, $('.ai-customization-embedded-detail.embedded-mcp-detail'));
+		this.root = DOM.append(
+			parent,
+			$(".ai-customization-embedded-detail.embedded-mcp-detail"),
+		);
 
-		this.headerEl = DOM.append(this.root, $('.embedded-detail-header'));
+		this.headerEl = DOM.append(this.root, $(".embedded-detail-header"));
 		// Slot at the start of the header for callers to append leading chrome
 		// (e.g. a back button) without reaching into private DOM structure.
-		this.leadingSlotEl = DOM.append(this.headerEl, $('.embedded-detail-leading-slot'));
-		const headerText = DOM.append(this.headerEl, $('.embedded-detail-header-text'));
-		this.nameEl = DOM.append(headerText, $('h2.embedded-detail-name'));
-		this.nameEl.setAttribute('role', 'heading');
-		this.scopeEl = DOM.append(headerText, $('.embedded-detail-scope'));
+		this.leadingSlotEl = DOM.append(
+			this.headerEl,
+			$(".embedded-detail-leading-slot"),
+		);
+		const headerText = DOM.append(
+			this.headerEl,
+			$(".embedded-detail-header-text"),
+		);
+		this.nameEl = DOM.append(headerText, $("h2.embedded-detail-name"));
+		this.nameEl.setAttribute("role", "heading");
+		this.scopeEl = DOM.append(headerText, $(".embedded-detail-scope"));
 
-		this.descriptionEl = DOM.append(this.root, $('.embedded-detail-description'));
+		this.descriptionEl = DOM.append(
+			this.root,
+			$(".embedded-detail-description"),
+		);
 
-		this.emptyEl = DOM.append(this.root, $('.embedded-detail-empty'));
-		this.emptyEl.textContent = localize('mcpDetailEmpty', "No MCP server selected.");
+		this.emptyEl = DOM.append(this.root, $(".embedded-detail-empty"));
+		this.emptyEl.textContent = localize(
+			"mcpDetailEmpty",
+			"No MCP server selected.",
+		);
 
 		// Refresh when the underlying server changes (install state, enablement, etc.).
-		this._register(this.mcpWorkbenchService.onChange(server => {
-			if (this.current && server && server.id === this.current.id) {
-				this.current = server;
-				this.renderItem();
-			}
-		}));
+		this._register(
+			this.mcpWorkbenchService.onChange((server) => {
+				if (this.current && server && server.id === this.current.id) {
+					this.current = server;
+					this.renderItem();
+				}
+			}),
+		);
 
 		this.renderItem();
 	}
@@ -94,12 +114,12 @@ export class EmbeddedMcpServerDetail extends Disposable {
 	private renderItem(): void {
 		const server = this.current;
 		const hasItem = !!server;
-		this.emptyEl.style.display = hasItem ? 'none' : '';
-		this.root.classList.toggle('is-empty', !hasItem);
+		this.emptyEl.style.display = hasItem ? "none" : "";
+		this.root.classList.toggle("is-empty", !hasItem);
 		if (!server) {
-			this.nameEl.textContent = '';
-			this.scopeEl.textContent = '';
-			this.descriptionEl.textContent = '';
+			this.nameEl.textContent = "";
+			this.scopeEl.textContent = "";
+			this.descriptionEl.textContent = "";
 			return;
 		}
 
@@ -110,26 +130,31 @@ export class EmbeddedMcpServerDetail extends Disposable {
 		const scopeInfo = describeMcpScope(scope);
 		if (scopeInfo) {
 			this.scopeEl.textContent = scopeInfo.label;
-			this.scopeEl.style.display = '';
+			this.scopeEl.style.display = "";
 		} else {
 			this.scopeEl.replaceChildren();
-			this.scopeEl.style.display = 'none';
+			this.scopeEl.style.display = "none";
 		}
 
 		// Description (single line, but allow wrapping in CSS)
-		const description = (server.description || '').trim();
+		const description = (server.description || "").trim();
 		this.descriptionEl.textContent = description;
-		this.descriptionEl.style.display = description ? '' : 'none';
+		this.descriptionEl.style.display = description ? "" : "none";
 	}
 }
 
-function describeMcpScope(scope: LocalMcpServerScope | undefined): { label: string; icon: ThemeIcon } | undefined {
+function describeMcpScope(
+	scope: LocalMcpServerScope | undefined,
+): { label: string; icon: ThemeIcon } | undefined {
 	switch (scope) {
 		case LocalMcpServerScope.Workspace:
-			return { label: localize('mcpScopeWorkspace', "Workspace"), icon: workspaceIcon };
+			return {
+				label: localize("mcpScopeWorkspace", "Workspace"),
+				icon: workspaceIcon,
+			};
 		case LocalMcpServerScope.User:
 		case LocalMcpServerScope.RemoteUser:
-			return { label: localize('mcpScopeUser', "User"), icon: userIcon };
+			return { label: localize("mcpScopeUser", "User"), icon: userIcon };
 		default:
 			return undefined;
 	}

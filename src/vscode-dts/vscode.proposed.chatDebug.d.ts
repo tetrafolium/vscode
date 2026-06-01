@@ -5,7 +5,7 @@
 
 // version: 4
 
-declare module 'vscode' {
+declare module "vscode" {
 	/**
 	 * The severity level of a chat debug log event.
 	 */
@@ -13,7 +13,7 @@ declare module 'vscode' {
 		Trace = 0,
 		Info = 1,
 		Warning = 2,
-		Error = 3
+		Error = 3,
 	}
 
 	/**
@@ -21,7 +21,7 @@ declare module 'vscode' {
 	 */
 	export enum ChatDebugToolCallResult {
 		Success = 0,
-		Error = 1
+		Error = 1,
 	}
 
 	/**
@@ -260,7 +260,7 @@ declare module 'vscode' {
 	export enum ChatDebugSubagentStatus {
 		Running = 0,
 		Completed = 1,
-		Failed = 2
+		Failed = 2,
 	}
 
 	/**
@@ -464,7 +464,7 @@ declare module 'vscode' {
 	 */
 	export enum ChatDebugMessageContentType {
 		User = 0,
-		Agent = 1
+		Agent = 1,
 	}
 
 	/**
@@ -493,7 +493,11 @@ declare module 'vscode' {
 		 * @param message A short summary.
 		 * @param sections The structured sections.
 		 */
-		constructor(type: ChatDebugMessageContentType, message: string, sections: ChatDebugMessageSection[]);
+		constructor(
+			type: ChatDebugMessageContentType,
+			message: string,
+			sections: ChatDebugMessageSection[],
+		);
 	}
 
 	/**
@@ -687,7 +691,7 @@ declare module 'vscode' {
 		/** The hook returned a blocking error (exit code 2). */
 		Error = 1,
 		/** The hook returned a non-blocking warning (other non-zero exit codes). */
-		NonBlockingError = 2
+		NonBlockingError = 2,
 	}
 
 	/**
@@ -696,13 +700,26 @@ declare module 'vscode' {
 	 * {@link ChatDebugAgentResponseEvent} from resolve, which will be
 	 * automatically converted to structured message content.
 	 */
-	export type ChatDebugResolvedEventContent = ChatDebugEventTextContent | ChatDebugEventMessageContent | ChatDebugEventToolCallContent | ChatDebugEventModelTurnContent | ChatDebugEventHookContent | ChatDebugUserMessageEvent | ChatDebugAgentResponseEvent;
+	export type ChatDebugResolvedEventContent =
+		| ChatDebugEventTextContent
+		| ChatDebugEventMessageContent
+		| ChatDebugEventToolCallContent
+		| ChatDebugEventModelTurnContent
+		| ChatDebugEventHookContent
+		| ChatDebugUserMessageEvent
+		| ChatDebugAgentResponseEvent;
 
 	/**
 	 * Union of all chat debug event types. Each type is a class,
 	 * following the same pattern as {@link ChatResponsePart}.
 	 */
-	export type ChatDebugEvent = ChatDebugToolCallEvent | ChatDebugModelTurnEvent | ChatDebugGenericEvent | ChatDebugSubagentInvocationEvent | ChatDebugUserMessageEvent | ChatDebugAgentResponseEvent;
+	export type ChatDebugEvent =
+		| ChatDebugToolCallEvent
+		| ChatDebugModelTurnEvent
+		| ChatDebugGenericEvent
+		| ChatDebugSubagentInvocationEvent
+		| ChatDebugUserMessageEvent
+		| ChatDebugAgentResponseEvent;
 
 	/**
 	 * A provider that supplies debug events for a chat session.
@@ -721,7 +738,7 @@ declare module 'vscode' {
 		provideChatDebugLog(
 			sessionResource: Uri,
 			progress: Progress<ChatDebugEvent>,
-			token: CancellationToken
+			token: CancellationToken,
 		): ProviderResult<ChatDebugEvent[]>;
 
 		/**
@@ -735,7 +752,7 @@ declare module 'vscode' {
 		 */
 		resolveChatDebugLogEvent?(
 			eventId: string,
-			token: CancellationToken
+			token: CancellationToken,
 		): ProviderResult<ChatDebugResolvedEventContent>;
 
 		/**
@@ -751,7 +768,7 @@ declare module 'vscode' {
 		provideChatDebugLogExport?(
 			sessionResource: Uri,
 			options: ChatDebugLogExportOptions,
-			token: CancellationToken
+			token: CancellationToken,
 		): ProviderResult<Uint8Array>;
 
 		/**
@@ -766,7 +783,7 @@ declare module 'vscode' {
 		 */
 		resolveChatDebugLogImport?(
 			data: Uint8Array,
-			token: CancellationToken
+			token: CancellationToken,
 		): ProviderResult<ChatDebugLogImportResult>;
 
 		/**
@@ -777,7 +794,7 @@ declare module 'vscode' {
 		 * @returns Session URIs with available debug data and optional titles.
 		 */
 		provideAvailableDebugSessionResources?(
-			token: CancellationToken
+			token: CancellationToken,
 		): ProviderResult<{ uri: Uri; title?: string }[]>;
 	}
 
@@ -789,7 +806,9 @@ declare module 'vscode' {
 		 * @param provider The chat debug log provider.
 		 * @returns A disposable that unregisters the provider.
 		 */
-		export function registerChatDebugLogProvider(provider: ChatDebugLogProvider): Disposable;
+		export function registerChatDebugLogProvider(
+			provider: ChatDebugLogProvider,
+		): Disposable;
 
 		/**
 		 * Fired when a core-originated debug event is received (e.g., prompt discovery,

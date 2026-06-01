@@ -18,11 +18,15 @@ import { CurrentTestRunInfo } from './simulationContext';
 const compress = promisify(zlib.brotliCompress);
 const decompress = promisify(zlib.brotliDecompress);
 
-const DefaultCachePath = process.env.VITEST ? path.resolve(__dirname, '..', 'simulation', 'cache') : path.resolve(__dirname, '..', 'test', 'simulation', 'cache');
+const DefaultCachePath = process.env.VITEST
+	? path.resolve(__dirname, '..', 'simulation', 'cache')
+	: path.resolve(__dirname, '..', 'test', 'simulation', 'cache');
 
 async function getGitRoot(cwd: string): Promise<string> {
 	const execAsync = promisify(exec);
-	const { stdout } = await execAsync('git rev-parse --show-toplevel', { cwd });
+	const { stdout } = await execAsync('git rev-parse --show-toplevel', {
+		cwd,
+	});
 	return stdout.trim();
 }
 
@@ -51,25 +55,36 @@ export class Cache extends EventEmitter {
 		this.externalLayersPath = process.env.EXTERNAL_CACHE_LAYERS_PATH;
 
 		if (!fs.existsSync(path.join(this.cachePath, 'base.sqlite'))) {
-			throw new Error(`Base cache file does not exist as ${path.join(this.cachePath, 'base.sqlite')}.`);
+			throw new Error(
+				`Base cache file does not exist as ${path.join(this.cachePath, 'base.sqlite')}.`,
+			);
 		}
 
-		if (this.externalLayersPath && !fs.existsSync(this.externalLayersPath)) {
-			throw new Error(`External layers cache directory provided but it does not exist at ${this.externalLayersPath}.`);
+		if (
+			this.externalLayersPath &&
+			!fs.existsSync(this.externalLayersPath)
+		) {
+			throw new Error(
+				`External layers cache directory provided but it does not exist at ${this.externalLayersPath}.`,
+			);
 		}
 
 		fs.mkdirSync(this.layersPath, { recursive: true });
-		this.base = new Keyv(new KeyvSqlite(path.join(this.cachePath, 'base.sqlite')));
+		this.base = new Keyv(
+			new KeyvSqlite(path.join(this.cachePath, 'base.sqlite')),
+		);
 
 		this.layers = new Map();
-		let layerFiles = fs.readdirSync(this.layersPath)
-			.filter(file => file.endsWith('.sqlite'))
-			.map(file => path.join(this.layersPath, file));
+		let layerFiles = fs
+			.readdirSync(this.layersPath)
+			.filter((file) => file.endsWith('.sqlite'))
+			.map((file) => path.join(this.layersPath, file));
 
 		if (this.externalLayersPath !== undefined) {
-			const externalLayerFiles = fs.readdirSync(this.externalLayersPath)
-				.filter(file => file.endsWith('.sqlite'))
-				.map(file => path.join(this.externalLayersPath!, file));
+			const externalLayerFiles = fs
+				.readdirSync(this.externalLayersPath)
+				.filter((file) => file.endsWith('.sqlite'))
+				.map((file) => path.join(this.externalLayersPath!, file));
 			layerFiles = layerFiles.concat(externalLayerFiles);
 		}
 
@@ -83,12 +98,12 @@ export class Cache extends EventEmitter {
 		let data: string | undefined;
 
 		// First check base database
-		data = await this.base.get(key) as string;
+		data = (await this.base.get(key)) as string;
 
 		if (!data) {
 			// Check layer databases
 			for (const [, layer] of this.layers) {
-				data = await layer.get(key) as string;
+				data = (await layer.get(key)) as string;
 
 				if (data) {
 					break;
@@ -112,7 +127,11 @@ export class Cache extends EventEmitter {
 		return this._decompress(data);
 	}
 
-	async set(key: string, value: string, layer?: 'base' | string): Promise<void> {
+	async set(
+		key: string,
+		value: string,
+		layer?: 'base' | string,
+	): Promise<void> {
 		if (await this.has(key)) {
 			throw new Error(`Key already exists in cache: ${key}`);
 		}
@@ -138,7 +157,6 @@ export class Cache extends EventEmitter {
 				break;
 			}
 		}
-
 	}
 
 	async has(key: string): Promise<boolean> {
@@ -190,7 +208,9 @@ export class Cache extends EventEmitter {
 		}
 
 		this.gcBaseKeys = new Set<string>();
-		this.gcBase = new Keyv(new KeyvSqlite(path.join(this.cachePath, '_base.sqlite')));
+		this.gcBase = new Keyv(
+			new KeyvSqlite(path.join(this.cachePath, '_base.sqlite')),
+		);
 	}
 
 	async gcEnd(): Promise<void> {
@@ -208,19 +228,20 @@ export class Cache extends EventEmitter {
 		// Rename _base.sqlite to base.sqlite
 		fs.renameSync(
 			path.join(this.cachePath, '_base.sqlite'),
-			path.join(this.cachePath, 'base.sqlite'));
+			path.join(this.cachePath, 'base.sqlite'),
+		);
 
 		// Delete the layer databases
 		for (const [uuid, layer] of this.layers.entries()) {
 			try {
 				// Close the connection
 				await layer.disconnect();
-			} catch (error) { }
+			} catch (error) {}
 
 			try {
 				// Delete the layer database
 				fs.unlinkSync(path.join(this.layersPath, `${uuid}.sqlite`));
-			} catch (error) { }
+			} catch (error) {}
 		}
 
 		this.activeLayer = undefined;
@@ -236,7 +257,8 @@ export class Cache extends EventEmitter {
 			this.activeLayer = (async () => {
 				const execAsync = promisify(exec);
 
-				const activeLayerPath = this.externalLayersPath ?? this.layersPath;
+				const activeLayerPath =
+					this.externalLayersPath ?? this.layersPath;
 				const gitStatusPath = this.externalLayersPath
 					? `${path.relative(await getGitRoot(activeLayerPath), activeLayerPath)}/*`
 					: 'test/simulation/cache/layers/*';
@@ -244,11 +266,17 @@ export class Cache extends EventEmitter {
 				// Check git for an uncommitted layer database file
 				try {
 					const gitRoot = await getGitRoot(activeLayerPath);
-					const { stdout: statusStdout } = await execAsync(`git status -z ${gitStatusPath}`, { cwd: gitRoot });
+					const { stdout: statusStdout } = await execAsync(
+						`git status -z ${gitStatusPath}`,
+						{ cwd: gitRoot },
+					);
 					if (statusStdout !== '') {
-						const layerDatabaseEntries = statusStdout.split('\0').filter(entry => entry.endsWith('.sqlite'));
+						const layerDatabaseEntries = statusStdout
+							.split('\0')
+							.filter((entry) => entry.endsWith('.sqlite'));
 						if (layerDatabaseEntries.length > 0) {
-							const regex = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.sqlite$/;
+							const regex =
+								/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.sqlite$/;
 							const match = layerDatabaseEntries[0].match(regex);
 							if (match && this.layers.has(match[1])) {
 								return this.layers.get(match[1])!;
@@ -261,7 +289,11 @@ export class Cache extends EventEmitter {
 
 				// Create a new layer database
 				const uuid = generateUuid();
-				const activeLayer = new Keyv(new KeyvSqlite(path.join(activeLayerPath, `${uuid}.sqlite`)));
+				const activeLayer = new Keyv(
+					new KeyvSqlite(
+						path.join(activeLayerPath, `${uuid}.sqlite`),
+					),
+				);
 				this.layers.set(uuid, activeLayer);
 				return activeLayer;
 			})();
@@ -271,7 +303,9 @@ export class Cache extends EventEmitter {
 	}
 
 	private async _compress(value: string): Promise<string> {
-		const buffer = await compress(value, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 6, } });
+		const buffer = await compress(value, {
+			params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 6 },
+		});
 		return buffer.toString('base64');
 	}
 
@@ -291,8 +325,10 @@ export interface ICache<TRequest, TResponse> {
 	set(req: TRequest, cachedResponse: TResponse): Promise<void>;
 }
 
-export class SQLiteCache<TRequest extends CacheableRequest, TResponse> implements ICache<TRequest, TResponse> {
-
+export class SQLiteCache<
+	TRequest extends CacheableRequest,
+	TResponse,
+> implements ICache<TRequest, TResponse> {
 	private readonly namespace: string;
 	private readonly locks = new LockMap();
 
@@ -305,12 +341,17 @@ export class SQLiteCache<TRequest extends CacheableRequest, TResponse> implement
 	}
 
 	async getRequest(hash: string): Promise<TRequest | undefined> {
-		const result = await Cache.Instance.get(`${this.namespace}:request:${hash}`);
+		const result = await Cache.Instance.get(
+			`${this.namespace}:request:${hash}`,
+		);
 		return result ? JSON.parse(result) : undefined;
 	}
 
 	async setRequest(hash: string, value: TRequest): Promise<void> {
-		await Cache.Instance.set(`${this.namespace}:request:${hash}`, JSON.stringify(value));
+		await Cache.Instance.set(
+			`${this.namespace}:request:${hash}`,
+			JSON.stringify(value),
+		);
 	}
 
 	async has(req: TRequest): Promise<boolean> {
@@ -318,28 +359,39 @@ export class SQLiteCache<TRequest extends CacheableRequest, TResponse> implement
 	}
 
 	async get(req: TRequest): Promise<TResponse | undefined> {
-		const result = await Cache.Instance.get(`${this.namespace}:response:${req.hash}`);
+		const result = await Cache.Instance.get(
+			`${this.namespace}:response:${req.hash}`,
+		);
 		return result ? JSON.parse(result) : undefined;
 	}
 
 	async set(req: TRequest, value: TResponse): Promise<void> {
 		await this.locks.withLock(req.hash, async () => {
-			if (!!req.toJSON && !await this.hasRequest(req.hash)) {
+			if (!!req.toJSON && !(await this.hasRequest(req.hash))) {
 				await this.setRequest(req.hash, req);
 			}
 		});
 
-		await Cache.Instance.set(`${this.namespace}:response:${req.hash}`, JSON.stringify(value));
+		await Cache.Instance.set(
+			`${this.namespace}:response:${req.hash}`,
+			JSON.stringify(value),
+		);
 	}
 }
 
 export interface ISlottedCache<TRequest, TResponse> {
 	get(req: TRequest, cacheSlot: number): Promise<TResponse | undefined>;
-	set(req: TRequest, cacheSlot: number, cachedResponse: TResponse): Promise<void>;
+	set(
+		req: TRequest,
+		cacheSlot: number,
+		cachedResponse: TResponse,
+	): Promise<void>;
 }
 
-export class SQLiteSlottedCache<TRequest extends CacheableRequest, TResponse> implements ISlottedCache<TRequest, TResponse> {
-
+export class SQLiteSlottedCache<
+	TRequest extends CacheableRequest,
+	TResponse,
+> implements ISlottedCache<TRequest, TResponse> {
 	private readonly namespace: string;
 	private readonly locks = new LockMap();
 
@@ -352,30 +404,49 @@ export class SQLiteSlottedCache<TRequest extends CacheableRequest, TResponse> im
 	}
 
 	async getRequest(hash: string): Promise<TRequest | undefined> {
-		const result = await Cache.Instance.get(`${this.namespace}:request:${hash}`);
+		const result = await Cache.Instance.get(
+			`${this.namespace}:request:${hash}`,
+		);
 		return result ? JSON.parse(result) : undefined;
 	}
 
 	async setRequest(hash: string, value: TRequest): Promise<void> {
-		await Cache.Instance.set(`${this.namespace}:request:${hash}`, JSON.stringify(value));
+		await Cache.Instance.set(
+			`${this.namespace}:request:${hash}`,
+			JSON.stringify(value),
+		);
 	}
 
 	async has(req: TRequest, cacheSlot: number): Promise<boolean> {
-		return Cache.Instance.has(`${this.namespace}:response:${req.hash}:${cacheSlot}`);
+		return Cache.Instance.has(
+			`${this.namespace}:response:${req.hash}:${cacheSlot}`,
+		);
 	}
 
-	async get(req: TRequest, cacheSlot: number): Promise<TResponse | undefined> {
-		const result = await Cache.Instance.get(`${this.namespace}:response:${req.hash}:${cacheSlot}`);
+	async get(
+		req: TRequest,
+		cacheSlot: number,
+	): Promise<TResponse | undefined> {
+		const result = await Cache.Instance.get(
+			`${this.namespace}:response:${req.hash}:${cacheSlot}`,
+		);
 		return result ? JSON.parse(result) : undefined;
 	}
 
-	async set(req: TRequest, cacheSlot: number, value: TResponse): Promise<void> {
+	async set(
+		req: TRequest,
+		cacheSlot: number,
+		value: TResponse,
+	): Promise<void> {
 		await this.locks.withLock(req.hash, async () => {
-			if (!await this.hasRequest(req.hash)) {
+			if (!(await this.hasRequest(req.hash))) {
 				await this.setRequest(req.hash, req);
 			}
 		});
 
-		await Cache.Instance.set(`${this.namespace}:response:${req.hash}:${cacheSlot}`, JSON.stringify(value));
+		await Cache.Instance.set(
+			`${this.namespace}:response:${req.hash}:${cacheSlot}`,
+			JSON.stringify(value),
+		);
 	}
 }

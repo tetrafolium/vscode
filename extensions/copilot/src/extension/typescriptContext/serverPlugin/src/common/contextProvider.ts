@@ -9,42 +9,69 @@ const ts = TS();
 import { CodeSnippetBuilder } from './code';
 import type { Host } from './host';
 import {
-	CacheScopeKind, CodeSnippet,
+	CacheScopeKind,
+	CodeSnippet,
 	ContextItem,
 	ContextItemReference,
 	ContextKind,
 	ContextRequestResultState,
 	ContextRunnableResultKind,
 	ContextRunnableState,
-	EmitMode, ErrorData, SpeculativeKind, Timings, Trait, TraitKind,
+	EmitMode,
+	ErrorData,
+	SpeculativeKind,
+	Timings,
+	Trait,
+	TraitKind,
 	type CachedContextItem,
 	type CachedContextRunnableResult,
-	type CacheInfo, type CacheScope,
+	type CacheInfo,
+	type CacheScope,
 	type ContextItemKey,
 	type ContextRequestResult,
 	type ContextRunnableResult,
 	type ContextRunnableResultId,
 	type ContextRunnableResultReference,
 	type ContextRunnableResultTypes,
-	type FullContextItem, type PriorityTag, type Range
+	type FullContextItem,
+	type PriorityTag,
+	type Range,
 } from './protocol';
-import { ProgramContext, RecoverableError, type CodeCacheItem, type EmitterContext, type SnippetProvider } from './types';
+import {
+	ProgramContext,
+	RecoverableError,
+	type CodeCacheItem,
+	type EmitterContext,
+	type SnippetProvider,
+} from './types';
 import tss, { ImportedByState, Symbols, Types } from './typescripts';
 import { LRUCache } from './utils';
 
-
 export class RequestContext {
-
 	private readonly symbols: Map<tt.Program, Symbols>;
 
 	public readonly neighborFiles: tt.server.NormalizedPath[];
-	public readonly clientSideRunnableResults: Map<ContextRunnableResultId, CachedContextRunnableResult>;
-	private readonly clientSideContextItems: Map<ContextItemKey, CachedContextItem>;
+	public readonly clientSideRunnableResults: Map<
+		ContextRunnableResultId,
+		CachedContextRunnableResult
+	>;
+	private readonly clientSideContextItems: Map<
+		ContextItemKey,
+		CachedContextItem
+	>;
 
 	public readonly session: ComputeContextSession;
 	public readonly includeDocumentation: boolean;
 
-	constructor(session: ComputeContextSession, neighborFiles: tt.server.NormalizedPath[], clientSideRunnableResults: Map<ContextRunnableResultId, CachedContextRunnableResult>, includeDocumentation: boolean) {
+	constructor(
+		session: ComputeContextSession,
+		neighborFiles: tt.server.NormalizedPath[],
+		clientSideRunnableResults: Map<
+			ContextRunnableResultId,
+			CachedContextRunnableResult
+		>,
+		includeDocumentation: boolean,
+	) {
 		this.session = session;
 		this.symbols = new Map();
 		this.neighborFiles = neighborFiles;
@@ -78,7 +105,9 @@ export class RequestContext {
 		return result;
 	}
 
-	public createContextItemReferenceIfManaged(key: ContextItemKey): ContextItemReference | undefined {
+	public createContextItemReferenceIfManaged(
+		key: ContextItemKey,
+	): ContextItemReference | undefined {
 		const cachedItem = this.clientSideContextItems.get(key);
 		return cachedItem !== undefined
 			? ContextItemReference.create(cachedItem.key)
@@ -91,7 +120,6 @@ export class RequestContext {
 }
 
 export abstract class Search<R> extends ProgramContext {
-
 	protected readonly program: tt.Program;
 	protected readonly symbols: Symbols;
 
@@ -129,7 +157,9 @@ export abstract class Search<R> extends ProgramContext {
 					if (ts.isTypeAliasDeclaration(declaration)) {
 						const type = declaration.type;
 						if (ts.isTypeReferenceNode(type)) {
-							result = this.symbols.getLeafSymbolAtLocation(type.typeName);
+							result = this.symbols.getLeafSymbolAtLocation(
+								type.typeName,
+							);
 						}
 					}
 				}
@@ -142,13 +172,23 @@ export abstract class Search<R> extends ProgramContext {
 		return result;
 	}
 
-	public static getNodeInProgram<T extends tt.Node>(program: tt.Program, node: T): T {
-		function sameChain(node: tt.Node | undefined, other: tt.Node | undefined): boolean {
+	public static getNodeInProgram<T extends tt.Node>(
+		program: tt.Program,
+		node: T,
+	): T {
+		function sameChain(
+			node: tt.Node | undefined,
+			other: tt.Node | undefined,
+		): boolean {
 			if (node === undefined || other === undefined) {
 				return node === other;
 			}
 			while (node !== undefined && other !== undefined) {
-				if (node.kind !== other.kind || node.pos !== other.pos || node.end !== other.end) {
+				if (
+					node.kind !== other.kind ||
+					node.pos !== other.pos ||
+					node.end !== other.end
+				) {
 					return false;
 				}
 				node = node.parent;
@@ -159,28 +199,44 @@ export abstract class Search<R> extends ProgramContext {
 		const fileName = node.getSourceFile().fileName;
 		const other = program.getSourceFile(fileName);
 		if (other === undefined) {
-			throw new RecoverableError(`No source file found for ${fileName}`, RecoverableError.SourceFileNotFound);
+			throw new RecoverableError(
+				`No source file found for ${fileName}`,
+				RecoverableError.SourceFileNotFound,
+			);
 		}
 		const candidate = tss.getTokenAtPosition(other, node.pos);
 		let otherNode = candidate;
 		if (otherNode === undefined) {
-			throw new RecoverableError(`No node found for ${fileName}:${node.pos}`, RecoverableError.NodeNotFound);
+			throw new RecoverableError(
+				`No node found for ${fileName}:${node.pos}`,
+				RecoverableError.NodeNotFound,
+			);
 		}
 
 		while (otherNode !== undefined) {
-			if (node.pos === otherNode.pos && node.end === otherNode.end && node.kind === otherNode.kind && sameChain(node.parent, otherNode.parent)) {
+			if (
+				node.pos === otherNode.pos &&
+				node.end === otherNode.end &&
+				node.kind === otherNode.kind &&
+				sameChain(node.parent, otherNode.parent)
+			) {
 				return otherNode as T;
 			}
 			otherNode = otherNode.parent;
 		}
 
-		throw new RecoverableError(`Found node ${candidate.kind} for node ${node.kind} in file ${fileName}:${node.pos}`, RecoverableError.NodeKindMismatch);
+		throw new RecoverableError(
+			`Found node ${candidate.kind} for node ${node.kind} in file ${fileName}:${node.pos}`,
+			RecoverableError.NodeKindMismatch,
+		);
 	}
 
 	public abstract with(program: tt.Program): Search<R>;
 	public abstract score(program: tt.Program, context: RequestContext): number;
-	public abstract run(context: RequestContext, token: tt.CancellationToken): R | undefined;
-
+	public abstract run(
+		context: RequestContext,
+		token: tt.CancellationToken,
+	): R | undefined;
 }
 
 export interface Logger {
@@ -191,18 +247,15 @@ export interface Logger {
 }
 
 export class NullLogger implements Logger {
-	public info(): void {
-	}
-	public msg(): void {
-	}
-	public startGroup(): void {
-	}
-	public endGroup(): void {
-	}
+	public info(): void {}
+	public msg(): void {}
+	public startGroup(): void {}
+	public endGroup(): void {}
 }
 
-export abstract class ComputeContextSession implements tss.StateProvider, EmitterContext {
-
+export abstract class ComputeContextSession
+	implements tss.StateProvider, EmitterContext
+{
 	public readonly languageServiceHost: tt.LanguageServiceHost;
 	public readonly host: Host;
 
@@ -210,7 +263,11 @@ export abstract class ComputeContextSession implements tss.StateProvider, Emitte
 	private readonly importedByState: Map<string, ImportedByState>;
 	private readonly supportsCaching: boolean;
 
-	protected constructor(languageServiceHost: tt.LanguageServiceHost, host: Host, supportsCaching: boolean) {
+	protected constructor(
+		languageServiceHost: tt.LanguageServiceHost,
+		host: Host,
+		supportsCaching: boolean,
+	) {
 		this.languageServiceHost = languageServiceHost;
 		this.host = host;
 		this.codeCache = new LRUCache(100);
@@ -227,7 +284,11 @@ export abstract class ComputeContextSession implements tss.StateProvider, Emitte
 		return state;
 	}
 
-	public run<R>(search: Search<R>, context: RequestContext, token: tt.CancellationToken): [tt.Program | undefined, R | undefined] {
+	public run<R>(
+		search: Search<R>,
+		context: RequestContext,
+		token: tt.CancellationToken,
+	): [tt.Program | undefined, R | undefined] {
 		const programsToSearch = this.getPossiblePrograms(search, context);
 		for (const program of programsToSearch) {
 			const programSearch = search.with(program);
@@ -239,7 +300,10 @@ export abstract class ComputeContextSession implements tss.StateProvider, Emitte
 		return [undefined, undefined];
 	}
 
-	private getPossiblePrograms<R>(search: Search<R>, context: RequestContext): tt.Program[] {
+	private getPossiblePrograms<R>(
+		search: Search<R>,
+		context: RequestContext,
+	): tt.Program[] {
 		const candidates: [number, tt.Program][] = [];
 		for (const languageService of this.getLanguageServices()) {
 			const program = languageService.getProgram();
@@ -251,12 +315,15 @@ export abstract class ComputeContextSession implements tss.StateProvider, Emitte
 				candidates.push([score, program]);
 			}
 		}
-		return candidates.sort((a, b) => b[0] - a[0]).map(c => c[1]);
+		return candidates.sort((a, b) => b[0] - a[0]).map((c) => c[1]);
 	}
 
 	public getCachedCode(key: string): CodeCacheItem | undefined;
 	public getCachedCode(symbol: tt.Symbol): CodeCacheItem | undefined;
-	public getCachedCode(symbolOrKey: tt.Symbol | string, symbol?: tt.Symbol): CodeCacheItem | undefined {
+	public getCachedCode(
+		symbolOrKey: tt.Symbol | string,
+		symbol?: tt.Symbol,
+	): CodeCacheItem | undefined {
 		if (!this.supportsCaching) {
 			return undefined;
 		}
@@ -270,7 +337,10 @@ export abstract class ComputeContextSession implements tss.StateProvider, Emitte
 
 	public cacheCode(key: string, code: CodeCacheItem): void;
 	public cacheCode(symbol: tt.Symbol, code: CodeCacheItem): void;
-	public cacheCode(symbolOrKey: tt.Symbol | string, code: CodeCacheItem): void {
+	public cacheCode(
+		symbolOrKey: tt.Symbol | string,
+		code: CodeCacheItem,
+	): void {
 		if (!this.supportsCaching) {
 			return;
 		}
@@ -289,24 +359,28 @@ export abstract class ComputeContextSession implements tss.StateProvider, Emitte
 	}
 
 	public abstract readonly logger: Logger;
-	public abstract getLanguageServices(sourceFile?: tt.SourceFile): IterableIterator<tt.LanguageService>;
+	public abstract getLanguageServices(
+		sourceFile?: tt.SourceFile,
+	): IterableIterator<tt.LanguageService>;
 	public abstract logError(error: Error, cmd: string): void;
-	public abstract getScriptVersion(sourceFile: tt.SourceFile): string | undefined;
+	public abstract getScriptVersion(
+		sourceFile: tt.SourceFile,
+	): string | undefined;
 }
 
-
 export interface RunnableResultContext {
-	createContextItemReference(key: ContextItemKey): ContextItemReference | undefined;
+	createContextItemReference(
+		key: ContextItemKey,
+	): ContextItemReference | undefined;
 	manageContextItem(item: FullContextItem): ContextItem;
 }
 
 export enum SnippetLocation {
 	Primary,
-	Secondary
+	Secondary,
 }
 
 export class RunnableResult {
-
 	private readonly id: string;
 	private readonly runnableResultContext: RunnableResultContext;
 
@@ -320,7 +394,15 @@ export class RunnableResult {
 	public readonly items: ContextItem[];
 	public debugPath: string | undefined;
 
-	constructor(id: ContextRunnableResultId, priority: number, runnableResultContext: RunnableResultContext, primaryBudget: CharacterBudget, secondaryBudget: CharacterBudget, speculativeKind: SpeculativeKind, cache?: CacheInfo | undefined) {
+	constructor(
+		id: ContextRunnableResultId,
+		priority: number,
+		runnableResultContext: RunnableResultContext,
+		primaryBudget: CharacterBudget,
+		secondaryBudget: CharacterBudget,
+		speculativeKind: SpeculativeKind,
+		cache?: CacheInfo | undefined,
+	) {
 		this.id = id;
 		this.priority = priority;
 		this.runnableResultContext = runnableResultContext;
@@ -345,7 +427,10 @@ export class RunnableResult {
 	}
 
 	public done(): void {
-		if (this.state === ContextRunnableState.Created || this.state === ContextRunnableState.InProgress) {
+		if (
+			this.state === ContextRunnableState.Created ||
+			this.state === ContextRunnableState.InProgress
+		) {
 			this.state = ContextRunnableState.Finished;
 		}
 	}
@@ -356,7 +441,8 @@ export class RunnableResult {
 
 	public addFromKnownItems(key: string): boolean {
 		this.state = ContextRunnableState.InProgress;
-		const reference = this.runnableResultContext.createContextItemReference(key);
+		const reference =
+			this.runnableResultContext.createContextItemReference(key);
 		if (reference === undefined) {
 			return false;
 		}
@@ -371,12 +457,39 @@ export class RunnableResult {
 		this.primaryBudget.spent(Trait.sizeInChars(trait));
 	}
 
-	public addSnippet(code: SnippetProvider, location: SnippetLocation, key: string | undefined): void;
-	public addSnippet(code: SnippetProvider, location: SnippetLocation, key: string | undefined, ifRoom: false): void;
-	public addSnippet(code: SnippetProvider, location: SnippetLocation, key: string | undefined, ifRoom: true): boolean;
-	public addSnippet(code: SnippetProvider, location: SnippetLocation, key: string | undefined, ifRoom: boolean): boolean;
-	public addSnippet(code: SnippetProvider, location: SnippetLocation, key: string | undefined, ifRoom: boolean = false): boolean {
-		const budget = location === SnippetLocation.Primary ? this.primaryBudget : this.secondaryBudget;
+	public addSnippet(
+		code: SnippetProvider,
+		location: SnippetLocation,
+		key: string | undefined,
+	): void;
+	public addSnippet(
+		code: SnippetProvider,
+		location: SnippetLocation,
+		key: string | undefined,
+		ifRoom: false,
+	): void;
+	public addSnippet(
+		code: SnippetProvider,
+		location: SnippetLocation,
+		key: string | undefined,
+		ifRoom: true,
+	): boolean;
+	public addSnippet(
+		code: SnippetProvider,
+		location: SnippetLocation,
+		key: string | undefined,
+		ifRoom: boolean,
+	): boolean;
+	public addSnippet(
+		code: SnippetProvider,
+		location: SnippetLocation,
+		key: string | undefined,
+		ifRoom: boolean = false,
+	): boolean {
+		const budget =
+			location === SnippetLocation.Primary
+				? this.primaryBudget
+				: this.secondaryBudget;
 		if (code.isEmpty()) {
 			return true;
 		}
@@ -401,13 +514,12 @@ export class RunnableResult {
 			items: this.items,
 			cache: this.cache,
 			speculativeKind: this.speculativeKind,
-			debugPath: this.debugPath
+			debugPath: this.debugPath,
 		};
 	}
 }
 
 class RunnableResultReference {
-
 	private readonly cached: CachedContextRunnableResult;
 
 	constructor(cached: CachedContextRunnableResult) {
@@ -431,7 +543,6 @@ class RunnableResultReference {
 }
 
 export class ContextResult {
-
 	public readonly primaryBudget: CharacterBudget;
 	public readonly secondaryBudget: CharacterBudget;
 	public readonly context: RequestContext;
@@ -442,10 +553,17 @@ export class ContextResult {
 	private timedOut: boolean;
 	private readonly errors: ErrorData[];
 
-	private readonly runnableResults: (RunnableResult | RunnableResultReference)[] = [];
+	private readonly runnableResults: (
+		| RunnableResult
+		| RunnableResultReference
+	)[] = [];
 	private readonly contextItems: Map<ContextItemKey, FullContextItem>;
 
-	constructor(primaryBudget: CharacterBudget, secondaryBudget: CharacterBudget, context: RequestContext) {
+	constructor(
+		primaryBudget: CharacterBudget,
+		secondaryBudget: CharacterBudget,
+		context: RequestContext,
+	) {
 		this.primaryBudget = primaryBudget;
 		this.secondaryBudget = secondaryBudget;
 		this.context = context;
@@ -477,20 +595,38 @@ export class ContextResult {
 		this.timedOut = timedOut;
 	}
 
-	public createRunnableResult(id: ContextRunnableResultId, priority: number, speculativeKind: SpeculativeKind, cache?: CacheInfo | undefined): RunnableResult {
+	public createRunnableResult(
+		id: ContextRunnableResultId,
+		priority: number,
+		speculativeKind: SpeculativeKind,
+		cache?: CacheInfo | undefined,
+	): RunnableResult {
 		this.state = ContextRequestResultState.InProgress;
-		const result = new RunnableResult(id, priority, this, this.primaryBudget, this.secondaryBudget, speculativeKind, cache);
+		const result = new RunnableResult(
+			id,
+			priority,
+			this,
+			this.primaryBudget,
+			this.secondaryBudget,
+			speculativeKind,
+			cache,
+		);
 		this.runnableResults.push(result);
 		return result;
 	}
 
-	public addRunnableResultReference(cached: CachedContextRunnableResult): void {
+	public addRunnableResultReference(
+		cached: CachedContextRunnableResult,
+	): void {
 		this.state = ContextRequestResultState.InProgress;
 		this.runnableResults.push(new RunnableResultReference(cached));
 	}
 
-	public createContextItemReference(key: ContextItemKey): ContextItemReference | undefined {
-		const clientSide = this.context.createContextItemReferenceIfManaged(key);
+	public createContextItemReference(
+		key: ContextItemKey,
+	): ContextItemReference | undefined {
+		const clientSide =
+			this.context.createContextItemReferenceIfManaged(key);
 		if (clientSide !== undefined) {
 			return clientSide;
 		}
@@ -525,9 +661,16 @@ export class ContextResult {
 	public items(): (FullContextItem & PriorityTag)[] {
 		const seen: Set<ContextItemKey> = new Set();
 		const items: (FullContextItem & PriorityTag)[] = [];
-		const runnableResults: RunnableResult[] = this.runnableResults.slice().filter(item => item instanceof RunnableResult).sort((a, b) => {
-			return a.priority < b.priority ? 1 : a.priority > b.priority ? -1 : 0;
-		});
+		const runnableResults: RunnableResult[] = this.runnableResults
+			.slice()
+			.filter((item) => item instanceof RunnableResult)
+			.sort((a, b) => {
+				return a.priority < b.priority
+					? 1
+					: a.priority > b.priority
+						? -1
+						: 0;
+			});
 		for (const runnableResult of runnableResults) {
 			for (const item of runnableResult.items) {
 				if (item.kind === ContextKind.Reference) {
@@ -538,11 +681,15 @@ export class ContextResult {
 					seen.add(item.key);
 					const referenced = this.contextItems.get(item.key);
 					if (referenced !== undefined) {
-						const withPriority = Object.assign({}, referenced, { priority: runnableResult.priority }) as FullContextItem & PriorityTag;
+						const withPriority = Object.assign({}, referenced, {
+							priority: runnableResult.priority,
+						}) as FullContextItem & PriorityTag;
 						items.push(withPriority);
 					}
 				} else {
-					const withPriority = Object.assign({}, item, { priority: runnableResult.priority }) as FullContextItem & PriorityTag;
+					const withPriority = Object.assign({}, item, {
+						priority: runnableResult.priority,
+					}) as FullContextItem & PriorityTag;
 					items.push(withPriority);
 				}
 			}
@@ -563,7 +710,7 @@ export class ContextResult {
 			timedOut: this.timedOut,
 			exhausted: this.primaryBudget.isExhausted(),
 			runnableResults: runnableResults,
-			contextItems: Array.from(this.contextItems.values())
+			contextItems: Array.from(this.contextItems.values()),
 		};
 	}
 }
@@ -571,11 +718,13 @@ export class ContextResult {
 export enum ComputeCost {
 	Low = 1,
 	Medium = 2,
-	High = 3
+	High = 3,
 }
 
 export namespace CacheScopes {
-	export function fromDeclaration(declaration: tt.FunctionLikeDeclarationBase): CacheScope | undefined {
+	export function fromDeclaration(
+		declaration: tt.FunctionLikeDeclarationBase,
+	): CacheScope | undefined {
 		const body = declaration.body;
 		if (body === undefined || !ts.isBlock(body)) {
 			return undefined;
@@ -583,9 +732,18 @@ export namespace CacheScopes {
 		return createWithinCacheScope(body, declaration.getSourceFile());
 	}
 
-	export function createWithinCacheScope(node: tt.Node, sourceFile?: tt.SourceFile | undefined): CacheScope;
-	export function createWithinCacheScope(node: tt.NodeArray<tt.Node>, sourceFile?: tt.SourceFile | undefined): CacheScope;
-	export function createWithinCacheScope(node: tt.Node | tt.NodeArray<tt.Node>, sourceFile?: tt.SourceFile | undefined): CacheScope {
+	export function createWithinCacheScope(
+		node: tt.Node,
+		sourceFile?: tt.SourceFile | undefined,
+	): CacheScope;
+	export function createWithinCacheScope(
+		node: tt.NodeArray<tt.Node>,
+		sourceFile?: tt.SourceFile | undefined,
+	): CacheScope;
+	export function createWithinCacheScope(
+		node: tt.Node | tt.NodeArray<tt.Node>,
+		sourceFile?: tt.SourceFile | undefined,
+	): CacheScope {
 		if (isNodeArray(node)) {
 			return {
 				kind: CacheScopeKind.WithinRange,
@@ -599,7 +757,10 @@ export namespace CacheScopes {
 		}
 	}
 
-	export function createOutsideCacheScope(nodes: Iterable<tt.Node>, sourceFile: tt.SourceFile | undefined): CacheScope {
+	export function createOutsideCacheScope(
+		nodes: Iterable<tt.Node>,
+		sourceFile: tt.SourceFile | undefined,
+	): CacheScope {
 		const ranges: Range[] = [];
 		for (const node of nodes) {
 			ranges.push(createRange(node, sourceFile));
@@ -612,13 +773,22 @@ export namespace CacheScopes {
 		});
 		return {
 			kind: CacheScopeKind.OutsideRange,
-			ranges
+			ranges,
 		};
 	}
 
-	export function createRange(node: tt.Node, sourceFile?: tt.SourceFile | undefined): Range;
-	export function createRange(node: tt.NodeArray<tt.Node>, sourceFile?: tt.SourceFile | undefined): Range;
-	export function createRange(node: tt.Node | tt.NodeArray<tt.Node>, sourceFile?: tt.SourceFile | undefined): Range {
+	export function createRange(
+		node: tt.Node,
+		sourceFile?: tt.SourceFile | undefined,
+	): Range;
+	export function createRange(
+		node: tt.NodeArray<tt.Node>,
+		sourceFile?: tt.SourceFile | undefined,
+	): Range;
+	export function createRange(
+		node: tt.Node | tt.NodeArray<tt.Node>,
+		sourceFile?: tt.SourceFile | undefined,
+	): Range {
 		let startOffset: number;
 		let endOffset: number;
 		if (isNodeArray(node)) {
@@ -631,12 +801,17 @@ export namespace CacheScopes {
 				sourceFile = node.getSourceFile();
 			}
 		}
-		const start = ts.getLineAndCharacterOfPosition(sourceFile!, startOffset);
+		const start = ts.getLineAndCharacterOfPosition(
+			sourceFile!,
+			startOffset,
+		);
 		const end = ts.getLineAndCharacterOfPosition(sourceFile!, endOffset);
 		return { start, end };
 	}
 
-	function isNodeArray(node: tt.Node | tt.NodeArray<tt.Node>): node is tt.NodeArray<tt.Node> {
+	function isNodeArray(
+		node: tt.Node | tt.NodeArray<tt.Node>,
+	): node is tt.NodeArray<tt.Node> {
 		return Array.isArray(node);
 	}
 }
@@ -650,7 +825,6 @@ export interface ContextRunnable {
 }
 
 class CacheBasedContextRunnable implements ContextRunnable {
-
 	private readonly cached: CachedContextRunnableResult;
 	private tokenBudget: CharacterBudget | undefined;
 
@@ -658,7 +832,11 @@ class CacheBasedContextRunnable implements ContextRunnable {
 	public readonly priority: number;
 	public readonly cost: ComputeCost;
 
-	constructor(cached: CachedContextRunnableResult, priority: number, cost: ComputeCost) {
+	constructor(
+		cached: CachedContextRunnableResult,
+		priority: number,
+		cost: ComputeCost,
+	) {
 		this.cached = cached;
 		this.id = cached.id;
 		this.priority = priority;
@@ -705,7 +883,6 @@ type TypeAliasEmitData = {
 type EmitData = SymbolEmitData | TypeAliasEmitData;
 
 export abstract class AbstractContextRunnable implements ContextRunnable {
-
 	public readonly session: ComputeContextSession;
 	public readonly symbols: Symbols;
 
@@ -719,7 +896,15 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 	private readonly program: tt.Program | undefined;
 	private result: RunnableResult | undefined;
 
-	constructor(session: ComputeContextSession, languageService: tt.LanguageService, context: RequestContext, id: ContextRunnableResultId, location: SnippetLocation, priority: number, cost: ComputeCost) {
+	constructor(
+		session: ComputeContextSession,
+		languageService: tt.LanguageService,
+		context: RequestContext,
+		id: ContextRunnableResultId,
+		location: SnippetLocation,
+		priority: number,
+		cost: ComputeCost,
+	) {
 		this.session = session;
 		this.languageService = languageService;
 		this.program = languageService.getProgram();
@@ -749,7 +934,11 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 			}
 			if (cached.state === ContextRunnableState.IsFull) {
 				const kind = cached.cache?.scope.kind;
-				if (kind === CacheScopeKind.WithinRange || kind === CacheScopeKind.NeighborFiles || kind === CacheScopeKind.File) {
+				if (
+					kind === CacheScopeKind.WithinRange ||
+					kind === CacheScopeKind.NeighborFiles ||
+					kind === CacheScopeKind.File
+				) {
 					return true;
 				}
 			}
@@ -771,24 +960,46 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 
 	public abstract getActiveSourceFile(): tt.SourceFile;
 
-	protected abstract createRunnableResult(result: ContextResult): RunnableResult;
+	protected abstract createRunnableResult(
+		result: ContextResult,
+	): RunnableResult;
 
-	protected abstract run(result: RunnableResult, token: tt.CancellationToken): void;
+	protected abstract run(
+		result: RunnableResult,
+		token: tt.CancellationToken,
+	): void;
 
 	protected getProgram(): tt.Program {
 		if (this.program === undefined) {
-			throw new RecoverableError('No program available', RecoverableError.NoProgram);
+			throw new RecoverableError(
+				'No program available',
+				RecoverableError.NoProgram,
+			);
 		}
 		return this.program;
 	}
 
-	protected createCacheScope(node: tt.Node, sourceFile?: tt.SourceFile | undefined): CacheScope;
-	protected createCacheScope(node: tt.NodeArray<tt.Node>, sourceFile: tt.SourceFile | undefined): CacheScope;
-	protected createCacheScope(node: tt.Node | tt.NodeArray<tt.Node>, sourceFile?: tt.SourceFile | undefined): CacheScope {
+	protected createCacheScope(
+		node: tt.Node,
+		sourceFile?: tt.SourceFile | undefined,
+	): CacheScope;
+	protected createCacheScope(
+		node: tt.NodeArray<tt.Node>,
+		sourceFile: tt.SourceFile | undefined,
+	): CacheScope;
+	protected createCacheScope(
+		node: tt.Node | tt.NodeArray<tt.Node>,
+		sourceFile?: tt.SourceFile | undefined,
+	): CacheScope {
 		return CacheScopes.createWithinCacheScope(node as any, sourceFile);
 	}
 
-	protected addScopeNode<T extends tt.Node>(scopeNodes: Set<T>, symbol: tt.Symbol, kind: tt.SyntaxKind, sourceFile: tt.SourceFile): Set<T> | undefined {
+	protected addScopeNode<T extends tt.Node>(
+		scopeNodes: Set<T>,
+		symbol: tt.Symbol,
+		kind: tt.SyntaxKind,
+		sourceFile: tt.SourceFile,
+	): Set<T> | undefined {
 		const declarations = symbol.getDeclarations();
 		if (declarations === undefined) {
 			return undefined;
@@ -820,11 +1031,20 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 		return scopeNodes;
 	}
 
-	protected createCacheInfo(emitMode: EmitMode, cacheScope?: CacheScope | undefined): CacheInfo | undefined {
-		return cacheScope !== undefined ? { emitMode, scope: cacheScope } : undefined;
+	protected createCacheInfo(
+		emitMode: EmitMode,
+		cacheScope?: CacheScope | undefined,
+	): CacheInfo | undefined {
+		return cacheScope !== undefined
+			? { emitMode, scope: cacheScope }
+			: undefined;
 	}
 
-	protected handleSymbol(symbol: tt.Symbol, name?: string, ifRoom?: boolean): boolean {
+	protected handleSymbol(
+		symbol: tt.Symbol,
+		name?: string,
+		ifRoom?: boolean,
+	): boolean {
 		if (this.result === undefined) {
 			return true;
 		}
@@ -837,30 +1057,59 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 				if (this.skipNode(emitData.node)) {
 					continue;
 				}
-				const snippetBuilder = new CodeSnippetBuilder(this.context, this.symbols, this.getActiveSourceFile());
+				const snippetBuilder = new CodeSnippetBuilder(
+					this.context,
+					this.symbols,
+					this.getActiveSourceFile(),
+				);
 				snippetBuilder.addDeclaration(emitData.node);
 				if (ifRoom === undefined || ifRoom === false) {
-					this.result.addSnippet(snippetBuilder, this.location, undefined);
+					this.result.addSnippet(
+						snippetBuilder,
+						this.location,
+						undefined,
+					);
 				} else {
-					if (!this.result.addSnippet(snippetBuilder, this.location, undefined, ifRoom)) {
+					if (
+						!this.result.addSnippet(
+							snippetBuilder,
+							this.location,
+							undefined,
+							ifRoom,
+						)
+					) {
 						return false;
 					}
 				}
 			} else if (emitData.kind === SymbolEmitDataKind.symbol) {
 				const { symbol, name } = emitData;
-				if (this.skipSymbolBasedOnDeclaration(symbol) || Symbols.isTypeParameter(symbol)) {
+				if (
+					this.skipSymbolBasedOnDeclaration(symbol) ||
+					Symbols.isTypeParameter(symbol)
+				) {
 					continue;
 				}
 				const key = Symbols.createKey(symbol, this.session.host);
 				if (key !== undefined && this.result.addFromKnownItems(key)) {
 					continue;
 				}
-				const snippetBuilder = new CodeSnippetBuilder(this.context, this.symbols, this.getActiveSourceFile());
+				const snippetBuilder = new CodeSnippetBuilder(
+					this.context,
+					this.symbols,
+					this.getActiveSourceFile(),
+				);
 				snippetBuilder.addTypeSymbol(symbol, name);
 				if (ifRoom === undefined || ifRoom === false) {
 					this.result.addSnippet(snippetBuilder, this.location, key);
 				} else {
-					if (!this.result.addSnippet(snippetBuilder, this.location, key, ifRoom)) {
+					if (
+						!this.result.addSnippet(
+							snippetBuilder,
+							this.location,
+							key,
+							ifRoom,
+						)
+					) {
 						return false;
 					}
 				}
@@ -869,7 +1118,9 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 		return true;
 	}
 
-	protected isNodeArray(node: tt.Node | tt.NodeArray<tt.Node>): node is tt.NodeArray<tt.Node> {
+	protected isNodeArray(
+		node: tt.Node | tt.NodeArray<tt.Node>,
+	): node is tt.NodeArray<tt.Node> {
 		return Array.isArray(node);
 	}
 
@@ -882,7 +1133,10 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 			return true;
 		}
 		const program = this.getProgram();
-		return program.isSourceFileDefaultLibrary(sourceFile) || program.isSourceFileFromExternalLibrary(sourceFile);
+		return (
+			program.isSourceFileDefaultLibrary(sourceFile) ||
+			program.isSourceFileFromExternalLibrary(sourceFile)
+		);
 	}
 
 	protected skipSymbolBasedOnDeclaration(symbol: tt.Symbol): boolean {
@@ -904,13 +1158,19 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 		return result;
 	}
 
-	private doGetSymbolsForTypeNode(result: SymbolData[], node: tt.TypeNode): void {
+	private doGetSymbolsForTypeNode(
+		result: SymbolData[],
+		node: tt.TypeNode,
+	): void {
 		if (ts.isTypeReferenceNode(node)) {
 			const symbol = this.symbols.getLeafSymbolAtLocation(node.typeName);
 			if (symbol !== undefined) {
 				result.push({ symbol, name: node.typeName.getText() });
 			}
-		} else if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node)) {
+		} else if (
+			ts.isUnionTypeNode(node) ||
+			ts.isIntersectionTypeNode(node)
+		) {
 			for (const type of node.types) {
 				this.doGetSymbolsForTypeNode(result, type);
 			}
@@ -934,13 +1194,28 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 		}
 	}
 
-	protected getEmitDataForSymbol(symbol: tt.Symbol, name?: string): EmitData[] {
+	protected getEmitDataForSymbol(
+		symbol: tt.Symbol,
+		name?: string,
+	): EmitData[] {
 		const result: EmitData[] = [];
-		this.doGetEmitDataForSymbol(result, new Set<tt.Symbol>(), 0, symbol, name);
+		this.doGetEmitDataForSymbol(
+			result,
+			new Set<tt.Symbol>(),
+			0,
+			symbol,
+			name,
+		);
 		return result;
 	}
 
-	private doGetEmitDataForSymbol(result: EmitData[], seen: Set<tt.Symbol>, level: number, symbol: tt.Symbol, name?: string): void {
+	private doGetEmitDataForSymbol(
+		result: EmitData[],
+		seen: Set<tt.Symbol>,
+		level: number,
+		symbol: tt.Symbol,
+		name?: string,
+	): void {
 		if (Symbols.isAlias(symbol)) {
 			symbol = this.symbols.getLeafSymbol(symbol);
 		}
@@ -974,18 +1249,36 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 					if (seen.has(symbol)) {
 						return;
 					}
-					result.push({ kind: SymbolEmitDataKind.symbol, symbol, name });
+					result.push({
+						kind: SymbolEmitDataKind.symbol,
+						symbol,
+						name,
+					});
 				}
 			} else if (ts.isTypeReferenceNode(type)) {
-				const symbol = this.symbols.getLeafSymbolAtLocation(type.typeName);
+				const symbol = this.symbols.getLeafSymbolAtLocation(
+					type.typeName,
+				);
 				if (symbol !== undefined) {
 					if (seen.has(symbol)) {
 						return;
 					}
-					this.doGetEmitDataForSymbol(result, seen, level + 1, symbol, name);
+					this.doGetEmitDataForSymbol(
+						result,
+						seen,
+						level + 1,
+						symbol,
+						name,
+					);
 				}
-			} else if (ts.isUnionTypeNode(type) || ts.isIntersectionTypeNode(type)) {
-				result.push({ kind: SymbolEmitDataKind.typeAlias, node: declaration });
+			} else if (
+				ts.isUnionTypeNode(type) ||
+				ts.isIntersectionTypeNode(type)
+			) {
+				result.push({
+					kind: SymbolEmitDataKind.typeAlias,
+					node: declaration,
+				});
 				if (level >= 2) {
 					return;
 				}
@@ -998,7 +1291,13 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 						// We can't name type literals on that level and we have included
 						// the type alias itself, so we don't need to emit it again.
 						if (!Symbols.isTypeLiteral(symbol)) {
-							this.doGetEmitDataForSymbol(result, seen, level + 1, symbol, name);
+							this.doGetEmitDataForSymbol(
+								result,
+								seen,
+								level + 1,
+								symbol,
+								name,
+							);
 						}
 					} else {
 						const symbolData = this.getSymbolsForTypeNode(item);
@@ -1006,7 +1305,13 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 							if (seen.has(symbol)) {
 								continue;
 							}
-							this.doGetEmitDataForSymbol(result, seen, level + 1, symbol, name);
+							this.doGetEmitDataForSymbol(
+								result,
+								seen,
+								level + 1,
+								symbol,
+								name,
+							);
 						}
 					}
 				}
@@ -1017,16 +1322,19 @@ export abstract class AbstractContextRunnable implements ContextRunnable {
 	}
 }
 
-
 export class ContextRunnableCollector {
-
-	private readonly cachedRunnableResults: Map<string, CachedContextRunnableResult>;
+	private readonly cachedRunnableResults: Map<
+		string,
+		CachedContextRunnableResult
+	>;
 
 	public readonly primary: ContextRunnable[];
 	public readonly secondary: ContextRunnable[];
 	public readonly tertiary: ContextRunnable[];
 
-	constructor(cachedRunnableResults: Map<string, CachedContextRunnableResult>) {
+	constructor(
+		cachedRunnableResults: Map<string, CachedContextRunnableResult>,
+	) {
 		this.cachedRunnableResults = cachedRunnableResults;
 		this.primary = [];
 		this.secondary = [];
@@ -1087,28 +1395,44 @@ export class ContextRunnableCollector {
 		});
 	}
 
-	private useCachedRunnableIfPossible(runnable: AbstractContextRunnable): ContextRunnable {
+	private useCachedRunnableIfPossible(
+		runnable: AbstractContextRunnable,
+	): ContextRunnable {
 		const cached = this.cachedRunnableResults.get(runnable.id);
 		if (cached === undefined) {
 			return runnable;
 		}
-		return runnable.useCachedResult(cached) ? new CacheBasedContextRunnable(cached, runnable.priority, runnable.cost) : runnable;
+		return runnable.useCachedResult(cached)
+			? new CacheBasedContextRunnable(
+					cached,
+					runnable.priority,
+					runnable.cost,
+				)
+			: runnable;
 	}
 }
 
 export abstract class ContextProvider {
-
-	constructor() {
-	}
+	constructor() {}
 
 	public isCallableProvider?: boolean;
-	public abstract provide(result: ContextRunnableCollector, session: ComputeContextSession, languageService: tt.LanguageService, context: RequestContext, token: tt.CancellationToken): void;
+	public abstract provide(
+		result: ContextRunnableCollector,
+		session: ComputeContextSession,
+		languageService: tt.LanguageService,
+		context: RequestContext,
+		token: tt.CancellationToken,
+	): void;
 }
 
 export interface ProviderComputeContext {
 	isFirstCallableProvider(contextProvider: ContextProvider): boolean;
 }
-export type ContextProviderFactory = (node: tt.Node, tokenInfo: tss.TokenInfo, context: ProviderComputeContext) => ContextProvider | undefined;
+export type ContextProviderFactory = (
+	node: tt.Node,
+	tokenInfo: tss.TokenInfo,
+	context: ProviderComputeContext,
+) => ContextProvider | undefined;
 
 export class TokenBudgetExhaustedError extends Error {
 	constructor() {
@@ -1117,7 +1441,6 @@ export class TokenBudgetExhaustedError extends Error {
 }
 
 export class CharacterBudget {
-
 	private charBudget: number;
 	private lowWaterMark: number;
 	private itemRejected: boolean;

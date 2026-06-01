@@ -11,14 +11,18 @@ export function isImportStatement(line: string, languageId: string): boolean {
 		case 'typescriptreact':
 		case 'javascript':
 		case 'javascriptreact':
-			return !!line.match(/^\s*import[\s{*]|^\s*[var|const|let].*=\s*require\(/);
+			return !!line.match(
+				/^\s*import[\s{*]|^\s*[var|const|let].*=\s*require\(/,
+			);
 		case 'php':
 			return !!line.match(/^\s*use/);
 		case 'rust':
 			return !!line.match(/^\s*use\s+[\w:{}, ]+\s*(as\s+\w+)?;/);
 		case 'python':
-			return !!line.match(/^\s*from\s+[\w.]+\s+import\s+[\w, *]+$/)
-				|| !!line.match(/^\s*import\s+[\w, ]+$/);
+			return (
+				!!line.match(/^\s*from\s+[\w.]+\s+import\s+[\w, *]+$/) ||
+				!!line.match(/^\s*import\s+[\w, ]+$/)
+			);
 		default:
 			return false;
 	}

@@ -31,4 +31,6 @@ export type LanguageInfo = {
 	filenames?: string[];
 };
 
-export const knownFileExtensions = Object.keys(knownLanguages).flatMap(language => knownLanguages[language].extensions);
+export const knownFileExtensions = Object.keys(knownLanguages).flatMap(
+	(language) => knownLanguages[language].extensions,
+);

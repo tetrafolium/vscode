@@ -6,5 +6,3 @@ const obj = {
 for (const { foo, bar } of [obj]) {
 	console.log(foo, bar);
 }
-
-

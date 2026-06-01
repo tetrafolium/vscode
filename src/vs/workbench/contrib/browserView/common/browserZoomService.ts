@@ -3,24 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { browserZoomDefaultIndex, browserZoomFactors } from '../../../../platform/browserView/common/browserView.js';
-import { zoomLevelToZoomFactor } from '../../../../platform/window/common/window.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { IConfigurationService } from "../../../../platform/configuration/common/configuration.js";
+import {
+	browserZoomDefaultIndex,
+	browserZoomFactors,
+} from "../../../../platform/browserView/common/browserView.js";
+import { zoomLevelToZoomFactor } from "../../../../platform/window/common/window.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../platform/storage/common/storage.js";
 
-export const IBrowserZoomService = createDecorator<IBrowserZoomService>('browserZoomService');
+export const IBrowserZoomService =
+	createDecorator<IBrowserZoomService>("browserZoomService");
 
 /** Storage key for the per-host persistent zoom map. */
-const BROWSER_ZOOM_PER_HOST_STORAGE_KEY = 'browserView.zoomPerHost';
+const BROWSER_ZOOM_PER_HOST_STORAGE_KEY = "browserView.zoomPerHost";
 
 /**
  * Special value for the default zoom level setting that instructs the browser view
  * to dynamically match the closest zoom level to the application's current UI zoom.
  */
-export const MATCH_WINDOW_ZOOM_LABEL = 'Match Window';
+export const MATCH_WINDOW_ZOOM_LABEL = "Match Window";
 
 export interface IBrowserZoomChangeEvent {
 	/**
@@ -90,14 +98,20 @@ export interface IBrowserZoomService {
 
 /** Pre-computed map from percentage label (e.g. "125%") to index into browserZoomFactors. */
 const ZOOM_LABEL_TO_INDEX = new Map<string, number>(
-	browserZoomFactors.map((f, i) => [`${Math.round(f * 100)}%`, i])
+	browserZoomFactors.map((f, i) => [`${Math.round(f * 100)}%`, i]),
 );
 
-export class BrowserZoomService extends Disposable implements IBrowserZoomService {
+export class BrowserZoomService
+	extends Disposable
+	implements IBrowserZoomService
+{
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidChangeZoom = this._register(new Emitter<IBrowserZoomChangeEvent>());
-	readonly onDidChangeZoom: Event<IBrowserZoomChangeEvent> = this._onDidChangeZoom.event;
+	private readonly _onDidChangeZoom = this._register(
+		new Emitter<IBrowserZoomChangeEvent>(),
+	);
+	readonly onDidChangeZoom: Event<IBrowserZoomChangeEvent> =
+		this._onDidChangeZoom.event;
 
 	/**
 	 * In-memory cache of the persistent per-host map.
@@ -111,21 +125,30 @@ export class BrowserZoomService extends Disposable implements IBrowserZoomServic
 	private _windowZoomFactor: number = zoomLevelToZoomFactor(0); // default: zoom level 0 → factor 1.0
 
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 		@IStorageService private readonly storageService: IStorageService,
 	) {
 		super();
 
 		this._persistentZoomMap = this._readPersistentZoomMap();
 
-		this._register(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration('workbench.browser.pageZoom')) {
-				this._onDidChangeZoom.fire({ host: undefined, isEphemeralChange: false });
-			}
-		}));
+		this._register(
+			this.configurationService.onDidChangeConfiguration((e) => {
+				if (e.affectsConfiguration("workbench.browser.pageZoom")) {
+					this._onDidChangeZoom.fire({
+						host: undefined,
+						isEphemeralChange: false,
+					});
+				}
+			}),
+		);
 	}
 
-	getEffectiveZoomIndex(host: string | undefined, isEphemeral: boolean): number {
+	getEffectiveZoomIndex(
+		host: string | undefined,
+		isEphemeral: boolean,
+	): number {
 		if (host !== undefined) {
 			if (isEphemeral) {
 				const ephemeralIndex = this._ephemeralZoomMap.get(host);
@@ -143,7 +166,11 @@ export class BrowserZoomService extends Disposable implements IBrowserZoomServic
 		return this._getDefaultZoomIndex();
 	}
 
-	setHostZoomIndex(host: string, zoomIndex: number, isEphemeral: boolean): void {
+	setHostZoomIndex(
+		host: string,
+		zoomIndex: number,
+		isEphemeral: boolean,
+	): void {
 		const clamped = this._clamp(zoomIndex);
 		const defaultIndex = this._getDefaultZoomIndex();
 		const matchesDefault = clamped === defaultIndex;
@@ -164,7 +191,9 @@ export class BrowserZoomService extends Disposable implements IBrowserZoomServic
 		} else {
 			let persistentChanged = false;
 			if (matchesDefault) {
-				if (Object.prototype.hasOwnProperty.call(this._persistentZoomMap, host)) {
+				if (
+					Object.prototype.hasOwnProperty.call(this._persistentZoomMap, host)
+				) {
 					delete this._persistentZoomMap[host];
 					persistentChanged = true;
 				}
@@ -194,7 +223,9 @@ export class BrowserZoomService extends Disposable implements IBrowserZoomServic
 
 	notifyWindowZoomChanged(windowZoomFactor: number): void {
 		this._windowZoomFactor = windowZoomFactor;
-		const label = this.configurationService.getValue<string>('workbench.browser.pageZoom');
+		const label = this.configurationService.getValue<string>(
+			"workbench.browser.pageZoom",
+		);
 		if (label === MATCH_WINDOW_ZOOM_LABEL) {
 			this._onDidChangeZoom.fire({ host: undefined, isEphemeralChange: false });
 		}
@@ -205,7 +236,9 @@ export class BrowserZoomService extends Disposable implements IBrowserZoomServic
 	// ---------------------------------------------------------------------------
 
 	private _getDefaultZoomIndex(): number {
-		const label = this.configurationService.getValue<string>('workbench.browser.pageZoom');
+		const label = this.configurationService.getValue<string>(
+			"workbench.browser.pageZoom",
+		);
 		if (label === MATCH_WINDOW_ZOOM_LABEL) {
 			return this._getMatchWindowZoomIndex();
 		}
@@ -221,7 +254,9 @@ export class BrowserZoomService extends Disposable implements IBrowserZoomServic
 		let bestIndex = browserZoomDefaultIndex;
 		let bestDist = Infinity;
 		for (let i = 0; i < browserZoomFactors.length; i++) {
-			const dist = Math.abs(Math.log(browserZoomFactors[i]) - Math.log(windowFactor));
+			const dist = Math.abs(
+				Math.log(browserZoomFactors[i]) - Math.log(windowFactor),
+			);
 			if (dist < bestDist) {
 				bestDist = dist;
 				bestIndex = i;
@@ -235,18 +270,29 @@ export class BrowserZoomService extends Disposable implements IBrowserZoomServic
 	 * The stored format is a JSON object mapping host strings to zoom indices.
 	 */
 	private _readPersistentZoomMap(): Record<string, number> {
-		const raw = this.storageService.get(BROWSER_ZOOM_PER_HOST_STORAGE_KEY, StorageScope.PROFILE);
+		const raw = this.storageService.get(
+			BROWSER_ZOOM_PER_HOST_STORAGE_KEY,
+			StorageScope.PROFILE,
+		);
 		if (!raw) {
 			return {};
 		}
 		try {
 			const parsed = JSON.parse(raw);
-			if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+			if (
+				typeof parsed !== "object" ||
+				parsed === null ||
+				Array.isArray(parsed)
+			) {
 				return {};
 			}
 			const result: Record<string, number> = {};
 			for (const [host, index] of Object.entries(parsed)) {
-				if (typeof index === 'number' && index >= 0 && index < browserZoomFactors.length) {
+				if (
+					typeof index === "number" &&
+					index >= 0 &&
+					index < browserZoomFactors.length
+				) {
 					result[host] = index;
 				}
 			}
@@ -259,13 +305,24 @@ export class BrowserZoomService extends Disposable implements IBrowserZoomServic
 	private _writePersistentZoomMap(): void {
 		const hasEntries = Object.keys(this._persistentZoomMap).length > 0;
 		if (hasEntries) {
-			this.storageService.store(BROWSER_ZOOM_PER_HOST_STORAGE_KEY, JSON.stringify(this._persistentZoomMap), StorageScope.PROFILE, StorageTarget.MACHINE);
+			this.storageService.store(
+				BROWSER_ZOOM_PER_HOST_STORAGE_KEY,
+				JSON.stringify(this._persistentZoomMap),
+				StorageScope.PROFILE,
+				StorageTarget.MACHINE,
+			);
 		} else {
-			this.storageService.remove(BROWSER_ZOOM_PER_HOST_STORAGE_KEY, StorageScope.PROFILE);
+			this.storageService.remove(
+				BROWSER_ZOOM_PER_HOST_STORAGE_KEY,
+				StorageScope.PROFILE,
+			);
 		}
 	}
 
 	private _clamp(index: number): number {
-		return Math.max(0, Math.min(Math.trunc(index), browserZoomFactors.length - 1));
+		return Math.max(
+			0,
+			Math.min(Math.trunc(index), browserZoomFactors.length - 1),
+		);
 	}
 }

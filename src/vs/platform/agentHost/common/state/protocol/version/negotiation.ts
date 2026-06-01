@@ -3,13 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { compareProtocolVersions } from './registry.js';
+import { compareProtocolVersions } from "./registry.js";
 
 /**
  * Parses a `MAJOR.MINOR.PATCH` SemVer string. Returns `undefined` if the
  * string is not well-formed. Pre-release / build metadata are not allowed.
  */
-function tryParseSemver(version: string): readonly [number, number, number] | undefined {
+function tryParseSemver(
+	version: string,
+): readonly [number, number, number] | undefined {
 	const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
 	if (!match) {
 		return undefined;
@@ -29,7 +31,10 @@ function tryParseSemver(version: string): readonly [number, number, number] | un
  *
  * Invalid version strings return `false`.
  */
-export function isCompatibleProtocolVersion(offered: string, current: string): boolean {
+export function isCompatibleProtocolVersion(
+	offered: string,
+	current: string,
+): boolean {
 	const a = tryParseSemver(offered);
 	const b = tryParseSemver(current);
 	if (!a || !b) {
@@ -55,7 +60,10 @@ export function isCompatibleProtocolVersion(offered: string, current: string): b
  * pick the highest compatible entry). Returns `undefined` when no offered
  * version is compatible.
  */
-export function negotiateProtocolVersion(offered: readonly string[], current: string): string | undefined {
+export function negotiateProtocolVersion(
+	offered: readonly string[],
+	current: string,
+): string | undefined {
 	let best: string | undefined;
 	for (const v of offered) {
 		if (!isCompatibleProtocolVersion(v, current)) {

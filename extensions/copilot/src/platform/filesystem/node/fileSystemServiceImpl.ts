@@ -9,13 +9,14 @@ import { Event } from '../../../util/vs/base/common/event';
 import { dirname, isEqual } from '../../../util/vs/base/common/resources';
 import { URI } from '../../../util/vs/base/common/uri';
 import { IWorkspaceService } from '../../workspace/common/workspaceService';
-import { assertReadFileSizeLimit, IFileSystemService } from '../common/fileSystemService';
+import {
+	assertReadFileSizeLimit,
+	IFileSystemService,
+} from '../common/fileSystemService';
 import { FileType } from '../common/fileTypes';
 
 export class NodeFileSystemService implements IFileSystemService {
-
 	declare readonly _serviceBrand: undefined;
-
 
 	async stat(uri: URI): Promise<FileStat> {
 		const stat = await fs.promises.stat(uri.fsPath);
@@ -23,16 +24,21 @@ export class NodeFileSystemService implements IFileSystemService {
 			type: stat.isFile() ? FileType.File : FileType.Directory,
 			ctime: stat.ctimeMs,
 			mtime: stat.mtimeMs,
-			size: stat.size
+			size: stat.size,
 		};
 	}
 
 	async readDirectory(uri: URI): Promise<[string, FileType][]> {
 		assetIsFileUri(uri);
-		const readDir = await fs.promises.readdir(uri.fsPath, { withFileTypes: true });
+		const readDir = await fs.promises.readdir(uri.fsPath, {
+			withFileTypes: true,
+		});
 		const result: [string, FileType][] = [];
 		for (const file of readDir) {
-			result.push([file.name, file.isFile() ? FileType.File : FileType.Directory]);
+			result.push([
+				file.name,
+				file.isFile() ? FileType.File : FileType.Directory,
+			]);
 		}
 		return result;
 	}
@@ -54,12 +60,21 @@ export class NodeFileSystemService implements IFileSystemService {
 		return fs.promises.writeFile(uri.fsPath, content);
 	}
 
-	async delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
+	async delete(
+		uri: URI,
+		options?: { recursive?: boolean; useTrash?: boolean },
+	): Promise<void> {
 		assetIsFileUri(uri);
-		return fs.promises.rm(uri.fsPath, { recursive: options?.recursive ?? false });
+		return fs.promises.rm(uri.fsPath, {
+			recursive: options?.recursive ?? false,
+		});
 	}
 
-	async rename(oldURI: URI, newURI: URI, options?: { overwrite?: boolean }): Promise<void> {
+	async rename(
+		oldURI: URI,
+		newURI: URI,
+		options?: { overwrite?: boolean },
+	): Promise<void> {
 		assetIsFileUri(oldURI);
 		assetIsFileUri(newURI);
 		// Check if new path exists if overwrite is not set return
@@ -70,20 +85,32 @@ export class NodeFileSystemService implements IFileSystemService {
 		return fs.promises.rename(oldURI.fsPath, newURI.fsPath);
 	}
 
-	async copy(source: URI, destination: URI, options?: { overwrite?: boolean }): Promise<void> {
+	async copy(
+		source: URI,
+		destination: URI,
+		options?: { overwrite?: boolean },
+	): Promise<void> {
 		assetIsFileUri(source);
 		assetIsFileUri(destination);
 		// Calculate copy contants based on overwrite option
-		const copyConstant = options?.overwrite ? fs.constants.COPYFILE_FICLONE : fs.constants.COPYFILE_EXCL;
-		return fs.promises.copyFile(source.fsPath, destination.fsPath, copyConstant);
+		const copyConstant = options?.overwrite
+			? fs.constants.COPYFILE_FICLONE
+			: fs.constants.COPYFILE_EXCL;
+		return fs.promises.copyFile(
+			source.fsPath,
+			destination.fsPath,
+			copyConstant,
+		);
 	}
 
 	isWritableFileSystem(scheme: string): boolean | undefined {
 		return true;
 	}
 
-	createFileSystemWatcher(_glob: string | RelativePattern): FileSystemWatcher {
-		return new class implements FileSystemWatcher {
+	createFileSystemWatcher(
+		_glob: string | RelativePattern,
+	): FileSystemWatcher {
+		return new (class implements FileSystemWatcher {
 			ignoreCreateEvents = false;
 			ignoreChangeEvents = false;
 			ignoreDeleteEvents = false;
@@ -93,7 +120,7 @@ export class NodeFileSystemService implements IFileSystemService {
 			dispose() {
 				// noop
 			}
-		};
+		})();
 	}
 }
 
@@ -106,9 +133,16 @@ export class NodeFileSystemService implements IFileSystemService {
  * @param maxBytesToRead An optional max bytes to read from the file system. If open, the entire document is always read.
  * @returns A promise that resolves to the file content or the file buffer
  */
-export async function readFileFromTextBufferOrFS(fileSystemService: IFileSystemService, workspaceService: IWorkspaceService, uri: Uri, maxBytesToRead?: number): Promise<string | Uint8Array> {
+export async function readFileFromTextBufferOrFS(
+	fileSystemService: IFileSystemService,
+	workspaceService: IWorkspaceService,
+	uri: Uri,
+	maxBytesToRead?: number,
+): Promise<string | Uint8Array> {
 	// First check open text documents
-	const file = workspaceService.textDocuments.find(d => isEqual(d.uri, uri));
+	const file = workspaceService.textDocuments.find((d) =>
+		isEqual(d.uri, uri),
+	);
 	if (file) {
 		return file.getText();
 	}
@@ -118,7 +152,12 @@ export async function readFileFromTextBufferOrFS(fileSystemService: IFileSystemS
 			const fileHandle = await fs.promises.open(uri.fsPath, 'r');
 			try {
 				const buffer = Buffer.alloc(maxBytesToRead);
-				const { bytesRead } = await fileHandle.read(buffer, 0, maxBytesToRead, 0);
+				const { bytesRead } = await fileHandle.read(
+					buffer,
+					0,
+					maxBytesToRead,
+					0,
+				);
 				return buffer.subarray(0, bytesRead);
 			} finally {
 				await fileHandle.close();
@@ -133,7 +172,6 @@ export async function readFileFromTextBufferOrFS(fileSystemService: IFileSystemS
 		return buffer;
 	}
 }
-
 
 function assetIsFileUri(uri: URI) {
 	if (uri.scheme !== 'file') {

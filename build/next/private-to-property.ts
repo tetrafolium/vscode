@@ -3,8 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as ts from 'typescript';
-import { type RawSourceMap, type Mapping, SourceMapConsumer, SourceMapGenerator } from 'source-map';
+import * as ts from "typescript";
+import {
+	type RawSourceMap,
+	type Mapping,
+	SourceMapConsumer,
+	SourceMapGenerator,
+} from "source-map";
 
 /**
  * Converts native ES private fields (`#foo`) into regular JavaScript properties with short,
@@ -33,15 +38,15 @@ import { type RawSourceMap, type Mapping, SourceMapConsumer, SourceMapGenerator 
  */
 
 // Short name generator: $a, $b, ..., $z, $A, ..., $Z, $aa, $ab, ...
-const CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 function generateShortName(index: number): string {
-	let name = '';
+	let name = "";
 	do {
 		name = CHARS[index % CHARS.length] + name;
 		index = Math.floor(index / CHARS.length) - 1;
 	} while (index >= 0);
-	return '$' + name;
+	return "$" + name;
 }
 
 interface Edit {
@@ -77,14 +82,30 @@ export interface ConvertPrivateFieldsResult {
  * @param filename Used for TypeScript parser diagnostics only.
  * @returns The transformed source code with `#` fields replaced, plus stats.
  */
-export function convertPrivateFields(code: string, filename: string): ConvertPrivateFieldsResult {
+export function convertPrivateFields(
+	code: string,
+	filename: string,
+): ConvertPrivateFieldsResult {
 	const t1 = Date.now();
 	// Quick bail-out: if there are no `#` characters, nothing to do
-	if (!code.includes('#')) {
-		return { code, classCount: 0, fieldCount: 0, editCount: 0, elapsed: Date.now() - t1, edits: [] };
+	if (!code.includes("#")) {
+		return {
+			code,
+			classCount: 0,
+			fieldCount: 0,
+			editCount: 0,
+			elapsed: Date.now() - t1,
+			edits: [],
+		};
 	}
 
-	const sourceFile = ts.createSourceFile(filename, code, ts.ScriptTarget.ESNext, false, ts.ScriptKind.JS);
+	const sourceFile = ts.createSourceFile(
+		filename,
+		code,
+		ts.ScriptTarget.ESNext,
+		false,
+		ts.ScriptKind.JS,
+	);
 
 	// Global counter for unique name generation
 	let nameCounter = 0;
@@ -102,7 +123,14 @@ export function convertPrivateFields(code: string, filename: string): ConvertPri
 	visit(sourceFile);
 
 	if (edits.length === 0) {
-		return { code, classCount: 0, fieldCount: 0, editCount: 0, elapsed: Date.now() - t1, edits: [] };
+		return {
+			code,
+			classCount: 0,
+			fieldCount: 0,
+			editCount: 0,
+			elapsed: Date.now() - t1,
+			edits: [],
+		};
 	}
 
 	// Apply edits using substring concatenation (O(N+K), not O(N*K) like char-array splice)
@@ -115,7 +143,14 @@ export function convertPrivateFields(code: string, filename: string): ConvertPri
 		lastEnd = edit.end;
 	}
 	parts.push(code.substring(lastEnd));
-	return { code: parts.join(''), classCount, fieldCount: fieldCount, editCount: edits.length, elapsed: Date.now() - t1, edits };
+	return {
+		code: parts.join(""),
+		classCount,
+		fieldCount: fieldCount,
+		editCount: edits.length,
+		elapsed: Date.now() - t1,
+		edits,
+	};
 
 	// --- AST walking ---
 
@@ -138,7 +173,10 @@ export function convertPrivateFields(code: string, filename: string): ConvertPri
 				publicNames.add(member.name.text);
 				continue;
 			}
-			if (ts.isComputedPropertyName(member.name) && ts.isStringLiteral(member.name.expression)) {
+			if (
+				ts.isComputedPropertyName(member.name) &&
+				ts.isStringLiteral(member.name.expression)
+			) {
 				publicNames.add(member.name.expression.text);
 			}
 		}
@@ -180,24 +218,31 @@ export function convertPrivateFields(code: string, filename: string): ConvertPri
 		classStack.pop();
 	}
 
-	function createWalkInClass(classNode: ts.ClassDeclaration | ts.ClassExpression) {
+	function createWalkInClass(
+		classNode: ts.ClassDeclaration | ts.ClassExpression,
+	) {
 		return function walkInClass(child: ts.Node): void {
 			// Nested class: process independently with its own scope
-			if ((ts.isClassDeclaration(child) || ts.isClassExpression(child)) && child !== classNode) {
+			if (
+				(ts.isClassDeclaration(child) || ts.isClassExpression(child)) &&
+				child !== classNode
+			) {
 				visitClass(child);
 				return;
 			}
 
 			// Handle `#field in expr` (ergonomic brand check) - needs string literal replacement
-			if (ts.isBinaryExpression(child) &&
+			if (
+				ts.isBinaryExpression(child) &&
 				child.operatorToken.kind === ts.SyntaxKind.InKeyword &&
-				ts.isPrivateIdentifier(child.left)) {
+				ts.isPrivateIdentifier(child.left)
+			) {
 				const resolved = resolvePrivateName(child.left.text);
 				if (resolved !== undefined) {
 					edits.push({
 						start: child.left.getStart(sourceFile),
 						end: child.left.getEnd(),
-						newText: `'${resolved}'`
+						newText: `'${resolved}'`,
 					});
 				}
 				// Still need to walk the right-hand side for any private field usages
@@ -217,7 +262,10 @@ export function convertPrivateFields(code: string, filename: string): ConvertPri
 						// The `#` naturally starts a new token, but `$` does not —
 						// `async$a` would fuse into one identifier. Insert a space
 						// when the preceding character is an identifier character.
-						newText: (start > 0 && isIdentifierChar(code.charCodeAt(start - 1))) ? ' ' + resolved : resolved
+						newText:
+							start > 0 && isIdentifierChar(code.charCodeAt(start - 1))
+								? " " + resolved
+								: resolved,
 					});
 				}
 				return;
@@ -241,7 +289,13 @@ export function convertPrivateFields(code: string, filename: string): ConvertPri
 
 function isIdentifierChar(ch: number): boolean {
 	// a-z, A-Z, 0-9, _, $
-	return (ch >= 97 && ch <= 122) || (ch >= 65 && ch <= 90) || (ch >= 48 && ch <= 57) || ch === 95 || ch === 36;
+	return (
+		(ch >= 97 && ch <= 122) ||
+		(ch >= 65 && ch <= 90) ||
+		(ch >= 48 && ch <= 57) ||
+		ch === 95 ||
+		ch === 36
+	);
 }
 
 /**
@@ -259,7 +313,7 @@ function isIdentifierChar(ch: number): boolean {
 export function adjustSourceMap(
 	sourceMapJson: RawSourceMap,
 	originalCode: string,
-	edits: readonly TextEdit[]
+	edits: readonly TextEdit[],
 ): RawSourceMap {
 	if (edits.length === 0) {
 		return sourceMapJson;
@@ -290,7 +344,8 @@ export function adjustSourceMap(
 
 	function adjustOffset(oldOff: number): number {
 		// Binary search: find last edit with start <= oldOff
-		let lo = 0, hi = n - 1;
+		let lo = 0,
+			hi = n - 1;
 		while (lo <= hi) {
 			const mid = (lo + hi) >> 1;
 			if (editStarts[mid] <= oldOff) {
@@ -311,8 +366,12 @@ export function adjustSourceMap(
 		return oldOff + cumShifts[hi];
 	}
 
-	function offsetToLineCol(lineStarts: readonly number[], offset: number): { line: number; col: number } {
-		let lo = 0, hi = lineStarts.length - 1;
+	function offsetToLineCol(
+		lineStarts: readonly number[],
+		offset: number,
+	): { line: number; col: number } {
+		let lo = 0,
+			hi = lineStarts.length - 1;
 		while (lo < hi) {
 			const mid = (lo + hi + 1) >> 1;
 			if (lineStarts[mid] <= offset) {
@@ -326,7 +385,10 @@ export function adjustSourceMap(
 
 	// Use source-map library to read, adjust, and write
 	const consumer = new SourceMapConsumer(sourceMapJson);
-	const generator = new SourceMapGenerator({ file: sourceMapJson.file, sourceRoot: sourceMapJson.sourceRoot });
+	const generator = new SourceMapGenerator({
+		file: sourceMapJson.file,
+		sourceRoot: sourceMapJson.sourceRoot,
+	});
 
 	// Copy sourcesContent
 	for (let i = 0; i < sourceMapJson.sources.length; i++) {
@@ -337,19 +399,27 @@ export function adjustSourceMap(
 	}
 
 	// Walk every mapping, convert old generated position → byte offset → adjust → new position
-	consumer.eachMapping(mapping => {
+	consumer.eachMapping((mapping) => {
 		const oldLine0 = mapping.generatedLine - 1; // 0-based
-		const oldOff = (oldLine0 < oldLineStarts.length
-			? oldLineStarts[oldLine0]
-			: oldLineStarts[oldLineStarts.length - 1]) + mapping.generatedColumn;
+		const oldOff =
+			(oldLine0 < oldLineStarts.length
+				? oldLineStarts[oldLine0]
+				: oldLineStarts[oldLineStarts.length - 1]) + mapping.generatedColumn;
 
 		const newOff = adjustOffset(oldOff);
 		const newPos = offsetToLineCol(newLineStarts, newOff);
 
-		if (mapping.source !== null && mapping.originalLine !== null && mapping.originalColumn !== null) {
+		if (
+			mapping.source !== null &&
+			mapping.originalLine !== null &&
+			mapping.originalColumn !== null
+		) {
 			const newMapping: Mapping = {
 				generated: { line: newPos.line + 1, column: newPos.col },
-				original: { line: mapping.originalLine, column: mapping.originalColumn },
+				original: {
+					line: mapping.originalLine,
+					column: mapping.originalColumn,
+				},
 				source: mapping.source,
 			};
 			if (mapping.name !== null) {
@@ -375,7 +445,7 @@ function buildLineStarts(text: string): number[] {
 	const starts: number[] = [0];
 	let pos = 0;
 	while (true) {
-		const nl = text.indexOf('\n', pos);
+		const nl = text.indexOf("\n", pos);
 		if (nl === -1) {
 			break;
 		}
@@ -389,7 +459,10 @@ function buildLineStarts(text: string): number[] {
  * Compute line starts for the code that results from applying `edits` to
  * `originalCode`, without materialising the full new string.
  */
-function buildLineStartsAfterEdits(originalCode: string, edits: readonly TextEdit[]): number[] {
+function buildLineStartsAfterEdits(
+	originalCode: string,
+	edits: readonly TextEdit[],
+): number[] {
 	const starts: number[] = [0];
 	let oldPos = 0;
 	let newPos = 0;
@@ -398,7 +471,7 @@ function buildLineStartsAfterEdits(originalCode: string, edits: readonly TextEdi
 		// Scan unchanged region [oldPos, edit.start) for newlines
 		let from = oldPos;
 		while (true) {
-			const nl = originalCode.indexOf('\n', from);
+			const nl = originalCode.indexOf("\n", from);
 			if (nl === -1 || nl >= edit.start) {
 				break;
 			}
@@ -410,7 +483,7 @@ function buildLineStartsAfterEdits(originalCode: string, edits: readonly TextEdi
 		// Scan replacement text for newlines
 		let replFrom = 0;
 		while (true) {
-			const nl = edit.newText.indexOf('\n', replFrom);
+			const nl = edit.newText.indexOf("\n", replFrom);
 			if (nl === -1) {
 				break;
 			}
@@ -425,7 +498,7 @@ function buildLineStartsAfterEdits(originalCode: string, edits: readonly TextEdi
 	// Scan remaining unchanged text after last edit
 	let from = oldPos;
 	while (true) {
-		const nl = originalCode.indexOf('\n', from);
+		const nl = originalCode.indexOf("\n", from);
 		if (nl === -1) {
 			break;
 		}

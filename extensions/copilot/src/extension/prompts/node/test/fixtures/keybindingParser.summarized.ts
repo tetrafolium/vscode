@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 export class KeybindingParser {
-
 	public static _readModifiers(input: string) {
 		input = input.toLowerCase().trim();
 
@@ -13,7 +12,7 @@ export class KeybindingParser {
 		let alt = false;
 		let meta = false;
 
-__SELECTION_HERE__
+		__SELECTION_HERE__;
 
 		let key: string;
 
@@ -32,7 +31,7 @@ __SELECTION_HERE__
 			shift,
 			alt,
 			meta,
-			key
+			key,
 		};
 	}
 }

@@ -13,7 +13,11 @@ import { TestExtensionsService } from '../../../test/common/testExtensionsServic
 import { createPlatformServices } from '../../../test/node/services';
 import { NullTestProvider } from '../../common/nullTestProvider';
 import { ITestProvider } from '../../common/testProvider';
-import { ISetupTestsDetector, SetupTestActionType, SetupTestsDetector } from '../../node/setupTestDetector';
+import {
+	ISetupTestsDetector,
+	SetupTestActionType,
+	SetupTestsDetector,
+} from '../../node/setupTestDetector';
 import { ITestDepsResolver } from '../../node/testDepsResolver';
 
 suite('SetupTestsDetector', () => {
@@ -41,17 +45,27 @@ suite('SetupTestsDetector', () => {
 		const accessor = services.createTestingAccessor();
 		commandService = accessor.get(IRunCommandExecutionService);
 		testProvider = accessor.get(ITestProvider);
-		extensionService = accessor.get(IExtensionsService) as TestExtensionsService;
-		setupTestsDetector = accessor.get(IInstantiationService).createInstance(SetupTestsDetector);
+		extensionService = accessor.get(
+			IExtensionsService,
+		) as TestExtensionsService;
+		setupTestsDetector = accessor
+			.get(IInstantiationService)
+			.createInstance(SetupTestsDetector);
 	});
 
 	suite('shouldSuggestSetup', () => {
 		test('suggests generic search when ambiguous', async () => {
-			const document = { languageId: 'javascript' } as vscode.TextDocument;
+			const document = {
+				languageId: 'javascript',
+			} as vscode.TextDocument;
 			const request = {} as vscode.ChatRequest;
 			const output = {} as vscode.ChatResponseStream;
 
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 
 			expect(action).to.deep.equal({
 				type: SetupTestActionType.SearchGeneric,
@@ -60,12 +74,18 @@ suite('SetupTestsDetector', () => {
 		});
 
 		test('suggests extension install for a framework', async () => {
-			const document = { languageId: 'javascript' } as vscode.TextDocument;
+			const document = {
+				languageId: 'javascript',
+			} as vscode.TextDocument;
 			const request = {} as vscode.ChatRequest;
 			const output = {} as vscode.ChatResponseStream;
 			testDepsResolver.deps = ['mocha'];
 
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 
 			expect(action).to.deep.equal({
 				type: SetupTestActionType.InstallExtensionForFramework,
@@ -78,33 +98,55 @@ suite('SetupTestsDetector', () => {
 		});
 
 		test('does not suggest install when tests are in workspace', async () => {
-			const document = { languageId: 'javascript' } as vscode.TextDocument;
+			const document = {
+				languageId: 'javascript',
+			} as vscode.TextDocument;
 			const request = {} as vscode.ChatRequest;
 			const output = {} as vscode.ChatResponseStream;
-			vi.spyOn(testProvider, 'hasAnyTests').mockReturnValue(Promise.resolve(true));
+			vi.spyOn(testProvider, 'hasAnyTests').mockReturnValue(
+				Promise.resolve(true),
+			);
 			testDepsResolver.deps = ['mocha'];
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 			expect(action).to.be.undefined;
 		});
 
 		test('does not suggest extension install for a framework already installed', async () => {
-			const document = { languageId: 'javascript' } as vscode.TextDocument;
+			const document = {
+				languageId: 'javascript',
+			} as vscode.TextDocument;
 			const request = {} as vscode.ChatRequest;
 			const output = {} as vscode.ChatResponseStream;
 			testDepsResolver.deps = ['mocha'];
-			extensionService.addExtension({ id: 'hbenl.vscode-mocha-test-adapter' });
+			extensionService.addExtension({
+				id: 'hbenl.vscode-mocha-test-adapter',
+			});
 
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 			expect(action).to.be.undefined;
 		});
 
 		test('suggests extension search for a known framework', async () => {
-			const document = { languageId: 'javascript' } as vscode.TextDocument;
+			const document = {
+				languageId: 'javascript',
+			} as vscode.TextDocument;
 			const request = {} as vscode.ChatRequest;
 			const output = {} as vscode.ChatResponseStream;
 			testDepsResolver.deps = ['cypress'];
 
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 
 			expect(action).to.deep.equal({
 				type: SetupTestActionType.SearchForFramework,
@@ -117,7 +159,11 @@ suite('SetupTestsDetector', () => {
 			const request = {} as vscode.ChatRequest;
 			const output = {} as vscode.ChatResponseStream;
 
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 
 			expect(action).to.deep.equal({
 				type: SetupTestActionType.InstallExtensionForLanguage,
@@ -134,7 +180,11 @@ suite('SetupTestsDetector', () => {
 			const request = {} as vscode.ChatRequest;
 			const output = {} as vscode.ChatResponseStream;
 
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 			expect(action).to.deep.equal({
 				type: SetupTestActionType.InstallExtensionForLanguage,
 				extension: {
@@ -145,7 +195,13 @@ suite('SetupTestsDetector', () => {
 			});
 			setupTestsDetector.showSuggestion(action!);
 
-			expect(await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output)).to.deep.equal({
+			expect(
+				await setupTestsDetector.shouldSuggestSetup(
+					{ document } as any,
+					request,
+					output,
+				),
+			).to.deep.equal({
 				type: SetupTestActionType.Remind,
 				action: {
 					type: SetupTestActionType.InstallExtensionForLanguage,
@@ -164,7 +220,11 @@ suite('SetupTestsDetector', () => {
 			const output = {} as vscode.ChatResponseStream;
 			extensionService.addExtension({ id: 'ms-python.python' });
 
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 			expect(action).to.be.undefined;
 		});
 
@@ -173,11 +233,25 @@ suite('SetupTestsDetector', () => {
 			const request = {} as vscode.ChatRequest;
 			const output = {} as vscode.ChatResponseStream;
 
-			vi.spyOn(commandService, 'executeCommand').mockReturnValue(Promise.resolve({ message: 'msg', command: { command: 'followup', title: 'Follow Up' } }));
+			vi.spyOn(commandService, 'executeCommand').mockReturnValue(
+				Promise.resolve({
+					message: 'msg',
+					command: { command: 'followup', title: 'Follow Up' },
+				}),
+			);
 
-			extensionService.addExtension({ id: 'ms-python.python', packageJSON: { copilot: { tests: { getSetupConfirmation: 'my-command' } } } });
+			extensionService.addExtension({
+				id: 'ms-python.python',
+				packageJSON: {
+					copilot: { tests: { getSetupConfirmation: 'my-command' } },
+				},
+			});
 
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 			expect(action).toMatchInlineSnapshot(`
 			{
 			  "command": {
@@ -194,10 +268,21 @@ suite('SetupTestsDetector', () => {
 			const document = { languageId: 'python' } as vscode.TextDocument;
 			const request = {} as vscode.ChatRequest;
 			const output = {} as vscode.ChatResponseStream;
-			vi.spyOn(commandService, 'executeCommand').mockReturnValue(Promise.resolve());
-			extensionService.addExtension({ id: 'ms-python.python', packageJSON: { copilot: { tests: { getSetupConfirmation: 'my-command' } } } });
+			vi.spyOn(commandService, 'executeCommand').mockReturnValue(
+				Promise.resolve(),
+			);
+			extensionService.addExtension({
+				id: 'ms-python.python',
+				packageJSON: {
+					copilot: { tests: { getSetupConfirmation: 'my-command' } },
+				},
+			});
 
-			const action = await setupTestsDetector.shouldSuggestSetup({ document } as any, request, output);
+			const action = await setupTestsDetector.shouldSuggestSetup(
+				{ document } as any,
+				request,
+				output,
+			);
 			expect(action).be.undefined;
 		});
 	});

@@ -3,14 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../../base/common/uri.js';
-import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
-import { IStorageService, StorageScope } from '../../../../../../platform/storage/common/storage.js';
-import { IChatWidgetService } from '../../../../chat/browser/chat.js';
-import { TerminalToolConfirmationStorageKeys } from '../../../../chat/browser/widget/chatContentParts/toolInvocationParts/chatTerminalToolConfirmationSubPart.js';
-import { IChatService } from '../../../../chat/common/chatService/chatService.js';
-import { ChatConfiguration, isAutoApproveLevel } from '../../../../chat/common/constants.js';
-import { TerminalChatAgentToolsSettingId } from '../../common/terminalChatAgentToolsConfiguration.js';
+import { URI } from "../../../../../../base/common/uri.js";
+import { IConfigurationService } from "../../../../../../platform/configuration/common/configuration.js";
+import {
+	IStorageService,
+	StorageScope,
+} from "../../../../../../platform/storage/common/storage.js";
+import { IChatWidgetService } from "../../../../chat/browser/chat.js";
+import { TerminalToolConfirmationStorageKeys } from "../../../../chat/browser/widget/chatContentParts/toolInvocationParts/chatTerminalToolConfirmationSubPart.js";
+import { IChatService } from "../../../../chat/common/chatService/chatService.js";
+import {
+	ChatConfiguration,
+	isAutoApproveLevel,
+} from "../../../../chat/common/constants.js";
+import { TerminalChatAgentToolsSettingId } from "../../common/terminalChatAgentToolsConfiguration.js";
 
 /**
  * Returns true if the chat session's permission level (Autopilot/Bypass Approvals)
@@ -23,16 +29,22 @@ export function isSessionAutoApproveLevel(
 	chatWidgetService: IChatWidgetService,
 	chatService: IChatService,
 ): boolean {
-	const inspected = configurationService.inspect<boolean>(ChatConfiguration.GlobalAutoApprove);
+	const inspected = configurationService.inspect<boolean>(
+		ChatConfiguration.GlobalAutoApprove,
+	);
 	if (inspected.policyValue === false) {
 		return false;
 	}
 	// Check the live widget picker level (handles mid-session switches).
 	// Fall back to lastFocusedWidget if the session-specific widget isn't found
 	// (e.g., widget was backgrounded or URI mismatch).
-	const widget = chatWidgetService.getWidgetBySessionResource(chatSessionResource)
-		?? chatWidgetService.lastFocusedWidget;
-	if (widget && isAutoApproveLevel(widget.input.currentModeInfo.permissionLevel)) {
+	const widget =
+		chatWidgetService.getWidgetBySessionResource(chatSessionResource) ??
+		chatWidgetService.lastFocusedWidget;
+	if (
+		widget &&
+		isAutoApproveLevel(widget.input.currentModeInfo.permissionLevel)
+	) {
 		return true;
 	}
 	// Fall back to the request-stamped level
@@ -51,8 +63,10 @@ export function isToolEligibleForTerminalAutoApproval(
 	configurationService: IConfigurationService,
 	legacyToolReferenceFullNames?: string[],
 ): boolean {
-	const config = configurationService.getValue<Record<string, boolean>>(ChatConfiguration.EligibleForAutoApproval);
-	if (config && typeof config === 'object') {
+	const config = configurationService.getValue<Record<string, boolean>>(
+		ChatConfiguration.EligibleForAutoApproval,
+	);
+	if (config && typeof config === "object") {
 		if (Object.prototype.hasOwnProperty.call(config, toolReferenceName)) {
 			return config[toolReferenceName];
 		}
@@ -78,8 +92,19 @@ export function isTerminalAutoApproveAllowed(
 	storageService: IStorageService,
 	legacyToolReferenceFullNames?: string[],
 ): boolean {
-	const isEligible = isToolEligibleForTerminalAutoApproval(toolReferenceName, configurationService, legacyToolReferenceFullNames);
-	const isAutoApproveEnabled = configurationService.getValue(TerminalChatAgentToolsSettingId.EnableAutoApprove) === true;
-	const isAutoApproveWarningAccepted = storageService.getBoolean(TerminalToolConfirmationStorageKeys.TerminalAutoApproveWarningAccepted, StorageScope.APPLICATION, false);
+	const isEligible = isToolEligibleForTerminalAutoApproval(
+		toolReferenceName,
+		configurationService,
+		legacyToolReferenceFullNames,
+	);
+	const isAutoApproveEnabled =
+		configurationService.getValue(
+			TerminalChatAgentToolsSettingId.EnableAutoApprove,
+		) === true;
+	const isAutoApproveWarningAccepted = storageService.getBoolean(
+		TerminalToolConfirmationStorageKeys.TerminalAutoApproveWarningAccepted,
+		StorageScope.APPLICATION,
+		false,
+	);
 	return isEligible && isAutoApproveEnabled && isAutoApproveWarningAccepted;
 }

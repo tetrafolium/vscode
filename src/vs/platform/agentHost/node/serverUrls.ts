@@ -3,19 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as os from 'os';
+import * as os from "os";
 
 export interface IResolvedServerUrls {
 	readonly local: readonly string[];
 	readonly network: readonly string[];
 }
 
-const loopbackHosts = new Set(['localhost', '127.0.0.1', '::1', '0000:0000:0000:0000:0000:0000:0000:0001']);
-const wildcardHosts = new Set(['0.0.0.0', '::', '0000:0000:0000:0000:0000:0000:0000:0000']);
+const loopbackHosts = new Set([
+	"localhost",
+	"127.0.0.1",
+	"::1",
+	"0000:0000:0000:0000:0000:0000:0000:0001",
+]);
+const wildcardHosts = new Set([
+	"0.0.0.0",
+	"::",
+	"0000:0000:0000:0000:0000:0000:0000:0000",
+]);
 
-export function resolveServerUrls(host: string | undefined, port: number, networkInterfaces: ReturnType<typeof os.networkInterfaces> = os.networkInterfaces()): IResolvedServerUrls {
+export function resolveServerUrls(
+	host: string | undefined,
+	port: number,
+	networkInterfaces: ReturnType<
+		typeof os.networkInterfaces
+	> = os.networkInterfaces(),
+): IResolvedServerUrls {
 	if (host === undefined) {
-		return { local: [formatWebSocketUrl('localhost', port)], network: [] };
+		return { local: [formatWebSocketUrl("localhost", port)], network: [] };
 	}
 
 	if (!wildcardHosts.has(host)) {
@@ -28,7 +43,7 @@ export function resolveServerUrls(host: string | undefined, port: number, networ
 	const network = new Set<string>();
 	for (const netInterface of Object.values(networkInterfaces)) {
 		for (const detail of netInterface ?? []) {
-			if (detail.family !== 'IPv4' || detail.internal) {
+			if (detail.family !== "IPv4" || detail.internal) {
 				continue;
 			}
 
@@ -37,12 +52,12 @@ export function resolveServerUrls(host: string | undefined, port: number, networ
 	}
 
 	return {
-		local: [formatWebSocketUrl('localhost', port)],
+		local: [formatWebSocketUrl("localhost", port)],
 		network: [...network],
 	};
 }
 
 export function formatWebSocketUrl(host: string, port: number): string {
-	const normalizedHost = host.includes(':') ? `[${host}]` : host;
+	const normalizedHost = host.includes(":") ? `[${host}]` : host;
 	return `ws://${normalizedHost}:${port}`;
 }

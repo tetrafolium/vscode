@@ -13,7 +13,10 @@ export class HooksOutputChannel implements IHooksOutputChannel {
 
 	appendLine(message: string): void {
 		if (!this._channel) {
-			this._channel = window.createOutputChannel('GitHub Copilot Chat Hooks', { log: true });
+			this._channel = window.createOutputChannel(
+				'GitHub Copilot Chat Hooks',
+				{ log: true },
+			);
 		}
 		this._channel.info(message);
 	}

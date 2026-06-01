@@ -35,7 +35,8 @@ export function toPosixPath(osPath: string) {
 	if (osPath.indexOf('/') === -1) {
 		osPath = toSlashes(osPath);
 	}
-	if (/^[a-zA-Z]:(\/|$)/.test(osPath)) { // starts with a drive letter
+	if (/^[a-zA-Z]:(\/|$)/.test(osPath)) {
+		// starts with a drive letter
 		osPath = '/' + osPath;
 	}
 	return osPath;
@@ -65,11 +66,15 @@ export function getRoot(path: string, sep: string = posix.sep): string {
 						break;
 					}
 				}
-				if (start !== pos && !isPathSeparator(path.charCodeAt(pos + 1))) {
+				if (
+					start !== pos &&
+					!isPathSeparator(path.charCodeAt(pos + 1))
+				) {
 					pos += 1;
 					for (; pos < len; pos++) {
 						if (isPathSeparator(path.charCodeAt(pos))) {
-							return path.slice(0, pos + 1) // consume this separator
+							return path
+								.slice(0, pos + 1) // consume this separator
 								.replace(/[\\/]/g, sep);
 						}
 					}
@@ -80,7 +85,6 @@ export function getRoot(path: string, sep: string = posix.sep): string {
 		// /user/far
 		// ^
 		return sep;
-
 	} else if (isWindowsDriveLetter(firstLetter)) {
 		// check for windows drive letter c:\ or c:
 
@@ -167,9 +171,15 @@ export function isUNC(path: string): boolean {
 // Reference: https://en.wikipedia.org/wiki/Filename
 const WINDOWS_INVALID_FILE_CHARS = /[\\/:\*\?"<>\|]/g;
 const UNIX_INVALID_FILE_CHARS = /[/]/g;
-const WINDOWS_FORBIDDEN_NAMES = /^(con|prn|aux|clock\$|nul|lpt[0-9]|com[0-9])(\.(.*?))?$/i;
-export function isValidBasename(name: string | null | undefined, isWindowsOS: boolean = isWindows): boolean {
-	const invalidFileChars = isWindowsOS ? WINDOWS_INVALID_FILE_CHARS : UNIX_INVALID_FILE_CHARS;
+const WINDOWS_FORBIDDEN_NAMES =
+	/^(con|prn|aux|clock\$|nul|lpt[0-9]|com[0-9])(\.(.*?))?$/i;
+export function isValidBasename(
+	name: string | null | undefined,
+	isWindowsOS: boolean = isWindows,
+): boolean {
+	const invalidFileChars = isWindowsOS
+		? WINDOWS_INVALID_FILE_CHARS
+		: UNIX_INVALID_FILE_CHARS;
 
 	if (!name || name.length === 0 || /^\s+$/.test(name)) {
 		return false; // require a name that is not just whitespace
@@ -208,8 +218,12 @@ export function isValidBasename(name: string | null | undefined, isWindowsOS: bo
  * in a context without services, consider to pass down the `extUri` from the outside
  * or use `extUriBiasedIgnorePathCase` if you know what you are doing.
  */
-export function isEqual(pathA: string, pathB: string, ignoreCase?: boolean): boolean {
-	const identityEquals = (pathA === pathB);
+export function isEqual(
+	pathA: string,
+	pathB: string,
+	ignoreCase?: boolean,
+): boolean {
+	const identityEquals = pathA === pathB;
 	if (!ignoreCase || identityEquals) {
 		return identityEquals;
 	}
@@ -226,7 +240,12 @@ export function isEqual(pathA: string, pathB: string, ignoreCase?: boolean): boo
  * you are in a context without services, consider to pass down the `extUri` from the
  * outside, or use `extUriBiasedIgnorePathCase` if you know what you are doing.
  */
-export function isEqualOrParent(base: string, parentCandidate: string, ignoreCase?: boolean, separator = sep): boolean {
+export function isEqualOrParent(
+	base: string,
+	parentCandidate: string,
+	ignoreCase?: boolean,
+	separator = sep,
+): boolean {
 	if (base === parentCandidate) {
 		return true;
 	}
@@ -265,11 +284,13 @@ export function isEqualOrParent(base: string, parentCandidate: string, ignoreCas
 }
 
 export function isWindowsDriveLetter(char0: number): boolean {
-	return char0 >= CharCode.A && char0 <= CharCode.Z || char0 >= CharCode.a && char0 <= CharCode.z;
+	return (
+		(char0 >= CharCode.A && char0 <= CharCode.Z) ||
+		(char0 >= CharCode.a && char0 <= CharCode.z)
+	);
 }
 
 export function sanitizeFilePath(candidate: string, cwd: string): string {
-
 	// Special case: allow to open a drive letter without trailing backslash
 	if (isWindows && candidate.endsWith(':')) {
 		candidate += sep;
@@ -295,7 +316,6 @@ export function removeTrailingPathSeparator(candidate: string): string {
 		if (candidate.endsWith(':')) {
 			candidate += sep;
 		}
-
 	} else {
 		candidate = rtrim(candidate, sep);
 
@@ -316,26 +336,42 @@ export function isRootOrDriveLetter(path: string): boolean {
 			return false;
 		}
 
-		return hasDriveLetter(pathNormalized) &&
-			(path.length === 2 || pathNormalized.charCodeAt(2) === CharCode.Backslash);
+		return (
+			hasDriveLetter(pathNormalized) &&
+			(path.length === 2 ||
+				pathNormalized.charCodeAt(2) === CharCode.Backslash)
+		);
 	}
 
 	return pathNormalized === posix.sep;
 }
 
-export function hasDriveLetter(path: string, isWindowsOS: boolean = isWindows): boolean {
+export function hasDriveLetter(
+	path: string,
+	isWindowsOS: boolean = isWindows,
+): boolean {
 	if (isWindowsOS) {
-		return isWindowsDriveLetter(path.charCodeAt(0)) && path.charCodeAt(1) === CharCode.Colon;
+		return (
+			isWindowsDriveLetter(path.charCodeAt(0)) &&
+			path.charCodeAt(1) === CharCode.Colon
+		);
 	}
 
 	return false;
 }
 
-export function getDriveLetter(path: string, isWindowsOS: boolean = isWindows): string | undefined {
+export function getDriveLetter(
+	path: string,
+	isWindowsOS: boolean = isWindows,
+): string | undefined {
 	return hasDriveLetter(path, isWindowsOS) ? path[0] : undefined;
 }
 
-export function indexOfPath(path: string, candidate: string, ignoreCase?: boolean): number {
+export function indexOfPath(
+	path: string,
+	candidate: string,
+	ignoreCase?: boolean,
+): number {
 	if (candidate.length > path.length) {
 		return -1;
 	}
@@ -358,7 +394,9 @@ export interface IPathWithLineAndColumn {
 	column?: number;
 }
 
-export function parseLineAndColumnAware(rawPath: string): IPathWithLineAndColumn {
+export function parseLineAndColumnAware(
+	rawPath: string,
+): IPathWithLineAndColumn {
 	const segments = rawPath.split(':'); // C:\file.txt:<line>:<column>
 
 	let path: string | undefined;
@@ -383,19 +421,30 @@ export function parseLineAndColumnAware(rawPath: string): IPathWithLineAndColumn
 	return {
 		path,
 		line: line !== undefined ? line : undefined,
-		column: column !== undefined ? column : line !== undefined ? 1 : undefined // if we have a line, make sure column is also set
+		column:
+			column !== undefined ? column : line !== undefined ? 1 : undefined, // if we have a line, make sure column is also set
 	};
 }
 
-const pathChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-const windowsSafePathFirstChars = 'BDEFGHIJKMOQRSTUVWXYZbdefghijkmoqrstuvwxyz0123456789';
+const pathChars =
+	'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+const windowsSafePathFirstChars =
+	'BDEFGHIJKMOQRSTUVWXYZbdefghijkmoqrstuvwxyz0123456789';
 
-export function randomPath(parent?: string, prefix?: string, randomLength = 8): string {
+export function randomPath(
+	parent?: string,
+	prefix?: string,
+	randomLength = 8,
+): string {
 	let suffix = '';
 	for (let i = 0; i < randomLength; i++) {
 		let pathCharsTouse: string;
-		if (i === 0 && isWindows && !prefix && (randomLength === 3 || randomLength === 4)) {
-
+		if (
+			i === 0 &&
+			isWindows &&
+			!prefix &&
+			(randomLength === 3 || randomLength === 4)
+		) {
 			// Windows has certain reserved file names that cannot be used, such
 			// as AUX, CON, PRN, etc. We want to avoid generating a random name
 			// that matches that pattern, so we use a different set of characters
@@ -407,7 +456,9 @@ export function randomPath(parent?: string, prefix?: string, randomLength = 8): 
 			pathCharsTouse = pathChars;
 		}
 
-		suffix += pathCharsTouse.charAt(Math.floor(Math.random() * pathCharsTouse.length));
+		suffix += pathCharsTouse.charAt(
+			Math.floor(Math.random() * pathCharsTouse.length),
+		);
 	}
 
 	let randomFileName: string;

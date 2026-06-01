@@ -61,7 +61,11 @@
 	font-weight: 500;
 	line-height: 14px;
 	opacity: 0.9;
-	transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease;
+	transition:
+		background-color 120ms ease,
+		border-color 120ms ease,
+		color 120ms ease,
+		opacity 120ms ease;
 }
 
 .run-script-action-section .monaco-custom-radio > .monaco-button:first-child,
@@ -69,13 +73,19 @@
 	border-radius: 4px;
 }
 
-.run-script-action-section .monaco-custom-radio > .monaco-button:not(.active):not(:last-child),
-.run-script-action-section .monaco-custom-radio > .monaco-button.previous-active {
+.run-script-action-section
+	.monaco-custom-radio
+	> .monaco-button:not(.active):not(:last-child),
+.run-script-action-section
+	.monaco-custom-radio
+	> .monaco-button.previous-active {
 	border-right: 1px solid transparent;
 	border-left: 1px solid transparent;
 }
 
-.run-script-action-section .monaco-custom-radio > .monaco-button:hover:not(.active):not(.disabled) {
+.run-script-action-section
+	.monaco-custom-radio
+	> .monaco-button:hover:not(.active):not(.disabled) {
 	background-color: var(--vscode-list-hoverBackground);
 	border-color: rgba(255, 255, 255, 0.06);
 	opacity: 1;
@@ -93,12 +103,17 @@
 	outline-offset: 0 !important;
 }
 
-.run-script-action-section .monaco-custom-radio.run-script-action-radio-disabled {
+.run-script-action-section
+	.monaco-custom-radio.run-script-action-radio-disabled {
 	opacity: 0.75;
 }
 
-.run-script-action-section .monaco-custom-radio.run-script-action-radio-disabled > .monaco-button,
-.run-script-action-section .monaco-custom-radio.run-script-action-radio-disabled > .monaco-button:hover:not(.active) {
+.run-script-action-section
+	.monaco-custom-radio.run-script-action-radio-disabled
+	> .monaco-button,
+.run-script-action-section
+	.monaco-custom-radio.run-script-action-radio-disabled
+	> .monaco-button:hover:not(.active) {
 	background-color: transparent;
 	border-color: transparent;
 	color: var(--vscode-disabledForeground);
@@ -106,8 +121,12 @@
 	cursor: default;
 }
 
-.run-script-action-section .monaco-custom-radio.run-script-action-radio-disabled > .monaco-button.active,
-.run-script-action-section .monaco-custom-radio.run-script-action-radio-disabled > .monaco-button.active:hover {
+.run-script-action-section
+	.monaco-custom-radio.run-script-action-radio-disabled
+	> .monaco-button.active,
+.run-script-action-section
+	.monaco-custom-radio.run-script-action-radio-disabled
+	> .monaco-button.active:hover {
 	background-color: var(--vscode-quickInputList-focusBackground);
 	color: var(--vscode-quickInputList-focusForeground);
 	border-color: var(--vscode-focusBorder, transparent);
@@ -115,8 +134,12 @@
 	cursor: default;
 }
 
-.run-script-action-section .monaco-custom-radio.run-script-action-radio-disabled > .monaco-button:focus,
-.run-script-action-section .monaco-custom-radio.run-script-action-radio-disabled > .monaco-button.active:focus {
+.run-script-action-section
+	.monaco-custom-radio.run-script-action-radio-disabled
+	> .monaco-button:focus,
+.run-script-action-section
+	.monaco-custom-radio.run-script-action-radio-disabled
+	> .monaco-button.active:focus {
 	outline: none !important;
 }
 
@@ -139,22 +162,29 @@
 	border-radius: 6px;
 }
 
-.agent-sessions-workbench.run-script-action-modal-visible .quick-input-widget .quick-input-titlebar {
+.agent-sessions-workbench.run-script-action-modal-visible
+	.quick-input-widget
+	.quick-input-titlebar {
 	gap: 8px;
 	height: 32px;
 	padding: 0 6px 0 0;
 	border-top-left-radius: 8px;
 	border-top-right-radius: 8px;
-	border-bottom: 1px solid var(--vscode-titleBar-border, var(--vscode-widget-border, transparent));
+	border-bottom: 1px solid
+		var(--vscode-titleBar-border, var(--vscode-widget-border, transparent));
 	box-sizing: border-box;
 	background-color: var(--vscode-titleBar-activeBackground);
 }
 
-.agent-sessions-workbench.run-script-action-modal-visible .quick-input-widget .quick-input-right-action-bar {
+.agent-sessions-workbench.run-script-action-modal-visible
+	.quick-input-widget
+	.quick-input-right-action-bar {
 	margin-right: 0;
 }
 
-.agent-sessions-workbench.run-script-action-modal-visible .quick-input-widget .quick-input-title {
+.agent-sessions-workbench.run-script-action-modal-visible
+	.quick-input-widget
+	.quick-input-title {
 	padding: 0;
 	text-align: left;
 	font-size: 12px;
@@ -167,14 +197,20 @@
 	box-shadow: var(--vscode-shadow-xl);
 }
 
-.agent-sessions-workbench.run-script-action-modal-visible .quick-input-widget .quick-input-html-widget {
+.agent-sessions-workbench.run-script-action-modal-visible
+	.quick-input-widget
+	.quick-input-html-widget {
 	border-bottom-left-radius: 8px;
 	border-bottom-right-radius: 8px;
 	overflow: hidden;
 }
 
-.agent-sessions-workbench.run-script-action-modal-visible .quick-input-widget .quick-input-header,
-.agent-sessions-workbench.run-script-action-modal-visible .quick-input-widget .run-script-action-widget {
+.agent-sessions-workbench.run-script-action-modal-visible
+	.quick-input-widget
+	.quick-input-header,
+.agent-sessions-workbench.run-script-action-modal-visible
+	.quick-input-widget
+	.run-script-action-widget {
 	background-color: var(--vscode-editor-background);
 }
 

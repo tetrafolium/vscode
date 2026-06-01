@@ -42,7 +42,7 @@ class IsEmptyBlockStartTestCase {
 
 	private constructor(
 		private readonly languageId: string,
-		testCase: string
+		testCase: string,
 	) {
 		let text = '';
 		const expectTrueOffsets: number[] = [];
@@ -79,7 +79,8 @@ class IsEmptyBlockStartTestCase {
 				return this.text;
 			case TrimMode.TRIM_TO_END_OF_LINE: {
 				const nextNewline = this.text.indexOf('\n', offset);
-				const fromNewline = nextNewline >= 0 ? this.text.slice(nextNewline) : '';
+				const fromNewline =
+					nextNewline >= 0 ? this.text.slice(nextNewline) : '';
 				return this.text.slice(0, offset) + fromNewline;
 			}
 			case TrimMode.TRIM_TO_END_OF_INPUT:
@@ -94,12 +95,20 @@ class IsEmptyBlockStartTestCase {
 			const text = this.trimText(offset);
 			const msg = `${this.text.slice(0, offset)}█${this.text.slice(offset)}`;
 			// common helper to all breaks
-			assert.strictEqual(await blockParser.isEmptyBlockStart(text, offset), true, msg);
+			assert.strictEqual(
+				await blockParser.isEmptyBlockStart(text, offset),
+				true,
+				msg,
+			);
 		}
 		for (const offset of this.expectFalseOffsets) {
 			const text = this.trimText(offset);
 			const msg = `${this.text.slice(0, offset)}█${this.text.slice(offset)}`;
-			assert.strictEqual(await blockParser.isEmptyBlockStart(text, offset), false, msg);
+			assert.strictEqual(
+				await blockParser.isEmptyBlockStart(text, offset),
+				false,
+				msg,
+			);
 		}
 	}
 
@@ -137,12 +146,15 @@ function runTestCase(languageId: string, testCase: TestCase) {
 	// block is expected to be empty if no body
 	const expectedEmpty = !testCase.body;
 	// block is expected to be finished after body, if there is a body and an after
-	const expectedFinish = testCase.body && testCase.after ? testCase.body.length : undefined;
+	const expectedFinish =
+		testCase.body && testCase.after ? testCase.body.length : undefined;
 
 	// cursor position is after the before text
 	const offset = testCase.before.length;
 	// print the text with a cursor indicator on failure
-	const prettyPrint = ('\n' + testCase.before + '█' + bodyWithAfter).split('\n').join('\n\t| ');
+	const prettyPrint = ('\n' + testCase.before + '█' + bodyWithAfter)
+		.split('\n')
+		.join('\n\t| ');
 
 	test(`empty block start:${expectedEmpty}`, async function () {
 		const isEmpty = await blockParser.isEmptyBlockStart(text, offset);
@@ -151,7 +163,11 @@ function runTestCase(languageId: string, testCase: TestCase) {
 	});
 
 	test(`block finish:${expectedFinish}`, async function () {
-		const isFinished = await blockParser.isBlockBodyFinished(testCase.before, bodyWithAfter, offset);
+		const isFinished = await blockParser.isBlockBodyFinished(
+			testCase.before,
+			bodyWithAfter,
+			offset,
+		);
 		// test isFinished matched expectation
 		assert.strictEqual(isFinished, expectedFinish, prettyPrint);
 	});
@@ -163,7 +179,9 @@ function runTestCases(languageId: string, testCases: TestCase[]) {
 	}
 }
 
-function getNodeStartTestCase(testCase: string): [string, number[], number[], number] {
+function getNodeStartTestCase(
+	testCase: string,
+): [string, number[], number[], number] {
 	let text = '';
 	let i = 0;
 	let expectedResult = 0;
@@ -205,17 +223,22 @@ function getNodeStartTestCase(testCase: string): [string, number[], number[], nu
  */
 async function testGetNodeStart(languageId: string, testCase: string) {
 	const blockParser = getBlockParser(languageId);
-	const [code, positiveOffsets, rejectedOffsets, expected_result] = getNodeStartTestCase(testCase);
+	const [code, positiveOffsets, rejectedOffsets, expected_result] =
+		getNodeStartTestCase(testCase);
 	for (const offset of positiveOffsets) {
 		const start = await blockParser.getNodeStart(code, offset);
-		assert.strictEqual(start, expected_result, 'Should get beginning of the scope');
+		assert.strictEqual(
+			start,
+			expected_result,
+			'Should get beginning of the scope',
+		);
 	}
 	for (const offset of rejectedOffsets) {
 		const start = await blockParser.getNodeStart(code, offset);
 		assert.notStrictEqual(
 			start,
 			expected_result,
-			`Should not get begining of the scope - tested offset: ${offset}`
+			`Should not get begining of the scope - tested offset: ${offset}`,
 		);
 	}
 }
@@ -223,14 +246,28 @@ async function testGetNodeStart(languageId: string, testCase: string) {
 suite('parseBlock Tests', function () {
 	suite('getBlockParser tests', function () {
 		test('Supported and unsupported languages', function () {
-			const supportedLanguages = ['python', 'javascript', 'typescript', 'go', 'ruby'];
+			const supportedLanguages = [
+				'python',
+				'javascript',
+				'typescript',
+				'go',
+				'ruby',
+			];
 			for (const language of supportedLanguages) {
 				assert.ok(getBlockParser(language));
 			}
 
 			// Taken from https://insights.stackoverflow.com/survey/2020#most-popular-technologies and
 			// https://code.visualstudio.com/docs/languages/identifiers
-			const unsupportedLanguages = ['sql', 'java', 'shellscript', 'php', 'cpp', 'c', 'kotlin'];
+			const unsupportedLanguages = [
+				'sql',
+				'java',
+				'shellscript',
+				'php',
+				'cpp',
+				'c',
+				'kotlin',
+			];
 			for (const language of unsupportedLanguages) {
 				assert.throws(() => getBlockParser(language));
 			}
@@ -244,7 +281,9 @@ suite('parseBlock Tests', function () {
                     pass
             `;
 			const blockParser = getBlockParser('python');
-			await assert.rejects(blockParser.isEmptyBlockStart(text, text.length + 1));
+			await assert.rejects(
+				blockParser.isEmptyBlockStart(text, text.length + 1),
+			);
 		});
 
 		test('simple examples', async function () {
@@ -306,7 +345,9 @@ suite('parseBlock Tests', function () {
 
 		test('func_decl', async function () {
 			const testCases = [
-				IsEmptyBlockStartTestCase.python('❌d❌e❌f🟢 🟢f🟢o🟢o🟢(🟢)🟢:🟢'),
+				IsEmptyBlockStartTestCase.python(
+					'❌d❌e❌f🟢 🟢f🟢o🟢o🟢(🟢)🟢:🟢',
+				),
 				IsEmptyBlockStartTestCase.python(dedent`
                     ❌d❌e❌f🟢 🟢f🟢o🟢o🟢(🟢)🟢:🟢
                     🟢 🟢 🟢 🟢 🟢
@@ -340,7 +381,7 @@ suite('parseBlock Tests', function () {
                     ❌d❌e❌f🟢 🟢f🟢u🟢n🟢c🟢1🟢(🟢)🟢:🟢 🟢 🟢
 
                     print("Running at toplevel")
-                `
+                `,
 			).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE);
 			// break 1
 			await testCase.test();
@@ -348,7 +389,7 @@ suite('parseBlock Tests', function () {
 
 		test('func_decl_with_type_hints', async function () {
 			const testCase = IsEmptyBlockStartTestCase.python(
-				'❌d❌e❌f🟢 🟢s🟢u🟢m🟢(🟢a🟢:🟢 🟢i🟢n🟢t🟢,🟢 🟢b🟢:🟢 🟢i🟢n🟢t🟢)🟢 🟢-🟢>🟢 🟢I🟢n🟢t🟢:🟢'
+				'❌d❌e❌f🟢 🟢s🟢u🟢m🟢(🟢a🟢:🟢 🟢i🟢n🟢t🟢,🟢 🟢b🟢:🟢 🟢i🟢n🟢t🟢)🟢 🟢-🟢>🟢 🟢I🟢n🟢t🟢:🟢',
 			);
 			await testCase.test();
 		});
@@ -360,7 +401,7 @@ suite('parseBlock Tests', function () {
                     ❌
                     pass❌
                     ❌
-            `
+            `,
 			).setTrimMode(TrimMode.NO_TRIM);
 			await testCase.test();
 		});
@@ -416,7 +457,7 @@ suite('parseBlock Tests', function () {
                     def my_func():❌
                         "❌"❌"❌T❌h❌i❌s❌ ❌i❌s❌ ❌a❌ ❌d❌o❌c❌s❌t❌r❌i❌n❌g❌.❌"❌"❌"❌
                         pass
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.python(
 					dedent`
@@ -425,7 +466,7 @@ suite('parseBlock Tests', function () {
 
                         ❌H❌e❌r❌e❌'❌s❌ ❌a❌n❌o❌t❌h❌e❌r❌ ❌l❌i❌n❌e❌.❌"❌"❌"❌
                         pass
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 			];
 
@@ -435,7 +476,9 @@ suite('parseBlock Tests', function () {
 		});
 
 		test('Not EOL', async function () {
-			const testCase = IsEmptyBlockStartTestCase.python('def my_❌func():').setTrimMode(TrimMode.NO_TRIM);
+			const testCase = IsEmptyBlockStartTestCase.python(
+				'def my_❌func():',
+			).setTrimMode(TrimMode.NO_TRIM);
 			await testCase.test();
 		});
 
@@ -783,28 +826,28 @@ suite('parseBlock Tests', function () {
                     ❌f❌u❌n❌c❌t❌i❌o❌n🟢 🟢f🟢o🟢o🟢(🟢)🟢 🟢{🟢
                         🟢
                     function bar() {}
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.javascript(
 					dedent`
                     ❌f❌u❌n❌c❌t❌i❌o❌n❌ ❌f❌o❌o❌(❌)❌ ❌{❌
                         ❌
                         function bar() {}
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.javascript(
 					dedent`
                     ❌f❌u❌n❌c❌t❌i❌o❌n🟢 🟢f🟢o🟢o🟢(🟢)🟢 🟢{🟢
                     🟢
                     let a = 10;
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.javascript(
 					dedent`
                     ❌f❌u❌n❌c❌t❌i❌o❌n❌ ❌f❌o❌o❌(❌)❌ ❌{❌
                         ❌
                         let a = 10;
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 			];
 
@@ -822,7 +865,7 @@ suite('parseBlock Tests', function () {
                         ❌b❌a❌r❌.❌b❌a❌z❌,❌
                         ❌b❌a❌z❌.❌b❌a❌z❌
                     );
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.javascript(
 					dedent`
@@ -831,7 +874,7 @@ suite('parseBlock Tests', function () {
                         ❌'❌a❌'❌,❌
                         ❌'❌a❌'❌
                     );
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.javascript(dedent`
                     () => doIt(❌
@@ -1181,14 +1224,14 @@ suite('parseBlock Tests', function () {
 					dedent`
                     ❌f❌u❌n❌c❌t❌i❌o❌n🟢 🟢f🟢(❌x❌ ❌:❌ ❌n❌u❌m❌b❌e❌r❌,❌
                         🟢y🟢 🟢:🟢 🟢n🟢u🟢m🟢b🟢e🟢r🟢)🟢 🟢:🟢 🟢n🟢u🟢m🟢b🟢e🟢r🟢;❌
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.typescript(
 					dedent`
                     ❌f❌u❌n❌c❌t❌i❌o❌n🟢 🟢f🟢(🟢
                         🟢
                     let x = 0;
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.typescript(
 					dedent`
@@ -1197,7 +1240,7 @@ suite('parseBlock Tests', function () {
                     x: number,
                     /** second parameter */
                     y: number);
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.typescript(
 					dedent`
@@ -1205,7 +1248,7 @@ suite('parseBlock Tests', function () {
                         start: number,❌
                         end: number❌
                     };
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 			];
 
@@ -1309,28 +1352,28 @@ suite('parseBlock Tests', function () {
                     ❌f❌u❌n❌c❌t❌i❌o❌n🟢 🟢f🟢o🟢o🟢(🟢)🟢 🟢{🟢
                         🟢
                     function bar() {}
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.typescript(
 					dedent`
                     ❌f❌u❌n❌c❌t❌i❌o❌n❌ ❌f❌o❌o❌(❌)❌ ❌{❌
                         ❌
                         function bar() {}
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.typescript(
 					dedent`
                     ❌f❌u❌n❌c❌t❌i❌o❌n🟢 🟢f🟢o🟢o🟢(🟢)🟢 🟢{🟢
                     🟢
                     let a = 10;
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.typescript(
 					dedent`
                     ❌f❌u❌n❌c❌t❌i❌o❌n❌ ❌f❌o❌o❌(❌)❌ ❌{❌
                         ❌
                         let a = 10;
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 			];
 
@@ -1348,7 +1391,7 @@ suite('parseBlock Tests', function () {
                         ❌b❌a❌r❌.❌b❌a❌z❌,❌
                         ❌b❌a❌z❌.❌b❌a❌z❌
                     );
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.typescript(
 					dedent`
@@ -1357,7 +1400,7 @@ suite('parseBlock Tests', function () {
                         ❌'❌a❌'❌,❌
                         ❌'❌a❌'❌
                     );
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.typescript(dedent`
                     () => doIt(❌
@@ -1398,7 +1441,7 @@ suite('parseBlock Tests', function () {
                     def 🟢greet❌
                         🟢puts "Hello"❌
                     end
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.ruby(
 					dedent`
@@ -1406,7 +1449,7 @@ suite('parseBlock Tests', function () {
                         ❌puts "Hello"❌
                         ❌puts "Bye"❌
                     end
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 			];
 			for (const testCase of testCases) {
@@ -1429,7 +1472,7 @@ suite('parseBlock Tests', function () {
                     func 🟢greet🟢()🟢 {❌
                         🟢fmt.Println("Hello")❌
                     }
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 				IsEmptyBlockStartTestCase.go(
 					dedent`
@@ -1437,7 +1480,7 @@ suite('parseBlock Tests', function () {
                         ❌fmt.Println("Hello")❌
                         ❌fmt.Println("Bye")❌
                     }
-                `
+                `,
 				).setTrimMode(TrimMode.TRIM_TO_END_OF_LINE),
 			];
 			for (const testCase of testCases) {
@@ -1453,22 +1496,50 @@ suite('parseBlock Tests', function () {
 			{ before: 'def foo():', body: '\n\tpass', after: '\npass' },
 			{ before: 'def foo():', body: '\n\tpass', after: '\n\t\npass' },
 			{ before: 'def foo(arg1', body: '):\n\tpass', after: '\npass' },
-			{ before: 'def foo(arg1', body: '\n\t\t):\n\tpass', after: '\npass' },
-			{ before: 'def foo(arg1,', body: ' arg2):\n\tpass', after: '\npass' },
+			{
+				before: 'def foo(arg1',
+				body: '\n\t\t):\n\tpass',
+				after: '\npass',
+			},
+			{
+				before: 'def foo(arg1,',
+				body: ' arg2):\n\tpass',
+				after: '\npass',
+			},
 			{ before: 'def foo', body: '():\n\tpass', after: '\n\npass' },
 			{ before: 'def foo' },
 			{ before: 'def foo', body: '():\n\t1+1\n\t# comment' },
-			{ before: 'def foo', body: '():\n\t1+1\n\t# comment1', after: '\n# comment2' },
+			{
+				before: 'def foo',
+				body: '():\n\t1+1\n\t# comment1',
+				after: '\n# comment2',
+			},
 			{ before: 'def foo', body: '():\n\t# comment' },
-			{ before: 'def foo', body: '():\n\t1+1 # comment1', after: '\n# comment2' },
-			{ before: 'def foo', body: '():\n\t# comment1\n\t1+1', after: '\n# comment2' },
+			{
+				before: 'def foo',
+				body: '():\n\t1+1 # comment1',
+				after: '\n# comment2',
+			},
+			{
+				before: 'def foo',
+				body: '():\n\t# comment1\n\t1+1',
+				after: '\n# comment2',
+			},
 			{ before: 'def foo', body: '():\n\t# comment1\n\t# comment2' },
-			{ before: 'def foo', body: '():\n\t# comment1\n\t# comment2', after: '\n# comment3' },
+			{
+				before: 'def foo',
+				body: '():\n\t# comment1\n\t# comment2',
+				after: '\n# comment3',
+			},
 			{ before: 'def foo', body: '(): #comment1' },
 			{ before: 'def foo', body: '():#comment1' },
 			{ before: 'try:', after: '\nexcept: pass' },
 			{ before: 'try:', body: '\n\t1+1', after: '\nexcept: pass' },
-			{ before: 'try:\n\tpass\nfinally:\n\tif 1:', body: '\n\t\tpass', after: '\npass' },
+			{
+				before: 'try:\n\tpass\nfinally:\n\tif 1:',
+				body: '\n\t\tpass',
+				after: '\npass',
+			},
 			{ before: 'try:\n\tpass\nfinally:\n\tif 1:', after: '\npass' },
 			{ before: 'if 1:\n\tpass\nelse:\n\tif 2:', after: '\npass' },
 			{ before: 'if 1:\n\tpass\nelse:\n\tif 2:', after: '\n\tpass' },
@@ -1478,7 +1549,11 @@ suite('parseBlock Tests', function () {
 				body: '\tdef foo():\n\t\tpass\n\tdef bar():\n\t\tpass',
 				after: '\npass',
 			},
-			{ before: 'class C:\n', body: '\tdef foo():\n\tpass\n\tdef bar():\n\t\tpass', after: '\npass' },
+			{
+				before: 'class C:\n',
+				body: '\tdef foo():\n\tpass\n\tdef bar():\n\t\tpass',
+				after: '\npass',
+			},
 			{
 				before: 'for ',
 				body: ` record in records:\n\taccount_id = record'actor_id']\n\trecord['account_tier'] = account_tiers[account_id]`,
@@ -1647,7 +1722,9 @@ suite('parseBlock Tests', function () {
         }`;
 
 	function mkTestCase(src: string, stripTypes: boolean) {
-		if (stripTypes) { src = src.replace(/〚.*?〛/g, ''); }
+		if (stripTypes) {
+			src = src.replace(/〚.*?〛/g, '');
+		}
 		const bodyStart = src.indexOf('⦃');
 		const bodyEnd = src.indexOf('⦄');
 		return {
@@ -1658,10 +1735,16 @@ suite('parseBlock Tests', function () {
 	}
 
 	suite('JavaScript isBlockBodyFinished tests', function () {
-		runTestCases('javascript', [mkTestCase(test1, true), mkTestCase(test2, true)]);
+		runTestCases('javascript', [
+			mkTestCase(test1, true),
+			mkTestCase(test2, true),
+		]);
 	});
 
 	suite('TypeScript isBlockBodyFinished tests', function () {
-		runTestCases('typescript', [mkTestCase(test1, false), mkTestCase(test2, false)]);
+		runTestCases('typescript', [
+			mkTestCase(test1, false),
+			mkTestCase(test2, false),
+		]);
 	});
 });

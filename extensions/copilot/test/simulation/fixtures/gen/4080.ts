@@ -2,14 +2,13 @@
  * Represents a gap (before the first child, between two children, or after the last child) in a `LinkedOverlayNode`.
  */
 class LinkedOverlayNodeGap {
-
 	constructor(
 		private readonly _originalText: string,
 		private readonly _parent: LinkedOverlayNode,
 		public readonly startIndex: number,
 		public readonly endIndex: number,
 		public readonly gapIndex: number,
-	) { }
+	) {}
 	public get range(): OffsetRange {
 		return new OffsetRange(this.startIndex, this.endIndex);
 	}
@@ -29,7 +28,11 @@ class LinkedOverlayNodeGap {
 		let index = this.startIndex;
 		while (index < this.endIndex) {
 			const charCode = this._originalText.charCodeAt(index);
-			if (charCode !== CharCode.Tab && charCode !== CharCode.Space && charCode !== CharCode.LineFeed) {
+			if (
+				charCode !== CharCode.Tab &&
+				charCode !== CharCode.Space &&
+				charCode !== CharCode.LineFeed
+			) {
 				return index;
 			}
 			index++;
@@ -37,13 +40,12 @@ class LinkedOverlayNodeGap {
 		return this.endIndex;
 	}
 
-	public get lastNonWhitespaceIndex(): number {
-		
-	}
+	public get lastNonWhitespaceIndex(): number {}
 
 	public get nextLeaf(): LinkedOverlayNode | null {
 		const nextSibling = this._parent.childAt(this.gapIndex);
-		return nextSibling ? nextSibling.leftMostLeafChild : this._parent.nextLeaf;
+		return nextSibling
+			? nextSibling.leftMostLeafChild
+			: this._parent.nextLeaf;
 	}
 }
-

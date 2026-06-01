@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 import { IVSCodeExtensionContext } from '../../../platform/extContext/common/extensionContext';
 
-export const NEW_WORKSPACE_STORAGE_KEY = 'copilot.newWorkspaceAgent.workspaceContexts';
+export const NEW_WORKSPACE_STORAGE_KEY =
+	'copilot.newWorkspaceAgent.workspaceContexts';
 
 export interface INewWorkspaceStoredData {
 	workspaceURI: string;
@@ -12,9 +13,16 @@ export interface INewWorkspaceStoredData {
 	initialized: boolean | undefined;
 }
 
-export function saveNewWorkspaceContext(add: INewWorkspaceStoredData, extensionContext: IVSCodeExtensionContext) {
-	const contexts = extensionContext.globalState.get<INewWorkspaceStoredData[]>(NEW_WORKSPACE_STORAGE_KEY, []);
-	const idx = contexts.findIndex(context => context.workspaceURI === add.workspaceURI);
+export function saveNewWorkspaceContext(
+	add: INewWorkspaceStoredData,
+	extensionContext: IVSCodeExtensionContext,
+) {
+	const contexts = extensionContext.globalState.get<
+		INewWorkspaceStoredData[]
+	>(NEW_WORKSPACE_STORAGE_KEY, []);
+	const idx = contexts.findIndex(
+		(context) => context.workspaceURI === add.workspaceURI,
+	);
 	if (idx >= 0) {
 		contexts.splice(idx, 1);
 	}

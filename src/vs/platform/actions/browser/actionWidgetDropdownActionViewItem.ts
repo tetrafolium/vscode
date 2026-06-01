@@ -3,18 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { $, append } from '../../../base/browser/dom.js';
-import { BaseActionViewItem } from '../../../base/browser/ui/actionbar/actionViewItems.js';
-import { ILabelRenderer } from '../../../base/browser/ui/dropdown/dropdown.js';
-import { getBaseLayerHoverDelegate } from '../../../base/browser/ui/hover/hoverDelegate2.js';
-import { getDefaultHoverDelegate } from '../../../base/browser/ui/hover/hoverDelegateFactory.js';
-import { IAction } from '../../../base/common/actions.js';
-import { IDisposable } from '../../../base/common/lifecycle.js';
-import { IActionWidgetService } from '../../actionWidget/browser/actionWidget.js';
-import { ActionWidgetDropdown, IActionWidgetDropdownOptions } from '../../actionWidget/browser/actionWidgetDropdown.js';
-import { IContextKeyService } from '../../contextkey/common/contextkey.js';
-import { IKeybindingService } from '../../keybinding/common/keybinding.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
+import { $, append } from "../../../base/browser/dom.js";
+import { BaseActionViewItem } from "../../../base/browser/ui/actionbar/actionViewItems.js";
+import { ILabelRenderer } from "../../../base/browser/ui/dropdown/dropdown.js";
+import { getBaseLayerHoverDelegate } from "../../../base/browser/ui/hover/hoverDelegate2.js";
+import { getDefaultHoverDelegate } from "../../../base/browser/ui/hover/hoverDelegateFactory.js";
+import { IAction } from "../../../base/common/actions.js";
+import { IDisposable } from "../../../base/common/lifecycle.js";
+import { IActionWidgetService } from "../../actionWidget/browser/actionWidget.js";
+import {
+	ActionWidgetDropdown,
+	IActionWidgetDropdownOptions,
+} from "../../actionWidget/browser/actionWidgetDropdown.js";
+import { IContextKeyService } from "../../contextkey/common/contextkey.js";
+import { IKeybindingService } from "../../keybinding/common/keybinding.js";
+import { ITelemetryService } from "../../telemetry/common/telemetry.js";
 
 /**
  * Action view item for the custom action widget dropdown widget.
@@ -25,8 +28,12 @@ export class ActionWidgetDropdownActionViewItem extends BaseActionViewItem {
 	private actionItem: HTMLElement | null = null;
 	constructor(
 		action: IAction,
-		private readonly actionWidgetOptions: Omit<IActionWidgetDropdownOptions, 'label' | 'labelRenderer'>,
-		@IActionWidgetService private readonly _actionWidgetService: IActionWidgetService,
+		private readonly actionWidgetOptions: Omit<
+			IActionWidgetDropdownOptions,
+			"label" | "labelRenderer"
+		>,
+		@IActionWidgetService
+		private readonly _actionWidgetService: IActionWidgetService,
 		@IKeybindingService private readonly _keybindingService: IKeybindingService,
 		@IContextKeyService private readonly _contextKeyService: IContextKeyService,
 		@ITelemetryService private readonly _telemetryService: ITelemetryService,
@@ -37,15 +44,27 @@ export class ActionWidgetDropdownActionViewItem extends BaseActionViewItem {
 	override render(container: HTMLElement): void {
 		this.actionItem = container;
 
-		const labelRenderer: ILabelRenderer = (el: HTMLElement): IDisposable | null => {
-			this.element = append(el, $('a.action-label'));
+		const labelRenderer: ILabelRenderer = (
+			el: HTMLElement,
+		): IDisposable | null => {
+			this.element = append(el, $("a.action-label"));
 			return this.renderLabel(this.element);
 		};
 
-		this.actionWidgetDropdown = this._register(new ActionWidgetDropdown(container, { ...this.actionWidgetOptions, labelRenderer }, this._actionWidgetService, this._keybindingService, this._telemetryService));
-		this._register(this.actionWidgetDropdown.onDidChangeVisibility(visible => {
-			this.element?.setAttribute('aria-expanded', `${visible}`);
-		}));
+		this.actionWidgetDropdown = this._register(
+			new ActionWidgetDropdown(
+				container,
+				{ ...this.actionWidgetOptions, labelRenderer },
+				this._actionWidgetService,
+				this._keybindingService,
+				this._telemetryService,
+			),
+		);
+		this._register(
+			this.actionWidgetDropdown.onDidChangeVisibility((visible) => {
+				this.element?.setAttribute("aria-expanded", `${visible}`);
+			}),
+		);
 
 		this.updateTooltip();
 		this.updateEnabled();
@@ -53,10 +72,16 @@ export class ActionWidgetDropdownActionViewItem extends BaseActionViewItem {
 
 	protected renderLabel(element: HTMLElement): IDisposable | null {
 		// todo@aeschli: remove codicon, should come through `this.options.classNames`
-		element.classList.add('codicon');
+		element.classList.add("codicon");
 
 		if (this._action.label) {
-			this._register(getBaseLayerHoverDelegate().setupManagedHover(this.options.hoverDelegate ?? getDefaultHoverDelegate('mouse'), element, this._action.label));
+			this._register(
+				getBaseLayerHoverDelegate().setupManagedHover(
+					this.options.hoverDelegate ?? getDefaultHoverDelegate("mouse"),
+					element,
+					this._action.label,
+				),
+			);
 		}
 
 		return null;
@@ -69,15 +94,21 @@ export class ActionWidgetDropdownActionViewItem extends BaseActionViewItem {
 	}
 
 	protected setAriaLabelAttributes(element: HTMLElement): void {
-		element.setAttribute('role', 'button');
-		element.setAttribute('aria-haspopup', 'true');
-		element.setAttribute('aria-expanded', 'false');
-		element.ariaLabel = (this.getTooltip() + ' - ' + (element.textContent || this._action.label)) || '';
+		element.setAttribute("role", "button");
+		element.setAttribute("aria-haspopup", "true");
+		element.setAttribute("aria-expanded", "false");
+		element.ariaLabel =
+			this.getTooltip() + " - " + (element.textContent || this._action.label) ||
+			"";
 	}
 
 	protected override getTooltip() {
 		const tooltip = this.action.tooltip ?? this.action.label;
-		return this._keybindingService.appendKeybinding(tooltip, this.action.id, this._contextKeyService);
+		return this._keybindingService.appendKeybinding(
+			tooltip,
+			this.action.id,
+			this._contextKeyService,
+		);
 	}
 
 	show(): void {
@@ -86,9 +117,8 @@ export class ActionWidgetDropdownActionViewItem extends BaseActionViewItem {
 
 	protected override updateEnabled(): void {
 		const disabled = !this.action.enabled;
-		this.actionItem?.classList.toggle('disabled', disabled);
-		this.element?.classList.toggle('disabled', disabled);
+		this.actionItem?.classList.toggle("disabled", disabled);
+		this.element?.classList.toggle("disabled", disabled);
 		this.actionWidgetDropdown?.setEnabled(!disabled);
 	}
-
 }

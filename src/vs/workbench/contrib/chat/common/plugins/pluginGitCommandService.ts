@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
+import { CancellationToken } from "../../../../../base/common/cancellation.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { createDecorator } from "../../../../../platform/instantiation/common/instantiation.js";
 
-export const IPluginGitService = createDecorator<IPluginGitService>('pluginGitService');
+export const IPluginGitService =
+	createDecorator<IPluginGitService>("pluginGitService");
 
 /**
  * Abstracts git operations used by the agent plugin system.
@@ -18,9 +19,19 @@ export const IPluginGitService = createDecorator<IPluginGitService>('pluginGitSe
 export interface IPluginGitService {
 	readonly _serviceBrand: undefined;
 
-	cloneRepository(cloneUrl: string, targetDir: URI, ref?: string, token?: CancellationToken): Promise<void>;
+	cloneRepository(
+		cloneUrl: string,
+		targetDir: URI,
+		ref?: string,
+		token?: CancellationToken,
+	): Promise<void>;
 	pull(repoDir: URI, token?: CancellationToken): Promise<boolean>;
-	checkout(repoDir: URI, treeish: string, detached?: boolean, token?: CancellationToken): Promise<void>;
+	checkout(
+		repoDir: URI,
+		treeish: string,
+		detached?: boolean,
+		token?: CancellationToken,
+	): Promise<void>;
 	revParse(repoDir: URI, ref: string): Promise<string>;
 	fetch(repoDir: URI, token?: CancellationToken): Promise<void>;
 	openRepository(repoDir: URI): Promise<void>;

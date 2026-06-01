@@ -6,7 +6,10 @@
 import * as ts from 'typescript';
 import { Range, languages, workspace } from 'vscode';
 import { timeout } from '../../../src/util/vs/base/common/async';
-import { CachedFunction, LRUCachedFunction } from '../../../src/util/vs/base/common/cache';
+import {
+	CachedFunction,
+	LRUCachedFunction,
+} from '../../../src/util/vs/base/common/cache';
 import { Disposable } from '../../../src/util/vs/base/common/lifecycle';
 
 export class Extension extends Disposable {
@@ -19,10 +22,16 @@ export class Extension extends Disposable {
 				await timeout(1000);
 			}
 
-			const document = workspace.textDocuments.find(d => d.fileName === fileName);
-			if (document?.version !== modelVersion) { return []; }
+			const document = workspace.textDocuments.find(
+				(d) => d.fileName === fileName,
+			);
+			if (document?.version !== modelVersion) {
+				return [];
+			}
 			const text = document.getText();
-			if (!text.includes('test')) { return []; }
+			if (!text.includes('test')) {
+				return [];
+			}
 			const tests = getTests(text);
 			return tests.filter(isVisualizableTest);
 		});
@@ -30,35 +39,46 @@ export class Extension extends Disposable {
 
 	constructor() {
 		super();
-		this._register(languages.registerCodeLensProvider([
-			{ language: 'javascript', scheme: 'file' },
-			{ language: 'typescript', scheme: 'file' }
-		], {
-			provideCodeLenses: async (document, token) => {
-				const info = await (this._testCaches.get(document.fileName).get(document.version));
-				return info.map(t => ({
-					range: new Range(t.lineNumber, 0, t.lineNumber, 0),
-					command: {
-						title: 'Visualize Test',
-						command: 'debug-value-editor.debug-and-send-request',
-						arguments: [{
-							launchConfigName: 'Test Visualization Runner',
-							args: {
-								fileName: document.fileName,
-								path: t.path,
+		this._register(
+			languages.registerCodeLensProvider(
+				[
+					{ language: 'javascript', scheme: 'file' },
+					{ language: 'typescript', scheme: 'file' },
+				],
+				{
+					provideCodeLenses: async (document, token) => {
+						const info = await this._testCaches
+							.get(document.fileName)
+							.get(document.version);
+						return info.map((t) => ({
+							range: new Range(t.lineNumber, 0, t.lineNumber, 0),
+							command: {
+								title: 'Visualize Test',
+								command:
+									'debug-value-editor.debug-and-send-request',
+								arguments: [
+									{
+										launchConfigName:
+											'Test Visualization Runner',
+										args: {
+											fileName: document.fileName,
+											path: t.path,
+										},
+										revealAvailablePropertiesView: true,
+									},
+								],
 							},
-							revealAvailablePropertiesView: true,
-						}],
+							isResolved: true,
+						}));
 					},
-					isResolved: true,
-				}));
-			},
-		}));
+				},
+			),
+		);
 	}
 }
 
 function isVisualizableTest(info: TestInfo): boolean {
-	return info.path.some(p => p.indexOf('[visualizable]') !== -1);
+	return info.path.some((p) => p.indexOf('[visualizable]') !== -1);
 }
 
 type TestInfo = {
@@ -74,24 +94,47 @@ function getTests(document: string): TestInfo[] {
 		return [];
 	}
 
-	function parseTest(node: ts.Node): { testName: string; node: ts.Node } | undefined {
-		if (!ts.isCallExpression(node)) { return undefined; }
-		if (!ts.isIdentifier(node.expression)) { return undefined; }
-		if (node.expression.text !== 'test') { return undefined; }
+	function parseTest(
+		node: ts.Node,
+	): { testName: string; node: ts.Node } | undefined {
+		if (!ts.isCallExpression(node)) {
+			return undefined;
+		}
+		if (!ts.isIdentifier(node.expression)) {
+			return undefined;
+		}
+		if (node.expression.text !== 'test') {
+			return undefined;
+		}
 		const firstArg = node.arguments[0];
-		if (!ts.isStringLiteral(firstArg)) { return undefined; }
+		if (!ts.isStringLiteral(firstArg)) {
+			return undefined;
+		}
 		return {
 			testName: firstArg.text,
 			node: node.expression,
 		};
 	}
 
-	function parseDescribeOrSuite(node: ts.Node): { describeName: string; node: ts.Node } | undefined {
-		if (!ts.isCallExpression(node)) { return undefined; }
-		if (!ts.isIdentifier(node.expression)) { return undefined; }
-		if (node.expression.text !== 'describe' && node.expression.text !== 'suite') { return undefined; }
+	function parseDescribeOrSuite(
+		node: ts.Node,
+	): { describeName: string; node: ts.Node } | undefined {
+		if (!ts.isCallExpression(node)) {
+			return undefined;
+		}
+		if (!ts.isIdentifier(node.expression)) {
+			return undefined;
+		}
+		if (
+			node.expression.text !== 'describe' &&
+			node.expression.text !== 'suite'
+		) {
+			return undefined;
+		}
 		const firstArg = node.arguments[0];
-		if (!ts.isStringLiteral(firstArg)) { return undefined; }
+		if (!ts.isStringLiteral(firstArg)) {
+			return undefined;
+		}
 		return {
 			describeName: firstArg.text,
 			node: node.expression,
@@ -101,11 +144,13 @@ function getTests(document: string): TestInfo[] {
 	const currentPath: string[] = [];
 	const result: TestInfo[] = [];
 	function find(node: ts.Node) {
-
 		const test = parseTest(node);
 		if (test) {
 			const pos = sf.getLineAndCharacterOfPosition(test.node.getStart());
-			result.push({ path: [...currentPath, test.testName], lineNumber: pos.line });
+			result.push({
+				path: [...currentPath, test.testName],
+				lineNumber: pos.line,
+			});
 		}
 
 		const describe = parseDescribeOrSuite(node);

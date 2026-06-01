@@ -4,13 +4,28 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { randomUUID } from 'crypto';
-import type { CancellationToken, ChatRequest, ChatResponseStream, LanguageModelToolInformation, Progress } from 'vscode';
+import type {
+	CancellationToken,
+	ChatRequest,
+	ChatResponseStream,
+	LanguageModelToolInformation,
+	Progress,
+} from 'vscode';
 import { IAuthenticationChatUpgradeService } from '../../../platform/authentication/common/authenticationUpgrade';
 import { IChatHookService } from '../../../platform/chat/common/chatHookService';
-import { ChatLocation, ChatResponse } from '../../../platform/chat/common/commonTypes';
+import {
+	ChatLocation,
+	ChatResponse,
+} from '../../../platform/chat/common/commonTypes';
 import { ISessionTranscriptService } from '../../../platform/chat/common/sessionTranscriptService';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
-import { ChatEndpointFamily, IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
+import {
+	ChatEndpointFamily,
+	IEndpointProvider,
+} from '../../../platform/endpoint/common/endpointProvider';
 import { ProxyAgenticEndpoint } from '../../../platform/endpoint/node/proxyAgenticEndpoint';
 import { IFileSystemService } from '../../../platform/filesystem/common/fileSystemService';
 import { IGitService } from '../../../platform/git/common/gitService';
@@ -21,8 +36,16 @@ import { IExperimentationService } from '../../../platform/telemetry/common/null
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
 import { ITerminalService } from '../../../platform/terminal/common/terminalService';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
-import { ChatResponseProgressPart, ChatResponseReferencePart, LanguageModelToolResult2 } from '../../../vscodeTypes';
-import { IToolCallingLoopOptions, ToolCallingLoop, ToolCallingLoopFetchOptions } from '../../intents/node/toolCallingLoop';
+import {
+	ChatResponseProgressPart,
+	ChatResponseReferencePart,
+	LanguageModelToolResult2,
+} from '../../../vscodeTypes';
+import {
+	IToolCallingLoopOptions,
+	ToolCallingLoop,
+	ToolCallingLoopFetchOptions,
+} from '../../intents/node/toolCallingLoop';
 import { ExecutionSubagentPrompt } from '../../prompts/node/agent/executionSubagentPrompt';
 import { PromptRenderer } from '../../prompts/node/base/promptRenderer';
 import { ToolResultMetadata } from '../../prompts/node/panel/toolCalling';
@@ -59,7 +82,6 @@ export interface IBackgroundCommand {
 }
 
 export class ExecutionSubagentToolCallingLoop extends ToolCallingLoop<IExecutionSubagentToolCallingLoopOptions> {
-
 	public static readonly ID = 'executionSubagentTool';
 
 	/** Terminal calls from previous rounds that the subagent is no longer
@@ -74,92 +96,148 @@ export class ExecutionSubagentToolCallingLoop extends ToolCallingLoop<IExecution
 
 	constructor(
 		options: IExecutionSubagentToolCallingLoopOptions,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@ILogService logService: ILogService,
 		@IRequestLogger requestLogger: IRequestLogger,
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
 		@IToolsService private readonly toolsService: IToolsService,
-		@IAuthenticationChatUpgradeService authenticationChatUpgradeService: IAuthenticationChatUpgradeService,
+		@IAuthenticationChatUpgradeService
+		authenticationChatUpgradeService: IAuthenticationChatUpgradeService,
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IExperimentationService experimentationService: IExperimentationService,
+		@IExperimentationService
+		experimentationService: IExperimentationService,
 		@IChatHookService chatHookService: IChatHookService,
-		@ISessionTranscriptService sessionTranscriptService: ISessionTranscriptService,
+		@ISessionTranscriptService
+		sessionTranscriptService: ISessionTranscriptService,
 		@IFileSystemService fileSystemService: IFileSystemService,
 		@IOTelService otelService: IOTelService,
 		@IGitService gitService: IGitService,
 		@ITerminalService private readonly terminalService: ITerminalService,
 	) {
-		super(options, instantiationService, endpointProvider, logService, requestLogger, authenticationChatUpgradeService, telemetryService, configurationService, experimentationService, chatHookService, sessionTranscriptService, fileSystemService, otelService, gitService);
+		super(
+			options,
+			instantiationService,
+			endpointProvider,
+			logService,
+			requestLogger,
+			authenticationChatUpgradeService,
+			telemetryService,
+			configurationService,
+			experimentationService,
+			chatHookService,
+			sessionTranscriptService,
+			fileSystemService,
+			otelService,
+			gitService,
+		);
 	}
 
-	protected override createPromptContext(availableTools: LanguageModelToolInformation[], outputStream: ChatResponseStream | undefined): IBuildPromptContext {
+	protected override createPromptContext(
+		availableTools: LanguageModelToolInformation[],
+		outputStream: ChatResponseStream | undefined,
+	): IBuildPromptContext {
 		const context = super.createPromptContext(availableTools, outputStream);
 		if (context.tools) {
 			context.tools = {
 				...context.tools,
 				toolReferences: [],
-				subAgentInvocationId: this.options.subAgentInvocationId ?? randomUUID(),
-				subAgentName: 'execution'
+				subAgentInvocationId:
+					this.options.subAgentInvocationId ?? randomUUID(),
+				subAgentName: 'execution',
 			};
 		}
 		context.query = this.options.promptText;
 		return context;
 	}
 
-	private static readonly DEFAULT_AGENTIC_PROXY_MODEL = 'exec-subagent-router-a';
+	private static readonly DEFAULT_AGENTIC_PROXY_MODEL =
+		'exec-subagent-router-a';
 
 	/**
 	 * Get the endpoint to use for the execution subagent
 	 */
 	private async getEndpoint() {
-		const modelName = this._configurationService.getExperimentBasedConfig(ConfigKey.Advanced.ExecutionSubagentModel, this._experimentationService) as ChatEndpointFamily | undefined;
-		const useAgenticProxy = this._configurationService.getExperimentBasedConfig(ConfigKey.Advanced.ExecutionSubagentUseAgenticProxy, this._experimentationService);
+		const modelName = this._configurationService.getExperimentBasedConfig(
+			ConfigKey.Advanced.ExecutionSubagentModel,
+			this._experimentationService,
+		) as ChatEndpointFamily | undefined;
+		const useAgenticProxy =
+			this._configurationService.getExperimentBasedConfig(
+				ConfigKey.Advanced.ExecutionSubagentUseAgenticProxy,
+				this._experimentationService,
+			);
 		const shellType = this.terminalService.terminalShellType;
 
 		if (useAgenticProxy) {
 			// Our custom models are not trained for PowerShell yet. Fall back to main agent endpoint.
 			if (shellType === 'powershell' || shellType === 'pwsh') {
-				return await this.endpointProvider.getChatEndpoint(this.options.request);
+				return await this.endpointProvider.getChatEndpoint(
+					this.options.request,
+				);
 			}
 			// Use agentic proxy with ExecutionSubagentModel or default to DEFAULT_AGENTIC_PROXY_MODEL
-			const agenticProxyModel = modelName || ExecutionSubagentToolCallingLoop.DEFAULT_AGENTIC_PROXY_MODEL;
-			return this.instantiationService.createInstance(ProxyAgenticEndpoint, agenticProxyModel);
+			const agenticProxyModel =
+				modelName ||
+				ExecutionSubagentToolCallingLoop.DEFAULT_AGENTIC_PROXY_MODEL;
+			return this.instantiationService.createInstance(
+				ProxyAgenticEndpoint,
+				agenticProxyModel,
+			);
 		}
 
 		if (modelName) {
 			try {
 				// Try to get the specified model
-				const endpoint = await this.endpointProvider.getChatEndpoint(modelName);
+				const endpoint =
+					await this.endpointProvider.getChatEndpoint(modelName);
 				if (endpoint.supportsToolCalls) {
 					return endpoint;
 				}
 				// Model does not support tool calls, fallback to main agent endpoint
-				return await this.endpointProvider.getChatEndpoint(this.options.request);
+				return await this.endpointProvider.getChatEndpoint(
+					this.options.request,
+				);
 			} catch (error) {
 				// Model not available, fallback to main agent endpoint
-				return await this.endpointProvider.getChatEndpoint(this.options.request);
+				return await this.endpointProvider.getChatEndpoint(
+					this.options.request,
+				);
 			}
 		} else {
 			// No model name specified, use main agent endpoint
-			return await this.endpointProvider.getChatEndpoint(this.options.request);
+			return await this.endpointProvider.getChatEndpoint(
+				this.options.request,
+			);
 		}
 	}
 
-	protected async buildPrompt(buildpromptContext: IBuildPromptContext, progress: Progress<ChatResponseReferencePart | ChatResponseProgressPart>, token: CancellationToken): Promise<IBuildPromptResult> {
+	protected async buildPrompt(
+		buildpromptContext: IBuildPromptContext,
+		progress: Progress<
+			ChatResponseReferencePart | ChatResponseProgressPart
+		>,
+		token: CancellationToken,
+	): Promise<IBuildPromptResult> {
 		const endpoint = await this.getEndpoint();
-		const maxExecutionTurns = this._configurationService.getExperimentBasedConfig(ConfigKey.Advanced.ExecutionSubagentToolCallLimit, this._experimentationService);
+		const maxExecutionTurns =
+			this._configurationService.getExperimentBasedConfig(
+				ConfigKey.Advanced.ExecutionSubagentToolCallLimit,
+				this._experimentationService,
+			);
 
-		const render = (hasBackgroundCommand: boolean) => PromptRenderer.create(
-			this.instantiationService,
-			endpoint,
-			ExecutionSubagentPrompt,
-			{
-				promptContext: buildpromptContext,
-				maxExecutionTurns,
-				hasBackgroundCommand,
-			}
-		).render(progress, token);
+		const render = (hasBackgroundCommand: boolean) =>
+			PromptRenderer.create(
+				this.instantiationService,
+				endpoint,
+				ExecutionSubagentPrompt,
+				{
+					promptContext: buildpromptContext,
+					maxExecutionTurns,
+					hasBackgroundCommand,
+				},
+			).render(progress, token);
 
 		// If a previous render observed any background terminal commands, tell the
 		// prompt to nudge the model to stop issuing tool calls and produce its
@@ -193,7 +271,10 @@ export class ExecutionSubagentToolCallingLoop extends ToolCallingLoop<IExecution
 		return result;
 	}
 
-	private collectBackgroundCommands(buildpromptContext: IBuildPromptContext, result: IBuildPromptResult): void {
+	private collectBackgroundCommands(
+		buildpromptContext: IBuildPromptContext,
+		result: IBuildPromptResult,
+	): void {
 		const lastRound = buildpromptContext.toolCallRounds?.at(-1);
 		if (!lastRound) {
 			return;
@@ -209,17 +290,25 @@ export class ExecutionSubagentToolCallingLoop extends ToolCallingLoop<IExecution
 		}
 		const terminalCallsById = new Map<string, ITerminalCall>();
 		for (const tc of lastRound.toolCalls) {
-			if (tc.name !== ToolName.CoreRunInTerminal || this._seenBackgroundCallIds.has(tc.id)) {
+			if (
+				tc.name !== ToolName.CoreRunInTerminal ||
+				this._seenBackgroundCallIds.has(tc.id)
+			) {
 				continue;
 			}
 			let command = '';
 			let invokedAsAsync = false;
 			try {
-				const args = JSON.parse(tc.arguments) as { command?: unknown; mode?: unknown; isBackground?: unknown };
+				const args = JSON.parse(tc.arguments) as {
+					command?: unknown;
+					mode?: unknown;
+					isBackground?: unknown;
+				};
 				if (typeof args?.command === 'string') {
 					command = args.command;
 				}
-				invokedAsAsync = args?.mode === 'async' || args?.isBackground === true;
+				invokedAsAsync =
+					args?.mode === 'async' || args?.isBackground === true;
 			} catch {
 				// arguments may not be valid JSON on partial rounds; skip extraction
 			}
@@ -273,11 +362,14 @@ export class ExecutionSubagentToolCallingLoop extends ToolCallingLoop<IExecution
 	 * the chatParticipantPrivate proposed API and is not on the public
 	 * LanguageModelToolResult2 type, so we narrow with an `in` check.
 	 */
-	private getTerminalId(toolResult: LanguageModelToolResult2): string | undefined {
+	private getTerminalId(
+		toolResult: LanguageModelToolResult2,
+	): string | undefined {
 		if (!('toolMetadata' in toolResult)) {
 			return undefined;
 		}
-		const metadata = (toolResult as { toolMetadata?: unknown }).toolMetadata;
+		const metadata = (toolResult as { toolMetadata?: unknown })
+			.toolMetadata;
 		if (!metadata || typeof metadata !== 'object') {
 			return undefined;
 		}
@@ -291,11 +383,14 @@ export class ExecutionSubagentToolCallingLoop extends ToolCallingLoop<IExecution
 	 * `undefined` otherwise. See vscode core: runInTerminalTool.ts which sets
 	 * `timedOut: true` and `timeoutMs` on `toolMetadata` for that case.
 	 */
-	private getTimeoutMsIfTimedOut(toolResult: LanguageModelToolResult2): number | undefined {
+	private getTimeoutMsIfTimedOut(
+		toolResult: LanguageModelToolResult2,
+	): number | undefined {
 		if (!('toolMetadata' in toolResult)) {
 			return undefined;
 		}
-		const metadata = (toolResult as { toolMetadata?: unknown }).toolMetadata;
+		const metadata = (toolResult as { toolMetadata?: unknown })
+			.toolMetadata;
 		if (!metadata || typeof metadata !== 'object') {
 			return undefined;
 		}
@@ -316,7 +411,8 @@ export class ExecutionSubagentToolCallingLoop extends ToolCallingLoop<IExecution
 		if (!('toolMetadata' in toolResult)) {
 			return false;
 		}
-		const metadata = (toolResult as { toolMetadata?: unknown }).toolMetadata;
+		const metadata = (toolResult as { toolMetadata?: unknown })
+			.toolMetadata;
 		if (!metadata || typeof metadata !== 'object') {
 			return false;
 		}
@@ -324,7 +420,9 @@ export class ExecutionSubagentToolCallingLoop extends ToolCallingLoop<IExecution
 		return m.inputNeeded === true;
 	}
 
-	protected async getAvailableTools(): Promise<LanguageModelToolInformation[]> {
+	protected async getAvailableTools(): Promise<
+		LanguageModelToolInformation[]
+	> {
 		// If any previous terminal call has moved to the background (timeout or
 		// async), expose no tools so the model cannot make further calls and is
 		// forced to produce its <final_answer>.
@@ -333,44 +431,62 @@ export class ExecutionSubagentToolCallingLoop extends ToolCallingLoop<IExecution
 		}
 
 		const endpoint = await this.getEndpoint();
-		const allTools = this.toolsService.getEnabledTools(this.options.request, endpoint);
+		const allTools = this.toolsService.getEnabledTools(
+			this.options.request,
+			endpoint,
+		);
 
-		const allowedExecutionTools = new Set([
-			ToolName.CoreRunInTerminal
-		]);
+		const allowedExecutionTools = new Set([ToolName.CoreRunInTerminal]);
 
-		return allTools.filter(tool => allowedExecutionTools.has(tool.name as ToolName));
+		return allTools.filter((tool) =>
+			allowedExecutionTools.has(tool.name as ToolName),
+		);
 	}
 
-	protected async fetch({ messages, finishedCb, requestOptions, modelCapabilities, iterationNumber }: ToolCallingLoopFetchOptions, token: CancellationToken): Promise<ChatResponse> {
-		const endpoint = await this.getEndpoint();
-		return endpoint.makeChatRequest2({
-			debugName: ExecutionSubagentToolCallingLoop.ID,
+	protected async fetch(
+		{
 			messages,
 			finishedCb,
-			location: this.options.location,
-			modelCapabilities: { ...modelCapabilities, reasoningEffort: undefined },
-			requestOptions: {
-				...(requestOptions ?? {}),
-				temperature: 0
+			requestOptions,
+			modelCapabilities,
+			iterationNumber,
+		}: ToolCallingLoopFetchOptions,
+		token: CancellationToken,
+	): Promise<ChatResponse> {
+		const endpoint = await this.getEndpoint();
+		return endpoint.makeChatRequest2(
+			{
+				debugName: ExecutionSubagentToolCallingLoop.ID,
+				messages,
+				finishedCb,
+				location: this.options.location,
+				modelCapabilities: {
+					...modelCapabilities,
+					reasoningEffort: undefined,
+				},
+				requestOptions: {
+					...(requestOptions ?? {}),
+					temperature: 0,
+				},
+				// This loop is inside a tool called from another request, so never user initiated
+				userInitiatedRequest: false,
+				interactionTypeOverride: 'conversation-subagent',
+				turnId: this.options.request.id,
+				topLevelTurnId: this.options.topLevelTurnId,
+				telemetryProperties: {
+					requestId: this.options.subAgentInvocationId,
+					messageId: randomUUID(),
+					messageSource: 'chat.editAgent',
+					subType: 'execution_subagent',
+					conversationId: this.options.conversation.sessionId,
+					parentToolCallId: this.options.parentToolCallId,
+					parentRequestId: this.options.request.id,
+					parentHeaderRequestId: this.options.parentHeaderRequestId,
+					parentModelCallId: this.options.parentModelCallId,
+					iterationNumber: iterationNumber.toString(),
+				},
 			},
-			// This loop is inside a tool called from another request, so never user initiated
-			userInitiatedRequest: false,
-			interactionTypeOverride: 'conversation-subagent',
-			turnId: this.options.request.id,
-			topLevelTurnId: this.options.topLevelTurnId,
-			telemetryProperties: {
-				requestId: this.options.subAgentInvocationId,
-				messageId: randomUUID(),
-				messageSource: 'chat.editAgent',
-				subType: 'execution_subagent',
-				conversationId: this.options.conversation.sessionId,
-				parentToolCallId: this.options.parentToolCallId,
-				parentRequestId: this.options.request.id,
-				parentHeaderRequestId: this.options.parentHeaderRequestId,
-				parentModelCallId: this.options.parentModelCallId,
-				iterationNumber: iterationNumber.toString(),
-			},
-		}, token);
+			token,
+		);
 	}
 }

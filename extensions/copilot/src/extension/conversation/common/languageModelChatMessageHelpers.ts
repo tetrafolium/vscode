@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import { LanguageModelDataPart } from '../../../vscodeTypes';
 
 export enum ChatImageMimeType {
@@ -15,7 +14,10 @@ export enum ChatImageMimeType {
 }
 
 export function isImageDataPart(part: unknown): part is LanguageModelDataPart {
-	if (part instanceof LanguageModelDataPart && isChatImageMimeType(part.mimeType)) {
+	if (
+		part instanceof LanguageModelDataPart &&
+		isChatImageMimeType(part.mimeType)
+	) {
 		return true;
 	}
 

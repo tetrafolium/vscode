@@ -9,11 +9,19 @@ import path from 'path';
 // Re-export all .ts files as rules
 const rules: Record<string, LooseRuleDefinition> = {};
 await Promise.all(
-	fs.readdirSync(import.meta.dirname)
-		.filter(file => file.endsWith('.ts') && !file.endsWith('index.ts') && !file.endsWith('utils.ts'))
-		.map(async file => {
-			rules[path.basename(file, '.ts')] = (await import('./' + file)).default;
-		})
+	fs
+		.readdirSync(import.meta.dirname)
+		.filter(
+			(file) =>
+				file.endsWith('.ts') &&
+				!file.endsWith('index.ts') &&
+				!file.endsWith('utils.ts'),
+		)
+		.map(async (file) => {
+			rules[path.basename(file, '.ts')] = (
+				await import('./' + file)
+			).default;
+		}),
 );
 
 export { rules };

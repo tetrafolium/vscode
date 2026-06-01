@@ -8,7 +8,6 @@ declare module 'vscode' {
 	 * Represents reasons why a notebook document is saved.
 	 */
 	export enum NotebookDocumentSaveReason {
-
 		/**
 		 * Manually triggered, e.g. by the user pressing save, by starting debugging,
 		 * or by an API call.
@@ -23,7 +22,7 @@ declare module 'vscode' {
 		/**
 		 * When the editor lost focus.
 		 */
-		FocusOut = 3
+		FocusOut = 3,
 	}
 
 	/**
@@ -50,8 +49,8 @@ declare module 'vscode' {
 		readonly reason: NotebookDocumentSaveReason;
 
 		/**
-		 * 
-		 * @param thenable 
+		 *
+		 * @param thenable
 		 */
 		waitUntil(thenable: Thenable<readonly WorkspaceEdit[]>): void;
 
@@ -59,7 +58,6 @@ declare module 'vscode' {
 	}
 
 	export namespace workspace {
-
 		export const onWillSaveNotebookDocument: Event<NotebookDocumentWillSaveEvent>;
 	}
 }

@@ -9,19 +9,40 @@ import type vscode from 'vscode';
 import { GlobIncludeOptions, shouldInclude } from '../../../util/common/glob';
 import { getLanguageForResource } from '../../../util/common/languages';
 import { createServiceIdentifier } from '../../../util/common/services';
-import { Limiter, raceCancellationError } from '../../../util/vs/base/common/async';
-import { CancellationToken, CancellationTokenSource } from '../../../util/vs/base/common/cancellation';
+import {
+	Limiter,
+	raceCancellationError,
+} from '../../../util/vs/base/common/async';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../util/vs/base/common/cancellation';
 import { isCancellationError } from '../../../util/vs/base/common/errors';
 import { Emitter, Event } from '../../../util/vs/base/common/event';
 import { Lazy } from '../../../util/vs/base/common/lazy';
-import { Disposable, dispose, IDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	dispose,
+	IDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 import { ResourceMap } from '../../../util/vs/base/common/map';
 import { Schemas } from '../../../util/vs/base/common/network';
-import { basename, extname, isEqual, isEqualOrParent } from '../../../util/vs/base/common/resources';
+import {
+	basename,
+	extname,
+	isEqual,
+	isEqualOrParent,
+} from '../../../util/vs/base/common/resources';
 import { TernarySearchTree } from '../../../util/vs/base/common/ternarySearchTree';
 import { URI } from '../../../util/vs/base/common/uri';
-import { IInstantiationService, ServicesAccessor } from '../../../util/vs/platform/instantiation/common/instantiation';
-import { ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { IFileSystemService } from '../../filesystem/common/fileSystemService';
 import { FileType, RelativePattern } from '../../filesystem/common/fileTypes';
 import { IIgnoreService } from '../../ignore/common/ignoreService';
@@ -41,20 +62,48 @@ const maxIndexableFileSize = 1.5 * 1024 * 1024; // 1.5 MB
  */
 const EXCLUDE_EXTENSIONS = new Set([
 	// Images
-	'jpg', 'jpeg', 'jpe',
+	'jpg',
+	'jpeg',
+	'jpe',
 	'png',
 	'gif',
 	'bmp',
-	'tif', 'tiff',
+	'tif',
+	'tiff',
 	'tga',
-	'ico', 'icns', 'xpm',
+	'ico',
+	'icns',
+	'xpm',
 	'webp',
-	'svg', 'eps',
-	'heif', 'heic',
-	'raw', 'arw', 'cr2', 'cr3', 'nef', 'nrw', 'orf', 'raf', 'rw2', 'rwl', 'pef', 'srw', 'x3f', 'erf', 'kdc', '3fr', 'mef', 'mrw', 'iiq', 'gpr', 'dng', // raw formats
+	'svg',
+	'eps',
+	'heif',
+	'heic',
+	'raw',
+	'arw',
+	'cr2',
+	'cr3',
+	'nef',
+	'nrw',
+	'orf',
+	'raf',
+	'rw2',
+	'rwl',
+	'pef',
+	'srw',
+	'x3f',
+	'erf',
+	'kdc',
+	'3fr',
+	'mef',
+	'mrw',
+	'iiq',
+	'gpr',
+	'dng', // raw formats
 
 	// Video
-	'mp4', 'm4v',
+	'mp4',
+	'm4v',
 	'mkv',
 	'webm',
 	'mov',
@@ -76,17 +125,21 @@ const EXCLUDE_EXTENSIONS = new Set([
 	// Compressed
 	'7z',
 	'bz2',
-	'gz', 'gz_', 'tgz',
+	'gz',
+	'gz_',
+	'tgz',
 	'rar',
 	'tar',
 	'xz',
-	'zip', 'vsix',
+	'zip',
+	'vsix',
 	'iso',
 	'img',
 	'pkg',
 
 	// Fonts
-	'woff', 'woff2',
+	'woff',
+	'woff2',
 	'otf',
 	'ttf',
 	'eot',
@@ -99,56 +152,108 @@ const EXCLUDE_EXTENSIONS = new Set([
 	'dae',
 	'blend',
 	'ply',
-	'glb', 'gltf',
+	'glb',
+	'gltf',
 	'max',
 	'c4d',
-	'ma', 'mb',
+	'ma',
+	'mb',
 	'pcd',
 
 	// Documents
-	'pdf', 'ai', 'ps', 'eps', 'indd', // PDF and related formats
-	'doc', 'docx', // Word
-	'xls', 'xlsx', // Excel
-	'ppt', 'pptx', // PowerPoint
-	'odt', 'ods', 'odp', // OpenDocument formats
+	'pdf',
+	'ai',
+	'ps',
+	'eps',
+	'indd', // PDF and related formats
+	'doc',
+	'docx', // Word
+	'xls',
+	'xlsx', // Excel
+	'ppt',
+	'pptx', // PowerPoint
+	'odt',
+	'ods',
+	'odp', // OpenDocument formats
 	'rtf', // Rich Text Format
 	'psd',
 	'pbix', // PowerBI
 
 	// Others
-	'temp', 'tmp',
+	'temp',
+	'tmp',
 	'exe',
-	'db', 'db-wal', 'db-shm', 'sqlite', // SQLite
+	'db',
+	'db-wal',
+	'db-shm',
+	'sqlite', // SQLite
 	'parquet',
-	'bin', 'dat', 'data', 'hex', 'cache', 'sum', 'hash',
+	'bin',
+	'dat',
+	'data',
+	'hex',
+	'cache',
+	'sum',
+	'hash',
 	'wasm',
-	'pdb', 'idb', 'sym',
+	'pdb',
+	'idb',
+	'sym',
 	'coverage',
 	'testlog',
-	'git', 'pack', 'pack_', // git
+	'git',
+	'pack',
+	'pack_', // git
 	'lock',
-	'log', 'trace', 'tlog',
+	'log',
+	'trace',
+	'tlog',
 	'snap',
 	'msi',
 	'deb',
-	'vsidx', 'suo', // VS
+	'vsidx',
+	'suo', // VS
 	'xcuserstate', // XCode
 	'download',
-	'map', 'tsbuildinfo', 'jsbundle', // JS/TS
-	'dll', 'dll.config', 'dylib', 'so', 'a', 'o', 'lib', 'out', 'elf', // C++
-	'nupkg', 'winmd', // C#
-	'pyc', 'pkl', 'pickle', 'pyd', // Python
-	'rlib', 'rmeta', // Rust
+	'map',
+	'tsbuildinfo',
+	'jsbundle', // JS/TS
+	'dll',
+	'dll.config',
+	'dylib',
+	'so',
+	'a',
+	'o',
+	'lib',
+	'out',
+	'elf', // C++
+	'nupkg',
+	'winmd', // C#
+	'pyc',
+	'pkl',
+	'pickle',
+	'pyd', // Python
+	'rlib',
+	'rmeta', // Rust
 	'dill', // Dart
-	'jar', 'class', 'ear', 'war', // Java
-	'apk', 'dex', // Android
+	'jar',
+	'class',
+	'ear',
+	'war', // Java
+	'apk',
+	'dex', // Android
 	'phar', // PHP
 
 	// Certificates and private keys (security sensitive)
-	'pfx', 'p12', // PKCS#12 files
-	'pem', 'crt', 'cer', // Certificate files
-	'key', 'priv', // Private key files
-	'jks', 'keystore', // Java keystore files
+	'pfx',
+	'p12', // PKCS#12 files
+	'pem',
+	'crt',
+	'cer', // Certificate files
+	'key',
+	'priv', // Private key files
+	'jks',
+	'keystore', // Java keystore files
 	'csr', // Certificate signing requests
 ]);
 
@@ -226,7 +331,7 @@ export function shouldAlwaysIgnoreFile(resource: URI): boolean {
 
 	// Ignore some common folders like node_modules
 	const parts = resource.fsPath.toLowerCase().split(/[/\\]/g);
-	if (parts.some(part => EXCLUDED_FOLDERS.includes(part))) {
+	if (parts.some((part) => EXCLUDED_FOLDERS.includes(part))) {
 		return true;
 	}
 
@@ -244,7 +349,10 @@ export function shouldAlwaysIgnoreFile(resource: URI): boolean {
  *
  * Caller should also look at file content to make sure the file is not binary or copilot ignored.
  */
-export function shouldPotentiallyIndexFile(accessor: ServicesAccessor, resource: URI): boolean {
+export function shouldPotentiallyIndexFile(
+	accessor: ServicesAccessor,
+	resource: URI,
+): boolean {
 	if (shouldAlwaysIgnoreFile(resource)) {
 		return false;
 	}
@@ -253,7 +361,9 @@ export function shouldPotentiallyIndexFile(accessor: ServicesAccessor, resource:
 	const workspaceService = accessor.get(IWorkspaceService);
 	if (
 		![Schemas.file, Schemas.untitled].includes(resource.scheme) && // Still always allow loose and untitled files
-		!workspaceService.getWorkspaceFolders().some(folder => resource.scheme === folder.scheme)
+		!workspaceService
+			.getWorkspaceFolders()
+			.some((folder) => resource.scheme === folder.scheme)
 	) {
 		return false;
 	}
@@ -262,13 +372,10 @@ export function shouldPotentiallyIndexFile(accessor: ServicesAccessor, resource:
 }
 
 export abstract class FileRepresentation implements IDisposable {
-
 	protected _isDisposed = false;
 	protected readonly _disposedCts = new CancellationTokenSource();
 
-	constructor(
-		private readonly _uri: URI,
-	) { }
+	constructor(private readonly _uri: URI) {}
 
 	dispose(): void {
 		this._isDisposed = true;
@@ -305,7 +412,9 @@ interface FileTextContent {
 }
 
 class FsFileRepresentation extends FileRepresentation {
-	private readonly _fileReadLimiter: Limiter<{ data: Uint8Array; truncatedInfo?: FileTruncationInfo } | undefined>;
+	private readonly _fileReadLimiter: Limiter<
+		{ data: Uint8Array; truncatedInfo?: FileTruncationInfo } | undefined
+	>;
 
 	constructor(
 		uri: URI,
@@ -338,7 +447,12 @@ class FsFileRepresentation extends FileRepresentation {
 
 			// Exclude minified css and js files
 			const lang = getLanguageForResource(this.uri).languageId;
-			if ((lang === 'javascript' || lang === 'javascriptreact' || lang === 'css') && isMinifiedText(text)) {
+			if (
+				(lang === 'javascript' ||
+					lang === 'javascriptreact' ||
+					lang === 'css') &&
+				isMinifiedText(text)
+			) {
 				return '';
 			}
 
@@ -348,9 +462,17 @@ class FsFileRepresentation extends FileRepresentation {
 		}
 	}
 
-	private async _readFile(): Promise<{ data: Uint8Array; truncatedInfo?: FileTruncationInfo } | undefined> {
+	private async _readFile(): Promise<
+		{ data: Uint8Array; truncatedInfo?: FileTruncationInfo } | undefined
+	> {
 		try {
-			return await this._fileReadLimiter.queue(() => readTextFile(this.uri, this._fileSystem, this._disposedCts.token));
+			return await this._fileReadLimiter.queue(() =>
+				readTextFile(
+					this.uri,
+					this._fileSystem,
+					this._disposedCts.token,
+				),
+			);
 		} catch (_err) {
 			return undefined;
 		}
@@ -358,7 +480,6 @@ class FsFileRepresentation extends FileRepresentation {
 }
 
 class TextDocumentFileRepresentation extends FileRepresentation {
-
 	constructor(
 		private readonly _textDocument: vscode.TextDocument,
 		@IFileSystemService private readonly _fileSystem: IFileSystemService,
@@ -384,12 +505,15 @@ class TextDocumentFileRepresentation extends FileRepresentation {
 
 		return {
 			size: new TextEncoder().encode(this._textDocument.getText()).length,
-			mtime: this._mtime
+			mtime: this._mtime,
 		};
 	}
 
 	private readonly _text = new Lazy((): string => {
-		const truncate = (originalText: string, data: Uint8Array): FileTextContent => {
+		const truncate = (
+			originalText: string,
+			data: Uint8Array,
+		): FileTextContent => {
 			if (data.length <= maxIndexableFileSize) {
 				return { text: originalText };
 			}
@@ -397,7 +521,7 @@ class TextDocumentFileRepresentation extends FileRepresentation {
 			const truncated = data.slice(0, maxIndexableFileSize);
 			return {
 				text: new TextDecoder().decode(truncated),
-				truncated: { originalByteLength: data.byteLength }
+				truncated: { originalByteLength: data.byteLength },
 			};
 		};
 
@@ -441,8 +565,8 @@ class TextDocumentFileRepresentation extends FileRepresentation {
 	}
 }
 
-
-export const IWorkspaceFileIndex = createServiceIdentifier<IWorkspaceFileIndex>('workspaceFileIndex');
+export const IWorkspaceFileIndex =
+	createServiceIdentifier<IWorkspaceFileIndex>('workspaceFileIndex');
 
 export interface IWorkspaceFileIndex extends IDisposable {
 	readonly _serviceBrand: undefined;
@@ -489,40 +613,60 @@ export interface IWorkspaceFileIndex extends IDisposable {
 	 *
 	 * Caller should still look at file content to make sure the file is not binary.
 	 */
-	shouldIndexWorkspaceFile(resource: URI, token: CancellationToken): Promise<boolean>;
+	shouldIndexWorkspaceFile(
+		resource: URI,
+		token: CancellationToken,
+	): Promise<boolean>;
 }
 
-export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileIndex {
-
+export class WorkspaceFileIndex
+	extends Disposable
+	implements IWorkspaceFileIndex
+{
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _textDocumentFiles = new ResourceMap<TextDocumentFileRepresentation>();
+	private readonly _textDocumentFiles =
+		new ResourceMap<TextDocumentFileRepresentation>();
 	private readonly _fsFileTree = new SimpleFsTree<FsFileRepresentation>();
 
-	private readonly _onDidCreateFile = this._register(new Emitter<readonly URI[]>());
+	private readonly _onDidCreateFile = this._register(
+		new Emitter<readonly URI[]>(),
+	);
 	public readonly onDidCreateFiles = this._onDidCreateFile.event;
 
-	private readonly _onDidChangeFiles = this._register(new Emitter<readonly URI[]>());
+	private readonly _onDidChangeFiles = this._register(
+		new Emitter<readonly URI[]>(),
+	);
 	public readonly onDidChangeFiles = this._onDidChangeFiles.event;
 
-	private readonly _onDidDeleteFile = this._register(new Emitter<readonly URI[]>());
+	private readonly _onDidDeleteFile = this._register(
+		new Emitter<readonly URI[]>(),
+	);
 	public readonly onDidDeleteFiles = this._onDidDeleteFile.event;
 
 	private _isDisposed = false;
-	private readonly _disposeCts = this._register(new CancellationTokenSource());
+	private readonly _disposeCts = this._register(
+		new CancellationTokenSource(),
+	);
 
 	private readonly _fileReadLimiter: Limiter<any>;
 
 	constructor(
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IExperimentationService private readonly _expService: IExperimentationService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IExperimentationService
+		private readonly _expService: IExperimentationService,
 		@IFileSystemService private readonly _fileSystem: IFileSystemService,
 		@IIgnoreService private readonly _ignoreService: IIgnoreService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 		@ISearchService private readonly _searchService: ISearchService,
-		@ITabsAndEditorsService private readonly _tabsAndEditorsService: ITabsAndEditorsService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
-		@IWorkspaceService private readonly _workspaceService: IWorkspaceService,
+		@ITabsAndEditorsService
+		private readonly _tabsAndEditorsService: ITabsAndEditorsService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
+		@IWorkspaceService
+		private readonly _workspaceService: IWorkspaceService,
 	) {
 		super();
 
@@ -563,7 +707,7 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 			return existing;
 		}
 
-		if (!await this.statIsFsFile(uri)) {
+		if (!(await this.statIsFsFile(uri))) {
 			return;
 		}
 
@@ -581,7 +725,7 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 		}
 
 		// Don't add to the index to avoid caching too much
-		if (!await this.statIsFsFile(uri)) {
+		if (!(await this.statIsFsFile(uri))) {
 			return;
 		}
 
@@ -608,37 +752,60 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 	private registerListeners(): void {
 		// Create text document watchers
 
-		this._register(this._workspaceService.onDidOpenTextDocument(doc => this.addOrUpdateTextDocumentEntry(doc)));
-		this._register(this._workspaceService.onDidChangeTextDocument(e => this.addOrUpdateTextDocumentEntry(e.document)));
-		this._register(this._workspaceService.onDidCloseTextDocument(doc => this.deleteTextDocumentEntry(doc.uri)));
-
-		this._register(this._tabsAndEditorsService.onDidChangeTabs(e => {
-			for (const tab of e.opened) {
-				if (tab.uri) {
-					const doc = this._workspaceService.textDocuments.find(doc => isEqual(doc.uri, tab.uri));
-					if (doc) {
-						this.addOrUpdateTextDocumentEntry(doc);
-					}
-				}
-			}
-
-			for (const tab of e.closed) {
-				if (tab.uri) {
-					this.deleteTextDocumentEntry(tab.uri);
-				}
-			}
-		}));
-
-		// Create file system watchers
-		const watcher = this._register(this._fileSystem.createFileSystemWatcher(`**/*`));
+		this._register(
+			this._workspaceService.onDidOpenTextDocument((doc) =>
+				this.addOrUpdateTextDocumentEntry(doc),
+			),
+		);
+		this._register(
+			this._workspaceService.onDidChangeTextDocument((e) =>
+				this.addOrUpdateTextDocumentEntry(e.document),
+			),
+		);
+		this._register(
+			this._workspaceService.onDidCloseTextDocument((doc) =>
+				this.deleteTextDocumentEntry(doc.uri),
+			),
+		);
 
 		this._register(
-			watcher.onDidChange(async uri => {
-				if (!await this.shouldIndexWorkspaceFile(uri, this._disposeCts.token)) {
+			this._tabsAndEditorsService.onDidChangeTabs((e) => {
+				for (const tab of e.opened) {
+					if (tab.uri) {
+						const doc = this._workspaceService.textDocuments.find(
+							(doc) => isEqual(doc.uri, tab.uri),
+						);
+						if (doc) {
+							this.addOrUpdateTextDocumentEntry(doc);
+						}
+					}
+				}
+
+				for (const tab of e.closed) {
+					if (tab.uri) {
+						this.deleteTextDocumentEntry(tab.uri);
+					}
+				}
+			}),
+		);
+
+		// Create file system watchers
+		const watcher = this._register(
+			this._fileSystem.createFileSystemWatcher(`**/*`),
+		);
+
+		this._register(
+			watcher.onDidChange(async (uri) => {
+				if (
+					!(await this.shouldIndexWorkspaceFile(
+						uri,
+						this._disposeCts.token,
+					))
+				) {
 					return;
 				}
 
-				if (!await this.statIsFsFile(uri)) {
+				if (!(await this.statIsFsFile(uri))) {
 					return;
 				}
 
@@ -649,15 +816,21 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 				} else {
 					this._onDidCreateFile.fire([uri]);
 				}
-			}));
+			}),
+		);
 
 		this._register(
-			watcher.onDidCreate(async uri => {
-				if (!await this.shouldIndexWorkspaceFile(uri, this._disposeCts.token)) {
+			watcher.onDidCreate(async (uri) => {
+				if (
+					!(await this.shouldIndexWorkspaceFile(
+						uri,
+						this._disposeCts.token,
+					))
+				) {
 					return;
 				}
 
-				if (!await this.statIsFsFile(uri)) {
+				if (!(await this.statIsFsFile(uri))) {
 					return;
 				}
 
@@ -667,10 +840,11 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 
 				this.createOrUpdateFsEntry(uri);
 				this._onDidCreateFile.fire([uri]);
-			}));
+			}),
+		);
 
 		this._register(
-			watcher.onDidDelete(deletedUri => {
+			watcher.onDidDelete((deletedUri) => {
 				const entry = this._fsFileTree.get(deletedUri);
 				if (entry) {
 					entry.dispose();
@@ -679,12 +853,14 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 					this._onDidDeleteFile.fire([deletedUri]);
 				} else {
 					// Not in our list but still could be a directory. In this case we need to delete all files under it
-					const deletedFiles = this._fsFileTree.deleteFolder(deletedUri);
+					const deletedFiles =
+						this._fsFileTree.deleteFolder(deletedUri);
 					if (deletedFiles.length) {
 						this._onDidDeleteFile.fire(deletedFiles);
 					}
 				}
-			}));
+			}),
+		);
 	}
 
 	/**
@@ -709,12 +885,19 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 				return;
 			}
 
-			await Promise.all(this._workspaceService.textDocuments.map(doc => this.addOrUpdateTextDocumentEntry(doc, true)));
+			await Promise.all(
+				this._workspaceService.textDocuments.map((doc) =>
+					this.addOrUpdateTextDocumentEntry(doc, true),
+				),
+			);
 			if (this._isDisposed) {
 				return;
 			}
 
-			for (const resource of await this.getWorkspaceFilesToIndex(this.getMaxFilesToIndex(), this._disposeCts.token)) {
+			for (const resource of await this.getWorkspaceFilesToIndex(
+				this.getMaxFilesToIndex(),
+				this._disposeCts.token,
+			)) {
 				this.createOrUpdateFsEntry(resource);
 			}
 
@@ -725,31 +908,47 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 					"totalFileCount": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Total number of files we can index" }
 				}
 			*/
-			this._telemetryService.sendMSFTTelemetryEvent('workspaceChunkIndex.initialize', {}, {
-				totalFileCount: this.fileCount
-			});
+			this._telemetryService.sendMSFTTelemetryEvent(
+				'workspaceChunkIndex.initialize',
+				{},
+				{
+					totalFileCount: this.fileCount,
+				},
+			);
 		})();
 
 		return this._initialized;
 	}
 
 	private getMaxFilesToIndex(): number {
-		return this._configurationService.getExperimentBasedConfig<number>(ConfigKey.Advanced.WorkspaceMaxLocalIndexSize, this._expService);
+		return this._configurationService.getExperimentBasedConfig<number>(
+			ConfigKey.Advanced.WorkspaceMaxLocalIndexSize,
+			this._expService,
+		);
 	}
 
-	private async getWorkspaceFilesToIndex(maxResults: number, token: CancellationToken): Promise<Iterable<URI>> {
+	private async getWorkspaceFilesToIndex(
+		maxResults: number,
+		token: CancellationToken,
+	): Promise<Iterable<URI>> {
 		await raceCancellationError(this._ignoreService.init(), token);
 
 		const resourcesToIndex = new ResourceMap<void>();
 		const cts = new CancellationTokenSource(token);
 
 		try {
-			for (const folder of this._workspaceService.getWorkspaceFolders() ?? []) {
+			for (const folder of this._workspaceService.getWorkspaceFolders() ??
+				[]) {
 				const paths = await raceCancellationError(
-					this._searchService.findFilesWithDefaultExcludes(new RelativePattern(folder, `**/*`), maxResults - resourcesToIndex.size, cts.token),
-					cts.token);
+					this._searchService.findFilesWithDefaultExcludes(
+						new RelativePattern(folder, `**/*`),
+						maxResults - resourcesToIndex.size,
+						cts.token,
+					),
+					cts.token,
+				);
 
-				const tasks = paths.map(async uri => {
+				const tasks = paths.map(async (uri) => {
 					if (await this.shouldIndexWorkspaceFile(uri, cts.token)) {
 						if (resourcesToIndex.size < maxResults) {
 							resourcesToIndex.set(uri);
@@ -770,7 +969,6 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 				}
 
 				// Otherwise ignore
-
 			} else {
 				// Rethrow all non-cancellation errors
 				throw e;
@@ -782,18 +980,32 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 		return resourcesToIndex.keys();
 	}
 
-	public async shouldIndexWorkspaceFile(resource: URI, token: CancellationToken): Promise<boolean> {
-		if (!this._instantiationService.invokeFunction(accessor => shouldPotentiallyIndexFile(accessor, resource))) {
+	public async shouldIndexWorkspaceFile(
+		resource: URI,
+		token: CancellationToken,
+	): Promise<boolean> {
+		if (
+			!this._instantiationService.invokeFunction((accessor) =>
+				shouldPotentiallyIndexFile(accessor, resource),
+			)
+		) {
 			return false;
 		}
 
 		// Only index files that are inside of the workspace
-		if (!this._workspaceService.getWorkspaceFolders().some(folder => isEqualOrParent(resource, folder))) {
+		if (
+			!this._workspaceService
+				.getWorkspaceFolders()
+				.some((folder) => isEqualOrParent(resource, folder))
+		) {
 			return false;
 		}
 
 		return this._fileReadLimiter.queue(async () => {
-			return !await this._ignoreService.isCopilotIgnored(resource, token);
+			return !(await this._ignoreService.isCopilotIgnored(
+				resource,
+				token,
+			));
 		});
 	}
 
@@ -809,16 +1021,32 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 	}
 
 	private createFsFileRepresentation(resource: URI) {
-		return this._instantiationService.createInstance(FsFileRepresentation, resource, this._fileReadLimiter);
+		return this._instantiationService.createInstance(
+			FsFileRepresentation,
+			resource,
+			this._fileReadLimiter,
+		);
 	}
 
-	private async addOrUpdateTextDocumentEntry(doc: vscode.TextDocument, skipEmit = false): Promise<void> {
-		if (!await this.shouldIndexWorkspaceFile(doc.uri, this._disposeCts.token)) {
+	private async addOrUpdateTextDocumentEntry(
+		doc: vscode.TextDocument,
+		skipEmit = false,
+	): Promise<void> {
+		if (
+			!(await this.shouldIndexWorkspaceFile(
+				doc.uri,
+				this._disposeCts.token,
+			))
+		) {
 			return;
 		}
 
 		// Check to make sure the document is open in the editor area
-		if (!this._tabsAndEditorsService.tabs.some(tab => isEqual(doc.uri, tab.uri))) {
+		if (
+			!this._tabsAndEditorsService.tabs.some((tab) =>
+				isEqual(doc.uri, tab.uri),
+			)
+		) {
 			return;
 		}
 
@@ -826,7 +1054,10 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 		const existingFsFile = this._fsFileTree.get(doc.uri);
 		existingTextDoc?.dispose();
 
-		const newTextDoc = this._instantiationService.createInstance(TextDocumentFileRepresentation, doc);
+		const newTextDoc = this._instantiationService.createInstance(
+			TextDocumentFileRepresentation,
+			doc,
+		);
 		this._textDocumentFiles.set(doc.uri, newTextDoc);
 
 		if (!skipEmit) {
@@ -836,8 +1067,12 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 			} else {
 				// File existed before, either on disk or as an open file
 
-				const existingContent = await (existingTextDoc ?? existingFsFile)?.getText().catch(() => undefined);
-				if (existingContent !== await newTextDoc.getText()) {
+				const existingContent = await (
+					existingTextDoc ?? existingFsFile
+				)
+					?.getText()
+					.catch(() => undefined);
+				if (existingContent !== (await newTextDoc.getText())) {
 					this._onDidChangeFiles.fire([doc.uri]);
 				}
 			}
@@ -851,11 +1086,17 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 		}
 
 		// Check to make sure the document is not still open in another tab
-		if (this._tabsAndEditorsService.tabs.some(tab => isEqual(deletedUri, tab.uri))) {
+		if (
+			this._tabsAndEditorsService.tabs.some((tab) =>
+				isEqual(deletedUri, tab.uri),
+			)
+		) {
 			return;
 		}
 
-		const existingTextDocContent = await existingTextDoc.getText().catch(() => undefined);
+		const existingTextDocContent = await existingTextDoc
+			.getText()
+			.catch(() => undefined);
 
 		this._textDocumentFiles.delete(deletedUri);
 		existingTextDoc.dispose();
@@ -865,7 +1106,9 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 			// File still exists on disk
 
 			// See if the text document content was different than the content on disk
-			const existingFsFileContent = await existingFsFile.getText().catch(() => undefined);
+			const existingFsFileContent = await existingFsFile
+				.getText()
+				.catch(() => undefined);
 			if (existingFsFileContent !== existingTextDocContent) {
 				this._onDidChangeFiles.fire([deletedUri]);
 			}
@@ -876,12 +1119,10 @@ export class WorkspaceFileIndex extends Disposable implements IWorkspaceFileInde
 	}
 }
 
-
 /**
  * Tracks files that exist on disk.
  */
 class SimpleFsTree<T> {
-
 	private readonly _tree = TernarySearchTree.forUris<T>();
 
 	private _fileCount = 0;
@@ -948,32 +1189,51 @@ class SimpleFsTree<T> {
  *
  * Automatically handles truncating the file if it is too large and detects if the file is binary.
  */
-async function readTextFile(uri: URI, fileSystem: IFileSystemService, token: CancellationToken): Promise<{ data: Uint8Array; truncatedInfo: FileTruncationInfo | undefined } | undefined> {
+async function readTextFile(
+	uri: URI,
+	fileSystem: IFileSystemService,
+	token: CancellationToken,
+): Promise<
+	| { data: Uint8Array; truncatedInfo: FileTruncationInfo | undefined }
+	| undefined
+> {
 	if (uri.scheme === Schemas.file) {
 		// If the file is on disk, try to avoid reading too much of it into memory if the file is too big
 
 		// Use nodefs to check that the file really exists on disk
 		let stats: nodeFs.Stats | undefined;
 		try {
-			stats = await raceCancellationError(nodeFs.promises.stat(uri.fsPath), token);
+			stats = await raceCancellationError(
+				nodeFs.promises.stat(uri.fsPath),
+				token,
+			);
 		} catch (e) {
 			// noop
 		}
 
 		if (stats) {
-			const data = await raceCancellationError(readLocalTextFileUsingReadStream(uri.fsPath, maxIndexableFileSize), token);
+			const data = await raceCancellationError(
+				readLocalTextFileUsingReadStream(
+					uri.fsPath,
+					maxIndexableFileSize,
+				),
+				token,
+			);
 			if (data === 'binary') {
 				return undefined;
 			}
 
 			return {
 				data: data,
-				truncatedInfo: { originalByteLength: stats.size }
+				truncatedInfo: { originalByteLength: stats.size },
 			};
 		}
 	}
 
-	let binaryData = await raceCancellationError(fileSystem.readFile(uri), token);
+	let binaryData = await raceCancellationError(
+		fileSystem.readFile(uri),
+		token,
+	);
 	if (await isBinaryFile(Buffer.from(binaryData))) {
 		return undefined;
 	}
@@ -987,21 +1247,30 @@ async function readTextFile(uri: URI, fileSystem: IFileSystemService, token: Can
 	return { data: binaryData, truncatedInfo };
 }
 
-async function readLocalTextFileUsingReadStream(fsFilePath: string, byteLimit: number): Promise<Buffer | 'binary'> {
+async function readLocalTextFileUsingReadStream(
+	fsFilePath: string,
+	byteLimit: number,
+): Promise<Buffer | 'binary'> {
 	const bytesRequiredForIsBinaryCheck = 1024;
 
 	return new Promise((resolve, reject) => {
-		const stream = nodeFs.createReadStream(fsFilePath, { start: 0, end: byteLimit - 1 });
+		const stream = nodeFs.createReadStream(fsFilePath, {
+			start: 0,
+			end: byteLimit - 1,
+		});
 
 		const chunks: Buffer[] = [];
 		let totalBytesRead = 0;
 
 		let hasCheckedForBinary = false;
 
-		stream.on('data', chunk => {
+		stream.on('data', (chunk) => {
 			totalBytesRead += chunk.length;
 
-			if (!hasCheckedForBinary && totalBytesRead >= bytesRequiredForIsBinaryCheck) {
+			if (
+				!hasCheckedForBinary &&
+				totalBytesRead >= bytesRequiredForIsBinaryCheck
+			) {
 				hasCheckedForBinary = true;
 
 				const isBinary = isBinaryFileSync(Buffer.concat(chunks));
@@ -1018,7 +1287,6 @@ async function readLocalTextFileUsingReadStream(fsFilePath: string, byteLimit: n
 	});
 }
 
-
 export interface IsMinifiedTextOptions {
 	/* Max length of any one line in the text */
 	readonly minifiedMaxLineLength: number;
@@ -1027,7 +1295,13 @@ export interface IsMinifiedTextOptions {
 	readonly minifiedMaxAverageLineLength: number;
 }
 
-export function isMinifiedText(str: string, options: IsMinifiedTextOptions = { minifiedMaxLineLength: 10_000, minifiedMaxAverageLineLength: 400 }): boolean {
+export function isMinifiedText(
+	str: string,
+	options: IsMinifiedTextOptions = {
+		minifiedMaxLineLength: 10_000,
+		minifiedMaxAverageLineLength: 400,
+	},
+): boolean {
 	let foundNewLines = 0;
 	let characterCount = 0;
 
@@ -1036,7 +1310,10 @@ export function isMinifiedText(str: string, options: IsMinifiedTextOptions = { m
 	while (true) {
 		const newLineIndex = str.indexOf('\n', startNewLineSearchIndex);
 		if (newLineIndex === -1) {
-			if ((str.length - startNewLineSearchIndex) > options.minifiedMaxLineLength) {
+			if (
+				str.length - startNewLineSearchIndex >
+				options.minifiedMaxLineLength
+			) {
 				return true;
 			}
 
@@ -1044,7 +1321,8 @@ export function isMinifiedText(str: string, options: IsMinifiedTextOptions = { m
 			break;
 		}
 
-		const foundLineLength = accCurrentLineLength + (newLineIndex - startNewLineSearchIndex);
+		const foundLineLength =
+			accCurrentLineLength + (newLineIndex - startNewLineSearchIndex);
 		if (foundLineLength > options.minifiedMaxLineLength) {
 			return true;
 		}
@@ -1055,5 +1333,8 @@ export function isMinifiedText(str: string, options: IsMinifiedTextOptions = { m
 		startNewLineSearchIndex = newLineIndex + 1;
 	}
 
-	return characterCount / (foundNewLines + 1) > options.minifiedMaxAverageLineLength;
+	return (
+		characterCount / (foundNewLines + 1) >
+		options.minifiedMaxAverageLineLength
+	);
 }

@@ -3,7 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AssistantMessage, BasePromptElementProps, Chunk, PrioritizedList, PromptElement, PromptSizing, UserMessage } from '@vscode/prompt-tsx';
+import {
+	AssistantMessage,
+	BasePromptElementProps,
+	Chunk,
+	PrioritizedList,
+	PromptElement,
+	PromptSizing,
+	UserMessage,
+} from '@vscode/prompt-tsx';
 import { IResultMetadata, Turn } from '../../../prompt/common/conversation';
 import { IBuildPromptContext } from '../../../prompt/common/intents';
 import { Tag } from '../base/tag';
@@ -18,22 +26,36 @@ export interface AgentUserMessageInHistoryProps extends BasePromptElementProps {
 }
 
 export class AgentUserMessageInHistory extends PromptElement<AgentUserMessageInHistoryProps> {
-	constructor(
-		props: AgentUserMessageInHistoryProps,
-	) {
+	constructor(props: AgentUserMessageInHistoryProps) {
 		super(props);
 	}
 
 	override async render(state: void, sizing: PromptSizing) {
 		const turn = this.props.turn;
-		return <UserMessage>
-			{turn.promptVariables && <ChatVariables flexGrow={1} priority={898} chatVariables={turn.promptVariables} isAgent={true} omitReferences />}
-			{turn.editedFileEvents?.length &&
-				<Tag name='context'>
-					<EditedFileEvents flexGrow={2} editedFileEvents={turn.editedFileEvents} />
-				</Tag>}
-			<Tag name={this.props.userQueryTagName ?? 'userRequest'}>{turn.request.message}</Tag>
-		</UserMessage>;
+		return (
+			<UserMessage>
+				{turn.promptVariables && (
+					<ChatVariables
+						flexGrow={1}
+						priority={898}
+						chatVariables={turn.promptVariables}
+						isAgent={true}
+						omitReferences
+					/>
+				)}
+				{turn.editedFileEvents?.length && (
+					<Tag name="context">
+						<EditedFileEvents
+							flexGrow={2}
+							editedFileEvents={turn.editedFileEvents}
+						/>
+					</Tag>
+				)}
+				<Tag name={this.props.userQueryTagName ?? 'userRequest'}>
+					{turn.request.message}
+				</Tag>
+			</UserMessage>
+		);
 	}
 }
 
@@ -78,7 +100,9 @@ export class AgentConversationHistory extends PromptElement<AgentConversationHis
 				continue;
 			}
 
-			const metadata = turn.responseChatResult?.metadata as IResultMetadata | undefined;
+			const metadata = turn.responseChatResult?.metadata as
+				| IResultMetadata
+				| undefined;
 			const isSummaryTurn = i === summaryTurnIndex;
 			// Read both the summary text and the rounds we keep from one source so the
 			// summary index stays valid for the slice below. `turn.rounds` is the same
@@ -89,39 +113,86 @@ export class AgentConversationHistory extends PromptElement<AgentConversationHis
 			if (isSummaryTurn) {
 				// The summary stands in for this turn's user message and the rounds up
 				// to and including the summarized one.
-				history.push(<UserMessage><Tag name='conversation-summary'>{rounds[summaryRoundIndex].summary}</Tag></UserMessage>);
+				history.push(
+					<UserMessage>
+						<Tag name="conversation-summary">
+							{rounds[summaryRoundIndex].summary}
+						</Tag>
+					</UserMessage>,
+				);
 			} else if (metadata?.renderedUserMessage) {
-				history.push(<UserMessage><Chunk>{renderedMessageToTsxChildren(metadata.renderedUserMessage, false)}</Chunk></UserMessage>);
+				history.push(
+					<UserMessage>
+						<Chunk>
+							{renderedMessageToTsxChildren(
+								metadata.renderedUserMessage,
+								false,
+							)}
+						</Chunk>
+					</UserMessage>,
+				);
 			} else {
-				history.push(<AgentUserMessageInHistory turn={turn} userQueryTagName={this.props.userQueryTagName} />);
+				history.push(
+					<AgentUserMessageInHistory
+						turn={turn}
+						userQueryTagName={this.props.userQueryTagName}
+					/>,
+				);
 			}
 
-			if (Array.isArray(metadata?.toolCallRounds) && metadata.toolCallRounds?.length > 0) {
+			if (
+				Array.isArray(metadata?.toolCallRounds) &&
+				metadata.toolCallRounds?.length > 0
+			) {
 				// On the summarized turn, only the rounds after the summary remain.
-				const toolCallRounds = isSummaryTurn ? rounds.slice(summaryRoundIndex + 1) : metadata.toolCallRounds;
+				const toolCallRounds = isSummaryTurn
+					? rounds.slice(summaryRoundIndex + 1)
+					: metadata.toolCallRounds;
 				if (toolCallRounds.length > 0) {
 					// If a tool call limit is exceeded, the tool call from this turn will
 					// have been aborted and any result should be found in the next turn.
-					const toolCallResultInNextTurn = metadata.maxToolCallsExceeded;
+					const toolCallResultInNextTurn =
+						metadata.maxToolCallsExceeded;
 					let toolCallResults = metadata.toolCallResults;
 					if (toolCallResultInNextTurn) {
-						const nextMetadata = contextHistory.at(i + 1)?.responseChatResult?.metadata as IResultMetadata | undefined;
-						const mergeFrom = i === contextHistory.length - 1 ? this.props.promptContext.toolCallResults : nextMetadata?.toolCallResults;
+						const nextMetadata = contextHistory.at(i + 1)
+							?.responseChatResult?.metadata as
+							| IResultMetadata
+							| undefined;
+						const mergeFrom =
+							i === contextHistory.length - 1
+								? this.props.promptContext.toolCallResults
+								: nextMetadata?.toolCallResults;
 						toolCallResults = { ...toolCallResults, ...mergeFrom };
 					}
 
-					history.push(<ChatToolCalls
-						promptContext={this.props.promptContext}
-						toolCallRounds={toolCallRounds}
-						toolCallResults={toolCallResults}
-						isHistorical={!(toolCallResultInNextTurn && i === contextHistory.length - 1)}
-					/>);
+					history.push(
+						<ChatToolCalls
+							promptContext={this.props.promptContext}
+							toolCallRounds={toolCallRounds}
+							toolCallResults={toolCallResults}
+							isHistorical={
+								!(
+									toolCallResultInNextTurn &&
+									i === contextHistory.length - 1
+								)
+							}
+						/>,
+					);
 				}
 			} else if (!isSummaryTurn && turn.responseMessage) {
-				history.push(<AssistantMessage>{turn.responseMessage?.message}</AssistantMessage>);
+				history.push(
+					<AssistantMessage>
+						{turn.responseMessage?.message}
+					</AssistantMessage>,
+				);
 			}
 		}
 
-		return (<PrioritizedList priority={this.props.priority} descending={false}>{history}</PrioritizedList>);
+		return (
+			<PrioritizedList priority={this.props.priority} descending={false}>
+				{history}
+			</PrioritizedList>
+		);
 	}
 }

@@ -5,27 +5,40 @@
 
 import * as assert from 'assert';
 import { createTextDocument } from '../../test/textDocument';
-import { Language, LanguageDetection, languageDetection } from '../languageDetection';
+import {
+	Language,
+	LanguageDetection,
+	languageDetection,
+} from '../languageDetection';
 
 suite('language detection', function () {
 	test('reuse languages for untitled documents', function () {
 		assert.deepStrictEqual(
-			languageDetection.detectLanguage({ uri: 'untitled:///abc', languageId: 'typescript' }),
-			new Language('typescript', true, '')
+			languageDetection.detectLanguage({
+				uri: 'untitled:///abc',
+				languageId: 'typescript',
+			}),
+			new Language('typescript', true, ''),
 		);
 	});
 
 	test('normalizes "c" to "cpp" for untitled documents', function () {
 		assert.deepStrictEqual(
-			languageDetection.detectLanguage({ uri: 'untitled:///abc', languageId: 'c' }),
-			new Language('cpp', true, '')
+			languageDetection.detectLanguage({
+				uri: 'untitled:///abc',
+				languageId: 'c',
+			}),
+			new Language('cpp', true, ''),
 		);
 	});
 
 	test('reuse languages for notebook documents', function () {
 		assert.deepStrictEqual(
-			languageDetection.detectLanguage({ uri: 'vscode-notebook-cell:/abc', languageId: 'typescript' }).languageId,
-			'typescript'
+			languageDetection.detectLanguage({
+				uri: 'vscode-notebook-cell:/abc',
+				languageId: 'typescript',
+			}).languageId,
+			'typescript',
 		);
 	});
 
@@ -150,7 +163,10 @@ suite('language detection', function () {
 	const urls: [string, string][] = [
 		['file:///some/path/test.ts', 'typescript'],
 		['untitled:///some/path/test', 'clientProvidedLanguageId'],
-		['file:////server-name/shared-resource-pathname/test.sh', 'shellscript'],
+		[
+			'file:////server-name/shared-resource-pathname/test.sh',
+			'shellscript',
+		],
 	];
 
 	urls.forEach(([url, languageId]) => {
@@ -182,7 +198,12 @@ suite('language detection', function () {
 	});
 
 	function assertExtension(uri: string, expectedExtension: string) {
-		const doc = createTextDocument(uri, 'clientProvidedLanguageId', 1, 'test content');
+		const doc = createTextDocument(
+			uri,
+			'clientProvidedLanguageId',
+			1,
+			'test content',
+		);
 
 		const language = languageDetection.detectLanguage(doc);
 
@@ -190,7 +211,12 @@ suite('language detection', function () {
 	}
 
 	function assertLanguageId(uri: string, expectedLanguageId: string) {
-		const doc = createTextDocument(uri, 'clientProvidedLanguageId', 1, 'test content');
+		const doc = createTextDocument(
+			uri,
+			'clientProvidedLanguageId',
+			1,
+			'test content',
+		);
 
 		const language = languageDetection.detectLanguage(doc);
 
@@ -198,15 +224,35 @@ suite('language detection', function () {
 	}
 
 	test('detected languages for ambiguous options will be re-detected', function () {
-		assert.deepStrictEqual(detect('testfile.c', languageDetection).languageId, 'cpp');
-		assert.deepStrictEqual(detect('testfile.h', languageDetection).languageId, 'cpp');
-		assert.deepStrictEqual(detect('testfile.cpp', languageDetection).languageId, 'cpp');
-		assert.deepStrictEqual(detect('testfile.h', languageDetection).languageId, 'cpp');
+		assert.deepStrictEqual(
+			detect('testfile.c', languageDetection).languageId,
+			'cpp',
+		);
+		assert.deepStrictEqual(
+			detect('testfile.h', languageDetection).languageId,
+			'cpp',
+		);
+		assert.deepStrictEqual(
+			detect('testfile.cpp', languageDetection).languageId,
+			'cpp',
+		);
+		assert.deepStrictEqual(
+			detect('testfile.h', languageDetection).languageId,
+			'cpp',
+		);
 	});
 
-	function detect(filename: string, languageDetection: LanguageDetection): Language {
+	function detect(
+		filename: string,
+		languageDetection: LanguageDetection,
+	): Language {
 		return languageDetection.detectLanguage(
-			createTextDocument(`file:///${filename}`, 'clientProvidedLanguageId', 1, 'test content')
+			createTextDocument(
+				`file:///${filename}`,
+				'clientProvidedLanguageId',
+				1,
+				'test content',
+			),
 		);
 	}
 });

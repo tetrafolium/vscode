@@ -3,29 +3,36 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { KeyCode, KeyMod } from '../../../../../base/common/keyCodes.js';
-import { ServicesAccessor } from '../../../../../editor/browser/editorExtensions.js';
-import { localize2 } from '../../../../../nls.js';
-import { Action2, registerAction2 } from '../../../../../platform/actions/common/actions.js';
-import { ContextKeyExpr } from '../../../../../platform/contextkey/common/contextkey.js';
-import { KeybindingWeight } from '../../../../../platform/keybinding/common/keybindingsRegistry.js';
-import { ChatContextKeys } from '../../common/actions/chatContextKeys.js';
-import { ElicitationState } from '../../common/chatService/chatService.js';
-import { isResponseVM } from '../../common/model/chatViewModel.js';
-import { IChatWidgetService } from '../chat.js';
-import { CHAT_CATEGORY } from './chatActions.js';
+import { KeyCode, KeyMod } from "../../../../../base/common/keyCodes.js";
+import { ServicesAccessor } from "../../../../../editor/browser/editorExtensions.js";
+import { localize2 } from "../../../../../nls.js";
+import {
+	Action2,
+	registerAction2,
+} from "../../../../../platform/actions/common/actions.js";
+import { ContextKeyExpr } from "../../../../../platform/contextkey/common/contextkey.js";
+import { KeybindingWeight } from "../../../../../platform/keybinding/common/keybindingsRegistry.js";
+import { ChatContextKeys } from "../../common/actions/chatContextKeys.js";
+import { ElicitationState } from "../../common/chatService/chatService.js";
+import { isResponseVM } from "../../common/model/chatViewModel.js";
+import { IChatWidgetService } from "../chat.js";
+import { CHAT_CATEGORY } from "./chatActions.js";
 
-export const AcceptElicitationRequestActionId = 'workbench.action.chat.acceptElicitation';
+export const AcceptElicitationRequestActionId =
+	"workbench.action.chat.acceptElicitation";
 
 class AcceptElicitationRequestAction extends Action2 {
 	constructor() {
 		super({
 			id: AcceptElicitationRequestActionId,
-			title: localize2('chat.acceptElicitation', "Accept Request"),
+			title: localize2("chat.acceptElicitation", "Accept Request"),
 			f1: false,
 			category: CHAT_CATEGORY,
 			keybinding: {
-				when: ContextKeyExpr.and(ChatContextKeys.inChatSession, ChatContextKeys.Editing.hasElicitationRequest),
+				when: ContextKeyExpr.and(
+					ChatContextKeys.inChatSession,
+					ChatContextKeys.Editing.hasElicitationRequest,
+				),
 				primary: KeyMod.CtrlCmd | KeyCode.Enter,
 				weight: KeybindingWeight.WorkbenchContrib + 1,
 			},
@@ -51,7 +58,10 @@ class AcceptElicitationRequestAction extends Action2 {
 			}
 
 			for (const content of item.response.value) {
-				if (content.kind === 'elicitation2' && content.state.get() === ElicitationState.Pending) {
+				if (
+					content.kind === "elicitation2" &&
+					content.state.get() === ElicitationState.Pending
+				) {
 					await content.accept(true);
 					widget.focusInput();
 					return;

@@ -4,8 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { CancellationToken, LanguageModelChatMessage, LanguageModelChatMessage2, LanguageModelResponsePart2, Progress, ProvideLanguageModelChatResponseOptions } from 'vscode';
-import { AzureAuthMode, ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	CancellationToken,
+	LanguageModelChatMessage,
+	LanguageModelChatMessage2,
+	LanguageModelResponsePart2,
+	Progress,
+	ProvideLanguageModelChatResponseOptions,
+} from 'vscode';
+import {
+	AzureAuthMode,
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { isEndpointEditToolName } from '../../../platform/endpoint/common/endpointProvider';
 import { IVSCodeExtensionContext } from '../../../platform/extContext/common/extensionContext';
 import { ILogService } from '../../../platform/log/common/logService';
@@ -16,7 +27,11 @@ import { resolveModelInfo } from '../common/byokProvider';
 import { AzureOpenAIEndpoint } from '../node/azureOpenAIEndpoint';
 import { OpenAICompatibleLanguageModelChatInformation } from './abstractLanguageModelChatProvider';
 import { IBYOKStorageService } from './byokStorageService';
-import { AbstractCustomOAIBYOKModelProvider, CustomOAIModelProviderConfig, hasExplicitApiPath } from './customOAIProvider';
+import {
+	AbstractCustomOAIBYOKModelProvider,
+	CustomOAIModelProviderConfig,
+	hasExplicitApiPath,
+} from './customOAIProvider';
 
 export function resolveAzureUrl(modelId: string, url: string): string {
 	// The fully resolved url was already passed in
@@ -36,7 +51,10 @@ export function resolveAzureUrl(modelId: string, url: string): string {
 	// Default to chat completions for base URLs
 	const defaultApiPath = '/chat/completions';
 
-	if (url.includes('models.ai.azure.com') || url.includes('inference.ml.azure.com')) {
+	if (
+		url.includes('models.ai.azure.com') ||
+		url.includes('inference.ml.azure.com')
+	) {
 		return `${url}/v1${defaultApiPath}`;
 	} else if (url.includes('openai.azure.com')) {
 		return `${url}/openai/deployments/${modelId}${defaultApiPath}?api-version=2025-01-01-preview`;
@@ -46,7 +64,6 @@ export function resolveAzureUrl(modelId: string, url: string): string {
 }
 
 export class AzureBYOKModelProvider extends AbstractCustomOAIBYOKModelProvider {
-
 	public static readonly providerName = 'Azure';
 	public static readonly providerId = this.providerName.toLowerCase();
 
@@ -57,7 +74,7 @@ export class AzureBYOKModelProvider extends AbstractCustomOAIBYOKModelProvider {
 		@IFetcherService fetcherService: IFetcherService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IExperimentationService expService: IExperimentationService,
-		@IVSCodeExtensionContext extensionContext: IVSCodeExtensionContext
+		@IVSCodeExtensionContext extensionContext: IVSCodeExtensionContext,
 	) {
 		super(
 			AzureBYOKModelProvider.providerId,
@@ -68,15 +85,22 @@ export class AzureBYOKModelProvider extends AbstractCustomOAIBYOKModelProvider {
 			instantiationService,
 			configurationService,
 			expService,
-			extensionContext
+			extensionContext,
 		);
 		this.migrateExistingConfigs();
 	}
 
 	// TODO: Remove this after 6 months
 	private async migrateExistingConfigs(): Promise<void> {
-		await this.migrateConfig(ConfigKey.Deprecated.AzureModels, AzureBYOKModelProvider.providerName, AzureBYOKModelProvider.providerName);
-		await this._configurationService.setConfig(ConfigKey.Deprecated.AzureAuthType, undefined);
+		await this.migrateConfig(
+			ConfigKey.Deprecated.AzureModels,
+			AzureBYOKModelProvider.providerName,
+			AzureBYOKModelProvider.providerName,
+		);
+		await this._configurationService.setConfig(
+			ConfigKey.Deprecated.AzureAuthType,
+			undefined,
+		);
 	}
 
 	protected override resolveUrl(modelId: string, url: string): string {
@@ -88,23 +112,32 @@ export class AzureBYOKModelProvider extends AbstractCustomOAIBYOKModelProvider {
 		messages: Array<LanguageModelChatMessage | LanguageModelChatMessage2>,
 		options: ProvideLanguageModelChatResponseOptions,
 		progress: Progress<LanguageModelResponsePart2>,
-		token: CancellationToken
+		token: CancellationToken,
 	): Promise<void> {
 		if (model.configuration?.apiKey) {
-			return super.provideLanguageModelChatResponse(model, messages, options, progress, token);
+			return super.provideLanguageModelChatResponse(
+				model,
+				messages,
+				options,
+				progress,
+				token,
+			);
 		}
 
-		const session: vscode.AuthenticationSession = await vscode.authentication.getSession(
-			AzureAuthMode.MICROSOFT_AUTH_PROVIDER,
-			[AzureAuthMode.COGNITIVE_SERVICES_SCOPE],
-			{
-				createIfNone: true,
-				silent: false
-			}
-		);
+		const session: vscode.AuthenticationSession =
+			await vscode.authentication.getSession(
+				AzureAuthMode.MICROSOFT_AUTH_PROVIDER,
+				[AzureAuthMode.COGNITIVE_SERVICES_SCOPE],
+				{
+					createIfNone: true,
+					silent: false,
+				},
+			);
 
 		const url = this.resolveUrl(model.id, model.url);
-		const modelConfiguration = model.configuration?.models?.find(m => m.id === model.id);
+		const modelConfiguration = model.configuration?.models?.find(
+			(m) => m.id === model.id,
+		);
 		const modelCapabilities = {
 			maxInputTokens: model.maxInputTokens,
 			maxOutputTokens: model.maxOutputTokens,
@@ -115,16 +148,24 @@ export class AzureBYOKModelProvider extends AbstractCustomOAIBYOKModelProvider {
 			thinking: modelConfiguration?.thinking,
 			streaming: modelConfiguration?.streaming,
 			requestHeaders: modelConfiguration?.requestHeaders,
-			editTools: model.capabilities?.editTools?.filter(isEndpointEditToolName),
-			zeroDataRetentionEnabled: modelConfiguration?.zeroDataRetentionEnabled
+			editTools: model.capabilities?.editTools?.filter(
+				isEndpointEditToolName,
+			),
+			zeroDataRetentionEnabled:
+				modelConfiguration?.zeroDataRetentionEnabled,
 		};
-		const modelInfo = resolveModelInfo(model.id, this._name, undefined, modelCapabilities);
+		const modelInfo = resolveModelInfo(
+			model.id,
+			this._name,
+			undefined,
+			modelCapabilities,
+		);
 
 		const openAIChatEndpoint = this._instantiationService.createInstance(
 			AzureOpenAIEndpoint,
 			modelInfo,
-			session.accessToken,  // Pass Entra ID token
-			url
+			session.accessToken, // Pass Entra ID token
+			url,
 		);
 
 		return this._lmWrapper.provideLanguageModelResponse(
@@ -133,7 +174,7 @@ export class AzureBYOKModelProvider extends AbstractCustomOAIBYOKModelProvider {
 			options,
 			options.requestInitiator,
 			progress,
-			token
+			token,
 		);
 	}
 }

@@ -13,19 +13,26 @@
 export const CMDOpenPanelClient = 'github.copilot.generate';
 export const CMDOpenPanelChat = 'github.copilot.chat.openSuggestionsPanel'; // "github.copilot.chat.generate" is already being used
 
-export const CMDAcceptCursorPanelSolutionClient = 'github.copilot.acceptCursorPanelSolution';
-export const CMDNavigatePreviousPanelSolutionClient = 'github.copilot.previousPanelSolution';
-export const CMDNavigateNextPanelSolutionClient = 'github.copilot.nextPanelSolution';
+export const CMDAcceptCursorPanelSolutionClient =
+	'github.copilot.acceptCursorPanelSolution';
+export const CMDNavigatePreviousPanelSolutionClient =
+	'github.copilot.previousPanelSolution';
+export const CMDNavigateNextPanelSolutionClient =
+	'github.copilot.nextPanelSolution';
 
 export const CMDToggleStatusMenuClient = 'github.copilot.toggleStatusMenu';
 export const CMDToggleStatusMenuChat = 'github.copilot.chat.toggleStatusMenu';
 
 // Needs to be supported in both extensions when they are loaded/active. Requires a different ID.
-export const CMDSendCompletionsFeedbackChat = 'github.copilot.chat.sendCompletionFeedback';
+export const CMDSendCompletionsFeedbackChat =
+	'github.copilot.chat.sendCompletionFeedback';
 
-export const CMDEnableCompletionsChat = 'github.copilot.chat.completions.enable';
-export const CMDDisableCompletionsChat = 'github.copilot.chat.completions.disable';
-export const CMDToggleCompletionsChat = 'github.copilot.chat.completions.toggle';
+export const CMDEnableCompletionsChat =
+	'github.copilot.chat.completions.enable';
+export const CMDDisableCompletionsChat =
+	'github.copilot.chat.completions.disable';
+export const CMDToggleCompletionsChat =
+	'github.copilot.chat.completions.toggle';
 export const CMDEnableCompletionsClient = 'github.copilot.completions.enable';
 export const CMDDisableCompletionsClient = 'github.copilot.completions.disable';
 export const CMDToggleCompletionsClient = 'github.copilot.completions.toggle';
@@ -34,12 +41,14 @@ export const CMDOpenLogsClient = 'github.copilot.openLogs';
 export const CMDOpenDocumentationClient = 'github.copilot.openDocs';
 
 // Existing chat command reused for diagnostics
-export const CMDCollectDiagnosticsChat = 'github.copilot.debug.collectDiagnostics';
+export const CMDCollectDiagnosticsChat =
+	'github.copilot.debug.collectDiagnostics';
 
 // Context variable that enable/disable panel-specific commands
 export const CopilotPanelVisible = 'github.copilot.panelVisible';
 export const ComparisonPanelVisible = 'github.copilot.comparisonPanelVisible';
-export const HasMultipleCompletionModels = 'github.copilot.completions.hasMultipleModels';
+export const HasMultipleCompletionModels =
+	'github.copilot.completions.hasMultipleModels';
 
 export const CMDOpenModelPickerClient = 'github.copilot.openModelPicker';
 export const CMDOpenModelPickerChat = 'github.copilot.chat.openModelPicker';

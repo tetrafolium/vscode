@@ -16,7 +16,9 @@ import { URI } from '../../../../../util/vs/base/common/uri';
 import { createExtensionUnitTestingServices } from '../../../../test/node/services';
 import { resolveSkillConfigLocations } from '../../../common/skillConfigLocations';
 
-function createWorkspaceService(folders: URI[] = [URI.file('/workspace')]): IWorkspaceService {
+function createWorkspaceService(
+	folders: URI[] = [URI.file('/workspace')],
+): IWorkspaceService {
 	return {
 		_serviceBrand: undefined,
 		onDidChangeWorkspaceFolders: Event.None,
@@ -43,18 +45,33 @@ describe('resolveSkillConfigLocations', () => {
 		workspaceFolders?: URI[];
 		userHome?: URI;
 	}): URI[] {
-		const configService = new InMemoryConfigurationService(baseConfigurationService);
+		const configService = new InMemoryConfigurationService(
+			baseConfigurationService,
+		);
 		if (options?.configLocations) {
-			configService.setNonExtensionConfig(SKILLS_LOCATION_KEY, options.configLocations);
+			configService.setNonExtensionConfig(
+				SKILLS_LOCATION_KEY,
+				options.configLocations,
+			);
 		}
 
 		const envService: INativeEnvService = options?.userHome
-			? new class extends NullNativeEnvService { override get userHome() { return options.userHome!; } }()
+			? new (class extends NullNativeEnvService {
+					override get userHome() {
+						return options.userHome!;
+					}
+				})()
 			: new NullNativeEnvService();
 
-		const workspaceService = createWorkspaceService(options?.workspaceFolders);
+		const workspaceService = createWorkspaceService(
+			options?.workspaceFolders,
+		);
 
-		return resolveSkillConfigLocations(configService, envService, workspaceService);
+		return resolveSkillConfigLocations(
+			configService,
+			envService,
+			workspaceService,
+		);
 	}
 
 	it('returns empty array when no config is set', () => {
@@ -62,8 +79,13 @@ describe('resolveSkillConfigLocations', () => {
 	});
 
 	it('returns empty array when config is not an object', () => {
-		const configService = new InMemoryConfigurationService(baseConfigurationService);
-		configService.setNonExtensionConfig(SKILLS_LOCATION_KEY, 'not-an-object');
+		const configService = new InMemoryConfigurationService(
+			baseConfigurationService,
+		);
+		configService.setNonExtensionConfig(
+			SKILLS_LOCATION_KEY,
+			'not-an-object',
+		);
 		const result = resolveSkillConfigLocations(
 			configService,
 			new NullNativeEnvService(),
@@ -92,7 +114,10 @@ describe('resolveSkillConfigLocations', () => {
 	it('joins relative paths to each workspace folder', () => {
 		const result = resolve({
 			configLocations: { 'relative/skills': true },
-			workspaceFolders: [URI.file('/workspace1'), URI.file('/workspace2')],
+			workspaceFolders: [
+				URI.file('/workspace1'),
+				URI.file('/workspace2'),
+			],
 		});
 		expect(result).toHaveLength(2);
 		expect(result[0].path).toBe('/workspace1/relative/skills');

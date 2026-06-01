@@ -12,7 +12,7 @@
 }
 
 .ai-customization-toolbar::before {
-	content: '';
+	content: "";
 	position: absolute;
 	top: 0;
 	left: 10px;
@@ -28,13 +28,19 @@
 	width: 100%;
 }
 
-.ai-customization-toolbar .ai-customization-toolbar-content .monaco-action-bar .actions-container {
+.ai-customization-toolbar
+	.ai-customization-toolbar-content
+	.monaco-action-bar
+	.actions-container {
 	display: flex;
 	flex-direction: column;
 	width: 100%;
 }
 
-.ai-customization-toolbar .ai-customization-toolbar-content .monaco-action-bar .action-item {
+.ai-customization-toolbar
+	.ai-customization-toolbar-content
+	.monaco-action-bar
+	.action-item {
 	width: 100%;
 	max-width: 100%;
 }
@@ -64,11 +70,16 @@
 	margin-left: auto;
 }
 
-.ai-customization-toolbar .ai-customization-header-total + .ai-customization-chevron {
+.ai-customization-toolbar
+	.ai-customization-header-total
+	+ .ai-customization-chevron {
 	margin-left: 6px;
 }
 
-.ai-customization-toolbar .ai-customization-header.collapsed .customization-link-button .ai-customization-header-total:not(.hidden) {
+.ai-customization-toolbar
+	.ai-customization-header.collapsed
+	.customization-link-button
+	.ai-customization-header-total:not(.hidden) {
 	display: inline;
 }
 
@@ -88,7 +99,9 @@
 	panel edges. The header button itself re-introduces matching internal
 	padding so its label and chevron align with the per-item icons and
 	counts below. */
-.ai-customization-toolbar .ai-customization-header .customization-link-button-container {
+.ai-customization-toolbar
+	.ai-customization-header
+	.customization-link-button-container {
 	margin: 0;
 	border-radius: 0;
 }
@@ -100,7 +113,8 @@
 
 /* Match hover color used by session list items rather than the
 	default toolbar hover used by `.sidebar-action-button`. */
-.ai-customization-toolbar .customization-link-button.sidebar-action-button:hover {
+.ai-customization-toolbar
+	.customization-link-button.sidebar-action-button:hover {
 	background-color: var(--vscode-list-hoverBackground);
 }
 

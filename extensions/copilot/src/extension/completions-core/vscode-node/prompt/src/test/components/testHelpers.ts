@@ -6,7 +6,9 @@
 import { PromptSnapshotNode } from '../../components/components';
 import { VirtualPromptNode } from '../../components/reconciler';
 
-export function extractNodesWitPath(node: VirtualPromptNode | PromptSnapshotNode): string[] {
+export function extractNodesWitPath(
+	node: VirtualPromptNode | PromptSnapshotNode,
+): string[] {
 	if (node.children === undefined || node.children.length === 0) {
 		return [node.path];
 	}

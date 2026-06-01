@@ -4,7 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { PriorityQueue } from '../../util/priorityQueue';
-import { DEFAULT_ELISION_MARKER, getAvailableNodeId, NodeCostFunction } from './utils';
+import {
+	DEFAULT_ELISION_MARKER,
+	getAvailableNodeId,
+	NodeCostFunction,
+} from './utils';
 
 export type NodeId = number;
 
@@ -73,7 +77,9 @@ export interface RenderNode extends IVirtualNode {
 export function createRenderNode(partial: Partial<RenderNode>): RenderNode {
 	const node: RenderNode = {
 		id: partial.id ?? getAvailableNodeId(),
-		text: partial.text ?? new Array((partial.children?.length ?? 0) + 1).fill(''),
+		text:
+			partial.text ??
+			new Array((partial.children?.length ?? 0) + 1).fill(''),
 		children: partial.children ?? [],
 		cost: partial.cost ?? 1,
 		weight: partial.weight ?? 0,
@@ -84,14 +90,17 @@ export function createRenderNode(partial: Partial<RenderNode>): RenderNode {
 	};
 	if (node.text.length !== node.children.length + 1) {
 		throw new Error(
-			`RenderNode text length (${node.text.length}) must be children length + 1 (${node.children.length + 1})`
+			`RenderNode text length (${node.text.length}) must be children length + 1 (${node.children.length + 1})`,
 		);
 	}
 	return node;
 }
 
 function isRenderedChildRequired(node: RenderNode): boolean {
-	return node.requireRenderedChild || (node.rectifiedWeight ?? node.weight) > node.weight;
+	return (
+		node.requireRenderedChild ||
+		(node.rectifiedWeight ?? node.weight) > node.weight
+	);
 }
 
 export function rectifiedValue(node: RenderNode): number {
@@ -103,7 +112,10 @@ export function rectifiedValue(node: RenderNode): number {
  * so that the rectified value (rectifiedWeight / cost) of each node is no greater than the value of its parent.
  * If no `weighter` is specified, uses the existing node weights a just redistributes from children to ancestors.
  */
-export function rectifyWeights(node: RenderNode, weighter?: (node: RenderNode) => number) {
+export function rectifyWeights(
+	node: RenderNode,
+	weighter?: (node: RenderNode) => number,
+) {
 	const rectificationQueue = recursivelyRectifyWeights(node, weighter);
 	for (const { item, priority } of rectificationQueue.clear()) {
 		for (const node of item.nodes) {
@@ -119,15 +131,22 @@ type NodeGroup = {
 };
 function recursivelyRectifyWeights(
 	node: RenderNode,
-	weighter?: (node: RenderNode) => number
+	weighter?: (node: RenderNode) => number,
 ): PriorityQueue<NodeGroup> {
-	const childQueues = node.children.map(child => recursivelyRectifyWeights(child, weighter));
+	const childQueues = node.children.map((child) =>
+		recursivelyRectifyWeights(child, weighter),
+	);
 	node.weight = Math.max(0, weighter ? weighter(node) : node.weight);
-	if (node.weight === 0 && childQueues.reduce((sum, q) => sum + q.size, 0) === 0) {
+	if (
+		node.weight === 0 &&
+		childQueues.reduce((sum, q) => sum + q.size, 0) === 0
+	) {
 		return new PriorityQueue<NodeGroup>([]);
 	}
 
-	const merged: PriorityQueue<NodeGroup> = new PriorityQueue(childQueues.flatMap(queue => queue.clear()));
+	const merged: PriorityQueue<NodeGroup> = new PriorityQueue(
+		childQueues.flatMap((queue) => queue.clear()),
+	);
 	const group: NodeGroup = {
 		nodes: [node],
 		totalCost: node.cost,
@@ -135,7 +154,10 @@ function recursivelyRectifyWeights(
 	};
 
 	// Combine with descendants until the combined average value is greater than or equal to the next item in the queue
-	while ((merged.peek()?.priority ?? 0) > group.totalWeight / Math.max(group.totalCost, 1)) {
+	while (
+		(merged.peek()?.priority ?? 0) >
+		group.totalWeight / Math.max(group.totalCost, 1)
+	) {
 		const { item } = merged.pop()!;
 		group.nodes.push(...item.nodes);
 		group.totalCost += item.totalCost;
@@ -171,7 +193,10 @@ type RenderOptions = Partial<{
  * @return An object containing the rendered text and its cost, which will either be the length of the text
  * or the result of the cost function if provided.
  */
-export function render(node: RenderNode, options: RenderOptions = {}): RenderedText {
+export function render(
+	node: RenderNode,
+	options: RenderOptions = {},
+): RenderedText {
 	const { budget, mask, costFunction } = options;
 	const exclude = mask ?? [];
 	const exclusionSet = new Set(Array.isArray(exclude) ? exclude : [exclude]);
@@ -179,7 +204,9 @@ export function render(node: RenderNode, options: RenderOptions = {}): RenderedT
 	if ((budget ?? node.cost) < node.cost || exclusionSet.has(node.id)) {
 		return {
 			text: node.elisionMarker,
-			cost: costFunction ? costFunction(node.elisionMarker) : node.elisionMarker.length,
+			cost: costFunction
+				? costFunction(node.elisionMarker)
+				: node.elisionMarker.length,
 			renderedNodes: new Map(),
 		};
 	}
@@ -206,7 +233,9 @@ export function render(node: RenderNode, options: RenderOptions = {}): RenderedT
 	// This is used to remove nodes that are marginally valuable if the final true cost exceeds the budget
 	const marginalNodes: RenderNode[] = [];
 	// Include highest-value non-excluded nodes up to the budget
-	const explorationQueue = new PriorityQueue<RenderNode>([{ item: node, priority: rectifiedValue(node) }]);
+	const explorationQueue = new PriorityQueue<RenderNode>([
+		{ item: node, priority: rectifiedValue(node) },
+	]);
 	let remainingBudget = budget;
 	while (remainingBudget > 0 && explorationQueue.size > 0) {
 		const { item } = explorationQueue.pop()!;
@@ -240,7 +269,10 @@ export function render(node: RenderNode, options: RenderOptions = {}): RenderedT
 		const text = renderParts.join('');
 		if (costFunction === undefined) {
 			// Within budget by construction
-			const cost = [...renderedNodes.values()].reduce((sum, n) => sum + n.cost, 0);
+			const cost = [...renderedNodes.values()].reduce(
+				(sum, n) => sum + n.cost,
+				0,
+			);
 			return { text, cost, renderedNodes };
 		}
 
@@ -268,10 +300,15 @@ export function render(node: RenderNode, options: RenderOptions = {}): RenderedT
 	return renderEmpty(node, costFunction);
 }
 
-function renderEmpty(node: RenderNode, costFunction?: (text: string) => number): RenderedText {
+function renderEmpty(
+	node: RenderNode,
+	costFunction?: (text: string) => number,
+): RenderedText {
 	return {
 		text: node.elisionMarker,
-		cost: costFunction ? costFunction(node.elisionMarker) : node.elisionMarker.length,
+		cost: costFunction
+			? costFunction(node.elisionMarker)
+			: node.elisionMarker.length,
 		renderedNodes: new Map(),
 	};
 }
@@ -281,14 +318,15 @@ function recursivelyRender(
 	parts: string[],
 	elider: (node: RenderNode) => boolean,
 	renderedNodes: Map<NodeId, RenderNode>,
-	mergeElision: boolean = false
+	mergeElision: boolean = false,
 ): boolean {
 	const numParts = parts.length;
 	if (elider(node)) {
 		if (numParts >= 2) {
 			if (
 				mergeElision ||
-				(parts[numParts - 2] === node.elisionMarker && parts[numParts - 1].trim().length === 0)
+				(parts[numParts - 2] === node.elisionMarker &&
+					parts[numParts - 1].trim().length === 0)
 			) {
 				parts.pop(); // elide by removing separator from previous elision
 				return false;
@@ -303,7 +341,13 @@ function recursivelyRender(
 	let didRender = true;
 	for (const [i, child] of node.children.entries()) {
 		parts.push(node.text[i] ?? '');
-		didRender = recursivelyRender(child, parts, elider, renderedNodes, child.canMerge && !didRender);
+		didRender = recursivelyRender(
+			child,
+			parts,
+			elider,
+			renderedNodes,
+			child.canMerge && !didRender,
+		);
 		requiresChild &&= !didRender;
 	}
 	if (requiresChild) {
@@ -330,9 +374,11 @@ function recursivelyRender(
 export function snapshot(
 	node: IVirtualNode,
 	costFunction: NodeCostFunction,
-	elisionMarker: string = DEFAULT_ELISION_MARKER
+	elisionMarker: string = DEFAULT_ELISION_MARKER,
 ): RenderNode {
-	const children = node.children.map(child => snapshot(child, costFunction, elisionMarker));
+	const children = node.children.map((child) =>
+		snapshot(child, costFunction, elisionMarker),
+	);
 	elisionMarker = node.elisionMarker ?? elisionMarker;
 	const cost = costFunction(node);
 	const renderNode: RenderNode = createRenderNode({

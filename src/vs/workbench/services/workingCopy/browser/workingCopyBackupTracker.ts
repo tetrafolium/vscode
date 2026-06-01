@@ -3,34 +3,49 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IWorkingCopyBackupService } from '../common/workingCopyBackup.js';
-import { IWorkbenchContribution } from '../../../common/contributions.js';
-import { IFilesConfigurationService } from '../../filesConfiguration/common/filesConfigurationService.js';
-import { IWorkingCopyService } from '../common/workingCopyService.js';
-import { ILifecycleService, ShutdownReason } from '../../lifecycle/common/lifecycle.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { WorkingCopyBackupTracker } from '../common/workingCopyBackupTracker.js';
-import { IWorkingCopyEditorService } from '../common/workingCopyEditorService.js';
-import { IEditorService } from '../../editor/common/editorService.js';
+import { IWorkingCopyBackupService } from "../common/workingCopyBackup.js";
+import { IWorkbenchContribution } from "../../../common/contributions.js";
+import { IFilesConfigurationService } from "../../filesConfiguration/common/filesConfigurationService.js";
+import { IWorkingCopyService } from "../common/workingCopyService.js";
+import {
+	ILifecycleService,
+	ShutdownReason,
+} from "../../lifecycle/common/lifecycle.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { WorkingCopyBackupTracker } from "../common/workingCopyBackupTracker.js";
+import { IWorkingCopyEditorService } from "../common/workingCopyEditorService.js";
+import { IEditorService } from "../../editor/common/editorService.js";
 
-export class BrowserWorkingCopyBackupTracker extends WorkingCopyBackupTracker implements IWorkbenchContribution {
-
-	static readonly ID = 'workbench.contrib.browserWorkingCopyBackupTracker';
+export class BrowserWorkingCopyBackupTracker
+	extends WorkingCopyBackupTracker
+	implements IWorkbenchContribution
+{
+	static readonly ID = "workbench.contrib.browserWorkingCopyBackupTracker";
 
 	constructor(
-		@IWorkingCopyBackupService workingCopyBackupService: IWorkingCopyBackupService,
-		@IFilesConfigurationService filesConfigurationService: IFilesConfigurationService,
+		@IWorkingCopyBackupService
+		workingCopyBackupService: IWorkingCopyBackupService,
+		@IFilesConfigurationService
+		filesConfigurationService: IFilesConfigurationService,
 		@IWorkingCopyService workingCopyService: IWorkingCopyService,
 		@ILifecycleService lifecycleService: ILifecycleService,
 		@ILogService logService: ILogService,
-		@IWorkingCopyEditorService workingCopyEditorService: IWorkingCopyEditorService,
+		@IWorkingCopyEditorService
+		workingCopyEditorService: IWorkingCopyEditorService,
 		@IEditorService editorService: IEditorService,
 	) {
-		super(workingCopyBackupService, workingCopyService, logService, lifecycleService, filesConfigurationService, workingCopyEditorService, editorService);
+		super(
+			workingCopyBackupService,
+			workingCopyService,
+			logService,
+			lifecycleService,
+			filesConfigurationService,
+			workingCopyEditorService,
+			editorService,
+		);
 	}
 
 	protected onFinalBeforeShutdown(reason: ShutdownReason): boolean {
-
 		// Web: we cannot perform long running in the shutdown phase
 		// As such we need to check sync if there are any modified working
 		// copies that have not been backed up yet and then prevent the
@@ -46,8 +61,13 @@ export class BrowserWorkingCopyBackupTracker extends WorkingCopyBackupTracker im
 		}
 
 		for (const modifiedWorkingCopy of modifiedWorkingCopies) {
-			if (!this.workingCopyBackupService.hasBackupSync(modifiedWorkingCopy, this.getContentVersion(modifiedWorkingCopy))) {
-				this.logService.warn('Unload veto: pending backups');
+			if (
+				!this.workingCopyBackupService.hasBackupSync(
+					modifiedWorkingCopy,
+					this.getContentVersion(modifiedWorkingCopy),
+				)
+			) {
+				this.logService.warn("Unload veto: pending backups");
 
 				return true; // modified without backup: veto
 			}

@@ -3,23 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ChatCustomAgent, ChatHook, ChatInstruction, ChatPlugin, ChatSkill, ChatSlashCommand } from 'vscode';
+import type {
+	ChatCustomAgent,
+	ChatHook,
+	ChatInstruction,
+	ChatPlugin,
+	ChatSkill,
+	ChatSlashCommand,
+} from 'vscode';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { Emitter, Event } from '../../../../util/vs/base/common/event';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { PromptFileParser } from '../../../../util/vs/workbench/contrib/chat/common/promptSyntax/promptFileParser';
-import { IPromptsService, IAgentInstructionFile, ParsedPromptFile } from '../../common/promptsService';
+import {
+	IPromptsService,
+	IAgentInstructionFile,
+	ParsedPromptFile,
+} from '../../common/promptsService';
 import { ResourceMap } from '../../../../util/vs/base/common/map';
 
 export class MockPromptsService extends Disposable implements IPromptsService {
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidChangeCustomAgents = this._register(new Emitter<void>());
-	readonly onDidChangeCustomAgents: Event<void> = this._onDidChangeCustomAgents.event;
+	private readonly _onDidChangeCustomAgents = this._register(
+		new Emitter<void>(),
+	);
+	readonly onDidChangeCustomAgents: Event<void> =
+		this._onDidChangeCustomAgents.event;
 
-	private readonly _onDidChangeInstructions = this._register(new Emitter<void>());
-	readonly onDidChangeInstructions: Event<void> = this._onDidChangeInstructions.event;
+	private readonly _onDidChangeInstructions = this._register(
+		new Emitter<void>(),
+	);
+	readonly onDidChangeInstructions: Event<void> =
+		this._onDidChangeInstructions.event;
 
 	private readonly _onDidChangeSkills = this._register(new Emitter<void>());
 	readonly onDidChangeSkills: Event<void> = this._onDidChangeSkills.event;
@@ -83,15 +100,21 @@ export class MockPromptsService extends Disposable implements IPromptsService {
 		this._onDidChangePlugins.fire();
 	}
 
-	getCustomAgents(_token: CancellationToken): Promise<readonly ChatCustomAgent[]> {
+	getCustomAgents(
+		_token: CancellationToken,
+	): Promise<readonly ChatCustomAgent[]> {
 		return Promise.resolve(this._customAgents);
 	}
 
-	getSlashCommands(_token: CancellationToken): Promise<readonly ChatSlashCommand[]> {
+	getSlashCommands(
+		_token: CancellationToken,
+	): Promise<readonly ChatSlashCommand[]> {
 		return Promise.resolve(this._slashCommands);
 	}
 
-	getInstructions(_token: CancellationToken): Promise<readonly ChatInstruction[]> {
+	getInstructions(
+		_token: CancellationToken,
+	): Promise<readonly ChatInstruction[]> {
 		return Promise.resolve(this._instructions);
 	}
 
@@ -122,11 +145,15 @@ export class MockPromptsService extends Disposable implements IPromptsService {
 		this._nestedAgentMDs = files;
 	}
 
-	listAgentInstructions(_token: CancellationToken): Promise<IAgentInstructionFile[]> {
+	listAgentInstructions(
+		_token: CancellationToken,
+	): Promise<IAgentInstructionFile[]> {
 		return Promise.resolve([...this._agentInstructions]);
 	}
 
-	listNestedAgentMDs(_token: CancellationToken): Promise<IAgentInstructionFile[]> {
+	listNestedAgentMDs(
+		_token: CancellationToken,
+	): Promise<IAgentInstructionFile[]> {
 		return Promise.resolve([...this._nestedAgentMDs]);
 	}
 

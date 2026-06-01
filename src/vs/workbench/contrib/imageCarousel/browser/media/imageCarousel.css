@@ -71,11 +71,13 @@
 	background-color: var(--vscode-scrollbarSlider-background);
 }
 
-.image-carousel-editor .main-image-container.zoomed::-webkit-scrollbar-thumb:hover {
+.image-carousel-editor
+	.main-image-container.zoomed::-webkit-scrollbar-thumb:hover {
 	background-color: var(--vscode-scrollbarSlider-hoverBackground);
 }
 
-.image-carousel-editor .main-image-container.zoomed::-webkit-scrollbar-thumb:active {
+.image-carousel-editor
+	.main-image-container.zoomed::-webkit-scrollbar-thumb:active {
 	background-color: var(--vscode-scrollbarSlider-activeBackground);
 }
 
@@ -183,7 +185,7 @@
 }
 
 .image-carousel-editor .caption-separator::before {
-	content: '\00b7';
+	content: "\00b7";
 	margin: 0 6px;
 	opacity: 0.6;
 }
@@ -229,7 +231,9 @@
 	border-radius: 4px;
 	overflow: hidden;
 	cursor: pointer;
-	transition: border-color 0.15s ease, opacity 0.15s ease;
+	transition:
+		border-color 0.15s ease,
+		opacity 0.15s ease;
 	flex-shrink: 0;
 	opacity: 0.6;
 	padding: 0;

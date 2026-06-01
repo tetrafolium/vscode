@@ -3,19 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../../base/browser/dom.js';
-import { renderIcon } from '../../../../../../base/browser/ui/iconLabel/iconLabels.js';
-import { Codicon } from '../../../../../../base/common/codicons.js';
-import { IMarkdownString } from '../../../../../../base/common/htmlContent.js';
-import { Disposable } from '../../../../../../base/common/lifecycle.js';
-import { IMarkdownRenderer } from '../../../../../../platform/markdown/browser/markdownRenderer.js';
-import { ChatErrorLevel } from '../../../common/chatService/chatService.js';
-import { IChatRendererContent } from '../../../common/model/chatViewModel.js';
-import { IChatContentPart } from './chatContentParts.js';
+import * as dom from "../../../../../../base/browser/dom.js";
+import { renderIcon } from "../../../../../../base/browser/ui/iconLabel/iconLabels.js";
+import { Codicon } from "../../../../../../base/common/codicons.js";
+import { IMarkdownString } from "../../../../../../base/common/htmlContent.js";
+import { Disposable } from "../../../../../../base/common/lifecycle.js";
+import { IMarkdownRenderer } from "../../../../../../platform/markdown/browser/markdownRenderer.js";
+import { ChatErrorLevel } from "../../../common/chatService/chatService.js";
+import { IChatRendererContent } from "../../../common/model/chatViewModel.js";
+import { IChatContentPart } from "./chatContentParts.js";
 
 const $ = dom.$;
 
-export class ChatErrorContentPart extends Disposable implements IChatContentPart {
+export class ChatErrorContentPart
+	extends Disposable
+	implements IChatContentPart
+{
 	public readonly domNode: HTMLElement;
 
 	constructor(
@@ -26,7 +29,9 @@ export class ChatErrorContentPart extends Disposable implements IChatContentPart
 	) {
 		super();
 
-		this.domNode = this._register(new ChatErrorWidget(kind, content, renderer)).domNode;
+		this.domNode = this._register(
+			new ChatErrorWidget(kind, content, renderer),
+		).domNode;
 	}
 
 	hasSameContent(other: IChatRendererContent): boolean {
@@ -44,22 +49,22 @@ export class ChatErrorWidget extends Disposable {
 	) {
 		super();
 
-		this.domNode = $('.chat-notification-widget');
+		this.domNode = $(".chat-notification-widget");
 		this.domNode.tabIndex = 0;
 		let icon;
 		let iconClass;
 		switch (kind) {
 			case ChatErrorLevel.Warning:
 				icon = Codicon.warning;
-				iconClass = '.chat-warning-codicon';
+				iconClass = ".chat-warning-codicon";
 				break;
 			case ChatErrorLevel.Error:
 				icon = Codicon.error;
-				iconClass = '.chat-error-codicon';
+				iconClass = ".chat-error-codicon";
 				break;
 			case ChatErrorLevel.Info:
 				icon = Codicon.info;
-				iconClass = '.chat-info-codicon';
+				iconClass = ".chat-info-codicon";
 				break;
 		}
 		this.domNode.appendChild($(iconClass, undefined, renderIcon(icon)));

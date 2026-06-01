@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeferredPromise } from './async.js';
-import { CancellationToken, CancellationTokenSource } from './cancellation.js';
-import { CancellationError } from './errors.js';
-import { Disposable, toDisposable } from './lifecycle.js';
-import { hasKey } from './types.js';
+import { DeferredPromise } from "./async.js";
+import { CancellationToken, CancellationTokenSource } from "./cancellation.js";
+import { CancellationError } from "./errors.js";
+import { Disposable, toDisposable } from "./lifecycle.js";
+import { hasKey } from "./types.js";
 
 export type JsonRpcId = string | number;
 
@@ -18,31 +18,35 @@ export interface IJsonRpcError {
 }
 
 export interface IJsonRpcRequest {
-	jsonrpc: '2.0';
+	jsonrpc: "2.0";
 	id: JsonRpcId;
 	method: string;
 	params?: unknown;
 }
 
 export interface IJsonRpcNotification {
-	jsonrpc: '2.0';
+	jsonrpc: "2.0";
 	method: string;
 	params?: unknown;
 }
 
 export interface IJsonRpcSuccessResponse {
-	jsonrpc: '2.0';
+	jsonrpc: "2.0";
 	id: JsonRpcId;
 	result: unknown;
 }
 
 export interface IJsonRpcErrorResponse {
-	jsonrpc: '2.0';
+	jsonrpc: "2.0";
 	id?: JsonRpcId;
 	error: IJsonRpcError;
 }
 
-export type JsonRpcMessage = IJsonRpcRequest | IJsonRpcNotification | IJsonRpcSuccessResponse | IJsonRpcErrorResponse;
+export type JsonRpcMessage =
+	| IJsonRpcRequest
+	| IJsonRpcNotification
+	| IJsonRpcSuccessResponse
+	| IJsonRpcErrorResponse;
 export type JsonRpcResponse = IJsonRpcSuccessResponse | IJsonRpcErrorResponse;
 
 interface IPendingRequest {
@@ -51,7 +55,10 @@ interface IPendingRequest {
 }
 
 export interface IJsonRpcProtocolHandlers {
-	handleRequest?(request: IJsonRpcRequest, token: CancellationToken): Promise<unknown> | unknown;
+	handleRequest?(
+		request: IJsonRpcRequest,
+		token: CancellationToken,
+	): Promise<unknown> | unknown;
 	handleNotification?(notification: IJsonRpcNotification): void;
 }
 
@@ -83,14 +90,20 @@ export class JsonRpcProtocol extends Disposable {
 		super();
 	}
 
-	public sendNotification(notification: Omit<IJsonRpcNotification, 'jsonrpc'>): void {
+	public sendNotification(
+		notification: Omit<IJsonRpcNotification, "jsonrpc">,
+	): void {
 		this._send({
-			jsonrpc: '2.0',
+			jsonrpc: "2.0",
 			...notification,
 		});
 	}
 
-	public sendRequest<T = unknown>(request: Omit<IJsonRpcRequest, 'jsonrpc' | 'id'>, token: CancellationToken = CancellationToken.None, onCancel?: (id: JsonRpcId) => void): Promise<T> {
+	public sendRequest<T = unknown>(
+		request: Omit<IJsonRpcRequest, "jsonrpc" | "id">,
+		token: CancellationToken = CancellationToken.None,
+		onCancel?: (id: JsonRpcId) => void,
+	): Promise<T> {
 		if (this._store.isDisposed) {
 			return Promise.reject(new CancellationError());
 		}
@@ -111,7 +124,7 @@ export class JsonRpcProtocol extends Disposable {
 		});
 
 		this._send({
-			jsonrpc: '2.0',
+			jsonrpc: "2.0",
 			id,
 			...request,
 		});
@@ -134,7 +147,9 @@ export class JsonRpcProtocol extends Disposable {
 	 * Note: responses are also emitted via the `_send` callback, so callers
 	 * that rely on the return value should not re-send them.
 	 */
-	public async handleMessage(message: JsonRpcMessage | JsonRpcMessage[]): Promise<JsonRpcResponse[]> {
+	public async handleMessage(
+		message: JsonRpcMessage | JsonRpcMessage[],
+	): Promise<JsonRpcResponse[]> {
 		if (Array.isArray(message)) {
 			const replies: JsonRpcResponse[] = [];
 			for (const single of message) {
@@ -169,7 +184,9 @@ export class JsonRpcProtocol extends Disposable {
 		}
 	}
 
-	private async _handleMessage(message: JsonRpcMessage): Promise<JsonRpcResponse | undefined> {
+	private async _handleMessage(
+		message: JsonRpcMessage,
+	): Promise<JsonRpcResponse | undefined> {
 		if (isJsonRpcResponse(message)) {
 			if (hasKey(message, { result: true })) {
 				this._handleResult(message);
@@ -207,20 +224,28 @@ export class JsonRpcProtocol extends Disposable {
 		const request = this._pendingRequests.get(response.id);
 		if (request) {
 			this._pendingRequests.delete(response.id);
-			request.promise.error(new JsonRpcError(response.error.code, response.error.message, response.error.data));
+			request.promise.error(
+				new JsonRpcError(
+					response.error.code,
+					response.error.message,
+					response.error.data,
+				),
+			);
 			request.cts.dispose(true);
 		}
 	}
 
-	private async _handleRequest(request: IJsonRpcRequest): Promise<JsonRpcResponse> {
+	private async _handleRequest(
+		request: IJsonRpcRequest,
+	): Promise<JsonRpcResponse> {
 		if (!this._handlers.handleRequest) {
 			const response: IJsonRpcErrorResponse = {
-				jsonrpc: '2.0',
+				jsonrpc: "2.0",
 				id: request.id,
 				error: {
 					code: JsonRpcProtocol.MethodNotFound,
 					message: `Method not found: ${request.method}`,
-				}
+				},
 			};
 			this._send(response);
 			return response;
@@ -231,9 +256,11 @@ export class JsonRpcProtocol extends Disposable {
 
 		try {
 			const resultOrThenable = this._handlers.handleRequest(request, cts.token);
-			const result = isThenable(resultOrThenable) ? await resultOrThenable : resultOrThenable;
+			const result = isThenable(resultOrThenable)
+				? await resultOrThenable
+				: resultOrThenable;
 			const response: IJsonRpcSuccessResponse = {
-				jsonrpc: '2.0',
+				jsonrpc: "2.0",
 				id: request.id,
 				result,
 			};
@@ -243,22 +270,22 @@ export class JsonRpcProtocol extends Disposable {
 			let response: IJsonRpcErrorResponse;
 			if (error instanceof JsonRpcError) {
 				response = {
-					jsonrpc: '2.0',
+					jsonrpc: "2.0",
 					id: request.id,
 					error: {
 						code: error.code,
 						message: error.message,
 						data: error.data,
-					}
+					},
 				};
 			} else {
 				response = {
-					jsonrpc: '2.0',
+					jsonrpc: "2.0",
 					id: request.id,
 					error: {
 						code: JsonRpcProtocol.InternalError,
-						message: error instanceof Error ? error.message : 'Internal error',
-					}
+						message: error instanceof Error ? error.message : "Internal error",
+					},
 				};
 			}
 			this._send(response);
@@ -273,31 +300,51 @@ export class JsonRpcProtocol extends Disposable {
 		super.dispose();
 	}
 
-	public static createParseError(message: string, data?: unknown): IJsonRpcErrorResponse {
+	public static createParseError(
+		message: string,
+		data?: unknown,
+	): IJsonRpcErrorResponse {
 		return {
-			jsonrpc: '2.0',
+			jsonrpc: "2.0",
 			error: {
 				code: JsonRpcProtocol.ParseError,
 				message,
 				data,
-			}
+			},
 		};
 	}
 }
 
-export function isJsonRpcRequest(message: JsonRpcMessage): message is IJsonRpcRequest {
-	return 'method' in message && 'id' in message && (typeof message.id === 'string' || typeof message.id === 'number');
+export function isJsonRpcRequest(
+	message: JsonRpcMessage,
+): message is IJsonRpcRequest {
+	return (
+		"method" in message &&
+		"id" in message &&
+		(typeof message.id === "string" || typeof message.id === "number")
+	);
 }
 
-export function isJsonRpcResponse(message: JsonRpcMessage): message is IJsonRpcSuccessResponse | IJsonRpcErrorResponse {
-	return hasKey(message, { id: true, result: true }) || hasKey(message, { id: true, error: true });
+export function isJsonRpcResponse(
+	message: JsonRpcMessage,
+): message is IJsonRpcSuccessResponse | IJsonRpcErrorResponse {
+	return (
+		hasKey(message, { id: true, result: true }) ||
+		hasKey(message, { id: true, error: true })
+	);
 }
 
-export function isJsonRpcNotification(message: JsonRpcMessage): message is IJsonRpcNotification {
+export function isJsonRpcNotification(
+	message: JsonRpcMessage,
+): message is IJsonRpcNotification {
 	return hasKey(message, { method: true }) && !hasKey(message, { id: true });
 }
 
-
 function isThenable<T>(value: T | Promise<T>): value is Promise<T> {
-	return typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function';
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"then" in value &&
+		typeof value.then === "function"
+	);
 }

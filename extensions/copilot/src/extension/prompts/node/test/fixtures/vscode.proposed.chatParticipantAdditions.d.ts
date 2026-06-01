@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 declare module 'vscode' {
-
 	/**
 	 * The location at which the chat is happening.
 	 */
@@ -24,7 +23,7 @@ declare module 'vscode' {
 		/**
 		 * Code editor inline chat
 		 */
-		Editor = 4
+		Editor = 4,
 	}
 
 	export interface ChatRequest {
@@ -85,7 +84,10 @@ declare module 'vscode' {
 	export class ChatResponseMarkdownWithVulnerabilitiesPart {
 		value: MarkdownString;
 		vulnerabilities: ChatVulnerability[];
-		constructor(value: string | MarkdownString, vulnerabilities: ChatVulnerability[]);
+		constructor(
+			value: string | MarkdownString,
+			vulnerabilities: ChatVulnerability[],
+		);
 	}
 
 	/**
@@ -114,7 +116,11 @@ declare module 'vscode' {
 		constructor(title: string, message: string, data: any);
 	}
 
-	export type ExtendedChatResponsePart = ChatResponsePart | ChatResponseTextEditPart | ChatResponseDetectedParticipantPart | ChatResponseConfirmationPart;
+	export type ExtendedChatResponsePart =
+		| ChatResponsePart
+		| ChatResponseTextEditPart
+		| ChatResponseDetectedParticipantPart
+		| ChatResponseConfirmationPart;
 
 	export class ChatResponseWarningPart {
 		value: MarkdownString;
@@ -123,12 +129,22 @@ declare module 'vscode' {
 
 	export class ChatResponseProgressPart2 extends ChatResponseProgressPart {
 		value: string;
-		task?: (progress: Progress<ChatResponseWarningPart | ChatResponseReferencePart>) => Thenable<string | void>;
-		constructor(value: string, task?: (progress: Progress<ChatResponseWarningPart | ChatResponseReferencePart>) => Thenable<string | void>);
+		task?: (
+			progress: Progress<
+				ChatResponseWarningPart | ChatResponseReferencePart
+			>,
+		) => Thenable<string | void>;
+		constructor(
+			value: string,
+			task?: (
+				progress: Progress<
+					ChatResponseWarningPart | ChatResponseReferencePart
+				>,
+			) => Thenable<string | void>,
+		);
 	}
 
 	export interface ChatResponseStream {
-
 		/**
 		 * Push a progress part to this stream. Short-hand for
 		 * `push(new ChatResponseProgressPart(value))`.
@@ -137,12 +153,29 @@ declare module 'vscode' {
 		 * @param task If provided, a task to run while the progress is displayed. When the Thenable resolves, the progress will be marked complete in the UI, and the progress message will be updated to the resolved string if one is specified.
 		 * @returns This stream.
 		 */
-		progress(value: string, task?: (progress: Progress<ChatResponseWarningPart | ChatResponseReferencePart>) => Thenable<string | void>): void;
+		progress(
+			value: string,
+			task?: (
+				progress: Progress<
+					ChatResponseWarningPart | ChatResponseReferencePart
+				>,
+			) => Thenable<string | void>,
+		): void;
 
 		textEdit(target: Uri, edits: TextEdit | TextEdit[]): void;
-		markdownWithVulnerabilities(value: string | MarkdownString, vulnerabilities: ChatVulnerability[]): void;
+		markdownWithVulnerabilities(
+			value: string | MarkdownString,
+			vulnerabilities: ChatVulnerability[],
+		): void;
 		detectedParticipant(participant: string, command?: ChatCommand): void;
-		push(part: ChatResponsePart | ChatResponseTextEditPart | ChatResponseDetectedParticipantPart | ChatResponseWarningPart | ChatResponseProgressPart2): void;
+		push(
+			part:
+				| ChatResponsePart
+				| ChatResponseTextEditPart
+				| ChatResponseDetectedParticipantPart
+				| ChatResponseWarningPart
+				| ChatResponseProgressPart2,
+		): void;
 
 		/**
 		 * Show an inline message in the chat view asking the user to confirm an action.
@@ -165,7 +198,13 @@ declare module 'vscode' {
 		 */
 		warning(message: string | MarkdownString): void;
 
-		reference(value: Uri | Location | { variableName: string; value?: Uri | Location }, iconPath?: Uri | ThemeIcon | { light: Uri; dark: Uri }): void;
+		reference(
+			value:
+				| Uri
+				| Location
+				| { variableName: string; value?: Uri | Location },
+			iconPath?: Uri | ThemeIcon | { light: Uri; dark: Uri },
+		): void;
 
 		push(part: ExtendedChatResponsePart): void;
 	}
@@ -195,11 +234,17 @@ declare module 'vscode' {
 		/**
 		 * Provide a set of variables that can only be used with this participant.
 		 */
-		participantVariableProvider?: { provider: ChatParticipantCompletionItemProvider; triggerCharacters: string[] };
+		participantVariableProvider?: {
+			provider: ChatParticipantCompletionItemProvider;
+			triggerCharacters: string[];
+		};
 	}
 
 	export interface ChatParticipantCompletionItemProvider {
-		provideCompletionItems(query: string, token: CancellationToken): ProviderResult<ChatCompletionItem[]>;
+		provideCompletionItems(
+			query: string,
+			token: CancellationToken,
+		): ProviderResult<ChatCompletionItem[]>;
 	}
 
 	export class ChatCompletionItem {
@@ -213,18 +258,34 @@ declare module 'vscode' {
 		documentation?: string | MarkdownString;
 		command?: Command;
 
-		constructor(id: string, label: string | CompletionItemLabel, values: ChatVariableValue[]);
+		constructor(
+			id: string,
+			label: string | CompletionItemLabel,
+			values: ChatVariableValue[],
+		);
 	}
 
-	export type ChatExtendedRequestHandler = (request: ChatRequest, context: ChatContext, response: ChatResponseStream, token: CancellationToken) => ProviderResult<ChatResult | void>;
+	export type ChatExtendedRequestHandler = (
+		request: ChatRequest,
+		context: ChatContext,
+		response: ChatResponseStream,
+		token: CancellationToken,
+	) => ProviderResult<ChatResult | void>;
 
 	export namespace chat {
 		/**
 		 * Create a chat participant with the extended progress type
 		 */
-		export function createChatParticipant(id: string, handler: ChatExtendedRequestHandler): ChatParticipant;
+		export function createChatParticipant(
+			id: string,
+			handler: ChatExtendedRequestHandler,
+		): ChatParticipant;
 
-		export function createDynamicChatParticipant(id: string, dynamicProps: DynamicChatParticipantProps, handler: ChatExtendedRequestHandler): ChatParticipant;
+		export function createDynamicChatParticipant(
+			id: string,
+			dynamicProps: DynamicChatParticipantProps,
+			handler: ChatExtendedRequestHandler,
+		): ChatParticipant;
 
 		/**
 		 * Current version of the proposal. Changes whenever backwards-incompatible changes are made.
@@ -252,7 +313,7 @@ declare module 'vscode' {
 	export enum ChatCopyKind {
 		// Keyboard shortcut or context menu
 		Action = 1,
-		Toolbar = 2
+		Toolbar = 2,
 	}
 
 	export interface ChatCopyAction {
@@ -304,7 +365,14 @@ declare module 'vscode' {
 
 	export interface ChatUserActionEvent {
 		readonly result: ChatResult;
-		readonly action: ChatCopyAction | ChatInsertAction | ChatTerminalAction | ChatCommandAction | ChatFollowupAction | ChatBugReportAction | ChatEditorAction;
+		readonly action:
+			| ChatCopyAction
+			| ChatInsertAction
+			| ChatTerminalAction
+			| ChatCommandAction
+			| ChatFollowupAction
+			| ChatBugReportAction
+			| ChatEditorAction;
 	}
 
 	export interface ChatPromptReference {
@@ -320,7 +388,7 @@ declare module 'vscode' {
 	export enum ChatVariableLevel {
 		Short = 1,
 		Medium = 2,
-		Full = 3
+		Full = 3,
 	}
 
 	export interface ChatVariableValue {
@@ -366,10 +434,14 @@ declare module 'vscode' {
 		 *
 		 * @param part A response part, rendered or metadata
 		 */
-		push(part: ChatVariableResolverResponsePart): ChatVariableResolverResponseStream;
+		push(
+			part: ChatVariableResolverResponsePart,
+		): ChatVariableResolverResponseStream;
 	}
 
-	export type ChatVariableResolverResponsePart = ChatResponseProgressPart | ChatResponseReferencePart;
+	export type ChatVariableResolverResponsePart =
+		| ChatResponseProgressPart
+		| ChatResponseReferencePart;
 
 	export interface ChatVariableResolver {
 		/**
@@ -378,6 +450,11 @@ declare module 'vscode' {
 		 * @param context Contextual information about this chat request.
 		 * @param token A cancellation token.
 		 */
-		resolve2?(name: string, context: ChatVariableContext, stream: ChatVariableResolverResponseStream, token: CancellationToken): ProviderResult<ChatVariableValue[]>;
+		resolve2?(
+			name: string,
+			context: ChatVariableContext,
+			stream: ChatVariableResolverResponseStream,
+			token: CancellationToken,
+		): ProviderResult<ChatVariableValue[]>;
 	}
 }

@@ -15,49 +15,77 @@ import { Emitter } from '../../../../../util/vs/base/common/event';
 import { DisposableStore } from '../../../../../util/vs/base/common/lifecycle';
 import { IInstantiationService } from '../../../../../util/vs/platform/instantiation/common/instantiation';
 import { createExtensionUnitTestingServices } from '../../../../test/node/services';
-import { CopilotCLIModels, type CopilotCLIModelInfo, type ICopilotCLISDK } from '../copilotCli';
+import {
+	CopilotCLIModels,
+	type CopilotCLIModelInfo,
+	type ICopilotCLISDK,
+} from '../copilotCli';
 
 function createMockExtensionContext(): IVSCodeExtensionContext {
 	const state = new Map<string, unknown>();
 	return {
 		extensionPath: '/mock',
 		globalState: {
-			get: <T>(key: string, defaultValue?: T) => (state.get(key) as T) ?? defaultValue,
-			update: async (key: string, value: unknown) => { state.set(key, value); },
-			keys: () => [...state.keys()]
+			get: <T>(key: string, defaultValue?: T) =>
+				(state.get(key) as T) ?? defaultValue,
+			update: async (key: string, value: unknown) => {
+				state.set(key, value);
+			},
+			keys: () => [...state.keys()],
 		},
 		workspaceState: {
 			get: () => ({}),
-			update: async () => { },
-			keys: () => []
-		}
+			update: async () => {},
+			keys: () => [],
+		},
 	} as unknown as IVSCodeExtensionContext;
 }
 
 const FAKE_MODELS: CopilotCLIModelInfo[] = [
-	{ id: 'gpt-4o', name: 'GPT-4o', maxContextWindowTokens: 128000, supportsVision: true },
-	{ id: 'gpt-3.5', name: 'GPT-3.5', maxContextWindowTokens: 16000, supportsVision: false },
+	{
+		id: 'gpt-4o',
+		name: 'GPT-4o',
+		maxContextWindowTokens: 128000,
+		supportsVision: true,
+	},
+	{
+		id: 'gpt-3.5',
+		name: 'GPT-3.5',
+		maxContextWindowTokens: 16000,
+		supportsVision: false,
+	},
 ];
 
-function createMockSDK(models: CopilotCLIModelInfo[] = FAKE_MODELS): ICopilotCLISDK {
+function createMockSDK(
+	models: CopilotCLIModelInfo[] = FAKE_MODELS,
+): ICopilotCLISDK {
 	return {
 		_serviceBrand: undefined,
 		getPackage: vi.fn(async () => ({
-			getAvailableModels: vi.fn(async () => models.map(m => ({
-				id: m.id,
-				name: m.name,
-				billing: m.multiplier !== undefined ? { multiplier: m.multiplier } : undefined,
-				capabilities: {
-					limits: {
-						max_prompt_tokens: m.maxInputTokens,
-						max_output_tokens: m.maxOutputTokens,
-						max_context_window_tokens: m.maxContextWindowTokens,
+			getAvailableModels: vi.fn(async () =>
+				models.map((m) => ({
+					id: m.id,
+					name: m.name,
+					billing:
+						m.multiplier !== undefined
+							? { multiplier: m.multiplier }
+							: undefined,
+					capabilities: {
+						limits: {
+							max_prompt_tokens: m.maxInputTokens,
+							max_output_tokens: m.maxOutputTokens,
+							max_context_window_tokens: m.maxContextWindowTokens,
+						},
+						supports: { vision: m.supportsVision },
 					},
-					supports: { vision: m.supportsVision }
-				}
-			}))),
+				})),
+			),
 		})),
-		getAuthInfo: vi.fn(async () => ({ type: 'token' as const, token: 'test-token', host: 'https://github.com' })),
+		getAuthInfo: vi.fn(async () => ({
+			type: 'token' as const,
+			token: 'test-token',
+			host: 'https://github.com',
+		})),
 		getRequestId: vi.fn(() => undefined),
 		setRequestId: vi.fn(),
 	} as unknown as ICopilotCLISDK;
@@ -71,7 +99,12 @@ class MockAuthenticationService {
 
 	constructor(hasSession: boolean) {
 		this._anyGitHubSession = hasSession
-			? { id: 'test', accessToken: 'token', scopes: [], account: { id: 'user', label: 'User' } }
+			? {
+					id: 'test',
+					accessToken: 'token',
+					scopes: [],
+					account: { id: 'user', label: 'User' },
+				}
 			: undefined;
 	}
 
@@ -116,18 +149,29 @@ describe('CopilotCLIModels', () => {
 		disposables.clear();
 	});
 
-	function createModels(options: { hasSession?: boolean; sdk?: ICopilotCLISDK; configService?: MockConfigurationService } = {}): { models: CopilotCLIModels; auth: MockAuthenticationService; configService: MockConfigurationService } {
+	function createModels(
+		options: {
+			hasSession?: boolean;
+			sdk?: ICopilotCLISDK;
+			configService?: MockConfigurationService;
+		} = {},
+	): {
+		models: CopilotCLIModels;
+		auth: MockAuthenticationService;
+		configService: MockConfigurationService;
+	} {
 		const auth = new MockAuthenticationService(options.hasSession ?? true);
 		const sdk = options.sdk ?? createMockSDK();
 		const extensionContext = createMockExtensionContext();
-		const configService = options.configService ?? new MockConfigurationService();
+		const configService =
+			options.configService ?? new MockConfigurationService();
 
 		const models = new CopilotCLIModels(
 			sdk,
 			extensionContext,
 			logService,
 			auth as unknown as IAuthenticationService,
-			configService
+			configService,
 		);
 		disposables.add(models);
 		disposables.add({ dispose: () => auth.dispose() });
@@ -191,13 +235,21 @@ describe('CopilotCLIModels', () => {
 		it('returns undefined for unknown model', async () => {
 			const { models } = createModels({ hasSession: true });
 
-			expect(await models.resolveModel('nonexistent-model')).toBeUndefined();
+			expect(
+				await models.resolveModel('nonexistent-model'),
+			).toBeUndefined();
 		});
 
 		it('resolves "auto" without querying SDK models', async () => {
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, true);
-			const { models } = createModels({ hasSession: false, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				true,
+			);
+			const { models } = createModels({
+				hasSession: false,
+				configService,
+			});
 
 			// Even without a session, 'auto' resolves to itself
 			expect(await models.resolveModel('auto')).toBe('auto');
@@ -254,7 +306,7 @@ describe('CopilotCLIModels', () => {
 				extensionContext,
 				logService,
 				auth as unknown as IAuthenticationService,
-				new MockConfigurationService()
+				new MockConfigurationService(),
 			);
 			disposables.add(models);
 
@@ -265,16 +317,24 @@ describe('CopilotCLIModels', () => {
 			// and capture the provider's event
 			let providerOnChangeEvent: any;
 			const lmMock = {
-				registerLanguageModelChatProvider: (_id: string, provider: any) => {
-					providerOnChangeEvent = provider.onDidChangeLanguageModelChatInformation;
-					return { dispose: () => { } };
-				}
+				registerLanguageModelChatProvider: (
+					_id: string,
+					provider: any,
+				) => {
+					providerOnChangeEvent =
+						provider.onDidChangeLanguageModelChatInformation;
+					return { dispose: () => {} };
+				},
 			};
 			models.registerLanguageModelChatProvider(lmMock as any);
 
 			// Now subscribe to the captured event
 			let fired = false;
-			disposables.add(providerOnChangeEvent(() => { fired = true; }));
+			disposables.add(
+				providerOnChangeEvent(() => {
+					fired = true;
+				}),
+			);
 
 			// Fire auth change — should propagate through _onDidChange
 			auth.fireAuthenticationChange();
@@ -289,7 +349,12 @@ describe('CopilotCLIModels', () => {
 			expect(await models.getModels()).toEqual([]);
 
 			// Set session and verify models are now available
-			auth.setSession({ id: 'test', accessToken: 'token', scopes: [], account: { id: 'user', label: 'User' } });
+			auth.setSession({
+				id: 'test',
+				accessToken: 'token',
+				scopes: [],
+				account: { id: 'user', label: 'User' },
+			});
 			const result = await models.getModels();
 			expect(result.length).toBe(2);
 		});
@@ -300,42 +365,60 @@ describe('CopilotCLIModels', () => {
 
 			// Initial fetch
 			await models.getModels();
-			const initialCallCount = (sdk.getPackage as ReturnType<typeof vi.fn>).mock.calls.length;
+			const initialCallCount = (
+				sdk.getPackage as ReturnType<typeof vi.fn>
+			).mock.calls.length;
 
 			// Fire auth change to invalidate the cache
 			auth.fireAuthenticationChange();
 
 			// Next getModels() call should re-fetch from the SDK
 			await models.getModels();
-			expect((sdk.getPackage as ReturnType<typeof vi.fn>).mock.calls.length).toBe(initialCallCount + 1);
+			expect(
+				(sdk.getPackage as ReturnType<typeof vi.fn>).mock.calls.length,
+			).toBe(initialCallCount + 1);
 		});
 
 		it('returns fresh models after auth change', async () => {
 			const updatedModels: CopilotCLIModelInfo[] = [
-				{ id: 'claude-4', name: 'Claude 4', maxContextWindowTokens: 200000, supportsVision: true },
+				{
+					id: 'claude-4',
+					name: 'Claude 4',
+					maxContextWindowTokens: 200000,
+					supportsVision: true,
+				},
 			];
 			let callCount = 0;
 			const sdk = {
 				_serviceBrand: undefined,
 				getPackage: vi.fn(async () => ({
 					getAvailableModels: vi.fn(async () => {
-						const source = callCount++ === 0 ? FAKE_MODELS : updatedModels;
-						return source.map(m => ({
+						const source =
+							callCount++ === 0 ? FAKE_MODELS : updatedModels;
+						return source.map((m) => ({
 							id: m.id,
 							name: m.name,
-							billing: m.multiplier !== undefined ? { multiplier: m.multiplier } : undefined,
+							billing:
+								m.multiplier !== undefined
+									? { multiplier: m.multiplier }
+									: undefined,
 							capabilities: {
 								limits: {
 									max_prompt_tokens: m.maxInputTokens,
 									max_output_tokens: m.maxOutputTokens,
-									max_context_window_tokens: m.maxContextWindowTokens,
+									max_context_window_tokens:
+										m.maxContextWindowTokens,
 								},
-								supports: { vision: m.supportsVision }
+								supports: { vision: m.supportsVision },
 							},
 						}));
 					}),
 				})),
-				getAuthInfo: vi.fn(async () => ({ type: 'token' as const, token: 'test-token', host: 'https://github.com' })),
+				getAuthInfo: vi.fn(async () => ({
+					type: 'token' as const,
+					token: 'test-token',
+					host: 'https://github.com',
+				})),
 				getRequestId: vi.fn(() => undefined),
 				setRequestId: vi.fn(),
 			} as unknown as ICopilotCLISDK;
@@ -362,10 +445,13 @@ describe('CopilotCLIModels', () => {
 			let capturedProvider: any;
 			return {
 				mock: {
-					registerLanguageModelChatProvider: (_id: string, provider: any) => {
+					registerLanguageModelChatProvider: (
+						_id: string,
+						provider: any,
+					) => {
 						capturedProvider = provider;
-						return { dispose: () => { } };
-					}
+						return { dispose: () => {} };
+					},
 				},
 				getProvider: () => capturedProvider,
 			};
@@ -373,31 +459,49 @@ describe('CopilotCLIModels', () => {
 
 		it('always includes auto model in results', async () => {
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, true);
-			const { models } = createModels({ hasSession: true, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				true,
+			);
+			const { models } = createModels({
+				hasSession: true,
+				configService,
+			});
 			const lm = createLmMock();
 			models.registerLanguageModelChatProvider(lm.mock as any);
 
 			// Wait for the eager fetch to complete
 			await models.getModels();
 			// Allow the _fetchAndCacheModels .then() to run
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			const result = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
-			expect(result[0]).toEqual(expect.objectContaining({ id: 'auto', name: 'Auto' }));
+			const result = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
+			expect(result[0]).toEqual(
+				expect.objectContaining({ id: 'auto', name: 'Auto' }),
+			);
 		});
 
 		it('returns an empty array when not authenticated', async () => {
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, true);
-			const { models } = createModels({ hasSession: false, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				true,
+			);
+			const { models } = createModels({
+				hasSession: false,
+				configService,
+			});
 			const lm = createLmMock();
 			models.registerLanguageModelChatProvider(lm.mock as any);
 
 			// Allow microtasks to settle (the eager fetch is skipped when no token source)
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			const result = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const result = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			expect(result).toEqual([]);
 		});
 
@@ -407,68 +511,124 @@ describe('CopilotCLIModels', () => {
 			const sdk = {
 				_serviceBrand: undefined,
 				getPackage: vi.fn(async () => ({
-					getAvailableModels: vi.fn(() => new Promise(resolve => { resolveModels = resolve; })),
+					getAvailableModels: vi.fn(
+						() =>
+							new Promise((resolve) => {
+								resolveModels = resolve;
+							}),
+					),
 				})),
-				getAuthInfo: vi.fn(async () => ({ type: 'token' as const, token: 'test-token', host: 'https://github.com' })),
+				getAuthInfo: vi.fn(async () => ({
+					type: 'token' as const,
+					token: 'test-token',
+					host: 'https://github.com',
+				})),
 				getRequestId: vi.fn(() => undefined),
 			} as unknown as ICopilotCLISDK;
 
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, true);
-			const { models } = createModels({ hasSession: true, sdk, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				true,
+			);
+			const { models } = createModels({
+				hasSession: true,
+				sdk,
+				configService,
+			});
 			const lm = createLmMock();
 			models.registerLanguageModelChatProvider(lm.mock as any);
 
 			// Models are still pending — provider has no resolved infos yet
-			const result = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const result = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			expect(result).toEqual([]);
 
 			// Flush microtasks so getPackage()/getAuthInfo() resolve and getAvailableModels is called,
 			// which captures resolveModels.
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
 			// Now resolve the models and let promises settle
-			resolveModels(FAKE_MODELS.map(m => ({
-				id: m.id, name: m.name,
-				capabilities: { limits: { max_context_window_tokens: m.maxContextWindowTokens, max_prompt_tokens: m.maxInputTokens, max_output_tokens: m.maxOutputTokens }, supports: { vision: m.supportsVision } },
-			})));
-			await new Promise(r => setTimeout(r, 0));
+			resolveModels(
+				FAKE_MODELS.map((m) => ({
+					id: m.id,
+					name: m.name,
+					capabilities: {
+						limits: {
+							max_context_window_tokens: m.maxContextWindowTokens,
+							max_prompt_tokens: m.maxInputTokens,
+							max_output_tokens: m.maxOutputTokens,
+						},
+						supports: { vision: m.supportsVision },
+					},
+				})),
+			);
+			await new Promise((r) => setTimeout(r, 0));
 
-			const afterResolve = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const afterResolve = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			expect(afterResolve.length).toBe(3); // auto + 2 models
-			expect(afterResolve[0]).toEqual(expect.objectContaining({ id: 'auto' }));
-			expect(afterResolve[1]).toEqual(expect.objectContaining({ id: 'gpt-4o' }));
-			expect(afterResolve[2]).toEqual(expect.objectContaining({ id: 'gpt-3.5' }));
+			expect(afterResolve[0]).toEqual(
+				expect.objectContaining({ id: 'auto' }),
+			);
+			expect(afterResolve[1]).toEqual(
+				expect.objectContaining({ id: 'gpt-4o' }),
+			);
+			expect(afterResolve[2]).toEqual(
+				expect.objectContaining({ id: 'gpt-3.5' }),
+			);
 		});
 
 		it('returns full model list with auto prepended after fetch completes', async () => {
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, true);
-			const { models } = createModels({ hasSession: true, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				true,
+			);
+			const { models } = createModels({
+				hasSession: true,
+				configService,
+			});
 			const lm = createLmMock();
 			models.registerLanguageModelChatProvider(lm.mock as any);
 
 			// Wait for the eager fetch to complete
 			await models.getModels();
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			const result = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const result = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			expect(result.length).toBe(3); // auto + 2 models
-			expect(result.map((m: any) => m.id)).toEqual(['auto', 'gpt-4o', 'gpt-3.5']);
+			expect(result.map((m: any) => m.id)).toEqual([
+				'auto',
+				'gpt-4o',
+				'gpt-3.5',
+			]);
 		});
 
 		it('resets to auto-only after auth change, then recovers', async () => {
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, true);
-			const { models, auth } = createModels({ hasSession: true, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				true,
+			);
+			const { models, auth } = createModels({
+				hasSession: true,
+				configService,
+			});
 			const lm = createLmMock();
 			models.registerLanguageModelChatProvider(lm.mock as any);
 
 			// Wait for initial fetch
 			await models.getModels();
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			const beforeAuthChange = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const beforeAuthChange = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			expect(beforeAuthChange.length).toBe(3);
 
 			// Fire auth change — caches are cleared
@@ -477,17 +637,25 @@ describe('CopilotCLIModels', () => {
 			// Immediately after auth change, _resolvedModelInfos is cleared but re-fetch is in flight.
 			// Before the re-fetch settles, we should get just auto.
 			// (The re-fetch is async so hasn't settled yet in the same microtask.)
-			const duringRefresh = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const duringRefresh = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			// Could be auto-only or already refreshed depending on timing; at minimum auto is present
-			expect(duringRefresh[0]).toEqual(expect.objectContaining({ id: 'auto' }));
+			expect(duringRefresh[0]).toEqual(
+				expect.objectContaining({ id: 'auto' }),
+			);
 
 			// Let the re-fetch settle
 			await models.getModels();
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			const afterRefresh = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const afterRefresh = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			expect(afterRefresh.length).toBe(3);
-			expect(afterRefresh[0]).toEqual(expect.objectContaining({ id: 'auto' }));
+			expect(afterRefresh[0]).toEqual(
+				expect.objectContaining({ id: 'auto' }),
+			);
 		});
 
 		it('fires onDidChange when models become available', async () => {
@@ -495,9 +663,18 @@ describe('CopilotCLIModels', () => {
 			const sdk = {
 				_serviceBrand: undefined,
 				getPackage: vi.fn(async () => ({
-					getAvailableModels: vi.fn(() => new Promise(resolve => { resolveModels = resolve; })),
+					getAvailableModels: vi.fn(
+						() =>
+							new Promise((resolve) => {
+								resolveModels = resolve;
+							}),
+					),
 				})),
-				getAuthInfo: vi.fn(async () => ({ type: 'token' as const, token: 'test-token', host: 'https://github.com' })),
+				getAuthInfo: vi.fn(async () => ({
+					type: 'token' as const,
+					token: 'test-token',
+					host: 'https://github.com',
+				})),
 				getRequestId: vi.fn(() => undefined),
 			} as unknown as ICopilotCLISDK;
 
@@ -506,18 +683,32 @@ describe('CopilotCLIModels', () => {
 			models.registerLanguageModelChatProvider(lm.mock as any);
 
 			let changeCount = 0;
-			disposables.add(lm.getProvider().onDidChangeLanguageModelChatInformation(() => { changeCount++; }));
+			disposables.add(
+				lm.getProvider().onDidChangeLanguageModelChatInformation(() => {
+					changeCount++;
+				}),
+			);
 
 			// Flush microtasks so getPackage()/getAuthInfo() resolve and getAvailableModels is called,
 			// which captures resolveModels.
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
 			// Resolve models
-			resolveModels(FAKE_MODELS.map(m => ({
-				id: m.id, name: m.name,
-				capabilities: { limits: { max_context_window_tokens: m.maxContextWindowTokens, max_prompt_tokens: m.maxInputTokens, max_output_tokens: m.maxOutputTokens }, supports: { vision: m.supportsVision } },
-			})));
-			await new Promise(r => setTimeout(r, 0));
+			resolveModels(
+				FAKE_MODELS.map((m) => ({
+					id: m.id,
+					name: m.name,
+					capabilities: {
+						limits: {
+							max_context_window_tokens: m.maxContextWindowTokens,
+							max_prompt_tokens: m.maxInputTokens,
+							max_output_tokens: m.maxOutputTokens,
+						},
+						supports: { vision: m.supportsVision },
+					},
+				})),
+			);
+			await new Promise((r) => setTimeout(r, 0));
 
 			expect(changeCount).toBeGreaterThan(0);
 		});
@@ -528,10 +719,13 @@ describe('CopilotCLIModels', () => {
 			let capturedProvider: any;
 			return {
 				mock: {
-					registerLanguageModelChatProvider: (_id: string, provider: any) => {
+					registerLanguageModelChatProvider: (
+						_id: string,
+						provider: any,
+					) => {
 						capturedProvider = provider;
-						return { dispose: () => { } };
-					}
+						return { dispose: () => {} };
+					},
 				},
 				getProvider: () => capturedProvider,
 			};
@@ -539,37 +733,61 @@ describe('CopilotCLIModels', () => {
 
 		it('omits auto model from resolved list when disabled', async () => {
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, false);
-			const { models } = createModels({ hasSession: true, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				false,
+			);
+			const { models } = createModels({
+				hasSession: true,
+				configService,
+			});
 			const lm = createLmMock();
 			models.registerLanguageModelChatProvider(lm.mock as any);
 
 			await models.getModels();
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			const result = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const result = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			expect(result.every((m: any) => m.id !== 'auto')).toBe(true);
 			expect(result.length).toBe(2);
-			expect(result[0]).toEqual(expect.objectContaining({ id: 'gpt-4o' }));
+			expect(result[0]).toEqual(
+				expect.objectContaining({ id: 'gpt-4o' }),
+			);
 		});
 
 		it('returns an empty array when not authenticated and auto model disabled', async () => {
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, false);
-			const { models } = createModels({ hasSession: false, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				false,
+			);
+			const { models } = createModels({
+				hasSession: false,
+				configService,
+			});
 			const lm = createLmMock();
 			models.registerLanguageModelChatProvider(lm.mock as any);
 
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			const result = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const result = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			expect(result).toEqual([]);
 		});
 
 		it('resolveModel does not short-circuit auto when disabled', async () => {
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, false);
-			const { models } = createModels({ hasSession: true, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				false,
+			);
+			const { models } = createModels({
+				hasSession: true,
+				configService,
+			});
 
 			// With the setting disabled, 'auto' is not a known model so resolveModel returns undefined
 			expect(await models.resolveModel('auto')).toBeUndefined();
@@ -577,15 +795,23 @@ describe('CopilotCLIModels', () => {
 
 		it('includes auto model when setting is enabled', async () => {
 			const configService = new MockConfigurationService();
-			await configService.setConfig(ConfigKey.Advanced.CLIAutoModelEnabled, true);
-			const { models } = createModels({ hasSession: true, configService });
+			await configService.setConfig(
+				ConfigKey.Advanced.CLIAutoModelEnabled,
+				true,
+			);
+			const { models } = createModels({
+				hasSession: true,
+				configService,
+			});
 			const lm = createLmMock();
 			models.registerLanguageModelChatProvider(lm.mock as any);
 
 			await models.getModels();
-			await new Promise(r => setTimeout(r, 0));
+			await new Promise((r) => setTimeout(r, 0));
 
-			const result = await lm.getProvider().provideLanguageModelChatInformation({}, undefined);
+			const result = await lm
+				.getProvider()
+				.provideLanguageModelChatInformation({}, undefined);
 			expect(result[0]).toEqual(expect.objectContaining({ id: 'auto' }));
 			expect(result.length).toBe(3); // auto + 2 models
 		});
@@ -596,9 +822,15 @@ describe('CopilotCLIModels', () => {
 			const sdk = {
 				_serviceBrand: undefined,
 				getPackage: vi.fn(async () => ({
-					getAvailableModels: vi.fn(async () => { throw new Error('Network error'); }),
+					getAvailableModels: vi.fn(async () => {
+						throw new Error('Network error');
+					}),
 				})),
-				getAuthInfo: vi.fn(async () => ({ type: 'token' as const, token: 'test-token', host: 'https://github.com' })),
+				getAuthInfo: vi.fn(async () => ({
+					type: 'token' as const,
+					token: 'test-token',
+					host: 'https://github.com',
+				})),
 				getRequestId: vi.fn(() => undefined),
 				setRequestId: vi.fn(),
 			} as unknown as ICopilotCLISDK;

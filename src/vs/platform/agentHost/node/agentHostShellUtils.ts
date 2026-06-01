@@ -3,8 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { posix as pathPosix, win32 as pathWin32 } from '../../../base/common/path.js';
-import * as platform from '../../../base/common/platform.js';
+import {
+	posix as pathPosix,
+	win32 as pathWin32,
+} from "../../../base/common/path.js";
+import * as platform from "../../../base/common/platform.js";
 
 export function isZsh(shell: string): boolean {
 	if (platform.OS === platform.OperatingSystem.Windows) {

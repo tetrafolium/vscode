@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import type { Repository } from './typings/git.d.ts';
+import * as vscode from "vscode";
+import type { Repository } from "./typings/git.d.ts";
 
 export class DisposableStore {
-
 	private disposables = new Set<vscode.Disposable>();
 
 	add(disposable: vscode.Disposable): void {
@@ -23,14 +22,16 @@ export class DisposableStore {
 	}
 }
 
-function decorate(decorator: (fn: Function, key: string) => Function): Function {
+function decorate(
+	decorator: (fn: Function, key: string) => Function,
+): Function {
 	return (_target: any, key: string, descriptor: PropertyDescriptor): void => {
-		if (typeof descriptor.value === 'function') {
+		if (typeof descriptor.value === "function") {
 			descriptor.value = decorator(descriptor.value, key);
-		} else if (typeof descriptor.get === 'function') {
+		} else if (typeof descriptor.get === "function") {
 			descriptor.get = decorator(descriptor.get, key) as () => any;
 		} else {
-			throw new Error('not supported');
+			throw new Error("not supported");
 		}
 	};
 }
@@ -39,7 +40,8 @@ function _sequentialize(fn: Function, key: string): Function {
 	const currentKey = `__$sequence$${key}`;
 
 	return function (this: any, ...args: any[]) {
-		const currentPromise = this[currentKey] as Promise<any> || Promise.resolve(null);
+		const currentPromise =
+			(this[currentKey] as Promise<any>) || Promise.resolve(null);
 		const run = async () => await fn.apply(this, args);
 		this[currentKey] = currentPromise.then(run, run);
 		return this[currentKey];
@@ -48,7 +50,10 @@ function _sequentialize(fn: Function, key: string): Function {
 
 export const sequentialize = decorate(_sequentialize);
 
-export function groupBy<T>(data: ReadonlyArray<T>, compare: (a: T, b: T) => number): T[][] {
+export function groupBy<T>(
+	data: ReadonlyArray<T>,
+	compare: (a: T, b: T) => number,
+): T[][] {
 	const result: T[][] = [];
 	let currentGroup: T[] | undefined = undefined;
 	for (const element of data.slice(0).sort(compare)) {
@@ -62,32 +67,42 @@ export function groupBy<T>(data: ReadonlyArray<T>, compare: (a: T, b: T) => numb
 	return result;
 }
 
-export function getRepositoryFromUrl(url: string): { owner: string; repo: string } | undefined {
-	const match = /^https:\/\/github\.com\/([^/]+)\/([^/]+?)(\.git)?$/i.exec(url)
-		|| /^git@github\.com:([^/]+)\/([^/]+?)(\.git)?$/i.exec(url);
+export function getRepositoryFromUrl(
+	url: string,
+): { owner: string; repo: string } | undefined {
+	const match =
+		/^https:\/\/github\.com\/([^/]+)\/([^/]+?)(\.git)?$/i.exec(url) ||
+		/^git@github\.com:([^/]+)\/([^/]+?)(\.git)?$/i.exec(url);
 	return match ? { owner: match[1], repo: match[2] } : undefined;
 }
 
-export function getRepositoryFromQuery(query: string): { owner: string; repo: string } | undefined {
+export function getRepositoryFromQuery(
+	query: string,
+): { owner: string; repo: string } | undefined {
 	const match = /^([^/]+)\/([^/]+)$/i.exec(query);
 	return match ? { owner: match[1], repo: match[2] } : undefined;
 }
 
 export function repositoryHasGitHubRemote(repository: Repository) {
-	return !!repository.state.remotes.find(remote => remote.fetchUrl ? getRepositoryFromUrl(remote.fetchUrl) : undefined);
+	return !!repository.state.remotes.find((remote) =>
+		remote.fetchUrl ? getRepositoryFromUrl(remote.fetchUrl) : undefined,
+	);
 }
 
-export function getRepositoryDefaultRemoteUrl(repository: Repository, order: string[]): string | undefined {
-	const remotes = repository.state.remotes
-		.filter(remote => remote.fetchUrl && getRepositoryFromUrl(remote.fetchUrl));
+export function getRepositoryDefaultRemoteUrl(
+	repository: Repository,
+	order: string[],
+): string | undefined {
+	const remotes = repository.state.remotes.filter(
+		(remote) => remote.fetchUrl && getRepositoryFromUrl(remote.fetchUrl),
+	);
 
 	if (remotes.length === 0) {
 		return undefined;
 	}
 
 	for (const name of order) {
-		const remote = remotes
-			.find(remote => remote.name === name);
+		const remote = remotes.find((remote) => remote.name === name);
 
 		if (remote) {
 			return remote.fetchUrl;
@@ -98,7 +113,10 @@ export function getRepositoryDefaultRemoteUrl(repository: Repository, order: str
 	return remotes[0].fetchUrl;
 }
 
-export function getRepositoryDefaultRemote(repository: Repository, order: string[]): { owner: string; repo: string } | undefined {
+export function getRepositoryDefaultRemote(
+	repository: Repository,
+	order: string[],
+): { owner: string; repo: string } | undefined {
 	const fetchUrl = getRepositoryDefaultRemoteUrl(repository, order);
 	return fetchUrl ? getRepositoryFromUrl(fetchUrl) : undefined;
 }

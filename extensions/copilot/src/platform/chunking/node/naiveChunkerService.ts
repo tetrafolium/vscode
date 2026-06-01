@@ -6,7 +6,10 @@
 import { createServiceIdentifier } from '../../../util/common/services';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { Uri } from '../../../vscodeTypes';
-import { ITokenizerProvider, TokenizationEndpoint } from '../../tokenizer/node/tokenizer';
+import {
+	ITokenizerProvider,
+	TokenizationEndpoint,
+} from '../../tokenizer/node/tokenizer';
 import { FileChunk } from '../common/chunk';
 import { MAX_CHUNK_SIZE_TOKENS, NaiveChunker } from './naiveChunker';
 
@@ -20,34 +23,54 @@ interface NaiveChunkingOptions {
 }
 
 export interface INaiveChunkingService {
-
 	/**
 	 * Splits `text` into smaller chunks of roughly equal length using a scrolling window approach.
 	 */
-	chunkFile(endpoint: TokenizationEndpoint, fileUri: Uri, text: string, options: NaiveChunkingOptions, token: CancellationToken): Promise<FileChunk[]>;
+	chunkFile(
+		endpoint: TokenizationEndpoint,
+		fileUri: Uri,
+		text: string,
+		options: NaiveChunkingOptions,
+		token: CancellationToken,
+	): Promise<FileChunk[]>;
 }
 
-export const INaiveChunkingService = createServiceIdentifier<INaiveChunkingService>('INaiveChunkingService');
+export const INaiveChunkingService =
+	createServiceIdentifier<INaiveChunkingService>('INaiveChunkingService');
 
 export class NaiveChunkingService implements INaiveChunkingService {
-
 	declare _serviceBrand: undefined;
 
-	private readonly naiveChunkers = new Map</*endpoint */ string, NaiveChunker>();
+	private readonly naiveChunkers = new Map<
+		/*endpoint */ string,
+		NaiveChunker
+	>();
 
 	constructor(
-		@ITokenizerProvider private readonly tokenizerProvider: ITokenizerProvider,
-	) { }
+		@ITokenizerProvider
+		private readonly tokenizerProvider: ITokenizerProvider,
+	) {}
 
-	async chunkFile(endpoint: TokenizationEndpoint, uri: Uri, text: string, options: NaiveChunkingOptions, token: CancellationToken): Promise<FileChunk[]> {
+	async chunkFile(
+		endpoint: TokenizationEndpoint,
+		uri: Uri,
+		text: string,
+		options: NaiveChunkingOptions,
+		token: CancellationToken,
+	): Promise<FileChunk[]> {
 		const maxTokenLength = options?.maxTokenLength ?? MAX_CHUNK_SIZE_TOKENS;
 
-		const out = await this.getNaiveChunker(endpoint).chunkFile(uri, text, { maxTokenLength }, token);
+		const out = await this.getNaiveChunker(endpoint).chunkFile(
+			uri,
+			text,
+			{ maxTokenLength },
+			token,
+		);
 		if (options?.validateChunkLengths) {
 			await this.validateChunkLengths(out, maxTokenLength, endpoint);
 		}
 
-		return out.filter(x => x.text);
+		return out.filter((x) => x.text);
 	}
 
 	private getNaiveChunker(endpoint: TokenizationEndpoint): NaiveChunker {
@@ -61,13 +84,23 @@ export class NaiveChunkingService implements INaiveChunkingService {
 		return chunker;
 	}
 
-	private async validateChunkLengths(chunks: FileChunk[], maxTokenLength: number, endpoint: TokenizationEndpoint) {
+	private async validateChunkLengths(
+		chunks: FileChunk[],
+		maxTokenLength: number,
+		endpoint: TokenizationEndpoint,
+	) {
 		for (const chunk of chunks) {
-			const tokenLength = await this.tokenizerProvider.acquireTokenizer(endpoint).tokenLength(chunk.text);
+			const tokenLength = await this.tokenizerProvider
+				.acquireTokenizer(endpoint)
+				.tokenLength(chunk.text);
 			if (tokenLength > maxTokenLength * 1.2) {
-				console.warn('Produced chunk that is over length limit', { file: chunk.file + '', range: chunk.range, chunkTokenLength: tokenLength, maxLength: maxTokenLength });
+				console.warn('Produced chunk that is over length limit', {
+					file: chunk.file + '',
+					range: chunk.range,
+					chunkTokenLength: tokenLength,
+					maxLength: maxTokenLength,
+				});
 			}
 		}
 	}
 }
-

@@ -5,12 +5,18 @@
 
 import * as vscode from 'vscode';
 import { INativeEnvService } from '../../../../../platform/env/common/envService';
-import { createDirectoryIfNotExists, IFileSystemService } from '../../../../../platform/filesystem/common/fileSystemService';
+import {
+	createDirectoryIfNotExists,
+	IFileSystemService,
+} from '../../../../../platform/filesystem/common/fileSystemService';
 import { ILogService } from '../../../../../platform/log/common/logService';
 import { IWorkspaceService } from '../../../../../platform/workspace/common/workspaceService';
 import { CancellationToken } from '../../../../../util/vs/base/common/cancellation';
 import { URI } from '../../../../../util/vs/base/common/uri';
-import { IClaudeSlashCommandHandler, registerClaudeSlashCommand } from './claudeSlashCommandRegistry';
+import {
+	IClaudeSlashCommandHandler,
+	registerClaudeSlashCommand,
+} from './claudeSlashCommandRegistry';
 
 /**
  * MEMORY FILE LOCATIONS
@@ -64,23 +70,30 @@ export class MemorySlashCommand implements IClaudeSlashCommandHandler {
 
 	constructor(
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
 		@INativeEnvService private readonly envService: INativeEnvService,
 		@ILogService private readonly logService: ILogService,
-	) { }
+	) {}
 
 	async handle(
 		_args: string,
 		stream: vscode.ChatResponseStream | undefined,
-		_token: CancellationToken
+		_token: CancellationToken,
 	): Promise<vscode.ChatResult> {
 		stream?.markdown(vscode.l10n.t('Opening memory file picker...'));
 
 		// Fire and forget - picker runs in background
-		this._runPicker().catch(error => {
-			this.logService.error('[MemorySlashCommand] Error running memory picker:', error);
+		this._runPicker().catch((error) => {
+			this.logService.error(
+				'[MemorySlashCommand] Error running memory picker:',
+				error,
+			);
 			vscode.window.showErrorMessage(
-				vscode.l10n.t('Error opening memory file: {0}', error instanceof Error ? error.message : String(error))
+				vscode.l10n.t(
+					'Error opening memory file: {0}',
+					error instanceof Error ? error.message : String(error),
+				),
 			);
 		});
 
@@ -110,7 +123,11 @@ export class MemorySlashCommand implements IClaudeSlashCommandHandler {
 		const homeDir = this.envService.userHome.fsPath;
 
 		// User memory (always available)
-		const userPath = URI.joinPath(this.envService.userHome, '.claude', 'CLAUDE.md');
+		const userPath = URI.joinPath(
+			this.envService.userHome,
+			'.claude',
+			'CLAUDE.md',
+		);
 		let userDisplayPath = userPath.fsPath;
 		if (homeDir && userDisplayPath.startsWith(homeDir)) {
 			userDisplayPath = '~' + userDisplayPath.slice(homeDir.length);
@@ -125,7 +142,8 @@ export class MemorySlashCommand implements IClaudeSlashCommandHandler {
 		// Project memories (per workspace folder)
 		const workspaceFolders = this.workspaceService.getWorkspaceFolders();
 		for (const folder of workspaceFolders) {
-			const folderName = this.workspaceService.getWorkspaceFolderName(folder);
+			const folderName =
+				this.workspaceService.getWorkspaceFolderName(folder);
 			const isMultiRoot = workspaceFolders.length > 1;
 
 			// Project memory (shared, checked in)
@@ -154,15 +172,25 @@ export class MemorySlashCommand implements IClaudeSlashCommandHandler {
 		return locations;
 	}
 
-	private async _buildQuickPickItems(locations: MemoryLocation[]): Promise<(vscode.QuickPickItem & { location: MemoryLocation })[]> {
-		const items: (vscode.QuickPickItem & { location: MemoryLocation })[] = [];
+	private async _buildQuickPickItems(
+		locations: MemoryLocation[],
+	): Promise<(vscode.QuickPickItem & { location: MemoryLocation })[]> {
+		const items: (vscode.QuickPickItem & { location: MemoryLocation })[] =
+			[];
 
 		for (const location of locations) {
 			const exists = await this._fileExists(location.path);
 
 			items.push({
-				label: exists ? `$(file) ${location.label}` : `$(file-add) ${location.label}`,
-				description: exists ? location.description : vscode.l10n.t('{0} (will be created)', location.description),
+				label: exists
+					? `$(file) ${location.label}`
+					: `$(file-add) ${location.label}`,
+				description: exists
+					? location.description
+					: vscode.l10n.t(
+							'{0} (will be created)',
+							location.description,
+						),
 				location,
 			});
 		}
@@ -179,7 +207,9 @@ export class MemorySlashCommand implements IClaudeSlashCommandHandler {
 		}
 	}
 
-	private async _openOrCreateMemoryFile(location: MemoryLocation): Promise<void> {
+	private async _openOrCreateMemoryFile(
+		location: MemoryLocation,
+	): Promise<void> {
 		const exists = await this._fileExists(location.path);
 
 		if (!exists) {
@@ -189,11 +219,16 @@ export class MemorySlashCommand implements IClaudeSlashCommandHandler {
 
 			// Create with template
 			const template = this._getTemplate(location.type);
-			await this.fileSystemService.writeFile(location.path, new TextEncoder().encode(template));
+			await this.fileSystemService.writeFile(
+				location.path,
+				new TextEncoder().encode(template),
+			);
 		}
 
 		// Open in editor
-		const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(location.path.fsPath));
+		const doc = await vscode.workspace.openTextDocument(
+			vscode.Uri.file(location.path.fsPath),
+		);
 		await vscode.window.showTextDocument(doc);
 	}
 

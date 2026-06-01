@@ -8,7 +8,9 @@ import { extUriBiasedIgnorePathCase } from '../../../../util/vs/base/common/reso
 import { URI } from '../../../../util/vs/base/common/uri';
 import { createDecorator } from '../../../../util/vs/platform/instantiation/common/instantiation';
 
-export const IClaudePlanFileTracker = createDecorator<IClaudePlanFileTracker>('claudePlanFileTracker');
+export const IClaudePlanFileTracker = createDecorator<IClaudePlanFileTracker>(
+	'claudePlanFileTracker',
+);
 
 /**
  * Per-session tracker for the markdown plan file Claude writes to
@@ -58,14 +60,20 @@ export class ClaudePlanFileTracker implements IClaudePlanFileTracker {
 	private readonly _planDirUri: URI;
 	private readonly _lastPlanFiles = new Map<string, URI>();
 
-	constructor(
-		@INativeEnvService envService: INativeEnvService,
-	) {
-		this._planDirUri = URI.joinPath(envService.userHome, '.claude', 'plans');
+	constructor(@INativeEnvService envService: INativeEnvService) {
+		this._planDirUri = URI.joinPath(
+			envService.userHome,
+			'.claude',
+			'plans',
+		);
 	}
 
 	public recordIfPlanFile(sessionId: string, filePath: string): void {
-		if (!sessionId || !filePath || !filePath.toLowerCase().endsWith('.md')) {
+		if (
+			!sessionId ||
+			!filePath ||
+			!filePath.toLowerCase().endsWith('.md')
+		) {
 			return;
 		}
 		const candidate = URI.file(filePath);

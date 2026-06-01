@@ -8,22 +8,47 @@ import * as tt from 'typescript';
 import TS from '../../common/typescript';
 const ts = TS();
 
-import { computeContext as _computeContext, nesRename as _nesRename, prepareNesRename as _prepareNesRename } from '../../common/api';
-import { CharacterBudget, ComputeContextSession, ContextResult, NullLogger, RequestContext, type Logger, type Search } from '../../common/contextProvider';
+import {
+	computeContext as _computeContext,
+	nesRename as _nesRename,
+	prepareNesRename as _prepareNesRename,
+} from '../../common/api';
+import {
+	CharacterBudget,
+	ComputeContextSession,
+	ContextResult,
+	NullLogger,
+	RequestContext,
+	type Logger,
+	type Search,
+} from '../../common/contextProvider';
 import type { Host } from '../../common/host';
 import { PrepareNesRenameResult } from '../../common/nesRenameValidator';
-import { CodeSnippet, ContextKind, type ContextItem, type FullContextItem, type PriorityTag, type Range, type RenameGroup, type RenameKind, type Trait } from '../../common/protocol';
+import {
+	CodeSnippet,
+	ContextKind,
+	type ContextItem,
+	type FullContextItem,
+	type PriorityTag,
+	type Range,
+	type RenameGroup,
+	type RenameKind,
+	type Trait,
+} from '../../common/protocol';
 import { NullCancellationToken } from '../../common/typescripts';
 import { NodeHost } from '../host';
 import { LanguageServices } from './languageServices';
 
 export class SingleLanguageServiceSession extends ComputeContextSession {
-
 	private readonly languageService: tt.LanguageService;
 
 	public readonly logger: Logger;
 
-	constructor(languageService: tt.LanguageService, languageServiceHost: tt.LanguageServiceHost, host: Host) {
+	constructor(
+		languageService: tt.LanguageService,
+		languageServiceHost: tt.LanguageServiceHost,
+		host: Host,
+	) {
 		super(languageServiceHost, host, false);
 		this.languageService = languageService;
 		this.logger = new NullLogger();
@@ -33,7 +58,9 @@ export class SingleLanguageServiceSession extends ComputeContextSession {
 		// Null logger;
 	}
 
-	public *getLanguageServices(sourceFile?: tt.SourceFile): IterableIterator<tt.LanguageService> {
+	public *getLanguageServices(
+		sourceFile?: tt.SourceFile,
+	): IterableIterator<tt.LanguageService> {
 		const ls: tt.LanguageService | undefined = this.languageService;
 		if (ls === undefined) {
 			return;
@@ -50,7 +77,11 @@ export class SingleLanguageServiceSession extends ComputeContextSession {
 		}
 	}
 
-	public override run<R>(search: Search<R>, context: RequestContext, token: tt.CancellationToken): [tt.Program | undefined, R | undefined] {
+	public override run<R>(
+		search: Search<R>,
+		context: RequestContext,
+		token: tt.CancellationToken,
+	): [tt.Program | undefined, R | undefined] {
 		const program = this.languageService.getProgram();
 		if (program === undefined) {
 			return [undefined, undefined];
@@ -67,13 +98,20 @@ export class SingleLanguageServiceSession extends ComputeContextSession {
 		}
 	}
 
-	public override getScriptVersion(_sourceFile: tt.SourceFile): string | undefined {
+	public override getScriptVersion(
+		_sourceFile: tt.SourceFile,
+	): string | undefined {
 		return undefined;
 	}
 }
 
 function normalize(value: string): string {
-	return value.trim().replace(/\r\n/g, ' ').replace(/\n/g, ' ').replace(/\t+/g, ' ').replace(/\s+/g, ' ');
+	return value
+		.trim()
+		.replace(/\r\n/g, ' ')
+		.replace(/\n/g, ' ')
+		.replace(/\t+/g, ' ')
+		.replace(/\s+/g, ' ');
 }
 
 export type ExpectedCodeSnippet = {
@@ -90,11 +128,21 @@ export type ExpectedTrait = {
 
 export type ExpectedContextItem = ExpectedCodeSnippet | ExpectedTrait;
 
-const semverRegex = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+([\w.-]+))?$|^(\d+)\.(\d+)$|^(\d+)$/;
-function assertCodeSnippet(actual: CodeSnippet, expected: ExpectedCodeSnippet): void {
+const semverRegex =
+	/^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+([\w.-]+))?$|^(\d+)\.(\d+)$|^(\d+)$/;
+function assertCodeSnippet(
+	actual: CodeSnippet,
+	expected: ExpectedCodeSnippet,
+): void {
 	assert.strictEqual(actual.kind, expected.kind);
-	assert.ok(actual.kind === ContextKind.Snippet, `Expected snippet, got ${actual.kind}`);
-	assert.ok(expected.kind === ContextKind.Snippet, `Expected snippet, got ${expected.kind}`);
+	assert.ok(
+		actual.kind === ContextKind.Snippet,
+		`Expected snippet, got ${actual.kind}`,
+	);
+	assert.ok(
+		expected.kind === ContextKind.Snippet,
+		`Expected snippet, got ${expected.kind}`,
+	);
 	assert.strictEqual(normalize(actual.value), normalize(expected.value));
 	const source = actual.fileName;
 	assert.ok(source.match(expected.fileName) !== null);
@@ -102,17 +150,32 @@ function assertCodeSnippet(actual: CodeSnippet, expected: ExpectedCodeSnippet): 
 
 function assertTrait(actual: Trait, expected: ExpectedTrait): void {
 	assert.strictEqual(actual.kind, expected.kind);
-	assert.ok(actual.kind === ContextKind.Trait, `Expected trait, got ${actual.kind}`);
-	assert.ok(expected.kind === ContextKind.Trait, `Expected trait, got ${expected.kind}`);
+	assert.ok(
+		actual.kind === ContextKind.Trait,
+		`Expected trait, got ${actual.kind}`,
+	);
+	assert.ok(
+		expected.kind === ContextKind.Trait,
+		`Expected trait, got ${expected.kind}`,
+	);
 	assert.strictEqual(actual.name, expected.name);
-	if (actual.name.startsWith('The TypeScript version used in this project is')) {
-		assert.ok(semverRegex.test(actual.value), `Expected semver, got ${actual.value}`);
+	if (
+		actual.name.startsWith('The TypeScript version used in this project is')
+	) {
+		assert.ok(
+			semverRegex.test(actual.value),
+			`Expected semver, got ${actual.value}`,
+		);
 	} else {
 		assert.strictEqual(actual.value, expected.value);
 	}
 }
 
-export function assertContextItems(actual: (ContextItem & PriorityTag)[], expected: ExpectedContextItem[], mode: 'equals' | 'contains' = 'equals'): void {
+export function assertContextItems(
+	actual: (ContextItem & PriorityTag)[],
+	expected: ExpectedContextItem[],
+	mode: 'equals' | 'contains' = 'equals',
+): void {
 	const actualSnippets: (CodeSnippet & PriorityTag)[] = [];
 	const actualTraits: (Trait & PriorityTag)[] = [];
 	for (const item of actual) {
@@ -143,20 +206,31 @@ export function assertContextItems(actual: (ContextItem & PriorityTag)[], expect
 		}
 		assert.strictEqual(actualTraits.length, expectedTraits.size);
 	} else {
-		assert.ok(actualSnippets.length >= expectedSnippets.length, `Expected ${expectedSnippets.length} snippets, got ${actualSnippets.length}`);
+		assert.ok(
+			actualSnippets.length >= expectedSnippets.length,
+			`Expected ${expectedSnippets.length} snippets, got ${actualSnippets.length}`,
+		);
 		const actualSnippetMap: Map<string, CodeSnippet> = new Map();
 		for (const actualSnippet of actualSnippets) {
 			actualSnippetMap.set(normalize(actualSnippet.value), actualSnippet);
 		}
 		for (const expectedSnippet of expectedSnippets) {
-			const actualSnippet = actualSnippetMap.get(normalize(expectedSnippet.value));
-			assert.ok(actualSnippet !== undefined, `Missing expected snippet ${expectedSnippet.value}`);
+			const actualSnippet = actualSnippetMap.get(
+				normalize(expectedSnippet.value),
+			);
+			assert.ok(
+				actualSnippet !== undefined,
+				`Missing expected snippet ${expectedSnippet.value}`,
+			);
 			assertCodeSnippet(actualSnippet, expectedSnippet);
 		}
 	}
 	for (const actualTrait of actualTraits) {
 		const expectedTrait = expectedTraits.get(actualTrait.name);
-		assert.ok(expectedTrait !== undefined, `Missing expected trait ${actualTrait.name}`);
+		assert.ok(
+			expectedTrait !== undefined,
+			`Missing expected trait ${actualTrait.name}`,
+		);
 		expectedTraits.delete(actualTrait.name);
 		assertTrait(actualTrait, expectedTrait);
 	}
@@ -170,8 +244,17 @@ export type TestSession = {
 
 export type ContextItemWithPriority = FullContextItem & PriorityTag;
 
-export function computeContext(session: TestSession, document: string, position: { line: number; character: number }, contextKind: ContextKind): ContextItemWithPriority[] {
-	const result: ContextResult = new ContextResult(new CharacterBudget(7 * 1024 * 4), new CharacterBudget(8 * 1024 * 4), new RequestContext(session.session, [], new Map(), true));
+export function computeContext(
+	session: TestSession,
+	document: string,
+	position: { line: number; character: number },
+	contextKind: ContextKind,
+): ContextItemWithPriority[] {
+	const result: ContextResult = new ContextResult(
+		new CharacterBudget(7 * 1024 * 4),
+		new CharacterBudget(8 * 1024 * 4),
+		new RequestContext(session.session, [], new Map(), true),
+	);
 	const program = session.service.getProgram();
 	if (program === undefined) {
 		return [];
@@ -180,12 +263,29 @@ export function computeContext(session: TestSession, document: string, position:
 	if (sourceFile === undefined) {
 		return [];
 	}
-	const pos = sourceFile.getPositionOfLineAndCharacter(position.line, position.character);
-	_computeContext(result, session.session, session.service, document, pos, new NullCancellationToken());
+	const pos = sourceFile.getPositionOfLineAndCharacter(
+		position.line,
+		position.character,
+	);
+	_computeContext(
+		result,
+		session.session,
+		session.service,
+		document,
+		pos,
+		new NullCancellationToken(),
+	);
 	return result.items().filter((item) => item.kind === contextKind);
 }
 
-export function prepareNesRename(session: TestSession, document: string, position: { line: number; character: number }, oldName: string, newName: string, lastSymbolRename?: Range): RenameKind | undefined {
+export function prepareNesRename(
+	session: TestSession,
+	document: string,
+	position: { line: number; character: number },
+	oldName: string,
+	newName: string,
+	lastSymbolRename?: Range,
+): RenameKind | undefined {
 	const program = session.service.getProgram();
 	if (program === undefined) {
 		return;
@@ -195,12 +295,32 @@ export function prepareNesRename(session: TestSession, document: string, positio
 		return;
 	}
 	const result = new PrepareNesRenameResult();
-	const pos = sourceFile.getPositionOfLineAndCharacter(position.line, position.character);
-	_prepareNesRename(result, session.session, session.service, document, pos, oldName, newName, lastSymbolRename, new NullCancellationToken());
+	const pos = sourceFile.getPositionOfLineAndCharacter(
+		position.line,
+		position.character,
+	);
+	_prepareNesRename(
+		result,
+		session.session,
+		session.service,
+		document,
+		pos,
+		oldName,
+		newName,
+		lastSymbolRename,
+		new NullCancellationToken(),
+	);
 	return result.getCanRename();
 }
 
-export function nesRename(session: TestSession, document: string, position: { line: number; character: number }, oldName: string, newName: string, lastSymbolRename: Range): RenameGroup[] {
+export function nesRename(
+	session: TestSession,
+	document: string,
+	position: { line: number; character: number },
+	oldName: string,
+	newName: string,
+	lastSymbolRename: Range,
+): RenameGroup[] {
 	const program = session.service.getProgram();
 	if (program === undefined) {
 		return [];
@@ -209,12 +329,27 @@ export function nesRename(session: TestSession, document: string, position: { li
 	if (sourceFile === undefined) {
 		return [];
 	}
-	const pos = sourceFile.getPositionOfLineAndCharacter(position.line, position.character);
-	return _nesRename(session.session, session.service, document, pos, oldName, newName, lastSymbolRename);
+	const pos = sourceFile.getPositionOfLineAndCharacter(
+		position.line,
+		position.character,
+	);
+	return _nesRename(
+		session.session,
+		session.service,
+		document,
+		pos,
+		oldName,
+		newName,
+		lastSymbolRename,
+	);
 }
 
 class LanguageServiceTestSession extends SingleLanguageServiceSession {
-	constructor(service: tt.LanguageService, languageServiceHost: tt.LanguageServiceHost, host: NodeHost) {
+	constructor(
+		service: tt.LanguageService,
+		languageServiceHost: tt.LanguageServiceHost,
+		host: NodeHost,
+	) {
 		super(service, languageServiceHost, host);
 	}
 
@@ -224,7 +359,12 @@ class LanguageServiceTestSession extends SingleLanguageServiceSession {
 }
 
 export function create(fileOrDirectory: string): TestSession {
-	const [service, host] = LanguageServices.createLanguageService(fileOrDirectory);
-	const session = new LanguageServiceTestSession(service, host, new NodeHost());
+	const [service, host] =
+		LanguageServices.createLanguageService(fileOrDirectory);
+	const session = new LanguageServiceTestSession(
+		service,
+		host,
+		new NodeHost(),
+	);
 	return { service, session };
 }

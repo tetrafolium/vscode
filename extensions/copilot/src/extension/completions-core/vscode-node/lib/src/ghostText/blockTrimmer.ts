@@ -21,17 +21,19 @@ export abstract class BlockTrimmer {
 	constructor(
 		protected readonly languageId: string,
 		protected readonly prefix: string,
-		protected readonly completion: string
-	) { }
+		protected readonly completion: string,
+	) {}
 
 	abstract getCompletionTrimOffset(): Promise<number | undefined>;
 
-	protected async withParsedStatementTree<T>(fn: (tree: StatementTree) => Promise<T> | T): Promise<T> {
+	protected async withParsedStatementTree<T>(
+		fn: (tree: StatementTree) => Promise<T> | T,
+	): Promise<T> {
 		const tree = StatementTree.create(
 			this.languageId,
 			this.prefix + this.completion,
 			this.prefix.length,
-			this.prefix.length + this.completion.length
+			this.prefix.length + this.completion.length,
 		);
 		await tree.build();
 
@@ -43,7 +45,9 @@ export abstract class BlockTrimmer {
 	}
 
 	protected trimmedCompletion(offset: number | undefined): string {
-		return offset === undefined ? this.completion : this.completion.substring(0, offset);
+		return offset === undefined
+			? this.completion
+			: this.completion.substring(0, offset);
 	}
 
 	/**
@@ -51,11 +55,18 @@ export abstract class BlockTrimmer {
 	 * If the cursor is not within a statement (e.g. it's on an error node),
 	 * returns the first statement from the tree (if any).
 	 */
-	protected getStatementAtCursor(tree: StatementTree): StatementNode | undefined {
-		return tree.statementAt(Math.max(this.prefix.length - 1, 0)) ?? tree.statements[0];
+	protected getStatementAtCursor(
+		tree: StatementTree,
+	): StatementNode | undefined {
+		return (
+			tree.statementAt(Math.max(this.prefix.length - 1, 0)) ??
+			tree.statements[0]
+		);
 	}
 
-	protected getContainingBlockOffset(stmt: StatementNode | undefined): number | undefined {
+	protected getContainingBlockOffset(
+		stmt: StatementNode | undefined,
+	): number | undefined {
 		let trimTo: StatementNode | undefined;
 		if (stmt && this.isCompoundStatement(stmt)) {
 			// for compound statement types, trim to the current statement
@@ -73,20 +84,36 @@ export abstract class BlockTrimmer {
 			const newOffset = this.asCompletionOffset(trimTo.node.endIndex);
 
 			// don't trim trailing whitespace as that will terminate the completion prematurely
-			if (newOffset && this.completion.substring(newOffset).trim() !== '') { return newOffset; }
+			if (
+				newOffset &&
+				this.completion.substring(newOffset).trim() !== ''
+			) {
+				return newOffset;
+			}
 		}
 		return undefined;
 	}
 
-	protected hasNonStatementContentAfter(stmt: StatementNode | undefined): boolean {
-		if (!stmt || !stmt.nextSibling) { return false; }
+	protected hasNonStatementContentAfter(
+		stmt: StatementNode | undefined,
+	): boolean {
+		if (!stmt || !stmt.nextSibling) {
+			return false;
+		}
 		const spanStart = this.asCompletionOffset(stmt.node.endIndex);
-		const spanEnd = this.asCompletionOffset(stmt.nextSibling.node.startIndex);
-		const content = this.completion.substring(Math.max(0, spanStart ?? 0), Math.max(0, spanEnd ?? 0));
+		const spanEnd = this.asCompletionOffset(
+			stmt.nextSibling.node.startIndex,
+		);
+		const content = this.completion.substring(
+			Math.max(0, spanStart ?? 0),
+			Math.max(0, spanEnd ?? 0),
+		);
 		return content.trim() !== '';
 	}
 
-	protected asCompletionOffset(offset: number | undefined): number | undefined {
+	protected asCompletionOffset(
+		offset: number | undefined,
+	): number | undefined {
 		return offset === undefined ? undefined : offset - this.prefix.length;
 	}
 
@@ -108,7 +135,7 @@ export class VerboseBlockTrimmer extends BlockTrimmer {
 		languageId: string,
 		prefix: string,
 		completion: string,
-		private readonly lineLimit: number = 10
+		private readonly lineLimit: number = 10,
 	) {
 		super(languageId, prefix, completion);
 		// determine the end of the lineLimit line as an offset into the completion
@@ -121,7 +148,7 @@ export class VerboseBlockTrimmer extends BlockTrimmer {
 	}
 
 	async getCompletionTrimOffset(): Promise<number | undefined> {
-		return await this.withParsedStatementTree(tree => {
+		return await this.withParsedStatementTree((tree) => {
 			const stmt = this.getStatementAtCursor(tree);
 
 			// do not go past the containing block
@@ -142,11 +169,16 @@ export class VerboseBlockTrimmer extends BlockTrimmer {
 	}
 
 	private isWithinLimit(offset: number | undefined): boolean {
-		return this.offsetLimit === undefined || (offset !== undefined && offset <= this.offsetLimit);
+		return (
+			this.offsetLimit === undefined ||
+			(offset !== undefined && offset <= this.offsetLimit)
+		);
 	}
 
 	private trimToBlankLine(offset: number | undefined): number | undefined {
-		const blankLines = [...this.trimmedCompletion(offset).matchAll(/\r?\n\s*\r?\n/g)].reverse();
+		const blankLines = [
+			...this.trimmedCompletion(offset).matchAll(/\r?\n\s*\r?\n/g),
+		].reverse();
 		while (blankLines.length > 0 && !this.isWithinLimit(offset)) {
 			const match = blankLines.pop()!;
 			offset = match.index;
@@ -154,12 +186,20 @@ export class VerboseBlockTrimmer extends BlockTrimmer {
 		return offset;
 	}
 
-	private trimToStatement(stmt: StatementNode | undefined, offset: number | undefined): number | undefined {
+	private trimToStatement(
+		stmt: StatementNode | undefined,
+		offset: number | undefined,
+	): number | undefined {
 		const min = this.prefix.length;
-		const max = this.prefix.length + (this.offsetLimit ?? this.completion.length);
+		const max =
+			this.prefix.length + (this.offsetLimit ?? this.completion.length);
 		let s = stmt;
 		let next = stmt?.nextSibling;
-		while (next && next.node.endIndex <= max && !this.hasNonStatementContentAfter(s)) {
+		while (
+			next &&
+			next.node.endIndex <= max &&
+			!this.hasNonStatementContentAfter(s)
+		) {
 			s = next;
 			next = next.nextSibling;
 		}
@@ -168,7 +208,10 @@ export class VerboseBlockTrimmer extends BlockTrimmer {
 		}
 		if (s && s.node.endIndex > max) {
 			// break at an internal statement if possible
-			return this.trimToStatement(s.children[0], this.asCompletionOffset(s.node.endIndex));
+			return this.trimToStatement(
+				s.children[0],
+				this.asCompletionOffset(s.node.endIndex),
+			);
 		}
 		return this.asCompletionOffset(s?.node?.endIndex) ?? offset;
 	}
@@ -188,7 +231,7 @@ export class TerseBlockTrimmer extends BlockTrimmer {
 		prefix: string,
 		completion: string,
 		private readonly lineLimit: number = 3,
-		private readonly lookAhead: number = 7
+		private readonly lookAhead: number = 7,
 	) {
 		super(languageId, prefix, completion);
 		// determine the end of the lineLimit line as an offset into the completion
@@ -197,13 +240,17 @@ export class TerseBlockTrimmer extends BlockTrimmer {
 		if (completionLineEnds.length >= this.lineLimit && this.lineLimit > 0) {
 			this.limitOffset = completionLineEnds[this.lineLimit - 1].index;
 		}
-		if (completionLineEnds.length >= limitAndLookAhead && limitAndLookAhead > 0) {
-			this.lookAheadOffset = completionLineEnds[limitAndLookAhead - 1].index;
+		if (
+			completionLineEnds.length >= limitAndLookAhead &&
+			limitAndLookAhead > 0
+		) {
+			this.lookAheadOffset =
+				completionLineEnds[limitAndLookAhead - 1].index;
 		}
 	}
 
 	async getCompletionTrimOffset(): Promise<number | undefined> {
-		return await this.withParsedStatementTree(tree => {
+		return await this.withParsedStatementTree((tree) => {
 			const stmt = tree.statementAt(this.stmtStartPos());
 
 			// do not go past the containing block
@@ -218,7 +265,11 @@ export class TerseBlockTrimmer extends BlockTrimmer {
 			}
 
 			// hard trim at the line limit if we have enough context
-			if (this.limitOffset && this.lookAheadOffset && (offset === undefined || offset > this.lookAheadOffset)) {
+			if (
+				this.limitOffset &&
+				this.lookAheadOffset &&
+				(offset === undefined || offset > this.lookAheadOffset)
+			) {
 				return this.limitOffset;
 			}
 
@@ -238,10 +289,17 @@ export class TerseBlockTrimmer extends BlockTrimmer {
 		return Math.max(this.prefix.length - 1, 0);
 	}
 
-	private trimAtFirstBlankLine(offset: number | undefined): number | undefined {
-		const blankLines = [...this.trimmedCompletion(offset).matchAll(/\r?\n\s*\r?\n/g)];
+	private trimAtFirstBlankLine(
+		offset: number | undefined,
+	): number | undefined {
+		const blankLines = [
+			...this.trimmedCompletion(offset).matchAll(/\r?\n\s*\r?\n/g),
+		];
 
-		while (blankLines.length > 0 && (offset === undefined || offset > blankLines[0].index)) {
+		while (
+			blankLines.length > 0 &&
+			(offset === undefined || offset > blankLines[0].index)
+		) {
 			const match = blankLines.shift()!;
 			if (this.completion.substring(0, match.index).trim() !== '') {
 				return match.index;
@@ -250,7 +308,10 @@ export class TerseBlockTrimmer extends BlockTrimmer {
 		return offset;
 	}
 
-	private trimAtStatementChange(stmt: StatementNode, offset: number | undefined): number | undefined {
+	private trimAtStatementChange(
+		stmt: StatementNode,
+		offset: number | undefined,
+	): number | undefined {
 		const min = this.prefix.length;
 		const max = this.prefix.length + (offset ?? this.completion.length);
 
@@ -291,20 +352,31 @@ export enum BlockPositionType {
 
 export async function getBlockPositionType(
 	document: TextDocumentContents,
-	position: IPosition
+	position: IPosition,
 ): Promise<BlockPositionType> {
 	const text = document.getText();
 	const offset = document.offsetAt(position);
-	const tree = StatementTree.create(document.detectedLanguageId, text, 0, text.length);
+	const tree = StatementTree.create(
+		document.detectedLanguageId,
+		text,
+		0,
+		text.length,
+	);
 	try {
 		await tree.build();
 
 		const stmt = tree.statementAt(offset);
 
-		if (!stmt) { return BlockPositionType.NonBlock; }
+		if (!stmt) {
+			return BlockPositionType.NonBlock;
+		}
 
 		if (!stmt.isCompoundStatementType && stmt.children.length === 0) {
-			if (stmt.parent && !stmt.nextSibling && stmt.node.endPosition.row <= position.line) {
+			if (
+				stmt.parent &&
+				!stmt.nextSibling &&
+				stmt.node.endPosition.row <= position.line
+			) {
 				return BlockPositionType.BlockEnd;
 			} else if (stmt.parent) {
 				return BlockPositionType.MidBlock;

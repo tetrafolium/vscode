@@ -3,16 +3,29 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { Emitter, Event } from '../../../base/common/event.js';
-import { DisposableStore, IDisposable, toDisposable } from '../../../base/common/lifecycle.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../base/test/common/utils.js';
-import { IChannel, IChannelClient } from '../../../base/parts/ipc/common/ipc.js';
-import { IAgentHostConnection, IAgentHostStarter } from '../../../platform/agentHost/common/agent.js';
-import { AgentHostIpcChannels } from '../../../platform/agentHost/common/agentService.js';
-import { NullLogService, NullLoggerService } from '../../../platform/log/common/log.js';
-import { ServerAgentHostManager } from '../../node/serverAgentHostManager.js';
-import { IServerLifetimeService } from '../../node/serverLifetimeService.js';
+import assert from "assert";
+import { Emitter, Event } from "../../../base/common/event.js";
+import {
+	DisposableStore,
+	IDisposable,
+	toDisposable,
+} from "../../../base/common/lifecycle.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../base/test/common/utils.js";
+import {
+	IChannel,
+	IChannelClient,
+} from "../../../base/parts/ipc/common/ipc.js";
+import {
+	IAgentHostConnection,
+	IAgentHostStarter,
+} from "../../../platform/agentHost/common/agent.js";
+import { AgentHostIpcChannels } from "../../../platform/agentHost/common/agentService.js";
+import {
+	NullLogService,
+	NullLoggerService,
+} from "../../../platform/log/common/log.js";
+import { ServerAgentHostManager } from "../../node/serverAgentHostManager.js";
+import { IServerLifetimeService } from "../../node/serverLifetimeService.js";
 
 // ---- Mock helpers -----------------------------------------------------------
 
@@ -50,7 +63,10 @@ class MockChannel implements IChannel {
 }
 
 class MockAgentHostStarter implements IAgentHostStarter {
-	private readonly _onDidProcessExit = new Emitter<{ code: number; signal: string }>();
+	private readonly _onDidProcessExit = new Emitter<{
+		code: number;
+		signal: string;
+	}>();
 
 	readonly agentHostChannel = new MockChannel();
 	readonly loggerChannel: MockChannel;
@@ -58,7 +74,7 @@ class MockAgentHostStarter implements IAgentHostStarter {
 
 	constructor() {
 		this.loggerChannel = new MockChannel();
-		this.loggerChannel.setCallResult('getRegisteredLoggers', []);
+		this.loggerChannel.setCallResult("getRegisteredLoggers", []);
 	}
 
 	async start(): Promise<IAgentHostConnection> {
@@ -85,7 +101,7 @@ class MockAgentHostStarter implements IAgentHostStarter {
 	}
 
 	fireProcessExit(code: number): void {
-		this._onDidProcessExit.fire({ code, signal: '' });
+		this._onDidProcessExit.fire({ code, signal: "" });
 	}
 
 	dispose(): void {
@@ -107,13 +123,15 @@ class MockServerLifetimeService implements IServerLifetimeService {
 
 	active(_consumer: string): IDisposable {
 		this._activeCount++;
-		return toDisposable(() => { this._activeCount--; });
+		return toDisposable(() => {
+			this._activeCount--;
+		});
 	}
 
-	delay(): void { }
+	delay(): void {}
 }
 
-suite('ServerAgentHostManager', () => {
+suite("ServerAgentHostManager", () => {
 	const ds = ensureNoDisposablesAreLeakedInTestSuite();
 
 	let starter: MockAgentHostStarter;
@@ -125,12 +143,14 @@ suite('ServerAgentHostManager', () => {
 	});
 
 	function createManager(): ServerAgentHostManager {
-		return ds.add(new ServerAgentHostManager(
-			starter,
-			new NullLogService(),
-			ds.add(new NullLoggerService()),
-			lifetimeService,
-		));
+		return ds.add(
+			new ServerAgentHostManager(
+				starter,
+				new NullLogService(),
+				ds.add(new NullLoggerService()),
+				lifetimeService,
+			),
+		);
 	}
 
 	// `ServerAgentHostManager._start()` is async (awaits `starter.start()`).
@@ -140,38 +160,40 @@ suite('ServerAgentHostManager', () => {
 	}
 
 	function fireActiveSessions(count: number): void {
-		starter.agentHostChannel.getEmitter('onDidAction').fire({
-			action: { type: 'root/activeSessionsChanged', activeSessions: count },
+		starter.agentHostChannel.getEmitter("onDidAction").fire({
+			action: { type: "root/activeSessionsChanged", activeSessions: count },
 			serverSeq: 1,
 			origin: undefined,
 		});
 	}
 
 	function fireConnectionCount(count: number): void {
-		starter.connectionTrackerChannel.getEmitter('onDidChangeConnectionCount').fire(count);
+		starter.connectionTrackerChannel
+			.getEmitter("onDidChangeConnectionCount")
+			.fire(count);
 	}
 
-	test('no lifetime token initially', async () => {
+	test("no lifetime token initially", async () => {
 		createManager();
 		await waitForStart();
 		assert.strictEqual(lifetimeService.hasActiveConsumers, false);
 	});
 
-	test('acquires token when sessions become active', async () => {
+	test("acquires token when sessions become active", async () => {
 		createManager();
 		await waitForStart();
 		fireActiveSessions(1);
 		assert.strictEqual(lifetimeService.hasActiveConsumers, true);
 	});
 
-	test('acquires token when clients connect (no active sessions)', async () => {
+	test("acquires token when clients connect (no active sessions)", async () => {
 		createManager();
 		await waitForStart();
 		fireConnectionCount(2);
 		assert.strictEqual(lifetimeService.hasActiveConsumers, true);
 	});
 
-	test('releases token only when both sessions and connections are zero', async () => {
+	test("releases token only when both sessions and connections are zero", async () => {
 		createManager();
 		await waitForStart();
 
@@ -192,7 +214,7 @@ suite('ServerAgentHostManager', () => {
 		assert.strictEqual(lifetimeService.hasActiveConsumers, false);
 	});
 
-	test('releases token only when connections drop after sessions already idle', async () => {
+	test("releases token only when connections drop after sessions already idle", async () => {
 		createManager();
 		await waitForStart();
 
@@ -203,7 +225,7 @@ suite('ServerAgentHostManager', () => {
 		assert.strictEqual(lifetimeService.hasActiveConsumers, false);
 	});
 
-	test('process exit resets both signals and clears token', async () => {
+	test("process exit resets both signals and clears token", async () => {
 		createManager();
 		await waitForStart();
 

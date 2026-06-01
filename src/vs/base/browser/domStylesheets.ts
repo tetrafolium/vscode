@@ -3,20 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DisposableStore, toDisposable, IDisposable, Disposable } from '../common/lifecycle.js';
-import { autorun, IObservable } from '../common/observable.js';
-import { isFirefox } from './browser.js';
-import { getWindows, sharedMutationObserver } from './dom.js';
-import { mainWindow } from './window.js';
+import {
+	DisposableStore,
+	toDisposable,
+	IDisposable,
+	Disposable,
+} from "../common/lifecycle.js";
+import { autorun, IObservable } from "../common/observable.js";
+import { isFirefox } from "./browser.js";
+import { getWindows, sharedMutationObserver } from "./dom.js";
+import { mainWindow } from "./window.js";
 
-const globalStylesheets = new Map<HTMLStyleElement /* main stylesheet */, Set<HTMLStyleElement /* aux window clones that track the main stylesheet */>>();
+const globalStylesheets = new Map<
+	HTMLStyleElement /* main stylesheet */,
+	Set<HTMLStyleElement /* aux window clones that track the main stylesheet */>
+>();
 
 export function isGlobalStylesheet(node: Node): boolean {
 	return globalStylesheets.has(node as HTMLStyleElement);
 }
 
 class WrappedStyleElement extends Disposable {
-	private _currentCssStyle = '';
+	private _currentCssStyle = "";
 	private _styleSheet: HTMLStyleElement | undefined = undefined;
 
 	setStyle(cssStyle: string): void {
@@ -26,7 +34,11 @@ class WrappedStyleElement extends Disposable {
 		this._currentCssStyle = cssStyle;
 
 		if (!this._styleSheet) {
-			this._styleSheet = createStyleSheet(mainWindow.document.head, s => s.textContent = cssStyle, this._store);
+			this._styleSheet = createStyleSheet(
+				mainWindow.document.head,
+				(s) => (s.textContent = cssStyle),
+				this._store,
+			);
 		} else {
 			this._styleSheet.textContent = cssStyle;
 		}
@@ -39,10 +51,14 @@ class WrappedStyleElement extends Disposable {
 	}
 }
 
-export function createStyleSheet(container: HTMLElement = mainWindow.document.head, beforeAppend?: (style: HTMLStyleElement) => void, disposableStore?: DisposableStore): HTMLStyleElement {
-	const style = document.createElement('style');
-	style.type = 'text/css';
-	style.media = 'screen';
+export function createStyleSheet(
+	container: HTMLElement = mainWindow.document.head,
+	beforeAppend?: (style: HTMLStyleElement) => void,
+	disposableStore?: DisposableStore,
+): HTMLStyleElement {
+	const style = document.createElement("style");
+	style.type = "text/css";
+	style.media = "screen";
 	beforeAppend?.(style);
 	container.appendChild(style);
 
@@ -64,7 +80,9 @@ export function createStyleSheet(container: HTMLElement = mainWindow.document.he
 				continue; // main window is already tracked
 			}
 
-			const cloneDisposable = disposables.add(cloneGlobalStyleSheet(style, globalStylesheetClones, targetWindow));
+			const cloneDisposable = disposables.add(
+				cloneGlobalStyleSheet(style, globalStylesheetClones, targetWindow),
+			);
 			disposableStore?.add(cloneDisposable);
 		}
 	}
@@ -76,13 +94,23 @@ export function cloneGlobalStylesheets(targetWindow: Window): IDisposable {
 	const disposables = new DisposableStore();
 
 	for (const [globalStylesheet, clonedGlobalStylesheets] of globalStylesheets) {
-		disposables.add(cloneGlobalStyleSheet(globalStylesheet, clonedGlobalStylesheets, targetWindow));
+		disposables.add(
+			cloneGlobalStyleSheet(
+				globalStylesheet,
+				clonedGlobalStylesheets,
+				targetWindow,
+			),
+		);
 	}
 
 	return disposables;
 }
 
-function cloneGlobalStyleSheet(globalStylesheet: HTMLStyleElement, globalStylesheetClones: Set<HTMLStyleElement>, targetWindow: Window): IDisposable {
+function cloneGlobalStyleSheet(
+	globalStylesheet: HTMLStyleElement,
+	globalStylesheetClones: Set<HTMLStyleElement>,
+	targetWindow: Window,
+): IDisposable {
 	const disposables = new DisposableStore();
 
 	const clone = globalStylesheet.cloneNode(true) as HTMLStyleElement;
@@ -93,9 +121,15 @@ function cloneGlobalStyleSheet(globalStylesheet: HTMLStyleElement, globalStylesh
 		clone.sheet?.insertRule(rule.cssText, clone.sheet?.cssRules.length);
 	}
 
-	disposables.add(sharedMutationObserver.observe(globalStylesheet, disposables, { childList: true, subtree: isFirefox, characterData: isFirefox })(() => {
-		clone.textContent = globalStylesheet.textContent;
-	}));
+	disposables.add(
+		sharedMutationObserver.observe(globalStylesheet, disposables, {
+			childList: true,
+			subtree: isFirefox,
+			characterData: isFirefox,
+		})(() => {
+			clone.textContent = globalStylesheet.textContent;
+		}),
+	);
 
 	globalStylesheetClones.add(clone);
 	disposables.add(toDisposable(() => globalStylesheetClones.delete(clone)));
@@ -111,7 +145,11 @@ function getSharedStyleSheet(): HTMLStyleElement {
 	return _sharedStyleSheet;
 }
 
-export function createCSSRule(selector: string, cssText: string, style = getSharedStyleSheet()): void {
+export function createCSSRule(
+	selector: string,
+	cssText: string,
+	style = getSharedStyleSheet(),
+): void {
 	if (!style || !cssText) {
 		return;
 	}
@@ -124,7 +162,10 @@ export function createCSSRule(selector: string, cssText: string, style = getShar
 	}
 }
 
-export function removeCSSRulesContainingSelector(ruleName: string, style = getSharedStyleSheet()): void {
+export function removeCSSRulesContainingSelector(
+	ruleName: string,
+	style = getSharedStyleSheet(),
+): void {
 	if (!style) {
 		return;
 	}
@@ -149,14 +190,18 @@ export function removeCSSRulesContainingSelector(ruleName: string, style = getSh
 }
 
 function isCSSStyleRule(rule: CSSRule): rule is CSSStyleRule {
-	return typeof (rule as CSSStyleRule).selectorText === 'string';
+	return typeof (rule as CSSStyleRule).selectorText === "string";
 }
 
-export function createStyleSheetFromObservable(css: IObservable<string>): IDisposable {
+export function createStyleSheetFromObservable(
+	css: IObservable<string>,
+): IDisposable {
 	const store = new DisposableStore();
 	const w = store.add(new WrappedStyleElement());
-	store.add(autorun(reader => {
-		w.setStyle(css.read(reader));
-	}));
+	store.add(
+		autorun((reader) => {
+			w.setStyle(css.read(reader));
+		}),
+	);
 	return store;
 }

@@ -19,5 +19,8 @@ export type DidChangeAuthParams = Static<typeof DidChangeAuthParams>;
 
 export namespace DidChangeAuthNotification {
 	export const method = 'github/didChangeAuth';
-	export const type = new lsp.ProtocolNotificationType<DidChangeAuthParams, void>(method);
+	export const type = new lsp.ProtocolNotificationType<
+		DidChangeAuthParams,
+		void
+	>(method);
 }

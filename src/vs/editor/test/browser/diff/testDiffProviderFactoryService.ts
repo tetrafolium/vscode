@@ -3,13 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { toDisposable } from '../../../../base/common/lifecycle.js';
-import { IDocumentDiff, IDocumentDiffProvider, IDocumentDiffProviderOptions } from '../../../common/diff/documentDiffProvider.js';
-import { linesDiffComputers } from '../../../common/diff/linesDiffComputers.js';
-import { ITextModel } from '../../../common/model.js';
-import { Event } from '../../../../base/common/event.js';
-import { IDiffProviderFactoryService } from '../../../browser/widget/diffEditor/diffProviderFactoryService.js';
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { toDisposable } from "../../../../base/common/lifecycle.js";
+import {
+	IDocumentDiff,
+	IDocumentDiffProvider,
+	IDocumentDiffProviderOptions,
+} from "../../../common/diff/documentDiffProvider.js";
+import { linesDiffComputers } from "../../../common/diff/linesDiffComputers.js";
+import { ITextModel } from "../../../common/model.js";
+import { Event } from "../../../../base/common/event.js";
+import { IDiffProviderFactoryService } from "../../../browser/widget/diffEditor/diffProviderFactoryService.js";
 
 export class TestDiffProviderFactoryService implements IDiffProviderFactoryService {
 	declare readonly _serviceBrand: undefined;
@@ -19,8 +23,19 @@ export class TestDiffProviderFactoryService implements IDiffProviderFactoryServi
 }
 
 class SyncDocumentDiffProvider implements IDocumentDiffProvider {
-	computeDiff(original: ITextModel, modified: ITextModel, options: IDocumentDiffProviderOptions, cancellationToken: CancellationToken): Promise<IDocumentDiff> {
-		const result = linesDiffComputers.getDefault().computeDiff(original.getLinesContent(), modified.getLinesContent(), options);
+	computeDiff(
+		original: ITextModel,
+		modified: ITextModel,
+		options: IDocumentDiffProviderOptions,
+		cancellationToken: CancellationToken,
+	): Promise<IDocumentDiff> {
+		const result = linesDiffComputers
+			.getDefault()
+			.computeDiff(
+				original.getLinesContent(),
+				modified.getLinesContent(),
+				options,
+			);
 		return Promise.resolve({
 			changes: result.changes,
 			quitEarly: result.hitTimeout,
@@ -29,5 +44,5 @@ class SyncDocumentDiffProvider implements IDocumentDiffProvider {
 		});
 	}
 
-	readonly onDidChange: Event<void> = () => toDisposable(() => { });
+	readonly onDidChange: Event<void> = () => toDisposable(() => {});
 }

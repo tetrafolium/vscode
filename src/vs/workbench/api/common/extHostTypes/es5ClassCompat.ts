@@ -26,7 +26,7 @@ export function es5ClassCompat(target: Function): any {
 				const [thisArg, ...restArgs] = args;
 				return Reflect.construct(target, restArgs, thisArg.constructor);
 			}
-		}
+		},
 	};
 	return Object.assign(target, interceptFunctions);
 }

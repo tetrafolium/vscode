@@ -11,7 +11,7 @@ export type JsonSchema =
 	| JsonSchemaReference
 	| EmptyJsonSchema;
 
-export interface EmptyJsonSchema { }
+export interface EmptyJsonSchema {}
 
 export interface JsonSchemaReference {
 	$ref: string;

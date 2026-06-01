@@ -9,30 +9,36 @@ import { IVSCodeExtensionContext } from '../../extContext/common/extensionContex
 import { IWorkspaceService } from '../../workspace/common/workspaceService';
 import { INotebookSummaryTracker } from '../common/notebookSummaryTracker';
 
-export class NotebookSummaryTrackerImpl extends DisposableStore implements INotebookSummaryTracker {
+export class NotebookSummaryTrackerImpl
+	extends DisposableStore
+	implements INotebookSummaryTracker
+{
 	declare readonly _serviceBrand: undefined;
 	private readonly trackedNotebooks = new WeakSet<NotebookDocument>();
 	private readonly notebooksWithChanges = new WeakSet<NotebookDocument>();
 
 	constructor(
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-		@IVSCodeExtensionContext vsCodeExtensionContext: IVSCodeExtensionContext) {
+		@IVSCodeExtensionContext
+		vsCodeExtensionContext: IVSCodeExtensionContext,
+	) {
 		super();
 		vsCodeExtensionContext.subscriptions.push(this);
 
-		this.add(this.workspaceService.onDidChangeNotebookDocument((e) => {
-			if (!this.trackedNotebooks.has(e.notebook)) {
-				return;
-			}
+		this.add(
+			this.workspaceService.onDidChangeNotebookDocument((e) => {
+				if (!this.trackedNotebooks.has(e.notebook)) {
+					return;
+				}
 
-			if (e.contentChanges.length) {
-				this.notebooksWithChanges.add(e.notebook);
-			}
-			if (e.cellChanges.some(c => c.executionSummary)) {
-				this.notebooksWithChanges.add(e.notebook);
-			}
-
-		}));
+				if (e.contentChanges.length) {
+					this.notebooksWithChanges.add(e.notebook);
+				}
+				if (e.cellChanges.some((c) => c.executionSummary)) {
+					this.notebooksWithChanges.add(e.notebook);
+				}
+			}),
+		);
 	}
 	trackNotebook(notebook: NotebookDocument): void {
 		this.trackedNotebooks.add(notebook);
@@ -43,6 +49,8 @@ export class NotebookSummaryTrackerImpl extends DisposableStore implements INote
 	}
 
 	listNotebooksWithChanges(): NotebookDocument[] {
-		return this.workspaceService.notebookDocuments.filter((notebook) => this.notebooksWithChanges.has(notebook));
+		return this.workspaceService.notebookDocuments.filter((notebook) =>
+			this.notebooksWithChanges.has(notebook),
+		);
 	}
 }

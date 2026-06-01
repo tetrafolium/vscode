@@ -3,27 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from '../../../../../nls.js';
-import { $, addDisposableListener, EventType } from '../../../../../base/browser/dom.js';
-import { ButtonBar } from '../../../../../base/browser/ui/button/button.js';
-import { HoverPosition } from '../../../../../base/browser/ui/hover/hoverWidget.js';
-import { renderIcon } from '../../../../../base/browser/ui/iconLabel/iconLabels.js';
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { Emitter, Event } from '../../../../../base/common/event.js';
-import { Disposable, DisposableStore, MutableDisposable } from '../../../../../base/common/lifecycle.js';
-import { isLinux, isMacintosh } from '../../../../../base/common/platform.js';
-import { IHoverService } from '../../../../../platform/hover/browser/hover.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { defaultButtonStyles } from '../../../../../platform/theme/browser/defaultStyles.js';
-import { IBrowserViewCertificateError, IBrowserViewLoadError } from '../../../../../platform/browserView/common/browserView.js';
-import { IBrowserViewModel } from '../../common/browserView.js';
+import { localize } from "../../../../../nls.js";
+import {
+	$,
+	addDisposableListener,
+	EventType,
+} from "../../../../../base/browser/dom.js";
+import { ButtonBar } from "../../../../../base/browser/ui/button/button.js";
+import { HoverPosition } from "../../../../../base/browser/ui/hover/hoverWidget.js";
+import { renderIcon } from "../../../../../base/browser/ui/iconLabel/iconLabels.js";
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { Emitter, Event } from "../../../../../base/common/event.js";
+import {
+	Disposable,
+	DisposableStore,
+	MutableDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { isLinux, isMacintosh } from "../../../../../base/common/platform.js";
+import { IHoverService } from "../../../../../platform/hover/browser/hover.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { defaultButtonStyles } from "../../../../../platform/theme/browser/defaultStyles.js";
+import {
+	IBrowserViewCertificateError,
+	IBrowserViewLoadError,
+} from "../../../../../platform/browserView/common/browserView.js";
+import { IBrowserViewModel } from "../../common/browserView.js";
 import {
 	BrowserEditor,
 	BrowserEditorContribution,
 	BrowserWidgetLocation,
 	IBrowserEditorWidget,
 	IBrowserUrlRenderer,
-} from '../browserEditor.js';
+} from "../browserEditor.js";
 
 /**
  * Renders the full-pane error overlay (load failures and certificate errors)
@@ -38,12 +49,13 @@ import {
  * `https:` prefix when a cert error is active.
  */
 class BrowserEditorErrorFeatures extends BrowserEditorContribution {
-
-	private readonly _element = $('.browser-error-container');
-	private readonly _certActionButton = this._register(new MutableDisposable<ButtonBar>());
+	private readonly _element = $(".browser-error-container");
+	private readonly _certActionButton = this._register(
+		new MutableDisposable<ButtonBar>(),
+	);
 	private readonly _content: IBrowserEditorWidget;
 
-	private readonly _siteInfoSlot = $('.browser-site-info-slot-wrapper');
+	private readonly _siteInfoSlot = $(".browser-site-info-slot-wrapper");
 	private readonly _siteInfoWidget: SiteInfoWidget;
 	private readonly _preUrlWidget: IBrowserEditorWidget;
 	private readonly _urlRenderer = this._register(new CertUrlRenderer());
@@ -53,12 +65,26 @@ class BrowserEditorErrorFeatures extends BrowserEditorContribution {
 		@IInstantiationService instantiationService: IInstantiationService,
 	) {
 		super(editor);
-		this._element.style.display = 'none';
+		this._element.style.display = "none";
 		// Sit above the placeholder screenshot and overlay-pause (orders 100/200).
-		this._content = { location: BrowserWidgetLocation.ContentArea, element: this._element, order: 300 };
+		this._content = {
+			location: BrowserWidgetLocation.ContentArea,
+			element: this._element,
+			order: 300,
+		};
 
-		this._siteInfoWidget = this._register(instantiationService.createInstance(SiteInfoWidget, this._siteInfoSlot, editor));
-		this._preUrlWidget = { location: BrowserWidgetLocation.PreUrl, element: this._siteInfoSlot, order: 0 };
+		this._siteInfoWidget = this._register(
+			instantiationService.createInstance(
+				SiteInfoWidget,
+				this._siteInfoSlot,
+				editor,
+			),
+		);
+		this._preUrlWidget = {
+			location: BrowserWidgetLocation.PreUrl,
+			element: this._siteInfoSlot,
+			order: 0,
+		};
 	}
 
 	override get widgets(): readonly IBrowserEditorWidget[] {
@@ -69,7 +95,10 @@ class BrowserEditorErrorFeatures extends BrowserEditorContribution {
 		return [this._urlRenderer];
 	}
 
-	protected override onModelAttached(model: IBrowserViewModel, store: DisposableStore): void {
+	protected override onModelAttached(
+		model: IBrowserViewModel,
+		store: DisposableStore,
+	): void {
 		store.add(model.onDidChangeLoadingState(() => this._updateError()));
 		store.add(model.onDidNavigate(() => this._updateCertState()));
 		this._updateError();
@@ -77,7 +106,7 @@ class BrowserEditorErrorFeatures extends BrowserEditorContribution {
 
 	override onModelDetached(): void {
 		this._clearContent();
-		this._element.style.display = 'none';
+		this._element.style.display = "none";
 		this._siteInfoWidget.setCertificateError(undefined);
 		this._urlRenderer.setCertificateError(undefined);
 	}
@@ -91,13 +120,13 @@ class BrowserEditorErrorFeatures extends BrowserEditorContribution {
 		this._updateCertState();
 
 		if (!error) {
-			this._element.style.display = 'none';
+			this._element.style.display = "none";
 			return;
 		}
 
 		this._clearContent();
 		this._element.appendChild(this._renderError(error));
-		this._element.style.display = '';
+		this._element.style.display = "";
 	}
 
 	private _updateCertState(): void {
@@ -119,38 +148,46 @@ class BrowserEditorErrorFeatures extends BrowserEditorContribution {
 
 	private _renderError(error: IBrowserViewLoadError): HTMLElement {
 		const isCertError = !!error.certificateError;
-		const errorContent = $('.browser-error-content');
+		const errorContent = $(".browser-error-content");
 
-		const errorIcon = $('.browser-error-icon');
-		errorIcon.classList.toggle('cert-error', isCertError);
-		errorIcon.appendChild(renderIcon(isCertError ? Codicon.workspaceUntrusted : Codicon.globe));
+		const errorIcon = $(".browser-error-icon");
+		errorIcon.classList.toggle("cert-error", isCertError);
+		errorIcon.appendChild(
+			renderIcon(isCertError ? Codicon.workspaceUntrusted : Codicon.globe),
+		);
 
-		const errorTitle = $('.browser-error-title');
+		const errorTitle = $(".browser-error-title");
 		errorTitle.textContent = isCertError
-			? localize('browser.certErrorLabel', "Certificate Error")
-			: localize('browser.loadErrorLabel', "Failed to Load Page");
+			? localize("browser.certErrorLabel", "Certificate Error")
+			: localize("browser.loadErrorLabel", "Failed to Load Page");
 
-		const errorMessage = $('.browser-error-detail');
-		const errorText = $('span');
+		const errorMessage = $(".browser-error-detail");
+		const errorText = $("span");
 		errorText.textContent = isCertError
-			? localize('browser.certErrorDescription', "This site's security certificate could not be verified.")
+			? localize(
+					"browser.certErrorDescription",
+					"This site's security certificate could not be verified.",
+				)
 			: `${error.errorDescription} (${error.errorCode})`;
 		errorMessage.appendChild(errorText);
 
 		// Show cert error name below description, above URL
 		if (error.certificateError) {
-			const extraWarning = $('b.browser-error-detail');
-			extraWarning.textContent = localize('browser.certErrorExtraWarning', " Your connection is not private.");
+			const extraWarning = $("b.browser-error-detail");
+			extraWarning.textContent = localize(
+				"browser.certErrorExtraWarning",
+				" Your connection is not private.",
+			);
 			errorMessage.appendChild(extraWarning);
 		}
 
-		const errorUrl = $('.browser-error-detail');
-		const urlLabel = $('strong');
-		urlLabel.textContent = localize('browser.errorUrlLabel', "URL:");
-		const urlValue = $('code');
+		const errorUrl = $(".browser-error-detail");
+		const urlLabel = $("strong");
+		urlLabel.textContent = localize("browser.errorUrlLabel", "URL:");
+		const urlValue = $("code");
 		urlValue.textContent = error.url;
 		errorUrl.appendChild(urlLabel);
-		errorUrl.appendChild(document.createTextNode(' '));
+		errorUrl.appendChild(document.createTextNode(" "));
 		errorUrl.appendChild(urlValue);
 
 		errorContent.appendChild(errorIcon);
@@ -166,42 +203,53 @@ class BrowserEditorErrorFeatures extends BrowserEditorContribution {
 		return errorContent;
 	}
 
-	private _renderCertDetails(certError: IBrowserViewCertificateError): HTMLElement {
-		const certDetailsTable = $('.browser-cert-details-table');
+	private _renderCertDetails(
+		certError: IBrowserViewCertificateError,
+	): HTMLElement {
+		const certDetailsTable = $(".browser-cert-details-table");
 
-		const heading = $('.browser-cert-details-heading');
-		heading.textContent = localize('browser.certDetailsHeading', "Certificate Details");
+		const heading = $(".browser-cert-details-heading");
+		heading.textContent = localize(
+			"browser.certDetailsHeading",
+			"Certificate Details",
+		);
 		certDetailsTable.appendChild(heading);
 
 		const addRow = (label: string, value: string) => {
-			const row = $('.browser-cert-details-row');
-			const labelEl = $('.browser-cert-details-label');
+			const row = $(".browser-cert-details-row");
+			const labelEl = $(".browser-cert-details-label");
 			labelEl.textContent = label;
-			const valueEl = $('.browser-cert-details-value');
+			const valueEl = $(".browser-cert-details-value");
 			valueEl.textContent = value;
 			row.appendChild(labelEl);
 			row.appendChild(valueEl);
 			certDetailsTable.appendChild(row);
 		};
 
-		addRow(localize('browser.certError', "Error"), certError.error);
-		addRow(localize('browser.certIssuer', "Issuer"), certError.issuerName);
-		addRow(localize('browser.certSubject', "Subject"), certError.subjectName);
+		addRow(localize("browser.certError", "Error"), certError.error);
+		addRow(localize("browser.certIssuer", "Issuer"), certError.issuerName);
+		addRow(localize("browser.certSubject", "Subject"), certError.subjectName);
 
-		const formatDate = (epoch: number) => new Date(epoch * 1000).toLocaleDateString();
+		const formatDate = (epoch: number) =>
+			new Date(epoch * 1000).toLocaleDateString();
 		addRow(
-			localize('browser.certValid', "Valid"),
-			`${formatDate(certError.validStart)} - ${formatDate(certError.validExpiry)}`
+			localize("browser.certValid", "Valid"),
+			`${formatDate(certError.validStart)} - ${formatDate(certError.validExpiry)}`,
 		);
 
-		addRow(localize('browser.certFingerprint', "Fingerprint"), certError.fingerprint);
+		addRow(
+			localize("browser.certFingerprint", "Fingerprint"),
+			certError.fingerprint,
+		);
 
 		return certDetailsTable;
 	}
 
-	private _renderCertActions(certError: IBrowserViewCertificateError): HTMLElement {
-		const actionContainer = $('.browser-cert-action');
-		actionContainer.classList.toggle('reverse', isMacintosh || isLinux);
+	private _renderCertActions(
+		certError: IBrowserViewCertificateError,
+	): HTMLElement {
+		const actionContainer = $(".browser-cert-action");
+		actionContainer.classList.toggle("reverse", isMacintosh || isLinux);
 
 		const canGoBack = this.editor.model?.canGoBack ?? false;
 		const buttonBar = new ButtonBar(actionContainer);
@@ -209,8 +257,8 @@ class BrowserEditorErrorFeatures extends BrowserEditorContribution {
 
 		const primaryButton = buttonBar.addButton({ ...defaultButtonStyles });
 		primaryButton.label = canGoBack
-			? localize('browser.certGoBack', "Go Back")
-			: localize('browser.certCloseTab', "Close Tab");
+			? localize("browser.certGoBack", "Go Back")
+			: localize("browser.certCloseTab", "Close Tab");
 		primaryButton.onDidClick(() => {
 			if (canGoBack) {
 				this.editor.model?.goBack();
@@ -219,10 +267,19 @@ class BrowserEditorErrorFeatures extends BrowserEditorContribution {
 			}
 		});
 
-		const secondaryButton = buttonBar.addButton({ ...defaultButtonStyles, secondary: true });
-		secondaryButton.label = localize('browser.certProceed', "Proceed anyway (unsafe)");
+		const secondaryButton = buttonBar.addButton({
+			...defaultButtonStyles,
+			secondary: true,
+		});
+		secondaryButton.label = localize(
+			"browser.certProceed",
+			"Proceed anyway (unsafe)",
+		);
 		secondaryButton.onDidClick(() => {
-			this.editor.model?.trustCertificate(certError.host, certError.fingerprint);
+			this.editor.model?.trustCertificate(
+				certError.host,
+				certError.fingerprint,
+			);
 		});
 
 		return actionContainer;
@@ -235,14 +292,16 @@ class BrowserEditorErrorFeatures extends BrowserEditorContribution {
  * URLs (and non-cert-error states) fall through to plain text.
  */
 class CertUrlRenderer implements IBrowserUrlRenderer {
-	private static readonly HTTPS_PREFIX = 'https:';
+	private static readonly HTTPS_PREFIX = "https:";
 
 	private readonly _onDidChange = new Emitter<void>();
 	readonly onDidChange: Event<void> = this._onDidChange.event;
 
 	private _hasCertError = false;
 
-	setCertificateError(certError: IBrowserViewCertificateError | undefined): void {
+	setCertificateError(
+		certError: IBrowserViewCertificateError | undefined,
+	): void {
 		const next = !!certError;
 		if (this._hasCertError === next) {
 			return;
@@ -256,12 +315,12 @@ class CertUrlRenderer implements IBrowserUrlRenderer {
 			return false;
 		}
 
-		const protocol = document.createElement('span');
-		protocol.className = 'browser-url-display-protocol-bad';
+		const protocol = document.createElement("span");
+		protocol.className = "browser-url-display-protocol-bad";
 		protocol.textContent = CertUrlRenderer.HTTPS_PREFIX;
 		container.appendChild(protocol);
 
-		const rest = document.createElement('span');
+		const rest = document.createElement("span");
 		rest.textContent = url.slice(CertUrlRenderer.HTTPS_PREFIX.length);
 		container.appendChild(rest);
 
@@ -279,7 +338,6 @@ class CertUrlRenderer implements IBrowserUrlRenderer {
  * and (if the user has previously trusted the cert) a revoke action.
  */
 class SiteInfoWidget extends Disposable {
-
 	private readonly _container: HTMLElement;
 	private readonly _indicator: HTMLElement;
 	private _certError: IBrowserViewCertificateError | undefined;
@@ -291,31 +349,43 @@ class SiteInfoWidget extends Disposable {
 	) {
 		super();
 
-		this._container = $('.browser-site-info-container');
-		this._container.style.display = 'none';
+		this._container = $(".browser-site-info-container");
+		this._container.style.display = "none";
 
-		this._indicator = $('.browser-site-info-indicator');
+		this._indicator = $(".browser-site-info-indicator");
 		this._indicator.tabIndex = 0;
-		this._indicator.role = 'button';
-		this._indicator.ariaLabel = localize('browser.notSecure', "Not Secure");
+		this._indicator.role = "button";
+		this._indicator.ariaLabel = localize("browser.notSecure", "Not Secure");
 		this._indicator.appendChild(renderIcon(Codicon.workspaceUntrusted));
 		this._container.appendChild(this._indicator);
 
 		parent.appendChild(this._container);
 
-		this._register(addDisposableListener(this._indicator, EventType.CLICK, () => this._showHover()));
-		this._register(addDisposableListener(this._indicator, EventType.KEY_DOWN, (e: KeyboardEvent) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				e.preventDefault();
-				this._showHover();
-			}
-		}));
+		this._register(
+			addDisposableListener(this._indicator, EventType.CLICK, () =>
+				this._showHover(),
+			),
+		);
+		this._register(
+			addDisposableListener(
+				this._indicator,
+				EventType.KEY_DOWN,
+				(e: KeyboardEvent) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						this._showHover();
+					}
+				},
+			),
+		);
 	}
 
 	/** Update visibility and state from a certificate error (or lack thereof). */
-	setCertificateError(certError: IBrowserViewCertificateError | undefined): void {
+	setCertificateError(
+		certError: IBrowserViewCertificateError | undefined,
+	): void {
 		this._certError = certError;
-		this._container.style.display = certError ? '' : 'none';
+		this._container.style.display = certError ? "" : "none";
 	}
 
 	private _showHover(): void {
@@ -324,58 +394,76 @@ class SiteInfoWidget extends Disposable {
 			return;
 		}
 
-		const content = document.createElement('div');
-		content.classList.add('browser-site-info-hover-content');
+		const content = document.createElement("div");
+		content.classList.add("browser-site-info-hover-content");
 
-		const heading = document.createElement('div');
-		heading.classList.add('browser-site-info-hover-heading');
-		heading.textContent = localize('browser.certHoverHeading', "Certificate Not Trusted");
+		const heading = document.createElement("div");
+		heading.classList.add("browser-site-info-hover-heading");
+		heading.textContent = localize(
+			"browser.certHoverHeading",
+			"Certificate Not Trusted",
+		);
 		content.appendChild(heading);
 
-		const detail1 = document.createElement('div');
-		detail1.classList.add('browser-site-info-hover-detail');
-		detail1.textContent = localize('browser.certHoverDetail1', "Your connection to this site is not secure.");
+		const detail1 = document.createElement("div");
+		detail1.classList.add("browser-site-info-hover-detail");
+		detail1.textContent = localize(
+			"browser.certHoverDetail1",
+			"Your connection to this site is not secure.",
+		);
 		content.appendChild(detail1);
 
 		if (certError.hasTrustedException) {
-			const detail2 = document.createElement('div');
-			detail2.classList.add('browser-site-info-hover-detail');
+			const detail2 = document.createElement("div");
+			detail2.classList.add("browser-site-info-hover-detail");
 			detail2.textContent = localize(
-				'browser.certHoverDetail2',
+				"browser.certHoverDetail2",
 				"You previously chose to proceed to '{0}' despite a certificate error ({1}).",
 				certError.host,
-				certError.error
+				certError.error,
 			);
 			content.appendChild(detail2);
 
-			const revokeLink = document.createElement('a');
-			revokeLink.classList.add('browser-site-info-hover-revoke');
-			revokeLink.textContent = localize('browser.certRevoke', "Revoke and Close");
-			revokeLink.role = 'button';
+			const revokeLink = document.createElement("a");
+			revokeLink.classList.add("browser-site-info-hover-revoke");
+			revokeLink.textContent = localize(
+				"browser.certRevoke",
+				"Revoke and Close",
+			);
+			revokeLink.role = "button";
 			revokeLink.tabIndex = 0;
-			revokeLink.addEventListener('click', () => {
+			revokeLink.addEventListener("click", () => {
 				hover?.dispose();
 				// This automatically closes the browser view.
-				this._editor.model?.untrustCertificate(certError.host, certError.fingerprint);
+				this._editor.model?.untrustCertificate(
+					certError.host,
+					certError.fingerprint,
+				);
 			});
-			revokeLink.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter' || e.key === ' ') {
+			revokeLink.addEventListener("keydown", (e) => {
+				if (e.key === "Enter" || e.key === " ") {
 					e.preventDefault();
 					hover?.dispose();
 					// This automatically closes the browser view.
-					this._editor.model?.untrustCertificate(certError.host, certError.fingerprint);
+					this._editor.model?.untrustCertificate(
+						certError.host,
+						certError.fingerprint,
+					);
 				}
 			});
 			content.appendChild(revokeLink);
 		}
 
-		const hover = this._hoverService.showInstantHover({
-			content,
-			target: this._indicator,
-			container: this._container,
-			position: { hoverPosition: HoverPosition.BELOW },
-			persistence: { sticky: true }
-		}, true);
+		const hover = this._hoverService.showInstantHover(
+			{
+				content,
+				target: this._indicator,
+				container: this._container,
+				position: { hoverPosition: HoverPosition.BELOW },
+				persistence: { sticky: true },
+			},
+			true,
+		);
 	}
 }
 

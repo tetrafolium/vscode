@@ -13,7 +13,10 @@ import { ILogService } from '../../log/common/logService';
 import { IAlternativeNotebookContentService } from '../../notebook/common/alternativeContent';
 import { INotebookService } from '../../notebook/common/notebookService';
 import { resolveWorkspaceOTelMetadata } from '../../otel/common/workspaceOTelMetadata';
-import { ITelemetryService, multiplexProperties } from '../../telemetry/common/telemetry';
+import {
+	ITelemetryService,
+	multiplexProperties,
+} from '../../telemetry/common/telemetry';
 import { IWorkspaceService } from '../../workspace/common/workspaceService';
 
 export interface IMultiFileEdit {
@@ -34,65 +37,104 @@ export interface IMultiFileEditTelemetry {
 	readonly speculationRequestId: string;
 }
 
-export const IMultiFileEditInternalTelemetryService = createServiceIdentifier<IMultiFileEditInternalTelemetryService>('IMultiFileEditInternalTelemetryService');
+export const IMultiFileEditInternalTelemetryService =
+	createServiceIdentifier<IMultiFileEditInternalTelemetryService>(
+		'IMultiFileEditInternalTelemetryService',
+	);
 export interface IMultiFileEditInternalTelemetryService {
 	_serviceBrand: undefined;
 	/**
 	 * Store telemetry info for a multi-file edit
 	 */
-	storeEditPrompt(edit: IMultiFileEdit, telemetryOptions: IMultiFileEditTelemetry): void;
+	storeEditPrompt(
+		edit: IMultiFileEdit,
+		telemetryOptions: IMultiFileEditTelemetry,
+	): void;
 	/**
 	 * Send a telemetry event with the outcome of a multi-file edit
 	 * @param chatRequestId The chat request id of the multi-file edit
 	 * @param uri The uri of the file that was accepted
 	 * Note: we do NOT track partial accepts and rejects
 	 */
-	sendEditPromptAndResult(telemetry: IMultiFileEditRequestInfo, uri: Uri, outcome: 'accept' | 'reject'): Promise<void>;
+	sendEditPromptAndResult(
+		telemetry: IMultiFileEditRequestInfo,
+		uri: Uri,
+		outcome: 'accept' | 'reject',
+	): Promise<void>;
 }
 
-export class MultiFileEditInternalTelemetryService extends Disposable implements IMultiFileEditInternalTelemetryService {
-
+export class MultiFileEditInternalTelemetryService
+	extends Disposable
+	implements IMultiFileEditInternalTelemetryService
+{
 	declare _serviceBrand: undefined;
 
 	// URI -> chatResponseId -> edits
-	private readonly editedFiles = new ResourceMap<Map<string, (IMultiFileEdit & IMultiFileEditTelemetry)[]>>();
+	private readonly editedFiles = new ResourceMap<
+		Map<string, (IMultiFileEdit & IMultiFileEditTelemetry)[]>
+	>();
 	// sessionId -> (URI -> TextDocument | NotebookDocument)
-	private readonly editedDocuments = new Map<string, ResourceMap<TextDocument | NotebookDocument>>();
+	private readonly editedDocuments = new Map<
+		string,
+		ResourceMap<TextDocument | NotebookDocument>
+	>();
 
 	constructor(
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
 		@INotebookService private readonly notebookService: INotebookService,
 		@ILogService private readonly logService: ILogService,
-		@IAlternativeNotebookContentService private readonly alternativeNotebookContent: IAlternativeNotebookContentService,
-		@IChatSessionService private readonly chatSessionService: IChatSessionService,
+		@IAlternativeNotebookContentService
+		private readonly alternativeNotebookContent: IAlternativeNotebookContentService,
+		@IChatSessionService
+		private readonly chatSessionService: IChatSessionService,
 		@IGitService private readonly gitService: IGitService,
 	) {
 		super();
-		this._register(this.chatSessionService.onDidDisposeChatSession(sessionId => {
-			this.editedDocuments.delete(sessionId);
-		}));
+		this._register(
+			this.chatSessionService.onDidDisposeChatSession((sessionId) => {
+				this.editedDocuments.delete(sessionId);
+			}),
+		);
 	}
 
-	storeEditPrompt(edit: IMultiFileEdit, telemetryOptions: IMultiFileEditTelemetry): void {
-		this.logService.debug(`Storing edit prompt for ${edit.uri.toString()} with request ID ${telemetryOptions.chatRequestId}`);
+	storeEditPrompt(
+		edit: IMultiFileEdit,
+		telemetryOptions: IMultiFileEditTelemetry,
+	): void {
+		this.logService.debug(
+			`Storing edit prompt for ${edit.uri.toString()} with request ID ${telemetryOptions.chatRequestId}`,
+		);
 
 		const existingEditsForUri = this.editedFiles.get(edit.uri) ?? new Map();
-		const existingEditsForUriInRequest = existingEditsForUri.get(telemetryOptions.chatRequestId) ?? [];
+		const existingEditsForUriInRequest =
+			existingEditsForUri.get(telemetryOptions.chatRequestId) ?? [];
 		existingEditsForUriInRequest.push({ ...edit, ...telemetryOptions });
-		existingEditsForUri.set(telemetryOptions.chatRequestId, existingEditsForUriInRequest);
+		existingEditsForUri.set(
+			telemetryOptions.chatRequestId,
+			existingEditsForUriInRequest,
+		);
 		this.editedFiles.set(edit.uri, existingEditsForUri);
 		if (edit.document && telemetryOptions.chatSessionId) {
-			let sessionMap = this.editedDocuments.get(telemetryOptions.chatSessionId);
+			let sessionMap = this.editedDocuments.get(
+				telemetryOptions.chatSessionId,
+			);
 			if (!sessionMap) {
 				sessionMap = new ResourceMap<TextDocument | NotebookDocument>();
-				this.editedDocuments.set(telemetryOptions.chatSessionId, sessionMap);
+				this.editedDocuments.set(
+					telemetryOptions.chatSessionId,
+					sessionMap,
+				);
 			}
 			sessionMap.set(edit.uri, edit.document);
 		}
 	}
 
-	async sendEditPromptAndResult(telemetry: IMultiFileEditRequestInfo, uri: Uri, outcome: 'accept' | 'reject'): Promise<void> {
+	async sendEditPromptAndResult(
+		telemetry: IMultiFileEditRequestInfo,
+		uri: Uri,
+		outcome: 'accept' | 'reject',
+	): Promise<void> {
 		const editsForUri = this.editedFiles.get(uri);
 		if (!editsForUri) {
 			return;
@@ -102,12 +144,16 @@ export class MultiFileEditInternalTelemetryService extends Disposable implements
 			// i.e. edit -> edit -> accept/reject
 			// Skip sending telemetry for files which originated from multiple SD prompts
 			// and reset our tracking
-			this.logService.debug(`Skipping telemetry for ${uri.toString()} with request ID ${telemetry.chatRequestId} due to multiple edit turns`);
+			this.logService.debug(
+				`Skipping telemetry for ${uri.toString()} with request ID ${telemetry.chatRequestId} due to multiple edit turns`,
+			);
 			this.editedFiles.delete(uri);
 			return;
 		}
 
-		const editsForUriInChatRequest = editsForUri.get(telemetry.chatRequestId);
+		const editsForUriInChatRequest = editsForUri.get(
+			telemetry.chatRequestId,
+		);
 		if (!editsForUriInChatRequest) {
 			return;
 		}
@@ -118,7 +164,9 @@ export class MultiFileEditInternalTelemetryService extends Disposable implements
 			// and can also happen when the LLM ignores instructions in non-agentic edits.
 			// Again, skip sending telemetry for files which originated from multiple SD prompts
 			// and reset our tracking
-			this.logService.debug(`Skipping telemetry for ${uri.toString()} with request ID ${telemetry.chatRequestId} due to multiple edits in one turn`);
+			this.logService.debug(
+				`Skipping telemetry for ${uri.toString()} with request ID ${telemetry.chatRequestId} due to multiple edits in one turn`,
+			);
 			this.editedFiles.delete(uri);
 			return;
 		}
@@ -131,7 +179,9 @@ export class MultiFileEditInternalTelemetryService extends Disposable implements
 			let languageId: string | undefined = undefined;
 			let documentText: string | undefined = undefined;
 			if (edit.chatSessionId) {
-				const editedDocument = this.editedDocuments.get(edit.chatSessionId)?.get(uri);
+				const editedDocument = this.editedDocuments
+					.get(edit.chatSessionId)
+					?.get(uri);
 				if (editedDocument && 'getText' in editedDocument) {
 					languageId = editedDocument.languageId;
 					documentText = editedDocument.getText();
@@ -139,18 +189,25 @@ export class MultiFileEditInternalTelemetryService extends Disposable implements
 			}
 			if (!documentText && !languageId) {
 				if (this.notebookService.hasSupportedNotebooks(uri)) {
-					const snapshot = await this.workspaceService.openNotebookDocumentAndSnapshot(uri, this.alternativeNotebookContent.getFormat(undefined));
+					const snapshot =
+						await this.workspaceService.openNotebookDocumentAndSnapshot(
+							uri,
+							this.alternativeNotebookContent.getFormat(
+								undefined,
+							),
+						);
 					languageId ??= snapshot.languageId;
 					documentText ??= snapshot.getText();
-				}
-				else {
-					const textDocument = await this.workspaceService.openTextDocument(uri);
+				} else {
+					const textDocument =
+						await this.workspaceService.openTextDocument(uri);
 					languageId = textDocument.languageId;
 					documentText = textDocument.getText();
 				}
 			}
 
-			this.telemetryService.sendInternalMSFTTelemetryEvent('multiFileEditQuality',
+			this.telemetryService.sendInternalMSFTTelemetryEvent(
+				'multiFileEditQuality',
 				{
 					requestId: telemetry.chatRequestId,
 					speculationRequestId: edit.speculationRequestId,
@@ -160,14 +217,19 @@ export class MultiFileEditInternalTelemetryService extends Disposable implements
 					prompt: edit.prompt,
 					languageId,
 					file: documentText, // Note that this is not necessarily the same as the model output because the user may have made manual edits
-					mapper: edit.mapper
+					mapper: edit.mapper,
 				},
 				{
-					isNotebook: this.notebookService.hasSupportedNotebooks(uri) ? 1 : 0
-				}
+					isNotebook: this.notebookService.hasSupportedNotebooks(uri)
+						? 1
+						: 0,
+				},
 			);
 
-			const workspace = resolveWorkspaceOTelMetadata(this.gitService, uri);
+			const workspace = resolveWorkspaceOTelMetadata(
+				this.gitService,
+				uri,
+			);
 			const gitHubEnhancedTelemetryProperties = multiplexProperties({
 				headerRequestId: edit.speculationRequestId,
 				providerId: edit.mapper,
@@ -182,10 +244,18 @@ export class MultiFileEditInternalTelemetryService extends Disposable implements
 				remoteUrl: workspace.remoteUrl,
 				fileRelativePath: workspace.fileRelativePath,
 			});
-			this.telemetryService.sendEnhancedGHTelemetryEvent('fastApply/editOutcome', gitHubEnhancedTelemetryProperties);
-			this.logService.debug(`Sent telemetry for ${uri.toString()} with request ID ${edit.chatRequestId}, SD request ID ${edit.speculationRequestId}, and outcome ${outcome}`);
+			this.telemetryService.sendEnhancedGHTelemetryEvent(
+				'fastApply/editOutcome',
+				gitHubEnhancedTelemetryProperties,
+			);
+			this.logService.debug(
+				`Sent telemetry for ${uri.toString()} with request ID ${edit.chatRequestId}, SD request ID ${edit.speculationRequestId}, and outcome ${outcome}`,
+			);
 		} catch (e) {
-			this.logService.error('Error sending multi-file edit telemetry', JSON.stringify(e));
+			this.logService.error(
+				'Error sending multi-file edit telemetry',
+				JSON.stringify(e),
+			);
 		} finally {
 			this.editedFiles.delete(uri);
 		}

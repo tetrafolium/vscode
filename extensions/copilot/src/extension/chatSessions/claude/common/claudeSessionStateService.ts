@@ -54,7 +54,10 @@ export interface IClaudeSessionStateService {
 	/**
 	 * Sets the model ID for a session.
 	 */
-	setModelIdForSession(sessionId: string, modelId: ParsedClaudeModelId | undefined): void;
+	setModelIdForSession(
+		sessionId: string,
+		modelId: ParsedClaudeModelId | undefined,
+	): void;
 
 	/**
 	 * Gets the permission mode for a session.
@@ -74,7 +77,10 @@ export interface IClaudeSessionStateService {
 	/**
 	 * Sets the capturing token for a session.
 	 */
-	setCapturingTokenForSession(sessionId: string, token: CapturingToken | undefined): void;
+	setCapturingTokenForSession(
+		sessionId: string,
+		token: CapturingToken | undefined,
+	): void;
 
 	/**
 	 * Gets the folder info for a session.
@@ -84,7 +90,10 @@ export interface IClaudeSessionStateService {
 	/**
 	 * Sets the folder info for a session.
 	 */
-	setFolderInfoForSession(sessionId: string, folderInfo: ClaudeFolderInfo): void;
+	setFolderInfoForSession(
+		sessionId: string,
+		folderInfo: ClaudeFolderInfo,
+	): void;
 
 	/**
 	 * Gets the usage handler for a session.
@@ -94,7 +103,10 @@ export interface IClaudeSessionStateService {
 	/**
 	 * Sets the usage handler for a session.
 	 */
-	setUsageHandlerForSession(sessionId: string, handler: UsageHandler | undefined): void;
+	setUsageHandlerForSession(
+		sessionId: string,
+		handler: UsageHandler | undefined,
+	): void;
 
 	/**
 	 * Gets the reasoning effort for a session (user's per-request selection from the model picker).
@@ -104,7 +116,10 @@ export interface IClaudeSessionStateService {
 	/**
 	 * Sets the reasoning effort for a session.
 	 */
-	setReasoningEffortForSession(sessionId: string, effort: EffortLevel | undefined): void;
+	setReasoningEffortForSession(
+		sessionId: string,
+		effort: EffortLevel | undefined,
+	): void;
 
 	/**
 	 * Gets the OTel trace context for a session (used to parent chat spans to invoke_agent).
@@ -114,7 +129,10 @@ export interface IClaudeSessionStateService {
 	/**
 	 * Sets the OTel trace context for a session.
 	 */
-	setTraceContextForSession(sessionId: string, traceContext: TraceContext | undefined): void;
+	setTraceContextForSession(
+		sessionId: string,
+		traceContext: TraceContext | undefined,
+	): void;
 
 	/**
 	 * Gets the current turn ID for a session (VS Code request ID, used for per-turn credit tracking).
@@ -127,4 +145,7 @@ export interface IClaudeSessionStateService {
 	setTurnIdForSession(sessionId: string, turnId: string | undefined): void;
 }
 
-export const IClaudeSessionStateService = createServiceIdentifier<IClaudeSessionStateService>('IClaudeSessionStateService');
+export const IClaudeSessionStateService =
+	createServiceIdentifier<IClaudeSessionStateService>(
+		'IClaudeSessionStateService',
+	);

@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { Event } from "../../../../base/common/event.js";
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
 
 export interface IRecordingData {
 	/** The raw video data as a Blob. */
@@ -20,12 +20,13 @@ export interface IRecordingData {
 }
 
 export const enum RecordingState {
-	Idle = 'idle',
-	Recording = 'recording',
-	Stopped = 'stopped',
+	Idle = "idle",
+	Recording = "recording",
+	Stopped = "stopped",
 }
 
-export const IRecordingService = createDecorator<IRecordingService>('recordingService');
+export const IRecordingService =
+	createDecorator<IRecordingService>("recordingService");
 
 export interface IRecordingService {
 	readonly _serviceBrand: undefined;
@@ -42,7 +43,11 @@ export interface IRecordingService {
 	/**
 	 * Returns the list of supported recording MIME types on this platform.
 	 */
-	getSupportedFormats(): { mimeType: string; label: string; extension: string }[];
+	getSupportedFormats(): {
+		mimeType: string;
+		label: string;
+		extension: string;
+	}[];
 
 	/**
 	 * Start recording the current window.
@@ -67,7 +72,9 @@ export interface IRecordingService {
 	 * concept doesn't apply (e.g. web) implementations return 'granted' so callers can
 	 * proceed straight to the recording flow.
 	 */
-	getScreenCapturePermissionStatus(): Promise<'not-determined' | 'granted' | 'denied' | 'restricted' | 'unknown'>;
+	getScreenCapturePermissionStatus(): Promise<
+		"not-determined" | "granted" | "denied" | "restricted" | "unknown"
+	>;
 
 	/**
 	 * Opens the OS-level UI for granting screen-capture permission. No-op on platforms
@@ -85,12 +92,16 @@ export class BrowserRecordingService implements IRecordingService {
 	readonly state = RecordingState.Idle;
 	readonly onDidChangeState = Event.None;
 
-	getSupportedFormats(): { mimeType: string; label: string; extension: string }[] {
+	getSupportedFormats(): {
+		mimeType: string;
+		label: string;
+		extension: string;
+	}[] {
 		return [];
 	}
 
 	async startRecording(_mimeType?: string): Promise<void> {
-		throw new Error('Recording is not supported in web browsers.');
+		throw new Error("Recording is not supported in web browsers.");
 	}
 
 	async stopRecording(): Promise<IRecordingData | undefined> {
@@ -101,8 +112,8 @@ export class BrowserRecordingService implements IRecordingService {
 		// No-op
 	}
 
-	async getScreenCapturePermissionStatus(): Promise<'granted'> {
-		return 'granted';
+	async getScreenCapturePermissionStatus(): Promise<"granted"> {
+		return "granted";
 	}
 
 	openScreenCapturePermissionSettings(): void {

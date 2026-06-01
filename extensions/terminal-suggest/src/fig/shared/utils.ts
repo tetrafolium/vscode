@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { osIsWindows } from '../../helpers/os.js';
-import { createErrorInstance } from './errors.js';
+import { osIsWindows } from "../../helpers/os.js";
+import { createErrorInstance } from "./errors.js";
 
 // Use bitwise representation of suggestion flags.
 // See here: https://stackoverflow.com/questions/39359740/what-are-enum-flags-in-typescript/
@@ -27,8 +27,8 @@ export enum SuggestionFlag {
 export type SuggestionFlags = number;
 
 export enum SpecLocationSource {
-	GLOBAL = 'global',
-	LOCAL = 'local',
+	GLOBAL = "global",
+	LOCAL = "local",
 }
 
 export function makeArray<T>(object: T | T[]): T[] {
@@ -60,7 +60,7 @@ export function isOrHasValue(
 	return Array.isArray(obj) ? obj.includes(valueToMatch) : obj === valueToMatch;
 }
 
-export const TimeoutError = createErrorInstance('TimeoutError');
+export const TimeoutError = createErrorInstance("TimeoutError");
 
 export async function withTimeout<T>(
 	time: number,
@@ -71,7 +71,7 @@ export async function withTimeout<T>(
 		promise,
 		new Promise<T>((_, reject) => {
 			timeout = setTimeout(() => {
-				reject(new TimeoutError('Function timed out'));
+				reject(new TimeoutError("Function timed out"));
 			}, time);
 		}),
 	]).finally(() => {
@@ -108,8 +108,8 @@ export function findLast<T>(
 
 type NamedObject =
 	| {
-		name?: string[] | string;
-	}
+			name?: string[] | string;
+	  }
 	| string;
 
 export function compareNamedObjectsAlphabetically<
@@ -117,7 +117,7 @@ export function compareNamedObjectsAlphabetically<
 	B extends NamedObject,
 >(a: A, b: B): number {
 	const getName = (object: NamedObject): string =>
-		typeof object === 'string' ? object : makeArray(object.name)[0] || '';
+		typeof object === "string" ? object : makeArray(object.name)[0] || "";
 	return getName(a).localeCompare(getName(b));
 }
 
@@ -158,7 +158,7 @@ export function memoizeOne<S extends unknown[], T>(
 }
 
 function isNonNullObj(v: unknown): v is Record<string, unknown> {
-	return typeof v === 'object' && v !== null;
+	return typeof v === "object" && v !== null;
 }
 
 function isEmptyObject(v: unknown): v is Record<string, never> {
@@ -195,12 +195,12 @@ export function fieldsAreEqual<T>(A: T, B: T, fields: (keyof T)[]): boolean {
 }
 
 export const splitPath = (path: string): [string, string] => {
-	const idx = path.lastIndexOf('/') + 1;
+	const idx = path.lastIndexOf("/") + 1;
 	return [path.slice(0, idx), path.slice(idx)];
 };
 
 export const ensureTrailingSlash = (str: string) =>
-	str.endsWith('/') ? str : `${str}/`;
+	str.endsWith("/") ? str : `${str}/`;
 
 // Outputs CWD with trailing `/`
 export const getCWDForFilesAndFolders = (
@@ -208,15 +208,15 @@ export const getCWDForFilesAndFolders = (
 	searchTerm: string,
 ): string => {
 	if (cwd === null) {
-		return '/';
+		return "/";
 	}
 	const [dirname] = splitPath(searchTerm);
 
-	if (dirname === '') {
+	if (dirname === "") {
 		return ensureTrailingSlash(cwd);
 	}
 
-	return dirname.startsWith('~/') || dirname.startsWith('/')
+	return dirname.startsWith("~/") || dirname.startsWith("/")
 		? dirname
 		: `${cwd}/${dirname}`;
 };
@@ -225,8 +225,8 @@ export function localProtocol(domain: string, path: string) {
 	let modifiedDomain;
 	//TODO@meganrogge
 	// if (domain === 'path' && !window.fig?.constants?.newUriFormat) {
-	if (domain === 'path') {
-		modifiedDomain = '';
+	if (domain === "path") {
+		modifiedDomain = "";
 	} else {
 		modifiedDomain = domain;
 	}
@@ -265,5 +265,5 @@ export async function exponentialBackoff<T>(
 		}
 	}
 
-	throw new Error('Failed to execute function after all retries.');
+	throw new Error("Failed to execute function after all retries.");
 }

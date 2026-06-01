@@ -9,27 +9,50 @@ import { IWorkspaceMutationManager } from '../../../platform/testing/common/work
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
 import { SetupTestFileScheme } from '../common/files';
 
-export class SetupTestsContribution extends Disposable implements IExtensionContribution {
+export class SetupTestsContribution
+	extends Disposable
+	implements IExtensionContribution
+{
 	constructor(
-		@IWorkspaceMutationManager workspaceMutationManager: IWorkspaceMutationManager,
+		@IWorkspaceMutationManager
+		workspaceMutationManager: IWorkspaceMutationManager,
 	) {
 		super();
-		this._register(vscode.workspace.registerTextDocumentContentProvider(SetupTestFileScheme, {
-			provideTextDocumentContent(uri, token) {
-				return workspaceMutationManager.get(uri.authority).get(uri.path, token);
-			},
-		}));
-		this._register(vscode.commands.registerCommand('github.copilot.tests.applyMutations', (requestId: string) => {
-			vscode.window.withProgress({
-				location: vscode.ProgressLocation.Notification,
-				cancellable: true,
-			}, async (progress, token) => {
-				try {
-					return await workspaceMutationManager.get(requestId).apply(progress, token);
-				} catch (e) {
-					vscode.window.showErrorMessage(`Failed to apply edits: ${e.message}`);
-				}
-			});
-		}));
+		this._register(
+			vscode.workspace.registerTextDocumentContentProvider(
+				SetupTestFileScheme,
+				{
+					provideTextDocumentContent(uri, token) {
+						return workspaceMutationManager
+							.get(uri.authority)
+							.get(uri.path, token);
+					},
+				},
+			),
+		);
+		this._register(
+			vscode.commands.registerCommand(
+				'github.copilot.tests.applyMutations',
+				(requestId: string) => {
+					vscode.window.withProgress(
+						{
+							location: vscode.ProgressLocation.Notification,
+							cancellable: true,
+						},
+						async (progress, token) => {
+							try {
+								return await workspaceMutationManager
+									.get(requestId)
+									.apply(progress, token);
+							} catch (e) {
+								vscode.window.showErrorMessage(
+									`Failed to apply edits: ${e.message}`,
+								);
+							}
+						},
+					);
+				},
+			),
+		);
 	}
 }

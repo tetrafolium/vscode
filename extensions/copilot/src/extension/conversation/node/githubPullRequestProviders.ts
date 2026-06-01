@@ -14,7 +14,10 @@ import { Extension, Uri } from '../../../vscodeTypes';
 import { API, RepositoryDescription } from '../../githubPullRequest';
 import { GitHubPullRequestTitleAndDescriptionGenerator } from '../../prompt/node/githubPullRequestTitleAndDescriptionGenerator';
 import { GitHubPullRequestReviewerCommentsProvider } from '../../review/node/githubPullRequestReviewerCommentsProvider';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 
 export class GitHubPullRequestProviders implements Disposable {
 	private gitHubExtensionApi: API | undefined;
@@ -22,10 +25,13 @@ export class GitHubPullRequestProviders implements Disposable {
 
 	constructor(
 		@ILogService protected readonly logService: ILogService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IReviewService private readonly reviewService: IReviewService,
-		@IExtensionsService private readonly extensionService: IExtensionsService,
-		@IConfigurationService private _configurationService: IConfigurationService,
+		@IExtensionsService
+		private readonly extensionService: IExtensionsService,
+		@IConfigurationService
+		private _configurationService: IConfigurationService,
 	) {
 		this.initializeGitHubPRExtensionApi();
 	}
@@ -34,7 +40,9 @@ export class GitHubPullRequestProviders implements Disposable {
 	}
 
 	private getExtension(): Extension<API> | undefined {
-		return this.extensionService.getExtension('github.vscode-pull-request-github');
+		return this.extensionService.getExtension(
+			'github.vscode-pull-request-github',
+		);
 	}
 
 	private initializeGitHubPRExtensionApi() {
@@ -43,7 +51,9 @@ export class GitHubPullRequestProviders implements Disposable {
 		const initialize = async () => {
 			if (githubPRExtension) {
 				const extension = await githubPRExtension!.activate();
-				this.logService.info('Successfully activated the GitHub.vscode-pull-request-github extension.');
+				this.logService.info(
+					'Successfully activated the GitHub.vscode-pull-request-github extension.',
+				);
 
 				this.gitHubExtensionApi = extension;
 				this.registerTitleAndDescriptionProvider();
@@ -54,7 +64,9 @@ export class GitHubPullRequestProviders implements Disposable {
 		if (githubPRExtension) {
 			initialize();
 		} else {
-			this.logService.info('GitHub.vscode-pull-request-github extension is not yet activated.');
+			this.logService.info(
+				'GitHub.vscode-pull-request-github extension is not yet activated.',
+			);
 
 			const listener = this.extensionService.onDidChange(() => {
 				githubPRExtension = this.getExtension();
@@ -66,31 +78,52 @@ export class GitHubPullRequestProviders implements Disposable {
 			this.disposables.add(listener);
 		}
 
-		this.disposables.add(this._configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(ConfigKey.ReviewAgent.fullyQualifiedId)) {
-				this.registerReviewerCommentsProvider();
-			}
-		}));
+		this.disposables.add(
+			this._configurationService.onDidChangeConfiguration((e) => {
+				if (
+					e.affectsConfiguration(
+						ConfigKey.ReviewAgent.fullyQualifiedId,
+					)
+				) {
+					this.registerReviewerCommentsProvider();
+				}
+			}),
+		);
 	}
 
-	private titleAndDescriptionProvider: GitHubPullRequestTitleAndDescriptionGenerator | undefined;
+	private titleAndDescriptionProvider:
+		| GitHubPullRequestTitleAndDescriptionGenerator
+		| undefined;
 	private async registerTitleAndDescriptionProvider() {
 		if (!this.gitHubExtensionApi) {
 			return;
 		}
 		try {
 			if (!this.titleAndDescriptionProvider) {
-				this.titleAndDescriptionProvider = this.disposables.add(this.instantiationService.createInstance(GitHubPullRequestTitleAndDescriptionGenerator));
+				this.titleAndDescriptionProvider = this.disposables.add(
+					this.instantiationService.createInstance(
+						GitHubPullRequestTitleAndDescriptionGenerator,
+					),
+				);
 			}
 			// This string "Copilot" needs to be in here. It's how we an tell which provider to use in the PR extension.
-			this.disposables.add(this.gitHubExtensionApi.registerTitleAndDescriptionProvider(l10n.t('Generate with Copilot'), this.titleAndDescriptionProvider));
-			this.logService.info('Successfully registered GitHub PR title and description provider.');
+			this.disposables.add(
+				this.gitHubExtensionApi.registerTitleAndDescriptionProvider(
+					l10n.t('Generate with Copilot'),
+					this.titleAndDescriptionProvider,
+				),
+			);
+			this.logService.info(
+				'Successfully registered GitHub PR title and description provider.',
+			);
 		} catch (e) {
 			// Catch errors in case there's a breaking API change.
 		}
 	}
 
-	private reviewerCommentsProvider: GitHubPullRequestReviewerCommentsProvider | undefined;
+	private reviewerCommentsProvider:
+		| GitHubPullRequestReviewerCommentsProvider
+		| undefined;
 	private reviewerCommentsRegistration: Disposable | undefined;
 	private async registerReviewerCommentsProvider() {
 		if (!this.gitHubExtensionApi) {
@@ -111,17 +144,28 @@ export class GitHubPullRequestProviders implements Disposable {
 
 		try {
 			if (!this.reviewerCommentsProvider) {
-				this.reviewerCommentsProvider = this.instantiationService.createInstance(GitHubPullRequestReviewerCommentsProvider);
+				this.reviewerCommentsProvider =
+					this.instantiationService.createInstance(
+						GitHubPullRequestReviewerCommentsProvider,
+					);
 			}
-			this.reviewerCommentsRegistration = this.gitHubExtensionApi.registerReviewerCommentsProvider(l10n.t('Copilot'), this.reviewerCommentsProvider);
+			this.reviewerCommentsRegistration =
+				this.gitHubExtensionApi.registerReviewerCommentsProvider(
+					l10n.t('Copilot'),
+					this.reviewerCommentsProvider,
+				);
 			this.disposables.add(this.reviewerCommentsRegistration);
-			this.logService.info('Successfully registered GitHub PR reviewer comments provider.');
+			this.logService.info(
+				'Successfully registered GitHub PR reviewer comments provider.',
+			);
 		} catch (e) {
 			// Catch errors in case there's a breaking API change.
 		}
 	}
 
-	public async getRepositoryDescription(uri: Uri): Promise<RepositoryDescription | undefined> {
+	public async getRepositoryDescription(
+		uri: Uri,
+	): Promise<RepositoryDescription | undefined> {
 		try {
 			// Wait for gitHubExtensionApi to be initialized if not already
 			if (!this.gitHubExtensionApi) {
@@ -131,7 +175,9 @@ export class GitHubPullRequestProviders implements Disposable {
 					const extension = await githubPRExtension.activate();
 					this.gitHubExtensionApi = extension;
 				} else {
-					this.logService.warn('GitHub.vscode-pull-request-github extension API is not available.');
+					this.logService.warn(
+						'GitHub.vscode-pull-request-github extension API is not available.',
+					);
 					return undefined;
 				}
 			}
@@ -142,7 +188,10 @@ export class GitHubPullRequestProviders implements Disposable {
 
 			return await this.gitHubExtensionApi.getRepositoryDescription(uri);
 		} catch (error) {
-			this.logService.error('Failed to get repository description from GitHub.vscode-pull-request-github extension.', error);
+			this.logService.error(
+				'Failed to get repository description from GitHub.vscode-pull-request-github extension.',
+				error,
+			);
 			return undefined;
 		}
 	}

@@ -3,27 +3,42 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { coalesce } from '../../../../../base/common/arrays.js';
-import { IMarkdownString, MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { Disposable, dispose, isDisposable, MutableDisposable } from '../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { IRange, Range } from '../../../../../editor/common/core/range.js';
-import { IDecorationOptions } from '../../../../../editor/common/editorCommon.js';
-import { Command, isLocation } from '../../../../../editor/common/languages.js';
-import { Action2, registerAction2 } from '../../../../../platform/actions/common/actions.js';
-import { ICommandService } from '../../../../../platform/commands/common/commands.js';
-import { ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
-import { ILabelService } from '../../../../../platform/label/common/label.js';
-import { IChatRequestVariableValue, IDynamicVariable } from '../../common/attachments/chatVariables.js';
-import { IChatWidget } from '../chat.js';
-import { IChatWidgetContrib } from '../widget/chatWidget.js';
+import { coalesce } from "../../../../../base/common/arrays.js";
+import {
+	IMarkdownString,
+	MarkdownString,
+} from "../../../../../base/common/htmlContent.js";
+import {
+	Disposable,
+	dispose,
+	isDisposable,
+	MutableDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { IRange, Range } from "../../../../../editor/common/core/range.js";
+import { IDecorationOptions } from "../../../../../editor/common/editorCommon.js";
+import { Command, isLocation } from "../../../../../editor/common/languages.js";
+import {
+	Action2,
+	registerAction2,
+} from "../../../../../platform/actions/common/actions.js";
+import { ICommandService } from "../../../../../platform/commands/common/commands.js";
+import { ServicesAccessor } from "../../../../../platform/instantiation/common/instantiation.js";
+import { ILabelService } from "../../../../../platform/label/common/label.js";
+import {
+	IChatRequestVariableValue,
+	IDynamicVariable,
+} from "../../common/attachments/chatVariables.js";
+import { IChatWidget } from "../chat.js";
+import { IChatWidgetContrib } from "../widget/chatWidget.js";
 
-export const dynamicVariableDecorationType = 'chat-dynamic-variable';
+export const dynamicVariableDecorationType = "chat-dynamic-variable";
 
-
-
-export class ChatDynamicVariableModel extends Disposable implements IChatWidgetContrib {
-	public static readonly ID = 'chatDynamicVariableModel';
+export class ChatDynamicVariableModel
+	extends Disposable
+	implements IChatWidgetContrib
+{
+	public static readonly ID = "chatDynamicVariableModel";
 
 	private _variables: IDynamicVariable[] = [];
 
@@ -46,72 +61,77 @@ export class ChatDynamicVariableModel extends Disposable implements IChatWidgetC
 		super();
 
 		this._subscribeToEditor();
-		this._register(widget.onDidChangeActiveInputEditor(() => {
-			this._subscribeToEditor();
-			this.updateDecorations();
-		}));
+		this._register(
+			widget.onDidChangeActiveInputEditor(() => {
+				this._subscribeToEditor();
+				this.updateDecorations();
+			}),
+		);
 	}
 
 	private _subscribeToEditor(): void {
-		this._editorListener.value = this.widget.inputEditor.onDidChangeModelContent(e => {
+		this._editorListener.value =
+			this.widget.inputEditor.onDidChangeModelContent((e) => {
+				const removed: IDynamicVariable[] = [];
+				let didChange = false;
 
-			const removed: IDynamicVariable[] = [];
-			let didChange = false;
+				// Don't mutate entries in _variables, since they will be returned from the getter
+				this._variables = coalesce(
+					this._variables.map((ref, idx): IDynamicVariable | null => {
+						const model = this.widget.inputEditor.getModel();
 
-			// Don't mutate entries in _variables, since they will be returned from the getter
-			this._variables = coalesce(this._variables.map((ref, idx): IDynamicVariable | null => {
-				const model = this.widget.inputEditor.getModel();
+						if (!model) {
+							removed.push(ref);
+							return null;
+						}
 
-				if (!model) {
-					removed.push(ref);
-					return null;
-				}
+						const data = this.decorationData[idx];
+						if (!data) {
+							removed.push(ref);
+							return null;
+						}
+						const newRange = model.getDecorationRange(data.id);
 
-				const data = this.decorationData[idx];
-				if (!data) {
-					removed.push(ref);
-					return null;
-				}
-				const newRange = model.getDecorationRange(data.id);
+						if (!newRange) {
+							// gone
+							removed.push(ref);
+							return null;
+						}
 
-				if (!newRange) {
-					// gone
-					removed.push(ref);
-					return null;
-				}
+						const newText = model.getValueInRange(newRange);
+						if (newText !== data.text) {
+							this.widget.inputEditor.executeEdits(this.id, [
+								{
+									range: newRange,
+									text: "",
+								},
+							]);
+							this.widget.refreshParsedInput();
 
-				const newText = model.getValueInRange(newRange);
-				if (newText !== data.text) {
+							removed.push(ref);
+							return null;
+						}
 
-					this.widget.inputEditor.executeEdits(this.id, [{
-						range: newRange,
-						text: '',
-					}]);
+						if (newRange.equalsRange(ref.range)) {
+							// all good
+							return ref;
+						}
+
+						didChange = true;
+
+						return { ...ref, range: newRange };
+					}),
+				);
+
+				// cleanup disposable variables
+				dispose(removed.filter(isDisposable));
+
+				if (didChange || removed.length > 0) {
 					this.widget.refreshParsedInput();
-
-					removed.push(ref);
-					return null;
 				}
 
-				if (newRange.equalsRange(ref.range)) {
-					// all good
-					return ref;
-				}
-
-				didChange = true;
-
-				return { ...ref, range: newRange };
-			}));
-
-			// cleanup disposable variables
-			dispose(removed.filter(isDisposable));
-
-			if (didChange || removed.length > 0) {
-				this.widget.refreshParsedInput();
-			}
-
-			this.updateDecorations();
-		});
+				this.updateDecorations();
+			});
 	}
 
 	getInputState(contrib: Record<string, unknown>): void {
@@ -153,30 +173,46 @@ export class ChatDynamicVariableModel extends Disposable implements IChatWidgetC
 			return;
 		}
 
-		const validVariables = this._variables.filter(v => isValidEditorRange(v.range));
-		const decorationIds = this.widget.inputEditor.setDecorationsByType('chat', dynamicVariableDecorationType, validVariables.map((r): IDecorationOptions => ({
-			range: r.range,
-			hoverMessage: this.getHoverForReference(r)
-		})));
+		const validVariables = this._variables.filter((v) =>
+			isValidEditorRange(v.range),
+		);
+		const decorationIds = this.widget.inputEditor.setDecorationsByType(
+			"chat",
+			dynamicVariableDecorationType,
+			validVariables.map(
+				(r): IDecorationOptions => ({
+					range: r.range,
+					hoverMessage: this.getHoverForReference(r),
+				}),
+			),
+		);
 
 		this._variables = validVariables.slice(0, decorationIds.length);
 		this.decorationData = [];
 		for (let i = 0; i < decorationIds.length; i++) {
 			this.decorationData.push({
 				id: decorationIds[i],
-				text: model.getValueInRange(this._variables[i].range)
+				text: model.getValueInRange(this._variables[i].range),
 			});
 		}
 	}
 
-	private getHoverForReference(ref: IDynamicVariable): IMarkdownString | undefined {
+	private getHoverForReference(
+		ref: IDynamicVariable,
+	): IMarkdownString | undefined {
 		const value = ref.data;
 		if (URI.isUri(value)) {
-			return new MarkdownString(this.labelService.getUriLabel(value, { relative: true }));
+			return new MarkdownString(
+				this.labelService.getUriLabel(value, { relative: true }),
+			);
 		} else if (isLocation(value)) {
-			const prefix = ref.fullName ? ` ${ref.fullName}` : '';
+			const prefix = ref.fullName ? ` ${ref.fullName}` : "";
 			const rangeString = `#${value.range.startLineNumber}-${value.range.endLineNumber}`;
-			return new MarkdownString(prefix + this.labelService.getUriLabel(value.uri, { relative: true }) + rangeString);
+			return new MarkdownString(
+				prefix +
+					this.labelService.getUriLabel(value.uri, { relative: true }) +
+					rangeString,
+			);
 		} else {
 			return undefined;
 		}
@@ -204,15 +240,22 @@ export class ChatDynamicVariableModel extends Disposable implements IChatWidgetC
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isDynamicVariable(obj: any): obj is IDynamicVariable {
-	return obj &&
-		typeof obj.id === 'string' &&
+	return (
+		obj &&
+		typeof obj.id === "string" &&
 		Range.isIRange(obj.range) &&
 		isValidEditorRange(obj.range) &&
-		'data' in obj;
+		"data" in obj
+	);
 }
 
 function isValidEditorRange(range: IRange): boolean {
-	if (range.startLineNumber < 1 || range.endLineNumber < 1 || range.startColumn < 1 || range.endColumn < 1) {
+	if (
+		range.startLineNumber < 1 ||
+		range.endLineNumber < 1 ||
+		range.startColumn < 1 ||
+		range.endColumn < 1
+	) {
 		return false;
 	}
 
@@ -220,14 +263,15 @@ function isValidEditorRange(range: IRange): boolean {
 		return false;
 	}
 
-	if (range.startLineNumber === range.endLineNumber && range.startColumn >= range.endColumn) {
+	if (
+		range.startLineNumber === range.endLineNumber &&
+		range.startColumn >= range.endColumn
+	) {
 		return false;
 	}
 
 	return true;
 }
-
-
 
 export interface IAddDynamicVariableContext {
 	id: string;
@@ -238,19 +282,19 @@ export interface IAddDynamicVariableContext {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isAddDynamicVariableContext(context: any): context is IAddDynamicVariableContext {
-	return 'widget' in context &&
-		'range' in context &&
-		'variableData' in context;
+function isAddDynamicVariableContext(
+	context: any,
+): context is IAddDynamicVariableContext {
+	return "widget" in context && "range" in context && "variableData" in context;
 }
 
 export class AddDynamicVariableAction extends Action2 {
-	static readonly ID = 'workbench.action.chat.addDynamicVariable';
+	static readonly ID = "workbench.action.chat.addDynamicVariable";
 
 	constructor() {
 		super({
 			id: AddDynamicVariableAction.ID,
-			title: '' // not displayed
+			title: "", // not displayed
 		});
 	}
 
@@ -265,37 +309,58 @@ export class AddDynamicVariableAction extends Action2 {
 
 		const doCleanup = () => {
 			// Failed, remove the dangling variable prefix
-			context.widget.inputEditor.executeEdits('chatInsertDynamicVariableWithArguments', [{ range: context.range, text: `` }]);
+			context.widget.inputEditor.executeEdits(
+				"chatInsertDynamicVariableWithArguments",
+				[{ range: context.range, text: `` }],
+			);
 		};
 
 		// If this completion item has no command, return it directly
 		if (context.command) {
 			// Invoke the command on this completion item along with its args and return the result
 			const commandService = accessor.get(ICommandService);
-			const selection: string | undefined = await commandService.executeCommand(context.command.id, ...(context.command.arguments ?? []));
+			const selection: string | undefined = await commandService.executeCommand(
+				context.command.id,
+				...(context.command.arguments ?? []),
+			);
 			if (!selection) {
 				doCleanup();
 				return;
 			}
 
 			// Compute new range and variableData
-			const insertText = ':' + selection;
-			const insertRange = new Range(range.startLineNumber, range.endColumn, range.endLineNumber, range.endColumn + insertText.length);
-			range = new Range(range.startLineNumber, range.startColumn, range.endLineNumber, range.endColumn + insertText.length);
+			const insertText = ":" + selection;
+			const insertRange = new Range(
+				range.startLineNumber,
+				range.endColumn,
+				range.endLineNumber,
+				range.endColumn + insertText.length,
+			);
+			range = new Range(
+				range.startLineNumber,
+				range.startColumn,
+				range.endLineNumber,
+				range.endColumn + insertText.length,
+			);
 			const editor = context.widget.inputEditor;
-			const success = editor.executeEdits('chatInsertDynamicVariableWithArguments', [{ range: insertRange, text: insertText + ' ' }]);
+			const success = editor.executeEdits(
+				"chatInsertDynamicVariableWithArguments",
+				[{ range: insertRange, text: insertText + " " }],
+			);
 			if (!success) {
 				doCleanup();
 				return;
 			}
 		}
 
-		context.widget.getContrib<ChatDynamicVariableModel>(ChatDynamicVariableModel.ID)?.addReference({
-			id: context.id,
-			range: range,
-			isFile: true,
-			data: variableData
-		});
+		context.widget
+			.getContrib<ChatDynamicVariableModel>(ChatDynamicVariableModel.ID)
+			?.addReference({
+				id: context.id,
+				range: range,
+				isFile: true,
+				data: variableData,
+			});
 	}
 }
 registerAction2(AddDynamicVariableAction);

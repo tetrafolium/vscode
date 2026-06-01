@@ -22,19 +22,27 @@ interface IBuildMetadata {
 }
 
 class Builds {
-
-	async fetchBuilds(runtime = Runtime.WebLocal, goodCommit?: string, badCommit?: string, releasedOnly?: boolean): Promise<IBuild[]> {
-
+	async fetchBuilds(
+		runtime = Runtime.WebLocal,
+		goodCommit?: string,
+		badCommit?: string,
+		releasedOnly?: boolean,
+	): Promise<IBuild[]> {
 		// Fetch all released insider builds
 		const allBuilds = await this.fetchAllBuilds(runtime, releasedOnly);
 
-		let goodCommitIndex = allBuilds.length - 1;  // last build (oldest) by default
-		let badCommitIndex = 0;                      // first build (newest) by default
+		let goodCommitIndex = allBuilds.length - 1; // last build (oldest) by default
+		let badCommitIndex = 0; // first build (newest) by default
 
 		if (typeof goodCommit === 'string') {
-			const candidateGoodCommitIndex = this.indexOf(goodCommit, allBuilds);
+			const candidateGoodCommitIndex = this.indexOf(
+				goodCommit,
+				allBuilds,
+			);
 			if (typeof candidateGoodCommitIndex !== 'number') {
-				throw new Error(`Provided good commit ${chalk.green(goodCommit)} was not found in the list of insiders builds. Try running with ${chalk.green('--releasedOnly')} to support older builds.`);
+				throw new Error(
+					`Provided good commit ${chalk.green(goodCommit)} was not found in the list of insiders builds. Try running with ${chalk.green('--releasedOnly')} to support older builds.`,
+				);
 			}
 
 			goodCommitIndex = candidateGoodCommitIndex;
@@ -43,18 +51,25 @@ class Builds {
 		if (typeof badCommit === 'string') {
 			const candidateBadCommitIndex = this.indexOf(badCommit, allBuilds);
 			if (typeof candidateBadCommitIndex !== 'number') {
-				throw new Error(`Provided bad commit ${chalk.green(badCommit)} was not found in the list of insiders builds. Try running with ${chalk.green('--releasedOnly')} to support older builds.`);
+				throw new Error(
+					`Provided bad commit ${chalk.green(badCommit)} was not found in the list of insiders builds. Try running with ${chalk.green('--releasedOnly')} to support older builds.`,
+				);
 			}
 
 			badCommitIndex = candidateBadCommitIndex;
 		}
 
 		if (badCommitIndex >= goodCommitIndex) {
-			throw new Error(`Provided bad commit ${chalk.green(badCommit)} cannot be older or same as good commit ${chalk.green(goodCommit)}.`);
+			throw new Error(
+				`Provided bad commit ${chalk.green(badCommit)} cannot be older or same as good commit ${chalk.green(goodCommit)}.`,
+			);
 		}
 
 		// Build a range based on the bad and good commits if any
-		const buildsInRange = allBuilds.slice(badCommitIndex, goodCommitIndex + 1);
+		const buildsInRange = allBuilds.slice(
+			badCommitIndex,
+			goodCommitIndex + 1,
+		);
 
 		// Drop those builds that are not on main branch
 		return buildsInRange;
@@ -71,12 +86,17 @@ class Builds {
 		return undefined;
 	}
 
-	private async fetchAllBuilds(runtime: Runtime, releasedOnly = false): Promise<IBuild[]> {
+	private async fetchAllBuilds(
+		runtime: Runtime,
+		releasedOnly = false,
+	): Promise<IBuild[]> {
 		const url = `https://update.code.visualstudio.com/api/commits/insider/${this.getBuildApiName(runtime)}?released=${releasedOnly}`;
-		console.log(`${chalk.gray('[build]')} fetching all builds from ${chalk.green(url)}...`);
+		console.log(
+			`${chalk.gray('[build]')} fetching all builds from ${chalk.green(url)}...`,
+		);
 		const commits = await jsonGet<Array<string>>(url);
 
-		return commits.map(commit => ({ commit, runtime }));
+		return commits.map((commit) => ({ commit, runtime }));
 	}
 
 	private getBuildApiName(runtime: Runtime): string {
@@ -113,7 +133,10 @@ class Builds {
 		}
 	}
 
-	async installBuild({ runtime, commit }: IBuild, options?: { forceReDownload: boolean }): Promise<void> {
+	async installBuild(
+		{ runtime, commit }: IBuild,
+		options?: { forceReDownload: boolean },
+	): Promise<void> {
 		const buildName = await this.getBuildArchiveName({ runtime, commit });
 
 		const path = join(getBuildPath(commit), buildName);
@@ -121,42 +144,56 @@ class Builds {
 		const pathExists = await exists(path);
 		if (pathExists && !options?.forceReDownload) {
 			if (LOGGER.verbose) {
-				console.log(`${chalk.gray('[build]')} using ${chalk.green(path)} for the next build to try`);
+				console.log(
+					`${chalk.gray('[build]')} using ${chalk.green(path)} for the next build to try`,
+				);
 			}
 
 			return; // assume the build is cached
 		}
 
 		if (pathExists && options?.forceReDownload) {
-			console.log(`${chalk.gray('[build]')} deleting ${chalk.green(getBuildPath(commit))} and retrying download`);
+			console.log(
+				`${chalk.gray('[build]')} deleting ${chalk.green(getBuildPath(commit))} and retrying download`,
+			);
 			rmSync(getBuildPath(commit), { recursive: true });
 		}
 
 		// Download
 		const url = `https://update.code.visualstudio.com/commit:${commit}/${this.getPlatformName(runtime)}/insider`;
-		console.log(`${chalk.gray('[build]')} downloading build from ${chalk.green(url)}...`);
+		console.log(
+			`${chalk.gray('[build]')} downloading build from ${chalk.green(url)}...`,
+		);
 		await fileGet(url, path);
 
-		const sha256 = (await this.fetchBuildMeta({ runtime, commit })).sha256hash;
+		const sha256 = (await this.fetchBuildMeta({ runtime, commit }))
+			.sha256hash;
 		console.log(`${chalk.gray('[build]')} validating build sha256 hash...`);
-
 
 		// Unzip
 		let destination: string;
-		if (runtime === Runtime.DesktopLocal && platform === Platform.WindowsX64 || platform === Platform.WindowsArm) {
+		if (
+			(runtime === Runtime.DesktopLocal &&
+				platform === Platform.WindowsX64) ||
+			platform === Platform.WindowsArm
+		) {
 			// zip does not contain a single top level folder to use...
 			destination = path.substring(0, path.lastIndexOf('.zip'));
 		} else {
 			// zip contains a single top level folder to use
 			destination = dirname(path);
 		}
-		console.log(`${chalk.gray('[build]')} unzipping build to ${chalk.green(destination)}...`);
+		console.log(
+			`${chalk.gray('[build]')} unzipping build to ${chalk.green(destination)}...`,
+		);
 		await unzip(path, destination);
 	}
 
-	private async getBuildArchiveName({ runtime, commit }: IBuild): Promise<string> {
+	private async getBuildArchiveName({
+		runtime,
+		commit,
+	}: IBuild): Promise<string> {
 		switch (runtime) {
-
 			// We currently do not have ARM enabled servers
 			// so we fallback to x64 until we ship ARM.
 			case Runtime.WebLocal:
@@ -187,12 +224,21 @@ class Builds {
 						return 'VSCode-darwin-arm64.zip';
 					case Platform.LinuxX64:
 					case Platform.LinuxArm:
-						return (await this.fetchBuildMeta({ runtime, commit })).url.split('/').pop()!; // e.g. https://az764295.vo.msecnd.net/insider/807bf598bea406dcb272a9fced54697986e87768/code-insider-x64-1639979337.tar.gz
+						return (
+							await this.fetchBuildMeta({ runtime, commit })
+						).url
+							.split('/')
+							.pop()!; // e.g. https://az764295.vo.msecnd.net/insider/807bf598bea406dcb272a9fced54697986e87768/code-insider-x64-1639979337.tar.gz
 					case Platform.WindowsX64:
 					case Platform.WindowsArm: {
-						const buildMeta = await this.fetchBuildMeta({ runtime, commit });
+						const buildMeta = await this.fetchBuildMeta({
+							runtime,
+							commit,
+						});
 
-						return platform === Platform.WindowsX64 ? `VSCode-win32-x64-${buildMeta.productVersion}.zip` : `VSCode-win32-arm64-${buildMeta.productVersion}.zip`;
+						return platform === Platform.WindowsX64
+							? `VSCode-win32-x64-${buildMeta.productVersion}.zip`
+							: `VSCode-win32-arm64-${buildMeta.productVersion}.zip`;
 					}
 				}
 		}
@@ -229,9 +275,14 @@ class Builds {
 						return 'VSCode-linux-arm64';
 					case Platform.WindowsX64:
 					case Platform.WindowsArm: {
-						const buildMeta = await this.fetchBuildMeta({ runtime, commit });
+						const buildMeta = await this.fetchBuildMeta({
+							runtime,
+							commit,
+						});
 
-						return platform === Platform.WindowsX64 ? `VSCode-win32-x64-${buildMeta.productVersion}` : `VSCode-win32-arm64-${buildMeta.productVersion}`;
+						return platform === Platform.WindowsX64
+							? `VSCode-win32-x64-${buildMeta.productVersion}`
+							: `VSCode-win32-arm64-${buildMeta.productVersion}`;
 					}
 				}
 		}
@@ -274,8 +325,13 @@ class Builds {
 		}
 	}
 
-	private fetchBuildMeta({ runtime, commit }: IBuild): Promise<IBuildMetadata> {
-		return jsonGet<IBuildMetadata>(`https://update.code.visualstudio.com/api/versions/commit:${commit}/${this.getBuildApiName(runtime)}/insider`);
+	private fetchBuildMeta({
+		runtime,
+		commit,
+	}: IBuild): Promise<IBuildMetadata> {
+		return jsonGet<IBuildMetadata>(
+			`https://update.code.visualstudio.com/api/versions/commit:${commit}/${this.getBuildApiName(runtime)}/insider`,
+		);
 	}
 
 	async getBuildExecutable({ runtime, commit }: IBuild): Promise<string> {
@@ -290,21 +346,39 @@ class Builds {
 					case Platform.MacOSArm:
 					case Platform.LinuxX64:
 					case Platform.LinuxArm: {
-						const oldLocation = join(buildPath, buildName, 'server.sh');
+						const oldLocation = join(
+							buildPath,
+							buildName,
+							'server.sh',
+						);
 						if (await exists(oldLocation)) {
 							return oldLocation; // only valid until 1.64.x
 						}
 
-						return join(buildPath, buildName, 'bin', 'code-server-insiders');
+						return join(
+							buildPath,
+							buildName,
+							'bin',
+							'code-server-insiders',
+						);
 					}
 					case Platform.WindowsX64:
 					case Platform.WindowsArm: {
-						const oldLocation = join(buildPath, buildName, 'server.cmd');
+						const oldLocation = join(
+							buildPath,
+							buildName,
+							'server.cmd',
+						);
 						if (await exists(oldLocation)) {
 							return oldLocation; // only valid until 1.64.x
 						}
 
-						return join(buildPath, buildName, 'bin', 'code-server-insiders.cmd');
+						return join(
+							buildPath,
+							buildName,
+							'bin',
+							'code-server-insiders.cmd',
+						);
 					}
 				}
 
@@ -312,13 +386,23 @@ class Builds {
 				switch (platform) {
 					case Platform.MacOSX64:
 					case Platform.MacOSArm:
-						return join(buildPath, buildName, 'Contents', 'MacOS', 'Electron')
+						return join(
+							buildPath,
+							buildName,
+							'Contents',
+							'MacOS',
+							'Electron',
+						);
 					case Platform.LinuxX64:
 					case Platform.LinuxArm:
-						return join(buildPath, buildName, 'code-insiders')
+						return join(buildPath, buildName, 'code-insiders');
 					case Platform.WindowsX64:
 					case Platform.WindowsArm:
-						return join(buildPath, buildName, 'Code - Insiders.exe')
+						return join(
+							buildPath,
+							buildName,
+							'Code - Insiders.exe',
+						);
 				}
 		}
 	}

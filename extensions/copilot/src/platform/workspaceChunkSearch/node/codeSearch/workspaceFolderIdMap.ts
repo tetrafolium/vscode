@@ -12,22 +12,22 @@ const maxPrefixLength = 8;
 
 interface StoredIdMap {
 	/** Maps folder URI string -> assigned id */
-	readonly entries: ReadonlyArray<{ readonly uri: string; readonly id: string }>;
+	readonly entries: ReadonlyArray<{
+		readonly uri: string;
+		readonly id: string;
+	}>;
 }
 
 /**
  * Generates short, unique, persistent ids for workspace folder URIs.
  */
 export class WorkspaceFolderIdMap {
-
 	private static readonly _storageKey = 'workspaceFolderIds';
 
 	private readonly _idByUri = new ResourceMap<string>();
 	private readonly _usedIds = new Set<string>();
 
-	constructor(
-		private readonly _workspaceState: Memento,
-	) {
+	constructor(private readonly _workspaceState: Memento) {
 		this._loadFromStorage();
 	}
 
@@ -65,7 +65,8 @@ export class WorkspaceFolderIdMap {
 		// Resolve collision by appending a numeric suffix
 		for (let i = 0; ; i++) {
 			const suffix = String(i);
-			const candidate = base.slice(0, maxPrefixLength - suffix.length) + suffix;
+			const candidate =
+				base.slice(0, maxPrefixLength - suffix.length) + suffix;
 			if (!this._usedIds.has(candidate)) {
 				return candidate;
 			}
@@ -73,7 +74,9 @@ export class WorkspaceFolderIdMap {
 	}
 
 	private _loadFromStorage(): void {
-		const stored = this._workspaceState.get<StoredIdMap>(WorkspaceFolderIdMap._storageKey);
+		const stored = this._workspaceState.get<StoredIdMap>(
+			WorkspaceFolderIdMap._storageKey,
+		);
 		if (!stored?.entries) {
 			return;
 		}
@@ -89,7 +92,10 @@ export class WorkspaceFolderIdMap {
 
 	private _saveToStorage(): void {
 		const data: StoredIdMap = {
-			entries: [...this._idByUri].map(([uri, id]) => ({ uri: uri.toString(), id })),
+			entries: [...this._idByUri].map(([uri, id]) => ({
+				uri: uri.toString(),
+				id,
+			})),
 		};
 		this._workspaceState.update(WorkspaceFolderIdMap._storageKey, data);
 	}

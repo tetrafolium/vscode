@@ -19,33 +19,51 @@ interface IGenerateFileContentsScenario {
 	validate?: (response: string) => void;
 }
 
-function generateFileContentsPromptTest(scenario: IGenerateFileContentsScenario, language: string) {
-	stest({ description: `File contents generation: ${scenario.args.FILEPATH} in ${scenario.args.PROJECT_DESCRIPTION}`, language }, async (testingServiceCollection) => {
-		const accessor = testingServiceCollection.createTestingAccessor();
-		const fileContentGenerator = accessor.get(IInstantiationService).createInstance(FileContentsGenerator);
-		const promptArgs: NewWorkspaceContentsPromptProps = {
-			query: scenario.args.PROJECT_DESCRIPTION,
-			fileTreeStr: scenario.args.PROJECT_TREE_STRUCTURE,
-			projectSpecification: scenario.args.PROJECT_SPECIFICATION,
-			filePath: scenario.args.FILEPATH,
-			history: [],
-		};
+function generateFileContentsPromptTest(
+	scenario: IGenerateFileContentsScenario,
+	language: string,
+) {
+	stest(
+		{
+			description: `File contents generation: ${scenario.args.FILEPATH} in ${scenario.args.PROJECT_DESCRIPTION}`,
+			language,
+		},
+		async (testingServiceCollection) => {
+			const accessor = testingServiceCollection.createTestingAccessor();
+			const fileContentGenerator = accessor
+				.get(IInstantiationService)
+				.createInstance(FileContentsGenerator);
+			const promptArgs: NewWorkspaceContentsPromptProps = {
+				query: scenario.args.PROJECT_DESCRIPTION,
+				fileTreeStr: scenario.args.PROJECT_TREE_STRUCTURE,
+				projectSpecification: scenario.args.PROJECT_SPECIFICATION,
+				filePath: scenario.args.FILEPATH,
+				history: [],
+			};
 
-		const result = await fileContentGenerator.generate(promptArgs, CancellationToken.None);
-		const trimmedResult = result.trim();
+			const result = await fileContentGenerator.generate(
+				promptArgs,
+				CancellationToken.None,
+			);
+			const trimmedResult = result.trim();
 
-		// Generated file contents should never be empty
-		assert.ok(trimmedResult.length > 0);
+			// Generated file contents should never be empty
+			assert.ok(trimmedResult.length > 0);
 
-		// Generated file contents should never start with backticks
-		assert.ok(!trimmedResult.startsWith('```'));
+			// Generated file contents should never start with backticks
+			assert.ok(!trimmedResult.startsWith('```'));
 
-		// The AI shouldn't refuse to generate file contents
-		assert.ok(!trimmedResult.startsWith('Sorry, I cannot generate file contents'));
+			// The AI shouldn't refuse to generate file contents
+			assert.ok(
+				!trimmedResult.startsWith(
+					'Sorry, I cannot generate file contents',
+				),
+			);
 
-		// Perform additional scenario-specific validation if provided
-		scenario.validate?.(trimmedResult);
-	});
+			// Perform additional scenario-specific validation if provided
+			scenario.validate?.(trimmedResult);
+		},
+	);
 }
 
 namespace TypeScript {
@@ -74,7 +92,8 @@ namespace TypeScript {
 }
 
 namespace PythonDjango {
-	export const PROJECT_DESCRIPTION = 'python Django backend that uses REST API to connect to Azure CosmosDB NoSQL';
+	export const PROJECT_DESCRIPTION =
+		'python Django backend that uses REST API to connect to Azure CosmosDB NoSQL';
 	export const PROJECT_TREE_STRUCTURE = `
 	my-django-cosmosdb-project
 	├── myapp
@@ -124,7 +143,8 @@ namespace PythonDjango {
 }
 
 namespace CPP {
-	export const PROJECT_DESCRIPTION = 'A nodejs native node module that has a fib function in C++ exported to TS using NAPI. Include a tsconfig.json. The fib function takes an integer N as its argument.';
+	export const PROJECT_DESCRIPTION =
+		'A nodejs native node module that has a fib function in C++ exported to TS using NAPI. Include a tsconfig.json. The fib function takes an integer N as its argument.';
 	export const PROJECT_TREE_STRUCTURE = `
 my-node-module
 ├── src
@@ -160,95 +180,131 @@ my-node-module
 }
 
 ssuite({ title: 'new', subtitle: 'prompt', location: 'panel' }, () => {
-
 	// #region TypeScript
 
-	generateFileContentsPromptTest({
-		args: {
-			PROJECT_DESCRIPTION: TypeScript.PROJECT_DESCRIPTION,
-			PROJECT_TREE_STRUCTURE: TypeScript.PROJECT_TREE_STRUCTURE,
-			PROJECT_SPECIFICATION: TypeScript.PROJECT_SPECIFICATION,
-			FILEPATH: 'README.md',
+	generateFileContentsPromptTest(
+		{
+			args: {
+				PROJECT_DESCRIPTION: TypeScript.PROJECT_DESCRIPTION,
+				PROJECT_TREE_STRUCTURE: TypeScript.PROJECT_TREE_STRUCTURE,
+				PROJECT_SPECIFICATION: TypeScript.PROJECT_SPECIFICATION,
+				FILEPATH: 'README.md',
+			},
+			validate: (response: string) => {
+				assert.ok(
+					response.startsWith('#'),
+					`Generated README.md does not start with a #`,
+				);
+			},
 		},
-		validate: (response: string) => {
-			assert.ok(response.startsWith('#'), `Generated README.md does not start with a #`);
-		}
-	}, 'typescript');
+		'typescript',
+	);
 
-	generateFileContentsPromptTest({
-		args: {
-			PROJECT_DESCRIPTION: TypeScript.PROJECT_DESCRIPTION,
-			PROJECT_TREE_STRUCTURE: TypeScript.PROJECT_TREE_STRUCTURE,
-			PROJECT_SPECIFICATION: TypeScript.PROJECT_SPECIFICATION,
-			FILEPATH: 'package.json',
+	generateFileContentsPromptTest(
+		{
+			args: {
+				PROJECT_DESCRIPTION: TypeScript.PROJECT_DESCRIPTION,
+				PROJECT_TREE_STRUCTURE: TypeScript.PROJECT_TREE_STRUCTURE,
+				PROJECT_SPECIFICATION: TypeScript.PROJECT_SPECIFICATION,
+				FILEPATH: 'package.json',
+			},
+			validate: (response: string) => {
+				try {
+					JSON.parse(response);
+				} catch (ex) {
+					assert.fail(
+						`Generated package.json is not valid JSON: ${JSON.stringify(ex)}`,
+					);
+				}
+			},
 		},
-		validate: (response: string) => {
-			try {
-				JSON.parse(response);
-			} catch (ex) {
-				assert.fail(`Generated package.json is not valid JSON: ${JSON.stringify(ex)}`);
-			}
-		}
-	}, 'typescript');
+		'typescript',
+	);
 
-	generateFileContentsPromptTest({
-		args: {
-			PROJECT_DESCRIPTION: TypeScript.PROJECT_DESCRIPTION,
-			PROJECT_TREE_STRUCTURE: TypeScript.PROJECT_TREE_STRUCTURE,
-			PROJECT_SPECIFICATION: TypeScript.PROJECT_SPECIFICATION,
-			FILEPATH: 'src/app.ts',
-		}
-	}, 'typescript');
+	generateFileContentsPromptTest(
+		{
+			args: {
+				PROJECT_DESCRIPTION: TypeScript.PROJECT_DESCRIPTION,
+				PROJECT_TREE_STRUCTURE: TypeScript.PROJECT_TREE_STRUCTURE,
+				PROJECT_SPECIFICATION: TypeScript.PROJECT_SPECIFICATION,
+				FILEPATH: 'src/app.ts',
+			},
+		},
+		'typescript',
+	);
 
 	// #endregion
 
 	// #region Python
-	generateFileContentsPromptTest({
-		args: {
-			PROJECT_DESCRIPTION: PythonDjango.PROJECT_DESCRIPTION,
-			PROJECT_TREE_STRUCTURE: PythonDjango.PROJECT_TREE_STRUCTURE,
-			FILEPATH: 'myapp/__init__.py',
-			PROJECT_SPECIFICATION: PythonDjango.PROJECT_SPECIFICATION
+	generateFileContentsPromptTest(
+		{
+			args: {
+				PROJECT_DESCRIPTION: PythonDjango.PROJECT_DESCRIPTION,
+				PROJECT_TREE_STRUCTURE: PythonDjango.PROJECT_TREE_STRUCTURE,
+				FILEPATH: 'myapp/__init__.py',
+				PROJECT_SPECIFICATION: PythonDjango.PROJECT_SPECIFICATION,
+			},
+			validate: (response: string) => {
+				assert.ok(
+					response.includes(
+						'# This file is intentionally left blank.',
+					),
+					'Intentionally blank file does not contain the expected comment',
+				);
+			},
 		},
-		validate: (response: string) => {
-			assert.ok(response.includes('# This file is intentionally left blank.'), 'Intentionally blank file does not contain the expected comment');
-		}
-	}, 'python');
+		'python',
+	);
 
 	// This test currently always fails because the response hits the content filter
-	generateFileContentsPromptTest({
-		args: {
-			PROJECT_DESCRIPTION: PythonDjango.PROJECT_DESCRIPTION,
-			PROJECT_TREE_STRUCTURE: PythonDjango.PROJECT_TREE_STRUCTURE,
-			FILEPATH: 'myapp/manage.py',
-			PROJECT_SPECIFICATION: PythonDjango.PROJECT_SPECIFICATION
-		}
-	}, 'python');
+	generateFileContentsPromptTest(
+		{
+			args: {
+				PROJECT_DESCRIPTION: PythonDjango.PROJECT_DESCRIPTION,
+				PROJECT_TREE_STRUCTURE: PythonDjango.PROJECT_TREE_STRUCTURE,
+				FILEPATH: 'myapp/manage.py',
+				PROJECT_SPECIFICATION: PythonDjango.PROJECT_SPECIFICATION,
+			},
+		},
+		'python',
+	);
 	// #endregion
 
 	// #region CPP
-	generateFileContentsPromptTest({
-		args: {
-			PROJECT_DESCRIPTION: CPP.PROJECT_DESCRIPTION,
-			PROJECT_TREE_STRUCTURE: CPP.PROJECT_TREE_STRUCTURE,
-			FILEPATH: 'src/fibModule.h',
-			PROJECT_SPECIFICATION: CPP.PROJECT_SPECIFICATION
+	generateFileContentsPromptTest(
+		{
+			args: {
+				PROJECT_DESCRIPTION: CPP.PROJECT_DESCRIPTION,
+				PROJECT_TREE_STRUCTURE: CPP.PROJECT_TREE_STRUCTURE,
+				FILEPATH: 'src/fibModule.h',
+				PROJECT_SPECIFICATION: CPP.PROJECT_SPECIFICATION,
+			},
+			validate: (response: string) => {
+				assert.ok(
+					!response.startsWith('++'),
+					'C++ file was not correctly parsed',
+				);
+			},
 		},
-		validate: (response: string) => {
-			assert.ok(!response.startsWith('++'), 'C++ file was not correctly parsed');
-		}
-	}, 'cpp');
+		'cpp',
+	);
 
-	generateFileContentsPromptTest({
-		args: {
-			PROJECT_DESCRIPTION: CPP.PROJECT_DESCRIPTION,
-			PROJECT_TREE_STRUCTURE: CPP.PROJECT_TREE_STRUCTURE,
-			FILEPATH: 'src/fibModule.cpp',
-			PROJECT_SPECIFICATION: CPP.PROJECT_SPECIFICATION
+	generateFileContentsPromptTest(
+		{
+			args: {
+				PROJECT_DESCRIPTION: CPP.PROJECT_DESCRIPTION,
+				PROJECT_TREE_STRUCTURE: CPP.PROJECT_TREE_STRUCTURE,
+				FILEPATH: 'src/fibModule.cpp',
+				PROJECT_SPECIFICATION: CPP.PROJECT_SPECIFICATION,
+			},
+			validate: (response: string) => {
+				assert.ok(
+					!response.startsWith('++'),
+					'C++ file was not correctly parsed',
+				);
+			},
 		},
-		validate: (response: string) => {
-			assert.ok(!response.startsWith('++'), 'C++ file was not correctly parsed');
-		}
-	}, 'cpp');
+		'cpp',
+	);
 	// #endregion
 });

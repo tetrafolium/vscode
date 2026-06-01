@@ -3,14 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../base/common/cancellation.js';
-import { Event } from '../../../base/common/event.js';
-import { URI } from '../../../base/common/uri.js';
-import { OperatingSystem, OS } from '../../../base/common/platform.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { TerminalCapability } from '../../terminal/common/capabilities/capabilities.js';
+import { CancellationToken } from "../../../base/common/cancellation.js";
+import { Event } from "../../../base/common/event.js";
+import { URI } from "../../../base/common/uri.js";
+import { OperatingSystem, OS } from "../../../base/common/platform.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import { TerminalCapability } from "../../terminal/common/capabilities/capabilities.js";
 
-export const ITerminalSandboxService = createDecorator<ITerminalSandboxService>('terminalSandboxService');
+export const ITerminalSandboxService = createDecorator<ITerminalSandboxService>(
+	"terminalSandboxService",
+);
 
 export interface ITerminalSandboxResolvedNetworkDomains {
 	allowedDomains: string[];
@@ -18,14 +20,14 @@ export interface ITerminalSandboxResolvedNetworkDomains {
 }
 
 export const enum TerminalSandboxPrerequisiteCheck {
-	Config = 'config',
-	Dependencies = 'dependencies',
-	Bubblewrap = 'bubblewrap',
+	Config = "config",
+	Dependencies = "dependencies",
+	Bubblewrap = "bubblewrap",
 }
 
 export const enum TerminalSandboxPreCheckRemediation {
-	InstallUbuntuAppArmorProfile = 'installUbuntuAppArmorProfile',
-	DisableUbuntuUserNamespaceRestriction = 'disableUbuntuUserNamespaceRestriction',
+	InstallUbuntuAppArmorProfile = "installUbuntuAppArmorProfile",
+	DisableUbuntuUserNamespaceRestriction = "disableUbuntuUserNamespaceRestriction",
 }
 
 export interface ITerminalSandboxPrerequisiteCheckResult {
@@ -75,7 +77,11 @@ export interface ISandboxDependencyInstallTerminal {
 	sendText(text: string, addNewLine?: boolean): Promise<void>;
 	focus(): void;
 	capabilities: {
-		get(id: TerminalCapability.CommandDetection): { onCommandFinished: Event<{ exitCode: number | undefined }> } | undefined;
+		get(
+			id: TerminalCapability.CommandDetection,
+		):
+			| { onCommandFinished: Event<{ exitCode: number | undefined }> }
+			| undefined;
 		onDidAddCapability: Event<{ id: TerminalCapability }>;
 	};
 	onDidInputData: Event<string>;
@@ -100,22 +106,46 @@ export interface ISandboxDependencyInstallResult {
 export interface ITerminalSandboxService {
 	readonly _serviceBrand: undefined;
 	isEnabled(precheckInputs?: ITerminalSandboxPrecheckInputs): Promise<boolean>;
-	isSandboxAllowNetworkEnabled(precheckInputs?: ITerminalSandboxPrecheckInputs): Promise<boolean>;
+	isSandboxAllowNetworkEnabled(
+		precheckInputs?: ITerminalSandboxPrecheckInputs,
+	): Promise<boolean>;
 	getOS(): Promise<OperatingSystem>;
-	checkForSandboxingPrereqs(forceRefresh?: boolean, precheckInputs?: ITerminalSandboxPrecheckInputs): Promise<ITerminalSandboxPrerequisiteCheckResult>;
+	checkForSandboxingPrereqs(
+		forceRefresh?: boolean,
+		precheckInputs?: ITerminalSandboxPrecheckInputs,
+	): Promise<ITerminalSandboxPrerequisiteCheckResult>;
 	/**
 	 * Wraps a command line for sandbox execution. Command details are optional,
 	 * but when provided they are used to derive command-specific read/write
 	 * allow-list entries.
 	 */
-	wrapCommand(command: string, requestUnsandboxedExecution?: boolean, shell?: string, cwd?: URI, commandDetails?: readonly ITerminalSandboxCommand[]): Promise<ITerminalSandboxWrapResult>;
-	getSandboxConfigPath(forceRefresh?: boolean, precheckInputs?: ITerminalSandboxPrecheckInputs): Promise<string | undefined>;
+	wrapCommand(
+		command: string,
+		requestUnsandboxedExecution?: boolean,
+		shell?: string,
+		cwd?: URI,
+		commandDetails?: readonly ITerminalSandboxCommand[],
+	): Promise<ITerminalSandboxWrapResult>;
+	getSandboxConfigPath(
+		forceRefresh?: boolean,
+		precheckInputs?: ITerminalSandboxPrecheckInputs,
+	): Promise<string | undefined>;
 	getTempDir(): URI | undefined;
 	setNeedsForceUpdateConfigFile(): void;
 	getResolvedNetworkDomains(): ITerminalSandboxResolvedNetworkDomains;
 	getMissingSandboxDependencies(): Promise<string[]>;
-	installMissingSandboxDependencies(missingDependencies: string[], sessionResource: URI | undefined, token: CancellationToken, options: ISandboxDependencyInstallOptions): Promise<ISandboxDependencyInstallResult>;
-	runSandboxRemediation(remediation: TerminalSandboxPreCheckRemediation, sessionResource: URI | undefined, token: CancellationToken, options: ISandboxDependencyInstallOptions): Promise<ISandboxDependencyInstallResult>;
+	installMissingSandboxDependencies(
+		missingDependencies: string[],
+		sessionResource: URI | undefined,
+		token: CancellationToken,
+		options: ISandboxDependencyInstallOptions,
+	): Promise<ISandboxDependencyInstallResult>;
+	runSandboxRemediation(
+		remediation: TerminalSandboxPreCheckRemediation,
+		sessionResource: URI | undefined,
+		token: CancellationToken,
+		options: ISandboxDependencyInstallOptions,
+	): Promise<ISandboxDependencyInstallResult>;
 }
 
 export class NullTerminalSandboxService implements ITerminalSandboxService {
@@ -134,7 +164,11 @@ export class NullTerminalSandboxService implements ITerminalSandboxService {
 	}
 
 	async checkForSandboxingPrereqs(): Promise<ITerminalSandboxPrerequisiteCheckResult> {
-		return { enabled: false, sandboxConfigPath: undefined, failedCheck: undefined };
+		return {
+			enabled: false,
+			sandboxConfigPath: undefined,
+			failedCheck: undefined,
+		};
 	}
 
 	async wrapCommand(command: string): Promise<ITerminalSandboxWrapResult> {

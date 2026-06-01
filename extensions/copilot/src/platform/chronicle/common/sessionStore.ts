@@ -7,7 +7,8 @@ import { createServiceIdentifier } from '../../../util/common/services';
 
 // ── Service identifier ──────────────────────────────────────────────────────────
 
-export const ISessionStore = createServiceIdentifier<ISessionStore>('ISessionStore');
+export const ISessionStore =
+	createServiceIdentifier<ISessionStore>('ISessionStore');
 
 // ── Row types (same as copilot-agent-runtime SessionStore) ──────────────────────
 
@@ -112,7 +113,11 @@ export interface ISessionStore {
 	insertRef(ref: RefRow): void;
 
 	/** Index a workspace artifact for full-text search. Upserts by file path. */
-	indexWorkspaceArtifact(sessionId: string, filePath: string, content: string): void;
+	indexWorkspaceArtifact(
+		sessionId: string,
+		filePath: string,
+		content: string,
+	): void;
 
 	/** Delete a session and all associated data (turns, checkpoints, files, refs, search index). */
 	deleteSession(sessionId: string): void;
@@ -138,7 +143,13 @@ export interface ISessionStore {
 	getMaxTurnIndex(sessionId: string): number;
 
 	/** Get basic stats about the store. */
-	getStats(): { sessions: number; turns: number; checkpoints: number; files: number; refs: number };
+	getStats(): {
+		sessions: number;
+		turns: number;
+		checkpoints: number;
+		files: number;
+		refs: number;
+	};
 
 	/**
 	 * Execute a read-only SQL query.

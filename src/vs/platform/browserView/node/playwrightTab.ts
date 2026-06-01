@@ -4,17 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 // eslint-disable-next-line local/code-import-patterns
-import type * as playwright from 'playwright-core';
-import { Emitter, Event } from '../../../base/common/event.js';
-import { CancellationToken } from '../../../base/common/cancellation.js';
-import { createCancelablePromise, raceCancellablePromises, timeout } from '../../../base/common/async.js';
-import { URI } from '../../../base/common/uri.js';
-import { IAgentNetworkFilterService } from '../../networkFilter/common/networkFilterService.js';
-import { IPlaywrightActionScope } from './playwrightService.js';
+import type * as playwright from "playwright-core";
+import { Emitter, Event } from "../../../base/common/event.js";
+import { CancellationToken } from "../../../base/common/cancellation.js";
+import {
+	createCancelablePromise,
+	raceCancellablePromises,
+	timeout,
+} from "../../../base/common/async.js";
+import { URI } from "../../../base/common/uri.js";
+import { IAgentNetworkFilterService } from "../../networkFilter/common/networkFilterService.js";
+import { IPlaywrightActionScope } from "./playwrightService.js";
 
-type IAiAriaSnapshotOptions = NonNullable<Parameters<playwright.Locator['ariaSnapshot']>[0]> & { _track?: string };
+type IAiAriaSnapshotOptions = NonNullable<
+	Parameters<playwright.Locator["ariaSnapshot"]>[0]
+> & { _track?: string };
 
-declare module 'playwright-core' {
+declare module "playwright-core" {
 	interface Page {
 		// We defined this here to be able to use the unofficial `_track` option
 		ariaSnapshot(options?: IAiAriaSnapshotOptions): Promise<string>;
@@ -28,8 +34,8 @@ declare module 'playwright-core' {
  */
 export class DialogInterruptedError extends Error {
 	constructor() {
-		super('Action was interrupted by a dialog');
-		this.name = 'DialogInterruptedError';
+		super("Action was interrupted by a dialog");
+		this.name = "DialogInterruptedError";
 	}
 }
 
@@ -58,37 +64,44 @@ export class PlaywrightTab {
 		private readonly actionScope: IPlaywrightActionScope,
 		private readonly agentNetworkFilterService: IAgentNetworkFilterService,
 	) {
-		page.on('console', event => this._handleConsoleMessage(event))
-			.on('pageerror', error => this._handlePageError(error))
-			.on('requestfailed', request => this._handleRequestFailed(request))
-			.on('dialog', dialog => this._handleDialog(dialog))
-			.on('download', download => this._handleDownload(download));
+		page
+			.on("console", (event) => this._handleConsoleMessage(event))
+			.on("pageerror", (error) => this._handlePageError(error))
+			.on("requestfailed", (request) => this._handleRequestFailed(request))
+			.on("dialog", (dialog) => this._handleDialog(dialog))
+			.on("download", (download) => this._handleDownload(download));
 
 		this._initialized = this._initialize();
 	}
 
 	private async _initialize() {
 		const messages = await this.page.consoleMessages().catch(() => []);
-		for (const message of messages) { this._handleConsoleMessage(message); }
+		for (const message of messages) {
+			this._handleConsoleMessage(message);
+		}
 		const errors = await this.page.pageErrors().catch(() => []);
-		for (const error of errors) { this._handlePageError(error); }
+		for (const error of errors) {
+			this._handlePageError(error);
+		}
 	}
 
 	private _handleDialog(dialog: playwright.Dialog) {
 		this._dialog = dialog;
 		// Playwright doesn't give us an event for when a dialog is closed, so we run a no-op script to know when it closes.
-		this.page.waitForFunction(() => true, undefined, { timeout: 0 }).then(() => {
-			if (this._dialog === dialog) {
-				this._dialog = undefined;
-				this._onDialogStateChanged.fire();
-			}
-		});
+		this.page
+			.waitForFunction(() => true, undefined, { timeout: 0 })
+			.then(() => {
+				if (this._dialog === dialog) {
+					this._dialog = undefined;
+					this._onDialogStateChanged.fire();
+				}
+			});
 		this._onDialogStateChanged.fire();
 	}
 
 	async replyToDialog(accept?: boolean, promptText?: string) {
 		if (!this._dialog) {
-			throw new Error('No active modal dialog to respond to');
+			throw new Error("No active modal dialog to respond to");
 		}
 		const dialog = this._dialog;
 		this._dialog = undefined;
@@ -108,7 +121,7 @@ export class PlaywrightTab {
 
 	async replyToFileChooser(files: string[]) {
 		if (!this._fileChooser) {
-			throw new Error('No active file chooser dialog to respond to');
+			throw new Error("No active file chooser dialog to respond to");
 		}
 		const chooser = this._fileChooser;
 		this._fileChooser = undefined;
@@ -116,22 +129,38 @@ export class PlaywrightTab {
 	}
 
 	private async _handleDownload(download: playwright.Download) {
-		this._logs.push({ type: 'download', time: Date.now(), description: `${download.suggestedFilename()}` });
+		this._logs.push({
+			type: "download",
+			time: Date.now(),
+			description: `${download.suggestedFilename()}`,
+		});
 	}
 
 	private _handleRequestFailed(request: playwright.Request) {
 		const timing = request.timing();
-		this._logs.push({ type: 'requestFailed', time: timing.responseEnd + timing.startTime, description: `${request.method()} request to ${request.url()} failed: "${request.failure()?.errorText}"` });
+		this._logs.push({
+			type: "requestFailed",
+			time: timing.responseEnd + timing.startTime,
+			description: `${request.method()} request to ${request.url()} failed: "${request.failure()?.errorText}"`,
+		});
 	}
 
 	private _handleConsoleMessage(message: playwright.ConsoleMessage) {
-		if (message.type() === 'error' || message.type() === 'warning') {
-			this._logs.push({ type: 'console', time: message.timestamp(), description: `[${message.type()}] ${message.text()}` });
+		if (message.type() === "error" || message.type() === "warning") {
+			this._logs.push({
+				type: "console",
+				time: message.timestamp(),
+				description: `[${message.type()}] ${message.text()}`,
+			});
 		}
 	}
 
 	private _handlePageError(error: Error) {
-		this._logs.push({ type: 'pageError', time: Date.now(), description: error.stack ?? error.message });
+		this._logs.push({
+			type: "pageError",
+			time: Date.now(),
+			description: error.stack ?? error.message,
+		});
 	}
 
 	/**
@@ -140,11 +169,13 @@ export class PlaywrightTab {
 	 */
 	private _getBlockedURLErrorMessage(): string | undefined {
 		const url = this.page.url();
-		if (!url || url === 'about:blank') {
+		if (!url || url === "about:blank") {
 			return undefined;
 		}
 		let uri: URI | undefined;
-		try { uri = URI.parse(url); } catch { }
+		try {
+			uri = URI.parse(url);
+		} catch {}
 		if (uri && !this.agentNetworkFilterService.isUriAllowed(uri)) {
 			return this.agentNetworkFilterService.formatError(uri);
 		}
@@ -160,7 +191,9 @@ export class PlaywrightTab {
 	 * Also allows for interactions to be handled differently when triggered by agents.
 	 * E.g. file dialogs should appear when the user triggers one, but not when the agent does.
 	 */
-	async safeRunAgainstPage<T>(action: (page: playwright.Page, token: CancellationToken) => Promise<T>): Promise<T> {
+	async safeRunAgainstPage<T>(
+		action: (page: playwright.Page, token: CancellationToken) => Promise<T>,
+	): Promise<T> {
 		if (this._dialog) {
 			throw new Error(`Cannot perform action while a dialog is open`);
 		}
@@ -175,20 +208,23 @@ export class PlaywrightTab {
 		let result: T | void;
 		const dialogOpened = Event.toPromise(this._onDialogStateChanged.event);
 		const actionCompleted = createCancelablePromise(async (token) => {
-
 			// Whenever the page has a `filechooser` handler, the default file chooser is disabled.
 			// We don't want this during normal user interactions, but we do for agentic interactions.
 			// So we add a handler just during the action, and remove it afterwards.
 			// This isn't perfect (e.g. the user could trigger it while an action is running), but it's a best effort.
-			const handleFileChooser = (chooser: playwright.FileChooser) => this._handleFileChooser(chooser);
-			this.page.on('filechooser', handleFileChooser);
+			const handleFileChooser = (chooser: playwright.FileChooser) =>
+				this._handleFileChooser(chooser);
+			this.page.on("filechooser", handleFileChooser);
 
 			try {
 				this.actionScope.activeCalls++;
-				result = await this.runAndWaitForCompletion((token) => action(this.page, token), token);
+				result = await this.runAndWaitForCompletion(
+					(token) => action(this.page, token),
+					token,
+				);
 				actionDidComplete = true;
 			} finally {
-				this.page.off('filechooser', handleFileChooser);
+				this.page.off("filechooser", handleFileChooser);
 				this.actionScope.activeCalls--;
 			}
 		});
@@ -217,46 +253,61 @@ export class PlaywrightTab {
 			this._needsFullSnapshot = false;
 		}
 
-		const snapshotFromPage = await this.safeRunAgainstPage((page) => this.getAiSnapshot(page, full)).catch(() => {
+		const snapshotFromPage = await this.safeRunAgainstPage((page) =>
+			this.getAiSnapshot(page, full),
+		).catch(() => {
 			this._needsFullSnapshot = true;
 			return undefined;
 		});
-		const title = await this.safeRunAgainstPage((page) => page.title()).catch(() => '');
+		const title = await this.safeRunAgainstPage((page) => page.title()).catch(
+			() => "",
+		);
 
 		const logs = this._logs;
 		this._logs = [];
 
-		const snapshot = snapshotFromPage?.trim() ?? '';
+		const snapshot = snapshotFromPage?.trim() ?? "";
 
 		return [
 			...(title ? [`Page Title: ${title}`] : []),
 			`URL: ${this.page.url()}`,
-			...(this._dialog ? [`Active ${this._dialog.type()} dialog: "${this._dialog.message()}"`] : []),
+			...(this._dialog
+				? [`Active ${this._dialog.type()} dialog: "${this._dialog.message()}"`]
+				: []),
 			...(this._fileChooser ? [`Active file chooser dialog`] : []),
-			...(logs.length > 0 ? [
-				`Recent events:`,
-				...logs.map(log => `- [${new Date(log.time).toISOString()}] (${log.type}) ${log.description}`)
-			] : []),
-			`Snapshot: ${snapshotFromPage !== undefined ? snapshot ? `\n${snapshot}` : '<unchanged>' : '<unavailable>'}`,
-		].join('\n');
+			...(logs.length > 0
+				? [
+						`Recent events:`,
+						...logs.map(
+							(log) =>
+								`- [${new Date(log.time).toISOString()}] (${log.type}) ${log.description}`,
+						),
+					]
+				: []),
+			`Snapshot: ${snapshotFromPage !== undefined ? (snapshot ? `\n${snapshot}` : "<unchanged>") : "<unavailable>"}`,
+		].join("\n");
 	}
 
 	private getAiSnapshot(page: playwright.Page, full: boolean): Promise<string> {
-		const options: IAiAriaSnapshotOptions = { mode: 'ai' };
+		const options: IAiAriaSnapshotOptions = { mode: "ai" };
 		if (!full) {
-			options._track = 'response';
+			options._track = "response";
 		}
 		return page.ariaSnapshot(options);
 	}
 
-	private async runAndWaitForCompletion<T>(callback: (token: CancellationToken) => Promise<T>, token = CancellationToken.None): Promise<T> {
+	private async runAndWaitForCompletion<T>(
+		callback: (token: CancellationToken) => Promise<T>,
+		token = CancellationToken.None,
+	): Promise<T> {
 		const requests: playwright.Request[] = [];
 
-		const requestListener = (request: playwright.Request) => requests.push(request);
+		const requestListener = (request: playwright.Request) =>
+			requests.push(request);
 		const disposeListeners = () => {
-			this.page.off('request', requestListener);
+			this.page.off("request", requestListener);
 		};
-		this.page.on('request', requestListener);
+		this.page.on("request", requestListener);
 
 		let result: T;
 		try {
@@ -265,20 +316,37 @@ export class PlaywrightTab {
 			disposeListeners();
 		}
 
-		const requestedNavigation = requests.some(request => request.isNavigationRequest());
+		const requestedNavigation = requests.some((request) =>
+			request.isNavigationRequest(),
+		);
 		if (requestedNavigation) {
-			await this.page.mainFrame().waitForLoadState('load', { timeout: 10000 }).catch(() => { });
+			await this.page
+				.mainFrame()
+				.waitForLoadState("load", { timeout: 10000 })
+				.catch(() => {});
 			return result;
 		}
 
 		const promises: Promise<unknown>[] = [];
 		for (const request of requests) {
-			if (['document', 'stylesheet', 'script', 'xhr', 'fetch'].includes(request.resourceType())) { promises.push(request.response().then(r => r?.finished()).catch(() => { })); }
-			else { promises.push(request.response().catch(() => { })); }
+			if (
+				["document", "stylesheet", "script", "xhr", "fetch"].includes(
+					request.resourceType(),
+				)
+			) {
+				promises.push(
+					request
+						.response()
+						.then((r) => r?.finished())
+						.catch(() => {}),
+				);
+			} else {
+				promises.push(request.response().catch(() => {}));
+			}
 		}
 		await raceCancellablePromises<unknown>([
 			Promise.all(promises),
-			timeout(5000) // Don't wait indefinitely for requests to finish
+			timeout(5000), // Don't wait indefinitely for requests to finish
 		]);
 
 		return result;

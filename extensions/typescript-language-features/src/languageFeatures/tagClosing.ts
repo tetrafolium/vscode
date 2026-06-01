@@ -3,30 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { DocumentSelector } from '../configuration/documentSelector';
-import { LanguageDescription } from '../configuration/languageDescription';
-import type * as Proto from '../tsServer/protocol/protocol';
-import * as typeConverters from '../typeConverters';
-import { ITypeScriptServiceClient } from '../typescriptService';
-import { Disposable } from '../utils/dispose';
-import { readUnifiedConfig } from '../utils/configuration';
-import { Condition, conditionalRegistration } from './util/dependentRegistration';
+import * as vscode from "vscode";
+import { DocumentSelector } from "../configuration/documentSelector";
+import { LanguageDescription } from "../configuration/languageDescription";
+import type * as Proto from "../tsServer/protocol/protocol";
+import * as typeConverters from "../typeConverters";
+import { ITypeScriptServiceClient } from "../typescriptService";
+import { Disposable } from "../utils/dispose";
+import { readUnifiedConfig } from "../utils/configuration";
+import {
+	Condition,
+	conditionalRegistration,
+} from "./util/dependentRegistration";
 
 class TagClosing extends Disposable {
-
 	private _disposed = false;
 	private _timeout: NodeJS.Timeout | undefined = undefined;
 	private _cancel: vscode.CancellationTokenSource | undefined = undefined;
 
-	constructor(
-		private readonly client: ITypeScriptServiceClient
-	) {
+	constructor(private readonly client: ITypeScriptServiceClient) {
 		super();
 		vscode.workspace.onDidChangeTextDocument(
-			event => this.onDidChangeTextDocument(event),
+			(event) => this.onDidChangeTextDocument(event),
 			null,
-			this._disposables);
+			this._disposables,
+		);
 	}
 
 	public override dispose() {
@@ -45,10 +46,16 @@ class TagClosing extends Disposable {
 		}
 	}
 
-	private onDidChangeTextDocument(
-		{ document, contentChanges, reason }: vscode.TextDocumentChangeEvent
-	) {
-		if (contentChanges.length === 0 || reason === vscode.TextDocumentChangeReason.Undo || reason === vscode.TextDocumentChangeReason.Redo) {
+	private onDidChangeTextDocument({
+		document,
+		contentChanges,
+		reason,
+	}: vscode.TextDocumentChangeEvent) {
+		if (
+			contentChanges.length === 0 ||
+			reason === vscode.TextDocumentChangeReason.Undo ||
+			reason === vscode.TextDocumentChangeReason.Redo
+		) {
 			return;
 		}
 
@@ -62,7 +69,7 @@ class TagClosing extends Disposable {
 			return;
 		}
 
-		if (typeof this._timeout !== 'undefined') {
+		if (typeof this._timeout !== "undefined") {
 			clearTimeout(this._timeout);
 		}
 
@@ -74,14 +81,23 @@ class TagClosing extends Disposable {
 
 		const lastChange = contentChanges[contentChanges.length - 1];
 		const lastCharacter = lastChange.text[lastChange.text.length - 1];
-		if (lastChange.rangeLength > 0 || lastCharacter !== '>' && lastCharacter !== '/') {
+		if (
+			lastChange.rangeLength > 0 ||
+			(lastCharacter !== ">" && lastCharacter !== "/")
+		) {
 			return;
 		}
 
-		const priorCharacter = lastChange.range.start.character > 0
-			? document.getText(new vscode.Range(lastChange.range.start.translate({ characterDelta: -1 }), lastChange.range.start))
-			: '';
-		if (priorCharacter === '>') {
+		const priorCharacter =
+			lastChange.range.start.character > 0
+				? document.getText(
+						new vscode.Range(
+							lastChange.range.start.translate({ characterDelta: -1 }),
+							lastChange.range.start,
+						),
+					)
+				: "";
+		if (priorCharacter === ">") {
 			return;
 		}
 
@@ -94,14 +110,25 @@ class TagClosing extends Disposable {
 			}
 
 			const addedLines = lastChange.text.split(/\r\n|\n/g);
-			const position = addedLines.length <= 1
-				? lastChange.range.start.translate({ characterDelta: lastChange.text.length })
-				: new vscode.Position(lastChange.range.start.line + addedLines.length - 1, addedLines[addedLines.length - 1].length);
+			const position =
+				addedLines.length <= 1
+					? lastChange.range.start.translate({
+							characterDelta: lastChange.text.length,
+						})
+					: new vscode.Position(
+							lastChange.range.start.line + addedLines.length - 1,
+							addedLines[addedLines.length - 1].length,
+						);
 
-			const args: Proto.JsxClosingTagRequestArgs = typeConverters.Position.toFileLocationRequestArgs(filepath, position);
+			const args: Proto.JsxClosingTagRequestArgs =
+				typeConverters.Position.toFileLocationRequestArgs(filepath, position);
 			this._cancel = new vscode.CancellationTokenSource();
-			const response = await this.client.execute('jsxClosingTag', args, this._cancel.token);
-			if (response.type !== 'response' || !response.body) {
+			const response = await this.client.execute(
+				"jsxClosingTag",
+				args,
+				this._cancel.token,
+			);
+			if (response.type !== "response" || !response.body) {
 				return;
 			}
 
@@ -119,21 +146,25 @@ class TagClosing extends Disposable {
 			if (document === activeDocument && activeDocument.version === version) {
 				activeEditor.insertSnippet(
 					this.getTagSnippet(insertion),
-					this.getInsertionPositions(activeEditor, position));
+					this.getInsertionPositions(activeEditor, position),
+				);
 			}
 		}, 100);
 	}
 
 	private getTagSnippet(closingTag: Proto.TextInsertion): vscode.SnippetString {
 		const snippet = new vscode.SnippetString();
-		snippet.appendPlaceholder('', 0);
+		snippet.appendPlaceholder("", 0);
 		snippet.appendText(closingTag.newText);
 		return snippet;
 	}
 
-	private getInsertionPositions(editor: vscode.TextEditor, position: vscode.Position) {
-		const activeSelectionPositions = editor.selections.map(s => s.active);
-		return activeSelectionPositions.some(p => p.isEqual(position))
+	private getInsertionPositions(
+		editor: vscode.TextEditor,
+		position: vscode.Position,
+	) {
+		const activeSelectionPositions = editor.selections.map((s) => s.active);
+		return activeSelectionPositions.some((p) => p.isEqual(position))
 			? activeSelectionPositions
 			: position;
 	}
@@ -150,14 +181,20 @@ function requireActiveDocumentSetting(
 				return false;
 			}
 
-			return !!readUnifiedConfig<boolean>('autoClosingTags.enabled', true, { scope: editor.document, fallbackSection: language.id, fallbackSubSectionNameOverride: 'autoClosingTags' });
+			return !!readUnifiedConfig<boolean>("autoClosingTags.enabled", true, {
+				scope: editor.document,
+				fallbackSection: language.id,
+				fallbackSubSectionNameOverride: "autoClosingTags",
+			});
 		},
-		handler => {
+		(handler) => {
 			return vscode.Disposable.from(
 				vscode.window.onDidChangeActiveTextEditor(handler),
 				vscode.workspace.onDidOpenTextDocument(handler),
-				vscode.workspace.onDidChangeConfiguration(handler));
-		});
+				vscode.workspace.onDidChangeConfiguration(handler),
+			);
+		},
+	);
 }
 
 export function register(
@@ -165,7 +202,8 @@ export function register(
 	language: LanguageDescription,
 	client: ITypeScriptServiceClient,
 ) {
-	return conditionalRegistration([
-		requireActiveDocumentSetting(selector.syntax, language)
-	], () => new TagClosing(client));
+	return conditionalRegistration(
+		[requireActiveDocumentSetting(selector.syntax, language)],
+		() => new TagClosing(client),
+	);
 }

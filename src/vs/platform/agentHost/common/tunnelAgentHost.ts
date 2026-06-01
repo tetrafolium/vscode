@@ -3,19 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import type { IAgentHostSocketInfo } from './agentService.js';
+import { Event } from "../../../base/common/event.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import type { IAgentHostSocketInfo } from "./agentService.js";
 
-export const ITunnelAgentHostService = createDecorator<ITunnelAgentHostService>('tunnelAgentHostService');
+export const ITunnelAgentHostService = createDecorator<ITunnelAgentHostService>(
+	"tunnelAgentHostService",
+);
 
 /**
  * IPC channel name for the shared-process tunnel service.
  */
-export const TUNNEL_AGENT_HOST_CHANNEL = 'tunnelAgentHost';
+export const TUNNEL_AGENT_HOST_CHANNEL = "tunnelAgentHost";
 
 /** Configuration key for the list of manually configured tunnel names. */
-export const TunnelAgentHostsSettingId = 'chat.remoteAgentTunnels';
+export const TunnelAgentHostsSettingId = "chat.remoteAgentTunnels";
 
 /** Minimum protocol version required for agent host connections. */
 export const TUNNEL_MIN_PROTOCOL_VERSION = 5;
@@ -24,13 +26,13 @@ export const TUNNEL_MIN_PROTOCOL_VERSION = 5;
 export const TUNNEL_AGENT_HOST_PORT = 31546;
 
 /** Label used to identify VS Code server launcher tunnels. */
-export const TUNNEL_LAUNCHER_LABEL = 'vscode-server-launcher';
+export const TUNNEL_LAUNCHER_LABEL = "vscode-server-launcher";
 
 /** Address prefix for tunnel-backed connections (e.g. `tunnel:myTunnelId`). */
-export const TUNNEL_ADDRESS_PREFIX = 'tunnel:';
+export const TUNNEL_ADDRESS_PREFIX = "tunnel:";
 
 /** Prefix for protocol version tags. */
-export const PROTOCOL_VERSION_TAG_PREFIX = 'protocolv';
+export const PROTOCOL_VERSION_TAG_PREFIX = "protocolv";
 
 /**
  * Parse tunnel tags to extract display name and protocol version.
@@ -52,7 +54,11 @@ export class TunnelTags {
 					if (!isNaN(parsed)) {
 						protocolVersion = parsed;
 					}
-				} else if (!tag.startsWith('_') && tag !== TUNNEL_LAUNCHER_LABEL && !name) {
+				} else if (
+					!tag.startsWith("_") &&
+					tag !== TUNNEL_LAUNCHER_LABEL &&
+					!name
+				) {
 					name = tag;
 				}
 			}
@@ -71,7 +77,7 @@ export interface ICachedTunnel {
 	readonly tunnelId: string;
 	readonly clusterId: string;
 	readonly name: string;
-	readonly authProvider?: 'github' | 'microsoft';
+	readonly authProvider?: "github" | "microsoft";
 }
 
 /** Information about a discovered dev tunnel with an agent host. */
@@ -120,7 +126,8 @@ export interface ITunnelRelayMessage {
  * connections. The renderer calls this over IPC and handles registration
  * with {@link IRemoteAgentHostService} locally.
  */
-export const ITunnelAgentHostMainService = createDecorator<ITunnelAgentHostMainService>('tunnelAgentHostMainService');
+export const ITunnelAgentHostMainService =
+	createDecorator<ITunnelAgentHostMainService>("tunnelAgentHostMainService");
 
 export interface ITunnelAgentHostMainService {
 	readonly _serviceBrand: undefined;
@@ -141,7 +148,11 @@ export interface ITunnelAgentHostMainService {
 	 * @param additionalTunnelNames Optional tunnel names to look up
 	 *   in addition to the account-wide enumeration.
 	 */
-	listTunnels(token: string, authProvider: 'github' | 'microsoft', additionalTunnelNames?: string[]): Promise<ITunnelInfo[]>;
+	listTunnels(
+		token: string,
+		authProvider: "github" | "microsoft",
+		additionalTunnelNames?: string[],
+	): Promise<ITunnelInfo[]>;
 
 	/**
 	 * Connect to a tunnel's agent host via the dev tunnels relay and
@@ -152,7 +163,12 @@ export interface ITunnelAgentHostMainService {
 	 * @param tunnelId The tunnel ID to connect to.
 	 * @param clusterId The cluster region of the tunnel.
 	 */
-	connect(token: string, authProvider: 'github' | 'microsoft', tunnelId: string, clusterId: string): Promise<ITunnelConnectResult>;
+	connect(
+		token: string,
+		authProvider: "github" | "microsoft",
+		tunnelId: string,
+		clusterId: string,
+	): Promise<ITunnelConnectResult>;
 
 	/**
 	 * Send a message to a remote agent host through the tunnel relay.
@@ -191,7 +207,10 @@ export interface ITunnelAgentHostService {
 	 * @param tunnel The tunnel to connect to.
 	 * @param authProvider Optional auth provider to use. If omitted, uses cached/last known.
 	 */
-	connect(tunnel: ITunnelInfo, authProvider?: 'github' | 'microsoft'): Promise<void>;
+	connect(
+		tunnel: ITunnelInfo,
+		authProvider?: "github" | "microsoft",
+	): Promise<void>;
 
 	/**
 	 * Disconnect from a tunnel agent host.
@@ -202,7 +221,7 @@ export interface ITunnelAgentHostService {
 	getCachedTunnels(): ICachedTunnel[];
 
 	/** Cache a tunnel as recently used. */
-	cacheTunnel(tunnel: ITunnelInfo, authProvider?: 'github' | 'microsoft'): void;
+	cacheTunnel(tunnel: ITunnelInfo, authProvider?: "github" | "microsoft"): void;
 
 	/** Remove a tunnel from the cache. */
 	removeCachedTunnel(tunnelId: string): void;
@@ -221,16 +240,18 @@ export interface ITunnelAgentHostService {
 	 * When {@link silent} is true, does not prompt the user.
 	 * Returns `undefined` if no cached session is available.
 	 */
-	getAuthProvider(options?: { silent?: boolean }): Promise<'github' | 'microsoft' | undefined>;
+	getAuthProvider(options?: {
+		silent?: boolean;
+	}): Promise<"github" | "microsoft" | undefined>;
 }
 
 // ---- Tunnel hosting (exposing the local agent host to remote clients) --------
 
 /** IPC channel name for the tunnel host service. */
-export const TUNNEL_HOST_CHANNEL = 'tunnelHost';
+export const TUNNEL_HOST_CHANNEL = "tunnelHost";
 
 /** Output channel ID for the tunnel host logs. */
-export const TUNNEL_HOST_LOG_ID = 'tunnelHostService';
+export const TUNNEL_HOST_LOG_ID = "tunnelHostService";
 
 /** Information about an actively hosted tunnel. */
 export interface ITunnelHostInfo {
@@ -249,7 +270,10 @@ export type TunnelHostStatus =
  * Shared-process service that hosts a dev tunnel using `TunnelRelayTunnelHost`
  * and pipes incoming connections to the local agent host.
  */
-export const ITunnelAgentHostHostingService = createDecorator<ITunnelAgentHostHostingService>('tunnelAgentHostHostingService');
+export const ITunnelAgentHostHostingService =
+	createDecorator<ITunnelAgentHostHostingService>(
+		"tunnelAgentHostHostingService",
+	);
 
 export interface ITunnelAgentHostHostingService {
 	readonly _serviceBrand: undefined;
@@ -266,7 +290,11 @@ export interface ITunnelAgentHostHostingService {
 	 * @param authProvider The auth provider that issued the token.
 	 * @param socketInfo Socket path for the local agent host.
 	 */
-	startHosting(token: string, authProvider: 'github' | 'microsoft', socketInfo: IAgentHostSocketInfo): Promise<ITunnelHostInfo>;
+	startHosting(
+		token: string,
+		authProvider: "github" | "microsoft",
+		socketInfo: IAgentHostSocketInfo,
+	): Promise<ITunnelHostInfo>;
 
 	/** Stop hosting and clean up the tunnel. */
 	stopHosting(): Promise<void>;

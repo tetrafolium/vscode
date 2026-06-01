@@ -1,6 +1,10 @@
 /*! @license DOMPurify 3.2.7 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.2.7/LICENSE */
 
-import type { TrustedTypePolicy, TrustedHTML, TrustedTypesWindow } from 'trusted-types/lib/index.d.ts';
+import type {
+	TrustedTypePolicy,
+	TrustedHTML,
+	TrustedTypesWindow,
+} from "trusted-types/lib/index.d.ts";
 
 /**
  * Configuration to control DOMPurify behavior.
@@ -76,7 +80,11 @@ interface Config {
 		 * Regular expression or function to match to allowed attributes.
 		 * Default is null (disallow any attributes not on the allow list).
 		 */
-		attributeNameCheck?: RegExp | ((attributeName: string, tagName?: string) => boolean) | null | undefined;
+		attributeNameCheck?:
+			| RegExp
+			| ((attributeName: string, tagName?: string) => boolean)
+			| null
+			| undefined;
 		/**
 		 * Allow custom elements derived from built-ins if they pass `tagNameCheck`. Default is false.
 		 */
@@ -242,9 +250,12 @@ interface DOMPurify {
 	 * @param cfg object
 	 * @returns Sanitized TrustedHTML.
 	 */
-	sanitize(dirty: string | Node, cfg: Config & {
-		RETURN_TRUSTED_TYPE: true;
-	}): TrustedHTML;
+	sanitize(
+		dirty: string | Node,
+		cfg: Config & {
+			RETURN_TRUSTED_TYPE: true;
+		},
+	): TrustedHTML;
 	/**
 	 * Provides core sanitation functionality.
 	 *
@@ -252,9 +263,12 @@ interface DOMPurify {
 	 * @param cfg object
 	 * @returns Sanitized DOM node.
 	 */
-	sanitize(dirty: Node, cfg: Config & {
-		IN_PLACE: true;
-	}): Node;
+	sanitize(
+		dirty: Node,
+		cfg: Config & {
+			IN_PLACE: true;
+		},
+	): Node;
 	/**
 	 * Provides core sanitation functionality.
 	 *
@@ -262,9 +276,12 @@ interface DOMPurify {
 	 * @param cfg object
 	 * @returns Sanitized DOM node.
 	 */
-	sanitize(dirty: string | Node, cfg: Config & {
-		RETURN_DOM: true;
-	}): Node;
+	sanitize(
+		dirty: string | Node,
+		cfg: Config & {
+			RETURN_DOM: true;
+		},
+	): Node;
 	/**
 	 * Provides core sanitation functionality.
 	 *
@@ -272,9 +289,12 @@ interface DOMPurify {
 	 * @param cfg object
 	 * @returns Sanitized document fragment.
 	 */
-	sanitize(dirty: string | Node, cfg: Config & {
-		RETURN_DOM_FRAGMENT: true;
-	}): DocumentFragment;
+	sanitize(
+		dirty: string | Node,
+		cfg: Config & {
+			RETURN_DOM_FRAGMENT: true;
+		},
+	): DocumentFragment;
 	/**
 	 * Provides core sanitation functionality.
 	 *
@@ -313,21 +333,30 @@ interface DOMPurify {
 	 * @param entryPoint entry point for the hook to add
 	 * @param hookFunction function to execute
 	 */
-	addHook(entryPoint: DocumentFragmentHookName, hookFunction: DocumentFragmentHook): void;
+	addHook(
+		entryPoint: DocumentFragmentHookName,
+		hookFunction: DocumentFragmentHook,
+	): void;
 	/**
 	 * Adds a DOMPurify hook.
 	 *
 	 * @param entryPoint entry point for the hook to add
 	 * @param hookFunction function to execute
 	 */
-	addHook(entryPoint: 'uponSanitizeElement', hookFunction: UponSanitizeElementHook): void;
+	addHook(
+		entryPoint: "uponSanitizeElement",
+		hookFunction: UponSanitizeElementHook,
+	): void;
 	/**
 	 * Adds a DOMPurify hook.
 	 *
 	 * @param entryPoint entry point for the hook to add
 	 * @param hookFunction function to execute
 	 */
-	addHook(entryPoint: 'uponSanitizeAttribute', hookFunction: UponSanitizeAttributeHook): void;
+	addHook(
+		entryPoint: "uponSanitizeAttribute",
+		hookFunction: UponSanitizeAttributeHook,
+	): void;
 	/**
 	 * Remove a DOMPurify hook at a given entryPoint
 	 * (pops it from the stack of hooks if hook not specified)
@@ -336,7 +365,10 @@ interface DOMPurify {
 	 * @param hookFunction optional specific hook to remove
 	 * @returns removed hook
 	 */
-	removeHook(entryPoint: BasicHookName, hookFunction?: NodeHook): NodeHook | undefined;
+	removeHook(
+		entryPoint: BasicHookName,
+		hookFunction?: NodeHook,
+	): NodeHook | undefined;
 	/**
 	 * Remove a DOMPurify hook at a given entryPoint
 	 * (pops it from the stack of hooks if hook not specified)
@@ -345,7 +377,10 @@ interface DOMPurify {
 	 * @param hookFunction optional specific hook to remove
 	 * @returns removed hook
 	 */
-	removeHook(entryPoint: ElementHookName, hookFunction?: ElementHook): ElementHook | undefined;
+	removeHook(
+		entryPoint: ElementHookName,
+		hookFunction?: ElementHook,
+	): ElementHook | undefined;
 	/**
 	 * Remove a DOMPurify hook at a given entryPoint
 	 * (pops it from the stack of hooks if hook not specified)
@@ -354,7 +389,10 @@ interface DOMPurify {
 	 * @param hookFunction optional specific hook to remove
 	 * @returns removed hook
 	 */
-	removeHook(entryPoint: DocumentFragmentHookName, hookFunction?: DocumentFragmentHook): DocumentFragmentHook | undefined;
+	removeHook(
+		entryPoint: DocumentFragmentHookName,
+		hookFunction?: DocumentFragmentHook,
+	): DocumentFragmentHook | undefined;
 	/**
 	 * Remove a DOMPurify hook at a given entryPoint
 	 * (pops it from the stack of hooks if hook not specified)
@@ -363,7 +401,10 @@ interface DOMPurify {
 	 * @param hookFunction optional specific hook to remove
 	 * @returns removed hook
 	 */
-	removeHook(entryPoint: 'uponSanitizeElement', hookFunction?: UponSanitizeElementHook): UponSanitizeElementHook | undefined;
+	removeHook(
+		entryPoint: "uponSanitizeElement",
+		hookFunction?: UponSanitizeElementHook,
+	): UponSanitizeElementHook | undefined;
 	/**
 	 * Remove a DOMPurify hook at a given entryPoint
 	 * (pops it from the stack of hooks if hook not specified)
@@ -372,7 +413,10 @@ interface DOMPurify {
 	 * @param hookFunction optional specific hook to remove
 	 * @returns removed hook
 	 */
-	removeHook(entryPoint: 'uponSanitizeAttribute', hookFunction?: UponSanitizeAttributeHook): UponSanitizeAttributeHook | undefined;
+	removeHook(
+		entryPoint: "uponSanitizeAttribute",
+		hookFunction?: UponSanitizeAttributeHook,
+	): UponSanitizeAttributeHook | undefined;
 	/**
 	 * Removes all DOMPurify hooks at a given entryPoint
 	 *
@@ -406,17 +450,52 @@ interface RemovedAttribute {
 	 */
 	from: Node;
 }
-type BasicHookName = 'beforeSanitizeElements' | 'afterSanitizeElements' | 'uponSanitizeShadowNode';
-type ElementHookName = 'beforeSanitizeAttributes' | 'afterSanitizeAttributes';
-type DocumentFragmentHookName = 'beforeSanitizeShadowDOM' | 'afterSanitizeShadowDOM';
-type UponSanitizeElementHookName = 'uponSanitizeElement';
-type UponSanitizeAttributeHookName = 'uponSanitizeAttribute';
-type HookName = BasicHookName | ElementHookName | DocumentFragmentHookName | UponSanitizeElementHookName | UponSanitizeAttributeHookName;
-type NodeHook = (this: DOMPurify, currentNode: Node, hookEvent: null, config: Config) => void;
-type ElementHook = (this: DOMPurify, currentNode: Element, hookEvent: null, config: Config) => void;
-type DocumentFragmentHook = (this: DOMPurify, currentNode: DocumentFragment, hookEvent: null, config: Config) => void;
-type UponSanitizeElementHook = (this: DOMPurify, currentNode: Node, hookEvent: UponSanitizeElementHookEvent, config: Config) => void;
-type UponSanitizeAttributeHook = (this: DOMPurify, currentNode: Element, hookEvent: UponSanitizeAttributeHookEvent, config: Config) => void;
+type BasicHookName =
+	| "beforeSanitizeElements"
+	| "afterSanitizeElements"
+	| "uponSanitizeShadowNode";
+type ElementHookName = "beforeSanitizeAttributes" | "afterSanitizeAttributes";
+type DocumentFragmentHookName =
+	| "beforeSanitizeShadowDOM"
+	| "afterSanitizeShadowDOM";
+type UponSanitizeElementHookName = "uponSanitizeElement";
+type UponSanitizeAttributeHookName = "uponSanitizeAttribute";
+type HookName =
+	| BasicHookName
+	| ElementHookName
+	| DocumentFragmentHookName
+	| UponSanitizeElementHookName
+	| UponSanitizeAttributeHookName;
+type NodeHook = (
+	this: DOMPurify,
+	currentNode: Node,
+	hookEvent: null,
+	config: Config,
+) => void;
+type ElementHook = (
+	this: DOMPurify,
+	currentNode: Element,
+	hookEvent: null,
+	config: Config,
+) => void;
+type DocumentFragmentHook = (
+	this: DOMPurify,
+	currentNode: DocumentFragment,
+	hookEvent: null,
+	config: Config,
+) => void;
+type UponSanitizeElementHook = (
+	this: DOMPurify,
+	currentNode: Node,
+	hookEvent: UponSanitizeElementHookEvent,
+	config: Config,
+) => void;
+type UponSanitizeAttributeHook = (
+	this: DOMPurify,
+	currentNode: Element,
+	hookEvent: UponSanitizeAttributeHookEvent,
+	config: Config,
+) => void;
 interface UponSanitizeElementHookEvent {
 	tagName: string;
 	allowedTags: Record<string, boolean>;
@@ -431,9 +510,34 @@ interface UponSanitizeAttributeHookEvent {
 /**
  * A `Window`-like object containing the properties and types that DOMPurify requires.
  */
-type WindowLike = Pick<typeof globalThis, 'DocumentFragment' | 'HTMLTemplateElement' | 'Node' | 'Element' | 'NodeFilter' | 'NamedNodeMap' | 'HTMLFormElement' | 'DOMParser'> & {
+type WindowLike = Pick<
+	typeof globalThis,
+	| "DocumentFragment"
+	| "HTMLTemplateElement"
+	| "Node"
+	| "Element"
+	| "NodeFilter"
+	| "NamedNodeMap"
+	| "HTMLFormElement"
+	| "DOMParser"
+> & {
 	document?: Document;
 	MozNamedAttrMap?: typeof window.NamedNodeMap;
-} & Pick<TrustedTypesWindow, 'trustedTypes'>;
+} & Pick<TrustedTypesWindow, "trustedTypes">;
 
-export { type Config, type DOMPurify, type DocumentFragmentHook, type ElementHook, type HookName, type NodeHook, type RemovedAttribute, type RemovedElement, type UponSanitizeAttributeHook, type UponSanitizeAttributeHookEvent, type UponSanitizeElementHook, type UponSanitizeElementHookEvent, type WindowLike, _default as default };
+export {
+	type Config,
+	type DOMPurify,
+	type DocumentFragmentHook,
+	type ElementHook,
+	type HookName,
+	type NodeHook,
+	type RemovedAttribute,
+	type RemovedElement,
+	type UponSanitizeAttributeHook,
+	type UponSanitizeAttributeHookEvent,
+	type UponSanitizeElementHook,
+	type UponSanitizeElementHookEvent,
+	type WindowLike,
+	_default as default,
+};

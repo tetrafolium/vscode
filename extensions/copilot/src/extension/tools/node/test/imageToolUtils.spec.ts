@@ -26,6 +26,8 @@ suite('imageToolUtils', () => {
 	});
 
 	test('does not recognize unsupported extensions as images', () => {
-		expect(getImageMimeType(URI.file('/workspace/image.bmp'))).toBeUndefined();
+		expect(
+			getImageMimeType(URI.file('/workspace/image.bmp')),
+		).toBeUndefined();
 	});
 });

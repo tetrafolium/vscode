@@ -10,9 +10,20 @@ import { createTextDocument } from '../../test/textDocument';
 import { ILines, checkSuffix, maybeSnipCompletionImpl } from '../suggestions';
 
 suite('checkSuffix', function () {
-	function assertSuffix(completionText: string, lineSuffix: string, expected: number) {
-		const doc = createTextDocument('file:///foo', 'typescript', 1, lineSuffix);
-		const processed = checkSuffix(doc, { line: 0, character: 0 }, <APIChoice>{
+	function assertSuffix(
+		completionText: string,
+		lineSuffix: string,
+		expected: number,
+	) {
+		const doc = createTextDocument(
+			'file:///foo',
+			'typescript',
+			1,
+			lineSuffix,
+		);
+		const processed = checkSuffix(doc, { line: 0, character: 0 }, <
+			APIChoice
+		>{
 			completionText,
 		});
 		assert.strictEqual(processed, expected);
@@ -47,11 +58,11 @@ class LicenseStore {
 		this.filePath = filePath;
 		this.fullLicenseText = fullLicenseText;
 	}`,
-				'}'
+				'}',
 			),
 			`any) {
 		this.filePath = filePath;
-		this.fullLicenseText = fullLicenseText;`
+		this.fullLicenseText = fullLicenseText;`,
 		);
 	});
 
@@ -75,11 +86,11 @@ class LicenseStore {
 		this.fullLicenseText = fullLicenseText;
 	}
 }`,
-				'}'
+				'}',
 			),
 			`any) {
 		this.filePath = filePath;
-		this.fullLicenseText = fullLicenseText;`
+		this.fullLicenseText = fullLicenseText;`,
 		);
 	});
 
@@ -102,11 +113,11 @@ class LicenseStore {
 		this.filePath = filePath;
 		this.fullLicenseText = fullLicenseText;
 	};`,
-				'}'
+				'}',
 			),
 			`any) {
 		this.filePath = filePath;
-		this.fullLicenseText = fullLicenseText;`
+		this.fullLicenseText = fullLicenseText;`,
 		);
 	});
 
@@ -130,13 +141,13 @@ class LicenseStore {
 		this.fullLicenseText = fullLicenseText;
 	}
 }`,
-				'}'
+				'}',
 			),
 			`any) {
 		this.filePath = filePath;
 		this.fullLicenseText = fullLicenseText;
 	}
-}`
+}`,
 		);
 
 		// Not restricted to the block close token
@@ -154,11 +165,11 @@ const list [
 	'two',
 	'three'
 ]`,
-				'}'
+				'}',
 			),
 			`'one',
 	'two',
-	'three'`
+	'three'`,
 		);
 	});
 
@@ -182,11 +193,11 @@ class LicenseStore {
 		this.fullLicenseText = fullLicenseText;
 	}
 }`,
-				'}'
+				'}',
 			),
 			`any) {
 		this.filePath = filePath;
-		this.fullLicenseText = fullLicenseText;`
+		this.fullLicenseText = fullLicenseText;`,
 		);
 	});
 
@@ -213,11 +224,11 @@ class LicenseStore {
 
 
 }`,
-				'}'
+				'}',
 			),
 			`any) {
 		this.filePath = filePath;
-		this.fullLicenseText = fullLicenseText;`
+		this.fullLicenseText = fullLicenseText;`,
 		);
 	});
 });

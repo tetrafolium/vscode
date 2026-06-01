@@ -6,7 +6,6 @@
 import type * as vscode from 'vscode';
 import { RepoContext } from '../../git/common/gitService';
 
-
 /**
  * Contains a subset of information needed to construct `IDeserializedWorkspaceState`
  * This is what is saved to the state.json files
@@ -15,20 +14,31 @@ export interface ISerializedWorkspaceState {
 	readonly workspaceFoldersFilePaths: string[] | undefined;
 	readonly workspaceFolderFilePath: string | undefined;
 	readonly repoContexts: Array<RepoContext | undefined> | undefined;
-	readonly activeTextEditor: {
-		selections: { anchor: vscode.Position; active: vscode.Position; isReversed: boolean }[];
-		documentFilePath: string;
-		visibleRanges: { start: vscode.Position; end: vscode.Position }[];
-		languageId: string;
-	} | undefined;
-	readonly symbols: {
-		name: string;
-		kind: vscode.SymbolKind;
-		containerName: string;
-		filePath: string;
-		start: vscode.Position;
-		end: vscode.Position;
-	}[] | undefined;
+	readonly activeTextEditor:
+		| {
+				selections: {
+					anchor: vscode.Position;
+					active: vscode.Position;
+					isReversed: boolean;
+				}[];
+				documentFilePath: string;
+				visibleRanges: {
+					start: vscode.Position;
+					end: vscode.Position;
+				}[];
+				languageId: string;
+		  }
+		| undefined;
+	readonly symbols:
+		| {
+				name: string;
+				kind: vscode.SymbolKind;
+				containerName: string;
+				filePath: string;
+				start: vscode.Position;
+				end: vscode.Position;
+		  }[]
+		| undefined;
 	readonly notebookDocumentFilePaths: string[] | undefined;
 	readonly activeFileDiagnostics: {
 		start: vscode.Position;
@@ -39,18 +49,22 @@ export interface ISerializedWorkspaceState {
 	}[];
 	readonly debugConsoleOutput: string;
 	readonly terminalBuffer: string;
-	readonly terminalLastCommand: {
-		commandLine: string | undefined;
-		cwd: string | undefined;
-		exitCode: number | undefined;
-		output: string | undefined;
-	} | undefined;
+	readonly terminalLastCommand:
+		| {
+				commandLine: string | undefined;
+				cwd: string | undefined;
+				exitCode: number | undefined;
+				output: string | undefined;
+		  }
+		| undefined;
 	readonly terminalSelection: string;
 	readonly terminalShellType: string;
-	readonly activeNotebookEditor: {
-		selections: { start: number; end: number }[];
-		documentFilePath: string;
-	} | undefined;
+	readonly activeNotebookEditor:
+		| {
+				selections: { start: number; end: number }[];
+				documentFilePath: string;
+		  }
+		| undefined;
 	readonly lsifIndex?: string;
 	readonly changeFiles?: { path: string; contents: string }[];
 	readonly textDocumentFilePaths: string[];

@@ -12,6 +12,9 @@ suite('EditDistanceScore Test Suite', function () {
 		assert.strictEqual(findEditDistanceScore([1], [2])?.score, 1);
 		assert.strictEqual(findEditDistanceScore([1], [])?.score, 1);
 		assert.strictEqual(findEditDistanceScore([], [1])?.score, 1);
-		assert.strictEqual(findEditDistanceScore([1, 2, 3], [3, 2, 1])?.score, 2);
+		assert.strictEqual(
+			findEditDistanceScore([1, 2, 3], [3, 2, 1])?.score,
+			2,
+		);
 	});
 });

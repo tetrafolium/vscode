@@ -3,13 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { status } from '../../../../../../base/browser/ui/aria/aria.js';
-import { renderAsPlaintext } from '../../../../../../base/browser/markdownRenderer.js';
-import { Emitter, Event } from '../../../../../../base/common/event.js';
-import { IMarkdownString } from '../../../../../../base/common/htmlContent.js';
-import { Disposable } from '../../../../../../base/common/lifecycle.js';
-import { InstantiationType, registerSingleton } from '../../../../../../platform/instantiation/common/extensions.js';
-import { createDecorator } from '../../../../../../platform/instantiation/common/instantiation.js';
+import { status } from "../../../../../../base/browser/ui/aria/aria.js";
+import { renderAsPlaintext } from "../../../../../../base/browser/markdownRenderer.js";
+import { Emitter, Event } from "../../../../../../base/common/event.js";
+import { IMarkdownString } from "../../../../../../base/common/htmlContent.js";
+import { Disposable } from "../../../../../../base/common/lifecycle.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../../../platform/instantiation/common/extensions.js";
+import { createDecorator } from "../../../../../../platform/instantiation/common/instantiation.js";
 
 export const enum ChatInputNotificationSeverity {
 	Info = 0,
@@ -40,7 +43,10 @@ export interface IChatInputNotification {
 	readonly sessionTypes?: readonly string[];
 }
 
-export const IChatInputNotificationService = createDecorator<IChatInputNotificationService>('chatInputNotificationService');
+export const IChatInputNotificationService =
+	createDecorator<IChatInputNotificationService>(
+		"chatInputNotificationService",
+	);
 
 export interface IChatInputNotificationService {
 	readonly _serviceBrand: undefined;
@@ -73,7 +79,9 @@ export interface IChatInputNotificationService {
 	 * An optional `filter` can be provided to restrict the set of notifications considered,
 	 * so a non-matching higher-priority notification doesn't mask other eligible ones.
 	 */
-	getActiveNotification(filter?: (notification: IChatInputNotification) => boolean): IChatInputNotification | undefined;
+	getActiveNotification(
+		filter?: (notification: IChatInputNotification) => boolean,
+	): IChatInputNotification | undefined;
 
 	/**
 	 * Called when the user sends a chat message. Auto-dismisses all notifications
@@ -82,7 +90,10 @@ export interface IChatInputNotificationService {
 	handleMessageSent(): void;
 }
 
-class ChatInputNotificationService extends Disposable implements IChatInputNotificationService {
+class ChatInputNotificationService
+	extends Disposable
+	implements IChatInputNotificationService
+{
 	readonly _serviceBrand: undefined;
 
 	private readonly _notifications = new Map<string, IChatInputNotification>();
@@ -128,7 +139,9 @@ class ChatInputNotificationService extends Disposable implements IChatInputNotif
 		}
 	}
 
-	getActiveNotification(filter?: (notification: IChatInputNotification) => boolean): IChatInputNotification | undefined {
+	getActiveNotification(
+		filter?: (notification: IChatInputNotification) => boolean,
+	): IChatInputNotification | undefined {
 		let best: IChatInputNotification | undefined;
 		let bestOrder = -1;
 
@@ -142,9 +155,10 @@ class ChatInputNotificationService extends Disposable implements IChatInputNotif
 
 			const order = this._insertionOrder.get(notification.id) ?? 0;
 
-			if (!best
-				|| notification.severity > best.severity
-				|| (notification.severity === best.severity && order > bestOrder)
+			if (
+				!best ||
+				notification.severity > best.severity ||
+				(notification.severity === best.severity && order > bestOrder)
 			) {
 				best = notification;
 				bestOrder = order;
@@ -157,7 +171,10 @@ class ChatInputNotificationService extends Disposable implements IChatInputNotif
 	handleMessageSent(): void {
 		let changed = false;
 		for (const notification of this._notifications.values()) {
-			if (notification.autoDismissOnMessage && !this._dismissed.has(notification.id)) {
+			if (
+				notification.autoDismissOnMessage &&
+				!this._dismissed.has(notification.id)
+			) {
 				this._dismissed.add(notification.id);
 				changed = true;
 			}
@@ -188,8 +205,11 @@ class ChatInputNotificationService extends Disposable implements IChatInputNotif
 			this._lastAnnouncedSignature = undefined;
 			return;
 		}
-		const rawMessage = typeof active.message === 'string' ? active.message : active.message.value;
-		const signature = `${active.id}\u0000${rawMessage}\u0000${active.description ?? ''}`;
+		const rawMessage =
+			typeof active.message === "string"
+				? active.message
+				: active.message.value;
+		const signature = `${active.id}\u0000${rawMessage}\u0000${active.description ?? ""}`;
 		if (signature === this._lastAnnouncedSignature) {
 			return;
 		}
@@ -198,9 +218,15 @@ class ChatInputNotificationService extends Disposable implements IChatInputNotif
 		// targets, etc. verbatim. Done after the signature check so we don't
 		// pay the parse cost on unrelated `onDidChange` fires.
 		const message = renderAsPlaintext(active.message);
-		const text = active.description ? `${message}. ${active.description}` : message;
+		const text = active.description
+			? `${message}. ${active.description}`
+			: message;
 		status(text);
 	}
 }
 
-registerSingleton(IChatInputNotificationService, ChatInputNotificationService, InstantiationType.Delayed);
+registerSingleton(
+	IChatInputNotificationService,
+	ChatInputNotificationService,
+	InstantiationType.Delayed,
+);

@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { join } from '../common/path.js';
-import { promises } from 'fs';
-import { mark } from '../common/performance.js';
-import { ILanguagePacks, INLSConfiguration } from '../../nls.js';
-import { Promises } from './pfs.js';
+import { join } from "../common/path.js";
+import { promises } from "fs";
+import { mark } from "../common/performance.js";
+import { ILanguagePacks, INLSConfiguration } from "../../nls.js";
+import { Promises } from "./pfs.js";
 
 export interface IResolveNLSConfigurationContext {
-
 	/**
 	 * Location where `nls.messages.json` and `nls.keys.json` are stored.
 	 */
@@ -39,13 +38,19 @@ export interface IResolveNLSConfigurationContext {
 	readonly osLocale: string;
 }
 
-export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPath, commit, nlsMetadataPath }: IResolveNLSConfigurationContext): Promise<INLSConfiguration> {
-	mark('code/willGenerateNls');
+export async function resolveNLSConfiguration({
+	userLocale,
+	osLocale,
+	userDataPath,
+	commit,
+	nlsMetadataPath,
+}: IResolveNLSConfigurationContext): Promise<INLSConfiguration> {
+	mark("code/willGenerateNls");
 
 	if (
-		process.env['VSCODE_DEV'] ||
-		userLocale === 'pseudo' ||
-		userLocale.startsWith('en') ||
+		process.env["VSCODE_DEV"] ||
+		userLocale === "pseudo" ||
+		userLocale.startsWith("en") ||
 		!commit ||
 		!userDataPath
 	) {
@@ -58,73 +63,101 @@ export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPa
 			return defaultNLSConfiguration(userLocale, osLocale, nlsMetadataPath);
 		}
 
-		const resolvedLanguage = resolveLanguagePackLanguage(languagePacks, userLocale);
+		const resolvedLanguage = resolveLanguagePackLanguage(
+			languagePacks,
+			userLocale,
+		);
 		if (!resolvedLanguage) {
 			return defaultNLSConfiguration(userLocale, osLocale, nlsMetadataPath);
 		}
 
 		const languagePack = languagePacks[resolvedLanguage];
-		const mainLanguagePackPath = languagePack?.translations?.['vscode'];
+		const mainLanguagePackPath = languagePack?.translations?.["vscode"];
 		if (
 			!languagePack ||
-			typeof languagePack.hash !== 'string' ||
+			typeof languagePack.hash !== "string" ||
 			!languagePack.translations ||
-			typeof mainLanguagePackPath !== 'string' ||
+			typeof mainLanguagePackPath !== "string" ||
 			!(await Promises.exists(mainLanguagePackPath))
 		) {
 			return defaultNLSConfiguration(userLocale, osLocale, nlsMetadataPath);
 		}
 
 		const languagePackId = `${languagePack.hash}.${resolvedLanguage}`;
-		const globalLanguagePackCachePath = join(userDataPath, 'clp', languagePackId);
-		const commitLanguagePackCachePath = join(globalLanguagePackCachePath, commit);
-		const languagePackMessagesFile = join(commitLanguagePackCachePath, 'nls.messages.json');
-		const translationsConfigFile = join(globalLanguagePackCachePath, 'tcf.json');
-		const languagePackCorruptMarkerFile = join(globalLanguagePackCachePath, 'corrupted.info');
+		const globalLanguagePackCachePath = join(
+			userDataPath,
+			"clp",
+			languagePackId,
+		);
+		const commitLanguagePackCachePath = join(
+			globalLanguagePackCachePath,
+			commit,
+		);
+		const languagePackMessagesFile = join(
+			commitLanguagePackCachePath,
+			"nls.messages.json",
+		);
+		const translationsConfigFile = join(
+			globalLanguagePackCachePath,
+			"tcf.json",
+		);
+		const languagePackCorruptMarkerFile = join(
+			globalLanguagePackCachePath,
+			"corrupted.info",
+		);
 
 		if (await Promises.exists(languagePackCorruptMarkerFile)) {
-			await promises.rm(globalLanguagePackCachePath, { recursive: true, force: true, maxRetries: 3 }); // delete corrupted cache folder
+			await promises.rm(globalLanguagePackCachePath, {
+				recursive: true,
+				force: true,
+				maxRetries: 3,
+			}); // delete corrupted cache folder
 		}
 
 		const result: INLSConfiguration = {
 			userLocale,
 			osLocale,
 			resolvedLanguage,
-			defaultMessagesFile: join(nlsMetadataPath, 'nls.messages.json'),
+			defaultMessagesFile: join(nlsMetadataPath, "nls.messages.json"),
 			languagePack: {
 				translationsConfigFile,
 				messagesFile: languagePackMessagesFile,
-				corruptMarkerFile: languagePackCorruptMarkerFile
+				corruptMarkerFile: languagePackCorruptMarkerFile,
 			},
 
 			// NLS: below properties are a relic from old times only used by vscode-nls and deprecated
 			locale: userLocale,
-			availableLanguages: { '*': resolvedLanguage },
+			availableLanguages: { "*": resolvedLanguage },
 			_languagePackId: languagePackId,
 			_languagePackSupport: true,
 			_translationsConfigFile: translationsConfigFile,
 			_cacheRoot: globalLanguagePackCachePath,
 			_resolvedLanguagePackCoreLocation: commitLanguagePackCachePath,
-			_corruptedFile: languagePackCorruptMarkerFile
+			_corruptedFile: languagePackCorruptMarkerFile,
 		};
 
 		if (await Promises.exists(languagePackMessagesFile)) {
-			touch(commitLanguagePackCachePath).catch(() => { }); // We don't wait for this. No big harm if we can't touch
-			mark('code/didGenerateNls');
+			touch(commitLanguagePackCachePath).catch(() => {}); // We don't wait for this. No big harm if we can't touch
+			mark("code/didGenerateNls");
 			return result;
 		}
 
-		const [
-			nlsDefaultKeys,
-			nlsDefaultMessages,
-			nlsPackdata
-		]:
-			[Array<[string, string[]]>, string[], { contents: Record<string, Record<string, string>> }]
+		const [nlsDefaultKeys, nlsDefaultMessages, nlsPackdata]: [
+			Array<[string, string[]]>,
+			string[],
+			{ contents: Record<string, Record<string, string>> },
+		] =
 			//      ^moduleId ^nlsKeys                               ^moduleId      ^nlsKey ^nlsValue
-			= await Promise.all([
-				promises.readFile(join(nlsMetadataPath, 'nls.keys.json'), 'utf-8').then(content => JSON.parse(content)),
-				promises.readFile(join(nlsMetadataPath, 'nls.messages.json'), 'utf-8').then(content => JSON.parse(content)),
-				promises.readFile(mainLanguagePackPath, 'utf-8').then(content => JSON.parse(content)),
+			await Promise.all([
+				promises
+					.readFile(join(nlsMetadataPath, "nls.keys.json"), "utf-8")
+					.then((content) => JSON.parse(content)),
+				promises
+					.readFile(join(nlsMetadataPath, "nls.messages.json"), "utf-8")
+					.then((content) => JSON.parse(content)),
+				promises
+					.readFile(mainLanguagePackPath, "utf-8")
+					.then((content) => JSON.parse(content)),
 			]);
 
 		const nlsResult: string[] = [];
@@ -138,7 +171,9 @@ export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPa
 		for (const [moduleId, nlsKeys] of nlsDefaultKeys) {
 			const moduleTranslations = nlsPackdata.contents[moduleId];
 			for (const nlsKey of nlsKeys) {
-				nlsResult.push(moduleTranslations?.[nlsKey] || nlsDefaultMessages[nlsIndex]);
+				nlsResult.push(
+					moduleTranslations?.[nlsKey] || nlsDefaultMessages[nlsIndex],
+				);
 				nlsIndex++;
 			}
 		}
@@ -146,15 +181,23 @@ export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPa
 		await promises.mkdir(commitLanguagePackCachePath, { recursive: true });
 
 		await Promise.all([
-			promises.writeFile(languagePackMessagesFile, JSON.stringify(nlsResult), 'utf-8'),
-			promises.writeFile(translationsConfigFile, JSON.stringify(languagePack.translations), 'utf-8')
+			promises.writeFile(
+				languagePackMessagesFile,
+				JSON.stringify(nlsResult),
+				"utf-8",
+			),
+			promises.writeFile(
+				translationsConfigFile,
+				JSON.stringify(languagePack.translations),
+				"utf-8",
+			),
 		]);
 
-		mark('code/didGenerateNls');
+		mark("code/didGenerateNls");
 
 		return result;
 	} catch (error) {
-		console.error('Generating translation files failed.', error);
+		console.error("Generating translation files failed.", error);
 	}
 
 	return defaultNLSConfiguration(userLocale, osLocale, nlsMetadataPath);
@@ -168,23 +211,28 @@ export async function resolveNLSConfiguration({ userLocale, osLocale, userDataPa
  *
  * The file is updated whenever a new language pack is installed or removed.
  */
-async function getLanguagePackConfigurations(userDataPath: string): Promise<ILanguagePacks | undefined> {
-	const configFile = join(userDataPath, 'languagepacks.json');
+async function getLanguagePackConfigurations(
+	userDataPath: string,
+): Promise<ILanguagePacks | undefined> {
+	const configFile = join(userDataPath, "languagepacks.json");
 	try {
-		return JSON.parse(await promises.readFile(configFile, 'utf-8'));
+		return JSON.parse(await promises.readFile(configFile, "utf-8"));
 	} catch (err) {
 		return undefined; // Do nothing. If we can't read the file we have no language pack config.
 	}
 }
 
-function resolveLanguagePackLanguage(languagePacks: ILanguagePacks, locale: string | undefined): string | undefined {
+function resolveLanguagePackLanguage(
+	languagePacks: ILanguagePacks,
+	locale: string | undefined,
+): string | undefined {
 	try {
 		while (locale) {
 			if (languagePacks[locale]) {
 				return locale;
 			}
 
-			const index = locale.lastIndexOf('-');
+			const index = locale.lastIndexOf("-");
 			if (index > 0) {
 				locale = locale.substring(0, index);
 			} else {
@@ -192,24 +240,28 @@ function resolveLanguagePackLanguage(languagePacks: ILanguagePacks, locale: stri
 			}
 		}
 	} catch (error) {
-		console.error('Resolving language pack configuration failed.', error);
+		console.error("Resolving language pack configuration failed.", error);
 	}
 
 	return undefined;
 }
 
-function defaultNLSConfiguration(userLocale: string, osLocale: string, nlsMetadataPath: string): INLSConfiguration {
-	mark('code/didGenerateNls');
+function defaultNLSConfiguration(
+	userLocale: string,
+	osLocale: string,
+	nlsMetadataPath: string,
+): INLSConfiguration {
+	mark("code/didGenerateNls");
 
 	return {
 		userLocale,
 		osLocale,
-		resolvedLanguage: 'en',
-		defaultMessagesFile: join(nlsMetadataPath, 'nls.messages.json'),
+		resolvedLanguage: "en",
+		defaultMessagesFile: join(nlsMetadataPath, "nls.messages.json"),
 
 		// NLS: below 2 are a relic from old times only used by vscode-nls and deprecated
 		locale: userLocale,
-		availableLanguages: {}
+		availableLanguages: {},
 	};
 }
 

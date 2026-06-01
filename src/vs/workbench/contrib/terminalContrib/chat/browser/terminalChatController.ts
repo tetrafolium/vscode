@@ -3,24 +3,41 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Terminal as RawXtermTerminal } from '@xterm/xterm';
-import { Lazy } from '../../../../../base/common/lazy.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
-import { IInstantiationService, type ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IChatCodeBlockContextProviderService, IChatWidgetService } from '../../../chat/browser/chat.js';
-import { IChatService } from '../../../chat/common/chatService/chatService.js';
-import { isDetachedTerminalInstance, ITerminalContribution, ITerminalInstance, ITerminalService, IXtermTerminal } from '../../../terminal/browser/terminal.js';
-import { TerminalChatWidget } from './terminalChatWidget.js';
-import type { ITerminalContributionContext } from '../../../terminal/browser/terminalExtensions.js';
-import type { IChatModel } from '../../../chat/common/model/chatModel.js';
-import { IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
+import type { Terminal as RawXtermTerminal } from "@xterm/xterm";
+import { Lazy } from "../../../../../base/common/lazy.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { IContextKeyService } from "../../../../../platform/contextkey/common/contextkey.js";
+import {
+	IInstantiationService,
+	type ServicesAccessor,
+} from "../../../../../platform/instantiation/common/instantiation.js";
+import {
+	IChatCodeBlockContextProviderService,
+	IChatWidgetService,
+} from "../../../chat/browser/chat.js";
+import { IChatService } from "../../../chat/common/chatService/chatService.js";
+import {
+	isDetachedTerminalInstance,
+	ITerminalContribution,
+	ITerminalInstance,
+	ITerminalService,
+	IXtermTerminal,
+} from "../../../terminal/browser/terminal.js";
+import { TerminalChatWidget } from "./terminalChatWidget.js";
+import type { ITerminalContributionContext } from "../../../terminal/browser/terminalExtensions.js";
+import type { IChatModel } from "../../../chat/common/model/chatModel.js";
+import { IChatEntitlementService } from "../../../../services/chat/common/chatEntitlementService.js";
 
-export class TerminalChatController extends Disposable implements ITerminalContribution {
-	static readonly ID = 'terminal.chat';
+export class TerminalChatController
+	extends Disposable
+	implements ITerminalContribution
+{
+	static readonly ID = "terminal.chat";
 
 	static get(instance: ITerminalInstance): TerminalChatController | null {
-		return instance.getContribution<TerminalChatController>(TerminalChatController.ID);
+		return instance.getContribution<TerminalChatController>(
+			TerminalChatController.ID,
+		);
 	}
 	/**
 	 * The controller for the currently focused chat widget. This is used to track action context since 'active terminals'
@@ -38,7 +55,9 @@ export class TerminalChatController extends Disposable implements ITerminalContr
 	 * The terminal chat widget for the controller, this will be undefined if xterm is not ready yet (ie. the
 	 * terminal is still initializing). This wraps the inline chat widget.
 	 */
-	get terminalChatWidget(): TerminalChatWidget | undefined { return this._terminalChatWidget?.value; }
+	get terminalChatWidget(): TerminalChatWidget | undefined {
+		return this._terminalChatWidget?.value;
+	}
 
 	private _lastResponseContent: string | undefined;
 	get lastResponseContent(): string | undefined {
@@ -46,56 +65,85 @@ export class TerminalChatController extends Disposable implements ITerminalContr
 	}
 
 	get scopedContextKeyService(): IContextKeyService {
-		return this._terminalChatWidget?.value.inlineChatWidget.scopedContextKeyService ?? this._contextKeyService;
+		return (
+			this._terminalChatWidget?.value.inlineChatWidget
+				.scopedContextKeyService ?? this._contextKeyService
+		);
 	}
 
 	constructor(
 		private readonly _ctx: ITerminalContributionContext,
-		@IChatCodeBlockContextProviderService chatCodeBlockContextProviderService: IChatCodeBlockContextProviderService,
+		@IChatCodeBlockContextProviderService
+		chatCodeBlockContextProviderService: IChatCodeBlockContextProviderService,
 		@IChatEntitlementService chatEntitlementService: IChatEntitlementService,
 		@IContextKeyService private readonly _contextKeyService: IContextKeyService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 		@ITerminalService private readonly _terminalService: ITerminalService,
 	) {
 		super();
 
-		this._register(chatEntitlementService.onDidChangeSentiment(() => {
-			if (chatEntitlementService.sentiment.hidden) {
-				this._terminalChatWidget?.value.clear();
-			}
-		}));
-
-		this._register(chatCodeBlockContextProviderService.registerProvider({
-			getCodeBlockContext: (editor) => {
-				if (!editor || !this._terminalChatWidget?.hasValue || !this.hasFocus()) {
-					return;
+		this._register(
+			chatEntitlementService.onDidChangeSentiment(() => {
+				if (chatEntitlementService.sentiment.hidden) {
+					this._terminalChatWidget?.value.clear();
 				}
-				return {
-					element: editor,
-					code: editor.getValue(),
-					codeBlockIndex: 0,
-					languageId: editor.getModel()!.getLanguageId(),
-					chatSessionResource: this._terminalChatWidget.value.inlineChatWidget.chatWidget.viewModel?.sessionResource
-				};
-			}
-		}, 'terminal'));
+			}),
+		);
+
+		this._register(
+			chatCodeBlockContextProviderService.registerProvider(
+				{
+					getCodeBlockContext: (editor) => {
+						if (
+							!editor ||
+							!this._terminalChatWidget?.hasValue ||
+							!this.hasFocus()
+						) {
+							return;
+						}
+						return {
+							element: editor,
+							code: editor.getValue(),
+							codeBlockIndex: 0,
+							languageId: editor.getModel()!.getLanguageId(),
+							chatSessionResource:
+								this._terminalChatWidget.value.inlineChatWidget.chatWidget
+									.viewModel?.sessionResource,
+						};
+					},
+				},
+				"terminal",
+			),
+		);
 	}
 
 	xtermReady(xterm: IXtermTerminal & { raw: RawXtermTerminal }): void {
 		this._terminalChatWidget = new Lazy(() => {
-			const chatWidget = this._register(this._instantiationService.createInstance(TerminalChatWidget, this._ctx.instance.domElement!, this._ctx.instance, xterm));
-			this._register(chatWidget.focusTracker.onDidFocus(() => {
-				TerminalChatController.activeChatController = this;
-				if (!isDetachedTerminalInstance(this._ctx.instance)) {
-					this._terminalService.setActiveInstance(this._ctx.instance);
-				}
-			}));
-			this._register(chatWidget.focusTracker.onDidBlur(() => {
-				TerminalChatController.activeChatController = undefined;
-				this._ctx.instance.resetScrollbarVisibility();
-			}));
+			const chatWidget = this._register(
+				this._instantiationService.createInstance(
+					TerminalChatWidget,
+					this._ctx.instance.domElement!,
+					this._ctx.instance,
+					xterm,
+				),
+			);
+			this._register(
+				chatWidget.focusTracker.onDidFocus(() => {
+					TerminalChatController.activeChatController = this;
+					if (!isDetachedTerminalInstance(this._ctx.instance)) {
+						this._terminalService.setActiveInstance(this._ctx.instance);
+					}
+				}),
+			);
+			this._register(
+				chatWidget.focusTracker.onDidBlur(() => {
+					TerminalChatController.activeChatController = undefined;
+					this._ctx.instance.resetScrollbarVisibility();
+				}),
+			);
 			if (!this._ctx.instance.domElement) {
-				throw new Error('FindWidget expected terminal DOM to be initialized');
+				throw new Error("FindWidget expected terminal DOM to be initialized");
 			}
 			return chatWidget;
 		});
@@ -111,7 +159,7 @@ export class TerminalChatController extends Disposable implements ITerminalContr
 	}
 
 	private _getPlaceholderText(): string {
-		return this._forcedPlaceholder ?? '';
+		return this._forcedPlaceholder ?? "";
 	}
 
 	setPlaceholder(text: string): void {
@@ -143,15 +191,22 @@ export class TerminalChatController extends Disposable implements ITerminalContr
 	}
 
 	async viewInChat(): Promise<void> {
-		const chatModel = this.terminalChatWidget?.inlineChatWidget.chatWidget.viewModel?.model;
+		const chatModel =
+			this.terminalChatWidget?.inlineChatWidget.chatWidget.viewModel?.model;
 		if (chatModel) {
-			await this._instantiationService.invokeFunction(moveToPanelChat, chatModel);
+			await this._instantiationService.invokeFunction(
+				moveToPanelChat,
+				chatModel,
+			);
 		}
 		this._terminalChatWidget?.rawValue?.hide();
 	}
 }
 
-async function moveToPanelChat(accessor: ServicesAccessor, model: IChatModel | undefined) {
+async function moveToPanelChat(
+	accessor: ServicesAccessor,
+	model: IChatModel | undefined,
+) {
 	const chatService = accessor.get(IChatService);
 	const chatWidgetService = accessor.get(IChatWidgetService);
 
@@ -159,7 +214,10 @@ async function moveToPanelChat(accessor: ServicesAccessor, model: IChatModel | u
 
 	if (widget && widget.viewModel && model) {
 		for (const request of model.getRequests().slice()) {
-			await chatService.adoptRequest(widget.viewModel.model.sessionResource, request);
+			await chatService.adoptRequest(
+				widget.viewModel.model.sessionResource,
+				request,
+			);
 		}
 		widget.focusResponseItem();
 	}

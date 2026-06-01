@@ -7,8 +7,14 @@ import { ServicesAccessor } from '../../../../../../../util/vs/platform/instanti
 import { TextDocumentValidation } from '../../textDocument';
 import { ICompletionsTextDocumentManagerService } from '../../textDocumentManager';
 import { ResolvedContextItem } from '../contextProviderRegistry';
-import { ICompletionsContextProviderService, PromptExpectation } from '../contextProviderStatistics';
-import { CodeSnippetWithId, filterContextItemsByType } from './contextItemSchemas';
+import {
+	ICompletionsContextProviderService,
+	PromptExpectation,
+} from '../contextProviderStatistics';
+import {
+	CodeSnippetWithId,
+	filterContextItemsByType,
+} from './contextItemSchemas';
 
 const CONTENT_EXCLUDED_EXPECTATION: PromptExpectation = 'content_excluded';
 
@@ -21,9 +27,12 @@ export async function getCodeSnippetsFromContextItems(
 	accessor: ServicesAccessor,
 	completionId: string,
 	resolvedContextItems: ResolvedContextItem[],
-	languageId: string
+	languageId: string,
 ): Promise<CodeSnippetWithId[]> {
-	const codeSnippetContextItems = filterContextItemsByType(resolvedContextItems, 'CodeSnippet');
+	const codeSnippetContextItems = filterContextItemsByType(
+		resolvedContextItems,
+		'CodeSnippet',
+	);
 
 	if (codeSnippetContextItems.length === 0) {
 		return [];
@@ -31,50 +40,69 @@ export async function getCodeSnippetsFromContextItems(
 
 	// Expand snippets and collect URIs
 	const allUris = new Set<string>();
-	const mappedSnippets: SnippetWithProviderInfo[] = codeSnippetContextItems.flatMap(item =>
-		item.data.map(data => {
-			allUris.add(data.uri);
-			data.additionalUris?.forEach(uri => allUris.add(uri));
-			return { providerId: item.providerId, data };
-		})
-	);
+	const mappedSnippets: SnippetWithProviderInfo[] =
+		codeSnippetContextItems.flatMap((item) =>
+			item.data.map((data) => {
+				allUris.add(data.uri);
+				data.additionalUris?.forEach((uri) => allUris.add(uri));
+				return { providerId: item.providerId, data };
+			}),
+		);
 
 	// Validate all URIs at once: we already know they are distinct
-	const contextProviderStatistics = accessor.get(ICompletionsContextProviderService);
+	const contextProviderStatistics = accessor.get(
+		ICompletionsContextProviderService,
+	);
 	const tdm = accessor.get(ICompletionsTextDocumentManagerService);
 	const validationMap = new Map<string, TextDocumentValidation>();
 	await Promise.all(
-		Array.from(allUris).map(async uri => {
-			validationMap.set(uri, await tdm.getTextDocumentValidation({ uri }));
-		})
+		Array.from(allUris).map(async (uri) => {
+			validationMap.set(
+				uri,
+				await tdm.getTextDocumentValidation({ uri }),
+			);
+		}),
 	);
 
 	// Process only valid snippets
-	const statistics = contextProviderStatistics.getStatisticsForCompletion(completionId);
+	const statistics =
+		contextProviderStatistics.getStatisticsForCompletion(completionId);
 	return mappedSnippets
-		.filter(snippet => {
-			const urisToCheck = [snippet.data.uri, ...(snippet.data.additionalUris ?? [])];
-			const isValid = urisToCheck.every(uri => validationMap.get(uri)?.status === 'valid');
+		.filter((snippet) => {
+			const urisToCheck = [
+				snippet.data.uri,
+				...(snippet.data.additionalUris ?? []),
+			];
+			const isValid = urisToCheck.every(
+				(uri) => validationMap.get(uri)?.status === 'valid',
+			);
 
 			// Set expectations regardless of validity
 			if (isValid) {
-				statistics.addExpectations(snippet.providerId, [[snippet.data, 'included']]);
+				statistics.addExpectations(snippet.providerId, [
+					[snippet.data, 'included'],
+				]);
 			} else {
-				statistics.addExpectations(snippet.providerId, [[snippet.data, CONTENT_EXCLUDED_EXPECTATION]]);
+				statistics.addExpectations(snippet.providerId, [
+					[snippet.data, CONTENT_EXCLUDED_EXPECTATION],
+				]);
 			}
 
 			return isValid;
 		})
-		.map(snippet => snippet.data);
+		.map((snippet) => snippet.data);
 }
 
-export type CodeSnippetWithRelativePath = { snippet: CodeSnippetWithId; relativePath?: string };
+export type CodeSnippetWithRelativePath = {
+	snippet: CodeSnippetWithId;
+	relativePath?: string;
+};
 
 export function addRelativePathToCodeSnippets(
 	tdm: ICompletionsTextDocumentManagerService,
-	codeSnippets: CodeSnippetWithId[]
+	codeSnippets: CodeSnippetWithId[],
 ): CodeSnippetWithRelativePath[] {
-	return codeSnippets.map(codeSnippet => {
+	return codeSnippets.map((codeSnippet) => {
 		return {
 			snippet: codeSnippet,
 			relativePath: tdm.getRelativePath(codeSnippet),

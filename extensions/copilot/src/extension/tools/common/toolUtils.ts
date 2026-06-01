@@ -11,14 +11,19 @@ type FileUriMetadata = {
 	linkText: string;
 };
 
-export function formatUriForFileWidget(uriOrLocation: URI | Location, metadata?: FileUriMetadata): string {
+export function formatUriForFileWidget(
+	uriOrLocation: URI | Location,
+	metadata?: FileUriMetadata,
+): string {
 	const uri = URI.isUri(uriOrLocation) ? uriOrLocation : uriOrLocation.uri;
-	const rangePart = URI.isUri(uriOrLocation) ?
-		'' :
-		`#${uriOrLocation.range.start.line + 1}-${uriOrLocation.range.end.line + 1}`;
+	const rangePart = URI.isUri(uriOrLocation)
+		? ''
+		: `#${uriOrLocation.range.start.line + 1}-${uriOrLocation.range.end.line + 1}`;
 
 	if (metadata) {
-		const uriWithQuery = uri.with({ query: `vscodeLinkType=${metadata.vscodeLinkType}` });
+		const uriWithQuery = uri.with({
+			query: `vscodeLinkType=${metadata.vscodeLinkType}`,
+		});
 		return `[${metadata.linkText}](${uriWithQuery.toString()}${rangePart})`;
 	}
 
@@ -31,7 +36,10 @@ export function formatUriForFileWidget(uriOrLocation: URI | Location, metadata?:
  * @param url The URL to encode
  * @returns An object containing the encoded URL and whether it was different from the original
  */
-export function encodeUrlHostname(url: string): { encoded: string; isDifferent: boolean } {
+export function encodeUrlHostname(url: string): {
+	encoded: string;
+	isDifferent: boolean;
+} {
 	if (!URL.canParse(url)) {
 		return { encoded: url, isDifferent: false };
 	}
@@ -57,6 +65,6 @@ export function encodeUrlHostname(url: string): { encoded: string; isDifferent: 
 
 	return {
 		encoded: encodedUrl,
-		isDifferent
+		isDifferent,
 	};
 }

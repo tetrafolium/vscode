@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ChildProcessWithoutNullStreams } from 'child_process';
-import { TimeoutTimer } from '../../../../base/common/async.js';
-import { IDisposable } from '../../../../base/common/lifecycle.js';
-import { killTree } from '../../../../base/node/processes.js';
-import { isWindows } from '../../../../base/common/platform.js';
+import { ChildProcessWithoutNullStreams } from "child_process";
+import { TimeoutTimer } from "../../../../base/common/async.js";
+import { IDisposable } from "../../../../base/common/lifecycle.js";
+import { killTree } from "../../../../base/node/processes.js";
+import { isWindows } from "../../../../base/common/platform.js";
 
 const enum McpProcessState {
 	Running,
@@ -37,8 +37,8 @@ export class McpStdioStateHandler implements IDisposable {
 
 	constructor(
 		private readonly _child: ChildProcessWithoutNullStreams,
-		private readonly _graceTimeMs: number = McpStdioStateHandler.GRACE_TIME_MS
-	) { }
+		private readonly _graceTimeMs: number = McpStdioStateHandler.GRACE_TIME_MS,
+	) {}
 
 	/**
 	 * Initiates graceful shutdown. If called while shutdown is already in progress,
@@ -64,16 +64,19 @@ export class McpStdioStateHandler implements IDisposable {
 
 	private async killPolite() {
 		this._procState = McpProcessState.KilledPolite;
-		this._nextTimeout = new TimeoutTimer(() => this.killForceful(), this._graceTimeMs);
+		this._nextTimeout = new TimeoutTimer(
+			() => this.killForceful(),
+			this._graceTimeMs,
+		);
 
 		if (this._child.pid) {
 			if (!isWindows) {
 				await killTree(this._child.pid, false).catch(() => {
-					this._child.kill('SIGTERM');
+					this._child.kill("SIGTERM");
 				});
 			}
 		} else {
-			this._child.kill('SIGTERM');
+			this._child.kill("SIGTERM");
 		}
 	}
 
@@ -82,7 +85,7 @@ export class McpStdioStateHandler implements IDisposable {
 
 		if (this._child.pid) {
 			await killTree(this._child.pid, true).catch(() => {
-				this._child.kill('SIGKILL');
+				this._child.kill("SIGKILL");
 			});
 		} else {
 			this._child.kill();
@@ -91,7 +94,7 @@ export class McpStdioStateHandler implements IDisposable {
 
 	public write(message: string): void {
 		if (!this.stopped) {
-			this._child.stdin.write(message + '\n');
+			this._child.stdin.write(message + "\n");
 		}
 	}
 

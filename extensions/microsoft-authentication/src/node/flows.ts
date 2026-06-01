@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AuthenticationResult } from '@azure/msal-node';
-import { Uri, LogOutputChannel, env } from 'vscode';
-import { ICachedPublicClientApplication } from '../common/publicClientCache';
-import { UriHandlerLoopbackClient } from '../common/loopbackClientAndOpener';
-import { UriEventHandler } from '../UriEventHandler';
-import { loopbackTemplate } from './loopbackTemplate';
-import { Config } from '../common/config';
+import { AuthenticationResult } from "@azure/msal-node";
+import { Uri, LogOutputChannel, env } from "vscode";
+import { ICachedPublicClientApplication } from "../common/publicClientCache";
+import { UriHandlerLoopbackClient } from "../common/loopbackClientAndOpener";
+import { UriEventHandler } from "../UriEventHandler";
+import { loopbackTemplate } from "./loopbackTemplate";
+import { Config } from "../common/config";
 
-const DEFAULT_REDIRECT_URI = 'https://vscode.dev/redirect';
+const DEFAULT_REDIRECT_URI = "https://vscode.dev/redirect";
 
 export const enum ExtensionHost {
 	Remote,
-	Local
+	Local,
 }
 
 interface IMsalFlowOptions {
@@ -50,50 +50,77 @@ interface IMsalFlow {
 }
 
 class DefaultLoopbackFlow implements IMsalFlow {
-	label = 'default';
+	label = "default";
 	options: IMsalFlowOptions = {
 		supportsRemoteExtensionHost: false,
 		supportsUnsupportedClient: true,
 		supportsBroker: true,
-		supportsPortableMode: true
+		supportsPortableMode: true,
 	};
 
-	async trigger({ cachedPca, authority, scopes, claims, resource, loginHint, windowHandle, logger }: IMsalFlowTriggerOptions): Promise<AuthenticationResult> {
-		logger.info('Trying default msal flow...');
+	async trigger({
+		cachedPca,
+		authority,
+		scopes,
+		claims,
+		resource,
+		loginHint,
+		windowHandle,
+		logger,
+	}: IMsalFlowTriggerOptions): Promise<AuthenticationResult> {
+		logger.info("Trying default msal flow...");
 		let redirectUri: string | undefined;
-		if (cachedPca.isBrokerAvailable && process.platform === 'darwin') {
+		if (cachedPca.isBrokerAvailable && process.platform === "darwin") {
 			redirectUri = Config.macOSBrokerRedirectUri;
 		}
 		return await cachedPca.acquireTokenInteractive({
-			openBrowser: async (url: string) => { await env.openExternal(Uri.parse(url)); },
+			openBrowser: async (url: string) => {
+				await env.openExternal(Uri.parse(url));
+			},
 			scopes,
 			authority,
 			successTemplate: loopbackTemplate,
 			errorTemplate: loopbackTemplate,
 			loginHint,
-			prompt: loginHint ? undefined : 'select_account',
+			prompt: loginHint ? undefined : "select_account",
 			windowHandle,
 			claims,
 			resource,
-			redirectUri
+			redirectUri,
 		});
 	}
 }
 
 class UrlHandlerFlow implements IMsalFlow {
-	label = 'protocol handler';
+	label = "protocol handler";
 	options: IMsalFlowOptions = {
 		supportsRemoteExtensionHost: true,
 		supportsUnsupportedClient: false,
 		supportsBroker: false,
-		supportsPortableMode: false
+		supportsPortableMode: false,
 	};
 
-	async trigger({ cachedPca, authority, scopes, claims, resource, loginHint, windowHandle, logger, uriHandler, callbackUri }: IMsalFlowTriggerOptions): Promise<AuthenticationResult> {
-		logger.info('Trying protocol handler flow...');
-		const loopbackClient = new UriHandlerLoopbackClient(uriHandler, DEFAULT_REDIRECT_URI, callbackUri, logger);
+	async trigger({
+		cachedPca,
+		authority,
+		scopes,
+		claims,
+		resource,
+		loginHint,
+		windowHandle,
+		logger,
+		uriHandler,
+		callbackUri,
+	}: IMsalFlowTriggerOptions): Promise<AuthenticationResult> {
+		logger.info("Trying protocol handler flow...");
+		const loopbackClient = new UriHandlerLoopbackClient(
+			uriHandler,
+			DEFAULT_REDIRECT_URI,
+			callbackUri,
+			logger,
+		);
 		let redirectUri: string | undefined;
-		if (cachedPca.isBrokerAvailable && process.platform === 'darwin') {
+		if (cachedPca.isBrokerAvailable && process.platform === "darwin") {
 			redirectUri = Config.macOSBrokerRedirectUri;
 		}
 		return await cachedPca.acquireTokenInteractive({
@@ -102,29 +129,41 @@ class UrlHandlerFlow implements IMsalFlow {
 			authority,
 			loopbackClient,
 			loginHint,
-			prompt: loginHint ? undefined : 'select_account',
+			prompt: loginHint ? undefined : "select_account",
 			windowHandle,
 			claims,
 			resource,
-			redirectUri
+			redirectUri,
 		});
 	}
 }
 
 class DeviceCodeFlow implements IMsalFlow {
-	label = 'device code';
+	label = "device code";
 	options: IMsalFlowOptions = {
 		supportsRemoteExtensionHost: true,
 		supportsUnsupportedClient: true,
 		supportsBroker: false,
-		supportsPortableMode: true
+		supportsPortableMode: true,
 	};
 
-	async trigger({ cachedPca, authority, scopes, claims, resource, logger }: IMsalFlowTriggerOptions): Promise<AuthenticationResult> {
-		logger.info('Trying device code flow...');
-		const result = await cachedPca.acquireTokenByDeviceCode({ scopes, authority, claims, resource });
+	async trigger({
+		cachedPca,
+		authority,
+		scopes,
+		claims,
+		resource,
+		logger,
+	}: IMsalFlowTriggerOptions): Promise<AuthenticationResult> {
+		logger.info("Trying device code flow...");
+		const result = await cachedPca.acquireTokenByDeviceCode({
+			scopes,
+			authority,
+			claims,
+			resource,
+		});
 		if (!result) {
-			throw new Error('Device code flow did not return a result');
+			throw new Error("Device code flow did not return a result");
 		}
 		return result;
 	}
@@ -133,7 +172,7 @@ class DeviceCodeFlow implements IMsalFlow {
 export const allFlows: IMsalFlow[] = [
 	new DefaultLoopbackFlow(),
 	new UrlHandlerFlow(),
-	new DeviceCodeFlow()
+	new DeviceCodeFlow(),
 ];
 
 export interface IMsalFlowQuery {

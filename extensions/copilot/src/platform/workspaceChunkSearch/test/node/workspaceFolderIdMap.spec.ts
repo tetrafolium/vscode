@@ -20,7 +20,7 @@ class MockMemento implements Memento {
 	get<T>(key: string, defaultValue: T): T;
 	get<T>(key: string, defaultValue?: T): T | undefined {
 		const val = this._data.get(key);
-		return val !== undefined ? val as T : defaultValue;
+		return val !== undefined ? (val as T) : defaultValue;
 	}
 
 	async update(key: string, value: unknown): Promise<void> {
@@ -29,7 +29,6 @@ class MockMemento implements Memento {
 }
 
 suite('WorkspaceFolderIdMap', () => {
-
 	test('returns an id based on folder basename', () => {
 		const store = new MockMemento();
 		const map = new WorkspaceFolderIdMap(store);

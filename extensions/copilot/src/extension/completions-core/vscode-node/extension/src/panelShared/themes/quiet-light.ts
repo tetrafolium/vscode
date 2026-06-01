@@ -132,7 +132,11 @@ export const quietLight: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['constant.language', 'support.constant', 'variable.language'],
+			scope: [
+				'constant.language',
+				'support.constant',
+				'variable.language',
+			],
 			settings: {
 				foreground: '#9C5D27',
 			},
@@ -240,20 +244,31 @@ export const quietLight: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['meta.tag entity.other.attribute-name', 'entity.other.attribute-name.html'],
+			scope: [
+				'meta.tag entity.other.attribute-name',
+				'entity.other.attribute-name.html',
+			],
 			settings: {
 				foreground: '#8190A0',
 				fontStyle: 'italic',
 			},
 		},
 		{
-			scope: ['constant.character.entity', 'punctuation.definition.entity'],
+			scope: [
+				'constant.character.entity',
+				'punctuation.definition.entity',
+			],
 			settings: {
 				foreground: '#9C5D27',
 			},
 		},
 		{
-			scope: ['meta.selector', 'meta.selector entity', 'meta.selector entity punctuation', 'entity.name.tag.css'],
+			scope: [
+				'meta.selector',
+				'meta.selector entity',
+				'meta.selector entity punctuation',
+				'entity.name.tag.css',
+			],
 			settings: {
 				foreground: '#7A3E9D',
 			},
@@ -265,7 +280,11 @@ export const quietLight: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['meta.property-value', 'meta.property-value constant.other', 'support.constant.property-value'],
+			scope: [
+				'meta.property-value',
+				'meta.property-value constant.other',
+				'support.constant.property-value',
+			],
 			settings: {
 				foreground: '#448C27',
 			},
@@ -386,13 +405,19 @@ export const quietLight: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['meta.diff.header.from-file', 'punctuation.definition.from-file.diff'],
+			scope: [
+				'meta.diff.header.from-file',
+				'punctuation.definition.from-file.diff',
+			],
 			settings: {
 				foreground: '#4B69C6',
 			},
 		},
 		{
-			scope: ['meta.diff.header.to-file', 'punctuation.definition.to-file.diff'],
+			scope: [
+				'meta.diff.header.to-file',
+				'punctuation.definition.to-file.diff',
+			],
 			settings: {
 				foreground: '#4B69C6',
 			},

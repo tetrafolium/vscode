@@ -6,7 +6,12 @@
 import * as assert from 'assert';
 import Sinon from 'sinon';
 import { ICompletionsTelemetryService } from '../../../bridge/src/completionsTelemetryServiceBridge';
-import { ICompletionsTelemetryReporters, telemetryCatch, TelemetryData, TelemetryStore } from '../telemetry';
+import {
+	ICompletionsTelemetryReporters,
+	telemetryCatch,
+	TelemetryData,
+	TelemetryStore,
+} from '../telemetry';
 import { ICompletionsTelemetryUserConfigService } from '../telemetry/userConfig';
 import { ICompletionsPromiseQueueService } from '../util/promiseQueue';
 import { createLibTestingContext } from './context';
@@ -28,7 +33,12 @@ suite('Telemetry unit tests', function () {
 	test('Adds additional fields', async function () {
 		const telemetry = TelemetryData.createAndMarkAsIssued();
 
-		await telemetry.makeReadyForSending(accessor, TelemetryStore.Standard, 'SkipExp', 2000);
+		await telemetry.makeReadyForSending(
+			accessor,
+			TelemetryStore.Standard,
+			'SkipExp',
+			2000,
+		);
 
 		assert.ok(telemetry.properties.copilot_build);
 		assert.ok(telemetry.properties.copilot_buildType);
@@ -84,16 +94,19 @@ suite('Telemetry unit tests', function () {
 	});
 
 	test('telemetryCatch', async function () {
-		const { enhancedReporter } = await withInMemoryTelemetry(accessor, accessor => {
-			telemetryCatch(
-				accessor.get(ICompletionsTelemetryService),
-				accessor.get(ICompletionsPromiseQueueService),
-				() => {
-					throw new Error('boom!');
-				},
-				'exceptionTest'
-			)();
-		});
+		const { enhancedReporter } = await withInMemoryTelemetry(
+			accessor,
+			(accessor) => {
+				telemetryCatch(
+					accessor.get(ICompletionsTelemetryService),
+					accessor.get(ICompletionsPromiseQueueService),
+					() => {
+						throw new Error('boom!');
+					},
+					'exceptionTest',
+				)();
+			},
+		);
 
 		// Chat has no Telemetry Store.
 

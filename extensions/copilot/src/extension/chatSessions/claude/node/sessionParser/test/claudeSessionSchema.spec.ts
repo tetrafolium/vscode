@@ -79,12 +79,7 @@ describe('claudeSessionSchema', () => {
 		});
 
 		it('should reject non-strings and empty strings', () => {
-			const invalid = [
-				'',
-				123,
-				null,
-				undefined,
-			];
+			const invalid = ['', 123, null, undefined];
 
 			for (const val of invalid) {
 				const result = validator.validate(val);
@@ -234,7 +229,9 @@ describe('claudeSessionSchema', () => {
 			// Verify image source data is preserved through validation
 			const content = result.content?.message.content;
 			expect(Array.isArray(content)).toBe(true);
-			const imageBlock = (content as ContentBlock[]).find((b): b is ImageBlock => b.type === 'image');
+			const imageBlock = (content as ContentBlock[]).find(
+				(b): b is ImageBlock => b.type === 'image',
+			);
 			expect(imageBlock).toBeDefined();
 			expect(imageBlock!.source).toEqual({
 				type: 'base64',
@@ -443,7 +440,10 @@ describe('claudeSessionSchema', () => {
 		});
 
 		it('should reject image block with non-object source', () => {
-			const result = validator.validate({ type: 'image', source: 'not-an-object' });
+			const result = validator.validate({
+				type: 'image',
+				source: 'not-an-object',
+			});
 			expect(result.error).toBeDefined();
 		});
 
@@ -471,7 +471,11 @@ describe('claudeSessionSchema', () => {
 		it('should reject base64 source with unsupported media_type', () => {
 			const result = validator.validate({
 				type: 'image',
-				source: { type: 'base64', media_type: 'image/bmp', data: 'abc=' },
+				source: {
+					type: 'base64',
+					media_type: 'image/bmp',
+					data: 'abc=',
+				},
 			});
 			expect(result.error).toBeDefined();
 		});
@@ -621,6 +625,4 @@ describe('claudeSessionSchema', () => {
 			expect(result.content?.parentUuid).toBe('msg-uuid');
 		});
 	});
-
 });
-

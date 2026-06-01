@@ -10,11 +10,12 @@ import { withInMemoryTelemetry } from '../../test/telemetry';
 import { createTextDocument } from '../../test/textDocument';
 import { CopilotCompletion } from '../copilotCompletion';
 import {
-	ICompletionsLastGhostText, handleGhostTextPostInsert,
+	ICompletionsLastGhostText,
+	handleGhostTextPostInsert,
 	handleGhostTextShown,
 	handlePartialGhostTextPostInsert,
 	rejectLastShown,
-	setLastShown
+	setLastShown,
 } from '../last';
 import { ResultType } from '../resultType';
 
@@ -26,11 +27,18 @@ suite('Isolated LastGhostText tests', function () {
 		last = accessor.get(ICompletionsLastGhostText);
 	});
 
-	function makeCompletion(index = 0, text = 'foo', offset = 0): CopilotCompletion {
+	function makeCompletion(
+		index = 0,
+		text = 'foo',
+		offset = 0,
+	): CopilotCompletion {
 		return {
 			uuid: 'uuid-' + index,
 			insertText: text,
-			range: { start: { line: 0, character: 0 }, end: { line: 0, character: text.length } },
+			range: {
+				start: { line: 0, character: 0 },
+				end: { line: 0, character: text.length },
+			},
 			index,
 			displayText: text,
 			offset,
@@ -76,7 +84,12 @@ suite('Isolated LastGhostText tests', function () {
 		last.setState({ uri: 'file:///test' }, { line: 0, character: 0 });
 		last.shownCompletions.push(makeCompletion(4, 'baz', 0));
 		const doc = createTextDocument('file:///other', 'plaintext', 1, '');
-		setLastShown(accessor, doc, { line: 1, character: 1 }, ResultType.Network);
+		setLastShown(
+			accessor,
+			doc,
+			{ line: 1, character: 1 },
+			ResultType.Network,
+		);
 		assert.strictEqual(last.shownCompletions.length, 0);
 	});
 
@@ -89,7 +102,9 @@ suite('Isolated LastGhostText tests', function () {
 			handleGhostTextPostInsert(accessor, cmp);
 		});
 
-		const event = reporter.events.find(e => e.name === 'ghostText.accepted');
+		const event = reporter.events.find(
+			(e) => e.name === 'ghostText.accepted',
+		);
 		assert.ok(event);
 		assert.strictEqual(event.measurements.numLines, 3);
 	});
@@ -103,7 +118,9 @@ suite('Isolated LastGhostText tests', function () {
 			handlePartialGhostTextPostInsert(accessor, cmp, 'line1'.length);
 		});
 
-		const event = reporter.events.find(e => e.name === 'ghostText.accepted');
+		const event = reporter.events.find(
+			(e) => e.name === 'ghostText.accepted',
+		);
 		assert.ok(event);
 		assert.strictEqual(event.measurements.numLines, 1);
 	});
@@ -119,7 +136,9 @@ suite('Isolated LastGhostText tests', function () {
 			handlePartialGhostTextPostInsert(accessor, cmp, 'line2'.length);
 		});
 
-		const event = reporter.events.reverse().find(e => e.name === 'ghostText.accepted');
+		const event = reporter.events
+			.reverse()
+			.find((e) => e.name === 'ghostText.accepted');
 		assert.ok(event);
 		assert.strictEqual(event.measurements.numLines, 2);
 	});

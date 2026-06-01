@@ -3,11 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IChatRequestVariableEntry } from '../../../../workbench/contrib/chat/common/attachments/chatVariableEntries.js';
-import { IChat, ISession, ISessionType, ISessionWorkspace, ISessionWorkspaceBrowseAction } from './session.js';
+import { Event } from "../../../../base/common/event.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IChatRequestVariableEntry } from "../../../../workbench/contrib/chat/common/attachments/chatVariableEntries.js";
+import {
+	IChat,
+	ISession,
+	ISessionType,
+	ISessionWorkspace,
+	ISessionWorkspaceBrowseAction,
+} from "./session.js";
 
 /**
  * Event fired when sessions change within a provider.
@@ -75,7 +81,10 @@ export interface ISessionsProvider {
 	 * @internal This is an implementation detail of the Copilot Chat sessions
 	 * provider. Do not implement or consume this event in other providers.
 	 */
-	readonly onDidReplaceSession?: Event<{ readonly from: ISession; readonly to: ISession }>;
+	readonly onDidReplaceSession?: Event<{
+		readonly from: ISession;
+		readonly to: ISession;
+	}>;
 
 	/**
 	 * List of workspace browse actions supported by the provider. These are used to contribute entries to the "Open Workspace" picker. Consumers should not cache this list, but should call `resolveWorkspace` when an action is executed.
@@ -166,5 +175,9 @@ export interface ISessionsProvider {
 	 * @param chatResource The resource URI of the chat to send the request for.
 	 * @param options Options for the request, including the query and any attached context entries.
 	 */
-	sendRequest(sessionId: string, chatResource: URI, options: ISendRequestOptions): Promise<ISession>;
+	sendRequest(
+		sessionId: string,
+		chatResource: URI,
+		options: ISendRequestOptions,
+	): Promise<ISession>;
 }

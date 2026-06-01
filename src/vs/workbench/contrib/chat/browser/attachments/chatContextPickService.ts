@@ -2,17 +2,29 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { CancellationToken, CancellationTokenSource } from '../../../../../base/common/cancellation.js';
-import { IDisposable, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { derived, IObservable, ObservablePromise } from '../../../../../base/common/observable.js';
-import { compare } from '../../../../../base/common/strings.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { isObject } from '../../../../../base/common/types.js';
-import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IQuickItem, IQuickPickSeparator } from '../../../../../platform/quickinput/common/quickInput.js';
-import { IChatRequestVariableEntry } from '../../common/attachments/chatVariableEntries.js';
-import { IChatWidget } from '../chat.js';
-
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from "../../../../../base/common/cancellation.js";
+import {
+	IDisposable,
+	toDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import {
+	derived,
+	IObservable,
+	ObservablePromise,
+} from "../../../../../base/common/observable.js";
+import { compare } from "../../../../../base/common/strings.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { isObject } from "../../../../../base/common/types.js";
+import { createDecorator } from "../../../../../platform/instantiation/common/instantiation.js";
+import {
+	IQuickItem,
+	IQuickPickSeparator,
+} from "../../../../../platform/quickinput/common/quickInput.js";
+import { IChatRequestVariableEntry } from "../../common/attachments/chatVariableEntries.js";
+import { IChatWidget } from "../chat.js";
 
 export interface IChatContextPickerPickItem extends Partial<IQuickItem> {
 	label: string;
@@ -21,13 +33,23 @@ export interface IChatContextPickerPickItem extends Partial<IQuickItem> {
 	description?: string;
 	detail?: string;
 	disabled?: boolean;
-	asAttachment(): ChatContextPickAttachment | Promise<ChatContextPickAttachment>;
+	asAttachment():
+		| ChatContextPickAttachment
+		| Promise<ChatContextPickAttachment>;
 }
 
-export type ChatContextPickAttachment = IChatRequestVariableEntry | IChatRequestVariableEntry[] | 'noop';
+export type ChatContextPickAttachment =
+	| IChatRequestVariableEntry
+	| IChatRequestVariableEntry[]
+	| "noop";
 
-export function isChatContextPickerPickItem(item: unknown): item is IChatContextPickerPickItem {
-	return isObject(item) && typeof (item as IChatContextPickerPickItem).asAttachment === 'function';
+export function isChatContextPickerPickItem(
+	item: unknown,
+): item is IChatContextPickerPickItem {
+	return (
+		isObject(item) &&
+		typeof (item as IChatContextPickerPickItem).asAttachment === "function"
+	);
 }
 
 interface IChatContextItem {
@@ -39,9 +61,13 @@ interface IChatContextItem {
 }
 
 export interface IChatContextValueItem extends IChatContextItem {
-	readonly type: 'valuePick';
+	readonly type: "valuePick";
 
-	asAttachment(widget: IChatWidget): Promise<IChatRequestVariableEntry | IChatRequestVariableEntry[] | undefined>;
+	asAttachment(
+		widget: IChatWidget,
+	): Promise<
+		IChatRequestVariableEntry | IChatRequestVariableEntry[] | undefined
+	>;
 }
 
 export type ChatContextPick = IChatContextPickerPickItem | IQuickPickSeparator;
@@ -53,7 +79,12 @@ export interface IChatContextPicker {
 	 * - A promise that resolves to the picked items
 	 * - A function that maps input query into items to display.
 	 */
-	readonly picks: Promise<ChatContextPick[]> | ((query: IObservable<string>, token: CancellationToken) => IObservable<{ busy: boolean; picks: ChatContextPick[] }>);
+	readonly picks:
+		| Promise<ChatContextPick[]>
+		| ((
+				query: IObservable<string>,
+				token: CancellationToken,
+		  ) => IObservable<{ busy: boolean; picks: ChatContextPick[] }>);
 
 	/** Return true to cancel the default behavior */
 	readonly goBack?: () => boolean;
@@ -67,7 +98,7 @@ export interface IChatContextPicker {
 }
 
 export interface IChatContextPickerItem extends IChatContextItem {
-	readonly type: 'pickerPick';
+	readonly type: "pickerPick";
 
 	asPicker(widget: IChatWidget): IChatContextPicker;
 }
@@ -76,9 +107,14 @@ export interface IChatContextPickerItem extends IChatContextItem {
  * Helper for use in {@IChatContextPickerItem} that wraps a simple query->promise
  * function into the requisite observable.
  */
-export function picksWithPromiseFn(fn: (query: string, token: CancellationToken) => Promise<ChatContextPick[]>): (query: IObservable<string>, token: CancellationToken) => IObservable<{ busy: boolean; picks: ChatContextPick[] }> {
+export function picksWithPromiseFn(
+	fn: (query: string, token: CancellationToken) => Promise<ChatContextPick[]>,
+): (
+	query: IObservable<string>,
+	token: CancellationToken,
+) => IObservable<{ busy: boolean; picks: ChatContextPick[] }> {
 	return (query, token) => {
-		const promise = derived(reader => {
+		const promise = derived((reader) => {
 			const queryValue = query.read(reader);
 			const cts = new CancellationTokenSource(token);
 			reader.store.add(toDisposable(() => cts.dispose(true)));
@@ -102,13 +138,16 @@ export interface IChatContextPickService {
 	 * chat attachment and a picker first shows a list of items to pick from and then
 	 * resolves the selected item to a chat attachment.
 	 */
-	registerChatContextItem(item: IChatContextValueItem | IChatContextPickerItem): IDisposable;
+	registerChatContextItem(
+		item: IChatContextValueItem | IChatContextPickerItem,
+	): IDisposable;
 }
 
-export const IChatContextPickService = createDecorator<IChatContextPickService>('IContextPickService');
+export const IChatContextPickService = createDecorator<IChatContextPickService>(
+	"IContextPickService",
+);
 
 export class ChatContextPickService implements IChatContextPickService {
-
 	declare _serviceBrand: undefined;
 
 	private readonly _picks: IChatContextValueItem[] = [];

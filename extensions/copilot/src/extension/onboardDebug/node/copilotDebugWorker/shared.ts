@@ -33,7 +33,11 @@ export interface IStartCancelled {
 	kind: StartResultKind.Cancelled;
 }
 
-export type StartResult = INoConfigStartResult | IStartResultOk | INeedExtension | IStartCancelled;
+export type StartResult =
+	| INoConfigStartResult
+	| IStartResultOk
+	| INeedExtension
+	| IStartCancelled;
 
 export interface IStartOptions {
 	cwd: string;

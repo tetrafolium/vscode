@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HOOKS_BY_TARGET, HookType } from './hookTypes.js';
-import { Target } from './promptTypes.js';
+import { HOOKS_BY_TARGET, HookType } from "./hookTypes.js";
+import { Target } from "./promptTypes.js";
 
-const COPILOT_CLI_HOOK_TYPE_MAP: Record<string, HookType> = HOOKS_BY_TARGET[Target.GitHubCopilot];
+const COPILOT_CLI_HOOK_TYPE_MAP: Record<string, HookType> =
+	HOOKS_BY_TARGET[Target.GitHubCopilot];
 
 /**
  * Cached inverse mapping from HookType to Copilot CLI hook type name.
@@ -17,7 +18,9 @@ let _hookTypeToCopilotCliName: Map<HookType, string> | undefined;
 function getHookTypeToCopilotCliNameMap(): Map<HookType, string> {
 	if (!_hookTypeToCopilotCliName) {
 		_hookTypeToCopilotCliName = new Map();
-		for (const [copilotCliName, hookType] of Object.entries(COPILOT_CLI_HOOK_TYPE_MAP)) {
+		for (const [copilotCliName, hookType] of Object.entries(
+			COPILOT_CLI_HOOK_TYPE_MAP,
+		)) {
 			_hookTypeToCopilotCliName.set(hookType, copilotCliName);
 		}
 	}
@@ -35,6 +38,8 @@ export function resolveCopilotCliHookType(name: string): HookType | undefined {
  * Gets the Copilot CLI hook type name for a given abstract HookType.
  * Returns undefined if the hook type is not supported in Copilot CLI.
  */
-export function getCopilotCliHookTypeName(hookType: HookType): string | undefined {
+export function getCopilotCliHookTypeName(
+	hookType: HookType,
+): string | undefined {
 	return getHookTypeToCopilotCliNameMap().get(hookType);
 }

@@ -5,7 +5,10 @@
 import { RequestMetadata, RequestType } from '@vscode/copilot-api';
 import { TokenizerType } from '../../../util/common/tokenizer';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
-import { CancellationError, isCancellationError } from '../../../util/vs/base/common/errors';
+import {
+	CancellationError,
+	isCancellationError,
+} from '../../../util/vs/base/common/errors';
 import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { IAuthenticationService } from '../../authentication/common/authentication';
@@ -13,8 +16,20 @@ import { LogExecTime } from '../../log/common/logExecTime';
 import { ILogService } from '../../log/common/logService';
 import { IEndpoint, postRequest } from '../../networking/common/networking';
 import { ITelemetryService } from '../../telemetry/common/telemetry';
-import { ICodeOrDocsSearchBaseScopingQuery, ICodeOrDocsSearchItem, ICodeOrDocsSearchMultiRepoScopingQuery, ICodeOrDocsSearchOptions, ICodeOrDocsSearchResult, ICodeOrDocsSearchSingleRepoScopingQuery, IDocsSearchClient } from '../common/codeOrDocsSearchClient';
-import { SearchErrorType, constructSearchError, constructSearchRepoError } from '../common/codeOrDocsSearchErrors';
+import {
+	ICodeOrDocsSearchBaseScopingQuery,
+	ICodeOrDocsSearchItem,
+	ICodeOrDocsSearchMultiRepoScopingQuery,
+	ICodeOrDocsSearchOptions,
+	ICodeOrDocsSearchResult,
+	ICodeOrDocsSearchSingleRepoScopingQuery,
+	IDocsSearchClient,
+} from '../common/codeOrDocsSearchClient';
+import {
+	SearchErrorType,
+	constructSearchError,
+	constructSearchRepoError,
+} from '../common/codeOrDocsSearchErrors';
 import { formatScopingQuery } from '../common/utils';
 
 /**
@@ -37,7 +52,7 @@ interface IDocsSearchResponse {
 class UnknownHttpError extends Error {
 	constructor(
 		readonly status: number,
-		message: string
+		message: string,
 	) {
 		super(message);
 	}
@@ -53,18 +68,36 @@ export class DocsSearchClient implements IDocsSearchClient {
 	private readonly slug = 'docs';
 
 	constructor(
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
-		@IAuthenticationService private readonly _authenticationService: IAuthenticationService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
+		@IAuthenticationService
+		private readonly _authenticationService: IAuthenticationService,
 		@ILogService private readonly _logService: ILogService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-	) { }
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
+	) {}
 
-	search(query: string, scopingQuery: ICodeOrDocsSearchSingleRepoScopingQuery, options?: ICodeOrDocsSearchOptions, token?: CancellationToken): Promise<ICodeOrDocsSearchItem[]>;
-	search(query: string, scopingQuery: ICodeOrDocsSearchMultiRepoScopingQuery, options?: ICodeOrDocsSearchOptions, token?: CancellationToken): Promise<ICodeOrDocsSearchResult>;
-	@LogExecTime(self => self._logService, 'CodeOrDocsSearchClientImpl::search')
+	search(
+		query: string,
+		scopingQuery: ICodeOrDocsSearchSingleRepoScopingQuery,
+		options?: ICodeOrDocsSearchOptions,
+		token?: CancellationToken,
+	): Promise<ICodeOrDocsSearchItem[]>;
+	search(
+		query: string,
+		scopingQuery: ICodeOrDocsSearchMultiRepoScopingQuery,
+		options?: ICodeOrDocsSearchOptions,
+		token?: CancellationToken,
+	): Promise<ICodeOrDocsSearchResult>;
+	@LogExecTime(
+		(self) => self._logService,
+		'CodeOrDocsSearchClientImpl::search',
+	)
 	async search(
 		query: string,
-		scopingQuery: ICodeOrDocsSearchSingleRepoScopingQuery | ICodeOrDocsSearchMultiRepoScopingQuery,
+		scopingQuery:
+			| ICodeOrDocsSearchSingleRepoScopingQuery
+			| ICodeOrDocsSearchMultiRepoScopingQuery,
 		options: ICodeOrDocsSearchOptions = {},
 		token?: CancellationToken,
 	): Promise<ICodeOrDocsSearchItem[] | ICodeOrDocsSearchResult> {
@@ -75,10 +108,18 @@ export class DocsSearchClient implements IDocsSearchClient {
 
 		let result: IDocsSearchResponse;
 		try {
-			result = await this.postRequestWithRetry(query, scopingQuery, options, token ?? CancellationToken.None);
+			result = await this.postRequestWithRetry(
+				query,
+				scopingQuery,
+				options,
+				token ?? CancellationToken.None,
+			);
 		} catch (error) {
 			if (!isCancellationError(error)) {
-				this._telemetryService.sendGHTelemetryException(error, `${this.slug} search failed`);
+				this._telemetryService.sendGHTelemetryException(
+					error,
+					`${this.slug} search failed`,
+				);
 			}
 			throw error;
 		}
@@ -99,7 +140,7 @@ export class DocsSearchClient implements IDocsSearchClient {
 		// Multi-repo
 		return {
 			results: result.results,
-			errors
+			errors,
 		};
 	}
 
@@ -107,9 +148,20 @@ export class DocsSearchClient implements IDocsSearchClient {
 		query: string,
 		scopingQuery: ICodeOrDocsSearchBaseScopingQuery,
 		options: ICodeOrDocsSearchOptions,
-		token: CancellationToken
+		token: CancellationToken,
 	): Promise<IDocsSearchResponse> {
-		const authToken = (await this._authenticationService.getGitHubSession('permissive', { silent: true }))?.accessToken ?? (await this._authenticationService.getGitHubSession('any', { silent: true }))?.accessToken;
+		const authToken =
+			(
+				await this._authenticationService.getGitHubSession(
+					'permissive',
+					{ silent: true },
+				)
+			)?.accessToken ??
+			(
+				await this._authenticationService.getGitHubSession('any', {
+					silent: true,
+				})
+			)?.accessToken;
 		if (token.isCancellationRequested) {
 			throw new CancellationError();
 		}
@@ -117,7 +169,7 @@ export class DocsSearchClient implements IDocsSearchClient {
 		const MAX_RETRIES = 3;
 		let retryCount = 0;
 
-		const errorMessages = new Set<string>;
+		const errorMessages = new Set<string>();
 		let error: Error | undefined;
 		while (retryCount < MAX_RETRIES) {
 			if (token.isCancellationRequested) {
@@ -126,7 +178,14 @@ export class DocsSearchClient implements IDocsSearchClient {
 
 			try {
 				try {
-					const result = await this.postCodeOrDocsSearchRequest({ type: RequestType.SearchSkill, slug: this.slug }, authToken!, query, scopingQuery, options, token);
+					const result = await this.postCodeOrDocsSearchRequest(
+						{ type: RequestType.SearchSkill, slug: this.slug },
+						authToken!,
+						query,
+						scopingQuery,
+						options,
+						token,
+					);
 					return result;
 				} catch (e) {
 					if (e instanceof UnknownHttpError) {
@@ -138,9 +197,13 @@ export class DocsSearchClient implements IDocsSearchClient {
 			} catch (error: any) {
 				retryCount++;
 				const waitTime = 100;
-				errorMessages.add(`Error fetching ${this.slug} search. ${error.message ?? error}`);
-				this._logService.warn(`[repo:${scopingQuery.repo}] Error fetching ${this.slug} search. Error: ${error.message ?? error}. Retrying in ${retryCount}ms. Query: ${query}`);
-				await new Promise(resolve => setTimeout(resolve, waitTime));
+				errorMessages.add(
+					`Error fetching ${this.slug} search. ${error.message ?? error}`,
+				);
+				this._logService.warn(
+					`[repo:${scopingQuery.repo}] Error fetching ${this.slug} search. Error: ${error.message ?? error}. Retrying in ${retryCount}ms. Query: ${query}`,
+				);
+				await new Promise((resolve) => setTimeout(resolve, waitTime));
 			}
 		}
 
@@ -149,10 +212,12 @@ export class DocsSearchClient implements IDocsSearchClient {
 		}
 
 		if (retryCount >= MAX_RETRIES) {
-			this._logService.warn(`[repo:${scopingQuery.repo}] Max Retry Error thrown while querying '${query}'`);
+			this._logService.warn(
+				`[repo:${scopingQuery.repo}] Max Retry Error thrown while querying '${query}'`,
+			);
 			error = constructSearchError({
 				error: SearchErrorType.maxRetriesExceeded,
-				message: `${this.slug} search timed out after ${MAX_RETRIES} retries. ${Array.from(errorMessages).join('\n')}`
+				message: `${this.slug} search timed out after ${MAX_RETRIES} retries. ${Array.from(errorMessages).join('\n')}`,
 			});
 		}
 
@@ -165,7 +230,7 @@ export class DocsSearchClient implements IDocsSearchClient {
 		query: string,
 		scopingQuery: ICodeOrDocsSearchBaseScopingQuery,
 		options: ICodeOrDocsSearchOptions,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	) {
 		const limit = Math.min(options.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
 		const similarity = options.similarity ?? DEFAULT_SIMILARITY;
@@ -189,27 +254,35 @@ export class DocsSearchClient implements IDocsSearchClient {
 				return headers;
 			},
 		};
-		const response = await this._instantiationService.invokeFunction(postRequest, {
-			endpointOrUrl: endpointInfo,
-			secretKey: authToken ?? '',
-			intent: 'codesearch',
-			requestId: generateUuid(),
-			body: {
-				query,
-				scopingQuery: formatScopingQuery(scopingQuery),
-				similarity,
-				limit
+		const response = await this._instantiationService.invokeFunction(
+			postRequest,
+			{
+				endpointOrUrl: endpointInfo,
+				secretKey: authToken ?? '',
+				intent: 'codesearch',
+				requestId: generateUuid(),
+				body: {
+					query,
+					scopingQuery: formatScopingQuery(scopingQuery),
+					similarity,
+					limit,
+				},
+				cancelToken: cancellationToken,
 			},
-			cancelToken: cancellationToken,
-		});
+		);
 
 		const text = await response.text();
-		if (response.status === 404 || (response.status === 400 && text.includes('unknown integration'))) {
+		if (
+			response.status === 404 ||
+			(response.status === 400 && text.includes('unknown integration'))
+		) {
 			// If the endpoint is not available for this user it will return 404.
-			this._logService.debug(`${this.slug} search endpoint not available for this user.`);
+			this._logService.debug(
+				`${this.slug} search endpoint not available for this user.`,
+			);
 			const error = constructSearchError({
 				error: SearchErrorType.noAccessToEndpoint,
-				message: `${this.slug}: ${text}`
+				message: `${this.slug}: ${text}`,
 			});
 			throw error;
 		}

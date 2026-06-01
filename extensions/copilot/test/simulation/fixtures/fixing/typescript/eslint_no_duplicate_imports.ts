@@ -8,9 +8,9 @@ import { sillyQuote } from './eslint_no_duplicate_case';
 import { Character } from './eslint_no_duplicate_case';
 
 export function testQuotes() {
-    const hamlet = sillyQuote(Character.Hamlet);
-    const guildenstern = sillyQuote(Character.Guildenstern);
-    if (isDeepLooseEqual(hamlet, guildenstern)) {
-        throw new Error('duplicated quotes');
-    }
+	const hamlet = sillyQuote(Character.Hamlet);
+	const guildenstern = sillyQuote(Character.Guildenstern);
+	if (isDeepLooseEqual(hamlet, guildenstern)) {
+		throw new Error('duplicated quotes');
+	}
 }

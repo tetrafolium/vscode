@@ -20,11 +20,15 @@ export class CodeReference implements IDisposable {
 	enabled: boolean = false;
 
 	constructor(
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@ICompletionsRuntimeModeService private readonly _runtimeMode: ICompletionsRuntimeModeService,
-		@ICompletionsLogTargetService private readonly _logTarget: ICompletionsLogTargetService,
-		@IAuthenticationService private readonly _authenticationService: IAuthenticationService,
-	) { }
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
+		@ICompletionsRuntimeModeService
+		private readonly _runtimeMode: ICompletionsRuntimeModeService,
+		@ICompletionsLogTargetService
+		private readonly _logTarget: ICompletionsLogTargetService,
+		@IAuthenticationService
+		private readonly _authenticationService: IAuthenticationService,
+	) {}
 
 	dispose() {
 		this.subscriptions?.dispose();
@@ -33,7 +37,9 @@ export class CodeReference implements IDisposable {
 
 	register() {
 		if (!this._runtimeMode.isRunningInTest()) {
-			this.event = onCopilotToken(this._authenticationService, (t) => this.onCopilotToken(t));
+			this.event = onCopilotToken(this._authenticationService, (t) =>
+				this.onCopilotToken(t),
+			);
 		}
 		return this;
 	}
@@ -42,7 +48,10 @@ export class CodeReference implements IDisposable {
 		if (!this.subscriptions) {
 			this.subscriptions = Disposable.from(disposable);
 		} else {
-			this.subscriptions = Disposable.from(this.subscriptions, disposable);
+			this.subscriptions = Disposable.from(
+				this.subscriptions,
+				disposable,
+			);
 		}
 	}
 
@@ -51,11 +60,19 @@ export class CodeReference implements IDisposable {
 		if (!token.codeQuoteEnabled) {
 			this.subscriptions?.dispose();
 			this.subscriptions = undefined;
-			codeReferenceLogger.debug(this._logTarget, 'Public code references are disabled.');
+			codeReferenceLogger.debug(
+				this._logTarget,
+				'Public code references are disabled.',
+			);
 			return;
 		}
 
-		codeReferenceLogger.info(this._logTarget, 'Public code references are enabled.');
-		this.addDisposable(this._instantiationService.createInstance(CodeRefEngagementTracker));
+		codeReferenceLogger.info(
+			this._logTarget,
+			'Public code references are enabled.',
+		);
+		this.addDisposable(
+			this._instantiationService.createInstance(CodeRefEngagementTracker),
+		);
 	};
 }

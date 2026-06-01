@@ -3,9 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { findNodeAtLocation, parseTree as jsonParseTree } from '../../../../base/common/json.js';
-import { Location } from '../../../../editor/common/languages.js';
-import { ITextModel } from '../../../../editor/common/model.js';
+import {
+	findNodeAtLocation,
+	parseTree as jsonParseTree,
+} from "../../../../base/common/json.js";
+import { Location } from "../../../../editor/common/languages.js";
+import { ITextModel } from "../../../../editor/common/model.js";
 
 export const getMcpServerMapping = (opts: {
 	model: ITextModel;
@@ -14,13 +17,13 @@ export const getMcpServerMapping = (opts: {
 }): Map<string, Location> => {
 	const tree = jsonParseTree(opts.model.getValue());
 	const servers = findNodeAtLocation(tree, opts.pathToServers);
-	if (!servers || servers.type !== 'object') {
+	if (!servers || servers.type !== "object") {
 		return new Map();
 	}
 
 	const result = new Map<string, Location>();
 	for (const node of servers.children || []) {
-		if (node.type !== 'property' || node.children?.[0]?.type !== 'string') {
+		if (node.type !== "property" || node.children?.[0]?.type !== "string") {
 			continue;
 		}
 
@@ -33,7 +36,7 @@ export const getMcpServerMapping = (opts: {
 				startColumn: start.column,
 				endLineNumber: end.lineNumber,
 				endColumn: end.column,
-			}
+			},
 		});
 	}
 

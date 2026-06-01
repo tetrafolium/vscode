@@ -13,7 +13,7 @@ export function log(...args: any[]) {
 
 export function binarySearch<T>(
 	array: readonly T[],
-	compare: (element: T) => number
+	compare: (element: T) => number,
 ): number {
 	let left = 0;
 	let right = array.length - 1;
@@ -55,7 +55,7 @@ export namespace Either {
  * To instantiate a Right, use `Either.right(value)`.
  */
 class Left<L> {
-	constructor(readonly value: L) { }
+	constructor(readonly value: L) {}
 
 	isLeft(): this is Left<L> {
 		return true;
@@ -71,7 +71,7 @@ class Left<L> {
  * To instantiate a Right, use `Either.right(value)`.
  */
 class Right<R> {
-	constructor(readonly value: R) { }
+	constructor(readonly value: R) {}
 
 	isLeft(): this is Left<never> {
 		return false;

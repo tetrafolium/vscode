@@ -61,7 +61,7 @@ interface ElisionStrategy {
 		prefixTokenLimit: number,
 		suffixBlock: WeightedBlock,
 		suffixTokenLimit: number,
-		tokenizer: Tokenizer
+		tokenizer: Tokenizer,
 	): { blocks: ElidedBlock[]; cycles: number };
 }
 
@@ -78,31 +78,35 @@ export class WishlistElision implements ElisionStrategy {
 		prefixTokenLimit: number,
 		suffixBlock: WeightedBlock,
 		suffixTokenLimit: number,
-		tokenizer: Tokenizer
+		tokenizer: Tokenizer,
 	) {
 		if (prefixTokenLimit <= 0) {
 			throw new Error('Prefix limit must be greater than 0');
 		}
 
-		const [elidablePrefixBlocks, maxPrefixTokens] = this.preparePrefixBlocks(prefixBlocks, tokenizer);
+		const [elidablePrefixBlocks, maxPrefixTokens] =
+			this.preparePrefixBlocks(prefixBlocks, tokenizer);
 		const { elidedSuffix, adjustedPrefixTokenLimit } = this.elideSuffix(
 			suffixBlock,
 			suffixTokenLimit,
 			prefixTokenLimit,
 			maxPrefixTokens,
-			tokenizer
+			tokenizer,
 		);
 		const elidedPrefix = this.elidePrefix(
 			elidablePrefixBlocks,
 			adjustedPrefixTokenLimit,
 			maxPrefixTokens,
-			tokenizer
+			tokenizer,
 		);
 
 		return { blocks: [elidedSuffix, ...elidedPrefix], cycles: 1 };
 	}
 
-	private preparePrefixBlocks(blocks: WeightedBlock[], tokenizer: Tokenizer): [PrefixElidableBlock[], number] {
+	private preparePrefixBlocks(
+		blocks: WeightedBlock[],
+		tokenizer: Tokenizer,
+	): [PrefixElidableBlock[], number] {
 		let maxPrefixTokens = 0;
 		// Create a set to keep track of component paths
 		const componentPaths = new Set<string>();
@@ -112,8 +116,10 @@ export class WishlistElision implements ElisionStrategy {
 			// Update the total tokens by approximating the length of a block with the sum
 			// of the lengths of its lines. Lines are split by newlines, and the newline
 			// value is kept together with the line (and hence counted as a token).
-			const blockLines = block.value.split(/([^\n]*\n+)/).filter(l => l !== '');
-			const processedBlockLines = blockLines.map(line => {
+			const blockLines = block.value
+				.split(/([^\n]*\n+)/)
+				.filter((l) => l !== '');
+			const processedBlockLines = blockLines.map((line) => {
 				const tokens = tokenizer.tokenLength(line);
 				blockTokens += tokens;
 				maxPrefixTokens += tokens;
@@ -122,7 +128,9 @@ export class WishlistElision implements ElisionStrategy {
 			// Check if the component path is unique
 			const componentPath = block.componentPath;
 			if (componentPaths.has(componentPath)) {
-				throw new Error(`Duplicate component path in prefix blocks: ${componentPath}`);
+				throw new Error(
+					`Duplicate component path in prefix blocks: ${componentPath}`,
+				);
 			}
 			componentPaths.add(componentPath);
 			return {
@@ -149,7 +157,7 @@ export class WishlistElision implements ElisionStrategy {
 		suffixTokenLimit: number,
 		prefixTokenLimit: number,
 		maxPrefixTokens: number,
-		tokenizer: Tokenizer
+		tokenizer: Tokenizer,
 	) {
 		const suffix = suffixBlock.value;
 		if (suffix.length === 0 || suffixTokenLimit <= 0) {
@@ -161,18 +169,23 @@ export class WishlistElision implements ElisionStrategy {
 			};
 			return {
 				elidedSuffix,
-				adjustedPrefixTokenLimit: prefixTokenLimit + Math.max(0, suffixTokenLimit),
+				adjustedPrefixTokenLimit:
+					prefixTokenLimit + Math.max(0, suffixTokenLimit),
 			};
 		}
 
 		// Check the maximum (approximate) length of the prefix.
 		// If everything fits, we give the remaining budget to the suffix instead.
 		if (maxPrefixTokens < prefixTokenLimit) {
-			suffixTokenLimit = suffixTokenLimit + (prefixTokenLimit - maxPrefixTokens);
+			suffixTokenLimit =
+				suffixTokenLimit + (prefixTokenLimit - maxPrefixTokens);
 			prefixTokenLimit = maxPrefixTokens;
 		}
 
-		const shortenedSuffix = tokenizer.takeFirstTokens(suffix, suffixTokenLimit);
+		const shortenedSuffix = tokenizer.takeFirstTokens(
+			suffix,
+			suffixTokenLimit,
+		);
 		const elidedSuffix: ElidedBlock = {
 			...suffixBlock,
 			// Update the original value and tokens
@@ -184,7 +197,9 @@ export class WishlistElision implements ElisionStrategy {
 
 		return {
 			elidedSuffix,
-			adjustedPrefixTokenLimit: prefixTokenLimit + Math.max(0, suffixTokenLimit - shortenedSuffix.tokens.length),
+			adjustedPrefixTokenLimit:
+				prefixTokenLimit +
+				Math.max(0, suffixTokenLimit - shortenedSuffix.tokens.length),
 		};
 	}
 
@@ -192,41 +207,63 @@ export class WishlistElision implements ElisionStrategy {
 		elidablePrefixBlocks: PrefixElidableBlock[],
 		tokenLimit: number,
 		maxPrefixTokens: number,
-		tokenizer: Tokenizer
+		tokenizer: Tokenizer,
 	): ElidedBlock[] {
-		const prefixBlocks = this.removeLowWeightPrefixBlocks(elidablePrefixBlocks, tokenLimit, maxPrefixTokens);
+		const prefixBlocks = this.removeLowWeightPrefixBlocks(
+			elidablePrefixBlocks,
+			tokenLimit,
+			maxPrefixTokens,
+		);
 
 		// The nodes that are not marked for removal are split into lines, but we keep
 		// track of the block they came from
-		const prefixLines = prefixBlocks.filter(block => !block.markedForRemoval).flatMap(block => block.lines);
+		const prefixLines = prefixBlocks
+			.filter((block) => !block.markedForRemoval)
+			.flatMap((block) => block.lines);
 
 		if (prefixLines.length === 0) {
 			return [];
 		}
 
-		const [trimmedLines, prefixTokens] = this.trimPrefixLinesToFit(prefixLines, tokenLimit, tokenizer);
+		const [trimmedLines, prefixTokens] = this.trimPrefixLinesToFit(
+			prefixLines,
+			tokenLimit,
+			tokenizer,
+		);
 		// Populate the final elidable blocks
 		let currentPrefixTokens = prefixTokens;
-		return prefixBlocks.map(block => {
+		return prefixBlocks.map((block) => {
 			if (block.markedForRemoval) {
 				// Try to re-include blocks if there's space left and they are not part of a chunk
-				if (currentPrefixTokens + block.tokens <= tokenLimit && !block.chunks) {
+				if (
+					currentPrefixTokens + block.tokens <= tokenLimit &&
+					!block.chunks
+				) {
 					// This is an approximation, but we don't want to add more token operations.
 					// In the wishlist, this is done using the priority list, but for simplicity we just
 					// do it in order.
 					currentPrefixTokens += block.tokens;
-					return { ...block, elidedValue: block.value, elidedTokens: block.tokens };
+					return {
+						...block,
+						elidedValue: block.value,
+						elidedTokens: block.tokens,
+					};
 				}
 				return { ...block, elidedValue: '', elidedTokens: 0 };
 			}
 
 			const elidedValue = trimmedLines
-				.filter(l => l.componentPath === block.componentPath && l.line !== '')
-				.map(l => l.line)
+				.filter(
+					(l) =>
+						l.componentPath === block.componentPath &&
+						l.line !== '',
+				)
+				.map((l) => l.line)
 				.join('');
 			let elidedTokens = block.tokens;
 			if (elidedValue !== block.value) {
-				elidedTokens = elidedValue !== '' ? tokenizer.tokenLength(elidedValue) : 0;
+				elidedTokens =
+					elidedValue !== '' ? tokenizer.tokenLength(elidedValue) : 0;
 			}
 
 			return { ...block, elidedValue, elidedTokens };
@@ -241,7 +278,7 @@ export class WishlistElision implements ElisionStrategy {
 	private removeLowWeightPrefixBlocks(
 		elidablePrefixBlocks: PrefixElidableBlock[],
 		tokenLimit: number,
-		maxPrefixTokens: number
+		maxPrefixTokens: number,
 	): PrefixElidableBlock[] {
 		let totalPrefixTokens = maxPrefixTokens;
 
@@ -250,11 +287,17 @@ export class WishlistElision implements ElisionStrategy {
 		// Remove blocks with the lowest weight until total tokens are within the limit
 		// If a block has a weight of 1, it is skipped in this step
 		for (const block of elidablePrefixBlocks) {
-			if (totalPrefixTokens <= tokenLimit) { break; }
-			if (block.weight === 1) { continue; }
+			if (totalPrefixTokens <= tokenLimit) {
+				break;
+			}
+			if (block.weight === 1) {
+				continue;
+			}
 
 			// If block has a chunk that's already been processed, skip it
-			if (block.chunks && block.markedForRemoval) { continue; }
+			if (block.chunks && block.markedForRemoval) {
+				continue;
+			}
 
 			if (block.chunks && block.chunks.size > 0) {
 				// Mark all blocks with the same chunk for removal
@@ -264,7 +307,9 @@ export class WishlistElision implements ElisionStrategy {
 						relatedBlock.chunks &&
 						// For nested chunks: if removing outer chunk, remove all inner chunks
 						// by checking if the related block contains ALL chunk IDs from current block
-						[...block.chunks].every(id => relatedBlock.chunks?.has(id))
+						[...block.chunks].every((id) =>
+							relatedBlock.chunks?.has(id),
+						)
 					) {
 						relatedBlock.markedForRemoval = true;
 						totalPrefixTokens -= relatedBlock.tokens;
@@ -278,13 +323,15 @@ export class WishlistElision implements ElisionStrategy {
 		}
 
 		// Sort the nodes by their original index
-		return elidablePrefixBlocks.sort((a, b) => a.originalIndex - b.originalIndex);
+		return elidablePrefixBlocks.sort(
+			(a, b) => a.originalIndex - b.originalIndex,
+		);
 	}
 
 	private trimPrefixLinesToFit(
 		linesWithComponentPath: LineWithPathAndTokens[],
 		tokenLimit: number,
-		tokenizer: Tokenizer
+		tokenizer: Tokenizer,
 	): [LineWithPathAndTokens[], number] {
 		let currentPrefixTokens = 0;
 
@@ -308,9 +355,13 @@ export class WishlistElision implements ElisionStrategy {
 		if (fittingLines.length === 0) {
 			// This can still mean that the last line (the cursor line) is too long.
 			// So we try to fit the last line up to the limit.
-			const lastLine = linesWithComponentPath[linesWithComponentPath.length - 1];
+			const lastLine =
+				linesWithComponentPath[linesWithComponentPath.length - 1];
 			if (lastLine && lastLine.line.length > 0) {
-				const prompt = tokenizer.takeLastTokens(lastLine.line, tokenLimit);
+				const prompt = tokenizer.takeLastTokens(
+					lastLine.line,
+					tokenLimit,
+				);
 				fittingLines.push({
 					line: prompt.text,
 					componentPath: lastLine.componentPath,
@@ -327,13 +378,13 @@ export class WishlistElision implements ElisionStrategy {
 }
 
 export function makePrompt(elidedBlocks: ElidedBlock[]): string {
-	return elidedBlocks.map(block => block.elidedValue).join('');
+	return elidedBlocks.map((block) => block.elidedValue).join('');
 }
 
 export function makePrefixPrompt(elidedBlocks: ElidedBlock[]): string {
 	return elidedBlocks
-		.filter(b => b.type === 'prefix')
-		.map(block => block.elidedValue)
+		.filter((b) => b.type === 'prefix')
+		.map((block) => block.elidedValue)
 		.join('');
 }
 

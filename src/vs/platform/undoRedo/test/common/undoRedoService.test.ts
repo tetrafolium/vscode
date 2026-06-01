@@ -3,25 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { URI } from '../../../../base/common/uri.js';
-import { mock } from '../../../../base/test/common/mock.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { IDialogService, IPrompt } from '../../../dialogs/common/dialogs.js';
-import { TestDialogService } from '../../../dialogs/test/common/testDialogService.js';
-import { TestNotificationService } from '../../../notification/test/common/testNotificationService.js';
-import { IUndoRedoElement, UndoRedoElementType, UndoRedoGroup } from '../../common/undoRedo.js';
-import { UndoRedoService } from '../../common/undoRedoService.js';
+import assert from "assert";
+import { URI } from "../../../../base/common/uri.js";
+import { mock } from "../../../../base/test/common/mock.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../base/test/common/utils.js";
+import { IDialogService, IPrompt } from "../../../dialogs/common/dialogs.js";
+import { TestDialogService } from "../../../dialogs/test/common/testDialogService.js";
+import { TestNotificationService } from "../../../notification/test/common/testNotificationService.js";
+import {
+	IUndoRedoElement,
+	UndoRedoElementType,
+	UndoRedoGroup,
+} from "../../common/undoRedo.js";
+import { UndoRedoService } from "../../common/undoRedoService.js";
 
-suite('UndoRedoService', () => {
-
-	function createUndoRedoService(dialogService: IDialogService = new TestDialogService()): UndoRedoService {
+suite("UndoRedoService", () => {
+	function createUndoRedoService(
+		dialogService: IDialogService = new TestDialogService(),
+	): UndoRedoService {
 		const notificationService = new TestNotificationService();
 		return new UndoRedoService(dialogService, notificationService);
 	}
 
-	test('simple single resource elements', () => {
-		const resource = URI.file('test.txt');
+	test("simple single resource elements", () => {
+		const resource = URI.file("test.txt");
 		const service = createUndoRedoService();
 
 		assert.strictEqual(service.canUndo(resource), false);
@@ -34,10 +39,14 @@ suite('UndoRedoService', () => {
 		const element1: IUndoRedoElement = {
 			type: UndoRedoElementType.Resource,
 			resource: resource,
-			label: 'typing 1',
-			code: 'typing',
-			undo: () => { undoCall1++; },
-			redo: () => { redoCall1++; }
+			label: "typing 1",
+			code: "typing",
+			undo: () => {
+				undoCall1++;
+			},
+			redo: () => {
+				redoCall1++;
+			},
 		};
 		service.pushElement(element1);
 
@@ -69,10 +78,14 @@ suite('UndoRedoService', () => {
 		const element2: IUndoRedoElement = {
 			type: UndoRedoElementType.Resource,
 			resource: resource,
-			label: 'typing 2',
-			code: 'typing',
-			undo: () => { undoCall2++; },
-			redo: () => { redoCall2++; }
+			label: "typing 2",
+			code: "typing",
+			undo: () => {
+				undoCall2++;
+			},
+			redo: () => {
+				redoCall2++;
+			},
 		};
 		service.pushElement(element2);
 
@@ -101,10 +114,14 @@ suite('UndoRedoService', () => {
 		const element3: IUndoRedoElement = {
 			type: UndoRedoElementType.Resource,
 			resource: resource,
-			label: 'typing 2',
-			code: 'typing',
-			undo: () => { undoCall3++; },
-			redo: () => { redoCall3++; }
+			label: "typing 2",
+			code: "typing",
+			undo: () => {
+				undoCall3++;
+			},
+			redo: () => {
+				redoCall3++;
+			},
 		};
 		service.pushElement(element3);
 
@@ -133,51 +150,69 @@ suite('UndoRedoService', () => {
 		assert.ok(service.getLastElement(resource) === null);
 	});
 
-	test('multi resource elements', async () => {
-		const resource1 = URI.file('test1.txt');
-		const resource2 = URI.file('test2.txt');
-		const service = createUndoRedoService(new class extends mock<IDialogService>() {
-			override async prompt<T = any>(prompt: IPrompt<any>) {
-				const result = prompt.buttons?.[0].run({ checkboxChecked: false });
+	test("multi resource elements", async () => {
+		const resource1 = URI.file("test1.txt");
+		const resource2 = URI.file("test2.txt");
+		const service = createUndoRedoService(
+			new (class extends mock<IDialogService>() {
+				override async prompt<T = any>(prompt: IPrompt<any>) {
+					const result = prompt.buttons?.[0].run({ checkboxChecked: false });
 
-				return { result };
-			}
-			override async confirm() {
-				return {
-					confirmed: true // confirm!
-				};
-			}
-		});
+					return { result };
+				}
+				override async confirm() {
+					return {
+						confirmed: true, // confirm!
+					};
+				}
+			})(),
+		);
 
-		let undoCall1 = 0, undoCall11 = 0, undoCall12 = 0;
-		let redoCall1 = 0, redoCall11 = 0, redoCall12 = 0;
+		let undoCall1 = 0,
+			undoCall11 = 0,
+			undoCall12 = 0;
+		let redoCall1 = 0,
+			redoCall11 = 0,
+			redoCall12 = 0;
 		const element1: IUndoRedoElement = {
 			type: UndoRedoElementType.Workspace,
 			resources: [resource1, resource2],
-			label: 'typing 1',
-			code: 'typing',
-			undo: () => { undoCall1++; },
-			redo: () => { redoCall1++; },
+			label: "typing 1",
+			code: "typing",
+			undo: () => {
+				undoCall1++;
+			},
+			redo: () => {
+				redoCall1++;
+			},
 			split: () => {
 				return [
 					{
 						type: UndoRedoElementType.Resource,
 						resource: resource1,
-						label: 'typing 1.1',
-						code: 'typing',
-						undo: () => { undoCall11++; },
-						redo: () => { redoCall11++; }
+						label: "typing 1.1",
+						code: "typing",
+						undo: () => {
+							undoCall11++;
+						},
+						redo: () => {
+							redoCall11++;
+						},
 					},
 					{
 						type: UndoRedoElementType.Resource,
 						resource: resource2,
-						label: 'typing 1.2',
-						code: 'typing',
-						undo: () => { undoCall12++; },
-						redo: () => { redoCall12++; }
-					}
+						label: "typing 1.2",
+						code: "typing",
+						undo: () => {
+							undoCall12++;
+						},
+						redo: () => {
+							redoCall12++;
+						},
+					},
 				];
-			}
+			},
 		};
 		service.pushElement(element1);
 
@@ -218,43 +253,42 @@ suite('UndoRedoService', () => {
 		assert.strictEqual(service.canRedo(resource2), false);
 		assert.strictEqual(service.hasElements(resource2), true);
 		assert.ok(service.getLastElement(resource2) === element1);
-
 	});
 
-	test('UndoRedoGroup.None uses id 0', () => {
+	test("UndoRedoGroup.None uses id 0", () => {
 		assert.strictEqual(UndoRedoGroup.None.id, 0);
 		assert.strictEqual(UndoRedoGroup.None.nextOrder(), 0);
 		assert.strictEqual(UndoRedoGroup.None.nextOrder(), 0);
 	});
 
-	test('restoreSnapshot preserves elements that match the snapshot', () => {
-		const resource = URI.file('test.txt');
+	test("restoreSnapshot preserves elements that match the snapshot", () => {
+		const resource = URI.file("test.txt");
 		const service = createUndoRedoService();
 
 		// Push three elements
 		const element1: IUndoRedoElement = {
 			type: UndoRedoElementType.Resource,
 			resource: resource,
-			label: 'typing 1',
-			code: 'typing',
-			undo: () => { },
-			redo: () => { }
+			label: "typing 1",
+			code: "typing",
+			undo: () => {},
+			redo: () => {},
 		};
 		const element2: IUndoRedoElement = {
 			type: UndoRedoElementType.Resource,
 			resource: resource,
-			label: 'typing 2',
-			code: 'typing',
-			undo: () => { },
-			redo: () => { }
+			label: "typing 2",
+			code: "typing",
+			undo: () => {},
+			redo: () => {},
 		};
 		const element3: IUndoRedoElement = {
 			type: UndoRedoElementType.Resource,
 			resource: resource,
-			label: 'typing 3',
-			code: 'typing',
-			undo: () => { },
-			redo: () => { }
+			label: "typing 3",
+			code: "typing",
+			undo: () => {},
+			redo: () => {},
 		};
 		service.pushElement(element1);
 		service.pushElement(element2);
@@ -267,18 +301,18 @@ suite('UndoRedoService', () => {
 		const element4: IUndoRedoElement = {
 			type: UndoRedoElementType.Resource,
 			resource: resource,
-			label: 'typing 4',
-			code: 'typing',
-			undo: () => { },
-			redo: () => { }
+			label: "typing 4",
+			code: "typing",
+			undo: () => {},
+			redo: () => {},
 		};
 		const element5: IUndoRedoElement = {
 			type: UndoRedoElementType.Resource,
 			resource: resource,
-			label: 'typing 5',
-			code: 'typing',
-			undo: () => { },
-			redo: () => { }
+			label: "typing 5",
+			code: "typing",
+			undo: () => {},
+			redo: () => {},
 		};
 		service.pushElement(element4);
 		service.pushElement(element5);
@@ -293,11 +327,31 @@ suite('UndoRedoService', () => {
 
 		// Verify that elements matching the snapshot are preserved
 		elements = service.getElements(resource);
-		assert.strictEqual(elements.past.length, 3, 'Should have 3 past elements after restore');
-		assert.strictEqual(elements.future.length, 0, 'Should have 0 future elements after restore');
-		assert.strictEqual(elements.past[0], element1, 'First element should be element1');
-		assert.strictEqual(elements.past[1], element2, 'Second element should be element2');
-		assert.strictEqual(elements.past[2], element3, 'Third element should be element3');
+		assert.strictEqual(
+			elements.past.length,
+			3,
+			"Should have 3 past elements after restore",
+		);
+		assert.strictEqual(
+			elements.future.length,
+			0,
+			"Should have 0 future elements after restore",
+		);
+		assert.strictEqual(
+			elements.past[0],
+			element1,
+			"First element should be element1",
+		);
+		assert.strictEqual(
+			elements.past[1],
+			element2,
+			"Second element should be element2",
+		);
+		assert.strictEqual(
+			elements.past[2],
+			element3,
+			"Third element should be element3",
+		);
 	});
 
 	ensureNoDisposablesAreLeakedInTestSuite();

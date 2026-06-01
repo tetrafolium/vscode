@@ -6,13 +6,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-async function copyStaticAssets(srcpaths: string[], dst: string): Promise<void> {
-	await Promise.all(srcpaths.map(async srcpath => {
-		const src = path.join(REPO_ROOT, srcpath);
-		const dest = path.join(REPO_ROOT, dst, path.basename(srcpath));
-		await fs.promises.mkdir(path.dirname(dest), { recursive: true });
-		await fs.promises.copyFile(src, dest);
-	}));
+async function copyStaticAssets(
+	srcpaths: string[],
+	dst: string,
+): Promise<void> {
+	await Promise.all(
+		srcpaths.map(async (srcpath) => {
+			const src = path.join(REPO_ROOT, srcpath);
+			const dest = path.join(REPO_ROOT, dst, path.basename(srcpath));
+			await fs.promises.mkdir(path.dirname(dest), { recursive: true });
+			await fs.promises.copyFile(src, dest);
+		}),
+	);
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -35,7 +40,7 @@ const treeSitterGrammars: string[] = [
 	'tree-sitter-tsx',
 	'tree-sitter-java',
 	'tree-sitter-rust',
-	'tree-sitter-php'
+	'tree-sitter-php',
 ];
 
 const REPO_ROOT = path.join(__dirname, '..');
@@ -48,27 +53,36 @@ async function platformDir(): Promise<string> {
 	} else if (await fileExists(path.join(REPO_ROOT, srcPath))) {
 		return srcPath;
 	} else {
-		throw new Error('Could not find the source directory for tokenizer files');
+		throw new Error(
+			'Could not find the source directory for tokenizer files',
+		);
 	}
 }
 
 function treeSitterWasmDir(): string {
-	const modulePath = path.dirname(require.resolve('@vscode/tree-sitter-wasm'));
+	const modulePath = path.dirname(
+		require.resolve('@vscode/tree-sitter-wasm'),
+	);
 	return path.relative(REPO_ROOT, modulePath);
 }
 
 async function main() {
 	const platform = await platformDir();
-	const vendoredTiktokenFiles = [`${platform}/tokenizer/node/cl100k_base.tiktoken`, `${platform}/tokenizer/node/o200k_base.tiktoken`];
+	const vendoredTiktokenFiles = [
+		`${platform}/tokenizer/node/cl100k_base.tiktoken`,
+		`${platform}/tokenizer/node/o200k_base.tiktoken`,
+	];
 	const wasm = treeSitterWasmDir();
 
 	// copy static assets to dist
-	await copyStaticAssets([
-		...vendoredTiktokenFiles,
-		...treeSitterGrammars.map(grammar => `${wasm}/${grammar}.wasm`),
-		`${wasm}/tree-sitter.wasm`,
-	], 'dist');
-
+	await copyStaticAssets(
+		[
+			...vendoredTiktokenFiles,
+			...treeSitterGrammars.map((grammar) => `${wasm}/${grammar}.wasm`),
+			`${wasm}/tree-sitter.wasm`,
+		],
+		'dist',
+	);
 }
 
 main();

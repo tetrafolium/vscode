@@ -14,13 +14,24 @@ import { ServicesAccessor } from '../../../../../util/vs/platform/instantiation/
 
 export type FileEntry =
 	| { readonly type: FileType.File; readonly uri: URI; readonly name: string }
-	| { readonly type: FileType.Directory; readonly uri: URI; readonly name: string; getChildren: () => Promise<FileList> };
+	| {
+			readonly type: FileType.Directory;
+			readonly uri: URI;
+			readonly name: string;
+			getChildren: () => Promise<FileList>;
+	  };
 
 type FileList = ReadonlyArray<FileEntry>;
 
 type Part =
 	| { type: 'text'; uri: URI | undefined; value: string }
-	| { type: 'dir'; uri: URI; value: string; level: number; getChildren: () => Promise<FileList> };
+	| {
+			type: 'dir';
+			uri: URI;
+			value: string;
+			level: number;
+			getChildren: () => Promise<FileList>;
+	  };
 
 function partsLength(parts: readonly Part[]): number {
 	const len = parts.reduce((p, c) => p + c.value.length, 0);
@@ -40,7 +51,11 @@ export interface IFileTreeData {
  * This attempts to smartly truncate the string to fit within `maxLength` characters. It does this by doing
  * breadth-first expansion of the file nodes and adding in `...` when we run out of space.
  */
-export async function visualFileTree(files: FileList, maxLength = Infinity, token?: CancellationToken): Promise<IFileTreeData> {
+export async function visualFileTree(
+	files: FileList,
+	maxLength = Infinity,
+	token?: CancellationToken,
+): Promise<IFileTreeData> {
 	let parts = toParts(0, files, maxLength);
 	let remainingSpace = maxLength - partsLength(parts);
 
@@ -52,14 +67,22 @@ export async function visualFileTree(files: FileList, maxLength = Infinity, toke
 			if (part.type === 'text') {
 				newParts.push(part);
 			} else if (part.type === 'dir') {
-				newParts.push({ type: 'text', uri: part.uri, value: part.value });
+				newParts.push({
+					type: 'text',
+					uri: part.uri,
+					value: part.value,
+				});
 
 				const children = await part.getChildren();
 				if (token?.isCancellationRequested) {
 					return emptyTree();
 				}
 
-				const subParts = toParts(part.level + 1, children, remainingSpace - 1);
+				const subParts = toParts(
+					part.level + 1,
+					children,
+					remainingSpace - 1,
+				);
 				if (subParts.length) {
 					didExpand = true;
 					remainingSpace -= partsLength(subParts) + 1;
@@ -75,8 +98,8 @@ export async function visualFileTree(files: FileList, maxLength = Infinity, toke
 	}
 
 	return {
-		files: parts.map(p => p.uri).filter(isDefined),
-		tree: parts.map(x => x.value).join('\n'),
+		files: parts.map((p) => p.uri).filter(isDefined),
+		tree: parts.map((x) => x.value).join('\n'),
 	};
 }
 
@@ -87,7 +110,8 @@ function toParts(level: number, files: FileList, maxLength: number): Part[] {
 	let remainingSpace = maxLength;
 	for (let i = 0; i < files.length; ++i) {
 		const item = files[i];
-		const str = indent + item.name + (item.type === FileType.Directory ? '/' : '');
+		const str =
+			indent + item.name + (item.type === FileType.Directory ? '/' : '');
 		if (str.length > remainingSpace) {
 			// Not enough space for item. Try adding `...` as a placeholder
 			const placeholder = indent + '...';
@@ -99,14 +123,24 @@ function toParts(level: number, files: FileList, maxLength: number): Part[] {
 
 			// Finally check to see if there's space for our placeholder
 			if (placeholder.length <= remainingSpace) {
-				parts.push({ type: 'text', uri: undefined, value: placeholder });
+				parts.push({
+					type: 'text',
+					uri: undefined,
+					value: placeholder,
+				});
 			}
 
 			break;
 		}
 
 		if (item.type === FileType.Directory) {
-			parts.push({ type: 'dir', uri: item.uri, level, value: str, getChildren: item.getChildren });
+			parts.push({
+				type: 'dir',
+				uri: item.uri,
+				level,
+				value: str,
+				getChildren: item.getChildren,
+			});
 		} else {
 			parts.push({ type: 'text', uri: item.uri, value: str });
 		}
@@ -124,7 +158,12 @@ export interface IWorkspaceVisualTreeOptions {
 	excludeDotFiles?: boolean;
 }
 
-export async function workspaceVisualFileTree(accessor: ServicesAccessor, root: URI, options: IWorkspaceVisualTreeOptions, token: CancellationToken): Promise<IFileTreeData> {
+export async function workspaceVisualFileTree(
+	accessor: ServicesAccessor,
+	root: URI,
+	options: IWorkspaceVisualTreeOptions,
+	token: CancellationToken,
+): Promise<IFileTreeData> {
 	const fs = accessor.get(IFileSystemService);
 	const ignoreService = accessor.get(IIgnoreService);
 
@@ -148,20 +187,30 @@ export async function workspaceVisualFileTree(accessor: ServicesAccessor, root: 
 		});
 
 		return Promise.all(
-			rootNodes.map(async x => {
+			rootNodes.map(async (x) => {
 				const uri = URI.joinPath(root, x[0]);
-				return !(options.excludeDotFiles && x[0].startsWith('.')) && !shouldAlwaysIgnoreFile(uri) && !await ignoreService.isCopilotIgnored(uri) ? x : null;
-			})
-		).then(entries =>
-			entries.filter((entry): entry is [string, FileType] => !!entry)
+				return !(options.excludeDotFiles && x[0].startsWith('.')) &&
+					!shouldAlwaysIgnoreFile(uri) &&
+					!(await ignoreService.isCopilotIgnored(uri))
+					? x
+					: null;
+			}),
+		).then((entries) =>
+			entries
+				.filter((entry): entry is [string, FileType] => !!entry)
 				.map((entry: [string, FileType]): FileEntry => {
 					const uri = URI.joinPath(root, entry[0]);
 					if (entry[1] === FileType.Directory) {
-						return { type: FileType.Directory, uri, name: entry[0], getChildren: () => buildFileList(uri) };
+						return {
+							type: FileType.Directory,
+							uri,
+							name: entry[0],
+							getChildren: () => buildFileList(uri),
+						};
 					} else {
 						return { type: FileType.File, uri, name: entry[0] };
 					}
-				})
+				}),
 		);
 	}
 

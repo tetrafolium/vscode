@@ -17,19 +17,42 @@ import { IGitExtensionService } from '../../../platform/git/common/gitExtensionS
 import { IIgnoreService } from '../../../platform/ignore/common/ignoreService';
 import { ILogService } from '../../../platform/log/common/logService';
 import { IFetcherService } from '../../../platform/networking/common/fetcherService';
-import { INotificationService, Progress, ProgressLocation } from '../../../platform/notification/common/notificationService';
-import { CodeReviewInput, CodeReviewResult, toCodeReviewResult } from '../../../platform/review/common/reviewCommand';
-import { IReviewService, ReviewComment } from '../../../platform/review/common/reviewService';
+import {
+	INotificationService,
+	Progress,
+	ProgressLocation,
+} from '../../../platform/notification/common/notificationService';
+import {
+	CodeReviewInput,
+	CodeReviewResult,
+	toCodeReviewResult,
+} from '../../../platform/review/common/reviewCommand';
+import {
+	IReviewService,
+	ReviewComment,
+} from '../../../platform/review/common/reviewService';
 import { IScopeSelector } from '../../../platform/scopeSelection/common/scopeSelection';
 import { ITabsAndEditorsService } from '../../../platform/tabs/common/tabsAndEditorsService';
 import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
-import { CancellationToken, CancellationTokenSource } from '../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../util/vs/base/common/cancellation';
 import { isCancellationError } from '../../../util/vs/base/common/errors';
 import * as path from '../../../util/vs/base/common/path';
 import { URI } from '../../../util/vs/base/common/uri';
-import { IInstantiationService, ServicesAccessor } from '../../../util/vs/platform/instantiation/common/instantiation';
-import { FeedbackGenerator, FeedbackResult } from '../../prompt/node/feedbackGenerator';
-import { CurrentChange, CurrentChangeInput } from '../../prompts/node/feedback/currentChange';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	FeedbackGenerator,
+	FeedbackResult,
+} from '../../prompt/node/feedbackGenerator';
+import {
+	CurrentChange,
+	CurrentChangeInput,
+} from '../../prompts/node/feedback/currentChange';
 import { githubReview, githubReviewFileUris } from './githubReviewAgent';
 
 /**
@@ -47,20 +70,21 @@ export interface HandleResultDependencies {
  */
 export async function handleReviewResult(
 	result: FeedbackResult,
-	deps: HandleResultDependencies
+	deps: HandleResultDependencies,
 ): Promise<void> {
 	const { notificationService, logService, reviewService } = deps;
 
 	if (result.type === 'error') {
 		const showLog = l10n.t('Show Log');
 		const res = await (result.severity === 'info'
-			? notificationService.showInformationMessage(result.reason, { modal: true })
+			? notificationService.showInformationMessage(result.reason, {
+					modal: true,
+				})
 			: notificationService.showInformationMessage(
-				l10n.t('Code review generation failed.'),
-				{ modal: true, detail: result.reason },
-				showLog
-			)
-		);
+					l10n.t('Code review generation failed.'),
+					{ modal: true, detail: result.reason },
+					showLog,
+				));
 		if (res === showLog) {
 			logService.show();
 		}
@@ -71,9 +95,12 @@ export async function handleReviewResult(
 				l10n.t('Reviewing your code did not provide any feedback.'),
 				{
 					modal: true,
-					detail: l10n.t('{0} comments were skipped due to low confidence.', result.excludedComments.length)
+					detail: l10n.t(
+						'{0} comments were skipped due to low confidence.',
+						result.excludedComments.length,
+					),
 				},
-				show
+				show,
 			);
 			if (res === show) {
 				reviewService.addReviewComments(result.excludedComments);
@@ -83,8 +110,12 @@ export async function handleReviewResult(
 				l10n.t('Reviewing your code did not provide any feedback.'),
 				{
 					modal: true,
-					detail: result.reason || l10n.t('Copilot only keeps its highest confidence comments to reduce noise and keep you focused.')
-				}
+					detail:
+						result.reason ||
+						l10n.t(
+							'Copilot only keeps its highest confidence comments to reduce noise and keep you focused.',
+						),
+				},
 			);
 		}
 	}
@@ -95,31 +126,37 @@ export async function handleReviewResult(
 let inProgress: CancellationTokenSource | undefined;
 
 export class ReviewSession {
-
 	constructor(
 		@IScopeSelector private readonly scopeSelector: IScopeSelector,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IReviewService private readonly reviewService: IReviewService,
-		@IAuthenticationService private readonly authService: IAuthenticationService,
+		@IAuthenticationService
+		private readonly authService: IAuthenticationService,
 		@ILogService private readonly logService: ILogService,
-		@IGitExtensionService private readonly gitExtensionService: IGitExtensionService,
+		@IGitExtensionService
+		private readonly gitExtensionService: IGitExtensionService,
 		@IDomainService private readonly domainService: IDomainService,
-		@ICAPIClientService private readonly capiClientService: ICAPIClientService,
+		@ICAPIClientService
+		private readonly capiClientService: ICAPIClientService,
 		@IFetcherService private readonly fetcherService: IFetcherService,
 		@IEnvService private readonly envService: IEnvService,
 		@IIgnoreService private readonly ignoreService: IIgnoreService,
-		@ITabsAndEditorsService private readonly tabsAndEditorsService: ITabsAndEditorsService,
+		@ITabsAndEditorsService
+		private readonly tabsAndEditorsService: ITabsAndEditorsService,
 		@IWorkspaceService private readonly workspaceService: IWorkspaceService,
-		@INotificationService private readonly notificationService: INotificationService,
-		@ICustomInstructionsService private readonly customInstructionsService: ICustomInstructionsService,
-	) { }
+		@INotificationService
+		private readonly notificationService: INotificationService,
+		@ICustomInstructionsService
+		private readonly customInstructionsService: ICustomInstructionsService,
+	) {}
 
 	async review(
 		group: ReviewGroup,
 		progressLocation: ProgressLocation,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<FeedbackResult | undefined> {
-		if (!await this.checkAuthentication()) {
+		if (!(await this.checkAuthentication())) {
 			return undefined;
 		}
 
@@ -130,7 +167,13 @@ export class ReviewSession {
 		}
 
 		const title = getReviewTitle(group, editor);
-		return this.executeWithProgress(group, editor, title, progressLocation, cancellationToken);
+		return this.executeWithProgress(
+			group,
+			editor,
+			title,
+			progressLocation,
+			cancellationToken,
+		);
 	}
 
 	/**
@@ -139,7 +182,9 @@ export class ReviewSession {
 	 */
 	private async checkAuthentication(): Promise<boolean> {
 		if (this.authService.copilotToken?.isNoAuthUser) {
-			await this.notificationService.showQuotaExceededDialog({ isNoAuthUser: true });
+			await this.notificationService.showQuotaExceededDialog({
+				isNoAuthUser: true,
+			});
 			return false;
 		}
 		return true;
@@ -149,7 +194,10 @@ export class ReviewSession {
 	 * Resolves the selection for 'selection' group reviews.
 	 * @returns The selection range, or undefined if selection cannot be determined
 	 */
-	private async resolveSelection(group: ReviewGroup, editor: TextEditor | undefined): Promise<Selection | undefined> {
+	private async resolveSelection(
+		group: ReviewGroup,
+		editor: TextEditor | undefined,
+	): Promise<Selection | undefined> {
 		if (group !== 'selection') {
 			return editor?.selection;
 		}
@@ -159,10 +207,11 @@ export class ReviewSession {
 		let selection = editor.selection;
 		if (!selection || selection.isEmpty) {
 			try {
-				const rangeOfEnclosingSymbol = await this.scopeSelector.selectEnclosingScope(editor, {
-					reason: l10n.t('Select an enclosing range to review'),
-					includeBlocks: true
-				});
+				const rangeOfEnclosingSymbol =
+					await this.scopeSelector.selectEnclosingScope(editor, {
+						reason: l10n.t('Select an enclosing range to review'),
+						includeBlocks: true,
+					});
 				if (!rangeOfEnclosingSymbol) {
 					return undefined;
 				}
@@ -187,38 +236,53 @@ export class ReviewSession {
 		editor: TextEditor | undefined,
 		title: string,
 		progressLocation: ProgressLocation,
-		cancellationToken?: CancellationToken
+		cancellationToken?: CancellationToken,
 	): Promise<FeedbackResult | undefined> {
-		return this.notificationService.withProgress({
-			location: progressLocation,
-			title,
-			cancellable: true,
-		}, async (_progress, progressToken) => {
-			if (inProgress) {
-				inProgress.cancel();
-			}
-			const tokenSource = inProgress = new CancellationTokenSource(
-				cancellationToken ? combineCancellationTokens(cancellationToken, progressToken) : progressToken
-			);
-
-			this.reviewService.removeReviewComments(this.reviewService.getReviewComments());
-			const progress: Progress<ReviewComment[]> = {
-				report: comments => {
-					if (!tokenSource.token.isCancellationRequested) {
-						this.reviewService.addReviewComments(comments);
-					}
+		return this.notificationService.withProgress(
+			{
+				location: progressLocation,
+				title,
+				cancellable: true,
+			},
+			async (_progress, progressToken) => {
+				if (inProgress) {
+					inProgress.cancel();
 				}
-			};
+				const tokenSource = (inProgress = new CancellationTokenSource(
+					cancellationToken
+						? combineCancellationTokens(
+								cancellationToken,
+								progressToken,
+							)
+						: progressToken,
+				));
 
-			const result = await this.performReview(group, editor, progress, tokenSource);
+				this.reviewService.removeReviewComments(
+					this.reviewService.getReviewComments(),
+				);
+				const progress: Progress<ReviewComment[]> = {
+					report: (comments) => {
+						if (!tokenSource.token.isCancellationRequested) {
+							this.reviewService.addReviewComments(comments);
+						}
+					},
+				};
 
-			if (tokenSource.token.isCancellationRequested) {
-				return { type: 'cancelled' };
-			}
+				const result = await this.performReview(
+					group,
+					editor,
+					progress,
+					tokenSource,
+				);
 
-			await this.handleResult(result);
-			return result;
-		});
+				if (tokenSource.token.isCancellationRequested) {
+					return { type: 'cancelled' };
+				}
+
+				await this.handleResult(result);
+				return result;
+			},
+		);
 	}
 
 	/**
@@ -228,7 +292,7 @@ export class ReviewSession {
 		group: ReviewGroup,
 		editor: TextEditor | undefined,
 		progress: Progress<ReviewComment[]>,
-		tokenSource: CancellationTokenSource
+		tokenSource: CancellationTokenSource,
 	): Promise<FeedbackResult> {
 		try {
 			const copilotToken = await this.authService.getCopilotToken();
@@ -236,21 +300,43 @@ export class ReviewSession {
 
 			if (canUseGitHubAgent) {
 				return await githubReview(
-					this.logService, this.gitExtensionService, this.authService,
-					this.capiClientService, this.domainService, this.fetcherService,
-					this.envService, this.ignoreService, this.workspaceService,
-					this.customInstructionsService, group, editor, progress, tokenSource.token
+					this.logService,
+					this.gitExtensionService,
+					this.authService,
+					this.capiClientService,
+					this.domainService,
+					this.fetcherService,
+					this.envService,
+					this.ignoreService,
+					this.workspaceService,
+					this.customInstructionsService,
+					group,
+					editor,
+					progress,
+					tokenSource.token,
 				);
 			} else {
-				const legacyGroup = typeof group === 'object' && 'group' in group ? group.group : group;
+				const legacyGroup =
+					typeof group === 'object' && 'group' in group
+						? group.group
+						: group;
 				return await review(
-					this.instantiationService, this.gitExtensionService, this.workspaceService,
-					legacyGroup, editor, progress, tokenSource.token
+					this.instantiationService,
+					this.gitExtensionService,
+					this.workspaceService,
+					legacyGroup,
+					editor,
+					progress,
+					tokenSource.token,
 				);
 			}
 		} catch (err) {
 			this.logService.error(err, 'Error during code review');
-			return { type: 'error', reason: err.message, severity: err.severity };
+			return {
+				type: 'error',
+				reason: err.message,
+				severity: err.severity,
+			};
 		} finally {
 			if (tokenSource === inProgress) {
 				inProgress = undefined;
@@ -271,14 +357,34 @@ export class ReviewSession {
 	}
 }
 
-export type ReviewGroup = 'selection' | 'index' | 'workingTree' | 'all' | { group: 'index' | 'workingTree'; file: Uri } | { repositoryRoot: string; commitMessages: string[]; patches: { patch: string; fileUri: string; previousFileUri?: string }[] };
+export type ReviewGroup =
+	| 'selection'
+	| 'index'
+	| 'workingTree'
+	| 'all'
+	| { group: 'index' | 'workingTree'; file: Uri }
+	| {
+			repositoryRoot: string;
+			commitMessages: string[];
+			patches: {
+				patch: string;
+				fileUri: string;
+				previousFileUri?: string;
+			}[];
+	  };
 
 /**
  * Gets the progress title for a review operation based on the review group type.
  */
-export function getReviewTitle(group: ReviewGroup, editor?: TextEditor): string {
+export function getReviewTitle(
+	group: ReviewGroup,
+	editor?: TextEditor,
+): string {
 	if (group === 'selection') {
-		return l10n.t('Reviewing selected code in {0}...', path.posix.basename(editor!.document.uri.path));
+		return l10n.t(
+			'Reviewing selected code in {0}...',
+			path.posix.basename(editor!.document.uri.path),
+		);
 	}
 	if (group === 'index') {
 		return l10n.t('Reviewing staged changes...');
@@ -293,12 +399,21 @@ export function getReviewTitle(group: ReviewGroup, editor?: TextEditor): string 
 		return l10n.t('Reviewing changes...');
 	}
 	if (group.group === 'index') {
-		return l10n.t('Reviewing staged changes in {0}...', path.posix.basename(group.file.path));
+		return l10n.t(
+			'Reviewing staged changes in {0}...',
+			path.posix.basename(group.file.path),
+		);
 	}
-	return l10n.t('Reviewing unstaged changes in {0}...', path.posix.basename(group.file.path));
+	return l10n.t(
+		'Reviewing unstaged changes in {0}...',
+		path.posix.basename(group.file.path),
+	);
 }
 
-export function combineCancellationTokens(token1: CancellationToken, token2: CancellationToken): CancellationToken {
+export function combineCancellationTokens(
+	token1: CancellationToken,
+	token2: CancellationToken,
+): CancellationToken {
 	const combinedSource = new CancellationTokenSource();
 
 	const subscription1 = token1.onCancellationRequested(() => {
@@ -323,38 +438,67 @@ async function review(
 	instantiationService: IInstantiationService,
 	gitExtensionService: IGitExtensionService,
 	workspaceService: IWorkspaceService,
-	group: 'selection' | 'index' | 'workingTree' | 'all' | { repositoryRoot: string; commitMessages: string[]; patches: { patch: string; fileUri: string; previousFileUri?: string }[] },
+	group:
+		| 'selection'
+		| 'index'
+		| 'workingTree'
+		| 'all'
+		| {
+				repositoryRoot: string;
+				commitMessages: string[];
+				patches: {
+					patch: string;
+					fileUri: string;
+					previousFileUri?: string;
+				}[];
+		  },
 	editor: TextEditor | undefined,
 	progress: Progress<ReviewComment[]>,
-	cancellationToken: CancellationToken
+	cancellationToken: CancellationToken,
 ) {
-	const feedbackGenerator = instantiationService.createInstance(FeedbackGenerator);
+	const feedbackGenerator =
+		instantiationService.createInstance(FeedbackGenerator);
 	const input: CurrentChangeInput[] = [];
 	if (group === 'index' || group === 'workingTree' || group === 'all') {
-		const changes = await CurrentChange.getCurrentChanges(gitExtensionService, group);
-		const documentsAndChanges = await Promise.all<CurrentChangeInput | undefined>(changes.map(async (change) => {
-			try {
-				const document = await workspaceService.openTextDocument(change.uri);
-				return {
-					document: TextDocumentSnapshot.create(document),
-					relativeDocumentPath: path.relative(change.repository.rootUri.fsPath, change.uri.fsPath),
-					change,
-				};
-			} catch (err) {
+		const changes = await CurrentChange.getCurrentChanges(
+			gitExtensionService,
+			group,
+		);
+		const documentsAndChanges = await Promise.all<
+			CurrentChangeInput | undefined
+		>(
+			changes.map(async (change) => {
 				try {
-					if ((await workspaceService.fs.stat(change.uri)).type === FileType.File) {
+					const document = await workspaceService.openTextDocument(
+						change.uri,
+					);
+					return {
+						document: TextDocumentSnapshot.create(document),
+						relativeDocumentPath: path.relative(
+							change.repository.rootUri.fsPath,
+							change.uri.fsPath,
+						),
+						change,
+					};
+				} catch (err) {
+					try {
+						if (
+							(await workspaceService.fs.stat(change.uri))
+								.type === FileType.File
+						) {
+							throw err;
+						}
+						return undefined;
+					} catch (inner) {
+						if (inner.code === 'FileNotFound') {
+							return undefined;
+						}
 						throw err;
 					}
-					return undefined;
-				} catch (inner) {
-					if (inner.code === 'FileNotFound') {
-						return undefined;
-					}
-					throw err;
 				}
-			}
-		}));
-		documentsAndChanges.map(i => {
+			}),
+		);
+		documentsAndChanges.map((i) => {
 			if (i) {
 				input.push(i);
 			}
@@ -369,13 +513,27 @@ async function review(
 		for (const patch of group.patches) {
 			const uri = URI.parse(patch.fileUri);
 			input.push({
-				document: TextDocumentSnapshot.create(await workspaceService.openTextDocument(uri)),
-				relativeDocumentPath: path.relative(group.repositoryRoot, uri.fsPath),
-				change: await CurrentChange.getChanges(gitExtensionService, URI.file(group.repositoryRoot), uri, patch.patch)
+				document: TextDocumentSnapshot.create(
+					await workspaceService.openTextDocument(uri),
+				),
+				relativeDocumentPath: path.relative(
+					group.repositoryRoot,
+					uri.fsPath,
+				),
+				change: await CurrentChange.getChanges(
+					gitExtensionService,
+					URI.file(group.repositoryRoot),
+					uri,
+					patch.patch,
+				),
 			});
 		}
 	}
-	return feedbackGenerator.generateComments(input, cancellationToken, progress);
+	return feedbackGenerator.generateComments(
+		input,
+		cancellationToken,
+		progress,
+	);
 }
 
 /**
@@ -399,24 +557,38 @@ export async function reviewFileChanges(
 
 	const copilotToken = await authService.getCopilotToken();
 	if (!copilotToken.isCopilotCodeReviewEnabled) {
-		return { type: 'error', reason: 'Code review is not enabled for this account.' };
+		return {
+			type: 'error',
+			reason: 'Code review is not enabled for this account.',
+		};
 	}
 
 	const tokenSource = new CancellationTokenSource();
 	try {
-		const fileInputs = await Promise.all(input.files.map(async file => {
-			let baseContent = '';
-			if (file.baseUri) {
-				const bytes = await fileSystemService.readFile(file.baseUri);
-				baseContent = new TextDecoder().decode(bytes);
-			}
-			return { currentUri: file.currentUri, baseContent };
-		}));
+		const fileInputs = await Promise.all(
+			input.files.map(async (file) => {
+				let baseContent = '';
+				if (file.baseUri) {
+					const bytes = await fileSystemService.readFile(
+						file.baseUri,
+					);
+					baseContent = new TextDecoder().decode(bytes);
+				}
+				return { currentUri: file.currentUri, baseContent };
+			}),
+		);
 
 		const result = await githubReviewFileUris(
-			logService, authService, capiClientService, fetcherService, envService,
-			ignoreService, workspaceService, customInstructionsService,
-			fileInputs, tokenSource.token,
+			logService,
+			authService,
+			capiClientService,
+			fetcherService,
+			envService,
+			ignoreService,
+			workspaceService,
+			customInstructionsService,
+			fileInputs,
+			tokenSource.token,
 		);
 
 		if (result.type === 'success') {

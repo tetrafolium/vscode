@@ -9,10 +9,14 @@ import { IEndpointProvider } from '../../../platform/endpoint/common/endpointPro
 import { isPreRelease } from '../../../platform/env/common/packagejson';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { Intent } from '../../common/constants';
-import { IIntent, IIntentInvocation, IIntentInvocationContext, IIntentSlashCommandInfo } from '../../prompt/node/intents';
+import {
+	IIntent,
+	IIntentInvocation,
+	IIntentInvocationContext,
+	IIntentSlashCommandInfo,
+} from '../../prompt/node/intents';
 import { SetupTestsFrameworkQueryInvocation } from './testIntent/setupTestsFrameworkQueryInvocation';
 import { SetupTestsInvocation } from './testIntent/setupTestsInvocation';
-
 
 export class SetupTestsIntent implements IIntent {
 	static readonly ID = Intent.SetupTests;
@@ -28,11 +32,16 @@ export class SetupTestsIntent implements IIntent {
 
 	constructor(
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-	) { }
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+	) {}
 
-	async invoke(invocationContext: IIntentInvocationContext): Promise<IIntentInvocation> {
-		const endpoint = await this.endpointProvider.getChatEndpoint(invocationContext.request);
+	async invoke(
+		invocationContext: IIntentInvocationContext,
+	): Promise<IIntentInvocation> {
+		const endpoint = await this.endpointProvider.getChatEndpoint(
+			invocationContext.request,
+		);
 
 		let prompt = invocationContext.request.prompt;
 		if (invocationContext.request.acceptedConfirmationData) {
@@ -43,9 +52,23 @@ export class SetupTestsIntent implements IIntent {
 		}
 
 		if (!prompt) {
-			return this.instantiationService.createInstance(SetupTestsFrameworkQueryInvocation, this, endpoint, invocationContext.location, invocationContext.documentContext);
+			return this.instantiationService.createInstance(
+				SetupTestsFrameworkQueryInvocation,
+				this,
+				endpoint,
+				invocationContext.location,
+				invocationContext.documentContext,
+			);
 		}
 
-		return Promise.resolve(this.instantiationService.createInstance(SetupTestsInvocation, this, endpoint, invocationContext.location, prompt));
+		return Promise.resolve(
+			this.instantiationService.createInstance(
+				SetupTestsInvocation,
+				this,
+				endpoint,
+				invocationContext.location,
+				prompt,
+			),
+		);
 	}
 }

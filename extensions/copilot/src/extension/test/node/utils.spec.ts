@@ -5,8 +5,16 @@
 
 import * as assert from 'assert';
 import { expect, suite, test } from 'vitest';
-import { EditSurvivalTracker, applyEditsToRanges, compute4GramTextSimilarity } from '../../../platform/editSurvivalTracking/common/editSurvivalTracker';
-import { ISerializedStringEdit, StringEdit, StringReplacement } from '../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	EditSurvivalTracker,
+	applyEditsToRanges,
+	compute4GramTextSimilarity,
+} from '../../../platform/editSurvivalTracking/common/editSurvivalTracker';
+import {
+	ISerializedStringEdit,
+	StringEdit,
+	StringReplacement,
+} from '../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRange';
 
 suite('OffsetEdit.join', () => {
@@ -34,7 +42,11 @@ function runTest(seed: number) {
 	assert.strictEqual(s2C, s2);
 }
 
-function getRandomEdits(str: string, count: number, rng: MersenneTwister): StringEdit {
+function getRandomEdits(
+	str: string,
+	count: number,
+	rng: MersenneTwister,
+): StringEdit {
 	const edits: StringReplacement[] = [];
 	let i = 0;
 	for (let j = 0; j < count; j++) {
@@ -47,7 +59,11 @@ function getRandomEdits(str: string, count: number, rng: MersenneTwister): Strin
 	return new StringEdit(edits);
 }
 
-function getRandomEdit(str: string, rangeOffsetStart: number, rng: MersenneTwister): StringReplacement {
+function getRandomEdit(
+	str: string,
+	rangeOffsetStart: number,
+	rng: MersenneTwister,
+): StringReplacement {
 	const offsetStart = rng.nextIntRange(rangeOffsetStart, str.length);
 	const offsetEnd = rng.nextIntRange(offsetStart, str.length);
 
@@ -56,7 +72,7 @@ function getRandomEdit(str: string, rangeOffsetStart: number, rng: MersenneTwist
 
 	return new StringReplacement(
 		new OffsetRange(offsetStart, offsetEnd),
-		str.substring(textStart, textStart + textLen)
+		str.substring(textStart, textStart + textLen),
 	);
 }
 
@@ -69,7 +85,11 @@ class MersenneTwister {
 		this.mt[0] = seed >>> 0;
 		for (let i = 1; i < 624; i++) {
 			const s = this.mt[i - 1] ^ (this.mt[i - 1] >>> 30);
-			this.mt[i] = (((((s & 0xffff0000) >>> 16) * 0x6c078965) << 16) + (s & 0x0000ffff) * 0x6c078965 + i) >>> 0;
+			this.mt[i] =
+				(((((s & 0xffff0000) >>> 16) * 0x6c078965) << 16) +
+					(s & 0x0000ffff) * 0x6c078965 +
+					i) >>>
+				0;
 		}
 	}
 
@@ -96,9 +116,11 @@ class MersenneTwister {
 
 	private generateNumbers() {
 		for (let i = 0; i < 624; i++) {
-			const y = (this.mt[i] & 0x80000000) + (this.mt[(i + 1) % 624] & 0x7fffffff);
+			const y =
+				(this.mt[i] & 0x80000000) +
+				(this.mt[(i + 1) % 624] & 0x7fffffff);
 			this.mt[i] = this.mt[(i + 397) % 624] ^ (y >>> 1);
-			if ((y % 2) !== 0) {
+			if (y % 2 !== 0) {
 				this.mt[i] = this.mt[i] ^ 0x9908b0df;
 			}
 		}
@@ -130,11 +152,10 @@ suite('applyEditsToRanges', () => {
 		]);
 
 		const newRanges = applyEditsToRanges(ranges, edits);
-		assert.deepStrictEqual(newRanges.map(r => r.toString()), [
-			'[10, 20)',
-			'[30, 40)',
-			'[50, 60)',
-		]);
+		assert.deepStrictEqual(
+			newRanges.map((r) => r.toString()),
+			['[10, 20)', '[30, 40)', '[50, 60)'],
+		);
 	});
 
 	test('edit before ranges', () => {
@@ -149,11 +170,10 @@ suite('applyEditsToRanges', () => {
 		]);
 
 		const newRanges = applyEditsToRanges(ranges, edits);
-		assert.deepStrictEqual(newRanges.map(r => r.toString()), [
-			'[12, 22)',
-			'[32, 42)',
-			'[52, 62)',
-		]);
+		assert.deepStrictEqual(
+			newRanges.map((r) => r.toString()),
+			['[12, 22)', '[32, 42)', '[52, 62)'],
+		);
 	});
 
 	test('edit in range', () => {
@@ -168,11 +188,10 @@ suite('applyEditsToRanges', () => {
 		]);
 
 		const newRanges = applyEditsToRanges(ranges, edits);
-		assert.deepStrictEqual(newRanges.map(r => r.toString()), [
-			'[10, 13)',
-			'[23, 33)',
-			'[43, 53)',
-		]);
+		assert.deepStrictEqual(
+			newRanges.map((r) => r.toString()),
+			['[10, 13)', '[23, 33)', '[43, 53)'],
+		);
 	});
 
 	test('edit in multiple ranges', () => {
@@ -187,11 +206,10 @@ suite('applyEditsToRanges', () => {
 		]);
 
 		const newRanges = applyEditsToRanges(ranges, edits);
-		assert.deepStrictEqual(newRanges.map(r => r.toString()), [
-			'[10, 16)',
-			'[16, 16)',
-			'[16, 21)',
-		]);
+		assert.deepStrictEqual(
+			newRanges.map((r) => r.toString()),
+			['[10, 16)', '[16, 16)', '[16, 21)'],
+		);
 	});
 
 	test('edit in multiple ranges 2', () => {
@@ -207,11 +225,10 @@ suite('applyEditsToRanges', () => {
 		]);
 
 		const newRanges = applyEditsToRanges(ranges, edits);
-		assert.deepStrictEqual(newRanges.map(r => r.toString()), [
-			'[10, 16)',
-			'[16, 16)',
-			'[16, 22)',
-		]);
+		assert.deepStrictEqual(
+			newRanges.map((r) => r.toString()),
+			['[10, 16)', '[16, 16)', '[16, 22)'],
+		);
 	});
 
 	test('touching edit', () => {
@@ -227,19 +244,16 @@ suite('applyEditsToRanges', () => {
 		]);
 
 		const newRanges = applyEditsToRanges(ranges, edits);
-		assert.deepStrictEqual(newRanges.map(r => r.toString()), [
-			'[10, 20)',
-			'[30, 41)',
-			'[51, 62)'
-		]);
+		assert.deepStrictEqual(
+			newRanges.map((r) => r.toString()),
+			['[10, 20)', '[30, 41)', '[51, 62)'],
+		);
 	});
 });
-
 
 function projectableValue_editable<T>(arg: T): T {
 	return arg;
 }
-
 
 suite('compute4GramTextSimilarity', () => {
 	for (let seed = 0; seed < 50; seed++) {
@@ -256,12 +270,18 @@ suite('compute4GramTextSimilarity', () => {
 
 		const similarity = compute4GramTextSimilarity(s1, s2);
 
-		assert.ok(similarity >= 0 && similarity <= 1, `similarity should be between 0 and 1, but was ${similarity}`);
+		assert.ok(
+			similarity >= 0 && similarity <= 1,
+			`similarity should be between 0 and 1, but was ${similarity}`,
+		);
 	}
 });
 
 suite('EditSurvivalTracker', () => {
-	function renameProps<T extends object>(obj: T, map: { [K in keyof T]?: string }): any {
+	function renameProps<T extends object>(
+		obj: T,
+		map: { [K in keyof T]?: string },
+	): any {
 		const result: any = {};
 		for (const key of Object.keys(obj) as (keyof T)[]) {
 			const newKey = map[key] || key;
@@ -270,9 +290,15 @@ suite('EditSurvivalTracker', () => {
 		return result;
 	}
 
-	function getScore(input: { text: string; edits: ISerializedStringEdit[] }): unknown {
+	function getScore(input: {
+		text: string;
+		edits: ISerializedStringEdit[];
+	}): unknown {
 		const originalText = input.text;
-		const t = new EditSurvivalTracker(originalText, StringEdit.fromJson(input.edits[0]));
+		const t = new EditSurvivalTracker(
+			originalText,
+			StringEdit.fromJson(input.edits[0]),
+		);
 		t.handleEdits(StringEdit.fromJson(input.edits[1]));
 		const score = t.computeTrackedEditsSurvivalScore();
 		return renameProps(score, {
@@ -284,26 +310,28 @@ suite('EditSurvivalTracker', () => {
 
 	test('simple', async () => {
 		expect(
-			getScore(projectableValue_editable({
-				'text': 'console.log(123456);',
-				'edits': [
-					[
-						{
-							'pos': 12,
-							'len': 6,
-							'txt': `'hello'`
-						}
+			getScore(
+				projectableValue_editable({
+					text: 'console.log(123456);',
+					edits: [
+						[
+							{
+								pos: 12,
+								len: 6,
+								txt: `'hello'`,
+							},
+						],
+						[
+							{
+								pos: 12,
+								len: 7,
+								txt: `'Hello'`,
+							},
+						],
 					],
-					[
-						{
-							'pos': 12,
-							'len': 7,
-							'txt': `'Hello'`
-						}
-					]
-				],
-				'x-editor': 'edit-editor'
-			})),
+					'x-editor': 'edit-editor',
+				}),
+			),
 		).toMatchInlineSnapshot(`
 			{
 			  "fourGram": 0.5,
@@ -323,41 +351,43 @@ suite('EditSurvivalTracker', () => {
 
 	test('multi edit', async () => {
 		expect(
-			getScore(projectableValue_editable({
-				'text': 'console.log(123456);',
-				'edits': [
-					[
-						{
-							'pos': 0,
-							'len': 0,
-							'txt': '// comment\\n'
-						},
-						{
-							'pos': 12,
-							'len': 6,
-							'txt': `'hello'`
-						}
+			getScore(
+				projectableValue_editable({
+					text: 'console.log(123456);',
+					edits: [
+						[
+							{
+								pos: 0,
+								len: 0,
+								txt: '// comment\\n',
+							},
+							{
+								pos: 12,
+								len: 6,
+								txt: `'hello'`,
+							},
+						],
+						[
+							{
+								pos: 0,
+								len: 2,
+								txt: '/*',
+							},
+							{
+								pos: 10,
+								len: 2,
+								txt: ' */',
+							},
+							{
+								pos: 25,
+								len: 7,
+								txt: 'Hello',
+							},
+						],
 					],
-					[
-						{
-							'pos': 0,
-							'len': 2,
-							'txt': '/*'
-						},
-						{
-							'pos': 10,
-							'len': 2,
-							'txt': ' */'
-						},
-						{
-							'pos': 25,
-							'len': 7,
-							'txt': 'Hello'
-						}
-					]
-				],
-				'x-editor': 'edit-editor'
-			})),
+					'x-editor': 'edit-editor',
+				}),
+			),
 		).toMatchInlineSnapshot(`
 			{
 			  "fourGram": 0.4376731301939058,
@@ -380,27 +410,30 @@ suite('EditSurvivalTracker', () => {
 
 	test('realistic example', async () => {
 		expect(
-			getScore(projectableValue_editable({
-				'text': `import {\r\n\tTextDocument,\r\n\tWebviewPanel,\r\n\tCancellationToken,\r\n\tworkspace,\r\n\tWorkspaceEdit,\r\n\tRange,\r\n\tCustomTextEditorProvider,\r\n} from "vscode";\r\nimport { WebviewInitializer } from "./WebviewInitializer";\r\n\r\ninterface EditableDocument {\r\n\t"x-editable"?: {\r\n\t\tkind: string;\r\n\t\tdefaultUrl: string;\r\n\t};\r\n}\r\n\r\nexport class TextEditorProvider implements CustomTextEditorProvider {\r\n\tconstructor(private readonly webviewInitializer: WebviewInitializer) {}\r\n\r\n\tpublic async resolveCustomTextEditor(\r\n\t\tdocument: TextDocument,\r\n\t\twebviewPanel: WebviewPanel,\r\n\t\ttoken: CancellationToken\r\n\t): Promise<void> {\r\n\t\tlet isThisEditorSaving = false;\r\n\r\n\t\tconst text = document.getText();\r\n\t\tconst doc = JSON.parse(text) as EditableDocument;\r\n\t\tconst args = doc["x-editable"];\r\n\r\n\r\n\t\tconst bridge = this.webviewInitializer.setupWebview(\r\n\t\t\t{ editorUrl: args.defaultUrl },\r\n\t\t\twebviewPanel.webview\r\n\t\t);\r\n\r\n\t\tconst setContentFromDocument = () => {\r\n\t\t\tconst newText = document.getText();\r\n\t\t\tconst content = JSON.parse(newText);\r\n\t\t\tbridge.setContent(content);\r\n\t\t};\r\n\r\n\t\tworkspace.onDidChangeTextDocument(async (evt) => {\r\n\t\t\tif (evt.document !== document) {\r\n\t\t\t\treturn;\r\n\t\t\t}\r\n\t\t\tif (isThisEditorSaving) {\r\n\t\t\t\t// We don't want to integrate our own changes\r\n\t\t\t\treturn;\r\n\t\t\t}\r\n\t\t\tif (evt.contentChanges.length === 0) {\r\n\t\t\t\t// Sometimes VS Code reports a document change without a change.\r\n\t\t\t\treturn;\r\n\t\t\t}\r\n\r\n\t\t\tsetContentFromDocument();\r\n\t\t});\r\n\r\n\t\tbridge.onChange.sub(async ({ newContent }) => {\r\n\t\t\tconst workspaceEdit = new WorkspaceEdit();\r\n\t\t\tconst data = newContent as EditableDocument;\r\n\t\t\tif (!data['x-editable']) {\r\n\t\t\t\tdata['x-editable'] = args;\r\n\t\t\t}\r\n\t\t\tconst output = JSON.stringify(newContent, undefined, 4);\r\n\t\t\tworkspaceEdit.replace(\r\n\t\t\t\tdocument.uri,\r\n\t\t\t\tnew Range(0, 0, document.lineCount, 0),\r\n\t\t\t\toutput\r\n\t\t\t);\r\n\r\n\t\t\tisThisEditorSaving = true;\r\n\t\t\ttry {\r\n\t\t\t\tawait workspace.applyEdit(workspaceEdit);\r\n\t\t\t} finally {\r\n\t\t\t\tisThisEditorSaving = false;\r\n\t\t\t}\r\n\t\t});\r\n\r\n\t\tbridge.onInit.sub(() => {\r\n\t\t\tsetContentFromDocument();\r\n\t\t});\r\n\t}\r\n}\r\n`,
-				'edits': [
-					[
-						{
-							'pos': 762,
-							'len': 2,
-							'txt': '\r\n\r\n\t\tif (!args) {\r\n\t\t\tthrow new Error("invalid json document!");\r\n\t\t}'
-						}
+			getScore(
+				projectableValue_editable({
+					text: `import {\r\n\tTextDocument,\r\n\tWebviewPanel,\r\n\tCancellationToken,\r\n\tworkspace,\r\n\tWorkspaceEdit,\r\n\tRange,\r\n\tCustomTextEditorProvider,\r\n} from "vscode";\r\nimport { WebviewInitializer } from "./WebviewInitializer";\r\n\r\ninterface EditableDocument {\r\n\t"x-editable"?: {\r\n\t\tkind: string;\r\n\t\tdefaultUrl: string;\r\n\t};\r\n}\r\n\r\nexport class TextEditorProvider implements CustomTextEditorProvider {\r\n\tconstructor(private readonly webviewInitializer: WebviewInitializer) {}\r\n\r\n\tpublic async resolveCustomTextEditor(\r\n\t\tdocument: TextDocument,\r\n\t\twebviewPanel: WebviewPanel,\r\n\t\ttoken: CancellationToken\r\n\t): Promise<void> {\r\n\t\tlet isThisEditorSaving = false;\r\n\r\n\t\tconst text = document.getText();\r\n\t\tconst doc = JSON.parse(text) as EditableDocument;\r\n\t\tconst args = doc["x-editable"];\r\n\r\n\r\n\t\tconst bridge = this.webviewInitializer.setupWebview(\r\n\t\t\t{ editorUrl: args.defaultUrl },\r\n\t\t\twebviewPanel.webview\r\n\t\t);\r\n\r\n\t\tconst setContentFromDocument = () => {\r\n\t\t\tconst newText = document.getText();\r\n\t\t\tconst content = JSON.parse(newText);\r\n\t\t\tbridge.setContent(content);\r\n\t\t};\r\n\r\n\t\tworkspace.onDidChangeTextDocument(async (evt) => {\r\n\t\t\tif (evt.document !== document) {\r\n\t\t\t\treturn;\r\n\t\t\t}\r\n\t\t\tif (isThisEditorSaving) {\r\n\t\t\t\t// We don't want to integrate our own changes\r\n\t\t\t\treturn;\r\n\t\t\t}\r\n\t\t\tif (evt.contentChanges.length === 0) {\r\n\t\t\t\t// Sometimes VS Code reports a document change without a change.\r\n\t\t\t\treturn;\r\n\t\t\t}\r\n\r\n\t\t\tsetContentFromDocument();\r\n\t\t});\r\n\r\n\t\tbridge.onChange.sub(async ({ newContent }) => {\r\n\t\t\tconst workspaceEdit = new WorkspaceEdit();\r\n\t\t\tconst data = newContent as EditableDocument;\r\n\t\t\tif (!data['x-editable']) {\r\n\t\t\t\tdata['x-editable'] = args;\r\n\t\t\t}\r\n\t\t\tconst output = JSON.stringify(newContent, undefined, 4);\r\n\t\t\tworkspaceEdit.replace(\r\n\t\t\t\tdocument.uri,\r\n\t\t\t\tnew Range(0, 0, document.lineCount, 0),\r\n\t\t\t\toutput\r\n\t\t\t);\r\n\r\n\t\t\tisThisEditorSaving = true;\r\n\t\t\ttry {\r\n\t\t\t\tawait workspace.applyEdit(workspaceEdit);\r\n\t\t\t} finally {\r\n\t\t\t\tisThisEditorSaving = false;\r\n\t\t\t}\r\n\t\t});\r\n\r\n\t\tbridge.onInit.sub(() => {\r\n\t\t\tsetContentFromDocument();\r\n\t\t});\r\n\t}\r\n}\r\n`,
+					edits: [
+						[
+							{
+								pos: 762,
+								len: 2,
+								txt: '\r\n\r\n\t\tif (!args) {\r\n\t\t\tthrow new Error("invalid json document!");\r\n\t\t}',
+							},
+						],
+						[
+							{
+								pos: 801,
+								len: 24,
+								txt: '""',
+							},
+						],
 					],
-					[
-						{
-							'pos': 801,
-							'len': 24,
-							'txt': '""'
-						}
-					]
-				],
-				'x-editor': 'edit-editor'
-			}))).toMatchInlineSnapshot(
-				`
+					'x-editor': 'edit-editor',
+				}),
+			),
+		).toMatchInlineSnapshot(
+			`
 				{
 				  "fourGram": 0.75,
 				  "noRevert": 1,
@@ -423,7 +456,8 @@ suite('EditSurvivalTracker', () => {
 						}",
 				  ],
 				}
-			`);
+			`,
+		);
 	});
 });
 
@@ -440,7 +474,10 @@ suite('OffsetEdits', () => {
 			const e2 = e.removeCommonSuffixPrefix(str);
 
 			assert.deepStrictEqual(e2.apply(str), e.apply(str));
-			assert.deepStrictEqual(e2.toString(), '[[1, 2) -> "x", [3, 4) -> "y"]');
+			assert.deepStrictEqual(
+				e2.toString(),
+				'[[1, 2) -> "x", [3, 4) -> "y"]',
+			);
 		});
 
 		for (let seed = 0; seed < 50; seed++) {

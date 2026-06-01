@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { SDKSessionInfo, SessionMessage } from '@anthropic-ai/claude-agent-sdk';
+import type {
+	SDKSessionInfo,
+	SessionMessage,
+} from '@anthropic-ai/claude-agent-sdk';
 import { describe, expect, it } from 'vitest';
 import {
 	buildClaudeCodeSession,
@@ -14,7 +17,9 @@ import {
 
 // #region Test Helpers
 
-function createSdkSessionInfo(overrides?: Partial<SDKSessionInfo>): SDKSessionInfo {
+function createSdkSessionInfo(
+	overrides?: Partial<SDKSessionInfo>,
+): SDKSessionInfo {
 	return {
 		sessionId: 'test-session-id',
 		summary: 'Test session summary',
@@ -23,7 +28,9 @@ function createSdkSessionInfo(overrides?: Partial<SDKSessionInfo>): SDKSessionIn
 	};
 }
 
-function createUserSessionMessage(overrides?: Partial<SessionMessage> & { messageContent?: unknown }): SessionMessage {
+function createUserSessionMessage(
+	overrides?: Partial<SessionMessage> & { messageContent?: unknown },
+): SessionMessage {
 	const { messageContent, ...rest } = overrides ?? {};
 	return {
 		type: 'user',
@@ -38,7 +45,9 @@ function createUserSessionMessage(overrides?: Partial<SessionMessage> & { messag
 	};
 }
 
-function createAssistantSessionMessage(overrides?: Partial<SessionMessage> & { messageContent?: unknown }): SessionMessage {
+function createAssistantSessionMessage(
+	overrides?: Partial<SessionMessage> & { messageContent?: unknown },
+): SessionMessage {
 	const { messageContent, ...rest } = overrides ?? {};
 	return {
 		type: 'assistant',
@@ -46,9 +55,7 @@ function createAssistantSessionMessage(overrides?: Partial<SessionMessage> & { m
 		session_id: 'test-session-id',
 		message: messageContent ?? {
 			role: 'assistant',
-			content: [
-				{ type: 'text', text: 'Hello! How can I help you?' },
-			],
+			content: [{ type: 'text', text: 'Hello! How can I help you?' }],
 		},
 		parent_tool_use_id: null,
 		...rest,
@@ -105,7 +112,8 @@ describe('sdkSessionInfoToSessionInfo', () => {
 
 	it('strips <system-reminder> tags from summary', () => {
 		const info = createSdkSessionInfo({
-			summary: '<system-reminder>some internal stuff</system-reminder>Fix the login bug',
+			summary:
+				'<system-reminder>some internal stuff</system-reminder>Fix the login bug',
 		});
 
 		const result = sdkSessionInfoToSessionInfo(info);
@@ -116,7 +124,8 @@ describe('sdkSessionInfoToSessionInfo', () => {
 	it('strips <system-reminder> tags from firstPrompt', () => {
 		const info = createSdkSessionInfo({
 			summary: '',
-			firstPrompt: '<system-reminder>internal</system-reminder>Hello, help me with React',
+			firstPrompt:
+				'<system-reminder>internal</system-reminder>Hello, help me with React',
 		});
 
 		const result = sdkSessionInfoToSessionInfo(info);
@@ -147,7 +156,8 @@ describe('sdkSessionInfoToSessionInfo', () => {
 	});
 
 	it('truncates long labels to 50 characters', () => {
-		const longSummary = 'This is a very long summary that exceeds fifty characters in length and should be truncated';
+		const longSummary =
+			'This is a very long summary that exceeds fifty characters in length and should be truncated';
 		const info = createSdkSessionInfo({ summary: longSummary });
 
 		const result = sdkSessionInfoToSessionInfo(info);
@@ -158,7 +168,8 @@ describe('sdkSessionInfoToSessionInfo', () => {
 
 	it('handles summary that is only <system-reminder> tags', () => {
 		const info = createSdkSessionInfo({
-			summary: '<system-reminder>only internal stuff here</system-reminder>',
+			summary:
+				'<system-reminder>only internal stuff here</system-reminder>',
 			firstPrompt: 'Fallback prompt',
 		});
 
@@ -234,31 +245,57 @@ describe('sdkSessionMessagesToStoredMessages', () => {
 
 	it('converts a multi-turn conversation', () => {
 		const messages: SessionMessage[] = [
-			createUserSessionMessage({ uuid: 'u1', messageContent: { role: 'user', content: 'Hello' } }),
+			createUserSessionMessage({
+				uuid: 'u1',
+				messageContent: { role: 'user', content: 'Hello' },
+			}),
 			createAssistantSessionMessage({
 				uuid: 'a1',
-				messageContent: { role: 'assistant', content: [{ type: 'text', text: 'Hi!' }] },
+				messageContent: {
+					role: 'assistant',
+					content: [{ type: 'text', text: 'Hi!' }],
+				},
 			}),
-			createUserSessionMessage({ uuid: 'u2', messageContent: { role: 'user', content: 'Help me' } }),
+			createUserSessionMessage({
+				uuid: 'u2',
+				messageContent: { role: 'user', content: 'Help me' },
+			}),
 			createAssistantSessionMessage({
 				uuid: 'a2',
-				messageContent: { role: 'assistant', content: [{ type: 'text', text: 'Sure!' }] },
+				messageContent: {
+					role: 'assistant',
+					content: [{ type: 'text', text: 'Sure!' }],
+				},
 			}),
 		];
 
 		const result = sdkSessionMessagesToStoredMessages(messages);
 
 		expect(result).toHaveLength(4);
-		expect(result.map(m => m.type)).toEqual(['user', 'assistant', 'user', 'assistant']);
+		expect(result.map((m) => m.type)).toEqual([
+			'user',
+			'assistant',
+			'user',
+			'assistant',
+		]);
 	});
 
 	it('skips messages with invalid content', () => {
 		const messages: SessionMessage[] = [
-			createUserSessionMessage({ uuid: 'u1', messageContent: { role: 'user', content: 'Valid' } }),
-			createUserSessionMessage({ uuid: 'u2', messageContent: { role: 'invalid', content: 123 } }),
+			createUserSessionMessage({
+				uuid: 'u1',
+				messageContent: { role: 'user', content: 'Valid' },
+			}),
+			createUserSessionMessage({
+				uuid: 'u2',
+				messageContent: { role: 'invalid', content: 123 },
+			}),
 			createAssistantSessionMessage({
 				uuid: 'a1',
-				messageContent: { role: 'assistant', content: [{ type: 'text', text: 'Valid' }] },
+				messageContent: {
+					role: 'assistant',
+					content: [{ type: 'text', text: 'Valid' }],
+				},
 			}),
 		];
 
@@ -333,11 +370,18 @@ describe('buildClaudeCodeSession', () => {
 			createdAt: 1699999990000,
 		});
 		const messages: SessionMessage[] = [
-			createUserSessionMessage({ uuid: 'u1', session_id: 'sess-1', messageContent: { role: 'user', content: 'Hi' } }),
+			createUserSessionMessage({
+				uuid: 'u1',
+				session_id: 'sess-1',
+				messageContent: { role: 'user', content: 'Hi' },
+			}),
 			createAssistantSessionMessage({
 				uuid: 'a1',
 				session_id: 'sess-1',
-				messageContent: { role: 'assistant', content: [{ type: 'text', text: 'Hello!' }] },
+				messageContent: {
+					role: 'assistant',
+					content: [{ type: 'text', text: 'Hello!' }],
+				},
 			}),
 		];
 
@@ -354,13 +398,18 @@ describe('buildClaudeCodeSession', () => {
 	it('includes subagents in the assembled session', () => {
 		const info = createSdkSessionInfo({ sessionId: 'sess-1' });
 		const messages: SessionMessage[] = [
-			createUserSessionMessage({ session_id: 'sess-1', messageContent: { role: 'user', content: 'Run task' } }),
+			createUserSessionMessage({
+				session_id: 'sess-1',
+				messageContent: { role: 'user', content: 'Run task' },
+			}),
 		];
-		const subagents = [{
-			agentId: 'agent-1',
-			messages: [],
-			timestamp: new Date(1700000000000),
-		}];
+		const subagents = [
+			{
+				agentId: 'agent-1',
+				messages: [],
+				timestamp: new Date(1700000000000),
+			},
+		];
 
 		const result = buildClaudeCodeSession(info, messages, subagents);
 
@@ -371,10 +420,17 @@ describe('buildClaudeCodeSession', () => {
 	it('passes folderName through to session info', () => {
 		const info = createSdkSessionInfo();
 		const messages: SessionMessage[] = [
-			createUserSessionMessage({ messageContent: { role: 'user', content: 'Hi' } }),
+			createUserSessionMessage({
+				messageContent: { role: 'user', content: 'Hi' },
+			}),
 		];
 
-		const result = buildClaudeCodeSession(info, messages, [], 'my-workspace');
+		const result = buildClaudeCodeSession(
+			info,
+			messages,
+			[],
+			'my-workspace',
+		);
 
 		expect(result.folderName).toBe('my-workspace');
 	});
@@ -397,7 +453,10 @@ describe('sdkSubagentMessagesToSubagentSession', () => {
 			}),
 		];
 
-		const result = sdkSubagentMessagesToSubagentSession('agent-abc', messages);
+		const result = sdkSubagentMessagesToSubagentSession(
+			'agent-abc',
+			messages,
+		);
 
 		expect(result).not.toBeNull();
 		expect(result!.agentId).toBe('agent-abc');
@@ -415,7 +474,10 @@ describe('sdkSubagentMessagesToSubagentSession', () => {
 			}),
 		];
 
-		const result = sdkSubagentMessagesToSubagentSession('agent-abc', messages);
+		const result = sdkSubagentMessagesToSubagentSession(
+			'agent-abc',
+			messages,
+		);
 
 		expect(result).not.toBeNull();
 		expect(result!.parentToolUseId).toBeUndefined();
@@ -450,7 +512,10 @@ describe('sdkSubagentMessagesToSubagentSession', () => {
 			}),
 		];
 
-		const result = sdkSubagentMessagesToSubagentSession('agent-late', messages);
+		const result = sdkSubagentMessagesToSubagentSession(
+			'agent-late',
+			messages,
+		);
 
 		expect(result).not.toBeNull();
 		expect(result!.parentToolUseId).toBe('toolu_on_second');
@@ -472,7 +537,10 @@ describe('sdkSubagentMessagesToSubagentSession', () => {
 			}),
 		];
 
-		const result = sdkSubagentMessagesToSubagentSession('agent-bad-id', messages);
+		const result = sdkSubagentMessagesToSubagentSession(
+			'agent-bad-id',
+			messages,
+		);
 
 		expect(result).not.toBeNull();
 		expect(result!.parentToolUseId).toBeUndefined();

@@ -25,7 +25,7 @@ export enum CacheScopeKind {
 	/**
 	 * The cache entry is valid as long as the neighbor files don't change.
 	 */
-	NeighborFiles = 'neighborFiles'
+	NeighborFiles = 'neighborFiles',
 }
 
 export type FileCacheScope = {
@@ -55,12 +55,16 @@ export type OutsideRangeCacheScope = {
 	ranges: Range[];
 };
 
-export type CacheScope = FileCacheScope | NeighborFilesCacheScope | WithinRangeCacheScope | OutsideRangeCacheScope;
+export type CacheScope =
+	| FileCacheScope
+	| NeighborFilesCacheScope
+	| WithinRangeCacheScope
+	| OutsideRangeCacheScope;
 
 export type ContextItemKey = string;
 export enum EmitMode {
 	ClientBased = 'clientBased',
-	ClientBasedOnTimeout = 'clientBasedOnTimeout'
+	ClientBasedOnTimeout = 'clientBasedOnTimeout',
 	// ServerBased = 'serverBased'
 }
 export type CacheInfo = {
@@ -78,7 +82,10 @@ export type CachedContextItem = {
 	sizeInChars?: number;
 };
 export namespace CachedContextItem {
-	export function create(key: ContextItemKey, sizeInChars?: number): CachedContextItem {
+	export function create(
+		key: ContextItemKey,
+		sizeInChars?: number,
+	): CachedContextItem {
 		return { key, sizeInChars };
 	}
 }
@@ -112,12 +119,12 @@ export enum Priorities {
 	Properties = 0.5,
 	Imports = 0.4,
 	NeighborFiles = 0.3,
-	Globals = 0.2
+	Globals = 0.2,
 }
 
 export enum SpeculativeKind {
 	emit = 'emit',
-	ignore = 'ignore'
+	ignore = 'ignore',
 }
 
 /**
@@ -136,7 +143,7 @@ export enum TraitKind {
 	ModuleResolution = 'moduleResolution',
 	Lib = 'lib',
 	Target = 'target',
-	Version = 'version'
+	Version = 'version',
 }
 
 /**
@@ -161,14 +168,27 @@ export type Trait = {
 	value: string;
 };
 export namespace Trait {
-	export function create(traitKind: TraitKind, name: string, value: string): Trait {
-		return { kind: ContextKind.Trait, key: createContextItemKey(traitKind), name, value };
+	export function create(
+		traitKind: TraitKind,
+		name: string,
+		value: string,
+	): Trait {
+		return {
+			kind: ContextKind.Trait,
+			key: createContextItemKey(traitKind),
+			name,
+			value,
+		};
 	}
 	export function sizeInChars(trait: Trait): number {
 		return trait.name.length + trait.value.length;
 	}
 	export function createContextItemKey(traitKind: TraitKind): string {
-		return JSON.stringify({ k: ContextKind.Trait, tk: traitKind }, undefined, 0);
+		return JSON.stringify(
+			{ k: ContextKind.Trait, tk: traitKind },
+			undefined,
+			0,
+		);
 	}
 }
 
@@ -199,8 +219,19 @@ export type CodeSnippet = {
 	value: string;
 };
 export namespace CodeSnippet {
-	export function create(key: string | undefined, fileName: FilePath, additionalFileNames: FilePath[] | undefined, value: string): CodeSnippet {
-		return { kind: ContextKind.Snippet, key, fileName, additionalFileNames, value };
+	export function create(
+		key: string | undefined,
+		fileName: FilePath,
+		additionalFileNames: FilePath[] | undefined,
+		value: string,
+	): CodeSnippet {
+		return {
+			kind: ContextKind.Snippet,
+			key,
+			fileName,
+			additionalFileNames,
+			value,
+		};
 	}
 	export function sizeInChars(snippet: CodeSnippet): number {
 		let result: number = snippet.value.length;
@@ -219,7 +250,9 @@ export type FullContextItem = RelatedFile | Trait | CodeSnippet;
 export type ContextItem = FullContextItem | ContextItemReference;
 export namespace ContextItem {
 	export type keyed = { key: ContextItemKey } & ContextItem;
-	export function hasKey(item: ContextItem): item is { key: ContextItemKey } & ContextItem {
+	export function hasKey(
+		item: ContextItem,
+	): item is { key: ContextItemKey } & ContextItem {
 		return (item as { key: ContextItemKey }).key !== undefined;
 	}
 	export function sizeInChars(item: ContextItem): number {
@@ -242,17 +275,16 @@ export enum ContextRunnableState {
 	Created = 'created',
 	InProgress = 'inProgress',
 	IsFull = 'isFull',
-	Finished = 'finished'
+	Finished = 'finished',
 }
 
 export type ContextRunnableResultId = string;
 export enum ContextRunnableResultKind {
 	ComputedResult = 'computedResult',
 	CacheEntry = 'cacheEntry',
-	Reference = 'reference'
+	Reference = 'reference',
 }
 export type ContextRunnableResult = {
-
 	kind: ContextRunnableResultKind.ComputedResult;
 
 	/**
@@ -294,7 +326,6 @@ export type ContextRunnableResult = {
 };
 
 export type CachedContextRunnableResult = {
-
 	kind: ContextRunnableResultKind.CacheEntry;
 
 	/**
@@ -320,7 +351,6 @@ export type CachedContextRunnableResult = {
 };
 
 export type ContextRunnableResultReference = {
-
 	kind: ContextRunnableResultKind.Reference;
 
 	/**
@@ -330,7 +360,9 @@ export type ContextRunnableResultReference = {
 	id: ContextRunnableResultId;
 };
 
-export type ContextRunnableResultTypes = ContextRunnableResult | ContextRunnableResultReference;
+export type ContextRunnableResultTypes =
+	| ContextRunnableResult
+	| ContextRunnableResultReference;
 
 export type ErrorData = {
 	code: number;
@@ -356,11 +388,10 @@ export enum ContextRequestResultState {
 	Created = 'created',
 	InProgress = 'inProgress',
 	Cancelled = 'cancelled',
-	Finished = 'finished'
+	Finished = 'finished',
 }
 
 export type ContextRequestResult = {
-
 	state: ContextRequestResultState;
 
 	/**
@@ -399,7 +430,8 @@ export type ContextRequestResult = {
 	contextItems?: ContextItem[];
 };
 
-export interface ComputeContextRequestArgs extends tt.server.protocol.FileLocationRequestArgs {
+export interface ComputeContextRequestArgs
+	extends tt.server.protocol.FileLocationRequestArgs {
 	startTime: number;
 	timeBudget: number;
 	primaryCharacterBudget: number;
@@ -422,37 +454,49 @@ export enum ErrorCode {
 	exception = 'exception',
 }
 
-export type ComputeContextResponse = (tt.server.protocol.Response & {
-	body: ComputeContextResponse.OK | ComputeContextResponse.Failed;
-}) | { type: 'cancelled' };
+export type ComputeContextResponse =
+	| (tt.server.protocol.Response & {
+			body: ComputeContextResponse.OK | ComputeContextResponse.Failed;
+	  })
+	| { type: 'cancelled' };
 
 export namespace CustomResponse {
-
 	export type Failed = {
 		error: ErrorCode;
 		message: string;
 		stack?: string;
 	};
 
-	export function isError(response: tt.server.protocol.Response): response is tt.server.protocol.Response & { body: Failed } {
-		return response.type === 'response' && (response.body as Failed).error !== undefined;
+	export function isError(
+		response: tt.server.protocol.Response,
+	): response is tt.server.protocol.Response & { body: Failed } {
+		return (
+			response.type === 'response' &&
+			(response.body as Failed).error !== undefined
+		);
 	}
 }
 
 export namespace ComputeContextResponse {
-
 	export type OK = ContextRequestResult;
 
 	export type Failed = CustomResponse.Failed;
 
 	export function isCancelled(response: ComputeContextResponse): boolean {
-		return (response.type === 'cancelled');
+		return response.type === 'cancelled';
 	}
 
-	export function isOk(response: ComputeContextResponse): response is tt.server.protocol.Response & { body: OK } {
-		return response.type === 'response' && (response.body as OK).state !== undefined;
+	export function isOk(
+		response: ComputeContextResponse,
+	): response is tt.server.protocol.Response & { body: OK } {
+		return (
+			response.type === 'response' &&
+			(response.body as OK).state !== undefined
+		);
 	}
-	export function isError(response: ComputeContextResponse): response is tt.server.protocol.Response & { body: Failed } {
+	export function isError(
+		response: ComputeContextResponse,
+	): response is tt.server.protocol.Response & { body: Failed } {
 		if (response.type === 'cancelled') {
 			return false;
 		}
@@ -481,7 +525,7 @@ export namespace PingResponse {
 export enum RenameKind {
 	no = 'no',
 	yes = 'yes',
-	maybe = 'maybe'
+	maybe = 'maybe',
 }
 
 export namespace RenameKind {
@@ -517,13 +561,17 @@ export namespace PrepareNesRenameResult {
 	};
 }
 
-export type PrepareNesRenameResult = PrepareNesRenameResult.Yes | PrepareNesRenameResult.Maybe | PrepareNesRenameResult.No;
+export type PrepareNesRenameResult =
+	| PrepareNesRenameResult.Yes
+	| PrepareNesRenameResult.Maybe
+	| PrepareNesRenameResult.No;
 
 export interface PrepareNesRenameRequest extends tt.server.protocol.Request {
 	arguments?: PrepareNesRenameRequestArgs;
 }
 
-export interface PrepareNesRenameRequestArgs extends tt.server.protocol.FileLocationRequestArgs {
+export interface PrepareNesRenameRequestArgs
+	extends tt.server.protocol.FileLocationRequestArgs {
 	oldName: string;
 	newName: string;
 	lastSymbolRename?: Range;
@@ -532,32 +580,46 @@ export interface PrepareNesRenameRequestArgs extends tt.server.protocol.FileLoca
 }
 
 export namespace PrepareNesRenameResponse {
-
 	export type OK = PrepareNesRenameResult;
 
 	export type Failed = CustomResponse.Failed;
 
 	export function isCancelled(response: PrepareNesRenameResponse): boolean {
-		return (response.type === 'cancelled');
+		return response.type === 'cancelled';
 	}
 
-	export function isOk(response: PrepareNesRenameResponse): response is Omit<tt.server.protocol.Response, 'body'> & { body: OK } {
-		return response.type === 'response' && (response.body as OK).canRename !== undefined;
+	export function isOk(
+		response: PrepareNesRenameResponse,
+	): response is Omit<tt.server.protocol.Response, 'body'> & { body: OK } {
+		return (
+			response.type === 'response' &&
+			(response.body as OK).canRename !== undefined
+		);
 	}
-	export function isError(response: PrepareNesRenameResponse): response is Omit<tt.server.protocol.Response, 'body'> & { body: Failed } {
-		return response.type === 'response' && (response.body as Failed).error !== undefined;
+	export function isError(
+		response: PrepareNesRenameResponse,
+	): response is Omit<tt.server.protocol.Response, 'body'> & {
+		body: Failed;
+	} {
+		return (
+			response.type === 'response' &&
+			(response.body as Failed).error !== undefined
+		);
 	}
 }
 
-export type PrepareNesRenameResponse = (tt.server.protocol.Response & {
-	body: PrepareNesRenameResponse.OK | PrepareNesRenameResponse.Failed;
-}) | { type: 'cancelled' };
+export type PrepareNesRenameResponse =
+	| (tt.server.protocol.Response & {
+			body: PrepareNesRenameResponse.OK | PrepareNesRenameResponse.Failed;
+	  })
+	| { type: 'cancelled' };
 
 export interface NesRenameRequest extends tt.server.protocol.Request {
 	arguments?: NesRenameRequestArgs;
 }
 
-export interface NesRenameRequestArgs extends tt.server.protocol.FileLocationRequestArgs {
+export interface NesRenameRequestArgs
+	extends tt.server.protocol.FileLocationRequestArgs {
 	oldName: string;
 	newName: string;
 	lastSymbolRename?: Range;
@@ -581,23 +643,36 @@ export namespace NesRenameResult {
 }
 
 export namespace NesRenameResponse {
-
 	export type OK = NesRenameResult.OK;
 
 	export type Failed = CustomResponse.Failed;
 
 	export function isCancelled(response: NesRenameResponse): boolean {
-		return (response.type === 'cancelled');
+		return response.type === 'cancelled';
 	}
 
-	export function isOk(response: NesRenameResponse): response is Omit<tt.server.protocol.Response, 'body'> & { body: OK } {
-		return response.type === 'response' && (response.body as NesRenameResult.OK).groups !== undefined;
+	export function isOk(
+		response: NesRenameResponse,
+	): response is Omit<tt.server.protocol.Response, 'body'> & { body: OK } {
+		return (
+			response.type === 'response' &&
+			(response.body as NesRenameResult.OK).groups !== undefined
+		);
 	}
-	export function isError(response: NesRenameResponse): response is Omit<tt.server.protocol.Response, 'body'> & { body: Failed } {
-		return response.type === 'response' && (response.body as NesRenameResult.Failed).error !== undefined;
+	export function isError(
+		response: NesRenameResponse,
+	): response is Omit<tt.server.protocol.Response, 'body'> & {
+		body: Failed;
+	} {
+		return (
+			response.type === 'response' &&
+			(response.body as NesRenameResult.Failed).error !== undefined
+		);
 	}
 }
 
-export type NesRenameResponse = (tt.server.protocol.Response & {
-	body: NesRenameResponse.OK | NesRenameResponse.Failed;
-}) | { type: 'cancelled' };
+export type NesRenameResponse =
+	| (tt.server.protocol.Response & {
+			body: NesRenameResponse.OK | NesRenameResponse.Failed;
+	  })
+	| { type: 'cancelled' };

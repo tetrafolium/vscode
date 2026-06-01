@@ -18,7 +18,6 @@ export enum IsolationMode {
 	Worktree = 'worktree',
 }
 
-
 /**
  * Options for initializing a folder/repository for a session.
  */
@@ -81,7 +80,10 @@ export interface FolderRepositoryMRUEntry {
 	readonly lastAccessed: number;
 }
 
-export const IFolderRepositoryManager = createServiceIdentifier<IFolderRepositoryManager>('IFolderRepositoryManager');
+export const IFolderRepositoryManager =
+	createServiceIdentifier<IFolderRepositoryManager>(
+		'IFolderRepositoryManager',
+	);
 
 export interface IFolderRepositoryManager {
 	readonly _serviceBrand: undefined;
@@ -111,7 +113,7 @@ export interface IFolderRepositoryManager {
 	getFolderRepository(
 		sessionId: string,
 		options: GetFolderRepositoryOptions | undefined,
-		token: vscode.CancellationToken
+		token: vscode.CancellationToken,
 	): Promise<FolderRepositoryInfo>;
 
 	/**
@@ -129,7 +131,7 @@ export interface IFolderRepositoryManager {
 	initializeFolderRepository(
 		sessionId: string | undefined,
 		options: InitializeFolderRepositoryOptions,
-		token: vscode.CancellationToken
+		token: vscode.CancellationToken,
 	): Promise<FolderRepositoryInfo>;
 
 	/**
@@ -149,8 +151,11 @@ export interface IFolderRepositoryManager {
 		primaryFolder: vscode.Uri,
 		additionalFolders: vscode.Uri[],
 		options: InitializeFolderRepositoryOptions,
-		token: vscode.CancellationToken
-	): Promise<{ primary: FolderRepositoryInfo; additional: FolderRepositoryInfo[] }>;
+		token: vscode.CancellationToken,
+	): Promise<{
+		primary: FolderRepositoryInfo;
+		additional: FolderRepositoryInfo[];
+	}>;
 
 	/**
 	 * Get repository information for a folder.
@@ -164,8 +169,11 @@ export interface IFolderRepositoryManager {
 	 */
 	getRepositoryInfo(
 		folder: vscode.Uri,
-		token: vscode.CancellationToken
-	): Promise<{ repository: vscode.Uri | undefined; headBranchName: string | undefined }>;
+		token: vscode.CancellationToken,
+	): Promise<{
+		repository: vscode.Uri | undefined;
+		headBranchName: string | undefined;
+	}>;
 
 	/**
 	 * @deprecated
@@ -182,7 +190,10 @@ export interface IFolderRepositoryManager {
 
 export interface IChatFolderMruService {
 	readonly _serviceBrand: undefined;
-	getRecentlyUsedFolders(token: vscode.CancellationToken): Promise<FolderRepositoryMRUEntry[]>;
+	getRecentlyUsedFolders(
+		token: vscode.CancellationToken,
+	): Promise<FolderRepositoryMRUEntry[]>;
 	deleteRecentlyUsedFolder(folder: vscode.Uri): Promise<void>;
 }
-export const IChatFolderMruService = createServiceIdentifier<IChatFolderMruService>('IChatFolderMruService');
+export const IChatFolderMruService =
+	createServiceIdentifier<IChatFolderMruService>('IChatFolderMruService');

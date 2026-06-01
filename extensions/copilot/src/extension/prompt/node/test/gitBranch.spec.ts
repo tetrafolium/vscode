@@ -8,34 +8,60 @@ import { suite, test } from 'vitest';
 import { normalizeBranchName } from '../gitBranch';
 
 suite('normalizeBranchName', () => {
-
 	test('preserves simple alphanumeric names', () => {
-		assert.strictEqual(normalizeBranchName('feature-branch'), 'feature-branch');
+		assert.strictEqual(
+			normalizeBranchName('feature-branch'),
+			'feature-branch',
+		);
 	});
 
 	test('converts to lowercase', () => {
-		assert.strictEqual(normalizeBranchName('Feature-Branch'), 'feature-branch');
+		assert.strictEqual(
+			normalizeBranchName('Feature-Branch'),
+			'feature-branch',
+		);
 		assert.strictEqual(normalizeBranchName('ABC'), 'abc');
 	});
 
 	test('strips spaces', () => {
-		assert.strictEqual(normalizeBranchName('my branch name'), 'mybranchname');
+		assert.strictEqual(
+			normalizeBranchName('my branch name'),
+			'mybranchname',
+		);
 	});
 
 	test('strips special characters', () => {
-		assert.strictEqual(normalizeBranchName('feature~branch^name'), 'featurebranchname');
-		assert.strictEqual(normalizeBranchName('name?with*wildcards'), 'namewithwildcards');
-		assert.strictEqual(normalizeBranchName('has:colon[bracket'), 'hascolonbracket');
+		assert.strictEqual(
+			normalizeBranchName('feature~branch^name'),
+			'featurebranchname',
+		);
+		assert.strictEqual(
+			normalizeBranchName('name?with*wildcards'),
+			'namewithwildcards',
+		);
+		assert.strictEqual(
+			normalizeBranchName('has:colon[bracket'),
+			'hascolonbracket',
+		);
 	});
 
 	test('strips dots, slashes, and underscores', () => {
-		assert.strictEqual(normalizeBranchName('feature/my-branch'), 'featuremy-branch');
+		assert.strictEqual(
+			normalizeBranchName('feature/my-branch'),
+			'featuremy-branch',
+		);
 		assert.strictEqual(normalizeBranchName('feature.name'), 'featurename');
-		assert.strictEqual(normalizeBranchName('with_underscore'), 'withunderscore');
+		assert.strictEqual(
+			normalizeBranchName('with_underscore'),
+			'withunderscore',
+		);
 	});
 
 	test('strips emojis and unicode characters', () => {
-		assert.strictEqual(normalizeBranchName('feature-🚀-launch'), 'feature--launch');
+		assert.strictEqual(
+			normalizeBranchName('feature-🚀-launch'),
+			'feature--launch',
+		);
 		assert.strictEqual(normalizeBranchName('日本語branch'), 'branch');
 		assert.strictEqual(normalizeBranchName('café-feature'), 'caf-feature');
 	});
@@ -61,7 +87,10 @@ suite('normalizeBranchName', () => {
 	});
 
 	test('handles backslashes', () => {
-		assert.strictEqual(normalizeBranchName('feature\\branch'), 'featurebranch');
+		assert.strictEqual(
+			normalizeBranchName('feature\\branch'),
+			'featurebranch',
+		);
 	});
 
 	test('preserves dashes in the middle', () => {
@@ -69,7 +98,10 @@ suite('normalizeBranchName', () => {
 	});
 
 	test('handles mixed valid and invalid characters', () => {
-		assert.strictEqual(normalizeBranchName('Fix: Add new feature! (#42)'), 'fixaddnewfeature42');
+		assert.strictEqual(
+			normalizeBranchName('Fix: Add new feature! (#42)'),
+			'fixaddnewfeature42',
+		);
 	});
 
 	test('handles quoted branch names', () => {

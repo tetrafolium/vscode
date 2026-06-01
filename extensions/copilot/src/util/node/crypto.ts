@@ -6,7 +6,9 @@
 import { createHash } from 'node:crypto';
 import type { Readable } from 'node:stream';
 
-export async function createSha256FromStream(stream: Readable): Promise<string> {
+export async function createSha256FromStream(
+	stream: Readable,
+): Promise<string> {
 	const hash = createHash('sha256');
 	for await (const chunk of stream) {
 		hash.update(chunk);

@@ -18,5 +18,4 @@ export function grandparentOfEmpty(leaf: Node<string>) {
 		node = node.parent;
 	}
 	return undefined;
-
 }

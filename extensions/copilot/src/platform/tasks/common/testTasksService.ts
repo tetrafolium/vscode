@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import type * as vscode from 'vscode';
 import { URI } from '../../../util/vs/base/common/uri';
 import { ITasksService, TaskResult, TaskStatus } from './tasksService';
@@ -27,10 +26,14 @@ export class TestTasksService implements ITasksService {
 		return Promise.resolve(undefined);
 	}
 
-	async executeTask(def: vscode.TaskDefinition, token: vscode.CancellationToken, workspaceFolder?: URI): Promise<TaskResult> {
+	async executeTask(
+		def: vscode.TaskDefinition,
+		token: vscode.CancellationToken,
+		workspaceFolder?: URI,
+	): Promise<TaskResult> {
 		return {
 			status: TaskStatus.Error,
-			error: new Error(`Task not found: ${def.type}:${def.label}`)
+			error: new Error(`Task not found: ${def.type}:${def.label}`),
 		};
 	}
 
@@ -38,7 +41,9 @@ export class TestTasksService implements ITasksService {
 		return false;
 	}
 
-	getTerminalForTask(task: vscode.TaskDefinition): vscode.Terminal | undefined {
+	getTerminalForTask(
+		task: vscode.TaskDefinition,
+	): vscode.Terminal | undefined {
 		// Return a mock terminal with a defined processId for testing
 		return {
 			name: task.label || 'mock-terminal',

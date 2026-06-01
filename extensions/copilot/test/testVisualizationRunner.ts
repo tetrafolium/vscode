@@ -4,14 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 import { enableHotReload, hotRequire } from '@hediet/node-reload';
 import { Module } from 'module';
-import { IDebugValueEditorGlobals, IPlaygroundRunnerGlobals } from '../src/util/common/debugValueEditorGlobals';
+import {
+	IDebugValueEditorGlobals,
+	IPlaygroundRunnerGlobals,
+} from '../src/util/common/debugValueEditorGlobals';
 
 /** See {@link file://./../.vscode/extensions/visualization-runner/README.md} */
 
 enableHotReload({ loggingEnabled: false });
 
 const r = Module.prototype.require;
-(Module as any).prototype.require = function (this: { filename: string }, path: string) {
+(Module as any).prototype.require = function (
+	this: { filename: string },
+	path: string,
+) {
 	if (path === 'vitest') {
 		return createVitestModule(this.filename);
 	}
@@ -25,13 +31,20 @@ function run(args: { fileName: string; path: string[] }) {
 	runCurrentTest();
 }
 
-const g = globalThis as unknown as IDebugValueEditorGlobals & IPlaygroundRunnerGlobals;
+const g = globalThis as unknown as IDebugValueEditorGlobals &
+	IPlaygroundRunnerGlobals;
 g.$$playgroundRunner_data = { currentPath: [] };
 
 // The timeout seems to fix a deadlock-issue of tsx, when the run function is called from the debugger.
-g.$$debugValueEditor_run = args => (setTimeout(() => { run(args); }, 0));
-(g.$$debugValueEditor_debugChannels ?? (g.$$debugValueEditor_debugChannels = {}))['run'] = host => ({
-	handleRequest: (args) => { setTimeout(() => run(args as any), 0); }
+g.$$debugValueEditor_run = (args) =>
+	setTimeout(() => {
+		run(args);
+	}, 0);
+(g.$$debugValueEditor_debugChannels ??
+	(g.$$debugValueEditor_debugChannels = {}))['run'] = (host) => ({
+	handleRequest: (args) => {
+		setTimeout(() => run(args as any), 0);
+	},
 });
 
 let hotRequireDisposable: any;
@@ -41,9 +54,11 @@ function setTestFile(fileName: string) {
 		return;
 	}
 	currentFileName = fileName;
-	if (hotRequireDisposable) { hotRequireDisposable.dispose(); }
+	if (hotRequireDisposable) {
+		hotRequireDisposable.dispose();
+	}
 	let isFirst = true;
-	hotRequireDisposable = hotRequire(module, fileName, cur => {
+	hotRequireDisposable = hotRequire(module, fileName, (cur) => {
 		if (isFirst) {
 			console.log('> Loading tests');
 			isFirst = false;
@@ -54,7 +69,7 @@ function setTestFile(fileName: string) {
 		return {
 			dispose: () => {
 				testsPerFileName.get(fileName)?.clearCache();
-			}
+			},
 		};
 	});
 }
@@ -84,7 +99,6 @@ async function runCurrentTest() {
 	}
 }
 
-
 const testsPerFileName = new Map<string, TestContainer>();
 
 function createVitestModule(filename: string) {
@@ -105,7 +119,6 @@ function createVitestModule(filename: string) {
 	vitest.describe = function (name: string, fn: () => void) {
 		currentTestContainer = new TestContainer(name, getDiscoverFn(fn));
 		items.push(currentTestContainer);
-
 	};
 	vitest.test = function (name: string, fn: () => void) {
 		items.push(new Test(name, fn));
@@ -113,17 +126,20 @@ function createVitestModule(filename: string) {
 
 	vitest.expect = function () {
 		return {
-			toBe: function () { },
-			toMatchInlineSnapshot: function () { },
-			toMatchFileSnapshot: function () { },
+			toBe: function () {},
+			toMatchInlineSnapshot: function () {},
+			toMatchFileSnapshot: function () {},
 		};
 	};
 
-	testsPerFileName.set(filename, new TestContainer(filename, () => {
-		const i = items;
-		items = [];
-		return i;
-	}));
+	testsPerFileName.set(
+		filename,
+		new TestContainer(filename, () => {
+			const i = items;
+			items = [];
+			return i;
+		}),
+	);
 
 	return vitest;
 }
@@ -137,8 +153,7 @@ class TestContainer {
 	constructor(
 		public readonly name: string,
 		private readonly _discoverFn: () => (Test | TestContainer)[],
-	) {
-	}
+	) {}
 
 	private _discover(): void {
 		if (this._discovered) {
@@ -171,7 +186,9 @@ class TestContainer {
 		let cur: TestContainer = this;
 		for (let i = 0; i < path.length - 1; i++) {
 			const c = cur.getContainer(path[i]);
-			if (!c) { return undefined; }
+			if (!c) {
+				return undefined;
+			}
 			cur = c;
 		}
 		return cur.getTest(path[path.length - 1]);
@@ -188,13 +205,15 @@ class Test {
 	constructor(
 		public readonly name: string,
 		public readonly runner: () => Promise<void> | void,
-	) { }
+	) {}
 }
 
 console.log('> Playground runner ready.');
 
 setTimeout(() => {
 	if (currentPath.length === 0) {
-		console.error('Did not run a test after 5 seconds. Probably a bug in the extension?');
+		console.error(
+			'Did not run a test after 5 seconds. Probably a bug in the extension?',
+		);
 	}
 }, 5000);

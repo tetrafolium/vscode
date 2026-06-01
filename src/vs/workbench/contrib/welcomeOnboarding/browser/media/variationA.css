@@ -36,7 +36,9 @@
 	color: var(--vscode-editor-foreground);
 	border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
 	border-radius: 12px;
-	box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+	box-shadow:
+		0 16px 48px rgba(0, 0, 0, 0.4),
+		0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 	width: min(960px, 92vw);
 	height: min(570px, 85vh);
 	display: flex;
@@ -79,7 +81,9 @@
 	cursor: pointer;
 	padding: 0;
 	flex-shrink: 0;
-	transition: background 0.15s ease, color 0.15s ease;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
 }
 
 .onboarding-a-close-btn:hover {
@@ -154,7 +158,8 @@
 	color: var(--vscode-descriptionForeground);
 	margin: 0 0 14px;
 	padding-bottom: 14px;
-	border-bottom: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.08));
+	border-bottom: 1px solid
+		var(--vscode-widget-border, rgba(255, 255, 255, 0.08));
 	line-height: 1.5;
 }
 
@@ -193,7 +198,9 @@
 	font-size: 13px;
 	font-family: inherit;
 	outline: none;
-	transition: background 0.15s ease, opacity 0.15s ease;
+	transition:
+		background 0.15s ease,
+		opacity 0.15s ease;
 }
 
 .onboarding-a-btn:focus-visible {
@@ -288,7 +295,7 @@
 	border: none;
 	background: transparent;
 	box-shadow: none;
-	background-image: url('../../../../browser/media/code-icon.svg');
+	background-image: url("../../../../browser/media/code-icon.svg");
 	background-repeat: no-repeat;
 	background-position: center center;
 	background-size: 148px;
@@ -419,7 +426,9 @@
 	font-size: 13px;
 	font-weight: 600;
 	font-family: inherit;
-	transition: background 0.12s ease, border-color 0.12s ease;
+	transition:
+		background 0.12s ease,
+		border-color 0.12s ease;
 }
 
 .onboarding-a-signin-btn:hover {
@@ -479,7 +488,10 @@
 }
 
 .onboarding-a-signin-ghe-message.error {
-	color: var(--vscode-inputValidation-errorForeground, var(--vscode-errorForeground));
+	color: var(
+		--vscode-inputValidation-errorForeground,
+		var(--vscode-errorForeground)
+	);
 }
 
 .onboarding-a-signin-ghe-progress {
@@ -533,16 +545,16 @@
 }
 
 .onboarding-a-provider-mark.google {
-	background-image: url('../../../chat/browser/chatSetup/media/google.svg');
+	background-image: url("../../../chat/browser/chatSetup/media/google.svg");
 }
 
 .monaco-workbench.hc-light .onboarding-a-provider-mark.apple,
 .monaco-workbench.vs .onboarding-a-provider-mark.apple {
-	background-image: url('../../../chat/browser/chatSetup/media/apple-light.svg');
+	background-image: url("../../../chat/browser/chatSetup/media/apple-light.svg");
 }
 
 .onboarding-a-provider-mark.apple {
-	background-image: url('../../../chat/browser/chatSetup/media/apple-dark.svg');
+	background-image: url("../../../chat/browser/chatSetup/media/apple-dark.svg");
 }
 
 /* Personalize step */
@@ -603,7 +615,9 @@
 	border: 2px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
 	cursor: pointer;
 	overflow: hidden;
-	transition: border-color 0.15s ease, transform 0.15s ease;
+	transition:
+		border-color 0.15s ease,
+		transform 0.15s ease;
 	outline: none;
 }
 
@@ -635,14 +649,16 @@
 
 .monaco-workbench.hc-black .onboarding-a-theme-card:focus-visible,
 .monaco-workbench.hc-light .onboarding-a-theme-card:focus-visible {
-	outline: 2px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+	outline: 2px solid
+		var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
 	outline-offset: 2px;
 }
 
 .monaco-workbench.hc-black .onboarding-a-theme-card.selected,
 .monaco-workbench.hc-light .onboarding-a-theme-card.selected {
 	border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
-	box-shadow: 0 0 0 1px var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+	box-shadow: 0 0 0 1px
+		var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
 }
 
 .onboarding-a-theme-preview {
@@ -662,7 +678,10 @@
 	text-align: center;
 	color: var(--vscode-editor-foreground);
 	border-top: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.08));
-	background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+	background: var(
+		--vscode-editorWidget-background,
+		var(--vscode-sideBar-background)
+	);
 }
 
 .onboarding-a-keymap-list {
@@ -675,12 +694,17 @@
 	padding: 7px 14px;
 	border-radius: 20px;
 	border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
-	background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+	background: var(
+		--vscode-editorWidget-background,
+		var(--vscode-sideBar-background)
+	);
 	color: var(--vscode-editor-foreground);
 	font-size: 12px;
 	cursor: pointer;
 	font-family: inherit;
-	transition: background 0.12s ease, border-color 0.12s ease;
+	transition:
+		background 0.12s ease,
+		border-color 0.12s ease;
 	outline: none;
 	display: flex;
 	align-items: center;
@@ -729,9 +753,15 @@
 	padding: 20px 18px;
 	border-radius: 12px;
 	border: 2px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.08));
-	background: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+	background: var(
+		--vscode-editorWidget-background,
+		var(--vscode-sideBar-background)
+	);
 	cursor: pointer;
-	transition: border-color 0.15s ease, background 0.12s ease, transform 0.12s ease;
+	transition:
+		border-color 0.15s ease,
+		background 0.12s ease,
+		transform 0.12s ease;
 	outline: none;
 	font-family: inherit;
 	text-align: left;
@@ -751,8 +781,13 @@
 
 .onboarding-a-ai-pref-card.selected {
 	border-color: var(--vscode-focusBorder);
-	background: color-mix(in srgb, var(--vscode-focusBorder) 8%, var(--vscode-editor-background));
-	box-shadow: 0 0 0 1px color-mix(in srgb, var(--vscode-focusBorder) 18%, transparent);
+	background: color-mix(
+		in srgb,
+		var(--vscode-focusBorder) 8%,
+		var(--vscode-editor-background)
+	);
+	box-shadow: 0 0 0 1px
+		color-mix(in srgb, var(--vscode-focusBorder) 18%, transparent);
 }
 
 .onboarding-a-ai-pref-card-icon .codicon {
@@ -873,9 +908,15 @@
 	font-size: 11px;
 	line-height: 1.4;
 	color: var(--vscode-keybindingLabel-foreground);
-	background-color: var(--vscode-keybindingLabel-background, rgba(128, 128, 128, 0.17));
+	background-color: var(
+		--vscode-keybindingLabel-background,
+		rgba(128, 128, 128, 0.17)
+	);
 	border: 1px solid var(--vscode-keybindingLabel-border, rgba(51, 51, 51, 0.6));
-	border-bottom-color: var(--vscode-keybindingLabel-bottomBorder, rgba(68, 68, 68, 0.6));
+	border-bottom-color: var(
+		--vscode-keybindingLabel-bottomBorder,
+		rgba(68, 68, 68, 0.6)
+	);
 	border-radius: 3px;
 	vertical-align: middle;
 }
@@ -978,7 +1019,9 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	transition: background 0.12s ease, border-color 0.12s ease;
+	transition:
+		background 0.12s ease,
+		border-color 0.12s ease;
 	outline: none;
 	font-size: 13px;
 	font-weight: 600;

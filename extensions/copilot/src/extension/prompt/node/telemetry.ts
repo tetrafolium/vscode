@@ -6,33 +6,51 @@
 import type { TextDocument } from 'vscode';
 import { ChatLocation } from '../../../platform/chat/common/commonTypes';
 import { TextDocumentSnapshot } from '../../../platform/editing/common/textDocumentSnapshot';
-import { ITelemetryService, TelemetryProperties } from '../../../platform/telemetry/common/telemetry';
+import {
+	ITelemetryService,
+	TelemetryProperties,
+} from '../../../platform/telemetry/common/telemetry';
 import { TelemetryData } from '../../../platform/telemetry/common/telemetryData';
 import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { Conversation } from '../common/conversation';
 
-export type ConversationalBaseTelemetryData = ConversationalTelemetryData<{ messageId: string }, { promptTokenLen: number; messageCharLen: number }>;
+export type ConversationalBaseTelemetryData = ConversationalTelemetryData<
+	{ messageId: string },
+	{ promptTokenLen: number; messageCharLen: number }
+>;
 
 export function createTelemetryWithId(): ConversationalBaseTelemetryData {
 	const uniqueId = generateUuid();
-	const baseTelemetry = TelemetryData.createAndMarkAsIssued({ messageId: uniqueId });
+	const baseTelemetry = TelemetryData.createAndMarkAsIssued({
+		messageId: uniqueId,
+	});
 	return new ConversationalTelemetryData(baseTelemetry);
 }
 
-export class ConversationalTelemetryData<P extends TelemetryProperties, M extends { [key: string]: number }> {
+export class ConversationalTelemetryData<
+	P extends TelemetryProperties,
+	M extends { [key: string]: number },
+> {
+	public get properties(): P {
+		return this.raw.properties as P;
+	}
+	public get measurements(): M {
+		return this.raw.measurements as M;
+	}
 
-	public get properties(): P { return this.raw.properties as P; }
-	public get measurements(): M { return this.raw.measurements as M; }
-
-	constructor(
-		public readonly raw: TelemetryData
-	) { }
+	constructor(public readonly raw: TelemetryData) {}
 
 	markAsDisplayed(): void {
 		this.raw.markAsDisplayed();
 	}
 
-	extendedBy<P2 extends TelemetryProperties, M2 extends { [key: string]: number }>(properties?: P2, measurements?: M2): ConversationalTelemetryData<P & P2, M & M2> {
+	extendedBy<
+		P2 extends TelemetryProperties,
+		M2 extends { [key: string]: number },
+	>(
+		properties?: P2,
+		measurements?: M2,
+	): ConversationalTelemetryData<P & P2, M & M2> {
 		const newTelemetryData = this.raw.extendedBy(properties, measurements);
 		return new ConversationalTelemetryData(newTelemetryData);
 	}
@@ -45,14 +63,13 @@ export function extendUserMessageTelemetryData(
 	message: string,
 	promptTokenLen: number,
 	suggestion: string | undefined,
-	baseTelemetry: ConversationalBaseTelemetryData
+	baseTelemetry: ConversationalBaseTelemetryData,
 ): ConversationalBaseTelemetryData {
-
 	const properties: TelemetryProperties = {
 		source: 'user',
 		turnIndex: (conversation.turns.length - 1).toString(),
 		conversationId,
-		uiKind: ChatLocation.toString(location)
+		uiKind: ChatLocation.toString(location),
 	};
 	const measurements = {
 		promptTokenLen: promptTokenLen,
@@ -78,10 +95,20 @@ export function sendUserMessageTelemetry(
 	modeName: string,
 ): void {
 	if (offTopic !== undefined) {
-		baseTelemetry = baseTelemetry.extendedBy({ offTopic: offTopic.toString() });
+		baseTelemetry = baseTelemetry.extendedBy({
+			offTopic: offTopic.toString(),
+		});
 	}
 	baseTelemetry = baseTelemetry.extendedBy({ headerRequestId: requestId });
-	sendConversationalMessageTelemetry(telemetryService, doc, location, message, { mode: modeName }, {}, baseTelemetry);
+	sendConversationalMessageTelemetry(
+		telemetryService,
+		doc,
+		location,
+		message,
+		{ mode: modeName },
+		{},
+		baseTelemetry,
+	);
 }
 
 export function sendModelMessageTelemetry(
@@ -111,8 +138,11 @@ export function sendModelMessageTelemetry(
 			codeBlockLanguages: JSON.stringify({ ...codeBlockLanguages }),
 			mode: modeName,
 		},
-		{ messageCharLen: appliedText.length, numCodeBlocks: codeBlockLanguages.length },
-		baseTelemetry
+		{
+			messageCharLen: appliedText.length,
+			numCodeBlocks: codeBlockLanguages.length,
+		},
+		baseTelemetry,
 	);
 }
 
@@ -123,7 +153,7 @@ export function sendOffTopicMessageTelemetry(
 	appliedText: string,
 	userMessageId: string,
 	doc: TextDocumentSnapshot | undefined,
-	baseTelemetry: ConversationalBaseTelemetryData
+	baseTelemetry: ConversationalBaseTelemetryData,
 ): void {
 	sendConversationalMessageTelemetry(
 		telemetryService,
@@ -138,7 +168,7 @@ export function sendOffTopicMessageTelemetry(
 			uiKind: ChatLocation.toString(location),
 		},
 		{ messageCharLen: appliedText.length },
-		baseTelemetry
+		baseTelemetry,
 	);
 }
 
@@ -150,9 +180,8 @@ export function sendConversationalMessageTelemetry(
 	messageText: string | undefined,
 	properties: TelemetryProperties,
 	measurements: { [key: string]: number },
-	baseTelemetry: ConversationalBaseTelemetryData
+	baseTelemetry: ConversationalBaseTelemetryData,
 ): TelemetryData {
-
 	const enhancedProperties: { [key: string]: string } = {
 		...(messageText ? { messageText: messageText } : {}),
 		...properties,
@@ -163,16 +192,32 @@ export function sendConversationalMessageTelemetry(
 		measurements.documentLength = document.getText().length;
 	}
 
-	const standardTelemetryData = baseTelemetry.extendedBy(properties, measurements);
-	const enhancedTelemetryLogger = baseTelemetry.extendedBy(enhancedProperties);
+	const standardTelemetryData = baseTelemetry.extendedBy(
+		properties,
+		measurements,
+	);
+	const enhancedTelemetryLogger =
+		baseTelemetry.extendedBy(enhancedProperties);
 
 	// Telemetrize the message in standard and enhanced telemetry
 	// Enhanced telemetry will not be sent if the user isn't opted in, same as for ghostText
 	const prefix = telemetryPrefixForLocation(location);
 
-	telemetryService.sendGHTelemetryEvent(`${prefix}.message`, standardTelemetryData.raw.properties, standardTelemetryData.raw.measurements);
-	telemetryService.sendEnhancedGHTelemetryEvent(`${prefix}.messageText`, enhancedTelemetryLogger.raw.properties, enhancedTelemetryLogger.raw.measurements);
-	telemetryService.sendInternalMSFTTelemetryEvent(`${prefix}.messageText`, enhancedTelemetryLogger.raw.properties, enhancedTelemetryLogger.raw.measurements);
+	telemetryService.sendGHTelemetryEvent(
+		`${prefix}.message`,
+		standardTelemetryData.raw.properties,
+		standardTelemetryData.raw.measurements,
+	);
+	telemetryService.sendEnhancedGHTelemetryEvent(
+		`${prefix}.messageText`,
+		enhancedTelemetryLogger.raw.properties,
+		enhancedTelemetryLogger.raw.measurements,
+	);
+	telemetryService.sendInternalMSFTTelemetryEvent(
+		`${prefix}.messageText`,
+		enhancedTelemetryLogger.raw.properties,
+		enhancedTelemetryLogger.raw.measurements,
+	);
 
 	return standardTelemetryData.raw;
 }
@@ -182,7 +227,7 @@ export function sendSuggestionShownTelemetryData(
 	suggestion: string,
 	messageId: string,
 	suggestionId: string,
-	doc: TextDocument | TextDocumentSnapshot | undefined
+	doc: TextDocument | TextDocumentSnapshot | undefined,
 ): TelemetryData {
 	const telemetryData = sendUserActionTelemetry(
 		telemetryService,
@@ -193,7 +238,7 @@ export function sendSuggestionShownTelemetryData(
 			suggestionId: suggestionId,
 		},
 		{},
-		'conversation.suggestionShown'
+		'conversation.suggestionShown',
 	);
 	return telemetryData;
 }
@@ -205,17 +250,25 @@ export function sendUserActionTelemetry(
 	properties: TelemetryProperties,
 	measurements: { [key: string]: number },
 	name: string,
-	baseTelemetry?: TelemetryData
+	baseTelemetry?: TelemetryData,
 ): TelemetryData {
-	const telemetryData = baseTelemetry ?? TelemetryData.createAndMarkAsIssued();
+	const telemetryData =
+		baseTelemetry ?? TelemetryData.createAndMarkAsIssued();
 
 	if (document) {
 		properties.languageId = document.languageId;
 		measurements.documentLength = document.getText().length;
 	}
 
-	const standardTelemetryData = telemetryData.extendedBy(properties, measurements);
-	telemetryService.sendGHTelemetryEvent(name, standardTelemetryData.properties, standardTelemetryData.measurements);
+	const standardTelemetryData = telemetryData.extendedBy(
+		properties,
+		measurements,
+	);
+	telemetryService.sendGHTelemetryEvent(
+		name,
+		standardTelemetryData.properties,
+		standardTelemetryData.measurements,
+	);
 
 	return standardTelemetryData;
 }
@@ -241,19 +294,23 @@ export function getCodeBlocks(text: string): ICodeblockDetails[] {
 	const lines = text.split('\n');
 	const codeBlocks: ICodeblockDetails[] = [];
 
-	let codeBlockState: undefined | {
-		readonly delimiter: string;
-		readonly languageId: string;
-		totalLines: number;
-	};
+	let codeBlockState:
+		| undefined
+		| {
+				readonly delimiter: string;
+				readonly languageId: string;
+				totalLines: number;
+		  };
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
 
 		if (codeBlockState) {
-			if (new RegExp(`^\\s*${codeBlockState.delimiter}\\s*$`).test(line)) {
+			if (
+				new RegExp(`^\\s*${codeBlockState.delimiter}\\s*$`).test(line)
+			) {
 				codeBlocks.push({
 					languageId: codeBlockState.languageId,
-					totalLines: codeBlockState.totalLines
+					totalLines: codeBlockState.totalLines,
 				});
 				codeBlockState = undefined;
 			} else {
@@ -265,7 +322,7 @@ export function getCodeBlocks(text: string): ICodeblockDetails[] {
 				codeBlockState = {
 					delimiter: match[2],
 					languageId: match[3],
-					totalLines: 0
+					totalLines: 0,
 				};
 			}
 		}

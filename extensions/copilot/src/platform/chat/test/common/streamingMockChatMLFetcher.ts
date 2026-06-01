@@ -6,7 +6,11 @@
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { Event } from '../../../../util/vs/base/common/event';
 import { IChatMLFetcher, IFetchMLOptions } from '../../common/chatMLFetcher';
-import { ChatFetchResponseType, ChatResponse, ChatResponses } from '../../common/commonTypes';
+import {
+	ChatFetchResponseType,
+	ChatResponse,
+	ChatResponses,
+} from '../../common/commonTypes';
 
 /**
  * A mock IChatMLFetcher that simulates streaming LLM responses by calling `finishedCb`
@@ -69,7 +73,10 @@ export class StreamingMockChatMLFetcher implements IChatMLFetcher {
 		this._capturedOptions = [];
 	}
 
-	async fetchOne(options: IFetchMLOptions, _token: CancellationToken): Promise<ChatResponse> {
+	async fetchOne(
+		options: IFetchMLOptions,
+		_token: CancellationToken,
+	): Promise<ChatResponse> {
 		this._callCount++;
 		this._capturedOptions.push(options);
 
@@ -77,8 +84,13 @@ export class StreamingMockChatMLFetcher implements IChatMLFetcher {
 		if (this._responseQueue.length > 0) {
 			const queuedResponse = this._responseQueue.shift()!;
 			// For success responses, still call finishedCb if available
-			if (queuedResponse.type === ChatFetchResponseType.Success && options.finishedCb) {
-				await options.finishedCb(queuedResponse.value, 0, { text: queuedResponse.value });
+			if (
+				queuedResponse.type === ChatFetchResponseType.Success &&
+				options.finishedCb
+			) {
+				await options.finishedCb(queuedResponse.value, 0, {
+					text: queuedResponse.value,
+				});
 			}
 			return queuedResponse;
 		}
@@ -98,7 +110,9 @@ export class StreamingMockChatMLFetcher implements IChatMLFetcher {
 					soFar += '\n';
 				}
 				soFar += lines[i];
-				await options.finishedCb(soFar, 0, { text: (i > 0 ? '\n' : '') + lines[i] });
+				await options.finishedCb(soFar, 0, {
+					text: (i > 0 ? '\n' : '') + lines[i],
+				});
 			}
 		}
 
@@ -106,13 +120,21 @@ export class StreamingMockChatMLFetcher implements IChatMLFetcher {
 			type: ChatFetchResponseType.Success,
 			requestId: 'test-request-id',
 			serverRequestId: 'test-server-request-id',
-			usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, prompt_tokens_details: { cached_tokens: 0 } },
+			usage: {
+				prompt_tokens: 0,
+				completion_tokens: 0,
+				total_tokens: 0,
+				prompt_tokens_details: { cached_tokens: 0 },
+			},
 			value: fullText,
 			resolvedModel: 'test-model',
 		};
 	}
 
-	async fetchMany(options: IFetchMLOptions, token: CancellationToken): Promise<ChatResponses> {
+	async fetchMany(
+		options: IFetchMLOptions,
+		token: CancellationToken,
+	): Promise<ChatResponses> {
 		const response = await this.fetchOne(options, token);
 		if (response.type === ChatFetchResponseType.Success) {
 			return { ...response, value: [response.value] };

@@ -12,7 +12,7 @@ export class MockIgnoreService implements IIgnoreService {
 
 	isEnabled = true;
 	isRegexExclusionsEnabled = true;
-	dispose(): void { }
+	dispose(): void {}
 
 	init(): Promise<void> {
 		this._alwaysIgnore = true;

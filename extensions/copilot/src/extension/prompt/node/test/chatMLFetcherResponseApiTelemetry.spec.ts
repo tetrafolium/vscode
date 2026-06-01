@@ -19,8 +19,16 @@ import { MockAuthenticationService } from '../../../../platform/ignore/node/test
 import { MockCAPIClientService } from '../../../../platform/ignore/node/test/mockCAPIClientService';
 import { ILogService } from '../../../../platform/log/common/logService';
 import { FinishedCallback } from '../../../../platform/networking/common/fetch';
-import { FetcherId, IFetcherService, IHeaders, Response } from '../../../../platform/networking/common/fetcherService';
-import { IChatEndpoint, IEndpointBody } from '../../../../platform/networking/common/networking';
+import {
+	FetcherId,
+	IFetcherService,
+	IHeaders,
+	Response,
+} from '../../../../platform/networking/common/fetcherService';
+import {
+	IChatEndpoint,
+	IEndpointBody,
+} from '../../../../platform/networking/common/networking';
 import { NullChatWebSocketManager } from '../../../../platform/networking/node/chatWebSocketManager';
 import { NoopOTelService } from '../../../../platform/otel/common/noopOtelService';
 import { resolveOTelConfig } from '../../../../platform/otel/common/otelConfig';
@@ -31,11 +39,17 @@ import { TelemetryData } from '../../../../platform/telemetry/common/telemetryDa
 import { SpyingTelemetryService } from '../../../../platform/telemetry/node/spyingTelemetryService';
 import { TestLogService } from '../../../../platform/testing/common/testLogService';
 import { InstantiationServiceBuilder } from '../../../../util/common/services';
-import { CancellationToken, CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../util/vs/base/common/cancellation';
 import { Event } from '../../../../util/vs/base/common/event';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
-import { IPowerService, NullPowerService } from '../../../power/common/powerService';
+import {
+	IPowerService,
+	NullPowerService,
+} from '../../../power/common/powerService';
 import { ChatMLFetcherImpl } from '../chatMLFetcher';
 
 describe('ChatMLFetcherImpl Response API telemetry', () => {
@@ -47,11 +61,15 @@ describe('ChatMLFetcherImpl Response API telemetry', () => {
 
 	beforeEach(() => {
 		disposables = new DisposableStore();
-		cancellationTokenSource = disposables.add(new CancellationTokenSource());
+		cancellationTokenSource = disposables.add(
+			new CancellationTokenSource(),
+		);
 
 		mockFetcherService = new MockFetcherService();
 		spyingTelemetryService = new SpyingTelemetryService();
-		const configurationService = new InMemoryConfigurationService(new DefaultsOnlyConfigurationService());
+		const configurationService = new InMemoryConfigurationService(
+			new DefaultsOnlyConfigurationService(),
+		);
 
 		const logService = new TestLogService();
 		const experimentationService = new NullExperimentationService();
@@ -70,12 +88,24 @@ describe('ChatMLFetcherImpl Response API telemetry', () => {
 			experimentationService,
 			createMockPowerService(),
 			new InstantiationServiceBuilder([
-				[IFetcherService, mockFetcherService as unknown as IFetcherService],
+				[
+					IFetcherService,
+					mockFetcherService as unknown as IFetcherService,
+				],
 				[ITelemetryService, spyingTelemetryService],
-				[ICAPIClientService, new TestCAPIClientService() as unknown as ICAPIClientService],
+				[
+					ICAPIClientService,
+					new TestCAPIClientService() as unknown as ICAPIClientService,
+				],
 			]).seal() as unknown as IInstantiationService,
 			new NullChatWebSocketManager(),
-			new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })),
+			new NoopOTelService(
+				resolveOTelConfig({
+					env: {},
+					extensionVersion: '0.0.0',
+					sessionId: 'test',
+				}),
+			),
 		);
 	});
 
@@ -91,7 +121,17 @@ describe('ChatMLFetcherImpl Response API telemetry', () => {
 
 		const opts: IFetchMLOptions = {
 			debugName: 'test-response-api',
-			messages: [{ role: Raw.ChatRole.User, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'Hello from Response API' }] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [
+						{
+							type: Raw.ChatCompletionContentPartKind.Text,
+							text: 'Hello from Response API',
+						},
+					],
+				},
+			],
 			endpoint: responseApiEndpoint,
 			location: ChatLocation.Panel,
 			requestOptions: {},
@@ -103,7 +143,7 @@ describe('ChatMLFetcherImpl Response API telemetry', () => {
 		// Find the engine.messages telemetry event
 		const events = spyingTelemetryService.getEvents();
 		const engineMessagesEvents = events.telemetryServiceEvents.filter(
-			e => e.eventName === 'engine.messages'
+			(e) => e.eventName === 'engine.messages',
 		);
 
 		expect(engineMessagesEvents.length).toBeGreaterThan(0);
@@ -113,7 +153,10 @@ describe('ChatMLFetcherImpl Response API telemetry', () => {
 		// which happens before the response processing that sends output events
 		const inputTelemetry = engineMessagesEvents[0]; // First event should be the input
 		expect(inputTelemetry).toBeDefined();
-		const inputProperties = inputTelemetry!.properties as Record<string, string>;
+		const inputProperties = inputTelemetry!.properties as Record<
+			string,
+			string
+		>;
 		expect(inputProperties.messagesJson).toBeDefined();
 
 		// Parse the messagesJson and verify it's not empty
@@ -126,7 +169,8 @@ describe('ChatMLFetcherImpl Response API telemetry', () => {
 
 	it('logs empty messagesJson when ChatCompletion API messages array is empty', async () => {
 		// Create an endpoint that returns ChatCompletion API format with empty messages
-		const chatCompletionEndpoint = createChatCompletionEndpointWithEmptyMessages();
+		const chatCompletionEndpoint =
+			createChatCompletionEndpointWithEmptyMessages();
 
 		mockFetcherService.queueResponse(createSuccessResponse('Hello!'));
 
@@ -144,7 +188,7 @@ describe('ChatMLFetcherImpl Response API telemetry', () => {
 		// Find the engine.messages telemetry event
 		const events = spyingTelemetryService.getEvents();
 		const engineMessagesEvents = events.telemetryServiceEvents.filter(
-			e => e.eventName === 'engine.messages'
+			(e) => e.eventName === 'engine.messages',
 		);
 
 		// First event should be the input messages telemetry
@@ -168,11 +212,15 @@ describe('ChatMLFetcherImpl request.options.tools telemetry', () => {
 
 	beforeEach(() => {
 		disposables = new DisposableStore();
-		cancellationTokenSource = disposables.add(new CancellationTokenSource());
+		cancellationTokenSource = disposables.add(
+			new CancellationTokenSource(),
+		);
 
 		mockFetcherService = new MockFetcherService();
 		spyingTelemetryService = new SpyingTelemetryService();
-		const configurationService = new InMemoryConfigurationService(new DefaultsOnlyConfigurationService());
+		const configurationService = new InMemoryConfigurationService(
+			new DefaultsOnlyConfigurationService(),
+		);
 
 		const logService = new TestLogService();
 		const experimentationService = new NullExperimentationService();
@@ -191,12 +239,24 @@ describe('ChatMLFetcherImpl request.options.tools telemetry', () => {
 			experimentationService,
 			createMockPowerService(),
 			new InstantiationServiceBuilder([
-				[IFetcherService, mockFetcherService as unknown as IFetcherService],
+				[
+					IFetcherService,
+					mockFetcherService as unknown as IFetcherService,
+				],
 				[ITelemetryService, spyingTelemetryService],
-				[ICAPIClientService, new TestCAPIClientService() as unknown as ICAPIClientService],
+				[
+					ICAPIClientService,
+					new TestCAPIClientService() as unknown as ICAPIClientService,
+				],
 			]).seal() as unknown as IInstantiationService,
 			new NullChatWebSocketManager(),
-			new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })),
+			new NoopOTelService(
+				resolveOTelConfig({
+					env: {},
+					extensionVersion: '0.0.0',
+					sessionId: 'test',
+				}),
+			),
 		);
 	});
 
@@ -210,7 +270,17 @@ describe('ChatMLFetcherImpl request.options.tools telemetry', () => {
 
 		const opts: IFetchMLOptions = {
 			debugName: 'test-tools-telemetry',
-			messages: [{ role: Raw.ChatRole.User, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'Use a tool' }] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [
+						{
+							type: Raw.ChatCompletionContentPartKind.Text,
+							text: 'Use a tool',
+						},
+					],
+				},
+			],
 			endpoint: endpointWithTools,
 			location: ChatLocation.Panel,
 			requestOptions: {},
@@ -221,7 +291,7 @@ describe('ChatMLFetcherImpl request.options.tools telemetry', () => {
 
 		const events = spyingTelemetryService.getEvents();
 		const toolsEvents = events.telemetryServiceEvents.filter(
-			e => e.eventName === 'request.options.tools'
+			(e) => e.eventName === 'request.options.tools',
 		);
 
 		expect(toolsEvents.length).toBe(1);
@@ -240,7 +310,17 @@ describe('ChatMLFetcherImpl request.options.tools telemetry', () => {
 
 		const opts: IFetchMLOptions = {
 			debugName: 'test-no-tools-telemetry',
-			messages: [{ role: Raw.ChatRole.User, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'Hello' }] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [
+						{
+							type: Raw.ChatCompletionContentPartKind.Text,
+							text: 'Hello',
+						},
+					],
+				},
+			],
 			endpoint: endpointWithoutTools,
 			location: ChatLocation.Panel,
 			requestOptions: {},
@@ -251,7 +331,7 @@ describe('ChatMLFetcherImpl request.options.tools telemetry', () => {
 
 		const events = spyingTelemetryService.getEvents();
 		const toolsEvents = events.telemetryServiceEvents.filter(
-			e => e.eventName === 'request.options.tools'
+			(e) => e.eventName === 'request.options.tools',
 		);
 
 		expect(toolsEvents.length).toBe(0);
@@ -263,7 +343,17 @@ describe('ChatMLFetcherImpl request.options.tools telemetry', () => {
 
 		const opts: IFetchMLOptions = {
 			debugName: 'test-large-tools-telemetry',
-			messages: [{ role: Raw.ChatRole.User, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: 'Use a tool' }] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [
+						{
+							type: Raw.ChatCompletionContentPartKind.Text,
+							text: 'Use a tool',
+						},
+					],
+				},
+			],
 			endpoint: endpointWithLargeTools,
 			location: ChatLocation.Panel,
 			requestOptions: {},
@@ -274,7 +364,7 @@ describe('ChatMLFetcherImpl request.options.tools telemetry', () => {
 
 		const events = spyingTelemetryService.getEvents();
 		const toolsEvents = events.telemetryServiceEvents.filter(
-			e => e.eventName === 'request.options.tools'
+			(e) => e.eventName === 'request.options.tools',
 		);
 
 		expect(toolsEvents.length).toBe(1);
@@ -318,21 +408,34 @@ function createEndpointWithTools(): IChatEndpoint {
 			model: 'test-model',
 			messages: [{ role: 'user', content: 'Use a tool' }],
 			stream: true,
-			tools: [{
-				type: 'function',
-				function: {
-					name: 'get_weather',
-					description: 'Get the weather for a location',
-					parameters: { type: 'object', properties: { location: { type: 'string' } } },
+			tools: [
+				{
+					type: 'function',
+					function: {
+						name: 'get_weather',
+						description: 'Get the weather for a location',
+						parameters: {
+							type: 'object',
+							properties: { location: { type: 'string' } },
+						},
+					},
 				},
-			}],
+			],
 		}),
 		acquireTokenizer: () => ({
 			countMessagesTokens: async () => 100,
 			countTokens: async () => 100,
 			tokenize: async () => [],
 		}),
-		processResponseFromChatEndpoint: async (_telemetryService: ITelemetryService, _logService: ILogService, response: Response, _expectedNumChoices: number, finishedCb: FinishedCallback, telemetryData: TelemetryData, _cancellationToken?: CancellationToken) => {
+		processResponseFromChatEndpoint: async (
+			_telemetryService: ITelemetryService,
+			_logService: ILogService,
+			response: Response,
+			_expectedNumChoices: number,
+			finishedCb: FinishedCallback,
+			telemetryData: TelemetryData,
+			_cancellationToken?: CancellationToken,
+		) => {
 			const text = await response.text();
 			if (finishedCb) {
 				await finishedCb(text, 0, { text });
@@ -340,11 +443,24 @@ function createEndpointWithTools(): IChatEndpoint {
 			return {
 				[Symbol.asyncIterator]: async function* () {
 					yield {
-						message: { role: Raw.ChatRole.Assistant, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }] },
+						message: {
+							role: Raw.ChatRole.Assistant,
+							content: [
+								{
+									type: Raw.ChatCompletionContentPartKind
+										.Text,
+									text,
+								},
+							],
+						},
 						choiceIndex: 0,
 						requestId: {
-							headerRequestId: response.headers.get('x-request-id') || 'test-request-id',
-							gitHubRequestId: response.headers.get('x-github-request-id') || '',
+							headerRequestId:
+								response.headers.get('x-request-id') ||
+								'test-request-id',
+							gitHubRequestId:
+								response.headers.get('x-github-request-id') ||
+								'',
 							completionId: '',
 							created: 0,
 							serverExperiments: '',
@@ -357,7 +473,7 @@ function createEndpointWithTools(): IChatEndpoint {
 						finishReason: 'stop',
 						telemetryData: telemetryData,
 					};
-				}
+				},
 			};
 		},
 		acceptChatPolicy: async () => true,
@@ -393,7 +509,15 @@ function createChatCompletionEndpointWithoutTools(): IChatEndpoint {
 			countTokens: async () => 100,
 			tokenize: async () => [],
 		}),
-		processResponseFromChatEndpoint: async (_telemetryService: ITelemetryService, _logService: ILogService, response: Response, _expectedNumChoices: number, finishedCb: FinishedCallback, telemetryData: TelemetryData, _cancellationToken?: CancellationToken) => {
+		processResponseFromChatEndpoint: async (
+			_telemetryService: ITelemetryService,
+			_logService: ILogService,
+			response: Response,
+			_expectedNumChoices: number,
+			finishedCb: FinishedCallback,
+			telemetryData: TelemetryData,
+			_cancellationToken?: CancellationToken,
+		) => {
 			const text = await response.text();
 			if (finishedCb) {
 				await finishedCb(text, 0, { text });
@@ -401,11 +525,24 @@ function createChatCompletionEndpointWithoutTools(): IChatEndpoint {
 			return {
 				[Symbol.asyncIterator]: async function* () {
 					yield {
-						message: { role: Raw.ChatRole.Assistant, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }] },
+						message: {
+							role: Raw.ChatRole.Assistant,
+							content: [
+								{
+									type: Raw.ChatCompletionContentPartKind
+										.Text,
+									text,
+								},
+							],
+						},
 						choiceIndex: 0,
 						requestId: {
-							headerRequestId: response.headers.get('x-request-id') || 'test-request-id',
-							gitHubRequestId: response.headers.get('x-github-request-id') || '',
+							headerRequestId:
+								response.headers.get('x-request-id') ||
+								'test-request-id',
+							gitHubRequestId:
+								response.headers.get('x-github-request-id') ||
+								'',
 							completionId: '',
 							created: 0,
 							serverExperiments: '',
@@ -418,7 +555,7 @@ function createChatCompletionEndpointWithoutTools(): IChatEndpoint {
 						finishReason: 'stop',
 						telemetryData: telemetryData,
 					};
-				}
+				},
 			};
 		},
 		acceptChatPolicy: async () => true,
@@ -438,7 +575,10 @@ function createEndpointWithLargeTools(): IChatEndpoint {
 			parameters: {
 				type: 'object',
 				properties: Object.fromEntries(
-					Array.from({ length: 10 }, (_, j) => [`param_${j}`, { type: 'string', description: 'B'.repeat(50) }])
+					Array.from({ length: 10 }, (_, j) => [
+						`param_${j}`,
+						{ type: 'string', description: 'B'.repeat(50) },
+					]),
 				),
 			},
 		},
@@ -469,7 +609,15 @@ function createEndpointWithLargeTools(): IChatEndpoint {
 			countTokens: async () => 100,
 			tokenize: async () => [],
 		}),
-		processResponseFromChatEndpoint: async (_telemetryService: ITelemetryService, _logService: ILogService, response: Response, _expectedNumChoices: number, finishedCb: FinishedCallback, telemetryData: TelemetryData, _cancellationToken?: CancellationToken) => {
+		processResponseFromChatEndpoint: async (
+			_telemetryService: ITelemetryService,
+			_logService: ILogService,
+			response: Response,
+			_expectedNumChoices: number,
+			finishedCb: FinishedCallback,
+			telemetryData: TelemetryData,
+			_cancellationToken?: CancellationToken,
+		) => {
 			const text = await response.text();
 			if (finishedCb) {
 				await finishedCb(text, 0, { text });
@@ -477,11 +625,24 @@ function createEndpointWithLargeTools(): IChatEndpoint {
 			return {
 				[Symbol.asyncIterator]: async function* () {
 					yield {
-						message: { role: Raw.ChatRole.Assistant, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }] },
+						message: {
+							role: Raw.ChatRole.Assistant,
+							content: [
+								{
+									type: Raw.ChatCompletionContentPartKind
+										.Text,
+									text,
+								},
+							],
+						},
 						choiceIndex: 0,
 						requestId: {
-							headerRequestId: response.headers.get('x-request-id') || 'test-request-id',
-							gitHubRequestId: response.headers.get('x-github-request-id') || '',
+							headerRequestId:
+								response.headers.get('x-request-id') ||
+								'test-request-id',
+							gitHubRequestId:
+								response.headers.get('x-github-request-id') ||
+								'',
 							completionId: '',
 							created: 0,
 							serverExperiments: '',
@@ -494,7 +655,7 @@ function createEndpointWithLargeTools(): IChatEndpoint {
 						finishReason: 'stop',
 						telemetryData: telemetryData,
 					};
-				}
+				},
 			};
 		},
 		acceptChatPolicy: async () => true,
@@ -524,18 +685,24 @@ function createResponseApiEndpoint(): IChatEndpoint {
 		getHeaders: async () => ({}),
 		// This is the key part - return Response API format with input instead of messages
 		createRequestBody: (): IEndpointBody => {
-			const body: IEndpointBody & OpenAI.Responses.ResponseCreateParams = {
-				model: 'gpt-5-mini',
-				stream: true,
-				// Response API uses 'input' instead of 'messages'
-				input: [
-					{
-						role: 'user',
-						content: [{ type: 'input_text', text: 'Hello from Response API' }]
-					}
-				],
-				// No 'messages' field - this is what distinguishes Response API
-			};
+			const body: IEndpointBody & OpenAI.Responses.ResponseCreateParams =
+				{
+					model: 'gpt-5-mini',
+					stream: true,
+					// Response API uses 'input' instead of 'messages'
+					input: [
+						{
+							role: 'user',
+							content: [
+								{
+									type: 'input_text',
+									text: 'Hello from Response API',
+								},
+							],
+						},
+					],
+					// No 'messages' field - this is what distinguishes Response API
+				};
 			return body;
 		},
 		acquireTokenizer: () => ({
@@ -543,7 +710,15 @@ function createResponseApiEndpoint(): IChatEndpoint {
 			countTokens: async () => 100,
 			tokenize: async () => [],
 		}),
-		processResponseFromChatEndpoint: async (_telemetryService: ITelemetryService, _logService: ILogService, response: Response, _expectedNumChoices: number, finishedCb: FinishedCallback, telemetryData: TelemetryData, _cancellationToken?: CancellationToken) => {
+		processResponseFromChatEndpoint: async (
+			_telemetryService: ITelemetryService,
+			_logService: ILogService,
+			response: Response,
+			_expectedNumChoices: number,
+			finishedCb: FinishedCallback,
+			telemetryData: TelemetryData,
+			_cancellationToken?: CancellationToken,
+		) => {
 			const text = await response.text();
 			if (finishedCb) {
 				await finishedCb(text, 0, { text });
@@ -551,11 +726,24 @@ function createResponseApiEndpoint(): IChatEndpoint {
 			return {
 				[Symbol.asyncIterator]: async function* () {
 					yield {
-						message: { role: Raw.ChatRole.Assistant, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }] },
+						message: {
+							role: Raw.ChatRole.Assistant,
+							content: [
+								{
+									type: Raw.ChatCompletionContentPartKind
+										.Text,
+									text,
+								},
+							],
+						},
 						choiceIndex: 0,
 						requestId: {
-							headerRequestId: response.headers.get('x-request-id') || 'test-request-id',
-							gitHubRequestId: response.headers.get('x-github-request-id') || '',
+							headerRequestId:
+								response.headers.get('x-request-id') ||
+								'test-request-id',
+							gitHubRequestId:
+								response.headers.get('x-github-request-id') ||
+								'',
 							completionId: '',
 							created: 0,
 							serverExperiments: '',
@@ -568,7 +756,7 @@ function createResponseApiEndpoint(): IChatEndpoint {
 						finishReason: 'stop',
 						telemetryData: telemetryData,
 					};
-				}
+				},
 			};
 		},
 		acceptChatPolicy: async () => true,
@@ -599,14 +787,22 @@ function createChatCompletionEndpointWithEmptyMessages(): IChatEndpoint {
 		createRequestBody: (): IEndpointBody => ({
 			model: 'test-model',
 			messages: [], // Empty messages array - ChatCompletion API format
-			stream: true
+			stream: true,
 		}),
 		acquireTokenizer: () => ({
 			countMessagesTokens: async () => 100,
 			countTokens: async () => 100,
 			tokenize: async () => [],
 		}),
-		processResponseFromChatEndpoint: async (_telemetryService: ITelemetryService, _logService: ILogService, response: Response, _expectedNumChoices: number, finishedCb: FinishedCallback, telemetryData: TelemetryData, _cancellationToken?: CancellationToken) => {
+		processResponseFromChatEndpoint: async (
+			_telemetryService: ITelemetryService,
+			_logService: ILogService,
+			response: Response,
+			_expectedNumChoices: number,
+			finishedCb: FinishedCallback,
+			telemetryData: TelemetryData,
+			_cancellationToken?: CancellationToken,
+		) => {
 			const text = await response.text();
 			if (finishedCb) {
 				await finishedCb(text, 0, { text });
@@ -614,11 +810,24 @@ function createChatCompletionEndpointWithEmptyMessages(): IChatEndpoint {
 			return {
 				[Symbol.asyncIterator]: async function* () {
 					yield {
-						message: { role: Raw.ChatRole.Assistant, content: [{ type: Raw.ChatCompletionContentPartKind.Text, text }] },
+						message: {
+							role: Raw.ChatRole.Assistant,
+							content: [
+								{
+									type: Raw.ChatCompletionContentPartKind
+										.Text,
+									text,
+								},
+							],
+						},
 						choiceIndex: 0,
 						requestId: {
-							headerRequestId: response.headers.get('x-request-id') || 'test-request-id',
-							gitHubRequestId: response.headers.get('x-github-request-id') || '',
+							headerRequestId:
+								response.headers.get('x-request-id') ||
+								'test-request-id',
+							gitHubRequestId:
+								response.headers.get('x-github-request-id') ||
+								'',
 							completionId: '',
 							created: 0,
 							serverExperiments: '',
@@ -631,7 +840,7 @@ function createChatCompletionEndpointWithEmptyMessages(): IChatEndpoint {
 						finishReason: 'stop',
 						telemetryData: telemetryData,
 					};
-				}
+				},
 			};
 		},
 		acceptChatPolicy: async () => true,
@@ -721,7 +930,7 @@ function createMockInteractionService(): IInteractionService {
 	return {
 		_serviceBrand: undefined,
 		onInteractionStateChanged: Event.None,
-		sendChatInteraction: () => { },
+		sendChatInteraction: () => {},
 		getInteractionState: () => undefined,
 		interactionId: 'test-interaction-id',
 	} as unknown as IInteractionService;
@@ -730,7 +939,7 @@ function createMockInteractionService(): IInteractionService {
 function createMockChatQuotaService(): IChatQuotaService {
 	return {
 		_serviceBrand: undefined,
-		processQuotaHeaders: () => { },
+		processQuotaHeaders: () => {},
 	} as unknown as IChatQuotaService;
 }
 
@@ -749,7 +958,7 @@ function createMockPowerService(): IPowerService {
 }
 
 class FakeHeaders implements IHeaders {
-	constructor(private readonly headers = new Map<string, string>()) { }
+	constructor(private readonly headers = new Map<string, string>()) {}
 	get(name: string): string | null {
 		return this.headers.get(name.toLowerCase()) ?? null;
 	}
@@ -763,11 +972,13 @@ function createSuccessResponse(content: string): Response {
 	return Response.fromText(
 		200,
 		'OK',
-		new FakeHeaders(new Map([
-			['content-type', 'text/event-stream'],
-			['x-request-id', 'test-request-id'],
-		])),
+		new FakeHeaders(
+			new Map([
+				['content-type', 'text/event-stream'],
+				['x-request-id', 'test-request-id'],
+			]),
+		),
 		streamContent,
-		'node-fetch' as FetcherId
+		'node-fetch' as FetcherId,
 	);
 }

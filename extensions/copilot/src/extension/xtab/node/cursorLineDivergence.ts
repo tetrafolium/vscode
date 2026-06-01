@@ -27,7 +27,10 @@ export function getCurrentLine(
 	originalDoc: PositionOffsetTransformer,
 	docLineIdx: number,
 	intermediateEdit: StringEdit,
-	precomputed?: { currentDoc: string; currentTransformer: PositionOffsetTransformer },
+	precomputed?: {
+		currentDoc: string;
+		currentTransformer: PositionOffsetTransformer;
+	},
 ): string | undefined {
 	const lineNumber = docLineIdx + 1; // 1-based
 	const lineCount = originalDoc.textLength.lineCount + 1;
@@ -44,7 +47,8 @@ export function getCurrentLine(
 	let delta = 0;
 	for (const replacement of intermediateEdit.replacements) {
 		if (replacement.replaceRange.endExclusive <= lineStartOffset) {
-			delta += replacement.newText.length - replacement.replaceRange.length;
+			delta +=
+				replacement.newText.length - replacement.replaceRange.length;
 		} else if (replacement.replaceRange.start < lineStartOffset) {
 			// The line start falls inside a replacement — ambiguous.
 			return undefined;
@@ -54,13 +58,18 @@ export function getCurrentLine(
 	}
 
 	const mappedOffset = lineStartOffset + delta;
-	const currentDoc = precomputed?.currentDoc ?? intermediateEdit.apply(originalDoc.text);
-	const currentTransformer = precomputed?.currentTransformer ?? new PositionOffsetTransformer(currentDoc);
+	const currentDoc =
+		precomputed?.currentDoc ?? intermediateEdit.apply(originalDoc.text);
+	const currentTransformer =
+		precomputed?.currentTransformer ??
+		new PositionOffsetTransformer(currentDoc);
 
 	// Map the offset back to a position in the current document, then extract
 	// the full line content.
 	const currentPos = currentTransformer.getPosition(mappedOffset);
-	const lineStart = currentTransformer.getOffset(new Position(currentPos.lineNumber, 1));
+	const lineStart = currentTransformer.getOffset(
+		new Position(currentPos.lineNumber, 1),
+	);
 	const lineLen = currentTransformer.getLineLength(currentPos.lineNumber);
 	return currentDoc.substring(lineStart, lineStart + lineLen);
 }
@@ -85,13 +94,20 @@ interface LineDiff {
  */
 function diffLine(before: string, after: string): LineDiff {
 	let prefixLen = 0;
-	while (prefixLen < before.length && prefixLen < after.length
-		&& before[prefixLen] === after[prefixLen]) {
+	while (
+		prefixLen < before.length &&
+		prefixLen < after.length &&
+		before[prefixLen] === after[prefixLen]
+	) {
 		prefixLen++;
 	}
 	let suffixLen = 0;
-	while (suffixLen < before.length - prefixLen && suffixLen < after.length - prefixLen
-		&& before[before.length - 1 - suffixLen] === after[after.length - 1 - suffixLen]) {
+	while (
+		suffixLen < before.length - prefixLen &&
+		suffixLen < after.length - prefixLen &&
+		before[before.length - 1 - suffixLen] ===
+			after[after.length - 1 - suffixLen]
+	) {
 		suffixLen++;
 	}
 	return {
@@ -122,7 +138,11 @@ function diffLine(before: string, after: string): LineDiff {
  *   → user typed "x", model inserted "bonacci(n): number"
  *   → model text does not start with "x" → incompatible ✗
  */
-export function isModelLineCompatible(originalLine: string, currentLine: string, modelLine: string): boolean {
+export function isModelLineCompatible(
+	originalLine: string,
+	currentLine: string,
+	modelLine: string,
+): boolean {
 	const userEdit = diffLine(originalLine, currentLine);
 	const modelEdit = diffLine(originalLine, modelLine);
 
@@ -134,14 +154,20 @@ export function isModelLineCompatible(originalLine: string, currentLine: string,
 	// The user's edit range must fall within the model's edit range.
 	// If the user edited a region the model didn't touch, we can't determine
 	// compatibility from the line alone.
-	const userEditWithinModelEdit = userEdit.startOffset >= modelEdit.startOffset
-		&& userEdit.endOffset <= modelEdit.endOffset;
+	const userEditWithinModelEdit =
+		userEdit.startOffset >= modelEdit.startOffset &&
+		userEdit.endOffset <= modelEdit.endOffset;
 
 	if (!userEditWithinModelEdit) {
 		return false;
 	}
 
-	return isUserEditCompatibleWithModelEdit(userEdit, modelEdit, currentLine, modelLine);
+	return isUserEditCompatibleWithModelEdit(
+		userEdit,
+		modelEdit,
+		currentLine,
+		modelLine,
+	);
 }
 
 const AUTO_CLOSE_PAIRS = new Set(['()', '[]', '{}', '<>', '""', `''`, '``']);
@@ -157,20 +183,33 @@ const AUTO_CLOSE_PAIRS = new Set(['()', '[]', '{}', '<>', '""', `''`, '``']);
  * already matches the model, or when the model is editing the exact same range
  * and replacing the exact same original text with a compatible continuation.
  */
-function isUserEditCompatibleWithModelEdit(userEdit: LineDiff, modelEdit: LineDiff, currentLine: string, modelLine: string): boolean {
+function isUserEditCompatibleWithModelEdit(
+	userEdit: LineDiff,
+	modelEdit: LineDiff,
+	currentLine: string,
+	modelLine: string,
+): boolean {
 	if (userEdit.replaced.length > 0) {
 		if (currentLine === modelLine) {
 			return true;
 		}
 
-		return userEdit.startOffset === modelEdit.startOffset
-			&& userEdit.endOffset === modelEdit.endOffset
-			&& userEdit.replaced === modelEdit.replaced
-			&& userEdit.inserted.length > 0
-			&& isUserTypingCompatibleWithModelText(userEdit.inserted, modelEdit.inserted);
+		return (
+			userEdit.startOffset === modelEdit.startOffset &&
+			userEdit.endOffset === modelEdit.endOffset &&
+			userEdit.replaced === modelEdit.replaced &&
+			userEdit.inserted.length > 0 &&
+			isUserTypingCompatibleWithModelText(
+				userEdit.inserted,
+				modelEdit.inserted,
+			)
+		);
 	}
 
-	return isUserTypingCompatibleWithModelText(userEdit.inserted, modelEdit.inserted);
+	return isUserTypingCompatibleWithModelText(
+		userEdit.inserted,
+		modelEdit.inserted,
+	);
 }
 
 /**
@@ -182,7 +221,10 @@ function isUserEditCompatibleWithModelEdit(userEdit: LineDiff, modelEdit: LineDi
  * 2. If the user's text is a known auto-close pair (e.g. `()`, `{}`), accept
  *    if both characters appear in order in the model's text (subsequence match).
  */
-function isUserTypingCompatibleWithModelText(userTypedText: string, modelNewText: string): boolean {
+function isUserTypingCompatibleWithModelText(
+	userTypedText: string,
+	modelNewText: string,
+): boolean {
 	if (modelNewText.startsWith(userTypedText)) {
 		return true;
 	}

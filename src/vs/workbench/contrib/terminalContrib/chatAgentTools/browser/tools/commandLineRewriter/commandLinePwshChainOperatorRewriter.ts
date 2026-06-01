@@ -3,26 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { QueryCapture } from '@vscode/tree-sitter-wasm';
-import { Disposable } from '../../../../../../../base/common/lifecycle.js';
-import { isPowerShell } from '../../runInTerminalHelpers.js';
-import type { TreeSitterCommandParser } from '../../treeSitterCommandParser.js';
-import type { ICommandLineRewriter, ICommandLineRewriterOptions, ICommandLineRewriterResult } from './commandLineRewriter.js';
+import type { QueryCapture } from "@vscode/tree-sitter-wasm";
+import { Disposable } from "../../../../../../../base/common/lifecycle.js";
+import { isPowerShell } from "../../runInTerminalHelpers.js";
+import type { TreeSitterCommandParser } from "../../treeSitterCommandParser.js";
+import type {
+	ICommandLineRewriter,
+	ICommandLineRewriterOptions,
+	ICommandLineRewriterResult,
+} from "./commandLineRewriter.js";
 
-export class CommandLinePwshChainOperatorRewriter extends Disposable implements ICommandLineRewriter {
+export class CommandLinePwshChainOperatorRewriter
+	extends Disposable
+	implements ICommandLineRewriter
+{
 	constructor(
 		private readonly _treeSitterCommandParser: TreeSitterCommandParser,
 	) {
 		super();
 	}
 
-	async rewrite(options: ICommandLineRewriterOptions): Promise<ICommandLineRewriterResult | undefined> {
+	async rewrite(
+		options: ICommandLineRewriterOptions,
+	): Promise<ICommandLineRewriterResult | undefined> {
 		// TODO: This should just be Windows PowerShell in the future when the powershell grammar
 		// supports chain operators https://github.com/airbus-cert/tree-sitter-powershell/issues/27
 		if (isPowerShell(options.shell, options.os)) {
 			let doubleAmpersandCaptures: QueryCapture[] | undefined;
 			try {
-				doubleAmpersandCaptures = await this._treeSitterCommandParser.extractPwshDoubleAmpersandChainOperators(options.commandLine);
+				doubleAmpersandCaptures =
+					await this._treeSitterCommandParser.extractPwshDoubleAmpersandChainOperators(
+						options.commandLine,
+					);
 			} catch {
 				// Swallow tree sitter failures
 			}
@@ -34,7 +46,7 @@ export class CommandLinePwshChainOperatorRewriter extends Disposable implements 
 				}
 				return {
 					rewritten,
-					reasoning: '&& re-written to ;'
+					reasoning: "&& re-written to ;",
 				};
 			}
 		}

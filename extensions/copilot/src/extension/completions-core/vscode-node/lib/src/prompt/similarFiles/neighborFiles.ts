@@ -3,15 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IInstantiationService, ServicesAccessor } from '../../../../../../../util/vs/platform/instantiation/common/instantiation';
-import { normalizeLanguageId, SimilarFileInfo } from '../../../../prompt/src/prompt';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	normalizeLanguageId,
+	SimilarFileInfo,
+} from '../../../../prompt/src/prompt';
 import { CancellationToken as ICancellationToken } from '../../../../types/src';
 import { ICompletionsFeaturesService } from '../../experiments/featuresService';
 import { ICompletionsLogTargetService } from '../../logger';
 import { TelemetryWithExp } from '../../telemetry';
 import { ICompletionsTextDocumentManagerService } from '../../textDocumentManager';
 import { OpenTabFiles } from './openTabFiles';
-import { getRelatedFilesAndTraits, relatedFilesLogger, RelatedFileTrait } from './relatedFiles';
+import {
+	getRelatedFilesAndTraits,
+	relatedFilesLogger,
+	RelatedFileTrait,
+} from './relatedFiles';
 
 // There is a limitation of the number of the neighbor files. So I use the next strategies to pick the most relevant cursor focused files.
 export enum NeighboringFileType {
@@ -42,8 +52,14 @@ export enum NeighboringFileType {
  * @returns Boolean value indicating whether the neighbor file should be considered
  *          (currently matching the current file's language with neighbors')
  */
-export function considerNeighborFile(languageId: string, neighborLanguageId: string): boolean {
-	return normalizeLanguageId(languageId) === normalizeLanguageId(neighborLanguageId);
+export function considerNeighborFile(
+	languageId: string,
+	neighborLanguageId: string,
+): boolean {
+	return (
+		normalizeLanguageId(languageId) ===
+		normalizeLanguageId(neighborLanguageId)
+	);
 }
 
 export type NeighborsCollection = Map<string, SimilarFileInfo>;
@@ -52,8 +68,11 @@ export interface INeighborSource {
 	getNeighborFiles(
 		uri: string,
 		languageId: string,
-		maxNumNeighborFiles: number
-	): Promise<{ docs: NeighborsCollection; neighborSource: Map<NeighboringFileType, string[]> }>;
+		maxNumNeighborFiles: number,
+	): Promise<{
+		docs: NeighborsCollection;
+		neighborSource: Map<NeighboringFileType, string[]>;
+	}>;
 }
 
 export class NeighborSource {
@@ -85,7 +104,7 @@ export class NeighborSource {
 		telemetryData: TelemetryWithExp,
 		cancellationToken?: ICancellationToken,
 		data?: unknown,
-		forceRelatedFilesComputation?: boolean
+		forceRelatedFilesComputation?: boolean,
 	): Promise<{
 		docs: NeighborsCollection;
 		neighborSource: Map<NeighboringFileType, string[]>;
@@ -96,46 +115,57 @@ export class NeighborSource {
 		const instantiationService = accessor.get(IInstantiationService);
 		const docManager = accessor.get(ICompletionsTextDocumentManagerService);
 		if (NeighborSource.instance === undefined) {
-			NeighborSource.instance = instantiationService.createInstance(OpenTabFiles);
+			NeighborSource.instance =
+				instantiationService.createInstance(OpenTabFiles);
 		}
 
 		const result = {
-			...(await NeighborSource.instance.getNeighborFiles(uri, fileType, NeighborSource.MAX_NEIGHBOR_FILES)),
+			...(await NeighborSource.instance.getNeighborFiles(
+				uri,
+				fileType,
+				NeighborSource.MAX_NEIGHBOR_FILES,
+			)),
 			traits: [] as RelatedFileTrait[],
 		};
 
-		if (featuresService.excludeRelatedFiles(fileType, telemetryData)) { return result; }
+		if (featuresService.excludeRelatedFiles(fileType, telemetryData)) {
+			return result;
+		}
 
 		const doc = await docManager.getTextDocument({ uri });
 		if (!doc) {
-			relatedFilesLogger.debug(logTarget,
+			relatedFilesLogger.debug(
+				logTarget,
 				'neighborFiles.getNeighborFilesAndTraits',
-				`Failed to get the related files: failed to get the document ${uri}`
+				`Failed to get the related files: failed to get the document ${uri}`,
 			);
 			return result;
 		}
 
 		const wksFolder = docManager.getWorkspaceFolder(doc);
 		if (!wksFolder) {
-			relatedFilesLogger.debug(logTarget,
+			relatedFilesLogger.debug(
+				logTarget,
 				'neighborFiles.getNeighborFilesAndTraits',
-				`Failed to get the related files: ${uri} is not under the workspace folder`
+				`Failed to get the related files: ${uri} is not under the workspace folder`,
 			);
 			return result;
 		}
 
-		const relatedFiles = await instantiationService.invokeFunction(getRelatedFilesAndTraits,
+		const relatedFiles = await instantiationService.invokeFunction(
+			getRelatedFilesAndTraits,
 			doc,
 			telemetryData,
 			cancellationToken,
 			data,
-			forceRelatedFilesComputation
+			forceRelatedFilesComputation,
 		);
 
 		if (relatedFiles.entries.size === 0) {
-			relatedFilesLogger.debug(logTarget,
+			relatedFilesLogger.debug(
+				logTarget,
 				'neighborFiles.getNeighborFilesAndTraits',
-				`0 related files found for ${uri}`
+				`0 related files found for ${uri}`,
 			);
 			// make sure we include traits if there's any
 			result.traits.push(...relatedFiles.traits);
@@ -145,11 +175,22 @@ export class NeighborSource {
 		relatedFiles.entries.forEach((uriToContentMap, type) => {
 			const addedDocs: SimilarFileInfo[] = [];
 			uriToContentMap.forEach((source, uri) => {
-				const relativePath = NeighborSource.getRelativePath(uri, wksFolder.uri);
-				if (!relativePath) { return; }
+				const relativePath = NeighborSource.getRelativePath(
+					uri,
+					wksFolder.uri,
+				);
+				if (!relativePath) {
+					return;
+				}
 				// Check that results.docs does not already contain an entry for the given uri.
-				if (result.docs.has(uri)) { return; }
-				const relatedFileDocInfo: SimilarFileInfo = { relativePath, uri, source };
+				if (result.docs.has(uri)) {
+					return;
+				}
+				const relatedFileDocInfo: SimilarFileInfo = {
+					relativePath,
+					uri,
+					source,
+				};
 				addedDocs.unshift(relatedFileDocInfo);
 				result.docs.set(uri, relatedFileDocInfo);
 			});
@@ -157,7 +198,7 @@ export class NeighborSource {
 			if (addedDocs.length > 0) {
 				result.neighborSource.set(
 					type,
-					addedDocs.map(doc => doc.uri.toString())
+					addedDocs.map((doc) => doc.uri.toString()),
 				);
 			}
 		});
@@ -167,14 +208,19 @@ export class NeighborSource {
 	}
 
 	static basename(uri: string): string {
-		return decodeURIComponent(uri.replace(/[#?].*$/, '').replace(/^.*[/:]/, ''));
+		return decodeURIComponent(
+			uri.replace(/[#?].*$/, '').replace(/^.*[/:]/, ''),
+		);
 	}
 
 	/**
 	 * Get the fileUri relative to the provided basePath
 	 * or its basename if basePath is not its ancestor.
 	 */
-	static getRelativePath(fileUri: string, baseUri: string): string | undefined {
+	static getRelativePath(
+		fileUri: string,
+		baseUri: string,
+	): string | undefined {
 		const parentURI = baseUri
 			.toString()
 			.replace(/[#?].*/, '')
@@ -186,7 +232,11 @@ export class NeighborSource {
 	}
 }
 
-export function isIncludeNeighborFilesActive(accessor: ServicesAccessor, languageId: string, telemetryData: TelemetryWithExp): boolean {
+export function isIncludeNeighborFilesActive(
+	accessor: ServicesAccessor,
+	languageId: string,
+	telemetryData: TelemetryWithExp,
+): boolean {
 	const featuresService = accessor.get(ICompletionsFeaturesService);
 	return featuresService.includeNeighboringFiles(languageId, telemetryData);
 }

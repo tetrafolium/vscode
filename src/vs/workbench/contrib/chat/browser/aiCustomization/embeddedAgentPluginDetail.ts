@@ -3,10 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as DOM from '../../../../../base/browser/dom.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { localize } from '../../../../../nls.js';
-import { AgentPluginItemKind, IAgentPluginItem } from '../agentPluginEditor/agentPluginItems.js';
+import * as DOM from "../../../../../base/browser/dom.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { localize } from "../../../../../nls.js";
+import {
+	AgentPluginItemKind,
+	IAgentPluginItem,
+} from "../agentPluginEditor/agentPluginItems.js";
 
 const $ = DOM.$;
 
@@ -18,7 +21,6 @@ const $ = DOM.$;
  * context menu, so this component intentionally stays small.
  */
 export class EmbeddedAgentPluginDetail extends Disposable {
-
 	private readonly root: HTMLElement;
 	private readonly headerEl: HTMLElement;
 	private readonly leadingSlotEl: HTMLElement;
@@ -29,26 +31,39 @@ export class EmbeddedAgentPluginDetail extends Disposable {
 
 	private current: IAgentPluginItem | undefined;
 
-	constructor(
-		parent: HTMLElement,
-	) {
+	constructor(parent: HTMLElement) {
 		super();
 
-		this.root = DOM.append(parent, $('.ai-customization-embedded-detail.embedded-plugin-detail'));
+		this.root = DOM.append(
+			parent,
+			$(".ai-customization-embedded-detail.embedded-plugin-detail"),
+		);
 
-		this.headerEl = DOM.append(this.root, $('.embedded-detail-header'));
+		this.headerEl = DOM.append(this.root, $(".embedded-detail-header"));
 		// Slot at the start of the header for callers to append leading chrome
 		// (e.g. a back button) without reaching into private DOM structure.
-		this.leadingSlotEl = DOM.append(this.headerEl, $('.embedded-detail-leading-slot'));
-		const headerText = DOM.append(this.headerEl, $('.embedded-detail-header-text'));
-		this.nameEl = DOM.append(headerText, $('h2.embedded-detail-name'));
-		this.nameEl.setAttribute('role', 'heading');
-		this.sourceEl = DOM.append(headerText, $('.embedded-detail-scope'));
+		this.leadingSlotEl = DOM.append(
+			this.headerEl,
+			$(".embedded-detail-leading-slot"),
+		);
+		const headerText = DOM.append(
+			this.headerEl,
+			$(".embedded-detail-header-text"),
+		);
+		this.nameEl = DOM.append(headerText, $("h2.embedded-detail-name"));
+		this.nameEl.setAttribute("role", "heading");
+		this.sourceEl = DOM.append(headerText, $(".embedded-detail-scope"));
 
-		this.descriptionEl = DOM.append(this.root, $('.embedded-detail-description'));
+		this.descriptionEl = DOM.append(
+			this.root,
+			$(".embedded-detail-description"),
+		);
 
-		this.emptyEl = DOM.append(this.root, $('.embedded-detail-empty'));
-		this.emptyEl.textContent = localize('pluginDetailEmpty', "No plugin selected.");
+		this.emptyEl = DOM.append(this.root, $(".embedded-detail-empty"));
+		this.emptyEl.textContent = localize(
+			"pluginDetailEmpty",
+			"No plugin selected.",
+		);
 
 		this.renderItem();
 	}
@@ -82,12 +97,12 @@ export class EmbeddedAgentPluginDetail extends Disposable {
 	private renderItem(): void {
 		const item = this.current;
 		const hasItem = !!item;
-		this.emptyEl.style.display = hasItem ? 'none' : '';
-		this.root.classList.toggle('is-empty', !hasItem);
+		this.emptyEl.style.display = hasItem ? "none" : "";
+		this.root.classList.toggle("is-empty", !hasItem);
 		if (!item) {
-			this.nameEl.textContent = '';
-			this.sourceEl.textContent = '';
-			this.descriptionEl.textContent = '';
+			this.nameEl.textContent = "";
+			this.sourceEl.textContent = "";
+			this.descriptionEl.textContent = "";
 			return;
 		}
 
@@ -96,16 +111,20 @@ export class EmbeddedAgentPluginDetail extends Disposable {
 		const isMarketplace = item.kind === AgentPluginItemKind.Marketplace;
 
 		const sourceLabel = item.marketplace
-			? (isMarketplace
-				? localize('pluginSourceMarketplace', "From {0}", item.marketplace)
-				: localize('pluginSourceInstalled', "Installed from {0}", item.marketplace))
-			: (isMarketplace
-				? localize('pluginSourceMarketplaceUnknown', "Marketplace plugin")
-				: localize('pluginSourceLocal', "Installed plugin"));
+			? isMarketplace
+				? localize("pluginSourceMarketplace", "From {0}", item.marketplace)
+				: localize(
+						"pluginSourceInstalled",
+						"Installed from {0}",
+						item.marketplace,
+					)
+			: isMarketplace
+				? localize("pluginSourceMarketplaceUnknown", "Marketplace plugin")
+				: localize("pluginSourceLocal", "Installed plugin");
 		this.sourceEl.textContent = sourceLabel;
 
-		const description = (item.description || '').trim();
+		const description = (item.description || "").trim();
 		this.descriptionEl.textContent = description;
-		this.descriptionEl.style.display = description ? '' : 'none';
+		this.descriptionEl.style.display = description ? "" : "none";
 	}
 }

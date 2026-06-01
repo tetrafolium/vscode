@@ -6,7 +6,9 @@ import { ConfigKey } from '../../src/platform/configuration/common/configuration
 import { SimulationOptions } from '../base/simulationOptions';
 import { Configuration } from '../base/stest';
 
-export function nesOptionsToConfigurations(options: SimulationOptions): Configuration<unknown>[] {
+export function nesOptionsToConfigurations(
+	options: SimulationOptions,
+): Configuration<unknown>[] {
 	const configs: Configuration<unknown>[] = [];
 
 	if (options.nesUrl) {

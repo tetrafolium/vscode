@@ -3,38 +3,66 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import fs from 'fs';
-import minimist from 'minimist';
-import Mocha, { MochaOptions } from 'mocha';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from "fs";
+import minimist from "minimist";
+import Mocha, { MochaOptions } from "mocha";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const options = minimist(process.argv.slice(2), {
-	string: ['fgrep', 'grep', 'test-results', 'timeout', 'screenshots-dir'],
-	boolean: ['help'],
-	alias: { fgrep: 'f', grep: 'g', help: 'h', 'test-results': 't', 'screenshots-dir': 's' },
+	string: ["fgrep", "grep", "test-results", "timeout", "screenshots-dir"],
+	boolean: ["help"],
+	alias: {
+		fgrep: "f",
+		grep: "g",
+		help: "h",
+		"test-results": "t",
+		"screenshots-dir": "s",
+	},
 });
 
 if (options.help) {
 	console.info(`Usage: node ${path.basename(process.argv[1])} [options]`);
-	console.info('Options:');
-	console.info('  --commit, -c <commit>           The commit to test (required)');
-	console.info(`  --quality, -q <quality>         The quality to test (required, "stable", "insider" or "exploration")`);
-	console.info('  --no-cleanup                    Do not cleanup downloaded files after each test');
-	console.info('  --no-signing-check              Skip Authenticode and codesign signature checks');
-	console.info('  --no-headless                   Run tests with a visible UI (desktop tests only)');
-	console.info('  --no-detection                  Enable all tests regardless of platform and skip executable runs');
-	console.info('  --grep, -g <pattern>            Only run tests matching the given <pattern>');
-	console.info('  --fgrep, -f <string>            Only run tests containing the given <string>');
-	console.info('  --test-results, -t <path>       Output test results in JUnit format to the specified path');
-	console.info('  --timeout <sec>                 Set the test-case timeout in seconds (default: 600 seconds)');
-	console.info('  --screenshots-dir, -s <path>    Save failure screenshots to the specified directory');
-	console.info('  --verbose, -v                   Enable verbose logging');
-	console.info('  --help, -h                      Show this help message');
+	console.info("Options:");
+	console.info(
+		"  --commit, -c <commit>           The commit to test (required)",
+	);
+	console.info(
+		`  --quality, -q <quality>         The quality to test (required, "stable", "insider" or "exploration")`,
+	);
+	console.info(
+		"  --no-cleanup                    Do not cleanup downloaded files after each test",
+	);
+	console.info(
+		"  --no-signing-check              Skip Authenticode and codesign signature checks",
+	);
+	console.info(
+		"  --no-headless                   Run tests with a visible UI (desktop tests only)",
+	);
+	console.info(
+		"  --no-detection                  Enable all tests regardless of platform and skip executable runs",
+	);
+	console.info(
+		"  --grep, -g <pattern>            Only run tests matching the given <pattern>",
+	);
+	console.info(
+		"  --fgrep, -f <string>            Only run tests containing the given <string>",
+	);
+	console.info(
+		"  --test-results, -t <path>       Output test results in JUnit format to the specified path",
+	);
+	console.info(
+		"  --timeout <sec>                 Set the test-case timeout in seconds (default: 600 seconds)",
+	);
+	console.info(
+		"  --screenshots-dir, -s <path>    Save failure screenshots to the specified directory",
+	);
+	console.info("  --verbose, -v                   Enable verbose logging");
+	console.info("  --help, -h                      Show this help message");
 	process.exit(0);
 }
 
-const testResults = options['test-results'];
+const testResults = options["test-results"];
 const mochaOptions: MochaOptions = {
 	color: true,
 	timeout: (options.timeout ?? 10 * 60) * 1000,
@@ -49,9 +77,9 @@ if (testResults) {
 }
 
 const mocha = new Mocha(mochaOptions);
-mocha.addFile(fileURLToPath(new URL('./main.js', import.meta.url)));
+mocha.addFile(fileURLToPath(new URL("./main.js", import.meta.url)));
 await mocha.loadFilesAsync();
-const runner = mocha.run(failures => {
+const runner = mocha.run((failures) => {
 	if (options.verbose) {
 		console.log(`Mocha test run finished: ${failures} failure(s)`);
 	}
@@ -67,12 +95,17 @@ const runner = mocha.run(failures => {
 
 // Attach JUnit reporter for CI test result publishing (runs alongside the default spec reporter)
 if (testResults) {
-	const JUnitReporter = (await import('mocha-junit-reporter' as string)).default;
-	new JUnitReporter(runner, { reporterOptions: { mochaFile: testResults, outputs: true } });
+	const JUnitReporter = (await import("mocha-junit-reporter" as string))
+		.default;
+	new JUnitReporter(runner, {
+		reporterOptions: { mochaFile: testResults, outputs: true },
+	});
 }
 
 if (options.verbose) {
-	runner.on('test', (test) => console.log(`Starting: ${test.fullTitle()}`));
-	runner.on('pass', (test) => console.log(`Passed: ${test.fullTitle()}`));
-	runner.on('fail', (test, err) => console.log(`Failed: ${test.fullTitle()} - ${err.message}`));
+	runner.on("test", (test) => console.log(`Starting: ${test.fullTitle()}`));
+	runner.on("pass", (test) => console.log(`Passed: ${test.fullTitle()}`));
+	runner.on("fail", (test, err) =>
+		console.log(`Failed: ${test.fullTitle()} - ${err.message}`),
+	);
 }

@@ -7,7 +7,10 @@ import { FetchBlockedError, type FetchMiddleware } from '../fetchTypes';
 
 export class AuthBlockedError extends FetchBlockedError {
 	constructor(retryAfterMs: number) {
-		super(`Auth token blocked for ${Math.round(retryAfterMs / 1000)}s after 401/403`, retryAfterMs);
+		super(
+			`Auth token blocked for ${Math.round(retryAfterMs / 1000)}s after 401/403`,
+			retryAfterMs,
+		);
 	}
 }
 
@@ -25,7 +28,9 @@ export function authBlockedMiddleware(
 	let blockedUntil = 0;
 
 	return (next) => async (request) => {
-		const currentToken = request.headers['Authorization'] ?? request.headers['authorization'];
+		const currentToken =
+			request.headers['Authorization'] ??
+			request.headers['authorization'];
 
 		// Token changed → clear block
 		if (currentToken !== blockedToken) {
@@ -34,13 +39,20 @@ export function authBlockedMiddleware(
 		}
 
 		// Still blocked?
-		if (currentToken && currentToken === blockedToken && Date.now() < blockedUntil) {
+		if (
+			currentToken &&
+			currentToken === blockedToken &&
+			Date.now() < blockedUntil
+		) {
 			throw new AuthBlockedError(blockedUntil - Date.now());
 		}
 
 		const response = await next(request);
 
-		if ((response.status === 401 || response.status === 403) && currentToken) {
+		if (
+			(response.status === 401 || response.status === 403) &&
+			currentToken
+		) {
 			blockedToken = currentToken;
 			blockedUntil = Date.now() + blockDurationMs;
 			throw new AuthBlockedError(blockDurationMs);

@@ -5,4 +5,4 @@
 
 // Re-export from the shared location so existing imports in terminalContrib
 // continue to work without modification.
-export { TerminalToolId } from '../../../../chat/common/tools/terminalToolIds.js';
+export { TerminalToolId } from "../../../../chat/common/tools/terminalToolIds.js";

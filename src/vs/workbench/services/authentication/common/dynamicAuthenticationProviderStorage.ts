@@ -3,11 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { IAuthorizationTokenResponse } from '../../../../base/common/oauth.js';
-import { Event } from '../../../../base/common/event.js';
+import { createDecorator } from "../../../../platform/instantiation/common/instantiation.js";
+import { IAuthorizationTokenResponse } from "../../../../base/common/oauth.js";
+import { Event } from "../../../../base/common/event.js";
 
-export const IDynamicAuthenticationProviderStorageService = createDecorator<IDynamicAuthenticationProviderStorageService>('dynamicAuthenticationProviderStorageService');
+export const IDynamicAuthenticationProviderStorageService =
+	createDecorator<IDynamicAuthenticationProviderStorageService>(
+		"dynamicAuthenticationProviderStorageService",
+	);
 
 export interface DynamicAuthenticationProviderInfo {
 	readonly providerId: string;
@@ -23,7 +26,9 @@ export interface DynamicAuthenticationProviderInfo {
 export interface DynamicAuthenticationProviderTokensChangeEvent {
 	readonly authProviderId: string;
 	readonly clientId: string;
-	readonly tokens: (IAuthorizationTokenResponse & { created_at: number })[] | undefined;
+	readonly tokens:
+		| (IAuthorizationTokenResponse & { created_at: number })[]
+		| undefined;
 }
 
 /**
@@ -42,7 +47,9 @@ export interface IDynamicAuthenticationProviderStorageService {
 	 * @param providerId The provider ID or authorization server URL.
 	 * @returns The client details if they exist, undefined otherwise.
 	 */
-	getClientRegistration(providerId: string): Promise<{ clientId?: string; clientSecret?: string } | undefined>;
+	getClientRegistration(
+		providerId: string,
+	): Promise<{ clientId?: string; clientSecret?: string } | undefined>;
 
 	/**
 	 * Store both client ID and client secret for a dynamic authentication provider.
@@ -52,7 +59,13 @@ export interface IDynamicAuthenticationProviderStorageService {
 	 * @param clientSecret Optional client secret to store.
 	 * @param label Optional label for the provider.
 	 */
-	storeClientRegistration(providerId: string, authorizationServer: string, clientId: string, clientSecret?: string, label?: string): Promise<void>;
+	storeClientRegistration(
+		providerId: string,
+		authorizationServer: string,
+		clientId: string,
+		clientSecret?: string,
+		label?: string,
+	): Promise<void>;
 
 	/**
 	 * Get all dynamic authentication providers that have been interacted with.
@@ -72,7 +85,12 @@ export interface IDynamicAuthenticationProviderStorageService {
 	 * @param clientId The client ID.
 	 * @returns Array of authorization tokens with creation timestamps, or undefined if none exist.
 	 */
-	getSessionsForDynamicAuthProvider(authProviderId: string, clientId: string): Promise<(IAuthorizationTokenResponse & { created_at: number })[] | undefined>;
+	getSessionsForDynamicAuthProvider(
+		authProviderId: string,
+		clientId: string,
+	): Promise<
+		(IAuthorizationTokenResponse & { created_at: number })[] | undefined
+	>;
 
 	/**
 	 * Set sessions for a dynamic authentication provider in secret storage.
@@ -80,5 +98,9 @@ export interface IDynamicAuthenticationProviderStorageService {
 	 * @param clientId The client ID.
 	 * @param sessions Array of authorization tokens with creation timestamps.
 	 */
-	setSessionsForDynamicAuthProvider(authProviderId: string, clientId: string, sessions: (IAuthorizationTokenResponse & { created_at: number })[]): Promise<void>;
+	setSessionsForDynamicAuthProvider(
+		authProviderId: string,
+		clientId: string,
+		sessions: (IAuthorizationTokenResponse & { created_at: number })[],
+	): Promise<void>;
 }

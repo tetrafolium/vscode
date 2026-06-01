@@ -5,10 +5,16 @@
 
 import { commands, env, Uri } from 'vscode';
 import { IVSCodeExtensionContext } from '../../../../../../platform/extContext/common/extensionContext';
-import { IInstantiationService, ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { ICompletionsNotificationSender } from '../../../lib/src/notificationSender';
 import { OutputPaneShowCommand } from '../../../lib/src/snippy/constants';
-import { matchNotificationTelemetry, TelemetryActor } from '../../../lib/src/snippy/telemetryHandlers';
+import {
+	matchNotificationTelemetry,
+	TelemetryActor,
+} from '../../../lib/src/snippy/telemetryHandlers';
 
 const matchCodeMessage =
 	'We found a reference to public code in a recent suggestion. To learn more about public code references, review the [documentation](https://aka.ms/github-copilot-match-public-code).';
@@ -34,25 +40,32 @@ export function notify(accessor: ServicesAccessor) {
 
 	const messageItems = [{ title: MatchAction }, { title: SettingAction }];
 
-	void notificationSender.showWarningMessage(matchCodeMessage, ...messageItems).then(async action => {
-		const event = { instantiationService, actor: 'user' as TelemetryActor };
+	void notificationSender
+		.showWarningMessage(matchCodeMessage, ...messageItems)
+		.then(async (action) => {
+			const event = {
+				instantiationService,
+				actor: 'user' as TelemetryActor,
+			};
 
-		switch (action?.title) {
-			case MatchAction: {
-				matchNotificationTelemetry.handleDoAction(event);
-				await commands.executeCommand(OutputPaneShowCommand);
-				break;
+			switch (action?.title) {
+				case MatchAction: {
+					matchNotificationTelemetry.handleDoAction(event);
+					await commands.executeCommand(OutputPaneShowCommand);
+					break;
+				}
+				case SettingAction: {
+					await env.openExternal(
+						Uri.parse('https://aka.ms/github-copilot-settings'),
+					);
+					break;
+				}
+				case undefined: {
+					matchNotificationTelemetry.handleDismiss(event);
+					break;
+				}
 			}
-			case SettingAction: {
-				await env.openExternal(Uri.parse('https://aka.ms/github-copilot-settings'));
-				break;
-			}
-			case undefined: {
-				matchNotificationTelemetry.handleDismiss(event);
-				break;
-			}
-		}
-	});
+		});
 
 	return extension.globalState.update(CodeReferenceKey, true);
 }

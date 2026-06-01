@@ -3,33 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { URI } from '../../../../../../base/common/uri.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { AgentSessionsAccessibilityProvider } from '../../../browser/agentSessions/agentSessionsViewer.js';
-import { AgentSessionSection, IAgentSession, IAgentSessionSection } from '../../../browser/agentSessions/agentSessionsModel.js';
-import { ChatSessionStatus } from '../../../common/chatSessionsService.js';
-import { Codicon } from '../../../../../../base/common/codicons.js';
+import assert from "assert";
+import { URI } from "../../../../../../base/common/uri.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import { AgentSessionsAccessibilityProvider } from "../../../browser/agentSessions/agentSessionsViewer.js";
+import {
+	AgentSessionSection,
+	IAgentSession,
+	IAgentSessionSection,
+} from "../../../browser/agentSessions/agentSessionsModel.js";
+import { ChatSessionStatus } from "../../../common/chatSessionsService.js";
+import { Codicon } from "../../../../../../base/common/codicons.js";
 
-suite('AgentSessionsAccessibilityProvider', () => {
-
+suite("AgentSessionsAccessibilityProvider", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
 	let accessibilityProvider: AgentSessionsAccessibilityProvider;
 
-	function createMockSession(overrides: Partial<{
-		id: string;
-		label: string;
-		providerLabel: string;
-		status: ChatSessionStatus;
-	}> = {}): IAgentSession {
+	function createMockSession(
+		overrides: Partial<{
+			id: string;
+			label: string;
+			providerLabel: string;
+			status: ChatSessionStatus;
+		}> = {},
+	): IAgentSession {
 		const now = Date.now();
 		return {
-			providerType: 'test',
-			providerLabel: overrides.providerLabel ?? 'Test',
-			resource: URI.parse(`test://session/${overrides.id ?? 'default'}`),
+			providerType: "test",
+			providerLabel: overrides.providerLabel ?? "Test",
+			resource: URI.parse(`test://session/${overrides.id ?? "default"}`),
 			status: overrides.status ?? ChatSessionStatus.Completed,
-			label: overrides.label ?? `Session ${overrides.id ?? 'default'}`,
+			label: overrides.label ?? `Session ${overrides.id ?? "default"}`,
 			icon: Codicon.terminal,
 			timing: {
 				created: now,
@@ -38,20 +43,23 @@ suite('AgentSessionsAccessibilityProvider', () => {
 			},
 			changes: undefined,
 			isArchived: () => false,
-			setArchived: () => { },
+			setArchived: () => {},
 			isPinned: () => false,
-			setPinned: () => { },
+			setPinned: () => {},
 			isRead: () => true,
 			isMarkedUnread: () => false,
-			setRead: () => { },
+			setRead: () => {},
 		};
 	}
 
-	function createMockSection(section: AgentSessionSection = AgentSessionSection.Today, sessions: IAgentSession[] = []): IAgentSessionSection {
+	function createMockSection(
+		section: AgentSessionSection = AgentSessionSection.Today,
+		sessions: IAgentSession[] = [],
+	): IAgentSessionSection {
 		return {
 			section,
-			label: 'Today',
-			sessions
+			label: "Today",
+			sessions,
 		};
 	}
 
@@ -59,54 +67,83 @@ suite('AgentSessionsAccessibilityProvider', () => {
 		accessibilityProvider = new AgentSessionsAccessibilityProvider();
 	});
 
-	test('getWidgetRole returns list', () => {
-		assert.strictEqual(accessibilityProvider.getWidgetRole(), 'list');
+	test("getWidgetRole returns list", () => {
+		assert.strictEqual(accessibilityProvider.getWidgetRole(), "list");
 	});
 
-	test('getRole returns listitem for session', () => {
+	test("getRole returns listitem for session", () => {
 		const session = createMockSession();
-		assert.strictEqual(accessibilityProvider.getRole(session), 'listitem');
+		assert.strictEqual(accessibilityProvider.getRole(session), "listitem");
 	});
 
-	test('getRole returns listitem for section', () => {
+	test("getRole returns listitem for section", () => {
 		const section = createMockSection();
-		assert.strictEqual(accessibilityProvider.getRole(section), 'listitem');
+		assert.strictEqual(accessibilityProvider.getRole(section), "listitem");
 	});
 
-	test('getWidgetAriaLabel returns correct label', () => {
-		assert.strictEqual(accessibilityProvider.getWidgetAriaLabel(), 'Agent Sessions');
+	test("getWidgetAriaLabel returns correct label", () => {
+		assert.strictEqual(
+			accessibilityProvider.getWidgetAriaLabel(),
+			"Agent Sessions",
+		);
 	});
 
-	test('getAriaLabel returns correct label for session', () => {
+	test("getAriaLabel returns correct label for session", () => {
 		const session = createMockSession({
-			id: 'test-session',
-			label: 'Test Session Title',
-			providerLabel: 'Agent'
+			id: "test-session",
+			label: "Test Session Title",
+			providerLabel: "Agent",
 		});
 
 		const ariaLabel = accessibilityProvider.getAriaLabel(session);
 
 		assert.ok(ariaLabel);
-		assert.ok(ariaLabel.includes('Test Session Title'), 'Aria label should include the session title');
-		assert.ok(ariaLabel.includes('Agent'), 'Aria label should include the provider label');
+		assert.ok(
+			ariaLabel.includes("Test Session Title"),
+			"Aria label should include the session title",
+		);
+		assert.ok(
+			ariaLabel.includes("Agent"),
+			"Aria label should include the provider label",
+		);
 	});
 
-	test('getAriaLabel returns singular label for section with 1 session', () => {
-		const section = createMockSection(AgentSessionSection.Today, [createMockSession({ id: 'a' })]);
+	test("getAriaLabel returns singular label for section with 1 session", () => {
+		const section = createMockSection(AgentSessionSection.Today, [
+			createMockSession({ id: "a" }),
+		]);
 		const ariaLabel = accessibilityProvider.getAriaLabel(section);
 
 		assert.ok(ariaLabel);
-		assert.ok(ariaLabel.includes('sessions section'), 'Aria label should indicate it is a section');
-		assert.ok(ariaLabel.includes('1 session'), 'Aria label should include session count');
-		assert.ok(!ariaLabel.includes('1 sessions'), 'Aria label should use singular form');
+		assert.ok(
+			ariaLabel.includes("sessions section"),
+			"Aria label should indicate it is a section",
+		);
+		assert.ok(
+			ariaLabel.includes("1 session"),
+			"Aria label should include session count",
+		);
+		assert.ok(
+			!ariaLabel.includes("1 sessions"),
+			"Aria label should use singular form",
+		);
 	});
 
-	test('getAriaLabel returns plural label for section with multiple sessions', () => {
-		const section = createMockSection(AgentSessionSection.Today, [createMockSession({ id: 'a' }), createMockSession({ id: 'b' })]);
+	test("getAriaLabel returns plural label for section with multiple sessions", () => {
+		const section = createMockSection(AgentSessionSection.Today, [
+			createMockSession({ id: "a" }),
+			createMockSession({ id: "b" }),
+		]);
 		const ariaLabel = accessibilityProvider.getAriaLabel(section);
 
 		assert.ok(ariaLabel);
-		assert.ok(ariaLabel.includes('sessions section'), 'Aria label should indicate it is a section');
-		assert.ok(ariaLabel.includes('2 sessions'), 'Aria label should include session count with plural form');
+		assert.ok(
+			ariaLabel.includes("sessions section"),
+			"Aria label should indicate it is a section",
+		);
+		assert.ok(
+			ariaLabel.includes("2 sessions"),
+			"Aria label should include session count with plural form",
+		);
 	});
 });

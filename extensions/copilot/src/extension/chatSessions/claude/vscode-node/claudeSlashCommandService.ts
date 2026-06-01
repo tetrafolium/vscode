@@ -7,8 +7,14 @@ import * as vscode from 'vscode';
 import { ILogService } from '../../../../platform/log/common/logService';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
-import { createDecorator, IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
-import { getClaudeSlashCommandRegistry, IClaudeSlashCommandHandler } from './slashCommands/claudeSlashCommandRegistry';
+import {
+	createDecorator,
+	IInstantiationService,
+} from '../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	getClaudeSlashCommandRegistry,
+	IClaudeSlashCommandHandler,
+} from './slashCommands/claudeSlashCommandRegistry';
 
 export interface IClaudeSlashCommandRequest {
 	readonly prompt: string;
@@ -40,7 +46,7 @@ export interface IClaudeSlashCommandService {
 	tryHandleCommand(
 		request: IClaudeSlashCommandRequest,
 		stream: vscode.ChatResponseStream,
-		token: CancellationToken
+		token: CancellationToken,
 	): Promise<IClaudeSlashCommandResult>;
 
 	/**
@@ -49,16 +55,21 @@ export interface IClaudeSlashCommandService {
 	getRegisteredCommands(): readonly string[];
 }
 
-export const IClaudeSlashCommandService = createDecorator<IClaudeSlashCommandService>('claudeSlashCommandService');
+export const IClaudeSlashCommandService =
+	createDecorator<IClaudeSlashCommandService>('claudeSlashCommandService');
 
-export class ClaudeSlashCommandService extends Disposable implements IClaudeSlashCommandService {
+export class ClaudeSlashCommandService
+	extends Disposable
+	implements IClaudeSlashCommandService
+{
 	readonly _serviceBrand: undefined;
 
 	private _handlerCache = new Map<string, IClaudeSlashCommandHandler>();
 	private _initialized = false;
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@ILogService private readonly logService: ILogService,
 	) {
 		super();
@@ -69,13 +80,17 @@ export class ClaudeSlashCommandService extends Disposable implements IClaudeSlas
 	async tryHandleCommand(
 		request: IClaudeSlashCommandRequest,
 		stream: vscode.ChatResponseStream,
-		token: CancellationToken
+		token: CancellationToken,
 	): Promise<IClaudeSlashCommandResult> {
 		// 1. Check request.command (VS Code slash command selected via UI)
 		if (request.command) {
 			const handler = this._getHandler(request.command.toLowerCase());
 			if (handler) {
-				const result = await handler.handle(request.prompt, stream, token);
+				const result = await handler.handle(
+					request.prompt,
+					stream,
+					token,
+				);
 				return { handled: true, result: result ?? {} };
 			}
 		}
@@ -101,7 +116,9 @@ export class ClaudeSlashCommandService extends Disposable implements IClaudeSlas
 		return Array.from(this._handlerCache.keys());
 	}
 
-	private _getHandler(commandName: string): IClaudeSlashCommandHandler | undefined {
+	private _getHandler(
+		commandName: string,
+	): IClaudeSlashCommandHandler | undefined {
 		this._ensureInitialized();
 		return this._handlerCache.get(commandName);
 	}
@@ -118,17 +135,25 @@ export class ClaudeSlashCommandService extends Disposable implements IClaudeSlas
 			const commandKey = handler.commandName.toLowerCase();
 			// This shouldn't happen unless we accidentally register duplicates
 			if (this._handlerCache.has(commandKey)) {
-				this.logService.warn(`Duplicate Claude slash command name "${handler.commandName}" detected. Ignoring handler ${ctor.name || 'unknown constructor'}.`);
+				this.logService.warn(
+					`Duplicate Claude slash command name "${handler.commandName}" detected. Ignoring handler ${ctor.name || 'unknown constructor'}.`,
+				);
 				continue;
 			}
 			this._handlerCache.set(commandKey, handler);
 
 			// Register VS Code command if commandId is provided
 			if (handler.commandId) {
-				this._register(vscode.commands.registerCommand(handler.commandId, () => {
-					// Invoke with no args and no stream (Command Palette mode)
-					return handler.handle('', undefined, CancellationToken.None);
-				}));
+				this._register(
+					vscode.commands.registerCommand(handler.commandId, () => {
+						// Invoke with no args and no stream (Command Palette mode)
+						return handler.handle(
+							'',
+							undefined,
+							CancellationToken.None,
+						);
+					}),
+				);
 			}
 		}
 

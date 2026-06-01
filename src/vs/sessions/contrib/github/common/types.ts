@@ -3,8 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Codicon } from '../../../../base/common/codicons.js';
-import { themeColorFromId, ThemeIcon } from '../../../../base/common/themables.js';
+import { Codicon } from "../../../../base/common/codicons.js";
+import {
+	themeColorFromId,
+	ThemeIcon,
+} from "../../../../base/common/themables.js";
 
 //#region Session Context
 
@@ -34,7 +37,14 @@ export interface IGitHubRepository {
 export interface IGitHubChangedFile {
 	readonly filename: string;
 	readonly previous_filename: string | undefined;
-	readonly status: 'added' | 'removed' | 'modified' | 'renamed' | 'copied' | 'changed' | 'unchanged';
+	readonly status:
+		| "added"
+		| "removed"
+		| "modified"
+		| "renamed"
+		| "copied"
+		| "changed"
+		| "unchanged";
 	readonly additions: number;
 	readonly deletions: number;
 }
@@ -44,9 +54,9 @@ export interface IGitHubChangedFile {
 //#region Pull Request
 
 export const enum GitHubPullRequestState {
-	Open = 'open',
-	Closed = 'closed',
-	Merged = 'merged',
+	Open = "open",
+	Closed = "closed",
+	Merged = "merged",
 }
 
 export interface IGitHubUser {
@@ -72,12 +82,12 @@ export interface IGitHubPullRequest {
 }
 
 export const enum MergeBlockerKind {
-	ChangesRequested = 'changesRequested',
-	CIFailed = 'ciFailed',
-	ApprovalNeeded = 'approvalNeeded',
-	Conflicts = 'conflicts',
-	Draft = 'draft',
-	Unknown = 'unknown',
+	ChangesRequested = "changesRequested",
+	CIFailed = "ciFailed",
+	ApprovalNeeded = "approvalNeeded",
+	Conflicts = "conflicts",
+	Draft = "draft",
+	Unknown = "unknown",
 }
 
 export interface IMergeBlocker {
@@ -102,16 +112,30 @@ export interface IGitHubPullRequestReview {
  * Accepts both the `GitHubPullRequestState` enum values and the
  * metadata-only `'draft'` value the extension writes to session metadata.
  */
-export function computePullRequestIcon(state: GitHubPullRequestState | 'draft'): ThemeIcon {
+export function computePullRequestIcon(
+	state: GitHubPullRequestState | "draft",
+): ThemeIcon {
 	switch (state) {
 		case GitHubPullRequestState.Merged:
-			return { ...Codicon.gitPullRequestDone, color: themeColorFromId('charts.purple') };
+			return {
+				...Codicon.gitPullRequestDone,
+				color: themeColorFromId("charts.purple"),
+			};
 		case GitHubPullRequestState.Closed:
-			return { ...Codicon.gitPullRequestClosed, color: themeColorFromId('charts.red') };
-		case 'draft':
-			return { ...Codicon.gitPullRequestDraft, color: themeColorFromId('descriptionForeground') };
+			return {
+				...Codicon.gitPullRequestClosed,
+				color: themeColorFromId("charts.red"),
+			};
+		case "draft":
+			return {
+				...Codicon.gitPullRequestDraft,
+				color: themeColorFromId("descriptionForeground"),
+			};
 		case GitHubPullRequestState.Open:
-			return { ...Codicon.gitPullRequest, color: themeColorFromId('charts.green') };
+			return {
+				...Codicon.gitPullRequest,
+				color: themeColorFromId("charts.green"),
+			};
 	}
 }
 
@@ -148,20 +172,20 @@ export interface IGitHubPullRequestReviewThread {
 //#region CI Checks
 
 export const enum GitHubCheckStatus {
-	Queued = 'queued',
-	InProgress = 'in_progress',
-	Completed = 'completed',
+	Queued = "queued",
+	InProgress = "in_progress",
+	Completed = "completed",
 }
 
 export const enum GitHubCheckConclusion {
-	Success = 'success',
-	Failure = 'failure',
-	Neutral = 'neutral',
-	Cancelled = 'cancelled',
-	Skipped = 'skipped',
-	TimedOut = 'timed_out',
-	ActionRequired = 'action_required',
-	Stale = 'stale',
+	Success = "success",
+	Failure = "failure",
+	Neutral = "neutral",
+	Cancelled = "cancelled",
+	Skipped = "skipped",
+	TimedOut = "timed_out",
+	ActionRequired = "action_required",
+	Stale = "stale",
 }
 
 export interface IGitHubCICheck {
@@ -175,10 +199,10 @@ export interface IGitHubCICheck {
 }
 
 export const enum GitHubCIOverallStatus {
-	Pending = 'pending',
-	Success = 'success',
-	Failure = 'failure',
-	Neutral = 'neutral',
+	Pending = "pending",
+	Success = "success",
+	Failure = "failure",
+	Neutral = "neutral",
 }
 
 //#endregion

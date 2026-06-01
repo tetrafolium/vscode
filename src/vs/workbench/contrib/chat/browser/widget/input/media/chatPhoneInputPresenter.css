@@ -14,7 +14,9 @@
 	touch-action: manipulation;
 }
 
-.chat-input-picker-item .action-label.chat-phone-input-chip .chat-input-picker-label {
+.chat-input-picker-item
+	.action-label.chat-phone-input-chip
+	.chat-input-picker-label {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;

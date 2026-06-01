@@ -7,7 +7,10 @@ import * as childProcess from 'child_process';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Terminal, TerminalOptions } from 'vscode';
 import { ILogService } from '../../../../../../platform/log/common/logService';
-import { ITerminalService, NullTerminalService } from '../../../../../../platform/terminal/common/terminalService';
+import {
+	ITerminalService,
+	NullTerminalService,
+} from '../../../../../../platform/terminal/common/terminalService';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../util/common/test/testUtils';
 import { CancellationToken } from '../../../../../../util/vs/base/common/cancellation';
 import * as uuid from '../../../../../../util/vs/base/common/uuid';
@@ -48,7 +51,10 @@ class TestTerminalService extends NullTerminalService {
 	}
 }
 
-interface MockLanguageModelServer extends Pick<ClaudeLanguageModelServer, 'start' | 'getConfig'> {
+interface MockLanguageModelServer extends Pick<
+	ClaudeLanguageModelServer,
+	'start' | 'getConfig'
+> {
 	start: ReturnType<typeof vi.fn>;
 	getConfig: ReturnType<typeof vi.fn>;
 }
@@ -70,13 +76,19 @@ describe('TerminalSlashCommand', () => {
 		vi.spyOn(uuid, 'generateUuid').mockReturnValue(TEST_SESSION_ID);
 
 		// Setup execFile mock - default to claude being available
-		execFileMock = vi.fn((cmd: string, args: string[], callback: (error: Error | null) => void) => {
-			if (args[0] === 'claude') {
-				callback(null);
-			} else {
-				callback(new Error('not found'));
-			}
-		});
+		execFileMock = vi.fn(
+			(
+				cmd: string,
+				args: string[],
+				callback: (error: Error | null) => void,
+			) => {
+				if (args[0] === 'claude') {
+					callback(null);
+				} else {
+					callback(new Error('not found'));
+				}
+			},
+		);
 		vi.mocked(childProcess.execFile).mockImplementation(execFileMock);
 
 		// Create test terminal service
@@ -92,14 +104,18 @@ describe('TerminalSlashCommand', () => {
 		};
 
 		// Create testing services
-		const serviceCollection = store.add(createExtensionUnitTestingServices(store));
+		const serviceCollection = store.add(
+			createExtensionUnitTestingServices(store),
+		);
 		serviceCollection.set(ITerminalService, testTerminalService);
 
 		const accessor = serviceCollection.createTestingAccessor();
 		mockLogService = accessor.get(ILogService);
 		mockSessionStateService = accessor.get(IClaudeSessionStateService);
 
-		terminalCommand = accessor.get(IInstantiationService).createInstance(TerminalSlashCommand);
+		terminalCommand = accessor
+			.get(IInstantiationService)
+			.createInstance(TerminalSlashCommand);
 		// Set the mock language model server directly using defineProperty to bypass type checking
 		Object.defineProperty(terminalCommand, '_langModelServer', {
 			value: mockLanguageModelServer,
@@ -113,7 +129,9 @@ describe('TerminalSlashCommand', () => {
 		});
 
 		it('has correct description', () => {
-			expect(terminalCommand.description).toBe('Launch Claude Code CLI using your GitHub Copilot subscription');
+			expect(terminalCommand.description).toBe(
+				'Launch Claude Code CLI using your GitHub Copilot subscription',
+			);
 		});
 
 		it('has correct command ID', () => {
@@ -125,7 +143,11 @@ describe('TerminalSlashCommand', () => {
 		it('creates a terminal with correct environment variables', async () => {
 			const mockStream = new MockChatResponseStream();
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
 			expect(testTerminalService.createTerminalSpy).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -134,25 +156,36 @@ describe('TerminalSlashCommand', () => {
 						ANTHROPIC_BASE_URL: 'http://localhost:12345',
 						ANTHROPIC_AUTH_TOKEN: `test-nonce-123.${TEST_SESSION_ID}`,
 						CLAUDE_CODE_HIDE_ACCOUNT_INFO: '1',
-					}
-				})
+					},
+				}),
 			);
 		});
 
 		it('creates a terminal with styled message', async () => {
 			const mockStream = new MockChatResponseStream();
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
-			const createTerminalCall = testTerminalService.createTerminalSpy.mock.calls[0][0] as TerminalOptions;
+			const createTerminalCall = testTerminalService.createTerminalSpy
+				.mock.calls[0][0] as TerminalOptions;
 			expect(createTerminalCall.message).toContain('\x1b[0;104m');
-			expect(createTerminalCall.message).toContain('GitHub Copilot subscription');
+			expect(createTerminalCall.message).toContain(
+				'GitHub Copilot subscription',
+			);
 		});
 
 		it('shows the terminal after creation', async () => {
 			const mockStream = new MockChatResponseStream();
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
 			expect(testTerminalService.mockTerminal.show).toHaveBeenCalled();
 		});
@@ -160,51 +193,87 @@ describe('TerminalSlashCommand', () => {
 		it('sends claude command to terminal when claude is available', async () => {
 			const mockStream = new MockChatResponseStream();
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
-			expect(testTerminalService.mockTerminal.sendText).toHaveBeenCalledWith(`claude --session-id ${TEST_SESSION_ID}`);
+			expect(
+				testTerminalService.mockTerminal.sendText,
+			).toHaveBeenCalledWith(`claude --session-id ${TEST_SESSION_ID}`);
 		});
 
 		it('sends agency claude command when only agency is available', async () => {
 			// Mock: claude not available, agency available
-			execFileMock.mockImplementation((cmd: string, args: string[], callback: (error: Error | null) => void) => {
-				if (args[0] === 'agency') {
-					callback(null);
-				} else {
-					callback(new Error('not found'));
-				}
-			});
+			execFileMock.mockImplementation(
+				(
+					cmd: string,
+					args: string[],
+					callback: (error: Error | null) => void,
+				) => {
+					if (args[0] === 'agency') {
+						callback(null);
+					} else {
+						callback(new Error('not found'));
+					}
+				},
+			);
 
 			const mockStream = new MockChatResponseStream();
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
-			expect(testTerminalService.mockTerminal.sendText).toHaveBeenCalledWith(`agency claude --session-id ${TEST_SESSION_ID}`);
+			expect(
+				testTerminalService.mockTerminal.sendText,
+			).toHaveBeenCalledWith(
+				`agency claude --session-id ${TEST_SESSION_ID}`,
+			);
 		});
 
 		it('shows download button when neither CLI is available', async () => {
 			// Mock: neither claude nor agency available
-			execFileMock.mockImplementation((cmd: string, args: string[], callback: (error: Error | null) => void) => {
-				callback(new Error('not found'));
-			});
+			execFileMock.mockImplementation(
+				(
+					cmd: string,
+					args: string[],
+					callback: (error: Error | null) => void,
+				) => {
+					callback(new Error('not found'));
+				},
+			);
 
 			const mockStream = new MockChatResponseStream();
 			const buttonSpy = vi.spyOn(mockStream, 'button');
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
-			expect(mockStream.output.some(o => o.includes('not installed'))).toBe(true);
+			expect(
+				mockStream.output.some((o) => o.includes('not installed')),
+			).toBe(true);
 			expect(buttonSpy).toHaveBeenCalledWith(
 				expect.objectContaining({
 					command: 'vscode.open',
 					title: expect.stringContaining('Download'),
-				})
+				}),
 			);
-			expect(testTerminalService.createTerminalSpy).not.toHaveBeenCalled();
+			expect(
+				testTerminalService.createTerminalSpy,
+			).not.toHaveBeenCalled();
 		});
 
 		it('handles undefined stream gracefully', async () => {
-			await expect(terminalCommand.handle('', undefined, CancellationToken.None)).resolves.toBeDefined();
+			await expect(
+				terminalCommand.handle('', undefined, CancellationToken.None),
+			).resolves.toBeDefined();
 
 			expect(testTerminalService.createTerminalSpy).toHaveBeenCalled();
 			expect(testTerminalService.mockTerminal.show).toHaveBeenCalled();
@@ -218,23 +287,38 @@ describe('TerminalSlashCommand', () => {
 
 			const mockStream = new MockChatResponseStream();
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
-			expect(mockStream.output.some(o => o.includes('Error creating terminal'))).toBe(true);
+			expect(
+				mockStream.output.some((o) =>
+					o.includes('Error creating terminal'),
+				),
+			).toBe(true);
 		});
 
 		it('sets capturing token on session state service', async () => {
 			const mockStream = new MockChatResponseStream();
-			const setCapturingSpy = vi.spyOn(mockSessionStateService, 'setCapturingTokenForSession');
+			const setCapturingSpy = vi.spyOn(
+				mockSessionStateService,
+				'setCapturingTokenForSession',
+			);
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
 			expect(setCapturingSpy).toHaveBeenCalledWith(
 				TEST_SESSION_ID,
 				expect.objectContaining({
 					label: `Claude CLI (${TEST_SESSION_ID})`,
 					icon: 'claude',
-				})
+				}),
 			);
 		});
 
@@ -242,9 +326,17 @@ describe('TerminalSlashCommand', () => {
 			const mockStream = new MockChatResponseStream();
 			const infoSpy = vi.spyOn(mockLogService, 'info');
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
-			expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('Created terminal with Claude CLI configured on port 12345'));
+			expect(infoSpy).toHaveBeenCalledWith(
+				expect.stringContaining(
+					'Created terminal with Claude CLI configured on port 12345',
+				),
+			);
 		});
 
 		it('logs errors when terminal creation fails', async () => {
@@ -256,7 +348,11 @@ describe('TerminalSlashCommand', () => {
 			const mockStream = new MockChatResponseStream();
 			const errorSpy = vi.spyOn(mockLogService, 'error');
 
-			await terminalCommand.handle('', mockStream, CancellationToken.None);
+			await terminalCommand.handle(
+				'',
+				mockStream,
+				CancellationToken.None,
+			);
 
 			expect(errorSpy).toHaveBeenCalled();
 		});

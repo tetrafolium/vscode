@@ -6,10 +6,12 @@
 import { ILogService } from '../../platform/log/common/logService';
 import { Disposable, isDisposable } from '../../util/vs/base/common/lifecycle';
 import { StopWatch } from '../../util/vs/base/common/stopwatch';
-import { IInstantiationService, ServicesAccessor } from '../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../util/vs/platform/instantiation/common/instantiation';
 
 export interface IExtensionContribution {
-
 	id?: string;
 
 	/**
@@ -29,12 +31,14 @@ export interface IExtensionContributionFactory {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function asContributionFactory(ctor: { new(...args: any): any }): IExtensionContributionFactory {
+export function asContributionFactory(ctor: {
+	new (...args: any): any;
+}): IExtensionContributionFactory {
 	return {
 		create(accessor: ServicesAccessor): IExtensionContribution {
 			const instantiationService = accessor.get(IInstantiationService);
 			return instantiationService.createInstance(ctor);
-		}
+		},
 	};
 }
 
@@ -60,9 +64,13 @@ export class ContributionCollection extends Disposable {
 				if (instance?.activationBlocker) {
 					const sw = StopWatch.create();
 					const id = instance.id || 'UNKNOWN';
-					this.allActivationBlockers.push(instance.activationBlocker.finally(() => {
-						logService.info(`activationBlocker from '${id}' took for ${Math.round(sw.elapsed())}ms`);
-					}));
+					this.allActivationBlockers.push(
+						instance.activationBlocker.finally(() => {
+							logService.info(
+								`activationBlocker from '${id}' took for ${Math.round(sw.elapsed())}ms`,
+							);
+						}),
+					);
 				}
 			} catch (error) {
 				logService.error(error, `Error while loading contribution`);

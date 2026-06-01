@@ -12,33 +12,57 @@ import type { TelemetrySender } from 'vscode';
 import { ICopilotTokenStore } from '../../authentication/common/copilotTokenStore';
 import { ICAPIClientService } from '../../endpoint/common/capiClient';
 import { IEnvService } from '../../env/common/envService';
-import { createTrackingIdGetter, TelemetryProperties } from '../common/telemetry';
+import {
+	createTrackingIdGetter,
+	TelemetryProperties,
+} from '../common/telemetry';
 
 export function wrapEventNameForPrefixRemoval(eventName: string): string {
 	return `wrapped-telemetry-event-name-${eventName}-wrapped-telemetry-event-name`;
 }
 function isWrappedEventName(eventName: string): boolean {
-	return eventName.includes('wrapped-telemetry-event-name-') && eventName.endsWith('-wrapped-telemetry-event-name');
+	return (
+		eventName.includes('wrapped-telemetry-event-name-') &&
+		eventName.endsWith('-wrapped-telemetry-event-name')
+	);
 }
 export function unwrapEventNameFromPrefix(eventName: string): string {
-	const match = eventName.match(/wrapped-telemetry-event-name-(.*?)-wrapped-telemetry-event-name/);
+	const match = eventName.match(
+		/wrapped-telemetry-event-name-(.*?)-wrapped-telemetry-event-name/,
+	);
 	return match ? match[1] : eventName;
 }
 
 export class AzureInsightReporter implements TelemetrySender {
 	private readonly client: appInsights.TelemetryClient;
 	private readonly getTrackingId: () => string | undefined;
-	constructor(capiClientService: ICAPIClientService, envService: IEnvService, tokenStore: ICopilotTokenStore, private readonly namespace: string, key: string) {
-		this.client = createAppInsightsClient(capiClientService, envService, key);
+	constructor(
+		capiClientService: ICAPIClientService,
+		envService: IEnvService,
+		tokenStore: ICopilotTokenStore,
+		private readonly namespace: string,
+		key: string,
+	) {
+		this.client = createAppInsightsClient(
+			capiClientService,
+			envService,
+			key,
+		);
 		configureReporter(capiClientService, envService, this.client);
 		this.getTrackingId = createTrackingIdGetter(tokenStore);
 	}
 
-	private separateData(data: Record<string, any>): { properties: Record<string, any>; measurements: Record<string, number> } {
+	private separateData(data: Record<string, any>): {
+		properties: Record<string, any>;
+		measurements: Record<string, number>;
+	} {
 		if (data.properties !== undefined || data.measurements !== undefined) {
 			data.properties = data.properties || {};
 			data.measurements = data.measurements || {};
-			return data as { properties: Record<string, any>; measurements: Record<string, number> };
+			return data as {
+				properties: Record<string, any>;
+				measurements: Record<string, number>;
+			};
 		}
 		const properties: Record<string, any> = {};
 		const measurements: Record<string, number> = {};
@@ -52,14 +76,17 @@ export class AzureInsightReporter implements TelemetrySender {
 		return { properties, measurements };
 	}
 
-	sendEventData(eventName: string, data?: Record<string, any> | undefined): void {
+	sendEventData(
+		eventName: string,
+		data?: Record<string, any> | undefined,
+	): void {
 		const { properties, measurements } = this.separateData(data || {});
 		const trackingId = this.getTrackingId();
 		this.client.trackEvent({
 			name: this.massageEventName(eventName),
 			properties,
 			measurements,
-			tagOverrides: trackingId ? { 'ai.user.id': trackingId } : undefined
+			tagOverrides: trackingId ? { 'ai.user.id': trackingId } : undefined,
 		});
 	}
 
@@ -73,7 +100,7 @@ export class AzureInsightReporter implements TelemetrySender {
 	}
 
 	flush(): void | Thenable<void> {
-		return new Promise(resolve => {
+		return new Promise((resolve) => {
 			this.client.flush({
 				callback: () => {
 					resolve(undefined);
@@ -86,11 +113,17 @@ export class AzureInsightReporter implements TelemetrySender {
 		if (isWrappedEventName(eventName)) {
 			return unwrapEventNameFromPrefix(eventName);
 		}
-		return eventName.includes(this.namespace) ? eventName : `${this.namespace}/${eventName}`;
+		return eventName.includes(this.namespace)
+			? eventName
+			: `${this.namespace}/${eventName}`;
 	}
 }
 
-function createAppInsightsClient(capiClientService: ICAPIClientService, envService: IEnvService, key: string) {
+function createAppInsightsClient(
+	capiClientService: ICAPIClientService,
+	envService: IEnvService,
+	key: string,
+) {
 	const client = new appInsights.TelemetryClient(key);
 	client.config.enableAutoCollectRequests = false;
 	client.config.enableAutoCollectPerformance = false;
@@ -103,8 +136,15 @@ function createAppInsightsClient(capiClientService: ICAPIClientService, envServi
 	return client;
 }
 
-function configureReporter(capiClientService: ICAPIClientService, envService: IEnvService, client: appInsights.TelemetryClient): void {
-	client.commonProperties = decorateWithCommonProperties(client.commonProperties, envService);
+function configureReporter(
+	capiClientService: ICAPIClientService,
+	envService: IEnvService,
+	client: appInsights.TelemetryClient,
+): void {
+	client.commonProperties = decorateWithCommonProperties(
+		client.commonProperties,
+		envService,
+	);
 	// Do not want personal machine names to be sent
 	client.context.tags[client.context.keys.cloudRoleInstance] = 'REDACTED';
 
@@ -116,12 +156,17 @@ function configureReporter(capiClientService: ICAPIClientService, envService: IE
 	}
 }
 
-function decorateWithCommonProperties(properties: TelemetryProperties, envService: IEnvService): TelemetryProperties {
+function decorateWithCommonProperties(
+	properties: TelemetryProperties,
+	envService: IEnvService,
+): TelemetryProperties {
 	properties = properties || {};
 	properties['common_os'] = os.platform();
 	properties['common_platformversion'] = os.release();
 	properties['common_arch'] = os.arch();
-	properties['common_cpu'] = Array.from(new Set(os.cpus().map(c => c.model))).join();
+	properties['common_cpu'] = Array.from(
+		new Set(os.cpus().map((c) => c.model)),
+	).join();
 
 	// We have editor-agnostic fields but keep the vs-specific ones for backward compatibility
 	properties['common_vscodemachineid'] = envService.machineId;

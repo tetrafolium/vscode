@@ -17,11 +17,14 @@ export interface TabChangeEvent {
 	readonly changed: readonly TabInfo[];
 }
 
-export const ITabsAndEditorsService = createServiceIdentifier<ITabsAndEditorsService>('ITabsAndEditorsService');
+export const ITabsAndEditorsService =
+	createServiceIdentifier<ITabsAndEditorsService>('ITabsAndEditorsService');
 
 export interface ITabsAndEditorsService {
 	readonly _serviceBrand: undefined;
-	readonly onDidChangeActiveTextEditor: vscode.Event<vscode.TextEditor | undefined>;
+	readonly onDidChangeActiveTextEditor: vscode.Event<
+		vscode.TextEditor | undefined
+	>;
 	readonly activeTextEditor: vscode.TextEditor | undefined;
 	readonly visibleTextEditors: readonly vscode.TextEditor[];
 	readonly activeNotebookEditor: vscode.NotebookEditor | undefined;

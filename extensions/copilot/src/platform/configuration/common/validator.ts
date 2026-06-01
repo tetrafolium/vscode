@@ -6,7 +6,11 @@
 import { JsonSchema } from './jsonSchema';
 
 export interface IValidator<T> {
-	validate(content: unknown): { content: T; error: undefined } | { content: undefined; error: ValidationError };
+	validate(
+		content: unknown,
+	):
+		| { content: T; error: undefined }
+		| { content: undefined; error: ValidationError };
 
 	toSchema(): JsonSchema;
 
@@ -33,12 +37,23 @@ interface TypeOfMap {
 	symbol: symbol;
 }
 
-class TypeofValidator<TKey extends keyof TypeOfMap> implements IValidator<TypeOfMap[TKey]> {
-	constructor(private readonly type: TKey) { }
+class TypeofValidator<TKey extends keyof TypeOfMap> implements IValidator<
+	TypeOfMap[TKey]
+> {
+	constructor(private readonly type: TKey) {}
 
-	validate(content: unknown): { content: TypeOfMap[TKey]; error: undefined } | { content: undefined; error: ValidationError } {
+	validate(
+		content: unknown,
+	):
+		| { content: TypeOfMap[TKey]; error: undefined }
+		| { content: undefined; error: ValidationError } {
 		if (typeof content !== this.type) {
-			return { content: undefined, error: { message: `Expected ${this.type}, but got ${typeof content}` } };
+			return {
+				content: undefined,
+				error: {
+					message: `Expected ${this.type}, but got ${typeof content}`,
+				},
+			};
 		}
 
 		return { content: content as TypeOfMap[TKey], error: undefined };
@@ -50,24 +65,41 @@ class TypeofValidator<TKey extends keyof TypeOfMap> implements IValidator<TypeOf
 }
 
 const vStringValidator = new TypeofValidator('string');
-export function vString(): IValidator<string> { return vStringValidator; }
+export function vString(): IValidator<string> {
+	return vStringValidator;
+}
 
 const vNumberValidator = new TypeofValidator('number');
-export function vNumber(): IValidator<number> { return vNumberValidator; }
+export function vNumber(): IValidator<number> {
+	return vNumberValidator;
+}
 
 const vBooleanValidator = new TypeofValidator('boolean');
-export function vBoolean(): IValidator<boolean> { return vBooleanValidator; }
+export function vBoolean(): IValidator<boolean> {
+	return vBooleanValidator;
+}
 
 const vObjAnyValidator = new TypeofValidator('object');
-export function vObjAny(): IValidator<object> { return vObjAnyValidator; }
+export function vObjAny(): IValidator<object> {
+	return vObjAnyValidator;
+}
 
 const vUndefinedValidator = new TypeofValidator('undefined');
-export function vUndefined(): IValidator<undefined> { return vUndefinedValidator; }
+export function vUndefined(): IValidator<undefined> {
+	return vUndefinedValidator;
+}
 
 class NullValidator implements IValidator<null> {
-	validate(content: unknown): { content: null; error: undefined } | { content: undefined; error: ValidationError } {
+	validate(
+		content: unknown,
+	):
+		| { content: null; error: undefined }
+		| { content: undefined; error: ValidationError } {
 		if (content !== null) {
-			return { content: undefined, error: { message: `Expected null, but got ${typeof content}` } };
+			return {
+				content: undefined,
+				error: { message: `Expected null, but got ${typeof content}` },
+			};
 		}
 		return { content: null, error: undefined };
 	}
@@ -78,7 +110,9 @@ class NullValidator implements IValidator<null> {
 }
 
 const vNullValidator = new NullValidator();
-export function vNull(): IValidator<null> { return vNullValidator; }
+export function vNull(): IValidator<null> {
+	return vNullValidator;
+}
 
 export function vNullable<T>(validator: IValidator<T>): IValidator<T | null> {
 	return vUnion(validator, vNullValidator);
@@ -90,9 +124,7 @@ export function vUnchecked<T>(): IValidator<T> {
 			return { content: content as T, error: undefined };
 		},
 		toSchema() {
-			return {
-
-			};
+			return {};
 		},
 	};
 }
@@ -105,9 +137,16 @@ export type ObjectProperties = Record<string, any>;
 
 export function vRequired<T>(validator: IValidator<T>): IValidator<T> {
 	return {
-		validate(content: unknown): { content: T; error: undefined } | { content: undefined; error: ValidationError } {
+		validate(
+			content: unknown,
+		):
+			| { content: T; error: undefined }
+			| { content: undefined; error: ValidationError } {
 			if (content === undefined) {
-				return { content: undefined, error: { message: 'Required field is missing' } };
+				return {
+					content: undefined,
+					error: { message: 'Required field is missing' },
+				};
 			}
 			return validator.validate(content);
 		},
@@ -116,15 +155,24 @@ export function vRequired<T>(validator: IValidator<T>): IValidator<T> {
 		},
 		isRequired(): boolean {
 			return true;
-		}
+		},
 	};
 }
 
-export function vObj<T extends Record<string, IValidator<any>>>(properties: T): IValidator<{ [K in keyof T]: ValidatorType<T[K]> }> {
+export function vObj<T extends Record<string, IValidator<any>>>(
+	properties: T,
+): IValidator<{ [K in keyof T]: ValidatorType<T[K]> }> {
 	return {
-		validate(content: unknown): { content: any; error: undefined } | { content: undefined; error: ValidationError } {
+		validate(
+			content: unknown,
+		):
+			| { content: any; error: undefined }
+			| { content: undefined; error: ValidationError } {
 			if (typeof content !== 'object' || content === null) {
-				return { content: undefined, error: { message: 'Expected object' } };
+				return {
+					content: undefined,
+					error: { message: 'Expected object' },
+				};
 			}
 
 			const result: any = {};
@@ -135,7 +183,12 @@ export function vObj<T extends Record<string, IValidator<any>>>(properties: T): 
 				// Check if field is required and missing
 				const isRequired = validator.isRequired?.() ?? false;
 				if (isRequired && fieldValue === undefined) {
-					return { content: undefined, error: { message: `Required field '${key}' is missing` } };
+					return {
+						content: undefined,
+						error: {
+							message: `Required field '${key}' is missing`,
+						},
+					};
 				}
 
 				// If field is not required and is missing, skip validation
@@ -143,9 +196,15 @@ export function vObj<T extends Record<string, IValidator<any>>>(properties: T): 
 					continue;
 				}
 
-				const { content: value, error } = validator.validate(fieldValue);
+				const { content: value, error } =
+					validator.validate(fieldValue);
 				if (error) {
-					return { content: undefined, error: { message: `Error in property '${key}': ${error.message}` } };
+					return {
+						content: undefined,
+						error: {
+							message: `Error in property '${key}': ${error.message}`,
+						},
+					};
 				}
 
 				result[key] = value;
@@ -167,26 +226,42 @@ export function vObj<T extends Record<string, IValidator<any>>>(properties: T): 
 			const schema: JsonSchema = {
 				type: 'object',
 				properties: schemaProperties,
-				...(requiredFields.length > 0 ? { required: requiredFields } : {})
+				...(requiredFields.length > 0
+					? { required: requiredFields }
+					: {}),
 			};
 
 			return schema;
-		}
+		},
 	};
 }
 
 export function vArray<T>(validator: IValidator<T>): IValidator<T[]> {
 	return {
-		validate(content: unknown): { content: T[]; error: undefined } | { content: undefined; error: ValidationError } {
+		validate(
+			content: unknown,
+		):
+			| { content: T[]; error: undefined }
+			| { content: undefined; error: ValidationError } {
 			if (!Array.isArray(content)) {
-				return { content: undefined, error: { message: 'Expected array' } };
+				return {
+					content: undefined,
+					error: { message: 'Expected array' },
+				};
 			}
 
 			const result: T[] = [];
 			for (let i = 0; i < content.length; i++) {
-				const { content: value, error } = validator.validate(content[i]);
+				const { content: value, error } = validator.validate(
+					content[i],
+				);
 				if (error) {
-					return { content: undefined, error: { message: `Error in element ${i}: ${error.message}` } };
+					return {
+						content: undefined,
+						error: {
+							message: `Error in element ${i}: ${error.message}`,
+						},
+					};
 				}
 
 				result.push(value);
@@ -200,27 +275,48 @@ export function vArray<T>(validator: IValidator<T>): IValidator<T[]> {
 				type: 'array',
 				items: validator.toSchema(),
 			};
-		}
+		},
 	};
 }
 
-export function vTuple<T extends IValidator<any>[]>(...validators: T): IValidator<{ [K in keyof T]: ValidatorType<T[K]> }> {
+export function vTuple<T extends IValidator<any>[]>(
+	...validators: T
+): IValidator<{ [K in keyof T]: ValidatorType<T[K]> }> {
 	return {
-		validate(content: unknown): { content: any; error: undefined } | { content: undefined; error: ValidationError } {
+		validate(
+			content: unknown,
+		):
+			| { content: any; error: undefined }
+			| { content: undefined; error: ValidationError } {
 			if (!Array.isArray(content)) {
-				return { content: undefined, error: { message: 'Expected array' } };
+				return {
+					content: undefined,
+					error: { message: 'Expected array' },
+				};
 			}
 
 			if (content.length !== validators.length) {
-				return { content: undefined, error: { message: `Expected tuple of length ${validators.length}, but got ${content.length}` } };
+				return {
+					content: undefined,
+					error: {
+						message: `Expected tuple of length ${validators.length}, but got ${content.length}`,
+					},
+				};
 			}
 
 			const result: any = [];
 			for (let i = 0; i < validators.length; i++) {
 				const validator = validators[i];
-				const { content: value, error } = validator.validate(content[i]);
+				const { content: value, error } = validator.validate(
+					content[i],
+				);
 				if (error) {
-					return { content: undefined, error: { message: `Error in element ${i}: ${error.message}` } };
+					return {
+						content: undefined,
+						error: {
+							message: `Error in element ${i}: ${error.message}`,
+						},
+					};
 				}
 
 				result.push(value);
@@ -232,15 +328,21 @@ export function vTuple<T extends IValidator<any>[]>(...validators: T): IValidato
 		toSchema(): JsonSchema {
 			return {
 				type: 'array',
-				items: validators.map(validator => validator.toSchema()),
+				items: validators.map((validator) => validator.toSchema()),
 			};
-		}
+		},
 	};
 }
 
-export function vUnion<T extends IValidator<any>[]>(...validators: T): IValidator<ValidatorType<T[number]>> {
+export function vUnion<T extends IValidator<any>[]>(
+	...validators: T
+): IValidator<ValidatorType<T[number]>> {
 	return {
-		validate(content: unknown): { content: any; error: undefined } | { content: undefined; error: ValidationError } {
+		validate(
+			content: unknown,
+		):
+			| { content: any; error: undefined }
+			| { content: undefined; error: ValidationError } {
 			let lastError: ValidationError | undefined;
 			for (const validator of validators) {
 				const { content: value, error } = validator.validate(content);
@@ -256,17 +358,24 @@ export function vUnion<T extends IValidator<any>[]>(...validators: T): IValidato
 
 		toSchema(): JsonSchema {
 			return {
-				oneOf: validators.map(validator => validator.toSchema()),
+				oneOf: validators.map((validator) => validator.toSchema()),
 			};
-		}
+		},
 	};
 }
 
 export function vEnum<T extends string[]>(...values: T): IValidator<T[number]> {
 	return {
-		validate(content: unknown): { content: any; error: undefined } | { content: undefined; error: ValidationError } {
+		validate(
+			content: unknown,
+		):
+			| { content: any; error: undefined }
+			| { content: undefined; error: ValidationError } {
 			if (values.indexOf(content as any) === -1) {
-				return { content: undefined, error: { message: `Expected one of: ${values.join(', ')}` } };
+				return {
+					content: undefined,
+					error: { message: `Expected one of: ${values.join(', ')}` },
+				};
 			}
 
 			return { content, error: undefined };
@@ -276,15 +385,22 @@ export function vEnum<T extends string[]>(...values: T): IValidator<T[number]> {
 			return {
 				enum: values,
 			};
-		}
+		},
 	};
 }
 
 export function vLiteral<T extends string>(value: T): IValidator<T> {
 	return {
-		validate(content: unknown): { content: any; error: undefined } | { content: undefined; error: ValidationError } {
+		validate(
+			content: unknown,
+		):
+			| { content: any; error: undefined }
+			| { content: undefined; error: ValidationError } {
 			if (content !== value) {
-				return { content: undefined, error: { message: `Expected: ${value}` } };
+				return {
+					content: undefined,
+					error: { message: `Expected: ${value}` },
+				};
 			}
 
 			return { content, error: undefined };
@@ -294,18 +410,22 @@ export function vLiteral<T extends string>(value: T): IValidator<T> {
 			return {
 				const: value,
 			};
-		}
+		},
 	};
 }
 
 export function vLazy<T>(fn: () => IValidator<T>): IValidator<T> {
 	return {
-		validate(content: unknown): { content: any; error: undefined } | { content: undefined; error: ValidationError } {
+		validate(
+			content: unknown,
+		):
+			| { content: any; error: undefined }
+			| { content: undefined; error: ValidationError } {
 			return fn().validate(content);
 		},
 
 		toSchema(): JsonSchema {
 			return fn().toSchema();
-		}
+		},
 	};
 }

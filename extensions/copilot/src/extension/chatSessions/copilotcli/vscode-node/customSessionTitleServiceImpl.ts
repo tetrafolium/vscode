@@ -12,26 +12,39 @@ import { ChatTitleProvider } from '../../../prompt/node/title';
 import { IChatSessionMetadataStore } from '../../common/chatSessionMetadataStore';
 import { ICustomSessionTitleService } from '../common/customSessionTitleService';
 
-const CUSTOM_SESSION_TITLE_MEMENTO_KEY = 'github.copilot.cli.customSessionTitles';
+const CUSTOM_SESSION_TITLE_MEMENTO_KEY =
+	'github.copilot.cli.customSessionTitles';
 
 export class CustomSessionTitleService implements ICustomSessionTitleService {
 	declare readonly _serviceBrand: undefined;
 	private readonly _keyedSessionGenerator = new SequencerByKey<string>();
 
 	constructor(
-		@IVSCodeExtensionContext private readonly context: IVSCodeExtensionContext,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IVSCodeExtensionContext
+		private readonly context: IVSCodeExtensionContext,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@ILogService private readonly logService: ILogService,
-		@IChatSessionMetadataStore private readonly chatSessionMetadataStore: IChatSessionMetadataStore,
-	) { }
+		@IChatSessionMetadataStore
+		private readonly chatSessionMetadataStore: IChatSessionMetadataStore,
+	) {}
 
-	private _getCustomSessionTitles(): { [sessionId: string]: { title: string; updatedAt: number } | undefined } {
-		return this.context.globalState.get<{ [sessionId: string]: { title: string; updatedAt: number } | undefined }>(CUSTOM_SESSION_TITLE_MEMENTO_KEY, {});
+	private _getCustomSessionTitles(): {
+		[sessionId: string]: { title: string; updatedAt: number } | undefined;
+	} {
+		return this.context.globalState.get<{
+			[sessionId: string]:
+				| { title: string; updatedAt: number }
+				| undefined;
+		}>(CUSTOM_SESSION_TITLE_MEMENTO_KEY, {});
 	}
 
-	public async getCustomSessionTitle(sessionId: string): Promise<string | undefined> {
+	public async getCustomSessionTitle(
+		sessionId: string,
+	): Promise<string | undefined> {
 		// First check the metadata store (new storage location).
-		const metadataTitle = await this.chatSessionMetadataStore.getCustomTitle(sessionId);
+		const metadataTitle =
+			await this.chatSessionMetadataStore.getCustomTitle(sessionId);
 		if (metadataTitle) {
 			return metadataTitle;
 		}
@@ -46,34 +59,67 @@ export class CustomSessionTitleService implements ICustomSessionTitleService {
 
 		// Migrate: store in metadata file and remove from global storage.
 		await Promise.all([
-			this.chatSessionMetadataStore.setCustomTitle(sessionId, entry.title),
-			this.context.globalState.update(CUSTOM_SESSION_TITLE_MEMENTO_KEY, Object.keys(entries).length > 0 ? entries : undefined)
+			this.chatSessionMetadataStore.setCustomTitle(
+				sessionId,
+				entry.title,
+			),
+			this.context.globalState.update(
+				CUSTOM_SESSION_TITLE_MEMENTO_KEY,
+				Object.keys(entries).length > 0 ? entries : undefined,
+			),
 		]);
 
 		return entry.title;
 	}
 
-	public async setCustomSessionTitle(sessionId: string, title: string): Promise<void> {
+	public async setCustomSessionTitle(
+		sessionId: string,
+		title: string,
+	): Promise<void> {
 		await this.chatSessionMetadataStore.setCustomTitle(sessionId, title);
 	}
 
-	public async generateSessionTitle(sessionId: string, request: { prompt?: string; command?: string }, token: CancellationToken): Promise<string | undefined> {
-		return this._keyedSessionGenerator.queue(sessionId, () => this.generateSessionTitleImpl(sessionId, request, token));
+	public async generateSessionTitle(
+		sessionId: string,
+		request: { prompt?: string; command?: string },
+		token: CancellationToken,
+	): Promise<string | undefined> {
+		return this._keyedSessionGenerator.queue(sessionId, () =>
+			this.generateSessionTitleImpl(sessionId, request, token),
+		);
 	}
 
-	private async generateSessionTitleImpl(sessionId: string, request: { prompt?: string; command?: string }, token: CancellationToken): Promise<string | undefined> {
+	private async generateSessionTitleImpl(
+		sessionId: string,
+		request: { prompt?: string; command?: string },
+		token: CancellationToken,
+	): Promise<string | undefined> {
 		if (!request.prompt && !request.command) {
 			return undefined;
 		}
 		try {
-			const titleProvider = this.instantiationService.createInstance(ChatTitleProvider);
+			const titleProvider =
+				this.instantiationService.createInstance(ChatTitleProvider);
 			// Construct a minimal ChatContext with the current request as a history entry so provideChatTitle can find it
-			const requestTurn = new ChatRequestTurn2(request.prompt ?? '', request.command, [], '', [], [], undefined, undefined, undefined);
+			const requestTurn = new ChatRequestTurn2(
+				request.prompt ?? '',
+				request.command,
+				[],
+				'',
+				[],
+				[],
+				undefined,
+				undefined,
+				undefined,
+			);
 			const fakeContext: ChatContext = {
 				history: [requestTurn],
 				yieldRequested: false,
 			};
-			const title = await titleProvider.provideChatTitle(fakeContext, token);
+			const title = await titleProvider.provideChatTitle(
+				fakeContext,
+				token,
+			);
 			if (title) {
 				return title;
 			}
@@ -81,5 +127,4 @@ export class CustomSessionTitleService implements ICustomSessionTitleService {
 			this.logService.error('Failed to generate session title', error);
 		}
 	}
-
 }

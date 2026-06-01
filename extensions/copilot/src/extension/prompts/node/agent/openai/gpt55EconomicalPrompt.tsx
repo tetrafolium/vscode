@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { PromptSizing } from '@vscode/prompt-tsx';
-import { ConfigKey, IConfigurationService } from '../../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../../platform/configuration/common/configurationService';
 import { IExperimentationService } from '../../../../../platform/telemetry/common/nullExperimentationService';
 import { DefaultAgentPromptProps } from '../defaultAgentInstructions';
 import { Gpt55PromptBase, Gpt55ReminderInstructions } from './gpt55BasePrompt';
@@ -14,11 +17,17 @@ export class Gpt55EconomicalSearchAndEditPromptExp extends Gpt55PromptBase {
 
 	constructor(
 		props: DefaultAgentPromptProps,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@IExperimentationService private readonly experimentationService: IExperimentationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
+		@IExperimentationService
+		private readonly experimentationService: IExperimentationService,
 	) {
 		super(props);
-		Gpt55EconomicalSearchAndEditPromptExp.isEnabled = this.configurationService.getExperimentBasedConfig(ConfigKey.EnableGpt55EconomicalSearchAndEdit, this.experimentationService);
+		Gpt55EconomicalSearchAndEditPromptExp.isEnabled =
+			this.configurationService.getExperimentBasedConfig(
+				ConfigKey.EnableGpt55EconomicalSearchAndEdit,
+				this.experimentationService,
+			);
 	}
 
 	protected override get includeEconomicalSearchAndEdit(): boolean {
@@ -35,4 +44,4 @@ export class Gpt55EconomicalSearchAndEditPromptExp extends Gpt55PromptBase {
 	}
 }
 
-export class Gpt55EconomicalSearchAndEditPromptExpReminderInstructions extends Gpt55ReminderInstructions { }
+export class Gpt55EconomicalSearchAndEditPromptExpReminderInstructions extends Gpt55ReminderInstructions {}

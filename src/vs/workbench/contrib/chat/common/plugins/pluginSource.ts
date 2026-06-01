@@ -3,9 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../base/common/uri.js';
-import { IEnsureRepositoryOptions, IPullRepositoryOptions } from './agentPluginRepositoryService.js';
-import { IMarketplacePlugin, IPluginSourceDescriptor, PluginSourceKind } from './pluginMarketplaceService.js';
+import { URI } from "../../../../../base/common/uri.js";
+import {
+	IEnsureRepositoryOptions,
+	IPullRepositoryOptions,
+} from "./agentPluginRepositoryService.js";
+import {
+	IMarketplacePlugin,
+	IPluginSourceDescriptor,
+	PluginSourceKind,
+} from "./pluginMarketplaceService.js";
 
 /**
  * Per-kind strategy that centralizes install-path computation, source
@@ -29,13 +36,21 @@ export interface IPluginSource {
 	 * Ensure the plugin source is available locally (clone, npm install, etc.).
 	 * Returns the install directory URI.
 	 */
-	ensure(cacheRoot: URI, plugin: IMarketplacePlugin, options?: IEnsureRepositoryOptions): Promise<URI>;
+	ensure(
+		cacheRoot: URI,
+		plugin: IMarketplacePlugin,
+		options?: IEnsureRepositoryOptions,
+	): Promise<URI>;
 
 	/**
 	 * Update an already-installed plugin source (git pull, npm update, etc.).
 	 * Returns `true` if the update brought in new changes.
 	 */
-	update(cacheRoot: URI, plugin: IMarketplacePlugin, options?: IPullRepositoryOptions): Promise<boolean>;
+	update(
+		cacheRoot: URI,
+		plugin: IMarketplacePlugin,
+		options?: IPullRepositoryOptions,
+	): Promise<boolean>;
 
 	/**
 	 * Returns the on-disk directory to delete when this plugin is
@@ -45,7 +60,10 @@ export interface IPluginSource {
 	 * a marketplace repository cache. Direct sources (github, url, npm,
 	 * pip) return the directory they own.
 	 */
-	getCleanupTarget(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI | undefined;
+	getCleanupTarget(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI | undefined;
 
 	/**
 	 * Returns a human-readable label for a source descriptor of this kind,
@@ -60,5 +78,10 @@ export interface IPluginSource {
 	 *
 	 * Not implemented by non-package-manager sources.
 	 */
-	runInstall?(installDir: URI, pluginDir: URI, plugin: IMarketplacePlugin, options?: { silent?: boolean }): Promise<{ pluginDir: URI } | undefined>;
+	runInstall?(
+		installDir: URI,
+		pluginDir: URI,
+		plugin: IMarketplacePlugin,
+		options?: { silent?: boolean },
+	): Promise<{ pluginDir: URI } | undefined>;
 }

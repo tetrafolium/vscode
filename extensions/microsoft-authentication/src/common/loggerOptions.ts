@@ -3,24 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LogLevel as MsalLogLevel } from '@azure/msal-node';
-import { env, LogLevel, LogOutputChannel } from 'vscode';
-import { MicrosoftAuthenticationTelemetryReporter } from './telemetryReporter';
+import { LogLevel as MsalLogLevel } from "@azure/msal-node";
+import { env, LogLevel, LogOutputChannel } from "vscode";
+import { MicrosoftAuthenticationTelemetryReporter } from "./telemetryReporter";
 
 export class MsalLoggerOptions {
 	piiLoggingEnabled = false;
 
 	constructor(
 		private readonly _output: LogOutputChannel,
-		private readonly _telemtryReporter: MicrosoftAuthenticationTelemetryReporter
-	) { }
+		private readonly _telemtryReporter: MicrosoftAuthenticationTelemetryReporter,
+	) {}
 
 	get logLevel(): MsalLogLevel {
 		return this._toMsalLogLevel(env.logLevel);
 	}
 
-	loggerCallback(level: MsalLogLevel, message: string, _containsPii: boolean): void {
-
+	loggerCallback(
+		level: MsalLogLevel,
+		message: string,
+		_containsPii: boolean,
+	): void {
 		// Log to output channel one level lower than the MSAL log level
 		switch (level) {
 			case MsalLogLevel.Error:

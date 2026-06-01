@@ -5,8 +5,7 @@
 
 // @alexr00 https://github.com/microsoft/vscode/issues/302393
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	export interface LanguageModelToolConfirmationMessages {
 		/**
 		 * When set, a button will be shown allowing the user to approve this particular

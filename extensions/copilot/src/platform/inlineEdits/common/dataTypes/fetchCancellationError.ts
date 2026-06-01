@@ -6,9 +6,7 @@
 import { CancellationError } from '../../../../util/vs/base/common/errors';
 
 export class FetchCancellationError extends CancellationError {
-	constructor(
-		public readonly extraInformation?: string
-	) {
+	constructor(public readonly extraInformation?: string) {
 		super();
 	}
 }

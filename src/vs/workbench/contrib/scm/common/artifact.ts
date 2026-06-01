@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../base/common/uri.js';
-import { Event } from '../../../../base/common/event.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { ISCMRepository } from './scm.js';
-import { Command } from '../../../../editor/common/languages.js';
+import { URI } from "../../../../base/common/uri.js";
+import { Event } from "../../../../base/common/event.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import { ISCMRepository } from "./scm.js";
+import { Command } from "../../../../editor/common/languages.js";
 
 export interface ISCMArtifactProvider {
 	readonly onDidChangeArtifacts: Event<string[]>;
@@ -34,7 +34,7 @@ export interface ISCMArtifact {
 export interface SCMArtifactGroupTreeElement {
 	readonly repository: ISCMRepository;
 	readonly artifactGroup: ISCMArtifactGroup;
-	readonly type: 'artifactGroup';
+	readonly type: "artifactGroup";
 }
 
 export interface SCMArtifactTreeElement {
@@ -42,5 +42,5 @@ export interface SCMArtifactTreeElement {
 	readonly group: ISCMArtifactGroup;
 	readonly artifact: ISCMArtifact;
 	readonly hideTimestamp: boolean;
-	readonly type: 'artifact';
+	readonly type: "artifact";
 }

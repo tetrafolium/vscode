@@ -16,7 +16,7 @@ export const EXPAND_UNTIL_COUNT = START_GROUPING_AFTER_TOOL_COUNT;
  * If we have an opportunity to re-collapse during summarization, do so if the
  * number of tools exceeds this threshold.
  */
-export const TRIM_THRESHOLD = HARD_TOOL_LIMIT * 3 / 4; // 96, currently
+export const TRIM_THRESHOLD = (HARD_TOOL_LIMIT * 3) / 4; // 96, currently
 
 /**
  * By default we group all MCP/extension tools together. If the number of tools
@@ -32,7 +32,8 @@ export const MIN_TOOLSET_SIZE_TO_GROUP = 2;
 export const NUM_EMBED_MATCHED_TOOLS = 10;
 
 /** Maximum number of tools and groups that will be presented to the LLM when all collapsed. */
-export const TOOLS_AND_GROUPS_LIMIT = HARD_TOOL_LIMIT - NUM_EMBED_MATCHED_TOOLS - 30;
+export const TOOLS_AND_GROUPS_LIMIT =
+	HARD_TOOL_LIMIT - NUM_EMBED_MATCHED_TOOLS - 30;
 
 /** Max number of times to retrying categorization in the event of failures. */
 export const MAX_CATEGORIZATION_RETRIES = 3;
@@ -44,4 +45,5 @@ export const MAX_GROUPS_PER_CHUNK = 16;
 export const UNCATEGORIZED_TOOLS_GROUP_NAME = 'uncategorized_tools';
 
 /** Summary for the group containing tools that could not be automatically categorized */
-export const UNCATEGORIZED_TOOLS_GROUP_SUMMARY = 'Tools that could not be automatically categorized into existing groups.';
+export const UNCATEGORIZED_TOOLS_GROUP_SUMMARY =
+	'Tools that could not be automatically categorized into existing groups.';

@@ -3,13 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IObservable } from '../../../../../base/common/observable.js'; import { URI } from '../../../../../base/common/uri.js';
-import type { IAgentPlugin } from '../../common/plugins/agentPluginService.js';
-import type { IMarketplacePlugin, IMarketplaceReference, IPluginSourceDescriptor, MarketplaceType } from '../../common/plugins/pluginMarketplaceService.js';
+import { IObservable } from "../../../../../base/common/observable.js";
+import { URI } from "../../../../../base/common/uri.js";
+import type { IAgentPlugin } from "../../common/plugins/agentPluginService.js";
+import type {
+	IMarketplacePlugin,
+	IMarketplaceReference,
+	IPluginSourceDescriptor,
+	MarketplaceType,
+} from "../../common/plugins/pluginMarketplaceService.js";
 
 export const enum AgentPluginItemKind {
-	Installed = 'installed',
-	Marketplace = 'marketplace',
+	Installed = "installed",
+	Marketplace = "marketplace",
 }
 
 export interface IInstalledPluginItem {

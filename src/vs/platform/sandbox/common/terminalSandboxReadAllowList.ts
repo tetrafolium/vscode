@@ -3,77 +3,84 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OperatingSystem } from '../../../base/common/platform.js';
-import type { ITerminalSandboxCommand } from './terminalSandboxService.js';
-import { gitGlobalOptionsWithValue, type ITerminalSandboxCommandRule, matchesTerminalSandboxCommandRule } from './terminalSandboxCommandRules.js';
+import { OperatingSystem } from "../../../base/common/platform.js";
+import type { ITerminalSandboxCommand } from "./terminalSandboxService.js";
+import {
+	gitGlobalOptionsWithValue,
+	type ITerminalSandboxCommandRule,
+	matchesTerminalSandboxCommandRule,
+} from "./terminalSandboxCommandRules.js";
 
 export const enum TerminalSandboxReadAllowListOperation {
-	Git = 'git',
-	Node = 'node',
-	Rust = 'rust',
-	Go = 'go',
-	Python = 'python',
-	Java = 'java',
-	Dotnet = 'dotnet',
-	Nuget = 'nuget',
-	Msbuild = 'msbuild',
-	Ruby = 'ruby',
-	NativeBuild = 'nativeBuild',
-	Conan = 'conan',
-	GnuPG = 'gnupg',
+	Git = "git",
+	Node = "node",
+	Rust = "rust",
+	Go = "go",
+	Python = "python",
+	Java = "java",
+	Dotnet = "dotnet",
+	Nuget = "nuget",
+	Msbuild = "msbuild",
+	Ruby = "ruby",
+	NativeBuild = "nativeBuild",
+	Conan = "conan",
+	GnuPG = "gnupg",
 }
 
-const terminalSandboxReadAllowListKeywordMap: ReadonlyMap<string, TerminalSandboxReadAllowListOperation> = new Map([
-	['git', TerminalSandboxReadAllowListOperation.Git],
-	['gh', TerminalSandboxReadAllowListOperation.Git],
-	['node', TerminalSandboxReadAllowListOperation.Node],
-	['npm', TerminalSandboxReadAllowListOperation.Node],
-	['npx', TerminalSandboxReadAllowListOperation.Node],
-	['pnpm', TerminalSandboxReadAllowListOperation.Node],
-	['yarn', TerminalSandboxReadAllowListOperation.Node],
-	['corepack', TerminalSandboxReadAllowListOperation.Node],
-	['bun', TerminalSandboxReadAllowListOperation.Node],
-	['deno', TerminalSandboxReadAllowListOperation.Node],
-	['nvm', TerminalSandboxReadAllowListOperation.Node],
-	['volta', TerminalSandboxReadAllowListOperation.Node],
-	['fnm', TerminalSandboxReadAllowListOperation.Node],
-	['asdf', TerminalSandboxReadAllowListOperation.Node],
-	['mise', TerminalSandboxReadAllowListOperation.Node],
-	['cargo', TerminalSandboxReadAllowListOperation.Rust],
-	['rustc', TerminalSandboxReadAllowListOperation.Rust],
-	['rustup', TerminalSandboxReadAllowListOperation.Rust],
-	['go', TerminalSandboxReadAllowListOperation.Go],
-	['gofmt', TerminalSandboxReadAllowListOperation.Go],
-	['python', TerminalSandboxReadAllowListOperation.Python],
-	['python3', TerminalSandboxReadAllowListOperation.Python],
-	['pip', TerminalSandboxReadAllowListOperation.Python],
-	['pip3', TerminalSandboxReadAllowListOperation.Python],
-	['poetry', TerminalSandboxReadAllowListOperation.Python],
-	['uv', TerminalSandboxReadAllowListOperation.Python],
-	['pipx', TerminalSandboxReadAllowListOperation.Python],
-	['pyenv', TerminalSandboxReadAllowListOperation.Python],
-	['java', TerminalSandboxReadAllowListOperation.Java],
-	['javac', TerminalSandboxReadAllowListOperation.Java],
-	['jar', TerminalSandboxReadAllowListOperation.Java],
-	['mvn', TerminalSandboxReadAllowListOperation.Java],
-	['mvnw', TerminalSandboxReadAllowListOperation.Java],
-	['gradle', TerminalSandboxReadAllowListOperation.Java],
-	['gradlew', TerminalSandboxReadAllowListOperation.Java],
-	['sdk', TerminalSandboxReadAllowListOperation.Java],
-	['dotnet', TerminalSandboxReadAllowListOperation.Dotnet],
-	['nuget', TerminalSandboxReadAllowListOperation.Nuget],
-	['msbuild', TerminalSandboxReadAllowListOperation.Msbuild],
-	['ruby', TerminalSandboxReadAllowListOperation.Ruby],
-	['gem', TerminalSandboxReadAllowListOperation.Ruby],
-	['bundle', TerminalSandboxReadAllowListOperation.Ruby],
-	['bundler', TerminalSandboxReadAllowListOperation.Ruby],
-	['rake', TerminalSandboxReadAllowListOperation.Ruby],
-	['rbenv', TerminalSandboxReadAllowListOperation.Ruby],
-	['rvm', TerminalSandboxReadAllowListOperation.Ruby],
-	['ccache', TerminalSandboxReadAllowListOperation.NativeBuild],
-	['sccache', TerminalSandboxReadAllowListOperation.NativeBuild],
-	['cmake', TerminalSandboxReadAllowListOperation.NativeBuild],
-	['conan', TerminalSandboxReadAllowListOperation.Conan],
+const terminalSandboxReadAllowListKeywordMap: ReadonlyMap<
+	string,
+	TerminalSandboxReadAllowListOperation
+> = new Map([
+	["git", TerminalSandboxReadAllowListOperation.Git],
+	["gh", TerminalSandboxReadAllowListOperation.Git],
+	["node", TerminalSandboxReadAllowListOperation.Node],
+	["npm", TerminalSandboxReadAllowListOperation.Node],
+	["npx", TerminalSandboxReadAllowListOperation.Node],
+	["pnpm", TerminalSandboxReadAllowListOperation.Node],
+	["yarn", TerminalSandboxReadAllowListOperation.Node],
+	["corepack", TerminalSandboxReadAllowListOperation.Node],
+	["bun", TerminalSandboxReadAllowListOperation.Node],
+	["deno", TerminalSandboxReadAllowListOperation.Node],
+	["nvm", TerminalSandboxReadAllowListOperation.Node],
+	["volta", TerminalSandboxReadAllowListOperation.Node],
+	["fnm", TerminalSandboxReadAllowListOperation.Node],
+	["asdf", TerminalSandboxReadAllowListOperation.Node],
+	["mise", TerminalSandboxReadAllowListOperation.Node],
+	["cargo", TerminalSandboxReadAllowListOperation.Rust],
+	["rustc", TerminalSandboxReadAllowListOperation.Rust],
+	["rustup", TerminalSandboxReadAllowListOperation.Rust],
+	["go", TerminalSandboxReadAllowListOperation.Go],
+	["gofmt", TerminalSandboxReadAllowListOperation.Go],
+	["python", TerminalSandboxReadAllowListOperation.Python],
+	["python3", TerminalSandboxReadAllowListOperation.Python],
+	["pip", TerminalSandboxReadAllowListOperation.Python],
+	["pip3", TerminalSandboxReadAllowListOperation.Python],
+	["poetry", TerminalSandboxReadAllowListOperation.Python],
+	["uv", TerminalSandboxReadAllowListOperation.Python],
+	["pipx", TerminalSandboxReadAllowListOperation.Python],
+	["pyenv", TerminalSandboxReadAllowListOperation.Python],
+	["java", TerminalSandboxReadAllowListOperation.Java],
+	["javac", TerminalSandboxReadAllowListOperation.Java],
+	["jar", TerminalSandboxReadAllowListOperation.Java],
+	["mvn", TerminalSandboxReadAllowListOperation.Java],
+	["mvnw", TerminalSandboxReadAllowListOperation.Java],
+	["gradle", TerminalSandboxReadAllowListOperation.Java],
+	["gradlew", TerminalSandboxReadAllowListOperation.Java],
+	["sdk", TerminalSandboxReadAllowListOperation.Java],
+	["dotnet", TerminalSandboxReadAllowListOperation.Dotnet],
+	["nuget", TerminalSandboxReadAllowListOperation.Nuget],
+	["msbuild", TerminalSandboxReadAllowListOperation.Msbuild],
+	["ruby", TerminalSandboxReadAllowListOperation.Ruby],
+	["gem", TerminalSandboxReadAllowListOperation.Ruby],
+	["bundle", TerminalSandboxReadAllowListOperation.Ruby],
+	["bundler", TerminalSandboxReadAllowListOperation.Ruby],
+	["rake", TerminalSandboxReadAllowListOperation.Ruby],
+	["rbenv", TerminalSandboxReadAllowListOperation.Ruby],
+	["rvm", TerminalSandboxReadAllowListOperation.Ruby],
+	["ccache", TerminalSandboxReadAllowListOperation.NativeBuild],
+	["sccache", TerminalSandboxReadAllowListOperation.NativeBuild],
+	["cmake", TerminalSandboxReadAllowListOperation.NativeBuild],
+	["conan", TerminalSandboxReadAllowListOperation.Conan],
 ]);
 
 /**
@@ -85,7 +92,10 @@ const terminalSandboxReadAllowListKeywordMap: ReadonlyMap<string, TerminalSandbo
  * subcommands that require them.
  */
 
-function getTerminalSandboxReadAllowListForOperation(operation: TerminalSandboxReadAllowListOperation, os: OperatingSystem): readonly string[] {
+function getTerminalSandboxReadAllowListForOperation(
+	operation: TerminalSandboxReadAllowListOperation,
+	os: OperatingSystem,
+): readonly string[] {
 	if (os === OperatingSystem.Windows) {
 		return [];
 	}
@@ -97,12 +107,12 @@ function getTerminalSandboxReadAllowListForOperation(operation: TerminalSandboxR
 				case OperatingSystem.Linux:
 				default:
 					return [
-						'~/.gitconfig',
-						'~/.config/git/config',
-						'~/.gitignore',
-						'~/.gitignore_global',
-						'~/.config/git/ignore',
-						'~/.config/git/attributes',
+						"~/.gitconfig",
+						"~/.config/git/config",
+						"~/.gitignore",
+						"~/.gitignore_global",
+						"~/.config/git/ignore",
+						"~/.config/git/attributes",
 					];
 			}
 
@@ -110,58 +120,58 @@ function getTerminalSandboxReadAllowListForOperation(operation: TerminalSandboxR
 			switch (os) {
 				case OperatingSystem.Macintosh:
 					return [
-						'~/.npm',
-						'~/Library/Caches/node',
-						'~/Library/Caches/electron',
-						'~/Library/Caches/ms-playwright',
-						'~/Library/Caches/Yarn',
-						'~/Library/Caches/deno',
-						'~/Library/pnpm',
-						'~/.electron-gyp',
-						'~/.node-gyp',
-						'~/.yarn/berry',
-						'~/.local/share/pnpm',
-						'~/.pnpm-store',
-						'~/.bun/install/cache',
-						'~/.bun/bin',
-						'~/.deno',
-						'~/.nvm/versions',
-						'~/.nvm/alias',
-						'~/.volta/bin',
-						'~/.volta/tools',
-						'~/.fnm',
-						'~/.asdf/installs/nodejs',
-						'~/.asdf/shims',
-						'~/.local/share/mise/installs/node',
-						'~/.local/share/mise/shims',
+						"~/.npm",
+						"~/Library/Caches/node",
+						"~/Library/Caches/electron",
+						"~/Library/Caches/ms-playwright",
+						"~/Library/Caches/Yarn",
+						"~/Library/Caches/deno",
+						"~/Library/pnpm",
+						"~/.electron-gyp",
+						"~/.node-gyp",
+						"~/.yarn/berry",
+						"~/.local/share/pnpm",
+						"~/.pnpm-store",
+						"~/.bun/install/cache",
+						"~/.bun/bin",
+						"~/.deno",
+						"~/.nvm/versions",
+						"~/.nvm/alias",
+						"~/.volta/bin",
+						"~/.volta/tools",
+						"~/.fnm",
+						"~/.asdf/installs/nodejs",
+						"~/.asdf/shims",
+						"~/.local/share/mise/installs/node",
+						"~/.local/share/mise/shims",
 					];
 				case OperatingSystem.Linux:
 				default:
 					return [
-						'~/.npm',
-						'~/.cache/node',
-						'~/.cache/node/corepack',
-						'~/.cache/electron',
-						'~/.cache/ms-playwright',
-						'~/.cache/yarn',
-						'~/.electron-gyp',
-						'~/.node-gyp',
-						'~/.yarn/berry',
-						'~/.local/share/pnpm',
-						'~/.pnpm-store',
-						'~/.bun/install/cache',
-						'~/.bun/bin',
-						'~/.deno',
-						'~/.cache/deno',
-						'~/.nvm/versions',
-						'~/.nvm/alias',
-						'~/.volta/bin',
-						'~/.volta/tools',
-						'~/.fnm',
-						'~/.asdf/installs/nodejs',
-						'~/.asdf/shims',
-						'~/.local/share/mise/installs/node',
-						'~/.local/share/mise/shims',
+						"~/.npm",
+						"~/.cache/node",
+						"~/.cache/node/corepack",
+						"~/.cache/electron",
+						"~/.cache/ms-playwright",
+						"~/.cache/yarn",
+						"~/.electron-gyp",
+						"~/.node-gyp",
+						"~/.yarn/berry",
+						"~/.local/share/pnpm",
+						"~/.pnpm-store",
+						"~/.bun/install/cache",
+						"~/.bun/bin",
+						"~/.deno",
+						"~/.cache/deno",
+						"~/.nvm/versions",
+						"~/.nvm/alias",
+						"~/.volta/bin",
+						"~/.volta/tools",
+						"~/.fnm",
+						"~/.asdf/installs/nodejs",
+						"~/.asdf/shims",
+						"~/.local/share/mise/installs/node",
+						"~/.local/share/mise/shims",
 					];
 			}
 
@@ -171,54 +181,46 @@ function getTerminalSandboxReadAllowListForOperation(operation: TerminalSandboxR
 				case OperatingSystem.Linux:
 				default:
 					return [
-						'~/.cargo/bin',
-						'~/.cargo/registry',
-						'~/.cargo/git',
-						'~/.rustup/toolchains',
+						"~/.cargo/bin",
+						"~/.cargo/registry",
+						"~/.cargo/git",
+						"~/.rustup/toolchains",
 					];
 			}
 
 		case TerminalSandboxReadAllowListOperation.Go:
 			switch (os) {
 				case OperatingSystem.Macintosh:
-					return [
-						'~/go/pkg/mod',
-						'~/go/bin',
-						'~/Library/Caches/go-build',
-					];
+					return ["~/go/pkg/mod", "~/go/bin", "~/Library/Caches/go-build"];
 				case OperatingSystem.Linux:
 				default:
-					return [
-						'~/go/pkg/mod',
-						'~/go/bin',
-						'~/.cache/go-build',
-					];
+					return ["~/go/pkg/mod", "~/go/bin", "~/.cache/go-build"];
 			}
 
 		case TerminalSandboxReadAllowListOperation.Python:
 			switch (os) {
 				case OperatingSystem.Macintosh:
 					return [
-						'~/Library/Caches/pip',
-						'~/Library/Caches/pypoetry',
-						'~/Library/Caches/uv',
-						'~/.local/bin',
-						'~/.local/share/virtualenv',
-						'~/.local/share/pipx',
-						'~/.pyenv/versions',
-						'~/.pyenv/shims',
+						"~/Library/Caches/pip",
+						"~/Library/Caches/pypoetry",
+						"~/Library/Caches/uv",
+						"~/.local/bin",
+						"~/.local/share/virtualenv",
+						"~/.local/share/pipx",
+						"~/.pyenv/versions",
+						"~/.pyenv/shims",
 					];
 				case OperatingSystem.Linux:
 				default:
 					return [
-						'~/.cache/pip',
-						'~/.cache/pypoetry',
-						'~/.cache/uv',
-						'~/.local/bin',
-						'~/.local/share/virtualenv',
-						'~/.local/share/pipx',
-						'~/.pyenv/versions',
-						'~/.pyenv/shims',
+						"~/.cache/pip",
+						"~/.cache/pypoetry",
+						"~/.cache/uv",
+						"~/.local/bin",
+						"~/.local/share/virtualenv",
+						"~/.local/share/pipx",
+						"~/.pyenv/versions",
+						"~/.pyenv/shims",
 					];
 			}
 
@@ -228,10 +230,10 @@ function getTerminalSandboxReadAllowListForOperation(operation: TerminalSandboxR
 				case OperatingSystem.Linux:
 				default:
 					return [
-						'~/.m2/repository',
-						'~/.gradle/caches',
-						'~/.gradle/wrapper/dists',
-						'~/.sdkman/candidates',
+						"~/.m2/repository",
+						"~/.gradle/caches",
+						"~/.gradle/wrapper/dists",
+						"~/.sdkman/candidates",
 					];
 			}
 
@@ -240,24 +242,16 @@ function getTerminalSandboxReadAllowListForOperation(operation: TerminalSandboxR
 				case OperatingSystem.Macintosh:
 				case OperatingSystem.Linux:
 				default:
-					return [
-						'~/.dotnet',
-					];
+					return ["~/.dotnet"];
 			}
 
 		case TerminalSandboxReadAllowListOperation.Nuget:
 			switch (os) {
 				case OperatingSystem.Macintosh:
-					return [
-						'~/.nuget/packages',
-						'~/Library/Caches/NuGet/v3-cache',
-					];
+					return ["~/.nuget/packages", "~/Library/Caches/NuGet/v3-cache"];
 				case OperatingSystem.Linux:
 				default:
-					return [
-						'~/.nuget/packages',
-						'~/.local/share/NuGet/v3-cache',
-					];
+					return ["~/.nuget/packages", "~/.local/share/NuGet/v3-cache"];
 			}
 
 		case TerminalSandboxReadAllowListOperation.Msbuild:
@@ -272,34 +266,28 @@ function getTerminalSandboxReadAllowListForOperation(operation: TerminalSandboxR
 			switch (os) {
 				case OperatingSystem.Macintosh:
 					return [
-						'~/.gem',
-						'~/.rbenv/versions',
-						'~/.rbenv/shims',
-						'~/.rvm/rubies',
+						"~/.gem",
+						"~/.rbenv/versions",
+						"~/.rbenv/shims",
+						"~/.rvm/rubies",
 					];
 				case OperatingSystem.Linux:
 				default:
 					return [
-						'~/.gem',
-						'~/.rbenv/versions',
-						'~/.rbenv/shims',
-						'~/.rvm/rubies',
+						"~/.gem",
+						"~/.rbenv/versions",
+						"~/.rbenv/shims",
+						"~/.rvm/rubies",
 					];
 			}
 
 		case TerminalSandboxReadAllowListOperation.NativeBuild:
 			switch (os) {
 				case OperatingSystem.Macintosh:
-					return [
-						'~/Library/Caches/ccache',
-						'~/Library/Caches/sccache',
-					];
+					return ["~/Library/Caches/ccache", "~/Library/Caches/sccache"];
 				case OperatingSystem.Linux:
 				default:
-					return [
-						'~/.cache/ccache',
-						'~/.cache/sccache',
-					];
+					return ["~/.cache/ccache", "~/.cache/sccache"];
 			}
 
 		case TerminalSandboxReadAllowListOperation.Conan:
@@ -307,10 +295,7 @@ function getTerminalSandboxReadAllowListForOperation(operation: TerminalSandboxR
 				case OperatingSystem.Macintosh:
 				case OperatingSystem.Linux:
 				default:
-					return [
-						'~/.conan2/p',
-						'~/.conan2/b',
-					];
+					return ["~/.conan2/p", "~/.conan2/b"];
 			}
 
 		case TerminalSandboxReadAllowListOperation.GnuPG:
@@ -318,14 +303,15 @@ function getTerminalSandboxReadAllowListForOperation(operation: TerminalSandboxR
 				case OperatingSystem.Macintosh:
 				case OperatingSystem.Linux:
 				default:
-					return [
-						'~/.gnupg',
-					];
+					return ["~/.gnupg"];
 			}
 	}
 }
 
-function getTerminalSandboxReadAllowListForCommandDetails(os: OperatingSystem, commandDetails: readonly ITerminalSandboxCommand[]): readonly string[] {
+function getTerminalSandboxReadAllowListForCommandDetails(
+	os: OperatingSystem,
+	commandDetails: readonly ITerminalSandboxCommand[],
+): readonly string[] {
 	const operations = new Set<TerminalSandboxReadAllowListOperation>();
 	for (const command of commandDetails) {
 		for (const rule of terminalSandboxReadAllowListCommandDetailRules) {
@@ -335,7 +321,9 @@ function getTerminalSandboxReadAllowListForCommandDetails(os: OperatingSystem, c
 		}
 	}
 
-	const paths = [...operations].flatMap(operation => getTerminalSandboxReadAllowListForOperation(operation, os));
+	const paths = [...operations].flatMap((operation) =>
+		getTerminalSandboxReadAllowListForOperation(operation, os),
+	);
 	return [...new Set(paths)];
 }
 
@@ -346,32 +334,46 @@ function getTerminalSandboxReadAllowListForCommandDetails(os: OperatingSystem, c
  * For example, `git -C repo commit -S` matches the `git`/`commit` rule below,
  * while `gpg --list-keys` matches the keyword-only `gpg` rule.
  */
-const terminalSandboxReadAllowListCommandDetailRules: readonly ITerminalSandboxCommandRule<TerminalSandboxReadAllowListOperation>[] = [
-	{
-		keywords: ['gpg', 'gpg2'],
-		value: TerminalSandboxReadAllowListOperation.GnuPG,
-	},
-	{
-		keywords: ['git'],
-		value: TerminalSandboxReadAllowListOperation.GnuPG,
-		subcommands: ['commit'],
-		optionsWithValue: gitGlobalOptionsWithValue,
-	},
-];
+const terminalSandboxReadAllowListCommandDetailRules: readonly ITerminalSandboxCommandRule<TerminalSandboxReadAllowListOperation>[] =
+	[
+		{
+			keywords: ["gpg", "gpg2"],
+			value: TerminalSandboxReadAllowListOperation.GnuPG,
+		},
+		{
+			keywords: ["git"],
+			value: TerminalSandboxReadAllowListOperation.GnuPG,
+			subcommands: ["commit"],
+			optionsWithValue: gitGlobalOptionsWithValue,
+		},
+	];
 
-export function getTerminalSandboxReadAllowListForCommands(os: OperatingSystem, commandKeywords: readonly string[], commandDetails: readonly ITerminalSandboxCommand[] = []): readonly string[] {
+export function getTerminalSandboxReadAllowListForCommands(
+	os: OperatingSystem,
+	commandKeywords: readonly string[],
+	commandDetails: readonly ITerminalSandboxCommand[] = [],
+): readonly string[] {
 	if (commandKeywords.length === 0) {
 		return getTerminalSandboxReadAllowListForCommandDetails(os, commandDetails);
 	}
 
 	const operations = new Set<TerminalSandboxReadAllowListOperation>();
 	for (const keyword of commandKeywords) {
-		const operation = terminalSandboxReadAllowListKeywordMap.get(keyword.toLowerCase());
+		const operation = terminalSandboxReadAllowListKeywordMap.get(
+			keyword.toLowerCase(),
+		);
 		if (operation) {
 			operations.add(operation);
 		}
 	}
 
-	const paths = [...operations].flatMap(operation => getTerminalSandboxReadAllowListForOperation(operation, os));
-	return [...new Set([...paths, ...getTerminalSandboxReadAllowListForCommandDetails(os, commandDetails)])];
+	const paths = [...operations].flatMap((operation) =>
+		getTerminalSandboxReadAllowListForOperation(operation, os),
+	);
+	return [
+		...new Set([
+			...paths,
+			...getTerminalSandboxReadAllowListForCommandDetails(os, commandDetails),
+		]),
+	];
 }

@@ -19,5 +19,10 @@ export interface IIncrementalRenderingAnimation {
 	 * @param currentCount Total number of children currently in the DOM.
 	 * @param elapsed Milliseconds since the animation batch started.
 	 */
-	animate(children: HTMLCollection, fromIndex: number, currentCount: number, elapsed: number): void;
+	animate(
+		children: HTMLCollection,
+		fromIndex: number,
+		currentCount: number,
+		elapsed: number,
+	): void;
 }

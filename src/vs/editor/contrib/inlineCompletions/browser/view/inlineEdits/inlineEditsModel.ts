@@ -3,25 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../../../base/common/event.js';
-import { derived, IObservable } from '../../../../../../base/common/observable.js';
-import { setTimeout0 } from '../../../../../../base/common/platform.js';
-import { InlineCompletionsModel, isSuggestionInViewport } from '../../model/inlineCompletionsModel.js';
-import { InlineSuggestHint } from '../../model/inlineSuggestionItem.js';
-import { InlineCompletionEditorType } from '../../model/provideInlineCompletions.js';
-import { InlineCompletionViewData, InlineCompletionViewKind, InlineEditTabAction } from './inlineEditsViewInterface.js';
-import { InlineEditWithChanges } from './inlineEditWithChanges.js';
+import { Event } from "../../../../../../base/common/event.js";
+import {
+	derived,
+	IObservable,
+} from "../../../../../../base/common/observable.js";
+import { setTimeout0 } from "../../../../../../base/common/platform.js";
+import {
+	InlineCompletionsModel,
+	isSuggestionInViewport,
+} from "../../model/inlineCompletionsModel.js";
+import { InlineSuggestHint } from "../../model/inlineSuggestionItem.js";
+import { InlineCompletionEditorType } from "../../model/provideInlineCompletions.js";
+import {
+	InlineCompletionViewData,
+	InlineCompletionViewKind,
+	InlineEditTabAction,
+} from "./inlineEditsViewInterface.js";
+import { InlineEditWithChanges } from "./inlineEditWithChanges.js";
 
 /**
  * Warning: This is not per inline edit id and gets created often.
  * @deprecated TODO@hediet remove
-*/
+ */
 export class ModelPerInlineEdit {
-
 	readonly editorType: InlineCompletionEditorType;
 
 	readonly displayLocation: InlineSuggestHint | undefined;
-
 
 	/** Determines if the inline suggestion is fully in the view port */
 	readonly inViewPort: IObservable<boolean>;
@@ -37,7 +45,13 @@ export class ModelPerInlineEdit {
 
 		this.displayLocation = this.inlineEdit.inlineCompletion.hint;
 
-		this.inViewPort = derived(this, reader => isSuggestionInViewport(this._model.editor, this.inlineEdit.inlineCompletion, reader));
+		this.inViewPort = derived(this, (reader) =>
+			isSuggestionInViewport(
+				this._model.editor,
+				this.inlineEdit.inlineCompletion,
+				reader,
+			),
+		);
 		this.onDidAccept = this._model.onDidAccept;
 	}
 
@@ -45,12 +59,20 @@ export class ModelPerInlineEdit {
 		this._model.accept(undefined, alternativeAction);
 	}
 
-	handleInlineEditShownNextFrame(viewKind: InlineCompletionViewKind, viewData: InlineCompletionViewData) {
+	handleInlineEditShownNextFrame(
+		viewKind: InlineCompletionViewKind,
+		viewData: InlineCompletionViewData,
+	) {
 		const item = this.inlineEdit.inlineCompletion;
 		const timeWhenShown = Date.now();
 		item.addRef();
 		setTimeout0(() => {
-			this._model.handleInlineSuggestionShown(item, viewKind, viewData, timeWhenShown);
+			this._model.handleInlineSuggestionShown(
+				item,
+				viewKind,
+				viewData,
+				timeWhenShown,
+			);
 			item.removeRef();
 		});
 	}

@@ -8,7 +8,11 @@ import { TaskQueue } from '../common/async';
 import { deepClone } from '../vs/base/common/objects';
 
 export class JSONFile<T> {
-	public static async readOrCreate<T>(filePath: string, initialValue: T, indent: string | number = 4): Promise<JSONFile<T>> {
+	public static async readOrCreate<T>(
+		filePath: string,
+		initialValue: T,
+		indent: string | number = 4,
+	): Promise<JSONFile<T>> {
 		let data: T = initialValue;
 
 		const result = await readFileTextOrUndefined(filePath);
@@ -23,7 +27,9 @@ export class JSONFile<T> {
 	}
 
 	private _value: T;
-	public get value(): Readonly<T> { return deepClone(this._value); }
+	public get value(): Readonly<T> {
+		return deepClone(this._value);
+	}
 
 	private constructor(
 		public readonly filePath: string,
@@ -42,15 +48,20 @@ export class JSONFile<T> {
 	}
 
 	private async _write(): Promise<void> {
-		await writeFile(this.filePath, JSON.stringify(this._value, null, this.indent), { encoding: 'utf8' });
+		await writeFile(
+			this.filePath,
+			JSON.stringify(this._value, null, this.indent),
+			{ encoding: 'utf8' },
+		);
 	}
 }
 
-export async function readFileTextOrUndefined(filePath: string): Promise<string | undefined> {
+export async function readFileTextOrUndefined(
+	filePath: string,
+): Promise<string | undefined> {
 	try {
 		return await readFile(filePath, 'utf8');
-	}
-	catch (e) {
+	} catch (e) {
 		if (e.code === 'ENOENT') {
 			return undefined;
 		}

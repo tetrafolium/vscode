@@ -3,25 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { IDisposable } from '../../../base/common/lifecycle.js';
-import { URI } from '../../../base/common/uri.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
+import { Event } from "../../../base/common/event.js";
+import { IDisposable } from "../../../base/common/lifecycle.js";
+import { URI } from "../../../base/common/uri.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
 
-export const ISSHRemoteAgentHostService = createDecorator<ISSHRemoteAgentHostService>('sshRemoteAgentHostService');
+export const ISSHRemoteAgentHostService =
+	createDecorator<ISSHRemoteAgentHostService>("sshRemoteAgentHostService");
 
 /**
  * IPC channel name for the main-process SSH service.
  */
-export const SSH_REMOTE_AGENT_HOST_CHANNEL = 'sshRemoteAgentHost';
+export const SSH_REMOTE_AGENT_HOST_CHANNEL = "sshRemoteAgentHost";
 
 export const enum SSHAuthMethod {
 	/** Use the local SSH agent for key-based auth. */
-	Agent = 'agent',
+	Agent = "agent",
 	/** Authenticate with an explicit private key file. */
-	KeyFile = 'keyFile',
+	KeyFile = "keyFile",
 	/** Authenticate with a password. */
-	Password = 'password',
+	Password = "password",
 }
 
 export interface ISSHAgentHostConfig {
@@ -54,7 +55,10 @@ export interface ISSHAgentHostConfig {
  * (password, private key path). Exposed on active connections so
  * consumers can inspect connection metadata without accessing credentials.
  */
-export type ISSHAgentHostConfigSanitized = Omit<ISSHAgentHostConfig, 'password' | 'privateKeyPath'>;
+export type ISSHAgentHostConfigSanitized = Omit<
+	ISSHAgentHostConfig,
+	"password" | "privateKeyPath"
+>;
 
 export interface ISSHAgentHostConnection extends IDisposable {
 	/** The SSH config used to establish this connection (secrets stripped). */
@@ -131,7 +135,10 @@ export interface ISSHRemoteAgentHostService {
 	 * Re-establish an SSH tunnel on startup for a previously connected host.
 	 * Returns the new local forwarded address and registers it.
 	 */
-	reconnect(sshConfigHost: string, name: string): Promise<ISSHAgentHostConnection>;
+	reconnect(
+		sshConfigHost: string,
+		name: string,
+	): Promise<ISSHAgentHostConnection>;
 }
 /**
  * Serializable result from a successful SSH connect operation.
@@ -210,7 +217,10 @@ export interface ISSHRelayMessage {
  * The renderer calls this over IPC and handles registration
  * with {@link IRemoteAgentHostService} locally.
  */
-export const ISSHRemoteAgentHostMainService = createDecorator<ISSHRemoteAgentHostMainService>('sshRemoteAgentHostMainService');
+export const ISSHRemoteAgentHostMainService =
+	createDecorator<ISSHRemoteAgentHostMainService>(
+		"sshRemoteAgentHostMainService",
+	);
 
 export interface ISSHRemoteAgentHostMainService {
 	readonly _serviceBrand: undefined;
@@ -250,7 +260,10 @@ export interface ISSHRemoteAgentHostMainService {
 	 * Pass `undefined` when the user cancels the prompt; this aborts the
 	 * owning SSH connection attempt.
 	 */
-	respondKeyboardInteractive(requestId: string, responses: readonly string[] | undefined): Promise<void>;
+	respondKeyboardInteractive(
+		requestId: string,
+		responses: readonly string[] | undefined,
+	): Promise<void>;
 
 	/**
 	 * Bootstrap a remote agent host over SSH. Returns serializable
@@ -288,5 +301,10 @@ export interface ISSHRemoteAgentHostMainService {
 	 * Resolves the SSH config alias, connects, and returns fresh
 	 * connection info with a new local forwarded port.
 	 */
-	reconnect(sshConfigHost: string, name: string, remoteAgentHostCommand?: string, agentForward?: boolean): Promise<ISSHConnectResult>;
+	reconnect(
+		sshConfigHost: string,
+		name: string,
+		remoteAgentHostCommand?: string,
+		agentForward?: boolean,
+	): Promise<ISSHConnectResult>;
 }

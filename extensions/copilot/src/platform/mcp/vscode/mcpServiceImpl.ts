@@ -13,8 +13,8 @@ import { AbstractMcpService } from '../common/mcpService';
 class TrackedMcpGateway implements McpGateway {
 	constructor(
 		private readonly _gateway: McpGateway,
-		private readonly _onDispose: () => void
-	) { }
+		private readonly _onDispose: () => void,
+	) {}
 
 	get servers(): readonly McpGatewayServer[] {
 		return this._gateway.servers;
@@ -33,7 +33,9 @@ class TrackedMcpGateway implements McpGateway {
 export class McpService extends AbstractMcpService implements IDisposable {
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _gateways = new ResourceMap<Promise<TrackedMcpGateway | undefined>>();
+	private readonly _gateways = new ResourceMap<
+		Promise<TrackedMcpGateway | undefined>
+	>();
 
 	constructor(@ILogService private readonly _logService: ILogService) {
 		super();
@@ -58,15 +60,21 @@ export class McpService extends AbstractMcpService implements IDisposable {
 		return promise;
 	}
 
-	private async _doStartMcpGateway(resource: URI): Promise<TrackedMcpGateway | undefined> {
+	private async _doStartMcpGateway(
+		resource: URI,
+	): Promise<TrackedMcpGateway | undefined> {
 		try {
 			// TODO: Pass resource into startMcpGateway once supported, to allow gateway to do per-session initialization if needed
 			const gateway = await lm.startMcpGateway();
 			if (gateway) {
-				return new TrackedMcpGateway(gateway, () => this._gateways.delete(resource));
+				return new TrackedMcpGateway(gateway, () =>
+					this._gateways.delete(resource),
+				);
 			}
 		} catch (error) {
-			this._logService.warn(`Failed to start MCP Gateway: ${error instanceof Error ? error.message : String(error)}`);
+			this._logService.warn(
+				`Failed to start MCP Gateway: ${error instanceof Error ? error.message : String(error)}`,
+			);
 		}
 		this._gateways.delete(resource);
 		return undefined;
@@ -76,7 +84,7 @@ export class McpService extends AbstractMcpService implements IDisposable {
 		const pending = [...this._gateways.values()];
 		this._gateways.clear();
 		for (const promise of pending) {
-			void promise.then(gateway => {
+			void promise.then((gateway) => {
 				try {
 					gateway?.dispose();
 				} catch {

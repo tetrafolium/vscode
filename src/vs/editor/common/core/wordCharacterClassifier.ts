@@ -3,30 +3,34 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CharCode } from '../../../base/common/charCode.js';
-import { safeIntl } from '../../../base/common/date.js';
-import { Lazy } from '../../../base/common/lazy.js';
-import { LRUCache } from '../../../base/common/map.js';
-import { CharacterClassifier } from './characterClassifier.js';
+import { CharCode } from "../../../base/common/charCode.js";
+import { safeIntl } from "../../../base/common/date.js";
+import { Lazy } from "../../../base/common/lazy.js";
+import { LRUCache } from "../../../base/common/map.js";
+import { CharacterClassifier } from "./characterClassifier.js";
 
 export const enum WordCharacterClass {
 	Regular = 0,
 	Whitespace = 1,
-	WordSeparator = 2
+	WordSeparator = 2,
 }
 
 export class WordCharacterClassifier extends CharacterClassifier<WordCharacterClass> {
-
 	public readonly intlSegmenterLocales: Intl.UnicodeBCP47LocaleIdentifier[];
 	private readonly _segmenter: Lazy<Intl.Segmenter> | null = null;
 	private _cachedLine: string | null = null;
 	private _cachedSegments: IntlWordSegmentData[] = [];
 
-	constructor(wordSeparators: string, intlSegmenterLocales: Intl.UnicodeBCP47LocaleIdentifier[]) {
+	constructor(
+		wordSeparators: string,
+		intlSegmenterLocales: Intl.UnicodeBCP47LocaleIdentifier[],
+	) {
 		super(WordCharacterClass.Regular);
 		this.intlSegmenterLocales = intlSegmenterLocales;
 		if (this.intlSegmenterLocales.length > 0) {
-			this._segmenter = safeIntl.Segmenter(this.intlSegmenterLocales, { granularity: 'word' });
+			this._segmenter = safeIntl.Segmenter(this.intlSegmenterLocales, {
+				granularity: "word",
+			});
 		} else {
 			this._segmenter = null;
 		}
@@ -39,7 +43,10 @@ export class WordCharacterClassifier extends CharacterClassifier<WordCharacterCl
 		this.set(CharCode.Tab, WordCharacterClass.Whitespace);
 	}
 
-	public findPrevIntlWordBeforeOrAtOffset(line: string, offset: number): IntlWordSegmentData | null {
+	public findPrevIntlWordBeforeOrAtOffset(
+		line: string,
+		offset: number,
+	): IntlWordSegmentData | null {
 		let candidate: IntlWordSegmentData | null = null;
 		for (const segment of this._getIntlSegmenterWordsOnLine(line)) {
 			if (segment.index > offset) {
@@ -50,7 +57,10 @@ export class WordCharacterClassifier extends CharacterClassifier<WordCharacterCl
 		return candidate;
 	}
 
-	public findNextIntlWordAtOrAfterOffset(lineContent: string, offset: number): IntlWordSegmentData | null {
+	public findNextIntlWordAtOrAfterOffset(
+		lineContent: string,
+		offset: number,
+	): IntlWordSegmentData | null {
 		for (const segment of this._getIntlSegmenterWordsOnLine(lineContent)) {
 			if (segment.index < offset) {
 				continue;
@@ -72,7 +82,9 @@ export class WordCharacterClassifier extends CharacterClassifier<WordCharacterCl
 
 		// Update the cache with the new line
 		this._cachedLine = line;
-		this._cachedSegments = this._filterWordSegments(this._segmenter.value.segment(line));
+		this._cachedSegments = this._filterWordSegments(
+			this._segmenter.value.segment(line),
+		);
 
 		return this._cachedSegments;
 	}
@@ -87,7 +99,9 @@ export class WordCharacterClassifier extends CharacterClassifier<WordCharacterCl
 		return result;
 	}
 
-	private _isWordLike(segment: Intl.SegmentData): segment is IntlWordSegmentData {
+	private _isWordLike(
+		segment: Intl.SegmentData,
+	): segment is IntlWordSegmentData {
 		if (segment.isWordLike) {
 			return true;
 		}
@@ -101,8 +115,11 @@ export interface IntlWordSegmentData extends Intl.SegmentData {
 
 const wordClassifierCache = new LRUCache<string, WordCharacterClassifier>(10);
 
-export function getMapForWordSeparators(wordSeparators: string, intlSegmenterLocales: Intl.UnicodeBCP47LocaleIdentifier[]): WordCharacterClassifier {
-	const key = `${wordSeparators}/${intlSegmenterLocales.join(',')}`;
+export function getMapForWordSeparators(
+	wordSeparators: string,
+	intlSegmenterLocales: Intl.UnicodeBCP47LocaleIdentifier[],
+): WordCharacterClassifier {
+	const key = `${wordSeparators}/${intlSegmenterLocales.join(",")}`;
 	let result = wordClassifierCache.get(key)!;
 	if (!result) {
 		result = new WordCharacterClassifier(wordSeparators, intlSegmenterLocales);

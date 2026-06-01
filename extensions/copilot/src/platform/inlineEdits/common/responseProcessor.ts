@@ -6,9 +6,7 @@ import { illegalArgument } from '../../../util/vs/base/common/errors';
 import { LineReplacement } from '../../../util/vs/editor/common/core/edits/lineEdit';
 import { LineRange } from '../../../util/vs/editor/common/core/ranges/lineRange';
 
-
 export namespace ResponseProcessor {
-
 	/**
 	 * Controls when to emit fast cursor line changes.
 	 * - `off`: Never emit fast cursor line changes
@@ -38,7 +36,9 @@ export namespace ResponseProcessor {
 	 * Maps the `emitFastCursorLineChange` setting value to the new type,
 	 * preserving backward compatibility with the old boolean type.
 	 */
-	export function mapEmitFastCursorLineChange(value: boolean | EmitFastCursorLineChange): EmitFastCursorLineChange {
+	export function mapEmitFastCursorLineChange(
+		value: boolean | EmitFastCursorLineChange,
+	): EmitFastCursorLineChange {
 		if (value === true) {
 			return EmitFastCursorLineChange.AdditiveOnly;
 		}
@@ -51,11 +51,11 @@ export namespace ResponseProcessor {
 	type DivergenceState =
 		| { k: 'aligned' }
 		| {
-			k: 'diverged';
-			startLineIdx: number;
-			newLines: string[];
-			convergenceCandidates?: number[];
-		};
+				k: 'diverged';
+				startLineIdx: number;
+				newLines: string[];
+				convergenceCandidates?: number[];
+		  };
 
 	/**
 	 *
@@ -63,8 +63,12 @@ export namespace ResponseProcessor {
 	 * @param modifiedLines
 	 * @param cursorOriginalLinesOffset offset of cursor within original lines
 	 */
-	export async function* diff(originalLines: string[], modifiedLines: AsyncIterable<string>, cursorOriginalLinesOffset: number, params: DiffParams): AsyncIterable<LineReplacement> {
-
+	export async function* diff(
+		originalLines: string[],
+		modifiedLines: AsyncIterable<string>,
+		cursorOriginalLinesOffset: number,
+		params: DiffParams,
+	): AsyncIterable<LineReplacement> {
 		const lineToIdxs = new ArrayMap<string, number>();
 		for (const [i, line] of originalLines.entries()) {
 			lineToIdxs.add(line, i);
@@ -82,7 +86,11 @@ export namespace ResponseProcessor {
 			if (editWindowIdx >= originalLines.length) {
 				switch (state.k) {
 					case 'aligned': {
-						state = { k: 'diverged', startLineIdx: editWindowIdx, newLines: [line] };
+						state = {
+							k: 'diverged',
+							startLineIdx: editWindowIdx,
+							newLines: [line],
+						};
 						break;
 					}
 					case 'diverged': {
@@ -93,11 +101,16 @@ export namespace ResponseProcessor {
 			}
 
 			if (state.k === 'aligned') {
-				if (originalLines[editWindowIdx] === line) { // if line is the same as in originalLines, skip over it
+				if (originalLines[editWindowIdx] === line) {
+					// if line is the same as in originalLines, skip over it
 					++editWindowIdx;
 					continue;
 				}
-				state = { k: 'diverged', startLineIdx: editWindowIdx, newLines: [] };
+				state = {
+					k: 'diverged',
+					startLineIdx: editWindowIdx,
+					newLines: [],
+				};
 			}
 
 			state.newLines.push(line);
@@ -120,14 +133,20 @@ export namespace ResponseProcessor {
 
 		switch (state.k) {
 			case 'diverged': {
-				const lineRange = new LineRange(state.startLineIdx + 1, originalLines.length + 1);
+				const lineRange = new LineRange(
+					state.startLineIdx + 1,
+					originalLines.length + 1,
+				);
 				yield new LineReplacement(lineRange, state.newLines);
 				break;
 			}
 
 			case 'aligned': {
 				if (editWindowIdx < originalLines.length) {
-					const lineRange = new LineRange(editWindowIdx + 1, originalLines.length + 1);
+					const lineRange = new LineRange(
+						editWindowIdx + 1,
+						originalLines.length + 1,
+					);
 					yield new LineReplacement(lineRange, []);
 				}
 				break;
@@ -149,7 +168,10 @@ export namespace ResponseProcessor {
 	 * - "hello world" → "hello" ✗ (not additive, removes " world")
 	 * - "abc" → "aXbYcZ" ✓ (additive)
 	 */
-	export function isAdditiveEdit(originalLine: string, newLine: string): boolean {
+	export function isAdditiveEdit(
+		originalLine: string,
+		newLine: string,
+	): boolean {
 		return isSubsequence(originalLine, newLine);
 	}
 
@@ -183,20 +205,29 @@ export namespace ResponseProcessor {
 		state: DivergenceState & { k: 'diverged' },
 		editWindowIdx: number,
 		params: DiffParams,
-	): undefined | {
-		singleLineEdit: LineReplacement;
-		convergenceEndIdx: number;
-	} {
+	):
+		| undefined
+		| {
+				singleLineEdit: LineReplacement;
+				convergenceEndIdx: number;
+		  } {
 		if (state.newLines.length === 0) {
-			throw illegalArgument('Cannot check for convergence without new lines');
+			throw illegalArgument(
+				'Cannot check for convergence without new lines',
+			);
 		}
 
 		let newLinesIdx = state.newLines.length - 1;
-		let candidates = lineToIndexes.get(state.newLines[newLinesIdx]).map((idx): [number, number] => [idx, idx]);
+		let candidates = lineToIndexes
+			.get(state.newLines[newLinesIdx])
+			.map((idx): [number, number] => [idx, idx]);
 
 		if (candidates.length === 0) {
-			if (params.emitFastCursorLineChange === EmitFastCursorLineChange.Off ||
-				editWindowIdx !== cursorOriginalLinesOffset || state.newLines.length > 1
+			if (
+				params.emitFastCursorLineChange ===
+					EmitFastCursorLineChange.Off ||
+				editWindowIdx !== cursorOriginalLinesOffset ||
+				state.newLines.length > 1
 			) {
 				return;
 			}
@@ -208,7 +239,10 @@ export namespace ResponseProcessor {
 			// When the cursor is on an empty line and the model outputs content that matches
 			// (or is a prefix of) the next original line, it's likely deleting the empty line
 			// rather than replacing it. Skip fast-emit to avoid line duplication.
-			if (originalLine.trim() === '' && editWindowIdx + 1 < originalLines.length) {
+			if (
+				originalLine.trim() === '' &&
+				editWindowIdx + 1 < originalLines.length
+			) {
 				const nextLine = originalLines[editWindowIdx + 1];
 				if (newLine === nextLine || nextLine.startsWith(newLine)) {
 					return;
@@ -221,7 +255,10 @@ export namespace ResponseProcessor {
 
 			// we detected that line with the cursor has changed, so we immediately emit an edit for it
 			const zeroBasedLineRange = [editWindowIdx, editWindowIdx + 1];
-			const lineRange = new LineRange(zeroBasedLineRange[0] + 1, zeroBasedLineRange[1] + 1);
+			const lineRange = new LineRange(
+				zeroBasedLineRange[0] + 1,
+				zeroBasedLineRange[1] + 1,
+			);
 			return {
 				singleLineEdit: new LineReplacement(lineRange, state.newLines),
 				convergenceEndIdx: editWindowIdx + 1,
@@ -247,14 +284,29 @@ export namespace ResponseProcessor {
 		//    c      |     c'
 		//    d      |     d    <-- match here should allow convergence
 		//    e      |     e
-		if (nNonSigMatches > 0 && (match[0] - state.startLineIdx) === state.newLines.length - 1 /* to discount for converging line */) {
+		if (
+			nNonSigMatches > 0 &&
+			match[0] - state.startLineIdx ===
+				state.newLines.length - 1 /* to discount for converging line */
+		) {
 			result = 'found_significant_matches';
 		}
 
 		for (; newLinesIdx >= 0; --newLinesIdx) {
-			candidates = candidates.map(([convEndIdx, convIdx]): [number, number] => [convEndIdx, convIdx - 1]);
-			candidates = candidates.filter(([_, currentIdx]) => currentIdx >= 0 && editWindowIdx <= currentIdx);
-			candidates = candidates.filter(([_, currentIdx]) => originalLines[currentIdx] === state.newLines[newLinesIdx]);
+			candidates = candidates.map(
+				([convEndIdx, convIdx]): [number, number] => [
+					convEndIdx,
+					convIdx - 1,
+				],
+			);
+			candidates = candidates.filter(
+				([_, currentIdx]) =>
+					currentIdx >= 0 && editWindowIdx <= currentIdx,
+			);
+			candidates = candidates.filter(
+				([_, currentIdx]) =>
+					originalLines[currentIdx] === state.newLines[newLinesIdx],
+			);
 
 			// count in matches for current batch
 			if (candidates.length === 0) {
@@ -282,17 +334,27 @@ export namespace ResponseProcessor {
 
 		const originalLinesConvIdx = match[1];
 		const originalLinesConvEndIdx = match[0];
-		const nLinesToConverge = originalLinesConvEndIdx - originalLinesConvIdx + 1;
+		const nLinesToConverge =
+			originalLinesConvEndIdx - originalLinesConvIdx + 1;
 
 		const nLinesRemoved = originalLinesConvIdx - state.startLineIdx;
-		const linesInserted = state.newLines.slice(0, state.newLines.length - nLinesToConverge);
+		const linesInserted = state.newLines.slice(
+			0,
+			state.newLines.length - nLinesToConverge,
+		);
 		const nLinesInserted = linesInserted.length;
 		if (nLinesRemoved - nLinesInserted > 1 && nLinesInserted > 0) {
 			return;
 		}
 
-		const zeroBasedLineRange: [startLineOffset: number, endLineOffset: number] = [state.startLineIdx, originalLinesConvIdx];
-		const lineRange = new LineRange(zeroBasedLineRange[0] + 1, zeroBasedLineRange[1] + 1);
+		const zeroBasedLineRange: [
+			startLineOffset: number,
+			endLineOffset: number,
+		] = [state.startLineIdx, originalLinesConvIdx];
+		const lineRange = new LineRange(
+			zeroBasedLineRange[0] + 1,
+			zeroBasedLineRange[1] + 1,
+		);
 		const singleLineEdit = new LineReplacement(lineRange, linesInserted);
 		return {
 			singleLineEdit,

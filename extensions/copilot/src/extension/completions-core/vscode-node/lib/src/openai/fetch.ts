@@ -4,12 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IAuthenticationService } from '../../../../../../platform/authentication/common/authentication';
-import { CopilotAnnotations, StreamCopilotAnnotations } from '../../../../../../platform/completions-core/common/openai/copilotAnnotations';
+import {
+	CopilotAnnotations,
+	StreamCopilotAnnotations,
+} from '../../../../../../platform/completions-core/common/openai/copilotAnnotations';
 import { IEnvService } from '../../../../../../platform/env/common/envService';
 import { Completion } from '../../../../../../platform/nesFetch/common/completionsAPI';
-import { Completions, ICompletionsFetchService } from '../../../../../../platform/nesFetch/common/completionsFetchService';
+import {
+	Completions,
+	ICompletionsFetchService,
+} from '../../../../../../platform/nesFetch/common/completionsFetchService';
 import { ResponseStream } from '../../../../../../platform/nesFetch/common/responseStream';
-import { RequestId, getRequestId } from '../../../../../../platform/networking/common/fetch';
+import {
+	RequestId,
+	getRequestId,
+} from '../../../../../../platform/networking/common/fetch';
 import { IHeaders } from '../../../../../../platform/networking/common/fetcherService';
 import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry';
 import { createServiceIdentifier } from '../../../../../../util/common/services';
@@ -17,9 +26,15 @@ import { assertNever } from '../../../../../../util/vs/base/common/assert';
 import { CancellationToken } from '../../../../../../util/vs/base/common/cancellation';
 import { StopWatch } from '../../../../../../util/vs/base/common/stopwatch';
 import { generateUuid } from '../../../../../../util/vs/base/common/uuid';
-import { IInstantiationService, ServicesAccessor } from '../../../../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../../../../util/vs/platform/instantiation/common/instantiation';
 import { CancellationToken as ICancellationToken } from '../../../types/src';
-import { CopilotToken, ICompletionsCopilotTokenManager } from '../auth/copilotTokenManager';
+import {
+	CopilotToken,
+	ICompletionsCopilotTokenManager,
+} from '../auth/copilotTokenManager';
 import { onCopilotToken } from '../auth/copilotTokenNotifier';
 import { apiVersion, editorVersionHeaders } from '../config';
 import { asyncIterableFilter } from '../helpers/iterableHelpers';
@@ -246,14 +261,17 @@ export interface SpeculationFetchParams extends InternalFetchParams {
 	stops: string[] | null;
 }
 
-export const ICompletionsOpenAIFetcherService = createServiceIdentifier<ICompletionsOpenAIFetcherService>('ICompletionsOpenAIFetcherService');
+export const ICompletionsOpenAIFetcherService =
+	createServiceIdentifier<ICompletionsOpenAIFetcherService>(
+		'ICompletionsOpenAIFetcherService',
+	);
 export interface ICompletionsOpenAIFetcherService {
 	readonly _serviceBrand: undefined;
 	fetchAndStreamCompletions(
 		params: CompletionParams,
 		baseTelemetryData: TelemetryWithExp,
 		finishedCb: FinishedCallback,
-		cancellationToken?: ICancellationToken
+		cancellationToken?: ICancellationToken,
 	): Promise<CompletionResults | CompletionError>;
 }
 
@@ -271,7 +289,7 @@ export abstract class OpenAIFetcher implements ICompletionsOpenAIFetcherService 
 		params: CompletionParams,
 		baseTelemetryData: TelemetryWithExp,
 		finishedCb: FinishedCallback,
-		cancellationToken?: ICancellationToken
+		cancellationToken?: ICancellationToken,
 	): Promise<CompletionResults | CompletionError>;
 }
 
@@ -281,7 +299,9 @@ export interface CompletionResults {
 	getProcessingTime(): number;
 }
 
-export type CompletionError = { type: 'failed'; reason: string } | { type: 'canceled'; reason: string };
+export type CompletionError =
+	| { type: 'failed'; reason: string }
+	| { type: 'canceled'; reason: string };
 
 export type CompletionHeaders = {
 	/** For speculation only**/
@@ -291,15 +311,27 @@ export type CompletionHeaders = {
 	'X-Copilot-Speculative'?: string;
 };
 
-function getProxyEngineUrl(accessor: ServicesAccessor, token: CopilotToken, modelId: string, endpoint: string): string {
-	return getEndpointUrl(accessor, token, 'proxy', 'v1/engines', modelId, endpoint);
+function getProxyEngineUrl(
+	accessor: ServicesAccessor,
+	token: CopilotToken,
+	modelId: string,
+	endpoint: string,
+): string {
+	return getEndpointUrl(
+		accessor,
+		token,
+		'proxy',
+		'v1/engines',
+		modelId,
+		endpoint,
+	);
 }
 
 export function sanitizeRequestOptionTelemetry(
 	request: Partial<CompletionRequest>,
 	telemetryData: TelemetryWithExp,
 	topLevelKeys: string[], // top-level properties to exclude from standard telemetry
-	extraKeys?: (keyof CompletionRequestExtra)[] // keys under the `extra` property to exclude from standard telemetry
+	extraKeys?: (keyof CompletionRequestExtra)[], // keys under the `extra` property to exclude from standard telemetry
 ): void {
 	for (const [key, value] of Object.entries(request)) {
 		if (topLevelKeys.includes(key)) {
@@ -316,12 +348,16 @@ export function sanitizeRequestOptionTelemetry(
 			valueToLog = extra;
 		}
 
-		telemetryData.properties[`request.option.${key}`] = JSON.stringify(valueToLog) ?? 'undefined';
+		telemetryData.properties[`request.option.${key}`] =
+			JSON.stringify(valueToLog) ?? 'undefined';
 	}
 }
 
 export function postProcessChoices(choices: AsyncIterable<APIChoice>) {
-	return asyncIterableFilter(choices, choice => choice.completionText.trim().length > 0);
+	return asyncIterableFilter(
+		choices,
+		(choice) => choice.completionText.trim().length > 0,
+	);
 }
 
 export const CMDQuotaExceeded = 'github.copilot.completions.quotaExceeded';
@@ -330,13 +366,20 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 	#disabledReason: string | undefined;
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@ICompletionsRuntimeModeService private readonly runtimeModeService: ICompletionsRuntimeModeService,
-		@ICompletionsLogTargetService private readonly logTargetService: ICompletionsLogTargetService,
-		@ICompletionsCopilotTokenManager private readonly copilotTokenManager: ICompletionsCopilotTokenManager,
-		@ICompletionsStatusReporter private readonly statusReporter: ICompletionsStatusReporter,
-		@IAuthenticationService private readonly authenticationService: IAuthenticationService,
-		@ICompletionsFetchService private readonly fetchService: ICompletionsFetchService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+		@ICompletionsRuntimeModeService
+		private readonly runtimeModeService: ICompletionsRuntimeModeService,
+		@ICompletionsLogTargetService
+		private readonly logTargetService: ICompletionsLogTargetService,
+		@ICompletionsCopilotTokenManager
+		private readonly copilotTokenManager: ICompletionsCopilotTokenManager,
+		@ICompletionsStatusReporter
+		private readonly statusReporter: ICompletionsStatusReporter,
+		@IAuthenticationService
+		private readonly authenticationService: IAuthenticationService,
+		@ICompletionsFetchService
+		private readonly fetchService: ICompletionsFetchService,
 		// @ICompletionsLogTargetService private readonly logTarget: ICompletionsLogTargetService,
 		@IEnvService private readonly envService: IEnvService,
 	) {
@@ -347,19 +390,24 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 		params: CompletionParams,
 		baseTelemetryData: TelemetryWithExp,
 		finishedCb: FinishedCallback,
-		cancel?: ICancellationToken
+		cancel?: ICancellationToken,
 	): Promise<CompletionResults | CompletionError> {
 		if (this.#disabledReason) {
 			return { type: 'canceled', reason: this.#disabledReason };
 		}
 		const endpoint = 'completions';
-		const copilotToken = this.copilotTokenManager.token ?? await this.copilotTokenManager.getToken();
+		const copilotToken =
+			this.copilotTokenManager.token ??
+			(await this.copilotTokenManager.getToken());
 
 		const request: CompletionRequest = {
 			prompt: params.prompt.prefix,
 			suffix: params.prompt.suffix,
 			max_tokens: getMaxSolutionTokens(),
-			temperature: getTemperatureForSamples(this.runtimeModeService, params.count),
+			temperature: getTemperatureForSamples(
+				this.runtimeModeService,
+				params.count,
+			),
 			top_p: getTopP(),
 			n: params.count,
 			stop: getStops(params.languageId),
@@ -368,7 +416,6 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 		} satisfies CompletionRequest;
 
 		{
-
 			if (params.requestLogProbs) {
 				request.logprobs = 2; // Request that logprobs of 2 tokens (i.e. including the best alternative) be returned
 			}
@@ -401,7 +448,12 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 			const telemetryExp = baseTelemetryData;
 			const uiKind = params.uiKind;
 			const headers = params.headers;
-			const uri = this.instantiationService.invokeFunction(getProxyEngineUrl, copilotToken, engineModelId, endpoint);
+			const uri = this.instantiationService.invokeFunction(
+				getProxyEngineUrl,
+				copilotToken,
+				engineModelId,
+				endpoint,
+			);
 
 			const telemetryData = telemetryExp.extendedBy(
 				{
@@ -409,18 +461,27 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 					engineName: engineModelId,
 					uiKind: uiKind,
 				},
-				telemetrizePromptLength(prompt)
+				telemetrizePromptLength(prompt),
 			);
 
 			// Skip prompt info (PII)
-			sanitizeRequestOptionTelemetry(request, telemetryData, ['prompt', 'suffix'], ['context']);
+			sanitizeRequestOptionTelemetry(
+				request,
+				telemetryData,
+				['prompt', 'suffix'],
+				['context'],
+			);
 
 			// The request ID we are passed in is sent in the request to the proxy, and included in our pre-request telemetry.
 			// We hope (but do not rely on) that the model will use the same ID in the response, allowing us to correlate
 			// the request and response.
 			telemetryData.properties['headerRequestId'] = ourRequestId;
 
-			this.instantiationService.invokeFunction(telemetry, 'request.sent', telemetryData);
+			this.instantiationService.invokeFunction(
+				telemetry,
+				'request.sent',
+				telemetryData,
+			);
 
 			const intent = uiKindToIntent(uiKind);
 
@@ -429,7 +490,9 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 			{
 				fullHeaders = {
 					...headers,
-					...this.instantiationService.invokeFunction(editorVersionHeaders),
+					...this.instantiationService.invokeFunction(
+						editorVersionHeaders,
+					),
 				};
 
 				fullHeaders['Openai-Organization'] = 'github-copilot';
@@ -445,98 +508,173 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 
 			const requestSw = new StopWatch();
 			const cancelToken = cancel ?? CancellationToken.None;
-			const res = await this.fetchService.fetch(
-				uri,
-				copilotToken.token,
-				request,
-				ourRequestId,
-				cancelToken,
-				fullHeaders,
-			).then(response => {
-				if (response.isError() && response.err instanceof Completions.Unexpected && isInterruptedNetworkError(response.err.error)) {
-					// disconnect and retry the request once if the connection was reset
-					this.instantiationService.invokeFunction(telemetry, 'networking.disconnectAll');
-					return this.fetchService.disconnectAll().then(() => {
-						return this.fetchService.fetch(
-							uri,
-							copilotToken.token,
-							request,
-							ourRequestId,
-							cancelToken,
-							fullHeaders,
+			const res = await this.fetchService
+				.fetch(
+					uri,
+					copilotToken.token,
+					request,
+					ourRequestId,
+					cancelToken,
+					fullHeaders,
+				)
+				.then((response) => {
+					if (
+						response.isError() &&
+						response.err instanceof Completions.Unexpected &&
+						isInterruptedNetworkError(response.err.error)
+					) {
+						// disconnect and retry the request once if the connection was reset
+						this.instantiationService.invokeFunction(
+							telemetry,
+							'networking.disconnectAll',
 						);
-					});
-				} else {
-					return response;
-				}
-			});
+						return this.fetchService.disconnectAll().then(() => {
+							return this.fetchService.fetch(
+								uri,
+								copilotToken.token,
+								request,
+								ourRequestId,
+								cancelToken,
+								fullHeaders,
+							);
+						});
+					} else {
+						return response;
+					}
+				});
 
 			try {
-
 				if (res.isError()) {
-
 					const err = res.err;
 
 					if (err instanceof Completions.RequestCancelled) {
 						// abort the request when the token is canceled
-						this.instantiationService.invokeFunction(telemetry,
+						this.instantiationService.invokeFunction(
+							telemetry,
 							'networking.cancelRequest',
-							TelemetryData.createAndMarkAsIssued({ headerRequestId: ourRequestId })
+							TelemetryData.createAndMarkAsIssued({
+								headerRequestId: ourRequestId,
+							}),
 						);
-						this.instantiationService.invokeFunction(telemetry, 'request.cancel', telemetryData);
-						return { type: 'canceled', reason: 'during fetch request' };
-					} else if (err instanceof Completions.UnsuccessfulResponse) {
+						this.instantiationService.invokeFunction(
+							telemetry,
+							'request.cancel',
+							telemetryData,
+						);
+						return {
+							type: 'canceled',
+							reason: 'during fetch request',
+						};
+					} else if (
+						err instanceof Completions.UnsuccessfulResponse
+					) {
 						const modelRequestId = getRequestId(err.headers);
 						telemetryData.extendWithRequestId(modelRequestId);
 						if (modelRequestId.serverExperiments) {
-							this.instantiationService.invokeFunction(accessor => accessor.get(ITelemetryService).setSharedProperty('capi.assignmentcontext', modelRequestId.serverExperiments));
+							this.instantiationService.invokeFunction(
+								(accessor) =>
+									accessor
+										.get(ITelemetryService)
+										.setSharedProperty(
+											'capi.assignmentcontext',
+											modelRequestId.serverExperiments,
+										),
+							);
 						}
 						const totalTimeMs = requestSw.elapsed();
 						telemetryData.measurements.totalTimeMs = totalTimeMs;
 						telemetryData.properties.status = String(err.status);
 						logger.info(
 							this.logTargetService,
-							`Request ${ourRequestId} at <${uri}> finished with ${err.status} status after ${totalTimeMs}ms`
+							`Request ${ourRequestId} at <${uri}> finished with ${err.status} status after ${totalTimeMs}ms`,
 						);
-						logger.debug(this.logTargetService, 'request.response properties', telemetryData.properties);
-						logger.debug(this.logTargetService, 'request.response measurements', telemetryData.measurements);
+						logger.debug(
+							this.logTargetService,
+							'request.response properties',
+							telemetryData.properties,
+						);
+						logger.debug(
+							this.logTargetService,
+							'request.response measurements',
+							telemetryData.measurements,
+						);
 						logger.debug(this.logTargetService, 'prompt:', prompt);
-						this.instantiationService.invokeFunction(telemetry, 'request.response', telemetryData);
+						this.instantiationService.invokeFunction(
+							telemetry,
+							'request.response',
+							telemetryData,
+						);
 
-						return this.handleError(this.statusReporter, telemetryData, {
-							status: err.status,
-							text: err.text,
-							headers: err.headers,
-						}, copilotToken);
+						return this.handleError(
+							this.statusReporter,
+							telemetryData,
+							{
+								status: err.status,
+								text: err.text,
+								headers: err.headers,
+							},
+							copilotToken,
+						);
 					} else if (err instanceof Completions.Unexpected) {
-
 						const error = err.error;
 
 						if (isAbortError(error)) {
 							// If we cancelled a network request, we want to log a `request.cancel` instead of `request.error`
-							this.instantiationService.invokeFunction(telemetry, 'request.cancel', telemetryData);
+							this.instantiationService.invokeFunction(
+								telemetry,
+								'request.cancel',
+								telemetryData,
+							);
 							throw error;
 						}
-						this.statusReporter.setWarning(getKey(error, 'message') ?? '');
-						const warningTelemetry = telemetryData.extendedBy({ error: 'Network exception' });
-						this.instantiationService.invokeFunction(telemetry, 'request.shownWarning', warningTelemetry);
+						this.statusReporter.setWarning(
+							getKey(error, 'message') ?? '',
+						);
+						const warningTelemetry = telemetryData.extendedBy({
+							error: 'Network exception',
+						});
+						this.instantiationService.invokeFunction(
+							telemetry,
+							'request.shownWarning',
+							warningTelemetry,
+						);
 
-						telemetryData.properties.message = String(getKey(error, 'name') ?? '');
-						telemetryData.properties.code = String(getKey(error, 'code') ?? '');
-						telemetryData.properties.errno = String(getKey(error, 'errno') ?? '');
-						telemetryData.properties.type = String(getKey(error, 'type') ?? '');
+						telemetryData.properties.message = String(
+							getKey(error, 'name') ?? '',
+						);
+						telemetryData.properties.code = String(
+							getKey(error, 'code') ?? '',
+						);
+						telemetryData.properties.errno = String(
+							getKey(error, 'errno') ?? '',
+						);
+						telemetryData.properties.type = String(
+							getKey(error, 'type') ?? '',
+						);
 
 						const totalTimeMs = requestSw.elapsed();
 						telemetryData.measurements.totalTimeMs = totalTimeMs;
 
 						logger.info(
 							this.logTargetService,
-							`Request ${ourRequestId} at <${uri}> rejected with ${String(error)} after ${totalTimeMs}ms`
+							`Request ${ourRequestId} at <${uri}> rejected with ${String(error)} after ${totalTimeMs}ms`,
 						);
-						logger.debug(this.logTargetService, 'request.error properties', telemetryData.properties);
-						logger.debug(this.logTargetService, 'request.error measurements', telemetryData.measurements);
+						logger.debug(
+							this.logTargetService,
+							'request.error properties',
+							telemetryData.properties,
+						);
+						logger.debug(
+							this.logTargetService,
+							'request.error measurements',
+							telemetryData.measurements,
+						);
 
-						this.instantiationService.invokeFunction(telemetry, 'request.error', telemetryData);
+						this.instantiationService.invokeFunction(
+							telemetry,
+							'request.error',
+							telemetryData,
+						);
 
 						throw error;
 					} else {
@@ -552,7 +690,14 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 					const modelRequestId = responseStream.requestId;
 					telemetryData.extendWithRequestId(modelRequestId);
 					if (modelRequestId.serverExperiments) {
-						this.instantiationService.invokeFunction(accessor => accessor.get(ITelemetryService).setSharedProperty('capi.assignmentcontext', modelRequestId.serverExperiments));
+						this.instantiationService.invokeFunction((accessor) =>
+							accessor
+								.get(ITelemetryService)
+								.setSharedProperty(
+									'capi.assignmentcontext',
+									modelRequestId.serverExperiments,
+								),
+						);
 					}
 
 					// TODO: Add response length (requires parsing)
@@ -562,16 +707,27 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 					const responseStatus = 200; // because otherwise it wouldn't be here
 					logger.info(
 						this.logTargetService,
-						`Request ${ourRequestId} at <${uri}> finished with ${responseStatus} status after ${totalTimeMs}ms`
+						`Request ${ourRequestId} at <${uri}> finished with ${responseStatus} status after ${totalTimeMs}ms`,
 					);
 					telemetryData.properties.status = String(responseStatus);
-					logger.debug(this.logTargetService, 'request.response properties', telemetryData.properties);
-					logger.debug(this.logTargetService, 'request.response measurements', telemetryData.measurements);
+					logger.debug(
+						this.logTargetService,
+						'request.response properties',
+						telemetryData.properties,
+					);
+					logger.debug(
+						this.logTargetService,
+						'request.response measurements',
+						telemetryData.measurements,
+					);
 
 					logger.debug(this.logTargetService, 'prompt:', prompt);
 
-					this.instantiationService.invokeFunction(telemetry, 'request.response', telemetryData);
-
+					this.instantiationService.invokeFunction(
+						telemetry,
+						'request.response',
+						telemetryData,
+					);
 				}
 
 				if (cancel?.isCancellationRequested) {
@@ -580,21 +736,32 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 						// and can cancel/forget about the request itself.
 						await responseStream.destroy();
 					} catch (e) {
-						this.instantiationService.invokeFunction(acc => logger.exception(acc, e, `Error destroying stream`));
+						this.instantiationService.invokeFunction((acc) =>
+							logger.exception(acc, e, `Error destroying stream`),
+						);
 					}
 					return { type: 'canceled', reason: 'after fetch request' };
 				}
 
-				const choices = LiveOpenAIFetcher.convertStreamToApiChoices(responseStream, finishedCb, baseTelemetryData, cancel);
+				const choices = LiveOpenAIFetcher.convertStreamToApiChoices(
+					responseStream,
+					finishedCb,
+					baseTelemetryData,
+					cancel,
+				);
 
 				return {
 					type: 'success',
 					choices: postProcessChoices(choices),
-					getProcessingTime: () => getProcessingTime(responseStream.headers),
+					getProcessingTime: () =>
+						getProcessingTime(responseStream.headers),
 				};
-
 			} finally {
-				this.instantiationService.invokeFunction(logEnginePrompt, prompt, telemetryData);
+				this.instantiationService.invokeFunction(
+					logEnginePrompt,
+					prompt,
+					telemetryData,
+				);
 			}
 		}
 	}
@@ -602,14 +769,18 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 	/**
 	 * @remarks exposed only for testing.
 	 */
-	public static async *convertStreamToApiChoices(resp: ResponseStream, finishedCb: FinishedCallback, baseTelemetryData: TelemetryWithExp, cancel?: CancellationToken): AsyncIterable<APIChoice> {
-
+	public static async *convertStreamToApiChoices(
+		resp: ResponseStream,
+		finishedCb: FinishedCallback,
+		baseTelemetryData: TelemetryWithExp,
+		cancel?: CancellationToken,
+	): AsyncIterable<APIChoice> {
 		const createAPIChoice = (
 			choiceIndex: number,
 			completionText: string,
 			finishReason: string,
 			accumulator: CompletionAccumulator,
-			blockFinished: boolean
+			blockFinished: boolean,
 		): APIChoice => ({
 			choiceIndex,
 			completionText,
@@ -625,7 +796,11 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 			copilotAnnotations: accumulator.annotations.current,
 		});
 
-		const completions: { accumulator: CompletionAccumulator; isFinished: boolean; yielded: boolean }[] = [];
+		const completions: {
+			accumulator: CompletionAccumulator;
+			isFinished: boolean;
+			yielded: boolean;
+		}[] = [];
 
 		try {
 			for await (const chunk of resp.stream) {
@@ -637,7 +812,11 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 					const chunkIdx = chunk.choices[i].index;
 					let completion = completions[chunkIdx];
 					if (completion === undefined) {
-						completion = { accumulator: new CompletionAccumulator(), isFinished: false, yielded: false };
+						completion = {
+							accumulator: new CompletionAccumulator(),
+							isFinished: false,
+							yielded: false,
+						};
 						completions[chunkIdx] = completion;
 					} else if (completion.isFinished) {
 						// already finished, skip
@@ -647,7 +826,7 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 					completion.accumulator.append(choice);
 
 					// finish_reason determines whether the completion is finished by the LLM
-					const hasFinishReason = !!(chunk.choices[i].finish_reason);
+					const hasFinishReason = !!chunk.choices[i].finish_reason;
 
 					// Only call finishedCb when there's a newline or finish_reason, matching SSEProcessor behavior.
 					// This optimization avoids calling finishedCb on every chunk which can be expensive.
@@ -657,20 +836,29 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 					let solutionDecision: SolutionDecision | number | undefined;
 					if (hasFinishReason || hasNewLine) {
 						// call finishedCb to determine whether the completion is finished by the client
-						solutionDecision = await finishedCb(completion.accumulator.responseSoFar, {
-							index: chunkIdx,
-							text: completion.accumulator.responseSoFar,
-							finished: hasFinishReason,
-							requestId: resp.requestId,
-							telemetryData: baseTelemetryData,
-							annotations: completion.accumulator.annotations,
-							getAPIJsonData: () => ({
+						solutionDecision = await finishedCb(
+							completion.accumulator.responseSoFar,
+							{
+								index: chunkIdx,
 								text: completion.accumulator.responseSoFar,
-								tokens: completion.accumulator.chunks,
-								finish_reason: completion.accumulator.finishReason ?? 'stop', // @ulugbekna: logic to determine if last completion was accepted uses finish reason, so changing this `?? 'stop'` will change behavior of multiline completions
-								copilot_annotations: completion.accumulator.annotations.current,
-							} satisfies APIJsonData),
-						} satisfies RequestDelta);
+								finished: hasFinishReason,
+								requestId: resp.requestId,
+								telemetryData: baseTelemetryData,
+								annotations: completion.accumulator.annotations,
+								getAPIJsonData: () =>
+									({
+										text: completion.accumulator
+											.responseSoFar,
+										tokens: completion.accumulator.chunks,
+										finish_reason:
+											completion.accumulator
+												.finishReason ?? 'stop', // @ulugbekna: logic to determine if last completion was accepted uses finish reason, so changing this `?? 'stop'` will change behavior of multiline completions
+										copilot_annotations:
+											completion.accumulator.annotations
+												.current,
+									}) satisfies APIJsonData,
+							} satisfies RequestDelta,
+						);
 
 						if (cancel?.isCancellationRequested) {
 							return;
@@ -680,19 +868,31 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 					// Determine whether to yield based on finish_reason or callback decision.
 					// When finish_reason is present, force yield & stop streaming (matching SSEProcessor).
 					if (hasFinishReason) {
-						if (solutionDecision === undefined || typeof solutionDecision !== 'object') {
-							solutionDecision = { yieldSolution: true, continueStreaming: false };
+						if (
+							solutionDecision === undefined ||
+							typeof solutionDecision !== 'object'
+						) {
+							solutionDecision = {
+								yieldSolution: true,
+								continueStreaming: false,
+							};
 						} else {
 							solutionDecision.yieldSolution = true;
 							solutionDecision.continueStreaming = false;
 						}
 					}
 
-					if (solutionDecision !== undefined &&
-						(typeof solutionDecision === 'number' || solutionDecision.yieldSolution)
+					if (
+						solutionDecision !== undefined &&
+						(typeof solutionDecision === 'number' ||
+							solutionDecision.yieldSolution)
 					) {
 						// mark as finished
-						const isFinished = hasFinishReason || typeof solutionDecision === 'number' || (solutionDecision !== undefined && !solutionDecision.continueStreaming);
+						const isFinished =
+							hasFinishReason ||
+							typeof solutionDecision === 'number' ||
+							(solutionDecision !== undefined &&
+								!solutionDecision.continueStreaming);
 						completion.isFinished = isFinished;
 
 						const finishReason = chunk.choices[i].finish_reason;
@@ -700,14 +900,21 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 							completion.accumulator.finishReason = finishReason;
 						}
 
-						const finishOffset = typeof solutionDecision === 'number'
-							? solutionDecision
-							: (solutionDecision && solutionDecision.finishOffset !== undefined
-								? solutionDecision.finishOffset
-								: undefined);
-						const completionText = finishOffset === undefined
-							? completion.accumulator.responseSoFar
-							: completion.accumulator.responseSoFar.slice(0, finishOffset);
+						const finishOffset =
+							typeof solutionDecision === 'number'
+								? solutionDecision
+								: solutionDecision &&
+									  solutionDecision.finishOffset !==
+											undefined
+									? solutionDecision.finishOffset
+									: undefined;
+						const completionText =
+							finishOffset === undefined
+								? completion.accumulator.responseSoFar
+								: completion.accumulator.responseSoFar.slice(
+										0,
+										finishOffset,
+									);
 
 						// Guard against double-yielding the same choice, matching
 						// SSEProcessor's `solution.yielded` flag. Without this,
@@ -747,12 +954,16 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 						requestId: resp.requestId,
 						telemetryData: baseTelemetryData,
 						annotations: completion.accumulator.annotations,
-						getAPIJsonData: () => ({
-							text: completion.accumulator.responseSoFar,
-							tokens: completion.accumulator.chunks,
-							finish_reason: completion.accumulator.finishReason ?? 'stop',
-							copilot_annotations: completion.accumulator.annotations.current,
-						} satisfies APIJsonData),
+						getAPIJsonData: () =>
+							({
+								text: completion.accumulator.responseSoFar,
+								tokens: completion.accumulator.chunks,
+								finish_reason:
+									completion.accumulator.finishReason ??
+									'stop',
+								copilot_annotations:
+									completion.accumulator.annotations.current,
+							}) satisfies APIJsonData,
 					} satisfies RequestDelta);
 
 					if (cancel?.isCancellationRequested) {
@@ -770,7 +981,7 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 						completion.accumulator.responseSoFar,
 						completion.accumulator.finishReason ?? 'stop', // Matches original SSEProcessor behavior: convertToAPIJsonData defaults to 'stop'
 						completion.accumulator,
-						false
+						false,
 					);
 					yield apiChoice;
 
@@ -793,8 +1004,12 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 	async handleError(
 		statusReporter: ICompletionsStatusReporter,
 		telemetryData: TelemetryData,
-		response: { status: number; text(): Promise<string>; headers: IHeaders },
-		copilotToken: CopilotToken
+		response: {
+			status: number;
+			text(): Promise<string>;
+			headers: IHeaders;
+		},
+		copilotToken: CopilotToken,
 	): Promise<CompletionError> {
 		const text = await response.text();
 		if (response.status === 402) {
@@ -804,7 +1019,7 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 				command: CMDQuotaExceeded,
 				title: 'Learn More',
 			});
-			const event = onCopilotToken(this.authenticationService, t => {
+			const event = onCopilotToken(this.authenticationService, (t) => {
 				this.#disabledReason = undefined;
 				if (!t.isCompletionsQuotaExceeded) {
 					statusReporter.forceNormal();
@@ -818,27 +1033,45 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 			logger.info(this.logTargetService, text);
 			return { type: 'failed', reason: `client not supported: ${text}` };
 		}
-		if (isClientError(response) && !response.headers.get('x-github-request-id')) {
+		if (
+			isClientError(response) &&
+			!response.headers.get('x-github-request-id')
+		) {
 			const message = `Last response was a ${response.status} error and does not appear to originate from GitHub. Is a proxy or firewall intercepting this request? https://gh.io/copilot-firewall`;
 			logger.error(this.logTargetService, message);
 			statusReporter.setWarning(message);
 			telemetryData.properties.error = `Response status was ${response.status} with no x-github-request-id header`;
 		} else if (isClientError(response)) {
-			logger.warn(this.logTargetService, `Response status was ${response.status}:`, text);
-			statusReporter.setWarning(`Last response was a ${response.status} error: ${text}`);
+			logger.warn(
+				this.logTargetService,
+				`Response status was ${response.status}:`,
+				text,
+			);
+			statusReporter.setWarning(
+				`Last response was a ${response.status} error: ${text}`,
+			);
 			telemetryData.properties.error = `Response status was ${response.status}: ${text}`;
 		} else {
-			statusReporter.setWarning(`Last response was a ${response.status} error`);
+			statusReporter.setWarning(
+				`Last response was a ${response.status} error`,
+			);
 			telemetryData.properties.error = `Response status was ${response.status}`;
 		}
 		telemetryData.properties.status = String(response.status);
-		this.instantiationService.invokeFunction(telemetry, 'request.shownWarning', telemetryData);
+		this.instantiationService.invokeFunction(
+			telemetry,
+			'request.shownWarning',
+			telemetryData,
+		);
 		// check for 4xx responses which will point to a forbidden
 		if (response.status === 401 || response.status === 403) {
 			// Token has expired or invalid, fetch a new one on next request
 			// TODO(drifkin): these actions should probably happen in vsc specific code
 			this.copilotTokenManager.resetToken(response.status);
-			return { type: 'failed', reason: `token expired or invalid: ${response.status}` };
+			return {
+				type: 'failed',
+				reason: `token expired or invalid: ${response.status}`,
+			};
 		}
 		if (response.status === 429) {
 			const rateLimitSeconds = 10;
@@ -846,15 +1079,26 @@ export class LiveOpenAIFetcher extends OpenAIFetcher {
 				this.#disabledReason = undefined;
 			}, rateLimitSeconds * 1000);
 			this.#disabledReason = 'rate limited';
-			logger.warn(this.logTargetService, `Rate limited by server. Denying completions for the next ${rateLimitSeconds} seconds.`);
+			logger.warn(
+				this.logTargetService,
+				`Rate limited by server. Denying completions for the next ${rateLimitSeconds} seconds.`,
+			);
 			return { type: 'failed', reason: this.#disabledReason };
 		}
 		if (response.status === 499) {
 			logger.info(this.logTargetService, 'Cancelled by server');
 			return { type: 'failed', reason: 'canceled by server' };
 		}
-		logger.error(this.logTargetService, 'Unhandled status from server:', response.status, text);
-		return { type: 'failed', reason: `unhandled status from server: ${response.status} ${text}` };
+		logger.error(
+			this.logTargetService,
+			'Unhandled status from server:',
+			response.status,
+			text,
+		);
+		return {
+			type: 'failed',
+			reason: `unhandled status from server: ${response.status} ${text}`,
+		};
 	}
 }
 
@@ -863,14 +1107,14 @@ function isClientError(response: { status: number }): boolean {
 }
 
 class CompletionAccumulator {
-
 	private _chunks: string[] = [];
 	/** concatenated version of {_chunks} */
 	private _responseSoFar: string = '';
 
 	private _finishReason: string | null = null;
 
-	public readonly annotations: CopilotAnnotations = new StreamCopilotAnnotations();
+	public readonly annotations: CopilotAnnotations =
+		new StreamCopilotAnnotations();
 
 	public get responseSoFar(): string {
 		return this._responseSoFar;

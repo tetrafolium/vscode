@@ -3,15 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IRange, Range } from '../../../../editor/common/core/range.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IAgentFeedback } from './agentFeedbackService.js';
-import { CodeReviewStateKind, ICodeReviewComment, ICodeReviewState, ICodeReviewSuggestion, IPRReviewComment, IPRReviewState, PRReviewStateKind } from '../../codeReview/browser/codeReviewService.js';
+import { IRange, Range } from "../../../../editor/common/core/range.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IAgentFeedback } from "./agentFeedbackService.js";
+import {
+	CodeReviewStateKind,
+	ICodeReviewComment,
+	ICodeReviewState,
+	ICodeReviewSuggestion,
+	IPRReviewComment,
+	IPRReviewState,
+	PRReviewStateKind,
+} from "../../codeReview/browser/codeReviewService.js";
 
 export const enum SessionEditorCommentSource {
-	AgentFeedback = 'agentFeedback',
-	CodeReview = 'codeReview',
-	PRReview = 'prReview',
+	AgentFeedback = "agentFeedback",
+	CodeReview = "codeReview",
+	PRReview = "prReview",
 }
 
 export interface ISessionEditorComment {
@@ -33,12 +41,20 @@ export interface ISessionEditorComment {
 	readonly replies?: readonly string[];
 }
 
-export function getCodeReviewComments(reviewState: ICodeReviewState): readonly ICodeReviewComment[] {
-	return reviewState.kind === CodeReviewStateKind.Result ? reviewState.comments : [];
+export function getCodeReviewComments(
+	reviewState: ICodeReviewState,
+): readonly ICodeReviewComment[] {
+	return reviewState.kind === CodeReviewStateKind.Result
+		? reviewState.comments
+		: [];
 }
 
-export function getPRReviewComments(prReviewState: IPRReviewState | undefined): readonly IPRReviewComment[] {
-	return prReviewState?.kind === PRReviewStateKind.Loaded ? prReviewState.comments : [];
+export function getPRReviewComments(
+	prReviewState: IPRReviewState | undefined,
+): readonly IPRReviewComment[] {
+	return prReviewState?.kind === PRReviewStateKind.Loaded
+		? prReviewState.comments
+		: [];
 }
 
 export function getSessionEditorComments(
@@ -51,7 +67,10 @@ export function getSessionEditorComments(
 
 	for (const item of agentFeedbackItems) {
 		comments.push({
-			id: toSessionEditorCommentId(SessionEditorCommentSource.AgentFeedback, item.id),
+			id: toSessionEditorCommentId(
+				SessionEditorCommentSource.AgentFeedback,
+				item.id,
+			),
 			sourceId: item.id,
 			source: SessionEditorCommentSource.AgentFeedback,
 			sessionResource,
@@ -66,7 +85,10 @@ export function getSessionEditorComments(
 
 	for (const item of getCodeReviewComments(reviewState)) {
 		comments.push({
-			id: toSessionEditorCommentId(SessionEditorCommentSource.CodeReview, item.id),
+			id: toSessionEditorCommentId(
+				SessionEditorCommentSource.CodeReview,
+				item.id,
+			),
 			sourceId: item.id,
 			source: SessionEditorCommentSource.CodeReview,
 			sessionResource,
@@ -81,7 +103,10 @@ export function getSessionEditorComments(
 
 	for (const item of getPRReviewComments(prReviewState)) {
 		comments.push({
-			id: toSessionEditorCommentId(SessionEditorCommentSource.PRReview, item.id),
+			id: toSessionEditorCommentId(
+				SessionEditorCommentSource.PRReview,
+				item.id,
+			),
 			sourceId: item.id,
 			source: SessionEditorCommentSource.PRReview,
 			sessionResource,
@@ -96,11 +121,16 @@ export function getSessionEditorComments(
 	return comments;
 }
 
-export function compareSessionEditorComments(a: ISessionEditorComment, b: ISessionEditorComment): number {
-	return a.resourceUri.toString().localeCompare(b.resourceUri.toString())
-		|| Range.compareRangesUsingStarts(Range.lift(a.range), Range.lift(b.range))
-		|| a.source.localeCompare(b.source)
-		|| a.sourceId.localeCompare(b.sourceId);
+export function compareSessionEditorComments(
+	a: ISessionEditorComment,
+	b: ISessionEditorComment,
+): number {
+	return (
+		a.resourceUri.toString().localeCompare(b.resourceUri.toString()) ||
+		Range.compareRangesUsingStarts(Range.lift(a.range), Range.lift(b.range)) ||
+		a.source.localeCompare(b.source) ||
+		a.sourceId.localeCompare(b.sourceId)
+	);
 }
 
 /**
@@ -118,7 +148,7 @@ function estimateExpandedCommentLines(comment: ISessionEditorComment): number {
 	let suggestionLines = 0;
 	if (comment.suggestion?.edits.length) {
 		for (const edit of comment.suggestion.edits) {
-			suggestionLines += 2 + Math.max(1, edit.newText.split('\n').length);
+			suggestionLines += 2 + Math.max(1, edit.newText.split("\n").length);
 		}
 	}
 	let replyLines = 0;
@@ -130,7 +160,10 @@ function estimateExpandedCommentLines(comment: ISessionEditorComment): number {
 	return textLines + 1 + suggestionLines + replyLines;
 }
 
-export function groupNearbySessionEditorComments(items: readonly ISessionEditorComment[], lineThreshold: number = 5): ISessionEditorComment[][] {
+export function groupNearbySessionEditorComments(
+	items: readonly ISessionEditorComment[],
+	lineThreshold: number = 5,
+): ISessionEditorComment[][] {
 	if (items.length === 0) {
 		return [];
 	}
@@ -144,8 +177,10 @@ export function groupNearbySessionEditorComments(items: readonly ISessionEditorC
 		const firstItem = currentGroup[0];
 		const currentItem = sorted[i];
 
-		const sameResource = currentItem.resourceUri.toString() === firstItem.resourceUri.toString();
-		const verticalSpan = currentItem.range.startLineNumber - firstItem.range.startLineNumber;
+		const sameResource =
+			currentItem.resourceUri.toString() === firstItem.resourceUri.toString();
+		const verticalSpan =
+			currentItem.range.startLineNumber - firstItem.range.startLineNumber;
 		// Account for the estimated vertical space already taken by the
 		// expanded group so that a long comment pulls in items below it.
 		const effectiveThreshold = lineThreshold + currentGroupExpandedLines;
@@ -164,15 +199,27 @@ export function groupNearbySessionEditorComments(items: readonly ISessionEditorC
 	return groups;
 }
 
-export function getResourceEditorComments(resourceUri: URI, comments: readonly ISessionEditorComment[]): readonly ISessionEditorComment[] {
+export function getResourceEditorComments(
+	resourceUri: URI,
+	comments: readonly ISessionEditorComment[],
+): readonly ISessionEditorComment[] {
 	const resource = resourceUri.toString();
-	return comments.filter(comment => comment.resourceUri.toString() === resource);
+	return comments.filter(
+		(comment) => comment.resourceUri.toString() === resource,
+	);
 }
 
-export function toSessionEditorCommentId(source: SessionEditorCommentSource, sourceId: string): string {
+export function toSessionEditorCommentId(
+	source: SessionEditorCommentSource,
+	sourceId: string,
+): string {
 	return `${source}:${sourceId}`;
 }
 
-export function hasAgentFeedbackComments(comments: readonly ISessionEditorComment[]): boolean {
-	return comments.some(comment => comment.source === SessionEditorCommentSource.AgentFeedback);
+export function hasAgentFeedbackComments(
+	comments: readonly ISessionEditorComment[],
+): boolean {
+	return comments.some(
+		(comment) => comment.source === SessionEditorCommentSource.AgentFeedback,
+	);
 }

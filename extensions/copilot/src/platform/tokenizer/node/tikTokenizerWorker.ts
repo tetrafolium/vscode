@@ -11,14 +11,19 @@ function main() {
 	if (!port) {
 		throw new Error(`This module should only be used in a worker thread.`);
 	}
-	port.on('message', async (message: { id: number; fn: string; args: any[] }) => {
-		try {
-			const res = await (<any>TikTokenImpl.instance)[message.fn](...message.args);
-			port.postMessage({ id: message.id, res });
-		} catch (err) {
-			port.postMessage({ id: message.id, err });
-		}
-	});
+	port.on(
+		'message',
+		async (message: { id: number; fn: string; args: any[] }) => {
+			try {
+				const res = await (<any>TikTokenImpl.instance)[message.fn](
+					...message.args,
+				);
+				port.postMessage({ id: message.id, res });
+			} catch (err) {
+				port.postMessage({ id: message.id, err });
+			}
+		},
+	);
 }
 
 main();

@@ -3,16 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { AnyZodRawShape, GetSessionMessagesOptions, GetSubagentMessagesOptions, InferShape, ListSessionsOptions, ListSubagentsOptions, McpSdkServerConfigWithInstance, Options, SDKSessionInfo, SdkMcpToolDefinition, SessionMessage, WarmQuery } from '@anthropic-ai/claude-agent-sdk';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import * as fs from 'fs';
-import { pathToFileURL } from 'url';
-import { join, resolve } from '../../../../base/common/path.js';
-import { createDecorator } from '../../../instantiation/common/instantiation.js';
-import { ILogService } from '../../../log/common/log.js';
-import { AgentHostClaudeSdkPathEnvVar } from '../../common/agentService.js';
+import type {
+	AnyZodRawShape,
+	GetSessionMessagesOptions,
+	GetSubagentMessagesOptions,
+	InferShape,
+	ListSessionsOptions,
+	ListSubagentsOptions,
+	McpSdkServerConfigWithInstance,
+	Options,
+	SDKSessionInfo,
+	SdkMcpToolDefinition,
+	SessionMessage,
+	WarmQuery,
+} from "@anthropic-ai/claude-agent-sdk";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import * as fs from "fs";
+import { pathToFileURL } from "url";
+import { join, resolve } from "../../../../base/common/path.js";
+import { createDecorator } from "../../../instantiation/common/instantiation.js";
+import { ILogService } from "../../../log/common/log.js";
+import { AgentHostClaudeSdkPathEnvVar } from "../../common/agentService.js";
 
-export const IClaudeAgentSdkService = createDecorator<IClaudeAgentSdkService>('claudeAgentSdkService');
+export const IClaudeAgentSdkService = createDecorator<IClaudeAgentSdkService>(
+	"claudeAgentSdkService",
+);
 
 /**
  * Pure per-method passthrough shim over `@anthropic-ai/claude-agent-sdk`.
@@ -29,10 +44,23 @@ export interface IClaudeAgentSdkService {
 
 	listSessions(): Promise<readonly SDKSessionInfo[]>;
 	getSessionInfo(sessionId: string): Promise<SDKSessionInfo | undefined>;
-	startup(params: { options: Options; initializeTimeoutMs?: number }): Promise<WarmQuery>;
-	getSessionMessages(sessionId: string, options?: GetSessionMessagesOptions): Promise<readonly SessionMessage[]>;
-	listSubagents(sessionId: string, options?: ListSubagentsOptions): Promise<readonly string[]>;
-	getSubagentMessages(sessionId: string, agentId: string, options?: GetSubagentMessagesOptions): Promise<readonly SessionMessage[]>;
+	startup(params: {
+		options: Options;
+		initializeTimeoutMs?: number;
+	}): Promise<WarmQuery>;
+	getSessionMessages(
+		sessionId: string,
+		options?: GetSessionMessagesOptions,
+	): Promise<readonly SessionMessage[]>;
+	listSubagents(
+		sessionId: string,
+		options?: ListSubagentsOptions,
+	): Promise<readonly string[]>;
+	getSubagentMessages(
+		sessionId: string,
+		agentId: string,
+		options?: GetSubagentMessagesOptions,
+	): Promise<readonly SessionMessage[]>;
 
 	createSdkMcpServer(options: {
 		name: string;
@@ -48,7 +76,10 @@ export interface IClaudeAgentSdkService {
 		name: string,
 		description: string,
 		inputSchema: Schema,
-		handler: (args: InferShape<Schema>, extra: unknown) => Promise<CallToolResult>
+		handler: (
+			args: InferShape<Schema>,
+			extra: unknown,
+		) => Promise<CallToolResult>,
 	): Promise<SdkMcpToolDefinition<Schema>>;
 }
 
@@ -63,10 +94,23 @@ export interface IClaudeAgentSdkService {
 export interface IClaudeSdkBindings {
 	listSessions(options?: ListSessionsOptions): Promise<SDKSessionInfo[]>;
 	getSessionInfo(sessionId: string): Promise<SDKSessionInfo | undefined>;
-	startup(params: { options: Options; initializeTimeoutMs?: number }): Promise<WarmQuery>;
-	getSessionMessages(sessionId: string, options?: GetSessionMessagesOptions): Promise<SessionMessage[]>;
-	listSubagents(sessionId: string, options?: ListSubagentsOptions): Promise<string[]>;
-	getSubagentMessages(sessionId: string, agentId: string, options?: GetSubagentMessagesOptions): Promise<SessionMessage[]>;
+	startup(params: {
+		options: Options;
+		initializeTimeoutMs?: number;
+	}): Promise<WarmQuery>;
+	getSessionMessages(
+		sessionId: string,
+		options?: GetSessionMessagesOptions,
+	): Promise<SessionMessage[]>;
+	listSubagents(
+		sessionId: string,
+		options?: ListSubagentsOptions,
+	): Promise<string[]>;
+	getSubagentMessages(
+		sessionId: string,
+		agentId: string,
+		options?: GetSubagentMessagesOptions,
+	): Promise<SessionMessage[]>;
 	createSdkMcpServer(options: {
 		name: string;
 		version?: string;
@@ -77,7 +121,10 @@ export interface IClaudeSdkBindings {
 		name: string,
 		description: string,
 		inputSchema: Schema,
-		handler: (args: InferShape<Schema>, extra: unknown) => Promise<CallToolResult>
+		handler: (
+			args: InferShape<Schema>,
+			extra: unknown,
+		) => Promise<CallToolResult>,
 	): SdkMcpToolDefinition<Schema>;
 }
 
@@ -97,9 +144,7 @@ export class ClaudeAgentSdkService implements IClaudeAgentSdkService {
 	 */
 	private _firstLoadFailureLogged = false;
 
-	constructor(
-		@ILogService private readonly _logService: ILogService,
-	) { }
+	constructor(@ILogService private readonly _logService: ILogService) {}
 
 	async listSessions(): Promise<readonly SDKSessionInfo[]> {
 		const sdk = await this._getSdk();
@@ -111,22 +156,35 @@ export class ClaudeAgentSdkService implements IClaudeAgentSdkService {
 		return sdk.getSessionInfo(sessionId);
 	}
 
-	async startup(params: { options: Options; initializeTimeoutMs?: number }): Promise<WarmQuery> {
+	async startup(params: {
+		options: Options;
+		initializeTimeoutMs?: number;
+	}): Promise<WarmQuery> {
 		const sdk = await this._getSdk();
 		return sdk.startup(params);
 	}
 
-	async getSessionMessages(sessionId: string, options?: GetSessionMessagesOptions): Promise<readonly SessionMessage[]> {
+	async getSessionMessages(
+		sessionId: string,
+		options?: GetSessionMessagesOptions,
+	): Promise<readonly SessionMessage[]> {
 		const sdk = await this._getSdk();
 		return sdk.getSessionMessages(sessionId, options);
 	}
 
-	async listSubagents(sessionId: string, options?: ListSubagentsOptions): Promise<readonly string[]> {
+	async listSubagents(
+		sessionId: string,
+		options?: ListSubagentsOptions,
+	): Promise<readonly string[]> {
 		const sdk = await this._getSdk();
 		return sdk.listSubagents(sessionId, options);
 	}
 
-	async getSubagentMessages(sessionId: string, agentId: string, options?: GetSubagentMessagesOptions): Promise<readonly SessionMessage[]> {
+	async getSubagentMessages(
+		sessionId: string,
+		agentId: string,
+		options?: GetSubagentMessagesOptions,
+	): Promise<readonly SessionMessage[]> {
 		const sdk = await this._getSdk();
 		return sdk.getSubagentMessages(sessionId, agentId, options);
 	}
@@ -145,7 +203,10 @@ export class ClaudeAgentSdkService implements IClaudeAgentSdkService {
 		name: string,
 		description: string,
 		inputSchema: Schema,
-		handler: (args: InferShape<Schema>, extra: unknown) => Promise<CallToolResult>
+		handler: (
+			args: InferShape<Schema>,
+			extra: unknown,
+		) => Promise<CallToolResult>,
 	): Promise<SdkMcpToolDefinition<Schema>> {
 		const sdk = await this._getSdk();
 		return sdk.tool(name, description, inputSchema, handler);
@@ -161,7 +222,10 @@ export class ClaudeAgentSdkService implements IClaudeAgentSdkService {
 		} catch (err) {
 			if (!this._firstLoadFailureLogged) {
 				this._firstLoadFailureLogged = true;
-				this._logService.error('[Claude] Failed to load @anthropic-ai/claude-agent-sdk', err);
+				this._logService.error(
+					"[Claude] Failed to load @anthropic-ai/claude-agent-sdk",
+					err,
+				);
 			}
 			throw err;
 		}
@@ -176,17 +240,22 @@ export class ClaudeAgentSdkService implements IClaudeAgentSdkService {
 		// works on Windows.
 		const sdkPath = process.env[AgentHostClaudeSdkPathEnvVar];
 		if (!sdkPath) {
-			throw new Error(`Cannot load @anthropic-ai/claude-agent-sdk: ${AgentHostClaudeSdkPathEnvVar} is not set. Set the 'chat.agentHost.claudeAgent.path' setting to a locally-installed SDK package.`);
+			throw new Error(
+				`Cannot load @anthropic-ai/claude-agent-sdk: ${AgentHostClaudeSdkPathEnvVar} is not set. Set the 'chat.agentHost.claudeAgent.path' setting to a locally-installed SDK package.`,
+			);
 		}
 		// Node ESM rejects directory imports, so if the user pointed at the
 		// package directory, resolve its `exports['.']` / `main` entry first.
 		let entry = sdkPath;
 		if (fs.statSync(sdkPath).isDirectory()) {
-			const pkgJson = JSON.parse(fs.readFileSync(join(sdkPath, 'package.json'), 'utf8'));
-			const mainEntry = pkgJson.exports?.['.']?.default
-				?? pkgJson.exports?.['.']?.import
-				?? pkgJson.main
-				?? 'index.js';
+			const pkgJson = JSON.parse(
+				fs.readFileSync(join(sdkPath, "package.json"), "utf8"),
+			);
+			const mainEntry =
+				pkgJson.exports?.["."]?.default ??
+				pkgJson.exports?.["."]?.import ??
+				pkgJson.main ??
+				"index.js";
 			entry = resolve(sdkPath, mainEntry);
 		}
 		return import(pathToFileURL(entry).href);
@@ -201,20 +270,26 @@ export class ClaudeAgentSdkService implements IClaudeAgentSdkService {
 // exports, the `_assertBindingsMatchSdk` assignment below stops type-
 // checking and the build fails — flagging that the shim needs updating.
 
-type SdkModule = typeof import('@anthropic-ai/claude-agent-sdk');
+type SdkModule = typeof import("@anthropic-ai/claude-agent-sdk");
 
 type AssertBindingsMatchSdk = {
 	[K in keyof IClaudeSdkBindings]: K extends keyof SdkModule
-	? SdkModule[K] extends IClaudeSdkBindings[K]
-	? true
-	: ['SDK export signature drifted from IClaudeSdkBindings', K, SdkModule[K], IClaudeSdkBindings[K]]
-	: ['Not an export of @anthropic-ai/claude-agent-sdk', K];
+		? SdkModule[K] extends IClaudeSdkBindings[K]
+			? true
+			: [
+					"SDK export signature drifted from IClaudeSdkBindings",
+					K,
+					SdkModule[K],
+					IClaudeSdkBindings[K],
+				]
+		: ["Not an export of @anthropic-ai/claude-agent-sdk", K];
 };
 
 // Forces the mapped type above to be eagerly checked: if any entry is not
 // `true`, this assignment fails to compile. Module-local so the runtime
 // surface stays clean — the only purpose is the type-level assertion.
-const _assertBindingsMatchSdk: { [K in keyof IClaudeSdkBindings]: true } = null as unknown as AssertBindingsMatchSdk;
+const _assertBindingsMatchSdk: { [K in keyof IClaudeSdkBindings]: true } =
+	null as unknown as AssertBindingsMatchSdk;
 void _assertBindingsMatchSdk;
 
 // #endregion

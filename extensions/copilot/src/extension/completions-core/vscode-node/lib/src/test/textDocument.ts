@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { WorkspaceFolder } from '../../../types/src';
-import { CopilotTextDocument, INotebookCell, INotebookDocument, ITextDocument } from '../textDocument';
+import {
+	CopilotTextDocument,
+	INotebookCell,
+	INotebookDocument,
+	ITextDocument,
+} from '../textDocument';
 import {
 	TextDocumentChangeEvent,
 	TextDocumentCloseEvent,
@@ -20,14 +25,14 @@ export function createTextDocument(
 	uri: string,
 	clientAndDetectedLanguageId: string,
 	version: number,
-	text: string
+	text: string,
 ): ITextDocument {
 	return CopilotTextDocument.create(
 		validateUri(uri),
 		clientAndDetectedLanguageId,
 		version,
 		text,
-		clientAndDetectedLanguageId
+		clientAndDetectedLanguageId,
 	);
 }
 
@@ -54,16 +59,26 @@ interface JupyterNotebook {
 }
 
 export function parseNotebook(doc: ITextDocument): INotebookDocument {
-	const notebook: JupyterNotebook = JSON.parse(doc.getText()) as JupyterNotebook;
+	const notebook: JupyterNotebook = JSON.parse(
+		doc.getText(),
+	) as JupyterNotebook;
 	const cells: INotebookCell[] = notebook.cells.map((cell, index) => {
 		const cellUri = `${doc.uri.replace(/#.*/, '')}#${index}`;
-		const cellText = Array.isArray(cell.source) ? cell.source.join('') : cell.source;
+		const cellText = Array.isArray(cell.source)
+			? cell.source.join('')
+			: cell.source;
 
 		const languageId =
 			(cell.metadata?.['vscode']?.['languageId'] as string) ||
 			(cell.cell_type === 'code' ? 'python' : 'markdown');
 
-		const document = CopilotTextDocument.create(cellUri, languageId, 0, cellText, languageId);
+		const document = CopilotTextDocument.create(
+			cellUri,
+			languageId,
+			0,
+			cellText,
+			languageId,
+		);
 
 		return {
 			index,
@@ -76,12 +91,12 @@ export function parseNotebook(doc: ITextDocument): INotebookDocument {
 }
 
 export class InMemoryNotebookDocument implements INotebookDocument {
-	constructor(private readonly _cells: INotebookCell[]) { }
+	constructor(private readonly _cells: INotebookCell[]) {}
 	getCells(): INotebookCell[] {
 		return this._cells;
 	}
 	getCellFor({ uri }: { uri: string }): INotebookCell | undefined {
-		return this._cells.find(cell => cell.document.uri === uri);
+		return this._cells.find((cell) => cell.document.uri === uri);
 	}
 }
 
@@ -94,11 +109,16 @@ export class SimpleTestTextDocumentManager extends TextDocumentManager {
 	private _workspaceFolders: WorkspaceFolder[] = [];
 
 	init(workspaceFolders: { readonly uri: string; readonly name?: string }[]) {
-		this._workspaceFolders = workspaceFolders.map(f => ({ uri: f.uri, name: f.name ?? basename(f.uri) }));
+		this._workspaceFolders = workspaceFolders.map((f) => ({
+			uri: f.uri,
+			name: f.name ?? basename(f.uri),
+		}));
 	}
 
 	// Make public to allow for stubbing
-	override async readTextDocumentFromDisk(uri: string): Promise<string | undefined> {
+	override async readTextDocumentFromDisk(
+		uri: string,
+	): Promise<string | undefined> {
 		return super.readTextDocumentFromDisk(uri);
 	}
 
@@ -106,35 +126,50 @@ export class SimpleTestTextDocumentManager extends TextDocumentManager {
 		return this._openTextDocuments;
 	}
 
-	readonly didFocusTextDocumentEmitter = new Emitter<TextDocumentFocusedEvent>();
+	readonly didFocusTextDocumentEmitter =
+		new Emitter<TextDocumentFocusedEvent>();
 	onDidFocusTextDocument = this.didFocusTextDocumentEmitter.event;
 
-	readonly didChangeTextDocumentEmitter = new Emitter<TextDocumentChangeEvent>();
+	readonly didChangeTextDocumentEmitter =
+		new Emitter<TextDocumentChangeEvent>();
 	onDidChangeTextDocument = this.didChangeTextDocumentEmitter.event;
 
 	readonly didOpenTextDocumentEmitter = new Emitter<TextDocumentOpenEvent>();
 	onDidOpenTextDocument = this.didOpenTextDocumentEmitter.event;
 
-	readonly didCloseTextDocumentEmitter = new Emitter<TextDocumentCloseEvent>();
+	readonly didCloseTextDocumentEmitter =
+		new Emitter<TextDocumentCloseEvent>();
 	onDidCloseTextDocument = this.didCloseTextDocumentEmitter.event;
 
-	readonly didChangeWorkspaceFoldersEmitter = new Emitter<WorkspaceFoldersChangeEvent>();
+	readonly didChangeWorkspaceFoldersEmitter =
+		new Emitter<WorkspaceFoldersChangeEvent>();
 	onDidChangeWorkspaceFolders = this.didChangeWorkspaceFoldersEmitter.event;
 
-	setTextDocument(uri: string, languageId: string, text: string): ITextDocument {
+	setTextDocument(
+		uri: string,
+		languageId: string,
+		text: string,
+	): ITextDocument {
 		const doc = createTextDocument(uri, languageId, 0, text);
 		this._openTextDocuments.push(doc);
 		return doc;
 	}
 
 	updateTextDocument(uri: string, newText: string) {
-		const idx = this._openTextDocuments.findIndex(t => t.uri === uri.toString());
+		const idx = this._openTextDocuments.findIndex(
+			(t) => t.uri === uri.toString(),
+		);
 		if (idx < 0) {
 			throw new Error('Document not found');
 		}
 
 		const oldDoc = this._openTextDocuments[idx];
-		this._openTextDocuments[idx] = createTextDocument(uri, oldDoc.clientLanguageId, oldDoc.version + 1, newText);
+		this._openTextDocuments[idx] = createTextDocument(
+			uri,
+			oldDoc.clientLanguageId,
+			oldDoc.version + 1,
+			newText,
+		);
 	}
 
 	setNotebookDocument(doc: ITextDocument, notebook: INotebookDocument) {
@@ -159,7 +194,9 @@ export class SimpleTestTextDocumentManager extends TextDocumentManager {
 export class TestTextDocumentManager extends SimpleTestTextDocumentManager {
 	private contents = new Map<string, string>();
 
-	override readTextDocumentFromDisk(uri: string): Promise<string | undefined> {
+	override readTextDocumentFromDisk(
+		uri: string,
+	): Promise<string | undefined> {
 		return Promise.resolve(this.contents.get(uri));
 	}
 

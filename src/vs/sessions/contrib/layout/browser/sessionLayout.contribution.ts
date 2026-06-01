@@ -3,7 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { registerWorkbenchContribution2, WorkbenchPhase } from '../../../../workbench/common/contributions.js';
-import { LayoutController } from './sessionLayoutController.js';
+import {
+	registerWorkbenchContribution2,
+	WorkbenchPhase,
+} from "../../../../workbench/common/contributions.js";
+import { LayoutController } from "./sessionLayoutController.js";
 
-registerWorkbenchContribution2(LayoutController.ID, LayoutController, WorkbenchPhase.AfterRestored);
+registerWorkbenchContribution2(
+	LayoutController.ID,
+	LayoutController,
+	WorkbenchPhase.AfterRestored,
+);

@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { decodeBase64, VSBuffer } from '../../../../base/common/buffer.js';
-import { joinPath } from '../../../../base/common/resources.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IFileService } from '../../../../platform/files/common/files.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { CommandsRegistry } from '../../../../platform/commands/common/commands.js';
+import { decodeBase64, VSBuffer } from "../../../../base/common/buffer.js";
+import { joinPath } from "../../../../base/common/resources.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IFileService } from "../../../../platform/files/common/files.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { CommandsRegistry } from "../../../../platform/commands/common/commands.js";
 
 /**
  * Resizes an image provided as a UInt8Array string. Resizing is based on Open AI's algorithm for tokenzing images.
@@ -17,15 +17,20 @@ import { CommandsRegistry } from '../../../../platform/commands/common/commands.
  * @returns A promise that resolves to the UInt8Array string of the resized image.
  */
 
-export async function resizeImage(data: Uint8Array | string, mimeType?: string): Promise<Uint8Array> {
-	const isGif = mimeType === 'image/gif';
+export async function resizeImage(
+	data: Uint8Array | string,
+	mimeType?: string,
+): Promise<Uint8Array> {
+	const isGif = mimeType === "image/gif";
 
-	if (typeof data === 'string') {
+	if (typeof data === "string") {
 		data = convertStringToUInt8Array(data);
 	}
 
 	return new Promise((resolve, reject) => {
-		const blob = new Blob([data as Uint8Array<ArrayBuffer>], { type: mimeType });
+		const blob = new Blob([data as Uint8Array<ArrayBuffer>], {
+			type: mimeType,
+		});
 		const img = new Image();
 		const url = URL.createObjectURL(blob);
 		img.src = url;
@@ -50,17 +55,18 @@ export async function resizeImage(data: Uint8Array | string, mimeType?: string):
 			width = Math.round(width * scaleFactor);
 			height = Math.round(height * scaleFactor);
 
-			const canvas = document.createElement('canvas');
+			const canvas = document.createElement("canvas");
 			canvas.width = width;
 			canvas.height = height;
-			const ctx = canvas.getContext('2d');
+			const ctx = canvas.getContext("2d");
 			if (ctx) {
 				ctx.drawImage(img, 0, 0, width, height);
 
-				const jpegTypes = ['image/jpeg', 'image/jpg'];
-				const outputMimeType = mimeType && jpegTypes.includes(mimeType) ? 'image/jpeg' : 'image/png';
+				const jpegTypes = ["image/jpeg", "image/jpg"];
+				const outputMimeType =
+					mimeType && jpegTypes.includes(mimeType) ? "image/jpeg" : "image/png";
 
-				canvas.toBlob(blob => {
+				canvas.toBlob((blob) => {
 					if (blob) {
 						const reader = new FileReader();
 						reader.onload = () => {
@@ -69,11 +75,11 @@ export async function resizeImage(data: Uint8Array | string, mimeType?: string):
 						reader.onerror = (error) => reject(error);
 						reader.readAsArrayBuffer(blob);
 					} else {
-						reject(new Error('Failed to create blob from canvas'));
+						reject(new Error("Failed to create blob from canvas"));
 					}
 				}, outputMimeType);
 			} else {
-				reject(new Error('Failed to get canvas context'));
+				reject(new Error("Failed to get canvas context"));
 			}
 		};
 		img.onerror = (error) => {
@@ -84,7 +90,7 @@ export async function resizeImage(data: Uint8Array | string, mimeType?: string):
 }
 
 export function convertStringToUInt8Array(data: string): Uint8Array {
-	const base64Data = data.includes(',') ? data.split(',')[1] : data;
+	const base64Data = data.includes(",") ? data.split(",")[1] : data;
 	if (isValidBase64(base64Data)) {
 		return decodeBase64(base64Data).buffer;
 	}
@@ -98,29 +104,37 @@ export function convertUint8ArrayToString(data: Uint8Array): string {
 		const decodedString = decoder.decode(data);
 		return decodedString;
 	} catch {
-		return '';
+		return "";
 	}
 }
 
 function isValidBase64(str: string): boolean {
 	// checks if the string is a valid base64 string that is NOT encoded
-	return /^[A-Za-z0-9+/]*={0,2}$/.test(str) && (() => {
-		try {
-			atob(str);
-			return true;
-		} catch {
-			return false;
-		}
-	})();
+	return (
+		/^[A-Za-z0-9+/]*={0,2}$/.test(str) &&
+		(() => {
+			try {
+				atob(str);
+				return true;
+			} catch {
+				return false;
+			}
+		})()
+	);
 }
 
-export async function createFileForMedia(fileService: IFileService, imagesFolder: URI, dataTransfer: Uint8Array, mimeType: string): Promise<URI | undefined> {
+export async function createFileForMedia(
+	fileService: IFileService,
+	imagesFolder: URI,
+	dataTransfer: Uint8Array,
+	mimeType: string,
+): Promise<URI | undefined> {
 	const exists = await fileService.exists(imagesFolder);
 	if (!exists) {
 		await fileService.createFolder(imagesFolder);
 	}
 
-	const ext = mimeType.split('/')[1] || 'png';
+	const ext = mimeType.split("/")[1] || "png";
 	const filename = `image-${Date.now()}.${ext}`;
 	const fileUri = joinPath(imagesFolder, filename);
 
@@ -130,7 +144,11 @@ export async function createFileForMedia(fileService: IFileService, imagesFolder
 	return fileUri;
 }
 
-export async function cleanupOldImages(fileService: IFileService, logService: ILogService, imagesFolder: URI): Promise<void> {
+export async function cleanupOldImages(
+	fileService: IFileService,
+	logService: ILogService,
+	imagesFolder: URI,
+): Promise<void> {
 	const exists = await fileService.exists(imagesFolder);
 	if (!exists) {
 		return;
@@ -142,16 +160,18 @@ export async function cleanupOldImages(fileService: IFileService, logService: IL
 		return;
 	}
 
-	await Promise.all(files.children.map(async (file) => {
-		try {
-			const timestamp = getTimestampFromFilename(file.name);
-			if (timestamp && (Date.now() - timestamp > duration)) {
-				await fileService.del(file.resource);
+	await Promise.all(
+		files.children.map(async (file) => {
+			try {
+				const timestamp = getTimestampFromFilename(file.name);
+				if (timestamp && Date.now() - timestamp > duration) {
+					await fileService.del(file.resource);
+				}
+			} catch (err) {
+				logService.error("Failed to clean up old images", err);
 			}
-		} catch (err) {
-			logService.error('Failed to clean up old images', err);
-		}
-	}));
+		}),
+	);
 }
 
 function getTimestampFromFilename(filename: string): number | undefined {
@@ -162,9 +182,16 @@ function getTimestampFromFilename(filename: string): number | undefined {
 	return undefined;
 }
 
-CommandsRegistry.registerCommand('_chat.resizeImage', async (_accessor, data: Uint8Array | VSBuffer, mimeType?: string): Promise<Uint8Array> => {
-	if (data instanceof VSBuffer) {
-		data = data.buffer;
-	}
-	return resizeImage(data, mimeType);
-});
+CommandsRegistry.registerCommand(
+	"_chat.resizeImage",
+	async (
+		_accessor,
+		data: Uint8Array | VSBuffer,
+		mimeType?: string,
+	): Promise<Uint8Array> => {
+		if (data instanceof VSBuffer) {
+			data = data.buffer;
+		}
+		return resizeImage(data, mimeType);
+	},
+);

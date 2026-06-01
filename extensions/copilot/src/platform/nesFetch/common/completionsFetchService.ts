@@ -32,7 +32,7 @@ export namespace Completions {
 		code_annotations?: boolean;
 	}
 
-	export interface ModelParams extends BaseCompletionsParams, CodexV2Params { }
+	export interface ModelParams extends BaseCompletionsParams, CodexV2Params {}
 
 	export class RequestCancelled {
 		readonly kind = 'cancelled' as const;
@@ -43,14 +43,12 @@ export namespace Completions {
 			public readonly status: number,
 			public readonly statusText: string,
 			public readonly headers: IHeaders,
-			public readonly text: () => Promise<string>
-		) { }
+			public readonly text: () => Promise<string>,
+		) {}
 	}
 	export class Unexpected {
 		readonly kind = 'unexpected' as const;
-		constructor(
-			public readonly error: Error
-		) { }
+		constructor(public readonly error: Error) {}
 	}
 	export type CompletionsFetchFailure =
 		| Completions.RequestCancelled
@@ -66,19 +64,25 @@ export namespace Completions {
 	}
 }
 
-export type CompletionsFetchErrorType = 'stop_content_filter' | 'stop_length' | 'unknown';
+export type CompletionsFetchErrorType =
+	| 'stop_content_filter'
+	| 'stop_length'
+	| 'unknown';
 
 export class CompletionsFetchError extends Error {
 	constructor(
 		readonly type: CompletionsFetchErrorType,
 		readonly requestId: string,
-		message: string
+		message: string,
 	) {
 		super(message);
 	}
 }
 
-export const ICompletionsFetchService = createServiceIdentifier<ICompletionsFetchService>('ICompletionsFetchService');
+export const ICompletionsFetchService =
+	createServiceIdentifier<ICompletionsFetchService>(
+		'ICompletionsFetchService',
+	);
 
 /**
  * OpenAI has completions and _chat_ completions endpoints. This's (non-chat) completions endpoint fetcher.
@@ -92,7 +96,7 @@ export interface ICompletionsFetchService {
 		params: Completions.ModelParams,
 		requestId: string,
 		ct: CancellationToken,
-		headerOverrides?: Record<string, string>
+		headerOverrides?: Record<string, string>,
 	): Promise<Result<ResponseStream, Completions.CompletionsFetchFailure>>;
 
 	disconnectAll(): Promise<unknown>;

@@ -12,7 +12,6 @@ import { Position } from './position';
 
 @es5ClassCompat
 export class Range {
-
 	static isRange(thing: unknown): thing is vscode.Range {
 		if (thing instanceof Range) {
 			return true;
@@ -20,8 +19,10 @@ export class Range {
 		if (!thing || typeof thing !== 'object') {
 			return false;
 		}
-		return Position.isPosition((<Range>thing).start)
-			&& Position.isPosition((<Range>thing).end);
+		return (
+			Position.isPosition((<Range>thing).start) &&
+			Position.isPosition((<Range>thing).end)
+		);
 	}
 
 	static of(obj: vscode.Range): Range {
@@ -47,15 +48,33 @@ export class Range {
 
 	constructor(start: vscode.Position, end: vscode.Position);
 	constructor(start: Position, end: Position);
-	constructor(startLine: number, startColumn: number, endLine: number, endColumn: number);
-	constructor(startLineOrStart: number | Position | vscode.Position, startColumnOrEnd: number | Position | vscode.Position, endLine?: number, endColumn?: number) {
+	constructor(
+		startLine: number,
+		startColumn: number,
+		endLine: number,
+		endColumn: number,
+	);
+	constructor(
+		startLineOrStart: number | Position | vscode.Position,
+		startColumnOrEnd: number | Position | vscode.Position,
+		endLine?: number,
+		endColumn?: number,
+	) {
 		let start: Position | undefined;
 		let end: Position | undefined;
 
-		if (typeof startLineOrStart === 'number' && typeof startColumnOrEnd === 'number' && typeof endLine === 'number' && typeof endColumn === 'number') {
+		if (
+			typeof startLineOrStart === 'number' &&
+			typeof startColumnOrEnd === 'number' &&
+			typeof endLine === 'number' &&
+			typeof endColumn === 'number'
+		) {
 			start = new Position(startLineOrStart, startColumnOrEnd);
 			end = new Position(endLine, endColumn);
-		} else if (Position.isPosition(startLineOrStart) && Position.isPosition(startColumnOrEnd)) {
+		} else if (
+			Position.isPosition(startLineOrStart) &&
+			Position.isPosition(startColumnOrEnd)
+		) {
 			start = Position.of(startLineOrStart);
 			end = Position.of(startColumnOrEnd);
 		}
@@ -75,9 +94,10 @@ export class Range {
 
 	contains(positionOrRange: Position | Range): boolean {
 		if (Range.isRange(positionOrRange)) {
-			return this.contains(positionOrRange.start)
-				&& this.contains(positionOrRange.end);
-
+			return (
+				this.contains(positionOrRange.start) &&
+				this.contains(positionOrRange.end)
+			);
 		} else if (Position.isPosition(positionOrRange)) {
 			if (Position.of(positionOrRange).isBefore(this._start)) {
 				return false;
@@ -91,7 +111,9 @@ export class Range {
 	}
 
 	isEqual(other: Range): boolean {
-		return this._start.isEqual(other._start) && this._end.isEqual(other._end);
+		return (
+			this._start.isEqual(other._start) && this._end.isEqual(other._end)
+		);
 	}
 
 	intersection(other: Range): Range | undefined {
@@ -127,8 +149,13 @@ export class Range {
 
 	with(change: { start?: Position; end?: Position }): Range;
 	with(start?: Position, end?: Position): Range;
-	with(startOrChange: Position | undefined | { start?: Position; end?: Position }, end: Position = this.end): Range {
-
+	with(
+		startOrChange:
+			| Position
+			| undefined
+			| { start?: Position; end?: Position },
+		end: Position = this.end,
+	): Range {
 		if (startOrChange === null || end === null) {
 			throw illegalArgument();
 		}
@@ -136,10 +163,8 @@ export class Range {
 		let start: Position;
 		if (!startOrChange) {
 			start = this.start;
-
 		} else if (Position.isPosition(startOrChange)) {
 			start = startOrChange;
-
 		} else {
 			start = startOrChange.start || this.start;
 			end = startOrChange.end || this.end;

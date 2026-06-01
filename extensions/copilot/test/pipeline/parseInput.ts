@@ -52,7 +52,9 @@ function parseInputJson(jsonContents: string): {
 				}
 			}
 
-			const alternativeAction = JSON.parse(record['action']) as IAlternativeAction;
+			const alternativeAction = JSON.parse(
+				record['action'],
+			) as IAlternativeAction;
 			const prompt = JSON.parse(record['input']) as unknown[];
 			const postProcessingOutcome = JSON.parse(record['outcome']) as {
 				suggestedEdit: string;
@@ -62,7 +64,10 @@ function parseInputJson(jsonContents: string): {
 			if (!alternativeAction.recording) {
 				throw new Error('action.recording is missing');
 			}
-			if (!alternativeAction.recording.entries || alternativeAction.recording.entries.length === 0) {
+			if (
+				!alternativeAction.recording.entries ||
+				alternativeAction.recording.entries.length === 0
+			) {
 				throw new Error('action.recording.entries is empty');
 			}
 			if (!postProcessingOutcome.suggestedEdit) {
@@ -89,7 +94,10 @@ function parseInputJson(jsonContents: string): {
 	return { rows, errors };
 }
 
-export async function loadAndParseInput(inputPath: string, verbose = false): Promise<{
+export async function loadAndParseInput(
+	inputPath: string,
+	verbose = false,
+): Promise<{
 	rows: IInputRow[];
 	errors: { rowIndex: number; error: string }[];
 }> {

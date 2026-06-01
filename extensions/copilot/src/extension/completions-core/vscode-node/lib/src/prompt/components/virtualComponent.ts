@@ -3,12 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ComponentStatistics, PromptMetadata } from '../../../../prompt/src/components/components';
-import { getTokenizer, Tokenizer, TokenizerName } from '../../../../prompt/src/tokenization';
+import {
+	ComponentStatistics,
+	PromptMetadata,
+} from '../../../../prompt/src/components/components';
+import {
+	getTokenizer,
+	Tokenizer,
+	TokenizerName,
+} from '../../../../prompt/src/tokenization';
 import { LRUCacheMap } from '../../helpers/cache';
 import { setDefault } from '../../util/map';
 import { CompletionsPromptOptions } from '../completionsPromptFactory/completionsPromptFactory';
-import { CodeSnippetWithId, TraitWithId } from '../contextProviders/contextItemSchemas';
+import {
+	CodeSnippetWithId,
+	TraitWithId,
+} from '../contextProviders/contextItemSchemas';
 import {
 	EMPTY_NODE,
 	IVirtualNode,
@@ -47,20 +57,31 @@ export type ValidatedContextItems = {
 
 export interface VirtualPromptComponent {
 	name: string;
-	snapshot(options: CompletionsPromptOptions, context?: ValidatedContextItems): ComponentSnapshot;
-	estimatedCost?(options: CompletionsPromptOptions, context?: ValidatedContextItems): number;
+	snapshot(
+		options: CompletionsPromptOptions,
+		context?: ValidatedContextItems,
+	): ComponentSnapshot;
+	estimatedCost?(
+		options: CompletionsPromptOptions,
+		context?: ValidatedContextItems,
+	): number;
 }
 
 let renderId = 0; // Unique across all render calls, used for telemetry
 const renderCache = new LRUCacheMap<
 	NodeId,
-	{ budget: number; mask: Set<NodeId>; tokenizer: TokenizerName; render: RenderedText }
+	{
+		budget: number;
+		mask: Set<NodeId>;
+		tokenizer: TokenizerName;
+		render: RenderedText;
+	}
 >();
 export function renderWithMetadata(
 	component: VirtualPromptComponent,
 	budget: number,
 	options: CompletionsPromptOptions,
-	context?: ValidatedContextItems
+	context?: ValidatedContextItems,
 ): RenderedComponent {
 	renderId++;
 	const tokenizerName = options.promptOpts?.tokenizer ?? TokenizerName.o200k;
@@ -77,7 +98,7 @@ export function renderWithMetadata(
 		cachedRender.render.cost <= budget &&
 		cachedRender.tokenizer === tokenizerName &&
 		maskSet.size === cachedRender.mask.size &&
-		[...maskSet].every(id => cachedRender.mask.has(id))
+		[...maskSet].every((id) => cachedRender.mask.has(id))
 	) {
 		// If we have a cached render, use it if we expect the same result
 		// (identical masks and tokenizer, cost within budget, and previous budget at least as large as current budget)
@@ -108,12 +129,17 @@ export function renderWithMetadata(
 		elisionTimeMs: elisionEnd - renderEnd,
 		renderTimeMs: renderEnd - start,
 		updateDataTimeMs: 0,
-		componentStatistics: [{ componentPath: component.name, actualTokens: cost }],
+		componentStatistics: [
+			{ componentPath: component.name, actualTokens: cost },
+		],
 	};
 	return { root, renderedNodes, text, cost, metadata };
 }
 
-function cachedLineCostFunction(tokenizer: Tokenizer, cache: Map<string, number>): NodeCostFunction {
+function cachedLineCostFunction(
+	tokenizer: Tokenizer,
+	cache: Map<string, number>,
+): NodeCostFunction {
 	return (node: IVirtualNode) => {
 		const key = node.text.join('') + '\n';
 		// since actual token costs aren't known until we concatenate the lines,
@@ -122,16 +148,31 @@ function cachedLineCostFunction(tokenizer: Tokenizer, cache: Map<string, number>
 	};
 }
 
-function getLinewiseNode(raw: string, costFunction: NodeCostFunction, reversed: boolean): RenderNode {
+function getLinewiseNode(
+	raw: string,
+	costFunction: NodeCostFunction,
+	reversed: boolean,
+): RenderNode {
 	const lines = raw.split('\n');
-	const children = lines.map(line => ({ id: getAvailableNodeId(), text: [line], children: [], canMerge: true }));
+	const children = lines.map((line) => ({
+		id: getAvailableNodeId(),
+		text: [line],
+		children: [],
+		canMerge: true,
+	}));
 	const seps = [''];
 	if (children.length >= 1) {
 		seps.push(...Array<string>(children.length - 1).fill('\n'), '');
 	}
-	const virtualNode = { id: getAvailableNodeId(), text: seps, children, canMerge: true };
+	const virtualNode = {
+		id: getAvailableNodeId(),
+		text: seps,
+		children,
+		canMerge: true,
+	};
 	// Don't include elision marker in node cost, since there will be at most one such marker
-	const nodeCostFunction = (node: IVirtualNode) => (node.id === virtualNode.id ? 0 : costFunction(node));
+	const nodeCostFunction = (node: IVirtualNode) =>
+		node.id === virtualNode.id ? 0 : costFunction(node);
 	const root = snapshot(virtualNode, nodeCostFunction);
 	// Weight lines so that each line is has less value than the following one
 	// (Or more value, if reversed)
@@ -163,7 +204,10 @@ export class BasicPrefixComponent implements VirtualPromptComponent {
 export class TraitComponent implements VirtualPromptComponent {
 	readonly name = 'traitProvider';
 
-	snapshot(options: CompletionsPromptOptions, context?: ValidatedContextItems): ComponentSnapshot {
+	snapshot(
+		options: CompletionsPromptOptions,
+		context?: ValidatedContextItems,
+	): ComponentSnapshot {
 		const { promptOpts } = options;
 		const tokenizer = getTokenizer(promptOpts?.tokenizer);
 		if (!context || context.traits.length === 0) {
@@ -197,7 +241,10 @@ export class TraitComponent implements VirtualPromptComponent {
 		}
 		totalWeight = Math.max(totalWeight, 1);
 		const header = `Related context:\n`;
-		const text: string[] = [header, ...new Array<string>(children.length).fill('\n')];
+		const text: string[] = [
+			header,
+			...new Array<string>(children.length).fill('\n'),
+		];
 		const root: RenderNode = {
 			id: getAvailableNodeId(),
 			text,
@@ -208,7 +255,10 @@ export class TraitComponent implements VirtualPromptComponent {
 			canMerge: true,
 			requireRenderedChild: true,
 		};
-		rectifyWeights(root, node => (weights.get(node.id) ?? 0) / totalWeight);
+		rectifyWeights(
+			root,
+			(node) => (weights.get(node.id) ?? 0) / totalWeight,
+		);
 		return { root, statistics };
 	}
 }
@@ -216,12 +266,19 @@ export class TraitComponent implements VirtualPromptComponent {
 export class ConcatenatedContextComponent implements VirtualPromptComponent {
 	constructor(
 		readonly name: string,
-		readonly components: VirtualPromptComponent[]
-	) { }
+		readonly components: VirtualPromptComponent[],
+	) {}
 
-	snapshot(options: CompletionsPromptOptions, context?: ValidatedContextItems): ComponentSnapshot {
-		const snapshots = this.components.map(component => component.snapshot(options, context));
-		const children = snapshots.map(s => s.root).filter(n => n.id !== EMPTY_NODE.id);
+	snapshot(
+		options: CompletionsPromptOptions,
+		context?: ValidatedContextItems,
+	): ComponentSnapshot {
+		const snapshots = this.components.map((component) =>
+			component.snapshot(options, context),
+		);
+		const children = snapshots
+			.map((s) => s.root)
+			.filter((n) => n.id !== EMPTY_NODE.id);
 		if (children.length === 0) {
 			return { root: EMPTY_NODE };
 		}

@@ -8,11 +8,20 @@ import { IObservableWithChange } from '../../../../../util/vs/base/common/observ
 import { URI } from '../../../../../util/vs/base/common/uri';
 import { createDecorator as createServiceIdentifier } from '../../../../../util/vs/platform/instantiation/common/instantiation';
 
-export const ICompletionsObservableWorkspace = createServiceIdentifier<ICompletionsObservableWorkspace>('ICompletionsObservableWorkspace');
+export const ICompletionsObservableWorkspace =
+	createServiceIdentifier<ICompletionsObservableWorkspace>(
+		'ICompletionsObservableWorkspace',
+	);
 export interface ICompletionsObservableWorkspace {
 	readonly _serviceBrand: undefined;
 
-	get openDocuments(): IObservableWithChange<readonly IObservableDocument[], { added: readonly IObservableDocument[]; removed: readonly IObservableDocument[] }>;
+	get openDocuments(): IObservableWithChange<
+		readonly IObservableDocument[],
+		{
+			added: readonly IObservableDocument[];
+			removed: readonly IObservableDocument[];
+		}
+	>;
 
 	getWorkspaceRoot(documentId: DocumentId): URI | undefined;
 

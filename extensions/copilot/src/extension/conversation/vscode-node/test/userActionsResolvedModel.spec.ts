@@ -16,23 +16,33 @@ import { resolveModelIdForTelemetry } from '../resolveModelId';
  */
 describe('resolveModelIdForTelemetry', () => {
 	test('returns resolvedModel when modelId is copilot/auto', () => {
-		expect(resolveModelIdForTelemetry('copilot/auto', 'gpt-4o')).toBe('gpt-4o');
+		expect(resolveModelIdForTelemetry('copilot/auto', 'gpt-4o')).toBe(
+			'gpt-4o',
+		);
 	});
 
 	test('falls back to copilot/auto when resolvedModel is undefined', () => {
-		expect(resolveModelIdForTelemetry('copilot/auto', undefined)).toBe('copilot/auto');
+		expect(resolveModelIdForTelemetry('copilot/auto', undefined)).toBe(
+			'copilot/auto',
+		);
 	});
 
 	test('falls back to copilot/auto when resolvedModel is empty string', () => {
-		expect(resolveModelIdForTelemetry('copilot/auto', '')).toBe('copilot/auto');
+		expect(resolveModelIdForTelemetry('copilot/auto', '')).toBe(
+			'copilot/auto',
+		);
 	});
 
 	test('returns original modelId when not copilot/auto', () => {
-		expect(resolveModelIdForTelemetry('gpt-4o', 'gpt-4o-2024-05-13')).toBe('gpt-4o');
+		expect(resolveModelIdForTelemetry('gpt-4o', 'gpt-4o-2024-05-13')).toBe(
+			'gpt-4o',
+		);
 	});
 
 	test('returns original modelId when not copilot/auto and no resolvedModel', () => {
-		expect(resolveModelIdForTelemetry('claude-sonnet-4', undefined)).toBe('claude-sonnet-4');
+		expect(resolveModelIdForTelemetry('claude-sonnet-4', undefined)).toBe(
+			'claude-sonnet-4',
+		);
 	});
 
 	test('does not substitute for empty modelId', () => {

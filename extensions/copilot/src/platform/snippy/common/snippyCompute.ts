@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-const SnippyLexemeRegex = new RegExp('[_\\p{L}\\p{Nd}]+|====+|----+|####+|////+|\\*\\*\\*\\*+|[\\p{P}\\p{S}]', 'gu');
+const SnippyLexemeRegex = new RegExp(
+	'[_\\p{L}\\p{Nd}]+|====+|----+|####+|////+|\\*\\*\\*\\*+|[\\p{P}\\p{S}]',
+	'gu',
+);
 
 export const MinTokenLength = 65;
 export const SnippyWindowSize = 65;
@@ -63,13 +66,20 @@ export function checkInString(text: string, interestRange?: [number, number]) {
 		fromIndex = 0;
 		toIndex = text.length;
 	} else {
-		fromIndex = offsetLastLexemes(text.slice(0, interestRange[0]), SnippyWindowSize);
-		toIndex = interestRange[1] + offsetFirstLexemes(text.slice(interestRange[1]), SnippyWindowSize);
+		fromIndex = offsetLastLexemes(
+			text.slice(0, interestRange[0]),
+			SnippyWindowSize,
+		);
+		toIndex =
+			interestRange[1] +
+			offsetFirstLexemes(text.slice(interestRange[1]), SnippyWindowSize);
 	}
 
 	return function (newText: string, snippet: { text: string }) {
 		// Try first to match close to the inserted range.
-		let matchOffset = newText.slice(fromIndex, toIndex).indexOf(snippet.text);
+		let matchOffset = newText
+			.slice(fromIndex, toIndex)
+			.indexOf(snippet.text);
 		if (matchOffset !== -1) {
 			matchOffset += fromIndex;
 		} else {

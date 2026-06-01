@@ -9,18 +9,23 @@ import { Location, SymbolInformation, Uri } from '../../../vscodeTypes';
 export class LinkifyLocationAnchor {
 	constructor(
 		public readonly value: Uri | Location,
-		public readonly title?: string
-	) { }
+		public readonly title?: string,
+	) {}
 }
 
 export class LinkifySymbolAnchor {
 	constructor(
 		public readonly symbolInformation: SymbolInformation,
-		public readonly resolve?: (token: CancellationToken) => Promise<SymbolInformation>,
-	) { }
+		public readonly resolve?: (
+			token: CancellationToken,
+		) => Promise<SymbolInformation>,
+	) {}
 }
 
-export type LinkifiedPart = string | LinkifyLocationAnchor | LinkifySymbolAnchor;
+export type LinkifiedPart =
+	| string
+	| LinkifyLocationAnchor
+	| LinkifySymbolAnchor;
 
 export interface LinkifiedText {
 	readonly parts: readonly LinkifiedPart[];
@@ -29,7 +34,9 @@ export interface LinkifiedText {
 /**
  * Coalesces adjacent string parts into a single string part.
  */
-export function coalesceParts(parts: readonly LinkifiedPart[]): LinkifiedPart[] {
+export function coalesceParts(
+	parts: readonly LinkifiedPart[],
+): LinkifiedPart[] {
 	const out: LinkifiedPart[] = [];
 
 	for (const part of parts) {

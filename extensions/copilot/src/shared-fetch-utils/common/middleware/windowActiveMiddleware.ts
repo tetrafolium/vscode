@@ -3,7 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FetchBlockedError, type FetchMiddleware, type WindowStateProvider } from '../fetchTypes';
+import {
+	FetchBlockedError,
+	type FetchMiddleware,
+	type WindowStateProvider,
+} from '../fetchTypes';
 
 export class WindowInactiveError extends FetchBlockedError {
 	constructor() {
@@ -17,7 +21,9 @@ export class WindowInactiveError extends FetchBlockedError {
  * (e.g. {@link FetchedValue}) will fall back to the last-good value
  * automatically because they handle {@link FetchBlockedError}.
  */
-export function windowActiveMiddleware(provider: WindowStateProvider): FetchMiddleware {
+export function windowActiveMiddleware(
+	provider: WindowStateProvider,
+): FetchMiddleware {
 	return (next) => async (request) => {
 		if (!provider.isActive) {
 			throw new WindowInactiveError();

@@ -10,8 +10,8 @@ import { Intent } from '../../common/constants';
 import { IntentRegistry } from '../../prompt/node/intentRegistry';
 import { IIntent } from '../../prompt/node/intents';
 
-
-export const IIntentService = createServiceIdentifier<IIntentService>('IIntentService');
+export const IIntentService =
+	createServiceIdentifier<IIntentService>('IIntentService');
 
 export interface IIntentService {
 	readonly _serviceBrand: undefined;
@@ -27,19 +27,22 @@ export class IntentService implements IIntentService {
 	private _intents: IIntent[] | null = null;
 
 	constructor(
-		@IInstantiationService private readonly _instantiationService: IInstantiationService
-	) { }
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
+	) {}
 
 	private _getOrCreateIntents(): IIntent[] {
 		if (!this._intents) {
-			this._intents = IntentRegistry.getIntents().map(d => this._instantiationService.createInstance(d));
+			this._intents = IntentRegistry.getIntents().map((d) =>
+				this._instantiationService.createInstance(d),
+			);
 		}
 		return this._intents;
 	}
 
 	public get unknownIntent(): IIntent {
 		const intents = this._getOrCreateIntents();
-		const result = intents.find(i => i.id === Intent.Unknown);
+		const result = intents.find((i) => i.id === Intent.Unknown);
 		if (!result) {
 			throw new Error(`Unknown intent not found`);
 		}
@@ -48,10 +51,10 @@ export class IntentService implements IIntentService {
 
 	public getIntents(location: ChatLocation): IIntent[] {
 		const intents = this._getOrCreateIntents();
-		return intents.filter(i => i.locations.includes(location));
+		return intents.filter((i) => i.locations.includes(location));
 	}
 
 	public getIntent(id: string, location: ChatLocation): IIntent | undefined {
-		return this.getIntents(location).find(i => i.id === id);
+		return this.getIntents(location).find((i) => i.id === id);
 	}
 }

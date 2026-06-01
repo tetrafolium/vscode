@@ -3,8 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, Event, EventEmitter, LogOutputChannel, SecretStorage } from 'vscode';
-import { AccountInfo } from '@azure/msal-node';
+import {
+	Disposable,
+	Event,
+	EventEmitter,
+	LogOutputChannel,
+	SecretStorage,
+} from "vscode";
+import { AccountInfo } from "@azure/msal-node";
 
 export interface IAccountAccess {
 	onDidAccountAccessChange: Event<void>;
@@ -14,7 +20,8 @@ export interface IAccountAccess {
 
 export class ScopedAccountAccess implements IAccountAccess, Disposable {
 	private readonly _onDidAccountAccessChangeEmitter = new EventEmitter<void>();
-	readonly onDidAccountAccessChange = this._onDidAccountAccessChangeEmitter.event;
+	readonly onDidAccountAccessChange =
+		this._onDidAccountAccessChangeEmitter.event;
 
 	private value = new Array<string>();
 
@@ -22,12 +29,12 @@ export class ScopedAccountAccess implements IAccountAccess, Disposable {
 
 	private constructor(
 		private readonly _accountAccessSecretStorage: IAccountAccessSecretStorage,
-		disposables: Disposable[] = []
+		disposables: Disposable[] = [],
 	) {
 		this._disposable = Disposable.from(
 			...disposables,
 			this._onDidAccountAccessChangeEmitter,
-			this._accountAccessSecretStorage.onDidChange(() => this.update())
+			this._accountAccessSecretStorage.onDidChange(() => this.update()),
 		);
 	}
 
@@ -37,7 +44,12 @@ export class ScopedAccountAccess implements IAccountAccess, Disposable {
 		logger: LogOutputChannel,
 		migrations: { clientId: string; authority: string }[] | undefined,
 	): Promise<ScopedAccountAccess> {
-		const storage = await AccountAccessSecretStorage.create(secretStorage, cloudName, logger, migrations);
+		const storage = await AccountAccessSecretStorage.create(
+			secretStorage,
+			cloudName,
+			logger,
+			migrations,
+		);
 		const access = new ScopedAccountAccess(storage, [storage]);
 		await access.initialize();
 		return access;
@@ -55,15 +67,23 @@ export class ScopedAccountAccess implements IAccountAccess, Disposable {
 		return this.value.includes(account.homeAccountId);
 	}
 
-	async setAllowedAccess(account: AccountInfo, allowed: boolean): Promise<void> {
+	async setAllowedAccess(
+		account: AccountInfo,
+		allowed: boolean,
+	): Promise<void> {
 		if (allowed) {
 			if (this.value.includes(account.homeAccountId)) {
 				return;
 			}
-			await this._accountAccessSecretStorage.store([...this.value, account.homeAccountId]);
+			await this._accountAccessSecretStorage.store([
+				...this.value,
+				account.homeAccountId,
+			]);
 			return;
 		}
-		await this._accountAccessSecretStorage.store(this.value.filter(id => id !== account.homeAccountId));
+		await this._accountAccessSecretStorage.store(
+			this.value.filter((id) => id !== account.homeAccountId),
+		);
 	}
 
 	private async update() {
@@ -71,7 +91,10 @@ export class ScopedAccountAccess implements IAccountAccess, Disposable {
 		const value = await this._accountAccessSecretStorage.get();
 
 		this.value = value ?? [];
-		if (current.size !== this.value.length || !this.value.every(id => current.has(id))) {
+		if (
+			current.size !== this.value.length ||
+			!this.value.every((id) => current.has(id))
+		) {
 			this._onDidAccountAccessChangeEmitter.fire();
 		}
 	}
@@ -84,7 +107,9 @@ interface IAccountAccessSecretStorage {
 	onDidChange: Event<void>;
 }
 
-class AccountAccessSecretStorage implements IAccountAccessSecretStorage, Disposable {
+class AccountAccessSecretStorage
+	implements IAccountAccessSecretStorage, Disposable
+{
 	private _disposable: Disposable;
 
 	private readonly _onDidChangeEmitter = new EventEmitter<void>();
@@ -102,11 +127,11 @@ class AccountAccessSecretStorage implements IAccountAccessSecretStorage, Disposa
 
 		this._disposable = Disposable.from(
 			this._onDidChangeEmitter,
-			this._secretStorage.onDidChange(e => {
+			this._secretStorage.onDidChange((e) => {
 				if (e.key === this._key) {
 					this._onDidChangeEmitter.fire();
 				}
-			})
+			}),
 		);
 	}
 
@@ -116,7 +141,12 @@ class AccountAccessSecretStorage implements IAccountAccessSecretStorage, Disposa
 		logger: LogOutputChannel,
 		migrations?: { clientId: string; authority: string }[],
 	): Promise<AccountAccessSecretStorage> {
-		const storage = new AccountAccessSecretStorage(secretStorage, cloudName, logger, migrations);
+		const storage = new AccountAccessSecretStorage(
+			secretStorage,
+			cloudName,
+			logger,
+			migrations,
+		);
 		await storage.initialize();
 		return storage;
 	}
@@ -140,7 +170,7 @@ class AccountAccessSecretStorage implements IAccountAccessSecretStorage, Disposa
 				const value = await this._secretStorage.get(oldKey);
 				if (value) {
 					const parsed = JSON.parse(value) as string[];
-					parsed.forEach(v => allValues.add(v));
+					parsed.forEach((v) => allValues.add(v));
 				}
 			}
 			if (allValues.size > 0) {
@@ -148,7 +178,9 @@ class AccountAccessSecretStorage implements IAccountAccessSecretStorage, Disposa
 			}
 		} catch (e) {
 			// Migration is best effort
-			this._logger.error(`Failed to migrate account access secret storage: ${e}`);
+			this._logger.error(
+				`Failed to migrate account access secret storage: ${e}`,
+			);
 		}
 	}
 

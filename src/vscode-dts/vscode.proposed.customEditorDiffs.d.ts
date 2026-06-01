@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	export interface CustomEditorDiffDocuments<T> {
 		readonly original: T;
 		readonly modified: T;
@@ -15,8 +14,9 @@ declare module 'vscode' {
 		readonly modified: WebviewPanel;
 	}
 
-	export interface CustomReadonlyEditorProvider<T extends CustomDocument = CustomDocument> {
-
+	export interface CustomReadonlyEditorProvider<
+		T extends CustomDocument = CustomDocument,
+	> {
 		/**
 		 * Resolve a custom editor the shows the diff between two documents using a single webview.
 		 *
@@ -26,7 +26,11 @@ declare module 'vscode' {
 		 *
 		 * @returns Thenable indicating that the custom diff editor has been resolved.
 		 */
-		resolveCustomEditorInlineDiff?(documents: CustomEditorDiffDocuments<T>, webviewPanel: WebviewPanel, token: CancellationToken): Thenable<void> | void;
+		resolveCustomEditorInlineDiff?(
+			documents: CustomEditorDiffDocuments<T>,
+			webviewPanel: WebviewPanel,
+			token: CancellationToken,
+		): Thenable<void> | void;
 
 		/**
 		 * Resolve a side-by-side custom editor diff between two custom documents.
@@ -37,11 +41,14 @@ declare module 'vscode' {
 		 *
 		 * @returns Thenable indicating that the custom diff editor has been resolved.
 		 */
-		resolveCustomEditorSideBySideDiff?(documents: CustomEditorDiffDocuments<T>, webviewPanels: CustomEditorDiffWebviewPanels, token: CancellationToken): Thenable<void> | void;
+		resolveCustomEditorSideBySideDiff?(
+			documents: CustomEditorDiffDocuments<T>,
+			webviewPanels: CustomEditorDiffWebviewPanels,
+			token: CancellationToken,
+		): Thenable<void> | void;
 	}
 
 	export interface CustomTextEditorProvider {
-
 		/**
 		 * Resolve a custom editor for a diff between two text resources using a single webview.
 		 *
@@ -51,7 +58,11 @@ declare module 'vscode' {
 		 *
 		 * @returns Thenable indicating that the custom diff editor has been resolved.
 		 */
-		resolveCustomTextEditorInlineDiff?(documents: CustomEditorDiffDocuments<TextDocument>, webviewPanel: WebviewPanel, token: CancellationToken): Thenable<void> | void;
+		resolveCustomTextEditorInlineDiff?(
+			documents: CustomEditorDiffDocuments<TextDocument>,
+			webviewPanel: WebviewPanel,
+			token: CancellationToken,
+		): Thenable<void> | void;
 
 		/**
 		 * Resolve a side-by-side custom editor diff between two text resources.
@@ -62,6 +73,10 @@ declare module 'vscode' {
 		 *
 		 * @returns Thenable indicating that the custom diff editor has been resolved.
 		 */
-		resolveCustomTextEditorSideBySideDiff?(documents: CustomEditorDiffDocuments<TextDocument>, webviewPanels: CustomEditorDiffWebviewPanels, token: CancellationToken): Thenable<void> | void;
+		resolveCustomTextEditorSideBySideDiff?(
+			documents: CustomEditorDiffDocuments<TextDocument>,
+			webviewPanels: CustomEditorDiffWebviewPanels,
+			token: CancellationToken,
+		): Thenable<void> | void;
 	}
 }

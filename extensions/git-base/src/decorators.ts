@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { done } from './util';
+import { done } from "./util";
 
 export function debounce(delay: number): Function {
 	return decorate((fn, key) => {
@@ -38,7 +38,7 @@ function _throttle<T>(fn: Function, key: string): Function {
 
 		this[currentKey] = fn.apply(this, args) as Promise<T>;
 
-		const clear = () => this[currentKey] = undefined;
+		const clear = () => (this[currentKey] = undefined);
 		done(this[currentKey]).then(clear, clear);
 
 		return this[currentKey];
@@ -47,10 +47,16 @@ function _throttle<T>(fn: Function, key: string): Function {
 	return trigger;
 }
 
-function decorate(decorator: (fn: Function, key: string) => Function): MethodDecorator {
-	return (_target: any, key: string | symbol, descriptor: PropertyDescriptor): void => {
-		if (typeof descriptor.value !== 'function') {
-			throw new Error('not supported');
+function decorate(
+	decorator: (fn: Function, key: string) => Function,
+): MethodDecorator {
+	return (
+		_target: any,
+		key: string | symbol,
+		descriptor: PropertyDescriptor,
+	): void => {
+		if (typeof descriptor.value !== "function") {
+			throw new Error("not supported");
 		}
 		descriptor.value = decorator(descriptor.value, String(key));
 	};

@@ -3,29 +3,35 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ITreeNode } from '../../../../../base/browser/ui/tree/tree.js';
-import { WorkbenchObjectTree } from '../../../../../platform/list/browser/listService.js';
-import { TestExplorerTreeElement, TestItemTreeElement } from './index.js';
-import { ISerializedTestTreeCollapseState } from './testingViewState.js';
-import { TestId } from '../../common/testId.js';
+import { ITreeNode } from "../../../../../base/browser/ui/tree/tree.js";
+import { WorkbenchObjectTree } from "../../../../../platform/list/browser/listService.js";
+import { TestExplorerTreeElement, TestItemTreeElement } from "./index.js";
+import { ISerializedTestTreeCollapseState } from "./testingViewState.js";
+import { TestId } from "../../common/testId.js";
 
-
-export class TestingObjectTree<TFilterData = void> extends WorkbenchObjectTree<TestExplorerTreeElement, TFilterData> {
-
+export class TestingObjectTree<TFilterData = void> extends WorkbenchObjectTree<
+	TestExplorerTreeElement,
+	TFilterData
+> {
 	/**
 	 * Gets a serialized view state for the tree, optimized for storage.
 	 *
 	 * @param updatePreviousState Optional previous state to mutate and update
 	 * instead of creating a new one.
 	 */
-	public getOptimizedViewState(updatePreviousState?: ISerializedTestTreeCollapseState): ISerializedTestTreeCollapseState {
+	public getOptimizedViewState(
+		updatePreviousState?: ISerializedTestTreeCollapseState,
+	): ISerializedTestTreeCollapseState {
 		const root: ISerializedTestTreeCollapseState = updatePreviousState || {};
 
 		/**
 		 * Recursive builder function. Returns whether the subtree has any non-default
 		 * value. Adds itself to the parent children if it does.
 		 */
-		const build = (node: ITreeNode<TestExplorerTreeElement | null, unknown>, parent: ISerializedTestTreeCollapseState): boolean => {
+		const build = (
+			node: ITreeNode<TestExplorerTreeElement | null, unknown>,
+			parent: ISerializedTestTreeCollapseState,
+		): boolean => {
 			if (!(node.element instanceof TestItemTreeElement)) {
 				return false;
 			}
@@ -33,7 +39,8 @@ export class TestingObjectTree<TFilterData = void> extends WorkbenchObjectTree<T
 			const localId = TestId.localId(node.element.test.item.extId);
 			const inTree = parent.children?.[localId] || {};
 			// only saved collapsed state if it's not the default (not collapsed, or a root depth)
-			inTree.collapsed = node.depth === 0 || !node.collapsed ? node.collapsed : undefined;
+			inTree.collapsed =
+				node.depth === 0 || !node.collapsed ? node.collapsed : undefined;
 
 			let hasAnyNonDefaultValue = inTree.collapsed !== undefined;
 			if (node.children.length) {
@@ -62,7 +69,9 @@ export class TestingObjectTree<TFilterData = void> extends WorkbenchObjectTree<T
 				if (node.element.test.controllerId === node.element.test.item.extId) {
 					build(node, root);
 				} else {
-					const ctrlNode = root.children[node.element.test.controllerId] ??= { children: {} };
+					const ctrlNode = (root.children[node.element.test.controllerId] ??= {
+						children: {},
+					});
 					build(node, ctrlNode);
 				}
 			}

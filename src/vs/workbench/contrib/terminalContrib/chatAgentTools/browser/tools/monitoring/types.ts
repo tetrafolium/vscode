@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Task } from '../../../../../tasks/common/taskService.js';
-import type { ITerminalInstance } from '../../../../../terminal/browser/terminal.js';
-import type { ILinkLocation } from '../../taskHelpers.js';
-import type { IMarker as XtermMarker } from '@xterm/xterm';
-import type { URI } from '../../../../../../../base/common/uri.js';
+import type { Task } from "../../../../../tasks/common/taskService.js";
+import type { ITerminalInstance } from "../../../../../terminal/browser/terminal.js";
+import type { ILinkLocation } from "../../taskHelpers.js";
+import type { IMarker as XtermMarker } from "@xterm/xterm";
+import type { URI } from "../../../../../../../base/common/uri.js";
 
 export interface IConfirmationPrompt {
 	prompt: string;
@@ -20,9 +20,18 @@ export interface IConfirmationPrompt {
 export interface IExecution {
 	getOutput: (marker?: XtermMarker) => string;
 	isActive?: () => Promise<boolean>;
-	task?: Task | Pick<Task, 'configurationProperties'>;
+	task?: Task | Pick<Task, "configurationProperties">;
 	dependencyTasks?: Task[];
-	instance: Pick<ITerminalInstance, 'sendText' | 'instanceId' | 'onDidInputData' | 'onDisposed' | 'onData' | 'focus' | 'registerMarker'>;
+	instance: Pick<
+		ITerminalInstance,
+		| "sendText"
+		| "instanceId"
+		| "onDidInputData"
+		| "onDisposed"
+		| "onData"
+		| "focus"
+		| "registerMarker"
+	>;
 	sessionResource: URI | undefined;
 }
 
@@ -33,13 +42,13 @@ export interface IPollingResult {
 }
 
 export enum OutputMonitorState {
-	Initial = 'Initial',
-	Idle = 'Idle',
-	PollingForIdle = 'PollingForIdle',
-	Prompting = 'Prompting',
-	Timeout = 'Timeout',
-	Active = 'Active',
-	Cancelled = 'Cancelled',
+	Initial = "Initial",
+	Idle = "Idle",
+	PollingForIdle = "PollingForIdle",
+	Prompting = "Prompting",
+	Timeout = "Timeout",
+	Active = "Active",
+	Cancelled = "Cancelled",
 }
 
 export const enum PollingConsts {
@@ -48,5 +57,5 @@ export const enum PollingConsts {
 	FirstPollingMaxDuration = 20000, // 20 seconds
 	ExtendedPollingMaxDuration = 120000, // 2 minutes
 	MaxPollingIntervalDuration = 10000, // 10 seconds - grows via exponential backoff
-	MaxRecursionCount = 5
+	MaxRecursionCount = 5,
 }

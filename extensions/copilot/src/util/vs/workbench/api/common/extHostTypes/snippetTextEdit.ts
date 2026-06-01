@@ -11,7 +11,6 @@ import { Position } from './position';
 import { Range } from './range';
 
 export class SnippetTextEdit implements vscode.SnippetTextEdit {
-
 	static isSnippetTextEdit(thing: unknown): thing is SnippetTextEdit {
 		if (thing instanceof SnippetTextEdit) {
 			return true;
@@ -19,8 +18,10 @@ export class SnippetTextEdit implements vscode.SnippetTextEdit {
 		if (!thing) {
 			return false;
 		}
-		return Range.isRange((<SnippetTextEdit>thing).range)
-			&& SnippetString.isSnippetString((<SnippetTextEdit>thing).snippet);
+		return (
+			Range.isRange((<SnippetTextEdit>thing).range) &&
+			SnippetString.isSnippetString((<SnippetTextEdit>thing).snippet)
+		);
 	}
 
 	static replace(range: Range, snippet: SnippetString): SnippetTextEdit {

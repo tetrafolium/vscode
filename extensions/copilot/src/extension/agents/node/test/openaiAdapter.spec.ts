@@ -23,17 +23,20 @@ describe('OpenAIAdapterFactory', () => {
 
 		const requestBody = {
 			model: 'gpt-4o',
-			messages: [
-				{ role: 'user', content: 'Hello' }
-			],
-			temperature: 0.7
+			messages: [{ role: 'user', content: 'Hello' }],
+			temperature: 0.7,
 		};
 
 		const parsedRequest = adapter.parseRequest(JSON.stringify(requestBody));
 
 		expect(parsedRequest.model).toBe('gpt-4o');
 		expect(parsedRequest.messages).toHaveLength(1);
-		expect(parsedRequest.messages[0]).toEqual({ role: Raw.ChatRole.User, content: [{ text: 'Hello', type: Raw.ChatCompletionContentPartKind.Text }] } satisfies Raw.UserChatMessage);
+		expect(parsedRequest.messages[0]).toEqual({
+			role: Raw.ChatRole.User,
+			content: [
+				{ text: 'Hello', type: Raw.ChatCompletionContentPartKind.Text },
+			],
+		} satisfies Raw.UserChatMessage);
 		expect(parsedRequest.options?.temperature).toBe(0.7);
 	});
 
@@ -43,9 +46,7 @@ describe('OpenAIAdapterFactory', () => {
 
 		const requestBody = {
 			model: 'gpt-4o',
-			messages: [
-				{ role: 'user', content: 'What is the weather?' }
-			],
+			messages: [{ role: 'user', content: 'What is the weather?' }],
 			tools: [
 				{
 					type: 'function',
@@ -55,12 +56,12 @@ describe('OpenAIAdapterFactory', () => {
 						parameters: {
 							type: 'object',
 							properties: {
-								location: { type: 'string' }
-							}
-						}
-					}
-				}
-			]
+								location: { type: 'string' },
+							},
+						},
+					},
+				},
+			],
 		};
 
 		const parsedRequest = adapter.parseRequest(JSON.stringify(requestBody));
@@ -76,7 +77,7 @@ describe('OpenAIAdapterFactory', () => {
 		const adapter = factory.createAdapter();
 
 		const headers: http.IncomingHttpHeaders = {
-			'authorization': 'Bearer test-key-123'
+			authorization: 'Bearer test-key-123',
 		};
 
 		const authKey = adapter.extractAuthKey(headers);
@@ -92,13 +93,13 @@ describe('OpenAIAdapterFactory', () => {
 			requestId: 'test-request-id',
 			endpoint: {
 				modelId: 'gpt-4o',
-				modelMaxPromptTokens: 128000
-			}
+				modelMaxPromptTokens: 128000,
+			},
 		};
 
 		const streamData = {
 			type: 'text' as const,
-			content: 'Hello, world!'
+			content: 'Hello, world!',
 		};
 
 		let events = adapter.formatStreamResponse(streamData, context);
@@ -111,7 +112,9 @@ describe('OpenAIAdapterFactory', () => {
 		expect(events[0].data).toContain('Hello, world!');
 
 		expect(events[1].event).toBe('message');
-		expect(JSON.parse(events[1].data).choices).toEqual([{ 'index': 0, 'delta': { 'content': null }, 'finish_reason': 'stop' }]);
+		expect(JSON.parse(events[1].data).choices).toEqual([
+			{ index: 0, delta: { content: null }, finish_reason: 'stop' },
+		]);
 	});
 
 	it('should format tool call stream response', () => {
@@ -122,15 +125,15 @@ describe('OpenAIAdapterFactory', () => {
 			requestId: 'test-request-id',
 			endpoint: {
 				modelId: 'gpt-4o',
-				modelMaxPromptTokens: 128000
-			}
+				modelMaxPromptTokens: 128000,
+			},
 		};
 
 		const streamData = {
 			type: 'tool_call' as const,
 			callId: 'call_123',
 			name: 'get_weather',
-			input: { location: 'Boston' }
+			input: { location: 'Boston' },
 		};
 
 		const events = adapter.formatStreamResponse(streamData, context);
@@ -149,14 +152,14 @@ describe('OpenAIAdapterFactory', () => {
 			requestId: 'test-request-id',
 			endpoint: {
 				modelId: 'gpt-4o',
-				modelMaxPromptTokens: 128000
-			}
+				modelMaxPromptTokens: 128000,
+			},
 		};
 
 		const usage = {
 			prompt_tokens: 10,
 			completion_tokens: 20,
-			total_tokens: 30
+			total_tokens: 30,
 		};
 
 		const events = adapter.generateFinalEvents(context, usage);

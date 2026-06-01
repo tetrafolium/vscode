@@ -31,34 +31,52 @@ function getDefaultEndpoints(accessor: ServicesAccessor): ServiceEndpoints {
 function urlConfigOverride(
 	accessor: ServicesAccessor,
 	overrideKeys: ConfigKeyType[],
-	testOverrideKeys?: ConfigKeyType[]
+	testOverrideKeys?: ConfigKeyType[],
 ): string | undefined {
-	if (testOverrideKeys !== undefined && accessor.get(ICompletionsRuntimeModeService).isRunningInTest()) {
+	if (
+		testOverrideKeys !== undefined &&
+		accessor.get(ICompletionsRuntimeModeService).isRunningInTest()
+	) {
 		for (const overrideKey of testOverrideKeys) {
 			const override = getConfig<string>(accessor, overrideKey);
-			if (override) { return override; }
+			if (override) {
+				return override;
+			}
 		}
 		return undefined;
 	}
 
 	for (const overrideKey of overrideKeys) {
 		const override = getConfig<string>(accessor, overrideKey);
-		if (override) { return override; }
+		if (override) {
+			return override;
+		}
 	}
 	return undefined;
 }
 
-function getEndpointOverrideUrl(accessor: ServicesAccessor, endpoint: keyof ServiceEndpoints): string | undefined {
+function getEndpointOverrideUrl(
+	accessor: ServicesAccessor,
+	endpoint: keyof ServiceEndpoints,
+): string | undefined {
 	switch (endpoint) {
 		case 'proxy':
 			return urlConfigOverride(
 				accessor,
-				[ConfigKey.DebugOverrideProxyUrl, ConfigKey.DebugOverrideProxyUrlLegacy],
-				[ConfigKey.DebugTestOverrideProxyUrl, ConfigKey.DebugTestOverrideProxyUrlLegacy]
+				[
+					ConfigKey.DebugOverrideProxyUrl,
+					ConfigKey.DebugOverrideProxyUrlLegacy,
+				],
+				[
+					ConfigKey.DebugTestOverrideProxyUrl,
+					ConfigKey.DebugTestOverrideProxyUrlLegacy,
+				],
 			);
 		case 'origin-tracker':
 			if (!BuildInfo.isProduction()) {
-				return urlConfigOverride(accessor, [ConfigKey.DebugSnippyOverrideUrl]);
+				return urlConfigOverride(accessor, [
+					ConfigKey.DebugSnippyOverrideUrl,
+				]);
 			}
 	}
 }
@@ -69,7 +87,10 @@ export function getEndpointUrl(
 	endpoint: keyof ServiceEndpoints,
 	...paths: string[]
 ): string {
-	const root = getEndpointOverrideUrl(accessor, endpoint) ?? (token.endpoints ? token.endpoints[endpoint] : undefined) ?? getDefaultEndpoints(accessor)[endpoint];
+	const root =
+		getEndpointOverrideUrl(accessor, endpoint) ??
+		(token.endpoints ? token.endpoints[endpoint] : undefined) ??
+		getDefaultEndpoints(accessor)[endpoint];
 	return joinPath(root, ...paths);
 }
 
@@ -78,6 +99,8 @@ export function getEndpointUrl(
  * Generally you should be using token.endpoints or getEndpointUrl() instead.
  */
 export function getLastKnownEndpoints(accessor: ServicesAccessor) {
-	return accessor.get(IAuthenticationService).copilotToken?.endpoints ?? getDefaultEndpoints(accessor);
+	return (
+		accessor.get(IAuthenticationService).copilotToken?.endpoints ??
+		getDefaultEndpoints(accessor)
+	);
 }
-

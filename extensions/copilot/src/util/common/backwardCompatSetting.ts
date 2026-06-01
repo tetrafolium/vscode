@@ -13,6 +13,9 @@
  * @param map A function that transforms the setting value (which can be either old or new type) to the new type.
  * @returns The mapped setting value of the new type.
  */
-export function backwardCompatSetting<TOld, TNew>(settingValue: TNew, map: (oldValue: TOld | TNew) => TNew): TNew {
+export function backwardCompatSetting<TOld, TNew>(
+	settingValue: TNew,
+	map: (oldValue: TOld | TNew) => TNew,
+): TNew {
 	return map(settingValue);
 }

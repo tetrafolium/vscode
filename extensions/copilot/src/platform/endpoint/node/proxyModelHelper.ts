@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ExperimentBasedConfig, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	ExperimentBasedConfig,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { IProxyModelsService } from '../../proxyModels/common/proxyModelsService';
 import { IExperimentationService } from '../../telemetry/common/nullExperimentationService';
 
@@ -19,7 +22,10 @@ export function getInstantApplyModel(
 ): string {
 	const instantApplyModels = proxyModelsService.instantApplyModels;
 
-	return (instantApplyModels && instantApplyModels.length > 0)
+	return instantApplyModels && instantApplyModels.length > 0
 		? instantApplyModels[0].name
-		: configurationService.getExperimentBasedConfig(modelNameConfig, experimentationService);
+		: configurationService.getExperimentBasedConfig(
+				modelNameConfig,
+				experimentationService,
+			);
 }

@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../base/common/lifecycle.js';
+import { Disposable } from "../../../../base/common/lifecycle.js";
 import {
 	ResponsePartKind,
 	ToolCallStatus,
 	ToolResultContentType,
 	type ResponsePart,
 	type Turn,
-} from '../../common/state/protocol/state.js';
+} from "../../common/state/protocol/state.js";
 
 /**
  * Tool names whose `tool_use` blocks spawn a subagent. The SDK's
@@ -18,7 +18,10 @@ import {
  * normal tool_use entries; we observe them here at spawn time and
  * track each one as a {@link SubagentSpawn}.
  */
-export const SUBAGENT_TOOL_NAMES: ReadonlySet<string> = new Set(['Task', 'Agent']);
+export const SUBAGENT_TOOL_NAMES: ReadonlySet<string> = new Set([
+	"Task",
+	"Agent",
+]);
 
 /**
  * Regex matching the SDK's synthetic per-subagent suffix appended to
@@ -59,7 +62,7 @@ export class SubagentSpawn {
 	private _announced = false;
 	private _completed = false;
 
-	constructor(readonly toolUseId: string) { }
+	constructor(readonly toolUseId: string) {}
 
 	get agentId(): string | undefined {
 		return this._agentId;
@@ -223,7 +226,9 @@ export class SubagentRegistry extends Disposable {
  * `TextSuffixStrategy` (which scans on demand) — registry priming
  * uses {@link SubagentRegistry.primeFromTranscript}.
  */
-export function scanTranscriptForAgentIds(transcript: readonly Turn[]): ReadonlyMap<string, string> {
+export function scanTranscriptForAgentIds(
+	transcript: readonly Turn[],
+): ReadonlyMap<string, string> {
 	const out = new Map<string, string>();
 	for (const turn of transcript) {
 		for (const part of turn.responseParts) {
@@ -236,7 +241,9 @@ export function scanTranscriptForAgentIds(transcript: readonly Turn[]): Readonly
 	return out;
 }
 
-function extractAgentIdPair(part: ResponsePart): { toolCallId: string; agentId: string } | undefined {
+function extractAgentIdPair(
+	part: ResponsePart,
+): { toolCallId: string; agentId: string } | undefined {
 	if (part.kind !== ResponsePartKind.ToolCall) {
 		return undefined;
 	}
@@ -244,7 +251,10 @@ function extractAgentIdPair(part: ResponsePart): { toolCallId: string; agentId: 
 	if (!SUBAGENT_TOOL_NAMES.has(state.toolName)) {
 		return undefined;
 	}
-	if (state.status !== ToolCallStatus.Completed && state.status !== ToolCallStatus.PendingResultConfirmation) {
+	if (
+		state.status !== ToolCallStatus.Completed &&
+		state.status !== ToolCallStatus.PendingResultConfirmation
+	) {
 		return undefined;
 	}
 	const content = state.content;

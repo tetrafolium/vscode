@@ -7,13 +7,22 @@ import assert from 'assert';
 import { afterEach, beforeEach, suite, test } from 'vitest';
 import { mock } from '../../../../util/common/test/simpleMock';
 import { TelemetryCorrelationId } from '../../../../util/common/telemetryCorrelationId';
-import { CancellationToken, CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../util/vs/base/common/cancellation';
 import { Event } from '../../../../util/vs/base/common/event';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { EmbeddingType } from '../../../embeddings/common/embeddingsComputer';
 import { IGitService } from '../../../git/common/gitService';
 import { ILogService } from '../../../log/common/logService';
-import { FetchOptions, IAbortController, IHeaders, IFetcherService, Response } from '../../../networking/common/fetcherService';
+import {
+	FetchOptions,
+	IAbortController,
+	IHeaders,
+	IFetcherService,
+	Response,
+} from '../../../networking/common/fetcherService';
 import { ScenarioAutomationWorkspaceChunkSearchService } from '../../node/scenarioAutomationWorkspaceChunkSearchService';
 import { WorkspaceChunkSearchSizing } from '../../node/workspaceChunkSearchService';
 
@@ -35,10 +44,17 @@ class TestHeaders implements IHeaders {
 	}
 }
 
-class TestFetcherService extends mock<IFetcherService>() implements IFetcherService {
+class TestFetcherService
+	extends mock<IFetcherService>()
+	implements IFetcherService
+{
 	public lastUrl: string | undefined;
 	public lastOptions: FetchOptions | undefined;
-	public fetchImpl: (url: string, options: FetchOptions) => Promise<Response> = () => Promise.reject(new Error('fetchImpl not configured'));
+	public fetchImpl: (
+		url: string,
+		options: FetchOptions,
+	) => Promise<Response> = () =>
+		Promise.reject(new Error('fetchImpl not configured'));
 
 	override readonly onDidFetch = Event.None;
 	override readonly onDidCompleteFetch = Event.None;
@@ -121,7 +137,11 @@ suite('ScenarioAutomationWorkspaceChunkSearchService', () => {
 		fetcherService = new TestFetcherService();
 		gitService = new TestGitService();
 		logService = new TestLogService();
-		service = new ScenarioAutomationWorkspaceChunkSearchService(fetcherService, gitService, logService);
+		service = new ScenarioAutomationWorkspaceChunkSearchService(
+			fetcherService,
+			gitService,
+			logService,
+		);
 	});
 
 	afterEach(() => {
@@ -144,7 +164,14 @@ suite('ScenarioAutomationWorkspaceChunkSearchService', () => {
 				},
 			],
 		});
-		fetcherService.fetchImpl = async () => Response.fromText(200, 'OK', new TestHeaders(), responseBody, 'test-stub');
+		fetcherService.fetchImpl = async () =>
+			Response.fromText(
+				200,
+				'OK',
+				new TestHeaders(),
+				responseBody,
+				'test-stub',
+			);
 
 		const result = await service.searchFileChunks(
 			emptySizing,
@@ -155,16 +182,25 @@ suite('ScenarioAutomationWorkspaceChunkSearchService', () => {
 			CancellationToken.None,
 		);
 
-		assert.strictEqual(fetcherService.lastUrl, 'http://localhost:4443/api/embeddings/code/search');
+		assert.strictEqual(
+			fetcherService.lastUrl,
+			'http://localhost:4443/api/embeddings/code/search',
+		);
 		assert.strictEqual(fetcherService.lastOptions?.method, 'POST');
-		assert.strictEqual(fetcherService.lastOptions?.headers?.['Content-Type'], 'application/json');
-		assert.deepStrictEqual(JSON.parse(fetcherService.lastOptions?.body ?? '{}'), {
-			scoping_query: 'repo:owner/repo',
-			prompt: 'query text',
-			include_embeddings: false,
-			limit: 20,
-			embedding_model: EmbeddingType.metis_1024_I16_Binary.id,
-		});
+		assert.strictEqual(
+			fetcherService.lastOptions?.headers?.['Content-Type'],
+			'application/json',
+		);
+		assert.deepStrictEqual(
+			JSON.parse(fetcherService.lastOptions?.body ?? '{}'),
+			{
+				scoping_query: 'repo:owner/repo',
+				prompt: 'query text',
+				include_embeddings: false,
+				limit: 20,
+				embedding_model: EmbeddingType.metis_1024_I16_Binary.id,
+			},
+		);
 		assert.strictEqual(result.chunks.length, 1);
 		assert.ok(URI.isUri(result.chunks[0].chunk.file));
 		assert.ok(result.chunks[0].chunk.file.path.endsWith('/src/include.ts'));
@@ -186,7 +222,14 @@ suite('ScenarioAutomationWorkspaceChunkSearchService', () => {
 				},
 			],
 		});
-		fetcherService.fetchImpl = async () => Response.fromText(200, 'OK', new TestHeaders(), responseBody, 'test-stub');
+		fetcherService.fetchImpl = async () =>
+			Response.fromText(
+				200,
+				'OK',
+				new TestHeaders(),
+				responseBody,
+				'test-stub',
+			);
 
 		const result = await service.searchFileChunks(
 			emptySizing,
@@ -202,7 +245,14 @@ suite('ScenarioAutomationWorkspaceChunkSearchService', () => {
 	});
 
 	test('returns empty chunks on non-ok response', async () => {
-		fetcherService.fetchImpl = async () => Response.fromText(500, 'Error', new TestHeaders(), 'failed', 'test-stub');
+		fetcherService.fetchImpl = async () =>
+			Response.fromText(
+				500,
+				'Error',
+				new TestHeaders(),
+				'failed',
+				'test-stub',
+			);
 
 		const result = await service.searchFileChunks(
 			emptySizing,
@@ -214,11 +264,18 @@ suite('ScenarioAutomationWorkspaceChunkSearchService', () => {
 		);
 
 		assert.deepStrictEqual(result, { chunks: [] });
-		assert.ok(logService.errors.some(e => e.includes('status 500')));
+		assert.ok(logService.errors.some((e) => e.includes('status 500')));
 	});
 
 	test('returns empty chunks on invalid json', async () => {
-		fetcherService.fetchImpl = async () => Response.fromText(200, 'OK', new TestHeaders(), '{ this is not json', 'test-stub');
+		fetcherService.fetchImpl = async () =>
+			Response.fromText(
+				200,
+				'OK',
+				new TestHeaders(),
+				'{ this is not json',
+				'test-stub',
+			);
 
 		const result = await service.searchFileChunks(
 			emptySizing,
@@ -230,13 +287,20 @@ suite('ScenarioAutomationWorkspaceChunkSearchService', () => {
 		);
 
 		assert.deepStrictEqual(result, { chunks: [] });
-		assert.ok(logService.errors.some(e => e.includes('failed to parse response JSON')));
+		assert.ok(
+			logService.errors.some((e) =>
+				e.includes('failed to parse response JSON'),
+			),
+		);
 	});
 
 	test('wires cancellation token to fetch signal', async () => {
-		fetcherService.fetchImpl = (_url, options) => new Promise((_resolve, reject) => {
-			options.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
-		});
+		fetcherService.fetchImpl = (_url, options) =>
+			new Promise((_resolve, reject) => {
+				options.signal?.addEventListener('abort', () =>
+					reject(new DOMException('aborted', 'AbortError')),
+				);
+			});
 		const cts = new CancellationTokenSource();
 
 		const resultPromise = service.searchFileChunks(
@@ -253,6 +317,8 @@ suite('ScenarioAutomationWorkspaceChunkSearchService', () => {
 
 		assert.deepStrictEqual(result, { chunks: [] });
 		assert.strictEqual(fetcherService.lastOptions?.signal?.aborted, true);
-		assert.ok(logService.traces.some(e => e.includes('search cancelled')));
+		assert.ok(
+			logService.traces.some((e) => e.includes('search cancelled')),
+		);
 	});
 });

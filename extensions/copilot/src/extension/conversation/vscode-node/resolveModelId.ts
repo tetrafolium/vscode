@@ -10,6 +10,9 @@ const autoModelId = 'copilot/auto';
  * the actual model that served the request so that downstream telemetry
  * reflects the resolved model rather than the opaque "copilot/auto" identifier.
  */
-export function resolveModelIdForTelemetry(modelId: string, resolvedModel: string | undefined): string {
-	return modelId === autoModelId ? (resolvedModel || autoModelId) : modelId;
+export function resolveModelIdForTelemetry(
+	modelId: string,
+	resolvedModel: string | undefined,
+): string {
+	return modelId === autoModelId ? resolvedModel || autoModelId : modelId;
 }

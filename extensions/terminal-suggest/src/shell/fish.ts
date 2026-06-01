@@ -3,22 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import type { ICompletionResource } from '../types';
-import { getAliasesHelper } from './common';
-import { type ExecOptionsWithStringEncoding } from 'node:child_process';
-import { fishBuiltinsCommandDescriptionsCache } from './fishBuiltinsCache';
+import * as vscode from "vscode";
+import type { ICompletionResource } from "../types";
+import { getAliasesHelper } from "./common";
+import { type ExecOptionsWithStringEncoding } from "node:child_process";
+import { fishBuiltinsCommandDescriptionsCache } from "./fishBuiltinsCache";
 
-const commandDescriptionsCache: Map<string, { shortDescription?: string; description: string; args: string | undefined }> | undefined = parseCache(fishBuiltinsCommandDescriptionsCache);
+const commandDescriptionsCache:
+	| Map<
+			string,
+			{
+				shortDescription?: string;
+				description: string;
+				args: string | undefined;
+			}
+	  >
+	| undefined = parseCache(fishBuiltinsCommandDescriptionsCache);
 
-export async function getFishGlobals(options: ExecOptionsWithStringEncoding, existingCommands?: Set<string>): Promise<(string | ICompletionResource)[]> {
-	return [
-		...await getAliases(options),
-		...await getBuiltins(options),
-	];
+export async function getFishGlobals(
+	options: ExecOptionsWithStringEncoding,
+	existingCommands?: Set<string>,
+): Promise<(string | ICompletionResource)[]> {
+	return [...(await getAliases(options)), ...(await getBuiltins(options))];
 }
 
-async function getBuiltins(options: ExecOptionsWithStringEncoding): Promise<(string | ICompletionResource)[]> {
+async function getBuiltins(
+	options: ExecOptionsWithStringEncoding,
+): Promise<(string | ICompletionResource)[]> {
 	const completions: ICompletionResource[] = [];
 
 	// Use the cache directly for all commands
@@ -30,20 +41,20 @@ async function getBuiltins(options: ExecOptionsWithStringEncoding): Promise<(str
 					label: { label: cmd, description: result.description },
 					detail: result.args,
 					documentation: new vscode.MarkdownString(result.documentation),
-					kind: vscode.TerminalCompletionItemKind.Method
+					kind: vscode.TerminalCompletionItemKind.Method,
 				});
 			} else {
 				console.warn(`Fish command "${cmd}" not found in cache.`);
 				completions.push({
 					label: cmd,
-					kind: vscode.TerminalCompletionItemKind.Method
+					kind: vscode.TerminalCompletionItemKind.Method,
 				});
 			}
 		} catch (e) {
 			// Ignore errors
 			completions.push({
 				label: cmd,
-				kind: vscode.TerminalCompletionItemKind.Method
+				kind: vscode.TerminalCompletionItemKind.Method,
 			});
 		}
 	}
@@ -51,7 +62,11 @@ async function getBuiltins(options: ExecOptionsWithStringEncoding): Promise<(str
 	return completions;
 }
 
-export function getCommandDescription(command: string): { documentation?: string; description?: string; args?: string | undefined } | undefined {
+export function getCommandDescription(
+	command: string,
+):
+	| { documentation?: string; description?: string; args?: string | undefined }
+	| undefined {
 	if (!commandDescriptionsCache) {
 		return undefined;
 	}
@@ -64,28 +79,49 @@ export function getCommandDescription(command: string): { documentation?: string
 		return {
 			description: result.shortDescription,
 			args: result.args,
-			documentation: result.description
+			documentation: result.description,
 		};
 	} else {
 		return {
 			description: result.description,
 			args: result.args,
-			documentation: result.description
+			documentation: result.description,
 		};
 	}
 }
 
-function parseCache(cache: Object): Map<string, { shortDescription?: string; description: string; args: string | undefined }> | undefined {
+function parseCache(
+	cache: Object,
+):
+	| Map<
+			string,
+			{
+				shortDescription?: string;
+				description: string;
+				args: string | undefined;
+			}
+	  >
+	| undefined {
 	if (!cache) {
 		return undefined;
 	}
-	const result = new Map<string, { shortDescription?: string; description: string; args: string | undefined }>();
+	const result = new Map<
+		string,
+		{ shortDescription?: string; description: string; args: string | undefined }
+	>();
 	for (const [key, value] of Object.entries(cache)) {
 		result.set(key, value);
 	}
 	return result;
 }
 
-async function getAliases(options: ExecOptionsWithStringEncoding): Promise<ICompletionResource[]> {
-	return getAliasesHelper('fish', ['-ic', 'alias'], /^alias (?<alias>[a-zA-Z0-9\.:-]+) (?<resolved>.+)$/, options);
+async function getAliases(
+	options: ExecOptionsWithStringEncoding,
+): Promise<ICompletionResource[]> {
+	return getAliasesHelper(
+		"fish",
+		["-ic", "alias"],
+		/^alias (?<alias>[a-zA-Z0-9\.:-]+) (?<resolved>.+)$/,
+		options,
+	);
 }

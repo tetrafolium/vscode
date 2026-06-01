@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LogEntryLike } from '../executionGraph.js';
-import { Trace, TraceContext } from './trace.js';
+import { LogEntryLike } from "../executionGraph.js";
+import { Trace, TraceContext } from "./trace.js";
 
 /**
  * A minimal logger for tests that captures the active {@link Trace} at log
@@ -31,7 +31,7 @@ export interface ITraceLogger {
  */
 export interface ITraceLogEntry extends LogEntryLike {
 	readonly trace: Trace;
-	readonly level: 'log' | 'warn' | 'error';
+	readonly level: "log" | "warn" | "error";
 }
 
 /**
@@ -42,18 +42,18 @@ export interface ITraceLogEntry extends LogEntryLike {
  * buffer)` to interleave log lines with the timer swimlane.
  */
 export function createTraceLogger(buffer: ITraceLogEntry[]): ITraceLogger {
-	const make = (level: 'log' | 'warn' | 'error') => (message: string) => {
+	const make = (level: "log" | "warn" | "error") => (message: string) => {
 		buffer.push({
 			trace: TraceContext.instance.currentTrace(),
 			level,
-			message: level === 'log' ? message : `[${level}] ${message}`,
+			message: level === "log" ? message : `[${level}] ${message}`,
 		});
 	};
-	const log = make('log');
+	const log = make("log");
 	return {
 		log,
-		warn: make('warn'),
-		error: make('error'),
+		warn: make("warn"),
+		error: make("error"),
 		logRun<T>(fn: () => T): T {
 			log(`run: ${_describeFn(fn)}`);
 			return fn();
@@ -66,12 +66,18 @@ function _describeFn(fn: () => unknown): string {
 	const src = fn.toString();
 	// Strip `() => ` / `function () {` wrappers so the body reads naturally.
 	const arrow = src.match(/^\s*(?:async\s+)?\(\s*\)\s*=>\s*([\s\S]+?)\s*$/);
-	if (arrow) { return _collapseWhitespace(arrow[1]); }
-	const fnExpr = src.match(/^\s*(?:async\s+)?function\s*\w*\s*\(\s*\)\s*\{\s*([\s\S]+?)\s*\}\s*$/);
-	if (fnExpr) { return _collapseWhitespace(fnExpr[1]); }
+	if (arrow) {
+		return _collapseWhitespace(arrow[1]);
+	}
+	const fnExpr = src.match(
+		/^\s*(?:async\s+)?function\s*\w*\s*\(\s*\)\s*\{\s*([\s\S]+?)\s*\}\s*$/,
+	);
+	if (fnExpr) {
+		return _collapseWhitespace(fnExpr[1]);
+	}
 	return _collapseWhitespace(src);
 }
 
 function _collapseWhitespace(s: string): string {
-	return s.replace(/\s+/g, ' ').trim();
+	return s.replace(/\s+/g, " ").trim();
 }

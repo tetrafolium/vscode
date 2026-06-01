@@ -49,8 +49,14 @@ suite('PositionOffsetTransformer', () => {
 
 	test('should apply offset edits correctly', () => {
 		const edits = [
-			new TextEdit(new Range(new Position(0, 0), new Position(0, 5)), 'Hello'),
-			new TextEdit(new Range(new Position(1, 0), new Position(1, 5)), 'World')
+			new TextEdit(
+				new Range(new Position(0, 0), new Position(0, 5)),
+				'Hello',
+			),
+			new TextEdit(
+				new Range(new Position(1, 0), new Position(1, 5)),
+				'World',
+			),
 		];
 		const offsetEdit = transformer.toOffsetEdit(edits);
 		transformer.applyOffsetEdits(offsetEdit);
@@ -67,7 +73,10 @@ suite('PositionOffsetTransformer', () => {
 	});
 
 	test('should validate range correctly', () => {
-		const invalidRange = new Range(new Position(10, 10), new Position(20, 20));
+		const invalidRange = new Range(
+			new Position(10, 10),
+			new Position(20, 20),
+		);
 		const validRange = transformer.validateRange(invalidRange);
 		assert.equal(validRange.start.line, 2);
 		assert.equal(validRange.start.character, 5);
@@ -77,8 +86,14 @@ suite('PositionOffsetTransformer', () => {
 
 	test('should apply offset edits with insertion correctly', () => {
 		const edits = [
-			new TextEdit(new Range(new Position(0, 5), new Position(0, 5)), 'Hello '),
-			new TextEdit(new Range(new Position(1, 5), new Position(1, 5)), ' World')
+			new TextEdit(
+				new Range(new Position(0, 5), new Position(0, 5)),
+				'Hello ',
+			),
+			new TextEdit(
+				new Range(new Position(1, 5), new Position(1, 5)),
+				' World',
+			),
 		];
 		const offsetEdit = transformer.toOffsetEdit(edits);
 		transformer.applyOffsetEdits(offsetEdit);
@@ -98,7 +113,7 @@ suite('PositionOffsetTransformer', () => {
 	test('should apply offset edits with deletion correctly', () => {
 		const edits = [
 			new TextEdit(new Range(new Position(0, 0), new Position(0, 5)), ''),
-			new TextEdit(new Range(new Position(1, 0), new Position(1, 5)), '')
+			new TextEdit(new Range(new Position(1, 0), new Position(1, 5)), ''),
 		];
 		const offsetEdit = transformer.toOffsetEdit(edits);
 		transformer.applyOffsetEdits(offsetEdit);
@@ -118,9 +133,18 @@ suite('PositionOffsetTransformer', () => {
 
 	test('should apply offset edits with mixed edits correctly', () => {
 		const edits = [
-			new TextEdit(new Range(new Position(0, 0), new Position(0, 5)), 'Hello'),
-			new TextEdit(new Range(new Position(1, 0), new Position(1, 5)), 'World'),
-			new TextEdit(new Range(new Position(2, 0), new Position(2, 5)), 'Test')
+			new TextEdit(
+				new Range(new Position(0, 0), new Position(0, 5)),
+				'Hello',
+			),
+			new TextEdit(
+				new Range(new Position(1, 0), new Position(1, 5)),
+				'World',
+			),
+			new TextEdit(
+				new Range(new Position(2, 0), new Position(2, 5)),
+				'Test',
+			),
 		];
 		const offsetEdit = transformer.toOffsetEdit(edits);
 		transformer.applyOffsetEdits(offsetEdit);
@@ -138,7 +162,10 @@ suite('PositionOffsetTransformer', () => {
 
 	test('should apply offset edits with multi-line insertion correctly', () => {
 		const edits = [
-			new TextEdit(new Range(new Position(0, 5), new Position(0, 5)), '\nInserted\nText\n')
+			new TextEdit(
+				new Range(new Position(0, 5), new Position(0, 5)),
+				'\nInserted\nText\n',
+			),
 		];
 		const offsetEdit = transformer.toOffsetEdit(edits);
 		transformer.applyOffsetEdits(offsetEdit);
@@ -163,13 +190,19 @@ suite('PositionOffsetTransformer', () => {
 		transformer = new PositionOffsetTransformer(sampleTextWithCRLF);
 
 		const edits = [
-			new TextEdit(new Range(new Position(0, 5), new Position(0, 5)), '\r\nInserted\r\nText\r\n')
+			new TextEdit(
+				new Range(new Position(0, 5), new Position(0, 5)),
+				'\r\nInserted\r\nText\r\n',
+			),
 		];
 		const offsetEdit = transformer.toOffsetEdit(edits);
 		transformer.applyOffsetEdits(offsetEdit);
 
 		const newText = transformer.getText();
-		assert.equal(newText, 'line1\r\nInserted\r\nText\r\n\r\nline2\r\nline3');
+		assert.equal(
+			newText,
+			'line1\r\nInserted\r\nText\r\n\r\nline2\r\nline3',
+		);
 
 		// Additional assertions
 		assert.equal(transformer.getPosition(7).line, 1);

@@ -3,28 +3,52 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/checksWidget.css';
-import * as dom from '../../../../base/browser/dom.js';
-import { renderIcon } from '../../../../base/browser/ui/iconLabel/iconLabels.js';
-import { IListRenderer, IListVirtualDelegate } from '../../../../base/browser/ui/list/list.js';
-import { Action } from '../../../../base/common/actions.js';
-import { Codicon } from '../../../../base/common/codicons.js';
-import { Emitter } from '../../../../base/common/event.js';
-import { Disposable, DisposableStore, IDisposable } from '../../../../base/common/lifecycle.js';
-import { autorun } from '../../../../base/common/observable.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { URI } from '../../../../base/common/uri.js';
-import { localize } from '../../../../nls.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { WorkbenchList } from '../../../../platform/list/browser/listService.js';
-import { IOpenerService } from '../../../../platform/opener/common/opener.js';
-import { IChatWidgetService } from '../../../../workbench/contrib/chat/browser/chat.js';
-import { DEFAULT_LABELS_CONTAINER, IResourceLabel, ResourceLabels } from '../../../../workbench/browser/labels.js';
-import { ActionBar } from '../../../../base/browser/ui/actionbar/actionbar.js';
-import { GitHubCheckConclusion, GitHubCheckStatus, IGitHubCICheck } from '../../github/common/types.js';
-import { GitHubPullRequestCIModel, parseWorkflowRunId } from '../../github/browser/models/githubPullRequestCIModel.js';
-import { CICheckGroup, buildFixChecksPrompt, getCheckGroup, getCheckStateLabel, getFailedChecks } from './checksActions.js';
-import { ChecksViewModel } from './checksViewModel.js';
+import "./media/checksWidget.css";
+import * as dom from "../../../../base/browser/dom.js";
+import { renderIcon } from "../../../../base/browser/ui/iconLabel/iconLabels.js";
+import {
+	IListRenderer,
+	IListVirtualDelegate,
+} from "../../../../base/browser/ui/list/list.js";
+import { Action } from "../../../../base/common/actions.js";
+import { Codicon } from "../../../../base/common/codicons.js";
+import { Emitter } from "../../../../base/common/event.js";
+import {
+	Disposable,
+	DisposableStore,
+	IDisposable,
+} from "../../../../base/common/lifecycle.js";
+import { autorun } from "../../../../base/common/observable.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import { URI } from "../../../../base/common/uri.js";
+import { localize } from "../../../../nls.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import { WorkbenchList } from "../../../../platform/list/browser/listService.js";
+import { IOpenerService } from "../../../../platform/opener/common/opener.js";
+import { IChatWidgetService } from "../../../../workbench/contrib/chat/browser/chat.js";
+import {
+	DEFAULT_LABELS_CONTAINER,
+	IResourceLabel,
+	ResourceLabels,
+} from "../../../../workbench/browser/labels.js";
+import { ActionBar } from "../../../../base/browser/ui/actionbar/actionbar.js";
+import {
+	GitHubCheckConclusion,
+	GitHubCheckStatus,
+	IGitHubCICheck,
+} from "../../github/common/types.js";
+import {
+	GitHubPullRequestCIModel,
+	parseWorkflowRunId,
+} from "../../github/browser/models/githubPullRequestCIModel.js";
+import {
+	CICheckGroup,
+	buildFixChecksPrompt,
+	getCheckGroup,
+	getCheckStateLabel,
+	getFailedChecks,
+} from "./checksActions.js";
+import { ChecksViewModel } from "./checksViewModel.js";
 
 const $ = dom.$;
 
@@ -60,25 +84,35 @@ interface ICICheckTemplateData {
 	readonly elementDisposables: DisposableStore;
 }
 
-class CICheckListRenderer implements IListRenderer<ICICheckListItem, ICICheckTemplateData> {
-	static readonly TEMPLATE_ID = 'ciCheck';
+class CICheckListRenderer implements IListRenderer<
+	ICICheckListItem,
+	ICICheckTemplateData
+> {
+	static readonly TEMPLATE_ID = "ciCheck";
 	readonly templateId = CICheckListRenderer.TEMPLATE_ID;
 
 	constructor(
 		private readonly _labels: ResourceLabels,
 		private readonly _openerService: IOpenerService,
 		private readonly _getModel: () => GitHubPullRequestCIModel | undefined,
-	) { }
+	) {}
 
 	renderTemplate(container: HTMLElement): ICICheckTemplateData {
 		const templateDisposables = new DisposableStore();
-		const row = dom.append(container, $('.ci-status-widget-check'));
+		const row = dom.append(container, $(".ci-status-widget-check"));
 
-		const labelContainer = dom.append(row, $('.ci-status-widget-check-label'));
-		const label = templateDisposables.add(this._labels.create(labelContainer, { supportIcons: true }));
+		const labelContainer = dom.append(row, $(".ci-status-widget-check-label"));
+		const label = templateDisposables.add(
+			this._labels.create(labelContainer, { supportIcons: true }),
+		);
 
-		const actionBarContainer = dom.append(row, $('.ci-status-widget-check-actions'));
-		const actionBar = templateDisposables.add(new ActionBar(actionBarContainer));
+		const actionBarContainer = dom.append(
+			row,
+			$(".ci-status-widget-check-actions"),
+		);
+		const actionBar = templateDisposables.add(
+			new ActionBar(actionBarContainer),
+		);
 
 		return {
 			row,
@@ -89,51 +123,83 @@ class CICheckListRenderer implements IListRenderer<ICICheckListItem, ICICheckTem
 		};
 	}
 
-	renderElement(element: ICICheckListItem, _index: number, templateData: ICICheckTemplateData): void {
+	renderElement(
+		element: ICICheckListItem,
+		_index: number,
+		templateData: ICICheckTemplateData,
+	): void {
 		templateData.elementDisposables.clear();
 		templateData.actionBar.clear();
 
 		templateData.row.className = `ci-status-widget-check ${getCheckStatusClass(element.check)}`;
 
-		const title = localize('ci.checkTitle', "{0}: {1}", element.check.name, getCheckStateLabel(element.check));
-		templateData.label.setResource({
-			name: element.check.name,
-			resource: URI.from({ scheme: 'github-check', path: `/${element.check.id}/${element.check.name}` }),
-		}, {
-			icon: getCheckIcon(element.check),
-			title,
-		});
+		const title = localize(
+			"ci.checkTitle",
+			"{0}: {1}",
+			element.check.name,
+			getCheckStateLabel(element.check),
+		);
+		templateData.label.setResource(
+			{
+				name: element.check.name,
+				resource: URI.from({
+					scheme: "github-check",
+					path: `/${element.check.id}/${element.check.name}`,
+				}),
+			},
+			{
+				icon: getCheckIcon(element.check),
+				title,
+			},
+		);
 
 		const actions: Action[] = [];
 
-		if (element.group === CICheckGroup.Failed && parseWorkflowRunId(element.check.detailsUrl) !== undefined) {
-			actions.push(templateData.elementDisposables.add(new Action(
-				'ci.rerunCheck',
-				localize('ci.rerunCheck', "Rerun Check"),
-				ThemeIcon.asClassName(Codicon.debugRerun),
-				true,
-				async () => {
-					await this._getModel()?.rerunFailedCheck(element.check);
-				},
-			)));
+		if (
+			element.group === CICheckGroup.Failed &&
+			parseWorkflowRunId(element.check.detailsUrl) !== undefined
+		) {
+			actions.push(
+				templateData.elementDisposables.add(
+					new Action(
+						"ci.rerunCheck",
+						localize("ci.rerunCheck", "Rerun Check"),
+						ThemeIcon.asClassName(Codicon.debugRerun),
+						true,
+						async () => {
+							await this._getModel()?.rerunFailedCheck(element.check);
+						},
+					),
+				),
+			);
 		}
 
 		if (element.check.detailsUrl) {
-			actions.push(templateData.elementDisposables.add(new Action(
-				'ci.openOnGitHub',
-				localize('ci.openOnGitHub', "Open on GitHub"),
-				ThemeIcon.asClassName(Codicon.linkExternal),
-				true,
-				async () => {
-					await this._openerService.open(URI.parse(element.check.detailsUrl!));
-				},
-			)));
+			actions.push(
+				templateData.elementDisposables.add(
+					new Action(
+						"ci.openOnGitHub",
+						localize("ci.openOnGitHub", "Open on GitHub"),
+						ThemeIcon.asClassName(Codicon.linkExternal),
+						true,
+						async () => {
+							await this._openerService.open(
+								URI.parse(element.check.detailsUrl!),
+							);
+						},
+					),
+				),
+			);
 		}
 
 		templateData.actionBar.push(actions, { icon: true, label: false });
 	}
 
-	disposeElement(_element: ICICheckListItem, _index: number, templateData: ICICheckTemplateData): void {
+	disposeElement(
+		_element: ICICheckListItem,
+		_index: number,
+		templateData: ICICheckTemplateData,
+	): void {
 		templateData.elementDisposables.clear();
 		templateData.actionBar.clear();
 	}
@@ -148,7 +214,6 @@ class CICheckListRenderer implements IListRenderer<ICICheckListItem, ICICheckTem
  * Rendered beneath the changes tree in the changes view as a SplitView pane.
  */
 export class CIStatusWidget extends Disposable {
-
 	static readonly HEADER_HEIGHT = 34; // total header height in px
 	static readonly MIN_BODY_HEIGHT = 84; // at least 3 checks (3 * 28)
 	static readonly PREFERRED_BODY_HEIGHT = 112; // preferred 4 checks (4 * 28)
@@ -164,12 +229,16 @@ export class CIStatusWidget extends Disposable {
 	private readonly _bodyNode: HTMLElement;
 	private readonly _list: WorkbenchList<ICICheckListItem>;
 	private readonly _labels: ResourceLabels;
-	private readonly _headerActionDisposables = this._register(new DisposableStore());
+	private readonly _headerActionDisposables = this._register(
+		new DisposableStore(),
+	);
 
 	private readonly _onDidChangeHeight = this._register(new Emitter<void>());
 	readonly onDidChangeHeight = this._onDidChangeHeight.event;
 
-	private readonly _onDidToggleCollapsed = this._register(new Emitter<boolean>());
+	private readonly _onDidToggleCollapsed = this._register(
+		new Emitter<boolean>(),
+	);
 	readonly onDidToggleCollapsed = this._onDidToggleCollapsed.event;
 
 	private _checkCount = 0;
@@ -190,7 +259,10 @@ export class CIStatusWidget extends Disposable {
 		if (this._collapsed) {
 			return CIStatusWidget.HEADER_HEIGHT;
 		}
-		return CIStatusWidget.HEADER_HEIGHT + this._checkCount * CICheckListDelegate.ITEM_HEIGHT;
+		return (
+			CIStatusWidget.HEADER_HEIGHT +
+			this._checkCount * CICheckListDelegate.ITEM_HEIGHT
+		);
 	}
 
 	/** Whether the widget is currently visible (has checks to show). */
@@ -207,78 +279,140 @@ export class CIStatusWidget extends Disposable {
 		container: HTMLElement,
 		@IOpenerService private readonly _openerService: IOpenerService,
 		@IChatWidgetService private readonly _chatWidgetService: IChatWidgetService,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
 	) {
 		super();
-		this._labels = this._register(this._instantiationService.createInstance(ResourceLabels, DEFAULT_LABELS_CONTAINER));
+		this._labels = this._register(
+			this._instantiationService.createInstance(
+				ResourceLabels,
+				DEFAULT_LABELS_CONTAINER,
+			),
+		);
 
-		this._domNode = dom.append(container, $('.ci-status-widget'));
-		this._domNode.style.display = 'none';
+		this._domNode = dom.append(container, $(".ci-status-widget"));
+		this._domNode.style.display = "none";
 
 		// Header (always visible, click to collapse/expand)
-		this._headerNode = dom.append(this._domNode, $('.ci-status-widget-header'));
-		this._titleNode = dom.append(this._headerNode, $('.ci-status-widget-title'));
-		this._titleLabelNode = dom.append(this._titleNode, $('.ci-status-widget-title-label'));
-		this._titleLabelNode.textContent = localize('ci.checksLabel', "Checks");
-		this._countsNode = dom.append(this._titleNode, $('.ci-status-widget-counts'));
-		this._headerActionBarContainer = dom.append(this._headerNode, $('.ci-status-widget-header-actions'));
-		this._headerActionBar = this._register(new ActionBar(this._headerActionBarContainer));
-		this._register(dom.addDisposableListener(this._headerActionBarContainer, dom.EventType.CLICK, e => {
-			e.preventDefault();
-			e.stopPropagation();
-		}));
-		this._chevronNode = dom.append(this._headerNode, $('.group-chevron'));
-		this._chevronNode.classList.add(...ThemeIcon.asClassNameArray(Codicon.chevronDown));
+		this._headerNode = dom.append(this._domNode, $(".ci-status-widget-header"));
+		this._titleNode = dom.append(
+			this._headerNode,
+			$(".ci-status-widget-title"),
+		);
+		this._titleLabelNode = dom.append(
+			this._titleNode,
+			$(".ci-status-widget-title-label"),
+		);
+		this._titleLabelNode.textContent = localize("ci.checksLabel", "Checks");
+		this._countsNode = dom.append(
+			this._titleNode,
+			$(".ci-status-widget-counts"),
+		);
+		this._headerActionBarContainer = dom.append(
+			this._headerNode,
+			$(".ci-status-widget-header-actions"),
+		);
+		this._headerActionBar = this._register(
+			new ActionBar(this._headerActionBarContainer),
+		);
+		this._register(
+			dom.addDisposableListener(
+				this._headerActionBarContainer,
+				dom.EventType.CLICK,
+				(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+				},
+			),
+		);
+		this._chevronNode = dom.append(this._headerNode, $(".group-chevron"));
+		this._chevronNode.classList.add(
+			...ThemeIcon.asClassNameArray(Codicon.chevronDown),
+		);
 
-		this._headerNode.setAttribute('role', 'button');
-		this._headerNode.setAttribute('aria-label', localize('ci.toggleChecks', "Toggle Checks"));
-		this._headerNode.setAttribute('aria-expanded', 'true');
+		this._headerNode.setAttribute("role", "button");
+		this._headerNode.setAttribute(
+			"aria-label",
+			localize("ci.toggleChecks", "Toggle Checks"),
+		);
+		this._headerNode.setAttribute("aria-expanded", "true");
 		this._headerNode.tabIndex = 0;
 
-		this._register(dom.addDisposableListener(this._headerNode, dom.EventType.CLICK, e => {
-			// Don't toggle when clicking the action bar
-			if (dom.isAncestor(e.target as HTMLElement, this._headerActionBarContainer)) {
-				return;
-			}
-			this._toggleCollapsed();
-		}));
-		this._register(dom.addDisposableListener(this._headerNode, dom.EventType.KEY_DOWN, e => {
-			if ((e.key === 'Enter' || e.key === ' ') && e.target === this._headerNode) {
-				e.preventDefault();
+		this._register(
+			dom.addDisposableListener(this._headerNode, dom.EventType.CLICK, (e) => {
+				// Don't toggle when clicking the action bar
+				if (
+					dom.isAncestor(
+						e.target as HTMLElement,
+						this._headerActionBarContainer,
+					)
+				) {
+					return;
+				}
 				this._toggleCollapsed();
-			}
-		}));
+			}),
+		);
+		this._register(
+			dom.addDisposableListener(
+				this._headerNode,
+				dom.EventType.KEY_DOWN,
+				(e) => {
+					if (
+						(e.key === "Enter" || e.key === " ") &&
+						e.target === this._headerNode
+					) {
+						e.preventDefault();
+						this._toggleCollapsed();
+					}
+				},
+			),
+		);
 
 		// Body (list of checks)
-		const bodyId = 'ci-status-widget-body';
+		const bodyId = "ci-status-widget-body";
 		this._bodyNode = dom.append(this._domNode, $(`.${bodyId}`));
 		this._bodyNode.id = bodyId;
-		this._headerNode.setAttribute('aria-controls', bodyId);
+		this._headerNode.setAttribute("aria-controls", bodyId);
 
-		const listContainer = $('.ci-status-widget-list');
-		this._list = this._register(this._instantiationService.createInstance(
-			WorkbenchList<ICICheckListItem>,
-			'CIStatusWidget',
-			listContainer,
-			new CICheckListDelegate(),
-			[new CICheckListRenderer(this._labels, this._openerService, () => this._model)],
-			{
-				multipleSelectionSupport: false,
-				openOnSingleClick: false,
-				accessibilityProvider: {
-					getWidgetAriaLabel: () => localize('ci.checksListAriaLabel', "Checks"),
-					getAriaLabel: item => localize('ci.checkAriaLabel', "{0}, {1}", item.check.name, getCheckStateLabel(item.check)),
+		const listContainer = $(".ci-status-widget-list");
+		this._list = this._register(
+			this._instantiationService.createInstance(
+				WorkbenchList<ICICheckListItem>,
+				"CIStatusWidget",
+				listContainer,
+				new CICheckListDelegate(),
+				[
+					new CICheckListRenderer(
+						this._labels,
+						this._openerService,
+						() => this._model,
+					),
+				],
+				{
+					multipleSelectionSupport: false,
+					openOnSingleClick: false,
+					accessibilityProvider: {
+						getWidgetAriaLabel: () =>
+							localize("ci.checksListAriaLabel", "Checks"),
+						getAriaLabel: (item) =>
+							localize(
+								"ci.checkAriaLabel",
+								"{0}, {1}",
+								item.check.name,
+								getCheckStateLabel(item.check),
+							),
+					},
+					keyboardNavigationLabelProvider: {
+						getKeyboardNavigationLabel: (item) => item.check.name,
+					},
 				},
-				keyboardNavigationLabelProvider: {
-					getKeyboardNavigationLabel: item => item.check.name,
-				},
-			},
-		));
+			),
+		);
 		this._bodyNode.appendChild(listContainer);
 	}
 
 	setInput(input: ChecksViewModel): IDisposable {
-		return autorun(reader => {
+		return autorun((reader) => {
 			this._model = input.checksObs.read(reader);
 			this._sessionResource = input.activeSessionResourceObs.read(reader);
 
@@ -287,7 +421,7 @@ export class CIStatusWidget extends Disposable {
 				this._setCollapsed(false);
 				this._renderBody([]);
 				this._renderHeaderActions([]);
-				this._domNode.style.display = 'none';
+				this._domNode.style.display = "none";
 				this._onDidChangeHeight.fire();
 				return;
 			}
@@ -299,7 +433,7 @@ export class CIStatusWidget extends Disposable {
 				this._setCollapsed(false);
 				this._renderBody([]);
 				this._renderHeaderActions([]);
-				this._domNode.style.display = 'none';
+				this._domNode.style.display = "none";
 				this._onDidChangeHeight.fire();
 				return;
 			}
@@ -308,7 +442,7 @@ export class CIStatusWidget extends Disposable {
 			const oldCount = this._checkCount;
 			this._checkCount = sorted.length;
 
-			this._domNode.style.display = '';
+			this._domNode.style.display = "";
 			this._renderHeader(checks);
 			this._renderHeaderActions(getFailedChecks(checks));
 			this._renderBody(sorted);
@@ -326,27 +460,39 @@ export class CIStatusWidget extends Disposable {
 		dom.clearNode(this._countsNode);
 
 		if (counts.running > 0) {
-			const badge = dom.append(this._countsNode, $('.ci-status-widget-count-badge.ci-status-running'));
+			const badge = dom.append(
+				this._countsNode,
+				$(".ci-status-widget-count-badge.ci-status-running"),
+			);
 			badge.appendChild(renderIcon(Codicon.circleFilled));
-			dom.append(badge, $('span')).textContent = `${counts.running}`;
+			dom.append(badge, $("span")).textContent = `${counts.running}`;
 		}
 
 		if (counts.failed > 0) {
-			const badge = dom.append(this._countsNode, $('.ci-status-widget-count-badge.ci-status-failure'));
+			const badge = dom.append(
+				this._countsNode,
+				$(".ci-status-widget-count-badge.ci-status-failure"),
+			);
 			badge.appendChild(renderIcon(Codicon.error));
-			dom.append(badge, $('span')).textContent = `${counts.failed}`;
+			dom.append(badge, $("span")).textContent = `${counts.failed}`;
 		}
 
 		if (counts.pending > 0) {
-			const badge = dom.append(this._countsNode, $('.ci-status-widget-count-badge.ci-status-pending'));
+			const badge = dom.append(
+				this._countsNode,
+				$(".ci-status-widget-count-badge.ci-status-pending"),
+			);
 			badge.appendChild(renderIcon(Codicon.circleFilled));
-			dom.append(badge, $('span')).textContent = `${counts.pending}`;
+			dom.append(badge, $("span")).textContent = `${counts.pending}`;
 		}
 
 		if (counts.successful > 0) {
-			const badge = dom.append(this._countsNode, $('.ci-status-widget-count-badge.ci-status-success'));
+			const badge = dom.append(
+				this._countsNode,
+				$(".ci-status-widget-count-badge.ci-status-success"),
+			);
 			badge.appendChild(renderIcon(Codicon.passFilled));
-			dom.append(badge, $('span')).textContent = `${counts.successful}`;
+			dom.append(badge, $("span")).textContent = `${counts.successful}`;
 		}
 	}
 
@@ -355,24 +501,26 @@ export class CIStatusWidget extends Disposable {
 		this._headerActionBar.clear();
 
 		if (failedChecks.length === 0) {
-			this._headerActionBarContainer.classList.remove('has-actions');
-			this._domNode.classList.remove('has-fix-actions');
+			this._headerActionBarContainer.classList.remove("has-actions");
+			this._domNode.classList.remove("has-fix-actions");
 			return;
 		}
 
-		const fixChecksAction = this._headerActionDisposables.add(new Action(
-			'ci.fixChecks',
-			localize('ci.fixChecks', "Fix Checks"),
-			ThemeIcon.asClassName(Codicon.lightbulbAutofix),
-			true,
-			async () => {
-				await this._sendFixChecksPrompt(failedChecks);
-			},
-		));
+		const fixChecksAction = this._headerActionDisposables.add(
+			new Action(
+				"ci.fixChecks",
+				localize("ci.fixChecks", "Fix Checks"),
+				ThemeIcon.asClassName(Codicon.lightbulbAutofix),
+				true,
+				async () => {
+					await this._sendFixChecksPrompt(failedChecks);
+				},
+			),
+		);
 
 		this._headerActionBar.push([fixChecksAction], { icon: true, label: false });
-		this._headerActionBarContainer.classList.add('has-actions');
-		this._domNode.classList.add('has-fix-actions');
+		this._headerActionBarContainer.classList.add("has-actions");
+		this._domNode.classList.add("has-fix-actions");
 	}
 
 	/**
@@ -381,10 +529,10 @@ export class CIStatusWidget extends Disposable {
 	 */
 	layout(height: number): void {
 		if (this._collapsed) {
-			this._bodyNode.style.display = 'none';
+			this._bodyNode.style.display = "none";
 			return;
 		}
-		this._bodyNode.style.display = '';
+		this._bodyNode.style.display = "";
 		this._list.layout(height);
 	}
 
@@ -398,15 +546,15 @@ export class CIStatusWidget extends Disposable {
 	private _setCollapsed(collapsed: boolean): void {
 		this._collapsed = collapsed;
 		this._updateChevron();
-		this._headerNode.setAttribute('aria-expanded', String(!collapsed));
+		this._headerNode.setAttribute("aria-expanded", String(!collapsed));
 	}
 
 	private _updateChevron(): void {
-		this._chevronNode.className = 'group-chevron';
+		this._chevronNode.className = "group-chevron";
 		this._chevronNode.classList.add(
 			...ThemeIcon.asClassNameArray(
-				this._collapsed ? Codicon.chevronRight : Codicon.chevronDown
-			)
+				this._collapsed ? Codicon.chevronRight : Codicon.chevronDown,
+			),
 		);
 	}
 
@@ -414,23 +562,28 @@ export class CIStatusWidget extends Disposable {
 		this._list.splice(0, this._list.length, checks);
 	}
 
-	private async _sendFixChecksPrompt(failedChecks: readonly IGitHubCICheck[]): Promise<void> {
+	private async _sendFixChecksPrompt(
+		failedChecks: readonly IGitHubCICheck[],
+	): Promise<void> {
 		const model = this._model;
 		const sessionResource = this._sessionResource;
 		if (!model || !sessionResource || failedChecks.length === 0) {
 			return;
 		}
 
-		const failedCheckDetails = await Promise.all(failedChecks.map(async check => {
-			const annotations = await model.getCheckRunAnnotations(check.id);
-			return {
-				check,
-				annotations,
-			};
-		}));
+		const failedCheckDetails = await Promise.all(
+			failedChecks.map(async (check) => {
+				const annotations = await model.getCheckRunAnnotations(check.id);
+				return {
+					check,
+					annotations,
+				};
+			}),
+		);
 
 		const prompt = buildFixChecksPrompt(failedCheckDetails);
-		const chatWidget = this._chatWidgetService.getWidgetBySessionResource(sessionResource);
+		const chatWidget =
+			this._chatWidgetService.getWidgetBySessionResource(sessionResource);
 		if (!chatWidget) {
 			return;
 		}
@@ -442,7 +595,7 @@ export class CIStatusWidget extends Disposable {
 function sortChecks(checks: readonly IGitHubCICheck[]): ICICheckListItem[] {
 	return [...checks]
 		.sort(compareChecks)
-		.map(check => ({ check, group: getCheckGroup(check) }));
+		.map((check) => ({ check, group: getCheckGroup(check) }));
 }
 
 function compareChecks(a: IGitHubCICheck, b: IGitHubCICheck): number {
@@ -451,7 +604,7 @@ function compareChecks(a: IGitHubCICheck, b: IGitHubCICheck): number {
 		return groupDiff;
 	}
 
-	return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+	return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 }
 
 function getCheckCounts(checks: readonly IGitHubCICheck[]): ICICheckCounts {
@@ -509,12 +662,12 @@ function getCheckIcon(check: IGitHubCICheck): ThemeIcon {
 function getCheckStatusClass(check: IGitHubCICheck): string {
 	switch (getCheckGroup(check)) {
 		case CICheckGroup.Running:
-			return 'ci-status-running';
+			return "ci-status-running";
 		case CICheckGroup.Pending:
-			return 'ci-status-pending';
+			return "ci-status-pending";
 		case CICheckGroup.Failed:
-			return 'ci-status-failure';
+			return "ci-status-failure";
 		case CICheckGroup.Successful:
-			return 'ci-status-success';
+			return "ci-status-success";
 	}
 }

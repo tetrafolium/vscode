@@ -29,7 +29,7 @@ suite('StatementTree', function () {
 				}
 				▶️return❚ fibonacci(n - 1) + fibonacci(n - 2);◀️
 			}◀️◀️
-			`
+			`,
 		);
 	});
 
@@ -39,7 +39,13 @@ suite('StatementTree', function () {
 	// MARK: JavaScript / TypeScript
 
 	suite('JavaScript / Typescript', function () {
-		['javascript', 'javascriptreact', 'jsx', 'typescript', 'typescriptreact'].forEach(language => {
+		[
+			'javascript',
+			'javascriptreact',
+			'jsx',
+			'typescript',
+			'typescriptreact',
+		].forEach((language) => {
 			test(`${language} is supported`, function () {
 				assert.strictEqual(StatementTree.isSupported(language), true);
 			});
@@ -51,7 +57,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️x = 1;◀️
 				▶️y = 2;◀️
-				`
+				`,
 			);
 		});
 
@@ -62,16 +68,22 @@ suite('StatementTree', function () {
 				▶️x = 1;◀️
 				// comment
 				▶️y = 2;◀️
-				`
+				`,
 			);
 		});
 
 		test('recognizes export statements', async function () {
-			await testStatementBuilding('typescript', `▶️export ▶️const x = 1;◀️◀️`);
+			await testStatementBuilding(
+				'typescript',
+				`▶️export ▶️const x = 1;◀️◀️`,
+			);
 		});
 
 		test('recognizes import statements', async function () {
-			await testStatementBuilding('typescript', `▶️import assert from 'assert';◀️`);
+			await testStatementBuilding(
+				'typescript',
+				`▶️import assert from 'assert';◀️`,
+			);
 		});
 
 		test('recognizes debugger statements', async function () {
@@ -88,7 +100,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️const x = 1;◀️
 				▶️let y = 2;◀️
-				`
+				`,
 			);
 		});
 
@@ -98,7 +110,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️if (x)
 					▶️y = 1;◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -114,14 +126,20 @@ suite('StatementTree', function () {
 					▶️y = 1;◀️
 				else
 					▶️y = 2;◀️◀️
-				`
+				`,
 			);
 		});
 
 		test('recognizes single-expression if / else statements on a single line as single statements', async function () {
-			await testStatementBuilding('typescript', `▶️if (x) y = 1; else y = 2;◀️`);
+			await testStatementBuilding(
+				'typescript',
+				`▶️if (x) y = 1; else y = 2;◀️`,
+			);
 			// Since TS and JS are different grammars and the else property changed to alternative ensure we are good in JS as well.
-			await testStatementBuilding('javascript', `▶️if (x) y = 1; else y = 2;◀️`);
+			await testStatementBuilding(
+				'javascript',
+				`▶️if (x) y = 1; else y = 2;◀️`,
+			);
 		});
 
 		test('recognizes if statements with blocks', async function () {
@@ -131,7 +149,7 @@ suite('StatementTree', function () {
 				▶️if (x) ▶️{
 					▶️y = 1;◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -144,7 +162,7 @@ suite('StatementTree', function () {
 				}◀️ else ▶️{
 					▶️y = 2;◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -158,7 +176,7 @@ suite('StatementTree', function () {
 					default:
 						▶️y = false;◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -170,7 +188,7 @@ suite('StatementTree', function () {
 				▶️for (let i = 0; i < 10; i++) ▶️{
 					▶️str += ' ';◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -181,7 +199,7 @@ suite('StatementTree', function () {
 				▶️for (const prop in object) ▶️{
 					▶️console.log(prop, object[prop]);◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -192,7 +210,7 @@ suite('StatementTree', function () {
 				▶️for (const item of [1, 2, 3]) ▶️{
 					▶️console.log(item);◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -203,7 +221,7 @@ suite('StatementTree', function () {
 				▶️while (true) ▶️{
 					▶️break;◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -214,7 +232,7 @@ suite('StatementTree', function () {
 				▶️do ▶️{
 					▶️break;◀️
 				}◀️ while (true);◀️
-				`
+				`,
 			);
 		});
 
@@ -229,7 +247,7 @@ suite('StatementTree', function () {
 				}◀️ finally ▶️{
 					▶️console.log('done!');◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -240,7 +258,7 @@ suite('StatementTree', function () {
 				▶️with ({x: 1}) ▶️{
 					▶️console.log(x);◀️ // 1
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -251,7 +269,7 @@ suite('StatementTree', function () {
 				▶️while (false) ▶️{
 					▶️continue;◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -262,7 +280,7 @@ suite('StatementTree', function () {
 				▶️function foo() ▶️{
 					▶️return;◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -276,7 +294,7 @@ suite('StatementTree', function () {
 							▶️break outer;◀️◀️
 					}◀️◀️
 				}◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -285,7 +303,7 @@ suite('StatementTree', function () {
 				'typescript',
 				dedent`
 				▶️let i = featureFlag ? 0 : 1;◀️
-				`
+				`,
 			);
 		});
 
@@ -296,7 +314,7 @@ suite('StatementTree', function () {
 				▶️function noop() ▶️{
 					// empty
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -308,7 +326,7 @@ suite('StatementTree', function () {
 					▶️yield 1;◀️
 					▶️yield 2;◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -319,7 +337,7 @@ suite('StatementTree', function () {
 				▶️class Empty {
 					// empty
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -330,7 +348,7 @@ suite('StatementTree', function () {
 				▶️class ConstantIdentifier {
 					▶️readonly id = 1◀️;
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -347,7 +365,7 @@ suite('StatementTree', function () {
 						▶️return this.value;◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -364,12 +382,15 @@ suite('StatementTree', function () {
 						▶️return this.value;◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
 		test('recognizes type alias declarations', async function () {
-			await testStatementBuilding('typescript', `▶️type OptionalIdentifier = number | undefined;◀️`);
+			await testStatementBuilding(
+				'typescript',
+				`▶️type OptionalIdentifier = number | undefined;◀️`,
+			);
 		});
 
 		test('recognizes interface declarations', async function () {
@@ -380,7 +401,7 @@ suite('StatementTree', function () {
 					x: number;
 					y: number;
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -394,7 +415,7 @@ suite('StatementTree', function () {
 					East,
 					West
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -434,7 +455,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️x = 1◀️
 				▶️y = 2◀️
-				`
+				`,
 			);
 		});
 
@@ -445,7 +466,7 @@ suite('StatementTree', function () {
 				▶️x = 1◀️
 				# comment
 				▶️y = 2◀️
-				`
+				`,
 			);
 		});
 
@@ -454,11 +475,17 @@ suite('StatementTree', function () {
 		});
 
 		test('recognizes from import statements', async function () {
-			await testStatementBuilding('python', `▶️from assert import strict◀️`);
+			await testStatementBuilding(
+				'python',
+				`▶️from assert import strict◀️`,
+			);
 		});
 
 		test('recognizes from future import statements', async function () {
-			await testStatementBuilding('python', `▶️from __future__ import annotations◀️`);
+			await testStatementBuilding(
+				'python',
+				`▶️from __future__ import annotations◀️`,
+			);
 		});
 
 		test('recognizes print statements', async function () {
@@ -475,7 +502,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️def example():
 					▶️▶️return 1◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -492,7 +519,7 @@ suite('StatementTree', function () {
 				'python',
 				dedent`
 				▶️def example():
-					▶️▶️pass◀️◀️◀️`
+					▶️▶️pass◀️◀️◀️`,
 			);
 		});
 
@@ -502,7 +529,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️while True:
 					▶️▶️break◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -512,7 +539,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️while True:
 					▶️▶️continue◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -525,7 +552,7 @@ suite('StatementTree', function () {
 				'python',
 				dedent`
 				▶️def example():
-					▶️▶️nonlocal x◀️◀️◀️`
+					▶️▶️nonlocal x◀️◀️◀️`,
 			);
 		});
 
@@ -534,7 +561,10 @@ suite('StatementTree', function () {
 		});
 
 		test('recognizes statements with list comprehensions as single statements', async function () {
-			await testStatementBuilding('python', `▶️some_powers_of_two = [2**n for in range(1,6) if n != 5]◀️`);
+			await testStatementBuilding(
+				'python',
+				`▶️some_powers_of_two = [2**n for in range(1,6) if n != 5]◀️`,
+			);
 		});
 
 		test('recognizes statements with lamba expressions as single statements', async function () {
@@ -547,7 +577,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️if x:
 					▶️▶️y = 1◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -556,7 +586,7 @@ suite('StatementTree', function () {
 				'python',
 				dedent`
 				▶️if x: y = 1◀️
-				`
+				`,
 			);
 		});
 
@@ -568,7 +598,7 @@ suite('StatementTree', function () {
 					▶️▶️y = 1◀️◀️
 				else:
 					▶️▶️y = 2◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -578,7 +608,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️if x: ▶️▶️y = 1◀️◀️
 				else: ▶️▶️y = 2◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -592,7 +622,7 @@ suite('StatementTree', function () {
 					▶️▶️y = 2◀️◀️
 				else:
 					▶️▶️y = 3◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -606,7 +636,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️for i in range(10):
 					▶️▶️y = 1◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -618,7 +648,7 @@ suite('StatementTree', function () {
 					▶️▶️print line◀️◀️
 				else:
 					▶️▶️print x◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -628,7 +658,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️while x:
 					▶️▶️print y◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -640,7 +670,7 @@ suite('StatementTree', function () {
 					▶️▶️print y◀️◀️
 				else:
 					▶️▶️print z◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -654,7 +684,7 @@ suite('StatementTree', function () {
 					▶️▶️x = 2◀️◀️
 				finally:
 					▶️▶️x = 3◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -664,7 +694,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️with open('file.txt') as f:
 					▶️▶️x = f.read()◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -674,7 +704,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️def add(x, y):
 					▶️▶️return x + y◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -690,7 +720,7 @@ suite('StatementTree', function () {
 					This is a docstring.
 					"""◀️
 					▶️pass◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -700,7 +730,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️class Example:
 						▶️▶️pass◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -711,7 +741,7 @@ suite('StatementTree', function () {
 				▶️class Example:
 					▶️▶️def method(self):
 						▶️▶️pass◀️◀️◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -723,7 +753,7 @@ suite('StatementTree', function () {
 				@decorator2
 				▶️def example():
 					▶️▶️pass◀️◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -738,7 +768,7 @@ suite('StatementTree', function () {
 						▶️▶️y = 2◀️◀️
 					case _:
 						▶️▶️y = 3◀️◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -752,7 +782,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️def example(x: int) -> int:
 					▶️▶️return x + 1◀️◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -891,7 +921,7 @@ suite('StatementTree', function () {
 				▶️package main◀️
 
 				▶️func example() ▶️{}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -902,7 +932,7 @@ suite('StatementTree', function () {
 				▶️package main◀️
 
 				▶️func (self Document) GetLine(n int) ▶️{}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -913,7 +943,7 @@ suite('StatementTree', function () {
 				▶️package main◀️
 
 				▶️import "fmt"◀️
-				`
+				`,
 			);
 		});
 
@@ -927,7 +957,7 @@ suite('StatementTree', function () {
 					"fmt"
 					"os
 				)◀️
-				`
+				`,
 			);
 		});
 
@@ -940,7 +970,7 @@ suite('StatementTree', function () {
 				▶️func main() ▶️{
 					// comment
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -954,7 +984,7 @@ suite('StatementTree', function () {
 				 * Comment
 				 */
 				▶️func main() ▶️{}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -965,7 +995,7 @@ suite('StatementTree', function () {
 				▶️package main◀️
 
 				▶️const zero = 0◀️
-				`
+				`,
 			);
 		});
 
@@ -979,7 +1009,7 @@ suite('StatementTree', function () {
 					zero = 0
 					one = 1
 				)◀️
-				`
+				`,
 			);
 		});
 
@@ -990,7 +1020,7 @@ suite('StatementTree', function () {
 				▶️package main◀️
 
 				▶️var counter = 0◀️
-				`
+				`,
 			);
 		});
 
@@ -1001,7 +1031,7 @@ suite('StatementTree', function () {
 				▶️package main◀️
 
 				▶️type a b◀️
-				`
+				`,
 			);
 		});
 
@@ -1014,7 +1044,7 @@ suite('StatementTree', function () {
 				▶️func main() ▶️{
 					▶️x := 1◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1027,7 +1057,7 @@ suite('StatementTree', function () {
 				▶️func main() ▶️{
 					▶️return◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1040,7 +1070,7 @@ suite('StatementTree', function () {
 				▶️func main() ▶️{
 					▶️go f()◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1053,7 +1083,7 @@ suite('StatementTree', function () {
 				▶️func main() ▶️{
 					▶️defer f()◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1068,7 +1098,7 @@ suite('StatementTree', function () {
 						▶️b◀️
 					}◀️◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1083,7 +1113,7 @@ suite('StatementTree', function () {
 						▶️b *= -1◀️
 					}◀️◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1100,7 +1130,7 @@ suite('StatementTree', function () {
 						▶️c()◀️
 					}◀️◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1115,7 +1145,7 @@ suite('StatementTree', function () {
 						▶️a()◀️
 					}◀️◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1131,7 +1161,7 @@ suite('StatementTree', function () {
 						▶️fmt.Println(i)◀️
 					}◀️◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1152,7 +1182,7 @@ suite('StatementTree', function () {
 							▶️d◀️
 					}◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1172,7 +1202,7 @@ suite('StatementTree', function () {
 							▶️fmt.Printf("%T is unknown", v)◀️
 					}◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1190,7 +1220,7 @@ suite('StatementTree', function () {
 							▶️dispatch(msg)◀️
 					}◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1205,7 +1235,7 @@ suite('StatementTree', function () {
 					▶️a()◀️◀️
 					▶️b()◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1223,7 +1253,7 @@ suite('StatementTree', function () {
 							▶️f(i)◀️
 					}◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1241,7 +1271,7 @@ suite('StatementTree', function () {
 							▶️f(i)◀️
 					}◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1259,7 +1289,7 @@ suite('StatementTree', function () {
 						▶️f(i)◀️
 					}◀️◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1274,7 +1304,7 @@ suite('StatementTree', function () {
 				▶️end:
 					▶️return◀️◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1289,7 +1319,7 @@ suite('StatementTree', function () {
 						▶️a()◀️
 					}◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1302,7 +1332,7 @@ suite('StatementTree', function () {
 				▶️func noop() ▶️{
 					▶️;◀️
 				}◀️◀️
-				`
+				`,
 			);
 		});
 
@@ -1401,7 +1431,10 @@ suite('StatementTree', function () {
 			`);
 		});
 
-		async function testStatementIsCompoundType(text: string, expectedResult: boolean) {
+		async function testStatementIsCompoundType(
+			text: string,
+			expectedResult: boolean,
+		) {
 			const posIndicator = '❚';
 			const offset = text.indexOf(posIndicator);
 			const doc = text.replace(posIndicator, '');
@@ -1411,7 +1444,10 @@ suite('StatementTree', function () {
 			const statement = tree.statementAt(offset + 1);
 
 			assert.ok(statement, `Statement not found at offset ${offset}`);
-			assert.strictEqual(statement.isCompoundStatementType, expectedResult);
+			assert.strictEqual(
+				statement.isCompoundStatementType,
+				expectedResult,
+			);
 		}
 
 		async function assertStatementIsCompoundType(text: string) {
@@ -1437,7 +1473,7 @@ suite('StatementTree', function () {
 				▶️echo "hello";◀️
 				▶️$b = $a = 5;◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1450,7 +1486,7 @@ suite('StatementTree', function () {
 					▶️echo "hello";◀️
 				}◀️◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1465,7 +1501,7 @@ suite('StatementTree', function () {
 					▶️echo "world";◀️
 				}◀️◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1482,7 +1518,7 @@ suite('StatementTree', function () {
 					▶️echo "foo";◀️
 				}◀️◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1502,7 +1538,7 @@ suite('StatementTree', function () {
 						▶️echo "foo";◀️
 				}◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1515,7 +1551,7 @@ suite('StatementTree', function () {
 					▶️break;◀️
 				}◀️◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1528,7 +1564,7 @@ suite('StatementTree', function () {
 					▶️break;◀️
 				}◀️ while (true);◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1541,7 +1577,7 @@ suite('StatementTree', function () {
 					▶️$str += ' ';◀️
 				}◀️◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1554,7 +1590,7 @@ suite('StatementTree', function () {
 					▶️echo $key;◀️
 				}◀️◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1571,7 +1607,7 @@ suite('StatementTree', function () {
 					▶️echo "done";◀️
 				}◀️◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1585,7 +1621,7 @@ suite('StatementTree', function () {
 					▶️return $retval;◀️
 				}◀️◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1597,7 +1633,7 @@ suite('StatementTree', function () {
 				▶️class Example {
 				}◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1613,7 +1649,7 @@ suite('StatementTree', function () {
 					}◀️◀️
 				}◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1627,7 +1663,7 @@ suite('StatementTree', function () {
 					▶️private $field_2;◀️
 				}◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1640,7 +1676,7 @@ suite('StatementTree', function () {
 					▶️const EXAMPLE = 1;◀️
 				}◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1653,7 +1689,7 @@ suite('StatementTree', function () {
 					▶️use Trait1, Trait2;◀️
 				}◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1666,7 +1702,7 @@ suite('StatementTree', function () {
 					▶️public function example($arg_1);◀️
 				}◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1681,7 +1717,7 @@ suite('StatementTree', function () {
 					}◀️◀️
 				}◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1692,7 +1728,7 @@ suite('StatementTree', function () {
 				<?php
 				▶️namespace Example;◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1703,7 +1739,7 @@ suite('StatementTree', function () {
 				<?php
 				▶️use Example\\ExampleClass;◀️
 				?>
-				`
+				`,
 			);
 		});
 
@@ -1749,7 +1785,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️x = 1◀️
 				▶️y = 2◀️
-				`
+				`,
 			);
 		});
 
@@ -1760,7 +1796,7 @@ suite('StatementTree', function () {
 				▶️x = 1◀️
 				# comment
 				▶️y = 2◀️
-				`
+				`,
 			);
 		});
 
@@ -1771,7 +1807,7 @@ suite('StatementTree', function () {
 				▶️if ▶️x◀️
 					▶️y = 1◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1784,7 +1820,7 @@ suite('StatementTree', function () {
 				else
 					▶️y = 2◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1799,7 +1835,7 @@ suite('StatementTree', function () {
 				else
 					▶️y = 3◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1810,7 +1846,7 @@ suite('StatementTree', function () {
 				▶️unless ▶️x◀️
 					▶️y = 1◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1823,7 +1859,7 @@ suite('StatementTree', function () {
 				else
 					▶️y = 2◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1838,7 +1874,7 @@ suite('StatementTree', function () {
 				else
 					▶️y = 3◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1847,7 +1883,7 @@ suite('StatementTree', function () {
 				'ruby',
 				dedent`
 				▶️▶️x = 1◀️ if y◀️
-				`
+				`,
 			);
 		});
 
@@ -1856,7 +1892,7 @@ suite('StatementTree', function () {
 				'ruby',
 				dedent`
 				▶️▶️x = 1◀️ unless y◀️
-				`
+				`,
 			);
 		});
 
@@ -1865,7 +1901,7 @@ suite('StatementTree', function () {
 				'ruby',
 				dedent`
 				▶️x = 1..10◀️
-				`
+				`,
 			);
 		});
 
@@ -1881,7 +1917,7 @@ suite('StatementTree', function () {
 					else
 						▶️y = 3◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1892,7 +1928,7 @@ suite('StatementTree', function () {
 				▶️for i in 1..10 do
 					▶️y = 1◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1903,7 +1939,7 @@ suite('StatementTree', function () {
 				▶️while ▶️x◀️
 					▶️y = 1◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1914,7 +1950,7 @@ suite('StatementTree', function () {
 				▶️until ▶️x◀️
 					▶️y = 1◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1924,7 +1960,7 @@ suite('StatementTree', function () {
 				dedent`
 				▶️▶️sleep◀️ while idle◀️
 				▶️▶️sleep◀️ until idle◀️
-				`
+				`,
 			);
 		});
 
@@ -1941,7 +1977,7 @@ suite('StatementTree', function () {
 				ensure
 					▶️x = 4◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1952,7 +1988,7 @@ suite('StatementTree', function () {
 				▶️BEGIN {
 					▶️x = 1◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -1963,7 +1999,7 @@ suite('StatementTree', function () {
 				▶️END {
 					▶️x = 1◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -1974,7 +2010,7 @@ suite('StatementTree', function () {
 				▶️class Example < Base
 					▶️x = 1◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1987,7 +2023,7 @@ suite('StatementTree', function () {
 						▶️x = 1◀️
 					end◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -1998,7 +2034,7 @@ suite('StatementTree', function () {
 				▶️module Example
 					▶️x = 1◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -2011,7 +2047,7 @@ suite('StatementTree', function () {
 						▶️x = 1◀️
 					end◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -2022,7 +2058,7 @@ suite('StatementTree', function () {
 				▶️def example
 					▶️x = 1◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -2033,7 +2069,7 @@ suite('StatementTree', function () {
 				▶️someArray.select do |item|
 					▶️item %2 == 0◀️
 				end◀️
-				`
+				`,
 			);
 		});
 
@@ -2143,7 +2179,7 @@ suite('StatementTree', function () {
 						▶️{}◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2157,7 +2193,7 @@ suite('StatementTree', function () {
 						▶️assert x > 0 : "x should be positive";◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2174,7 +2210,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2191,7 +2227,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2210,7 +2246,7 @@ suite('StatementTree', function () {
 						}◀️ while (i < 10);◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2228,7 +2264,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2241,7 +2277,7 @@ suite('StatementTree', function () {
 						▶️int x = 1;◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2256,7 +2292,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2272,7 +2308,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2287,7 +2323,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2300,7 +2336,7 @@ suite('StatementTree', function () {
 						▶️int x = 1;◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2316,7 +2352,7 @@ suite('StatementTree', function () {
 						▶️return a + b;◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2340,7 +2376,7 @@ suite('StatementTree', function () {
 						}◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2356,7 +2392,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2369,7 +2405,7 @@ suite('StatementTree', function () {
 						▶️throw new RuntimeException("This is a runtime exception");◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2386,7 +2422,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2403,7 +2439,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2418,7 +2454,7 @@ suite('StatementTree', function () {
 						}◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2431,7 +2467,7 @@ suite('StatementTree', function () {
 					▶️public static void main(String[] args) ▶️{
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2446,7 +2482,7 @@ suite('StatementTree', function () {
 					▶️public static void main(String[] args) ▶️{
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2462,7 +2498,7 @@ suite('StatementTree', function () {
 						▶️System.out.println("Sum: " + sum);◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2475,7 +2511,7 @@ suite('StatementTree', function () {
 					}◀️◀️
 					▶️public static int x = 0;◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2489,7 +2525,7 @@ suite('StatementTree', function () {
 						▶️lastName = lastName;◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2506,7 +2542,7 @@ suite('StatementTree', function () {
 						}◀️◀️
 					}◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2521,7 +2557,7 @@ suite('StatementTree', function () {
 						▶️void innerMethod();◀️
 					}◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2535,7 +2571,7 @@ suite('StatementTree', function () {
 					▶️public @interface MyAnnotation {
 					}◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2550,7 +2586,7 @@ suite('StatementTree', function () {
 						MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
 					}◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2566,7 +2602,7 @@ suite('StatementTree', function () {
 					▶️public static void main(String[] args) ▶️{
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2583,7 +2619,7 @@ suite('StatementTree', function () {
 						▶️int x = 0;◀️
 					}◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2596,7 +2632,7 @@ suite('StatementTree', function () {
 					▶️public static void main(String[] args) ▶️{
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2610,7 +2646,7 @@ suite('StatementTree', function () {
 						▶️int y = (x == 5) ? 0 : 1;◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2625,7 +2661,7 @@ suite('StatementTree', function () {
 						▶️if (x == 5) y = 0;◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2640,7 +2676,7 @@ suite('StatementTree', function () {
 						▶️if (x == 5) ▶️{ ▶️y = 0;◀️ }◀️◀️
 					}◀️◀️
 				}◀️
-				`
+				`,
 			);
 		});
 
@@ -2791,7 +2827,10 @@ suite('StatementTree', function () {
 			await assertStatementIsNotCompoundType('int x = 1;');
 		});
 
-		async function testStatementIsCompoundType(text: string, expectedResult: boolean) {
+		async function testStatementIsCompoundType(
+			text: string,
+			expectedResult: boolean,
+		) {
 			const posIndicator = '❚';
 			const offset = text.indexOf(posIndicator);
 			const doc = text.replace(posIndicator, '');
@@ -2801,7 +2840,10 @@ suite('StatementTree', function () {
 			const statement = tree.statementAt(offset + 1);
 
 			assert.ok(statement, `Statement not found at offset ${offset}`);
-			assert.strictEqual(statement.isCompoundStatementType, expectedResult);
+			assert.strictEqual(
+				statement.isCompoundStatementType,
+				expectedResult,
+			);
 		}
 
 		async function assertStatementIsCompoundType(text: string) {
@@ -2829,7 +2871,10 @@ suite('StatementTree', function () {
 		});
 
 		test('recognizes global attributes', async function () {
-			await testStatementBuilding('csharp', `▶️[assembly: AssemblyTitle("Example")]◀️`);
+			await testStatementBuilding(
+				'csharp',
+				`▶️[assembly: AssemblyTitle("Example")]◀️`,
+			);
 		});
 
 		test('recognizes top-level pre-processor directives', async function () {
@@ -2843,7 +2888,7 @@ suite('StatementTree', function () {
 					#else
 						▶️string os = "Linux";◀️
 					#endif◀️
-				`
+				`,
 			);
 		});
 
@@ -2856,7 +2901,10 @@ suite('StatementTree', function () {
 		});
 
 		test('recognizes top-level statements', async function () {
-			await testStatementBuilding('csharp', `▶️Console.WriteLine("example");◀️`);
+			await testStatementBuilding(
+				'csharp',
+				`▶️Console.WriteLine("example");◀️`,
+			);
 		});
 
 		test('recognizes enum declarations', async function () {
@@ -2870,7 +2918,7 @@ suite('StatementTree', function () {
 						East,
 						West
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2881,7 +2929,7 @@ suite('StatementTree', function () {
 					▶️class Example
 					{
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2892,7 +2940,7 @@ suite('StatementTree', function () {
 					▶️struct Example
 					{
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2903,7 +2951,7 @@ suite('StatementTree', function () {
 					▶️record Example
 					{
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2914,7 +2962,7 @@ suite('StatementTree', function () {
 					▶️interface Example
 					{
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2926,7 +2974,7 @@ suite('StatementTree', function () {
 					{
 						▶️bool flag = true;◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2938,7 +2986,7 @@ suite('StatementTree', function () {
 					{
 						▶️event EventHandler onEvent;◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2954,7 +3002,7 @@ suite('StatementTree', function () {
 							▶️set ▶️{ ▶️_len = value;◀️ }◀️◀️
 						}◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2967,7 +3015,7 @@ suite('StatementTree', function () {
 						▶️int Len { ▶️get;◀️ ▶️set;◀️ }◀️
 						▶️int Capacity { ▶️get;◀️ ▶️init;◀️ }◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2979,7 +3027,7 @@ suite('StatementTree', function () {
 					{
 						▶️int Len { ▶️get;◀️ } = 0;◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -2991,7 +3039,7 @@ suite('StatementTree', function () {
 					{
 						▶️int Area => _width * _height;◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3006,7 +3054,7 @@ suite('StatementTree', function () {
 							▶️add ▶️{ ▶️someWork();◀️ }◀️◀️
 						}◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3020,7 +3068,7 @@ suite('StatementTree', function () {
 						▶️{
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3034,7 +3082,7 @@ suite('StatementTree', function () {
 						▶️{
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3048,7 +3096,7 @@ suite('StatementTree', function () {
 						▶️{
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3064,7 +3112,7 @@ suite('StatementTree', function () {
 							▶️set ▶️{ ▶️_items[index] = value;◀️ }◀️◀️
 						}◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3076,7 +3124,7 @@ suite('StatementTree', function () {
 					{
 						▶️Example operator +(Example e) ▶️{ ▶️return new Example();◀️ }◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3088,7 +3136,7 @@ suite('StatementTree', function () {
 					{
 						▶️explicit operator int(Example e) ▶️{ ▶️return 0;◀️ }◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3100,7 +3148,7 @@ suite('StatementTree', function () {
 					{
 						▶️delegate void Action();◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3117,7 +3165,7 @@ suite('StatementTree', function () {
 							}◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3134,7 +3182,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3149,7 +3197,7 @@ suite('StatementTree', function () {
 							▶️x = y * 4 + 2;◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3168,7 +3216,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3188,7 +3236,7 @@ suite('StatementTree', function () {
 							}◀️ while (i < 10);◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3203,7 +3251,7 @@ suite('StatementTree', function () {
 							▶️;◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3222,7 +3270,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3244,7 +3292,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3262,7 +3310,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3277,7 +3325,7 @@ suite('StatementTree', function () {
 							▶️return;◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3295,7 +3343,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3313,7 +3361,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3339,7 +3387,7 @@ suite('StatementTree', function () {
 							}◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3354,7 +3402,7 @@ suite('StatementTree', function () {
 							▶️throw new Exception("Error occurred");◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3380,7 +3428,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3395,7 +3443,7 @@ suite('StatementTree', function () {
 							▶️using var file = new StreamReader(path);◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3413,7 +3461,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3431,7 +3479,7 @@ suite('StatementTree', function () {
 							▶️return;◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3453,7 +3501,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3468,7 +3516,7 @@ suite('StatementTree', function () {
 							▶️if (flag) return;◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3488,7 +3536,7 @@ suite('StatementTree', function () {
 							}◀️◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3503,7 +3551,7 @@ suite('StatementTree', function () {
 							▶️int x = 10;◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3519,7 +3567,7 @@ suite('StatementTree', function () {
 							▶️LocalFunction();◀️
 						}◀️◀️
 					}◀️
-				`
+				`,
 			);
 		});
 
@@ -3797,7 +3845,7 @@ suite('StatementTree', function () {
 
 	suite('C, C++', function () {
 		const languages = ['c', 'cpp'];
-		languages.forEach(lang => {
+		languages.forEach((lang) => {
 			test(`${lang} is supported`, function () {
 				assert.strictEqual(StatementTree.isSupported(lang), true);
 			});
@@ -3821,7 +3869,7 @@ suite('StatementTree', function () {
 						▶️int x;◀️
 						▶️float y;◀️
 					}◀️ obj;◀️
-				`
+				`,
 				);
 			});
 
@@ -3834,7 +3882,7 @@ suite('StatementTree', function () {
 						▶️int x;◀️
 						▶️float y;◀️
 					}◀️ example◀️
-				`
+				`,
 				);
 			});
 
@@ -3848,7 +3896,7 @@ suite('StatementTree', function () {
 						GREEN,
 						BLUE
 					}◀️
-				`
+				`,
 				);
 			});
 
@@ -3860,7 +3908,7 @@ suite('StatementTree', function () {
 					▶️{
 						▶️return a + b;◀️
 					}◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -3874,7 +3922,7 @@ suite('StatementTree', function () {
 					▶️{
 						▶️return a + b;◀️
 					}◀️
-				`
+				`,
 				);
 			});
 
@@ -3883,7 +3931,7 @@ suite('StatementTree', function () {
 					'c',
 					dedent`
 					▶️int x = 10;◀️
-				`
+				`,
 				);
 			});
 
@@ -3895,7 +3943,7 @@ suite('StatementTree', function () {
 						▶️int x = 10;◀️
 						▶️int y = 20;◀️
 					}◀️
-				`
+				`,
 				);
 			});
 
@@ -3910,7 +3958,7 @@ suite('StatementTree', function () {
 							▶️printf("Positive");◀️
 						}◀️◀️
 					}◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -3932,7 +3980,7 @@ suite('StatementTree', function () {
 							▶️printf("Zero");◀️
 						}◀️◀️◀️
 					}◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -3955,7 +4003,7 @@ suite('StatementTree', function () {
 								▶️break;◀️◀️
 						}◀️◀️
 					}◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -3972,7 +4020,7 @@ suite('StatementTree', function () {
 							▶️continue;◀️
 						}◀️◀️
 					}◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -3987,7 +4035,7 @@ suite('StatementTree', function () {
 							▶️printf("%d", i);◀️
 						}◀️◀️
 					}◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -4002,7 +4050,7 @@ suite('StatementTree', function () {
 							▶️printf("%d", x);◀️
 						}◀️ while (x < 10);◀️
 					}◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -4013,7 +4061,7 @@ suite('StatementTree', function () {
 					▶️goto label;◀️
 					▶️label:
 						▶️printf("Label reached");◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -4028,7 +4076,7 @@ suite('StatementTree', function () {
 					◀️#else
 						▶️printf("Unknown mode");◀️
 					#endif◀️
-				`
+				`,
 				);
 			});
 
@@ -4039,7 +4087,7 @@ suite('StatementTree', function () {
 					▶️#ifdef DEBUG
 						▶️printf("Debug mode");◀️
 					#endif◀️
-				`
+				`,
 				);
 			});
 
@@ -4049,7 +4097,7 @@ suite('StatementTree', function () {
 					dedent`
 					▶️#include <stdio.h>
 					◀️▶️#include "myheader.h"◀️
-				`
+				`,
 				);
 			});
 
@@ -4063,7 +4111,7 @@ suite('StatementTree', function () {
 					◀️▶️#using "using_assembly_A.dll"
 					◀️▶️#undef ADD
 					◀️▶️#error C++ compiler required.◀️
-				`
+				`,
 				);
 			});
 
@@ -4075,7 +4123,7 @@ suite('StatementTree', function () {
 					◀️▶️#define MAX(a, b) (\\
 						(a) > (b) ? (a) : (b) \\
 					)◀️
-				`
+				`,
 				);
 			});
 		});
@@ -4089,7 +4137,7 @@ suite('StatementTree', function () {
 					{
 						▶️int x;◀️
 					}◀️
-				`
+				`,
 				);
 			});
 
@@ -4104,7 +4152,7 @@ suite('StatementTree', function () {
 							▶️x = 1;◀️
 						}◀️◀️
 					}◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -4115,7 +4163,7 @@ suite('StatementTree', function () {
 					▶️template <typename T> ▶️T myMax(T x, T y) ▶️{
 						▶️return (x > y) ? x : y;◀️
 					}◀️◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -4128,7 +4176,7 @@ suite('StatementTree', function () {
 					{
 						▶️{ t.foo() } -> std::same_as<int>;◀️
 					}◀️◀️
-				`
+				`,
 				);
 			});
 
@@ -4137,7 +4185,7 @@ suite('StatementTree', function () {
 					'cpp',
 					dedent`
 					▶️using MyType = int;◀️
-				`
+				`,
 				);
 			});
 
@@ -4146,7 +4194,7 @@ suite('StatementTree', function () {
 					'cpp',
 					dedent`
 					▶️using MyAlias = int;◀️
-				`
+				`,
 				);
 			});
 
@@ -4155,7 +4203,7 @@ suite('StatementTree', function () {
 					'cpp',
 					dedent`
 					▶️static_assert(sizeof(int) == 4, "int is not 4 bytes");◀️
-				`
+				`,
 				);
 			});
 		});
@@ -4506,7 +4554,7 @@ suite('StatementTree', function () {
 					s = s.parent;
 				} else {
 					throw new Error(
-						`Unmatched statement end at offset ${doc.length} (at ${JSON.stringify(remainder.slice(match.index! + match[0].length))})`
+						`Unmatched statement end at offset ${doc.length} (at ${JSON.stringify(remainder.slice(match.index! + match[0].length))})`,
 					);
 				}
 			}
@@ -4517,31 +4565,40 @@ suite('StatementTree', function () {
 
 		if (s) {
 			throw new Error(
-				`Unmatched statement start beginning at offset ${s.startOffset} (at ${JSON.stringify(doc.substring(s.startOffset))})`
+				`Unmatched statement start beginning at offset ${s.startOffset} (at ${JSON.stringify(doc.substring(s.startOffset))})`,
 			);
 		}
 
-		using tree = StatementTree.create(language, doc, startOffset, doc.length);
+		using tree = StatementTree.create(
+			language,
+			doc,
+			startOffset,
+			doc.length,
+		);
 
 		await tree.build();
 
-		function expectNodeLike(node: StatementNode, spec: StatementNodeSpec, prefix = '') {
+		function expectNodeLike(
+			node: StatementNode,
+			spec: StatementNodeSpec,
+			prefix = '',
+		) {
 			const pad = ' '.repeat(prefix.length);
 			const path = node.dumpPath(prefix, pad);
 			assert.strictEqual(
 				node.node.startIndex,
 				spec.startOffset,
-				`At:\n\n${path}\n\nExpected statement to begin at offset ${spec.startOffset}, but begins at ${node.node.startIndex}`
+				`At:\n\n${path}\n\nExpected statement to begin at offset ${spec.startOffset}, but begins at ${node.node.startIndex}`,
 			);
 			assert.strictEqual(
 				node.node.endIndex,
 				spec.endOffset,
-				`At:\n\n${path}\n\nExpected statement to end at offset ${spec.endOffset}, but ends at ${node.node.endIndex}`
+				`At:\n\n${path}\n\nExpected statement to end at offset ${spec.endOffset}, but ends at ${node.node.endIndex}`,
 			);
 			assert.strictEqual(
 				node.children.length,
 				spec.children.length,
-				`At:\n\n${path}\n\nExpected node to have ${spec.children.length} children, but got ${node.children.length}`
+				`At:\n\n${path}\n\nExpected node to have ${spec.children.length} children, but got ${node.children.length}`,
 			);
 			for (let i = 0; i < spec.children.length; i++) {
 				expectNodeLike(node.children[i], spec.children[i], prefix);
@@ -4551,14 +4608,18 @@ suite('StatementTree', function () {
 		assert.strictEqual(
 			tree.statements.length,
 			statements.length,
-			`Expected a tree with ${statements.length} statements, but got ${tree.statements.length}:\n${tree.dump()}`
+			`Expected a tree with ${statements.length} statements, but got ${tree.statements.length}:\n${tree.dump()}`,
 		);
 		for (let i = 0; i < statements.length; i++) {
 			expectNodeLike(tree.statements[i], statements[i], ` [${i}] `);
 		}
 	}
 
-	async function testStatementIsCompoundType(languageId: string, text: string, expectedResult: boolean) {
+	async function testStatementIsCompoundType(
+		languageId: string,
+		text: string,
+		expectedResult: boolean,
+	) {
 		const posIndicator = '❚';
 		const offset = text.indexOf(posIndicator);
 		const doc = text.replace(posIndicator, '');
@@ -4571,7 +4632,7 @@ suite('StatementTree', function () {
 		assert.strictEqual(
 			statement.isCompoundStatementType,
 			expectedResult,
-			`Expected .isCompoundStatementType to be ${expectedResult ? 'true' : 'false'} for ${statement.node.type} but got ${statement.isCompoundStatementType ? 'true' : 'false'}`
+			`Expected .isCompoundStatementType to be ${expectedResult ? 'true' : 'false'} for ${statement.node.type} but got ${statement.isCompoundStatementType ? 'true' : 'false'}`,
 		);
 	}
 });

@@ -5,14 +5,33 @@
 
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { IChatDebugFileLoggerService, IDebugLogEntry, sessionResourceToId } from '../../../platform/chat/common/chatDebugFileLoggerService';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	IChatDebugFileLoggerService,
+	IDebugLogEntry,
+	sessionResourceToId,
+} from '../../../platform/chat/common/chatDebugFileLoggerService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { IEnvService } from '../../../platform/env/common/envService';
 import { IVSCodeExtensionContext } from '../../../platform/extContext/common/extensionContext';
-import { createDirectoryIfNotExists, IFileSystemService } from '../../../platform/filesystem/common/fileSystemService';
+import {
+	createDirectoryIfNotExists,
+	IFileSystemService,
+} from '../../../platform/filesystem/common/fileSystemService';
 import { ILogService } from '../../../platform/log/common/logService';
-import { CopilotChatAttr, GenAiAttr, GenAiOperationName } from '../../../platform/otel/common/index';
-import { ICompletedSpanData, IOTelService, ISpanEventData, SpanStatusCode } from '../../../platform/otel/common/otelService';
+import {
+	CopilotChatAttr,
+	GenAiAttr,
+	GenAiOperationName,
+} from '../../../platform/otel/common/index';
+import {
+	ICompletedSpanData,
+	IOTelService,
+	ISpanEventData,
+	SpanStatusCode,
+} from '../../../platform/otel/common/otelService';
 import { IExperimentationService } from '../../../platform/telemetry/common/nullExperimentationService';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
 import { Emitter } from '../../../util/vs/base/common/event';
@@ -30,7 +49,6 @@ const MAX_PENDING_CORE_EVENTS = 100;
 const DEFAULT_MAX_SESSION_LOG_MB = 100;
 const TRUNCATION_RETAIN_RATIO = 0.6; // retain 60% of max on truncation
 const MAX_SPAN_SESSION_INDEX = 10_000;
-
 
 interface IActiveLogSession {
 	readonly uri: URI;
@@ -72,17 +90,25 @@ interface IActiveLogSession {
 // Re-export for consumers that import from this file.
 export type { IDebugLogEntry } from '../../../platform/chat/common/chatDebugFileLoggerService';
 
-export class ChatDebugFileLoggerService extends Disposable implements IChatDebugFileLoggerService {
+export class ChatDebugFileLoggerService
+	extends Disposable
+	implements IChatDebugFileLoggerService
+{
 	declare readonly _serviceBrand: undefined;
 
 	public readonly id = 'chatDebugFileLogger';
 
-	private readonly _onDidEmitEntry = this._register(new Emitter<{ sessionId: string; entry: IDebugLogEntry }>());
+	private readonly _onDidEmitEntry = this._register(
+		new Emitter<{ sessionId: string; entry: IDebugLogEntry }>(),
+	);
 	readonly onDidEmitEntry = this._onDidEmitEntry.event;
 
 	private readonly _activeSessions = new Map<string, IActiveLogSession>();
 	/** Maps child session ID → { parentSessionId, label } for child session routing */
-	private readonly _childSessionMap = new Map<string, { parentSessionId: string; label: string; parentToolSpanId?: string }>();
+	private readonly _childSessionMap = new Map<
+		string,
+		{ parentSessionId: string; label: string; parentToolSpanId?: string }
+	>();
 	/** Maps spanId → resolved session ID for parent-span inheritance */
 	private readonly _spanSessionIndex = new Map<string, string>();
 	private readonly _pendingCoreEvents: IDebugLogEntry[] = [];
@@ -96,17 +122,25 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 
 	constructor(
 		@IOTelService private readonly _otelService: IOTelService,
-		@IFileSystemService private readonly _fileSystemService: IFileSystemService,
-		@IVSCodeExtensionContext private readonly _extensionContext: IVSCodeExtensionContext,
+		@IFileSystemService
+		private readonly _fileSystemService: IFileSystemService,
+		@IVSCodeExtensionContext
+		private readonly _extensionContext: IVSCodeExtensionContext,
 		@ILogService private readonly _logService: ILogService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IExperimentationService private readonly _experimentationService: IExperimentationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IExperimentationService
+		private readonly _experimentationService: IExperimentationService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
 		@IEnvService private readonly _envService: IEnvService,
 	) {
 		super();
 
-		const enabled = this._configurationService.getExperimentBasedConfig(ConfigKey.Advanced.ChatDebugFileLogging, this._experimentationService);
+		const enabled = this._configurationService.getExperimentBasedConfig(
+			ConfigKey.Advanced.ChatDebugFileLogging,
+			this._experimentationService,
+		);
 		if (!enabled) {
 			/* __GDPR__
 				"chatDebugFileLogger.disabled" : {
@@ -114,47 +148,86 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					"comment": "Chat debug file logging is disabled via experiment or config"
 				}
 			*/
-			this._telemetryService.sendMSFTTelemetryEvent('chatDebugFileLogger.disabled');
+			this._telemetryService.sendMSFTTelemetryEvent(
+				'chatDebugFileLogger.disabled',
+			);
 			this._autoFlushIntervalMs = DEFAULT_FLUSH_INTERVAL_MS;
 			this._maxSessionLogBytes = DEFAULT_MAX_SESSION_LOG_MB * 1024 * 1024;
 			return;
 		}
 
-		this._autoFlushIntervalMs = Math.max(MIN_FLUSH_INTERVAL_MS, this._configurationService.getConfig(ConfigKey.Advanced.ChatDebugFileLoggingFlushInterval) ?? DEFAULT_FLUSH_INTERVAL_MS);
+		this._autoFlushIntervalMs = Math.max(
+			MIN_FLUSH_INTERVAL_MS,
+			this._configurationService.getConfig(
+				ConfigKey.Advanced.ChatDebugFileLoggingFlushInterval,
+			) ?? DEFAULT_FLUSH_INTERVAL_MS,
+		);
 		this._maxSessionLogBytes = this._resolveMaxSessionLogBytes();
 
 		// React to changes at runtime
-		this._register(this._configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(ConfigKey.Advanced.ChatDebugFileLoggingFlushInterval.fullyQualifiedId)) {
-				this._autoFlushIntervalMs = Math.max(MIN_FLUSH_INTERVAL_MS, this._configurationService.getConfig(ConfigKey.Advanced.ChatDebugFileLoggingFlushInterval) ?? DEFAULT_FLUSH_INTERVAL_MS);
-				this._restartFlushTimer();
-			}
-			if (e.affectsConfiguration(ConfigKey.Advanced.ChatDebugFileLoggingMaxSessionLogSizeMB.fullyQualifiedId)) {
-				this._maxSessionLogBytes = this._resolveMaxSessionLogBytes();
-			}
-		}));
+		this._register(
+			this._configurationService.onDidChangeConfiguration((e) => {
+				if (
+					e.affectsConfiguration(
+						ConfigKey.Advanced.ChatDebugFileLoggingFlushInterval
+							.fullyQualifiedId,
+					)
+				) {
+					this._autoFlushIntervalMs = Math.max(
+						MIN_FLUSH_INTERVAL_MS,
+						this._configurationService.getConfig(
+							ConfigKey.Advanced
+								.ChatDebugFileLoggingFlushInterval,
+						) ?? DEFAULT_FLUSH_INTERVAL_MS,
+					);
+					this._restartFlushTimer();
+				}
+				if (
+					e.affectsConfiguration(
+						ConfigKey.Advanced
+							.ChatDebugFileLoggingMaxSessionLogSizeMB
+							.fullyQualifiedId,
+					)
+				) {
+					this._maxSessionLogBytes =
+						this._resolveMaxSessionLogBytes();
+				}
+			}),
+		);
 
 		// Subscribe to OTel span completions
-		this._register(this._otelService.onDidCompleteSpan(span => {
-			this._onSpanCompleted(span);
-		}));
+		this._register(
+			this._otelService.onDidCompleteSpan((span) => {
+				this._onSpanCompleted(span);
+			}),
+		);
 
 		// Subscribe to OTel span events (real-time user messages)
-		this._register(this._otelService.onDidEmitSpanEvent(event => {
-			this._onSpanEvent(event);
-		}));
+		this._register(
+			this._otelService.onDidEmitSpanEvent((event) => {
+				this._onSpanEvent(event);
+			}),
+		);
 
 		// Subscribe to core debug events (discovery, skill loading, etc.)
 		if (typeof vscode.chat?.onDidReceiveChatDebugEvent === 'function') {
-			this._register(vscode.chat.onDidReceiveChatDebugEvent(event => {
-				this._onCoreDebugEvent(event);
-			}));
+			this._register(
+				vscode.chat.onDidReceiveChatDebugEvent((event) => {
+					this._onCoreDebugEvent(event);
+				}),
+			);
 		}
 	}
 
 	private _resolveMaxSessionLogBytes(): number {
-		const raw = this._configurationService.getExperimentBasedConfig(ConfigKey.Advanced.ChatDebugFileLoggingMaxSessionLogSizeMB, this._experimentationService);
-		const mb = typeof raw === 'number' && Number.isFinite(raw) ? raw : DEFAULT_MAX_SESSION_LOG_MB;
+		const raw = this._configurationService.getExperimentBasedConfig(
+			ConfigKey.Advanced.ChatDebugFileLoggingMaxSessionLogSizeMB,
+			this._experimentationService,
+		);
+		const mb =
+			typeof raw === 'number' && Number.isFinite(raw)
+				? raw
+				: DEFAULT_MAX_SESSION_LOG_MB;
 		return Math.max(1, Math.floor(mb)) * 1024 * 1024;
 	}
 
@@ -175,7 +248,14 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 				"sessionCount": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true, "comment": "Total number of sessions logged" }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('chatDebugFileLogger.end', undefined, { totalBytesWritten: this._totalBytesWritten, sessionCount: this._totalSessionCount });
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'chatDebugFileLogger.end',
+			undefined,
+			{
+				totalBytesWritten: this._totalBytesWritten,
+				sessionCount: this._totalSessionCount,
+			},
+		);
 		super.dispose();
 	}
 
@@ -199,9 +279,18 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		this._ensureSession(sessionId, /* hasOwnSpans */ true);
 	}
 
-	startChildSession(childSessionId: string, parentSessionId: string, label: string, parentToolSpanId?: string): void {
+	startChildSession(
+		childSessionId: string,
+		parentSessionId: string,
+		label: string,
+		parentToolSpanId?: string,
+	): void {
 		if (!this._childSessionMap.has(childSessionId)) {
-			this._childSessionMap.set(childSessionId, { parentSessionId, label, parentToolSpanId });
+			this._childSessionMap.set(childSessionId, {
+				parentSessionId,
+				label,
+				parentToolSpanId,
+			});
 		}
 	}
 
@@ -253,14 +342,19 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		if (childInfo) {
 			// Child session — write under parent's directory
 			sessionDir = URI.joinPath(dir, childInfo.parentSessionId);
-			const safeLabel = childInfo.label.replace(/[/\\:*?"<>|\x00-\x1f]/g, '_').replace(/\.\./g, '_');
+			const safeLabel = childInfo.label
+				.replace(/[/\\:*?"<>|\x00-\x1f]/g, '_')
+				.replace(/\.\./g, '_');
 			const fileName = `${safeLabel}-${sessionId}.jsonl`;
 			fileUri = URI.joinPath(sessionDir, fileName);
 
 			// Ensure parent session exists so we can write a cross-reference.
 			// A child referencing a parent proves it is a main user session,
 			// so promote it with hasOwnSpans = true.
-			this._ensureSession(childInfo.parentSessionId, /* hasOwnSpans */ true);
+			this._ensureSession(
+				childInfo.parentSessionId,
+				/* hasOwnSpans */ true,
+			);
 
 			// Write a cross-reference entry in the parent's main.jsonl
 			this._bufferEntry(childInfo.parentSessionId, {
@@ -270,7 +364,9 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 				type: 'child_session_ref',
 				name: childInfo.label,
 				spanId: `child-ref-${sessionId}`,
-				...(childInfo.parentToolSpanId ? { parentSpanId: childInfo.parentToolSpanId } : {}),
+				...(childInfo.parentToolSpanId
+					? { parentSpanId: childInfo.parentToolSpanId }
+					: {}),
 				status: 'ok',
 				attrs: {
 					childSessionId: sessionId,
@@ -333,11 +429,14 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 
 		// Start auto-flush timer if this is the first active session
 		if (this._activeSessions.size === 1 && !this._autoFlushTimer) {
-			this._autoFlushTimer = setInterval(() => this._autoFlushAll(), this._autoFlushIntervalMs);
+			this._autoFlushTimer = setInterval(
+				() => this._autoFlushAll(),
+				this._autoFlushIntervalMs,
+			);
 		}
 
 		// Fire-and-forget cleanup of old logs
-		this._cleanupOldLogs().catch(() => { });
+		this._cleanupOldLogs().catch(() => {});
 	}
 
 	async endSession(sessionId: string): Promise<void> {
@@ -400,9 +499,14 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		const childInfo = this._childSessionMap.get(sessionId);
 		if (childInfo) {
 			const dir = this._getDebugLogsDir();
-			if (!dir) { return undefined; }
+			if (!dir) {
+				return undefined;
+			}
 			const parentDir = URI.joinPath(dir, childInfo.parentSessionId);
-			return URI.joinPath(parentDir, `${childInfo.label}-${sessionId}.jsonl`);
+			return URI.joinPath(
+				parentDir,
+				`${childInfo.label}-${sessionId}.jsonl`,
+			);
 		}
 		// For historical sessions (after restart), construct the default path
 		const sessionDir = this.getSessionDir(sessionId);
@@ -419,7 +523,9 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		const childInfo = this._childSessionMap.get(sessionId);
 		if (childInfo) {
 			const dir = this._getDebugLogsDir();
-			return dir ? URI.joinPath(dir, childInfo.parentSessionId) : undefined;
+			return dir
+				? URI.joinPath(dir, childInfo.parentSessionId)
+				: undefined;
 		}
 		// Unknown session — construct the default path (assuming it's a parent)
 		const dir = this._getDebugLogsDir();
@@ -460,40 +566,72 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		);
 	}
 
-	private async _writeModelSnapshot(session: IActiveLogSession): Promise<void> {
+	private async _writeModelSnapshot(
+		session: IActiveLogSession,
+	): Promise<void> {
 		if (!this._modelSnapshot || session.modelSnapshotWritten) {
 			return;
 		}
 		try {
 			if (!session.dirEnsured) {
-				await createDirectoryIfNotExists(this._fileSystemService, session.sessionDir);
+				await createDirectoryIfNotExists(
+					this._fileSystemService,
+					session.sessionDir,
+				);
 				session.dirEnsured = true;
 			}
 			const modelsUri = URI.joinPath(session.sessionDir, 'models.json');
-			await fs.promises.writeFile(modelsUri.fsPath, JSON.stringify(this._modelSnapshot, null, 2), 'utf-8');
+			await fs.promises.writeFile(
+				modelsUri.fsPath,
+				JSON.stringify(this._modelSnapshot, null, 2),
+				'utf-8',
+			);
 			session.modelSnapshotWritten = true;
 		} catch (err) {
-			this._logService.error('[ChatDebugFileLogger] Failed to write models.json', err);
+			this._logService.error(
+				'[ChatDebugFileLogger] Failed to write models.json',
+				err,
+			);
 		}
 	}
 
-	private _enqueueFileWrite(session: IActiveLogSession, content: string, fileName: string): void {
+	private _enqueueFileWrite(
+		session: IActiveLogSession,
+		content: string,
+		fileName: string,
+	): void {
 		session.flushPromise = session.flushPromise.then(
 			() => this._writeSessionFile(session, content, fileName),
 			() => this._writeSessionFile(session, content, fileName),
 		);
 	}
 
-	private async _writeSessionFile(session: IActiveLogSession, content: string, fileName: string): Promise<void> {
+	private async _writeSessionFile(
+		session: IActiveLogSession,
+		content: string,
+		fileName: string,
+	): Promise<void> {
 		try {
 			if (!session.dirEnsured) {
-				await createDirectoryIfNotExists(this._fileSystemService, session.sessionDir);
+				await createDirectoryIfNotExists(
+					this._fileSystemService,
+					session.sessionDir,
+				);
 				session.dirEnsured = true;
 			}
 			const fileUri = URI.joinPath(session.sessionDir, fileName);
-			await fs.promises.writeFile(fileUri.fsPath, fileName.endsWith('.json') ? JSON.stringify({ content }, null, 2) : content, 'utf-8');
+			await fs.promises.writeFile(
+				fileUri.fsPath,
+				fileName.endsWith('.json')
+					? JSON.stringify({ content }, null, 2)
+					: content,
+				'utf-8',
+			);
 		} catch (err) {
-			this._logService.error(`[ChatDebugFileLogger] Failed to write ${fileName}`, err);
+			this._logService.error(
+				`[ChatDebugFileLogger] Failed to write ${fileName}`,
+				err,
+			);
 		}
 	}
 
@@ -501,7 +639,10 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 	 * Emit a session_start entry, replay cached core events, and write the model snapshot.
 	 * Called when a parent session is first promoted to hasOwnSpans.
 	 */
-	private _emitSessionStartAndReplay(sessionId: string, session: IActiveLogSession): void {
+	private _emitSessionStartAndReplay(
+		sessionId: string,
+		session: IActiveLogSession,
+	): void {
 		this._bufferEntry(sessionId, {
 			v: 1,
 			ts: Date.now(),
@@ -552,17 +693,29 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		}
 
 		// Check if this span carries parent session info (e.g., title, categorization)
-		const parentChatSessionId = asString(span.attributes[CopilotChatAttr.PARENT_CHAT_SESSION_ID]);
-		const debugLogLabel = asString(span.attributes[CopilotChatAttr.DEBUG_LOG_LABEL]);
-		if (parentChatSessionId && debugLogLabel && !this._childSessionMap.has(sessionId)) {
-			this._childSessionMap.set(sessionId, { parentSessionId: parentChatSessionId, label: debugLogLabel });
+		const parentChatSessionId = asString(
+			span.attributes[CopilotChatAttr.PARENT_CHAT_SESSION_ID],
+		);
+		const debugLogLabel = asString(
+			span.attributes[CopilotChatAttr.DEBUG_LOG_LABEL],
+		);
+		if (
+			parentChatSessionId &&
+			debugLogLabel &&
+			!this._childSessionMap.has(sessionId)
+		) {
+			this._childSessionMap.set(sessionId, {
+				parentSessionId: parentChatSessionId,
+				label: debugLogLabel,
+			});
 		}
 
 		const entry = this._spanToEntry(span, sessionId);
 		const opName = asString(span.attributes[GenAiAttr.OPERATION_NAME]);
-		const outputMessages = opName === GenAiOperationName.CHAT
-			? asString(span.attributes[GenAiAttr.OUTPUT_MESSAGES])
-			: undefined;
+		const outputMessages =
+			opName === GenAiOperationName.CHAT
+				? asString(span.attributes[GenAiAttr.OUTPUT_MESSAGES])
+				: undefined;
 
 		// Never auto-promote sessions from OTel spans.  Sub-requests like
 		// title generation, categorization, and progress-message generation
@@ -580,7 +733,12 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		// extension lifecycle, promote it. This handles sessions continued after
 		// VS Code restart where title/categorization won't re-fire.
 		const session = this._activeSessions.get(sessionId);
-		if (session && !session.hasOwnSpans && !session.parentSessionId && !session.resumeChecked) {
+		if (
+			session &&
+			!session.hasOwnSpans &&
+			!session.parentSessionId &&
+			!session.resumeChecked
+		) {
 			session.resumeChecked = true;
 			const mainJsonl = URI.joinPath(session.sessionDir, 'main.jsonl');
 			try {
@@ -594,27 +752,46 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					const tail = this._readTailBytes(mainJsonl.fsPath, 8192);
 					let maxRIdx = 0;
 					for (const line of tail.split('\n')) {
-						if (!line.trim()) { continue; }
+						if (!line.trim()) {
+							continue;
+						}
 						try {
 							const parsed = JSON.parse(line);
-							if (typeof parsed.rIdx === 'number' && parsed.rIdx > maxRIdx) {
+							if (
+								typeof parsed.rIdx === 'number' &&
+								parsed.rIdx > maxRIdx
+							) {
 								maxRIdx = parsed.rIdx;
 							}
-						} catch { /* skip malformed lines */ }
+						} catch {
+							/* skip malformed lines */
+						}
 					}
 					session.runIndex = maxRIdx + 1;
-				} catch { /* file read failed — runIndex stays at 0, but that's safe since this is a back-compat path */ }
+				} catch {
+					/* file read failed — runIndex stays at 0, but that's safe since this is a back-compat path */
+				}
 
 				// Find the next available indices for companion files to avoid
 				// overwriting ones from the previous run. Single readdir + scan.
 				try {
 					for (const f of fs.readdirSync(session.sessionDir.fsPath)) {
-						const spIdx = f.startsWith('system_prompt_') ? parseInt(f.slice(14), 10) : -1;
-						if (spIdx >= session.systemPromptIndex) { session.systemPromptIndex = spIdx + 1; }
-						const tIdx = f.startsWith('tools_') ? parseInt(f.slice(6), 10) : -1;
-						if (tIdx >= session.toolsIndex) { session.toolsIndex = tIdx + 1; }
+						const spIdx = f.startsWith('system_prompt_')
+							? parseInt(f.slice(14), 10)
+							: -1;
+						if (spIdx >= session.systemPromptIndex) {
+							session.systemPromptIndex = spIdx + 1;
+						}
+						const tIdx = f.startsWith('tools_')
+							? parseInt(f.slice(6), 10)
+							: -1;
+						if (tIdx >= session.toolsIndex) {
+							session.toolsIndex = tIdx + 1;
+						}
 					}
-				} catch { /* readdir failed — indices stay at 0 */ }
+				} catch {
+					/* readdir failed — indices stay at 0 */
+				}
 			} catch {
 				// No existing directory — leave as is
 			}
@@ -624,10 +801,13 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		if (opName === GenAiOperationName.CHAT) {
 			const session = this._activeSessions.get(sessionId);
 			if (session && session.hasOwnSpans && !session.parentSessionId) {
-				const model = asString(span.attributes[GenAiAttr.REQUEST_MODEL])
-					?? asString(span.attributes[GenAiAttr.RESPONSE_MODEL])
-					?? 'unknown';
-				const systemInstructions = asString(span.attributes[GenAiAttr.SYSTEM_INSTRUCTIONS]);
+				const model =
+					asString(span.attributes[GenAiAttr.REQUEST_MODEL]) ??
+					asString(span.attributes[GenAiAttr.RESPONSE_MODEL]) ??
+					'unknown';
+				const systemInstructions = asString(
+					span.attributes[GenAiAttr.SYSTEM_INSTRUCTIONS],
+				);
 				if (systemInstructions) {
 					const key = `${model}:${systemInstructions.length}`;
 					if (key !== session.systemPromptKey) {
@@ -635,7 +815,11 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 						session.systemPromptKey = key;
 						session.systemPromptIndex++;
 						session.currentSystemPromptFile = fileName;
-						this._enqueueFileWrite(session, systemInstructions, fileName);
+						this._enqueueFileWrite(
+							session,
+							systemInstructions,
+							fileName,
+						);
 					}
 				}
 			}
@@ -646,7 +830,8 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 			if (entry.type === 'llm_request') {
 				const session = this._activeSessions.get(sessionId);
 				if (session?.currentSystemPromptFile) {
-					entry.attrs.systemPromptFile = session.currentSystemPromptFile;
+					entry.attrs.systemPromptFile =
+						session.currentSystemPromptFile;
 				}
 				if (session?.currentToolsFile) {
 					entry.attrs.toolsFile = session.currentToolsFile;
@@ -663,7 +848,9 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		if (opName === GenAiOperationName.CHAT) {
 			// Extract agent response summary from output messages
 			if (outputMessages) {
-				const reasoningContent = asString(span.attributes[CopilotChatAttr.REASONING_CONTENT]);
+				const reasoningContent = asString(
+					span.attributes[CopilotChatAttr.REASONING_CONTENT],
+				);
 				this._bufferEntry(sessionId, {
 					ts: span.endTime,
 					dur: 0,
@@ -674,8 +861,18 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					parentSpanId: span.parentSpanId,
 					status: 'ok',
 					attrs: {
-						response: truncate(outputMessages, MAX_ATTR_VALUE_LENGTH),
-						...(reasoningContent ? { reasoning: truncate(reasoningContent, MAX_ATTR_VALUE_LENGTH) } : {}),
+						response: truncate(
+							outputMessages,
+							MAX_ATTR_VALUE_LENGTH,
+						),
+						...(reasoningContent
+							? {
+									reasoning: truncate(
+										reasoningContent,
+										MAX_ATTR_VALUE_LENGTH,
+									),
+								}
+							: {}),
 					},
 				});
 			}
@@ -683,7 +880,10 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 	}
 
 	private _onSpanEvent(event: ISpanEventData): void {
-		if (event.eventName === 'turn_start' || event.eventName === 'turn_end') {
+		if (
+			event.eventName === 'turn_start' ||
+			event.eventName === 'turn_end'
+		) {
 			this._onTurnBoundaryEvent(event);
 			return;
 		}
@@ -702,7 +902,8 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		}
 
 		// If the event carries a session ID, route to that specific session
-		const eventSessionId = event.attributes[CopilotChatAttr.CHAT_SESSION_ID];
+		const eventSessionId =
+			event.attributes[CopilotChatAttr.CHAT_SESSION_ID];
 		if (typeof eventSessionId === 'string') {
 			// Ensure the session buffer exists so early events (before any span completes) are captured
 			this._ensureSession(eventSessionId);
@@ -723,8 +924,13 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		}
 
 		// Fallback: try to inherit session from parent span before broadcasting
-		const inheritedSessionId = event.parentSpanId ? this._spanSessionIndex.get(event.parentSpanId) : undefined;
-		if (inheritedSessionId && this._activeSessions.has(inheritedSessionId)) {
+		const inheritedSessionId = event.parentSpanId
+			? this._spanSessionIndex.get(event.parentSpanId)
+			: undefined;
+		if (
+			inheritedSessionId &&
+			this._activeSessions.has(inheritedSessionId)
+		) {
 			this._bufferEntry(inheritedSessionId, {
 				ts: event.timestamp,
 				dur: 0,
@@ -743,7 +949,10 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 
 		// Last resort: span events without chat_session_id — write to parent sessions that have their own spans
 		const parentSessions = [...this._activeSessions.entries()]
-			.filter(([, session]) => !session.parentSessionId && session.hasOwnSpans)
+			.filter(
+				([, session]) =>
+					!session.parentSessionId && session.hasOwnSpans,
+			)
 			.map(([id]) => id);
 		if (parentSessions.length === 0) {
 			return;
@@ -768,11 +977,19 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 	}
 
 	private _onTurnBoundaryEvent(event: ISpanEventData): void {
-		const type = event.eventName === 'turn_start' ? 'turn_start' : 'turn_end';
-		const turnId = typeof event.attributes.turnId === 'string' ? event.attributes.turnId : String(event.attributes.turnId ?? '');
-		const sessionId = typeof event.attributes[CopilotChatAttr.CHAT_SESSION_ID] === 'string'
-			? event.attributes[CopilotChatAttr.CHAT_SESSION_ID] as string
-			: (event.parentSpanId ? this._spanSessionIndex.get(event.parentSpanId) : undefined);
+		const type =
+			event.eventName === 'turn_start' ? 'turn_start' : 'turn_end';
+		const turnId =
+			typeof event.attributes.turnId === 'string'
+				? event.attributes.turnId
+				: String(event.attributes.turnId ?? '');
+		const sessionId =
+			typeof event.attributes[CopilotChatAttr.CHAT_SESSION_ID] ===
+			'string'
+				? (event.attributes[CopilotChatAttr.CHAT_SESSION_ID] as string)
+				: event.parentSpanId
+					? this._spanSessionIndex.get(event.parentSpanId)
+					: undefined;
 
 		if (!sessionId) {
 			return;
@@ -795,9 +1012,13 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 	}
 
 	private _onToolsAvailableEvent(event: ISpanEventData): void {
-		const sessionId = typeof event.attributes[CopilotChatAttr.CHAT_SESSION_ID] === 'string'
-			? event.attributes[CopilotChatAttr.CHAT_SESSION_ID] as string
-			: (event.parentSpanId ? this._spanSessionIndex.get(event.parentSpanId) : undefined);
+		const sessionId =
+			typeof event.attributes[CopilotChatAttr.CHAT_SESSION_ID] ===
+			'string'
+				? (event.attributes[CopilotChatAttr.CHAT_SESSION_ID] as string)
+				: event.parentSpanId
+					? this._spanSessionIndex.get(event.parentSpanId)
+					: undefined;
 
 		if (!sessionId) {
 			return;
@@ -812,14 +1033,20 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 
 		// If the session isn't promoted yet, cache the tools for later replay
 		if (!session.hasOwnSpans) {
-			const toolDefs = typeof event.attributes.toolDefinitions === 'string' ? event.attributes.toolDefinitions : undefined;
+			const toolDefs =
+				typeof event.attributes.toolDefinitions === 'string'
+					? event.attributes.toolDefinitions
+					: undefined;
 			if (toolDefs) {
 				session.pendingToolDefs = toolDefs;
 			}
 			return;
 		}
 
-		const toolDefs = typeof event.attributes.toolDefinitions === 'string' ? event.attributes.toolDefinitions : undefined;
+		const toolDefs =
+			typeof event.attributes.toolDefinitions === 'string'
+				? event.attributes.toolDefinitions
+				: undefined;
 		if (!toolDefs) {
 			return;
 		}
@@ -858,9 +1085,17 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 			name: event.name,
 			spanId: eventId ?? `core-${Date.now()}`,
 			parentSpanId: parentEventId,
-			status: event.level === vscode.ChatDebugLogLevel.Error ? 'error' : 'ok',
+			status:
+				event.level === vscode.ChatDebugLogLevel.Error ? 'error' : 'ok',
 			attrs: {
-				...(event.details ? { details: truncate(event.details, MAX_ATTR_VALUE_LENGTH) } : {}),
+				...(event.details
+					? {
+							details: truncate(
+								event.details,
+								MAX_ATTR_VALUE_LENGTH,
+							),
+						}
+					: {}),
 				...(event.category ? { category: event.category } : {}),
 				source: 'core',
 			},
@@ -882,14 +1117,18 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 
 	// ── Span to entry conversion ──
 
-	private _spanToEntry(span: ICompletedSpanData, sessionId: string): IDebugLogEntry | undefined {
+	private _spanToEntry(
+		span: ICompletedSpanData,
+		sessionId: string,
+	): IDebugLogEntry | undefined {
 		const opName = asString(span.attributes[GenAiAttr.OPERATION_NAME]);
 		const duration = span.endTime - span.startTime;
 		const isError = span.status.code === SpanStatusCode.ERROR;
 
 		switch (opName) {
 			case GenAiOperationName.EXECUTE_TOOL: {
-				const toolName = asString(span.attributes[GenAiAttr.TOOL_NAME]) ?? span.name;
+				const toolName =
+					asString(span.attributes[GenAiAttr.TOOL_NAME]) ?? span.name;
 				return {
 					ts: span.startTime,
 					dur: duration,
@@ -900,23 +1139,47 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					parentSpanId: span.parentSpanId,
 					status: isError ? 'error' : 'ok',
 					attrs: {
-						...(span.attributes[GenAiAttr.TOOL_CALL_ARGUMENTS] !== undefined
-							? { args: truncate(String(span.attributes[GenAiAttr.TOOL_CALL_ARGUMENTS]), MAX_ATTR_VALUE_LENGTH) }
+						...(span.attributes[GenAiAttr.TOOL_CALL_ARGUMENTS] !==
+						undefined
+							? {
+									args: truncate(
+										String(
+											span.attributes[
+												GenAiAttr.TOOL_CALL_ARGUMENTS
+											],
+										),
+										MAX_ATTR_VALUE_LENGTH,
+									),
+								}
 							: {}),
-						...(span.attributes[GenAiAttr.TOOL_CALL_RESULT] !== undefined
-							? { result: truncate(String(span.attributes[GenAiAttr.TOOL_CALL_RESULT]), MAX_ATTR_VALUE_LENGTH) }
+						...(span.attributes[GenAiAttr.TOOL_CALL_RESULT] !==
+						undefined
+							? {
+									result: truncate(
+										String(
+											span.attributes[
+												GenAiAttr.TOOL_CALL_RESULT
+											],
+										),
+										MAX_ATTR_VALUE_LENGTH,
+									),
+								}
 							: {}),
-						...(isError && span.status.message ? { error: span.status.message } : {}),
+						...(isError && span.status.message
+							? { error: span.status.message }
+							: {}),
 					},
 				};
 			}
 
 			case GenAiOperationName.CHAT: {
-				const model = asString(span.attributes[GenAiAttr.REQUEST_MODEL])
-					?? asString(span.attributes[GenAiAttr.RESPONSE_MODEL])
-					?? 'unknown';
-				const debugName = asString(span.attributes[CopilotChatAttr.DEBUG_NAME])
-					?? asString(span.attributes[GenAiAttr.AGENT_NAME]);
+				const model =
+					asString(span.attributes[GenAiAttr.REQUEST_MODEL]) ??
+					asString(span.attributes[GenAiAttr.RESPONSE_MODEL]) ??
+					'unknown';
+				const debugName =
+					asString(span.attributes[CopilotChatAttr.DEBUG_NAME]) ??
+					asString(span.attributes[GenAiAttr.AGENT_NAME]);
 				return {
 					ts: span.startTime,
 					dur: duration,
@@ -929,46 +1192,141 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					attrs: {
 						model,
 						...(debugName ? { debugName } : {}),
-						...(span.attributes[GenAiAttr.USAGE_INPUT_TOKENS] !== undefined
-							? { inputTokens: asNumber(span.attributes[GenAiAttr.USAGE_INPUT_TOKENS]) }
+						...(span.attributes[GenAiAttr.USAGE_INPUT_TOKENS] !==
+						undefined
+							? {
+									inputTokens: asNumber(
+										span.attributes[
+											GenAiAttr.USAGE_INPUT_TOKENS
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[GenAiAttr.USAGE_OUTPUT_TOKENS] !== undefined
-							? { outputTokens: asNumber(span.attributes[GenAiAttr.USAGE_OUTPUT_TOKENS]) }
+						...(span.attributes[GenAiAttr.USAGE_OUTPUT_TOKENS] !==
+						undefined
+							? {
+									outputTokens: asNumber(
+										span.attributes[
+											GenAiAttr.USAGE_OUTPUT_TOKENS
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[GenAiAttr.USAGE_CACHE_READ_INPUT_TOKENS] !== undefined
-							? { cachedTokens: asNumber(span.attributes[GenAiAttr.USAGE_CACHE_READ_INPUT_TOKENS]) }
+						...(span.attributes[
+							GenAiAttr.USAGE_CACHE_READ_INPUT_TOKENS
+						] !== undefined
+							? {
+									cachedTokens: asNumber(
+										span.attributes[
+											GenAiAttr
+												.USAGE_CACHE_READ_INPUT_TOKENS
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[CopilotChatAttr.TIME_TO_FIRST_TOKEN] !== undefined
-							? { ttft: asNumber(span.attributes[CopilotChatAttr.TIME_TO_FIRST_TOKEN]) }
+						...(span.attributes[
+							CopilotChatAttr.TIME_TO_FIRST_TOKEN
+						] !== undefined
+							? {
+									ttft: asNumber(
+										span.attributes[
+											CopilotChatAttr.TIME_TO_FIRST_TOKEN
+										],
+									),
+								}
 							: {}),
 						...(span.attributes[GenAiAttr.RESPONSE_ID] !== undefined
-							? { responseId: asString(span.attributes[GenAiAttr.RESPONSE_ID]) }
+							? {
+									responseId: asString(
+										span.attributes[GenAiAttr.RESPONSE_ID],
+									),
+								}
 							: {}),
-						...(span.attributes[CopilotChatAttr.USER_REQUEST] !== undefined
-							? { userRequest: String(span.attributes[CopilotChatAttr.USER_REQUEST]) }
+						...(span.attributes[CopilotChatAttr.USER_REQUEST] !==
+						undefined
+							? {
+									userRequest: String(
+										span.attributes[
+											CopilotChatAttr.USER_REQUEST
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[GenAiAttr.INPUT_MESSAGES] !== undefined
-							? { inputMessages: String(span.attributes[GenAiAttr.INPUT_MESSAGES]) }
+						...(span.attributes[GenAiAttr.INPUT_MESSAGES] !==
+						undefined
+							? {
+									inputMessages: String(
+										span.attributes[
+											GenAiAttr.INPUT_MESSAGES
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[GenAiAttr.REQUEST_MAX_TOKENS] !== undefined
-							? { maxTokens: asNumber(span.attributes[GenAiAttr.REQUEST_MAX_TOKENS]) }
+						...(span.attributes[GenAiAttr.REQUEST_MAX_TOKENS] !==
+						undefined
+							? {
+									maxTokens: asNumber(
+										span.attributes[
+											GenAiAttr.REQUEST_MAX_TOKENS
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[GenAiAttr.REQUEST_TEMPERATURE] !== undefined
-							? { temperature: asNumber(span.attributes[GenAiAttr.REQUEST_TEMPERATURE]) }
+						...(span.attributes[GenAiAttr.REQUEST_TEMPERATURE] !==
+						undefined
+							? {
+									temperature: asNumber(
+										span.attributes[
+											GenAiAttr.REQUEST_TEMPERATURE
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[GenAiAttr.REQUEST_TOP_P] !== undefined
-							? { topP: asNumber(span.attributes[GenAiAttr.REQUEST_TOP_P]) }
+						...(span.attributes[GenAiAttr.REQUEST_TOP_P] !==
+						undefined
+							? {
+									topP: asNumber(
+										span.attributes[
+											GenAiAttr.REQUEST_TOP_P
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[CopilotChatAttr.REQUEST_OPTIONS] !== undefined
-							? { requestOptions: String(span.attributes[CopilotChatAttr.REQUEST_OPTIONS]) }
+						...(span.attributes[CopilotChatAttr.REQUEST_OPTIONS] !==
+						undefined
+							? {
+									requestOptions: String(
+										span.attributes[
+											CopilotChatAttr.REQUEST_OPTIONS
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[CopilotChatAttr.REQUEST_SHAPE] !== undefined
-							? { requestShape: String(span.attributes[CopilotChatAttr.REQUEST_SHAPE]) }
+						...(span.attributes[CopilotChatAttr.REQUEST_SHAPE] !==
+						undefined
+							? {
+									requestShape: String(
+										span.attributes[
+											CopilotChatAttr.REQUEST_SHAPE
+										],
+									),
+								}
 							: {}),
-						...(span.attributes[CopilotChatAttr.COPILOT_USAGE_NANO_AIU] !== undefined
-							? { copilotUsageNanoAiu: asNumber(span.attributes[CopilotChatAttr.COPILOT_USAGE_NANO_AIU]) }
+						...(span.attributes[
+							CopilotChatAttr.COPILOT_USAGE_NANO_AIU
+						] !== undefined
+							? {
+									copilotUsageNanoAiu: asNumber(
+										span.attributes[
+											CopilotChatAttr
+												.COPILOT_USAGE_NANO_AIU
+										],
+									),
+								}
 							: {}),
-						...(isError && span.status.message ? { error: span.status.message } : {}),
+						...(isError && span.status.message
+							? { error: span.status.message }
+							: {}),
 					},
 				};
 			}
@@ -977,7 +1335,9 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 				if (!span.parentSpanId) {
 					return undefined; // Top-level agent spans are containers
 				}
-				const agentName = asString(span.attributes[GenAiAttr.AGENT_NAME]) ?? span.name;
+				const agentName =
+					asString(span.attributes[GenAiAttr.AGENT_NAME]) ??
+					span.name;
 				return {
 					ts: span.startTime,
 					dur: duration,
@@ -989,17 +1349,31 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					status: isError ? 'error' : 'ok',
 					attrs: {
 						agentName,
-						...(span.attributes[GenAiAttr.AGENT_DESCRIPTION] !== undefined
-							? { description: truncate(String(span.attributes[GenAiAttr.AGENT_DESCRIPTION]), MAX_ATTR_VALUE_LENGTH) }
+						...(span.attributes[GenAiAttr.AGENT_DESCRIPTION] !==
+						undefined
+							? {
+									description: truncate(
+										String(
+											span.attributes[
+												GenAiAttr.AGENT_DESCRIPTION
+											],
+										),
+										MAX_ATTR_VALUE_LENGTH,
+									),
+								}
 							: {}),
-						...(isError && span.status.message ? { error: span.status.message } : {}),
+						...(isError && span.status.message
+							? { error: span.status.message }
+							: {}),
 					},
 				};
 			}
 
 			case GenAiOperationName.CONTENT_EVENT:
 			case 'core_event': {
-				const name = asString(span.attributes[CopilotChatAttr.DEBUG_NAME]) ?? span.name;
+				const name =
+					asString(span.attributes[CopilotChatAttr.DEBUG_NAME]) ??
+					span.name;
 				return {
 					ts: span.startTime,
 					dur: duration,
@@ -1010,18 +1384,37 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					parentSpanId: span.parentSpanId,
 					status: isError ? 'error' : 'ok',
 					attrs: {
-						...(span.attributes['copilot_chat.event_details'] !== undefined
-							? { details: truncate(String(span.attributes['copilot_chat.event_details']), MAX_ATTR_VALUE_LENGTH) }
+						...(span.attributes['copilot_chat.event_details'] !==
+						undefined
+							? {
+									details: truncate(
+										String(
+											span.attributes[
+												'copilot_chat.event_details'
+											],
+										),
+										MAX_ATTR_VALUE_LENGTH,
+									),
+								}
 							: {}),
-						...(span.attributes['copilot_chat.event_category'] !== undefined
-							? { category: String(span.attributes['copilot_chat.event_category']) }
+						...(span.attributes['copilot_chat.event_category'] !==
+						undefined
+							? {
+									category: String(
+										span.attributes[
+											'copilot_chat.event_category'
+										],
+									),
+								}
 							: {}),
 					},
 				};
 			}
 
 			case GenAiOperationName.EXECUTE_HOOK: {
-				const hookType = asString(span.attributes[CopilotChatAttr.HOOK_TYPE]) ?? span.name;
+				const hookType =
+					asString(span.attributes[CopilotChatAttr.HOOK_TYPE]) ??
+					span.name;
 				return {
 					ts: span.startTime,
 					dur: duration,
@@ -1032,19 +1425,59 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					parentSpanId: span.parentSpanId,
 					status: isError ? 'error' : 'ok',
 					attrs: {
-						...(span.attributes['copilot_chat.hook_command'] !== undefined
-							? { command: truncate(String(span.attributes['copilot_chat.hook_command']), MAX_ATTR_VALUE_LENGTH) }
+						...(span.attributes['copilot_chat.hook_command'] !==
+						undefined
+							? {
+									command: truncate(
+										String(
+											span.attributes[
+												'copilot_chat.hook_command'
+											],
+										),
+										MAX_ATTR_VALUE_LENGTH,
+									),
+								}
 							: {}),
-						...(span.attributes[CopilotChatAttr.HOOK_INPUT] !== undefined
-							? { input: truncate(String(span.attributes[CopilotChatAttr.HOOK_INPUT]), MAX_ATTR_VALUE_LENGTH) }
+						...(span.attributes[CopilotChatAttr.HOOK_INPUT] !==
+						undefined
+							? {
+									input: truncate(
+										String(
+											span.attributes[
+												CopilotChatAttr.HOOK_INPUT
+											],
+										),
+										MAX_ATTR_VALUE_LENGTH,
+									),
+								}
 							: {}),
-						...(span.attributes[CopilotChatAttr.HOOK_OUTPUT] !== undefined
-							? { output: truncate(String(span.attributes[CopilotChatAttr.HOOK_OUTPUT]), MAX_ATTR_VALUE_LENGTH) }
+						...(span.attributes[CopilotChatAttr.HOOK_OUTPUT] !==
+						undefined
+							? {
+									output: truncate(
+										String(
+											span.attributes[
+												CopilotChatAttr.HOOK_OUTPUT
+											],
+										),
+										MAX_ATTR_VALUE_LENGTH,
+									),
+								}
 							: {}),
-						...(span.attributes[CopilotChatAttr.HOOK_RESULT_KIND] !== undefined
-							? { resultKind: String(span.attributes[CopilotChatAttr.HOOK_RESULT_KIND]) }
+						...(span.attributes[
+							CopilotChatAttr.HOOK_RESULT_KIND
+						] !== undefined
+							? {
+									resultKind: String(
+										span.attributes[
+											CopilotChatAttr.HOOK_RESULT_KIND
+										],
+									),
+								}
 							: {}),
-						...(isError && span.status.message ? { error: span.status.message } : {}),
+						...(isError && span.status.message
+							? { error: span.status.message }
+							: {}),
 					},
 				};
 			}
@@ -1074,21 +1507,28 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 	}
 
 	private _extractSessionId(span: ICompletedSpanData): string | undefined {
-		const directSessionId = asString(span.attributes[CopilotChatAttr.CHAT_SESSION_ID])
-			?? asString(span.attributes[GenAiAttr.CONVERSATION_ID]);
+		const directSessionId =
+			asString(span.attributes[CopilotChatAttr.CHAT_SESSION_ID]) ??
+			asString(span.attributes[GenAiAttr.CONVERSATION_ID]);
 
 		// If the span's parentSpanId maps to a known child session, prefer that.
 		// This handles hook spans that carry the parent's CHAT_SESSION_ID but
 		// whose parent span belongs to a child subagent session.
 		if (span.parentSpanId) {
-			const childSessionId = this._spanSessionIndex.get(span.parentSpanId);
+			const childSessionId = this._spanSessionIndex.get(
+				span.parentSpanId,
+			);
 			if (childSessionId && this._childSessionMap.has(childSessionId)) {
 				return childSessionId;
 			}
 		}
 
-		return directSessionId
-			?? (span.parentSpanId ? this._spanSessionIndex.get(span.parentSpanId) : undefined);
+		return (
+			directSessionId ??
+			(span.parentSpanId
+				? this._spanSessionIndex.get(span.parentSpanId)
+				: undefined)
+		);
 	}
 
 	private _bufferEntry(sessionId: string, entry: IDebugLogEntry): void {
@@ -1107,11 +1547,14 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 
 	async readEntries(sessionId: string): Promise<IDebugLogEntry[]> {
 		const entries: IDebugLogEntry[] = [];
-		await this.streamEntries(sessionId, entry => entries.push(entry));
+		await this.streamEntries(sessionId, (entry) => entries.push(entry));
 		return entries;
 	}
 
-	async readTailEntries(sessionId: string, count: number): Promise<IDebugLogEntry[]> {
+	async readTailEntries(
+		sessionId: string,
+		count: number,
+	): Promise<IDebugLogEntry[]> {
 		const session = this._activeSessions.get(sessionId);
 		const logPath = session?.uri ?? this.getLogPath(sessionId);
 		let entries: IDebugLogEntry[] = [];
@@ -1127,17 +1570,30 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 				const fd = await fs.promises.open(logPath.fsPath, 'r');
 				try {
 					const buffer = Buffer.alloc(stat.size - startOffset);
-					const { bytesRead } = await fd.read(buffer, 0, buffer.length, startOffset);
+					const { bytesRead } = await fd.read(
+						buffer,
+						0,
+						buffer.length,
+						startOffset,
+					);
 
-					const text = buffer.subarray(0, bytesRead).toString('utf-8');
+					const text = buffer
+						.subarray(0, bytesRead)
+						.toString('utf-8');
 					const lines = text.split('\n');
 					// Skip the first line if we started mid-file (likely partial)
 					const startIdx = startOffset > 0 ? 1 : 0;
 					for (let i = startIdx; i < lines.length; i++) {
-						if (!lines[i]) { continue; }
+						if (!lines[i]) {
+							continue;
+						}
 						try {
-							entries.push(JSON.parse(lines[i]) as IDebugLogEntry);
-						} catch { /* skip malformed */ }
+							entries.push(
+								JSON.parse(lines[i]) as IDebugLogEntry,
+							);
+						} catch {
+							/* skip malformed */
+						}
 					}
 				} finally {
 					await fd.close();
@@ -1157,7 +1613,9 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 			for (const line of session.buffer) {
 				try {
 					entries.push(JSON.parse(line) as IDebugLogEntry);
-				} catch { /* skip malformed */ }
+				} catch {
+					/* skip malformed */
+				}
 			}
 		}
 
@@ -1169,26 +1627,38 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		return entries;
 	}
 
-	async streamEntries(sessionId: string, onEntry: (entry: IDebugLogEntry) => void): Promise<void> {
+	async streamEntries(
+		sessionId: string,
+		onEntry: (entry: IDebugLogEntry) => void,
+	): Promise<void> {
 		const session = this._activeSessions.get(sessionId);
 		const logPath = session?.uri ?? this.getLogPath(sessionId);
 
 		if (logPath) {
 			try {
 				await new Promise<void>((resolve, reject) => {
-					const stream = fs.createReadStream(logPath.fsPath, { encoding: 'utf-8' });
+					const stream = fs.createReadStream(logPath.fsPath, {
+						encoding: 'utf-8',
+					});
 					let partial = '';
 					stream.on('data', (chunk) => {
-						const text = typeof chunk === 'string' ? chunk : chunk.toString('utf-8');
+						const text =
+							typeof chunk === 'string'
+								? chunk
+								: chunk.toString('utf-8');
 						partial += text;
 						const lines = partial.split('\n');
 						// Last element may be a partial line — keep it for next chunk
 						partial = lines.pop() ?? '';
 						for (const line of lines) {
-							if (!line) { continue; }
+							if (!line) {
+								continue;
+							}
 							try {
 								onEntry(JSON.parse(line) as IDebugLogEntry);
-							} catch { /* skip malformed */ }
+							} catch {
+								/* skip malformed */
+							}
 						}
 					});
 					stream.on('end', () => {
@@ -1196,7 +1666,9 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 						if (partial) {
 							try {
 								onEntry(JSON.parse(partial) as IDebugLogEntry);
-							} catch { /* skip malformed */ }
+							} catch {
+								/* skip malformed */
+							}
 						}
 						resolve();
 					});
@@ -1212,15 +1684,23 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 			for (const line of session.buffer) {
 				try {
 					onEntry(JSON.parse(line) as IDebugLogEntry);
-				} catch { /* skip malformed */ }
+				} catch {
+					/* skip malformed */
+				}
 			}
 		}
 	}
 
-	private async _writeToFile(session: IActiveLogSession, content: string): Promise<void> {
+	private async _writeToFile(
+		session: IActiveLogSession,
+		content: string,
+	): Promise<void> {
 		try {
 			if (!session.dirEnsured) {
-				await createDirectoryIfNotExists(this._fileSystemService, session.sessionDir);
+				await createDirectoryIfNotExists(
+					this._fileSystemService,
+					session.sessionDir,
+				);
 				session.dirEnsured = true;
 			}
 			await fs.promises.appendFile(session.uri.fsPath, content, 'utf-8');
@@ -1229,7 +1709,10 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 				await this._truncateLogFile(session);
 			}
 		} catch (err) {
-			this._logService.error('[ChatDebugFileLogger] Failed to write debug log entries', err);
+			this._logService.error(
+				'[ChatDebugFileLogger] Failed to write debug log entries',
+				err,
+			);
 		}
 	}
 
@@ -1246,15 +1729,26 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 				return;
 			}
 
-			const retainBytes = Math.floor(this._maxSessionLogBytes * TRUNCATION_RETAIN_RATIO);
+			const retainBytes = Math.floor(
+				this._maxSessionLogBytes * TRUNCATION_RETAIN_RATIO,
+			);
 			const skipBytes = stat.size - retainBytes;
 			const fd = await fs.promises.open(filePath, 'r');
 			try {
 				// Read a small probe around the cut point to find the next newline
 				const probe = Buffer.alloc(4096);
-				const { bytesRead } = await fd.read(probe, 0, probe.length, skipBytes);
-				const newlineIdx = probe.indexOf(0x0A, 0); // '\n'
-				const cutOffset = skipBytes + (newlineIdx >= 0 && newlineIdx < bytesRead ? newlineIdx + 1 : 0);
+				const { bytesRead } = await fd.read(
+					probe,
+					0,
+					probe.length,
+					skipBytes,
+				);
+				const newlineIdx = probe.indexOf(0x0a, 0); // '\n'
+				const cutOffset =
+					skipBytes +
+					(newlineIdx >= 0 && newlineIdx < bytesRead
+						? newlineIdx + 1
+						: 0);
 
 				const tailSize = stat.size - cutOffset;
 				if (tailSize <= 0) {
@@ -1266,7 +1760,9 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 				// Stream the tail to a temp file, then rename over the original.
 				const tmpPath = filePath + '.tmp';
 				await new Promise<void>((resolve, reject) => {
-					const readStream = fs.createReadStream(filePath, { start: cutOffset });
+					const readStream = fs.createReadStream(filePath, {
+						start: cutOffset,
+					});
 					const writeStream = fs.createWriteStream(tmpPath);
 					const onError = (err: Error) => {
 						readStream.destroy();
@@ -1288,28 +1784,36 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 						"retainedSize": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true, "comment": "File size in bytes after truncation" }
 					}
 				*/
-				this._telemetryService.sendMSFTTelemetryEvent('chatDebugFileLogger.truncated', undefined, { previousSize: stat.size, retainedSize: tailSize });
+				this._telemetryService.sendMSFTTelemetryEvent(
+					'chatDebugFileLogger.truncated',
+					undefined,
+					{ previousSize: stat.size, retainedSize: tailSize },
+				);
 			} catch (innerErr) {
-				await fd.close().catch(() => { });
+				await fd.close().catch(() => {});
 				// Clean up temp file if it exists
-				await fs.promises.unlink(filePath + '.tmp').catch(() => { });
+				await fs.promises.unlink(filePath + '.tmp').catch(() => {});
 				throw innerErr;
 			}
 		} catch (err) {
-			this._logService.warn(`[ChatDebugFileLogger] Failed to truncate log file: ${err}`);
+			this._logService.warn(
+				`[ChatDebugFileLogger] Failed to truncate log file: ${err}`,
+			);
 			/* __GDPR__
 				"chatDebugFileLogger.truncateFailed" : {
 					"owner": "vijayupadya",
 					"comment": "Failed to truncate a debug log file"
 				}
 			*/
-			this._telemetryService.sendMSFTTelemetryEvent('chatDebugFileLogger.truncateFailed');
+			this._telemetryService.sendMSFTTelemetryEvent(
+				'chatDebugFileLogger.truncateFailed',
+			);
 		}
 	}
 
 	private _autoFlushAll(): void {
 		for (const sessionId of this._activeSessions.keys()) {
-			this.flush(sessionId).catch(() => { });
+			this.flush(sessionId).catch(() => {});
 		}
 	}
 
@@ -1319,7 +1823,10 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 			this._autoFlushTimer = undefined;
 		}
 		if (this._activeSessions.size > 0) {
-			this._autoFlushTimer = setInterval(() => this._autoFlushAll(), this._autoFlushIntervalMs);
+			this._autoFlushTimer = setInterval(
+				() => this._autoFlushAll(),
+				this._autoFlushIntervalMs,
+			);
 		}
 	}
 
@@ -1330,19 +1837,25 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		}
 		try {
 			const entries = await this._fileSystemService.readDirectory(dir);
-			const dirs = entries.filter(([, type]) => type === 2 /* FileType.Directory */);
+			const dirs = entries.filter(
+				([, type]) => type === 2 /* FileType.Directory */,
+			);
 
 			// Stat each directory in parallel to sort by most recently modified.
-			const withMtime = await Promise.all(dirs.map(async ([name]) => {
-				try {
-					const stat = await this._fileSystemService.stat(URI.joinPath(dir, name));
-					return { name, mtime: stat.mtime };
-				} catch {
-					return { name, mtime: 0 };
-				}
-			}));
+			const withMtime = await Promise.all(
+				dirs.map(async ([name]) => {
+					try {
+						const stat = await this._fileSystemService.stat(
+							URI.joinPath(dir, name),
+						);
+						return { name, mtime: stat.mtime };
+					} catch {
+						return { name, mtime: 0 };
+					}
+				}),
+			);
 			withMtime.sort((a, b) => b.mtime - a.mtime);
-			return withMtime.map(e => e.name);
+			return withMtime.map((e) => e.name);
 		} catch {
 			return [];
 		}
@@ -1358,13 +1871,22 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 		try {
 			const entries = await this._fileSystemService.readDirectory(dir);
 			// Count both directories (new format) and legacy .jsonl files (old format)
-			const sessionEntries = entries.filter(([name, type]) =>
-				(type === 2 /* FileType.Directory */) ||
-				(name.endsWith('.jsonl') && type === 1 /* FileType.File */)
+			const sessionEntries = entries.filter(
+				([name, type]) =>
+					type === 2 /* FileType.Directory */ ||
+					(name.endsWith('.jsonl') && type === 1) /* FileType.File */,
 			);
 
-			const configuredMax = this._configurationService.getExperimentBasedConfig(ConfigKey.Advanced.ChatDebugFileLoggingMaxRetainedSessionLogs, this._experimentationService);
-			const maxRetainedSessionLogs = Number.isFinite(configuredMax) && configuredMax >= 1 ? Math.trunc(configuredMax) : DEFAULT_MAX_RETAINED_LOGS;
+			const configuredMax =
+				this._configurationService.getExperimentBasedConfig(
+					ConfigKey.Advanced
+						.ChatDebugFileLoggingMaxRetainedSessionLogs,
+					this._experimentationService,
+				);
+			const maxRetainedSessionLogs =
+				Number.isFinite(configuredMax) && configuredMax >= 1
+					? Math.trunc(configuredMax)
+					: DEFAULT_MAX_RETAINED_LOGS;
 			if (sessionEntries.length <= maxRetainedSessionLogs) {
 				/* __GDPR__
 					"chatDebugFileLogger.cleanupOldLogs" : {
@@ -1375,7 +1897,15 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 						"deletedCount": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true, "comment": "Number of log entries deleted" }
 					}
 				*/
-				this._telemetryService.sendMSFTTelemetryEvent('chatDebugFileLogger.cleanupOldLogs', undefined, { durationMs: Date.now() - startTime, entryCount: sessionEntries.length, deletedCount: 0 });
+				this._telemetryService.sendMSFTTelemetryEvent(
+					'chatDebugFileLogger.cleanupOldLogs',
+					undefined,
+					{
+						durationMs: Date.now() - startTime,
+						entryCount: sessionEntries.length,
+						deletedCount: 0,
+					},
+				);
 				return;
 			}
 
@@ -1384,10 +1914,23 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					const entryUri = URI.joinPath(dir, name);
 					const sessionIdFromEntry = name.replace('.jsonl', '');
 					try {
-						const stat = await this._fileSystemService.stat(entryUri);
-						return { name, uri: entryUri, mtime: stat.mtime, sessionId: sessionIdFromEntry, isDir: type === 2 };
+						const stat =
+							await this._fileSystemService.stat(entryUri);
+						return {
+							name,
+							uri: entryUri,
+							mtime: stat.mtime,
+							sessionId: sessionIdFromEntry,
+							isDir: type === 2,
+						};
 					} catch {
-						return { name, uri: entryUri, mtime: 0, sessionId: sessionIdFromEntry, isDir: type === 2 };
+						return {
+							name,
+							uri: entryUri,
+							mtime: 0,
+							sessionId: sessionIdFromEntry,
+							isDir: type === 2,
+						};
 					}
 				}),
 			);
@@ -1404,14 +1947,26 @@ export class ChatDebugFileLoggerService extends Disposable implements IChatDebug
 					continue;
 				}
 				try {
-					await this._fileSystemService.delete(entry.uri, { recursive: true });
+					await this._fileSystemService.delete(entry.uri, {
+						recursive: true,
+					});
 					deleted++;
 				} catch {
-					this._logService.warn(`[ChatDebugFileLogger] Failed to delete old debug log: ${entry.name}`);
+					this._logService.warn(
+						`[ChatDebugFileLogger] Failed to delete old debug log: ${entry.name}`,
+					);
 				}
 			}
 			// GDPR comment above covers this event
-			this._telemetryService.sendMSFTTelemetryEvent('chatDebugFileLogger.cleanupOldLogs', undefined, { durationMs: Date.now() - startTime, entryCount: sessionEntries.length, deletedCount: deleted });
+			this._telemetryService.sendMSFTTelemetryEvent(
+				'chatDebugFileLogger.cleanupOldLogs',
+				undefined,
+				{
+					durationMs: Date.now() - startTime,
+					entryCount: sessionEntries.length,
+					deletedCount: deleted,
+				},
+			);
 		} catch {
 			// Directory may not exist yet
 		}

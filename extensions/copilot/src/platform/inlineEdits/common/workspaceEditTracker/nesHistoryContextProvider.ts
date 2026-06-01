@@ -3,8 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, toDisposable } from '../../../../util/vs/base/common/lifecycle';
-import { autorun, mapObservableArrayCached } from '../../../../util/vs/base/common/observable';
+import {
+	Disposable,
+	toDisposable,
+} from '../../../../util/vs/base/common/lifecycle';
+import {
+	autorun,
+	mapObservableArrayCached,
+} from '../../../../util/vs/base/common/observable';
 import { assertType } from '../../../../util/vs/base/common/types';
 import { StringEdit } from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { TextEdit } from '../../../../util/vs/editor/common/core/edits/textEdit';
@@ -19,9 +25,16 @@ import { ObservableGit } from '../observableGit';
 import { ObservableWorkspace } from '../observableWorkspace';
 import { autorunWithChanges } from '../utils/observable';
 import { Instant, now } from '../utils/utils';
-import { DocumentHistory, HistoryContext, IHistoryContextProvider } from './historyContextProvider';
+import {
+	DocumentHistory,
+	HistoryContext,
+	IHistoryContextProvider,
+} from './historyContextProvider';
 
-export class NesHistoryContextProvider extends Disposable implements IHistoryContextProvider {
+export class NesHistoryContextProvider
+	extends Disposable
+	implements IHistoryContextProvider
+{
 	private readonly _documentState = new Map<DocumentId, DocumentState>();
 	private readonly _lastDocuments = new FifoSet<DocumentState>(50);
 	private _lastGitCheckout: Instant | undefined;
@@ -29,50 +42,73 @@ export class NesHistoryContextProvider extends Disposable implements IHistoryCon
 	constructor(workspace: ObservableWorkspace, observableGit: ObservableGit) {
 		super();
 
-		this._register(autorun(reader => {
-			const branch = reader.readObservable(observableGit.branch);
-			if (branch === undefined) {
-				return; // probably git extension hasn't activated or no repository found, so don't do anything
-			}
-			this._lastGitCheckout = now();
-			this._documentState.forEach(d => d.applyAllEdits());
-		}));
-
-		mapObservableArrayCached(this, workspace.openDocuments, (doc, store) => {
-			const initialSelection = doc.selection.get().at(0);
-			const state = new DocumentState(doc.id, doc.value.get().value, doc.languageId.get(), initialSelection);
-			this._documentState.set(state.docId, state);
-			if (initialSelection) {
-				this._lastDocuments.push(state);
-			}
-
-			store.add(autorunWithChanges(this, {
-				value: doc.value,
-				selection: doc.selection,
-				languageId: doc.languageId,
-			}, (data) => {
-				if (data.languageId.changes.length > 0) {
-					state.languageId = data.languageId.value;
+		this._register(
+			autorun((reader) => {
+				const branch = reader.readObservable(observableGit.branch);
+				if (branch === undefined) {
+					return; // probably git extension hasn't activated or no repository found, so don't do anything
 				}
-				const isInCooldown = this._isAwaitingGitCheckoutCooldown();
-				for (const edit of data.value.changes) {
-					this._lastDocuments.push(state);
-					state.handleEdit(edit, isInCooldown);
-				}
-				if (data.selection.changes.length > 0) {
-					state.handleSelection(data.selection.value.at(0));
+				this._lastGitCheckout = now();
+				this._documentState.forEach((d) => d.applyAllEdits());
+			}),
+		);
+
+		mapObservableArrayCached(
+			this,
+			workspace.openDocuments,
+			(doc, store) => {
+				const initialSelection = doc.selection.get().at(0);
+				const state = new DocumentState(
+					doc.id,
+					doc.value.get().value,
+					doc.languageId.get(),
+					initialSelection,
+				);
+				this._documentState.set(state.docId, state);
+				if (initialSelection) {
 					this._lastDocuments.push(state);
 				}
-			}));
 
-			store.add(toDisposable(() => {
-				const state = this._documentState.get(doc.id);
-				if (state) {
-					this._lastDocuments.remove(state);
-				}
-				this._documentState.delete(doc.id);
-			}));
-		}, d => d.id).recomputeInitiallyAndOnChange(this._store);
+				store.add(
+					autorunWithChanges(
+						this,
+						{
+							value: doc.value,
+							selection: doc.selection,
+							languageId: doc.languageId,
+						},
+						(data) => {
+							if (data.languageId.changes.length > 0) {
+								state.languageId = data.languageId.value;
+							}
+							const isInCooldown =
+								this._isAwaitingGitCheckoutCooldown();
+							for (const edit of data.value.changes) {
+								this._lastDocuments.push(state);
+								state.handleEdit(edit, isInCooldown);
+							}
+							if (data.selection.changes.length > 0) {
+								state.handleSelection(
+									data.selection.value.at(0),
+								);
+								this._lastDocuments.push(state);
+							}
+						},
+					),
+				);
+
+				store.add(
+					toDisposable(() => {
+						const state = this._documentState.get(doc.id);
+						if (state) {
+							this._lastDocuments.remove(state);
+						}
+						this._documentState.delete(doc.id);
+					}),
+				);
+			},
+			(d) => d.id,
+		).recomputeInitiallyAndOnChange(this._store);
 	}
 
 	public getHistoryContext(docId: DocumentId): HistoryContext | undefined {
@@ -91,7 +127,8 @@ export class NesHistoryContextProvider extends Disposable implements IHistoryCon
 
 		for (const doc of this._lastDocuments.getItemsReversed()) {
 			const result = doc.getRecentEdit(editCount);
-			if (result === undefined) { // result is undefined if the document is not a user document
+			if (result === undefined) {
+				// result is undefined if the document is not a user document
 				continue;
 			}
 			if (result.editCount === 0 && hasProcessedCurrentDocument) {
@@ -109,7 +146,7 @@ export class NesHistoryContextProvider extends Disposable implements IHistoryCon
 		docs.reverse();
 		// Docs is sorted from least recent to most recent now
 
-		if (!docs.some(d => d.docId === docId)) {
+		if (!docs.some((d) => d.docId === docId)) {
 			return undefined;
 		}
 
@@ -120,7 +157,8 @@ export class NesHistoryContextProvider extends Disposable implements IHistoryCon
 		if (!this._lastGitCheckout) {
 			return false;
 		}
-		const isInCooldown = now() - this._lastGitCheckout < 2 * 1000 /* 2 seconds */;
+		const isInCooldown =
+			now() - this._lastGitCheckout < 2 * 1000; /* 2 seconds */
 		if (!isInCooldown) {
 			this._lastGitCheckout = undefined;
 		}
@@ -134,7 +172,11 @@ class DocumentState {
 
 	private _baseValue: StringText;
 	private _currentValue: StringText;
-	private _edits: { edit: StringEdit; textLengthEdit: TextLengthEdit; instant: Instant }[] = [];
+	private _edits: {
+		edit: StringEdit;
+		textLengthEdit: TextLengthEdit;
+		instant: Instant;
+	}[] = [];
 	private _isUserDocument = false;
 	private _selection: OffsetRange | undefined;
 
@@ -176,13 +218,18 @@ class DocumentState {
 		}
 
 		function editInsertSize(edit: StringEdit): number {
-			return sum(edit.replacements, e => e.newText.length);
+			return sum(edit.replacements, (e) => e.newText.length);
 		}
 
 		const lastEdit = this._edits.at(-1);
-		if (lastEdit && editInsertSize(lastEdit.edit) < 200 && editExtends(edit, lastEdit.edit)) {
+		if (
+			lastEdit &&
+			editInsertSize(lastEdit.edit) < 200 &&
+			editExtends(edit, lastEdit.edit)
+		) {
 			lastEdit.edit = lastEdit.edit.compose(edit);
-			lastEdit.textLengthEdit = lastEdit.textLengthEdit.compose(textLengthEdit);
+			lastEdit.textLengthEdit =
+				lastEdit.textLengthEdit.compose(textLengthEdit);
 			lastEdit.instant = now();
 			if (lastEdit.edit.isEmpty()) {
 				this._edits.pop();
@@ -192,7 +239,9 @@ class DocumentState {
 		}
 	}
 
-	public getRecentEdit(maxEditCount: number): { history: DocumentHistory; editCount: number } | undefined {
+	public getRecentEdit(
+		maxEditCount: number,
+	): { history: DocumentHistory; editCount: number } | undefined {
 		if (!this._isUserDocument) {
 			return undefined;
 		}
@@ -200,10 +249,19 @@ class DocumentState {
 		// note that `editCount` may not match the actual number of edits in the history because it's computed by transforming to line edits
 		const { editCount } = this._applyStaleEdits(maxEditCount);
 
-		const edits = new Edits(StringEdit, this._edits.map(e => e.edit));
+		const edits = new Edits(
+			StringEdit,
+			this._edits.map((e) => e.edit),
+		);
 
 		return {
-			history: new DocumentHistory(this.docId, this.languageId, this._baseValue, edits, this._selection),
+			history: new DocumentHistory(
+				this.docId,
+				this.languageId,
+				this._baseValue,
+				edits,
+				this._selection,
+			),
 			editCount,
 		};
 	}
@@ -228,24 +286,44 @@ class DocumentState {
 				break;
 			}
 
-			const potentialNewTextLengthEdit = e.textLengthEdit.compose(recentTextLengthEdit);
+			const potentialNewTextLengthEdit =
+				e.textLengthEdit.compose(recentTextLengthEdit);
 			const potentialNewRange = potentialNewTextLengthEdit.getRange();
 			// FIXME@ulugbekna: the code below can actually throw if one edit cancels another one out
 			assertType(potentialNewRange, 'we only compose non-empty Edits');
-			if (potentialNewRange.endLineNumber - potentialNewRange.startLineNumber > 100) {
+			if (
+				potentialNewRange.endLineNumber -
+					potentialNewRange.startLineNumber >
+				100
+			) {
 				break;
 			}
 
-			const changedLines = sum(e.textLengthEdit.edits, e => (e.range.endLineNumber - e.range.startLineNumber) + e.newLength.lineCount);
-			if (changedLines > DocumentState.MAX_EDITED_LINES_PER_EDIT) { // 5k line long -- it should work for both deletion & insertion
+			const changedLines = sum(
+				e.textLengthEdit.edits,
+				(e) =>
+					e.range.endLineNumber -
+					e.range.startLineNumber +
+					e.newLength.lineCount,
+			);
+			if (changedLines > DocumentState.MAX_EDITED_LINES_PER_EDIT) {
+				// 5k line long -- it should work for both deletion & insertion
 				break;
 			}
-			const newCharacterCount = sum(e.edit.replacements, singleEdit => singleEdit.newText.length);
+			const newCharacterCount = sum(
+				e.edit.replacements,
+				(singleEdit) => singleEdit.newText.length,
+			);
 			if (newCharacterCount > DocumentState.MAX_EDITED_CHARS_PER_EDIT) {
 				break;
 			}
-			const replacedCharacterCount = sum(e.edit.replacements, singleEdit => singleEdit.replaceRange.length);
-			if (replacedCharacterCount > DocumentState.MAX_EDITED_CHARS_PER_EDIT) {
+			const replacedCharacterCount = sum(
+				e.edit.replacements,
+				(singleEdit) => singleEdit.replaceRange.length,
+			);
+			if (
+				replacedCharacterCount > DocumentState.MAX_EDITED_CHARS_PER_EDIT
+			) {
 				break;
 			}
 
@@ -270,8 +348,13 @@ class DocumentState {
 			lastValue = inverseE.applyOnText(lastValue);
 
 			const potentialRecentEdit = e.edit.compose(recentEdit);
-			const potentialLineEdit = RootedEdit.toLineEdit(new RootedEdit(lastValue, potentialRecentEdit));
-			const rootedLineEdit = new RootedLineEdit(lastValue, potentialLineEdit).removeCommonSuffixPrefixLines(); // do not take into account no-op edits
+			const potentialLineEdit = RootedEdit.toLineEdit(
+				new RootedEdit(lastValue, potentialRecentEdit),
+			);
+			const rootedLineEdit = new RootedLineEdit(
+				lastValue,
+				potentialLineEdit,
+			).removeCommonSuffixPrefixLines(); // do not take into account no-op edits
 			const editLineCount = rootedLineEdit.edit.replacements.length;
 			if (editLineCount > maxEditCount) {
 				break;
@@ -295,7 +378,10 @@ class DocumentState {
 	}
 
 	public toString(): string {
-		return new Edits(StringEdit, this._edits.map(e => e.edit)).toHumanReadablePatch(this._baseValue);
+		return new Edits(
+			StringEdit,
+			this._edits.map((e) => e.edit),
+		).toHumanReadablePatch(this._baseValue);
 	}
 }
 
@@ -307,22 +393,24 @@ export function sum<T>(arr: readonly T[], f: (t: T) => number): number {
 	return result;
 }
 
-export function editExtends(edit: StringEdit, previousEdit: StringEdit): boolean {
+export function editExtends(
+	edit: StringEdit,
+	previousEdit: StringEdit,
+): boolean {
 	const newRanges = previousEdit.getNewRanges();
-	return edit.replacements.every(e => doesTouch(e.replaceRange, newRanges));
+	return edit.replacements.every((e) => doesTouch(e.replaceRange, newRanges));
 }
 
 function doesTouch(range: OffsetRange, sortedRanges: readonly OffsetRange[]) {
-	return sortedRanges.some(r => range.start === r.endExclusive || range.endExclusive === r.start);
+	return sortedRanges.some(
+		(r) => range.start === r.endExclusive || range.endExclusive === r.start,
+	);
 }
 
 class FifoSet<T> {
 	private _arr: T[] = [];
 
-	constructor(
-		public readonly maxSize: number
-	) {
-	}
+	constructor(public readonly maxSize: number) {}
 
 	push(e: T): void {
 		const existing = this._arr.indexOf(e);

@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IStringDictionary } from '../../../base/common/collections.js';
+import { IStringDictionary } from "../../../base/common/collections.js";
 
 export interface IMcpDevModeConfig {
 	/** Pattern or list of glob patterns to watch relative to the workspace folder. */
 	watch?: string | string[];
 	/** Whether to debug the MCP server when it's started. */
-	debug?: { type: 'node' } | { type: 'debugpy'; debugpyPath?: string };
+	debug?: { type: "node" } | { type: "debugpy"; debugpyPath?: string };
 }
 
 export interface IMcpSandboxConfiguration {
@@ -25,8 +25,8 @@ export interface IMcpSandboxConfiguration {
 }
 
 export const enum McpServerVariableType {
-	PROMPT = 'promptString',
-	PICK = 'pickString',
+	PROMPT = "promptString",
+	PICK = "pickString",
 }
 
 export interface IMcpServerVariable {
@@ -40,8 +40,8 @@ export interface IMcpServerVariable {
 }
 
 export const enum McpServerType {
-	LOCAL = 'stdio',
-	REMOTE = 'http',
+	LOCAL = "stdio",
+	REMOTE = "http",
 }
 
 export interface ICommonMcpServerConfiguration {
@@ -73,7 +73,9 @@ export interface IMcpRemoteServerConfiguration extends ICommonMcpServerConfigura
 	readonly dev?: IMcpDevModeConfig;
 }
 
-export type IMcpServerConfiguration = IMcpStdioServerConfiguration | IMcpRemoteServerConfiguration;
+export type IMcpServerConfiguration =
+	| IMcpStdioServerConfiguration
+	| IMcpRemoteServerConfiguration;
 
 export interface IMcpServersConfiguration {
 	servers?: IStringDictionary<IMcpServerConfiguration>;

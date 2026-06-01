@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../../base/common/event.js';
-import { IBrowserDeviceProfile } from '../common/browserView.js';
-import { ILogService } from '../../log/common/log.js';
-import type { BrowserView } from './browserView.js';
-import { ICDPConnection } from '../common/cdp/types.js';
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { Emitter, Event } from "../../../base/common/event.js";
+import { IBrowserDeviceProfile } from "../common/browserView.js";
+import { ILogService } from "../../log/common/log.js";
+import type { BrowserView } from "./browserView.js";
+import { ICDPConnection } from "../common/cdp/types.js";
 
 /**
  * Manages device emulation for a browser view. The renderer is authoritative
@@ -19,14 +19,29 @@ import { ICDPConnection } from '../common/cdp/types.js';
  * user-agent overrides that have no native Electron equivalent.
  */
 export class BrowserViewEmulator extends Disposable {
-
 	private _device: IBrowserDeviceProfile | undefined;
 	private readonly _defaultUserAgent: string;
-	private _lastLayout = { containerWidth: 1024, containerHeight: 768, scale: 1, hostZoom: 1 };
-	private _lastApplied: { viewportWidth: number; viewportHeight: number; scale: number; hostZoom: number; mobile: boolean } | undefined;
+	private _lastLayout = {
+		containerWidth: 1024,
+		containerHeight: 768,
+		scale: 1,
+		hostZoom: 1,
+	};
+	private _lastApplied:
+		| {
+				viewportWidth: number;
+				viewportHeight: number;
+				scale: number;
+				hostZoom: number;
+				mobile: boolean;
+		  }
+		| undefined;
 
-	private readonly _onDidChange = this._register(new Emitter<IBrowserDeviceProfile | undefined>());
-	readonly onDidChange: Event<IBrowserDeviceProfile | undefined> = this._onDidChange.event;
+	private readonly _onDidChange = this._register(
+		new Emitter<IBrowserDeviceProfile | undefined>(),
+	);
+	readonly onDidChange: Event<IBrowserDeviceProfile | undefined> =
+		this._onDidChange.event;
 
 	constructor(
 		private readonly browser: BrowserView,
@@ -40,10 +55,14 @@ export class BrowserViewEmulator extends Disposable {
 			this._lastApplied = undefined;
 			void this._reapply();
 		};
-		this.browser.webContents.on('did-navigate', onNavigate);
+		this.browser.webContents.on("did-navigate", onNavigate);
 
 		// Intercept external CDP emulation commands and fold them into the device profile so there is a single source of truth.
-		this._register(this.browser.debugger.registerCommandInterceptor((method, params, session) => this._intercept(method, params, session)));
+		this._register(
+			this.browser.debugger.registerCommandInterceptor(
+				(method, params, session) => this._intercept(method, params, session),
+			),
+		);
 	}
 
 	get device(): IBrowserDeviceProfile | undefined {
@@ -81,7 +100,12 @@ export class BrowserViewEmulator extends Disposable {
 	 * emulation scale must be too or the emulated viewport won't fill the
 	 * WebContentsView when the workbench is zoomed.
 	 */
-	applyScreenEmulation(containerWidth: number, containerHeight: number, scale: number, hostZoom: number): void {
+	applyScreenEmulation(
+		containerWidth: number,
+		containerHeight: number,
+		scale: number,
+		hostZoom: number,
+	): void {
 		this._lastLayout = { containerWidth, containerHeight, scale, hostZoom };
 		this._reapply();
 	}
@@ -90,21 +114,36 @@ export class BrowserViewEmulator extends Disposable {
 		if (!this._device || !this.isSafeToApplyEmulation()) {
 			return;
 		}
-		const { containerWidth, containerHeight, scale, hostZoom } = this._lastLayout;
+		const { containerWidth, containerHeight, scale, hostZoom } =
+			this._lastLayout;
 		const s = Math.max(0.01, scale);
 		const z = Math.max(0.01, hostZoom);
 		const w = Math.max(1, Math.round(this._device.width || containerWidth / s));
-		const h = Math.max(1, Math.round(this._device.height || containerHeight / s));
+		const h = Math.max(
+			1,
+			Math.round(this._device.height || containerHeight / s),
+		);
 		const mobile = !!this._device.mobile;
 		const last = this._lastApplied;
-		if (last && last.viewportWidth === w && last.viewportHeight === h
-			&& Math.abs(last.scale - s) < 0.0001 && Math.abs(last.hostZoom - z) < 0.0001
-			&& last.mobile === mobile) {
+		if (
+			last &&
+			last.viewportWidth === w &&
+			last.viewportHeight === h &&
+			Math.abs(last.scale - s) < 0.0001 &&
+			Math.abs(last.hostZoom - z) < 0.0001 &&
+			last.mobile === mobile
+		) {
 			return;
 		}
-		this._lastApplied = { viewportWidth: w, viewportHeight: h, scale: s, hostZoom: z, mobile };
+		this._lastApplied = {
+			viewportWidth: w,
+			viewportHeight: h,
+			scale: s,
+			hostZoom: z,
+			mobile,
+		};
 		const params: Electron.Parameters = {
-			screenPosition: mobile ? 'mobile' : 'desktop',
+			screenPosition: mobile ? "mobile" : "desktop",
 			screenSize: { width: w, height: h },
 			viewSize: { width: w, height: h },
 			deviceScaleFactor: this._device.deviceScaleFactor ?? 0,
@@ -117,7 +156,7 @@ export class BrowserViewEmulator extends Disposable {
 		if (mobile && !last) {
 			this.browser.webContents.enableDeviceEmulation({
 				...params,
-				screenPosition: 'desktop',
+				screenPosition: "desktop",
 			});
 		}
 
@@ -129,7 +168,10 @@ export class BrowserViewEmulator extends Disposable {
 	}
 
 	private isSafeToApplyEmulation(): boolean {
-		return !this.browser.webContents.isDestroyed() && !!this.browser.webContents.getURL();
+		return (
+			!this.browser.webContents.isDestroyed() &&
+			!!this.browser.webContents.getURL()
+		);
 	}
 
 	private async _applyTouchAndMedia(): Promise<void> {
@@ -139,15 +181,32 @@ export class BrowserViewEmulator extends Disposable {
 		const device = this._device;
 		const mobile = !!this._device?.mobile;
 		try {
-			await this.browser.debugger.sendCommandRaw('Emulation.setTouchEmulationEnabled', { enabled: mobile, maxTouchPoints: mobile ? 5 : 1 });
-			if (this.device !== device) { return; } // Bail if device changed while we were awaiting
+			await this.browser.debugger.sendCommandRaw(
+				"Emulation.setTouchEmulationEnabled",
+				{ enabled: mobile, maxTouchPoints: mobile ? 5 : 1 },
+			);
+			if (this.device !== device) {
+				return;
+			} // Bail if device changed while we were awaiting
 
-			await this.browser.debugger.sendCommandRaw('Emulation.setEmulatedMedia', { features: this._device ? [{ name: 'pointer', value: mobile ? 'coarse' : 'fine' }] : [] });
-			if (this.device !== device) { return; } // Bail if device changed while we were awaiting
+			await this.browser.debugger.sendCommandRaw("Emulation.setEmulatedMedia", {
+				features: this._device
+					? [{ name: "pointer", value: mobile ? "coarse" : "fine" }]
+					: [],
+			});
+			if (this.device !== device) {
+				return;
+			} // Bail if device changed while we were awaiting
 
-			await this.browser.debugger.sendCommandRaw('Emulation.setEmitTouchEventsForMouse', { enabled: mobile });
+			await this.browser.debugger.sendCommandRaw(
+				"Emulation.setEmitTouchEventsForMouse",
+				{ enabled: mobile },
+			);
 		} catch (err) {
-			this.logService.error('[BrowserViewEmulator] _applyTouchAndMedia failed', err);
+			this.logService.error(
+				"[BrowserViewEmulator] _applyTouchAndMedia failed",
+				err,
+			);
 		}
 	}
 
@@ -158,41 +217,63 @@ export class BrowserViewEmulator extends Disposable {
 	 * falls through to raw CDP. Only the root session is intercepted — worker
 	 * and iframe sub-sessions get pass-through behavior.
 	 */
-	private _intercept(method: string, params: unknown, session: ICDPConnection | undefined): Promise<unknown> | undefined {
+	private _intercept(
+		method: string,
+		params: unknown,
+		session: ICDPConnection | undefined,
+	): Promise<unknown> | undefined {
 		if (session && session.targetId !== this.browser.debugger.targetId) {
 			return undefined;
 		}
 
 		switch (method) {
-			case 'Emulation.setDeviceMetricsOverride': {
-				const p = (params ?? {}) as { width?: number; height?: number; mobile?: boolean; deviceScaleFactor?: number };
+			case "Emulation.setDeviceMetricsOverride": {
+				const p = (params ?? {}) as {
+					width?: number;
+					height?: number;
+					mobile?: boolean;
+					deviceScaleFactor?: number;
+				};
 				const next: IBrowserDeviceProfile = {
 					...this._device,
 					// CDP uses 0 to disable the corresponding override.
 					width: p.width || undefined,
 					height: p.height || undefined,
 					mobile: p.mobile ?? this._device?.mobile,
-					deviceScaleFactor: p.deviceScaleFactor ?? this._device?.deviceScaleFactor,
+					deviceScaleFactor:
+						p.deviceScaleFactor ?? this._device?.deviceScaleFactor,
 				};
 				return this.setDevice(next).then(() => ({}));
 			}
-			case 'Emulation.clearDeviceMetricsOverride': {
+			case "Emulation.clearDeviceMetricsOverride": {
 				if (!this._device) {
 					return Promise.resolve({});
 				}
-				const { width, height, mobile, deviceScaleFactor, ...rest } = this._device;
-				const hasRest = Object.values(rest).some(v => v !== undefined);
+				const { width, height, mobile, deviceScaleFactor, ...rest } =
+					this._device;
+				const hasRest = Object.values(rest).some((v) => v !== undefined);
 				return this.setDevice(hasRest ? rest : undefined).then(() => ({}));
 			}
-			case 'Emulation.setUserAgentOverride': {
-				const p = (params ?? {}) as { userAgent?: string; acceptLanguage?: string; platform?: string; userAgentMetadata?: unknown };
+			case "Emulation.setUserAgentOverride": {
+				const p = (params ?? {}) as {
+					userAgent?: string;
+					acceptLanguage?: string;
+					platform?: string;
+					userAgentMetadata?: unknown;
+				};
 				// Only fold the bare-string case; richer client-hint params would
 				// not round-trip through our model, so let them go raw.
-				if (p.acceptLanguage !== undefined || p.platform !== undefined || p.userAgentMetadata !== undefined) {
+				if (
+					p.acceptLanguage !== undefined ||
+					p.platform !== undefined ||
+					p.userAgentMetadata !== undefined
+				) {
 					return undefined;
 				}
 				const ua = p.userAgent || undefined;
-				return this.setDevice({ ...this._device, userAgent: ua }).then(() => ({}));
+				return this.setDevice({ ...this._device, userAgent: ua }).then(
+					() => ({}),
+				);
 			}
 			default:
 				return undefined;

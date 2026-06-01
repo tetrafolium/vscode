@@ -6,14 +6,10 @@
 import type { Language, Query, QueryMatch, SyntaxNode } from 'web-tree-sitter';
 import { pushMany } from '../../../util/vs/base/common/arrays';
 
-
 class LanguageQueryCache {
-
 	private readonly map = new Map<string, Query>();
 
-	constructor(
-		private readonly language: Language
-	) { }
+	constructor(private readonly language: Language) {}
 
 	getQuery(query: string): Query {
 		if (!this.map.has(query)) {
@@ -24,7 +20,6 @@ class LanguageQueryCache {
 }
 
 class QueryCache {
-
 	public static INSTANCE = new QueryCache();
 
 	private readonly map = new Map<Language, LanguageQueryCache>();
@@ -40,7 +35,10 @@ class QueryCache {
 export function runQueries(queries: string[], root: SyntaxNode): QueryMatch[] {
 	const matches: QueryMatch[] = [];
 	for (const query of queries) {
-		const compiledQuery = QueryCache.INSTANCE.getQuery(root.tree.getLanguage(), query);
+		const compiledQuery = QueryCache.INSTANCE.getQuery(
+			root.tree.getLanguage(),
+			query,
+		);
 		const queryMatches = compiledQuery.matches(root);
 		pushMany(matches, queryMatches);
 	}

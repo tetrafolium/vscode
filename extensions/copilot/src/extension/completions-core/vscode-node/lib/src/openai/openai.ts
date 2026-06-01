@@ -57,9 +57,15 @@ export function convertToAPIChoice(
 	choiceIndex: number,
 	requestId: RequestId,
 	blockFinished: boolean,
-	telemetryData: TelemetryWithExp
+	telemetryData: TelemetryWithExp,
 ): APIChoice {
-	logEngineCompletion(accessor, completionText, jsonData, requestId, choiceIndex);
+	logEngineCompletion(
+		accessor,
+		completionText,
+		jsonData,
+		requestId,
+		choiceIndex,
+	);
 
 	// NOTE: It's possible that the completion text we care about is not exactly jsonData.text but a prefix,
 	// so we pass it down directly.
@@ -67,7 +73,10 @@ export function convertToAPIChoice(
 		// NOTE: This does not contain stop tokens necessarily
 		completionText: completionText,
 		meanLogProb: calculateMeanLogProb(accessor, jsonData),
-		meanAlternativeLogProb: calculateMeanAlternativeLogProb(accessor, jsonData),
+		meanAlternativeLogProb: calculateMeanAlternativeLogProb(
+			accessor,
+			jsonData,
+		),
 		choiceIndex: choiceIndex,
 		requestId: requestId,
 		blockFinished: blockFinished,
@@ -81,7 +90,10 @@ export function convertToAPIChoice(
 }
 
 // Helper functions
-function calculateMeanLogProb(accessor: ServicesAccessor, jsonData: APIJsonData): number | undefined {
+function calculateMeanLogProb(
+	accessor: ServicesAccessor,
+	jsonData: APIJsonData,
+): number | undefined {
 	if (!jsonData?.logprobs?.token_logprobs) {
 		return undefined;
 	}
@@ -94,7 +106,11 @@ function calculateMeanLogProb(accessor: ServicesAccessor, jsonData: APIJsonData)
 		let iterLimit = 50;
 
 		// First token is always null and last token can have multiple options if it hit a stop
-		for (let i = 0; i < jsonData.logprobs.token_logprobs.length - 1 && iterLimit > 0; i++, iterLimit--) {
+		for (
+			let i = 0;
+			i < jsonData.logprobs.token_logprobs.length - 1 && iterLimit > 0;
+			i++, iterLimit--
+		) {
 			logProbSum += jsonData.logprobs.token_logprobs[i];
 			numTokens += 1;
 		}
@@ -109,7 +125,10 @@ function calculateMeanLogProb(accessor: ServicesAccessor, jsonData: APIJsonData)
 	}
 }
 
-function calculateMeanAlternativeLogProb(accessor: ServicesAccessor, jsonData: APIJsonData): number | undefined {
+function calculateMeanAlternativeLogProb(
+	accessor: ServicesAccessor,
+	jsonData: APIJsonData,
+): number | undefined {
 	if (!jsonData?.logprobs?.top_logprobs) {
 		return undefined;
 	}
@@ -121,7 +140,11 @@ function calculateMeanAlternativeLogProb(accessor: ServicesAccessor, jsonData: A
 		// Limit to first 50 logprobs, avoids up-ranking longer solutions
 		let iterLimit = 50;
 
-		for (let i = 0; i < jsonData.logprobs.token_logprobs.length - 1 && iterLimit > 0; i++, iterLimit--) {
+		for (
+			let i = 0;
+			i < jsonData.logprobs.token_logprobs.length - 1 && iterLimit > 0;
+			i++, iterLimit--
+		) {
 			// copy the options object to avoid mutating the original
 			const options = { ...jsonData.logprobs.top_logprobs[i] };
 			delete options[jsonData.logprobs.tokens[i]];
@@ -141,7 +164,10 @@ function calculateMeanAlternativeLogProb(accessor: ServicesAccessor, jsonData: A
 
 // Returns a temperature in range 0.0-1.0, using either a config setting,
 // or the following ranges: 1=0.0, <10=0.2, <20=0.4, >=20=0.8
-export function getTemperatureForSamples(runtime: ICompletionsRuntimeModeService, numShots: number): number {
+export function getTemperatureForSamples(
+	runtime: ICompletionsRuntimeModeService,
+	numShots: number,
+): number {
 	if (runtime.isRunningInTest()) {
 		return 0.0;
 	}

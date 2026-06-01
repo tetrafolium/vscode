@@ -3,15 +3,27 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter } from '../../../../base/common/event.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { IDataChannelService, CoreDataChannel, IDataChannelEvent } from '../../../../platform/dataChannel/common/dataChannel.js';
-import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
+import { Emitter } from "../../../../base/common/event.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import {
+	IDataChannelService,
+	CoreDataChannel,
+	IDataChannelEvent,
+} from "../../../../platform/dataChannel/common/dataChannel.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../platform/instantiation/common/extensions.js";
 
-export class DataChannelService extends Disposable implements IDataChannelService {
+export class DataChannelService
+	extends Disposable
+	implements IDataChannelService
+{
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidSendData = this._register(new Emitter<IDataChannelEvent>());
+	private readonly _onDidSendData = this._register(
+		new Emitter<IDataChannelEvent>(),
+	);
 	readonly onDidSendData = this._onDidSendData.event;
 
 	constructor() {
@@ -26,15 +38,19 @@ export class DataChannelService extends Disposable implements IDataChannelServic
 class CoreDataChannelImpl<T> implements CoreDataChannel<T> {
 	constructor(
 		private readonly channelId: string,
-		private readonly _onDidSendData: Emitter<IDataChannelEvent>
-	) { }
+		private readonly _onDidSendData: Emitter<IDataChannelEvent>,
+	) {}
 
 	sendData(data: T): void {
 		this._onDidSendData.fire({
 			channelId: this.channelId,
-			data
+			data,
 		});
 	}
 }
 
-registerSingleton(IDataChannelService, DataChannelService, InstantiationType.Delayed);
+registerSingleton(
+	IDataChannelService,
+	DataChannelService,
+	InstantiationType.Delayed,
+);

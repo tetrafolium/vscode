@@ -18,7 +18,9 @@ export interface IProxyModelsService {
 	readonly instantApplyModels: WireTypes.Model.t[] | undefined;
 }
 
-export const IProxyModelsService = createServiceIdentifier<IProxyModelsService>('IProxyModelsService');
+export const IProxyModelsService = createServiceIdentifier<IProxyModelsService>(
+	'IProxyModelsService',
+);
 
 export class NullProxyModelsService implements IProxyModelsService {
 	readonly _serviceBrand: undefined;

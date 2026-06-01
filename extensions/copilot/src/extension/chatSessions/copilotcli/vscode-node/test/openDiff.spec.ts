@@ -14,12 +14,17 @@ vi.mock('fs/promises', () => ({
 vi.mock('vscode', () => ({
 	Uri: {
 		file: (path: string) => ({ fsPath: path, scheme: 'file' }),
-		from: (components: { scheme: string; path: string; query: string }) => ({
+		from: (components: {
+			scheme: string;
+			path: string;
+			query: string;
+		}) => ({
 			fsPath: components.path,
 			scheme: components.scheme,
 			path: components.path,
 			query: components.query,
-			toString: () => `${components.scheme}:${components.path}?${components.query}`,
+			toString: () =>
+				`${components.scheme}:${components.path}?${components.query}`,
 		}),
 	},
 	window: {
@@ -27,15 +32,18 @@ vi.mock('vscode', () => ({
 			activeTabGroup: { activeTab: null },
 			all: [],
 			close: vi.fn(),
-			onDidChangeTabGroups: () => ({ dispose: () => { } }),
-			onDidChangeTabs: vi.fn(() => ({ dispose: () => { } })),
+			onDidChangeTabGroups: () => ({ dispose: () => {} }),
+			onDidChangeTabs: vi.fn(() => ({ dispose: () => {} })),
 		},
 	},
 	commands: {
 		executeCommand: vi.fn().mockResolvedValue(undefined),
 	},
 	TabInputTextDiff: class TabInputTextDiff {
-		constructor(public original: unknown, public modified: unknown) { }
+		constructor(
+			public original: unknown,
+			public modified: unknown,
+		) {}
 	},
 }));
 
@@ -64,33 +72,49 @@ describe('openDiff tool', () => {
 		contentProvider = new ReadonlyContentProvider();
 		server = new MockMcpServer();
 		vi.mocked(fsPromises.readFile).mockResolvedValue('original content');
-		registerOpenDiffTool(server as unknown as import('@modelcontextprotocol/sdk/server/mcp.js').McpServer, logger, diffState, contentProvider, 'test-session');
+		registerOpenDiffTool(
+			server as unknown as import('@modelcontextprotocol/sdk/server/mcp.js').McpServer,
+			logger,
+			diffState,
+			contentProvider,
+			'test-session',
+		);
 	});
 
 	/** Simulate accepting a diff after it's registered */
 	function simulateAcceptOnRegister(tabName: string) {
-		vi.mocked(vscode.commands.executeCommand).mockImplementation(async () => {
-			setTimeout(() => {
-				const diff = diffState.getByTabName(tabName);
-				if (diff) {
-					diff.cleanup();
-					diff.resolve({ status: 'SAVED', trigger: 'accepted_via_button' });
-				}
-			}, 10);
-		});
+		vi.mocked(vscode.commands.executeCommand).mockImplementation(
+			async () => {
+				setTimeout(() => {
+					const diff = diffState.getByTabName(tabName);
+					if (diff) {
+						diff.cleanup();
+						diff.resolve({
+							status: 'SAVED',
+							trigger: 'accepted_via_button',
+						});
+					}
+				}, 10);
+			},
+		);
 	}
 
 	/** Simulate rejecting a diff after it's registered */
 	function simulateRejectOnRegister(tabName: string) {
-		vi.mocked(vscode.commands.executeCommand).mockImplementation(async () => {
-			setTimeout(() => {
-				const diff = diffState.getByTabName(tabName);
-				if (diff) {
-					diff.cleanup();
-					diff.resolve({ status: 'REJECTED', trigger: 'rejected_via_button' });
-				}
-			}, 10);
-		});
+		vi.mocked(vscode.commands.executeCommand).mockImplementation(
+			async () => {
+				setTimeout(() => {
+					const diff = diffState.getByTabName(tabName);
+					if (diff) {
+						diff.cleanup();
+						diff.resolve({
+							status: 'REJECTED',
+							trigger: 'rejected_via_button',
+						});
+					}
+				}, 10);
+			},
+		);
 	}
 
 	it('should register the open_diff tool', () => {
@@ -101,11 +125,13 @@ describe('openDiff tool', () => {
 		simulateAcceptOnRegister('Test Diff');
 
 		const handler = server.getToolHandler('open_diff')!;
-		const result = parseToolResult<OpenDiffResult>(await handler({
-			original_file_path: '/test/file.ts',
-			new_file_contents: 'new content',
-			tab_name: 'Test Diff',
-		}));
+		const result = parseToolResult<OpenDiffResult>(
+			await handler({
+				original_file_path: '/test/file.ts',
+				new_file_contents: 'new content',
+				tab_name: 'Test Diff',
+			}),
+		);
 
 		expect(result.success).toBe(true);
 		expect(result.result).toBe('SAVED');
@@ -117,11 +143,13 @@ describe('openDiff tool', () => {
 		simulateRejectOnRegister('Reject Diff');
 
 		const handler = server.getToolHandler('open_diff')!;
-		const result = parseToolResult<OpenDiffResult>(await handler({
-			original_file_path: '/test/file.ts',
-			new_file_contents: 'new content',
-			tab_name: 'Reject Diff',
-		}));
+		const result = parseToolResult<OpenDiffResult>(
+			await handler({
+				original_file_path: '/test/file.ts',
+				new_file_contents: 'new content',
+				tab_name: 'Reject Diff',
+			}),
+		);
 
 		expect(result.success).toBe(true);
 		expect(result.result).toBe('REJECTED');
@@ -135,18 +163,22 @@ describe('openDiff tool', () => {
 		simulateAcceptOnRegister('New File');
 
 		const handler = server.getToolHandler('open_diff')!;
-		const result = parseToolResult<OpenDiffResult>(await handler({
-			original_file_path: '/new/file.ts',
-			new_file_contents: 'brand new content',
-			tab_name: 'New File',
-		}));
+		const result = parseToolResult<OpenDiffResult>(
+			await handler({
+				original_file_path: '/new/file.ts',
+				new_file_contents: 'brand new content',
+				tab_name: 'New File',
+			}),
+		);
 
 		expect(result.success).toBe(true);
 		expect(result.result).toBe('SAVED');
 	});
 
 	it('should return error for non-ENOENT file read errors', async () => {
-		const permError = new Error('Permission denied') as NodeJS.ErrnoException;
+		const permError = new Error(
+			'Permission denied',
+		) as NodeJS.ErrnoException;
 		permError.code = 'EACCES';
 		vi.mocked(fsPromises.readFile).mockRejectedValue(permError);
 
@@ -156,7 +188,10 @@ describe('openDiff tool', () => {
 			new_file_contents: 'new content',
 			tab_name: 'Error Diff',
 		});
-		const typed = result as { isError: boolean; content: [{ text: string }] };
+		const typed = result as {
+			isError: boolean;
+			content: [{ text: string }];
+		};
 
 		expect(typed.isError).toBe(true);
 		expect(typed.content[0].text).toContain('Failed to open diff');
@@ -179,16 +214,21 @@ describe('openDiff tool', () => {
 
 	it('should register diff in diff state', async () => {
 		let diffRegistered = false;
-		vi.mocked(vscode.commands.executeCommand).mockImplementation(async () => {
-			setTimeout(() => {
-				const diff = diffState.getByTabName('Register Test');
-				diffRegistered = !!diff;
-				if (diff) {
-					diff.cleanup();
-					diff.resolve({ status: 'SAVED', trigger: 'accepted_via_button' });
-				}
-			}, 10);
-		});
+		vi.mocked(vscode.commands.executeCommand).mockImplementation(
+			async () => {
+				setTimeout(() => {
+					const diff = diffState.getByTabName('Register Test');
+					diffRegistered = !!diff;
+					if (diff) {
+						diff.cleanup();
+						diff.resolve({
+							status: 'SAVED',
+							trigger: 'accepted_via_button',
+						});
+					}
+				}, 10);
+			},
+		);
 
 		const handler = server.getToolHandler('open_diff')!;
 		await handler({

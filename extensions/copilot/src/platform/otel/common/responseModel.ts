@@ -18,7 +18,10 @@
  * (e.g. `gpt-5.4-mini` → `gpt-5.4-mini-2026-03-17`) or refers to a
  * genuinely different model.
  */
-export function normalizeResponseModel(requestModel: string | undefined, responseModel: string | undefined): string | undefined {
+export function normalizeResponseModel(
+	requestModel: string | undefined,
+	responseModel: string | undefined,
+): string | undefined {
 	if (!responseModel) {
 		return undefined;
 	}

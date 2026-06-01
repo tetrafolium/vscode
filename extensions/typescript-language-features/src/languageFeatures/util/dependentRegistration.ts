@@ -3,11 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { API } from '../../tsServer/api';
-import { ClientCapability, ITypeScriptServiceClient } from '../../typescriptService';
-import { hasModifiedUnifiedConfig, readUnifiedConfig, ReadUnifiedConfigOptions } from '../../utils/configuration';
-import { Disposable } from '../../utils/dispose';
+import * as vscode from "vscode";
+import { API } from "../../tsServer/api";
+import {
+	ClientCapability,
+	ITypeScriptServiceClient,
+} from "../../typescriptService";
+import {
+	hasModifiedUnifiedConfig,
+	readUnifiedConfig,
+	ReadUnifiedConfigOptions,
+} from "../../utils/configuration";
+import { Disposable } from "../../utils/dispose";
 
 export class Condition extends Disposable {
 	private _value: boolean;
@@ -28,9 +35,13 @@ export class Condition extends Disposable {
 		});
 	}
 
-	public get value(): boolean { return this._value; }
+	public get value(): boolean {
+		return this._value;
+	}
 
-	private readonly _onDidChange = this._register(new vscode.EventEmitter<void>());
+	private readonly _onDidChange = this._register(
+		new vscode.EventEmitter<void>(),
+	);
 	public readonly onDidChange = this._onDidChange.event;
 }
 
@@ -43,7 +54,7 @@ class ConditionalRegistration {
 	public constructor(
 		private readonly conditions: readonly Condition[],
 		private readonly doRegister: () => vscode.Disposable,
-		private readonly elseDoRegister?: () => vscode.Disposable
+		private readonly elseDoRegister?: () => vscode.Disposable,
 	) {
 		for (const condition of conditions) {
 			condition.onDidChange(() => this.update());
@@ -57,7 +68,7 @@ class ConditionalRegistration {
 	}
 
 	private update() {
-		const enabled = this.conditions.every(condition => condition.value);
+		const enabled = this.conditions.every((condition) => condition.value);
 		if (enabled) {
 			if (!this.state?.enabled) {
 				this.state?.registration?.dispose();
@@ -75,7 +86,7 @@ class ConditionalRegistration {
 export function conditionalRegistration(
 	conditions: readonly Condition[],
 	doRegister: () => vscode.Disposable,
-	elseDoRegister?: () => vscode.Disposable
+	elseDoRegister?: () => vscode.Disposable,
 ): vscode.Disposable {
 	return new ConditionalRegistration(conditions, doRegister, elseDoRegister);
 }
@@ -86,7 +97,7 @@ export function requireMinVersion(
 ) {
 	return new Condition(
 		() => client.apiVersion.gte(minVersion),
-		client.onTsServerStarted
+		client.onTsServerStarted,
 	);
 }
 
@@ -101,20 +112,17 @@ export function requireHasModifiedUnifiedConfig(
 ) {
 	return new Condition(
 		() => hasModifiedUnifiedConfig(configValue, { fallbackSection }),
-		vscode.workspace.onDidChangeConfiguration
+		vscode.workspace.onDidChangeConfiguration,
 	);
 }
 
 export function requireGlobalUnifiedConfig(
 	configValue: string,
-	options: ReadUnifiedConfigOptions
+	options: ReadUnifiedConfigOptions,
 ) {
-	return new Condition(
-		() => {
-			return !!readUnifiedConfig(configValue, undefined, options);
-		},
-		vscode.workspace.onDidChangeConfiguration
-	);
+	return new Condition(() => {
+		return !!readUnifiedConfig(configValue, undefined, options);
+	}, vscode.workspace.onDidChangeConfiguration);
 }
 
 export function requireSomeCapability(
@@ -122,19 +130,16 @@ export function requireSomeCapability(
 	...capabilities: readonly ClientCapability[]
 ) {
 	return new Condition(
-		() => capabilities.some(requiredCapability => client.capabilities.has(requiredCapability)),
-		client.onDidChangeCapabilities
+		() =>
+			capabilities.some((requiredCapability) =>
+				client.capabilities.has(requiredCapability),
+			),
+		client.onDidChangeCapabilities,
 	);
 }
 
-export function requireHasVsCodeExtension(
-	extensionId: string
-) {
-	return new Condition(
-		() => {
-			return !!vscode.extensions.getExtension(extensionId);
-		},
-		vscode.extensions.onDidChange
-	);
+export function requireHasVsCodeExtension(extensionId: string) {
+	return new Condition(() => {
+		return !!vscode.extensions.getExtension(extensionId);
+	}, vscode.extensions.onDidChange);
 }
-

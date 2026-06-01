@@ -3,47 +3,77 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/browser.css';
-import { localize, localize2 } from '../../../../nls.js';
-import { $, Dimension, IDomPosition } from '../../../../base/browser/dom.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { ContextKeyExpr, IContextKey, RawContextKey, IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
-import { IInstantiationService, IConstructorSignature, BrandedService } from '../../../../platform/instantiation/common/instantiation.js';
-import { ServiceCollection } from '../../../../platform/instantiation/common/serviceCollection.js';
-import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
-import { IEditorOpenContext } from '../../../common/editor.js';
-import { BrowserEditorInput } from '../common/browserEditorInput.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IQuickInputButton } from '../../../../platform/quickinput/common/quickInput.js';
-import { IBrowserViewModel } from '../../browserView/common/browserView.js';
-import { IThemeService } from '../../../../platform/theme/common/themeService.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { IEditorGroup } from '../../../services/editor/common/editorGroupsService.js';
-import { IEditorOptions } from '../../../../platform/editor/common/editor.js';
-import { getZoomFactor, onDidChangeZoomLevel } from '../../../../base/browser/browser.js';
-import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { ILayoutService } from '../../../../platform/layout/browser/layoutService.js';
+import "./media/browser.css";
+import { localize, localize2 } from "../../../../nls.js";
+import { $, Dimension, IDomPosition } from "../../../../base/browser/dom.js";
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import {
+	ContextKeyExpr,
+	IContextKey,
+	RawContextKey,
+	IContextKeyService,
+} from "../../../../platform/contextkey/common/contextkey.js";
+import {
+	IInstantiationService,
+	IConstructorSignature,
+	BrandedService,
+} from "../../../../platform/instantiation/common/instantiation.js";
+import { ServiceCollection } from "../../../../platform/instantiation/common/serviceCollection.js";
+import { EditorPane } from "../../../browser/parts/editor/editorPane.js";
+import { IEditorOpenContext } from "../../../common/editor.js";
+import { BrowserEditorInput } from "../common/browserEditorInput.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IQuickInputButton } from "../../../../platform/quickinput/common/quickInput.js";
+import { IBrowserViewModel } from "../../browserView/common/browserView.js";
+import { IThemeService } from "../../../../platform/theme/common/themeService.js";
+import { ITelemetryService } from "../../../../platform/telemetry/common/telemetry.js";
+import { IStorageService } from "../../../../platform/storage/common/storage.js";
+import { IEditorGroup } from "../../../services/editor/common/editorGroupsService.js";
+import { IEditorOptions } from "../../../../platform/editor/common/editor.js";
+import {
+	getZoomFactor,
+	onDidChangeZoomLevel,
+} from "../../../../base/browser/browser.js";
+import {
+	Disposable,
+	DisposableStore,
+} from "../../../../base/common/lifecycle.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { ILayoutService } from "../../../../platform/layout/browser/layoutService.js";
 
-export const CONTEXT_BROWSER_FOCUSED = new RawContextKey<boolean>('browserFocused', true, localize('browser.editorFocused', "Whether the browser editor is focused"));
-export const CONTEXT_BROWSER_HAS_URL = new RawContextKey<boolean>('browserHasUrl', false, localize('browser.hasUrl', "Whether the browser has a URL loaded"));
-export const CONTEXT_BROWSER_HAS_ERROR = new RawContextKey<boolean>('browserHasError', false, localize('browser.hasError', "Whether the browser has a load error"));
+export const CONTEXT_BROWSER_FOCUSED = new RawContextKey<boolean>(
+	"browserFocused",
+	true,
+	localize("browser.editorFocused", "Whether the browser editor is focused"),
+);
+export const CONTEXT_BROWSER_HAS_URL = new RawContextKey<boolean>(
+	"browserHasUrl",
+	false,
+	localize("browser.hasUrl", "Whether the browser has a URL loaded"),
+);
+export const CONTEXT_BROWSER_HAS_ERROR = new RawContextKey<boolean>(
+	"browserHasError",
+	false,
+	localize("browser.hasError", "Whether the browser has a load error"),
+);
 
 /** Context key expression matching when the browser editor is the active editor. */
-export const BROWSER_EDITOR_ACTIVE = ContextKeyExpr.equals('activeEditor', BrowserEditorInput.EDITOR_ID);
+export const BROWSER_EDITOR_ACTIVE = ContextKeyExpr.equals(
+	"activeEditor",
+	BrowserEditorInput.EDITOR_ID,
+);
 
 /** Localized "Browser" category for command palette grouping. */
-export const BrowserActionCategory = localize2('browserCategory', "Browser");
+export const BrowserActionCategory = localize2("browserCategory", "Browser");
 
 /** Menu groups used by browser-editor actions. */
 export enum BrowserActionGroup {
-	Tabs = '1_tabs',
-	Zoom = '2_zoom',
-	Developer = '3_developer',
-	Page = '4_page',
-	Settings = '5_settings'
+	Tabs = "1_tabs",
+	Zoom = "2_zoom",
+	Developer = "3_developer",
+	Page = "4_page",
+	Settings = "5_settings",
 }
 
 /**
@@ -51,7 +81,6 @@ export enum BrowserActionGroup {
  * before it gets overridden by the workbench.
  */
 const originalHtmlElementFocus = HTMLElement.prototype.focus;
-
 
 /**
  * Base class for browser editor services that track the model lifecycle.
@@ -65,25 +94,31 @@ export abstract class BrowserEditorContribution extends Disposable {
 
 	constructor(protected readonly editor: BrowserEditor) {
 		super();
-		this._register(editor.onDidChangeModel(({ model, isNew }) => {
-			this._modelStore.clear();
-			if (model) {
-				this.onModelAttached(model, this._modelStore, isNew);
-			} else {
-				this.onModelDetached();
-			}
-		}));
+		this._register(
+			editor.onDidChangeModel(({ model, isNew }) => {
+				this._modelStore.clear();
+				if (model) {
+					this.onModelAttached(model, this._modelStore, isNew);
+				} else {
+					this.onModelDetached();
+				}
+			}),
+		);
 	}
 
 	/**
 	 * Called whenever the editor model changes to update state.
 	 */
-	protected onModelAttached(_model: IBrowserViewModel, _store: DisposableStore, _isNew: boolean): void { }
+	protected onModelAttached(
+		_model: IBrowserViewModel,
+		_store: DisposableStore,
+		_isNew: boolean,
+	): void {}
 
 	/**
 	 * Called when the model is cleared to reset state.
 	 */
-	onModelDetached(): void { }
+	onModelDetached(): void {}
 
 	/**
 	 * Called when an input is attached but no model exists yet. Use to render
@@ -91,14 +126,16 @@ export abstract class BrowserEditorContribution extends Disposable {
 	 * while the model resolves. Only fires when the input has no preloaded model;
 	 * after the model resolves, {@link onModelAttached} takes over.
 	 */
-	prerenderInput(_input: BrowserEditorInput): void { }
+	prerenderInput(_input: BrowserEditorInput): void {}
 
 	/**
 	 * Widgets contributed by this feature. Each widget declares its target
 	 * {@link BrowserWidgetLocation}; the editor groups widgets by location
 	 * and stacks them in {@link IBrowserEditorWidget.order} order.
 	 */
-	get widgets(): readonly IBrowserEditorWidget[] { return []; }
+	get widgets(): readonly IBrowserEditorWidget[] {
+		return [];
+	}
 
 	/**
 	 * Optional renderers for the URL displayed in the navbar. Each renderer is
@@ -107,7 +144,9 @@ export abstract class BrowserEditorContribution extends Disposable {
 	 * decorate URLs for special conditions (e.g. red strikethrough on the
 	 * `https:` prefix when a certificate error is active).
 	 */
-	get urlRenderers(): readonly IBrowserUrlRenderer[] { return []; }
+	get urlRenderers(): readonly IBrowserUrlRenderer[] {
+		return [];
+	}
 
 	/**
 	 * Optional URL bar suggestion providers (open tabs, history, favorites,
@@ -115,19 +154,23 @@ export abstract class BrowserEditorContribution extends Disposable {
 	 * when the URL picker opens or its value changes, and renders the merged
 	 * suggestions below the built-in "Go to" entry.
 	 */
-	get urlSuggestionProviders(): readonly IBrowserUrlSuggestionProvider[] { return []; }
+	get urlSuggestionProviders(): readonly IBrowserUrlSuggestionProvider[] {
+		return [];
+	}
 
 	/**
 	 * Optional action providers for buttons rendered in the URL picker chrome.
 	 * The navbar collects buttons from each provider when the picker opens
 	 * and refreshes them when a provider fires {@link IBrowserUrlPickerActionProvider.onDidChange}.
 	 */
-	get urlPickerActionProviders(): readonly IBrowserUrlPickerActionProvider[] { return []; }
+	get urlPickerActionProviders(): readonly IBrowserUrlPickerActionProvider[] {
+		return [];
+	}
 
 	/**
 	 * Called when the editor is laid out with a new dimension.
 	 */
-	onPaneResized(_width: number): void { }
+	onPaneResized(_width: number): void {}
 
 	/**
 	 * Called after the browser container has been laid out and its bounds
@@ -135,13 +178,13 @@ export abstract class BrowserEditorContribution extends Disposable {
 	 * changes (e.g. recompute overlay overlap), unlike {@link onPaneResized} which
 	 * only fires on pane dimension changes.
 	 */
-	afterContainerLayout(): void { }
+	afterContainerLayout(): void {}
 
 	/**
 	 * Called when the editor pane's visibility changes (e.g. tab switched).
 	 * Contributions that drive page rendering use this to pause/resume work.
 	 */
-	onPaneVisibilityChanged(_visible: boolean): void { }
+	onPaneVisibilityChanged(_visible: boolean): void {}
 
 	/**
 	 * Called when the editor wants focus. Contributions are tried in
@@ -149,7 +192,9 @@ export abstract class BrowserEditorContribution extends Disposable {
 	 * renderer-providing contribution typically handles this when a page is
 	 * loaded; the navbar handles it as a fallback by focusing the URL input.
 	 */
-	tryFocus(): boolean { return false; }
+	tryFocus(): boolean {
+		return false;
+	}
 
 	/**
 	 * Called once after the editor's browser container DOM has been created
@@ -157,7 +202,7 @@ export abstract class BrowserEditorContribution extends Disposable {
 	 * the editor's DOM to exist or needs to read sibling contributions (e.g.
 	 * the navbar pulls pre/post-URL widgets from other features here).
 	 */
-	onContainerCreated(_container: HTMLElement): void { }
+	onContainerCreated(_container: HTMLElement): void {}
 
 	/**
 	 * Optional contributions to how the browser container is sized and
@@ -169,7 +214,9 @@ export abstract class BrowserEditorContribution extends Disposable {
 	 * previous result so contributions can stack (e.g. device emulation sizes
 	 * and centers the viewport, then pixel-snap aligns it).
 	 */
-	beforeContainerLayout(): IContainerLayoutOverride | undefined { return undefined; }
+	beforeContainerLayout(): IContainerLayoutOverride | undefined {
+		return undefined;
+	}
 }
 
 /** Customization returned by {@link BrowserEditorContribution.beforeContainerLayout}. */
@@ -198,7 +245,10 @@ export interface IContainerLayoutOverride {
 	 * physical pixels) and convert back to local coords. Returning
 	 * `undefined` leaves the current layout unchanged.
 	 */
-	readonly compute?: (current: IContainerLayout, pane: IContainerLayoutPane) => IContainerLayout | undefined;
+	readonly compute?: (
+		current: IContainerLayout,
+		pane: IContainerLayoutPane,
+	) => IContainerLayout | undefined;
 	/**
 	 * Priority for {@link compute}. Lower numbers run earlier so later
 	 * contributions can refine the result (e.g. emulation runs at priority 0
@@ -234,13 +284,13 @@ export interface IContainerLayout {
 /** Where a contributed widget mounts within the browser editor. */
 export const enum BrowserWidgetLocation {
 	/** Inside the navbar, before the URL input (e.g. site/security indicators). */
-	PreUrl = 'preUrl',
+	PreUrl = "preUrl",
 	/** Inside the navbar, after the URL input (e.g. zoom pill, share toggle). */
-	PostUrl = 'postUrl',
+	PostUrl = "postUrl",
 	/** Between the navbar and the browser container (e.g. find / emulation toolbars). */
-	Toolbar = 'toolbar',
+	Toolbar = "toolbar",
 	/** Inside the browser container (placeholder screenshot, error overlay, etc.). */
-	ContentArea = 'contentArea',
+	ContentArea = "contentArea",
 }
 
 /**
@@ -352,7 +402,10 @@ export interface IBrowserUrlSuggestionProvider {
 	 * The navbar re-requests suggestions when this fires.
 	 */
 	readonly onDidChange?: Event<void>;
-	getSuggestions(context: IBrowserUrlSuggestionContext, token: CancellationToken): Promise<readonly IBrowserUrlSuggestion[]>;
+	getSuggestions(
+		context: IBrowserUrlSuggestionContext,
+		token: CancellationToken,
+	): Promise<readonly IBrowserUrlSuggestion[]>;
 }
 
 /**
@@ -385,17 +438,36 @@ export interface IBrowserUrlPickerActionProvider {
 }
 
 export class BrowserEditor extends EditorPane {
-
 	// -- Contribution registry --------------------------------------------
 
-	private static readonly _contributions: IConstructorSignature<BrowserEditorContribution, [BrowserEditor]>[] = [];
-	static registerContribution<Services extends BrandedService[]>(ctor: { new(editor: BrowserEditor, ...services: Services): BrowserEditorContribution }): void {
-		BrowserEditor._contributions.push(ctor as IConstructorSignature<BrowserEditorContribution, [BrowserEditor]>);
+	private static readonly _contributions: IConstructorSignature<
+		BrowserEditorContribution,
+		[BrowserEditor]
+	>[] = [];
+	static registerContribution<Services extends BrandedService[]>(ctor: {
+		new (
+			editor: BrowserEditor,
+			...services: Services
+		): BrowserEditorContribution;
+	}): void {
+		BrowserEditor._contributions.push(
+			ctor as IConstructorSignature<BrowserEditorContribution, [BrowserEditor]>,
+		);
 	}
 
-	private readonly _contributionInstances = new Map<IConstructorSignature<BrowserEditorContribution, [BrowserEditor]>, BrowserEditorContribution>();
-	getContribution<T extends BrowserEditorContribution, Services extends BrandedService[]>(ctor: { new(editor: BrowserEditor, ...services: Services): T }): T | undefined {
-		return this._contributionInstances.get(ctor as IConstructorSignature<BrowserEditorContribution, [BrowserEditor]>) as T | undefined;
+	private readonly _contributionInstances = new Map<
+		IConstructorSignature<BrowserEditorContribution, [BrowserEditor]>,
+		BrowserEditorContribution
+	>();
+	getContribution<
+		T extends BrowserEditorContribution,
+		Services extends BrandedService[],
+	>(ctor: {
+		new (editor: BrowserEditor, ...services: Services): T;
+	}): T | undefined {
+		return this._contributionInstances.get(
+			ctor as IConstructorSignature<BrowserEditorContribution, [BrowserEditor]>,
+		) as T | undefined;
 	}
 
 	/** All instantiated contributions in registration order. */
@@ -406,40 +478,60 @@ export class BrowserEditor extends EditorPane {
 	// -- Model lifecycle ------------------------------------------------
 
 	private _model: IBrowserViewModel | undefined;
-	get model(): IBrowserViewModel | undefined { return this._model; }
-	private readonly _onDidChangeModel = this._register(new Emitter<{
-		model: IBrowserViewModel | undefined;
-		isNew: boolean;
-	}>());
+	get model(): IBrowserViewModel | undefined {
+		return this._model;
+	}
+	private readonly _onDidChangeModel = this._register(
+		new Emitter<{
+			model: IBrowserViewModel | undefined;
+			isNew: boolean;
+		}>(),
+	);
 	readonly onDidChangeModel = this._onDidChangeModel.event;
 
 	// -- State ----------------------------------------------------------
 
 	private _browserContainerWrapper!: HTMLElement;
 	private _browserContainer!: HTMLElement;
-	get browserContainer(): HTMLElement { return this._browserContainer; }
+	get browserContainer(): HTMLElement {
+		return this._browserContainer;
+	}
 
 	private _hasUrlContext!: IContextKey<boolean>;
 	private _hasErrorContext!: IContextKey<boolean>;
 
 	private readonly _inputDisposables = this._register(new DisposableStore());
-	private _currentPadding: { top: number; right: number; bottom: number; left: number } = { top: 0, right: 0, bottom: 0, left: 0 };
+	private _currentPadding: {
+		top: number;
+		right: number;
+		bottom: number;
+		left: number;
+	} = { top: 0, right: 0, bottom: 0, left: 0 };
 
 	constructor(
 		group: IEditorGroup,
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@ILayoutService private readonly layoutService: ILayoutService,
 	) {
-		super(BrowserEditorInput.EDITOR_ID, group, telemetryService, themeService, storageService);
+		super(
+			BrowserEditorInput.EDITOR_ID,
+			group,
+			telemetryService,
+			themeService,
+			storageService,
+		);
 	}
 
 	protected override createEditor(parent: HTMLElement): void {
 		// Create scoped context key service for this editor instance
-		const contextKeyService = this._register(this.contextKeyService.createScoped(parent));
+		const contextKeyService = this._register(
+			this.contextKeyService.createScoped(parent),
+		);
 
 		this._hasUrlContext = CONTEXT_BROWSER_HAS_URL.bindTo(contextKeyService);
 		this._hasErrorContext = CONTEXT_BROWSER_HAS_ERROR.bindTo(contextKeyService);
@@ -448,23 +540,30 @@ export class BrowserEditor extends EditorPane {
 		CONTEXT_BROWSER_FOCUSED.bindTo(contextKeyService);
 
 		// Create a scoped instantiation service so contributions get the scoped context key service
-		const scopedInstantiationService = this._register(this.instantiationService.createChild(
-			new ServiceCollection([IContextKeyService, contextKeyService])
-		));
+		const scopedInstantiationService = this._register(
+			this.instantiationService.createChild(
+				new ServiceCollection([IContextKeyService, contextKeyService]),
+			),
+		);
 
 		// Instantiate all registered contributions
 		for (const ctor of BrowserEditor._contributions) {
-			const instance = this._register(scopedInstantiationService.createInstance(ctor, this));
+			const instance = this._register(
+				scopedInstantiationService.createInstance(ctor, this),
+			);
 			this._contributionInstances.set(ctor, instance);
 		}
 
 		// Create root container
-		const root = $('.browser-root');
+		const root = $(".browser-root");
 		root.tabIndex = -1; // Click focusable (for kb shortcuts), but not in tab order
 		parent.appendChild(root);
 
 		// Collect widgets from all contributions, grouped by location.
-		const widgetsByLocation = new Map<BrowserWidgetLocation, IBrowserEditorWidget[]>();
+		const widgetsByLocation = new Map<
+			BrowserWidgetLocation,
+			IBrowserEditorWidget[]
+		>();
 		for (const contribution of this._contributionInstances.values()) {
 			for (const widget of contribution.widgets) {
 				let bucket = widgetsByLocation.get(widget.location);
@@ -478,8 +577,9 @@ export class BrowserEditor extends EditorPane {
 		for (const bucket of widgetsByLocation.values()) {
 			bucket.sort((a, b) => a.order - b.order);
 		}
-		const widgetsAt = (location: BrowserWidgetLocation): readonly IBrowserEditorWidget[] =>
-			widgetsByLocation.get(location) ?? [];
+		const widgetsAt = (
+			location: BrowserWidgetLocation,
+		): readonly IBrowserEditorWidget[] => widgetsByLocation.get(location) ?? [];
 
 		// Toolbar widgets — stacked at the top of the editor. The navbar is the
 		// first toolbar widget (order 0); find/emulation/etc follow in order.
@@ -488,12 +588,15 @@ export class BrowserEditor extends EditorPane {
 		}
 
 		// Create browser container wrapper (flex item that fills remaining space)
-		this._browserContainerWrapper = $('.browser-container-wrapper');
-		this._browserContainerWrapper.style.setProperty('--zoom-factor', String(getZoomFactor(this.window)));
+		this._browserContainerWrapper = $(".browser-container-wrapper");
+		this._browserContainerWrapper.style.setProperty(
+			"--zoom-factor",
+			String(getZoomFactor(this.window)),
+		);
 		root.appendChild(this._browserContainerWrapper);
 
 		// Create browser container (stub element for positioning)
-		this._browserContainer = $('.browser-container');
+		this._browserContainer = $(".browser-container");
 		this._browserContainer.tabIndex = 0; // make focusable
 		this._browserContainerWrapper.appendChild(this._browserContainer);
 
@@ -505,7 +608,7 @@ export class BrowserEditor extends EditorPane {
 		// Wrapper around placeholder contents for border radius clipping. Holds
 		// contribution-provided content area widgets (welcome placeholder,
 		// placeholder screenshot, overlay-pause, error overlay, ...).
-		const placeholderContents = $('.browser-placeholder-contents');
+		const placeholderContents = $(".browser-placeholder-contents");
 		this._browserContainer.appendChild(placeholderContents);
 
 		// Container widgets — stacked inside the placeholder area.
@@ -524,7 +627,12 @@ export class BrowserEditor extends EditorPane {
 		this.ensureBrowserFocus();
 	}
 
-	override async setInput(input: BrowserEditorInput, options: IEditorOptions | undefined, context: IEditorOpenContext, token: CancellationToken): Promise<void> {
+	override async setInput(
+		input: BrowserEditorInput,
+		options: IEditorOptions | undefined,
+		context: IEditorOpenContext,
+		token: CancellationToken,
+	): Promise<void> {
 		await super.setInput(input, options, context, token);
 		if (token.isCancellationRequested) {
 			return;
@@ -560,44 +668,59 @@ export class BrowserEditor extends EditorPane {
 
 		// When closing a tab, the model gets disposed before the editor input is cleared.
 		// So we make sure we don't keep a reference to the disposed model.
-		this._inputDisposables.add(this._model.onWillDispose(() => {
-			this._model = undefined;
-		}));
+		this._inputDisposables.add(
+			this._model.onWillDispose(() => {
+				this._model = undefined;
+			}),
+		);
 
-		this._inputDisposables.add(this._model.onWillNavigate(() => {
-			this.group.pinEditor(this.input); // pin editor on navigation
-			this.ensureBrowserFocus();
-		}));
-
-		this._inputDisposables.add(this._model.onDidNavigate(() => {
-			this.group.pinEditor(this.input); // pin editor on navigation
-			this._hasUrlContext.set(!!model.url);
-		}));
-
-		this._inputDisposables.add(this._model.onDidChangeLoadingState(() => {
-			this._hasErrorContext.set(!!model.error);
-		}));
-
-		this._inputDisposables.add(model.onDidChangeFocus(({ focused }) => {
-			// When the view gets focused, make sure the editor reports that it has focus,
-			// but focus is removed from the workbench.
-			if (focused) {
-				this._onDidFocus?.fire();
+		this._inputDisposables.add(
+			this._model.onWillNavigate(() => {
+				this.group.pinEditor(this.input); // pin editor on navigation
 				this.ensureBrowserFocus();
-			}
-		}));
+			}),
+		);
+
+		this._inputDisposables.add(
+			this._model.onDidNavigate(() => {
+				this.group.pinEditor(this.input); // pin editor on navigation
+				this._hasUrlContext.set(!!model.url);
+			}),
+		);
+
+		this._inputDisposables.add(
+			this._model.onDidChangeLoadingState(() => {
+				this._hasErrorContext.set(!!model.error);
+			}),
+		);
+
+		this._inputDisposables.add(
+			model.onDidChangeFocus(({ focused }) => {
+				// When the view gets focused, make sure the editor reports that it has focus,
+				// but focus is removed from the workbench.
+				if (focused) {
+					this._onDidFocus?.fire();
+					this.ensureBrowserFocus();
+				}
+			}),
+		);
 
 		// Listen for workbench zoom level changes and update browser view placeholder screenshot's zoom factor
-		this._inputDisposables.add(onDidChangeZoomLevel(targetWindowId => {
-			if (targetWindowId === this.window.vscodeWindowId) {
-				// Update CSS variable for size calculations
-				this._browserContainerWrapper.style.setProperty('--zoom-factor', String(getZoomFactor(this.window)));
-				// Re-push container bounds and emulation: zoom-factor affects
-				// both the screen-px conversion in main and the Chromium
-				// emulation scale (so the emulated viewport fills the WCV).
-				this.layoutBrowserContainer();
-			}
-		}));
+		this._inputDisposables.add(
+			onDidChangeZoomLevel((targetWindowId) => {
+				if (targetWindowId === this.window.vscodeWindowId) {
+					// Update CSS variable for size calculations
+					this._browserContainerWrapper.style.setProperty(
+						"--zoom-factor",
+						String(getZoomFactor(this.window)),
+					);
+					// Re-push container bounds and emulation: zoom-factor affects
+					// both the screen-px conversion in main and the Chromium
+					// emulation scale (so the emulated viewport fills the WCV).
+					this.layoutBrowserContainer();
+				}
+			}),
+		);
 
 		this.layout();
 	}
@@ -629,7 +752,8 @@ export class BrowserEditor extends EditorPane {
 			}
 		}
 
-		const whenContainerStylesLoaded = this.layoutService.whenContainerStylesLoaded(this.window);
+		const whenContainerStylesLoaded =
+			this.layoutService.whenContainerStylesLoaded(this.window);
 		if (whenContainerStylesLoaded) {
 			// In floating windows, we need to ensure that the
 			// container is ready for us to compute certain
@@ -672,7 +796,9 @@ export class BrowserEditor extends EditorPane {
 		const wrapperRect = this._browserContainerWrapper.getBoundingClientRect();
 		if ((wrapperRect.width === 0 || wrapperRect.height === 0) && retries > 0) {
 			// Wrapper not measured yet; retry on the next frame.
-			this.window.requestAnimationFrame(() => this.layoutBrowserContainer(retries - 1));
+			this.window.requestAnimationFrame(() =>
+				this.layoutBrowserContainer(retries - 1),
+			);
 			return;
 		}
 
@@ -680,16 +806,29 @@ export class BrowserEditor extends EditorPane {
 		// after padding. layout.top/left are local to the available area; pane
 		// info also carries the absolute screen origin so contributions can
 		// reason about pixel alignment.
-		const paneWidth = Math.max(0, wrapperRect.width - padding.left - padding.right);
-		const paneHeight = Math.max(0, wrapperRect.height - padding.top - padding.bottom);
+		const paneWidth = Math.max(
+			0,
+			wrapperRect.width - padding.left - padding.right,
+		);
+		const paneHeight = Math.max(
+			0,
+			wrapperRect.height - padding.top - padding.bottom,
+		);
 		const pane: IContainerLayoutPane = {
 			width: paneWidth,
 			height: paneHeight,
 			originX: wrapperRect.left + padding.left,
 			originY: wrapperRect.top + padding.top,
 		};
-		const sorted = overrides.slice().sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
-		let layout: IContainerLayout = { width: paneWidth, height: paneHeight, top: 0, left: 0 };
+		const sorted = overrides
+			.slice()
+			.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+		let layout: IContainerLayout = {
+			width: paneWidth,
+			height: paneHeight,
+			top: 0,
+			left: 0,
+		};
 		for (const o of sorted) {
 			const next = o.compute?.(layout, pane);
 			if (next) {
@@ -705,7 +844,10 @@ export class BrowserEditor extends EditorPane {
 		this._browserContainer.style.left = `${left}px`;
 		this._browserContainer.style.top = `${top}px`;
 
-		const cornerRadius = parseFloat(this.window.getComputedStyle(this._browserContainer).borderTopLeftRadius ?? '0');
+		const cornerRadius = parseFloat(
+			this.window.getComputedStyle(this._browserContainer)
+				.borderTopLeftRadius ?? "0",
+		);
 		void this._model.layout({
 			windowId: this.group.windowId,
 			x: wrapperRect.left + left,

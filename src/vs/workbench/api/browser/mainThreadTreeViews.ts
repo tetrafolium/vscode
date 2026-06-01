@@ -3,55 +3,128 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableMap, DisposableStore } from '../../../base/common/lifecycle.js';
-import { ExtHostContext, MainThreadTreeViewsShape, ExtHostTreeViewsShape, MainContext, CheckboxUpdate } from '../common/extHost.protocol.js';
-import { ITreeItem, ITreeView, IViewsRegistry, ITreeViewDescriptor, IRevealOptions, Extensions, ResolvableTreeItem, ITreeViewDragAndDropController, IViewBadge, NoTreeViewError, ITreeViewDataProvider } from '../../common/views.js';
-import { extHostNamedCustomer, IExtHostContext } from '../../services/extensions/common/extHostCustomers.js';
-import { distinct } from '../../../base/common/arrays.js';
-import { INotificationService } from '../../../platform/notification/common/notification.js';
-import { isUndefinedOrNull, isNumber } from '../../../base/common/types.js';
-import { Registry } from '../../../platform/registry/common/platform.js';
-import { IExtensionService } from '../../services/extensions/common/extensions.js';
-import { ILogService } from '../../../platform/log/common/log.js';
-import { CancellationToken } from '../../../base/common/cancellation.js';
-import { createStringDataTransferItem, UriList, VSDataTransfer } from '../../../base/common/dataTransfer.js';
-import { Mimes } from '../../../base/common/mime.js';
-import { URI } from '../../../base/common/uri.js';
-import { VSBuffer } from '../../../base/common/buffer.js';
-import { DataTransferFileCache } from '../common/shared/dataTransferCache.js';
-import * as typeConvert from '../common/extHostTypeConverters.js';
-import { IMarkdownString } from '../../../base/common/htmlContent.js';
-import { IViewsService } from '../../services/views/common/viewsService.js';
-import { ITelemetryService } from '../../../platform/telemetry/common/telemetry.js';
+import {
+	Disposable,
+	DisposableMap,
+	DisposableStore,
+} from "../../../base/common/lifecycle.js";
+import {
+	ExtHostContext,
+	MainThreadTreeViewsShape,
+	ExtHostTreeViewsShape,
+	MainContext,
+	CheckboxUpdate,
+} from "../common/extHost.protocol.js";
+import {
+	ITreeItem,
+	ITreeView,
+	IViewsRegistry,
+	ITreeViewDescriptor,
+	IRevealOptions,
+	Extensions,
+	ResolvableTreeItem,
+	ITreeViewDragAndDropController,
+	IViewBadge,
+	NoTreeViewError,
+	ITreeViewDataProvider,
+} from "../../common/views.js";
+import {
+	extHostNamedCustomer,
+	IExtHostContext,
+} from "../../services/extensions/common/extHostCustomers.js";
+import { distinct } from "../../../base/common/arrays.js";
+import { INotificationService } from "../../../platform/notification/common/notification.js";
+import { isUndefinedOrNull, isNumber } from "../../../base/common/types.js";
+import { Registry } from "../../../platform/registry/common/platform.js";
+import { IExtensionService } from "../../services/extensions/common/extensions.js";
+import { ILogService } from "../../../platform/log/common/log.js";
+import { CancellationToken } from "../../../base/common/cancellation.js";
+import {
+	createStringDataTransferItem,
+	UriList,
+	VSDataTransfer,
+} from "../../../base/common/dataTransfer.js";
+import { Mimes } from "../../../base/common/mime.js";
+import { URI } from "../../../base/common/uri.js";
+import { VSBuffer } from "../../../base/common/buffer.js";
+import { DataTransferFileCache } from "../common/shared/dataTransferCache.js";
+import * as typeConvert from "../common/extHostTypeConverters.js";
+import { IMarkdownString } from "../../../base/common/htmlContent.js";
+import { IViewsService } from "../../services/views/common/viewsService.js";
+import { ITelemetryService } from "../../../platform/telemetry/common/telemetry.js";
 
 @extHostNamedCustomer(MainContext.MainThreadTreeViews)
-export class MainThreadTreeViews extends Disposable implements MainThreadTreeViewsShape {
-
+export class MainThreadTreeViews
+	extends Disposable
+	implements MainThreadTreeViewsShape
+{
 	private readonly _proxy: ExtHostTreeViewsShape;
-	private readonly _dataProviders: DisposableMap<string, { dataProvider: TreeViewDataProvider; dispose: () => void }> = this._register(new DisposableMap<string, { dataProvider: TreeViewDataProvider; dispose: () => void }>());
-	private readonly _dndControllers = new Map<string, TreeViewDragAndDropController>();
+	private readonly _dataProviders: DisposableMap<
+		string,
+		{ dataProvider: TreeViewDataProvider; dispose: () => void }
+	> = this._register(
+		new DisposableMap<
+			string,
+			{ dataProvider: TreeViewDataProvider; dispose: () => void }
+		>(),
+	);
+	private readonly _dndControllers = new Map<
+		string,
+		TreeViewDragAndDropController
+	>();
 
 	constructor(
 		extHostContext: IExtHostContext,
 		@IViewsService private readonly viewsService: IViewsService,
-		@INotificationService private readonly notificationService: INotificationService,
+		@INotificationService
+		private readonly notificationService: INotificationService,
 		@IExtensionService private readonly extensionService: IExtensionService,
 		@ILogService private readonly logService: ILogService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService
+		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super();
 		this._proxy = extHostContext.getProxy(ExtHostContext.ExtHostTreeViews);
 	}
 
-	async $registerTreeViewDataProvider(treeViewId: string, options: { showCollapseAll: boolean; canSelectMany: boolean; dropMimeTypes: string[]; dragMimeTypes: string[]; hasHandleDrag: boolean; hasHandleDrop: boolean; manuallyManageCheckboxes: boolean }): Promise<void> {
-		this.logService.trace('MainThreadTreeViews#$registerTreeViewDataProvider', treeViewId, options);
+	async $registerTreeViewDataProvider(
+		treeViewId: string,
+		options: {
+			showCollapseAll: boolean;
+			canSelectMany: boolean;
+			dropMimeTypes: string[];
+			dragMimeTypes: string[];
+			hasHandleDrag: boolean;
+			hasHandleDrop: boolean;
+			manuallyManageCheckboxes: boolean;
+		},
+	): Promise<void> {
+		this.logService.trace(
+			"MainThreadTreeViews#$registerTreeViewDataProvider",
+			treeViewId,
+			options,
+		);
 
 		this.extensionService.whenInstalledExtensionsRegistered().then(() => {
-			const dataProvider = new TreeViewDataProvider(treeViewId, this._proxy, this.notificationService);
+			const dataProvider = new TreeViewDataProvider(
+				treeViewId,
+				this._proxy,
+				this.notificationService,
+			);
 			const disposables = new DisposableStore();
-			this._dataProviders.set(treeViewId, { dataProvider, dispose: () => disposables.dispose() });
-			const dndController = (options.hasHandleDrag || options.hasHandleDrop)
-				? new TreeViewDragAndDropController(treeViewId, options.dropMimeTypes, options.dragMimeTypes, options.hasHandleDrag, this._proxy) : undefined;
+			this._dataProviders.set(treeViewId, {
+				dataProvider,
+				dispose: () => disposables.dispose(),
+			});
+			const dndController =
+				options.hasHandleDrag || options.hasHandleDrop
+					? new TreeViewDragAndDropController(
+							treeViewId,
+							options.dropMimeTypes,
+							options.dragMimeTypes,
+							options.hasHandleDrag,
+							this._proxy,
+						)
+					: undefined;
 			const viewer = this.getTreeView(treeViewId);
 			if (viewer) {
 				// Order is important here. The internal tree isn't created until the dataProvider is set.
@@ -67,38 +140,73 @@ export class MainThreadTreeViews extends Disposable implements MainThreadTreeVie
 				this.registerListeners(treeViewId, viewer, disposables);
 				this._proxy.$setVisible(treeViewId, viewer.visible);
 			} else {
-				this.notificationService.error('No view is registered with id: ' + treeViewId);
+				this.notificationService.error(
+					"No view is registered with id: " + treeViewId,
+				);
 			}
 		});
 	}
 
-	$reveal(treeViewId: string, itemInfo: { item: ITreeItem; parentChain: ITreeItem[] } | undefined, options: IRevealOptions): Promise<void> {
-		this.logService.trace('MainThreadTreeViews#$reveal', treeViewId, itemInfo?.item, itemInfo?.parentChain, options);
+	$reveal(
+		treeViewId: string,
+		itemInfo: { item: ITreeItem; parentChain: ITreeItem[] } | undefined,
+		options: IRevealOptions,
+	): Promise<void> {
+		this.logService.trace(
+			"MainThreadTreeViews#$reveal",
+			treeViewId,
+			itemInfo?.item,
+			itemInfo?.parentChain,
+			options,
+		);
 
-		return this.viewsService.openView(treeViewId, options.focus)
-			.then(() => {
-				const viewer = this.getTreeView(treeViewId);
-				if (viewer && itemInfo) {
-					return this.reveal(viewer, this._dataProviders.get(treeViewId)!.dataProvider, itemInfo.item, itemInfo.parentChain, options);
-				}
-				return undefined;
-			});
+		return this.viewsService.openView(treeViewId, options.focus).then(() => {
+			const viewer = this.getTreeView(treeViewId);
+			if (viewer && itemInfo) {
+				return this.reveal(
+					viewer,
+					this._dataProviders.get(treeViewId)!.dataProvider,
+					itemInfo.item,
+					itemInfo.parentChain,
+					options,
+				);
+			}
+			return undefined;
+		});
 	}
 
-	$refresh(treeViewId: string, itemsToRefreshByHandle: { [treeItemHandle: string]: ITreeItem }): Promise<void> {
-		this.logService.trace('MainThreadTreeViews#$refresh', treeViewId, itemsToRefreshByHandle);
+	$refresh(
+		treeViewId: string,
+		itemsToRefreshByHandle: { [treeItemHandle: string]: ITreeItem },
+	): Promise<void> {
+		this.logService.trace(
+			"MainThreadTreeViews#$refresh",
+			treeViewId,
+			itemsToRefreshByHandle,
+		);
 
 		const viewer = this.getTreeView(treeViewId);
 		const dataProvider = this._dataProviders.get(treeViewId);
 		if (viewer && dataProvider) {
-			const itemsToRefresh = dataProvider.dataProvider.getItemsToRefresh(itemsToRefreshByHandle);
-			return viewer.refresh(itemsToRefresh.items.length ? itemsToRefresh.items : undefined, itemsToRefresh.checkboxes.length ? itemsToRefresh.checkboxes : undefined);
+			const itemsToRefresh = dataProvider.dataProvider.getItemsToRefresh(
+				itemsToRefreshByHandle,
+			);
+			return viewer.refresh(
+				itemsToRefresh.items.length ? itemsToRefresh.items : undefined,
+				itemsToRefresh.checkboxes.length
+					? itemsToRefresh.checkboxes
+					: undefined,
+			);
 		}
 		return Promise.resolve();
 	}
 
 	$setMessage(treeViewId: string, message: string | IMarkdownString): void {
-		this.logService.trace('MainThreadTreeViews#$setMessage', treeViewId, message.toString());
+		this.logService.trace(
+			"MainThreadTreeViews#$setMessage",
+			treeViewId,
+			message.toString(),
+		);
 
 		const viewer = this.getTreeView(treeViewId);
 		if (viewer) {
@@ -106,8 +214,17 @@ export class MainThreadTreeViews extends Disposable implements MainThreadTreeVie
 		}
 	}
 
-	$setTitle(treeViewId: string, title: string, description: string | undefined): void {
-		this.logService.trace('MainThreadTreeViews#$setTitle', treeViewId, title, description);
+	$setTitle(
+		treeViewId: string,
+		title: string,
+		description: string | undefined,
+	): void {
+		this.logService.trace(
+			"MainThreadTreeViews#$setTitle",
+			treeViewId,
+			title,
+			description,
+		);
 
 		const viewer = this.getTreeView(treeViewId);
 		if (viewer) {
@@ -117,7 +234,12 @@ export class MainThreadTreeViews extends Disposable implements MainThreadTreeVie
 	}
 
 	$setBadge(treeViewId: string, badge: IViewBadge | undefined): void {
-		this.logService.trace('MainThreadTreeViews#$setBadge', treeViewId, badge?.value, badge?.tooltip);
+		this.logService.trace(
+			"MainThreadTreeViews#$setBadge",
+			treeViewId,
+			badge?.value,
+			badge?.tooltip,
+		);
 
 		const viewer = this.getTreeView(treeViewId);
 		if (viewer) {
@@ -125,10 +247,14 @@ export class MainThreadTreeViews extends Disposable implements MainThreadTreeVie
 		}
 	}
 
-	$resolveDropFileData(destinationViewId: string, requestId: number, dataItemId: string): Promise<VSBuffer> {
+	$resolveDropFileData(
+		destinationViewId: string,
+		requestId: number,
+		dataItemId: string,
+	): Promise<VSBuffer> {
 		const controller = this._dndControllers.get(destinationViewId);
 		if (!controller) {
-			throw new Error('Unknown tree');
+			throw new Error("Unknown tree");
 		}
 		return controller.resolveDropFileData(requestId, dataItemId);
 	}
@@ -147,20 +273,40 @@ export class MainThreadTreeViews extends Disposable implements MainThreadTreeVie
 			extensionId: string;
 		};
 		type TreeViewResolveFailureClassification = {
-			extensionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The extension identifier.' };
-			owner: 'alexr00';
-			comment: 'Tracks tree view resolve failures due to concurrent refresh races.';
+			extensionId: {
+				classification: "SystemMetaData";
+				purpose: "FeatureInsight";
+				comment: "The extension identifier.";
+			};
+			owner: "alexr00";
+			comment: "Tracks tree view resolve failures due to concurrent refresh races.";
 		};
-		this.telemetryService.publicLog2<TreeViewResolveFailureEvent, TreeViewResolveFailureClassification>('treeView.resolveFailure', {
-			extensionId
+		this.telemetryService.publicLog2<
+			TreeViewResolveFailureEvent,
+			TreeViewResolveFailureClassification
+		>("treeView.resolveFailure", {
+			extensionId,
 		});
 	}
 
-	private async reveal(treeView: ITreeView, dataProvider: TreeViewDataProvider, itemIn: ITreeItem, parentChain: ITreeItem[], options: IRevealOptions): Promise<void> {
+	private async reveal(
+		treeView: ITreeView,
+		dataProvider: TreeViewDataProvider,
+		itemIn: ITreeItem,
+		parentChain: ITreeItem[],
+		options: IRevealOptions,
+	): Promise<void> {
 		options = options ? options : { select: false, focus: false };
 		const select = isUndefinedOrNull(options.select) ? false : options.select;
 		const focus = isUndefinedOrNull(options.focus) ? false : options.focus;
-		let expand = Math.min(isNumber(options.expand) ? options.expand : options.expand === true ? 1 : 0, 3);
+		let expand = Math.min(
+			isNumber(options.expand)
+				? options.expand
+				: options.expand === true
+					? 1
+					: 0,
+			3,
+		);
 
 		if (dataProvider.isEmpty()) {
 			// Refresh if empty
@@ -197,20 +343,54 @@ export class MainThreadTreeViews extends Disposable implements MainThreadTreeVie
 		}
 	}
 
-	private registerListeners(treeViewId: string, treeView: ITreeView, disposables: DisposableStore): void {
-		disposables.add(treeView.onDidExpandItem(item => this._proxy.$setExpanded(treeViewId, item.handle, true)));
-		disposables.add(treeView.onDidCollapseItem(item => this._proxy.$setExpanded(treeViewId, item.handle, false)));
-		disposables.add(treeView.onDidChangeSelectionAndFocus(items => this._proxy.$setSelectionAndFocus(treeViewId, items.selection.map(({ handle }) => handle), items.focus.handle)));
-		disposables.add(treeView.onDidChangeVisibility(isVisible => this._proxy.$setVisible(treeViewId, isVisible)));
-		disposables.add(treeView.onDidChangeCheckboxState(items => {
-			this._proxy.$changeCheckboxState(treeViewId, <CheckboxUpdate[]>items.map(item => {
-				return { treeItemHandle: item.handle, newState: item.checkbox?.isChecked ?? false };
-			}));
-		}));
+	private registerListeners(
+		treeViewId: string,
+		treeView: ITreeView,
+		disposables: DisposableStore,
+	): void {
+		disposables.add(
+			treeView.onDidExpandItem((item) =>
+				this._proxy.$setExpanded(treeViewId, item.handle, true),
+			),
+		);
+		disposables.add(
+			treeView.onDidCollapseItem((item) =>
+				this._proxy.$setExpanded(treeViewId, item.handle, false),
+			),
+		);
+		disposables.add(
+			treeView.onDidChangeSelectionAndFocus((items) =>
+				this._proxy.$setSelectionAndFocus(
+					treeViewId,
+					items.selection.map(({ handle }) => handle),
+					items.focus.handle,
+				),
+			),
+		);
+		disposables.add(
+			treeView.onDidChangeVisibility((isVisible) =>
+				this._proxy.$setVisible(treeViewId, isVisible),
+			),
+		);
+		disposables.add(
+			treeView.onDidChangeCheckboxState((items) => {
+				this._proxy.$changeCheckboxState(
+					treeViewId,
+					<CheckboxUpdate[]>items.map((item) => {
+						return {
+							treeItemHandle: item.handle,
+							newState: item.checkbox?.isChecked ?? false,
+						};
+					}),
+				);
+			}),
+		);
 	}
 
 	private getTreeView(treeViewId: string): ITreeView | null {
-		const viewDescriptor: ITreeViewDescriptor = <ITreeViewDescriptor>Registry.as<IViewsRegistry>(Extensions.ViewsRegistry).getView(treeViewId);
+		const viewDescriptor: ITreeViewDescriptor = <ITreeViewDescriptor>(
+			Registry.as<IViewsRegistry>(Extensions.ViewsRegistry).getView(treeViewId)
+		);
 		return viewDescriptor ? viewDescriptor.treeView : null;
 	}
 
@@ -232,34 +412,60 @@ export class MainThreadTreeViews extends Disposable implements MainThreadTreeVie
 type TreeItemHandle = string;
 
 class TreeViewDragAndDropController implements ITreeViewDragAndDropController {
-
 	private readonly dataTransfersCache = new DataTransferFileCache();
 
-	constructor(private readonly treeViewId: string,
+	constructor(
+		private readonly treeViewId: string,
 		readonly dropMimeTypes: string[],
 		readonly dragMimeTypes: string[],
 		readonly hasWillDrop: boolean,
-		private readonly _proxy: ExtHostTreeViewsShape) { }
+		private readonly _proxy: ExtHostTreeViewsShape,
+	) {}
 
-	async handleDrop(dataTransfer: VSDataTransfer, targetTreeItem: ITreeItem | undefined, token: CancellationToken,
-		operationUuid?: string, sourceTreeId?: string, sourceTreeItemHandles?: string[]): Promise<void> {
+	async handleDrop(
+		dataTransfer: VSDataTransfer,
+		targetTreeItem: ITreeItem | undefined,
+		token: CancellationToken,
+		operationUuid?: string,
+		sourceTreeId?: string,
+		sourceTreeItemHandles?: string[],
+	): Promise<void> {
 		const request = this.dataTransfersCache.add(dataTransfer);
 		try {
-			const dataTransferDto = await typeConvert.DataTransfer.fromList(dataTransfer);
+			const dataTransferDto =
+				await typeConvert.DataTransfer.fromList(dataTransfer);
 			if (token.isCancellationRequested) {
 				return;
 			}
-			return await this._proxy.$handleDrop(this.treeViewId, request.id, dataTransferDto, targetTreeItem?.handle, token, operationUuid, sourceTreeId, sourceTreeItemHandles);
+			return await this._proxy.$handleDrop(
+				this.treeViewId,
+				request.id,
+				dataTransferDto,
+				targetTreeItem?.handle,
+				token,
+				operationUuid,
+				sourceTreeId,
+				sourceTreeItemHandles,
+			);
 		} finally {
 			request.dispose();
 		}
 	}
 
-	async handleDrag(sourceTreeItemHandles: string[], operationUuid: string, token: CancellationToken): Promise<VSDataTransfer | undefined> {
+	async handleDrag(
+		sourceTreeItemHandles: string[],
+		operationUuid: string,
+		token: CancellationToken,
+	): Promise<VSDataTransfer | undefined> {
 		if (!this.hasWillDrop) {
 			return;
 		}
-		const additionalDataTransferDTO = await this._proxy.$handleDrag(this.treeViewId, sourceTreeItemHandles, operationUuid, token);
+		const additionalDataTransferDTO = await this._proxy.$handleDrag(
+			this.treeViewId,
+			sourceTreeItemHandles,
+			operationUuid,
+			token,
+		);
 		if (!additionalDataTransferDTO) {
 			return;
 		}
@@ -267,76 +473,114 @@ class TreeViewDragAndDropController implements ITreeViewDragAndDropController {
 		const additionalDataTransfer = new VSDataTransfer();
 		additionalDataTransferDTO.items.forEach(([type, item]) => {
 			// For text/uri-list, reconstruct from uriListData which has been transformed by the URI transformer
-			const value = type === Mimes.uriList && item.uriListData
-				? UriList.create(item.uriListData.map(part => typeof part === 'string' ? part : URI.revive(part)))
-				: item.asString;
+			const value =
+				type === Mimes.uriList && item.uriListData
+					? UriList.create(
+							item.uriListData.map((part) =>
+								typeof part === "string" ? part : URI.revive(part),
+							),
+						)
+					: item.asString;
 			additionalDataTransfer.replace(type, createStringDataTransferItem(value));
 		});
 		return additionalDataTransfer;
 	}
 
-	public resolveDropFileData(requestId: number, dataItemId: string): Promise<VSBuffer> {
+	public resolveDropFileData(
+		requestId: number,
+		dataItemId: string,
+	): Promise<VSBuffer> {
 		return this.dataTransfersCache.resolveFileData(requestId, dataItemId);
 	}
 }
 
 class TreeViewDataProvider implements ITreeViewDataProvider {
-
-	private readonly itemsMap: Map<TreeItemHandle, ITreeItem> = new Map<TreeItemHandle, ITreeItem>();
+	private readonly itemsMap: Map<TreeItemHandle, ITreeItem> = new Map<
+		TreeItemHandle,
+		ITreeItem
+	>();
 	private hasResolve: Promise<boolean>;
 
-	constructor(private readonly treeViewId: string,
+	constructor(
+		private readonly treeViewId: string,
 		private readonly _proxy: ExtHostTreeViewsShape,
-		private readonly notificationService: INotificationService
+		private readonly notificationService: INotificationService,
 	) {
 		this.hasResolve = this._proxy.$hasResolve(this.treeViewId);
 	}
 
-	async getChildren(treeItem?: ITreeItem): Promise<readonly ITreeItem[] | undefined> {
-		const batches = await this.getChildrenBatch(treeItem ? [treeItem] : undefined);
+	async getChildren(
+		treeItem?: ITreeItem,
+	): Promise<readonly ITreeItem[] | undefined> {
+		const batches = await this.getChildrenBatch(
+			treeItem ? [treeItem] : undefined,
+		);
 		return batches?.[0];
 	}
 
-	getChildrenBatch(treeItems?: ITreeItem[]): Promise<(readonly ITreeItem[])[] | undefined> {
+	getChildrenBatch(
+		treeItems?: ITreeItem[],
+	): Promise<(readonly ITreeItem[])[] | undefined> {
 		if (!treeItems) {
 			this.itemsMap.clear();
 		}
-		return this._proxy.$getChildren(this.treeViewId, treeItems ? treeItems.map(item => item.handle) : undefined)
+		return this._proxy
+			.$getChildren(
+				this.treeViewId,
+				treeItems ? treeItems.map((item) => item.handle) : undefined,
+			)
 			.then(
-				children => {
-					const convertedChildren = this.convertTransferChildren(treeItems ?? [], children);
+				(children) => {
+					const convertedChildren = this.convertTransferChildren(
+						treeItems ?? [],
+						children,
+					);
 					return this.postGetChildren(convertedChildren);
 				},
-				err => {
+				(err) => {
 					// It can happen that a tree view is disposed right as `getChildren` is called. This results in an error because the data provider gets removed.
 					// The tree will shortly get cleaned up in this case. We just need to handle the error here.
 					if (!NoTreeViewError.is(err)) {
 						this.notificationService.error(err);
 					}
 					return [];
-				});
+				},
+			);
 	}
 
-	private convertTransferChildren(parents: ITreeItem[], children: (readonly (number | ITreeItem)[])[] | undefined) {
-		const convertedChildren: (readonly ITreeItem[] | undefined)[] = Array(parents.length);
+	private convertTransferChildren(
+		parents: ITreeItem[],
+		children: (readonly (number | ITreeItem)[])[] | undefined,
+	) {
+		const convertedChildren: (readonly ITreeItem[] | undefined)[] = Array(
+			parents.length,
+		);
 		if (children) {
 			for (const childGroup of children) {
 				const childGroupIndex = childGroup[0] as number;
-				convertedChildren[childGroupIndex] = childGroup.slice(1) as readonly ITreeItem[];
+				convertedChildren[childGroupIndex] = childGroup.slice(
+					1,
+				) as readonly ITreeItem[];
 			}
 		}
 		return convertedChildren;
 	}
 
-	getItemsToRefresh(itemsToRefreshByHandle: { [treeItemHandle: string]: ITreeItem }): { items: ITreeItem[]; checkboxes: ITreeItem[] } {
+	getItemsToRefresh(itemsToRefreshByHandle: {
+		[treeItemHandle: string]: ITreeItem;
+	}): { items: ITreeItem[]; checkboxes: ITreeItem[] } {
 		const itemsToRefresh: ITreeItem[] = [];
 		const checkboxesToRefresh: ITreeItem[] = [];
 		if (itemsToRefreshByHandle) {
 			for (const newTreeItemHandle of Object.keys(itemsToRefreshByHandle)) {
 				const currentTreeItem = this.getItem(newTreeItemHandle);
-				if (currentTreeItem) { // Refresh only if the item exists
+				if (currentTreeItem) {
+					// Refresh only if the item exists
 					const newTreeItem = itemsToRefreshByHandle[newTreeItemHandle];
-					if (currentTreeItem.checkbox?.isChecked !== newTreeItem.checkbox?.isChecked) {
+					if (
+						currentTreeItem.checkbox?.isChecked !==
+						newTreeItem.checkbox?.isChecked
+					) {
 						checkboxesToRefresh.push(currentTreeItem);
 					}
 					// Update the current item with refreshed item
@@ -347,7 +591,9 @@ class TreeViewDataProvider implements ITreeViewDataProvider {
 						// Update maps when handle is changed and refresh parent
 						this.itemsMap.delete(newTreeItemHandle);
 						this.itemsMap.set(currentTreeItem.handle, currentTreeItem);
-						const parent = newTreeItem.parentHandle ? this.itemsMap.get(newTreeItem.parentHandle) : null;
+						const parent = newTreeItem.parentHandle
+							? this.itemsMap.get(newTreeItem.parentHandle)
+							: null;
 						if (parent) {
 							itemsToRefresh.push(parent);
 						}
@@ -366,7 +612,9 @@ class TreeViewDataProvider implements ITreeViewDataProvider {
 		return this.itemsMap.size === 0;
 	}
 
-	private async postGetChildren(elementGroups: (readonly ITreeItem[] | undefined)[] | undefined): Promise<ResolvableTreeItem[][] | undefined> {
+	private async postGetChildren(
+		elementGroups: (readonly ITreeItem[] | undefined)[] | undefined,
+	): Promise<ResolvableTreeItem[][] | undefined> {
 		if (elementGroups === undefined) {
 			return undefined;
 		}
@@ -380,9 +628,18 @@ class TreeViewDataProvider implements ITreeViewDataProvider {
 					continue;
 				}
 				for (const element of elements) {
-					const resolvable = new ResolvableTreeItem(element, hasResolve ? (token) => {
-						return this._proxy.$resolve(this.treeViewId, element.handle, token);
-					} : undefined);
+					const resolvable = new ResolvableTreeItem(
+						element,
+						hasResolve
+							? (token) => {
+									return this._proxy.$resolve(
+										this.treeViewId,
+										element.handle,
+										token,
+									);
+								}
+							: undefined,
+					);
 					this.itemsMap.set(element.handle, resolvable);
 					result.push(resolvable);
 				}
@@ -394,10 +651,18 @@ class TreeViewDataProvider implements ITreeViewDataProvider {
 	private updateTreeItem(current: ITreeItem, treeItem: ITreeItem): void {
 		treeItem.children = treeItem.children ? treeItem.children : undefined;
 		if (current) {
-			const properties = distinct([...Object.keys(current instanceof ResolvableTreeItem ? current.asTreeItem() : current),
-			...Object.keys(treeItem)]);
+			const properties = distinct([
+				...Object.keys(
+					current instanceof ResolvableTreeItem
+						? current.asTreeItem()
+						: current,
+				),
+				...Object.keys(treeItem),
+			]);
 			for (const property of properties) {
-				(current as unknown as { [key: string]: unknown })[property] = (treeItem as unknown as { [key: string]: unknown })[property];
+				(current as unknown as { [key: string]: unknown })[property] = (
+					treeItem as unknown as { [key: string]: unknown }
+				)[property];
 			}
 			if (current instanceof ResolvableTreeItem) {
 				current.resetResolve();

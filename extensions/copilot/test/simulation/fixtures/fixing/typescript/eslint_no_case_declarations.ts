@@ -4,10 +4,10 @@
 /* eslint no-case-declarations: "error" */
 import { Character } from './eslint_no_duplicate_case';
 export function soliloquoy(locutor: Character, others: Character[]) {
-	const scene: Character[] = [locutor]
+	const scene: Character[] = [locutor];
 	switch (locutor) {
 		case Character.Hamlet:
-			const ophelia = others.find(x => x === Character.Ophelia);
+			const ophelia = others.find((x) => x === Character.Ophelia);
 			if (ophelia) {
 				scene.push(ophelia);
 			}
@@ -18,7 +18,7 @@ export function soliloquoy(locutor: Character, others: Character[]) {
 			}
 			return scene;
 		case Character.Ophelia:
-			return [locutor, others.find(x => x === Character.Hamlet)];
+			return [locutor, others.find((x) => x === Character.Hamlet)];
 		default:
 			return [locutor];
 	}

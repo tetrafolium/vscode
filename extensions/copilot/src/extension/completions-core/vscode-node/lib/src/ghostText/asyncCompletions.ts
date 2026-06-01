@@ -40,9 +40,14 @@ interface CompletedAsyncCompletionRequest extends BaseAsyncCompletionRequest {
 	allChoicesPromise: Promise<void>;
 }
 
-type AsyncCompletionRequest = PendingAsyncCompletionRequest | CompletedAsyncCompletionRequest;
+type AsyncCompletionRequest =
+	| PendingAsyncCompletionRequest
+	| CompletedAsyncCompletionRequest;
 
-export const ICompletionsAsyncManagerService = createServiceIdentifier<ICompletionsAsyncManagerService>('ICompletionsAsyncManagerService');
+export const ICompletionsAsyncManagerService =
+	createServiceIdentifier<ICompletionsAsyncManagerService>(
+		'ICompletionsAsyncManagerService',
+	);
 export interface ICompletionsAsyncManagerService {
 	readonly _serviceBrand: undefined;
 	clear(): void;
@@ -53,20 +58,20 @@ export interface ICompletionsAsyncManagerService {
 		prefix: string,
 		prompt: Prompt,
 		cancellationTokenSource: CancellationTokenSource,
-		resultPromise: Promise<GetNetworkCompletionsType>
+		resultPromise: Promise<GetNetworkCompletionsType>,
 	): Promise<void>;
 	getFirstMatchingRequestWithTimeout(
 		headerRequestId: string,
 		prefix: string,
 		prompt: Prompt,
 		isSpeculative: boolean,
-		telemetryWithExp: TelemetryWithExp
+		telemetryWithExp: TelemetryWithExp,
 	): Promise<[APIChoice, Promise<void>] | undefined>;
 	getFirstMatchingRequest(
 		headerRequestId: string,
 		prefix: string,
 		prompt: Prompt,
-		isSpeculative: boolean
+		isSpeculative: boolean,
 	): Promise<[APIChoice, Promise<void>] | undefined>;
 }
 
@@ -76,7 +81,9 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 	#logger = new Logger('AsyncCompletionManager');
 
 	/** Mapping of headerRequestId to completion request */
-	private readonly requests = new LRUCacheMap<string, AsyncCompletionRequest>(100);
+	private readonly requests = new LRUCacheMap<string, AsyncCompletionRequest>(
+		100,
+	);
 
 	/** The most recently requested (either via getFirstMatchingRequest or
 	 * getFirstMatchingRequestWithTimeout) header request ID. Serves as a lock
@@ -85,9 +92,11 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 	private mostRecentRequestId = '';
 
 	constructor(
-		@ICompletionsFeaturesService private readonly featuresService: ICompletionsFeaturesService,
-		@ICompletionsLogTargetService private readonly logTarget: ICompletionsLogTargetService,
-	) { }
+		@ICompletionsFeaturesService
+		private readonly featuresService: ICompletionsFeaturesService,
+		@ICompletionsLogTargetService
+		private readonly logTarget: ICompletionsLogTargetService,
+	) {}
 
 	clear() {
 		this.requests.clear();
@@ -119,7 +128,9 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 	 */
 	updateCompletion(headerRequestId: string, text: string) {
 		const request = this.requests.get(headerRequestId);
-		if (request === undefined) { return; }
+		if (request === undefined) {
+			return;
+		}
 		request.partialCompletionText = text;
 		request.subject.next(request);
 	}
@@ -133,11 +144,12 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 		prefix: string,
 		prompt: Prompt,
 		cancellationTokenSource: CancellationTokenSource,
-		resultPromise: Promise<GetNetworkCompletionsType>
+		resultPromise: Promise<GetNetworkCompletionsType>,
 	) {
-		this.#logger.debug(this.logTarget,
+		this.#logger.debug(
+			this.logTarget,
 			`[${headerRequestId}] Queueing async completion request:`,
-			prefix.substring(prefix.lastIndexOf('\n') + 1)
+			prefix.substring(prefix.lastIndexOf('\n') + 1),
 		);
 		const subject = new ReplaySubject<AsyncCompletionRequest>();
 		this.requests.set(headerRequestId, {
@@ -149,10 +161,14 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 			subject,
 		});
 		return resultPromise
-			.then(result => {
+			.then((result) => {
 				this.requests.delete(headerRequestId);
 				if (result.type !== 'success') {
-					this.#logger.debug(this.logTarget, `[${headerRequestId}] Request failed with`, result.reason);
+					this.#logger.debug(
+						this.logTarget,
+						`[${headerRequestId}] Request failed with`,
+						result.reason,
+					);
 					subject.error(result.reason);
 					return;
 				}
@@ -172,7 +188,11 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 				subject.complete();
 			})
 			.catch((e: unknown) => {
-				this.#logger.error(this.logTarget, `[${headerRequestId}] Request errored with`, e);
+				this.#logger.error(
+					this.logTarget,
+					`[${headerRequestId}] Request errored with`,
+					e,
+				);
 				this.requests.delete(headerRequestId);
 				subject.error(e);
 			});
@@ -184,20 +204,40 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 		prefix: string,
 		prompt: Prompt,
 		isSpeculative: boolean,
-		telemetryWithExp: TelemetryWithExp
+		telemetryWithExp: TelemetryWithExp,
 	): Promise<[APIChoice, Promise<void>] | undefined> {
-		const timeout = this.featuresService.asyncCompletionsTimeout(telemetryWithExp);
+		const timeout =
+			this.featuresService.asyncCompletionsTimeout(telemetryWithExp);
 		if (timeout < 0) {
-			this.#logger.debug(this.logTarget, `[${headerRequestId}] Waiting for completions without timeout`);
-			return this.getFirstMatchingRequest(headerRequestId, prefix, prompt, isSpeculative);
+			this.#logger.debug(
+				this.logTarget,
+				`[${headerRequestId}] Waiting for completions without timeout`,
+			);
+			return this.getFirstMatchingRequest(
+				headerRequestId,
+				prefix,
+				prompt,
+				isSpeculative,
+			);
 		}
-		this.#logger.debug(this.logTarget, `[${headerRequestId}] Waiting for completions with timeout of ${timeout}ms`);
+		this.#logger.debug(
+			this.logTarget,
+			`[${headerRequestId}] Waiting for completions with timeout of ${timeout}ms`,
+		);
 		return Promise.race([
-			this.getFirstMatchingRequest(headerRequestId, prefix, prompt, isSpeculative),
-			new Promise<null>(r => setTimeout(() => r(null), timeout)),
-		]).then(result => {
+			this.getFirstMatchingRequest(
+				headerRequestId,
+				prefix,
+				prompt,
+				isSpeculative,
+			),
+			new Promise<null>((r) => setTimeout(() => r(null), timeout)),
+		]).then((result) => {
 			if (result === null) {
-				this.#logger.debug(this.logTarget, `[${headerRequestId}] Timed out waiting for completion`);
+				this.#logger.debug(
+					this.logTarget,
+					`[${headerRequestId}] Timed out waiting for completion`,
+				);
 				return undefined;
 			}
 			return result;
@@ -212,28 +252,37 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 		headerRequestId: string,
 		prefix: string,
 		prompt: Prompt,
-		isSpeculative: boolean
+		isSpeculative: boolean,
 	): Promise<[APIChoice, Promise<void>] | undefined> {
-		if (!isSpeculative) { this.mostRecentRequestId = headerRequestId; }
+		if (!isSpeculative) {
+			this.mostRecentRequestId = headerRequestId;
+		}
 		let resolved = false;
 		const deferred = new Deferred<[APIChoice, Promise<void>] | undefined>();
 		const subscriptions = new Map<string, () => void>();
 		const finishRequest = (id: string) => () => {
 			const subscription = subscriptions.get(id);
-			if (subscription === undefined) { return; }
+			if (subscription === undefined) {
+				return;
+			}
 			subscription();
 			subscriptions.delete(id);
 			if (!resolved && subscriptions.size === 0) {
 				// TODO: Check for new candidates before resolving.
 				resolved = true;
-				this.#logger.debug(this.logTarget, `[${headerRequestId}] No matching completions found`);
+				this.#logger.debug(
+					this.logTarget,
+					`[${headerRequestId}] No matching completions found`,
+				);
 				deferred.resolve(undefined);
 			}
 		};
 		const next = (request: AsyncCompletionRequest) => {
 			if (isCandidate(prefix, prompt, request)) {
 				if (request.state === AsyncCompletionRequestState.Completed) {
-					const remainingPrefix = prefix.substring(request.prefix.length);
+					const remainingPrefix = prefix.substring(
+						request.prefix.length,
+					);
 					let { completionText } = request.choice;
 					if (
 						!completionText.startsWith(remainingPrefix) ||
@@ -242,12 +291,19 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 						finishRequest(request.headerRequestId)();
 						return;
 					}
-					completionText = completionText.substring(remainingPrefix.length);
-					request.choice.telemetryData.measurements.foundOffset = remainingPrefix.length;
-					this.#logger.debug(this.logTarget,
-						`[${headerRequestId}] Found completion at offset ${remainingPrefix.length}: ${JSON.stringify(completionText)}`
+					completionText = completionText.substring(
+						remainingPrefix.length,
 					);
-					deferred.resolve([{ ...request.choice, completionText }, request.allChoicesPromise]);
+					request.choice.telemetryData.measurements.foundOffset =
+						remainingPrefix.length;
+					this.#logger.debug(
+						this.logTarget,
+						`[${headerRequestId}] Found completion at offset ${remainingPrefix.length}: ${JSON.stringify(completionText)}`,
+					);
+					deferred.resolve([
+						{ ...request.choice, completionText },
+						request.allChoicesPromise,
+					]);
 					resolved = true;
 				}
 			} else {
@@ -263,7 +319,7 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 						next,
 						error: finishRequest(id),
 						complete: finishRequest(id),
-					})
+					}),
 				);
 			} else {
 				this.cancelRequest(headerRequestId, request);
@@ -285,25 +341,46 @@ export class AsyncCompletionManager implements ICompletionsAsyncManagerService {
 	 * getFirstMatchingRequest that the `request` no longer matches.
 	 * @param request The request to cancel
 	 */
-	private cancelRequest(headerRequestId: string, request: AsyncCompletionRequest) {
-		if (headerRequestId !== this.mostRecentRequestId) { return; }
-		if (request.state === AsyncCompletionRequestState.Completed) { return; }
-		this.#logger.debug(this.logTarget, `[${headerRequestId}] Cancelling request: ${request.headerRequestId}`);
+	private cancelRequest(
+		headerRequestId: string,
+		request: AsyncCompletionRequest,
+	) {
+		if (headerRequestId !== this.mostRecentRequestId) {
+			return;
+		}
+		if (request.state === AsyncCompletionRequestState.Completed) {
+			return;
+		}
+		this.#logger.debug(
+			this.logTarget,
+			`[${headerRequestId}] Cancelling request: ${request.headerRequestId}`,
+		);
 		request.cancellationTokenSource.cancel();
 		this.requests.delete(request.headerRequestId);
 	}
 }
 
-function isCandidate(prefix: string, prompt: Prompt, request: AsyncCompletionRequest): boolean {
-	if (request.prompt.suffix !== prompt.suffix) { return false; }
-	if (!prefix.startsWith(request.prefix)) { return false; }
+function isCandidate(
+	prefix: string,
+	prompt: Prompt,
+	request: AsyncCompletionRequest,
+): boolean {
+	if (request.prompt.suffix !== prompt.suffix) {
+		return false;
+	}
+	if (!prefix.startsWith(request.prefix)) {
+		return false;
+	}
 	const remainingPrefix = prefix.substring(request.prefix.length);
 	if (request.state === AsyncCompletionRequestState.Completed) {
 		return (
 			request.choice.completionText.startsWith(remainingPrefix) &&
-			request.choice.completionText.trimEnd().length > remainingPrefix.length
+			request.choice.completionText.trimEnd().length >
+				remainingPrefix.length
 		);
 	}
-	if (request.partialCompletionText === undefined) { return true; }
+	if (request.partialCompletionText === undefined) {
+		return true;
+	}
 	return request.partialCompletionText.startsWith(remainingPrefix);
 }

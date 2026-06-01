@@ -7,7 +7,8 @@ import * as assert from 'assert';
 import { WorkbenchServiceImpl } from '../../vscode/workbenchServiceImpt';
 
 suite('HostServiceImpl', () => {
-	test.skip('getAllCommands', async () => { // TODO@TylerLeonhardt
+	test.skip('getAllCommands', async () => {
+		// TODO@TylerLeonhardt
 		const envService = new WorkbenchServiceImpl();
 		const commands = await envService.getAllCommands();
 		assert.ok(Array.isArray(commands));

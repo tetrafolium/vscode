@@ -4,11 +4,28 @@
  *--------------------------------------------------------------------------------------------*/
 
 import type { RequestMetadata } from '@vscode/copilot-api';
-import { HTMLTracer, IChatEndpointInfo, Raw, RenderPromptResult } from '@vscode/prompt-tsx';
+import {
+	HTMLTracer,
+	IChatEndpointInfo,
+	Raw,
+	RenderPromptResult,
+} from '@vscode/prompt-tsx';
 import type { Event } from 'vscode';
-import { ChatFetchError, ChatFetchResponseType, ChatLocation, ChatResponses, FetchSuccess } from '../../../platform/chat/common/commonTypes';
-import { IResponseDelta, OptionalChatRequestParams } from '../../../platform/networking/common/fetch';
-import { IChatEndpoint, IEndpointBody } from '../../../platform/networking/common/networking';
+import {
+	ChatFetchError,
+	ChatFetchResponseType,
+	ChatLocation,
+	ChatResponses,
+	FetchSuccess,
+} from '../../../platform/chat/common/commonTypes';
+import {
+	IResponseDelta,
+	OptionalChatRequestParams,
+} from '../../../platform/networking/common/fetch';
+import {
+	IChatEndpoint,
+	IEndpointBody,
+} from '../../../platform/networking/common/networking';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { ThemeIcon } from '../../../util/vs/base/common/themables';
 import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRange';
@@ -23,13 +40,17 @@ export type UriData = { kind: 'request'; id: string } | { kind: 'latest' };
 export class ChatRequestScheme {
 	public static readonly chatRequestScheme = 'ccreq';
 
-	public static buildUri(data: UriData, format: 'markdown' | 'json' | 'rawrequest' = 'markdown'): string {
+	public static buildUri(
+		data: UriData,
+		format: 'markdown' | 'json' | 'rawrequest' = 'markdown',
+	): string {
 		let extension: string;
 		if (format === 'markdown') {
 			extension = 'copilotmd';
 		} else if (format === 'json') {
 			extension = 'json';
-		} else { // rawrequest
+		} else {
+			// rawrequest
 			extension = 'request.json';
 		}
 		if (data.kind === 'latest') {
@@ -39,7 +60,11 @@ export class ChatRequestScheme {
 		}
 	}
 
-	public static parseUri(uri: string): { data: UriData; format: 'markdown' | 'json' | 'rawrequest' } | undefined {
+	public static parseUri(
+		uri: string,
+	):
+		| { data: UriData; format: 'markdown' | 'json' | 'rawrequest' }
+		| undefined {
 		// Check for latest markdown
 		if (uri === this.buildUri({ kind: 'latest' }, 'markdown')) {
 			return { data: { kind: 'latest' }, format: 'markdown' };
@@ -56,35 +81,44 @@ export class ChatRequestScheme {
 		// Check for specific request markdown
 		const mdMatch = uri.match(/ccreq:([^\s]+)\.copilotmd/);
 		if (mdMatch) {
-			return { data: { kind: 'request', id: mdMatch[1] }, format: 'markdown' };
+			return {
+				data: { kind: 'request', id: mdMatch[1] },
+				format: 'markdown',
+			};
 		}
 
 		// specific raw body json
 		const bodyJsonMatch = uri.match(/ccreq:([^\s]+)\.request\.json/);
 		if (bodyJsonMatch) {
-			return { data: { kind: 'request', id: bodyJsonMatch[1] }, format: 'rawrequest' };
+			return {
+				data: { kind: 'request', id: bodyJsonMatch[1] },
+				format: 'rawrequest',
+			};
 		}
 
 		// Check for specific request JSON
 		const jsonMatch = uri.match(/ccreq:([^\s]+)\.json/);
 		if (jsonMatch) {
-			return { data: { kind: 'request', id: jsonMatch[1] }, format: 'json' };
+			return {
+				data: { kind: 'request', id: jsonMatch[1] },
+				format: 'json',
+			};
 		}
 
 		return undefined;
 	}
 
-	public static findAllUris(text: string): { uri: string; range: OffsetRange }[] {
+	public static findAllUris(
+		text: string,
+	): { uri: string; range: OffsetRange }[] {
 		const linkRE = /(ccreq:[^\s]+\.(copilotmd|json|request\.json))/g;
-		return [...text.matchAll(linkRE)].map(
-			(m) => {
-				const identifier = m[1];
-				return {
-					uri: identifier,
-					range: new OffsetRange(m.index!, m.index! + identifier.length)
-				};
-			}
-		);
+		return [...text.matchAll(linkRE)].map((m) => {
+			const identifier = m[1];
+			return {
+				uri: identifier,
+				range: new OffsetRange(m.index!, m.index! + identifier.length),
+			};
+		});
 	}
 }
 
@@ -140,26 +174,59 @@ export interface ILoggedPendingRequest {
 	customMetadata?: Record<string, string | number | boolean | undefined>;
 }
 
-export type LoggedInfo = ILoggedElementInfo | ILoggedRequestInfo | ILoggedToolCall;
+export type LoggedInfo =
+	| ILoggedElementInfo
+	| ILoggedRequestInfo
+	| ILoggedToolCall;
 
-export const IRequestLogger = createServiceIdentifier<IRequestLogger>('IRequestLogger');
+export const IRequestLogger =
+	createServiceIdentifier<IRequestLogger>('IRequestLogger');
 export interface IRequestLogger {
-
 	readonly _serviceBrand: undefined;
 
 	promptRendererTracing: boolean;
 
-	captureInvocation<T>(request: CapturingToken, fn: () => Promise<T>): Promise<T>;
+	captureInvocation<T>(
+		request: CapturingToken,
+		fn: () => Promise<T>,
+	): Promise<T>;
 
-	logToolCall(id: string, name: string, args: unknown, response: LanguageModelToolResult2, thinking?: ThinkingData): void;
+	logToolCall(
+		id: string,
+		name: string,
+		args: unknown,
+		response: LanguageModelToolResult2,
+		thinking?: ThinkingData,
+	): void;
 
-	logModelListCall(requestId: string, requestMetadata: RequestMetadata, models: IModelAPIResponse[]): void;
+	logModelListCall(
+		requestId: string,
+		requestMetadata: RequestMetadata,
+		models: IModelAPIResponse[],
+	): void;
 
-	logContentExclusionRules(repos: string[], rules: { patterns: string[]; ifAnyMatch: string[]; ifNoneMatch: string[] }[], durationMs: number): void;
+	logContentExclusionRules(
+		repos: string[],
+		rules: {
+			patterns: string[];
+			ifAnyMatch: string[];
+			ifNoneMatch: string[];
+		}[],
+		durationMs: number,
+	): void;
 
-	logChatRequest(debugName: string, chatEndpoint: IChatEndpointLogInfo, chatParams: ILoggedPendingRequest): PendingLoggedChatRequest;
+	logChatRequest(
+		debugName: string,
+		chatEndpoint: IChatEndpointLogInfo,
+		chatParams: ILoggedPendingRequest,
+	): PendingLoggedChatRequest;
 
-	addPromptTrace(elementName: string, endpoint: IChatEndpointInfo, result: RenderPromptResult, trace: HTMLTracer): void;
+	addPromptTrace(
+		elementName: string,
+		endpoint: IChatEndpointInfo,
+		result: RenderPromptResult,
+		trace: HTMLTracer,
+	): void;
 	addEntry(entry: LoggedRequest): void;
 
 	onDidChangeRequests: Event<void>;
@@ -177,7 +244,12 @@ export const enum LoggedRequestKind {
 	MarkdownContentRequest = 'MarkdownContentRequest',
 }
 
-export type IChatEndpointLogInfo = Partial<Pick<IChatEndpoint, 'model' | 'modelMaxPromptTokens' | 'urlOrRequestMetadata'>>;
+export type IChatEndpointLogInfo = Partial<
+	Pick<
+		IChatEndpoint,
+		'model' | 'modelMaxPromptTokens' | 'urlOrRequestMetadata'
+	>
+>;
 
 export interface ILoggedChatMLRequest {
 	debugName: string;
@@ -228,19 +300,22 @@ export interface IMarkdownContentRequest {
 }
 
 export function resolveMarkdownContent(entry: IMarkdownContentRequest): string {
-	return typeof entry.markdownContent === 'function' ? entry.markdownContent() : entry.markdownContent;
+	return typeof entry.markdownContent === 'function'
+		? entry.markdownContent()
+		: entry.markdownContent;
 }
 
-export function resolveMarkdownIcon(entry: IMarkdownContentRequest): ThemeIcon | undefined {
+export function resolveMarkdownIcon(
+	entry: IMarkdownContentRequest,
+): ThemeIcon | undefined {
 	return typeof entry.icon === 'function' ? entry.icon() : entry.icon;
 }
 
-export type LoggedRequest = (
-	ILoggedChatMLSuccessRequest
+export type LoggedRequest =
+	| ILoggedChatMLSuccessRequest
 	| ILoggedChatMLFailureRequest
 	| ILoggedChatMLCancelationRequest
-	| IMarkdownContentRequest
-);
+	| IMarkdownContentRequest;
 
 class AbstractPendingLoggedRequest {
 	protected _time: Date;
@@ -250,7 +325,7 @@ class AbstractPendingLoggedRequest {
 		protected _logbook: IRequestLogger,
 		protected _debugName: string,
 		protected _chatEndpoint: IChatEndpointLogInfo,
-		protected _chatParams: ILoggedPendingRequest
+		protected _chatParams: ILoggedPendingRequest,
 	) {
 		this._time = new Date();
 	}
@@ -268,7 +343,7 @@ class AbstractPendingLoggedRequest {
 			startTime: this._time,
 			endTime: new Date(),
 			isConversationRequest: this._chatParams.isConversationRequest,
-			customMetadata: this._chatParams.customMetadata
+			customMetadata: this._chatParams.customMetadata,
 		});
 	}
 }
@@ -278,7 +353,7 @@ export class PendingLoggedChatRequest extends AbstractPendingLoggedRequest {
 		logbook: IRequestLogger,
 		debugName: string,
 		chatEndpoint: IChatEndpoint,
-		chatParams: ILoggedPendingRequest
+		chatParams: ILoggedPendingRequest,
 	) {
 		super(logbook, debugName, chatEndpoint, chatParams);
 	}
@@ -297,11 +372,14 @@ export class PendingLoggedChatRequest extends AbstractPendingLoggedRequest {
 				isConversationRequest: this._chatParams.isConversationRequest,
 				customMetadata: this._chatParams.customMetadata,
 				result,
-				deltas
+				deltas,
 			});
 		} else {
 			this._logbook.addEntry({
-				type: result.type === ChatFetchResponseType.Canceled ? LoggedRequestKind.ChatMLCancelation : LoggedRequestKind.ChatMLFailure,
+				type:
+					result.type === ChatFetchResponseType.Canceled
+						? LoggedRequestKind.ChatMLCancelation
+						: LoggedRequestKind.ChatMLFailure,
 				debugName: this._debugName,
 				chatEndpoint: this._chatEndpoint,
 				chatParams: this._chatParams,

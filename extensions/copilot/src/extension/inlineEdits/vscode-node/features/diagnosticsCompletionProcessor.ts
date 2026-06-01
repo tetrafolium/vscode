@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { applyEditsToRanges } from '../../../../platform/editSurvivalTracking/common/editSurvivalTracker';
 import { IFileSystemService } from '../../../../platform/filesystem/common/fileSystemService';
 import { DocumentId } from '../../../../platform/inlineEdits/common/dataTypes/documentId';
@@ -13,52 +16,93 @@ import { ObservableGit } from '../../../../platform/inlineEdits/common/observabl
 import { IObservableDocument } from '../../../../platform/inlineEdits/common/observableWorkspace';
 import { autorunWithChanges } from '../../../../platform/inlineEdits/common/utils/observable';
 import { WorkspaceDocumentEditHistory } from '../../../../platform/inlineEdits/common/workspaceEditTracker/workspaceDocumentEditTracker';
-import { ILogger, ILogService } from '../../../../platform/log/common/logService';
+import {
+	ILogger,
+	ILogService,
+} from '../../../../platform/log/common/logService';
 import { ITabsAndEditorsService } from '../../../../platform/tabs/common/tabsAndEditorsService';
 import { IWorkspaceService } from '../../../../platform/workspace/common/workspaceService';
 import { isNotebookCell } from '../../../../util/common/notebooks';
 import { equals } from '../../../../util/vs/base/common/arrays';
 import { findFirstMonotonous } from '../../../../util/vs/base/common/arraysFind';
 import { ThrottledDelayer } from '../../../../util/vs/base/common/async';
-import { CancellationToken, CancellationTokenSource } from '../../../../util/vs/base/common/cancellation';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from '../../../../util/vs/base/common/cancellation';
 import { BugIndicatingError } from '../../../../util/vs/base/common/errors';
 import { Emitter } from '../../../../util/vs/base/common/event';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
-import { autorun, derived, IObservable, runOnChange } from '../../../../util/vs/base/common/observableInternal';
+import {
+	autorun,
+	derived,
+	IObservable,
+	runOnChange,
+} from '../../../../util/vs/base/common/observableInternal';
 import { isEqual } from '../../../../util/vs/base/common/resources';
 import { StringEdit } from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { Position } from '../../../../util/vs/editor/common/core/position';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { StringText } from '../../../../util/vs/editor/common/core/text/abstractText';
-import { getInformationDelta, InformationDelta } from '../../common/informationDelta';
+import {
+	getInformationDelta,
+	InformationDelta,
+} from '../../common/informationDelta';
 import { RejectionCollector } from '../../common/rejectionCollector';
-import { IVSCodeObservableDocument, VSCodeWorkspace } from '../parts/vscodeWorkspace';
+import {
+	IVSCodeObservableDocument,
+	VSCodeWorkspace,
+} from '../parts/vscodeWorkspace';
 import { toInternalPosition } from '../utils/translations';
-import { AnyDiagnosticCompletionItem, AnyDiagnosticCompletionProvider } from './diagnosticsBasedCompletions/anyDiagnosticsCompletionProvider';
+import {
+	AnyDiagnosticCompletionItem,
+	AnyDiagnosticCompletionProvider,
+} from './diagnosticsBasedCompletions/anyDiagnosticsCompletionProvider';
 import { AsyncDiagnosticCompletionProvider } from './diagnosticsBasedCompletions/asyncDiagnosticsCompletionProvider';
-import { Diagnostic, DiagnosticCompletionItem, DiagnosticInlineEditRequestLogContext, IDiagnosticCompletionProvider, log, logList, sortDiagnosticsByDistance } from './diagnosticsBasedCompletions/diagnosticsCompletions';
-import { ImportDiagnosticCompletionItem, ImportDiagnosticCompletionProvider } from './diagnosticsBasedCompletions/importDiagnosticsCompletionProvider';
+import {
+	Diagnostic,
+	DiagnosticCompletionItem,
+	DiagnosticInlineEditRequestLogContext,
+	IDiagnosticCompletionProvider,
+	log,
+	logList,
+	sortDiagnosticsByDistance,
+} from './diagnosticsBasedCompletions/diagnosticsCompletions';
+import {
+	ImportDiagnosticCompletionItem,
+	ImportDiagnosticCompletionProvider,
+} from './diagnosticsBasedCompletions/importDiagnosticsCompletionProvider';
 
-interface IDiagnosticsCompletionState<T extends DiagnosticCompletionItem = DiagnosticCompletionItem> {
+interface IDiagnosticsCompletionState<
+	T extends DiagnosticCompletionItem = DiagnosticCompletionItem,
+> {
 	completionItem: T | null;
 	logContext: DiagnosticInlineEditRequestLogContext;
 	telemetryBuilder: DiagnosticsCompletionHandlerTelemetry;
 }
 
-function diagnosticCompletionRunResultEquals(a: IDiagnosticsCompletionState, b: IDiagnosticsCompletionState): boolean {
+function diagnosticCompletionRunResultEquals(
+	a: IDiagnosticsCompletionState,
+	b: IDiagnosticsCompletionState,
+): boolean {
 	if (!!a.completionItem && !!b.completionItem) {
-		return DiagnosticCompletionItem.equals(a.completionItem, b.completionItem);
+		return DiagnosticCompletionItem.equals(
+			a.completionItem,
+			b.completionItem,
+		);
 	}
 	return a.completionItem === b.completionItem;
 }
 
 // Only exported for testing
 export class DiagnosticsCollection {
-
 	private _diagnostics: Diagnostic[] = [];
 
-	applyEdit(previous: StringText, edit: StringEdit, after: StringText): boolean {
-
+	applyEdit(
+		previous: StringText,
+		edit: StringEdit,
+		after: StringText,
+	): boolean {
 		let hasInvalidated = false;
 		for (const diagnostic of this._diagnostics) {
 			const oldRange = diagnostic.range;
@@ -86,8 +130,18 @@ export class DiagnosticsCollection {
 			}
 
 			// If the range grew then we need to check what got added
-			const isSamePrefix = contentAtOldRange === new OffsetRange(newRange.start, newRange.start + oldRange.length).substring(after.value);
-			const isSameSuffix = contentAtOldRange === new OffsetRange(newRange.endExclusive - oldRange.length, newRange.endExclusive).substring(after.value);
+			const isSamePrefix =
+				contentAtOldRange ===
+				new OffsetRange(
+					newRange.start,
+					newRange.start + oldRange.length,
+				).substring(after.value);
+			const isSameSuffix =
+				contentAtOldRange ===
+				new OffsetRange(
+					newRange.endExclusive - oldRange.length,
+					newRange.endExclusive,
+				).substring(after.value);
 			if (!isSamePrefix && !isSameSuffix) {
 				// The content at the diagnostic range has changed
 				diagnostic.invalidate();
@@ -98,13 +152,23 @@ export class DiagnosticsCollection {
 			let edgeCharacter;
 			if (isSamePrefix) {
 				const offsetAfterOldRange = newRange.start + oldRange.length;
-				edgeCharacter = new OffsetRange(offsetAfterOldRange, offsetAfterOldRange + 1).substring(after.value);
+				edgeCharacter = new OffsetRange(
+					offsetAfterOldRange,
+					offsetAfterOldRange + 1,
+				).substring(after.value);
 			} else {
-				const offsetBeforeOldRange = newRange.endExclusive - oldRange.length - 1;
-				edgeCharacter = new OffsetRange(offsetBeforeOldRange, offsetBeforeOldRange + 1).substring(after.value);
+				const offsetBeforeOldRange =
+					newRange.endExclusive - oldRange.length - 1;
+				edgeCharacter = new OffsetRange(
+					offsetBeforeOldRange,
+					offsetBeforeOldRange + 1,
+				).substring(after.value);
 			}
 
-			if (edgeCharacter.length !== 1 || /^[a-zA-Z0-9_]$/.test(edgeCharacter)) {
+			if (
+				edgeCharacter.length !== 1 ||
+				/^[a-zA-Z0-9_]$/.test(edgeCharacter)
+			) {
 				// The content at the diagnostic range has changed
 				diagnostic.invalidate();
 				hasInvalidated = true;
@@ -114,9 +178,15 @@ export class DiagnosticsCollection {
 			// We need to update the range of the diagnostic after applying the edits
 			let updatedRange: OffsetRange;
 			if (isSamePrefix) {
-				updatedRange = new OffsetRange(newRange.start, newRange.start + oldRange.length);
+				updatedRange = new OffsetRange(
+					newRange.start,
+					newRange.start + oldRange.length,
+				);
 			} else {
-				updatedRange = new OffsetRange(newRange.endExclusive - oldRange.length, newRange.endExclusive);
+				updatedRange = new OffsetRange(
+					newRange.endExclusive - oldRange.length,
+					newRange.endExclusive,
+				);
 			}
 
 			diagnostic.updateRange(updatedRange);
@@ -134,7 +204,7 @@ export class DiagnosticsCollection {
 	}
 
 	toString(): string {
-		return this._diagnostics.map(d => d.toString()).join('\n');
+		return this._diagnostics.map((d) => d.toString()).join('\n');
 	}
 }
 
@@ -146,21 +216,27 @@ export type DiagnosticCompletionState = {
 };
 
 export class DiagnosticsCompletionProcessor extends Disposable {
-
 	static get documentSelector(): vscode.DocumentSelector {
-		return Array.from(new Set([
-			...ImportDiagnosticCompletionProvider.SupportedLanguages,
-			...AsyncDiagnosticCompletionProvider.SupportedLanguages
-		]));
+		return Array.from(
+			new Set([
+				...ImportDiagnosticCompletionProvider.SupportedLanguages,
+				...AsyncDiagnosticCompletionProvider.SupportedLanguages,
+			]),
+		);
 	}
 
 	private readonly _onDidChange = this._register(new Emitter<boolean>());
 	readonly onDidChange = this._onDidChange.event;
 
-	private readonly _worker = new AsyncWorker<IDiagnosticsCompletionState>(20, diagnosticCompletionRunResultEquals);
+	private readonly _worker = new AsyncWorker<IDiagnosticsCompletionState>(
+		20,
+		diagnosticCompletionRunResultEquals,
+	);
 
 	private readonly _rejectionCollector: RejectionCollector;
-	private readonly _diagnosticsCompletionProviders: IObservable<IDiagnosticCompletionProvider[]>;
+	private readonly _diagnosticsCompletionProviders: IObservable<
+		IDiagnosticCompletionProvider[]
+	>;
 	private readonly _workspaceDocumentEditHistory: WorkspaceDocumentEditHistory;
 	private readonly _currentDiagnostics = new DiagnosticsCollection();
 
@@ -173,101 +249,185 @@ export class DiagnosticsCompletionProcessor extends Disposable {
 		@IConfigurationService configurationService: IConfigurationService,
 		@IWorkspaceService workspaceService: IWorkspaceService,
 		@IFileSystemService fileSystemService: IFileSystemService,
-		@ITabsAndEditorsService private readonly _tabsAndEditorsService: ITabsAndEditorsService,
+		@ITabsAndEditorsService
+		private readonly _tabsAndEditorsService: ITabsAndEditorsService,
 	) {
 		super();
 
-		this._workspaceDocumentEditHistory = this._register(new WorkspaceDocumentEditHistory(this._workspace, git, 100));
+		this._workspaceDocumentEditHistory = this._register(
+			new WorkspaceDocumentEditHistory(this._workspace, git, 100),
+		);
 
-		this._logger = logService.createSubLogger(['NES', 'DiagnosticsInlineCompletionProvider']);
+		this._logger = logService.createSubLogger([
+			'NES',
+			'DiagnosticsInlineCompletionProvider',
+		]);
 
-		const diagnosticsExplorationEnabled = configurationService.getConfigObservable(ConfigKey.TeamInternal.InlineEditsDiagnosticsExplorationEnabled);
+		const diagnosticsExplorationEnabled =
+			configurationService.getConfigObservable(
+				ConfigKey.TeamInternal.InlineEditsDiagnosticsExplorationEnabled,
+			);
 
-		const importProvider = new ImportDiagnosticCompletionProvider(this._logger.createSubLogger('Import'), workspaceService, fileSystemService);
-		const asyncProvider = new AsyncDiagnosticCompletionProvider(this._logger.createSubLogger('Async'));
+		const importProvider = new ImportDiagnosticCompletionProvider(
+			this._logger.createSubLogger('Import'),
+			workspaceService,
+			fileSystemService,
+		);
+		const asyncProvider = new AsyncDiagnosticCompletionProvider(
+			this._logger.createSubLogger('Async'),
+		);
 
-		this._diagnosticsCompletionProviders = derived(reader => {
+		this._diagnosticsCompletionProviders = derived((reader) => {
 			const providers: IDiagnosticCompletionProvider[] = [
 				importProvider,
-				asyncProvider
+				asyncProvider,
 			];
 
 			if (diagnosticsExplorationEnabled.read(reader)) {
-				providers.push(new AnyDiagnosticCompletionProvider(this._logger.createSubLogger('All')));
+				providers.push(
+					new AnyDiagnosticCompletionProvider(
+						this._logger.createSubLogger('All'),
+					),
+				);
 			}
 
 			return providers;
 		}).recomputeInitiallyAndOnChange(this._store);
 
-		this._rejectionCollector = this._register(new RejectionCollector(this._workspace, logService));
+		this._rejectionCollector = this._register(
+			new RejectionCollector(this._workspace, logService),
+		);
 
-		const isValidEditor = (editor: vscode.TextEditor | undefined): editor is vscode.TextEditor => {
-			return !!editor && (isNotebookCell(editor.document.uri) || isEditorFromEditorGrid(editor));
+		const isValidEditor = (
+			editor: vscode.TextEditor | undefined,
+		): editor is vscode.TextEditor => {
+			return (
+				!!editor &&
+				(isNotebookCell(editor.document.uri) ||
+					isEditorFromEditorGrid(editor))
+			);
 		};
 
-		this._register(autorun(reader => {
-			const activeDocument = this._workspace.lastActiveDocument.read(reader);
-			if (!activeDocument) { return; }
-
-			const activeEditor = this._tabsAndEditorsService.activeTextEditor;
-			if (!activeEditor || !isEditorFromEditorGrid(activeEditor) || !isEqual(activeDocument.id.toUri(), activeEditor.document.uri)) {
-				return;
-			}
-
-			// update state because document changed
-			this._updateState();
-
-			// update state because diagnostics changed
-			reader.store.add(runOnChange(activeDocument.diagnostics, (diagnostics) => {
-				this._logger.trace(`Diagnostics changed received in processor: ${diagnostics.map(d => '\n- ' + d.message).join('')}`);
-				this._updateState();
-			}));
-		}));
-
-		this._register(vscode.window.onDidChangeTextEditorSelection(async e => {
-			const activeEditor = this._tabsAndEditorsService.activeTextEditor;
-			if (!isValidEditor(activeEditor)) {
-				return;
-			}
-
-			if (!isEqual(e.textEditor.document.uri, activeEditor.document.uri)) {
-				return;
-			}
-
-			this._updateState();
-		}));
-
-		this._register(this._worker.onDidChange(result => {
-			this._onDidChange.fire(!!result.completionItem);
-		}));
-
-		this._register(autorun(reader => {
-			const document = this._workspace.lastActiveDocument.read(reader);
-			if (!document) { return; }
-
-			reader.store.add(autorunWithChanges(this, {
-				value: document.value,
-			}, (data) => {
-				for (const edit of data.value.changes) {
-					if (!data.value.previous) { continue; }
-					const hasInvalidatedRange = this._currentDiagnostics.applyEdit(data.value.previous, edit, data.value.value);
-					if (hasInvalidatedRange) {
-						this._updateState();
-					}
+		this._register(
+			autorun((reader) => {
+				const activeDocument =
+					this._workspace.lastActiveDocument.read(reader);
+				if (!activeDocument) {
+					return;
 				}
-			}));
-		}));
+
+				const activeEditor =
+					this._tabsAndEditorsService.activeTextEditor;
+				if (
+					!activeEditor ||
+					!isEditorFromEditorGrid(activeEditor) ||
+					!isEqual(
+						activeDocument.id.toUri(),
+						activeEditor.document.uri,
+					)
+				) {
+					return;
+				}
+
+				// update state because document changed
+				this._updateState();
+
+				// update state because diagnostics changed
+				reader.store.add(
+					runOnChange(activeDocument.diagnostics, (diagnostics) => {
+						this._logger.trace(
+							`Diagnostics changed received in processor: ${diagnostics.map((d) => '\n- ' + d.message).join('')}`,
+						);
+						this._updateState();
+					}),
+				);
+			}),
+		);
+
+		this._register(
+			vscode.window.onDidChangeTextEditorSelection(async (e) => {
+				const activeEditor =
+					this._tabsAndEditorsService.activeTextEditor;
+				if (!isValidEditor(activeEditor)) {
+					return;
+				}
+
+				if (
+					!isEqual(
+						e.textEditor.document.uri,
+						activeEditor.document.uri,
+					)
+				) {
+					return;
+				}
+
+				this._updateState();
+			}),
+		);
+
+		this._register(
+			this._worker.onDidChange((result) => {
+				this._onDidChange.fire(!!result.completionItem);
+			}),
+		);
+
+		this._register(
+			autorun((reader) => {
+				const document =
+					this._workspace.lastActiveDocument.read(reader);
+				if (!document) {
+					return;
+				}
+
+				reader.store.add(
+					autorunWithChanges(
+						this,
+						{
+							value: document.value,
+						},
+						(data) => {
+							for (const edit of data.value.changes) {
+								if (!data.value.previous) {
+									continue;
+								}
+								const hasInvalidatedRange =
+									this._currentDiagnostics.applyEdit(
+										data.value.previous,
+										edit,
+										data.value.value,
+									);
+								if (hasInvalidatedRange) {
+									this._updateState();
+								}
+							}
+						},
+					),
+				);
+			}),
+		);
 	}
 
 	private async _updateState(): Promise<void> {
 		const activeTextEditor = this._tabsAndEditorsService.activeTextEditor;
-		if (!activeTextEditor) { return; }
+		if (!activeTextEditor) {
+			return;
+		}
 
-		const workspaceDocument = this._workspace.getDocumentByTextDocument(activeTextEditor.document);
-		if (!workspaceDocument) { return; }
+		const workspaceDocument = this._workspace.getDocumentByTextDocument(
+			activeTextEditor.document,
+		);
+		if (!workspaceDocument) {
+			return;
+		}
 
-		const range = new vscode.Range(activeTextEditor.selection.active, activeTextEditor.selection.active);
-		const selection = workspaceDocument.toRange(activeTextEditor.document, range);
+		const range = new vscode.Range(
+			activeTextEditor.selection.active,
+			activeTextEditor.selection.active,
+		);
+		const selection = workspaceDocument.toRange(
+			activeTextEditor.document,
+			range,
+		);
 		if (!selection) {
 			return;
 		}
@@ -275,27 +435,57 @@ export class DiagnosticsCompletionProcessor extends Disposable {
 		const cursor = toInternalPosition(selection.start);
 		const log = new DiagnosticInlineEditRequestLogContext();
 
-		const relevantDiagnostics = this._getDiagnostics(workspaceDocument, cursor, log);
-		const diagnosticsSorted = sortDiagnosticsByDistance(workspaceDocument, relevantDiagnostics, cursor);
+		const relevantDiagnostics = this._getDiagnostics(
+			workspaceDocument,
+			cursor,
+			log,
+		);
+		const diagnosticsSorted = sortDiagnosticsByDistance(
+			workspaceDocument,
+			relevantDiagnostics,
+			cursor,
+		);
 
 		if (this._currentDiagnostics.isEqualAndUpdate(diagnosticsSorted)) {
 			return;
 		}
 
-		this._logger.trace('Scheduled update for diagnostics inline completion');
+		this._logger.trace(
+			'Scheduled update for diagnostics inline completion',
+		);
 
-		await this._worker.schedule(async (token: CancellationToken) => this._runCompletionHandler(workspaceDocument, diagnosticsSorted, cursor, log, token));
+		await this._worker.schedule(async (token: CancellationToken) =>
+			this._runCompletionHandler(
+				workspaceDocument,
+				diagnosticsSorted,
+				cursor,
+				log,
+				token,
+			),
+		);
 	}
 
-	private _getDiagnostics(workspaceDocument: IVSCodeObservableDocument, cursor: Position, logContext: DiagnosticInlineEditRequestLogContext): Diagnostic[] {
-		const availableDiagnostics = workspaceDocument.diagnostics.get().map(d => new Diagnostic(d));
+	private _getDiagnostics(
+		workspaceDocument: IVSCodeObservableDocument,
+		cursor: Position,
+		logContext: DiagnosticInlineEditRequestLogContext,
+	): Diagnostic[] {
+		const availableDiagnostics = workspaceDocument.diagnostics
+			.get()
+			.map((d) => new Diagnostic(d));
 		if (availableDiagnostics.length === 0) {
 			return [];
 		}
 
-		const filterDiagnosticsAndLog = (diagnostics: Diagnostic[], message: string, filterFn: (diagnostics: Diagnostic[]) => Diagnostic[]): Diagnostic[] => {
+		const filterDiagnosticsAndLog = (
+			diagnostics: Diagnostic[],
+			message: string,
+			filterFn: (diagnostics: Diagnostic[]) => Diagnostic[],
+		): Diagnostic[] => {
 			const diagnosticsAfter = filterFn(diagnostics);
-			const diagnosticsDiff = diagnostics.filter(diagnostic => !diagnosticsAfter.includes(diagnostic));
+			const diagnosticsDiff = diagnostics.filter(
+				(diagnostic) => !diagnosticsAfter.includes(diagnostic),
+			);
 			if (diagnosticsDiff.length > 0) {
 				logList(message, diagnosticsDiff, logContext, this._logger);
 			}
@@ -306,112 +496,279 @@ export class DiagnosticsCompletionProcessor extends Disposable {
 		const providers = this._diagnosticsCompletionProviders.get();
 
 		let relevantDiagnostics = [...availableDiagnostics];
-		relevantDiagnostics = filterDiagnosticsAndLog(relevantDiagnostics, 'Filtered by provider', ds => ds.filter(diagnostic => providers.some(provider => provider.providesCompletionsForDiagnostic(workspaceDocument, diagnostic, language, cursor))));
-		relevantDiagnostics = filterDiagnosticsAndLog(relevantDiagnostics, 'Filtered by recent acceptance', ds => ds.filter(diagnostic => !this._hasDiagnosticRecentlyBeenAccepted(diagnostic)));
-		relevantDiagnostics = filterDiagnosticsAndLog(relevantDiagnostics, 'Filtered by no recent edit', ds => this._filterDiagnosticsByRecentEditNearby(ds, workspaceDocument));
+		relevantDiagnostics = filterDiagnosticsAndLog(
+			relevantDiagnostics,
+			'Filtered by provider',
+			(ds) =>
+				ds.filter((diagnostic) =>
+					providers.some((provider) =>
+						provider.providesCompletionsForDiagnostic(
+							workspaceDocument,
+							diagnostic,
+							language,
+							cursor,
+						),
+					),
+				),
+		);
+		relevantDiagnostics = filterDiagnosticsAndLog(
+			relevantDiagnostics,
+			'Filtered by recent acceptance',
+			(ds) =>
+				ds.filter(
+					(diagnostic) =>
+						!this._hasDiagnosticRecentlyBeenAccepted(diagnostic),
+				),
+		);
+		relevantDiagnostics = filterDiagnosticsAndLog(
+			relevantDiagnostics,
+			'Filtered by no recent edit',
+			(ds) =>
+				this._filterDiagnosticsByRecentEditNearby(
+					ds,
+					workspaceDocument,
+				),
+		);
 
 		return relevantDiagnostics;
 	}
 
-	private async _runCompletionHandler(workspaceDocument: IVSCodeObservableDocument, diagnosticsSorted: Diagnostic[], cursor: Position, log: DiagnosticInlineEditRequestLogContext, token: CancellationToken): Promise<IDiagnosticsCompletionState> {
+	private async _runCompletionHandler(
+		workspaceDocument: IVSCodeObservableDocument,
+		diagnosticsSorted: Diagnostic[],
+		cursor: Position,
+		log: DiagnosticInlineEditRequestLogContext,
+		token: CancellationToken,
+	): Promise<IDiagnosticsCompletionState> {
 		const telemetryBuilder = new DiagnosticsCompletionHandlerTelemetry();
 
 		let completionItem = null;
 		try {
 			this._logger.trace('Running diagnostics inline completion handler');
-			completionItem = await this._getCompletionFromDiagnostics(workspaceDocument, diagnosticsSorted, cursor, log, token, telemetryBuilder);
+			completionItem = await this._getCompletionFromDiagnostics(
+				workspaceDocument,
+				diagnosticsSorted,
+				cursor,
+				log,
+				token,
+				telemetryBuilder,
+			);
 		} catch (error) {
 			log.setError(error);
 		}
 
-		this._logger.trace('Diagnostic Providers returned completion item: ' + (completionItem ? completionItem.toString() : 'null'));
+		this._logger.trace(
+			'Diagnostic Providers returned completion item: ' +
+				(completionItem ? completionItem.toString() : 'null'),
+		);
 
 		if (completionItem instanceof ImportDiagnosticCompletionItem) {
 			telemetryBuilder.setImportTelemetry(completionItem);
 		}
 
-		return { completionItem, logContext: log, telemetryBuilder: telemetryBuilder };
+		return {
+			completionItem,
+			logContext: log,
+			telemetryBuilder: telemetryBuilder,
+		};
 	}
 
 	getCurrentState(docId: DocumentId): DiagnosticCompletionState {
 		const currentState = this._worker.getCurrentResult();
 
 		const workspaceDocument = this._workspace.getDocument(docId);
-		if (!workspaceDocument) { return { item: undefined, telemetry: new DiagnosticsCompletionHandlerTelemetry().addDroppedReason('WorkspaceDocumentNotFound').build(), logContext: undefined }; }
+		if (!workspaceDocument) {
+			return {
+				item: undefined,
+				telemetry: new DiagnosticsCompletionHandlerTelemetry()
+					.addDroppedReason('WorkspaceDocumentNotFound')
+					.build(),
+				logContext: undefined,
+			};
+		}
 
 		if (currentState === undefined) {
-			return { item: undefined, telemetry: new DiagnosticsCompletionHandlerTelemetry().build(), logContext: undefined };
+			return {
+				item: undefined,
+				telemetry: new DiagnosticsCompletionHandlerTelemetry().build(),
+				logContext: undefined,
+			};
 		}
 
 		const { telemetryBuilder, completionItem, logContext } = currentState;
 		const workInProgress = this._worker.workInProgress();
 		if (!completionItem) {
-			return { item: undefined, telemetry: telemetryBuilder.build(), logContext, workInProgress };
+			return {
+				item: undefined,
+				telemetry: telemetryBuilder.build(),
+				logContext,
+				workInProgress,
+			};
 		}
 
-		if (!this._isCompletionItemValid(completionItem, workspaceDocument, currentState.logContext, telemetryBuilder)) {
-			return { item: undefined, telemetry: telemetryBuilder.build(), logContext, workInProgress };
+		if (
+			!this._isCompletionItemValid(
+				completionItem,
+				workspaceDocument,
+				currentState.logContext,
+				telemetryBuilder,
+			)
+		) {
+			return {
+				item: undefined,
+				telemetry: telemetryBuilder.build(),
+				logContext,
+				workInProgress,
+			};
 		}
 
 		if (completionItem.documentId !== docId) {
 			logContext.addLog('Dropped: wrong-document');
-			return { item: undefined, telemetry: telemetryBuilder.addDroppedReason('wrong-document').build(), logContext, workInProgress };
+			return {
+				item: undefined,
+				telemetry: telemetryBuilder
+					.addDroppedReason('wrong-document')
+					.build(),
+				logContext,
+				workInProgress,
+			};
 		}
 
-		log('following known diagnostics:\n' + this._currentDiagnostics.toString(), undefined, this._logger);
+		log(
+			'following known diagnostics:\n' +
+				this._currentDiagnostics.toString(),
+			undefined,
+			this._logger,
+		);
 
-		return { item: completionItem, telemetry: telemetryBuilder.build(), logContext, workInProgress };
+		return {
+			item: completionItem,
+			telemetry: telemetryBuilder.build(),
+			logContext,
+			workInProgress,
+		};
 	}
 
-	private async _getCompletionFromDiagnostics(workspaceDocument: IVSCodeObservableDocument, diagnosticsSorted: Diagnostic[], pos: Position, logContext: DiagnosticInlineEditRequestLogContext, token: CancellationToken, tb: DiagnosticsCompletionHandlerTelemetry): Promise<DiagnosticCompletionItem | null> {
+	private async _getCompletionFromDiagnostics(
+		workspaceDocument: IVSCodeObservableDocument,
+		diagnosticsSorted: Diagnostic[],
+		pos: Position,
+		logContext: DiagnosticInlineEditRequestLogContext,
+		token: CancellationToken,
+		tb: DiagnosticsCompletionHandlerTelemetry,
+	): Promise<DiagnosticCompletionItem | null> {
 		if (diagnosticsSorted.length === 0) {
-			log(`No diagnostics available for document ${workspaceDocument.id.toString()}`, logContext, this._logger);
+			log(
+				`No diagnostics available for document ${workspaceDocument.id.toString()}`,
+				logContext,
+				this._logger,
+			);
 			return null;
 		}
 
-		const diagnosticsCompletionItems = await this._fetchDiagnosticsBasedCompletions(workspaceDocument, diagnosticsSorted, pos, logContext, token);
+		const diagnosticsCompletionItems =
+			await this._fetchDiagnosticsBasedCompletions(
+				workspaceDocument,
+				diagnosticsSorted,
+				pos,
+				logContext,
+				token,
+			);
 
-		return diagnosticsCompletionItems.find(item => this._isCompletionItemValid(item, workspaceDocument, logContext, tb)) ?? null;
+		return (
+			diagnosticsCompletionItems.find((item) =>
+				this._isCompletionItemValid(
+					item,
+					workspaceDocument,
+					logContext,
+					tb,
+				),
+			) ?? null
+		);
 	}
 
-	private async _fetchDiagnosticsBasedCompletions(workspaceDocument: IVSCodeObservableDocument, sortedDiagnostics: Diagnostic[], pos: Position, logContext: DiagnosticInlineEditRequestLogContext, token: CancellationToken): Promise<DiagnosticCompletionItem[]> {
+	private async _fetchDiagnosticsBasedCompletions(
+		workspaceDocument: IVSCodeObservableDocument,
+		sortedDiagnostics: Diagnostic[],
+		pos: Position,
+		logContext: DiagnosticInlineEditRequestLogContext,
+		token: CancellationToken,
+	): Promise<DiagnosticCompletionItem[]> {
 		const providers = this._diagnosticsCompletionProviders.get();
 
-		const providerTimings: Array<{ provider: string; duration: number }> = [];
+		const providerTimings: Array<{ provider: string; duration: number }> =
+			[];
 
-		const providerResults = await Promise.all(providers.map(async provider => {
-			const startTime = Date.now();
-			const result = await provider.provideDiagnosticCompletionItem(workspaceDocument, sortedDiagnostics, pos, logContext, token);
-			providerTimings.push({ provider: provider.providerName, duration: Date.now() - startTime });
-			return result;
-		}));
+		const providerResults = await Promise.all(
+			providers.map(async (provider) => {
+				const startTime = Date.now();
+				const result = await provider.provideDiagnosticCompletionItem(
+					workspaceDocument,
+					sortedDiagnostics,
+					pos,
+					logContext,
+					token,
+				);
+				providerTimings.push({
+					provider: provider.providerName,
+					duration: Date.now() - startTime,
+				});
+				return result;
+			}),
+		);
 
-		this._logger.trace(`Provider durations: ${providerTimings.map(timing => `\n- ${timing.provider}: ${timing.duration}ms`).join('')}`);
+		this._logger.trace(
+			`Provider durations: ${providerTimings.map((timing) => `\n- ${timing.provider}: ${timing.duration}ms`).join('')}`,
+		);
 
-		return providerResults.filter(item => !!item) as DiagnosticCompletionItem[];
+		return providerResults.filter(
+			(item) => !!item,
+		) as DiagnosticCompletionItem[];
 	}
 
 	// Handle Acceptance and rejection of diagnostics completion items
 
-	public handleEndOfLifetime(completionItem: DiagnosticCompletionItem, reason: vscode.InlineCompletionEndOfLifeReason): void {
-		const provider = this._diagnosticsCompletionProviders.get().find(p => p.providerName === completionItem.providerName);
+	public handleEndOfLifetime(
+		completionItem: DiagnosticCompletionItem,
+		reason: vscode.InlineCompletionEndOfLifeReason,
+	): void {
+		const provider = this._diagnosticsCompletionProviders
+			.get()
+			.find((p) => p.providerName === completionItem.providerName);
 		if (!provider) {
-			throw new BugIndicatingError('No provider found for completion item');
+			throw new BugIndicatingError(
+				'No provider found for completion item',
+			);
 		}
 
-		if (reason.kind === vscode.InlineCompletionEndOfLifeReasonKind.Rejected) {
+		if (
+			reason.kind === vscode.InlineCompletionEndOfLifeReasonKind.Rejected
+		) {
 			this._rejectDiagnosticCompletion(provider, completionItem);
-		} else if (reason.kind === vscode.InlineCompletionEndOfLifeReasonKind.Accepted) {
+		} else if (
+			reason.kind === vscode.InlineCompletionEndOfLifeReasonKind.Accepted
+		) {
 			this._acceptDiagnosticCompletion(provider, completionItem);
 		}
 	}
 
-	private _lastAcceptedDiagnostic: { diagnostic: Diagnostic; time: number } | undefined = undefined;
-	private _acceptDiagnosticCompletion(provider: IDiagnosticCompletionProvider, item: DiagnosticCompletionItem): void {
-		this._lastAcceptedDiagnostic = { diagnostic: item.diagnostic, time: Date.now() };
+	private _lastAcceptedDiagnostic:
+		| { diagnostic: Diagnostic; time: number }
+		| undefined = undefined;
+	private _acceptDiagnosticCompletion(
+		provider: IDiagnosticCompletionProvider,
+		item: DiagnosticCompletionItem,
+	): void {
+		this._lastAcceptedDiagnostic = {
+			diagnostic: item.diagnostic,
+			time: Date.now(),
+		};
 	}
 
-	private _rejectDiagnosticCompletion(provider: IDiagnosticCompletionProvider, item: DiagnosticCompletionItem): void {
+	private _rejectDiagnosticCompletion(
+		provider: IDiagnosticCompletionProvider,
+		item: DiagnosticCompletionItem,
+	): void {
 		this._rejectionCollector.reject(item.documentId, item.toOffsetEdit());
 
 		provider.completionItemRejected?.(item);
@@ -419,46 +776,84 @@ export class DiagnosticsCompletionProcessor extends Disposable {
 
 	// Filters
 
-	private _isCompletionItemValid(item: DiagnosticCompletionItem, workspaceDocument: IObservableDocument, logContext: DiagnosticInlineEditRequestLogContext, tb: DiagnosticsCompletionHandlerTelemetry): boolean {
+	private _isCompletionItemValid(
+		item: DiagnosticCompletionItem,
+		workspaceDocument: IObservableDocument,
+		logContext: DiagnosticInlineEditRequestLogContext,
+		tb: DiagnosticsCompletionHandlerTelemetry,
+	): boolean {
 		if (!item.diagnostic.isValid()) {
-			log('Diagnostic completion item is no longer valid', logContext, this._logger);
+			log(
+				'Diagnostic completion item is no longer valid',
+				logContext,
+				this._logger,
+			);
 			tb.addDroppedReason('no-longer-valid', item);
 			logContext.markToBeLogged();
 			return false;
 		}
 
 		if (this._isDiagnosticCompletionRejected(item)) {
-			log('Diagnostic completion item has been rejected before', logContext, this._logger);
+			log(
+				'Diagnostic completion item has been rejected before',
+				logContext,
+				this._logger,
+			);
 			tb.addDroppedReason('recently-rejected', item);
 			logContext.markToBeLogged();
 			return false;
 		}
 
 		if (this._isUndoRecentEdit(item)) {
-			log('Diagnostic completion item is an undo operation', logContext, this._logger);
+			log(
+				'Diagnostic completion item is an undo operation',
+				logContext,
+				this._logger,
+			);
 			tb.addDroppedReason('undo-operation', item);
 			logContext.markToBeLogged();
 			return false;
 		}
 
 		if (this._hasDiagnosticRecentlyBeenAccepted(item.diagnostic)) {
-			log('Completion item fixing the diagnostic has been accepted recently', logContext, this._logger);
+			log(
+				'Completion item fixing the diagnostic has been accepted recently',
+				logContext,
+				this._logger,
+			);
 			tb.addDroppedReason('recently-accepted', item);
 			logContext.markToBeLogged();
 			return false;
 		}
 
 		if (this._hasRecentlyBeenAddedWithoutNES(item)) {
-			log('Diagnostic has been fixed without NES recently', logContext, this._logger);
+			log(
+				'Diagnostic has been fixed without NES recently',
+				logContext,
+				this._logger,
+			);
 			tb.addDroppedReason('recently-added-without-nes', item);
 			logContext.markToBeLogged();
 			return false;
 		}
 
-		const provider = this._diagnosticsCompletionProviders.get().find(p => p.providerName === item.providerName);
-		if (provider && provider.isCompletionItemStillValid && !provider.isCompletionItemStillValid(item, workspaceDocument)) {
-			log(`${provider.providerName}: Completion item is no longer valid`, logContext, this._logger);
-			tb.addDroppedReason(`${provider.providerName}-no-longer-valid`, item);
+		const provider = this._diagnosticsCompletionProviders
+			.get()
+			.find((p) => p.providerName === item.providerName);
+		if (
+			provider &&
+			provider.isCompletionItemStillValid &&
+			!provider.isCompletionItemStillValid(item, workspaceDocument)
+		) {
+			log(
+				`${provider.providerName}: Completion item is no longer valid`,
+				logContext,
+				this._logger,
+			);
+			tb.addDroppedReason(
+				`${provider.providerName}-no-longer-valid`,
+				item,
+			);
 			logContext.markToBeLogged();
 			return false;
 		}
@@ -466,59 +861,101 @@ export class DiagnosticsCompletionProcessor extends Disposable {
 		return true;
 	}
 
-	private _isDiagnosticCompletionRejected(diagnostic: DiagnosticCompletionItem): boolean {
-		return this._rejectionCollector.isRejected(diagnostic.documentId, diagnostic.toOffsetEdit());
+	private _isDiagnosticCompletionRejected(
+		diagnostic: DiagnosticCompletionItem,
+	): boolean {
+		return this._rejectionCollector.isRejected(
+			diagnostic.documentId,
+			diagnostic.toOffsetEdit(),
+		);
 	}
 
-	private _hasRecentlyBeenAddedWithoutNES(item: DiagnosticCompletionItem): boolean {
-		const recentEdits = this._workspaceDocumentEditHistory.getNRecentEdits(item.documentId, 5)?.edits;
+	private _hasRecentlyBeenAddedWithoutNES(
+		item: DiagnosticCompletionItem,
+	): boolean {
+		const recentEdits = this._workspaceDocumentEditHistory.getNRecentEdits(
+			item.documentId,
+			5,
+		)?.edits;
 		if (!recentEdits) {
 			return false;
 		}
 
 		const offsetEdit = item.toOffsetEdit();
-		return recentEdits.replacements.some(edit => edit.replaceRange.intersectsOrTouches(offsetEdit.replaceRange));
+		return recentEdits.replacements.some((edit) =>
+			edit.replaceRange.intersectsOrTouches(offsetEdit.replaceRange),
+		);
 	}
 
-	private _hasDiagnosticRecentlyBeenAccepted(diagnostic: Diagnostic): boolean {
-		if (!this._lastAcceptedDiagnostic || this._lastAcceptedDiagnostic.time + 1000 < Date.now()) {
+	private _hasDiagnosticRecentlyBeenAccepted(
+		diagnostic: Diagnostic,
+	): boolean {
+		if (
+			!this._lastAcceptedDiagnostic ||
+			this._lastAcceptedDiagnostic.time + 1000 < Date.now()
+		) {
 			return false;
 		}
 		return this._lastAcceptedDiagnostic.diagnostic.equals(diagnostic);
 	}
 
 	private _isUndoRecentEdit(diagnostic: DiagnosticCompletionItem): boolean {
-		const documentHistory = this._workspaceDocumentEditHistory.getRecentEdits(diagnostic.documentId);
+		const documentHistory =
+			this._workspaceDocumentEditHistory.getRecentEdits(
+				diagnostic.documentId,
+			);
 		if (!documentHistory) {
 			return false;
 		}
 
-		return diagnosticWouldUndoUserEdit(diagnostic, documentHistory.before, documentHistory.after, Edits.single(documentHistory.edits));
+		return diagnosticWouldUndoUserEdit(
+			diagnostic,
+			documentHistory.before,
+			documentHistory.after,
+			Edits.single(documentHistory.edits),
+		);
 	}
 
-	private _filterDiagnosticsByRecentEditNearby(diagnostics: Diagnostic[], document: IVSCodeObservableDocument): Diagnostic[] {
-		const recentEdits = this._workspaceDocumentEditHistory.getRecentEdits(document.id)?.edits;
+	private _filterDiagnosticsByRecentEditNearby(
+		diagnostics: Diagnostic[],
+		document: IVSCodeObservableDocument,
+	): Diagnostic[] {
+		const recentEdits = this._workspaceDocumentEditHistory.getRecentEdits(
+			document.id,
+		)?.edits;
 		if (!recentEdits) {
 			return [];
 		}
 
-		return diagnostics.filter(diagnostic => {
+		return diagnostics.filter((diagnostic) => {
 			const newRanges = recentEdits.getNewRanges();
-			const potentialIntersection = findFirstMonotonous(newRanges, (r) => r.endExclusive >= diagnostic.range.start);
+			const potentialIntersection = findFirstMonotonous(
+				newRanges,
+				(r) => r.endExclusive >= diagnostic.range.start,
+			);
 			return potentialIntersection?.intersectsOrTouches(diagnostic.range);
 		});
 	}
 }
 
-function diagnosticWouldUndoUserEdit(diagnostic: DiagnosticCompletionItem, documentBefore: StringText, documentAfter: StringText, edits: Edits): boolean {
-
+function diagnosticWouldUndoUserEdit(
+	diagnostic: DiagnosticCompletionItem,
+	documentBefore: StringText,
+	documentAfter: StringText,
+	edits: Edits,
+): boolean {
 	const currentEdit = diagnostic.toOffsetEdit().toEdit();
-	const ourInformationDelta = getInformationDelta(documentAfter.value, currentEdit);
+	const ourInformationDelta = getInformationDelta(
+		documentAfter.value,
+		currentEdit,
+	);
 
 	let recentInformationDelta = new InformationDelta();
 	let doc = documentBefore.value;
 	for (const edit of edits.edits) {
-		recentInformationDelta = recentInformationDelta.combine(getInformationDelta(doc, edit));
+		recentInformationDelta = recentInformationDelta.combine(
+			getInformationDelta(doc, edit),
+		);
 		doc = edit.apply(doc);
 	}
 
@@ -536,10 +973,13 @@ function isEditorFromEditorGrid(editor: vscode.TextEditor): boolean {
 class AsyncWorker<T extends {}> extends Disposable {
 	private readonly _taskQueue: ThrottledDelayer<void>;
 
-	private readonly _onDidChange = this._register(new vscode.EventEmitter<T>());
+	private readonly _onDidChange = this._register(
+		new vscode.EventEmitter<T>(),
+	);
 	readonly onDidChange = this._onDidChange.event;
 
-	private _currentTokenSource: CancellationTokenSource | undefined = undefined;
+	private _currentTokenSource: CancellationTokenSource | undefined =
+		undefined;
 	private _activeWorkPromise: Promise<T | undefined> | undefined = undefined;
 
 	private __currentResult: T | undefined = undefined;
@@ -547,20 +987,27 @@ class AsyncWorker<T extends {}> extends Disposable {
 		return this.__currentResult;
 	}
 	private set _currentResult(value: T) {
-		const changed = this.__currentResult === undefined || !this._equals(value, this.__currentResult);
+		const changed =
+			this.__currentResult === undefined ||
+			!this._equals(value, this.__currentResult);
 		this.__currentResult = value;
 		if (changed) {
 			this._onDidChange.fire(value);
 		}
 	}
 
-	constructor(delay: number, private readonly _equals: (a: T, b: T) => boolean) {
+	constructor(
+		delay: number,
+		private readonly _equals: (a: T, b: T) => boolean,
+	) {
 		super();
 
 		this._taskQueue = new ThrottledDelayer<void>(delay);
 	}
 
-	async schedule(fn: (token: CancellationToken) => Promise<T>): Promise<void> {
+	async schedule(
+		fn: (token: CancellationToken) => Promise<T>,
+	): Promise<void> {
 		const activePromise = this._doSchedule(fn);
 		this._activeWorkPromise = activePromise;
 
@@ -575,7 +1022,9 @@ class AsyncWorker<T extends {}> extends Disposable {
 		}
 	}
 
-	private async _doSchedule(fn: (token: CancellationToken) => Promise<T>): Promise<T | undefined> {
+	private async _doSchedule(
+		fn: (token: CancellationToken) => Promise<T>,
+	): Promise<T | undefined> {
 		this._currentTokenSource?.dispose(true);
 		this._currentTokenSource = new CancellationTokenSource();
 		const token = this._currentTokenSource.token;
@@ -672,8 +1121,10 @@ class DiagnosticsCompletionHandlerTelemetry {
 			hasExistingSameFileImport: this._hasExistingSameFileImport,
 			isLocalImport: this._isLocalImport,
 			distanceToUnknownDiagnostic: this._distanceToUnknownDiagnostic,
-			distanceToAlternativeDiagnostic: this._distanceToAlternativeDiagnostic,
-			hasAlternativeDiagnosticForSameRange: this._hasAlternativeDiagnosticForSameRange
+			distanceToAlternativeDiagnostic:
+				this._distanceToAlternativeDiagnostic,
+			hasAlternativeDiagnosticForSameRange:
+				this._hasAlternativeDiagnosticForSameRange,
 		};
 	}
 }

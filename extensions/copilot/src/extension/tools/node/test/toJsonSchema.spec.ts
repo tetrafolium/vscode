@@ -70,7 +70,12 @@ describe('toJsonSchema', () => {
 		});
 
 		it('handles nested arrays', () => {
-			expect(toJsonSchema([[1, 2], [3, 4]])).toEqual({
+			expect(
+				toJsonSchema([
+					[1, 2],
+					[3, 4],
+				]),
+			).toEqual({
 				type: 'array',
 				items: {
 					type: 'array',
@@ -99,10 +104,7 @@ describe('toJsonSchema', () => {
 		});
 
 		it('merges objects with no common properties', () => {
-			const input = [
-				{ name: 'Alice' },
-				{ age: 30 },
-			];
+			const input = [{ name: 'Alice' }, { age: 30 }];
 			expect(toJsonSchema(input)).toEqual({
 				type: 'array',
 				items: {
@@ -120,10 +122,7 @@ describe('toJsonSchema', () => {
 			expect(toJsonSchema(input)).toEqual({
 				type: 'array',
 				items: {
-					oneOf: [
-						{ type: 'string' },
-						{ type: 'integer' },
-					],
+					oneOf: [{ type: 'string' }, { type: 'integer' }],
 				},
 			});
 		});
@@ -169,10 +168,7 @@ describe('toJsonSchema', () => {
 			expect(toJsonSchema(input)).toEqual({
 				type: 'array',
 				items: {
-					oneOf: [
-						{ type: 'integer' },
-						{ type: 'null' },
-					],
+					oneOf: [{ type: 'integer' }, { type: 'null' }],
 				},
 			});
 		});
@@ -182,10 +178,7 @@ describe('toJsonSchema', () => {
 			expect(toJsonSchema(input)).toEqual({
 				type: 'array',
 				items: {
-					oneOf: [
-						{ type: 'integer' },
-						{ type: 'string' },
-					],
+					oneOf: [{ type: 'integer' }, { type: 'string' }],
 				},
 			});
 		});
@@ -228,14 +221,16 @@ describe('toJsonSchema', () => {
 		});
 
 		it('handles nested objects', () => {
-			expect(toJsonSchema({
-				person: {
-					name: 'Alice',
-					address: {
-						city: 'Seattle',
+			expect(
+				toJsonSchema({
+					person: {
+						name: 'Alice',
+						address: {
+							city: 'Seattle',
+						},
 					},
-				},
-			})).toEqual({
+				}),
+			).toEqual({
 				type: 'object',
 				properties: {
 					person: {
@@ -258,13 +253,15 @@ describe('toJsonSchema', () => {
 		});
 
 		it('handles object with mixed types', () => {
-			expect(toJsonSchema({
-				name: 'Test',
-				count: 5,
-				active: true,
-				tags: ['a', 'b'],
-				meta: null,
-			})).toEqual({
+			expect(
+				toJsonSchema({
+					name: 'Test',
+					count: 5,
+					active: true,
+					tags: ['a', 'b'],
+					meta: null,
+				}),
+			).toEqual({
 				type: 'object',
 				properties: {
 					name: { type: 'string' },
@@ -283,10 +280,12 @@ describe('toJsonSchema', () => {
 
 	describe('complex structures', () => {
 		it('handles array of objects with nested arrays', () => {
-			const input = [{
-				id: 1,
-				items: ['x', 'y'],
-			}];
+			const input = [
+				{
+					id: 1,
+					items: ['x', 'y'],
+				},
+			];
 
 			expect(toJsonSchema(input)).toEqual({
 				type: 'array',
@@ -378,11 +377,7 @@ describe('toJsonSchema', () => {
 		});
 
 		it('merges objects with same property having different types', () => {
-			const input = [
-				{ value: 42 },
-				{ value: 'text' },
-				{ value: true },
-			];
+			const input = [{ value: 42 }, { value: 'text' }, { value: true }];
 
 			expect(toJsonSchema(input)).toEqual({
 				type: 'array',
@@ -421,10 +416,7 @@ describe('toJsonSchema', () => {
 							},
 						},
 						b: {
-							oneOf: [
-								{ type: 'string' },
-								{ type: 'integer' },
-							],
+							oneOf: [{ type: 'string' }, { type: 'integer' }],
 						},
 					},
 					required: ['a', 'b'],
@@ -433,10 +425,7 @@ describe('toJsonSchema', () => {
 		});
 
 		it('handles object property becoming null in another object', () => {
-			const input = [
-				{ data: { value: 1 } },
-				{ data: null },
-			];
+			const input = [{ data: { value: 1 } }, { data: null }];
 
 			expect(toJsonSchema(input)).toEqual({
 				type: 'array',

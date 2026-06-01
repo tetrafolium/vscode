@@ -16,7 +16,9 @@ export const accessTimes = new LRUCacheMap<string, number>();
 /**
  * Returns a copy of `docs` sorted by access time, from most to least recent.
  */
-export function sortByAccessTimes<T extends TextDocumentIdentifier>(docs: readonly T[]): T[] {
+export function sortByAccessTimes<T extends TextDocumentIdentifier>(
+	docs: readonly T[],
+): T[] {
 	return [...docs].sort((a, b) => {
 		const aAccessTime = accessTimes.get(a.uri) ?? 0;
 		const bAccessTime = accessTimes.get(b.uri) ?? 0;
@@ -29,8 +31,10 @@ export function sortByAccessTimes<T extends TextDocumentIdentifier>(docs: readon
  * access time of the document.
  */
 export const registerDocumentTracker = (accessor: ServicesAccessor) =>
-	accessor.get(ICompletionsTextDocumentManagerService).onDidFocusTextDocument(e => {
-		if (e.document) {
-			accessTimes.set(e.document.uri.toString(), Date.now());
-		}
-	});
+	accessor
+		.get(ICompletionsTextDocumentManagerService)
+		.onDidFocusTextDocument((e) => {
+			if (e.document) {
+				accessTimes.set(e.document.uri.toString(), Date.now());
+			}
+		});

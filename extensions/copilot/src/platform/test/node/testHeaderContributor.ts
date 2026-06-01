@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HeaderContributor, ReqHeaders } from '../../networking/common/networking';
+import {
+	HeaderContributor,
+	ReqHeaders,
+} from '../../networking/common/networking';
 
 export class TestHeaderContributor implements HeaderContributor {
 	headerKey = 'test';

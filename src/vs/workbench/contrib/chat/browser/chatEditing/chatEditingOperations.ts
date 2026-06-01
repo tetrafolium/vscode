@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { StringSHA1 } from '../../../../../base/common/hash.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { TextEdit } from '../../../../../editor/common/languages.js';
-import { ICellEditOperation } from '../../../notebook/common/notebookCommon.js';
-import { IModifiedEntryTelemetryInfo } from '../../common/editing/chatEditingService.js';
-import { LocalChatSessionUri } from '../../common/model/chatUri.js';
+import { StringSHA1 } from "../../../../../base/common/hash.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { TextEdit } from "../../../../../editor/common/languages.js";
+import { ICellEditOperation } from "../../../notebook/common/notebookCommon.js";
+import { IModifiedEntryTelemetryInfo } from "../../common/editing/chatEditingService.js";
+import { LocalChatSessionUri } from "../../common/model/chatUri.js";
 
 export enum FileOperationType {
-	Create = 'create',
-	Delete = 'delete',
-	Rename = 'rename',
-	TextEdit = 'textEdit',
-	NotebookEdit = 'notebookEdit'
+	Create = "create",
+	Delete = "delete",
+	Rename = "rename",
+	TextEdit = "textEdit",
+	NotebookEdit = "notebookEdit",
 }
 
 /**
@@ -79,7 +79,12 @@ export interface INotebookEditOperation extends IFileOperation {
 /**
  * Union type of all possible file operations
  */
-export type FileOperation = IFileCreateOperation | IFileDeleteOperation | IFileRenameOperation | ITextEditOperation | INotebookEditOperation;
+export type FileOperation =
+	| IFileCreateOperation
+	| IFileDeleteOperation
+	| IFileRenameOperation
+	| ITextEditOperation
+	| INotebookEditOperation;
 
 /**
  * File baseline represents the initial state of a file when first edited in a request
@@ -109,7 +114,9 @@ export interface IReconstructedFileNotExistsState {
 /**
  * The reconstructed state of a file at a specific checkpoint
  */
-export type IReconstructedFileState = IReconstructedFileNotExistsState | IReconstructedFileExistsState;
+export type IReconstructedFileState =
+	| IReconstructedFileNotExistsState
+	| IReconstructedFileExistsState;
 
 /**
  * Checkpoint represents a stable state that can be navigated to
@@ -135,7 +142,8 @@ export interface IChatEditingTimelineState {
 }
 
 export function getKeyForChatSessionResource(chatSessionResource: URI) {
-	const sessionId = LocalChatSessionUri.parseLocalSessionId(chatSessionResource);
+	const sessionId =
+		LocalChatSessionUri.parseLocalSessionId(chatSessionResource);
 	if (sessionId) {
 		return sessionId;
 	}

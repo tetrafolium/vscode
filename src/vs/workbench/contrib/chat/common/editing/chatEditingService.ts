@@ -3,38 +3,57 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { decodeHex, encodeHex, VSBuffer } from '../../../../../base/common/buffer.js';
-import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { CancellationError } from '../../../../../base/common/errors.js';
-import { Event } from '../../../../../base/common/event.js';
-import { IDisposable } from '../../../../../base/common/lifecycle.js';
-import { autorunSelfDisposable, IObservable, IReader } from '../../../../../base/common/observable.js';
-import { hasKey } from '../../../../../base/common/types.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { IDocumentDiff } from '../../../../../editor/common/diff/documentDiffProvider.js';
-import { TextEdit } from '../../../../../editor/common/languages.js';
-import { ITextModel } from '../../../../../editor/common/model.js';
-import { EditSuggestionId } from '../../../../../editor/common/textModelEditSource.js';
-import { localize } from '../../../../../nls.js';
-import { RawContextKey } from '../../../../../platform/contextkey/common/contextkey.js';
-import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IEditorPane } from '../../../../common/editor.js';
-import { ICellEditOperation } from '../../../notebook/common/notebookCommon.js';
-import { IChatMultiDiffData, IChatMultiDiffDataSerialized, IChatProgress, IChatWorkspaceEdit } from '../chatService/chatService.js';
-import { ChatModel, IChatRequestDisablement, IChatResponseModel } from '../model/chatModel.js';
-import { IChatAgentResult } from '../participants/chatAgents.js';
+import {
+	decodeHex,
+	encodeHex,
+	VSBuffer,
+} from "../../../../../base/common/buffer.js";
+import { CancellationToken } from "../../../../../base/common/cancellation.js";
+import { CancellationError } from "../../../../../base/common/errors.js";
+import { Event } from "../../../../../base/common/event.js";
+import { IDisposable } from "../../../../../base/common/lifecycle.js";
+import {
+	autorunSelfDisposable,
+	IObservable,
+	IReader,
+} from "../../../../../base/common/observable.js";
+import { hasKey } from "../../../../../base/common/types.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { IDocumentDiff } from "../../../../../editor/common/diff/documentDiffProvider.js";
+import { TextEdit } from "../../../../../editor/common/languages.js";
+import { ITextModel } from "../../../../../editor/common/model.js";
+import { EditSuggestionId } from "../../../../../editor/common/textModelEditSource.js";
+import { localize } from "../../../../../nls.js";
+import { RawContextKey } from "../../../../../platform/contextkey/common/contextkey.js";
+import { createDecorator } from "../../../../../platform/instantiation/common/instantiation.js";
+import { IEditorPane } from "../../../../common/editor.js";
+import { ICellEditOperation } from "../../../notebook/common/notebookCommon.js";
+import {
+	IChatMultiDiffData,
+	IChatMultiDiffDataSerialized,
+	IChatProgress,
+	IChatWorkspaceEdit,
+} from "../chatService/chatService.js";
+import {
+	ChatModel,
+	IChatRequestDisablement,
+	IChatResponseModel,
+} from "../model/chatModel.js";
+import { IChatAgentResult } from "../participants/chatAgents.js";
 
-export const IChatEditingService = createDecorator<IChatEditingService>('chatEditingService');
+export const IChatEditingService =
+	createDecorator<IChatEditingService>("chatEditingService");
 
 export interface IChatEditingSessionProvider {
 	createEditingSession(chatSessionResource: URI): IChatEditingSession;
 }
 
 export interface IChatEditingService {
-
 	_serviceBrand: undefined;
 
-	startOrContinueGlobalEditingSession(chatModel: ChatModel): IChatEditingSession;
+	startOrContinueGlobalEditingSession(
+		chatModel: ChatModel,
+	): IChatEditingSession;
 
 	getEditingSession(chatSessionResource: URI): IChatEditingSession | undefined;
 
@@ -51,7 +70,10 @@ export interface IChatEditingService {
 	/**
 	 * Creates an editing session with state transferred from the provided session.
 	 */
-	transferEditingSession(chatModel: ChatModel, session: IChatEditingSession): IChatEditingSession;
+	transferEditingSession(
+		chatModel: ChatModel,
+		session: IChatEditingSession,
+	): IChatEditingSession;
 
 	/**
 	 * Registers a provider that creates editing sessions for chat sessions
@@ -59,7 +81,10 @@ export interface IChatEditingService {
 	 * for a chat model whose sessionResource matches the scheme, the provider
 	 * is used instead of the default implementation.
 	 */
-	registerEditingSessionProvider(scheme: string, provider: IChatEditingSessionProvider): IDisposable;
+	registerEditingSessionProvider(
+		scheme: string,
+		provider: IChatEditingSessionProvider,
+	): IDisposable;
 }
 
 export interface WorkingSetDisplayMetadata {
@@ -69,7 +94,11 @@ export interface WorkingSetDisplayMetadata {
 
 export interface IStreamingEdits {
 	pushText(edits: TextEdit[], isLastEdits: boolean): void;
-	pushNotebookCellText(cell: URI, edits: TextEdit[], isLastEdits: boolean): void;
+	pushNotebookCellText(
+		cell: URI,
+		edits: TextEdit[],
+		isLastEdits: boolean,
+	): void;
 	pushNotebook(edits: ICellEditOperation[], isLastEdits: boolean): void;
 	/** Marks edits as done, idempotent */
 	complete(): void;
@@ -82,9 +111,15 @@ export interface IModifiedEntryTelemetryInfo {
 	readonly requestId: string;
 	readonly result: IChatAgentResult | undefined;
 	readonly modelId: string | undefined;
-	readonly modeId: 'ask' | 'edit' | 'agent' | 'custom' | 'applyCodeBlock' | undefined;
+	readonly modeId:
+		| "ask"
+		| "edit"
+		| "agent"
+		| "custom"
+		| "applyCodeBlock"
+		| undefined;
 	readonly applyCodeBlockSuggestionId: EditSuggestionId | undefined;
-	readonly feature: 'sideBarChat' | 'inlineChat' | undefined;
+	readonly feature: "sideBarChat" | "inlineChat" | undefined;
 }
 
 export interface ISnapshotEntry {
@@ -123,17 +158,39 @@ export interface IChatEditingSession extends IDisposable {
 	 * agents that make changes on-disk rather than streaming edits through the
 	 * chat session.
 	 */
-	startExternalEdits(responseModel: IChatResponseModel, operationId: number, resources: URI[], undoStopId: string, contentFor?: URI[]): Promise<IChatProgress[]>;
-	stopExternalEdits(responseModel: IChatResponseModel, operationId: number, contentFor?: URI[]): Promise<IChatProgress[]>;
+	startExternalEdits(
+		responseModel: IChatResponseModel,
+		operationId: number,
+		resources: URI[],
+		undoStopId: string,
+		contentFor?: URI[],
+	): Promise<IChatProgress[]>;
+	stopExternalEdits(
+		responseModel: IChatResponseModel,
+		operationId: number,
+		contentFor?: URI[],
+	): Promise<IChatProgress[]>;
 
 	/**
 	 * Gets the snapshot URI of a file at the request and _after_ changes made in the undo stop.
 	 * @param uri File in the workspace
 	 */
-	getSnapshotUri(requestId: string, uri: URI, stopId: string | undefined): URI | undefined;
+	getSnapshotUri(
+		requestId: string,
+		uri: URI,
+		stopId: string | undefined,
+	): URI | undefined;
 
-	getSnapshotContents(requestId: string, uri: URI, stopId: string | undefined): Promise<VSBuffer | undefined>;
-	getSnapshotModel(requestId: string, undoStop: string | undefined, snapshotUri: URI): Promise<ITextModel | null>;
+	getSnapshotContents(
+		requestId: string,
+		uri: URI,
+		stopId: string | undefined,
+	): Promise<VSBuffer | undefined>;
+	getSnapshotModel(
+		requestId: string,
+		undoStop: string | undefined,
+		snapshotUri: URI,
+	): Promise<ITextModel | null>;
 
 	/**
 	 * Will lead to this object getting disposed
@@ -146,7 +203,11 @@ export interface IChatEditingSession extends IDisposable {
 	 * @param responseModel The response model making the edits
 	 * @param inUndoStop The undo stop the edits will be grouped in
 	 */
-	startStreamingEdits(resource: URI, responseModel: IChatResponseModel, inUndoStop: string | undefined): IStreamingEdits;
+	startStreamingEdits(
+		resource: URI,
+		responseModel: IChatResponseModel,
+		inUndoStop: string | undefined,
+	): IStreamingEdits;
 
 	/**
 	 * Applies a workspace edit (file deletions, creations, renames).
@@ -154,20 +215,32 @@ export interface IChatEditingSession extends IDisposable {
 	 * @param responseModel The response model making the edit
 	 * @param undoStopId The undo stop ID for this edit
 	 */
-	applyWorkspaceEdit(edit: IChatWorkspaceEdit, responseModel: IChatResponseModel, undoStopId: string): void;
+	applyWorkspaceEdit(
+		edit: IChatWorkspaceEdit,
+		responseModel: IChatResponseModel,
+		undoStopId: string,
+	): void;
 
 	/**
 	 * Gets the document diff of a change made to a URI between one undo stop and
 	 * the next one.
 	 * @returns The observable or undefined if there is no diff between the stops.
 	 */
-	getEntryDiffBetweenStops(uri: URI, requestId: string | undefined, stopId: string | undefined): IObservable<IEditSessionEntryDiff | undefined> | undefined;
+	getEntryDiffBetweenStops(
+		uri: URI,
+		requestId: string | undefined,
+		stopId: string | undefined,
+	): IObservable<IEditSessionEntryDiff | undefined> | undefined;
 
 	/**
 	 * Gets the document diff of a change made to a URI between one request to another one.
 	 * @returns The observable or undefined if there is no diff between the requests.
 	 */
-	getEntryDiffBetweenRequests(uri: URI, startRequestIs: string, stopRequestId: string): IObservable<IEditSessionEntryDiff | undefined>;
+	getEntryDiffBetweenRequests(
+		uri: URI,
+		startRequestIs: string,
+		stopRequestId: string,
+	): IObservable<IEditSessionEntryDiff | undefined>;
 
 	/**
 	 * Gets the diff of each file modified in this session, comparing the initial
@@ -178,7 +251,9 @@ export interface IChatEditingSession extends IDisposable {
 	/**
 	 * Gets the diff of each file modified in the request.
 	 */
-	getDiffsForFilesInRequest(requestId: string): IObservable<readonly IEditSessionEntryDiff[]>;
+	getDiffsForFilesInRequest(
+		requestId: string,
+	): IObservable<readonly IEditSessionEntryDiff[]>;
 
 	/**
 	 * Whether there are any edits made in the given request.
@@ -211,9 +286,11 @@ export interface IChatEditingSession extends IDisposable {
 	hasExplanations(): boolean;
 }
 
-export function chatEditingSessionIsReady(session: IChatEditingSession): Promise<void> {
-	return new Promise<void>(resolve => {
-		autorunSelfDisposable(reader => {
+export function chatEditingSessionIsReady(
+	session: IChatEditingSession,
+): Promise<void> {
+	return new Promise<void>((resolve) => {
+		autorunSelfDisposable((reader) => {
 			const state = session.state.read(reader);
 			if (state !== ChatEditingSessionState.Initial) {
 				reader.dispose();
@@ -223,60 +300,79 @@ export function chatEditingSessionIsReady(session: IChatEditingSession): Promise
 	});
 }
 
-export function editEntriesToMultiDiffData(entriesObs: IObservable<readonly IEditSessionEntryDiff[]>): IChatMultiDiffData {
-	const multiDiffData = entriesObs.map(entries => ({
-		title: localize('chatMultidiff.autoGenerated', 'Changes to {0} files', entries.length),
-		resources: entries.map(entry => ({
+export function editEntriesToMultiDiffData(
+	entriesObs: IObservable<readonly IEditSessionEntryDiff[]>,
+): IChatMultiDiffData {
+	const multiDiffData = entriesObs.map((entries) => ({
+		title: localize(
+			"chatMultidiff.autoGenerated",
+			"Changes to {0} files",
+			entries.length,
+		),
+		resources: entries.map((entry) => ({
 			originalUri: entry.originalURI,
 			modifiedUri: entry.modifiedURI,
 			goToFileUri: entry.modifiedURI,
 			added: entry.added,
 			removed: entry.removed,
-		}))
+		})),
 	}));
 
 	return {
-		kind: 'multiDiffData',
+		kind: "multiDiffData",
 		collapsed: true,
 		multiDiffData,
 		toJSON(): IChatMultiDiffDataSerialized {
 			return {
-				kind: 'multiDiffData',
+				kind: "multiDiffData",
 				collapsed: this.collapsed,
 				multiDiffData: multiDiffData.get(),
 			};
-		}
+		},
 	};
 }
 
-export function awaitCompleteChatEditingDiff(diff: IObservable<IEditSessionEntryDiff>, token?: CancellationToken): Promise<IEditSessionEntryDiff>;
-export function awaitCompleteChatEditingDiff(diff: IObservable<readonly IEditSessionEntryDiff[]>, token?: CancellationToken): Promise<readonly IEditSessionEntryDiff[]>;
-export function awaitCompleteChatEditingDiff(diff: IObservable<readonly IEditSessionEntryDiff[] | IEditSessionEntryDiff>, token?: CancellationToken): Promise<readonly IEditSessionEntryDiff[] | IEditSessionEntryDiff> {
-	return new Promise<readonly IEditSessionEntryDiff[] | IEditSessionEntryDiff>((resolve, reject) => {
-		autorunSelfDisposable(reader => {
-			if (token) {
-				if (token.isCancellationRequested) {
-					reader.dispose();
-					return reject(new CancellationError());
+export function awaitCompleteChatEditingDiff(
+	diff: IObservable<IEditSessionEntryDiff>,
+	token?: CancellationToken,
+): Promise<IEditSessionEntryDiff>;
+export function awaitCompleteChatEditingDiff(
+	diff: IObservable<readonly IEditSessionEntryDiff[]>,
+	token?: CancellationToken,
+): Promise<readonly IEditSessionEntryDiff[]>;
+export function awaitCompleteChatEditingDiff(
+	diff: IObservable<readonly IEditSessionEntryDiff[] | IEditSessionEntryDiff>,
+	token?: CancellationToken,
+): Promise<readonly IEditSessionEntryDiff[] | IEditSessionEntryDiff> {
+	return new Promise<readonly IEditSessionEntryDiff[] | IEditSessionEntryDiff>(
+		(resolve, reject) => {
+			autorunSelfDisposable((reader) => {
+				if (token) {
+					if (token.isCancellationRequested) {
+						reader.dispose();
+						return reject(new CancellationError());
+					}
+					reader.store.add(
+						token.onCancellationRequested(() => {
+							reader.dispose();
+							reject(new CancellationError());
+						}),
+					);
 				}
-				reader.store.add(token.onCancellationRequested(() => {
-					reader.dispose();
-					reject(new CancellationError());
-				}));
-			}
 
-			const current = diff.read(reader);
-			if (current instanceof Array) {
-				if (!current.some(c => c.isBusy)) {
+				const current = diff.read(reader);
+				if (current instanceof Array) {
+					if (!current.some((c) => c.isBusy)) {
+						reader.dispose();
+						resolve(current);
+					}
+				} else if (!current.isBusy) {
 					reader.dispose();
 					resolve(current);
 				}
-			} else if (!current.isBusy) {
-				reader.dispose();
-				resolve(current);
-			}
-		});
-	});
+			});
+		},
+	);
 }
 
 export interface IEditSessionDiffStats {
@@ -302,7 +398,10 @@ export interface IEditSessionEntryDiff extends IEditSessionDiffStats {
 	isBusy: boolean;
 }
 
-export function emptySessionEntryDiff(originalURI: URI, modifiedURI: URI): IEditSessionEntryDiff {
+export function emptySessionEntryDiff(
+	originalURI: URI,
+	modifiedURI: URI,
+): IEditSessionEntryDiff {
 	return {
 		originalURI,
 		modifiedURI,
@@ -330,7 +429,6 @@ export interface IModifiedFileEntryChangeHunk {
 }
 
 export interface IModifiedFileEntryEditorIntegration extends IDisposable {
-
 	/**
 	 * The index of a change
 	 */
@@ -374,7 +472,10 @@ export interface IModifiedFileEntryEditorIntegration extends IDisposable {
 	 * @param change An opaque change object
 	 * @param show Optional boolean to control if the diff should show
 	 */
-	toggleDiff(change: IModifiedFileEntryChangeHunk | undefined, show?: boolean): Promise<void>;
+	toggleDiff(
+		change: IModifiedFileEntryChangeHunk | undefined,
+		show?: boolean,
+	): Promise<void>;
 }
 
 export interface IModifiedFileEntry {
@@ -386,7 +487,10 @@ export interface IModifiedFileEntry {
 	readonly lastModifyingRequestId: string;
 
 	readonly state: IObservable<ModifiedFileEntryState>;
-	readonly isCurrentlyBeingModifiedBy: IObservable<{ responseModel: IChatResponseModel; undoStopId: string | undefined } | undefined>;
+	readonly isCurrentlyBeingModifiedBy: IObservable<
+		| { responseModel: IChatResponseModel; undoStopId: string | undefined }
+		| undefined
+	>;
 	readonly lastModifyingResponse: IObservable<IChatResponseModel | undefined>;
 	readonly rewriteRatio: IObservable<number>;
 
@@ -396,7 +500,9 @@ export interface IModifiedFileEntry {
 	reject(): Promise<void>;
 
 	reviewMode: IObservable<boolean>;
-	autoAcceptController: IObservable<{ total: number; remaining: number; cancel(): void } | undefined>;
+	autoAcceptController: IObservable<
+		{ total: number; remaining: number; cancel(): void } | undefined
+	>;
 	enableReviewModeUntilSettled(): void;
 
 	/**
@@ -419,7 +525,9 @@ export interface IModifiedFileEntry {
 	 */
 	readonly linesRemoved?: IObservable<number>;
 
-	getEditorIntegration(editor: IEditorPane): IModifiedFileEntryEditorIntegration;
+	getEditorIntegration(
+		editor: IEditorPane,
+	): IModifiedFileEntryEditorIntegration;
 	/**
 	 * Gets the document diff info, waiting for any ongoing promises to flush.
 	 */
@@ -427,29 +535,69 @@ export interface IModifiedFileEntry {
 }
 
 export interface IChatEditingSessionStream {
-	textEdits(resource: URI, textEdits: TextEdit[], isLastEdits: boolean, responseModel: IChatResponseModel): void;
-	notebookEdits(resource: URI, edits: ICellEditOperation[], isLastEdits: boolean, responseModel: IChatResponseModel): void;
+	textEdits(
+		resource: URI,
+		textEdits: TextEdit[],
+		isLastEdits: boolean,
+		responseModel: IChatResponseModel,
+	): void;
+	notebookEdits(
+		resource: URI,
+		edits: ICellEditOperation[],
+		isLastEdits: boolean,
+		responseModel: IChatResponseModel,
+	): void;
 }
 
 export const enum ChatEditingSessionState {
 	Initial = 0,
 	StreamingEdits = 1,
 	Idle = 2,
-	Disposed = 3
+	Disposed = 3,
 }
 
-export const CHAT_EDITING_MULTI_DIFF_SOURCE_RESOLVER_SCHEME = 'chat-editing-multi-diff-source';
+export const CHAT_EDITING_MULTI_DIFF_SOURCE_RESOLVER_SCHEME =
+	"chat-editing-multi-diff-source";
 
-export const chatEditingWidgetFileStateContextKey = new RawContextKey<ModifiedFileEntryState>('chatEditingWidgetFileState', undefined, localize('chatEditingWidgetFileState', "The current state of the file in the chat editing widget"));
-export const chatEditingAgentSupportsReadonlyReferencesContextKey = new RawContextKey<boolean>('chatEditingAgentSupportsReadonlyReferences', undefined, localize('chatEditingAgentSupportsReadonlyReferences', "Whether the chat editing agent supports readonly references (temporary)"));
-export const decidedChatEditingResourceContextKey = new RawContextKey<string[]>('decidedChatEditingResource', []);
-export const chatEditingResourceContextKey = new RawContextKey<string | undefined>('chatEditingResource', undefined);
-export const inChatEditingSessionContextKey = new RawContextKey<boolean | undefined>('inChatEditingSession', undefined);
-export const hasUndecidedChatEditingResourceContextKey = new RawContextKey<boolean | undefined>('hasUndecidedChatEditingResource', false);
-export const hasAppliedChatEditsContextKey = new RawContextKey<boolean | undefined>('hasAppliedChatEdits', false);
-export const applyingChatEditsFailedContextKey = new RawContextKey<boolean | undefined>('applyingChatEditsFailed', false);
+export const chatEditingWidgetFileStateContextKey =
+	new RawContextKey<ModifiedFileEntryState>(
+		"chatEditingWidgetFileState",
+		undefined,
+		localize(
+			"chatEditingWidgetFileState",
+			"The current state of the file in the chat editing widget",
+		),
+	);
+export const chatEditingAgentSupportsReadonlyReferencesContextKey =
+	new RawContextKey<boolean>(
+		"chatEditingAgentSupportsReadonlyReferences",
+		undefined,
+		localize(
+			"chatEditingAgentSupportsReadonlyReferences",
+			"Whether the chat editing agent supports readonly references (temporary)",
+		),
+	);
+export const decidedChatEditingResourceContextKey = new RawContextKey<string[]>(
+	"decidedChatEditingResource",
+	[],
+);
+export const chatEditingResourceContextKey = new RawContextKey<
+	string | undefined
+>("chatEditingResource", undefined);
+export const inChatEditingSessionContextKey = new RawContextKey<
+	boolean | undefined
+>("inChatEditingSession", undefined);
+export const hasUndecidedChatEditingResourceContextKey = new RawContextKey<
+	boolean | undefined
+>("hasUndecidedChatEditingResource", false);
+export const hasAppliedChatEditsContextKey = new RawContextKey<
+	boolean | undefined
+>("hasAppliedChatEdits", false);
+export const applyingChatEditsFailedContextKey = new RawContextKey<
+	boolean | undefined
+>("applyingChatEditsFailed", false);
 
-export const chatEditingMaxFileAssignmentName = 'chatEditingSessionFileLimit';
+export const chatEditingMaxFileAssignmentName = "chatEditingSessionFileLimit";
 export const defaultChatEditingMaxFileLimit = 10;
 
 export const enum ChatEditKind {
@@ -463,21 +611,35 @@ export interface IChatEditingActionContext {
 	sessionResource: URI;
 }
 
-export function isChatEditingActionContext(thing: unknown): thing is IChatEditingActionContext {
-	return typeof thing === 'object' && !!thing && hasKey(thing, { sessionResource: true });
+export function isChatEditingActionContext(
+	thing: unknown,
+): thing is IChatEditingActionContext {
+	return (
+		typeof thing === "object" &&
+		!!thing &&
+		hasKey(thing, { sessionResource: true })
+	);
 }
 
-export function getMultiDiffSourceUri(session: IChatEditingSession, showPreviousChanges?: boolean): URI {
+export function getMultiDiffSourceUri(
+	session: IChatEditingSession,
+	showPreviousChanges?: boolean,
+): URI {
 	return URI.from({
 		scheme: CHAT_EDITING_MULTI_DIFF_SOURCE_RESOLVER_SCHEME,
-		authority: encodeHex(VSBuffer.fromString(session.chatSessionResource.toString())),
-		query: showPreviousChanges ? 'previous' : undefined,
+		authority: encodeHex(
+			VSBuffer.fromString(session.chatSessionResource.toString()),
+		),
+		query: showPreviousChanges ? "previous" : undefined,
 	});
 }
 
-export function parseChatMultiDiffUri(uri: URI): { chatSessionResource: URI; showPreviousChanges: boolean } {
+export function parseChatMultiDiffUri(uri: URI): {
+	chatSessionResource: URI;
+	showPreviousChanges: boolean;
+} {
 	const chatSessionResource = URI.parse(decodeHex(uri.authority).toString());
-	const showPreviousChanges = uri.query === 'previous';
+	const showPreviousChanges = uri.query === "previous";
 
 	return { chatSessionResource, showPreviousChanges };
 }

@@ -13,8 +13,8 @@ import {
 	IMergeBlocker,
 	MergeBlockerKind,
 	IGitHubPullRequestReviewThread,
-} from '../../common/types.js';
-import { GitHubApiClient, IGitHubApiResponse } from '../githubApiClient.js';
+} from "../../common/types.js";
+import { GitHubApiClient, IGitHubApiResponse } from "../githubApiClient.js";
 
 //#region GitHub API response types
 
@@ -22,7 +22,7 @@ interface IGitHubPRResponse {
 	readonly number: number;
 	readonly title: string;
 	readonly body: string | null;
-	readonly state: 'open' | 'closed';
+	readonly state: "open" | "closed";
 	readonly draft: boolean;
 	readonly user: { readonly login: string; readonly avatar_url: string };
 	readonly head: { readonly ref: string; readonly sha: string };
@@ -91,7 +91,10 @@ interface IGitHubGraphQLReviewCommentNode {
 	readonly line: number | null;
 	readonly originalLine: number | null;
 	readonly replyTo: { readonly databaseId: number | null } | null;
-	readonly author: { readonly login: string; readonly avatarUrl: string } | null;
+	readonly author: {
+		readonly login: string;
+		readonly avatarUrl: string;
+	} | null;
 }
 
 interface IGitHubGraphQLResolveReviewThreadResponse {
@@ -105,98 +108,108 @@ interface IGitHubGraphQLResolveReviewThreadResponse {
 //#endregion
 
 const GET_REVIEW_THREADS_QUERY = [
-	'query GetReviewThreads($owner: String!, $repo: String!, $prNumber: Int!) {',
-	'  repository(owner: $owner, name: $repo) {',
-	'    pullRequest(number: $prNumber) {',
-	'      reviewThreads(first: 100) {',
-	'        nodes {',
-	'          id',
-	'          isResolved',
-	'          path',
-	'          line',
-	'          comments(first: 100) {',
-	'            nodes {',
-	'              databaseId',
-	'              body',
-	'              createdAt',
-	'              updatedAt',
-	'              path',
-	'              line',
-	'              originalLine',
-	'              replyTo {',
-	'                databaseId',
-	'              }',
-	'              author {',
-	'                login',
-	'                avatarUrl',
-	'              }',
-	'            }',
-	'          }',
-	'        }',
-	'      }',
-	'    }',
-	'  }',
-	'}',
-].join('\n');
+	"query GetReviewThreads($owner: String!, $repo: String!, $prNumber: Int!) {",
+	"  repository(owner: $owner, name: $repo) {",
+	"    pullRequest(number: $prNumber) {",
+	"      reviewThreads(first: 100) {",
+	"        nodes {",
+	"          id",
+	"          isResolved",
+	"          path",
+	"          line",
+	"          comments(first: 100) {",
+	"            nodes {",
+	"              databaseId",
+	"              body",
+	"              createdAt",
+	"              updatedAt",
+	"              path",
+	"              line",
+	"              originalLine",
+	"              replyTo {",
+	"                databaseId",
+	"              }",
+	"              author {",
+	"                login",
+	"                avatarUrl",
+	"              }",
+	"            }",
+	"          }",
+	"        }",
+	"      }",
+	"    }",
+	"  }",
+	"}",
+].join("\n");
 
 const RESOLVE_REVIEW_THREAD_MUTATION = [
-	'mutation ResolveReviewThread($threadId: ID!) {',
-	'  resolveReviewThread(input: { threadId: $threadId }) {',
-	'    thread {',
-	'      isResolved',
-	'    }',
-	'  }',
-	'}',
-].join('\n');
+	"mutation ResolveReviewThread($threadId: ID!) {",
+	"  resolveReviewThread(input: { threadId: $threadId }) {",
+	"    thread {",
+	"      isResolved",
+	"    }",
+	"  }",
+	"}",
+].join("\n");
 
 /**
  * Stateless fetcher for GitHub pull request data.
  * Handles all PR-related REST API calls including reviews, comments, and mergeability.
  */
 export class GitHubPRFetcher {
+	constructor(private readonly _apiClient: GitHubApiClient) {}
 
-	constructor(
-		private readonly _apiClient: GitHubApiClient,
-	) { }
-
-	async getPullRequest(owner: string, repo: string, prNumber: number, etag?: string): Promise<IGitHubApiResponse<IGitHubPullRequest>> {
+	async getPullRequest(
+		owner: string,
+		repo: string,
+		prNumber: number,
+		etag?: string,
+	): Promise<IGitHubApiResponse<IGitHubPullRequest>> {
 		const response = await this._apiClient.request<IGitHubPRResponse>(
-			'GET',
+			"GET",
 			`/repos/${e(owner)}/${e(repo)}/pulls/${prNumber}`,
-			'githubApi.getPullRequest',
-			{ etag }
+			"githubApi.getPullRequest",
+			{ etag },
 		);
 
 		return {
 			...response,
-			data: response.data
-				? mapPullRequest(response.data)
-				: undefined
+			data: response.data ? mapPullRequest(response.data) : undefined,
 		};
 	}
 
-	async getReviews(owner: string, repo: string, prNumber: number, etag?: string): Promise<IGitHubApiResponse<readonly IGitHubPullRequestReview[]>> {
-		const response = await this._apiClient.request<readonly IGitHubReviewResponse[]>(
-			'GET',
+	async getReviews(
+		owner: string,
+		repo: string,
+		prNumber: number,
+		etag?: string,
+	): Promise<IGitHubApiResponse<readonly IGitHubPullRequestReview[]>> {
+		const response = await this._apiClient.request<
+			readonly IGitHubReviewResponse[]
+		>(
+			"GET",
 			`/repos/${e(owner)}/${e(repo)}/pulls/${prNumber}/reviews`,
-			'githubApi.getReviews',
-			{ etag }
+			"githubApi.getReviews",
+			{ etag },
 		);
 
 		return {
 			...response,
-			data: response.data
-				? response.data.map(mapReview)
-				: undefined
+			data: response.data ? response.data.map(mapReview) : undefined,
 		};
 	}
 
-	async getReviewThreads(owner: string, repo: string, prNumber: number): Promise<IGitHubPullRequestReviewThread[]> {
-		const data = await this._apiClient.graphql<IGitHubGraphQLPullRequestReviewThreadsResponse>(
-			GET_REVIEW_THREADS_QUERY,
-			'githubApi.getReviewThreads',
-			{ owner, repo, prNumber },
-		);
+	async getReviewThreads(
+		owner: string,
+		repo: string,
+		prNumber: number,
+	): Promise<IGitHubPullRequestReviewThread[]> {
+		const data =
+			await this._apiClient.graphql<IGitHubGraphQLPullRequestReviewThreadsResponse>(
+				GET_REVIEW_THREADS_QUERY,
+				"githubApi.getReviewThreads",
+				{ owner, repo, prNumber },
+			);
 
 		const reviewThreads = data.repository?.pullRequest?.reviewThreads.nodes;
 		if (!reviewThreads) {
@@ -213,14 +226,17 @@ export class GitHubPRFetcher {
 		body: string,
 		inReplyTo: number,
 	): Promise<IGitHubPRComment> {
-		const response = await this._apiClient.request<IGitHubReviewCommentResponse>(
-			'POST',
-			`/repos/${e(owner)}/${e(repo)}/pulls/${prNumber}/comments`,
-			'githubApi.postReviewComment',
-			{ data: { body, in_reply_to: inReplyTo } }
-		);
+		const response =
+			await this._apiClient.request<IGitHubReviewCommentResponse>(
+				"POST",
+				`/repos/${e(owner)}/${e(repo)}/pulls/${prNumber}/comments`,
+				"githubApi.postReviewComment",
+				{ data: { body, in_reply_to: inReplyTo } },
+			);
 		if (!response.data) {
-			throw new Error(`Failed to post review comment to ${owner}/${repo}#${prNumber}`);
+			throw new Error(
+				`Failed to post review comment to ${owner}/${repo}#${prNumber}`,
+			);
 		}
 		return mapReviewComment(response.data);
 	}
@@ -232,18 +248,20 @@ export class GitHubPRFetcher {
 		body: string,
 	): Promise<IGitHubPRComment> {
 		const response = await this._apiClient.request<IGitHubIssueCommentResponse>(
-			'POST',
+			"POST",
 			`/repos/${e(owner)}/${e(repo)}/issues/${prNumber}/comments`,
-			'githubApi.postIssueComment',
+			"githubApi.postIssueComment",
 			{ data: { body } },
 		);
 		const data = response.data;
 		if (!data) {
-			throw new Error(`Failed to post issue comment to ${owner}/${repo}#${prNumber}`);
+			throw new Error(
+				`Failed to post issue comment to ${owner}/${repo}#${prNumber}`,
+			);
 		}
 		return {
 			id: data.id,
-			body: data.body ?? '',
+			body: data.body ?? "",
 			author: mapUser(data.user),
 			createdAt: data.created_at,
 			updatedAt: data.updated_at,
@@ -254,12 +272,17 @@ export class GitHubPRFetcher {
 		};
 	}
 
-	async resolveThread(_owner: string, _repo: string, threadId: string): Promise<void> {
-		const data = await this._apiClient.graphql<IGitHubGraphQLResolveReviewThreadResponse>(
-			RESOLVE_REVIEW_THREAD_MUTATION,
-			'githubApi.resolveThread',
-			{ threadId },
-		);
+	async resolveThread(
+		_owner: string,
+		_repo: string,
+		threadId: string,
+	): Promise<void> {
+		const data =
+			await this._apiClient.graphql<IGitHubGraphQLResolveReviewThreadResponse>(
+				RESOLVE_REVIEW_THREAD_MUTATION,
+				"githubApi.resolveThread",
+				{ threadId },
+			);
 
 		if (!data.resolveReviewThread?.thread?.isResolved) {
 			throw new Error(`Failed to resolve review thread ${threadId}`);
@@ -271,46 +294,75 @@ export class GitHubPRFetcher {
  * Compute pull request mergeability from a PR and its reviews. Pure function
  * so callers that already have the PR payload don't need to refetch it.
  */
-export function computeMergeability(pr: IGitHubPullRequest, reviews: readonly IGitHubPullRequestReview[]): IGitHubPullRequestMergeability {
+export function computeMergeability(
+	pr: IGitHubPullRequest,
+	reviews: readonly IGitHubPullRequestReview[],
+): IGitHubPullRequestMergeability {
 	const blockers: IMergeBlocker[] = [];
 
 	// Draft
 	if (pr.isDraft) {
-		blockers.push({ kind: MergeBlockerKind.Draft, description: 'Pull request is a draft' });
+		blockers.push({
+			kind: MergeBlockerKind.Draft,
+			description: "Pull request is a draft",
+		});
 	}
 
 	// Merge conflicts
 	if (pr.mergeable === false) {
-		blockers.push({ kind: MergeBlockerKind.Conflicts, description: 'Pull request has merge conflicts' });
+		blockers.push({
+			kind: MergeBlockerKind.Conflicts,
+			description: "Pull request has merge conflicts",
+		});
 	}
 
 	// Changes requested — check most recent review per reviewer
 	const latestReviewByUser = new Map<string, string>();
 	for (const review of reviews) {
-		if (review.state === 'APPROVED' || review.state === 'CHANGES_REQUESTED' || review.state === 'DISMISSED') {
+		if (
+			review.state === "APPROVED" ||
+			review.state === "CHANGES_REQUESTED" ||
+			review.state === "DISMISSED"
+		) {
 			latestReviewByUser.set(review.author.login, review.state);
 		}
 	}
-	const hasChangesRequested = [...latestReviewByUser.values()].some(s => s === 'CHANGES_REQUESTED');
+	const hasChangesRequested = [...latestReviewByUser.values()].some(
+		(s) => s === "CHANGES_REQUESTED",
+	);
 	if (hasChangesRequested) {
-		blockers.push({ kind: MergeBlockerKind.ChangesRequested, description: 'Changes have been requested' });
+		blockers.push({
+			kind: MergeBlockerKind.ChangesRequested,
+			description: "Changes have been requested",
+		});
 	}
 
 	// Approval needed — check mergeable_state
-	if (pr.mergeableState === 'blocked') {
-		const hasApproval = [...latestReviewByUser.values()].some(s => s === 'APPROVED');
+	if (pr.mergeableState === "blocked") {
+		const hasApproval = [...latestReviewByUser.values()].some(
+			(s) => s === "APPROVED",
+		);
 		if (!hasApproval) {
-			blockers.push({ kind: MergeBlockerKind.ApprovalNeeded, description: 'Approval is required' });
+			blockers.push({
+				kind: MergeBlockerKind.ApprovalNeeded,
+				description: "Approval is required",
+			});
 		}
 	}
 
 	// CI failures — mergeable_state 'unstable' indicates check failures
-	if (pr.mergeableState === 'unstable') {
-		blockers.push({ kind: MergeBlockerKind.CIFailed, description: 'CI checks have failed' });
+	if (pr.mergeableState === "unstable") {
+		blockers.push({
+			kind: MergeBlockerKind.CIFailed,
+			description: "CI checks have failed",
+		});
 	}
 
 	return {
-		canMerge: blockers.length === 0 && pr.mergeable !== false && pr.state === GitHubPullRequestState.Open,
+		canMerge:
+			blockers.length === 0 &&
+			pr.mergeable !== false &&
+			pr.state === GitHubPullRequestState.Open,
 		blockers,
 	};
 }
@@ -321,7 +373,10 @@ function e(value: string): string {
 	return encodeURIComponent(value);
 }
 
-function mapUser(user: { readonly login: string; readonly avatar_url: string }): IGitHubUser {
+function mapUser(user: {
+	readonly login: string;
+	readonly avatar_url: string;
+}): IGitHubUser {
 	return { login: user.login, avatarUrl: user.avatar_url };
 }
 
@@ -329,7 +384,7 @@ function mapPullRequest(data: IGitHubPRResponse): IGitHubPullRequest {
 	let state: GitHubPullRequestState;
 	if (data.merged) {
 		state = GitHubPullRequestState.Merged;
-	} else if (data.state === 'closed') {
+	} else if (data.state === "closed") {
 		state = GitHubPullRequestState.Closed;
 	} else {
 		state = GitHubPullRequestState.Open;
@@ -338,7 +393,7 @@ function mapPullRequest(data: IGitHubPRResponse): IGitHubPullRequest {
 	return {
 		number: data.number,
 		title: data.title,
-		body: data.body ?? '',
+		body: data.body ?? "",
 		state,
 		author: mapUser(data.user),
 		headRef: data.head.ref,
@@ -362,7 +417,9 @@ function mapReview(data: IGitHubReviewResponse): IGitHubPullRequestReview {
 	};
 }
 
-function mapReviewComment(data: IGitHubReviewCommentResponse): IGitHubPRComment {
+function mapReviewComment(
+	data: IGitHubReviewCommentResponse,
+): IGitHubPRComment {
 	return {
 		id: data.id,
 		body: data.body,
@@ -376,32 +433,44 @@ function mapReviewComment(data: IGitHubReviewCommentResponse): IGitHubPRComment 
 	};
 }
 
-function mapReviewThread(thread: IGitHubGraphQLReviewThreadNode): IGitHubPullRequestReviewThread {
+function mapReviewThread(
+	thread: IGitHubGraphQLReviewThreadNode,
+): IGitHubPullRequestReviewThread {
 	return {
 		id: thread.id,
 		isResolved: thread.isResolved,
 		path: thread.path,
 		line: thread.line ?? undefined,
-		comments: thread.comments.nodes.flatMap(comment => mapGraphQLReviewComment(comment, thread)),
+		comments: thread.comments.nodes.flatMap((comment) =>
+			mapGraphQLReviewComment(comment, thread),
+		),
 	};
 }
 
-function mapGraphQLReviewComment(comment: IGitHubGraphQLReviewCommentNode, thread: IGitHubGraphQLReviewThreadNode): readonly IGitHubPRComment[] {
+function mapGraphQLReviewComment(
+	comment: IGitHubGraphQLReviewCommentNode,
+	thread: IGitHubGraphQLReviewThreadNode,
+): readonly IGitHubPRComment[] {
 	if (comment.databaseId === null || comment.author === null) {
 		return [];
 	}
 
-	return [{
-		id: comment.databaseId,
-		body: comment.body,
-		author: { login: comment.author.login, avatarUrl: comment.author.avatarUrl },
-		createdAt: comment.createdAt,
-		updatedAt: comment.updatedAt,
-		path: comment.path ?? thread.path,
-		line: comment.line ?? comment.originalLine ?? thread.line ?? undefined,
-		threadId: thread.id,
-		inReplyToId: comment.replyTo?.databaseId ?? undefined,
-	}];
+	return [
+		{
+			id: comment.databaseId,
+			body: comment.body,
+			author: {
+				login: comment.author.login,
+				avatarUrl: comment.author.avatarUrl,
+			},
+			createdAt: comment.createdAt,
+			updatedAt: comment.updatedAt,
+			path: comment.path ?? thread.path,
+			line: comment.line ?? comment.originalLine ?? thread.line ?? undefined,
+			threadId: thread.id,
+			inReplyToId: comment.replyTo?.databaseId ?? undefined,
+		},
+	];
 }
 
 //#endregion

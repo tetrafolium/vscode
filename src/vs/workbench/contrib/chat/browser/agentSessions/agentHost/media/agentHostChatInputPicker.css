@@ -151,11 +151,17 @@
  * both present the Isolation rule is suppressed by the general-sibling
  * selector below that detects a preceding (visible) Branch chip.
  */
-.chat-secondary-input-toolbar .monaco-action-bar .actions-container > .action-item.agent-host-chat-input-picker-host-branch {
+.chat-secondary-input-toolbar
+	.monaco-action-bar
+	.actions-container
+	> .action-item.agent-host-chat-input-picker-host-branch {
 	margin-left: auto;
 }
 
-.chat-secondary-input-toolbar .monaco-action-bar .actions-container > .action-item.agent-host-chat-input-picker-host-isolation {
+.chat-secondary-input-toolbar
+	.monaco-action-bar
+	.actions-container
+	> .action-item.agent-host-chat-input-picker-host-isolation {
 	margin-left: auto;
 }
 
@@ -164,6 +170,12 @@
  * precedes it. Hidden chips keep the `agent-host-chat-input-picker-host-hidden`
  * marker so this selector can ignore them.
  */
-.chat-secondary-input-toolbar .monaco-action-bar .actions-container > .action-item.agent-host-chat-input-picker-host-branch:not(.agent-host-chat-input-picker-host-hidden) ~ .action-item.agent-host-chat-input-picker-host-isolation {
+.chat-secondary-input-toolbar
+	.monaco-action-bar
+	.actions-container
+	> .action-item.agent-host-chat-input-picker-host-branch:not(
+		.agent-host-chat-input-picker-host-hidden
+	)
+	~ .action-item.agent-host-chat-input-picker-host-isolation {
 	margin-left: 0;
 }

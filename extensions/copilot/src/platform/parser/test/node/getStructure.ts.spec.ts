@@ -11,7 +11,6 @@ import { WASMLanguage } from '../../node/treeSitterLanguages';
 import { fromFixture, srcWithAnnotatedStructure } from './getStructure.util';
 
 describe('getStructure - typescript', () => {
-
 	afterAll(() => _dispose());
 
 	function tsSrcWithStructure(source: string) {
@@ -76,9 +75,7 @@ describe('getStructure - typescript', () => {
 		`);
 	});
 
-
 	describe('if-else statements', () => {
-
 		it(`capture within statement blocks`, async () => {
 			const source = outdent`
 					if (true) {
@@ -197,9 +194,17 @@ describe('getStructure - typescript', () => {
 	});
 
 	it('issue #5755: inline edits go outside the selection', async () => {
-		const source = await fromFixture('vscode.proposed.chatParticipantAdditions.d.ts');
-		const fileSnapshot = resolve(__dirname, 'fixtures', `vscode.proposed.chatParticipantAdditions-annotated.d.ts.txt`);
-		await expect(await tsSrcWithStructure(source)).toMatchFileSnapshot(fileSnapshot);
+		const source = await fromFixture(
+			'vscode.proposed.chatParticipantAdditions.d.ts',
+		);
+		const fileSnapshot = resolve(
+			__dirname,
+			'fixtures',
+			`vscode.proposed.chatParticipantAdditions-annotated.d.ts.txt`,
+		);
+		await expect(await tsSrcWithStructure(source)).toMatchFileSnapshot(
+			fileSnapshot,
+		);
 	});
 
 	it('issue #5755: inline interfaces', async () => {

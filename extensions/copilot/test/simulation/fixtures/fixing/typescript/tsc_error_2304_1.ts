@@ -11,7 +11,7 @@ export default function PushMissingPathname(history: History) {
 	});
 	*/
 
-	history.push("/home?the=query#the-hash");
+	history.push('/home?the=query#the-hash');
 	/*
 	expect(history.action).toBe("PUSH");
 	expect(history.location).toMatchObject({
@@ -21,11 +21,11 @@ export default function PushMissingPathname(history: History) {
 	});
 	*/
 
-	history.push("?another=query#another-hash");
+	history.push('?another=query#another-hash');
 	// expect(history.action).toBe("PUSH");
 	expect(history.location).toMatchObject({
-		pathname: "/home",
-		search: "?another=query",
-		hash: "#another-hash",
+		pathname: '/home',
+		search: '?another=query',
+		hash: '#another-hash',
 	});
 }

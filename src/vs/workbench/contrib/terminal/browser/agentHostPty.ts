@@ -3,18 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Barrier } from '../../../../base/common/async.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { DisposableStore, IReference } from '../../../../base/common/lifecycle.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IProcessPropertyMap, ITerminalChildProcess, ITerminalLaunchError, ITerminalLaunchResult, ProcessPropertyType } from '../../../../platform/terminal/common/terminal.js';
-import { IAgentConnection } from '../../../../platform/agentHost/common/agentService.js';
-import { AGENT_HOST_SCHEME, fromAgentHostUri } from '../../../../platform/agentHost/common/agentHostUri.js';
-import { ActionType, ActionEnvelope } from '../../../../platform/agentHost/common/state/sessionActions.js';
-import { TerminalClaimKind, type TerminalContentPart, type TerminalState } from '../../../../platform/agentHost/common/state/protocol/state.js';
-import { IAgentSubscription } from '../../../../platform/agentHost/common/state/agentSubscription.js';
-import { StateComponents } from '../../../../platform/agentHost/common/state/sessionState.js';
-import { BasePty } from '../common/basePty.js';
+import { Barrier } from "../../../../base/common/async.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import {
+	DisposableStore,
+	IReference,
+} from "../../../../base/common/lifecycle.js";
+import { URI } from "../../../../base/common/uri.js";
+import {
+	IProcessPropertyMap,
+	ITerminalChildProcess,
+	ITerminalLaunchError,
+	ITerminalLaunchResult,
+	ProcessPropertyType,
+} from "../../../../platform/terminal/common/terminal.js";
+import { IAgentConnection } from "../../../../platform/agentHost/common/agentService.js";
+import {
+	AGENT_HOST_SCHEME,
+	fromAgentHostUri,
+} from "../../../../platform/agentHost/common/agentHostUri.js";
+import {
+	ActionType,
+	ActionEnvelope,
+} from "../../../../platform/agentHost/common/state/sessionActions.js";
+import {
+	TerminalClaimKind,
+	type TerminalContentPart,
+	type TerminalState,
+} from "../../../../platform/agentHost/common/state/protocol/state.js";
+import { IAgentSubscription } from "../../../../platform/agentHost/common/state/agentSubscription.js";
+import { StateComponents } from "../../../../platform/agentHost/common/state/sessionState.js";
+import { BasePty } from "../common/basePty.js";
 
 /**
  * Options for creating a new terminal on an agent host.
@@ -48,21 +67,26 @@ export interface IAgentHostPtyCommandFinishedEvent {
 }
 
 export const enum AhpCommandMarkKind {
-	Executed = 's',
-	End = 'e'
+	Executed = "s",
+	End = "e",
 }
-
 
 /**
  * Generates the mark ID used to correlate SetMark VT codes with xterm markers
  * via {@link IBufferMarkCapability.getMark}.
  */
-export function getAhpCommandMarkId(commandId: string, kind: AhpCommandMarkKind): string {
+export function getAhpCommandMarkId(
+	commandId: string,
+	kind: AhpCommandMarkKind,
+): string {
 	return `ahp-${commandId}-${kind}`;
 }
 
 /** Generates an OSC 633 SetMark sequence for an AHP command boundary. */
-function getAhpCommandMarkCode(commandId: string, kind: AhpCommandMarkKind): string {
+function getAhpCommandMarkCode(
+	commandId: string,
+	kind: AhpCommandMarkKind,
+): string {
 	return `\x1b]633;SetMark;Id=${getAhpCommandMarkId(commandId, kind)};Hidden\x07`;
 }
 
@@ -71,7 +95,7 @@ function getAhpCommandMarkCode(commandId: string, kind: AhpCommandMarkKind): str
  * When shell integration is active, these internal sentinel echo commands
  * get detected as real commands — we suppress them from command events.
  */
-const COPILOT_SENTINEL_PREFIX = '<<<COPILOT_SENTINEL_';
+const COPILOT_SENTINEL_PREFIX = "<<<COPILOT_SENTINEL_";
 
 /** Returns whether a command line is a copilot sentinel echo, not a real user command. */
 function isCopilotSentinelCommand(commandLine: string): boolean {
@@ -92,23 +116,37 @@ function isCopilotSentinelCommand(commandLine: string): boolean {
  *   shutdown()      →  disposeTerminal command
  */
 export class AgentHostPty extends BasePty implements ITerminalChildProcess {
-
 	private readonly _startBarrier = new Barrier();
-	private readonly _subscriptionDisposables = this._register(new DisposableStore());
-	private _subscriptionRef: IReference<IAgentSubscription<TerminalState>> | undefined;
-	private _initialCwd = '';
+	private readonly _subscriptionDisposables = this._register(
+		new DisposableStore(),
+	);
+	private _subscriptionRef:
+		| IReference<IAgentSubscription<TerminalState>>
+		| undefined;
+	private _initialCwd = "";
 
-	private readonly _onCommandExecuted = this._register(new Emitter<IAgentHostPtyCommandExecutedEvent>());
-	readonly onCommandExecuted: Event<IAgentHostPtyCommandExecutedEvent> = this._onCommandExecuted.event;
+	private readonly _onCommandExecuted = this._register(
+		new Emitter<IAgentHostPtyCommandExecutedEvent>(),
+	);
+	readonly onCommandExecuted: Event<IAgentHostPtyCommandExecutedEvent> =
+		this._onCommandExecuted.event;
 
-	private readonly _onCommandFinished = this._register(new Emitter<IAgentHostPtyCommandFinishedEvent>());
-	readonly onCommandFinished: Event<IAgentHostPtyCommandFinishedEvent> = this._onCommandFinished.event;
+	private readonly _onCommandFinished = this._register(
+		new Emitter<IAgentHostPtyCommandFinishedEvent>(),
+	);
+	readonly onCommandFinished: Event<IAgentHostPtyCommandFinishedEvent> =
+		this._onCommandFinished.event;
 
-	private readonly _onSupportsCommandDetection = this._register(new Emitter<void>());
-	readonly onSupportsCommandDetection: Event<void> = this._onSupportsCommandDetection.event;
+	private readonly _onSupportsCommandDetection = this._register(
+		new Emitter<void>(),
+	);
+	readonly onSupportsCommandDetection: Event<void> =
+		this._onSupportsCommandDetection.event;
 
 	private _supportsCommandDetection = false;
-	get supportsCommandDetection(): boolean { return this._supportsCommandDetection; }
+	get supportsCommandDetection(): boolean {
+		return this._supportsCommandDetection;
+	}
 
 	/**
 	 * Command IDs for sentinel commands that should be suppressed from shell
@@ -127,28 +165,42 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 		super(id, /* shouldPersist */ false);
 	}
 
-	async start(): Promise<ITerminalLaunchError | ITerminalLaunchResult | undefined> {
+	async start(): Promise<
+		ITerminalLaunchError | ITerminalLaunchResult | undefined
+	> {
 		try {
 			// 1. Create the terminal on the agent host (skip for attach-only mode
 			//    where the terminal already exists, e.g. created by a tool)
 			if (!this._options?.attachOnly) {
 				await this._connection.createTerminal({
 					channel: this._terminalUri.toString(),
-					claim: { kind: TerminalClaimKind.Client, clientId: this._connection.clientId },
+					claim: {
+						kind: TerminalClaimKind.Client,
+						clientId: this._connection.clientId,
+					},
 					name: this._options?.name,
 					cwd: this._resolveCwdForProtocol(this._options?.cwd),
-					cols: this._lastDimensions.cols > 0 ? this._lastDimensions.cols : undefined,
-					rows: this._lastDimensions.rows > 0 ? this._lastDimensions.rows : undefined,
+					cols:
+						this._lastDimensions.cols > 0
+							? this._lastDimensions.cols
+							: undefined,
+					rows:
+						this._lastDimensions.rows > 0
+							? this._lastDimensions.rows
+							: undefined,
 				});
 			}
 
 			// 2. Get a subscription for the terminal URI (auto-subscribes)
-			this._subscriptionRef = this._connection.getSubscription(StateComponents.Terminal, this._terminalUri);
+			this._subscriptionRef = this._connection.getSubscription(
+				StateComponents.Terminal,
+				this._terminalUri,
+			);
 			const subscription = this._subscriptionRef.object;
 
 			// 3. Wait for hydration via onDidChange, then replay snapshot
 			if (subscription.value === undefined) {
-				await new Promise<void>(resolve => {
+				await new Promise<void>((resolve) => {
 					const listener = subscription.onDidChange(() => {
 						listener.dispose();
 						resolve();
@@ -167,7 +219,7 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 			this._replayContent(state.content);
 
 			// 5. Track initial cwd
-			this._initialCwd = state.cwd?.toString() ?? '';
+			this._initialCwd = state.cwd?.toString() ?? "";
 			this._properties.cwd = this._initialCwd;
 			this._properties.initialCwd = this._initialCwd;
 			if (state.title) {
@@ -175,13 +227,19 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 			}
 
 			// 6. Wire up action listener for streaming updates via the subscription
-			this._subscriptionDisposables.add(subscription.onDidApplyAction(envelope => {
-				this._handleAction(envelope);
-			}));
+			this._subscriptionDisposables.add(
+				subscription.onDidApplyAction((envelope) => {
+					this._handleAction(envelope);
+				}),
+			);
 
 			// 7. Signal that the process is ready
 			this._startBarrier.open();
-			this.handleReady({ pid: -1, cwd: this._initialCwd, windowsPty: undefined });
+			this.handleReady({
+				pid: -1,
+				cwd: this._initialCwd,
+				windowsPty: undefined,
+			});
 			return undefined;
 		} catch (err) {
 			this._startBarrier.open();
@@ -200,11 +258,17 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 				break;
 			case ActionType.TerminalCwdChanged:
 				this._properties.cwd = action.cwd.toString();
-				this.handleDidChangeProperty({ type: ProcessPropertyType.Cwd, value: action.cwd.toString() });
+				this.handleDidChangeProperty({
+					type: ProcessPropertyType.Cwd,
+					value: action.cwd.toString(),
+				});
 				break;
 			case ActionType.TerminalTitleChanged:
 				this._properties.title = action.title;
-				this.handleDidChangeProperty({ type: ProcessPropertyType.Title, value: action.title });
+				this.handleDidChangeProperty({
+					type: ProcessPropertyType.Title,
+					value: action.title,
+				});
 				break;
 			case ActionType.TerminalResized:
 				// Only apply resize from other clients — this client owns
@@ -228,7 +292,9 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 					this._suppressedCommandIds.add(action.commandId);
 					break;
 				}
-				this.handleData(getAhpCommandMarkCode(action.commandId, AhpCommandMarkKind.Executed));
+				this.handleData(
+					getAhpCommandMarkCode(action.commandId, AhpCommandMarkKind.Executed),
+				);
 				this._onCommandExecuted.fire({
 					commandId: action.commandId,
 					commandLine: action.commandLine,
@@ -239,7 +305,9 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 				if (this._suppressedCommandIds.delete(action.commandId)) {
 					break;
 				}
-				this.handleData(getAhpCommandMarkCode(action.commandId, AhpCommandMarkKind.End));
+				this.handleData(
+					getAhpCommandMarkCode(action.commandId, AhpCommandMarkKind.End),
+				);
 				this._onCommandFinished.fire({
 					commandId: action.commandId,
 					exitCode: action.exitCode,
@@ -256,15 +324,17 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 	 */
 	private _replayContent(content: TerminalContentPart[]): void {
 		for (const part of content) {
-			if (part.type === 'unclassified') {
+			if (part.type === "unclassified") {
 				if (part.value) {
 					this.handleData(part.value);
 				}
-			} else if (part.type === 'command') {
+			} else if (part.type === "command") {
 				if (isCopilotSentinelCommand(part.commandLine)) {
 					continue;
 				}
-				this.handleData(getAhpCommandMarkCode(part.commandId, AhpCommandMarkKind.Executed));
+				this.handleData(
+					getAhpCommandMarkCode(part.commandId, AhpCommandMarkKind.Executed),
+				);
 				this._onCommandExecuted.fire({
 					commandId: part.commandId,
 					commandLine: part.commandLine,
@@ -275,7 +345,9 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 					this.handleData(part.output);
 				}
 				if (part.isComplete) {
-					this.handleData(getAhpCommandMarkCode(part.commandId, AhpCommandMarkKind.End));
+					this.handleData(
+						getAhpCommandMarkCode(part.commandId, AhpCommandMarkKind.End),
+					);
 					this._onCommandFinished.fire({
 						commandId: part.commandId,
 						exitCode: part.exitCode,
@@ -305,24 +377,28 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 			return;
 		}
 		this._startBarrier.wait().then(() => {
-			this._connection.dispatch(
-				this._terminalUri.toString(),
-				{ type: ActionType.TerminalInput, data },
-			);
+			this._connection.dispatch(this._terminalUri.toString(), {
+				type: ActionType.TerminalInput,
+				data,
+			});
 		});
 	}
 
 	resize(cols: number, rows: number): void {
-		if (this._inReplay || (this._lastDimensions.cols === cols && this._lastDimensions.rows === rows)) {
+		if (
+			this._inReplay ||
+			(this._lastDimensions.cols === cols && this._lastDimensions.rows === rows)
+		) {
 			return;
 		}
 		this._lastDimensions.cols = cols;
 		this._lastDimensions.rows = rows;
 		this._startBarrier.wait().then(() => {
-			this._connection.dispatch(
-				this._terminalUri.toString(),
-				{ type: ActionType.TerminalResized, cols, rows },
-			);
+			this._connection.dispatch(this._terminalUri.toString(), {
+				type: ActionType.TerminalResized,
+				cols,
+				rows,
+			});
 		});
 	}
 
@@ -350,17 +426,16 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 
 	async clearBuffer(): Promise<void> {
 		// Send a clear action to the agent host
-		this._connection.dispatch(
-			this._terminalUri.toString(),
-			{ type: ActionType.TerminalCleared },
-		);
+		this._connection.dispatch(this._terminalUri.toString(), {
+			type: ActionType.TerminalCleared,
+		});
 	}
 
 	acknowledgeDataEvent(_charCount: number): void {
 		// No flow control needed for AHP terminals
 	}
 
-	async setUnicodeVersion(_version: '6' | '11'): Promise<void> {
+	async setUnicodeVersion(_version: "6" | "11"): Promise<void> {
 		// Not applicable
 	}
 
@@ -373,11 +448,16 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 		// Not applicable
 	}
 
-	async refreshProperty<T extends ProcessPropertyType>(type: T): Promise<IProcessPropertyMap[T]> {
+	async refreshProperty<T extends ProcessPropertyType>(
+		type: T,
+	): Promise<IProcessPropertyMap[T]> {
 		return this._properties[type];
 	}
 
-	async updateProperty<T extends ProcessPropertyType>(_type: T, _value: IProcessPropertyMap[T]): Promise<void> {
+	async updateProperty<T extends ProcessPropertyType>(
+		_type: T,
+		_value: IProcessPropertyMap[T],
+	): Promise<void> {
 		// Not applicable
 	}
 
@@ -400,7 +480,10 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 
 		try {
 			// Re-subscribe to the terminal state
-			this._subscriptionRef = this._connection.getSubscription(StateComponents.Terminal, this._terminalUri);
+			this._subscriptionRef = this._connection.getSubscription(
+				StateComponents.Terminal,
+				this._terminalUri,
+			);
 			const subscription = this._subscriptionRef.object;
 
 			// Wait for hydration with a timeout — the terminal may no longer
@@ -410,7 +493,7 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 				await new Promise<void>((resolve, reject) => {
 					const timer = setTimeout(() => {
 						listener.dispose();
-						reject(new Error('Reconnect hydration timed out'));
+						reject(new Error("Reconnect hydration timed out"));
 					}, RECONNECT_HYDRATE_TIMEOUT_MS);
 					const listener = subscription.onDidChange(() => {
 						clearTimeout(timer);
@@ -431,7 +514,7 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 			// Clear the terminal buffer before replaying to avoid duplicate
 			// content. ESC[2J clears the screen, ESC[3J clears scrollback,
 			// ESC[H moves cursor to home position.
-			this.handleData('\x1b[2J\x1b[3J\x1b[H');
+			this.handleData("\x1b[2J\x1b[3J\x1b[H");
 			this._replayContent(state.content);
 
 			// Update cwd/title if they changed
@@ -443,13 +526,18 @@ export class AgentHostPty extends BasePty implements ITerminalChildProcess {
 			}
 
 			// Wire up action listener for streaming updates
-			this._subscriptionDisposables.add(subscription.onDidApplyAction(envelope => {
-				this._handleAction(envelope);
-			}));
+			this._subscriptionDisposables.add(
+				subscription.onDidApplyAction((envelope) => {
+					this._handleAction(envelope);
+				}),
+			);
 
 			return true;
 		} catch (err) {
-			console.warn('[AgentHostPty] Reconnection failed:', err instanceof Error ? err.message : String(err));
+			console.warn(
+				"[AgentHostPty] Reconnection failed:",
+				err instanceof Error ? err.message : String(err),
+			);
 			return false;
 		}
 	}

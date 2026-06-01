@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { es5ClassCompat } from './es5ClassCompat.js';
+import { es5ClassCompat } from "./es5ClassCompat.js";
 
 @es5ClassCompat
 export class CodeActionKind {
-	private static readonly sep = '.';
+	private static readonly sep = ".";
 
 	public static Empty: CodeActionKind;
 	public static QuickFix: CodeActionKind;
@@ -21,12 +21,12 @@ export class CodeActionKind {
 	public static SourceFixAll: CodeActionKind;
 	public static Notebook: CodeActionKind;
 
-	constructor(
-		public readonly value: string
-	) { }
+	constructor(public readonly value: string) {}
 
 	public append(parts: string): CodeActionKind {
-		return new CodeActionKind(this.value ? this.value + CodeActionKind.sep + parts : parts);
+		return new CodeActionKind(
+			this.value ? this.value + CodeActionKind.sep + parts : parts,
+		);
 	}
 
 	public intersects(other: CodeActionKind): boolean {
@@ -34,17 +34,21 @@ export class CodeActionKind {
 	}
 
 	public contains(other: CodeActionKind): boolean {
-		return this.value === other.value || other.value.startsWith(this.value + CodeActionKind.sep);
+		return (
+			this.value === other.value ||
+			other.value.startsWith(this.value + CodeActionKind.sep)
+		);
 	}
 }
-CodeActionKind.Empty = new CodeActionKind('');
-CodeActionKind.QuickFix = CodeActionKind.Empty.append('quickfix');
-CodeActionKind.Refactor = CodeActionKind.Empty.append('refactor');
-CodeActionKind.RefactorExtract = CodeActionKind.Refactor.append('extract');
-CodeActionKind.RefactorInline = CodeActionKind.Refactor.append('inline');
-CodeActionKind.RefactorMove = CodeActionKind.Refactor.append('move');
-CodeActionKind.RefactorRewrite = CodeActionKind.Refactor.append('rewrite');
-CodeActionKind.Source = CodeActionKind.Empty.append('source');
-CodeActionKind.SourceOrganizeImports = CodeActionKind.Source.append('organizeImports');
-CodeActionKind.SourceFixAll = CodeActionKind.Source.append('fixAll');
-CodeActionKind.Notebook = CodeActionKind.Empty.append('notebook');
+CodeActionKind.Empty = new CodeActionKind("");
+CodeActionKind.QuickFix = CodeActionKind.Empty.append("quickfix");
+CodeActionKind.Refactor = CodeActionKind.Empty.append("refactor");
+CodeActionKind.RefactorExtract = CodeActionKind.Refactor.append("extract");
+CodeActionKind.RefactorInline = CodeActionKind.Refactor.append("inline");
+CodeActionKind.RefactorMove = CodeActionKind.Refactor.append("move");
+CodeActionKind.RefactorRewrite = CodeActionKind.Refactor.append("rewrite");
+CodeActionKind.Source = CodeActionKind.Empty.append("source");
+CodeActionKind.SourceOrganizeImports =
+	CodeActionKind.Source.append("organizeImports");
+CodeActionKind.SourceFixAll = CodeActionKind.Source.append("fixAll");
+CodeActionKind.Notebook = CodeActionKind.Empty.append("notebook");

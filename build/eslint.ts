@@ -3,18 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ESLint } from 'eslint';
-import { eslintFilter } from './filters.ts';
+import { ESLint } from "eslint";
+import { eslintFilter } from "./filters.ts";
 
 async function eslint(): Promise<void> {
 	const linter = new ESLint({
 		cache: true,
-		cacheLocation: '.eslintcache',
-		cacheStrategy: 'content',
-		concurrency: 'auto',
+		cacheLocation: ".eslintcache",
+		cacheStrategy: "content",
+		concurrency: "auto",
 		errorOnUnmatchedPattern: false,
 	});
-	const formatter = await linter.loadFormatter('compact');
+	const formatter = await linter.loadFormatter("compact");
 
 	const results = await linter.lintFiles(Array.from(eslintFilter));
 	const message = await formatter.format(results);
@@ -29,7 +29,9 @@ async function eslint(): Promise<void> {
 		errorCount += r.errorCount;
 	}
 	if (warningCount > 0 || errorCount > 0) {
-		throw new Error(`eslint failed with ${warningCount + errorCount} warnings and/or errors`);
+		throw new Error(
+			`eslint failed with ${warningCount + errorCount} warnings and/or errors`,
+		);
 	}
 }
 

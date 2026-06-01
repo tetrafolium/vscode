@@ -3,14 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationTokenSource } from '../../../common/cancellation.js';
-import { drainMicrotasksEmbedding } from './embedding.js';
-import { pushGlobalTimeApi } from './globalTimeApi.js';
-import { realTimeApi } from './timeApi.js';
-import { untilToken, VirtualTimeProcessor } from './processor.js';
-import { createRecordingRealTimeApi, RecordedTimerEvent } from './recordingTimeApi.js';
-import { VirtualClock } from './virtualClock.js';
-import { createVirtualTimeApi } from './virtualTimeApi.js';
+import { CancellationTokenSource } from "../../../common/cancellation.js";
+import { drainMicrotasksEmbedding } from "./embedding.js";
+import { pushGlobalTimeApi } from "./globalTimeApi.js";
+import { realTimeApi } from "./timeApi.js";
+import { untilToken, VirtualTimeProcessor } from "./processor.js";
+import {
+	createRecordingRealTimeApi,
+	RecordedTimerEvent,
+} from "./recordingTimeApi.js";
+import { VirtualClock } from "./virtualClock.js";
+import { createVirtualTimeApi } from "./virtualTimeApi.js";
 
 export interface RunWithFakedTimersOptions {
 	readonly startTime?: number;
@@ -48,7 +51,9 @@ export async function runWithFakedTimers<T>(
 ): Promise<T> {
 	const useFakeTimers = options.useFakeTimers !== false;
 	if (!useFakeTimers) {
-		if (!options.onHistory) { return fn(); }
+		if (!options.onHistory) {
+			return fn();
+		}
 		const history: RecordedTimerEvent[] = [];
 		const restore = pushGlobalTimeApi(createRecordingRealTimeApi(history));
 		try {
@@ -91,7 +96,9 @@ export async function runWithFakedTimers<T>(
 			} else {
 				// Avoid an unhandled rejection in case disposal rejects the
 				// run.
-				runPromise.catch(() => { /* swallowed: fn() already failed */ });
+				runPromise.catch(() => {
+					/* swallowed: fn() already failed */
+				});
 			}
 		} finally {
 			cts.dispose();

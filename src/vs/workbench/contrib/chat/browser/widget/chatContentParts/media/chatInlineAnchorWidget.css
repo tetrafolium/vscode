@@ -4,7 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 .chat-inline-anchor-widget {
-	border: 0.5px solid var(--vscode-chat-requestBorder, var(--vscode-input-background, transparent));
+	border: 0.5px solid
+		var(
+			--vscode-chat-requestBorder,
+			var(--vscode-input-background, transparent)
+		);
 	border-radius: 4px;
 	margin: 0 1px;
 	padding: 1px 3px;
@@ -23,11 +27,14 @@
 	}
 }
 
-.chat-inline-anchor-widget:hover .icon-label .label-suffix  {
-	color: currentColor
+.chat-inline-anchor-widget:hover .icon-label .label-suffix {
+	color: currentColor;
 }
 
-.interactive-item-container .value .rendered-markdown .chat-inline-anchor-widget {
+.interactive-item-container
+	.value
+	.rendered-markdown
+	.chat-inline-anchor-widget {
 	color: inherit;
 }
 
@@ -62,7 +69,11 @@
 
 /* Link-style appearance - no box, no icon (controlled by parent container class) */
 .chat-inline-references-link-style .chat-inline-anchor-widget,
-.chat-inline-references-link-style .interactive-item-container .value .rendered-markdown .chat-inline-anchor-widget {
+.chat-inline-references-link-style
+	.interactive-item-container
+	.value
+	.rendered-markdown
+	.chat-inline-anchor-widget {
 	border: none;
 	background-color: transparent;
 	padding: 0;

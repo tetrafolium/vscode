@@ -3,61 +3,107 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { Emitter, Event } from '../../../../../base/common/event.js';
-import { IMarkdownString } from '../../../../../base/common/htmlContent.js';
-import { Disposable, dispose } from '../../../../../base/common/lifecycle.js';
-import { RunOnceScheduler } from '../../../../../base/common/async.js';
-import { IObservable } from '../../../../../base/common/observable.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IChatRequestVariableEntry } from '../attachments/chatVariableEntries.js';
-import { ChatAgentVoteDirection, ChatRequestQueueKind, IChatCodeCitation, IChatContentReference, IChatDisabledClaudeHooksPart, IChatFollowup, IChatMcpServersStarting, IChatPlanReview, IChatProgressMessage, IChatQuestionCarousel, IChatResponseErrorDetails, IChatTask, IChatUsage, IChatUsedContext } from '../chatService/chatService.js';
-import { getFullyQualifiedId, IChatAgentCommand, IChatAgentData, IChatAgentNameService, IChatAgentResult } from '../participants/chatAgents.js';
-import { IParsedChatRequest } from '../requestParser/chatParserTypes.js';
-import { IChatModel, IChatProgressRenderableResponseContent, IChatRequestDisablement, IChatRequestModel, IChatResponseModel, IChatTextEditGroup, IResponse } from './chatModel.js';
-import { ChatStreamStatsTracker, IChatStreamStats } from './chatStreamStats.js';
-import { countWords } from './chatWordCounter.js';
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { Emitter, Event } from "../../../../../base/common/event.js";
+import { IMarkdownString } from "../../../../../base/common/htmlContent.js";
+import { Disposable, dispose } from "../../../../../base/common/lifecycle.js";
+import { RunOnceScheduler } from "../../../../../base/common/async.js";
+import { IObservable } from "../../../../../base/common/observable.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { IChatRequestVariableEntry } from "../attachments/chatVariableEntries.js";
+import {
+	ChatAgentVoteDirection,
+	ChatRequestQueueKind,
+	IChatCodeCitation,
+	IChatContentReference,
+	IChatDisabledClaudeHooksPart,
+	IChatFollowup,
+	IChatMcpServersStarting,
+	IChatPlanReview,
+	IChatProgressMessage,
+	IChatQuestionCarousel,
+	IChatResponseErrorDetails,
+	IChatTask,
+	IChatUsage,
+	IChatUsedContext,
+} from "../chatService/chatService.js";
+import {
+	getFullyQualifiedId,
+	IChatAgentCommand,
+	IChatAgentData,
+	IChatAgentNameService,
+	IChatAgentResult,
+} from "../participants/chatAgents.js";
+import { IParsedChatRequest } from "../requestParser/chatParserTypes.js";
+import {
+	IChatModel,
+	IChatProgressRenderableResponseContent,
+	IChatRequestDisablement,
+	IChatRequestModel,
+	IChatResponseModel,
+	IChatTextEditGroup,
+	IResponse,
+} from "./chatModel.js";
+import { ChatStreamStatsTracker, IChatStreamStats } from "./chatStreamStats.js";
+import { countWords } from "./chatWordCounter.js";
 
 export function isRequestVM(item: unknown): item is IChatRequestViewModel {
-	return !!item && typeof item === 'object' && 'message' in item;
+	return !!item && typeof item === "object" && "message" in item;
 }
 
 export function isResponseVM(item: unknown): item is IChatResponseViewModel {
-	return !!item && typeof (item as IChatResponseViewModel).setVote !== 'undefined';
+	return (
+		!!item && typeof (item as IChatResponseViewModel).setVote !== "undefined"
+	);
 }
 
-export function isPendingDividerVM(item: unknown): item is IChatPendingDividerViewModel {
-	return !!item && typeof item === 'object' && (item as IChatPendingDividerViewModel).kind === 'pendingDivider';
+export function isPendingDividerVM(
+	item: unknown,
+): item is IChatPendingDividerViewModel {
+	return (
+		!!item &&
+		typeof item === "object" &&
+		(item as IChatPendingDividerViewModel).kind === "pendingDivider"
+	);
 }
 
-export function isChatTreeItem(item: unknown): item is IChatRequestViewModel | IChatResponseViewModel {
+export function isChatTreeItem(
+	item: unknown,
+): item is IChatRequestViewModel | IChatResponseViewModel {
 	return isRequestVM(item) || isResponseVM(item);
 }
 
-export function assertIsResponseVM(item: unknown): asserts item is IChatResponseViewModel {
+export function assertIsResponseVM(
+	item: unknown,
+): asserts item is IChatResponseViewModel {
 	if (!isResponseVM(item)) {
-		throw new Error('Expected item to be IChatResponseViewModel');
+		throw new Error("Expected item to be IChatResponseViewModel");
 	}
 }
 
-export type IChatViewModelChangeEvent = IChatAddRequestEvent | IChangePlaceholderEvent | IChatSessionInitEvent | IChatSetHiddenEvent | null;
+export type IChatViewModelChangeEvent =
+	| IChatAddRequestEvent
+	| IChangePlaceholderEvent
+	| IChatSessionInitEvent
+	| IChatSetHiddenEvent
+	| null;
 
 export interface IChatAddRequestEvent {
-	kind: 'addRequest';
+	kind: "addRequest";
 }
 
 export interface IChangePlaceholderEvent {
-	kind: 'changePlaceholder';
+	kind: "changePlaceholder";
 }
 
 export interface IChatSessionInitEvent {
-	kind: 'initialize';
+	kind: "initialize";
 }
 
 export interface IChatSetHiddenEvent {
-	kind: 'setHidden';
+	kind: "setHidden";
 }
 
 export interface IChatViewModel {
@@ -66,7 +112,11 @@ export interface IChatViewModel {
 	readonly onDidDisposeModel: Event<void>;
 	readonly onDidChange: Event<IChatViewModelChangeEvent>;
 	readonly inputPlaceholder?: string;
-	getItems(): (IChatRequestViewModel | IChatResponseViewModel | IChatPendingDividerViewModel)[];
+	getItems(): (
+		| IChatRequestViewModel
+		| IChatResponseViewModel
+		| IChatPendingDividerViewModel
+	)[];
 	setInputPlaceholder(text: string): void;
 	resetInputPlaceholder(): void;
 	editing?: IChatRequestViewModel;
@@ -151,14 +201,14 @@ export interface IChatResponseRenderData {
  */
 export interface IChatReferences {
 	references: ReadonlyArray<IChatContentReference>;
-	kind: 'references';
+	kind: "references";
 }
 
 /**
  * Content type for the "Working" progress message
  */
 export interface IChatWorkingProgress {
-	kind: 'working';
+	kind: "working";
 	content?: IMarkdownString;
 	/**
 	 * When present, the working progress will show elapsed time and token usage.
@@ -179,23 +229,22 @@ export interface IChatWorkingProgressState {
 	readonly elapsedMs?: number;
 }
 
-
 /**
  * Content type for citations used during rendering, not in the model
  */
 export interface IChatCodeCitations {
 	citations: ReadonlyArray<IChatCodeCitation>;
-	kind: 'codeCitations';
+	kind: "codeCitations";
 }
 
 export interface IChatErrorDetailsPart {
-	kind: 'errorDetails';
+	kind: "errorDetails";
 	errorDetails: IChatResponseErrorDetails;
 	isLast: boolean;
 }
 
 export interface IChatChangesSummaryPart {
-	readonly kind: 'changesSummary';
+	readonly kind: "changesSummary";
 	readonly requestId: string;
 	readonly sessionResource: URI;
 }
@@ -203,7 +252,17 @@ export interface IChatChangesSummaryPart {
 /**
  * Type for content parts rendered by IChatListRenderer (not necessarily in the model)
  */
-export type IChatRendererContent = IChatProgressRenderableResponseContent | IChatReferences | IChatCodeCitations | IChatErrorDetailsPart | IChatChangesSummaryPart | IChatWorkingProgress | IChatMcpServersStarting | IChatQuestionCarousel | IChatPlanReview | IChatDisabledClaudeHooksPart;
+export type IChatRendererContent =
+	| IChatProgressRenderableResponseContent
+	| IChatReferences
+	| IChatCodeCitations
+	| IChatErrorDetailsPart
+	| IChatChangesSummaryPart
+	| IChatWorkingProgress
+	| IChatMcpServersStarting
+	| IChatQuestionCarousel
+	| IChatPlanReview
+	| IChatDisabledClaudeHooksPart;
 
 export interface IChatResponseViewModel {
 	readonly model: IChatResponseModel;
@@ -246,7 +305,7 @@ export interface IChatResponseViewModel {
 }
 
 export interface IChatPendingDividerViewModel {
-	readonly kind: 'pendingDivider';
+	readonly kind: "pendingDivider";
 	readonly id: string; // e.g., 'pending-divider-steering' or 'pending-divider-queued'
 	readonly sessionResource: URI;
 	readonly isComplete: true;
@@ -264,14 +323,16 @@ export interface IChatViewModelOptions {
 }
 
 export class ChatViewModel extends Disposable implements IChatViewModel {
-
 	private readonly _onDidDisposeModel = this._register(new Emitter<void>());
 	readonly onDidDisposeModel = this._onDidDisposeModel.event;
 
-	private readonly _onDidChange = this._register(new Emitter<IChatViewModelChangeEvent>());
+	private readonly _onDidChange = this._register(
+		new Emitter<IChatViewModelChangeEvent>(),
+	);
 	readonly onDidChange = this._onDidChange.event;
 
-	private readonly _items: (ChatRequestViewModel | ChatResponseViewModel)[] = [];
+	private readonly _items: (ChatRequestViewModel | ChatResponseViewModel)[] =
+		[];
 
 	private _inputPlaceholder: string | undefined = undefined;
 	get inputPlaceholder(): string | undefined {
@@ -284,12 +345,12 @@ export class ChatViewModel extends Disposable implements IChatViewModel {
 
 	setInputPlaceholder(text: string): void {
 		this._inputPlaceholder = text;
-		this._onDidChange.fire({ kind: 'changePlaceholder' });
+		this._onDidChange.fire({ kind: "changePlaceholder" });
 	}
 
 	resetInputPlaceholder(): void {
 		this._inputPlaceholder = undefined;
-		this._onDidChange.fire({ kind: 'changePlaceholder' });
+		this._onDidChange.fire({ kind: "changePlaceholder" });
 	}
 
 	get sessionResource(): URI {
@@ -299,12 +360,16 @@ export class ChatViewModel extends Disposable implements IChatViewModel {
 	constructor(
 		private readonly _model: IChatModel,
 		private readonly _options: IChatViewModelOptions | undefined,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super();
 
 		_model.getRequests().forEach((request, i) => {
-			const requestModel = this.instantiationService.createInstance(ChatRequestViewModel, request);
+			const requestModel = this.instantiationService.createInstance(
+				ChatRequestViewModel,
+				request,
+			);
 			this._items.push(requestModel);
 
 			if (request.response) {
@@ -313,82 +378,147 @@ export class ChatViewModel extends Disposable implements IChatViewModel {
 		});
 
 		this._register(_model.onDidDispose(() => this._onDidDisposeModel.fire()));
-		this._register(_model.onDidChangePendingRequests(() => this._onDidChange.fire(null)));
-		this._register(_model.onDidChange(e => {
-			if (e.kind === 'addRequest') {
-				const requestModel = this.instantiationService.createInstance(ChatRequestViewModel, e.request);
-				this._items.push(requestModel);
+		this._register(
+			_model.onDidChangePendingRequests(() => this._onDidChange.fire(null)),
+		);
+		this._register(
+			_model.onDidChange((e) => {
+				if (e.kind === "addRequest") {
+					const requestModel = this.instantiationService.createInstance(
+						ChatRequestViewModel,
+						e.request,
+					);
+					this._items.push(requestModel);
 
-				if (e.request.response) {
-					this.onAddResponse(e.request.response);
-				}
-			} else if (e.kind === 'addResponse') {
-				this.onAddResponse(e.response);
-			} else if (e.kind === 'removeRequest') {
-				const requestIdx = this._items.findIndex(item => isRequestVM(item) && item.id === e.requestId);
-				if (requestIdx >= 0) {
-					this._items.splice(requestIdx, 1);
-				}
+					if (e.request.response) {
+						this.onAddResponse(e.request.response);
+					}
+				} else if (e.kind === "addResponse") {
+					this.onAddResponse(e.response);
+				} else if (e.kind === "removeRequest") {
+					const requestIdx = this._items.findIndex(
+						(item) => isRequestVM(item) && item.id === e.requestId,
+					);
+					if (requestIdx >= 0) {
+						this._items.splice(requestIdx, 1);
+					}
 
-				const responseIdx = e.responseId && this._items.findIndex(item => isResponseVM(item) && item.id === e.responseId);
-				if (typeof responseIdx === 'number' && responseIdx >= 0) {
-					const items = this._items.splice(responseIdx, 1);
-					const item = items[0];
-					if (item instanceof ChatResponseViewModel) {
-						item.dispose();
+					const responseIdx =
+						e.responseId &&
+						this._items.findIndex(
+							(item) => isResponseVM(item) && item.id === e.responseId,
+						);
+					if (typeof responseIdx === "number" && responseIdx >= 0) {
+						const items = this._items.splice(responseIdx, 1);
+						const item = items[0];
+						if (item instanceof ChatResponseViewModel) {
+							item.dispose();
+						}
 					}
 				}
-			}
 
-			const modelEventToVmEvent: IChatViewModelChangeEvent =
-				e.kind === 'addRequest' ? { kind: 'addRequest' }
-					: e.kind === 'initialize' ? { kind: 'initialize' }
-						: e.kind === 'setHidden' ? { kind: 'setHidden' }
-							: null;
-			this._onDidChange.fire(modelEventToVmEvent);
-		}));
+				const modelEventToVmEvent: IChatViewModelChangeEvent =
+					e.kind === "addRequest"
+						? { kind: "addRequest" }
+						: e.kind === "initialize"
+							? { kind: "initialize" }
+							: e.kind === "setHidden"
+								? { kind: "setHidden" }
+								: null;
+				this._onDidChange.fire(modelEventToVmEvent);
+			}),
+		);
 	}
 
 	private onAddResponse(responseModel: IChatResponseModel) {
-		const response = this.instantiationService.createInstance(ChatResponseViewModel, responseModel, this);
-		this._register(response.onDidChange(() => {
-			return this._onDidChange.fire(null);
-		}));
+		const response = this.instantiationService.createInstance(
+			ChatResponseViewModel,
+			responseModel,
+			this,
+		);
+		this._register(
+			response.onDidChange(() => {
+				return this._onDidChange.fire(null);
+			}),
+		);
 		this._items.push(response);
 	}
 
-	getItems(): (IChatRequestViewModel | IChatResponseViewModel | IChatPendingDividerViewModel)[] {
-		let items: (IChatRequestViewModel | IChatResponseViewModel | IChatPendingDividerViewModel)[] = this._items.filter((item) => {
-			if (item.shouldBeRemovedOnSend && !item.shouldBeRemovedOnSend.afterUndoStop) {
+	getItems(): (
+		| IChatRequestViewModel
+		| IChatResponseViewModel
+		| IChatPendingDividerViewModel
+	)[] {
+		let items: (
+			| IChatRequestViewModel
+			| IChatResponseViewModel
+			| IChatPendingDividerViewModel
+		)[] = this._items.filter((item) => {
+			if (
+				item.shouldBeRemovedOnSend &&
+				!item.shouldBeRemovedOnSend.afterUndoStop
+			) {
 				return false;
 			}
 			return true;
 		});
-		if (this._options?.maxVisibleItems !== undefined && items.length > this._options.maxVisibleItems) {
+		if (
+			this._options?.maxVisibleItems !== undefined &&
+			items.length > this._options.maxVisibleItems
+		) {
 			items = items.slice(-this._options.maxVisibleItems);
 		}
 
 		const pendingRequests = this._model.getPendingRequests();
 		if (pendingRequests.length > 0) {
 			// Separate steering and queued requests
-			const steeringRequests = pendingRequests.filter(p => p.kind === ChatRequestQueueKind.Steering);
-			const queuedRequests = pendingRequests.filter(p => p.kind === ChatRequestQueueKind.Queued);
+			const steeringRequests = pendingRequests.filter(
+				(p) => p.kind === ChatRequestQueueKind.Steering,
+			);
+			const queuedRequests = pendingRequests.filter(
+				(p) => p.kind === ChatRequestQueueKind.Queued,
+			);
 
 			// Add steering requests with their divider first
 			if (steeringRequests.length > 0) {
-				const isSystemInitiated = steeringRequests.every(p => p.request.isSystemInitiated);
-				items.push({ kind: 'pendingDivider', id: 'pending-divider-steering', sessionResource: this._model.sessionResource, isComplete: true, dividerKind: ChatRequestQueueKind.Steering, isSystemInitiated, currentRenderedHeight: undefined });
+				const isSystemInitiated = steeringRequests.every(
+					(p) => p.request.isSystemInitiated,
+				);
+				items.push({
+					kind: "pendingDivider",
+					id: "pending-divider-steering",
+					sessionResource: this._model.sessionResource,
+					isComplete: true,
+					dividerKind: ChatRequestQueueKind.Steering,
+					isSystemInitiated,
+					currentRenderedHeight: undefined,
+				});
 				for (const pending of steeringRequests) {
-					const requestVM = this.instantiationService.createInstance(ChatRequestViewModel, pending.request, pending.kind);
+					const requestVM = this.instantiationService.createInstance(
+						ChatRequestViewModel,
+						pending.request,
+						pending.kind,
+					);
 					items.push(requestVM);
 				}
 			}
 
 			// Add queued requests with their divider
 			if (queuedRequests.length > 0) {
-				items.push({ kind: 'pendingDivider', id: 'pending-divider-queued', sessionResource: this._model.sessionResource, isComplete: true, dividerKind: ChatRequestQueueKind.Queued, currentRenderedHeight: undefined });
+				items.push({
+					kind: "pendingDivider",
+					id: "pending-divider-queued",
+					sessionResource: this._model.sessionResource,
+					isComplete: true,
+					dividerKind: ChatRequestQueueKind.Queued,
+					currentRenderedHeight: undefined,
+				});
 				for (const pending of queuedRequests) {
-					const requestVM = this.instantiationService.createInstance(ChatRequestViewModel, pending.request, pending.kind);
+					const requestVM = this.instantiationService.createInstance(
+						ChatRequestViewModel,
+						pending.request,
+						pending.kind,
+					);
 					items.push(requestVM);
 				}
 			}
@@ -396,7 +526,6 @@ export class ChatViewModel extends Disposable implements IChatViewModel {
 
 		return items;
 	}
-
 
 	private _editing: IChatRequestViewModel | undefined = undefined;
 	get editing(): IChatRequestViewModel | undefined {
@@ -413,7 +542,12 @@ export class ChatViewModel extends Disposable implements IChatViewModel {
 
 	override dispose() {
 		super.dispose();
-		dispose(this._items.filter((item): item is ChatResponseViewModel => item instanceof ChatResponseViewModel));
+		dispose(
+			this._items.filter(
+				(item): item is ChatResponseViewModel =>
+					item instanceof ChatResponseViewModel,
+			),
+		);
 		this._items.length = 0;
 	}
 }
@@ -435,7 +569,7 @@ export class ChatRequestViewModel implements IChatRequestViewModel {
 	}
 
 	get username() {
-		return 'User';
+		return "User";
 	}
 
 	get avatarIcon(): ThemeIcon {
@@ -519,10 +653,13 @@ export class ChatRequestViewModel implements IChatRequestViewModel {
 	constructor(
 		private readonly _model: IChatRequestModel,
 		private readonly _pendingKind?: ChatRequestQueueKind,
-	) { }
+	) {}
 }
 
-export class ChatResponseViewModel extends Disposable implements IChatResponseViewModel {
+export class ChatResponseViewModel
+	extends Disposable
+	implements IChatResponseViewModel
+{
 	private _modelChangeCount = 0;
 
 	private readonly _onDidChange = this._register(new Emitter<void>());
@@ -537,9 +674,11 @@ export class ChatResponseViewModel extends Disposable implements IChatResponseVi
 	}
 
 	get dataId() {
-		return this._model.id +
+		return (
+			this._model.id +
 			`_${this._modelChangeCount}` +
-			(this.isLast ? '_last' : '');
+			(this.isLast ? "_last" : "")
+		);
 	}
 
 	get sessionResource(): URI {
@@ -548,7 +687,9 @@ export class ChatResponseViewModel extends Disposable implements IChatResponseVi
 
 	get username() {
 		if (this.agent) {
-			const isAllowed = this.chatAgentNameService.getAgentNameRestriction(this.agent);
+			const isAllowed = this.chatAgentNameService.getAgentNameRestriction(
+				this.agent,
+			);
 			if (isAllowed) {
 				return this.agent.fullName || this.agent.name;
 			} else {
@@ -612,7 +753,9 @@ export class ChatResponseViewModel extends Disposable implements IChatResponseVi
 	}
 
 	get replyFollowups() {
-		return this._model.followups?.filter((f): f is IChatFollowup => f.kind === 'reply');
+		return this._model.followups?.filter(
+			(f): f is IChatFollowup => f.kind === "reply",
+		);
 	}
 
 	get result() {
@@ -644,7 +787,7 @@ export class ChatResponseViewModel extends Disposable implements IChatResponseVi
 
 	private _usedReferencesExpanded: boolean | undefined;
 	get usedReferencesExpanded(): boolean | undefined {
-		if (typeof this._usedReferencesExpanded === 'boolean') {
+		if (typeof this._usedReferencesExpanded === "boolean") {
 			return this._usedReferencesExpanded;
 		}
 
@@ -685,28 +828,38 @@ export class ChatResponseViewModel extends Disposable implements IChatResponseVi
 	constructor(
 		private readonly _model: IChatResponseModel,
 		public readonly session: IChatViewModel,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@IChatAgentNameService private readonly chatAgentNameService: IChatAgentNameService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+		@IChatAgentNameService
+		private readonly chatAgentNameService: IChatAgentNameService,
 	) {
 		super();
 
 		if (!_model.isComplete) {
-			this.liveUpdateTracker = this.instantiationService.createInstance(ChatStreamStatsTracker);
+			this.liveUpdateTracker = this.instantiationService.createInstance(
+				ChatStreamStatsTracker,
+			);
 		}
 
-		const wordCountScheduler = this.liveUpdateTracker ? this._register(new RunOnceScheduler(() => {
-			const wordCount = countWords(_model.entireResponse.getMarkdown());
-			this.liveUpdateTracker!.update({ totalWordCount: wordCount });
-		}, 0)) : undefined;
+		const wordCountScheduler = this.liveUpdateTracker
+			? this._register(
+					new RunOnceScheduler(() => {
+						const wordCount = countWords(_model.entireResponse.getMarkdown());
+						this.liveUpdateTracker!.update({ totalWordCount: wordCount });
+					}, 0),
+				)
+			: undefined;
 
-		this._register(_model.onDidChange(() => {
-			wordCountScheduler?.schedule();
+		this._register(
+			_model.onDidChange(() => {
+				wordCountScheduler?.schedule();
 
-			// new data -> new id, new content to render
-			this._modelChangeCount++;
+				// new data -> new id, new content to render
+				this._modelChangeCount++;
 
-			this._onDidChange.fire();
-		}));
+				this._onDidChange.fire();
+			}),
+		);
 	}
 
 	setVote(vote: ChatAgentVoteDirection): void {

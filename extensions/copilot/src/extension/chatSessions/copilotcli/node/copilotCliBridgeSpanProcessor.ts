@@ -3,8 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CopilotChatAttr, CopilotCliSdkAttr, GenAiAttr, GenAiOperationName } from '../../../../platform/otel/common/genAiAttributes';
-import { type ICompletedSpanData, type IOTelService, type ISpanEventRecord, SpanStatusCode } from '../../../../platform/otel/common/otelService';
+import {
+	CopilotChatAttr,
+	CopilotCliSdkAttr,
+	GenAiAttr,
+	GenAiOperationName,
+} from '../../../../platform/otel/common/genAiAttributes';
+import {
+	type ICompletedSpanData,
+	type IOTelService,
+	type ISpanEventRecord,
+	SpanStatusCode,
+} from '../../../../platform/otel/common/otelService';
 
 /**
  * Hook event data stashed by copilotcliSession for bridge enrichment.
@@ -26,10 +36,17 @@ interface ReadableSpan {
 	readonly startTime: readonly [number, number]; // [seconds, nanoseconds]
 	readonly endTime: readonly [number, number];
 	readonly attributes: Readonly<Record<string, unknown>>;
-	readonly events: readonly { readonly name: string; readonly time: readonly [number, number]; readonly attributes?: Readonly<Record<string, unknown>> }[];
+	readonly events: readonly {
+		readonly name: string;
+		readonly time: readonly [number, number];
+		readonly attributes?: Readonly<Record<string, unknown>>;
+	}[];
 	readonly status: { readonly code: number; readonly message?: string };
 	/** OTel SDK v2: parent span context object (replaces v1's parentSpanId string) */
-	readonly parentSpanContext?: { readonly traceId: string; readonly spanId: string };
+	readonly parentSpanContext?: {
+		readonly traceId: string;
+		readonly spanId: string;
+	};
 	spanContext(): { readonly traceId: string; readonly spanId: string };
 }
 
@@ -50,12 +67,21 @@ function hrTimeToMs(hrTime: readonly [number, number]): number {
 }
 
 /** Flatten OTel attribute values to the types ICompletedSpanData accepts. */
-function flattenAttributes(attrs: Readonly<Record<string, unknown>>): Record<string, string | number | boolean | string[]> {
+function flattenAttributes(
+	attrs: Readonly<Record<string, unknown>>,
+): Record<string, string | number | boolean | string[]> {
 	const result: Record<string, string | number | boolean | string[]> = {};
 	for (const [key, value] of Object.entries(attrs)) {
-		if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+		if (
+			typeof value === 'string' ||
+			typeof value === 'number' ||
+			typeof value === 'boolean'
+		) {
 			result[key] = value;
-		} else if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
+		} else if (
+			Array.isArray(value) &&
+			value.every((v) => typeof v === 'string')
+		) {
 			result[key] = value as string[];
 		} else if (value !== null && value !== undefined) {
 			result[key] = String(value);
@@ -95,7 +121,7 @@ export class CopilotCliBridgeSpanProcessor implements SpanProcessor {
 	 */
 	private readonly _pendingHookSpans = new Map<string, ICompletedSpanData>();
 
-	constructor(private readonly _otelService: IOTelService) { }
+	constructor(private readonly _otelService: IOTelService) {}
 
 	/** Register a traceId → sessionId mapping for CHAT_SESSION_ID injection. */
 	registerTrace(traceId: string, sessionId: string): void {
@@ -111,7 +137,11 @@ export class CopilotCliBridgeSpanProcessor implements SpanProcessor {
 	 * Stash hook input data from a hook.start session event.
 	 * Called by copilotcliSession before the SDK span ends.
 	 */
-	stashHookInput(hookInvocationId: string, hookType: string, input: string | undefined): void {
+	stashHookInput(
+		hookInvocationId: string,
+		hookType: string,
+		input: string | undefined,
+	): void {
 		this._hookData.set(hookInvocationId, { hookType, input });
 	}
 
@@ -119,12 +149,28 @@ export class CopilotCliBridgeSpanProcessor implements SpanProcessor {
 	 * Stash hook completion data from a hook.end session event.
 	 * If the SDK span already arrived (held in _pendingHookSpans), enriches and injects it now.
 	 */
-	stashHookEnd(hookInvocationId: string, hookType: string, output: string | undefined, resultKind: 'success' | 'error', errorMessage: string | undefined): void {
+	stashHookEnd(
+		hookInvocationId: string,
+		hookType: string,
+		output: string | undefined,
+		resultKind: 'success' | 'error',
+		errorMessage: string | undefined,
+	): void {
 		const existing = this._hookData.get(hookInvocationId);
 		if (existing) {
-			this._hookData.set(hookInvocationId, { ...existing, output, resultKind, errorMessage });
+			this._hookData.set(hookInvocationId, {
+				...existing,
+				output,
+				resultKind,
+				errorMessage,
+			});
 		} else {
-			this._hookData.set(hookInvocationId, { hookType, output, resultKind, errorMessage });
+			this._hookData.set(hookInvocationId, {
+				hookType,
+				output,
+				resultKind,
+				errorMessage,
+			});
 		}
 
 		// If the SDK span arrived before this data, inject it now
@@ -160,8 +206,13 @@ export class CopilotCliBridgeSpanProcessor implements SpanProcessor {
 
 		// SDK native hook spans: enrich with data from session events and
 		// remap to execute_hook so the debug panel shows full details.
-		const invocationId = span.attributes[CopilotCliSdkAttr.HOOK_INVOCATION_ID];
-		if (span.name.startsWith('hook ') && span.attributes[CopilotCliSdkAttr.HOOK_TYPE] && typeof invocationId === 'string') {
+		const invocationId =
+			span.attributes[CopilotCliSdkAttr.HOOK_INVOCATION_ID];
+		if (
+			span.name.startsWith('hook ') &&
+			span.attributes[CopilotCliSdkAttr.HOOK_TYPE] &&
+			typeof invocationId === 'string'
+		) {
 			const hookEndData = this._hookData.get(invocationId);
 			if (hookEndData?.resultKind) {
 				// hook.end data already arrived — enrich and inject immediately
@@ -176,7 +227,10 @@ export class CopilotCliBridgeSpanProcessor implements SpanProcessor {
 		this._otelService.injectCompletedSpan(completedSpan);
 	}
 
-	private _injectEnrichedHookSpan(span: ICompletedSpanData, hookInvocationId: string): void {
+	private _injectEnrichedHookSpan(
+		span: ICompletedSpanData,
+		hookInvocationId: string,
+	): void {
 		const data = this._hookData.get(hookInvocationId);
 		this._hookData.delete(hookInvocationId);
 		if (!data) {
@@ -201,19 +255,25 @@ export class CopilotCliBridgeSpanProcessor implements SpanProcessor {
 			...span,
 			name: `execute_hook ${data.hookType}`,
 			attributes: attrs,
-			status: data.resultKind === 'error'
-				? { code: SpanStatusCode.ERROR, message: data.errorMessage }
-				: { code: SpanStatusCode.OK },
+			status:
+				data.resultKind === 'error'
+					? { code: SpanStatusCode.ERROR, message: data.errorMessage }
+					: { code: SpanStatusCode.OK },
 		};
 		this._otelService.injectCompletedSpan(enrichedSpan);
 	}
 
-	private _toCompletedSpan(span: ReadableSpan, sessionId: string): ICompletedSpanData {
+	private _toCompletedSpan(
+		span: ReadableSpan,
+		sessionId: string,
+	): ICompletedSpanData {
 		const ctx = span.spanContext();
-		const events: ISpanEventRecord[] = span.events.map(event => ({
+		const events: ISpanEventRecord[] = span.events.map((event) => ({
 			name: event.name,
 			timestamp: hrTimeToMs(event.time),
-			attributes: event.attributes ? flattenAttributes(event.attributes) : undefined,
+			attributes: event.attributes
+				? flattenAttributes(event.attributes)
+				: undefined,
 		}));
 
 		const baseAttributes = flattenAttributes(span.attributes);

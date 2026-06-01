@@ -23,16 +23,17 @@ function createMockExtensionContext(): IVSCodeExtensionContext {
 		extensionPath: '/mock',
 		globalState: {
 			get: <T>(_key: string, defaultValue?: T) => defaultValue as T,
-			update: async () => { },
-			keys: () => []
+			update: async () => {},
+			keys: () => [],
 		},
 		workspaceState: {
-			get: <T>(key: string, defaultValue?: T) => (workspaceState.get(key) as T) ?? defaultValue,
+			get: <T>(key: string, defaultValue?: T) =>
+				(workspaceState.get(key) as T) ?? defaultValue,
 			update: async (key: string, value: unknown) => {
 				workspaceState.set(key, value);
 			},
-			keys: () => [...workspaceState.keys()]
-		}
+			keys: () => [...workspaceState.keys()],
+		},
 	} as unknown as IVSCodeExtensionContext;
 }
 
@@ -49,7 +50,7 @@ function createWorkspaceService(): IWorkspaceService {
 	return {
 		_serviceBrand: undefined,
 		onDidChangeWorkspaceFolders: Event.None,
-		getWorkspaceFolders: () => [URI.file('/workspace')]
+		getWorkspaceFolders: () => [URI.file('/workspace')],
 	} as unknown as IWorkspaceService;
 }
 
@@ -71,17 +72,24 @@ describe('CopilotCLIAgents', () => {
 		return {
 			uri: mock.uri,
 			source: 'local',
-			name: parsed.header?.name ?? mock.uri.path.split('/').pop()?.replace('.agent.md', '') ?? 'unknown',
+			name:
+				parsed.header?.name ??
+				mock.uri.path.split('/').pop()?.replace('.agent.md', '') ??
+				'unknown',
 			description: parsed.header?.description ?? '',
 			model: parsed.header?.model,
 			tools: parsed.header?.tools,
 			userInvocable: parsed.header?.userInvocable ?? true,
-			disableModelInvocation: parsed.header?.disableModelInvocation ?? false,
-			enabled: true
+			disableModelInvocation:
+				parsed.header?.disableModelInvocation ?? false,
+			enabled: true,
 		};
 	}
 
-	function createAgents(options: { sdkAgentsByCall: ReadonlyArray<ReadonlyArray<SweCustomAgent>>; customAgents?: PromptFileInfo[] }): { agents: CopilotCLIAgents; promptsService: MockPromptsService } {
+	function createAgents(options: {
+		sdkAgentsByCall: ReadonlyArray<ReadonlyArray<SweCustomAgent>>;
+		customAgents?: PromptFileInfo[];
+	}): { agents: CopilotCLIAgents; promptsService: MockPromptsService } {
 		const promptsService = disposables.add(new MockPromptsService());
 		if (options.customAgents) {
 			const customAgents = [];
@@ -102,24 +110,31 @@ describe('CopilotCLIAgents', () => {
 	}
 
 	it('prefers prompt-derived agents over SDK agents with the same name', async () => {
-		const promptAgent = mockPromptFile('merge.agent.md', `---
+		const promptAgent = mockPromptFile(
+			'merge.agent.md',
+			`---
 name: MergeMe
 description: Prompt description
 tools: []
 model: ['gpt-4.1', 'gpt-4o']
 disable-model-invocation: true
 ---
-Prompt body`);
+Prompt body`,
+		);
 		const { agents } = createAgents({
-			sdkAgentsByCall: [[{
-				name: 'mergeme',
-				displayName: 'SDK MergeMe',
-				description: 'SDK description',
-				tools: ['sdk-tool'],
-				prompt: async () => 'sdk body',
-				disableModelInvocation: false,
-			}]],
-			customAgents: [promptAgent]
+			sdkAgentsByCall: [
+				[
+					{
+						name: 'mergeme',
+						displayName: 'SDK MergeMe',
+						description: 'SDK description',
+						tools: ['sdk-tool'],
+						prompt: async () => 'sdk body',
+						disableModelInvocation: false,
+					},
+				],
+			],
+			customAgents: [promptAgent],
 		});
 
 		const result = await agents.getAgents();
@@ -138,11 +153,16 @@ Prompt body`);
 	it('derives agent name from filename when frontmatter name is missing', async () => {
 		const { agents } = createAgents({
 			sdkAgentsByCall: [[]],
-			customAgents: [mockPromptFile('invalid.agent.md', `---
+			customAgents: [
+				mockPromptFile(
+					'invalid.agent.md',
+					`---
 description: Missing name
 tools: ['read_file']
 ---
-Body`)]
+Body`,
+				),
+			],
 		});
 
 		const result = await agents.getAgents();
@@ -156,43 +176,57 @@ Body`)]
 	it('refreshes cached agents when custom agents change', async () => {
 		const { agents, promptsService } = createAgents({
 			sdkAgentsByCall: [[], []],
-			customAgents: [mockPromptFile('first.agent.md', `---
+			customAgents: [
+				mockPromptFile(
+					'first.agent.md',
+					`---
 name: First
 description: First prompt agent
 ---
-First body`)]
+First body`,
+				),
+			],
 		});
 
 		const first = await agents.getAgents();
-		promptsService.setCustomAgents([createChatCustomAgent(mockPromptFile('second.agent.md', `---
+		promptsService.setCustomAgents([
+			createChatCustomAgent(
+				mockPromptFile(
+					'second.agent.md',
+					`---
 name: Second
 description: Second prompt agent
 ---
-Second body`))]);
+Second body`,
+				),
+			),
+		]);
 		const second = await agents.getAgents();
 
-		expect(first.map(a => a.agent.name)).toEqual(['First']);
-		expect(second.map(a => a.agent.name)).toEqual(['Second']);
+		expect(first.map((a) => a.agent.name)).toEqual(['First']);
+		expect(second.map((a) => a.agent.name)).toEqual(['Second']);
 	});
 
 	it('filters out legacy .chatmode.md files', async () => {
 		const chatmodeFile = {
-			uri:
-				URI.file('/workspace/.github/chatmodes/test.chatmode.md'),
+			uri: URI.file('/workspace/.github/chatmodes/test.chatmode.md'),
 			content: `---
 name: TestMode
 description: A legacy chatmode
 ---
-Body`
+Body`,
 		};
-		const agentFile = mockPromptFile('real.agent.md', `---
+		const agentFile = mockPromptFile(
+			'real.agent.md',
+			`---
 name: RealAgent
 description: A real agent
 ---
-Body`);
+Body`,
+		);
 		const { agents } = createAgents({
 			sdkAgentsByCall: [[]],
-			customAgents: [chatmodeFile, agentFile]
+			customAgents: [chatmodeFile, agentFile],
 		});
 
 		const result = await agents.getAgents();

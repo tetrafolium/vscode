@@ -3,8 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Config, ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
-import { EndpointEditToolName, ModelSupportedEndpoint } from '../../../platform/endpoint/common/endpointProvider';
+import {
+	Config,
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
+import {
+	EndpointEditToolName,
+	ModelSupportedEndpoint,
+} from '../../../platform/endpoint/common/endpointProvider';
 import { IVSCodeExtensionContext } from '../../../platform/extContext/common/extensionContext';
 import { ILogService } from '../../../platform/log/common/logService';
 import { IFetcherService } from '../../../platform/networking/common/fetcherService';
@@ -13,7 +20,11 @@ import { IStringDictionary } from '../../../util/vs/base/common/collections';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { resolveModelInfo } from '../common/byokProvider';
 import { OpenAIEndpoint } from '../node/openAIEndpoint';
-import { AbstractOpenAICompatibleLMProvider, LanguageModelChatConfiguration, OpenAICompatibleLanguageModelChatInformation } from './abstractLanguageModelChatProvider';
+import {
+	AbstractOpenAICompatibleLMProvider,
+	LanguageModelChatConfiguration,
+	OpenAICompatibleLanguageModelChatInformation,
+} from './abstractLanguageModelChatProvider';
 import { byokKnownModelToAPIInfoWithEffort } from './byokModelInfo';
 import { IBYOKStorageService } from './byokStorageService';
 
@@ -71,7 +82,6 @@ export interface CustomOAIModelConfig extends _CustomOAIModelConfig {
 }
 
 export abstract class AbstractCustomOAIBYOKModelProvider extends AbstractOpenAICompatibleLMProvider<CustomOAIModelProviderConfig> {
-
 	constructor(
 		id: string,
 		name: string,
@@ -81,60 +91,119 @@ export abstract class AbstractCustomOAIBYOKModelProvider extends AbstractOpenAIC
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IExperimentationService expService: IExperimentationService,
-		@IVSCodeExtensionContext private readonly _extensionContext: IVSCodeExtensionContext
+		@IVSCodeExtensionContext
+		private readonly _extensionContext: IVSCodeExtensionContext,
 	) {
-		super(id, name, undefined, byokStorageService, fetcherService, logService, instantiationService, configurationService, expService);
+		super(
+			id,
+			name,
+			undefined,
+			byokStorageService,
+			fetcherService,
+			logService,
+			instantiationService,
+			configurationService,
+			expService,
+		);
 	}
 
-	protected async migrateConfig(configKey: Config<IStringDictionary<_CustomOAIModelConfig>>, providerName: string, providerGroupName: string): Promise<void> {
+	protected async migrateConfig(
+		configKey: Config<IStringDictionary<_CustomOAIModelConfig>>,
+		providerName: string,
+		providerGroupName: string,
+	): Promise<void> {
 		// Check if migration has already been completed
 		const migrationKey = `copilot-byok-migration-${providerName}-${configKey}`;
-		const migrationCompleted = this._extensionContext.globalState.get<boolean>(migrationKey, false);
+		const migrationCompleted =
+			this._extensionContext.globalState.get<boolean>(
+				migrationKey,
+				false,
+			);
 		if (migrationCompleted) {
 			return;
 		}
 
-		const customOAIModelConfigsByApiKey: Map<string, Array<CustomOAIModelConfig & { requiresAPIKey?: boolean }>> = new Map();
-		const customOAIModelProviderConfig = this._configurationService.getConfig<IStringDictionary<_CustomOAIModelConfig>>(configKey);
-		for (const [modelId, modelConfig] of Object.entries(customOAIModelProviderConfig)) {
-			const apiKey = await this._byokStorageService.getAPIKey(providerName, modelId) ?? '';
-			const customOAIModelConfigs = customOAIModelConfigsByApiKey.get(apiKey) ?? [];
-			customOAIModelConfigs.push({ ...modelConfig, id: modelId, requiresAPIKey: undefined });
+		const customOAIModelConfigsByApiKey: Map<
+			string,
+			Array<CustomOAIModelConfig & { requiresAPIKey?: boolean }>
+		> = new Map();
+		const customOAIModelProviderConfig =
+			this._configurationService.getConfig<
+				IStringDictionary<_CustomOAIModelConfig>
+			>(configKey);
+		for (const [modelId, modelConfig] of Object.entries(
+			customOAIModelProviderConfig,
+		)) {
+			const apiKey =
+				(await this._byokStorageService.getAPIKey(
+					providerName,
+					modelId,
+				)) ?? '';
+			const customOAIModelConfigs =
+				customOAIModelConfigsByApiKey.get(apiKey) ?? [];
+			customOAIModelConfigs.push({
+				...modelConfig,
+				id: modelId,
+				requiresAPIKey: undefined,
+			});
 			customOAIModelConfigsByApiKey.set(apiKey, customOAIModelConfigs);
 		}
 		if (customOAIModelConfigsByApiKey.size > 0) {
-			for (const [apiKey, customOAIModelConfigs] of customOAIModelConfigsByApiKey.entries()) {
-				await this.configureDefaultGroupIfExists(providerGroupName, { models: customOAIModelConfigs, apiKey: apiKey || undefined });
+			for (const [
+				apiKey,
+				customOAIModelConfigs,
+			] of customOAIModelConfigsByApiKey.entries()) {
+				await this.configureDefaultGroupIfExists(providerGroupName, {
+					models: customOAIModelConfigs,
+					apiKey: apiKey || undefined,
+				});
 			}
 			// Mark migration as completed instead of deleting the config
 			await this._extensionContext.globalState.update(migrationKey, true);
 		}
 	}
 
-	protected override async configureDefaultGroupWithApiKeyOnly(): Promise<string | undefined> {
+	protected override async configureDefaultGroupWithApiKeyOnly(): Promise<
+		string | undefined
+	> {
 		// No-op: Custom OAI models are configured separately via migration
 		return;
 	}
 
-	protected override async getAllModels(silent: boolean, apiKey: string | undefined, configuration: CustomOAIModelProviderConfig | undefined): Promise<OpenAICompatibleLanguageModelChatInformation<CustomOAIModelProviderConfig>[]> {
+	protected override async getAllModels(
+		silent: boolean,
+		apiKey: string | undefined,
+		configuration: CustomOAIModelProviderConfig | undefined,
+	): Promise<
+		OpenAICompatibleLanguageModelChatInformation<CustomOAIModelProviderConfig>[]
+	> {
 		if (configuration?.url) {
 			return super.getAllModels(silent, apiKey, configuration);
 		}
-		const models: OpenAICompatibleLanguageModelChatInformation<CustomOAIModelProviderConfig>[] = [];
+		const models: OpenAICompatibleLanguageModelChatInformation<CustomOAIModelProviderConfig>[] =
+			[];
 		if (Array.isArray(configuration?.models)) {
 			for (const modelConfig of configuration.models) {
 				models.push({
-					...byokKnownModelToAPIInfoWithEffort(this._name, modelConfig.id, modelConfig),
-					url: modelConfig.url
+					...byokKnownModelToAPIInfoWithEffort(
+						this._name,
+						modelConfig.id,
+						modelConfig,
+					),
+					url: modelConfig.url,
 				});
 			}
 		}
 		return models;
 	}
 
-	protected override async createOpenAIEndPoint(model: OpenAICompatibleLanguageModelChatInformation<CustomOAIModelProviderConfig>): Promise<OpenAIEndpoint> {
+	protected override async createOpenAIEndPoint(
+		model: OpenAICompatibleLanguageModelChatInformation<CustomOAIModelProviderConfig>,
+	): Promise<OpenAIEndpoint> {
 		const url = this.resolveUrl(model.id, model.url);
-		const modelConfiguration = model.configuration?.models?.find(m => m.id === model.id);
+		const modelConfiguration = model.configuration?.models?.find(
+			(m) => m.id === model.id,
+		);
 		const modelCapabilities = {
 			maxInputTokens: model.maxInputTokens,
 			maxOutputTokens: model.maxOutputTokens,
@@ -145,21 +214,35 @@ export abstract class AbstractCustomOAIBYOKModelProvider extends AbstractOpenAIC
 			thinking: modelConfiguration?.thinking ?? false,
 			streaming: modelConfiguration?.streaming,
 			requestHeaders: modelConfiguration?.requestHeaders,
-			zeroDataRetentionEnabled: modelConfiguration?.zeroDataRetentionEnabled,
-			supportsReasoningEffort: modelConfiguration?.supportsReasoningEffort,
-			reasoningEffortFormat: modelConfiguration?.reasoningEffortFormat
+			zeroDataRetentionEnabled:
+				modelConfiguration?.zeroDataRetentionEnabled,
+			supportsReasoningEffort:
+				modelConfiguration?.supportsReasoningEffort,
+			reasoningEffortFormat: modelConfiguration?.reasoningEffortFormat,
 		};
-		const modelInfo = resolveModelInfo(model.id, this._name, undefined, modelCapabilities);
+		const modelInfo = resolveModelInfo(
+			model.id,
+			this._name,
+			undefined,
+			modelCapabilities,
+		);
 		if (modelCapabilities?.url?.includes('/responses')) {
 			modelInfo.supported_endpoints = [
 				ModelSupportedEndpoint.ChatCompletions,
-				ModelSupportedEndpoint.Responses
+				ModelSupportedEndpoint.Responses,
 			];
 		}
-		return this._instantiationService.createInstance(OpenAIEndpoint, modelInfo, model.configuration?.apiKey ?? '', url);
+		return this._instantiationService.createInstance(
+			OpenAIEndpoint,
+			modelInfo,
+			model.configuration?.apiKey ?? '',
+			url,
+		);
 	}
 
-	protected getModelsBaseUrl(configuration: CustomOAIModelProviderConfig | undefined): string | undefined {
+	protected getModelsBaseUrl(
+		configuration: CustomOAIModelProviderConfig | undefined,
+	): string | undefined {
 		return configuration?.url;
 	}
 
@@ -167,7 +250,6 @@ export abstract class AbstractCustomOAIBYOKModelProvider extends AbstractOpenAIC
 }
 
 export class CustomOAIBYOKModelProvider extends AbstractCustomOAIBYOKModelProvider {
-
 	public static readonly providerName = 'CustomOAI';
 	public static readonly providerId = this.providerName.toLowerCase();
 
@@ -178,15 +260,29 @@ export class CustomOAIBYOKModelProvider extends AbstractCustomOAIBYOKModelProvid
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IExperimentationService expService: IExperimentationService,
-		@IVSCodeExtensionContext extensionContext: IVSCodeExtensionContext
+		@IVSCodeExtensionContext extensionContext: IVSCodeExtensionContext,
 	) {
-		super(CustomOAIBYOKModelProvider.providerId, CustomOAIBYOKModelProvider.providerName, _byokStorageService, logService, fetcherService, instantiationService, configurationService, expService, extensionContext);
+		super(
+			CustomOAIBYOKModelProvider.providerId,
+			CustomOAIBYOKModelProvider.providerName,
+			_byokStorageService,
+			logService,
+			fetcherService,
+			instantiationService,
+			configurationService,
+			expService,
+			extensionContext,
+		);
 		this.migrateExistingConfigs();
 	}
 
 	// TODO: Remove this after 6 months
 	private async migrateExistingConfigs(): Promise<void> {
-		await this.migrateConfig(ConfigKey.Deprecated.CustomOAIModels, CustomOAIBYOKModelProvider.providerName, CustomOAIBYOKModelProvider.providerName);
+		await this.migrateConfig(
+			ConfigKey.Deprecated.CustomOAIModels,
+			CustomOAIBYOKModelProvider.providerName,
+			CustomOAIBYOKModelProvider.providerName,
+		);
 	}
 
 	protected resolveUrl(modelId: string, url: string): string {

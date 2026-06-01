@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ITerminalInstance } from '../../../terminal/browser/terminal.js';
-import type { IMarker as IXtermMarker } from '@xterm/xterm';
-import { truncateOutputKeepingTail } from './runInTerminalHelpers.js';
+import { ITerminalInstance } from "../../../terminal/browser/terminal.js";
+import type { IMarker as IXtermMarker } from "@xterm/xterm";
+import { truncateOutputKeepingTail } from "./runInTerminalHelpers.js";
 
 const MAX_OUTPUT_LENGTH = 60000;
 
@@ -14,9 +14,13 @@ export interface IGetOutputOptions {
 	lastNLines?: number;
 }
 
-export function getOutput(instance: ITerminalInstance, startMarker?: IXtermMarker, options?: IGetOutputOptions): string {
+export function getOutput(
+	instance: ITerminalInstance,
+	startMarker?: IXtermMarker,
+	options?: IGetOutputOptions,
+): string {
 	if (!instance.xterm || !instance.xterm.raw) {
-		return '';
+		return "";
 	}
 
 	const buffer = instance.xterm.raw.buffer.active;
@@ -26,7 +30,7 @@ export function getOutput(instance: ITerminalInstance, startMarker?: IXtermMarke
 	}
 	const endLine = buffer.length;
 	const lines: string[] = [];
-	let currentLine = '';
+	let currentLine = "";
 
 	for (let y = startLine; y < endLine; y++) {
 		const line = buffer.getLine(y);
@@ -38,7 +42,7 @@ export function getOutput(instance: ITerminalInstance, startMarker?: IXtermMarke
 		currentLine += line.translateToString(!isWrapped);
 		if (!isWrapped) {
 			lines.push(currentLine);
-			currentLine = '';
+			currentLine = "";
 		}
 	}
 	if (currentLine) {
@@ -46,11 +50,11 @@ export function getOutput(instance: ITerminalInstance, startMarker?: IXtermMarke
 	}
 
 	if (options?.lastNLines !== undefined) {
-		const nonEmpty = lines.filter(l => l.trim().length > 0);
-		return nonEmpty.slice(-options.lastNLines).join('\n');
+		const nonEmpty = lines.filter((l) => l.trim().length > 0);
+		return nonEmpty.slice(-options.lastNLines).join("\n");
 	}
 
-	let output = lines.join('\n');
+	let output = lines.join("\n");
 	if (output.length > MAX_OUTPUT_LENGTH) {
 		output = truncateOutputKeepingTail(output, MAX_OUTPUT_LENGTH);
 	}

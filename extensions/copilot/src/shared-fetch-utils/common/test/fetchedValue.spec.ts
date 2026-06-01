@@ -17,13 +17,15 @@ describe('FetchedValue', () => {
 	let nextToken: TestToken;
 	let fetchedValue: FetchedValue<TestToken>;
 
-	function createFetchedValue(overrides?: Partial<FetchedValueOptions<TestToken>>): FetchedValue<TestToken> {
+	function createFetchedValue(
+		overrides?: Partial<FetchedValueOptions<TestToken>>,
+	): FetchedValue<TestToken> {
 		return new FetchedValue({
 			fetch: async () => {
 				fetchCount++;
 				return nextToken;
 			},
-			isStale: token => token.expiresAt < Date.now(),
+			isStale: (token) => token.expiresAt < Date.now(),
 			...overrides,
 		});
 	}
@@ -86,7 +88,9 @@ describe('FetchedValue', () => {
 
 	it('fetch error propagates and does not cache', async () => {
 		const fv = createFetchedValue({
-			fetch: async () => { throw new Error('network failure'); },
+			fetch: async () => {
+				throw new Error('network failure');
+			},
 		});
 
 		await expect(fv.resolve()).rejects.toThrow('network failure');
@@ -114,7 +118,9 @@ describe('FetchedValue', () => {
 
 	it('FetchBlockedError propagates when no cached value exists', async () => {
 		const fv = new FetchedValue<TestToken>({
-			fetch: async () => { throw new FetchBlockedError('blocked', 5000); },
+			fetch: async () => {
+				throw new FetchBlockedError('blocked', 5000);
+			},
 			isStale: () => true,
 		});
 

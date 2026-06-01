@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDisposable } from '../../../../../base/common/lifecycle.js';
-import { SyncDescriptor0 } from '../../../../../platform/instantiation/common/descriptors.js';
-
+import { IDisposable } from "../../../../../base/common/lifecycle.js";
+import { SyncDescriptor0 } from "../../../../../platform/instantiation/common/descriptors.js";
 
 export interface IMcpDiscovery extends IDisposable {
 	readonly fromGallery: boolean;
@@ -25,6 +24,3 @@ class McpDiscoveryRegistry {
 }
 
 export const mcpDiscoveryRegistry = new McpDiscoveryRegistry();
-
-
-

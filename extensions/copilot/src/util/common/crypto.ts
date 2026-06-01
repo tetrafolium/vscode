@@ -6,7 +6,9 @@
 import { encodeHex, VSBuffer } from '../vs/base/common/buffer';
 import * as strings from '../vs/base/common/strings';
 
-export async function createRequestHMAC(hmacSecret: string | undefined): Promise<string | undefined> {
+export async function createRequestHMAC(
+	hmacSecret: string | undefined,
+): Promise<string | undefined> {
 	// If we don't have the right env variables this could happen
 	if (!hmacSecret) {
 		return undefined;
@@ -17,7 +19,7 @@ export async function createRequestHMAC(hmacSecret: string | undefined): Promise
 		new TextEncoder().encode(hmacSecret),
 		{ name: 'HMAC', hash: 'SHA-256' },
 		false,
-		['sign']
+		['sign'],
 	);
 
 	const current = Math.floor(Date.now() / 1000).toString();
@@ -26,13 +28,18 @@ export async function createRequestHMAC(hmacSecret: string | undefined): Promise
 
 	const signature = await crypto.subtle.sign('HMAC', key, data);
 	const signatureArray = Array.from(new Uint8Array(signature));
-	const signatureHex = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
+	const signatureHex = signatureArray
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
 
 	return `${current}.${signatureHex}`;
 }
 
-export async function createSha256Hash(data: string | Uint8Array): Promise<string> {
-	const dataUint8 = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+export async function createSha256Hash(
+	data: string | Uint8Array,
+): Promise<string> {
+	const dataUint8 =
+		typeof data === 'string' ? new TextEncoder().encode(data) : data;
 	const hashBuffer = await crypto.subtle.digest('SHA-256', dataUint8);
 	const hashArray = new Uint8Array(hashBuffer);
 	let hashHex = '';
@@ -54,7 +61,6 @@ export function getCachedSha256Hash(text: string): string {
 	return hash;
 }
 
-
 function createSha256HashSyncInsecure(data: string): string {
 	const sha256 = new StringSHA256Insecure();
 	sha256.update(data);
@@ -63,12 +69,15 @@ function createSha256HashSyncInsecure(data: string): string {
 
 const enum SHA256Constant {
 	BLOCK_SIZE = 64, // 512 / 8
-	UNICODE_REPLACEMENT = 0xFFFD,
+	UNICODE_REPLACEMENT = 0xfffd,
 }
 
 function toHexString(buffer: ArrayBuffer): string;
 function toHexString(value: number, bitsize?: number): string;
-function toHexString(bufferOrValue: ArrayBuffer | number, bitsize: number = 32): string {
+function toHexString(
+	bufferOrValue: ArrayBuffer | number,
+	bitsize: number = 32,
+): string {
 	if (bufferOrValue instanceof ArrayBuffer) {
 		return encodeHex(VSBuffer.wrap(new Uint8Array(bufferOrValue)));
 	}
@@ -86,14 +95,17 @@ function rightRotate(value: number, bits: number): number {
  */
 class StringSHA256Insecure {
 	private static _k = [
-		0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-		0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-		0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-		0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-		0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-		0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-		0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-		0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+		0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+		0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+		0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+		0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+		0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+		0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+		0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+		0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+		0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+		0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+		0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 	];
 
 	private static _bigBlock32 = new DataView(new ArrayBuffer(256)); // 64 * 4 = 256
@@ -115,7 +127,9 @@ class StringSHA256Insecure {
 	private _finished: boolean;
 
 	constructor() {
-		this._buff = new Uint8Array(SHA256Constant.BLOCK_SIZE + 3 /* to fit any utf-8 */);
+		this._buff = new Uint8Array(
+			SHA256Constant.BLOCK_SIZE + 3 /* to fit any utf-8 */,
+		);
 		this._buffDV = new DataView(this._buff.buffer);
 		this._buffLen = 0;
 		this._totalLen = 0;
@@ -151,7 +165,10 @@ class StringSHA256Insecure {
 					const nextCharCode = str.charCodeAt(offset + 1);
 					if (strings.isLowSurrogate(nextCharCode)) {
 						offset++;
-						codePoint = strings.computeCodePoint(charCode, nextCharCode);
+						codePoint = strings.computeCodePoint(
+							charCode,
+							nextCharCode,
+						);
 					} else {
 						// illegal => unicode replacement character
 						codePoint = SHA256Constant.UNICODE_REPLACEMENT;
@@ -179,21 +196,43 @@ class StringSHA256Insecure {
 		this._leftoverHighSurrogate = leftoverHighSurrogate;
 	}
 
-	private _push(buff: Uint8Array, buffLen: number, codePoint: number): number {
+	private _push(
+		buff: Uint8Array,
+		buffLen: number,
+		codePoint: number,
+	): number {
 		if (codePoint < 0x0080) {
 			buff[buffLen++] = codePoint;
 		} else if (codePoint < 0x0800) {
-			buff[buffLen++] = 0b11000000 | ((codePoint & 0b00000000000000000000011111000000) >>> 6);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000000000111111) >>> 0);
+			buff[buffLen++] =
+				0b11000000 |
+				((codePoint & 0b00000000000000000000011111000000) >>> 6);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000000000111111) >>> 0);
 		} else if (codePoint < 0x10000) {
-			buff[buffLen++] = 0b11100000 | ((codePoint & 0b00000000000000001111000000000000) >>> 12);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000111111000000) >>> 6);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000000000111111) >>> 0);
+			buff[buffLen++] =
+				0b11100000 |
+				((codePoint & 0b00000000000000001111000000000000) >>> 12);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000111111000000) >>> 6);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000000000111111) >>> 0);
 		} else {
-			buff[buffLen++] = 0b11110000 | ((codePoint & 0b00000000000111000000000000000000) >>> 18);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000111111000000000000) >>> 12);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000111111000000) >>> 6);
-			buff[buffLen++] = 0b10000000 | ((codePoint & 0b00000000000000000000000000111111) >>> 0);
+			buff[buffLen++] =
+				0b11110000 |
+				((codePoint & 0b00000000000111000000000000000000) >>> 18);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000111111000000000000) >>> 12);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000111111000000) >>> 6);
+			buff[buffLen++] =
+				0b10000000 |
+				((codePoint & 0b00000000000000000000000000111111) >>> 0);
 		}
 
 		if (buffLen >= SHA256Constant.BLOCK_SIZE) {
@@ -215,13 +254,26 @@ class StringSHA256Insecure {
 			if (this._leftoverHighSurrogate) {
 				// illegal => unicode replacement character
 				this._leftoverHighSurrogate = 0;
-				this._buffLen = this._push(this._buff, this._buffLen, SHA256Constant.UNICODE_REPLACEMENT);
+				this._buffLen = this._push(
+					this._buff,
+					this._buffLen,
+					SHA256Constant.UNICODE_REPLACEMENT,
+				);
 			}
 			this._totalLen += this._buffLen;
 			this._wrapUp();
 		}
 
-		return toHexString(this._h0) + toHexString(this._h1) + toHexString(this._h2) + toHexString(this._h3) + toHexString(this._h4) + toHexString(this._h5) + toHexString(this._h6) + toHexString(this._h7);
+		return (
+			toHexString(this._h0) +
+			toHexString(this._h1) +
+			toHexString(this._h2) +
+			toHexString(this._h3) +
+			toHexString(this._h4) +
+			toHexString(this._h5) +
+			toHexString(this._h6) +
+			toHexString(this._h7)
+		);
 	}
 
 	private _wrapUp(): void {
@@ -276,10 +328,13 @@ class StringSHA256Insecure {
 
 		// Compression function main loop
 		for (let j = 0; j < 64; j++) {
-			const S1 = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
-			const ch = (e & f) ^ ((~e) & g);
-			const temp1 = (h + S1 + ch + k[j] + bigBlock32.getUint32(j * 4, false)) >>> 0;
-			const S0 = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+			const S1 =
+				rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+			const ch = (e & f) ^ (~e & g);
+			const temp1 =
+				(h + S1 + ch + k[j] + bigBlock32.getUint32(j * 4, false)) >>> 0;
+			const S0 =
+				rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
 			const maj = (a & b) ^ (a & c) ^ (b & c);
 			const temp2 = (S0 + maj) >>> 0;
 

@@ -5,9 +5,18 @@
 
 import { PromptReference, Raw } from '@vscode/prompt-tsx';
 import type * as vscode from 'vscode';
-import { ChatFetchResponseType, ChatLocation } from '../../../platform/chat/common/commonTypes';
-import { getTextPart, roleToString } from '../../../platform/chat/common/globalStringUtils';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ChatFetchResponseType,
+	ChatLocation,
+} from '../../../platform/chat/common/commonTypes';
+import {
+	getTextPart,
+	roleToString,
+} from '../../../platform/chat/common/globalStringUtils';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { isAutoModel } from '../../../platform/endpoint/node/autoChatEndpoint';
 import { IVSCodeExtensionContext } from '../../../platform/extContext/common/extensionContext';
 import { ILanguageDiagnosticsService } from '../../../platform/languages/common/languageDiagnosticsService';
@@ -21,19 +30,35 @@ import { URI } from '../../../util/vs/base/common/uri';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { isBYOKModel } from '../../byok/node/openAIEndpoint';
 import { Intent, agentsToCommands } from '../../common/constants';
-import { DiagnosticsTelemetryData, findDiagnosticsTelemetry } from '../../inlineChat/node/diagnosticsTelemetry';
+import {
+	DiagnosticsTelemetryData,
+	findDiagnosticsTelemetry,
+} from '../../inlineChat/node/diagnosticsTelemetry';
 import { InteractionOutcome } from '../../inlineChat/node/promptCraftingTypes';
 import { AgentIntent } from '../../intents/node/agentIntent';
 import { EditCodeIntent } from '../../intents/node/editCodeIntent';
 import { getCustomInstructionTelemetry } from '../../prompts/node/panel/customInstructions';
 import { PATCH_PREFIX } from '../../tools/node/applyPatch/parseApplyPatch';
-import { ChatVariablesCollection, parseSlashCommand } from '../common/chatVariablesCollection';
+import {
+	ChatVariablesCollection,
+	parseSlashCommand,
+} from '../common/chatVariablesCollection';
 import { Conversation } from '../common/conversation';
 import { IToolCall, IToolCallRound } from '../common/intents';
 import { IDocumentContext } from './documentContext';
 import { IIntent, TelemetryData } from './intents';
 import { RepoInfoTelemetry } from './repoInfoTelemetry';
-import { ConversationalBaseTelemetryData, ConversationalTelemetryData, createTelemetryWithId, extendUserMessageTelemetryData, getCodeBlocks, sendModelMessageTelemetry, sendOffTopicMessageTelemetry, sendUserActionTelemetry, sendUserMessageTelemetry } from './telemetry';
+import {
+	ConversationalBaseTelemetryData,
+	ConversationalTelemetryData,
+	createTelemetryWithId,
+	extendUserMessageTelemetryData,
+	getCodeBlocks,
+	sendModelMessageTelemetry,
+	sendOffTopicMessageTelemetry,
+	sendUserActionTelemetry,
+	sendUserMessageTelemetry,
+} from './telemetry';
 
 // #region: internal telemetry for responses
 
@@ -47,14 +72,15 @@ type ResponseInternalTelemetryProperties = {
 };
 
 // EVENT: interactiveSessionResponse
-type ResponseInternalPanelTelemetryProperties = ResponseInternalTelemetryProperties & {
-	chatLocation: 'panel';
-	requestId: string;
+type ResponseInternalPanelTelemetryProperties =
+	ResponseInternalTelemetryProperties & {
+		chatLocation: 'panel';
+		requestId: string;
 
-	// shareable but NOT
-	isParticipantDetected: string;
-	sessionId: string;
-};
+		// shareable but NOT
+		isParticipantDetected: string;
+		sessionId: string;
+	};
 
 // EVENT: interactiveSessionResponse
 type ResponseInternalPanelTelemetryMeasurements = {
@@ -62,22 +88,23 @@ type ResponseInternalPanelTelemetryMeasurements = {
 };
 
 // EVENT: interactiveSessionResponse
-type ResponseInternalInlineTelemetryProperties = ResponseInternalTelemetryProperties & {
-	chatLocation: 'inline';
+type ResponseInternalInlineTelemetryProperties =
+	ResponseInternalTelemetryProperties & {
+		chatLocation: 'inline';
 
-	// shareable but NOT
-	conversationId: string;
-	requestId: string;
-	responseType: ChatFetchResponseType;
+		// shareable but NOT
+		conversationId: string;
+		requestId: string;
+		responseType: ChatFetchResponseType;
 
-	// editor-specific
-	problems: string;
-	selectionProblems: string;
-	diagnosticCodes: string;
-	selectionDiagnosticCodes: string;
-	diagnosticsProvider: string;
-	language: string;
-};
+		// editor-specific
+		problems: string;
+		selectionProblems: string;
+		diagnosticCodes: string;
+		selectionDiagnosticCodes: string;
+		diagnosticsProvider: string;
+		language: string;
+	};
 
 // EVENT: interactiveSessionResponse
 type ResponseInternalInlineTelemetryMeasurements = {
@@ -123,7 +150,6 @@ type RequestInternalInlineTelemetryMeasurements = {
 };
 
 // #endregion
-
 
 //#region public telemetry for requests
 
@@ -209,23 +235,37 @@ type RequestInlineTelemetryMeasurements = RequestTelemetryMeasurements & {
 //#endregion
 
 const builtinSlashCommands = new Set(
-	Object.values(agentsToCommands).flatMap(commands => commands ? Object.keys(commands) : [])
+	Object.values(agentsToCommands).flatMap((commands) =>
+		commands ? Object.keys(commands) : [],
+	),
 );
 
-function getSlashCommandForTelemetry(request: vscode.ChatRequest, extensionUri: URI): string {
+function getSlashCommandForTelemetry(
+	request: vscode.ChatRequest,
+	extensionUri: URI,
+): string {
 	// Built-in slash commands (explain, fix, tests, etc.) are safe to send as plain text
 	if (request.command && builtinSlashCommands.has(request.command)) {
 		return request.command;
 	}
 
 	// Parse the query for /command and match against prompt file references
-	const match = parseSlashCommand(request.prompt, new ChatVariablesCollection(request.references));
+	const match = parseSlashCommand(
+		request.prompt,
+		new ChatVariablesCollection(request.references),
+	);
 	if (!match) {
 		return '';
 	}
 
 	// Extension-provided prompt files are safe to send as plain text
-	if (URI.isUri(match.variable.value) && extUriBiasedIgnorePathCase.isEqualOrParent(match.variable.value, extensionUri)) {
+	if (
+		URI.isUri(match.variable.value) &&
+		extUriBiasedIgnorePathCase.isEqualOrParent(
+			match.variable.value,
+			extensionUri,
+		)
+	) {
 		return match.command;
 	}
 
@@ -234,7 +274,6 @@ function getSlashCommandForTelemetry(request: vscode.ChatRequest, extensionUri: 
 }
 
 export class ChatTelemetryBuilder {
-
 	public readonly baseUserTelemetry: ConversationalBaseTelemetryData;
 
 	private readonly _repoInfoTelemetry: RepoInfoTelemetry;
@@ -250,22 +289,63 @@ export class ChatTelemetryBuilder {
 		private readonly _firstTurn: boolean,
 		private readonly _request: vscode.ChatRequest,
 		telemetryMessageId: string | undefined,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		this.baseUserTelemetry = telemetryMessageId
-			? new ConversationalTelemetryData(PlatformTelemetryData.createAndMarkAsIssued({ messageId: telemetryMessageId }))
+			? new ConversationalTelemetryData(
+					PlatformTelemetryData.createAndMarkAsIssued({
+						messageId: telemetryMessageId,
+					}),
+				)
 			: createTelemetryWithId();
 		// Repo info telemetry is held here as the begin event should be sent only by the first PanelChatTelemetry instance created for a user request.
 		// and a new PanelChatTelemetry instance is created per step in the request.
-		this._repoInfoTelemetry = this.instantiationService.createInstance(RepoInfoTelemetry, this.baseUserTelemetry.properties.messageId);
+		this._repoInfoTelemetry = this.instantiationService.createInstance(
+			RepoInfoTelemetry,
+			this.baseUserTelemetry.properties.messageId,
+		);
 	}
 
-	public makeRequest(intent: IIntent, location: ChatLocation.Editor, conversation: Conversation, messages: Raw.ChatMessage[], promptTokenLength: number, references: readonly PromptReference[], endpoint: IChatEndpoint, telemetryData: readonly TelemetryData[], availableToolCount: number, toolTokenCount: number): InlineChatTelemetry;
-	public makeRequest(intent: IIntent, location: ChatLocation, conversation: Conversation, messages: Raw.ChatMessage[], promptTokenLength: number, references: readonly PromptReference[], endpoint: IChatEndpoint, telemetryData: readonly TelemetryData[], availableToolCount: number, toolTokenCount: number): PanelChatTelemetry;
-	public makeRequest(intent: IIntent, location: ChatLocation, conversation: Conversation, messages: Raw.ChatMessage[], promptTokenLength: number, references: readonly PromptReference[], endpoint: IChatEndpoint, telemetryData: readonly TelemetryData[], availableToolCount: number, toolTokenCount: number): InlineChatTelemetry | PanelChatTelemetry {
-
+	public makeRequest(
+		intent: IIntent,
+		location: ChatLocation.Editor,
+		conversation: Conversation,
+		messages: Raw.ChatMessage[],
+		promptTokenLength: number,
+		references: readonly PromptReference[],
+		endpoint: IChatEndpoint,
+		telemetryData: readonly TelemetryData[],
+		availableToolCount: number,
+		toolTokenCount: number,
+	): InlineChatTelemetry;
+	public makeRequest(
+		intent: IIntent,
+		location: ChatLocation,
+		conversation: Conversation,
+		messages: Raw.ChatMessage[],
+		promptTokenLength: number,
+		references: readonly PromptReference[],
+		endpoint: IChatEndpoint,
+		telemetryData: readonly TelemetryData[],
+		availableToolCount: number,
+		toolTokenCount: number,
+	): PanelChatTelemetry;
+	public makeRequest(
+		intent: IIntent,
+		location: ChatLocation,
+		conversation: Conversation,
+		messages: Raw.ChatMessage[],
+		promptTokenLength: number,
+		references: readonly PromptReference[],
+		endpoint: IChatEndpoint,
+		telemetryData: readonly TelemetryData[],
+		availableToolCount: number,
+		toolTokenCount: number,
+	): InlineChatTelemetry | PanelChatTelemetry {
 		if (location === ChatLocation.Editor) {
-			return this.instantiationService.createInstance(InlineChatTelemetry,
+			return this.instantiationService.createInstance(
+				InlineChatTelemetry,
 				this._sessionId,
 				this._documentContext!,
 				this._firstTurn,
@@ -281,10 +361,11 @@ export class ChatTelemetryBuilder {
 				telemetryData,
 				availableToolCount,
 				toolTokenCount,
-				this._repoInfoTelemetry
+				this._repoInfoTelemetry,
 			);
 		} else {
-			return this.instantiationService.createInstance(PanelChatTelemetry,
+			return this.instantiationService.createInstance(
+				PanelChatTelemetry,
 				this._sessionId,
 				this._documentContext!,
 				this._firstTurn,
@@ -300,14 +381,15 @@ export class ChatTelemetryBuilder {
 				telemetryData,
 				availableToolCount,
 				toolTokenCount,
-				this._repoInfoTelemetry
+				this._repoInfoTelemetry,
 			);
 		}
 	}
 }
 
-export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDocumentContext | undefined> {
-
+export abstract class ChatTelemetry<
+	C extends IDocumentContext | undefined = IDocumentContext | undefined,
+> {
 	protected readonly _userTelemetry: ConversationalBaseTelemetryData;
 
 	protected readonly _requestStartTime: number = Date.now();
@@ -357,7 +439,8 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 		protected readonly _availableToolCount: number,
 		protected readonly _toolTokenCount: number,
 		protected readonly _repoInfoTelemetry: RepoInfoTelemetry,
-		@ITelemetryService protected readonly _telemetryService: ITelemetryService,
+		@ITelemetryService
+		protected readonly _telemetryService: ITelemetryService,
 	) {
 		// Extend the base user telemetry with message and prompt information.
 		// We don't send this telemetry yet, but we will need it later to include the off topic scores.
@@ -369,7 +452,7 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 			promptTokenLength,
 			// this._tokenizer.countMessagesTokens(this._messages),
 			this._intent.id,
-			baseUserTelemetry
+			baseUserTelemetry,
 		);
 
 		// we are in a super-ctor and use a microtask to give sub-classes a change to initialize properties
@@ -400,10 +483,19 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 
 	public markEmittedEdits(uri: vscode.Uri, edits: vscode.TextEdit[]) {
 		this._editCount += edits.length;
-		this._editLineCount += edits.reduce((acc, edit) => acc + edit.newText.split('\n').length, 0);
+		this._editLineCount += edits.reduce(
+			(acc, edit) => acc + edit.newText.split('\n').length,
+			0,
+		);
 	}
 
-	public async sendTelemetry(requestId: string, responseType: ChatFetchResponseType, response: string, interactionOutcome: InteractionOutcome, toolCalls: IToolCall[]): Promise<void> {
+	public async sendTelemetry(
+		requestId: string,
+		responseType: ChatFetchResponseType,
+		response: string,
+		interactionOutcome: InteractionOutcome,
+		toolCalls: IToolCall[],
+	): Promise<void> {
 		// We can send the user message telemetry event now that the response is returned, including off-topic prediction.
 		sendUserMessageTelemetry(
 			this._telemetryService,
@@ -424,7 +516,7 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 				this._request.prompt,
 				this.telemetryMessageId, // That's the message id of the user message
 				this._documentContext?.document,
-				this._userTelemetry
+				this._userTelemetry,
 			);
 		}
 
@@ -436,14 +528,20 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 				response,
 				this.telemetryMessageId, // That's the message id of the user message
 				this._documentContext?.document,
-				this._userTelemetry.extendedBy({ replyType: interactionOutcome.kind }),
-				this._getModeNameForTelemetry()
+				this._userTelemetry.extendedBy({
+					replyType: interactionOutcome.kind,
+				}),
+				this._getModeNameForTelemetry(),
 			);
 		}
 
-		await this._sendResponseTelemetryEvent(responseType, response, interactionOutcome, toolCalls);
+		await this._sendResponseTelemetryEvent(
+			responseType,
+			response,
+			interactionOutcome,
+			toolCalls,
+		);
 		this._sendResponseInternalTelemetryEvent(responseType, response);
-
 
 		// todo@connor4312: temporary event to track occurences of patches in response
 		// text, ref https://github.com/microsoft/vscode-copilot/issues/16608
@@ -455,31 +553,47 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 					"model": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The model that is used in the endpoint." }
 				}
 			*/
-			this._telemetryService.sendMSFTTelemetryEvent('applyPatch.inResponse', {
-				model: this._endpoint.model
-			});
+			this._telemetryService.sendMSFTTelemetryEvent(
+				'applyPatch.inResponse',
+				{
+					model: this._endpoint.model,
+				},
+			);
 		}
 	}
 
 	protected _getModeNameForTelemetry(): string {
-		return this._request.modeInstructions2 ? (this._request.modeInstructions2.isBuiltin ? this._request.modeInstructions2.name.toLowerCase() : 'custom') :
-			this._intent.id === AgentIntent.ID ? 'agent' :
-				(this._intent.id === EditCodeIntent.ID) ? 'edit' :
-					(this._intent.id === Intent.InlineChat) ? 'inlineChatIntent' :
-						'ask';
+		return this._request.modeInstructions2
+			? this._request.modeInstructions2.isBuiltin
+				? this._request.modeInstructions2.name.toLowerCase()
+				: 'custom'
+			: this._intent.id === AgentIntent.ID
+				? 'agent'
+				: this._intent.id === EditCodeIntent.ID
+					? 'edit'
+					: this._intent.id === Intent.InlineChat
+						? 'inlineChatIntent'
+						: 'ask';
 	}
 
-	public sendToolCallingTelemetry(toolCallRounds: IToolCallRound[], availableTools: readonly vscode.LanguageModelToolInformation[], responseType: ChatFetchResponseType | 'cancelled' | 'maxToolCalls'): void {
+	public sendToolCallingTelemetry(
+		toolCallRounds: IToolCallRound[],
+		availableTools: readonly vscode.LanguageModelToolInformation[],
+		responseType: ChatFetchResponseType | 'cancelled' | 'maxToolCalls',
+	): void {
 		if (availableTools.length === 0) {
 			return;
 		}
 
-		const toolCounts = toolCallRounds.reduce((acc, round) => {
-			round.toolCalls.forEach(call => {
-				acc[call.name] = (acc[call.name] || 0) + 1;
-			});
-			return acc;
-		}, {} as Record<string, number>);
+		const toolCounts = toolCallRounds.reduce(
+			(acc, round) => {
+				round.toolCalls.forEach((call) => {
+					acc[call.name] = (acc[call.name] || 0) + 1;
+				});
+				return acc;
+			},
+			{} as Record<string, number>,
+		);
 
 		const invalidToolCallCount = toolCallRounds.reduce((acc, round) => {
 			if (round.toolInputRetry > 0) {
@@ -506,14 +620,15 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 			requestId: this.telemetryMessageId,
 			responseType,
 			toolCounts: JSON.stringify(toolCounts),
-			model: this._endpoint.model
+			model: this._endpoint.model,
 		};
 
 		const toolCallMeasurements = {
 			numRequests: toolCallRounds.length, // This doesn't include cancelled requests
 			turnIndex: this._conversation.turns.length,
 			sessionDuration: Date.now() - this._conversation.turns[0].startTime,
-			turnDuration: Date.now() - this._conversation.getLatestTurn().startTime,
+			turnDuration:
+				Date.now() - this._conversation.getLatestTurn().startTime,
 			promptTokenCount: this._userTelemetry.measurements.promptTokenLen,
 			messageCharLen: this._userTelemetry.measurements.messageCharLen,
 			availableToolCount: availableTools.length,
@@ -521,7 +636,7 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 			invalidToolCallCount,
 			totalToolCalls,
 			parallelToolCallRounds,
-			parallelToolCallsTotal
+			parallelToolCallsTotal,
 		};
 
 		/* __GDPR__
@@ -548,19 +663,35 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 				"parallelToolCallsTotal": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Total number of tool calls that were part of a parallel round." }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('toolCallDetails', toolCallProperties, toolCallMeasurements);
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'toolCallDetails',
+			toolCallProperties,
+			toolCallMeasurements,
+		);
 
-		this._telemetryService.sendInternalMSFTTelemetryEvent('toolCallDetailsInternal', {
-			...toolCallProperties,
-			messageId: this.telemetryMessageId,
-			availableTools: JSON.stringify(availableTools.map(tool => tool.name))
-		}, toolCallMeasurements);
+		this._telemetryService.sendInternalMSFTTelemetryEvent(
+			'toolCallDetailsInternal',
+			{
+				...toolCallProperties,
+				messageId: this.telemetryMessageId,
+				availableTools: JSON.stringify(
+					availableTools.map((tool) => tool.name),
+				),
+			},
+			toolCallMeasurements,
+		);
 
-		this._telemetryService.sendEnhancedGHTelemetryEvent('toolCallDetailsExternal', {
-			...toolCallProperties,
-			messageId: this.telemetryMessageId,
-			availableTools: JSON.stringify(availableTools.map(tool => tool.name))
-		}, toolCallMeasurements);
+		this._telemetryService.sendEnhancedGHTelemetryEvent(
+			'toolCallDetailsExternal',
+			{
+				...toolCallProperties,
+				messageId: this.telemetryMessageId,
+				availableTools: JSON.stringify(
+					availableTools.map((tool) => tool.name),
+				),
+			},
+			toolCallMeasurements,
+		);
 
 		// Send internal repo info telemetry at the end of the tool loop
 		this._repoInfoTelemetry.sendEndTelemetry();
@@ -568,18 +699,28 @@ export abstract class ChatTelemetry<C extends IDocumentContext | undefined = IDo
 
 	protected abstract _sendInternalRequestTelemetryEvent(): void;
 
-	protected abstract _sendResponseTelemetryEvent(responseType: ChatFetchResponseType, response: string, interactionOutcome: InteractionOutcome, toolCalls?: IToolCall[]): Promise<void>;
+	protected abstract _sendResponseTelemetryEvent(
+		responseType: ChatFetchResponseType,
+		response: string,
+		interactionOutcome: InteractionOutcome,
+		toolCalls?: IToolCall[],
+	): Promise<void>;
 
-	protected abstract _sendResponseInternalTelemetryEvent(responseType: ChatFetchResponseType, response: string): void;
+	protected abstract _sendResponseInternalTelemetryEvent(
+		responseType: ChatFetchResponseType,
+		response: string,
+	): void;
 
-	protected _getTelemetryData<T extends TelemetryData>(ctor: new (...args: any[]) => T): T | undefined {
-		return <T>this._genericTelemetryData.find(d => d instanceof ctor);
+	protected _getTelemetryData<T extends TelemetryData>(
+		ctor: new (...args: any[]) => T,
+	): T | undefined {
+		return <T>this._genericTelemetryData.find((d) => d instanceof ctor);
 	}
-
 }
 
-export class PanelChatTelemetry extends ChatTelemetry<IDocumentContext | undefined> {
-
+export class PanelChatTelemetry extends ChatTelemetry<
+	IDocumentContext | undefined
+> {
 	constructor(
 		sessionId: string,
 		documentContext: IDocumentContext | undefined,
@@ -598,10 +739,13 @@ export class PanelChatTelemetry extends ChatTelemetry<IDocumentContext | undefin
 		toolTokenCount: number,
 		repoInfoTelemetry: RepoInfoTelemetry,
 		@ITelemetryService telemetryService: ITelemetryService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IVSCodeExtensionContext private readonly _extensionContext: IVSCodeExtensionContext,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IVSCodeExtensionContext
+		private readonly _extensionContext: IVSCodeExtensionContext,
 	) {
-		super(ChatLocation.Panel,
+		super(
+			ChatLocation.Panel,
 			sessionId,
 			documentContext,
 			firstTurn,
@@ -618,28 +762,34 @@ export class PanelChatTelemetry extends ChatTelemetry<IDocumentContext | undefin
 			availableToolCount,
 			toolTokenCount,
 			repoInfoTelemetry,
-			telemetryService
+			telemetryService,
 		);
 	}
 
 	protected override _sendInternalRequestTelemetryEvent(): void {
-
-
 		// Capture the created prompt in internal telemetry
-		this._telemetryService.sendInternalMSFTTelemetryEvent('interactiveSessionMessage', {
-			chatLocation: 'panel',
-			sessionId: this._sessionId,
-			requestId: this.telemetryMessageId,
-			baseModel: this._endpoint.model,
-			apiType: this._endpoint.apiType,
-			intent: this._intent.id,
-			isParticipantDetected: String(this._request.isParticipantDetected),
-			detectedIntent: this._request.enableCommandDetection ? this._intent?.id : 'none',
-			contextTypes: 'none', // TODO this is defunct
-			query: this._request.prompt
-		} satisfies RequestInternalPanelTelemetryProperties, {
-			turnNumber: this._conversation.turns.length,
-		} satisfies ResponseInternalPanelTelemetryMeasurements);
+		this._telemetryService.sendInternalMSFTTelemetryEvent(
+			'interactiveSessionMessage',
+			{
+				chatLocation: 'panel',
+				sessionId: this._sessionId,
+				requestId: this.telemetryMessageId,
+				baseModel: this._endpoint.model,
+				apiType: this._endpoint.apiType,
+				intent: this._intent.id,
+				isParticipantDetected: String(
+					this._request.isParticipantDetected,
+				),
+				detectedIntent: this._request.enableCommandDetection
+					? this._intent?.id
+					: 'none',
+				contextTypes: 'none', // TODO this is defunct
+				query: this._request.prompt,
+			} satisfies RequestInternalPanelTelemetryProperties,
+			{
+				turnNumber: this._conversation.turns.length,
+			} satisfies ResponseInternalPanelTelemetryMeasurements,
+		);
 
 		// Send the begin telemetry for repo info, this uses the same repo info telemetry instance held by the builder class
 		// as the begin event need to be sent only once per user request and PanelChatTelemetry is recreated per step. The class is
@@ -647,33 +797,59 @@ export class PanelChatTelemetry extends ChatTelemetry<IDocumentContext | undefin
 		this._repoInfoTelemetry.sendBeginTelemetryIfNeeded();
 	}
 
-	protected override async _sendResponseTelemetryEvent(responseType: ChatFetchResponseType, response: string, interactionOutcome: InteractionOutcome, toolCalls: IToolCall[] = []): Promise<void> {
-
-
+	protected override async _sendResponseTelemetryEvent(
+		responseType: ChatFetchResponseType,
+		response: string,
+		interactionOutcome: InteractionOutcome,
+		toolCalls: IToolCall[] = [],
+	): Promise<void> {
 		const turn = this._conversation.getLatestTurn();
 		const roundIndex = turn.rounds.length - 1;
 
 		const codeBlocks = response ? getCodeBlocks(response) : [];
-		const codeBlockLanguages = codeBlocks.map(block => block.languageId);
+		const codeBlockLanguages = codeBlocks.map((block) => block.languageId);
 
 		// TBD@digitarald: This is a first cheap way to detect off-topic LLM responses.
-		const offTopicHints = ['programming-related tasks', 'programming related questions', 'software development topics', 'related to programming', 'expertise is limited', 'sorry, i can\'t assist with that'];
+		const offTopicHints = [
+			'programming-related tasks',
+			'programming related questions',
+			'software development topics',
+			'related to programming',
+			'expertise is limited',
+			"sorry, i can't assist with that",
+		];
 		let maybeOffTopic = 0;
-		if (responseType === ChatFetchResponseType.Success && !response.trim().includes('\n')) {
+		if (
+			responseType === ChatFetchResponseType.Success &&
+			!response.trim().includes('\n')
+		) {
 			// Check responseMessage
-			if (offTopicHints.some(flag => response.toLowerCase().includes(flag))) {
+			if (
+				offTopicHints.some((flag) =>
+					response.toLowerCase().includes(flag),
+				)
+			) {
 				maybeOffTopic = 1;
 			}
 		}
 
-		const toolCounts = toolCalls.reduce((acc, call) => {
-			acc[call.name] = (acc[call.name] || 0) + 1;
-			return acc;
-		}, {} as Record<string, number>);
+		const toolCounts = toolCalls.reduce(
+			(acc, call) => {
+				acc[call.name] = (acc[call.name] || 0) + 1;
+				return acc;
+			},
+			{} as Record<string, number>,
+		);
 
-		const messageTokenCount = await this._endpoint.acquireTokenizer().tokenLength(turn.request.message);
-		const promptTokenCount = await this._endpoint.acquireTokenizer().countMessagesTokens(this._messages);
-		const responseTokenCount = await this._endpoint.acquireTokenizer().tokenLength(response) ?? 0;
+		const messageTokenCount = await this._endpoint
+			.acquireTokenizer()
+			.tokenLength(turn.request.message);
+		const promptTokenCount = await this._endpoint
+			.acquireTokenizer()
+			.countMessagesTokens(this._messages);
+		const responseTokenCount =
+			(await this._endpoint.acquireTokenizer().tokenLength(response)) ??
+			0;
 
 		/* __GDPR__
 			"panel.request" : {
@@ -721,46 +897,70 @@ export class PanelChatTelemetry extends ChatTelemetry<IDocumentContext | undefin
 				"isSystemInitiated": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "Whether the request was system-initiated (e.g. terminal completion notification) rather than user-typed." }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('panel.request', {
-			command: this._intent.id,
-			contextTypes: 'none', // TODO this is defunct
-			promptTypes: this._messages.map(msg => `${msg.role}${'name' in msg && msg.name ? `-${msg.name}` : ''}:${getTextPart(msg.content).length}`).join(','),
-			conversationId: this._sessionId,
-			requestId: turn.id,
-			responseId: turn.id, // SAME as fetchResult.requestId ,
-			responseType,
-			languageId: this._documentContext?.document.languageId,
-			codeBlocks: codeBlockLanguages.join(','),
-			model: this._endpoint.model,
-			apiType: this._endpoint.apiType,
-			isParticipantDetected: String(this._request.isParticipantDetected),
-			toolCounts: JSON.stringify(toolCounts),
-			mode: this._getModeNameForTelemetry(),
-			parentRequestId: this._request.parentRequestId,
-			vscodeRequestId: this._request.id,
-			slashCommand: getSlashCommandForTelemetry(this._request, URI.from(this._extensionContext.extensionUri)),
-			isSystemInitiated: String(!!this._request.isSystemInitiated)
-		} satisfies RequestPanelTelemetryProperties, {
-			turn: this._conversation.turns.length,
-			round: roundIndex,
-			textBlocks: codeBlocks.length ? -1 : response.split(/\n{2,}/).length ?? 0,
-			links: this._addedLinkCount,
-			maybeOffTopic: maybeOffTopic,
-			messageTokenCount,
-			promptTokenCount,
-			userPromptCount: this._messages.filter(msg => msg.role === Raw.ChatRole.User).length,
-			responseTokenCount,
-			timeToRequest: this._requestStartTime - this._startTime,
-			timeToFirstToken: this._firstTokenTime ? this._firstTokenTime - this._startTime : -1,
-			timeToComplete: Date.now() - this._startTime,
-			...getCustomInstructionTelemetry(turn.references),
-			numToolCalls: toolCalls.length,
-			availableToolCount: this._availableToolCount,
-			toolTokenCount: this._toolTokenCount,
-			summarizationEnabled: this._configurationService.getConfig(ConfigKey.SummarizeAgentConversationHistory) ? 1 : 0,
-			isBYOK: isBYOKModel(this._endpoint),
-			isAuto: isAutoModel(this._endpoint)
-		} satisfies RequestPanelTelemetryMeasurements);
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'panel.request',
+			{
+				command: this._intent.id,
+				contextTypes: 'none', // TODO this is defunct
+				promptTypes: this._messages
+					.map(
+						(msg) =>
+							`${msg.role}${'name' in msg && msg.name ? `-${msg.name}` : ''}:${getTextPart(msg.content).length}`,
+					)
+					.join(','),
+				conversationId: this._sessionId,
+				requestId: turn.id,
+				responseId: turn.id, // SAME as fetchResult.requestId ,
+				responseType,
+				languageId: this._documentContext?.document.languageId,
+				codeBlocks: codeBlockLanguages.join(','),
+				model: this._endpoint.model,
+				apiType: this._endpoint.apiType,
+				isParticipantDetected: String(
+					this._request.isParticipantDetected,
+				),
+				toolCounts: JSON.stringify(toolCounts),
+				mode: this._getModeNameForTelemetry(),
+				parentRequestId: this._request.parentRequestId,
+				vscodeRequestId: this._request.id,
+				slashCommand: getSlashCommandForTelemetry(
+					this._request,
+					URI.from(this._extensionContext.extensionUri),
+				),
+				isSystemInitiated: String(!!this._request.isSystemInitiated),
+			} satisfies RequestPanelTelemetryProperties,
+			{
+				turn: this._conversation.turns.length,
+				round: roundIndex,
+				textBlocks: codeBlocks.length
+					? -1
+					: (response.split(/\n{2,}/).length ?? 0),
+				links: this._addedLinkCount,
+				maybeOffTopic: maybeOffTopic,
+				messageTokenCount,
+				promptTokenCount,
+				userPromptCount: this._messages.filter(
+					(msg) => msg.role === Raw.ChatRole.User,
+				).length,
+				responseTokenCount,
+				timeToRequest: this._requestStartTime - this._startTime,
+				timeToFirstToken: this._firstTokenTime
+					? this._firstTokenTime - this._startTime
+					: -1,
+				timeToComplete: Date.now() - this._startTime,
+				...getCustomInstructionTelemetry(turn.references),
+				numToolCalls: toolCalls.length,
+				availableToolCount: this._availableToolCount,
+				toolTokenCount: this._toolTokenCount,
+				summarizationEnabled: this._configurationService.getConfig(
+					ConfigKey.SummarizeAgentConversationHistory,
+				)
+					? 1
+					: 0,
+				isBYOK: isBYOKModel(this._endpoint),
+				isAuto: isAutoModel(this._endpoint),
+			} satisfies RequestPanelTelemetryMeasurements,
+		);
 
 		const modeName = this._getModeNameForTelemetry();
 		sendUserActionTelemetry(
@@ -773,7 +973,9 @@ export class PanelChatTelemetry extends ChatTelemetry<IDocumentContext | undefin
 				responseType,
 				languageId: this._documentContext?.document.languageId ?? '',
 				model: this._endpoint.model,
-				isParticipantDetected: String(this._request.isParticipantDetected),
+				isParticipantDetected: String(
+					this._request.isParticipantDetected,
+				),
 				toolCounts: JSON.stringify(toolCounts),
 				mode: modeName,
 				codeBlocks: JSON.stringify(codeBlocks),
@@ -783,46 +985,59 @@ export class PanelChatTelemetry extends ChatTelemetry<IDocumentContext | undefin
 				isAgent: this._intent.id === AgentIntent.ID ? 1 : 0,
 				turn: this._conversation.turns.length,
 				round: roundIndex,
-				textBlocks: codeBlocks.length ? -1 : response.split(/\n{2,}/).length ?? 0,
+				textBlocks: codeBlocks.length
+					? -1
+					: (response.split(/\n{2,}/).length ?? 0),
 				links: this._addedLinkCount,
 				maybeOffTopic,
 				messageTokenCount,
 				promptTokenCount,
-				userPromptCount: this._messages.filter(msg => msg.role === Raw.ChatRole.User).length,
+				userPromptCount: this._messages.filter(
+					(msg) => msg.role === Raw.ChatRole.User,
+				).length,
 				responseTokenCount,
 				timeToRequest: this._requestStartTime - this._startTime,
-				timeToFirstToken: this._firstTokenTime ? this._firstTokenTime - this._startTime : -1,
+				timeToFirstToken: this._firstTokenTime
+					? this._firstTokenTime - this._startTime
+					: -1,
 				timeToComplete: Date.now() - this._startTime,
 				numToolCalls: toolCalls.length,
 				availableToolCount: this._availableToolCount,
 			},
-			'panel_request'
+			'panel_request',
 		);
 	}
 
-	protected override _sendResponseInternalTelemetryEvent(_responseType: ChatFetchResponseType, response: string): void {
+	protected override _sendResponseInternalTelemetryEvent(
+		_responseType: ChatFetchResponseType,
+		response: string,
+	): void {
+		this._telemetryService.sendInternalMSFTTelemetryEvent(
+			'interactiveSessionResponse',
+			{
+				// shared
+				chatLocation: 'panel',
+				requestId: this.telemetryMessageId,
+				intent: this._intent.id,
+				request: this._request.prompt,
+				response: response ?? '',
+				baseModel: this._endpoint.model,
+				apiType: this._endpoint.apiType,
 
-		this._telemetryService.sendInternalMSFTTelemetryEvent('interactiveSessionResponse', {
-			// shared
-			chatLocation: 'panel',
-			requestId: this.telemetryMessageId,
-			intent: this._intent.id,
-			request: this._request.prompt,
-			response: response ?? '',
-			baseModel: this._endpoint.model,
-			apiType: this._endpoint.apiType,
-
-			// shareable but NOT
-			isParticipantDetected: String(this._request.isParticipantDetected),
-			sessionId: this._sessionId,
-		} satisfies ResponseInternalPanelTelemetryProperties, {
-			turnNumber: this._conversation.turns.length,
-		} satisfies ResponseInternalPanelTelemetryMeasurements);
+				// shareable but NOT
+				isParticipantDetected: String(
+					this._request.isParticipantDetected,
+				),
+				sessionId: this._sessionId,
+			} satisfies ResponseInternalPanelTelemetryProperties,
+			{
+				turnNumber: this._conversation.turns.length,
+			} satisfies ResponseInternalPanelTelemetryMeasurements,
+		);
 	}
 }
 
 export class InlineChatTelemetry extends ChatTelemetry<IDocumentContext> {
-
 	private readonly _diagnosticsTelemetryData: {
 		fileDiagnosticsTelemetry: DiagnosticsTelemetryData;
 		selectionDiagnosticsTelemetry: DiagnosticsTelemetryData;
@@ -830,7 +1045,11 @@ export class InlineChatTelemetry extends ChatTelemetry<IDocumentContext> {
 	};
 
 	private get _isNotebookDocument(): number {
-		return isNotebookCellOrNotebookChatInput(this._documentContext.document.uri) ? 1 : 0;
+		return isNotebookCellOrNotebookChatInput(
+			this._documentContext.document.uri,
+		)
+			? 1
+			: 0;
 	}
 
 	constructor(
@@ -851,9 +1070,11 @@ export class InlineChatTelemetry extends ChatTelemetry<IDocumentContext> {
 		toolTokenCount: number,
 		repoInfoTelemetry: RepoInfoTelemetry,
 		@ITelemetryService telemetryService: ITelemetryService,
-		@ILanguageDiagnosticsService private readonly _languageDiagnosticsService: ILanguageDiagnosticsService,
+		@ILanguageDiagnosticsService
+		private readonly _languageDiagnosticsService: ILanguageDiagnosticsService,
 	) {
-		super(ChatLocation.Editor,
+		super(
+			ChatLocation.Editor,
 			sessionId,
 			documentContext,
 			firstTurn,
@@ -870,35 +1091,56 @@ export class InlineChatTelemetry extends ChatTelemetry<IDocumentContext> {
 			availableToolCount,
 			toolTokenCount,
 			repoInfoTelemetry,
-			telemetryService
+			telemetryService,
 		);
 
-		this._diagnosticsTelemetryData = findDiagnosticsTelemetry(this._documentContext.selection, this._languageDiagnosticsService.getDiagnostics(this._documentContext.document.uri));
+		this._diagnosticsTelemetryData = findDiagnosticsTelemetry(
+			this._documentContext.selection,
+			this._languageDiagnosticsService.getDiagnostics(
+				this._documentContext.document.uri,
+			),
+		);
 	}
 
 	protected override _sendInternalRequestTelemetryEvent(): void {
 		// Capture the created prompt in internal telemetry
-		this._telemetryService.sendInternalMSFTTelemetryEvent('interactiveSessionRequest', {
-			conversationId: this._sessionId,
-			requestId: this.telemetryMessageId,
-			chatLocation: 'inline',
-			intent: this._intent.id,
-			language: this._documentContext.document.languageId,
-			prompt: this._messages.map(m => `${roleToString(m.role).toUpperCase()}:\n${m.content}`).join('\n---\n'),
-			model: this._endpoint.model,
-			apiType: this._endpoint.apiType
-		} satisfies RequestInternalInlineTelemetryProperties, {
-			isNotebook: this._isNotebookDocument,
-			turnNumber: this._conversation.turns.length,
-		} satisfies RequestInternalInlineTelemetryMeasurements);
+		this._telemetryService.sendInternalMSFTTelemetryEvent(
+			'interactiveSessionRequest',
+			{
+				conversationId: this._sessionId,
+				requestId: this.telemetryMessageId,
+				chatLocation: 'inline',
+				intent: this._intent.id,
+				language: this._documentContext.document.languageId,
+				prompt: this._messages
+					.map(
+						(m) =>
+							`${roleToString(m.role).toUpperCase()}:\n${m.content}`,
+					)
+					.join('\n---\n'),
+				model: this._endpoint.model,
+				apiType: this._endpoint.apiType,
+			} satisfies RequestInternalInlineTelemetryProperties,
+			{
+				isNotebook: this._isNotebookDocument,
+				turnNumber: this._conversation.turns.length,
+			} satisfies RequestInternalInlineTelemetryMeasurements,
+		);
 	}
 
-	protected override async _sendResponseTelemetryEvent(responseType: ChatFetchResponseType, response: string, interactionOutcome: InteractionOutcome, toolCalls: IToolCall[] = []): Promise<void> {
-
-		const toolCounts = toolCalls.reduce((acc, call) => {
-			acc[call.name] = (acc[call.name] || 0) + 1;
-			return acc;
-		}, {} as Record<string, number>);
+	protected override async _sendResponseTelemetryEvent(
+		responseType: ChatFetchResponseType,
+		response: string,
+		interactionOutcome: InteractionOutcome,
+		toolCalls: IToolCall[] = [],
+	): Promise<void> {
+		const toolCounts = toolCalls.reduce(
+			(acc, call) => {
+				acc[call.name] = (acc[call.name] || 0) + 1;
+				return acc;
+			},
+			{} as Record<string, number>,
+		);
 
 		/* __GDPR__
 			"inline.request" : {
@@ -950,72 +1192,138 @@ export class InlineChatTelemetry extends ChatTelemetry<IDocumentContext> {
 				"isAuto": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "Whether the request was for an Auto model" }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('inline.request', {
-			command: this._intent.id,
-			contextTypes: 'none',// TODO@jrieken intentResult.contexts.map(part => part.kind).join(',') ?? 'none',
-			promptTypes: this._messages.map(msg => `${msg.role}${'name' in msg && msg.name ? `-${msg.name}` : ''}:${getTextPart(msg.content).length}`).join(','),
-			conversationId: this._sessionId,
-			requestId: this.telemetryMessageId,
-			languageId: this._documentContext.document.languageId,
-			responseType: responseType,
-			replyType: interactionOutcome.kind,
-			model: this._endpoint.model,
-			apiType: this._endpoint.apiType,
-			diagnosticsProvider: this._diagnosticsTelemetryData.diagnosticsProvider,
-			diagnosticCodes: this._diagnosticsTelemetryData.fileDiagnosticsTelemetry.diagnosticCodes,
-			selectionDiagnosticCodes: this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry.diagnosticCodes,
-			outcomeAnnotations: interactionOutcome.annotations?.map(a => a.label).join(','),
-			toolCounts: JSON.stringify(toolCounts),
-		} satisfies RequestInlineTelemetryProperties, {
-			firstTurn: this._firstTurn ? 1 : 0,
-			isNotebook: this._isNotebookDocument,
-			withIntentDetection: this._request.enableCommandDetection ? 1 : 0,
-			messageTokenCount: await this._endpoint.acquireTokenizer().tokenLength(this._request.prompt),
-			promptTokenCount: await this._endpoint.acquireTokenizer().countMessagesTokens(this._messages),
-			responseTokenCount: responseType === ChatFetchResponseType.Success ? await this._endpoint.acquireTokenizer().tokenLength(response) : -1,
-			implicitCommand: (!this._request.prompt.trim().startsWith(`/${this._intent.id}`) ? 1 : 0),
-			attemptCount: this._request.attempt || 0,
-			selectionLineCount: Math.abs(this._documentContext.selection.end.line - this._documentContext.selection.start.line) + 1,
-			wholeRangeLineCount: Math.abs(this._documentContext.wholeRange.end.line - this._documentContext.wholeRange.start.line) + 1,
-			editCount: this._editCount > 0 ? this._editCount : -1,
-			editLineCount: this._editLineCount > 0 ? this._editLineCount : -1,
-			markdownCharCount: this._markdownCharCount,
-			problemsCount: this._diagnosticsTelemetryData.fileDiagnosticsTelemetry.problemsCount,
-			selectionProblemsCount: this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry.problemsCount,
-			diagnosticsCount: this._diagnosticsTelemetryData.fileDiagnosticsTelemetry.diagnosticsCount,
-			selectionDiagnosticsCount: this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry.diagnosticsCount,
-			timeToRequest: this._requestStartTime - this._startTime,
-			timeToFirstToken: this._firstTokenTime ? this._firstTokenTime - this._startTime : -1,
-			timeToComplete: Date.now() - this._startTime,
-			...getCustomInstructionTelemetry(this._references),
-			numToolCalls: toolCalls.length,
-			availableToolCount: this._availableToolCount,
-			toolTokenCount: this._toolTokenCount,
-			isBYOK: isBYOKModel(this._endpoint),
-			isAuto: isAutoModel(this._endpoint)
-		} satisfies RequestInlineTelemetryMeasurements);
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'inline.request',
+			{
+				command: this._intent.id,
+				contextTypes: 'none', // TODO@jrieken intentResult.contexts.map(part => part.kind).join(',') ?? 'none',
+				promptTypes: this._messages
+					.map(
+						(msg) =>
+							`${msg.role}${'name' in msg && msg.name ? `-${msg.name}` : ''}:${getTextPart(msg.content).length}`,
+					)
+					.join(','),
+				conversationId: this._sessionId,
+				requestId: this.telemetryMessageId,
+				languageId: this._documentContext.document.languageId,
+				responseType: responseType,
+				replyType: interactionOutcome.kind,
+				model: this._endpoint.model,
+				apiType: this._endpoint.apiType,
+				diagnosticsProvider:
+					this._diagnosticsTelemetryData.diagnosticsProvider,
+				diagnosticCodes:
+					this._diagnosticsTelemetryData.fileDiagnosticsTelemetry
+						.diagnosticCodes,
+				selectionDiagnosticCodes:
+					this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry
+						.diagnosticCodes,
+				outcomeAnnotations: interactionOutcome.annotations
+					?.map((a) => a.label)
+					.join(','),
+				toolCounts: JSON.stringify(toolCounts),
+			} satisfies RequestInlineTelemetryProperties,
+			{
+				firstTurn: this._firstTurn ? 1 : 0,
+				isNotebook: this._isNotebookDocument,
+				withIntentDetection: this._request.enableCommandDetection
+					? 1
+					: 0,
+				messageTokenCount: await this._endpoint
+					.acquireTokenizer()
+					.tokenLength(this._request.prompt),
+				promptTokenCount: await this._endpoint
+					.acquireTokenizer()
+					.countMessagesTokens(this._messages),
+				responseTokenCount:
+					responseType === ChatFetchResponseType.Success
+						? await this._endpoint
+								.acquireTokenizer()
+								.tokenLength(response)
+						: -1,
+				implicitCommand: !this._request.prompt
+					.trim()
+					.startsWith(`/${this._intent.id}`)
+					? 1
+					: 0,
+				attemptCount: this._request.attempt || 0,
+				selectionLineCount:
+					Math.abs(
+						this._documentContext.selection.end.line -
+							this._documentContext.selection.start.line,
+					) + 1,
+				wholeRangeLineCount:
+					Math.abs(
+						this._documentContext.wholeRange.end.line -
+							this._documentContext.wholeRange.start.line,
+					) + 1,
+				editCount: this._editCount > 0 ? this._editCount : -1,
+				editLineCount:
+					this._editLineCount > 0 ? this._editLineCount : -1,
+				markdownCharCount: this._markdownCharCount,
+				problemsCount:
+					this._diagnosticsTelemetryData.fileDiagnosticsTelemetry
+						.problemsCount,
+				selectionProblemsCount:
+					this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry
+						.problemsCount,
+				diagnosticsCount:
+					this._diagnosticsTelemetryData.fileDiagnosticsTelemetry
+						.diagnosticsCount,
+				selectionDiagnosticsCount:
+					this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry
+						.diagnosticsCount,
+				timeToRequest: this._requestStartTime - this._startTime,
+				timeToFirstToken: this._firstTokenTime
+					? this._firstTokenTime - this._startTime
+					: -1,
+				timeToComplete: Date.now() - this._startTime,
+				...getCustomInstructionTelemetry(this._references),
+				numToolCalls: toolCalls.length,
+				availableToolCount: this._availableToolCount,
+				toolTokenCount: this._toolTokenCount,
+				isBYOK: isBYOKModel(this._endpoint),
+				isAuto: isAutoModel(this._endpoint),
+			} satisfies RequestInlineTelemetryMeasurements,
+		);
 	}
 
-	protected override  _sendResponseInternalTelemetryEvent(responseType: ChatFetchResponseType, response: string): void {
-		this._telemetryService.sendInternalMSFTTelemetryEvent('interactiveSessionResponse', {
-			chatLocation: 'inline',
-			intent: this._intent.id,
-			request: this._request.prompt,
-			response,
-			conversationId: this._sessionId,
-			requestId: this.telemetryMessageId,
-			baseModel: this._endpoint.model,
-			apiType: this._endpoint.apiType,
-			responseType,
-			problems: this._diagnosticsTelemetryData.fileDiagnosticsTelemetry.problems,
-			selectionProblems: this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry.problems,
-			diagnosticCodes: this._diagnosticsTelemetryData.fileDiagnosticsTelemetry.diagnosticCodes,
-			selectionDiagnosticCodes: this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry.diagnosticCodes,
-			diagnosticsProvider: this._diagnosticsTelemetryData.diagnosticsProvider,
-			language: this._documentContext.document.languageId,
-		} satisfies ResponseInternalInlineTelemetryProperties, {
-			isNotebook: this._isNotebookDocument,
-			turnNumber: this._conversation.turns.length,
-		} satisfies ResponseInternalInlineTelemetryMeasurements);
+	protected override _sendResponseInternalTelemetryEvent(
+		responseType: ChatFetchResponseType,
+		response: string,
+	): void {
+		this._telemetryService.sendInternalMSFTTelemetryEvent(
+			'interactiveSessionResponse',
+			{
+				chatLocation: 'inline',
+				intent: this._intent.id,
+				request: this._request.prompt,
+				response,
+				conversationId: this._sessionId,
+				requestId: this.telemetryMessageId,
+				baseModel: this._endpoint.model,
+				apiType: this._endpoint.apiType,
+				responseType,
+				problems:
+					this._diagnosticsTelemetryData.fileDiagnosticsTelemetry
+						.problems,
+				selectionProblems:
+					this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry
+						.problems,
+				diagnosticCodes:
+					this._diagnosticsTelemetryData.fileDiagnosticsTelemetry
+						.diagnosticCodes,
+				selectionDiagnosticCodes:
+					this._diagnosticsTelemetryData.selectionDiagnosticsTelemetry
+						.diagnosticCodes,
+				diagnosticsProvider:
+					this._diagnosticsTelemetryData.diagnosticsProvider,
+				language: this._documentContext.document.languageId,
+			} satisfies ResponseInternalInlineTelemetryProperties,
+			{
+				isNotebook: this._isNotebookDocument,
+				turnNumber: this._conversation.turns.length,
+			} satisfies ResponseInternalInlineTelemetryMeasurements,
+		);
 	}
 }

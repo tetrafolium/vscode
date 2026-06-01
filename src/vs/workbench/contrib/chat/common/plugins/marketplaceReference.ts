@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../base/common/uri.js';
-import { IExtraKnownMarketplaceEntry } from '../../../../../base/common/managedSettings.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { ChatConfiguration } from '../constants.js';
+import { URI } from "../../../../../base/common/uri.js";
+import { IExtraKnownMarketplaceEntry } from "../../../../../base/common/managedSettings.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { ChatConfiguration } from "../constants.js";
 
 export const enum MarketplaceReferenceKind {
-	GitHubShorthand = 'githubShorthand',
-	GitUri = 'gitUri',
-	LocalFileUri = 'localFileUri',
+	GitHubShorthand = "githubShorthand",
+	GitUri = "gitUri",
+	LocalFileUri = "localFileUri",
 }
 
 export interface IMarketplaceReference {
@@ -60,35 +60,47 @@ const _githubShorthandRe = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:#.+)?$/;
  * with the value used as both key and value so they survive the round-trip
  * intact.
  */
-export function extraKnownMarketplacesToConfigDict(entries: readonly (string | IExtraKnownMarketplaceEntry)[] | undefined): Record<string, string> | undefined {
+export function extraKnownMarketplacesToConfigDict(
+	entries: readonly (string | IExtraKnownMarketplaceEntry)[] | undefined,
+): Record<string, string> | undefined {
 	if (!entries?.length) {
 		return undefined;
 	}
 	const obj: Record<string, string> = {};
 	for (const entry of entries) {
-		if (typeof entry === 'string') {
+		if (typeof entry === "string") {
 			obj[entry] = entry;
 		} else {
 			const s = entry.source;
-			const base = s.source === 'github' ? s.repo : s.url;
+			const base = s.source === "github" ? s.repo : s.url;
 			obj[entry.name] = s.ref ? `${base}#${s.ref}` : base;
 		}
 	}
 	return obj;
 }
 
-export function readConfiguredMarketplaces(configurationService: IConfigurationService): IConfiguredMarketplaces {
-	const userValues = configurationService.getValue<(string | object)[]>(ChatConfiguration.PluginMarketplaces) ?? [];
+export function readConfiguredMarketplaces(
+	configurationService: IConfigurationService,
+): IConfiguredMarketplaces {
+	const userValues =
+		configurationService.getValue<(string | object)[]>(
+			ChatConfiguration.PluginMarketplaces,
+		) ?? [];
 
 	// `ChatExtraMarketplaces` is stored as `{ [name]: url-or-shorthand }` when delivered by
 	// policy. Convert each entry to the nested IExtraMarketplaceObjectEntry shape so that
 	// parseMarketplaceReferences can set displayLabel = name (critical for enabledPlugins keys).
-	const extraObj = configurationService.getValue<Record<string, string>>(ChatConfiguration.ExtraMarketplaces) ?? {};
-	const extraValues: IExtraMarketplaceObjectEntry[] = Object.entries(extraObj).map(([name, src]) => {
+	const extraObj =
+		configurationService.getValue<Record<string, string>>(
+			ChatConfiguration.ExtraMarketplaces,
+		) ?? {};
+	const extraValues: IExtraMarketplaceObjectEntry[] = Object.entries(
+		extraObj,
+	).map(([name, src]) => {
 		const isGithubShorthand = _githubShorthandRe.test(src);
 		return isGithubShorthand
-			? { name, source: { source: 'github' as const, repo: src } }
-			: { name, source: { source: 'git' as const, url: src } };
+			? { name, source: { source: "github" as const, repo: src } }
+			: { name, source: { source: "git" as const, url: src } };
 	});
 
 	return {
@@ -98,15 +110,19 @@ export function readConfiguredMarketplaces(configurationService: IConfigurationS
 	};
 }
 
-export function parseMarketplaceReferences(values: readonly unknown[]): IMarketplaceReference[] {
+export function parseMarketplaceReferences(
+	values: readonly unknown[],
+): IMarketplaceReference[] {
 	const byCanonicalId = new Map<string, IMarketplaceReference>();
 
 	for (const value of values) {
 		let parsed: IMarketplaceReference | undefined;
-		if (typeof value === 'string') {
+		if (typeof value === "string") {
 			parsed = parseMarketplaceReference(value);
-		} else if (value && typeof value === 'object') {
-			parsed = parseMarketplaceObjectEntry(value as IExtraMarketplaceObjectEntry);
+		} else if (value && typeof value === "object") {
+			parsed = parseMarketplaceObjectEntry(
+				value as IExtraMarketplaceObjectEntry,
+			);
 		}
 		if (parsed && !byCanonicalId.has(parsed.canonicalId)) {
 			byCanonicalId.set(parsed.canonicalId, parsed);
@@ -127,19 +143,28 @@ export function parseMarketplaceReferences(values: readonly unknown[]): IMarketp
  */
 export interface IExtraMarketplaceObjectEntry {
 	readonly name?: string;
-	readonly source?: string | { readonly source?: string; readonly repo?: string; readonly url?: string; readonly ref?: string };
+	readonly source?:
+		| string
+		| {
+				readonly source?: string;
+				readonly repo?: string;
+				readonly url?: string;
+				readonly ref?: string;
+		  };
 	readonly repo?: string;
 	readonly url?: string;
 	readonly ref?: string;
 }
 
-export function parseMarketplaceObjectEntry(entry: IExtraMarketplaceObjectEntry): IMarketplaceReference | undefined {
+export function parseMarketplaceObjectEntry(
+	entry: IExtraMarketplaceObjectEntry,
+): IMarketplaceReference | undefined {
 	let sourceType: string | undefined;
 	let repo: string | undefined;
 	let url: string | undefined;
 	let ref: string | undefined;
 
-	if (entry.source && typeof entry.source === 'object') {
+	if (entry.source && typeof entry.source === "object") {
 		const nested = entry.source;
 		sourceType = nested.source;
 		repo = nested.repo;
@@ -153,13 +178,13 @@ export function parseMarketplaceObjectEntry(entry: IExtraMarketplaceObjectEntry)
 	}
 
 	let parsed: IMarketplaceReference | undefined;
-	if (sourceType === 'github' && typeof repo === 'string') {
+	if (sourceType === "github" && typeof repo === "string") {
 		parsed = parseMarketplaceReference(appendMarketplaceRef(repo, ref));
-	} else if (sourceType === 'git' && typeof url === 'string') {
+	} else if (sourceType === "git" && typeof url === "string") {
 		parsed = parseMarketplaceReference(appendMarketplaceRef(url, ref));
 	}
 
-	if (parsed && typeof entry.name === 'string' && entry.name.length > 0) {
+	if (parsed && typeof entry.name === "string" && entry.name.length > 0) {
 		parsed = { ...parsed, displayLabel: entry.name };
 	}
 	return parsed;
@@ -169,7 +194,7 @@ function appendMarketplaceRef(value: string, ref: string | undefined): string {
 	if (!ref) {
 		return value;
 	}
-	const fragmentIndex = value.indexOf('#');
+	const fragmentIndex = value.indexOf("#");
 	const base = fragmentIndex === -1 ? value : value.slice(0, fragmentIndex);
 	return `${base}#${ref}`;
 }
@@ -178,7 +203,10 @@ function appendMarketplaceRef(value: string, ref: string | undefined): string {
  * Merges two sets of marketplace references, deduplicating by canonical ID.
  * The first set takes precedence when IDs collide.
  */
-export function deduplicateMarketplaceReferences(primary: readonly IMarketplaceReference[], secondary: readonly IMarketplaceReference[]): IMarketplaceReference[] {
+export function deduplicateMarketplaceReferences(
+	primary: readonly IMarketplaceReference[],
+	secondary: readonly IMarketplaceReference[],
+): IMarketplaceReference[] {
 	const byCanonicalId = new Map<string, IMarketplaceReference>();
 	for (const ref of primary) {
 		byCanonicalId.set(ref.canonicalId, ref);
@@ -191,7 +219,9 @@ export function deduplicateMarketplaceReferences(primary: readonly IMarketplaceR
 	return [...byCanonicalId.values()];
 }
 
-export function parseMarketplaceReference(value: string): IMarketplaceReference | undefined {
+export function parseMarketplaceReference(
+	value: string,
+): IMarketplaceReference | undefined {
 	const rawValue = value.trim();
 	if (!rawValue) {
 		return undefined;
@@ -207,7 +237,8 @@ export function parseMarketplaceReference(value: string): IMarketplaceReference 
 		return scpReference;
 	}
 
-	const shorthandMatch = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#(.+))?$/.exec(rawValue);
+	const shorthandMatch =
+		/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#(.+))?$/.exec(rawValue);
 	if (shorthandMatch) {
 		const owner = shorthandMatch[1];
 		const repo = shorthandMatch[2];
@@ -217,7 +248,7 @@ export function parseMarketplaceReference(value: string): IMarketplaceReference 
 			displayLabel: rawValue,
 			cloneUrl: `https://github.com/${owner}/${repo}.git`,
 			canonicalId: getGitHubCanonicalId(owner, repo, ref),
-			cacheSegments: ['github.com', owner, repo, ...getRefCacheSegments(ref)],
+			cacheSegments: ["github.com", owner, repo, ...getRefCacheSegments(ref)],
 			kind: MarketplaceReferenceKind.GitHubShorthand,
 			ref,
 			githubRepo: `${owner}/${repo}`,
@@ -227,7 +258,9 @@ export function parseMarketplaceReference(value: string): IMarketplaceReference 
 	return undefined;
 }
 
-function parseUriMarketplaceReference(rawValue: string): IMarketplaceReference | undefined {
+function parseUriMarketplaceReference(
+	rawValue: string,
+): IMarketplaceReference | undefined {
 	let uri: URI;
 	try {
 		uri = URI.parse(rawValue);
@@ -236,7 +269,7 @@ function parseUriMarketplaceReference(rawValue: string): IMarketplaceReference |
 	}
 
 	const scheme = uri.scheme.toLowerCase();
-	if (scheme === 'file' && /^file:\/\//i.test(rawValue)) {
+	if (scheme === "file" && /^file:\/\//i.test(rawValue)) {
 		if (uri.fragment) {
 			return undefined;
 		}
@@ -252,7 +285,7 @@ function parseUriMarketplaceReference(rawValue: string): IMarketplaceReference |
 		};
 	}
 
-	if (scheme !== 'http' && scheme !== 'https' && scheme !== 'ssh') {
+	if (scheme !== "http" && scheme !== "https" && scheme !== "ssh") {
 		return undefined;
 	}
 
@@ -261,9 +294,12 @@ function parseUriMarketplaceReference(rawValue: string): IMarketplaceReference |
 	}
 
 	const ref = uri.fragment || undefined;
-	const cloneUri = uri.fragment ? uri.with({ fragment: '' }) : uri;
+	const cloneUri = uri.fragment ? uri.with({ fragment: "" }) : uri;
 	const sanitizedAuthority = sanitizePathSegment(uri.authority.toLowerCase());
-	const trimmedPath = uri.path.replace(/\/+/g, '/').replace(/\/+$/g, '').replace(/^\/+/, '');
+	const trimmedPath = uri.path
+		.replace(/\/+/g, "/")
+		.replace(/\/+$/g, "")
+		.replace(/^\/+/, "");
 
 	// Host-only marketplace endpoint (e.g. `https://plugins.internal.example.com`).
 	// The ADR allows any string for `git.url`, so a URL without a repo path is
@@ -280,12 +316,16 @@ function parseUriMarketplaceReference(rawValue: string): IMarketplaceReference |
 		};
 	}
 
-	const gitSuffix = '.git';
+	const gitSuffix = ".git";
 	const pathHasGitSuffix = trimmedPath.toLowerCase().endsWith(gitSuffix);
-	const pathWithoutGit = pathHasGitSuffix ? trimmedPath.slice(0, trimmedPath.length - gitSuffix.length) : trimmedPath;
-	const pathSegments = pathWithoutGit.split('/').map(sanitizePathSegment);
+	const pathWithoutGit = pathHasGitSuffix
+		? trimmedPath.slice(0, trimmedPath.length - gitSuffix.length)
+		: trimmedPath;
+	const pathSegments = pathWithoutGit.split("/").map(sanitizePathSegment);
 	// Always normalize the canonical path to include .git so that URLs with and without the suffix deduplicate.
-	const canonicalPath = pathHasGitSuffix ? trimmedPath.toLowerCase() : `${trimmedPath.toLowerCase()}${gitSuffix}`;
+	const canonicalPath = pathHasGitSuffix
+		? trimmedPath.toLowerCase()
+		: `${trimmedPath.toLowerCase()}${gitSuffix}`;
 
 	// Extract githubRepo for GitHub URLs so the editor can render a clickable link
 	const githubRepo = extractGitHubRepo(uri.authority, pathWithoutGit);
@@ -295,10 +335,13 @@ function parseUriMarketplaceReference(rawValue: string): IMarketplaceReference |
 	// canonicalId) treat both forms as the same marketplace.
 	let canonicalId: string;
 	if (githubRepo) {
-		const [owner, repo] = githubRepo.split('/');
+		const [owner, repo] = githubRepo.split("/");
 		canonicalId = getGitHubCanonicalId(owner, repo, ref);
 	} else {
-		canonicalId = appendRefSuffix(`git:${uri.authority.toLowerCase()}/${canonicalPath}`, ref);
+		canonicalId = appendRefSuffix(
+			`git:${uri.authority.toLowerCase()}/${canonicalPath}`,
+			ref,
+		);
 	}
 
 	return {
@@ -306,39 +349,48 @@ function parseUriMarketplaceReference(rawValue: string): IMarketplaceReference |
 		displayLabel: rawValue,
 		cloneUrl: cloneUri.toString(),
 		canonicalId,
-		cacheSegments: [sanitizedAuthority, ...pathSegments, ...getRefCacheSegments(ref)],
+		cacheSegments: [
+			sanitizedAuthority,
+			...pathSegments,
+			...getRefCacheSegments(ref),
+		],
 		kind: MarketplaceReferenceKind.GitUri,
 		ref,
 		githubRepo,
 	};
 }
 
-function parseScpMarketplaceReference(rawValue: string): IMarketplaceReference | undefined {
+function parseScpMarketplaceReference(
+	rawValue: string,
+): IMarketplaceReference | undefined {
 	const match = /^([^@\s]+)@([^:\s]+):(.+?\.git)(?:#(.+))?$/i.exec(rawValue);
 	if (!match) {
 		return undefined;
 	}
 
-	const gitSuffix = '.git';
+	const gitSuffix = ".git";
 	const authority = match[2];
-	const pathWithGit = match[3].replace(/^\/+/, '');
+	const pathWithGit = match[3].replace(/^\/+/, "");
 	const ref = match[4];
 	if (!pathWithGit.toLowerCase().endsWith(gitSuffix)) {
 		return undefined;
 	}
 
 	const pathWithoutGit = pathWithGit.slice(0, -gitSuffix.length);
-	const pathSegments = pathWithoutGit.split('/').map(sanitizePathSegment);
+	const pathSegments = pathWithoutGit.split("/").map(sanitizePathSegment);
 	const githubRepo = extractGitHubRepo(authority, pathWithoutGit);
 
 	// Normalize git@github.com:<owner>/<repo>.git to the same canonical id the
 	// shorthand parser emits (see parseUriMarketplaceReference for rationale).
 	let canonicalId: string;
 	if (githubRepo) {
-		const [owner, repo] = githubRepo.split('/');
+		const [owner, repo] = githubRepo.split("/");
 		canonicalId = getGitHubCanonicalId(owner, repo, ref);
 	} else {
-		canonicalId = appendRefSuffix(`git:${authority.toLowerCase()}/${pathWithGit.toLowerCase()}`, ref);
+		canonicalId = appendRefSuffix(
+			`git:${authority.toLowerCase()}/${pathWithGit.toLowerCase()}`,
+			ref,
+		);
 	}
 
 	return {
@@ -346,26 +398,40 @@ function parseScpMarketplaceReference(rawValue: string): IMarketplaceReference |
 		displayLabel: rawValue,
 		cloneUrl: `${match[1]}@${authority}:${pathWithGit}`,
 		canonicalId,
-		cacheSegments: [sanitizePathSegment(authority.toLowerCase()), ...pathSegments, ...getRefCacheSegments(ref)],
+		cacheSegments: [
+			sanitizePathSegment(authority.toLowerCase()),
+			...pathSegments,
+			...getRefCacheSegments(ref),
+		],
 		kind: MarketplaceReferenceKind.GitUri,
 		ref,
 		githubRepo,
 	};
 }
 
-function extractGitHubRepo(authority: string, pathWithoutGit: string): string | undefined {
-	if (authority.toLowerCase() !== 'github.com') {
+function extractGitHubRepo(
+	authority: string,
+	pathWithoutGit: string,
+): string | undefined {
+	if (authority.toLowerCase() !== "github.com") {
 		return undefined;
 	}
-	const parts = pathWithoutGit.split('/');
+	const parts = pathWithoutGit.split("/");
 	if (parts.length >= 2 && parts[0] && parts[1]) {
 		return `${parts[0]}/${parts[1]}`;
 	}
 	return undefined;
 }
 
-function getGitHubCanonicalId(owner: string, repo: string, ref?: string): string {
-	return appendRefSuffix(`github:${owner.toLowerCase()}/${repo.toLowerCase()}`, ref);
+function getGitHubCanonicalId(
+	owner: string,
+	repo: string,
+	ref?: string,
+): string {
+	return appendRefSuffix(
+		`github:${owner.toLowerCase()}/${repo.toLowerCase()}`,
+		ref,
+	);
 }
 
 function appendRefSuffix(canonicalId: string, ref: string | undefined): string {
@@ -377,5 +443,5 @@ function getRefCacheSegments(ref: string | undefined): string[] {
 }
 
 function sanitizePathSegment(value: string): string {
-	return value.replace(/[\\/:*?"<>|]/g, '_');
+	return value.replace(/[\\/:*?"<>|]/g, "_");
 }

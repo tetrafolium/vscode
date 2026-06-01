@@ -4,23 +4,41 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it } from 'vitest';
-import { LineEdit, LineReplacement } from '../../../../util/vs/editor/common/core/edits/lineEdit';
-import { StringEdit, StringReplacement } from '../../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	LineEdit,
+	LineReplacement,
+} from '../../../../util/vs/editor/common/core/edits/lineEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { LineRange } from '../../../../util/vs/editor/common/core/ranges/lineRange';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { StringText } from '../../../../util/vs/editor/common/core/text/abstractText';
 import { Edits } from '../../common/dataTypes/edit';
 import { StatelessNextEditDocument } from '../../common/statelessNextEditProvider';
-import { editWouldDeleteWhatWasJustInserted2, IgnoreWhitespaceOnlyChanges } from '../../common/statelessNextEditProviders';
+import {
+	editWouldDeleteWhatWasJustInserted2,
+	IgnoreWhitespaceOnlyChanges,
+} from '../../common/statelessNextEditProviders';
 
 describe('IgnoreFormattingChangesAspect', () => {
 	// Helper to create test cases with less boilerplate
-	function createEdit(baseLines: string[], newLines: string[]): LineReplacement {
-		return new LineReplacement(new LineRange(1, baseLines.length + 1), newLines);
+	function createEdit(
+		baseLines: string[],
+		newLines: string[],
+	): LineReplacement {
+		return new LineReplacement(
+			new LineRange(1, baseLines.length + 1),
+			newLines,
+		);
 	}
 
 	function isFormattingOnly(base: string[], edited: string[]): boolean {
-		return IgnoreWhitespaceOnlyChanges._isFormattingOnlyChange(base, createEdit(base, edited));
+		return IgnoreWhitespaceOnlyChanges._isFormattingOnlyChange(
+			base,
+			createEdit(base, edited),
+		);
 	}
 
 	// Test the core algorithm: formatting-only changes preserve content after whitespace removal
@@ -40,15 +58,50 @@ describe('IgnoreFormattingChangesAspect', () => {
 	describe('common scenarios', () => {
 		const testCases = [
 			// Formatting-only changes
-			{ name: 'indentation', base: ['  code'], edited: ['    code'], expected: true },
-			{ name: 'space normalization', base: ['a  b'], edited: ['a b'], expected: true },
-			{ name: 'line breaks', base: ['a;', 'b;'], edited: ['a; b;'], expected: true },
-			{ name: 'empty lines', base: ['   '], edited: ['\t'], expected: true },
+			{
+				name: 'indentation',
+				base: ['  code'],
+				edited: ['    code'],
+				expected: true,
+			},
+			{
+				name: 'space normalization',
+				base: ['a  b'],
+				edited: ['a b'],
+				expected: true,
+			},
+			{
+				name: 'line breaks',
+				base: ['a;', 'b;'],
+				edited: ['a; b;'],
+				expected: true,
+			},
+			{
+				name: 'empty lines',
+				base: ['   '],
+				edited: ['\t'],
+				expected: true,
+			},
 
 			// Content changes
-			{ name: 'value change', base: ['x=1'], edited: ['x=2'], expected: false },
-			{ name: 'added code', base: ['f()'], edited: ['f()', 'g()'], expected: false },
-			{ name: 'removed code', base: ['a', 'b'], edited: ['a'], expected: false },
+			{
+				name: 'value change',
+				base: ['x=1'],
+				edited: ['x=2'],
+				expected: false,
+			},
+			{
+				name: 'added code',
+				base: ['f()'],
+				edited: ['f()', 'g()'],
+				expected: false,
+			},
+			{
+				name: 'removed code',
+				base: ['a', 'b'],
+				edited: ['a'],
+				expected: false,
+			},
 		];
 
 		it.each(testCases)('$name', ({ base, edited, expected }) => {
@@ -72,10 +125,8 @@ describe('IgnoreFormattingChangesAspect', () => {
 });
 
 describe('editWouldDeleteWhatWasJustInserted', () => {
-
 	it('does not incorrectly flag multi-line removals', async () => {
-		const file =
-			`const modifiedTimes: Map<string, number> = new Map()
+		const file = `const modifiedTimes: Map<string, number> = new Map()
 
 export async function getForceFreshForDir(
 	cacheEntry:
@@ -108,17 +159,29 @@ export async function getForceFreshForDir(
 }
 `;
 
-		const lineEdit = new LineEdit([new LineReplacement(new LineRange(28, 31), [])]); //[28,31)->[])
+		const lineEdit = new LineEdit([
+			new LineReplacement(new LineRange(28, 31), []),
+		]); //[28,31)->[])
 
-		const recentEdits = Edits.single(new StringEdit([
-			new StringReplacement(new OffsetRange(740, 746), 'return '),
-			new StringReplacement(new OffsetRange(806, 808), ''),
-			new StringReplacement(new OffsetRange(811, 875), '? true\\n\\t\\t: undefined')
-		]));
+		const recentEdits = Edits.single(
+			new StringEdit([
+				new StringReplacement(new OffsetRange(740, 746), 'return '),
+				new StringReplacement(new OffsetRange(806, 808), ''),
+				new StringReplacement(
+					new OffsetRange(811, 875),
+					'? true\\n\\t\\t: undefined',
+				),
+			]),
+		);
 
-		const r = editWouldDeleteWhatWasJustInserted2({ documentAfterEdits: new StringText(file), recentEdits } as StatelessNextEditDocument, lineEdit);
+		const r = editWouldDeleteWhatWasJustInserted2(
+			{
+				documentAfterEdits: new StringText(file),
+				recentEdits,
+			} as StatelessNextEditDocument,
+			lineEdit,
+		);
 
 		expect(r).toMatchInlineSnapshot(`false`);
 	});
-
 });

@@ -5,9 +5,15 @@
 import { DocumentId } from '../../../platform/inlineEdits/common/dataTypes/documentId';
 import { LanguageContextResponse } from '../../../platform/inlineEdits/common/dataTypes/languageContext';
 import * as xtabPromptOptions from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
-import { PromptOptions, RecentFileClippingStrategy } from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	PromptOptions,
+	RecentFileClippingStrategy,
+} from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { StatelessNextEditDocument } from '../../../platform/inlineEdits/common/statelessNextEditProvider';
-import { IXtabHistoryEditEntry, IXtabHistoryEntry } from '../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
+import {
+	IXtabHistoryEditEntry,
+	IXtabHistoryEntry,
+} from '../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
 import { ContextKind } from '../../../platform/languageServer/common/languageContextService';
 import { batchArrayElements } from '../../../util/common/arrays';
 import { assertNever } from '../../../util/vs/base/common/assert';
@@ -26,29 +32,68 @@ export function getRecentCodeSnippets(
 	computeTokens: (code: string) => number,
 	opts: PromptOptions,
 	neighborSnippets?: readonly INeighborFileSnippet[],
-): { codeSnippets: string; documents: Set<DocumentId>; neighborSnippetsResult: AppendNeighborFileSnippetsResult | undefined } {
-
-	const { includeViewedFiles, nDocuments, clippingStrategy } = opts.recentlyViewedDocuments;
+): {
+	codeSnippets: string;
+	documents: Set<DocumentId>;
+	neighborSnippetsResult: AppendNeighborFileSnippetsResult | undefined;
+} {
+	const { includeViewedFiles, nDocuments, clippingStrategy } =
+		opts.recentlyViewedDocuments;
 
 	let recentlyViewedCodeSnippets: RecentCodeSnippet[];
 
 	if (clippingStrategy === RecentFileClippingStrategy.Proportional) {
-		const grouped = collectRecentDocumentsGrouped(xtabHistory, activeDoc.id, includeViewedFiles, nDocuments);
-		recentlyViewedCodeSnippets = grouped.map(g => historyEntriesToCodeSnippet(g.entries));
+		const grouped = collectRecentDocumentsGrouped(
+			xtabHistory,
+			activeDoc.id,
+			includeViewedFiles,
+			nDocuments,
+		);
+		recentlyViewedCodeSnippets = grouped.map((g) =>
+			historyEntriesToCodeSnippet(g.entries),
+		);
 	} else {
-		const docsBesidesActiveDoc = collectRecentDocuments(xtabHistory, activeDoc.id, includeViewedFiles, nDocuments);
-		recentlyViewedCodeSnippets = docsBesidesActiveDoc.map(d => historyEntryToCodeSnippet(d));
+		const docsBesidesActiveDoc = collectRecentDocuments(
+			xtabHistory,
+			activeDoc.id,
+			includeViewedFiles,
+			nDocuments,
+		);
+		recentlyViewedCodeSnippets = docsBesidesActiveDoc.map((d) =>
+			historyEntryToCodeSnippet(d),
+		);
 	}
 
-	const { snippets, docsInPrompt } = buildCodeSnippetsUsingPagedClipping(recentlyViewedCodeSnippets, computeTokens, opts);
+	const { snippets, docsInPrompt } = buildCodeSnippetsUsingPagedClipping(
+		recentlyViewedCodeSnippets,
+		computeTokens,
+		opts,
+	);
 
 	if (langCtx) {
-		appendLanguageContextSnippets(langCtx, snippets, opts.languageContext.maxTokens, computeTokens, opts.recentlyViewedDocuments.includeLineNumbers);
+		appendLanguageContextSnippets(
+			langCtx,
+			snippets,
+			opts.languageContext.maxTokens,
+			computeTokens,
+			opts.recentlyViewedDocuments.includeLineNumbers,
+		);
 	}
 
 	let neighborSnippetsResult: AppendNeighborFileSnippetsResult | undefined;
-	if (opts.neighborFiles.enabled && neighborSnippets && neighborSnippets.length > 0) {
-		neighborSnippetsResult = appendNeighborFileSnippets(neighborSnippets, snippets, docsInPrompt, opts.neighborFiles.maxTokens, computeTokens, opts.recentlyViewedDocuments.includeLineNumbers);
+	if (
+		opts.neighborFiles.enabled &&
+		neighborSnippets &&
+		neighborSnippets.length > 0
+	) {
+		neighborSnippetsResult = appendNeighborFileSnippets(
+			neighborSnippets,
+			snippets,
+			docsInPrompt,
+			opts.neighborFiles.maxTokens,
+			computeTokens,
+			opts.recentlyViewedDocuments.includeLineNumbers,
+		);
 	}
 
 	return {
@@ -65,7 +110,9 @@ function formatLinesWithLineNumbers(
 ): string[] {
 	switch (includeLineNumbers) {
 		case xtabPromptOptions.IncludeLineNumbersOption.WithSpaceAfter:
-			return lines.map((line, idx) => `${startLineOffset + idx}| ${line}`);
+			return lines.map(
+				(line, idx) => `${startLineOffset + idx}| ${line}`,
+			);
 		case xtabPromptOptions.IncludeLineNumbersOption.WithoutSpace:
 			return lines.map((line, idx) => `${startLineOffset + idx}|${line}`);
 		case xtabPromptOptions.IncludeLineNumbersOption.None:
@@ -78,16 +125,29 @@ function formatLinesWithLineNumbers(
 function formatCodeSnippet(
 	documentId: DocumentId,
 	lines: string[],
-	opts: { truncated: boolean; includeLineNumbers: xtabPromptOptions.IncludeLineNumbersOption; startLineOffset: number }
+	opts: {
+		truncated: boolean;
+		includeLineNumbers: xtabPromptOptions.IncludeLineNumbersOption;
+		startLineOffset: number;
+	},
 ): string {
 	const filePath = toUniquePath(documentId, undefined);
 	const firstLine = opts.truncated
 		? `code_snippet_file_path: ${filePath} (truncated)`
 		: `code_snippet_file_path: ${filePath}`;
 
-	const formattedLines = formatLinesWithLineNumbers(lines, opts.includeLineNumbers, opts.startLineOffset);
+	const formattedLines = formatLinesWithLineNumbers(
+		lines,
+		opts.includeLineNumbers,
+		opts.startLineOffset,
+	);
 	const fileContent = formattedLines.join('\n');
-	return [PromptTags.RECENT_FILE.start, firstLine, fileContent, PromptTags.RECENT_FILE.end].join('\n');
+	return [
+		PromptTags.RECENT_FILE.start,
+		firstLine,
+		fileContent,
+		PromptTags.RECENT_FILE.end,
+	].join('\n');
 }
 
 /**
@@ -166,7 +226,10 @@ function collectRecentDocumentsGrouped(
 		}
 	}
 
-	return docOrder.map(docId => ({ docId, entries: docEntries.get(docId)! }));
+	return docOrder.map((docId) => ({
+		docId,
+		entries: docEntries.get(docId)!,
+	}));
 }
 
 export type RecentCodeSnippet = {
@@ -186,13 +249,24 @@ export function prepareRecentCodeSnippets(
 	xtabHistory: readonly IXtabHistoryEntry[],
 	opts: PromptOptions,
 ): RecentCodeSnippet[] {
-	const { includeViewedFiles, nDocuments, clippingStrategy } = opts.recentlyViewedDocuments;
+	const { includeViewedFiles, nDocuments, clippingStrategy } =
+		opts.recentlyViewedDocuments;
 	if (clippingStrategy === RecentFileClippingStrategy.Proportional) {
-		const grouped = collectRecentDocumentsGrouped(xtabHistory, activeDoc.id, includeViewedFiles, nDocuments);
-		return grouped.map(g => historyEntriesToCodeSnippet(g.entries));
+		const grouped = collectRecentDocumentsGrouped(
+			xtabHistory,
+			activeDoc.id,
+			includeViewedFiles,
+			nDocuments,
+		);
+		return grouped.map((g) => historyEntriesToCodeSnippet(g.entries));
 	}
-	const docsBesidesActiveDoc = collectRecentDocuments(xtabHistory, activeDoc.id, includeViewedFiles, nDocuments);
-	return docsBesidesActiveDoc.map(d => historyEntryToCodeSnippet(d));
+	const docsBesidesActiveDoc = collectRecentDocuments(
+		xtabHistory,
+		activeDoc.id,
+		includeViewedFiles,
+		nDocuments,
+	);
+	return docsBesidesActiveDoc.map((d) => historyEntryToCodeSnippet(d));
 }
 
 /**
@@ -220,12 +294,16 @@ export function selectFocalRangesWithinSpanCap(
 
 	const selected: OffsetRange[] = [focalRanges[0]];
 	let startLine = getLineNumber(focalRanges[0].start);
-	let endLine = getLineNumber(Math.max(focalRanges[0].start, focalRanges[0].endExclusive - 1));
+	let endLine = getLineNumber(
+		Math.max(focalRanges[0].start, focalRanges[0].endExclusive - 1),
+	);
 
 	for (let i = 1; i < focalRanges.length; i++) {
 		const range = focalRanges[i];
 		const rangeStartLine = getLineNumber(range.start);
-		const rangeEndLine = getLineNumber(Math.max(range.start, range.endExclusive - 1));
+		const rangeEndLine = getLineNumber(
+			Math.max(range.start, range.endExclusive - 1),
+		);
 		const candidateStart = Math.min(startLine, rangeStartLine);
 		const candidateEnd = Math.max(endLine, rangeEndLine);
 		if (candidateEnd - candidateStart > maxSpanLines) {
@@ -273,12 +351,15 @@ function historyEntryToCodeSnippet(d: IXtabHistoryEntry): RecentCodeSnippet {
  * of subsequent edits using {@link BaseStringEdit.applyToOffsetRange} so that they
  * remain valid in the most recent content.
  */
-export function historyEntriesToCodeSnippet(entries: IXtabHistoryEntry[]): RecentCodeSnippet {
+export function historyEntriesToCodeSnippet(
+	entries: IXtabHistoryEntry[],
+): RecentCodeSnippet {
 	// Use the most recent entry's content as the base
 	const mostRecent = entries[0];
-	const content = mostRecent.kind === 'edit'
-		? mostRecent.edit.edit.applyOnText(mostRecent.edit.base)
-		: mostRecent.documentContent;
+	const content =
+		mostRecent.kind === 'edit'
+			? mostRecent.edit.edit.applyOnText(mostRecent.edit.base)
+			: mostRecent.documentContent;
 
 	// Collect only edit entries (most recent first). VisibleRanges entries are
 	// skipped because their character offsets refer to older document snapshots.
@@ -299,7 +380,9 @@ export function historyEntriesToCodeSnippet(entries: IXtabHistoryEntry[]): Recen
 	for (let j = 0; j < editEntries.length; j++) {
 		let ranges = editEntries[j].edit.edit.getNewRanges();
 		for (let k = j - 1; k >= 0; k--) {
-			ranges = ranges.map(r => editEntries[k].edit.edit.applyToOffsetRange(r));
+			ranges = ranges.map((r) =>
+				editEntries[k].edit.edit.applyToOffsetRange(r),
+			);
 		}
 		allFocalRanges.push(...ranges);
 	}
@@ -343,7 +426,13 @@ export function appendLanguageContextSnippets(
 				break;
 			}
 			const documentId = DocumentId.create(ctx.uri.toString());
-			snippets.push(formatCodeSnippet(documentId, langCtxSnippet.split(/\r?\n/), { truncated: false, includeLineNumbers, startLineOffset: 0 }));
+			snippets.push(
+				formatCodeSnippet(documentId, langCtxSnippet.split(/\r?\n/), {
+					truncated: false,
+					includeLineNumbers,
+					startLineOffset: 0,
+				}),
+			);
 			tokenBudget = potentialBudget;
 		}
 	}
@@ -390,7 +479,8 @@ export function appendNeighborFileSnippets(
 	includeLineNumbers: xtabPromptOptions.IncludeLineNumbersOption,
 ): AppendNeighborFileSnippetsResult {
 	const initialBudget = tokenBudget;
-	const selected: { snippet: INeighborFileSnippet; originalIndex: number }[] = [];
+	const selected: { snippet: INeighborFileSnippet; originalIndex: number }[] =
+		[];
 	// Iterate from highest score (last) to lowest (first) so the best snippets reserve budget first.
 	for (let i = neighborSnippets.length - 1; i >= 0; i--) {
 		const neighborSnippet = neighborSnippets[i];
@@ -398,7 +488,8 @@ export function appendNeighborFileSnippets(
 		if (docsInPrompt.has(documentId)) {
 			continue;
 		}
-		const potentialBudget = tokenBudget - computeTokens(neighborSnippet.snippet);
+		const potentialBudget =
+			tokenBudget - computeTokens(neighborSnippet.snippet);
 		if (potentialBudget < 0) {
 			continue;
 		}
@@ -409,13 +500,21 @@ export function appendNeighborFileSnippets(
 	// Reverse so the highest-scoring snippet is appended last (closest to the current file).
 	for (let i = selected.length - 1; i >= 0; i--) {
 		const neighborSnippet = selected[i].snippet;
-		snippets.push(formatCodeSnippet(
-			DocumentId.create(neighborSnippet.uri),
-			neighborSnippet.snippet.split(/\r?\n/),
-			{ truncated: false, includeLineNumbers, startLineOffset: neighborSnippet.lineRange.startLine },
-		));
+		snippets.push(
+			formatCodeSnippet(
+				DocumentId.create(neighborSnippet.uri),
+				neighborSnippet.snippet.split(/\r?\n/),
+				{
+					truncated: false,
+					includeLineNumbers,
+					startLineOffset: neighborSnippet.lineRange.startLine,
+				},
+			),
+		);
 	}
-	const includedIndices = selected.map(s => s.originalIndex).sort((a, b) => a - b);
+	const includedIndices = selected
+		.map((s) => s.originalIndex)
+		.sort((a, b) => a - b);
 	return {
 		nComputed: neighborSnippets.length,
 		nIncluded: selected.length,
@@ -442,7 +541,8 @@ function clipFullDocument(
 	const linesToKeep: string[] = [];
 
 	for (const page of pages) {
-		const allowedBudgetLeft = allowedBudget - countTokensForLines(page, computeTokens);
+		const allowedBudgetLeft =
+			allowedBudget - countTokensForLines(page, computeTokens);
 		if (allowedBudgetLeft < 0) {
 			break;
 		}
@@ -453,7 +553,13 @@ function clipFullDocument(
 	if (linesToKeep.length > 0) {
 		const isTruncated = linesToKeep.length !== totalLineCount;
 		result.docsInPrompt.add(document.id);
-		result.snippets.push(formatCodeSnippet(document.id, linesToKeep, { truncated: isTruncated, includeLineNumbers, startLineOffset: 0 }));
+		result.snippets.push(
+			formatCodeSnippet(document.id, linesToKeep, {
+				truncated: isTruncated,
+				includeLineNumbers,
+				startLineOffset: 0,
+			}),
+		);
 	}
 
 	return allowedBudget;
@@ -475,7 +581,7 @@ export function computeFocalPageCost(
 	const maxFocalSpanLines = pageSize * 3;
 	const capped = selectFocalRangesWithinSpanCap(
 		focalRanges,
-		offset => contentTransform.getPosition(offset).lineNumber,
+		(offset) => contentTransform.getPosition(offset).lineNumber,
 		maxFocalSpanLines,
 	);
 
@@ -483,8 +589,8 @@ export function computeFocalPageCost(
 		return undefined;
 	}
 
-	const startOffset = Math.min(...capped.map(r => r.start));
-	const endOffset = Math.max(...capped.map(r => r.endExclusive - 1));
+	const startOffset = Math.min(...capped.map((r) => r.start));
+	const endOffset = Math.max(...capped.map((r) => r.endExclusive - 1));
 	const startLine = contentTransform.getPosition(startOffset).lineNumber;
 	const endLine = contentTransform.getPosition(endOffset).lineNumber;
 
@@ -512,7 +618,11 @@ export function computeFocalPageCost(
  * @returns The remaining token budget after clipping, or `undefined` if nothing fit into the budget.
  */
 function clipAroundFocalRanges(
-	document: { id: DocumentId; content: StringText; focalRanges: readonly OffsetRange[] },
+	document: {
+		id: DocumentId;
+		content: StringText;
+		focalRanges: readonly OffsetRange[];
+	},
 	pageSize: number,
 	totalLineCount: number,
 	tokenBudget: number,
@@ -531,7 +641,7 @@ function clipAroundFocalRanges(
 	const maxFocalSpanLines = pageSize * 3;
 	const focalRanges = selectFocalRangesWithinSpanCap(
 		document.focalRanges,
-		offset => contentTransform.getPosition(offset).lineNumber,
+		(offset) => contentTransform.getPosition(offset).lineNumber,
 		maxFocalSpanLines,
 	);
 
@@ -539,19 +649,25 @@ function clipAroundFocalRanges(
 		return tokenBudget;
 	}
 
-	const startOffset = Math.min(...focalRanges.map(range => range.start));
-	const endOffset = Math.max(...focalRanges.map(range => range.endExclusive - 1));
+	const startOffset = Math.min(...focalRanges.map((range) => range.start));
+	const endOffset = Math.max(
+		...focalRanges.map((range) => range.endExclusive - 1),
+	);
 	const startPos = contentTransform.getPosition(startOffset);
 	const endPos = contentTransform.getPosition(endOffset);
 
-	const { firstPageIdx, lastPageIdxIncl, budgetLeft } = expandRangeToPageRange(
-		document.content.getLines(),
-		new OffsetRange(startPos.lineNumber - 1 /* convert from 1-based to 0-based */, endPos.lineNumber),
-		pageSize,
-		tokenBudget,
-		computeTokens,
-		false
-	);
+	const { firstPageIdx, lastPageIdxIncl, budgetLeft } =
+		expandRangeToPageRange(
+			document.content.getLines(),
+			new OffsetRange(
+				startPos.lineNumber - 1 /* convert from 1-based to 0-based */,
+				endPos.lineNumber,
+			),
+			pageSize,
+			tokenBudget,
+			computeTokens,
+			false,
+		);
 
 	if (budgetLeft === tokenBudget) {
 		return undefined; // nothing fit — signal caller to stop
@@ -564,9 +680,17 @@ function clipAroundFocalRanges(
 	}
 
 	const startLineOffset = firstPageIdx * pageSize;
-	const linesToKeep = document.content.getLines().slice(startLineOffset, (lastPageIdxIncl + 1) * pageSize);
+	const linesToKeep = document.content
+		.getLines()
+		.slice(startLineOffset, (lastPageIdxIncl + 1) * pageSize);
 	result.docsInPrompt.add(document.id);
-	result.snippets.push(formatCodeSnippet(document.id, linesToKeep, { truncated: linesToKeep.length < totalLineCount, includeLineNumbers, startLineOffset }));
+	result.snippets.push(
+		formatCodeSnippet(document.id, linesToKeep, {
+			truncated: linesToKeep.length < totalLineCount,
+			includeLineNumbers,
+			startLineOffset,
+		}),
+	);
 	return budgetLeft;
 }
 
@@ -579,8 +703,11 @@ export function buildCodeSnippetsUsingPagedClipping(
 	recentlyViewedCodeSnippets: RecentCodeSnippet[],
 	computeTokens: (s: string) => number,
 	opts: PromptOptions,
-): { snippets: string[]; docsInPrompt: Set<DocumentId>; tokensConsumed: number } {
-
+): {
+	snippets: string[];
+	docsInPrompt: Set<DocumentId>;
+	tokensConsumed: number;
+} {
 	const pageSize = opts.pagedClipping?.pageSize;
 	if (pageSize === undefined) {
 		throw illegalArgument('Page size must be defined');
@@ -589,10 +716,20 @@ export function buildCodeSnippetsUsingPagedClipping(
 	const clippingStrategy = opts.recentlyViewedDocuments.clippingStrategy;
 
 	if (clippingStrategy === RecentFileClippingStrategy.Proportional) {
-		return buildCodeSnippetsWithProportionalBudget(recentlyViewedCodeSnippets, computeTokens, opts, pageSize);
+		return buildCodeSnippetsWithProportionalBudget(
+			recentlyViewedCodeSnippets,
+			computeTokens,
+			opts,
+			pageSize,
+		);
 	}
 
-	return buildCodeSnippetsGreedy(recentlyViewedCodeSnippets, computeTokens, opts, pageSize);
+	return buildCodeSnippetsGreedy(
+		recentlyViewedCodeSnippets,
+		computeTokens,
+		opts,
+		pageSize,
+	);
 }
 
 /**
@@ -603,8 +740,11 @@ function buildCodeSnippetsGreedy(
 	computeTokens: (s: string) => number,
 	opts: PromptOptions,
 	pageSize: number,
-): { snippets: string[]; docsInPrompt: Set<DocumentId>; tokensConsumed: number } {
-
+): {
+	snippets: string[];
+	docsInPrompt: Set<DocumentId>;
+	tokensConsumed: number;
+} {
 	const result: { snippets: string[]; docsInPrompt: Set<DocumentId> } = {
 		snippets: [],
 		docsInPrompt: new Set<DocumentId>(),
@@ -621,8 +761,17 @@ function buildCodeSnippetsGreedy(
 		// center the clip around those ranges instead of truncating from top.
 		if (file.focalRanges !== undefined) {
 			const budgetLeft = clipAroundFocalRanges(
-				file as { id: DocumentId; content: StringText; focalRanges: readonly OffsetRange[] },
-				pageSize, lines.length, maxTokenBudget, computeTokens, includeLineNumbers, result
+				file as {
+					id: DocumentId;
+					content: StringText;
+					focalRanges: readonly OffsetRange[];
+				},
+				pageSize,
+				lines.length,
+				maxTokenBudget,
+				computeTokens,
+				includeLineNumbers,
+				result,
 			);
 			if (budgetLeft === undefined) {
 				break;
@@ -630,11 +779,23 @@ function buildCodeSnippetsGreedy(
 			maxTokenBudget = budgetLeft;
 		} else {
 			const pages = batchArrayElements(lines, pageSize);
-			maxTokenBudget = clipFullDocument(file, pages, lines.length, maxTokenBudget, computeTokens, includeLineNumbers, result);
+			maxTokenBudget = clipFullDocument(
+				file,
+				pages,
+				lines.length,
+				maxTokenBudget,
+				computeTokens,
+				includeLineNumbers,
+				result,
+			);
 		}
 	}
 
-	return { snippets: result.snippets.reverse(), docsInPrompt: result.docsInPrompt, tokensConsumed: initialBudget - maxTokenBudget };
+	return {
+		snippets: result.snippets.reverse(),
+		docsInPrompt: result.docsInPrompt,
+		tokensConsumed: initialBudget - maxTokenBudget,
+	};
 }
 
 /**
@@ -650,8 +811,11 @@ function buildCodeSnippetsWithProportionalBudget(
 	computeTokens: (s: string) => number,
 	opts: PromptOptions,
 	pageSize: number,
-): { snippets: string[]; docsInPrompt: Set<DocumentId>; tokensConsumed: number } {
-
+): {
+	snippets: string[];
+	docsInPrompt: Set<DocumentId>;
+	tokensConsumed: number;
+} {
 	const result: { snippets: string[]; docsInPrompt: Set<DocumentId> } = {
 		snippets: [],
 		docsInPrompt: new Set<DocumentId>(),
@@ -665,10 +829,15 @@ function buildCodeSnippetsWithProportionalBudget(
 	}
 
 	// --- Pass 1: compute minimum focal costs ---
-	const focalCosts = recentlyViewedCodeSnippets.map(file =>
+	const focalCosts = recentlyViewedCodeSnippets.map((file) =>
 		file.focalRanges !== undefined && file.focalRanges.length > 0
-			? computeFocalPageCost(file.content, file.focalRanges, pageSize, computeTokens) ?? 0
-			: 0
+			? (computeFocalPageCost(
+					file.content,
+					file.focalRanges,
+					pageSize,
+					computeTokens,
+				) ?? 0)
+			: 0,
 	);
 
 	// Determine which files to include. Input is ordered most-recent-first,
@@ -687,11 +856,15 @@ function buildCodeSnippetsWithProportionalBudget(
 	// --- Pass 2: distribute expansion budget proportionally ---
 	const expansionBudget = totalBudget - sumFocalCosts;
 
-	const weights = recentlyViewedCodeSnippets.slice(0, includedCount).map(f => f.editEntryCount ?? 1);
+	const weights = recentlyViewedCodeSnippets
+		.slice(0, includedCount)
+		.map((f) => f.editEntryCount ?? 1);
 	const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
 	// Per-file expansion shares, proportional to edit-entry weight
-	const expansionShares = weights.map(w => Math.floor(expansionBudget * (w / totalWeight)));
+	const expansionShares = weights.map((w) =>
+		Math.floor(expansionBudget * (w / totalWeight)),
+	);
 
 	let unspentBudget = 0;
 
@@ -699,23 +872,44 @@ function buildCodeSnippetsWithProportionalBudget(
 		const file = recentlyViewedCodeSnippets[i];
 		const lines = file.content.getLines();
 		// Each file's budget = guaranteed focal cost + proportional expansion share + carry-forward
-		const effectiveBudget = focalCosts[i] + expansionShares[i] + unspentBudget;
+		const effectiveBudget =
+			focalCosts[i] + expansionShares[i] + unspentBudget;
 
 		if (file.focalRanges !== undefined && file.focalRanges.length > 0) {
 			const budgetLeft = clipAroundFocalRanges(
-				file as { id: DocumentId; content: StringText; focalRanges: readonly OffsetRange[] },
-				pageSize, lines.length, effectiveBudget, computeTokens, includeLineNumbers, result
+				file as {
+					id: DocumentId;
+					content: StringText;
+					focalRanges: readonly OffsetRange[];
+				},
+				pageSize,
+				lines.length,
+				effectiveBudget,
+				computeTokens,
+				includeLineNumbers,
+				result,
 			);
 			unspentBudget = budgetLeft ?? effectiveBudget;
 		} else {
 			const pages = batchArrayElements(lines, pageSize);
-			unspentBudget = clipFullDocument(file, pages, lines.length, effectiveBudget, computeTokens, includeLineNumbers, result);
+			unspentBudget = clipFullDocument(
+				file,
+				pages,
+				lines.length,
+				effectiveBudget,
+				computeTokens,
+				includeLineNumbers,
+				result,
+			);
 		}
 	}
 
 	// Total budget given out across all files = sum(focalCosts[0..includedCount]) + expansionBudget = totalBudget,
 	// with unspentBudget rolling forward each iteration. Final unspentBudget therefore represents the leftover
 	// of the entire pool, so consumed = totalBudget - finalUnspentBudget.
-	return { snippets: result.snippets.reverse(), docsInPrompt: result.docsInPrompt, tokensConsumed: totalBudget - unspentBudget };
+	return {
+		snippets: result.snippets.reverse(),
+		docsInPrompt: result.docsInPrompt,
+		tokensConsumed: totalBudget - unspentBudget,
+	};
 }
-

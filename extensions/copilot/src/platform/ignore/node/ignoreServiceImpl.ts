@@ -24,19 +24,19 @@ import { RemoteContentExclusion } from './remoteContentExclusion';
 export const COPILOT_IGNORE_FILE_NAME = '.copilotignore';
 
 export class BaseIgnoreService implements IIgnoreService {
-
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _copilotIgnoreFiles = new IgnoreFile();
 	private _remoteContentExclusions: RemoteContentExclusion | undefined;
 	private _copilotIgnoreEnabled = false;
-	private readonly _onDidChangeCopilotIgnoreEnablement = new Emitter<boolean>();
+	private readonly _onDidChangeCopilotIgnoreEnablement =
+		new Emitter<boolean>();
 
 	protected _disposables: IDisposable[] = [];
-	protected onDidChangeCopilotIgnoreEnablement = this._onDidChangeCopilotIgnoreEnablement.event;
+	protected onDidChangeCopilotIgnoreEnablement =
+		this._onDidChangeCopilotIgnoreEnablement.event;
 
 	constructor(
-
 		private readonly _gitService: IGitService,
 		private readonly _logService: ILogService,
 		private readonly _authService: IAuthenticationService,
@@ -47,32 +47,44 @@ export class BaseIgnoreService implements IIgnoreService {
 		private readonly _requestLogger: IRequestLogger,
 	) {
 		this._disposables.push(this._onDidChangeCopilotIgnoreEnablement);
-		this._disposables.push(this._authService.onDidAuthenticationChange(() => {
-			const copilotIgnoreEnabled = this._authService.copilotToken?.isCopilotIgnoreEnabled() ?? false;
-			if (this._copilotIgnoreEnabled !== copilotIgnoreEnabled) {
-				this._onDidChangeCopilotIgnoreEnablement.fire(copilotIgnoreEnabled);
-			}
-			this._copilotIgnoreEnabled = copilotIgnoreEnabled;
-			if (this._copilotIgnoreEnabled === false && this._remoteContentExclusions) {
-				this._remoteContentExclusions.dispose();
-				this._remoteContentExclusions = undefined;
-			}
-			if (this._copilotIgnoreEnabled === true && !this._remoteContentExclusions) {
-				this._remoteContentExclusions = new RemoteContentExclusion(
-					this._gitService,
-					this._logService,
-					this._authService,
-					this._capiClientService,
-					this.fs,
-					this._workspaceService,
-					this._requestLogger
-				);
-			}
-		}));
+		this._disposables.push(
+			this._authService.onDidAuthenticationChange(() => {
+				const copilotIgnoreEnabled =
+					this._authService.copilotToken?.isCopilotIgnoreEnabled() ??
+					false;
+				if (this._copilotIgnoreEnabled !== copilotIgnoreEnabled) {
+					this._onDidChangeCopilotIgnoreEnablement.fire(
+						copilotIgnoreEnabled,
+					);
+				}
+				this._copilotIgnoreEnabled = copilotIgnoreEnabled;
+				if (
+					this._copilotIgnoreEnabled === false &&
+					this._remoteContentExclusions
+				) {
+					this._remoteContentExclusions.dispose();
+					this._remoteContentExclusions = undefined;
+				}
+				if (
+					this._copilotIgnoreEnabled === true &&
+					!this._remoteContentExclusions
+				) {
+					this._remoteContentExclusions = new RemoteContentExclusion(
+						this._gitService,
+						this._logService,
+						this._authService,
+						this._capiClientService,
+						this.fs,
+						this._workspaceService,
+						this._requestLogger,
+					);
+				}
+			}),
+		);
 	}
 
 	dispose(): void {
-		this._disposables.forEach(d => d.dispose());
+		this._disposables.forEach((d) => d.dispose());
 		if (this._remoteContentExclusions) {
 			this._remoteContentExclusions.dispose();
 			this._remoteContentExclusions = undefined;
@@ -85,18 +97,27 @@ export class BaseIgnoreService implements IIgnoreService {
 	}
 
 	get isRegexExclusionsEnabled(): boolean {
-		return this._remoteContentExclusions?.isRegexContextExclusionsEnabled ?? false;
+		return (
+			this._remoteContentExclusions?.isRegexContextExclusionsEnabled ??
+			false
+		);
 	}
 
-	public async isCopilotIgnored(file: URI, token?: CancellationToken): Promise<boolean> {
+	public async isCopilotIgnored(
+		file: URI,
+		token?: CancellationToken,
+	): Promise<boolean> {
 		let copilotIgnored = false;
 		if (this._copilotIgnoreEnabled) {
-			const localCopilotIgnored = this._copilotIgnoreFiles.isIgnored(file);
-			copilotIgnored = localCopilotIgnored || await (this._remoteContentExclusions?.isIgnored(file, token) ?? false);
+			const localCopilotIgnored =
+				this._copilotIgnoreFiles.isIgnored(file);
+			copilotIgnored =
+				localCopilotIgnored ||
+				(await (this._remoteContentExclusions?.isIgnored(file, token) ??
+					false));
 		}
 		return copilotIgnored;
 	}
-
 
 	async asMinimatchPattern(): Promise<string | undefined> {
 		if (!this._copilotIgnoreEnabled) {
@@ -104,13 +125,17 @@ export class BaseIgnoreService implements IIgnoreService {
 		}
 		const all: string[][] = [];
 
-		const gitRepoRoots = (await this.searchService.findFiles('**/.git/HEAD', {
-			useExcludeSettings: ExcludeSettingOptions.None,
-		})).map(uri => URI.joinPath(uri, '..', '..'));
+		const gitRepoRoots = (
+			await this.searchService.findFiles('**/.git/HEAD', {
+				useExcludeSettings: ExcludeSettingOptions.None,
+			})
+		).map((uri) => URI.joinPath(uri, '..', '..'));
 		// Loads the repositories in prior to requesting the patterns so that they're "discovered" and available
 		await this._remoteContentExclusions?.loadRepos(gitRepoRoots);
 
-		all.push(await this._remoteContentExclusions?.asMinimatchPatterns() ?? []);
+		all.push(
+			(await this._remoteContentExclusions?.asMinimatchPatterns()) ?? [],
+		);
 		all.push(this._copilotIgnoreFiles.asMinimatchPatterns());
 
 		const allall = all.flat();
@@ -134,10 +159,18 @@ export class BaseIgnoreService implements IIgnoreService {
 		return this._init;
 	}
 
-	protected trackIgnoreFile(workspaceRoot: URI | undefined, ignoreFile: URI, contents: string) {
+	protected trackIgnoreFile(
+		workspaceRoot: URI | undefined,
+		ignoreFile: URI,
+		contents: string,
+	) {
 		// Check if the ignore file is a copilotignore file
 		if (ignoreFile.path.endsWith(COPILOT_IGNORE_FILE_NAME)) {
-			this._copilotIgnoreFiles.setIgnoreFile(workspaceRoot, ignoreFile, contents);
+			this._copilotIgnoreFiles.setIgnoreFile(
+				workspaceRoot,
+				ignoreFile,
+				contents,
+			);
 		}
 		return;
 	}
@@ -167,7 +200,15 @@ export class BaseIgnoreService implements IIgnoreService {
 			return;
 		}
 
-		const files: URI[] = await this.searchService.findFilesWithDefaultExcludes(new RelativePattern(workspaceUri, `${COPILOT_IGNORE_FILE_NAME}`), undefined, CancellationToken.None);
+		const files: URI[] =
+			await this.searchService.findFilesWithDefaultExcludes(
+				new RelativePattern(
+					workspaceUri,
+					`${COPILOT_IGNORE_FILE_NAME}`,
+				),
+				undefined,
+				CancellationToken.None,
+			);
 		for (const file of files) {
 			const contents = (await this.fs.readFile(file)).toString();
 			this.trackIgnoreFile(workspaceUri, file, contents);

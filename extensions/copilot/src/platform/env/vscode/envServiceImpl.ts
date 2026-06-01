@@ -5,11 +5,14 @@
 
 import * as vscode from 'vscode';
 import { Platform, platform } from '../../../util/vs/base/common/platform';
-import { IEnvService, NameAndVersion, OperatingSystem } from '../common/envService';
+import {
+	IEnvService,
+	NameAndVersion,
+	OperatingSystem,
+} from '../common/envService';
 import { isPreRelease, isProduction, packageJson } from '../common/packagejson';
 
 export class EnvServiceImpl implements IEnvService {
-
 	declare readonly _serviceBrand: undefined;
 
 	public get extensionId(): string {
@@ -33,8 +36,10 @@ export class EnvServiceImpl implements IEnvService {
 	}
 	public get uiKind(): 'desktop' | 'web' {
 		switch (vscode.env.uiKind) {
-			case vscode.UIKind.Desktop: return 'desktop';
-			case vscode.UIKind.Web: return 'web';
+			case vscode.UIKind.Desktop:
+				return 'desktop';
+			case vscode.UIKind.Web:
+				return 'web';
 		}
 	}
 
@@ -111,6 +116,8 @@ export class EnvServiceImpl implements IEnvService {
 	}
 
 	openExternal(target: vscode.Uri): Promise<boolean> {
-		return new Promise((resolve, reject) => vscode.env.openExternal(target).then(resolve, reject));
+		return new Promise((resolve, reject) =>
+			vscode.env.openExternal(target).then(resolve, reject),
+		);
 	}
 }

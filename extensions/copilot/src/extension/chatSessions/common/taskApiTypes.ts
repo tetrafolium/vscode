@@ -41,13 +41,36 @@ export interface ListTaskEventsOptions {
  * `ICAPIClientService.makeRequest({...}, { type: RequestType.AgentTask, ... })`.
  */
 export interface ITaskApiClient {
-	createTask(owner: string, repo: string, request: AgentTaskCreateRequest): Promise<AgentTask>;
-	listTasksForRepo(owner: string, repo: string, options?: ListTasksOptions): Promise<AgentTaskListResponse>;
+	createTask(
+		owner: string,
+		repo: string,
+		request: AgentTaskCreateRequest,
+	): Promise<AgentTask>;
+	listTasksForRepo(
+		owner: string,
+		repo: string,
+		options?: ListTasksOptions,
+	): Promise<AgentTaskListResponse>;
 	listTasks(options?: ListTasksOptions): Promise<AgentTaskListResponse>;
 	getTask(taskId: string): Promise<AgentTaskGetResponse>;
-	getTaskEvents(taskId: string, options?: ListTaskEventsOptions): Promise<AgentTaskListEventsResponse>;
+	getTaskEvents(
+		taskId: string,
+		options?: ListTaskEventsOptions,
+	): Promise<AgentTaskListEventsResponse>;
 	steerTask(taskId: string, request: AgentTaskSteerRequest): Promise<void>;
-	createPRForTask(owner: string, repo: string, taskId: string): Promise<AgentTaskCreatePullRequestResponse>;
-	archiveTask(owner: string, repo: string, taskId: string): Promise<AgentTask>;
-	unarchiveTask(owner: string, repo: string, taskId: string): Promise<AgentTask>;
+	createPRForTask(
+		owner: string,
+		repo: string,
+		taskId: string,
+	): Promise<AgentTaskCreatePullRequestResponse>;
+	archiveTask(
+		owner: string,
+		repo: string,
+		taskId: string,
+	): Promise<AgentTask>;
+	unarchiveTask(
+		owner: string,
+		repo: string,
+		taskId: string,
+	): Promise<AgentTask>;
 }

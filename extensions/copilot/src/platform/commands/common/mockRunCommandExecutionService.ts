@@ -10,6 +10,5 @@ export class MockRunCommandExecutionService implements IRunCommandExecutionServi
 	async executeCommand(command: string, ...args: any[]): Promise<any> {
 		// ignore call
 	}
-	updateContextValues(): void {
-	}
+	updateContextValues(): void {}
 }

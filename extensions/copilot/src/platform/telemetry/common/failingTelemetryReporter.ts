@@ -6,7 +6,10 @@
 import type { TelemetrySender } from 'vscode';
 
 export class FailingTelemetryReporter implements TelemetrySender {
-	sendEventData(eventName: string, data?: Record<string, any> | undefined): void {
+	sendEventData(
+		eventName: string,
+		data?: Record<string, any> | undefined,
+	): void {
 		throw new Error('Telemetry disabled');
 	}
 	sendErrorData(error: Error, data?: Record<string, any> | undefined): void {

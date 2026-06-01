@@ -39,14 +39,17 @@ function fakeDestroyableStream(text: string) {
 	return { toReadableStream: () => textStream(text) };
 }
 
-function makeResponse(status: number, headers: HttpHeaders, body: ReadableStream<Uint8Array> | null): CloneableResponse {
+function makeResponse(
+	status: number,
+	headers: HttpHeaders,
+	body: ReadableStream<Uint8Array> | null,
+): CloneableResponse {
 	return { status, headers, body };
 }
 
 // ── cloneResponse ───────────────────────────────────────────────────────
 
 describe('cloneResponse', () => {
-
 	describe('null body', () => {
 		it('returns two independent responses with null body', () => {
 			const headers = makeHeaders({ 'x-test': '1' });
@@ -60,7 +63,9 @@ describe('cloneResponse', () => {
 		});
 
 		it('text() returns empty string for null body', async () => {
-			const [a, b] = cloneResponse(makeResponse(204, makeHeaders(), null));
+			const [a, b] = cloneResponse(
+				makeResponse(204, makeHeaders(), null),
+			);
 			expect(await a.text()).toBe('');
 			expect(await b.text()).toBe('');
 		});
@@ -68,7 +73,11 @@ describe('cloneResponse', () => {
 
 	describe('ReadableStream body', () => {
 		it('produces two independently consumable streams', async () => {
-			const response = makeResponse(200, makeHeaders(), textStream('hello'));
+			const response = makeResponse(
+				200,
+				makeHeaders(),
+				textStream('hello'),
+			);
 			const [a, b] = cloneResponse(response);
 
 			expect(await a.text()).toBe('hello');
@@ -76,7 +85,11 @@ describe('cloneResponse', () => {
 		});
 
 		it('text() handles multi-chunk streams', async () => {
-			const response = makeResponse(200, makeHeaders(), multiChunkStream(['hel', 'lo ', 'world']));
+			const response = makeResponse(
+				200,
+				makeHeaders(),
+				multiChunkStream(['hel', 'lo ', 'world']),
+			);
 			const [a, b] = cloneResponse(response);
 
 			expect(await a.text()).toBe('hello world');
@@ -85,7 +98,11 @@ describe('cloneResponse', () => {
 
 		it('json() parses body as JSON', async () => {
 			const payload = { key: 'value', n: 42 };
-			const response = makeResponse(200, makeHeaders(), textStream(JSON.stringify(payload)));
+			const response = makeResponse(
+				200,
+				makeHeaders(),
+				textStream(JSON.stringify(payload)),
+			);
 			const [a, b] = cloneResponse(response);
 
 			expect(await a.json()).toEqual(payload);
@@ -93,7 +110,10 @@ describe('cloneResponse', () => {
 		});
 
 		it('preserves status and headers on both clones', () => {
-			const headers = makeHeaders({ 'content-type': 'application/json', 'etag': '"v1"' });
+			const headers = makeHeaders({
+				'content-type': 'application/json',
+				etag: '"v1"',
+			});
 			const response = makeResponse(200, headers, textStream('{}'));
 			const [a, b] = cloneResponse(response);
 
@@ -120,7 +140,11 @@ describe('cloneResponse', () => {
 
 	describe('repeated cloning', () => {
 		it('can clone a clone', async () => {
-			const response = makeResponse(200, makeHeaders(), textStream('original'));
+			const response = makeResponse(
+				200,
+				makeHeaders(),
+				textStream('original'),
+			);
 			const [first, second] = cloneResponse(response);
 
 			// Clone one of the halves again

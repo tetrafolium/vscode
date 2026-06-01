@@ -53,13 +53,16 @@ export interface CodeReviewComment {
  * Result of the `github.copilot.chat.codeReview.run` command.
  */
 export type CodeReviewResult =
-	| { readonly type: 'success'; readonly comments: readonly CodeReviewComment[] }
+	| {
+			readonly type: 'success';
+			readonly comments: readonly CodeReviewComment[];
+	  }
 	| { readonly type: 'error'; readonly reason: string }
 	| { readonly type: 'cancelled' };
 
 function mapSuggestion(suggestion: ReviewSuggestion): CodeReviewSuggestion {
 	return {
-		edits: suggestion.edits.map(edit => ({
+		edits: suggestion.edits.map((edit) => ({
 			range: edit.range,
 			newText: edit.newText,
 			oldText: edit.oldText,
@@ -67,7 +70,9 @@ function mapSuggestion(suggestion: ReviewSuggestion): CodeReviewSuggestion {
 	};
 }
 
-async function resolveSuggestion(suggestion: ReviewSuggestion | Promise<ReviewSuggestion> | undefined): Promise<ReviewSuggestion | undefined> {
+async function resolveSuggestion(
+	suggestion: ReviewSuggestion | Promise<ReviewSuggestion> | undefined,
+): Promise<ReviewSuggestion | undefined> {
 	if (!suggestion) {
 		return undefined;
 	}
@@ -77,21 +82,30 @@ async function resolveSuggestion(suggestion: ReviewSuggestion | Promise<ReviewSu
 /**
  * Converts internal `ReviewComment[]` to the public `CodeReviewResult` shape.
  */
-export async function toCodeReviewResult(comments: readonly ReviewComment[]): Promise<CodeReviewResult> {
+export async function toCodeReviewResult(
+	comments: readonly ReviewComment[],
+): Promise<CodeReviewResult> {
 	return {
 		type: 'success',
-		comments: await Promise.all(comments.map(async comment => {
-			const body = typeof comment.body === 'string' ? comment.body : comment.body.value;
-			const suggestion = await resolveSuggestion(comment.suggestion);
-			const result: CodeReviewComment = {
-				uri: comment.uri,
-				range: comment.range,
-				body,
-				kind: comment.kind,
-				severity: comment.severity,
-				...(suggestion?.edits.length ? { suggestion: mapSuggestion(suggestion) } : {}),
-			};
-			return result;
-		})),
+		comments: await Promise.all(
+			comments.map(async (comment) => {
+				const body =
+					typeof comment.body === 'string'
+						? comment.body
+						: comment.body.value;
+				const suggestion = await resolveSuggestion(comment.suggestion);
+				const result: CodeReviewComment = {
+					uri: comment.uri,
+					range: comment.range,
+					body,
+					kind: comment.kind,
+					severity: comment.severity,
+					...(suggestion?.edits.length
+						? { suggestion: mapSuggestion(suggestion) }
+						: {}),
+				};
+				return result;
+			}),
+		),
 	};
 }

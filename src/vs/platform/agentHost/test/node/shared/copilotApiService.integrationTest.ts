@@ -14,69 +14,97 @@
  * Run via `scripts/test-integration.sh`.
  */
 
-import assert from 'assert';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { NullLogService } from '../../../../log/common/log.js';
-import product from '../../../../product/common/product.js';
-import { IProductService } from '../../../../product/common/productService.js';
-import { CopilotApiService } from '../../../node/shared/copilotApiService.js';
+import assert from "assert";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../base/test/common/utils.js";
+import { NullLogService } from "../../../../log/common/log.js";
+import product from "../../../../product/common/product.js";
+import { IProductService } from "../../../../product/common/productService.js";
+import { CopilotApiService } from "../../../node/shared/copilotApiService.js";
 
-suite('CopilotApiService.utilityChatCompletion (real CAPI)', () => {
+suite("CopilotApiService.utilityChatCompletion (real CAPI)", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
 	const githubToken = process.env.COPILOT_GITHUB_TOKEN;
 	const hasToken = !!githubToken;
 
-	const productService: IProductService = { _serviceBrand: undefined, ...product };
+	const productService: IProductService = {
+		_serviceBrand: undefined,
+		...product,
+	};
 
 	function createService(): CopilotApiService {
 		// Bind fetch to its global receiver — calling an unbound
 		// `globalThis.fetch` through `this._fetch(...)` throws
 		// "Illegal invocation" in the Electron renderer.
-		const boundFetch: typeof globalThis.fetch = (...args) => globalThis.fetch(...args);
-		return new CopilotApiService(boundFetch, new NullLogService(), productService);
+		const boundFetch: typeof globalThis.fetch = (...args) =>
+			globalThis.fetch(...args);
+		return new CopilotApiService(
+			boundFetch,
+			new NullLogService(),
+			productService,
+		);
 	}
 
-	(hasToken ? test : test.skip)('answers a trivial arithmetic prompt', async function () {
-		this.timeout(30_000);
-		const service = createService();
-		const answer = await service.utilityChatCompletion(githubToken!, {
-			messages: [
-				{ role: 'system', content: 'You answer math questions with only the integer result, no words, no punctuation.' },
-				{ role: 'user', content: 'What is 1+3?' },
-			],
-		});
-		assert.ok(answer.includes('4'), `expected the answer to contain "4", got: ${JSON.stringify(answer)}`);
-	});
+	(hasToken ? test : test.skip)(
+		"answers a trivial arithmetic prompt",
+		async function () {
+			this.timeout(30_000);
+			const service = createService();
+			const answer = await service.utilityChatCompletion(githubToken!, {
+				messages: [
+					{
+						role: "system",
+						content:
+							"You answer math questions with only the integer result, no words, no punctuation.",
+					},
+					{ role: "user", content: "What is 1+3?" },
+				],
+			});
+			assert.ok(
+				answer.includes("4"),
+				`expected the answer to contain "4", got: ${JSON.stringify(answer)}`,
+			);
+		},
+	);
 
-	(hasToken ? test : test.skip)('returns the assistant text for a multi-turn prompt', async function () {
-		this.timeout(30_000);
-		const service = createService();
-		const answer = await service.utilityChatCompletion(githubToken!, {
-			messages: [
-				{ role: 'system', content: 'You reverse the word the user gives you and reply with only the reversed word, nothing else.' },
-				{ role: 'user', content: 'hello' },
-			],
-		});
-		assert.strictEqual(answer.trim().toLowerCase(), 'olleh');
-	});
+	(hasToken ? test : test.skip)(
+		"returns the assistant text for a multi-turn prompt",
+		async function () {
+			this.timeout(30_000);
+			const service = createService();
+			const answer = await service.utilityChatCompletion(githubToken!, {
+				messages: [
+					{
+						role: "system",
+						content:
+							"You reverse the word the user gives you and reply with only the reversed word, nothing else.",
+					},
+					{ role: "user", content: "hello" },
+				],
+			});
+			assert.strictEqual(answer.trim().toLowerCase(), "olleh");
+		},
+	);
 
-	(hasToken ? test : test.skip)('caches the Copilot session token across calls', async function () {
-		this.timeout(60_000);
-		const service = createService();
+	(hasToken ? test : test.skip)(
+		"caches the Copilot session token across calls",
+		async function () {
+			this.timeout(60_000);
+			const service = createService();
 
-		const first = await service.utilityChatCompletion(githubToken!, {
-			messages: [{ role: 'user', content: 'Say "ok" and nothing else.' }],
-		});
-		const second = await service.utilityChatCompletion(githubToken!, {
-			messages: [{ role: 'user', content: 'Say "ok" and nothing else.' }],
-		});
+			const first = await service.utilityChatCompletion(githubToken!, {
+				messages: [{ role: "user", content: 'Say "ok" and nothing else.' }],
+			});
+			const second = await service.utilityChatCompletion(githubToken!, {
+				messages: [{ role: "user", content: 'Say "ok" and nothing else.' }],
+			});
 
-		// Both calls succeed; the second is served from the cached
-		// Copilot token + resolved model id. Cache-hit assertions live in
-		// the unit-test suite (see copilotApiService.test.ts) where we can
-		// count `RequestType.CopilotToken` calls against a fake fetch.
-		assert.ok(first.toLowerCase().includes('ok'));
-		assert.ok(second.toLowerCase().includes('ok'));
-	});
+			// Both calls succeed; the second is served from the cached
+			// Copilot token + resolved model id. Cache-hit assertions live in
+			// the unit-test suite (see copilotApiService.test.ts) where we can
+			// count `RequestType.CopilotToken` calls against a fake fetch.
+			assert.ok(first.toLowerCase().includes("ok"));
+			assert.ok(second.toLowerCase().includes("ok"));
+		},
+	);
 });

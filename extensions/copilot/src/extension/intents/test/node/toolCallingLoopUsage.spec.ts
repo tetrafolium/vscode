@@ -5,8 +5,15 @@
 
 import { Raw } from '@vscode/prompt-tsx';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { ChatRequest, LanguageModelChat, LanguageModelToolInformation } from 'vscode';
-import { ChatFetchResponseType, ChatResponse } from '../../../../platform/chat/common/commonTypes';
+import type {
+	ChatRequest,
+	LanguageModelChat,
+	LanguageModelToolInformation,
+} from 'vscode';
+import {
+	ChatFetchResponseType,
+	ChatResponse,
+} from '../../../../platform/chat/common/commonTypes';
 import { toTextPart } from '../../../../platform/chat/common/globalStringUtils';
 import { ITestingServicesAccessor } from '../../../../platform/test/node/services';
 import { ChatResponseStreamImpl } from '../../../../util/common/chatResponseStreamImpl';
@@ -16,18 +23,30 @@ import { generateUuid } from '../../../../util/vs/base/common/uuid';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { Conversation, Turn } from '../../../prompt/common/conversation';
 import { IBuildPromptContext } from '../../../prompt/common/intents';
-import { IBuildPromptResult, nullRenderPromptResult } from '../../../prompt/node/intents';
+import {
+	IBuildPromptResult,
+	nullRenderPromptResult,
+} from '../../../prompt/node/intents';
 import { createExtensionUnitTestingServices } from '../../../test/node/services';
-import { IToolCallingLoopOptions, ToolCallingLoop } from '../../node/toolCallingLoop';
+import {
+	IToolCallingLoopOptions,
+	ToolCallingLoop,
+} from '../../node/toolCallingLoop';
 
 class UsageCapturingStream extends ChatResponseStreamImpl {
-	public readonly usages: Array<{ promptTokens: number; completionTokens: number }>;
+	public readonly usages: Array<{
+		promptTokens: number;
+		completionTokens: number;
+	}>;
 
 	constructor() {
-		const usages: Array<{ promptTokens: number; completionTokens: number }> = [];
+		const usages: Array<{
+			promptTokens: number;
+			completionTokens: number;
+		}> = [];
 		super(
-			() => { },
-			() => { },
+			() => {},
+			() => {},
 			undefined,
 			undefined,
 			undefined,
@@ -35,23 +54,32 @@ class UsageCapturingStream extends ChatResponseStreamImpl {
 			(usage) => {
 				usages.push({
 					promptTokens: usage.promptTokens,
-					completionTokens: usage.completionTokens
+					completionTokens: usage.completionTokens,
 				});
-			}
+			},
 		);
 		this.usages = usages;
 	}
 }
 
 class UsageTestToolCallingLoop extends ToolCallingLoop<IToolCallingLoopOptions> {
-	protected override async buildPrompt(_buildPromptContext: IBuildPromptContext): Promise<IBuildPromptResult> {
+	protected override async buildPrompt(
+		_buildPromptContext: IBuildPromptContext,
+	): Promise<IBuildPromptResult> {
 		return {
 			...nullRenderPromptResult(),
-			messages: [{ role: Raw.ChatRole.User, content: [toTextPart('hello world')] }],
+			messages: [
+				{
+					role: Raw.ChatRole.User,
+					content: [toTextPart('hello world')],
+				},
+			],
 		};
 	}
 
-	protected override async getAvailableTools(): Promise<LanguageModelToolInformation[]> {
+	protected override async getAvailableTools(): Promise<
+		LanguageModelToolInformation[]
+	> {
 		return [];
 	}
 
@@ -64,16 +92,18 @@ class UsageTestToolCallingLoop extends ToolCallingLoop<IToolCallingLoopOptions> 
 			usage: {
 				prompt_tokens: 100,
 				completion_tokens: 20,
-				total_tokens: 120
+				total_tokens: 120,
 			},
-			resolvedModel: 'gpt-4.1'
+			resolvedModel: 'gpt-4.1',
 		};
 	}
 }
 
 const chatPanelLocation: ChatRequest['location'] = 1;
 
-function createMockChatRequest(overrides: Partial<ChatRequest> = {}): ChatRequest {
+function createMockChatRequest(
+	overrides: Partial<ChatRequest> = {},
+): ChatRequest {
 	return {
 		prompt: 'test prompt',
 		command: undefined,
@@ -97,7 +127,7 @@ function createMockChatRequest(overrides: Partial<ChatRequest> = {}): ChatReques
 
 function createConversation(prompt: string): Conversation {
 	return new Conversation(generateUuid(), [
-		new Turn(generateUuid(), { type: 'user', message: prompt })
+		new Turn(generateUuid(), { type: 'user', message: prompt }),
 	]);
 }
 
@@ -109,7 +139,9 @@ describe('ToolCallingLoop usage reporting', () => {
 
 	beforeEach(() => {
 		disposables = new DisposableStore();
-		const serviceCollection = disposables.add(createExtensionUnitTestingServices());
+		const serviceCollection = disposables.add(
+			createExtensionUnitTestingServices(),
+		);
 		accessor = serviceCollection.createTestingAccessor();
 		instantiationService = accessor.get(IInstantiationService);
 		tokenSource = new CancellationTokenSource();
@@ -129,20 +161,22 @@ describe('ToolCallingLoop usage reporting', () => {
 				conversation: createConversation(request.prompt),
 				toolCallLimit: 1,
 				request,
-			}
+			},
 		);
 		disposables.add(loop);
 		const stream = new UsageCapturingStream();
 
 		await loop.runOne(stream, 0, tokenSource.token);
 
-		expect(stream.usages).toEqual([{ promptTokens: 100, completionTokens: 20 }]);
+		expect(stream.usages).toEqual([
+			{ promptTokens: 100, completionTokens: 20 },
+		]);
 	});
 
 	it('does not report usage for subagent requests', async () => {
 		const request = createMockChatRequest({
 			subAgentInvocationId: 'subagent-usage-test',
-			subAgentName: 'search'
+			subAgentName: 'search',
 		});
 		const loop = instantiationService.createInstance(
 			UsageTestToolCallingLoop,
@@ -150,7 +184,7 @@ describe('ToolCallingLoop usage reporting', () => {
 				conversation: createConversation(request.prompt),
 				toolCallLimit: 1,
 				request,
-			}
+			},
 		);
 		disposables.add(loop);
 		const stream = new UsageCapturingStream();

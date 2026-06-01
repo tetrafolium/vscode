@@ -5,7 +5,10 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IBlockedExtensionService = createServiceIdentifier<IBlockedExtensionService>('IBlockedExtensionService');
+export const IBlockedExtensionService =
+	createServiceIdentifier<IBlockedExtensionService>(
+		'IBlockedExtensionService',
+	);
 
 export interface IBlockedExtensionService {
 	readonly _serviceBrand: undefined;
@@ -16,7 +19,8 @@ export interface IBlockedExtensionService {
 
 export class BlockedExtensionService implements IBlockedExtensionService {
 	readonly _serviceBrand: undefined;
-	private blockedExtensions: Map<string, ReturnType<typeof setTimeout>> = new Map();
+	private blockedExtensions: Map<string, ReturnType<typeof setTimeout>> =
+		new Map();
 
 	reportBlockedExtension(extensionId: string, timeout: number): void {
 		if (this.blockedExtensions.has(extensionId)) {

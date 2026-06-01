@@ -3,21 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../../base/common/event.js';
-import { FileAccess } from '../../../../base/common/network.js';
-import { dirname } from '../../../../base/common/path.js';
-import { OS, OperatingSystem } from '../../../../base/common/platform.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IEnvironmentService, INativeEnvironmentService } from '../../../environment/common/environment.js';
-import { IInstantiationService } from '../../../instantiation/common/instantiation.js';
-import { IProductService } from '../../../product/common/productService.js';
-import { ISandboxHelperService, type ISandboxDependencyStatus, type IWindowsMxcPolicyContainment, type IWindowsMxcSandboxPolicy } from '../../../sandbox/common/sandboxHelperService.js';
-import { ITerminalSandboxEngineHost, ITerminalSandboxRuntimeInfo, TerminalSandboxEngine } from '../../../sandbox/common/terminalSandboxEngine.js';
-import { IAgentConfigurationService } from '../agentConfigurationService.js';
-import { AgentHostSandboxConfigKey, sandboxConfigSchema, sandboxSettingIdToAgentHostKey } from '../../common/sandboxConfigSchema.js';
+import { Event } from "../../../../base/common/event.js";
+import { FileAccess } from "../../../../base/common/network.js";
+import { dirname } from "../../../../base/common/path.js";
+import { OS, OperatingSystem } from "../../../../base/common/platform.js";
+import { URI } from "../../../../base/common/uri.js";
+import {
+	IEnvironmentService,
+	INativeEnvironmentService,
+} from "../../../environment/common/environment.js";
+import { IInstantiationService } from "../../../instantiation/common/instantiation.js";
+import { IProductService } from "../../../product/common/productService.js";
+import {
+	ISandboxHelperService,
+	type ISandboxDependencyStatus,
+	type IWindowsMxcPolicyContainment,
+	type IWindowsMxcSandboxPolicy,
+} from "../../../sandbox/common/sandboxHelperService.js";
+import {
+	ITerminalSandboxEngineHost,
+	ITerminalSandboxRuntimeInfo,
+	TerminalSandboxEngine,
+} from "../../../sandbox/common/terminalSandboxEngine.js";
+import { IAgentConfigurationService } from "../agentConfigurationService.js";
+import {
+	AgentHostSandboxConfigKey,
+	sandboxConfigSchema,
+	sandboxSettingIdToAgentHostKey,
+} from "../../common/sandboxConfigSchema.js";
 
 /** Subdirectory under the user home + product data folder where the engine creates its temp dir. */
-const SANDBOX_TEMP_DIR_NAME = 'tmp';
+const SANDBOX_TEMP_DIR_NAME = "tmp";
 
 /**
  * Host adapter that bridges agent-host environment data into the shared
@@ -38,7 +54,8 @@ class AgentHostTerminalSandboxHost implements ITerminalSandboxEngineHost {
 		sandboxHelper: ISandboxHelperService,
 	) {
 		this._sandboxHelper = sandboxHelper;
-		this.onDidChangeSandboxSettings = this._agentConfigurationService.onDidRootConfigChange;
+		this.onDidChangeSandboxSettings =
+			this._agentConfigurationService.onDidRootConfigChange;
 	}
 
 	async getOS(): Promise<OperatingSystem> {
@@ -46,8 +63,8 @@ class AgentHostTerminalSandboxHost implements ITerminalSandboxEngineHost {
 	}
 
 	async getRuntimeInfo(): Promise<ITerminalSandboxRuntimeInfo> {
-		const appRoot = dirname(FileAccess.asFileUri('').path);
-		const runAsNode = !!process.versions['electron'];
+		const appRoot = dirname(FileAccess.asFileUri("").path);
+		const runAsNode = !!process.versions["electron"];
 		return { appRoot, execPath: process.execPath, runAsNode };
 	}
 
@@ -60,7 +77,11 @@ class AgentHostTerminalSandboxHost implements ITerminalSandboxEngineHost {
 		if (!userHome) {
 			return undefined;
 		}
-		const sandboxRoot = URI.joinPath(userHome, this._productService.dataFolderName, SANDBOX_TEMP_DIR_NAME);
+		const sandboxRoot = URI.joinPath(
+			userHome,
+			this._productService.dataFolderName,
+			SANDBOX_TEMP_DIR_NAME,
+		);
 		return URI.joinPath(sandboxRoot, `agenthost_${this._sessionId}`);
 	}
 
@@ -73,7 +94,9 @@ class AgentHostTerminalSandboxHost implements ITerminalSandboxEngineHost {
 		return this._workingDirectory ? [this._workingDirectory] : [];
 	}
 
-	async checkSandboxDependencies(): Promise<ISandboxDependencyStatus | undefined> {
+	async checkSandboxDependencies(): Promise<
+		ISandboxDependencyStatus | undefined
+	> {
 		return this._sandboxHelper.checkSandboxDependencies();
 	}
 
@@ -85,8 +108,20 @@ class AgentHostTerminalSandboxHost implements ITerminalSandboxEngineHost {
 		return this._sandboxHelper.getWindowsMxcEnvironment();
 	}
 
-	async buildWindowsMxcSandboxPayload(commandLine: string, policy: IWindowsMxcSandboxPolicy, workingDirectory?: string, containerName?: string, containment?: IWindowsMxcPolicyContainment) {
-		return this._sandboxHelper.buildWindowsMxcSandboxPayload(commandLine, policy, workingDirectory, containerName, containment);
+	async buildWindowsMxcSandboxPayload(
+		commandLine: string,
+		policy: IWindowsMxcSandboxPolicy,
+		workingDirectory?: string,
+		containerName?: string,
+		containment?: IWindowsMxcPolicyContainment,
+	) {
+		return this._sandboxHelper.buildWindowsMxcSandboxPayload(
+			commandLine,
+			policy,
+			workingDirectory,
+			containerName,
+			containment,
+		);
 	}
 
 	getSandboxSetting<T>(settingId: string): T | undefined {
@@ -100,7 +135,10 @@ class AgentHostTerminalSandboxHost implements ITerminalSandboxEngineHost {
 		if (innerKey === undefined) {
 			return undefined;
 		}
-		const sandbox = this._agentConfigurationService.getRootValue(sandboxConfigSchema, AgentHostSandboxConfigKey.Sandbox);
+		const sandbox = this._agentConfigurationService.getRootValue(
+			sandboxConfigSchema,
+			AgentHostSandboxConfigKey.Sandbox,
+		);
 		return sandbox?.[innerKey] as T | undefined;
 	}
 }
@@ -120,7 +158,13 @@ export function createAgentHostSandboxEngine(
 	sessionId: string,
 	workingDirectory: URI | undefined,
 ): TerminalSandboxEngine {
-	const host = new AgentHostTerminalSandboxHost(sessionId, workingDirectory, environmentService as INativeEnvironmentService, productService, agentConfigurationService, sandboxHelper);
+	const host = new AgentHostTerminalSandboxHost(
+		sessionId,
+		workingDirectory,
+		environmentService as INativeEnvironmentService,
+		productService,
+		agentConfigurationService,
+		sandboxHelper,
+	);
 	return instantiationService.createInstance(TerminalSandboxEngine, host);
 }
-

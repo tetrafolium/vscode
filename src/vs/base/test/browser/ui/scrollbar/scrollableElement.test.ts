@@ -3,17 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { MouseWheelClassifier } from '../../../../browser/ui/scrollbar/scrollableElement.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../common/utils.js';
+import assert from "assert";
+import { MouseWheelClassifier } from "../../../../browser/ui/scrollbar/scrollableElement.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../common/utils.js";
 
 export type IMouseWheelEvent = [number, number, number];
 
-suite('MouseWheelClassifier', () => {
-
+suite("MouseWheelClassifier", () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('OSX - Apple Magic Mouse', () => {
+	test("OSX - Apple Magic Mouse", () => {
 		const testData: IMouseWheelEvent[] = [
 			[1503409622410, -0.025, 0],
 			[1503409622435, -0.175, 0],
@@ -60,7 +59,7 @@ suite('MouseWheelClassifier', () => {
 		}
 	});
 
-	test('OSX - Apple Touch Pad', () => {
+	test("OSX - Apple Touch Pad", () => {
 		const testData: IMouseWheelEvent[] = [
 			[1503409780792, 0.025, 0],
 			[1503409780808, 0.175, -0.025],
@@ -149,7 +148,7 @@ suite('MouseWheelClassifier', () => {
 		}
 	});
 
-	test('OSX - Razer Physical Mouse Wheel', () => {
+	test("OSX - Razer Physical Mouse Wheel", () => {
 		const testData: IMouseWheelEvent[] = [
 			[1503409880776, -1, 0],
 			[1503409880791, -1, 0],
@@ -206,11 +205,10 @@ suite('MouseWheelClassifier', () => {
 
 			const actual = classifier.isPhysicalMouseWheel();
 			assert.strictEqual(actual, true, `i = ${i}`);
-
 		}
 	});
 
-	test('Windows - Microsoft Arc Touch', () => {
+	test("Windows - Microsoft Arc Touch", () => {
 		const testData: IMouseWheelEvent[] = [
 			[1503418316909, -2, 0],
 			[1503418316985, -2, 0],
@@ -246,11 +244,10 @@ suite('MouseWheelClassifier', () => {
 
 			const actual = classifier.isPhysicalMouseWheel();
 			assert.strictEqual(actual, true, `i = ${i}`);
-
 		}
 	});
 
-	test('Windows - SurfaceBook TouchPad', () => {
+	test("Windows - SurfaceBook TouchPad", () => {
 		const testData: IMouseWheelEvent[] = [
 			[1503418499174, -3.35, 0],
 			[1503418499177, -0.9333333333333333, 0],
@@ -294,7 +291,7 @@ suite('MouseWheelClassifier', () => {
 		}
 	});
 
-	test('Windows - Razer physical wheel', () => {
+	test("Windows - Razer physical wheel", () => {
 		const testData: IMouseWheelEvent[] = [
 			[1503418638271, -2, 0],
 			[1503418638317, -2, 0],
@@ -380,11 +377,10 @@ suite('MouseWheelClassifier', () => {
 
 			const actual = classifier.isPhysicalMouseWheel();
 			assert.strictEqual(actual, true, `i = ${i}`);
-
 		}
 	});
 
-	test('Windows - Logitech physical wheel', () => {
+	test("Windows - Logitech physical wheel", () => {
 		const testData: IMouseWheelEvent[] = [
 			[1503418872930, -2, 0],
 			[1503418872952, -2, 0],
@@ -471,11 +467,10 @@ suite('MouseWheelClassifier', () => {
 
 			const actual = classifier.isPhysicalMouseWheel();
 			assert.strictEqual(actual, true, `i = ${i}`);
-
 		}
 	});
 
-	test('Windows - Microsoft basic v2 physical wheel', () => {
+	test("Windows - Microsoft basic v2 physical wheel", () => {
 		const testData: IMouseWheelEvent[] = [
 			[1503418994564, -2, 0],
 			[1503418994643, -2, 0],
@@ -529,7 +524,7 @@ suite('MouseWheelClassifier', () => {
 		}
 	});
 
-	test('Linux Wayland - Logitech G Pro Wireless', () => {
+	test("Linux Wayland - Logitech G Pro Wireless", () => {
 		const testData: IMouseWheelEvent[] = [
 			[1707837460397, -1.5, 0],
 			[1707837460449, -1.5, 0],
@@ -728,5 +723,4 @@ suite('MouseWheelClassifier', () => {
 			}
 		}
 	});
-
 });

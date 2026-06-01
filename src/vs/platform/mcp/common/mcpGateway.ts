@@ -3,15 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { URI } from '../../../base/common/uri.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { MCP } from './modelContextProtocol.js';
+import { Event } from "../../../base/common/event.js";
+import { URI } from "../../../base/common/uri.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import { MCP } from "./modelContextProtocol.js";
 
-export const IMcpGatewayService = createDecorator<IMcpGatewayService>('IMcpGatewayService');
+export const IMcpGatewayService =
+	createDecorator<IMcpGatewayService>("IMcpGatewayService");
 
-export const McpGatewayChannelName = 'mcpGateway';
-export const McpGatewayToolBrokerChannelName = 'mcpGatewayToolBroker';
+export const McpGatewayChannelName = "mcpGateway";
+export const McpGatewayToolBrokerChannelName = "mcpGatewayToolBroker";
 
 /**
  * Descriptor for an MCP server known to the gateway.
@@ -37,7 +38,10 @@ export interface IMcpGatewaySingleServerInvoker {
 	readonly onDidChangeTools: Event<void>;
 	readonly onDidChangeResources: Event<void>;
 	listTools(): Promise<readonly MCP.Tool[]>;
-	callTool(name: string, args: Record<string, unknown>): Promise<MCP.CallToolResult>;
+	callTool(
+		name: string,
+		args: Record<string, unknown>,
+	): Promise<MCP.CallToolResult>;
 	listResources(): Promise<readonly MCP.Resource[]>;
 	readResource(uri: string): Promise<MCP.ReadResourceResult>;
 	listResourceTemplates(): Promise<readonly MCP.ResourceTemplate[]>;
@@ -54,10 +58,19 @@ export interface IMcpGatewayToolInvoker {
 	readonly onDidChangeResources: Event<void>;
 	listServers(): readonly IMcpGatewayServerDescriptor[];
 	listToolsForServer(serverId: string): Promise<readonly MCP.Tool[]>;
-	callToolForServer(serverId: string, name: string, args: Record<string, unknown>): Promise<MCP.CallToolResult>;
+	callToolForServer(
+		serverId: string,
+		name: string,
+		args: Record<string, unknown>,
+	): Promise<MCP.CallToolResult>;
 	listResourcesForServer(serverId: string): Promise<readonly MCP.Resource[]>;
-	readResourceForServer(serverId: string, uri: string): Promise<MCP.ReadResourceResult>;
-	listResourceTemplatesForServer(serverId: string): Promise<readonly MCP.ResourceTemplate[]>;
+	readResourceForServer(
+		serverId: string,
+		uri: string,
+	): Promise<MCP.ReadResourceResult>;
+	listResourceTemplatesForServer(
+		serverId: string,
+	): Promise<readonly MCP.ResourceTemplate[]>;
 }
 
 /**
@@ -112,7 +125,10 @@ export interface IMcpGatewayService {
 	 * @param context Optional context (e.g., client ID) to associate with the gateway for cleanup purposes.
 	 * @returns A promise that resolves to the gateway info if successful.
 	 */
-	createGateway<TContext>(context: TContext, toolInvoker?: IMcpGatewayToolInvoker): Promise<IMcpGatewayInfo>;
+	createGateway<TContext>(
+		context: TContext,
+		toolInvoker?: IMcpGatewayToolInvoker,
+	): Promise<IMcpGatewayInfo>;
 
 	/**
 	 * Disposes a previously created gateway.

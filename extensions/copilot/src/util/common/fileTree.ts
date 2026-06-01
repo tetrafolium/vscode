@@ -5,8 +5,14 @@
 
 import type * as vscode from 'vscode';
 
-export function fileTreePartToMarkdown(fileTree: vscode.ChatResponseFileTreePart) {
-	const printTree = (node: vscode.ChatResponseFileTree, depth: number, isLastChild: boolean): string => {
+export function fileTreePartToMarkdown(
+	fileTree: vscode.ChatResponseFileTreePart,
+) {
+	const printTree = (
+		node: vscode.ChatResponseFileTree,
+		depth: number,
+		isLastChild: boolean,
+	): string => {
 		let output: string = '';
 		const indent = isLastChild ? '└── ' : '├── ';
 		if (depth === 1) {

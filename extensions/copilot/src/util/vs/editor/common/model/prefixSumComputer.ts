@@ -9,7 +9,6 @@ import { arrayInsert } from '../../../base/common/arrays';
 import { toUint32 } from '../../../base/common/uint';
 
 export class PrefixSumComputer {
-
 	/**
 	 * values[i] is the value at index i
 	 */
@@ -36,7 +35,10 @@ export class PrefixSumComputer {
 		return this.values.length;
 	}
 
-	public insertValues(insertIndex: number, insertValues: Uint32Array): boolean {
+	public insertValues(
+		insertIndex: number,
+		insertValues: Uint32Array,
+	): boolean {
 		insertIndex = toUint32(insertIndex);
 		const oldValues = this.values;
 		const oldPrefixSum = this.prefixSum;
@@ -48,7 +50,10 @@ export class PrefixSumComputer {
 
 		this.values = new Uint32Array(oldValues.length + insertValuesLen);
 		this.values.set(oldValues.subarray(0, insertIndex), 0);
-		this.values.set(oldValues.subarray(insertIndex), insertIndex + insertValuesLen);
+		this.values.set(
+			oldValues.subarray(insertIndex),
+			insertIndex + insertValuesLen,
+		);
 		this.values.set(insertValues, insertIndex);
 
 		if (insertIndex - 1 < this.prefixSumValidIndex[0]) {
@@ -57,7 +62,9 @@ export class PrefixSumComputer {
 
 		this.prefixSum = new Uint32Array(this.values.length);
 		if (this.prefixSumValidIndex[0] >= 0) {
-			this.prefixSum.set(oldPrefixSum.subarray(0, this.prefixSumValidIndex[0] + 1));
+			this.prefixSum.set(
+				oldPrefixSum.subarray(0, this.prefixSumValidIndex[0] + 1),
+			);
 		}
 		return true;
 	}
@@ -105,7 +112,9 @@ export class PrefixSumComputer {
 			this.prefixSumValidIndex[0] = startIndex - 1;
 		}
 		if (this.prefixSumValidIndex[0] >= 0) {
-			this.prefixSum.set(oldPrefixSum.subarray(0, this.prefixSumValidIndex[0] + 1));
+			this.prefixSum.set(
+				oldPrefixSum.subarray(0, this.prefixSumValidIndex[0] + 1),
+			);
 		}
 		return true;
 	}
@@ -148,7 +157,10 @@ export class PrefixSumComputer {
 		for (let i = startIndex; i <= index; i++) {
 			this.prefixSum[i] = this.prefixSum[i - 1] + this.values[i];
 		}
-		this.prefixSumValidIndex[0] = Math.max(this.prefixSumValidIndex[0], index);
+		this.prefixSumValidIndex[0] = Math.max(
+			this.prefixSumValidIndex[0],
+			index,
+		);
 		return this.prefixSum[index];
 	}
 
@@ -165,7 +177,7 @@ export class PrefixSumComputer {
 		let midStart = 0;
 
 		while (low <= high) {
-			mid = low + ((high - low) / 2) | 0;
+			mid = (low + (high - low) / 2) | 0;
 
 			midStop = this.prefixSum[mid];
 			midStart = midStop - this.values[mid];
@@ -187,7 +199,7 @@ export class PrefixSumComputer {
  * {@link getIndexOf} has an amortized runtime complexity of O(1).
  *
  * ({@link PrefixSumComputer.getIndexOf} is just  O(log n))
-*/
+ */
 export class ConstantTimePrefixSumComputer {
 	private _values: number[];
 	private _isValid: boolean;
@@ -200,7 +212,7 @@ export class ConstantTimePrefixSumComputer {
 
 	/**
 	 * _indexBySum[sum] = idx => _prefixSum[idx - 1] <= sum < _prefixSum[idx]
-	*/
+	 */
 	private _indexBySum: number[];
 
 	constructor(values: number[]) {
@@ -240,7 +252,8 @@ export class ConstantTimePrefixSumComputer {
 		if (idx === undefined) {
 			// sum does not have a direct entry in _indexBySum (e.g. sum >= getTotalSum() or the array is empty / all values are zero)
 			const lastIdx = Math.max(0, this._values.length - 1);
-			const lastPrefixSum = lastIdx > 0 ? this._prefixSum[lastIdx - 1] : 0;
+			const lastPrefixSum =
+				lastIdx > 0 ? this._prefixSum[lastIdx - 1] : 0;
 			return new PrefixSumIndexOfResult(lastIdx, sum - lastPrefixSum);
 		}
 		const viewLinesAbove = idx > 0 ? this._prefixSum[idx - 1] : 0;
@@ -267,7 +280,11 @@ export class ConstantTimePrefixSumComputer {
 			return;
 		}
 
-		for (let i = this._validEndIndex + 1, len = this._values.length; i < len; i++) {
+		for (
+			let i = this._validEndIndex + 1, len = this._values.length;
+			i < len;
+			i++
+		) {
 			const value = this._values[i];
 			const sumAbove = i > 0 ? this._prefixSum[i - 1] : 0;
 
@@ -279,7 +296,10 @@ export class ConstantTimePrefixSumComputer {
 
 		// trim things
 		this._prefixSum.length = this._values.length;
-		this._indexBySum.length = this._values.length > 0 ? this._prefixSum[this._values.length - 1] : 0;
+		this._indexBySum.length =
+			this._values.length > 0
+				? this._prefixSum[this._values.length - 1]
+				: 0;
 
 		// mark as valid
 		this._isValid = true;
@@ -296,13 +316,12 @@ export class ConstantTimePrefixSumComputer {
 	}
 }
 
-
 export class PrefixSumIndexOfResult {
 	_prefixSumIndexOfResultBrand: void = undefined;
 
 	constructor(
 		public readonly index: number,
-		public readonly remainder: number
+		public readonly remainder: number,
 	) {
 		this.index = index;
 		this.remainder = remainder;

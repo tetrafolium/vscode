@@ -3,29 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../../../base/browser/dom.js';
-import { StandardKeyboardEvent } from '../../../../../../../base/browser/keyboardEvent.js';
-import { Button } from '../../../../../../../base/browser/ui/button/button.js';
-import { Codicon } from '../../../../../../../base/common/codicons.js';
-import { Emitter } from '../../../../../../../base/common/event.js';
-import { IMarkdownString } from '../../../../../../../base/common/htmlContent.js';
-import { KeyCode } from '../../../../../../../base/common/keyCodes.js';
-import { Disposable, DisposableStore, MutableDisposable, toDisposable } from '../../../../../../../base/common/lifecycle.js';
-import { autorun } from '../../../../../../../base/common/observable.js';
-import { generateUuid } from '../../../../../../../base/common/uuid.js';
-import { localize } from '../../../../../../../nls.js';
-import { defaultButtonStyles } from '../../../../../../../platform/theme/browser/defaultStyles.js';
-import { IChatToolInvocation, ToolConfirmKind } from '../../../../common/chatService/chatService.js';
-import { ChatToolInvocationPart } from './chatToolInvocationPart.js';
-import '../media/chatToolConfirmationCarousel.css';
+import * as dom from "../../../../../../../base/browser/dom.js";
+import { StandardKeyboardEvent } from "../../../../../../../base/browser/keyboardEvent.js";
+import { Button } from "../../../../../../../base/browser/ui/button/button.js";
+import { Codicon } from "../../../../../../../base/common/codicons.js";
+import { Emitter } from "../../../../../../../base/common/event.js";
+import { IMarkdownString } from "../../../../../../../base/common/htmlContent.js";
+import { KeyCode } from "../../../../../../../base/common/keyCodes.js";
+import {
+	Disposable,
+	DisposableStore,
+	MutableDisposable,
+	toDisposable,
+} from "../../../../../../../base/common/lifecycle.js";
+import { autorun } from "../../../../../../../base/common/observable.js";
+import { generateUuid } from "../../../../../../../base/common/uuid.js";
+import { localize } from "../../../../../../../nls.js";
+import { defaultButtonStyles } from "../../../../../../../platform/theme/browser/defaultStyles.js";
+import {
+	IChatToolInvocation,
+	ToolConfirmKind,
+} from "../../../../common/chatService/chatService.js";
+import { ChatToolInvocationPart } from "./chatToolInvocationPart.js";
+import "../media/chatToolConfirmationCarousel.css";
 
 const COLLAPSED_CAROUSEL_MAX_HEIGHT = 300;
 const COLLAPSED_MESSAGE_MAX_HEIGHT = 200;
 const COLLAPSED_CODE_BLOCK_MAX_HEIGHT = 150;
 const MIN_CAROUSEL_MAX_HEIGHT = 80;
-const EXPANDABLE_CONTENT_SELECTOR = '.interactive-result-editor, .chat-markdown-part.rendered-markdown';
+const EXPANDABLE_CONTENT_SELECTOR =
+	".interactive-result-editor, .chat-markdown-part.rendered-markdown";
 
-export type ToolInvocationPartFactory = (tool: IChatToolInvocation) => ChatToolInvocationPart;
+export type ToolInvocationPartFactory = (
+	tool: IChatToolInvocation,
+) => ChatToolInvocationPart;
 
 export type ScrollToSubagentCallback = (subAgentInvocationId: string) => void;
 
@@ -75,85 +86,148 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 	) {
 		super();
 
-		const elements = dom.h('.chat-tool-confirmation-carousel@root', [
-			dom.h('.chat-tool-carousel-overlay@overlay', [
-				dom.h('.chat-tool-carousel-title-group@titleGroup', [
-					dom.h('span.chat-tool-carousel-collapsed-title@collapsedTitle'),
-					dom.h('button.chat-tool-carousel-agent-label@agentLabel'),
+		const elements = dom.h(".chat-tool-confirmation-carousel@root", [
+			dom.h(".chat-tool-carousel-overlay@overlay", [
+				dom.h(".chat-tool-carousel-title-group@titleGroup", [
+					dom.h("span.chat-tool-carousel-collapsed-title@collapsedTitle"),
+					dom.h("button.chat-tool-carousel-agent-label@agentLabel"),
 				]),
-				dom.h('.chat-tool-carousel-overlay-actions@overlayActions', [
-					dom.h('.chat-tool-carousel-step-indicator@stepIndicator'),
-					dom.h('.chat-tool-carousel-nav-arrows@navArrows'),
+				dom.h(".chat-tool-carousel-overlay-actions@overlayActions", [
+					dom.h(".chat-tool-carousel-step-indicator@stepIndicator"),
+					dom.h(".chat-tool-carousel-nav-arrows@navArrows"),
 				]),
 			]),
-			dom.h('.chat-tool-carousel-content@content'),
+			dom.h(".chat-tool-carousel-content@content"),
 		]);
 
 		this.domNode = elements.root;
 		this.domNode.tabIndex = -1;
-		this.domNode.setAttribute('role', 'group');
-		this.domNode.setAttribute('aria-label', localize('toolConfirmationCarousel', "Tool confirmation carousel"));
+		this.domNode.setAttribute("role", "group");
+		this.domNode.setAttribute(
+			"aria-label",
+			localize("toolConfirmationCarousel", "Tool confirmation carousel"),
+		);
 		this.collapsedTitle = elements.collapsedTitle;
 		this.agentLabel = elements.agentLabel;
 		this.contentContainer = elements.content;
 		this.contentContainer.id = generateUuid();
 		this.stepIndicator = elements.stepIndicator;
 		this.activeContentDisposables = this._register(new DisposableStore());
-		this.updateContentExpansionStateScheduler = this._register(new dom.AnimationFrameScheduler(this.domNode, () => this.updateContentExpansionState()));
-		this.contentResizeObserver = this._register(new dom.DisposableResizeObserver('ChatToolConfirmationCarouselPart.contentExpansion', () => this.updateContentExpansionStateScheduler.schedule()));
+		this.updateContentExpansionStateScheduler = this._register(
+			new dom.AnimationFrameScheduler(this.domNode, () =>
+				this.updateContentExpansionState(),
+			),
+		);
+		this.contentResizeObserver = this._register(
+			new dom.DisposableResizeObserver(
+				"ChatToolConfirmationCarouselPart.contentExpansion",
+				() => this.updateContentExpansionStateScheduler.schedule(),
+			),
+		);
 		this._register(this.contentResizeObserver.observe(this.contentContainer));
 
-		this.allowAllButton = this._register(new Button(elements.overlayActions, { ...defaultButtonStyles, small: true }));
-		this.allowAllButton.element.classList.add('chat-tool-carousel-allow-all-button');
-		this.allowAllButton.label = localize('allowAll', "Allow All");
+		this.allowAllButton = this._register(
+			new Button(elements.overlayActions, {
+				...defaultButtonStyles,
+				small: true,
+			}),
+		);
+		this.allowAllButton.element.classList.add(
+			"chat-tool-carousel-allow-all-button",
+		);
+		this.allowAllButton.label = localize("allowAll", "Allow All");
 		this._register(this.allowAllButton.onDidClick(() => this.allowAll()));
 
-		this.expandContentButton = this._register(new Button(elements.overlayActions, { ...defaultButtonStyles, secondary: true, supportIcons: true }));
-		this.expandContentButton.element.classList.add('chat-tool-carousel-header-button', 'chat-tool-carousel-expand-content-button');
-		this.expandContentButton.element.setAttribute('aria-controls', this.contentContainer.id);
+		this.expandContentButton = this._register(
+			new Button(elements.overlayActions, {
+				...defaultButtonStyles,
+				secondary: true,
+				supportIcons: true,
+			}),
+		);
+		this.expandContentButton.element.classList.add(
+			"chat-tool-carousel-header-button",
+			"chat-tool-carousel-expand-content-button",
+		);
+		this.expandContentButton.element.setAttribute(
+			"aria-controls",
+			this.contentContainer.id,
+		);
 		this.updateExpandContentButton();
 		dom.hide(this.expandContentButton.element);
-		this._register(this.expandContentButton.onDidClick(() => this.toggleContentExpanded()));
+		this._register(
+			this.expandContentButton.onDidClick(() => this.toggleContentExpanded()),
+		);
 
-		this.dismissButton = this._register(new Button(elements.overlayActions, { ...defaultButtonStyles, secondary: true, supportIcons: true }));
-		this.dismissButton.element.classList.add('chat-tool-carousel-dismiss-button');
+		this.dismissButton = this._register(
+			new Button(elements.overlayActions, {
+				...defaultButtonStyles,
+				secondary: true,
+				supportIcons: true,
+			}),
+		);
+		this.dismissButton.element.classList.add(
+			"chat-tool-carousel-dismiss-button",
+		);
 		this.dismissButton.label = `$(${Codicon.close.id})`;
-		const dismissButtonLabel = this.items.length === 1
-			? localize('skip', "Skip")
-			: localize('skipAll', "Skip All");
-		this.dismissButton.element.setAttribute('aria-label', dismissButtonLabel);
+		const dismissButtonLabel =
+			this.items.length === 1
+				? localize("skip", "Skip")
+				: localize("skipAll", "Skip All");
+		this.dismissButton.element.setAttribute("aria-label", dismissButtonLabel);
 		this.dismissButton.element.title = dismissButtonLabel;
 		this._register(this.dismissButton.onDidClick(() => this.skipAll()));
 
-		this.prevButton = this._register(new Button(elements.navArrows, {
-			...defaultButtonStyles,
-			secondary: true,
-			supportIcons: true,
-		}));
-		this.prevButton.element.classList.add('chat-tool-carousel-nav-arrow');
+		this.prevButton = this._register(
+			new Button(elements.navArrows, {
+				...defaultButtonStyles,
+				secondary: true,
+				supportIcons: true,
+			}),
+		);
+		this.prevButton.element.classList.add("chat-tool-carousel-nav-arrow");
 		this.prevButton.label = `$(${Codicon.chevronLeft.id})`;
-		this.prevButton.element.setAttribute('aria-label', localize('previous', "Previous"));
+		this.prevButton.element.setAttribute(
+			"aria-label",
+			localize("previous", "Previous"),
+		);
 		this._register(this.prevButton.onDidClick(() => this.navigateRelative(-1)));
 
-		this.nextButton = this._register(new Button(elements.navArrows, {
-			...defaultButtonStyles,
-			secondary: true,
-			supportIcons: true,
-		}));
-		this.nextButton.element.classList.add('chat-tool-carousel-nav-arrow');
+		this.nextButton = this._register(
+			new Button(elements.navArrows, {
+				...defaultButtonStyles,
+				secondary: true,
+				supportIcons: true,
+			}),
+		);
+		this.nextButton.element.classList.add("chat-tool-carousel-nav-arrow");
 		this.nextButton.label = `$(${Codicon.chevronRight.id})`;
-		this.nextButton.element.setAttribute('aria-label', localize('next', "Next"));
+		this.nextButton.element.setAttribute(
+			"aria-label",
+			localize("next", "Next"),
+		);
 		this._register(this.nextButton.onDidClick(() => this.navigateRelative(1)));
 
-		this._register(dom.addDisposableListener(this.agentLabel, 'click', e => {
-			e.preventDefault();
-			this.scrollToActiveSubagent();
-		}));
+		this._register(
+			dom.addDisposableListener(this.agentLabel, "click", (e) => {
+				e.preventDefault();
+				this.scrollToActiveSubagent();
+			}),
+		);
 
-		this._register(dom.addDisposableListener(this.domNode, 'keydown', e => this.onKeydown(e)));
+		this._register(
+			dom.addDisposableListener(this.domNode, "keydown", (e) =>
+				this.onKeydown(e),
+			),
+		);
 
 		for (const tool of initialTools) {
-			this.addToolInvocation(tool, this.initialSubAgentInvocationId, this.initialAgentName, this.scrollToSubagent);
+			this.addToolInvocation(
+				tool,
+				this.initialSubAgentInvocationId,
+				this.initialAgentName,
+				this.scrollToSubagent,
+			);
 		}
 	}
 
@@ -170,9 +244,17 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 		return this.toolCallIds.has(toolCallId);
 	}
 
-	addToolInvocation(tool: IChatToolInvocation, subAgentInvocationId?: string, agentName?: string, scrollToSubagent?: ScrollToSubagentCallback, toolPart?: ChatToolInvocationPart): void {
+	addToolInvocation(
+		tool: IChatToolInvocation,
+		subAgentInvocationId?: string,
+		agentName?: string,
+		scrollToSubagent?: ScrollToSubagentCallback,
+		toolPart?: ChatToolInvocationPart,
+	): void {
 		if (this.toolCallIds.has(tool.toolCallId)) {
-			const existing = this.items.find(item => item.toolCallId === tool.toolCallId);
+			const existing = this.items.find(
+				(item) => item.toolCallId === tool.toolCallId,
+			);
 			if (existing && toolPart && !existing.toolPart) {
 				this.replaceExternalToolPart(existing, toolPart);
 			}
@@ -198,12 +280,17 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 			this.watchExternalToolPart(item, toolPart);
 		}
 
-		disposables.add(autorun(reader => {
-			const currentState = tool.state.read(reader);
-			if (currentState.type !== IChatToolInvocation.StateKind.WaitingForConfirmation) {
-				this.removeItem(tool.toolCallId);
-			}
-		}));
+		disposables.add(
+			autorun((reader) => {
+				const currentState = tool.state.read(reader);
+				if (
+					currentState.type !==
+					IChatToolInvocation.StateKind.WaitingForConfirmation
+				) {
+					this.removeItem(tool.toolCallId);
+				}
+			}),
+		);
 
 		this.updateUI();
 
@@ -212,7 +299,10 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 		}
 	}
 
-	private replaceExternalToolPart(item: ICarouselToolItem, toolPart: ChatToolInvocationPart): void {
+	private replaceExternalToolPart(
+		item: ICarouselToolItem,
+		toolPart: ChatToolInvocationPart,
+	): void {
 		if (item.toolPart === toolPart) {
 			return;
 		}
@@ -229,9 +319,12 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 		}
 	}
 
-	private watchExternalToolPart(item: ICarouselToolItem, toolPart: ChatToolInvocationPart): void {
+	private watchExternalToolPart(
+		item: ICarouselToolItem,
+		toolPart: ChatToolInvocationPart,
+	): void {
 		let isItemAlive = true;
-		item.disposables.add(toDisposable(() => isItemAlive = false));
+		item.disposables.add(toDisposable(() => (isItemAlive = false)));
 
 		const externalPartDisposeWatcher = new MutableDisposable();
 		externalPartDisposeWatcher.value = toDisposable(() => {
@@ -246,7 +339,9 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 			}
 		});
 		toolPart.addDisposable(externalPartDisposeWatcher);
-		item.disposables.add(toDisposable(() => externalPartDisposeWatcher.clear()));
+		item.disposables.add(
+			toDisposable(() => externalPartDisposeWatcher.clear()),
+		);
 	}
 
 	override dispose(): void {
@@ -262,7 +357,7 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 	}
 
 	private removeItem(toolCallId: string): void {
-		const index = this.items.findIndex(i => i.toolCallId === toolCallId);
+		const index = this.items.findIndex((i) => i.toolCallId === toolCallId);
 		if (index < 0) {
 			return;
 		}
@@ -298,7 +393,8 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 		if (this.items.length <= 1) {
 			return;
 		}
-		const newIndex = (this.activeIndex + delta + this.items.length) % this.items.length;
+		const newIndex =
+			(this.activeIndex + delta + this.items.length) % this.items.length;
 		this.setActiveIndex(newIndex);
 	}
 
@@ -312,7 +408,8 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 		}
 
 		const event = new StandardKeyboardEvent(e);
-		const focusContentAfterNavigation = dom.isHTMLElement(e.target) && this.contentContainer.contains(e.target);
+		const focusContentAfterNavigation =
+			dom.isHTMLElement(e.target) && this.contentContainer.contains(e.target);
 		let didNavigate = false;
 
 		switch (event.keyCode) {
@@ -351,7 +448,9 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 			return false;
 		}
 
-		return !!target.closest('.monaco-editor, .interactive-result-editor, .chat-confirmation-widget-message, input, textarea, select, [contenteditable="true"]');
+		return !!target.closest(
+			'.monaco-editor, .interactive-result-editor, .chat-confirmation-widget-message, input, textarea, select, [contenteditable="true"]',
+		);
 	}
 
 	private focusActiveContent(): void {
@@ -361,19 +460,24 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 	private updateUI(): void {
 		const item = this.items[this.activeIndex];
 
-		this.collapsedTitle.textContent = this.getToolTitle(item) ?? '';
+		this.collapsedTitle.textContent = this.getToolTitle(item) ?? "";
 		dom.setVisibility(!!this.collapsedTitle.textContent, this.collapsedTitle);
 
 		if (item?.agentName) {
 			this.agentLabel.textContent = `\u2014 ${item.agentName}`;
-			this.agentLabel.disabled = !item.subAgentInvocationId || !item.scrollToSubagent;
-			this.agentLabel.title = localize('scrollToSubagent', "Scroll to {0}", item.agentName);
-			this.agentLabel.setAttribute('aria-label', this.agentLabel.title);
+			this.agentLabel.disabled =
+				!item.subAgentInvocationId || !item.scrollToSubagent;
+			this.agentLabel.title = localize(
+				"scrollToSubagent",
+				"Scroll to {0}",
+				item.agentName,
+			);
+			this.agentLabel.setAttribute("aria-label", this.agentLabel.title);
 			dom.show(this.agentLabel);
 		} else {
-			this.agentLabel.textContent = '';
-			this.agentLabel.title = '';
-			this.agentLabel.removeAttribute('aria-label');
+			this.agentLabel.textContent = "";
+			this.agentLabel.title = "";
+			this.agentLabel.removeAttribute("aria-label");
 			dom.hide(this.agentLabel);
 		}
 
@@ -389,8 +493,8 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 		dom.setVisibility(this.canExpandContent, this.expandContentButton.element);
 
 		this.allowAllButton.label = multi
-			? localize('allowAll', "Allow All")
-			: localize('allow', "Allow");
+			? localize("allowAll", "Allow All")
+			: localize("allow", "Allow");
 		this.updateExpandContentButton();
 	}
 
@@ -414,7 +518,9 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 		}
 
 		this.contentContainer.appendChild(item.toolPart.domNode);
-		this.activeContentDisposables.add(this.contentResizeObserver.observe(item.toolPart.domNode));
+		this.activeContentDisposables.add(
+			this.contentResizeObserver.observe(item.toolPart.domNode),
+		);
 		this.observeExpandableContentElements(item.toolPart.domNode);
 		this.updateContentExpansionStateScheduler.schedule();
 	}
@@ -429,12 +535,16 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 	}
 
 	private updateContentExpansionState(): void {
-		this.canExpandContent = this.items.length > 0 && this.isActiveContentLargerThanCollapsedLimit();
+		this.canExpandContent =
+			this.items.length > 0 && this.isActiveContentLargerThanCollapsedLimit();
 		if (!this.canExpandContent) {
 			this._isContentExpanded = false;
 		}
 
-		this.domNode.classList.toggle('chat-tool-carousel-content-expanded', this.canExpandContent && this._isContentExpanded);
+		this.domNode.classList.toggle(
+			"chat-tool-carousel-content-expanded",
+			this.canExpandContent && this._isContentExpanded,
+		);
 		this.updateMaxHeightStyle();
 		dom.setVisibility(this.canExpandContent, this.expandContentButton.element);
 		this.updateExpandContentButton();
@@ -442,25 +552,30 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 
 	private updateMaxHeightStyle(): void {
 		if (this.maxHeight === undefined) {
-			this.domNode.style.removeProperty('max-height');
+			this.domNode.style.removeProperty("max-height");
 			return;
 		}
 
 		const expanded = this.canExpandContent && this._isContentExpanded;
-		const maxHeight = expanded ? Math.max(MIN_CAROUSEL_MAX_HEIGHT, this.maxHeight) : this.getCollapsedMaxHeight();
+		const maxHeight = expanded
+			? Math.max(MIN_CAROUSEL_MAX_HEIGHT, this.maxHeight)
+			: this.getCollapsedMaxHeight();
 		this.domNode.style.maxHeight = `${Math.floor(maxHeight)}px`;
 	}
 
 	private updateExpandContentButton(): void {
 		const expanded = this.canExpandContent && this._isContentExpanded;
 		const label = expanded
-			? localize('restoreConfirmationSize', "Restore Confirmation Size")
-			: localize('expandConfirmationUp', "Expand Confirmation Up");
+			? localize("restoreConfirmationSize", "Restore Confirmation Size")
+			: localize("expandConfirmationUp", "Expand Confirmation Up");
 		this.expandContentButton.label = expanded
 			? `$(${Codicon.screenNormal.id})`
 			: `$(${Codicon.screenFull.id})`;
-		this.expandContentButton.element.setAttribute('aria-label', label);
-		this.expandContentButton.element.setAttribute('aria-expanded', String(expanded));
+		this.expandContentButton.element.setAttribute("aria-label", label);
+		this.expandContentButton.element.setAttribute(
+			"aria-expanded",
+			String(expanded),
+		);
 		this.expandContentButton.setTitle(label);
 	}
 
@@ -473,8 +588,14 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 		return this.hasInnerContentLargerThanCollapsedLimit(activeContent);
 	}
 
-	private hasInnerContentLargerThanCollapsedLimit(element: HTMLElement): boolean {
-		if (this.isExpandableContentElement(element) && this.getElementHeight(element) > this.getExpandableContentHeightLimit(element) + 1) {
+	private hasInnerContentLargerThanCollapsedLimit(
+		element: HTMLElement,
+	): boolean {
+		if (
+			this.isExpandableContentElement(element) &&
+			this.getElementHeight(element) >
+				this.getExpandableContentHeightLimit(element) + 1
+		) {
 			return true;
 		}
 
@@ -497,7 +618,9 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 
 	private observeExpandableContentElements(element: HTMLElement): void {
 		if (this.isExpandableContentElement(element)) {
-			this.activeContentDisposables.add(this.contentResizeObserver.observe(element));
+			this.activeContentDisposables.add(
+				this.contentResizeObserver.observe(element),
+			);
 		}
 
 		for (const child of element.children) {
@@ -513,31 +636,47 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 
 	private getExpandableContentHeightLimit(element: HTMLElement): number {
 		const window = dom.getWindow(this.domNode);
-		if (element.classList.contains('interactive-result-editor')) {
-			return Math.min(COLLAPSED_CODE_BLOCK_MAX_HEIGHT, window.innerHeight * 0.25);
+		if (element.classList.contains("interactive-result-editor")) {
+			return Math.min(
+				COLLAPSED_CODE_BLOCK_MAX_HEIGHT,
+				window.innerHeight * 0.25,
+			);
 		}
 
 		return Math.min(COLLAPSED_MESSAGE_MAX_HEIGHT, window.innerHeight * 0.3);
 	}
 
 	private getCollapsedMaxHeight(): number {
-		const configuredMaxHeight = this.maxHeight === undefined ? Number.POSITIVE_INFINITY : Math.max(MIN_CAROUSEL_MAX_HEIGHT, this.maxHeight);
-		return Math.min(configuredMaxHeight, COLLAPSED_CAROUSEL_MAX_HEIGHT, dom.getWindow(this.domNode).innerHeight * 0.45);
+		const configuredMaxHeight =
+			this.maxHeight === undefined
+				? Number.POSITIVE_INFINITY
+				: Math.max(MIN_CAROUSEL_MAX_HEIGHT, this.maxHeight);
+		return Math.min(
+			configuredMaxHeight,
+			COLLAPSED_CAROUSEL_MAX_HEIGHT,
+			dom.getWindow(this.domNode).innerHeight * 0.45,
+		);
 	}
 
 	allowAll(): void {
 		for (const item of [...this.items]) {
-			IChatToolInvocation.confirmWith(item.tool, { type: ToolConfirmKind.UserAction });
+			IChatToolInvocation.confirmWith(item.tool, {
+				type: ToolConfirmKind.UserAction,
+			});
 		}
 	}
 
 	private skipAll(): void {
 		for (const item of [...this.items]) {
-			IChatToolInvocation.confirmWith(item.tool, { type: ToolConfirmKind.Skipped });
+			IChatToolInvocation.confirmWith(item.tool, {
+				type: ToolConfirmKind.Skipped,
+			});
 		}
 	}
 
-	private getToolTitle(item: ICarouselToolItem | undefined): string | undefined {
+	private getToolTitle(
+		item: ICarouselToolItem | undefined,
+	): string | undefined {
 		if (!item) {
 			return undefined;
 		}
@@ -549,25 +688,30 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 	}
 
 	private truncateTitle(text: string): string {
-		text = text.replace(/\s+/g, ' ').trim();
+		text = text.replace(/\s+/g, " ").trim();
 		const maxLength = 100;
-		return text.length > maxLength ? `${text.substring(0, maxLength)}\u2026` : text;
+		return text.length > maxLength
+			? `${text.substring(0, maxLength)}\u2026`
+			: text;
 	}
 
 	private toPlainText(message: string | IMarkdownString): string {
-		const markdown = typeof message === 'string' ? message : message.value;
+		const markdown = typeof message === "string" ? message : message.value;
 		return markdown
-			.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_match, text, url) => text || this.basename(url))
-			.replace(/\*\*([^*]+)\*\*/g, '$1')
-			.replace(/__([^_]+)__/g, '$1')
-			.replace(/`([^`]+)`/g, '$1')
-			.replace(/[\\*_#>]/g, '');
+			.replace(
+				/\[([^\]]*)\]\(([^)]+)\)/g,
+				(_match, text, url) => text || this.basename(url),
+			)
+			.replace(/\*\*([^*]+)\*\*/g, "$1")
+			.replace(/__([^_]+)__/g, "$1")
+			.replace(/`([^`]+)`/g, "$1")
+			.replace(/[\\*_#>]/g, "");
 	}
 
 	private basename(url: string): string {
 		try {
-			const path = decodeURIComponent(url.split('?')[0].split('#')[0]);
-			const segments = path.split('/').filter(Boolean);
+			const path = decodeURIComponent(url.split("?")[0].split("#")[0]);
+			const segments = path.split("/").filter(Boolean);
 			return segments.at(-1) ?? url;
 		} catch {
 			return url;
@@ -582,7 +726,9 @@ export class ChatToolConfirmationCarouselPart extends Disposable {
 	}
 
 	activateFirstToolForSubagent(subAgentInvocationId: string): void {
-		const index = this.items.findIndex(i => i.subAgentInvocationId === subAgentInvocationId);
+		const index = this.items.findIndex(
+			(i) => i.subAgentInvocationId === subAgentInvocationId,
+		);
 		if (index >= 0) {
 			this.setActiveIndex(index);
 		}

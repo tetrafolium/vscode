@@ -3,38 +3,45 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { MdLanguageClient } from '../client/client';
-import * as proto from '../client/protocol';
+import * as vscode from "vscode";
+import { MdLanguageClient } from "../client/client";
+import * as proto from "../client/protocol";
 
 enum OpenMarkdownLinks {
-	beside = 'beside',
-	currentGroup = 'currentGroup',
+	beside = "beside",
+	currentGroup = "currentGroup",
 }
 
 export class MdLinkOpener {
-
 	readonly #client: MdLanguageClient;
 
-	constructor(
-		client: MdLanguageClient,
-	) {
+	constructor(client: MdLanguageClient) {
 		this.#client = client;
 	}
 
-	public async resolveDocumentLink(linkText: string, fromResource: vscode.Uri): Promise<proto.ResolvedDocumentLinkTarget> {
+	public async resolveDocumentLink(
+		linkText: string,
+		fromResource: vscode.Uri,
+	): Promise<proto.ResolvedDocumentLinkTarget> {
 		return this.#client.resolveLinkTarget(linkText, fromResource);
 	}
 
-	public async openDocumentLink(linkText: string, fromResource: vscode.Uri, viewColumn?: vscode.ViewColumn): Promise<void> {
-		const resolved = await this.#client.resolveLinkTarget(linkText, fromResource);
+	public async openDocumentLink(
+		linkText: string,
+		fromResource: vscode.Uri,
+		viewColumn?: vscode.ViewColumn,
+	): Promise<void> {
+		const resolved = await this.#client.resolveLinkTarget(
+			linkText,
+			fromResource,
+		);
 		if (!resolved) {
 			return;
 		}
 
 		let uri = vscode.Uri.from(resolved.uri);
 		let rangeSelection: vscode.Range | undefined;
-		if (resolved.kind === 'file' && !resolved.position) {
+		if (resolved.kind === "file" && !resolved.position) {
 			if (uri.fragment) {
 				rangeSelection = getSelectionFromLocationFragment(uri.fragment);
 			} else {
@@ -47,16 +54,18 @@ export class MdLinkOpener {
 		}
 
 		switch (resolved.kind) {
-			case 'external':
-				return vscode.commands.executeCommand('vscode.open', uri);
+			case "external":
+				return vscode.commands.executeCommand("vscode.open", uri);
 
-			case 'folder':
-				return vscode.commands.executeCommand('revealInExplorer', uri);
+			case "folder":
+				return vscode.commands.executeCommand("revealInExplorer", uri);
 
-			case 'file': {
+			case "file": {
 				// If no explicit viewColumn is given, check if the editor is already open in a tab
-				if (typeof viewColumn === 'undefined') {
-					for (const tab of vscode.window.tabGroups.all.flatMap(x => x.tabs)) {
+				if (typeof viewColumn === "undefined") {
+					for (const tab of vscode.window.tabGroups.all.flatMap(
+						(x) => x.tabs,
+					)) {
 						if (tab.input instanceof vscode.TabInputText) {
 							if (tab.input.uri.fsPath === uri.fsPath) {
 								viewColumn = tab.group.viewColumn;
@@ -66,9 +75,14 @@ export class MdLinkOpener {
 					}
 				}
 
-				return vscode.commands.executeCommand('vscode.open', uri, {
+				return vscode.commands.executeCommand("vscode.open", uri, {
 					selection: resolved.position
-						? new vscode.Range(resolved.position.line, resolved.position.character, resolved.position.line, resolved.position.character)
+						? new vscode.Range(
+								resolved.position.line,
+								resolved.position.character,
+								resolved.position.line,
+								resolved.position.character,
+							)
 						: rangeSelection,
 					viewColumn: viewColumn ?? getViewColumn(fromResource),
 				} satisfies vscode.TextDocumentShowOptions);
@@ -77,7 +91,9 @@ export class MdLinkOpener {
 	}
 }
 
-function getSelectionFromLocationFragment(fragment: string): vscode.Range | undefined {
+function getSelectionFromLocationFragment(
+	fragment: string,
+): vscode.Range | undefined {
 	const match = /^L?(\d+)(?:,(\d+))?(?:-L?(\d+)(?:,(\d+))?)?$/i.exec(fragment);
 	if (!match) {
 		return undefined;
@@ -90,19 +106,27 @@ function getSelectionFromLocationFragment(fragment: string): vscode.Range | unde
 
 	const startColumn = match[2] ? parseInt(match[2], 10) : 1;
 	const endLineNumberRaw = match[3] ? parseInt(match[3], 10) : undefined;
-	if (typeof endLineNumberRaw !== 'undefined' && endLineNumberRaw <= 0) {
+	if (typeof endLineNumberRaw !== "undefined" && endLineNumberRaw <= 0) {
 		return undefined;
 	}
 	const endLineNumber = endLineNumberRaw;
-	const endColumn = match[3] ? (match[4] ? parseInt(match[4], 10) : 1) : undefined;
+	const endColumn = match[3]
+		? match[4]
+			? parseInt(match[4], 10)
+			: 1
+		: undefined;
 
 	let normalizedStartLine = startLineNumber;
 	let normalizedStartColumn = startColumn;
 	let normalizedEndLine = endLineNumber;
 	let normalizedEndColumn = endColumn ?? 1;
 
-	if (typeof normalizedEndLine === 'number') {
-		if (normalizedEndLine < normalizedStartLine || (normalizedEndLine === normalizedStartLine && normalizedEndColumn < normalizedStartColumn)) {
+	if (typeof normalizedEndLine === "number") {
+		if (
+			normalizedEndLine < normalizedStartLine ||
+			(normalizedEndLine === normalizedStartLine &&
+				normalizedEndColumn < normalizedStartColumn)
+		) {
 			const tmpLine = normalizedStartLine;
 			const tmpColumn = normalizedStartColumn;
 			normalizedStartLine = normalizedEndLine;
@@ -112,16 +136,23 @@ function getSelectionFromLocationFragment(fragment: string): vscode.Range | unde
 		}
 	}
 
-	const start = new vscode.Position(normalizedStartLine - 1, Math.max(0, normalizedStartColumn - 1));
-	const end = typeof normalizedEndLine === 'number'
-		? new vscode.Position(normalizedEndLine - 1, Math.max(0, normalizedEndColumn - 1))
-		: start;
+	const start = new vscode.Position(
+		normalizedStartLine - 1,
+		Math.max(0, normalizedStartColumn - 1),
+	);
+	const end =
+		typeof normalizedEndLine === "number"
+			? new vscode.Position(
+					normalizedEndLine - 1,
+					Math.max(0, normalizedEndColumn - 1),
+				)
+			: start;
 
 	return new vscode.Range(start, end);
 }
 
 function getLocationFragmentFromLinkText(linkText: string): string | undefined {
-	const fragmentStart = linkText.indexOf('#');
+	const fragmentStart = linkText.indexOf("#");
 	if (fragmentStart < 0) {
 		return undefined;
 	}
@@ -144,8 +175,11 @@ function getLocationFragmentFromLinkText(linkText: string): string | undefined {
 }
 
 function getViewColumn(resource: vscode.Uri): vscode.ViewColumn {
-	const config = vscode.workspace.getConfiguration('markdown', resource);
-	const openLinks = config.get<OpenMarkdownLinks>('links.openLocation', OpenMarkdownLinks.currentGroup);
+	const config = vscode.workspace.getConfiguration("markdown", resource);
+	const openLinks = config.get<OpenMarkdownLinks>(
+		"links.openLocation",
+		OpenMarkdownLinks.currentGroup,
+	);
 	switch (openLinks) {
 		case OpenMarkdownLinks.beside:
 			return vscode.ViewColumn.Beside;
@@ -154,4 +188,3 @@ function getViewColumn(resource: vscode.Uri): vscode.ViewColumn {
 			return vscode.ViewColumn.Active;
 	}
 }
-

@@ -3,21 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { IHistory } from '../../../../base/common/history.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { IHistory } from "../../../../base/common/history.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../platform/storage/common/storage.js";
 
 export class ReplaceWidgetHistory implements IHistory<string> {
-	public static readonly FIND_HISTORY_KEY = 'workbench.replace.history';
+	public static readonly FIND_HISTORY_KEY = "workbench.replace.history";
 	private inMemoryValues: Set<string> = new Set();
 	public onDidChange?: Event<string[]>;
 	private _onDidChangeEmitter: Emitter<string[]>;
 
 	private static _instance: ReplaceWidgetHistory | null = null;
 
-	static getOrCreate(
-		storageService: IStorageService,
-	): ReplaceWidgetHistory {
+	static getOrCreate(storageService: IStorageService): ReplaceWidgetHistory {
 		if (!ReplaceWidgetHistory._instance) {
 			ReplaceWidgetHistory._instance = new ReplaceWidgetHistory(storageService);
 		}
@@ -53,7 +55,10 @@ export class ReplaceWidgetHistory implements IHistory<string> {
 		this.save();
 	}
 
-	forEach(callbackfn: (value: string, value2: string, set: Set<string>) => void, thisArg?: unknown): void {
+	forEach(
+		callbackfn: (value: string, value2: string, set: Set<string>) => void,
+		thisArg?: unknown,
+	): void {
 		// fetch latest from storage
 		this.load();
 		return this.inMemoryValues.forEach(callbackfn);
@@ -67,7 +72,7 @@ export class ReplaceWidgetHistory implements IHistory<string> {
 		let result: [] | undefined;
 		const raw = this.storageService.get(
 			ReplaceWidgetHistory.FIND_HISTORY_KEY,
-			StorageScope.WORKSPACE
+			StorageScope.WORKSPACE,
 		);
 
 		if (raw) {
@@ -84,8 +89,8 @@ export class ReplaceWidgetHistory implements IHistory<string> {
 	// Run saves async
 	save(): Promise<void> {
 		const elements: string[] = [];
-		this.inMemoryValues.forEach(e => elements.push(e));
-		return new Promise<void>(resolve => {
+		this.inMemoryValues.forEach((e) => elements.push(e));
+		return new Promise<void>((resolve) => {
 			this.storageService.store(
 				ReplaceWidgetHistory.FIND_HISTORY_KEY,
 				JSON.stringify(elements),

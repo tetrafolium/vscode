@@ -5,12 +5,21 @@
 
 // version: 6
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	/**
 	 * The type of hook to execute.
 	 */
-	export type ChatHookType = 'SessionStart' | 'SessionEnd' | 'UserPromptSubmit' | 'PreToolUse' | 'PostToolUse' | 'PreCompact' | 'SubagentStart' | 'SubagentStop' | 'Stop' | 'ErrorOccurred';
+	export type ChatHookType =
+		| "SessionStart"
+		| "SessionEnd"
+		| "UserPromptSubmit"
+		| "PreToolUse"
+		| "PostToolUse"
+		| "PreCompact"
+		| "SubagentStart"
+		| "SubagentStop"
+		| "Stop"
+		| "ErrorOccurred";
 
 	/**
 	 * A resolved hook command ready for execution.
@@ -48,7 +57,7 @@ declare module 'vscode' {
 	 * - 'error': Blocking error shown to model (exit code 2)
 	 * - 'warning': Non-blocking warning shown to user only (other exit codes)
 	 */
-	export type ChatHookResultKind = 'success' | 'error' | 'warning';
+	export type ChatHookResultKind = "success" | "error" | "warning";
 
 	/**
 	 * Result of executing a hook command.
@@ -106,7 +115,12 @@ declare module 'vscode' {
 		 * @param systemMessage Warning/system message from the hook
 		 * @param metadata Optional metadata
 		 */
-		constructor(hookType: ChatHookType, stopReason?: string, systemMessage?: string, metadata?: { readonly [key: string]: unknown });
+		constructor(
+			hookType: ChatHookType,
+			stopReason?: string,
+			systemMessage?: string,
+			metadata?: { readonly [key: string]: unknown },
+		);
 	}
 
 	export interface ExtendedChatResponseParts {
@@ -114,13 +128,16 @@ declare module 'vscode' {
 	}
 
 	export interface ChatResponseStream {
-
 		/**
 		 * Push a hook execution result to this stream.
 		 * @param hookType The type of hook that was executed
 		 * @param stopReason If set, the hook blocked processing. This message is shown to the user.
 		 * @param systemMessage Warning/system message from the hook
 		 */
-		hookProgress(hookType: ChatHookType, stopReason?: string, systemMessage?: string): void;
+		hookProgress(
+			hookType: ChatHookType,
+			stopReason?: string,
+			systemMessage?: string,
+		): void;
 	}
 }

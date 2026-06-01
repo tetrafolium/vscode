@@ -23,23 +23,47 @@ describe('nodePtyShim', () => {
 	});
 
 	it('prefers build output when present', async () => {
-		const buildDir = join(testDir, 'node_modules', 'node-pty', 'build', 'Release');
-		const prebuildDir = join(testDir, 'node_modules', 'node-pty', 'prebuilds', process.platform + '-' + process.arch);
+		const buildDir = join(
+			testDir,
+			'node_modules',
+			'node-pty',
+			'build',
+			'Release',
+		);
+		const prebuildDir = join(
+			testDir,
+			'node_modules',
+			'node-pty',
+			'prebuilds',
+			process.platform + '-' + process.arch,
+		);
 		await mkdir(buildDir, { recursive: true });
 		await mkdir(prebuildDir, { recursive: true });
 
-		await expect(resolveNodePtySourcePath(testDir, logService)).resolves.toBe(buildDir);
+		await expect(
+			resolveNodePtySourcePath(testDir, logService),
+		).resolves.toBe(buildDir);
 	});
 
 	it('falls back to prebuilds when build output is absent', async () => {
-		const prebuildDir = join(testDir, 'node_modules', 'node-pty', 'prebuilds', process.platform + '-' + process.arch);
+		const prebuildDir = join(
+			testDir,
+			'node_modules',
+			'node-pty',
+			'prebuilds',
+			process.platform + '-' + process.arch,
+		);
 		await mkdir(prebuildDir, { recursive: true });
 
-		await expect(resolveNodePtySourcePath(testDir, logService)).resolves.toBe(prebuildDir);
+		await expect(
+			resolveNodePtySourcePath(testDir, logService),
+		).resolves.toBe(prebuildDir);
 	});
 
 	it('throws when node-pty binaries are missing', async () => {
-		await expect(resolveNodePtySourcePath(testDir, logService)).rejects.toThrow('Unable to find node-pty binaries');
+		await expect(
+			resolveNodePtySourcePath(testDir, logService),
+		).rejects.toThrow('Unable to find node-pty binaries');
 	});
 
 	it('copies node-pty files into the SDK prebuilds folder', async () => {
@@ -51,8 +75,20 @@ describe('nodePtyShim', () => {
 
 		await copyNodePtyFiles(extensionPath, sourceDir, logService);
 
-		const sdkNodePtyDir = join(extensionPath, 'node_modules', '@github', 'copilot', 'sdk', 'prebuilds', process.platform + '-' + process.arch);
-		await expect(readFile(join(sdkNodePtyDir, 'pty.node'), 'utf8')).resolves.toBe('native-binary');
-		await expect(readFile(join(sdkNodePtyDir, 'spawn-helper'), 'utf8')).resolves.toBe('spawn-helper');
+		const sdkNodePtyDir = join(
+			extensionPath,
+			'node_modules',
+			'@github',
+			'copilot',
+			'sdk',
+			'prebuilds',
+			process.platform + '-' + process.arch,
+		);
+		await expect(
+			readFile(join(sdkNodePtyDir, 'pty.node'), 'utf8'),
+		).resolves.toBe('native-binary');
+		await expect(
+			readFile(join(sdkNodePtyDir, 'spawn-helper'), 'utf8'),
+		).resolves.toBe('spawn-helper');
 	});
 });

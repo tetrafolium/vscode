@@ -192,12 +192,16 @@
 	height: 8px;
 	border-radius: 50%;
 	background: var(--vscode-descriptionForeground);
-	border: 2px solid var(--vscode-menu-background, var(--vscode-editor-background));
+	border: 2px solid
+		var(--vscode-menu-background, var(--vscode-editor-background));
 	box-sizing: content-box;
 }
 
 .host-picker-sheet-item-status.connected {
-	background: var(--vscode-testing-iconPassed, var(--vscode-debugIcon-startForeground, #388a34));
+	background: var(
+		--vscode-testing-iconPassed,
+		var(--vscode-debugIcon-startForeground, #388a34)
+	);
 }
 
 .host-picker-sheet-item-status.connecting {
@@ -254,7 +258,8 @@
 
 .host-picker-sheet-footer {
 	flex-shrink: 0;
-	border-top: 1px solid color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+	border-top: 1px solid
+		color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
 }
 
 .host-picker-sheet-action {
@@ -279,7 +284,7 @@
 	background: var(--vscode-toolbar-hoverBackground);
 }
 
-.host-picker-sheet-action[aria-disabled='true'] {
+.host-picker-sheet-action[aria-disabled="true"] {
 	opacity: 0.6;
 	cursor: default;
 }
@@ -333,7 +338,8 @@
 }
 
 @keyframes host-picker-sheet-blink {
-	0%, 100% {
+	0%,
+	100% {
 		opacity: 0.5;
 	}
 	50% {

@@ -3,10 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { basename } from '../../../../../base/common/path.js';
-import { CompletionItem, CompletionItemKind, CompletionItemProvider } from '../../../../../editor/common/languages.js';
-import { ISimpleCompletion, SimpleCompletionItem } from '../../../../services/suggest/browser/simpleCompletionItem.js';
+import { CancellationToken } from "../../../../../base/common/cancellation.js";
+import { basename } from "../../../../../base/common/path.js";
+import {
+	CompletionItem,
+	CompletionItemKind,
+	CompletionItemProvider,
+} from "../../../../../editor/common/languages.js";
+import {
+	ISimpleCompletion,
+	SimpleCompletionItem,
+} from "../../../../services/suggest/browser/simpleCompletionItem.js";
 
 export enum TerminalCompletionItemKind {
 	// Extension host kinds
@@ -34,7 +41,9 @@ export enum TerminalCompletionItemKind {
 }
 
 // Maps CompletionItemKind from language server based completion to TerminalCompletionItemKind
-export function mapLspKindToTerminalKind(lspKind: CompletionItemKind): TerminalCompletionItemKind {
+export function mapLspKindToTerminalKind(
+	lspKind: CompletionItemKind,
+): TerminalCompletionItemKind {
 	// TODO: Add more types for different [LSP providers](https://github.com/microsoft/vscode/issues/249480)
 
 	switch (lspKind) {
@@ -90,7 +99,6 @@ export interface ITerminalCompletion extends ISimpleCompletion {
 	 * Provider that can resolve this item
 	 */
 	_resolveProvider?: CompletionItemProvider;
-
 }
 
 export class TerminalCompletionItem extends SimpleCompletionItem {
@@ -108,7 +116,7 @@ export class TerminalCompletionItem extends SimpleCompletionItem {
 	/**
 	 * The file extension part from {@link labelLow}.
 	 */
-	fileExtLow: string = '';
+	fileExtLow: string = "";
 
 	/**
 	 * A penalty that applies to completions that are comprised of only punctuation characters or
@@ -128,15 +136,16 @@ export class TerminalCompletionItem extends SimpleCompletionItem {
 		 * detecting the separator from the label. This is important for remote scenarios
 		 * (e.g., WSL) where the remote OS may use different path separators than the local OS.
 		 */
-		pathSeparator?: string
+		pathSeparator?: string,
 	) {
 		super(completion);
 
 		// Detect path separator from the label if not provided. This ensures correct behavior
 		// for all scenarios (local Windows, local Unix, WSL, SSH remotes) by using the actual
 		// separator present in the completion rather than assuming based on the local OS.
-		const detectedSeparator = pathSeparator ?? (this.labelLow.includes('\\') ? '\\' : undefined);
-		const useWindowsStylePath = detectedSeparator === '\\';
+		const detectedSeparator =
+			pathSeparator ?? (this.labelLow.includes("\\") ? "\\" : undefined);
+		const useWindowsStylePath = detectedSeparator === "\\";
 
 		// ensure lower-variants (perf)
 		this.labelLowExcludeFileExt = this.labelLow;
@@ -145,38 +154,50 @@ export class TerminalCompletionItem extends SimpleCompletionItem {
 		// HACK: Treat branch as a path separator, otherwise they get filtered out. Hard code the
 		// documentation for now, but this would be better to come in through a `kind`
 		// See https://github.com/microsoft/vscode/issues/255864
-		if (isFile(completion) || completion.kind === TerminalCompletionItemKind.Branch) {
+		if (
+			isFile(completion) ||
+			completion.kind === TerminalCompletionItemKind.Branch
+		) {
 			if (useWindowsStylePath) {
-				this.labelLow = this.labelLow.replaceAll('/', '\\');
+				this.labelLow = this.labelLow.replaceAll("/", "\\");
 			}
 		}
 
 		if (isFile(completion)) {
 			// Don't include dotfiles as extensions when sorting
-			const extIndex = this.labelLow.lastIndexOf('.');
+			const extIndex = this.labelLow.lastIndexOf(".");
 			if (extIndex > 0) {
 				this.labelLowExcludeFileExt = this.labelLow.substring(0, extIndex);
 				this.fileExtLow = this.labelLow.substring(extIndex + 1);
 			}
 		}
 
-		if (isFile(completion) || completion.kind === TerminalCompletionItemKind.Folder) {
+		if (
+			isFile(completion) ||
+			completion.kind === TerminalCompletionItemKind.Folder
+		) {
 			if (useWindowsStylePath) {
-				this.labelLowNormalizedPath = this.labelLow.replaceAll('\\', '/');
+				this.labelLowNormalizedPath = this.labelLow.replaceAll("\\", "/");
 			}
 			if (completion.kind === TerminalCompletionItemKind.Folder) {
-				this.labelLowNormalizedPath = this.labelLowNormalizedPath.replace(/\/$/, '');
+				this.labelLowNormalizedPath = this.labelLowNormalizedPath.replace(
+					/\/$/,
+					"",
+				);
 			}
 		}
 
-		this.punctuationPenalty = shouldPenalizeForPunctuation(this.labelLowExcludeFileExt) ? 1 : 0;
+		this.punctuationPenalty = shouldPenalizeForPunctuation(
+			this.labelLowExcludeFileExt,
+		)
+			? 1
+			: 0;
 	}
 
 	/**
 	 * Resolves the completion item's details lazily when needed.
 	 */
 	async resolve(token: CancellationToken): Promise<void> {
-
 		if (this.resolveCache) {
 			return this.resolveCache;
 		}
@@ -190,7 +211,10 @@ export class TerminalCompletionItem extends SimpleCompletionItem {
 
 		this.resolveCache = (async () => {
 			try {
-				const resolved = await provider.resolveCompletionItem!(unresolvedItem, token);
+				const resolved = await provider.resolveCompletionItem!(
+					unresolvedItem,
+					token,
+				);
 				if (resolved) {
 					// Update the completion with resolved details
 					if (resolved.detail) {
@@ -207,13 +231,18 @@ export class TerminalCompletionItem extends SimpleCompletionItem {
 
 		return this.resolveCache;
 	}
-
 }
 
 function isFile(completion: ITerminalCompletion): boolean {
-	return !!(completion.kind === TerminalCompletionItemKind.File || completion.isFileOverride);
+	return !!(
+		completion.kind === TerminalCompletionItemKind.File ||
+		completion.isFileOverride
+	);
 }
 
 function shouldPenalizeForPunctuation(label: string): boolean {
-	return basename(label).startsWith('_') || /^[\[\]\{\}\(\)\.,;:!?\/\\\-_@#~*%^=$]+$/.test(label);
+	return (
+		basename(label).startsWith("_") ||
+		/^[\[\]\{\}\(\)\.,;:!?\/\\\-_@#~*%^=$]+$/.test(label)
+	);
 }

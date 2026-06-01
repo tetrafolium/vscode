@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as esbuild from 'esbuild';
-import * as path from 'path';
-import * as fs from 'fs';
-import { SourceMapGenerator } from 'source-map';
+import * as esbuild from "esbuild";
+import * as path from "path";
+import * as fs from "fs";
+import { SourceMapGenerator } from "source-map";
 import {
 	TextModel,
 	analyzeLocalizeCalls,
-	parseLocalizeKeyOrValue
-} from '../lib/nls-analysis.ts';
-import type { TextEdit } from './private-to-property.ts';
+	parseLocalizeKeyOrValue,
+} from "../lib/nls-analysis.ts";
+import type { TextEdit } from "./private-to-property.ts";
 
 // ============================================================================
 // Types
@@ -55,7 +55,7 @@ export function createNLSCollector(): NLSCollector {
 		entries,
 		add(entry: NLSEntry) {
 			entries.set(entry.placeholder, entry);
-		}
+		},
 	};
 }
 
@@ -66,7 +66,7 @@ export function createNLSCollector(): NLSCollector {
 export async function finalizeNLS(
 	collector: NLSCollector,
 	outDir: string,
-	alsoWriteTo?: string[]
+	alsoWriteTo?: string[],
 ): Promise<{ indexMap: Map<string, number>; messageCount: number }> {
 	if (collector.entries.size === 0) {
 		return { indexMap: new Map(), messageCount: 0 };
@@ -74,8 +74,8 @@ export async function finalizeNLS(
 
 	// Sort entries by moduleId, then by key for stable indices
 	const sortedEntries = [...collector.entries.values()].sort((a, b) => {
-		const aKey = typeof a.key === 'string' ? a.key : a.key.key;
-		const bKey = typeof b.key === 'string' ? b.key : b.key.key;
+		const aKey = typeof a.key === "string" ? a.key : a.key.key;
+		const bKey = typeof b.key === "string" ? b.key : b.key.key;
 		const moduleCompare = a.moduleId.localeCompare(b.moduleId);
 		if (moduleCompare !== 0) {
 			return moduleCompare;
@@ -91,7 +91,10 @@ export async function finalizeNLS(
 
 	// Build NLS metadata
 	const allMessages: string[] = [];
-	const moduleToKeys: Map<string, (string | { key: string; comment: string[] })[]> = new Map();
+	const moduleToKeys: Map<
+		string,
+		(string | { key: string; comment: string[] })[]
+	> = new Map();
 	const moduleToMessages: Map<string, string[]> = new Map();
 
 	for (const entry of sortedEntries) {
@@ -108,13 +111,16 @@ export async function finalizeNLS(
 	// nls.keys.json: [["moduleId", ["key1", "key2"]], ...]
 	const nlsKeysJson: [string, string[]][] = [];
 	for (const [moduleId, keys] of moduleToKeys) {
-		nlsKeysJson.push([moduleId, keys.map(k => typeof k === 'string' ? k : k.key)]);
+		nlsKeysJson.push([
+			moduleId,
+			keys.map((k) => (typeof k === "string" ? k : k.key)),
+		]);
 	}
 
 	// nls.metadata.json: { keys: {...}, messages: {...} }
 	const nlsMetadataJson = {
 		keys: Object.fromEntries(moduleToKeys),
-		messages: Object.fromEntries(moduleToMessages)
+		messages: Object.fromEntries(moduleToMessages),
 	};
 
 	// Write NLS files
@@ -123,26 +129,30 @@ export async function finalizeNLS(
 		await fs.promises.mkdir(dir, { recursive: true });
 	}
 
-	await Promise.all(allOutDirs.flatMap(dir => [
-		fs.promises.writeFile(
-			path.join(dir, 'nls.messages.json'),
-			JSON.stringify(allMessages)
-		),
-		fs.promises.writeFile(
-			path.join(dir, 'nls.keys.json'),
-			JSON.stringify(nlsKeysJson)
-		),
-		fs.promises.writeFile(
-			path.join(dir, 'nls.metadata.json'),
-			JSON.stringify(nlsMetadataJson, null, '\t')
-		),
-		fs.promises.writeFile(
-			path.join(dir, 'nls.messages.js'),
-			`/*---------------------------------------------------------\n * Copyright (C) Microsoft Corporation. All rights reserved.\n *--------------------------------------------------------*/\nglobalThis._VSCODE_NLS_MESSAGES=${JSON.stringify(allMessages)};`
-		),
-	]));
+	await Promise.all(
+		allOutDirs.flatMap((dir) => [
+			fs.promises.writeFile(
+				path.join(dir, "nls.messages.json"),
+				JSON.stringify(allMessages),
+			),
+			fs.promises.writeFile(
+				path.join(dir, "nls.keys.json"),
+				JSON.stringify(nlsKeysJson),
+			),
+			fs.promises.writeFile(
+				path.join(dir, "nls.metadata.json"),
+				JSON.stringify(nlsMetadataJson, null, "\t"),
+			),
+			fs.promises.writeFile(
+				path.join(dir, "nls.messages.js"),
+				`/*---------------------------------------------------------\n * Copyright (C) Microsoft Corporation. All rights reserved.\n *--------------------------------------------------------*/\nglobalThis._VSCODE_NLS_MESSAGES=${JSON.stringify(allMessages)};`,
+			),
+		]),
+	);
 
-	console.log(`[nls] Extracted ${allMessages.length} messages from ${moduleToKeys.size} modules`);
+	console.log(
+		`[nls] Extracted ${allMessages.length} messages from ${moduleToKeys.size} modules`,
+	);
 
 	return { indexMap, messageCount: allMessages.length };
 }
@@ -154,7 +164,7 @@ export async function finalizeNLS(
 export function postProcessNLS(
 	content: string,
 	indexMap: Map<string, number>,
-	preserveEnglish: boolean
+	preserveEnglish: boolean,
 ): { code: string; edits: readonly TextEdit[] } {
 	return replaceInOutput(content, indexMap, preserveEnglish);
 }
@@ -164,25 +174,32 @@ export function postProcessNLS(
 // ============================================================================
 
 interface NLSEdit {
-	line: number;       // 0-based line in original source
-	startCol: number;   // 0-based start column in original
-	endCol: number;     // 0-based end column in original
-	newLength: number;  // length of replacement text
+	line: number; // 0-based line in original source
+	startCol: number; // 0-based start column in original
+	endCol: number; // 0-based end column in original
+	newLength: number; // length of replacement text
 }
 
 function transformToPlaceholders(
 	source: string,
-	moduleId: string
+	moduleId: string,
 ): { code: string; entries: NLSEntry[]; edits: NLSEdit[] } {
-	const localizeCalls = analyzeLocalizeCalls(source, 'localize');
-	const localize2Calls = analyzeLocalizeCalls(source, 'localize2');
+	const localizeCalls = analyzeLocalizeCalls(source, "localize");
+	const localize2Calls = analyzeLocalizeCalls(source, "localize2");
 
 	// Tag calls with their type so we can handle them differently later
-	const taggedLocalize = localizeCalls.map(call => ({ call, isLocalize2: false }));
-	const taggedLocalize2 = localize2Calls.map(call => ({ call, isLocalize2: true }));
+	const taggedLocalize = localizeCalls.map((call) => ({
+		call,
+		isLocalize2: false,
+	}));
+	const taggedLocalize2 = localize2Calls.map((call) => ({
+		call,
+		isLocalize2: true,
+	}));
 	const allCalls = [...taggedLocalize, ...taggedLocalize2].sort(
-		(a, b) => a.call.keySpan.start.line - b.call.keySpan.start.line ||
-			a.call.keySpan.start.character - b.call.keySpan.start.character
+		(a, b) =>
+			a.call.keySpan.start.line - b.call.keySpan.start.line ||
+			a.call.keySpan.start.character - b.call.keySpan.start.character,
 	);
 
 	if (allCalls.length === 0) {
@@ -195,21 +212,23 @@ function transformToPlaceholders(
 
 	// Process in reverse order to preserve positions
 	for (const { call, isLocalize2 } of allCalls.reverse()) {
-		const keyParsed = parseLocalizeKeyOrValue(call.key) as string | { key: string; comment: string[] };
+		const keyParsed = parseLocalizeKeyOrValue(call.key) as
+			| string
+			| { key: string; comment: string[] };
 		const messageParsed = parseLocalizeKeyOrValue(call.value);
-		const keyString = typeof keyParsed === 'string' ? keyParsed : keyParsed.key;
+		const keyString = typeof keyParsed === "string" ? keyParsed : keyParsed.key;
 
 		// Use different placeholder prefix for localize vs localize2
 		// localize: message will be replaced with null
 		// localize2: message will be preserved (only key replaced)
-		const prefix = isLocalize2 ? 'NLS2' : 'NLS';
+		const prefix = isLocalize2 ? "NLS2" : "NLS";
 		const placeholder = `%%${prefix}:${moduleId}#${keyString}%%`;
 
 		entries.push({
 			moduleId,
 			key: keyParsed,
 			message: String(messageParsed),
-			placeholder
+			placeholder,
 		});
 
 		const replacementText = `"${placeholder}"`;
@@ -241,12 +260,12 @@ function transformToPlaceholders(
 function generateNLSSourceMap(
 	originalSource: string,
 	filePath: string,
-	edits: NLSEdit[]
+	edits: NLSEdit[],
 ): string {
 	const generator = new SourceMapGenerator();
 	generator.setSourceContent(filePath, originalSource);
 
-	const lines = originalSource.split('\n');
+	const lines = originalSource.split("\n");
 
 	// Group edits by line
 	const editsByLine = new Map<number, NLSEdit[]>();
@@ -294,7 +313,10 @@ function generateNLSSourceMap(
 				// collapse to that one original position. Add per-column identity
 				// mappings from edit-end to the next edit (or end of line) so that
 				// esbuild's source-map composition preserves fine-grained accuracy.
-				const nextBound = i + 1 < lineEdits.length ? lineEdits[i + 1].startCol : lines[line].length;
+				const nextBound =
+					i + 1 < lineEdits.length
+						? lineEdits[i + 1].startCol
+						: lines[line].length;
 				for (let origCol = edit.endCol; origCol < nextBound; origCol++) {
 					generator.addMapping({
 						generated: { line: smLine, column: origCol + cumulativeShift },
@@ -312,13 +334,17 @@ function generateNLSSourceMap(
 function replaceInOutput(
 	content: string,
 	indexMap: Map<string, number>,
-	preserveEnglish: boolean
+	preserveEnglish: boolean,
 ): { code: string; edits: readonly TextEdit[] } {
 	// Collect all matches first, then apply from back to front so that byte
 	// offsets remain valid. Each match becomes a TextEdit in terms of the
 	// ORIGINAL content offsets, which is what adjustSourceMap expects.
 
-	interface PendingEdit { start: number; end: number; replacement: string }
+	interface PendingEdit {
+		start: number;
+		end: number;
+		replacement: string;
+	}
 	const pending: PendingEdit[] = [];
 
 	if (preserveEnglish) {
@@ -333,12 +359,17 @@ function replaceInOutput(
 				index = indexMap.get(placeholder);
 			}
 			if (index !== undefined) {
-				pending.push({ start: m.index, end: m.index + m[0].length, replacement: String(index) });
+				pending.push({
+					start: m.index,
+					end: m.index + m[0].length,
+					replacement: String(index),
+				});
 			}
 		}
 	} else {
 		// NLS (localize): replace placeholder with index AND replace message with null
-		const reNLS = /["']%%NLS:([^%]+)%%["'](\s*,\s*)(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g;
+		const reNLS =
+			/["']%%NLS:([^%]+)%%["'](\s*,\s*)(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g;
 		let m: RegExpExecArray | null;
 		while ((m = reNLS.exec(content)) !== null) {
 			const inner = m[1];
@@ -346,7 +377,11 @@ function replaceInOutput(
 			const placeholder = `%%NLS:${inner}%%`;
 			const index = indexMap.get(placeholder);
 			if (index !== undefined) {
-				pending.push({ start: m.index, end: m.index + m[0].length, replacement: `${index}${comma}null` });
+				pending.push({
+					start: m.index,
+					end: m.index + m[0].length,
+					replacement: `${index}${comma}null`,
+				});
 			}
 		}
 
@@ -357,7 +392,11 @@ function replaceInOutput(
 			const placeholder = `%%NLS2:${inner}%%`;
 			const index = indexMap.get(placeholder);
 			if (index !== undefined) {
-				pending.push({ start: m.index, end: m.index + m[0].length, replacement: String(index) });
+				pending.push({
+					start: m.index,
+					end: m.index + m[0].length,
+					replacement: String(index),
+				});
 			}
 		}
 	}
@@ -386,7 +425,7 @@ function replaceInOutput(
 	}
 	parts.push(content.substring(lastEnd));
 
-	return { code: parts.join(''), edits };
+	return { code: parts.join(""), edits };
 }
 
 // ============================================================================
@@ -397,25 +436,27 @@ export function nlsPlugin(options: NLSPluginOptions): esbuild.Plugin {
 	const { collector } = options;
 
 	return {
-		name: 'nls',
+		name: "nls",
 		setup(build) {
 			// Transform TypeScript files to replace localize() calls with placeholders
 			build.onLoad({ filter: /\.ts$/ }, async (args) => {
 				// Skip .d.ts files
-				if (args.path.endsWith('.d.ts')) {
+				if (args.path.endsWith(".d.ts")) {
 					return undefined;
 				}
 
-				const source = await fs.promises.readFile(args.path, 'utf-8');
+				const source = await fs.promises.readFile(args.path, "utf-8");
 
 				// Compute module ID (e.g., "vs/editor/editor" from "src/vs/editor/editor.ts")
 				const relativePath = path.relative(options.baseDir, args.path);
-				const moduleId = relativePath
-					.replace(/\\/g, '/')
-					.replace(/\.ts$/, '');
+				const moduleId = relativePath.replace(/\\/g, "/").replace(/\.ts$/, "");
 
 				// Transform localize() calls to placeholders
-				const { code, entries: fileEntries, edits } = transformToPlaceholders(source, moduleId);
+				const {
+					code,
+					entries: fileEntries,
+					edits,
+				} = transformToPlaceholders(source, moduleId);
 
 				// Collect entries
 				for (const entry of fileEntries) {
@@ -433,14 +474,16 @@ export function nlsPlugin(options: NLSPluginOptions): esbuild.Plugin {
 					// directory segments in the final bundled source map.
 					const sourceName = path.basename(args.path);
 					const sourcemap = generateNLSSourceMap(source, sourceName, edits);
-					const encodedMap = Buffer.from(sourcemap).toString('base64');
-					const contentsWithMap = code + `\n//# sourceMappingURL=data:application/json;base64,${encodedMap}\n`;
-					return { contents: contentsWithMap, loader: 'ts' };
+					const encodedMap = Buffer.from(sourcemap).toString("base64");
+					const contentsWithMap =
+						code +
+						`\n//# sourceMappingURL=data:application/json;base64,${encodedMap}\n`;
+					return { contents: contentsWithMap, loader: "ts" };
 				}
 
 				// No NLS calls, return undefined to let esbuild handle normally
 				return undefined;
 			});
-		}
+		},
 	};
 }

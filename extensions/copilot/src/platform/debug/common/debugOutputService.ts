@@ -5,8 +5,9 @@
 
 import { createServiceIdentifier } from '../../../util/common/services';
 
-
-export const IDebugOutputService = createServiceIdentifier<IDebugOutputService>('IDebugOutputService');
+export const IDebugOutputService = createServiceIdentifier<IDebugOutputService>(
+	'IDebugOutputService',
+);
 
 export interface IDebugOutputService {
 	readonly _serviceBrand: undefined;

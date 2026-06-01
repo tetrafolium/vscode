@@ -10,12 +10,17 @@
  * incompatible with `moduleResolution: "nodenext"`. This file provides
  * the subset of types used by the agent host until the package is fixed.
  */
-declare module '@vscode/copilot-api' {
-
+declare module "@vscode/copilot-api" {
 	export interface IAbortSignal {
 		readonly aborted: boolean;
-		addEventListener(type: 'abort', listener: (this: AbortSignal) => void): void;
-		removeEventListener(type: 'abort', listener: (this: AbortSignal) => void): void;
+		addEventListener(
+			type: "abort",
+			listener: (this: AbortSignal) => void,
+		): void;
+		removeEventListener(
+			type: "abort",
+			listener: (this: AbortSignal) => void,
+		): void;
 	}
 
 	export interface FetchOptions {
@@ -24,12 +29,12 @@ declare module '@vscode/copilot-api' {
 		body?: BodyInit;
 		timeout?: number;
 		json?: unknown;
-		method?: 'GET' | 'POST' | 'PUT';
+		method?: "GET" | "POST" | "PUT";
 		signal?: IAbortSignal;
 		suppressIntegrationId?: boolean;
 	}
 
-	export type MakeRequestOptions = Omit<FetchOptions, 'callSite'> & {
+	export type MakeRequestOptions = Omit<FetchOptions, "callSite"> & {
 		callSite?: string;
 	};
 
@@ -44,7 +49,7 @@ declare module '@vscode/copilot-api' {
 		deviceId: string;
 		vscodeVersion: string;
 		version: string;
-		buildType: 'dev' | 'prod';
+		buildType: "dev" | "prod";
 	}
 
 	export interface CopilotToken {
@@ -52,22 +57,29 @@ declare module '@vscode/copilot-api' {
 			api?: string;
 			telemetry?: string;
 			proxy?: string;
-			'origin-tracker'?: string;
+			"origin-tracker"?: string;
 		};
 		sku: string;
 	}
 
 	export enum RequestType {
-		CopilotToken = 'CopilotToken',
-		ChatCompletions = 'ChatCompletions',
-		ChatResponses = 'ChatResponses',
-		ChatMessages = 'ChatMessages',
-		Models = 'Models',
+		CopilotToken = "CopilotToken",
+		ChatCompletions = "ChatCompletions",
+		ChatResponses = "ChatResponses",
+		ChatMessages = "ChatMessages",
+		Models = "Models",
 	}
 
 	export type RequestMetadata =
 		| { type: RequestType.CopilotToken }
-		| { type: RequestType.ChatCompletions | RequestType.ChatResponses | RequestType.ChatMessages | RequestType.Models; isModelLab?: boolean };
+		| {
+				type:
+					| RequestType.ChatCompletions
+					| RequestType.ChatResponses
+					| RequestType.ChatMessages
+					| RequestType.Models;
+				isModelLab?: boolean;
+		  };
 
 	export interface IDomainChangeResponse {
 		capiUrlChanged: boolean;
@@ -84,8 +96,14 @@ declare module '@vscode/copilot-api' {
 			hmacSecret?: string,
 			integrationId?: string,
 		);
-		updateDomains(copilotToken: CopilotToken | undefined, enterpriseUrlConfig: string | undefined): IDomainChangeResponse;
-		makeRequest<T>(requestOptions: MakeRequestOptions, requestMetadata: RequestMetadata): Promise<T>;
+		updateDomains(
+			copilotToken: CopilotToken | undefined,
+			enterpriseUrlConfig: string | undefined,
+		): IDomainChangeResponse;
+		makeRequest<T>(
+			requestOptions: MakeRequestOptions,
+			requestMetadata: RequestMetadata,
+		): Promise<T>;
 	}
 
 	interface CCAModelTokenPriceTier {

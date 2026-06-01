@@ -5,7 +5,10 @@
 
 import type * as vscode from 'vscode';
 import { ChatLocation } from '../../../platform/chat/common/commonTypes';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
 import { IAutomodeService } from '../../../platform/endpoint/node/automodeService';
 import { IEnvService } from '../../../platform/env/common/envService';
@@ -26,32 +29,47 @@ import { Intent } from '../../common/constants';
 import { Conversation } from '../../prompt/common/conversation';
 import { getRequestedToolCallIterationLimit } from '../../prompt/common/specialRequestTypes';
 import { ChatTelemetryBuilder } from '../../prompt/node/chatParticipantTelemetry';
-import { DefaultIntentRequestHandler, IDefaultIntentRequestHandlerOptions } from '../../prompt/node/defaultIntentRequestHandler';
+import {
+	DefaultIntentRequestHandler,
+	IDefaultIntentRequestHandlerOptions,
+} from '../../prompt/node/defaultIntentRequestHandler';
 import { IDocumentContext } from '../../prompt/node/documentContext';
-import { IIntent, IIntentInvocationContext, IntentLinkificationOptions } from '../../prompt/node/intents';
+import {
+	IIntent,
+	IIntentInvocationContext,
+	IntentLinkificationOptions,
+} from '../../prompt/node/intents';
 import { AgentPrompt } from '../../prompts/node/agent/agentPrompt';
 import { ICodeMapperService } from '../../prompts/node/codeMapper/codeMapperService';
 import { IToolsService } from '../../tools/common/toolsService';
 import { getAgentMaxRequests } from '../common/agentConfig';
 import { AgentIntentInvocation } from './agentIntent';
 
-
-const getTools = (instaService: IInstantiationService, request: vscode.ChatRequest): Promise<vscode.LanguageModelToolInformation[]> =>
-	instaService.invokeFunction(async accessor => {
+const getTools = (
+	instaService: IInstantiationService,
+	request: vscode.ChatRequest,
+): Promise<vscode.LanguageModelToolInformation[]> =>
+	instaService.invokeFunction(async (accessor) => {
 		const toolsService = accessor.get<IToolsService>(IToolsService);
 		const lookForTags = new Set<string>(['vscode_codesearch']);
-		const endpointProvider = accessor.get<IEndpointProvider>(IEndpointProvider);
+		const endpointProvider =
+			accessor.get<IEndpointProvider>(IEndpointProvider);
 		const model = await endpointProvider.getChatEndpoint(request);
 
 		// Special case...
 		// Since AskAgent currently has no tool picker, have to duplicate the toolReference logic here.
 		// When it's no longer experimental, it should be a custom mode, have a tool picker, etc.
 		// And must return boolean to avoid falling back on other logic that we don't want, like the `extension_installed_by_tool` check.
-		return toolsService.getEnabledTools(request, model, tool => tool.tags.some(tag => lookForTags.has(tag)) || request.toolReferences.some(ref => ref.name === tool.name));
+		return toolsService.getEnabledTools(
+			request,
+			model,
+			(tool) =>
+				tool.tags.some((tag) => lookForTags.has(tag)) ||
+				request.toolReferences.some((ref) => ref.name === tool.name),
+		);
 	});
 
 export class AskAgentIntent implements IIntent {
-
 	static readonly ID = Intent.AskAgent;
 
 	readonly id = AskAgentIntent.ID;
@@ -60,20 +78,38 @@ export class AskAgentIntent implements IIntent {
 	readonly locations = [ChatLocation.Panel];
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
-	) { }
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
+	) {}
 
-	private getIntentHandlerOptions(request: vscode.ChatRequest): IDefaultIntentRequestHandlerOptions | undefined {
+	private getIntentHandlerOptions(
+		request: vscode.ChatRequest,
+	): IDefaultIntentRequestHandlerOptions | undefined {
 		return {
-			maxToolCallIterations: getRequestedToolCallIterationLimit(request) ?? this.instantiationService.invokeFunction(getAgentMaxRequests),
-			temperature: this.configurationService.getConfig(ConfigKey.Advanced.AgentTemperature) ?? 0,
+			maxToolCallIterations:
+				getRequestedToolCallIterationLimit(request) ??
+				this.instantiationService.invokeFunction(getAgentMaxRequests),
+			temperature:
+				this.configurationService.getConfig(
+					ConfigKey.Advanced.AgentTemperature,
+				) ?? 0,
 			overrideRequestLocation: ChatLocation.EditingSession,
 		};
 	}
 
-	async handleRequest(conversation: Conversation, request: vscode.ChatRequest, stream: vscode.ChatResponseStream, token: CancellationToken, documentContext: IDocumentContext | undefined, agentName: string, location: ChatLocation, chatTelemetry: ChatTelemetryBuilder): Promise<vscode.ChatResult> {
+	async handleRequest(
+		conversation: Conversation,
+		request: vscode.ChatRequest,
+		stream: vscode.ChatResponseStream,
+		token: CancellationToken,
+		documentContext: IDocumentContext | undefined,
+		agentName: string,
+		location: ChatLocation,
+		chatTelemetry: ChatTelemetryBuilder,
+	): Promise<vscode.ChatResult> {
 		const actual = this.instantiationService.createInstance(
 			DefaultIntentRequestHandler,
 			this,
@@ -94,12 +130,17 @@ export class AskAgentIntent implements IIntent {
 		const { location, request } = invocationContext;
 		const endpoint = await this.endpointProvider.getChatEndpoint(request);
 
-		return this.instantiationService.createInstance(AskAgentIntentInvocation, this, location, endpoint, request);
+		return this.instantiationService.createInstance(
+			AskAgentIntentInvocation,
+			this,
+			location,
+			endpoint,
+			request,
+		);
 	}
 }
 
 export class AskAgentIntentInvocation extends AgentIntentInvocation {
-
 	public override get linkification(): IntentLinkificationOptions {
 		return { disable: false };
 	}
@@ -116,7 +157,8 @@ export class AskAgentIntentInvocation extends AgentIntentInvocation {
 		@IInstantiationService instantiationService: IInstantiationService,
 		@ICodeMapperService codeMapperService: ICodeMapperService,
 		@IEnvService envService: IEnvService,
-		@IPromptPathRepresentationService promptPathRepresentationService: IPromptPathRepresentationService,
+		@IPromptPathRepresentationService
+		promptPathRepresentationService: IPromptPathRepresentationService,
 		@IEndpointProvider endpointProvider: IEndpointProvider,
 		@IWorkspaceService workspaceService: IWorkspaceService,
 		@IToolsService toolsService: IToolsService,
@@ -129,12 +171,38 @@ export class AskAgentIntentInvocation extends AgentIntentInvocation {
 		@IExperimentationService expService: IExperimentationService,
 		@IAutomodeService automodeService: IAutomodeService,
 		@IOTelService otelService: IOTelService,
-		@ISessionTranscriptService sessionTranscriptService: ISessionTranscriptService,
+		@ISessionTranscriptService
+		sessionTranscriptService: ISessionTranscriptService,
 	) {
-		super(intent, location, endpoint, request, { processCodeblocks: true }, instantiationService, codeMapperService, envService, promptPathRepresentationService, endpointProvider, workspaceService, toolsService, configurationService, editLogService, commandService, telemetryService, notebookService, logService, expService, automodeService, otelService, sessionTranscriptService);
+		super(
+			intent,
+			location,
+			endpoint,
+			request,
+			{ processCodeblocks: true },
+			instantiationService,
+			codeMapperService,
+			envService,
+			promptPathRepresentationService,
+			endpointProvider,
+			workspaceService,
+			toolsService,
+			configurationService,
+			editLogService,
+			commandService,
+			telemetryService,
+			notebookService,
+			logService,
+			expService,
+			automodeService,
+			otelService,
+			sessionTranscriptService,
+		);
 	}
 
-	public override async getAvailableTools(): Promise<vscode.LanguageModelToolInformation[]> {
+	public override async getAvailableTools(): Promise<
+		vscode.LanguageModelToolInformation[]
+	> {
 		return getTools(this.instantiationService, this.request);
 	}
 }

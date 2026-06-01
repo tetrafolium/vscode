@@ -3,25 +3,51 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BasePolicy } from './basePolicy.ts';
-import type { CategoryDto, PolicyDto } from './policyDto.ts';
-import { renderProfileString } from './render.ts';
-import { type Category, type NlsString, PolicyType, type LanguageTranslations } from './types.ts';
+import { BasePolicy } from "./basePolicy.ts";
+import type { CategoryDto, PolicyDto } from "./policyDto.ts";
+import { renderProfileString } from "./render.ts";
+import {
+	type Category,
+	type NlsString,
+	PolicyType,
+	type LanguageTranslations,
+} from "./types.ts";
 
 export class NumberPolicy extends BasePolicy {
+	static from(
+		category: CategoryDto,
+		policy: PolicyDto,
+	): NumberPolicy | undefined {
+		const {
+			type,
+			default: defaultValue,
+			name,
+			minimumVersion,
+			localization,
+		} = policy;
 
-	static from(category: CategoryDto, policy: PolicyDto): NumberPolicy | undefined {
-		const { type, default: defaultValue, name, minimumVersion, localization } = policy;
-
-		if (type !== 'number') {
+		if (type !== "number") {
 			return undefined;
 		}
 
-		if (typeof defaultValue !== 'number') {
+		if (typeof defaultValue !== "number") {
 			throw new Error(`Missing required 'default' property.`);
 		}
 
-		return new NumberPolicy(name, { moduleName: '', name: { nlsKey: category.name.key, value: category.name.value } }, minimumVersion, { nlsKey: localization.description.key, value: localization.description.value }, '', defaultValue);
+		return new NumberPolicy(
+			name,
+			{
+				moduleName: "",
+				name: { nlsKey: category.name.key, value: category.name.value },
+			},
+			minimumVersion,
+			{
+				nlsKey: localization.description.key,
+				value: localization.description.value,
+			},
+			"",
+			defaultValue,
+		);
 	}
 
 	protected readonly defaultValue: number;
@@ -34,13 +60,20 @@ export class NumberPolicy extends BasePolicy {
 		moduleName: string,
 		defaultValue: number,
 	) {
-		super(PolicyType.Number, name, category, minimumVersion, description, moduleName);
+		super(
+			PolicyType.Number,
+			name,
+			category,
+			minimumVersion,
+			description,
+			moduleName,
+		);
 		this.defaultValue = defaultValue;
 	}
 
 	protected renderADMXElements(): string[] {
 		return [
-			`<decimal id="${this.name}" valueName="${this.name}" />`
+			`<decimal id="${this.name}" valueName="${this.name}" />`,
 			// `<decimal id="Quarantine_PurgeItemsAfterDelay" valueName="PurgeItemsAfterDelay" minValue="0" maxValue="10000000" />`
 		];
 	}

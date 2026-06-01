@@ -3,22 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/runScriptAction.css';
+import "./media/runScriptAction.css";
 
-import * as dom from '../../../../base/browser/dom.js';
-import { StandardKeyboardEvent } from '../../../../base/browser/keyboardEvent.js';
-import { Button } from '../../../../base/browser/ui/button/button.js';
-import { InputBox } from '../../../../base/browser/ui/inputbox/inputBox.js';
-import { Radio } from '../../../../base/browser/ui/radio/radio.js';
-import { Checkbox } from '../../../../base/browser/ui/toggle/toggle.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { KeyCode } from '../../../../base/common/keyCodes.js';
-import { localize } from '../../../../nls.js';
-import { defaultButtonStyles, defaultCheckboxStyles, defaultInputBoxStyles } from '../../../../platform/theme/browser/defaultStyles.js';
-import { TaskStorageTarget } from './sessionsTasksService.js';
+import * as dom from "../../../../base/browser/dom.js";
+import { StandardKeyboardEvent } from "../../../../base/browser/keyboardEvent.js";
+import { Button } from "../../../../base/browser/ui/button/button.js";
+import { InputBox } from "../../../../base/browser/ui/inputbox/inputBox.js";
+import { Radio } from "../../../../base/browser/ui/radio/radio.js";
+import { Checkbox } from "../../../../base/browser/ui/toggle/toggle.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { KeyCode } from "../../../../base/common/keyCodes.js";
+import { localize } from "../../../../nls.js";
+import {
+	defaultButtonStyles,
+	defaultCheckboxStyles,
+	defaultInputBoxStyles,
+} from "../../../../platform/theme/browser/defaultStyles.js";
+import { TaskStorageTarget } from "./sessionsTasksService.js";
 
-export const WORKTREE_CREATED_RUN_ON = 'worktreeCreated' as const;
+export const WORKTREE_CREATED_RUN_ON = "worktreeCreated" as const;
 
 export interface IRunScriptCustomTaskWidgetState {
 	readonly label?: string;
@@ -28,7 +32,7 @@ export interface IRunScriptCustomTaskWidgetState {
 	readonly target?: TaskStorageTarget;
 	readonly targetDisabledReason?: string;
 	readonly runOn?: typeof WORKTREE_CREATED_RUN_ON;
-	readonly mode?: 'add' | 'add-existing' | 'configure';
+	readonly mode?: "add" | "add-existing" | "configure";
 }
 
 export interface IRunScriptCustomTaskWidgetResult {
@@ -39,7 +43,6 @@ export interface IRunScriptCustomTaskWidgetResult {
 }
 
 export class RunScriptCustomTaskWidget extends Disposable {
-
 	readonly domNode: HTMLElement;
 
 	private readonly _labelInput: InputBox;
@@ -59,8 +62,11 @@ export class RunScriptCustomTaskWidget extends Disposable {
 	private readonly _initialTarget: TaskStorageTarget;
 	private _selectedTarget: TaskStorageTarget;
 
-	private readonly _onDidSubmit = this._register(new Emitter<IRunScriptCustomTaskWidgetResult>());
-	readonly onDidSubmit: Event<IRunScriptCustomTaskWidgetResult> = this._onDidSubmit.event;
+	private readonly _onDidSubmit = this._register(
+		new Emitter<IRunScriptCustomTaskWidgetResult>(),
+	);
+	readonly onDidSubmit: Event<IRunScriptCustomTaskWidgetResult> =
+		this._onDidSubmit.event;
 
 	private readonly _onDidCancel = this._register(new Emitter<void>());
 	readonly onDidCancel: Event<void> = this._onDidCancel.event;
@@ -70,120 +76,259 @@ export class RunScriptCustomTaskWidget extends Disposable {
 
 		this._labelLocked = !!state.labelDisabledReason;
 		this._commandLocked = !!state.commandDisabledReason;
-		this._targetLocked = !!state.targetDisabledReason && state.target !== undefined;
-		this._isExistingTask = state.mode === 'configure';
-		this._isAddExistingTask = state.mode === 'add-existing';
-		this._selectedTarget = state.target ?? (state.targetDisabledReason ? 'user' : 'workspace');
-		this._initialLabel = state.label ?? '';
-		this._initialCommand = state.command ?? '';
+		this._targetLocked =
+			!!state.targetDisabledReason && state.target !== undefined;
+		this._isExistingTask = state.mode === "configure";
+		this._isAddExistingTask = state.mode === "add-existing";
+		this._selectedTarget =
+			state.target ?? (state.targetDisabledReason ? "user" : "workspace");
+		this._initialLabel = state.label ?? "";
+		this._initialCommand = state.command ?? "";
 		this._initialRunOn = state.runOn === WORKTREE_CREATED_RUN_ON;
 		this._initialTarget = this._selectedTarget;
 
-		this.domNode = dom.$('.run-script-action-widget');
+		this.domNode = dom.$(".run-script-action-widget");
 
-		const labelSection = dom.append(this.domNode, dom.$('.run-script-action-section'));
-		dom.append(labelSection, dom.$('label.run-script-action-label', undefined, localize('labelFieldLabel', "Name")));
-		const labelInputContainer = dom.append(labelSection, dom.$('.run-script-action-input'));
-		this._labelInput = this._register(new InputBox(labelInputContainer, undefined, {
-			placeholder: localize('enterLabelPlaceholder', "Enter a name for this task (optional)"),
-			tooltip: state.labelDisabledReason,
-			ariaLabel: localize('enterLabelAriaLabel', "Task name"),
-			inputBoxStyles: defaultInputBoxStyles,
-		}));
-		this._labelInput.value = state.label ?? '';
+		const labelSection = dom.append(
+			this.domNode,
+			dom.$(".run-script-action-section"),
+		);
+		dom.append(
+			labelSection,
+			dom.$(
+				"label.run-script-action-label",
+				undefined,
+				localize("labelFieldLabel", "Name"),
+			),
+		);
+		const labelInputContainer = dom.append(
+			labelSection,
+			dom.$(".run-script-action-input"),
+		);
+		this._labelInput = this._register(
+			new InputBox(labelInputContainer, undefined, {
+				placeholder: localize(
+					"enterLabelPlaceholder",
+					"Enter a name for this task (optional)",
+				),
+				tooltip: state.labelDisabledReason,
+				ariaLabel: localize("enterLabelAriaLabel", "Task name"),
+				inputBoxStyles: defaultInputBoxStyles,
+			}),
+		);
+		this._labelInput.value = state.label ?? "";
 		if (state.labelDisabledReason) {
 			this._labelInput.disable();
 		}
 
-		const commandSection = dom.append(this.domNode, dom.$('.run-script-action-section'));
-		dom.append(commandSection, dom.$('label.run-script-action-label', undefined, localize('commandFieldLabel', "Command")));
-		const commandInputContainer = dom.append(commandSection, dom.$('.run-script-action-input'));
-		this._commandInput = this._register(new InputBox(commandInputContainer, undefined, {
-			placeholder: localize('enterCommandPlaceholder', "Enter command (for example, npm run dev)"),
-			tooltip: state.commandDisabledReason,
-			ariaLabel: localize('enterCommandAriaLabel', "Task command"),
-			inputBoxStyles: defaultInputBoxStyles,
-		}));
-		this._commandInput.value = state.command ?? '';
+		const commandSection = dom.append(
+			this.domNode,
+			dom.$(".run-script-action-section"),
+		);
+		dom.append(
+			commandSection,
+			dom.$(
+				"label.run-script-action-label",
+				undefined,
+				localize("commandFieldLabel", "Command"),
+			),
+		);
+		const commandInputContainer = dom.append(
+			commandSection,
+			dom.$(".run-script-action-input"),
+		);
+		this._commandInput = this._register(
+			new InputBox(commandInputContainer, undefined, {
+				placeholder: localize(
+					"enterCommandPlaceholder",
+					"Enter command (for example, npm run dev)",
+				),
+				tooltip: state.commandDisabledReason,
+				ariaLabel: localize("enterCommandAriaLabel", "Task command"),
+				inputBoxStyles: defaultInputBoxStyles,
+			}),
+		);
+		this._commandInput.value = state.command ?? "";
 		if (state.commandDisabledReason) {
 			this._commandInput.disable();
 		}
 
-		const runOnSection = dom.append(this.domNode, dom.$('.run-script-action-section'));
-		dom.append(runOnSection, dom.$('div.run-script-action-label', undefined, localize('runOptionsLabel', "Run Options")));
-		const runOnRow = dom.append(runOnSection, dom.$('.run-script-action-option-row'));
-		this._runOnCheckbox = this._register(new Checkbox(localize('runOnWorktreeCreated', "Run When Worktree Is Created"), state.runOn === WORKTREE_CREATED_RUN_ON, defaultCheckboxStyles));
+		const runOnSection = dom.append(
+			this.domNode,
+			dom.$(".run-script-action-section"),
+		);
+		dom.append(
+			runOnSection,
+			dom.$(
+				"div.run-script-action-label",
+				undefined,
+				localize("runOptionsLabel", "Run Options"),
+			),
+		);
+		const runOnRow = dom.append(
+			runOnSection,
+			dom.$(".run-script-action-option-row"),
+		);
+		this._runOnCheckbox = this._register(
+			new Checkbox(
+				localize("runOnWorktreeCreated", "Run When Worktree Is Created"),
+				state.runOn === WORKTREE_CREATED_RUN_ON,
+				defaultCheckboxStyles,
+			),
+		);
 		runOnRow.appendChild(this._runOnCheckbox.domNode);
-		const runOnText = dom.append(runOnRow, dom.$('span.run-script-action-option-text', undefined, localize('runOnWorktreeCreatedDescription', "Automatically run this task when the session worktree is created")));
-		this._register(dom.addDisposableListener(runOnText, dom.EventType.CLICK, () => this._runOnCheckbox.checked = !this._runOnCheckbox.checked));
+		const runOnText = dom.append(
+			runOnRow,
+			dom.$(
+				"span.run-script-action-option-text",
+				undefined,
+				localize(
+					"runOnWorktreeCreatedDescription",
+					"Automatically run this task when the session worktree is created",
+				),
+			),
+		);
+		this._register(
+			dom.addDisposableListener(
+				runOnText,
+				dom.EventType.CLICK,
+				() => (this._runOnCheckbox.checked = !this._runOnCheckbox.checked),
+			),
+		);
 
-		const storageSection = dom.append(this.domNode, dom.$('.run-script-action-section'));
-		dom.append(storageSection, dom.$('div.run-script-action-label', undefined, localize('storageLabel', "Save In")));
+		const storageSection = dom.append(
+			this.domNode,
+			dom.$(".run-script-action-section"),
+		);
+		dom.append(
+			storageSection,
+			dom.$(
+				"div.run-script-action-label",
+				undefined,
+				localize("storageLabel", "Save In"),
+			),
+		);
 		const storageDisabledReason = state.targetDisabledReason;
 		if (storageDisabledReason) {
-			dom.append(storageSection, dom.$('div.run-script-action-hint', undefined, storageDisabledReason));
+			dom.append(
+				storageSection,
+				dom.$("div.run-script-action-hint", undefined, storageDisabledReason),
+			);
 		}
 		const workspaceTargetDisabled = !!storageDisabledReason;
-		this._storageOptions = this._register(new Radio({
-			items: [
-				{
-					text: localize('workspaceStorageLabel', "Workspace"),
-					tooltip: storageDisabledReason ?? localize('workspaceStorageTooltip', "Save this task in the current workspace"),
-					isActive: this._selectedTarget === 'workspace',
-					disabled: workspaceTargetDisabled,
-				},
-				{
-					text: localize('userStorageLabel', "User"),
-					tooltip: this._targetLocked ? storageDisabledReason : localize('userStorageTooltip', "Save this task in your user tasks and make it available in all sessions"),
-					isActive: this._selectedTarget === 'user',
-					disabled: this._targetLocked,
-				}
-			]
-		}));
-		this._storageOptions.domNode.setAttribute('aria-label', localize('storageAriaLabel', "Task storage target"));
-		this._storageOptions.domNode.classList.toggle('run-script-action-radio-disabled', this._targetLocked);
+		this._storageOptions = this._register(
+			new Radio({
+				items: [
+					{
+						text: localize("workspaceStorageLabel", "Workspace"),
+						tooltip:
+							storageDisabledReason ??
+							localize(
+								"workspaceStorageTooltip",
+								"Save this task in the current workspace",
+							),
+						isActive: this._selectedTarget === "workspace",
+						disabled: workspaceTargetDisabled,
+					},
+					{
+						text: localize("userStorageLabel", "User"),
+						tooltip: this._targetLocked
+							? storageDisabledReason
+							: localize(
+									"userStorageTooltip",
+									"Save this task in your user tasks and make it available in all sessions",
+								),
+						isActive: this._selectedTarget === "user",
+						disabled: this._targetLocked,
+					},
+				],
+			}),
+		);
+		this._storageOptions.domNode.setAttribute(
+			"aria-label",
+			localize("storageAriaLabel", "Task storage target"),
+		);
+		this._storageOptions.domNode.classList.toggle(
+			"run-script-action-radio-disabled",
+			this._targetLocked,
+		);
 		this._storageOptions.setEnabled(!this._targetLocked);
 		storageSection.appendChild(this._storageOptions.domNode);
 
-		const buttonRow = dom.append(this.domNode, dom.$('.run-script-action-buttons'));
-		this._cancelButton = this._register(new Button(buttonRow, { ...defaultButtonStyles, secondary: true }));
-		this._cancelButton.label = localize('cancelAddAction', "Cancel");
-		this._submitButton = this._register(new Button(buttonRow, defaultButtonStyles));
+		const buttonRow = dom.append(
+			this.domNode,
+			dom.$(".run-script-action-buttons"),
+		);
+		this._cancelButton = this._register(
+			new Button(buttonRow, { ...defaultButtonStyles, secondary: true }),
+		);
+		this._cancelButton.label = localize("cancelAddAction", "Cancel");
+		this._submitButton = this._register(
+			new Button(buttonRow, defaultButtonStyles),
+		);
 		this._submitButton.label = this._getSubmitLabel();
 
-		this._register(this._labelInput.onDidChange(() => this._updateButtonState()));
-		this._register(this._commandInput.onDidChange(() => this._updateButtonState()));
-		this._register(this._storageOptions.onDidSelect(index => {
-			this._selectedTarget = index === 0 ? 'workspace' : 'user';
-			this._updateButtonState();
-		}));
-		this._register(this._runOnCheckbox.onChange(() => this._updateButtonState()));
+		this._register(
+			this._labelInput.onDidChange(() => this._updateButtonState()),
+		);
+		this._register(
+			this._commandInput.onDidChange(() => this._updateButtonState()),
+		);
+		this._register(
+			this._storageOptions.onDidSelect((index) => {
+				this._selectedTarget = index === 0 ? "workspace" : "user";
+				this._updateButtonState();
+			}),
+		);
+		this._register(
+			this._runOnCheckbox.onChange(() => this._updateButtonState()),
+		);
 		this._register(this._submitButton.onDidClick(() => this._submit()));
-		this._register(this._cancelButton.onDidClick(() => this._onDidCancel.fire()));
-		this._register(dom.addDisposableListener(this._labelInput.inputElement, dom.EventType.KEY_DOWN, event => {
-			const keyboardEvent = new StandardKeyboardEvent(event);
-			if (keyboardEvent.equals(KeyCode.Enter)) {
-				keyboardEvent.preventDefault();
-				keyboardEvent.stopPropagation();
-				this._submit();
-			}
-		}));
-		this._register(dom.addDisposableListener(this._commandInput.inputElement, dom.EventType.KEY_DOWN, event => {
-			const keyboardEvent = new StandardKeyboardEvent(event);
-			if (keyboardEvent.equals(KeyCode.Enter)) {
-				keyboardEvent.preventDefault();
-				keyboardEvent.stopPropagation();
-				this._submit();
-			}
-		}));
-		this._register(dom.addDisposableListener(this.domNode, dom.EventType.KEY_DOWN, event => {
-			const keyboardEvent = new StandardKeyboardEvent(event);
-			if (keyboardEvent.equals(KeyCode.Escape)) {
-				keyboardEvent.preventDefault();
-				keyboardEvent.stopPropagation();
-				this._onDidCancel.fire();
-			}
-		}));
+		this._register(
+			this._cancelButton.onDidClick(() => this._onDidCancel.fire()),
+		);
+		this._register(
+			dom.addDisposableListener(
+				this._labelInput.inputElement,
+				dom.EventType.KEY_DOWN,
+				(event) => {
+					const keyboardEvent = new StandardKeyboardEvent(event);
+					if (keyboardEvent.equals(KeyCode.Enter)) {
+						keyboardEvent.preventDefault();
+						keyboardEvent.stopPropagation();
+						this._submit();
+					}
+				},
+			),
+		);
+		this._register(
+			dom.addDisposableListener(
+				this._commandInput.inputElement,
+				dom.EventType.KEY_DOWN,
+				(event) => {
+					const keyboardEvent = new StandardKeyboardEvent(event);
+					if (keyboardEvent.equals(KeyCode.Enter)) {
+						keyboardEvent.preventDefault();
+						keyboardEvent.stopPropagation();
+						this._submit();
+					}
+				},
+			),
+		);
+		this._register(
+			dom.addDisposableListener(
+				this.domNode,
+				dom.EventType.KEY_DOWN,
+				(event) => {
+					const keyboardEvent = new StandardKeyboardEvent(event);
+					if (keyboardEvent.equals(KeyCode.Escape)) {
+						keyboardEvent.preventDefault();
+						keyboardEvent.stopPropagation();
+						this._onDidCancel.fire();
+					}
+				},
+			),
+		);
 
 		this._updateButtonState();
 	}
@@ -222,10 +367,10 @@ export class RunScriptCustomTaskWidget extends Disposable {
 
 	private _getSubmitLabel(): string {
 		if (this._isAddExistingTask) {
-			return localize('confirmAddToAgents', "Add to Agents Window");
+			return localize("confirmAddToAgents", "Add to Agents Window");
 		}
 		if (!this._isExistingTask) {
-			return localize('confirmAddTask', "Add Task");
+			return localize("confirmAddTask", "Add Task");
 		}
 
 		const targetChanged = this._selectedTarget !== this._initialTarget;
@@ -235,11 +380,11 @@ export class RunScriptCustomTaskWidget extends Disposable {
 		const otherChanged = labelChanged || commandChanged || runOnChanged;
 
 		if (targetChanged && otherChanged) {
-			return localize('confirmMoveAndUpdateTask', "Move and Update Task");
+			return localize("confirmMoveAndUpdateTask", "Move and Update Task");
 		}
 		if (targetChanged) {
-			return localize('confirmMoveTask', "Move Task");
+			return localize("confirmMoveTask", "Move Task");
 		}
-		return localize('confirmUpdateTask', "Update Task");
+		return localize("confirmUpdateTask", "Update Task");
 	}
 }

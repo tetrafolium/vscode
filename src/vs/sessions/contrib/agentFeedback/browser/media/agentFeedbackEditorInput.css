@@ -7,7 +7,11 @@
 	position: absolute;
 	z-index: 10000;
 	background-color: var(--vscode-panel-background);
-	border: 1px solid var(--vscode-agentFeedbackInputWidget-border, var(--vscode-editorWidget-border, var(--vscode-contrastBorder)));
+	border: 1px solid
+		var(
+			--vscode-agentFeedbackInputWidget-border,
+			var(--vscode-editorWidget-border, var(--vscode-contrastBorder))
+		);
 	box-shadow: var(--vscode-shadow-lg);
 	border-radius: 8px;
 	padding: 4px;
@@ -79,7 +83,11 @@
 	flex-shrink: 0;
 }
 
-.agent-feedback-input-widget .agent-feedback-input-actions .action-bar .action-item .action-label {
+.agent-feedback-input-widget
+	.agent-feedback-input-actions
+	.action-bar
+	.action-item
+	.action-label {
 	width: 16px;
 	height: 16px;
 }

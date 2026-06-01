@@ -3,10 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../base/common/uri.js';
-import { toHookType, IHookCommand, extractHookCommandsFromItem } from './hookSchema.js';
-import { HOOKS_BY_TARGET, HookType } from './hookTypes.js';
-import { Target } from './promptTypes.js';
+import { URI } from "../../../../../base/common/uri.js";
+import {
+	toHookType,
+	IHookCommand,
+	extractHookCommandsFromItem,
+} from "./hookSchema.js";
+import { HOOKS_BY_TARGET, HookType } from "./hookTypes.js";
+import { Target } from "./promptTypes.js";
 
 export { extractHookCommandsFromItem };
 
@@ -19,7 +23,9 @@ let _hookTypeToClaudeName: Map<HookType, string> | undefined;
 function getHookTypeToClaudeNameMap(): Map<HookType, string> {
 	if (!_hookTypeToClaudeName) {
 		_hookTypeToClaudeName = new Map();
-		for (const [claudeName, hookType] of Object.entries(HOOKS_BY_TARGET[Target.Claude])) {
+		for (const [claudeName, hookType] of Object.entries(
+			HOOKS_BY_TARGET[Target.Claude],
+		)) {
 			_hookTypeToClaudeName.set(hookType, claudeName);
 		}
 	}
@@ -78,11 +84,14 @@ export interface IParseClaudeHooksResult {
 export function parseClaudeHooks(
 	json: unknown,
 	workspaceRootUri: URI | undefined,
-	userHome: string
+	userHome: string,
 ): IParseClaudeHooksResult {
-	const result = new Map<HookType, { hooks: IHookCommand[]; originalId: string }>();
+	const result = new Map<
+		HookType,
+		{ hooks: IHookCommand[]; originalId: string }
+	>();
 
-	if (!json || typeof json !== 'object') {
+	if (!json || typeof json !== "object") {
 		return { hooks: result, disabledAllHooks: false };
 	}
 
@@ -95,7 +104,7 @@ export function parseClaudeHooks(
 
 	const hooks = root.hooks;
 
-	if (!hooks || typeof hooks !== 'object') {
+	if (!hooks || typeof hooks !== "object") {
 		return { hooks: result, disabledAllHooks: false };
 	}
 
@@ -103,7 +112,8 @@ export function parseClaudeHooks(
 
 	for (const originalId of Object.keys(hooksObj)) {
 		// Resolve Claude hook type name to our canonical HookType
-		const hookType = resolveClaudeHookType(originalId) ?? toHookType(originalId);
+		const hookType =
+			resolveClaudeHookType(originalId) ?? toHookType(originalId);
 		if (!hookType) {
 			continue;
 		}
@@ -117,7 +127,11 @@ export function parseClaudeHooks(
 
 		for (const item of hookArray) {
 			// Use shared helper that handles both direct commands and nested matcher structures
-			const extracted = extractHookCommandsFromItem(item, workspaceRootUri, userHome);
+			const extracted = extractHookCommandsFromItem(
+				item,
+				workspaceRootUri,
+				userHome,
+			);
 			commands.push(...extracted);
 		}
 
@@ -133,5 +147,3 @@ export function parseClaudeHooks(
 
 	return { hooks: result, disabledAllHooks: false };
 }
-
-

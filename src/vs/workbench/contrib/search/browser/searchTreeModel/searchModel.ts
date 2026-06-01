@@ -3,27 +3,53 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
-import { CancellationToken, CancellationTokenSource } from '../../../../../base/common/cancellation.js';
-import * as errors from '../../../../../base/common/errors.js';
-import { Emitter, Event, PauseableEmitter } from '../../../../../base/common/event.js';
-import { Lazy } from '../../../../../base/common/lazy.js';
-import { Disposable, IDisposable } from '../../../../../base/common/lifecycle.js';
-import { Schemas } from '../../../../../base/common/network.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { INotebookSearchService } from '../../common/notebookSearch.js';
-import { ReplacePattern } from '../../../../services/search/common/replace.js';
-import { IFileMatch, IPatternInfo, ISearchComplete, ISearchConfigurationProperties, ISearchProgressItem, ISearchService, ITextQuery, ITextSearchStats, QueryType, SearchCompletionExitCode } from '../../../../services/search/common/search.js';
-import { IChangeEvent, mergeSearchResultEvents, SearchModelLocation, ISearchModel, ISearchResult, SEARCH_MODEL_PREFIX } from './searchTreeCommon.js';
-import { SearchResultImpl } from './searchResult.js';
-import { ISearchViewModelWorkbenchService } from './searchViewModelWorkbenchService.js';
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from "../../../../../base/common/cancellation.js";
+import * as errors from "../../../../../base/common/errors.js";
+import {
+	Emitter,
+	Event,
+	PauseableEmitter,
+} from "../../../../../base/common/event.js";
+import { Lazy } from "../../../../../base/common/lazy.js";
+import {
+	Disposable,
+	IDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { Schemas } from "../../../../../base/common/network.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import { ITelemetryService } from "../../../../../platform/telemetry/common/telemetry.js";
+import { INotebookSearchService } from "../../common/notebookSearch.js";
+import { ReplacePattern } from "../../../../services/search/common/replace.js";
+import {
+	IFileMatch,
+	IPatternInfo,
+	ISearchComplete,
+	ISearchConfigurationProperties,
+	ISearchProgressItem,
+	ISearchService,
+	ITextQuery,
+	ITextSearchStats,
+	QueryType,
+	SearchCompletionExitCode,
+} from "../../../../services/search/common/search.js";
+import {
+	IChangeEvent,
+	mergeSearchResultEvents,
+	SearchModelLocation,
+	ISearchModel,
+	ISearchResult,
+	SEARCH_MODEL_PREFIX,
+} from "./searchTreeCommon.js";
+import { SearchResultImpl } from "./searchResult.js";
+import { ISearchViewModelWorkbenchService } from "./searchViewModelWorkbenchService.js";
 
 export class SearchModelImpl extends Disposable implements ISearchModel {
-
 	private _searchResult: ISearchResult;
 	private _searchQuery: ITextQuery | null = null;
 	private _replaceActive: boolean = false;
@@ -34,13 +60,18 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 	private readonly _resultQueue: IFileMatch[] = [];
 	private readonly _aiResultQueue: IFileMatch[] = [];
 
-	private readonly _onReplaceTermChanged: Emitter<void> = this._register(new Emitter<void>());
+	private readonly _onReplaceTermChanged: Emitter<void> = this._register(
+		new Emitter<void>(),
+	);
 	readonly onReplaceTermChanged: Event<void> = this._onReplaceTermChanged.event;
 
-	private readonly _onSearchResultChanged = this._register(new PauseableEmitter<IChangeEvent>({
-		merge: mergeSearchResultEvents
-	}));
-	readonly onSearchResultChanged: Event<IChangeEvent> = this._onSearchResultChanged.event;
+	private readonly _onSearchResultChanged = this._register(
+		new PauseableEmitter<IChangeEvent>({
+			merge: mergeSearchResultEvents,
+		}),
+	);
+	readonly onSearchResultChanged: Event<IChangeEvent> =
+		this._onSearchResultChanged.event;
 
 	private currentCancelTokenSource: CancellationTokenSource | null = null;
 	private currentAICancelTokenSource: CancellationTokenSource | null = null;
@@ -54,16 +85,26 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 	constructor(
 		@ISearchService private readonly searchService: ISearchService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@ILogService private readonly logService: ILogService,
-		@INotebookSearchService private readonly notebookSearchService: INotebookSearchService,
+		@INotebookSearchService
+		private readonly notebookSearchService: INotebookSearchService,
 	) {
 		super();
-		this._searchResult = this.instantiationService.createInstance(SearchResultImpl, this);
-		this._register(this._searchResult.onChange((e) => this._onSearchResultChanged.fire(e)));
+		this._searchResult = this.instantiationService.createInstance(
+			SearchResultImpl,
+			this,
+		);
+		this._register(
+			this._searchResult.onChange((e) => this._onSearchResultChanged.fire(e)),
+		);
 
-		this._aiTextResultProviderName = new Lazy(async () => this.searchService.getAIName());
+		this._aiTextResultProviderName = new Lazy(async () =>
+			this.searchService.getAIName(),
+		);
 		this._id = SEARCH_MODEL_PREFIX + Date.now().toString();
 	}
 
@@ -74,7 +115,7 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 	async getAITextResultProviderName(): Promise<string> {
 		const result = await this._aiTextResultProviderName.value;
 		if (!result) {
-			throw Error('Fetching AI name when no provider present.');
+			throw Error("Fetching AI name when no provider present.");
 		}
 		return result;
 	}
@@ -92,7 +133,7 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 	}
 
 	get replaceString(): string {
-		return this._replaceString || '';
+		return this._replaceString || "";
 	}
 
 	set preserveCase(value: boolean) {
@@ -106,7 +147,10 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 	set replaceString(replaceString: string) {
 		this._replaceString = replaceString;
 		if (this._searchQuery) {
-			this._replacePattern = new ReplacePattern(replaceString, this._searchQuery.contentPattern);
+			this._replacePattern = new ReplacePattern(
+				replaceString,
+				this._searchQuery.contentPattern,
+			);
 		}
 		this._onReplaceTermChanged.fire();
 	}
@@ -115,44 +159,67 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 		return this._searchResult;
 	}
 
-	aiSearch(onResult: (result: ISearchProgressItem | undefined) => void): Promise<ISearchComplete> {
+	aiSearch(
+		onResult: (result: ISearchProgressItem | undefined) => void,
+	): Promise<ISearchComplete> {
 		if (this.hasAIResults) {
 			// already has matches or pending matches
-			throw Error('AI results already exist');
+			throw Error("AI results already exist");
 		}
 		if (!this._searchQuery) {
-			throw Error('No search query');
+			throw Error("No search query");
 		}
 
 		const searchInstanceID = Date.now().toString();
 		const tokenSource = new CancellationTokenSource();
 		this.currentAICancelTokenSource = tokenSource;
 		const start = Date.now();
-		const asyncAIResults = this.searchService.aiTextSearch(
-			{ ...this._searchQuery, contentPattern: this._searchQuery.contentPattern.pattern, type: QueryType.aiText },
-			tokenSource.token,
-			async (p: ISearchProgressItem) => {
-				onResult(p);
-				this.onSearchProgress(p, searchInstanceID, false, true);
-			}).finally(() => {
+		const asyncAIResults = this.searchService
+			.aiTextSearch(
+				{
+					...this._searchQuery,
+					contentPattern: this._searchQuery.contentPattern.pattern,
+					type: QueryType.aiText,
+				},
+				tokenSource.token,
+				async (p: ISearchProgressItem) => {
+					onResult(p);
+					this.onSearchProgress(p, searchInstanceID, false, true);
+				},
+			)
+			.finally(() => {
 				tokenSource.dispose(true);
-			}).then(
-				value => {
+			})
+			.then(
+				(value) => {
 					if (value.results.length === 0) {
 						// alert of no results since onProgress won't be called
 						onResult(undefined);
 					}
-					this.onSearchCompleted(value, Date.now() - start, searchInstanceID, true);
+					this.onSearchCompleted(
+						value,
+						Date.now() - start,
+						searchInstanceID,
+						true,
+					);
 					return value;
 				},
-				e => {
+				(e) => {
 					this.onSearchError(e, Date.now() - start, true);
 					throw e;
-				});
+				},
+			);
 		return asyncAIResults;
 	}
 
-	private doSearch(query: ITextQuery, progressEmitter: Emitter<void>, searchQuery: ITextQuery, searchInstanceID: string, onProgress?: (result: ISearchProgressItem) => void, callerToken?: CancellationToken): {
+	private doSearch(
+		query: ITextQuery,
+		progressEmitter: Emitter<void>,
+		searchQuery: ITextQuery,
+		searchInstanceID: string,
+		onProgress?: (result: ISearchProgressItem) => void,
+		callerToken?: CancellationToken,
+	): {
 		asyncResults: Promise<ISearchComplete>;
 		syncResults: IFileMatch<URI>[];
 	} {
@@ -167,18 +234,29 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 			this.onSearchProgress(p, searchInstanceID, true);
 			onProgress?.(p);
 		};
-		const tokenSource = this.currentCancelTokenSource = new CancellationTokenSource(callerToken);
+		const tokenSource = (this.currentCancelTokenSource =
+			new CancellationTokenSource(callerToken));
 
-		const notebookResult = this.notebookSearchService.notebookSearch(query, tokenSource.token, searchInstanceID, asyncGenerateOnProgress);
+		const notebookResult = this.notebookSearchService.notebookSearch(
+			query,
+			tokenSource.token,
+			searchInstanceID,
+			asyncGenerateOnProgress,
+		);
 		const textResult = this.searchService.textSearchSplitSyncAsync(
 			searchQuery,
-			tokenSource.token, asyncGenerateOnProgress,
+			tokenSource.token,
+			asyncGenerateOnProgress,
 			notebookResult.openFilesToScan,
 			notebookResult.allScannedFiles,
 		);
 
 		const syncResults = textResult.syncResults.results;
-		syncResults.forEach(p => { if (p) { syncGenerateOnProgress(p); } });
+		syncResults.forEach((p) => {
+			if (p) {
+				syncGenerateOnProgress(p);
+			}
+		});
 
 		const getAsyncResults = async (): Promise<ISearchComplete> => {
 			const searchStart = Date.now();
@@ -188,9 +266,16 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 			const resolvedNotebookResults = await notebookResult.completeData;
 			const searchLength = Date.now() - searchStart;
 			const resolvedResult: ISearchComplete = {
-				results: [...allClosedEditorResults.results, ...resolvedNotebookResults.results],
-				messages: [...allClosedEditorResults.messages, ...resolvedNotebookResults.messages],
-				limitHit: allClosedEditorResults.limitHit || resolvedNotebookResults.limitHit,
+				results: [
+					...allClosedEditorResults.results,
+					...resolvedNotebookResults.results,
+				],
+				messages: [
+					...allClosedEditorResults.messages,
+					...resolvedNotebookResults.messages,
+				],
+				limitHit:
+					allClosedEditorResults.limitHit || resolvedNotebookResults.limitHit,
 				exit: allClosedEditorResults.exit,
 				stats: allClosedEditorResults.stats,
 			};
@@ -198,21 +283,32 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 			return resolvedResult;
 		};
 		return {
-			asyncResults: getAsyncResults()
-				.finally(() => tokenSource.dispose(true)),
-			syncResults
+			asyncResults: getAsyncResults().finally(() => tokenSource.dispose(true)),
+			syncResults,
 		};
 	}
 
 	get hasAIResults(): boolean {
-		return !!(this.searchResult.getCachedSearchComplete(true)) || (!!this.currentAICancelTokenSource && !this.currentAICancelTokenSource.token.isCancellationRequested);
+		return (
+			!!this.searchResult.getCachedSearchComplete(true) ||
+			(!!this.currentAICancelTokenSource &&
+				!this.currentAICancelTokenSource.token.isCancellationRequested)
+		);
 	}
 
 	get hasPlainResults(): boolean {
-		return !!(this.searchResult.getCachedSearchComplete(false)) || (!!this.currentCancelTokenSource && !this.currentCancelTokenSource.token.isCancellationRequested);
+		return (
+			!!this.searchResult.getCachedSearchComplete(false) ||
+			(!!this.currentCancelTokenSource &&
+				!this.currentCancelTokenSource.token.isCancellationRequested)
+		);
 	}
 
-	search(query: ITextQuery, onProgress?: (result: ISearchProgressItem) => void, callerToken?: CancellationToken): {
+	search(
+		query: ITextQuery,
+		onProgress?: (result: ISearchProgressItem) => void,
+		callerToken?: CancellationToken,
+	): {
 		asyncResults: Promise<ISearchComplete>;
 		syncResults: IFileMatch<URI>[];
 	} {
@@ -227,17 +323,29 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 		this._searchResult.query = this._searchQuery;
 
 		const progressEmitter = this._register(new Emitter<void>());
-		this._replacePattern = new ReplacePattern(this.replaceString, this._searchQuery.contentPattern);
+		this._replacePattern = new ReplacePattern(
+			this.replaceString,
+			this._searchQuery.contentPattern,
+		);
 
 		// In search on type case, delay the streaming of results just a bit, so that we don't flash the only "local results" fast path
-		this._startStreamDelay = new Promise(resolve => setTimeout(resolve, this.searchConfig.searchOnType ? 150 : 0));
+		this._startStreamDelay = new Promise((resolve) =>
+			setTimeout(resolve, this.searchConfig.searchOnType ? 150 : 0),
+		);
 
-		const req = this.doSearch(query, progressEmitter, this._searchQuery, searchInstanceID, onProgress, callerToken);
+		const req = this.doSearch(
+			query,
+			progressEmitter,
+			this._searchQuery,
+			searchInstanceID,
+			onProgress,
+			callerToken,
+		);
 		const asyncResults = req.asyncResults;
 		const syncResults = req.syncResults;
 
 		if (onProgress) {
-			syncResults.forEach(p => {
+			syncResults.forEach((p) => {
 				if (p) {
 					onProgress(p);
 				}
@@ -247,7 +355,7 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 		const start = Date.now();
 		let event: IDisposable | undefined;
 
-		const progressEmitterPromise = new Promise(resolve => {
+		const progressEmitterPromise = new Promise((resolve) => {
 			event = Event.once(progressEmitter.event)(resolve);
 			return event;
 		});
@@ -260,21 +368,29 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 				}
 			*/
 			event?.dispose();
-			this.telemetryService.publicLog('searchResultsFirstRender', { duration: Date.now() - start });
+			this.telemetryService.publicLog("searchResultsFirstRender", {
+				duration: Date.now() - start,
+			});
 		});
 
 		try {
 			return {
 				asyncResults: asyncResults.then(
-					value => {
-						this.onSearchCompleted(value, Date.now() - start, searchInstanceID, false);
+					(value) => {
+						this.onSearchCompleted(
+							value,
+							Date.now() - start,
+							searchInstanceID,
+							false,
+						);
 						return value;
 					},
-					e => {
+					(e) => {
 						this.onSearchError(e, Date.now() - start, false);
 						throw e;
-					}),
-				syncResults
+					},
+				),
+				syncResults,
 			};
 		} finally {
 			/* __GDPR__
@@ -283,13 +399,22 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 					"duration" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true }
 				}
 			*/
-			this.telemetryService.publicLog('searchResultsFinished', { duration: Date.now() - start });
+			this.telemetryService.publicLog("searchResultsFinished", {
+				duration: Date.now() - start,
+			});
 		}
 	}
 
-	private onSearchCompleted(completed: ISearchComplete | undefined, duration: number, searchInstanceID: string, ai: boolean): ISearchComplete | undefined {
+	private onSearchCompleted(
+		completed: ISearchComplete | undefined,
+		duration: number,
+		searchInstanceID: string,
+		ai: boolean,
+	): ISearchComplete | undefined {
 		if (!this._searchQuery) {
-			throw new Error('onSearchCompleted must be called after a search is started');
+			throw new Error(
+				"onSearchCompleted must be called after a search is started",
+			);
 		}
 
 		if (ai) {
@@ -302,17 +427,26 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 
 		this.searchResult.setCachedSearchComplete(completed, ai);
 
-		const options: IPatternInfo = Object.assign({}, this._searchQuery.contentPattern);
+		const options: IPatternInfo = Object.assign(
+			{},
+			this._searchQuery.contentPattern,
+		);
 		// eslint-disable-next-line local/code-no-any-casts
 		delete (options as any).pattern;
 
-		const stats = completed && completed.stats as ITextSearchStats;
+		const stats = completed && (completed.stats as ITextSearchStats);
 
-		const fileSchemeOnly = this._searchQuery.folderQueries.every(fq => fq.folder.scheme === Schemas.file);
-		const otherSchemeOnly = this._searchQuery.folderQueries.every(fq => fq.folder.scheme !== Schemas.file);
-		const scheme = fileSchemeOnly ? Schemas.file :
-			otherSchemeOnly ? 'other' :
-				'mixed';
+		const fileSchemeOnly = this._searchQuery.folderQueries.every(
+			(fq) => fq.folder.scheme === Schemas.file,
+		);
+		const otherSchemeOnly = this._searchQuery.folderQueries.every(
+			(fq) => fq.folder.scheme !== Schemas.file,
+		);
+		const scheme = fileSchemeOnly
+			? Schemas.file
+			: otherSchemeOnly
+				? "other"
+				: "mixed";
 
 		/* __GDPR__
 			"searchResultsShown" : {
@@ -326,14 +460,14 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 				"searchOnTypeEnabled" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
 			}
 		*/
-		this.telemetryService.publicLog('searchResultsShown', {
+		this.telemetryService.publicLog("searchResultsShown", {
 			count: this._searchResult.count(),
 			fileCount: this._searchResult.fileCount(),
 			options,
 			duration,
 			type: stats && stats.type,
 			scheme,
-			searchOnTypeEnabled: this.searchConfig.searchOnType
+			searchOnTypeEnabled: this.searchConfig.searchOnType,
 		});
 		return completed;
 	}
@@ -341,10 +475,21 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 	private onSearchError(e: any, duration: number, ai: boolean): void {
 		if (errors.isCancellationError(e)) {
 			this.onSearchCompleted(
-				(ai ? this.aiSearchCancelledForNewSearch : this.searchCancelledForNewSearch)
-					? { exit: SearchCompletionExitCode.NewSearchStarted, results: [], messages: [] }
+				(
+					ai
+						? this.aiSearchCancelledForNewSearch
+						: this.searchCancelledForNewSearch
+				)
+					? {
+							exit: SearchCompletionExitCode.NewSearchStarted,
+							results: [],
+							messages: [],
+						}
 					: undefined,
-				duration, '', ai);
+				duration,
+				"",
+				ai,
+			);
 			if (ai) {
 				this.aiSearchCancelledForNewSearch = false;
 			} else {
@@ -353,7 +498,12 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 		}
 	}
 
-	private onSearchProgress(p: ISearchProgressItem, searchInstanceID: string, sync = true, ai: boolean = false) {
+	private onSearchProgress(
+		p: ISearchProgressItem,
+		searchInstanceID: string,
+		sync = true,
+		ai: boolean = false,
+	) {
 		const targetQueue = ai ? this._aiResultQueue : this._resultQueue;
 		if ((<IFileMatch>p).resource) {
 			targetQueue.push(<IFileMatch>p);
@@ -370,12 +520,13 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 					}
 				});
 			}
-
 		}
 	}
 
 	private get searchConfig() {
-		return this.configurationService.getValue<ISearchConfigurationProperties>('search');
+		return this.configurationService.getValue<ISearchConfigurationProperties>(
+			"search",
+		);
 	}
 
 	cancelSearch(cancelledForNewSearch = false): boolean {
@@ -405,21 +556,21 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 		this.searchResult.dispose();
 		super.dispose();
 	}
-
 }
 
-
 export class SearchViewModelWorkbenchService implements ISearchViewModelWorkbenchService {
-
 	declare readonly _serviceBrand: undefined;
 	private _searchModel: SearchModelImpl | null = null;
 
-	constructor(@IInstantiationService private readonly instantiationService: IInstantiationService) {
-	}
+	constructor(
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+	) {}
 
 	get searchModel(): SearchModelImpl {
 		if (!this._searchModel) {
-			this._searchModel = this.instantiationService.createInstance(SearchModelImpl);
+			this._searchModel =
+				this.instantiationService.createInstance(SearchModelImpl);
 		}
 		return this._searchModel;
 	}
@@ -429,4 +580,3 @@ export class SearchViewModelWorkbenchService implements ISearchViewModelWorkbenc
 		this._searchModel = searchModel;
 	}
 }
-

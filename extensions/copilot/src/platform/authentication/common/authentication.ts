@@ -2,7 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import type { AuthenticationGetSessionOptions, AuthenticationGetSessionPresentationOptions, AuthenticationSession } from 'vscode';
+import type {
+	AuthenticationGetSessionOptions,
+	AuthenticationGetSessionPresentationOptions,
+	AuthenticationSession,
+} from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
 /**
@@ -10,11 +14,17 @@ import { createServiceIdentifier } from '../../../util/common/services';
  * a `detail` message explaining why authentication is needed. This forces callers to provide
  * meaningful context to the user instead of passing a bare `true` or `{}`.
  */
-export type StrictAuthenticationPresentationOptions = AuthenticationGetSessionPresentationOptions & { detail: string };
+export type StrictAuthenticationPresentationOptions =
+	AuthenticationGetSessionPresentationOptions & { detail: string };
 import { Emitter, Event } from '../../../util/vs/base/common/event';
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
 import { derived } from '../../../util/vs/base/common/observableInternal';
-import { AuthPermissionMode, AuthProviderId, ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
+import {
+	AuthPermissionMode,
+	AuthProviderId,
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
 import { ILogService } from '../../log/common/logService';
 import { CopilotToken } from './copilotToken';
 import { ICopilotTokenManager } from './copilotTokenManager';
@@ -27,7 +37,12 @@ export const GITHUB_SCOPE_USER_EMAIL = ['user:email'];
 export const GITHUB_SCOPE_READ_USER = ['read:user'];
 
 // The same scopes that GitHub Pull Request, GitHub Repositories, and others use
-export const GITHUB_SCOPE_ALIGNED = ['read:user', 'user:email', 'repo', 'workflow'];
+export const GITHUB_SCOPE_ALIGNED = [
+	'read:user',
+	'user:email',
+	'repo',
+	'workflow',
+];
 
 export class MinimalModeError extends Error {
 	constructor() {
@@ -36,9 +51,9 @@ export class MinimalModeError extends Error {
 	}
 }
 
-export const IAuthenticationService = createServiceIdentifier<IAuthenticationService>('IAuthenticationService');
+export const IAuthenticationService =
+	createServiceIdentifier<IAuthenticationService>('IAuthenticationService');
 export interface IAuthenticationService {
-
 	readonly _serviceBrand: undefined;
 
 	/**
@@ -103,7 +118,12 @@ export interface IAuthenticationService {
 	 * @throws MinimalModeError - If kind is 'permissive' and the authentication service is in minimal mode.
 	 * @throws Error - If no session is acquired (user cancels).
 	 */
-	getGitHubSession(kind: 'permissive' | 'any', options: AuthenticationGetSessionOptions & { createIfNone: StrictAuthenticationPresentationOptions }): Promise<AuthenticationSession>;
+	getGitHubSession(
+		kind: 'permissive' | 'any',
+		options: AuthenticationGetSessionOptions & {
+			createIfNone: StrictAuthenticationPresentationOptions;
+		},
+	): Promise<AuthenticationSession>;
 
 	/**
 	 * Gets a GitHub session capable of calling GitHub APIs.
@@ -115,7 +135,12 @@ export interface IAuthenticationService {
 	 * @throws MinimalModeError - If kind is 'permissive' and the authentication service is in minimal mode.
 	 * @throws Error - If no session is acquired (user cancels).
 	 */
-	getGitHubSession(kind: 'permissive' | 'any', options: AuthenticationGetSessionOptions & { forceNewSession: StrictAuthenticationPresentationOptions }): Promise<AuthenticationSession>;
+	getGitHubSession(
+		kind: 'permissive' | 'any',
+		options: AuthenticationGetSessionOptions & {
+			forceNewSession: StrictAuthenticationPresentationOptions;
+		},
+	): Promise<AuthenticationSession>;
 
 	/**
 	 * Gets a GitHub session capable of calling GitHub APIs.
@@ -127,7 +152,13 @@ export interface IAuthenticationService {
 	 * @returns Promise<undefined> - If no session is available or kind is 'permissive' and the authentication service is in minimal mode.
 	 * @see {@link isMinimalMode} for more information about minimal mode.
 	 */
-	getGitHubSession(kind: 'permissive' | 'any', options: Omit<AuthenticationGetSessionOptions, 'createIfNone' | 'forceNewSession'>): Promise<AuthenticationSession | undefined>;
+	getGitHubSession(
+		kind: 'permissive' | 'any',
+		options: Omit<
+			AuthenticationGetSessionOptions,
+			'createIfNone' | 'forceNewSession'
+		>,
+	): Promise<AuthenticationSession | undefined>;
 
 	/**
 	 * Checks if there is currently a Copilot token available in the cache. Does not make any network requests.
@@ -137,7 +168,6 @@ export interface IAuthenticationService {
 	 * @note For best practice of handling of the user's authentication state, you should react to {@link onDidAuthenticationChange}.
 	 */
 	readonly copilotToken: Omit<CopilotToken, 'token'> | undefined;
-
 
 	/**
 	 * Return the token needed to authenticate with the speculative decoding endpoint.
@@ -170,43 +200,68 @@ export interface IAuthenticationService {
 	/**
 	 * Returns a valid Azure DevOps session for the user
 	 */
-	getAdoAccessTokenBase64(options?: AuthenticationGetSessionOptions): Promise<string | undefined>;
+	getAdoAccessTokenBase64(
+		options?: AuthenticationGetSessionOptions,
+	): Promise<string | undefined>;
 }
 
-export abstract class BaseAuthenticationService extends Disposable implements IAuthenticationService {
+export abstract class BaseAuthenticationService
+	extends Disposable
+	implements IAuthenticationService
+{
 	declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidAuthenticationChange = this._register(new Emitter<void>());
-	readonly onDidAuthenticationChange: Event<void> = this._onDidAuthenticationChange.event;
+	private readonly _onDidAuthenticationChange = this._register(
+		new Emitter<void>(),
+	);
+	readonly onDidAuthenticationChange: Event<void> =
+		this._onDidAuthenticationChange.event;
 
 	protected fireAuthenticationChange(source: string): void {
 		const hasSession = !!this.copilotToken;
-		this._logService.info(`AuthenticationService: firing onDidAuthenticationChange from ${source}. Has token: ${hasSession}`);
+		this._logService.info(
+			`AuthenticationService: firing onDidAuthenticationChange from ${source}. Has token: ${hasSession}`,
+		);
 		this._onDidAuthenticationChange.fire();
 	}
 
-	protected readonly _onDidAccessTokenChange = this._register(new Emitter<void>());
-	readonly onDidAccessTokenChange: Event<void> = this._onDidAccessTokenChange.event;
+	protected readonly _onDidAccessTokenChange = this._register(
+		new Emitter<void>(),
+	);
+	readonly onDidAccessTokenChange: Event<void> =
+		this._onDidAccessTokenChange.event;
 
-	protected readonly _onDidAdoAuthenticationChange = this._register(new Emitter<void>());
-	readonly onDidAdoAuthenticationChange: Event<void> = this._onDidAdoAuthenticationChange.event;
+	protected readonly _onDidAdoAuthenticationChange = this._register(
+		new Emitter<void>(),
+	);
+	readonly onDidAdoAuthenticationChange: Event<void> =
+		this._onDidAdoAuthenticationChange.event;
 
 	constructor(
 		@ILogService protected readonly _logService: ILogService,
 		@ICopilotTokenStore protected readonly _tokenStore: ICopilotTokenStore,
-		@ICopilotTokenManager private readonly _tokenManager: ICopilotTokenManager,
-		@IConfigurationService protected readonly _configurationService: IConfigurationService,
+		@ICopilotTokenManager
+		private readonly _tokenManager: ICopilotTokenManager,
+		@IConfigurationService
+		protected readonly _configurationService: IConfigurationService,
 	) {
 		super();
-		this._register(_tokenManager.onDidCopilotTokenRefresh(() => {
-			this._logService.debug('Handling CopilotToken refresh.');
-			void this._handleAuthChangeEvent();
-		}));
+		this._register(
+			_tokenManager.onDidCopilotTokenRefresh(() => {
+				this._logService.debug('Handling CopilotToken refresh.');
+				void this._handleAuthChangeEvent();
+			}),
+		);
 	}
 
 	//#region isMinimalMode
 
-	protected _isMinimalMode = derived(r => this._configurationService.getConfigObservable(ConfigKey.Shared.AuthPermissions).read(r) === AuthPermissionMode.Minimal);
+	protected _isMinimalMode = derived(
+		(r) =>
+			this._configurationService
+				.getConfigObservable(ConfigKey.Shared.AuthPermissions)
+				.read(r) === AuthPermissionMode.Minimal,
+	);
 	get isMinimalMode(): boolean {
 		return this._isMinimalMode.get();
 	}
@@ -241,9 +296,25 @@ export abstract class BaseAuthenticationService extends Disposable implements IA
 
 	//#region GitHub Session
 
-	abstract getGitHubSession(kind: 'permissive' | 'any', options: AuthenticationGetSessionOptions & { createIfNone: StrictAuthenticationPresentationOptions }): Promise<AuthenticationSession>;
-	abstract getGitHubSession(kind: 'permissive' | 'any', options: AuthenticationGetSessionOptions & { forceNewSession: StrictAuthenticationPresentationOptions }): Promise<AuthenticationSession>;
-	abstract getGitHubSession(kind: 'permissive' | 'any', options: Omit<AuthenticationGetSessionOptions, 'createIfNone' | 'forceNewSession'>): Promise<AuthenticationSession | undefined>;
+	abstract getGitHubSession(
+		kind: 'permissive' | 'any',
+		options: AuthenticationGetSessionOptions & {
+			createIfNone: StrictAuthenticationPresentationOptions;
+		},
+	): Promise<AuthenticationSession>;
+	abstract getGitHubSession(
+		kind: 'permissive' | 'any',
+		options: AuthenticationGetSessionOptions & {
+			forceNewSession: StrictAuthenticationPresentationOptions;
+		},
+	): Promise<AuthenticationSession>;
+	abstract getGitHubSession(
+		kind: 'permissive' | 'any',
+		options: Omit<
+			AuthenticationGetSessionOptions,
+			'createIfNone' | 'forceNewSession'
+		>,
+	): Promise<AuthenticationSession | undefined>;
 
 	//#endregion
 
@@ -253,7 +324,9 @@ export abstract class BaseAuthenticationService extends Disposable implements IA
 	get anyAdoSession(): AuthenticationSession | undefined {
 		return this._anyAdoSession;
 	}
-	protected abstract getAnyAdoSession(options?: AuthenticationGetSessionOptions): Promise<AuthenticationSession | undefined>;
+	protected abstract getAnyAdoSession(
+		options?: AuthenticationGetSessionOptions,
+	): Promise<AuthenticationSession | undefined>;
 
 	//#endregion
 
@@ -277,7 +350,11 @@ export abstract class BaseAuthenticationService extends Disposable implements IA
 			// but the error has change. I.e. They go from being not signed in (no copilot token can be minted)
 			// to an account that doesn't have a valid subscription (no copilot token can be minted).
 			// NOTE: if either error is undefined, this event should be fired elsewhere already.
-			if (beforeError && afterError && beforeError.message !== afterError.message) {
+			if (
+				beforeError &&
+				afterError &&
+				beforeError.message !== afterError.message
+			) {
 				this.fireAuthenticationChange('getCopilotToken error change');
 			}
 			throw afterError;
@@ -296,7 +373,9 @@ export abstract class BaseAuthenticationService extends Disposable implements IA
 	// #endregion
 
 	//#region ADO Token
-	abstract getAdoAccessTokenBase64(options?: AuthenticationGetSessionOptions): Promise<string | undefined>;
+	abstract getAdoAccessTokenBase64(
+		options?: AuthenticationGetSessionOptions,
+	): Promise<string | undefined>;
 	//#endregion
 
 	protected async _handleAuthChangeEvent(): Promise<void> {
@@ -314,16 +393,22 @@ export abstract class BaseAuthenticationService extends Disposable implements IA
 		]);
 		for (const res of resolved) {
 			if (res.status === 'rejected') {
-				this._logService.error(`Error getting a session: ${res.reason}`);
+				this._logService.error(
+					`Error getting a session: ${res.reason}`,
+				);
 			}
 		}
 
 		if (
-			anyGitHubSessionBefore?.accessToken !== this._anyGitHubSession?.accessToken ||
-			permissiveGitHubSessionBefore?.accessToken !== this._permissiveGitHubSession?.accessToken
+			anyGitHubSessionBefore?.accessToken !==
+				this._anyGitHubSession?.accessToken ||
+			permissiveGitHubSessionBefore?.accessToken !==
+				this._permissiveGitHubSession?.accessToken
 		) {
 			this._onDidAccessTokenChange.fire();
-			this._logService.debug('Auth state changed, minting a new CopilotToken...');
+			this._logService.debug(
+				'Auth state changed, minting a new CopilotToken...',
+			);
 			// The auth state has changed, so mint a new Copilot token
 			try {
 				await this.getCopilotToken(true);
@@ -334,8 +419,13 @@ export abstract class BaseAuthenticationService extends Disposable implements IA
 			return;
 		}
 
-		if (anyAdoSessionBefore?.accessToken !== this._anyAdoSession?.accessToken) {
-			this._logService.debug(`Ado auth state changed, firing event. Had token before: ${!!anyAdoSessionBefore?.accessToken}. Has token now: ${!!this._anyAdoSession?.accessToken}.`);
+		if (
+			anyAdoSessionBefore?.accessToken !==
+			this._anyAdoSession?.accessToken
+		) {
+			this._logService.debug(
+				`Ado auth state changed, firing event. Had token before: ${!!anyAdoSessionBefore?.accessToken}. Has token now: ${!!this._anyAdoSession?.accessToken}.`,
+			);
 			this._onDidAdoAuthenticationChange.fire();
 		}
 
@@ -346,9 +436,12 @@ export abstract class BaseAuthenticationService extends Disposable implements IA
 			// Ignore errors
 		}
 
-		if (copilotTokenBefore?.token !== this._tokenStore.copilotToken?.token ||
+		if (
+			copilotTokenBefore?.token !==
+				this._tokenStore.copilotToken?.token ||
 			// React to errors changing too (i.e. I go from zero session to a session that doesn't have Copilot access)
-			copilotTokenErrorBefore?.message !== this._copilotTokenError?.message
+			copilotTokenErrorBefore?.message !==
+				this._copilotTokenError?.message
 		) {
 			this._logService.debug('CopilotToken state changed, firing event.');
 			this.fireAuthenticationChange('handleAuthChangeEvent');
@@ -357,10 +450,11 @@ export abstract class BaseAuthenticationService extends Disposable implements IA
 	}
 }
 
-export function authProviderId(configurationService: IConfigurationService): AuthProviderId {
-	return (
-		configurationService.getConfig(ConfigKey.Shared.AuthProvider) === AuthProviderId.GitHubEnterprise
-			? AuthProviderId.GitHubEnterprise
-			: AuthProviderId.GitHub
-	);
+export function authProviderId(
+	configurationService: IConfigurationService,
+): AuthProviderId {
+	return configurationService.getConfig(ConfigKey.Shared.AuthProvider) ===
+		AuthProviderId.GitHubEnterprise
+		? AuthProviderId.GitHubEnterprise
+		: AuthProviderId.GitHub;
 }

@@ -9,21 +9,31 @@ import { InlineEditRequestLogContext } from '../../../../platform/inlineEdits/co
 import { TaskQueue } from '../../../../util/common/async';
 import { timeout } from '../../../../util/vs/base/common/async';
 import { BugIndicatingError } from '../../../../util/vs/base/common/errors';
-import { Disposable, DisposableMap, toDisposable } from '../../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	DisposableMap,
+	toDisposable,
+} from '../../../../util/vs/base/common/lifecycle';
 import * as path from '../../../../util/vs/base/common/path';
-import { FlushableJSONFile, FlushableSafeJSONLFile, getFileSize } from '../../../workspaceRecorder/vscode-node/safeFileWriteUtils';
+import {
+	FlushableJSONFile,
+	FlushableSafeJSONLFile,
+	getFileSize,
+} from '../../../workspaceRecorder/vscode-node/safeFileWriteUtils';
 import { INextEditResult } from '../../node/nextEditResult';
 import { InlineEditLogger } from '../parts/inlineEditLogger';
 
 export class LogContextRecorder extends Disposable {
-
 	public static fileSuffix = '.logContext.jsonl';
 
 	private readonly _queue: TaskQueue;
 	public readonly logFilePath: string;
 	private readonly _impl: Promise<LogContextRecorderImpl>;
 
-	private readonly _shownSuggestions: DisposableMap<number, { timeout: TimeoutHandle; dispose: () => void }>;
+	private readonly _shownSuggestions: DisposableMap<
+		number,
+		{ timeout: TimeoutHandle; dispose: () => void }
+	>;
 
 	constructor(
 		public readonly recordingDirPath: string,
@@ -35,11 +45,17 @@ export class LogContextRecorder extends Disposable {
 
 		this._shownSuggestions = this._register(new DisposableMap());
 
-		this.logFilePath = path.join(this.recordingDirPath, `current${LogContextRecorder.fileSuffix}`);
+		this.logFilePath = path.join(
+			this.recordingDirPath,
+			`current${LogContextRecorder.fileSuffix}`,
+		);
 
-		this._impl = LogContextRecorderImpl.create(this.recordingDirPath, this.logFilePath);
+		this._impl = LogContextRecorderImpl.create(
+			this.recordingDirPath,
+			this.logFilePath,
+		);
 
-		this._impl.then(impl => {
+		this._impl.then((impl) => {
 			if (this._store.isDisposed) {
 				impl.dispose();
 			} else {
@@ -51,10 +67,12 @@ export class LogContextRecorder extends Disposable {
 	public static async cleanupOldRecordings(recordingDirPath: string) {
 		const dirContents = await fs.readdir(recordingDirPath).catch(() => []);
 		return Promise.all(
-			dirContents.filter(file => file.endsWith(LogContextRecorder.fileSuffix)).map(file => {
-				const filePath = path.join(recordingDirPath, file);
-				return fs.unlink(filePath).catch(() => { });
-			})
+			dirContents
+				.filter((file) => file.endsWith(LogContextRecorder.fileSuffix))
+				.map((file) => {
+					const filePath = path.join(recordingDirPath, file);
+					return fs.unlink(filePath).catch(() => {});
+				}),
 		);
 	}
 
@@ -69,7 +87,10 @@ export class LogContextRecorder extends Disposable {
 			}
 			this._shownSuggestions.deleteAndDispose(requestId);
 		}, 10000);
-		this._shownSuggestions.set(requestId, { timeout: timer, dispose: () => clearTimeout(timer) });
+		this._shownSuggestions.set(requestId, {
+			timeout: timer,
+			dispose: () => clearTimeout(timer),
+		});
 	}
 
 	public handleAcceptance(nextEditResult: INextEditResult) {
@@ -103,18 +124,27 @@ export class LogContextRecorder extends Disposable {
 }
 
 class LogContextRecorderImpl extends Disposable {
-	public static async create(recordingDirPath: string, logFilePath: string,): Promise<LogContextRecorderImpl> {
+	public static async create(
+		recordingDirPath: string,
+		logFilePath: string,
+	): Promise<LogContextRecorderImpl> {
 		await mkdir(recordingDirPath, { recursive: true });
 
 		const currentVersion = 1;
 
-		const state = await FlushableJSONFile.loadOrCreate<LogFileState>(path.join(recordingDirPath, 'state.json'), {
-			version: currentVersion,
-			logCount: 0,
-		});
+		const state = await FlushableJSONFile.loadOrCreate<LogFileState>(
+			path.join(recordingDirPath, 'state.json'),
+			{
+				version: currentVersion,
+				logCount: 0,
+			},
+		);
 
 		let shouldStartNewLog = false;
-		if (!('version' in state.value) || state.value.version !== currentVersion) {
+		if (
+			!('version' in state.value) ||
+			state.value.version !== currentVersion
+		) {
 			shouldStartNewLog = true;
 			state.setValue({
 				version: currentVersion,
@@ -144,7 +174,13 @@ class LogContextRecorderImpl extends Disposable {
 				return date.toISOString().replace(/:/g, '-');
 			}
 
-			await rename(logFilePath, path.join(recordingDirPath, `${state.value.logCount}.${formatDateFileNameSafe(date)}${LogContextRecorder.fileSuffix}`));
+			await rename(
+				logFilePath,
+				path.join(
+					recordingDirPath,
+					`${state.value.logCount}.${formatDateFileNameSafe(date)}${LogContextRecorder.fileSuffix}`,
+				),
+			);
 
 			// Reset state after truncating the log
 			state.setValue({
@@ -155,7 +191,9 @@ class LogContextRecorderImpl extends Disposable {
 			logFileExists = false;
 		}
 
-		const log = new FlushableSafeJSONLFile<InlineEditRequestLogContext>(logFilePath);
+		const log = new FlushableSafeJSONLFile<InlineEditRequestLogContext>(
+			logFilePath,
+		);
 		return new LogContextRecorderImpl(state, log);
 	}
 
@@ -164,9 +202,11 @@ class LogContextRecorderImpl extends Disposable {
 		private readonly _log: FlushableSafeJSONLFile<unknown>,
 	) {
 		super();
-		this._register(toDisposable(() => {
-			this._forceFlush();
-		}));
+		this._register(
+			toDisposable(() => {
+				this._forceFlush();
+			}),
+		);
 	}
 
 	private readonly _writeQueue = new TaskQueue();

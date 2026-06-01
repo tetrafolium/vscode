@@ -5,16 +5,25 @@
 
 import { Event } from '../../../util/vs/base/common/event';
 import type { OTelConfig } from './otelConfig';
-import type { ICompletedSpanData, IOTelService, ISpanEventData, ISpanHandle, SpanOptions, TraceContext } from './otelService';
+import type {
+	ICompletedSpanData,
+	IOTelService,
+	ISpanEventData,
+	ISpanHandle,
+	SpanOptions,
+	TraceContext,
+} from './otelService';
 
 const noopSpan: ISpanHandle = {
-	setAttribute() { },
-	setAttributes() { },
-	setStatus() { },
-	recordException() { },
-	addEvent() { },
-	getSpanContext() { return undefined; },
-	end() { },
+	setAttribute() {},
+	setAttributes() {},
+	setStatus() {},
+	recordException() {},
+	addEvent() {},
+	getSpanContext() {
+		return undefined;
+	},
+	end() {},
 };
 
 /**
@@ -33,7 +42,11 @@ export class NoopOTelService implements IOTelService {
 		return noopSpan;
 	}
 
-	startActiveSpan<T>(_name: string, _options: SpanOptions, fn: (span: ISpanHandle) => Promise<T>): Promise<T> {
+	startActiveSpan<T>(
+		_name: string,
+		_options: SpanOptions,
+		fn: (span: ISpanHandle) => Promise<T>,
+	): Promise<T> {
 		return fn(noopSpan);
 	}
 
@@ -41,27 +54,38 @@ export class NoopOTelService implements IOTelService {
 		return undefined;
 	}
 
-	storeTraceContext(_key: string, _context: TraceContext): void { }
+	storeTraceContext(_key: string, _context: TraceContext): void {}
 
 	getStoredTraceContext(_key: string): TraceContext | undefined {
 		return undefined;
 	}
 
-	runWithTraceContext<T>(_traceContext: TraceContext, fn: () => Promise<T>): Promise<T> {
+	runWithTraceContext<T>(
+		_traceContext: TraceContext,
+		fn: () => Promise<T>,
+	): Promise<T> {
 		return fn();
 	}
 
-	recordMetric(_name: string, _value: number, _attributes?: Record<string, string | number | boolean>): void { }
+	recordMetric(
+		_name: string,
+		_value: number,
+		_attributes?: Record<string, string | number | boolean>,
+	): void {}
 
-	incrementCounter(_name: string, _value?: number, _attributes?: Record<string, string | number | boolean>): void { }
+	incrementCounter(
+		_name: string,
+		_value?: number,
+		_attributes?: Record<string, string | number | boolean>,
+	): void {}
 
-	emitLogRecord(_body: string, _attributes?: Record<string, unknown>): void { }
+	emitLogRecord(_body: string, _attributes?: Record<string, unknown>): void {}
 
-	async flush(): Promise<void> { }
+	async flush(): Promise<void> {}
 
-	async shutdown(): Promise<void> { }
+	async shutdown(): Promise<void> {}
 
-	injectCompletedSpan(_span: ICompletedSpanData): void { }
+	injectCompletedSpan(_span: ICompletedSpanData): void {}
 
 	readonly onDidCompleteSpan: Event<ICompletedSpanData> = Event.None;
 	readonly onDidEmitSpanEvent: Event<ISpanEventData> = Event.None;

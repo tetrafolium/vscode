@@ -20,14 +20,20 @@ export enum RemoteCodeSearchIndexStatus {
 }
 
 export type RemoteCodeSearchIndexState =
-	| { readonly status: RemoteCodeSearchIndexStatus.Ready; readonly indexedCommit: string | undefined }
-	| { readonly status: RemoteCodeSearchIndexStatus.BuildingIndex | RemoteCodeSearchIndexStatus.NotYetIndexed | RemoteCodeSearchIndexStatus.NotIndexable }
-	;
+	| {
+			readonly status: RemoteCodeSearchIndexStatus.Ready;
+			readonly indexedCommit: string | undefined;
+	  }
+	| {
+			readonly status:
+				| RemoteCodeSearchIndexStatus.BuildingIndex
+				| RemoteCodeSearchIndexStatus.NotYetIndexed
+				| RemoteCodeSearchIndexStatus.NotIndexable;
+	  };
 
 export type RemoteCodeSearchError =
 	| { readonly type: 'not-authorized' }
-	| { readonly type: 'generic-error'; readonly error: Error }
-	;
+	| { readonly type: 'generic-error'; readonly error: Error };
 
 interface BaseCodeSearchResult {
 	/** Tracks if the commit sha code search used differs from the one we used to compute the local diff */

@@ -15,13 +15,13 @@ export function parseEnvFile(src: string) {
 	const result = new Map<string, string>();
 
 	// Normalize line breaks
-	const normalizedSrc = src.replace(/\r\n?/g, '\n');
-	const lines = normalizedSrc.split('\n');
+	const normalizedSrc = src.replace(/\r\n?/g, "\n");
+	const lines = normalizedSrc.split("\n");
 
 	for (let line of lines) {
 		// Skip empty lines and comments
 		line = line.trim();
-		if (!line || line.startsWith('#')) {
+		if (!line || line.startsWith("#")) {
 			continue;
 		}
 
@@ -36,12 +36,15 @@ export function parseEnvFile(src: string) {
 
 	function parseLine(line: string): [string, string] | [null, null] {
 		// Handle export prefix
-		if (line.startsWith('export ')) {
+		if (line.startsWith("export ")) {
 			line = line.substring(7).trim();
 		}
 
 		// Find the key-value separator
-		const separatorIndex = findIndexOutsideQuotes(line, c => c === '=' || c === ':');
+		const separatorIndex = findIndexOutsideQuotes(
+			line,
+			(c) => c === "=" || c === ":",
+		);
 		if (separatorIndex === -1) {
 			return [null, null];
 		}
@@ -50,7 +53,7 @@ export function parseEnvFile(src: string) {
 		let value = line.substring(separatorIndex + 1).trim();
 
 		// Handle comments and remove them
-		const commentIndex = findIndexOutsideQuotes(value, c => c === '#');
+		const commentIndex = findIndexOutsideQuotes(value, (c) => c === "#");
 		if (commentIndex !== -1) {
 			value = value.substring(0, commentIndex).trim();
 		}
@@ -60,15 +63,17 @@ export function parseEnvFile(src: string) {
 			const firstChar = value[0];
 			const lastChar = value[value.length - 1];
 
-			if ((firstChar === '"' && lastChar === '"') ||
-				(firstChar === '\'' && lastChar === '\'') ||
-				(firstChar === '`' && lastChar === '`')) {
+			if (
+				(firstChar === '"' && lastChar === '"') ||
+				(firstChar === "'" && lastChar === "'") ||
+				(firstChar === "`" && lastChar === "`")
+			) {
 				// Remove surrounding quotes
 				value = value.substring(1, value.length - 1);
 
 				// Handle escaped characters in double quotes
 				if (firstChar === '"') {
-					value = value.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+					value = value.replace(/\\n/g, "\n").replace(/\\r/g, "\r");
 				}
 			}
 		}
@@ -76,18 +81,21 @@ export function parseEnvFile(src: string) {
 		return [key, value];
 	}
 
-	function findIndexOutsideQuotes(text: string, predicate: (char: string) => boolean): number {
+	function findIndexOutsideQuotes(
+		text: string,
+		predicate: (char: string) => boolean,
+	): number {
 		let inQuote = false;
-		let quoteChar = '';
+		let quoteChar = "";
 
 		for (let i = 0; i < text.length; i++) {
 			const char = text[i];
 
 			if (inQuote) {
-				if (char === quoteChar && text[i - 1] !== '\\') {
+				if (char === quoteChar && text[i - 1] !== "\\") {
 					inQuote = false;
 				}
-			} else if (char === '"' || char === '\'' || char === '`') {
+			} else if (char === '"' || char === "'" || char === "`") {
 				inQuote = true;
 				quoteChar = char;
 			} else if (predicate(char)) {

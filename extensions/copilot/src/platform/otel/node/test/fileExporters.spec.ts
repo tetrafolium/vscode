@@ -9,7 +9,11 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { FileLogExporter, FileMetricExporter, FileSpanExporter } from '../fileExporters';
+import {
+	FileLogExporter,
+	FileMetricExporter,
+	FileSpanExporter,
+} from '../fileExporters';
 
 describe('FileSpanExporter', () => {
 	let tmpFile: string;
@@ -22,14 +26,18 @@ describe('FileSpanExporter', () => {
 
 	afterEach(async () => {
 		await exporter.shutdown();
-		try { fs.unlinkSync(tmpFile); } catch { }
+		try {
+			fs.unlinkSync(tmpFile);
+		} catch {}
 	});
 
 	it('writes span data as JSON lines', async () => {
 		const fakeSpan = { name: 'test-span', kind: 0, attributes: { a: 1 } };
 		await new Promise<void>((resolve, reject) => {
-			exporter.export([fakeSpan as any], result => {
-				result.code === ExportResultCode.SUCCESS ? resolve() : reject(result.error);
+			exporter.export([fakeSpan as any], (result) => {
+				result.code === ExportResultCode.SUCCESS
+					? resolve()
+					: reject(result.error);
 			});
 		});
 		await exporter.shutdown();
@@ -42,8 +50,10 @@ describe('FileSpanExporter', () => {
 	it('appends multiple exports', async () => {
 		for (let i = 0; i < 3; i++) {
 			await new Promise<void>((resolve, reject) => {
-				exporter.export([{ name: `span-${i}` } as any], result => {
-					result.code === ExportResultCode.SUCCESS ? resolve() : reject(result.error);
+				exporter.export([{ name: `span-${i}` } as any], (result) => {
+					result.code === ExportResultCode.SUCCESS
+						? resolve()
+						: reject(result.error);
 				});
 			});
 		}
@@ -66,14 +76,18 @@ describe('FileLogExporter', () => {
 
 	afterEach(async () => {
 		await exporter.shutdown();
-		try { fs.unlinkSync(tmpFile); } catch { }
+		try {
+			fs.unlinkSync(tmpFile);
+		} catch {}
 	});
 
 	it('writes log records as JSON lines', async () => {
 		const fakeLog = { body: 'test log', severityText: 'INFO' };
 		await new Promise<void>((resolve, reject) => {
-			exporter.export([fakeLog as any], result => {
-				result.code === ExportResultCode.SUCCESS ? resolve() : reject(result.error);
+			exporter.export([fakeLog as any], (result) => {
+				result.code === ExportResultCode.SUCCESS
+					? resolve()
+					: reject(result.error);
 			});
 		});
 		await exporter.shutdown();
@@ -88,20 +102,30 @@ describe('FileMetricExporter', () => {
 	let exporter: FileMetricExporter;
 
 	beforeEach(() => {
-		tmpFile = path.join(os.tmpdir(), `otel-test-metrics-${Date.now()}.jsonl`);
+		tmpFile = path.join(
+			os.tmpdir(),
+			`otel-test-metrics-${Date.now()}.jsonl`,
+		);
 		exporter = new FileMetricExporter(tmpFile);
 	});
 
 	afterEach(async () => {
 		await exporter.shutdown();
-		try { fs.unlinkSync(tmpFile); } catch { }
+		try {
+			fs.unlinkSync(tmpFile);
+		} catch {}
 	});
 
 	it('writes metric data as JSON lines', async () => {
-		const fakeMetrics = { resource: {}, scopeMetrics: [{ metrics: [{ name: 'test' }] }] };
+		const fakeMetrics = {
+			resource: {},
+			scopeMetrics: [{ metrics: [{ name: 'test' }] }],
+		};
 		await new Promise<void>((resolve, reject) => {
-			exporter.export(fakeMetrics as any, result => {
-				result.code === ExportResultCode.SUCCESS ? resolve() : reject(result.error);
+			exporter.export(fakeMetrics as any, (result) => {
+				result.code === ExportResultCode.SUCCESS
+					? resolve()
+					: reject(result.error);
 			});
 		});
 		await exporter.shutdown();
@@ -111,6 +135,8 @@ describe('FileMetricExporter', () => {
 	});
 
 	it('returns CUMULATIVE aggregation temporality', () => {
-		expect(exporter.selectAggregationTemporality()).toBe(AggregationTemporality.CUMULATIVE);
+		expect(exporter.selectAggregationTemporality()).toBe(
+			AggregationTemporality.CUMULATIVE,
+		);
 	});
 });

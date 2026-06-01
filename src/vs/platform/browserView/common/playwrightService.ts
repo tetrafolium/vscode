@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
+import { Event } from "../../../base/common/event.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
 
-export const IPlaywrightService = createDecorator<IPlaywrightService>('playwrightService');
+export const IPlaywrightService =
+	createDecorator<IPlaywrightService>("playwrightService");
 
 export interface IInvokeFunctionResult {
 	result?: unknown;
@@ -65,7 +66,10 @@ export interface IPlaywrightService {
 	 * @param url The URL to open in the new page.
 	 * @returns An object containing the new page's view ID and a summary of its initial state.
 	 */
-	openPage(sessionId: string, url: string): Promise<{ pageId: string; summary: string }>;
+	openPage(
+		sessionId: string,
+		url: string,
+	): Promise<{ pageId: string; summary: string }>;
 
 	/**
 	 * Gets a summary of the page's current state, including its DOM and visual representation.
@@ -84,7 +88,12 @@ export interface IPlaywrightService {
 	 * @param args Additional arguments to pass to the function after the `page` object.
 	 * @returns The result of the function execution.
 	 */
-	invokeFunctionRaw<T>(sessionId: string, pageId: string, fnDef: string, ...args: unknown[]): Promise<T>;
+	invokeFunctionRaw<T>(
+		sessionId: string,
+		pageId: string,
+		fnDef: string,
+		...args: unknown[]
+	): Promise<T>;
 
 	/**
 	 * Run a function with access to a Playwright page and return a result for tool output, including error handling.
@@ -103,7 +112,13 @@ export interface IPlaywrightService {
 	 * @param timeoutMs Maximum time (in ms) to wait for the function to complete before deferring. When omitted the call awaits indefinitely.
 	 * @returns The result of the function execution, including a page summary and optionally a deferredResultId if the call did not complete.
 	 */
-	invokeFunction(sessionId: string, pageId: string, fnDef: string, args?: unknown[], timeoutMs?: number): Promise<IInvokeFunctionResult>;
+	invokeFunction(
+		sessionId: string,
+		pageId: string,
+		fnDef: string,
+		args?: unknown[],
+		timeoutMs?: number,
+	): Promise<IInvokeFunctionResult>;
 
 	/**
 	 * Continue waiting for a previously deferred function invocation.
@@ -114,7 +129,11 @@ export interface IPlaywrightService {
 	 * @returns The same shape as {@link invokeFunction}. If the result is still not
 	 * available after the timeout, {@link deferredResultId} is returned again.
 	 */
-	waitForDeferredResult(sessionId: string, deferredResultId: string, timeoutMs: number): Promise<IInvokeFunctionResult>;
+	waitForDeferredResult(
+		sessionId: string,
+		deferredResultId: string,
+		timeoutMs: number,
+	): Promise<IInvokeFunctionResult>;
 
 	/**
 	 * Responds to a file chooser dialog on the given page.
@@ -123,7 +142,11 @@ export interface IPlaywrightService {
 	 * @param files The list of files to select in the file chooser. Empty to dismiss the dialog without selecting files.
 	 * @returns An object with the page summary afterwards.
 	 */
-	replyToFileChooser(sessionId: string, pageId: string, files: string[]): Promise<{ summary: string }>;
+	replyToFileChooser(
+		sessionId: string,
+		pageId: string,
+		files: string[],
+	): Promise<{ summary: string }>;
 
 	/**
 	 * Responds to a dialog (alert, confirm, prompt) on the given page.
@@ -133,7 +156,12 @@ export interface IPlaywrightService {
 	 * @param promptText Optional text to enter into a prompt dialog.
 	 * @returns An object with the page summary afterwards.
 	 */
-	replyToDialog(sessionId: string, pageId: string, accept: boolean, promptText?: string): Promise<{ summary: string }>;
+	replyToDialog(
+		sessionId: string,
+		pageId: string,
+		accept: boolean,
+		promptText?: string,
+	): Promise<{ summary: string }>;
 
 	/**
 	 * Dispose a session's Playwright browser connection and release its resources.

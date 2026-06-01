@@ -10,27 +10,52 @@ import { IEndpointProvider } from '../../../platform/endpoint/common/endpointPro
 import { IChatEndpoint } from '../../../platform/networking/common/networking';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { Intent } from '../../common/constants';
-import { IIntent, IIntentInvocation, IIntentInvocationContext, IIntentSlashCommandInfo } from '../../prompt/node/intents';
-import { PromptRenderer, RendererIntentInvocation } from '../../prompts/node/base/promptRenderer';
-import { ISearchPanelPromptContext, SearchPanelPrompt } from '../../prompts/node/panel/searchPanelPrompt';
+import {
+	IIntent,
+	IIntentInvocation,
+	IIntentInvocationContext,
+	IIntentSlashCommandInfo,
+} from '../../prompt/node/intents';
+import {
+	PromptRenderer,
+	RendererIntentInvocation,
+} from '../../prompts/node/base/promptRenderer';
+import {
+	ISearchPanelPromptContext,
+	SearchPanelPrompt,
+} from '../../prompts/node/panel/searchPanelPrompt';
 
-
-class SearchIntentInvocation extends RendererIntentInvocation implements IIntentInvocation {
-
+class SearchIntentInvocation
+	extends RendererIntentInvocation
+	implements IIntentInvocation
+{
 	constructor(
 		intent: IIntent,
 		location: ChatLocation,
 		endpoint: IChatEndpoint,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super(intent, location, endpoint);
 	}
 
-	createRenderer(promptContext: ISearchPanelPromptContext, endpoint: IChatEndpoint, progress: vscode.Progress<vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart>, token: vscode.CancellationToken) {
-		return PromptRenderer.create(this.instantiationService, endpoint, SearchPanelPrompt, {
-			promptContext,
-			endpoint
-		});
+	createRenderer(
+		promptContext: ISearchPanelPromptContext,
+		endpoint: IChatEndpoint,
+		progress: vscode.Progress<
+			vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart
+		>,
+		token: vscode.CancellationToken,
+	) {
+		return PromptRenderer.create(
+			this.instantiationService,
+			endpoint,
+			SearchPanelPrompt,
+			{
+				promptContext,
+				endpoint,
+			},
+		);
 	}
 }
 
@@ -49,13 +74,22 @@ export class SearchPanelIntent implements IIntent {
 	};
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
-	) { }
+	) {}
 
-	async invoke(invocationContext: IIntentInvocationContext): Promise<IIntentInvocation> {
+	async invoke(
+		invocationContext: IIntentInvocationContext,
+	): Promise<IIntentInvocation> {
 		const location = invocationContext.location;
-		const endpoint = await this.endpointProvider.getChatEndpoint('copilot-utility');
-		return this.instantiationService.createInstance(SearchIntentInvocation, this, location, endpoint);
+		const endpoint =
+			await this.endpointProvider.getChatEndpoint('copilot-utility');
+		return this.instantiationService.createInstance(
+			SearchIntentInvocation,
+			this,
+			location,
+			endpoint,
+		);
 	}
 }

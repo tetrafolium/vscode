@@ -3,11 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { IProductService } from '../../../../platform/product/common/productService.js';
-import { TelemetryLevel } from '../../../../platform/telemetry/common/telemetry.js';
-import { getTelemetryLevel } from '../../../../platform/telemetry/common/telemetryUtils.js';
-import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
+import { IConfigurationService } from "../../../../platform/configuration/common/configuration.js";
+import { IProductService } from "../../../../platform/product/common/productService.js";
+import { TelemetryLevel } from "../../../../platform/telemetry/common/telemetry.js";
+import { getTelemetryLevel } from "../../../../platform/telemetry/common/telemetryUtils.js";
+import { IWorkbenchEnvironmentService } from "../../environment/common/environmentService.js";
 
 /**
  * Determines if experiment properties will be set on telemetry events.
@@ -16,12 +16,14 @@ import { IWorkbenchEnvironmentService } from '../../environment/common/environme
 export function experimentsEnabled(
 	configurationService: IConfigurationService,
 	productService: IProductService,
-	environmentService: IWorkbenchEnvironmentService
+	environmentService: IWorkbenchEnvironmentService,
 ): boolean {
-	return getTelemetryLevel(configurationService) === TelemetryLevel.USAGE &&
+	return (
+		getTelemetryLevel(configurationService) === TelemetryLevel.USAGE &&
 		!!productService.tasConfig &&
 		!environmentService.disableExperiments &&
 		!environmentService.extensionTestsLocationURI &&
 		!environmentService.enableSmokeTestDriver &&
-		configurationService.getValue('workbench.enableExperiments') === true;
+		configurationService.getValue("workbench.enableExperiments") === true
+	);
 }

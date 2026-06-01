@@ -4,17 +4,27 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { expect, it, suite } from 'vitest';
-import { AsyncIterableSource, timeout } from '../../../util/vs/base/common/async';
-import { forEachStreamed, replaceStringInStream } from '../../prompts/node/inline/utils/streaming';
+import {
+	AsyncIterableSource,
+	timeout,
+} from '../../../util/vs/base/common/async';
+import {
+	forEachStreamed,
+	replaceStringInStream,
+} from '../../prompts/node/inline/utils/streaming';
 
 suite('Streaming', () => {
 	it('replaceStringInStream', async () => {
 		const streamSrc = new AsyncIterableSource<string>();
 
-		const resultingStream = replaceStringInStream(streamSrc.asyncIterable, 'aba', 'xxx');
+		const resultingStream = replaceStringInStream(
+			streamSrc.asyncIterable,
+			'aba',
+			'xxx',
+		);
 		const arr = [] as string[];
 
-		forEachStreamed(resultingStream, value => arr.push(value));
+		forEachStreamed(resultingStream, (value) => arr.push(value));
 		await timeout(1);
 		expect(arr).toMatchInlineSnapshot(`[]`);
 		arr.length = 0;
@@ -50,7 +60,6 @@ suite('Streaming', () => {
 			]
 		`);
 		arr.length = 0;
-
 
 		streamSrc.emitOne('a'); // waits for more data
 		await timeout(1);

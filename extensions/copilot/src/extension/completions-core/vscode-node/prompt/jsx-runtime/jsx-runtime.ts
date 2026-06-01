@@ -20,7 +20,7 @@ import {
 function functionComponentFunction(
 	type: FunctionComponent,
 	props: PromptElementProps,
-	key?: string | number
+	key?: string | number,
 ): PromptElement {
 	let children: PromptComponentChild[] = [];
 	if (Array.isArray(props.children)) {
@@ -72,4 +72,8 @@ export namespace JSX {
 	}
 }
 
-export { fragmentFunction as Fragment, functionComponentFunction as jsx, functionComponentFunction as jsxs };
+export {
+	fragmentFunction as Fragment,
+	functionComponentFunction as jsx,
+	functionComponentFunction as jsxs,
+};

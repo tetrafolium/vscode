@@ -6,19 +6,38 @@
 import { DocumentId } from '../../../platform/inlineEdits/common/dataTypes/documentId';
 import { LanguageContextResponse } from '../../../platform/inlineEdits/common/dataTypes/languageContext';
 import * as xtabPromptOptions from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
-import { AggressivenessLevel, CurrentFileOptions, GlobalBudgetOptions, PromptingStrategy, PromptOptions } from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	AggressivenessLevel,
+	CurrentFileOptions,
+	GlobalBudgetOptions,
+	PromptingStrategy,
+	PromptOptions,
+} from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { StatelessNextEditDocument } from '../../../platform/inlineEdits/common/statelessNextEditProvider';
 import { IXtabHistoryEntry } from '../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
-import { ContextKind, TraitContext } from '../../../platform/languageServer/common/languageContextService';
+import {
+	ContextKind,
+	TraitContext,
+} from '../../../platform/languageServer/common/languageContextService';
 import { Result } from '../../../util/common/result';
 import { range } from '../../../util/vs/base/common/arrays';
 import { assertNever } from '../../../util/vs/base/common/assert';
-import { StringEdit, StringReplacement } from '../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../util/vs/editor/common/core/ranges/offsetRange';
 import { getEditDiffHistory } from './diffHistoryForPrompt';
 import { LintErrors } from './lintErrors';
 import { countTokensForLines, toUniquePath } from './promptCraftingUtils';
-import { appendLanguageContextSnippets, appendNeighborFileSnippets, AppendNeighborFileSnippetsResult, buildCodeSnippetsUsingPagedClipping, getRecentCodeSnippets, prepareRecentCodeSnippets } from './recentFilesForPrompt';
+import {
+	appendLanguageContextSnippets,
+	appendNeighborFileSnippets,
+	AppendNeighborFileSnippetsResult,
+	buildCodeSnippetsUsingPagedClipping,
+	getRecentCodeSnippets,
+	prepareRecentCodeSnippets,
+} from './recentFilesForPrompt';
 import { INeighborFileSnippet } from './similarFilesContextService';
 import { PromptTags } from './tags';
 import { CurrentDocument } from './xtabCurrentDocument';
@@ -38,20 +57,31 @@ export class PromptPieces {
 		public readonly computeTokens: (s: string) => number,
 		public readonly opts: PromptOptions,
 		public readonly neighborSnippets?: readonly INeighborFileSnippet[],
-	) {
-	}
+	) {}
 }
 
 export interface UserPromptResult {
 	readonly prompt: string;
 	readonly nDiffsInPrompt: number;
 	readonly diffTokensInPrompt: number;
-	readonly neighborSnippetsResult: AppendNeighborFileSnippetsResult | undefined;
+	readonly neighborSnippetsResult:
+		| AppendNeighborFileSnippetsResult
+		| undefined;
 }
 
 export function getUserPrompt(promptPieces: PromptPieces): UserPromptResult {
-
-	const { activeDoc, xtabHistory, taggedCurrentDocLines, areaAroundCodeToEdit, langCtx, aggressivenessLevel, lintErrors, computeTokens, opts, neighborSnippets } = promptPieces;
+	const {
+		activeDoc,
+		xtabHistory,
+		taggedCurrentDocLines,
+		areaAroundCodeToEdit,
+		langCtx,
+		aggressivenessLevel,
+		lintErrors,
+		computeTokens,
+		opts,
+		neighborSnippets,
+	} = promptPieces;
 	const currentFileContent = taggedCurrentDocLines.join('\n');
 
 	let recentlyViewedCodeSnippets: string;
@@ -62,7 +92,15 @@ export function getUserPrompt(promptPieces: PromptPieces): UserPromptResult {
 	let diffTokensInPrompt: number;
 
 	if (opts.globalBudget !== undefined) {
-		const cascade = runGlobalBudgetCascade(activeDoc, xtabHistory, langCtx, computeTokens, opts, neighborSnippets, opts.globalBudget);
+		const cascade = runGlobalBudgetCascade(
+			activeDoc,
+			xtabHistory,
+			langCtx,
+			computeTokens,
+			opts,
+			neighborSnippets,
+			opts.globalBudget,
+		);
 		recentlyViewedCodeSnippets = cascade.codeSnippets;
 		docsInPrompt = cascade.documents;
 		neighborSnippetsResult = cascade.neighborSnippetsResult;
@@ -70,14 +108,27 @@ export function getUserPrompt(promptPieces: PromptPieces): UserPromptResult {
 		nDiffsInPrompt = cascade.nDiffsInPrompt;
 		diffTokensInPrompt = cascade.diffTokensInPrompt;
 	} else {
-		const r = getRecentCodeSnippets(activeDoc, xtabHistory, langCtx, computeTokens, opts, neighborSnippets);
+		const r = getRecentCodeSnippets(
+			activeDoc,
+			xtabHistory,
+			langCtx,
+			computeTokens,
+			opts,
+			neighborSnippets,
+		);
 		recentlyViewedCodeSnippets = r.codeSnippets;
 		docsInPrompt = r.documents;
 		neighborSnippetsResult = r.neighborSnippetsResult;
 
 		docsInPrompt.add(activeDoc.id); // Add active document to the set of documents in prompt
 
-		const diff = getEditDiffHistory(activeDoc, xtabHistory, docsInPrompt, computeTokens, opts.diffHistory);
+		const diff = getEditDiffHistory(
+			activeDoc,
+			xtabHistory,
+			docsInPrompt,
+			computeTokens,
+			opts.diffHistory,
+		);
 		editDiffHistory = diff.promptPiece;
 		nDiffsInPrompt = diff.nDiffs;
 		diffTokensInPrompt = diff.totalTokens;
@@ -85,11 +136,22 @@ export function getUserPrompt(promptPieces: PromptPieces): UserPromptResult {
 
 	const relatedInformation = getRelatedInformation(langCtx);
 
-	const currentFilePath = toUniquePath(activeDoc.id, activeDoc.workspaceRoot?.path);
+	const currentFilePath = toUniquePath(
+		activeDoc.id,
+		activeDoc.workspaceRoot?.path,
+	);
 
-	const postScript = promptPieces.opts.includePostScript ? getPostScript(opts.promptingStrategy, currentFilePath, aggressivenessLevel) : '';
+	const postScript = promptPieces.opts.includePostScript
+		? getPostScript(
+				opts.promptingStrategy,
+				currentFilePath,
+				aggressivenessLevel,
+			)
+		: '';
 
-	const lintsWithNewLinePadding = opts.lintOptions ? `\n${lintErrors.getFormattedLintErrors(opts.lintOptions)}\n` : '';
+	const lintsWithNewLinePadding = opts.lintOptions
+		? `\n${lintErrors.getFormattedLintErrors(opts.lintOptions)}\n`
+		: '';
 
 	const basePrompt = `${PromptTags.RECENT_FILES.start}
 ${recentlyViewedCodeSnippets}
@@ -114,8 +176,15 @@ ${PromptTags.EDIT_HISTORY.end}`;
 		case PromptingStrategy.PatchBased02WithoutRecentLineNumbers: {
 			const currentDocument = promptPieces.currentDocument;
 			const cursorLine = currentDocument.lineWithCursor();
-			const cursorLineWithTag = cursorLine.substring(0, currentDocument.cursorPosition.column - 1) + PromptTags.CURSOR + cursorLine.substring(currentDocument.cursorPosition.column - 1);
-			const lineNumberZeroBased = currentDocument.cursorPosition.lineNumber - 1;
+			const cursorLineWithTag =
+				cursorLine.substring(
+					0,
+					currentDocument.cursorPosition.column - 1,
+				) +
+				PromptTags.CURSOR +
+				cursorLine.substring(currentDocument.cursorPosition.column - 1);
+			const lineNumberZeroBased =
+				currentDocument.cursorPosition.lineNumber - 1;
 			let lineNumbering: string;
 			switch (opts.currentFile.includeLineNumbers) {
 				case xtabPromptOptions.IncludeLineNumbersOption.WithSpaceAfter:
@@ -133,7 +202,7 @@ ${PromptTags.EDIT_HISTORY.end}`;
 			const lineWithCursorSnippet = [
 				PromptTags.CURSOR_LOCATION.start,
 				`${lineNumbering}${cursorLineWithTag}`,
-				PromptTags.CURSOR_LOCATION.end
+				PromptTags.CURSOR_LOCATION.end,
 			].join('\n');
 			mainPrompt = basePrompt + `\n\n${lineWithCursorSnippet}`;
 			break;
@@ -143,26 +212,42 @@ ${PromptTags.EDIT_HISTORY.end}`;
 			break;
 	}
 
-	const includeBackticks = opts.promptingStrategy !== PromptingStrategy.Nes41Miniv3 &&
+	const includeBackticks =
+		opts.promptingStrategy !== PromptingStrategy.Nes41Miniv3 &&
 		opts.promptingStrategy !== PromptingStrategy.Codexv21NesUnified &&
 		opts.promptingStrategy !== PromptingStrategy.PatchBased01 &&
 		opts.promptingStrategy !== PromptingStrategy.PatchBased02 &&
-		opts.promptingStrategy !== PromptingStrategy.PatchBased02WithRecentLineNumbers &&
-		opts.promptingStrategy !== PromptingStrategy.PatchBased02WithoutRecentLineNumbers;
+		opts.promptingStrategy !==
+			PromptingStrategy.PatchBased02WithRecentLineNumbers &&
+		opts.promptingStrategy !==
+			PromptingStrategy.PatchBased02WithoutRecentLineNumbers;
 
-	const packagedPrompt = includeBackticks ? wrapInBackticks(mainPrompt) : mainPrompt;
-	const packagedPromptWithRelatedInfo = addRelatedInformation(relatedInformation, packagedPrompt, opts.languageContext.traitPosition);
+	const packagedPrompt = includeBackticks
+		? wrapInBackticks(mainPrompt)
+		: mainPrompt;
+	const packagedPromptWithRelatedInfo = addRelatedInformation(
+		relatedInformation,
+		packagedPrompt,
+		opts.languageContext.traitPosition,
+	);
 	const prompt = packagedPromptWithRelatedInfo + postScript;
 
 	const trimmedPrompt = prompt.trim();
 
-	return { prompt: trimmedPrompt, nDiffsInPrompt, diffTokensInPrompt, neighborSnippetsResult };
+	return {
+		prompt: trimmedPrompt,
+		nDiffsInPrompt,
+		diffTokensInPrompt,
+		neighborSnippetsResult,
+	};
 }
 
 interface CascadeResult {
 	readonly codeSnippets: string;
 	readonly documents: Set<DocumentId>;
-	readonly neighborSnippetsResult: AppendNeighborFileSnippetsResult | undefined;
+	readonly neighborSnippetsResult:
+		| AppendNeighborFileSnippetsResult
+		| undefined;
 	readonly editDiffHistory: string;
 	readonly nDiffsInPrompt: number;
 	readonly diffTokensInPrompt: number;
@@ -206,41 +291,81 @@ function runGlobalBudgetCascade(
 	let nDiffsInPrompt = 0;
 	let diffTokensInPrompt = 0;
 
-	const preparedRecent = prepareRecentCodeSnippets(activeDoc, xtabHistory, opts);
+	const preparedRecent = prepareRecentCodeSnippets(
+		activeDoc,
+		xtabHistory,
+		opts,
+	);
 
 	let surplus = 0;
 	for (const part of globalBudget.order) {
 		const share = globalBudget.shares[part] ?? 0;
-		const budget = Math.max(0, Math.floor(surplus + globalBudget.totalTokens * share));
+		const budget = Math.max(
+			0,
+			Math.floor(surplus + globalBudget.totalTokens * share),
+		);
 		let tokensConsumed = 0;
 		switch (part) {
 			case 'recentlyViewedDocuments': {
 				const overridden: PromptOptions = {
 					...opts,
-					recentlyViewedDocuments: { ...opts.recentlyViewedDocuments, maxTokens: budget },
+					recentlyViewedDocuments: {
+						...opts.recentlyViewedDocuments,
+						maxTokens: budget,
+					},
 				};
-				const r = buildCodeSnippetsUsingPagedClipping(preparedRecent, computeTokens, overridden);
+				const r = buildCodeSnippetsUsingPagedClipping(
+					preparedRecent,
+					computeTokens,
+					overridden,
+				);
 				recentlyViewedSnippets.push(...r.snippets);
-				r.docsInPrompt.forEach(d => docsInPrompt.add(d));
+				r.docsInPrompt.forEach((d) => docsInPrompt.add(d));
 				tokensConsumed = r.tokensConsumed;
 				break;
 			}
 			case 'languageContext': {
 				if (langCtx) {
-					tokensConsumed = appendLanguageContextSnippets(langCtx, langCtxSnippets, budget, computeTokens, opts.recentlyViewedDocuments.includeLineNumbers);
+					tokensConsumed = appendLanguageContextSnippets(
+						langCtx,
+						langCtxSnippets,
+						budget,
+						computeTokens,
+						opts.recentlyViewedDocuments.includeLineNumbers,
+					);
 				}
 				break;
 			}
 			case 'neighborFiles': {
-				if (opts.neighborFiles.enabled && neighborSnippets && neighborSnippets.length > 0) {
-					neighborSnippetsResult = appendNeighborFileSnippets(neighborSnippets, neighborOutSnippets, docsInPrompt, budget, computeTokens, opts.recentlyViewedDocuments.includeLineNumbers);
+				if (
+					opts.neighborFiles.enabled &&
+					neighborSnippets &&
+					neighborSnippets.length > 0
+				) {
+					neighborSnippetsResult = appendNeighborFileSnippets(
+						neighborSnippets,
+						neighborOutSnippets,
+						docsInPrompt,
+						budget,
+						computeTokens,
+						opts.recentlyViewedDocuments.includeLineNumbers,
+					);
 					tokensConsumed = neighborSnippetsResult.tokensConsumed;
 				}
 				break;
 			}
 			case 'diffHistory': {
-				const overriddenDiff = { ...opts.diffHistory, maxTokens: budget };
-				const r = getEditDiffHistory(activeDoc, xtabHistory, docsInPrompt, computeTokens, overriddenDiff);
+				const overriddenDiff = {
+					...opts.diffHistory,
+					maxTokens: budget,
+				};
+				const r = getEditDiffHistory(
+					activeDoc,
+					xtabHistory,
+					docsInPrompt,
+					computeTokens,
+					overriddenDiff,
+				);
 				editDiffHistory = r.promptPiece;
 				nDiffsInPrompt = r.nDiffs;
 				diffTokensInPrompt = r.totalTokens;
@@ -253,7 +378,11 @@ function runGlobalBudgetCascade(
 		surplus = Math.max(0, budget - tokensConsumed);
 	}
 
-	const codeSnippets = [...recentlyViewedSnippets, ...langCtxSnippets, ...neighborOutSnippets].join('\n\n');
+	const codeSnippets = [
+		...recentlyViewedSnippets,
+		...langCtxSnippets,
+		...neighborOutSnippets,
+	].join('\n\n');
 
 	return {
 		codeSnippets,
@@ -279,24 +408,35 @@ function validateGlobalBudget(globalBudget: GlobalBudgetOptions): void {
 	const seen = new Set<string>();
 	for (const part of globalBudget.order) {
 		if (seen.has(part)) {
-			throw new Error(`globalBudget.order contains duplicate part '${part}'`);
+			throw new Error(
+				`globalBudget.order contains duplicate part '${part}'`,
+			);
 		}
 		seen.add(part);
 		if (typeof globalBudget.shares[part] !== 'number') {
-			throw new Error(`globalBudget.shares is missing entry for '${part}'`);
+			throw new Error(
+				`globalBudget.shares is missing entry for '${part}'`,
+			);
 		}
 	}
 
 	const recentIdx = globalBudget.order.indexOf('recentlyViewedDocuments');
 	const neighborIdx = globalBudget.order.indexOf('neighborFiles');
 	if (recentIdx !== -1 && neighborIdx !== -1 && neighborIdx < recentIdx) {
-		throw new Error(`globalBudget.order must place 'recentlyViewedDocuments' before 'neighborFiles'`);
+		throw new Error(
+			`globalBudget.order must place 'recentlyViewedDocuments' before 'neighborFiles'`,
+		);
 	}
 
-	const sharesSum = globalBudget.order.reduce((sum, part) => sum + globalBudget.shares[part], 0);
+	const sharesSum = globalBudget.order.reduce(
+		(sum, part) => sum + globalBudget.shares[part],
+		0,
+	);
 	const epsilon = 1e-3;
 	if (Math.abs(sharesSum - 1) > epsilon) {
-		throw new Error(`globalBudget.shares across order must sum to ~1, got ${sharesSum}`);
+		throw new Error(
+			`globalBudget.shares across order must sum to ~1, got ${sharesSum}`,
+		);
 	}
 }
 
@@ -304,14 +444,22 @@ function wrapInBackticks(content: string) {
 	return `\`\`\`\n${content}\n\`\`\``;
 }
 
-function addRelatedInformation(relatedInformation: string, prompt: string, position: 'before' | 'after'): string {
+function addRelatedInformation(
+	relatedInformation: string,
+	prompt: string,
+	position: 'before' | 'after',
+): string {
 	if (position === 'before') {
 		return appendWithNewLineIfNeeded(relatedInformation, prompt, 2);
 	}
 	return appendWithNewLineIfNeeded(prompt, relatedInformation, 2);
 }
 
-function appendWithNewLineIfNeeded(base: string, toAppend: string, minNewLines: number): string {
+function appendWithNewLineIfNeeded(
+	base: string,
+	toAppend: string,
+	minNewLines: number,
+): string {
 	// Count existing newlines at the end of base and start of toAppend
 	let existingNewLines = 0;
 	for (let i = base.length - 1; i >= 0 && base[i] === '\n'; i--) {
@@ -326,7 +474,11 @@ function appendWithNewLineIfNeeded(base: string, toAppend: string, minNewLines: 
 	return (base + '\n'.repeat(newLinesToAdd) + toAppend).trim();
 }
 
-function getPostScript(strategy: PromptingStrategy | undefined, currentFilePath: string, aggressivenessLevel: AggressivenessLevel) {
+function getPostScript(
+	strategy: PromptingStrategy | undefined,
+	currentFilePath: string,
+	aggressivenessLevel: AggressivenessLevel,
+) {
 	const xtab275BasePostScript = `The developer was working on a section of code within the tags \`code_to_edit\` in the file located at \`${currentFilePath}\`. Using the given \`recently_viewed_code_snippets\`, \`current_file_content\`, \`edit_diff_history\`, \`area_around_code_to_edit\`, and the cursor position marked as \`${PromptTags.CURSOR}\`, please continue the developer's work. Update the \`code_to_edit\` section by predicting and completing the changes they would have made next. Provide the revised code that was between the \`${PromptTags.EDIT_WINDOW.start}\` and \`${PromptTags.EDIT_WINDOW.end}\` tags, but do not include the tags themselves. Avoid undoing or reverting the developer's last change unless there are obvious typos or errors. Don't include the line numbers or the form #| in your response. Do not skip any lines. Do not be lazy.`;
 
 	let postScript: string | undefined;
@@ -357,9 +509,10 @@ function getPostScript(strategy: PromptingStrategy | undefined, currentFilePath:
 			postScript = `${xtab275BasePostScript}\n<|aggressive|>${aggressivenessLevel}<|/aggressive|>`;
 			break;
 		case PromptingStrategy.Xtab275AggressivenessHighLow:
-			postScript = aggressivenessLevel === AggressivenessLevel.Medium
-				? xtab275BasePostScript
-				: `${xtab275BasePostScript}\n<|aggressive|>${aggressivenessLevel}<|/aggressive|>`;
+			postScript =
+				aggressivenessLevel === AggressivenessLevel.Medium
+					? xtab275BasePostScript
+					: `${xtab275BasePostScript}\n<|aggressive|>${aggressivenessLevel}<|/aggressive|>`;
 			break;
 		case PromptingStrategy.PatchBased:
 			postScript = `Output a modified diff style format with the changes you want. Each change patch must start with \`<filename>:<line number>\` and then include some non empty "anchor lines" preceded by \`-\` and the new lines meant to replace them preceded by \`+\`. Put your changes in the order that makes the most sense, for example edits inside the code_to_edit region and near the user's <|cursor|> should always be prioritized. Output "<NO_EDIT>" if you don't have a good edit candidate.`;
@@ -379,18 +532,21 @@ they would have made next. Provide the revised code that was between the \`${Pro
 			assertNever(strategy);
 	}
 
-	const formattedPostScript = postScript === undefined ? '' : `\n\n${postScript}`;
+	const formattedPostScript =
+		postScript === undefined ? '' : `\n\n${postScript}`;
 	return formattedPostScript;
 }
 
-function getRelatedInformation(langCtx: LanguageContextResponse | undefined): string {
+function getRelatedInformation(
+	langCtx: LanguageContextResponse | undefined,
+): string {
 	if (langCtx === undefined) {
 		return '';
 	}
 
 	const traits = langCtx.items
-		.filter(ctx => ctx.context.kind === ContextKind.Trait)
-		.map(t => t.context) as TraitContext[];
+		.filter((ctx) => ctx.context.kind === ContextKind.Trait)
+		.map((t) => t.context) as TraitContext[];
 
 	if (traits.length === 0) {
 		return '';
@@ -407,7 +563,7 @@ function getRelatedInformation(langCtx: LanguageContextResponse | undefined): st
 export function truncateCode(
 	lines: string[],
 	fromBeginning: boolean,
-	maxTokens: number
+	maxTokens: number,
 ): [number, number] {
 	if (!lines.length) {
 		return [0, 0];
@@ -452,7 +608,6 @@ export function expandRangeToPageRange(
 	computeTokens: (s: string) => number,
 	prioritizeAboveCursor: boolean,
 ): { firstPageIdx: number; lastPageIdxIncl: number; budgetLeft: number } {
-
 	const totalNOfPages = Math.ceil(currentDocLines.length / pageSize);
 
 	function computeTokensForPage(kthPage: number) {
@@ -464,18 +619,32 @@ export function expandRangeToPageRange(
 
 	// [0, pageSize) -> 0, [pageSize, 2*pageSize) -> 1, ...
 	// eg 5 -> 0, 63 -> 6
-	let firstPageIdx = Math.floor(areaAroundEditWindowLinesRange.start / pageSize);
-	let lastPageIdxIncl = Math.floor((areaAroundEditWindowLinesRange.endExclusive - 1) / pageSize);
+	let firstPageIdx = Math.floor(
+		areaAroundEditWindowLinesRange.start / pageSize,
+	);
+	let lastPageIdxIncl = Math.floor(
+		(areaAroundEditWindowLinesRange.endExclusive - 1) / pageSize,
+	);
 
-	const availableTokenBudget = maxTokens - range(firstPageIdx, lastPageIdxIncl + 1).reduce((sum, idx) => sum + computeTokensForPage(idx), 0);
+	const availableTokenBudget =
+		maxTokens -
+		range(firstPageIdx, lastPageIdxIncl + 1).reduce(
+			(sum, idx) => sum + computeTokensForPage(idx),
+			0,
+		);
 	if (availableTokenBudget < 0) {
-		return { firstPageIdx, lastPageIdxIncl, budgetLeft: availableTokenBudget };
+		return {
+			firstPageIdx,
+			lastPageIdxIncl,
+			budgetLeft: availableTokenBudget,
+		};
 	}
 
 	let tokenBudget = availableTokenBudget;
 
 	// TODO: this's specifically implemented with some code duplication to not accidentally change existing behavior
-	if (!prioritizeAboveCursor) { // both above and below get the half of budget
+	if (!prioritizeAboveCursor) {
+		// both above and below get the half of budget
 		const halfOfAvailableTokenBudget = Math.floor(availableTokenBudget / 2);
 
 		tokenBudget = halfOfAvailableTokenBudget; // split by 2 to give both above and below areaAroundCode same budget
@@ -492,7 +661,11 @@ export function expandRangeToPageRange(
 
 		tokenBudget = halfOfAvailableTokenBudget;
 
-		for (let i = lastPageIdxIncl + 1; i < totalNOfPages && tokenBudget > 0; ++i) {
+		for (
+			let i = lastPageIdxIncl + 1;
+			i < totalNOfPages && tokenBudget > 0;
+			++i
+		) {
 			const tokenCountForPage = computeTokensForPage(i);
 			const newTokenBudget = tokenBudget - tokenCountForPage;
 			if (newTokenBudget < 0) {
@@ -501,7 +674,8 @@ export function expandRangeToPageRange(
 			lastPageIdxIncl = i;
 			tokenBudget = newTokenBudget;
 		}
-	} else { // code above consumes as much as it can and the leftover budget is given to code below
+	} else {
+		// code above consumes as much as it can and the leftover budget is given to code below
 		tokenBudget = availableTokenBudget;
 
 		for (let i = firstPageIdx - 1; i >= 0 && tokenBudget > 0; --i) {
@@ -514,7 +688,11 @@ export function expandRangeToPageRange(
 			tokenBudget = newTokenBudget;
 		}
 
-		for (let i = lastPageIdxIncl + 1; i < totalNOfPages && tokenBudget > 0; ++i) {
+		for (
+			let i = lastPageIdxIncl + 1;
+			i < totalNOfPages && tokenBudget > 0;
+			++i
+		) {
 			const tokenCountForPage = computeTokensForPage(i);
 			const newTokenBudget = tokenBudget - tokenCountForPage;
 			if (newTokenBudget < 0) {
@@ -535,10 +713,13 @@ export function clipPreservingRange(
 	pageSize: number,
 	opts: CurrentFileOptions,
 ): Result<OffsetRange, 'outOfBudget'> {
-
 	// subtract budget consumed by rangeToPreserve
-	const linesToPreserve = docLines.slice(rangeToPreserve.start, rangeToPreserve.endExclusive);
-	const availableTokenBudget = opts.maxTokens - countTokensForLines(linesToPreserve, computeTokens);
+	const linesToPreserve = docLines.slice(
+		rangeToPreserve.start,
+		rangeToPreserve.endExclusive,
+	);
+	const availableTokenBudget =
+		opts.maxTokens - countTokensForLines(linesToPreserve, computeTokens);
 	if (availableTokenBudget < 0) {
 		return Result.error('outOfBudget');
 	}
@@ -563,7 +744,7 @@ export class ClippedDocument {
 		public readonly lines: string[],
 		/** The line range in the original document that corresponds to the kept lines. */
 		public readonly keptRange: OffsetRange,
-	) { }
+	) {}
 }
 
 export function createTaggedCurrentFileContentUsingPagedClipping(
@@ -572,15 +753,14 @@ export function createTaggedCurrentFileContentUsingPagedClipping(
 	areaAroundEditWindowLinesRange: OffsetRange,
 	computeTokens: (s: string) => number,
 	pageSize: number,
-	opts: CurrentFileOptions
+	opts: CurrentFileOptions,
 ): Result<ClippedDocument, 'outOfBudget'> {
-
 	const r = clipPreservingRange(
 		currentDocLines,
 		areaAroundEditWindowLinesRange,
 		computeTokens,
 		pageSize,
-		opts
+		opts,
 	);
 
 	if (r.isError()) {
@@ -590,20 +770,29 @@ export function createTaggedCurrentFileContentUsingPagedClipping(
 	const rangeToKeep = r.val;
 
 	const taggedCurrentFileContent = [
-		...currentDocLines.slice(rangeToKeep.start, areaAroundEditWindowLinesRange.start),
+		...currentDocLines.slice(
+			rangeToKeep.start,
+			areaAroundEditWindowLinesRange.start,
+		),
 		...areaAroundCodeToEdit,
-		...currentDocLines.slice(areaAroundEditWindowLinesRange.endExclusive, rangeToKeep.endExclusive),
+		...currentDocLines.slice(
+			areaAroundEditWindowLinesRange.endExclusive,
+			rangeToKeep.endExclusive,
+		),
 	];
 
 	const keptRange = new OffsetRange(
 		rangeToKeep.start,
-		rangeToKeep.start + taggedCurrentFileContent.length
+		rangeToKeep.start + taggedCurrentFileContent.length,
 	);
 
 	return Result.ok(new ClippedDocument(taggedCurrentFileContent, keptRange));
 }
 
-function addLineNumbers(lines: readonly string[], option: xtabPromptOptions.IncludeLineNumbersOption): string[] {
+function addLineNumbers(
+	lines: readonly string[],
+	option: xtabPromptOptions.IncludeLineNumbersOption,
+): string[] {
 	switch (option) {
 		case xtabPromptOptions.IncludeLineNumbersOption.WithSpaceAfter:
 			return lines.map((line, idx) => `${idx}| ${line}`);
@@ -627,59 +816,99 @@ export function constructTaggedFile(
 			areaAroundCodeToEdit: xtabPromptOptions.IncludeLineNumbersOption;
 			currentFileContent: xtabPromptOptions.IncludeLineNumbersOption;
 		};
-	}
+	},
 ) {
 	// Content with cursor tag - always created for areaAroundCodeToEdit
 	const contentWithCursorAsLinesOriginal = (() => {
-		const addCursorTagEdit = StringEdit.single(StringReplacement.insert(currentDocument.cursorOffset, PromptTags.CURSOR));
-		const contentWithCursor = addCursorTagEdit.applyOnText(currentDocument.content);
+		const addCursorTagEdit = StringEdit.single(
+			StringReplacement.insert(
+				currentDocument.cursorOffset,
+				PromptTags.CURSOR,
+			),
+		);
+		const contentWithCursor = addCursorTagEdit.applyOnText(
+			currentDocument.content,
+		);
 		return contentWithCursor.getLines();
 	})();
 
-	const contentWithCursorAsLines = addLineNumbers(contentWithCursorAsLinesOriginal, opts.includeLineNumbers.areaAroundCodeToEdit);
+	const contentWithCursorAsLines = addLineNumbers(
+		contentWithCursorAsLinesOriginal,
+		opts.includeLineNumbers.areaAroundCodeToEdit,
+	);
 
-	const editWindowWithCursorAsLines = contentWithCursorAsLines.slice(editWindowLinesRange.start, editWindowLinesRange.endExclusive);
+	const editWindowWithCursorAsLines = contentWithCursorAsLines.slice(
+		editWindowLinesRange.start,
+		editWindowLinesRange.endExclusive,
+	);
 
 	const areaAroundCodeToEdit = [
 		PromptTags.AREA_AROUND.start,
-		...contentWithCursorAsLines.slice(areaAroundEditWindowLinesRange.start, editWindowLinesRange.start),
+		...contentWithCursorAsLines.slice(
+			areaAroundEditWindowLinesRange.start,
+			editWindowLinesRange.start,
+		),
 		PromptTags.EDIT_WINDOW.start,
 		...editWindowWithCursorAsLines,
 		PromptTags.EDIT_WINDOW.end,
-		...contentWithCursorAsLines.slice(editWindowLinesRange.endExclusive, areaAroundEditWindowLinesRange.endExclusive),
-		PromptTags.AREA_AROUND.end
+		...contentWithCursorAsLines.slice(
+			editWindowLinesRange.endExclusive,
+			areaAroundEditWindowLinesRange.endExclusive,
+		),
+		PromptTags.AREA_AROUND.end,
 	];
 
 	// For current file content, optionally include cursor tag based on includeCursorTag option
-	const currentFileContentSourceLines = promptOptions.currentFile.includeCursorTag
+	const currentFileContentSourceLines = promptOptions.currentFile
+		.includeCursorTag
 		? contentWithCursorAsLinesOriginal
 		: currentDocument.lines;
-	const currentFileContentWithCursorLines = addLineNumbers(currentFileContentSourceLines, opts.includeLineNumbers.currentFileContent);
-	const currentFileContentLines = addLineNumbers(currentDocument.lines, opts.includeLineNumbers.currentFileContent);
+	const currentFileContentWithCursorLines = addLineNumbers(
+		currentFileContentSourceLines,
+		opts.includeLineNumbers.currentFileContent,
+	);
+	const currentFileContentLines = addLineNumbers(
+		currentDocument.lines,
+		opts.includeLineNumbers.currentFileContent,
+	);
 
 	let areaAroundCodeToEditForCurrentFile: string[];
-	if (promptOptions.currentFile.includeTags && opts.includeLineNumbers.currentFileContent === opts.includeLineNumbers.areaAroundCodeToEdit) {
+	if (
+		promptOptions.currentFile.includeTags &&
+		opts.includeLineNumbers.currentFileContent ===
+			opts.includeLineNumbers.areaAroundCodeToEdit
+	) {
 		areaAroundCodeToEditForCurrentFile = areaAroundCodeToEdit;
 	} else {
 		// Use currentFileContentWithCursorLines for edit window too
-		const editWindowLines = currentFileContentWithCursorLines.slice(editWindowLinesRange.start, editWindowLinesRange.endExclusive);
+		const editWindowLines = currentFileContentWithCursorLines.slice(
+			editWindowLinesRange.start,
+			editWindowLinesRange.endExclusive,
+		);
 		areaAroundCodeToEditForCurrentFile = [
-			...currentFileContentWithCursorLines.slice(areaAroundEditWindowLinesRange.start, editWindowLinesRange.start),
+			...currentFileContentWithCursorLines.slice(
+				areaAroundEditWindowLinesRange.start,
+				editWindowLinesRange.start,
+			),
 			...editWindowLines,
-			...currentFileContentWithCursorLines.slice(editWindowLinesRange.endExclusive, areaAroundEditWindowLinesRange.endExclusive),
+			...currentFileContentWithCursorLines.slice(
+				editWindowLinesRange.endExclusive,
+				areaAroundEditWindowLinesRange.endExclusive,
+			),
 		];
 	}
 
-	const taggedCurrentFileContentResult = createTaggedCurrentFileContentUsingPagedClipping(
-		currentFileContentLines,
-		areaAroundCodeToEditForCurrentFile,
-		areaAroundEditWindowLinesRange,
-		computeTokens,
-		promptOptions.pagedClipping.pageSize,
-		promptOptions.currentFile,
-	);
+	const taggedCurrentFileContentResult =
+		createTaggedCurrentFileContentUsingPagedClipping(
+			currentFileContentLines,
+			areaAroundCodeToEditForCurrentFile,
+			areaAroundEditWindowLinesRange,
+			computeTokens,
+			promptOptions.pagedClipping.pageSize,
+			promptOptions.currentFile,
+		);
 
-	return taggedCurrentFileContentResult.map(clippedTaggedCurrentDoc => ({
+	return taggedCurrentFileContentResult.map((clippedTaggedCurrentDoc) => ({
 		clippedTaggedCurrentDoc,
 		areaAroundCodeToEdit: areaAroundCodeToEdit.join('\n'),
 	}));

@@ -5,22 +5,15 @@
 
 import { outdent } from 'outdent';
 import { afterAll, expect, suite, test } from 'vitest';
-import {
-	_dispose
-} from '../../node/parserImpl';
+import { _dispose } from '../../node/parserImpl';
 import { WASMLanguage } from '../../node/treeSitterLanguages';
 import { srcWithAnnotatedNodeToDoc } from './getNodeToDocument.util';
 
-
 suite('getNodeToDocument - python', () => {
-
 	afterAll(() => _dispose());
 
 	async function run(annotatedSrc: string) {
-		return srcWithAnnotatedNodeToDoc(
-			WASMLanguage.Python,
-			annotatedSrc,
-		);
+		return srcWithAnnotatedNodeToDoc(WASMLanguage.Python, annotatedSrc);
 	}
 
 	test('plain function definition - cursor on `def`', async () => {

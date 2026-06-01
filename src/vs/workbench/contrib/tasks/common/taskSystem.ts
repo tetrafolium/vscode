@@ -3,18 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../base/common/uri.js';
-import Severity from '../../../../base/common/severity.js';
-import { TerminateResponse } from '../../../../base/common/processes.js';
-import { Event } from '../../../../base/common/event.js';
-import { Platform } from '../../../../base/common/platform.js';
-import { IWorkspaceFolder } from '../../../../platform/workspace/common/workspace.js';
-import { Task, ITaskEvent, KeyedTaskIdentifier } from './tasks.js';
-import { ConfigurationTarget } from '../../../../platform/configuration/common/configuration.js';
+import { URI } from "../../../../base/common/uri.js";
+import Severity from "../../../../base/common/severity.js";
+import { TerminateResponse } from "../../../../base/common/processes.js";
+import { Event } from "../../../../base/common/event.js";
+import { Platform } from "../../../../base/common/platform.js";
+import { IWorkspaceFolder } from "../../../../platform/workspace/common/workspace.js";
+import { Task, ITaskEvent, KeyedTaskIdentifier } from "./tasks.js";
+import { ConfigurationTarget } from "../../../../platform/configuration/common/configuration.js";
 
-import { IShellLaunchConfig } from '../../../../platform/terminal/common/terminal.js';
-import { IMarkerData } from '../../../../platform/markers/common/markers.js';
-import type { SingleOrMany } from '../../../../base/common/types.js';
+import { IShellLaunchConfig } from "../../../../platform/terminal/common/terminal.js";
+import { IMarkerData } from "../../../../platform/markers/common/markers.js";
+import type { SingleOrMany } from "../../../../base/common/types.js";
 
 export const enum TaskErrors {
 	NotConfigured,
@@ -24,7 +24,7 @@ export const enum TaskErrors {
 	ConfigValidationError,
 	TaskNotFound,
 	NoValidTaskRunner,
-	UnknownError
+	UnknownError,
 }
 
 export class VerifiedTask {
@@ -44,17 +44,40 @@ export class VerifiedTask {
 
 	public verify(): boolean {
 		let verified = false;
-		if (this.trigger && this.resolvedVariables && this.workspaceFolder && (this.shellLaunchConfig !== undefined)) {
+		if (
+			this.trigger &&
+			this.resolvedVariables &&
+			this.workspaceFolder &&
+			this.shellLaunchConfig !== undefined
+		) {
 			verified = true;
 		}
 		return verified;
 	}
 
-	public getVerifiedTask(): { task: Task; resolver: ITaskResolver; trigger: string; resolvedVariables: IResolvedVariables; systemInfo: ITaskSystemInfo; workspaceFolder: IWorkspaceFolder; shellLaunchConfig: IShellLaunchConfig } {
+	public getVerifiedTask(): {
+		task: Task;
+		resolver: ITaskResolver;
+		trigger: string;
+		resolvedVariables: IResolvedVariables;
+		systemInfo: ITaskSystemInfo;
+		workspaceFolder: IWorkspaceFolder;
+		shellLaunchConfig: IShellLaunchConfig;
+	} {
 		if (this.verify()) {
-			return { task: this.task, resolver: this.resolver, trigger: this.trigger, resolvedVariables: this.resolvedVariables!, systemInfo: this.systemInfo!, workspaceFolder: this.workspaceFolder!, shellLaunchConfig: this.shellLaunchConfig! };
+			return {
+				task: this.task,
+				resolver: this.resolver,
+				trigger: this.trigger,
+				resolvedVariables: this.resolvedVariables!,
+				systemInfo: this.systemInfo!,
+				workspaceFolder: this.workspaceFolder!,
+				shellLaunchConfig: this.shellLaunchConfig!,
+			};
 		} else {
-			throw new Error('VerifiedTask was not checked. verify must be checked before getVerifiedTask.');
+			throw new Error(
+				"VerifiedTask was not checked. verify must be checked before getVerifiedTask.",
+			);
 		}
 	}
 }
@@ -72,9 +95,9 @@ export class TaskError {
 }
 
 export namespace Triggers {
-	export const shortcut: string = 'shortcut';
-	export const command: string = 'command';
-	export const reconnect: string = 'reconnect';
+	export const shortcut: string = "shortcut";
+	export const command: string = "command";
+	export const reconnect: string = "reconnect";
 }
 
 export interface ITaskSummary {
@@ -86,7 +109,7 @@ export interface ITaskSummary {
 
 export const enum TaskExecuteKind {
 	Started = 1,
-	Active = 2
+	Active = 2,
 }
 
 export interface ITaskExecuteResult {
@@ -103,7 +126,10 @@ export interface ITaskExecuteResult {
 }
 
 export interface ITaskResolver {
-	resolve(uri: URI | string, identifier: string | KeyedTaskIdentifier | undefined): Promise<Task | undefined>;
+	resolve(
+		uri: URI | string,
+		identifier: string | KeyedTaskIdentifier | undefined,
+	): Promise<Task | undefined>;
 }
 
 export interface ITaskTerminateResponse extends TerminateResponse {
@@ -128,8 +154,16 @@ export interface ITaskSystemInfo {
 	platform: Platform;
 	context: unknown;
 	uriProvider: (this: void, path: string) => URI;
-	resolveVariables(workspaceFolder: IWorkspaceFolder, toResolve: IResolveSet, target: ConfigurationTarget): Promise<IResolvedVariables | undefined>;
-	findExecutable(command: string, cwd?: string, paths?: string[]): Promise<string | undefined>;
+	resolveVariables(
+		workspaceFolder: IWorkspaceFolder,
+		toResolve: IResolveSet,
+		target: ConfigurationTarget,
+	): Promise<IResolvedVariables | undefined>;
+	findExecutable(
+		command: string,
+		cwd?: string,
+		paths?: string[],
+	): Promise<string | undefined>;
 }
 
 export interface ITaskSystemInfoResolver {
@@ -154,7 +188,9 @@ export interface ITaskSystem {
 	isTaskVisible(task: Task): boolean;
 	getTaskForTerminal(instanceId: number): Promise<Task | undefined>;
 	getTerminalsForTasks(tasks: SingleOrMany<Task>): URI[] | undefined;
-	getTaskProblems(instanceId: number): Map<string, { resources: URI[]; markers: IMarkerData[] }> | undefined;
+	getTaskProblems(
+		instanceId: number,
+	): Map<string, { resources: URI[]; markers: IMarkerData[] }> | undefined;
 	getFirstInstance(task: Task): Task | undefined;
 	get lastTask(): VerifiedTask | undefined;
 	set lastTask(task: VerifiedTask);

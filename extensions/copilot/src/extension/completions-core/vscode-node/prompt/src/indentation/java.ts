@@ -46,7 +46,9 @@ const javaLabelRules: LabelRule<string>[] = buildLabelRules(_javaLabelRules);
 /**
  * processJava(parseRaw(text)) is supposed to serve as superior alternative to alternative parseTree(text, "generic")
  */
-export function processJava<L>(originalTree: IndentationTree<L>): IndentationTree<L | string> {
+export function processJava<L>(
+	originalTree: IndentationTree<L>,
+): IndentationTree<L | string> {
 	let tree = originalTree as IndentationTree<L | string>;
 	labelLines(tree, javaLabelRules);
 	tree = combineClosersAndOpeners(tree);
@@ -60,13 +62,16 @@ export function processJava<L>(originalTree: IndentationTree<L>): IndentationTre
 		(tree: IndentationTree<L | string>) => {
 			if (tree.label === 'class' || tree.label === 'interface') {
 				for (const sub of tree.subs) {
-					if (!isBlank(sub) && (sub.label === undefined || sub.label === 'annotation')) {
+					if (
+						!isBlank(sub) &&
+						(sub.label === undefined || sub.label === 'annotation')
+					) {
 						sub.label = 'member';
 					}
 				}
 			}
 		},
-		'bottomUp'
+		'bottomUp',
 	);
 	return tree;
 }

@@ -3,236 +3,288 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { testPaths, type ISuiteSpec } from './helpers';
-const expectedCompletions = [{ label: 'foo', description: 'Foo' }];
+import { testPaths, type ISuiteSpec } from "./helpers";
+const expectedCompletions = [{ label: "foo", description: "Foo" }];
 export const figGenericTestSuites: ISuiteSpec[] = [
 	{
-		name: 'Fig name and description only',
+		name: "Fig name and description only",
 		completionSpecs: [
 			{
-				name: 'foo',
-				description: 'Foo',
-			}
+				name: "foo",
+				description: "Foo",
+			},
 		],
-		availableCommands: 'foo',
+		availableCommands: "foo",
 		testSpecs: [
 			// Typing a path
-			{ input: '|', expectedCompletions, expectedResourceRequests: { type: 'both', cwd: testPaths.cwd } },
-			{ input: 'f|', expectedCompletions, expectedResourceRequests: { type: 'both', cwd: testPaths.cwd } },
-			{ input: 'fo|', expectedCompletions, expectedResourceRequests: { type: 'both', cwd: testPaths.cwd } },
-			{ input: 'foo|', expectedCompletions, expectedResourceRequests: { type: 'both', cwd: testPaths.cwd } },
+			{
+				input: "|",
+				expectedCompletions,
+				expectedResourceRequests: { type: "both", cwd: testPaths.cwd },
+			},
+			{
+				input: "f|",
+				expectedCompletions,
+				expectedResourceRequests: { type: "both", cwd: testPaths.cwd },
+			},
+			{
+				input: "fo|",
+				expectedCompletions,
+				expectedResourceRequests: { type: "both", cwd: testPaths.cwd },
+			},
+			{
+				input: "foo|",
+				expectedCompletions,
+				expectedResourceRequests: { type: "both", cwd: testPaths.cwd },
+			},
 
 			// Basic arguments (fallback)
-			{ input: 'foo |', expectedCompletions: [], expectedResourceRequests: { type: 'both', cwd: testPaths.cwd } }
-		]
-	},
-	{
-		name: 'Fig top-level args files only',
-		completionSpecs: [
 			{
-				name: 'foo',
-				description: 'Foo',
-				args: {
-					template: 'filepaths',
-					isVariadic: true,
-				}
-			}
+				input: "foo |",
+				expectedCompletions: [],
+				expectedResourceRequests: { type: "both", cwd: testPaths.cwd },
+			},
 		],
-		availableCommands: 'foo',
-		testSpecs: [
-			{ input: 'foo |', expectedCompletions: [], expectedResourceRequests: { type: 'files', cwd: testPaths.cwd } },
-		]
 	},
 	{
-		name: 'Fig top-level args folders only',
+		name: "Fig top-level args files only",
 		completionSpecs: [
 			{
-				name: 'foo',
-				description: 'Foo',
+				name: "foo",
+				description: "Foo",
 				args: {
-					template: 'folders',
+					template: "filepaths",
 					isVariadic: true,
-				}
-			}
+				},
+			},
 		],
-		availableCommands: 'foo',
+		availableCommands: "foo",
 		testSpecs: [
-			{ input: 'foo |', expectedCompletions: [], expectedResourceRequests: { type: 'folders', cwd: testPaths.cwd } },
-		]
+			{
+				input: "foo |",
+				expectedCompletions: [],
+				expectedResourceRequests: { type: "files", cwd: testPaths.cwd },
+			},
+		],
 	},
 	{
-		name: 'Fig top-level args files and folders',
+		name: "Fig top-level args folders only",
 		completionSpecs: [
 			{
-				name: 'foo',
-				description: 'Foo',
+				name: "foo",
+				description: "Foo",
 				args: {
-					template: ['filepaths', 'folders'],
+					template: "folders",
 					isVariadic: true,
-				}
-			}
+				},
+			},
 		],
-		availableCommands: 'foo',
+		availableCommands: "foo",
 		testSpecs: [
-			{ input: 'foo |', expectedCompletions: [], expectedResourceRequests: { type: 'both', cwd: testPaths.cwd } },
-		]
+			{
+				input: "foo |",
+				expectedCompletions: [],
+				expectedResourceRequests: { type: "folders", cwd: testPaths.cwd },
+			},
+		],
 	},
 	{
-		name: 'Fig top-level options',
+		name: "Fig top-level args files and folders",
 		completionSpecs: [
 			{
-				name: 'foo',
-				description: 'Foo',
+				name: "foo",
+				description: "Foo",
+				args: {
+					template: ["filepaths", "folders"],
+					isVariadic: true,
+				},
+			},
+		],
+		availableCommands: "foo",
+		testSpecs: [
+			{
+				input: "foo |",
+				expectedCompletions: [],
+				expectedResourceRequests: { type: "both", cwd: testPaths.cwd },
+			},
+		],
+	},
+	{
+		name: "Fig top-level options",
+		completionSpecs: [
+			{
+				name: "foo",
+				description: "Foo",
 				options: [
-					{ name: '--bar', description: 'Bar' },
-					{ name: '--baz', description: 'Baz' }
-				]
-			}
+					{ name: "--bar", description: "Bar" },
+					{ name: "--baz", description: "Baz" },
+				],
+			},
 		],
-		availableCommands: 'foo',
+		availableCommands: "foo",
 		testSpecs: [
-			{ input: 'foo |', expectedCompletions: ['--bar', '--baz'] },
-			{ input: 'foo bar|', expectedCompletions: ['--bar', '--baz'] },
-			{ input: 'foo --bar |', expectedCompletions: ['--baz'] },
-			{ input: 'foo --baz |', expectedCompletions: ['--bar'] },
-		]
+			{ input: "foo |", expectedCompletions: ["--bar", "--baz"] },
+			{ input: "foo bar|", expectedCompletions: ["--bar", "--baz"] },
+			{ input: "foo --bar |", expectedCompletions: ["--baz"] },
+			{ input: "foo --baz |", expectedCompletions: ["--bar"] },
+		],
 	},
 	{
-		name: 'Fig top-level option values',
+		name: "Fig top-level option values",
 		completionSpecs: [
 			{
-				name: 'foo',
-				description: 'Foo',
+				name: "foo",
+				description: "Foo",
 				options: [
 					{
-						name: '--bar',
-						description: 'Bar',
+						name: "--bar",
+						description: "Bar",
 						args: {
-							name: 'baz',
-							suggestions: [
-								'a',
-								'b',
-								'c',
-							],
-						}
-					}
-				]
-			}
+							name: "baz",
+							suggestions: ["a", "b", "c"],
+						},
+					},
+				],
+			},
 		],
-		availableCommands: 'foo',
+		availableCommands: "foo",
 		testSpecs: [
-			{ input: 'foo |', expectedCompletions: ['--bar <baz>'] },
-			{ input: 'foo --bar |', expectedCompletions: ['a', 'b', 'c'] },
-			{ input: 'foo --bar a|', expectedCompletions: ['a', 'b', 'c'] },
-			{ input: 'foo --bar b|', expectedCompletions: ['a', 'b', 'c'] },
-			{ input: 'foo --bar c|', expectedCompletions: ['a', 'b', 'c'] },
-		]
+			{ input: "foo |", expectedCompletions: ["--bar <baz>"] },
+			{ input: "foo --bar |", expectedCompletions: ["a", "b", "c"] },
+			{ input: "foo --bar a|", expectedCompletions: ["a", "b", "c"] },
+			{ input: "foo --bar b|", expectedCompletions: ["a", "b", "c"] },
+			{ input: "foo --bar c|", expectedCompletions: ["a", "b", "c"] },
+		],
 	},
 	{
-		name: 'Fig script generator',
+		name: "Fig script generator",
 		completionSpecs: [
 			{
-				name: 'foo',
-				description: 'Foo',
+				name: "foo",
+				description: "Foo",
 				args: {
-					name: 'bar',
+					name: "bar",
 					generators: [
 						{
-							script: () => ['echo abcd'],
-							postProcess: (out) => out.split('').map(item => {
-								return { name: item };
-							}).filter(i => !!i)
-						}
-					]
-				}
-			}
+							script: () => ["echo abcd"],
+							postProcess: (out) =>
+								out
+									.split("")
+									.map((item) => {
+										return { name: item };
+									})
+									.filter((i) => !!i),
+						},
+					],
+				},
+			},
 		],
-		availableCommands: 'foo',
+		availableCommands: "foo",
 		testSpecs: [
-			{ input: 'foo |', expectedCompletions: ['e', 'c', 'h', 'o', ' ', 'a', 'b', 'c', 'd'] },
-			{ input: 'foo a|', expectedCompletions: ['e', 'c', 'h', 'o', ' ', 'a', 'b', 'c', 'd'] },
-			{ input: 'foo b|', expectedCompletions: ['e', 'c', 'h', 'o', ' ', 'a', 'b', 'c', 'd'] },
-			{ input: 'foo c|', expectedCompletions: ['e', 'c', 'h', 'o', ' ', 'a', 'b', 'c', 'd'] },
-		]
+			{
+				input: "foo |",
+				expectedCompletions: ["e", "c", "h", "o", " ", "a", "b", "c", "d"],
+			},
+			{
+				input: "foo a|",
+				expectedCompletions: ["e", "c", "h", "o", " ", "a", "b", "c", "d"],
+			},
+			{
+				input: "foo b|",
+				expectedCompletions: ["e", "c", "h", "o", " ", "a", "b", "c", "d"],
+			},
+			{
+				input: "foo c|",
+				expectedCompletions: ["e", "c", "h", "o", " ", "a", "b", "c", "d"],
+			},
+		],
 	},
 	{
-		name: 'Fig custom generator',
+		name: "Fig custom generator",
 		completionSpecs: [
 			{
-				name: 'foo',
-				description: 'Foo',
+				name: "foo",
+				description: "Foo",
 				args: {
-					name: 'bar',
+					name: "bar",
 					generators: [
 						{
-							custom: async (tokens: string[], executeCommand: Fig.ExecuteCommandFunction, generatorContext: Fig.GeneratorContext) => {
+							custom: async (
+								tokens: string[],
+								executeCommand: Fig.ExecuteCommandFunction,
+								generatorContext: Fig.GeneratorContext,
+							) => {
 								if (tokens.length) {
-									return tokens.map(token => ({ name: token }));
+									return tokens.map((token) => ({ name: token }));
 								}
-								executeCommand({ command: 'echo', args: ['a\tb\nc\td'] });
-							}
-						}
-					]
-				}
-			}
+								executeCommand({ command: "echo", args: ["a\tb\nc\td"] });
+							},
+						},
+					],
+				},
+			},
 		],
-		availableCommands: 'foo',
+		availableCommands: "foo",
 		testSpecs: [
-			{ input: 'foo |', expectedCompletions: ['foo'] },
-			{ input: 'foo a|', expectedCompletions: ['a', 'foo'] },
-			{ input: 'foo b|', expectedCompletions: ['b', 'foo'] },
-			{ input: 'foo c|', expectedCompletions: ['c', 'foo'] },
-		]
+			{ input: "foo |", expectedCompletions: ["foo"] },
+			{ input: "foo a|", expectedCompletions: ["a", "foo"] },
+			{ input: "foo b|", expectedCompletions: ["b", "foo"] },
+			{ input: "foo c|", expectedCompletions: ["c", "foo"] },
+		],
 	},
 	{
-		name: 'Fig persistent options',
+		name: "Fig persistent options",
 		completionSpecs: [
 			{
-				name: 'foo',
-				description: 'Foo',
+				name: "foo",
+				description: "Foo",
 				options: [
-					{ name: '--help', description: 'Show help', isPersistent: true },
-					{ name: '--docs', description: 'Show docs' },
-					{ name: '--version', description: 'Version info', isPersistent: false }
+					{ name: "--help", description: "Show help", isPersistent: true },
+					{ name: "--docs", description: "Show docs" },
+					{
+						name: "--version",
+						description: "Version info",
+						isPersistent: false,
+					},
 				],
 				subcommands: [
 					{
-						name: 'bar',
-						description: 'Bar subcommand',
-						options: [
-							{ name: '--local', description: 'Local option' }
-						]
+						name: "bar",
+						description: "Bar subcommand",
+						options: [{ name: "--local", description: "Local option" }],
 					},
 					{
-						name: 'baz',
-						description: 'Baz subcommand',
-						options: [
-							{ name: '--another', description: 'Another option' }
-						],
+						name: "baz",
+						description: "Baz subcommand",
+						options: [{ name: "--another", description: "Another option" }],
 						subcommands: [
 							{
-								name: 'nested',
-								description: 'Nested subcommand'
-							}
-						]
-					}
-				]
-			}
+								name: "nested",
+								description: "Nested subcommand",
+							},
+						],
+					},
+				],
+			},
 		],
-		availableCommands: 'foo',
+		availableCommands: "foo",
 		testSpecs: [
 			// Top-level should show all options including persistent
-			{ input: 'foo |', expectedCompletions: ['--help', '--docs', '--version', 'bar', 'baz'] },
+			{
+				input: "foo |",
+				expectedCompletions: ["--help", "--docs", "--version", "bar", "baz"],
+			},
 			// First-level subcommand should only inherit persistent options (not --docs or --version)
-			{ input: 'foo bar |', expectedCompletions: ['--help', '--local'] },
+			{ input: "foo bar |", expectedCompletions: ["--help", "--local"] },
 			// Another first-level subcommand should also inherit only persistent options
-			{ input: 'foo baz |', expectedCompletions: ['--help', '--another', 'nested'] },
+			{
+				input: "foo baz |",
+				expectedCompletions: ["--help", "--another", "nested"],
+			},
 			// Nested subcommand should inherit persistent options from top level
-			{ input: 'foo baz nested |', expectedCompletions: ['--help'] },
+			{ input: "foo baz nested |", expectedCompletions: ["--help"] },
 			// Persistent options should be available even after using local options
-			{ input: 'foo bar --local |', expectedCompletions: ['--help'] },
-		]
-	}
+			{ input: "foo bar --local |", expectedCompletions: ["--help"] },
+		],
+	},
 ];
-
-

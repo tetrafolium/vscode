@@ -12,20 +12,33 @@ import { citationsChannelName } from './outputChannel';
 export class CodeRefEngagementTracker extends Disposable {
 	private activeLog = false;
 
-	constructor(@IInstantiationService private instantiationService: IInstantiationService) {
+	constructor(
+		@IInstantiationService
+		private instantiationService: IInstantiationService,
+	) {
 		super();
-		this._register(window.onDidChangeActiveTextEditor((e) => this.onActiveEditorChange(e)));
-		this._register(window.onDidChangeVisibleTextEditors((e) => this.onVisibleEditorsChange(e)));
+		this._register(
+			window.onDidChangeActiveTextEditor((e) =>
+				this.onActiveEditorChange(e),
+			),
+		);
+		this._register(
+			window.onDidChangeVisibleTextEditors((e) =>
+				this.onVisibleEditorsChange(e),
+			),
+		);
 	}
 
 	onActiveEditorChange = (editor: TextEditor | undefined) => {
 		if (this.isOutputLog(editor)) {
-			copilotOutputLogTelemetry.handleFocus({ instantiationService: this.instantiationService });
+			copilotOutputLogTelemetry.handleFocus({
+				instantiationService: this.instantiationService,
+			});
 		}
 	};
 
 	onVisibleEditorsChange = (currEditors: readonly TextEditor[]) => {
-		const copilotLog = currEditors.find(e => this.isOutputLog(e));
+		const copilotLog = currEditors.find((e) => this.isOutputLog(e));
 
 		if (this.activeLog) {
 			if (!copilotLog) {
@@ -33,7 +46,9 @@ export class CodeRefEngagementTracker extends Disposable {
 			}
 		} else if (copilotLog) {
 			this.activeLog = true;
-			copilotOutputLogTelemetry.handleOpen({ instantiationService: this.instantiationService });
+			copilotOutputLogTelemetry.handleOpen({
+				instantiationService: this.instantiationService,
+			});
 		}
 	};
 
@@ -43,7 +58,9 @@ export class CodeRefEngagementTracker extends Disposable {
 
 	private isOutputLog = (editor: TextEditor | undefined) => {
 		return (
-			editor && editor.document.uri.scheme === 'output' && editor.document.uri.path.includes(citationsChannelName)
+			editor &&
+			editor.document.uri.scheme === 'output' &&
+			editor.document.uri.path.includes(citationsChannelName)
 		);
 	};
 }

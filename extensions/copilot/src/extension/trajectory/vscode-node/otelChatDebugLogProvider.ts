@@ -5,12 +5,22 @@
 
 import * as fs from 'fs';
 import * as vscode from 'vscode';
-import { IChatDebugFileLoggerService, IDebugLogEntry, sessionResourceToId } from '../../../platform/chat/common/chatDebugFileLoggerService';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	IChatDebugFileLoggerService,
+	IDebugLogEntry,
+	sessionResourceToId,
+} from '../../../platform/chat/common/chatDebugFileLoggerService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { ILogService } from '../../../platform/log/common/logService';
 import { IExperimentationService } from '../../../platform/telemetry/common/nullExperimentationService';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
-import { Disposable, type IDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	type IDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 import { URI } from '../../../util/vs/base/common/uri';
 import { IExtensionContribution } from '../../common/contributions';
 import {
@@ -32,7 +42,10 @@ import {
  * Live events: subscribes to IChatDebugFileLoggerService.onDidEmitEntry.
  * No in-memory span storage, no eviction, no compaction.
  */
-export class OTelChatDebugLogProviderContribution extends Disposable implements IExtensionContribution {
+export class OTelChatDebugLogProviderContribution
+	extends Disposable
+	implements IExtensionContribution
+{
 	public readonly id = 'otelChatDebugLogProvider';
 
 	/** Max entries to keep in the detail resolution cache */
@@ -65,39 +78,66 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 	private _liveSubscription: IDisposable | undefined;
 
 	constructor(
-		@IChatDebugFileLoggerService private readonly _fileLogger: IChatDebugFileLoggerService,
+		@IChatDebugFileLoggerService
+		private readonly _fileLogger: IChatDebugFileLoggerService,
 		@ILogService private readonly _logService: ILogService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@IExperimentationService private readonly _experimentationService: IExperimentationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
+		@IExperimentationService
+		private readonly _experimentationService: IExperimentationService,
+		@ITelemetryService
+		private readonly _telemetryService: ITelemetryService,
 	) {
 		super();
 
-		if (!this._configurationService.getExperimentBasedConfig(ConfigKey.Advanced.ChatDebugFileLogging, this._experimentationService)) {
+		if (
+			!this._configurationService.getExperimentBasedConfig(
+				ConfigKey.Advanced.ChatDebugFileLogging,
+				this._experimentationService,
+			)
+		) {
 			return;
 		}
 
 		// Register as the debug log provider (guard for proposed API availability)
 		if (typeof vscode.chat?.registerChatDebugLogProvider !== 'function') {
-			this._logService.info('[OTelDebug] Chat debug API not available, skipping registration');
+			this._logService.info(
+				'[OTelDebug] Chat debug API not available, skipping registration',
+			);
 			return;
 		}
 
 		try {
-			this._register(vscode.chat.registerChatDebugLogProvider({
-				provideChatDebugLog: (sessionResource, progress, token) =>
-					this._provideChatDebugLog(sessionResource, progress, token),
-				resolveChatDebugLogEvent: (eventId, token) =>
-					this._resolveChatDebugLogEvent(eventId, token),
-				provideChatDebugLogExport: (sessionResource, options, token) =>
-					this._provideChatDebugLogExport(sessionResource, options, token),
-				resolveChatDebugLogImport: (data, token) =>
-					this._resolveChatDebugLogImport(data, token),
-				provideAvailableDebugSessionResources: (token) =>
-					this._getAvailableDebugSessionResources(token),
-			}));
+			this._register(
+				vscode.chat.registerChatDebugLogProvider({
+					provideChatDebugLog: (sessionResource, progress, token) =>
+						this._provideChatDebugLog(
+							sessionResource,
+							progress,
+							token,
+						),
+					resolveChatDebugLogEvent: (eventId, token) =>
+						this._resolveChatDebugLogEvent(eventId, token),
+					provideChatDebugLogExport: (
+						sessionResource,
+						options,
+						token,
+					) =>
+						this._provideChatDebugLogExport(
+							sessionResource,
+							options,
+							token,
+						),
+					resolveChatDebugLogImport: (data, token) =>
+						this._resolveChatDebugLogImport(data, token),
+					provideAvailableDebugSessionResources: (token) =>
+						this._getAvailableDebugSessionResources(token),
+				}),
+			);
 		} catch (e) {
-			this._logService.warn(`[OTelDebug] Failed to register debug log provider: ${e}`);
+			this._logService.warn(
+				`[OTelDebug] Failed to register debug log provider: ${e}`,
+			);
 		}
 	}
 
@@ -106,17 +146,27 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 	 * across VS Code restarts (OTel resets its span counter on restart).
 	 */
 	private _scopeEventIds(evt: vscode.ChatDebugEvent, runIndex: number): void {
-		if (runIndex === 0) { return; } // First run — no suffix needed
+		if (runIndex === 0) {
+			return;
+		} // First run — no suffix needed
 		const suffix = `:r${runIndex}`;
 		const evtWithId = evt as { id?: string; parentEventId?: string };
-		if (evtWithId.id) { evtWithId.id += suffix; }
-		if (evtWithId.parentEventId) { evtWithId.parentEventId += suffix; }
+		if (evtWithId.id) {
+			evtWithId.id += suffix;
+		}
+		if (evtWithId.parentEventId) {
+			evtWithId.parentEventId += suffix;
+		}
 	}
 
 	private _streamEvent(evt: vscode.ChatDebugEvent, dedupKey?: string): void {
-		if (!this._activeProgress) { return; }
+		if (!this._activeProgress) {
+			return;
+		}
 		if (dedupKey) {
-			if (this._sentDedupKeys.has(dedupKey)) { return; }
+			if (this._sentDedupKeys.has(dedupKey)) {
+				return;
+			}
 			this._sentDedupKeys.add(dedupKey);
 		}
 		this._activeProgress.report(evt);
@@ -130,7 +180,10 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 	 * child-session user_message and subagent events that share a spanId
 	 * don't collide with each other in UI caches or id-based lookups.
 	 */
-	private _prefixChildEventId(evt: vscode.ChatDebugEvent, entry: IDebugLogEntry): void {
+	private _prefixChildEventId(
+		evt: vscode.ChatDebugEvent,
+		entry: IDebugLogEntry,
+	): void {
 		if (entry.type === 'user_message' || entry.type === 'subagent') {
 			const evtWithId = evt as { id?: string };
 			if (evtWithId.id) {
@@ -147,8 +200,13 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 		this._activeEntryCache.delete(evtId);
 		this._activeEntryCache.set(evtId, entry);
 		// Evict oldest entries if over cap
-		if (this._activeEntryCache.size > OTelChatDebugLogProviderContribution.MAX_ENTRY_CACHE) {
-			const excess = this._activeEntryCache.size - OTelChatDebugLogProviderContribution.MAX_ENTRY_CACHE;
+		if (
+			this._activeEntryCache.size >
+			OTelChatDebugLogProviderContribution.MAX_ENTRY_CACHE
+		) {
+			const excess =
+				this._activeEntryCache.size -
+				OTelChatDebugLogProviderContribution.MAX_ENTRY_CACHE;
 			const iter = this._activeEntryCache.keys();
 			for (let i = 0; i < excess; i++) {
 				this._activeEntryCache.delete(iter.next().value!);
@@ -171,7 +229,9 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 		this._activeChildSessions.clear();
 		// For live sessions, core already displays discovery/customization events.
 		// For historical sessions, we need to render them from JSONL.
-		this._skipCoreEvents = this._fileLogger.getActiveSessionIds().includes(sessionId);
+		this._skipCoreEvents = this._fileLogger
+			.getActiveSessionIds()
+			.includes(sessionId);
 
 		// Clean up on cancellation
 		token.onCancellationRequested(() => {
@@ -188,55 +248,82 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 
 		// Subscribe to live events from the file logger bridge
 		this._liveSubscription?.dispose();
-		this._liveSubscription = this._fileLogger.onDidEmitEntry(({ sessionId: sid, entry }) => {
-			// Accept entries from the active parent session OR a known child session
-			const childParentId = this._activeChildSessions.get(sid);
-			if (sid !== this._activeSessionId && !childParentId) { return; }
+		this._liveSubscription = this._fileLogger.onDidEmitEntry(
+			({ sessionId: sid, entry }) => {
+				// Accept entries from the active parent session OR a known child session
+				const childParentId = this._activeChildSessions.get(sid);
+				if (sid !== this._activeSessionId && !childParentId) {
+					return;
+				}
 
-			// Entries from a child session: reparent under the child_session_ref node
-			if (childParentId) {
-				const evt = debugLogEntryToDebugEvent(entry, this._skipCoreEvents);
+				// Entries from a child session: reparent under the child_session_ref node
+				if (childParentId) {
+					const evt = debugLogEntryToDebugEvent(
+						entry,
+						this._skipCoreEvents,
+					);
+					if (evt) {
+						this._scopeEventIds(evt, entry.rIdx ?? 0);
+						this._prefixChildEventId(evt, entry);
+						if ('parentEventId' in evt) {
+							(evt as { parentEventId?: string }).parentEventId =
+								childParentId;
+						}
+						const evtId =
+							'id' in evt
+								? (evt as { id?: string }).id
+								: undefined;
+						if (evtId) {
+							this._cacheEntry(evtId, entry);
+						}
+						this._streamEvent(evt, entryDedupKey(entry));
+					}
+					return;
+				}
+
+				// Parent session entry
+				const evt = debugLogEntryToDebugEvent(
+					entry,
+					this._skipCoreEvents,
+				);
 				if (evt) {
 					this._scopeEventIds(evt, entry.rIdx ?? 0);
-					this._prefixChildEventId(evt, entry);
-					if ('parentEventId' in evt) {
-						(evt as { parentEventId?: string }).parentEventId = childParentId;
-					}
-					const evtId = 'id' in evt ? (evt as { id?: string }).id : undefined;
+					const evtId =
+						'id' in evt ? (evt as { id?: string }).id : undefined;
 					if (evtId) {
 						this._cacheEntry(evtId, entry);
 					}
 					this._streamEvent(evt, entryDedupKey(entry));
 				}
-				return;
-			}
 
-			// Parent session entry
-			const evt = debugLogEntryToDebugEvent(entry, this._skipCoreEvents);
-			if (evt) {
-				this._scopeEventIds(evt, entry.rIdx ?? 0);
-				const evtId = 'id' in evt ? (evt as { id?: string }).id : undefined;
-				if (evtId) {
-					this._cacheEntry(evtId, entry);
+				// When a child_session_ref arrives, register the child session
+				// so subsequent live entries from it are routed here
+				if (entry.type === 'child_session_ref' && evt) {
+					const childSessionId = entry.attrs.childSessionId as
+						| string
+						| undefined;
+					if (childSessionId) {
+						const parentRunIndex = entry.rIdx ?? 0;
+						const scopedParentId =
+							parentRunIndex > 0
+								? `${entry.spanId}:r${parentRunIndex}`
+								: entry.spanId;
+						this._activeChildSessions.set(
+							childSessionId,
+							scopedParentId,
+						);
+						// Also load any entries already written before we registered
+						this._streamChildSessionEntries(
+							childSessionId,
+							scopedParentId,
+							entry,
+						).catch(() => {
+							// Expected for live scenarios — child file may not exist yet
+						});
+					}
 				}
-				this._streamEvent(evt, entryDedupKey(entry));
-			}
-
-			// When a child_session_ref arrives, register the child session
-			// so subsequent live entries from it are routed here
-			if (entry.type === 'child_session_ref' && evt) {
-				const childSessionId = entry.attrs.childSessionId as string | undefined;
-				if (childSessionId) {
-					const parentRunIndex = entry.rIdx ?? 0;
-					const scopedParentId = parentRunIndex > 0 ? `${entry.spanId}:r${parentRunIndex}` : entry.spanId;
-					this._activeChildSessions.set(childSessionId, scopedParentId);
-					// Also load any entries already written before we registered
-					this._streamChildSessionEntries(childSessionId, scopedParentId, entry).catch(() => {
-						// Expected for live scenarios — child file may not exist yet
-					});
-				}
-			}
-		});
+			},
+		);
 
 		// Read historical entries — from imported cache or from JSONL on disk
 		const startTime = Date.now();
@@ -251,7 +338,10 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 		// Remaining older entries are streamed in the background via progress.report().
 		const INITIAL_TAIL_COUNT = 500;
 		try {
-			const tailEntries = await this._fileLogger.readTailEntries(sessionId, INITIAL_TAIL_COUNT);
+			const tailEntries = await this._fileLogger.readTailEntries(
+				sessionId,
+				INITIAL_TAIL_COUNT,
+			);
 			const events = await this._processEntries(tailEntries, startTime);
 
 			// Background-stream the full file to backfill older events.
@@ -262,7 +352,9 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 
 			return events;
 		} catch (err) {
-			this._logService.error(`[OTelDebug] Error in _provideChatDebugLog: ${err}`);
+			this._logService.error(
+				`[OTelDebug] Error in _provideChatDebugLog: ${err}`,
+			);
 			return [];
 		}
 	}
@@ -271,18 +363,24 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 	 * Process a batch of entries: scope event IDs by run index, convert to events,
 	 * cache for detail resolution, load child session entries, and mark as sent.
 	 */
-	private async _processEntries(entries: readonly IDebugLogEntry[], startTime: number): Promise<vscode.ChatDebugEvent[]> {
+	private async _processEntries(
+		entries: readonly IDebugLogEntry[],
+		startTime: number,
+	): Promise<vscode.ChatDebugEvent[]> {
 		const events: vscode.ChatDebugEvent[] = [];
 
 		for (const entry of entries) {
 			const dedupKey = entryDedupKey(entry);
 			// Skip entries already sent by the live handler during the async tail read
-			if (this._sentDedupKeys.has(dedupKey)) { continue; }
+			if (this._sentDedupKeys.has(dedupKey)) {
+				continue;
+			}
 
 			const evt = debugLogEntryToDebugEvent(entry, this._skipCoreEvents);
 			if (evt) {
 				this._scopeEventIds(evt, entry.rIdx ?? 0);
-				const evtId = 'id' in evt ? (evt as { id?: string }).id : undefined;
+				const evtId =
+					'id' in evt ? (evt as { id?: string }).id : undefined;
 				if (evtId) {
 					this._cacheEntry(evtId, entry);
 				}
@@ -292,25 +390,45 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 
 			// When we see a non-filtered child_session_ref, load its child session's entries
 			if (entry.type === 'child_session_ref' && evt) {
-				const childSessionId = entry.attrs.childSessionId as string | undefined;
+				const childSessionId = entry.attrs.childSessionId as
+					| string
+					| undefined;
 				if (childSessionId) {
 					// Compute the scoped parent ID (with :rN suffix if applicable)
 					const parentRunIndex = entry.rIdx ?? 0;
-					const scopedParentId = parentRunIndex > 0 ? `${entry.spanId}:r${parentRunIndex}` : entry.spanId;
+					const scopedParentId =
+						parentRunIndex > 0
+							? `${entry.spanId}:r${parentRunIndex}`
+							: entry.spanId;
 					// Register so the live handler routes future child entries here
-					this._activeChildSessions.set(childSessionId, scopedParentId);
+					this._activeChildSessions.set(
+						childSessionId,
+						scopedParentId,
+					);
 					try {
-						const childEntries = await this._readChildEntries(entry);
+						const childEntries =
+							await this._readChildEntries(entry);
 						for (const childEntry of childEntries) {
-							const childEvt = debugLogEntryToDebugEvent(childEntry, this._skipCoreEvents);
+							const childEvt = debugLogEntryToDebugEvent(
+								childEntry,
+								this._skipCoreEvents,
+							);
 							if (childEvt) {
-								this._scopeEventIds(childEvt, childEntry.rIdx ?? 0);
+								this._scopeEventIds(
+									childEvt,
+									childEntry.rIdx ?? 0,
+								);
 								this._prefixChildEventId(childEvt, childEntry);
 								// Set parent to the child_session_ref entry (with run-index scope)
 								if ('parentEventId' in childEvt) {
-									(childEvt as { parentEventId?: string }).parentEventId = scopedParentId;
+									(
+										childEvt as { parentEventId?: string }
+									).parentEventId = scopedParentId;
 								}
-								const childEvtId = 'id' in childEvt ? (childEvt as { id?: string }).id : undefined;
+								const childEvtId =
+									'id' in childEvt
+										? (childEvt as { id?: string }).id
+										: undefined;
 								if (childEvtId) {
 									this._cacheEntry(childEvtId, childEntry);
 								}
@@ -327,8 +445,10 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 
 		// Sort by timestamp
 		events.sort((a, b) => {
-			const aTime = 'created' in a ? (a as { created: Date }).created.getTime() : 0;
-			const bTime = 'created' in b ? (b as { created: Date }).created.getTime() : 0;
+			const aTime =
+				'created' in a ? (a as { created: Date }).created.getTime() : 0;
+			const bTime =
+				'created' in b ? (b as { created: Date }).created.getTime() : 0;
 			return aTime - bTime;
 		});
 
@@ -341,11 +461,15 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 				"eventCount": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true, "comment": "Number of output events" }
 			}
 		*/
-		this._telemetryService.sendMSFTTelemetryEvent('otelDebug.convertEntriesToEvents', undefined, {
-			durationMs: Date.now() - startTime,
-			entryCount: entries.length,
-			eventCount: events.length,
-		});
+		this._telemetryService.sendMSFTTelemetryEvent(
+			'otelDebug.convertEntriesToEvents',
+			undefined,
+			{
+				durationMs: Date.now() - startTime,
+				entryCount: entries.length,
+				eventCount: events.length,
+			},
+		);
 
 		return events;
 	}
@@ -356,43 +480,73 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 	 * progress.report(). The dedup keys prevent double-reporting entries
 	 * that were already returned in the initial batch.
 	 */
-	private _streamOlderEntries(sessionId: string, token: vscode.CancellationToken): void {
-		const childRefs: { childSessionId: string; scopedParentId: string }[] = [];
+	private _streamOlderEntries(
+		sessionId: string,
+		token: vscode.CancellationToken,
+	): void {
+		const childRefs: { childSessionId: string; scopedParentId: string }[] =
+			[];
 
-		this._fileLogger.streamEntries(sessionId, entry => {
-			if (token.isCancellationRequested) { return; }
-
-			const dedupKey = entryDedupKey(entry);
-			if (this._sentDedupKeys.has(dedupKey)) { return; } // Already sent in tail batch
-
-			const evt = debugLogEntryToDebugEvent(entry, this._skipCoreEvents);
-			if (evt) {
-				this._scopeEventIds(evt, entry.rIdx ?? 0);
-				const evtId = 'id' in evt ? (evt as { id?: string }).id : undefined;
-				if (evtId) {
-					this._cacheEntry(evtId, entry);
+		this._fileLogger
+			.streamEntries(sessionId, (entry) => {
+				if (token.isCancellationRequested) {
+					return;
 				}
-				this._streamEvent(evt, dedupKey);
-			}
 
-			// Collect non-filtered child_session_ref entries for post-stream loading
-			if (entry.type === 'child_session_ref' && evt) {
-				const childSessionId = entry.attrs.childSessionId as string | undefined;
-				if (childSessionId) {
-					const parentRunIndex = entry.rIdx ?? 0;
-					const scopedParentId = parentRunIndex > 0 ? `${entry.spanId}:r${parentRunIndex}` : entry.spanId;
-					childRefs.push({ childSessionId, scopedParentId });
-					// Register so the live handler routes future child entries here
-					this._activeChildSessions.set(childSessionId, scopedParentId);
+				const dedupKey = entryDedupKey(entry);
+				if (this._sentDedupKeys.has(dedupKey)) {
+					return;
+				} // Already sent in tail batch
+
+				const evt = debugLogEntryToDebugEvent(
+					entry,
+					this._skipCoreEvents,
+				);
+				if (evt) {
+					this._scopeEventIds(evt, entry.rIdx ?? 0);
+					const evtId =
+						'id' in evt ? (evt as { id?: string }).id : undefined;
+					if (evtId) {
+						this._cacheEntry(evtId, entry);
+					}
+					this._streamEvent(evt, dedupKey);
 				}
-			}
-		}).then(async () => {
-			// Load child session entries that weren't already loaded by _processEntries
-			for (const { childSessionId, scopedParentId } of childRefs) {
-				if (token.isCancellationRequested) { break; }
-				await this._streamChildSessionEntries(childSessionId, scopedParentId);
-			}
-		}).catch(() => { /* streaming failed — tail events are still shown */ });
+
+				// Collect non-filtered child_session_ref entries for post-stream loading
+				if (entry.type === 'child_session_ref' && evt) {
+					const childSessionId = entry.attrs.childSessionId as
+						| string
+						| undefined;
+					if (childSessionId) {
+						const parentRunIndex = entry.rIdx ?? 0;
+						const scopedParentId =
+							parentRunIndex > 0
+								? `${entry.spanId}:r${parentRunIndex}`
+								: entry.spanId;
+						childRefs.push({ childSessionId, scopedParentId });
+						// Register so the live handler routes future child entries here
+						this._activeChildSessions.set(
+							childSessionId,
+							scopedParentId,
+						);
+					}
+				}
+			})
+			.then(async () => {
+				// Load child session entries that weren't already loaded by _processEntries
+				for (const { childSessionId, scopedParentId } of childRefs) {
+					if (token.isCancellationRequested) {
+						break;
+					}
+					await this._streamChildSessionEntries(
+						childSessionId,
+						scopedParentId,
+					);
+				}
+			})
+			.catch(() => {
+				/* streaming failed — tail events are still shown */
+			});
 	}
 
 	/**
@@ -400,20 +554,31 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 	 * setting their parentEventId to the child_session_ref event.
 	 * Dedup keys prevent double-reporting if entries were already sent.
 	 */
-	private async _streamChildSessionEntries(childSessionId: string, scopedParentId: string, childSessionRefEntry?: IDebugLogEntry): Promise<void> {
+	private async _streamChildSessionEntries(
+		childSessionId: string,
+		scopedParentId: string,
+		childSessionRefEntry?: IDebugLogEntry,
+	): Promise<void> {
 		try {
 			const childEntries = childSessionRefEntry
 				? await this._readChildEntries(childSessionRefEntry)
 				: await this._fileLogger.readEntries(childSessionId);
 			for (const childEntry of childEntries) {
-				const childEvt = debugLogEntryToDebugEvent(childEntry, this._skipCoreEvents);
+				const childEvt = debugLogEntryToDebugEvent(
+					childEntry,
+					this._skipCoreEvents,
+				);
 				if (childEvt) {
 					this._scopeEventIds(childEvt, childEntry.rIdx ?? 0);
 					this._prefixChildEventId(childEvt, childEntry);
 					if ('parentEventId' in childEvt) {
-						(childEvt as { parentEventId?: string }).parentEventId = scopedParentId;
+						(childEvt as { parentEventId?: string }).parentEventId =
+							scopedParentId;
 					}
-					const childEvtId = 'id' in childEvt ? (childEvt as { id?: string }).id : undefined;
+					const childEvtId =
+						'id' in childEvt
+							? (childEvt as { id?: string }).id
+							: undefined;
 					if (childEvtId) {
 						this._cacheEntry(childEvtId, childEntry);
 					}
@@ -431,8 +596,12 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 	 * falls back to direct file read using the childLogFile attribute
 	 * (for historical sessions where the child session mapping is lost).
 	 */
-	private async _readChildEntries(childSessionRefEntry: IDebugLogEntry): Promise<IDebugLogEntry[]> {
-		const childSessionId = childSessionRefEntry.attrs.childSessionId as string | undefined;
+	private async _readChildEntries(
+		childSessionRefEntry: IDebugLogEntry,
+	): Promise<IDebugLogEntry[]> {
+		const childSessionId = childSessionRefEntry.attrs.childSessionId as
+			| string
+			| undefined;
 
 		// Try readEntries first — handles active sessions with file + unflushed buffer
 		if (childSessionId) {
@@ -444,15 +613,22 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 
 		// Fallback: direct file read using the known filename from the entry
 		// (for historical sessions where _childSessionMap may be empty after restart)
-		const childLogFile = childSessionRefEntry.attrs.childLogFile as string | undefined;
+		const childLogFile = childSessionRefEntry.attrs.childLogFile as
+			| string
+			| undefined;
 		const parentSessionId = childSessionRefEntry.sid;
 		if (childLogFile) {
 			const parentDir = this._fileLogger.getSessionDir(parentSessionId);
 			if (parentDir) {
-				const childFilePath = URI.joinPath(parentDir, childLogFile).fsPath;
+				const childFilePath = URI.joinPath(
+					parentDir,
+					childLogFile,
+				).fsPath;
 				try {
 					const entries: IDebugLogEntry[] = [];
-					const stream = fs.createReadStream(childFilePath, { encoding: 'utf-8' });
+					const stream = fs.createReadStream(childFilePath, {
+						encoding: 'utf-8',
+					});
 					let remainder = '';
 					await new Promise<void>((resolve, reject) => {
 						stream.on('data', (chunk) => {
@@ -460,13 +636,27 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 							const lines = remainder.split('\n');
 							remainder = lines.pop()!;
 							for (const line of lines) {
-								if (!line.trim()) { continue; }
-								try { entries.push(JSON.parse(line) as IDebugLogEntry); } catch { /* skip */ }
+								if (!line.trim()) {
+									continue;
+								}
+								try {
+									entries.push(
+										JSON.parse(line) as IDebugLogEntry,
+									);
+								} catch {
+									/* skip */
+								}
 							}
 						});
 						stream.on('end', () => {
 							if (remainder.trim()) {
-								try { entries.push(JSON.parse(remainder) as IDebugLogEntry); } catch { /* skip */ }
+								try {
+									entries.push(
+										JSON.parse(remainder) as IDebugLogEntry,
+									);
+								} catch {
+									/* skip */
+								}
 							}
 							resolve();
 						});
@@ -499,7 +689,7 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 		// This happens when the entry was evicted from the LRU cache.
 		if (this._activeSessionId) {
 			const sessionId = this._activeSessionId;
-			return this._findEntryOnDisk(sessionId, eventId).then(found => {
+			return this._findEntryOnDisk(sessionId, eventId).then((found) => {
 				if (found) {
 					this._cacheEntry(eventId, found);
 					return this._resolveEntry(found);
@@ -510,27 +700,38 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 		return undefined;
 	}
 
-	private _resolveEntry(entry: IDebugLogEntry): vscode.ProviderResult<vscode.ChatDebugResolvedEventContent> {
+	private _resolveEntry(
+		entry: IDebugLogEntry,
+	): vscode.ProviderResult<vscode.ChatDebugResolvedEventContent> {
 		const sessionDir = this._fileLogger.getSessionDir(entry.sid);
 		const readCompanionFile = sessionDir
 			? async (fileName: string): Promise<string | undefined> => {
-				// Validate fileName to prevent path traversal
-				if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
-					return undefined;
-				}
-				try {
-					const fileUri = URI.joinPath(sessionDir, fileName);
-					const raw = await fs.promises.readFile(fileUri.fsPath, 'utf-8');
-					try {
-						const parsed = JSON.parse(raw);
-						return typeof parsed.content === 'string' ? parsed.content : raw;
-					} catch {
-						return raw;
+					// Validate fileName to prevent path traversal
+					if (
+						fileName.includes('..') ||
+						fileName.includes('/') ||
+						fileName.includes('\\')
+					) {
+						return undefined;
 					}
-				} catch {
-					return undefined;
+					try {
+						const fileUri = URI.joinPath(sessionDir, fileName);
+						const raw = await fs.promises.readFile(
+							fileUri.fsPath,
+							'utf-8',
+						);
+						try {
+							const parsed = JSON.parse(raw);
+							return typeof parsed.content === 'string'
+								? parsed.content
+								: raw;
+						} catch {
+							return raw;
+						}
+					} catch {
+						return undefined;
+					}
 				}
-			}
 			: undefined;
 		return resolveDebugLogEntry(entry, readCompanionFile);
 	}
@@ -539,7 +740,10 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 	 * Scan the JSONL file on disk to find an entry by event ID.
 	 * Used as a fallback when the entry was evicted from the LRU cache.
 	 */
-	private async _findEntryOnDisk(sessionId: string, eventId: string): Promise<IDebugLogEntry | undefined> {
+	private async _findEntryOnDisk(
+		sessionId: string,
+		eventId: string,
+	): Promise<IDebugLogEntry | undefined> {
 		// The eventId may have a run suffix (e.g., "0000000000000001:r1").
 		const runMatch = /:r(\d+)$/.exec(eventId);
 		const rawSpanId = runMatch ? eventId.slice(0, runMatch.index) : eventId;
@@ -548,16 +752,23 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 		let found: IDebugLogEntry | undefined;
 		const childSessionIds: string[] = [];
 
-		await this._fileLogger.streamEntries(sessionId, entry => {
-			if (found) { return; }
+		await this._fileLogger.streamEntries(sessionId, (entry) => {
+			if (found) {
+				return;
+			}
 
-			if (entry.spanId === rawSpanId && (entry.rIdx ?? 0) === targetRunIndex) {
+			if (
+				entry.spanId === rawSpanId &&
+				(entry.rIdx ?? 0) === targetRunIndex
+			) {
 				found = entry;
 			}
 
 			// Collect child session IDs for fallback search
 			if (entry.type === 'child_session_ref') {
-				const childSessionId = entry.attrs.childSessionId as string | undefined;
+				const childSessionId = entry.attrs.childSessionId as
+					| string
+					| undefined;
 				if (childSessionId) {
 					childSessionIds.push(childSessionId);
 				}
@@ -571,9 +782,13 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 		// Search child session JSONL files
 		for (const childSessionId of childSessionIds) {
 			try {
-				const childEntries = await this._fileLogger.readEntries(childSessionId);
+				const childEntries =
+					await this._fileLogger.readEntries(childSessionId);
 				for (const childEntry of childEntries) {
-					if (childEntry.spanId === rawSpanId && (childEntry.rIdx ?? 0) === targetRunIndex) {
+					if (
+						childEntry.spanId === rawSpanId &&
+						(childEntry.rIdx ?? 0) === targetRunIndex
+					) {
 						return childEntry;
 					}
 				}
@@ -599,11 +814,11 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 
 		// Convert core events to IDebugLogEntry-compatible entries.
 		// Deduplicate against JSONL entries (file logger already captures core events).
-		const existingSpanIds = new Set(entries.map(e => e.spanId));
+		const existingSpanIds = new Set(entries.map((e) => e.spanId));
 		let coreIdx = 0;
 		const coreEntries = options.coreEvents
-			.filter(e => e instanceof vscode.ChatDebugGenericEvent)
-			.filter(e => {
+			.filter((e) => e instanceof vscode.ChatDebugGenericEvent)
+			.filter((e) => {
 				const id = (e as vscode.ChatDebugGenericEvent).id;
 				return !id || !existingSpanIds.has(id);
 			})
@@ -617,7 +832,10 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 					name: ge.name,
 					spanId: ge.id ?? `core-${Date.now()}-${coreIdx++}`,
 					parentSpanId: ge.parentEventId,
-					status: ge.level === vscode.ChatDebugLogLevel.Error ? 'error' : 'ok',
+					status:
+						ge.level === vscode.ChatDebugLogLevel.Error
+							? 'error'
+							: 'ok',
 					attrs: {
 						...(ge.details ? { details: ge.details } : {}),
 						...(ge.category ? { category: ge.category } : {}),
@@ -628,12 +846,14 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 
 		const allEntries = [...entries, ...coreEntries];
 		if (allEntries.length === 0) {
-			this._logService.warn(`[OTelDebug] No entries found for session ${sessionId}`);
+			this._logService.warn(
+				`[OTelDebug] No entries found for session ${sessionId}`,
+			);
 			return undefined;
 		}
 
 		// Convert entries to spans for OTLP format
-		const spans = allEntries.map(entry => entryToExportSpan(entry));
+		const spans = allEntries.map((entry) => entryToExportSpan(entry));
 
 		const otlpExport = wrapInResourceSpans(spans, {
 			'service.name': 'copilot-chat',
@@ -646,7 +866,9 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 				exportedAt: new Date().toISOString(),
 				exporterVersion: '',
 				sessionId,
-				sessionTitle: options.sessionTitle ?? deriveSessionTitleFromEntries(allEntries),
+				sessionTitle:
+					options.sessionTitle ??
+					deriveSessionTitleFromEntries(allEntries),
 			},
 		};
 
@@ -664,7 +886,9 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 			// Parse spans from OTLP format
 			const spans = parseResourceSpans(jsonString);
 			if (spans.length === 0) {
-				this._logService.warn('[OTelDebug] No spans found in imported file');
+				this._logService.warn(
+					'[OTelDebug] No spans found in imported file',
+				);
 				return undefined;
 			}
 
@@ -675,20 +899,29 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 				const parsed = JSON.parse(jsonString);
 				sourceSessionId = parsed.copilotChat?.sessionId;
 				sessionTitle = parsed.copilotChat?.sessionTitle;
-			} catch { /* JSONL format — no top-level object */ }
-			sourceSessionId ??= extractSessionId(spans[0]) ?? `imported-${Date.now()}`;
+			} catch {
+				/* JSONL format — no top-level object */
+			}
+			sourceSessionId ??=
+				extractSessionId(spans[0]) ?? `imported-${Date.now()}`;
 			sessionTitle ??= deriveSessionTitleFromSpans(spans);
 
 			// Convert imported spans to IDebugLogEntry format and store in memory
 			const importedSessionId = `import:${sourceSessionId}:${Date.now()}`;
-			const entries: IDebugLogEntry[] = spans.map(span => spanToImportEntry(span, importedSessionId));
+			const entries: IDebugLogEntry[] = spans.map((span) =>
+				spanToImportEntry(span, importedSessionId),
+			);
 			this._importedSessions.set(importedSessionId, entries);
 
 			const encoded = Buffer.from(importedSessionId).toString('base64');
-			const uri = vscode.Uri.parse(`vscode-chat-session://imported/${encoded}`);
+			const uri = vscode.Uri.parse(
+				`vscode-chat-session://imported/${encoded}`,
+			);
 			return { uri, sessionTitle };
 		} catch (err) {
-			this._logService.error(`[OTelDebug] Failed to parse import file: ${err}`);
+			this._logService.error(
+				`[OTelDebug] Failed to parse import file: ${err}`,
+			);
 			return undefined;
 		}
 	}
@@ -707,43 +940,67 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 
 			// Read tails only for the first batch (most recent sessions).
 			const toRead = sessionIds.slice(0, MAX_TAIL_READS);
-			const settled = await Promise.allSettled(toRead.map(async (id): Promise<{ uri: vscode.Uri; title?: string } | undefined> => {
-				if (token.isCancellationRequested) {
-					return undefined;
-				}
-				const encoded = Buffer.from(id).toString('base64url');
-				const uri = vscode.Uri.parse(`vscode-chat-session://local/${encoded}`);
-
-				let title: string | undefined;
-				let hasRealEvents = false;
-				try {
-					const entries = await this._fileLogger.readTailEntries(id, 50);
-					const userMsg = entries.find(e => e.type === 'user_message');
-					if (userMsg) {
-						hasRealEvents = true;
-						const content = userMsg.attrs.content as string | undefined;
-						if (content) {
-							title = content.length > 80 ? content.slice(0, 80) + '\u2026' : content;
+			const settled = await Promise.allSettled(
+				toRead.map(
+					async (
+						id,
+					): Promise<
+						{ uri: vscode.Uri; title?: string } | undefined
+					> => {
+						if (token.isCancellationRequested) {
+							return undefined;
 						}
-					}
-					if (!hasRealEvents) {
-						hasRealEvents = entries.some(e =>
-							e.type === 'tool_call' || e.type === 'llm_request' ||
-							e.type === 'agent_response' || e.type === 'subagent'
+						const encoded = Buffer.from(id).toString('base64url');
+						const uri = vscode.Uri.parse(
+							`vscode-chat-session://local/${encoded}`,
 						);
-					}
-				} catch {
-					// best effort
-				}
-				if (!hasRealEvents) {
-					return undefined;
-				}
-				if (!title) {
-					const shortId = id.length > 12 ? id.slice(0, 12) + '\u2026' : id;
-					title = `Session ${shortId}`;
-				}
-				return { uri, title };
-			}));
+
+						let title: string | undefined;
+						let hasRealEvents = false;
+						try {
+							const entries =
+								await this._fileLogger.readTailEntries(id, 50);
+							const userMsg = entries.find(
+								(e) => e.type === 'user_message',
+							);
+							if (userMsg) {
+								hasRealEvents = true;
+								const content = userMsg.attrs.content as
+									| string
+									| undefined;
+								if (content) {
+									title =
+										content.length > 80
+											? content.slice(0, 80) + '\u2026'
+											: content;
+								}
+							}
+							if (!hasRealEvents) {
+								hasRealEvents = entries.some(
+									(e) =>
+										e.type === 'tool_call' ||
+										e.type === 'llm_request' ||
+										e.type === 'agent_response' ||
+										e.type === 'subagent',
+								);
+							}
+						} catch {
+							// best effort
+						}
+						if (!hasRealEvents) {
+							return undefined;
+						}
+						if (!title) {
+							const shortId =
+								id.length > 12
+									? id.slice(0, 12) + '\u2026'
+									: id;
+							title = `Session ${shortId}`;
+						}
+						return { uri, title };
+					},
+				),
+			);
 
 			const results: { uri: vscode.Uri; title?: string }[] = [];
 			for (const entry of settled) {
@@ -753,7 +1010,9 @@ export class OTelChatDebugLogProviderContribution extends Disposable implements 
 			}
 			return results;
 		} catch (err) {
-			this._logService.error(`[OTelDebug] Failed to list available sessions: ${err}`);
+			this._logService.error(
+				`[OTelDebug] Failed to list available sessions: ${err}`,
+			);
 			return [];
 		}
 	}
@@ -774,18 +1033,36 @@ function entryToExportSpan(entry: IDebugLogEntry): ICompletedSpanData {
 		case 'tool_call':
 			attributes['gen_ai.operation.name'] = 'execute_tool';
 			attributes['gen_ai.tool.name'] = entry.name;
-			if (entry.attrs.args !== undefined) { attributes['gen_ai.tool.call.arguments'] = String(entry.attrs.args); }
-			if (entry.attrs.result !== undefined) { attributes['gen_ai.tool.call.result'] = String(entry.attrs.result); }
+			if (entry.attrs.args !== undefined) {
+				attributes['gen_ai.tool.call.arguments'] = String(
+					entry.attrs.args,
+				);
+			}
+			if (entry.attrs.result !== undefined) {
+				attributes['gen_ai.tool.call.result'] = String(
+					entry.attrs.result,
+				);
+			}
 			break;
 		case 'llm_request':
 			attributes['gen_ai.operation.name'] = 'chat';
-			if (entry.attrs.model !== undefined) { attributes['gen_ai.request.model'] = String(entry.attrs.model); }
-			if (entry.attrs.inputTokens !== undefined) { attributes['gen_ai.usage.input_tokens'] = entry.attrs.inputTokens as number; }
-			if (entry.attrs.outputTokens !== undefined) { attributes['gen_ai.usage.output_tokens'] = entry.attrs.outputTokens as number; }
+			if (entry.attrs.model !== undefined) {
+				attributes['gen_ai.request.model'] = String(entry.attrs.model);
+			}
+			if (entry.attrs.inputTokens !== undefined) {
+				attributes['gen_ai.usage.input_tokens'] = entry.attrs
+					.inputTokens as number;
+			}
+			if (entry.attrs.outputTokens !== undefined) {
+				attributes['gen_ai.usage.output_tokens'] = entry.attrs
+					.outputTokens as number;
+			}
 			break;
 		case 'subagent':
 			attributes['gen_ai.operation.name'] = 'invoke_agent';
-			if (entry.attrs.agentName !== undefined) { attributes['gen_ai.agent.name'] = String(entry.attrs.agentName); }
+			if (entry.attrs.agentName !== undefined) {
+				attributes['gen_ai.agent.name'] = String(entry.attrs.agentName);
+			}
 			break;
 		case 'hook':
 			attributes['gen_ai.operation.name'] = 'execute_hook';
@@ -793,8 +1070,16 @@ function entryToExportSpan(entry: IDebugLogEntry): ICompletedSpanData {
 		case 'discovery':
 		case 'generic':
 			attributes['gen_ai.operation.name'] = 'core_event';
-			if (entry.attrs.details !== undefined) { attributes['copilot_chat.event_details'] = String(entry.attrs.details); }
-			if (entry.attrs.category !== undefined) { attributes['copilot_chat.event_category'] = String(entry.attrs.category); }
+			if (entry.attrs.details !== undefined) {
+				attributes['copilot_chat.event_details'] = String(
+					entry.attrs.details,
+				);
+			}
+			if (entry.attrs.category !== undefined) {
+				attributes['copilot_chat.event_category'] = String(
+					entry.attrs.category,
+				);
+			}
 			break;
 		default:
 			attributes['gen_ai.operation.name'] = 'core_event';
@@ -814,7 +1099,9 @@ function entryToExportSpan(entry: IDebugLogEntry): ICompletedSpanData {
 	};
 }
 
-function deriveSessionTitleFromEntries(entries: readonly IDebugLogEntry[]): string | undefined {
+function deriveSessionTitleFromEntries(
+	entries: readonly IDebugLogEntry[],
+): string | undefined {
 	for (const entry of entries) {
 		if (entry.type === 'user_message') {
 			const content = entry.attrs.content;
@@ -827,14 +1114,18 @@ function deriveSessionTitleFromEntries(entries: readonly IDebugLogEntry[]): stri
 	return undefined;
 }
 
-function deriveSessionTitleFromSpans(spans: readonly ICompletedSpanData[]): string | undefined {
+function deriveSessionTitleFromSpans(
+	spans: readonly ICompletedSpanData[],
+): string | undefined {
 	for (const span of spans) {
 		for (const event of span.events) {
 			if (event.name === 'user_message') {
 				const content = event.attributes?.content;
 				if (typeof content === 'string' && content.trim()) {
 					const title = content.trim();
-					return title.length > 80 ? title.slice(0, 80) + '...' : title;
+					return title.length > 80
+						? title.slice(0, 80) + '...'
+						: title;
 				}
 			}
 		}
@@ -845,7 +1136,10 @@ function deriveSessionTitleFromSpans(spans: readonly ICompletedSpanData[]): stri
 /**
  * Convert an imported OTel span into an IDebugLogEntry for in-memory import cache.
  */
-function spanToImportEntry(span: ICompletedSpanData, sessionId: string): IDebugLogEntry {
+function spanToImportEntry(
+	span: ICompletedSpanData,
+	sessionId: string,
+): IDebugLogEntry {
 	const opName = (span.attributes['gen_ai.operation.name'] as string) ?? '';
 	const duration = span.endTime - span.startTime;
 	const isError = span.status.code === 2;
@@ -856,30 +1150,63 @@ function spanToImportEntry(span: ICompletedSpanData, sessionId: string): IDebugL
 	switch (opName) {
 		case 'execute_tool':
 			type = 'tool_call';
-			if (span.attributes['gen_ai.tool.call.arguments'] !== undefined) { attrs.args = String(span.attributes['gen_ai.tool.call.arguments']); }
-			if (span.attributes['gen_ai.tool.call.result'] !== undefined) { attrs.result = String(span.attributes['gen_ai.tool.call.result']); }
+			if (span.attributes['gen_ai.tool.call.arguments'] !== undefined) {
+				attrs.args = String(
+					span.attributes['gen_ai.tool.call.arguments'],
+				);
+			}
+			if (span.attributes['gen_ai.tool.call.result'] !== undefined) {
+				attrs.result = String(
+					span.attributes['gen_ai.tool.call.result'],
+				);
+			}
 			break;
 		case 'chat':
 			type = 'llm_request';
-			if (span.attributes['gen_ai.request.model'] !== undefined) { attrs.model = String(span.attributes['gen_ai.request.model']); }
-			if (span.attributes['gen_ai.usage.input_tokens'] !== undefined) { attrs.inputTokens = span.attributes['gen_ai.usage.input_tokens'] as number; }
-			if (span.attributes['gen_ai.usage.output_tokens'] !== undefined) { attrs.outputTokens = span.attributes['gen_ai.usage.output_tokens'] as number; }
+			if (span.attributes['gen_ai.request.model'] !== undefined) {
+				attrs.model = String(span.attributes['gen_ai.request.model']);
+			}
+			if (span.attributes['gen_ai.usage.input_tokens'] !== undefined) {
+				attrs.inputTokens = span.attributes[
+					'gen_ai.usage.input_tokens'
+				] as number;
+			}
+			if (span.attributes['gen_ai.usage.output_tokens'] !== undefined) {
+				attrs.outputTokens = span.attributes[
+					'gen_ai.usage.output_tokens'
+				] as number;
+			}
 			break;
 		case 'invoke_agent':
 			type = 'subagent';
-			if (span.attributes['gen_ai.agent.name'] !== undefined) { attrs.agentName = String(span.attributes['gen_ai.agent.name']); }
+			if (span.attributes['gen_ai.agent.name'] !== undefined) {
+				attrs.agentName = String(span.attributes['gen_ai.agent.name']);
+			}
 			break;
 		case 'execute_hook':
 			type = 'hook';
 			break;
 		case 'core_event':
-			type = (span.attributes['copilot_chat.event_category'] === 'discovery') ? 'discovery' : 'generic';
-			if (span.attributes['copilot_chat.event_details'] !== undefined) { attrs.details = String(span.attributes['copilot_chat.event_details']); }
-			if (span.attributes['copilot_chat.event_category'] !== undefined) { attrs.category = String(span.attributes['copilot_chat.event_category']); }
+			type =
+				span.attributes['copilot_chat.event_category'] === 'discovery'
+					? 'discovery'
+					: 'generic';
+			if (span.attributes['copilot_chat.event_details'] !== undefined) {
+				attrs.details = String(
+					span.attributes['copilot_chat.event_details'],
+				);
+			}
+			if (span.attributes['copilot_chat.event_category'] !== undefined) {
+				attrs.category = String(
+					span.attributes['copilot_chat.event_category'],
+				);
+			}
 			break;
 	}
 
-	if (isError && span.status.message) { attrs.error = span.status.message; }
+	if (isError && span.status.message) {
+		attrs.error = span.status.message;
+	}
 
 	return {
 		ts: span.startTime,

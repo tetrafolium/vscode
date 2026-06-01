@@ -20,7 +20,12 @@ import { isRepetitive } from './anomalyDetection';
  * after the cursor starts with that same token at the same indentation. If so,
  * we snip.
  */
-function maybeSnipCompletion(accessor: ServicesAccessor, doc: TextDocumentContents, position: IPosition, completion: string): string {
+function maybeSnipCompletion(
+	accessor: ServicesAccessor,
+	doc: TextDocumentContents,
+	position: IPosition,
+	completion: string,
+): string {
 	// Default to `}` for block closing token
 	let blockCloseToken = '}';
 
@@ -33,10 +38,13 @@ function maybeSnipCompletion(accessor: ServicesAccessor, doc: TextDocumentConten
 	}
 
 	return maybeSnipCompletionImpl(
-		{ getLineText: lineIdx => doc.lineAt(lineIdx).text, getLineCount: () => doc.lineCount },
+		{
+			getLineText: (lineIdx) => doc.lineAt(lineIdx).text,
+			getLineCount: () => doc.lineCount,
+		},
 		position,
 		completion,
-		blockCloseToken
+		blockCloseToken,
 	);
 }
 
@@ -49,7 +57,7 @@ export function maybeSnipCompletionImpl(
 	doc: ILines,
 	position: IPosition,
 	completion: string,
-	blockCloseToken: string
+	blockCloseToken: string,
 ): string {
 	// if the last lines of the completion are just indented block close tokens (e.g. `\t}\n}`),
 	// and if these lines exactly match the lines of the document after the insertion position (ignoring empty lines in both the document and the completion),
@@ -63,19 +71,28 @@ export function maybeSnipCompletionImpl(
 		return completion;
 	}
 
-	for (let completionLineStartIdx = 1; completionLineStartIdx < completionLines.length; completionLineStartIdx++) {
+	for (
+		let completionLineStartIdx = 1;
+		completionLineStartIdx < completionLines.length;
+		completionLineStartIdx++
+	) {
 		let matched = true;
 		let docSkippedEmptyLineCount = 0;
 		let completionSkippedEmptyLineCount = 0;
 		for (
 			let offset = 0;
-			offset + completionLineStartIdx + completionSkippedEmptyLineCount < completionLines.length;
+			offset + completionLineStartIdx + completionSkippedEmptyLineCount <
+			completionLines.length;
 			offset++
 		) {
 			let docLine: string | undefined;
 			while (true) {
-				const docLineIdx = position.line + 1 + offset + docSkippedEmptyLineCount;
-				docLine = docLineIdx >= doc.getLineCount() ? undefined : doc.getLineText(docLineIdx);
+				const docLineIdx =
+					position.line + 1 + offset + docSkippedEmptyLineCount;
+				docLine =
+					docLineIdx >= doc.getLineCount()
+						? undefined
+						: doc.getLineText(docLineIdx);
 				if (docLine !== undefined && docLine.trim() === '') {
 					// Skip empty lines in the document and loop
 					docSkippedEmptyLineCount++;
@@ -87,10 +104,18 @@ export function maybeSnipCompletionImpl(
 			let completionLineIdx: number | undefined;
 			let completionLine: string | undefined;
 			while (true) {
-				completionLineIdx = completionLineStartIdx + offset + completionSkippedEmptyLineCount;
+				completionLineIdx =
+					completionLineStartIdx +
+					offset +
+					completionSkippedEmptyLineCount;
 				completionLine =
-					completionLineIdx >= completionLines.length ? undefined : completionLines[completionLineIdx];
-				if (completionLine !== undefined && completionLine.trim() === '') {
+					completionLineIdx >= completionLines.length
+						? undefined
+						: completionLines[completionLineIdx];
+				if (
+					completionLine !== undefined &&
+					completionLine.trim() === ''
+				) {
 					// Skip empty lines in the completion and loop
 					completionSkippedEmptyLineCount++;
 				} else {
@@ -98,18 +123,21 @@ export function maybeSnipCompletionImpl(
 				}
 			}
 
-			const isLastCompletionLine = completionLineIdx === completionLines.length - 1;
+			const isLastCompletionLine =
+				completionLineIdx === completionLines.length - 1;
 			if (
 				!completionLine ||
 				!(
 					docLine &&
 					(isLastCompletionLine
 						? // For the last line, accept any line that starts with the completion line and vice versa.
-						// This allows for brackets, braces, parentheses, quotes, identifiers like "end" and "fi",
-						// heredocs, etc.
-						docLine.startsWith(completionLine) || completionLine.startsWith(docLine)
+							// This allows for brackets, braces, parentheses, quotes, identifiers like "end" and "fi",
+							// heredocs, etc.
+							docLine.startsWith(completionLine) ||
+							completionLine.startsWith(docLine)
 						: // For other lines, strictly require the block close token, and nothing else
-						docLine === completionLine && completionLine.trim() === blockCloseToken)
+							docLine === completionLine &&
+							completionLine.trim() === blockCloseToken)
 				)
 			) {
 				matched = false;
@@ -127,7 +155,10 @@ export function maybeSnipCompletionImpl(
 	return completion;
 }
 
-function splitByNewLine(text: string): { lines: string[]; newLineCharacter: string } {
+function splitByNewLine(text: string): {
+	lines: string[];
+	newLineCharacter: string;
+} {
 	const newLineCharacter = text.includes('\r\n') ? '\r\n' : '\n';
 	return {
 		lines: text.split(newLineCharacter),
@@ -139,7 +170,7 @@ function matchesNextLine(
 	document: TextDocumentContents,
 	position: IPosition,
 	text: string,
-	shouldTrim: boolean
+	shouldTrim: boolean,
 ): boolean {
 	let nextLine = '';
 	let lineNo: number = position.line + 1;
@@ -166,12 +197,17 @@ export function postProcessChoiceInContext(
 	position: IPosition,
 	choice: APIChoice,
 	isMoreMultiline: boolean,
-	logger: ILogger
+	logger: ILogger,
 ): APIChoice | undefined {
 	if (isRepetitive(choice.tokens)) {
 		const telemetryData = TelemetryData.createAndMarkAsIssued();
 		telemetryData.extendWithRequestId(choice.requestId);
-		telemetry(accessor, 'repetition.detected', telemetryData, TelemetryStore.Enhanced);
+		telemetry(
+			accessor,
+			'repetition.detected',
+			telemetryData,
+			TelemetryStore.Enhanced,
+		);
 		// FIXME: trim request at start of repetitive block? for now we just skip
 		logger.info('Filtered out repetitive solution');
 		return undefined;
@@ -180,7 +216,14 @@ export function postProcessChoiceInContext(
 	const postProcessedChoice = { ...choice };
 
 	// Avoid single-line completions that duplicate the next line (#993)
-	if (matchesNextLine(document, position, postProcessedChoice.completionText, !isMoreMultiline)) {
+	if (
+		matchesNextLine(
+			document,
+			position,
+			postProcessedChoice.completionText,
+			!isMoreMultiline,
+		)
+	) {
 		const baseTelemetryData = TelemetryData.createAndMarkAsIssued();
 		baseTelemetryData.extendWithRequestId(choice.requestId);
 		telemetry(accessor, 'completion.alreadyInDocument', baseTelemetryData);
@@ -188,9 +231,11 @@ export function postProcessChoiceInContext(
 			accessor,
 			'completion.alreadyInDocument',
 			baseTelemetryData.extendedBy({
-				completionTextJson: JSON.stringify(postProcessedChoice.completionText),
+				completionTextJson: JSON.stringify(
+					postProcessedChoice.completionText,
+				),
 			}),
-			TelemetryStore.Enhanced
+			TelemetryStore.Enhanced,
 		);
 		logger.info('Filtered out solution matching next line');
 		return undefined;
@@ -201,13 +246,17 @@ export function postProcessChoiceInContext(
 		accessor,
 		document,
 		position,
-		postProcessedChoice.completionText
+		postProcessedChoice.completionText,
 	);
 
 	return postProcessedChoice.completionText ? postProcessedChoice : undefined;
 }
 
-export function checkSuffix(document: TextDocumentContents, position: IPosition, choice: APIChoice): number {
+export function checkSuffix(
+	document: TextDocumentContents,
+	position: IPosition,
+	choice: APIChoice,
+): number {
 	const currentLine = document.lineAt(position.line);
 	const restOfLine = currentLine.text.substring(position.character);
 	if (restOfLine.length > 0) {

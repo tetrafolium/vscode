@@ -5,10 +5,15 @@
 
 import { Disposable } from '../../../util/vs/base/common/lifecycle';
 import { IDebugOutputService } from '../common/debugOutputService';
-import { getMostRecentDebugOutput, installDebugOutputListeners } from './debugOutputListener';
+import {
+	getMostRecentDebugOutput,
+	installDebugOutputListeners,
+} from './debugOutputListener';
 
-export class DebugOutputServiceImpl extends Disposable implements IDebugOutputService {
-
+export class DebugOutputServiceImpl
+	extends Disposable
+	implements IDebugOutputService
+{
 	declare readonly _serviceBrand: undefined;
 
 	constructor() {

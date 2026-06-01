@@ -3,10 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
-import * as sinon from 'sinon';
-import { CancellationTokenSource, Disposable, EventEmitter, ExtensionContext, NotebookCellKind, NotebookDocumentChangeEvent, NotebookDocumentWillSaveEvent, NotebookEdit, NotebookRange, TextDocument, TextDocumentSaveReason, workspace, type CancellationToken, type NotebookCell, type NotebookDocument, type WorkspaceEdit, type WorkspaceEditMetadata } from 'vscode';
-import { activate } from '../notebookModelStoreSync';
+import * as assert from "assert";
+import * as sinon from "sinon";
+import {
+	CancellationTokenSource,
+	Disposable,
+	EventEmitter,
+	ExtensionContext,
+	NotebookCellKind,
+	NotebookDocumentChangeEvent,
+	NotebookDocumentWillSaveEvent,
+	NotebookEdit,
+	NotebookRange,
+	TextDocument,
+	TextDocumentSaveReason,
+	workspace,
+	type CancellationToken,
+	type NotebookCell,
+	type NotebookDocument,
+	type WorkspaceEdit,
+	type WorkspaceEditMetadata,
+} from "vscode";
+import { activate } from "../notebookModelStoreSync";
 
 suite(`Notebook Model Store Sync`, () => {
 	let disposables: Disposable[] = [];
@@ -17,37 +35,45 @@ suite(`Notebook Model Store Sync`, () => {
 	let editsApplied: WorkspaceEdit[] = [];
 	let pendingPromises: Promise<void>[] = [];
 	let cellMetadataUpdates: NotebookEdit[] = [];
-	let applyEditStub: sinon.SinonStub<[edit: WorkspaceEdit, metadata?: WorkspaceEditMetadata | undefined], Thenable<boolean>>;
+	let applyEditStub: sinon.SinonStub<
+		[edit: WorkspaceEdit, metadata?: WorkspaceEditMetadata | undefined],
+		Thenable<boolean>
+	>;
 	setup(() => {
 		disposables = [];
 		notebook = {
-			notebookType: '',
-			metadata: {}
+			notebookType: "",
+			metadata: {},
 		} as NotebookDocument;
 		token = new CancellationTokenSource();
 		disposables.push(token);
-		sinon.stub(notebook, 'notebookType').get(() => 'jupyter-notebook');
-		applyEditStub = sinon.stub(workspace, 'applyEdit').callsFake((edit: WorkspaceEdit) => {
-			editsApplied.push(edit);
-			return Promise.resolve(true);
-		});
+		sinon.stub(notebook, "notebookType").get(() => "jupyter-notebook");
+		applyEditStub = sinon
+			.stub(workspace, "applyEdit")
+			.callsFake((edit: WorkspaceEdit) => {
+				editsApplied.push(edit);
+				return Promise.resolve(true);
+			});
 		const context = { subscriptions: [] as Disposable[] } as ExtensionContext;
-		onDidChangeNotebookDocument = new EventEmitter<NotebookDocumentChangeEvent>();
+		onDidChangeNotebookDocument =
+			new EventEmitter<NotebookDocumentChangeEvent>();
 		disposables.push(onDidChangeNotebookDocument);
-		onWillSaveNotebookDocument = new AsyncEmitter<NotebookDocumentWillSaveEvent>();
+		onWillSaveNotebookDocument =
+			new AsyncEmitter<NotebookDocumentWillSaveEvent>();
 
-		const stub = sinon.stub(NotebookEdit, 'updateCellMetadata').callsFake((index, metadata) => {
-			const edit = stub.wrappedMethod.call(NotebookEdit, index, metadata);
-			cellMetadataUpdates.push(edit);
-			return edit;
-		}
-		);
-		sinon.stub(workspace, 'onDidChangeNotebookDocument').callsFake(cb =>
-			onDidChangeNotebookDocument.event(cb)
-		);
-		sinon.stub(workspace, 'onWillSaveNotebookDocument').callsFake(cb =>
-			onWillSaveNotebookDocument.event(cb)
-		);
+		const stub = sinon
+			.stub(NotebookEdit, "updateCellMetadata")
+			.callsFake((index, metadata) => {
+				const edit = stub.wrappedMethod.call(NotebookEdit, index, metadata);
+				cellMetadataUpdates.push(edit);
+				return edit;
+			});
+		sinon
+			.stub(workspace, "onDidChangeNotebookDocument")
+			.callsFake((cb) => onDidChangeNotebookDocument.event(cb));
+		sinon
+			.stub(workspace, "onWillSaveNotebookDocument")
+			.callsFake((cb) => onWillSaveNotebookDocument.event(cb));
 		activate(context);
 	});
 	teardown(async () => {
@@ -55,25 +81,25 @@ suite(`Notebook Model Store Sync`, () => {
 		editsApplied = [];
 		pendingPromises = [];
 		cellMetadataUpdates = [];
-		disposables.forEach(d => d.dispose());
+		disposables.forEach((d) => d.dispose());
 		disposables = [];
 		sinon.restore();
 	});
 
-	test('Empty cell will not result in any updates', async () => {
+	test("Empty cell will not result in any updates", async () => {
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
 			metadata: undefined,
 			contentChanges: [],
-			cellChanges: []
+			cellChanges: [],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
 
 		assert.strictEqual(editsApplied.length, 0);
 	});
-	test('Adding cell for non Jupyter Notebook will not result in any updates', async () => {
-		sinon.stub(notebook, 'notebookType').get(() => 'some-other-type');
+	test("Adding cell for non Jupyter Notebook will not result in any updates", async () => {
+		sinon.stub(notebook, "notebookType").get(() => "some-other-type");
 		const cell: NotebookCell = {
 			document: {} as unknown as TextDocument,
 			executionSummary: {},
@@ -81,7 +107,7 @@ suite(`Notebook Model Store Sync`, () => {
 			kind: NotebookCellKind.Code,
 			metadata: {},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -90,10 +116,10 @@ suite(`Notebook Model Store Sync`, () => {
 				{
 					range: new NotebookRange(0, 0),
 					removedCells: [],
-					addedCells: [cell]
-				}
+					addedCells: [cell],
+				},
 			],
-			cellChanges: []
+			cellChanges: [],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -101,8 +127,10 @@ suite(`Notebook Model Store Sync`, () => {
 		assert.strictEqual(editsApplied.length, 0);
 		assert.strictEqual(cellMetadataUpdates.length, 0);
 	});
-	test('Adding cell to nbformat 4.2 notebook will result in adding empty metadata', async () => {
-		sinon.stub(notebook, 'metadata').get(() => ({ nbformat: 4, nbformat_minor: 2 }));
+	test("Adding cell to nbformat 4.2 notebook will result in adding empty metadata", async () => {
+		sinon
+			.stub(notebook, "metadata")
+			.get(() => ({ nbformat: 4, nbformat_minor: 2 }));
 		const cell: NotebookCell = {
 			document: {} as unknown as TextDocument,
 			executionSummary: {},
@@ -110,7 +138,7 @@ suite(`Notebook Model Store Sync`, () => {
 			kind: NotebookCellKind.Code,
 			metadata: {},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -119,10 +147,10 @@ suite(`Notebook Model Store Sync`, () => {
 				{
 					range: new NotebookRange(0, 0),
 					removedCells: [],
-					addedCells: [cell]
-				}
+					addedCells: [cell],
+				},
 			],
-			cellChanges: []
+			cellChanges: [],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -130,10 +158,15 @@ suite(`Notebook Model Store Sync`, () => {
 		assert.strictEqual(editsApplied.length, 1);
 		assert.strictEqual(cellMetadataUpdates.length, 1);
 		const newMetadata = cellMetadataUpdates[0].newCellMetadata;
-		assert.deepStrictEqual(newMetadata, { execution_count: null, metadata: {} });
+		assert.deepStrictEqual(newMetadata, {
+			execution_count: null,
+			metadata: {},
+		});
 	});
-	test('Added cell will have a cell id if nbformat is 4.5', async () => {
-		sinon.stub(notebook, 'metadata').get(() => ({ nbformat: 4, nbformat_minor: 5 }));
+	test("Added cell will have a cell id if nbformat is 4.5", async () => {
+		sinon
+			.stub(notebook, "metadata")
+			.get(() => ({ nbformat: 4, nbformat_minor: 5 }));
 		const cell: NotebookCell = {
 			document: {} as unknown as TextDocument,
 			executionSummary: {},
@@ -141,7 +174,7 @@ suite(`Notebook Model Store Sync`, () => {
 			kind: NotebookCellKind.Code,
 			metadata: {},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -150,10 +183,10 @@ suite(`Notebook Model Store Sync`, () => {
 				{
 					range: new NotebookRange(0, 0),
 					removedCells: [],
-					addedCells: [cell]
-				}
+					addedCells: [cell],
+				},
 			],
-			cellChanges: []
+			cellChanges: [],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -166,18 +199,20 @@ suite(`Notebook Model Store Sync`, () => {
 		assert.deepStrictEqual(newMetadata.metadata, {});
 		assert.ok(newMetadata.id);
 	});
-	test('Do not add cell id if one already exists', async () => {
-		sinon.stub(notebook, 'metadata').get(() => ({ nbformat: 4, nbformat_minor: 5 }));
+	test("Do not add cell id if one already exists", async () => {
+		sinon
+			.stub(notebook, "metadata")
+			.get(() => ({ nbformat: 4, nbformat_minor: 5 }));
 		const cell: NotebookCell = {
 			document: {} as unknown as TextDocument,
 			executionSummary: {},
 			index: 0,
 			kind: NotebookCellKind.Code,
 			metadata: {
-				id: '1234'
+				id: "1234",
 			},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -186,10 +221,10 @@ suite(`Notebook Model Store Sync`, () => {
 				{
 					range: new NotebookRange(0, 0),
 					removedCells: [],
-					addedCells: [cell]
-				}
+					addedCells: [cell],
+				},
 			],
-			cellChanges: []
+			cellChanges: [],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -200,21 +235,23 @@ suite(`Notebook Model Store Sync`, () => {
 		assert.strictEqual(Object.keys(newMetadata).length, 3);
 		assert.deepStrictEqual(newMetadata.execution_count, null);
 		assert.deepStrictEqual(newMetadata.metadata, {});
-		assert.strictEqual(newMetadata.id, '1234');
+		assert.strictEqual(newMetadata.id, "1234");
 	});
-	test('Do not perform any updates if cell id and metadata exists', async () => {
-		sinon.stub(notebook, 'metadata').get(() => ({ nbformat: 4, nbformat_minor: 5 }));
+	test("Do not perform any updates if cell id and metadata exists", async () => {
+		sinon
+			.stub(notebook, "metadata")
+			.get(() => ({ nbformat: 4, nbformat_minor: 5 }));
 		const cell: NotebookCell = {
 			document: {} as unknown as TextDocument,
 			executionSummary: {},
 			index: 0,
 			kind: NotebookCellKind.Code,
 			metadata: {
-				id: '1234',
-				metadata: {}
+				id: "1234",
+				metadata: {},
 			},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -223,10 +260,10 @@ suite(`Notebook Model Store Sync`, () => {
 				{
 					range: new NotebookRange(0, 0),
 					removedCells: [],
-					addedCells: [cell]
-				}
+					addedCells: [cell],
+				},
 			],
-			cellChanges: []
+			cellChanges: [],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -234,28 +271,30 @@ suite(`Notebook Model Store Sync`, () => {
 		assert.strictEqual(editsApplied.length, 0);
 		assert.strictEqual(cellMetadataUpdates.length, 0);
 	});
-	test('Store language id in custom metadata, whilst preserving existing metadata', async () => {
-		sinon.stub(notebook, 'metadata').get(() => ({
-			nbformat: 4, nbformat_minor: 5,
+	test("Store language id in custom metadata, whilst preserving existing metadata", async () => {
+		sinon.stub(notebook, "metadata").get(() => ({
+			nbformat: 4,
+			nbformat_minor: 5,
 			metadata: {
-				language_info: { name: 'python' }
-			}
+				language_info: { name: "python" },
+			},
 		}));
 		const cell: NotebookCell = {
 			document: {
-				languageId: 'javascript'
+				languageId: "javascript",
 			} as unknown as TextDocument,
 			executionSummary: {},
 			index: 0,
 			kind: NotebookCellKind.Code,
 			metadata: {
-				id: '1234',
+				id: "1234",
 				metadata: {
-					collapsed: true, scrolled: true
-				}
+					collapsed: true,
+					scrolled: true,
+				},
 			},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -265,13 +304,13 @@ suite(`Notebook Model Store Sync`, () => {
 				{
 					cell,
 					document: {
-						languageId: 'javascript'
+						languageId: "javascript",
 					} as unknown as TextDocument,
 					metadata: undefined,
 					outputs: undefined,
-					executionSummary: undefined
-				}
-			]
+					executionSummary: undefined,
+				},
+			],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -281,31 +320,37 @@ suite(`Notebook Model Store Sync`, () => {
 		const newMetadata = cellMetadataUpdates[0].newCellMetadata || {};
 		assert.strictEqual(Object.keys(newMetadata).length, 3);
 		assert.deepStrictEqual(newMetadata.execution_count, null);
-		assert.deepStrictEqual(newMetadata.metadata, { collapsed: true, scrolled: true, vscode: { languageId: 'javascript' } });
-		assert.strictEqual(newMetadata.id, '1234');
+		assert.deepStrictEqual(newMetadata.metadata, {
+			collapsed: true,
+			scrolled: true,
+			vscode: { languageId: "javascript" },
+		});
+		assert.strictEqual(newMetadata.id, "1234");
 	});
-	test('No changes when language is javascript', async () => {
-		sinon.stub(notebook, 'metadata').get(() => ({
-			nbformat: 4, nbformat_minor: 5,
+	test("No changes when language is javascript", async () => {
+		sinon.stub(notebook, "metadata").get(() => ({
+			nbformat: 4,
+			nbformat_minor: 5,
 			metadata: {
-				language_info: { name: 'javascript' }
-			}
+				language_info: { name: "javascript" },
+			},
 		}));
 		const cell: NotebookCell = {
 			document: {
-				languageId: 'javascript'
+				languageId: "javascript",
 			} as unknown as TextDocument,
 			executionSummary: {},
 			index: 0,
 			kind: NotebookCellKind.Code,
 			metadata: {
-				id: '1234',
+				id: "1234",
 				metadata: {
-					collapsed: true, scrolled: true
-				}
+					collapsed: true,
+					scrolled: true,
+				},
 			},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -317,9 +362,9 @@ suite(`Notebook Model Store Sync`, () => {
 					document: undefined,
 					metadata: undefined,
 					outputs: undefined,
-					executionSummary: undefined
-				}
-			]
+					executionSummary: undefined,
+				},
+			],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -327,29 +372,31 @@ suite(`Notebook Model Store Sync`, () => {
 		assert.strictEqual(editsApplied.length, 0);
 		assert.strictEqual(cellMetadataUpdates.length, 0);
 	});
-	test('Remove language from metadata when cell language matches kernel language', async () => {
-		sinon.stub(notebook, 'metadata').get(() => ({
-			nbformat: 4, nbformat_minor: 5,
+	test("Remove language from metadata when cell language matches kernel language", async () => {
+		sinon.stub(notebook, "metadata").get(() => ({
+			nbformat: 4,
+			nbformat_minor: 5,
 			metadata: {
-				language_info: { name: 'javascript' }
-			}
+				language_info: { name: "javascript" },
+			},
 		}));
 		const cell: NotebookCell = {
 			document: {
-				languageId: 'javascript'
+				languageId: "javascript",
 			} as unknown as TextDocument,
 			executionSummary: {},
 			index: 0,
 			kind: NotebookCellKind.Code,
 			metadata: {
-				id: '1234',
+				id: "1234",
 				metadata: {
-					vscode: { languageId: 'python' },
-					collapsed: true, scrolled: true
-				}
+					vscode: { languageId: "python" },
+					collapsed: true,
+					scrolled: true,
+				},
 			},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -359,13 +406,13 @@ suite(`Notebook Model Store Sync`, () => {
 				{
 					cell,
 					document: {
-						languageId: 'javascript'
+						languageId: "javascript",
 					} as unknown as TextDocument,
 					metadata: undefined,
 					outputs: undefined,
-					executionSummary: undefined
-				}
-			]
+					executionSummary: undefined,
+				},
+			],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -375,32 +422,37 @@ suite(`Notebook Model Store Sync`, () => {
 		const newMetadata = cellMetadataUpdates[0].newCellMetadata || {};
 		assert.strictEqual(Object.keys(newMetadata).length, 3);
 		assert.deepStrictEqual(newMetadata.execution_count, null);
-		assert.deepStrictEqual(newMetadata.metadata, { collapsed: true, scrolled: true });
-		assert.strictEqual(newMetadata.id, '1234');
+		assert.deepStrictEqual(newMetadata.metadata, {
+			collapsed: true,
+			scrolled: true,
+		});
+		assert.strictEqual(newMetadata.id, "1234");
 	});
-	test('Update language in metadata', async () => {
-		sinon.stub(notebook, 'metadata').get(() => ({
-			nbformat: 4, nbformat_minor: 5,
+	test("Update language in metadata", async () => {
+		sinon.stub(notebook, "metadata").get(() => ({
+			nbformat: 4,
+			nbformat_minor: 5,
 			metadata: {
-				language_info: { name: 'javascript' }
-			}
+				language_info: { name: "javascript" },
+			},
 		}));
 		const cell: NotebookCell = {
 			document: {
-				languageId: 'powershell'
+				languageId: "powershell",
 			} as unknown as TextDocument,
 			executionSummary: {},
 			index: 0,
 			kind: NotebookCellKind.Code,
 			metadata: {
-				id: '1234',
+				id: "1234",
 				metadata: {
-					vscode: { languageId: 'python' },
-					collapsed: true, scrolled: true
-				}
+					vscode: { languageId: "python" },
+					collapsed: true,
+					scrolled: true,
+				},
 			},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -410,13 +462,13 @@ suite(`Notebook Model Store Sync`, () => {
 				{
 					cell,
 					document: {
-						languageId: 'powershell'
+						languageId: "powershell",
 					} as unknown as TextDocument,
 					metadata: undefined,
 					outputs: undefined,
-					executionSummary: undefined
-				}
-			]
+					executionSummary: undefined,
+				},
+			],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -426,18 +478,27 @@ suite(`Notebook Model Store Sync`, () => {
 		const newMetadata = cellMetadataUpdates[0].newCellMetadata || {};
 		assert.strictEqual(Object.keys(newMetadata).length, 3);
 		assert.deepStrictEqual(newMetadata.execution_count, null);
-		assert.deepStrictEqual(newMetadata.metadata, { collapsed: true, scrolled: true, vscode: { languageId: 'powershell' } });
-		assert.strictEqual(newMetadata.id, '1234');
+		assert.deepStrictEqual(newMetadata.metadata, {
+			collapsed: true,
+			scrolled: true,
+			vscode: { languageId: "powershell" },
+		});
+		assert.strictEqual(newMetadata.id, "1234");
 	});
 
-	test('Will save event without any changes', async () => {
-		await onWillSaveNotebookDocument.fireAsync({ notebook, reason: TextDocumentSaveReason.Manual }, token.token);
+	test("Will save event without any changes", async () => {
+		await onWillSaveNotebookDocument.fireAsync(
+			{ notebook, reason: TextDocumentSaveReason.Manual },
+			token.token,
+		);
 	});
-	test('Wait for pending updates to complete when saving', async () => {
+	test("Wait for pending updates to complete when saving", async () => {
 		let resolveApplyEditPromise: (value: boolean) => void;
-		const promise = new Promise<boolean>((resolve) => resolveApplyEditPromise = resolve);
+		const promise = new Promise<boolean>(
+			(resolve) => (resolveApplyEditPromise = resolve),
+		);
 		applyEditStub.restore();
-		sinon.stub(workspace, 'applyEdit').callsFake((edit: WorkspaceEdit) => {
+		sinon.stub(workspace, "applyEdit").callsFake((edit: WorkspaceEdit) => {
 			editsApplied.push(edit);
 			return promise;
 		});
@@ -449,7 +510,7 @@ suite(`Notebook Model Store Sync`, () => {
 			kind: NotebookCellKind.Code,
 			metadata: {},
 			notebook,
-			outputs: []
+			outputs: [],
 		};
 		const e: NotebookDocumentChangeEvent = {
 			notebook,
@@ -458,10 +519,10 @@ suite(`Notebook Model Store Sync`, () => {
 				{
 					range: new NotebookRange(0, 0),
 					removedCells: [],
-					addedCells: [cell]
-				}
+					addedCells: [cell],
+				},
 			],
-			cellChanges: []
+			cellChanges: [],
 		};
 
 		onDidChangeNotebookDocument.fire(e);
@@ -471,11 +532,14 @@ suite(`Notebook Model Store Sync`, () => {
 
 		// Try to save.
 		let saveCompleted = false;
-		const saved = onWillSaveNotebookDocument.fireAsync({
-			notebook,
-			reason: TextDocumentSaveReason.Manual
-		}, token.token);
-		saved.finally(() => saveCompleted = true);
+		const saved = onWillSaveNotebookDocument.fireAsync(
+			{
+				notebook,
+				reason: TextDocumentSaveReason.Manual,
+			},
+			token.token,
+		);
+		saved.finally(() => (saveCompleted = true));
 		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		// Verify we have not yet completed saving.
@@ -485,7 +549,7 @@ suite(`Notebook Model Store Sync`, () => {
 		await new Promise((resolve) => setTimeout(resolve, 1));
 
 		// Should have completed saving.
-		saved.finally(() => saveCompleted = true);
+		saved.finally(() => (saveCompleted = true));
 	});
 
 	interface IWaitUntil {
@@ -497,37 +561,43 @@ suite(`Notebook Model Store Sync`, () => {
 		token: CancellationToken;
 		waitUntil(thenable: Promise<unknown>): void;
 	}
-	type IWaitUntilData<T> = Omit<Omit<T, 'waitUntil'>, 'token'>;
+	type IWaitUntilData<T> = Omit<Omit<T, "waitUntil">, "token">;
 
 	class AsyncEmitter<T extends IWaitUntil> {
 		private listeners: ((d: T) => void)[] = [];
-		get event(): (listener: (e: T) => any, thisArgs?: any, disposables?: Disposable[]) => Disposable {
-
+		get event(): (
+			listener: (e: T) => any,
+			thisArgs?: any,
+			disposables?: Disposable[],
+		) => Disposable {
 			return (listener, thisArgs, _disposables) => {
 				this.listeners.push(listener.bind(thisArgs));
 				return {
 					dispose: () => {
 						//
-					}
+					},
 				};
 			};
 		}
 		dispose() {
 			this.listeners = [];
 		}
-		async fireAsync(data: IWaitUntilData<T>, token: CancellationToken): Promise<void> {
+		async fireAsync(
+			data: IWaitUntilData<T>,
+			token: CancellationToken,
+		): Promise<void> {
 			if (!this.listeners.length) {
 				return;
 			}
 
 			const promises: Promise<unknown>[] = [];
-			this.listeners.forEach(cb => {
+			this.listeners.forEach((cb) => {
 				const event = {
 					...data,
 					token,
 					waitUntil: (thenable: Promise<WorkspaceEdit>) => {
 						promises.push(thenable);
-					}
+					},
 				} as T;
 				cb(event);
 			});

@@ -28,14 +28,16 @@ export enum FileType {
 	/**
 	 * A symbolic link to a file.
 	 */
-	SymbolicLink = 64
+	SymbolicLink = 64,
 }
 
 export class RelativePattern implements vscode.RelativePattern {
 	constructor(
 		public readonly baseUri: URI,
 		public readonly pattern: string,
-	) { }
+	) {}
 
-	get base(): string { throw new Error('Not implemented'); }
+	get base(): string {
+		throw new Error('Not implemented');
+	}
 }

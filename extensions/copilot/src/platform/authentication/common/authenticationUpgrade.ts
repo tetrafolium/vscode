@@ -7,8 +7,10 @@ import type { ChatContext, ChatRequest, ChatResponseStream } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 import { Event } from '../../../util/vs/base/common/event';
 
-
-export const IAuthenticationChatUpgradeService = createServiceIdentifier<IAuthenticationChatUpgradeService>('IAuthenticationChatUpgradeService');
+export const IAuthenticationChatUpgradeService =
+	createServiceIdentifier<IAuthenticationChatUpgradeService>(
+		'IAuthenticationChatUpgradeService',
+	);
 
 export interface IAuthenticationChatUpgradeService {
 	_serviceBrand: undefined;
@@ -33,7 +35,12 @@ export interface IAuthenticationChatUpgradeService {
 	 * @param data - The initial chat request data for context.
 	 * @param detail - Optional detail overriding
 	 */
-	showPermissiveSessionUpgradeInChat(stream: ChatResponseStream, data: ChatRequest, detail?: string, context?: ChatContext): void;
+	showPermissiveSessionUpgradeInChat(
+		stream: ChatResponseStream,
+		data: ChatRequest,
+		detail?: string,
+		context?: ChatContext,
+	): void;
 
 	/**
 	 * Manages the user's input regarding the confirmation request for a session upgrade.
@@ -41,5 +48,9 @@ export interface IAuthenticationChatUpgradeService {
 	 * @returns Promise<ChatRequest> - The ChatRequest that was originally presented the confirmation, or the request that
 	 * was passed in if we don't detect that the confirmation was presented.
 	 */
-	handleConfirmationRequest(stream: ChatResponseStream, request: ChatRequest, history: ChatContext['history']): Promise<ChatRequest>;
+	handleConfirmationRequest(
+		stream: ChatResponseStream,
+		request: ChatRequest,
+		history: ChatContext['history'],
+	): Promise<ChatRequest>;
 }

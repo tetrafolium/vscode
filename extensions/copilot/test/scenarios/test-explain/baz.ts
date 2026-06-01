@@ -2,4 +2,4 @@
  *  Copyright (c) Microsoft Corporation and GitHub. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-console.log('hi')
+console.log('hi');

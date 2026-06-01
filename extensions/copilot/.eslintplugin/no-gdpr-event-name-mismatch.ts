@@ -6,18 +6,22 @@
 import { TSESTree } from '@typescript-eslint/typescript-estree';
 import * as eslint from 'eslint';
 
-export default new class NoGDPREventNameMismatch implements eslint.Rule.RuleModule {
-
+export default new (class NoGDPREventNameMismatch
+	implements eslint.Rule.RuleModule
+{
 	readonly meta: eslint.Rule.RuleMetaData = {
-		type: "problem",
-		fixable: "code",
+		type: 'problem',
+		fixable: 'code',
 		docs: {
-			description: "Finds common cases where the gdpr comment does not match the telemetry event name in code.",
+			description:
+				'Finds common cases where the gdpr comment does not match the telemetry event name in code.',
 		},
 	};
 	create(context: eslint.Rule.RuleContext): eslint.Rule.RuleListener {
-
-		function getParentOfType<NodeType extends TSESTree.Node>(node: TSESTree.Node, type: string): NodeType | undefined {
+		function getParentOfType<NodeType extends TSESTree.Node>(
+			node: TSESTree.Node,
+			type: string,
+		): NodeType | undefined {
 			let parentNode: TSESTree.Node | undefined = node.parent;
 			while (parentNode && parentNode.type !== type) {
 				parentNode = parentNode.parent;
@@ -25,13 +29,17 @@ export default new class NoGDPREventNameMismatch implements eslint.Rule.RuleModu
 			return parentNode as NodeType;
 		}
 
-		function getEventNameFromLeadingGdprComment(esNode: TSESTree.Node): string | undefined {
+		function getEventNameFromLeadingGdprComment(
+			esNode: TSESTree.Node,
+		): string | undefined {
 			const statement = getParentOfType(esNode, 'ExpressionStatement');
 			if (!statement) {
 				return;
 			}
 
-			const comments = context.sourceCode.getCommentsBefore(statement as any);
+			const comments = context.sourceCode.getCommentsBefore(
+				statement as any,
+			);
 			if (comments.length === 0) {
 				return;
 			}
@@ -41,11 +49,11 @@ export default new class NoGDPREventNameMismatch implements eslint.Rule.RuleModu
 			}
 
 			const dataStart = comment.value.indexOf('\n');
-			const data = comment.value.substring(dataStart)
+			const data = comment.value.substring(dataStart);
 
-			let gdprData: { [key: string]: object }
+			let gdprData: { [key: string]: object };
 			try {
-				const jsonRaw = `{ ${data} }`
+				const jsonRaw = `{ ${data} }`;
 				gdprData = JSON.parse(jsonRaw);
 			} catch (e) {
 				return;
@@ -55,14 +63,20 @@ export default new class NoGDPREventNameMismatch implements eslint.Rule.RuleModu
 		}
 
 		return {
-			['ExpressionStatement MemberExpression Identifier[name=/^send.*TelemetryEvent$/]'](node: any) {
+			['ExpressionStatement MemberExpression Identifier[name=/^send.*TelemetryEvent$/]'](
+				node: any,
+			) {
 				const esNode = node as TSESTree.Identifier;
-				const gdprCommentEventName = getEventNameFromLeadingGdprComment(esNode);
+				const gdprCommentEventName =
+					getEventNameFromLeadingGdprComment(esNode);
 				if (!gdprCommentEventName) {
 					return;
 				}
 
-				const callExpr = getParentOfType<TSESTree.CallExpression>(esNode, 'CallExpression');
+				const callExpr = getParentOfType<TSESTree.CallExpression>(
+					esNode,
+					'CallExpression',
+				);
 				if (!callExpr) {
 					return;
 				}
@@ -72,14 +86,14 @@ export default new class NoGDPREventNameMismatch implements eslint.Rule.RuleModu
 					return;
 				}
 
-				const callName = firstArg.value
+				const callName = firstArg.value;
 				if (callName !== gdprCommentEventName) {
 					context.report({
 						node,
-						message: `Found mismatch between GDPR comment event name (${gdprCommentEventName}) and telemetry event name (${callName}).`
+						message: `Found mismatch between GDPR comment event name (${gdprCommentEventName}) and telemetry event name (${callName}).`,
 					});
 				}
-			}
+			},
 		};
 	}
-};
+})();

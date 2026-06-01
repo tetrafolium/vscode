@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
-
+declare module "vscode" {
 	// https://github.com/microsoft/vscode/issues/226562
 
 	/**
@@ -20,7 +19,9 @@ declare module 'vscode' {
 	 * 	}
 	 * });
 	 */
-	export interface TerminalCompletionProvider<T extends TerminalCompletionItem = TerminalCompletionItem> {
+	export interface TerminalCompletionProvider<
+		T extends TerminalCompletionItem = TerminalCompletionItem,
+	> {
 		/**
 		 * Provide completions for the given terminal and context.
 		 * @param terminal The terminal for which completions are being provided.
@@ -28,7 +29,11 @@ declare module 'vscode' {
 		 * @param token A cancellation token.
 		 * @return A list of completions.
 		 */
-		provideTerminalCompletions(terminal: Terminal, context: TerminalCompletionContext, token: CancellationToken): ProviderResult<T[] | TerminalCompletionList<T>>;
+		provideTerminalCompletions(
+			terminal: Terminal,
+			context: TerminalCompletionContext,
+			token: CancellationToken,
+		): ProviderResult<T[] | TerminalCompletionList<T>>;
 	}
 
 	/**
@@ -83,7 +88,7 @@ declare module 'vscode' {
 		constructor(
 			label: string | CompletionItemLabel,
 			replacementRange: readonly [number, number],
-			kind?: TerminalCompletionItemKind
+			kind?: TerminalCompletionItemKind,
 		);
 	}
 
@@ -207,8 +212,9 @@ declare module 'vscode' {
 	 * 	{ label: 'ls', replacementRange: [0, 0], kind: TerminalCompletionItemKind.Method }
 	 * ], { showFiles: true, cwd: Uri.file('/home/user') });
 	 */
-	export class TerminalCompletionList<T extends TerminalCompletionItem = TerminalCompletionItem> {
-
+	export class TerminalCompletionList<
+		T extends TerminalCompletionItem = TerminalCompletionItem,
+	> {
 		/**
 		 * Resources that should be shown in the completions list for the cwd of the terminal.
 		 */
@@ -225,7 +231,10 @@ declare module 'vscode' {
 		 * @param items The completion items.
 		 * @param resourceOptions Indicates which resources should be shown as completions for the cwd of the terminal.
 		 */
-		constructor(items: T[], resourceOptions?: TerminalCompletionResourceOptions);
+		constructor(
+			items: T[],
+			resourceOptions?: TerminalCompletionResourceOptions,
+		);
 	}
 
 	/**
@@ -280,7 +289,11 @@ declare module 'vscode' {
 		 * 	}
 		 * }, '-');
 		 */
-		export function registerTerminalCompletionProvider<T extends TerminalCompletionItem>(provider: TerminalCompletionProvider<T>, ...triggerCharacters: string[]): Disposable;
+		export function registerTerminalCompletionProvider<
+			T extends TerminalCompletionItem,
+		>(
+			provider: TerminalCompletionProvider<T>,
+			...triggerCharacters: string[]
+		): Disposable;
 	}
 }
-

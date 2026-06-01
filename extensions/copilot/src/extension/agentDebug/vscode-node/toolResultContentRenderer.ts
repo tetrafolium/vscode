@@ -3,7 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { LanguageModelDataPart, LanguageModelPromptTsxPart, LanguageModelTextPart } from '../../../vscodeTypes';
+import {
+	LanguageModelDataPart,
+	LanguageModelPromptTsxPart,
+	LanguageModelTextPart,
+} from '../../../vscodeTypes';
 import { renderDataPartToString } from '../../prompt/vscode-node/requestLoggerToolResult';
 import { IToolResultContentRenderer } from '../common/toolResultRenderer';
 

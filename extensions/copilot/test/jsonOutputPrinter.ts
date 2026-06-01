@@ -8,8 +8,8 @@ import { SimpleRPC } from '../src/extension/onboardDebug/node/copilotDebugWorker
 import { createServiceIdentifier } from '../src/util/common/services';
 import { Output, STDOUT_FILENAME } from './simulation/shared/sharedTypes';
 
-
-export const IJSONOutputPrinter = createServiceIdentifier<IJSONOutputPrinter>('IJSONOutputPrinter');
+export const IJSONOutputPrinter =
+	createServiceIdentifier<IJSONOutputPrinter>('IJSONOutputPrinter');
 
 export interface IJSONOutputPrinter {
 	readonly _serviceBrand: undefined;
@@ -36,7 +36,10 @@ export class CollectingJSONOutputPrinter implements IJSONOutputPrinter {
 
 	async flush(outputPath: string): Promise<void> {
 		const filePath = path.join(outputPath, STDOUT_FILENAME);
-		await fs.promises.writeFile(filePath, JSON.stringify(this.outputs, null, '\t'));
+		await fs.promises.writeFile(
+			filePath,
+			JSON.stringify(this.outputs, null, '\t'),
+		);
 	}
 }
 
@@ -51,15 +54,21 @@ export class NoopJSONOutputPrinter implements IJSONOutputPrinter {
 export class ProxiedSONOutputPrinter implements IJSONOutputPrinter {
 	declare readonly _serviceBrand: undefined;
 
-	public static registerTo(instance: IJSONOutputPrinter, rpc: SimpleRPC): IJSONOutputPrinter {
-		rpc.registerMethod('ProxiedJSONOutputPrinter.print', (obj: Output) => instance.print(obj));
-		rpc.registerMethod('ProxiedJSONOutputPrinter.flush', (outputPath: string) => instance.flush?.(outputPath));
+	public static registerTo(
+		instance: IJSONOutputPrinter,
+		rpc: SimpleRPC,
+	): IJSONOutputPrinter {
+		rpc.registerMethod('ProxiedJSONOutputPrinter.print', (obj: Output) =>
+			instance.print(obj),
+		);
+		rpc.registerMethod(
+			'ProxiedJSONOutputPrinter.flush',
+			(outputPath: string) => instance.flush?.(outputPath),
+		);
 		return instance;
 	}
 
-	constructor(
-		private readonly rpc: SimpleRPC,
-	) { }
+	constructor(private readonly rpc: SimpleRPC) {}
 
 	print(obj: Output): void {
 		this.rpc.callMethod('ProxiedJSONOutputPrinter.print', obj);

@@ -7,9 +7,15 @@ import * as assert from 'assert';
 import { DisposableStore } from 'vs/base/common/lifecycle';
 import { TestInstantiationService } from 'vs/platform/instantiation/test/common/instantiationServiceMock';
 import { IUndoRedoService } from 'vs/platform/undoRedo/common/undoRedo';
-import { FoldingModel, updateFoldingStateAtIndex } from 'vs/workbench/contrib/notebook/browser/viewModel/foldingModel';
+import {
+	FoldingModel,
+	updateFoldingStateAtIndex,
+} from 'vs/workbench/contrib/notebook/browser/viewModel/foldingModel';
 import { CellKind } from 'vs/workbench/contrib/notebook/common/notebookCommon';
-import { setupInstantiationService, withTestNotebook } from 'vs/workbench/contrib/notebook/test/browser/testNotebookEditor';
+import {
+	setupInstantiationService,
+	withTestNotebook,
+} from 'vs/workbench/contrib/notebook/test/browser/testNotebookEditor';
 
 suite('Notebook Folding', () => {
 	let disposables: DisposableStore;
@@ -45,7 +51,7 @@ suite('Notebook Folding', () => {
 				assert.strictEqual(foldingController.regions.findRange(5), 1);
 				assert.strictEqual(foldingController.regions.findRange(6), 2);
 				assert.strictEqual(foldingController.regions.findRange(7), 2);
-			}
+			},
 		);
 	});
 
@@ -56,7 +62,13 @@ suite('Notebook Folding', () => {
 				['body', 'markdown', CellKind.Markup, [], {}],
 				['# comment 1', 'python', CellKind.Code, [], {}],
 				['body 2', 'markdown', CellKind.Markup, [], {}],
-				['body 3\n```\n## comment 2\n```', 'markdown', CellKind.Markup, [], {}],
+				[
+					'body 3\n```\n## comment 2\n```',
+					'markdown',
+					CellKind.Markup,
+					[],
+					{},
+				],
 				['body 4', 'markdown', CellKind.Markup, [], {}],
 				['## header 2.1', 'markdown', CellKind.Markup, [], {}],
 				['var e = 7;', 'python', CellKind.Code, [], {}],
@@ -73,7 +85,7 @@ suite('Notebook Folding', () => {
 				assert.strictEqual(foldingController.regions.findRange(6), 0);
 				assert.strictEqual(foldingController.regions.findRange(7), 1);
 				assert.strictEqual(foldingController.regions.findRange(8), 1);
-			}
+			},
 		);
 	});
 
@@ -82,7 +94,13 @@ suite('Notebook Folding', () => {
 			[
 				['# header 1', 'markdown', CellKind.Markup, [], {}],
 				['body', 'markdown', CellKind.Markup, [], {}],
-				['## header 2.1\n# header3', 'markdown', CellKind.Markup, [], {}],
+				[
+					'## header 2.1\n# header3',
+					'markdown',
+					CellKind.Markup,
+					[],
+					{},
+				],
 				['body 2', 'markdown', CellKind.Markup, [], {}],
 				['body 3', 'markdown', CellKind.Markup, [], {}],
 				['## header 2.2', 'markdown', CellKind.Markup, [], {}],
@@ -94,17 +112,26 @@ suite('Notebook Folding', () => {
 
 				assert.strictEqual(foldingController.regions.findRange(1), 0);
 				assert.strictEqual(foldingController.regions.findRange(2), 0);
-				assert.strictEqual(foldingController.regions.getEndLineNumber(0), 2);
+				assert.strictEqual(
+					foldingController.regions.getEndLineNumber(0),
+					2,
+				);
 
 				assert.strictEqual(foldingController.regions.findRange(3), 1);
 				assert.strictEqual(foldingController.regions.findRange(4), 1);
 				assert.strictEqual(foldingController.regions.findRange(5), 1);
-				assert.strictEqual(foldingController.regions.getEndLineNumber(1), 7);
+				assert.strictEqual(
+					foldingController.regions.getEndLineNumber(1),
+					7,
+				);
 
 				assert.strictEqual(foldingController.regions.findRange(6), 2);
 				assert.strictEqual(foldingController.regions.findRange(7), 2);
-				assert.strictEqual(foldingController.regions.getEndLineNumber(2), 7);
-			}
+				assert.strictEqual(
+					foldingController.regions.getEndLineNumber(2),
+					7,
+				);
+			},
 		);
 	});
 
@@ -125,12 +152,10 @@ suite('Notebook Folding', () => {
 				updateFoldingStateAtIndex(foldingModel, 0, true);
 				viewModel.updateFoldingRanges(foldingModel.regions);
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
-					{ start: 1, end: 6 }
+					{ start: 1, end: 6 },
 				]);
-			}
+			},
 		);
-
-
 
 		await withTestNotebook(
 			[
@@ -149,9 +174,9 @@ suite('Notebook Folding', () => {
 				viewModel.updateFoldingRanges(foldingModel.regions);
 
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
-					{ start: 3, end: 4 }
+					{ start: 3, end: 4 },
 				]);
-			}
+			},
 		);
 
 		await withTestNotebook(
@@ -171,9 +196,9 @@ suite('Notebook Folding', () => {
 				viewModel.updateFoldingRanges(foldingModel.regions);
 
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
-					{ start: 3, end: 6 }
+					{ start: 3, end: 6 },
 				]);
-			}
+			},
 		);
 	});
 
@@ -195,7 +220,7 @@ suite('Notebook Folding', () => {
 				viewModel.updateFoldingRanges(foldingModel.regions);
 
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
-					{ start: 1, end: 1 }
+					{ start: 1, end: 1 },
 				]);
 
 				updateFoldingStateAtIndex(foldingModel, 5, true);
@@ -204,14 +229,14 @@ suite('Notebook Folding', () => {
 
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
 					{ start: 1, end: 1 },
-					{ start: 3, end: 6 }
+					{ start: 3, end: 6 },
 				]);
 
 				updateFoldingStateAtIndex(foldingModel, 2, false);
 				viewModel.updateFoldingRanges(foldingModel.regions);
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
 					{ start: 1, end: 1 },
-					{ start: 6, end: 6 }
+					{ start: 6, end: 6 },
 				]);
 
 				// viewModel.insertCell(7, new TestCell(viewModel.viewType, 7, ['var c = 8;'], 'markdown', CellKind.Code, []), true);
@@ -227,7 +252,7 @@ suite('Notebook Folding', () => {
 				// 	// { start: 1,},
 				// 	{ start: 7, end: 8 }
 				// ]);
-			}
+			},
 		);
 	});
 
@@ -255,9 +280,9 @@ suite('Notebook Folding', () => {
 
 				// Note that hidden ranges !== folding ranges
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
-					{ start: 3, end: 6 }
+					{ start: 3, end: 6 },
 				]);
-			}
+			},
 		);
 
 		await withTestNotebook(
@@ -287,9 +312,9 @@ suite('Notebook Folding', () => {
 				// Note that hidden ranges !== folding ranges
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
 					{ start: 6, end: 6 },
-					{ start: 11, end: 11 }
+					{ start: 11, end: 11 },
 				]);
-			}
+			},
 		);
 
 		await withTestNotebook(
@@ -319,9 +344,9 @@ suite('Notebook Folding', () => {
 				// Note that hidden ranges !== folding ranges
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
 					{ start: 6, end: 6 },
-					{ start: 8, end: 11 }
+					{ start: 8, end: 11 },
 				]);
-			}
+			},
 		);
 	});
 
@@ -349,7 +374,7 @@ suite('Notebook Folding', () => {
 
 				// Note that hidden ranges !== folding ranges
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
-					{ start: 3, end: 6 }
+					{ start: 3, end: 6 },
 				]);
 
 				assert.strictEqual(viewModel.getNextVisibleCellIndex(1), 2);
@@ -359,7 +384,7 @@ suite('Notebook Folding', () => {
 				assert.strictEqual(viewModel.getNextVisibleCellIndex(5), 7);
 				assert.strictEqual(viewModel.getNextVisibleCellIndex(6), 7);
 				assert.strictEqual(viewModel.getNextVisibleCellIndex(7), 8);
-			}
+			},
 		);
 
 		await withTestNotebook(
@@ -390,7 +415,7 @@ suite('Notebook Folding', () => {
 				// Note that hidden ranges !== folding ranges
 				assert.deepStrictEqual(viewModel.getHiddenRanges(), [
 					{ start: 6, end: 6 },
-					{ start: 11, end: 11 }
+					{ start: 11, end: 11 },
 				]);
 
 				// folding ranges
@@ -403,7 +428,7 @@ suite('Notebook Folding', () => {
 				assert.strictEqual(viewModel.getNextVisibleCellIndex(9), 10);
 				assert.strictEqual(viewModel.getNextVisibleCellIndex(10), 12);
 				assert.strictEqual(viewModel.getNextVisibleCellIndex(11), 12);
-			}
+			},
 		);
 	});
 });

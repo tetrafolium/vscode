@@ -3,15 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fs from 'fs';
-import path from 'path';
-import * as os from 'os';
-import * as child_process from 'child_process';
-import { dirs } from './dirs.ts';
-import { root, stateFile, stateContentsFile, computeState, computeContents, isUpToDate } from './installStateHash.ts';
+import * as fs from "fs";
+import path from "path";
+import * as os from "os";
+import * as child_process from "child_process";
+import { dirs } from "./dirs.ts";
+import {
+	root,
+	stateFile,
+	stateContentsFile,
+	computeState,
+	computeContents,
+	isUpToDate,
+} from "./installStateHash.ts";
 
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const rootNpmrcConfigKeys = getNpmrcConfigKeys(path.join(root, '.npmrc'));
+const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+const rootNpmrcConfigKeys = getNpmrcConfigKeys(path.join(root, ".npmrc"));
 
 function log(dir: string, message: string) {
 	if (process.stdout.isTTY) {
@@ -21,8 +28,12 @@ function log(dir: string, message: string) {
 	}
 }
 
-function run(command: string, args: string[], opts: child_process.SpawnSyncOptions) {
-	log(opts.cwd as string || '.', '$ ' + command + ' ' + args.join(' '));
+function run(
+	command: string,
+	args: string[],
+	opts: child_process.SpawnSyncOptions,
+) {
+	log((opts.cwd as string) || ".", "$ " + command + " " + args.join(" "));
 
 	const result = child_process.spawnSync(command, args, opts);
 
@@ -35,14 +46,25 @@ function run(command: string, args: string[], opts: child_process.SpawnSyncOptio
 	}
 }
 
-function spawnAsync(command: string, args: string[], opts: child_process.SpawnOptions): Promise<string> {
+function spawnAsync(
+	command: string,
+	args: string[],
+	opts: child_process.SpawnOptions,
+): Promise<string> {
 	return new Promise((resolve, reject) => {
-		const child = child_process.spawn(command, args, { ...opts, stdio: ['ignore', 'pipe', 'pipe'] });
-		let output = '';
-		child.stdout?.on('data', (data: Buffer) => { output += data.toString(); });
-		child.stderr?.on('data', (data: Buffer) => { output += data.toString(); });
-		child.on('error', reject);
-		child.on('close', (code) => {
+		const child = child_process.spawn(command, args, {
+			...opts,
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		let output = "";
+		child.stdout?.on("data", (data: Buffer) => {
+			output += data.toString();
+		});
+		child.stderr?.on("data", (data: Buffer) => {
+			output += data.toString();
+		});
+		child.on("error", reject);
+		child.on("close", (code) => {
 			if (code !== 0) {
 				reject(new Error(`Process exited with code: ${code}\n${output}`));
 			} else {
@@ -52,7 +74,10 @@ function spawnAsync(command: string, args: string[], opts: child_process.SpawnOp
 	});
 }
 
-async function npmInstallAsync(dir: string, opts?: child_process.SpawnOptions): Promise<void> {
+async function npmInstallAsync(
+	dir: string,
+	opts?: child_process.SpawnOptions,
+): Promise<void> {
 	const finalOpts: child_process.SpawnOptions = {
 		env: { ...process.env },
 		...(opts ?? {}),
@@ -60,37 +85,77 @@ async function npmInstallAsync(dir: string, opts?: child_process.SpawnOptions): 
 		shell: true,
 	};
 
-	const command = process.env['npm_command'] || 'install';
+	const command = process.env["npm_command"] || "install";
 
-	if (process.env['VSCODE_REMOTE_DEPENDENCIES_CONTAINER_NAME'] && /^(.build\/distro\/npm\/)?remote$/.test(dir)) {
+	if (
+		process.env["VSCODE_REMOTE_DEPENDENCIES_CONTAINER_NAME"] &&
+		/^(.build\/distro\/npm\/)?remote$/.test(dir)
+	) {
 		const syncOpts: child_process.SpawnSyncOptions = {
 			env: finalOpts.env,
 			cwd: root,
-			stdio: 'inherit',
+			stdio: "inherit",
 			shell: true,
 		};
 		const userinfo = os.userInfo();
-		log(dir, `Installing dependencies inside container ${process.env['VSCODE_REMOTE_DEPENDENCIES_CONTAINER_NAME']}...`);
+		log(
+			dir,
+			`Installing dependencies inside container ${process.env["VSCODE_REMOTE_DEPENDENCIES_CONTAINER_NAME"]}...`,
+		);
 
-		if (process.env['npm_config_arch'] === 'arm64') {
-			run('sudo', ['docker', 'run', '--rm', '--privileged', 'vscodehub.azurecr.io/multiarch/qemu-user-static@sha256:fe60359c92e86a43cc87b3d906006245f77bfc0565676b80004cc666e4feb9f0', '--reset', '-p', 'yes'], syncOpts);
+		if (process.env["npm_config_arch"] === "arm64") {
+			run(
+				"sudo",
+				[
+					"docker",
+					"run",
+					"--rm",
+					"--privileged",
+					"vscodehub.azurecr.io/multiarch/qemu-user-static@sha256:fe60359c92e86a43cc87b3d906006245f77bfc0565676b80004cc666e4feb9f0",
+					"--reset",
+					"-p",
+					"yes",
+				],
+				syncOpts,
+			);
 		}
-		run('sudo', [
-			'docker', 'run',
-			'-e', 'GITHUB_TOKEN',
-			'-v', `${process.env['VSCODE_HOST_MOUNT']}:/root/vscode`,
-			'-v', `${process.env['VSCODE_HOST_MOUNT']}/.build/.netrc:/root/.netrc`,
-			'-v', `${process.env['VSCODE_NPMRC_PATH']}:/root/.npmrc`,
-			'-w', path.resolve('/root/vscode', dir),
-			process.env['VSCODE_REMOTE_DEPENDENCIES_CONTAINER_NAME'],
-			'sh', '-c', `\"chown -R root:root ${path.resolve('/root/vscode', dir)} && export PATH="/root/vscode/.build/nodejs-musl/usr/local/bin:$PATH" && npm i -g node-gyp-build && npm ci\"`
-		], syncOpts);
-		run('sudo', ['chown', '-R', `${userinfo.uid}:${userinfo.gid}`, `${path.resolve(root, dir)}`], syncOpts);
+		run(
+			"sudo",
+			[
+				"docker",
+				"run",
+				"-e",
+				"GITHUB_TOKEN",
+				"-v",
+				`${process.env["VSCODE_HOST_MOUNT"]}:/root/vscode`,
+				"-v",
+				`${process.env["VSCODE_HOST_MOUNT"]}/.build/.netrc:/root/.netrc`,
+				"-v",
+				`${process.env["VSCODE_NPMRC_PATH"]}:/root/.npmrc`,
+				"-w",
+				path.resolve("/root/vscode", dir),
+				process.env["VSCODE_REMOTE_DEPENDENCIES_CONTAINER_NAME"],
+				"sh",
+				"-c",
+				`\"chown -R root:root ${path.resolve("/root/vscode", dir)} && export PATH="/root/vscode/.build/nodejs-musl/usr/local/bin:$PATH" && npm i -g node-gyp-build && npm ci\"`,
+			],
+			syncOpts,
+		);
+		run(
+			"sudo",
+			[
+				"chown",
+				"-R",
+				`${userinfo.uid}:${userinfo.gid}`,
+				`${path.resolve(root, dir)}`,
+			],
+			syncOpts,
+		);
 	} else {
-		log(dir, 'Installing dependencies...');
-		const output = await spawnAsync(npm, command.split(' '), finalOpts);
+		log(dir, "Installing dependencies...");
+		const output = await spawnAsync(npm, command.split(" "), finalOpts);
 		if (output.trim()) {
-			for (const line of output.trim().split('\n')) {
+			for (const line of output.trim().split("\n")) {
 				log(dir, line);
 			}
 		}
@@ -99,22 +164,34 @@ async function npmInstallAsync(dir: string, opts?: child_process.SpawnOptions): 
 }
 
 function setNpmrcConfig(dir: string, env: NodeJS.ProcessEnv) {
-	const npmrcPath = path.join(root, dir, '.npmrc');
-	const lines = fs.readFileSync(npmrcPath, 'utf8').split('\n');
+	const npmrcPath = path.join(root, dir, ".npmrc");
+	const lines = fs.readFileSync(npmrcPath, "utf8").split("\n");
 
 	for (const line of lines) {
 		const trimmedLine = line.trim();
-		if (trimmedLine && !trimmedLine.startsWith('#')) {
-			const [key, value] = trimmedLine.split('=');
-			env[`npm_config_${key}`] = value.replace(/^"(.*)"$/, '$1');
+		if (trimmedLine && !trimmedLine.startsWith("#")) {
+			const [key, value] = trimmedLine.split("=");
+			env[`npm_config_${key}`] = value.replace(/^"(.*)"$/, "$1");
 		}
 	}
 
 	// Use our bundled node-gyp version
-	env['npm_config_node_gyp'] =
-		process.platform === 'win32'
-			? path.join(import.meta.dirname, 'gyp', 'node_modules', '.bin', 'node-gyp.cmd')
-			: path.join(import.meta.dirname, 'gyp', 'node_modules', '.bin', 'node-gyp');
+	env["npm_config_node_gyp"] =
+		process.platform === "win32"
+			? path.join(
+					import.meta.dirname,
+					"gyp",
+					"node_modules",
+					".bin",
+					"node-gyp.cmd",
+				)
+			: path.join(
+					import.meta.dirname,
+					"gyp",
+					"node_modules",
+					".bin",
+					"node-gyp",
+				);
 
 	// Force node-gyp to use process.config on macOS
 	// which defines clang variable as expected. Otherwise we
@@ -124,31 +201,31 @@ function setNpmrcConfig(dir: string, env: NodeJS.ProcessEnv) {
 	// the correct clang variable. So keep the version check
 	// in preinstall sync with this logic.
 	// Change was first introduced in https://github.com/nodejs/node/commit/6e0a2bb54c5bbeff0e9e33e1a0c683ed980a8a0f
-	if ((dir === 'remote' || dir === 'build') && process.platform === 'darwin') {
-		env['npm_config_force_process_config'] = 'true';
+	if ((dir === "remote" || dir === "build") && process.platform === "darwin") {
+		env["npm_config_force_process_config"] = "true";
 	} else {
-		delete env['npm_config_force_process_config'];
+		delete env["npm_config_force_process_config"];
 	}
 
-	if (dir === 'build') {
+	if (dir === "build") {
 		// Temporarily lock the target version.
 		// Node 24 V8 headers require C++20, but tree-sitter hard-pin "c++17" in their binding.gyp.
 		// This is fixed in v0.25.1 however the version is not published to npm, refs
 		// https://github.com/tree-sitter/node-tree-sitter/issues/268.
 		// env['npm_config_target'] = process.versions.node;
-		env['npm_config_arch'] = process.arch;
+		env["npm_config_arch"] = process.arch;
 	}
 }
 
 function removeParcelWatcherPrebuild(dir: string) {
-	const parcelModuleFolder = path.join(root, dir, 'node_modules', '@parcel');
+	const parcelModuleFolder = path.join(root, dir, "node_modules", "@parcel");
 	if (!fs.existsSync(parcelModuleFolder)) {
 		return;
 	}
 
 	const parcelModules = fs.readdirSync(parcelModuleFolder);
 	for (const moduleName of parcelModules) {
-		if (moduleName.startsWith('watcher-')) {
+		if (moduleName.startsWith("watcher-")) {
 			const modulePath = path.join(parcelModuleFolder, moduleName);
 			fs.rmSync(modulePath, { recursive: true, force: true });
 			log(dir, `Removed @parcel/watcher prebuilt module ${modulePath}`);
@@ -160,12 +237,12 @@ function getNpmrcConfigKeys(npmrcPath: string): string[] {
 	if (!fs.existsSync(npmrcPath)) {
 		return [];
 	}
-	const lines = fs.readFileSync(npmrcPath, 'utf8').split('\n');
+	const lines = fs.readFileSync(npmrcPath, "utf8").split("\n");
 	const keys: string[] = [];
 	for (const line of lines) {
 		const trimmedLine = line.trim();
-		if (trimmedLine && !trimmedLine.startsWith('#')) {
-			const eqIndex = trimmedLine.indexOf('=');
+		if (trimmedLine && !trimmedLine.startsWith("#")) {
+			const eqIndex = trimmedLine.indexOf("=");
 			if (eqIndex > 0) {
 				keys.push(trimmedLine.substring(0, eqIndex).trim());
 			}
@@ -175,44 +252,54 @@ function getNpmrcConfigKeys(npmrcPath: string): string[] {
 }
 
 function clearInheritedNpmrcConfig(dir: string, env: NodeJS.ProcessEnv): void {
-	const dirNpmrcPath = path.join(root, dir, '.npmrc');
+	const dirNpmrcPath = path.join(root, dir, ".npmrc");
 	if (fs.existsSync(dirNpmrcPath)) {
 		return;
 	}
 
 	for (const key of rootNpmrcConfigKeys) {
-		const envKey = `npm_config_${key.replace(/-/g, '_')}`;
+		const envKey = `npm_config_${key.replace(/-/g, "_")}`;
 		delete env[envKey];
 	}
 }
 
-function ensureAgentHarnessLink(sourceRelativePath: string, linkPath: string): 'existing' | 'junction' | 'symlink' | 'hard link' {
+function ensureAgentHarnessLink(
+	sourceRelativePath: string,
+	linkPath: string,
+): "existing" | "junction" | "symlink" | "hard link" {
 	if (fs.existsSync(linkPath)) {
-		return 'existing';
+		return "existing";
 	}
 
 	const sourcePath = path.resolve(path.dirname(linkPath), sourceRelativePath);
 	const isDirectory = fs.statSync(sourcePath).isDirectory();
 
 	try {
-		if (process.platform === 'win32' && isDirectory) {
-			fs.symlinkSync(sourcePath, linkPath, 'junction');
-			return 'junction';
+		if (process.platform === "win32" && isDirectory) {
+			fs.symlinkSync(sourcePath, linkPath, "junction");
+			return "junction";
 		}
 
-		fs.symlinkSync(sourceRelativePath, linkPath, isDirectory ? 'dir' : 'file');
-		return 'symlink';
+		fs.symlinkSync(sourceRelativePath, linkPath, isDirectory ? "dir" : "file");
+		return "symlink";
 	} catch (error) {
-		if (process.platform === 'win32' && !isDirectory && (error as NodeJS.ErrnoException).code === 'EPERM') {
+		if (
+			process.platform === "win32" &&
+			!isDirectory &&
+			(error as NodeJS.ErrnoException).code === "EPERM"
+		) {
 			fs.linkSync(sourcePath, linkPath);
-			return 'hard link';
+			return "hard link";
 		}
 
 		throw error;
 	}
 }
 
-async function runWithConcurrency(tasks: (() => Promise<void>)[], concurrency: number): Promise<void> {
+async function runWithConcurrency(
+	tasks: (() => Promise<void>)[],
+	concurrency: number,
+): Promise<void> {
 	const errors: Error[] = [];
 	let index = 0;
 
@@ -227,7 +314,9 @@ async function runWithConcurrency(tasks: (() => Promise<void>)[], concurrency: n
 		}
 	}
 
-	await Promise.all(Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker()));
+	await Promise.all(
+		Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker()),
+	);
 
 	if (errors.length > 0) {
 		for (const err of errors) {
@@ -238,10 +327,12 @@ async function runWithConcurrency(tasks: (() => Promise<void>)[], concurrency: n
 }
 
 async function main() {
-	if (!process.env['VSCODE_FORCE_INSTALL'] && isUpToDate()) {
-		log('.', 'All dependencies up to date, skipping postinstall.');
-		child_process.execSync('git config pull.rebase merges');
-		child_process.execSync('git config blame.ignoreRevsFile .git-blame-ignore-revs');
+	if (!process.env["VSCODE_FORCE_INSTALL"] && isUpToDate()) {
+		log(".", "All dependencies up to date, skipping postinstall.");
+		child_process.execSync("git config pull.rebase merges");
+		child_process.execSync(
+			"git config blame.ignoreRevsFile .git-blame-ignore-revs",
+		);
 		return;
 	}
 
@@ -251,20 +342,28 @@ async function main() {
 	const parallelTasks: (() => Promise<void>)[] = [];
 
 	for (const dir of dirs) {
-		if (dir === '') {
+		if (dir === "") {
 			removeParcelWatcherPrebuild(dir);
 			continue; // already executed in root
 		}
 
-		if (dir === 'build') {
+		if (dir === "build") {
 			nativeTasks.push(() => {
 				const env: NodeJS.ProcessEnv = { ...process.env };
-				if (process.env['CC']) { env['CC'] = 'gcc'; }
-				if (process.env['CXX']) { env['CXX'] = 'g++'; }
-				if (process.env['CXXFLAGS']) { env['CXXFLAGS'] = ''; }
-				if (process.env['LDFLAGS']) { env['LDFLAGS'] = ''; }
-				setNpmrcConfig('build', env);
-				return npmInstallAsync('build', { env });
+				if (process.env["CC"]) {
+					env["CC"] = "gcc";
+				}
+				if (process.env["CXX"]) {
+					env["CXX"] = "g++";
+				}
+				if (process.env["CXXFLAGS"]) {
+					env["CXXFLAGS"] = "";
+				}
+				if (process.env["LDFLAGS"]) {
+					env["LDFLAGS"] = "";
+				}
+				setNpmrcConfig("build", env);
+				return npmInstallAsync("build", { env });
 			});
 			continue;
 		}
@@ -273,23 +372,35 @@ async function main() {
 			const remoteDir = dir;
 			nativeTasks.push(() => {
 				const env: NodeJS.ProcessEnv = { ...process.env };
-				if (process.env['VSCODE_REMOTE_CC']) {
-					env['CC'] = process.env['VSCODE_REMOTE_CC'];
+				if (process.env["VSCODE_REMOTE_CC"]) {
+					env["CC"] = process.env["VSCODE_REMOTE_CC"];
 				} else {
-					delete env['CC'];
+					delete env["CC"];
 				}
-				if (process.env['VSCODE_REMOTE_CXX']) {
-					env['CXX'] = process.env['VSCODE_REMOTE_CXX'];
+				if (process.env["VSCODE_REMOTE_CXX"]) {
+					env["CXX"] = process.env["VSCODE_REMOTE_CXX"];
 				} else {
-					delete env['CXX'];
+					delete env["CXX"];
 				}
-				if (process.env['CXXFLAGS']) { delete env['CXXFLAGS']; }
-				if (process.env['CFLAGS']) { delete env['CFLAGS']; }
-				if (process.env['LDFLAGS']) { delete env['LDFLAGS']; }
-				if (process.env['VSCODE_REMOTE_CXXFLAGS']) { env['CXXFLAGS'] = process.env['VSCODE_REMOTE_CXXFLAGS']; }
-				if (process.env['VSCODE_REMOTE_LDFLAGS']) { env['LDFLAGS'] = process.env['VSCODE_REMOTE_LDFLAGS']; }
-				if (process.env['VSCODE_REMOTE_NODE_GYP']) { env['npm_config_node_gyp'] = process.env['VSCODE_REMOTE_NODE_GYP']; }
-				setNpmrcConfig('remote', env);
+				if (process.env["CXXFLAGS"]) {
+					delete env["CXXFLAGS"];
+				}
+				if (process.env["CFLAGS"]) {
+					delete env["CFLAGS"];
+				}
+				if (process.env["LDFLAGS"]) {
+					delete env["LDFLAGS"];
+				}
+				if (process.env["VSCODE_REMOTE_CXXFLAGS"]) {
+					env["CXXFLAGS"] = process.env["VSCODE_REMOTE_CXXFLAGS"];
+				}
+				if (process.env["VSCODE_REMOTE_LDFLAGS"]) {
+					env["LDFLAGS"] = process.env["VSCODE_REMOTE_LDFLAGS"];
+				}
+				if (process.env["VSCODE_REMOTE_NODE_GYP"]) {
+					env["npm_config_node_gyp"] = process.env["VSCODE_REMOTE_NODE_GYP"];
+				}
+				setNpmrcConfig("remote", env);
 				return npmInstallAsync(remoteDir, { env });
 			});
 			continue;
@@ -310,48 +421,79 @@ async function main() {
 
 	// JS-only dirs run in parallel
 	const concurrency = Math.min(os.cpus().length, 8);
-	log('.', `Running ${parallelTasks.length} npm installs with concurrency ${concurrency}...`);
+	log(
+		".",
+		`Running ${parallelTasks.length} npm installs with concurrency ${concurrency}...`,
+	);
 	await runWithConcurrency(parallelTasks, concurrency);
 
-	child_process.execSync('git config pull.rebase merges');
-	child_process.execSync('git config blame.ignoreRevsFile .git-blame-ignore-revs');
+	child_process.execSync("git config pull.rebase merges");
+	child_process.execSync(
+		"git config blame.ignoreRevsFile .git-blame-ignore-revs",
+	);
 
 	fs.writeFileSync(stateFile, JSON.stringify(_state));
 	fs.writeFileSync(stateContentsFile, JSON.stringify(computeContents()));
 
 	// Symlink .claude/ files to their canonical locations to test Claude agent harness
-	const claudeDir = path.join(root, '.claude');
+	const claudeDir = path.join(root, ".claude");
 	fs.mkdirSync(claudeDir, { recursive: true });
 
-	const claudeMdLink = path.join(claudeDir, 'CLAUDE.md');
-	const claudeMdLinkType = ensureAgentHarnessLink(path.join('..', '.github', 'copilot-instructions.md'), claudeMdLink);
-	if (claudeMdLinkType !== 'existing') {
-		log('.', `Created ${claudeMdLinkType} .claude/CLAUDE.md -> .github/copilot-instructions.md`);
+	const claudeMdLink = path.join(claudeDir, "CLAUDE.md");
+	const claudeMdLinkType = ensureAgentHarnessLink(
+		path.join("..", ".github", "copilot-instructions.md"),
+		claudeMdLink,
+	);
+	if (claudeMdLinkType !== "existing") {
+		log(
+			".",
+			`Created ${claudeMdLinkType} .claude/CLAUDE.md -> .github/copilot-instructions.md`,
+		);
 	}
 
-	const claudeSkillsLink = path.join(claudeDir, 'skills');
-	const claudeSkillsLinkType = ensureAgentHarnessLink(path.join('..', '.agents', 'skills'), claudeSkillsLink);
-	if (claudeSkillsLinkType !== 'existing') {
-		log('.', `Created ${claudeSkillsLinkType} .claude/skills -> .agents/skills`);
+	const claudeSkillsLink = path.join(claudeDir, "skills");
+	const claudeSkillsLinkType = ensureAgentHarnessLink(
+		path.join("..", ".agents", "skills"),
+		claudeSkillsLink,
+	);
+	if (claudeSkillsLinkType !== "existing") {
+		log(
+			".",
+			`Created ${claudeSkillsLinkType} .claude/skills -> .agents/skills`,
+		);
 	}
 
 	// Temporary: patch @github/copilot-sdk session.js to fix ESM import
 	// (missing .js extension on vscode-jsonrpc/node). Fixed upstream in v0.1.32.
 	// TODO: Remove once @github/copilot-sdk is updated to >=0.1.32
-	for (const dir of ['', 'remote']) {
-		const sessionFile = path.join(root, dir, 'node_modules', '@github', 'copilot-sdk', 'dist', 'session.js');
+	for (const dir of ["", "remote"]) {
+		const sessionFile = path.join(
+			root,
+			dir,
+			"node_modules",
+			"@github",
+			"copilot-sdk",
+			"dist",
+			"session.js",
+		);
 		if (fs.existsSync(sessionFile)) {
-			const content = fs.readFileSync(sessionFile, 'utf8');
-			const patched = content.replace(/from "vscode-jsonrpc\/node"/g, 'from "vscode-jsonrpc/node.js"');
+			const content = fs.readFileSync(sessionFile, "utf8");
+			const patched = content.replace(
+				/from "vscode-jsonrpc\/node"/g,
+				'from "vscode-jsonrpc/node.js"',
+			);
 			if (content !== patched) {
 				fs.writeFileSync(sessionFile, patched);
-				log(dir || '.', 'Patched @github/copilot-sdk session.js (vscode-jsonrpc ESM import fix)');
+				log(
+					dir || ".",
+					"Patched @github/copilot-sdk session.js (vscode-jsonrpc ESM import fix)",
+				);
 			}
 		}
 	}
 }
 
-main().catch(err => {
+main().catch((err) => {
 	console.error(err);
 	process.exit(1);
 });

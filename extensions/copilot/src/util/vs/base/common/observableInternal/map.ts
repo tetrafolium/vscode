@@ -8,11 +8,13 @@
 import { IObservable, ITransaction } from '../observable';
 import { observableValueOpts } from './observables/observableValueOpts';
 
-
 export class ObservableMap<K, V> implements Map<K, V> {
 	private readonly _data = new Map<K, V>();
 
-	private readonly _obs = observableValueOpts({ equalsFn: () => false }, this);
+	private readonly _obs = observableValueOpts(
+		{ equalsFn: () => false },
+		this,
+	);
 
 	readonly observable: IObservable<Map<K, V>> = this._obs;
 
@@ -53,7 +55,10 @@ export class ObservableMap<K, V> implements Map<K, V> {
 		}
 	}
 
-	forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: unknown): void {
+	forEach(
+		callbackfn: (value: V, key: K, map: Map<K, V>) => void,
+		thisArg?: unknown,
+	): void {
 		this._data.forEach((value, key, _map) => {
 			callbackfn.call(thisArg, value, key, this);
 		});

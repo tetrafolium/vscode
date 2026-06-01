@@ -3,7 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BasePromptElementProps, PromptElement, PromptElementProps, PromptSizing } from '@vscode/prompt-tsx';
+import {
+	BasePromptElementProps,
+	PromptElement,
+	PromptElementProps,
+	PromptSizing,
+} from '@vscode/prompt-tsx';
 import { IVSCodeExtensionContext } from '../../../platform/extContext/common/extensionContext';
 import { IFileSystemService } from '../../../platform/filesystem/common/fileSystemService';
 import { FileType } from '../../../platform/filesystem/common/fileTypes';
@@ -23,8 +28,10 @@ export interface MemoryContextPromptProps extends BasePromptElementProps {
 export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps> {
 	constructor(
 		props: any,
-		@IVSCodeExtensionContext private readonly extensionContext: IVSCodeExtensionContext,
-		@IFileSystemService private readonly fileSystemService: IFileSystemService,
+		@IVSCodeExtensionContext
+		private readonly extensionContext: IVSCodeExtensionContext,
+		@IFileSystemService
+		private readonly fileSystemService: IFileSystemService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super(props);
@@ -32,7 +39,9 @@ export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps>
 
 	async render() {
 		const userMemoryContent = await this.getUserMemoryContent();
-		const sessionMemoryFiles = await this.getSessionMemoryFiles(this.props.sessionResource);
+		const sessionMemoryFiles = await this.getSessionMemoryFiles(
+			this.props.sessionResource,
+		);
 		const localRepoMemoryFiles = await this.getLocalRepoMemoryFiles();
 
 		this._sendContextReadTelemetry(
@@ -44,23 +53,58 @@ export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps>
 
 		return (
 			<>
-				<Tag name='userMemory'>
-					{userMemoryContent
-						? <>The following are your persistent user memory notes. These persist across all workspaces and conversations.<br /><br />{userMemoryContent}</>
-						: <>No user preferences or notes saved yet. Use the {ToolName.Memory} tool to store persistent notes under /memories/.</>
-					}
+				<Tag name="userMemory">
+					{userMemoryContent ? (
+						<>
+							The following are your persistent user memory notes.
+							These persist across all workspaces and
+							conversations.
+							<br />
+							<br />
+							{userMemoryContent}
+						</>
+					) : (
+						<>
+							No user preferences or notes saved yet. Use the{' '}
+							{ToolName.Memory} tool to store persistent notes
+							under /memories/.
+						</>
+					)}
 				</Tag>
-				<Tag name='sessionMemory'>
-					{sessionMemoryFiles && sessionMemoryFiles.length > 0
-						? <>The following files exist in your session memory (/memories/session/). Use the {ToolName.Memory} tool to read them if needed.<br /><br />{sessionMemoryFiles.join('\n')}</>
-						: <>Session memory (/memories/session/) is empty. No session notes have been created yet.</>
-					}
+				<Tag name="sessionMemory">
+					{sessionMemoryFiles && sessionMemoryFiles.length > 0 ? (
+						<>
+							The following files exist in your session memory
+							(/memories/session/). Use the {ToolName.Memory} tool
+							to read them if needed.
+							<br />
+							<br />
+							{sessionMemoryFiles.join('\n')}
+						</>
+					) : (
+						<>
+							Session memory (/memories/session/) is empty. No
+							session notes have been created yet.
+						</>
+					)}
 				</Tag>
-				<Tag name='repoMemory'>
-					{localRepoMemoryFiles && localRepoMemoryFiles.length > 0
-						? <>The following files exist in your repository memory (/memories/repo/). These are scoped to the current workspace. Use the {ToolName.Memory} tool to read them if needed.<br /><br />{localRepoMemoryFiles.join('\n')}</>
-						: <>Repository memory (/memories/repo/) is empty. No workspace-scoped notes have been created yet.</>
-					}
+				<Tag name="repoMemory">
+					{localRepoMemoryFiles && localRepoMemoryFiles.length > 0 ? (
+						<>
+							The following files exist in your repository memory
+							(/memories/repo/). These are scoped to the current
+							workspace. Use the {ToolName.Memory} tool to read
+							them if needed.
+							<br />
+							<br />
+							{localRepoMemoryFiles.join('\n')}
+						</>
+					) : (
+						<>
+							Repository memory (/memories/repo/) is empty. No
+							workspace-scoped notes have been created yet.
+						</>
+					)}
 				</Tag>
 			</>
 		);
@@ -81,8 +125,11 @@ export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps>
 			return undefined;
 		}
 
-		const entries = await this.fileSystemService.readDirectory(memoryDirUri);
-		const fileEntries = entries.filter(([name, type]) => type === FileType.File && !name.startsWith('.'));
+		const entries =
+			await this.fileSystemService.readDirectory(memoryDirUri);
+		const fileEntries = entries.filter(
+			([name, type]) => type === FileType.File && !name.startsWith('.'),
+		);
 		if (fileEntries.length === 0) {
 			return undefined;
 		}
@@ -109,14 +156,20 @@ export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps>
 		return lines.slice(0, MAX_USER_MEMORY_LINES).join('\n');
 	}
 
-	private async getSessionMemoryFiles(sessionResource?: string): Promise<string[] | undefined> {
+	private async getSessionMemoryFiles(
+		sessionResource?: string,
+	): Promise<string[] | undefined> {
 		const storageUri = this.extensionContext.storageUri;
 		if (!storageUri || !sessionResource) {
 			return undefined;
 		}
 		// Use the same logic as the memory tool to resolve the current session directory
 		const sessionId = extractSessionId(sessionResource);
-		const sessionDirUri = URI.joinPath(URI.from(storageUri), MEMORY_BASE_DIR, sessionId);
+		const sessionDirUri = URI.joinPath(
+			URI.from(storageUri),
+			MEMORY_BASE_DIR,
+			sessionId,
+		);
 		try {
 			const stat = await this.fileSystemService.stat(sessionDirUri);
 			if (stat.type !== FileType.Directory) {
@@ -127,7 +180,8 @@ export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps>
 		}
 
 		const files: string[] = [];
-		const entries = await this.fileSystemService.readDirectory(sessionDirUri);
+		const entries =
+			await this.fileSystemService.readDirectory(sessionDirUri);
 		for (const [fileName, fileType] of entries) {
 			if (fileType === FileType.File && !fileName.startsWith('.')) {
 				files.push(`/memories/session/${fileName}`);
@@ -142,7 +196,11 @@ export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps>
 		if (!storageUri) {
 			return undefined;
 		}
-		const repoDirUri = URI.joinPath(URI.from(storageUri), MEMORY_BASE_DIR, 'repo');
+		const repoDirUri = URI.joinPath(
+			URI.from(storageUri),
+			MEMORY_BASE_DIR,
+			'repo',
+		);
 		try {
 			const stat = await this.fileSystemService.stat(repoDirUri);
 			if (stat.type !== FileType.Directory) {
@@ -163,7 +221,12 @@ export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps>
 		return files.length > 0 ? files : undefined;
 	}
 
-	private _sendContextReadTelemetry(hasUserMemory: boolean, userMemoryLength: number, sessionFileCount: number, sessionMemoryLength: number): void {
+	private _sendContextReadTelemetry(
+		hasUserMemory: boolean,
+		userMemoryLength: number,
+		sessionFileCount: number,
+		sessionMemoryLength: number,
+	): void {
 		/* __GDPR__
 			"memoryContextRead" : {
 				"owner": "digitarald",
@@ -174,13 +237,17 @@ export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps>
 				"sessionMemoryLength": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true, "comment": "String length of session memory file listing" }
 			}
 		*/
-		this.telemetryService.sendMSFTTelemetryEvent('memoryContextRead', {
-			hasUserMemory: String(hasUserMemory),
-		}, {
-			userMemoryLength,
-			sessionFileCount,
-			sessionMemoryLength,
-		});
+		this.telemetryService.sendMSFTTelemetryEvent(
+			'memoryContextRead',
+			{
+				hasUserMemory: String(hasUserMemory),
+			},
+			{
+				userMemoryLength,
+				sessionFileCount,
+				sessionMemoryLength,
+			},
+		);
 	}
 }
 
@@ -189,34 +256,72 @@ export class MemoryContextPrompt extends PromptElement<MemoryContextPromptProps>
  * Covers all three memory tiers: user, session, and repository.
  */
 export class MemoryInstructionsPrompt extends PromptElement<BasePromptElementProps> {
-	constructor(
-		props: PromptElementProps<BasePromptElementProps>,
-	) {
+	constructor(props: PromptElementProps<BasePromptElementProps>) {
 		super(props);
 	}
 
 	async render(state: void, sizing: PromptSizing) {
-		return <Tag name='memoryInstructions'>
-			As you work, consult your memory files to build on previous experience. When you encounter a mistake that seems like it could be common, check your memory for relevant notes — and if nothing is written yet, record what you learned.<br />
-			<br />
-			<Tag name='memoryScopes'>
-				Memory is organized into the scopes defined below:<br />
-				- **User memory** (`/memories/`): Persistent notes that survive across all workspaces and conversations. Store user preferences, common patterns, frequently used commands, and general insights here. First {MAX_USER_MEMORY_LINES} lines are loaded into your context automatically.<br />
-				- **Session memory** (`/memories/session/`): Notes for the current conversation only. Store task-specific context, in-progress notes, and temporary working state here. Session files are listed in your context but not loaded automatically — use the memory tool to read them when needed.<br />
-				- **Repository memory** (`/memories/repo/`): Repository-scoped facts stored locally in the workspace. Store codebase conventions, build commands, project structure facts, and verified practices here.<br />
+		return (
+			<Tag name="memoryInstructions">
+				As you work, consult your memory files to build on previous
+				experience. When you encounter a mistake that seems like it
+				could be common, check your memory for relevant notes — and if
+				nothing is written yet, record what you learned.
+				<br />
+				<br />
+				<Tag name="memoryScopes">
+					Memory is organized into the scopes defined below:
+					<br />- **User memory** (`/memories/`): Persistent notes
+					that survive across all workspaces and conversations. Store
+					user preferences, common patterns, frequently used commands,
+					and general insights here. First {
+						MAX_USER_MEMORY_LINES
+					}{' '}
+					lines are loaded into your context automatically.
+					<br />
+					- **Session memory** (`/memories/session/`): Notes for the
+					current conversation only. Store task-specific context,
+					in-progress notes, and temporary working state here. Session
+					files are listed in your context but not loaded
+					automatically — use the memory tool to read them when
+					needed.
+					<br />
+					- **Repository memory** (`/memories/repo/`):
+					Repository-scoped facts stored locally in the workspace.
+					Store codebase conventions, build commands, project
+					structure facts, and verified practices here.
+					<br />
+				</Tag>
+				<br />
+				<Tag name="memoryGuidelines">
+					Guidelines for user memory (`/memories/`):
+					<br />
+					- Keep entries short and concise — use brief bullet points
+					or single-line facts, not lengthy prose. User memory is
+					loaded into context automatically, so brevity is critical.
+					<br />
+					- Organize by topic in separate files (e.g., `debugging.md`,
+					`patterns.md`).
+					<br />
+					- Record only key insights: problem constraints, strategies
+					that worked or failed, and lessons learned.
+					<br />
+					- Update or remove memories that turn out to be wrong or
+					outdated.
+					<br />
+					- Do not create new files unless necessary — prefer updating
+					existing files.
+					<br />
+					Guidelines for session memory (`/memories/session/`):
+					<br />
+					- Use session memory to keep plans up to date and reviewing
+					historical summaries.
+					<br />
+					- Do not create unnecessary session memory files. You should
+					only view and update existing session files.
+					<br />
+				</Tag>
 			</Tag>
-			<br />
-			<Tag name='memoryGuidelines'>
-				Guidelines for user memory (`/memories/`):<br />
-				- Keep entries short and concise — use brief bullet points or single-line facts, not lengthy prose. User memory is loaded into context automatically, so brevity is critical.<br />
-				- Organize by topic in separate files (e.g., `debugging.md`, `patterns.md`).<br />
-				- Record only key insights: problem constraints, strategies that worked or failed, and lessons learned.<br />
-				- Update or remove memories that turn out to be wrong or outdated.<br />
-				- Do not create new files unless necessary — prefer updating existing files.<br />
-				Guidelines for session memory (`/memories/session/`):<br />
-				- Use session memory to keep plans up to date and reviewing historical summaries.<br />
-				- Do not create unnecessary session memory files. You should only view and update existing session files.<br />
-			</Tag>
-		</Tag>;
+		);
 	}
 }

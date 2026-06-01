@@ -69,12 +69,12 @@ export interface McAuthOptions {
  * by `IOctoKitService.postCopilotAgentJob`.
  */
 export class MissionControlApiClient {
-
 	constructor(
-		@IAuthenticationService private readonly _authService: IAuthenticationService,
+		@IAuthenticationService
+		private readonly _authService: IAuthenticationService,
 		@IFetcherService private readonly _fetcherService: IFetcherService,
 		@ILogService private readonly _logService: ILogService,
-	) { }
+	) {}
 
 	/**
 	 * Create a Mission Control session for the given repo and agent task id.
@@ -87,7 +87,10 @@ export class MissionControlApiClient {
 		agentTaskId: string,
 		authOptions: McAuthOptions,
 	): Promise<McSessionCreateResult> {
-		const { url, headers } = await this._buildRequest(SESSIONS_PATH, authOptions);
+		const { url, headers } = await this._buildRequest(
+			SESSIONS_PATH,
+			authOptions,
+		);
 		const res = await this._fetcherService.fetch(url, {
 			callSite: 'copilotcli.mc.createSession',
 			method: 'POST',
@@ -101,9 +104,11 @@ export class MissionControlApiClient {
 		});
 		if (!res.ok) {
 			const body = await res.text().catch(() => '');
-			throw new Error(`Mission Control session creation failed: ${res.status} ${res.statusText} - ${body}`);
+			throw new Error(
+				`Mission Control session creation failed: ${res.status} ${res.statusText} - ${body}`,
+			);
 		}
-		const data = await res.json() as { id: string; task_id?: string };
+		const data = (await res.json()) as { id: string; task_id?: string };
 		return { id: data.id, taskId: data.task_id ?? agentTaskId };
 	}
 
@@ -120,25 +125,35 @@ export class MissionControlApiClient {
 		completedCommandIds: readonly string[],
 	): Promise<boolean> {
 		try {
-			const { url, headers } = await this._buildRequest(`${SESSIONS_PATH}/${sessionId}/events`, {});
+			const { url, headers } = await this._buildRequest(
+				`${SESSIONS_PATH}/${sessionId}/events`,
+				{},
+			);
 			const res = await this._fetcherService.fetch(url, {
 				callSite: 'copilotcli.mc.submitEvents',
 				method: 'POST',
 				headers,
 				json: {
 					events,
-					completed_command_ids: completedCommandIds.length > 0 ? completedCommandIds : undefined,
+					completed_command_ids:
+						completedCommandIds.length > 0
+							? completedCommandIds
+							: undefined,
 				},
 				timeout: REQUEST_TIMEOUT_MS,
 			});
 			if (!res.ok) {
 				const body = await res.text().catch(() => '');
-				this._logService.warn(`[MissionControlApiClient] submitEvents failed: ${res.status} ${res.statusText} - ${body}`);
+				this._logService.warn(
+					`[MissionControlApiClient] submitEvents failed: ${res.status} ${res.statusText} - ${body}`,
+				);
 				return false;
 			}
 			return true;
 		} catch (err) {
-			this._logService.warn(`[MissionControlApiClient] submitEvents error: ${err}`);
+			this._logService.warn(
+				`[MissionControlApiClient] submitEvents error: ${err}`,
+			);
 			return false;
 		}
 	}
@@ -149,7 +164,10 @@ export class MissionControlApiClient {
 	 */
 	async getPendingCommands(sessionId: string): Promise<McCommand[]> {
 		try {
-			const { url, headers } = await this._buildRequest(`${SESSIONS_PATH}/${sessionId}/commands`, {});
+			const { url, headers } = await this._buildRequest(
+				`${SESSIONS_PATH}/${sessionId}/commands`,
+				{},
+			);
 			const res = await this._fetcherService.fetch(url, {
 				callSite: 'copilotcli.mc.getPendingCommands',
 				method: 'GET',
@@ -159,7 +177,7 @@ export class MissionControlApiClient {
 			if (!res.ok) {
 				return [];
 			}
-			const data = await res.json() as { commands?: McCommand[] };
+			const data = (await res.json()) as { commands?: McCommand[] };
 			return data.commands ?? [];
 		} catch {
 			return [];
@@ -172,7 +190,10 @@ export class MissionControlApiClient {
 	 */
 	async deleteSession(sessionId: string): Promise<void> {
 		try {
-			const { url, headers } = await this._buildRequest(`${SESSIONS_PATH}/${sessionId}`, {});
+			const { url, headers } = await this._buildRequest(
+				`${SESSIONS_PATH}/${sessionId}`,
+				{},
+			);
 			await this._fetcherService.fetch(url, {
 				callSite: 'copilotcli.mc.deleteSession',
 				// FetchOptions.method is typed narrowly (GET/POST/PUT) but the
@@ -182,7 +203,9 @@ export class MissionControlApiClient {
 				timeout: REQUEST_TIMEOUT_MS,
 			});
 		} catch (err) {
-			this._logService.warn(`[MissionControlApiClient] deleteSession error: ${err}`);
+			this._logService.warn(
+				`[MissionControlApiClient] deleteSession error: ${err}`,
+			);
 		}
 	}
 
@@ -202,8 +225,12 @@ export class MissionControlApiClient {
 		authOptions: McAuthOptions,
 	): Promise<{ url: string; headers: Record<string, string> }> {
 		const session = authOptions.createIfNone
-			? await this._authService.getGitHubSession('permissive', { createIfNone: authOptions.createIfNone })
-			: await this._authService.getGitHubSession('permissive', { silent: true });
+			? await this._authService.getGitHubSession('permissive', {
+					createIfNone: authOptions.createIfNone,
+				})
+			: await this._authService.getGitHubSession('permissive', {
+					silent: true,
+				});
 		if (!session?.accessToken) {
 			throw new PermissiveAuthRequiredError();
 		}
@@ -216,7 +243,7 @@ export class MissionControlApiClient {
 
 		const url = `${baseUrl.replace(/\/+$/, '')}${path}`;
 		const headers: Record<string, string> = {
-			'Authorization': `Bearer ${session.accessToken}`,
+			Authorization: `Bearer ${session.accessToken}`,
 			'Copilot-Integration-Id': INTEGRATION_ID,
 		};
 		return { url, headers };

@@ -3,11 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fs from 'fs';
-import { SequencerByKey } from '../../../base/common/async.js';
-import type { Database, RunResult } from '@vscode/sqlite3';
-import type { IFileEditContent, IFileEditRecord, ISessionDatabase } from '../common/sessionDataService.js';
-import { dirname } from '../../../base/common/path.js';
+import * as fs from "fs";
+import { SequencerByKey } from "../../../base/common/async.js";
+import type { Database, RunResult } from "@vscode/sqlite3";
+import type {
+	IFileEditContent,
+	IFileEditRecord,
+	ISessionDatabase,
+} from "../common/sessionDataService.js";
+import { dirname } from "../../../base/common/path.js";
 
 /**
  * A single numbered migration. Migrations are applied in order of
@@ -42,7 +46,7 @@ export const sessionDatabaseMigrations: readonly ISessionDatabaseMigration[] = [
 				removed_lines  INTEGER,
 				PRIMARY KEY (tool_call_id, file_path)
 			)`,
-		].join(';\n'),
+		].join(";\n"),
 	},
 	{
 		version: 2,
@@ -72,14 +76,14 @@ export const sessionDatabaseMigrations: readonly ISessionDatabaseMigration[] = [
 				SELECT turn_id, tool_call_id, file_path, 'edit', before_content, after_content, added_lines, removed_lines FROM file_edits`,
 			`DROP TABLE file_edits`,
 			`ALTER TABLE file_edits_v3 RENAME TO file_edits`,
-		].join(';\n'),
+		].join(";\n"),
 	},
 	{
 		version: 4,
 		sql: [
 			`ALTER TABLE turns ADD COLUMN event_id TEXT`,
 			`CREATE INDEX IF NOT EXISTS idx_turns_event_id ON turns(event_id)`,
-		].join(';\n'),
+		].join(";\n"),
 	},
 	{
 		version: 5,
@@ -91,11 +95,15 @@ export const sessionDatabaseMigrations: readonly ISessionDatabaseMigration[] = [
 
 function dbExec(db: Database, sql: string): Promise<void> {
 	return new Promise((resolve, reject) => {
-		db.exec(sql, err => err ? reject(err) : resolve());
+		db.exec(sql, (err) => (err ? reject(err) : resolve()));
 	});
 }
 
-function dbRun(db: Database, sql: string, params: unknown[]): Promise<{ changes: number; lastID: number }> {
+function dbRun(
+	db: Database,
+	sql: string,
+	params: unknown[],
+): Promise<{ changes: number; lastID: number }> {
 	return new Promise((resolve, reject) => {
 		db.run(sql, params, function (this: RunResult, err: Error | null) {
 			if (err) {
@@ -106,37 +114,53 @@ function dbRun(db: Database, sql: string, params: unknown[]): Promise<{ changes:
 	});
 }
 
-function dbGet(db: Database, sql: string, params: unknown[]): Promise<Record<string, unknown> | undefined> {
+function dbGet(
+	db: Database,
+	sql: string,
+	params: unknown[],
+): Promise<Record<string, unknown> | undefined> {
 	return new Promise((resolve, reject) => {
-		db.get(sql, params, (err: Error | null, row: Record<string, unknown> | undefined) => {
-			if (err) {
-				return reject(err);
-			}
-			resolve(row);
-		});
+		db.get(
+			sql,
+			params,
+			(err: Error | null, row: Record<string, unknown> | undefined) => {
+				if (err) {
+					return reject(err);
+				}
+				resolve(row);
+			},
+		);
 	});
 }
 
-function dbAll(db: Database, sql: string, params: unknown[]): Promise<Record<string, unknown>[]> {
+function dbAll(
+	db: Database,
+	sql: string,
+	params: unknown[],
+): Promise<Record<string, unknown>[]> {
 	return new Promise((resolve, reject) => {
-		db.all(sql, params, (err: Error | null, rows: Record<string, unknown>[]) => {
-			if (err) {
-				return reject(err);
-			}
-			resolve(rows);
-		});
+		db.all(
+			sql,
+			params,
+			(err: Error | null, rows: Record<string, unknown>[]) => {
+				if (err) {
+					return reject(err);
+				}
+				resolve(rows);
+			},
+		);
 	});
 }
 
 function dbClose(db: Database): Promise<void> {
 	return new Promise((resolve, reject) => {
-		db.close(err => err ? reject(err) : resolve());
+		db.close((err) => (err ? reject(err) : resolve()));
 	});
 }
 
 function dbOpen(path: string): Promise<Database> {
 	return new Promise((resolve, reject) => {
-		import('@vscode/sqlite3').then(sqlite3 => {
+		import("@vscode/sqlite3").then((sqlite3) => {
 			const db = new sqlite3.default.Database(path, (err: Error | null) => {
 				if (err) {
 					return reject(err);
@@ -153,32 +177,35 @@ function dbOpen(path: string): Promise<Database> {
  * `PRAGMA user_version` are run inside a serialized transaction. After all
  * migrations complete the pragma is updated to the highest applied version.
  */
-export async function runMigrations(db: Database, migrations: readonly ISessionDatabaseMigration[]): Promise<void> {
+export async function runMigrations(
+	db: Database,
+	migrations: readonly ISessionDatabaseMigration[],
+): Promise<void> {
 	// Enable foreign key enforcement — must be set outside a transaction
 	// and every time a connection is opened.
-	await dbExec(db, 'PRAGMA foreign_keys = ON');
+	await dbExec(db, "PRAGMA foreign_keys = ON");
 
-	const row = await dbGet(db, 'PRAGMA user_version', []);
+	const row = await dbGet(db, "PRAGMA user_version", []);
 	const currentVersion = (row?.user_version as number | undefined) ?? 0;
 
 	const pending = migrations
-		.filter(m => m.version > currentVersion)
+		.filter((m) => m.version > currentVersion)
 		.sort((a, b) => a.version - b.version);
 
 	if (pending.length === 0) {
 		return;
 	}
 
-	await dbExec(db, 'BEGIN TRANSACTION');
+	await dbExec(db, "BEGIN TRANSACTION");
 	try {
 		for (const migration of pending) {
 			await dbExec(db, migration.sql);
 			// PRAGMA cannot be parameterized; the version is a trusted literal.
 			await dbExec(db, `PRAGMA user_version = ${migration.version}`);
 		}
-		await dbExec(db, 'COMMIT');
+		await dbExec(db, "COMMIT");
 	} catch (err) {
-		await dbExec(db, 'ROLLBACK');
+		await dbExec(db, "ROLLBACK");
 		throw err;
 	}
 }
@@ -194,7 +221,6 @@ export async function runMigrations(db: Database, migrations: readonly ISessionD
  * Calling {@link dispose} closes the connection.
  */
 export class SessionDatabase implements ISessionDatabase {
-
 	protected _dbPromise: Promise<Database> | undefined;
 	protected _closed: Promise<void> | true | undefined;
 	private readonly _fileEditSequencer = new SequencerByKey<string>();
@@ -226,14 +252,17 @@ export class SessionDatabase implements ISessionDatabase {
 	constructor(
 		private readonly _path: string,
 		private readonly _migrations: readonly ISessionDatabaseMigration[] = sessionDatabaseMigrations,
-	) { }
+	) {}
 
 	/**
 	 * Opens (or creates) a SQLite database at {@link path} and applies
 	 * any pending migrations. Only used in tests where synchronous
 	 * construction + immediate readiness is desired.
 	 */
-	static async open(path: string, migrations: readonly ISessionDatabaseMigration[] = sessionDatabaseMigrations): Promise<SessionDatabase> {
+	static async open(
+		path: string,
+		migrations: readonly ISessionDatabaseMigration[] = sessionDatabaseMigrations,
+	): Promise<SessionDatabase> {
 		const inst = new SessionDatabase(path, migrations);
 		await inst._ensureDb();
 		return inst;
@@ -241,7 +270,7 @@ export class SessionDatabase implements ISessionDatabase {
 
 	protected _ensureDb(): Promise<Database> {
 		if (this._closed) {
-			return Promise.reject(new Error('SessionDatabase has been disposed'));
+			return Promise.reject(new Error("SessionDatabase has been disposed"));
 		}
 		if (!this._dbPromise) {
 			this._dbPromise = (async () => {
@@ -259,7 +288,7 @@ export class SessionDatabase implements ISessionDatabase {
 				// If dispose() was called while we were opening, close immediately.
 				if (this._closed) {
 					await dbClose(db);
-					throw new Error('SessionDatabase has been disposed');
+					throw new Error("SessionDatabase has been disposed");
 				}
 				return db;
 			})();
@@ -273,8 +302,12 @@ export class SessionDatabase implements ISessionDatabase {
 	 */
 	async getAllTables(): Promise<string[]> {
 		const db = await this._ensureDb();
-		const rows = await dbAll(db, `SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`, []);
-		return rows.map(r => r.name as string);
+		const rows = await dbAll(
+			db,
+			`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`,
+			[],
+		);
+		return rows.map((r) => r.name as string);
 	}
 
 	// ---- Turns ----------------------------------------------------------
@@ -282,32 +315,38 @@ export class SessionDatabase implements ISessionDatabase {
 	createTurn(turnId: string): Promise<void> {
 		return this._track(async () => {
 			const db = await this._ensureDb();
-			await dbRun(db, 'INSERT OR IGNORE INTO turns (id) VALUES (?)', [turnId]);
+			await dbRun(db, "INSERT OR IGNORE INTO turns (id) VALUES (?)", [turnId]);
 		});
 	}
 
 	deleteTurn(turnId: string): Promise<void> {
 		return this._track(async () => {
 			const db = await this._ensureDb();
-			await dbRun(db, 'DELETE FROM turns WHERE id = ?', [turnId]);
+			await dbRun(db, "DELETE FROM turns WHERE id = ?", [turnId]);
 		});
 	}
 
 	setTurnEventId(turnId: string, eventId: string): Promise<void> {
 		return this._track(async () => {
 			const db = await this._ensureDb();
-			await dbRun(db, 'INSERT OR IGNORE INTO turns (id) VALUES (?)', [turnId]);
+			await dbRun(db, "INSERT OR IGNORE INTO turns (id) VALUES (?)", [turnId]);
 			// Only set the event ID if not already set — steering messages
 			// trigger additional user.message events within the same turn,
 			// and we must preserve the first (boundary) event ID.
-			await dbRun(db, 'UPDATE turns SET event_id = ? WHERE id = ? AND event_id IS NULL', [eventId, turnId]);
+			await dbRun(
+				db,
+				"UPDATE turns SET event_id = ? WHERE id = ? AND event_id IS NULL",
+				[eventId, turnId],
+			);
 		});
 	}
 
 	async getTurnEventId(turnId: string): Promise<string | undefined> {
 		const db = await this._ensureDb();
-		const row = await dbGet(db, 'SELECT event_id FROM turns WHERE id = ?', [turnId]);
-		return row?.event_id as string | undefined ?? undefined;
+		const row = await dbGet(db, "SELECT event_id FROM turns WHERE id = ?", [
+			turnId,
+		]);
+		return (row?.event_id as string | undefined) ?? undefined;
 	}
 
 	async getNextTurnEventId(turnId: string): Promise<string | undefined> {
@@ -327,27 +366,38 @@ export class SessionDatabase implements ISessionDatabase {
 				ORDER BY rowid LIMIT 1`,
 			[turnId],
 		);
-		return row?.event_id as string | undefined ?? undefined;
+		return (row?.event_id as string | undefined) ?? undefined;
 	}
 
 	async getFirstTurnEventId(): Promise<string | undefined> {
 		const db = await this._ensureDb();
-		const row = await dbGet(db, 'SELECT event_id FROM turns ORDER BY rowid LIMIT 1', []);
-		return row?.event_id as string | undefined ?? undefined;
+		const row = await dbGet(
+			db,
+			"SELECT event_id FROM turns ORDER BY rowid LIMIT 1",
+			[],
+		);
+		return (row?.event_id as string | undefined) ?? undefined;
 	}
 
 	setTurnCheckpointRef(turnId: string, ref: string): Promise<void> {
 		return this._track(async () => {
 			const db = await this._ensureDb();
-			await dbRun(db, 'INSERT OR IGNORE INTO turns (id) VALUES (?)', [turnId]);
-			await dbRun(db, 'UPDATE turns SET checkpoint_ref = ? WHERE id = ?', [ref, turnId]);
+			await dbRun(db, "INSERT OR IGNORE INTO turns (id) VALUES (?)", [turnId]);
+			await dbRun(db, "UPDATE turns SET checkpoint_ref = ? WHERE id = ?", [
+				ref,
+				turnId,
+			]);
 		});
 	}
 
 	async getTurnCheckpointRef(turnId: string): Promise<string | undefined> {
 		const db = await this._ensureDb();
-		const row = await dbGet(db, 'SELECT checkpoint_ref FROM turns WHERE id = ?', [turnId]);
-		return row?.checkpoint_ref as string | undefined ?? undefined;
+		const row = await dbGet(
+			db,
+			"SELECT checkpoint_ref FROM turns WHERE id = ?",
+			[turnId],
+		);
+		return (row?.checkpoint_ref as string | undefined) ?? undefined;
 	}
 
 	async getPreviousCheckpointRef(turnId: string): Promise<string | undefined> {
@@ -360,13 +410,17 @@ export class SessionDatabase implements ISessionDatabase {
 				ORDER BY rowid DESC LIMIT 1`,
 			[turnId],
 		);
-		return row?.checkpoint_ref as string | undefined ?? undefined;
+		return (row?.checkpoint_ref as string | undefined) ?? undefined;
 	}
 
 	async getAllCheckpointRefs(): Promise<string[]> {
 		const db = await this._ensureDb();
-		const rows = await dbAll(db, 'SELECT checkpoint_ref FROM turns WHERE checkpoint_ref IS NOT NULL ORDER BY rowid', []);
-		return rows.map(r => r.checkpoint_ref as string);
+		const rows = await dbAll(
+			db,
+			"SELECT checkpoint_ref FROM turns WHERE checkpoint_ref IS NOT NULL ORDER BY rowid",
+			[],
+		);
+		return rows.map((r) => r.checkpoint_ref as string);
 	}
 
 	truncateFromTurn(turnId: string): Promise<void> {
@@ -374,7 +428,8 @@ export class SessionDatabase implements ISessionDatabase {
 			const db = await this._ensureDb();
 			// Delete the target turn and all turns inserted after it (by rowid order).
 			// File edits cascade-delete via the foreign key constraint.
-			await dbRun(db,
+			await dbRun(
+				db,
 				`DELETE FROM turns WHERE rowid >= (SELECT rowid FROM turns WHERE id = ?)`,
 				[turnId],
 			);
@@ -387,7 +442,8 @@ export class SessionDatabase implements ISessionDatabase {
 			// Delete all turns inserted after the given turn (by rowid order),
 			// keeping the given turn itself.
 			// File edits cascade-delete via the foreign key constraint.
-			await dbRun(db,
+			await dbRun(
+				db,
 				`DELETE FROM turns WHERE rowid > (SELECT rowid FROM turns WHERE id = ?)`,
 				[turnId],
 			);
@@ -397,36 +453,40 @@ export class SessionDatabase implements ISessionDatabase {
 	deleteAllTurns(): Promise<void> {
 		return this._track(async () => {
 			const db = await this._ensureDb();
-			await dbExec(db, 'DELETE FROM turns');
+			await dbExec(db, "DELETE FROM turns");
 		});
 	}
 
 	// ---- File edits -----------------------------------------------------
 
 	storeFileEdit(edit: IFileEditRecord & IFileEditContent): Promise<void> {
-		return this._track(() => this._fileEditSequencer.queue(edit.filePath, async () => {
-			const db = await this._ensureDb();
-			// Ensure the turn exists — lazily insert since the turn record
-			// may not have been created by an explicit createTurn() call.
-			await dbRun(db, 'INSERT OR IGNORE INTO turns (id) VALUES (?)', [edit.turnId]);
-			await dbRun(
-				db,
-				`INSERT OR REPLACE INTO file_edits
+		return this._track(() =>
+			this._fileEditSequencer.queue(edit.filePath, async () => {
+				const db = await this._ensureDb();
+				// Ensure the turn exists — lazily insert since the turn record
+				// may not have been created by an explicit createTurn() call.
+				await dbRun(db, "INSERT OR IGNORE INTO turns (id) VALUES (?)", [
+					edit.turnId,
+				]);
+				await dbRun(
+					db,
+					`INSERT OR REPLACE INTO file_edits
 					(turn_id, tool_call_id, file_path, edit_type, original_path, before_content, after_content, added_lines, removed_lines)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					edit.turnId,
-					edit.toolCallId,
-					edit.filePath,
-					edit.kind,
-					edit.originalPath ?? null,
-					edit.beforeContent ? Buffer.from(edit.beforeContent) : null,
-					edit.afterContent ? Buffer.from(edit.afterContent) : null,
-					edit.addedLines ?? null,
-					edit.removedLines ?? null,
-				],
-			);
-		}));
+					[
+						edit.turnId,
+						edit.toolCallId,
+						edit.filePath,
+						edit.kind,
+						edit.originalPath ?? null,
+						edit.beforeContent ? Buffer.from(edit.beforeContent) : null,
+						edit.afterContent ? Buffer.from(edit.afterContent) : null,
+						edit.addedLines ?? null,
+						edit.removedLines ?? null,
+					],
+				);
+			}),
+		);
 	}
 
 	async getFileEdits(toolCallIds: string[]): Promise<IFileEditRecord[]> {
@@ -434,7 +494,7 @@ export class SessionDatabase implements ISessionDatabase {
 			return [];
 		}
 		const db = await this._ensureDb();
-		const placeholders = toolCallIds.map(() => '?').join(',');
+		const placeholders = toolCallIds.map(() => "?").join(",");
 		const rows = await dbAll(
 			db,
 			`SELECT turn_id, tool_call_id, file_path, edit_type, original_path, added_lines, removed_lines
@@ -443,14 +503,14 @@ export class SessionDatabase implements ISessionDatabase {
 				ORDER BY rowid`,
 			toolCallIds,
 		);
-		return rows.map(row => ({
+		return rows.map((row) => ({
 			turnId: row.turn_id as string,
 			toolCallId: row.tool_call_id as string,
 			filePath: row.file_path as string,
-			kind: (row.edit_type as IFileEditRecord['kind']) ?? 'edit',
-			originalPath: row.original_path as string | undefined ?? undefined,
-			addedLines: row.added_lines as number | undefined ?? undefined,
-			removedLines: row.removed_lines as number | undefined ?? undefined,
+			kind: (row.edit_type as IFileEditRecord["kind"]) ?? "edit",
+			originalPath: (row.original_path as string | undefined) ?? undefined,
+			addedLines: (row.added_lines as number | undefined) ?? undefined,
+			removedLines: (row.removed_lines as number | undefined) ?? undefined,
 		}));
 	}
 
@@ -463,14 +523,14 @@ export class SessionDatabase implements ISessionDatabase {
 				ORDER BY rowid`,
 			[],
 		);
-		return rows.map(row => ({
+		return rows.map((row) => ({
 			turnId: row.turn_id as string,
 			toolCallId: row.tool_call_id as string,
 			filePath: row.file_path as string,
-			kind: (row.edit_type as IFileEditRecord['kind']) ?? 'edit',
-			originalPath: row.original_path as string | undefined ?? undefined,
-			addedLines: row.added_lines as number | undefined ?? undefined,
-			removedLines: row.removed_lines as number | undefined ?? undefined,
+			kind: (row.edit_type as IFileEditRecord["kind"]) ?? "edit",
+			originalPath: (row.original_path as string | undefined) ?? undefined,
+			addedLines: (row.added_lines as number | undefined) ?? undefined,
+			removedLines: (row.removed_lines as number | undefined) ?? undefined,
 		}));
 	}
 
@@ -484,18 +544,21 @@ export class SessionDatabase implements ISessionDatabase {
 				ORDER BY rowid`,
 			[turnId],
 		);
-		return rows.map(row => ({
+		return rows.map((row) => ({
 			turnId: row.turn_id as string,
 			toolCallId: row.tool_call_id as string,
 			filePath: row.file_path as string,
-			kind: (row.edit_type as IFileEditRecord['kind']) ?? 'edit',
-			originalPath: row.original_path as string | undefined ?? undefined,
-			addedLines: row.added_lines as number | undefined ?? undefined,
-			removedLines: row.removed_lines as number | undefined ?? undefined,
+			kind: (row.edit_type as IFileEditRecord["kind"]) ?? "edit",
+			originalPath: (row.original_path as string | undefined) ?? undefined,
+			addedLines: (row.added_lines as number | undefined) ?? undefined,
+			removedLines: (row.removed_lines as number | undefined) ?? undefined,
 		}));
 	}
 
-	async readFileEditContent(toolCallId: string, filePath: string): Promise<IFileEditContent | undefined> {
+	async readFileEditContent(
+		toolCallId: string,
+		filePath: string,
+	): Promise<IFileEditContent | undefined> {
 		return this._fileEditSequencer.queue(filePath, async () => {
 			const db = await this._ensureDb();
 			const row = await dbGet(
@@ -509,8 +572,12 @@ export class SessionDatabase implements ISessionDatabase {
 				return undefined;
 			}
 			return {
-				beforeContent: row.before_content ? toUint8Array(row.before_content) : undefined,
-				afterContent: row.after_content ? toUint8Array(row.after_content) : undefined,
+				beforeContent: row.before_content
+					? toUint8Array(row.before_content)
+					: undefined,
+				afterContent: row.after_content
+					? toUint8Array(row.after_content)
+					: undefined,
 			};
 		});
 	}
@@ -519,11 +586,17 @@ export class SessionDatabase implements ISessionDatabase {
 
 	async getMetadata(key: string): Promise<string | undefined> {
 		const db = await this._ensureDb();
-		const row = await dbGet(db, 'SELECT value FROM session_metadata WHERE key = ?', [key]);
+		const row = await dbGet(
+			db,
+			"SELECT value FROM session_metadata WHERE key = ?",
+			[key],
+		);
 		return row?.value as string | undefined;
 	}
 
-	async getMetadataObject<T extends Record<string, unknown>>(obj: T): Promise<{ [K in keyof T]: string | undefined }> {
+	async getMetadataObject<T extends Record<string, unknown>>(
+		obj: T,
+	): Promise<{ [K in keyof T]: string | undefined }> {
 		const keys = Object.keys(obj) as (keyof T & string)[];
 		// eslint-disable-next-line local/code-no-dangerous-type-assertions
 		const result = {} as { [K in keyof T]: string | undefined };
@@ -531,8 +604,12 @@ export class SessionDatabase implements ISessionDatabase {
 			return result;
 		}
 		const db = await this._ensureDb();
-		const placeholders = keys.map(() => '?').join(',');
-		const rows = await dbAll(db, `SELECT key, value FROM session_metadata WHERE key IN (${placeholders})`, keys);
+		const placeholders = keys.map(() => "?").join(",");
+		const rows = await dbAll(
+			db,
+			`SELECT key, value FROM session_metadata WHERE key IN (${placeholders})`,
+			keys,
+		);
 		for (const key of keys) {
 			result[key] = undefined;
 		}
@@ -543,10 +620,16 @@ export class SessionDatabase implements ISessionDatabase {
 	}
 
 	setMetadata(key: string, value: string): Promise<void> {
-		return this._track(() => this._metadataSequencer.queue(key, async () => {
-			const db = await this._ensureDb();
-			await dbRun(db, 'INSERT OR REPLACE INTO session_metadata (key, value) VALUES (?, ?)', [key, value]);
-		}));
+		return this._track(() =>
+			this._metadataSequencer.queue(key, async () => {
+				const db = await this._ensureDb();
+				await dbRun(
+					db,
+					"INSERT OR REPLACE INTO session_metadata (key, value) VALUES (?, ?)",
+					[key, value],
+				);
+			}),
+		);
 	}
 
 	remapTurnIds(mapping: ReadonlyMap<string, string>): Promise<void> {
@@ -555,15 +638,16 @@ export class SessionDatabase implements ISessionDatabase {
 			// Defer FK checks to commit time so we can update turns.id and
 			// file_edits.turn_id in any order without mid-statement violations.
 			// This pragma auto-resets after the transaction ends.
-			await dbExec(db, 'PRAGMA defer_foreign_keys = ON');
-			await dbExec(db, 'BEGIN TRANSACTION');
+			await dbExec(db, "PRAGMA defer_foreign_keys = ON");
+			await dbExec(db, "BEGIN TRANSACTION");
 			try {
 				// Delete turns not present in the mapping (e.g. turns beyond
 				// the fork point). File edits cascade-delete via FK.
 				const oldIds = [...mapping.keys()];
 				if (oldIds.length > 0) {
-					const placeholders = oldIds.map(() => '?').join(',');
-					await dbRun(db,
+					const placeholders = oldIds.map(() => "?").join(",");
+					await dbRun(
+						db,
 						`DELETE FROM turns WHERE id NOT IN (${placeholders})`,
 						oldIds,
 					);
@@ -571,12 +655,19 @@ export class SessionDatabase implements ISessionDatabase {
 
 				// Remap the remaining turn IDs to their new values
 				for (const [oldId, newId] of mapping) {
-					await dbRun(db, 'UPDATE turns SET id = ? WHERE id = ?', [newId, oldId]);
-					await dbRun(db, 'UPDATE file_edits SET turn_id = ? WHERE turn_id = ?', [newId, oldId]);
+					await dbRun(db, "UPDATE turns SET id = ? WHERE id = ?", [
+						newId,
+						oldId,
+					]);
+					await dbRun(
+						db,
+						"UPDATE file_edits SET turn_id = ? WHERE turn_id = ?",
+						[newId, oldId],
+					);
 				}
-				await dbExec(db, 'COMMIT');
+				await dbExec(db, "COMMIT");
 			} catch (err) {
-				await dbExec(db, 'ROLLBACK');
+				await dbExec(db, "ROLLBACK");
 				throw err;
 			}
 		});
@@ -597,7 +688,7 @@ export class SessionDatabase implements ISessionDatabase {
 
 	async vacuumInto(targetPath: string) {
 		const db = await this._ensureDb();
-		await dbRun(db, 'VACUUM INTO ?', [targetPath]);
+		await dbRun(db, "VACUUM INTO ?", [targetPath]);
 	}
 
 	/**
@@ -610,13 +701,16 @@ export class SessionDatabase implements ISessionDatabase {
 	private _track<T>(fn: () => Promise<T>): Promise<T> {
 		const p = fn();
 		this._pendingWrites.add(p);
-		const untrack = () => { this._pendingWrites.delete(p); };
+		const untrack = () => {
+			this._pendingWrites.delete(p);
+		};
 		p.then(untrack, untrack);
 		return p;
 	}
 
 	async close() {
-		await (this._closed ??= this._dbPromise?.then(db => dbClose(db)).catch(() => { }) || true);
+		await (this._closed ??=
+			this._dbPromise?.then((db) => dbClose(db)).catch(() => {}) || true);
 	}
 
 	dispose(): void {
@@ -631,7 +725,7 @@ function toUint8Array(value: unknown): Uint8Array {
 	if (value instanceof Uint8Array) {
 		return value;
 	}
-	if (typeof value === 'string') {
+	if (typeof value === "string") {
 		return new TextEncoder().encode(value);
 	}
 	return new Uint8Array(0);

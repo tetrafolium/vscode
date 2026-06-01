@@ -40,12 +40,18 @@ import {
 	TaskCloudAgentBackend,
 	TaskContent,
 } from '../vscode/cloudAgentBackend';
-import { extractTitle, SessionIdForPr, SessionIdForTask } from '../vscode/copilotCodingAgentUtils';
+import {
+	extractTitle,
+	SessionIdForPr,
+	SessionIdForTask,
+} from '../vscode/copilotCodingAgentUtils';
 
 const TASK_SESSION_POLL_INTERVAL_MS = 2_000;
 const TASK_SESSION_POLL_TIMEOUT_MS = 60_000;
 
-function mapTaskStateToSessionState(state: AgentTaskState): SessionInfo['state'] {
+function mapTaskStateToSessionState(
+	state: AgentTaskState,
+): SessionInfo['state'] {
 	switch (state) {
 		case 'queued':
 			return 'queued';
@@ -62,21 +68,26 @@ function mapTaskStateToSessionState(state: AgentTaskState): SessionInfo['state']
 	}
 }
 
-function findPullArtifact(task: AgentTask): (AgentTaskArtifact & { data: AgentTaskGitHubResourceData }) | undefined {
+function findPullArtifact(
+	task: AgentTask,
+): (AgentTaskArtifact & { data: AgentTaskGitHubResourceData }) | undefined {
 	return task.artifacts?.find(
 		(a): a is AgentTaskArtifact & { data: AgentTaskGitHubResourceData } =>
-			a.provider === 'github'
-			&& a.type === 'pull'
-			&& typeof (a.data as AgentTaskGitHubResourceData).id === 'number',
+			a.provider === 'github' &&
+			a.type === 'pull' &&
+			typeof (a.data as AgentTaskGitHubResourceData).id === 'number',
 	);
 }
 
-function findBranchArtifact(task: AgentTask): (AgentTaskArtifact & { data: AgentTaskBranchResourceData }) | undefined {
+function findBranchArtifact(
+	task: AgentTask,
+): (AgentTaskArtifact & { data: AgentTaskBranchResourceData }) | undefined {
 	return task.artifacts?.find(
 		(a): a is AgentTaskArtifact & { data: AgentTaskBranchResourceData } =>
-			a.provider === 'github'
-			&& a.type === 'branch'
-			&& typeof (a.data as AgentTaskBranchResourceData).head_ref === 'string',
+			a.provider === 'github' &&
+			a.type === 'branch' &&
+			typeof (a.data as AgentTaskBranchResourceData).head_ref ===
+				'string',
 	);
 }
 
@@ -96,7 +107,10 @@ function taskToSessionInfo(task: AgentTask): SessionInfo {
 		resource_id: 0,
 		last_updated_at: task.updated_at ?? task.created_at,
 		created_at: task.created_at,
-		completed_at: task.state === 'completed' ? (task.updated_at ?? task.created_at) : '',
+		completed_at:
+			task.state === 'completed'
+				? (task.updated_at ?? task.created_at)
+				: '',
 		event_type: 'task',
 		workflow_run_id: 0,
 		premium_requests: 0,
@@ -111,7 +125,9 @@ function taskToSessionInfo(task: AgentTask): SessionInfo {
  * when the caller doesn't already know the repo (e.g. the global `listTasks` path) this is
  * how we keep `PullArtifactRef.repo.owner/name` populated for resolver fallbacks.
  */
-function parseRepoFromTaskUrl(htmlUrl: string | undefined): { owner: string; name: string } | undefined {
+function parseRepoFromTaskUrl(
+	htmlUrl: string | undefined,
+): { owner: string; name: string } | undefined {
 	if (!htmlUrl) {
 		return undefined;
 	}
@@ -161,13 +177,12 @@ function taskToPullArtifactRef(
  * GHE-aware URL construction and auth.
  */
 export class TaskApiBackend implements TaskCloudAgentBackend {
-
 	readonly kind = 'task' as const;
 
 	constructor(
 		private readonly _taskApiClient: ITaskApiClient,
 		private readonly _logService: ILogService,
-	) { }
+	) {}
 
 	parseSessionId(resource: vscode.Uri): CloudSessionIdentity | undefined {
 		const taskParsed = SessionIdForTask.parse(resource);
@@ -176,14 +191,24 @@ export class TaskApiBackend implements TaskCloudAgentBackend {
 		}
 		// Fall back to PR parsing for backward compat with sessions created under v1.
 		const prParsed = SessionIdForPr.parse(resource);
-		const prNumber = prParsed?.prNumber ?? SessionIdForPr.parsePullRequestNumber(resource);
+		const prNumber =
+			prParsed?.prNumber ??
+			SessionIdForPr.parsePullRequestNumber(resource);
 		if (prParsed || prNumber) {
-			return { type: 'pr', prNumber, sessionIndex: prParsed?.sessionIndex };
+			return {
+				type: 'pr',
+				prNumber,
+				sessionIndex: prParsed?.sessionIndex,
+			};
 		}
 		return undefined;
 	}
 
-	async createSession(params: CreateCloudSessionParams, _stream: vscode.ChatResponseStream, _token: vscode.CancellationToken): Promise<CloudDelegationResult> {
+	async createSession(
+		params: CreateCloudSessionParams,
+		_stream: vscode.ChatResponseStream,
+		_token: vscode.CancellationToken,
+	): Promise<CloudDelegationResult> {
 		const request: AgentTaskCreateRequest = {
 			prompt: params.prompt,
 			event_content: params.prompt,
@@ -194,10 +219,16 @@ export class TaskApiBackend implements TaskCloudAgentBackend {
 			...(params.headRef && { head_ref: params.headRef }),
 			...(params.customAgent && { custom_agent: params.customAgent }),
 			...(params.model && { model: params.model }),
-			...(params.partnerAgentId !== undefined && { agent_id: params.partnerAgentId }),
+			...(params.partnerAgentId !== undefined && {
+				agent_id: params.partnerAgentId,
+			}),
 		};
 
-		const task = await this._taskApiClient.createTask(params.owner, params.repo, request);
+		const task = await this._taskApiClient.createTask(
+			params.owner,
+			params.repo,
+			request,
+		);
 
 		// Return immediately. The pull artifact (if any) may not exist yet; the provider
 		// resolves it asynchronously via `resolvePullArtifactWithRetry` so creation isn't
@@ -206,15 +237,29 @@ export class TaskApiBackend implements TaskCloudAgentBackend {
 			kind: 'task',
 			taskId: task.id,
 			taskUrl: task.html_url ?? '',
-			title: task.name ?? extractTitle(params.prompt, params.problemStatement) ?? params.title ?? 'Copilot task',
+			title:
+				task.name ??
+				extractTitle(params.prompt, params.problemStatement) ??
+				params.title ??
+				'Copilot task',
 			sessionId: task.id,
-			pullArtifact: taskToPullArtifactRef(task, { owner: params.owner, name: params.repo }),
+			pullArtifact: taskToPullArtifactRef(task, {
+				owner: params.owner,
+				name: params.repo,
+			}),
 		};
 	}
 
-	async fetchSessionList(repoIds: GithubRepoId[] | undefined, _isAgentWorkspace: boolean, _refresh: boolean): Promise<CloudSessionData[]> {
+	async fetchSessionList(
+		repoIds: GithubRepoId[] | undefined,
+		_isAgentWorkspace: boolean,
+		_refresh: boolean,
+	): Promise<CloudSessionData[]> {
 		const listOpts: ListTasksOptions = { per_page: 100 };
-		const tasksWithRepo: { task: AgentTask; repo: { owner: string; name: string } | undefined }[] = [];
+		const tasksWithRepo: {
+			task: AgentTask;
+			repo: { owner: string; name: string } | undefined;
+		}[] = [];
 
 		if (!repoIds || repoIds.length === 0) {
 			const response = await this._taskApiClient.listTasks(listOpts);
@@ -223,13 +268,27 @@ export class TaskApiBackend implements TaskCloudAgentBackend {
 			}
 		} else {
 			const responses = await Promise.all(
-				repoIds.map(async repo => {
+				repoIds.map(async (repo) => {
 					try {
-						const r = await this._taskApiClient.listTasksForRepo(repo.org, repo.repo, listOpts);
-						return { repo: { owner: repo.org, name: repo.repo }, response: r };
+						const r = await this._taskApiClient.listTasksForRepo(
+							repo.org,
+							repo.repo,
+							listOpts,
+						);
+						return {
+							repo: { owner: repo.org, name: repo.repo },
+							response: r,
+						};
 					} catch (e: unknown) {
-						this._logService.warn(`Failed to fetch tasks for ${repo.org}/${repo.repo}: ${e}`);
-						return { repo: { owner: repo.org, name: repo.repo }, response: { tasks: [] as readonly AgentTask[] } satisfies AgentTaskListResponse };
+						this._logService.warn(
+							`Failed to fetch tasks for ${repo.org}/${repo.repo}: ${e}`,
+						);
+						return {
+							repo: { owner: repo.org, name: repo.repo },
+							response: {
+								tasks: [] as readonly AgentTask[],
+							} satisfies AgentTaskListResponse,
+						};
 					}
 				}),
 			);
@@ -242,10 +301,12 @@ export class TaskApiBackend implements TaskCloudAgentBackend {
 
 		return tasksWithRepo
 			.filter(({ task }) => !task.archived_at)
-			.map(({ task, repo }): CloudSessionData => ({
-				latestSession: taskToSessionInfo(task),
-				pullArtifact: taskToPullArtifactRef(task, repo),
-			}));
+			.map(
+				({ task, repo }): CloudSessionData => ({
+					latestSession: taskToSessionInfo(task),
+					pullArtifact: taskToPullArtifactRef(task, repo),
+				}),
+			);
 	}
 
 	async fetchTaskContent(taskId: string): Promise<TaskContent | undefined> {
@@ -262,38 +323,69 @@ export class TaskApiBackend implements TaskCloudAgentBackend {
 		}
 	}
 
-	async fetchTaskEvents(taskId: string): Promise<readonly AgentTaskSessionEvent[]> {
+	async fetchTaskEvents(
+		taskId: string,
+	): Promise<readonly AgentTaskSessionEvent[]> {
 		const perPage = 100;
 		const events: AgentTaskSessionEvent[] = [];
 		try {
 			for (let page = 1; ; page++) {
-				const response = await this._taskApiClient.getTaskEvents(taskId, { per_page: perPage, page });
+				const response = await this._taskApiClient.getTaskEvents(
+					taskId,
+					{ per_page: perPage, page },
+				);
 				const batch = response.events;
 				events.push(...batch);
-				if (batch.length === 0 || batch.length < perPage || (typeof response.total === 'number' && events.length >= response.total)) {
+				if (
+					batch.length === 0 ||
+					batch.length < perPage ||
+					(typeof response.total === 'number' &&
+						events.length >= response.total)
+				) {
 					break;
 				}
 			}
 			return events;
 		} catch (e) {
-			this._logService.warn(`Failed to fetch events for task ${taskId}: ${e}`);
+			this._logService.warn(
+				`Failed to fetch events for task ${taskId}: ${e}`,
+			);
 			return events;
 		}
 	}
 
-	async waitForTaskUpdate(taskId: string, since: { turnCount: number; updatedAt?: string }, token?: vscode.CancellationToken): Promise<TaskContent | undefined> {
+	async waitForTaskUpdate(
+		taskId: string,
+		since: { turnCount: number; updatedAt?: string },
+		token?: vscode.CancellationToken,
+	): Promise<TaskContent | undefined> {
 		const startTime = Date.now();
-		while (Date.now() - startTime < TASK_SESSION_POLL_TIMEOUT_MS && !(token?.isCancellationRequested)) {
+		while (
+			Date.now() - startTime < TASK_SESSION_POLL_TIMEOUT_MS &&
+			!token?.isCancellationRequested
+		) {
 			try {
 				const task = await this._taskApiClient.getTask(taskId);
 				const turnCount = task.sessions?.length ?? 0;
 				// Fire when any observable changed: a new turn was added, the task's
 				// `updated_at` advanced (covers in-place state transitions), or the latest
 				// turn left the in-progress/queued region.
-				const updatedAtChanged = since.updatedAt && task.updated_at && task.updated_at !== since.updatedAt;
+				const updatedAtChanged =
+					since.updatedAt &&
+					task.updated_at &&
+					task.updated_at !== since.updatedAt;
 				const latestTurnState = task.sessions?.[turnCount - 1]?.state;
-				const latestTurnSettled = latestTurnState && latestTurnState !== 'in_progress' && latestTurnState !== 'queued' && latestTurnState !== 'idle' && latestTurnState !== 'waiting_for_user';
-				if (turnCount > since.turnCount || updatedAtChanged || latestTurnSettled) {
+				const latestTurnSettled =
+					latestTurnState &&
+					latestTurnState !== 'in_progress' &&
+					latestTurnState !== 'queued' &&
+					latestTurnState !== 'idle' &&
+					latestTurnState !== 'waiting_for_user';
+				if (
+					turnCount > since.turnCount ||
+					updatedAtChanged ||
+					latestTurnSettled
+				) {
 					return {
 						task,
 						turns: [],
@@ -303,14 +395,22 @@ export class TaskApiBackend implements TaskCloudAgentBackend {
 			} catch (e) {
 				this._logService.warn(`Failed to poll task ${taskId}: ${e}`);
 			}
-			await new Promise(resolve => setTimeout(resolve, TASK_SESSION_POLL_INTERVAL_MS));
+			await new Promise((resolve) =>
+				setTimeout(resolve, TASK_SESSION_POLL_INTERVAL_MS),
+			);
 		}
 		return undefined;
 	}
 
-	async sendFollowUpToTask(taskId: string, prompt: string): Promise<FollowUpResult | undefined> {
+	async sendFollowUpToTask(
+		taskId: string,
+		prompt: string,
+	): Promise<FollowUpResult | undefined> {
 		try {
-			await this._taskApiClient.steerTask(taskId, { content: prompt, type: 'user_message' });
+			await this._taskApiClient.steerTask(taskId, {
+				content: prompt,
+				type: 'user_message',
+			});
 			return {};
 		} catch (e) {
 			this._logService.error(`Failed to steer task ${taskId}: ${e}`);
@@ -318,18 +418,28 @@ export class TaskApiBackend implements TaskCloudAgentBackend {
 		}
 	}
 
-	async findTaskIdForPullRequest(owner: string, repo: string, prNumber: number): Promise<string | undefined> {
+	async findTaskIdForPullRequest(
+		owner: string,
+		repo: string,
+		prNumber: number,
+	): Promise<string | undefined> {
 		try {
-			const response = await this._taskApiClient.listTasksForRepo(owner, repo, {
-				artifact_type: 'pull',
-				artifact_id: prNumber,
-				sort: 'created_at',
-				direction: 'desc',
-				per_page: 1,
-			});
+			const response = await this._taskApiClient.listTasksForRepo(
+				owner,
+				repo,
+				{
+					artifact_type: 'pull',
+					artifact_id: prNumber,
+					sort: 'created_at',
+					direction: 'desc',
+					per_page: 1,
+				},
+			);
 			return response.tasks[0]?.id;
 		} catch (e) {
-			this._logService.warn(`Failed to find task for ${owner}/${repo}#${prNumber}: ${e}`);
+			this._logService.warn(
+				`Failed to find task for ${owner}/${repo}#${prNumber}: ${e}`,
+			);
 			return undefined;
 		}
 	}
@@ -343,21 +453,29 @@ export class TaskApiBackend implements TaskCloudAgentBackend {
  * session used by `IOctoKitService` for Jobs API calls.
  */
 export class TaskApiHttpClient implements ITaskApiClient {
-
-	private static readonly SIGN_IN_DETAIL = l10n.t('Sign in to GitHub to use the Cloud Agent (Task API).');
+	private static readonly SIGN_IN_DETAIL = l10n.t(
+		'Sign in to GitHub to use the Cloud Agent (Task API).',
+	);
 
 	constructor(
 		private readonly _capiClientService: ICAPIClientService,
 		private readonly _authService: IAuthenticationService,
 		private readonly _logService: ILogService,
-	) { }
+	) {}
 
 	private async _authHeaders(): Promise<Record<string, string>> {
-		const session = await this._authService.getGitHubSession('permissive', { silent: true })
-			?? await this._authService.getGitHubSession('permissive', { createIfNone: { detail: TaskApiHttpClient.SIGN_IN_DETAIL } });
+		const session =
+			(await this._authService.getGitHubSession('permissive', {
+				silent: true,
+			})) ??
+			(await this._authService.getGitHubSession('permissive', {
+				createIfNone: { detail: TaskApiHttpClient.SIGN_IN_DETAIL },
+			}));
 		const token = session?.accessToken;
 		if (!token) {
-			throw new Error(l10n.t('Sign in to GitHub to use the Cloud Agent.'));
+			throw new Error(
+				l10n.t('Sign in to GitHub to use the Cloud Agent.'),
+			);
 		}
 		return { Authorization: `Bearer ${token}`, Accept: 'application/json' };
 	}
@@ -365,101 +483,204 @@ export class TaskApiHttpClient implements ITaskApiClient {
 	private async _request<T>(
 		method: 'GET' | 'POST',
 		action: AgentTaskRequestAction,
-		opts: { owner?: string; repo?: string; taskId?: string; body?: unknown; searchParams?: Record<string, string | number | boolean> },
+		opts: {
+			owner?: string;
+			repo?: string;
+			taskId?: string;
+			body?: unknown;
+			searchParams?: Record<string, string | number | boolean>;
+		},
 	): Promise<T | undefined> {
 		const headers = await this._authHeaders();
-		const init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string } = { method, headers };
+		const init: {
+			method: 'GET' | 'POST';
+			headers: Record<string, string>;
+			body?: string;
+		} = { method, headers };
 		if (opts.body !== undefined) {
 			init.headers['Content-Type'] = 'application/json';
 			init.body = JSON.stringify(opts.body);
 		}
-		const response = await this._capiClientService.makeRequest<Response>(init, {
-			type: RequestType.AgentTask,
-			action,
-			...(opts.owner !== undefined && { owner: opts.owner }),
-			...(opts.repo !== undefined && { repo: opts.repo }),
-			...(opts.taskId !== undefined && { taskId: opts.taskId }),
-			...(opts.searchParams && { searchParams: opts.searchParams }),
-		});
+		const response = await this._capiClientService.makeRequest<Response>(
+			init,
+			{
+				type: RequestType.AgentTask,
+				action,
+				...(opts.owner !== undefined && { owner: opts.owner }),
+				...(opts.repo !== undefined && { repo: opts.repo }),
+				...(opts.taskId !== undefined && { taskId: opts.taskId }),
+				...(opts.searchParams && { searchParams: opts.searchParams }),
+			},
+		);
 		if (!response.ok) {
 			let body = '';
-			try { body = await response.text(); } catch { /* ignore */ }
-			this._logService.warn(`Task API ${action} failed: ${response.status} ${response.statusText} (owner=${opts.owner ?? 'n/a'}, repo=${opts.repo ?? 'n/a'}, taskId=${opts.taskId ?? 'n/a'}); body=${body.slice(0, 200)}`);
-			throw new Error(l10n.t('Task API request failed: {0} {1}', response.status, response.statusText));
+			try {
+				body = await response.text();
+			} catch {
+				/* ignore */
+			}
+			this._logService.warn(
+				`Task API ${action} failed: ${response.status} ${response.statusText} (owner=${opts.owner ?? 'n/a'}, repo=${opts.repo ?? 'n/a'}, taskId=${opts.taskId ?? 'n/a'}); body=${body.slice(0, 200)}`,
+			);
+			throw new Error(
+				l10n.t(
+					'Task API request failed: {0} {1}',
+					response.status,
+					response.statusText,
+				),
+			);
 		}
 		if (response.status === 204 || response.status === 202) {
 			return undefined;
 		}
-		return await response.json() as T;
+		return (await response.json()) as T;
 	}
 
-	async createTask(owner: string, repo: string, request: AgentTaskCreateRequest): Promise<AgentTask> {
-		const task = await this._request<AgentTask>('POST', 'create', { owner, repo, body: request });
+	async createTask(
+		owner: string,
+		repo: string,
+		request: AgentTaskCreateRequest,
+	): Promise<AgentTask> {
+		const task = await this._request<AgentTask>('POST', 'create', {
+			owner,
+			repo,
+			body: request,
+		});
 		if (!task) {
-			throw new Error(l10n.t('Task API createTask returned an empty response.'));
+			throw new Error(
+				l10n.t('Task API createTask returned an empty response.'),
+			);
 		}
 		return task;
 	}
 
-	async listTasksForRepo(owner: string, repo: string, options?: ListTasksOptions): Promise<AgentTaskListResponse> {
-		const response = await this._request<AgentTaskListResponse>('GET', 'list-for-repo', {
-			owner, repo, searchParams: toSearchParams(options),
-		});
+	async listTasksForRepo(
+		owner: string,
+		repo: string,
+		options?: ListTasksOptions,
+	): Promise<AgentTaskListResponse> {
+		const response = await this._request<AgentTaskListResponse>(
+			'GET',
+			'list-for-repo',
+			{
+				owner,
+				repo,
+				searchParams: toSearchParams(options),
+			},
+		);
 		return response ?? { tasks: [] };
 	}
 
-	async listTasks(options?: ListTasksOptions): Promise<AgentTaskListResponse> {
-		const response = await this._request<AgentTaskListResponse>('GET', 'list', { searchParams: toSearchParams(options) });
+	async listTasks(
+		options?: ListTasksOptions,
+	): Promise<AgentTaskListResponse> {
+		const response = await this._request<AgentTaskListResponse>(
+			'GET',
+			'list',
+			{ searchParams: toSearchParams(options) },
+		);
 		return response ?? { tasks: [] };
 	}
 
 	async getTask(taskId: string): Promise<AgentTaskGetResponse> {
-		const task = await this._request<AgentTaskGetResponse>('GET', 'get', { taskId });
+		const task = await this._request<AgentTaskGetResponse>('GET', 'get', {
+			taskId,
+		});
 		if (!task) {
-			throw new Error(l10n.t('Task API getTask returned an empty response.'));
+			throw new Error(
+				l10n.t('Task API getTask returned an empty response.'),
+			);
 		}
 		return task;
 	}
 
-	async getTaskEvents(taskId: string, options?: ListTaskEventsOptions): Promise<AgentTaskListEventsResponse> {
-		const response = await this._request<AgentTaskListEventsResponse>('GET', 'events', {
-			taskId, searchParams: toSearchParams(options),
-		});
+	async getTaskEvents(
+		taskId: string,
+		options?: ListTaskEventsOptions,
+	): Promise<AgentTaskListEventsResponse> {
+		const response = await this._request<AgentTaskListEventsResponse>(
+			'GET',
+			'events',
+			{
+				taskId,
+				searchParams: toSearchParams(options),
+			},
+		);
 		return response ?? { events: [], total: 0 };
 	}
 
-	async steerTask(taskId: string, request: AgentTaskSteerRequest): Promise<void> {
+	async steerTask(
+		taskId: string,
+		request: AgentTaskSteerRequest,
+	): Promise<void> {
 		await this._request<void>('POST', 'steer', { taskId, body: request });
 	}
 
-	async createPRForTask(owner: string, repo: string, taskId: string): Promise<AgentTaskCreatePullRequestResponse> {
-		const result = await this._request<AgentTaskCreatePullRequestResponse>('POST', 'create-pr', { owner, repo, taskId });
+	async createPRForTask(
+		owner: string,
+		repo: string,
+		taskId: string,
+	): Promise<AgentTaskCreatePullRequestResponse> {
+		const result = await this._request<AgentTaskCreatePullRequestResponse>(
+			'POST',
+			'create-pr',
+			{ owner, repo, taskId },
+		);
 		if (!result) {
-			throw new Error(l10n.t('Task API createPRForTask returned an empty response.'));
+			throw new Error(
+				l10n.t('Task API createPRForTask returned an empty response.'),
+			);
 		}
 		return result;
 	}
 
-	async archiveTask(_owner: string, _repo: string, taskId: string): Promise<AgentTask> {
-		const task = await this._request<AgentTask>('POST', 'archive', { taskId });
+	async archiveTask(
+		_owner: string,
+		_repo: string,
+		taskId: string,
+	): Promise<AgentTask> {
+		const task = await this._request<AgentTask>('POST', 'archive', {
+			taskId,
+		});
 		if (!task) {
-			throw new Error(l10n.t('Task API archiveTask returned an empty response.'));
+			throw new Error(
+				l10n.t('Task API archiveTask returned an empty response.'),
+			);
 		}
 		return task;
 	}
 
-	async unarchiveTask(_owner: string, _repo: string, taskId: string): Promise<AgentTask> {
-		const task = await this._request<AgentTask>('POST', 'unarchive', { taskId });
+	async unarchiveTask(
+		_owner: string,
+		_repo: string,
+		taskId: string,
+	): Promise<AgentTask> {
+		const task = await this._request<AgentTask>('POST', 'unarchive', {
+			taskId,
+		});
 		if (!task) {
-			throw new Error(l10n.t('Task API unarchiveTask returned an empty response.'));
+			throw new Error(
+				l10n.t('Task API unarchiveTask returned an empty response.'),
+			);
 		}
 		return task;
 	}
 }
 
-type AgentTaskRequestAction = 'create' | 'list' | 'list-for-repo' | 'get' | 'events' | 'steer' | 'create-pr' | 'archive' | 'unarchive';
+type AgentTaskRequestAction =
+	| 'create'
+	| 'list'
+	| 'list-for-repo'
+	| 'get'
+	| 'events'
+	| 'steer'
+	| 'create-pr'
+	| 'archive'
+	| 'unarchive';
 
-function toSearchParams(opts: ListTasksOptions | ListTaskEventsOptions | undefined): Record<string, string | number | boolean> | undefined {
+function toSearchParams(
+	opts: ListTasksOptions | ListTaskEventsOptions | undefined,
+): Record<string, string | number | boolean> | undefined {
 	if (!opts) {
 		return undefined;
 	}

@@ -18,7 +18,7 @@ function findKnownOrg(orgs: string[]): string | undefined {
 		'faef89d9169d5eacf1d8c8dde3412e37',
 		'4535c7beffc844b46bb1ed4aa04d759a',
 	];
-	return known_orgs.find(o => orgs.includes(o));
+	return known_orgs.find((o) => orgs.includes(o));
 }
 
 export function getUserKind(token: Omit<CopilotToken, 'token'>): string {

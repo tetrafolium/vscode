@@ -5,51 +5,55 @@
 
 // Test file to verify the code-no-reader-after-await ESLint rule works correctly
 
-import { observableValue, derived, autorun } from '../../src/vs/base/common/observable.js';
+import {
+	observableValue,
+	derived,
+	autorun,
+} from "../../src/vs/base/common/observable.js";
 
 export function testValidUsage() {
-	const obs = observableValue('test', 0);
+	const obs = observableValue("test", 0);
 
-	const validDerived = derived(reader => {
+	const validDerived = derived((reader) => {
 		const value = obs.read(reader);
 		return value * 2;
 	});
 
-	autorun(reader => {
+	autorun((reader) => {
 		const value = validDerived.read(reader);
-		console.log('Value:', value);
+		console.log("Value:", value);
 	});
 }
 
 export function testInvalidUsage() {
-	const obs = observableValue('test', 0);
+	const obs = observableValue("test", 0);
 
-	const invalidDerived = derived(async reader => {
+	const invalidDerived = derived(async (reader) => {
 		await Promise.resolve();
 		// eslint-disable-next-line local/code-no-reader-after-await
 		const value = obs.read(reader);
 		return value * 2;
 	});
 
-	autorun(async reader => {
+	autorun(async (reader) => {
 		await Promise.resolve();
 		// eslint-disable-next-line local/code-no-reader-after-await
 		const value = invalidDerived.read(reader);
-		console.log('Value:', value);
+		console.log("Value:", value);
 	});
 
-	autorun(async reader => {
+	autorun(async (reader) => {
 		await Promise.resolve();
 		// eslint-disable-next-line local/code-no-reader-after-await
 		const value = reader.readObservable(obs);
-		console.log('Value:', value);
+		console.log("Value:", value);
 	});
 }
 
 export function testComplexCases() {
-	const obs = observableValue('test', 0);
+	const obs = observableValue("test", 0);
 
-	derived(async reader => {
+	derived(async (reader) => {
 		const initial = obs.read(reader);
 
 		if (initial > 0) {
@@ -61,7 +65,7 @@ export function testComplexCases() {
 		return final;
 	});
 
-	autorun(async reader => {
+	autorun(async (reader) => {
 		try {
 			await Promise.resolve();
 		} catch (e) {
@@ -74,9 +78,9 @@ export function testComplexCases() {
 }
 
 export function testValidComplexCases() {
-	const obs = observableValue('test', 0);
+	const obs = observableValue("test", 0);
 
-	derived(async reader => {
+	derived(async (reader) => {
 		const value1 = obs.read(reader);
 		const value2 = reader.readObservable(obs);
 		const result = value1 + value2;

@@ -3,16 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IDisposable, IReference } from '../../../base/common/lifecycle.js';
-import { URI } from '../../../base/common/uri.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { Event } from '../../../base/common/event.js';
-import type { FileEditKind } from './state/sessionState.js';
+import { IDisposable, IReference } from "../../../base/common/lifecycle.js";
+import { URI } from "../../../base/common/uri.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import { Event } from "../../../base/common/event.js";
+import type { FileEditKind } from "./state/sessionState.js";
 
-export const ISessionDataService = createDecorator<ISessionDataService>('sessionDataService');
+export const ISessionDataService =
+	createDecorator<ISessionDataService>("sessionDataService");
 
 /** Filename of the per-session SQLite database. */
-export const SESSION_DB_FILENAME = 'session.db';
+export const SESSION_DB_FILENAME = "session.db";
 
 /**
  * Subdirectory under a session's data directory that holds snapshotted
@@ -21,7 +22,7 @@ export const SESSION_DB_FILENAME = 'session.db';
  * in-memory state tree, and reads of files under this directory are
  * auto-approved by the agent's permission flow.
  */
-export const SESSION_ATTACHMENTS_DIRNAME = 'attachments';
+export const SESSION_ATTACHMENTS_DIRNAME = "attachments";
 
 // ---- File-edit types ----------------------------------------------------
 
@@ -184,7 +185,10 @@ export interface ISessionDatabase extends IDisposable {
 	 * Read the before/after content blobs for a single file edit.
 	 * Returns `undefined` if no edit exists for the given key.
 	 */
-	readFileEditContent(toolCallId: string, filePath: string): Promise<IFileEditContent | undefined>;
+	readFileEditContent(
+		toolCallId: string,
+		filePath: string,
+	): Promise<IFileEditContent | undefined>;
 
 	// ---- Session metadata ------------------------------------------------
 
@@ -197,7 +201,9 @@ export interface ISessionDatabase extends IDisposable {
 	/**
 	 * Gets a bulk of metadata. For example `getMetadataObject({ foo: true }) ->  { foo: 'data' }`
 	 */
-	getMetadataObject<T extends Record<string, unknown>>(obj: T): Promise<{ [K in keyof T]: string | undefined }>;
+	getMetadataObject<T extends Record<string, unknown>>(
+		obj: T,
+	): Promise<{ [K in keyof T]: string | undefined }>;
 
 	/**
 	 * Store a metadata key-value pair. Overwrites any existing value for the key.
@@ -273,7 +279,9 @@ export interface ISessionDataService {
 	 * been created yet, avoiding the side effect of materializing empty
 	 * database files during read-only operations like listing sessions.
 	 */
-	tryOpenDatabase(session: URI): Promise<IReference<ISessionDatabase> | undefined>;
+	tryOpenDatabase(
+		session: URI,
+	): Promise<IReference<ISessionDatabase> | undefined>;
 
 	/**
 	 * Recursively deletes the data directory for a session, if it exists.

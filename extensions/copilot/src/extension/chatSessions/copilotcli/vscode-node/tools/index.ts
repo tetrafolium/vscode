@@ -18,7 +18,15 @@ import { ICopilotCLISessionTracker } from '../copilotCLISessionTracker';
 export { getSelectionInfo, SelectionState } from './getSelection';
 export type { SelectionInfo } from './getSelection';
 
-export function registerTools(server: McpServer, logger: ILogger, diffState: DiffStateManager, selectionState: SelectionState, contentProvider: ReadonlyContentProvider, sessionTracker: ICopilotCLISessionTracker, sessionId: string): void {
+export function registerTools(
+	server: McpServer,
+	logger: ILogger,
+	diffState: DiffStateManager,
+	selectionState: SelectionState,
+	contentProvider: ReadonlyContentProvider,
+	sessionTracker: ICopilotCLISessionTracker,
+	sessionId: string,
+): void {
 	logger.debug('Registering MCP tools...');
 	registerGetVscodeInfoTool(server, logger);
 	registerGetSelectionTool(server, logger, selectionState);

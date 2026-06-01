@@ -15,7 +15,10 @@ export type RpcResponse = { id: number; res?: any; err?: Error };
 export class RcpResponseHandler {
 	private nextId = 1;
 
-	private readonly handlers = new Map<number, { resolve: (res: any) => void; reject: (err: Error) => void }>();
+	private readonly handlers = new Map<
+		number,
+		{ resolve: (res: any) => void; reject: (err: Error) => void }
+	>();
 
 	public createHandler<T>(): { id: number; result: Promise<T> } {
 		const id = this.nextId++;
@@ -59,10 +62,16 @@ export class RcpResponseHandler {
 }
 
 export type RpcProxy<ProxyType> = {
-	[K in keyof ProxyType]: ProxyType[K] extends ((...args: infer Args) => infer R) ? (...args: Args) => Promise<Awaited<R>> : never;
+	[K in keyof ProxyType]: ProxyType[K] extends (
+		...args: infer Args
+	) => infer R
+		? (...args: Args) => Promise<Awaited<R>>
+		: never;
 };
 
-export function createRpcProxy<ProxyType>(remoteCall: (name: string, args: any[]) => Promise<any>): RpcProxy<ProxyType> {
+export function createRpcProxy<ProxyType>(
+	remoteCall: (name: string, args: any[]) => Promise<any>,
+): RpcProxy<ProxyType> {
 	const handler = {
 		get: (target: any, name: PropertyKey) => {
 			if (typeof name === 'string' && !target[name]) {
@@ -71,7 +80,7 @@ export function createRpcProxy<ProxyType>(remoteCall: (name: string, args: any[]
 				};
 			}
 			return target[name];
-		}
+		},
 	};
 	return new Proxy(Object.create(null), handler);
 }
@@ -82,15 +91,28 @@ export class WorkerWithRpcProxy<WorkerProxyType, HostProxyType = {}> {
 
 	public readonly proxy: RpcProxy<WorkerProxyType>;
 
-	constructor(workerPath: string, workerOptions?: WorkerOptions, host?: HostProxyType) {
+	constructor(
+		workerPath: string,
+		workerOptions?: WorkerOptions,
+		host?: HostProxyType,
+	) {
 		this.worker = new Worker(workerPath, workerOptions);
 		this.worker.on('message', async (msg: RpcRequest | RpcResponse) => {
 			if ('fn' in msg) {
 				try {
-					const response = await (host as any)?.[msg.fn].apply(host, msg.args);
-					this.worker.postMessage({ id: msg.id, res: response } satisfies RpcResponse);
+					const response = await (host as any)?.[msg.fn].apply(
+						host,
+						msg.args,
+					);
+					this.worker.postMessage({
+						id: msg.id,
+						res: response,
+					} satisfies RpcResponse);
 				} catch (err) {
-					this.worker.postMessage({ id: msg.id, err } satisfies RpcResponse);
+					this.worker.postMessage({
+						id: msg.id,
+						err,
+					} satisfies RpcResponse);
 				}
 			} else {
 				this.responseHandler.handleResponse(msg);
@@ -98,9 +120,11 @@ export class WorkerWithRpcProxy<WorkerProxyType, HostProxyType = {}> {
 		});
 		this.worker.on('error', (err) => this.handleError(err));
 
-		this.worker.on('exit', code => {
+		this.worker.on('exit', (code) => {
 			if (code !== 0) {
-				this.handleError(new Error(`Worker thread exited with code ${code}.`));
+				this.handleError(
+					new Error(`Worker thread exited with code ${code}.`),
+				);
 			}
 		});
 

@@ -3,41 +3,68 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { Options, PermissionMode, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
-import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { CancellationError } from '../../../../base/common/errors.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IInstantiationService } from '../../../instantiation/common/instantiation.js';
-import { ILogService } from '../../../log/common/log.js';
-import { IAgentConfigurationService } from '../agentConfigurationService.js';
-import { ISyncedCustomization } from '../../common/agentPluginManager.js';
-import { ClaudePermissionMode } from '../../common/claudeSessionConfigKeys.js';
-import { ClaudeRuntimeEffortLevel, clampEffortForRuntime, resolveClaudeEffort } from '../../common/claudeModelConfig.js';
-import { AgentSignal, IAgentSessionProjectInfo } from '../../common/agentService.js';
-import { PendingRequestRegistry } from '../../common/pendingRequestRegistry.js';
-import { ISessionDataService } from '../../common/sessionDataService.js';
-import { ActionType } from '../../common/state/sessionActions.js';
-import { PendingMessage, SessionInputAnswer, SessionInputRequest, SessionInputResponseKind, ToolCallPendingConfirmationState, type AgentSelection, type ModelSelection, type ToolDefinition } from '../../common/state/protocol/state.js';
-import type { Customization, ToolCallResult } from '../../common/state/sessionState.js';
-import { IClaudeAgentSdkService } from './claudeAgentSdkService.js';
-import { buildClientMcpServers, buildOptions } from './claudeSdkOptions.js';
-import { ClaudeSessionMetadataStore } from './claudeSessionMetadataStore.js';
-import { convertToolCallResult } from './clientTools/claudeClientToolResult.js';
-import { readClaudePermissionMode } from './claudeSessionPermissionMode.js';
-import { SessionClientToolsDiff } from './clientTools/claudeSessionClientToolsModel.js';
-import { SessionClientCustomizationsDiff } from './customizations/claudeSessionClientCustomizationsModel.js';
-import { projectSessionCustomizations } from './customizations/claudeSessionCustomizationsProjector.js';
-import { ClaudeSdkCustomizationBundler } from './customizations/claudeSdkCustomizationBundler.js';
-import { resolvePromptToContentBlocks } from './claudePromptResolver.js';
-import { IClaudeProxyHandle } from './claudeProxyService.js';
-import { ClaudeSdkPipeline, IRematerializer, type ISdkResolvedCustomizations } from './claudeSdkPipeline.js';
-import { SubagentRegistry } from './claudeSubagentRegistry.js';
-import { ClaudePermissionKind } from './claudeToolDisplay.js';
+import type {
+	Options,
+	PermissionMode,
+	SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { CancellationError } from "../../../../base/common/errors.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IInstantiationService } from "../../../instantiation/common/instantiation.js";
+import { ILogService } from "../../../log/common/log.js";
+import { IAgentConfigurationService } from "../agentConfigurationService.js";
+import { ISyncedCustomization } from "../../common/agentPluginManager.js";
+import { ClaudePermissionMode } from "../../common/claudeSessionConfigKeys.js";
+import {
+	ClaudeRuntimeEffortLevel,
+	clampEffortForRuntime,
+	resolveClaudeEffort,
+} from "../../common/claudeModelConfig.js";
+import {
+	AgentSignal,
+	IAgentSessionProjectInfo,
+} from "../../common/agentService.js";
+import { PendingRequestRegistry } from "../../common/pendingRequestRegistry.js";
+import { ISessionDataService } from "../../common/sessionDataService.js";
+import { ActionType } from "../../common/state/sessionActions.js";
+import {
+	PendingMessage,
+	SessionInputAnswer,
+	SessionInputRequest,
+	SessionInputResponseKind,
+	ToolCallPendingConfirmationState,
+	type AgentSelection,
+	type ModelSelection,
+	type ToolDefinition,
+} from "../../common/state/protocol/state.js";
+import type {
+	Customization,
+	ToolCallResult,
+} from "../../common/state/sessionState.js";
+import { IClaudeAgentSdkService } from "./claudeAgentSdkService.js";
+import { buildClientMcpServers, buildOptions } from "./claudeSdkOptions.js";
+import { ClaudeSessionMetadataStore } from "./claudeSessionMetadataStore.js";
+import { convertToolCallResult } from "./clientTools/claudeClientToolResult.js";
+import { readClaudePermissionMode } from "./claudeSessionPermissionMode.js";
+import { SessionClientToolsDiff } from "./clientTools/claudeSessionClientToolsModel.js";
+import { SessionClientCustomizationsDiff } from "./customizations/claudeSessionClientCustomizationsModel.js";
+import { projectSessionCustomizations } from "./customizations/claudeSessionCustomizationsProjector.js";
+import { ClaudeSdkCustomizationBundler } from "./customizations/claudeSdkCustomizationBundler.js";
+import { resolvePromptToContentBlocks } from "./claudePromptResolver.js";
+import { IClaudeProxyHandle } from "./claudeProxyService.js";
+import {
+	ClaudeSdkPipeline,
+	IRematerializer,
+	type ISdkResolvedCustomizations,
+} from "./claudeSdkPipeline.js";
+import { SubagentRegistry } from "./claudeSubagentRegistry.js";
+import { ClaudePermissionKind } from "./claudeToolDisplay.js";
 
 // Re-export for callers that import IRematerializer from the session.
-export type { IRematerializer } from './claudeSdkPipeline.js';
+export type { IRematerializer } from "./claudeSdkPipeline.js";
 
 /**
  * Inputs to {@link ClaudeAgentSession.materialize}. Carries the
@@ -47,7 +74,7 @@ export type { IRematerializer } from './claudeSdkPipeline.js';
  */
 export interface IMaterializeContext {
 	readonly proxyHandle: IClaudeProxyHandle;
-	readonly canUseTool: NonNullable<Options['canUseTool']>;
+	readonly canUseTool: NonNullable<Options["canUseTool"]>;
 	readonly isResume: boolean;
 }
 
@@ -56,7 +83,10 @@ function resolveCurrentPermissionMode(
 	sessionUri: URI,
 	permissionModeFallback: ClaudePermissionMode,
 ): ClaudePermissionMode {
-	return readClaudePermissionMode(configurationService, sessionUri) ?? permissionModeFallback;
+	return (
+		readClaudePermissionMode(configurationService, sessionUri) ??
+		permissionModeFallback
+	);
 }
 
 /**
@@ -70,7 +100,6 @@ function resolveCurrentPermissionMode(
  *     surfaced via `requestPermission` / `requestUserInput`.
  */
 export class ClaudeAgentSession extends Disposable {
-
 	private _pipeline: ClaudeSdkPipeline | undefined;
 	private _sdkBundler: ClaudeSdkCustomizationBundler | undefined;
 
@@ -94,9 +123,13 @@ export class ClaudeAgentSession extends Disposable {
 	readonly abortController: AbortController;
 
 	/** Exposed for the materializer's MCP-server build closure. */
-	get pendingClientToolCalls(): PendingRequestRegistry<CallToolResult> { return this._pendingClientToolCalls; }
+	get pendingClientToolCalls(): PendingRequestRegistry<CallToolResult> {
+		return this._pendingClientToolCalls;
+	}
 	/** Snapshot of permission-mode fallback used when live read is undefined. */
-	get permissionModeFallback(): ClaudePermissionMode { return this._permissionModeFallback; }
+	get permissionModeFallback(): ClaudePermissionMode {
+		return this._permissionModeFallback;
+	}
 
 	static createProvisional(
 		sessionId: string,
@@ -149,7 +182,10 @@ export class ClaudeAgentSession extends Disposable {
 	 * Phase 7 / S3.2. User-input deferreds parked for interactive tools
 	 * (`AskUserQuestion`, `ExitPlanMode`). Keyed by `SessionInputRequest.id`.
 	 */
-	private readonly _pendingUserInputs = new PendingRequestRegistry<{ response: SessionInputResponseKind; answers?: Record<string, SessionInputAnswer> }>();
+	private readonly _pendingUserInputs = new PendingRequestRegistry<{
+		response: SessionInputResponseKind;
+		answers?: Record<string, SessionInputAnswer>;
+	}>();
 
 	/**
 	 * Phase 10 — owns the workbench-registered client-tool snapshot
@@ -176,10 +212,14 @@ export class ClaudeAgentSession extends Disposable {
 	 *
 	 * See {@link SessionClientCustomizationsDiff}.
 	 */
-	readonly clientCustomizationsDiff: SessionClientCustomizationsDiff = this._register(new SessionClientCustomizationsDiff());
+	readonly clientCustomizationsDiff: SessionClientCustomizationsDiff =
+		this._register(new SessionClientCustomizationsDiff());
 
-	private readonly _onDidSessionProgress = this._register(new Emitter<AgentSignal>());
-	readonly onDidSessionProgress: Event<AgentSignal> = this._onDidSessionProgress.event;
+	private readonly _onDidSessionProgress = this._register(
+		new Emitter<AgentSignal>(),
+	);
+	readonly onDidSessionProgress: Event<AgentSignal> =
+		this._onDidSessionProgress.event;
 
 	constructor(
 		readonly sessionId: string,
@@ -194,10 +234,14 @@ export class ClaudeAgentSession extends Disposable {
 		toolDiff: SessionClientToolsDiff,
 		private readonly _permissionModeFallback: ClaudePermissionMode,
 		private readonly _metadataStore: ClaudeSessionMetadataStore,
-		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@IAgentConfigurationService private readonly _configurationService: IAgentConfigurationService,
-		@IClaudeAgentSdkService private readonly _sdkService: IClaudeAgentSdkService,
-		@ISessionDataService private readonly _sessionDataService: ISessionDataService,
+		@IInstantiationService
+		private readonly _instantiationService: IInstantiationService,
+		@IAgentConfigurationService
+		private readonly _configurationService: IAgentConfigurationService,
+		@IClaudeAgentSdkService
+		private readonly _sdkService: IClaudeAgentSdkService,
+		@ISessionDataService
+		private readonly _sessionDataService: ISessionDataService,
 		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
@@ -207,7 +251,11 @@ export class ClaudeAgentSession extends Disposable {
 		this.provisionalConfig = config;
 		this.abortController = abortController;
 		this.toolDiff = this._register(toolDiff);
-		this._register(this.clientCustomizationsDiff.onDidChange(() => this._onDidCustomizationsChange.fire()));
+		this._register(
+			this.clientCustomizationsDiff.onDidChange(() =>
+				this._onDidCustomizationsChange.fire(),
+			),
+		);
 	}
 
 	/**
@@ -225,14 +273,22 @@ export class ClaudeAgentSession extends Disposable {
 	 */
 	async materialize(ctx: IMaterializeContext): Promise<void> {
 		if (this._pipeline) {
-			throw new Error('ClaudeAgentSession is already materialized');
+			throw new Error("ClaudeAgentSession is already materialized");
 		}
 		if (!this.workingDirectory) {
-			throw new Error(`Cannot materialize Claude session ${this.sessionId}: workingDirectory is required`);
+			throw new Error(
+				`Cannot materialize Claude session ${this.sessionId}: workingDirectory is required`,
+			);
 		}
 
-		const permissionMode = readClaudePermissionMode(this._configurationService, this.sessionUri) ?? this._permissionModeFallback;
-		const mcpServers = await buildClientMcpServers(this.toolDiff, this._pendingClientToolCalls, this._sdkService);
+		const permissionMode =
+			readClaudePermissionMode(this._configurationService, this.sessionUri) ??
+			this._permissionModeFallback;
+		const mcpServers = await buildClientMcpServers(
+			this.toolDiff,
+			this._pendingClientToolCalls,
+			this._sdkService,
+		);
 
 		const options = await buildOptions(
 			{
@@ -248,11 +304,16 @@ export class ClaudeAgentSession extends Disposable {
 				agent: this._resolveAgentName(this._provisionalAgent),
 			},
 			ctx.proxyHandle,
-			data => this._logService.error(`[Claude SDK stderr] ${data}`),
-			msg => this._logService.info(`[Claude] declining elicitation from MCP server (Phase 7 stub): ${msg}`),
+			(data) => this._logService.error(`[Claude SDK stderr] ${data}`),
+			(msg) =>
+				this._logService.info(
+					`[Claude] declining elicitation from MCP server (Phase 7 stub): ${msg}`,
+				),
 		);
 
-		this._logService.info(`[Claude] session ${this.sessionId}: enableFileCheckpointing=${options.enableFileCheckpointing} isResume=${ctx.isResume}`);
+		this._logService.info(
+			`[Claude] session ${this.sessionId}: enableFileCheckpointing=${options.enableFileCheckpointing} isResume=${ctx.isResume}`,
+		);
 
 		const warm = await this._sdkService.startup({ options });
 
@@ -264,32 +325,38 @@ export class ClaudeAgentSession extends Disposable {
 		const dbRef = this._sessionDataService.openDatabase(this.sessionUri);
 		let pipeline: ClaudeSdkPipeline;
 		try {
-			pipeline = this._register(this._instantiationService.createInstance(
-				ClaudeSdkPipeline,
-				this.sessionId,
-				this.sessionUri,
-				warm,
-				this.abortController,
-				dbRef,
-				this.subagents,
-				this.toolDiff.model.state.get().clientId,
-			));
+			pipeline = this._register(
+				this._instantiationService.createInstance(
+					ClaudeSdkPipeline,
+					this.sessionId,
+					this.sessionUri,
+					warm,
+					this.abortController,
+					dbRef,
+					this.subagents,
+					this.toolDiff.model.state.get().clientId,
+				),
+			);
 		} catch (err) {
 			dbRef.dispose();
 			await warm[Symbol.asyncDispose]();
 			throw err;
 		}
-		this._register(pipeline.onDidProduceSignal(s => this._onDidSessionProgress.fire(s)));
+		this._register(
+			pipeline.onDidProduceSignal((s) => this._onDidSessionProgress.fire(s)),
+		);
 		this._pipeline = pipeline;
 		// On-disk Open Plugin bundle for SDK-discovered customizations.
 		// The bundle directory is content-addressed by the SDK snapshot
 		// hash and lives under the plugin manager's user-data tree;
 		// disposing the bundler does NOT delete the on-disk tree (kept
 		// as a warm cache across sessions on the same workingDirectory).
-		this._sdkBundler = this._register(this._instantiationService.createInstance(
-			ClaudeSdkCustomizationBundler,
-			this.workingDirectory,
-		));
+		this._sdkBundler = this._register(
+			this._instantiationService.createInstance(
+				ClaudeSdkCustomizationBundler,
+				this.workingDirectory,
+			),
+		);
 
 		// Seed the pipeline's bijective config cache so a rebuild re-applies
 		// the user's last-chosen model / effort without losing the picker
@@ -312,7 +379,10 @@ export class ClaudeAgentSession extends Disposable {
 					permissionMode,
 				});
 			} catch (err) {
-				this._logService.error(`[Claude] Failed to persist customization directory; aborting materialize`, err);
+				this._logService.error(
+					`[Claude] Failed to persist customization directory; aborting materialize`,
+					err,
+				);
 				throw err;
 			}
 		}
@@ -327,9 +397,15 @@ export class ClaudeAgentSession extends Disposable {
 		}
 
 		pipeline.attachRematerializer(async (_reason) => {
-			const liveMode = readClaudePermissionMode(this._configurationService, this.sessionUri) ?? this._permissionModeFallback;
+			const liveMode =
+				readClaudePermissionMode(this._configurationService, this.sessionUri) ??
+				this._permissionModeFallback;
 			try {
-				const rebuildMcp = await buildClientMcpServers(this.toolDiff, this._pendingClientToolCalls, this._sdkService);
+				const rebuildMcp = await buildClientMcpServers(
+					this.toolDiff,
+					this._pendingClientToolCalls,
+					this._sdkService,
+				);
 				const rebuildAbort = new AbortController();
 				const rebuildOptions = await buildOptions(
 					{
@@ -345,11 +421,18 @@ export class ClaudeAgentSession extends Disposable {
 						agent: this._resolveAgentName(this._provisionalAgent),
 					},
 					ctx.proxyHandle,
-					data => this._logService.error(`[Claude SDK stderr] ${data}`),
-					msg => this._logService.info(`[Claude] declining elicitation from MCP server (Phase 7 stub): ${msg}`),
+					(data) => this._logService.error(`[Claude SDK stderr] ${data}`),
+					(msg) =>
+						this._logService.info(
+							`[Claude] declining elicitation from MCP server (Phase 7 stub): ${msg}`,
+						),
 				);
-				this._logService.info(`[Claude] session ${this.sessionId}: resume rebuild agent=${rebuildOptions.agent ?? '(none)'}`);
-				const rebuildWarm = await this._sdkService.startup({ options: rebuildOptions });
+				this._logService.info(
+					`[Claude] session ${this.sessionId}: resume rebuild agent=${rebuildOptions.agent ?? "(none)"}`,
+				);
+				const rebuildWarm = await this._sdkService.startup({
+					options: rebuildOptions,
+				});
 				return { warm: rebuildWarm, abortController: rebuildAbort };
 			} catch (err) {
 				this.toolDiff.markDirty();
@@ -366,19 +449,25 @@ export class ClaudeAgentSession extends Disposable {
 	}
 
 	/** True once {@link materialize} has installed the SDK pipeline. */
-	get isPipelineReady(): boolean { return this._pipeline !== undefined; }
+	get isPipelineReady(): boolean {
+		return this._pipeline !== undefined;
+	}
 
 	/** Pre-materialize model selection accessor (read by materializer to build Options). */
-	get provisionalModel(): ModelSelection | undefined { return this._provisionalModel; }
+	get provisionalModel(): ModelSelection | undefined {
+		return this._provisionalModel;
+	}
 
 	private _requirePipeline(): ClaudeSdkPipeline {
 		if (!this._pipeline) {
-			throw new Error('ClaudeAgentSession is not materialized');
+			throw new Error("ClaudeAgentSession is not materialized");
 		}
 		return this._pipeline;
 	}
 
-	get isResumed(): boolean { return this._requirePipeline().isResumed; }
+	get isResumed(): boolean {
+		return this._requirePipeline().isResumed;
+	}
 
 	/**
 	 * Seed the pipeline's current + applied config cache from
@@ -386,8 +475,16 @@ export class ClaudeAgentSession extends Disposable {
 	 * values, so the cache prevents a redundant first `setModel` /
 	 * `applyFlagSettings` call.
 	 */
-	seedBijectiveState(state: { model?: string; effort?: ClaudeRuntimeEffortLevel; permissionMode?: PermissionMode }): void {
-		this._requirePipeline().seedCurrentConfig(state.model, state.effort, state.permissionMode);
+	seedBijectiveState(state: {
+		model?: string;
+		effort?: ClaudeRuntimeEffortLevel;
+		permissionMode?: PermissionMode;
+	}): void {
+		this._requirePipeline().seedCurrentConfig(
+			state.model,
+			state.effort,
+			state.permissionMode,
+		);
 	}
 
 	attachRematerializer(rematerializer: IRematerializer): void {
@@ -416,10 +513,19 @@ export class ClaudeAgentSession extends Disposable {
 	 */
 	async send(prompt: SDKUserMessage, turnId: string): Promise<void> {
 		const pipeline = this._requirePipeline();
-		if (this.toolDiff.hasDifference || this.clientCustomizationsDiff.hasDifference) {
+		if (
+			this.toolDiff.hasDifference ||
+			this.clientCustomizationsDiff.hasDifference
+		) {
 			await this._rebindForSyncedState();
 		} else {
-			await pipeline.setPermissionMode(resolveCurrentPermissionMode(this._configurationService, this.sessionUri, this._permissionModeFallback));
+			await pipeline.setPermissionMode(
+				resolveCurrentPermissionMode(
+					this._configurationService,
+					this.sessionUri,
+					this._permissionModeFallback,
+				),
+			);
 		}
 		return pipeline.send(prompt, turnId);
 	}
@@ -451,7 +557,9 @@ export class ClaudeAgentSession extends Disposable {
 	 */
 	abort(): void {
 		this._pendingPermissions.denyAll(false);
-		this._pendingUserInputs.denyAll({ response: SessionInputResponseKind.Cancel });
+		this._pendingUserInputs.denyAll({
+			response: SessionInputResponseKind.Cancel,
+		});
 		this._requirePipeline().abort();
 	}
 
@@ -475,8 +583,10 @@ export class ClaudeAgentSession extends Disposable {
 		if (this._pipeline) {
 			const requestedEffort = resolveClaudeEffort(model);
 			const runtimeEffort = clampEffortForRuntime(requestedEffort);
-			if (requestedEffort === 'max') {
-				this._logService.warn(`[Claude:${this.sessionId}] setModel: 'max' effort clamped to 'xhigh' (Copilot CAPI has no 'max' model yet)`);
+			if (requestedEffort === "max") {
+				this._logService.warn(
+					`[Claude:${this.sessionId}] setModel: 'max' effort clamped to 'xhigh' (Copilot CAPI has no 'max' model yet)`,
+				);
 			}
 			await this._pipeline.setModel(model.id);
 			if (runtimeEffort !== undefined) {
@@ -489,7 +599,9 @@ export class ClaudeAgentSession extends Disposable {
 	/**
 	 * Pre-materialize custom-agent selection accessor.
 	 */
-	get provisionalAgent(): AgentSelection | undefined { return this._provisionalAgent; }
+	get provisionalAgent(): AgentSelection | undefined {
+		return this._provisionalAgent;
+	}
 
 	/**
 	 * Change (or clear with `undefined`) the selected custom agent for this
@@ -527,15 +639,19 @@ export class ClaudeAgentSession extends Disposable {
 	 * resolve to a known agent file) so the SDK falls back to its default
 	 * (no `--agent` flag).
 	 */
-	private _resolveAgentName(agent: AgentSelection | undefined): string | undefined {
+	private _resolveAgentName(
+		agent: AgentSelection | undefined,
+	): string | undefined {
 		if (!agent) {
 			return undefined;
 		}
 		const uri = URI.parse(agent.uri);
-		const basename = uri.path.split('/').pop() ?? '';
-		const name = basename.replace(/\.md$/i, '');
+		const basename = uri.path.split("/").pop() ?? "";
+		const name = basename.replace(/\.md$/i, "");
 		if (!name) {
-			this._logService.warn(`[Claude:${this.sessionId}] _resolveAgentName: could not extract agent name from URI '${agent.uri}'`);
+			this._logService.warn(
+				`[Claude:${this.sessionId}] _resolveAgentName: could not extract agent name from URI '${agent.uri}'`,
+			);
 			return undefined;
 		}
 		return name;
@@ -558,11 +674,11 @@ export class ClaudeAgentSession extends Disposable {
 			steeringMessage.message.attachments,
 		);
 		const sdkMessage: SDKUserMessage = {
-			type: 'user',
-			message: { role: 'user', content: contentBlocks },
+			type: "user",
+			message: { role: "user", content: contentBlocks },
 			session_id: this.sessionId,
 			parent_tool_use_id: null,
-			priority: 'now',
+			priority: "now",
 			// Reuse the protocol PendingMessage.id as the SDK uuid — same
 			// pattern as `ClaudeAgent.sendMessage` reusing turnId. The SDK's
 			// `uuid` field is typed as a branded UUID, but the cast at the
@@ -599,12 +715,16 @@ export class ClaudeAgentSession extends Disposable {
 		}
 		return this._pendingPermissions.registerAndFire(args.toolUseID, () => {
 			this._onDidSessionProgress.fire({
-				kind: 'pending_confirmation',
+				kind: "pending_confirmation",
 				session: this.sessionUri,
 				state: args.state,
 				permissionKind: args.permissionKind,
-				...(args.permissionPath !== undefined ? { permissionPath: args.permissionPath } : {}),
-				...(args.parentToolCallId !== undefined ? { parentToolCallId: args.parentToolCallId } : {}),
+				...(args.permissionPath !== undefined
+					? { permissionPath: args.permissionPath }
+					: {}),
+				...(args.parentToolCallId !== undefined
+					? { parentToolCallId: args.parentToolCallId }
+					: {}),
 			});
 		});
 	}
@@ -618,13 +738,19 @@ export class ClaudeAgentSession extends Disposable {
 	 * a deferred until {@link respondToUserInputRequest} resolves it.
 	 * Resolves with `{ response: Cancel }` if the pipeline is aborted.
 	 */
-	requestUserInput(request: SessionInputRequest, parentToolCallId?: string): Promise<{ response: SessionInputResponseKind; answers?: Record<string, SessionInputAnswer> }> {
+	requestUserInput(
+		request: SessionInputRequest,
+		parentToolCallId?: string,
+	): Promise<{
+		response: SessionInputResponseKind;
+		answers?: Record<string, SessionInputAnswer>;
+	}> {
 		if (!this._pipeline || this._pipeline.isAborted) {
 			return Promise.resolve({ response: SessionInputResponseKind.Cancel });
 		}
 		return this._pendingUserInputs.registerAndFire(request.id, () => {
 			this._onDidSessionProgress.fire({
-				kind: 'action',
+				kind: "action",
 				session: this.sessionUri,
 				action: {
 					type: ActionType.SessionInputRequested,
@@ -699,8 +825,11 @@ export class ClaudeAgentSession extends Disposable {
 	 * {@link SessionClientCustomizationsDiff} drives plugin rebinds,
 	 * and only flips on client-side writes.
 	 */
-	private readonly _onDidCustomizationsChange = this._register(new Emitter<void>());
-	readonly onDidCustomizationsChange: Event<void> = this._onDidCustomizationsChange.event;
+	private readonly _onDidCustomizationsChange = this._register(
+		new Emitter<void>(),
+	);
+	readonly onDidCustomizationsChange: Event<void> =
+		this._onDidCustomizationsChange.event;
 
 	/**
 	 * Adopt the result of a global {@link IAgentPluginManager.syncCustomizations}
@@ -741,20 +870,27 @@ export class ClaudeAgentSession extends Disposable {
 	 * still returned, so a transient SDK hiccup doesn't blank the UI.
 	 */
 	async getSessionCustomizations(): Promise<readonly Customization[]> {
-		const { synced, enablement } = this.clientCustomizationsDiff.model.state.get();
+		const { synced, enablement } =
+			this.clientCustomizationsDiff.model.state.get();
 		let bundled: Customization | undefined;
 		if (this._pipeline && this._sdkBundler) {
 			let sdk: ISdkResolvedCustomizations | undefined;
 			try {
 				sdk = await this._pipeline.snapshotResolvedCustomizations();
 			} catch (err) {
-				this._logService.warn(`[Claude:${this.sessionId}] snapshotResolvedCustomizations failed`, err);
+				this._logService.warn(
+					`[Claude:${this.sessionId}] snapshotResolvedCustomizations failed`,
+					err,
+				);
 			}
 			if (sdk) {
 				try {
 					bundled = await this._sdkBundler.bundle(sdk);
 				} catch (err) {
-					this._logService.warn(`[Claude:${this.sessionId}] SDK bundle failed`, err);
+					this._logService.warn(
+						`[Claude:${this.sessionId}] SDK bundle failed`,
+						err,
+					);
 				}
 			}
 		}
@@ -767,7 +903,9 @@ export class ClaudeAgentSession extends Disposable {
 		// Resolve parked deferreds before tearing the pipeline down so the
 		// SDK's canUseTool callback unwinds with a deny and the loop exits.
 		this._pendingPermissions.denyAll(false);
-		this._pendingUserInputs.denyAll({ response: SessionInputResponseKind.Cancel });
+		this._pendingUserInputs.denyAll({
+			response: SessionInputResponseKind.Cancel,
+		});
 		this._pendingClientToolCalls.rejectAll(new CancellationError());
 		super.dispose();
 	}

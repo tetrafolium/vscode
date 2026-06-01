@@ -3,25 +3,42 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../base/browser/dom.js';
-import { Gesture, EventType as TouchEventType } from '../../../../base/browser/touch.js';
-import { Codicon } from '../../../../base/common/codicons.js';
-import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
-import { renderIcon } from '../../../../base/browser/ui/iconLabel/iconLabels.js';
-import { localize } from '../../../../nls.js';
-import { IActionWidgetService } from '../../../../platform/actionWidget/browser/actionWidget.js';
-import { ActionListItemKind, IActionListDelegate, IActionListItem } from '../../../../platform/actionWidget/browser/actionList.js';
-import { IProviderSessionType, ISessionsManagementService } from '../../../services/sessions/common/sessionsManagement.js';
-import { ISessionsProvidersService } from '../../../services/sessions/browser/sessionsProvidersService.js';
-import { autorun } from '../../../../base/common/observable.js';
-import { ISession } from '../../../services/sessions/common/session.js';
-import { Emitter } from '../../../../base/common/event.js';
-import { isWeb } from '../../../../base/common/platform.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { reportNewChatPickerClosed } from './newChatPickerTelemetry.js';
+import * as dom from "../../../../base/browser/dom.js";
+import {
+	Gesture,
+	EventType as TouchEventType,
+} from "../../../../base/browser/touch.js";
+import { Codicon } from "../../../../base/common/codicons.js";
+import {
+	Disposable,
+	DisposableStore,
+} from "../../../../base/common/lifecycle.js";
+import { renderIcon } from "../../../../base/browser/ui/iconLabel/iconLabels.js";
+import { localize } from "../../../../nls.js";
+import { IActionWidgetService } from "../../../../platform/actionWidget/browser/actionWidget.js";
+import {
+	ActionListItemKind,
+	IActionListDelegate,
+	IActionListItem,
+} from "../../../../platform/actionWidget/browser/actionList.js";
+import {
+	IProviderSessionType,
+	ISessionsManagementService,
+} from "../../../services/sessions/common/sessionsManagement.js";
+import { ISessionsProvidersService } from "../../../services/sessions/browser/sessionsProvidersService.js";
+import { autorun } from "../../../../base/common/observable.js";
+import { ISession } from "../../../services/sessions/common/session.js";
+import { Emitter } from "../../../../base/common/event.js";
+import { isWeb } from "../../../../base/common/platform.js";
+import {
+	IStorageService,
+	StorageScope,
+	StorageTarget,
+} from "../../../../platform/storage/common/storage.js";
+import { ITelemetryService } from "../../../../platform/telemetry/common/telemetry.js";
+import { reportNewChatPickerClosed } from "./newChatPickerTelemetry.js";
 
-export const STORAGE_KEY_LAST_SESSION_TYPE = 'sessions.lastSelectedSessionType';
+export const STORAGE_KEY_LAST_SESSION_TYPE = "sessions.lastSelectedSessionType";
 
 /**
  * Persist a preferred session type into the picker's stored preference.
@@ -33,7 +50,10 @@ export function writeStoredSessionTypePref(
 ): void {
 	storageService.store(
 		STORAGE_KEY_LAST_SESSION_TYPE,
-		JSON.stringify({ providerId: pick.providerId, sessionTypeId: pick.sessionTypeId }),
+		JSON.stringify({
+			providerId: pick.providerId,
+			sessionTypeId: pick.sessionTypeId,
+		}),
 		StorageScope.PROFILE,
 		StorageTarget.USER,
 	);
@@ -79,7 +99,6 @@ interface ISessionTypePickerItem {
 }
 
 export class SessionTypePicker extends Disposable {
-
 	/**
 	 * The currently displayed pick. May be missing `providerId` when restored
 	 * from legacy storage that only persisted the session type id — it will
@@ -87,7 +106,9 @@ export class SessionTypePicker extends Disposable {
 	 * session.
 	 */
 	protected _picked: IPreferredSessionType | undefined;
-	protected readonly _onDidSelectSessionType = this._register(new Emitter<IPickedSessionType | undefined>());
+	protected readonly _onDidSelectSessionType = this._register(
+		new Emitter<IPickedSessionType | undefined>(),
+	);
 	readonly onDidSelectSessionType = this._onDidSelectSessionType.event;
 
 	/** Session types the active session's folder can be served by, across all providers. */
@@ -97,9 +118,12 @@ export class SessionTypePicker extends Disposable {
 	protected _triggerElement: HTMLElement | undefined;
 
 	constructor(
-		@IActionWidgetService private readonly actionWidgetService: IActionWidgetService,
-		@ISessionsManagementService private readonly sessionsManagementService: ISessionsManagementService,
-		@ISessionsProvidersService private readonly sessionsProvidersService: ISessionsProvidersService,
+		@IActionWidgetService
+		private readonly actionWidgetService: IActionWidgetService,
+		@ISessionsManagementService
+		private readonly sessionsManagementService: ISessionsManagementService,
+		@ISessionsProvidersService
+		private readonly sessionsProvidersService: ISessionsProvidersService,
 		@IStorageService protected readonly storageService: IStorageService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
@@ -111,10 +135,15 @@ export class SessionTypePicker extends Disposable {
 		const refresh = (session: ISession | undefined) => {
 			if (session) {
 				const folderUri = session.workspace.get()?.folders[0]?.root;
-				this._folderSessionTypes = folderUri ? this.sessionsManagementService.getSessionTypesForFolder(folderUri) : [];
+				this._folderSessionTypes = folderUri
+					? this.sessionsManagementService.getSessionTypesForFolder(folderUri)
+					: [];
 				// The active session's actual type wins over any stored preference
 				// for trigger-label rendering.
-				this._picked = { providerId: session.providerId, sessionTypeId: session.sessionType };
+				this._picked = {
+					providerId: session.providerId,
+					sessionTypeId: session.sessionType,
+				};
 			} else {
 				this._folderSessionTypes = [];
 				// Preserve the stored pick when no active session exists,
@@ -124,24 +153,35 @@ export class SessionTypePicker extends Disposable {
 			this._updateTriggerLabel();
 		};
 
-		this._register(autorun(reader => {
-			const session = this.sessionsManagementService.activeSession.read(reader);
-			refresh(session);
-		}));
+		this._register(
+			autorun((reader) => {
+				const session =
+					this.sessionsManagementService.activeSession.read(reader);
+				refresh(session);
+			}),
+		);
 		// Re-read when a provider advertises/removes session types at runtime
 		// (e.g. a remote agent host discovers a new agent).
-		this._register(this.sessionsManagementService.onDidChangeSessionTypes(() => {
-			refresh(this.sessionsManagementService.activeSession.get());
-		}));
+		this._register(
+			this.sessionsManagementService.onDidChangeSessionTypes(() => {
+				refresh(this.sessionsManagementService.activeSession.get());
+			}),
+		);
 		// Re-read when the stored preference changes (e.g. handoff IPC from
 		// the main vscode window pre-seeds Copilot CLI [Local] when opening
 		// the agents window from an empty workspace).
-		this._register(this.storageService.onDidChangeValue(StorageScope.PROFILE, STORAGE_KEY_LAST_SESSION_TYPE, this._register(new DisposableStore()))(() => {
-			if (!this.sessionsManagementService.activeSession.get()) {
-				this._picked = this._readStoredPick();
-				this._updateTriggerLabel();
-			}
-		}));
+		this._register(
+			this.storageService.onDidChangeValue(
+				StorageScope.PROFILE,
+				STORAGE_KEY_LAST_SESSION_TYPE,
+				this._register(new DisposableStore()),
+			)(() => {
+				if (!this.sessionsManagementService.activeSession.get()) {
+					this._picked = this._readStoredPick();
+					this._updateTriggerLabel();
+				}
+			}),
+		);
 	}
 
 	get selectedPick(): IPreferredSessionType | undefined {
@@ -151,35 +191,41 @@ export class SessionTypePicker extends Disposable {
 	render(container: HTMLElement, options?: { className?: string }): void {
 		this._renderDisposables.clear();
 
-		const slot = dom.append(container, dom.$('.sessions-chat-picker-slot'));
+		const slot = dom.append(container, dom.$(".sessions-chat-picker-slot"));
 		if (options?.className) {
-			const classNames = options.className.split(/\s+/).filter(className => className.length > 0);
+			const classNames = options.className
+				.split(/\s+/)
+				.filter((className) => className.length > 0);
 			if (classNames.length > 0) {
 				slot.classList.add(...classNames);
 			}
 		}
 		this._renderDisposables.add({ dispose: () => slot.remove() });
 
-		const trigger = dom.append(slot, dom.$('a.action-label'));
+		const trigger = dom.append(slot, dom.$("a.action-label"));
 		trigger.tabIndex = 0;
-		trigger.role = 'button';
+		trigger.role = "button";
 		this._triggerElement = trigger;
 		this._updateTriggerLabel();
 
 		this._renderDisposables.add(Gesture.addTarget(trigger));
 		for (const eventType of [dom.EventType.CLICK, TouchEventType.Tap]) {
-			this._renderDisposables.add(dom.addDisposableListener(trigger, eventType, (e) => {
-				dom.EventHelper.stop(e, true);
-				this._showPicker();
-			}));
+			this._renderDisposables.add(
+				dom.addDisposableListener(trigger, eventType, (e) => {
+					dom.EventHelper.stop(e, true);
+					this._showPicker();
+				}),
+			);
 		}
 
-		this._renderDisposables.add(dom.addDisposableListener(trigger, dom.EventType.KEY_DOWN, (e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
-				dom.EventHelper.stop(e, true);
-				this._showPicker();
-			}
-		}));
+		this._renderDisposables.add(
+			dom.addDisposableListener(trigger, dom.EventType.KEY_DOWN, (e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					dom.EventHelper.stop(e, true);
+					this._showPicker();
+				}
+			}),
+		);
 	}
 
 	/**
@@ -215,7 +261,10 @@ export class SessionTypePicker extends Disposable {
 		// Only those providers need a group title for disambiguation.
 		const labelCounts = new Map<string, number>();
 		for (const { sessionType } of folderTypes) {
-			labelCounts.set(sessionType.label, (labelCounts.get(sessionType.label) ?? 0) + 1);
+			labelCounts.set(
+				sessionType.label,
+				(labelCounts.get(sessionType.label) ?? 0) + 1,
+			);
 		}
 		const providersWithDuplicates = new Set<string>();
 		for (const { providerId, sessionType } of folderTypes) {
@@ -233,20 +282,33 @@ export class SessionTypePicker extends Disposable {
 			const groupTitle = provider?.label ?? providerId;
 			const isFirstInGroup = providerId !== lastProviderId;
 			lastProviderId = providerId;
-			const isCurrent = this._picked?.providerId === providerId && this._picked?.sessionTypeId === sessionType.id;
+			const isCurrent =
+				this._picked?.providerId === providerId &&
+				this._picked?.sessionTypeId === sessionType.id;
 			const item: ISessionTypePickerItem = isCurrent
-				? { providerId, sessionTypeId: sessionType.id, label: sessionType.label, checked: true }
-				: { providerId, sessionTypeId: sessionType.id, label: sessionType.label };
+				? {
+						providerId,
+						sessionTypeId: sessionType.id,
+						label: sessionType.label,
+						checked: true,
+					}
+				: {
+						providerId,
+						sessionTypeId: sessionType.id,
+						label: sessionType.label,
+					};
 			groupedItems.push({
 				kind: ActionListItemKind.Action,
 				label: sessionType.label,
-				group: providersWithDuplicates.has(providerId) ? {
-					title: isFirstInGroup ? groupTitle : '',
-					icon: sessionType.icon,
-				} : {
-					title: '',
-					icon: sessionType.icon,
-				},
+				group: providersWithDuplicates.has(providerId)
+					? {
+							title: isFirstInGroup ? groupTitle : "",
+							icon: sessionType.icon,
+						}
+					: {
+							title: "",
+							icon: sessionType.icon,
+						},
 				item,
 			});
 		}
@@ -257,11 +319,13 @@ export class SessionTypePicker extends Disposable {
 				this.actionWidgetService.hide();
 				this._handleSelectedSessionType(item);
 			},
-			onHide: () => { triggerElement.focus(); },
+			onHide: () => {
+				triggerElement.focus();
+			},
 		};
 
 		this.actionWidgetService.show<ISessionTypePickerItem>(
-			'sessionTypePicker',
+			"sessionTypePicker",
 			false,
 			groupedItems,
 			delegate,
@@ -269,8 +333,9 @@ export class SessionTypePicker extends Disposable {
 			undefined,
 			[],
 			{
-				getAriaLabel: (item) => item.label ?? '',
-				getWidgetAriaLabel: () => localize('sessionTypePicker.ariaLabel', "Session Type"),
+				getAriaLabel: (item) => item.label ?? "",
+				getWidgetAriaLabel: () =>
+					localize("sessionTypePicker.ariaLabel", "Session Type"),
 			},
 			{ showGroupTitleOnFirstItem: hasDuplicateLabels },
 		);
@@ -289,12 +354,18 @@ export class SessionTypePicker extends Disposable {
 	protected _handleSelectedSessionType(pick: IPickedSessionType): void {
 		const stored = this._readStoredPick();
 		const beforeId = stored?.sessionTypeId ?? this._picked?.sessionTypeId;
-		const beforeLabel = this._folderSessionTypes.find(t => t.sessionType.id === beforeId)?.sessionType.label;
-		const afterLabel = this._folderSessionTypes.find(t => t.providerId === pick.providerId && t.sessionType.id === pick.sessionTypeId)?.sessionType.label;
+		const beforeLabel = this._folderSessionTypes.find(
+			(t) => t.sessionType.id === beforeId,
+		)?.sessionType.label;
+		const afterLabel = this._folderSessionTypes.find(
+			(t) =>
+				t.providerId === pick.providerId &&
+				t.sessionType.id === pick.sessionTypeId,
+		)?.sessionType.label;
 
 		reportNewChatPickerClosed(this.telemetryService, {
-			id: 'NewChatSessionTypePicker',
-			name: 'NewChatSessionTypePicker',
+			id: "NewChatSessionTypePicker",
+			name: "NewChatSessionTypePicker",
 			optionIdBefore: beforeId,
 			optionIdAfter: pick.sessionTypeId,
 			optionLabelBefore: beforeLabel,
@@ -302,7 +373,9 @@ export class SessionTypePicker extends Disposable {
 			isPII: false,
 		});
 
-		const changed = pick.providerId !== this._picked?.providerId || pick.sessionTypeId !== this._picked?.sessionTypeId;
+		const changed =
+			pick.providerId !== this._picked?.providerId ||
+			pick.sessionTypeId !== this._picked?.sessionTypeId;
 		if (changed) {
 			this._writeStoredPick(pick);
 			this._onDidSelectSessionType.fire(pick);
@@ -310,7 +383,10 @@ export class SessionTypePicker extends Disposable {
 	}
 
 	private _readStoredPick(): IPreferredSessionType | undefined {
-		const raw = this.storageService.get(STORAGE_KEY_LAST_SESSION_TYPE, StorageScope.PROFILE);
+		const raw = this.storageService.get(
+			STORAGE_KEY_LAST_SESSION_TYPE,
+			StorageScope.PROFILE,
+		);
 		if (!raw) {
 			return undefined;
 		}
@@ -318,9 +394,12 @@ export class SessionTypePicker extends Disposable {
 		// shape where only the sessionTypeId string was stored.
 		try {
 			const parsed = JSON.parse(raw) as IStoredSessionTypePick;
-			if (parsed && typeof parsed.sessionTypeId === 'string') {
-				return typeof parsed.providerId === 'string'
-					? { providerId: parsed.providerId, sessionTypeId: parsed.sessionTypeId }
+			if (parsed && typeof parsed.sessionTypeId === "string") {
+				return typeof parsed.providerId === "string"
+					? {
+							providerId: parsed.providerId,
+							sessionTypeId: parsed.sessionTypeId,
+						}
 					: { sessionTypeId: parsed.sessionTypeId };
 			}
 		} catch {
@@ -333,8 +412,16 @@ export class SessionTypePicker extends Disposable {
 
 	private _writeStoredPick(pick: IPickedSessionType): void {
 		this._picked = pick;
-		const stored: IStoredSessionTypePick = { providerId: pick.providerId, sessionTypeId: pick.sessionTypeId };
-		this.storageService.store(STORAGE_KEY_LAST_SESSION_TYPE, JSON.stringify(stored), StorageScope.PROFILE, StorageTarget.MACHINE);
+		const stored: IStoredSessionTypePick = {
+			providerId: pick.providerId,
+			sessionTypeId: pick.sessionTypeId,
+		};
+		this.storageService.store(
+			STORAGE_KEY_LAST_SESSION_TYPE,
+			JSON.stringify(stored),
+			StorageScope.PROFILE,
+			StorageTarget.MACHINE,
+		);
 	}
 
 	private _updateTriggerLabel(): void {
@@ -352,24 +439,40 @@ export class SessionTypePicker extends Disposable {
 		// to also hide the "with" connector when the trigger is hidden.
 		const hideForSingleHarness = isWeb && this._folderSessionTypes.length <= 1;
 		if (this._folderSessionTypes.length === 0 || hideForSingleHarness) {
-			this._triggerElement.classList.add('hidden');
+			this._triggerElement.classList.add("hidden");
 			return;
 		}
 
-		this._triggerElement.classList.remove('hidden');
-		const currentType = this._folderSessionTypes.find(t =>
-			t.providerId === this._picked?.providerId && t.sessionType.id === this._picked?.sessionTypeId)?.sessionType
-			?? this._folderSessionTypes.find(t => t.sessionType.id === this._picked?.sessionTypeId)?.sessionType;
+		this._triggerElement.classList.remove("hidden");
+		const currentType =
+			this._folderSessionTypes.find(
+				(t) =>
+					t.providerId === this._picked?.providerId &&
+					t.sessionType.id === this._picked?.sessionTypeId,
+			)?.sessionType ??
+			this._folderSessionTypes.find(
+				(t) => t.sessionType.id === this._picked?.sessionTypeId,
+			)?.sessionType;
 		const modeIcon = currentType?.icon ?? Codicon.terminal;
-		const modeLabel = currentType?.label ?? this._picked?.sessionTypeId ?? '';
+		const modeLabel = currentType?.label ?? this._picked?.sessionTypeId ?? "";
 
 		dom.append(this._triggerElement, renderIcon(modeIcon));
-		const labelSpan = dom.append(this._triggerElement, dom.$('span.sessions-chat-dropdown-label'));
+		const labelSpan = dom.append(
+			this._triggerElement,
+			dom.$("span.sessions-chat-dropdown-label"),
+		);
 		labelSpan.textContent = modeLabel;
 
-		const chevron = dom.append(this._triggerElement, renderIcon(Codicon.chevronDown));
-		chevron.classList.add('sessions-chat-dropdown-chevron');
+		const chevron = dom.append(
+			this._triggerElement,
+			renderIcon(Codicon.chevronDown),
+		);
+		chevron.classList.add("sessions-chat-dropdown-chevron");
 
-		this._triggerElement.ariaLabel = localize('sessionTypePicker.triggerAriaLabel', "Pick Session Type, {0}", modeLabel);
+		this._triggerElement.ariaLabel = localize(
+			"sessionTypePicker.triggerAriaLabel",
+			"Pick Session Type, {0}",
+			modeLabel,
+		);
 	}
 }

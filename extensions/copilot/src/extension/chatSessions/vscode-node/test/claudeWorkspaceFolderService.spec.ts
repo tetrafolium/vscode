@@ -69,25 +69,40 @@ describe('ClaudeWorkspaceFolderService', () => {
 		logService = new MockLogService();
 		extensionContext = new MockExtensionContext();
 		fileSystemService = new MockFileSystemService();
-		service = new ClaudeWorkspaceFolderService(gitService, logService, extensionContext, fileSystemService);
+		service = new ClaudeWorkspaceFolderService(
+			gitService,
+			logService,
+			extensionContext,
+			fileSystemService,
+		);
 	});
 
 	describe('getWorkspaceChanges', () => {
 		it('returns empty array when repository is not found', async () => {
 			gitService.getRepository = vi.fn().mockResolvedValue(undefined);
 
-			const result = await service.getWorkspaceChanges('/nonexistent', 'main', undefined);
+			const result = await service.getWorkspaceChanges(
+				'/nonexistent',
+				'main',
+				undefined,
+			);
 
 			expect(result).toEqual([]);
 			expect(logService.warn).toHaveBeenCalled();
 		});
 
 		it('returns empty array when repository has no changes object', async () => {
-			gitService.getRepository = vi.fn().mockResolvedValue(
-				createMockRepoContext({ changes: undefined }),
-			);
+			gitService.getRepository = vi
+				.fn()
+				.mockResolvedValue(
+					createMockRepoContext({ changes: undefined }),
+				);
 
-			const result = await service.getWorkspaceChanges('/mock/repo', 'main', undefined);
+			const result = await service.getWorkspaceChanges(
+				'/mock/repo',
+				'main',
+				undefined,
+			);
 
 			expect(result).toEqual([]);
 		});
@@ -97,8 +112,16 @@ describe('ClaudeWorkspaceFolderService', () => {
 			gitService.getRepository = vi.fn().mockResolvedValue(repo);
 			gitService.exec = vi.fn().mockResolvedValue('');
 
-			const result1 = await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
-			const result2 = await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
+			const result1 = await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
+			const result2 = await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
 
 			expect(result1).toBe(result2);
 			expect(gitService.exec).toHaveBeenCalledTimes(1);
@@ -109,8 +132,17 @@ describe('ClaudeWorkspaceFolderService', () => {
 			gitService.getRepository = vi.fn().mockResolvedValue(repo);
 			gitService.exec = vi.fn().mockResolvedValue('');
 
-			await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
-			await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined, true);
+			await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
+			await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+				true,
+			);
 
 			expect(gitService.exec).toHaveBeenCalledTimes(2);
 		});
@@ -118,9 +150,15 @@ describe('ClaudeWorkspaceFolderService', () => {
 		it('returns empty array on git exec error', async () => {
 			const repo = createMockRepoContext();
 			gitService.getRepository = vi.fn().mockResolvedValue(repo);
-			gitService.exec = vi.fn().mockRejectedValue(new Error('git failed'));
+			gitService.exec = vi
+				.fn()
+				.mockRejectedValue(new Error('git failed'));
 
-			const result = await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
+			const result = await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
 
 			expect(result).toEqual([]);
 			expect(logService.error).toHaveBeenCalled();
@@ -131,13 +169,22 @@ describe('ClaudeWorkspaceFolderService', () => {
 		it('calls getBranchBase when gitBaseBranch is undefined and gitBranch is provided', async () => {
 			const repo = createMockRepoContext();
 			gitService.getRepository = vi.fn().mockResolvedValue(repo);
-			gitService.getBranchBase = vi.fn().mockResolvedValue({ name: 'main', commit: 'def456', type: 0 });
+			gitService.getBranchBase = vi
+				.fn()
+				.mockResolvedValue({ name: 'main', commit: 'def456', type: 0 });
 			gitService.exec = vi.fn().mockResolvedValue('');
 			gitService.getMergeBase = vi.fn().mockResolvedValue('def456');
 
-			await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
+			await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
 
-			expect(gitService.getBranchBase).toHaveBeenCalledWith(repo.rootUri, 'feature-branch');
+			expect(gitService.getBranchBase).toHaveBeenCalledWith(
+				repo.rootUri,
+				'feature-branch',
+			);
 			expect(gitService.exec).toHaveBeenCalledWith(
 				repo.rootUri,
 				expect.arrayContaining(['--merge-base', 'main']),
@@ -150,7 +197,11 @@ describe('ClaudeWorkspaceFolderService', () => {
 			gitService.getBranchBase = vi.fn();
 			gitService.exec = vi.fn().mockResolvedValue('');
 
-			await service.getWorkspaceChanges('/mock/repo', 'feature-branch', 'develop');
+			await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				'develop',
+			);
 
 			expect(gitService.getBranchBase).not.toHaveBeenCalled();
 			expect(gitService.exec).toHaveBeenCalledWith(
@@ -165,7 +216,11 @@ describe('ClaudeWorkspaceFolderService', () => {
 			gitService.getBranchBase = vi.fn().mockResolvedValue(undefined);
 			gitService.exec = vi.fn().mockResolvedValue('');
 
-			const result = await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
+			const result = await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
 
 			expect(result).toEqual([]);
 			expect(gitService.exec).toHaveBeenCalledWith(
@@ -177,10 +232,16 @@ describe('ClaudeWorkspaceFolderService', () => {
 		it('handles getBranchBase throwing an error gracefully', async () => {
 			const repo = createMockRepoContext();
 			gitService.getRepository = vi.fn().mockResolvedValue(repo);
-			gitService.getBranchBase = vi.fn().mockRejectedValue(new Error('branch not found'));
+			gitService.getBranchBase = vi
+				.fn()
+				.mockRejectedValue(new Error('branch not found'));
 			gitService.exec = vi.fn().mockResolvedValue('');
 
-			const result = await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
+			const result = await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
 
 			expect(result).toEqual([]);
 			expect(logService.warn).toHaveBeenCalledWith(
@@ -194,7 +255,11 @@ describe('ClaudeWorkspaceFolderService', () => {
 			gitService.getBranchBase = vi.fn();
 			gitService.exec = vi.fn().mockResolvedValue('');
 
-			await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
+			await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
 
 			expect(gitService.getBranchBase).not.toHaveBeenCalled();
 		});
@@ -206,12 +271,20 @@ describe('ClaudeWorkspaceFolderService', () => {
 			gitService.getRepository = vi.fn().mockResolvedValue(repo);
 			gitService.exec = vi.fn().mockResolvedValue('');
 
-			await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
+			await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
 
 			service.dispose();
 
 			gitService.exec = vi.fn().mockResolvedValue('');
-			await service.getWorkspaceChanges('/mock/repo', 'feature-branch', undefined);
+			await service.getWorkspaceChanges(
+				'/mock/repo',
+				'feature-branch',
+				undefined,
+			);
 
 			expect(gitService.exec).toHaveBeenCalledTimes(1);
 		});

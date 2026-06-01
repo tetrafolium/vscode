@@ -28,7 +28,7 @@ export class UriTemplate {
 
 	private constructor(
 		public readonly template: string,
-		components: ReadonlyArray<IUriTemplateComponent | string>
+		components: ReadonlyArray<IUriTemplateComponent | string>,
 	) {
 		this.template = template;
 		this.components = components;
@@ -48,24 +48,24 @@ export class UriTemplate {
 			lastPos = match.index + expression.length;
 
 			// Handle escaped braces: treat '{{' and '}}' as literals, not expressions
-			if (template[match.index - 1] === '{' || template[lastPos] === '}') {
+			if (template[match.index - 1] === "{" || template[lastPos] === "}") {
 				components.push(inner);
 				continue;
 			}
 
-			let operator = '';
+			let operator = "";
 			let rest = inner;
 			if (rest.length > 0 && UriTemplate._isOperator(rest[0])) {
 				operator = rest[0];
 				rest = rest.slice(1);
 			}
-			const variables = rest.split(',').map((v): IUriTemplateVariable => {
+			const variables = rest.split(",").map((v): IUriTemplateVariable => {
 				let name = v;
 				let explodable = false;
 				let repeatable = false;
 				let prefixLength: number | undefined = undefined;
 				let optional = false;
-				if (name.endsWith('*')) {
+				if (name.endsWith("*")) {
 					explodable = true;
 					repeatable = true;
 					name = name.slice(0, -1);
@@ -75,7 +75,7 @@ export class UriTemplate {
 					name = prefixMatch[1];
 					prefixLength = parseInt(prefixMatch[2], 10);
 				}
-				if (name.endsWith('?')) {
+				if (name.endsWith("?")) {
 					optional = true;
 					name = name.slice(0, -1);
 				}
@@ -88,7 +88,7 @@ export class UriTemplate {
 		return new UriTemplate(template, components);
 	}
 
-	private static _operators = ['+', '#', '.', '/', ';', '?', '&'] as const;
+	private static _operators = ["+", "#", ".", "/", ";", "?", "&"] as const;
 	private static _isOperator(ch: string): boolean {
 		return (UriTemplate._operators as readonly string[]).includes(ch);
 	}
@@ -97,9 +97,9 @@ export class UriTemplate {
 	 * Resolves the template with the given variables.
 	 */
 	public resolve(variables: Record<string, unknown>): string {
-		let result = '';
+		let result = "";
 		for (const comp of this.components) {
-			if (typeof comp === 'string') {
+			if (typeof comp === "string") {
 				result += comp;
 			} else {
 				result += this._expand(comp, variables);
@@ -108,35 +108,50 @@ export class UriTemplate {
 		return result;
 	}
 
-	private _expand(comp: IUriTemplateComponent, variables: Record<string, unknown>): string {
+	private _expand(
+		comp: IUriTemplateComponent,
+		variables: Record<string, unknown>,
+	): string {
 		const op = comp.operator;
 		const varSpecs = comp.variables;
 		if (varSpecs.length === 0) {
 			return comp.expression;
 		}
 		const vals: string[] = [];
-		const isNamed = op === ';' || op === '?' || op === '&';
-		const isReserved = op === '+' || op === '#';
-		const isFragment = op === '#';
-		const isLabel = op === '.';
-		const isPath = op === '/';
-		const isForm = op === '?';
-		const isFormCont = op === '&';
-		const isParam = op === ';';
+		const isNamed = op === ";" || op === "?" || op === "&";
+		const isReserved = op === "+" || op === "#";
+		const isFragment = op === "#";
+		const isLabel = op === ".";
+		const isPath = op === "/";
+		const isForm = op === "?";
+		const isFormCont = op === "&";
+		const isParam = op === ";";
 
-		let prefix = '';
-		if (op === '+') { prefix = ''; }
-		else if (op === '#') { prefix = '#'; }
-		else if (op === '.') { prefix = '.'; }
-		else if (op === '/') { prefix = ''; }
-		else if (op === ';') { prefix = ';'; }
-		else if (op === '?') { prefix = '?'; }
-		else if (op === '&') { prefix = '&'; }
+		let prefix = "";
+		if (op === "+") {
+			prefix = "";
+		} else if (op === "#") {
+			prefix = "#";
+		} else if (op === ".") {
+			prefix = ".";
+		} else if (op === "/") {
+			prefix = "";
+		} else if (op === ";") {
+			prefix = ";";
+		} else if (op === "?") {
+			prefix = "?";
+		} else if (op === "&") {
+			prefix = "&";
+		}
 
 		for (const v of varSpecs) {
 			const value = variables[v.name];
 			const defined = Object.prototype.hasOwnProperty.call(variables, v.name);
-			if (value === undefined || value === null || (Array.isArray(value) && value.length === 0)) {
+			if (
+				value === undefined ||
+				value === null ||
+				(Array.isArray(value) && value.length === 0)
+			) {
 				if (isParam) {
 					if (defined && (value === null || value === undefined)) {
 						vals.push(v.name);
@@ -145,41 +160,43 @@ export class UriTemplate {
 				}
 				if (isForm || isFormCont) {
 					if (defined) {
-						vals.push(UriTemplate._formPair(v.name, '', isNamed));
+						vals.push(UriTemplate._formPair(v.name, "", isNamed));
 					}
 					continue;
 				}
 				continue;
 			}
-			if (typeof value === 'object' && !Array.isArray(value)) {
+			if (typeof value === "object" && !Array.isArray(value)) {
 				if (v.explodable) {
 					const pairs: string[] = [];
 					for (const k in value) {
 						if (Object.prototype.hasOwnProperty.call(value, k)) {
 							const thisVal = String((value as Record<string, unknown>)[k]);
 							if (isParam) {
-								pairs.push(k + '=' + thisVal);
+								pairs.push(k + "=" + thisVal);
 							} else if (isForm || isFormCont) {
-								pairs.push(k + '=' + thisVal);
+								pairs.push(k + "=" + thisVal);
 							} else if (isLabel) {
-								pairs.push(k + '=' + thisVal);
+								pairs.push(k + "=" + thisVal);
 							} else if (isPath) {
-								pairs.push('/' + k + '=' + UriTemplate._encode(thisVal, isReserved));
+								pairs.push(
+									"/" + k + "=" + UriTemplate._encode(thisVal, isReserved),
+								);
 							} else {
-								pairs.push(k + '=' + UriTemplate._encode(thisVal, isReserved));
+								pairs.push(k + "=" + UriTemplate._encode(thisVal, isReserved));
 							}
 						}
 					}
 					if (isLabel) {
-						vals.push(pairs.join('.'));
+						vals.push(pairs.join("."));
 					} else if (isPath) {
-						vals.push(pairs.join(''));
+						vals.push(pairs.join(""));
 					} else if (isParam) {
-						vals.push(pairs.join(';'));
+						vals.push(pairs.join(";"));
 					} else if (isForm || isFormCont) {
-						vals.push(pairs.join('&'));
+						vals.push(pairs.join("&"));
 					} else {
-						vals.push(pairs.join(','));
+						vals.push(pairs.join(","));
 					}
 				} else {
 					// Not explodable: join as k1,v1,k2,v2,... and assign to variable name
@@ -191,11 +208,11 @@ export class UriTemplate {
 						}
 					}
 					// For label, param, form, join as keys=semi,;,dot,.,comma,, (no encoding of , or ;)
-					const joined = pairs.join(',');
+					const joined = pairs.join(",");
 					if (isLabel) {
 						vals.push(joined);
 					} else if (isParam || isForm || isFormCont) {
-						vals.push(v.name + '=' + joined);
+						vals.push(v.name + "=" + joined);
 					} else {
 						vals.push(joined);
 					}
@@ -205,25 +222,33 @@ export class UriTemplate {
 			if (Array.isArray(value)) {
 				if (v.explodable) {
 					if (isLabel) {
-						vals.push(value.join('.'));
+						vals.push(value.join("."));
 					} else if (isPath) {
-						vals.push(value.map(x => '/' + UriTemplate._encode(x, isReserved)).join(''));
+						vals.push(
+							value
+								.map((x) => "/" + UriTemplate._encode(x, isReserved))
+								.join(""),
+						);
 					} else if (isParam) {
-						vals.push(value.map(x => v.name + '=' + String(x)).join(';'));
+						vals.push(value.map((x) => v.name + "=" + String(x)).join(";"));
 					} else if (isForm || isFormCont) {
-						vals.push(value.map(x => v.name + '=' + String(x)).join('&'));
+						vals.push(value.map((x) => v.name + "=" + String(x)).join("&"));
 					} else {
-						vals.push(value.map(x => UriTemplate._encode(x, isReserved)).join(','));
+						vals.push(
+							value.map((x) => UriTemplate._encode(x, isReserved)).join(","),
+						);
 					}
 				} else {
 					if (isLabel) {
-						vals.push(value.join(','));
+						vals.push(value.join(","));
 					} else if (isParam) {
-						vals.push(v.name + '=' + value.join(','));
+						vals.push(v.name + "=" + value.join(","));
 					} else if (isForm || isFormCont) {
-						vals.push(v.name + '=' + value.join(','));
+						vals.push(v.name + "=" + value.join(","));
 					} else {
-						vals.push(value.map(x => UriTemplate._encode(x, isReserved)).join(','));
+						vals.push(
+							value.map((x) => UriTemplate._encode(x, isReserved)).join(","),
+						);
 					}
 				}
 				continue;
@@ -234,45 +259,47 @@ export class UriTemplate {
 			}
 			// For simple expansion, encode ! as well (not reserved)
 			// Only + and # are reserved
-			const enc = UriTemplate._encode(str, op === '+' || op === '#');
+			const enc = UriTemplate._encode(str, op === "+" || op === "#");
 			if (isParam) {
-				vals.push(v.name + '=' + enc);
+				vals.push(v.name + "=" + enc);
 			} else if (isForm || isFormCont) {
-				vals.push(v.name + '=' + enc);
+				vals.push(v.name + "=" + enc);
 			} else if (isLabel) {
 				vals.push(enc);
 			} else if (isPath) {
-				vals.push('/' + enc);
+				vals.push("/" + enc);
 			} else {
 				vals.push(enc);
 			}
 		}
 
-		let joined = '';
+		let joined = "";
 		if (isLabel) {
 			// Remove trailing dot for missing values
-			const filtered = vals.filter(v => v !== '');
-			joined = filtered.length ? prefix + filtered.join('.') : '';
+			const filtered = vals.filter((v) => v !== "");
+			joined = filtered.length ? prefix + filtered.join(".") : "";
 		} else if (isPath) {
 			// Remove empty segments for undefined/null
-			const filtered = vals.filter(v => v !== '');
-			joined = filtered.length ? filtered.join('') : '';
-			if (joined && !joined.startsWith('/')) {
-				joined = '/' + joined;
+			const filtered = vals.filter((v) => v !== "");
+			joined = filtered.length ? filtered.join("") : "";
+			if (joined && !joined.startsWith("/")) {
+				joined = "/" + joined;
 			}
 		} else if (isParam) {
 			// For param, if value is empty string, just append ;name
-			joined = vals.length ? prefix + vals.map(v => v.replace(/=\s*$/, '')).join(';') : '';
+			joined = vals.length
+				? prefix + vals.map((v) => v.replace(/=\s*$/, "")).join(";")
+				: "";
 		} else if (isForm) {
-			joined = vals.length ? prefix + vals.join('&') : '';
+			joined = vals.length ? prefix + vals.join("&") : "";
 		} else if (isFormCont) {
-			joined = vals.length ? prefix + vals.join('&') : '';
+			joined = vals.length ? prefix + vals.join("&") : "";
 		} else if (isFragment) {
-			joined = prefix + vals.join(',');
+			joined = prefix + vals.join(",");
 		} else if (isReserved) {
-			joined = vals.join(',');
+			joined = vals.join(",");
 		} else {
-			joined = vals.join(',');
+			joined = vals.join(",");
 		}
 		return joined;
 	}
@@ -282,23 +309,30 @@ export class UriTemplate {
 	}
 
 	private static _formPair(k: string, v: unknown, named: boolean): string {
-		return named ? k + '=' + encodeURIComponent(String(v)) : encodeURIComponent(String(v));
+		return named
+			? k + "=" + encodeURIComponent(String(v))
+			: encodeURIComponent(String(v));
 	}
 }
 
 function pctEncode(str: string): string {
-	let out = '';
+	let out = "";
 	for (let i = 0; i < str.length; i++) {
 		const chr = str.charCodeAt(i);
 		if (
 			// alphanum ranges:
-			(chr >= 0x30 && chr <= 0x39 || chr >= 0x41 && chr <= 0x5a || chr >= 0x61 && chr <= 0x7a) ||
+			(chr >= 0x30 && chr <= 0x39) ||
+			(chr >= 0x41 && chr <= 0x5a) ||
+			(chr >= 0x61 && chr <= 0x7a) ||
 			// unreserved characters:
-			(chr === 0x2d || chr === 0x2e || chr === 0x5f || chr === 0x7e)
+			chr === 0x2d ||
+			chr === 0x2e ||
+			chr === 0x5f ||
+			chr === 0x7e
 		) {
 			out += str[i];
 		} else {
-			out += '%' + chr.toString(16).toUpperCase();
+			out += "%" + chr.toString(16).toUpperCase();
 		}
 	}
 	return out;

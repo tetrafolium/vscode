@@ -17,7 +17,10 @@ import { getLanguage, wellKnownLanguages } from './languages';
  */
 export function getFenceForCodeBlock(code: string, minNumberOfBackticks = 3) {
 	const backticks = code.matchAll(/^\s*(```+)/gm);
-	const backticksNeeded = Math.max(minNumberOfBackticks, ...Array.from(backticks, d => d[1].length + 1));
+	const backticksNeeded = Math.max(
+		minNumberOfBackticks,
+		...Array.from(backticks, (d) => d[1].length + 1),
+	);
 	return '`'.repeat(backticksNeeded);
 }
 
@@ -36,34 +39,54 @@ export function createFilepathRegexp(languageId?: string): RegExp {
 	add(language.lineComment);
 	language.alternativeLineComments?.forEach(add);
 	const startMatch = `(?:${prefixes.join('|')})`;
-	const optionalEndMatch = suffixes.length ? `(?:\\s*${suffixes.join('|')})?` : '';
-	return new RegExp(`^\\s*${startMatch}\\s*${filepathCodeBlockMarker}\\s*(.*?)${optionalEndMatch}\\s*$`);
+	const optionalEndMatch = suffixes.length
+		? `(?:\\s*${suffixes.join('|')})?`
+		: '';
+	return new RegExp(
+		`^\\s*${startMatch}\\s*${filepathCodeBlockMarker}\\s*(.*?)${optionalEndMatch}\\s*$`,
+	);
 }
 
 /**
  * Create a markdown code block with an optional language id and an optional file path.
  * @param filePath The file path to include in the code block. To create the file path use the {@link IPromptPathRepresentationService}
  */
-export function createFencedCodeBlock(languageId: string, code: string, shouldTrim = true, filePath?: string, minNumberOfBackticksOrStyle: string | number = 3): string {
-	const fence = typeof minNumberOfBackticksOrStyle === 'number'
-		? getFenceForCodeBlock(code, minNumberOfBackticksOrStyle)
-		: minNumberOfBackticksOrStyle;
+export function createFencedCodeBlock(
+	languageId: string,
+	code: string,
+	shouldTrim = true,
+	filePath?: string,
+	minNumberOfBackticksOrStyle: string | number = 3,
+): string {
+	const fence =
+		typeof minNumberOfBackticksOrStyle === 'number'
+			? getFenceForCodeBlock(code, minNumberOfBackticksOrStyle)
+			: minNumberOfBackticksOrStyle;
 
 	let filepathComment = '';
 	if (filePath) {
 		filepathComment = getFilepathComment(languageId, filePath);
 	}
 
-	return `${fence}${fence && (languageIdToMDCodeBlockLang(languageId) + '\n')}${filepathComment}${shouldTrim ? code.trim() : code}${fence && ('\n' + fence)}`;
+	return `${fence}${fence && languageIdToMDCodeBlockLang(languageId) + '\n'}${filepathComment}${shouldTrim ? code.trim() : code}${fence && '\n' + fence}`;
 }
 
-export function getFilepathComment(languageId: string, filePath: string): string {
+export function getFilepathComment(
+	languageId: string,
+	filePath: string,
+): string {
 	const language = getLanguage(languageId);
 	const { start, end } = language.lineComment;
-	return end ? `${start} ${filepathCodeBlockMarker} ${filePath} ${end}\n` : `${start} ${filepathCodeBlockMarker} ${filePath}\n`;
+	return end
+		? `${start} ${filepathCodeBlockMarker} ${filePath} ${end}\n`
+		: `${start} ${filepathCodeBlockMarker} ${filePath}\n`;
 }
 
-export function removeLeadingFilepathComment(codeblock: string, languageId: string, filepath: string): string {
+export function removeLeadingFilepathComment(
+	codeblock: string,
+	languageId: string,
+	filepath: string,
+): string {
 	const filepathComment = getFilepathComment(languageId, filepath);
 	if (codeblock.startsWith(filepathComment)) {
 		return codeblock.substring(filepathComment.length);
@@ -81,7 +104,7 @@ const mdLanguageIdToLanguageId = new Lazy(() => {
 	const result = new Map<string, string>();
 	wellKnownLanguages.forEach((language, languageId) => {
 		if (language.markdownLanguageIds) {
-			language.markdownLanguageIds.forEach(mdLanguageId => {
+			language.markdownLanguageIds.forEach((mdLanguageId) => {
 				result.set(mdLanguageId, languageId);
 			});
 		} else {
@@ -91,16 +114,20 @@ const mdLanguageIdToLanguageId = new Lazy(() => {
 	return result;
 });
 
-export function mdCodeBlockLangToLanguageId(mdLanguageId: string): string | undefined {
+export function mdCodeBlockLangToLanguageId(
+	mdLanguageId: string,
+): string | undefined {
 	return mdLanguageIdToLanguageId.value.get(mdLanguageId);
 }
 
 export function getLanguageId(uri: URI) {
 	const ext = extname(uri).toLowerCase();
 
-	return Object.keys(wellKnownLanguages).find(id => {
-		return wellKnownLanguages.get(id)?.extensions?.includes(ext);
-	}) || ext.replace(/^\./, '');
+	return (
+		Object.keys(wellKnownLanguages).find((id) => {
+			return wellKnownLanguages.get(id)?.extensions?.includes(ext);
+		}) || ext.replace(/^\./, '')
+	);
 }
 
 export function getMdCodeBlockLanguage(uri: URI) {
@@ -154,7 +181,9 @@ export function extractInlineCode(text: string): string[] {
 	return out;
 }
 
-function* flattenTokensLists(tokensList: readonly MarkdownIt.Token[]): Iterable<MarkdownIt.Token> {
+function* flattenTokensLists(
+	tokensList: readonly MarkdownIt.Token[],
+): Iterable<MarkdownIt.Token> {
 	for (const entry of tokensList) {
 		if (entry.children) {
 			yield* flattenTokensLists(entry.children);

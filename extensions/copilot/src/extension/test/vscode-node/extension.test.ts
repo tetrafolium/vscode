@@ -14,7 +14,7 @@ suite('Extension tests', function () {
 	let disposables: IDisposable[] = [];
 
 	teardown(() => {
-		disposables.forEach(d => d.dispose());
+		disposables.forEach((d) => d.dispose());
 		disposables = [];
 	});
 
@@ -37,7 +37,7 @@ suite('Extension tests', function () {
 		const accessor = createInstantiationService({
 			context: extensionContext,
 			contributions: vscodeNodeContributions,
-			registerServices
+			registerServices,
 		});
 		disposables.push(accessor);
 		assert.ok(accessor);
@@ -58,7 +58,7 @@ suite('Extension tests', function () {
 		const accessor = createInstantiationService({
 			context: extensionContext,
 			contributions: vscodeNodeContributions,
-			registerServices
+			registerServices,
 		});
 		disposables.push(accessor);
 		assert.ok(accessor);

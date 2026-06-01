@@ -3,15 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { isThenable } from '../../../../base/common/async.js';
-import { CharCode } from '../../../../base/common/charCode.js';
-import { IExtHostRpcService } from '../../common/extHostRpcService.js';
-import { IExtHostContext } from '../../../services/extensions/common/extHostCustomers.js';
-import { ExtensionHostKind } from '../../../services/extensions/common/extensionHostKind.js';
-import { Proxied, ProxyIdentifier, SerializableObjectWithBuffers } from '../../../services/extensions/common/proxyIdentifier.js';
-import { parseJsonAndRestoreBufferRefs, stringifyJsonWithBufferRefs } from '../../../services/extensions/common/rpcProtocol.js';
+import { isThenable } from "../../../../base/common/async.js";
+import { CharCode } from "../../../../base/common/charCode.js";
+import { IExtHostRpcService } from "../../common/extHostRpcService.js";
+import { IExtHostContext } from "../../../services/extensions/common/extHostCustomers.js";
+import { ExtensionHostKind } from "../../../services/extensions/common/extensionHostKind.js";
+import {
+	Proxied,
+	ProxyIdentifier,
+	SerializableObjectWithBuffers,
+} from "../../../services/extensions/common/proxyIdentifier.js";
+import {
+	parseJsonAndRestoreBufferRefs,
+	stringifyJsonWithBufferRefs,
+} from "../../../services/extensions/common/rpcProtocol.js";
 
-export function SingleProxyRPCProtocol(thing: any): IExtHostContext & IExtHostRpcService {
+export function SingleProxyRPCProtocol(
+	thing: any,
+): IExtHostContext & IExtHostRpcService {
 	return {
 		_serviceBrand: undefined,
 		remoteAuthority: null!,
@@ -24,25 +33,29 @@ export function SingleProxyRPCProtocol(thing: any): IExtHostContext & IExtHostRp
 		dispose: undefined!,
 		assertRegistered: undefined!,
 		drain: undefined!,
-		extensionHostKind: ExtensionHostKind.LocalProcess
+		extensionHostKind: ExtensionHostKind.LocalProcess,
 	};
 }
 
 /** Makes a fake {@link SingleProxyRPCProtocol} on which any method can be called */
 export function AnyCallRPCProtocol<T>(useCalls?: { [K in keyof T]: T[K] }) {
-	return SingleProxyRPCProtocol(new Proxy({}, {
-		get(_target, prop: string) {
-			if (useCalls && prop in useCalls) {
-				// eslint-disable-next-line local/code-no-any-casts
-				return (useCalls as any)[prop];
-			}
-			return () => Promise.resolve(undefined);
-		}
-	}));
+	return SingleProxyRPCProtocol(
+		new Proxy(
+			{},
+			{
+				get(_target, prop: string) {
+					if (useCalls && prop in useCalls) {
+						// eslint-disable-next-line local/code-no-any-casts
+						return (useCalls as any)[prop];
+					}
+					return () => Promise.resolve(undefined);
+				},
+			},
+		),
+	);
 }
 
 export class TestRPCProtocol implements IExtHostContext, IExtHostRpcService {
-
 	public _serviceBrand: undefined;
 	public remoteAuthority = null!;
 	public extensionHostKind = ExtensionHostKind.LocalProcess;
@@ -101,14 +114,18 @@ export class TestRPCProtocol implements IExtHostContext, IExtHostRpcService {
 	private _createProxy<T>(proxyId: string): T {
 		const handler = {
 			get: (target: any, name: PropertyKey) => {
-				if (typeof name === 'string' && !target[name] && name.charCodeAt(0) === CharCode.DollarSign) {
+				if (
+					typeof name === "string" &&
+					!target[name] &&
+					name.charCodeAt(0) === CharCode.DollarSign
+				) {
 					target[name] = (...myArgs: any[]) => {
 						return this._remoteCall(proxyId, name, myArgs);
 					};
 				}
 
 				return target[name];
-			}
+			},
 		};
 		return new Proxy(Object.create(null), handler);
 	}
@@ -118,7 +135,11 @@ export class TestRPCProtocol implements IExtHostContext, IExtHostRpcService {
 		return value;
 	}
 
-	protected _remoteCall(proxyId: string, path: string, args: any[]): Promise<any> {
+	protected _remoteCall(
+		proxyId: string,
+		path: string,
+		args: any[],
+	): Promise<any> {
 		this._callCount++;
 
 		return new Promise<any>((c) => {
@@ -135,22 +156,25 @@ export class TestRPCProtocol implements IExtHostContext, IExtHostRpcService {
 				p = Promise.reject(err);
 			}
 
-			return p.then(result => {
-				this._callCount--;
-				// pretend the result went over the wire... (invoke .toJSON on objects...)
-				const wireResult = simulateWireTransfer(result);
-				return wireResult;
-			}, err => {
-				this._callCount--;
-				return Promise.reject(err);
-			});
+			return p.then(
+				(result) => {
+					this._callCount--;
+					// pretend the result went over the wire... (invoke .toJSON on objects...)
+					const wireResult = simulateWireTransfer(result);
+					return wireResult;
+				},
+				(err) => {
+					this._callCount--;
+					return Promise.reject(err);
+				},
+			);
 		});
 	}
 
-	public dispose() { }
+	public dispose() {}
 
 	public assertRegistered(identifiers: ProxyIdentifier<any>[]): void {
-		throw new Error('Not implemented!');
+		throw new Error("Not implemented!");
 	}
 }
 

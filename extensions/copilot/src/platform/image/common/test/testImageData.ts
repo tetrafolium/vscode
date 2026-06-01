@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-const pngSignaturePrefix = [0x89, 0x50, 0x4E, 0x47];
+const pngSignaturePrefix = [0x89, 0x50, 0x4e, 0x47];
 
 export function createPngBytes(width: number, height: number): Uint8Array {
 	const bytes = new Uint8Array(24);

@@ -43,7 +43,7 @@ export interface IClaudeSlashCommandHandler {
 	handle(
 		args: string,
 		stream: vscode.ChatResponseStream | undefined,
-		token: CancellationToken
+		token: CancellationToken,
 	): Promise<vscode.ChatResult | void>;
 }
 
@@ -53,7 +53,7 @@ export interface IClaudeSlashCommandHandler {
  */
 export interface IClaudeSlashCommandHandlerCtor {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	new(...args: any[]): IClaudeSlashCommandHandler;
+	new (...args: any[]): IClaudeSlashCommandHandler;
 }
 
 // Registry of slash command handler constructors
@@ -90,7 +90,9 @@ const handlerRegistry: IClaudeSlashCommandHandlerCtor[] = [];
  * registerClaudeSlashCommand(MyCommand);
  * ```
  */
-export function registerClaudeSlashCommand(ctor: IClaudeSlashCommandHandlerCtor): void {
+export function registerClaudeSlashCommand(
+	ctor: IClaudeSlashCommandHandlerCtor,
+): void {
 	handlerRegistry.push(ctor);
 }
 

@@ -1,7 +1,6 @@
-import { filepaths } from '../../helpers/filepaths';
+import { filepaths } from "../../helpers/filepaths";
 
-const DOTNET_ICON =
-	undefined;
+const DOTNET_ICON = undefined;
 
 const commands: Fig.Subcommand[] = [
 	{

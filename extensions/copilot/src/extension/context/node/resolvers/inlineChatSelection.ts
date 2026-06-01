@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import type * as vscode from 'vscode';
 import { TextDocumentSnapshot } from '../../../../platform/editing/common/textDocumentSnapshot';
 import { TreeSitterOffsetRange } from '../../../../platform/parser/node/nodes';
@@ -13,7 +12,10 @@ import { ILanguage, getLanguage } from '../../../../util/common/languages';
 import { findCell, findNotebook } from '../../../../util/common/notebooks';
 import { Schemas } from '../../../../util/vs/base/common/network';
 import { Position, Range } from '../../../../vscodeTypes';
-import { CodeContextRegion, CodeContextTracker } from '../../../inlineChat/node/codeContextRegion';
+import {
+	CodeContextRegion,
+	CodeContextTracker,
+} from '../../../inlineChat/node/codeContextRegion';
 import { IDocumentContext } from '../../../prompt/node/documentContext';
 
 /**
@@ -30,35 +32,37 @@ export function getSelectionAndCodeAroundSelection(
 	range: vscode.Range,
 	limitRange: vscode.Range,
 	language: ILanguage,
-	tracker: CodeContextTracker
+	tracker: CodeContextTracker,
 ): {
 	language: ILanguage;
 	above: CodeContextRegion;
 	range: CodeContextRegion;
 	below: CodeContextRegion;
 } {
-
 	if (range.start.line !== range.end.line && range.end.character === 0) {
 		// The range ends at the start of a line, we don't need to include that EOL char
 		const lastLine = document.lineAt(range.end.line - 1);
-		range = new Range(range.start, new Position(range.end.line - 1, lastLine.text.length));
+		range = new Range(
+			range.start,
+			new Position(range.end.line - 1, lastLine.text.length),
+		);
 	} else if (
-		selection.end.character === 0
-		&& selection.end.line !== selection.start.line
-		&& (
-			(range.start.line === selection.start.line
-				&& range.start.character === 0
-				&& range.end.line === selection.end.line
-				&& range.end.character === document.lineAt(range.end.line).text.length
-			)
-			||
-			(range.isEqual(selection))
-		)
+		selection.end.character === 0 &&
+		selection.end.line !== selection.start.line &&
+		((range.start.line === selection.start.line &&
+			range.start.character === 0 &&
+			range.end.line === selection.end.line &&
+			range.end.character ===
+				document.lineAt(range.end.line).text.length) ||
+			range.isEqual(selection))
 	) {
 		// The selection ends at the start of a line, we don't need to include that line
 		// The range was computed from the selection, expanding it
 		const lastLine = document.lineAt(range.end.line - 1);
-		range = new Range(range.start, new Position(range.end.line - 1, lastLine.text.length));
+		range = new Range(
+			range.start,
+			new Position(range.end.line - 1, lastLine.text.length),
+		);
 	}
 
 	const rangeInfo = new CodeContextRegion(tracker, document, language);
@@ -70,11 +74,20 @@ export function getSelectionAndCodeAroundSelection(
 		rangeInfo.trim(selection);
 		belowInfo.trim();
 
-		return { language, above: aboveInfo, range: rangeInfo, below: belowInfo };
+		return {
+			language,
+			above: aboveInfo,
+			range: rangeInfo,
+			below: belowInfo,
+		};
 	};
 
 	// the selection might not fit, so we iterate from its bottom
-	for (let lineIndex = range.end.line; lineIndex >= range.start.line; lineIndex--) {
+	for (
+		let lineIndex = range.end.line;
+		lineIndex >= range.start.line;
+		lineIndex--
+	) {
 		if (!rangeInfo.prependLine(lineIndex)) {
 			// didn't fit
 			return finish();
@@ -85,7 +98,7 @@ export function getSelectionAndCodeAroundSelection(
 		aboveLineIndex: range.start.line - 1,
 		belowLineIndex: range.end.line + 1,
 		minimumLineIndex: Math.max(0, limitRange.start.line),
-		maximumLineIndex: Math.min(document.lineCount - 1, limitRange.end.line)
+		maximumLineIndex: Math.min(document.lineCount - 1, limitRange.end.line),
 	};
 
 	processCodeAroundSelection(constraints, aboveInfo, belowInfo);
@@ -94,11 +107,15 @@ export function getSelectionAndCodeAroundSelection(
 }
 
 export function processCodeAroundSelection(
-	constraints: { aboveLineIndex: number; belowLineIndex: number; minimumLineIndex: number; maximumLineIndex: number },
+	constraints: {
+		aboveLineIndex: number;
+		belowLineIndex: number;
+		minimumLineIndex: number;
+		maximumLineIndex: number;
+	},
 	aboveInfo: CodeContextRegion,
-	belowInfo: CodeContextRegion
+	belowInfo: CodeContextRegion,
 ) {
-
 	let aboveLineIndex = constraints.aboveLineIndex;
 	let canGoAbove = true;
 	let belowLineIndex = constraints.belowLineIndex;
@@ -109,14 +126,20 @@ export function processCodeAroundSelection(
 
 		if (goBelow) {
 			// add line from below
-			if (belowLineIndex <= constraints.maximumLineIndex && belowInfo.appendLine(belowLineIndex)) {
+			if (
+				belowLineIndex <= constraints.maximumLineIndex &&
+				belowInfo.appendLine(belowLineIndex)
+			) {
 				belowLineIndex++;
 			} else {
 				canGoBelow = false;
 			}
 		} else {
 			// add a line from above
-			if (aboveLineIndex >= constraints.minimumLineIndex && aboveInfo.prependLine(aboveLineIndex)) {
+			if (
+				aboveLineIndex >= constraints.minimumLineIndex &&
+				aboveInfo.prependLine(aboveLineIndex)
+			) {
 				aboveLineIndex--;
 			} else {
 				canGoAbove = false;
@@ -131,7 +154,7 @@ export function removeBodiesOutsideRange(
 	src: string,
 	functionBodies: TreeSitterOffsetRange[],
 	rangeToMaintain: { startOffset: number; endOffset: number },
-	replaceBodyWith: string
+	replaceBodyWith: string,
 ): { outlineAbove: string; outlineBelow: string } {
 	// remove nodes that are outside the range `rangeToMaintain`
 	// by copying undeleted chunks of `src` into `above` and `below`
@@ -147,13 +170,19 @@ export function removeBodiesOutsideRange(
 		if (rangeToDelete.endIndex < rangeToMaintain.startOffset) {
 			// range is above - delete
 
-			outlineAbove += src.substring(lastOffsetAbove, rangeToDelete.startIndex);
+			outlineAbove += src.substring(
+				lastOffsetAbove,
+				rangeToDelete.startIndex,
+			);
 			outlineAbove += replaceBodyWith;
 			lastOffsetAbove = rangeToDelete.endIndex;
 		} else if (rangeToDelete.startIndex > rangeToMaintain.endOffset) {
 			// range is below - delete
 
-			outlineBelow += src.substring(lastOffsetBelow, rangeToDelete.startIndex);
+			outlineBelow += src.substring(
+				lastOffsetBelow,
+				rangeToDelete.startIndex,
+			);
 			outlineBelow += replaceBodyWith;
 			lastOffsetBelow = rangeToDelete.endIndex;
 		} else {
@@ -172,8 +201,13 @@ export function generateNotebookCellContext(
 	tabAndEditorService: ITabsAndEditorsService,
 	workspaceService: IWorkspaceService,
 	documentContext: IDocumentContext,
-	initialContext: { language: ILanguage; above: CodeContextRegion; range: CodeContextRegion; below: CodeContextRegion },
-	initialTracker: CodeContextTracker
+	initialContext: {
+		language: ILanguage;
+		above: CodeContextRegion;
+		range: CodeContextRegion;
+		below: CodeContextRegion;
+	},
+	initialTracker: CodeContextTracker,
 ): {
 	language: ILanguage;
 	aboveCells: CodeContextRegion[];
@@ -190,9 +224,13 @@ export function generateNotebookCellContext(
 
 	if (documentContext.document.uri.scheme === Schemas.vscodeNotebookCell) {
 		// inline
-		notebook = findNotebook(documentContext.document.uri, workspaceService.notebookDocuments);
+		notebook = findNotebook(
+			documentContext.document.uri,
+			workspaceService.notebookDocuments,
+		);
 
-		const cellIndex = notebook && findCell(documentContext.document.uri, notebook)?.index;
+		const cellIndex =
+			notebook && findCell(documentContext.document.uri, notebook)?.index;
 
 		if (cellIndex === undefined || cellIndex === -1) {
 			return emptyContext;
@@ -202,7 +240,10 @@ export function generateNotebookCellContext(
 		belowCellIndex = cellIndex + 1;
 	} else {
 		// floating widget
-		if (tabAndEditorService.activeNotebookEditor?.notebook.uri.path !== documentContext.document.uri.path) {
+		if (
+			tabAndEditorService.activeNotebookEditor?.notebook.uri.path !==
+			documentContext.document.uri.path
+		) {
 			return emptyContext;
 		}
 
@@ -217,14 +258,22 @@ export function generateNotebookCellContext(
 		return emptyContext;
 	}
 
-	const { language, above: aboveInfo, range: rangeInfo, below: belowInfo } = initialContext;
-	const usedSteps = aboveInfo.lines.length + rangeInfo.lines.length + belowInfo.lines.length;
+	const {
+		language,
+		above: aboveInfo,
+		range: rangeInfo,
+		below: belowInfo,
+	} = initialContext;
+	const usedSteps =
+		aboveInfo.lines.length +
+		rangeInfo.lines.length +
+		belowInfo.lines.length;
 	const aboveCells: CodeContextRegion[] = [];
 	const belowCells: CodeContextRegion[] = [];
 
 	const finish = () => {
-		aboveCells.forEach(cell => cell.trim());
-		belowCells.forEach(cell => cell.trim());
+		aboveCells.forEach((cell) => cell.trim());
+		belowCells.forEach((cell) => cell.trim());
 
 		return {
 			language,
@@ -236,7 +285,11 @@ export function generateNotebookCellContext(
 	let canGoAboveCell = true;
 	let canGoBelowCell = true;
 
-	for (let step = usedSteps; step < 100 && (canGoAboveCell || canGoBelowCell); step++) {
+	for (
+		let step = usedSteps;
+		step < 100 && (canGoAboveCell || canGoBelowCell);
+		step++
+	) {
 		if (canGoAboveCell) {
 			// add lines from above cell is always preferred over cells below
 			if (aboveCellIndex >= 0) {
@@ -247,7 +300,7 @@ export function generateNotebookCellContext(
 				const cellContextRegion = new CodeContextRegion(
 					initialTracker,
 					cellDocument,
-					getLanguage(cellDocument)
+					getLanguage(cellDocument),
 				);
 				for (let i = 0; i < cellDocument.lineCount; i++) {
 					cellContextRegion.appendLine(i);
@@ -269,7 +322,7 @@ export function generateNotebookCellContext(
 				const cellContextRegion = new CodeContextRegion(
 					initialTracker,
 					cellDocument,
-					getLanguage(cellDocument)
+					getLanguage(cellDocument),
 				);
 				for (let i = 0; i < cellDocument.lineCount; i++) {
 					cellContextRegion.appendLine(i);

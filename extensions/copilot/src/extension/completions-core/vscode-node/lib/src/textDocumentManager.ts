@@ -4,7 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 import { createServiceIdentifier } from '../../../../../util/common/services';
 import { IInstantiationService } from '../../../../../util/vs/platform/instantiation/common/instantiation';
-import { TextDocumentItem, VersionedTextDocumentIdentifier, WorkspaceFolder } from '../../types/src';
+import {
+	TextDocumentItem,
+	VersionedTextDocumentIdentifier,
+	WorkspaceFolder,
+} from '../../types/src';
 import { ICompletionsFileSystemService } from './fileSystem';
 import {
 	INotebookDocument,
@@ -86,7 +90,10 @@ export interface WorkspaceFoldersChangeEvent {
 	readonly removed: WorkspaceFolder[];
 }
 
-export const ICompletionsTextDocumentManagerService = createServiceIdentifier<ICompletionsTextDocumentManagerService>('ICompletionsTextDocumentManagerService');
+export const ICompletionsTextDocumentManagerService =
+	createServiceIdentifier<ICompletionsTextDocumentManagerService>(
+		'ICompletionsTextDocumentManagerService',
+	);
 
 export interface ICompletionsTextDocumentManagerService {
 	readonly _serviceBrand: undefined;
@@ -106,23 +113,31 @@ export interface ICompletionsTextDocumentManagerService {
 	/**
 	 * Get the text document for the given URI, skipping content exclusions and other validations.
 	 */
-	getTextDocumentUnsafe(docId: TextDocumentIdentifier): ITextDocument | undefined;
+	getTextDocumentUnsafe(
+		docId: TextDocumentIdentifier,
+	): ITextDocument | undefined;
 
 	/**
 	 * Get the text document for the given URI, checking content exclusions and other validations.
 	 */
-	getTextDocument(docId: TextDocumentIdentifier): Promise<ITextDocument | undefined>;
+	getTextDocument(
+		docId: TextDocumentIdentifier,
+	): Promise<ITextDocument | undefined>;
 
 	/**
 	 * Get a TextDocumentValidation for the given document URI.  Unlike other methods, this supports reading the
 	 * document from disk.
 	 */
-	getTextDocumentValidation(docId: TextDocumentIdentifier): Promise<TextDocumentValidation>;
+	getTextDocumentValidation(
+		docId: TextDocumentIdentifier,
+	): Promise<TextDocumentValidation>;
 
 	/**
 	 * Get a TextDocumentResult for the given document URI.
 	 */
-	getTextDocumentWithValidation(docId: TextDocumentIdentifier): Promise<TextDocumentResult<ITextDocument>>;
+	getTextDocumentWithValidation(
+		docId: TextDocumentIdentifier,
+	): Promise<TextDocumentResult<ITextDocument>>;
 
 	/**
 	 * If `TextDocument` represents notebook returns `INotebookDocument` instance, otherwise returns `undefined`
@@ -131,7 +146,9 @@ export interface ICompletionsTextDocumentManagerService {
 
 	getWorkspaceFolders(): WorkspaceFolder[];
 
-	getWorkspaceFolder(doc: TextDocumentIdentifier): WorkspaceFolder | undefined;
+	getWorkspaceFolder(
+		doc: TextDocumentIdentifier,
+	): WorkspaceFolder | undefined;
 
 	/**
 	 * Get the path of the given document relative to one of the workspace folders,
@@ -156,15 +173,20 @@ export abstract class TextDocumentManager implements ICompletionsTextDocumentMan
 	abstract getTextDocumentsUnsafe(): ITextDocument[];
 
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@ICompletionsFileSystemService private readonly fileSystem: ICompletionsFileSystemService,
-	) { }
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+		@ICompletionsFileSystemService
+		private readonly fileSystem: ICompletionsFileSystemService,
+	) {}
 
 	async textDocuments(): Promise<ITextDocument[]> {
 		const documents = this.getTextDocumentsUnsafe();
 		const filteredDocuments: ITextDocument[] = [];
 		for (const doc of documents) {
-			const result = await this.instantiationService.invokeFunction(isDocumentValid, doc);
+			const result = await this.instantiationService.invokeFunction(
+				isDocumentValid,
+				doc,
+			);
 			// Only return valid documents
 			if (result.status === 'valid') {
 				filteredDocuments.push(doc);
@@ -176,16 +198,20 @@ export abstract class TextDocumentManager implements ICompletionsTextDocumentMan
 	/**
 	 * Get the text document for the given URI, skipping content exclusions and other validations.
 	 */
-	getTextDocumentUnsafe(docId: TextDocumentIdentifier): ITextDocument | undefined {
+	getTextDocumentUnsafe(
+		docId: TextDocumentIdentifier,
+	): ITextDocument | undefined {
 		const uri = normalizeUri(docId.uri);
-		return this.getTextDocumentsUnsafe().find(t => t.uri === uri);
+		return this.getTextDocumentsUnsafe().find((t) => t.uri === uri);
 	}
 
 	/**
 	 * Get the text document for the given URI, checking content exclusions and other validations.
 	 */
-	async getTextDocument(docId: TextDocumentIdentifier): Promise<ITextDocument | undefined> {
-		return this.getTextDocumentWithValidation(docId).then(result => {
+	async getTextDocument(
+		docId: TextDocumentIdentifier,
+	): Promise<ITextDocument | undefined> {
+		return this.getTextDocumentWithValidation(docId).then((result) => {
 			if (result.status === 'valid') {
 				return result.document;
 			}
@@ -194,14 +220,19 @@ export abstract class TextDocumentManager implements ICompletionsTextDocumentMan
 	}
 
 	private async validateTextDocument(docId: TextDocumentIdentifier) {
-		return await this.instantiationService.invokeFunction(isDocumentValid, docId);
+		return await this.instantiationService.invokeFunction(
+			isDocumentValid,
+			docId,
+		);
 	}
 
 	/**
 	 * Get a TextDocumentValidation for the given document URI.  Unlike other methods, this supports reading the
 	 * document from disk.
 	 */
-	async getTextDocumentValidation(docId: TextDocumentIdentifier): Promise<TextDocumentValidation> {
+	async getTextDocumentValidation(
+		docId: TextDocumentIdentifier,
+	): Promise<TextDocumentValidation> {
 		try {
 			return await this.validateTextDocument(docId);
 		} catch (err) {
@@ -212,14 +243,23 @@ export abstract class TextDocumentManager implements ICompletionsTextDocumentMan
 	/**
 	 * Get a TextDocumentResult for the given document URI.
 	 */
-	async getTextDocumentWithValidation(docId: TextDocumentIdentifier): Promise<TextDocumentResult<ITextDocument>> {
+	async getTextDocumentWithValidation(
+		docId: TextDocumentIdentifier,
+	): Promise<TextDocumentResult<ITextDocument>> {
 		const document = this.getTextDocumentUnsafe(docId);
-		if (!document) { return this.notFoundResult(docId); }
+		if (!document) {
+			return this.notFoundResult(docId);
+		}
 		const result = await this.validateTextDocument(docId);
-		return result.status === 'valid' ? { status: 'valid', document } : result;
+		return result.status === 'valid'
+			? { status: 'valid', document }
+			: result;
 	}
 
-	private notFoundResult({ uri }: TextDocumentIdentifier): { status: 'notfound'; message: string } {
+	private notFoundResult({ uri }: TextDocumentIdentifier): {
+		status: 'notfound';
+		message: string;
+	} {
 		return {
 			status: 'notfound',
 			message: `Document for URI could not be found: ${uri}`,
@@ -232,7 +272,9 @@ export abstract class TextDocumentManager implements ICompletionsTextDocumentMan
 	 * This is usually used with asychronous operations like the postInsertion callbacks that
 	 * analyze a document long time after the user interacted with it.
 	 */
-	protected async readTextDocumentFromDisk(uri: string): Promise<string | undefined> {
+	protected async readTextDocumentFromDisk(
+		uri: string,
+	): Promise<string | undefined> {
 		try {
 			const fileStat = await this.fileSystem.stat(uri);
 			if (fileStat.size > 5 * 1024 * 1024) {
@@ -248,13 +290,17 @@ export abstract class TextDocumentManager implements ICompletionsTextDocumentMan
 	/**
 	 * If `TextDocument` represents notebook returns `INotebookDocument` instance, otherwise returns `undefined`
 	 */
-	abstract findNotebook(doc: TextDocumentIdentifier): INotebookDocument | undefined;
+	abstract findNotebook(
+		doc: TextDocumentIdentifier,
+	): INotebookDocument | undefined;
 
 	abstract getWorkspaceFolders(): WorkspaceFolder[];
 
 	getWorkspaceFolder(doc: TextDocumentIdentifier) {
 		const uri = normalizeUri(doc.uri);
-		return this.getWorkspaceFolders().find(f => uri.startsWith(normalizeUri(f.uri)));
+		return this.getWorkspaceFolders().find((f) =>
+			uri.startsWith(normalizeUri(f.uri)),
+		);
 	}
 
 	/**

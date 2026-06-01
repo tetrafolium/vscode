@@ -128,7 +128,11 @@ export const kimbieDark: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['entity.name.function', 'meta.require', 'support.function.any-method'],
+			scope: [
+				'entity.name.function',
+				'meta.require',
+				'support.function.any-method',
+			],
 			settings: {
 				foreground: '#8AB1B0',
 			},
@@ -164,7 +168,11 @@ export const kimbieDark: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['string', 'constant.other.symbol', 'entity.other.inherited-class'],
+			scope: [
+				'string',
+				'constant.other.symbol',
+				'entity.other.inherited-class',
+			],
 			settings: {
 				foreground: '#889B4A',
 			},
@@ -206,7 +214,10 @@ export const kimbieDark: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['entity.other.attribute-name.id', 'punctuation.definition.entity'],
+			scope: [
+				'entity.other.attribute-name.id',
+				'punctuation.definition.entity',
+			],
 			settings: {
 				foreground: '#8AB1B0',
 			},
@@ -224,7 +235,12 @@ export const kimbieDark: ThemeRegistrationAny = {
 			},
 		},
 		{
-			scope: ['markup.heading', 'markup.heading.setext', 'punctuation.definition.heading', 'entity.name.section'],
+			scope: [
+				'markup.heading',
+				'markup.heading.setext',
+				'punctuation.definition.heading',
+				'entity.name.section',
+			],
 			settings: {
 				foreground: '#8AB1B0',
 				fontStyle: 'bold',

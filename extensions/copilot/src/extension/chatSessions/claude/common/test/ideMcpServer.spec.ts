@@ -22,10 +22,18 @@ describe('getDiagnosticsHandler', () => {
 
 	it('returns all diagnostics when no uri is provided', () => {
 		diagnosticsService.setDiagnostics(fileA, [
-			{ message: 'error in A', range: new Range(0, 0, 0, 5), severity: DiagnosticSeverity.Error },
+			{
+				message: 'error in A',
+				range: new Range(0, 0, 0, 5),
+				severity: DiagnosticSeverity.Error,
+			},
 		]);
 		diagnosticsService.setDiagnostics(fileB, [
-			{ message: 'warning in B', range: new Range(1, 0, 1, 10), severity: DiagnosticSeverity.Warning },
+			{
+				message: 'warning in B',
+				range: new Range(1, 0, 1, 10),
+				severity: DiagnosticSeverity.Warning,
+			},
 		]);
 
 		const result = getDiagnosticsHandler(diagnosticsService, {});
@@ -37,13 +45,23 @@ describe('getDiagnosticsHandler', () => {
 
 	it('scopes to a single file when uri is provided', () => {
 		diagnosticsService.setDiagnostics(fileA, [
-			{ message: 'error in A', range: new Range(0, 0, 0, 5), severity: DiagnosticSeverity.Error },
+			{
+				message: 'error in A',
+				range: new Range(0, 0, 0, 5),
+				severity: DiagnosticSeverity.Error,
+			},
 		]);
 		diagnosticsService.setDiagnostics(fileB, [
-			{ message: 'warning in B', range: new Range(1, 0, 1, 10), severity: DiagnosticSeverity.Warning },
+			{
+				message: 'warning in B',
+				range: new Range(1, 0, 1, 10),
+				severity: DiagnosticSeverity.Warning,
+			},
 		]);
 
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: fileA.toString() });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: fileA.toString(),
+		});
 
 		expect(result).toHaveLength(1);
 		expect(result[0].uri).toBe(fileA.toString());
@@ -58,7 +76,11 @@ describe('getDiagnosticsHandler', () => {
 	it('filters out files with zero diagnostics', () => {
 		diagnosticsService.setDiagnostics(fileA, []);
 		diagnosticsService.setDiagnostics(fileB, [
-			{ message: 'warning', range: new Range(0, 0, 0, 1), severity: DiagnosticSeverity.Warning },
+			{
+				message: 'warning',
+				range: new Range(0, 0, 0, 1),
+				severity: DiagnosticSeverity.Warning,
+			},
 		]);
 
 		const result = getDiagnosticsHandler(diagnosticsService, {});
@@ -70,23 +92,43 @@ describe('getDiagnosticsHandler', () => {
 	it('returns empty array for a file with no diagnostics when scoped by uri', () => {
 		diagnosticsService.setDiagnostics(fileC, []);
 
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: fileC.toString() });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: fileC.toString(),
+		});
 
 		expect(result).toHaveLength(0);
 	});
 
 	it('maps all severity levels correctly', () => {
 		diagnosticsService.setDiagnostics(fileA, [
-			{ message: 'err', range: new Range(0, 0, 0, 1), severity: DiagnosticSeverity.Error },
-			{ message: 'warn', range: new Range(1, 0, 1, 1), severity: DiagnosticSeverity.Warning },
-			{ message: 'info', range: new Range(2, 0, 2, 1), severity: DiagnosticSeverity.Information },
-			{ message: 'hint', range: new Range(3, 0, 3, 1), severity: DiagnosticSeverity.Hint },
+			{
+				message: 'err',
+				range: new Range(0, 0, 0, 1),
+				severity: DiagnosticSeverity.Error,
+			},
+			{
+				message: 'warn',
+				range: new Range(1, 0, 1, 1),
+				severity: DiagnosticSeverity.Warning,
+			},
+			{
+				message: 'info',
+				range: new Range(2, 0, 2, 1),
+				severity: DiagnosticSeverity.Information,
+			},
+			{
+				message: 'hint',
+				range: new Range(3, 0, 3, 1),
+				severity: DiagnosticSeverity.Hint,
+			},
 		]);
 
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: fileA.toString() });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: fileA.toString(),
+		});
 
 		expect(result).toHaveLength(1);
-		const severities = result[0].diagnostics.map(d => d.severity);
+		const severities = result[0].diagnostics.map((d) => d.severity);
 		expect(severities).toEqual(['error', 'warning', 'information', 'hint']);
 	});
 
@@ -101,7 +143,9 @@ describe('getDiagnosticsHandler', () => {
 			},
 		]);
 
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: fileA.toString() });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: fileA.toString(),
+		});
 
 		const diag = result[0].diagnostics[0];
 		expect(diag.range).toEqual({
@@ -118,42 +162,77 @@ describe('getDiagnosticsHandler', () => {
 				message: 'some lint error',
 				range: new Range(0, 0, 0, 1),
 				severity: DiagnosticSeverity.Error,
-				code: { value: 'no-unused-vars', target: URI.parse('https://eslint.org/rules/no-unused-vars') },
+				code: {
+					value: 'no-unused-vars',
+					target: URI.parse(
+						'https://eslint.org/rules/no-unused-vars',
+					),
+				},
 			},
 		]);
 
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: fileA.toString() });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: fileA.toString(),
+		});
 
 		expect(result[0].diagnostics[0].code).toBe('no-unused-vars');
 	});
 
 	it('includes filePath in output', () => {
 		diagnosticsService.setDiagnostics(fileA, [
-			{ message: 'err', range: new Range(0, 0, 0, 1), severity: DiagnosticSeverity.Error },
+			{
+				message: 'err',
+				range: new Range(0, 0, 0, 1),
+				severity: DiagnosticSeverity.Error,
+			},
 		]);
 
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: fileA.toString() });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: fileA.toString(),
+		});
 
 		expect(result[0].filePath).toBe(fileA.fsPath);
 	});
 
 	it('handles multiple diagnostics in a single file', () => {
 		diagnosticsService.setDiagnostics(fileA, [
-			{ message: 'first', range: new Range(0, 0, 0, 1), severity: DiagnosticSeverity.Error },
-			{ message: 'second', range: new Range(1, 0, 1, 1), severity: DiagnosticSeverity.Warning },
-			{ message: 'third', range: new Range(2, 0, 2, 1), severity: DiagnosticSeverity.Hint },
+			{
+				message: 'first',
+				range: new Range(0, 0, 0, 1),
+				severity: DiagnosticSeverity.Error,
+			},
+			{
+				message: 'second',
+				range: new Range(1, 0, 1, 1),
+				severity: DiagnosticSeverity.Warning,
+			},
+			{
+				message: 'third',
+				range: new Range(2, 0, 2, 1),
+				severity: DiagnosticSeverity.Hint,
+			},
 		]);
 
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: fileA.toString() });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: fileA.toString(),
+		});
 
 		expect(result).toHaveLength(1);
 		expect(result[0].diagnostics).toHaveLength(3);
-		expect(result[0].diagnostics.map(d => d.message)).toEqual(['first', 'second', 'third']);
+		expect(result[0].diagnostics.map((d) => d.message)).toEqual([
+			'first',
+			'second',
+			'third',
+		]);
 	});
 
 	it('treats empty string uri as no filter', () => {
 		diagnosticsService.setDiagnostics(fileA, [
-			{ message: 'err', range: new Range(0, 0, 0, 1), severity: DiagnosticSeverity.Error },
+			{
+				message: 'err',
+				range: new Range(0, 0, 0, 1),
+				severity: DiagnosticSeverity.Error,
+			},
 		]);
 
 		const result = getDiagnosticsHandler(diagnosticsService, { uri: '' });
@@ -163,17 +242,23 @@ describe('getDiagnosticsHandler', () => {
 	});
 
 	it('accepts a non-file scheme URI', () => {
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: 'untitled:Untitled-1' });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: 'untitled:Untitled-1',
+		});
 		expect(result).toHaveLength(0);
 	});
 
 	it('accepts an absolute unix path', () => {
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: '/workspace/src/fileA.ts' });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: '/workspace/src/fileA.ts',
+		});
 		expect(result).toHaveLength(0);
 	});
 
 	it('accepts a file:// URI', () => {
-		const result = getDiagnosticsHandler(diagnosticsService, { uri: 'file:///workspace/src/fileA.ts' });
+		const result = getDiagnosticsHandler(diagnosticsService, {
+			uri: 'file:///workspace/src/fileA.ts',
+		});
 		expect(result).toHaveLength(0);
 	});
 });

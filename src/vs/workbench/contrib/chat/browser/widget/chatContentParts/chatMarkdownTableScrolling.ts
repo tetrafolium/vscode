@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../../../base/browser/dom.js';
-import { DomScrollableElement } from '../../../../../../base/browser/ui/scrollbar/scrollableElement.js';
-import { Lazy } from '../../../../../../base/common/lazy.js';
-import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
+import * as dom from "../../../../../../base/browser/dom.js";
+import { DomScrollableElement } from "../../../../../../base/browser/ui/scrollbar/scrollableElement.js";
+import { Lazy } from "../../../../../../base/common/lazy.js";
+import { DisposableStore } from "../../../../../../base/common/lifecycle.js";
 
-import { ScrollbarVisibility } from '../../../../../../base/common/scrollable.js';
+import { ScrollbarVisibility } from "../../../../../../base/common/scrollable.js";
 
 /**
  * Finds all tables in `domNode` and wraps each in a {@link DomScrollableElement}
@@ -22,10 +22,13 @@ import { ScrollbarVisibility } from '../../../../../../base/common/scrollable.js
  * like "001" from being squeezed to one character wide. Single-character columns
  * are left unchanged. This is layout-free: only `textContent` lengths are read.
  */
-export function wrapTablesWithScrollable(domNode: HTMLElement, layoutParticipants: Lazy<Set<() => void>>): DisposableStore {
+export function wrapTablesWithScrollable(
+	domNode: HTMLElement,
+	layoutParticipants: Lazy<Set<() => void>>,
+): DisposableStore {
 	const store = new DisposableStore();
 	// eslint-disable-next-line no-restricted-syntax
-	for (const table of domNode.querySelectorAll('table')) {
+	for (const table of domNode.querySelectorAll("table")) {
 		if (!dom.isHTMLElement(table)) {
 			continue;
 		}
@@ -38,17 +41,22 @@ export function wrapTablesWithScrollable(domNode: HTMLElement, layoutParticipant
 		// to its content width, so clientWidth == scrollWidth and no scrollbar appears.
 		const parent = table.parentElement;
 		const nextSibling = table.nextSibling;
-		const tableContainer = document.createElement('div');
+		const tableContainer = document.createElement("div");
 		tableContainer.appendChild(table); // moves table out of DOM
-		const scrollable = store.add(new DomScrollableElement(tableContainer, { // moves tableContainer into scrollNode
-			vertical: ScrollbarVisibility.Hidden,
-			horizontal: ScrollbarVisibility.Auto,
-		}));
+		const scrollable = store.add(
+			new DomScrollableElement(tableContainer, {
+				// moves tableContainer into scrollNode
+				vertical: ScrollbarVisibility.Hidden,
+				horizontal: ScrollbarVisibility.Auto,
+			}),
+		);
 		const scrollNode = scrollable.getDomNode();
-		scrollNode.classList.add('rendered-markdown-table-scroll-wrapper');
+		scrollNode.classList.add("rendered-markdown-table-scroll-wrapper");
 		parent?.insertBefore(scrollNode, nextSibling);
 
-		layoutParticipants.value.add(() => { scrollable.scanDomNode(); });
+		layoutParticipants.value.add(() => {
+			scrollable.scanDomNode();
+		});
 		scrollable.scanDomNode();
 	}
 	return store;
@@ -75,7 +83,8 @@ function applyTableColumnMinWidths(table: HTMLTableElement): void {
 		for (let c = 0; c < firstRow.cells.length; c++) {
 			const minCh = colMaxChars[c];
 			if (minCh !== undefined && minCh > 1) {
-				firstRow.cells[c].style.minWidth = Math.min(minCh, TABLE_COLUMN_MIN_WIDTH_CAP_CH) + 'ch';
+				firstRow.cells[c].style.minWidth =
+					Math.min(minCh, TABLE_COLUMN_MIN_WIDTH_CAP_CH) + "ch";
 			}
 		}
 	}

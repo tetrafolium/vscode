@@ -6,10 +6,22 @@
 import { describe, expect, it } from 'vitest';
 import type { ICompletedSpanData } from '../../../../platform/otel/common/otelService';
 import type { IDebugLogEntry } from '../../../../platform/chat/common/chatDebugFileLoggerService';
-import { createSessionTranslationState, deriveTitleFromUserMessage, isTerminalFlushEvent, makeIdleEvent, makeShutdownEvent, STREAMING_EVENT_TYPES, TERMINAL_FLUSH_EVENT_TYPES, translateDebugLogEntry, translateSpan } from '../eventTranslator';
+import {
+	createSessionTranslationState,
+	deriveTitleFromUserMessage,
+	isTerminalFlushEvent,
+	makeIdleEvent,
+	makeShutdownEvent,
+	STREAMING_EVENT_TYPES,
+	TERMINAL_FLUSH_EVENT_TYPES,
+	translateDebugLogEntry,
+	translateSpan,
+} from '../eventTranslator';
 import type { SessionEvent } from '../cloudSessionTypes';
 
-function makeSpan(overrides: Partial<ICompletedSpanData> = {}): ICompletedSpanData {
+function makeSpan(
+	overrides: Partial<ICompletedSpanData> = {},
+): ICompletedSpanData {
 	return {
 		name: 'test-span',
 		spanId: 'span-1',
@@ -63,15 +75,24 @@ describe('translateSpan', () => {
 		translateSpan(span1, state);
 		const events = translateSpan(span2, state);
 
-		const starts = events.filter(e => e.type === 'session.start');
+		const starts = events.filter((e) => e.type === 'session.start');
 		expect(starts).toHaveLength(0);
-		expect(events.some(e => e.type === 'user.message' && e.data.content === 'Second message')).toBe(true);
+		expect(
+			events.some(
+				(e) =>
+					e.type === 'user.message' &&
+					e.data.content === 'Second message',
+			),
+		).toBe(true);
 	});
 
 	it('emits assistant.message when output_messages is present', () => {
 		const state = createSessionTranslationState();
 		const outputMessages = JSON.stringify([
-			{ role: 'assistant', parts: [{ type: 'text', content: 'Here is the fix.' }] },
+			{
+				role: 'assistant',
+				parts: [{ type: 'text', content: 'Here is the fix.' }],
+			},
 		]);
 		const span = makeSpan({
 			attributes: {
@@ -82,7 +103,9 @@ describe('translateSpan', () => {
 		});
 
 		const events = translateSpan(span, state);
-		const assistantEvents = events.filter(e => e.type === 'assistant.message');
+		const assistantEvents = events.filter(
+			(e) => e.type === 'assistant.message',
+		);
 		expect(assistantEvents).toHaveLength(1);
 		expect(assistantEvents[0].data.content).toBe('Here is the fix.');
 	});
@@ -235,7 +258,11 @@ describe('translateSpan', () => {
 
 	it('includes context in session.start when provided', () => {
 		const state = createSessionTranslationState();
-		const context = { repository: 'microsoft/vscode', branch: 'main', headCommit: 'abc123' };
+		const context = {
+			repository: 'microsoft/vscode',
+			branch: 'main',
+			headCommit: 'abc123',
+		};
 		const span = makeSpan({
 			attributes: {
 				'gen_ai.operation.name': 'invoke_agent',
@@ -256,7 +283,10 @@ describe('translateSpan', () => {
 		// Assistant text fits, user_request is far larger than MAX_EVENT_SIZE (~100KB).
 		const huge = 'x'.repeat(200_000);
 		const outputMessages = JSON.stringify([
-			{ role: 'assistant', parts: [{ type: 'text', content: 'small reply' }] },
+			{
+				role: 'assistant',
+				parts: [{ type: 'text', content: 'small reply' }],
+			},
 		]);
 		const span = makeSpan({
 			attributes: {
@@ -269,7 +299,10 @@ describe('translateSpan', () => {
 		const events = translateSpan(span, state);
 
 		// user.message should be dropped, session.start + assistant.message kept.
-		expect(events.map(e => e.type)).toEqual(['session.start', 'assistant.message']);
+		expect(events.map((e) => e.type)).toEqual([
+			'session.start',
+			'assistant.message',
+		]);
 		expect(state.droppedCount).toBe(1);
 		// Critical: assistant.message must chain to session.start, not the dropped user.message.
 		expect(events[1].parentId).toBe(events[0].id);
@@ -282,7 +315,10 @@ describe('translateSpan', () => {
 		state.lastEventId = 'parent-last-event-id';
 
 		const outputMessages = JSON.stringify([
-			{ role: 'assistant', parts: [{ type: 'text', content: 'sub-agent reply' }] },
+			{
+				role: 'assistant',
+				parts: [{ type: 'text', content: 'sub-agent reply' }],
+			},
 		]);
 		const subagentSpan = makeSpan({
 			attributes: {
@@ -292,11 +328,16 @@ describe('translateSpan', () => {
 			},
 		});
 
-		const events = translateSpan(subagentSpan, state, undefined, 'child-session-id');
+		const events = translateSpan(
+			subagentSpan,
+			state,
+			undefined,
+			'child-session-id',
+		);
 
 		// Only assistant.message should be emitted; session.start (parent owns it)
 		// and user.message (synthetic sub-agent prompt) must be suppressed.
-		expect(events.map(e => e.type)).toEqual(['assistant.message']);
+		expect(events.map((e) => e.type)).toEqual(['assistant.message']);
 		expect(events[0].agentId).toBe('child-session-id');
 		expect(events[0].parentId).toBe('parent-last-event-id');
 	});
@@ -311,7 +352,12 @@ describe('translateSpan', () => {
 				role: 'assistant',
 				parts: [
 					{ type: 'text', content: 'calling tool' },
-					{ type: 'tool-call', toolCallId: 'call-1', toolName: 'read_file', args: { path: 'a.ts' } },
+					{
+						type: 'tool-call',
+						toolCallId: 'call-1',
+						toolName: 'read_file',
+						args: { path: 'a.ts' },
+					},
 				],
 			},
 		]);
@@ -322,10 +368,20 @@ describe('translateSpan', () => {
 			},
 		});
 
-		const events = translateSpan(span, state, undefined, 'child-session-id');
+		const events = translateSpan(
+			span,
+			state,
+			undefined,
+			'child-session-id',
+		);
 
-		expect(events.map(e => e.type)).toEqual(['assistant.message', 'tool.execution_start']);
-		expect(events.every(e => e.agentId === 'child-session-id')).toBe(true);
+		expect(events.map((e) => e.type)).toEqual([
+			'assistant.message',
+			'tool.execution_start',
+		]);
+		expect(events.every((e) => e.agentId === 'child-session-id')).toBe(
+			true,
+		);
 	});
 
 	it('tags agentId on tool.execution_complete events from sub-agent execute_tool spans', () => {
@@ -342,7 +398,12 @@ describe('translateSpan', () => {
 			},
 		});
 
-		const events = translateSpan(span, state, undefined, 'child-session-id');
+		const events = translateSpan(
+			span,
+			state,
+			undefined,
+			'child-session-id',
+		);
 
 		expect(events).toHaveLength(1);
 		expect(events[0].type).toBe('tool.execution_complete');
@@ -352,7 +413,10 @@ describe('translateSpan', () => {
 	it('does not set agentId on events from non-sub-agent (root) spans', () => {
 		const state = createSessionTranslationState();
 		const outputMessages = JSON.stringify([
-			{ role: 'assistant', parts: [{ type: 'text', content: 'root reply' }] },
+			{
+				role: 'assistant',
+				parts: [{ type: 'text', content: 'root reply' }],
+			},
 		]);
 		const span = makeSpan({
 			attributes: {
@@ -364,8 +428,13 @@ describe('translateSpan', () => {
 
 		const events = translateSpan(span, state);
 
-		expect(events.map(e => e.type)).toEqual(['session.start', 'user.message', 'session.title_changed', 'assistant.message']);
-		expect(events.every(e => e.agentId === undefined)).toBe(true);
+		expect(events.map((e) => e.type)).toEqual([
+			'session.start',
+			'user.message',
+			'session.title_changed',
+			'assistant.message',
+		]);
+		expect(events.every((e) => e.agentId === undefined)).toBe(true);
 	});
 });
 
@@ -416,7 +485,11 @@ describe('translateDebugLogEntry', () => {
 		const entry = makeDebugEntry({
 			type: 'session_start',
 			name: 'session_start',
-			attrs: { cwd: '/workspace', repository: 'microsoft/vscode', branch: 'main' },
+			attrs: {
+				cwd: '/workspace',
+				repository: 'microsoft/vscode',
+				branch: 'main',
+			},
 		});
 
 		const events = translateDebugLogEntry(entry, 'sess-1', state);
@@ -425,15 +498,22 @@ describe('translateDebugLogEntry', () => {
 		expect(events[0].type).toBe('session.start');
 		expect(events[0].data.sessionId).toBe('sess-1');
 		expect(events[0].parentId).toBeNull();
-		expect((events[0].data.context as Record<string, unknown>).cwd).toBe('/workspace');
-		expect((events[0].data.context as Record<string, unknown>).repository).toBe('microsoft/vscode');
+		expect((events[0].data.context as Record<string, unknown>).cwd).toBe(
+			'/workspace',
+		);
+		expect(
+			(events[0].data.context as Record<string, unknown>).repository,
+		).toBe('microsoft/vscode');
 		expect(state.started).toBe(true);
 	});
 
 	it('does not emit duplicate session.start', () => {
 		const state = createSessionTranslationState();
 		state.started = true;
-		const entry = makeDebugEntry({ type: 'session_start', name: 'session_start' });
+		const entry = makeDebugEntry({
+			type: 'session_start',
+			name: 'session_start',
+		});
 
 		const events = translateDebugLogEntry(entry, 'sess-1', state);
 		expect(events).toHaveLength(0);
@@ -524,8 +604,15 @@ describe('translateDebugLogEntry', () => {
 
 	it('chains parentId across entries', () => {
 		const state = createSessionTranslationState();
-		const e1 = makeDebugEntry({ type: 'session_start', name: 'session_start' });
-		const e2 = makeDebugEntry({ type: 'user_message', name: 'user_message', attrs: { content: 'hello' } });
+		const e1 = makeDebugEntry({
+			type: 'session_start',
+			name: 'session_start',
+		});
+		const e2 = makeDebugEntry({
+			type: 'user_message',
+			name: 'user_message',
+			attrs: { content: 'hello' },
+		});
 
 		const events1 = translateDebugLogEntry(e1, 'sess-1', state);
 		const events2 = translateDebugLogEntry(e2, 'sess-1', state);
@@ -544,7 +631,10 @@ describe('translateDebugLogEntry', () => {
 	it('drops oversized entries and keeps parentId chain valid', () => {
 		const state = createSessionTranslationState();
 		// session.start → kept, huge user_message → dropped, agent_response → kept
-		const start = makeDebugEntry({ type: 'session_start', name: 'session_start' });
+		const start = makeDebugEntry({
+			type: 'session_start',
+			name: 'session_start',
+		});
 		const huge = makeDebugEntry({
 			type: 'user_message',
 			name: 'user_message',
@@ -647,26 +737,36 @@ describe('deriveTitleFromUserMessage', () => {
 });
 describe('terminal / streaming event classification', () => {
 	function makeEvent(type: string): SessionEvent {
-		return { id: 'e', timestamp: '2024-01-01T00:00:00.000Z', parentId: null, type, data: {} };
+		return {
+			id: 'e',
+			timestamp: '2024-01-01T00:00:00.000Z',
+			parentId: null,
+			type,
+			data: {},
+		};
 	}
 
 	it('marks the documented terminal flush event types', () => {
-		expect(TERMINAL_FLUSH_EVENT_TYPES).toEqual(new Set([
-			'assistant.message',
-			'tool.execution_complete',
-			'session.idle',
-			'session.shutdown',
-			'session.error',
-		]));
+		expect(TERMINAL_FLUSH_EVENT_TYPES).toEqual(
+			new Set([
+				'assistant.message',
+				'tool.execution_complete',
+				'session.idle',
+				'session.shutdown',
+				'session.error',
+			]),
+		);
 	});
 
 	it('marks the documented streaming delta event types', () => {
-		expect(STREAMING_EVENT_TYPES).toEqual(new Set([
-			'assistant.streaming_delta',
-			'assistant.reasoning_delta',
-			'assistant.message_delta',
-			'tool.execution_partial_result',
-		]));
+		expect(STREAMING_EVENT_TYPES).toEqual(
+			new Set([
+				'assistant.streaming_delta',
+				'assistant.reasoning_delta',
+				'assistant.message_delta',
+				'tool.execution_partial_result',
+			]),
+		);
 	});
 
 	it('terminal and streaming sets are disjoint', () => {
@@ -677,7 +777,9 @@ describe('terminal / streaming event classification', () => {
 
 	it('isTerminalFlushEvent recognizes terminal events', () => {
 		expect(isTerminalFlushEvent(makeEvent('assistant.message'))).toBe(true);
-		expect(isTerminalFlushEvent(makeEvent('tool.execution_complete'))).toBe(true);
+		expect(isTerminalFlushEvent(makeEvent('tool.execution_complete'))).toBe(
+			true,
+		);
 		expect(isTerminalFlushEvent(makeEvent('session.shutdown'))).toBe(true);
 	});
 
@@ -685,7 +787,11 @@ describe('terminal / streaming event classification', () => {
 		expect(isTerminalFlushEvent(makeEvent('session.start'))).toBe(false);
 		expect(isTerminalFlushEvent(makeEvent('user.message'))).toBe(false);
 		expect(isTerminalFlushEvent(makeEvent('assistant.usage'))).toBe(false);
-		expect(isTerminalFlushEvent(makeEvent('tool.execution_start'))).toBe(false);
-		expect(isTerminalFlushEvent(makeEvent('assistant.streaming_delta'))).toBe(false);
+		expect(isTerminalFlushEvent(makeEvent('tool.execution_start'))).toBe(
+			false,
+		);
+		expect(
+			isTerminalFlushEvent(makeEvent('assistant.streaming_delta')),
+		).toBe(false);
 	});
 });

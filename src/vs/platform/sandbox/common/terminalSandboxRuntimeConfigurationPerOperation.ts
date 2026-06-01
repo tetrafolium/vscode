@@ -3,31 +3,53 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { OperatingSystem } from '../../../base/common/platform.js';
-import type { ITerminalSandboxCommand } from './terminalSandboxService.js';
-import { gitGlobalOptionsWithValue, type ITerminalSandboxCommandRule, matchesTerminalSandboxCommandRule } from './terminalSandboxCommandRules.js';
+import { OperatingSystem } from "../../../base/common/platform.js";
+import type { ITerminalSandboxCommand } from "./terminalSandboxService.js";
+import {
+	gitGlobalOptionsWithValue,
+	type ITerminalSandboxCommandRule,
+	matchesTerminalSandboxCommandRule,
+} from "./terminalSandboxCommandRules.js";
 
 export const enum TerminalSandboxRuntimeConfigurationOperation {
-	GnuPG = 'gnupg',
-	Node = 'node',
+	GnuPG = "gnupg",
+	Node = "node",
 }
 
-const terminalSandboxRuntimeConfigurationCommandRules: readonly ITerminalSandboxCommandRule<TerminalSandboxRuntimeConfigurationOperation>[] = [
-	{
-		keywords: ['node', 'npm', 'npx', 'pnpm', 'yarn', 'corepack', 'bun', 'deno', 'nvm', 'volta', 'fnm', 'asdf', 'mise'],
-		value: TerminalSandboxRuntimeConfigurationOperation.Node,
-	},
-	{
-		keywords: ['git'],
-		value: TerminalSandboxRuntimeConfigurationOperation.GnuPG,
-		subcommands: ['commit'],
-		optionsWithValue: gitGlobalOptionsWithValue,
-		condition: ({ os }) => os !== OperatingSystem.Windows,
-		when: isGpgSignedGitCommit,
-	},
-];
+const terminalSandboxRuntimeConfigurationCommandRules: readonly ITerminalSandboxCommandRule<TerminalSandboxRuntimeConfigurationOperation>[] =
+	[
+		{
+			keywords: [
+				"node",
+				"npm",
+				"npx",
+				"pnpm",
+				"yarn",
+				"corepack",
+				"bun",
+				"deno",
+				"nvm",
+				"volta",
+				"fnm",
+				"asdf",
+				"mise",
+			],
+			value: TerminalSandboxRuntimeConfigurationOperation.Node,
+		},
+		{
+			keywords: ["git"],
+			value: TerminalSandboxRuntimeConfigurationOperation.GnuPG,
+			subcommands: ["commit"],
+			optionsWithValue: gitGlobalOptionsWithValue,
+			condition: ({ os }) => os !== OperatingSystem.Windows,
+			when: isGpgSignedGitCommit,
+		},
+	];
 
-function getTerminalSandboxRuntimeConfigurationForOperation(operation: TerminalSandboxRuntimeConfigurationOperation, os: OperatingSystem): Record<string, unknown> {
+function getTerminalSandboxRuntimeConfigurationForOperation(
+	operation: TerminalSandboxRuntimeConfigurationOperation,
+	os: OperatingSystem,
+): Record<string, unknown> {
 	switch (operation) {
 		case TerminalSandboxRuntimeConfigurationOperation.GnuPG:
 			switch (os) {
@@ -38,16 +60,12 @@ function getTerminalSandboxRuntimeConfigurationForOperation(operation: TerminalS
 				default:
 					return {
 						network: {
-							allowAllUnixSockets: true
+							allowAllUnixSockets: true,
 						},
 						filesystem: {
-							allowRead: [
-								'~/.gnupg'
-							],
-							allowWrite: [
-								'~/.gnupg'
-							]
-						}
+							allowRead: ["~/.gnupg"],
+							allowWrite: ["~/.gnupg"],
+						},
 					};
 			}
 
@@ -60,16 +78,17 @@ function getTerminalSandboxRuntimeConfigurationForOperation(operation: TerminalS
 				default:
 					return {
 						filesystem: {
-							allowWrite: [
-								'~/.volta/'
-							]
-						}
+							allowWrite: ["~/.volta/"],
+						},
 					};
 			}
 	}
 }
 
-export function getTerminalSandboxRuntimeConfigurationForCommands(os: OperatingSystem, commandDetails: readonly ITerminalSandboxCommand[]): Record<string, unknown> {
+export function getTerminalSandboxRuntimeConfigurationForCommands(
+	os: OperatingSystem,
+	commandDetails: readonly ITerminalSandboxCommand[],
+): Record<string, unknown> {
 	const operations = new Set<TerminalSandboxRuntimeConfigurationOperation>();
 	for (const command of commandDetails) {
 		for (const rule of terminalSandboxRuntimeConfigurationCommandRules) {
@@ -81,16 +100,28 @@ export function getTerminalSandboxRuntimeConfigurationForCommands(os: OperatingS
 
 	const configuration: Record<string, unknown> = {};
 	for (const operation of operations) {
-		mergeAdditionalSandboxConfigProperties(configuration, getTerminalSandboxRuntimeConfigurationForOperation(operation, os));
+		mergeAdditionalSandboxConfigProperties(
+			configuration,
+			getTerminalSandboxRuntimeConfigurationForOperation(operation, os),
+		);
 	}
 	return configuration;
 }
 
 function isGpgSignedGitCommit(command: ITerminalSandboxCommand): boolean {
-	return command.args.some(arg => arg === '-S' || arg.startsWith('-S') || arg === '--gpg-sign' || arg.startsWith('--gpg-sign='));
+	return command.args.some(
+		(arg) =>
+			arg === "-S" ||
+			arg.startsWith("-S") ||
+			arg === "--gpg-sign" ||
+			arg.startsWith("--gpg-sign="),
+	);
 }
 
-function mergeAdditionalSandboxConfigProperties(target: Record<string, unknown>, additional: Record<string, unknown>): void {
+function mergeAdditionalSandboxConfigProperties(
+	target: Record<string, unknown>,
+	additional: Record<string, unknown>,
+): void {
 	for (const [key, value] of Object.entries(additional)) {
 		if (!Object.prototype.hasOwnProperty.call(target, key)) {
 			target[key] = value;
@@ -102,12 +133,17 @@ function mergeAdditionalSandboxConfigProperties(target: Record<string, unknown>,
 			target[key] = [...new Set([...existingValue, ...value])];
 			continue;
 		}
-		if (isObjectForSandboxConfigMerge(existingValue) && isObjectForSandboxConfigMerge(value)) {
+		if (
+			isObjectForSandboxConfigMerge(existingValue) &&
+			isObjectForSandboxConfigMerge(value)
+		) {
 			mergeAdditionalSandboxConfigProperties(existingValue, value);
 		}
 	}
 }
 
-function isObjectForSandboxConfigMerge(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value);
+function isObjectForSandboxConfigMerge(
+	value: unknown,
+): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

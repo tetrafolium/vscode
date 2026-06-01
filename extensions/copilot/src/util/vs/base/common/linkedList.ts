@@ -6,7 +6,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 class Node<E> {
-
 	static readonly Undefined = new Node<unknown>(undefined);
 
 	element: E;
@@ -21,7 +20,6 @@ class Node<E> {
 }
 
 export class LinkedList<E> {
-
 	private _first: Node<E> | typeof Node.Undefined = Node.Undefined;
 	private _last: Node<E> | typeof Node.Undefined = Node.Undefined;
 	private _size: number = 0;
@@ -61,14 +59,12 @@ export class LinkedList<E> {
 		if (this._first === Node.Undefined) {
 			this._first = newNode;
 			this._last = newNode;
-
 		} else if (atTheEnd) {
 			// push
 			const oldLast = this._last;
 			this._last = newNode;
 			newNode.prev = oldLast;
 			oldLast.next = newNode;
-
 		} else {
 			// unshift
 			const oldFirst = this._first;
@@ -122,17 +118,17 @@ export class LinkedList<E> {
 			const anchor = node.prev;
 			anchor.next = node.next;
 			node.next.prev = anchor;
-
-		} else if (node.prev === Node.Undefined && node.next === Node.Undefined) {
+		} else if (
+			node.prev === Node.Undefined &&
+			node.next === Node.Undefined
+		) {
 			// only node
 			this._first = Node.Undefined;
 			this._last = Node.Undefined;
-
 		} else if (node.next === Node.Undefined) {
 			// last
 			this._last = this._last.prev!;
 			this._last.next = Node.Undefined;
-
 		} else if (node.prev === Node.Undefined) {
 			// first
 			this._first = this._first.next!;

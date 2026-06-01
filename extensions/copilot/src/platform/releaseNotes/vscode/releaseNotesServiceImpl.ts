@@ -12,9 +12,10 @@ export class ReleaseNotesService implements IReleaseNotesService {
 	declare _serviceBrand: undefined;
 	static readonly BASE_URL = 'https://code.visualstudio.com/raw';
 
-	constructor(@IEnvService private readonly envService: IEnvService,
-		@IFetcherService private readonly fetcherService: IFetcherService
-	) { }
+	constructor(
+		@IEnvService private readonly envService: IEnvService,
+		@IFetcherService private readonly fetcherService: IFetcherService,
+	) {}
 
 	async fetchLatestReleaseNotes(): Promise<string | undefined> {
 		const url = this.getUrl();
@@ -29,7 +30,9 @@ export class ReleaseNotesService implements IReleaseNotesService {
 		return releaseNotesText;
 	}
 
-	async fetchReleaseNotesForVersion(version: string): Promise<string | undefined> {
+	async fetchReleaseNotesForVersion(
+		version: string,
+	): Promise<string | undefined> {
 		const url = this.getUrl(version);
 		if (!url) {
 			return;
@@ -44,9 +47,10 @@ export class ReleaseNotesService implements IReleaseNotesService {
 
 	private getUrl(version?: string): string | undefined {
 		// Build URL using MAJOR and MINOR only (no patch). VS Code does not have separate URLs per patch.
-		const sourceVersion = (version && version.trim().length > 0)
-			? version.trim()
-			: this.envService.getEditorInfo().version;
+		const sourceVersion =
+			version && version.trim().length > 0
+				? version.trim()
+				: this.envService.getEditorInfo().version;
 
 		let major: string | undefined;
 		let minor: string | undefined;

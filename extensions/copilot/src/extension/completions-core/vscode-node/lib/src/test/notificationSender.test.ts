@@ -16,7 +16,7 @@ suite('NotificationSender test suite', function () {
 		assert.strictEqual(
 			count,
 			2,
-			`Expected showInformationMessage to be called twice, but was called ${count} times`
+			`Expected showInformationMessage to be called twice, but was called ${count} times`,
 		);
 	});
 
@@ -25,7 +25,10 @@ suite('NotificationSender test suite', function () {
 		const action = { title: 'OK' };
 		notificationSender.performAction('OK');
 
-		const result = await notificationSender.showInformationMessage('Success', action);
+		const result = await notificationSender.showInformationMessage(
+			'Success',
+			action,
+		);
 		assert.deepStrictEqual(result, action);
 	});
 
@@ -33,7 +36,10 @@ suite('NotificationSender test suite', function () {
 		const notificationSender = new TestNotificationSender();
 		notificationSender.performDismiss();
 
-		const result = await notificationSender.showInformationMessage('Success', { title: 'OK' });
+		const result = await notificationSender.showInformationMessage(
+			'Success',
+			{ title: 'OK' },
+		);
 		assert.strictEqual(result, undefined);
 	});
 
@@ -42,7 +48,11 @@ suite('NotificationSender test suite', function () {
 		const action = { title: 'Yes' };
 		notificationSender.performAction('Yes');
 
-		const result = await notificationSender.showInformationModal('Are you sure?', action, { title: 'No' });
+		const result = await notificationSender.showInformationModal(
+			'Are you sure?',
+			action,
+			{ title: 'No' },
+		);
 		assert.deepStrictEqual(result, action);
 		assert.strictEqual(notificationSender.sentMessages.length, 1);
 		assert.strictEqual(notificationSender.sentMessages[0], 'Are you sure?');
@@ -52,16 +62,23 @@ suite('NotificationSender test suite', function () {
 		const notificationSender = new TestNotificationSender();
 		notificationSender.performDismiss();
 
-		const result = await notificationSender.showInformationModal('Are you sure?', { title: 'Yes' });
+		const result = await notificationSender.showInformationModal(
+			'Are you sure?',
+			{ title: 'Yes' },
+		);
 		assert.strictEqual(result, undefined);
 	});
 
 	test('should handle request without actions', async function () {
 		const notificationSender = new TestNotificationSender();
 
-		const result = await notificationSender.showInformationModal('Just showing info');
+		const result =
+			await notificationSender.showInformationModal('Just showing info');
 		assert.strictEqual(result, undefined);
 		assert.strictEqual(notificationSender.sentMessages.length, 1);
-		assert.strictEqual(notificationSender.sentMessages[0], 'Just showing info');
+		assert.strictEqual(
+			notificationSender.sentMessages[0],
+			'Just showing info',
+		);
 	});
 });

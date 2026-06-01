@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 export function disposeAll(disposables: Iterable<vscode.Disposable>): void {
 	const errors: unknown[] = [];
@@ -19,7 +19,10 @@ export function disposeAll(disposables: Iterable<vscode.Disposable>): void {
 	if (errors.length === 1) {
 		throw errors[0];
 	} else if (errors.length > 1) {
-		throw new AggregateError(errors, 'Encountered errors while disposing of store');
+		throw new AggregateError(
+			errors,
+			"Encountered errors while disposing of store",
+		);
 	}
 }
 

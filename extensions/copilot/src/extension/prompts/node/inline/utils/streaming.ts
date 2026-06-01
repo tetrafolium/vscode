@@ -5,7 +5,11 @@
 
 import { AsyncIterableObject } from '../../../../../util/vs/base/common/async';
 
-export async function* replaceStringInStream(stream: AsyncIterable<string>, searchValue: string, replaceValue: string): AsyncIterable<string> {
+export async function* replaceStringInStream(
+	stream: AsyncIterable<string>,
+	searchValue: string,
+	replaceValue: string,
+): AsyncIterable<string> {
 	let buffer = '';
 
 	const searchValuePrefixes = getPrefixes(searchValue);
@@ -69,19 +73,22 @@ export type StreamPipe<T> = (stream: AsyncIterable<T>) => AsyncIterable<T>;
 
 export namespace StreamPipe {
 	export function identity<T>(): StreamPipe<T> {
-		return stream => stream;
+		return (stream) => stream;
 	}
 
 	export function discard<T>(): StreamPipe<T> {
-		return _stream => AsyncIterableObject.EMPTY;
+		return (_stream) => AsyncIterableObject.EMPTY;
 	}
 
 	export function chain<T>(...pipes: StreamPipe<T>[]): StreamPipe<T> {
-		return stream => pipes.reduce((s, pipe) => pipe(s), stream);
+		return (stream) => pipes.reduce((s, pipe) => pipe(s), stream);
 	}
 }
 
-export function forEachStreamed<T>(stream: AsyncIterable<T>, fn: (item: T) => void): Promise<void> {
+export function forEachStreamed<T>(
+	stream: AsyncIterable<T>,
+	fn: (item: T) => void,
+): Promise<void> {
 	return (async () => {
 		for await (const item of stream) {
 			fn(item);

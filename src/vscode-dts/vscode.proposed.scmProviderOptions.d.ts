@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
+declare module "vscode" {
 	// https://github.com/microsoft/vscode/issues/254910
 
 	export interface SourceControl {
@@ -34,6 +34,13 @@ declare module 'vscode' {
 	}
 
 	export namespace scm {
-		export function createSourceControl(id: string, label: string, rootUri?: Uri, iconPath?: IconPath, isHidden?: boolean, parent?: SourceControl): SourceControl;
+		export function createSourceControl(
+			id: string,
+			label: string,
+			rootUri?: Uri,
+			iconPath?: IconPath,
+			isHidden?: boolean,
+			parent?: SourceControl,
+		): SourceControl;
 	}
 }

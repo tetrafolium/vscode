@@ -13,7 +13,13 @@ import { getFixturesDir } from '../stestUtil';
  * This function allows [tools](https://github.com/microsoft/vscode-ts-file-path-support/tree/main) to inline/extract the file content.
  */
 
-type FileInfo = { filePath: string | { fullPath: string; pathWithinFixturesDir?: string } } | {/** Relative */ fileName: string; fileContents: string };
+type FileInfo =
+	| {
+			filePath:
+				| string
+				| { fullPath: string; pathWithinFixturesDir?: string };
+	  }
+	| { /** Relative */ fileName: string; fileContents: string };
 
 export interface ILoadedFile {
 	fileContents: string;
@@ -49,8 +55,14 @@ export function loadFile(data: FileInfo): ILoadedFile {
 	return { fileContents, fileName, filePath, pathWithinFixturesDir };
 }
 
-export function inlineEditsFixture(pathWithinFixturesDir: RelativeFilePath<'$dir/../fixtures/inlineEdits'>): { fullPath: string; pathWithinFixturesDir: string } {
-	const fullPath = join(getFixturesDir(), 'inlineEdits', pathWithinFixturesDir);
+export function inlineEditsFixture(
+	pathWithinFixturesDir: RelativeFilePath<'$dir/../fixtures/inlineEdits'>,
+): { fullPath: string; pathWithinFixturesDir: string } {
+	const fullPath = join(
+		getFixturesDir(),
+		'inlineEdits',
+		pathWithinFixturesDir,
+	);
 	return {
 		fullPath,
 		pathWithinFixturesDir,
@@ -58,7 +70,8 @@ export function inlineEditsFixture(pathWithinFixturesDir: RelativeFilePath<'$dir
 }
 
 /** See https://github.com/microsoft/vscode-ts-file-path-support */
-type RelativeFilePath<T extends string> = string & { baseDir?: T }; export interface IInlineEditBaseFile {
+type RelativeFilePath<T extends string> = string & { baseDir?: T };
+export interface IInlineEditBaseFile {
 	fileContents: string;
 
 	/** Relative or absolute */

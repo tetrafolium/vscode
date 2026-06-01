@@ -3,13 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from '../../../../nls.js';
-import { ITestResult } from './testResult.js';
-import { TestResultState } from './testTypes.js';
+import { localize } from "../../../../nls.js";
+import { ITestResult } from "./testResult.js";
+import { TestResultState } from "./testTypes.js";
 
 export type CountSummary = ReturnType<typeof collectTestStateCounts>;
 
-export const collectTestStateCounts = (isRunning: boolean, results: ReadonlyArray<ITestResult>) => {
+export const collectTestStateCounts = (
+	isRunning: boolean,
+	results: ReadonlyArray<ITestResult>,
+) => {
 	let passed = 0;
 	let failed = 0;
 	let skipped = 0;
@@ -35,8 +38,15 @@ export const collectTestStateCounts = (isRunning: boolean, results: ReadonlyArra
 	};
 };
 
-export const getTestProgressText = ({ isRunning, passed, runSoFar, totalWillBeRun, skipped, failed }: CountSummary) => {
-	let percent = passed / runSoFar * 100;
+export const getTestProgressText = ({
+	isRunning,
+	passed,
+	runSoFar,
+	totalWillBeRun,
+	skipped,
+	failed,
+}: CountSummary) => {
+	let percent = (passed / runSoFar) * 100;
 	if (failed > 0) {
 		// fix: prevent from rounding to 100 if there's any failed test
 		percent = Math.min(percent, 99.9);
@@ -46,18 +56,43 @@ export const getTestProgressText = ({ isRunning, passed, runSoFar, totalWillBeRu
 
 	if (isRunning) {
 		if (runSoFar === 0) {
-			return localize('testProgress.runningInitial', 'Running tests...');
+			return localize("testProgress.runningInitial", "Running tests...");
 		} else if (skipped === 0) {
-			return localize('testProgress.running', 'Running tests, {0}/{1} passed ({2}%)', passed, totalWillBeRun, percent.toPrecision(3));
+			return localize(
+				"testProgress.running",
+				"Running tests, {0}/{1} passed ({2}%)",
+				passed,
+				totalWillBeRun,
+				percent.toPrecision(3),
+			);
 		} else {
-			return localize('testProgressWithSkip.running', 'Running tests, {0}/{1} tests passed ({2}%, {3} skipped)', passed, totalWillBeRun, percent.toPrecision(3), skipped);
+			return localize(
+				"testProgressWithSkip.running",
+				"Running tests, {0}/{1} tests passed ({2}%, {3} skipped)",
+				passed,
+				totalWillBeRun,
+				percent.toPrecision(3),
+				skipped,
+			);
 		}
 	} else {
 		if (skipped === 0) {
-			return localize('testProgress.completed', '{0}/{1} tests passed ({2}%)', passed, runSoFar, percent.toPrecision(3));
+			return localize(
+				"testProgress.completed",
+				"{0}/{1} tests passed ({2}%)",
+				passed,
+				runSoFar,
+				percent.toPrecision(3),
+			);
 		} else {
-			return localize('testProgressWithSkip.completed', '{0}/{1} tests passed ({2}%, {3} skipped)', passed, runSoFar, percent.toPrecision(3), skipped);
+			return localize(
+				"testProgressWithSkip.completed",
+				"{0}/{1} tests passed ({2}%, {3} skipped)",
+				passed,
+				runSoFar,
+				percent.toPrecision(3),
+				skipped,
+			);
 		}
 	}
 };
-

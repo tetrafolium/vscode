@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { sum } from '../../../../../base/common/arrays.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { ITextModel } from '../../../../common/model.js';
-import { IModelContentChangedEvent } from '../../../../common/textModelEvents.js';
+import { sum } from "../../../../../base/common/arrays.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import { ITextModel } from "../../../../common/model.js";
+import { IModelContentChangedEvent } from "../../../../common/textModelEvents.js";
 
 interface TypingSession {
 	startTime: number;
@@ -24,7 +24,6 @@ interface TypingIntervalResult {
  * Higher values indicate slower typing.
  */
 export class TypingInterval extends Disposable {
-
 	private readonly _typingSessions: TypingSession[] = [];
 	private _currentSession: TypingSession | null = null;
 	private _lastChangeTime = 0;
@@ -55,7 +54,9 @@ export class TypingInterval extends Disposable {
 	constructor(private readonly _textModel: ITextModel) {
 		super();
 
-		this._register(this._textModel.onDidChangeContent(e => this._updateTypingSpeed(e)));
+		this._register(
+			this._textModel.onDidChangeContent((e) => this._updateTypingSpeed(e)),
+		);
 	}
 
 	private _updateTypingSpeed(change: IModelContentChangedEvent): void {
@@ -67,7 +68,10 @@ export class TypingInterval extends Disposable {
 		}
 
 		// If too much time has passed since last change, start a new session
-		if (this._currentSession && (now - this._lastChangeTime) > TypingInterval.MAX_SESSION_GAP_MS) {
+		if (
+			this._currentSession &&
+			now - this._lastChangeTime > TypingInterval.MAX_SESSION_GAP_MS
+		) {
 			this._finalizeCurrentSession();
 		}
 
@@ -76,13 +80,14 @@ export class TypingInterval extends Disposable {
 			this._currentSession = {
 				startTime: now,
 				endTime: now,
-				characterCount: 0
+				characterCount: 0,
 			};
 		}
 
 		// Update current session
 		this._currentSession.endTime = now;
-		this._currentSession.characterCount += this._getActualCharacterCount(change);
+		this._currentSession.characterCount +=
+			this._getActualCharacterCount(change);
 
 		this._lastChangeTime = now;
 		this._cacheInvalidated = true;
@@ -121,10 +126,14 @@ export class TypingInterval extends Disposable {
 
 		// Handle different source types
 		switch (reason.metadata.source) {
-			case 'cursor': {
+			case "cursor": {
 				// Direct user input via cursor
 				const kind = reason.metadata.kind;
-				return kind === 'type' || kind === 'compositionType' || kind === 'compositionEnd';
+				return (
+					kind === "type" ||
+					kind === "compositionType" ||
+					kind === "compositionEnd"
+				);
 			}
 
 			default:
@@ -138,10 +147,14 @@ export class TypingInterval extends Disposable {
 			return;
 		}
 
-		const sessionDuration = this._currentSession.endTime - this._currentSession.startTime;
+		const sessionDuration =
+			this._currentSession.endTime - this._currentSession.startTime;
 
 		// Only keep sessions that meet minimum duration and have actual content
-		if (sessionDuration >= TypingInterval.MIN_SESSION_DURATION_MS && this._currentSession.characterCount > 0) {
+		if (
+			sessionDuration >= TypingInterval.MIN_SESSION_DURATION_MS &&
+			this._currentSession.characterCount > 0
+		) {
 			this._typingSessions.push(this._currentSession);
 
 			// Limit session history
@@ -158,7 +171,10 @@ export class TypingInterval extends Disposable {
 		if (this._currentSession) {
 			const tempSession = { ...this._currentSession };
 			const sessionDuration = tempSession.endTime - tempSession.startTime;
-			if (sessionDuration >= TypingInterval.MIN_SESSION_DURATION_MS && tempSession.characterCount > 0) {
+			if (
+				sessionDuration >= TypingInterval.MIN_SESSION_DURATION_MS &&
+				tempSession.characterCount > 0
+			) {
 				const allSessions = [...this._typingSessions, tempSession];
 				return this._calculateSpeedFromSessions(allSessions);
 			}
@@ -167,7 +183,9 @@ export class TypingInterval extends Disposable {
 		return this._calculateSpeedFromSessions(this._typingSessions);
 	}
 
-	private _calculateSpeedFromSessions(sessions: TypingSession[]): TypingIntervalResult {
+	private _calculateSpeedFromSessions(
+		sessions: TypingSession[],
+	): TypingIntervalResult {
 		if (sessions.length === 0) {
 			return { averageInterval: 0, characterCount: 0 };
 		}
@@ -177,18 +195,29 @@ export class TypingInterval extends Disposable {
 
 		// First, try the standard window
 		const cutoffTime = Date.now() - TypingInterval.TYPING_SPEED_WINDOW_MS;
-		const recentSessions = sortedSessions.filter(session => session.endTime > cutoffTime);
+		const recentSessions = sortedSessions.filter(
+			(session) => session.endTime > cutoffTime,
+		);
 		const olderSessions = sortedSessions.splice(recentSessions.length);
 
-		let totalChars = sum(recentSessions.map(session => session.characterCount));
+		let totalChars = sum(
+			recentSessions.map((session) => session.characterCount),
+		);
 
 		// If we don't have enough characters in the standard window, expand to include older sessions
-		for (let i = 0; i < olderSessions.length && totalChars < TypingInterval.MIN_CHARS_FOR_RELIABLE_SPEED; i++) {
+		for (
+			let i = 0;
+			i < olderSessions.length &&
+			totalChars < TypingInterval.MIN_CHARS_FOR_RELIABLE_SPEED;
+			i++
+		) {
 			recentSessions.push(olderSessions[i]);
 			totalChars += olderSessions[i].characterCount;
 		}
 
-		const totalTime = sum(recentSessions.map(session => session.endTime - session.startTime));
+		const totalTime = sum(
+			recentSessions.map((session) => session.endTime - session.startTime),
+		);
 		if (totalTime === 0 || totalChars <= 1) {
 			return { averageInterval: 0, characterCount: totalChars };
 		}
@@ -199,7 +228,7 @@ export class TypingInterval extends Disposable {
 
 		return {
 			averageInterval: Math.round(avgMsBetweenKeystrokes),
-			characterCount: totalChars
+			characterCount: totalChars,
 		};
 	}
 

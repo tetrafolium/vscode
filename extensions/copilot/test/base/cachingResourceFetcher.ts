@@ -3,19 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { ICache, SQLiteCache } from './cache';
-import { CacheMode, CacheScope, CurrentTestRunInfo, ICachingResourceFetcher } from './simulationContext';
+import {
+	CacheMode,
+	CacheScope,
+	CurrentTestRunInfo,
+	ICachingResourceFetcher,
+} from './simulationContext';
 
 export const usedResourceCaches = new Set<string>();
 
 class Request<T> {
-
 	constructor(
 		readonly input: T,
 		readonly cacheScope: CacheScope,
 		readonly cacheSalt: string,
-		readonly inputCacheKey: string
-	) {
-	}
+		readonly inputCacheKey: string,
+	) {}
 
 	get hash() {
 		return `${this.cacheScope}:${this.cacheSalt}:${this.inputCacheKey}`;
@@ -33,32 +36,42 @@ class ResourceFetcherSQLiteCache<I, R> extends SQLiteCache<Request<I>, R> {
 }
 
 export class CachingResourceFetcher implements ICachingResourceFetcher {
-
 	declare readonly _serviceBrand: undefined;
 
 	private cache: ICache<Request<any>, any> | undefined;
 
 	// needs to be static, otherwise concurrent writes will happen, since
 	// many instances of this will be created
-	private static Queues = new Map</* cache key */string, Promise<unknown>>();
+	private static Queues = new Map</* cache key */ string, Promise<unknown>>();
 
-	constructor(
-		currentTestRunInfo: CurrentTestRunInfo,
-		cacheMode: CacheMode
-	) {
-		this.cache = cacheMode !== CacheMode.Disable
-			? new ResourceFetcherSQLiteCache(currentTestRunInfo)
-			: undefined;
+	constructor(currentTestRunInfo: CurrentTestRunInfo, cacheMode: CacheMode) {
+		this.cache =
+			cacheMode !== CacheMode.Disable
+				? new ResourceFetcherSQLiteCache(currentTestRunInfo)
+				: undefined;
 	}
 
-	public async invokeWithCache<I, R>(cacheScope: CacheScope, input: I, cacheSalt: string, inputCacheKey: string, fn: (input: I) => Promise<R>): Promise<R> {
+	public async invokeWithCache<I, R>(
+		cacheScope: CacheScope,
+		input: I,
+		cacheSalt: string,
+		inputCacheKey: string,
+		fn: (input: I) => Promise<R>,
+	): Promise<R> {
 		if (!this.cache) {
 			return await fn(input);
 		}
 
 		// serialize accesses to the same cache key
-		const promise = Promise.resolve(CachingResourceFetcher.Queues.get(inputCacheKey)).then(async (): Promise<R> => {
-			const request = new Request(input, cacheScope, cacheSalt, inputCacheKey);
+		const promise = Promise.resolve(
+			CachingResourceFetcher.Queues.get(inputCacheKey),
+		).then(async (): Promise<R> => {
+			const request = new Request(
+				input,
+				cacheScope,
+				cacheSalt,
+				inputCacheKey,
+			);
 			let result: R | undefined = await this.cache!.get(request);
 
 			if (result === undefined) {
@@ -69,7 +82,10 @@ export class CachingResourceFetcher implements ICachingResourceFetcher {
 			return result;
 		});
 
-		CachingResourceFetcher.Queues.set(inputCacheKey, promise.catch(() => { }));
+		CachingResourceFetcher.Queues.set(
+			inputCacheKey,
+			promise.catch(() => {}),
+		);
 
 		return promise;
 	}

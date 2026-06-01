@@ -8,19 +8,21 @@ import { expect, suite, test } from 'vitest';
 import { anthropicMessagesToRawMessages } from '../anthropicMessageConverter';
 
 suite('anthropicMessagesToRawMessages', function () {
-
 	test('converts simple text messages', function () {
 		const messages: MessageParam[] = [
 			{
 				role: 'user',
-				content: 'Hello world'
+				content: 'Hello world',
 			},
 			{
 				role: 'assistant',
-				content: 'Hi there!'
-			}
+				content: 'Hi there!',
+			},
 		];
-		const system: TextBlockParam = { type: 'text', text: 'You are a helpful assistant' };
+		const system: TextBlockParam = {
+			type: 'text',
+			text: 'You are a helpful assistant',
+		};
 
 		const result = anthropicMessagesToRawMessages(messages, system);
 
@@ -31,8 +33,8 @@ suite('anthropicMessagesToRawMessages', function () {
 		const messages: MessageParam[] = [
 			{
 				role: 'user',
-				content: 'Hello'
-			}
+				content: 'Hello',
+			},
 		];
 		const system: TextBlockParam = { type: 'text', text: '' };
 
@@ -52,11 +54,11 @@ suite('anthropicMessagesToRawMessages', function () {
 						source: {
 							type: 'base64',
 							media_type: 'image/jpeg',
-							data: 'fake-base64-data'
-						}
-					}
-				]
-			}
+							data: 'fake-base64-data',
+						},
+					},
+				],
+			},
 		];
 		const system: TextBlockParam = { type: 'text', text: 'System prompt' };
 
@@ -75,10 +77,10 @@ suite('anthropicMessagesToRawMessages', function () {
 						type: 'tool_use',
 						id: 'call_123',
 						name: 'get_weather',
-						input: { location: 'London' }
-					}
-				]
-			}
+						input: { location: 'London' },
+					},
+				],
+			},
 		];
 		const system: TextBlockParam = { type: 'text', text: '' };
 
@@ -95,10 +97,10 @@ suite('anthropicMessagesToRawMessages', function () {
 					{
 						type: 'tool_result',
 						tool_use_id: 'call_123',
-						content: 'The weather in London is sunny'
-					}
-				]
-			}
+						content: 'The weather in London is sunny',
+					},
+				],
+			},
 		];
 		const system: TextBlockParam = { type: 'text', text: '' };
 
@@ -122,13 +124,13 @@ suite('anthropicMessagesToRawMessages', function () {
 								source: {
 									type: 'base64',
 									media_type: 'image/png',
-									data: 'chart-data'
-								}
-							}
-						]
-					}
-				]
-			}
+									data: 'chart-data',
+								},
+							},
+						],
+					},
+				],
+			},
 		];
 		const system: TextBlockParam = { type: 'text', text: '' };
 
@@ -145,15 +147,15 @@ suite('anthropicMessagesToRawMessages', function () {
 					{
 						type: 'text',
 						text: 'Cached content',
-						cache_control: { type: 'ephemeral' }
-					}
-				]
-			}
+						cache_control: { type: 'ephemeral' },
+					},
+				],
+			},
 		];
 		const system: TextBlockParam = {
 			type: 'text',
 			text: 'System with cache',
-			cache_control: { type: 'ephemeral' }
+			cache_control: { type: 'ephemeral' },
 		};
 
 		const result = anthropicMessagesToRawMessages(messages, system);
@@ -166,10 +168,14 @@ suite('anthropicMessagesToRawMessages', function () {
 			{
 				role: 'assistant',
 				content: [
-					{ type: 'thinking', thinking: 'Let me think...', signature: '' },
-					{ type: 'text', text: 'Here is my response' }
-				]
-			}
+					{
+						type: 'thinking',
+						thinking: 'Let me think...',
+						signature: '',
+					},
+					{ type: 'text', text: 'Here is my response' },
+				],
+			},
 		];
 		const system: TextBlockParam = { type: 'text', text: '' };
 
@@ -187,11 +193,11 @@ suite('anthropicMessagesToRawMessages', function () {
 						type: 'image',
 						source: {
 							type: 'url',
-							url: 'https://example.com/image.jpg'
-						}
-					}
-				]
-			}
+							url: 'https://example.com/image.jpg',
+						},
+					},
+				],
+			},
 		];
 		const system: TextBlockParam = { type: 'text', text: '' };
 
@@ -208,10 +214,10 @@ suite('anthropicMessagesToRawMessages', function () {
 					{
 						type: 'tool_result',
 						tool_use_id: 'call_empty',
-						content: []
-					}
-				]
-			}
+						content: [],
+					},
+				],
+			},
 		];
 		const system: TextBlockParam = { type: 'text', text: '' };
 

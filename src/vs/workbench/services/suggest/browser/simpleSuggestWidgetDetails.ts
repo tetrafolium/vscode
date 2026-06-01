@@ -3,35 +3,43 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../base/browser/dom.js';
-import { DomScrollableElement } from '../../../../base/browser/ui/scrollbar/scrollableElement.js';
-import { Codicon } from '../../../../base/common/codicons.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
-import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { ResizableHTMLElement } from '../../../../base/browser/ui/resizable/resizable.js';
-import * as nls from '../../../../nls.js';
-import { SimpleCompletionItem } from './simpleCompletionItem.js';
-import { MarkdownString } from '../../../../base/common/htmlContent.js';
-import { IMarkdownRendererService } from '../../../../platform/markdown/browser/markdownRenderer.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { ISimpleSuggestWidgetFontInfo } from './simpleSuggestWidgetRenderer.js';
+import * as dom from "../../../../base/browser/dom.js";
+import { DomScrollableElement } from "../../../../base/browser/ui/scrollbar/scrollableElement.js";
+import { Codicon } from "../../../../base/common/codicons.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import { Emitter, Event } from "../../../../base/common/event.js";
+import { DisposableStore } from "../../../../base/common/lifecycle.js";
+import { ResizableHTMLElement } from "../../../../base/browser/ui/resizable/resizable.js";
+import * as nls from "../../../../nls.js";
+import { SimpleCompletionItem } from "./simpleCompletionItem.js";
+import { MarkdownString } from "../../../../base/common/htmlContent.js";
+import { IMarkdownRendererService } from "../../../../platform/markdown/browser/markdownRenderer.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import { ISimpleSuggestWidgetFontInfo } from "./simpleSuggestWidgetRenderer.js";
 
-export function canExpandCompletionItem(item: SimpleCompletionItem | undefined): boolean {
-	return !!item && Boolean(item.completion.documentation || item.completion.detail && item.completion.detail !== item.completion.label);
+export function canExpandCompletionItem(
+	item: SimpleCompletionItem | undefined,
+): boolean {
+	return (
+		!!item &&
+		Boolean(
+			item.completion.documentation ||
+			(item.completion.detail &&
+				item.completion.detail !== item.completion.label),
+		)
+	);
 }
 
-export const SuggestDetailsClassName = 'suggest-details';
+export const SuggestDetailsClassName = "suggest-details";
 
 export const enum SimpleSuggestDetailsPlacement {
 	East = 0,
 	West = 1,
 	South = 2,
-	North = 3
+	North = 3,
 }
 
 export class SimpleSuggestDetailsWidget {
-
 	readonly domNode: HTMLDivElement;
 
 	private readonly _onDidClose = new Emitter<void>();
@@ -48,7 +56,9 @@ export class SimpleSuggestDetailsWidget {
 	private readonly _docs: HTMLElement;
 	private readonly _disposables = new DisposableStore();
 
-	private readonly _renderDisposeable = this._disposables.add(new DisposableStore());
+	private readonly _renderDisposeable = this._disposables.add(
+		new DisposableStore(),
+	);
 	private _borderWidth: number = 1;
 	private _size = new dom.Dimension(330, 0);
 
@@ -57,12 +67,13 @@ export class SimpleSuggestDetailsWidget {
 		onDidFontInfoChange: Event<void>,
 		private readonly _getAdvancedExplainModeDetails: () => string | undefined,
 		@IInstantiationService instaService: IInstantiationService,
-		@IMarkdownRendererService private readonly markdownRendererService: IMarkdownRendererService,
+		@IMarkdownRendererService
+		private readonly markdownRendererService: IMarkdownRendererService,
 	) {
-		this.domNode = dom.$('.suggest-details');
-		this.domNode.classList.add('no-docs');
+		this.domNode = dom.$(".suggest-details");
+		this.domNode.classList.add("no-docs");
 
-		this._body = dom.$('.body');
+		this._body = dom.$(".body");
 
 		this._scrollbar = new DomScrollableElement(this._body, {
 			alwaysConsumeMouseWheel: true,
@@ -70,14 +81,17 @@ export class SimpleSuggestDetailsWidget {
 		dom.append(this.domNode, this._scrollbar.getDomNode());
 		this._disposables.add(this._scrollbar);
 
-		this._header = dom.append(this._body, dom.$('.header'));
-		this._close = dom.append(this._header, dom.$('span' + ThemeIcon.asCSSSelector(Codicon.close)));
-		this._close.title = nls.localize('details.close', "Close");
-		this._close.role = 'button';
+		this._header = dom.append(this._body, dom.$(".header"));
+		this._close = dom.append(
+			this._header,
+			dom.$("span" + ThemeIcon.asCSSSelector(Codicon.close)),
+		);
+		this._close.title = nls.localize("details.close", "Close");
+		this._close.role = "button";
 		this._close.tabIndex = -1;
-		this._type = dom.append(this._header, dom.$('p.type'));
+		this._type = dom.append(this._header, dom.$("p.type"));
 
-		this._docs = dom.append(this._body, dom.$('p.docs'));
+		this._docs = dom.append(this._body, dom.$("p.docs"));
 
 		this._configureFont();
 
@@ -101,7 +115,6 @@ export class SimpleSuggestDetailsWidget {
 		this._type.style.fontFamily = fontFamily;
 		this._close.style.height = lineHeightPx;
 		this._close.style.width = lineHeightPx;
-
 	}
 
 	dispose(): void {
@@ -119,14 +132,14 @@ export class SimpleSuggestDetailsWidget {
 			borderWidth,
 			borderHeight,
 			verticalPadding: 22,
-			horizontalPadding: 14
+			horizontalPadding: 14,
 		};
 	}
 
 	renderLoading(): void {
-		this._type.textContent = nls.localize('loading', "Loading...");
-		this._docs.textContent = '';
-		this.domNode.classList.remove('no-docs', 'no-type');
+		this._type.textContent = nls.localize("loading", "Loading...");
+		this._docs.textContent = "";
+		this.domNode.classList.remove("no-docs", "no-type");
 		this.layout(this.size.width, this.getLayoutInfo().lineHeight * 2);
 		this._onDidChangeContents.fire(this);
 	}
@@ -136,13 +149,13 @@ export class SimpleSuggestDetailsWidget {
 
 		let { detail, documentation } = item.completion;
 
-		let md = '';
+		let md = "";
 
 		if (explainMode) {
 			md += `score: ${item.score[0]}\n`;
-			md += `prefix: ${item.word ?? '(no prefix)'}\n`;
+			md += `prefix: ${item.word ?? "(no prefix)"}\n`;
 			const vs = item.completion.replacementRange;
-			md += `valueSelection: ${vs ? `[${vs[0]}, ${vs[1]}]` : 'undefined'}\n`;
+			md += `valueSelection: ${vs ? `[${vs[0]}, ${vs[1]}]` : "undefined"}\n`;
 			md += `index: ${item.idx}\n`;
 			if (this._getAdvancedExplainModeDetails) {
 				const advancedDetails = this._getAdvancedExplainModeDetails();
@@ -151,72 +164,86 @@ export class SimpleSuggestDetailsWidget {
 				}
 			}
 			detail = `Provider: ${item.completion.provider}`;
-			documentation = new MarkdownString().appendCodeblock('empty', md);
+			documentation = new MarkdownString().appendCodeblock("empty", md);
 		}
 
-		const hasDetail = typeof detail === 'string' ? detail.trim().length > 0 : !!detail;
-		const hasDocs = typeof documentation === 'string'
-			? documentation.trim().length > 0
-			: !!(documentation && documentation.value?.trim().length > 0);
+		const hasDetail =
+			typeof detail === "string" ? detail.trim().length > 0 : !!detail;
+		const hasDocs =
+			typeof documentation === "string"
+				? documentation.trim().length > 0
+				: !!(documentation && documentation.value?.trim().length > 0);
 
 		const updateSize = () => {
-			this.layout(this._size.width, this._type.clientHeight + this._docs.clientHeight);
+			this.layout(
+				this._size.width,
+				this._type.clientHeight + this._docs.clientHeight,
+			);
 			this._onDidChangeContents.fire(this);
 		};
 
-		if (!explainMode && (!canExpandCompletionItem(item) || (!hasDetail && !hasDocs))) {
+		if (
+			!explainMode &&
+			(!canExpandCompletionItem(item) || (!hasDetail && !hasDocs))
+		) {
 			this.clearContents();
 			return;
 		}
 
-		this.domNode.classList.remove('no-docs', 'no-type');
+		this.domNode.classList.remove("no-docs", "no-type");
 
 		// --- details
 
 		if (hasDetail && detail) {
-			const cappedDetail = detail.length > 100000 ? `${detail.substr(0, 100000)}…` : detail;
+			const cappedDetail =
+				detail.length > 100000 ? `${detail.substr(0, 100000)}…` : detail;
 			this._type.textContent = cappedDetail;
 			this._type.title = cappedDetail;
 			dom.show(this._type);
-			this._type.classList.toggle('auto-wrap', !/\r?\n^\s+/gmi.test(cappedDetail));
+			this._type.classList.toggle(
+				"auto-wrap",
+				!/\r?\n^\s+/gim.test(cappedDetail),
+			);
 		} else {
 			dom.clearNode(this._type);
-			this._type.title = '';
+			this._type.title = "";
 			dom.hide(this._type);
-			this.domNode.classList.add('no-type');
+			this.domNode.classList.add("no-type");
 		}
 
 		// // --- documentation
 
 		dom.clearNode(this._docs);
-		if (hasDocs && typeof documentation === 'string') {
-			this._docs.classList.remove('markdown-docs');
+		if (hasDocs && typeof documentation === "string") {
+			this._docs.classList.remove("markdown-docs");
 			this._docs.textContent = documentation;
-
-		} else if (hasDocs && documentation && typeof documentation !== 'string') {
-			this._docs.classList.add('markdown-docs');
+		} else if (hasDocs && documentation && typeof documentation !== "string") {
+			this._docs.classList.add("markdown-docs");
 			dom.clearNode(this._docs);
-			const renderedContents = this.markdownRendererService.render(documentation, {
-				asyncRenderCallback: () => {
-					updateSize();
-				}
-			});
+			const renderedContents = this.markdownRendererService.render(
+				documentation,
+				{
+					asyncRenderCallback: () => {
+						updateSize();
+					},
+				},
+			);
 			this._docs.appendChild(renderedContents.element);
 			this._renderDisposeable.add(renderedContents);
 		} else {
-			this._docs.classList.remove('markdown-docs');
+			this._docs.classList.remove("markdown-docs");
 		}
 
-		this.domNode.classList.toggle('detail-and-doc', hasDetail && hasDocs);
+		this.domNode.classList.toggle("detail-and-doc", hasDetail && hasDocs);
 
-		this.domNode.style.userSelect = 'text';
+		this.domNode.style.userSelect = "text";
 		this.domNode.tabIndex = -1;
 
-		this._close.onmousedown = e => {
+		this._close.onmousedown = (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 		};
-		this._close.onclick = e => {
+		this._close.onclick = (e) => {
 			e.preventDefault();
 			e.stopPropagation();
 			this._onDidClose.fire();
@@ -228,13 +255,13 @@ export class SimpleSuggestDetailsWidget {
 	}
 
 	clearContents() {
-		this.domNode.classList.add('no-docs');
-		this._type.textContent = '';
-		this._docs.textContent = '';
+		this.domNode.classList.add("no-docs");
+		this._type.textContent = "";
+		this._docs.textContent = "";
 	}
 
 	get isEmpty(): boolean {
-		return this.domNode.classList.contains('no-docs');
+		return this.domNode.classList.contains("no-docs");
 	}
 
 	get size() {
@@ -288,7 +315,6 @@ export class SimpleSuggestDetailsWidget {
 }
 
 export class SimpleSuggestDetailsOverlay {
-
 	private readonly _disposables = new DisposableStore();
 	private readonly _resizable: ResizableHTMLElement;
 
@@ -302,58 +328,69 @@ export class SimpleSuggestDetailsOverlay {
 	constructor(
 		readonly widget: SimpleSuggestDetailsWidget,
 		private _container: HTMLElement,
-		preventPlacements?: readonly SimpleSuggestDetailsPlacement[]
+		preventPlacements?: readonly SimpleSuggestDetailsPlacement[],
 	) {
-
 		this._resizable = this._disposables.add(new ResizableHTMLElement());
-		this._resizable.domNode.classList.add('suggest-details-container');
+		this._resizable.domNode.classList.add("suggest-details-container");
 		this._resizable.domNode.appendChild(widget.domNode);
 		this._resizable.enableSashes(false, true, true, false);
-		this._preventPlacements = preventPlacements && preventPlacements.length ? new Set(preventPlacements) : undefined;
+		this._preventPlacements =
+			preventPlacements && preventPlacements.length
+				? new Set(preventPlacements)
+				: undefined;
 
 		let topLeftNow: TopLeftPosition | undefined;
 		let sizeNow: dom.Dimension | undefined;
 		let deltaTop: number = 0;
 		let deltaLeft: number = 0;
-		this._disposables.add(this._resizable.onDidWillResize(() => {
-			topLeftNow = this._topLeft;
-			sizeNow = this._resizable.size;
-		}));
+		this._disposables.add(
+			this._resizable.onDidWillResize(() => {
+				topLeftNow = this._topLeft;
+				sizeNow = this._resizable.size;
+			}),
+		);
 
-		this._disposables.add(this._resizable.onDidResize(e => {
-			if (topLeftNow && sizeNow) {
-				this.widget.layout(e.dimension.width, e.dimension.height);
+		this._disposables.add(
+			this._resizable.onDidResize((e) => {
+				if (topLeftNow && sizeNow) {
+					this.widget.layout(e.dimension.width, e.dimension.height);
 
-				let updateTopLeft = false;
-				if (e.west) {
-					deltaLeft = sizeNow.width - e.dimension.width;
-					updateTopLeft = true;
+					let updateTopLeft = false;
+					if (e.west) {
+						deltaLeft = sizeNow.width - e.dimension.width;
+						updateTopLeft = true;
+					}
+					if (e.north) {
+						deltaTop = sizeNow.height - e.dimension.height;
+						updateTopLeft = true;
+					}
+					if (updateTopLeft) {
+						this._applyTopLeft({
+							top: topLeftNow.top + deltaTop,
+							left: topLeftNow.left + deltaLeft,
+						});
+					}
 				}
-				if (e.north) {
-					deltaTop = sizeNow.height - e.dimension.height;
-					updateTopLeft = true;
+				if (e.done) {
+					topLeftNow = undefined;
+					sizeNow = undefined;
+					deltaTop = 0;
+					deltaLeft = 0;
+					this._userSize = e.dimension;
 				}
-				if (updateTopLeft) {
-					this._applyTopLeft({
-						top: topLeftNow.top + deltaTop,
-						left: topLeftNow.left + deltaLeft,
-					});
-				}
-			}
-			if (e.done) {
-				topLeftNow = undefined;
-				sizeNow = undefined;
-				deltaTop = 0;
-				deltaLeft = 0;
-				this._userSize = e.dimension;
-			}
-		}));
+			}),
+		);
 
-		this._disposables.add(this.widget.onDidChangeContents(() => {
-			if (this._anchorBox) {
-				this._placeAtAnchor(this._anchorBox, this._userSize ?? this.widget.size);
-			}
-		}));
+		this._disposables.add(
+			this.widget.onDidChangeContents(() => {
+				if (this._anchorBox) {
+					this._placeAtAnchor(
+						this._anchorBox,
+						this._userSize ?? this.widget.size,
+					);
+				}
+			}),
+		);
 	}
 
 	dispose(): void {
@@ -363,7 +400,7 @@ export class SimpleSuggestDetailsOverlay {
 	}
 
 	getId(): string {
-		return 'suggest.details';
+		return "suggest.details";
 	}
 
 	getDomNode(): HTMLElement {
@@ -407,32 +444,98 @@ export class SimpleSuggestDetailsOverlay {
 		const defaultMinSize = new dom.Dimension(220, 2 * info.lineHeight);
 		const defaultTop = anchorBox.top;
 
-		type Placement = { top: number; left: number; fit: number; maxSizeTop: dom.Dimension; maxSizeBottom: dom.Dimension; minSize: dom.Dimension };
+		type Placement = {
+			top: number;
+			left: number;
+			fit: number;
+			maxSizeTop: dom.Dimension;
+			maxSizeBottom: dom.Dimension;
+			minSize: dom.Dimension;
+		};
 
 		// EAST
 		const eastPlacement: Placement = (function () {
-			const width = bodyBox.width - (anchorBox.left + anchorBox.width + info.borderWidth + info.horizontalPadding);
+			const width =
+				bodyBox.width -
+				(anchorBox.left +
+					anchorBox.width +
+					info.borderWidth +
+					info.horizontalPadding);
 			const left = -info.borderWidth + anchorBox.left + anchorBox.width;
-			const maxSizeTop = new dom.Dimension(width, bodyBox.height - anchorBox.top - info.borderHeight - info.verticalPadding);
-			const maxSizeBottom = maxSizeTop.with(undefined, anchorBox.top + anchorBox.height - info.borderHeight - info.verticalPadding);
-			return { top: defaultTop, left, fit: width - size.width, maxSizeTop, maxSizeBottom, minSize: defaultMinSize.with(Math.min(width, defaultMinSize.width)) };
+			const maxSizeTop = new dom.Dimension(
+				width,
+				bodyBox.height -
+					anchorBox.top -
+					info.borderHeight -
+					info.verticalPadding,
+			);
+			const maxSizeBottom = maxSizeTop.with(
+				undefined,
+				anchorBox.top +
+					anchorBox.height -
+					info.borderHeight -
+					info.verticalPadding,
+			);
+			return {
+				top: defaultTop,
+				left,
+				fit: width - size.width,
+				maxSizeTop,
+				maxSizeBottom,
+				minSize: defaultMinSize.with(Math.min(width, defaultMinSize.width)),
+			};
 		})();
 
 		// WEST
 		const westPlacement: Placement = (function () {
 			const width = anchorBox.left - info.borderWidth - info.horizontalPadding;
-			const left = Math.max(info.horizontalPadding, anchorBox.left - size.width - info.borderWidth);
-			const maxSizeTop = new dom.Dimension(width, bodyBox.height - anchorBox.top - info.borderHeight - info.verticalPadding);
-			const maxSizeBottom = maxSizeTop.with(undefined, anchorBox.top + anchorBox.height - info.borderHeight - info.verticalPadding);
-			return { top: defaultTop, left, fit: width - size.width, maxSizeTop, maxSizeBottom, minSize: defaultMinSize.with(Math.min(width, defaultMinSize.width)) };
+			const left = Math.max(
+				info.horizontalPadding,
+				anchorBox.left - size.width - info.borderWidth,
+			);
+			const maxSizeTop = new dom.Dimension(
+				width,
+				bodyBox.height -
+					anchorBox.top -
+					info.borderHeight -
+					info.verticalPadding,
+			);
+			const maxSizeBottom = maxSizeTop.with(
+				undefined,
+				anchorBox.top +
+					anchorBox.height -
+					info.borderHeight -
+					info.verticalPadding,
+			);
+			return {
+				top: defaultTop,
+				left,
+				fit: width - size.width,
+				maxSizeTop,
+				maxSizeBottom,
+				minSize: defaultMinSize.with(Math.min(width, defaultMinSize.width)),
+			};
 		})();
 
 		// SOUTH
 		const southPlacement: Placement = (function () {
 			const left = anchorBox.left;
 			const top = -info.borderWidth + anchorBox.top + anchorBox.height;
-			const maxSizeBottom = new dom.Dimension(anchorBox.width - info.borderHeight, bodyBox.height - anchorBox.top - anchorBox.height - info.verticalPadding);
-			return { top, left, fit: maxSizeBottom.height - size.height, maxSizeBottom, maxSizeTop: maxSizeBottom, minSize: defaultMinSize.with(maxSizeBottom.width) };
+			const maxSizeBottom = new dom.Dimension(
+				anchorBox.width - info.borderHeight,
+				bodyBox.height -
+					anchorBox.top -
+					anchorBox.height -
+					info.verticalPadding,
+			);
+			return {
+				top,
+				left,
+				fit: maxSizeBottom.height - size.height,
+				maxSizeBottom,
+				maxSizeTop: maxSizeBottom,
+				minSize: defaultMinSize.with(maxSizeBottom.width),
+			};
 		})();
 
 		// NORTH
@@ -443,7 +546,14 @@ export class SimpleSuggestDetailsOverlay {
 			const heightForTop = Math.min(size.height, maxHeightAbove);
 			const top = anchorBox.top - info.borderWidth - heightForTop;
 			const maxSize = new dom.Dimension(width, Math.max(maxHeightAbove, 0));
-			return { top, left, fit: maxSize.height - size.height, maxSizeTop: maxSize, maxSizeBottom: maxSize, minSize: defaultMinSize.with(maxSize.width) };
+			return {
+				top,
+				left,
+				fit: maxSize.height - size.height,
+				maxSizeTop: maxSize,
+				maxSizeBottom: maxSize,
+				minSize: defaultMinSize.with(maxSize.width),
+			};
 		})();
 
 		// take first placement that fits or the first with "least bad" fit
@@ -451,21 +561,34 @@ export class SimpleSuggestDetailsOverlay {
 			[SimpleSuggestDetailsPlacement.East, eastPlacement],
 			[SimpleSuggestDetailsPlacement.South, southPlacement],
 			[SimpleSuggestDetailsPlacement.North, northPlacement],
-			[SimpleSuggestDetailsPlacement.West, westPlacement]
+			[SimpleSuggestDetailsPlacement.West, westPlacement],
 		];
-		const orientations = (this._preventPlacements
-			? placementEntries.filter(([direction]) => !this._preventPlacements!.has(direction))
-			: placementEntries).map(([, entry]) => entry);
-		const candidates = orientations.length ? orientations : placementEntries.map(([, entry]) => entry);
-		const placement = candidates.find(p => p.fit >= 0)
-			?? candidates.reduce<Placement | undefined>((best, current) => !best || current.fit > best.fit ? current : best, undefined)
-			?? eastPlacement;
+		const orientations = (
+			this._preventPlacements
+				? placementEntries.filter(
+						([direction]) => !this._preventPlacements!.has(direction),
+					)
+				: placementEntries
+		).map(([, entry]) => entry);
+		const candidates = orientations.length
+			? orientations
+			: placementEntries.map(([, entry]) => entry);
+		const placement =
+			candidates.find((p) => p.fit >= 0) ??
+			candidates.reduce<Placement | undefined>(
+				(best, current) => (!best || current.fit > best.fit ? current : best),
+				undefined,
+			) ??
+			eastPlacement;
 
 		// top/bottom placement
 		const bottom = anchorBox.top + anchorBox.height - info.borderHeight;
 		let alignAtTop: boolean;
 		let height = size.height;
-		const maxHeight = Math.max(placement.maxSizeTop.height, placement.maxSizeBottom.height);
+		const maxHeight = Math.max(
+			placement.maxSizeTop.height,
+			placement.maxSizeBottom.height,
+		);
 		if (height > maxHeight) {
 			height = maxHeight;
 		}
@@ -501,7 +624,12 @@ export class SimpleSuggestDetailsOverlay {
 		}
 		this._applyTopLeft({ left, top });
 
-		this._resizable.enableSashes(!alignAtTop, placement === eastPlacement, alignAtTop, placement !== eastPlacement);
+		this._resizable.enableSashes(
+			!alignAtTop,
+			placement === eastPlacement,
+			alignAtTop,
+			placement !== eastPlacement,
+		);
 
 		this._resizable.minSize = placement.minSize;
 		this._resizable.maxSize = maxSize;
@@ -514,7 +642,7 @@ export class SimpleSuggestDetailsOverlay {
 		// this._editor.layoutOverlayWidget(this);
 		this._resizable.domNode.style.top = `${topLeft.top}px`;
 		this._resizable.domNode.style.left = `${topLeft.left}px`;
-		this._resizable.domNode.style.position = 'absolute';
+		this._resizable.domNode.style.position = "absolute";
 	}
 }
 

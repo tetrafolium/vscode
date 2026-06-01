@@ -8,7 +8,12 @@ import { TextDocumentSnapshot } from '../../../platform/editing/common/textDocum
 import { ILanguage, getLanguage } from '../../../util/common/languages';
 import { findLast } from '../../../util/vs/base/common/arraysFind';
 import { Mutable } from '../../../util/vs/base/common/types';
-import { ChatRequestEditorData, ChatRequestNotebookData, Range, Selection } from '../../../vscodeTypes';
+import {
+	ChatRequestEditorData,
+	ChatRequestNotebookData,
+	Range,
+	Selection,
+} from '../../../vscodeTypes';
 import { CopilotInteractiveEditorResponse } from '../../inlineChat/node/promptCraftingTypes';
 import { Turn } from '../common/conversation';
 
@@ -21,7 +26,10 @@ export interface IDocumentContext {
 }
 
 export namespace IDocumentContext {
-	export function fromEditor(editor: vscode.TextEditor, wholeRange?: vscode.Range): IDocumentContext {
+	export function fromEditor(
+		editor: vscode.TextEditor,
+		wholeRange?: vscode.Range,
+	): IDocumentContext {
 		const { options, document, selection, visibleRanges } = editor;
 		const docSnapshot = TextDocumentSnapshot.create(document);
 		const fileIndentInfo = {
@@ -33,30 +41,46 @@ export namespace IDocumentContext {
 			if (visibleRanges.length === 1) {
 				wholeRange = visibleRanges[0];
 			} else if (visibleRanges.length > 1) {
-				wholeRange = visibleRanges[0].union(visibleRanges[visibleRanges.length - 1]);
+				wholeRange = visibleRanges[0].union(
+					visibleRanges[visibleRanges.length - 1],
+				);
 			} else {
 				wholeRange = selection;
 			}
 		}
 		return {
-			document: docSnapshot, fileIndentInfo, language, selection, wholeRange
+			document: docSnapshot,
+			fileIndentInfo,
+			language,
+			selection,
+			wholeRange,
 		};
-
 	}
 
-	export function fromTextDocument(document: vscode.TextDocument, selection: vscode.Selection, wholeRange?: vscode.Range): IDocumentContext {
+	export function fromTextDocument(
+		document: vscode.TextDocument,
+		selection: vscode.Selection,
+		wholeRange?: vscode.Range,
+	): IDocumentContext {
 		const docSnapshot = TextDocumentSnapshot.create(document);
 		const language = getLanguage(docSnapshot);
 		if (!wholeRange) {
 			wholeRange = selection;
 		}
 		return {
-			document: docSnapshot, fileIndentInfo: undefined, language, selection, wholeRange
+			document: docSnapshot,
+			fileIndentInfo: undefined,
+			language,
+			selection,
+			wholeRange,
 		};
 	}
 
-	export function inferDocumentContext(request: vscode.ChatRequest, activeEditor: vscode.TextEditor | undefined, previousTurns: Turn[]): IDocumentContext | undefined {
-
+	export function inferDocumentContext(
+		request: vscode.ChatRequest,
+		activeEditor: vscode.TextEditor | undefined,
+		previousTurns: Turn[],
+	): IDocumentContext | undefined {
 		let result: Mutable<IDocumentContext> | undefined;
 
 		if (request.location2 instanceof ChatRequestEditorData) {
@@ -67,9 +91,8 @@ export namespace IDocumentContext {
 				language: getLanguage(document),
 				wholeRange,
 				selection,
-				fileIndentInfo: undefined
+				fileIndentInfo: undefined,
 			};
-
 		} else if (request.location2 instanceof ChatRequestNotebookData) {
 			const { cell } = request.location2;
 			const cellSnapshot = TextDocumentSnapshot.create(cell);
@@ -78,23 +101,35 @@ export namespace IDocumentContext {
 				language: getLanguage(cell),
 				wholeRange: new Range(0, 0, 0, 0),
 				selection: new Selection(0, 0, 0, 0),
-				fileIndentInfo: undefined
+				fileIndentInfo: undefined,
 			};
-
 		} else if (activeEditor) {
 			result = IDocumentContext.fromEditor(activeEditor);
 		}
 
 		if (result) {
-			const lastTurnWithInlineResponse = findLast(previousTurns, turn => Boolean(turn.getMetadata(CopilotInteractiveEditorResponse)));
-			const data = lastTurnWithInlineResponse?.getMetadata(CopilotInteractiveEditorResponse);
-			if (data && data.store && data.store.lastDocumentContent === result.document.getText()) {
+			const lastTurnWithInlineResponse = findLast(previousTurns, (turn) =>
+				Boolean(turn.getMetadata(CopilotInteractiveEditorResponse)),
+			);
+			const data = lastTurnWithInlineResponse?.getMetadata(
+				CopilotInteractiveEditorResponse,
+			);
+			if (
+				data &&
+				data.store &&
+				data.store.lastDocumentContent === result.document.getText()
+			) {
 				result.wholeRange = data.store.lastWholeRange;
 			}
 		}
 
 		// DEFAULT - use the active editor's indent settings if none are set yet and if the editor and context document match
-		if (activeEditor && activeEditor?.document.uri.toString() === result?.document.uri.toString() && !result.fileIndentInfo) {
+		if (
+			activeEditor &&
+			activeEditor?.document.uri.toString() ===
+				result?.document.uri.toString() &&
+			!result.fileIndentInfo
+		) {
 			result.fileIndentInfo = {
 				insertSpaces: activeEditor.options.insertSpaces as boolean,
 				tabSize: activeEditor.options.tabSize as number,

@@ -3,14 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { localize } from '../../../../nls.js';
-import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from '../../../../platform/configuration/common/configurationRegistry.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { Registry } from '../../../../platform/registry/common/platform.js';
-import { ILanguageModelChatMetadata, ILanguageModelsService } from '../common/languageModels.js';
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { localize } from "../../../../nls.js";
+import {
+	IConfigurationRegistry,
+	Extensions as ConfigurationExtensions,
+} from "../../../../platform/configuration/common/configurationRegistry.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { Registry } from "../../../../platform/registry/common/platform.js";
+import {
+	ILanguageModelChatMetadata,
+	ILanguageModelsService,
+} from "../common/languageModels.js";
 
-const configurationRegistry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration);
+const configurationRegistry = Registry.as<IConfigurationRegistry>(
+	ConfigurationExtensions.Configuration,
+);
 
 export interface DefaultModelArrays {
 	readonly modelIds: string[];
@@ -35,7 +43,7 @@ export interface DefaultModelContributionOptions {
 	 * - `'vendorAndId'`: `${vendor}/${id}` — stable composite of API-stable
 	 *   fields, directly usable with `vscode.lm.selectChatModels`.
 	 */
-	readonly storageFormat?: 'qualifiedName' | 'vendorAndId';
+	readonly storageFormat?: "qualifiedName" | "vendorAndId";
 	/**
 	 * Optional override for the label of the default ("empty") enum entry.
 	 * When omitted, defaults to `"Auto (Vendor Default)"`.
@@ -53,11 +61,19 @@ export interface DefaultModelContributionOptions {
  * The returned arrays are mutated in-place by {@link DefaultModelContribution}.
  *
  */
-export function createDefaultModelArrays(defaultEntryLabel?: string, defaultEntryDescription?: string): DefaultModelArrays {
+export function createDefaultModelArrays(
+	defaultEntryLabel?: string,
+	defaultEntryDescription?: string,
+): DefaultModelArrays {
 	return {
-		modelIds: [''],
-		modelLabels: [defaultEntryLabel ?? localize('defaultModel', 'Auto (Vendor Default)')],
-		modelDescriptions: [defaultEntryDescription ?? localize('defaultModelDescription', "Use the vendor's default model")],
+		modelIds: [""],
+		modelLabels: [
+			defaultEntryLabel ?? localize("defaultModel", "Auto (Vendor Default)"),
+		],
+		modelDescriptions: [
+			defaultEntryDescription ??
+				localize("defaultModelDescription", "Use the vendor's default model"),
+		],
 	};
 }
 
@@ -66,21 +82,33 @@ export function createDefaultModelArrays(defaultEntryLabel?: string, defaultEntr
  * of language models for a settings picker.
  */
 export abstract class DefaultModelContribution extends Disposable {
-
 	constructor(
 		private readonly _arrays: DefaultModelArrays,
 		private readonly _options: DefaultModelContributionOptions,
-		@ILanguageModelsService private readonly _languageModelsService: ILanguageModelsService,
+		@ILanguageModelsService
+		private readonly _languageModelsService: ILanguageModelsService,
 		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
-		this._register(_languageModelsService.onDidChangeLanguageModels(() => this._updateModelValues()));
+		this._register(
+			_languageModelsService.onDidChangeLanguageModels(() =>
+				this._updateModelValues(),
+			),
+		);
 		this._updateModelValues();
 	}
 
 	private _updateModelValues(): void {
 		const { modelIds, modelLabels, modelDescriptions } = this._arrays;
-		const { configKey, configSectionId, logPrefix, filter, storageFormat, defaultEntryLabel, defaultEntryDescription } = this._options;
+		const {
+			configKey,
+			configSectionId,
+			logPrefix,
+			filter,
+			storageFormat,
+			defaultEntryLabel,
+			defaultEntryDescription,
+		} = this._options;
 
 		try {
 			// Clear arrays
@@ -89,29 +117,43 @@ export abstract class DefaultModelContribution extends Disposable {
 			modelDescriptions.length = 0;
 
 			// Add default/empty option
-			modelIds.push('');
-			modelLabels.push(defaultEntryLabel ?? localize('defaultModel', 'Auto (Vendor Default)'));
-			modelDescriptions.push(defaultEntryDescription ?? localize('defaultModelDescription', "Use the vendor's default model"));
+			modelIds.push("");
+			modelLabels.push(
+				defaultEntryLabel ?? localize("defaultModel", "Auto (Vendor Default)"),
+			);
+			modelDescriptions.push(
+				defaultEntryDescription ??
+					localize("defaultModelDescription", "Use the vendor's default model"),
+			);
 
-			const models: { identifier: string; metadata: ILanguageModelChatMetadata }[] = [];
+			const models: {
+				identifier: string;
+				metadata: ILanguageModelChatMetadata;
+			}[] = [];
 			const allModelIds = this._languageModelsService.getLanguageModelIds();
 
 			for (const modelId of allModelIds) {
 				try {
-					const metadata = this._languageModelsService.lookupLanguageModel(modelId);
+					const metadata =
+						this._languageModelsService.lookupLanguageModel(modelId);
 					if (metadata) {
 						models.push({ identifier: modelId, metadata });
 					} else {
-						this._logService.warn(`${logPrefix} No metadata found for model ID: ${modelId}`);
+						this._logService.warn(
+							`${logPrefix} No metadata found for model ID: ${modelId}`,
+						);
 					}
 				} catch (e) {
-					this._logService.error(`${logPrefix} Error looking up model ${modelId}:`, e);
+					this._logService.error(
+						`${logPrefix} Error looking up model ${modelId}:`,
+						e,
+					);
 				}
 			}
 
 			const vendors = this._languageModelsService.getVendors();
-			const visibleVendors = new Set(vendors.map(vendor => vendor.vendor));
-			const supportedModels = models.filter(model => {
+			const visibleVendors = new Set(vendors.map((vendor) => vendor.vendor));
+			const supportedModels = models.filter((model) => {
 				if (!visibleVendors.has(model.metadata.vendor)) {
 					return false;
 				}
@@ -129,7 +171,9 @@ export abstract class DefaultModelContribution extends Disposable {
 				return true;
 			});
 
-			supportedModels.sort((a, b) => a.metadata.name.localeCompare(b.metadata.name));
+			supportedModels.sort((a, b) =>
+				a.metadata.name.localeCompare(b.metadata.name),
+			);
 
 			// Build a vendor id -> display name lookup so labels can show the
 			// human-readable provider name (e.g. "Copilot") instead of the
@@ -147,7 +191,7 @@ export abstract class DefaultModelContribution extends Disposable {
 			// across *all* models (not just `supportedModels`) so any such
 			// collision excludes the visible entry from the picker too.
 			const ambiguousVendorIds = new Set<string>();
-			if (storageFormat === 'vendorAndId') {
+			if (storageFormat === "vendorAndId") {
 				const counts = new Map<string, number>();
 				for (const model of models) {
 					const key = `${model.metadata.vendor}/${model.metadata.id}`;
@@ -162,22 +206,41 @@ export abstract class DefaultModelContribution extends Disposable {
 
 			for (const model of supportedModels) {
 				try {
-					const storedId = storageFormat === 'vendorAndId'
-						? `${model.metadata.vendor}/${model.metadata.id}`
-						: ILanguageModelChatMetadata.asQualifiedName(model.metadata);
+					const storedId =
+						storageFormat === "vendorAndId"
+							? `${model.metadata.vendor}/${model.metadata.id}`
+							: ILanguageModelChatMetadata.asQualifiedName(model.metadata);
 					if (ambiguousVendorIds.has(storedId)) {
-						this._logService.trace(`${logPrefix} Skipping model '${model.metadata.name}' (${storedId}): key collides with another registered model.`);
+						this._logService.trace(
+							`${logPrefix} Skipping model '${model.metadata.name}' (${storedId}): key collides with another registered model.`,
+						);
 						continue;
 					}
-					const vendorDisplayName = vendorDisplayNames.get(model.metadata.vendor);
+					const vendorDisplayName = vendorDisplayNames.get(
+						model.metadata.vendor,
+					);
 					if (!vendorDisplayName) {
-						this._logService.trace(`${logPrefix} No vendor descriptor for '${model.metadata.vendor}' (model '${model.metadata.id}'); falling back to vendor id in label.`);
+						this._logService.trace(
+							`${logPrefix} No vendor descriptor for '${model.metadata.vendor}' (model '${model.metadata.id}'); falling back to vendor id in label.`,
+						);
 					}
 					modelIds.push(storedId);
-					modelLabels.push(localize('modelLabelWithVendor', "{0} ({1})", model.metadata.name, vendorDisplayName ?? model.metadata.vendor));
-					modelDescriptions.push(model.metadata.tooltip ?? model.metadata.detail ?? '');
+					modelLabels.push(
+						localize(
+							"modelLabelWithVendor",
+							"{0} ({1})",
+							model.metadata.name,
+							vendorDisplayName ?? model.metadata.vendor,
+						),
+					);
+					modelDescriptions.push(
+						model.metadata.tooltip ?? model.metadata.detail ?? "",
+					);
 				} catch (e) {
-					this._logService.error(`${logPrefix} Error adding model ${model.metadata.name}:`, e);
+					this._logService.error(
+						`${logPrefix} Error adding model ${model.metadata.name}:`,
+						e,
+					);
 				}
 			}
 
@@ -185,8 +248,8 @@ export abstract class DefaultModelContribution extends Disposable {
 				configurationRegistry.notifyConfigurationSchemaUpdated({
 					id: configSectionId,
 					properties: {
-						[configKey]: {}
-					}
+						[configKey]: {},
+					},
 				});
 			}
 		} catch (e) {

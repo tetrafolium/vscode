@@ -11,12 +11,22 @@ import { Emitter } from '../../../../util/vs/base/common/event';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
 import type { ClaudeFolderInfo } from '../common/claudeFolderInfo';
 import type { ParsedClaudeModelId } from '../common/claudeModelId';
-import type { IClaudeSessionStateService, SessionState, SessionStateChangeEvent, UsageHandler } from '../common/claudeSessionStateService';
+import type {
+	IClaudeSessionStateService,
+	SessionState,
+	SessionStateChangeEvent,
+	UsageHandler,
+} from '../common/claudeSessionStateService';
 
-export class ClaudeSessionStateService extends Disposable implements IClaudeSessionStateService {
+export class ClaudeSessionStateService
+	extends Disposable
+	implements IClaudeSessionStateService
+{
 	declare _serviceBrand: undefined;
 
-	private readonly _onDidChangeSessionState = this._register(new Emitter<SessionStateChangeEvent>());
+	private readonly _onDidChangeSessionState = this._register(
+		new Emitter<SessionStateChangeEvent>(),
+	);
 	readonly onDidChangeSessionState = this._onDidChangeSessionState.event;
 
 	// State for sessions (model and permission mode selections)
@@ -35,7 +45,10 @@ export class ClaudeSessionStateService extends Disposable implements IClaudeSess
 		return state?.modelId;
 	}
 
-	setModelIdForSession(sessionId: string, modelId: ParsedClaudeModelId | undefined): void {
+	setModelIdForSession(
+		sessionId: string,
+		modelId: ParsedClaudeModelId | undefined,
+	): void {
 		const existing = this._sessionState.get(sessionId);
 		if (existing?.modelId === modelId) {
 			return;
@@ -54,7 +67,9 @@ export class ClaudeSessionStateService extends Disposable implements IClaudeSess
 	}
 
 	getPermissionModeForSession(sessionId: string): PermissionMode {
-		return this._sessionState.get(sessionId)?.permissionMode ?? 'acceptEdits';
+		return (
+			this._sessionState.get(sessionId)?.permissionMode ?? 'acceptEdits'
+		);
 	}
 
 	setPermissionModeForSession(sessionId: string, mode: PermissionMode): void {
@@ -79,7 +94,10 @@ export class ClaudeSessionStateService extends Disposable implements IClaudeSess
 		return this._sessionState.get(sessionId)?.capturingToken;
 	}
 
-	setCapturingTokenForSession(sessionId: string, token: CapturingToken | undefined): void {
+	setCapturingTokenForSession(
+		sessionId: string,
+		token: CapturingToken | undefined,
+	): void {
 		const existing = this._sessionState.get(sessionId);
 		this._sessionState.set(sessionId, {
 			modelId: existing?.modelId,
@@ -97,9 +115,18 @@ export class ClaudeSessionStateService extends Disposable implements IClaudeSess
 		return this._sessionState.get(sessionId)?.folderInfo;
 	}
 
-	setFolderInfoForSession(sessionId: string, folderInfo: ClaudeFolderInfo): void {
+	setFolderInfoForSession(
+		sessionId: string,
+		folderInfo: ClaudeFolderInfo,
+	): void {
 		const existing = this._sessionState.get(sessionId);
-		if (existing?.folderInfo?.cwd === folderInfo.cwd && arrayEquals(existing?.folderInfo?.additionalDirectories ?? [], folderInfo.additionalDirectories)) {
+		if (
+			existing?.folderInfo?.cwd === folderInfo.cwd &&
+			arrayEquals(
+				existing?.folderInfo?.additionalDirectories ?? [],
+				folderInfo.additionalDirectories,
+			)
+		) {
 			return;
 		}
 		this._sessionState.set(sessionId, {
@@ -119,7 +146,10 @@ export class ClaudeSessionStateService extends Disposable implements IClaudeSess
 		return this._sessionState.get(sessionId)?.usageHandler;
 	}
 
-	setUsageHandlerForSession(sessionId: string, handler: UsageHandler | undefined): void {
+	setUsageHandlerForSession(
+		sessionId: string,
+		handler: UsageHandler | undefined,
+	): void {
 		const existing = this._sessionState.get(sessionId);
 		this._sessionState.set(sessionId, {
 			modelId: existing?.modelId,
@@ -137,7 +167,10 @@ export class ClaudeSessionStateService extends Disposable implements IClaudeSess
 		return this._sessionState.get(sessionId)?.reasoningEffort;
 	}
 
-	setReasoningEffortForSession(sessionId: string, effort: EffortLevel | undefined): void {
+	setReasoningEffortForSession(
+		sessionId: string,
+		effort: EffortLevel | undefined,
+	): void {
 		const existing = this._sessionState.get(sessionId);
 		if (existing?.reasoningEffort === effort) {
 			return;
@@ -158,7 +191,10 @@ export class ClaudeSessionStateService extends Disposable implements IClaudeSess
 		return this._sessionState.get(sessionId)?.traceContext;
 	}
 
-	setTraceContextForSession(sessionId: string, traceContext: TraceContext | undefined): void {
+	setTraceContextForSession(
+		sessionId: string,
+		traceContext: TraceContext | undefined,
+	): void {
 		const existing = this._sessionState.get(sessionId);
 		this._sessionState.set(sessionId, {
 			modelId: existing?.modelId,

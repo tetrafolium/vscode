@@ -5,9 +5,9 @@
 
 /* eslint-disable local/code-no-unexternalized-strings */
 
-import * as vscode from 'vscode';
-import { filepaths } from '../helpers/filepaths';
-import { keyValue } from '../helpers/keyvalue';
+import * as vscode from "vscode";
+import { filepaths } from "../helpers/filepaths";
+import { keyValue } from "../helpers/keyvalue";
 
 const filterMessages = (out: string): string => {
 	return out.startsWith("warning:") || out.startsWith("error:")
@@ -338,7 +338,8 @@ const completionSpec: Fig.Spec = {
 					],
 				},
 			],
-		}, {
+		},
+		{
 			name: "api",
 			description: "Make an authenticated GitHub API request",
 			args: {

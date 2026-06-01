@@ -3,31 +3,41 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { timeout } from '../../../../../base/common/async.js';
-import { CancellationToken } from '../../../../../base/common/cancellation.js';
-import { IStringDictionary } from '../../../../../base/common/collections.js';
-import { MarkdownString } from '../../../../../base/common/htmlContent.js';
-import { DisposableStore } from '../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../base/common/uri.js';
-import { Range } from '../../../../../editor/common/core/range.js';
-import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IMarkerData } from '../../../../../platform/markers/common/markers.js';
-import { IToolInvocationContext, ToolProgress } from '../../../chat/common/tools/languageModelToolsService.js';
-import { ConfiguringTask, ITaskDependency, Task } from '../../../tasks/common/tasks.js';
-import { ITaskService } from '../../../tasks/common/taskService.js';
-import { ITerminalInstance } from '../../../terminal/browser/terminal.js';
-import { getOutput } from './outputHelpers.js';
-import { OutputMonitor } from './tools/monitoring/outputMonitor.js';
-import { IExecution, IPollingResult, OutputMonitorState } from './tools/monitoring/types.js';
-import { Event } from '../../../../../base/common/event.js';
-import { IReconnectionTaskData } from '../../../tasks/browser/terminalTaskSystem.js';
-import { isString } from '../../../../../base/common/types.js';
-import type { IMarker as IXtermMarker } from '@xterm/xterm';
-
+import { timeout } from "../../../../../base/common/async.js";
+import { CancellationToken } from "../../../../../base/common/cancellation.js";
+import { IStringDictionary } from "../../../../../base/common/collections.js";
+import { MarkdownString } from "../../../../../base/common/htmlContent.js";
+import { DisposableStore } from "../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../base/common/uri.js";
+import { Range } from "../../../../../editor/common/core/range.js";
+import { IConfigurationService } from "../../../../../platform/configuration/common/configuration.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { IMarkerData } from "../../../../../platform/markers/common/markers.js";
+import {
+	IToolInvocationContext,
+	ToolProgress,
+} from "../../../chat/common/tools/languageModelToolsService.js";
+import {
+	ConfiguringTask,
+	ITaskDependency,
+	Task,
+} from "../../../tasks/common/tasks.js";
+import { ITaskService } from "../../../tasks/common/taskService.js";
+import { ITerminalInstance } from "../../../terminal/browser/terminal.js";
+import { getOutput } from "./outputHelpers.js";
+import { OutputMonitor } from "./tools/monitoring/outputMonitor.js";
+import {
+	IExecution,
+	IPollingResult,
+	OutputMonitorState,
+} from "./tools/monitoring/types.js";
+import { Event } from "../../../../../base/common/event.js";
+import { IReconnectionTaskData } from "../../../tasks/browser/terminalTaskSystem.js";
+import { isString } from "../../../../../base/common/types.js";
+import type { IMarker as IXtermMarker } from "@xterm/xterm";
 
 export function getTaskDefinition(id: string) {
-	const idx = id.indexOf(': ');
+	const idx = id.indexOf(": ");
 	const taskType = id.substring(0, idx);
 	let taskLabel = idx > 0 ? id.substring(idx + 2) : id;
 
@@ -36,19 +46,24 @@ export function getTaskDefinition(id: string) {
 	}
 
 	return { taskLabel, taskType };
-
 }
 
 export function getTaskRepresentation(task: IConfiguredTask | Task): string {
-	if (Object.hasOwn(task, 'label') && (task as IConfiguredTask).label) {
+	if (Object.hasOwn(task, "label") && (task as IConfiguredTask).label) {
 		return (task as IConfiguredTask).label!;
-	} else if (Object.hasOwn(task, 'script') && (task as IConfiguredTask).script) {
+	} else if (
+		Object.hasOwn(task, "script") &&
+		(task as IConfiguredTask).script
+	) {
 		return (task as IConfiguredTask).script!;
-	} else if (Object.hasOwn(task, 'command') && (task as IConfiguredTask).command) {
+	} else if (
+		Object.hasOwn(task, "command") &&
+		(task as IConfiguredTask).command
+	) {
 		const command = (task as IConfiguredTask).command;
-		return isString(command) ? command : command!.name?.toString() || '';
+		return isString(command) ? command : command!.name?.toString() || "";
 	}
-	return '';
+	return "";
 }
 
 export function getTaskKey(task: Task): string {
@@ -71,26 +86,43 @@ export function tasksMatch(a: Task, b: Task): boolean {
 	return a._id === b._id;
 }
 
-export async function getTaskForTool(id: string | undefined, taskDefinition: { taskLabel?: string; taskType?: string }, workspaceFolder: string, configurationService: IConfigurationService, taskService: ITaskService, allowParentTask?: boolean): Promise<Task | undefined> {
+export async function getTaskForTool(
+	id: string | undefined,
+	taskDefinition: { taskLabel?: string; taskType?: string },
+	workspaceFolder: string,
+	configurationService: IConfigurationService,
+	taskService: ITaskService,
+	allowParentTask?: boolean,
+): Promise<Task | undefined> {
 	let index = 0;
 	let task: IConfiguredTask | undefined;
 	const workspaceFolderToTaskMap = await taskService.getWorkspaceTasks();
 	let configTasks: IConfiguredTask[] = [];
 	for (const folder of workspaceFolderToTaskMap.keys()) {
-		const tasksConfig = configurationService.getValue('tasks', { resource: URI.parse(folder) }) as { tasks: IConfiguredTask[] } | undefined;
+		const tasksConfig = configurationService.getValue("tasks", {
+			resource: URI.parse(folder),
+		}) as { tasks: IConfiguredTask[] } | undefined;
 		if (tasksConfig?.tasks) {
 			configTasks = configTasks.concat(tasksConfig.tasks);
 		}
 	}
 	for (const configTask of configTasks) {
-		if ((!allowParentTask && !configTask.type) || (Object.hasOwn(configTask, 'hide') && configTask.hide)) {
+		if (
+			(!allowParentTask && !configTask.type) ||
+			(Object.hasOwn(configTask, "hide") && configTask.hide)
+		) {
 			// Skip these as they are not included in the agent prompt and we need to align with
 			// the indices used there.
 			continue;
 		}
 
-		if ((configTask.type && taskDefinition.taskType ? configTask.type === taskDefinition.taskType : true) &&
-			((getTaskRepresentation(configTask) === taskDefinition?.taskLabel) || (id === configTask.label))) {
+		if (
+			(configTask.type && taskDefinition.taskType
+				? configTask.type === taskDefinition.taskType
+				: true) &&
+			(getTaskRepresentation(configTask) === taskDefinition?.taskLabel ||
+				id === configTask.label)
+		) {
 			task = configTask;
 			break;
 		} else if (!configTask.label && id === `${configTask.type}: ${index}`) {
@@ -104,7 +136,8 @@ export async function getTaskForTool(id: string | undefined, taskDefinition: { t
 	}
 
 	let tasksForWorkspace;
-	const getPathForCompare = (uri: URI) => uri.path.replace(/\/$/, '').toLowerCase();
+	const getPathForCompare = (uri: URI) =>
+		uri.path.replace(/\/$/, "").toLowerCase();
 	const workspaceFolderPath = getPathForCompare(URI.file(workspaceFolder));
 	for (const [folder, tasks] of workspaceFolderToTaskMap) {
 		if (getPathForCompare(URI.parse(folder)) === workspaceFolderPath) {
@@ -115,9 +148,17 @@ export async function getTaskForTool(id: string | undefined, taskDefinition: { t
 	if (!tasksForWorkspace) {
 		return;
 	}
-	const configuringTasks: IStringDictionary<ConfiguringTask> | undefined = tasksForWorkspace.configurations?.byIdentifier;
-	const configuredTask: ConfiguringTask | undefined = Object.values(configuringTasks ?? {}).find(t => {
-		return t.type === task.type && (t._label === task.label || t._label === `${task.type}: ${getTaskRepresentation(task)}` || t._label === getTaskRepresentation(task));
+	const configuringTasks: IStringDictionary<ConfiguringTask> | undefined =
+		tasksForWorkspace.configurations?.byIdentifier;
+	const configuredTask: ConfiguringTask | undefined = Object.values(
+		configuringTasks ?? {},
+	).find((t) => {
+		return (
+			t.type === task.type &&
+			(t._label === task.label ||
+				t._label === `${task.type}: ${getTaskRepresentation(task)}` ||
+				t._label === getTaskRepresentation(task))
+		);
 	});
 	let resolvedTask: Task | undefined;
 	if (configuredTask) {
@@ -125,7 +166,9 @@ export async function getTaskForTool(id: string | undefined, taskDefinition: { t
 	}
 	if (!resolvedTask) {
 		const customTasks: Task[] | undefined = tasksForWorkspace.set?.tasks;
-		resolvedTask = customTasks?.find(t => task.label === t._label || task.label === t._label);
+		resolvedTask = customTasks?.find(
+			(t) => task.label === t._label || task.label === t._label,
+		);
 	}
 	return resolvedTask;
 }
@@ -155,18 +198,37 @@ export interface IConfiguredTask {
 	hide?: boolean;
 }
 
-export async function resolveDependencyTasks(parentTask: Task, workspaceFolder: string, configurationService: IConfigurationService, taskService: ITaskService): Promise<Task[] | undefined> {
+export async function resolveDependencyTasks(
+	parentTask: Task,
+	workspaceFolder: string,
+	configurationService: IConfigurationService,
+	taskService: ITaskService,
+): Promise<Task[] | undefined> {
 	if (!parentTask.configurationProperties?.dependsOn) {
 		return undefined;
 	}
-	const dependencyTasks = await Promise.all(parentTask.configurationProperties.dependsOn.map(async (dep: ITaskDependency) => {
-		const depId: string | undefined = isString(dep.task) ? dep.task : dep.task?._key;
-		if (!depId) {
-			return undefined;
-		}
-		return await getTaskForTool(depId, { taskLabel: depId }, workspaceFolder, configurationService, taskService);
-	}));
-	return dependencyTasks.filter((t: Task | undefined): t is Task => t !== undefined);
+	const dependencyTasks = await Promise.all(
+		parentTask.configurationProperties.dependsOn.map(
+			async (dep: ITaskDependency) => {
+				const depId: string | undefined = isString(dep.task)
+					? dep.task
+					: dep.task?._key;
+				if (!depId) {
+					return undefined;
+				}
+				return await getTaskForTool(
+					depId,
+					{ taskLabel: depId },
+					workspaceFolder,
+					configurationService,
+					taskService,
+				);
+			},
+		),
+	);
+	return dependencyTasks.filter(
+		(t: Task | undefined): t is Task => t !== undefined,
+	);
 }
 
 /**
@@ -183,21 +245,37 @@ export async function collectTerminalResults(
 	isActive?: (task: Task) => Promise<boolean>,
 	dependencyTasks?: Task[],
 	taskService?: ITaskService,
-	startMarkersByTerminalInstanceId?: Map<number, IXtermMarker | undefined>
-): Promise<Array<{
-	name: string;
-	output: string;
-	resources?: ILinkLocation[];
-	pollDurationMs: number;
-	state: OutputMonitorState;
-	inputToolManualAcceptCount: number;
-	inputToolManualRejectCount: number;
-	inputToolManualChars: number;
-	inputToolManualShownCount: number;
-	inputToolFreeFormInputShownCount: number;
-	inputToolFreeFormInputCount: number;
-}>> {
-	const results: Array<{ state: OutputMonitorState; name: string; output: string; resources?: ILinkLocation[]; pollDurationMs: number; inputToolManualAcceptCount: number; inputToolManualRejectCount: number; inputToolManualChars: number; inputToolAutoAcceptCount: number; inputToolAutoChars: number; inputToolManualShownCount: number; inputToolFreeFormInputCount: number; inputToolFreeFormInputShownCount: number }> = [];
+	startMarkersByTerminalInstanceId?: Map<number, IXtermMarker | undefined>,
+): Promise<
+	Array<{
+		name: string;
+		output: string;
+		resources?: ILinkLocation[];
+		pollDurationMs: number;
+		state: OutputMonitorState;
+		inputToolManualAcceptCount: number;
+		inputToolManualRejectCount: number;
+		inputToolManualChars: number;
+		inputToolManualShownCount: number;
+		inputToolFreeFormInputShownCount: number;
+		inputToolFreeFormInputCount: number;
+	}>
+> {
+	const results: Array<{
+		state: OutputMonitorState;
+		name: string;
+		output: string;
+		resources?: ILinkLocation[];
+		pollDurationMs: number;
+		inputToolManualAcceptCount: number;
+		inputToolManualRejectCount: number;
+		inputToolManualChars: number;
+		inputToolAutoAcceptCount: number;
+		inputToolAutoChars: number;
+		inputToolManualShownCount: number;
+		inputToolFreeFormInputCount: number;
+		inputToolFreeFormInputShownCount: number;
+	}> = [];
 	if (token.isCancellationRequested) {
 		return results;
 	}
@@ -213,8 +291,14 @@ export async function collectTerminalResults(
 	}
 
 	// Process all terminals in parallel
-	const terminalNames = terminals.map(t => t.shellLaunchConfig.name ?? t.title ?? 'unknown');
-	progress.report({ message: new MarkdownString(`Checking output for ${terminalNames.map(n => `\`${n}\``).join(', ')}`) });
+	const terminalNames = terminals.map(
+		(t) => t.shellLaunchConfig.name ?? t.title ?? "unknown",
+	);
+	progress.report({
+		message: new MarkdownString(
+			`Checking output for ${terminalNames.map((n) => `\`${n}\``).join(", ")}`,
+		),
+	});
 
 	const terminalPromises = terminals.map(async (instance) => {
 		const startMarker = startMarkersByTerminalInstanceId
@@ -225,7 +309,9 @@ export async function collectTerminalResults(
 		// For composite tasks, find the actual dependency task running in this terminal
 		if (dependencyTasks?.length) {
 			// Use reconnection data if possible to match, since the properties here are unique
-			const reconnectionData = instance.reconnectionProperties?.data as IReconnectionTaskData | undefined;
+			const reconnectionData = instance.reconnectionProperties?.data as
+				| IReconnectionTaskData
+				| undefined;
 			if (reconnectionData) {
 				if (Object.hasOwn(commonTaskIdToTaskMap, reconnectionData.lastTask)) {
 					terminalTask = commonTaskIdToTaskMap[reconnectionData.lastTask];
@@ -234,7 +320,10 @@ export async function collectTerminalResults(
 				}
 			} else {
 				// Otherwise, fallback to label matching
-				if (instance.shellLaunchConfig.name && Object.hasOwn(taskLabelToTaskMap, instance.shellLaunchConfig.name)) {
+				if (
+					instance.shellLaunchConfig.name &&
+					Object.hasOwn(taskLabelToTaskMap, instance.shellLaunchConfig.name)
+				) {
 					terminalTask = taskLabelToTaskMap[instance.shellLaunchConfig.name];
 				} else if (Object.hasOwn(taskLabelToTaskMap, instance.title)) {
 					terminalTask = taskLabelToTaskMap[instance.title];
@@ -243,21 +332,28 @@ export async function collectTerminalResults(
 		}
 
 		const execution: IExecution = {
-			getOutput: (marker) => getOutput(instance, marker ?? startMarker) ?? '',
+			getOutput: (marker) => getOutput(instance, marker ?? startMarker) ?? "",
 			task: terminalTask,
 			isActive: isActive ? () => isActive(terminalTask) : undefined,
 			instance,
 			dependencyTasks,
-			sessionResource: invocationContext.sessionResource
+			sessionResource: invocationContext.sessionResource,
 		};
 
 		// For tasks with problem matchers, wait until the task becomes busy before creating the output monitor
-		if (terminalTask.configurationProperties.problemMatchers && terminalTask.configurationProperties.problemMatchers.length > 0 && taskService) {
+		if (
+			terminalTask.configurationProperties.problemMatchers &&
+			terminalTask.configurationProperties.problemMatchers.length > 0 &&
+			taskService
+		) {
 			const maxWaitTime = 1000; // Wait up to 1 second
 			const startTime = Date.now();
-			while (!token.isCancellationRequested && Date.now() - startTime < maxWaitTime) {
+			while (
+				!token.isCancellationRequested &&
+				Date.now() - startTime < maxWaitTime
+			) {
 				const busyTasks = await taskService.getBusyTasks();
-				if (busyTasks.some(t => tasksMatch(t, terminalTask))) {
+				if (busyTasks.some((t) => tasksMatch(t, terminalTask))) {
 					break;
 				}
 				await timeout(100);
@@ -265,27 +361,53 @@ export async function collectTerminalResults(
 		}
 
 		try {
-			const hasProblemMatchers = terminalTask.configurationProperties.problemMatchers && terminalTask.configurationProperties.problemMatchers.length > 0;
-			const outputMonitor = disposableStore.add(instantiationService.createInstance(OutputMonitor, execution, hasProblemMatchers ? taskProblemPollFn : undefined, invocationContext, token, task._label));
+			const hasProblemMatchers =
+				terminalTask.configurationProperties.problemMatchers &&
+				terminalTask.configurationProperties.problemMatchers.length > 0;
+			const outputMonitor = disposableStore.add(
+				instantiationService.createInstance(
+					OutputMonitor,
+					execution,
+					hasProblemMatchers ? taskProblemPollFn : undefined,
+					invocationContext,
+					token,
+					task._label,
+				),
+			);
 			await Promise.race([
 				Event.toPromise(outputMonitor.onDidFinishCommand),
-				Event.toPromise(token.onCancellationRequested as Event<unknown>)
+				Event.toPromise(token.onCancellationRequested as Event<unknown>),
 			]);
 			const pollingResult = outputMonitor.pollingResult;
 			return {
-				name: instance.shellLaunchConfig.name ?? instance.title ?? 'unknown',
-				output: pollingResult?.output ?? '',
+				name: instance.shellLaunchConfig.name ?? instance.title ?? "unknown",
+				output: pollingResult?.output ?? "",
 				pollDurationMs: pollingResult?.pollDurationMs ?? 0,
 				resources: pollingResult?.resources,
 				state: pollingResult?.state || OutputMonitorState.Idle,
-				inputToolManualAcceptCount: outputMonitor.outputMonitorTelemetryCounters.inputToolManualAcceptCount ?? 0,
-				inputToolManualRejectCount: outputMonitor.outputMonitorTelemetryCounters.inputToolManualRejectCount ?? 0,
-				inputToolManualChars: outputMonitor.outputMonitorTelemetryCounters.inputToolManualChars ?? 0,
-				inputToolAutoAcceptCount: outputMonitor.outputMonitorTelemetryCounters.inputToolAutoAcceptCount ?? 0,
-				inputToolAutoChars: outputMonitor.outputMonitorTelemetryCounters.inputToolAutoChars ?? 0,
-				inputToolManualShownCount: outputMonitor.outputMonitorTelemetryCounters.inputToolManualShownCount ?? 0,
-				inputToolFreeFormInputShownCount: outputMonitor.outputMonitorTelemetryCounters.inputToolFreeFormInputShownCount ?? 0,
-				inputToolFreeFormInputCount: outputMonitor.outputMonitorTelemetryCounters.inputToolFreeFormInputCount ?? 0,
+				inputToolManualAcceptCount:
+					outputMonitor.outputMonitorTelemetryCounters
+						.inputToolManualAcceptCount ?? 0,
+				inputToolManualRejectCount:
+					outputMonitor.outputMonitorTelemetryCounters
+						.inputToolManualRejectCount ?? 0,
+				inputToolManualChars:
+					outputMonitor.outputMonitorTelemetryCounters.inputToolManualChars ??
+					0,
+				inputToolAutoAcceptCount:
+					outputMonitor.outputMonitorTelemetryCounters
+						.inputToolAutoAcceptCount ?? 0,
+				inputToolAutoChars:
+					outputMonitor.outputMonitorTelemetryCounters.inputToolAutoChars ?? 0,
+				inputToolManualShownCount:
+					outputMonitor.outputMonitorTelemetryCounters
+						.inputToolManualShownCount ?? 0,
+				inputToolFreeFormInputShownCount:
+					outputMonitor.outputMonitorTelemetryCounters
+						.inputToolFreeFormInputShownCount ?? 0,
+				inputToolFreeFormInputCount:
+					outputMonitor.outputMonitorTelemetryCounters
+						.inputToolFreeFormInputCount ?? 0,
 			};
 		} finally {
 			startMarker?.dispose();
@@ -296,7 +418,9 @@ export async function collectTerminalResults(
 	results.push(...parallelResults);
 
 	if (startMarkersByTerminalInstanceId) {
-		const activeInstanceIds = new Set(terminals.map(instance => instance.instanceId));
+		const activeInstanceIds = new Set(
+			terminals.map((instance) => instance.instanceId),
+		);
 		for (const [instanceId, marker] of startMarkersByTerminalInstanceId) {
 			if (!activeInstanceIds.has(instanceId)) {
 				marker?.dispose();
@@ -308,12 +432,18 @@ export async function collectTerminalResults(
 	return results;
 }
 
-export async function taskProblemPollFn(execution: IExecution, token: CancellationToken, taskService: ITaskService): Promise<IPollingResult | undefined> {
+export async function taskProblemPollFn(
+	execution: IExecution,
+	token: CancellationToken,
+	taskService: ITaskService,
+): Promise<IPollingResult | undefined> {
 	if (token.isCancellationRequested) {
 		return;
 	}
 	if (execution.task) {
-		const data: Map<string, { resources: URI[]; markers: IMarkerData[] }> | undefined = taskService.getTaskProblems(execution.instance.instanceId);
+		const data:
+			| Map<string, { resources: URI[]; markers: IMarkerData[] }>
+			| undefined = taskService.getTaskProblems(execution.instance.instanceId);
 		if (data) {
 			// Problem matchers exist for this task
 			const problemList: string[] = [];
@@ -324,16 +454,32 @@ export async function taskProblemPollFn(execution: IExecution, token: Cancellati
 					const marker = markers[i];
 					resultResources.push({
 						uri,
-						range: marker.startLineNumber !== undefined && marker.startColumn !== undefined && marker.endLineNumber !== undefined && marker.endColumn !== undefined
-							? new Range(marker.startLineNumber, marker.startColumn, marker.endLineNumber, marker.endColumn)
-							: undefined
+						range:
+							marker.startLineNumber !== undefined &&
+							marker.startColumn !== undefined &&
+							marker.endLineNumber !== undefined &&
+							marker.endColumn !== undefined
+								? new Range(
+										marker.startLineNumber,
+										marker.startColumn,
+										marker.endLineNumber,
+										marker.endColumn,
+									)
+								: undefined,
 					});
-					const message = marker.message ?? '';
-					problemList.push(`Problem: ${message} in ${uri.fsPath} coming from ${owner} starting on line ${marker.startLineNumber}${marker.startColumn ? `, column ${marker.startColumn} and ending on line ${marker.endLineNumber}${marker.endColumn ? `, column ${marker.endColumn}` : ''}` : ''}`);
+					const message = marker.message ?? "";
+					problemList.push(
+						`Problem: ${message} in ${uri.fsPath} coming from ${owner} starting on line ${marker.startLineNumber}${marker.startColumn ? `, column ${marker.startColumn} and ending on line ${marker.endLineNumber}${marker.endColumn ? `, column ${marker.endColumn}` : ""}` : ""}`,
+					);
 				}
 			}
 			if (problemList.length === 0) {
-				const lastTenLines = execution.getOutput().split('\n').filter(line => line !== '').slice(-10).join('\n');
+				const lastTenLines = execution
+					.getOutput()
+					.split("\n")
+					.filter((line) => line !== "")
+					.slice(-10)
+					.join("\n");
 				return {
 					state: OutputMonitorState.Idle,
 					output: `Task completed with output:\n${lastTenLines}`,
@@ -341,12 +487,15 @@ export async function taskProblemPollFn(execution: IExecution, token: Cancellati
 			}
 			return {
 				state: OutputMonitorState.Idle,
-				output: problemList.join('\n'),
+				output: problemList.join("\n"),
 				resources: resultResources,
 			};
 		}
 	}
-	throw new Error('Polling failed');
+	throw new Error("Polling failed");
 }
 
-export interface ILinkLocation { uri: URI; range?: Range }
+export interface ILinkLocation {
+	uri: URI;
+	range?: Range;
+}

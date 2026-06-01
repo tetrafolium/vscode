@@ -3,12 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './media/mobileSortGroupSheet.css';
-import * as DOM from '../../../../base/browser/dom.js';
-import { Codicon } from '../../../../base/common/codicons.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
-import { Gesture, EventType as TouchEventType } from '../../../../base/browser/touch.js';
-import { localize } from '../../../../nls.js';
+import "./media/mobileSortGroupSheet.css";
+import * as DOM from "../../../../base/browser/dom.js";
+import { Codicon } from "../../../../base/common/codicons.js";
+import { ThemeIcon } from "../../../../base/common/themables.js";
+import {
+	Gesture,
+	EventType as TouchEventType,
+} from "../../../../base/browser/touch.js";
+import { localize } from "../../../../nls.js";
 
 const $ = DOM.$;
 
@@ -57,7 +60,7 @@ export function showMobileSortGroupSheet(
 	title: string,
 	items: readonly IMobileSortGroupSheetItem[],
 ): Promise<string | undefined> {
-	return new Promise<string | undefined>(resolve => {
+	return new Promise<string | undefined>((resolve) => {
 		const disposables: (() => void)[] = [];
 		let resolved = false;
 
@@ -67,11 +70,15 @@ export function showMobileSortGroupSheet(
 			}
 			resolved = true;
 			// Animate sheet out before removal for a more native feel.
-			sheet.classList.add('closing');
-			backdrop.classList.add('closing');
+			sheet.classList.add("closing");
+			backdrop.classList.add("closing");
 			DOM.getWindow(workbenchContainer).setTimeout(() => {
 				for (const d of disposables) {
-					try { d(); } catch { /* ignore */ }
+					try {
+						d();
+					} catch {
+						/* ignore */
+					}
 				}
 				overlay.remove();
 				resolve(id);
@@ -79,33 +86,56 @@ export function showMobileSortGroupSheet(
 		};
 
 		// -- DOM: backdrop + sheet -------------------------------------
-		const overlay = DOM.append(workbenchContainer, $('div.mobile-sort-group-sheet-overlay'));
-		const backdrop = DOM.append(overlay, $('div.mobile-sort-group-sheet-backdrop'));
-		const sheet = DOM.append(overlay, $('div.mobile-sort-group-sheet'));
-		sheet.setAttribute('role', 'dialog');
-		sheet.setAttribute('aria-modal', 'true');
-		sheet.setAttribute('aria-label', title);
+		const overlay = DOM.append(
+			workbenchContainer,
+			$("div.mobile-sort-group-sheet-overlay"),
+		);
+		const backdrop = DOM.append(
+			overlay,
+			$("div.mobile-sort-group-sheet-backdrop"),
+		);
+		const sheet = DOM.append(overlay, $("div.mobile-sort-group-sheet"));
+		sheet.setAttribute("role", "dialog");
+		sheet.setAttribute("aria-modal", "true");
+		sheet.setAttribute("aria-label", title);
 
 		// -- Header (handle bar + title + close) -----------------------
-		DOM.append(sheet, $('div.mobile-sort-group-sheet-handle'));
-		const header = DOM.append(sheet, $('div.mobile-sort-group-sheet-header'));
-		DOM.append(header, $('div.mobile-sort-group-sheet-title')).textContent = title;
-		const closeBtn = DOM.append(header, $('button.mobile-sort-group-sheet-close', { type: 'button' })) as HTMLButtonElement;
-		closeBtn.setAttribute('aria-label', localize('sortGroupSheet.close', "Close"));
-		DOM.append(closeBtn, $('span')).classList.add(...ThemeIcon.asClassNameArray(Codicon.close));
+		DOM.append(sheet, $("div.mobile-sort-group-sheet-handle"));
+		const header = DOM.append(sheet, $("div.mobile-sort-group-sheet-header"));
+		DOM.append(header, $("div.mobile-sort-group-sheet-title")).textContent =
+			title;
+		const closeBtn = DOM.append(
+			header,
+			$("button.mobile-sort-group-sheet-close", { type: "button" }),
+		) as HTMLButtonElement;
+		closeBtn.setAttribute(
+			"aria-label",
+			localize("sortGroupSheet.close", "Close"),
+		);
+		DOM.append(closeBtn, $("span")).classList.add(
+			...ThemeIcon.asClassNameArray(Codicon.close),
+		);
 		const closeGesture = Gesture.addTarget(closeBtn);
 		disposables.push(() => closeGesture.dispose());
-		const closeClick = DOM.addDisposableListener(closeBtn, DOM.EventType.CLICK, (e: MouseEvent) => {
-			e.preventDefault();
-			finish(undefined);
-		});
+		const closeClick = DOM.addDisposableListener(
+			closeBtn,
+			DOM.EventType.CLICK,
+			(e: MouseEvent) => {
+				e.preventDefault();
+				finish(undefined);
+			},
+		);
 		disposables.push(() => closeClick.dispose());
-		const closeTap = DOM.addDisposableListener(closeBtn, TouchEventType.Tap, () => finish(undefined));
+		const closeTap = DOM.addDisposableListener(
+			closeBtn,
+			TouchEventType.Tap,
+			() => finish(undefined),
+		);
 		disposables.push(() => closeTap.dispose());
 
 		// -- Items list ------------------------------------------------
-		const list = DOM.append(sheet, $('div.mobile-sort-group-sheet-list'));
-		list.setAttribute('role', 'listbox');
+		const list = DOM.append(sheet, $("div.mobile-sort-group-sheet-list"));
+		list.setAttribute("role", "listbox");
 
 		let lastGroup: string | undefined;
 		let firstRow: HTMLButtonElement | undefined;
@@ -113,58 +143,87 @@ export function showMobileSortGroupSheet(
 		for (const item of items) {
 			if (item.group !== lastGroup) {
 				if (lastGroup !== undefined) {
-					DOM.append(list, $('div.mobile-sort-group-sheet-divider'));
+					DOM.append(list, $("div.mobile-sort-group-sheet-divider"));
 				}
 				if (item.groupTitle) {
-					const sectionTitle = DOM.append(list, $('div.mobile-sort-group-sheet-section-title'));
+					const sectionTitle = DOM.append(
+						list,
+						$("div.mobile-sort-group-sheet-section-title"),
+					);
 					sectionTitle.textContent = item.groupTitle;
 				}
 				lastGroup = item.group;
 			}
 
-			const row = DOM.append(list, $('button.mobile-sort-group-sheet-item', { type: 'button' })) as HTMLButtonElement;
-			row.setAttribute('role', 'option');
-			row.setAttribute('aria-selected', String(item.checked));
+			const row = DOM.append(
+				list,
+				$("button.mobile-sort-group-sheet-item", { type: "button" }),
+			) as HTMLButtonElement;
+			row.setAttribute("role", "option");
+			row.setAttribute("aria-selected", String(item.checked));
 			if (item.checked) {
-				row.classList.add('checked');
+				row.classList.add("checked");
 			}
 			firstRow ??= row;
 			if (item.checked && !firstCheckedRow) {
 				firstCheckedRow = row;
 			}
 
-			const checkSlot = DOM.append(row, $('span.mobile-sort-group-sheet-check'));
+			const checkSlot = DOM.append(
+				row,
+				$("span.mobile-sort-group-sheet-check"),
+			);
 			if (item.checked) {
 				checkSlot.classList.add(...ThemeIcon.asClassNameArray(Codicon.check));
 			}
-			DOM.append(row, $('span.mobile-sort-group-sheet-label')).textContent = item.label;
+			DOM.append(row, $("span.mobile-sort-group-sheet-label")).textContent =
+				item.label;
 
 			const rowGesture = Gesture.addTarget(row);
 			disposables.push(() => rowGesture.dispose());
-			const rowClick = DOM.addDisposableListener(row, DOM.EventType.CLICK, (e: MouseEvent) => {
-				e.preventDefault();
-				finish(item.id);
-			});
+			const rowClick = DOM.addDisposableListener(
+				row,
+				DOM.EventType.CLICK,
+				(e: MouseEvent) => {
+					e.preventDefault();
+					finish(item.id);
+				},
+			);
 			disposables.push(() => rowClick.dispose());
-			const rowTap = DOM.addDisposableListener(row, TouchEventType.Tap, () => finish(item.id));
+			const rowTap = DOM.addDisposableListener(row, TouchEventType.Tap, () =>
+				finish(item.id),
+			);
 			disposables.push(() => rowTap.dispose());
 		}
 
 		// -- Dismissal: backdrop + Escape ------------------------------
-		const backdropClick = DOM.addDisposableListener(backdrop, DOM.EventType.CLICK, () => finish(undefined));
+		const backdropClick = DOM.addDisposableListener(
+			backdrop,
+			DOM.EventType.CLICK,
+			() => finish(undefined),
+		);
 		disposables.push(() => backdropClick.dispose());
 		const backdropGesture = Gesture.addTarget(backdrop);
 		disposables.push(() => backdropGesture.dispose());
-		const backdropTap = DOM.addDisposableListener(backdrop, TouchEventType.Tap, () => finish(undefined));
+		const backdropTap = DOM.addDisposableListener(
+			backdrop,
+			TouchEventType.Tap,
+			() => finish(undefined),
+		);
 		disposables.push(() => backdropTap.dispose());
 
-		const keyHandler = DOM.addDisposableListener(DOM.getWindow(workbenchContainer), DOM.EventType.KEY_DOWN, (e: KeyboardEvent) => {
-			if (e.key === 'Escape') {
-				e.preventDefault();
-				e.stopPropagation();
-				finish(undefined);
-			}
-		}, true);
+		const keyHandler = DOM.addDisposableListener(
+			DOM.getWindow(workbenchContainer),
+			DOM.EventType.KEY_DOWN,
+			(e: KeyboardEvent) => {
+				if (e.key === "Escape") {
+					e.preventDefault();
+					e.stopPropagation();
+					finish(undefined);
+				}
+			},
+			true,
+		);
 		disposables.push(() => keyHandler.dispose());
 
 		// Focus the first checked row (or the first row) for keyboard users.

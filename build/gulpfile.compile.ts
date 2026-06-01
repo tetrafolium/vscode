@@ -3,24 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as util from './lib/util.ts';
-import * as date from './lib/date.ts';
-import * as task from './lib/gulp/task.ts';
-import * as compilation from './lib/compilation.ts';
+import * as util from "./lib/util.ts";
+import * as date from "./lib/date.ts";
+import * as task from "./lib/gulp/task.ts";
+import * as compilation from "./lib/compilation.ts";
 
 function makeCompileBuildTask(disableMangle: boolean) {
 	return task.series(
-		util.rimraf('out-build'),
-		date.writeISODate('out-build'),
+		util.rimraf("out-build"),
+		date.writeISODate("out-build"),
 		compilation.compileApiProposalNamesTask,
-		compilation.compileTask('src', 'out-build', true, { disableMangle })
+		compilation.compileTask("src", "out-build", true, { disableMangle }),
 	);
 }
 
 // Local/PR compile, including nls and inline sources in sourcemaps, minification, no mangling
-export const compileBuildWithoutManglingTask = task.define('compile-build-without-mangling', task.series(compilation.copyCodiconsTask, makeCompileBuildTask(true)));
+export const compileBuildWithoutManglingTask = task.define(
+	"compile-build-without-mangling",
+	task.series(compilation.copyCodiconsTask, makeCompileBuildTask(true)),
+);
 task.task(compileBuildWithoutManglingTask);
 
 // CI compile, including nls and inline sources in sourcemaps, mangling, minification, for build
-export const compileBuildWithManglingTask = task.define('compile-build-with-mangling', task.series(compilation.copyCodiconsTask, makeCompileBuildTask(false)));
+export const compileBuildWithManglingTask = task.define(
+	"compile-build-with-mangling",
+	task.series(compilation.copyCodiconsTask, makeCompileBuildTask(false)),
+);
 task.task(compileBuildWithManglingTask);

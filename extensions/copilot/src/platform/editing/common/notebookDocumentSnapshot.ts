@@ -5,7 +5,10 @@
 
 import type { NotebookDocument, TextLine, Uri } from 'vscode';
 import { isNumber, isString } from '../../../util/vs/base/common/types';
-import { isUriComponents, UriComponents } from '../../../util/vs/base/common/uri';
+import {
+	isUriComponents,
+	UriComponents,
+} from '../../../util/vs/base/common/uri';
 import { Position, Range, Selection } from '../../../vscodeTypes';
 import { getAlternativeNotebookDocumentProvider } from '../../notebook/common/alternativeContent';
 import { AlternativeNotebookDocument } from '../../notebook/common/alternativeNotebookDocument';
@@ -20,28 +23,59 @@ export interface INotebookDocumentSnapshotJSON {
 	readonly alternativeFormat: 'json' | 'xml' | 'text';
 }
 
-export function isNotebookDocumentSnapshotJSON(thing: any): thing is INotebookDocumentSnapshotJSON {
+export function isNotebookDocumentSnapshotJSON(
+	thing: any,
+): thing is INotebookDocumentSnapshotJSON {
 	if (!thing || typeof thing !== 'object') {
 		return false;
 	}
-	return thing.type === 'notebook' && isUriComponents(thing.uri) && isString(thing._text) &&
-		isString(thing.languageId) && isNumber(thing.version) && isString(thing.alternativeFormat);
+	return (
+		thing.type === 'notebook' &&
+		isUriComponents(thing.uri) &&
+		isString(thing._text) &&
+		isString(thing.languageId) &&
+		isNumber(thing.version) &&
+		isString(thing.alternativeFormat)
+	);
 }
 
 export class NotebookDocumentSnapshot {
-	static create(doc: NotebookDocument, format: 'json' | 'xml' | 'text'): NotebookDocumentSnapshot {
+	static create(
+		doc: NotebookDocument,
+		format: 'json' | 'xml' | 'text',
+	): NotebookDocumentSnapshot {
 		const uri = doc.uri;
 		const version = doc.version;
 
-		const alternativeDocument = getAlternativeNotebookDocumentProvider(format).getAlternativeDocument(doc);
-		return new NotebookDocumentSnapshot(doc, uri, version, format, alternativeDocument);
+		const alternativeDocument =
+			getAlternativeNotebookDocumentProvider(
+				format,
+			).getAlternativeDocument(doc);
+		return new NotebookDocumentSnapshot(
+			doc,
+			uri,
+			version,
+			format,
+			alternativeDocument,
+		);
 	}
 	static fromNewText(text: string, doc: NotebookDocumentSnapshot) {
-		const alternativeDocument = getAlternativeNotebookDocumentProvider(doc.alternativeFormat).getAlternativeDocumentFromText(text, doc.document);
-		const nd = new NotebookDocumentSnapshot(doc.document, doc.uri, doc.version, doc.alternativeFormat, alternativeDocument);
+		const alternativeDocument = getAlternativeNotebookDocumentProvider(
+			doc.alternativeFormat,
+		).getAlternativeDocumentFromText(text, doc.document);
+		const nd = new NotebookDocumentSnapshot(
+			doc.document,
+			doc.uri,
+			doc.version,
+			doc.alternativeFormat,
+			alternativeDocument,
+		);
 		return nd;
 	}
-	static fromJSON(doc: NotebookDocument, json: INotebookDocumentSnapshotJSON): NotebookDocumentSnapshot {
+	static fromJSON(
+		doc: NotebookDocument,
+		json: INotebookDocumentSnapshotJSON,
+	): NotebookDocumentSnapshot {
 		// TODO@DonJayamanne
 		return NotebookDocumentSnapshot.create(doc, json.alternativeFormat);
 	}
@@ -52,12 +86,20 @@ export class NotebookDocumentSnapshot {
 	readonly version: number;
 	readonly languageId: string;
 
-
-	private constructor(doc: NotebookDocument, uri: Uri, version: number, public readonly alternativeFormat: 'json' | 'xml' | 'text', private readonly _alternativeDocument: AlternativeNotebookDocument) {
+	private constructor(
+		doc: NotebookDocument,
+		uri: Uri,
+		version: number,
+		public readonly alternativeFormat: 'json' | 'xml' | 'text',
+		private readonly _alternativeDocument: AlternativeNotebookDocument,
+	) {
 		this.document = doc;
 		this.uri = uri;
 		this.version = version;
-		this.languageId = alternativeFormat === 'text' ? getDefaultLanguage(doc) || 'python' : alternativeFormat;
+		this.languageId =
+			alternativeFormat === 'text'
+				? getDefaultLanguage(doc) || 'python'
+				: alternativeFormat;
 	}
 
 	getText(range?: Range): string {
@@ -117,7 +159,7 @@ export class NotebookDocumentSnapshot {
 			languageId: this.languageId,
 			version: this.version,
 			_text: this._alternativeDocument.getText(),
-			alternativeFormat: this.alternativeFormat
+			alternativeFormat: this.alternativeFormat,
 		};
 	}
 }

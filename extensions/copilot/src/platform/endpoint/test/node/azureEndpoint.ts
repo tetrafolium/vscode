@@ -7,10 +7,16 @@ import { TokenizerType } from '../../../../util/common/tokenizer';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
 import { IAuthenticationService } from '../../../authentication/common/authentication';
 import { IChatMLFetcher } from '../../../chat/common/chatMLFetcher';
-import { CHAT_MODEL, IConfigurationService } from '../../../configuration/common/configurationService';
+import {
+	CHAT_MODEL,
+	IConfigurationService,
+} from '../../../configuration/common/configurationService';
 import { ILogService } from '../../../log/common/logService';
 import { IFetcherService } from '../../../networking/common/fetcherService';
-import { IChatEndpoint, IEndpointBody } from '../../../networking/common/networking';
+import {
+	IChatEndpoint,
+	IEndpointBody,
+} from '../../../networking/common/networking';
 import { RawMessageConversionCallback } from '../../../networking/common/openai';
 import { IChatWebSocketManager } from '../../../networking/node/chatWebSocketManager';
 import { IExperimentationService } from '../../../telemetry/common/nullExperimentationService';
@@ -32,11 +38,13 @@ export class AzureTestEndpoint extends ChatEndpoint {
 		@IAuthenticationService authService: IAuthenticationService,
 		@IChatMLFetcher chatMLFetcher: IChatMLFetcher,
 		@ITokenizerProvider tokenizerProvider: ITokenizerProvider,
-		@IInstantiationService private instantiationService: IInstantiationService,
+		@IInstantiationService
+		private instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IExperimentationService experimentationService: IExperimentationService,
+		@IExperimentationService
+		experimentationService: IExperimentationService,
 		@IChatWebSocketManager chatWebSocketService: IChatWebSocketManager,
-		@ILogService logService: ILogService
+		@ILogService logService: ILogService,
 	) {
 		const modelInfo: IChatModelInformation = {
 			id: _azureModel,
@@ -50,12 +58,17 @@ export class AzureTestEndpoint extends ChatEndpoint {
 				type: 'chat',
 				family: 'azure',
 				tokenizer: TokenizerType.O200K,
-				supports: { streaming: true, tool_calls: true, vision: false, prediction: false },
+				supports: {
+					streaming: true,
+					tool_calls: true,
+					vision: false,
+					prediction: false,
+				},
 				limits: {
 					max_prompt_tokens: 200000,
 					max_output_tokens: 56000,
 				},
-			}
+			},
 		};
 		super(
 			modelInfo,
@@ -66,7 +79,7 @@ export class AzureTestEndpoint extends ChatEndpoint {
 			configurationService,
 			experimentationService,
 			chatWebSocketService,
-			logService
+			logService,
 		);
 		this.isThinkingModel = false; // Set to true if testing a thinking model
 	}
@@ -77,7 +90,9 @@ export class AzureTestEndpoint extends ChatEndpoint {
 				// Set model params and thinking in constructor
 				return '<replace with your experimental endpoint URL>';
 			default:
-				throw new Error(`Unknown azure model passed ${this._azureModel} passed to test endpoint`);
+				throw new Error(
+					`Unknown azure model passed ${this._azureModel} passed to test endpoint`,
+				);
 		}
 	}
 
@@ -88,10 +103,14 @@ export class AzureTestEndpoint extends ChatEndpoint {
 				secretKey = process.env.EXPERIMENTAL_TOKEN;
 				break;
 			default:
-				throw new Error(`Unknown azure model passed ${this._azureModel} passed to test endpoint`);
+				throw new Error(
+					`Unknown azure model passed ${this._azureModel} passed to test endpoint`,
+				);
 		}
 		if (!secretKey) {
-			throw new Error(`No secret key found for model ${this._azureModel}`);
+			throw new Error(
+				`No secret key found for model ${this._azureModel}`,
+			);
 		}
 		return secretKey;
 	}
@@ -102,10 +121,10 @@ export class AzureTestEndpoint extends ChatEndpoint {
 
 	public override getExtraHeaders(): Record<string, string> {
 		return {
-			'Authorization': this.getAuthHeader(),
+			Authorization: this.getAuthHeader(),
 			'ocp-apim-subscription-key': this.getSecretKey(),
 			'api-key': this.getSecretKey(),
-			'x-policy-id': 'nil'
+			'x-policy-id': 'nil',
 		};
 	}
 
@@ -123,15 +142,24 @@ export class AzureTestEndpoint extends ChatEndpoint {
 		}
 	}
 
-	override cloneWithTokenOverride(modelMaxPromptTokens: number): IChatEndpoint {
-		return this.instantiationService.createInstance(AzureTestEndpoint, this._azureModel);
+	override cloneWithTokenOverride(
+		modelMaxPromptTokens: number,
+	): IChatEndpoint {
+		return this.instantiationService.createInstance(
+			AzureTestEndpoint,
+			this._azureModel,
+		);
 	}
 
-	protected override getCompletionsCallback(): RawMessageConversionCallback | undefined {
+	protected override getCompletionsCallback():
+		| RawMessageConversionCallback
+		| undefined {
 		return (out, data) => {
 			if (data && data.id) {
 				out.cot_id = data.id;
-				out.cot_summary = Array.isArray(data.text) ? data.text.join('') : data.text;
+				out.cot_summary = Array.isArray(data.text)
+					? data.text.join('')
+					: data.text;
 			}
 		};
 	}

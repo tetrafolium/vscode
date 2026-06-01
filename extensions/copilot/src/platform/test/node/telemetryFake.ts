@@ -31,7 +31,7 @@ class FakeTelemetryServer {
 				let body = '';
 				const uncompress = zlib.createGunzip();
 				req.pipe(uncompress)
-					.on('data', chunk => {
+					.on('data', (chunk) => {
 						body = body + chunk.toString();
 					})
 					.on('end', () => {

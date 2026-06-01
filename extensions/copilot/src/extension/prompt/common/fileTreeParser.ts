@@ -32,13 +32,14 @@ export function convertFileTreeToChatResponseFileTree(
 
 		if (depth === 0) {
 			if (isUnsafeNodeName(name)) {
-				throw new Error(`Invalid project root name in file tree: ${name}`);
+				throw new Error(
+					`Invalid project root name in file tree: ${name}`,
+				);
 			}
 			baseUri = generatePreviewURI(name);
 			root.name = name;
 			continue;
-		}
-		else {
+		} else {
 			while (depth > 0 && fileTree[depth - 1] === undefined) {
 				depth--;
 			}
@@ -54,18 +55,22 @@ export function convertFileTreeToChatResponseFileTree(
 		throw new Error('Base URI is undefined');
 	}
 	const filteredTree = filterChatResponseFileTree(root.children!);
-	root.children = filteredTree.sort((a, b) => (a.children && !b.children) ? -1 : 1);
+	root.children = filteredTree.sort((a, b) =>
+		a.children && !b.children ? -1 : 1,
+	);
 	return {
 		chatResponseTree: new ChatResponseFileTreePart([root], baseUri),
-		projectName: root.name
+		projectName: root.name,
 	};
 }
 
 /**
  * List filenames in the tree, separated by forward-slashes.
  */
-export function listFilesInResponseFileTree(tree: vscode.ChatResponseFileTree[]): string[] {
-	const queue = tree.map(node => ({ node, path: node.name }));
+export function listFilesInResponseFileTree(
+	tree: vscode.ChatResponseFileTree[],
+): string[] {
+	const queue = tree.map((node) => ({ node, path: node.name }));
 	const result: string[] = [];
 
 	while (queue.length > 0) {
@@ -93,16 +98,37 @@ function calculateDepth(inputString: string): number {
 }
 
 const filterList = [
-	/* compile/runtime files */ 'node_modules', 'out', 'bin', 'debug', 'obj', 'lib', '.dll', '.pdb', '.lib',
-	/* image assets */ '.jpg', '.png', '.ico', '.gif', '.svg', '.jpeg', '.tiff', '.bmp', '.webp', '.jpeg',
-	/* other files we should not be included in a new project */'.gitignore', 'LICENSE.txt', 'yarn.lock', 'package-lock.json'
+	/* compile/runtime files */ 'node_modules',
+	'out',
+	'bin',
+	'debug',
+	'obj',
+	'lib',
+	'.dll',
+	'.pdb',
+	'.lib',
+	/* image assets */ '.jpg',
+	'.png',
+	'.ico',
+	'.gif',
+	'.svg',
+	'.jpeg',
+	'.tiff',
+	'.bmp',
+	'.webp',
+	'.jpeg',
+	/* other files we should not be included in a new project */ '.gitignore',
+	'LICENSE.txt',
+	'yarn.lock',
+	'package-lock.json',
 ];
 
-function filterChatResponseFileTree(fileTree: vscode.ChatResponseFileTree[]): vscode.ChatResponseFileTree[] {
+function filterChatResponseFileTree(
+	fileTree: vscode.ChatResponseFileTree[],
+): vscode.ChatResponseFileTree[] {
 	const filteredTree: vscode.ChatResponseFileTree[] = [];
 
 	for (const node of fileTree) {
-
 		if (!isNodeInFilterList(node) && !isUnsafeNodeName(node.name)) {
 			if (node.children) {
 				node.children = filterChatResponseFileTree(node.children);

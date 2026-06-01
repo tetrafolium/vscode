@@ -3,11 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { SessionEvent, ToolExecutionCompleteEvent, ToolExecutionStartEvent } from '@github/copilot/sdk';
+import type {
+	SessionEvent,
+	ToolExecutionCompleteEvent,
+	ToolExecutionStartEvent,
+} from '@github/copilot/sdk';
 import * as l10n from '@vscode/l10n';
 import { ILogger } from '../../../platform/log/common/logService';
 import { URI } from '../../../util/vs/base/common/uri';
-import { ChatResponseCodeblockUriPart, ChatResponseMarkdownPart, ChatResponsePullRequestPart, ChatResponseTextEditPart, ChatResponseThinkingProgressPart, ChatToolInvocationPart, MarkdownString } from '../../../vscodeTypes';
+import {
+	ChatResponseCodeblockUriPart,
+	ChatResponseMarkdownPart,
+	ChatResponsePullRequestPart,
+	ChatResponseTextEditPart,
+	ChatResponseThinkingProgressPart,
+	ChatToolInvocationPart,
+	MarkdownString,
+} from '../../../vscodeTypes';
 import type { ExtendedChatResponsePart } from 'vscode';
 
 /**
@@ -17,7 +29,11 @@ import type { ExtendedChatResponsePart } from 'vscode';
  * verbatim to the injected handlers.
  */
 export type PendingToolInvocation<TToolCall> = [
-	ChatToolInvocationPart | ChatResponseMarkdownPart | ChatResponseThinkingProgressPart,
+	(
+		| ChatToolInvocationPart
+		| ChatResponseMarkdownPart
+		| ChatResponseThinkingProgressPart
+	),
 	toolData: TToolCall,
 	parentToolCallId: string | undefined,
 ];
@@ -34,7 +50,11 @@ export interface ToolEventHandlers<TToolCall> {
 		event: ToolExecutionStartEvent,
 		pending: Map<string, PendingToolInvocation<TToolCall>>,
 		workingDirectory?: URI,
-	) => ChatToolInvocationPart | ChatResponseMarkdownPart | ChatResponseThinkingProgressPart | undefined;
+	) =>
+		| ChatToolInvocationPart
+		| ChatResponseMarkdownPart
+		| ChatResponseThinkingProgressPart
+		| undefined;
 	processComplete: (
 		event: ToolExecutionCompleteEvent,
 		pending: Map<string, PendingToolInvocation<TToolCall>>,
@@ -60,7 +80,10 @@ export interface ResponseEventRenderContext<TToolCall = unknown> {
 	readonly workingDirectory?: URI;
 	readonly logger: ILogger;
 	readonly handlers: ToolEventHandlers<TToolCall>;
-	readonly pendingToolInvocations: Map<string, PendingToolInvocation<TToolCall>>;
+	readonly pendingToolInvocations: Map<
+		string,
+		PendingToolInvocation<TToolCall>
+	>;
 	/** Message ids that have already been streamed via deltas; the final
 	 * `assistant.message` for the same id is skipped to avoid duplicate text. */
 	readonly processedMessages: Set<string>;
@@ -103,7 +126,9 @@ interface AssistantMessageBufferCtx {
 	readonly currentResponseParts: ExtendedChatResponsePart[];
 }
 
-export function flushPendingAssistantMessage(ctx: AssistantMessageBufferCtx): void {
+export function flushPendingAssistantMessage(
+	ctx: AssistantMessageBufferCtx,
+): void {
 	if (ctx.currentAssistantMessage.chunks.length === 0) {
 		return;
 	}
@@ -112,38 +137,52 @@ export function flushPendingAssistantMessage(ctx: AssistantMessageBufferCtx): vo
 	appendAssistantMessageContent(ctx, content);
 }
 
-function appendAssistantMessageContent(ctx: AssistantMessageBufferCtx, content: string): void {
+function appendAssistantMessageContent(
+	ctx: AssistantMessageBufferCtx,
+	content: string,
+): void {
 	const { cleanedContent, prPart } = extractPRMetadata(content);
 	if (prPart) {
 		ctx.currentResponseParts.push(prPart);
 	}
 	if (cleanedContent) {
-		ctx.currentResponseParts.push(new ChatResponseMarkdownPart(new MarkdownString(cleanedContent)));
+		ctx.currentResponseParts.push(
+			new ChatResponseMarkdownPart(new MarkdownString(cleanedContent)),
+		);
 	}
 }
 
 /**
  * Extract PR metadata from assistant message content.
  */
-function extractPRMetadata(content: string): { cleanedContent: string; prPart?: ChatResponsePullRequestPart } {
-	const prMetadataRegex = /<pr_metadata\s+uri="(?<uri>[^"]+)"\s+title="(?<title>[^"]+)"\s+description="(?<description>[^"]+)"\s+author="(?<author>[^"]+)"\s+linkTag="(?<linkTag>[^"]+)"\s*\/?>/;
+function extractPRMetadata(content: string): {
+	cleanedContent: string;
+	prPart?: ChatResponsePullRequestPart;
+} {
+	const prMetadataRegex =
+		/<pr_metadata\s+uri="(?<uri>[^"]+)"\s+title="(?<title>[^"]+)"\s+description="(?<description>[^"]+)"\s+author="(?<author>[^"]+)"\s+linkTag="(?<linkTag>[^"]+)"\s*\/?>/;
 	const match = content.match(prMetadataRegex);
 
 	if (match?.groups) {
 		const { title, description, author, linkTag } = match.groups;
-		const unescapeXml = (text: string) => text
-			.replace(/&apos;/g, `'`)
-			.replace(/&quot;/g, '"')
-			.replace(/&gt;/g, '>')
-			.replace(/&lt;/g, '<')
-			.replace(/&amp;/g, '&');
+		const unescapeXml = (text: string) =>
+			text
+				.replace(/&apos;/g, `'`)
+				.replace(/&quot;/g, '"')
+				.replace(/&gt;/g, '>')
+				.replace(/&lt;/g, '<')
+				.replace(/&amp;/g, '&');
 
 		const prPart = new ChatResponsePullRequestPart(
-			{ command: 'github.copilot.chat.openPullRequestReroute', title: l10n.t('View Pull Request {0}', linkTag), arguments: [Number(linkTag.substring(1))] },
+			{
+				command: 'github.copilot.chat.openPullRequestReroute',
+				title: l10n.t('View Pull Request {0}', linkTag),
+				arguments: [Number(linkTag.substring(1))],
+			},
 			unescapeXml(title),
 			unescapeXml(description),
 			unescapeXml(author),
-			unescapeXml(linkTag)
+			unescapeXml(linkTag),
 		);
 
 		const cleanedContent = content.replace(match[0], '').trim();
@@ -164,31 +203,51 @@ function extractPRMetadata(content: string): { cleanedContent: string; prPart?: 
  * the equivalent `subagent.*` SDK types before invoking — both follow the same
  * CMC OpenAPI schema, only the event-type names differ.
  */
-export function appendResponsePartsForEvent<TToolCall>(event: SessionEvent, ctx: ResponseEventRenderContext<TToolCall>): boolean {
+export function appendResponsePartsForEvent<TToolCall>(
+	event: SessionEvent,
+	ctx: ResponseEventRenderContext<TToolCall>,
+): boolean {
 	if (event.type !== 'assistant.message') {
 		flushPendingAssistantMessage(ctx);
 	}
 
 	switch (event.type) {
 		case 'session.error': {
-			ctx.currentResponseParts.push(new ChatResponseMarkdownPart(`\n\n❌ Error: (${event.data.errorType}) ${event.data.message}`));
+			ctx.currentResponseParts.push(
+				new ChatResponseMarkdownPart(
+					`\n\n❌ Error: (${event.data.errorType}) ${event.data.message}`,
+				),
+			);
 			return true;
 		}
 		case 'assistant.message_delta': {
-			if (typeof event.data.deltaContent === 'string' && !event.data.parentToolCallId) {
+			if (
+				typeof event.data.deltaContent === 'string' &&
+				!event.data.parentToolCallId
+			) {
 				ctx.processedMessages.add(event.data.messageId);
-				ctx.currentAssistantMessage.chunks.push(event.data.deltaContent);
+				ctx.currentAssistantMessage.chunks.push(
+					event.data.deltaContent,
+				);
 			}
 			return true;
 		}
 		case 'assistant.message': {
-			if (event.data.content && !ctx.processedMessages.has(event.data.messageId) && !event.data.parentToolCallId) {
+			if (
+				event.data.content &&
+				!ctx.processedMessages.has(event.data.messageId) &&
+				!event.data.parentToolCallId
+			) {
 				appendAssistantMessageContent(ctx, event.data.content);
 			}
 			return true;
 		}
 		case 'tool.execution_start': {
-			const part = ctx.handlers.processStart(event, ctx.pendingToolInvocations, ctx.workingDirectory);
+			const part = ctx.handlers.processStart(
+				event,
+				ctx.pendingToolInvocations,
+				ctx.workingDirectory,
+			);
 			if (part instanceof ChatResponseThinkingProgressPart) {
 				ctx.currentResponseParts.push(part);
 			}
@@ -208,21 +267,45 @@ export function appendResponsePartsForEvent<TToolCall>(event: SessionEvent, ctx:
 			// Completion is already handled by `tool.execution_complete` for the task tool.
 			return true;
 		case 'tool.execution_complete': {
-			const [part, toolCall] = ctx.handlers.processComplete(event, ctx.pendingToolInvocations, ctx.logger, ctx.workingDirectory) ?? [undefined, undefined];
-			if (!part || !toolCall || part instanceof ChatResponseThinkingProgressPart) {
+			const [part, toolCall] = ctx.handlers.processComplete(
+				event,
+				ctx.pendingToolInvocations,
+				ctx.logger,
+				ctx.workingDirectory,
+			) ?? [undefined, undefined];
+			if (
+				!part ||
+				!toolCall ||
+				part instanceof ChatResponseThinkingProgressPart
+			) {
 				return true;
 			}
 			const editId = ctx.getEditId?.(event.data.toolCallId);
 			const editedUris = ctx.handlers.getEditedUris(toolCall);
-			if (!(part instanceof ChatResponseMarkdownPart) && ctx.handlers.isEditToolCall(toolCall) && editId && editedUris.length > 0) {
+			if (
+				!(part instanceof ChatResponseMarkdownPart) &&
+				ctx.handlers.isEditToolCall(toolCall) &&
+				editId &&
+				editedUris.length > 0
+			) {
 				part.presentation = 'hidden';
 				ctx.currentResponseParts.push(part);
 				for (const uri of editedUris) {
-					ctx.currentResponseParts.push(new ChatResponseMarkdownPart('\n````\n'));
-					ctx.currentResponseParts.push(new ChatResponseCodeblockUriPart(uri, true, editId));
-					ctx.currentResponseParts.push(new ChatResponseTextEditPart(uri, []));
-					ctx.currentResponseParts.push(new ChatResponseTextEditPart(uri, true));
-					ctx.currentResponseParts.push(new ChatResponseMarkdownPart('\n````\n'));
+					ctx.currentResponseParts.push(
+						new ChatResponseMarkdownPart('\n````\n'),
+					);
+					ctx.currentResponseParts.push(
+						new ChatResponseCodeblockUriPart(uri, true, editId),
+					);
+					ctx.currentResponseParts.push(
+						new ChatResponseTextEditPart(uri, []),
+					);
+					ctx.currentResponseParts.push(
+						new ChatResponseTextEditPart(uri, true),
+					);
+					ctx.currentResponseParts.push(
+						new ChatResponseMarkdownPart('\n````\n'),
+					);
 				}
 			} else {
 				ctx.currentResponseParts.push(part);
@@ -230,7 +313,11 @@ export function appendResponsePartsForEvent<TToolCall>(event: SessionEvent, ctx:
 			return true;
 		}
 		case 'abort': {
-			ctx.currentResponseParts.push(new ChatResponseMarkdownPart(new MarkdownString(`_Aborted: ${event.data.reason}_`)));
+			ctx.currentResponseParts.push(
+				new ChatResponseMarkdownPart(
+					new MarkdownString(`_Aborted: ${event.data.reason}_`),
+				),
+			);
 			return true;
 		}
 	}

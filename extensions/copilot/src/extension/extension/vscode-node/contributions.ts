@@ -13,7 +13,10 @@ import { ChatSessionsContrib } from '../../chatSessions/vscode-node/chatSessions
 import { SessionStoreTracker } from '../../chronicle/vscode-node/sessionStoreTracker';
 import * as sessionSyncContribution from '../../chronicle/vscode-node/sessionSync.contribution';
 import * as chatBlockLanguageContribution from '../../codeBlocks/vscode-node/chatBlockLanguageFeatures.contribution';
-import { IExtensionContributionFactory, asContributionFactory } from '../../common/contributions';
+import {
+	IExtensionContributionFactory,
+	asContributionFactory,
+} from '../../common/contributions';
 import { CompletionsUnificationContribution } from '../../completions/vscode-node/completionsUnificationContribution';
 import { ConfigurationMigrationContribution } from '../../configuration/vscode-node/configurationMigration';
 import { ContextKeysContribution } from '../../contextKeys/vscode-node/contextKeys.contribution';
@@ -34,7 +37,10 @@ import { IgnoredFileProviderContribution } from '../../ignore/vscode-node/ignore
 import { JointCompletionsProviderContribution } from '../../inlineEdits/vscode-node/jointInlineCompletionProvider';
 import { FixTestFailureContribution } from '../../intents/vscode-node/fixTestFailureContributions';
 import { ExtensionStateCommandContribution } from '../../log/vscode-node/extensionStateCommand';
-import { FetcherTelemetryContribution, LoggingActionsContrib } from '../../log/vscode-node/loggingActions';
+import {
+	FetcherTelemetryContribution,
+	LoggingActionsContrib,
+} from '../../log/vscode-node/loggingActions';
 import { RequestLogTree } from '../../log/vscode-node/requestLogTree';
 import { McpSetupCommands } from '../../mcp/vscode-node/commands';
 import { NotebookFollowCommands } from '../../notebook/vscode-node/followActions';
@@ -112,7 +118,7 @@ export const vscodeNodeContributions: IExtensionContributionFactory[] = [
  * when the user is logged in and chat is enabled.
  * Anything that contributes a copilot chat feature that doesn't need
  * to run when chat is not enabled should be added here.
-*/
+ */
 export const vscodeNodeChatContributions: IExtensionContributionFactory[] = [
 	asContributionFactory(ConfigurationMigrationContribution),
 	asContributionFactory(RequestLogTree),

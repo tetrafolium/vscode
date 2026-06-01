@@ -13,7 +13,11 @@ import { CacheScope } from '../../base/simulationContext';
 import { REPO_ROOT } from '../../base/stest';
 import { TS_SERVER_DIAGNOSTICS_PROVIDER_CACHE_SALT } from '../../cacheSalt';
 import { cleanTempDirWithRetry, createTempDir } from '../stestUtil';
-import { IFile, ITSDiagnosticRelatedInformation, ITestDiagnostic } from './diagnosticsProvider';
+import {
+	IFile,
+	ITSDiagnosticRelatedInformation,
+	ITestDiagnostic,
+} from './diagnosticsProvider';
 import { CachingDiagnosticsProvider, setupTemporaryWorkspace } from './utils';
 
 /**
@@ -32,9 +36,13 @@ export class TSServerDiagnosticsProvider extends CachingDiagnosticsProvider {
 		this.id = this.ignoreImportErrors ? 'tsc-ignore-import-errors' : 'tsc';
 	}
 
-	protected override get cacheVersion(): number { return TS_SERVER_DIAGNOSTICS_PROVIDER_CACHE_SALT; }
+	protected override get cacheVersion(): number {
+		return TS_SERVER_DIAGNOSTICS_PROVIDER_CACHE_SALT;
+	}
 
-	protected override async computeDiagnostics(files: IFile[]): Promise<ITestDiagnostic[]> {
+	protected override async computeDiagnostics(
+		files: IFile[],
+	): Promise<ITestDiagnostic[]> {
 		if (this.ignoreImportErrors) {
 			const identifiers = new Set<string>();
 			for (const file of files) {
@@ -45,21 +53,26 @@ export class TSServerDiagnosticsProvider extends CachingDiagnosticsProvider {
 				fileName: 'modules-mock.d.ts',
 				fileContents: `
 declare module '*'  {
-	${filteredIdentifiers.map(i => `export const ${i}: any; export type ${i} = any;`).join('\n\t')}
+	${filteredIdentifiers.map((i) => `export const ${i}: any; export type ${i} = any;`).join('\n\t')}
 }
-`
+`,
 			});
 		}
 
 		const workspacePath = await createTempDir();
-		const filesWithPaths = await setupTemporaryWorkspace(workspacePath, files);
+		const filesWithPaths = await setupTemporaryWorkspace(
+			workspacePath,
+			files,
+		);
 
-		const packagejson = filesWithPaths.find(file => path.basename(file.fileName) === 'package.json');
+		const packagejson = filesWithPaths.find(
+			(file) => path.basename(file.fileName) === 'package.json',
+		);
 		if (packagejson) {
 			try {
 				await doRunNpmInstall(path.dirname(packagejson.filePath));
 			} catch (err) {
-				return files.map(file => ({
+				return files.map((file) => ({
 					file: file.fileName,
 					startLine: 0,
 					startCharacter: 0,
@@ -68,58 +81,60 @@ declare module '*'  {
 					code: 'npm-install-failed',
 					message: `npm install failed: ${err.message}`,
 					source: 'ts',
-					relatedInformation: undefined
+					relatedInformation: undefined,
 				}));
 			}
 		}
 
-		const hasTSConfigFile = filesWithPaths.some(file => path.basename(file.fileName) === 'tsconfig.json');
+		const hasTSConfigFile = filesWithPaths.some(
+			(file) => path.basename(file.fileName) === 'tsconfig.json',
+		);
 
 		if (!hasTSConfigFile) {
 			const tsconfigPath = path.join(workspacePath, 'tsconfig.json');
 			let tsConfig: any;
 			if (this.ignoreImportErrors) {
 				tsConfig = {
-					'compilerOptions': {
-						'target': 'es2021',
-						'strict': true,
-						'module': 'commonjs',
-						'outDir': 'out',
-						'sourceMap': false,
-						'useDefineForClassFields': false,
-						'experimentalDecorators': true,
+					compilerOptions: {
+						target: 'es2021',
+						strict: true,
+						module: 'commonjs',
+						outDir: 'out',
+						sourceMap: false,
+						useDefineForClassFields: false,
+						experimentalDecorators: true,
 					},
-					'exclude': [
-						'node_modules',
-						'outcome',
-						'scenarios'
-					]
+					exclude: ['node_modules', 'outcome', 'scenarios'],
 				};
 			} else {
 				tsConfig = {
-					'compilerOptions': {
-						'target': 'es2021',
-						'strict': true,
-						'module': 'commonjs',
-						'outDir': 'out',
-						'sourceMap': true
+					compilerOptions: {
+						target: 'es2021',
+						strict: true,
+						module: 'commonjs',
+						outDir: 'out',
+						sourceMap: true,
 					},
-					'exclude': [
-						'node_modules',
-						'outcome',
-						'scenarios'
-					]
+					exclude: ['node_modules', 'outcome', 'scenarios'],
 				};
 			}
 			await fs.promises.writeFile(tsconfigPath, JSON.stringify(tsConfig));
 		}
 
 		try {
-			let diagnostics = await this.compileFolder(workspacePath, filesWithPaths);
+			let diagnostics = await this.compileFolder(
+				workspacePath,
+				filesWithPaths,
+			);
 			if (this.ignoreImportErrors) {
 				const errorCodeThisMemberCannotHaveAnOverride = 4113; // "This member cannot have an 'override' modifier because it is not declared in the base class 'any'."
 				const errorCodeParameterOptionsImplicitlyHasAnAnyType = 7006; // "Parameter 'options' implicitly has an 'any' type."
-				diagnostics = diagnostics.filter(d => d.code !== errorCodeThisMemberCannotHaveAnOverride && d.code !== errorCodeParameterOptionsImplicitlyHasAnAnyType);
+				diagnostics = diagnostics.filter(
+					(d) =>
+						d.code !== errorCodeThisMemberCannotHaveAnOverride &&
+						d.code !==
+							errorCodeParameterOptionsImplicitlyHasAnAnyType,
+				);
 			}
 			return diagnostics;
 		} finally {
@@ -127,14 +142,19 @@ declare module '*'  {
 		}
 	}
 
-	private compileFolder(workspacePath: string, files: { filePath: string; fileName: string; fileContents: string }[]): Promise<ITestDiagnostic[]> {
+	private compileFolder(
+		workspacePath: string,
+		files: { filePath: string; fileName: string; fileContents: string }[],
+	): Promise<ITestDiagnostic[]> {
 		return new Promise<ITestDiagnostic[]>((resolve, reject) => {
 			const results: ITestDiagnostic[] = [];
 
-			const tsserverPath = path.resolve(path.join(REPO_ROOT, 'node_modules/typescript/lib/tsserver.js'));
+			const tsserverPath = path.resolve(
+				path.join(REPO_ROOT, 'node_modules/typescript/lib/tsserver.js'),
+			);
 			const tsserver = cp.fork(tsserverPath, {
 				cwd: workspacePath,
-				stdio: ['pipe', 'pipe', 'pipe', 'ipc']
+				stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
 			});
 			tsserver.stdin?.setDefaultEncoding('utf8');
 			tsserver.stdout?.setEncoding('utf8');
@@ -149,25 +169,25 @@ declare module '*'  {
 
 			for (const file of files) {
 				writeRequest({
-					'type': 'request',
-					'command': 'open',
-					'arguments': { 'file': file.filePath }
+					type: 'request',
+					command: 'open',
+					arguments: { file: file.filePath },
 				});
 			}
 			for (const file of files) {
 				seqToFile.set(seq, file.fileName);
 				writeRequest({
-					'type': 'request',
-					'command': 'syntacticDiagnosticsSync',
-					'arguments': { 'file': file.filePath }
+					type: 'request',
+					command: 'syntacticDiagnosticsSync',
+					arguments: { file: file.filePath },
 				});
 			}
 			for (const file of files) {
 				seqToFile.set(seq, file.fileName);
 				writeRequest({
-					'type': 'request',
-					'command': 'semanticDiagnosticsSync',
-					'arguments': { 'file': file.filePath }
+					type: 'request',
+					command: 'semanticDiagnosticsSync',
+					arguments: { file: file.filePath },
 				});
 			}
 			tsserver.on('error', reject);
@@ -176,33 +196,48 @@ declare module '*'  {
 					return;
 				}
 				const resp = msg as ts.server.protocol.Response;
-				if (resp.command !== 'semanticDiagnosticsSync' && resp.command !== 'syntacticDiagnosticsSync') {
+				if (
+					resp.command !== 'semanticDiagnosticsSync' &&
+					resp.command !== 'syntacticDiagnosticsSync'
+				) {
 					return;
 				}
-				const kind = resp.command === 'semanticDiagnosticsSync' ? 'semantic' : 'syntactic';
-				const diagResp = resp as ts.server.protocol.SemanticDiagnosticsSyncResponse | ts.server.protocol.SyntacticDiagnosticsSyncResponse;
+				const kind =
+					resp.command === 'semanticDiagnosticsSync'
+						? 'semantic'
+						: 'syntactic';
+				const diagResp = resp as
+					| ts.server.protocol.SemanticDiagnosticsSyncResponse
+					| ts.server.protocol.SyntacticDiagnosticsSyncResponse;
 				for (const diag of diagResp.body ?? []) {
 					if (typeof diag.start === 'number') {
-						throw new Error(`TODO: Can't handle DiagnosticWithLinePosition right now`);
+						throw new Error(
+							`TODO: Can't handle DiagnosticWithLinePosition right now`,
+						);
 					}
 					const regularDiag = diag as ts.server.protocol.Diagnostic;
-					const _relatedInfo: (ITSDiagnosticRelatedInformation | null)[] = (regularDiag.relatedInformation ?? []).map((ri) => {
-						if (!ri.span) {
-							return null;
-						}
-						return {
-							location: {
-								file: ri.span.file.substring(workspacePath.length + 1),
-								startLine: ri.span?.start.line - 1,
-								startCharacter: ri.span?.start.offset - 1,
-								endLine: ri.span?.end.line - 1,
-								endCharacter: ri.span?.end.offset - 1,
-							},
-							message: ri.message,
-							code: ri.code
-						};
-					});
-					const relatedInformation = _relatedInfo.filter((x): x is ITSDiagnosticRelatedInformation => !!x);
+					const _relatedInfo: (ITSDiagnosticRelatedInformation | null)[] =
+						(regularDiag.relatedInformation ?? []).map((ri) => {
+							if (!ri.span) {
+								return null;
+							}
+							return {
+								location: {
+									file: ri.span.file.substring(
+										workspacePath.length + 1,
+									),
+									startLine: ri.span?.start.line - 1,
+									startCharacter: ri.span?.start.offset - 1,
+									endLine: ri.span?.end.line - 1,
+									endCharacter: ri.span?.end.offset - 1,
+								},
+								message: ri.message,
+								code: ri.code,
+							};
+						});
+					const relatedInformation = _relatedInfo.filter(
+						(x): x is ITSDiagnosticRelatedInformation => !!x,
+					);
 					results.push({
 						file: seqToFile.get(diagResp.request_seq)!,
 						startLine: regularDiag.start.line - 1,
@@ -219,8 +254,8 @@ declare module '*'  {
 
 				if (diagResp.request_seq === seq - 1) {
 					writeRequest({
-						'type': 'request',
-						'command': 'exit',
+						type: 'request',
+						command: 'exit',
 					});
 					tsserver.on('exit', () => {
 						resolve(results);
@@ -232,15 +267,22 @@ declare module '*'  {
 			let stdout = '';
 			const processStdoutData = () => {
 				do {
-					const eolIndex = stdout.indexOf('\r\n') ?? stdout.indexOf('\n');
+					const eolIndex =
+						stdout.indexOf('\r\n') ?? stdout.indexOf('\n');
 					if (eolIndex === -1) {
 						break;
 					}
 					const firstLine = stdout.substring(0, eolIndex);
 					let body;
 					if (firstLine.includes('Content-Length')) {
-						const contentLength = parseInt(firstLine.substring('Content-Length: '.length), 10);
-						body = stdout.substring(eolIndex + 4, eolIndex + 4 + contentLength);
+						const contentLength = parseInt(
+							firstLine.substring('Content-Length: '.length),
+							10,
+						);
+						body = stdout.substring(
+							eolIndex + 4,
+							eolIndex + 4 + contentLength,
+						);
 						if (body.length < contentLength) {
 							// entire body did not arrive yet
 							break;
@@ -278,12 +320,103 @@ function addIdentifiersToSet(content: string, result: Set<string>): void {
 }
 
 function withoutKeywords(identifiers: Set<string>): Set<string> {
-	const keywords = ['class', 'interface', 'function', 'const', 'let', 'var', 'import', 'export', 'from', 'default', 'extends', 'implements', 'new', 'return', 'if', 'else', 'for',
-		'while', 'do', 'switch', 'case', 'break', 'continue', 'throw', 'try', 'catch', 'finally', 'finally', 'await', 'async', 'await', 'void', 'any', 'number',
-		'string', 'boolean', 'object', 'null', 'undefined', 'true', 'false', 'this', 'super', 'typeof', 'instanceof', 'in', 'as', 'is', 'delete', 'typeof',
-		'instanceof', 'in', 'as', 'is', 'delete', 'void', 'never', 'unknown', 'declare', 'namespace', 'module', 'type', 'enum', 'readonly', 'abstract', 'private',
-		'protected', 'public', 'static', 'readonly', 'abstract', 'private', 'protected', 'public', 'static', 'get', 'set', 'constructor', 'require', 'module', 'exports',
-		'global', 'window', 'document', 'console', 'process', 'require', 'module', 'exports', 'global', 'window', 'document', 'console', 'process', 'with'];
+	const keywords = [
+		'class',
+		'interface',
+		'function',
+		'const',
+		'let',
+		'var',
+		'import',
+		'export',
+		'from',
+		'default',
+		'extends',
+		'implements',
+		'new',
+		'return',
+		'if',
+		'else',
+		'for',
+		'while',
+		'do',
+		'switch',
+		'case',
+		'break',
+		'continue',
+		'throw',
+		'try',
+		'catch',
+		'finally',
+		'finally',
+		'await',
+		'async',
+		'await',
+		'void',
+		'any',
+		'number',
+		'string',
+		'boolean',
+		'object',
+		'null',
+		'undefined',
+		'true',
+		'false',
+		'this',
+		'super',
+		'typeof',
+		'instanceof',
+		'in',
+		'as',
+		'is',
+		'delete',
+		'typeof',
+		'instanceof',
+		'in',
+		'as',
+		'is',
+		'delete',
+		'void',
+		'never',
+		'unknown',
+		'declare',
+		'namespace',
+		'module',
+		'type',
+		'enum',
+		'readonly',
+		'abstract',
+		'private',
+		'protected',
+		'public',
+		'static',
+		'readonly',
+		'abstract',
+		'private',
+		'protected',
+		'public',
+		'static',
+		'get',
+		'set',
+		'constructor',
+		'require',
+		'module',
+		'exports',
+		'global',
+		'window',
+		'document',
+		'console',
+		'process',
+		'require',
+		'module',
+		'exports',
+		'global',
+		'window',
+		'document',
+		'console',
+		'process',
+		'with',
+	];
 	const keywordsSet = new Set(keywords);
 	const filteredIdentifiers = new Set<string>();
 	for (const identifier of identifiers) {
@@ -297,19 +430,29 @@ function withoutKeywords(identifiers: Set<string>): Set<string> {
 /**
  * Runs `npm install` and proceeds to compile the files in the passed in folder. This is cached and is safe to use in tests.
  */
-export async function compileTSWorkspace(accessor: ITestingServicesAccessor, folderPath: string): Promise<ITestDiagnostic[]> {
+export async function compileTSWorkspace(
+	accessor: ITestingServicesAccessor,
+	folderPath: string,
+): Promise<ITestDiagnostic[]> {
 	const files = await readTSFiles(folderPath);
-	return await new TSServerDiagnosticsProvider().getDiagnostics(accessor, files);
+	return await new TSServerDiagnosticsProvider().getDiagnostics(
+		accessor,
+		files,
+	);
 }
 
 export function doRunNpmInstall(projectRoot: string): Promise<void> {
 	return new Promise((resolve, reject) => {
-		cp.exec('npm install', { cwd: projectRoot }, (error, stdout, stderr) => {
-			if (error) {
-				return reject(error);
-			}
-			return resolve();
-		});
+		cp.exec(
+			'npm install',
+			{ cwd: projectRoot },
+			(error, stdout, stderr) => {
+				if (error) {
+					return reject(error);
+				}
+				return resolve();
+			},
+		);
 	});
 }
 
@@ -317,21 +460,28 @@ async function readTSFiles(folderPath: string): Promise<IFile[]> {
 	const allFiles: string[] = [];
 	await rreaddir(folderPath, allFiles);
 	return await Promise.all(
-		allFiles.filter(
-			file => ['.ts', '.tsx', '.json'].includes(path.extname(file))
-		).map(async (filePath) => {
-			const relativeFilePath = path.relative(folderPath, filePath);
-			const fileContents = await fs.promises.readFile(filePath, 'utf8');
-			return {
-				fileName: relativeFilePath,
-				fileContents
-			};
-		})
+		allFiles
+			.filter((file) =>
+				['.ts', '.tsx', '.json'].includes(path.extname(file)),
+			)
+			.map(async (filePath) => {
+				const relativeFilePath = path.relative(folderPath, filePath);
+				const fileContents = await fs.promises.readFile(
+					filePath,
+					'utf8',
+				);
+				return {
+					fileName: relativeFilePath,
+					fileContents,
+				};
+			}),
 	);
 }
 
 async function rreaddir(folderPath: string, result: string[]): Promise<void> {
-	const entries = await fs.promises.readdir(folderPath, { withFileTypes: true });
+	const entries = await fs.promises.readdir(folderPath, {
+		withFileTypes: true,
+	});
 	for (const entry of entries) {
 		const fullPath = path.join(folderPath, entry.name);
 		if (entry.isDirectory()) {

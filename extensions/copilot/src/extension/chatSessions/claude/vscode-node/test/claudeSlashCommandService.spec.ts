@@ -10,37 +10,69 @@ import { CancellationToken } from '../../../../../util/vs/base/common/cancellati
 import { IInstantiationService } from '../../../../../util/vs/platform/instantiation/common/instantiation';
 import { createExtensionUnitTestingServices } from '../../../../test/node/services';
 import { MockChatResponseStream } from '../../../../test/node/testHelpers';
-import { ClaudeSlashCommandService, IClaudeSlashCommandRequest } from '../claudeSlashCommandService';
-import { IClaudeSlashCommandHandler, IClaudeSlashCommandHandlerCtor } from '../slashCommands/claudeSlashCommandRegistry';
+import {
+	ClaudeSlashCommandService,
+	IClaudeSlashCommandRequest,
+} from '../claudeSlashCommandService';
+import {
+	IClaudeSlashCommandHandler,
+	IClaudeSlashCommandHandlerCtor,
+} from '../slashCommands/claudeSlashCommandRegistry';
 
 // Wire test handler ctors through the registry so the service populates its cache naturally
-const mockGetRegistry = vi.fn<() => readonly IClaudeSlashCommandHandlerCtor[]>().mockReturnValue([]);
-vi.mock('../slashCommands/claudeSlashCommandRegistry', async importOriginal => {
-	const actual = await importOriginal<typeof import('../slashCommands/claudeSlashCommandRegistry')>();
-	return { ...actual, getClaudeSlashCommandRegistry: () => mockGetRegistry() };
-});
+const mockGetRegistry = vi
+	.fn<() => readonly IClaudeSlashCommandHandlerCtor[]>()
+	.mockReturnValue([]);
+vi.mock(
+	'../slashCommands/claudeSlashCommandRegistry',
+	async (importOriginal) => {
+		const actual =
+			await importOriginal<
+				typeof import('../slashCommands/claudeSlashCommandRegistry')
+			>();
+		return {
+			...actual,
+			getClaudeSlashCommandRegistry: () => mockGetRegistry(),
+		};
+	},
+);
 
 class TestHooksHandler implements IClaudeSlashCommandHandler {
-	static handleSpy = vi.fn<IClaudeSlashCommandHandler['handle']>().mockResolvedValue({});
+	static handleSpy = vi
+		.fn<IClaudeSlashCommandHandler['handle']>()
+		.mockResolvedValue({});
 	readonly commandName = 'hooks';
 	readonly description = 'Test hooks handler';
 
-	handle(args: string, stream: vscode.ChatResponseStream | undefined, token: CancellationToken): Promise<vscode.ChatResult | void> {
+	handle(
+		args: string,
+		stream: vscode.ChatResponseStream | undefined,
+		token: CancellationToken,
+	): Promise<vscode.ChatResult | void> {
 		return TestHooksHandler.handleSpy(args, stream, token);
 	}
 }
 
 class TestMemoryHandler implements IClaudeSlashCommandHandler {
-	static handleSpy = vi.fn<IClaudeSlashCommandHandler['handle']>().mockResolvedValue({});
+	static handleSpy = vi
+		.fn<IClaudeSlashCommandHandler['handle']>()
+		.mockResolvedValue({});
 	readonly commandName = 'memory';
 	readonly description = 'Test memory handler';
 
-	handle(args: string, stream: vscode.ChatResponseStream | undefined, token: CancellationToken): Promise<vscode.ChatResult | void> {
+	handle(
+		args: string,
+		stream: vscode.ChatResponseStream | undefined,
+		token: CancellationToken,
+	): Promise<vscode.ChatResult | void> {
 		return TestMemoryHandler.handleSpy(args, stream, token);
 	}
 }
 
-function makeRequest(prompt: string, command?: string): IClaudeSlashCommandRequest {
+function makeRequest(
+	prompt: string,
+	command?: string,
+): IClaudeSlashCommandRequest {
 	return { prompt, command };
 }
 
@@ -54,11 +86,15 @@ describe('ClaudeSlashCommandService', () => {
 		TestMemoryHandler.handleSpy.mockReset().mockResolvedValue({});
 		mockGetRegistry.mockReturnValue([TestHooksHandler, TestMemoryHandler]);
 
-		const serviceCollection = store.add(createExtensionUnitTestingServices(store));
+		const serviceCollection = store.add(
+			createExtensionUnitTestingServices(store),
+		);
 		const accessor = serviceCollection.createTestingAccessor();
 		const instantiationService = accessor.get(IInstantiationService);
 
-		service = store.add(instantiationService.createInstance(ClaudeSlashCommandService));
+		service = store.add(
+			instantiationService.createInstance(ClaudeSlashCommandService),
+		);
 		stream = new MockChatResponseStream();
 	});
 
@@ -73,7 +109,11 @@ describe('ClaudeSlashCommandService', () => {
 			);
 
 			expect(result.handled).toBe(true);
-			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith('some prompt', stream, CancellationToken.None);
+			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith(
+				'some prompt',
+				stream,
+				CancellationToken.None,
+			);
 		});
 
 		it('passes the full prompt as args when dispatched via request.command', async () => {
@@ -83,7 +123,11 @@ describe('ClaudeSlashCommandService', () => {
 				CancellationToken.None,
 			);
 
-			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith('event PreToolUse', stream, CancellationToken.None);
+			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith(
+				'event PreToolUse',
+				stream,
+				CancellationToken.None,
+			);
 		});
 
 		it('is case-insensitive for request.command', async () => {
@@ -115,7 +159,11 @@ describe('ClaudeSlashCommandService', () => {
 			);
 
 			expect(result.handled).toBe(true);
-			expect(TestMemoryHandler.handleSpy).toHaveBeenCalledWith('list', stream, CancellationToken.None);
+			expect(TestMemoryHandler.handleSpy).toHaveBeenCalledWith(
+				'list',
+				stream,
+				CancellationToken.None,
+			);
 		});
 
 		it('takes precedence over prompt-based parsing', async () => {
@@ -126,7 +174,11 @@ describe('ClaudeSlashCommandService', () => {
 			);
 
 			// request.command = 'hooks' wins, prompt is passed as-is
-			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith('/memory list', stream, CancellationToken.None);
+			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith(
+				'/memory list',
+				stream,
+				CancellationToken.None,
+			);
 			expect(TestMemoryHandler.handleSpy).not.toHaveBeenCalled();
 		});
 	});
@@ -144,7 +196,11 @@ describe('ClaudeSlashCommandService', () => {
 			);
 
 			expect(result.handled).toBe(true);
-			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith('event', stream, CancellationToken.None);
+			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith(
+				'event',
+				stream,
+				CancellationToken.None,
+			);
 		});
 
 		it('passes empty string args when no arguments in prompt', async () => {
@@ -154,7 +210,11 @@ describe('ClaudeSlashCommandService', () => {
 				CancellationToken.None,
 			);
 
-			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith('', stream, CancellationToken.None);
+			expect(TestHooksHandler.handleSpy).toHaveBeenCalledWith(
+				'',
+				stream,
+				CancellationToken.None,
+			);
 		});
 
 		it('is case-insensitive for command name in prompt', async () => {
@@ -215,7 +275,9 @@ describe('ClaudeSlashCommandService', () => {
 
 	describe('result propagation', () => {
 		it('returns handler result in the response', async () => {
-			const expectedResult: vscode.ChatResult = { metadata: { key: 'value' } };
+			const expectedResult: vscode.ChatResult = {
+				metadata: { key: 'value' },
+			};
 			TestHooksHandler.handleSpy.mockResolvedValue(expectedResult);
 
 			const result = await service.tryHandleCommand(
@@ -254,7 +316,11 @@ describe('ClaudeSlashCommandService', () => {
 			);
 
 			expect(result.handled).toBe(true);
-			expect(TestMemoryHandler.handleSpy).toHaveBeenCalledWith('foo', stream, CancellationToken.None);
+			expect(TestMemoryHandler.handleSpy).toHaveBeenCalledWith(
+				'foo',
+				stream,
+				CancellationToken.None,
+			);
 		});
 	});
 

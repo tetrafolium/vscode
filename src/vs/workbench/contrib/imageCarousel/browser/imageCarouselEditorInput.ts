@@ -3,25 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EditorInput } from '../../../common/editor/editorInput.js';
-import { EditorInputCapabilities, IUntypedEditorInput } from '../../../common/editor.js';
-import { URI } from '../../../../base/common/uri.js';
-import { Schemas } from '../../../../base/common/network.js';
-import { IImageCarouselCollection } from './imageCarouselTypes.js';
+import { EditorInput } from "../../../common/editor/editorInput.js";
+import {
+	EditorInputCapabilities,
+	IUntypedEditorInput,
+} from "../../../common/editor.js";
+import { URI } from "../../../../base/common/uri.js";
+import { Schemas } from "../../../../base/common/network.js";
+import { IImageCarouselCollection } from "./imageCarouselTypes.js";
 
 export class ImageCarouselEditorInput extends EditorInput {
-	static readonly ID = 'workbench.input.imageCarousel';
+	static readonly ID = "workbench.input.imageCarousel";
 
 	private _resource: URI;
 	private _name: string;
 
 	override get capabilities(): EditorInputCapabilities {
-		return super.capabilities | EditorInputCapabilities.Singleton | EditorInputCapabilities.RequiresModal;
+		return (
+			super.capabilities |
+			EditorInputCapabilities.Singleton |
+			EditorInputCapabilities.RequiresModal
+		);
 	}
 
 	constructor(
 		public readonly collection: IImageCarouselCollection,
-		public readonly startIndex: number = 0
+		public readonly startIndex: number = 0,
 	) {
 		super();
 		this._resource = URI.from({

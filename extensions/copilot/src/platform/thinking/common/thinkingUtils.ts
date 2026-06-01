@@ -3,9 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EncryptedThinkingDelta, RawThinkingDelta, ThinkingDelta } from './thinking';
+import {
+	EncryptedThinkingDelta,
+	RawThinkingDelta,
+	ThinkingDelta,
+} from './thinking';
 
-function getThinkingDeltaText(thinking: RawThinkingDelta | undefined): string | undefined {
+function getThinkingDeltaText(
+	thinking: RawThinkingDelta | undefined,
+): string | undefined {
 	if (!thinking) {
 		return '';
 	}
@@ -27,7 +33,9 @@ function getThinkingDeltaText(thinking: RawThinkingDelta | undefined): string | 
 	return undefined;
 }
 
-function getThinkingDeltaId(thinking: RawThinkingDelta | undefined): string | undefined {
+function getThinkingDeltaId(
+	thinking: RawThinkingDelta | undefined,
+): string | undefined {
 	if (!thinking) {
 		return undefined;
 	}
@@ -43,7 +51,10 @@ function getThinkingDeltaId(thinking: RawThinkingDelta | undefined): string | un
 	return undefined;
 }
 
-export function extractThinkingDeltaFromChoice(choice: { message?: RawThinkingDelta; delta?: RawThinkingDelta }): ThinkingDelta | EncryptedThinkingDelta | undefined {
+export function extractThinkingDeltaFromChoice(choice: {
+	message?: RawThinkingDelta;
+	delta?: RawThinkingDelta;
+}): ThinkingDelta | EncryptedThinkingDelta | undefined {
 	const thinking = choice.message || choice.delta;
 	if (!thinking) {
 		return undefined;
@@ -54,7 +65,11 @@ export function extractThinkingDeltaFromChoice(choice: { message?: RawThinkingDe
 
 	// reasoning_opaque is encrypted content that should be marked as such
 	if (thinking.reasoning_opaque) {
-		return { id: thinking.reasoning_opaque, text, encrypted: thinking.reasoning_opaque };
+		return {
+			id: thinking.reasoning_opaque,
+			text,
+			encrypted: thinking.reasoning_opaque,
+		};
 	}
 
 	if (id && text) {

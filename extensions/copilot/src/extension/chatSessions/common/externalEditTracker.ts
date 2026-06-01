@@ -16,15 +16,16 @@ import { URI } from '../../../util/vs/base/common/uri';
  * externalEdit API to ensure proper tracking and attribution of file changes.
  */
 export class ExternalEditTracker {
-	private _ongoingEdits = new Map<string, { complete: () => void; onDidComplete: Thenable<string> }>();
+	private _ongoingEdits = new Map<
+		string,
+		{ complete: () => void; onDidComplete: Thenable<string> }
+	>();
 
 	/**
 	 * Creates a new ExternalEditTracker.
 	 * @param ignoreDirectories Optional list of directory URIs to ignore when tracking edits
 	 */
-	constructor(
-		private readonly ignoreDirectories: URI[] = []
-	) { }
+	constructor(private readonly ignoreDirectories: URI[] = []) {}
 
 	/**
 	 * Starts tracking an external edit operation.
@@ -39,19 +40,21 @@ export class ExternalEditTracker {
 		editKey: string,
 		uris: vscode.Uri[],
 		stream: vscode.ChatResponseStream,
-		token?: CancellationToken
+		token?: CancellationToken,
 	): Promise<void> {
 		// Filter out URIs that are within ignored directories
-		const filteredUris = uris.filter(uri => {
+		const filteredUris = uris.filter((uri) => {
 			const uriAsURI = URI.isUri(uri) ? uri : URI.from(uri);
-			return !this.ignoreDirectories.some(ignoreDir => isEqualOrParent(uriAsURI, ignoreDir));
+			return !this.ignoreDirectories.some((ignoreDir) =>
+				isEqualOrParent(uriAsURI, ignoreDir),
+			);
 		});
 
 		if (!filteredUris.length || token?.isCancellationRequested) {
 			return;
 		}
 
-		return new Promise(proceedWithEdit => {
+		return new Promise((proceedWithEdit) => {
 			const deferred = new DeferredPromise<void>();
 			let cancelListen: IDisposable | undefined;
 
@@ -63,15 +66,18 @@ export class ExternalEditTracker {
 				});
 			}
 
-			const onDidComplete = stream.externalEdit(filteredUris, async () => {
-				proceedWithEdit();
-				await deferred.p;
-				cancelListen?.dispose();
-			});
+			const onDidComplete = stream.externalEdit(
+				filteredUris,
+				async () => {
+					proceedWithEdit();
+					await deferred.p;
+					cancelListen?.dispose();
+				},
+			);
 
 			this._ongoingEdits.set(editKey, {
 				onDidComplete,
-				complete: () => deferred.complete()
+				complete: () => deferred.complete(),
 			});
 		});
 	}

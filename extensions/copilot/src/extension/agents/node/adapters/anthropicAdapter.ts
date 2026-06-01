@@ -10,7 +10,14 @@ import { IMakeChatRequestOptions } from '../../../../platform/networking/common/
 import { APIUsage } from '../../../../platform/networking/common/openai';
 import { coalesce } from '../../../../util/vs/base/common/arrays';
 import { anthropicMessagesToRawMessages } from '../../../byok/common/anthropicMessageConverter';
-import { IAgentStreamBlock, IParsedRequest, IProtocolAdapter, IProtocolAdapterFactory, IStreamEventData, IStreamingContext } from './types';
+import {
+	IAgentStreamBlock,
+	IParsedRequest,
+	IProtocolAdapter,
+	IProtocolAdapterFactory,
+	IStreamEventData,
+	IStreamingContext,
+} from './types';
 
 export class AnthropicAdapterFactory implements IProtocolAdapterFactory {
 	createAdapter(): IProtocolAdapter {
@@ -32,14 +39,24 @@ class AnthropicAdapter implements IProtocolAdapter {
 		let systemText = '';
 		if (typeof requestBody.system === 'string') {
 			systemText = requestBody.system;
-		} else if (Array.isArray(requestBody.system) && requestBody.system.length > 0) {
-			systemText = requestBody.system.map(s => s.text).join('\n');
+		} else if (
+			Array.isArray(requestBody.system) &&
+			requestBody.system.length > 0
+		) {
+			systemText = requestBody.system.map((s) => s.text).join('\n');
 		}
 
-		const type = systemText.includes('You are a helpful AI assistant tasked with summarizing conversations') ? 'summary' : undefined;
+		const type = systemText.includes(
+			'You are a helpful AI assistant tasked with summarizing conversations',
+		)
+			? 'summary'
+			: undefined;
 
 		// Convert Anthropic messages to Raw (TSX) messages
-		const rawMessages = anthropicMessagesToRawMessages(requestBody.messages, { type: 'text', text: systemText });
+		const rawMessages = anthropicMessagesToRawMessages(
+			requestBody.messages,
+			{ type: 'text', text: systemText },
+		);
 
 		const options: IMakeChatRequestOptions['requestOptions'] = {
 			temperature: requestBody.temperature,
@@ -47,20 +64,22 @@ class AnthropicAdapter implements IProtocolAdapter {
 
 		if (requestBody.tools && requestBody.tools.length > 0) {
 			// Map Anthropic tools to VS Code chat tools. Provide a no-op invoke since this server doesn't run tools.
-			const tools = coalesce(requestBody.tools.map(tool => {
-				if ('input_schema' in tool) {
-					const chatTool: OpenAiFunctionTool = {
-						type: 'function',
-						function: {
-							name: tool.name,
-							description: tool.description || '',
-							parameters: tool.input_schema || {},
-						}
-					};
-					return chatTool;
-				}
-				return undefined;
-			}));
+			const tools = coalesce(
+				requestBody.tools.map((tool) => {
+					if ('input_schema' in tool) {
+						const chatTool: OpenAiFunctionTool = {
+							type: 'function',
+							function: {
+								name: tool.name,
+								description: tool.description || '',
+								parameters: tool.input_schema || {},
+							},
+						};
+						return chatTool;
+					}
+					return undefined;
+				}),
+			);
 			if (tools.length) {
 				options.tools = tools;
 			}
@@ -70,13 +89,13 @@ class AnthropicAdapter implements IProtocolAdapter {
 			model: requestBody.model,
 			messages: rawMessages,
 			options,
-			type
+			type,
 		};
 	}
 
 	formatStreamResponse(
 		streamData: IAgentStreamBlock,
-		context: IStreamingContext
+		context: IStreamingContext,
 	): IStreamEventData[] {
 		const events: IStreamEventData[] = [];
 
@@ -89,12 +108,12 @@ class AnthropicAdapter implements IProtocolAdapter {
 					content_block: {
 						type: 'text',
 						text: '',
-						citations: null
-					}
+						citations: null,
+					},
 				};
 				events.push({
 					event: contentBlockStart.type,
-					data: this.formatEventData(contentBlockStart)
+					data: this.formatEventData(contentBlockStart),
 				});
 				this.hasTextBlock = true;
 			}
@@ -105,24 +124,23 @@ class AnthropicAdapter implements IProtocolAdapter {
 				index: this.currentBlockIndex,
 				delta: {
 					type: 'text_delta',
-					text: streamData.content
-				}
+					text: streamData.content,
+				},
 			};
 			events.push({
 				event: contentDelta.type,
-				data: this.formatEventData(contentDelta)
+				data: this.formatEventData(contentDelta),
 			});
-
 		} else if (streamData.type === 'tool_call') {
 			// End current text block if it exists
 			if (this.hasTextBlock) {
 				const contentBlockStop: Anthropic.RawContentBlockStopEvent = {
 					type: 'content_block_stop',
-					index: this.currentBlockIndex
+					index: this.currentBlockIndex,
 				};
 				events.push({
 					event: contentBlockStop.type,
-					data: this.formatEventData(contentBlockStop)
+					data: this.formatEventData(contentBlockStop),
 				});
 				this.currentBlockIndex++;
 				this.hasTextBlock = false;
@@ -140,11 +158,11 @@ class AnthropicAdapter implements IProtocolAdapter {
 					name: streamData.name,
 					input: {},
 					caller: { type: 'direct' },
-				}
+				},
 			};
 			events.push({
 				event: toolBlockStart.type,
-				data: this.formatEventData(toolBlockStart)
+				data: this.formatEventData(toolBlockStart),
 			});
 
 			// Send tool use content
@@ -153,21 +171,21 @@ class AnthropicAdapter implements IProtocolAdapter {
 				index: this.currentBlockIndex,
 				delta: {
 					type: 'input_json_delta',
-					partial_json: JSON.stringify(streamData.input || {})
-				}
+					partial_json: JSON.stringify(streamData.input || {}),
+				},
 			};
 			events.push({
 				event: toolBlockContent.type,
-				data: this.formatEventData(toolBlockContent)
+				data: this.formatEventData(toolBlockContent),
 			});
 
 			const toolBlockStop: Anthropic.RawContentBlockStopEvent = {
 				type: 'content_block_stop',
-				index: this.currentBlockIndex
+				index: this.currentBlockIndex,
 			};
 			events.push({
 				event: toolBlockStop.type,
-				data: this.formatEventData(toolBlockStop)
+				data: this.formatEventData(toolBlockStop),
 			});
 
 			this.currentBlockIndex++;
@@ -176,24 +194,30 @@ class AnthropicAdapter implements IProtocolAdapter {
 		return events;
 	}
 
-	generateFinalEvents(context: IStreamingContext, usage?: APIUsage): IStreamEventData[] {
+	generateFinalEvents(
+		context: IStreamingContext,
+		usage?: APIUsage,
+	): IStreamEventData[] {
 		const events: IStreamEventData[] = [];
 
 		// Send final events
 		if (this.hasTextBlock) {
 			const contentBlockStop: Anthropic.RawContentBlockStopEvent = {
 				type: 'content_block_stop',
-				index: this.currentBlockIndex
+				index: this.currentBlockIndex,
 			};
 			events.push({
 				event: contentBlockStop.type,
-				data: this.formatEventData(contentBlockStop)
+				data: this.formatEventData(contentBlockStop),
 			});
 		}
 
 		// Adjust token usage to make the agent think it has a 200k context window
 		// when the real one is smaller
-		const adjustedUsage = this.adjustTokenUsageForContextWindow(context, usage);
+		const adjustedUsage = this.adjustTokenUsageForContextWindow(
+			context,
+			usage,
+		);
 
 		const messageDelta: Anthropic.RawMessageDeltaEvent = {
 			type: 'message_delta',
@@ -201,39 +225,42 @@ class AnthropicAdapter implements IProtocolAdapter {
 				stop_reason: this.hadToolCalls ? 'tool_use' : 'end_turn',
 				stop_sequence: null,
 				stop_details: null,
-				container: null
+				container: null,
 			},
 			usage: {
 				output_tokens: adjustedUsage.completion_tokens,
 				cache_creation_input_tokens: 0,
 				cache_read_input_tokens: 0,
 				input_tokens: adjustedUsage.prompt_tokens,
-				server_tool_use: null
-			}
+				server_tool_use: null,
+			},
 		};
 		events.push({
 			event: messageDelta.type,
-			data: this.formatEventData(messageDelta)
+			data: this.formatEventData(messageDelta),
 		});
 
 		const messageStop: Anthropic.RawMessageStopEvent = {
-			type: 'message_stop'
+			type: 'message_stop',
 		};
 		events.push({
 			event: messageStop.type,
-			data: this.formatEventData(messageStop)
+			data: this.formatEventData(messageStop),
 		});
 
 		return events;
 	}
 
-	private adjustTokenUsageForContextWindow(context: IStreamingContext, usage?: APIUsage): APIUsage {
+	private adjustTokenUsageForContextWindow(
+		context: IStreamingContext,
+		usage?: APIUsage,
+	): APIUsage {
 		// If we don't have usage, return defaults
 		if (!usage) {
 			return {
 				prompt_tokens: 0,
 				completion_tokens: 0,
-				total_tokens: 0
+				total_tokens: 0,
 			};
 		}
 
@@ -249,9 +276,14 @@ class AnthropicAdapter implements IProtocolAdapter {
 		// When the real usage approaches the real limit, the adjusted usage should approach the assumed limit
 		const scalingFactor = agentAssumedContextLimit / realContextLimit;
 
-		const adjustedPromptTokens = Math.floor(usage.prompt_tokens * scalingFactor);
-		const adjustedCompletionTokens = Math.floor(usage.completion_tokens * scalingFactor);
-		const adjustedTotalTokens = adjustedPromptTokens + adjustedCompletionTokens;
+		const adjustedPromptTokens = Math.floor(
+			usage.prompt_tokens * scalingFactor,
+		);
+		const adjustedCompletionTokens = Math.floor(
+			usage.completion_tokens * scalingFactor,
+		);
+		const adjustedTotalTokens =
+			adjustedPromptTokens + adjustedCompletionTokens;
 
 		return {
 			...usage,
@@ -264,7 +296,10 @@ class AnthropicAdapter implements IProtocolAdapter {
 	generateInitialEvents(context: IStreamingContext): IStreamEventData[] {
 		// Use adjusted token usage for initial events to be consistent
 		// For initial events, we don't have real usage yet, so we'll use defaults
-		const adjustedUsage = this.adjustTokenUsageForContextWindow(context, undefined);
+		const adjustedUsage = this.adjustTokenUsageForContextWindow(
+			context,
+			undefined,
+		);
 
 		// Send message_start event
 		const messageStart: Anthropic.RawMessageStartEvent = {
@@ -287,14 +322,16 @@ class AnthropicAdapter implements IProtocolAdapter {
 					service_tier: null,
 					server_tool_use: null,
 					cache_creation: null,
-				} as Anthropic.Usage
-			}
+				} as Anthropic.Usage,
+			},
 		};
 
-		return [{
-			event: messageStart.type,
-			data: this.formatEventData(messageStart)
-		}];
+		return [
+			{
+				event: messageStart.type,
+				data: this.formatEventData(messageStart),
+			},
+		];
 	}
 
 	getContentType(): string {

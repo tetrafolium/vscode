@@ -30,7 +30,9 @@ export interface ICompletedSpanData {
 	readonly startTime: number; // milliseconds since epoch
 	readonly endTime: number; // milliseconds since epoch
 	readonly status: { readonly code: SpanStatusCode; readonly message?: string };
-	readonly attributes: Readonly<Record<string, string | number | boolean | string[]>>;
+	readonly attributes: Readonly<
+		Record<string, string | number | boolean | string[]>
+	>;
 	readonly events: readonly ISpanEventRecord[];
 }
 
@@ -40,5 +42,7 @@ export interface ICompletedSpanData {
 export interface ISpanEventRecord {
 	readonly name: string;
 	readonly timestamp: number; // milliseconds since epoch
-	readonly attributes?: Readonly<Record<string, string | number | boolean | string[]>>;
+	readonly attributes?: Readonly<
+		Record<string, string | number | boolean | string[]>
+	>;
 }

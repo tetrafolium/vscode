@@ -3,20 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Codicon } from '../../../../../base/common/codicons.js';
-import { ThemeIcon } from '../../../../../base/common/themables.js';
-import { localize } from '../../../../../nls.js';
-import { IUntypedEditorInput, EditorInputCapabilities, GroupIdentifier, ISaveOptions, SaveReason } from '../../../../common/editor.js';
-import { EditorInput } from '../../../../common/editor/editorInput.js';
-import { IModalEditorOptions, IModalEditorOptionsProvider } from '../../../../../platform/editor/common/editor.js';
-import { AI_CUSTOMIZATION_MANAGEMENT_EDITOR_INPUT_ID } from './aiCustomizationManagement.js';
+import { Codicon } from "../../../../../base/common/codicons.js";
+import { ThemeIcon } from "../../../../../base/common/themables.js";
+import { localize } from "../../../../../nls.js";
+import {
+	IUntypedEditorInput,
+	EditorInputCapabilities,
+	GroupIdentifier,
+	ISaveOptions,
+	SaveReason,
+} from "../../../../common/editor.js";
+import { EditorInput } from "../../../../common/editor/editorInput.js";
+import {
+	IModalEditorOptions,
+	IModalEditorOptionsProvider,
+} from "../../../../../platform/editor/common/editor.js";
+import { AI_CUSTOMIZATION_MANAGEMENT_EDITOR_INPUT_ID } from "./aiCustomizationManagement.js";
 
 /**
  * Editor input for the AI Customizations Management Editor.
  * This is a singleton-style input with no file resource.
  */
-export class AICustomizationManagementEditorInput extends EditorInput implements IModalEditorOptionsProvider {
-
+export class AICustomizationManagementEditorInput
+	extends EditorInput
+	implements IModalEditorOptionsProvider
+{
 	static readonly ID: string = AI_CUSTOMIZATION_MANAGEMENT_EDITOR_INPUT_ID;
 
 	readonly resource = undefined;
@@ -25,7 +36,11 @@ export class AICustomizationManagementEditorInput extends EditorInput implements
 	private _saveHandler?: () => Promise<boolean>;
 
 	override get capabilities(): EditorInputCapabilities {
-		return super.capabilities | EditorInputCapabilities.Singleton | EditorInputCapabilities.RequiresModal;
+		return (
+			super.capabilities |
+			EditorInputCapabilities.Singleton |
+			EditorInputCapabilities.RequiresModal
+		);
 	}
 
 	private static _instance: AICustomizationManagementEditorInput | undefined;
@@ -34,8 +49,12 @@ export class AICustomizationManagementEditorInput extends EditorInput implements
 	 * Gets or creates the singleton instance of this input.
 	 */
 	static getOrCreate(): AICustomizationManagementEditorInput {
-		if (!AICustomizationManagementEditorInput._instance || AICustomizationManagementEditorInput._instance.isDisposed()) {
-			AICustomizationManagementEditorInput._instance = new AICustomizationManagementEditorInput();
+		if (
+			!AICustomizationManagementEditorInput._instance ||
+			AICustomizationManagementEditorInput._instance.isDisposed()
+		) {
+			AICustomizationManagementEditorInput._instance =
+				new AICustomizationManagementEditorInput();
 		}
 		return AICustomizationManagementEditorInput._instance;
 	}
@@ -45,7 +64,10 @@ export class AICustomizationManagementEditorInput extends EditorInput implements
 	}
 
 	override matches(otherInput: EditorInput | IUntypedEditorInput): boolean {
-		return super.matches(otherInput) || otherInput instanceof AICustomizationManagementEditorInput;
+		return (
+			super.matches(otherInput) ||
+			otherInput instanceof AICustomizationManagementEditorInput
+		);
 	}
 
 	override get typeId(): string {
@@ -53,7 +75,10 @@ export class AICustomizationManagementEditorInput extends EditorInput implements
 	}
 
 	override getName(): string {
-		return localize('aiCustomizationManagementEditorName', "Agent Customizations");
+		return localize(
+			"aiCustomizationManagementEditorName",
+			"Agent Customizations",
+		);
 	}
 
 	override getIcon(): ThemeIcon {
@@ -72,8 +97,14 @@ export class AICustomizationManagementEditorInput extends EditorInput implements
 		return this._isDirty;
 	}
 
-	override async save(group: GroupIdentifier, options?: ISaveOptions): Promise<EditorInput | undefined> {
-		if (options?.reason !== undefined && options.reason !== SaveReason.EXPLICIT) {
+	override async save(
+		group: GroupIdentifier,
+		options?: ISaveOptions,
+	): Promise<EditorInput | undefined> {
+		if (
+			options?.reason !== undefined &&
+			options.reason !== SaveReason.EXPLICIT
+		) {
 			return undefined;
 		}
 		if (this._saveHandler) {

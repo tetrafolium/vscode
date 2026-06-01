@@ -8,7 +8,10 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, suite, test } from 'vitest';
 import * as vscode from 'vscode';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { InMemoryConfigurationService } from '../../../../platform/configuration/test/common/inMemoryConfigurationService';
 import { IVSCodeExtensionContext } from '../../../../platform/extContext/common/extensionContext';
 import { IFileSystemService } from '../../../../platform/filesystem/common/fileSystemService';
@@ -32,14 +35,23 @@ suite('PlanAgentProvider', () => {
 		disposables = new DisposableStore();
 
 		// Set up testing services with a mock extension context that has globalStorageUri
-		const testingServiceCollection = createExtensionUnitTestingServices(disposables);
-		const globalStoragePath = path.join(os.tmpdir(), 'plan-agent-test-' + Date.now());
-		testingServiceCollection.define(IVSCodeExtensionContext, new SyncDescriptor(MockExtensionContext, [globalStoragePath]));
+		const testingServiceCollection =
+			createExtensionUnitTestingServices(disposables);
+		const globalStoragePath = path.join(
+			os.tmpdir(),
+			'plan-agent-test-' + Date.now(),
+		);
+		testingServiceCollection.define(
+			IVSCodeExtensionContext,
+			new SyncDescriptor(MockExtensionContext, [globalStoragePath]),
+		);
 		accessor = testingServiceCollection.createTestingAccessor();
 		disposables.add(accessor);
 		instantiationService = accessor.get(IInstantiationService);
 
-		mockConfigurationService = accessor.get(IConfigurationService) as InMemoryConfigurationService;
+		mockConfigurationService = accessor.get(
+			IConfigurationService,
+		) as InMemoryConfigurationService;
 		fileSystemService = accessor.get(IFileSystemService);
 	});
 
@@ -53,7 +65,9 @@ suite('PlanAgentProvider', () => {
 		return provider;
 	}
 
-	async function getAgentContent(agent: vscode.ChatResource): Promise<string> {
+	async function getAgentContent(
+		agent: vscode.ChatResource,
+	): Promise<string> {
 		const content = await fileSystemService.readFile(agent.uri);
 		return new TextDecoder().decode(content);
 	}
@@ -65,7 +79,10 @@ suite('PlanAgentProvider', () => {
 
 		assert.equal(agents.length, 1);
 		assert.ok(agents[0].uri, 'Agent should have a URI');
-		assert.ok(agents[0].uri.path.endsWith('.agent.md'), 'Agent URI should end with .agent.md');
+		assert.ok(
+			agents[0].uri.path.endsWith('.agent.md'),
+			'Agent URI should end with .agent.md',
+		);
 	});
 
 	test('returns agent content with base frontmatter when no settings configured', async () => {
@@ -85,11 +102,18 @@ suite('PlanAgentProvider', () => {
 
 		// Should not have model override (not in base content)
 		assert.ok(content.includes('name: Plan'));
-		assert.ok(content.includes('description: Researches and outlines multi-step plans'));
+		assert.ok(
+			content.includes(
+				'description: Researches and outlines multi-step plans',
+			),
+		);
 	});
 
 	test('merges additionalTools setting with base tools', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.PlanAgentAdditionalTools, ['customTool1', 'customTool2']);
+		await mockConfigurationService.setConfig(
+			ConfigKey.PlanAgentAdditionalTools,
+			['customTool1', 'customTool2'],
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -108,7 +132,10 @@ suite('PlanAgentProvider', () => {
 
 	test('deduplicates tools when additionalTools overlaps with base tools', async () => {
 		// Add a tool that already exists in base
-		await mockConfigurationService.setConfig(ConfigKey.PlanAgentAdditionalTools, ['agent', 'newTool']);
+		await mockConfigurationService.setConfig(
+			ConfigKey.PlanAgentAdditionalTools,
+			['agent', 'newTool'],
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -122,14 +149,21 @@ suite('PlanAgentProvider', () => {
 		assert.ok(toolsMatch, 'Tools list not found in agent content');
 		const toolsSection = toolsMatch[1];
 		const agentCount = (toolsSection.match(/'agent'/g) || []).length;
-		assert.equal(agentCount, 1, 'agent tool should appear only once after deduplication');
+		assert.equal(
+			agentCount,
+			1,
+			'agent tool should appear only once after deduplication',
+		);
 
 		// Should contain new tool
 		assert.ok(content.includes('newTool'));
 	});
 
 	test('applies model override from settings', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.Deprecated.PlanAgentModel, 'Claude Haiku 4.5 (copilot)');
+		await mockConfigurationService.setConfig(
+			ConfigKey.Deprecated.PlanAgentModel,
+			'Claude Haiku 4.5 (copilot)',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -142,7 +176,10 @@ suite('PlanAgentProvider', () => {
 	});
 
 	test('applies core default model when configured', async () => {
-		await mockConfigurationService.setNonExtensionConfig('chat.planAgent.defaultModel', 'Claude Haiku 4.5 (copilot)');
+		await mockConfigurationService.setNonExtensionConfig(
+			'chat.planAgent.defaultModel',
+			'Claude Haiku 4.5 (copilot)',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -155,8 +192,14 @@ suite('PlanAgentProvider', () => {
 	});
 
 	test('prefers core default model over extension setting', async () => {
-		await mockConfigurationService.setNonExtensionConfig('chat.planAgent.defaultModel', 'core-model');
-		await mockConfigurationService.setConfig(ConfigKey.Deprecated.PlanAgentModel, 'extension-model');
+		await mockConfigurationService.setNonExtensionConfig(
+			'chat.planAgent.defaultModel',
+			'core-model',
+		);
+		await mockConfigurationService.setConfig(
+			ConfigKey.Deprecated.PlanAgentModel,
+			'extension-model',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -170,8 +213,14 @@ suite('PlanAgentProvider', () => {
 	});
 
 	test('applies both additionalTools and model settings together', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.PlanAgentAdditionalTools, ['extraTool']);
-		await mockConfigurationService.setConfig(ConfigKey.Deprecated.PlanAgentModel, 'claude-3-sonnet');
+		await mockConfigurationService.setConfig(
+			ConfigKey.PlanAgentAdditionalTools,
+			['extraTool'],
+		);
+		await mockConfigurationService.setConfig(
+			ConfigKey.Deprecated.PlanAgentModel,
+			'claude-3-sonnet',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -194,7 +243,10 @@ suite('PlanAgentProvider', () => {
 			eventFired = true;
 		});
 
-		await mockConfigurationService.setConfig(ConfigKey.PlanAgentAdditionalTools, ['newTool']);
+		await mockConfigurationService.setConfig(
+			ConfigKey.PlanAgentAdditionalTools,
+			['newTool'],
+		);
 
 		assert.equal(eventFired, true);
 	});
@@ -207,7 +259,10 @@ suite('PlanAgentProvider', () => {
 			eventFired = true;
 		});
 
-		await mockConfigurationService.setConfig(ConfigKey.Deprecated.PlanAgentModel, 'new-model');
+		await mockConfigurationService.setConfig(
+			ConfigKey.Deprecated.PlanAgentModel,
+			'new-model',
+		);
 
 		assert.equal(eventFired, true);
 	});
@@ -220,7 +275,10 @@ suite('PlanAgentProvider', () => {
 			eventFired = true;
 		});
 
-		await mockConfigurationService.setNonExtensionConfig('chat.planAgent.defaultModel', 'core-model');
+		await mockConfigurationService.setNonExtensionConfig(
+			'chat.planAgent.defaultModel',
+			'core-model',
+		);
 
 		assert.equal(eventFired, true);
 	});
@@ -234,7 +292,10 @@ suite('PlanAgentProvider', () => {
 		});
 
 		// Set an unrelated config (using a different config key)
-		await mockConfigurationService.setConfig(ConfigKey.Advanced.FeedbackOnChange, true);
+		await mockConfigurationService.setConfig(
+			ConfigKey.Advanced.FeedbackOnChange,
+			true,
+		);
 
 		assert.equal(eventFired, false);
 	});
@@ -258,8 +319,14 @@ suite('PlanAgentProvider', () => {
 
 		const toolsMatch = content.match(/tools: \[([^\]]+)\]/);
 		assert.ok(toolsMatch, 'Tools list not found in agent content');
-		const actualTools = (toolsMatch[1].match(/'([^']+)'/g) || []).map(tool => tool.slice(1, -1)).sort();
-		const expectedTools = [...DEFAULT_READ_TOOLS, 'agent', 'vscode/askQuestions'].sort();
+		const actualTools = (toolsMatch[1].match(/'([^']+)'/g) || [])
+			.map((tool) => tool.slice(1, -1))
+			.sort();
+		const expectedTools = [
+			...DEFAULT_READ_TOOLS,
+			'agent',
+			'vscode/askQuestions',
+		].sort();
 
 		assert.deepStrictEqual(actualTools, expectedTools);
 		assert.ok(!actualTools.includes('edit'));
@@ -273,7 +340,10 @@ suite('PlanAgentProvider', () => {
 	});
 
 	test('preserves body content after frontmatter when applying settings', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.Deprecated.PlanAgentModel, 'test-model');
+		await mockConfigurationService.setConfig(
+			ConfigKey.Deprecated.PlanAgentModel,
+			'test-model',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -281,12 +351,21 @@ suite('PlanAgentProvider', () => {
 		const content = await getAgentContent(agents[0]);
 
 		// Should preserve body content
-		assert.ok(content.includes('You are a PLANNING AGENT, pairing with the user'));
-		assert.ok(content.includes('Your SOLE responsibility is planning. NEVER start implementation.'));
+		assert.ok(
+			content.includes('You are a PLANNING AGENT, pairing with the user'),
+		);
+		assert.ok(
+			content.includes(
+				'Your SOLE responsibility is planning. NEVER start implementation.',
+			),
+		);
 	});
 
 	test('handles empty additionalTools array gracefully', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.PlanAgentAdditionalTools, []);
+		await mockConfigurationService.setConfig(
+			ConfigKey.PlanAgentAdditionalTools,
+			[],
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -300,7 +379,10 @@ suite('PlanAgentProvider', () => {
 	});
 
 	test('handles empty model string gracefully', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.Deprecated.PlanAgentModel, '');
+		await mockConfigurationService.setConfig(
+			ConfigKey.Deprecated.PlanAgentModel,
+			'',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -313,8 +395,14 @@ suite('PlanAgentProvider', () => {
 	});
 
 	test('falls back to extension setting when core default model is empty string', async () => {
-		await mockConfigurationService.setNonExtensionConfig('chat.planAgent.defaultModel', '');
-		await mockConfigurationService.setConfig(ConfigKey.Deprecated.PlanAgentModel, 'fallback-model');
+		await mockConfigurationService.setNonExtensionConfig(
+			'chat.planAgent.defaultModel',
+			'',
+		);
+		await mockConfigurationService.setConfig(
+			ConfigKey.Deprecated.PlanAgentModel,
+			'fallback-model',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -341,7 +429,10 @@ suite('PlanAgentProvider', () => {
 	});
 
 	test('applies ImplementAgentModel to Start Implementation handoff', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.ImplementAgentModel, 'Claude Haiku 4.5 (copilot)');
+		await mockConfigurationService.setConfig(
+			ConfigKey.ImplementAgentModel,
+			'Claude Haiku 4.5 (copilot)',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -362,10 +453,16 @@ suite('PlanAgentProvider', () => {
 
 		// Find the Start Implementation handoff section
 		const handoffsStart = content.indexOf('handoffs:');
-		const handoffsSection = content.slice(handoffsStart, content.indexOf('---', handoffsStart));
+		const handoffsSection = content.slice(
+			handoffsStart,
+			content.indexOf('---', handoffsStart),
+		);
 
 		// Should not contain model field in handoffs when not configured
-		assert.ok(!handoffsSection.includes('model:'), 'Should not have model field in handoffs when ImplementAgentModel is not set');
+		assert.ok(
+			!handoffsSection.includes('model:'),
+			'Should not have model field in handoffs when ImplementAgentModel is not set',
+		);
 	});
 
 	test('fires onDidChangeCustomAgents when ImplementAgentModel setting changes', async () => {
@@ -376,7 +473,10 @@ suite('PlanAgentProvider', () => {
 			eventFired = true;
 		});
 
-		await mockConfigurationService.setConfig(ConfigKey.ImplementAgentModel, 'new-model');
+		await mockConfigurationService.setConfig(
+			ConfigKey.ImplementAgentModel,
+			'new-model',
+		);
 
 		assert.equal(eventFired, true);
 	});
@@ -389,7 +489,10 @@ suite('PlanAgentProvider', () => {
 			eventFired = true;
 		});
 
-		await mockConfigurationService.setConfig(ConfigKey.Advanced.SearchSubagentToolEnabled, true);
+		await mockConfigurationService.setConfig(
+			ConfigKey.Advanced.SearchSubagentToolEnabled,
+			true,
+		);
 
 		assert.equal(eventFired, true);
 	});
@@ -414,7 +517,10 @@ suite('PlanAgentProvider', () => {
 	});
 
 	test('excludes agent tool and Explore subagent when explore is disabled', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.ExploreAgentEnabled, false);
+		await mockConfigurationService.setConfig(
+			ConfigKey.ExploreAgentEnabled,
+			false,
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -423,14 +529,23 @@ suite('PlanAgentProvider', () => {
 		// Should not have the 'agent' tool
 		const toolsMatch = content.match(/tools: \[([^\]]+)\]/);
 		assert.ok(toolsMatch);
-		assert.ok(!toolsMatch[1].includes('\'agent\''), 'Should not include agent tool when explore is disabled');
+		assert.ok(
+			!toolsMatch[1].includes("'agent'"),
+			'Should not include agent tool when explore is disabled',
+		);
 
 		// Should not have agents field
-		assert.ok(!content.includes('agents:'), 'Should not include agents field when explore is disabled');
+		assert.ok(
+			!content.includes('agents:'),
+			'Should not include agents field when explore is disabled',
+		);
 	});
 
 	test('includes agent tool and Explore subagent when explore is enabled', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.ExploreAgentEnabled, true);
+		await mockConfigurationService.setConfig(
+			ConfigKey.ExploreAgentEnabled,
+			true,
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -439,10 +554,16 @@ suite('PlanAgentProvider', () => {
 		// Should have the 'agent' tool
 		const toolsMatch = content.match(/tools: \[([^\]]+)\]/);
 		assert.ok(toolsMatch);
-		assert.ok(toolsMatch[1].includes('\'agent\''), 'Should include agent tool when explore is enabled');
+		assert.ok(
+			toolsMatch[1].includes("'agent'"),
+			'Should include agent tool when explore is enabled',
+		);
 
 		// Should have agents field with Explore
-		assert.ok(content.includes('agents:'), 'Should include agents field when explore is enabled');
+		assert.ok(
+			content.includes('agents:'),
+			'Should include agents field when explore is enabled',
+		);
 	});
 });
 
@@ -460,15 +581,16 @@ suite('buildAgentMarkdown', () => {
 					label: 'Start Implementation',
 					agent: 'agent',
 					prompt: 'Start implementation',
-					send: true
-				}
+					send: true,
+				},
 			],
-			body: 'You are a PLANNING AGENT.'
+			body: 'You are a PLANNING AGENT.',
 		};
 
 		const result = buildAgentMarkdown(config);
 
-		assert.deepStrictEqual(result,
+		assert.deepStrictEqual(
+			result,
 			`---
 name: Plan
 description: Researches and outlines multi-step plans
@@ -481,7 +603,8 @@ handoffs:
     prompt: 'Start implementation'
     send: true
 ---
-You are a PLANNING AGENT.`);
+You are a PLANNING AGENT.`,
+		);
 	});
 
 	test('generates valid YAML frontmatter with basic config', () => {
@@ -491,7 +614,7 @@ You are a PLANNING AGENT.`);
 			argumentHint: 'Test hint',
 			tools: ['tool1', 'tool2'],
 			handoffs: [],
-			body: 'Test body content'
+			body: 'Test body content',
 		};
 
 		const result = buildAgentMarkdown(config);
@@ -500,7 +623,7 @@ You are a PLANNING AGENT.`);
 		assert.ok(result.includes('name: TestAgent'));
 		assert.ok(result.includes('description: Test description'));
 		assert.ok(result.includes('argument-hint: Test hint'));
-		assert.ok(result.includes('tools: [\'tool1\', \'tool2\']'));
+		assert.ok(result.includes("tools: ['tool1', 'tool2']"));
 		assert.ok(result.includes('---\nTest body content'));
 	});
 
@@ -512,7 +635,7 @@ You are a PLANNING AGENT.`);
 			tools: [],
 			model: 'Claude Haiku 4.5 (copilot)',
 			handoffs: [],
-			body: 'Body'
+			body: 'Body',
 		};
 
 		const result = buildAgentMarkdown(config);
@@ -527,7 +650,7 @@ You are a PLANNING AGENT.`);
 			argumentHint: 'Test',
 			tools: [],
 			handoffs: [],
-			body: 'Body'
+			body: 'Body',
 		};
 
 		const result = buildAgentMarkdown(config);
@@ -546,16 +669,16 @@ You are a PLANNING AGENT.`);
 					label: 'Continue',
 					agent: 'agent',
 					prompt: 'Do the thing',
-					send: true
+					send: true,
 				},
 				{
 					label: 'Save',
 					agent: 'editor',
 					prompt: 'Save it',
-					showContinueOn: false
-				}
+					showContinueOn: false,
+				},
 			],
-			body: 'Body'
+			body: 'Body',
 		};
 
 		const result = buildAgentMarkdown(config);
@@ -563,10 +686,10 @@ You are a PLANNING AGENT.`);
 		assert.ok(result.includes('handoffs:'));
 		assert.ok(result.includes('  - label: Continue'));
 		assert.ok(result.includes('    agent: agent'));
-		assert.ok(result.includes('    prompt: \'Do the thing\''));
+		assert.ok(result.includes("    prompt: 'Do the thing'"));
 		assert.ok(result.includes('    send: true'));
 		assert.ok(result.includes('  - label: Save'));
-		assert.ok(result.includes('    prompt: \'Save it\''));
+		assert.ok(result.includes("    prompt: 'Save it'"));
 		assert.ok(result.includes('    showContinueOn: false'));
 	});
 
@@ -577,7 +700,7 @@ You are a PLANNING AGENT.`);
 			argumentHint: 'Test',
 			tools: [],
 			handoffs: [],
-			body: 'Body'
+			body: 'Body',
 		};
 
 		const result = buildAgentMarkdown(config);
@@ -593,12 +716,16 @@ You are a PLANNING AGENT.`);
 			argumentHint: 'Test',
 			tools: ['github/issue_read', 'mcp_server/custom_tool'],
 			handoffs: [],
-			body: 'Body'
+			body: 'Body',
 		};
 
 		const result = buildAgentMarkdown(config);
 
-		assert.ok(result.includes('tools: [\'github/issue_read\', \'mcp_server/custom_tool\']'));
+		assert.ok(
+			result.includes(
+				"tools: ['github/issue_read', 'mcp_server/custom_tool']",
+			),
+		);
 	});
 
 	test('escapes single quotes in tool names', () => {
@@ -606,15 +733,18 @@ You are a PLANNING AGENT.`);
 			name: 'TestAgent',
 			description: 'Test',
 			argumentHint: 'Test',
-			tools: ['tool\'s_name', 'another'],
+			tools: ["tool's_name", 'another'],
 			handoffs: [],
-			body: 'Body'
+			body: 'Body',
 		};
 
 		const result = buildAgentMarkdown(config);
 
 		// Single quotes should be doubled for YAML escaping
-		assert.ok(result.includes('\'tool\'\'s_name\''), 'Single quote should be escaped by doubling');
+		assert.ok(
+			result.includes("'tool''s_name'"),
+			'Single quote should be escaped by doubling',
+		);
 	});
 
 	test('escapes single quotes in handoff prompts', () => {
@@ -627,15 +757,18 @@ You are a PLANNING AGENT.`);
 				{
 					label: 'Test',
 					agent: 'agent',
-					prompt: 'It\'s a test prompt with \'quotes\''
-				}
+					prompt: "It's a test prompt with 'quotes'",
+				},
 			],
-			body: 'Body'
+			body: 'Body',
 		};
 
 		const result = buildAgentMarkdown(config);
 
 		// Single quotes in prompt should be doubled for YAML escaping
-		assert.ok(result.includes('prompt: \'It\'\'s a test prompt with \'\'quotes\'\'\''), 'Single quotes should be escaped by doubling');
+		assert.ok(
+			result.includes("prompt: 'It''s a test prompt with ''quotes'''"),
+			'Single quotes should be escaped by doubling',
+		);
 	});
 });

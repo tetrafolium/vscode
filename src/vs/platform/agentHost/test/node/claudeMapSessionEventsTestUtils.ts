@@ -3,8 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type Anthropic from '@anthropic-ai/sdk';
-import type { SDKAssistantMessage, SDKPartialAssistantMessage, SDKResultSuccess, SDKSystemMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import type Anthropic from "@anthropic-ai/sdk";
+import type {
+	SDKAssistantMessage,
+	SDKPartialAssistantMessage,
+	SDKResultSuccess,
+	SDKSystemMessage,
+	SDKUserMessage,
+} from "@anthropic-ai/claude-agent-sdk";
 
 // Beta event-stream type aliases. The `Anthropic` namespace re-exports
 // these from `@anthropic-ai/sdk/resources/beta/messages.js`, but
@@ -13,9 +19,12 @@ import type { SDKAssistantMessage, SDKPartialAssistantMessage, SDKResultSuccess,
 // `@anthropic-ai/sdk` specifier). Local aliases via the `Anthropic`
 // import keep the body of this file readable without extending the
 // allowlist.
-export type BetaRawContentBlockDeltaEvent = Anthropic.Beta.BetaRawContentBlockDeltaEvent;
-export type BetaRawContentBlockStartEvent = Anthropic.Beta.BetaRawContentBlockStartEvent;
-export type BetaRawContentBlockStopEvent = Anthropic.Beta.BetaRawContentBlockStopEvent;
+export type BetaRawContentBlockDeltaEvent =
+	Anthropic.Beta.BetaRawContentBlockDeltaEvent;
+export type BetaRawContentBlockStartEvent =
+	Anthropic.Beta.BetaRawContentBlockStartEvent;
+export type BetaRawContentBlockStopEvent =
+	Anthropic.Beta.BetaRawContentBlockStopEvent;
 export type BetaRawMessageStartEvent = Anthropic.Beta.BetaRawMessageStartEvent;
 export type BetaRawMessageStopEvent = Anthropic.Beta.BetaRawMessageStopEvent;
 export type BetaContentBlock = Anthropic.Beta.BetaContentBlock;
@@ -26,41 +35,44 @@ export type BetaContentBlock = Anthropic.Beta.BetaContentBlock;
  * Tests that exercise uuid-sensitive logic (e.g. the Cycle C send-seam
  * test) construct their own uuids instead of relying on this constant.
  */
-export const TEST_UUID = '11111111-2222-3333-4444-555555555555';
+export const TEST_UUID = "11111111-2222-3333-4444-555555555555";
 
 /**
  * Builds the non-nullable shape of {@link SDKResultSuccess.usage}. Most
  * fields are zeroed; the mapper only reads `input_tokens`,
  * `output_tokens`, and `cache_read_input_tokens`.
  */
-export function makeNonNullableUsage(): SDKResultSuccess['usage'] {
+export function makeNonNullableUsage(): SDKResultSuccess["usage"] {
 	return {
-		cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 0 },
+		cache_creation: {
+			ephemeral_1h_input_tokens: 0,
+			ephemeral_5m_input_tokens: 0,
+		},
 		cache_creation_input_tokens: 0,
 		cache_read_input_tokens: 0,
-		inference_geo: 'unknown',
+		inference_geo: "unknown",
 		input_tokens: 0,
 		iterations: [],
 		output_tokens: 0,
 		server_tool_use: { web_fetch_requests: 0, web_search_requests: 0 },
-		service_tier: 'standard',
-		speed: 'standard',
+		service_tier: "standard",
+		speed: "standard",
 	};
 }
 
 export function makeSystemInitMessage(sessionId: string): SDKSystemMessage {
 	return {
-		type: 'system',
-		subtype: 'init',
-		apiKeySource: 'user',
-		claude_code_version: '0.0.0-test',
-		cwd: '/workspace',
+		type: "system",
+		subtype: "init",
+		apiKeySource: "user",
+		claude_code_version: "0.0.0-test",
+		cwd: "/workspace",
 		tools: [],
 		mcp_servers: [],
-		model: 'claude-test',
-		permissionMode: 'default',
+		model: "claude-test",
+		permissionMode: "default",
 		slash_commands: [],
-		output_style: 'default',
+		output_style: "default",
 		skills: [],
 		plugins: [],
 		uuid: TEST_UUID,
@@ -70,14 +82,14 @@ export function makeSystemInitMessage(sessionId: string): SDKSystemMessage {
 
 export function makeResultSuccess(sessionId: string): SDKResultSuccess {
 	return {
-		type: 'result',
-		subtype: 'success',
+		type: "result",
+		subtype: "success",
 		duration_ms: 0,
 		duration_api_ms: 0,
 		is_error: false,
 		num_turns: 1,
-		result: '',
-		stop_reason: 'end_turn',
+		result: "",
+		stop_reason: "end_turn",
 		total_cost_usd: 0,
 		usage: makeNonNullableUsage(),
 		modelUsage: {},
@@ -97,10 +109,10 @@ export function makeResultSuccess(sessionId: string): SDKResultSuccess {
 
 export function makeStreamEvent(
 	sessionId: string,
-	event: SDKPartialAssistantMessage['event'],
+	event: SDKPartialAssistantMessage["event"],
 ): SDKPartialAssistantMessage {
 	return {
-		type: 'stream_event',
+		type: "stream_event",
 		event,
 		parent_tool_use_id: null,
 		uuid: TEST_UUID,
@@ -108,14 +120,16 @@ export function makeStreamEvent(
 	};
 }
 
-export function makeMessageStart(messageId: string = 'msg_test'): BetaRawMessageStartEvent {
+export function makeMessageStart(
+	messageId: string = "msg_test",
+): BetaRawMessageStartEvent {
 	return {
-		type: 'message_start',
+		type: "message_start",
 		message: {
 			id: messageId,
-			type: 'message',
-			role: 'assistant',
-			model: 'claude-test',
+			type: "message",
+			role: "assistant",
+			model: "claude-test",
 			content: [],
 			stop_reason: null,
 			stop_sequence: null,
@@ -123,34 +137,41 @@ export function makeMessageStart(messageId: string = 'msg_test'): BetaRawMessage
 			container: null,
 			context_management: null,
 			usage: {
-				cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 0 },
+				cache_creation: {
+					ephemeral_1h_input_tokens: 0,
+					ephemeral_5m_input_tokens: 0,
+				},
 				cache_creation_input_tokens: 0,
 				cache_read_input_tokens: 0,
-				inference_geo: 'unknown',
+				inference_geo: "unknown",
 				input_tokens: 0,
 				iterations: [],
 				output_tokens: 0,
 				server_tool_use: { web_fetch_requests: 0, web_search_requests: 0 },
-				service_tier: 'standard',
-				speed: 'standard',
+				service_tier: "standard",
+				speed: "standard",
 			},
 		},
 	};
 }
 
-export function makeContentBlockStartText(index: number): BetaRawContentBlockStartEvent {
+export function makeContentBlockStartText(
+	index: number,
+): BetaRawContentBlockStartEvent {
 	return {
-		type: 'content_block_start',
+		type: "content_block_start",
 		index,
-		content_block: { type: 'text', text: '', citations: null },
+		content_block: { type: "text", text: "", citations: null },
 	};
 }
 
-export function makeContentBlockStartThinking(index: number): BetaRawContentBlockStartEvent {
+export function makeContentBlockStartThinking(
+	index: number,
+): BetaRawContentBlockStartEvent {
 	return {
-		type: 'content_block_start',
+		type: "content_block_start",
 		index,
-		content_block: { type: 'thinking', thinking: '', signature: '' },
+		content_block: { type: "thinking", thinking: "", signature: "" },
 	};
 }
 
@@ -160,25 +181,31 @@ export function makeContentBlockStartToolUse(
 	name: string,
 ): BetaRawContentBlockStartEvent {
 	return {
-		type: 'content_block_start',
+		type: "content_block_start",
 		index,
-		content_block: { type: 'tool_use', id, name, input: {} },
+		content_block: { type: "tool_use", id, name, input: {} },
 	};
 }
 
-export function makeTextDelta(index: number, text: string): BetaRawContentBlockDeltaEvent {
+export function makeTextDelta(
+	index: number,
+	text: string,
+): BetaRawContentBlockDeltaEvent {
 	return {
-		type: 'content_block_delta',
+		type: "content_block_delta",
 		index,
-		delta: { type: 'text_delta', text },
+		delta: { type: "text_delta", text },
 	};
 }
 
-export function makeThinkingDelta(index: number, thinking: string): BetaRawContentBlockDeltaEvent {
+export function makeThinkingDelta(
+	index: number,
+	thinking: string,
+): BetaRawContentBlockDeltaEvent {
 	return {
-		type: 'content_block_delta',
+		type: "content_block_delta",
 		index,
-		delta: { type: 'thinking_delta', thinking },
+		delta: { type: "thinking_delta", thinking },
 	};
 }
 
@@ -186,23 +213,28 @@ export function makeThinkingDelta(index: number, thinking: string): BetaRawConte
  * Phase 7 §3.3: `content_block_delta` with `input_json_delta` is the
  * stream of partial parameter JSON for an open `tool_use` block.
  */
-export function makeInputJsonDelta(index: number, partialJson: string): BetaRawContentBlockDeltaEvent {
+export function makeInputJsonDelta(
+	index: number,
+	partialJson: string,
+): BetaRawContentBlockDeltaEvent {
 	return {
-		type: 'content_block_delta',
+		type: "content_block_delta",
 		index,
-		delta: { type: 'input_json_delta', partial_json: partialJson },
+		delta: { type: "input_json_delta", partial_json: partialJson },
 	};
 }
 
-export function makeContentBlockStop(index: number): BetaRawContentBlockStopEvent {
+export function makeContentBlockStop(
+	index: number,
+): BetaRawContentBlockStopEvent {
 	return {
-		type: 'content_block_stop',
+		type: "content_block_stop",
 		index,
 	};
 }
 
 export function makeMessageStop(): BetaRawMessageStopEvent {
-	return { type: 'message_stop' };
+	return { type: "message_stop" };
 }
 
 /**
@@ -219,28 +251,31 @@ export function makeAssistantMessage(
 	content: BetaContentBlock[],
 ): SDKAssistantMessage {
 	return {
-		type: 'assistant',
+		type: "assistant",
 		message: {
-			id: 'msg_test',
-			type: 'message',
-			role: 'assistant',
-			model: 'claude-test',
+			id: "msg_test",
+			type: "message",
+			role: "assistant",
+			model: "claude-test",
 			content,
-			stop_reason: 'end_turn',
+			stop_reason: "end_turn",
 			stop_sequence: null,
 			container: null,
 			context_management: null,
 			usage: {
-				cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 0 },
+				cache_creation: {
+					ephemeral_1h_input_tokens: 0,
+					ephemeral_5m_input_tokens: 0,
+				},
 				cache_creation_input_tokens: 0,
 				cache_read_input_tokens: 0,
-				inference_geo: 'unknown',
+				inference_geo: "unknown",
 				input_tokens: 0,
 				iterations: [],
 				output_tokens: 0,
 				server_tool_use: { web_fetch_requests: 0, web_search_requests: 0 },
-				service_tier: 'standard',
-				speed: 'standard',
+				service_tier: "standard",
+				speed: "standard",
 			},
 		},
 		parent_tool_use_id: null,
@@ -261,16 +296,16 @@ export function makeAssistantMessage(
 export function makeUserToolResultMessage(
 	sessionId: string,
 	toolUseId: string,
-	content: string | Array<{ type: 'text'; text: string }>,
+	content: string | Array<{ type: "text"; text: string }>,
 	options?: { isError?: boolean },
 ): SDKUserMessage {
 	return {
-		type: 'user',
+		type: "user",
 		message: {
-			role: 'user',
+			role: "user",
 			content: [
 				{
-					type: 'tool_result',
+					type: "tool_result",
 					tool_use_id: toolUseId,
 					content,
 					...(options?.isError ? { is_error: true } : {}),

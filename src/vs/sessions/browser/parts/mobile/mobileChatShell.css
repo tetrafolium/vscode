@@ -78,7 +78,11 @@
 	font-size: 12px;
 	line-height: 18px;
 	font-variant-numeric: tabular-nums;
-	border: 1px solid var(--vscode-widget-border, color-mix(in srgb, var(--vscode-foreground) 15%, transparent));
+	border: 1px solid
+		var(
+			--vscode-widget-border,
+			color-mix(in srgb, var(--vscode-foreground) 15%, transparent)
+		);
 	background: transparent;
 	color: var(--vscode-foreground);
 }
@@ -91,11 +95,17 @@
 }
 
 .mobile-top-bar .mobile-changes-pill .mobile-changes-pill-added {
-	color: var(--vscode-gitDecoration-addedResourceForeground, var(--vscode-charts-green));
+	color: var(
+		--vscode-gitDecoration-addedResourceForeground,
+		var(--vscode-charts-green)
+	);
 }
 
 .mobile-top-bar .mobile-changes-pill .mobile-changes-pill-removed {
-	color: var(--vscode-gitDecoration-deletedResourceForeground, var(--vscode-charts-red));
+	color: var(
+		--vscode-gitDecoration-deletedResourceForeground,
+		var(--vscode-charts-red)
+	);
 }
 
 .mobile-top-bar .mobile-changes-pill:active {
@@ -179,7 +189,8 @@
 	to grid wrappers so splitviews used inside individual parts' content
 	(e.g. a sidebar's view list) are not affected. */
 .agent-sessions-workbench.phone-layout .split-view-view:has(> .part),
-.agent-sessions-workbench.phone-layout .split-view-view:has(> .monaco-grid-branch-node) {
+.agent-sessions-workbench.phone-layout
+	.split-view-view:has(> .monaco-grid-branch-node) {
 	position: absolute !important;
 	top: 0 !important;
 	left: 0 !important;
@@ -245,22 +256,34 @@
 }
 
 /* Remove max-width constraint on chat content */
-.agent-sessions-workbench.phone-layout .interactive-session .interactive-item-container {
+.agent-sessions-workbench.phone-layout
+	.interactive-session
+	.interactive-item-container {
 	max-width: none !important;
 }
 
-.agent-sessions-workbench.phone-layout .interactive-session > .chat-suggest-next-widget {
+.agent-sessions-workbench.phone-layout
+	.interactive-session
+	> .chat-suggest-next-widget {
 	max-width: none !important;
 }
 
-.agent-sessions-workbench.phone-layout .interactive-session .interactive-input-part {
+.agent-sessions-workbench.phone-layout
+	.interactive-session
+	.interactive-input-part {
 	max-width: none !important; /* fights equal-specificity rule in style.css */
 	padding-bottom: calc(10px + env(safe-area-inset-bottom));
 }
 
 /* Chat input minimum font size to prevent iOS auto-zoom */
-.agent-sessions-workbench.phone-layout .interactive-session .chat-input-container textarea,
-.agent-sessions-workbench.phone-layout .interactive-session .chat-input-container input {
+.agent-sessions-workbench.phone-layout
+	.interactive-session
+	.chat-input-container
+	textarea,
+.agent-sessions-workbench.phone-layout
+	.interactive-session
+	.chat-input-container
+	input {
 	font-size: 16px !important;
 }
 
@@ -294,7 +317,10 @@
 }
 
 /* Make sidebar footer touch-friendly */
-.agent-sessions-workbench.phone-layout .part.sidebar > .sidebar-footer .sidebar-action-button {
+.agent-sessions-workbench.phone-layout
+	.part.sidebar
+	> .sidebar-footer
+	.sidebar-action-button {
 	min-height: 44px;
 	padding: 8px 12px;
 }
@@ -320,7 +346,9 @@
 }
 
 /* On phone, push the chat input to the bottom of the chat area */
-.agent-sessions-workbench.phone-layout .interactive-session .interactive-input-and-execute-toolbar {
+.agent-sessions-workbench.phone-layout
+	.interactive-session
+	.interactive-input-and-execute-toolbar {
 	margin-top: auto;
 }
 
@@ -374,22 +402,27 @@
 }
 
 /* Show the sessions logo above the workspace picker — same asset as the auth page */
-.agent-sessions-workbench.phone-layout .new-session-workspace-picker-container::before {
-	content: '';
+.agent-sessions-workbench.phone-layout
+	.new-session-workspace-picker-container::before {
+	content: "";
 	display: block;
 	width: 64px;
 	height: 64px;
 	margin-bottom: 16px;
-	background-image: url('../../media/sessions-logo-light.svg');
+	background-image: url("../../media/sessions-logo-light.svg");
 	background-size: contain;
 	background-repeat: no-repeat;
 	background-position: center;
 	opacity: 0.85;
 }
 
-.vs .agent-sessions-workbench.phone-layout .new-session-workspace-picker-container::before,
-.hc-light .agent-sessions-workbench.phone-layout .new-session-workspace-picker-container::before {
-	background-image: url('../../media/sessions-logo-dark.svg');
+.vs
+	.agent-sessions-workbench.phone-layout
+	.new-session-workspace-picker-container::before,
+.hc-light
+	.agent-sessions-workbench.phone-layout
+	.new-session-workspace-picker-container::before {
+	background-image: url("../../media/sessions-logo-dark.svg");
 }
 
 /* Center the picker text */
@@ -410,20 +443,33 @@
 /* Promote the central workspace picker into a prominent pill so the empty
  * state has a clearly tappable hero affordance, mirroring the inspiration
  * design's "<icon> workspace v" chip. */
-.agent-sessions-workbench.phone-layout .session-workspace-picker .sessions-chat-picker-slot.sessions-chat-workspace-picker .action-label {
+.agent-sessions-workbench.phone-layout
+	.session-workspace-picker
+	.sessions-chat-picker-slot.sessions-chat-workspace-picker
+	.action-label {
 	height: auto;
 	min-height: 36px;
 	padding: 2px 6px;
 	font-size: 17px;
 	border-radius: 999px;
 	background-color: var(--vscode-toolbar-hoverBackground, transparent);
-	border: 1px solid var(--vscode-commandCenter-inactiveBorder, var(--vscode-commandCenter-border, transparent));
+	border: 1px solid
+		var(
+			--vscode-commandCenter-inactiveBorder,
+			var(--vscode-commandCenter-border, transparent)
+		);
 	gap: 4px;
 	touch-action: manipulation;
 }
 
-.agent-sessions-workbench.phone-layout .session-workspace-picker .sessions-chat-picker-slot.sessions-chat-workspace-picker .action-label:active {
-	background-color: var(--vscode-toolbar-activeBackground, var(--vscode-toolbar-hoverBackground, transparent));
+.agent-sessions-workbench.phone-layout
+	.session-workspace-picker
+	.sessions-chat-picker-slot.sessions-chat-workspace-picker
+	.action-label:active {
+	background-color: var(
+		--vscode-toolbar-activeBackground,
+		var(--vscode-toolbar-hoverBackground, transparent)
+	);
 }
 
 /* Input slot pinned to the bottom. Flex `order` puts the chip row
@@ -484,8 +530,12 @@
  * compressing — each layer transmits its content width up to the
  * outermost `.new-chat-bottom-container`, which has `overflow-x: auto`.
  */
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container,
-.agent-sessions-workbench.phone-layout .new-chat-widget-container.revealed .new-chat-bottom-container {
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container,
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container.revealed
+	.new-chat-bottom-container {
 	order: 1;
 	display: flex;
 	flex-direction: row;
@@ -522,7 +572,9 @@
 	scrollbar-width: none;
 }
 
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container::-webkit-scrollbar {
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container::-webkit-scrollbar {
 	display: none;
 }
 
@@ -533,7 +585,11 @@
  * providers with different chip configurations. The reserved `height`
  * on `.new-chat-bottom-container` then dominates the vertical layout
  * below the hero. */
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container:not(:has(.sessions-chat-picker-slot > .action-label:not(.hidden))):not(:has(.monaco-action-bar .action-item)) {
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container:not(
+		:has(.sessions-chat-picker-slot > .action-label:not(.hidden))
+	):not(:has(.monaco-action-bar .action-item)) {
 	visibility: hidden;
 }
 
@@ -550,13 +606,37 @@
  * flattening) and only relies on the standard
  * `.monaco-action-bar > .actions-container > .action-item` chain that's
  * part of monaco's public structure. */
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .new-chat-controls-container,
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .new-chat-repo-config-container,
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .monaco-toolbar,
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .monaco-action-bar,
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .monaco-action-bar > .actions-container,
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .monaco-action-bar > .actions-container > .action-item,
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .sessions-chat-agent-host-config {
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.new-chat-controls-container,
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.new-chat-repo-config-container,
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-toolbar,
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-action-bar,
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-action-bar
+	> .actions-container,
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-action-bar
+	> .actions-container
+	> .action-item,
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.sessions-chat-agent-host-config {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -569,7 +649,10 @@
  * lingering desktop `min-width: 0`, so a long branch label keeps its
  * intrinsic size and the lane's `overflow-x: auto` clips/scrolls the
  * row instead of the chips compressing. */
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .sessions-chat-picker-slot {
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.sessions-chat-picker-slot {
 	flex-shrink: 0;
 	min-width: max-content;
 }
@@ -583,8 +666,17 @@
  * one level deeper than `.sessions-chat-picker-slot`. Both land at
  * specificity 0,7,0 (action-bar path) / 0,6,0 (slot path), which beats
  * the desktop floor at 0,5,0 / 0,4,0 — no `!important` required. */
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .sessions-chat-picker-slot .action-label,
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .monaco-action-bar .action-item .action-label {
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.sessions-chat-picker-slot
+	.action-label,
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-action-bar
+	.action-item
+	.action-label {
 	display: inline-flex;
 	align-items: center;
 	height: auto;
@@ -606,19 +698,39 @@
 	touch-action: pan-x;
 }
 
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .sessions-chat-picker-slot .action-label:active,
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .monaco-action-bar .action-item .action-label:active {
-	background-color: var(--vscode-toolbar-activeBackground, var(--vscode-toolbar-hoverBackground, transparent));
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.sessions-chat-picker-slot
+	.action-label:active,
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.monaco-action-bar
+	.action-item
+	.action-label:active {
+	background-color: var(
+		--vscode-toolbar-activeBackground,
+		var(--vscode-toolbar-hoverBackground, transparent)
+	);
 }
 
 /* Tune codicon sizing inside chips so the icon, label, and chevron
  * read at a comfortable size for touch but stay tight to the label,
  * matching the iOS reference proportions. */
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .action-label > .codicon {
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.action-label
+	> .codicon {
 	font-size: 13px;
 }
 
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .action-label > .codicon-chevron-down {
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.action-label
+	> .codicon-chevron-down {
 	font-size: 10px;
 	margin-left: 4px;
 	opacity: 0.7;
@@ -628,7 +740,11 @@
  * to icon-only — keep them visible regardless of viewport width. This
  * overrides the desktop `@container (max-width: 330px)` query that
  * hides `.sessions-chat-dropdown-label` to make icon-only chips. */
-.agent-sessions-workbench.phone-layout .new-chat-widget-container .new-chat-bottom-container .action-label .sessions-chat-dropdown-label {
+.agent-sessions-workbench.phone-layout
+	.new-chat-widget-container
+	.new-chat-bottom-container
+	.action-label
+	.sessions-chat-dropdown-label {
 	display: inline;
 	margin-left: 4px;
 }
@@ -728,7 +844,8 @@
 	min-height: 56px;
 	padding: 0 16px;
 	padding-top: env(safe-area-inset-top);
-	border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-editorWidget-border, transparent));
+	border-bottom: 1px solid
+		var(--vscode-panel-border, var(--vscode-editorWidget-border, transparent));
 	flex-shrink: 0;
 }
 
@@ -824,7 +941,8 @@
 
 .mobile-account-sheet-section {
 	padding: 8px 0 16px;
-	border-top: 1px solid var(--vscode-panel-border, var(--vscode-editorWidget-border, transparent));
+	border-top: 1px solid
+		var(--vscode-panel-border, var(--vscode-editorWidget-border, transparent));
 }
 
 /* Action rows */
@@ -832,7 +950,8 @@
 .mobile-account-sheet-actions {
 	display: flex;
 	flex-direction: column;
-	border-top: 1px solid var(--vscode-panel-border, var(--vscode-editorWidget-border, transparent));
+	border-top: 1px solid
+		var(--vscode-panel-border, var(--vscode-editorWidget-border, transparent));
 	padding: 8px 0;
 }
 
@@ -882,7 +1001,10 @@
 .mobile-account-sheet-separator {
 	height: 1px;
 	margin: 4px 0;
-	background: var(--vscode-panel-border, var(--vscode-editorWidget-border, transparent));
+	background: var(
+		--vscode-panel-border,
+		var(--vscode-editorWidget-border, transparent)
+	);
 }
 
 .agent-sessions-workbench.phone-layout .sessions-account-titlebar-panel-action {
@@ -890,7 +1012,8 @@
 	touch-action: manipulation;
 }
 
-.agent-sessions-workbench.phone-layout .sessions-account-titlebar-panel-header-action {
+.agent-sessions-workbench.phone-layout
+	.sessions-account-titlebar-panel-header-action {
 	min-width: 44px;
 	min-height: 44px;
 	touch-action: manipulation;
@@ -899,7 +1022,8 @@
 /* -- Phone: Sessions list header --------------------------------------- */
 /* The desktop header row (Sessions label + New + Filter + Find toolbar) is hidden on phone in favor of the filter-chips row and the (+) button in MobileTitlebarPart. The row container itself is still rendered because the tree's find widget mounts inside it; the `phone-layout-empty` class is removed when the find widget is open so the row reappears for searching. */
 
-.agent-sessions-workbench.phone-layout .agent-sessions-header-row.phone-layout-empty {
+.agent-sessions-workbench.phone-layout
+	.agent-sessions-header-row.phone-layout-empty {
 	display: none;
 }
 
@@ -909,8 +1033,12 @@
  * becomes visible, but these two empty flex children would still occupy
  * leading space because of `gap` between siblings. Collapse them so the
  * find input sits flush with the row's leading edge. */
-.agent-sessions-workbench.phone-layout .agent-sessions-header-row > .agent-sessions-header-label,
-.agent-sessions-workbench.phone-layout .agent-sessions-header-row > .agent-sessions-header-actions {
+.agent-sessions-workbench.phone-layout
+	.agent-sessions-header-row
+	> .agent-sessions-header-label,
+.agent-sessions-workbench.phone-layout
+	.agent-sessions-header-row
+	> .agent-sessions-header-actions {
 	display: none;
 }
 
@@ -931,29 +1059,36 @@
 }
 
 .agent-sessions-workbench.phone-layout
-	.agent-sessions-find-widget-container > .monaco-tree-type-filter {
+	.agent-sessions-find-widget-container
+	> .monaco-tree-type-filter {
 	/* Reset desktop offsets — the desktop widget tries to align with the tree-element rows above it; on phone it lives in its own row. */
 	width: 100%;
 	gap: 4px;
 }
 
 .agent-sessions-workbench.phone-layout
-	.agent-sessions-find-widget-container > .monaco-tree-type-filter
+	.agent-sessions-find-widget-container
+	> .monaco-tree-type-filter
 	.monaco-tree-type-filter-input {
 	flex: 1 1 auto;
 	min-width: 0;
 }
 
 .agent-sessions-workbench.phone-layout
-	.agent-sessions-find-widget-container > .monaco-tree-type-filter
-	.monaco-tree-type-filter-input > .monaco-findInput {
+	.agent-sessions-find-widget-container
+	> .monaco-tree-type-filter
+	.monaco-tree-type-filter-input
+	> .monaco-findInput {
 	display: block;
 	width: 100%;
 }
 
 .agent-sessions-workbench.phone-layout
-	.agent-sessions-find-widget-container > .monaco-tree-type-filter
-	.monaco-tree-type-filter-input > .monaco-findInput > .monaco-inputbox {
+	.agent-sessions-find-widget-container
+	> .monaco-tree-type-filter
+	.monaco-tree-type-filter-input
+	> .monaco-findInput
+	> .monaco-inputbox {
 	min-height: 36px;
 	border-radius: 18px;
 	padding: 0 12px;
@@ -962,30 +1097,41 @@
 }
 
 .agent-sessions-workbench.phone-layout
-	.agent-sessions-find-widget-container > .monaco-tree-type-filter
-	.monaco-tree-type-filter-input > .monaco-findInput > .monaco-inputbox input {
+	.agent-sessions-find-widget-container
+	> .monaco-tree-type-filter
+	.monaco-tree-type-filter-input
+	> .monaco-findInput
+	> .monaco-inputbox
+	input {
 	font-size: 14px;
 	line-height: 22px;
 }
 
 /* Hide the per-input "filter mode" toggle (matches whole word, etc.) on phone — it's tiny and rarely useful for a sessions list lookup; the primary action is "type to filter". */
 .agent-sessions-workbench.phone-layout
-	.agent-sessions-find-widget-container > .monaco-tree-type-filter
-	.monaco-tree-type-filter-input > .monaco-findInput > .controls {
+	.agent-sessions-find-widget-container
+	> .monaco-tree-type-filter
+	.monaco-tree-type-filter-input
+	> .monaco-findInput
+	> .controls {
 	display: none;
 }
 
 /* Close button: thumb-sized, hugs the right edge. Override the desktop actionbar's natural left-margin so there is no extra empty gap between the input and the X. */
 .agent-sessions-workbench.phone-layout
-	.agent-sessions-find-widget-container > .monaco-tree-type-filter
+	.agent-sessions-find-widget-container
+	> .monaco-tree-type-filter
 	> .monaco-tree-type-filter-actionbar {
 	margin: 0;
 	flex-shrink: 0;
 }
 
 .agent-sessions-workbench.phone-layout
-	.agent-sessions-find-widget-container > .monaco-tree-type-filter
-	> .monaco-tree-type-filter-actionbar .monaco-action-bar .action-label {
+	.agent-sessions-find-widget-container
+	> .monaco-tree-type-filter
+	> .monaco-tree-type-filter-actionbar
+	.monaco-action-bar
+	.action-label {
 	width: 36px;
 	height: 36px;
 	padding: 0;

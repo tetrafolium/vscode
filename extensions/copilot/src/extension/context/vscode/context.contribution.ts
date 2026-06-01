@@ -4,7 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable, commands } from 'vscode';
-import { DisposableStore, IDisposable } from '../../../util/vs/base/common/lifecycle';
+import {
+	DisposableStore,
+	IDisposable,
+} from '../../../util/vs/base/common/lifecycle';
 import { ServicesAccessor } from '../../../util/vs/platform/instantiation/common/instantiation';
 
 export function create(accessor: ServicesAccessor): IDisposable {
@@ -25,7 +28,9 @@ function registerContextCommands(accessor: ServicesAccessor) {
 			return commands.executeCommand('workbench.action.chat.attachFile');
 		}),
 		commands.registerCommand('github.copilot.chat.attachSelection', () => {
-			return commands.executeCommand('workbench.action.chat.attachSelection');
+			return commands.executeCommand(
+				'workbench.action.chat.attachSelection',
+			);
 		}),
 	);
 }

@@ -8,7 +8,10 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, suite, test } from 'vitest';
 import * as vscode from 'vscode';
-import { ConfigKey, IConfigurationService } from '../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../platform/configuration/common/configurationService';
 import { InMemoryConfigurationService } from '../../../../platform/configuration/test/common/inMemoryConfigurationService';
 import { IVSCodeExtensionContext } from '../../../../platform/extContext/common/extensionContext';
 import { IFileSystemService } from '../../../../platform/filesystem/common/fileSystemService';
@@ -30,14 +33,23 @@ suite('AskAgentProvider', () => {
 	beforeEach(() => {
 		disposables = new DisposableStore();
 
-		const testingServiceCollection = createExtensionUnitTestingServices(disposables);
-		const globalStoragePath = path.join(os.tmpdir(), 'ask-agent-test-' + Date.now());
-		testingServiceCollection.define(IVSCodeExtensionContext, new SyncDescriptor(MockExtensionContext, [globalStoragePath]));
+		const testingServiceCollection =
+			createExtensionUnitTestingServices(disposables);
+		const globalStoragePath = path.join(
+			os.tmpdir(),
+			'ask-agent-test-' + Date.now(),
+		);
+		testingServiceCollection.define(
+			IVSCodeExtensionContext,
+			new SyncDescriptor(MockExtensionContext, [globalStoragePath]),
+		);
 		accessor = testingServiceCollection.createTestingAccessor();
 		disposables.add(accessor);
 		instantiationService = accessor.get(IInstantiationService);
 
-		mockConfigurationService = accessor.get(IConfigurationService) as InMemoryConfigurationService;
+		mockConfigurationService = accessor.get(
+			IConfigurationService,
+		) as InMemoryConfigurationService;
 		fileSystemService = accessor.get(IFileSystemService);
 	});
 
@@ -51,7 +63,9 @@ suite('AskAgentProvider', () => {
 		return provider;
 	}
 
-	async function getAgentContent(agent: vscode.ChatResource): Promise<string> {
+	async function getAgentContent(
+		agent: vscode.ChatResource,
+	): Promise<string> {
 		const content = await fileSystemService.readFile(agent.uri);
 		return new TextDecoder().decode(content);
 	}
@@ -63,7 +77,10 @@ suite('AskAgentProvider', () => {
 
 		assert.equal(agents.length, 1);
 		assert.ok(agents[0].uri, 'Agent should have a URI');
-		assert.ok(agents[0].uri.path.endsWith('.agent.md'), 'Agent URI should end with .agent.md');
+		assert.ok(
+			agents[0].uri.path.endsWith('.agent.md'),
+			'Agent URI should end with .agent.md',
+		);
 	});
 
 	test('returns agent content with base frontmatter when no settings configured', async () => {
@@ -82,16 +99,29 @@ suite('AskAgentProvider', () => {
 
 		// Should NOT contain editing tools
 
-		assert.ok(!content.includes('\'edit'), 'Should not have edit or edit/... tools');
-		assert.ok(!content.includes('\'execute/run'), 'Should not have any execute/run... tool');
+		assert.ok(
+			!content.includes("'edit"),
+			'Should not have edit or edit/... tools',
+		);
+		assert.ok(
+			!content.includes("'execute/run"),
+			'Should not have any execute/run... tool',
+		);
 
 		// Should have correct metadata
 		assert.ok(content.includes('name: Ask'));
-		assert.ok(content.includes('description: Answers questions without making changes'));
+		assert.ok(
+			content.includes(
+				'description: Answers questions without making changes',
+			),
+		);
 	});
 
 	test('merges additionalTools setting with base tools', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.AskAgentAdditionalTools, ['customTool1', 'customTool2']);
+		await mockConfigurationService.setConfig(
+			ConfigKey.AskAgentAdditionalTools,
+			['customTool1', 'customTool2'],
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -109,7 +139,10 @@ suite('AskAgentProvider', () => {
 	});
 
 	test('deduplicates tools when additionalTools overlaps with base tools', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.AskAgentAdditionalTools, ['search', 'newTool']);
+		await mockConfigurationService.setConfig(
+			ConfigKey.AskAgentAdditionalTools,
+			['search', 'newTool'],
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -122,14 +155,21 @@ suite('AskAgentProvider', () => {
 		assert.ok(toolsMatch, 'Tools list not found in agent content');
 		const toolsSection = toolsMatch[1];
 		const searchCount = (toolsSection.match(/'search'/g) || []).length;
-		assert.equal(searchCount, 1, 'search tool should appear only once after deduplication');
+		assert.equal(
+			searchCount,
+			1,
+			'search tool should appear only once after deduplication',
+		);
 
 		// Should contain new tool
 		assert.ok(content.includes('newTool'));
 	});
 
 	test('applies model override from settings', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.AskAgentModel, 'Claude Haiku 4.5 (copilot)');
+		await mockConfigurationService.setConfig(
+			ConfigKey.AskAgentModel,
+			'Claude Haiku 4.5 (copilot)',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -141,8 +181,14 @@ suite('AskAgentProvider', () => {
 	});
 
 	test('applies both additionalTools and model settings together', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.AskAgentAdditionalTools, ['extraTool']);
-		await mockConfigurationService.setConfig(ConfigKey.AskAgentModel, 'claude-3-sonnet');
+		await mockConfigurationService.setConfig(
+			ConfigKey.AskAgentAdditionalTools,
+			['extraTool'],
+		);
+		await mockConfigurationService.setConfig(
+			ConfigKey.AskAgentModel,
+			'claude-3-sonnet',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -162,7 +208,10 @@ suite('AskAgentProvider', () => {
 			eventFired = true;
 		});
 
-		await mockConfigurationService.setConfig(ConfigKey.AskAgentAdditionalTools, ['newTool']);
+		await mockConfigurationService.setConfig(
+			ConfigKey.AskAgentAdditionalTools,
+			['newTool'],
+		);
 
 		assert.equal(eventFired, true);
 	});
@@ -175,7 +224,10 @@ suite('AskAgentProvider', () => {
 			eventFired = true;
 		});
 
-		await mockConfigurationService.setConfig(ConfigKey.AskAgentModel, 'new-model');
+		await mockConfigurationService.setConfig(
+			ConfigKey.AskAgentModel,
+			'new-model',
+		);
 
 		assert.equal(eventFired, true);
 	});
@@ -188,7 +240,10 @@ suite('AskAgentProvider', () => {
 			eventFired = true;
 		});
 
-		await mockConfigurationService.setConfig(ConfigKey.Advanced.FeedbackOnChange, true);
+		await mockConfigurationService.setConfig(
+			ConfigKey.Advanced.FeedbackOnChange,
+			true,
+		);
 
 		assert.equal(eventFired, false);
 	});
@@ -209,7 +264,10 @@ suite('AskAgentProvider', () => {
 	});
 
 	test('preserves body content after frontmatter when applying settings', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.AskAgentModel, 'test-model');
+		await mockConfigurationService.setConfig(
+			ConfigKey.AskAgentModel,
+			'test-model',
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -217,11 +275,18 @@ suite('AskAgentProvider', () => {
 		const content = await getAgentContent(agents[0]);
 
 		assert.ok(content.includes('You are an ASK AGENT'));
-		assert.ok(content.includes('NEVER modify files or run commands that change state'));
+		assert.ok(
+			content.includes(
+				'NEVER modify files or run commands that change state',
+			),
+		);
 	});
 
 	test('handles empty additionalTools array gracefully', async () => {
-		await mockConfigurationService.setConfig(ConfigKey.AskAgentAdditionalTools, []);
+		await mockConfigurationService.setConfig(
+			ConfigKey.AskAgentAdditionalTools,
+			[],
+		);
 
 		const provider = createProvider();
 		const agents = await provider.provideCustomAgents({}, {} as any);
@@ -252,7 +317,10 @@ suite('AskAgentProvider', () => {
 
 		const content = await getAgentContent(agents[0]);
 
-		assert.ok(!content.includes('handoffs:'), 'Ask agent should not have handoffs');
+		assert.ok(
+			!content.includes('handoffs:'),
+			'Ask agent should not have handoffs',
+		);
 	});
 
 	test('body content instructs not to edit files', async () => {

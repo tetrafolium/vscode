@@ -13,18 +13,21 @@ import { SimulationRunner, TestRuns } from './simulationRunner';
  */
 
 export class ResolvedSimulationRun {
-
 	@mobx.computed
 	public get runs(): ObservablePromise<TestRuns[]> {
-		const outputFolderName = this.simulationRunsProvider.selectedBaselineRun?.name ?? '';
+		const outputFolderName =
+			this.simulationRunsProvider.selectedBaselineRun?.name ?? '';
 		if (!outputFolderName) {
 			return ObservablePromise.resolve([]);
 		}
-		return new ObservablePromise(SimulationRunner.readFromPreviousRun(outputFolderName), []);
+		return new ObservablePromise(
+			SimulationRunner.readFromPreviousRun(outputFolderName),
+			[],
+		);
 	}
 
 	constructor(
-		private readonly simulationRunsProvider: SimulationRunsProvider
+		private readonly simulationRunsProvider: SimulationRunsProvider,
 	) {
 		mobx.makeObservable(this);
 	}

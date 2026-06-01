@@ -19,16 +19,21 @@ import { IGitExtensionService } from '../../../platform/git/common/gitExtensionS
 import { API, Repository } from '../../../platform/git/vscode/git';
 import { IIgnoreService } from '../../../platform/ignore/common/ignoreService';
 import { ILogService } from '../../../platform/log/common/logService';
-import { IFetcherService, Response } from '../../../platform/networking/common/fetcherService';
+import {
+	IFetcherService,
+	Response,
+} from '../../../platform/networking/common/fetcherService';
 import { Progress } from '../../../platform/notification/common/notificationService';
-import { ReviewComment, ReviewRequest } from '../../../platform/review/common/reviewService';
+import {
+	ReviewComment,
+	ReviewRequest,
+} from '../../../platform/review/common/reviewService';
 import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import * as path from '../../../util/vs/base/common/path';
 import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { MarkdownString, Range, Uri } from '../../../vscodeTypes';
 import { FeedbackResult } from '../../prompt/node/feedbackGenerator';
-
 
 const testing = false;
 
@@ -49,7 +54,9 @@ interface FileChange {
  * Normalizes a file path to use forward slashes on all platforms.
  */
 export function normalizePath(relativePath: string): string {
-	return process.platform === 'win32' ? relativePath.replace(/\\/g, '/') : relativePath;
+	return process.platform === 'win32'
+		? relativePath.replace(/\\/g, '/')
+		: relativePath;
 }
 
 /**
@@ -58,17 +65,19 @@ export function normalizePath(relativePath: string): string {
 function collectSelectionChanges(
 	git: API,
 	editor: TextEditor,
-	workspaceService: IWorkspaceService
+	workspaceService: IWorkspaceService,
 ): FileChange[] {
-	return [{
-		repository: git.getRepository(editor.document.uri) || undefined,
-		uri: editor.document.uri,
-		relativePath: workspaceService.asRelativePath(editor.document.uri),
-		before: '',
-		after: editor.document.getText(),
-		selection: editor.selection,
-		document: editor.document,
-	}];
+	return [
+		{
+			repository: git.getRepository(editor.document.uri) || undefined,
+			uri: editor.document.uri,
+			relativePath: workspaceService.asRelativePath(editor.document.uri),
+			before: '',
+			after: editor.document.getText(),
+			selection: editor.selection,
+			document: editor.document,
+		},
+	];
 }
 
 /**
@@ -77,36 +86,56 @@ function collectSelectionChanges(
 async function collectDiffChanges(
 	git: API,
 	group: 'index' | 'workingTree' | 'all',
-	workspaceService: IWorkspaceService
+	workspaceService: IWorkspaceService,
 ): Promise<(FileChange | undefined)[]> {
-	const repositoryChanges = await Promise.all(git.repositories.map(async repository => {
-		const uris = new Set<Uri>();
-		if (group === 'all' || group === 'index') {
-			repository.state.indexChanges.forEach(c => uris.add(c.uri));
-		}
-		if (group === 'all' || group === 'workingTree') {
-			repository.state.workingTreeChanges.forEach(c => uris.add(c.uri));
-			repository.state.untrackedChanges.forEach(c => uris.add(c.uri));
-		}
-		const changes = await Promise.all(Array.from(uris).map(async uri => {
-			const document = await workspaceService.openTextDocument(uri).then(undefined, () => undefined);
-			if (!document) {
-				return undefined; // Deleted files can be skipped.
+	const repositoryChanges = await Promise.all(
+		git.repositories.map(async (repository) => {
+			const uris = new Set<Uri>();
+			if (group === 'all' || group === 'index') {
+				repository.state.indexChanges.forEach((c) => uris.add(c.uri));
 			}
-			const before = await (group === 'index' || group === 'all' ? repository.show('HEAD', uri.fsPath).catch(() => '') : repository.show('', uri.fsPath).catch(() => ''));
-			const after = group === 'index' ? await (repository.show('', uri.fsPath).catch(() => '')) : document.getText();
-			const relativePath = path.relative(repository.rootUri.fsPath, uri.fsPath);
-			return {
-				repository,
-				uri,
-				relativePath: normalizePath(relativePath),
-				before,
-				after,
-				document,
-			};
-		}));
-		return changes;
-	}));
+			if (group === 'all' || group === 'workingTree') {
+				repository.state.workingTreeChanges.forEach((c) =>
+					uris.add(c.uri),
+				);
+				repository.state.untrackedChanges.forEach((c) =>
+					uris.add(c.uri),
+				);
+			}
+			const changes = await Promise.all(
+				Array.from(uris).map(async (uri) => {
+					const document = await workspaceService
+						.openTextDocument(uri)
+						.then(undefined, () => undefined);
+					if (!document) {
+						return undefined; // Deleted files can be skipped.
+					}
+					const before = await (group === 'index' || group === 'all'
+						? repository.show('HEAD', uri.fsPath).catch(() => '')
+						: repository.show('', uri.fsPath).catch(() => ''));
+					const after =
+						group === 'index'
+							? await repository
+									.show('', uri.fsPath)
+									.catch(() => '')
+							: document.getText();
+					const relativePath = path.relative(
+						repository.rootUri.fsPath,
+						uri.fsPath,
+					);
+					return {
+						repository,
+						uri,
+						relativePath: normalizePath(relativePath),
+						before,
+						after,
+						document,
+					};
+				}),
+			);
+			return changes;
+		}),
+	);
 	return repositoryChanges.flat();
 }
 
@@ -115,26 +144,37 @@ async function collectDiffChanges(
  */
 async function collectPatchChanges(
 	git: API,
-	group: { repositoryRoot: string; commitMessages: string[]; patches: { patch: string; fileUri: string; previousFileUri?: string }[] },
-	workspaceService: IWorkspaceService
+	group: {
+		repositoryRoot: string;
+		commitMessages: string[];
+		patches: { patch: string; fileUri: string; previousFileUri?: string }[];
+	},
+	workspaceService: IWorkspaceService,
 ): Promise<(FileChange | undefined)[]> {
-	return Promise.all(group.patches.map(async patch => {
-		const uri = Uri.parse(patch.fileUri);
-		const document = await workspaceService.openTextDocument(uri).then(undefined, () => undefined);
-		if (!document) {
-			return undefined; // Deleted files can be skipped.
-		}
-		const after = document.getText();
-		const before = reversePatch(after, patch.patch);
-		const relativePath = path.relative(group.repositoryRoot, uri.fsPath);
-		return {
-			repository: git.getRepository(Uri.parse(group.repositoryRoot))!,
-			relativePath: normalizePath(relativePath),
-			before,
-			after,
-			document,
-		};
-	}));
+	return Promise.all(
+		group.patches.map(async (patch) => {
+			const uri = Uri.parse(patch.fileUri);
+			const document = await workspaceService
+				.openTextDocument(uri)
+				.then(undefined, () => undefined);
+			if (!document) {
+				return undefined; // Deleted files can be skipped.
+			}
+			const after = document.getText();
+			const before = reversePatch(after, patch.patch);
+			const relativePath = path.relative(
+				group.repositoryRoot,
+				uri.fsPath,
+			);
+			return {
+				repository: git.getRepository(Uri.parse(group.repositoryRoot))!,
+				relativePath: normalizePath(relativePath),
+				before,
+				after,
+				document,
+			};
+		}),
+	);
 }
 
 /**
@@ -143,24 +183,33 @@ async function collectPatchChanges(
 async function collectSingleFileChanges(
 	git: API,
 	group: { group: 'index' | 'workingTree'; file: Uri },
-	workspaceService: IWorkspaceService
+	workspaceService: IWorkspaceService,
 ): Promise<FileChange[]> {
 	const { group: g, file } = group;
 	const repository = git.getRepository(file);
-	const document = await workspaceService.openTextDocument(file).then(undefined, () => undefined);
+	const document = await workspaceService
+		.openTextDocument(file)
+		.then(undefined, () => undefined);
 	if (!repository || !document) {
 		return [];
 	}
-	const before = await (g === 'index' ? repository.show('HEAD', file.fsPath).catch(() => '') : repository.show('', file.fsPath).catch(() => ''));
-	const after = g === 'index' ? await (repository.show('', file.fsPath).catch(() => '')) : document.getText();
+	const before = await (g === 'index'
+		? repository.show('HEAD', file.fsPath).catch(() => '')
+		: repository.show('', file.fsPath).catch(() => ''));
+	const after =
+		g === 'index'
+			? await repository.show('', file.fsPath).catch(() => '')
+			: document.getText();
 	const relativePath = path.relative(repository.rootUri.fsPath, file.fsPath);
-	return [{
-		repository,
-		relativePath: normalizePath(relativePath),
-		before,
-		after,
-		document,
-	}];
+	return [
+		{
+			repository,
+			relativePath: normalizePath(relativePath),
+			before,
+			after,
+			document,
+		},
+	];
 }
 
 /**
@@ -168,9 +217,23 @@ async function collectSingleFileChanges(
  */
 async function collectChanges(
 	git: API,
-	group: 'selection' | 'index' | 'workingTree' | 'all' | { group: 'index' | 'workingTree'; file: Uri } | { repositoryRoot: string; commitMessages: string[]; patches: { patch: string; fileUri: string; previousFileUri?: string }[] },
+	group:
+		| 'selection'
+		| 'index'
+		| 'workingTree'
+		| 'all'
+		| { group: 'index' | 'workingTree'; file: Uri }
+		| {
+				repositoryRoot: string;
+				commitMessages: string[];
+				patches: {
+					patch: string;
+					fileUri: string;
+					previousFileUri?: string;
+				}[];
+		  },
 	editor: TextEditor | undefined,
-	workspaceService: IWorkspaceService
+	workspaceService: IWorkspaceService,
 ): Promise<FileChange[]> {
 	if (group === 'selection') {
 		return collectSelectionChanges(git, editor!, workspaceService);
@@ -197,10 +260,24 @@ export async function githubReview(
 	ignoreService: IIgnoreService,
 	workspaceService: IWorkspaceService,
 	customInstructionsService: ICustomInstructionsService,
-	group: 'selection' | 'index' | 'workingTree' | 'all' | { group: 'index' | 'workingTree'; file: Uri } | { repositoryRoot: string; commitMessages: string[]; patches: { patch: string; fileUri: string; previousFileUri?: string }[] },
+	group:
+		| 'selection'
+		| 'index'
+		| 'workingTree'
+		| 'all'
+		| { group: 'index' | 'workingTree'; file: Uri }
+		| {
+				repositoryRoot: string;
+				commitMessages: string[];
+				patches: {
+					patch: string;
+					fileUri: string;
+					previousFileUri?: string;
+				}[];
+		  },
 	editor: TextEditor | undefined,
 	progress: Progress<ReviewComment[]>,
-	cancellationToken: CancellationToken
+	cancellationToken: CancellationToken,
 ): Promise<FeedbackResult> {
 	const git = gitExtensionService.getExtensionApi();
 	if (!git) {
@@ -212,38 +289,55 @@ export async function githubReview(
 		return { type: 'success', comments: [] };
 	}
 
-	const ignored = await Promise.all(changes.map(i => ignoreService.isCopilotIgnored(i.document.uri)));
+	const ignored = await Promise.all(
+		changes.map((i) => ignoreService.isCopilotIgnored(i.document.uri)),
+	);
 	const filteredChanges = changes.filter((_, i) => !ignored[i]);
 	if (filteredChanges.length === 0) {
-		logService.info('All input documents are ignored. Skipping feedback generation.');
+		logService.info(
+			'All input documents are ignored. Skipping feedback generation.',
+		);
 		return {
 			type: 'error',
 			severity: 'info',
-			reason: l10n.t('All input documents are ignored by configuration. Check your .copilotignore file.')
+			reason: l10n.t(
+				'All input documents are ignored by configuration. Check your .copilotignore file.',
+			),
 		};
 	}
-	logService.debug(`[github review agent] files: ${filteredChanges.map(change => change.relativePath).join(', ')}`);
+	logService.debug(
+		`[github review agent] files: ${filteredChanges.map((change) => change.relativePath).join(', ')}`,
+	);
 
-	const { requestId, rl } = !testing ? await fetchComments(
-		logService,
-		authService,
-		capiClientService,
-		fetcherService,
-		envService,
-		customInstructionsService,
-		workspaceService,
-		group === 'selection' ? 'selection' : 'diff',
-		filteredChanges[0].repository,
-		filteredChanges.map(change => ({ path: change.relativePath, content: change.before, languageId: change.document.languageId })),
-		filteredChanges.map(change => ({ path: change.relativePath, content: change.after, languageId: change.document.languageId, selection: 'selection' in change ? change.selection : undefined })),
-		cancellationToken,
-	) : {
-		requestId: 'test-request-id',
-		rl: [
-			'data: ...',
-			'data: [DONE]',
-		]
-	};
+	const { requestId, rl } = !testing
+		? await fetchComments(
+				logService,
+				authService,
+				capiClientService,
+				fetcherService,
+				envService,
+				customInstructionsService,
+				workspaceService,
+				group === 'selection' ? 'selection' : 'diff',
+				filteredChanges[0].repository,
+				filteredChanges.map((change) => ({
+					path: change.relativePath,
+					content: change.before,
+					languageId: change.document.languageId,
+				})),
+				filteredChanges.map((change) => ({
+					path: change.relativePath,
+					content: change.after,
+					languageId: change.document.languageId,
+					selection:
+						'selection' in change ? change.selection : undefined,
+				})),
+				cancellationToken,
+			)
+		: {
+				requestId: 'test-request-id',
+				rl: ['data: ...', 'data: [DONE]'],
+			};
 	if (!rl || cancellationToken.isCancellationRequested) {
 		return { type: 'cancelled' };
 	}
@@ -266,25 +360,76 @@ export async function githubReview(
 		logService.debug(`[github review agent] response line: ${line}`);
 		const refs = parseLine(line);
 		references.push(...refs);
-		for (const ghComment of refs.filter(ref => ref.type === 'github.generated-pull-request-comment')) {
-			const change = filteredChanges.find(change => change.relativePath === ghComment.data.path);
+		for (const ghComment of refs.filter(
+			(ref) => ref.type === 'github.generated-pull-request-comment',
+		)) {
+			const change = filteredChanges.find(
+				(change) => change.relativePath === ghComment.data.path,
+			);
 			if (!change) {
 				continue;
 			}
-			const comment = createReviewComment(ghComment, request, change.document, comments.length);
+			const comment = createReviewComment(
+				ghComment,
+				request,
+				change.document,
+				comments.length,
+			);
 			comments.push(comment);
 			progress.report([comment]);
 		}
 	}
-	const excludedComments = references.filter((ref): ref is ExcludedComment => ref.type === 'github.excluded-pull-request-comment')
-		.map(ghComment => {
-			const change = filteredChanges.find(change => change.relativePath === ghComment.data.path);
+	const excludedComments = references
+		.filter(
+			(ref): ref is ExcludedComment =>
+				ref.type === 'github.excluded-pull-request-comment',
+		)
+		.map((ghComment) => {
+			const change = filteredChanges.find(
+				(change) => change.relativePath === ghComment.data.path,
+			);
 			return { ghComment, change };
-		}).filter((item): item is { ghComment: ExcludedComment; change: NonNullable<typeof item.change> } => !!item.change)
-		.map(({ ghComment, change }, i) => createReviewComment(ghComment, request, change.document, comments.length + i));
-	const unsupportedLanguages = !comments.length ? [...new Set(references.filter((ref): ref is ExcludedFile => ref.type === 'github.excluded-file' && ref.data.reason === 'file_type_not_supported')
-		.map(ref => ref.data.language))] : [];
-	return { type: 'success', comments, excludedComments, reason: unsupportedLanguages.length ? l10n.t('Some of the submitted languages are currently not supported: {0}', unsupportedLanguages.join(', ')) : undefined };
+		})
+		.filter(
+			(
+				item,
+			): item is {
+				ghComment: ExcludedComment;
+				change: NonNullable<typeof item.change>;
+			} => !!item.change,
+		)
+		.map(({ ghComment, change }, i) =>
+			createReviewComment(
+				ghComment,
+				request,
+				change.document,
+				comments.length + i,
+			),
+		);
+	const unsupportedLanguages = !comments.length
+		? [
+				...new Set(
+					references
+						.filter(
+							(ref): ref is ExcludedFile =>
+								ref.type === 'github.excluded-file' &&
+								ref.data.reason === 'file_type_not_supported',
+						)
+						.map((ref) => ref.data.language),
+				),
+			]
+		: [];
+	return {
+		type: 'success',
+		comments,
+		excludedComments,
+		reason: unsupportedLanguages.length
+			? l10n.t(
+					'Some of the submitted languages are currently not supported: {0}',
+					unsupportedLanguages.join(', '),
+				)
+			: undefined,
+	};
 }
 
 /**
@@ -301,15 +446,28 @@ export async function githubReviewFileUris(
 	ignoreService: IIgnoreService,
 	workspaceService: IWorkspaceService,
 	customInstructionsService: ICustomInstructionsService,
-	fileInputs: readonly { readonly currentUri: Uri; readonly baseContent: string }[],
+	fileInputs: readonly {
+		readonly currentUri: Uri;
+		readonly baseContent: string;
+	}[],
 	cancellationToken: CancellationToken,
 ): Promise<FeedbackResult> {
-	const changes: { readonly relativePath: string; readonly before: string; readonly after: string; readonly document: TextDocument; readonly uri: Uri }[] = [];
+	const changes: {
+		readonly relativePath: string;
+		readonly before: string;
+		readonly after: string;
+		readonly document: TextDocument;
+		readonly uri: Uri;
+	}[] = [];
 	for (const input of fileInputs) {
-		const document = await workspaceService.openTextDocument(input.currentUri);
+		const document = await workspaceService.openTextDocument(
+			input.currentUri,
+		);
 		changes.push({
 			uri: input.currentUri,
-			relativePath: normalizePath(workspaceService.asRelativePath(input.currentUri)),
+			relativePath: normalizePath(
+				workspaceService.asRelativePath(input.currentUri),
+			),
 			before: input.baseContent,
 			after: document.getText(),
 			document,
@@ -320,25 +478,46 @@ export async function githubReviewFileUris(
 		return { type: 'success', comments: [] };
 	}
 
-	const ignored = await Promise.all(changes.map(c => ignoreService.isCopilotIgnored(c.uri)));
+	const ignored = await Promise.all(
+		changes.map((c) => ignoreService.isCopilotIgnored(c.uri)),
+	);
 	const filteredChanges = changes.filter((_, i) => !ignored[i]);
 	if (filteredChanges.length === 0) {
-		logService.info('All input documents are ignored. Skipping feedback generation.');
+		logService.info(
+			'All input documents are ignored. Skipping feedback generation.',
+		);
 		return {
 			type: 'error',
 			severity: 'info',
-			reason: l10n.t('All input documents are ignored by configuration. Check your .copilotignore file.')
+			reason: l10n.t(
+				'All input documents are ignored by configuration. Check your .copilotignore file.',
+			),
 		};
 	}
-	logService.debug(`[github review agent] files: ${filteredChanges.map(c => c.relativePath).join(', ')}`);
+	logService.debug(
+		`[github review agent] files: ${filteredChanges.map((c) => c.relativePath).join(', ')}`,
+	);
 
 	const { requestId, rl } = await fetchComments(
-		logService, authService, capiClientService, fetcherService, envService,
-		customInstructionsService, workspaceService,
+		logService,
+		authService,
+		capiClientService,
+		fetcherService,
+		envService,
+		customInstructionsService,
+		workspaceService,
 		'diff',
 		undefined,
-		filteredChanges.map(c => ({ path: c.relativePath, content: c.before, languageId: c.document.languageId })),
-		filteredChanges.map(c => ({ path: c.relativePath, content: c.after, languageId: c.document.languageId })),
+		filteredChanges.map((c) => ({
+			path: c.relativePath,
+			content: c.before,
+			languageId: c.document.languageId,
+		})),
+		filteredChanges.map((c) => ({
+			path: c.relativePath,
+			content: c.after,
+			languageId: c.document.languageId,
+		})),
 		cancellationToken,
 	);
 	if (!rl || cancellationToken.isCancellationRequested) {
@@ -363,34 +542,98 @@ export async function githubReviewFileUris(
 		logService.debug(`[github review agent] response line: ${line}`);
 		const refs = parseLine(line);
 		references.push(...refs);
-		for (const ghComment of refs.filter(ref => ref.type === 'github.generated-pull-request-comment')) {
-			const change = filteredChanges.find(c => c.relativePath === ghComment.data.path);
+		for (const ghComment of refs.filter(
+			(ref) => ref.type === 'github.generated-pull-request-comment',
+		)) {
+			const change = filteredChanges.find(
+				(c) => c.relativePath === ghComment.data.path,
+			);
 			if (!change) {
 				continue;
 			}
-			const comment = createReviewComment(ghComment, request, change.document, comments.length);
+			const comment = createReviewComment(
+				ghComment,
+				request,
+				change.document,
+				comments.length,
+			);
 			comments.push(comment);
 		}
 	}
-	const excludedComments = references.filter((ref): ref is ExcludedComment => ref.type === 'github.excluded-pull-request-comment')
-		.map(ghComment => {
-			const change = filteredChanges.find(c => c.relativePath === ghComment.data.path);
+	const excludedComments = references
+		.filter(
+			(ref): ref is ExcludedComment =>
+				ref.type === 'github.excluded-pull-request-comment',
+		)
+		.map((ghComment) => {
+			const change = filteredChanges.find(
+				(c) => c.relativePath === ghComment.data.path,
+			);
 			return { ghComment, change };
-		}).filter((item): item is { ghComment: ExcludedComment; change: NonNullable<typeof item.change> } => !!item.change)
-		.map(({ ghComment, change }, i) => createReviewComment(ghComment, request, change.document, comments.length + i));
-	const unsupportedLanguages = !comments.length ? [...new Set(references.filter((ref): ref is ExcludedFile => ref.type === 'github.excluded-file' && ref.data.reason === 'file_type_not_supported')
-		.map(ref => ref.data.language))] : [];
-	return { type: 'success', comments, excludedComments, reason: unsupportedLanguages.length ? l10n.t('Some of the submitted languages are currently not supported: {0}', unsupportedLanguages.join(', ')) : undefined };
+		})
+		.filter(
+			(
+				item,
+			): item is {
+				ghComment: ExcludedComment;
+				change: NonNullable<typeof item.change>;
+			} => !!item.change,
+		)
+		.map(({ ghComment, change }, i) =>
+			createReviewComment(
+				ghComment,
+				request,
+				change.document,
+				comments.length + i,
+			),
+		);
+	const unsupportedLanguages = !comments.length
+		? [
+				...new Set(
+					references
+						.filter(
+							(ref): ref is ExcludedFile =>
+								ref.type === 'github.excluded-file' &&
+								ref.data.reason === 'file_type_not_supported',
+						)
+						.map((ref) => ref.data.language),
+				),
+			]
+		: [];
+	return {
+		type: 'success',
+		comments,
+		excludedComments,
+		reason: unsupportedLanguages.length
+			? l10n.t(
+					'Some of the submitted languages are currently not supported: {0}',
+					unsupportedLanguages.join(', '),
+				)
+			: undefined,
+	};
 }
 
-export function createReviewComment(ghComment: ResponseComment | ExcludedComment, request: ReviewRequest, document: TextDocument, index: number) {
+export function createReviewComment(
+	ghComment: ResponseComment | ExcludedComment,
+	request: ReviewRequest,
+	document: TextDocument,
+	index: number,
+) {
 	const fromLine = document.lineAt(ghComment.data.line - 1);
 	const lastNonWhitespaceCharacterIndex = fromLine.text.trimEnd().length;
-	const range = new Range(fromLine.lineNumber, fromLine.firstNonWhitespaceCharacterIndex, fromLine.lineNumber, lastNonWhitespaceCharacterIndex);
+	const range = new Range(
+		fromLine.lineNumber,
+		fromLine.firstNonWhitespaceCharacterIndex,
+		fromLine.lineNumber,
+		lastNonWhitespaceCharacterIndex,
+	);
 	const raw = ghComment.data.body;
 	// Remove suggestion because that interfers with our own suggestion rendering later.
 	const { content, suggestions } = removeSuggestion(raw);
-	const startLine = typeof ghComment.data.start_line === 'number' ? ghComment.data.start_line : ghComment.data.line;
+	const startLine =
+		typeof ghComment.data.start_line === 'number'
+			? ghComment.data.start_line
+			: ghComment.data.line;
 	const suggestionRange = new Range(startLine - 1, 0, ghComment.data.line, 0);
 	const comment: ReviewComment = {
 		request,
@@ -406,7 +649,7 @@ export function createReviewComment(ghComment: ResponseComment | ExcludedComment
 		skipSuggestion: true,
 		suggestion: {
 			markdown: '',
-			edits: suggestions.map(suggestion => {
+			edits: suggestions.map((suggestion) => {
 				const oldText = document.getText(suggestionRange);
 				return {
 					range: suggestionRange,
@@ -419,15 +662,19 @@ export function createReviewComment(ghComment: ResponseComment | ExcludedComment
 	return comment;
 }
 
-const SUGGESTION_EXPRESSION = /```suggestion(\u0020*(\r\n|\n))((?<suggestion>[\s\S]*?)(\r\n|\n))?```/g;
+const SUGGESTION_EXPRESSION =
+	/```suggestion(\u0020*(\r\n|\n))((?<suggestion>[\s\S]*?)(\r\n|\n))?```/g;
 export function removeSuggestion(body: string) {
 	const suggestions: string[] = [];
-	const content = body.replaceAll(SUGGESTION_EXPRESSION, (_match, _ws, _nl, suggestion) => {
-		if (suggestion) {
-			suggestions.push(suggestion);
-		}
-		return '';
-	});
+	const content = body.replaceAll(
+		SUGGESTION_EXPRESSION,
+		(_match, _ws, _nl, suggestion) => {
+			if (suggestion) {
+				suggestions.push(suggestion);
+			}
+			return '';
+		},
+	);
 	return { content, suggestions };
 }
 
@@ -466,7 +713,11 @@ interface FileState {
 //   }
 // }
 
-export type ResponseReference = ResponseComment | ExcludedComment | ExcludedFile | { type: 'unknown' };
+export type ResponseReference =
+	| ResponseComment
+	| ExcludedComment
+	| ExcludedFile
+	| { type: 'unknown' };
 
 export interface ResponseComment {
 	type: 'github.generated-pull-request-comment';
@@ -525,20 +776,41 @@ function hasType(ref: RawReference): ref is RawReference & { type: string } {
 }
 
 export function parseLine(line: string): ResponseReference[] {
-
-	if (line === 'data: [DONE]') { return []; }
-	if (line === '') { return []; }
+	if (line === 'data: [DONE]') {
+		return [];
+	}
+	if (line === '') {
+		return [];
+	}
 
 	const parsedLine: ParsedResponse = JSON.parse(line.replace('data: ', ''));
 
-	if (Array.isArray(parsedLine.copilot_references) && parsedLine.copilot_references.length > 0) {
-		return parsedLine.copilot_references.filter(hasType) as ResponseReference[];
+	if (
+		Array.isArray(parsedLine.copilot_references) &&
+		parsedLine.copilot_references.length > 0
+	) {
+		return parsedLine.copilot_references.filter(
+			hasType,
+		) as ResponseReference[];
 	} else {
 		return [];
 	}
 }
 
-async function fetchComments(logService: ILogService, authService: IAuthenticationService, capiClientService: ICAPIClientService, fetcherService: IFetcherService, envService: IEnvService, customInstructionsService: ICustomInstructionsService, workspaceService: IWorkspaceService, kind: 'selection' | 'diff', repository: Repository | undefined, baseFileContents: FileState[], headFileContents: FileState[], cancellationToken: CancellationToken) {
+async function fetchComments(
+	logService: ILogService,
+	authService: IAuthenticationService,
+	capiClientService: ICAPIClientService,
+	fetcherService: IFetcherService,
+	envService: IEnvService,
+	customInstructionsService: ICustomInstructionsService,
+	workspaceService: IWorkspaceService,
+	kind: 'selection' | 'diff',
+	repository: Repository | undefined,
+	baseFileContents: FileState[],
+	headFileContents: FileState[],
+	cancellationToken: CancellationToken,
+) {
 	// Collect languageId to file patterns mapping
 	const languageIdToFilePatterns = new Map<string, Set<string>>();
 	for (const file of [...baseFileContents, ...headFileContents]) {
@@ -551,52 +823,75 @@ async function fetchComments(logService: ILogService, authService: IAuthenticati
 		}
 	}
 
-	const customInstructions = await loadCustomInstructions(customInstructionsService, workspaceService, kind, languageIdToFilePatterns, 2);
+	const customInstructions = await loadCustomInstructions(
+		customInstructionsService,
+		workspaceService,
+		kind,
+		languageIdToFilePatterns,
+		2,
+	);
 
 	const requestBody = {
-		messages: [{
-			role: 'user',
-			...(kind === 'selection' ? {
-				review_type: 'snippet',
-				snippet_files: headFileContents.map(f => ({
-					path: f.path,
-					regions: [
-						{
-							start_line: f.selection!.start.line + 1,
-							end_line: f.selection!.end.line + (f.selection!.end.character > 0 ? 1 : 0), // If selection ends at start of line, don't include that line
+		messages: [
+			{
+				role: 'user',
+				...(kind === 'selection'
+					? {
+							review_type: 'snippet',
+							snippet_files: headFileContents.map((f) => ({
+								path: f.path,
+								regions: [
+									{
+										start_line: f.selection!.start.line + 1,
+										end_line:
+											f.selection!.end.line +
+											(f.selection!.end.character > 0
+												? 1
+												: 0), // If selection ends at start of line, don't include that line
+									},
+								],
+							})),
 						}
-					]
-				})),
-			} : {}),
-			copilot_references: [
-				{
-					type: 'github.pull_request',
-					id: '1',
-					data: {
-						type: 'pull-request',
-						headFileContents: headFileContents.map(({ path, content }) => ({ path, content })),
-						baseFileContents: baseFileContents.map(({ path, content }) => ({ path, content })),
+					: {}),
+				copilot_references: [
+					{
+						type: 'github.pull_request',
+						id: '1',
+						data: {
+							type: 'pull-request',
+							headFileContents: headFileContents.map(
+								({ path, content }) => ({ path, content }),
+							),
+							baseFileContents: baseFileContents.map(
+								({ path, content }) => ({ path, content }),
+							),
+						},
 					},
-				},
-				...customInstructions,
-			],
-		}]
+					...customInstructions,
+				],
+			},
+		],
 	};
 
 	const abort = fetcherService.makeAbortController();
-	const disposable = cancellationToken.onCancellationRequested(() => abort.abort());
+	const disposable = cancellationToken.onCancellationRequested(() =>
+		abort.abort(),
+	);
 	let response: Response;
 	try {
 		const copilotToken = await authService.getCopilotToken();
-		response = await capiClientService.makeRequest({
-			method: 'POST',
-			headers: {
-				Authorization: 'Bearer ' + copilotToken.token,
-				'X-Copilot-Code-Review-Mode': 'ide',
+		response = await capiClientService.makeRequest(
+			{
+				method: 'POST',
+				headers: {
+					Authorization: 'Bearer ' + copilotToken.token,
+					'X-Copilot-Code-Review-Mode': 'ide',
+				},
+				body: JSON.stringify(requestBody),
+				signal: abort.signal,
 			},
-			body: JSON.stringify(requestBody),
-			signal: abort.signal,
-		}, { type: RequestType.CodeReviewAgent });
+			{ type: RequestType.CodeReviewAgent },
+		);
 	} catch (err) {
 		if (fetcherService.isAbortError(err)) {
 			return {
@@ -613,16 +908,22 @@ async function fetchComments(logService: ILogService, authService: IAuthenticati
 
 	if (!response.ok) {
 		if (response.status === 402) {
-			const err = new Error(`You have reached your Code Review quota limit.`);
+			const err = new Error(
+				`You have reached your Code Review quota limit.`,
+			);
 			(err as any).severity = 'info';
 			throw err;
 		}
-		throw new Error(`Agent returned an unexpected HTTP ${response.status} error (request id ${requestId || 'unknown'}).`);
+		throw new Error(
+			`Agent returned an unexpected HTTP ${response.status} error (request id ${requestId || 'unknown'}).`,
+		);
 	}
 
 	return {
 		requestId,
-		rl: readline.createInterface({ input: Readable.fromWeb(response.body.toReadableStream()) }),
+		rl: readline.createInterface({
+			input: Readable.fromWeb(response.body.toReadableStream()),
+		}),
 	};
 }
 
@@ -650,9 +951,17 @@ export function parsePatch(patchLines: string[]): LineChange[] {
 			}
 		} else if (beforeLineNumber !== -1) {
 			if (line.startsWith('+')) {
-				changes.push({ beforeLineNumber, content: line.slice(1), type: 'add' });
+				changes.push({
+					beforeLineNumber,
+					content: line.slice(1),
+					type: 'add',
+				});
 			} else if (line.startsWith('-')) {
-				changes.push({ beforeLineNumber, content: line.slice(1), type: 'remove' });
+				changes.push({
+					beforeLineNumber,
+					content: line.slice(1),
+					type: 'remove',
+				});
 				beforeLineNumber++;
 			} else {
 				beforeLineNumber++;
@@ -663,7 +972,10 @@ export function parsePatch(patchLines: string[]): LineChange[] {
 	return changes;
 }
 
-export function reverseParsedPatch(fileLines: string[], patch: LineChange[]): string[] {
+export function reverseParsedPatch(
+	fileLines: string[],
+	patch: LineChange[],
+): string[] {
 	for (const change of patch) {
 		if (change.type === 'add') {
 			fileLines.splice(change.beforeLineNumber - 1, 1);
@@ -687,22 +999,41 @@ export interface CodingGuideline {
 	};
 }
 
-export async function loadCustomInstructions(customInstructionsService: ICustomInstructionsService, workspaceService: IWorkspaceService, kind: 'selection' | 'diff', languageIdToFilePatterns: Map<string, Set<string>>, firstId: number): Promise<CodingGuideline[]> {
+export async function loadCustomInstructions(
+	customInstructionsService: ICustomInstructionsService,
+	workspaceService: IWorkspaceService,
+	kind: 'selection' | 'diff',
+	languageIdToFilePatterns: Map<string, Set<string>>,
+	firstId: number,
+): Promise<CodingGuideline[]> {
 	const customInstructionRefs = [];
 	let nextId = firstId;
 
 	// Collect instruction files from agent instructions
-	const agentInstructionUris = await customInstructionsService.getAgentInstructions();
+	const agentInstructionUris =
+		await customInstructionsService.getAgentInstructions();
 	for (const uri of agentInstructionUris) {
-		const instructions = await customInstructionsService.fetchInstructionsFromFile(Uri.from(uri));
+		const instructions =
+			await customInstructionsService.fetchInstructionsFromFile(
+				Uri.from(uri),
+			);
 		if (instructions) {
 			const relativePath = workspaceService.asRelativePath(Uri.from(uri));
 			for (const instruction of instructions.content) {
 				// Skip instructions with languageId if not in map
-				if (instruction.languageId && !languageIdToFilePatterns.has(instruction.languageId)) {
+				if (
+					instruction.languageId &&
+					!languageIdToFilePatterns.has(instruction.languageId)
+				) {
 					continue;
 				}
-				const filePatterns = instruction.languageId ? Array.from(languageIdToFilePatterns.get(instruction.languageId)!) : ['*'];
+				const filePatterns = instruction.languageId
+					? Array.from(
+							languageIdToFilePatterns.get(
+								instruction.languageId,
+							)!,
+						)
+					: ['*'];
 				customInstructionRefs.push({
 					type: 'github.coding_guideline',
 					id: `${nextId}`,
@@ -721,19 +1052,41 @@ export async function loadCustomInstructions(customInstructionsService: ICustomI
 
 	// Collect instructions from settings
 	const settingsConfigs = [
-		{ config: ConfigKey.CodeGenerationInstructions, name: 'Code Generation Instruction' },
-		...(kind === 'selection' ? [{ config: ConfigKey.CodeFeedbackInstructions, name: 'Code Review Instruction' }] : []),
+		{
+			config: ConfigKey.CodeGenerationInstructions,
+			name: 'Code Generation Instruction',
+		},
+		...(kind === 'selection'
+			? [
+					{
+						config: ConfigKey.CodeFeedbackInstructions,
+						name: 'Code Review Instruction',
+					},
+				]
+			: []),
 	];
 
 	for (const { config, name } of settingsConfigs) {
-		const instructionsGroups = await customInstructionsService.fetchInstructionsFromSetting(config);
+		const instructionsGroups =
+			await customInstructionsService.fetchInstructionsFromSetting(
+				config,
+			);
 		for (const instructionsGroup of instructionsGroups) {
 			for (const instruction of instructionsGroup.content) {
 				// Skip instructions with languageId if not in map
-				if (instruction.languageId && !languageIdToFilePatterns.has(instruction.languageId)) {
+				if (
+					instruction.languageId &&
+					!languageIdToFilePatterns.has(instruction.languageId)
+				) {
 					continue;
 				}
-				const filePatterns = instruction.languageId ? Array.from(languageIdToFilePatterns.get(instruction.languageId)!) : ['*'];
+				const filePatterns = instruction.languageId
+					? Array.from(
+							languageIdToFilePatterns.get(
+								instruction.languageId,
+							)!,
+						)
+					: ['*'];
 				customInstructionRefs.push({
 					type: 'github.coding_guideline',
 					id: `${nextId}`,

@@ -19,13 +19,20 @@ suite('LocalFileSystem', function () {
 	suiteSetup(async function () {
 		testDir = await mkdtemp(join(tmpdir(), 'copilot-unit-test-'));
 		await mkdir(join(testDir, 'folder'));
-		await symlink(join(testDir, 'folder'), join(testDir, 'folder-link'), 'dir');
+		await symlink(
+			join(testDir, 'folder'),
+			join(testDir, 'folder-link'),
+			'dir',
+		);
 
 		await writeFile(join(testDir, 'file'), '\n');
 		await symlink(join(testDir, 'file'), join(testDir, 'file-link'));
 
 		await writeFile(join(testDir, 'tempfile'), '');
-		await symlink(join(testDir, 'tempfile'), join(testDir, 'dangling-link'));
+		await symlink(
+			join(testDir, 'tempfile'),
+			join(testDir, 'dangling-link'),
+		);
 		await rm(join(testDir, 'tempfile')); // leave the link dangling
 	});
 
@@ -34,7 +41,9 @@ suite('LocalFileSystem', function () {
 	});
 
 	test('.readDirectory returns correct entries', async function () {
-		const result = await defaultFileSystem.readDirectory(makeFsUri(testDir));
+		const result = await defaultFileSystem.readDirectory(
+			makeFsUri(testDir),
+		);
 		assert.strictEqual(result.length, 5);
 		const target = [
 			['folder', FileType.Directory],
@@ -45,15 +54,19 @@ suite('LocalFileSystem', function () {
 		];
 		for (const entry of target) {
 			assert.ok(
-				result.some(([name, type]) => name === entry[0] && type === entry[1]),
-				`Expected entry ${entry[0]} with type ${entry[1]} not found in result`
+				result.some(
+					([name, type]) => name === entry[0] && type === entry[1],
+				),
+				`Expected entry ${entry[0]} with type ${entry[1]} not found in result`,
 			);
 		}
 	});
 
 	test('.stat returns correct stats for a normal file', async function () {
 		const fsStats = await stat(join(testDir, 'file'));
-		const result = await defaultFileSystem.stat(makeFsUri(join(testDir, 'file')));
+		const result = await defaultFileSystem.stat(
+			makeFsUri(join(testDir, 'file')),
+		);
 
 		assert.strictEqual(result.ctime, fsStats.ctimeMs);
 		assert.strictEqual(result.mtime, fsStats.mtimeMs);
@@ -63,7 +76,9 @@ suite('LocalFileSystem', function () {
 
 	test('.stat returns correct stats for a directory', async function () {
 		const fsStats = await stat(join(testDir, 'folder'));
-		const result = await defaultFileSystem.stat(makeFsUri(join(testDir, 'folder')));
+		const result = await defaultFileSystem.stat(
+			makeFsUri(join(testDir, 'folder')),
+		);
 
 		assert.strictEqual(result.ctime, fsStats.ctimeMs);
 		assert.strictEqual(result.mtime, fsStats.mtimeMs);
@@ -73,7 +88,9 @@ suite('LocalFileSystem', function () {
 
 	test('.stat returns target stats and combined type for link to file', async function () {
 		const fsStats = await stat(join(testDir, 'file'));
-		const result = await defaultFileSystem.stat(makeFsUri(join(testDir, 'file-link')));
+		const result = await defaultFileSystem.stat(
+			makeFsUri(join(testDir, 'file-link')),
+		);
 
 		assert.strictEqual(result.ctime, fsStats.ctimeMs);
 		assert.strictEqual(result.mtime, fsStats.mtimeMs);
@@ -83,16 +100,23 @@ suite('LocalFileSystem', function () {
 
 	test('.stat returns target stats and combined type for link to directory', async function () {
 		const fsStats = await stat(join(testDir, 'folder'));
-		const result = await defaultFileSystem.stat(makeFsUri(join(testDir, 'folder-link')));
+		const result = await defaultFileSystem.stat(
+			makeFsUri(join(testDir, 'folder-link')),
+		);
 
 		assert.strictEqual(result.ctime, fsStats.ctimeMs);
 		assert.strictEqual(result.mtime, fsStats.mtimeMs);
 		assert.strictEqual(result.size, fsStats.size);
-		assert.strictEqual(result.type, FileType.Directory | FileType.SymbolicLink);
+		assert.strictEqual(
+			result.type,
+			FileType.Directory | FileType.SymbolicLink,
+		);
 	});
 
 	test('.stat returns Unknown type for a dangling link', async function () {
-		const result = await defaultFileSystem.stat(makeFsUri(join(testDir, 'dangling-link')));
+		const result = await defaultFileSystem.stat(
+			makeFsUri(join(testDir, 'dangling-link')),
+		);
 
 		assert.strictEqual(result.type, FileType.Unknown);
 	});

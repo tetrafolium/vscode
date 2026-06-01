@@ -4,11 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { describe, expect, it } from 'vitest';
-import { GenAiAttr, GenAiOperationName } from '../../../../platform/otel/common/genAiAttributes';
-import type { ICompletedSpanData, SpanStatusCode } from '../../../../platform/otel/common/otelService';
+import {
+	GenAiAttr,
+	GenAiOperationName,
+} from '../../../../platform/otel/common/genAiAttributes';
+import type {
+	ICompletedSpanData,
+	SpanStatusCode,
+} from '../../../../platform/otel/common/otelService';
 import { completedSpanToDebugEvent } from '../otelSpanToChatDebugEvent';
 
-function makeSpan(overrides: Partial<ICompletedSpanData> & { attributes?: Record<string, string | number | boolean | string[]> }): ICompletedSpanData {
+function makeSpan(
+	overrides: Partial<ICompletedSpanData> & {
+		attributes?: Record<string, string | number | boolean | string[]>;
+	},
+): ICompletedSpanData {
 	return {
 		name: overrides.name ?? 'test-span',
 		spanId: overrides.spanId ?? 'span-1',
@@ -26,7 +36,9 @@ describe('completedSpanToDebugEvent - invoke_agent identification', () => {
 	it('returns undefined for top-level invoke_agent (no parentSpanId)', () => {
 		const span = makeSpan({
 			name: 'invoke_agent copilotcli',
-			attributes: { [GenAiAttr.OPERATION_NAME]: GenAiOperationName.INVOKE_AGENT },
+			attributes: {
+				[GenAiAttr.OPERATION_NAME]: GenAiOperationName.INVOKE_AGENT,
+			},
 		});
 		expect(completedSpanToDebugEvent(span)).toBeUndefined();
 	});
@@ -35,7 +47,9 @@ describe('completedSpanToDebugEvent - invoke_agent identification', () => {
 		const span = makeSpan({
 			name: 'invoke_agent',
 			parentSpanId: 'parent-1',
-			attributes: { [GenAiAttr.OPERATION_NAME]: GenAiOperationName.INVOKE_AGENT },
+			attributes: {
+				[GenAiAttr.OPERATION_NAME]: GenAiOperationName.INVOKE_AGENT,
+			},
 		});
 		expect(completedSpanToDebugEvent(span)).toBeUndefined();
 	});
@@ -44,7 +58,9 @@ describe('completedSpanToDebugEvent - invoke_agent identification', () => {
 		const span = makeSpan({
 			name: 'invoke_agent  ',
 			parentSpanId: 'parent-1',
-			attributes: { [GenAiAttr.OPERATION_NAME]: GenAiOperationName.INVOKE_AGENT },
+			attributes: {
+				[GenAiAttr.OPERATION_NAME]: GenAiOperationName.INVOKE_AGENT,
+			},
 		});
 		expect(completedSpanToDebugEvent(span)).toBeUndefined();
 	});
@@ -67,7 +83,9 @@ describe('completedSpanToDebugEvent - invoke_agent identification', () => {
 		const span = makeSpan({
 			name: 'invoke_agent explore',
 			parentSpanId: 'parent-1',
-			attributes: { [GenAiAttr.OPERATION_NAME]: GenAiOperationName.INVOKE_AGENT },
+			attributes: {
+				[GenAiAttr.OPERATION_NAME]: GenAiOperationName.INVOKE_AGENT,
+			},
 		});
 		expect(() => completedSpanToDebugEvent(span)).toThrow();
 	});

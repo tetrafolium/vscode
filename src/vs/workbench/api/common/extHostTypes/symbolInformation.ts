@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../base/common/uri.js';
-import { es5ClassCompat } from './es5ClassCompat.js';
-import { Location } from './location.js';
-import { Range } from './range.js';
+import { URI } from "../../../../base/common/uri.js";
+import { es5ClassCompat } from "./es5ClassCompat.js";
+import { Location } from "./location.js";
+import { Range } from "./range.js";
 
 export enum SymbolKind {
 	File = 0,
@@ -34,19 +34,18 @@ export enum SymbolKind {
 	Struct = 22,
 	Event = 23,
 	Operator = 24,
-	TypeParameter = 25
+	TypeParameter = 25,
 }
 
 export enum SymbolTag {
-	Deprecated = 1
+	Deprecated = 1,
 }
 
 @es5ClassCompat
 export class SymbolInformation {
-
 	static validate(candidate: SymbolInformation): void {
 		if (!candidate.name) {
-			throw new Error('name must not be falsy');
+			throw new Error("name must not be falsy");
 		}
 	}
 
@@ -56,14 +55,31 @@ export class SymbolInformation {
 	tags?: SymbolTag[];
 	containerName: string | undefined;
 
-	constructor(name: string, kind: SymbolKind, containerName: string | undefined, location: Location);
-	constructor(name: string, kind: SymbolKind, range: Range, uri?: URI, containerName?: string);
-	constructor(name: string, kind: SymbolKind, rangeOrContainer: string | undefined | Range, locationOrUri?: Location | URI, containerName?: string) {
+	constructor(
+		name: string,
+		kind: SymbolKind,
+		containerName: string | undefined,
+		location: Location,
+	);
+	constructor(
+		name: string,
+		kind: SymbolKind,
+		range: Range,
+		uri?: URI,
+		containerName?: string,
+	);
+	constructor(
+		name: string,
+		kind: SymbolKind,
+		rangeOrContainer: string | undefined | Range,
+		locationOrUri?: Location | URI,
+		containerName?: string,
+	) {
 		this.name = name;
 		this.kind = kind;
 		this.containerName = containerName;
 
-		if (typeof rangeOrContainer === 'string') {
+		if (typeof rangeOrContainer === "string") {
 			this.containerName = rangeOrContainer;
 		}
 
@@ -76,12 +92,17 @@ export class SymbolInformation {
 		SymbolInformation.validate(this);
 	}
 
-	toJSON(): { name: string; kind: string; location: Location; containerName: string | undefined } {
+	toJSON(): {
+		name: string;
+		kind: string;
+		location: Location;
+		containerName: string | undefined;
+	} {
 		return {
 			name: this.name,
 			kind: SymbolKind[this.kind],
 			location: this.location,
-			containerName: this.containerName
+			containerName: this.containerName,
 		};
 	}
 }

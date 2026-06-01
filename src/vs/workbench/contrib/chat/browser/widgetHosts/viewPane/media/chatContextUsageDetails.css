@@ -4,10 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 /* Remove the outline and change border color on focus instead */
-.workbench-hover-container.locked:has(.chat-context-usage-details) .monaco-hover.workbench-hover {
+.workbench-hover-container.locked:has(.chat-context-usage-details)
+	.monaco-hover.workbench-hover {
 	outline: none;
 }
-.workbench-hover-container:focus-within.locked:has(.chat-context-usage-details) .monaco-hover.workbench-hover {
+.workbench-hover-container:focus-within.locked:has(.chat-context-usage-details)
+	.monaco-hover.workbench-hover {
 	outline: none;
 	border-color: var(--vscode-focusBorder);
 }
@@ -62,7 +64,10 @@
 	transition: width 0.3s ease;
 }
 
-.chat-context-usage-details .quota-indicator .quota-bar .quota-bit.output-buffer {
+.chat-context-usage-details
+	.quota-indicator
+	.quota-bar
+	.quota-bit.output-buffer {
 	background: repeating-linear-gradient(
 		-45deg,
 		var(--vscode-focusBorder),
@@ -73,7 +78,12 @@
 	border-radius: 0 4px 4px 0;
 }
 
-.chat-context-usage-details .quota-indicator .quota-bar .quota-bit:not(.output-buffer):has(+ .quota-bit.output-buffer:not([style*="display: none"])) {
+.chat-context-usage-details
+	.quota-indicator
+	.quota-bar
+	.quota-bit:not(.output-buffer):has(
+		+ .quota-bit.output-buffer:not([style*="display: none"])
+	) {
 	border-radius: 4px 0 0 4px;
 }
 
@@ -87,7 +97,10 @@
 	color: var(--vscode-descriptionForeground);
 }
 
-.chat-context-usage-details .quota-indicator .output-buffer-legend .output-buffer-swatch {
+.chat-context-usage-details
+	.quota-indicator
+	.output-buffer-legend
+	.output-buffer-swatch {
 	width: 12px;
 	height: 8px;
 	border-radius: 2px;
@@ -119,7 +132,10 @@
 	background-color: var(--vscode-editorWarning-foreground);
 }
 
-.chat-context-usage-details .quota-indicator.warning .quota-bar .quota-bit.output-buffer {
+.chat-context-usage-details
+	.quota-indicator.warning
+	.quota-bar
+	.quota-bit.output-buffer {
 	background: repeating-linear-gradient(
 		-45deg,
 		var(--vscode-editorWarning-foreground),
@@ -147,7 +163,10 @@
 	background-color: var(--vscode-editorError-foreground);
 }
 
-.chat-context-usage-details .quota-indicator.error .quota-bar .quota-bit.output-buffer {
+.chat-context-usage-details
+	.quota-indicator.error
+	.quota-bar
+	.quota-bit.output-buffer {
 	background: repeating-linear-gradient(
 		-45deg,
 		var(--vscode-editorError-foreground),
@@ -211,12 +230,18 @@
 	gap: 4px;
 }
 
-.chat-context-usage-details .actions-section .button-bar-container .monaco-button-bar {
+.chat-context-usage-details
+	.actions-section
+	.button-bar-container
+	.monaco-button-bar {
 	flex-direction: column;
 	gap: 4px;
 }
 
-.chat-context-usage-details .actions-section .button-bar-container .monaco-button {
+.chat-context-usage-details
+	.actions-section
+	.button-bar-container
+	.monaco-button {
 	width: 100%;
 	justify-content: center;
 }

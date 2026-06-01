@@ -3,18 +3,30 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as dom from '../../../../base/browser/dom.js';
-import { mainWindow } from '../../../../base/browser/window.js';
-import { Event } from '../../../../base/common/event.js';
-import { Disposable, IDisposable } from '../../../../base/common/lifecycle.js';
-import { autorun, derived, IObservable, observableFromEvent, observableValue } from '../../../../base/common/observable.js';
+import * as dom from "../../../../base/browser/dom.js";
+import { mainWindow } from "../../../../base/browser/window.js";
+import { Event } from "../../../../base/common/event.js";
+import { Disposable, IDisposable } from "../../../../base/common/lifecycle.js";
+import {
+	autorun,
+	derived,
+	IObservable,
+	observableFromEvent,
+	observableValue,
+} from "../../../../base/common/observable.js";
 // eslint-disable-next-line local/code-no-deep-import-of-internal
-import { TotalTrueTimeObservable, wasTrueRecently } from '../../../../base/common/observableInternal/experimental/time.js';
-import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
-import { ILogService, LogLevel } from '../../../../platform/log/common/log.js';
-import { IHostService } from '../../host/browser/host.js';
-import { IUserAttentionService } from '../common/userAttentionService.js';
+import {
+	TotalTrueTimeObservable,
+	wasTrueRecently,
+} from "../../../../base/common/observableInternal/experimental/time.js";
+import { IInstantiationService } from "../../../../platform/instantiation/common/instantiation.js";
+import {
+	InstantiationType,
+	registerSingleton,
+} from "../../../../platform/instantiation/common/extensions.js";
+import { ILogService, LogLevel } from "../../../../platform/log/common/log.js";
+import { IHostService } from "../../host/browser/host.js";
+import { IUserAttentionService } from "../common/userAttentionService.js";
 
 /**
  * The user attention timeout in milliseconds.
@@ -22,7 +34,10 @@ import { IUserAttentionService } from '../common/userAttentionService.js';
  */
 const USER_ATTENTION_TIMEOUT_MS = 60_000;
 
-export class UserAttentionService extends Disposable implements IUserAttentionService {
+export class UserAttentionService
+	extends Disposable
+	implements IUserAttentionService
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _isTracingEnabled: IObservable<boolean>;
@@ -38,41 +53,62 @@ export class UserAttentionService extends Disposable implements IUserAttentionSe
 	) {
 		super();
 
-		const hostAdapter = this._register(instantiationService.createInstance(UserAttentionServiceEnv));
+		const hostAdapter = this._register(
+			instantiationService.createInstance(UserAttentionServiceEnv),
+		);
 		this.isVsCodeFocused = hostAdapter.isVsCodeFocused;
 		this.isUserActive = hostAdapter.isUserActive;
 
 		this._isTracingEnabled = observableFromEvent(
 			this,
 			this._logService.onDidChangeLogLevel,
-			() => this._logService.getLevel() === LogLevel.Trace
+			() => this._logService.getLevel() === LogLevel.Trace,
 		);
 
-		const hadRecentActivity = wasTrueRecently(this.isUserActive, USER_ATTENTION_TIMEOUT_MS, this._store);
+		const hadRecentActivity = wasTrueRecently(
+			this.isUserActive,
+			USER_ATTENTION_TIMEOUT_MS,
+			this._store,
+		);
 
-		this.hasUserAttention = derived(this, reader => {
+		this.hasUserAttention = derived(this, (reader) => {
 			return hadRecentActivity.read(reader);
 		});
 
-		this._timeKeeper = this._register(new TotalTrueTimeObservable(this.hasUserAttention));
+		this._timeKeeper = this._register(
+			new TotalTrueTimeObservable(this.hasUserAttention),
+		);
 
-		this._register(autorun(reader => {
-			if (!this._isTracingEnabled.read(reader)) {
-				return;
-			}
+		this._register(
+			autorun((reader) => {
+				if (!this._isTracingEnabled.read(reader)) {
+					return;
+				}
 
-			reader.store.add(autorun(innerReader => {
-				const focused = this.isVsCodeFocused.read(innerReader);
-				this._logService.trace(`[UserAttentionService] VS Code focus changed: ${focused}`);
-			}));
-			reader.store.add(autorun(innerReader => {
-				const hasAttention = this.hasUserAttention.read(innerReader);
-				this._logService.trace(`[UserAttentionService] User attention changed: ${hasAttention}`);
-			}));
-		}));
+				reader.store.add(
+					autorun((innerReader) => {
+						const focused = this.isVsCodeFocused.read(innerReader);
+						this._logService.trace(
+							`[UserAttentionService] VS Code focus changed: ${focused}`,
+						);
+					}),
+				);
+				reader.store.add(
+					autorun((innerReader) => {
+						const hasAttention = this.hasUserAttention.read(innerReader);
+						this._logService.trace(
+							`[UserAttentionService] User attention changed: ${hasAttention}`,
+						);
+					}),
+				);
+			}),
+		);
 	}
 
-	public fireAfterGivenFocusTimePassed(focusTimeMs: number, callback: () => void): IDisposable {
+	public fireAfterGivenFocusTimePassed(
+		focusTimeMs: number,
+		callback: () => void,
+	): IDisposable {
 		return this._timeKeeper.fireWhenTimeIncreasedBy(focusTimeMs, callback);
 	}
 
@@ -94,19 +130,57 @@ export class UserAttentionServiceEnv extends Disposable {
 	) {
 		super();
 
-		this.isVsCodeFocused = observableFromEvent(this, this._hostService.onDidChangeFocus, () => this._hostService.hasFocus);
+		this.isVsCodeFocused = observableFromEvent(
+			this,
+			this._hostService.onDidChangeFocus,
+			() => this._hostService.hasFocus,
+		);
 		this.isUserActive = this._isUserActive;
 
 		const onActivity = () => {
 			this._markUserActivity();
 		};
 
-		this._register(Event.runAndSubscribe(dom.onDidRegisterWindow, ({ window, disposables }) => {
-			disposables.add(dom.addDisposableListener(window.document, 'keydown', onActivity, eventListenerOptions));
-			disposables.add(dom.addDisposableListener(window.document, 'mousemove', onActivity, eventListenerOptions));
-			disposables.add(dom.addDisposableListener(window.document, 'mousedown', onActivity, eventListenerOptions));
-			disposables.add(dom.addDisposableListener(window.document, 'touchstart', onActivity, eventListenerOptions));
-		}, { window: mainWindow, disposables: this._store }));
+		this._register(
+			Event.runAndSubscribe(
+				dom.onDidRegisterWindow,
+				({ window, disposables }) => {
+					disposables.add(
+						dom.addDisposableListener(
+							window.document,
+							"keydown",
+							onActivity,
+							eventListenerOptions,
+						),
+					);
+					disposables.add(
+						dom.addDisposableListener(
+							window.document,
+							"mousemove",
+							onActivity,
+							eventListenerOptions,
+						),
+					);
+					disposables.add(
+						dom.addDisposableListener(
+							window.document,
+							"mousedown",
+							onActivity,
+							eventListenerOptions,
+						),
+					);
+					disposables.add(
+						dom.addDisposableListener(
+							window.document,
+							"touchstart",
+							onActivity,
+							eventListenerOptions,
+						),
+					);
+				},
+				{ window: mainWindow, disposables: this._store },
+			),
+		);
 
 		if (this._hostService.hasFocus) {
 			this._markUserActivity();
@@ -117,7 +191,7 @@ export class UserAttentionServiceEnv extends Disposable {
 		if (this._activityDebounceTimeout !== undefined) {
 			clearTimeout(this._activityDebounceTimeout);
 		} else {
-			this._logService.trace('[UserAttentionService] User activity detected');
+			this._logService.trace("[UserAttentionService] User activity detected");
 			this._isUserActive.set(true, undefined);
 		}
 
@@ -139,4 +213,8 @@ const eventListenerOptions: AddEventListenerOptions = {
 	capture: true,
 };
 
-registerSingleton(IUserAttentionService, UserAttentionService, InstantiationType.Delayed);
+registerSingleton(
+	IUserAttentionService,
+	UserAttentionService,
+	InstantiationType.Delayed,
+);

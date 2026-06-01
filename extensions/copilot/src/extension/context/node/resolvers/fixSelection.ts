@@ -6,10 +6,17 @@
 import type * as vscode from 'vscode';
 import { ILanguageDiagnosticsService } from '../../../../platform/languages/common/languageDiagnosticsService';
 import { IChatEndpoint } from '../../../../platform/networking/common/networking';
-import { TreeSitterAST, treeSitterToVSCodeRange, vscodeToTreeSitterRange } from '../../../../platform/parser/node/parserService';
+import {
+	TreeSitterAST,
+	treeSitterToVSCodeRange,
+	vscodeToTreeSitterRange,
+} from '../../../../platform/parser/node/parserService';
 import { ILanguage } from '../../../../util/common/languages';
 import { Range } from '../../../../vscodeTypes';
-import { CodeContextRegion, CodeContextTracker } from '../../../inlineChat/node/codeContextRegion';
+import {
+	CodeContextRegion,
+	CodeContextTracker,
+} from '../../../inlineChat/node/codeContextRegion';
 import { IDocumentContext } from '../../../prompt/node/documentContext';
 import { processCodeAroundSelection } from './inlineChatSelection';
 
@@ -20,14 +27,12 @@ interface IFixCodeContextInfo {
 	below: CodeContextRegion;
 }
 
-
 export function generateFixContext(
 	endpoint: IChatEndpoint,
 	documentContext: IDocumentContext,
 	range: Range,
-	rangeOfInterest: Range
+	rangeOfInterest: Range,
 ): { contextInfo: IFixCodeContextInfo; tracker: CodeContextTracker } {
-
 	// Number of tokens the endpoint can handle, 4 chars per token, we consume one 3rd
 	const charLimit = (endpoint.modelMaxPromptTokens * 4) / 3;
 	const tracker = new CodeContextTracker(charLimit);
@@ -42,10 +47,22 @@ export function generateFixContext(
 		aboveInfo.trim();
 		rangeInfo.trim();
 		belowInfo.trim();
-		return { contextInfo: { language, above: aboveInfo, range: rangeInfo, below: belowInfo }, tracker };
+		return {
+			contextInfo: {
+				language,
+				above: aboveInfo,
+				range: rangeInfo,
+				below: belowInfo,
+			},
+			tracker,
+		};
 	};
 
-	const continueExecution = processFixSelection(rangeInfo, range, rangeOfInterest);
+	const continueExecution = processFixSelection(
+		rangeInfo,
+		range,
+		rangeOfInterest,
+	);
 
 	if (!continueExecution) {
 		return finish();
@@ -55,7 +72,7 @@ export function generateFixContext(
 		aboveLineIndex: rangeOfInterest.start.line - 1,
 		belowLineIndex: rangeOfInterest.end.line + 1,
 		minimumLineIndex: 0,
-		maximumLineIndex: document.lineCount - 1
+		maximumLineIndex: document.lineCount - 1,
 	};
 
 	processCodeAroundSelection(constraints, aboveInfo, belowInfo);
@@ -70,9 +87,18 @@ export function generateFixContext(
  * @diagnosticsRangeOfInterest range around this spanning range which is permitted for editing
  * @returns a boolean indicating whether to continue code execution
  */
-function processFixSelection(range: CodeContextRegion, diagnosticsRange: Range, diagnosticsRangeOfInterest: Range): boolean {
-	const diagnosticsRangeMidLine = Math.floor((diagnosticsRange.start.line + diagnosticsRange.end.line) / 2);
-	const maximumRadius = Math.max(diagnosticsRangeMidLine - diagnosticsRangeOfInterest.start.line, diagnosticsRangeOfInterest.end.line - diagnosticsRangeMidLine);
+function processFixSelection(
+	range: CodeContextRegion,
+	diagnosticsRange: Range,
+	diagnosticsRangeOfInterest: Range,
+): boolean {
+	const diagnosticsRangeMidLine = Math.floor(
+		(diagnosticsRange.start.line + diagnosticsRange.end.line) / 2,
+	);
+	const maximumRadius = Math.max(
+		diagnosticsRangeMidLine - diagnosticsRangeOfInterest.start.line,
+		diagnosticsRangeOfInterest.end.line - diagnosticsRangeMidLine,
+	);
 
 	range.appendLine(diagnosticsRangeMidLine);
 	for (let radius = 1; radius <= maximumRadius; radius++) {
@@ -92,14 +118,22 @@ function processFixSelection(range: CodeContextRegion, diagnosticsRange: Range, 
 	return true;
 }
 
-
 /**
  * This function finds the diagnostics at the given selection and filtered by the actual prompt
  */
-export function findDiagnosticForSelectionAndPrompt(diagnosticService: ILanguageDiagnosticsService, resource: vscode.Uri, selection: vscode.Selection | vscode.Range, prompt: string | undefined): vscode.Diagnostic[] {
-	const diagnostics = diagnosticService.getDiagnostics(resource).filter(d => !!d.range.intersection(selection));
+export function findDiagnosticForSelectionAndPrompt(
+	diagnosticService: ILanguageDiagnosticsService,
+	resource: vscode.Uri,
+	selection: vscode.Selection | vscode.Range,
+	prompt: string | undefined,
+): vscode.Diagnostic[] {
+	const diagnostics = diagnosticService
+		.getDiagnostics(resource)
+		.filter((d) => !!d.range.intersection(selection));
 	if (prompt) {
-		const diagnosticsForPrompt = diagnostics.filter(d => prompt.includes(d.message));
+		const diagnosticsForPrompt = diagnostics.filter((d) =>
+			prompt.includes(d.message),
+		);
 		if (diagnosticsForPrompt.length > 0) {
 			return diagnosticsForPrompt;
 		}
@@ -111,9 +145,20 @@ export function findDiagnosticForSelectionAndPrompt(diagnosticService: ILanguage
  * This function finds the range of interest for the input range for the /fix command
  * @param maximumNumberOfLines the maximum number of lines in the range of interest
  */
-export async function findFixRangeOfInterest(treeSitterAST: TreeSitterAST, range: Range, maximumNumberOfLines: number): Promise<Range> {
+export async function findFixRangeOfInterest(
+	treeSitterAST: TreeSitterAST,
+	range: Range,
+	maximumNumberOfLines: number,
+): Promise<Range> {
 	const treeSitterRange = vscodeToTreeSitterRange(range);
-	const maxNumberOfAdditionalLinesInRangeOfInterest = Math.max(maximumNumberOfLines, range.end.line - range.start.line + maximumNumberOfLines);
-	const treeSitterRangeOfInterest = await treeSitterAST.getFixSelectionOfInterest(treeSitterRange, maxNumberOfAdditionalLinesInRangeOfInterest);
+	const maxNumberOfAdditionalLinesInRangeOfInterest = Math.max(
+		maximumNumberOfLines,
+		range.end.line - range.start.line + maximumNumberOfLines,
+	);
+	const treeSitterRangeOfInterest =
+		await treeSitterAST.getFixSelectionOfInterest(
+			treeSitterRange,
+			maxNumberOfAdditionalLinesInRangeOfInterest,
+		);
 	return treeSitterToVSCodeRange(treeSitterRangeOfInterest);
 }

@@ -13,9 +13,7 @@
  *   the upstream MCP PR is merged or closed.
  */
 export namespace MCP {
-
 	// Nothing, yet
-
 }
 
 //#endregion
@@ -1016,7 +1014,7 @@ export namespace MCP {
 	 *
 	 * @category `resources/read`
 	 */
-	export interface ReadResourceRequestParams extends ResourceRequestParams { }
+	export interface ReadResourceRequestParams extends ResourceRequestParams {}
 
 	/**
 	 * Sent from the client to the server, to read a specific resource URI.
@@ -1076,7 +1074,7 @@ export namespace MCP {
 	 *
 	 * @category `resources/subscribe`
 	 */
-	export interface SubscribeRequestParams extends ResourceRequestParams { }
+	export interface SubscribeRequestParams extends ResourceRequestParams {}
 
 	/**
 	 * Sent from the client to request {@link ResourceUpdatedNotification | resources/updated} notifications from the server whenever a particular resource changes.
@@ -1108,7 +1106,7 @@ export namespace MCP {
 	 *
 	 * @category `resources/unsubscribe`
 	 */
-	export interface UnsubscribeRequestParams extends ResourceRequestParams { }
+	export interface UnsubscribeRequestParams extends ResourceRequestParams {}
 
 	/**
 	 * Sent from the client to request cancellation of {@link ResourceUpdatedNotification | resources/updated} notifications from the server. This should follow a previous {@link SubscribeRequest | resources/subscribe} request.

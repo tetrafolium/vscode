@@ -3,17 +3,24 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import './scrollDecoration.css';
-import { FastDomNode, createFastDomNode } from '../../../../base/browser/fastDomNode.js';
-import { ViewPart } from '../../view/viewPart.js';
-import { RenderingContext, RestrictedRenderingContext } from '../../view/renderingContext.js';
-import { ViewContext } from '../../../common/viewModel/viewContext.js';
-import * as viewEvents from '../../../common/viewEvents.js';
-import { EditorOption, RenderMinimap } from '../../../common/config/editorOptions.js';
-
+import "./scrollDecoration.css";
+import {
+	FastDomNode,
+	createFastDomNode,
+} from "../../../../base/browser/fastDomNode.js";
+import { ViewPart } from "../../view/viewPart.js";
+import {
+	RenderingContext,
+	RestrictedRenderingContext,
+} from "../../view/renderingContext.js";
+import { ViewContext } from "../../../common/viewModel/viewContext.js";
+import * as viewEvents from "../../../common/viewEvents.js";
+import {
+	EditorOption,
+	RenderMinimap,
+} from "../../../common/config/editorOptions.js";
 
 export class ScrollDecorationViewPart extends ViewPart {
-
 	private readonly _domNode: FastDomNode<HTMLElement>;
 	private _scrollTop: number;
 	private _width: number;
@@ -30,14 +37,13 @@ export class ScrollDecorationViewPart extends ViewPart {
 		const options = this._context.configuration.options;
 		const scrollbar = options.get(EditorOption.scrollbar);
 		this._useShadows = scrollbar.useShadows;
-		this._domNode = createFastDomNode(document.createElement('div'));
-		this._domNode.setAttribute('role', 'presentation');
-		this._domNode.setAttribute('aria-hidden', 'true');
+		this._domNode = createFastDomNode(document.createElement("div"));
+		this._domNode.setAttribute("role", "presentation");
+		this._domNode.setAttribute("aria-hidden", "true");
 	}
 
-
 	private _updateShouldShow(): boolean {
-		const newShouldShow = (this._useShadows && this._scrollTop > 0);
+		const newShouldShow = this._useShadows && this._scrollTop > 0;
 		if (this._shouldShow !== newShouldShow) {
 			this._shouldShow = newShouldShow;
 			return true;
@@ -53,7 +59,11 @@ export class ScrollDecorationViewPart extends ViewPart {
 		const options = this._context.configuration.options;
 		const layoutInfo = options.get(EditorOption.layoutInfo);
 
-		if (layoutInfo.minimap.renderMinimap === RenderMinimap.None || (layoutInfo.minimap.minimapWidth > 0 && layoutInfo.minimap.minimapLeft === 0)) {
+		if (
+			layoutInfo.minimap.renderMinimap === RenderMinimap.None ||
+			(layoutInfo.minimap.minimapWidth > 0 &&
+				layoutInfo.minimap.minimapLeft === 0)
+		) {
 			this._width = layoutInfo.width;
 		} else {
 			this._width = layoutInfo.width - layoutInfo.verticalScrollbarWidth;
@@ -62,7 +72,9 @@ export class ScrollDecorationViewPart extends ViewPart {
 
 	// --- begin event handlers
 
-	public override onConfigurationChanged(e: viewEvents.ViewConfigurationChangedEvent): boolean {
+	public override onConfigurationChanged(
+		e: viewEvents.ViewConfigurationChangedEvent,
+	): boolean {
 		const options = this._context.configuration.options;
 		const scrollbar = options.get(EditorOption.scrollbar);
 		this._useShadows = scrollbar.useShadows;
@@ -70,7 +82,9 @@ export class ScrollDecorationViewPart extends ViewPart {
 		this._updateShouldShow();
 		return true;
 	}
-	public override onScrollChanged(e: viewEvents.ViewScrollChangedEvent): boolean {
+	public override onScrollChanged(
+		e: viewEvents.ViewScrollChangedEvent,
+	): boolean {
 		this._scrollTop = e.scrollTop;
 		return this._updateShouldShow();
 	}
@@ -83,6 +97,6 @@ export class ScrollDecorationViewPart extends ViewPart {
 
 	public render(ctx: RestrictedRenderingContext): void {
 		this._domNode.setWidth(this._width);
-		this._domNode.setClassName(this._shouldShow ? 'scroll-decoration' : '');
+		this._domNode.setClassName(this._shouldShow ? "scroll-decoration" : "");
 	}
 }

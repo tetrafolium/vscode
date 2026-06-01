@@ -60,7 +60,7 @@ describe('ClaudeSessionStateService', () => {
 	describe('setModelIdForSession', () => {
 		it('should fire onDidChangeSessionState event when model is set', () => {
 			const events: SessionStateChangeEvent[] = [];
-			service.onDidChangeSessionState(e => events.push(e));
+			service.onDidChangeSessionState((e) => events.push(e));
 
 			service.setModelIdForSession('session-1', OPUS_4);
 
@@ -71,10 +71,14 @@ describe('ClaudeSessionStateService', () => {
 		});
 
 		it('should preserve permission mode when setting model', () => {
-			service.setPermissionModeForSession('session-1', 'bypassPermissions');
+			service.setPermissionModeForSession(
+				'session-1',
+				'bypassPermissions',
+			);
 			service.setModelIdForSession('session-1', OPUS_4);
 
-			const permissionMode = service.getPermissionModeForSession('session-1');
+			const permissionMode =
+				service.getPermissionModeForSession('session-1');
 			assert.strictEqual(permissionMode, 'bypassPermissions');
 		});
 	});
@@ -86,13 +90,19 @@ describe('ClaudeSessionStateService', () => {
 		});
 
 		it('should return the set permission mode', () => {
-			service.setPermissionModeForSession('session-1', 'bypassPermissions');
+			service.setPermissionModeForSession(
+				'session-1',
+				'bypassPermissions',
+			);
 			const mode = service.getPermissionModeForSession('session-1');
 			assert.strictEqual(mode, 'bypassPermissions');
 		});
 
 		it('should return different modes for different sessions', () => {
-			service.setPermissionModeForSession('session-1', 'bypassPermissions');
+			service.setPermissionModeForSession(
+				'session-1',
+				'bypassPermissions',
+			);
 			service.setPermissionModeForSession('session-2', 'default');
 
 			const mode1 = service.getPermissionModeForSession('session-1');
@@ -106,9 +116,12 @@ describe('ClaudeSessionStateService', () => {
 	describe('setPermissionModeForSession', () => {
 		it('should fire onDidChangeSessionState event when permission mode is set', () => {
 			const events: SessionStateChangeEvent[] = [];
-			service.onDidChangeSessionState(e => events.push(e));
+			service.onDidChangeSessionState((e) => events.push(e));
 
-			service.setPermissionModeForSession('session-1', 'bypassPermissions');
+			service.setPermissionModeForSession(
+				'session-1',
+				'bypassPermissions',
+			);
 
 			assert.strictEqual(events.length, 1);
 			assert.strictEqual(events[0].sessionId, 'session-1');
@@ -118,7 +131,10 @@ describe('ClaudeSessionStateService', () => {
 
 		it('should preserve model id when setting permission mode', () => {
 			service.setModelIdForSession('session-1', OPUS_4);
-			service.setPermissionModeForSession('session-1', 'bypassPermissions');
+			service.setPermissionModeForSession(
+				'session-1',
+				'bypassPermissions',
+			);
 
 			const modelId = service.getModelIdForSession('session-1');
 			assert.strictEqual(modelId, OPUS_4);
@@ -132,7 +148,10 @@ describe('ClaudeSessionStateService', () => {
 		});
 
 		it('should return the set folder info', () => {
-			const info: ClaudeFolderInfo = { cwd: '/home/user', additionalDirectories: ['/tmp'] };
+			const info: ClaudeFolderInfo = {
+				cwd: '/home/user',
+				additionalDirectories: ['/tmp'],
+			};
 			service.setFolderInfoForSession('session-1', info);
 			const folderInfo = service.getFolderInfoForSession('session-1');
 			assert.deepStrictEqual(folderInfo, info);
@@ -142,9 +161,12 @@ describe('ClaudeSessionStateService', () => {
 	describe('setFolderInfoForSession', () => {
 		it('should fire onDidChangeSessionState event when folder info is set', () => {
 			const events: SessionStateChangeEvent[] = [];
-			service.onDidChangeSessionState(e => events.push(e));
+			service.onDidChangeSessionState((e) => events.push(e));
 
-			const info: ClaudeFolderInfo = { cwd: '/home/user', additionalDirectories: [] };
+			const info: ClaudeFolderInfo = {
+				cwd: '/home/user',
+				additionalDirectories: [],
+			};
 			service.setFolderInfoForSession('session-1', info);
 
 			assert.strictEqual(events.length, 1);
@@ -155,44 +177,69 @@ describe('ClaudeSessionStateService', () => {
 		});
 
 		it('should not fire event when folder info is unchanged', () => {
-			const info: ClaudeFolderInfo = { cwd: '/home/user', additionalDirectories: ['/tmp'] };
+			const info: ClaudeFolderInfo = {
+				cwd: '/home/user',
+				additionalDirectories: ['/tmp'],
+			};
 			service.setFolderInfoForSession('session-1', info);
 
 			const events: SessionStateChangeEvent[] = [];
-			service.onDidChangeSessionState(e => events.push(e));
+			service.onDidChangeSessionState((e) => events.push(e));
 
-			service.setFolderInfoForSession('session-1', { cwd: '/home/user', additionalDirectories: ['/tmp'] });
+			service.setFolderInfoForSession('session-1', {
+				cwd: '/home/user',
+				additionalDirectories: ['/tmp'],
+			});
 			assert.strictEqual(events.length, 0);
 		});
 
 		it('should fire event when cwd changes', () => {
-			service.setFolderInfoForSession('session-1', { cwd: '/home/user', additionalDirectories: [] });
+			service.setFolderInfoForSession('session-1', {
+				cwd: '/home/user',
+				additionalDirectories: [],
+			});
 
 			const events: SessionStateChangeEvent[] = [];
-			service.onDidChangeSessionState(e => events.push(e));
+			service.onDidChangeSessionState((e) => events.push(e));
 
-			service.setFolderInfoForSession('session-1', { cwd: '/home/other', additionalDirectories: [] });
+			service.setFolderInfoForSession('session-1', {
+				cwd: '/home/other',
+				additionalDirectories: [],
+			});
 			assert.strictEqual(events.length, 1);
 		});
 
 		it('should fire event when additionalDirectories change', () => {
-			service.setFolderInfoForSession('session-1', { cwd: '/home/user', additionalDirectories: ['/tmp'] });
+			service.setFolderInfoForSession('session-1', {
+				cwd: '/home/user',
+				additionalDirectories: ['/tmp'],
+			});
 
 			const events: SessionStateChangeEvent[] = [];
-			service.onDidChangeSessionState(e => events.push(e));
+			service.onDidChangeSessionState((e) => events.push(e));
 
-			service.setFolderInfoForSession('session-1', { cwd: '/home/user', additionalDirectories: ['/tmp', '/var'] });
+			service.setFolderInfoForSession('session-1', {
+				cwd: '/home/user',
+				additionalDirectories: ['/tmp', '/var'],
+			});
 			assert.strictEqual(events.length, 1);
 		});
 
 		it('should preserve other state when setting folder info', () => {
 			service.setModelIdForSession('session-1', OPUS_4);
-			service.setPermissionModeForSession('session-1', 'bypassPermissions');
-			service.setFolderInfoForSession('session-1', { cwd: '/home/user', additionalDirectories: [] });
+			service.setPermissionModeForSession(
+				'session-1',
+				'bypassPermissions',
+			);
+			service.setFolderInfoForSession('session-1', {
+				cwd: '/home/user',
+				additionalDirectories: [],
+			});
 
 			const modelId = service.getModelIdForSession('session-1');
 			assert.strictEqual(modelId, OPUS_4);
-			const permissionMode = service.getPermissionModeForSession('session-1');
+			const permissionMode =
+				service.getPermissionModeForSession('session-1');
 			assert.strictEqual(permissionMode, 'bypassPermissions');
 		});
 	});
@@ -213,43 +260,68 @@ describe('ClaudeSessionStateService', () => {
 			service.setReasoningEffortForSession('session-1', 'high');
 			service.setReasoningEffortForSession('session-2', 'low');
 
-			assert.strictEqual(service.getReasoningEffortForSession('session-1'), 'high');
-			assert.strictEqual(service.getReasoningEffortForSession('session-2'), 'low');
+			assert.strictEqual(
+				service.getReasoningEffortForSession('session-1'),
+				'high',
+			);
+			assert.strictEqual(
+				service.getReasoningEffortForSession('session-2'),
+				'low',
+			);
 		});
 	});
 
 	describe('setReasoningEffortForSession', () => {
 		it('should allow setting a reasoning effort', () => {
 			service.setReasoningEffortForSession('session-1', 'medium');
-			assert.strictEqual(service.getReasoningEffortForSession('session-1'), 'medium');
+			assert.strictEqual(
+				service.getReasoningEffortForSession('session-1'),
+				'medium',
+			);
 		});
 
 		it('should allow clearing a reasoning effort', () => {
 			service.setReasoningEffortForSession('session-1', 'high');
 			service.setReasoningEffortForSession('session-1', undefined);
-			assert.strictEqual(service.getReasoningEffortForSession('session-1'), undefined);
+			assert.strictEqual(
+				service.getReasoningEffortForSession('session-1'),
+				undefined,
+			);
 		});
 
 		it('should not update state when effort is unchanged', () => {
 			service.setReasoningEffortForSession('session-1', 'high');
-			const stateBefore = service.getReasoningEffortForSession('session-1');
+			const stateBefore =
+				service.getReasoningEffortForSession('session-1');
 			service.setReasoningEffortForSession('session-1', 'high');
-			assert.strictEqual(service.getReasoningEffortForSession('session-1'), stateBefore);
+			assert.strictEqual(
+				service.getReasoningEffortForSession('session-1'),
+				stateBefore,
+			);
 		});
 
 		it('should preserve other state when setting reasoning effort', () => {
 			service.setModelIdForSession('session-1', OPUS_4);
-			service.setPermissionModeForSession('session-1', 'bypassPermissions');
+			service.setPermissionModeForSession(
+				'session-1',
+				'bypassPermissions',
+			);
 
 			service.setReasoningEffortForSession('session-1', 'high');
 
-			assert.strictEqual(service.getModelIdForSession('session-1'), OPUS_4);
-			assert.strictEqual(service.getPermissionModeForSession('session-1'), 'bypassPermissions');
+			assert.strictEqual(
+				service.getModelIdForSession('session-1'),
+				OPUS_4,
+			);
+			assert.strictEqual(
+				service.getPermissionModeForSession('session-1'),
+				'bypassPermissions',
+			);
 		});
 
 		it('should not fire onDidChangeSessionState event', () => {
 			const events: SessionStateChangeEvent[] = [];
-			service.onDidChangeSessionState(e => events.push(e));
+			service.onDidChangeSessionState((e) => events.push(e));
 
 			service.setReasoningEffortForSession('session-1', 'high');
 
@@ -259,19 +331,40 @@ describe('ClaudeSessionStateService', () => {
 		it('should initialize defaults when session has no prior state', () => {
 			service.setReasoningEffortForSession('new-session', 'medium');
 
-			assert.strictEqual(service.getModelIdForSession('new-session'), undefined);
-			assert.strictEqual(service.getPermissionModeForSession('new-session'), 'acceptEdits');
-			assert.strictEqual(service.getCapturingTokenForSession('new-session'), undefined);
-			assert.strictEqual(service.getFolderInfoForSession('new-session'), undefined);
-			assert.strictEqual(service.getUsageHandlerForSession('new-session'), undefined);
-			assert.strictEqual(service.getReasoningEffortForSession('new-session'), 'medium');
+			assert.strictEqual(
+				service.getModelIdForSession('new-session'),
+				undefined,
+			);
+			assert.strictEqual(
+				service.getPermissionModeForSession('new-session'),
+				'acceptEdits',
+			);
+			assert.strictEqual(
+				service.getCapturingTokenForSession('new-session'),
+				undefined,
+			);
+			assert.strictEqual(
+				service.getFolderInfoForSession('new-session'),
+				undefined,
+			);
+			assert.strictEqual(
+				service.getUsageHandlerForSession('new-session'),
+				undefined,
+			);
+			assert.strictEqual(
+				service.getReasoningEffortForSession('new-session'),
+				'medium',
+			);
 		});
 	});
 
 	describe('dispose', () => {
 		it('should clear session state on dispose', () => {
 			service.setModelIdForSession('session-1', OPUS_4);
-			service.setPermissionModeForSession('session-1', 'bypassPermissions');
+			service.setPermissionModeForSession(
+				'session-1',
+				'bypassPermissions',
+			);
 
 			service.dispose();
 
@@ -331,14 +424,18 @@ describe('ClaudeSessionStateService', () => {
 
 		it('should preserve other state when setting usage handler', () => {
 			service.setModelIdForSession('session-1', OPUS_4);
-			service.setPermissionModeForSession('session-1', 'bypassPermissions');
+			service.setPermissionModeForSession(
+				'session-1',
+				'bypassPermissions',
+			);
 
 			const mockHandler = sinon.stub();
 			service.setUsageHandlerForSession('session-1', mockHandler);
 
 			const modelId = service.getModelIdForSession('session-1');
 			assert.strictEqual(modelId, OPUS_4);
-			const permissionMode = service.getPermissionModeForSession('session-1');
+			const permissionMode =
+				service.getPermissionModeForSession('session-1');
 			assert.strictEqual(permissionMode, 'bypassPermissions');
 		});
 
@@ -350,12 +447,15 @@ describe('ClaudeSessionStateService', () => {
 			handler?.({ promptTokens: 100, completionTokens: 50 });
 
 			assert.strictEqual(mockHandler.callCount, 1);
-			assert.deepStrictEqual(mockHandler.firstCall.args[0], { promptTokens: 100, completionTokens: 50 });
+			assert.deepStrictEqual(mockHandler.firstCall.args[0], {
+				promptTokens: 100,
+				completionTokens: 50,
+			});
 		});
 
 		it('should not fire onDidChangeSessionState event', () => {
 			const events: SessionStateChangeEvent[] = [];
-			service.onDidChangeSessionState(e => events.push(e));
+			service.onDidChangeSessionState((e) => events.push(e));
 
 			const mockHandler = sinon.stub();
 			service.setUsageHandlerForSession('session-1', mockHandler);
@@ -367,11 +467,26 @@ describe('ClaudeSessionStateService', () => {
 			const mockHandler = sinon.stub();
 			service.setUsageHandlerForSession('new-session', mockHandler);
 
-			assert.strictEqual(service.getModelIdForSession('new-session'), undefined);
-			assert.strictEqual(service.getPermissionModeForSession('new-session'), 'acceptEdits');
-			assert.strictEqual(service.getCapturingTokenForSession('new-session'), undefined);
-			assert.strictEqual(service.getFolderInfoForSession('new-session'), undefined);
-			assert.strictEqual(service.getUsageHandlerForSession('new-session'), mockHandler);
+			assert.strictEqual(
+				service.getModelIdForSession('new-session'),
+				undefined,
+			);
+			assert.strictEqual(
+				service.getPermissionModeForSession('new-session'),
+				'acceptEdits',
+			);
+			assert.strictEqual(
+				service.getCapturingTokenForSession('new-session'),
+				undefined,
+			);
+			assert.strictEqual(
+				service.getFolderInfoForSession('new-session'),
+				undefined,
+			);
+			assert.strictEqual(
+				service.getUsageHandlerForSession('new-session'),
+				mockHandler,
+			);
 		});
 	});
 });

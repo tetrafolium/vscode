@@ -4,7 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 import { Stats, promises as fsp } from 'fs';
 import { join } from 'path';
-import { FileIdentifier, FileStat, FileType, ICompletionsFileSystemService } from './fileSystem';
+import {
+	FileIdentifier,
+	FileStat,
+	FileType,
+	ICompletionsFileSystemService,
+} from './fileSystem';
 import { fsPath } from './util/uri';
 
 export class LocalFileSystem implements ICompletionsFileSystemService {
@@ -15,7 +20,9 @@ export class LocalFileSystem implements ICompletionsFileSystemService {
 	}
 
 	async stat(uri: FileIdentifier): Promise<FileStat> {
-		const { targetStat, lstat, stat } = await this.statWithLink(fsPath(uri));
+		const { targetStat, lstat, stat } = await this.statWithLink(
+			fsPath(uri),
+		);
 		return {
 			ctime: targetStat.ctimeMs,
 			mtime: targetStat.mtimeMs,
@@ -29,13 +36,17 @@ export class LocalFileSystem implements ICompletionsFileSystemService {
 		const readDir = await fsp.readdir(filePath, { withFileTypes: true });
 		const result: [string, FileType][] = [];
 		for (const file of readDir) {
-			const { targetStat, lstat, stat } = await this.statWithLink(join(filePath, file.name));
+			const { targetStat, lstat, stat } = await this.statWithLink(
+				join(filePath, file.name),
+			);
 			result.push([file.name, this.getFileType(targetStat, lstat, stat)]);
 		}
 		return result;
 	}
 
-	private async statWithLink(fsPath: string): Promise<{ lstat: Stats; stat?: Stats; targetStat: Stats }> {
+	private async statWithLink(
+		fsPath: string,
+	): Promise<{ lstat: Stats; stat?: Stats; targetStat: Stats }> {
 		const lstat = await fsp.lstat(fsPath);
 
 		if (lstat.isSymbolicLink()) {
@@ -50,7 +61,11 @@ export class LocalFileSystem implements ICompletionsFileSystemService {
 		return { lstat, targetStat: lstat };
 	}
 
-	private getFileType(targetStat: Stats, lstat: Stats, stat?: Stats): FileType {
+	private getFileType(
+		targetStat: Stats,
+		lstat: Stats,
+		stat?: Stats,
+	): FileType {
 		let type = FileType.Unknown;
 		if (targetStat.isFile()) {
 			type = FileType.File;

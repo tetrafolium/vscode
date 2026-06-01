@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 import { Result } from '../result';
 
 describe('Result', () => {
-
 	describe('Result.ok', () => {
 		it('creates an ok result', () => {
 			const r = Result.ok(42);
@@ -45,7 +44,9 @@ describe('Result', () => {
 		});
 
 		it('returns error when the function throws', () => {
-			const r = Result.tryWith(() => { throw new Error('boom'); });
+			const r = Result.tryWith(() => {
+				throw new Error('boom');
+			});
 			expect(r.isError()).toBe(true);
 			if (r.isError()) {
 				expect(r.err.message).toBe('boom');
@@ -63,7 +64,9 @@ describe('Result', () => {
 		});
 
 		it('returns error when the async function rejects', async () => {
-			const r = await Result.tryWithAsync(async () => { throw new Error('async boom'); });
+			const r = await Result.tryWithAsync(async () => {
+				throw new Error('async boom');
+			});
 			expect(r.isError()).toBe(true);
 			if (r.isError()) {
 				expect(r.err.message).toBe('async boom');
@@ -73,7 +76,7 @@ describe('Result', () => {
 
 	describe('map', () => {
 		it('transforms the value of an ok result', () => {
-			const r = Result.ok(3).map(x => x * 2);
+			const r = Result.ok(3).map((x) => x * 2);
 			expect(r.isOk()).toBe(true);
 			if (r.isOk()) {
 				expect(r.val).toBe(6);
@@ -82,7 +85,7 @@ describe('Result', () => {
 
 		it('is a no-op on an error result', () => {
 			const r: Result<number, string> = Result.error('fail');
-			const mapped = r.map(x => x * 2);
+			const mapped = r.map((x) => x * 2);
 			expect(mapped.isError()).toBe(true);
 			if (mapped.isError()) {
 				expect(mapped.err).toBe('fail');
@@ -93,7 +96,7 @@ describe('Result', () => {
 	describe('mapError', () => {
 		it('is a no-op on an ok result', () => {
 			const r: Result<number, string> = Result.ok(5);
-			const mapped = r.mapError(e => new Error(e));
+			const mapped = r.mapError((e) => new Error(e));
 			expect(mapped.isOk()).toBe(true);
 			if (mapped.isOk()) {
 				expect(mapped.val).toBe(5);
@@ -102,7 +105,7 @@ describe('Result', () => {
 
 		it('transforms the error of an error result', () => {
 			const r = Result.error('oops');
-			const mapped = r.mapError(e => ({ reason: e }));
+			const mapped = r.mapError((e) => ({ reason: e }));
 			expect(mapped.isError()).toBe(true);
 			if (mapped.isError()) {
 				expect(mapped.err).toEqual({ reason: 'oops' });
@@ -112,8 +115,10 @@ describe('Result', () => {
 
 	describe('flatMap', () => {
 		it('chains ok results', () => {
-			const r = Result.ok(10).flatMap(x =>
-				x > 0 ? Result.ok(x.toString()) : Result.error('negative' as const)
+			const r = Result.ok(10).flatMap((x) =>
+				x > 0
+					? Result.ok(x.toString())
+					: Result.error('negative' as const),
 			);
 			expect(r.isOk()).toBe(true);
 			if (r.isOk()) {
@@ -122,8 +127,10 @@ describe('Result', () => {
 		});
 
 		it('chains to an error result', () => {
-			const r = Result.ok(-1).flatMap(x =>
-				x > 0 ? Result.ok(x.toString()) : Result.error('negative' as const)
+			const r = Result.ok(-1).flatMap((x) =>
+				x > 0
+					? Result.ok(x.toString())
+					: Result.error('negative' as const),
 			);
 			expect(r.isError()).toBe(true);
 			if (r.isError()) {
@@ -133,7 +140,7 @@ describe('Result', () => {
 
 		it('is a no-op on an error result', () => {
 			const r: Result<number, string> = Result.error('already bad');
-			const chained = r.flatMap(x => Result.ok(x * 2));
+			const chained = r.flatMap((x) => Result.ok(x * 2));
 			expect(chained.isError()).toBe(true);
 			if (chained.isError()) {
 				expect(chained.err).toBe('already bad');

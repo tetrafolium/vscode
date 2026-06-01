@@ -137,7 +137,7 @@ describe('claudeSlashCommandRegistry', () => {
 				async handle(
 					_args: string,
 					_stream: vscode.ChatResponseStream | undefined,
-					_token: CancellationToken
+					_token: CancellationToken,
 				): Promise<vscode.ChatResult> {
 					return {};
 				}
@@ -174,7 +174,7 @@ describe('claudeSlashCommandRegistry', () => {
 				async handle(
 					args: string,
 					stream: vscode.ChatResponseStream | undefined,
-					token: CancellationToken
+					token: CancellationToken,
 				): Promise<vscode.ChatResult> {
 					receivedArgs = args;
 					receivedStream = stream;
@@ -186,10 +186,14 @@ describe('claudeSlashCommandRegistry', () => {
 			const handler = new ParamHandler();
 			const mockToken: CancellationToken = {
 				isCancellationRequested: false,
-				onCancellationRequested: () => ({ dispose: () => { } }),
+				onCancellationRequested: () => ({ dispose: () => {} }),
 			};
 
-			const result = await handler.handle('test args', undefined, mockToken);
+			const result = await handler.handle(
+				'test args',
+				undefined,
+				mockToken,
+			);
 
 			expect(receivedArgs).toBe('test args');
 			expect(receivedStream).toBeUndefined();
@@ -204,7 +208,7 @@ describe('claudeSlashCommandRegistry', () => {
 				async handle(
 					_args: string,
 					_stream: vscode.ChatResponseStream | undefined,
-					_token: CancellationToken
+					_token: CancellationToken,
 				): Promise<void> {
 					// Returns void instead of ChatResult
 				}
@@ -213,7 +217,7 @@ describe('claudeSlashCommandRegistry', () => {
 			const handler = new VoidHandler();
 			const mockToken: CancellationToken = {
 				isCancellationRequested: false,
-				onCancellationRequested: () => ({ dispose: () => { } }),
+				onCancellationRequested: () => ({ dispose: () => {} }),
 			};
 
 			const result = await handler.handle('', undefined, mockToken);
@@ -227,7 +231,7 @@ describe('claudeSlashCommandRegistry', () => {
 				readonly commandName = 'instantiable';
 				readonly description = 'Can be instantiated';
 
-				constructor(public readonly testValue?: string) { }
+				constructor(public readonly testValue?: string) {}
 
 				async handle(): Promise<vscode.ChatResult> {
 					return {};
@@ -238,7 +242,7 @@ describe('claudeSlashCommandRegistry', () => {
 
 			const registry = getClaudeSlashCommandRegistry();
 			const HandlerCtor = registry.find(
-				ctor => ctor === InstantiableHandler
+				(ctor) => ctor === InstantiableHandler,
 			) as IClaudeSlashCommandHandlerCtor | undefined;
 
 			expect(HandlerCtor).toBeDefined();
@@ -246,7 +250,9 @@ describe('claudeSlashCommandRegistry', () => {
 			const instance = new HandlerCtor!('test-value');
 			expect(instance).toBeInstanceOf(InstantiableHandler);
 			expect(instance.commandName).toBe('instantiable');
-			expect((instance as InstantiableHandler).testValue).toBe('test-value');
+			expect((instance as InstantiableHandler).testValue).toBe(
+				'test-value',
+			);
 		});
 
 		it('supports handlers with dependency injection style constructors', () => {
@@ -256,24 +262,29 @@ describe('claudeSlashCommandRegistry', () => {
 
 				constructor(
 					private readonly dep1: { value: string },
-					private readonly dep2: number
-				) { }
+					private readonly dep2: number,
+				) {}
 
 				async handle(): Promise<vscode.ChatResult> {
-					return { metadata: { dep1: this.dep1.value, dep2: this.dep2 } };
+					return {
+						metadata: { dep1: this.dep1.value, dep2: this.dep2 },
+					};
 				}
 			}
 
 			registerClaudeSlashCommand(DIHandler);
 
 			const registry = getClaudeSlashCommandRegistry();
-			const HandlerCtor = registry.find(
-				ctor => ctor === DIHandler
-			) as IClaudeSlashCommandHandlerCtor | undefined;
+			const HandlerCtor = registry.find((ctor) => ctor === DIHandler) as
+				| IClaudeSlashCommandHandlerCtor
+				| undefined;
 
 			expect(HandlerCtor).toBeDefined();
 
-			const instance = new HandlerCtor!({ value: 'injected' }, 42) as DIHandler;
+			const instance = new HandlerCtor!(
+				{ value: 'injected' },
+				42,
+			) as DIHandler;
 			expect(instance.commandName).toBe('di');
 		});
 	});

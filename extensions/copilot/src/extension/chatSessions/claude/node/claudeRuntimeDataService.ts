@@ -9,7 +9,10 @@ import { Emitter } from '../../../../util/vs/base/common/event';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
 import { IClaudeRuntimeDataService } from '../common/claudeRuntimeDataService';
 
-export class ClaudeRuntimeDataService extends Disposable implements IClaudeRuntimeDataService {
+export class ClaudeRuntimeDataService
+	extends Disposable
+	implements IClaudeRuntimeDataService
+{
 	declare readonly _serviceBrand: undefined;
 
 	private readonly _onDidChange = this._register(new Emitter<void>());
@@ -17,9 +20,7 @@ export class ClaudeRuntimeDataService extends Disposable implements IClaudeRunti
 
 	private _agents: readonly AgentInfo[] = [];
 
-	constructor(
-		@ILogService private readonly logService: ILogService,
-	) {
+	constructor(@ILogService private readonly logService: ILogService) {
 		super();
 	}
 
@@ -30,9 +31,14 @@ export class ClaudeRuntimeDataService extends Disposable implements IClaudeRunti
 	async update(query: Query): Promise<void> {
 		try {
 			this._agents = await query.supportedAgents();
-			this.logService.trace(`[ClaudeRuntimeDataService] Cached ${this._agents.length} agents`);
+			this.logService.trace(
+				`[ClaudeRuntimeDataService] Cached ${this._agents.length} agents`,
+			);
 		} catch (err) {
-			this.logService.error('[ClaudeRuntimeDataService] Failed to query agents from SDK', err);
+			this.logService.error(
+				'[ClaudeRuntimeDataService] Failed to query agents from SDK',
+				err,
+			);
 			// Keep previous cache (or empty) on error
 		}
 		this._onDidChange.fire();

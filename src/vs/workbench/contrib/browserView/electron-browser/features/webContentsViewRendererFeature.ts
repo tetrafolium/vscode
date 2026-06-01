@@ -3,18 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from '../../../../../nls.js';
-import { $, addDisposableListener, EventType, registerExternalFocusChecker } from '../../../../../base/browser/dom.js';
-import { getZoomFactor } from '../../../../../base/browser/browser.js';
-import { StandardKeyboardEvent } from '../../../../../base/browser/keyboardEvent.js';
-import { encodeBase64, VSBuffer } from '../../../../../base/common/buffer.js';
-import { DisposableStore, MutableDisposable, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { IKeybindingService } from '../../../../../platform/keybinding/common/keybinding.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
+import { localize } from "../../../../../nls.js";
 import {
-	IBrowserViewKeyDownEvent,
-} from '../../../../../platform/browserView/common/browserView.js';
-import { IBrowserViewModel } from '../../common/browserView.js';
+	$,
+	addDisposableListener,
+	EventType,
+	registerExternalFocusChecker,
+} from "../../../../../base/browser/dom.js";
+import { getZoomFactor } from "../../../../../base/browser/browser.js";
+import { StandardKeyboardEvent } from "../../../../../base/browser/keyboardEvent.js";
+import { encodeBase64, VSBuffer } from "../../../../../base/common/buffer.js";
+import {
+	DisposableStore,
+	MutableDisposable,
+	toDisposable,
+} from "../../../../../base/common/lifecycle.js";
+import { IKeybindingService } from "../../../../../platform/keybinding/common/keybinding.js";
+import { ILogService } from "../../../../../platform/log/common/log.js";
+import { IBrowserViewKeyDownEvent } from "../../../../../platform/browserView/common/browserView.js";
+import { IBrowserViewModel } from "../../common/browserView.js";
 import {
 	BrowserEditor,
 	BrowserEditorContribution,
@@ -22,8 +29,11 @@ import {
 	IBrowserEditorWidget,
 	IContainerLayout,
 	IContainerLayoutOverride,
-} from '../browserEditor.js';
-import { BrowserOverlayManager, BrowserOverlayType } from '../overlayManager.js';
+} from "../browserEditor.js";
+import {
+	BrowserOverlayManager,
+	BrowserOverlayType,
+} from "../overlayManager.js";
 
 /**
  * Default browser renderer: drives a Chromium WebContentsView.
@@ -41,14 +51,15 @@ import { BrowserOverlayManager, BrowserOverlayType } from '../overlayManager.js'
  * contribution and need none of the above.
  */
 class WebContentsViewRendererFeature extends BrowserEditorContribution {
-
 	private _container: HTMLElement | undefined;
 	private _model: IBrowserViewModel | undefined;
 	private _editorVisible = false;
 	private _overlayObscured = false;
 
-	private readonly _placeholderScreenshot = $('.browser-placeholder-screenshot');
-	private readonly _overlayPauseEl = $('.browser-overlay-paused');
+	private readonly _placeholderScreenshot = $(
+		".browser-placeholder-screenshot",
+	);
+	private readonly _overlayPauseEl = $(".browser-overlay-paused");
 	private readonly _overlayManager: BrowserOverlayManager;
 
 	private readonly _placeholderContent: IBrowserEditorWidget;
@@ -64,22 +75,42 @@ class WebContentsViewRendererFeature extends BrowserEditorContribution {
 	) {
 		super(editor);
 
-		this._overlayManager = this._register(new BrowserOverlayManager(editor.window));
+		this._overlayManager = this._register(
+			new BrowserOverlayManager(editor.window),
+		);
 
 		// Build overlay-pause DOM
-		const message = $('.browser-overlay-paused-message');
-		const heading = $('.browser-overlay-paused-heading');
-		const detail = $('.browser-overlay-paused-detail');
-		heading.textContent = localize('browser.overlayPauseHeading.notification', "Paused due to Notification");
-		detail.textContent = localize('browser.overlayPauseDetail.notification', "Dismiss the notification to continue using the browser.");
+		const message = $(".browser-overlay-paused-message");
+		const heading = $(".browser-overlay-paused-heading");
+		const detail = $(".browser-overlay-paused-detail");
+		heading.textContent = localize(
+			"browser.overlayPauseHeading.notification",
+			"Paused due to Notification",
+		);
+		detail.textContent = localize(
+			"browser.overlayPauseDetail.notification",
+			"Dismiss the notification to continue using the browser.",
+		);
 		message.appendChild(heading);
 		message.appendChild(detail);
 		this._overlayPauseEl.appendChild(message);
 
-		this._placeholderContent = { location: BrowserWidgetLocation.ContentArea, element: this._placeholderScreenshot, order: 100 };
-		this._overlayPauseContent = { location: BrowserWidgetLocation.ContentArea, element: this._overlayPauseEl, order: 200 };
+		this._placeholderContent = {
+			location: BrowserWidgetLocation.ContentArea,
+			element: this._placeholderScreenshot,
+			order: 100,
+		};
+		this._overlayPauseContent = {
+			location: BrowserWidgetLocation.ContentArea,
+			element: this._overlayPauseEl,
+			order: 200,
+		};
 
-		this._register(this._overlayManager.onDidChangeOverlayState(() => this._refreshOverlayObscured()));
+		this._register(
+			this._overlayManager.onDidChangeOverlayState(() =>
+				this._refreshOverlayObscured(),
+			),
+		);
 		this._refresh();
 	}
 
@@ -120,22 +151,30 @@ class WebContentsViewRendererFeature extends BrowserEditorContribution {
 	override onContainerCreated(container: HTMLElement): void {
 		this._container = container;
 
-		this._register(addDisposableListener(container, EventType.FOCUS, (event: FocusEvent) => {
-			// When the browser container gets focus, make sure the browser view also gets focused —
-			// but only if focus was already in the workbench (and not e.g. clicking back into the
-			// workbench from the browser view itself).
-			if (event.relatedTarget) {
-				this.tryFocus();
-			}
-		}));
-		this._register(addDisposableListener(container, EventType.BLUR, () => this._cancelFocusTimeout()));
+		this._register(
+			addDisposableListener(container, EventType.FOCUS, (event: FocusEvent) => {
+				// When the browser container gets focus, make sure the browser view also gets focused —
+				// but only if focus was already in the workbench (and not e.g. clicking back into the
+				// workbench from the browser view itself).
+				if (event.relatedTarget) {
+					this.tryFocus();
+				}
+			}),
+		);
+		this._register(
+			addDisposableListener(container, EventType.BLUR, () =>
+				this._cancelFocusTimeout(),
+			),
+		);
 
 		// Cross-window focus logic uses this checker because the WCV lives
 		// outside the DOM tree and can't be detected with activeElement.
-		this._register(registerExternalFocusChecker(() => ({
-			hasFocus: this._model?.focused ?? false,
-			window: this._model?.focused ? this.editor.window : undefined,
-		})));
+		this._register(
+			registerExternalFocusChecker(() => ({
+				hasFocus: this._model?.focused ?? false,
+				window: this._model?.focused ? this.editor.window : undefined,
+			})),
+		);
 
 		this._refreshOverlayObscured();
 	}
@@ -176,12 +215,17 @@ class WebContentsViewRendererFeature extends BrowserEditorContribution {
 
 	// -- Model lifecycle ----------------------------------------------------
 
-	protected override onModelAttached(model: IBrowserViewModel, store: DisposableStore): void {
+	protected override onModelAttached(
+		model: IBrowserViewModel,
+		store: DisposableStore,
+	): void {
 		this._model = model;
 		this._setBackgroundImage(model.screenshot);
 
 		store.add(model.onDidChangeVisibility(() => void this._doScreenshot()));
-		store.add(model.onDidKeyCommand(keyEvent => void this._handleKeyEvent(keyEvent)));
+		store.add(
+			model.onDidKeyCommand((keyEvent) => void this._handleKeyEvent(keyEvent)),
+		);
 		store.add(model.onDidNavigate(() => this._refresh()));
 		store.add(model.onDidChangeLoadingState(() => this._refresh()));
 
@@ -208,10 +252,12 @@ class WebContentsViewRendererFeature extends BrowserEditorContribution {
 	// -- Internals ----------------------------------------------------------
 
 	private _shouldShowPage(): boolean {
-		return this._editorVisible
-			&& !this._overlayObscured
-			&& !!this._model?.url
-			&& !this._model?.error;
+		return (
+			this._editorVisible &&
+			!this._overlayObscured &&
+			!!this._model?.url &&
+			!this._model?.error
+		);
 	}
 
 	/**
@@ -222,11 +268,12 @@ class WebContentsViewRendererFeature extends BrowserEditorContribution {
 		// Placeholder screenshot: shown whenever there's a page to render
 		// (covered by the WCV when it's up, visible during hide/show swaps).
 		const placeholderActive = !!this._model?.url && !this._model?.error;
-		this._placeholderScreenshot.style.display = placeholderActive ? '' : 'none';
+		this._placeholderScreenshot.style.display = placeholderActive ? "" : "none";
 
 		// Overlay-pause overlay: fades in when an overlay obscures the page.
-		const pauseActive = !!this._model?.url && this._editorVisible && this._overlayObscured;
-		this._overlayPauseEl.classList.toggle('visible', pauseActive);
+		const pauseActive =
+			!!this._model?.url && this._editorVisible && this._overlayObscured;
+		this._overlayPauseEl.classList.toggle("visible", pauseActive);
 
 		if (!this._model) {
 			return;
@@ -245,7 +292,9 @@ class WebContentsViewRendererFeature extends BrowserEditorContribution {
 		} else {
 			void this._doScreenshot();
 			// Defer the hide one frame so the latest screenshot has a chance to paint first.
-			this.editor.window.requestAnimationFrame(() => void this._model?.setVisible(false));
+			this.editor.window.requestAnimationFrame(
+				() => void this._model?.setVisible(false),
+			);
 		}
 	}
 
@@ -253,10 +302,14 @@ class WebContentsViewRendererFeature extends BrowserEditorContribution {
 		if (!this._container) {
 			return;
 		}
-		const overlays = this._overlayManager.getOverlappingOverlays(this._container);
+		const overlays = this._overlayManager.getOverlappingOverlays(
+			this._container,
+		);
 		const obscured = overlays.length > 0;
-		const hasNotification = overlays.some(o => o.type === BrowserOverlayType.Notification);
-		this._overlayPauseEl.classList.toggle('show-message', hasNotification);
+		const hasNotification = overlays.some(
+			(o) => o.type === BrowserOverlayType.Notification,
+		);
+		this._overlayPauseEl.classList.toggle("show-message", hasNotification);
 		if (obscured !== this._overlayObscured) {
 			this._overlayObscured = obscured;
 			this._refresh();
@@ -275,7 +328,7 @@ class WebContentsViewRendererFeature extends BrowserEditorContribution {
 			const screenshot = await this._model.captureScreenshot({ quality: 80 });
 			this._setBackgroundImage(screenshot);
 		} catch (error) {
-			this.logService.error('Failed to capture browser view screenshot', error);
+			this.logService.error("Failed to capture browser view screenshot", error);
 		}
 		const handle = setTimeout(() => void this._doScreenshot(), 1000);
 		this._screenshotHandle.value = toDisposable(() => clearTimeout(handle));
@@ -286,20 +339,25 @@ class WebContentsViewRendererFeature extends BrowserEditorContribution {
 			const dataUrl = `data:image/jpeg;base64,${encodeBase64(buffer)}`;
 			this._placeholderScreenshot.style.backgroundImage = `url('${dataUrl}')`;
 		} else {
-			this._placeholderScreenshot.style.backgroundImage = '';
+			this._placeholderScreenshot.style.backgroundImage = "";
 		}
 	}
 
-	private async _handleKeyEvent(keyEvent: IBrowserViewKeyDownEvent): Promise<void> {
+	private async _handleKeyEvent(
+		keyEvent: IBrowserViewKeyDownEvent,
+	): Promise<void> {
 		if (!this._container) {
 			return;
 		}
 		try {
-			const syntheticEvent = new KeyboardEvent('keydown', keyEvent);
+			const syntheticEvent = new KeyboardEvent("keydown", keyEvent);
 			const standardEvent = new StandardKeyboardEvent(syntheticEvent);
 			this.keybindingService.dispatchEvent(standardEvent, this._container);
 		} catch (error) {
-			this.logService.error('WebContentsViewRendererFeature: Error dispatching key event', error);
+			this.logService.error(
+				"WebContentsViewRendererFeature: Error dispatching key event",
+				error,
+			);
 		}
 	}
 

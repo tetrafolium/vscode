@@ -59,7 +59,6 @@
 		}
 
 		.package-section {
-
 			margin-top: 10px;
 
 			.package-section-title {
@@ -87,12 +86,9 @@
 			}
 		}
 
-
 		.no-manifest {
 			font-style: italic;
 			padding: 20px;
 		}
 	}
-
-
 }

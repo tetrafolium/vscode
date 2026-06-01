@@ -26,7 +26,10 @@ export interface IStatefulMarkerContainerProps extends BasePromptElementProps {
 export class StatefulMarkerContainer extends PromptElement<IStatefulMarkerContainerProps> {
 	render() {
 		const { statefulMarker } = this.props;
-		const container = { type: CustomDataPartMimeTypes.StatefulMarker, value: statefulMarker };
+		const container = {
+			type: CustomDataPartMimeTypes.StatefulMarker,
+			value: statefulMarker,
+		};
 		return <opaque value={container} />;
 	}
 }
@@ -34,31 +37,43 @@ export class StatefulMarkerContainer extends PromptElement<IStatefulMarkerContai
 /**
  * Check whether an opaque content part is a StatefulMarkerContainer and retrieve the stateful marker if so
  */
-export function rawPartAsStatefulMarker(part: Raw.ChatCompletionContentPartOpaque): StatefulMarkerWithModel | undefined {
+export function rawPartAsStatefulMarker(
+	part: Raw.ChatCompletionContentPartOpaque,
+): StatefulMarkerWithModel | undefined {
 	const value = part.value;
 	if (!value || typeof value !== 'object') {
 		return;
 	}
 
 	const data = value as IStatefulMarkerContainer;
-	if (data.type === CustomDataPartMimeTypes.StatefulMarker && typeof data.value === 'object') {
+	if (
+		data.type === CustomDataPartMimeTypes.StatefulMarker &&
+		typeof data.value === 'object'
+	) {
 		return data.value;
 	}
 	return;
 }
 
-export function encodeStatefulMarker(modelId: string, marker: string): Uint8Array {
+export function encodeStatefulMarker(
+	modelId: string,
+	marker: string,
+): Uint8Array {
 	return new TextEncoder().encode(modelId + '\\' + marker);
 }
 
-export function decodeStatefulMarker(data: Uint8Array): StatefulMarkerWithModel {
+export function decodeStatefulMarker(
+	data: Uint8Array,
+): StatefulMarkerWithModel {
 	const decoded = new TextDecoder().decode(data);
 	const [modelId, marker] = decoded.split('\\');
 	return { modelId, marker };
 }
 
 /** Gets stateful markers from the messages, from the most to least recent */
-export function* getAllStatefulMarkersAndIndicies(messages: readonly Raw.ChatMessage[]) {
+export function* getAllStatefulMarkersAndIndicies(
+	messages: readonly Raw.ChatMessage[],
+) {
 	for (let idx = messages.length - 1; idx >= 0; idx--) {
 		const message = messages[idx];
 		if (message.role === Raw.ChatRole.Assistant) {
@@ -75,10 +90,16 @@ export function* getAllStatefulMarkersAndIndicies(messages: readonly Raw.ChatMes
 	return undefined;
 }
 
-export function getStatefulMarkerAndIndex(modelId: string, messages: readonly Raw.ChatMessage[]): { statefulMarker: string; index: number } | undefined {
+export function getStatefulMarkerAndIndex(
+	modelId: string,
+	messages: readonly Raw.ChatMessage[],
+): { statefulMarker: string; index: number } | undefined {
 	for (const marker of getAllStatefulMarkersAndIndicies(messages)) {
 		if (marker.statefulMarker.modelId === modelId) {
-			return { statefulMarker: marker.statefulMarker.marker, index: marker.index };
+			return {
+				statefulMarker: marker.statefulMarker.marker,
+				index: marker.index,
+			};
 		}
 	}
 	return undefined;
@@ -88,7 +109,10 @@ export function getStatefulMarkerAndIndex(modelId: string, messages: readonly Ra
  * Finds the message index of a specific stateful marker value in the message history.
  * Returns the index if found, undefined otherwise.
  */
-export function getIndexOfStatefulMarker(markerValue: string, messages: readonly Raw.ChatMessage[]): number | undefined {
+export function getIndexOfStatefulMarker(
+	markerValue: string,
+	messages: readonly Raw.ChatMessage[],
+): number | undefined {
 	for (const entry of getAllStatefulMarkersAndIndicies(messages)) {
 		if (entry.statefulMarker.marker === markerValue) {
 			return entry.index;

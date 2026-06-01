@@ -13,15 +13,21 @@ blockquote[data-severity="tip"] {
 }
 
 blockquote[data-severity="important"] {
-	--vscode-textBlockQuote-border: var(--vscode-markdownAlert-important-foreground);
+	--vscode-textBlockQuote-border: var(
+		--vscode-markdownAlert-important-foreground
+	);
 }
 
 blockquote[data-severity="warning"] {
-	--vscode-textBlockQuote-border: var(--vscode-markdownAlert-warning-foreground);
+	--vscode-textBlockQuote-border: var(
+		--vscode-markdownAlert-warning-foreground
+	);
 }
 
 blockquote[data-severity="caution"] {
-	--vscode-textBlockQuote-border: var(--vscode-markdownAlert-caution-foreground);
+	--vscode-textBlockQuote-border: var(
+		--vscode-markdownAlert-caution-foreground
+	);
 }
 
 /* Alert title styling */

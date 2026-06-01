@@ -6,7 +6,8 @@
 import type { Selection, TextEditor } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
 
-export const IScopeSelector = createServiceIdentifier<IScopeSelector>('IScopeSelector');
+export const IScopeSelector =
+	createServiceIdentifier<IScopeSelector>('IScopeSelector');
 /**
  * Represents a scope selector that provides methods for selecting enclosing symbol ranges.
  */
@@ -20,5 +21,8 @@ export interface IScopeSelector {
 	 * @param options.includeBlocks Whether to include for/if/while etc. block statements as scope options. Defaults to `false`.
 	 * @returns A promise that resolves to the selected range, or undefined if no range could be selected.
 	 */
-	selectEnclosingScope(editor: TextEditor, options?: { reason?: string; includeBlocks?: boolean }): Promise<Selection | undefined>;
+	selectEnclosingScope(
+		editor: TextEditor,
+		options?: { reason?: string; includeBlocks?: boolean },
+	): Promise<Selection | undefined>;
 }

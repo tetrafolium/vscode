@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { safeIntl } from '../../../base/common/date.js';
-import type { GraphemeIterator } from '../../../base/common/strings.js';
-import type { ViewLineRenderingData } from '../../common/viewModel.js';
-import type { ViewLineOptions } from '../viewParts/viewLines/viewLineOptions.js';
+import { safeIntl } from "../../../base/common/date.js";
+import type { GraphemeIterator } from "../../../base/common/strings.js";
+import type { ViewLineRenderingData } from "../../common/viewModel.js";
+import type { ViewLineOptions } from "../viewParts/viewLines/viewLineOptions.js";
 
 export interface IContentSegmenter {
 	/**
@@ -19,7 +19,10 @@ export interface IContentSegmenter {
 	getSegmentData(index: number): Intl.SegmentData | undefined;
 }
 
-export function createContentSegmenter(lineData: ViewLineRenderingData, options: ViewLineOptions): IContentSegmenter {
+export function createContentSegmenter(
+	lineData: ViewLineRenderingData,
+	options: ViewLineOptions,
+): IContentSegmenter {
 	if (lineData.isBasicASCII && options.useMonospaceOptimizations) {
 		return new AsciiContentSegmenter(lineData);
 	}
@@ -51,7 +54,9 @@ class GraphemeContentSegmenter implements IContentSegmenter {
 
 	constructor(lineData: ViewLineRenderingData) {
 		const content = lineData.content;
-		const segmenter = safeIntl.Segmenter(undefined, { granularity: 'grapheme' }).value;
+		const segmenter = safeIntl.Segmenter(undefined, {
+			granularity: "grapheme",
+		}).value;
 		const segmentedContent = Array.from(segmenter.segment(content));
 		let segmenterIndex = 0;
 

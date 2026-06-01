@@ -6,7 +6,10 @@
 import type { SessionOptions } from '@github/copilot/sdk';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { IAuthenticationService } from '../../../../../platform/authentication/common/authentication';
-import { ConfigKey, IConfigurationService } from '../../../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../../../platform/configuration/common/configurationService';
 import { IEnvService } from '../../../../../platform/env/common/envService';
 import { IVSCodeExtensionContext } from '../../../../../platform/extContext/common/extensionContext';
 import { ILogService } from '../../../../../platform/log/common/logService';
@@ -15,8 +18,14 @@ import { IInstantiationService } from '../../../../../util/vs/platform/instantia
 import { createExtensionUnitTestingServices } from '../../../../test/node/services';
 import { CopilotCLISDK } from '../copilotCli';
 
-type TokenAuthInfo = Extract<NonNullable<SessionOptions['authInfo']>, { type: 'token' }>;
-type HmacAuthInfo = Extract<NonNullable<SessionOptions['authInfo']>, { type: 'hmac' }>;
+type TokenAuthInfo = Extract<
+	NonNullable<SessionOptions['authInfo']>,
+	{ type: 'token' }
+>;
+type HmacAuthInfo = Extract<
+	NonNullable<SessionOptions['authInfo']>,
+	{ type: 'hmac' }
+>;
 
 describe('CopilotCLISDK Authentication', () => {
 	const disposables = new DisposableStore();
@@ -34,9 +43,9 @@ describe('CopilotCLISDK Authentication', () => {
 		return {
 			workspaceState: {
 				get: () => ({}),
-				update: async () => { },
-				keys: () => []
-			}
+				update: async () => {},
+				keys: () => [],
+			},
 		} as unknown as IVSCodeExtensionContext;
 	}
 
@@ -64,14 +73,16 @@ describe('CopilotCLISDK Authentication', () => {
 					return 'https://proxy.example.com';
 				}
 				return undefined;
-			}
+			},
 		} as unknown as IConfigurationService;
 
 		const mockAuthService = {
 			async getGitHubSession(): Promise<undefined> {
 				// This should not be called when proxy is configured
-				throw new Error('getGitHubSession should not be called when proxy is configured');
-			}
+				throw new Error(
+					'getGitHubSession should not be called when proxy is configured',
+				);
+			},
 		} as unknown as IAuthenticationService;
 
 		const sdk = new TestCopilotCLISDK(
@@ -80,15 +91,17 @@ describe('CopilotCLISDK Authentication', () => {
 			logService,
 			instantiationService,
 			mockAuthService,
-			mockConfigService
+			mockConfigService,
 		);
 
-		const authInfo = await sdk.getAuthInfo() as HmacAuthInfo;
+		const authInfo = (await sdk.getAuthInfo()) as HmacAuthInfo;
 
 		expect(authInfo.type).toBe('hmac');
 		expect(authInfo.hmac).toBe('empty');
 		expect(authInfo.host).toBe('https://github.com');
-		expect(authInfo.copilotUser?.endpoints?.api).toBe('https://proxy.example.com');
+		expect(authInfo.copilotUser?.endpoints?.api).toBe(
+			'https://proxy.example.com',
+		);
 	});
 
 	it('should call getGitHubSession when no proxy URL is configured', async () => {
@@ -98,7 +111,7 @@ describe('CopilotCLISDK Authentication', () => {
 		const mockConfigService = {
 			getConfig() {
 				return undefined;
-			}
+			},
 		} as unknown as IConfigurationService;
 
 		const mockAuthService = {
@@ -108,9 +121,9 @@ describe('CopilotCLISDK Authentication', () => {
 					accessToken: 'test-token',
 					id: 'test-id',
 					scopes: [] as readonly string[],
-					account: { id: 'test-account', label: 'Test User' }
+					account: { id: 'test-account', label: 'Test User' },
 				};
-			}
+			},
 		} as unknown as IAuthenticationService;
 
 		const sdk = new TestCopilotCLISDK(
@@ -119,10 +132,10 @@ describe('CopilotCLISDK Authentication', () => {
 			logService,
 			instantiationService,
 			mockAuthService,
-			mockConfigService
+			mockConfigService,
 		);
 
-		const authInfo = await sdk.getAuthInfo() as TokenAuthInfo;
+		const authInfo = (await sdk.getAuthInfo()) as TokenAuthInfo;
 
 		expect(getGitHubSessionCalled).toBe(true);
 		expect(authInfo.type).toBe('token');
@@ -135,13 +148,13 @@ describe('CopilotCLISDK Authentication', () => {
 		const mockConfigService = {
 			getConfig() {
 				return undefined;
-			}
+			},
 		} as unknown as IConfigurationService;
 
 		const mockAuthService = {
 			async getGitHubSession() {
 				return undefined;
-			}
+			},
 		} as unknown as IAuthenticationService;
 
 		const sdk = new TestCopilotCLISDK(
@@ -150,10 +163,10 @@ describe('CopilotCLISDK Authentication', () => {
 			logService,
 			instantiationService,
 			mockAuthService,
-			mockConfigService
+			mockConfigService,
 		);
 
-		const authInfo = await sdk.getAuthInfo() as TokenAuthInfo;
+		const authInfo = (await sdk.getAuthInfo()) as TokenAuthInfo;
 
 		expect(authInfo.type).toBe('token');
 		expect(authInfo.token).toBe('');

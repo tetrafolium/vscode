@@ -7,9 +7,17 @@ import * as assert from 'assert';
 import * as ed from '../editDistance';
 
 suite('Edit-Distance Test Suite', function () {
-	function test_alignment(haystack: string, needle: string, expected_dist: number, expected_match: string) {
+	function test_alignment(
+		haystack: string,
+		needle: string,
+		expected_dist: number,
+		expected_match: string,
+	) {
 		const alignment = ed.editDistance(haystack, needle);
-		const alignedStr = haystack.substring(alignment.startOffset, alignment.endOffset);
+		const alignedStr = haystack.substring(
+			alignment.startOffset,
+			alignment.endOffset,
+		);
 		assert.strictEqual(alignment.distance, expected_dist);
 		assert.strictEqual(alignedStr, expected_match);
 		return alignment;
@@ -103,16 +111,29 @@ suite('Edit-Distance Test Suite', function () {
 
 suite('Lexical Analyzer for Edit-Distance Test Suite', function () {
 	function test_lexing(s: string, expected_lexemes: string[]) {
-		const [lexemes, d] = ed.lexicalAnalyzer(s, ed.emptyLexDictionary(), ed.lexGeneratorWords, lexeme => true);
+		const [lexemes, d] = ed.lexicalAnalyzer(
+			s,
+			ed.emptyLexDictionary(),
+			ed.lexGeneratorWords,
+			(lexeme) => true,
+		);
 		const lookup = ed.reverseLexDictionary(d);
 		assert.deepStrictEqual(
 			lexemes.map(([lid]) => lookup[lid]),
-			expected_lexemes
+			expected_lexemes,
 		);
 	}
 
 	test('lex some alphanumeric words with underscores', function () {
-		test_lexing('abc as22_b 12abc aAzZu', ['abc', ' ', 'as22_b', ' ', '12abc', ' ', 'aAzZu']);
+		test_lexing('abc as22_b 12abc aAzZu', [
+			'abc',
+			' ',
+			'as22_b',
+			' ',
+			'12abc',
+			' ',
+			'aAzZu',
+		]);
 	});
 
 	test('lex split at symbols', function () {
@@ -185,11 +206,34 @@ suite('Lexical Analyzer for Edit-Distance Test Suite', function () {
 	});
 
 	test('lex common double-character symbols take up two lexemes', function () {
-		test_lexing('== => -> ::', ['=', '=', ' ', '=', '>', ' ', '-', '>', ' ', ':', ':']);
+		test_lexing('== => -> ::', [
+			'=',
+			'=',
+			' ',
+			'=',
+			'>',
+			' ',
+			'-',
+			'>',
+			' ',
+			':',
+			':',
+		]);
 	});
 
 	test('lex astral plane characters', function () {
-		test_lexing(' a🤪🤫a🤬1🤭_🤮', [' ', 'a', '🤪', '🤫', 'a', '🤬', '1', '🤭', '_', '🤮']);
+		test_lexing(' a🤪🤫a🤬1🤭_🤮', [
+			' ',
+			'a',
+			'🤪',
+			'🤫',
+			'a',
+			'🤬',
+			'1',
+			'🤭',
+			'_',
+			'🤮',
+		]);
 	});
 
 	test('lex alternative alphabets form words', function () {
@@ -198,13 +242,21 @@ suite('Lexical Analyzer for Edit-Distance Test Suite', function () {
 			'a\u03B1\u03B2\u03B3\u03B4\u03B5\u03B6\u03B7\u03B8\u03B9\u03BA\u03BB\u03BC\u03BD\u03BE\u03BF\u03C0\u03C1\u03C2\u03C3\u03C4\u03C5',
 			[
 				'a\u03B1\u03B2\u03B3\u03B4\u03B5\u03B6\u03B7\u03B8\u03B9\u03BA\u03BB\u03BC\u03BD\u03BE\u03BF\u03C0\u03C1\u03C2\u03C3\u03C4\u03C5',
-			]
+			],
 		);
 	});
 
-	function test_lex_alignment(haystack: string, needle: string, expected_lex_dist: number, expected_match: string) {
+	function test_lex_alignment(
+		haystack: string,
+		needle: string,
+		expected_lex_dist: number,
+		expected_match: string,
+	) {
 		const alignment = ed.lexEditDistance(haystack, needle);
-		const alignedStr = haystack.substring(alignment.startOffset, alignment.endOffset);
+		const alignedStr = haystack.substring(
+			alignment.startOffset,
+			alignment.endOffset,
+		);
 		assert.strictEqual(expected_lex_dist, alignment.lexDistance);
 		assert.strictEqual(expected_match, alignedStr);
 		return alignment;
@@ -219,7 +271,12 @@ suite('Lexical Analyzer for Edit-Distance Test Suite', function () {
 	});
 
 	test('lex-edit-dist counts multiple spaces and newlines', function () {
-		test_lex_alignment('XX XX def fun (  )\n   {z} YY YY', 'def fun (){z}', 3, 'def fun (  )\n   {z}');
+		test_lex_alignment(
+			'XX XX def fun (  )\n   {z} YY YY',
+			'def fun (){z}',
+			3,
+			'def fun (  )\n   {z}',
+		);
 	});
 
 	test('lex-edit-dist long words small distance', function () {
@@ -227,12 +284,17 @@ suite('Lexical Analyzer for Edit-Distance Test Suite', function () {
 			'a bee is a tee in deed',
 			'a hippopotamus is a pachyderm in deed',
 			2,
-			'a bee is a tee in deed'
+			'a bee is a tee in deed',
 		);
 	});
 
 	test('lex-edit-dist first needle lexeme match postfix of lexeme in haystack', function () {
-		test_lex_alignment('AKingdomForAHorse he did cry', 'Horse he did', 0, 'AKingdomForAHorse he did');
+		test_lex_alignment(
+			'AKingdomForAHorse he did cry',
+			'Horse he did',
+			0,
+			'AKingdomForAHorse he did',
+		);
 	});
 
 	test('lex-edit-dist last needle lexeme match prefix of lexeme in haystack', function () {
@@ -240,7 +302,7 @@ suite('Lexical Analyzer for Edit-Distance Test Suite', function () {
 			'uncomfortable with promptOrExplode',
 			'comfortable with prompt',
 			0,
-			'uncomfortable with promptOrExplode'
+			'uncomfortable with promptOrExplode',
 		);
 	});
 
@@ -287,12 +349,17 @@ suite('Lexical Analyzer for Edit-Distance Test Suite', function () {
 			'XX XX XX aa bb XX cc dd XX ee ff XX gg hh XX XX XX ',
 			'aa bb cc dd ee ff gg hh',
 			3,
-			'aa bb XX cc dd XX ee ff XX gg hh'
+			'aa bb XX cc dd XX ee ff XX gg hh',
 		);
 	});
 
 	test('lexed substitutions', function () {
-		test_lex_alignment('aa bb SS dd ee SS gg', 'aa bb cc dd ee ff gg', 2, 'aa bb SS dd ee SS gg');
+		test_lex_alignment(
+			'aa bb SS dd ee SS gg',
+			'aa bb cc dd ee ff gg',
+			2,
+			'aa bb SS dd ee SS gg',
+		);
 	});
 
 	test('lexed deletions and substitutions', function () {
@@ -300,16 +367,26 @@ suite('Lexical Analyzer for Edit-Distance Test Suite', function () {
 			'XX XX XX aa bb XX SS dd ee SS XX gg hh XX XX XX ',
 			'aa bb cc dd ee ff gg hh',
 			4,
-			'aa bb XX SS dd ee SS XX gg hh'
+			'aa bb XX SS dd ee SS XX gg hh',
 		);
 	});
 
 	test('lexed insertions from start of needle', function () {
-		test_lex_alignment('dd ee XX ff gg SS ii XX XX XX ', 'aa bb cc dd ee ff gg hh ii', 5, 'dd ee XX ff gg SS ii');
+		test_lex_alignment(
+			'dd ee XX ff gg SS ii XX XX XX ',
+			'aa bb cc dd ee ff gg hh ii',
+			5,
+			'dd ee XX ff gg SS ii',
+		);
 	});
 
 	test('lexed insertions from end of needle', function () {
-		test_lex_alignment('XX XX XX XX aa bb XX cc dd SS ff', 'aa bb cc dd ee ff gg hh', 4, 'aa bb XX cc dd SS ff');
+		test_lex_alignment(
+			'XX XX XX XX aa bb XX cc dd SS ff',
+			'aa bb cc dd ee ff gg hh',
+			4,
+			'aa bb XX cc dd SS ff',
+		);
 	});
 
 	test('lexed insertions from the middle of needle', function () {
@@ -317,7 +394,7 @@ suite('Lexical Analyzer for Edit-Distance Test Suite', function () {
 			'XX XX XX XX aa bb XX cc ff XX gg hh XX XX XX XX XX ',
 			'aa bb cc dd ee ff gg hh',
 			4,
-			'aa bb XX cc ff XX gg hh'
+			'aa bb XX cc ff XX gg hh',
 		);
 	});
 

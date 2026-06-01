@@ -3,8 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BasePromptElementProps, Chunk, PrioritizedList, PromptElement, PromptSizing, SystemMessage, UserMessage } from '@vscode/prompt-tsx';
-import { computeRoundPriority, escapeForPromptTag, IBackgroundTodoHistory, IBackgroundTodoHistoryRound, renderBackgroundTodoRound, renderRoundsGroupedByTurn } from './backgroundTodoProcessor';
+import {
+	BasePromptElementProps,
+	Chunk,
+	PrioritizedList,
+	PromptElement,
+	PromptSizing,
+	SystemMessage,
+	UserMessage,
+} from '@vscode/prompt-tsx';
+import {
+	computeRoundPriority,
+	escapeForPromptTag,
+	IBackgroundTodoHistory,
+	IBackgroundTodoHistoryRound,
+	renderBackgroundTodoRound,
+	renderRoundsGroupedByTurn,
+} from './backgroundTodoProcessor';
 
 export interface BackgroundTodoPromptProps extends BasePromptElementProps {
 	/** Current todo list state as rendered markdown, or undefined if no todos exist yet. */
@@ -158,7 +173,10 @@ interface PreviousContextRoundChunkProps extends BasePromptElementProps {
  */
 class PreviousContextRoundChunk extends PromptElement<PreviousContextRoundChunkProps> {
 	render() {
-		const priority = computeRoundPriority(this.props.round, this.props.totalPreviousRounds);
+		const priority = computeRoundPriority(
+			this.props.round,
+			this.props.totalPreviousRounds,
+		);
 		const { round } = this.props;
 		return (
 			<Chunk priority={priority} flexGrow={1}>
@@ -184,7 +202,8 @@ class PreviousContextRoundChunk extends PromptElement<PreviousContextRoundChunkP
  */
 export class BackgroundTodoPrompt extends PromptElement<BackgroundTodoPromptProps> {
 	async render(_state: void, _sizing: PromptSizing) {
-		const { currentTodos, userRequest, history, isFinalReview } = this.props;
+		const { currentTodos, userRequest, history, isFinalReview } =
+			this.props;
 
 		const hasPrevious = history.previousRounds.length > 0;
 		const hasNew = history.newRounds.length > 0;
@@ -193,9 +212,13 @@ export class BackgroundTodoPrompt extends PromptElement<BackgroundTodoPromptProp
 		return (
 			<>
 				{isFinalReview ? (
-					<SystemMessage priority={1000}>{BACKGROUND_TODO_FINAL_REVIEW_SYSTEM_MESSAGE}</SystemMessage>
+					<SystemMessage priority={1000}>
+						{BACKGROUND_TODO_FINAL_REVIEW_SYSTEM_MESSAGE}
+					</SystemMessage>
 				) : (
-					<SystemMessage priority={1000}>{BACKGROUND_TODO_SYSTEM_MESSAGE}</SystemMessage>
+					<SystemMessage priority={1000}>
+						{BACKGROUND_TODO_SYSTEM_MESSAGE}
+					</SystemMessage>
 				)}
 
 				<UserMessage priority={950}>
@@ -214,10 +237,16 @@ export class BackgroundTodoPrompt extends PromptElement<BackgroundTodoPromptProp
 					<UserMessage priority={880} flexGrow={1}>
 						{'<full-trajectory>\n'}
 						<PrioritizedList descending={false} passPriority={true}>
-							{[...history.previousRounds, ...history.newRounds].map(round => (
+							{[
+								...history.previousRounds,
+								...history.newRounds,
+							].map((round) => (
 								<PreviousContextRoundChunk
 									round={round}
-									totalPreviousRounds={history.previousRounds.length + history.newRounds.length}
+									totalPreviousRounds={
+										history.previousRounds.length +
+										history.newRounds.length
+									}
 								/>
 							))}
 						</PrioritizedList>
@@ -229,10 +258,12 @@ export class BackgroundTodoPrompt extends PromptElement<BackgroundTodoPromptProp
 					<UserMessage priority={850} flexGrow={1}>
 						{'<previous-context>\n'}
 						<PrioritizedList descending={false} passPriority={true}>
-							{history.previousRounds.map(round => (
+							{history.previousRounds.map((round) => (
 								<PreviousContextRoundChunk
 									round={round}
-									totalPreviousRounds={history.previousRounds.length}
+									totalPreviousRounds={
+										history.previousRounds.length
+									}
 								/>
 							))}
 						</PrioritizedList>
@@ -242,7 +273,9 @@ export class BackgroundTodoPrompt extends PromptElement<BackgroundTodoPromptProp
 
 				{!isFinalReview && hasNew && (
 					<UserMessage priority={880}>
-						{'<new-activity>\nUse these rounds to decide whether the todo list needs updating:\n'}
+						{
+							'<new-activity>\nUse these rounds to decide whether the todo list needs updating:\n'
+						}
 						{renderRoundsGroupedByTurn(history.newRounds)}
 						{'\n</new-activity>'}
 					</UserMessage>
@@ -250,7 +283,9 @@ export class BackgroundTodoPrompt extends PromptElement<BackgroundTodoPromptProp
 
 				{!isFinalReview && !hasNew && hasAny && (
 					<UserMessage priority={880}>
-						No new activity since your previous background pass — only call the todo tool if the existing list still does not reflect the trajectory.
+						No new activity since your previous background pass —
+						only call the todo tool if the existing list still does
+						not reflect the trajectory.
 					</UserMessage>
 				)}
 			</>

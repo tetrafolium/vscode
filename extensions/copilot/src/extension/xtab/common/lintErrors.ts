@@ -5,7 +5,11 @@
 
 import { DiagnosticData } from '../../../platform/inlineEdits/common/dataTypes/diagnosticData';
 import { DocumentId } from '../../../platform/inlineEdits/common/dataTypes/documentId';
-import { LintOptions, LintOptionShowCode, LintOptionWarning } from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
+import {
+	LintOptions,
+	LintOptionShowCode,
+	LintOptionWarning,
+} from '../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { IXtabHistoryEntry } from '../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
 import { ILanguageDiagnosticsService } from '../../../platform/languages/common/languageDiagnosticsService';
 import { BugIndicatingError } from '../../../util/vs/base/common/errors';
@@ -24,58 +28,102 @@ export interface LintDiagnosticsContext {
 }
 
 export class LintErrors {
-
-	private _previousFormttedDiagnostics: readonly DiagnosticDataWithDistance[] | undefined;
+	private _previousFormttedDiagnostics:
+		| readonly DiagnosticDataWithDistance[]
+		| undefined;
 
 	constructor(
 		private readonly _documentId: DocumentId,
 		private readonly _document: CurrentDocument,
-		@ILanguageDiagnosticsService private readonly _langDiagService: ILanguageDiagnosticsService,
+		@ILanguageDiagnosticsService
+		private readonly _langDiagService: ILanguageDiagnosticsService,
 		private readonly _xtabHistory?: readonly IXtabHistoryEntry[],
-	) { }
+	) {}
 
-	private _diagnostics(resource: URI | undefined): readonly DiagnosticDataWithDistance[] {
-		const allDiagnostics: [URI, Diagnostic[]][] = resource ? [[resource, this._langDiagService.getDiagnostics(resource)]] : this._langDiagService.getAllDiagnostics();
+	private _diagnostics(
+		resource: URI | undefined,
+	): readonly DiagnosticDataWithDistance[] {
+		const allDiagnostics: [URI, Diagnostic[]][] = resource
+			? [[resource, this._langDiagService.getDiagnostics(resource)]]
+			: this._langDiagService.getAllDiagnostics();
 		const activeDocumentUri = this._documentId.toUri();
 
-		return allDiagnostics.map(fileDiagnostics => {
-			const [uri, diagnostics] = fileDiagnostics;
-			return diagnostics.map(diagnostic => {
-				const range = new Range(diagnostic.range.start.line + 1, diagnostic.range.start.character + 1, diagnostic.range.end.line + 1, diagnostic.range.end.character + 1);
-				const distance = isEqual(activeDocumentUri, uri) ? CursorDistance.fromPositions(range.getStartPosition(), this._document.cursorPosition) : undefined;
-				return new DiagnosticDataWithDistance(
-					uri,
-					diagnostic.message,
-					diagnostic.severity === DiagnosticSeverity.Error ? 'error' : 'warning',
-					distance,
-					range,
-					this._document.transformer.getOffsetRange(range),
-					diagnostic.code && !(typeof diagnostic.code === 'number') && !(typeof diagnostic.code === 'string') ? diagnostic.code.value : diagnostic.code,
-					diagnostic.source
-				);
-			});
-		}).flat();
+		return allDiagnostics
+			.map((fileDiagnostics) => {
+				const [uri, diagnostics] = fileDiagnostics;
+				return diagnostics.map((diagnostic) => {
+					const range = new Range(
+						diagnostic.range.start.line + 1,
+						diagnostic.range.start.character + 1,
+						diagnostic.range.end.line + 1,
+						diagnostic.range.end.character + 1,
+					);
+					const distance = isEqual(activeDocumentUri, uri)
+						? CursorDistance.fromPositions(
+								range.getStartPosition(),
+								this._document.cursorPosition,
+							)
+						: undefined;
+					return new DiagnosticDataWithDistance(
+						uri,
+						diagnostic.message,
+						diagnostic.severity === DiagnosticSeverity.Error
+							? 'error'
+							: 'warning',
+						distance,
+						range,
+						this._document.transformer.getOffsetRange(range),
+						diagnostic.code &&
+							!(typeof diagnostic.code === 'number') &&
+							!(typeof diagnostic.code === 'string')
+							? diagnostic.code.value
+							: diagnostic.code,
+						diagnostic.source,
+					);
+				});
+			})
+			.flat();
 	}
 
-	private _getRelevantDiagnostics(options: LintOptions, resource: URI | undefined): readonly DiagnosticDataWithDistance[] {
+	private _getRelevantDiagnostics(
+		options: LintOptions,
+		resource: URI | undefined,
+	): readonly DiagnosticDataWithDistance[] {
 		let diagnostics = this._diagnostics(resource);
 
-		diagnostics = filterDiagnosticsByDistance(diagnostics, options.maxLineDistance);
+		diagnostics = filterDiagnosticsByDistance(
+			diagnostics,
+			options.maxLineDistance,
+		);
 		diagnostics = sortDiagnosticsByDistance(diagnostics);
-		diagnostics = filterDiagnosticsBySeverity(diagnostics, options.warnings);
+		diagnostics = filterDiagnosticsBySeverity(
+			diagnostics,
+			options.warnings,
+		);
 
 		return diagnostics.slice(0, options.maxLints);
 	}
 
 	public getFormattedLintErrors(options: LintOptions): string {
-		const currentFileDiagnostics = this._getRelevantDiagnostics(options, this._documentId.toUri());
+		const currentFileDiagnostics = this._getRelevantDiagnostics(
+			options,
+			this._documentId.toUri(),
+		);
 
 		let allDiagnostics: readonly DiagnosticDataWithDistance[];
 
 		if (options.nRecentFiles > 0 && this._xtabHistory) {
-			const recentFileUris = this._collectRecentFileUris(options.nRecentFiles);
-			const recentDiagnostics = this._getRecentFileDiagnostics(recentFileUris, options);
-			allDiagnostics = [...currentFileDiagnostics, ...recentDiagnostics].slice(0, options.maxLints);
+			const recentFileUris = this._collectRecentFileUris(
+				options.nRecentFiles,
+			);
+			const recentDiagnostics = this._getRecentFileDiagnostics(
+				recentFileUris,
+				options,
+			);
+			allDiagnostics = [
+				...currentFileDiagnostics,
+				...recentDiagnostics,
+			].slice(0, options.maxLints);
 		} else {
 			allDiagnostics = currentFileDiagnostics;
 		}
@@ -83,13 +131,21 @@ export class LintErrors {
 		this._previousFormttedDiagnostics = allDiagnostics;
 
 		const activeDocUri = this._documentId.toUri();
-		const formattedDiagnostics = allDiagnostics.map(d => {
-			// Only show code context for diagnostics from the current file,
-			// since we don't have the document lines for recent files.
-			const isCurrentFile = isEqual(d.documentUri, activeDocUri);
-			const effectiveOptions = isCurrentFile ? options : { ...options, showCode: LintOptionShowCode.NO };
-			return formatSingleDiagnostic(d, this._document.lines, effectiveOptions);
-		}).join('\n');
+		const formattedDiagnostics = allDiagnostics
+			.map((d) => {
+				// Only show code context for diagnostics from the current file,
+				// since we don't have the document lines for recent files.
+				const isCurrentFile = isEqual(d.documentUri, activeDocUri);
+				const effectiveOptions = isCurrentFile
+					? options
+					: { ...options, showCode: LintOptionShowCode.NO };
+				return formatSingleDiagnostic(
+					d,
+					this._document.lines,
+					effectiveOptions,
+				);
+			})
+			.join('\n');
 
 		const lintTag = PromptTags.createLintTag(options.tagName);
 		return `${lintTag.start}\n${formattedDiagnostics}\n${lintTag.end}`;
@@ -131,23 +187,40 @@ export class LintErrors {
 	 * Collects diagnostics from recent files, maintaining the file recency order.
 	 * Within each file, diagnostics are sorted by line number.
 	 */
-	private _getRecentFileDiagnostics(recentFileUris: readonly URI[], options: LintOptions): readonly DiagnosticDataWithDistance[] {
+	private _getRecentFileDiagnostics(
+		recentFileUris: readonly URI[],
+		options: LintOptions,
+	): readonly DiagnosticDataWithDistance[] {
 		const result: DiagnosticDataWithDistance[] = [];
 
 		for (const uri of recentFileUris) {
 			let fileDiags = this._diagnostics(uri);
-			fileDiags = filterDiagnosticsBySeverity(fileDiags, options.warnings);
+			fileDiags = filterDiagnosticsBySeverity(
+				fileDiags,
+				options.warnings,
+			);
 			// Sort by line number within each file
-			fileDiags = fileDiags.slice().sort((a, b) => a.documentRange.startLineNumber - b.documentRange.startLineNumber);
+			fileDiags = fileDiags
+				.slice()
+				.sort(
+					(a, b) =>
+						a.documentRange.startLineNumber -
+						b.documentRange.startLineNumber,
+				);
 			result.push(...fileDiags);
 		}
 
 		return result;
 	}
 
-	public lineNumberInPreviousFormattedPrompt(options: LintOptions, lineNumber: number): boolean {
+	public lineNumberInPreviousFormattedPrompt(
+		options: LintOptions,
+		lineNumber: number,
+	): boolean {
 		if (!this._previousFormttedDiagnostics) {
-			throw new BugIndicatingError('No previous formatted diagnostics available to check line number against.');
+			throw new BugIndicatingError(
+				'No previous formatted diagnostics available to check line number against.',
+			);
 		}
 
 		const activeDocUri = this._documentId.toUri();
@@ -159,7 +232,10 @@ export class LintErrors {
 			}
 
 			// Convert diagnostic position (1-based) to 0-based for comparison with formatted output
-			if (diagnostic.documentRange.getStartPosition().lineNumber - 1 === lineNumber) {
+			if (
+				diagnostic.documentRange.getStartPosition().lineNumber - 1 ===
+				lineNumber
+			) {
 				return true;
 			}
 
@@ -167,7 +243,10 @@ export class LintErrors {
 				continue;
 			}
 
-			const lineRange = diagnosticsToCodeLineRange(diagnostic.documentRange, options);
+			const lineRange = diagnosticsToCodeLineRange(
+				diagnostic.documentRange,
+				options,
+			);
 			if (lineRange.contains(lineNumber)) {
 				return true;
 			}
@@ -188,11 +267,14 @@ export class LintErrors {
 		};
 
 		let diagnostics = this._diagnostics(undefined);
-		diagnostics = filterDiagnosticsBySeverity(diagnostics, LintOptionWarning.YES);
+		diagnostics = filterDiagnosticsBySeverity(
+			diagnostics,
+			LintOptionWarning.YES,
+		);
 		diagnostics = sortDiagnosticsByDistance(diagnostics);
 		diagnostics = diagnostics.slice(0, 20);
 
-		const telemetryDiagnostics = diagnostics.map(diagnostic => ({
+		const telemetryDiagnostics = diagnostics.map((diagnostic) => ({
 			uri: diagnostic.documentUri.toString(),
 			line: diagnostic.documentRange.startLineNumber,
 			column: diagnostic.documentRange.startColumn,
@@ -203,9 +285,24 @@ export class LintErrors {
 			code: diagnostic.code,
 			source: diagnostic.source,
 			lineDistance: diagnostic.distance?.lineDistance,
-			formatted: formatSingleDiagnostic(diagnostic, this._document.lines, telemetryOptions),
-			formattedCode: formatSingleDiagnostic(diagnostic, this._document.lines, { ...telemetryOptions, showCode: LintOptionShowCode.YES }),
-			formattedCodeWithSurrounding: formatSingleDiagnostic(diagnostic, this._document.lines, { ...telemetryOptions, showCode: LintOptionShowCode.YES_WITH_SURROUNDING }),
+			formatted: formatSingleDiagnostic(
+				diagnostic,
+				this._document.lines,
+				telemetryOptions,
+			),
+			formattedCode: formatSingleDiagnostic(
+				diagnostic,
+				this._document.lines,
+				{ ...telemetryOptions, showCode: LintOptionShowCode.YES },
+			),
+			formattedCodeWithSurrounding: formatSingleDiagnostic(
+				diagnostic,
+				this._document.lines,
+				{
+					...telemetryOptions,
+					showCode: LintOptionShowCode.YES_WITH_SURROUNDING,
+				},
+			),
 		}));
 
 		return JSON.stringify(telemetryDiagnostics);
@@ -218,19 +315,29 @@ export class LintErrors {
 function formatSingleDiagnostic(
 	diagnostic: DiagnosticDataWithDistance,
 	documentLines: readonly string[],
-	lintOptions: LintOptions
+	lintOptions: LintOptions,
 ): string {
-	const headerLine = formatDiagnosticMessage(diagnostic, diagnostic.documentRange);
+	const headerLine = formatDiagnosticMessage(
+		diagnostic,
+		diagnostic.documentRange,
+	);
 
 	if (lintOptions.showCode === LintOptionShowCode.NO) {
 		return headerLine;
 	}
 
-	const codeLines = formatCodeLines(diagnostic.documentRange, lintOptions, documentLines);
+	const codeLines = formatCodeLines(
+		diagnostic.documentRange,
+		lintOptions,
+		documentLines,
+	);
 	return headerLine + '\n' + codeLines.join('\n');
 }
 
-function formatDiagnosticMessage(diagnostic: DiagnosticDataWithDistance, diagnosticRange: Range): string {
+function formatDiagnosticMessage(
+	diagnostic: DiagnosticDataWithDistance,
+	diagnosticRange: Range,
+): string {
 	// Format: "line:column - severity CODE: message"
 	let codeStr = '';
 	if (diagnostic.code) {
@@ -243,10 +350,19 @@ function formatDiagnosticMessage(diagnostic: DiagnosticDataWithDistance, diagnos
 	return headerLine;
 }
 
-function formatCodeLines(diagnosticRange: Range, lintOptions: LintOptions, documentLines: readonly string[]): string[] {
-	const lineRangeToInclude = diagnosticsToCodeLineRange(diagnosticRange, lintOptions);
+function formatCodeLines(
+	diagnosticRange: Range,
+	lintOptions: LintOptions,
+	documentLines: readonly string[],
+): string[] {
+	const lineRangeToInclude = diagnosticsToCodeLineRange(
+		diagnosticRange,
+		lintOptions,
+	);
 
-	const lineRange = lineRangeToInclude.intersect(new OffsetRange(0, documentLines.length));
+	const lineRange = lineRangeToInclude.intersect(
+		new OffsetRange(0, documentLines.length),
+	);
 	if (!lineRange) {
 		// Diagnostic refers to lines that no longer exist (stale diagnostic after document edit)
 		return [];
@@ -259,11 +375,18 @@ function formatCodeLines(diagnosticRange: Range, lintOptions: LintOptions, docum
 	return codeLines;
 }
 
-function diagnosticsToCodeLineRange(diagnosticRange: Range, lintOptions: LintOptions): OffsetRange {
-	const diagnosticStartLine = diagnosticRange.getStartPosition().lineNumber - 1; // 0-based for rendering and array access
+function diagnosticsToCodeLineRange(
+	diagnosticRange: Range,
+	lintOptions: LintOptions,
+): OffsetRange {
+	const diagnosticStartLine =
+		diagnosticRange.getStartPosition().lineNumber - 1; // 0-based for rendering and array access
 	const diagnosticEndLine = diagnosticRange.getEndPosition().lineNumber - 1; // 0-based for rendering and array access
 
-	let lineRangeToInclude = new OffsetRange(diagnosticStartLine, diagnosticEndLine + 1);
+	let lineRangeToInclude = new OffsetRange(
+		diagnosticStartLine,
+		diagnosticEndLine + 1,
+	);
 	if (lintOptions.showCode === LintOptionShowCode.YES_WITH_SURROUNDING) {
 		lineRangeToInclude = lineRangeToInclude.deltaStart(-1).deltaEnd(1);
 	}
@@ -275,11 +398,20 @@ function formatCodeLine(lineNumber: number, lineContent: string): string {
 	return `${lineNumber}|${lineContent}`;
 }
 
-function filterDiagnosticsByDistance(diagnostics: readonly DiagnosticDataWithDistance[], distance: number): readonly DiagnosticDataWithDistance[] {
-	return diagnostics.filter(d => d.distance?.lineDistance !== undefined && d.distance.lineDistance <= distance);
+function filterDiagnosticsByDistance(
+	diagnostics: readonly DiagnosticDataWithDistance[],
+	distance: number,
+): readonly DiagnosticDataWithDistance[] {
+	return diagnostics.filter(
+		(d) =>
+			d.distance?.lineDistance !== undefined &&
+			d.distance.lineDistance <= distance,
+	);
 }
 
-function sortDiagnosticsByDistance(diagnostics: readonly DiagnosticDataWithDistance[]): readonly DiagnosticDataWithDistance[] {
+function sortDiagnosticsByDistance(
+	diagnostics: readonly DiagnosticDataWithDistance[],
+): readonly DiagnosticDataWithDistance[] {
 	return diagnostics.slice().sort((a, b) => {
 		if (a.distance === undefined && b.distance === undefined) {
 			return 0;
@@ -294,24 +426,33 @@ function sortDiagnosticsByDistance(diagnostics: readonly DiagnosticDataWithDista
 	});
 }
 
-function filterDiagnosticsBySeverity(diagnostics: readonly DiagnosticDataWithDistance[], warnings: LintOptionWarning): readonly DiagnosticDataWithDistance[] {
+function filterDiagnosticsBySeverity(
+	diagnostics: readonly DiagnosticDataWithDistance[],
+	warnings: LintOptionWarning,
+): readonly DiagnosticDataWithDistance[] {
 	switch (warnings) {
 		case LintOptionWarning.NO:
-			return diagnostics.filter(d => d.severity === 'error');
+			return diagnostics.filter((d) => d.severity === 'error');
 		case LintOptionWarning.YES: {
-			return diagnostics.filter(d => d.severity === 'error' || d.severity === 'warning');
+			return diagnostics.filter(
+				(d) => d.severity === 'error' || d.severity === 'warning',
+			);
 		}
 		case LintOptionWarning.YES_IF_NO_ERRORS: {
-			const errorDiagnostics = diagnostics.filter(d => d.severity === 'error');
+			const errorDiagnostics = diagnostics.filter(
+				(d) => d.severity === 'error',
+			);
 			return errorDiagnostics.length > 0
 				? errorDiagnostics
-				: diagnostics.filter(d => d.severity === 'error' || d.severity === 'warning');
+				: diagnostics.filter(
+						(d) =>
+							d.severity === 'error' || d.severity === 'warning',
+					);
 		}
 	}
 }
 
 class CursorDistance {
-
 	static compareFn(a: CursorDistance, b: CursorDistance): number {
 		if (a.lineDistance !== b.lineDistance) {
 			return a.lineDistance - b.lineDistance;
@@ -322,18 +463,17 @@ class CursorDistance {
 	static fromPositions(pos1: Position, pos2: Position): CursorDistance {
 		return new CursorDistance(
 			Math.abs(pos1.lineNumber - pos2.lineNumber),
-			Math.abs(pos1.column - pos2.column)
+			Math.abs(pos1.column - pos2.column),
 		);
 	}
 
 	constructor(
 		public lineDistance: number,
-		public columnDistance: number
-	) { }
+		public columnDistance: number,
+	) {}
 }
 
 class DiagnosticDataWithDistance extends DiagnosticData {
-
 	constructor(
 		documentUri: URI,
 		message: string,
@@ -346,5 +486,4 @@ class DiagnosticDataWithDistance extends DiagnosticData {
 	) {
 		super(documentUri, message, severity, range, code, source);
 	}
-
 }

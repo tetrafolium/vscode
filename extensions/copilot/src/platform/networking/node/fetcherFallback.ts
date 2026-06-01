@@ -3,14 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
-import { Config, ConfigKey, IConfigurationService } from '../../configuration/common/configurationService';
-import { collectSingleLineErrorMessage, ILogService } from '../../log/common/logService';
+import {
+	Config,
+	ConfigKey,
+	IConfigurationService,
+} from '../../configuration/common/configurationService';
+import {
+	collectSingleLineErrorMessage,
+	ILogService,
+} from '../../log/common/logService';
 import { IExperimentationService } from '../../telemetry/common/nullExperimentationService';
 import { ITelemetryService } from '../../telemetry/common/telemetry';
 import { FetcherId, FetchOptions, Response } from '../common/fetcherService';
 import { IFetcher } from '../common/networking';
-
 
 const fetcherConfigKeys: Partial<Record<FetcherId, Config<boolean>>> = {
 	'electron-fetch': ConfigKey.Shared.DebugUseElectronFetcher,
@@ -18,9 +23,25 @@ const fetcherConfigKeys: Partial<Record<FetcherId, Config<boolean>>> = {
 	'node-http': ConfigKey.Shared.DebugUseNodeFetcher,
 };
 
-export async function fetchWithFallbacks(availableFetchers: readonly IFetcher[], url: string, options: FetchOptions, knownBadFetchers: Set<string>, configurationService: IConfigurationService, logService: ILogService, telemetryService: ITelemetryService | undefined, experimentationService: IExperimentationService | undefined): Promise<{ response: Response; updatedFetchers?: IFetcher[]; updatedKnownBadFetchers?: Set<string> }> {
+export async function fetchWithFallbacks(
+	availableFetchers: readonly IFetcher[],
+	url: string,
+	options: FetchOptions,
+	knownBadFetchers: Set<string>,
+	configurationService: IConfigurationService,
+	logService: ILogService,
+	telemetryService: ITelemetryService | undefined,
+	experimentationService: IExperimentationService | undefined,
+): Promise<{
+	response: Response;
+	updatedFetchers?: IFetcher[];
+	updatedKnownBadFetchers?: Set<string>;
+}> {
 	if (options.retryFallbacks && availableFetchers.length > 1) {
-		let firstResult: { ok: boolean; response: Response } | { ok: false; err: any } | undefined;
+		let firstResult:
+			| { ok: boolean; response: Response }
+			| { ok: false; err: any }
+			| undefined;
 		const updatedKnownBadFetchers = new Set<string>();
 		let lastError: string | undefined;
 		for (const fetcher of availableFetchers) {
@@ -39,11 +60,18 @@ export async function fetchWithFallbacks(availableFetchers: readonly IFetcher[],
 				continue;
 			}
 			if (fetcher !== availableFetchers[0]) {
-				const retry = await tryFetch(availableFetchers[0], url, options, logService);
+				const retry = await tryFetch(
+					availableFetchers[0],
+					url,
+					options,
+					logService,
+				);
 				if (retry.ok) {
 					return { response: retry.response };
 				}
-				logService.info(`FetcherService: using ${fetcher.getUserAgentLibrary()} from now on`);
+				logService.info(
+					`FetcherService: using ${fetcher.getUserAgentLibrary()} from now on`,
+				);
 				/* __GDPR__
 					"fetcherFallback" : {
 						"owner": "chrmarti",
@@ -54,17 +82,28 @@ export async function fetchWithFallbacks(availableFetchers: readonly IFetcher[],
 						"lastError": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The last error encountered, containing fetcher ID, status code and error message" }
 					}
 				*/
-				telemetryService?.sendTelemetryEvent('fetcherFallback', { github: true, microsoft: true }, {
-					newFetcher: fetcher.getUserAgentLibrary(),
-					knownBadFetchers: Array.from(updatedKnownBadFetchers).join(','),
-					lastError,
-				}, {
-					knownBadFetchersCount: updatedKnownBadFetchers.size,
-				});
+				telemetryService?.sendTelemetryEvent(
+					'fetcherFallback',
+					{ github: true, microsoft: true },
+					{
+						newFetcher: fetcher.getUserAgentLibrary(),
+						knownBadFetchers: Array.from(
+							updatedKnownBadFetchers,
+						).join(','),
+						lastError,
+					},
+					{
+						knownBadFetchersCount: updatedKnownBadFetchers.size,
+					},
+				);
 				const updatedFetchers = availableFetchers.slice();
 				updatedFetchers.splice(updatedFetchers.indexOf(fetcher), 1);
 				updatedFetchers.unshift(fetcher);
-				return { response: result.response, updatedFetchers, updatedKnownBadFetchers };
+				return {
+					response: result.response,
+					updatedFetchers,
+					updatedKnownBadFetchers,
+				};
 			}
 			return { response: result.response };
 		}
@@ -76,18 +115,32 @@ export async function fetchWithFallbacks(availableFetchers: readonly IFetcher[],
 	let fetcher = availableFetchers[0];
 	if (options.useFetcher) {
 		if (knownBadFetchers.has(options.useFetcher)) {
-			logService.trace(`FetcherService: not using requested fetcher ${options.useFetcher} as it is known to be failing, using ${fetcher.getUserAgentLibrary()} instead.`);
+			logService.trace(
+				`FetcherService: not using requested fetcher ${options.useFetcher} as it is known to be failing, using ${fetcher.getUserAgentLibrary()} instead.`,
+			);
 		} else {
 			const configKey = fetcherConfigKeys[options.useFetcher];
-			if (configKey && configurationService.inspectConfig(configKey)?.globalValue === false) {
-				logService.trace(`FetcherService: not using requested fetcher ${options.useFetcher} as it is disabled in user settings, using ${fetcher.getUserAgentLibrary()} instead.`);
+			if (
+				configKey &&
+				configurationService.inspectConfig(configKey)?.globalValue ===
+					false
+			) {
+				logService.trace(
+					`FetcherService: not using requested fetcher ${options.useFetcher} as it is disabled in user settings, using ${fetcher.getUserAgentLibrary()} instead.`,
+				);
 			} else {
-				const requestedFetcher = availableFetchers.find(f => f.getUserAgentLibrary() === options.useFetcher);
+				const requestedFetcher = availableFetchers.find(
+					(f) => f.getUserAgentLibrary() === options.useFetcher,
+				);
 				if (requestedFetcher) {
 					fetcher = requestedFetcher;
-					logService.trace(`FetcherService: using ${options.useFetcher} as requested.`);
+					logService.trace(
+						`FetcherService: using ${options.useFetcher} as requested.`,
+					);
 				} else {
-					logService.info(`FetcherService: could not find requested fetcher ${options.useFetcher}, using ${fetcher.getUserAgentLibrary()} instead.`);
+					logService.info(
+						`FetcherService: could not find requested fetcher ${options.useFetcher}, using ${fetcher.getUserAgentLibrary()} instead.`,
+					);
 				}
 			}
 		}
@@ -98,11 +151,15 @@ export async function fetchWithFallbacks(availableFetchers: readonly IFetcher[],
 		// For net::ERR_FAILED from network process crash, disconnect and retry once.
 		if (fetcher.isNetworkProcessCrashedError(err)) {
 			const fetcherId = fetcher.getUserAgentLibrary();
-			logService.info(`FetcherService: ${fetcherId} hit network process crash error (${(err as Error)?.message}), retrying after disconnect...`);
+			logService.info(
+				`FetcherService: ${fetcherId} hit network process crash error (${(err as Error)?.message}), retrying after disconnect...`,
+			);
 			try {
 				await fetcher.disconnectAll();
 				const response = await fetcher.fetch(url, options);
-				logService.info(`FetcherService: ${fetcherId} retry after crash succeeded.`);
+				logService.info(
+					`FetcherService: ${fetcherId} retry after crash succeeded.`,
+				);
 				/* __GDPR__
 					"fetcherCrashRetry" : {
 						"owner": "deepak1556",
@@ -112,19 +169,29 @@ export async function fetchWithFallbacks(availableFetchers: readonly IFetcher[],
 						"error": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "comment": "The error message" }
 					}
 				*/
-				telemetryService?.sendTelemetryEvent('fetcherCrashRetry', { github: true, microsoft: true }, {
-					fetcher: fetcherId,
-					outcome: 'recovered',
-					error: collectSingleLineErrorMessage(err, true),
-				});
+				telemetryService?.sendTelemetryEvent(
+					'fetcherCrashRetry',
+					{ github: true, microsoft: true },
+					{
+						fetcher: fetcherId,
+						outcome: 'recovered',
+						error: collectSingleLineErrorMessage(err, true),
+					},
+				);
 				return { response };
 			} catch (retryErr) {
-				logService.info(`FetcherService: ${fetcherId} retry also failed (${(retryErr as Error)?.message}), checking for demotion...`);
-				telemetryService?.sendTelemetryEvent('fetcherCrashRetry', { github: true, microsoft: true }, {
-					fetcher: fetcherId,
-					outcome: 'failed',
-					error: collectSingleLineErrorMessage(retryErr, true),
-				});
+				logService.info(
+					`FetcherService: ${fetcherId} retry also failed (${(retryErr as Error)?.message}), checking for demotion...`,
+				);
+				telemetryService?.sendTelemetryEvent(
+					'fetcherCrashRetry',
+					{ github: true, microsoft: true },
+					{
+						fetcher: fetcherId,
+						outcome: 'failed',
+						error: collectSingleLineErrorMessage(retryErr, true),
+					},
+				);
 				err = retryErr;
 			}
 		}
@@ -134,47 +201,95 @@ export async function fetchWithFallbacks(availableFetchers: readonly IFetcher[],
 		// If that retry still fails and crash fallback is enabled, demote the crashed fetcher so future requests use a healthy one.
 		// After demotion, the caller is responsible for deciding whether to retry or surface the error.
 		const enableCrashFallback = experimentationService
-			? configurationService.getExperimentBasedConfig(ConfigKey.TeamInternal.FallbackNodeFetchOnNetworkProcessCrash, experimentationService)
+			? configurationService.getExperimentBasedConfig(
+					ConfigKey.TeamInternal
+						.FallbackNodeFetchOnNetworkProcessCrash,
+					experimentationService,
+				)
 			: false;
 		if (enableCrashFallback && fetcher.isNetworkProcessCrashedError(err)) {
 			const fetcherId = fetcher.getUserAgentLibrary();
-			logService.info(`FetcherService: ${fetcherId} network process crashed. Permanently demoting to avoid future use.`);
+			logService.info(
+				`FetcherService: ${fetcherId} network process crashed. Permanently demoting to avoid future use.`,
+			);
 			const updatedKnownBadFetchers = new Set(knownBadFetchers);
 			updatedKnownBadFetchers.add(fetcherId);
-			const updatedFetchers = availableFetchers.filter(f => f !== fetcher);
+			const updatedFetchers = availableFetchers.filter(
+				(f) => f !== fetcher,
+			);
 			if (updatedFetchers.length > 0) {
 				updatedFetchers.push(fetcher);
-				logService.info(`FetcherService: now using ${updatedFetchers[0].getUserAgentLibrary()} as primary fetcher.`);
+				logService.info(
+					`FetcherService: now using ${updatedFetchers[0].getUserAgentLibrary()} as primary fetcher.`,
+				);
 			}
 			// Attach demotion info to the error so the caller can apply it
-			(err as any)._fetcherDemotion = { updatedFetchers: updatedFetchers.length > 0 ? updatedFetchers : undefined, updatedKnownBadFetchers };
+			(err as any)._fetcherDemotion = {
+				updatedFetchers:
+					updatedFetchers.length > 0 ? updatedFetchers : undefined,
+				updatedKnownBadFetchers,
+			};
 		}
 		throw err;
 	}
 }
 
-async function tryFetch(fetcher: IFetcher, url: string, options: FetchOptions, logService: ILogService): Promise<{ ok: boolean; response: Response } | { ok: false; err: any }> {
+async function tryFetch(
+	fetcher: IFetcher,
+	url: string,
+	options: FetchOptions,
+	logService: ILogService,
+): Promise<{ ok: boolean; response: Response } | { ok: false; err: any }> {
 	try {
 		const response = await fetcher.fetch(url, options);
 		if (!response.ok) {
-			logService.info(`FetcherService: ${fetcher.getUserAgentLibrary()} failed with status: ${response.status} ${response.statusText}`);
+			logService.info(
+				`FetcherService: ${fetcher.getUserAgentLibrary()} failed with status: ${response.status} ${response.statusText}`,
+			);
 			return { ok: false, response };
 		}
 		if (!options.expectJSON) {
-			logService.debug(`FetcherService: ${fetcher.getUserAgentLibrary()} succeeded (not JSON)`);
+			logService.debug(
+				`FetcherService: ${fetcher.getUserAgentLibrary()} succeeded (not JSON)`,
+			);
 			return { ok: response.ok, response };
 		}
 		const text = await response.text();
 		try {
 			JSON.parse(text); // Verify JSON
-			logService.debug(`FetcherService: ${fetcher.getUserAgentLibrary()} succeeded (JSON)`);
-			return { ok: true, response: Response.fromText(response.status, response.statusText, response.headers, text, response.fetcher) };
+			logService.debug(
+				`FetcherService: ${fetcher.getUserAgentLibrary()} succeeded (JSON)`,
+			);
+			return {
+				ok: true,
+				response: Response.fromText(
+					response.status,
+					response.statusText,
+					response.headers,
+					text,
+					response.fetcher,
+				),
+			};
 		} catch (err) {
-			logService.info(`FetcherService: ${fetcher.getUserAgentLibrary()} failed to parse JSON: ${err.message}`);
-			return { ok: false, err, response: Response.fromText(response.status, response.statusText, response.headers, text, response.fetcher) };
+			logService.info(
+				`FetcherService: ${fetcher.getUserAgentLibrary()} failed to parse JSON: ${err.message}`,
+			);
+			return {
+				ok: false,
+				err,
+				response: Response.fromText(
+					response.status,
+					response.statusText,
+					response.headers,
+					text,
+					response.fetcher,
+				),
+			};
 		}
 	} catch (err) {
-		logService.info(`FetcherService: ${fetcher.getUserAgentLibrary()} failed with error: ${err.message}`);
+		logService.info(
+			`FetcherService: ${fetcher.getUserAgentLibrary()} failed with error: ${err.message}`,
+		);
 		return { ok: false, err };
 	}
 }

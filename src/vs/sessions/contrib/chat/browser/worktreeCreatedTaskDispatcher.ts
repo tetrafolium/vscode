@@ -3,24 +3,32 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableMap, DisposableStore } from '../../../../base/common/lifecycle.js';
-import { registerAutorunSelfDisposable } from '../../../../base/common/observable.js';
-import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { IWorkbenchContribution } from '../../../../workbench/common/contributions.js';
-import { isAgentHostProviderId } from '../../../common/agentHostSessionsProvider.js';
-import { ISession, SessionStatus } from '../../../services/sessions/common/session.js';
-import { ISessionsManagementService } from '../../../services/sessions/common/sessionsManagement.js';
-import { ISessionsTasksService } from './sessionsTasksService.js';
+import {
+	Disposable,
+	DisposableMap,
+	DisposableStore,
+} from "../../../../base/common/lifecycle.js";
+import { registerAutorunSelfDisposable } from "../../../../base/common/observable.js";
+import { IConfigurationService } from "../../../../platform/configuration/common/configuration.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import { IWorkbenchContribution } from "../../../../workbench/common/contributions.js";
+import { isAgentHostProviderId } from "../../../common/agentHostSessionsProvider.js";
+import {
+	ISession,
+	SessionStatus,
+} from "../../../services/sessions/common/session.js";
+import { ISessionsManagementService } from "../../../services/sessions/common/sessionsManagement.js";
+import { ISessionsTasksService } from "./sessionsTasksService.js";
 
-const LOG_PREFIX = '[WorktreeCreatedTaskDispatcher]';
+const LOG_PREFIX = "[WorktreeCreatedTaskDispatcher]";
 
 /**
  * Setting that controls whether `runOptions.runOn === 'worktreeCreated'`
  * tasks are auto-dispatched for agent host sessions when a new worktree is
  * created. Defaults to `true`. Manual `Run Task` invocations are unaffected.
  */
-export const AGENT_HOST_RUN_WORKTREE_CREATED_TASKS_SETTING = 'chat.agentHost.runWorktreeCreatedTasks';
+export const AGENT_HOST_RUN_WORKTREE_CREATED_TASKS_SETTING =
+	"chat.agentHost.runWorktreeCreatedTasks";
 
 /**
  * Workbench contribution that runs all tasks tagged with
@@ -34,24 +42,40 @@ export const AGENT_HOST_RUN_WORKTREE_CREATED_TASKS_SETTING = 'chat.agentHost.run
  * We deliberately ignore sessions that predate this contribution so restored
  * sessions don't re-run setup tasks when the agents window opens.
  */
-export class WorktreeCreatedTaskDispatcher extends Disposable implements IWorkbenchContribution {
-
-	static readonly ID = 'workbench.contrib.sessions.worktreeCreatedTaskDispatcher';
+export class WorktreeCreatedTaskDispatcher
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	static readonly ID =
+		"workbench.contrib.sessions.worktreeCreatedTaskDispatcher";
 
 	// Track per-session disposables (one per in-flight session subscription) so
 	// we tear them down when the session is removed.
-	private readonly _sessionDisposables = this._register(new DisposableMap<string>());
+	private readonly _sessionDisposables = this._register(
+		new DisposableMap<string>(),
+	);
 
 	constructor(
-		@ISessionsManagementService private readonly _sessionsManagementService: ISessionsManagementService,
-		@ISessionsTasksService private readonly _sessionsTasksService: ISessionsTasksService,
-		@IConfigurationService private readonly _configurationService: IConfigurationService,
+		@ISessionsManagementService
+		private readonly _sessionsManagementService: ISessionsManagementService,
+		@ISessionsTasksService
+		private readonly _sessionsTasksService: ISessionsTasksService,
+		@IConfigurationService
+		private readonly _configurationService: IConfigurationService,
 		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
 
-		this._register(this._sessionsManagementService.onDidStartSession(session => this._trackSession(session)));
-		this._register(this._sessionsManagementService.onDidChangeSessions(e => this._onDidRemoveSessions(e.removed)));
+		this._register(
+			this._sessionsManagementService.onDidStartSession((session) =>
+				this._trackSession(session),
+			),
+		);
+		this._register(
+			this._sessionsManagementService.onDidChangeSessions((e) =>
+				this._onDidRemoveSessions(e.removed),
+			),
+		);
 	}
 
 	private _onDidRemoveSessions(removed: readonly ISession[]): void {
@@ -72,14 +96,18 @@ export class WorktreeCreatedTaskDispatcher extends Disposable implements IWorkbe
 		const store = new DisposableStore();
 		this._sessionDisposables.set(session.sessionId, store);
 
-		registerAutorunSelfDisposable(store, reader => {
+		registerAutorunSelfDisposable(store, (reader) => {
 			if (session.loading.read(reader)) {
 				return;
 			}
 			if (session.status.read(reader) === SessionStatus.Untitled) {
 				return;
 			}
-			if (!session.workspace.read(reader)?.folders.some(folder => !!folder.gitRepository?.workTreeUri)) {
+			if (
+				!session.workspace
+					.read(reader)
+					?.folders.some((folder) => !!folder.gitRepository?.workTreeUri)
+			) {
 				return;
 			}
 			reader.dispose();
@@ -87,9 +115,18 @@ export class WorktreeCreatedTaskDispatcher extends Disposable implements IWorkbe
 		});
 	}
 
-	private async _dispatchWorktreeCreatedTasks(session: ISession): Promise<void> {
-		if (isAgentHostProviderId(session.providerId) && !this._configurationService.getValue<boolean>(AGENT_HOST_RUN_WORKTREE_CREATED_TASKS_SETTING)) {
-			this._logService.trace(`${LOG_PREFIX} Skipping worktreeCreated tasks for agent host session '${session.sessionId}' — '${AGENT_HOST_RUN_WORKTREE_CREATED_TASKS_SETTING}' is disabled.`);
+	private async _dispatchWorktreeCreatedTasks(
+		session: ISession,
+	): Promise<void> {
+		if (
+			isAgentHostProviderId(session.providerId) &&
+			!this._configurationService.getValue<boolean>(
+				AGENT_HOST_RUN_WORKTREE_CREATED_TASKS_SETTING,
+			)
+		) {
+			this._logService.trace(
+				`${LOG_PREFIX} Skipping worktreeCreated tasks for agent host session '${session.sessionId}' — '${AGENT_HOST_RUN_WORKTREE_CREATED_TASKS_SETTING}' is disabled.`,
+			);
 			return;
 		}
 
@@ -97,19 +134,25 @@ export class WorktreeCreatedTaskDispatcher extends Disposable implements IWorkbe
 		try {
 			tasks = await this._sessionsTasksService.getSessionTasksOnce(session);
 		} catch (err) {
-			this._logService.warn(`${LOG_PREFIX} Failed to read tasks for session '${session.sessionId}': ${err}`);
+			this._logService.warn(
+				`${LOG_PREFIX} Failed to read tasks for session '${session.sessionId}': ${err}`,
+			);
 			return;
 		}
 
 		for (const { task } of tasks) {
-			if (task.runOptions?.runOn !== 'worktreeCreated') {
+			if (task.runOptions?.runOn !== "worktreeCreated") {
 				continue;
 			}
-			this._logService.trace(`${LOG_PREFIX} Running worktreeCreated task '${task.label}' for session '${session.sessionId}'`);
+			this._logService.trace(
+				`${LOG_PREFIX} Running worktreeCreated task '${task.label}' for session '${session.sessionId}'`,
+			);
 			try {
 				await this._sessionsTasksService.runTask(task, session);
 			} catch (err) {
-				this._logService.warn(`${LOG_PREFIX} Failed to run task '${task.label}' for session '${session.sessionId}': ${err}`);
+				this._logService.warn(
+					`${LOG_PREFIX} Failed to run task '${task.label}' for session '${session.sessionId}': ${err}`,
+				);
 			}
 		}
 	}

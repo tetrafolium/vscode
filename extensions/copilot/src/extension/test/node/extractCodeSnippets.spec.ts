@@ -11,7 +11,6 @@ import { Range } from '../../../util/vs/editor/common/core/range';
 import { getSearchResults } from '../../workspaceSemanticSearch/node/semanticSearchTextSearchProvider';
 
 suite('Extract Code Snippets From Files', () => {
-
 	const uri1 = URI.file('/c:/Users/file1.ts');
 	const uri2 = URI.file('/c:/Users/file2.ts');
 
@@ -56,7 +55,6 @@ module.exports = router;
 `);
 		}
 	};
-
 
 	test('Return the ranges from the code snippet', async () => {
 		const range1 = new Range(14, 0, 19, 2);

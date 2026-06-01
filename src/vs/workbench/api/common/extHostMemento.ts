@@ -3,14 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type * as vscode from 'vscode';
-import { IDisposable } from '../../../base/common/lifecycle.js';
-import { ExtHostStorage } from './extHostStorage.js';
-import { IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
-import { DeferredPromise, RunOnceScheduler } from '../../../base/common/async.js';
+import type * as vscode from "vscode";
+import { IDisposable } from "../../../base/common/lifecycle.js";
+import { ExtHostStorage } from "./extHostStorage.js";
+import { IExtensionDescription } from "../../../platform/extensions/common/extensions.js";
+import {
+	DeferredPromise,
+	RunOnceScheduler,
+} from "../../../base/common/async.js";
 
 export class ExtensionMemento implements vscode.Memento {
-
 	protected readonly _id: string;
 	private readonly _shared: boolean;
 	protected readonly _storage: ExtHostStorage;
@@ -27,12 +29,14 @@ export class ExtensionMemento implements vscode.Memento {
 		this._shared = global;
 		this._storage = storage;
 
-		this._init = this._storage.initializeExtensionStorage(this._shared, this._id, Object.create(null)).then(value => {
-			this._value = value;
-			return this;
-		});
+		this._init = this._storage
+			.initializeExtensionStorage(this._shared, this._id, Object.create(null))
+			.then((value) => {
+				this._value = value;
+				return this;
+			});
 
-		this._storageListener = this._storage.onDidChangeStorage(e => {
+		this._storageListener = this._storage.onDidChangeStorage((e) => {
 			if (e.shared === this._shared && e.key === this._id) {
 				this._value = e.value;
 			}
@@ -58,7 +62,9 @@ export class ExtensionMemento implements vscode.Memento {
 
 	keys(): readonly string[] {
 		// Filter out `undefined` values, as they can stick around in the `_value` until the `onDidChangeStorage` event runs
-		return Object.entries(this._value ?? {}).filter(([, value]) => value !== undefined).map(([key]) => key);
+		return Object.entries(this._value ?? {})
+			.filter(([, value]) => value !== undefined)
+			.map(([key]) => key);
 	}
 
 	get whenReady(): Promise<ExtensionMemento> {
@@ -69,14 +75,14 @@ export class ExtensionMemento implements vscode.Memento {
 	get<T>(key: string, defaultValue: T): T;
 	get<T>(key: string, defaultValue?: T): T {
 		let value = this._value![key];
-		if (typeof value === 'undefined') {
+		if (typeof value === "undefined") {
 			value = defaultValue;
 		}
 		return value;
 	}
 
 	update(key: string, value: any): Promise<void> {
-		if (value !== null && typeof value === 'object') {
+		if (value !== null && typeof value === "object") {
 			// Prevent the value from being as-is for until we have
 			// received the change event from the main side by emulating
 			// the treatment of values via JSON parsing and stringifying.
@@ -107,16 +113,20 @@ export class ExtensionMemento implements vscode.Memento {
 }
 
 export class ExtensionGlobalMemento extends ExtensionMemento {
-
 	private readonly _extension: IExtensionDescription;
 
 	setKeysForSync(keys: string[]): void {
-		this._storage.registerExtensionStorageKeysToSync({ id: this._id, version: this._extension.version }, keys);
+		this._storage.registerExtensionStorageKeysToSync(
+			{ id: this._id, version: this._extension.version },
+			keys,
+		);
 	}
 
-	constructor(extensionDescription: IExtensionDescription, storage: ExtHostStorage) {
+	constructor(
+		extensionDescription: IExtensionDescription,
+		storage: ExtHostStorage,
+	) {
 		super(extensionDescription.identifier.value, true, storage);
 		this._extension = extensionDescription;
 	}
-
 }

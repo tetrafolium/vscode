@@ -11,7 +11,12 @@ suite('TextDocument Tests', function () {
 
 	for (const newLineChar of newLineChars) {
 		test(`new lines are handled correctly (${JSON.stringify(newLineChar)} separator)`, function () {
-			const doc = createTextDocument('file:///test.ts', 'typescript', 1, `hello${newLineChar}goodbye`);
+			const doc = createTextDocument(
+				'file:///test.ts',
+				'typescript',
+				1,
+				`hello${newLineChar}goodbye`,
+			);
 
 			assert.deepStrictEqual(doc.lineCount, 2);
 

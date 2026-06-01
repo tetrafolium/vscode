@@ -7,7 +7,10 @@ import { ServicesAccessor } from '../../../../../../util/vs/platform/instantiati
 import { TokenizerName } from '../../../prompt/src/tokenization';
 import { TelemetryWithExp } from '../telemetry';
 import { CompletionHeaders } from './fetch';
-import { ICompletionsModelManagerService, ModelChoiceSourceTelemetryValue } from './model';
+import {
+	ICompletionsModelManagerService,
+	ModelChoiceSourceTelemetryValue,
+} from './model';
 
 // Config methods
 
@@ -20,11 +23,14 @@ export type EngineRequestInfo = {
 
 export function getEngineRequestInfo(
 	accessor: ServicesAccessor,
-	telemetryData: TelemetryWithExp | undefined = undefined
+	telemetryData: TelemetryWithExp | undefined = undefined,
 ): EngineRequestInfo {
 	const modelsManager = accessor.get(ICompletionsModelManagerService);
-	const modelRequestInfo = modelsManager.getCurrentModelRequestInfo(telemetryData);
-	const tokenizer = modelsManager.getTokenizerForModel(modelRequestInfo.modelId);
+	const modelRequestInfo =
+		modelsManager.getCurrentModelRequestInfo(telemetryData);
+	const tokenizer = modelsManager.getTokenizerForModel(
+		modelRequestInfo.modelId,
+	);
 
 	return {
 		headers: modelRequestInfo.headers,

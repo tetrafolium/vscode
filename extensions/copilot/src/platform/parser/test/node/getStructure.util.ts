@@ -25,10 +25,9 @@ export async function fromFixture(pathWithinFixturesDir: string) {
 }
 
 function treeToFlatList(
-	node: OverlayNode
+	node: OverlayNode,
 ): { startIndex: number; endIndex: number; kind: string }[] {
-	const result: { startIndex: number; endIndex: number; kind: string }[] =
-		[];
+	const result: { startIndex: number; endIndex: number; kind: string }[] = [];
 	for (const child of node.children) {
 		result.push({
 			startIndex: child.startIndex,
@@ -42,7 +41,7 @@ function treeToFlatList(
 
 export async function srcWithAnnotatedStructure(
 	language: WASMLanguage,
-	source: string
+	source: string,
 ) {
 	const structure = await structureComputer.getStructure(language, source);
 	const flatList = structure ? treeToFlatList(structure) : [];

@@ -3,30 +3,49 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IWorkbenchContribution, registerWorkbenchContribution2, WorkbenchPhase } from '../../../../../workbench/common/contributions.js';
-import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { Disposable } from '../../../../../base/common/lifecycle.js';
-import { CopilotChatSessionsProvider, COPILOT_MULTI_CHAT_SETTING, CLAUDE_CODE_ENABLED_SETTING } from '../../copilotChatSessions/browser/copilotChatSessionsProvider.js';
-import '../../copilotChatSessions/browser/copilotChatSessionsActions.js';
-import { ISessionsProvidersService } from '../../../../services/sessions/browser/sessionsProvidersService.js';
-import { Registry } from '../../../../../platform/registry/common/platform.js';
-import { IConfigurationRegistry, Extensions as ConfigurationExtensions } from '../../../../../platform/configuration/common/configurationRegistry.js';
-import { localize } from '../../../../../nls.js';
+import {
+	IWorkbenchContribution,
+	registerWorkbenchContribution2,
+	WorkbenchPhase,
+} from "../../../../../workbench/common/contributions.js";
+import { IInstantiationService } from "../../../../../platform/instantiation/common/instantiation.js";
+import { Disposable } from "../../../../../base/common/lifecycle.js";
+import {
+	CopilotChatSessionsProvider,
+	COPILOT_MULTI_CHAT_SETTING,
+	CLAUDE_CODE_ENABLED_SETTING,
+} from "../../copilotChatSessions/browser/copilotChatSessionsProvider.js";
+import "../../copilotChatSessions/browser/copilotChatSessionsActions.js";
+import { ISessionsProvidersService } from "../../../../services/sessions/browser/sessionsProvidersService.js";
+import { Registry } from "../../../../../platform/registry/common/platform.js";
+import {
+	IConfigurationRegistry,
+	Extensions as ConfigurationExtensions,
+} from "../../../../../platform/configuration/common/configurationRegistry.js";
+import { localize } from "../../../../../nls.js";
 
-Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).registerConfiguration({
-	id: 'sessions',
+Registry.as<IConfigurationRegistry>(
+	ConfigurationExtensions.Configuration,
+).registerConfiguration({
+	id: "sessions",
 	properties: {
 		[COPILOT_MULTI_CHAT_SETTING]: {
-			type: 'boolean',
+			type: "boolean",
 			default: true,
-			tags: ['preview'],
-			description: localize('sessions.github.copilot.multiChatSessions', "Whether to enable multiple chats within a single session in the Copilot Chat sessions provider."),
+			tags: ["preview"],
+			description: localize(
+				"sessions.github.copilot.multiChatSessions",
+				"Whether to enable multiple chats within a single session in the Copilot Chat sessions provider.",
+			),
 		},
 		[CLAUDE_CODE_ENABLED_SETTING]: {
-			type: 'boolean',
+			type: "boolean",
 			default: true,
-			experiment: { mode: 'startup' },
-			description: localize('sessions.chat.claudeAgent.enabled', "Enable Claude Agent sessions in the Agents window. Start and resume agentic coding sessions powered by Anthropic's Claude Agent SDK directly. Uses your existing Copilot subscription."),
+			experiment: { mode: "startup" },
+			description: localize(
+				"sessions.chat.claudeAgent.enabled",
+				"Enable Claude Agent sessions in the Agents window. Start and resume agentic coding sessions powered by Anthropic's Claude Agent SDK directly. Uses your existing Copilot subscription.",
+			),
 		},
 	},
 });
@@ -41,18 +60,28 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
  * - This provider's underlying extension service filters via the per-session
  *   metadata file's `origin` field, which the local agent host never writes.
  */
-class DefaultSessionsProviderContribution extends Disposable implements IWorkbenchContribution {
-	static readonly ID = 'sessions.defaultSessionsProvider';
+class DefaultSessionsProviderContribution
+	extends Disposable
+	implements IWorkbenchContribution
+{
+	static readonly ID = "sessions.defaultSessionsProvider";
 
 	constructor(
 		@IInstantiationService instantiationService: IInstantiationService,
-		@ISessionsProvidersService sessionsProvidersService: ISessionsProvidersService,
+		@ISessionsProvidersService
+		sessionsProvidersService: ISessionsProvidersService,
 	) {
 		super();
 
-		const provider = this._register(instantiationService.createInstance(CopilotChatSessionsProvider));
+		const provider = this._register(
+			instantiationService.createInstance(CopilotChatSessionsProvider),
+		);
 		this._register(sessionsProvidersService.registerProvider(provider));
 	}
 }
 
-registerWorkbenchContribution2(DefaultSessionsProviderContribution.ID, DefaultSessionsProviderContribution, WorkbenchPhase.AfterRestored);
+registerWorkbenchContribution2(
+	DefaultSessionsProviderContribution.ID,
+	DefaultSessionsProviderContribution,
+	WorkbenchPhase.AfterRestored,
+);

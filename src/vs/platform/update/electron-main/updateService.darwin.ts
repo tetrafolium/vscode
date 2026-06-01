@@ -3,38 +3,86 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as electron from 'electron';
-import { CancellationToken } from '../../../base/common/cancellation.js';
-import { memoize } from '../../../base/common/decorators.js';
-import { Event } from '../../../base/common/event.js';
-import { hash } from '../../../base/common/hash.js';
-import { DisposableStore } from '../../../base/common/lifecycle.js';
-import { IConfigurationService } from '../../configuration/common/configuration.js';
-import { IEnvironmentMainService } from '../../environment/electron-main/environmentMainService.js';
-import { ILifecycleMainService, IRelaunchHandler, IRelaunchOptions } from '../../lifecycle/electron-main/lifecycleMainService.js';
-import { ILogService } from '../../log/common/log.js';
-import { IProductService } from '../../product/common/productService.js';
-import { asJson, IRequestService } from '../../request/common/request.js';
-import { IApplicationStorageMainService } from '../../storage/electron-main/storageMainService.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
-import { AvailableForDownload, IUpdate, State, StateType, UpdateType } from '../common/update.js';
-import { IMeteredConnectionService } from '../../meteredConnection/common/meteredConnection.js';
-import { AbstractUpdateService, createUpdateURL, getUpdateRequestHeaders, IUpdateURLOptions, UpdateErrorClassification } from './abstractUpdateService.js';
+import * as electron from "electron";
+import { CancellationToken } from "../../../base/common/cancellation.js";
+import { memoize } from "../../../base/common/decorators.js";
+import { Event } from "../../../base/common/event.js";
+import { hash } from "../../../base/common/hash.js";
+import { DisposableStore } from "../../../base/common/lifecycle.js";
+import { IConfigurationService } from "../../configuration/common/configuration.js";
+import { IEnvironmentMainService } from "../../environment/electron-main/environmentMainService.js";
+import {
+	ILifecycleMainService,
+	IRelaunchHandler,
+	IRelaunchOptions,
+} from "../../lifecycle/electron-main/lifecycleMainService.js";
+import { ILogService } from "../../log/common/log.js";
+import { IProductService } from "../../product/common/productService.js";
+import { asJson, IRequestService } from "../../request/common/request.js";
+import { IApplicationStorageMainService } from "../../storage/electron-main/storageMainService.js";
+import { ITelemetryService } from "../../telemetry/common/telemetry.js";
+import {
+	AvailableForDownload,
+	IUpdate,
+	State,
+	StateType,
+	UpdateType,
+} from "../common/update.js";
+import { IMeteredConnectionService } from "../../meteredConnection/common/meteredConnection.js";
+import {
+	AbstractUpdateService,
+	createUpdateURL,
+	getUpdateRequestHeaders,
+	IUpdateURLOptions,
+	UpdateErrorClassification,
+} from "./abstractUpdateService.js";
 
-export class DarwinUpdateService extends AbstractUpdateService implements IRelaunchHandler {
-
+export class DarwinUpdateService
+	extends AbstractUpdateService
+	implements IRelaunchHandler
+{
 	private readonly disposables = new DisposableStore();
 
-	@memoize private get onRawError(): Event<string> { return Event.fromNodeEventEmitter(electron.autoUpdater, 'error', (_, message) => message); }
-	@memoize private get onRawCheckingForUpdate(): Event<void> { return Event.fromNodeEventEmitter<void>(electron.autoUpdater, 'checking-for-update'); }
-	@memoize private get onRawUpdateNotAvailable(): Event<void> { return Event.fromNodeEventEmitter<void>(electron.autoUpdater, 'update-not-available'); }
-	@memoize private get onRawUpdateAvailable(): Event<void> { return Event.fromNodeEventEmitter(electron.autoUpdater, 'update-available'); }
+	@memoize private get onRawError(): Event<string> {
+		return Event.fromNodeEventEmitter(
+			electron.autoUpdater,
+			"error",
+			(_, message) => message,
+		);
+	}
+	@memoize private get onRawCheckingForUpdate(): Event<void> {
+		return Event.fromNodeEventEmitter<void>(
+			electron.autoUpdater,
+			"checking-for-update",
+		);
+	}
+	@memoize private get onRawUpdateNotAvailable(): Event<void> {
+		return Event.fromNodeEventEmitter<void>(
+			electron.autoUpdater,
+			"update-not-available",
+		);
+	}
+	@memoize private get onRawUpdateAvailable(): Event<void> {
+		return Event.fromNodeEventEmitter(electron.autoUpdater, "update-available");
+	}
 	@memoize private get onRawUpdateDownloaded(): Event<IUpdate> {
-		return Event.fromNodeEventEmitter(electron.autoUpdater, 'update-downloaded', (_, version: string, productVersion: string, releaseDate: Date | number) => ({
-			version,
-			productVersion,
-			timestamp: releaseDate instanceof Date ? releaseDate.getTime() || undefined : releaseDate
-		}));
+		return Event.fromNodeEventEmitter(
+			electron.autoUpdater,
+			"update-downloaded",
+			(
+				_,
+				version: string,
+				productVersion: string,
+				releaseDate: Date | number,
+			) => ({
+				version,
+				productVersion,
+				timestamp:
+					releaseDate instanceof Date
+						? releaseDate.getTime() || undefined
+						: releaseDate,
+			}),
+		);
 	}
 
 	constructor(
@@ -45,10 +93,23 @@ export class DarwinUpdateService extends AbstractUpdateService implements IRelau
 		@IRequestService requestService: IRequestService,
 		@ILogService logService: ILogService,
 		@IProductService productService: IProductService,
-		@IApplicationStorageMainService applicationStorageMainService: IApplicationStorageMainService,
-		@IMeteredConnectionService meteredConnectionService: IMeteredConnectionService,
+		@IApplicationStorageMainService
+		applicationStorageMainService: IApplicationStorageMainService,
+		@IMeteredConnectionService
+		meteredConnectionService: IMeteredConnectionService,
 	) {
-		super(lifecycleMainService, configurationService, environmentMainService, requestService, logService, productService, telemetryService, applicationStorageMainService, meteredConnectionService, true);
+		super(
+			lifecycleMainService,
+			configurationService,
+			environmentMainService,
+			requestService,
+			logService,
+			productService,
+			telemetryService,
+			applicationStorageMainService,
+			meteredConnectionService,
+			true,
+		);
 
 		lifecycleMainService.setRelaunchHandler(this);
 	}
@@ -62,7 +123,9 @@ export class DarwinUpdateService extends AbstractUpdateService implements IRelau
 			return false; // we only handle the relaunch when we have a pending update
 		}
 
-		this.logService.trace('update#handleRelaunch(): running raw#quitAndInstall()');
+		this.logService.trace(
+			"update#handleRelaunch(): running raw#quitAndInstall()",
+		);
 		this.doQuitAndInstall();
 
 		return true;
@@ -72,35 +135,66 @@ export class DarwinUpdateService extends AbstractUpdateService implements IRelau
 		await super.initialize();
 
 		this.onRawError(this.onError, this, this.disposables);
-		this.onRawCheckingForUpdate(this.onCheckingForUpdate, this, this.disposables);
+		this.onRawCheckingForUpdate(
+			this.onCheckingForUpdate,
+			this,
+			this.disposables,
+		);
 		this.onRawUpdateAvailable(this.onUpdateAvailable, this, this.disposables);
 		this.onRawUpdateDownloaded(this.onUpdateDownloaded, this, this.disposables);
-		this.onRawUpdateNotAvailable(this.onUpdateNotAvailable, this, this.disposables);
+		this.onRawUpdateNotAvailable(
+			this.onUpdateNotAvailable,
+			this,
+			this.disposables,
+		);
 	}
 
 	private onCheckingForUpdate(): void {
-		this.logService.trace('update#onCheckingForUpdate - Electron autoUpdater is checking for updates');
+		this.logService.trace(
+			"update#onCheckingForUpdate - Electron autoUpdater is checking for updates",
+		);
 	}
 
 	private onError(err: string): void {
-		this.telemetryService.publicLog2<{ messageHash: string }, UpdateErrorClassification>('update:error', { messageHash: String(hash(String(err))) });
-		this.logService.error('UpdateService error:', err);
+		this.telemetryService.publicLog2<
+			{ messageHash: string },
+			UpdateErrorClassification
+		>("update:error", { messageHash: String(hash(String(err))) });
+		this.logService.error("UpdateService error:", err);
 
 		// only show message when explicitly checking for updates
-		const message = (this.state.type === StateType.CheckingForUpdates && this.state.explicit) ? err : undefined;
+		const message =
+			this.state.type === StateType.CheckingForUpdates && this.state.explicit
+				? err
+				: undefined;
 		this.setState(State.Idle(UpdateType.Archive, message));
 	}
 
-	protected buildUpdateFeedUrl(quality: string, commit: string, options?: IUpdateURLOptions): string | undefined {
-		const assetID = this.productService.darwinUniversalAssetId ?? (process.arch === 'x64' ? 'darwin' : 'darwin-arm64');
-		const url = createUpdateURL(this.productService.updateUrl!, assetID, quality, commit, options);
+	protected buildUpdateFeedUrl(
+		quality: string,
+		commit: string,
+		options?: IUpdateURLOptions,
+	): string | undefined {
+		const assetID =
+			this.productService.darwinUniversalAssetId ??
+			(process.arch === "x64" ? "darwin" : "darwin-arm64");
+		const url = createUpdateURL(
+			this.productService.updateUrl!,
+			assetID,
+			quality,
+			commit,
+			options,
+		);
 		const headers = getUpdateRequestHeaders(this.productService.version);
 		try {
-			this.logService.trace('update#buildUpdateFeedUrl - setting feed URL for Electron autoUpdater', { url, assetID, quality, commit, headers });
+			this.logService.trace(
+				"update#buildUpdateFeedUrl - setting feed URL for Electron autoUpdater",
+				{ url, assetID, quality, commit, headers },
+			);
 			electron.autoUpdater.setFeedURL({ url, headers });
 		} catch (e) {
 			// application is very likely not signed
-			this.logService.error('Failed to set update feed URL', e);
+			this.logService.error("Failed to set update feed URL", e);
 			return undefined;
 		}
 		return url;
@@ -115,7 +209,11 @@ export class DarwinUpdateService extends AbstractUpdateService implements IRelau
 
 		const internalOrg = this.getInternalOrg();
 		const background = !explicit && !internalOrg;
-		const url = this.buildUpdateFeedUrl(this.quality, pendingCommit ?? this.productService.commit!, { background, internalOrg });
+		const url = this.buildUpdateFeedUrl(
+			this.quality,
+			pendingCommit ?? this.productService.commit!,
+			{ background, internalOrg },
+		);
 
 		if (!url) {
 			this.setState(State.Idle(UpdateType.Archive));
@@ -124,12 +222,17 @@ export class DarwinUpdateService extends AbstractUpdateService implements IRelau
 
 		// When connection is metered and this is not an explicit check, avoid electron call as to not to trigger auto-download.
 		if (!explicit && this.meteredConnectionService.isConnectionMetered) {
-			this.logService.info('update#doCheckForUpdates - checking for update without auto-download because connection is metered');
+			this.logService.info(
+				"update#doCheckForUpdates - checking for update without auto-download because connection is metered",
+			);
 			this.checkForUpdateNoDownload(url);
 			return;
 		}
 
-		this.logService.trace('update#doCheckForUpdates - using Electron autoUpdater', { url, explicit, background });
+		this.logService.trace(
+			"update#doCheckForUpdates - using Electron autoUpdater",
+			{ url, explicit, background },
+		);
 		electron.autoUpdater.checkForUpdates();
 	}
 
@@ -138,38 +241,74 @@ export class DarwinUpdateService extends AbstractUpdateService implements IRelau
 	 * Used when connection is metered or in the embedded app.
 	 * @param canInstall When false, signals that the update cannot be installed from this app.
 	 */
-	private async checkForUpdateNoDownload(url: string, canInstall?: boolean): Promise<void> {
+	private async checkForUpdateNoDownload(
+		url: string,
+		canInstall?: boolean,
+	): Promise<void> {
 		const headers = getUpdateRequestHeaders(this.productService.version);
-		this.logService.trace('update#checkForUpdateNoDownload - checking update server', { url, headers });
+		this.logService.trace(
+			"update#checkForUpdateNoDownload - checking update server",
+			{ url, headers },
+		);
 
 		try {
-			const context = await this.requestService.request({ url, headers, callSite: 'updateService.darwin.checkForUpdates' }, CancellationToken.None);
+			const context = await this.requestService.request(
+				{ url, headers, callSite: "updateService.darwin.checkForUpdates" },
+				CancellationToken.None,
+			);
 			const statusCode = context.res.statusCode;
-			this.logService.trace('update#checkForUpdateNoDownload - response', { statusCode });
+			this.logService.trace("update#checkForUpdateNoDownload - response", {
+				statusCode,
+			});
 
 			const update = await asJson<IUpdate>(context);
 			if (!update || !update.url || !update.version || !update.productVersion) {
-				this.logService.trace('update#checkForUpdateNoDownload - no update available');
-				const notAvailable = this.state.type === StateType.CheckingForUpdates && this.state.explicit;
-				this.setState(State.Idle(UpdateType.Archive, undefined, notAvailable || undefined));
+				this.logService.trace(
+					"update#checkForUpdateNoDownload - no update available",
+				);
+				const notAvailable =
+					this.state.type === StateType.CheckingForUpdates &&
+					this.state.explicit;
+				this.setState(
+					State.Idle(UpdateType.Archive, undefined, notAvailable || undefined),
+				);
 			} else {
-				this.logService.trace('update#checkForUpdateNoDownload - update available', { version: update.version, productVersion: update.productVersion });
+				this.logService.trace(
+					"update#checkForUpdateNoDownload - update available",
+					{ version: update.version, productVersion: update.productVersion },
+				);
 				this.setState(State.AvailableForDownload(update, canInstall));
 			}
 		} catch (err) {
-			this.logService.error('update#checkForUpdateNoDownload - failed to check for update', err);
+			this.logService.error(
+				"update#checkForUpdateNoDownload - failed to check for update",
+				err,
+			);
 			this.setState(State.Idle(UpdateType.Archive));
 		}
 	}
 
 	private onUpdateAvailable(): void {
-		this.logService.trace('update#onUpdateAvailable - Electron autoUpdater reported update available');
+		this.logService.trace(
+			"update#onUpdateAvailable - Electron autoUpdater reported update available",
+		);
 
-		if (this.state.type !== StateType.CheckingForUpdates && this.state.type !== StateType.Overwriting) {
+		if (
+			this.state.type !== StateType.CheckingForUpdates &&
+			this.state.type !== StateType.Overwriting
+		) {
 			return;
 		}
 
-		this.setState(State.Downloading(this.state.type === StateType.Overwriting ? this.state.update : undefined, this.state.explicit, this._overwrite));
+		this.setState(
+			State.Downloading(
+				this.state.type === StateType.Overwriting
+					? this.state.update
+					: undefined,
+				this.state.explicit,
+				this._overwrite,
+			),
+		);
 	}
 
 	private onUpdateDownloaded(update: IUpdate): void {
@@ -177,32 +316,44 @@ export class DarwinUpdateService extends AbstractUpdateService implements IRelau
 			return;
 		}
 
-		this.setState(State.Downloaded(update, this.state.explicit, this._overwrite));
+		this.setState(
+			State.Downloaded(update, this.state.explicit, this._overwrite),
+		);
 		this.logService.info(`Update downloaded: ${JSON.stringify(update)}`);
 
 		this.setState(State.Ready(update, this.state.explicit, this._overwrite));
 	}
 
 	private onUpdateNotAvailable(): void {
-		this.logService.trace('update#onUpdateNotAvailable - Electron autoUpdater reported no update available');
+		this.logService.trace(
+			"update#onUpdateNotAvailable - Electron autoUpdater reported no update available",
+		);
 
 		if (this.state.type !== StateType.CheckingForUpdates) {
 			return;
 		}
 
 		const notAvailable = this.state.explicit;
-		this.setState(State.Idle(UpdateType.Archive, undefined, notAvailable || undefined));
+		this.setState(
+			State.Idle(UpdateType.Archive, undefined, notAvailable || undefined),
+		);
 	}
 
-	protected override async doDownloadUpdate(state: AvailableForDownload): Promise<void> {
+	protected override async doDownloadUpdate(
+		state: AvailableForDownload,
+	): Promise<void> {
 		// Rebuild feed URL and trigger download via Electron's auto-updater
-		this.buildUpdateFeedUrl(this.quality!, state.update.version, { internalOrg: this.getInternalOrg() });
+		this.buildUpdateFeedUrl(this.quality!, state.update.version, {
+			internalOrg: this.getInternalOrg(),
+		});
 		this.setState(State.CheckingForUpdates(true));
 		electron.autoUpdater.checkForUpdates();
 	}
 
 	protected override doQuitAndInstall(): void {
-		this.logService.trace('update#quitAndInstall(): running raw#quitAndInstall()');
+		this.logService.trace(
+			"update#quitAndInstall(): running raw#quitAndInstall()",
+		);
 		electron.autoUpdater.quitAndInstall();
 	}
 

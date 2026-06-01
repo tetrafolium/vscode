@@ -3,17 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter, Event } from '../../../base/common/event.js';
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { LRUCache } from '../../../base/common/map.js';
-import { URI } from '../../../base/common/uri.js';
-import { localize } from '../../../nls.js';
-import { IConfigurationService } from '../../configuration/common/configuration.js';
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { extractDomainFromUri, isDomainAllowed } from './domainMatcher.js';
-import { AgentNetworkDomainSettingId } from './settings.js';
+import { Emitter, Event } from "../../../base/common/event.js";
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { LRUCache } from "../../../base/common/map.js";
+import { URI } from "../../../base/common/uri.js";
+import { localize } from "../../../nls.js";
+import { IConfigurationService } from "../../configuration/common/configuration.js";
+import { createDecorator } from "../../instantiation/common/instantiation.js";
+import { extractDomainFromUri, isDomainAllowed } from "./domainMatcher.js";
+import { AgentNetworkDomainSettingId } from "./settings.js";
 
-export const IAgentNetworkFilterService = createDecorator<IAgentNetworkFilterService>('agentNetworkFilterService');
+export const IAgentNetworkFilterService =
+	createDecorator<IAgentNetworkFilterService>("agentNetworkFilterService");
 
 /**
  * Service that filters network requests made by agent tools (fetch tool,
@@ -49,7 +50,10 @@ export interface IAgentNetworkFilterService {
 	readonly onDidChange: Event<void>;
 }
 
-export class AgentNetworkFilterService extends Disposable implements IAgentNetworkFilterService {
+export class AgentNetworkFilterService
+	extends Disposable
+	implements IAgentNetworkFilterService
+{
 	readonly _serviceBrand: undefined;
 
 	private networkFilterEnabled = false;
@@ -61,29 +65,45 @@ export class AgentNetworkFilterService extends Disposable implements IAgentNetwo
 	readonly onDidChange = this.onDidChangeEmitter.event;
 
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
 	) {
 		super();
 		this.readConfiguration();
 
-		this._register(this.configurationService.onDidChangeConfiguration(e => {
-			if (
-				e.affectsConfiguration(AgentNetworkDomainSettingId.NetworkFilter) ||
-				e.affectsConfiguration(AgentNetworkDomainSettingId.AllowedNetworkDomains) ||
-				e.affectsConfiguration(AgentNetworkDomainSettingId.DeniedNetworkDomains)
-			) {
-				this.readConfiguration();
-				this.onDidChangeEmitter.fire();
-			}
-		}));
+		this._register(
+			this.configurationService.onDidChangeConfiguration((e) => {
+				if (
+					e.affectsConfiguration(AgentNetworkDomainSettingId.NetworkFilter) ||
+					e.affectsConfiguration(
+						AgentNetworkDomainSettingId.AllowedNetworkDomains,
+					) ||
+					e.affectsConfiguration(
+						AgentNetworkDomainSettingId.DeniedNetworkDomains,
+					)
+				) {
+					this.readConfiguration();
+					this.onDidChangeEmitter.fire();
+				}
+			}),
+		);
 	}
 
 	private readConfiguration(): void {
-		const networkFilterEnabled = this.configurationService.getValue<boolean>(AgentNetworkDomainSettingId.NetworkFilter) ?? false;
+		const networkFilterEnabled =
+			this.configurationService.getValue<boolean>(
+				AgentNetworkDomainSettingId.NetworkFilter,
+			) ?? false;
 
 		this.networkFilterEnabled = networkFilterEnabled;
-		this.allowedPatterns = this.configurationService.getValue<string[]>(AgentNetworkDomainSettingId.AllowedNetworkDomains) ?? [];
-		this.deniedPatterns = this.configurationService.getValue<string[]>(AgentNetworkDomainSettingId.DeniedNetworkDomains) ?? [];
+		this.allowedPatterns =
+			this.configurationService.getValue<string[]>(
+				AgentNetworkDomainSettingId.AllowedNetworkDomains,
+			) ?? [];
+		this.deniedPatterns =
+			this.configurationService.getValue<string[]>(
+				AgentNetworkDomainSettingId.DeniedNetworkDomains,
+			) ?? [];
 		this.domainCache.clear();
 	}
 
@@ -94,7 +114,7 @@ export class AgentNetworkFilterService extends Disposable implements IAgentNetwo
 		}
 
 		// File URIs and URIs without authority always pass
-		if (uri.scheme === 'file' || !uri.authority) {
+		if (uri.scheme === "file" || !uri.authority) {
 			return true;
 		}
 
@@ -105,7 +125,11 @@ export class AgentNetworkFilterService extends Disposable implements IAgentNetwo
 
 		let result = this.domainCache.get(domain);
 		if (result === undefined) {
-			result = isDomainAllowed(domain, this.allowedPatterns, this.deniedPatterns);
+			result = isDomainAllowed(
+				domain,
+				this.allowedPatterns,
+				this.deniedPatterns,
+			);
 			this.domainCache.set(domain, result);
 		}
 
@@ -120,8 +144,8 @@ export class AgentNetworkFilterService extends Disposable implements IAgentNetwo
 	formatError(uri: URI): string {
 		const domain = extractDomainFromUri(uri);
 		return localize(
-			'networkFilter.blockedByPolicy',
-			'Access to {0} is blocked by network domain policy (see `{1}` and `{2}` settings).',
+			"networkFilter.blockedByPolicy",
+			"Access to {0} is blocked by network domain policy (see `{1}` and `{2}` settings).",
 			domain ?? uri.authority,
 			AgentNetworkDomainSettingId.AllowedNetworkDomains,
 			AgentNetworkDomainSettingId.DeniedNetworkDomains,

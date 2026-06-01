@@ -3,21 +3,36 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../base/common/cancellation.js';
-import { toErrorMessage } from '../../../base/common/errorMessage.js';
-import { Disposable } from '../../../base/common/lifecycle.js';
-import { URI } from '../../../base/common/uri.js';
-import { parseFrontMatter } from '../../../base/common/yaml.js';
-import { IFileService } from '../../files/common/files.js';
-import { ILogService } from '../../log/common/log.js';
-import { toAgentClientUri } from '../common/agentClientUri.js';
-import type { IAgent } from '../common/agentService.js';
-import { CompletionItem, CompletionItemKind, CompletionsParams } from '../common/state/protocol/commands.js';
-import { MessageAttachmentKind } from '../common/state/protocol/state.js';
-import { CustomizationLoadStatus, type ClientPluginCustomization, type Customization, type CustomizationLoadState } from '../common/state/sessionState.js';
-import { parsePlugin, type INamedPluginResource } from '../../agentPlugins/common/pluginParsers.js';
-import { CompletionTriggerCharacter, IAgentHostCompletionItemProvider } from './agentHostCompletions.js';
-import { extractLeadingSlashToken } from './agentHostSlashCompletion.js';
+import { CancellationToken } from "../../../base/common/cancellation.js";
+import { toErrorMessage } from "../../../base/common/errorMessage.js";
+import { Disposable } from "../../../base/common/lifecycle.js";
+import { URI } from "../../../base/common/uri.js";
+import { parseFrontMatter } from "../../../base/common/yaml.js";
+import { IFileService } from "../../files/common/files.js";
+import { ILogService } from "../../log/common/log.js";
+import { toAgentClientUri } from "../common/agentClientUri.js";
+import type { IAgent } from "../common/agentService.js";
+import {
+	CompletionItem,
+	CompletionItemKind,
+	CompletionsParams,
+} from "../common/state/protocol/commands.js";
+import { MessageAttachmentKind } from "../common/state/protocol/state.js";
+import {
+	CustomizationLoadStatus,
+	type ClientPluginCustomization,
+	type Customization,
+	type CustomizationLoadState,
+} from "../common/state/sessionState.js";
+import {
+	parsePlugin,
+	type INamedPluginResource,
+} from "../../agentPlugins/common/pluginParsers.js";
+import {
+	CompletionTriggerCharacter,
+	IAgentHostCompletionItemProvider,
+} from "./agentHostCompletions.js";
+import { extractLeadingSlashToken } from "./agentHostSlashCompletion.js";
 
 interface ISkillCustomizationCandidate {
 	readonly customization: Customization;
@@ -42,9 +57,13 @@ interface ISkillCacheEntry {
  * Generic completion provider that contributes slash completions for skills
  * exposed through an agent's global and session-effective customizations.
  */
-export class AgentHostSkillCompletionProvider extends Disposable implements IAgentHostCompletionItemProvider {
-
-	readonly kinds: ReadonlySet<CompletionItemKind> = new Set([CompletionItemKind.UserMessage]);
+export class AgentHostSkillCompletionProvider
+	extends Disposable
+	implements IAgentHostCompletionItemProvider
+{
+	readonly kinds: ReadonlySet<CompletionItemKind> = new Set([
+		CompletionItemKind.UserMessage,
+	]);
 	readonly triggerCharacters = [CompletionTriggerCharacter.Slash] as const;
 
 	private readonly _skillCache = new Map<string, ISkillCacheEntry>();
@@ -59,7 +78,10 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 		super();
 	}
 
-	async provideCompletionItems(params: CompletionsParams, token: CancellationToken): Promise<readonly CompletionItem[]> {
+	async provideCompletionItems(
+		params: CompletionsParams,
+		token: CancellationToken,
+	): Promise<readonly CompletionItem[]> {
 		const leading = extractLeadingSlashToken(params.text, params.offset);
 		if (!leading) {
 			return [];
@@ -71,7 +93,12 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 		}
 		this._watchAgent(agent);
 
-		const candidates = await this._getCandidates(agent, typeof params.channel === 'string' ? URI.parse(params.channel) : params.channel);
+		const candidates = await this._getCandidates(
+			agent,
+			typeof params.channel === "string"
+				? URI.parse(params.channel)
+				: params.channel,
+		);
 		if (token.isCancellationRequested || candidates.length === 0) {
 			return [];
 		}
@@ -83,12 +110,19 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 			const cacheKey = this._cacheKey(agent.id, pluginRoot, candidate.nonce);
 			reachableCacheKeys.add(cacheKey);
 
-			const skills = await this._getCachedSkills(agent.id, cacheKey, pluginRoot);
+			const skills = await this._getCachedSkills(
+				agent.id,
+				cacheKey,
+				pluginRoot,
+			);
 			if (token.isCancellationRequested) {
 				return [];
 			}
 			for (const skill of skills) {
-				if (leading.typed.length > 0 && !skill.slashName.startsWith(leading.typed)) {
+				if (
+					leading.typed.length > 0 &&
+					!skill.slashName.startsWith(leading.typed)
+				) {
 					continue;
 				}
 				if (!skillBySlashName.has(skill.slashName)) {
@@ -98,30 +132,37 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 		}
 		this._pruneUnreachableCacheEntries(agent.id, reachableCacheKeys);
 
-		return [...skillBySlashName.values()].map(skill => ({
-			insertText: '/' + skill.slashName + ' ',
+		return [...skillBySlashName.values()].map((skill) => ({
+			insertText: "/" + skill.slashName + " ",
 			rangeStart: leading.rangeStart,
 			rangeEnd: leading.rangeEnd,
 			attachment: {
 				type: MessageAttachmentKind.Simple,
-				label: '/' + skill.slashName,
+				label: "/" + skill.slashName,
 				_meta: {
 					uri: skill.uri.toString(),
 					name: skill.slashName,
 					displayName: skill.displayName,
-					...(skill.description !== undefined ? { description: skill.description } : {}),
+					...(skill.description !== undefined
+						? { description: skill.description }
+						: {}),
 				},
 			},
 		}));
 	}
 
-	private async _getCandidates(agent: IAgent, session: URI): Promise<readonly ISkillCustomizationCandidate[]> {
+	private async _getCandidates(
+		agent: IAgent,
+		session: URI,
+	): Promise<readonly ISkillCustomizationCandidate[]> {
 		let sessionCustomizations: readonly Customization[] = [];
 		if (agent.getSessionCustomizations) {
 			try {
 				sessionCustomizations = await agent.getSessionCustomizations(session);
 			} catch (error) {
-				this._logService.warn(`[AgentHostSkillCompletionProvider] Error reading session customizations for '${session.toString()}': ${toErrorMessage(error)}`);
+				this._logService.warn(
+					`[AgentHostSkillCompletionProvider] Error reading session customizations for '${session.toString()}': ${toErrorMessage(error)}`,
+				);
 			}
 		}
 
@@ -146,7 +187,12 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 			candidates.push({ customization });
 		}
 
-		return candidates.filter(candidate => candidate.customization.enabled && candidate.load?.kind !== CustomizationLoadStatus.Loading && candidate.load?.kind !== CustomizationLoadStatus.Error);
+		return candidates.filter(
+			(candidate) =>
+				candidate.customization.enabled &&
+				candidate.load?.kind !== CustomizationLoadStatus.Loading &&
+				candidate.load?.kind !== CustomizationLoadStatus.Error,
+		);
 	}
 
 	private _watchAgent(agent: IAgent): void {
@@ -154,7 +200,9 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 			return;
 		}
 		this._watchedAgents.add(agent.id);
-		this._register(agent.onDidCustomizationsChange(() => this._clearCache(agent.id)));
+		this._register(
+			agent.onDidCustomizationsChange(() => this._clearCache(agent.id)),
+		);
 	}
 
 	private _resolvePluginRoot(candidate: ISkillCustomizationCandidate): URI {
@@ -162,11 +210,21 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 		return candidate.clientId ? toAgentClientUri(uri, candidate.clientId) : uri;
 	}
 
-	private _cacheKey(agentId: string, pluginRoot: URI, nonce: string | undefined): string {
-		return nonce ? `${agentId}::${pluginRoot.toString()}::${nonce}` : `${agentId}::${pluginRoot.toString()}`;
+	private _cacheKey(
+		agentId: string,
+		pluginRoot: URI,
+		nonce: string | undefined,
+	): string {
+		return nonce
+			? `${agentId}::${pluginRoot.toString()}::${nonce}`
+			: `${agentId}::${pluginRoot.toString()}`;
 	}
 
-	private _getCachedSkills(agentId: string, cacheKey: string, pluginRoot: URI): Promise<readonly ISkillCompletionMetadata[]> {
+	private _getCachedSkills(
+		agentId: string,
+		cacheKey: string,
+		pluginRoot: URI,
+	): Promise<readonly ISkillCompletionMetadata[]> {
 		let entry = this._skillCache.get(cacheKey);
 		if (!entry) {
 			entry = {
@@ -178,29 +236,51 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 		return entry.value;
 	}
 
-	private async _readSkills(pluginRoot: URI): Promise<readonly ISkillCompletionMetadata[]> {
+	private async _readSkills(
+		pluginRoot: URI,
+	): Promise<readonly ISkillCompletionMetadata[]> {
 		try {
-			const plugin = await parsePlugin(pluginRoot, this._fileService, undefined, this._userHome);
-			return await Promise.all(plugin.skills.map(skill => this._readSkillMetadata(skill)));
+			const plugin = await parsePlugin(
+				pluginRoot,
+				this._fileService,
+				undefined,
+				this._userHome,
+			);
+			return await Promise.all(
+				plugin.skills.map((skill) => this._readSkillMetadata(skill)),
+			);
 		} catch (error) {
-			this._logService.warn(`[AgentHostSkillCompletionProvider] Error parsing customization '${pluginRoot.toString()}': ${toErrorMessage(error)}`);
+			this._logService.warn(
+				`[AgentHostSkillCompletionProvider] Error parsing customization '${pluginRoot.toString()}': ${toErrorMessage(error)}`,
+			);
 			return [];
 		}
 	}
 
-	private async _readSkillMetadata(skill: INamedPluginResource): Promise<ISkillCompletionMetadata> {
+	private async _readSkillMetadata(
+		skill: INamedPluginResource,
+	): Promise<ISkillCompletionMetadata> {
 		let displayName = skill.name;
 		let description: string | undefined;
 		try {
 			const content = await this._fileService.readFile(skill.uri);
 			const frontmatter = parseFrontMatter(content.value.toString());
-			displayName = frontmatter?.getStringValue('name')?.trim() || skill.name;
-			const parsedDescription = frontmatter?.getStringValue('description')?.trim();
+			displayName = frontmatter?.getStringValue("name")?.trim() || skill.name;
+			const parsedDescription = frontmatter
+				?.getStringValue("description")
+				?.trim();
 			description = parsedDescription || undefined;
 		} catch (error) {
-			this._logService.trace(`[AgentHostSkillCompletionProvider] Error reading skill metadata '${skill.uri.toString()}': ${toErrorMessage(error)}`);
+			this._logService.trace(
+				`[AgentHostSkillCompletionProvider] Error reading skill metadata '${skill.uri.toString()}': ${toErrorMessage(error)}`,
+			);
 		}
-		return { uri: skill.uri, slashName: skill.name, displayName, ...(description !== undefined ? { description } : {}) };
+		return {
+			uri: skill.uri,
+			slashName: skill.name,
+			displayName,
+			...(description !== undefined ? { description } : {}),
+		};
 	}
 
 	private _clearCache(agentId: string): void {
@@ -211,7 +291,10 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 		}
 	}
 
-	private _pruneUnreachableCacheEntries(agentId: string, reachableCacheKeys: ReadonlySet<string>): void {
+	private _pruneUnreachableCacheEntries(
+		agentId: string,
+		reachableCacheKeys: ReadonlySet<string>,
+	): void {
 		for (const [cacheKey, entry] of this._skillCache) {
 			if (entry.agentId === agentId && !reachableCacheKeys.has(cacheKey)) {
 				this._skillCache.delete(cacheKey);
@@ -221,5 +304,5 @@ export class AgentHostSkillCompletionProvider extends Disposable implements IAge
 }
 
 function getUserHome(): string {
-	return process.env['HOME'] ?? process.env['USERPROFILE'] ?? '';
+	return process.env["HOME"] ?? process.env["USERPROFILE"] ?? "";
 }

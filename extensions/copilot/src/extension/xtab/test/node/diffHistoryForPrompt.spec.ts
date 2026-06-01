@@ -5,13 +5,22 @@
 
 import { describe, expect, it } from 'vitest';
 import { DocumentId } from '../../../../platform/inlineEdits/common/dataTypes/documentId';
-import { Edits, RootedEdit } from '../../../../platform/inlineEdits/common/dataTypes/edit';
+import {
+	Edits,
+	RootedEdit,
+} from '../../../../platform/inlineEdits/common/dataTypes/edit';
 import { LanguageId } from '../../../../platform/inlineEdits/common/dataTypes/languageId';
 import { DiffHistoryOptions } from '../../../../platform/inlineEdits/common/dataTypes/xtabPromptOptions';
 import { StatelessNextEditDocument } from '../../../../platform/inlineEdits/common/statelessNextEditProvider';
-import { IXtabHistoryEditEntry, IXtabHistoryEntry } from '../../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
+import {
+	IXtabHistoryEditEntry,
+	IXtabHistoryEntry,
+} from '../../../../platform/inlineEdits/common/workspaceEditTracker/nesXtabHistoryTracker';
 import { LineEdit } from '../../../../util/vs/editor/common/core/edits/lineEdit';
-import { StringEdit, StringReplacement } from '../../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 import { StringText } from '../../../../util/vs/editor/common/core/text/abstractText';
 import { getEditDiffHistory } from '../../common/diffHistoryForPrompt';
@@ -23,7 +32,10 @@ const diffHistoryOptions: DiffHistoryOptions = {
 	useRelativePaths: false,
 };
 
-function createActiveDocument(docId: DocumentId, text: StringText): StatelessNextEditDocument {
+function createActiveDocument(
+	docId: DocumentId,
+	text: StringText,
+): StatelessNextEditDocument {
 	return new StatelessNextEditDocument(
 		docId,
 		undefined,
@@ -35,7 +47,11 @@ function createActiveDocument(docId: DocumentId, text: StringText): StatelessNex
 	);
 }
 
-function createHistoryEntry(docId: DocumentId, baseContent: string, replacements: readonly StringReplacement[]): IXtabHistoryEditEntry {
+function createHistoryEntry(
+	docId: DocumentId,
+	baseContent: string,
+	replacements: readonly StringReplacement[],
+): IXtabHistoryEditEntry {
 	const base = new StringText(baseContent);
 	return {
 		docId,
@@ -45,14 +61,25 @@ function createHistoryEntry(docId: DocumentId, baseContent: string, replacements
 }
 
 describe('getEditDiffHistory', () => {
-
 	function computeTokens(s: string): number {
 		// for testing purposes, we'll say each character is a token
 		return Math.ceil(s.length / 4);
 	}
 
-	function runGetEditDiffHistory(activeDoc: StatelessNextEditDocument, xtabHistory: readonly IXtabHistoryEntry[], docsInPrompt: Set<DocumentId>, computeTokens: (s: string) => number, options: DiffHistoryOptions): string {
-		const res = getEditDiffHistory(activeDoc, xtabHistory, docsInPrompt, computeTokens, options);
+	function runGetEditDiffHistory(
+		activeDoc: StatelessNextEditDocument,
+		xtabHistory: readonly IXtabHistoryEntry[],
+		docsInPrompt: Set<DocumentId>,
+		computeTokens: (s: string) => number,
+		options: DiffHistoryOptions,
+	): string {
+		const res = getEditDiffHistory(
+			activeDoc,
+			xtabHistory,
+			docsInPrompt,
+			computeTokens,
+			options,
+		);
 		const lines = [
 			res.nDiffs + ' diffs',
 			'-------------',
@@ -65,14 +92,23 @@ describe('getEditDiffHistory', () => {
 
 	it('coalesces adjacent line replacements into one hunk', () => {
 		const docId = DocumentId.create('file:///workspace/src/a.ts');
-		const activeDoc = createActiveDocument(docId, new StringText('aaa\nbbb\nccc'));
+		const activeDoc = createActiveDocument(
+			docId,
+			new StringText('aaa\nbbb\nccc'),
+		);
 
 		const historyEntry = createHistoryEntry(docId, 'aaa\nbbb\nccc', [
 			new StringReplacement(new OffsetRange(0, 3), 'AAA'),
 			new StringReplacement(new OffsetRange(4, 7), 'BBB'),
 		]);
 
-		const result = runGetEditDiffHistory(activeDoc, [historyEntry], new Set(), computeTokens, diffHistoryOptions);
+		const result = runGetEditDiffHistory(
+			activeDoc,
+			[historyEntry],
+			new Set(),
+			computeTokens,
+			diffHistoryOptions,
+		);
 
 		expect(result).toMatchInlineSnapshot(`
 			"1 diffs
@@ -92,14 +128,23 @@ describe('getEditDiffHistory', () => {
 
 	it('keeps separate hunks for non-adjacent line replacements', () => {
 		const docId = DocumentId.create('file:///workspace/src/a.ts');
-		const activeDoc = createActiveDocument(docId, new StringText('aaa\nbbb\nccc'));
+		const activeDoc = createActiveDocument(
+			docId,
+			new StringText('aaa\nbbb\nccc'),
+		);
 
 		const historyEntry = createHistoryEntry(docId, 'aaa\nbbb\nccc', [
 			new StringReplacement(new OffsetRange(0, 3), 'AAA'),
 			new StringReplacement(new OffsetRange(8, 11), 'CCC'),
 		]);
 
-		const result = runGetEditDiffHistory(activeDoc, [historyEntry], new Set(), computeTokens, diffHistoryOptions);
+		const result = runGetEditDiffHistory(
+			activeDoc,
+			[historyEntry],
+			new Set(),
+			computeTokens,
+			diffHistoryOptions,
+		);
 
 		expect(result).toMatchInlineSnapshot(`
 			"1 diffs
@@ -119,8 +164,13 @@ describe('getEditDiffHistory', () => {
 	});
 
 	it('renders diffs for multiple sequential edits on the same document', () => {
-		const docId = DocumentId.create('file:///Users/john/myProject/src/a.ts');
-		const activeDoc = createActiveDocument(docId, new StringText('AAA\nBBB\nccc\nddd\neee'));
+		const docId = DocumentId.create(
+			'file:///Users/john/myProject/src/a.ts',
+		);
+		const activeDoc = createActiveDocument(
+			docId,
+			new StringText('AAA\nBBB\nccc\nddd\neee'),
+		);
 
 		const historyEntries: IXtabHistoryEditEntry[] = [
 			createHistoryEntry(docId, 'aaa\nbbb\nccc\nddd\neee', [
@@ -131,7 +181,13 @@ describe('getEditDiffHistory', () => {
 			]),
 		];
 
-		const result = runGetEditDiffHistory(activeDoc, historyEntries, new Set(), computeTokens, diffHistoryOptions);
+		const result = runGetEditDiffHistory(
+			activeDoc,
+			historyEntries,
+			new Set(),
+			computeTokens,
+			diffHistoryOptions,
+		);
 
 		expect(result).toMatchInlineSnapshot(`
 			"2 diffs

@@ -4,10 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 import { FetchSuccess } from '../../../platform/chat/common/commonTypes';
 import { OpenAIContextManagementResponse } from '../../../platform/networking/common/openai';
-import { isEncryptedThinkingDelta, ThinkingData, ThinkingDelta } from '../../../platform/thinking/common/thinking';
+import {
+	isEncryptedThinkingDelta,
+	ThinkingData,
+	ThinkingDelta,
+} from '../../../platform/thinking/common/thinking';
 import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { IToolCall, IToolCallRound } from './intents';
-
 
 /**
  * Represents a round of tool calling from the AI assistant.
@@ -23,7 +26,9 @@ export class ToolCallRound implements IToolCallRound {
 	 * Creates a ToolCallRound from an existing IToolCallRound object.
 	 * Prefer this over using a constructor overload to keep construction explicit.
 	 */
-	public static create(params: Omit<IToolCallRound, 'id'> & { id?: string }): ToolCallRound {
+	public static create(
+		params: Omit<IToolCallRound, 'id'> & { id?: string },
+	): ToolCallRound {
 		const round = new ToolCallRound(
 			params.response,
 			params.toolCalls,
@@ -58,7 +63,7 @@ export class ToolCallRound implements IToolCallRound {
 		public readonly thinking?: ThinkingData,
 		public readonly timestamp: number = Date.now(),
 		public readonly compaction?: OpenAIContextManagementResponse,
-	) { }
+	) {}
 
 	private static generateID(): string {
 		return generateUuid();
@@ -71,7 +76,10 @@ export class ThinkingDataItem implements ThinkingData {
 	public tokens?: number;
 	public encrypted?: string;
 
-	static createOrUpdate(item: ThinkingDataItem | undefined, delta: ThinkingDelta) {
+	static createOrUpdate(
+		item: ThinkingDataItem | undefined,
+		delta: ThinkingDelta,
+	) {
 		if (!item) {
 			item = new ThinkingDataItem(delta.id ?? generateUuid());
 		}
@@ -80,9 +88,7 @@ export class ThinkingDataItem implements ThinkingData {
 		return item;
 	}
 
-	constructor(
-		public id: string
-	) { }
+	constructor(public id: string) {}
 
 	public update(delta: ThinkingDelta): void {
 		if (delta.id && this.id !== delta.id) {
@@ -92,7 +98,6 @@ export class ThinkingDataItem implements ThinkingData {
 			this.encrypted = delta.encrypted;
 		}
 		if (delta.text !== undefined) {
-
 			// handles all possible text states
 			if (Array.isArray(delta.text)) {
 				if (Array.isArray(this.text)) {
@@ -116,6 +121,7 @@ export class ThinkingDataItem implements ThinkingData {
 	}
 
 	public updateWithFetchResult(fetchResult: FetchSuccess<unknown>): void {
-		this.tokens = fetchResult.usage?.completion_tokens_details?.reasoning_tokens;
+		this.tokens =
+			fetchResult.usage?.completion_tokens_details?.reasoning_tokens;
 	}
 }

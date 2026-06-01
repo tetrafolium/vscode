@@ -3,20 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ClientAssertionCredential } from '@azure/identity';
-import { CosmosClient } from '@azure/cosmos';
-import { retry } from './retry.ts';
+import { ClientAssertionCredential } from "@azure/identity";
+import { CosmosClient } from "@azure/cosmos";
+import { retry } from "./retry.ts";
 
 if (process.argv.length !== 3) {
-	console.error('Usage: node createBuild.ts VERSION');
+	console.error("Usage: node createBuild.ts VERSION");
 	process.exit(-1);
 }
 
 function getEnv(name: string): string {
 	const result = process.env[name];
 
-	if (typeof result === 'undefined') {
-		throw new Error('Missing env: ' + name);
+	if (typeof result === "undefined") {
+		throw new Error("Missing env: " + name);
 	}
 
 	return result;
@@ -24,18 +24,18 @@ function getEnv(name: string): string {
 
 async function main(): Promise<void> {
 	const [, , _version] = process.argv;
-	const quality = getEnv('VSCODE_QUALITY');
-	const commit = getEnv('BUILD_SOURCEVERSION');
-	const queuedBy = getEnv('BUILD_QUEUEDBY');
-	const sourceBranch = getEnv('BUILD_SOURCEBRANCH');
-	const version = _version + (quality === 'stable' ? '' : `-${quality}`);
-	const buildId = process.env['BUILD_BUILDID'];
-	const definitionId = process.env['SYSTEM_DEFINITIONID'];
+	const quality = getEnv("VSCODE_QUALITY");
+	const commit = getEnv("BUILD_SOURCEVERSION");
+	const queuedBy = getEnv("BUILD_QUEUEDBY");
+	const sourceBranch = getEnv("BUILD_SOURCEBRANCH");
+	const version = _version + (quality === "stable" ? "" : `-${quality}`);
+	const buildId = process.env["BUILD_BUILDID"];
+	const definitionId = process.env["SYSTEM_DEFINITIONID"];
 
-	console.log('Creating build...');
-	console.log('Quality:', quality);
-	console.log('Version:', version);
-	console.log('Commit:', commit);
+	console.log("Creating build...");
+	console.log("Quality:", quality);
+	console.log("Version:", version);
+	console.log("Commit:", commit);
 
 	const timestamp = Date.now();
 	const build = {
@@ -43,29 +43,41 @@ async function main(): Promise<void> {
 		timestamp,
 		version,
 		isReleased: false,
-		private: process.env['VSCODE_PRIVATE_BUILD']?.toLowerCase() === 'true',
+		private: process.env["VSCODE_PRIVATE_BUILD"]?.toLowerCase() === "true",
 		sourceBranch,
 		queuedBy,
 		assets: [],
 		updates: {},
 		firstReleaseTimestamp: null,
-		history: [
-			{ event: 'created', timestamp }
-		],
+		history: [{ event: "created", timestamp }],
 		buildId,
-		definitionId
+		definitionId,
 	};
 
-	const aadCredentials = new ClientAssertionCredential(process.env['AZURE_TENANT_ID']!, process.env['AZURE_CLIENT_ID']!, () => Promise.resolve(process.env['AZURE_ID_TOKEN']!));
-	const client = new CosmosClient({ endpoint: process.env['AZURE_DOCUMENTDB_ENDPOINT']!, aadCredentials });
-	const scripts = client.database('builds').container(quality).scripts;
-	await retry(() => scripts.storedProcedure('createBuild').execute('', [{ ...build, _partitionKey: '' }]));
+	const aadCredentials = new ClientAssertionCredential(
+		process.env["AZURE_TENANT_ID"]!,
+		process.env["AZURE_CLIENT_ID"]!,
+		() => Promise.resolve(process.env["AZURE_ID_TOKEN"]!),
+	);
+	const client = new CosmosClient({
+		endpoint: process.env["AZURE_DOCUMENTDB_ENDPOINT"]!,
+		aadCredentials,
+	});
+	const scripts = client.database("builds").container(quality).scripts;
+	await retry(() =>
+		scripts
+			.storedProcedure("createBuild")
+			.execute("", [{ ...build, _partitionKey: "" }]),
+	);
 }
 
-main().then(() => {
-	console.log('Build successfully created');
-	process.exit(0);
-}, err => {
-	console.error(err);
-	process.exit(1);
-});
+main().then(
+	() => {
+		console.log("Build successfully created");
+		process.exit(0);
+	},
+	(err) => {
+		console.error(err);
+		process.exit(1);
+	},
+);

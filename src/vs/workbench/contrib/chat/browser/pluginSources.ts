@@ -3,34 +3,67 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Action } from '../../../../base/common/actions.js';
-import { CancelablePromise, timeout } from '../../../../base/common/async.js';
-import { CancellationToken, CancellationTokenSource } from '../../../../base/common/cancellation.js';
-import { Event } from '../../../../base/common/event.js';
-import { DisposableStore, toDisposable } from '../../../../base/common/lifecycle.js';
-import { isWindows } from '../../../../base/common/platform.js';
-import { dirname, isEqualOrParent, joinPath } from '../../../../base/common/resources.js';
-import { URI } from '../../../../base/common/uri.js';
-import { localize } from '../../../../nls.js';
-import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
-import { IFileService } from '../../../../platform/files/common/files.js';
-import { ILogService } from '../../../../platform/log/common/log.js';
-import { INotificationService, Severity } from '../../../../platform/notification/common/notification.js';
-import { IProgressService, ProgressLocation } from '../../../../platform/progress/common/progress.js';
-import { TerminalCapability, type ITerminalCommand } from '../../../../platform/terminal/common/capabilities/capabilities.js';
-import { ITerminalInstance, ITerminalService } from '../../terminal/browser/terminal.js';
-import { IEnsureRepositoryOptions, IPullRepositoryOptions } from '../common/plugins/agentPluginRepositoryService.js';
-import { IGitHubPluginSource, IGitUrlPluginSource, IMarketplacePlugin, INpmPluginSource, IPipPluginSource, IPluginSourceDescriptor, PluginSourceKind } from '../common/plugins/pluginMarketplaceService.js';
-import { IPluginSource } from '../common/plugins/pluginSource.js';
-import { IPluginGitService } from '../common/plugins/pluginGitService.js';
+import { Action } from "../../../../base/common/actions.js";
+import { CancelablePromise, timeout } from "../../../../base/common/async.js";
+import {
+	CancellationToken,
+	CancellationTokenSource,
+} from "../../../../base/common/cancellation.js";
+import { Event } from "../../../../base/common/event.js";
+import {
+	DisposableStore,
+	toDisposable,
+} from "../../../../base/common/lifecycle.js";
+import { isWindows } from "../../../../base/common/platform.js";
+import {
+	dirname,
+	isEqualOrParent,
+	joinPath,
+} from "../../../../base/common/resources.js";
+import { URI } from "../../../../base/common/uri.js";
+import { localize } from "../../../../nls.js";
+import { ICommandService } from "../../../../platform/commands/common/commands.js";
+import { IDialogService } from "../../../../platform/dialogs/common/dialogs.js";
+import { IFileService } from "../../../../platform/files/common/files.js";
+import { ILogService } from "../../../../platform/log/common/log.js";
+import {
+	INotificationService,
+	Severity,
+} from "../../../../platform/notification/common/notification.js";
+import {
+	IProgressService,
+	ProgressLocation,
+} from "../../../../platform/progress/common/progress.js";
+import {
+	TerminalCapability,
+	type ITerminalCommand,
+} from "../../../../platform/terminal/common/capabilities/capabilities.js";
+import {
+	ITerminalInstance,
+	ITerminalService,
+} from "../../terminal/browser/terminal.js";
+import {
+	IEnsureRepositoryOptions,
+	IPullRepositoryOptions,
+} from "../common/plugins/agentPluginRepositoryService.js";
+import {
+	IGitHubPluginSource,
+	IGitUrlPluginSource,
+	IMarketplacePlugin,
+	INpmPluginSource,
+	IPipPluginSource,
+	IPluginSourceDescriptor,
+	PluginSourceKind,
+} from "../common/plugins/pluginMarketplaceService.js";
+import { IPluginSource } from "../common/plugins/pluginSource.js";
+import { IPluginGitService } from "../common/plugins/pluginGitService.js";
 
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
 
 function sanitizeCacheSegment(name: string): string {
-	return name.replace(/[\\/:*?"<>|]/g, '_');
+	return name.replace(/[\\/:*?"<>|]/g, "_");
 }
 
 function gitRevisionCacheSuffix(ref?: string, sha?: string): string[] {
@@ -45,14 +78,14 @@ function gitRevisionCacheSuffix(ref?: string, sha?: string): string[] {
 
 function shellEscapeArg(value: string): string {
 	if (isWindows) {
-		return `"${value.replace(/[`$"]/g, '`$&')}"`;
+		return `"${value.replace(/[`$"]/g, "`$&")}"`;
 	}
 	return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 function formatShellCommand(args: readonly string[]): string {
 	const [command, ...rest] = args;
-	return [command, ...rest.map(arg => shellEscapeArg(arg))].join(' ');
+	return [command, ...rest.map((arg) => shellEscapeArg(arg))].join(" ");
 }
 
 // ---------------------------------------------------------------------------
@@ -65,17 +98,24 @@ abstract class AbstractGitPluginSource implements IPluginSource {
 		@ICommandService protected readonly _commandService: ICommandService,
 		@IFileService protected readonly _fileService: IFileService,
 		@ILogService protected readonly _logService: ILogService,
-		@INotificationService protected readonly _notificationService: INotificationService,
+		@INotificationService
+		protected readonly _notificationService: INotificationService,
 		@IPluginGitService protected readonly _pluginGit: IPluginGitService,
 		@IProgressService protected readonly _progressService: IProgressService,
-	) { }
+	) {}
 
-	abstract getInstallUri(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI;
+	abstract getInstallUri(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI;
 	abstract getLabel(descriptor: IPluginSourceDescriptor): string;
 	protected abstract _cloneUrl(descriptor: IPluginSourceDescriptor): string;
 	protected abstract _displayLabel(descriptor: IPluginSourceDescriptor): string;
 
-	getCleanupTarget(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI | undefined {
+	getCleanupTarget(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI | undefined {
 		return this._getRepoDir(cacheRoot, descriptor);
 	}
 
@@ -84,36 +124,61 @@ abstract class AbstractGitPluginSource implements IPluginSource {
 	 * support a sub-path within a repository should override this to return the
 	 * repository root, while {@link getInstallUri} returns root + sub-path.
 	 */
-	protected _getRepoDir(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI {
+	protected _getRepoDir(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI {
 		return this.getInstallUri(cacheRoot, descriptor);
 	}
 
-	async ensure(cacheRoot: URI, plugin: IMarketplacePlugin, options?: IEnsureRepositoryOptions): Promise<URI> {
+	async ensure(
+		cacheRoot: URI,
+		plugin: IMarketplacePlugin,
+		options?: IEnsureRepositoryOptions,
+	): Promise<URI> {
 		const descriptor = plugin.sourceDescriptor;
 		const repoDir = this._getRepoDir(cacheRoot, descriptor);
 		const repoExists = await this._fileService.exists(repoDir);
 		const label = this._displayLabel(descriptor);
 
 		if (repoExists) {
-			await this._checkoutRevision(repoDir, descriptor, options?.failureLabel ?? label);
+			await this._checkoutRevision(
+				repoDir,
+				descriptor,
+				options?.failureLabel ?? label,
+			);
 			return this.getInstallUri(cacheRoot, descriptor);
 		}
 
-		const progressTitle = options?.progressTitle ?? localize('cloningPluginSource', "Cloning plugin source '{0}'...", label);
+		const progressTitle =
+			options?.progressTitle ??
+			localize("cloningPluginSource", "Cloning plugin source '{0}'...", label);
 		const failureLabel = options?.failureLabel ?? label;
 		const ref = (descriptor as IGitHubPluginSource | IGitUrlPluginSource).ref;
 
-		await this._cloneRepository(repoDir, this._cloneUrl(descriptor), progressTitle, failureLabel, ref);
+		await this._cloneRepository(
+			repoDir,
+			this._cloneUrl(descriptor),
+			progressTitle,
+			failureLabel,
+			ref,
+		);
 		await this._checkoutRevision(repoDir, descriptor, failureLabel);
 		return this.getInstallUri(cacheRoot, descriptor);
 	}
 
-	async update(cacheRoot: URI, plugin: IMarketplacePlugin, options?: IPullRepositoryOptions): Promise<boolean> {
+	async update(
+		cacheRoot: URI,
+		plugin: IMarketplacePlugin,
+		options?: IPullRepositoryOptions,
+	): Promise<boolean> {
 		const descriptor = plugin.sourceDescriptor;
 		const repoDir = this._getRepoDir(cacheRoot, descriptor);
 		const repoExists = await this._fileService.exists(repoDir);
 		if (!repoExists) {
-			this._logService.warn(`[${this.kind}] Cannot update plugin '${options?.pluginName ?? plugin.name}': source repository not cloned`);
+			this._logService.warn(
+				`[${this.kind}] Cannot update plugin '${options?.pluginName ?? plugin.name}': source repository not cloned`,
+			);
 			return false;
 		}
 
@@ -125,14 +190,28 @@ abstract class AbstractGitPluginSource implements IPluginSource {
 				const git = descriptor as IGitHubPluginSource | IGitUrlPluginSource;
 				let changed: boolean;
 				if (git.sha) {
-					const headBefore = await this._pluginGit.revParse(repoDir, 'HEAD').catch(() => undefined);
+					const headBefore = await this._pluginGit
+						.revParse(repoDir, "HEAD")
+						.catch(() => undefined);
 					await this._pluginGit.fetch(repoDir, cts?.token);
-					await this._checkoutRevision(repoDir, descriptor, failureLabel, cts?.token);
-					const headAfter = await this._pluginGit.revParse(repoDir, 'HEAD').catch(() => undefined);
+					await this._checkoutRevision(
+						repoDir,
+						descriptor,
+						failureLabel,
+						cts?.token,
+					);
+					const headAfter = await this._pluginGit
+						.revParse(repoDir, "HEAD")
+						.catch(() => undefined);
 					changed = headBefore !== headAfter;
 				} else {
 					changed = await this._pluginGit.pull(repoDir, cts?.token);
-					await this._checkoutRevision(repoDir, descriptor, failureLabel, cts?.token);
+					await this._checkoutRevision(
+						repoDir,
+						descriptor,
+						failureLabel,
+						cts?.token,
+					);
 				}
 				return changed;
 			};
@@ -146,7 +225,11 @@ abstract class AbstractGitPluginSource implements IPluginSource {
 				return await this._progressService.withProgress(
 					{
 						location: ProgressLocation.Notification,
-						title: localize('updatingPluginSource', "Updating plugin '{0}'...", updateLabel),
+						title: localize(
+							"updatingPluginSource",
+							"Updating plugin '{0}'...",
+							updateLabel,
+						),
 						cancellable: true,
 					},
 					() => doUpdate(cts),
@@ -156,11 +239,19 @@ abstract class AbstractGitPluginSource implements IPluginSource {
 				cts.dispose();
 			}
 		} catch (err) {
-			this._logService.error(`[${this.kind}] Failed to update plugin source '${updateLabel}':`, err);
+			this._logService.error(
+				`[${this.kind}] Failed to update plugin source '${updateLabel}':`,
+				err,
+			);
 			if (!options?.silent) {
 				this._notificationService.notify({
 					severity: Severity.Error,
-					message: localize('pullPluginSourceFailed', "Failed to update plugin '{0}': {1}", failureLabel, err?.message ?? String(err)),
+					message: localize(
+						"pullPluginSourceFailed",
+						"Failed to update plugin '{0}': {1}",
+						failureLabel,
+						err?.message ?? String(err),
+					),
 				});
 			}
 			throw err;
@@ -169,7 +260,13 @@ abstract class AbstractGitPluginSource implements IPluginSource {
 
 	// -- internal helpers ---
 
-	private async _cloneRepository(repoDir: URI, cloneUrl: string, progressTitle: string, failureLabel: string, ref?: string): Promise<void> {
+	private async _cloneRepository(
+		repoDir: URI,
+		cloneUrl: string,
+		progressTitle: string,
+		failureLabel: string,
+		ref?: string,
+	): Promise<void> {
 		const cts = new CancellationTokenSource();
 		try {
 			await this._progressService.withProgress(
@@ -180,15 +277,28 @@ abstract class AbstractGitPluginSource implements IPluginSource {
 				},
 				async () => {
 					await this._fileService.createFolder(dirname(repoDir));
-					await this._pluginGit.cloneRepository(cloneUrl, repoDir, ref, cts.token);
+					await this._pluginGit.cloneRepository(
+						cloneUrl,
+						repoDir,
+						ref,
+						cts.token,
+					);
 				},
 				() => cts.dispose(true),
 			);
 		} catch (err) {
-			this._logService.error(`[${this.kind}] Failed to clone ${cloneUrl}:`, err);
+			this._logService.error(
+				`[${this.kind}] Failed to clone ${cloneUrl}:`,
+				err,
+			);
 			this._notificationService.notify({
 				severity: Severity.Error,
-				message: localize('cloneFailed', "Failed to install plugin '{0}': {1}", failureLabel, err?.message ?? String(err)),
+				message: localize(
+					"cloneFailed",
+					"Failed to install plugin '{0}': {1}",
+					failureLabel,
+					err?.message ?? String(err),
+				),
 			});
 			throw err;
 		} finally {
@@ -196,7 +306,12 @@ abstract class AbstractGitPluginSource implements IPluginSource {
 		}
 	}
 
-	private async _checkoutRevision(repoDir: URI, descriptor: IPluginSourceDescriptor, failureLabel: string, token?: CancellationToken): Promise<void> {
+	private async _checkoutRevision(
+		repoDir: URI,
+		descriptor: IPluginSourceDescriptor,
+		failureLabel: string,
+		token?: CancellationToken,
+	): Promise<void> {
 		const git = descriptor as IGitHubPluginSource | IGitUrlPluginSource;
 		if (!git.sha && !git.ref) {
 			return;
@@ -210,10 +325,18 @@ abstract class AbstractGitPluginSource implements IPluginSource {
 			// git.ref is guaranteed non-nullish by the guard above
 			await this._pluginGit.checkout(repoDir, git.ref!, undefined, token);
 		} catch (err) {
-			this._logService.error(`[${this.kind}] Failed to checkout revision for '${failureLabel}':`, err);
+			this._logService.error(
+				`[${this.kind}] Failed to checkout revision for '${failureLabel}':`,
+				err,
+			);
 			this._notificationService.notify({
 				severity: Severity.Error,
-				message: localize('checkoutPluginSourceFailed', "Failed to checkout plugin '{0}' to requested revision: {1}", failureLabel, err?.message ?? String(err)),
+				message: localize(
+					"checkoutPluginSourceFailed",
+					"Failed to checkout plugin '{0}' to requested revision: {1}",
+					failureLabel,
+					err?.message ?? String(err),
+				),
 			});
 			throw err;
 		}
@@ -228,23 +351,34 @@ export class RelativePathPluginSource implements IPluginSource {
 	readonly kind = PluginSourceKind.RelativePath;
 
 	getInstallUri(_cacheRoot: URI, _descriptor: IPluginSourceDescriptor): URI {
-		throw new Error('Use getPluginInstallUri() for relative-path sources');
+		throw new Error("Use getPluginInstallUri() for relative-path sources");
 	}
 
-	async ensure(_cacheRoot: URI, _plugin: IMarketplacePlugin, _options?: IEnsureRepositoryOptions): Promise<URI> {
-		throw new Error('Use ensureRepository() for relative-path sources');
+	async ensure(
+		_cacheRoot: URI,
+		_plugin: IMarketplacePlugin,
+		_options?: IEnsureRepositoryOptions,
+	): Promise<URI> {
+		throw new Error("Use ensureRepository() for relative-path sources");
 	}
 
-	async update(_cacheRoot: URI, _plugin: IMarketplacePlugin, _options?: IPullRepositoryOptions): Promise<boolean> {
-		throw new Error('Use pullRepository() for relative-path sources');
+	async update(
+		_cacheRoot: URI,
+		_plugin: IMarketplacePlugin,
+		_options?: IPullRepositoryOptions,
+	): Promise<boolean> {
+		throw new Error("Use pullRepository() for relative-path sources");
 	}
 
-	getCleanupTarget(_cacheRoot: URI, _descriptor: IPluginSourceDescriptor): URI | undefined {
+	getCleanupTarget(
+		_cacheRoot: URI,
+		_descriptor: IPluginSourceDescriptor,
+	): URI | undefined {
 		return undefined;
 	}
 
 	getLabel(descriptor: IPluginSourceDescriptor): string {
-		return (descriptor as { path: string }).path || '.';
+		return (descriptor as { path: string }).path || ".";
 	}
 }
 
@@ -260,7 +394,7 @@ export class GitHubPluginSource extends AbstractGitPluginSource {
 		const repoDir = this._getRepoDir(cacheRoot, descriptor);
 		const gh = descriptor as IGitHubPluginSource;
 		if (gh.path) {
-			const normalizedPath = gh.path.trim().replace(/^\.?\/+|\/+$/g, '');
+			const normalizedPath = gh.path.trim().replace(/^\.?\/+|\/+$/g, "");
 			if (normalizedPath) {
 				const target = joinPath(repoDir, normalizedPath);
 				if (isEqualOrParent(target, repoDir)) {
@@ -272,10 +406,19 @@ export class GitHubPluginSource extends AbstractGitPluginSource {
 	}
 
 	/** Returns the cloned repository root (without sub-path). */
-	protected override _getRepoDir(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI {
+	protected override _getRepoDir(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI {
 		const gh = descriptor as IGitHubPluginSource;
-		const [owner, repo] = gh.repo.split('/');
-		return joinPath(cacheRoot, 'github.com', owner, repo, ...gitRevisionCacheSuffix(gh.ref, gh.sha));
+		const [owner, repo] = gh.repo.split("/");
+		return joinPath(
+			cacheRoot,
+			"github.com",
+			owner,
+			repo,
+			...gitRevisionCacheSuffix(gh.ref, gh.sha),
+		);
 	}
 
 	getLabel(descriptor: IPluginSourceDescriptor): string {
@@ -304,7 +447,7 @@ export class GitUrlPluginSource extends AbstractGitPluginSource {
 		const repoDir = this._getRepoDir(cacheRoot, descriptor);
 		const git = descriptor as IGitUrlPluginSource;
 		if (git.path) {
-			const normalizedPath = git.path.trim().replace(/^\.?\/+|\/+$/g, '');
+			const normalizedPath = git.path.trim().replace(/^\.?\/+|\/+$/g, "");
 			if (normalizedPath) {
 				const target = joinPath(repoDir, normalizedPath);
 				if (isEqualOrParent(target, repoDir)) {
@@ -316,7 +459,10 @@ export class GitUrlPluginSource extends AbstractGitPluginSource {
 	}
 
 	/** Returns the cloned repository root (without sub-path). */
-	protected override _getRepoDir(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI {
+	protected override _getRepoDir(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI {
 		const git = descriptor as IGitUrlPluginSource;
 		const segments = this._gitUrlCacheSegments(git.url, git.ref, git.sha);
 		return joinPath(cacheRoot, ...segments);
@@ -335,15 +481,30 @@ export class GitUrlPluginSource extends AbstractGitPluginSource {
 		return (descriptor as IGitUrlPluginSource).url;
 	}
 
-	private _gitUrlCacheSegments(url: string, ref?: string, sha?: string): string[] {
+	private _gitUrlCacheSegments(
+		url: string,
+		ref?: string,
+		sha?: string,
+	): string[] {
 		try {
 			const parsed = URI.parse(url);
-			const authority = (parsed.authority || 'unknown').replace(/[\\/:*?"<>|]/g, '_').toLowerCase();
-			const pathPart = parsed.path.replace(/^\/+/, '').replace(/\.git$/i, '').replace(/\/+$/g, '');
-			const segments = pathPart.split('/').map(s => s.replace(/[\\/:*?"<>|]/g, '_'));
+			const authority = (parsed.authority || "unknown")
+				.replace(/[\\/:*?"<>|]/g, "_")
+				.toLowerCase();
+			const pathPart = parsed.path
+				.replace(/^\/+/, "")
+				.replace(/\.git$/i, "")
+				.replace(/\/+$/g, "");
+			const segments = pathPart
+				.split("/")
+				.map((s) => s.replace(/[\\/:*?"<>|]/g, "_"));
 			return [authority, ...segments, ...gitRevisionCacheSuffix(ref, sha)];
 		} catch {
-			return ['git', url.replace(/[\\/:*?"<>|]/g, '_'), ...gitRevisionCacheSuffix(ref, sha)];
+			return [
+				"git",
+				url.replace(/[\\/:*?"<>|]/g, "_"),
+				...gitRevisionCacheSuffix(ref, sha),
+			];
 		}
 	}
 }
@@ -358,15 +519,22 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 		@IDialogService protected readonly _dialogService: IDialogService,
 		@IFileService protected readonly _fileService: IFileService,
 		@ILogService protected readonly _logService: ILogService,
-		@INotificationService protected readonly _notificationService: INotificationService,
+		@INotificationService
+		protected readonly _notificationService: INotificationService,
 		@IProgressService protected readonly _progressService: IProgressService,
 		@ITerminalService protected readonly _terminalService: ITerminalService,
-	) { }
+	) {}
 
-	abstract getInstallUri(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI;
+	abstract getInstallUri(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI;
 	abstract getLabel(descriptor: IPluginSourceDescriptor): string;
 
-	getCleanupTarget(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI | undefined {
+	getCleanupTarget(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI | undefined {
 		return this._getCacheDir(cacheRoot, descriptor);
 	}
 
@@ -374,38 +542,71 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 	 * Return the parent directory (prefix / target) where the package
 	 * manager installs into. This is above the actual plugin content dir.
 	 */
-	protected abstract _getCacheDir(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI;
+	protected abstract _getCacheDir(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI;
 
 	/** Build the terminal command args for install. */
-	protected abstract _buildInstallArgs(installDir: URI, plugin: IMarketplacePlugin): string[];
+	protected abstract _buildInstallArgs(
+		installDir: URI,
+		plugin: IMarketplacePlugin,
+	): string[];
 
 	/** Human-readable package manager name for messages. */
 	protected abstract get _managerName(): string;
 
-	async ensure(cacheRoot: URI, plugin: IMarketplacePlugin, _options?: IEnsureRepositoryOptions): Promise<URI> {
+	async ensure(
+		cacheRoot: URI,
+		plugin: IMarketplacePlugin,
+		_options?: IEnsureRepositoryOptions,
+	): Promise<URI> {
 		const cacheDir = this._getCacheDir(cacheRoot, plugin.sourceDescriptor);
 		await this._fileService.createFolder(cacheDir);
 		return cacheDir;
 	}
 
-	async update(cacheRoot: URI, plugin: IMarketplacePlugin, _options?: IPullRepositoryOptions): Promise<boolean> {
+	async update(
+		cacheRoot: URI,
+		plugin: IMarketplacePlugin,
+		_options?: IPullRepositoryOptions,
+	): Promise<boolean> {
 		// For package-manager sources, "update" re-runs install.
 		const installDir = this._getCacheDir(cacheRoot, plugin.sourceDescriptor);
 		const pluginDir = this.getInstallUri(cacheRoot, plugin.sourceDescriptor);
-		await this.runInstall(installDir, pluginDir, plugin, { silent: _options?.silent });
+		await this.runInstall(installDir, pluginDir, plugin, {
+			silent: _options?.silent,
+		});
 		return true;
 	}
 
-	async runInstall(installDir: URI, pluginDir: URI, plugin: IMarketplacePlugin, options?: { silent?: boolean }): Promise<{ pluginDir: URI } | undefined> {
+	async runInstall(
+		installDir: URI,
+		pluginDir: URI,
+		plugin: IMarketplacePlugin,
+		options?: { silent?: boolean },
+	): Promise<{ pluginDir: URI } | undefined> {
 		const args = this._buildInstallArgs(installDir, plugin);
 		const command = formatShellCommand(args);
-		const confirmed = await this._confirmTerminalCommand(plugin.name, command, options?.silent);
+		const confirmed = await this._confirmTerminalCommand(
+			plugin.name,
+			command,
+			options?.silent,
+		);
 		if (!confirmed) {
 			return undefined;
 		}
 
-		const progressTitle = localize('installingPackagePlugin', "Installing {0} plugin '{1}'...", this._managerName, plugin.name);
-		const { success, terminal } = await this._runTerminalCommand(command, progressTitle);
+		const progressTitle = localize(
+			"installingPackagePlugin",
+			"Installing {0} plugin '{1}'...",
+			this._managerName,
+			plugin.name,
+		);
+		const { success, terminal } = await this._runTerminalCommand(
+			command,
+			progressTitle,
+		);
 		if (!success) {
 			return undefined;
 		}
@@ -414,7 +615,12 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 		if (!exists) {
 			this._notificationService.notify({
 				severity: Severity.Error,
-				message: localize('packagePluginNotFound', "{0} package '{1}' was not found after installation.", this._managerName, this.getLabel(plugin.sourceDescriptor)),
+				message: localize(
+					"packagePluginNotFound",
+					"{0} package '{1}' was not found after installation.",
+					this._managerName,
+					this.getLabel(plugin.sourceDescriptor),
+				),
 			});
 			return undefined;
 		}
@@ -425,15 +631,30 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 
 	// -- terminal helpers (moved from PluginInstallService) ---
 
-	private async _confirmTerminalCommand(pluginName: string, command: string, silent?: boolean): Promise<boolean> {
+	private async _confirmTerminalCommand(
+		pluginName: string,
+		command: string,
+		silent?: boolean,
+	): Promise<boolean> {
 		if (silent) {
-			return new Promise<boolean>(resolve => {
+			return new Promise<boolean>((resolve) => {
 				const n = this._notificationService.notify({
 					severity: Severity.Info,
-					message: localize('confirmPluginInstallNotification', "Plugin '{0}' wants to run: {1}", pluginName, command),
+					message: localize(
+						"confirmPluginInstallNotification",
+						"Plugin '{0}' wants to run: {1}",
+						pluginName,
+						command,
+					),
 					actions: {
 						primary: [
-							new Action('installPlugin', localize('install', "Install"), undefined, true, async () => resolve(true)),
+							new Action(
+								"installPlugin",
+								localize("install", "Install"),
+								undefined,
+								true,
+								async () => resolve(true),
+							),
 						],
 					},
 				});
@@ -443,10 +664,21 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 		}
 
 		const { confirmed } = await this._dialogService.confirm({
-			type: 'question',
-			message: localize('confirmPluginInstall', "Install Plugin '{0}'?", pluginName),
-			detail: localize('confirmPluginInstallDetail', "This will run the following command in a terminal:\n\n{0}", command),
-			primaryButton: localize({ key: 'confirmInstall', comment: ['&& denotes a mnemonic'] }, "&&Install"),
+			type: "question",
+			message: localize(
+				"confirmPluginInstall",
+				"Install Plugin '{0}'?",
+				pluginName,
+			),
+			detail: localize(
+				"confirmPluginInstallDetail",
+				"This will run the following command in a terminal:\n\n{0}",
+				command,
+			),
+			primaryButton: localize(
+				{ key: "confirmInstall", comment: ["&& denotes a mnemonic"] },
+				"&&Install",
+			),
 		});
 		return confirmed;
 	}
@@ -463,7 +695,7 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 				async () => {
 					terminal = await this._terminalService.createTerminal({
 						config: {
-							name: localize('pluginInstallTerminal', "Plugin Install"),
+							name: localize("pluginInstallTerminal", "Plugin Install"),
 							forceShellIntegration: true,
 							isTransient: true,
 							isFeatureTerminal: true,
@@ -472,27 +704,40 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 					await terminal.processReady;
 					this._terminalService.setActiveInstance(terminal);
 
-					const commandResultPromise = this._waitForTerminalCommandCompletion(terminal);
+					const commandResultPromise =
+						this._waitForTerminalCommandCompletion(terminal);
 					await terminal.runCommand(command, true);
 					const exitCode = await commandResultPromise;
 					if (exitCode !== 0) {
-						throw new Error(localize('terminalCommandExitCode', "Command exited with code {0}", exitCode));
+						throw new Error(
+							localize(
+								"terminalCommandExitCode",
+								"Command exited with code {0}",
+								exitCode,
+							),
+						);
 					}
-				}
+				},
 			);
 			return { success: true, terminal };
 		} catch (err) {
 			this._logService.error(`[${this.kind}] Terminal command failed:`, err);
 			this._notificationService.notify({
 				severity: Severity.Error,
-				message: localize('terminalCommandFailed', "Plugin installation command failed: {0}", err?.message ?? String(err)),
+				message: localize(
+					"terminalCommandFailed",
+					"Plugin installation command failed: {0}",
+					err?.message ?? String(err),
+				),
 			});
 			return { success: false, terminal };
 		}
 	}
 
-	private _waitForTerminalCommandCompletion(terminal: ITerminalInstance): Promise<number | undefined> {
-		return new Promise<number | undefined>(resolve => {
+	private _waitForTerminalCommandCompletion(
+		terminal: ITerminalInstance,
+	): Promise<number | undefined> {
+		return new Promise<number | undefined>((resolve) => {
 			const disposables = new DisposableStore();
 			let isResolved = false;
 
@@ -506,17 +751,25 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 			};
 
 			const attachCommandFinishedListener = (): void => {
-				const commandDetection = terminal.capabilities.get(TerminalCapability.CommandDetection);
+				const commandDetection = terminal.capabilities.get(
+					TerminalCapability.CommandDetection,
+				);
 				if (!commandDetection) {
 					return;
 				}
-				disposables.add(commandDetection.onCommandFinished((command: ITerminalCommand) => {
-					resolveAndDispose(command.exitCode ?? 0);
-				}));
+				disposables.add(
+					commandDetection.onCommandFinished((command: ITerminalCommand) => {
+						resolveAndDispose(command.exitCode ?? 0);
+					}),
+				);
 			};
 
 			attachCommandFinishedListener();
-			disposables.add(terminal.capabilities.onDidAddCommandDetectionCapability(() => attachCommandFinishedListener()));
+			disposables.add(
+				terminal.capabilities.onDidAddCommandDetectionCapability(() =>
+					attachCommandFinishedListener(),
+				),
+			);
 
 			const timeoutHandle: CancelablePromise<void> = timeout(120_000);
 			disposables.add(toDisposable(() => timeoutHandle.cancel()));
@@ -524,7 +777,9 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 				if (isResolved) {
 					return;
 				}
-				this._logService.warn(`[${this.kind}] Terminal command completion timed out`);
+				this._logService.warn(
+					`[${this.kind}] Terminal command completion timed out`,
+				);
 				resolveAndDispose(undefined);
 			});
 		});
@@ -537,11 +792,17 @@ export abstract class AbstractPackagePluginSource implements IPluginSource {
 
 export class NpmPluginSource extends AbstractPackagePluginSource {
 	readonly kind = PluginSourceKind.Npm;
-	protected readonly _managerName = 'npm';
+	protected readonly _managerName = "npm";
 
 	getInstallUri(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI {
 		const npm = descriptor as INpmPluginSource;
-		return joinPath(cacheRoot, 'npm', sanitizeCacheSegment(npm.package), 'node_modules', npm.package);
+		return joinPath(
+			cacheRoot,
+			"npm",
+			sanitizeCacheSegment(npm.package),
+			"node_modules",
+			npm.package,
+		);
 	}
 
 	getLabel(descriptor: IPluginSourceDescriptor): string {
@@ -549,17 +810,25 @@ export class NpmPluginSource extends AbstractPackagePluginSource {
 		return npm.version ? `${npm.package}@${npm.version}` : npm.package;
 	}
 
-	protected _getCacheDir(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI {
+	protected _getCacheDir(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI {
 		const npm = descriptor as INpmPluginSource;
-		return joinPath(cacheRoot, 'npm', sanitizeCacheSegment(npm.package));
+		return joinPath(cacheRoot, "npm", sanitizeCacheSegment(npm.package));
 	}
 
-	protected _buildInstallArgs(installDir: URI, plugin: IMarketplacePlugin): string[] {
+	protected _buildInstallArgs(
+		installDir: URI,
+		plugin: IMarketplacePlugin,
+	): string[] {
 		const npm = plugin.sourceDescriptor as INpmPluginSource;
-		const packageSpec = npm.version ? `${npm.package}@${npm.version}` : npm.package;
-		const args = ['npm', 'install', '--prefix', installDir.fsPath, packageSpec];
+		const packageSpec = npm.version
+			? `${npm.package}@${npm.version}`
+			: npm.package;
+		const args = ["npm", "install", "--prefix", installDir.fsPath, packageSpec];
 		if (npm.registry) {
-			args.push('--registry', npm.registry);
+			args.push("--registry", npm.registry);
 		}
 		return args;
 	}
@@ -571,11 +840,11 @@ export class NpmPluginSource extends AbstractPackagePluginSource {
 
 export class PipPluginSource extends AbstractPackagePluginSource {
 	readonly kind = PluginSourceKind.Pip;
-	protected readonly _managerName = 'pip';
+	protected readonly _managerName = "pip";
 
 	getInstallUri(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI {
 		const pip = descriptor as IPipPluginSource;
-		return joinPath(cacheRoot, 'pip', sanitizeCacheSegment(pip.package));
+		return joinPath(cacheRoot, "pip", sanitizeCacheSegment(pip.package));
 	}
 
 	getLabel(descriptor: IPluginSourceDescriptor): string {
@@ -583,17 +852,25 @@ export class PipPluginSource extends AbstractPackagePluginSource {
 		return pip.version ? `${pip.package}==${pip.version}` : pip.package;
 	}
 
-	protected _getCacheDir(cacheRoot: URI, descriptor: IPluginSourceDescriptor): URI {
+	protected _getCacheDir(
+		cacheRoot: URI,
+		descriptor: IPluginSourceDescriptor,
+	): URI {
 		const pip = descriptor as IPipPluginSource;
-		return joinPath(cacheRoot, 'pip', sanitizeCacheSegment(pip.package));
+		return joinPath(cacheRoot, "pip", sanitizeCacheSegment(pip.package));
 	}
 
-	protected _buildInstallArgs(installDir: URI, plugin: IMarketplacePlugin): string[] {
+	protected _buildInstallArgs(
+		installDir: URI,
+		plugin: IMarketplacePlugin,
+	): string[] {
 		const pip = plugin.sourceDescriptor as IPipPluginSource;
-		const packageSpec = pip.version ? `${pip.package}==${pip.version}` : pip.package;
-		const args = ['pip', 'install', '--target', installDir.fsPath, packageSpec];
+		const packageSpec = pip.version
+			? `${pip.package}==${pip.version}`
+			: pip.package;
+		const args = ["pip", "install", "--target", installDir.fsPath, packageSpec];
 		if (pip.registry) {
-			args.push('--index-url', pip.registry);
+			args.push("--index-url", pip.registry);
 		}
 		return args;
 	}

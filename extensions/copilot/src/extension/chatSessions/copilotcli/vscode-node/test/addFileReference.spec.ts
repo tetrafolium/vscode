@@ -6,17 +6,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestLogService } from '../../../../../platform/testing/common/testLogService';
 import type { InProcHttpServer } from '../inProcHttpServer';
-import { MockHttpServer, MockSessionTracker, createMockEditor, createMockEditorWithScheme } from './testHelpers';
+import {
+	MockHttpServer,
+	MockSessionTracker,
+	createMockEditor,
+	createMockEditorWithScheme,
+} from './testHelpers';
 
-const { mockRegisterCommand, mockActiveTextEditor, mockShowQuickPick } = vi.hoisted(() => ({
-	mockRegisterCommand: vi.fn(),
-	mockActiveTextEditor: { value: null as unknown },
-	mockShowQuickPick: vi.fn(),
-}));
+const { mockRegisterCommand, mockActiveTextEditor, mockShowQuickPick } =
+	vi.hoisted(() => ({
+		mockRegisterCommand: vi.fn(),
+		mockActiveTextEditor: { value: null as unknown },
+		mockShowQuickPick: vi.fn(),
+	}));
 
 vi.mock('vscode', () => ({
 	window: {
-		get activeTextEditor() { return mockActiveTextEditor.value; },
+		get activeTextEditor() {
+			return mockActiveTextEditor.value;
+		},
 		showWarningMessage: vi.fn(),
 		showQuickPick: (...args: unknown[]) => mockShowQuickPick(...args),
 	},
@@ -26,7 +34,10 @@ vi.mock('vscode', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { ADD_FILE_REFERENCE_COMMAND, registerAddFileReferenceCommand } from '../commands/addFileReference';
+import {
+	ADD_FILE_REFERENCE_COMMAND,
+	registerAddFileReferenceCommand,
+} from '../commands/addFileReference';
 import { ADD_FILE_REFERENCE_NOTIFICATION } from '../commands/sendContext';
 
 describe('addFileReference command', () => {
@@ -45,19 +56,29 @@ describe('addFileReference command', () => {
 		// Default: one connected session
 		httpServer.setConnectedSessionIds(['session-1']);
 
-		mockRegisterCommand.mockImplementation((name: string, callback: (...args: unknown[]) => unknown) => {
-			registeredCommands.set(name, callback);
-			return { dispose: () => { } };
-		});
+		mockRegisterCommand.mockImplementation(
+			(name: string, callback: (...args: unknown[]) => unknown) => {
+				registeredCommands.set(name, callback);
+				return { dispose: () => {} };
+			},
+		);
 	});
 
 	it('should register the command', () => {
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		expect(registeredCommands.has(ADD_FILE_REFERENCE_COMMAND)).toBe(true);
 	});
 
 	it('should send file reference from URI (explorer context menu)', async () => {
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 
 		const uri = {
 			fsPath: '/test/explorer-file.ts',
@@ -80,9 +101,20 @@ describe('addFileReference command', () => {
 	});
 
 	it('should send file reference from active editor with no selection', async () => {
-		mockActiveTextEditor.value = createMockEditor('/test/active-file.ts', 'Hello World', 0, 0, 0, 0);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/active-file.ts',
+			'Hello World',
+			0,
+			0,
+			0,
+			0,
+		);
 
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_FILE_REFERENCE_COMMAND)!();
 
 		expect(httpServer.sendNotification).toHaveBeenCalledWith(
@@ -97,9 +129,20 @@ describe('addFileReference command', () => {
 	});
 
 	it('should include selection info when text is selected', async () => {
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'line 0\nline 1\nline 2', 1, 0, 1, 6);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'line 0\nline 1\nline 2',
+			1,
+			0,
+			1,
+			6,
+		);
 
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_FILE_REFERENCE_COMMAND)!();
 
 		expect(httpServer.sendNotification).toHaveBeenCalledWith(
@@ -117,9 +160,20 @@ describe('addFileReference command', () => {
 	});
 
 	it('should include multi-line selection info', async () => {
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'line 0\nline 1\nline 2', 0, 0, 2, 6);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'line 0\nline 1\nline 2',
+			0,
+			0,
+			2,
+			6,
+		);
 
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_FILE_REFERENCE_COMMAND)!();
 
 		expect(httpServer.sendNotification).toHaveBeenCalledWith(
@@ -136,7 +190,11 @@ describe('addFileReference command', () => {
 	});
 
 	it('should show warning when no active editor and no URI', async () => {
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_FILE_REFERENCE_COMMAND)!();
 
 		expect(httpServer.sendNotification).not.toHaveBeenCalled();
@@ -146,9 +204,20 @@ describe('addFileReference command', () => {
 	});
 
 	it('should prefer provided URI over active editor', async () => {
-		mockActiveTextEditor.value = createMockEditor('/test/active-file.ts', 'Active content', 0, 0, 0, 6);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/active-file.ts',
+			'Active content',
+			0,
+			0,
+			0,
+			6,
+		);
 
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 
 		const explorerUri = {
 			fsPath: '/test/explorer-file.ts',
@@ -170,9 +239,20 @@ describe('addFileReference command', () => {
 
 	it('should show warning when no sessions are connected', async () => {
 		httpServer.setConnectedSessionIds([]);
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'content', 0, 0, 0, 0);
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'content',
+			0,
+			0,
+			0,
+			0,
+		);
 
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_FILE_REFERENCE_COMMAND)!();
 
 		expect(httpServer.sendNotification).not.toHaveBeenCalled();
@@ -183,9 +263,16 @@ describe('addFileReference command', () => {
 
 	it('should show picker when multiple sessions are connected', async () => {
 		httpServer.setConnectedSessionIds(['session-1', 'session-2']);
-		mockShowQuickPick.mockResolvedValue({ sessionId: 'session-2', label: 'session-2' });
+		mockShowQuickPick.mockResolvedValue({
+			sessionId: 'session-2',
+			label: 'session-2',
+		});
 
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 
 		const uri = {
 			fsPath: '/test/file.ts',
@@ -206,13 +293,31 @@ describe('addFileReference command', () => {
 		httpServer.setConnectedSessionIds(['session-1', 'session-2']);
 		sessionTracker.setSessionName('session-1', 'My CLI');
 		sessionTracker.setSessionName('session-2', 'session-2');
-		mockShowQuickPick.mockResolvedValue({ sessionId: 'session-1', label: 'My CLI' });
-		mockActiveTextEditor.value = createMockEditor('/test/file.ts', 'content', 0, 0, 0, 0);
+		mockShowQuickPick.mockResolvedValue({
+			sessionId: 'session-1',
+			label: 'My CLI',
+		});
+		mockActiveTextEditor.value = createMockEditor(
+			'/test/file.ts',
+			'content',
+			0,
+			0,
+			0,
+			0,
+		);
 
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_FILE_REFERENCE_COMMAND)!();
 
-		const items = mockShowQuickPick.mock.calls[0][0] as Array<{ label: string; description?: string; sessionId: string }>;
+		const items = mockShowQuickPick.mock.calls[0][0] as Array<{
+			label: string;
+			description?: string;
+			sessionId: string;
+		}>;
 		expect(items[0].label).toBe('My CLI');
 		expect(items[0].description).toBe('session-1');
 		expect(items[1].label).toBe('session-2');
@@ -223,7 +328,11 @@ describe('addFileReference command', () => {
 		httpServer.setConnectedSessionIds(['session-1', 'session-2']);
 		mockShowQuickPick.mockResolvedValue(undefined);
 
-		registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+		registerAddFileReferenceCommand(
+			logger,
+			httpServer as unknown as InProcHttpServer,
+			sessionTracker.asTracker(),
+		);
 		await registeredCommands.get(ADD_FILE_REFERENCE_COMMAND)!();
 
 		expect(httpServer.sendNotification).not.toHaveBeenCalled();
@@ -231,9 +340,21 @@ describe('addFileReference command', () => {
 
 	describe('URI scheme validation', () => {
 		it('should reject output scheme from editor with warning', async () => {
-			mockActiveTextEditor.value = createMockEditorWithScheme('/Output', 'content', 0, 0, 0, 7, 'output');
+			mockActiveTextEditor.value = createMockEditorWithScheme(
+				'/Output',
+				'content',
+				0,
+				0,
+				0,
+				7,
+				'output',
+			);
 
-			registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+			registerAddFileReferenceCommand(
+				logger,
+				httpServer as unknown as InProcHttpServer,
+				sessionTracker.asTracker(),
+			);
 			await registeredCommands.get(ADD_FILE_REFERENCE_COMMAND)!();
 
 			expect(httpServer.sendNotification).not.toHaveBeenCalled();
@@ -243,7 +364,11 @@ describe('addFileReference command', () => {
 		});
 
 		it('should reject virtual scheme from explorer URI with warning', async () => {
-			registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+			registerAddFileReferenceCommand(
+				logger,
+				httpServer as unknown as InProcHttpServer,
+				sessionTracker.asTracker(),
+			);
 
 			const uri = {
 				fsPath: '/block',
@@ -259,7 +384,11 @@ describe('addFileReference command', () => {
 		});
 
 		it('should reject vscode-remote scheme from explorer URI with warning', async () => {
-			registerAddFileReferenceCommand(logger, httpServer as unknown as InProcHttpServer, sessionTracker.asTracker());
+			registerAddFileReferenceCommand(
+				logger,
+				httpServer as unknown as InProcHttpServer,
+				sessionTracker.asTracker(),
+			);
 
 			const uri = {
 				fsPath: '/remote/file.ts',

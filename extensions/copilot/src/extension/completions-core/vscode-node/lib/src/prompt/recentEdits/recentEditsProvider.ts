@@ -17,7 +17,10 @@ import {
 	summarizeEdit,
 } from './recentEditsReducer';
 
-export const ICompletionsRecentEditsProviderService = createServiceIdentifier<ICompletionsRecentEditsProviderService>('ICompletionsRecentEditsProviderService');
+export const ICompletionsRecentEditsProviderService =
+	createServiceIdentifier<ICompletionsRecentEditsProviderService>(
+		'ICompletionsRecentEditsProviderService',
+	);
 export interface ICompletionsRecentEditsProviderService {
 	readonly _serviceBrand: undefined;
 	isEnabled(): boolean;
@@ -68,19 +71,24 @@ const RECENT_EDITS_DEFAULT_CONFIG: RecentEditsConfig = Object.freeze({
 	maxLinesPerEdit: 10,
 });
 
-export class FullRecentEditsProvider extends Disposable implements ICompletionsRecentEditsProviderService {
+export class FullRecentEditsProvider
+	extends Disposable
+	implements ICompletionsRecentEditsProviderService
+{
 	declare _serviceBrand: undefined;
 
 	private _started: boolean = false;
 	private recentEditMap: RecentEditMap = {};
 	private recentEdits: RecentEdit[] = [];
-	private recentEditSummaries: WeakMap<RecentEdit, string | null> = new WeakMap();
+	private recentEditSummaries: WeakMap<RecentEdit, string | null> =
+		new WeakMap();
 	private debounceTimeouts: { [key: string]: TimeoutHandle } = {};
 	private readonly _config: RecentEditsConfig;
 
 	constructor(
 		config: RecentEditsConfig | undefined,
-		@ICompletionsObservableWorkspace private readonly observableWorkspace: ICompletionsObservableWorkspace,
+		@ICompletionsObservableWorkspace
+		private readonly observableWorkspace: ICompletionsObservableWorkspace,
 	) {
 		super();
 		this._config = config ?? Object.assign({}, RECENT_EDITS_DEFAULT_CONFIG);
@@ -103,10 +111,15 @@ export class FullRecentEditsProvider extends Disposable implements ICompletionsR
 	}
 
 	protected updateRecentEdits(docId: string, newContents: string): void {
-		this.recentEditMap = recentEditsReducer(this.recentEditMap, docId, newContents, this._config);
+		this.recentEditMap = recentEditsReducer(
+			this.recentEditMap,
+			docId,
+			newContents,
+			this._config,
+		);
 		this.recentEdits = getAllRecentEditsByTimestamp(this.recentEditMap);
 
-		this.recentEdits.forEach(edit => {
+		this.recentEdits.forEach((edit) => {
 			if (!this.recentEditSummaries.has(edit)) {
 				// Generate a summary for the edit if it doesn't already exist
 				const summary = summarizeEdit(edit, this._config);
@@ -134,7 +147,7 @@ export class FullRecentEditsProvider extends Disposable implements ICompletionsR
 							selection: doc.selection,
 							languageId: doc.languageId,
 						},
-						data => {
+						(data) => {
 							if (data.value.changes.length > 0) {
 								const prevText = data.value.previous?.value;
 								const newText = data.value.value.value;
@@ -153,16 +166,22 @@ export class FullRecentEditsProvider extends Disposable implements ICompletionsR
 									this.updateRecentEdits(docId, newText);
 								} else {
 									// update in a few milliseconds
-									this.debounceTimeouts[docId] = setTimeout(() => {
-										this.updateRecentEdits(docId, newText);
-									}, this._config.debounceTimeout ?? 500);
+									this.debounceTimeouts[docId] = setTimeout(
+										() => {
+											this.updateRecentEdits(
+												docId,
+												newText,
+											);
+										},
+										this._config.debounceTimeout ?? 500,
+									);
 								}
 							}
-						}
-					)
+						},
+					),
 				);
 			},
-			d => d.id
+			(d) => d.id,
 		).recomputeInitiallyAndOnChange(this._store);
 	}
 }

@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { DiffScrollSyncData, MarkdownPreviewLineChanges } from '../types/previewMessaging';
+import type {
+	DiffScrollSyncData,
+	MarkdownPreviewLineChanges,
+} from "../types/previewMessaging";
 
 export interface PreviewSettings {
 	readonly source: string;
@@ -21,7 +24,7 @@ export interface PreviewSettings {
 }
 
 export function getRawData(key: string): string {
-	const element = document.getElementById('vscode-markdown-preview-data');
+	const element = document.getElementById("vscode-markdown-preview-data");
 	if (element) {
 		const data = element.getAttribute(key);
 		if (data) {
@@ -37,7 +40,7 @@ export function getData<T = {}>(key: string): T {
 }
 
 export class SettingsManager {
-	#settings: PreviewSettings = getData('data-settings');
+	#settings: PreviewSettings = getData("data-settings");
 
 	public get settings(): PreviewSettings {
 		return this.#settings;

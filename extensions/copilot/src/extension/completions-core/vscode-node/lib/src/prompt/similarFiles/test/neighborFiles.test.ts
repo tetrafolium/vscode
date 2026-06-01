@@ -70,36 +70,165 @@ const FILE_T = 'file:///test/test2/t.js';
 const FILE_T_TEXT = '# file t';
 
 const CURRENT_TIME_STAMP = Date.now();
-const CURSOR_HISTORY_FOR_TEST: { uri: string; offset: number; timestamp: number; text: string }[] = [
-	{ uri: FILE_C, offset: 0, timestamp: CURRENT_TIME_STAMP - 14, text: FILE_C_TEXT },
-	{ uri: FILE_C, offset: 0, timestamp: CURRENT_TIME_STAMP - 13, text: FILE_C_TEXT },
-	{ uri: FILE_C, offset: 0, timestamp: CURRENT_TIME_STAMP - 12, text: FILE_C_TEXT },
-	{ uri: FILE_A, offset: 0, timestamp: CURRENT_TIME_STAMP - 11, text: FILE_A_TEXT },
-	{ uri: FILE_D, offset: 0, timestamp: CURRENT_TIME_STAMP - 10, text: FILE_D_TEXT },
-	{ uri: FILE_D, offset: 0, timestamp: CURRENT_TIME_STAMP - 9, text: FILE_D_TEXT },
-	{ uri: FILE_D, offset: 0, timestamp: CURRENT_TIME_STAMP - 8, text: FILE_D_TEXT },
-	{ uri: FILE_D, offset: 0, timestamp: CURRENT_TIME_STAMP - 7, text: FILE_D_TEXT },
-	{ uri: FILE_A, offset: 0, timestamp: CURRENT_TIME_STAMP - 6, text: FILE_A_TEXT },
-	{ uri: FILE_C, offset: 0, timestamp: CURRENT_TIME_STAMP - 5, text: FILE_C_TEXT },
-	{ uri: FILE_B, offset: 0, timestamp: CURRENT_TIME_STAMP - 4, text: FILE_B_TEXT },
-	{ uri: FILE_B, offset: 0, timestamp: CURRENT_TIME_STAMP - 3, text: FILE_B_TEXT },
-	{ uri: FILE_B, offset: 0, timestamp: CURRENT_TIME_STAMP - 2, text: FILE_B_TEXT },
-	{ uri: FILE_J, offset: 0, timestamp: CURRENT_TIME_STAMP - 1, text: FILE_J_TEXT },
-	{ uri: FILE_A, offset: 0, timestamp: CURRENT_TIME_STAMP, text: FILE_A_TEXT },
+const CURSOR_HISTORY_FOR_TEST: {
+	uri: string;
+	offset: number;
+	timestamp: number;
+	text: string;
+}[] = [
+	{
+		uri: FILE_C,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 14,
+		text: FILE_C_TEXT,
+	},
+	{
+		uri: FILE_C,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 13,
+		text: FILE_C_TEXT,
+	},
+	{
+		uri: FILE_C,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 12,
+		text: FILE_C_TEXT,
+	},
+	{
+		uri: FILE_A,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 11,
+		text: FILE_A_TEXT,
+	},
+	{
+		uri: FILE_D,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 10,
+		text: FILE_D_TEXT,
+	},
+	{
+		uri: FILE_D,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 9,
+		text: FILE_D_TEXT,
+	},
+	{
+		uri: FILE_D,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 8,
+		text: FILE_D_TEXT,
+	},
+	{
+		uri: FILE_D,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 7,
+		text: FILE_D_TEXT,
+	},
+	{
+		uri: FILE_A,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 6,
+		text: FILE_A_TEXT,
+	},
+	{
+		uri: FILE_C,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 5,
+		text: FILE_C_TEXT,
+	},
+	{
+		uri: FILE_B,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 4,
+		text: FILE_B_TEXT,
+	},
+	{
+		uri: FILE_B,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 3,
+		text: FILE_B_TEXT,
+	},
+	{
+		uri: FILE_B,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 2,
+		text: FILE_B_TEXT,
+	},
+	{
+		uri: FILE_J,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP - 1,
+		text: FILE_J_TEXT,
+	},
+	{
+		uri: FILE_A,
+		offset: 0,
+		timestamp: CURRENT_TIME_STAMP,
+		text: FILE_A_TEXT,
+	},
 ];
 
-const OPEN_FILES_FOR_TEST: { uri: string; timestamp: number; text: string; language: string }[] = [
-	{ uri: FILE_T, timestamp: CURRENT_TIME_STAMP - 7, text: FILE_T_TEXT, language: 'javascript' },
-	{ uri: FILE_D, timestamp: CURRENT_TIME_STAMP - 6, text: FILE_D_TEXT, language: 'python' },
-	{ uri: FILE_R, timestamp: CURRENT_TIME_STAMP - 3, text: FILE_R_TEXT, language: 'javascriptreact' },
-	{ uri: FILE_C, timestamp: CURRENT_TIME_STAMP - 4, text: FILE_C_TEXT, language: 'python' },
-	{ uri: FILE_J, timestamp: CURRENT_TIME_STAMP - 3, text: FILE_J_TEXT, language: 'javascript' },
-	{ uri: FILE_K, timestamp: CURRENT_TIME_STAMP - 2, text: FILE_K_TEXT, language: 'markdown' },
-	{ uri: FILE_B, timestamp: CURRENT_TIME_STAMP - 1, text: FILE_B_TEXT, language: 'python' },
-	{ uri: FILE_A, timestamp: CURRENT_TIME_STAMP, text: FILE_A_TEXT, language: 'python' },
+const OPEN_FILES_FOR_TEST: {
+	uri: string;
+	timestamp: number;
+	text: string;
+	language: string;
+}[] = [
+	{
+		uri: FILE_T,
+		timestamp: CURRENT_TIME_STAMP - 7,
+		text: FILE_T_TEXT,
+		language: 'javascript',
+	},
+	{
+		uri: FILE_D,
+		timestamp: CURRENT_TIME_STAMP - 6,
+		text: FILE_D_TEXT,
+		language: 'python',
+	},
+	{
+		uri: FILE_R,
+		timestamp: CURRENT_TIME_STAMP - 3,
+		text: FILE_R_TEXT,
+		language: 'javascriptreact',
+	},
+	{
+		uri: FILE_C,
+		timestamp: CURRENT_TIME_STAMP - 4,
+		text: FILE_C_TEXT,
+		language: 'python',
+	},
+	{
+		uri: FILE_J,
+		timestamp: CURRENT_TIME_STAMP - 3,
+		text: FILE_J_TEXT,
+		language: 'javascript',
+	},
+	{
+		uri: FILE_K,
+		timestamp: CURRENT_TIME_STAMP - 2,
+		text: FILE_K_TEXT,
+		language: 'markdown',
+	},
+	{
+		uri: FILE_B,
+		timestamp: CURRENT_TIME_STAMP - 1,
+		text: FILE_B_TEXT,
+		language: 'python',
+	},
+	{
+		uri: FILE_A,
+		timestamp: CURRENT_TIME_STAMP,
+		text: FILE_A_TEXT,
+		language: 'python',
+	},
 ];
 
-const WORKSPACE_FILES_FOR_TEST: { uri: string; text: string; language: string }[] = [
+const WORKSPACE_FILES_FOR_TEST: {
+	uri: string;
+	text: string;
+	language: string;
+}[] = [
 	{ uri: FILE_E, text: FILE_E_TEXT, language: 'python' },
 	{ uri: FILE_D, text: FILE_D_TEXT, language: 'python' },
 	{ uri: FILE_F, text: FILE_F_TEXT, language: 'python' },
@@ -111,7 +240,8 @@ const WORKSPACE_FILES_FOR_TEST: { uri: string; text: string; language: string }[
 	{ uri: FILE_T, text: FILE_T_TEXT, language: 'javascript' },
 ];
 
-const CURRENT_FILE = CURSOR_HISTORY_FOR_TEST[CURSOR_HISTORY_FOR_TEST.length - 1].uri;
+const CURRENT_FILE =
+	CURSOR_HISTORY_FOR_TEST[CURSOR_HISTORY_FOR_TEST.length - 1].uri;
 
 const MAX_NUM_NEIGHBORING_FILES = 20;
 const DEFAULT_FILE_LANGUAGE = 'python';
@@ -119,14 +249,22 @@ const DEFAULT_FILE_LANGUAGE = 'python';
 suite('neighbor files tests', function () {
 	this.timeout(TIMEOUT);
 	const accessor = createLibTestingContext().createTestingAccessor();
-	const tdm = accessor.get(ICompletionsTextDocumentManagerService) as TestTextDocumentManager;
+	const tdm = accessor.get(
+		ICompletionsTextDocumentManagerService,
+	) as TestTextDocumentManager;
 
-	const workspaceTextDocumentManager = accessor.get(IInstantiationService).createInstance(TestTextDocumentManager);
+	const workspaceTextDocumentManager = accessor
+		.get(IInstantiationService)
+		.createInstance(TestTextDocumentManager);
 	for (const file of WORKSPACE_FILES_FOR_TEST) {
 		workspaceTextDocumentManager.setDiskContents(file.uri, file.text);
 	}
 
-	workspaceTextDocumentManager.setTextDocument(FILE_I, DEFAULT_FILE_LANGUAGE, FILE_I_TEXT);
+	workspaceTextDocumentManager.setTextDocument(
+		FILE_I,
+		DEFAULT_FILE_LANGUAGE,
+		FILE_I_TEXT,
+	);
 
 	for (const file of OPEN_FILES_FOR_TEST) {
 		tdm.setTextDocument(file.uri, file.language, file.text);
@@ -146,30 +284,59 @@ suite('neighbor files tests', function () {
 		const { docs, neighborSource } = await ns.getNeighborFiles(
 			CURRENT_FILE,
 			DEFAULT_FILE_LANGUAGE,
-			MAX_NUM_NEIGHBORING_FILES
+			MAX_NUM_NEIGHBORING_FILES,
 		);
 		assert.strictEqual(docs.size, 3);
 		assert.strictEqual(docs.has(FILE_B), true);
 		assert.strictEqual(docs.has(FILE_C), true);
 		assert.strictEqual(docs.has(FILE_D), true);
-		assert.strictEqual(neighborSource.has(NeighboringFileType.CursorMostCount), false);
-		assert.strictEqual(neighborSource.has(NeighboringFileType.CursorMostRecent), false);
-		assert.strictEqual(neighborSource.has(NeighboringFileType.OpenTabs), true);
-		assert.strictEqual(neighborSource.get(NeighboringFileType.OpenTabs)?.length, 3);
-		assert.strictEqual(neighborSource.get(NeighboringFileType.OpenTabs)?.shift(), FILE_B);
-		assert.strictEqual(neighborSource.get(NeighboringFileType.OpenTabs)?.shift(), FILE_C);
-		assert.strictEqual(neighborSource.get(NeighboringFileType.OpenTabs)?.shift(), FILE_D);
+		assert.strictEqual(
+			neighborSource.has(NeighboringFileType.CursorMostCount),
+			false,
+		);
+		assert.strictEqual(
+			neighborSource.has(NeighboringFileType.CursorMostRecent),
+			false,
+		);
+		assert.strictEqual(
+			neighborSource.has(NeighboringFileType.OpenTabs),
+			true,
+		);
+		assert.strictEqual(
+			neighborSource.get(NeighboringFileType.OpenTabs)?.length,
+			3,
+		);
+		assert.strictEqual(
+			neighborSource.get(NeighboringFileType.OpenTabs)?.shift(),
+			FILE_B,
+		);
+		assert.strictEqual(
+			neighborSource.get(NeighboringFileType.OpenTabs)?.shift(),
+			FILE_C,
+		);
+		assert.strictEqual(
+			neighborSource.get(NeighboringFileType.OpenTabs)?.shift(),
+			FILE_D,
+		);
 	});
 
 	test('Test open files file limit', async function () {
 		const ns = new OpenTabFiles(tdm);
-		const { docs } = await ns.getNeighborFiles(CURRENT_FILE, DEFAULT_FILE_LANGUAGE, /* maxNumNeighborFiles */ 1);
+		const { docs } = await ns.getNeighborFiles(
+			CURRENT_FILE,
+			DEFAULT_FILE_LANGUAGE,
+			/* maxNumNeighborFiles */ 1,
+		);
 		assert.strictEqual(docs.size, 1);
 	});
 
 	test('Include neighboring files for aliased languages', async function () {
 		const ns = new OpenTabFiles(tdm);
-		const { docs } = await ns.getNeighborFiles(CURRENT_FILE, 'javascript', MAX_NUM_NEIGHBORING_FILES);
+		const { docs } = await ns.getNeighborFiles(
+			CURRENT_FILE,
+			'javascript',
+			MAX_NUM_NEIGHBORING_FILES,
+		);
 
 		assert.ok(docs.has(FILE_J));
 		assert.ok(docs.has(FILE_R));
@@ -185,7 +352,10 @@ suite('NeighborSource.getRelativePath tests', function () {
 
 		const sshFile = 'ssh://path/to/file.txt';
 		const sshBase = 'ssh:';
-		const relativeSshPath = NeighborSource.getRelativePath(sshFile, sshBase);
+		const relativeSshPath = NeighborSource.getRelativePath(
+			sshFile,
+			sshBase,
+		);
 		assert.strictEqual(relativeSshPath, '/path/to/file.txt');
 	});
 
@@ -226,18 +396,27 @@ suite('Neighbor files exclusion tests', function () {
 	class MockedRelatedFilesProvider extends RelatedFilesProvider {
 		constructor(
 			private readonly relatedFiles: RelatedFilesResponseEntry[],
-			private readonly traits: RelatedFileTrait[] = [{ name: 'testTraitName', value: 'testTraitValue' }],
+			private readonly traits: RelatedFileTrait[] = [
+				{ name: 'testTraitName', value: 'testTraitValue' },
+			],
 			@IInstantiationService instantiationService: IInstantiationService,
 			@IIgnoreService ignoreService: IIgnoreService,
-			@ICompletionsLogTargetService logTarget: ICompletionsLogTargetService,
-			@ICompletionsFileSystemService fileSystemService: ICompletionsFileSystemService,
+			@ICompletionsLogTargetService
+			logTarget: ICompletionsLogTargetService,
+			@ICompletionsFileSystemService
+			fileSystemService: ICompletionsFileSystemService,
 		) {
-			super(instantiationService, ignoreService, logTarget, fileSystemService);
+			super(
+				instantiationService,
+				ignoreService,
+				logTarget,
+				fileSystemService,
+			);
 		}
 
 		async getRelatedFilesResponse(
 			docInfo: RelatedFilesDocumentInfo,
-			telemetryData: TelemetryWithExp
+			telemetryData: TelemetryWithExp,
 		): Promise<RelatedFilesResponse | undefined> {
 			return Promise.resolve({
 				entries: this.relatedFiles,
@@ -252,22 +431,36 @@ suite('Neighbor files exclusion tests', function () {
 	}
 
 	const serviceCollection = createLibTestingContext();
-	serviceCollection.define(ICompletionsRelatedFilesProviderService, new SyncDescriptor(MockedRelatedFilesProvider, [[], [{ name: 'testTraitName', value: 'testTraitValue' }]]));
+	serviceCollection.define(
+		ICompletionsRelatedFilesProviderService,
+		new SyncDescriptor(MockedRelatedFilesProvider, [
+			[],
+			[{ name: 'testTraitName', value: 'testTraitValue' }],
+		]),
+	);
 
 	const accessor = serviceCollection.createTestingAccessor();
-	const tdm = accessor.get(ICompletionsTextDocumentManagerService) as TestTextDocumentManager;
+	const tdm = accessor.get(
+		ICompletionsTextDocumentManagerService,
+	) as TestTextDocumentManager;
 	tdm.init([{ uri: WKS_ROOTFOLDER }]);
 
 	for (const file of OPEN_FILES_FOR_TEST) {
 		accessTimes.set(file.uri, file.timestamp);
 	}
 
-	const workspaceTextDocumentManager = accessor.get(IInstantiationService).createInstance(TestTextDocumentManager);
+	const workspaceTextDocumentManager = accessor
+		.get(IInstantiationService)
+		.createInstance(TestTextDocumentManager);
 	for (const file of WORKSPACE_FILES_FOR_TEST) {
 		workspaceTextDocumentManager.setDiskContents(file.uri, file.text);
 	}
 
-	workspaceTextDocumentManager.setTextDocument(FILE_I, DEFAULT_FILE_LANGUAGE, FILE_I_TEXT);
+	workspaceTextDocumentManager.setTextDocument(
+		FILE_I,
+		DEFAULT_FILE_LANGUAGE,
+		FILE_I_TEXT,
+	);
 
 	for (const file of OPEN_FILES_FOR_TEST) {
 		tdm.setTextDocument(file.uri, file.language, file.text);
@@ -276,25 +469,40 @@ suite('Neighbor files exclusion tests', function () {
 	test('Test with related files excluded', async function () {
 		NeighborSource.reset();
 		const telemetryWithExp = TelemetryWithExp.createEmptyConfigForTesting();
-		telemetryWithExp.filtersAndExp.exp.variables[ExpTreatmentVariables.ExcludeRelatedFiles] = true;
-		const { docs, neighborSource, traits } = await NeighborSource.getNeighborFilesAndTraits(
-			accessor,
-			FILE_J,
-			'javascript',
-			telemetryWithExp,
-			undefined,
-			undefined,
-			true
-		);
+		telemetryWithExp.filtersAndExp.exp.variables[
+			ExpTreatmentVariables.ExcludeRelatedFiles
+		] = true;
+		const { docs, neighborSource, traits } =
+			await NeighborSource.getNeighborFilesAndTraits(
+				accessor,
+				FILE_J,
+				'javascript',
+				telemetryWithExp,
+				undefined,
+				undefined,
+				true,
+			);
 
 		assert.strictEqual(docs.size, 2);
 		assert.strictEqual(docs.has(FILE_T), true);
 		assert.strictEqual(docs.has(FILE_R), true);
 		assert.strictEqual(neighborSource.size, 1);
-		assert.strictEqual(neighborSource.has(NeighboringFileType.OpenTabs), true);
-		assert.strictEqual(neighborSource.get(NeighboringFileType.OpenTabs)?.length, 2);
-		assert.strictEqual(neighborSource.get(NeighboringFileType.OpenTabs)?.shift(), FILE_R);
-		assert.strictEqual(neighborSource.get(NeighboringFileType.OpenTabs)?.shift(), FILE_T);
+		assert.strictEqual(
+			neighborSource.has(NeighboringFileType.OpenTabs),
+			true,
+		);
+		assert.strictEqual(
+			neighborSource.get(NeighboringFileType.OpenTabs)?.length,
+			2,
+		);
+		assert.strictEqual(
+			neighborSource.get(NeighboringFileType.OpenTabs)?.shift(),
+			FILE_R,
+		);
+		assert.strictEqual(
+			neighborSource.get(NeighboringFileType.OpenTabs)?.shift(),
+			FILE_T,
+		);
 		assert.strictEqual(traits.length, 0);
 	});
 });

@@ -10,25 +10,34 @@ import { IEnvService } from '../../../../platform/env/common/envService';
 import { IVSCodeExtensionContext } from '../../../../platform/extContext/common/extensionContext';
 import { MockAuthenticationService } from '../../../../platform/ignore/node/test/mockAuthenticationService';
 import { ILogService } from '../../../../platform/log/common/logService';
-import { NoopOTelService, resolveOTelConfig } from '../../../../platform/otel/common/index';
+import {
+	NoopOTelService,
+	resolveOTelConfig,
+} from '../../../../platform/otel/common/index';
 import { NullTelemetryService } from '../../../../platform/telemetry/common/nullTelemetryService';
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry';
-import { ITerminalService, NullTerminalService } from '../../../../platform/terminal/common/terminalService';
+import {
+	ITerminalService,
+	NullTerminalService,
+} from '../../../../platform/terminal/common/terminalService';
 import { IWorkspaceService } from '../../../../platform/workspace/common/workspaceService';
 import { DisposableStore } from '../../../../util/vs/base/common/lifecycle';
 
 // The .ps1 asset cannot be parsed by Vite's transform pipeline,
 // so we need to tell Vite to treat .ps1 files as raw text via a mock
-vi.mock('../copilotCLIShim.ps1', () => ({ default: '# mock powershell script' }));
+vi.mock('../copilotCLIShim.ps1', () => ({
+	default: '# mock powershell script',
+}));
 
 // Mock fs operations to avoid real filesystem access during tests
-const { mockMkdir, mockWriteFile, mockCopyFile, mockChmod, mockStat } = vi.hoisted(() => ({
-	mockMkdir: vi.fn(async () => { }),
-	mockWriteFile: vi.fn(async () => { }),
-	mockCopyFile: vi.fn(async () => { }),
-	mockChmod: vi.fn(async () => { }),
-	mockStat: vi.fn(async () => ({ isFile: () => true })),
-}));
+const { mockMkdir, mockWriteFile, mockCopyFile, mockChmod, mockStat } =
+	vi.hoisted(() => ({
+		mockMkdir: vi.fn(async () => {}),
+		mockWriteFile: vi.fn(async () => {}),
+		mockCopyFile: vi.fn(async () => {}),
+		mockChmod: vi.fn(async () => {}),
+		mockStat: vi.fn(async () => ({ isFile: () => true })),
+	}));
 
 vi.mock('fs', () => ({
 	promises: {
@@ -37,14 +46,14 @@ vi.mock('fs', () => ({
 		copyFile: mockCopyFile,
 		chmod: mockChmod,
 		stat: mockStat,
-	}
+	},
 }));
 
 // Mock Python terminal service to avoid extension dependency
 vi.mock('../copilotCLIPythonTerminalService', () => ({
 	PythonTerminalService: class {
 		createTerminal = vi.fn(async () => undefined);
-	}
+	},
 }));
 
 // Mock terminal link provider to avoid pulling in unrelated notebook/proposed API dependencies
@@ -58,7 +67,7 @@ vi.mock('../copilotCLITerminalLinkProvider', () => ({
 
 vi.mock('../../../../platform/workspace/common/workspaceService', () => ({
 	IWorkspaceService: (() => {
-		const identifier = () => { };
+		const identifier = () => {};
 		return identifier;
 	})(),
 }));
@@ -95,7 +104,12 @@ class TestTerminalService extends NullTerminalService {
 		return this.createTerminalSpy(...arguments) as Terminal;
 	}
 
-	override contributePath(contributor: unknown, pathLocation: unknown, description?: unknown, prepend?: unknown): void {
+	override contributePath(
+		contributor: unknown,
+		pathLocation: unknown,
+		description?: unknown,
+		prepend?: unknown,
+	): void {
 		this.contributePathSpy(contributor, pathLocation, description, prepend);
 	}
 }
@@ -108,9 +122,13 @@ class TestEnvService {
 	appRoot = '';
 	language = 'en';
 	uiKind = 1;
-	clipboard = { readText: async () => '', writeText: async () => { } };
-	getAppSpecificStorageUri() { return undefined; }
-	getEditorInfo() { return { name: 'test-editor', version: '1.0' }; }
+	clipboard = { readText: async () => '', writeText: async () => {} };
+	getAppSpecificStorageUri() {
+		return undefined;
+	}
+	getEditorInfo() {
+		return { name: 'test-editor', version: '1.0' };
+	}
 }
 
 class TestExtensionContext {
@@ -122,48 +140,75 @@ class TestExtensionContext {
 }
 
 class TestTelemetryService extends NullTelemetryService {
-	public readonly events: Array<{ name: string; properties: Record<string, string> }> = [];
-	override sendMSFTTelemetryEvent(name: string, properties: Record<string, string>): void {
+	public readonly events: Array<{
+		name: string;
+		properties: Record<string, string>;
+	}> = [];
+	override sendMSFTTelemetryEvent(
+		name: string,
+		properties: Record<string, string>,
+	): void {
 		this.events.push({ name, properties });
 	}
 }
 
-const { mockWorkspaceGetConfiguration, mockRegisterTerminalProfileProvider, mockRegisterTerminalLinkProvider } = vi.hoisted(() => ({
+const {
+	mockWorkspaceGetConfiguration,
+	mockRegisterTerminalProfileProvider,
+	mockRegisterTerminalLinkProvider,
+} = vi.hoisted(() => ({
 	mockWorkspaceGetConfiguration: vi.fn(),
-	mockRegisterTerminalProfileProvider: vi.fn(() => ({ dispose: () => { } })),
-	mockRegisterTerminalLinkProvider: vi.fn(() => ({ dispose: () => { } })),
+	mockRegisterTerminalProfileProvider: vi.fn(() => ({ dispose: () => {} })),
+	mockRegisterTerminalLinkProvider: vi.fn(() => ({ dispose: () => {} })),
 }));
 
 vi.mock('vscode', async (importOriginal) => {
-	const actual = await importOriginal() as Record<string, unknown>;
+	const actual = (await importOriginal()) as Record<string, unknown>;
 	return {
 		...actual,
 		workspace: {
 			getConfiguration: mockWorkspaceGetConfiguration,
 		},
 		window: {
-			registerTerminalProfileProvider: mockRegisterTerminalProfileProvider,
+			registerTerminalProfileProvider:
+				mockRegisterTerminalProfileProvider,
 			registerTerminalLinkProvider: mockRegisterTerminalLinkProvider,
 		},
 		TerminalLocation: { Panel: 1, Editor: 2 },
 		ViewColumn: { Active: -1, Beside: -2 },
 		ThemeIcon: class ThemeIcon {
-			constructor(public readonly id: string) { }
+			constructor(public readonly id: string) {}
 		},
 		TerminalProfile: class TerminalProfile {
-			constructor(public readonly options: TerminalOptions) { }
+			constructor(public readonly options: TerminalOptions) {}
 		},
 		Range: class Range {
-			constructor(public startLine: number, public startCharacter: number, public endLine: number, public endCharacter: number) { }
+			constructor(
+				public startLine: number,
+				public startCharacter: number,
+				public endLine: number,
+				public endCharacter: number,
+			) {}
 		},
 		Uri: {
-			joinPath: (base: { fsPath: string; scheme: string }, ...segments: string[]) => ({ fsPath: [base.fsPath, ...segments].join('/'), scheme: base.scheme }),
+			joinPath: (
+				base: { fsPath: string; scheme: string },
+				...segments: string[]
+			) => ({
+				fsPath: [base.fsPath, ...segments].join('/'),
+				scheme: base.scheme,
+			}),
 			file: (path: string) => ({ fsPath: path, scheme: 'file' }),
 		},
 	};
 });
 
-function setupTerminalConfig(defaultProfile: string | undefined, profiles: Record<string, { path: string | string[]; args?: string[] }> | undefined) {
+function setupTerminalConfig(
+	defaultProfile: string | undefined,
+	profiles:
+		| Record<string, { path: string | string[]; args?: string[] }>
+		| undefined,
+) {
 	mockWorkspaceGetConfiguration.mockImplementation((section: string) => ({
 		get: (key: string) => {
 			if (key.startsWith('integrated.defaultProfile.')) {
@@ -173,7 +218,7 @@ function setupTerminalConfig(defaultProfile: string | undefined, profiles: Recor
 				return profiles;
 			}
 			return undefined;
-		}
+		},
 	}));
 }
 
@@ -202,13 +247,28 @@ describe('CopilotCLITerminalIntegration', () => {
 			authService as unknown as IAuthenticationService,
 			terminalService as unknown as ITerminalService,
 			envService as unknown as IEnvService,
-			{ trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), createSubLogger: () => ({}) } as unknown as ILogService,
+			{
+				trace: vi.fn(),
+				debug: vi.fn(),
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				createSubLogger: () => ({}),
+			} as unknown as ILogService,
 			telemetryService as unknown as ITelemetryService,
 			{ getConfig: () => true } as unknown as IConfigurationService,
 
-			{ requestResourceTrust: vi.fn().mockResolvedValue(true) } as unknown as IWorkspaceService,
+			{
+				requestResourceTrust: vi.fn().mockResolvedValue(true),
+			} as unknown as IWorkspaceService,
 
-			new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })),
+			new NoopOTelService(
+				resolveOTelConfig({
+					env: {},
+					extensionVersion: '0.0.0',
+					sessionId: 'test',
+				}),
+			),
 		);
 		disposables.add(integration);
 
@@ -233,15 +293,22 @@ describe('CopilotCLITerminalIntegration', () => {
 		it('should set sessionType to "new" when no cliArgs provided', async () => {
 			await integration.openTerminal('Test Terminal');
 
-			const event = telemetryService.events.find(e => e.name === 'copilotcli.terminal.open');
+			const event = telemetryService.events.find(
+				(e) => e.name === 'copilotcli.terminal.open',
+			);
 			expect(event).toBeDefined();
 			expect(event!.properties.sessionType).toBe('new');
 		});
 
 		it('should set sessionType to "resume" when cliArgs has --resume', async () => {
-			await integration.openTerminal('Test Terminal', ['--resume', 'session-123']);
+			await integration.openTerminal('Test Terminal', [
+				'--resume',
+				'session-123',
+			]);
 
-			const event = telemetryService.events.find(e => e.name === 'copilotcli.terminal.open');
+			const event = telemetryService.events.find(
+				(e) => e.name === 'copilotcli.terminal.open',
+			);
 			expect(event).toBeDefined();
 			expect(event!.properties.sessionType).toBe('resume');
 		});
@@ -249,15 +316,22 @@ describe('CopilotCLITerminalIntegration', () => {
 		it('should send telemetry with shell type', async () => {
 			await integration.openTerminal('Test Terminal');
 
-			const event = telemetryService.events.find(e => e.name === 'copilotcli.terminal.open');
+			const event = telemetryService.events.find(
+				(e) => e.name === 'copilotcli.terminal.open',
+			);
 			expect(event).toBeDefined();
 			expect(event!.properties.shell).toBe('zsh');
 		});
 
 		it('should pass cwd to terminal options', async () => {
-			await integration.openTerminal('Test Terminal', [], '/my/working/dir');
+			await integration.openTerminal(
+				'Test Terminal',
+				[],
+				'/my/working/dir',
+			);
 
-			const callArgs = terminalService.createTerminalSpy.mock.calls[0][0] as TerminalOptions;
+			const callArgs = terminalService.createTerminalSpy.mock
+				.calls[0][0] as TerminalOptions;
 			expect(callArgs.cwd).toBe('/my/working/dir');
 		});
 
@@ -278,23 +352,42 @@ describe('CopilotCLITerminalIntegration', () => {
 				authService as unknown as IAuthenticationService,
 				terminalService as unknown as ITerminalService,
 				envService as unknown as IEnvService,
-				{ trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), createSubLogger: () => ({}) } as unknown as ILogService,
+				{
+					trace: vi.fn(),
+					debug: vi.fn(),
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					createSubLogger: () => ({}),
+				} as unknown as ILogService,
 				telemetryService as unknown as ITelemetryService,
 				{ getConfig: () => true } as unknown as IConfigurationService,
 
-				{ requestResourceTrust: vi.fn().mockResolvedValue(true) } as unknown as IWorkspaceService,
+				{
+					requestResourceTrust: vi.fn().mockResolvedValue(true),
+				} as unknown as IWorkspaceService,
 
-				new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })),
+				new NoopOTelService(
+					resolveOTelConfig({
+						env: {},
+						extensionVersion: '0.0.0',
+						sessionId: 'test',
+					}),
+				),
 			);
 			disposables.add(freshIntegration);
 			await (freshIntegration as any).initialization;
 
 			await freshIntegration.openTerminal('Fallback Terminal');
 
-			const event = telemetryService.events.find(e => e.name === 'copilotcli.terminal.open');
+			const event = telemetryService.events.find(
+				(e) => e.name === 'copilotcli.terminal.open',
+			);
 			expect(event).toBeDefined();
 			expect(event!.properties.shell).toBe('unknown');
-			expect(event!.properties.terminalCreationMethod).toBe('fallbackTerminal');
+			expect(event!.properties.terminalCreationMethod).toBe(
+				'fallbackTerminal',
+			);
 		});
 
 		it('should use pythonTerminal method when python terminal is available and shell is not powershell', async () => {
@@ -306,31 +399,46 @@ describe('CopilotCLITerminalIntegration', () => {
 			};
 
 			// Access the internal pythonTerminalService and mock createTerminal to return a terminal
-			const pythonService = (integration as any).pythonTerminalService as PythonTerminalService;
-			(pythonService.createTerminal as ReturnType<typeof vi.fn>).mockResolvedValue(mockPythonTerminal);
+			const pythonService = (integration as any)
+				.pythonTerminalService as PythonTerminalService;
+			(
+				pythonService.createTerminal as ReturnType<typeof vi.fn>
+			).mockResolvedValue(mockPythonTerminal);
 
 			await integration.openTerminal('Python Terminal');
 
-			const event = telemetryService.events.find(e => e.name === 'copilotcli.terminal.open');
+			const event = telemetryService.events.find(
+				(e) => e.name === 'copilotcli.terminal.open',
+			);
 			expect(event).toBeDefined();
-			expect(event!.properties.terminalCreationMethod).toBe('pythonTerminal');
+			expect(event!.properties.terminalCreationMethod).toBe(
+				'pythonTerminal',
+			);
 			expect(event!.properties.shell).toBe('zsh');
 		});
 
 		it('should use shellArgsTerminal method when python terminal is not available', async () => {
 			await integration.openTerminal('Shell Args Terminal');
 
-			const event = telemetryService.events.find(e => e.name === 'copilotcli.terminal.open');
+			const event = telemetryService.events.find(
+				(e) => e.name === 'copilotcli.terminal.open',
+			);
 			expect(event).toBeDefined();
-			expect(event!.properties.terminalCreationMethod).toBe('shellArgsTerminal');
+			expect(event!.properties.terminalCreationMethod).toBe(
+				'shellArgsTerminal',
+			);
 		});
 
 		it('should prepend --clear to cliArgs', async () => {
-			await integration.openTerminal('Test Terminal', ['--resume', 'sess-1']);
+			await integration.openTerminal('Test Terminal', [
+				'--resume',
+				'sess-1',
+			]);
 
 			// For shellArgs terminal path, --clear gets removed before getShellInfo,
 			// but the final shell args should contain the original CLI args
-			const callArgs = terminalService.createTerminalSpy.mock.calls[0][0] as TerminalOptions;
+			const callArgs = terminalService.createTerminalSpy.mock
+				.calls[0][0] as TerminalOptions;
 			const shellArgs = callArgs.shellArgs as string[];
 			// Shell args should contain the cli args (--resume, sess-1) but not --clear
 			const joinedArgs = shellArgs.join(' ');
@@ -341,7 +449,8 @@ describe('CopilotCLITerminalIntegration', () => {
 		it('should use editor location by default', async () => {
 			await integration.openTerminal('Test Terminal');
 
-			const callArgs = terminalService.createTerminalSpy.mock.calls[0][0] as TerminalOptions;
+			const callArgs = terminalService.createTerminalSpy.mock
+				.calls[0][0] as TerminalOptions;
 			// Default location is 'editor' which maps to ViewColumn.Active
 			expect(callArgs.location).toEqual({ viewColumn: -1 }); // ViewColumn.Active
 		});
@@ -357,19 +466,36 @@ describe('CopilotCLITerminalIntegration', () => {
 				authService as unknown as IAuthenticationService,
 				terminalService as unknown as ITerminalService,
 				envService as unknown as IEnvService,
-				{ trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), createSubLogger: () => ({}) } as unknown as ILogService,
+				{
+					trace: vi.fn(),
+					debug: vi.fn(),
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					createSubLogger: () => ({}),
+				} as unknown as ILogService,
 				telemetryService as unknown as ITelemetryService,
 
 				{ getConfig: () => true } as unknown as IConfigurationService,
-				{ requestResourceTrust: vi.fn().mockResolvedValue(true) } as unknown as IWorkspaceService,
-				new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })),
+				{
+					requestResourceTrust: vi.fn().mockResolvedValue(true),
+				} as unknown as IWorkspaceService,
+				new NoopOTelService(
+					resolveOTelConfig({
+						env: {},
+						extensionVersion: '0.0.0',
+						sessionId: 'test',
+					}),
+				),
 			);
 			disposables.add(freshIntegration);
 			await (freshIntegration as any).initialization;
 
 			await freshIntegration.openTerminal('Bash Terminal');
 
-			const event = telemetryService.events.find(e => e.name === 'copilotcli.terminal.open');
+			const event = telemetryService.events.find(
+				(e) => e.name === 'copilotcli.terminal.open',
+			);
 			expect(event).toBeDefined();
 			expect(event!.properties.shell).toBe('bash');
 		});
@@ -388,7 +514,9 @@ describe('CopilotCLITerminalIntegration', () => {
 		it('should register a terminal profile provider', async () => {
 			expect(mockRegisterTerminalProfileProvider).toHaveBeenCalledWith(
 				'copilot-cli',
-				expect.objectContaining({ provideTerminalProfile: expect.any(Function) }),
+				expect.objectContaining({
+					provideTerminalProfile: expect.any(Function),
+				}),
 			);
 		});
 	});
@@ -397,15 +525,24 @@ describe('CopilotCLITerminalIntegration', () => {
 		it('should include location in telemetry', async () => {
 			await integration.openTerminal('Test', [], undefined, 'panel');
 
-			const event = telemetryService.events.find(e => e.name === 'copilotcli.terminal.open');
+			const event = telemetryService.events.find(
+				(e) => e.name === 'copilotcli.terminal.open',
+			);
 			expect(event).toBeDefined();
 			expect(event!.properties.location).toBe('panel');
 		});
 
 		it('should report editorBeside location', async () => {
-			await integration.openTerminal('Test', [], undefined, 'editorBeside');
+			await integration.openTerminal(
+				'Test',
+				[],
+				undefined,
+				'editorBeside',
+			);
 
-			const event = telemetryService.events.find(e => e.name === 'copilotcli.terminal.open');
+			const event = telemetryService.events.find(
+				(e) => e.name === 'copilotcli.terminal.open',
+			);
 			expect(event!.properties.location).toBe('editorBeside');
 		});
 	});
@@ -414,42 +551,61 @@ describe('CopilotCLITerminalIntegration', () => {
 		it('should set terminal name from parameter', async () => {
 			await integration.openTerminal('My Custom Name');
 
-			const callArgs = terminalService.createTerminalSpy.mock.calls[0][0] as TerminalOptions;
+			const callArgs = terminalService.createTerminalSpy.mock
+				.calls[0][0] as TerminalOptions;
 			expect(callArgs.name).toBe('My Custom Name');
 		});
 
 		it('should not include auth env vars when no session available', async () => {
 			await integration.openTerminal('No Auth Terminal');
 
-			const callArgs = terminalService.createTerminalSpy.mock.calls[0][0] as TerminalOptions;
+			const callArgs = terminalService.createTerminalSpy.mock
+				.calls[0][0] as TerminalOptions;
 			expect(callArgs.env).toBeUndefined();
 		});
 
 		it('should include auth env vars when session is available', async () => {
-			const authServiceWithSession = new class extends MockAuthenticationService {
-				override async getGitHubSession() {
-					return { accessToken: 'test-token-123' } as any;
-				}
-			}();
+			const authServiceWithSession =
+				new (class extends MockAuthenticationService {
+					override async getGitHubSession() {
+						return { accessToken: 'test-token-123' } as any;
+					}
+				})();
 
 			const freshIntegration = new CopilotCLITerminalIntegration(
 				new TestExtensionContext() as unknown as IVSCodeExtensionContext,
 				authServiceWithSession as unknown as IAuthenticationService,
 				terminalService as unknown as ITerminalService,
 				envService as unknown as IEnvService,
-				{ trace: vi.fn(), debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), createSubLogger: () => ({}) } as unknown as ILogService,
+				{
+					trace: vi.fn(),
+					debug: vi.fn(),
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					createSubLogger: () => ({}),
+				} as unknown as ILogService,
 				telemetryService as unknown as ITelemetryService,
 
 				{ getConfig: () => true } as unknown as IConfigurationService,
-				{ requestResourceTrust: vi.fn().mockResolvedValue(true) } as unknown as IWorkspaceService,
-				new NoopOTelService(resolveOTelConfig({ env: {}, extensionVersion: '0.0.0', sessionId: 'test' })),
+				{
+					requestResourceTrust: vi.fn().mockResolvedValue(true),
+				} as unknown as IWorkspaceService,
+				new NoopOTelService(
+					resolveOTelConfig({
+						env: {},
+						extensionVersion: '0.0.0',
+						sessionId: 'test',
+					}),
+				),
 			);
 			disposables.add(freshIntegration);
 			await (freshIntegration as any).initialization;
 
 			await freshIntegration.openTerminal('Auth Terminal');
 
-			const callArgs = terminalService.createTerminalSpy.mock.calls[0][0] as TerminalOptions;
+			const callArgs = terminalService.createTerminalSpy.mock
+				.calls[0][0] as TerminalOptions;
 			expect(callArgs.env).toEqual({
 				GH_TOKEN: 'test-token-123',
 				COPILOT_GITHUB_TOKEN: 'test-token-123',

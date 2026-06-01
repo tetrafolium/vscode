@@ -5,7 +5,11 @@
 
 import * as vscode from 'vscode';
 
-import { ContextKind, type ContextItem, type ILanguageContextService } from '../../../platform/languageServer/common/languageContextService';
+import {
+	ContextKind,
+	type ContextItem,
+	type ILanguageContextService,
+} from '../../../platform/languageServer/common/languageContextService';
 import * as protocol from '../common/serverProtocol';
 
 export type ResolvedRunnableResult = {
@@ -17,14 +21,17 @@ export type ResolvedRunnableResult = {
 	debugPath?: protocol.ContextRunnableResultId | undefined;
 };
 export namespace ResolvedRunnableResult {
-	export function from(result: protocol.ContextRunnableResult, items: protocol.FullContextItem[]): ResolvedRunnableResult {
+	export function from(
+		result: protocol.ContextRunnableResult,
+		items: protocol.FullContextItem[],
+	): ResolvedRunnableResult {
 		return {
 			id: result.id,
 			state: result.state,
 			priority: result.priority,
 			items: items,
 			cache: result.cache,
-			debugPath: result.debugPath
+			debugPath: result.debugPath,
 		};
 	}
 }
@@ -36,9 +43,15 @@ export type ContextComputedEvent = {
 	summary: ContextItemSummary;
 };
 
-export type OnCachePopulatedEvent = ContextComputedEvent & { items: ReadonlyArray<ResolvedRunnableResult> };
-export type OnContextComputedEvent = ContextComputedEvent & { items: ReadonlyArray<ContextItem> };
-export type OnContextComputedOnTimeoutEvent = ContextComputedEvent & { items: ReadonlyArray<ContextItem> };
+export type OnCachePopulatedEvent = ContextComputedEvent & {
+	items: ReadonlyArray<ResolvedRunnableResult>;
+};
+export type OnContextComputedEvent = ContextComputedEvent & {
+	items: ReadonlyArray<ContextItem>;
+};
+export type OnContextComputedOnTimeoutEvent = ContextComputedEvent & {
+	items: ReadonlyArray<ContextItem>;
+};
 
 export interface IInternalLanguageContextService extends ILanguageContextService {
 	onCachePopulated: vscode.Event<OnCachePopulatedEvent>;
@@ -52,7 +65,15 @@ export type Stats = {
 	snippets: number;
 	traits: number;
 	yielded: number;
-	items: { [runnable: string]: [state: string, numberOfItems: number, sizeInChars: number, emitMode: string, cacheScope: string] };
+	items: {
+		[runnable: string]: [
+			state: string,
+			numberOfItems: number,
+			sizeInChars: number,
+			emitMode: string,
+			cacheScope: string,
+		];
+	};
 };
 
 export namespace Stats {
@@ -63,11 +84,13 @@ export namespace Stats {
 			snippets: 0,
 			traits: 0,
 			yielded: 0,
-			items: {
-			},
+			items: {},
 		};
 	}
-	export function update(stats: Stats, runnableResult: ResolvedRunnableResult): void {
+	export function update(
+		stats: Stats,
+		runnableResult: ResolvedRunnableResult,
+	): void {
 		let size: number = 0;
 		for (const item of runnableResult.items) {
 			stats.total++;
@@ -82,7 +105,13 @@ export namespace Stats {
 					break;
 			}
 		}
-		stats.items[runnableResult.id] = [runnableResult.state, runnableResult.items.length, size, runnableResult.cache?.emitMode ?? 'none', runnableResult.cache?.scope.kind ?? 'notCached'];
+		stats.items[runnableResult.id] = [
+			runnableResult.state,
+			runnableResult.items.length,
+			size,
+			runnableResult.cache?.emitMode ?? 'none',
+			runnableResult.cache?.scope.kind ?? 'notCached',
+		];
 		stats.totalSize += size;
 	}
 	export function yielded(stats: Stats): void {
@@ -106,25 +135,25 @@ export interface ContextItemSummary {
 	totalTime: number;
 }
 export namespace ContextItemSummary {
-	export const DefaultExhausted: ContextItemSummary = Object.freeze<ContextItemSummary>({
-		path: [0],
-		errorData: undefined,
-		stats: Stats.create(),
-		cancelled: false,
-		timedOut: false,
-		tokenBudgetExhausted: true,
-		cachedItems: 0,
-		referencedItems: 0,
-		fromCache: false,
-		serverComputed: undefined,
-		serverTime: -1,
-		contextComputeTime: -1,
-		totalTime: 0,
-	});
+	export const DefaultExhausted: ContextItemSummary =
+		Object.freeze<ContextItemSummary>({
+			path: [0],
+			errorData: undefined,
+			stats: Stats.create(),
+			cancelled: false,
+			timedOut: false,
+			tokenBudgetExhausted: true,
+			cachedItems: 0,
+			referencedItems: 0,
+			fromCache: false,
+			serverComputed: undefined,
+			serverTime: -1,
+			contextComputeTime: -1,
+			totalTime: 0,
+		});
 }
 
 export class ContextItemResultBuilder implements ContextItemSummary {
-
 	private readonly seenRunnableResults: Set<protocol.ContextRunnableResultId>;
 	private readonly seenContextItems: Set<protocol.ContextItemKey>;
 
@@ -165,7 +194,10 @@ export class ContextItemResultBuilder implements ContextItemSummary {
 		this.counter = 0;
 	}
 
-	public updateResponse(result: protocol.ContextRequestResult, token: vscode.CancellationToken): void {
+	public updateResponse(
+		result: protocol.ContextRequestResult,
+		token: vscode.CancellationToken,
+	): void {
 		this.timedOut = result.timedOut;
 		this.tokenBudgetExhausted = result.exhausted;
 		this.serverTime = result.timings?.totalTime ?? -1;
@@ -174,7 +206,10 @@ export class ContextItemResultBuilder implements ContextItemSummary {
 		this.cancelled = token.isCancellationRequested;
 	}
 
-	public *update(runnableResult: ResolvedRunnableResult, fromCache: boolean = false): IterableIterator<{ item: ContextItem; size: number }> {
+	public *update(
+		runnableResult: ResolvedRunnableResult,
+		fromCache: boolean = false,
+	): IterableIterator<{ item: ContextItem; size: number }> {
 		if (this.seenRunnableResults.has(runnableResult.id)) {
 			return;
 		}
@@ -187,19 +222,32 @@ export class ContextItemResultBuilder implements ContextItemSummary {
 				}
 				this.seenContextItems.add(item.key);
 			}
-			const converted = ContextItemResultBuilder.doConvert(item, runnableResult.priority, (this.counter++).toString());
+			const converted = ContextItemResultBuilder.doConvert(
+				item,
+				runnableResult.priority,
+				(this.counter++).toString(),
+			);
 			if (converted === undefined) {
 				continue;
 			}
 			Stats.yielded(this.stats);
-			yield { item: converted, size: protocol.ContextItem.sizeInChars(item) };
+			yield {
+				item: converted,
+				size: protocol.ContextItem.sizeInChars(item),
+			};
 		}
 	}
 
-	public *convert(runnableResult: ResolvedRunnableResult): IterableIterator<ContextItem> {
+	public *convert(
+		runnableResult: ResolvedRunnableResult,
+	): IterableIterator<ContextItem> {
 		Stats.update(this.stats, runnableResult);
 		for (const item of runnableResult.items) {
-			const converted = ContextItemResultBuilder.doConvert(item, runnableResult.priority, (this.counter++).toString());
+			const converted = ContextItemResultBuilder.doConvert(
+				item,
+				runnableResult.priority,
+				(this.counter++).toString(),
+			);
 			if (converted === undefined) {
 				continue;
 			}
@@ -208,7 +256,11 @@ export class ContextItemResultBuilder implements ContextItemSummary {
 		}
 	}
 
-	private static doConvert(item: protocol.ContextItem, priority: number, id: string): ContextItem | undefined {
+	private static doConvert(
+		item: protocol.ContextItem,
+		priority: number,
+		id: string,
+	): ContextItem | undefined {
 		switch (item.kind) {
 			case protocol.ContextKind.Snippet:
 				return {
@@ -216,8 +268,10 @@ export class ContextItemResultBuilder implements ContextItemSummary {
 					id: id,
 					priority: priority,
 					uri: vscode.Uri.file(item.fileName),
-					additionalUris: item.additionalFileNames?.map(uri => vscode.Uri.file(uri)),
-					value: item.value
+					additionalUris: item.additionalFileNames?.map((uri) =>
+						vscode.Uri.file(uri),
+					),
+					value: item.value,
 				};
 			case protocol.ContextKind.Trait:
 				return {
@@ -225,7 +279,7 @@ export class ContextItemResultBuilder implements ContextItemSummary {
 					id: id,
 					priority: priority,
 					name: item.name,
-					value: item.value
+					value: item.value,
 				};
 		}
 		return undefined;

@@ -3,16 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
-import { IStorageService, StorageScope } from '../../../../platform/storage/common/storage.js';
-import { ChatContextKeys } from './actions/chatContextKeys.js';
-import { ILanguageModelsService } from './languageModels.js';
+import { IContextKeyService } from "../../../../platform/contextkey/common/contextkey.js";
+import {
+	IStorageService,
+	StorageScope,
+} from "../../../../platform/storage/common/storage.js";
+import { ChatContextKeys } from "./actions/chatContextKeys.js";
+import { ILanguageModelsService } from "./languageModels.js";
 
 /**
  * Storage key prefix for persisted model selections.
  * Full key format: `chat.currentLanguageModel.{location}[.{sessionType}]`
  */
-export const SELECTED_MODEL_STORAGE_KEY_PREFIX = 'chat.currentLanguageModel.';
+export const SELECTED_MODEL_STORAGE_KEY_PREFIX = "chat.currentLanguageModel.";
 
 /**
  * Builds the storage key used to persist the selected language model for a
@@ -21,7 +24,10 @@ export const SELECTED_MODEL_STORAGE_KEY_PREFIX = 'chat.currentLanguageModel.';
  * Matches the keys written by `chatInputPart.ts` so that other consumers
  * can read the persisted model selection without depending on widget internals.
  */
-export function getSelectedModelStorageKey(location: string, sessionType?: string): string {
+export function getSelectedModelStorageKey(
+	location: string,
+	sessionType?: string,
+): string {
 	if (sessionType) {
 		return `${SELECTED_MODEL_STORAGE_KEY_PREFIX}${location}.${sessionType}`;
 	}
@@ -44,16 +50,27 @@ export function getSelectedModelIdentifier(
 	storageService: IStorageService,
 ): string | undefined {
 	// Step 1: Context key (live, widget-scoped)
-	const contextKeyModelId = contextKeyService.getContextKeyValue<string>(ChatContextKeys.chatModelId.key);
+	const contextKeyModelId = contextKeyService.getContextKeyValue<string>(
+		ChatContextKeys.chatModelId.key,
+	);
 	if (contextKeyModelId) {
 		return contextKeyModelId;
 	}
 
 	// Step 2: Persisted storage (survives reload, written by chatInputPart)
-	const location = contextKeyService.getContextKeyValue<string>(ChatContextKeys.location.key) ?? 'panel';
-	const sessionType = contextKeyService.getContextKeyValue<string>(ChatContextKeys.chatSessionType.key) ?? '';
+	const location =
+		contextKeyService.getContextKeyValue<string>(
+			ChatContextKeys.location.key,
+		) ?? "panel";
+	const sessionType =
+		contextKeyService.getContextKeyValue<string>(
+			ChatContextKeys.chatSessionType.key,
+		) ?? "";
 	const candidateKeys = sessionType
-		? [getSelectedModelStorageKey(location, sessionType), getSelectedModelStorageKey(location)]
+		? [
+				getSelectedModelStorageKey(location, sessionType),
+				getSelectedModelStorageKey(location),
+			]
 		: [getSelectedModelStorageKey(location)];
 
 	for (const key of candidateKeys) {
@@ -86,17 +103,18 @@ export function getSelectedModelVendor(
 	}
 
 	// Try registry lookup first (handles both short and qualified IDs)
-	const shortId = modelId.includes('/') ? modelId.split('/').pop()! : modelId;
-	const metadata = languageModelsService.lookupLanguageModel(shortId)
-		?? languageModelsService.lookupLanguageModel(modelId);
+	const shortId = modelId.includes("/") ? modelId.split("/").pop()! : modelId;
+	const metadata =
+		languageModelsService.lookupLanguageModel(shortId) ??
+		languageModelsService.lookupLanguageModel(modelId);
 	if (metadata) {
 		return metadata.vendor;
 	}
 
 	// Fall back to vendor prefix from the persisted identifier
 	// (e.g. "copilot/gpt-4.1" or "customendpoint/ANT/claude-sonnet-4-6")
-	if (modelId.includes('/')) {
-		return modelId.split('/')[0];
+	if (modelId.includes("/")) {
+		return modelId.split("/")[0];
 	}
 
 	return undefined;

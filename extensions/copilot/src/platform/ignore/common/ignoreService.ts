@@ -8,12 +8,14 @@ import { createServiceIdentifier } from '../../../util/common/services';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { URI } from '../../../util/vs/base/common/uri';
 
-export const HAS_IGNORED_FILES_MESSAGE = l10n.t('\n\n**Note:** Some files were excluded from the context due to content exclusion rules. Click [here](https://docs.github.com/en/copilot/managing-github-copilot-in-your-organization/configuring-content-exclusions-for-github-copilot) to learn more.');
+export const HAS_IGNORED_FILES_MESSAGE = l10n.t(
+	'\n\n**Note:** Some files were excluded from the context due to content exclusion rules. Click [here](https://docs.github.com/en/copilot/managing-github-copilot-in-your-organization/configuring-content-exclusions-for-github-copilot) to learn more.',
+);
 
-export const IIgnoreService = createServiceIdentifier<IIgnoreService>('IIgnoreService');
+export const IIgnoreService =
+	createServiceIdentifier<IIgnoreService>('IIgnoreService');
 
 export interface IIgnoreService {
-
 	_serviceBrand: undefined;
 
 	isEnabled: boolean;
@@ -35,12 +37,11 @@ export interface IIgnoreService {
 }
 
 export class NullIgnoreService implements IIgnoreService {
-
 	declare readonly _serviceBrand: undefined;
 
 	static readonly Instance = new NullIgnoreService();
 
-	dispose(): void { }
+	dispose(): void {}
 
 	get isEnabled(): boolean {
 		return false;
@@ -50,7 +51,7 @@ export class NullIgnoreService implements IIgnoreService {
 		return false;
 	}
 
-	async init(): Promise<void> { }
+	async init(): Promise<void> {}
 
 	async isCopilotIgnored(file: URI): Promise<boolean> {
 		return false;
@@ -61,10 +62,13 @@ export class NullIgnoreService implements IIgnoreService {
 	}
 }
 
-export async function filterIngoredResources(ignoreService: IIgnoreService, resources: URI[]): Promise<URI[]> {
+export async function filterIngoredResources(
+	ignoreService: IIgnoreService,
+	resources: URI[],
+): Promise<URI[]> {
 	const result: URI[] = [];
 	for (const resource of resources) {
-		if (!await ignoreService.isCopilotIgnored(resource)) {
+		if (!(await ignoreService.isCopilotIgnored(resource))) {
 			result.push(resource);
 		}
 	}

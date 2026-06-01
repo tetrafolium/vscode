@@ -5,10 +5,20 @@
 
 import type { CancellationToken } from 'vscode';
 import { createServiceIdentifier } from '../../../util/common/services';
-import { AsyncIterableObject, AsyncIterableSource } from '../../../util/vs/base/common/async';
+import {
+	AsyncIterableObject,
+	AsyncIterableSource,
+} from '../../../util/vs/base/common/async';
 import { Event } from '../../../util/vs/base/common/event';
-import { FinishedCallback, IResponseDelta, OptionalChatRequestParams } from '../../networking/common/fetch';
-import { IChatEndpoint, IMakeChatRequestOptions } from '../../networking/common/networking';
+import {
+	FinishedCallback,
+	IResponseDelta,
+	OptionalChatRequestParams,
+} from '../../networking/common/fetch';
+import {
+	IChatEndpoint,
+	IMakeChatRequestOptions,
+} from '../../networking/common/networking';
 import { ChatResponse, ChatResponses } from './commonTypes';
 
 export interface Source {
@@ -24,21 +34,30 @@ export interface IFetchMLOptions extends IMakeChatRequestOptions {
 	requestOptions: OptionalChatRequestParams;
 }
 
-
-export const IChatMLFetcher = createServiceIdentifier<IChatMLFetcher>('IChatMLFetcher');
+export const IChatMLFetcher =
+	createServiceIdentifier<IChatMLFetcher>('IChatMLFetcher');
 
 export interface IChatMLFetcher {
-
 	readonly _serviceBrand: undefined;
 
-	readonly onDidMakeChatMLRequest: Event<{ readonly model: string; readonly source?: Source; readonly tokenCount?: number }>;
+	readonly onDidMakeChatMLRequest: Event<{
+		readonly model: string;
+		readonly source?: Source;
+		readonly tokenCount?: number;
+	}>;
 
-	fetchOne(options: IFetchMLOptions, token: CancellationToken): Promise<ChatResponse>;
+	fetchOne(
+		options: IFetchMLOptions,
+		token: CancellationToken,
+	): Promise<ChatResponse>;
 
 	/**
 	 * Note: the returned array of strings may be less than `n` (e.g., in case there were errors during streaming)
 	 */
-	fetchMany(options: IFetchMLOptions, token: CancellationToken): Promise<ChatResponses>;
+	fetchMany(
+		options: IFetchMLOptions,
+		token: CancellationToken,
+	): Promise<ChatResponses>;
 }
 
 interface IResponsePartWithText extends IResponsePart {
@@ -46,7 +65,6 @@ interface IResponsePartWithText extends IResponsePart {
 }
 
 export class FetchStreamSource {
-
 	private _stream = new AsyncIterableSource<IResponsePart>();
 	private _paused?: (IResponsePartWithText | undefined)[];
 
@@ -57,7 +75,7 @@ export class FetchStreamSource {
 		return this._stream.asyncIterable;
 	}
 
-	constructor() { }
+	constructor() {}
 
 	pause() {
 		this._paused ??= [];
@@ -89,14 +107,20 @@ export class FetchStreamSource {
 			// We can only display vulnerabilities inside codeblocks, and it's ok to discard annotations that fell outside of them
 			const numTripleBackticks = text.match(/(^|\n)```/g)?.length ?? 0;
 			const insideCodeblock = numTripleBackticks % 2 === 1;
-			if (!insideCodeblock || text.match(/(^|\n)```\w*\s*$/)) { // Not inside a codeblock, or right on the start triple-backtick of a codeblock
+			if (!insideCodeblock || text.match(/(^|\n)```\w*\s*$/)) {
+				// Not inside a codeblock, or right on the start triple-backtick of a codeblock
 				delta.codeVulnAnnotations = undefined;
 			}
 		}
 
 		if (delta.codeVulnAnnotations) {
-			delta.codeVulnAnnotations = delta.codeVulnAnnotations.filter(annotation => !this._seenAnnotationTypes.has(annotation.details.type));
-			delta.codeVulnAnnotations.forEach(annotation => this._seenAnnotationTypes.add(annotation.details.type));
+			delta.codeVulnAnnotations = delta.codeVulnAnnotations.filter(
+				(annotation) =>
+					!this._seenAnnotationTypes.has(annotation.details.type),
+			);
+			delta.codeVulnAnnotations.forEach((annotation) =>
+				this._seenAnnotationTypes.add(annotation.details.type),
+			);
 		}
 		this._stream.emitOne({ delta });
 	}
@@ -126,15 +150,28 @@ export class FetchStreamRecorder {
 		return this._firstTokenEmittedTime;
 	}
 
-	constructor(
-		callback: FinishedCallback | undefined
-	) {
-		this.callback = async (text: string, index: number, delta: IResponseDelta): Promise<number | undefined> => {
-			if (this._firstTokenEmittedTime === undefined && (delta.text || delta.beginToolCalls || (typeof delta.thinking?.text === 'string' && delta.thinking?.text || delta.thinking?.text?.length) || delta.copilotToolCalls || delta.copilotToolCallStreamUpdates)) {
+	constructor(callback: FinishedCallback | undefined) {
+		this.callback = async (
+			text: string,
+			index: number,
+			delta: IResponseDelta,
+		): Promise<number | undefined> => {
+			if (
+				this._firstTokenEmittedTime === undefined &&
+				(delta.text ||
+					delta.beginToolCalls ||
+					(typeof delta.thinking?.text === 'string' &&
+						delta.thinking?.text) ||
+					delta.thinking?.text?.length ||
+					delta.copilotToolCalls ||
+					delta.copilotToolCallStreamUpdates)
+			) {
 				this._firstTokenEmittedTime = Date.now();
 			}
 
-			const result = callback ? await callback(text, index, delta) : undefined;
+			const result = callback
+				? await callback(text, index, delta)
+				: undefined;
 			this.deltas.push(delta);
 			return result;
 		};

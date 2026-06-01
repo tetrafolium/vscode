@@ -15,25 +15,28 @@
 // to report the results back to the caller. When the tests are finished, return
 // a possible error to the callback or null if none.
 
-const path = require('path');
-const testRunner = require('../../../../../test/integration/electron/testrunner');
+const path = require("path");
+const testRunner = require("../../../../../test/integration/electron/testrunner");
 
-const suite = 'Integration TypeScript Tests';
+const suite = "Integration TypeScript Tests";
 
-const options: import('mocha').MochaOptions = {
-	ui: 'tdd',
+const options: import("mocha").MochaOptions = {
+	ui: "tdd",
 	color: true,
-	timeout: 60000
+	timeout: 60000,
 };
 
 if (process.env.BUILD_ARTIFACTSTAGINGDIRECTORY) {
-	options.reporter = 'mocha-multi-reporters';
+	options.reporter = "mocha-multi-reporters";
 	options.reporterOptions = {
-		reporterEnabled: 'spec, mocha-junit-reporter',
+		reporterEnabled: "spec, mocha-junit-reporter",
 		mochaJunitReporterReporterOptions: {
 			testsuitesTitle: `${suite} ${process.platform}`,
-			mochaFile: path.join(process.env.BUILD_ARTIFACTSTAGINGDIRECTORY, `test-results/${process.platform}-${process.arch}-${suite.toLowerCase().replace(/[^\w]/g, '-')}-results.xml`)
-		}
+			mochaFile: path.join(
+				process.env.BUILD_ARTIFACTSTAGINGDIRECTORY,
+				`test-results/${process.platform}-${process.arch}-${suite.toLowerCase().replace(/[^\w]/g, "-")}-results.xml`,
+			),
+		},
 	};
 }
 

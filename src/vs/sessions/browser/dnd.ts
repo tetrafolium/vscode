@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../base/common/uri.js';
+import { URI } from "../../base/common/uri.js";
 
 /**
  * Code data transfer mime types specific to the Agents window.
  */
 export const SessionsDataTransfers = {
 	/** Mime type used to identify a session being dragged within the application. */
-	SESSION: 'application/vnd.code.session',
+	SESSION: "application/vnd.code.session",
 };
 
 /**
@@ -19,9 +19,8 @@ export const SessionsDataTransfers = {
  * {@link DraggedEditorIdentifier} pattern.
  */
 export class DraggedSessionIdentifier {
-
 	constructor(
 		readonly sessionId: string,
 		readonly resource: URI,
-	) { }
+	) {}
 }

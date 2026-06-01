@@ -3,7 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export type IndentationTree<L> = TopNode<L> | VirtualNode<L> | LineNode<L> | BlankNode<L>;
+export type IndentationTree<L> =
+	| TopNode<L>
+	| VirtualNode<L>
+	| LineNode<L>
+	| BlankNode<L>;
 export type IndentationSubTree<L> = Exclude<IndentationTree<L>, TopNode<L>>;
 
 interface NodeBase<L> {
@@ -44,7 +48,11 @@ interface BlankNode<L> extends NodeBase<L> {
 }
 
 /** Construct a virtual node */
-export function virtualNode<L>(indentation: number, subs: IndentationSubTree<L>[], label?: L): VirtualNode<L> {
+export function virtualNode<L>(
+	indentation: number,
+	subs: IndentationSubTree<L>[],
+	label?: L,
+): VirtualNode<L> {
 	return { type: 'virtual', indentation, subs, label };
 }
 
@@ -54,7 +62,7 @@ export function lineNode<L>(
 	lineNumber: number,
 	sourceLine: string,
 	subs: IndentationSubTree<L>[],
-	label?: L
+	label?: L,
 ): LineNode<L> {
 	if (sourceLine === '') {
 		throw new Error('Cannot create a line node with an empty source line');
@@ -102,9 +110,16 @@ export function isTop<L>(tree: IndentationTree<L>): tree is TopNode<L> {
  *
  * This is destructive and modifies the tree.
  */
-export function cutTreeAfterLine(tree: IndentationTree<unknown>, lineNumber: number) {
+export function cutTreeAfterLine(
+	tree: IndentationTree<unknown>,
+	lineNumber: number,
+) {
 	function cut(tree: IndentationTree<unknown>): boolean {
-		if (!isVirtual(tree) && !isTop(tree) && tree.lineNumber === lineNumber) {
+		if (
+			!isVirtual(tree) &&
+			!isTop(tree) &&
+			tree.lineNumber === lineNumber
+		) {
 			tree.subs = [];
 			return true;
 		}
@@ -122,11 +137,17 @@ export function cutTreeAfterLine(tree: IndentationTree<unknown>, lineNumber: num
 /**
  * A type expressing that JSON.parse(JSON.stringify(x)) === x.
  */
-export type JsonStable = string | number | JsonStable[] | { [key: string]: JsonStable };
+export type JsonStable =
+	| string
+	| number
+	| JsonStable[]
+	| { [key: string]: JsonStable };
 
 /**
  * Return a deep duplicate of the tree -- this will only work if the labels can be stringified to parseable JSON.
  */
-export function duplicateTree<L extends JsonStable>(tree: IndentationTree<L>): IndentationTree<L> {
+export function duplicateTree<L extends JsonStable>(
+	tree: IndentationTree<L>,
+): IndentationTree<L> {
 	return <IndentationTree<L>>JSON.parse(JSON.stringify(tree));
 }

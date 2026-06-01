@@ -26,21 +26,31 @@ export class VirtualTool {
 		public contents: (LanguageModelToolInformation | VirtualTool)[] = [],
 	) {
 		if (!name.startsWith(VIRTUAL_TOOL_NAME_PREFIX)) {
-			throw new Error(`Virtual tool name must start with '${VIRTUAL_TOOL_NAME_PREFIX}'`);
+			throw new Error(
+				`Virtual tool name must start with '${VIRTUAL_TOOL_NAME_PREFIX}'`,
+			);
 		}
 	}
 
 	public cloneWithNewName(name: string) {
-		const vt = new VirtualTool(name, this.description, this.lastUsedOnTurn, { ...this.metadata }, this.contents);
+		const vt = new VirtualTool(
+			name,
+			this.description,
+			this.lastUsedOnTurn,
+			{ ...this.metadata },
+			this.contents,
+		);
 		vt.isExpanded = this.isExpanded;
 		return vt;
 	}
 
 	public copyStateFrom(other: VirtualTool) {
 		this.isExpanded = other.isExpanded;
-		this.metadata.wasExpandedByDefault = other.metadata.wasExpandedByDefault;
+		this.metadata.wasExpandedByDefault =
+			other.metadata.wasExpandedByDefault;
 		this.metadata.canBeCollapsed = other.metadata.canBeCollapsed;
-		this.metadata.wasEmbeddingsMatched = other.metadata.wasEmbeddingsMatched;
+		this.metadata.wasEmbeddingsMatched =
+			other.metadata.wasEmbeddingsMatched;
 		this.lastUsedOnTurn = other.lastUsedOnTurn;
 	}
 
@@ -48,10 +58,12 @@ export class VirtualTool {
 	 * Looks up a tool. Update the {@link lastUsedOnTurn} of all virtual tools
 	 * it touches.
 	 */
-	public find(name: string): undefined | {
-		tool: VirtualTool | LanguageModelToolInformation;
-		path: VirtualTool[];
-	} {
+	public find(name: string):
+		| undefined
+		| {
+				tool: VirtualTool | LanguageModelToolInformation;
+				path: VirtualTool[];
+		  } {
 		if (this.name === name) {
 			return { tool: this, path: [] };
 		}

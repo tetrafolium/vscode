@@ -3,26 +3,36 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { DocumentSelector } from '../../configuration/documentSelector';
-import { LanguageDescription } from '../../configuration/languageDescription';
-import { CachedResponse } from '../../tsServer/cachedResponse';
-import type * as Proto from '../../tsServer/protocol/protocol';
-import * as PConst from '../../tsServer/protocol/protocol.const';
-import { ExecutionTarget } from '../../tsServer/server';
-import * as typeConverters from '../../typeConverters';
-import { ClientCapability, ITypeScriptServiceClient } from '../../typescriptService';
-import { ResourceUnifiedConfigValue } from '../../utils/configuration';
-import { conditionalRegistration, requireHasModifiedUnifiedConfig, requireSomeCapability } from '../util/dependentRegistration';
-import { ReferencesCodeLens, TypeScriptBaseCodeLensProvider, getSymbolRange } from './baseCodeLensProvider';
+import * as vscode from "vscode";
+import { DocumentSelector } from "../../configuration/documentSelector";
+import { LanguageDescription } from "../../configuration/languageDescription";
+import { CachedResponse } from "../../tsServer/cachedResponse";
+import type * as Proto from "../../tsServer/protocol/protocol";
+import * as PConst from "../../tsServer/protocol/protocol.const";
+import { ExecutionTarget } from "../../tsServer/server";
+import * as typeConverters from "../../typeConverters";
+import {
+	ClientCapability,
+	ITypeScriptServiceClient,
+} from "../../typescriptService";
+import { ResourceUnifiedConfigValue } from "../../utils/configuration";
+import {
+	conditionalRegistration,
+	requireHasModifiedUnifiedConfig,
+	requireSomeCapability,
+} from "../util/dependentRegistration";
+import {
+	ReferencesCodeLens,
+	TypeScriptBaseCodeLensProvider,
+	getSymbolRange,
+} from "./baseCodeLensProvider";
 
 const Config = Object.freeze({
-	enabled: 'referencesCodeLens.enabled',
-	showOnAllFunctions: 'referencesCodeLens.showOnAllFunctions',
+	enabled: "referencesCodeLens.enabled",
+	showOnAllFunctions: "referencesCodeLens.showOnAllFunctions",
 });
 
 export class TypeScriptReferencesCodeLensProvider extends TypeScriptBaseCodeLensProvider {
-
 	private readonly _enabled: ResourceUnifiedConfigValue<boolean>;
 	private readonly _showOnAllFunctions: ResourceUnifiedConfigValue<boolean>;
 
@@ -32,14 +42,23 @@ export class TypeScriptReferencesCodeLensProvider extends TypeScriptBaseCodeLens
 	) {
 		super(client, _cachedResponse);
 
-		this._enabled = this._register(new ResourceUnifiedConfigValue<boolean>(Config.enabled, false));
+		this._enabled = this._register(
+			new ResourceUnifiedConfigValue<boolean>(Config.enabled, false),
+		);
 		this._register(this._enabled.onDidChange(() => this.changeEmitter.fire()));
 
-		this._showOnAllFunctions = this._register(new ResourceUnifiedConfigValue<boolean>(Config.showOnAllFunctions, false));
-		this._register(this._showOnAllFunctions.onDidChange(() => this.changeEmitter.fire()));
+		this._showOnAllFunctions = this._register(
+			new ResourceUnifiedConfigValue<boolean>(Config.showOnAllFunctions, false),
+		);
+		this._register(
+			this._showOnAllFunctions.onDidChange(() => this.changeEmitter.fire()),
+		);
 	}
 
-	override async provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): Promise<ReferencesCodeLens[]> {
+	override async provideCodeLenses(
+		document: vscode.TextDocument,
+		token: vscode.CancellationToken,
+	): Promise<ReferencesCodeLens[]> {
 		const enabled = this._enabled.getValue(document);
 		if (!enabled) {
 			return [];
@@ -48,29 +67,40 @@ export class TypeScriptReferencesCodeLensProvider extends TypeScriptBaseCodeLens
 		return super.provideCodeLenses(document, token);
 	}
 
-	public async resolveCodeLens(codeLens: ReferencesCodeLens, token: vscode.CancellationToken): Promise<vscode.CodeLens> {
-		const args = typeConverters.Position.toFileLocationRequestArgs(codeLens.file, codeLens.range.start);
-		const response = await this.client.execute('references', args, token, {
+	public async resolveCodeLens(
+		codeLens: ReferencesCodeLens,
+		token: vscode.CancellationToken,
+	): Promise<vscode.CodeLens> {
+		const args = typeConverters.Position.toFileLocationRequestArgs(
+			codeLens.file,
+			codeLens.range.start,
+		);
+		const response = await this.client.execute("references", args, token, {
 			lowPriority: true,
 			executionTarget: ExecutionTarget.Semantic,
 			cancelOnResourceChange: codeLens.document,
 		});
-		if (response.type !== 'response' || !response.body) {
-			codeLens.command = response.type === 'cancelled'
-				? TypeScriptBaseCodeLensProvider.cancelledCommand
-				: TypeScriptBaseCodeLensProvider.errorCommand;
+		if (response.type !== "response" || !response.body) {
+			codeLens.command =
+				response.type === "cancelled"
+					? TypeScriptBaseCodeLensProvider.cancelledCommand
+					: TypeScriptBaseCodeLensProvider.errorCommand;
 			return codeLens;
 		}
 
 		const locations = response.body.refs
-			.filter(reference => !reference.isDefinition)
-			.map(reference =>
-				typeConverters.Location.fromTextSpan(this.client.toResource(reference.file), reference));
+			.filter((reference) => !reference.isDefinition)
+			.map((reference) =>
+				typeConverters.Location.fromTextSpan(
+					this.client.toResource(reference.file),
+					reference,
+				),
+			);
 
 		codeLens.command = {
 			title: this.getCodeLensLabel(locations),
-			command: locations.length ? 'editor.action.showReferences' : '',
-			arguments: [codeLens.document, codeLens.range.start, locations]
+			command: locations.length ? "editor.action.showReferences" : "",
+			arguments: [codeLens.document, codeLens.range.start, locations],
 		};
 		return codeLens;
 	}
@@ -84,7 +114,7 @@ export class TypeScriptReferencesCodeLensProvider extends TypeScriptBaseCodeLens
 	protected extractSymbol(
 		document: vscode.TextDocument,
 		item: Proto.NavigationTree,
-		parent: Proto.NavigationTree | undefined
+		parent: Proto.NavigationTree | undefined,
 	): vscode.Range | undefined {
 		if (parent && parent.kind === PConst.Kind.enum) {
 			return getSymbolRange(document, item);
@@ -109,7 +139,7 @@ export class TypeScriptReferencesCodeLensProvider extends TypeScriptBaseCodeLens
 				break;
 
 			case PConst.Kind.class:
-				if (item.text === '<class>') {
+				if (item.text === "<class>") {
 					break;
 				}
 				return getSymbolRange(document, item);
@@ -126,8 +156,11 @@ export class TypeScriptReferencesCodeLensProvider extends TypeScriptBaseCodeLens
 			case PConst.Kind.memberVariable:
 				// Don't show if child and parent have same start
 				// For https://github.com/microsoft/vscode/issues/90396
-				if (parent &&
-					typeConverters.Position.fromLocation(parent.spans[0].start).isEqual(typeConverters.Position.fromLocation(item.spans[0].start))
+				if (
+					parent &&
+					typeConverters.Position.fromLocation(parent.spans[0].start).isEqual(
+						typeConverters.Position.fromLocation(item.spans[0].start),
+					)
 				) {
 					return undefined;
 				}
@@ -152,11 +185,16 @@ export function register(
 	client: ITypeScriptServiceClient,
 	cachedResponse: CachedResponse<Proto.NavTreeResponse>,
 ) {
-	return conditionalRegistration([
-		requireHasModifiedUnifiedConfig(Config.enabled, language.id),
-		requireSomeCapability(client, ClientCapability.Semantic),
-	], () => {
-		return vscode.languages.registerCodeLensProvider(selector.semantic,
-			new TypeScriptReferencesCodeLensProvider(client, cachedResponse));
-	});
+	return conditionalRegistration(
+		[
+			requireHasModifiedUnifiedConfig(Config.enabled, language.id),
+			requireSomeCapability(client, ClientCapability.Semantic),
+		],
+		() => {
+			return vscode.languages.registerCodeLensProvider(
+				selector.semantic,
+				new TypeScriptReferencesCodeLensProvider(client, cachedResponse),
+			);
+		},
+	);
 }

@@ -8,5 +8,5 @@ export enum ResultType {
 	Cache,
 	TypingAsSuggested,
 	Cycling,
-	Async
+	Async,
 }

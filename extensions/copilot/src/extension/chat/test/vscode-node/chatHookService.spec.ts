@@ -4,9 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { ChatHookCommand, ChatHookResult, ChatHookResultKind, ChatRequestHooks, Uri } from 'vscode';
-import { IPostToolUseHookResult, IPreToolUseHookResult } from '../../../../platform/chat/common/chatHookService';
-import { HookCommandResultKind, IHookCommandResult } from '../../../../platform/chat/common/hookExecutor';
+import type {
+	ChatHookCommand,
+	ChatHookResult,
+	ChatHookResultKind,
+	ChatRequestHooks,
+	Uri,
+} from 'vscode';
+import {
+	IPostToolUseHookResult,
+	IPreToolUseHookResult,
+} from '../../../../platform/chat/common/chatHookService';
+import {
+	HookCommandResultKind,
+	IHookCommandResult,
+} from '../../../../platform/chat/common/hookExecutor';
 import { IToolValidationResult } from '../../../tools/common/toolsService';
 import { isCompatibleHookEventName } from '../../vscode-node/chatHookService';
 
@@ -20,12 +32,26 @@ function cmd(command: string, cwd?: Uri): ChatHookCommand {
  * This mirrors the real implementation's result conversion and iteration logic.
  */
 class TestableExecuteHookService {
-	public executorCalls: Array<{ hookCommand: ChatHookCommand; input: unknown }> = [];
-	public executorHandler: (hookCommand: ChatHookCommand, input: unknown) => IHookCommandResult = () => ({ kind: HookCommandResultKind.Success, result: '' });
+	public executorCalls: Array<{
+		hookCommand: ChatHookCommand;
+		input: unknown;
+	}> = [];
+	public executorHandler: (
+		hookCommand: ChatHookCommand,
+		input: unknown,
+	) => IHookCommandResult = () => ({
+		kind: HookCommandResultKind.Success,
+		result: '',
+	});
 	public transcriptPath: Uri | undefined;
 	public flushedSessionIds: string[] = [];
 
-	async executeHook(hookType: string, hooks: ChatRequestHooks | undefined, input: unknown, sessionId?: string): Promise<ChatHookResult[]> {
+	async executeHook(
+		hookType: string,
+		hooks: ChatRequestHooks | undefined,
+		input: unknown,
+		sessionId?: string,
+	): Promise<ChatHookResult[]> {
 		if (!hooks) {
 			return [];
 		}
@@ -43,11 +69,14 @@ class TestableExecuteHookService {
 			timestamp: new Date().toISOString(),
 			hook_event_name: hookType,
 			...(sessionId ? { session_id: sessionId } : undefined),
-			...(this.transcriptPath ? { transcript_path: this.transcriptPath } : undefined),
+			...(this.transcriptPath
+				? { transcript_path: this.transcriptPath }
+				: undefined),
 		};
-		const fullInput = (typeof input === 'object' && input !== null)
-			? { ...commonInput, ...input }
-			: commonInput;
+		const fullInput =
+			typeof input === 'object' && input !== null
+				? { ...commonInput, ...input }
+				: commonInput;
 
 		const results: ChatHookResult[] = [];
 
@@ -57,7 +86,10 @@ class TestableExecuteHookService {
 					? { ...fullInput, cwd: hookCommand.cwd }
 					: fullInput;
 				this.executorCalls.push({ hookCommand, input: commandInput });
-				const commandResult = this.executorHandler(hookCommand, commandInput);
+				const commandResult = this.executorHandler(
+					hookCommand,
+					commandInput,
+				);
 				const result = this._toHookResult(hookType, commandResult);
 				results.push(result);
 
@@ -68,7 +100,8 @@ class TestableExecuteHookService {
 				results.push({
 					resultKind: 'warning',
 					output: undefined,
-					warningMessage: err instanceof Error ? err.message : String(err),
+					warningMessage:
+						err instanceof Error ? err.message : String(err),
 				});
 			}
 		}
@@ -76,25 +109,50 @@ class TestableExecuteHookService {
 		return results;
 	}
 
-	private _toHookResult(hookType: string, commandResult: IHookCommandResult): ChatHookResult {
+	private _toHookResult(
+		hookType: string,
+		commandResult: IHookCommandResult,
+	): ChatHookResult {
 		switch (commandResult.kind) {
 			case HookCommandResultKind.Error: {
-				const message = typeof commandResult.result === 'string' ? commandResult.result : JSON.stringify(commandResult.result);
+				const message =
+					typeof commandResult.result === 'string'
+						? commandResult.result
+						: JSON.stringify(commandResult.result);
 				return { resultKind: 'error', output: message };
 			}
 			case HookCommandResultKind.NonBlockingError: {
-				const errorMessage = typeof commandResult.result === 'string' ? commandResult.result : JSON.stringify(commandResult.result);
-				return { resultKind: 'warning', output: undefined, warningMessage: errorMessage };
+				const errorMessage =
+					typeof commandResult.result === 'string'
+						? commandResult.result
+						: JSON.stringify(commandResult.result);
+				return {
+					resultKind: 'warning',
+					output: undefined,
+					warningMessage: errorMessage,
+				};
 			}
 			case HookCommandResultKind.Success: {
 				if (typeof commandResult.result !== 'object') {
-					return { resultKind: 'success', output: commandResult.result };
+					return {
+						resultKind: 'success',
+						output: commandResult.result,
+					};
 				}
 
-				const resultObj = commandResult.result as Record<string, unknown>;
-				const stopReason = typeof resultObj['stopReason'] === 'string' ? resultObj['stopReason'] : undefined;
+				const resultObj = commandResult.result as Record<
+					string,
+					unknown
+				>;
+				const stopReason =
+					typeof resultObj['stopReason'] === 'string'
+						? resultObj['stopReason']
+						: undefined;
 				const continueFlag = resultObj['continue'];
-				const systemMessage = typeof resultObj['systemMessage'] === 'string' ? resultObj['systemMessage'] : undefined;
+				const systemMessage =
+					typeof resultObj['systemMessage'] === 'string'
+						? resultObj['systemMessage']
+						: undefined;
 
 				let effectiveStopReason = stopReason;
 				if (continueFlag === false && !effectiveStopReason) {
@@ -103,21 +161,39 @@ class TestableExecuteHookService {
 
 				// Check hookEventName at top level — if present and mismatched, skip this result
 				const topLevelHookEventName = resultObj['hookEventName'];
-				if (typeof topLevelHookEventName === 'string' && !isCompatibleHookEventName(topLevelHookEventName, hookType)) {
+				if (
+					typeof topLevelHookEventName === 'string' &&
+					!isCompatibleHookEventName(topLevelHookEventName, hookType)
+				) {
 					return { resultKind: 'success', output: undefined };
 				}
 
 				// Check hookEventName inside hookSpecificOutput — if mismatched, strip hookSpecificOutput but keep the rest
 				let stripHookSpecificOutput = false;
 				const hookSpecificOutput = resultObj['hookSpecificOutput'];
-				if (typeof hookSpecificOutput === 'object' && hookSpecificOutput !== null) {
-					const nestedHookEventName = (hookSpecificOutput as Record<string, unknown>)['hookEventName'];
-					if (typeof nestedHookEventName === 'string' && !isCompatibleHookEventName(nestedHookEventName, hookType)) {
+				if (
+					typeof hookSpecificOutput === 'object' &&
+					hookSpecificOutput !== null
+				) {
+					const nestedHookEventName = (
+						hookSpecificOutput as Record<string, unknown>
+					)['hookEventName'];
+					if (
+						typeof nestedHookEventName === 'string' &&
+						!isCompatibleHookEventName(
+							nestedHookEventName,
+							hookType,
+						)
+					) {
 						stripHookSpecificOutput = true;
 					}
 				}
 
-				const commonFields = new Set(['continue', 'stopReason', 'systemMessage']);
+				const commonFields = new Set([
+					'continue',
+					'stopReason',
+					'systemMessage',
+				]);
 				if (stripHookSpecificOutput) {
 					commonFields.add('hookSpecificOutput');
 				}
@@ -132,11 +208,18 @@ class TestableExecuteHookService {
 					resultKind: 'success',
 					stopReason: effectiveStopReason,
 					warningMessage: systemMessage,
-					output: Object.keys(hookOutput).length > 0 ? hookOutput : undefined,
+					output:
+						Object.keys(hookOutput).length > 0
+							? hookOutput
+							: undefined,
 				};
 			}
 			default:
-				return { resultKind: 'warning', warningMessage: `Unexpected hook command result kind: ${(commandResult as IHookCommandResult).kind}`, output: undefined };
+				return {
+					resultKind: 'warning',
+					warningMessage: `Unexpected hook command result kind: ${(commandResult as IHookCommandResult).kind}`,
+					output: undefined,
+				};
 		}
 	}
 }
@@ -154,22 +237,43 @@ describe('ChatHookService.executeHook', () => {
 	});
 
 	it('returns empty array when no commands for hook type', async () => {
-		const results = await service.executeHook('Stop', { PreToolUse: [cmd('echo test')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ PreToolUse: [cmd('echo test')] },
+			{},
+		);
 		expect(results).toEqual([]);
 	});
 
 	it('executes hook and returns success result', async () => {
-		service.executorHandler = () => ({ kind: HookCommandResultKind.Success, result: { decision: 'block', reason: 'test' } });
-		const results = await service.executeHook('Stop', { Stop: [cmd('echo test')] }, {});
+		service.executorHandler = () => ({
+			kind: HookCommandResultKind.Success,
+			result: { decision: 'block', reason: 'test' },
+		});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('echo test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
-		expect(results[0].output).toEqual({ decision: 'block', reason: 'test' });
+		expect(results[0].output).toEqual({
+			decision: 'block',
+			reason: 'test',
+		});
 	});
 
 	it('converts exit code 2 to error result with message in output', async () => {
-		service.executorHandler = () => ({ kind: HookCommandResultKind.Error, result: 'fatal error' });
-		const results = await service.executeHook('Stop', { Stop: [cmd('fail')] }, {});
+		service.executorHandler = () => ({
+			kind: HookCommandResultKind.Error,
+			result: 'fatal error',
+		});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('fail')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('error');
@@ -182,11 +286,18 @@ describe('ChatHookService.executeHook', () => {
 		service.executorHandler = () => {
 			callCount++;
 			if (callCount === 1) {
-				return { kind: HookCommandResultKind.Error, result: 'error from first' };
+				return {
+					kind: HookCommandResultKind.Error,
+					result: 'error from first',
+				};
 			}
 			return { kind: HookCommandResultKind.Success, result: 'second ok' };
 		};
-		const results = await service.executeHook('Stop', { Stop: [cmd('first'), cmd('second')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('first'), cmd('second')] },
+			{},
+		);
 
 		expect(results).toHaveLength(2);
 		expect(callCount).toBe(2);
@@ -195,8 +306,15 @@ describe('ChatHookService.executeHook', () => {
 	});
 
 	it('converts non-blocking error to warning', async () => {
-		service.executorHandler = () => ({ kind: HookCommandResultKind.NonBlockingError, result: 'warning msg' });
-		const results = await service.executeHook('Stop', { Stop: [cmd('warn')] }, {});
+		service.executorHandler = () => ({
+			kind: HookCommandResultKind.NonBlockingError,
+			result: 'warning msg',
+		});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('warn')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('warning');
@@ -209,11 +327,18 @@ describe('ChatHookService.executeHook', () => {
 		service.executorHandler = () => {
 			callCount++;
 			if (callCount === 1) {
-				return { kind: HookCommandResultKind.Success, result: { stopReason: 'stop here' } };
+				return {
+					kind: HookCommandResultKind.Success,
+					result: { stopReason: 'stop here' },
+				};
 			}
 			return { kind: HookCommandResultKind.Success, result: 'second' };
 		};
-		const results = await service.executeHook('Stop', { Stop: [cmd('first'), cmd('second')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('first'), cmd('second')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(callCount).toBe(1);
@@ -224,9 +349,16 @@ describe('ChatHookService.executeHook', () => {
 		let callCount = 0;
 		service.executorHandler = () => {
 			callCount++;
-			return { kind: HookCommandResultKind.Success, result: { continue: false } };
+			return {
+				kind: HookCommandResultKind.Success,
+				result: { continue: false },
+			};
 		};
-		const results = await service.executeHook('Stop', { Stop: [cmd('first'), cmd('second')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('first'), cmd('second')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(callCount).toBe(1);
@@ -234,8 +366,14 @@ describe('ChatHookService.executeHook', () => {
 	});
 
 	it('catches executor errors and returns warning', async () => {
-		service.executorHandler = () => { throw new Error('spawn failed'); };
-		const results = await service.executeHook('Stop', { Stop: [cmd('fail')] }, {});
+		service.executorHandler = () => {
+			throw new Error('spawn failed');
+		};
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('fail')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('warning');
@@ -243,23 +381,44 @@ describe('ChatHookService.executeHook', () => {
 	});
 
 	it('includes sessionId in common input', async () => {
-		service.executorHandler = () => ({ kind: HookCommandResultKind.Success, result: '' });
-		await service.executeHook('Stop', { Stop: [cmd('test')] }, {}, 'session-123');
+		service.executorHandler = () => ({
+			kind: HookCommandResultKind.Success,
+			result: '',
+		});
+		await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('test')] },
+			{},
+			'session-123',
+		);
 
-		expect(service.executorCalls[0].input).toMatchObject({ session_id: 'session-123', hook_event_name: 'Stop' });
+		expect(service.executorCalls[0].input).toMatchObject({
+			session_id: 'session-123',
+			hook_event_name: 'Stop',
+		});
 	});
 
 	it('includes cwd from hook command in input', async () => {
 		const cwdUri = { scheme: 'file', path: '/my/project' } as Uri;
-		service.executorHandler = () => ({ kind: HookCommandResultKind.Success, result: '' });
+		service.executorHandler = () => ({
+			kind: HookCommandResultKind.Success,
+			result: '',
+		});
 		await service.executeHook('Stop', { Stop: [cmd('test', cwdUri)] }, {});
 
 		expect(service.executorCalls[0].input).toMatchObject({ cwd: cwdUri });
 	});
 
 	it('merges caller input with common input', async () => {
-		service.executorHandler = () => ({ kind: HookCommandResultKind.Success, result: '' });
-		await service.executeHook('PreToolUse', { PreToolUse: [cmd('test')] }, { tool_name: 'myTool', tool_input: { x: 1 } });
+		service.executorHandler = () => ({
+			kind: HookCommandResultKind.Success,
+			result: '',
+		});
+		await service.executeHook(
+			'PreToolUse',
+			{ PreToolUse: [cmd('test')] },
+			{ tool_name: 'myTool', tool_input: { x: 1 } },
+		);
 
 		const input = service.executorCalls[0].input as Record<string, unknown>;
 		expect(input['tool_name']).toBe('myTool');
@@ -269,13 +428,26 @@ describe('ChatHookService.executeHook', () => {
 	});
 
 	it('includes transcript_path when configured', async () => {
-		const transcriptUri = { scheme: 'file', path: '/tmp/transcript.jsonl' } as Uri;
+		const transcriptUri = {
+			scheme: 'file',
+			path: '/tmp/transcript.jsonl',
+		} as Uri;
 		service.transcriptPath = transcriptUri;
-		service.executorHandler = () => ({ kind: HookCommandResultKind.Success, result: '' });
-		await service.executeHook('Stop', { Stop: [cmd('test')] }, {}, 'session-1');
+		service.executorHandler = () => ({
+			kind: HookCommandResultKind.Success,
+			result: '',
+		});
+		await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('test')] },
+			{},
+			'session-1',
+		);
 
 		expect(service.flushedSessionIds).toContain('session-1');
-		expect(service.executorCalls[0].input).toMatchObject({ transcript_path: transcriptUri });
+		expect(service.executorCalls[0].input).toMatchObject({
+			transcript_path: transcriptUri,
+		});
 	});
 
 	it('extracts systemMessage as warningMessage', async () => {
@@ -283,7 +455,11 @@ describe('ChatHookService.executeHook', () => {
 			kind: HookCommandResultKind.Success,
 			result: { systemMessage: 'be careful' },
 		});
-		const results = await service.executeHook('Stop', { Stop: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('test')] },
+			{},
+		);
 
 		expect(results[0].warningMessage).toBe('be careful');
 	});
@@ -291,11 +467,23 @@ describe('ChatHookService.executeHook', () => {
 	it('separates common fields from hook-specific output', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { continue: true, systemMessage: 'msg', decision: 'block', reason: 'test' },
+			result: {
+				continue: true,
+				systemMessage: 'msg',
+				decision: 'block',
+				reason: 'test',
+			},
 		});
-		const results = await service.executeHook('Stop', { Stop: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('test')] },
+			{},
+		);
 
-		expect(results[0].output).toEqual({ decision: 'block', reason: 'test' });
+		expect(results[0].output).toEqual({
+			decision: 'block',
+			reason: 'test',
+		});
 		expect(results[0].warningMessage).toBe('msg');
 		expect(results[0].stopReason).toBeUndefined();
 	});
@@ -306,7 +494,11 @@ describe('ChatHookService.executeHook', () => {
 			commands.push(hookCmd.command);
 			return { kind: HookCommandResultKind.Success, result: '' };
 		};
-		const results = await service.executeHook('Stop', { Stop: [cmd('a'), cmd('b'), cmd('c')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('a'), cmd('b'), cmd('c')] },
+			{},
+		);
 
 		expect(results).toHaveLength(3);
 		expect(commands).toEqual(['a', 'b', 'c']);
@@ -315,9 +507,17 @@ describe('ChatHookService.executeHook', () => {
 	it('filters out results with mismatched top-level hookEventName', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookEventName: 'PreToolUse', decision: 'block', reason: 'wrong event' },
+			result: {
+				hookEventName: 'PreToolUse',
+				decision: 'block',
+				reason: 'wrong event',
+			},
 		});
-		const results = await service.executeHook('Stop', { Stop: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
@@ -327,21 +527,44 @@ describe('ChatHookService.executeHook', () => {
 	it('strips hookSpecificOutput with mismatched nested hookEventName but keeps other fields', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookSpecificOutput: { hookEventName: 'PostToolUse', permissionDecision: 'deny' }, decision: 'block', reason: 'kept' },
+			result: {
+				hookSpecificOutput: {
+					hookEventName: 'PostToolUse',
+					permissionDecision: 'deny',
+				},
+				decision: 'block',
+				reason: 'kept',
+			},
 		});
-		const results = await service.executeHook('PreToolUse', { PreToolUse: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'PreToolUse',
+			{ PreToolUse: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
-		expect(results[0].output).toEqual({ decision: 'block', reason: 'kept' });
+		expect(results[0].output).toEqual({
+			decision: 'block',
+			reason: 'kept',
+		});
 	});
 
 	it('discards entire output when hookSpecificOutput is the only non-common field and hookEventName mismatches', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookSpecificOutput: { hookEventName: 'PostToolUse', permissionDecision: 'deny' } },
+			result: {
+				hookSpecificOutput: {
+					hookEventName: 'PostToolUse',
+					permissionDecision: 'deny',
+				},
+			},
 		});
-		const results = await service.executeHook('PreToolUse', { PreToolUse: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'PreToolUse',
+			{ PreToolUse: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
@@ -351,12 +574,24 @@ describe('ChatHookService.executeHook', () => {
 	it('allows results with matching hookEventName', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookEventName: 'Stop', decision: 'block', reason: 'correct event' },
+			result: {
+				hookEventName: 'Stop',
+				decision: 'block',
+				reason: 'correct event',
+			},
 		});
-		const results = await service.executeHook('Stop', { Stop: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
-		expect(results[0].output).toEqual({ hookEventName: 'Stop', decision: 'block', reason: 'correct event' });
+		expect(results[0].output).toEqual({
+			hookEventName: 'Stop',
+			decision: 'block',
+			reason: 'correct event',
+		});
 	});
 
 	it('allows results without hookEventName', async () => {
@@ -364,30 +599,63 @@ describe('ChatHookService.executeHook', () => {
 			kind: HookCommandResultKind.Success,
 			result: { decision: 'block', reason: 'no event name' },
 		});
-		const results = await service.executeHook('Stop', { Stop: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
-		expect(results[0].output).toEqual({ decision: 'block', reason: 'no event name' });
+		expect(results[0].output).toEqual({
+			decision: 'block',
+			reason: 'no event name',
+		});
 	});
 
 	it('treats Stop hookEventName as compatible with SubagentStop hook type', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookSpecificOutput: { hookEventName: 'Stop', decision: 'block', reason: 'tests failing' } },
+			result: {
+				hookSpecificOutput: {
+					hookEventName: 'Stop',
+					decision: 'block',
+					reason: 'tests failing',
+				},
+			},
 		});
-		const results = await service.executeHook('SubagentStop', { SubagentStop: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'SubagentStop',
+			{ SubagentStop: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
-		expect(results[0].output).toEqual({ hookSpecificOutput: { hookEventName: 'Stop', decision: 'block', reason: 'tests failing' } });
+		expect(results[0].output).toEqual({
+			hookSpecificOutput: {
+				hookEventName: 'Stop',
+				decision: 'block',
+				reason: 'tests failing',
+			},
+		});
 	});
 
 	it('does NOT treat SubagentStop hookEventName as compatible with Stop hook type', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookSpecificOutput: { hookEventName: 'SubagentStop', decision: 'block', reason: 'not done' } },
+			result: {
+				hookSpecificOutput: {
+					hookEventName: 'SubagentStop',
+					decision: 'block',
+					reason: 'not done',
+				},
+			},
 		});
-		const results = await service.executeHook('Stop', { Stop: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'Stop',
+			{ Stop: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
@@ -398,21 +666,44 @@ describe('ChatHookService.executeHook', () => {
 	it('treats SessionStart hookEventName as compatible with SubagentStart hook type', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: 'context' } },
+			result: {
+				hookSpecificOutput: {
+					hookEventName: 'SessionStart',
+					additionalContext: 'context',
+				},
+			},
 		});
-		const results = await service.executeHook('SubagentStart', { SubagentStart: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'SubagentStart',
+			{ SubagentStart: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
-		expect(results[0].output).toEqual({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: 'context' } });
+		expect(results[0].output).toEqual({
+			hookSpecificOutput: {
+				hookEventName: 'SessionStart',
+				additionalContext: 'context',
+			},
+		});
 	});
 
 	it('does NOT treat SubagentStart hookEventName as compatible with SessionStart hook type', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookSpecificOutput: { hookEventName: 'SubagentStart', additionalContext: 'context' } },
+			result: {
+				hookSpecificOutput: {
+					hookEventName: 'SubagentStart',
+					additionalContext: 'context',
+				},
+			},
 		});
-		const results = await service.executeHook('SessionStart', { SessionStart: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'SessionStart',
+			{ SessionStart: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
@@ -423,21 +714,42 @@ describe('ChatHookService.executeHook', () => {
 	it('treats top-level Stop hookEventName as compatible with SubagentStop', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookEventName: 'Stop', decision: 'block', reason: 'from stop hook' },
+			result: {
+				hookEventName: 'Stop',
+				decision: 'block',
+				reason: 'from stop hook',
+			},
 		});
-		const results = await service.executeHook('SubagentStop', { SubagentStop: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'SubagentStop',
+			{ SubagentStop: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
-		expect(results[0].output).toEqual({ hookEventName: 'Stop', decision: 'block', reason: 'from stop hook' });
+		expect(results[0].output).toEqual({
+			hookEventName: 'Stop',
+			decision: 'block',
+			reason: 'from stop hook',
+		});
 	});
 
 	it('still strips hookSpecificOutput when hookEventName is truly incompatible', async () => {
 		service.executorHandler = () => ({
 			kind: HookCommandResultKind.Success,
-			result: { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny' } },
+			result: {
+				hookSpecificOutput: {
+					hookEventName: 'PreToolUse',
+					permissionDecision: 'deny',
+				},
+			},
 		});
-		const results = await service.executeHook('SubagentStop', { SubagentStop: [cmd('test')] }, {});
+		const results = await service.executeHook(
+			'SubagentStop',
+			{ SubagentStop: [cmd('test')] },
+			{},
+		);
 
 		expect(results).toHaveLength(1);
 		expect(results[0].resultKind).toBe('success');
@@ -461,14 +773,20 @@ interface IPreToolUseHookSpecificOutput {
 	additionalContext?: string;
 }
 
-const permissionPriority: Record<string, number> = { 'deny': 2, 'ask': 1, 'allow': 0 };
+const permissionPriority: Record<string, number> = {
+	deny: 2,
+	ask: 1,
+	allow: 0,
+};
 
 /**
  * A testable version of the executePreToolUseHook collapsing logic,
  * decoupled from the vscode API. Takes raw ChatHookResult[] and returns
  * the collapsed IPreToolUseHookResult.
  */
-function collapsePreToolUseHookResults(results: ChatHookResult[]): IPreToolUseHookResult | undefined {
+function collapsePreToolUseHookResults(
+	results: ChatHookResult[],
+): IPreToolUseHookResult | undefined {
 	if (results.length === 0) {
 		return undefined;
 	}
@@ -481,23 +799,33 @@ function collapsePreToolUseHookResults(results: ChatHookResult[]): IPreToolUseHo
 	for (const result of results) {
 		// Exit code 2 (error) means deny the tool
 		if (result.resultKind === 'error') {
-			const reason = typeof result.output === 'string' ? result.output : undefined;
+			const reason =
+				typeof result.output === 'string' ? result.output : undefined;
 			mostRestrictiveDecision = 'deny';
 			winningReason = reason ?? winningReason;
 			break;
 		}
 
-		if (result.resultKind !== 'success' || typeof result.output !== 'object' || result.output === null) {
+		if (
+			result.resultKind !== 'success' ||
+			typeof result.output !== 'object' ||
+			result.output === null
+		) {
 			continue;
 		}
 
-		const output = result.output as { hookSpecificOutput?: IPreToolUseHookSpecificOutput };
+		const output = result.output as {
+			hookSpecificOutput?: IPreToolUseHookSpecificOutput;
+		};
 		const hookSpecificOutput = output.hookSpecificOutput;
 		if (!hookSpecificOutput) {
 			continue;
 		}
 
-		if (hookSpecificOutput.hookEventName !== undefined && hookSpecificOutput.hookEventName !== 'PreToolUse') {
+		if (
+			hookSpecificOutput.hookEventName !== undefined &&
+			hookSpecificOutput.hookEventName !== 'PreToolUse'
+		) {
 			continue;
 		}
 
@@ -510,13 +838,22 @@ function collapsePreToolUseHookResults(results: ChatHookResult[]): IPreToolUseHo
 		}
 
 		const decision = hookSpecificOutput.permissionDecision;
-		if (decision && (mostRestrictiveDecision === undefined || (permissionPriority[decision] ?? 0) > (permissionPriority[mostRestrictiveDecision] ?? 0))) {
+		if (
+			decision &&
+			(mostRestrictiveDecision === undefined ||
+				(permissionPriority[decision] ?? 0) >
+					(permissionPriority[mostRestrictiveDecision] ?? 0))
+		) {
 			mostRestrictiveDecision = decision;
 			winningReason = hookSpecificOutput.permissionDecisionReason;
 		}
 	}
 
-	if (!mostRestrictiveDecision && !lastUpdatedInput && allAdditionalContext.length === 0) {
+	if (
+		!mostRestrictiveDecision &&
+		!lastUpdatedInput &&
+		allAdditionalContext.length === 0
+	) {
 		return undefined;
 	}
 
@@ -524,11 +861,15 @@ function collapsePreToolUseHookResults(results: ChatHookResult[]): IPreToolUseHo
 		permissionDecision: mostRestrictiveDecision,
 		permissionDecisionReason: winningReason,
 		updatedInput: lastUpdatedInput,
-		additionalContext: allAdditionalContext.length > 0 ? allAdditionalContext : undefined,
+		additionalContext:
+			allAdditionalContext.length > 0 ? allAdditionalContext : undefined,
 	};
 }
 
-function hookResult(output: unknown, kind: ChatHookResultKind = 'success'): ChatHookResult {
+function hookResult(
+	output: unknown,
+	kind: ChatHookResultKind = 'success',
+): ChatHookResult {
 	return { resultKind: kind, output } as ChatHookResult;
 }
 
@@ -538,7 +879,9 @@ function hookResult(output: unknown, kind: ChatHookResultKind = 'success'): Chat
  */
 class TestableChatHookService {
 	public hookResults: ChatHookResult[] = [];
-	public validateToolInputFn: ((name: string, input: string) => IToolValidationResult) | undefined;
+	public validateToolInputFn:
+		| ((name: string, input: string) => IToolValidationResult)
+		| undefined;
 
 	async executeHook(): Promise<ChatHookResult[]> {
 		return this.hookResults;
@@ -559,13 +902,20 @@ class TestableChatHookService {
 
 		// Validate updatedInput against the tool's input schema, mirroring the real ChatHookService
 		if (collapsed.updatedInput && this.validateToolInputFn) {
-			const validationResult = this.validateToolInputFn(toolName, JSON.stringify(collapsed.updatedInput));
+			const validationResult = this.validateToolInputFn(
+				toolName,
+				JSON.stringify(collapsed.updatedInput),
+			);
 			if ('error' in validationResult) {
 				collapsed.updatedInput = undefined;
 			}
 		}
 
-		if (!collapsed.permissionDecision && !collapsed.updatedInput && !collapsed.additionalContext?.length) {
+		if (
+			!collapsed.permissionDecision &&
+			!collapsed.updatedInput &&
+			!collapsed.additionalContext?.length
+		) {
 			return undefined;
 		}
 
@@ -582,16 +932,31 @@ describe('ChatHookService.executePreToolUseHook', () => {
 
 	it('returns undefined when no hooks return results', async () => {
 		service.hookResults = [];
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result).toBeUndefined();
 	});
 
 	it('returns allow when single hook allows', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', permissionDecisionReason: 'Tool is safe' } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					permissionDecisionReason: 'Tool is safe',
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result).toEqual({
 			permissionDecision: 'allow',
 			permissionDecisionReason: 'Tool is safe',
@@ -602,10 +967,20 @@ describe('ChatHookService.executePreToolUseHook', () => {
 
 	it('returns deny when single hook denies', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: 'Blocked' } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'deny',
+					permissionDecisionReason: 'Blocked',
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result).toEqual({
 			permissionDecision: 'deny',
 			permissionDecisionReason: 'Blocked',
@@ -616,10 +991,20 @@ describe('ChatHookService.executePreToolUseHook', () => {
 
 	it('returns ask when single hook asks', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'ask', permissionDecisionReason: 'Needs review' } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'ask',
+					permissionDecisionReason: 'Needs review',
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result).toEqual({
 			permissionDecision: 'ask',
 			permissionDecisionReason: 'Needs review',
@@ -630,34 +1015,84 @@ describe('ChatHookService.executePreToolUseHook', () => {
 
 	it('deny wins over allow and ask', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', permissionDecisionReason: 'ok' } }),
-			hookResult({ hookSpecificOutput: { permissionDecision: 'ask', permissionDecisionReason: 'maybe' } }),
-			hookResult({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: 'nope' } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					permissionDecisionReason: 'ok',
+				},
+			}),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'ask',
+					permissionDecisionReason: 'maybe',
+				},
+			}),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'deny',
+					permissionDecisionReason: 'nope',
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('deny');
 		expect(result?.permissionDecisionReason).toBe('nope');
 	});
 
 	it('ask wins over allow', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', permissionDecisionReason: 'ok' } }),
-			hookResult({ hookSpecificOutput: { permissionDecision: 'ask', permissionDecisionReason: 'confirm please' } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					permissionDecisionReason: 'ok',
+				},
+			}),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'ask',
+					permissionDecisionReason: 'confirm please',
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('ask');
 		expect(result?.permissionDecisionReason).toBe('confirm please');
 	});
 
 	it('ignores results with wrong hookEventName', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { hookEventName: 'PostToolUse', permissionDecision: 'deny' } }),
-			hookResult({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }),
+			hookResult({
+				hookSpecificOutput: {
+					hookEventName: 'PostToolUse',
+					permissionDecision: 'deny',
+				},
+			}),
+			hookResult({
+				hookSpecificOutput: {
+					hookEventName: 'PreToolUse',
+					permissionDecision: 'allow',
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('allow');
 	});
 
@@ -666,57 +1101,118 @@ describe('ChatHookService.executePreToolUseHook', () => {
 			hookResult({ hookSpecificOutput: { permissionDecision: 'allow' } }),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('allow');
 	});
 
 	it('returns updatedInput from hook', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', updatedInput: { path: '/safe/path.ts' } } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					updatedInput: { path: '/safe/path.ts' },
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', { path: '/original' }, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{ path: '/original' },
+			'call-1',
+			undefined,
+		);
 		expect(result?.updatedInput).toEqual({ path: '/safe/path.ts' });
 	});
 
 	it('later hook updatedInput overrides earlier one', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', updatedInput: { value: 'first' } } }),
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', updatedInput: { value: 'second' } } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					updatedInput: { value: 'first' },
+				},
+			}),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					updatedInput: { value: 'second' },
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.updatedInput).toEqual({ value: 'second' });
 	});
 
 	it('returns updatedInput even without permission decision', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { updatedInput: { modified: true } } }),
+			hookResult({
+				hookSpecificOutput: { updatedInput: { modified: true } },
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.updatedInput).toEqual({ modified: true });
 		expect(result?.permissionDecision).toBeUndefined();
 	});
 
 	it('discards updatedInput when schema validation fails', async () => {
-		service.validateToolInputFn = () => ({ error: 'Missing required property "command"' });
+		service.validateToolInputFn = () => ({
+			error: 'Missing required property "command"',
+		});
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', updatedInput: { invalidField: 'wrong' } } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					updatedInput: { invalidField: 'wrong' },
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('allow');
 		expect(result?.updatedInput).toBeUndefined();
 	});
 
 	it('keeps updatedInput when schema validation passes', async () => {
-		service.validateToolInputFn = (_name, input) => ({ inputObj: JSON.parse(input) });
+		service.validateToolInputFn = (_name, input) => ({
+			inputObj: JSON.parse(input),
+		});
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', updatedInput: { command: 'safe' } } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					updatedInput: { command: 'safe' },
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('allow');
 		expect(result?.updatedInput).toEqual({ command: 'safe' });
 	});
@@ -727,18 +1223,41 @@ describe('ChatHookService.executePreToolUseHook', () => {
 			hookResult({ hookSpecificOutput: { updatedInput: { bad: true } } }),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result).toBeUndefined();
 	});
 
 	it('collects additionalContext from all hooks', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', additionalContext: 'context from hook 1' } }),
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', additionalContext: 'context from hook 2' } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					additionalContext: 'context from hook 1',
+				},
+			}),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					additionalContext: 'context from hook 2',
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
-		expect(result?.additionalContext).toEqual(['context from hook 1', 'context from hook 2']);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
+		expect(result?.additionalContext).toEqual([
+			'context from hook 1',
+			'context from hook 2',
+		]);
 	});
 
 	it('returns undefined additionalContext when no hooks provide it', async () => {
@@ -746,16 +1265,33 @@ describe('ChatHookService.executePreToolUseHook', () => {
 			hookResult({ hookSpecificOutput: { permissionDecision: 'allow' } }),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.additionalContext).toBeUndefined();
 	});
 
 	it('combines updatedInput, additionalContext, and permission decision', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'ask', permissionDecisionReason: 'Modified input needs review', updatedInput: { command: 'echo safe' }, additionalContext: 'audit log enabled' } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'ask',
+					permissionDecisionReason: 'Modified input needs review',
+					updatedInput: { command: 'echo safe' },
+					additionalContext: 'audit log enabled',
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', { command: 'rm -rf /' }, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{ command: 'rm -rf /' },
+			'call-1',
+			undefined,
+		);
 		expect(result).toEqual({
 			permissionDecision: 'ask',
 			permissionDecisionReason: 'Modified input needs review',
@@ -770,29 +1306,52 @@ describe('ChatHookService.executePreToolUseHook', () => {
 			hookResult({ hookSpecificOutput: { permissionDecision: 'allow' } }),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('deny');
 		expect(result?.permissionDecisionReason).toBe('hook blocked this tool');
 	});
 
 	it('preserves context from prior hooks when error denies', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow', additionalContext: 'context from first hook' } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'allow',
+					additionalContext: 'context from first hook',
+				},
+			}),
 			hookResult('second hook errored', 'error'),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('deny');
 		expect(result?.additionalContext).toEqual(['context from first hook']);
 	});
 
 	it('skips warning results', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'deny' } }, 'warning'),
+			hookResult(
+				{ hookSpecificOutput: { permissionDecision: 'deny' } },
+				'warning',
+			),
 			hookResult({ hookSpecificOutput: { permissionDecision: 'allow' } }),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('allow');
 	});
 
@@ -802,27 +1361,53 @@ describe('ChatHookService.executePreToolUseHook', () => {
 			hookResult({ hookSpecificOutput: { permissionDecision: 'allow' } }),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('allow');
 	});
 
 	it('skips results without hookSpecificOutput', async () => {
 		service.hookResults = [
 			hookResult({ someOtherField: 'value' }),
-			hookResult({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: 'blocked' } }),
+			hookResult({
+				hookSpecificOutput: {
+					permissionDecision: 'deny',
+					permissionDecisionReason: 'blocked',
+				},
+			}),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result?.permissionDecision).toBe('deny');
 	});
 
 	it('returns undefined when all results are warnings', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { permissionDecision: 'deny' } }, 'warning'),
-			hookResult({ hookSpecificOutput: { permissionDecision: 'allow' } }, 'warning'),
+			hookResult(
+				{ hookSpecificOutput: { permissionDecision: 'deny' } },
+				'warning',
+			),
+			hookResult(
+				{ hookSpecificOutput: { permissionDecision: 'allow' } },
+				'warning',
+			),
 		];
 
-		const result = await service.executePreToolUseHook('tool', {}, 'call-1', undefined);
+		const result = await service.executePreToolUseHook(
+			'tool',
+			{},
+			'call-1',
+			undefined,
+		);
 		expect(result).toBeUndefined();
 	});
 });
@@ -832,7 +1417,9 @@ interface IPostToolUseHookSpecificOutput {
 	additionalContext?: string;
 }
 
-function collapsePostToolUseHookResults(results: ChatHookResult[]): IPostToolUseHookResult | undefined {
+function collapsePostToolUseHookResults(
+	results: ChatHookResult[],
+): IPostToolUseHookResult | undefined {
 	if (results.length === 0) {
 		return undefined;
 	}
@@ -844,7 +1431,8 @@ function collapsePostToolUseHookResults(results: ChatHookResult[]): IPostToolUse
 	for (const result of results) {
 		// Exit code 2 (error) means block the tool result
 		if (result.resultKind === 'error') {
-			const reason = typeof result.output === 'string' ? result.output : undefined;
+			const reason =
+				typeof result.output === 'string' ? result.output : undefined;
 			if (!hasBlock) {
 				hasBlock = true;
 				blockReason = reason;
@@ -852,7 +1440,11 @@ function collapsePostToolUseHookResults(results: ChatHookResult[]): IPostToolUse
 			break;
 		}
 
-		if (result.resultKind !== 'success' || typeof result.output !== 'object' || result.output === null) {
+		if (
+			result.resultKind !== 'success' ||
+			typeof result.output !== 'object' ||
+			result.output === null
+		) {
 			continue;
 		}
 
@@ -862,12 +1454,17 @@ function collapsePostToolUseHookResults(results: ChatHookResult[]): IPostToolUse
 			hookSpecificOutput?: IPostToolUseHookSpecificOutput;
 		};
 
-		if (output.hookSpecificOutput?.hookEventName !== undefined && output.hookSpecificOutput.hookEventName !== 'PostToolUse') {
+		if (
+			output.hookSpecificOutput?.hookEventName !== undefined &&
+			output.hookSpecificOutput.hookEventName !== 'PostToolUse'
+		) {
 			continue;
 		}
 
 		if (output.hookSpecificOutput?.additionalContext) {
-			allAdditionalContext.push(output.hookSpecificOutput.additionalContext);
+			allAdditionalContext.push(
+				output.hookSpecificOutput.additionalContext,
+			);
 		}
 
 		if (output.decision === 'block' && !hasBlock) {
@@ -883,7 +1480,8 @@ function collapsePostToolUseHookResults(results: ChatHookResult[]): IPostToolUse
 	return {
 		decision: hasBlock ? 'block' : undefined,
 		reason: blockReason,
-		additionalContext: allAdditionalContext.length > 0 ? allAdditionalContext : undefined,
+		additionalContext:
+			allAdditionalContext.length > 0 ? allAdditionalContext : undefined,
 	};
 }
 
@@ -916,7 +1514,13 @@ describe('ChatHookService.executePostToolUseHook', () => {
 
 	it('returns undefined when no hooks return results', async () => {
 		service.hookResults = [];
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result).toBeUndefined();
 	});
 
@@ -925,7 +1529,13 @@ describe('ChatHookService.executePostToolUseHook', () => {
 			hookResult({ decision: 'block', reason: 'Lint errors found' }),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result).toEqual({
 			decision: 'block',
 			reason: 'Lint errors found',
@@ -935,10 +1545,18 @@ describe('ChatHookService.executePostToolUseHook', () => {
 
 	it('returns additionalContext from hookSpecificOutput', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { additionalContext: 'Tests still pass' } }),
+			hookResult({
+				hookSpecificOutput: { additionalContext: 'Tests still pass' },
+			}),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result).toEqual({
 			decision: undefined,
 			reason: undefined,
@@ -948,12 +1566,29 @@ describe('ChatHookService.executePostToolUseHook', () => {
 
 	it('collects additionalContext from all hooks', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { additionalContext: 'context from hook 1' } }),
-			hookResult({ hookSpecificOutput: { additionalContext: 'context from hook 2' } }),
+			hookResult({
+				hookSpecificOutput: {
+					additionalContext: 'context from hook 1',
+				},
+			}),
+			hookResult({
+				hookSpecificOutput: {
+					additionalContext: 'context from hook 2',
+				},
+			}),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
-		expect(result?.additionalContext).toEqual(['context from hook 1', 'context from hook 2']);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
+		expect(result?.additionalContext).toEqual([
+			'context from hook 1',
+			'context from hook 2',
+		]);
 	});
 
 	it('first block decision wins', async () => {
@@ -962,7 +1597,13 @@ describe('ChatHookService.executePostToolUseHook', () => {
 			hookResult({ decision: 'block', reason: 'Second block' }),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result?.decision).toBe('block');
 		expect(result?.reason).toBe('First block');
 	});
@@ -970,10 +1611,20 @@ describe('ChatHookService.executePostToolUseHook', () => {
 	it('block decision with additionalContext from different hooks', async () => {
 		service.hookResults = [
 			hookResult({ decision: 'block', reason: 'Tests failed' }),
-			hookResult({ hookSpecificOutput: { additionalContext: 'Extra context from linter' } }),
+			hookResult({
+				hookSpecificOutput: {
+					additionalContext: 'Extra context from linter',
+				},
+			}),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result).toEqual({
 			decision: 'block',
 			reason: 'Tests failed',
@@ -983,52 +1634,103 @@ describe('ChatHookService.executePostToolUseHook', () => {
 
 	it('ignores results with wrong hookEventName', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: 'Should be ignored' } }),
-			hookResult({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: 'Correct context' } }),
+			hookResult({
+				hookSpecificOutput: {
+					hookEventName: 'PreToolUse',
+					additionalContext: 'Should be ignored',
+				},
+			}),
+			hookResult({
+				hookSpecificOutput: {
+					hookEventName: 'PostToolUse',
+					additionalContext: 'Correct context',
+				},
+			}),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result?.additionalContext).toEqual(['Correct context']);
 	});
 
 	it('accepts results without hookEventName', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { additionalContext: 'No event name' } }),
+			hookResult({
+				hookSpecificOutput: { additionalContext: 'No event name' },
+			}),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result?.additionalContext).toEqual(['No event name']);
 	});
 
 	it('treats error results (exit code 2) as block', async () => {
 		service.hookResults = [
 			hookResult('hook errored', 'error'),
-			hookResult({ hookSpecificOutput: { additionalContext: 'Valid context' } }),
+			hookResult({
+				hookSpecificOutput: { additionalContext: 'Valid context' },
+			}),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result?.decision).toBe('block');
 		expect(result?.reason).toBe('hook errored');
 	});
 
 	it('preserves context from prior hooks when error blocks', async () => {
 		service.hookResults = [
-			hookResult({ hookSpecificOutput: { additionalContext: 'context from first' } }),
+			hookResult({
+				hookSpecificOutput: { additionalContext: 'context from first' },
+			}),
 			hookResult('second errored', 'error'),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result?.decision).toBe('block');
 		expect(result?.additionalContext).toEqual(['context from first']);
 	});
 
 	it('skips warning results', async () => {
 		service.hookResults = [
-			hookResult({ decision: 'block', reason: 'Should be ignored' }, 'warning'),
-			hookResult({ hookSpecificOutput: { additionalContext: 'Valid context' } }),
+			hookResult(
+				{ decision: 'block', reason: 'Should be ignored' },
+				'warning',
+			),
+			hookResult({
+				hookSpecificOutput: { additionalContext: 'Valid context' },
+			}),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result?.decision).toBeUndefined();
 		expect(result?.additionalContext).toEqual(['Valid context']);
 	});
@@ -1039,26 +1741,45 @@ describe('ChatHookService.executePostToolUseHook', () => {
 			hookResult({ decision: 'block', reason: 'Valid block' }),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result?.decision).toBe('block');
 	});
 
 	it('returns undefined when all results are warnings', async () => {
 		service.hookResults = [
 			hookResult({ decision: 'block' }, 'warning'),
-			hookResult({ hookSpecificOutput: { additionalContext: 'ctx' } }, 'warning'),
+			hookResult(
+				{ hookSpecificOutput: { additionalContext: 'ctx' } },
+				'warning',
+			),
 		];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result).toBeUndefined();
 	});
 
 	it('returns undefined when no hook provides block or additionalContext', async () => {
-		service.hookResults = [
-			hookResult({ hookSpecificOutput: {} }),
-		];
+		service.hookResults = [hookResult({ hookSpecificOutput: {} })];
 
-		const result = await service.executePostToolUseHook('tool', {}, 'output', 'call-1', undefined);
+		const result = await service.executePostToolUseHook(
+			'tool',
+			{},
+			'output',
+			'call-1',
+			undefined,
+		);
 		expect(result).toBeUndefined();
 	});
 });

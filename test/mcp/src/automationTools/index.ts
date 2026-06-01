@@ -3,30 +3,33 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
 
 // Import all tool modules
-import { applyCoreTools } from './core.js';
-import { applyEditorTools } from './editor.js';
-import { applyTerminalTools } from './terminal.js';
-import { applyDebugTools } from './debug.js';
-import { applySearchTools } from './search.js';
-import { applyExtensionsTools } from './extensions.js';
-import { applyQuickAccessTools } from './quickAccess.js';
-import { applyExplorerTools } from './explorer.js';
-import { applyActivityBarTools } from './activityBar.js';
-import { applySCMTools } from './scm.js';
-import { applyStatusBarTools } from './statusbar.js';
-import { applyProblemsTools } from './problems.js';
-import { applySettingsTools } from './settings.js';
-import { applyKeybindingsTools } from './keybindings.js';
-import { applyNotebookTools } from './notebook.js';
-import { applyLocalizationTools } from './localization.js';
-import { applyTaskTools } from './task.js';
-import { applyProfilerTools } from './profiler.js';
-import { applyChatTools } from './chat.js';
-import { applyWindowTools } from './windows.js';
-import { ApplicationService } from '../application';
+import { applyCoreTools } from "./core.js";
+import { applyEditorTools } from "./editor.js";
+import { applyTerminalTools } from "./terminal.js";
+import { applyDebugTools } from "./debug.js";
+import { applySearchTools } from "./search.js";
+import { applyExtensionsTools } from "./extensions.js";
+import { applyQuickAccessTools } from "./quickAccess.js";
+import { applyExplorerTools } from "./explorer.js";
+import { applyActivityBarTools } from "./activityBar.js";
+import { applySCMTools } from "./scm.js";
+import { applyStatusBarTools } from "./statusbar.js";
+import { applyProblemsTools } from "./problems.js";
+import { applySettingsTools } from "./settings.js";
+import { applyKeybindingsTools } from "./keybindings.js";
+import { applyNotebookTools } from "./notebook.js";
+import { applyLocalizationTools } from "./localization.js";
+import { applyTaskTools } from "./task.js";
+import { applyProfilerTools } from "./profiler.js";
+import { applyChatTools } from "./chat.js";
+import { applyWindowTools } from "./windows.js";
+import { ApplicationService } from "../application";
 
 /**
  * Apply all VS Code automation tools to the MCP server
@@ -34,7 +37,10 @@ import { ApplicationService } from '../application';
  * @param appService - The application service instance
  * @returns The registered tools from the server
  */
-export function applyAllTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applyAllTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	let tools: RegisteredTool[] = [];
 
 	// Core Application Management Tools
@@ -122,5 +128,5 @@ export {
 	applyTaskTools,
 	applyProfilerTools,
 	applyChatTools,
-	applyWindowTools
+	applyWindowTools,
 };

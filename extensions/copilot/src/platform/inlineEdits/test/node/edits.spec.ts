@@ -7,8 +7,14 @@ import assert from 'assert';
 import { expect, suite, test } from 'vitest';
 import { range } from '../../../../util/vs/base/common/arrays';
 import { splitLines } from '../../../../util/vs/base/common/strings';
-import { LineEdit, LineReplacement } from '../../../../util/vs/editor/common/core/edits/lineEdit';
-import { StringEdit, StringReplacement } from '../../../../util/vs/editor/common/core/edits/stringEdit';
+import {
+	LineEdit,
+	LineReplacement,
+} from '../../../../util/vs/editor/common/core/edits/lineEdit';
+import {
+	StringEdit,
+	StringReplacement,
+} from '../../../../util/vs/editor/common/core/edits/stringEdit';
 import { TextReplacement } from '../../../../util/vs/editor/common/core/edits/textEdit';
 import { LineRange } from '../../../../util/vs/editor/common/core/ranges/lineRange';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
@@ -45,7 +51,9 @@ suite('Edit <-> LineEdit equivalence', () => {
 
 		const rootedLineEdit = RootedLineEdit.fromEdit(rootedEdit);
 		const lineEditApplied = rootedLineEdit.getEditedState().join('\n');
-		const editFromLineEditApplied = rootedLineEdit.toRootedEdit().getEditedState().value;
+		const editFromLineEditApplied = rootedLineEdit
+			.toRootedEdit()
+			.getEditedState().value;
 
 		assert.deepStrictEqual(lineEditApplied, editApplied);
 		assert.deepStrictEqual(editFromLineEditApplied, editApplied);
@@ -83,7 +91,6 @@ suite('Edit.compose', () => {
 	}
 });
 
-
 function getRandomEdit(str: string, count: number, rng: Random): StringEdit {
 	const edits: StringReplacement[] = [];
 	let i = 0;
@@ -97,7 +104,11 @@ function getRandomEdit(str: string, count: number, rng: Random): StringEdit {
 	return StringEdit.create(edits);
 }
 
-function getRandomSingleEdit(str: string, rangeOffsetStart: number, rng: Random): StringReplacement {
+function getRandomSingleEdit(
+	str: string,
+	rangeOffsetStart: number,
+	rng: Random,
+): StringReplacement {
 	const offsetStart = rng.nextIntRange(rangeOffsetStart, str.length);
 	const offsetEnd = rng.nextIntRange(offsetStart, str.length);
 
@@ -106,7 +117,7 @@ function getRandomSingleEdit(str: string, rangeOffsetStart: number, rng: Random)
 
 	return StringReplacement.replace(
 		new OffsetRange(offsetStart, offsetEnd),
-		str.substring(textStart, textStart + textLen)
+		str.substring(textStart, textStart + textLen),
 	);
 }
 
@@ -128,26 +139,47 @@ suite('LineEdit', () => {
 			const rand = Random.create(seed);
 			const lineCount = rand.nextIntRange(1, 4);
 			// Use unique letters to such that .shrink can be tested
-			const str = rand.nextMultiLineString(lineCount, new OffsetRange(0, 5), sequenceGenerator([...Random.alphabetUppercase]));
+			const str = rand.nextMultiLineString(
+				lineCount,
+				new OffsetRange(0, 5),
+				sequenceGenerator([...Random.alphabetUppercase]),
+			);
 
-			let randomOffsetEdit = rand.nextSingleOffsetEdit(str, Random.alphabetSmallLowercase + '\n');
+			let randomOffsetEdit = rand.nextSingleOffsetEdit(
+				str,
+				Random.alphabetSmallLowercase + '\n',
+			);
 			randomOffsetEdit = randomOffsetEdit.removeCommonSuffixPrefix(str);
 			const randomEdit = randomOffsetEdit;
 
 			const strVal = new StringText(str);
 
-			const singleTextEdit = TextReplacement.fromStringReplacement(randomEdit, strVal);
-			const singleLineEdit1 = LineReplacement.fromSingleTextEdit(singleTextEdit, strVal);
+			const singleTextEdit = TextReplacement.fromStringReplacement(
+				randomEdit,
+				strVal,
+			);
+			const singleLineEdit1 = LineReplacement.fromSingleTextEdit(
+				singleTextEdit,
+				strVal,
+			);
 
 			const extendedEdit = singleTextEdit.extendToFullLine(strVal);
 			const singleLineEdit2Full = new LineReplacement(
-				new LineRange(extendedEdit.range.startLineNumber, extendedEdit.range.endLineNumber + 1),
-				splitLines(extendedEdit.text)
+				new LineRange(
+					extendedEdit.range.startLineNumber,
+					extendedEdit.range.endLineNumber + 1,
+				),
+				splitLines(extendedEdit.text),
 			);
-			const singleLineEdit2 = singleLineEdit2Full.removeCommonSuffixPrefixLines(strVal);
+			const singleLineEdit2 =
+				singleLineEdit2Full.removeCommonSuffixPrefixLines(strVal);
 
-			if (singleLineEdit1.lineRange.isEmpty && singleLineEdit2.lineRange.isEmpty
-				&& singleLineEdit1.newLines.length === 0 && singleLineEdit2.newLines.length === 0) {
+			if (
+				singleLineEdit1.lineRange.isEmpty &&
+				singleLineEdit2.lineRange.isEmpty &&
+				singleLineEdit1.newLines.length === 0 &&
+				singleLineEdit2.newLines.length === 0
+			) {
 				return;
 			}
 
@@ -159,7 +191,9 @@ suite('LineEdit', () => {
 		test('format normal edit 1', () => {
 			const lineEdit = new RootedLineEdit(
 				new StringText('abc\ndef\nghi'),
-				new LineEdit([new LineReplacement(new LineRange(2, 3), ['xyz'])])
+				new LineEdit([
+					new LineReplacement(new LineRange(2, 3), ['xyz']),
+				]),
 			);
 			expect(lineEdit.toString()).toMatchInlineSnapshot(`
 			"    1   1 abc
@@ -172,7 +206,9 @@ suite('LineEdit', () => {
 		test('format normal edit 2', () => {
 			const lineEdit = new RootedLineEdit(
 				new StringText('abc\ndef\nghi'),
-				new LineEdit([new LineReplacement(new LineRange(3, 4), ['xyz'])])
+				new LineEdit([
+					new LineReplacement(new LineRange(3, 4), ['xyz']),
+				]),
 			);
 			expect(lineEdit.toString()).toMatchInlineSnapshot(`
 			"    1   1 abc
@@ -185,7 +221,9 @@ suite('LineEdit', () => {
 		test('format invalid edit', () => {
 			const lineEdit = new RootedLineEdit(
 				new StringText('abc\ndef\nghi'),
-				new LineEdit([new LineReplacement(new LineRange(4, 5), ['xyz'])])
+				new LineEdit([
+					new LineReplacement(new LineRange(4, 5), ['xyz']),
+				]),
 			);
 			expect(lineEdit.toString()).toMatchInlineSnapshot(`
 				"    2   2 def
@@ -198,7 +236,9 @@ suite('LineEdit', () => {
 		test('format invalid edit', () => {
 			const lineEdit = new RootedLineEdit(
 				new StringText('abc\ndef\nghi'),
-				new LineEdit([new LineReplacement(new LineRange(6, 7), ['xyz'])])
+				new LineEdit([
+					new LineReplacement(new LineRange(6, 7), ['xyz']),
+				]),
 			);
 			expect(lineEdit.toString()).toMatchInlineSnapshot(`
 				"    4   4 [[[[[ WARNING: LINE DOES NOT EXIST ]]]]]
@@ -217,7 +257,9 @@ suite('Edit#decompose', () => {
 			StringReplacement.replace(new OffsetRange(10, 12), ''),
 		]);
 
-		expect(decomposeStringEdit(edit).edits.toString()).toMatchInlineSnapshot(`"[0, 5) -> "12345",[10, 12) -> """`);
+		expect(
+			decomposeStringEdit(edit).edits.toString(),
+		).toMatchInlineSnapshot(`"[0, 5) -> "12345",[10, 12) -> """`);
 	});
 
 	test('1', () => {
@@ -226,7 +268,9 @@ suite('Edit#decompose', () => {
 			StringReplacement.replace(new OffsetRange(10, 12), ''),
 		]);
 
-		expect(decomposeStringEdit(edit, new Permutation([1, 0])).edits.toString()).toMatchInlineSnapshot(`"[10, 12) -> "",[0, 5) -> "12345""`);
+		expect(
+			decomposeStringEdit(edit, new Permutation([1, 0])).edits.toString(),
+		).toMatchInlineSnapshot(`"[10, 12) -> "",[0, 5) -> "12345""`);
 	});
 
 	test('2', () => {
@@ -236,11 +280,16 @@ suite('Edit#decompose', () => {
 			StringReplacement.replace(new OffsetRange(23, 24), ''),
 		]);
 
-		const decomposedEdits = decomposeStringEdit(edit, new Permutation([1, 0, 2]));
+		const decomposedEdits = decomposeStringEdit(
+			edit,
+			new Permutation([1, 0, 2]),
+		);
 
 		const recomposedEdits = decomposedEdits.compose();
 
-		expect(decomposedEdits.edits.toString()).toMatchInlineSnapshot(`"[10, 22) -> "",[0, 5) -> "12345",[11, 12) -> """`);
+		expect(decomposedEdits.edits.toString()).toMatchInlineSnapshot(
+			`"[10, 22) -> "",[0, 5) -> "12345",[11, 12) -> """`,
+		);
 		expect(edit.toString()).toStrictEqual(recomposedEdits.toString());
 	});
 

@@ -5,10 +5,6 @@
 
 import { IIntentInvocation } from './intents';
 
-
 export class IntentInvocationMetadata {
-	constructor(
-		readonly value: IIntentInvocation
-	) { }
+	constructor(readonly value: IIntentInvocation) {}
 }
-

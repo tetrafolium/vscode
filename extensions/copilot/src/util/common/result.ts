@@ -8,7 +8,6 @@ import { ErrorUtils } from './errors';
 export type Result<T, E> = ResultOk<T> | ResultError<E>;
 
 export namespace Result {
-
 	export function ok<T>(value: T): ResultOk<T> {
 		return new ResultOk(value);
 	}
@@ -29,7 +28,9 @@ export namespace Result {
 		}
 	}
 
-	export async function tryWithAsync<T>(f: () => Promise<T>): Promise<Result<T, Error>> {
+	export async function tryWithAsync<T>(
+		f: () => Promise<T>,
+	): Promise<Result<T, Error>> {
 		try {
 			return Result.ok(await f());
 		} catch (err) {
@@ -43,7 +44,7 @@ export namespace Result {
  * To instantiate a ResultError, use `Result.error(value)`.
  */
 class ResultOk<T> {
-	constructor(readonly val: T) { }
+	constructor(readonly val: T) {}
 
 	map<U>(f: (value: T) => U): ResultOk<U> {
 		return new ResultOk(f(this.val));
@@ -88,9 +89,7 @@ class ResultOk<T> {
  * To instantiate a ResultError, use `Result.error(value)`.
  */
 class ResultError<E> {
-	constructor(
-		public readonly err: E,
-	) { }
+	constructor(public readonly err: E) {}
 
 	map<U>(_f: (value: never) => U): ResultError<E> {
 		return this;

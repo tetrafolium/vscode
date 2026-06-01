@@ -41,10 +41,15 @@ const languageMap: { [key: string]: number } = {
 	ruby: 7,
 };
 
-export function hasComment(text: string, lineNumber: number, language: string, ignoreEmptyLines = true): boolean {
+export function hasComment(
+	text: string,
+	lineNumber: number,
+	language: string,
+	ignoreEmptyLines = true,
+): boolean {
 	let lines = text.split('\n');
 	if (ignoreEmptyLines) {
-		lines = lines.filter(line => line.trim().length > 0);
+		lines = lines.filter((line) => line.trim().length > 0);
 	}
 	if (Math.abs(lineNumber) > lines.length || lineNumber >= lines.length) {
 		return false;
@@ -54,7 +59,7 @@ export function hasComment(text: string, lineNumber: number, language: string, i
 	}
 	const line = lines[lineNumber];
 	const commentChars = commentMap[language] ?? [];
-	return commentChars.some(commentChar => line.includes(commentChar));
+	return commentChars.some((commentChar) => line.includes(commentChar));
 }
 
 export class PromptFeatures {
@@ -78,7 +83,9 @@ export class PromptFeatures {
 
 	constructor(promptComponentText: string, language: string) {
 		const [firstLine, lastLine] = this.firstAndLast(promptComponentText);
-		const firstAndLastTrimEnd = this.firstAndLast(promptComponentText.trimEnd());
+		const firstAndLastTrimEnd = this.firstAndLast(
+			promptComponentText.trimEnd(),
+		);
 		this.language = language;
 		this.length = promptComponentText.length;
 		this.firstLineLength = firstLine.length;
@@ -89,8 +96,16 @@ export class PromptFeatures {
 		this.stripLength = promptComponentText.trim().length;
 		this.rstripLastLineLength = firstAndLastTrimEnd[1].length;
 		this.rstripLastLineStripLength = firstAndLastTrimEnd[1].trim().length;
-		this.secondToLastLineHasComment = hasComment(promptComponentText, -2, language);
-		this.rstripSecondToLastLineHasComment = hasComment(promptComponentText.trimEnd(), -2, language);
+		this.secondToLastLineHasComment = hasComment(
+			promptComponentText,
+			-2,
+			language,
+		);
+		this.rstripSecondToLastLineHasComment = hasComment(
+			promptComponentText.trimEnd(),
+			-2,
+			language,
+		);
 		this.prefixEndsWithNewline = promptComponentText.endsWith('\n');
 		this.lastChar = promptComponentText.slice(-1);
 		this.rstripLastChar = promptComponentText.trimEnd().slice(-1);
@@ -138,50 +153,75 @@ export class MultilineModelFeatures {
 		numFeatures[8] = this.suffixFeatures.length;
 		numFeatures[9] = this.suffixFeatures.firstLineLength;
 		numFeatures[10] = this.suffixFeatures.lastLineLength;
-		numFeatures[11] = this.prefixFeatures.secondToLastLineHasComment ? 1 : 0;
-		numFeatures[12] = this.prefixFeatures.rstripSecondToLastLineHasComment ? 1 : 0;
+		numFeatures[11] = this.prefixFeatures.secondToLastLineHasComment
+			? 1
+			: 0;
+		numFeatures[12] = this.prefixFeatures.rstripSecondToLastLineHasComment
+			? 1
+			: 0;
 		numFeatures[13] = this.prefixFeatures.prefixEndsWithNewline ? 1 : 0;
 
-		const langFeatures: number[] = new Array<number>(Object.keys(languageMap).length + 1).fill(0);
+		const langFeatures: number[] = new Array<number>(
+			Object.keys(languageMap).length + 1,
+		).fill(0);
 		langFeatures[languageMap[this.language] ?? 0] = 1;
 
 		const prefixLastCharFeatures: number[] = new Array<number>(
-			Object.keys(contextualFilterCharacterMap).length + 1
+			Object.keys(contextualFilterCharacterMap).length + 1,
 		).fill(0);
-		prefixLastCharFeatures[contextualFilterCharacterMap[this.prefixFeatures.lastChar] ?? 0] = 1;
+		prefixLastCharFeatures[
+			contextualFilterCharacterMap[this.prefixFeatures.lastChar] ?? 0
+		] = 1;
 
 		const prefixRstripLastCharFeatures: number[] = new Array<number>(
-			Object.keys(contextualFilterCharacterMap).length + 1
+			Object.keys(contextualFilterCharacterMap).length + 1,
 		).fill(0);
-		prefixRstripLastCharFeatures[contextualFilterCharacterMap[this.prefixFeatures.rstripLastChar] ?? 0] = 1;
+		prefixRstripLastCharFeatures[
+			contextualFilterCharacterMap[this.prefixFeatures.rstripLastChar] ??
+				0
+		] = 1;
 
 		const suffixFirstCharFeatures: number[] = new Array<number>(
-			Object.keys(contextualFilterCharacterMap).length + 1
+			Object.keys(contextualFilterCharacterMap).length + 1,
 		).fill(0);
-		suffixFirstCharFeatures[contextualFilterCharacterMap[this.suffixFeatures.firstChar] ?? 0] = 1;
+		suffixFirstCharFeatures[
+			contextualFilterCharacterMap[this.suffixFeatures.firstChar] ?? 0
+		] = 1;
 
 		const suffixLstripFirstCharFeatures: number[] = new Array<number>(
-			Object.keys(contextualFilterCharacterMap).length + 1
+			Object.keys(contextualFilterCharacterMap).length + 1,
 		).fill(0);
-		suffixLstripFirstCharFeatures[contextualFilterCharacterMap[this.suffixFeatures.lstripFirstChar] ?? 0] = 1;
+		suffixLstripFirstCharFeatures[
+			contextualFilterCharacterMap[this.suffixFeatures.lstripFirstChar] ??
+				0
+		] = 1;
 
 		return numFeatures.concat(
 			langFeatures,
 			prefixLastCharFeatures,
 			prefixRstripLastCharFeatures,
 			suffixFirstCharFeatures,
-			suffixLstripFirstCharFeatures
+			suffixLstripFirstCharFeatures,
 		);
 	}
 }
 
-function constructMultilineFeatures(prompt: Prompt, language: string): MultilineModelFeatures {
+function constructMultilineFeatures(
+	prompt: Prompt,
+	language: string,
+): MultilineModelFeatures {
 	return new MultilineModelFeatures(prompt.prefix, prompt.suffix, language);
 }
 
-export function requestMultilineScore(prompt: Prompt, language: string): number {
+export function requestMultilineScore(
+	prompt: Prompt,
+	language: string,
+): number {
 	// Construct features based on the prompt and language
-	const features = constructMultilineFeatures(prompt, language).constructFeatures();
+	const features = constructMultilineFeatures(
+		prompt,
+		language,
+	).constructFeatures();
 	// Return the score from the model which is the value at index 1 of the output array
 	const score = multilineModelPredict(features)[1];
 	return score;

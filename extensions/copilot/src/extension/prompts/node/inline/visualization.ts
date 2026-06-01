@@ -3,18 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { findFirstIdxMonotonousOrArrLen, findLastIdxMonotonous } from '../../../../util/vs/base/common/arraysFind';
+import {
+	findFirstIdxMonotonousOrArrLen,
+	findLastIdxMonotonous,
+} from '../../../../util/vs/base/common/arraysFind';
 import { OffsetRange } from '../../../../util/vs/editor/common/core/ranges/offsetRange';
 
 export function toAstNode<T>(
 	node: T,
-	fn: (node: T) => Omit<IAstNode, 'children' | 'range'> & { range: OffsetRange; children?: readonly T[] }
+	fn: (
+		node: T,
+	) => Omit<IAstNode, 'children' | 'range'> & {
+		range: OffsetRange;
+		children?: readonly T[];
+	},
 ): IAstNode {
 	const data = fn(node);
 	return {
 		...data,
 		range: [data.range.start, data.range.endExclusive],
-		children: data.children?.map(child => toAstNode(child, fn)),
+		children: data.children?.map((child) => toAstNode(child, fn)),
 	};
 }
 
@@ -37,12 +45,18 @@ interface ISource {
 
 type IOffsetRange = [start: number, endEx: number];
 
-
-export function subtractRange(range: OffsetRange, ranges: OffsetRange[]): OffsetRange[] {
+export function subtractRange(
+	range: OffsetRange,
+	ranges: OffsetRange[],
+): OffsetRange[] {
 	// idx of first element that touches range or that is after range
-	const joinRangeStartIdx = findFirstIdxMonotonousOrArrLen(ranges, r => r.endExclusive >= range.start);
+	const joinRangeStartIdx = findFirstIdxMonotonousOrArrLen(
+		ranges,
+		(r) => r.endExclusive >= range.start,
+	);
 	// idx of element after { last element that touches range or that is before range }
-	const joinRangeEndIdxExclusive = findLastIdxMonotonous(ranges, r => r.start <= range.endExclusive) + 1;
+	const joinRangeEndIdxExclusive =
+		findLastIdxMonotonous(ranges, (r) => r.start <= range.endExclusive) + 1;
 
 	if (joinRangeStartIdx === joinRangeEndIdxExclusive) {
 		return [range];

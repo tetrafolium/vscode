@@ -28,24 +28,35 @@ export function raceAndAll<T extends readonly unknown[]>(
 		[K in keyof T]: T[K] | undefined;
 	}>((resolve, reject) => {
 		promises.forEach((promise, index) => {
-			promise.then(result => {
-				if (settled) {
-					return;
-				}
-				settled = true;
-				const output = Array(promises.length).fill(undefined) as unknown[];
-				output[index] = result;
-				resolve(output as {
-					[K in keyof T]: T[K] | undefined;
-				});
-			}, error => {
-				errorHandler(error);
-				rejectionCount++;
-				if (rejectionCount === promises.length) {
+			promise.then(
+				(result) => {
+					if (settled) {
+						return;
+					}
 					settled = true;
-					reject(new Error('All promises passed to raceAndAll were rejected'));
-				}
-			});
+					const output = Array(promises.length).fill(
+						undefined,
+					) as unknown[];
+					output[index] = result;
+					resolve(
+						output as {
+							[K in keyof T]: T[K] | undefined;
+						},
+					);
+				},
+				(error) => {
+					errorHandler(error);
+					rejectionCount++;
+					if (rejectionCount === promises.length) {
+						settled = true;
+						reject(
+							new Error(
+								'All promises passed to raceAndAll were rejected',
+							),
+						);
+					}
+				},
+			);
 		});
 	});
 

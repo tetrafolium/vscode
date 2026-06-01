@@ -6,22 +6,39 @@
 import type { Session } from '@github/copilot/sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as vscode from 'vscode';
-import type { CancellationToken, ChatParticipantToolToken, TextDocumentChangeEvent } from 'vscode';
+import type {
+	CancellationToken,
+	ChatParticipantToolToken,
+	TextDocumentChangeEvent,
+} from 'vscode';
 import { IChatEndpoint } from '../../../../../platform/networking/common/networking';
 import { NullWorkspaceService } from '../../../../../platform/workspace/common/workspaceService';
 import { Emitter } from '../../../../../util/vs/base/common/event';
 import { DisposableStore } from '../../../../../util/vs/base/common/lifecycle';
-import { constObservable, IObservable } from '../../../../../util/vs/base/common/observableInternal';
+import {
+	constObservable,
+	IObservable,
+} from '../../../../../util/vs/base/common/observableInternal';
 import { URI } from '../../../../../util/vs/base/common/uri';
 import { LanguageModelTextPart } from '../../../../../vscodeTypes';
 import { ToolName } from '../../../../tools/common/toolNames';
 import { ICopilotTool } from '../../../../tools/common/toolsRegistry';
-import { IOnWillInvokeToolEvent, IToolsService, IToolValidationResult } from '../../../../tools/common/toolsService';
-import { handleExitPlanMode, type ExitPlanModeEventData, type ExitPlanModeResponse } from '../exitPlanModeHandler';
+import {
+	IOnWillInvokeToolEvent,
+	IToolsService,
+	IToolValidationResult,
+} from '../../../../tools/common/toolsService';
+import {
+	handleExitPlanMode,
+	type ExitPlanModeEventData,
+	type ExitPlanModeResponse,
+} from '../exitPlanModeHandler';
 
 // ---------- helpers / mocks ----------
 
-function makeEvent(overrides: Partial<ExitPlanModeEventData> = {}): ExitPlanModeEventData {
+function makeEvent(
+	overrides: Partial<ExitPlanModeEventData> = {},
+): ExitPlanModeEventData {
 	return {
 		requestId: 'req-1',
 		summary: 'Test plan summary',
@@ -33,9 +50,13 @@ function makeEvent(overrides: Partial<ExitPlanModeEventData> = {}): ExitPlanMode
 
 class StubSession {
 	public writtenPlans: string[] = [];
-	constructor(public planPath: string | undefined = '/session/plan.md') { }
-	getPlanPath(): string | undefined { return this.planPath; }
-	async writePlan(content: string): Promise<void> { this.writtenPlans.push(content); }
+	constructor(public planPath: string | undefined = '/session/plan.md') {}
+	getPlanPath(): string | undefined {
+		return this.planPath;
+	}
+	async writePlan(content: string): Promise<void> {
+		this.writtenPlans.push(content);
+	}
 }
 
 class FakeToolsService implements IToolsService {
@@ -45,14 +66,23 @@ class FakeToolsService implements IToolsService {
 	readonly onWillInvokeTool = this._onWillInvokeTool.event;
 	readonly tools: ReadonlyArray<vscode.LanguageModelToolInformation> = [];
 	readonly copilotTools = new Map<ToolName, ICopilotTool<unknown>>();
-	modelSpecificTools: IObservable<{ definition: vscode.LanguageModelToolDefinition; tool: ICopilotTool<unknown> }[]> = constObservable([]);
+	modelSpecificTools: IObservable<
+		{
+			definition: vscode.LanguageModelToolDefinition;
+			tool: ICopilotTool<unknown>;
+		}[]
+	> = constObservable([]);
 
 	private _result: vscode.LanguageModelToolResult2 = { content: [] };
 	invokeToolCalls: Array<{ name: string; input: unknown }> = [];
 
-	setResult(answer: { action?: string; rejected: boolean; feedback?: string }): void {
+	setResult(answer: {
+		action?: string;
+		rejected: boolean;
+		feedback?: string;
+	}): void {
 		this._result = {
-			content: [new LanguageModelTextPart(JSON.stringify(answer))]
+			content: [new LanguageModelTextPart(JSON.stringify(answer))],
 		};
 	}
 
@@ -60,21 +90,42 @@ class FakeToolsService implements IToolsService {
 		this._result = { content: [] };
 	}
 
-	async invokeTool(name: string, options: vscode.LanguageModelToolInvocationOptions<unknown>): Promise<vscode.LanguageModelToolResult2> {
+	async invokeTool(
+		name: string,
+		options: vscode.LanguageModelToolInvocationOptions<unknown>,
+	): Promise<vscode.LanguageModelToolResult2> {
 		this.invokeToolCalls.push({ name, input: options.input });
 		return this._result;
 	}
 
-	invokeToolWithEndpoint(name: string, options: vscode.LanguageModelToolInvocationOptions<unknown>, _endpoint: IChatEndpoint | undefined): Thenable<vscode.LanguageModelToolResult2> {
+	invokeToolWithEndpoint(
+		name: string,
+		options: vscode.LanguageModelToolInvocationOptions<unknown>,
+		_endpoint: IChatEndpoint | undefined,
+	): Thenable<vscode.LanguageModelToolResult2> {
 		return this.invokeTool(name, options);
 	}
 
-	getCopilotTool(): ICopilotTool<unknown> | undefined { return undefined; }
-	getTool(): vscode.LanguageModelToolInformation | undefined { return undefined; }
-	getToolByToolReferenceName(): vscode.LanguageModelToolInformation | undefined { return undefined; }
-	validateToolInput(): IToolValidationResult { return { inputObj: {} }; }
-	validateToolName(): string | undefined { return undefined; }
-	getEnabledTools(): vscode.LanguageModelToolInformation[] { return []; }
+	getCopilotTool(): ICopilotTool<unknown> | undefined {
+		return undefined;
+	}
+	getTool(): vscode.LanguageModelToolInformation | undefined {
+		return undefined;
+	}
+	getToolByToolReferenceName():
+		| vscode.LanguageModelToolInformation
+		| undefined {
+		return undefined;
+	}
+	validateToolInput(): IToolValidationResult {
+		return { inputObj: {} };
+	}
+	validateToolName(): string | undefined {
+		return undefined;
+	}
+	getEnabledTools(): vscode.LanguageModelToolInformation[] {
+		return [];
+	}
 }
 
 function stubLogService() {
@@ -89,7 +140,10 @@ function stubLogService() {
 }
 
 const FAKE_TOKEN = {} as ChatParticipantToolToken;
-const CANCEL_TOKEN: CancellationToken = { isCancellationRequested: false, onCancellationRequested: new Emitter<void>().event };
+const CANCEL_TOKEN: CancellationToken = {
+	isCancellationRequested: false,
+	onCancellationRequested: new Emitter<void>().event,
+};
 
 // ---------- tests ----------
 
@@ -115,42 +169,142 @@ describe('handleExitPlanMode', () => {
 
 	describe('autopilot mode', () => {
 		it('auto-approves with recommended action when it is available', async () => {
-			const event = makeEvent({ actions: ['autopilot', 'interactive', 'exit_only'], recommendedAction: 'interactive' });
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'autopilot', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
-			expect(result).toEqual<ExitPlanModeResponse>({ approved: true, selectedAction: 'interactive', autoApproveEdits: true });
+			const event = makeEvent({
+				actions: ['autopilot', 'interactive', 'exit_only'],
+				recommendedAction: 'interactive',
+			});
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'autopilot',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
+			expect(result).toEqual<ExitPlanModeResponse>({
+				approved: true,
+				selectedAction: 'interactive',
+				autoApproveEdits: true,
+			});
 		});
 
 		it('falls back to first available action in priority order when no recommended', async () => {
-			const event = makeEvent({ actions: ['interactive', 'exit_only'], recommendedAction: '' });
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'autopilot', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
-			expect(result).toEqual<ExitPlanModeResponse>({ approved: true, selectedAction: 'interactive', autoApproveEdits: undefined });
+			const event = makeEvent({
+				actions: ['interactive', 'exit_only'],
+				recommendedAction: '',
+			});
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'autopilot',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
+			expect(result).toEqual<ExitPlanModeResponse>({
+				approved: true,
+				selectedAction: 'interactive',
+				autoApproveEdits: undefined,
+			});
 		});
 
 		it('prefers autopilot over other actions in fallback order', async () => {
-			const event = makeEvent({ actions: ['exit_only', 'autopilot'], recommendedAction: '' });
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'autopilot', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
-			expect(result).toEqual<ExitPlanModeResponse>({ approved: true, selectedAction: 'autopilot', autoApproveEdits: true });
+			const event = makeEvent({
+				actions: ['exit_only', 'autopilot'],
+				recommendedAction: '',
+			});
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'autopilot',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
+			expect(result).toEqual<ExitPlanModeResponse>({
+				approved: true,
+				selectedAction: 'autopilot',
+				autoApproveEdits: true,
+			});
 		});
 
 		it('prefers autopilot_fleet second in fallback order', async () => {
-			const event = makeEvent({ actions: ['exit_only', 'autopilot_fleet', 'interactive'], recommendedAction: '' });
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'autopilot', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
-			expect(result).toEqual<ExitPlanModeResponse>({ approved: true, selectedAction: 'autopilot_fleet', autoApproveEdits: true });
+			const event = makeEvent({
+				actions: ['exit_only', 'autopilot_fleet', 'interactive'],
+				recommendedAction: '',
+			});
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'autopilot',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
+			expect(result).toEqual<ExitPlanModeResponse>({
+				approved: true,
+				selectedAction: 'autopilot_fleet',
+				autoApproveEdits: true,
+			});
 		});
 
 		it('returns approved with autoApproveEdits when no actions available', async () => {
 			const event = makeEvent({ actions: [], recommendedAction: '' });
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'autopilot', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
-			expect(result).toEqual<ExitPlanModeResponse>({ approved: true, autoApproveEdits: true });
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'autopilot',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
+			expect(result).toEqual<ExitPlanModeResponse>({
+				approved: true,
+				autoApproveEdits: true,
+			});
 		});
 
 		it('sets autoApproveEdits only for autopilot and autopilot_fleet', async () => {
-			const event1 = makeEvent({ actions: ['exit_only'], recommendedAction: '' });
-			const r1 = await handleExitPlanMode(event1, session as unknown as Session, 'autopilot', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			const event1 = makeEvent({
+				actions: ['exit_only'],
+				recommendedAction: '',
+			});
+			const r1 = await handleExitPlanMode(
+				event1,
+				session as unknown as Session,
+				'autopilot',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			expect(r1.autoApproveEdits).toBeUndefined();
 
-			const event2 = makeEvent({ actions: ['interactive'], recommendedAction: '' });
-			const r2 = await handleExitPlanMode(event2, session as unknown as Session, 'autopilot', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			const event2 = makeEvent({
+				actions: ['interactive'],
+				recommendedAction: '',
+			});
+			const r2 = await handleExitPlanMode(
+				event2,
+				session as unknown as Session,
+				'autopilot',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			expect(r2.autoApproveEdits).toBeUndefined();
 		});
 	});
@@ -160,7 +314,16 @@ describe('handleExitPlanMode', () => {
 	describe('missing toolInvocationToken', () => {
 		it('returns not approved when no token', async () => {
 			const event = makeEvent();
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'interactive', undefined, workspaceService, logService, toolService, CANCEL_TOKEN);
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				undefined,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			expect(result).toEqual<ExitPlanModeResponse>({ approved: false });
 		});
 	});
@@ -171,76 +334,213 @@ describe('handleExitPlanMode', () => {
 		it('returns not approved when tool returns empty result', async () => {
 			toolService.setEmptyResult();
 			const event = makeEvent();
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			expect(result).toEqual<ExitPlanModeResponse>({ approved: false });
 		});
 
 		it('returns not approved when user rejects the plan', async () => {
 			toolService.setResult({ rejected: true });
 			const event = makeEvent();
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			expect(result).toEqual<ExitPlanModeResponse>({ approved: false });
 		});
 
 		it('returns feedback when user provides freeform text', async () => {
-			toolService.setResult({ rejected: false, feedback: 'I want changes to the plan' });
+			toolService.setResult({
+				rejected: false,
+				feedback: 'I want changes to the plan',
+			});
 			const event = makeEvent();
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
-			expect(result).toEqual<ExitPlanModeResponse>({ approved: false, feedback: 'I want changes to the plan', selectedAction: undefined });
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
+			expect(result).toEqual<ExitPlanModeResponse>({
+				approved: false,
+				feedback: 'I want changes to the plan',
+				selectedAction: undefined,
+			});
 		});
 
 		it('returns feedback with selected action', async () => {
-			toolService.setResult({ rejected: false, action: 'interactive', feedback: 'needs more detail' });
+			toolService.setResult({
+				rejected: false,
+				action: 'interactive',
+				feedback: 'needs more detail',
+			});
 			const event = makeEvent();
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
-			expect(result).toEqual<ExitPlanModeResponse>({ approved: false, feedback: 'needs more detail', selectedAction: 'interactive' });
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
+			expect(result).toEqual<ExitPlanModeResponse>({
+				approved: false,
+				feedback: 'needs more detail',
+				selectedAction: 'interactive',
+			});
 		});
 
 		it('returns approved with selected action mapped from label', async () => {
-			toolService.setResult({ rejected: false, action: 'Implement with Autopilot' });
+			toolService.setResult({
+				rejected: false,
+				action: 'Implement with Autopilot',
+			});
 			const event = makeEvent();
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
-			expect(result).toEqual<ExitPlanModeResponse>({ approved: true, selectedAction: 'autopilot', autoApproveEdits: undefined });
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
+			expect(result).toEqual<ExitPlanModeResponse>({
+				approved: true,
+				selectedAction: 'autopilot',
+				autoApproveEdits: undefined,
+			});
 		});
 
 		it('maps "Approve Plan Only" label to exit_only', async () => {
-			toolService.setResult({ rejected: false, action: 'Approve Plan Only' });
+			toolService.setResult({
+				rejected: false,
+				action: 'Approve Plan Only',
+			});
 			const event = makeEvent();
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			expect(result.selectedAction).toBe('exit_only');
 		});
 
 		it('sets autoApproveEdits when permissionLevel is autoApprove', async () => {
-			toolService.setResult({ rejected: false, action: 'Implement Plan' });
+			toolService.setResult({
+				rejected: false,
+				action: 'Implement Plan',
+			});
 			const event = makeEvent();
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'autoApprove', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'autoApprove',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			expect(result.autoApproveEdits).toBe(true);
 		});
 
 		it('does not set autoApproveEdits when permissionLevel is interactive', async () => {
-			toolService.setResult({ rejected: false, action: 'Implement Plan' });
+			toolService.setResult({
+				rejected: false,
+				action: 'Implement Plan',
+			});
 			const event = makeEvent();
-			const result = await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			const result = await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			expect(result.autoApproveEdits).toBeUndefined();
 		});
 
 		it('passes actions with labels and recommended flag to tool', async () => {
-			toolService.setResult({ rejected: false, action: 'Implement Plan' });
-			const event = makeEvent({ actions: ['autopilot', 'exit_only'], recommendedAction: 'exit_only' });
-			await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			toolService.setResult({
+				rejected: false,
+				action: 'Implement Plan',
+			});
+			const event = makeEvent({
+				actions: ['autopilot', 'exit_only'],
+				recommendedAction: 'exit_only',
+			});
+			await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			const call = toolService.invokeToolCalls[0];
 			expect(call.name).toBe('vscode_reviewPlan');
 			const input = call.input as any;
 			expect(input.actions).toHaveLength(2);
-			expect(input.actions[0]).toEqual(expect.objectContaining({ label: 'Implement with Autopilot', default: false }));
-			expect(input.actions[1]).toEqual(expect.objectContaining({ label: 'Approve Plan Only', default: true }));
+			expect(input.actions[0]).toEqual(
+				expect.objectContaining({
+					label: 'Implement with Autopilot',
+					default: false,
+				}),
+			);
+			expect(input.actions[1]).toEqual(
+				expect.objectContaining({
+					label: 'Approve Plan Only',
+					default: true,
+				}),
+			);
 		});
 
 		it('includes plan path in tool input when plan path exists', async () => {
 			session.planPath = '/session/plan.md';
 			toolService.setResult({ rejected: false, action: 'Interactive' });
 			const event = makeEvent();
-			await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			const input = toolService.invokeToolCalls[0].input as any;
 			expect(input.plan).toBe('file:///session/plan.md');
 		});
@@ -249,7 +549,16 @@ describe('handleExitPlanMode', () => {
 			session.planPath = undefined;
 			toolService.setResult({ rejected: false, action: 'Interactive' });
 			const event = makeEvent();
-			await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			const input = toolService.invokeToolCalls[0].input as any;
 			expect(input.plan).toBeUndefined();
 		});
@@ -257,7 +566,16 @@ describe('handleExitPlanMode', () => {
 		it('enables feedback via canProvideFeedback', async () => {
 			toolService.setEmptyResult();
 			const event = makeEvent();
-			await handleExitPlanMode(event, session as unknown as Session, 'interactive', FAKE_TOKEN, workspaceService, logService, toolService, CANCEL_TOKEN);
+			await handleExitPlanMode(
+				event,
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
+			);
 			const input = toolService.invokeToolCalls[0].input as any;
 			expect(input.canProvideFeedback).toBe(true);
 		});
@@ -283,20 +601,42 @@ describe('handleExitPlanMode', () => {
 			};
 
 			// Set up a deferred tool invocation so we can fire document changes while waiting
-			let resolveInvokeTool!: (result: vscode.LanguageModelToolResult2) => void;
-			toolService.invokeTool = ((_name: string, _options: vscode.LanguageModelToolInvocationOptions<unknown>) => {
-				return new Promise<vscode.LanguageModelToolResult2>(resolve => { resolveInvokeTool = resolve; });
-			});
+			let resolveInvokeTool!: (
+				result: vscode.LanguageModelToolResult2,
+			) => void;
+			toolService.invokeTool = (
+				_name: string,
+				_options: vscode.LanguageModelToolInvocationOptions<unknown>,
+			) => {
+				return new Promise<vscode.LanguageModelToolResult2>(
+					(resolve) => {
+						resolveInvokeTool = resolve;
+					},
+				);
+			};
 
 			const promise = handleExitPlanMode(
-				makeEvent(), session as unknown as Session, 'interactive', FAKE_TOKEN,
-				workspaceService, logService, toolService, CANCEL_TOKEN,
+				makeEvent(),
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
 			);
 
 			// Simulate a saved document change
 			workspaceService.didChangeTextDocumentEmitter.fire({
 				document: savedDoc,
-				contentChanges: [{ range: {} as any, rangeOffset: 0, rangeLength: 0, text: 'x' }],
+				contentChanges: [
+					{
+						range: {} as any,
+						rangeOffset: 0,
+						rangeLength: 0,
+						text: 'x',
+					},
+				],
 			} as unknown as TextDocumentChangeEvent);
 
 			// Allow debouncer to fire
@@ -318,19 +658,41 @@ describe('handleExitPlanMode', () => {
 				getText: () => 'dirty content',
 			};
 
-			let resolveInvokeTool!: (result: vscode.LanguageModelToolResult2) => void;
-			toolService.invokeTool = ((_name: string, _options: vscode.LanguageModelToolInvocationOptions<unknown>) => {
-				return new Promise<vscode.LanguageModelToolResult2>(resolve => { resolveInvokeTool = resolve; });
-			});
+			let resolveInvokeTool!: (
+				result: vscode.LanguageModelToolResult2,
+			) => void;
+			toolService.invokeTool = (
+				_name: string,
+				_options: vscode.LanguageModelToolInvocationOptions<unknown>,
+			) => {
+				return new Promise<vscode.LanguageModelToolResult2>(
+					(resolve) => {
+						resolveInvokeTool = resolve;
+					},
+				);
+			};
 
 			const promise = handleExitPlanMode(
-				makeEvent(), session as unknown as Session, 'interactive', FAKE_TOKEN,
-				workspaceService, logService, toolService, CANCEL_TOKEN,
+				makeEvent(),
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
 			);
 
 			workspaceService.didChangeTextDocumentEmitter.fire({
 				document: dirtyDoc,
-				contentChanges: [{ range: {} as any, rangeOffset: 0, rangeLength: 0, text: 'x' }],
+				contentChanges: [
+					{
+						range: {} as any,
+						rangeOffset: 0,
+						rangeLength: 0,
+						text: 'x',
+					},
+				],
 			} as unknown as TextDocumentChangeEvent);
 
 			await vi.advanceTimersByTimeAsync(150);
@@ -349,19 +711,41 @@ describe('handleExitPlanMode', () => {
 				getText: () => 'other content',
 			};
 
-			let resolveInvokeTool!: (result: vscode.LanguageModelToolResult2) => void;
-			toolService.invokeTool = ((_name: string, _options: vscode.LanguageModelToolInvocationOptions<unknown>) => {
-				return new Promise<vscode.LanguageModelToolResult2>(resolve => { resolveInvokeTool = resolve; });
-			});
+			let resolveInvokeTool!: (
+				result: vscode.LanguageModelToolResult2,
+			) => void;
+			toolService.invokeTool = (
+				_name: string,
+				_options: vscode.LanguageModelToolInvocationOptions<unknown>,
+			) => {
+				return new Promise<vscode.LanguageModelToolResult2>(
+					(resolve) => {
+						resolveInvokeTool = resolve;
+					},
+				);
+			};
 
 			const promise = handleExitPlanMode(
-				makeEvent(), session as unknown as Session, 'interactive', FAKE_TOKEN,
-				workspaceService, logService, toolService, CANCEL_TOKEN,
+				makeEvent(),
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
 			);
 
 			workspaceService.didChangeTextDocumentEmitter.fire({
 				document: otherDoc,
-				contentChanges: [{ range: {} as any, rangeOffset: 0, rangeLength: 0, text: 'x' }],
+				contentChanges: [
+					{
+						range: {} as any,
+						rangeOffset: 0,
+						rangeLength: 0,
+						text: 'x',
+					},
+				],
 			} as unknown as TextDocumentChangeEvent);
 
 			await vi.advanceTimersByTimeAsync(150);
@@ -377,8 +761,14 @@ describe('handleExitPlanMode', () => {
 			toolService.setResult({ rejected: false, action: 'Interactive' });
 
 			const result = await handleExitPlanMode(
-				makeEvent(), session as unknown as Session, 'interactive', FAKE_TOKEN,
-				workspaceService, logService, toolService, CANCEL_TOKEN,
+				makeEvent(),
+				session as unknown as Session,
+				'interactive',
+				FAKE_TOKEN,
+				workspaceService,
+				logService,
+				toolService,
+				CANCEL_TOKEN,
 			);
 
 			// Should complete without errors even with no plan path

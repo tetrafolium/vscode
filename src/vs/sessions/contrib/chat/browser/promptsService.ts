@@ -3,17 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../base/common/cancellation.js';
-import { FileAccess } from '../../../../base/common/network.js';
-import { basename, dirname, joinPath } from '../../../../base/common/resources.js';
-import { SKILL_FILENAME } from '../../../../workbench/contrib/chat/common/promptSyntax/config/promptFileLocations.js';
-import { PromptsType } from '../../../../workbench/contrib/chat/common/promptSyntax/promptTypes.js';
-import { IAgentSkill, IPromptPath, PromptsStorage } from '../../../../workbench/contrib/chat/common/promptSyntax/service/promptsService.js';
-import { PromptsService } from '../../../../workbench/contrib/chat/common/promptSyntax/service/promptsServiceImpl.js';
-import { BUILTIN_STORAGE, IBuiltinPromptPath } from '../common/builtinPromptsStorage.js';
+import { CancellationToken } from "../../../../base/common/cancellation.js";
+import { FileAccess } from "../../../../base/common/network.js";
+import {
+	basename,
+	dirname,
+	joinPath,
+} from "../../../../base/common/resources.js";
+import { SKILL_FILENAME } from "../../../../workbench/contrib/chat/common/promptSyntax/config/promptFileLocations.js";
+import { PromptsType } from "../../../../workbench/contrib/chat/common/promptSyntax/promptTypes.js";
+import {
+	IAgentSkill,
+	IPromptPath,
+	PromptsStorage,
+} from "../../../../workbench/contrib/chat/common/promptSyntax/service/promptsService.js";
+import { PromptsService } from "../../../../workbench/contrib/chat/common/promptSyntax/service/promptsServiceImpl.js";
+import {
+	BUILTIN_STORAGE,
+	IBuiltinPromptPath,
+} from "../common/builtinPromptsStorage.js";
 
 /** URI root for built-in skills bundled with the Agents app. */
-export const BUILTIN_SKILLS_URI = FileAccess.asFileUri('vs/sessions/skills');
+export const BUILTIN_SKILLS_URI = FileAccess.asFileUri("vs/sessions/skills");
 
 /**
  * Sessions-specific PromptsService that additionally discovers built-in skills
@@ -27,7 +38,6 @@ export const BUILTIN_SKILLS_URI = FileAccess.asFileUri('vs/sessions/skills');
  * are appended last and filtered when overridden).
  */
 export class AgenticPromptsService extends PromptsService {
-
 	private _builtinSkillsCache: Promise<readonly IAgentSkill[]> | undefined;
 
 	private async getBuiltinSkills(): Promise<readonly IAgentSkill[]> {
@@ -51,7 +61,10 @@ export class AgenticPromptsService extends PromptsService {
 				}
 				const skillFileUri = joinPath(child.resource, SKILL_FILENAME);
 				try {
-					const parsed = await this.parseNew(skillFileUri, CancellationToken.None);
+					const parsed = await this.parseNew(
+						skillFileUri,
+						CancellationToken.None,
+					);
 					const rawName = parsed.header?.name;
 					const rawDescription = parsed.header?.description;
 					if (!rawName || !rawDescription) {
@@ -68,11 +81,15 @@ export class AgenticPromptsService extends PromptsService {
 						storage: BUILTIN_STORAGE as PromptsStorage,
 						name,
 						description,
-						disableModelInvocation: parsed.header?.disableModelInvocation === true,
+						disableModelInvocation:
+							parsed.header?.disableModelInvocation === true,
 						userInvocable: parsed.header?.userInvocable !== false,
 					});
 				} catch (e) {
-					this.logger.warn(`[AgenticPromptsService] Failed to parse built-in skill: ${skillFileUri}`, e instanceof Error ? e.message : String(e));
+					this.logger.warn(
+						`[AgenticPromptsService] Failed to parse built-in skill: ${skillFileUri}`,
+						e instanceof Error ? e.message : String(e),
+					);
 				}
 			}
 			return skills;
@@ -83,7 +100,7 @@ export class AgenticPromptsService extends PromptsService {
 
 	private async getBuiltinSkillPaths(): Promise<readonly IBuiltinPromptPath[]> {
 		const skills = await this.getBuiltinSkills();
-		return skills.map(s => ({
+		return skills.map((s) => ({
 			uri: s.uri,
 			storage: BUILTIN_STORAGE,
 			type: PromptsType.skill,
@@ -92,7 +109,9 @@ export class AgenticPromptsService extends PromptsService {
 		}));
 	}
 
-	public override async findAgentSkills(token: CancellationToken): Promise<IAgentSkill[] | undefined> {
+	public override async findAgentSkills(
+		token: CancellationToken,
+	): Promise<IAgentSkill[] | undefined> {
 		const baseResult = await super.findAgentSkills(token);
 		if (baseResult === undefined) {
 			return undefined;
@@ -105,11 +124,17 @@ export class AgenticPromptsService extends PromptsService {
 
 		const existingNames = new Set(
 			baseResult
-				.filter(s => s.storage === PromptsStorage.local || s.storage === PromptsStorage.user)
-				.map(s => s.name)
+				.filter(
+					(s) =>
+						s.storage === PromptsStorage.local ||
+						s.storage === PromptsStorage.user,
+				)
+				.map((s) => s.name),
 		);
 		const disabledSkills = this.getDisabledPromptFiles(PromptsType.skill);
-		const nonOverridden = builtinSkills.filter(s => !existingNames.has(s.name) && !disabledSkills.has(s.uri));
+		const nonOverridden = builtinSkills.filter(
+			(s) => !existingNames.has(s.name) && !disabledSkills.has(s.uri),
+		);
 		if (nonOverridden.length === 0) {
 			return baseResult;
 		}
@@ -117,7 +142,10 @@ export class AgenticPromptsService extends PromptsService {
 		return [...baseResult, ...nonOverridden];
 	}
 
-	public override async listPromptFiles(type: PromptsType, token: CancellationToken): Promise<readonly IPromptPath[]> {
+	public override async listPromptFiles(
+		type: PromptsType,
+		token: CancellationToken,
+	): Promise<readonly IPromptPath[]> {
 		const baseResults = await super.listPromptFiles(type, token);
 
 		if (type !== PromptsType.skill) {
@@ -132,19 +160,30 @@ export class AgenticPromptsService extends PromptsService {
 		// Filter out built-ins overridden by user/workspace skills of the same folder name.
 		const overriddenNames = new Set<string>();
 		for (const p of baseResults) {
-			if (p.storage === PromptsStorage.local || p.storage === PromptsStorage.user) {
+			if (
+				p.storage === PromptsStorage.local ||
+				p.storage === PromptsStorage.user
+			) {
 				overriddenNames.add(basename(dirname(p.uri)));
 			}
 		}
-		const nonOverridden = builtinItems.filter(p => !overriddenNames.has(basename(dirname(p.uri))));
+		const nonOverridden = builtinItems.filter(
+			(p) => !overriddenNames.has(basename(dirname(p.uri))),
+		);
 
 		// Built-in items use BUILTIN_STORAGE ('builtin') which is not in the core
 		// IPromptPath union but is handled by the sessions UI layer.
 		return [...baseResults, ...nonOverridden] as readonly IPromptPath[];
 	}
 
-	public override async listPromptFilesForStorage(type: PromptsType, storage: PromptsStorage, token: CancellationToken): Promise<readonly IPromptPath[]> {
-		if ((storage as PromptsStorage | typeof BUILTIN_STORAGE) === BUILTIN_STORAGE) {
+	public override async listPromptFilesForStorage(
+		type: PromptsType,
+		storage: PromptsStorage,
+		token: CancellationToken,
+	): Promise<readonly IPromptPath[]> {
+		if (
+			(storage as PromptsStorage | typeof BUILTIN_STORAGE) === BUILTIN_STORAGE
+		) {
 			if (type === PromptsType.skill) {
 				return this.getBuiltinSkillPaths() as Promise<readonly IPromptPath[]>;
 			}
@@ -159,6 +198,8 @@ export class AgenticPromptsService extends PromptsService {
  * Matches the sanitization applied by PromptsService for other skill sources.
  */
 function sanitizeSkillText(text: string, maxLength: number): string {
-	const sanitized = text.replace(/<[^>]+>/g, '');
-	return sanitized.length > maxLength ? sanitized.substring(0, maxLength) : sanitized;
+	const sanitized = text.replace(/<[^>]+>/g, "");
+	return sanitized.length > maxLength
+		? sanitized.substring(0, maxLength)
+		: sanitized;
 }

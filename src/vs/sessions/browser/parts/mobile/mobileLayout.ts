@@ -3,14 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IWorkbenchLayoutService } from '../../../../workbench/services/layout/browser/layoutService.js';
+import { IWorkbenchLayoutService } from "../../../../workbench/services/layout/browser/layoutService.js";
 
 /**
  * CSS class applied to the sessions workbench main container when the
  * viewport is classified as phone. Must stay in sync with
  * `LayoutClasses.PHONE_LAYOUT` in `workbench.ts`.
  */
-const PHONE_LAYOUT_CLASS = 'phone-layout';
+const PHONE_LAYOUT_CLASS = "phone-layout";
 
 /**
  * Returns true when the sessions workbench currently has the phone

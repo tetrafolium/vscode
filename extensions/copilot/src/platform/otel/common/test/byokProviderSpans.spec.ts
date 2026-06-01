@@ -77,27 +77,45 @@ describe('BYOK Provider Span Emission', () => {
 		const otel = new CapturingOTelService({ captureContent: false });
 
 		// Simulate the input capture gating pattern used in BYOK providers
-		const span = otel.startSpan('chat gpt-4o', { kind: SpanKind.CLIENT, attributes: {} });
+		const span = otel.startSpan('chat gpt-4o', {
+			kind: SpanKind.CLIENT,
+			attributes: {},
+		});
 		if (otel.config.captureContent) {
 			span.setAttribute(GenAiAttr.INPUT_MESSAGES, 'should not appear');
 		}
 		span.end();
 
-		expect(otel.spans[0].attributes[GenAiAttr.INPUT_MESSAGES]).toBeUndefined();
+		expect(
+			otel.spans[0].attributes[GenAiAttr.INPUT_MESSAGES],
+		).toBeUndefined();
 	});
 
 	it('captures content when captureContent is true', () => {
 		const otel = new CapturingOTelService({ captureContent: true });
 
-		const span = otel.startSpan('chat gpt-4o', { kind: SpanKind.CLIENT, attributes: {} });
+		const span = otel.startSpan('chat gpt-4o', {
+			kind: SpanKind.CLIENT,
+			attributes: {},
+		});
 		if (otel.config.captureContent) {
-			span.setAttribute(GenAiAttr.INPUT_MESSAGES, '[{"role":"user","parts":[{"type":"text","content":"hello"}]}]');
-			span.setAttribute(GenAiAttr.OUTPUT_MESSAGES, '[{"role":"assistant","parts":[{"type":"text","content":"hi"}]}]');
+			span.setAttribute(
+				GenAiAttr.INPUT_MESSAGES,
+				'[{"role":"user","parts":[{"type":"text","content":"hello"}]}]',
+			);
+			span.setAttribute(
+				GenAiAttr.OUTPUT_MESSAGES,
+				'[{"role":"assistant","parts":[{"type":"text","content":"hi"}]}]',
+			);
 		}
 		span.end();
 
-		expect(otel.spans[0].attributes[GenAiAttr.INPUT_MESSAGES]).toBeDefined();
-		expect(otel.spans[0].attributes[GenAiAttr.OUTPUT_MESSAGES]).toBeDefined();
+		expect(
+			otel.spans[0].attributes[GenAiAttr.INPUT_MESSAGES],
+		).toBeDefined();
+		expect(
+			otel.spans[0].attributes[GenAiAttr.OUTPUT_MESSAGES],
+		).toBeDefined();
 	});
 
 	it('emits inference details event with request/response data', () => {
@@ -105,13 +123,25 @@ describe('BYOK Provider Span Emission', () => {
 
 		emitInferenceDetailsEvent(
 			otel,
-			{ model: 'claude-sonnet-4-20250514', temperature: 0.1, maxTokens: 4096 },
-			{ id: 'msg_123', model: 'claude-sonnet-4-20250514', finishReasons: ['stop'], inputTokens: 2000, outputTokens: 500 },
+			{
+				model: 'claude-sonnet-4-20250514',
+				temperature: 0.1,
+				maxTokens: 4096,
+			},
+			{
+				id: 'msg_123',
+				model: 'claude-sonnet-4-20250514',
+				finishReasons: ['stop'],
+				inputTokens: 2000,
+				outputTokens: 500,
+			},
 		);
 
 		expect(otel.logRecords).toHaveLength(1);
 		const attrs = otel.logRecords[0].attributes!;
-		expect(attrs['event.name']).toBe('gen_ai.client.inference.operation.details');
+		expect(attrs['event.name']).toBe(
+			'gen_ai.client.inference.operation.details',
+		);
 		expect(attrs[GenAiAttr.REQUEST_MODEL]).toBe('claude-sonnet-4-20250514');
 		expect(attrs[GenAiAttr.USAGE_INPUT_TOKENS]).toBe(2000);
 		expect(attrs[GenAiAttr.USAGE_OUTPUT_TOKENS]).toBe(500);
@@ -119,7 +149,10 @@ describe('BYOK Provider Span Emission', () => {
 
 	it('uses parentTraceContext for CAPI → BYOK trace linking', () => {
 		const otel = new CapturingOTelService();
-		const parentCtx = { traceId: '11112222333344445555666677778888', spanId: 'aabbccddeeff0011' };
+		const parentCtx = {
+			traceId: '11112222333344445555666677778888',
+			spanId: 'aabbccddeeff0011',
+		};
 
 		const span = otel.startSpan('chat gpt-4o', {
 			kind: SpanKind.CLIENT,

@@ -44,7 +44,9 @@
 		border-radius: 3px;
 		cursor: pointer;
 		opacity: 0.6;
-		transition: opacity 0.15s, background-color 0.15s;
+		transition:
+			opacity 0.15s,
+			background-color 0.15s;
 	}
 
 	.chart-toggle-button:hover {
@@ -101,7 +103,6 @@
 	.settings .setting.disabled .setting-label {
 		color: var(--vscode-disabledForeground);
 	}
-
 
 	/* Contributions */
 

@@ -3,15 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { spawn, spawnSync, SpawnSyncReturns } from 'child_process';
-import { createHash } from 'crypto';
-import fs from 'fs';
-import { test } from 'mocha';
-import fetch, { Response } from 'node-fetch';
-import os from 'os';
-import path from 'path';
-import { Browser, chromium, ElectronApplication, Page, webkit } from 'playwright';
-import { Capability, detectCapabilities } from './detectors.js';
+import { spawn, spawnSync, SpawnSyncReturns } from "child_process";
+import { createHash } from "crypto";
+import fs from "fs";
+import { test } from "mocha";
+import fetch, { Response } from "node-fetch";
+import os from "os";
+import path from "path";
+import {
+	Browser,
+	chromium,
+	ElectronApplication,
+	Page,
+	webkit,
+} from "playwright";
+import { Capability, detectCapabilities } from "./detectors.js";
 
 /**
  * Response from https://update.code.visualstudio.com/api/versions/commit:<commit>/<target>/<quality>
@@ -31,14 +37,19 @@ interface ITargetMetadata {
  * Provides context and utilities for VS Code sanity tests.
  */
 export class TestContext {
-	private static readonly authenticodeInclude = /^.+\.(exe|dll|sys|cab|cat|msi|jar|ocx|ps1|psm1|psd1|ps1xml|pssc1)$/i;
+	private static readonly authenticodeInclude =
+		/^.+\.(exe|dll|sys|cab|cat|msi|jar|ocx|ps1|psm1|psd1|ps1xml|pssc1)$/i;
 	// MXC SDK ships per-arch SPDX catalog manifests that Get-AuthenticodeSignature reports as UnknownError.
-	private static readonly authenticodeExclude = /[\\/]node_modules[\\/]@microsoft[\\/]mxc-sdk[\\/]bin[\\/][^\\/]+[\\/]_manifest[\\/][^\\/]+[\\/]manifest\.cat$/i;
+	private static readonly authenticodeExclude =
+		/[\\/]node_modules[\\/]@microsoft[\\/]mxc-sdk[\\/]bin[\\/][^\\/]+[\\/]_manifest[\\/][^\\/]+[\\/]manifest\.cat$/i;
 	private static readonly versionInfoInclude = /^.+\.(exe|dll|node|msi)$/i;
-	private static readonly versionInfoFileExclude = /^(dxil\.dll|ffmpeg\.dll|msalruntime\.dll)$/i;
+	private static readonly versionInfoFileExclude =
+		/^(dxil\.dll|ffmpeg\.dll|msalruntime\.dll)$/i;
 	// MXC SDK binaries under bin are signed, but they do not carry a ProductName VersionInfo resource.
-	private static readonly versionInfoPathExclude = /(?:^|[\\/])node_modules(?:\.asar\.unpacked)?[\\/]@microsoft[\\/]mxc-sdk[\\/]bin[\\/]/i;
-	private static readonly dpkgLockError = /dpkg frontend lock was locked by another process|unable to acquire the dpkg frontend lock|could not get lock \/var\/lib\/dpkg\/lock-frontend/i;
+	private static readonly versionInfoPathExclude =
+		/(?:^|[\\/])node_modules(?:\.asar\.unpacked)?[\\/]@microsoft[\\/]mxc-sdk[\\/]bin[\\/]/i;
+	private static readonly dpkgLockError =
+		/dpkg frontend lock was locked by another process|unable to acquire the dpkg frontend lock|could not get lock \/var\/lib\/dpkg\/lock-frontend/i;
 
 	private readonly tempDirs = new Set<string>();
 	private readonly wslTempDirs = new Set<string>();
@@ -48,17 +59,18 @@ export class TestContext {
 	private screenshotCounter = 0;
 	private wslVersion: number | undefined;
 
-	public constructor(public readonly options: Readonly<{
-		quality: 'stable' | 'insider' | 'exploration';
-		commit: string;
-		verbose: boolean;
-		cleanup: boolean;
-		checkSigning: boolean;
-		headlessBrowser: boolean;
-		downloadOnly: boolean;
-		screenshotsDir: string | undefined;
-	}>) {
-	}
+	public constructor(
+		public readonly options: Readonly<{
+			quality: "stable" | "insider" | "exploration";
+			commit: string;
+			verbose: boolean;
+			cleanup: boolean;
+			checkSigning: boolean;
+			headlessBrowser: boolean;
+			downloadOnly: boolean;
+			screenshotsDir: string | undefined;
+		}>,
+	) {}
 
 	/**
 	 * Returns true if the current process is running as root.
@@ -77,7 +89,7 @@ export class TestContext {
 		let tempDir = fs.realpathSync(os.tmpdir());
 
 		// On Windows, expand short 8.3 file names to long names
-		if (os.platform() === 'win32') {
+		if (os.platform() === "win32") {
 			tempDir = fs.realpathSync.native(tempDir);
 		}
 
@@ -91,8 +103,15 @@ export class TestContext {
 	 * @param fn The test function.
 	 * @returns The Mocha test object or void if the test is skipped.
 	 */
-	public test(name: string, require: Capability[], fn: () => Promise<void>): Mocha.Test | void {
-		if (!this.options.downloadOnly && require.some(o => !this.capabilities.has(o))) {
+	public test(
+		name: string,
+		require: Capability[],
+		fn: () => Promise<void>,
+	): Mocha.Test | void {
+		if (
+			!this.options.downloadOnly &&
+			require.some((o) => !this.capabilities.has(o))
+		) {
 			return;
 		}
 
@@ -108,11 +127,11 @@ export class TestContext {
 
 			try {
 				await fn();
-
 			} catch (error) {
-				self.log(`Test failed with error: ${error instanceof Error ? error.message : String(error)}`);
+				self.log(
+					`Test failed with error: ${error instanceof Error ? error.message : String(error)}`,
+				);
 				throw error;
-
 			} finally {
 				self.currentTestName = undefined;
 
@@ -168,14 +187,14 @@ export class TestContext {
 	 * @param delay The delay in milliseconds to wait before resolving the promise.
 	 */
 	private timeout(delay: number) {
-		return new Promise(resolve => setTimeout(resolve, delay));
+		return new Promise((resolve) => setTimeout(resolve, delay));
 	}
 
 	/**
 	 * Creates a new temporary directory and returns its path.
 	 */
 	public createTempDir(): string {
-		const tempDir = fs.mkdtempSync(path.join(this.osTempDir, 'vscode-sanity'));
+		const tempDir = fs.mkdtempSync(path.join(this.osTempDir, "vscode-sanity"));
 		this.log(`Created temp directory: ${tempDir}`);
 		this.tempDirs.add(tempDir);
 		return tempDir;
@@ -187,7 +206,7 @@ export class TestContext {
 	public createWslTempDir(): string {
 		const tempDir = `/tmp/vscode-sanity-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 		this.log(`Creating WSL temp directory: ${tempDir}`);
-		this.runNoErrors('wsl', 'mkdir', '-p', tempDir);
+		this.runNoErrors("wsl", "mkdir", "-p", tempDir);
 		this.wslTempDirs.add(tempDir);
 		return tempDir;
 	}
@@ -198,7 +217,7 @@ export class TestContext {
 	 */
 	public deleteWslDir(dir: string): void {
 		this.log(`Deleting WSL directory: ${dir}`);
-		this.runNoErrors('wsl', 'rm', '-rf', dir);
+		this.runNoErrors("wsl", "rm", "-rf", dir);
 	}
 
 	/**
@@ -209,7 +228,7 @@ export class TestContext {
 	public toWslPath(windowsPath: string): string {
 		return windowsPath
 			.replace(/^([A-Za-z]):/, (_, drive) => `/mnt/${drive.toLowerCase()}`)
-			.replaceAll('\\', '/');
+			.replaceAll("\\", "/");
 	}
 
 	/**
@@ -217,10 +236,14 @@ export class TestContext {
 	 * @returns The default WSL distribution name (e.g., 'Ubuntu').
 	 */
 	public getDefaultWslDistro(): string {
-		const result = this.runNoErrors('wsl', '--list', '--quiet');
-		const distro = result.stdout.trim().split('\n')[0].replace(/\0/g, '').trim();
+		const result = this.runNoErrors("wsl", "--list", "--quiet");
+		const distro = result.stdout
+			.trim()
+			.split("\n")[0]
+			.replace(/\0/g, "")
+			.trim();
 		if (!distro) {
-			this.error('No WSL distribution found');
+			this.error("No WSL distribution found");
 		}
 		this.log(`Default WSL distribution: ${distro}`);
 		return distro;
@@ -234,16 +257,16 @@ export class TestContext {
 			return this.wslVersion;
 		}
 
-		const result = this.runNoErrors('wsl', '--list', '--verbose');
+		const result = this.runNoErrors("wsl", "--list", "--verbose");
 		for (const rawLine of result.stdout.split(/\r?\n/)) {
 			const line = rawLine.trim();
 			if (!line || /^NAME\s+STATE\s+VERSION$/i.test(line)) {
 				continue;
 			}
 
-			const normalizedLine = line.replace(/^\*\s*/, '');
+			const normalizedLine = line.replace(/^\*\s*/, "");
 			const columns = normalizedLine.split(/\s+/);
-			if (columns.length < 3 || columns[0] !== 'Ubuntu') {
+			if (columns.length < 3 || columns[0] !== "Ubuntu") {
 				continue;
 			}
 
@@ -267,7 +290,7 @@ export class TestContext {
 			return;
 		}
 
-		const wslNodePath = wslEntryPoint.replace(/\/bin\/[^/]+$/, '/node');
+		const wslNodePath = wslEntryPoint.replace(/\/bin\/[^/]+$/, "/node");
 		if (this.patchedWslNodePaths.has(wslNodePath)) {
 			return;
 		}
@@ -276,17 +299,17 @@ export class TestContext {
 		this.warn(`Applying WSL1 Node 24 workaround for ${wslNodePath}`);
 
 		const shellScript = [
-			'set -e',
+			"set -e",
 			`node_path='${wslNodePath}'`,
 			'backup_path="${node_path}.orig"',
 			'if [ -f "${backup_path}" ]; then exit 0; fi',
-			'if ! command -v objcopy >/dev/null 2>&1; then apt-get update && apt-get install -y binutils; fi',
+			"if ! command -v objcopy >/dev/null 2>&1; then apt-get update && apt-get install -y binutils; fi",
 			'cp "${node_path}" "${backup_path}"',
 			'objcopy --remove-section .note.ABI-tag --remove-section .note.gnu.build-id --remove-section .note.gnu.property "${backup_path}" "${node_path}"',
 			'chmod +x "${node_path}"',
-		].join('; ');
+		].join("; ");
 
-		this.runNoErrors('wsl', '-d', 'Ubuntu', 'sh', '-lc', shellScript);
+		this.runNoErrors("wsl", "-d", "Ubuntu", "sh", "-lc", shellScript);
 	}
 
 	/**
@@ -329,21 +352,27 @@ export class TestContext {
 	 * @param url The URL to fetch.
 	 * @returns The fetch Response object.
 	 */
-	public async fetchNoErrors(url: string): Promise<Response & { body: NodeJS.ReadableStream }> {
+	public async fetchNoErrors(
+		url: string,
+	): Promise<Response & { body: NodeJS.ReadableStream }> {
 		const maxRetries = 5;
 		let lastError: Error | undefined;
 
 		for (let attempt = 0; attempt < maxRetries; attempt++) {
 			if (attempt > 0) {
 				const delay = Math.pow(2, attempt - 1) * 1000;
-				this.warn(`Retrying fetch (attempt ${attempt + 1}/${maxRetries}) after ${delay}ms`);
+				this.warn(
+					`Retrying fetch (attempt ${attempt + 1}/${maxRetries}) after ${delay}ms`,
+				);
 				await this.timeout(delay);
 			}
 
 			try {
 				const response = await fetch(url);
 				if (!response.ok) {
-					lastError = new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+					lastError = new Error(
+						`Failed to fetch ${url}: ${response.status} ${response.statusText}`,
+					);
 					continue;
 				}
 
@@ -359,7 +388,9 @@ export class TestContext {
 			}
 		}
 
-		this.error(`Failed to fetch ${url} after ${maxRetries} attempts: ${lastError?.message}`);
+		this.error(
+			`Failed to fetch ${url} after ${maxRetries} attempts: ${lastError?.message}`,
+		);
 	}
 
 	/**
@@ -373,9 +404,11 @@ export class TestContext {
 		this.log(`Fetching metadata for ${target} from ${url}`);
 		const response = await this.fetchNoErrors(url);
 
-		const result = await response.json() as ITargetMetadata;
+		const result = (await response.json()) as ITargetMetadata;
 		if (result.url === undefined || result.sha256hash === undefined) {
-			this.error(`Invalid metadata response for ${target}: ${JSON.stringify(result)}`);
+			this.error(
+				`Invalid metadata response for ${target}: ${JSON.stringify(result)}`,
+			);
 		}
 
 		this.log(`Fetched metadata for ${target}: ${JSON.stringify(result)}`);
@@ -392,7 +425,18 @@ export class TestContext {
 		const filePath = path.join(this.createTempDir(), path.basename(url));
 
 		this.log(`Downloading ${url} to ${filePath}`);
-		this.runNoErrors('curl', '-fSL', '--retry', '5', '--retry-delay', '2', '--retry-all-errors', '-o', filePath, url);
+		this.runNoErrors(
+			"curl",
+			"-fSL",
+			"--retry",
+			"5",
+			"--retry-delay",
+			"2",
+			"--retry-all-errors",
+			"-o",
+			filePath,
+			url,
+		);
 		this.log(`Downloaded ${url} to ${filePath}`);
 
 		this.validateSha256Hash(filePath, sha256hash);
@@ -408,10 +452,12 @@ export class TestContext {
 		this.log(`Validating SHA256 hash for ${filePath}`);
 
 		const buffer = fs.readFileSync(filePath);
-		const hash = createHash('sha256').update(buffer).digest('hex');
+		const hash = createHash("sha256").update(buffer).digest("hex");
 
 		if (hash !== expectedHash) {
-			this.error(`Hash mismatch for ${filePath}: expected ${expectedHash}, got ${hash}`);
+			this.error(
+				`Hash mismatch for ${filePath}: expected ${expectedHash}, got ${hash}`,
+			);
 		}
 	}
 
@@ -420,8 +466,10 @@ export class TestContext {
 	 * @param filePath The path to the file to validate.
 	 */
 	public validateAuthenticodeSignature(filePath: string) {
-		if (!this.options.checkSigning || !this.capabilities.has('windows')) {
-			this.log(`Skipping Authenticode signature validation for ${filePath} (signing checks disabled)`);
+		if (!this.options.checkSigning || !this.capabilities.has("windows")) {
+			this.log(
+				`Skipping Authenticode signature validation for ${filePath} (signing checks disabled)`,
+			);
 			return;
 		}
 
@@ -440,7 +488,9 @@ export class TestContext {
 				this.collectAuthenticodeFiles(filePath, files);
 			} else if (TestContext.authenticodeInclude.test(entry.name)) {
 				if (TestContext.authenticodeExclude.test(filePath)) {
-					this.log(`Skipping excluded file from Authenticode validation: ${filePath}`);
+					this.log(
+						`Skipping excluded file from Authenticode validation: ${filePath}`,
+					);
 				} else {
 					files.push(filePath);
 				}
@@ -456,15 +506,20 @@ export class TestContext {
 			return;
 		}
 
-		const fileList = files.map(file => `"${file}"`).join(',');
+		const fileList = files.map((file) => `"${file}"`).join(",");
 		const command = `@(${fileList}) | ForEach-Object { $sig = Get-AuthenticodeSignature $_; "$($sig.Path)|$($sig.Status)" }`;
-		const result = this.runNoErrors('powershell', '-NoProfile', '-Command', command);
+		const result = this.runNoErrors(
+			"powershell",
+			"-NoProfile",
+			"-Command",
+			command,
+		);
 
 		const invalid: string[] = [];
-		for (const line of result.stdout.trim().split('\n')) {
+		for (const line of result.stdout.trim().split("\n")) {
 			const [, filePath, status] = /^(.+)\|(\w+)$/.exec(line.trim()) ?? [];
 			if (filePath) {
-				if (status === 'Valid') {
+				if (status === "Valid") {
 					this.log(`Authenticode signature is valid for ${filePath}`);
 				} else {
 					invalid.push(`${filePath}: ${status}`);
@@ -473,7 +528,9 @@ export class TestContext {
 		}
 
 		if (invalid.length > 0) {
-			this.error(`Authenticode signatures are not valid for:\n${invalid.join('\n')}`);
+			this.error(
+				`Authenticode signatures are not valid for:\n${invalid.join("\n")}`,
+			);
 		}
 	}
 
@@ -482,14 +539,18 @@ export class TestContext {
 	 * @param dir The directory to scan for executable files.
 	 */
 	public validateAllAuthenticodeSignatures(dir: string) {
-		if (!this.options.checkSigning || !this.capabilities.has('windows')) {
-			this.log(`Skipping Authenticode signature validation for ${dir} (signing checks disabled)`);
+		if (!this.options.checkSigning || !this.capabilities.has("windows")) {
+			this.log(
+				`Skipping Authenticode signature validation for ${dir} (signing checks disabled)`,
+			);
 			return;
 		}
 
 		const files: string[] = [];
 		this.collectAuthenticodeFiles(dir, files);
-		this.log(`Found ${files.length} file(s) to validate Authenticode signatures`);
+		this.log(
+			`Found ${files.length} file(s) to validate Authenticode signatures`,
+		);
 		this.validateAuthenticodeSignaturesForFiles(files);
 	}
 
@@ -503,8 +564,13 @@ export class TestContext {
 			if (entry.isDirectory()) {
 				this.collectVersionInfoFiles(filePath, files);
 			} else if (TestContext.versionInfoInclude.test(entry.name)) {
-				if (TestContext.versionInfoFileExclude.test(entry.name) || TestContext.versionInfoPathExclude.test(filePath)) {
-					this.log(`Skipping excluded file from VersionInfo validation: ${filePath}`);
+				if (
+					TestContext.versionInfoFileExclude.test(entry.name) ||
+					TestContext.versionInfoPathExclude.test(filePath)
+				) {
+					this.log(
+						`Skipping excluded file from VersionInfo validation: ${filePath}`,
+					);
 				} else {
 					files.push(filePath);
 				}
@@ -517,8 +583,10 @@ export class TestContext {
 	 * @param filePath The path to the file to validate.
 	 */
 	public validateVersionInfo(filePath: string) {
-		if (!this.options.checkSigning || !this.capabilities.has('windows')) {
-			this.log(`Skipping VersionInfo validation for ${filePath} (signing checks disabled)`);
+		if (!this.options.checkSigning || !this.capabilities.has("windows")) {
+			this.log(
+				`Skipping VersionInfo validation for ${filePath} (signing checks disabled)`,
+			);
 			return;
 		}
 
@@ -534,16 +602,23 @@ export class TestContext {
 			return;
 		}
 
-		const fileList = files.map(file => `"${file}"`).join(',');
+		const fileList = files.map((file) => `"${file}"`).join(",");
 		const command = `@(${fileList}) | ForEach-Object { $vi = (Get-Item $_).VersionInfo; "$($_.ToString())|$($vi.ProductName)" }`;
-		const result = this.runNoErrors('powershell', '-NoProfile', '-Command', command);
+		const result = this.runNoErrors(
+			"powershell",
+			"-NoProfile",
+			"-Command",
+			command,
+		);
 
 		const invalid: string[] = [];
-		for (const line of result.stdout.trim().split('\n')) {
+		for (const line of result.stdout.trim().split("\n")) {
 			const [, filePath, productName] = /^(.+)\|(.*)$/.exec(line.trim()) ?? [];
 			if (filePath) {
 				if (productName && productName.trim().length > 0) {
-					this.log(`VersionInfo ProductName is set for ${filePath}: ${productName.trim()}`);
+					this.log(
+						`VersionInfo ProductName is set for ${filePath}: ${productName.trim()}`,
+					);
 				} else {
 					invalid.push(filePath);
 				}
@@ -551,7 +626,9 @@ export class TestContext {
 		}
 
 		if (invalid.length > 0) {
-			this.error(`VersionInfo ProductName is missing or empty for:\n${invalid.join('\n')}`);
+			this.error(
+				`VersionInfo ProductName is missing or empty for:\n${invalid.join("\n")}`,
+			);
 		}
 	}
 
@@ -560,8 +637,10 @@ export class TestContext {
 	 * @param dir The directory to scan for binary files.
 	 */
 	public validateAllVersionInfo(dir: string) {
-		if (!this.options.checkSigning || !this.capabilities.has('windows')) {
-			this.log(`Skipping VersionInfo validation for ${dir} (signing checks disabled)`);
+		if (!this.options.checkSigning || !this.capabilities.has("windows")) {
+			this.log(
+				`Skipping VersionInfo validation for ${dir} (signing checks disabled)`,
+			);
 			return;
 		}
 
@@ -576,31 +655,53 @@ export class TestContext {
 	 * @param filePath The path to the file or app bundle to validate.
 	 */
 	public validateCodesignSignature(filePath: string) {
-		if (!this.options.checkSigning || !this.capabilities.has('darwin')) {
-			this.log(`Skipping codesign signature validation for ${filePath} (signing checks disabled)`);
+		if (!this.options.checkSigning || !this.capabilities.has("darwin")) {
+			this.log(
+				`Skipping codesign signature validation for ${filePath} (signing checks disabled)`,
+			);
 			return;
 		}
 
 		this.log(`Validating codesign signature for ${filePath}`);
 
-		const result = this.run('codesign', '--verify', '--deep', '--strict', '--verbose=2', filePath);
+		const result = this.run(
+			"codesign",
+			"--verify",
+			"--deep",
+			"--strict",
+			"--verbose=2",
+			filePath,
+		);
 		if (result.error !== undefined) {
 			this.error(`Failed to run codesign: ${result.error.message}`);
 		}
 
 		if (result.status !== 0) {
-			this.error(`Codesign signature is not valid for ${filePath}: ${result.stderr}`);
+			this.error(
+				`Codesign signature is not valid for ${filePath}: ${result.stderr}`,
+			);
 		}
 
 		this.log(`Validating notarization for ${filePath}`);
 
-		const notaryResult = this.run('spctl', '--assess', '--type', 'open', '--context', 'context:primary-signature', '--verbose=2', filePath);
+		const notaryResult = this.run(
+			"spctl",
+			"--assess",
+			"--type",
+			"open",
+			"--context",
+			"context:primary-signature",
+			"--verbose=2",
+			filePath,
+		);
 		if (notaryResult.error !== undefined) {
 			this.error(`Failed to run spctl: ${notaryResult.error.message}`);
 		}
 
 		if (notaryResult.status !== 0) {
-			this.error(`Notarization is not valid for ${filePath}: ${notaryResult.stderr}`);
+			this.error(
+				`Notarization is not valid for ${filePath}: ${notaryResult.stderr}`,
+			);
 		}
 	}
 
@@ -609,8 +710,10 @@ export class TestContext {
 	 * @param dir The directory to scan for Mach-O binaries.
 	 */
 	public validateAllCodesignSignatures(dir: string) {
-		if (!this.options.checkSigning || !this.capabilities.has('darwin')) {
-			this.log(`Skipping codesign signature validation for ${dir} (signing checks disabled)`);
+		if (!this.options.checkSigning || !this.capabilities.has("darwin")) {
+			this.log(
+				`Skipping codesign signature validation for ${dir} (signing checks disabled)`,
+			);
 			return;
 		}
 
@@ -619,7 +722,7 @@ export class TestContext {
 			const filePath = path.join(dir, file.name);
 			if (file.isDirectory()) {
 				// For .app bundles, validate the bundle itself, not its contents
-				if (file.name.endsWith('.app') || file.name.endsWith('.framework')) {
+				if (file.name.endsWith(".app") || file.name.endsWith(".framework")) {
 					this.validateCodesignSignature(filePath);
 				} else {
 					this.validateAllCodesignSignatures(filePath);
@@ -637,13 +740,19 @@ export class TestContext {
 	 */
 	private isMachOBinary(filePath: string): boolean {
 		try {
-			const file = fs.openSync(filePath, 'r');
+			const file = fs.openSync(filePath, "r");
 			const buffer = Buffer.alloc(4);
 			fs.readSync(file, buffer, 0, 4, 0);
 			fs.closeSync(file);
 			const magic = buffer.readUInt32BE(0);
-			return magic === 0xFEEDFACE || magic === 0xCEFAEDFE || magic === 0xFEEDFACF ||
-				magic === 0xCFFAEDFE || magic === 0xCAFEBABE || magic === 0xBEBAFECA;
+			return (
+				magic === 0xfeedface ||
+				magic === 0xcefaedfe ||
+				magic === 0xfeedfacf ||
+				magic === 0xcffaedfe ||
+				magic === 0xcafebabe ||
+				magic === 0xbebafeca
+			);
 		} catch {
 			return false;
 		}
@@ -668,7 +777,14 @@ export class TestContext {
 		const dir = this.createTempDir();
 
 		this.log(`Unpacking ${archivePath} to ${dir}`);
-		this.runNoErrors('tar', '-xzf', archivePath, '-C', dir, '--no-same-permissions');
+		this.runNoErrors(
+			"tar",
+			"-xzf",
+			archivePath,
+			"-C",
+			dir,
+			"--no-same-permissions",
+		);
 		this.log(`Unpacked ${archivePath} to ${dir}`);
 
 		return dir;
@@ -681,12 +797,18 @@ export class TestContext {
 	 */
 	public mountDmg(dmgPath: string): string {
 		this.log(`Mounting DMG ${dmgPath}`);
-		const result = this.runNoErrors('hdiutil', 'attach', dmgPath, '-nobrowse', '-readonly');
+		const result = this.runNoErrors(
+			"hdiutil",
+			"attach",
+			dmgPath,
+			"-nobrowse",
+			"-readonly",
+		);
 
 		// Parse the output to find the mount point (last column of the last line)
-		const lines = result.stdout.trim().split('\n');
+		const lines = result.stdout.trim().split("\n");
 		const lastLine = lines[lines.length - 1];
-		const mountPoint = lastLine.split('\t').pop()?.trim();
+		const mountPoint = lastLine.split("\t").pop()?.trim();
 
 		if (!mountPoint || !fs.existsSync(mountPoint)) {
 			this.error(`Failed to find mount point for DMG ${dmgPath}`);
@@ -702,7 +824,7 @@ export class TestContext {
 	 */
 	public unmountDmg(mountPoint: string): void {
 		this.log(`Unmounting DMG ${mountPoint}`);
-		this.runNoErrors('hdiutil', 'detach', mountPoint);
+		this.runNoErrors("hdiutil", "detach", mountPoint);
 		this.log(`Unmounted DMG ${mountPoint}`);
 	}
 
@@ -713,8 +835,10 @@ export class TestContext {
 	 * @returns The result of the spawnSync call.
 	 */
 	public run(command: string, ...args: string[]): SpawnSyncReturns<string> {
-		this.log(`Running command: ${command} ${args.join(' ')}`);
-		return spawnSync(command, args, { encoding: 'utf-8' }) as SpawnSyncReturns<string>;
+		this.log(`Running command: ${command} ${args.join(" ")}`);
+		return spawnSync(command, args, {
+			encoding: "utf-8",
+		}) as SpawnSyncReturns<string>;
 	}
 
 	/**
@@ -723,7 +847,10 @@ export class TestContext {
 	 * @param args Optional arguments for the command.
 	 * @returns The result of the spawnSync call.
 	 */
-	public runNoErrors(command: string, ...args: string[]): SpawnSyncReturns<string> {
+	public runNoErrors(
+		command: string,
+		...args: string[]
+	): SpawnSyncReturns<string> {
 		const result = this.run(command, ...args);
 		if (result.error !== undefined) {
 			this.error(`Failed to run command: ${result.error.message}`);
@@ -742,11 +869,14 @@ export class TestContext {
 	 * @param args Optional arguments for the command.
 	 * @returns The result of the spawnSync call.
 	 */
-	private runSudoNoErrors(command: string, ...args: string[]): SpawnSyncReturns<string> {
+	private runSudoNoErrors(
+		command: string,
+		...args: string[]
+	): SpawnSyncReturns<string> {
 		if (this.isRootUser) {
 			return this.runNoErrors(command, ...args);
 		} else {
-			return this.runNoErrors('sudo', command, ...args);
+			return this.runNoErrors("sudo", command, ...args);
 		}
 	}
 
@@ -754,15 +884,17 @@ export class TestContext {
 	 * Runs a dpkg command with retries if the frontend lock is busy, and ensures it succeeds.
 	 */
 	private async runDpkgNoErrors(...args: string[]) {
-		const command = this.isRootUser ? 'dpkg' : 'sudo';
-		const commandArgs = this.isRootUser ? args : ['dpkg', ...args];
+		const command = this.isRootUser ? "dpkg" : "sudo";
+		const commandArgs = this.isRootUser ? args : ["dpkg", ...args];
 		const maxRetries = 5;
 		let lastError: string | undefined;
 
 		for (let attempt = 0; attempt < maxRetries; attempt++) {
 			if (attempt > 0) {
 				const delay = Math.pow(2, attempt - 1) * 1000;
-				this.log(`Retrying dpkg command (attempt ${attempt + 1}/${maxRetries}) after ${delay}ms`);
+				this.log(
+					`Retrying dpkg command (attempt ${attempt + 1}/${maxRetries}) after ${delay}ms`,
+				);
 				await this.timeout(delay);
 			}
 
@@ -782,10 +914,15 @@ export class TestContext {
 				break;
 			}
 
-			this.log(`dpkg lock is busy, waiting for the other package manager process to finish`);
+			this.log(
+				`dpkg lock is busy, waiting for the other package manager process to finish`,
+			);
 		}
 
-		this.error(lastError ?? `Command failed after ${maxRetries} attempts because the dpkg frontend lock remained busy`);
+		this.error(
+			lastError ??
+				`Command failed after ${maxRetries} attempts because the dpkg frontend lock remained busy`,
+		);
 	}
 
 	/**
@@ -794,10 +931,10 @@ export class TestContext {
 	 */
 	public killProcessTree(pid: number): void {
 		this.log(`Killing process tree for PID: ${pid}`);
-		if (os.platform() === 'win32') {
-			spawnSync('taskkill', ['/T', '/F', '/PID', pid.toString()]);
+		if (os.platform() === "win32") {
+			spawnSync("taskkill", ["/T", "/F", "/PID", pid.toString()]);
 		} else {
-			process.kill(-pid, 'SIGKILL');
+			process.kill(-pid, "SIGKILL");
 		}
 		this.log(`Killed process tree for PID: ${pid}`);
 	}
@@ -807,21 +944,22 @@ export class TestContext {
 	 * @param type The type of installation ('user' or 'system').
 	 * @returns The path to the VS Code installation directory.
 	 */
-	private getWindowsInstallDir(type: 'user' | 'system'): string {
+	private getWindowsInstallDir(type: "user" | "system"): string {
 		let parentDir: string;
-		if (type === 'system') {
-			parentDir = process.env['ProgramW6432'] || process.env['PROGRAMFILES'] || '';
+		if (type === "system") {
+			parentDir =
+				process.env["ProgramW6432"] || process.env["PROGRAMFILES"] || "";
 		} else {
-			parentDir = path.join(process.env['LOCALAPPDATA'] || '', 'Programs');
+			parentDir = path.join(process.env["LOCALAPPDATA"] || "", "Programs");
 		}
 
 		switch (this.options.quality) {
-			case 'stable':
-				return path.join(parentDir, 'Microsoft VS Code');
-			case 'insider':
-				return path.join(parentDir, 'Microsoft VS Code Insiders');
-			case 'exploration':
-				return path.join(parentDir, 'Microsoft VS Code Exploration');
+			case "stable":
+				return path.join(parentDir, "Microsoft VS Code");
+			case "insider":
+				return path.join(parentDir, "Microsoft VS Code Insiders");
+			case "exploration":
+				return path.join(parentDir, "Microsoft VS Code Exploration");
 		}
 	}
 
@@ -830,22 +968,25 @@ export class TestContext {
 	 * @param installerPath The path to the installer executable.
 	 * @returns The path to the installed VS Code executable.
 	 */
-	public installWindowsApp(type: 'user' | 'system', installerPath: string): string {
+	public installWindowsApp(
+		type: "user" | "system",
+		installerPath: string,
+	): string {
 		this.log(`Installing ${installerPath} in silent mode`);
-		this.runNoErrors(installerPath, '/silent', '/mergetasks=!runcode');
+		this.runNoErrors(installerPath, "/silent", "/mergetasks=!runcode");
 		this.log(`Installed ${installerPath} successfully`);
 
 		const appDir = this.getWindowsInstallDir(type);
 		let entryPoint: string;
 		switch (this.options.quality) {
-			case 'stable':
-				entryPoint = path.join(appDir, 'Code.exe');
+			case "stable":
+				entryPoint = path.join(appDir, "Code.exe");
 				break;
-			case 'insider':
-				entryPoint = path.join(appDir, 'Code - Insiders.exe');
+			case "insider":
+				entryPoint = path.join(appDir, "Code - Insiders.exe");
 				break;
-			case 'exploration':
-				entryPoint = path.join(appDir, 'Code - Exploration.exe');
+			case "exploration":
+				entryPoint = path.join(appDir, "Code - Exploration.exe");
 				break;
 		}
 
@@ -861,20 +1002,22 @@ export class TestContext {
 	 * Uninstalls a Windows application silently.
 	 * @param type The type of installation ('user' or 'system').
 	 */
-	public async uninstallWindowsApp(type: 'user' | 'system') {
+	public async uninstallWindowsApp(type: "user" | "system") {
 		const appDir = this.getWindowsInstallDir(type);
-		const uninstallerPath = path.join(appDir, 'unins000.exe');
+		const uninstallerPath = path.join(appDir, "unins000.exe");
 		if (!fs.existsSync(uninstallerPath)) {
 			this.error(`Uninstaller does not exist: ${uninstallerPath}`);
 		}
 
 		this.log(`Uninstalling VS Code from ${appDir} in silent mode`);
-		this.runNoErrors(uninstallerPath, '/silent');
+		this.runNoErrors(uninstallerPath, "/silent");
 		this.log(`Uninstalled VS Code from ${appDir} successfully`);
 
 		await this.timeout(2000);
 		if (fs.existsSync(appDir)) {
-			this.error(`Installation directory still exists after uninstall: ${appDir}`);
+			this.error(
+				`Installation directory still exists after uninstall: ${appDir}`,
+			);
 		}
 	}
 
@@ -885,13 +1028,15 @@ export class TestContext {
 	 */
 	public async installDeb(packagePath: string): Promise<string> {
 		const name = this.getLinuxBinaryName();
-		const entryPoint = path.join('/usr/share', name, name);
+		const entryPoint = path.join("/usr/share", name, name);
 		if (fs.existsSync(entryPoint)) {
-			this.error(`Cannot install ${packagePath}: ${name} is already installed at ${entryPoint}. This usually means a previous test run was terminated before cleanup completed; investigate the prior failure rather than silencing this error.`);
+			this.error(
+				`Cannot install ${packagePath}: ${name} is already installed at ${entryPoint}. This usually means a previous test run was terminated before cleanup completed; investigate the prior failure rather than silencing this error.`,
+			);
 		}
 
 		this.log(`Installing ${packagePath} using DEB package manager`);
-		await this.runDpkgNoErrors('-i', packagePath);
+		await this.runDpkgNoErrors("-i", packagePath);
 		this.log(`Installed ${packagePath} successfully`);
 
 		this.log(`Installed VS Code executable at: ${entryPoint}`);
@@ -904,7 +1049,7 @@ export class TestContext {
 	 */
 	public async uninstallDeb() {
 		const name = this.getLinuxBinaryName();
-		const packagePath = path.join('/usr/share', name, name);
+		const packagePath = path.join("/usr/share", name, name);
 
 		if (!fs.existsSync(packagePath)) {
 			this.log(`DEB package ${name} not installed, skipping uninstall`);
@@ -912,7 +1057,7 @@ export class TestContext {
 		}
 
 		this.log(`Uninstalling DEB package ${packagePath}`);
-		await this.runDpkgNoErrors('-r', name);
+		await this.runDpkgNoErrors("-r", name);
 		this.log(`Uninstalled DEB package ${packagePath} successfully`);
 
 		await this.timeout(1000);
@@ -928,16 +1073,18 @@ export class TestContext {
 	 */
 	public installRpm(packagePath: string): string {
 		const name = this.getLinuxBinaryName();
-		const installedBinary = path.join('/usr/bin', name);
+		const installedBinary = path.join("/usr/bin", name);
 		if (fs.existsSync(installedBinary)) {
-			this.error(`Cannot install ${packagePath}: ${name} is already installed at ${installedBinary}. This usually means a previous test run was terminated before cleanup completed; investigate the prior failure rather than silencing this error.`);
+			this.error(
+				`Cannot install ${packagePath}: ${name} is already installed at ${installedBinary}. This usually means a previous test run was terminated before cleanup completed; investigate the prior failure rather than silencing this error.`,
+			);
 		}
 
 		this.log(`Installing ${packagePath} using RPM package manager`);
-		this.runSudoNoErrors('rpm', '-i', packagePath);
+		this.runSudoNoErrors("rpm", "-i", packagePath);
 		this.log(`Installed ${packagePath} successfully`);
 
-		const entryPoint = path.join('/usr/share', name, name);
+		const entryPoint = path.join("/usr/share", name, name);
 		this.log(`Installed VS Code executable at: ${entryPoint}`);
 		return entryPoint;
 	}
@@ -948,7 +1095,7 @@ export class TestContext {
 	 */
 	public async uninstallRpm() {
 		const name = this.getLinuxBinaryName();
-		const packagePath = path.join('/usr/bin', name);
+		const packagePath = path.join("/usr/bin", name);
 
 		if (!fs.existsSync(packagePath)) {
 			this.log(`RPM package ${name} not installed, skipping uninstall`);
@@ -956,7 +1103,7 @@ export class TestContext {
 		}
 
 		this.log(`Uninstalling RPM package ${packagePath}`);
-		this.runSudoNoErrors('rpm', '-e', name);
+		this.runSudoNoErrors("rpm", "-e", name);
 		this.log(`Uninstalled RPM package ${packagePath} successfully`);
 
 		await this.timeout(1000);
@@ -972,13 +1119,21 @@ export class TestContext {
 	 */
 	public installSnap(packagePath: string): string {
 		const name = this.getLinuxBinaryName();
-		const snapWrapper = path.join('/snap/bin', name);
+		const snapWrapper = path.join("/snap/bin", name);
 		if (fs.existsSync(snapWrapper)) {
-			this.error(`Cannot install ${packagePath}: ${name} is already installed at ${snapWrapper}. This usually means a previous test run was terminated before cleanup completed; investigate the prior failure rather than silencing this error.`);
+			this.error(
+				`Cannot install ${packagePath}: ${name} is already installed at ${snapWrapper}. This usually means a previous test run was terminated before cleanup completed; investigate the prior failure rather than silencing this error.`,
+			);
 		}
 
 		this.log(`Installing ${packagePath} using Snap package manager`);
-		this.runSudoNoErrors('snap', 'install', packagePath, '--classic', '--dangerous');
+		this.runSudoNoErrors(
+			"snap",
+			"install",
+			packagePath,
+			"--classic",
+			"--dangerous",
+		);
 		this.log(`Installed ${packagePath} successfully`);
 
 		// Snap wrapper scripts are in /snap/bin, but actual Electron binary is in /snap/<package>/current/usr/share/
@@ -993,7 +1148,7 @@ export class TestContext {
 	 */
 	public async uninstallSnap() {
 		const name = this.getLinuxBinaryName();
-		const packagePath = path.join('/snap/bin', name);
+		const packagePath = path.join("/snap/bin", name);
 
 		if (!fs.existsSync(packagePath)) {
 			this.log(`Snap package ${name} not installed, skipping uninstall`);
@@ -1001,7 +1156,7 @@ export class TestContext {
 		}
 
 		this.log(`Uninstalling Snap package ${packagePath}`);
-		this.runSudoNoErrors('snap', 'remove', name);
+		this.runSudoNoErrors("snap", "remove", name);
 		this.log(`Uninstalled Snap package ${packagePath} successfully`);
 
 		await this.timeout(1000);
@@ -1015,12 +1170,12 @@ export class TestContext {
 	 */
 	private getLinuxBinaryName(): string {
 		switch (this.options.quality) {
-			case 'stable':
-				return 'code';
-			case 'insider':
-				return 'code-insiders';
-			case 'exploration':
-				return 'code-exploration';
+			case "stable":
+				return "code";
+			case "insider":
+				return "code-insiders";
+			case "exploration":
+				return "code-exploration";
 		}
 	}
 
@@ -1030,56 +1185,56 @@ export class TestContext {
 	 * @returns The path to the entry point executable.
 	 */
 	public getDesktopEntryPoint(dir: string): string {
-		let filePath: string = '';
+		let filePath: string = "";
 
 		switch (os.platform()) {
-			case 'darwin': {
+			case "darwin": {
 				let appName: string;
 				let binaryName: string;
 				switch (this.options.quality) {
-					case 'stable':
-						appName = 'Visual Studio Code.app';
-						binaryName = 'Code';
+					case "stable":
+						appName = "Visual Studio Code.app";
+						binaryName = "Code";
 						break;
-					case 'insider':
-						appName = 'Visual Studio Code - Insiders.app';
-						binaryName = 'Code - Insiders';
+					case "insider":
+						appName = "Visual Studio Code - Insiders.app";
+						binaryName = "Code - Insiders";
 						break;
-					case 'exploration':
-						appName = 'Visual Studio Code - Exploration.app';
-						binaryName = 'Code - Exploration';
+					case "exploration":
+						appName = "Visual Studio Code - Exploration.app";
+						binaryName = "Code - Exploration";
 						break;
 				}
-				filePath = path.join(dir, appName, 'Contents/MacOS', binaryName);
+				filePath = path.join(dir, appName, "Contents/MacOS", binaryName);
 				break;
 			}
-			case 'linux': {
+			case "linux": {
 				let binaryName: string;
 				switch (this.options.quality) {
-					case 'stable':
+					case "stable":
 						binaryName = `code`;
 						break;
-					case 'insider':
+					case "insider":
 						binaryName = `code-insiders`;
 						break;
-					case 'exploration':
+					case "exploration":
 						binaryName = `code-exploration`;
 						break;
 				}
 				filePath = path.join(dir, binaryName);
 				break;
 			}
-			case 'win32': {
+			case "win32": {
 				let exeName: string;
 				switch (this.options.quality) {
-					case 'stable':
-						exeName = 'Code.exe';
+					case "stable":
+						exeName = "Code.exe";
 						break;
-					case 'insider':
-						exeName = 'Code - Insiders.exe';
+					case "insider":
+						exeName = "Code - Insiders.exe";
 						break;
-					case 'exploration':
-						exeName = 'Code - Exploration.exe';
+					case "exploration":
+						exeName = "Code - Exploration.exe";
 						break;
 				}
 				filePath = path.join(dir, exeName);
@@ -1102,19 +1257,19 @@ export class TestContext {
 	public getCliEntryPoint(dir: string): string {
 		let filename: string;
 		switch (this.options.quality) {
-			case 'stable':
-				filename = 'code';
+			case "stable":
+				filename = "code";
 				break;
-			case 'insider':
-				filename = 'code-insiders';
+			case "insider":
+				filename = "code-insiders";
 				break;
-			case 'exploration':
-				filename = 'code-exploration';
+			case "exploration":
+				filename = "code-exploration";
 				break;
 		}
 
-		if (os.platform() === 'win32') {
-			filename += '.exe';
+		if (os.platform() === "win32") {
+			filename += ".exe";
 		}
 
 		const entryPoint = path.join(dir, filename);
@@ -1134,22 +1289,26 @@ export class TestContext {
 	public getServerEntryPoint(dir: string, forWsl = false): string {
 		let filename: string;
 		switch (this.options.quality) {
-			case 'stable':
-				filename = 'code-server';
+			case "stable":
+				filename = "code-server";
 				break;
-			case 'insider':
-				filename = 'code-server-insiders';
+			case "insider":
+				filename = "code-server-insiders";
 				break;
-			case 'exploration':
-				filename = 'code-server-exploration';
+			case "exploration":
+				filename = "code-server-exploration";
 				break;
 		}
 
-		if (os.platform() === 'win32' && !forWsl) {
-			filename += '.cmd';
+		if (os.platform() === "win32" && !forWsl) {
+			filename += ".cmd";
 		}
 
-		const entryPoint = path.join(this.getFirstSubdirectory(dir), 'bin', filename);
+		const entryPoint = path.join(
+			this.getFirstSubdirectory(dir),
+			"bin",
+			filename,
+		);
 		if (!fs.existsSync(entryPoint)) {
 			this.error(`Server entry point does not exist: ${entryPoint}`);
 		}
@@ -1161,7 +1320,10 @@ export class TestContext {
 	 * Returns the first subdirectory within the specified directory.
 	 */
 	public getFirstSubdirectory(dir: string): string {
-		const subDir = fs.readdirSync(dir, { withFileTypes: true }).filter(o => o.isDirectory()).at(0)?.name;
+		const subDir = fs
+			.readdirSync(dir, { withFileTypes: true })
+			.filter((o) => o.isDirectory())
+			.at(0)?.name;
 		if (!subDir) {
 			this.error(`No subdirectories found in directory: ${dir}`);
 		}
@@ -1174,7 +1336,10 @@ export class TestContext {
 	 * @returns The path to the created portable data directory.
 	 */
 	public createPortableDataDir(dir: string): string {
-		const dataDir = path.join(dir, os.platform() === 'darwin' ? 'code-portable-data' : 'data');
+		const dataDir = path.join(
+			dir,
+			os.platform() === "darwin" ? "code-portable-data" : "data",
+		);
 
 		this.log(`Creating portable data directory: ${dataDir}`);
 		fs.mkdirSync(dataDir, { recursive: true });
@@ -1191,27 +1356,31 @@ export class TestContext {
 		this.log(`Launching web browser`);
 		const headless = this.options.headlessBrowser;
 		switch (os.platform()) {
-			case 'darwin': {
+			case "darwin": {
 				return await webkit.launch({ headless });
 			}
-			case 'win32': {
-				const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] ?? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+			case "win32": {
+				const executablePath =
+					process.env["PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"] ??
+					"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 				this.log(`Using Chromium executable at: ${executablePath}`);
 				return await chromium.launch({ headless, executablePath });
 			}
-			case 'linux':
+			case "linux":
 			default: {
-				const executablePath = process.env['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] ?? '/usr/bin/chromium-browser';
+				const executablePath =
+					process.env["PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"] ??
+					"/usr/bin/chromium-browser";
 				this.log(`Using Chromium executable at: ${executablePath}`);
 				return await chromium.launch({
 					headless,
 					executablePath,
 					args: [
-						'--disable-gpu',
-						'--disable-gpu-compositing',
-						'--disable-software-rasterizer',
-						'--no-zygote',
-					]
+						"--disable-gpu",
+						"--disable-gpu-compositing",
+						"--disable-software-rasterizer",
+						"--no-zygote",
+					],
 				});
 			}
 		}
@@ -1232,8 +1401,11 @@ export class TestContext {
 	 * Closes a Playwright Electron application gracefully, falling back to a forced
 	 * kill of the process tree if the close hangs (for example after a renderer crash).
 	 */
-	public async closeElectronApp(app: ElectronApplication, timeoutMs = 60_000): Promise<void> {
-		this.log('Closing the application');
+	public async closeElectronApp(
+		app: ElectronApplication,
+		timeoutMs = 60_000,
+	): Promise<void> {
+		this.log("Closing the application");
 		const pid = app.process().pid;
 		let timeoutHandle: NodeJS.Timeout | undefined;
 		try {
@@ -1241,18 +1413,25 @@ export class TestContext {
 				app.close(),
 				new Promise<never>((_, reject) => {
 					timeoutHandle = setTimeout(
-						() => reject(new Error(`app.close() did not complete within ${timeoutMs}ms`)),
+						() =>
+							reject(
+								new Error(`app.close() did not complete within ${timeoutMs}ms`),
+							),
 						timeoutMs,
 					);
 				}),
 			]);
 		} catch (error) {
-			this.warn(`Failed to close application gracefully: ${error instanceof Error ? error.message : String(error)}`);
+			this.warn(
+				`Failed to close application gracefully: ${error instanceof Error ? error.message : String(error)}`,
+			);
 			if (pid) {
 				try {
 					this.killProcessTree(pid);
 				} catch (killError) {
-					this.warn(`Failed to force-kill application process tree: ${killError instanceof Error ? killError.message : String(killError)}`);
+					this.warn(
+						`Failed to force-kill application process tree: ${killError instanceof Error ? killError.message : String(killError)}`,
+					);
 				}
 			}
 		} finally {
@@ -1271,14 +1450,24 @@ export class TestContext {
 		}
 
 		try {
-			const screenshotDir = this.options.screenshotsDir ?? path.join(this.osTempDir, 'vscode-sanity-screenshots');
+			const screenshotDir =
+				this.options.screenshotsDir ??
+				path.join(this.osTempDir, "vscode-sanity-screenshots");
 			fs.mkdirSync(screenshotDir, { recursive: true });
-			const sanitizedName = this.currentTestName.replace(/[^a-zA-Z0-9_-]/g, '_');
-			const screenshotPath = path.join(screenshotDir, `${sanitizedName}-${++this.screenshotCounter}.png`);
+			const sanitizedName = this.currentTestName.replace(
+				/[^a-zA-Z0-9_-]/g,
+				"_",
+			);
+			const screenshotPath = path.join(
+				screenshotDir,
+				`${sanitizedName}-${++this.screenshotCounter}.png`,
+			);
 			await page.screenshot({ path: screenshotPath, fullPage: true });
 			this.log(`Screenshot saved to: ${screenshotPath}`);
 		} catch (e) {
-			this.warn(`Failed to capture screenshot: ${e instanceof Error ? e.message : String(e)}`);
+			this.warn(
+				`Failed to capture screenshot: ${e instanceof Error ? e.message : String(e)}`,
+			);
 		}
 	}
 
@@ -1292,14 +1481,14 @@ export class TestContext {
 	public getWebServerUrl(port: string, token?: string, folder?: string): URL {
 		const url = new URL(`http://localhost:${port}`);
 		if (token) {
-			url.searchParams.set('tkn', token);
+			url.searchParams.set("tkn", token);
 		}
 		if (folder) {
-			folder = folder.replaceAll('\\', '/');
-			if (!folder.startsWith('/')) {
+			folder = folder.replaceAll("\\", "/");
+			if (!folder.startsWith("/")) {
 				folder = `/${folder}`;
 			}
-			url.searchParams.set('folder', folder);
+			url.searchParams.set("folder", folder);
 		}
 		return url;
 	}
@@ -1312,13 +1501,13 @@ export class TestContext {
 	 */
 	public getTunnelUrl(baseUrl: string, workspaceDir?: string): string {
 		const url = new URL(baseUrl);
-		url.searchParams.set('vscode-version', this.options.commit);
+		url.searchParams.set("vscode-version", this.options.commit);
 		if (workspaceDir) {
-			let folder = workspaceDir.replaceAll('\\', '/');
-			if (!folder.startsWith('/')) {
+			let folder = workspaceDir.replaceAll("\\", "/");
+			if (!folder.startsWith("/")) {
 				folder = `/${folder}`;
 			}
-			url.pathname = url.pathname.replace(/\/+$/, '') + folder;
+			url.pathname = url.pathname.replace(/\/+$/, "") + folder;
 		}
 		return url.toString();
 	}
@@ -1327,7 +1516,9 @@ export class TestContext {
 	 * Returns a random alphanumeric token of length 10.
 	 */
 	public getRandomToken(): string {
-		return Array.from({ length: 10 }, () => Math.floor(Math.random() * 36).toString(36)).join('');
+		return Array.from({ length: 10 }, () =>
+			Math.floor(Math.random() * 36).toString(36),
+		).join("");
 	}
 
 	/**
@@ -1344,14 +1535,14 @@ export class TestContext {
 	public getWslServerExtensionsDir(): string {
 		let serverDir: string;
 		switch (this.options.quality) {
-			case 'stable':
-				serverDir = '.vscode-server';
+			case "stable":
+				serverDir = ".vscode-server";
 				break;
-			case 'insider':
-				serverDir = '.vscode-server-insiders';
+			case "insider":
+				serverDir = ".vscode-server-insiders";
 				break;
-			case 'exploration':
-				serverDir = '.vscode-server-exploration';
+			case "exploration":
+				serverDir = ".vscode-server-exploration";
 				break;
 		}
 		return `~/${serverDir}/extensions`;
@@ -1364,18 +1555,25 @@ export class TestContext {
 	 * @param args Arguments for the command.
 	 * @param onLine Callback to handle output lines.
 	 */
-	public async runCliApp(name: string, command: string, args: string[], onLine: (text: string) => Promise<boolean | void | undefined>) {
-		this.log(`Starting ${name} with command line: ${command} ${args.join(' ')}`);
+	public async runCliApp(
+		name: string,
+		command: string,
+		args: string[],
+		onLine: (text: string) => Promise<boolean | void | undefined>,
+	) {
+		this.log(
+			`Starting ${name} with command line: ${command} ${args.join(" ")}`,
+		);
 
 		const app = spawn(command, args, {
 			shell: /\.(sh|cmd)$/.test(command),
-			detached: !this.capabilities.has('windows'),
-			stdio: ['ignore', 'pipe', 'pipe'],
+			detached: !this.capabilities.has("windows"),
+			stdio: ["ignore", "pipe", "pipe"],
 		});
 
 		try {
 			await new Promise<void>((resolve, reject) => {
-				app.stderr.on('data', (data) => {
+				app.stderr.on("data", (data) => {
 					const text = `[${name}] ${data.toString().trim()}`;
 					if (this.isNonFatalCliStderr(text)) {
 						this.log(text);
@@ -1385,25 +1583,27 @@ export class TestContext {
 				});
 
 				let terminated = false;
-				app.stdout.on('data', (data) => {
+				app.stdout.on("data", (data) => {
 					const text = data.toString().trim();
 					if (/\berror\b/.test(text)) {
 						reject(new Error(`[${name}] ${text}`));
 					}
 
-					for (const line of text.split('\n')) {
+					for (const line of text.split("\n")) {
 						this.log(`[${name}] ${line}`);
-						onLine(line).then((result) => {
-							if (terminated = !!result) {
-								this.log(`Terminating ${name} process`);
-								resolve();
-							}
-						}).catch(reject);
+						onLine(line)
+							.then((result) => {
+								if ((terminated = !!result)) {
+									this.log(`Terminating ${name} process`);
+									resolve();
+								}
+							})
+							.catch(reject);
 					}
 				});
 
-				app.on('error', reject);
-				app.on('exit', (code) => {
+				app.on("error", reject);
+				app.on("exit", (code) => {
 					if (code === 0) {
 						resolve();
 					} else if (!terminated) {
@@ -1417,7 +1617,11 @@ export class TestContext {
 	}
 
 	private isNonFatalCliStderr(text: string): boolean {
-		return /ECONNRESET|ECONNABORTED|ECANCELED|EPIPE|SIGPIPE/.test(text)
-			|| /(^|\n)(?:\[[^\]]+\]\s*)?(?:\(node:\d+\)\s*)?(?:\[[A-Z0-9]+\]\s*)?(?:[A-Za-z]+Warning|Warning):/.test(text);
+		return (
+			/ECONNRESET|ECONNABORTED|ECANCELED|EPIPE|SIGPIPE/.test(text) ||
+			/(^|\n)(?:\[[^\]]+\]\s*)?(?:\(node:\d+\)\s*)?(?:\[[A-Z0-9]+\]\s*)?(?:[A-Za-z]+Warning|Warning):/.test(
+				text,
+			)
+		);
 	}
 }

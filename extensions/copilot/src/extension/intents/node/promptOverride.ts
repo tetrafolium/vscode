@@ -12,7 +12,10 @@ import { URI } from '../../../util/vs/base/common/uri';
 
 interface PromptOverrideConfig {
 	readonly systemPrompt?: string;
-	readonly toolDescriptions?: Record<string, { readonly description: string }>;
+	readonly toolDescriptions?: Record<
+		string,
+		{ readonly description: string }
+	>;
 }
 
 interface PromptOverrideResult {
@@ -38,14 +41,27 @@ export async function applyConfiguredPromptOverrides(
 
 	if (normalizedInlinePromptOverride) {
 		if (normalizedPromptOverrideFile) {
-			logService.trace('[PromptOverride] Both inline prompt override text and prompt override file are configured; using inline prompt override text');
+			logService.trace(
+				'[PromptOverride] Both inline prompt override text and prompt override file are configured; using inline prompt override text',
+			);
 		}
 
-		return applyPromptOverridesFromString(normalizedInlinePromptOverride, messages, tools, logService);
+		return applyPromptOverridesFromString(
+			normalizedInlinePromptOverride,
+			messages,
+			tools,
+			logService,
+		);
 	}
 
 	if (normalizedPromptOverrideFile) {
-		return applyPromptOverrides(URI.file(normalizedPromptOverrideFile), messages, tools, fileSystemService, logService);
+		return applyPromptOverrides(
+			URI.file(normalizedPromptOverrideFile),
+			messages,
+			tools,
+			fileSystemService,
+			logService,
+		);
 	}
 
 	return clonePromptOverrideResult(messages, tools);
@@ -69,11 +85,21 @@ export async function applyPromptOverrides(
 		const buffer = await fileSystemService.readFile(fileUri);
 		content = new TextDecoder().decode(buffer);
 	} catch (err) {
-		logPromptOverrideFailure(logService, key, `Failed to read prompt override file "${key}"`, err);
+		logPromptOverrideFailure(
+			logService,
+			key,
+			`Failed to read prompt override file "${key}"`,
+			err,
+		);
 		return clonePromptOverrideResult(messages, tools);
 	}
 
-	const config = parsePromptOverrideConfig(content, key, `prompt override file "${key}"`, logService);
+	const config = parsePromptOverrideConfig(
+		content,
+		key,
+		`prompt override file "${key}"`,
+		logService,
+	);
 	if (!config) {
 		return clonePromptOverrideResult(messages, tools);
 	}
@@ -81,14 +107,18 @@ export async function applyPromptOverrides(
 	return applyPromptOverrideConfig(config, messages, tools, logService);
 }
 
-
 export function applyPromptOverridesFromString(
 	content: string,
 	messages: readonly Raw.ChatMessage[],
 	tools: readonly LanguageModelToolInformation[],
 	logService: ILogService,
 ): PromptOverrideResult {
-	const config = parsePromptOverrideConfig(content, INLINE_PROMPT_OVERRIDE_SOURCE, `inline prompt override setting "${INLINE_PROMPT_OVERRIDE_SOURCE}"`, logService);
+	const config = parsePromptOverrideConfig(
+		content,
+		INLINE_PROMPT_OVERRIDE_SOURCE,
+		`inline prompt override setting "${INLINE_PROMPT_OVERRIDE_SOURCE}"`,
+		logService,
+	);
 	if (!config) {
 		return clonePromptOverrideResult(messages, tools);
 	}
@@ -106,7 +136,12 @@ function parsePromptOverrideConfig(
 	try {
 		config = yaml.load(content) as PromptOverrideConfig;
 	} catch (err) {
-		logPromptOverrideFailure(logService, sourceKey, `Failed to parse prompt override from ${sourceDescription}`, err);
+		logPromptOverrideFailure(
+			logService,
+			sourceKey,
+			`Failed to parse prompt override from ${sourceDescription}`,
+			err,
+		);
 		return undefined;
 	}
 
@@ -130,12 +165,21 @@ function applyPromptOverrideConfig(
 	let resultTools = [...tools];
 
 	if (typeof config.systemPrompt === 'string') {
-		resultMessages = applySystemPromptOverride(resultMessages, config.systemPrompt);
+		resultMessages = applySystemPromptOverride(
+			resultMessages,
+			config.systemPrompt,
+		);
 		logService.trace('[PromptOverride] Applied system prompt override');
 	}
 
-	if (config.toolDescriptions && typeof config.toolDescriptions === 'object') {
-		resultTools = applyToolDescriptionOverrides(resultTools, config.toolDescriptions);
+	if (
+		config.toolDescriptions &&
+		typeof config.toolDescriptions === 'object'
+	) {
+		resultTools = applyToolDescriptionOverrides(
+			resultTools,
+			config.toolDescriptions,
+		);
 		logService.trace('[PromptOverride] Applied tool description overrides');
 	}
 
@@ -149,7 +193,12 @@ function clonePromptOverrideResult(
 	return { messages: [...messages], tools: [...tools] };
 }
 
-function logPromptOverrideFailure(logService: ILogService, sourceKey: string, message: string, err: unknown): void {
+function logPromptOverrideFailure(
+	logService: ILogService,
+	sourceKey: string,
+	message: string,
+	err: unknown,
+): void {
 	if (!warnedSources.has(sourceKey)) {
 		warnedSources.add(sourceKey);
 		logService.warn(`[PromptOverride] ${message}: ${err}`);
@@ -166,12 +215,22 @@ export function resetPromptOverrideWarnings(): void {
 	warnedSources.clear();
 }
 
-function applySystemPromptOverride(messages: Raw.ChatMessage[], systemPrompt: string): Raw.ChatMessage[] {
-	const nonSystemMessages = messages.filter(m => m.role !== Raw.ChatRole.System);
+function applySystemPromptOverride(
+	messages: Raw.ChatMessage[],
+	systemPrompt: string,
+): Raw.ChatMessage[] {
+	const nonSystemMessages = messages.filter(
+		(m) => m.role !== Raw.ChatRole.System,
+	);
 	return [
 		{
 			role: Raw.ChatRole.System,
-			content: [{ type: Raw.ChatCompletionContentPartKind.Text, text: systemPrompt }],
+			content: [
+				{
+					type: Raw.ChatCompletionContentPartKind.Text,
+					text: systemPrompt,
+				},
+			],
 		},
 		...nonSystemMessages,
 	];
@@ -181,7 +240,7 @@ function applyToolDescriptionOverrides(
 	tools: readonly LanguageModelToolInformation[],
 	overrides: Record<string, { readonly description: string }>,
 ): LanguageModelToolInformation[] {
-	return tools.map(tool => {
+	return tools.map((tool) => {
 		const override = overrides[tool.name];
 		if (override && typeof override.description === 'string') {
 			return { ...tool, description: override.description };

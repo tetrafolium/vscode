@@ -3,11 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as vscode from 'vscode';
-import { Command } from '../commandManager';
-import { DynamicPreviewSettings, MarkdownPreviewManager } from '../preview/previewManager';
-import { TelemetryReporter } from '../telemetryReporter';
-
+import * as vscode from "vscode";
+import { Command } from "../commandManager";
+import {
+	DynamicPreviewSettings,
+	MarkdownPreviewManager,
+} from "../preview/previewManager";
+import { TelemetryReporter } from "../telemetryReporter";
 
 interface ShowPreviewSettings {
 	readonly sideBySide?: boolean;
@@ -31,58 +33,65 @@ async function showPreview(
 	if (!(resource instanceof vscode.Uri)) {
 		if (!vscode.window.activeTextEditor) {
 			// this is most likely toggling the preview
-			return vscode.commands.executeCommand('markdown.showSource');
+			return vscode.commands.executeCommand("markdown.showSource");
 		}
 		// nothing found that could be shown or toggled
 		return;
 	}
 
-	const resourceColumn = vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.One;
+	const resourceColumn =
+		vscode.window.activeTextEditor?.viewColumn || vscode.ViewColumn.One;
 	webviewManager.openDynamicPreview(resource, {
 		resourceColumn: resourceColumn,
-		previewColumn: previewSettings.sideBySide ? vscode.ViewColumn.Beside : resourceColumn,
-		locked: !!previewSettings.locked
+		previewColumn: previewSettings.sideBySide
+			? vscode.ViewColumn.Beside
+			: resourceColumn,
+		locked: !!previewSettings.locked,
 	});
 
-	telemetryReporter.sendTelemetryEvent('openPreview', {
-		where: previewSettings.sideBySide ? 'sideBySide' : 'inPlace',
-		how: (uri instanceof vscode.Uri) ? 'action' : 'pallete'
+	telemetryReporter.sendTelemetryEvent("openPreview", {
+		where: previewSettings.sideBySide ? "sideBySide" : "inPlace",
+		how: uri instanceof vscode.Uri ? "action" : "pallete",
 	});
 }
 
 export class ShowPreviewCommand implements Command {
-	public readonly id = 'markdown.showPreview';
+	public readonly id = "markdown.showPreview";
 
 	readonly #webviewManager: MarkdownPreviewManager;
 	readonly #telemetryReporter: TelemetryReporter;
 
 	public constructor(
 		webviewManager: MarkdownPreviewManager,
-		telemetryReporter: TelemetryReporter
+		telemetryReporter: TelemetryReporter,
 	) {
 		this.#webviewManager = webviewManager;
 		this.#telemetryReporter = telemetryReporter;
 	}
 
-	public execute(mainUri?: vscode.Uri, allUris?: vscode.Uri[], previewSettings?: DynamicPreviewSettings) {
+	public execute(
+		mainUri?: vscode.Uri,
+		allUris?: vscode.Uri[],
+		previewSettings?: DynamicPreviewSettings,
+	) {
 		for (const uri of Array.isArray(allUris) ? allUris : [mainUri]) {
 			showPreview(this.#webviewManager, this.#telemetryReporter, uri, {
 				sideBySide: false,
-				locked: previewSettings?.locked
+				locked: previewSettings?.locked,
 			});
 		}
 	}
 }
 
 export class ShowPreviewToSideCommand implements Command {
-	public readonly id = 'markdown.showPreviewToSide';
+	public readonly id = "markdown.showPreviewToSide";
 
 	readonly #webviewManager: MarkdownPreviewManager;
 	readonly #telemetryReporter: TelemetryReporter;
 
 	public constructor(
 		webviewManager: MarkdownPreviewManager,
-		telemetryReporter: TelemetryReporter
+		telemetryReporter: TelemetryReporter,
 	) {
 		this.#webviewManager = webviewManager;
 		this.#telemetryReporter = telemetryReporter;
@@ -91,21 +100,20 @@ export class ShowPreviewToSideCommand implements Command {
 	public execute(uri?: vscode.Uri, previewSettings?: DynamicPreviewSettings) {
 		showPreview(this.#webviewManager, this.#telemetryReporter, uri, {
 			sideBySide: true,
-			locked: previewSettings?.locked
+			locked: previewSettings?.locked,
 		});
 	}
 }
 
-
 export class ShowLockedPreviewToSideCommand implements Command {
-	public readonly id = 'markdown.showLockedPreviewToSide';
+	public readonly id = "markdown.showLockedPreviewToSide";
 
 	readonly #webviewManager: MarkdownPreviewManager;
 	readonly #telemetryReporter: TelemetryReporter;
 
 	public constructor(
 		webviewManager: MarkdownPreviewManager,
-		telemetryReporter: TelemetryReporter
+		telemetryReporter: TelemetryReporter,
 	) {
 		this.#webviewManager = webviewManager;
 		this.#telemetryReporter = telemetryReporter;
@@ -114,7 +122,7 @@ export class ShowLockedPreviewToSideCommand implements Command {
 	public execute(uri?: vscode.Uri) {
 		showPreview(this.#webviewManager, this.#telemetryReporter, uri, {
 			sideBySide: true,
-			locked: true
+			locked: true,
 		});
 	}
 }

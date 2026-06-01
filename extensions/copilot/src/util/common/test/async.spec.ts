@@ -9,7 +9,6 @@ import { TaskQueue } from '../async';
 import { assert, beforeEach, describe, it } from 'vitest';
 import { isCancellationError } from '../../vs/base/common/errors';
 
-
 describe('TaskQueue', () => {
 	let taskQueue: TaskQueue;
 
@@ -26,8 +25,12 @@ describe('TaskQueue', () => {
 
 	it('should schedule and run multiple tasks in order', async () => {
 		const results: string[] = [];
-		const task1 = sinon.stub().callsFake(async () => { results.push('task1'); });
-		const task2 = sinon.stub().callsFake(async () => { results.push('task2'); });
+		const task1 = sinon.stub().callsFake(async () => {
+			results.push('task1');
+		});
+		const task2 = sinon.stub().callsFake(async () => {
+			results.push('task2');
+		});
 
 		await taskQueue.schedule(task1);
 		await taskQueue.schedule(task2);
@@ -55,5 +58,4 @@ describe('TaskQueue', () => {
 			}
 		}
 	});
-
 });

@@ -12,14 +12,18 @@ export interface ITextEditorOptions {
 export function normalizeIndentCharacter(
 	options: ITextEditorOptions,
 	completion: GhostCompletion,
-	isEmptyLine: boolean
+	isEmptyLine: boolean,
 ): GhostCompletion {
-	function replace(text: string, toReplace: string, replacer: (numberOfRemovedChars: number) => string): string {
+	function replace(
+		text: string,
+		toReplace: string,
+		replacer: (numberOfRemovedChars: number) => string,
+	): string {
 		const regex = new RegExp(`^(${toReplace})+`, 'g');
 
 		return text
 			.split('\n')
-			.map(line => {
+			.map((line) => {
 				const trimmed = line.replace(regex, '');
 				const removedCharacters = line.length - trimmed.length;
 				return replacer(removedCharacters) + trimmed;
@@ -39,13 +43,20 @@ export function normalizeIndentCharacter(
 	//If editor indentation is set to tabs
 	if (options.insertSpaces === false) {
 		const r = (txt: string) =>
-			replace(txt, ' ', n => '\t'.repeat(Math.floor(n / indentSize)) + ' '.repeat(n % indentSize));
+			replace(
+				txt,
+				' ',
+				(n) =>
+					'\t'.repeat(Math.floor(n / indentSize)) +
+					' '.repeat(n % indentSize),
+			);
 		completion.displayText = r(completion.displayText);
 		completion.completionText = r(completion.completionText);
 	}
 	//If editor indentation is set to spaces
 	else if (options.insertSpaces === true) {
-		const r = (txt: string) => replace(txt, '\t', n => ' '.repeat(n * indentSize));
+		const r = (txt: string) =>
+			replace(txt, '\t', (n) => ' '.repeat(n * indentSize));
 		completion.displayText = r(completion.displayText);
 		completion.completionText = r(completion.completionText);
 		if (isEmptyLine) {
@@ -54,12 +65,19 @@ export function normalizeIndentCharacter(
 					return txt;
 				}
 				const firstLine = txt.split('\n')[0];
-				const spacesAtStart = firstLine.length - firstLine.trimStart().length;
+				const spacesAtStart =
+					firstLine.length - firstLine.trimStart().length;
 				const remainder = spacesAtStart % indentSize;
 				if (remainder !== 0 && spacesAtStart > 0) {
 					const toReplace = ' '.repeat(remainder);
-					return replace(txt, toReplace, n => ' '.repeat((Math.floor(n / indentSize) + 1) * indentSize));
-				} else { return txt; }
+					return replace(txt, toReplace, (n) =>
+						' '.repeat(
+							(Math.floor(n / indentSize) + 1) * indentSize,
+						),
+					);
+				} else {
+					return txt;
+				}
 			};
 
 			completion.displayText = re(completion.displayText);

@@ -6,17 +6,30 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { IExperimentationService as ITASExperimentationService } from 'vscode-tas-client';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
-import { CopilotToken, createTestExtendedTokenInfo } from '../../../authentication/common/copilotToken';
+import {
+	CopilotToken,
+	createTestExtendedTokenInfo,
+} from '../../../authentication/common/copilotToken';
 import { ICopilotTokenStore } from '../../../authentication/common/copilotTokenStore';
 import { IConfigurationService } from '../../../configuration/common/configurationService';
 import { IVSCodeExtensionContext } from '../../../extContext/common/extensionContext';
 import { ILogService } from '../../../log/common/logService';
-import { createPlatformServices, ITestingServicesAccessor } from '../../../test/node/services';
+import {
+	createPlatformServices,
+	ITestingServicesAccessor,
+} from '../../../test/node/services';
 import { TreatmentsChangeEvent } from '../../common/nullExperimentationService';
-import { BaseExperimentationService, TASClientDelegateFn, UserInfoStore } from '../../node/baseExperimentationService';
+import {
+	BaseExperimentationService,
+	TASClientDelegateFn,
+	UserInfoStore,
+} from '../../node/baseExperimentationService';
 
-
-function toExpectedTreatment(name: string, org: string | undefined, sku: string | undefined): string | undefined {
+function toExpectedTreatment(
+	name: string,
+	org: string | undefined,
+	sku: string | undefined,
+): string | undefined {
 	return `${name}.${org}.${sku}`;
 }
 
@@ -27,13 +40,22 @@ class TestExperimentationService extends BaseExperimentationService {
 		@IVSCodeExtensionContext extensionContext: IVSCodeExtensionContext,
 		@ICopilotTokenStore tokenStore: ICopilotTokenStore,
 		@IConfigurationService configurationService: IConfigurationService,
-		@ILogService logService: ILogService
+		@ILogService logService: ILogService,
 	) {
-		const delegateFn: TASClientDelegateFn = (globalState: any, userInfoStore: UserInfoStore) => {
+		const delegateFn: TASClientDelegateFn = (
+			globalState: any,
+			userInfoStore: UserInfoStore,
+		) => {
 			return new MockTASExperimentationService(userInfoStore);
 		};
 
-		super(delegateFn, extensionContext, tokenStore, configurationService, logService);
+		super(
+			delegateFn,
+			extensionContext,
+			tokenStore,
+			configurationService,
+			logService,
+		);
 		this._mockTasService = this._delegate as MockTASExperimentationService;
 	}
 
@@ -51,9 +73,14 @@ class MockTASExperimentationService implements ITASExperimentationService {
 	private _initialized = false;
 	private _fetchedTreatments = false;
 	public refreshCallCount = 0;
-	public treatmentRequests: Array<{ configId: string; name: string; org: string | undefined; sku: string | undefined }> = [];
+	public treatmentRequests: Array<{
+		configId: string;
+		name: string;
+		org: string | undefined;
+		sku: string | undefined;
+	}> = [];
 
-	constructor(private userInfoStore: UserInfoStore) { }
+	constructor(private userInfoStore: UserInfoStore) {}
 
 	get initializePromise(): Promise<void> {
 		if (this._initializePromise) {
@@ -96,7 +123,10 @@ class MockTASExperimentationService implements ITASExperimentationService {
 	isFlightEnabledAsync(flight: string): Promise<boolean> {
 		throw new Error('Method not implemented.');
 	}
-	getTreatmentVariable<T extends boolean | number | string>(configId: string, name: string): T | undefined {
+	getTreatmentVariable<T extends boolean | number | string>(
+		configId: string,
+		name: string,
+	): T | undefined {
 		if (!this._initialized) {
 			return undefined;
 		}
@@ -114,7 +144,11 @@ class MockTASExperimentationService implements ITASExperimentationService {
 		return toExpectedTreatment(name, org, sku) as T | undefined;
 	}
 
-	getTreatmentVariableAsync<T extends boolean | number | string>(configId: string, name: string, checkCache?: boolean): Promise<T | undefined> {
+	getTreatmentVariableAsync<T extends boolean | number | string>(
+		configId: string,
+		name: string,
+		checkCache?: boolean,
+	): Promise<T | undefined> {
 		// Track refresh calls
 		if (configId === 'vscode' && name === 'refresh') {
 			this.refreshCallCount++;
@@ -135,21 +169,89 @@ describe('ExP Service Tests', () => {
 	let copilotTokenService: ICopilotTokenStore;
 	let extensionContext: IVSCodeExtensionContext;
 
-	const GitHubProToken = new CopilotToken(createTestExtendedTokenInfo({ token: 'token-gh-pro', username: 'fake', sku: 'pro', copilot_plan: 'unknown', organization_list: ['4535c7beffc844b46bb1ed4aa04d759a'] }));
-	const GitHubAndMicrosoftEnterpriseToken = new CopilotToken(createTestExtendedTokenInfo({ token: 'token-gh-msft-enterprise', username: 'fake', sku: 'enterprise', copilot_plan: 'unknown', organization_list: ['4535c7beffc844b46bb1ed4aa04d759a', 'a5db0bcaae94032fe715fb34a5e4bce2'] }));
-	const MicrosoftEnterpriseToken = new CopilotToken(createTestExtendedTokenInfo({ token: 'token-msft-enterprise', username: 'fake', sku: 'enterprise', copilot_plan: 'unknown', organization_list: ['a5db0bcaae94032fe715fb34a5e4bce2'] }));
-	const NoOrgFreeToken = new CopilotToken(createTestExtendedTokenInfo({ token: 'token-no-org-free', username: 'fake', sku: 'free', copilot_plan: 'unknown' }));
-	const VscodeTeamMemberToken = new CopilotToken(createTestExtendedTokenInfo({ token: 'token-vscode-team', username: 'fake', sku: 'enterprise', copilot_plan: 'unknown', isVscodeTeamMember: true }));
-	const NonVscodeTeamMemberToken = new CopilotToken(createTestExtendedTokenInfo({ token: 'token-non-vscode-team', username: 'fake', sku: 'enterprise', copilot_plan: 'unknown', isVscodeTeamMember: false }));
-	const SnEnabledToken = new CopilotToken(createTestExtendedTokenInfo({ token: 'sn=1;tid=test', username: 'fake', sku: 'pro', copilot_plan: 'unknown', organization_list: ['4535c7beffc844b46bb1ed4aa04d759a'] }));
-	const SnDisabledToken = new CopilotToken(createTestExtendedTokenInfo({ token: 'sn=0;tid=test', username: 'fake', sku: 'pro', copilot_plan: 'unknown', organization_list: ['4535c7beffc844b46bb1ed4aa04d759a'] }));
+	const GitHubProToken = new CopilotToken(
+		createTestExtendedTokenInfo({
+			token: 'token-gh-pro',
+			username: 'fake',
+			sku: 'pro',
+			copilot_plan: 'unknown',
+			organization_list: ['4535c7beffc844b46bb1ed4aa04d759a'],
+		}),
+	);
+	const GitHubAndMicrosoftEnterpriseToken = new CopilotToken(
+		createTestExtendedTokenInfo({
+			token: 'token-gh-msft-enterprise',
+			username: 'fake',
+			sku: 'enterprise',
+			copilot_plan: 'unknown',
+			organization_list: [
+				'4535c7beffc844b46bb1ed4aa04d759a',
+				'a5db0bcaae94032fe715fb34a5e4bce2',
+			],
+		}),
+	);
+	const MicrosoftEnterpriseToken = new CopilotToken(
+		createTestExtendedTokenInfo({
+			token: 'token-msft-enterprise',
+			username: 'fake',
+			sku: 'enterprise',
+			copilot_plan: 'unknown',
+			organization_list: ['a5db0bcaae94032fe715fb34a5e4bce2'],
+		}),
+	);
+	const NoOrgFreeToken = new CopilotToken(
+		createTestExtendedTokenInfo({
+			token: 'token-no-org-free',
+			username: 'fake',
+			sku: 'free',
+			copilot_plan: 'unknown',
+		}),
+	);
+	const VscodeTeamMemberToken = new CopilotToken(
+		createTestExtendedTokenInfo({
+			token: 'token-vscode-team',
+			username: 'fake',
+			sku: 'enterprise',
+			copilot_plan: 'unknown',
+			isVscodeTeamMember: true,
+		}),
+	);
+	const NonVscodeTeamMemberToken = new CopilotToken(
+		createTestExtendedTokenInfo({
+			token: 'token-non-vscode-team',
+			username: 'fake',
+			sku: 'enterprise',
+			copilot_plan: 'unknown',
+			isVscodeTeamMember: false,
+		}),
+	);
+	const SnEnabledToken = new CopilotToken(
+		createTestExtendedTokenInfo({
+			token: 'sn=1;tid=test',
+			username: 'fake',
+			sku: 'pro',
+			copilot_plan: 'unknown',
+			organization_list: ['4535c7beffc844b46bb1ed4aa04d759a'],
+		}),
+	);
+	const SnDisabledToken = new CopilotToken(
+		createTestExtendedTokenInfo({
+			token: 'sn=0;tid=test',
+			username: 'fake',
+			sku: 'pro',
+			copilot_plan: 'unknown',
+			organization_list: ['4535c7beffc844b46bb1ed4aa04d759a'],
+		}),
+	);
 
 	beforeAll(() => {
 		const testingServiceCollection = createPlatformServices();
 		accessor = testingServiceCollection.createTestingAccessor();
 		extensionContext = accessor.get(IVSCodeExtensionContext);
 		copilotTokenService = accessor.get(ICopilotTokenStore);
-		expService = accessor.get(IInstantiationService).createInstance(TestExperimentationService);
+		expService = accessor
+			.get(IInstantiationService)
+			.createInstance(TestExperimentationService);
 	});
 
 	beforeEach(() => {
@@ -241,11 +343,19 @@ describe('ExP Service Tests', () => {
 
 	it('should handle cached user info on initialization', async () => {
 		// Simulate cached values in global state
-		await extensionContext.globalState.update(UserInfoStore.INTERNAL_ORG_STORAGE_KEY, 'github');
-		await extensionContext.globalState.update(UserInfoStore.SKU_STORAGE_KEY, 'pro');
+		await extensionContext.globalState.update(
+			UserInfoStore.INTERNAL_ORG_STORAGE_KEY,
+			'github',
+		);
+		await extensionContext.globalState.update(
+			UserInfoStore.SKU_STORAGE_KEY,
+			'pro',
+		);
 
 		// Create new service instance to test initialization
-		const newExpService = accessor.get(IInstantiationService).createInstance(TestExperimentationService);
+		const newExpService = accessor
+			.get(IInstantiationService)
+			.createInstance(TestExperimentationService);
 		await newExpService.hasTreatments();
 
 		// Should use cached values initially
@@ -253,8 +363,14 @@ describe('ExP Service Tests', () => {
 		expect(treatment).toBe(toExpectedTreatment('test', 'github', 'pro'));
 
 		// Clean up
-		await extensionContext.globalState.update(UserInfoStore.INTERNAL_ORG_STORAGE_KEY, undefined);
-		await extensionContext.globalState.update(UserInfoStore.SKU_STORAGE_KEY, undefined);
+		await extensionContext.globalState.update(
+			UserInfoStore.INTERNAL_ORG_STORAGE_KEY,
+			undefined,
+		);
+		await extensionContext.globalState.update(
+			UserInfoStore.SKU_STORAGE_KEY,
+			undefined,
+		);
 	});
 
 	it('should handle multiple treatment variables', async () => {
@@ -266,17 +382,23 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Test string treatment
-		const stringTreatment = expService.getTreatmentVariable<string>('stringVar');
-		expect(stringTreatment).toBe(toExpectedTreatment('stringVar', 'github', 'pro'));
+		const stringTreatment =
+			expService.getTreatmentVariable<string>('stringVar');
+		expect(stringTreatment).toBe(
+			toExpectedTreatment('stringVar', 'github', 'pro'),
+		);
 
 		// Test different config and variable names
-		const anotherTreatment = expService.getTreatmentVariable<string>('featureFlag');
-		expect(anotherTreatment).toBe(toExpectedTreatment('featureFlag', 'github', 'pro'));
+		const anotherTreatment =
+			expService.getTreatmentVariable<string>('featureFlag');
+		expect(anotherTreatment).toBe(
+			toExpectedTreatment('featureFlag', 'github', 'pro'),
+		);
 
 		// Verify all requests were tracked
 		const requests = expService.mockTasService.treatmentRequests;
-		expect(requests.some(r => r.name === 'stringVar')).toBe(true);
-		expect(requests.some(r => r.name === 'featureFlag')).toBe(true);
+		expect(requests.some((r) => r.name === 'stringVar')).toBe(true);
+		expect(requests.some((r) => r.name === 'featureFlag')).toBe(true);
 	});
 
 	it('should not fire events when relevant user info does not change', async () => {
@@ -294,19 +416,25 @@ describe('ExP Service Tests', () => {
 		expService.mockTasService.reset();
 
 		let eventFired = false;
-		const eventHandler = () => { eventFired = true; };
+		const eventHandler = () => {
+			eventFired = true;
+		};
 		expService.onDidTreatmentsChange(eventHandler);
 
 		// We need a separate token just to make sure we get passed the copilot token change guard
-		const newGitHubProToken = new CopilotToken(createTestExtendedTokenInfo({
-			token: 'github-test', username: 'fake',
-			sku: 'pro', copilot_plan: 'unknown',
-			organization_list: ['4535c7beffc844b46bb1ed4aa04d759a']
-		}));
+		const newGitHubProToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				token: 'github-test',
+				username: 'fake',
+				sku: 'pro',
+				copilot_plan: 'unknown',
+				organization_list: ['4535c7beffc844b46bb1ed4aa04d759a'],
+			}),
+		);
 		copilotTokenService.copilotToken = newGitHubProToken; // Same token
 
 		// Wait a bit to see if event fires
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// Event should not have fired since user info didn't change
 		expect(eventFired).toBe(false);
@@ -332,7 +460,9 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		const treatment = expService.getTreatmentVariable<string>('orgTest');
-		expect(treatment).toBe(toExpectedTreatment('orgTest', 'github', 'enterprise'));
+		expect(treatment).toBe(
+			toExpectedTreatment('orgTest', 'github', 'enterprise'),
+		);
 	});
 
 	it('should detect Microsoft organization correctly', async () => {
@@ -343,7 +473,9 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		const treatment = expService.getTreatmentVariable<string>('orgTest');
-		expect(treatment).toBe(toExpectedTreatment('orgTest', 'microsoft', 'enterprise'));
+		expect(treatment).toBe(
+			toExpectedTreatment('orgTest', 'microsoft', 'enterprise'),
+		);
 	});
 
 	it('should handle no organization correctly', async () => {
@@ -354,20 +486,26 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		const treatment = expService.getTreatmentVariable<string>('orgTest');
-		expect(treatment).toBe(toExpectedTreatment('orgTest', undefined, 'free'));
+		expect(treatment).toBe(
+			toExpectedTreatment('orgTest', undefined, 'free'),
+		);
 	});
 
 	it('should return undefined before initialization completes', async () => {
 		// Create a fresh service that hasn't been initialized yet
-		const newExpService = accessor.get(IInstantiationService).createInstance(TestExperimentationService);
+		const newExpService = accessor
+			.get(IInstantiationService)
+			.createInstance(TestExperimentationService);
 
 		// Should return undefined before initialization
-		const treatmentBeforeInit = newExpService.getTreatmentVariable<string>('test');
+		const treatmentBeforeInit =
+			newExpService.getTreatmentVariable<string>('test');
 		expect(treatmentBeforeInit).toBeUndefined();
 
 		// Initialize and verify it works
 		await newExpService.hasTreatments();
-		const treatmentAfterInit = newExpService.getTreatmentVariable<string>('test');
+		const treatmentAfterInit =
+			newExpService.getTreatmentVariable<string>('test');
 		expect(treatmentAfterInit).toBeDefined();
 	});
 
@@ -375,8 +513,14 @@ describe('ExP Service Tests', () => {
 		await expService.hasTreatments();
 
 		// Clear any existing cached values
-		await extensionContext.globalState.update(UserInfoStore.INTERNAL_ORG_STORAGE_KEY, undefined);
-		await extensionContext.globalState.update(UserInfoStore.SKU_STORAGE_KEY, undefined);
+		await extensionContext.globalState.update(
+			UserInfoStore.INTERNAL_ORG_STORAGE_KEY,
+			undefined,
+		);
+		await extensionContext.globalState.update(
+			UserInfoStore.SKU_STORAGE_KEY,
+			undefined,
+		);
 
 		// Set a token and wait for update
 		const treatmentsChangePromise = GetNewTreatmentsChangedPromise();
@@ -384,8 +528,12 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify values were cached in global state
-		const cachedOrg = extensionContext.globalState.get<string>(UserInfoStore.INTERNAL_ORG_STORAGE_KEY);
-		const cachedSku = extensionContext.globalState.get<string>(UserInfoStore.SKU_STORAGE_KEY);
+		const cachedOrg = extensionContext.globalState.get<string>(
+			UserInfoStore.INTERNAL_ORG_STORAGE_KEY,
+		);
+		const cachedSku = extensionContext.globalState.get<string>(
+			UserInfoStore.SKU_STORAGE_KEY,
+		);
 		expect(cachedOrg).toBe('github');
 		expect(cachedSku).toBe('pro');
 	});
@@ -394,8 +542,11 @@ describe('ExP Service Tests', () => {
 		await expService.hasTreatments();
 
 		// Query one treatment before sign-in
-		const queriedTreatment = expService.getTreatmentVariable<string>('queriedTreatment');
-		expect(queriedTreatment).toBe(toExpectedTreatment('queriedTreatment', undefined, undefined));
+		const queriedTreatment =
+			expService.getTreatmentVariable<string>('queriedTreatment');
+		expect(queriedTreatment).toBe(
+			toExpectedTreatment('queriedTreatment', undefined, undefined),
+		);
 
 		// Don't query another treatment (notQueriedTreatment)
 
@@ -408,16 +559,27 @@ describe('ExP Service Tests', () => {
 
 		// Verify only the previously queried treatment is in the affected list
 		expect(treatmentChangeEvent).toBeDefined();
-		expect(treatmentChangeEvent.affectedTreatmentVariables).toContain('queriedTreatment');
-		expect(treatmentChangeEvent.affectedTreatmentVariables).not.toContain('notQueriedTreatment');
+		expect(treatmentChangeEvent.affectedTreatmentVariables).toContain(
+			'queriedTreatment',
+		);
+		expect(treatmentChangeEvent.affectedTreatmentVariables).not.toContain(
+			'notQueriedTreatment',
+		);
 
 		// Now query the treatment that wasn't queried before to verify it has the new value
-		const notQueriedTreatment = expService.getTreatmentVariable<string>('notQueriedTreatment');
-		expect(notQueriedTreatment).toBe(toExpectedTreatment('notQueriedTreatment', 'github', 'pro'));
+		const notQueriedTreatment = expService.getTreatmentVariable<string>(
+			'notQueriedTreatment',
+		);
+		expect(notQueriedTreatment).toBe(
+			toExpectedTreatment('notQueriedTreatment', 'github', 'pro'),
+		);
 
 		// And verify the previously queried treatment has the updated value
-		const updatedQueriedTreatment = expService.getTreatmentVariable<string>('queriedTreatment');
-		expect(updatedQueriedTreatment).toBe(toExpectedTreatment('queriedTreatment', 'github', 'pro'));
+		const updatedQueriedTreatment =
+			expService.getTreatmentVariable<string>('queriedTreatment');
+		expect(updatedQueriedTreatment).toBe(
+			toExpectedTreatment('queriedTreatment', 'github', 'pro'),
+		);
 
 		// Set up promise for treatment changes
 		treatmentChangePromise = GetNewTreatmentsChangedPromise();
@@ -428,14 +590,24 @@ describe('ExP Service Tests', () => {
 
 		// Verify both queried treatments are in the affected list now
 		expect(treatmentChangeEvent).toBeDefined();
-		expect(treatmentChangeEvent.affectedTreatmentVariables).toContain('queriedTreatment');
-		expect(treatmentChangeEvent.affectedTreatmentVariables).toContain('notQueriedTreatment');
+		expect(treatmentChangeEvent.affectedTreatmentVariables).toContain(
+			'queriedTreatment',
+		);
+		expect(treatmentChangeEvent.affectedTreatmentVariables).toContain(
+			'notQueriedTreatment',
+		);
 
 		// Verify both treatments have the signed-out value
-		const signedOutQueriedTreatment = expService.getTreatmentVariable<string>('queriedTreatment');
-		expect(signedOutQueriedTreatment).toBe(toExpectedTreatment('queriedTreatment', undefined, undefined));
-		const signedOutNotQueriedTreatment = expService.getTreatmentVariable<string>('notQueriedTreatment');
-		expect(signedOutNotQueriedTreatment).toBe(toExpectedTreatment('notQueriedTreatment', undefined, undefined));
+		const signedOutQueriedTreatment =
+			expService.getTreatmentVariable<string>('queriedTreatment');
+		expect(signedOutQueriedTreatment).toBe(
+			toExpectedTreatment('queriedTreatment', undefined, undefined),
+		);
+		const signedOutNotQueriedTreatment =
+			expService.getTreatmentVariable<string>('notQueriedTreatment');
+		expect(signedOutNotQueriedTreatment).toBe(
+			toExpectedTreatment('notQueriedTreatment', undefined, undefined),
+		);
 	});
 
 	it('should detect VS Code team member correctly', async () => {
@@ -447,7 +619,10 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify isVscodeTeamMember is set in UserInfoStore
-		const userInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const userInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 		expect(userInfoStore.isVscodeTeamMember).toBe(true);
 	});
 
@@ -460,7 +635,10 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify isVscodeTeamMember is set correctly in UserInfoStore
-		const userInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const userInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 		expect(userInfoStore.isVscodeTeamMember).toBe(false);
 	});
 
@@ -468,7 +646,10 @@ describe('ExP Service Tests', () => {
 		await expService.hasTreatments();
 
 		// Clear any existing cached values
-		await extensionContext.globalState.update(UserInfoStore.IS_VSCODE_TEAM_MEMBER_STORAGE_KEY, undefined);
+		await extensionContext.globalState.update(
+			UserInfoStore.IS_VSCODE_TEAM_MEMBER_STORAGE_KEY,
+			undefined,
+		);
 
 		// Set a token and wait for update
 		const treatmentsChangePromise = GetNewTreatmentsChangedPromise();
@@ -476,22 +657,34 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify value was cached in global state
-		const cachedIsVscodeTeamMember = extensionContext.globalState.get<boolean>(UserInfoStore.IS_VSCODE_TEAM_MEMBER_STORAGE_KEY);
+		const cachedIsVscodeTeamMember =
+			extensionContext.globalState.get<boolean>(
+				UserInfoStore.IS_VSCODE_TEAM_MEMBER_STORAGE_KEY,
+			);
 		expect(cachedIsVscodeTeamMember).toBe(true);
 	});
 
 	it('should use cached VS Code team member status on initialization', async () => {
 		// Simulate cached value in global state
-		await extensionContext.globalState.update(UserInfoStore.IS_VSCODE_TEAM_MEMBER_STORAGE_KEY, true);
+		await extensionContext.globalState.update(
+			UserInfoStore.IS_VSCODE_TEAM_MEMBER_STORAGE_KEY,
+			true,
+		);
 
 		// Create new UserInfoStore instance to test initialization
-		const newUserInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const newUserInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 
 		// Should use cached value initially (when no token is present)
 		expect(newUserInfoStore.isVscodeTeamMember).toBe(true);
 
 		// Clean up
-		await extensionContext.globalState.update(UserInfoStore.IS_VSCODE_TEAM_MEMBER_STORAGE_KEY, undefined);
+		await extensionContext.globalState.update(
+			UserInfoStore.IS_VSCODE_TEAM_MEMBER_STORAGE_KEY,
+			undefined,
+		);
 	});
 
 	it('should track organization list for targeting', async () => {
@@ -503,17 +696,27 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify organization list is correctly tracked
-		const userInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const userInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 		expect(userInfoStore.organizationList).toBeDefined();
-		expect(userInfoStore.organizationList).toContain('4535c7beffc844b46bb1ed4aa04d759a'); // GitHub org
-		expect(userInfoStore.organizationList).toContain('a5db0bcaae94032fe715fb34a5e4bce2'); // Microsoft org
+		expect(userInfoStore.organizationList).toContain(
+			'4535c7beffc844b46bb1ed4aa04d759a',
+		); // GitHub org
+		expect(userInfoStore.organizationList).toContain(
+			'a5db0bcaae94032fe715fb34a5e4bce2',
+		); // Microsoft org
 	});
 
 	it('should persist organization list to global state', async () => {
 		await expService.hasTreatments();
 
 		// Clear any existing cached values
-		await extensionContext.globalState.update(UserInfoStore.ORGANIZATION_LIST_STORAGE_KEY, undefined);
+		await extensionContext.globalState.update(
+			UserInfoStore.ORGANIZATION_LIST_STORAGE_KEY,
+			undefined,
+		);
 
 		// Set a token and wait for update
 		const treatmentsChangePromise = GetNewTreatmentsChangedPromise();
@@ -521,7 +724,9 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify value was cached in global state
-		const cachedOrgList = extensionContext.globalState.get<string[]>(UserInfoStore.ORGANIZATION_LIST_STORAGE_KEY);
+		const cachedOrgList = extensionContext.globalState.get<string[]>(
+			UserInfoStore.ORGANIZATION_LIST_STORAGE_KEY,
+		);
 		expect(cachedOrgList).toBeDefined();
 		expect(cachedOrgList).toContain('4535c7beffc844b46bb1ed4aa04d759a');
 		expect(cachedOrgList).toContain('a5db0bcaae94032fe715fb34a5e4bce2');
@@ -530,16 +735,25 @@ describe('ExP Service Tests', () => {
 	it('should use cached organization list on initialization', async () => {
 		// Simulate cached value in global state
 		const testOrgList = ['org1', 'org2', 'org3'];
-		await extensionContext.globalState.update(UserInfoStore.ORGANIZATION_LIST_STORAGE_KEY, testOrgList);
+		await extensionContext.globalState.update(
+			UserInfoStore.ORGANIZATION_LIST_STORAGE_KEY,
+			testOrgList,
+		);
 
 		// Create new UserInfoStore instance to test initialization
-		const newUserInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const newUserInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 
 		// Should use cached value initially (when no token is present)
 		expect(newUserInfoStore.organizationList).toEqual(testOrgList);
 
 		// Clean up
-		await extensionContext.globalState.update(UserInfoStore.ORGANIZATION_LIST_STORAGE_KEY, undefined);
+		await extensionContext.globalState.update(
+			UserInfoStore.ORGANIZATION_LIST_STORAGE_KEY,
+			undefined,
+		);
 	});
 
 	it('should handle empty organization list', async () => {
@@ -551,7 +765,10 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify organization list is empty
-		const userInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const userInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 		expect(userInfoStore.organizationList).toBeDefined();
 		expect(userInfoStore.organizationList?.length).toBe(0);
 	});
@@ -563,7 +780,7 @@ describe('ExP Service Tests', () => {
 		copilotTokenService.copilotToken = undefined;
 
 		// Wait a bit for any pending state
-		await new Promise(resolve => setTimeout(resolve, 50));
+		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		// Reset mock to track refresh calls
 		expService.mockTasService.reset();
@@ -577,7 +794,10 @@ describe('ExP Service Tests', () => {
 		expect(expService.mockTasService.refreshCallCount).toBe(1);
 
 		// Verify the UserInfoStore has the correct value
-		const userInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const userInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 		expect(userInfoStore.isVscodeTeamMember).toBe(true);
 	});
 
@@ -590,7 +810,10 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify isSn is set in UserInfoStore
-		const userInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const userInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 		expect(userInfoStore.isSn).toBe(true);
 	});
 
@@ -603,7 +826,10 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify isSn is false in UserInfoStore
-		const userInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const userInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 		expect(userInfoStore.isSn).toBe(false);
 	});
 
@@ -611,7 +837,10 @@ describe('ExP Service Tests', () => {
 		await expService.hasTreatments();
 
 		// Clear any existing cached values
-		await extensionContext.globalState.update(UserInfoStore.IS_SN_STORAGE_KEY, undefined);
+		await extensionContext.globalState.update(
+			UserInfoStore.IS_SN_STORAGE_KEY,
+			undefined,
+		);
 
 		// Set a token and wait for update
 		const treatmentsChangePromise = GetNewTreatmentsChangedPromise();
@@ -619,21 +848,32 @@ describe('ExP Service Tests', () => {
 		await treatmentsChangePromise;
 
 		// Verify value was cached in global state
-		const cachedIsSn = extensionContext.globalState.get<boolean>(UserInfoStore.IS_SN_STORAGE_KEY);
+		const cachedIsSn = extensionContext.globalState.get<boolean>(
+			UserInfoStore.IS_SN_STORAGE_KEY,
+		);
 		expect(cachedIsSn).toBe(true);
 	});
 
 	it('should use cached sn flag on initialization', async () => {
 		// Simulate cached value in global state
-		await extensionContext.globalState.update(UserInfoStore.IS_SN_STORAGE_KEY, true);
+		await extensionContext.globalState.update(
+			UserInfoStore.IS_SN_STORAGE_KEY,
+			true,
+		);
 
 		// Create new UserInfoStore instance to test initialization
-		const newUserInfoStore = new UserInfoStore(extensionContext, copilotTokenService);
+		const newUserInfoStore = new UserInfoStore(
+			extensionContext,
+			copilotTokenService,
+		);
 
 		// Should use cached value initially (when no token is present)
 		expect(newUserInfoStore.isSn).toBe(true);
 
 		// Clean up
-		await extensionContext.globalState.update(UserInfoStore.IS_SN_STORAGE_KEY, undefined);
+		await extensionContext.globalState.update(
+			UserInfoStore.IS_SN_STORAGE_KEY,
+			undefined,
+		);
 	});
 });

@@ -11,7 +11,10 @@ import { _createBaselineContext } from '../../../lib/src/test/context';
 import { StaticFetcher } from '../../../lib/src/test/fetcher';
 import { ICompletionsTextDocumentManagerService } from '../../../lib/src/textDocumentManager';
 import { VSCodeEditorInfo } from '../config';
-import { CopilotExtensionStatus, ICompletionsExtensionStatus } from '../extensionStatus';
+import {
+	CopilotExtensionStatus,
+	ICompletionsExtensionStatus,
+} from '../extensionStatus';
 import { extensionFileSystem } from '../fileSystem';
 import { ExtensionTextDocumentManager } from '../textDocumentManager';
 import { ExtensionTestConfigProvider } from './config';
@@ -22,13 +25,28 @@ import { ExtensionTestConfigProvider } from './config';
  */
 export function createExtensionTestingContext() {
 	let serviceCollection = createExtensionTestingServices();
-	serviceCollection = _createBaselineContext(serviceCollection, new ExtensionTestConfigProvider());
+	serviceCollection = _createBaselineContext(
+		serviceCollection,
+		new ExtensionTestConfigProvider(),
+	);
 
 	serviceCollection.define(ICompletionsFetcherService, new StaticFetcher());
-	serviceCollection.define(ICompletionsEditorAndPluginInfo, new VSCodeEditorInfo());
-	serviceCollection.define(ICompletionsTextDocumentManagerService, new SyncDescriptor(ExtensionTextDocumentManager));
-	serviceCollection.define(ICompletionsFileSystemService, extensionFileSystem);
-	serviceCollection.define(ICompletionsExtensionStatus, new CopilotExtensionStatus());
+	serviceCollection.define(
+		ICompletionsEditorAndPluginInfo,
+		new VSCodeEditorInfo(),
+	);
+	serviceCollection.define(
+		ICompletionsTextDocumentManagerService,
+		new SyncDescriptor(ExtensionTextDocumentManager),
+	);
+	serviceCollection.define(
+		ICompletionsFileSystemService,
+		extensionFileSystem,
+	);
+	serviceCollection.define(
+		ICompletionsExtensionStatus,
+		new CopilotExtensionStatus(),
+	);
 
 	return serviceCollection;
 }

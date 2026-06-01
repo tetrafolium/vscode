@@ -11,7 +11,7 @@ export class Point {
 	constructor(
 		public readonly x: number,
 		public readonly y: number,
-	) { }
+	) {}
 
 	public add(other: Point): Point {
 		return new Point(this.x + other.x, this.y + other.y);
@@ -46,7 +46,7 @@ export class Point {
 	}
 
 	public withThreshold(threshold: number): Point {
-		return this.mapComponents(axisVal => {
+		return this.mapComponents((axisVal) => {
 			if (axisVal > threshold) {
 				return axisVal - threshold;
 			} else if (axisVal < -threshold) {

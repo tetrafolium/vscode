@@ -21,7 +21,11 @@ export class OffsetLineColumnConverter {
 			const ch = text.charCodeAt(index);
 			index++; // go to next index
 			if (ch === CharCode.CarriageReturn || ch === CharCode.LineFeed) {
-				if (ch === CharCode.CarriageReturn && index < text.length && text.charCodeAt(index) === CharCode.LineFeed) {
+				if (
+					ch === CharCode.CarriageReturn &&
+					index < text.length &&
+					text.charCodeAt(index) === CharCode.LineFeed
+				) {
 					index++;
 				}
 				this._lineStartOffsets.push(index);
@@ -56,8 +60,16 @@ export class OffsetLineColumnConverter {
 
 	public positionToOffset(position: Position): number {
 		if (position.lineNumber >= this._lineStartOffsets.length) {
-			return this._lineStartOffsets[this._lineStartOffsets.length - 1] + position.column - 1;
+			return (
+				this._lineStartOffsets[this._lineStartOffsets.length - 1] +
+				position.column -
+				1
+			);
 		}
-		return this._lineStartOffsets[position.lineNumber - 1] + position.column - 1;
+		return (
+			this._lineStartOffsets[position.lineNumber - 1] +
+			position.column -
+			1
+		);
 	}
 }

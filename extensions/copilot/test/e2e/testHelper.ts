@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { ChatLanguageModelToolReference, ChatPromptReference } from 'vscode';
+import type {
+	ChatLanguageModelToolReference,
+	ChatPromptReference,
+} from 'vscode';
 import { IToolsService } from '../../src/extension/tools/common/toolsService';
 import { ITestingServicesAccessor } from '../../src/platform/test/node/services';
 import { SimulationWorkspace } from '../../src/platform/test/node/simulationWorkspace';
@@ -22,9 +25,17 @@ export interface IParsedQuery {
 /**
  * This has to recreate some of the variable parsing logic in VS Code so that we can write tests easily with variables
  * as strings, but then provide the extension code with the parsed variables in the extension API format.
-*/
-export async function parseQueryForScenarioTest(accessor: ITestingServicesAccessor, testCase: IConversationTestCase, simulationWorkspace: SimulationWorkspace): Promise<IParsedQuery> {
-	const query = await parseQueryForTest(accessor, testCase.question, simulationWorkspace);
+ */
+export async function parseQueryForScenarioTest(
+	accessor: ITestingServicesAccessor,
+	testCase: IConversationTestCase,
+	simulationWorkspace: SimulationWorkspace,
+): Promise<IParsedQuery> {
+	const query = await parseQueryForTest(
+		accessor,
+		testCase.question,
+		simulationWorkspace,
+	);
 
 	// Simulate implicit context enablement
 	const activeTextEditor = simulationWorkspace.activeTextEditor;
@@ -35,14 +46,14 @@ export async function parseQueryForScenarioTest(accessor: ITestingServicesAccess
 				id: 'vscode.implicit',
 				name: `file:${basename(activeTextEditor.document.uri)}`,
 				value: new Location(activeTextEditor.document.uri, selection),
-				modelDescription: `User's active selection`
+				modelDescription: `User's active selection`,
 			});
 		} else {
 			query.variables.push({
 				id: 'vscode.implicit',
 				name: `file:${basename(activeTextEditor.document.uri)}`,
 				value: activeTextEditor.document.uri,
-				modelDescription: `User's active file`
+				modelDescription: `User's active file`,
 			});
 		}
 	}
@@ -58,8 +69,12 @@ export function createWorkingSetFileVariable(uri: Uri) {
 	};
 }
 
-export function parseQueryForTest(accessor: ITestingServicesAccessor, query: string, simulationWorkspace: SimulationWorkspace): IParsedQuery {
-	const variableReg = /#([\w_\-]+)(?::(\S+))?(?=(\s|$|\b))/ig;
+export function parseQueryForTest(
+	accessor: ITestingServicesAccessor,
+	query: string,
+	simulationWorkspace: SimulationWorkspace,
+): IParsedQuery {
+	const variableReg = /#([\w_\-]+)(?::(\S+))?(?=(\s|$|\b))/gi;
 
 	const toolsService = accessor.get(IToolsService);
 
@@ -75,13 +90,21 @@ export function parseQueryForTest(accessor: ITestingServicesAccessor, query: str
 	const variables: ChatPromptReference[] = [];
 	const toolReferences: ChatLanguageModelToolReference[] = [];
 	let varMatch: RegExpMatchArray | null;
-	while (varMatch = variableReg.exec(query)) {
+	while ((varMatch = variableReg.exec(query))) {
 		const [_, varName, arg] = varMatch;
-		const range: [number, number] = [varMatch.index!, varMatch.index! + varMatch[0].length];
+		const range: [number, number] = [
+			varMatch.index!,
+			varMatch.index! + varMatch[0].length,
+		];
 		if (varName === 'file') {
 			const value = parseFileVariables(simulationWorkspace, arg);
 			const varWithArg = `${varName}:${arg}`;
-			variables.push({ id: `copilot.${varName}`, name: varWithArg, range, value });
+			variables.push({
+				id: `copilot.${varName}`,
+				name: varWithArg,
+				range,
+				value,
+			});
 		} else {
 			const tool = toolsService.getToolByToolReferenceName(varName);
 			if (tool) {
@@ -97,11 +120,14 @@ export function parseQueryForTest(accessor: ITestingServicesAccessor, query: str
 		participantName,
 		command,
 		variables,
-		toolReferences
+		toolReferences,
 	};
 }
 
-function parseFileVariables(simulationWorkspace: SimulationWorkspace, filePath: string): Uri {
+function parseFileVariables(
+	simulationWorkspace: SimulationWorkspace,
+	filePath: string,
+): Uri {
 	for (const doc of simulationWorkspace.documents) {
 		if (basename(doc.document.uri) === filePath) {
 			return doc.document.uri;

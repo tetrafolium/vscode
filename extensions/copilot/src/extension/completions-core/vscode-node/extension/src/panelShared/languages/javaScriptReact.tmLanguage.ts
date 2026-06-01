@@ -345,7 +345,8 @@ export const javascriptreact: LanguageInput = {
 							end: '(?<!,)(((?==|;|}|((?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(of|in)\\s+)|^\\s*$))|((?<=\\S)(?=\\s*$)))',
 							patterns: [
 								{
-									include: '#single-line-comment-consuming-line-ending',
+									include:
+										'#single-line-comment-consuming-line-ending',
 								},
 								{
 									include: '#comment',
@@ -419,7 +420,8 @@ export const javascriptreact: LanguageInput = {
 							end: '(?<!,)(((?==|;|}|((?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(of|in)\\s+)|^\\s*$))|((?<=\\S)(?=\\s*$)))',
 							patterns: [
 								{
-									include: '#single-line-comment-consuming-line-ending',
+									include:
+										'#single-line-comment-consuming-line-ending',
 								},
 								{
 									include: '#comment',
@@ -1502,7 +1504,8 @@ export const javascriptreact: LanguageInput = {
 					end: '((?<=\\}|\\S)(?<!=>)|((?!\\{)(?=\\S)))(?!\\/[\\/\\*])',
 					patterns: [
 						{
-							include: '#single-line-comment-consuming-line-ending',
+							include:
+								'#single-line-comment-consuming-line-ending',
 						},
 						{
 							include: '#decl-block',
@@ -2126,7 +2129,8 @@ export const javascriptreact: LanguageInput = {
 					end: '(?=;|$|^)',
 					patterns: [
 						{
-							include: '#single-line-comment-consuming-line-ending',
+							include:
+								'#single-line-comment-consuming-line-ending',
 						},
 						{
 							include: '#comment',
@@ -2851,7 +2855,8 @@ export const javascriptreact: LanguageInput = {
 									},
 									patterns: [
 										{
-											include: '#expression-inside-possibly-arrow-parens',
+											include:
+												'#expression-inside-possibly-arrow-parens',
 										},
 									],
 								},
@@ -2875,7 +2880,8 @@ export const javascriptreact: LanguageInput = {
 							},
 							patterns: [
 								{
-									include: '#expression-inside-possibly-arrow-parens',
+									include:
+										'#expression-inside-possibly-arrow-parens',
 								},
 							],
 						},
@@ -2908,7 +2914,8 @@ export const javascriptreact: LanguageInput = {
 							},
 							patterns: [
 								{
-									include: '#expression-inside-possibly-arrow-parens',
+									include:
+										'#expression-inside-possibly-arrow-parens',
 								},
 							],
 						},
@@ -3088,7 +3095,8 @@ export const javascriptreact: LanguageInput = {
 					end: '(?<=\\))',
 					patterns: [
 						{
-							include: '#paren-expression-possibly-arrow-with-typeparameters',
+							include:
+								'#paren-expression-possibly-arrow-with-typeparameters',
 						},
 					],
 				},
@@ -3102,7 +3110,8 @@ export const javascriptreact: LanguageInput = {
 					end: '(?<=\\))',
 					patterns: [
 						{
-							include: '#paren-expression-possibly-arrow-with-typeparameters',
+							include:
+								'#paren-expression-possibly-arrow-with-typeparameters',
 						},
 					],
 				},
@@ -4704,7 +4713,8 @@ export const javascriptreact: LanguageInput = {
 							end: '(?=(<\\s*(((keyof|infer|typeof|readonly)\\s+)|(([_$[:alpha:]][_$[:alnum:]]*|(\\{([^\\{\\}]|(\\{([^\\{\\}]|\\{[^\\{\\}]*\\})*\\}))*\\})|(\\(([^\\(\\)]|(\\(([^\\(\\)]|\\([^\\(\\)]*\\))*\\)))*\\))|(\\[([^\\[\\]]|(\\[([^\\[\\]]|\\[[^\\[\\]]*\\])*\\]))*\\])|(\\\'([^\\\'\\\\]|\\\\.)*\\\')|(\\"([^\\"\\\\]|\\\\.)*\\")|(\\`([^\\`\\\\]|\\\\.)*\\`))(?=\\s*([\\<\\>\\,\\.\\[]|=>|&(?!&)|\\|(?!\\|)))))([^<>\\(]|(\\(([^\\(\\)]|(\\(([^\\(\\)]|\\([^\\(\\)]*\\))*\\)))*\\))|(?<==)\\>|\\<\\s*(((keyof|infer|typeof|readonly)\\s+)|(([_$[:alpha:]][_$[:alnum:]]*|(\\{([^\\{\\}]|(\\{([^\\{\\}]|\\{[^\\{\\}]*\\})*\\}))*\\})|(\\(([^\\(\\)]|(\\(([^\\(\\)]|\\([^\\(\\)]*\\))*\\)))*\\))|(\\[([^\\[\\]]|(\\[([^\\[\\]]|\\[[^\\[\\]]*\\])*\\]))*\\])|(\\\'([^\\\'\\\\]|\\\\.)*\\\')|(\\"([^\\"\\\\]|\\\\.)*\\")|(\\`([^\\`\\\\]|\\\\.)*\\`))(?=\\s*([\\<\\>\\,\\.\\[]|=>|&(?!&)|\\|(?!\\|)))))(([^<>\\(]|(\\(([^\\(\\)]|(\\(([^\\(\\)]|\\([^\\(\\)]*\\))*\\)))*\\))|(?<==)\\>|\\<\\s*(((keyof|infer|typeof|readonly)\\s+)|(([_$[:alpha:]][_$[:alnum:]]*|(\\{([^\\{\\}]|(\\{([^\\{\\}]|\\{[^\\{\\}]*\\})*\\}))*\\})|(\\(([^\\(\\)]|(\\(([^\\(\\)]|\\([^\\(\\)]*\\))*\\)))*\\))|(\\[([^\\[\\]]|(\\[([^\\[\\]]|\\[[^\\[\\]]*\\])*\\]))*\\])|(\\\'([^\\\'\\\\]|\\\\.)*\\\')|(\\"([^\\"\\\\]|\\\\.)*\\")|(\\`([^\\`\\\\]|\\\\.)*\\`))(?=\\s*([\\<\\>\\,\\.\\[]|=>|&(?!&)|\\|(?!\\|)))))([^<>\\(]|(\\(([^\\(\\)]|(\\(([^\\(\\)]|\\([^\\(\\)]*\\))*\\)))*\\))|(?<==)\\>)*(?<!=)\\>))*(?<!=)\\>)*(?<!=)>\\s*)?`)',
 							patterns: [
 								{
-									include: '#support-function-call-identifiers',
+									include:
+										'#support-function-call-identifiers',
 								},
 								{
 									name: 'entity.name.function.tagged-template.js.jsx',

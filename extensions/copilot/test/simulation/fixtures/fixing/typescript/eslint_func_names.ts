@@ -8,5 +8,5 @@ export const factorial = function (n: number): number {
 	} else {
 		return n * factorial(n - 1);
 	}
-}
+};
 export const functionName = factorial;

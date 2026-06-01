@@ -13,12 +13,32 @@ import { IDomainService } from '../../../endpoint/common/domainService';
 import { IEnvService } from '../../../env/common/envService';
 import { NullBaseOctoKitService } from '../../../github/common/nullOctokitServiceImpl';
 import { ILogService } from '../../../log/common/logService';
-import { FetchOptions, IAbortController, IFetcherService, PaginationOptions, Response, WebSocketConnection } from '../../../networking/common/fetcherService';
+import {
+	FetchOptions,
+	IAbortController,
+	IFetcherService,
+	PaginationOptions,
+	Response,
+	WebSocketConnection,
+} from '../../../networking/common/fetcherService';
 import { ITelemetryService } from '../../../telemetry/common/telemetry';
 import { createFakeResponse } from '../../../test/node/fetcher';
-import { createPlatformServices, ITestingServicesAccessor } from '../../../test/node/services';
-import { CopilotToken, createTestExtendedTokenInfo, isErrorEnvelope, isStandardErrorEnvelope, isTokenEnvelope, validateTokenEnvelope } from '../../common/copilotToken';
-import { BaseCopilotTokenManager, CopilotTokenManagerFromGitHubToken } from '../../node/copilotTokenManager';
+import {
+	createPlatformServices,
+	ITestingServicesAccessor,
+} from '../../../test/node/services';
+import {
+	CopilotToken,
+	createTestExtendedTokenInfo,
+	isErrorEnvelope,
+	isStandardErrorEnvelope,
+	isTokenEnvelope,
+	validateTokenEnvelope,
+} from '../../common/copilotToken';
+import {
+	BaseCopilotTokenManager,
+	CopilotTokenManagerFromGitHubToken,
+} from '../../node/copilotTokenManager';
 
 // This is a fake version of CopilotTokenManagerFromGitHubToken.
 class RefreshFakeCopilotTokenManager extends BaseCopilotTokenManager {
@@ -32,19 +52,36 @@ class RefreshFakeCopilotTokenManager extends BaseCopilotTokenManager {
 		@IFetcherService fetcherService: IFetcherService,
 		@IEnvService envService: IEnvService,
 	) {
-		super(new NullBaseOctoKitService(capiClientService, fetcherService, logService, telemetryService), logService, telemetryService, domainService, capiClientService, fetcherService, envService);
+		super(
+			new NullBaseOctoKitService(
+				capiClientService,
+				fetcherService,
+				logService,
+				telemetryService,
+			),
+			logService,
+			telemetryService,
+			domainService,
+			capiClientService,
+			fetcherService,
+			envService,
+		);
 	}
 
 	async getCopilotToken(force?: boolean): Promise<CopilotToken> {
 		this.calls++;
-		await new Promise(resolve => setTimeout(resolve, 10));
+		await new Promise((resolve) => setTimeout(resolve, 10));
 		if (this.calls === this.throwErrorCount) {
 			throw new Error('fake error');
 		}
 		if (!force && this.copilotToken) {
 			return new CopilotToken(this.copilotToken);
 		}
-		this.copilotToken = createTestExtendedTokenInfo({ token: 'done', username: 'fake', copilot_plan: 'unknown' });
+		this.copilotToken = createTestExtendedTokenInfo({
+			token: 'done',
+			username: 'fake',
+			copilot_plan: 'unknown',
+		});
 		return new CopilotToken(this.copilotToken);
 	}
 }
@@ -55,7 +92,9 @@ describe('Copilot token unit tests', function () {
 
 	beforeEach(() => {
 		disposables = new DisposableStore();
-		accessor = disposables.add(createPlatformServices().createTestingAccessor());
+		accessor = disposables.add(
+			createPlatformServices().createTestingAccessor(),
+		);
 	});
 
 	afterEach(() => {
@@ -70,16 +109,26 @@ describe('Copilot token unit tests', function () {
 		});
 		const testingServiceCollection = createPlatformServices();
 		testingServiceCollection.define(IFetcherService, fetcher);
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 
-		const tokenManager = disposables.add(accessor.get(IInstantiationService).createInstance(RefreshFakeCopilotTokenManager, 1));
+		const tokenManager = disposables.add(
+			accessor
+				.get(IInstantiationService)
+				.createInstance(RefreshFakeCopilotTokenManager, 1),
+		);
 		await tokenManager.authFromGitHubToken('fake-token', 'fake-user');
 
 		expect(fetcher.requests.size).toBe(2);
 	});
 
 	it(`notifies about token on token retrieval`, async function () {
-		const tokenManager = disposables.add(accessor.get(IInstantiationService).createInstance(RefreshFakeCopilotTokenManager, 3));
+		const tokenManager = disposables.add(
+			accessor
+				.get(IInstantiationService)
+				.createInstance(RefreshFakeCopilotTokenManager, 3),
+		);
 		const deferredTokenPromise = new DeferredPromise<CopilotToken>();
 		tokenManager.onDidCopilotTokenRefresh(async () => {
 			const notifiedValue = await tokenManager.getCopilotToken();
@@ -104,9 +153,17 @@ describe('Copilot token unit tests', function () {
 
 		const testingServiceCollection = createPlatformServices();
 		testingServiceCollection.define(IFetcherService, fetcher);
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 
-		const tokenManager = accessor.get(IInstantiationService).createInstance(CopilotTokenManagerFromGitHubToken, 'invalid', 'invalid-user');
+		const tokenManager = accessor
+			.get(IInstantiationService)
+			.createInstance(
+				CopilotTokenManagerFromGitHubToken,
+				'invalid',
+				'invalid-user',
+			);
 		const result = await tokenManager.checkCopilotToken();
 		expect(result).toEqual({
 			kind: 'failure',
@@ -123,9 +180,17 @@ describe('Copilot token unit tests', function () {
 
 		const testingServiceCollection = createPlatformServices();
 		testingServiceCollection.define(IFetcherService, fetcher);
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 
-		const tokenManager = accessor.get(IInstantiationService).createInstance(CopilotTokenManagerFromGitHubToken, 'valid', 'valid-user');
+		const tokenManager = accessor
+			.get(IInstantiationService)
+			.createInstance(
+				CopilotTokenManagerFromGitHubToken,
+				'valid',
+				'valid-user',
+			);
 		const result = await tokenManager.checkCopilotToken();
 		expect(result).toEqual({
 			kind: 'failure',
@@ -139,9 +204,17 @@ describe('Copilot token unit tests', function () {
 
 		const testingServiceCollection = createPlatformServices();
 		testingServiceCollection.define(IFetcherService, fetcher);
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 
-		const tokenManager = accessor.get(IInstantiationService).createInstance(CopilotTokenManagerFromGitHubToken, 'valid', 'valid-user');
+		const tokenManager = accessor
+			.get(IInstantiationService)
+			.createInstance(
+				CopilotTokenManagerFromGitHubToken,
+				'valid',
+				'valid-user',
+			);
 		const result = await tokenManager.checkCopilotToken();
 		expect(result).toEqual({
 			kind: 'failure',
@@ -154,10 +227,21 @@ describe('Copilot token unit tests', function () {
 		const expectedError = new Error('to be handled');
 
 		const testingServiceCollection = createPlatformServices();
-		testingServiceCollection.define(IFetcherService, new ErrorFetcherService(expectedError));
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		testingServiceCollection.define(
+			IFetcherService,
+			new ErrorFetcherService(expectedError),
+		);
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 
-		const tokenManager = accessor.get(IInstantiationService).createInstance(CopilotTokenManagerFromGitHubToken, 'invalid', 'invalid-user');
+		const tokenManager = accessor
+			.get(IInstantiationService)
+			.createInstance(
+				CopilotTokenManagerFromGitHubToken,
+				'invalid',
+				'invalid-user',
+			);
 		try {
 			await tokenManager.checkCopilotToken();
 		} catch (err: any) {
@@ -169,7 +253,13 @@ describe('Copilot token unit tests', function () {
 		const token =
 			'0123456789abcdef0123456789abcdef:org1.com:1674258990:0000000000000000000000000000000000000000000000000000000000000000';
 
-		const copilotToken = new CopilotToken(createTestExtendedTokenInfo({ token, username: 'fake', copilot_plan: 'unknown' }));
+		const copilotToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				token,
+				username: 'fake',
+				copilot_plan: 'unknown',
+			}),
+		);
 		expect(copilotToken.getTokenValue('tid')).toBeUndefined();
 	});
 
@@ -177,15 +267,29 @@ describe('Copilot token unit tests', function () {
 		const token =
 			'tid=0123456789abcdef0123456789abcdef;dom=org1.com;ol=org1,org2;exp=1674258990:0000000000000000000000000000000000000000000000000000000000000000';
 
-		const copilotToken = new CopilotToken(createTestExtendedTokenInfo({ token, username: 'fake', copilot_plan: 'unknown' }));
-		expect(copilotToken.getTokenValue('tid')).toBe('0123456789abcdef0123456789abcdef');
+		const copilotToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				token,
+				username: 'fake',
+				copilot_plan: 'unknown',
+			}),
+		);
+		expect(copilotToken.getTokenValue('tid')).toBe(
+			'0123456789abcdef0123456789abcdef',
+		);
 	});
 
 	it('parsing v2 token, multiple values', async function () {
 		const token =
 			'tid=0123456789abcdef0123456789abcdef;rt=1;ssc=0;dom=org1.com;ol=org1,org2;exp=1674258990:0000000000000000000000000000000000000000000000000000000000000000';
 
-		const copilotToken = new CopilotToken(createTestExtendedTokenInfo({ token, username: 'fake', copilot_plan: 'unknown' }));
+		const copilotToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				token,
+				username: 'fake',
+				copilot_plan: 'unknown',
+			}),
+		);
 		expect(copilotToken.getTokenValue('rt')).toBe('1');
 		expect(copilotToken.getTokenValue('ssc')).toBe('0');
 		expect(copilotToken.getTokenValue('foo')).toBeUndefined();
@@ -205,9 +309,15 @@ describe('Copilot token unit tests', function () {
 		const testingServiceCollection = createPlatformServices();
 		testingServiceCollection.define(IDomainService, ghecConfig);
 		testingServiceCollection.define(IFetcherService, fetcher);
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 
-		const tokenManager = disposables.add(accessor.get(IInstantiationService).createInstance(RefreshFakeCopilotTokenManager, 1));
+		const tokenManager = disposables.add(
+			accessor
+				.get(IInstantiationService)
+				.createInstance(RefreshFakeCopilotTokenManager, 1),
+		);
 		await tokenManager.authFromGitHubToken('fake-token', 'invalid-user');
 
 		expect(fetcher.requests.size).toBe(2);
@@ -216,15 +326,24 @@ describe('Copilot token unit tests', function () {
 	it('rate limiting (StandardErrorEnvelope)', async function () {
 		const fetcher = new StaticFetcherService({
 			message: 'API rate limit exceeded for user ID 12345.',
-			documentation_url: 'https://developer.github.com/rest/overview/rate-limits-for-the-rest-api',
+			documentation_url:
+				'https://developer.github.com/rest/overview/rate-limits-for-the-rest-api',
 			status: '403',
 		});
 
 		const testingServiceCollection = createPlatformServices();
 		testingServiceCollection.define(IFetcherService, fetcher);
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 
-		const tokenManager = accessor.get(IInstantiationService).createInstance(CopilotTokenManagerFromGitHubToken, 'valid', 'valid-user');
+		const tokenManager = accessor
+			.get(IInstantiationService)
+			.createInstance(
+				CopilotTokenManagerFromGitHubToken,
+				'valid',
+				'valid-user',
+			);
 		const result = await tokenManager.checkCopilotToken();
 		expect(result).toEqual({
 			kind: 'failure',
@@ -237,9 +356,17 @@ describe('Copilot token unit tests', function () {
 
 		const testingServiceCollection = createPlatformServices();
 		testingServiceCollection.define(IFetcherService, fetcher);
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 
-		const tokenManager = accessor.get(IInstantiationService).createInstance(CopilotTokenManagerFromGitHubToken, 'bad-token', 'bad-user');
+		const tokenManager = accessor
+			.get(IInstantiationService)
+			.createInstance(
+				CopilotTokenManagerFromGitHubToken,
+				'bad-token',
+				'bad-user',
+			);
 		const result = await tokenManager.checkCopilotToken();
 		expect(result).toEqual({
 			kind: 'failure',
@@ -320,7 +447,8 @@ describe('Token envelope validators', function () {
 	it('isStandardErrorEnvelope returns true for rate limit response', function () {
 		const rateLimitError = {
 			message: 'API rate limit exceeded for user ID 12345.',
-			documentation_url: 'https://developer.github.com/rest/overview/rate-limits-for-the-rest-api',
+			documentation_url:
+				'https://developer.github.com/rest/overview/rate-limits-for-the-rest-api',
 			status: '403',
 		};
 		expect(isStandardErrorEnvelope(rateLimitError)).toBe(true);
@@ -489,38 +617,72 @@ describe('Token envelope validators', function () {
 
 describe('CopilotToken class', function () {
 	it('isFreeUser returns true for free_limited_copilot sku', function () {
-		const token = new CopilotToken(createTestExtendedTokenInfo({ sku: 'free_limited_copilot' }));
+		const token = new CopilotToken(
+			createTestExtendedTokenInfo({ sku: 'free_limited_copilot' }),
+		);
 		expect(token.isFreeUser).toBe(true);
 		expect(token.isNoAuthUser).toBe(false);
 	});
 
 	it('isNoAuthUser returns true for no_auth_limited_copilot sku', function () {
-		const token = new CopilotToken(createTestExtendedTokenInfo({ sku: 'no_auth_limited_copilot' }));
+		const token = new CopilotToken(
+			createTestExtendedTokenInfo({ sku: 'no_auth_limited_copilot' }),
+		);
 		expect(token.isFreeUser).toBe(false);
 		expect(token.isNoAuthUser).toBe(true);
 	});
 
 	it('isTelemetryEnabled reflects token state', function () {
-		const enabledToken = new CopilotToken(createTestExtendedTokenInfo({ telemetry: 'enabled' }));
-		const disabledToken = new CopilotToken(createTestExtendedTokenInfo({ telemetry: 'disabled' }));
+		const enabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({ telemetry: 'enabled' }),
+		);
+		const disabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({ telemetry: 'disabled' }),
+		);
 		expect(enabledToken.isTelemetryEnabled()).toBe(true);
 		expect(disabledToken.isTelemetryEnabled()).toBe(false);
 	});
 
 	it('isPublicSuggestionsEnabled reflects token state', function () {
-		const enabledToken = new CopilotToken(createTestExtendedTokenInfo({ public_suggestions: 'enabled' }));
-		const disabledToken = new CopilotToken(createTestExtendedTokenInfo({ public_suggestions: 'disabled' }));
-		const unconfiguredToken = new CopilotToken(createTestExtendedTokenInfo({ public_suggestions: 'unconfigured' }));
+		const enabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({ public_suggestions: 'enabled' }),
+		);
+		const disabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({ public_suggestions: 'disabled' }),
+		);
+		const unconfiguredToken = new CopilotToken(
+			createTestExtendedTokenInfo({ public_suggestions: 'unconfigured' }),
+		);
 		expect(enabledToken.isPublicSuggestionsEnabled()).toBe(true);
 		expect(disabledToken.isPublicSuggestionsEnabled()).toBe(false);
 		expect(unconfiguredToken.isPublicSuggestionsEnabled()).toBe(false);
 	});
 
 	it('copilotPlan returns correct plan type', function () {
-		const freeToken = new CopilotToken(createTestExtendedTokenInfo({ sku: 'free_limited_copilot', copilot_plan: 'free' }));
-		const individualToken = new CopilotToken(createTestExtendedTokenInfo({ sku: 'copilot_individual', copilot_plan: 'individual' }));
-		const businessToken = new CopilotToken(createTestExtendedTokenInfo({ sku: 'copilot_business', copilot_plan: 'business' }));
-		const enterpriseToken = new CopilotToken(createTestExtendedTokenInfo({ sku: 'copilot_enterprise', copilot_plan: 'enterprise' }));
+		const freeToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				sku: 'free_limited_copilot',
+				copilot_plan: 'free',
+			}),
+		);
+		const individualToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				sku: 'copilot_individual',
+				copilot_plan: 'individual',
+			}),
+		);
+		const businessToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				sku: 'copilot_business',
+				copilot_plan: 'business',
+			}),
+		);
+		const enterpriseToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				sku: 'copilot_enterprise',
+				copilot_plan: 'enterprise',
+			}),
+		);
 
 		expect(freeToken.copilotPlan).toBe('free');
 		expect(individualToken.copilotPlan).toBe('individual');
@@ -529,18 +691,24 @@ describe('CopilotToken class', function () {
 	});
 
 	it('isChatQuotaExceeded for free users with zero quota', function () {
-		const exceededToken = new CopilotToken(createTestExtendedTokenInfo({
-			sku: 'free_limited_copilot',
-			limited_user_quotas: { chat: 0, completions: 10 }
-		}));
-		const notExceededToken = new CopilotToken(createTestExtendedTokenInfo({
-			sku: 'free_limited_copilot',
-			limited_user_quotas: { chat: 5, completions: 10 }
-		}));
-		const nonFreeToken = new CopilotToken(createTestExtendedTokenInfo({
-			sku: 'copilot_individual',
-			limited_user_quotas: { chat: 0, completions: 0 }
-		}));
+		const exceededToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				sku: 'free_limited_copilot',
+				limited_user_quotas: { chat: 0, completions: 10 },
+			}),
+		);
+		const notExceededToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				sku: 'free_limited_copilot',
+				limited_user_quotas: { chat: 5, completions: 10 },
+			}),
+		);
+		const nonFreeToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				sku: 'copilot_individual',
+				limited_user_quotas: { chat: 0, completions: 0 },
+			}),
+		);
 
 		expect(exceededToken.isChatQuotaExceeded).toBe(true);
 		expect(notExceededToken.isChatQuotaExceeded).toBe(false);
@@ -548,32 +716,44 @@ describe('CopilotToken class', function () {
 	});
 
 	it('isCompletionsQuotaExceeded for free users with zero quota', function () {
-		const exceededToken = new CopilotToken(createTestExtendedTokenInfo({
-			sku: 'free_limited_copilot',
-			limited_user_quotas: { chat: 10, completions: 0 }
-		}));
-		const notExceededToken = new CopilotToken(createTestExtendedTokenInfo({
-			sku: 'free_limited_copilot',
-			limited_user_quotas: { chat: 10, completions: 5 }
-		}));
+		const exceededToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				sku: 'free_limited_copilot',
+				limited_user_quotas: { chat: 10, completions: 0 },
+			}),
+		);
+		const notExceededToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				sku: 'free_limited_copilot',
+				limited_user_quotas: { chat: 10, completions: 5 },
+			}),
+		);
 
 		expect(exceededToken.isCompletionsQuotaExceeded).toBe(true);
 		expect(notExceededToken.isCompletionsQuotaExceeded).toBe(false);
 	});
 
 	it('isInternal detects GitHub and Microsoft organizations', function () {
-		const githubOrgToken = new CopilotToken(createTestExtendedTokenInfo({
-			organization_list: ['4535c7beffc844b46bb1ed4aa04d759a']
-		}));
-		const microsoftOrgToken = new CopilotToken(createTestExtendedTokenInfo({
-			organization_list: ['a5db0bcaae94032fe715fb34a5e4bce2']
-		}));
-		const externalToken = new CopilotToken(createTestExtendedTokenInfo({
-			organization_list: ['some-other-org']
-		}));
-		const noOrgToken = new CopilotToken(createTestExtendedTokenInfo({
-			organization_list: []
-		}));
+		const githubOrgToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				organization_list: ['4535c7beffc844b46bb1ed4aa04d759a'],
+			}),
+		);
+		const microsoftOrgToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				organization_list: ['a5db0bcaae94032fe715fb34a5e4bce2'],
+			}),
+		);
+		const externalToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				organization_list: ['some-other-org'],
+			}),
+		);
+		const noOrgToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				organization_list: [],
+			}),
+		);
 
 		expect(githubOrgToken.isInternal).toBe(true);
 		expect(githubOrgToken.isGitHubInternal).toBe(true);
@@ -588,53 +768,80 @@ describe('CopilotToken class', function () {
 	});
 
 	it('codeQuoteEnabled reflects token state', function () {
-		const enabledToken = new CopilotToken(createTestExtendedTokenInfo({ code_quote_enabled: true }));
-		const disabledToken = new CopilotToken(createTestExtendedTokenInfo({ code_quote_enabled: false }));
+		const enabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({ code_quote_enabled: true }),
+		);
+		const disabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({ code_quote_enabled: false }),
+		);
 		expect(enabledToken.codeQuoteEnabled).toBe(true);
 		expect(disabledToken.codeQuoteEnabled).toBe(false);
 	});
 
 	it('isCopilotCodeReviewEnabled reflects token state', function () {
-		const enabledToken = new CopilotToken(createTestExtendedTokenInfo({ code_review_enabled: true }));
-		const disabledToken = new CopilotToken(createTestExtendedTokenInfo({ code_review_enabled: false }));
+		const enabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({ code_review_enabled: true }),
+		);
+		const disabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({ code_review_enabled: false }),
+		);
 		expect(enabledToken.isCopilotCodeReviewEnabled).toBe(true);
 		expect(disabledToken.isCopilotCodeReviewEnabled).toBe(false);
 	});
 
 	it('isExpandedClientSideIndexingEnabled reflects token state', function () {
-		const enabledToken = new CopilotToken(createTestExtendedTokenInfo({ blackbird_clientside_indexing: true }));
-		const disabledToken = new CopilotToken(createTestExtendedTokenInfo({ blackbird_clientside_indexing: false }));
+		const enabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				blackbird_clientside_indexing: true,
+			}),
+		);
+		const disabledToken = new CopilotToken(
+			createTestExtendedTokenInfo({
+				blackbird_clientside_indexing: false,
+			}),
+		);
 		expect(enabledToken.isExpandedClientSideIndexingEnabled()).toBe(true);
 		expect(disabledToken.isExpandedClientSideIndexingEnabled()).toBe(false);
 	});
 
 	it('isBlackbirdExternalIndexingEnabled returns false when flag is absent', function () {
-		const token = new CopilotToken(createTestExtendedTokenInfo({ token: 'tid=test' }));
+		const token = new CopilotToken(
+			createTestExtendedTokenInfo({ token: 'tid=test' }),
+		);
 		expect(token.isBlackbirdExternalIndexingEnabled()).toBe(false);
 	});
 
 	it('isBlackbirdExternalIndexingEnabled returns false when flag is 0', function () {
-		const token = new CopilotToken(createTestExtendedTokenInfo({ token: 'blackbird_external_indexing=0;tid=test' }));
+		const token = new CopilotToken(
+			createTestExtendedTokenInfo({
+				token: 'blackbird_external_indexing=0;tid=test',
+			}),
+		);
 		expect(token.isBlackbirdExternalIndexingEnabled()).toBe(false);
 	});
 
 	it('isBlackbirdExternalIndexingEnabled returns true when flag is 1', function () {
-		const token = new CopilotToken(createTestExtendedTokenInfo({ token: 'blackbird_external_indexing=1;tid=test' }));
+		const token = new CopilotToken(
+			createTestExtendedTokenInfo({
+				token: 'blackbird_external_indexing=1;tid=test',
+			}),
+		);
 		expect(token.isBlackbirdExternalIndexingEnabled()).toBe(true);
 	});
 });
 
 class StaticFetcherService implements IFetcherService {
-
 	declare readonly _serviceBrand: undefined;
 	readonly onDidFetch = Event.None;
 	readonly onDidCompleteFetch = Event.None;
 
 	public requests = new Map<string, FetchOptions>();
-	constructor(readonly tokenResponse: any) {
-	}
+	constructor(readonly tokenResponse: any) {}
 
-	fetchWithPagination<T>(baseUrl: string, options: PaginationOptions<T>): Promise<T[]> {
+	fetchWithPagination<T>(
+		baseUrl: string,
+		options: PaginationOptions<T>,
+	): Promise<T[]> {
 		throw new Error('Method not implemented.');
 	}
 
@@ -696,7 +903,10 @@ class HttpStatusFetcherService extends StaticFetcherService {
 		super({});
 	}
 
-	override async fetch(url: string, options: FetchOptions): Promise<Response> {
+	override async fetch(
+		url: string,
+		options: FetchOptions,
+	): Promise<Response> {
 		this.requests.set(url, options);
 		return createFakeResponse(this.status, {});
 	}

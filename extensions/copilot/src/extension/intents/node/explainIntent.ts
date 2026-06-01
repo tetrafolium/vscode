@@ -15,76 +15,143 @@ import { CancellationToken } from '../../../util/vs/base/common/cancellation';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { Intent } from '../../common/constants';
 import { IBuildPromptContext } from '../../prompt/common/intents';
-import { IIntent, IIntentInvocation, IIntentInvocationContext, IIntentSlashCommandInfo, IResponseProcessorContext, StreamingMarkdownReplyInterpreter } from '../../prompt/node/intents';
-import { PromptRenderer, RendererIntentInvocation } from '../../prompts/node/base/promptRenderer';
+import {
+	IIntent,
+	IIntentInvocation,
+	IIntentInvocationContext,
+	IIntentSlashCommandInfo,
+	IResponseProcessorContext,
+	StreamingMarkdownReplyInterpreter,
+} from '../../prompt/node/intents';
+import {
+	PromptRenderer,
+	RendererIntentInvocation,
+} from '../../prompts/node/base/promptRenderer';
 import { ExplainPrompt } from '../../prompts/node/panel/explain';
 
+export const explainIntentPromptSnippet =
+	'Write an explanation for the active selection as paragraphs of text.';
 
-export const explainIntentPromptSnippet = 'Write an explanation for the active selection as paragraphs of text.';
-
-class ExplainIntentInvocation extends RendererIntentInvocation implements IIntentInvocation {
-
-	protected readonly defaultQuery: string = 'Write an explanation for the code above as paragraphs of text.';
+class ExplainIntentInvocation
+	extends RendererIntentInvocation
+	implements IIntentInvocation
+{
+	protected readonly defaultQuery: string =
+		'Write an explanation for the code above as paragraphs of text.';
 
 	constructor(
 		intent: IIntent,
 		location: ChatLocation,
 		endpoint: IChatEndpoint,
-		@ITabsAndEditorsService private readonly tabsAndEditorsService: ITabsAndEditorsService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@ITabsAndEditorsService
+		private readonly tabsAndEditorsService: ITabsAndEditorsService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 	) {
 		super(intent, location, endpoint);
 	}
 
-	override async buildPrompt(promptParams: IBuildPromptContext, progress: vscode.Progress<vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart>, token: vscode.CancellationToken) {
+	override async buildPrompt(
+		promptParams: IBuildPromptContext,
+		progress: vscode.Progress<
+			vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart
+		>,
+		token: vscode.CancellationToken,
+	) {
 		if (promptParams.query === '') {
 			promptParams = { ...promptParams, query: this.defaultQuery };
 		}
 		return super.buildPrompt(promptParams, progress, token);
 	}
 
-	createRenderer(promptContext: IBuildPromptContext, endpoint: IChatEndpoint, progress: vscode.Progress<vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart>, token: vscode.CancellationToken) {
+	createRenderer(
+		promptContext: IBuildPromptContext,
+		endpoint: IChatEndpoint,
+		progress: vscode.Progress<
+			vscode.ChatResponseProgressPart | vscode.ChatResponseReferencePart
+		>,
+		token: vscode.CancellationToken,
+	) {
 		const editor = this.tabsAndEditorsService.activeTextEditor;
-		return PromptRenderer.create(this.instantiationService, endpoint, ExplainPrompt, {
-			promptContext,
-			document: editor ? TextDocumentSnapshot.create(editor?.document) : undefined,
-			selection: editor?.selection,
-			isInlineChat: this.location === ChatLocation.Editor,
-			endpoint
-		});
+		return PromptRenderer.create(
+			this.instantiationService,
+			endpoint,
+			ExplainPrompt,
+			{
+				promptContext,
+				document: editor
+					? TextDocumentSnapshot.create(editor?.document)
+					: undefined,
+				selection: editor?.selection,
+				isInlineChat: this.location === ChatLocation.Editor,
+				endpoint,
+			},
+		);
 	}
 }
 
-class InlineExplainIntentInvocation extends ExplainIntentInvocation implements IIntentInvocation {
-
+class InlineExplainIntentInvocation
+	extends ExplainIntentInvocation
+	implements IIntentInvocation
+{
 	protected override readonly defaultQuery = explainIntentPromptSnippet;
 
-	processResponse(context: IResponseProcessorContext, inputStream: AsyncIterable<IResponsePart>, outputStream: vscode.ChatResponseStream, token: CancellationToken): Promise<void> {
+	processResponse(
+		context: IResponseProcessorContext,
+		inputStream: AsyncIterable<IResponsePart>,
+		outputStream: vscode.ChatResponseStream,
+		token: CancellationToken,
+	): Promise<void> {
 		const replyInterpreter = new StreamingMarkdownReplyInterpreter();
-		return replyInterpreter.processResponse(context, inputStream, outputStream, token);
+		return replyInterpreter.processResponse(
+			context,
+			inputStream,
+			outputStream,
+			token,
+		);
 	}
 }
 
 export class ExplainIntent implements IIntent {
-
 	static readonly ID = Intent.Explain;
 	readonly id: string = Intent.Explain;
-	readonly locations = [ChatLocation.Panel, ChatLocation.Editor, ChatLocation.Notebook];
-	readonly description: string = l10n.t('Explain how the code in your active editor works');
+	readonly locations = [
+		ChatLocation.Panel,
+		ChatLocation.Editor,
+		ChatLocation.Notebook,
+	];
+	readonly description: string = l10n.t(
+		'Explain how the code in your active editor works',
+	);
 
 	readonly commandInfo: IIntentSlashCommandInfo | undefined;
 
 	constructor(
 		@IEndpointProvider private readonly endpointProvider: IEndpointProvider,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-	) { }
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
+	) {}
 
-	async invoke(invocationContext: IIntentInvocationContext): Promise<IIntentInvocation> {
+	async invoke(
+		invocationContext: IIntentInvocationContext,
+	): Promise<IIntentInvocation> {
 		const location = invocationContext.location;
-		const endpoint = await this.endpointProvider.getChatEndpoint(invocationContext.request);
+		const endpoint = await this.endpointProvider.getChatEndpoint(
+			invocationContext.request,
+		);
 		if (location === ChatLocation.Editor) {
-			return this.instantiationService.createInstance(InlineExplainIntentInvocation, this, location, endpoint);
+			return this.instantiationService.createInstance(
+				InlineExplainIntentInvocation,
+				this,
+				location,
+				endpoint,
+			);
 		}
-		return this.instantiationService.createInstance(ExplainIntentInvocation, this, location, endpoint);
+		return this.instantiationService.createInstance(
+			ExplainIntentInvocation,
+			this,
+			location,
+			endpoint,
+		);
 	}
 }

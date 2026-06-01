@@ -3,19 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IChatVariablesService, IDynamicVariable } from '../../common/attachments/chatVariables.js';
-import { IToolAndToolSetEnablementMap } from '../../common/tools/languageModelToolsService.js';
-import { IChatWidget, IChatWidgetService } from '../chat.js';
-import { ChatDynamicVariableModel } from './chatDynamicVariables.js';
-import { Range } from '../../../../../editor/common/core/range.js';
-import { URI } from '../../../../../base/common/uri.js';
+import {
+	IChatVariablesService,
+	IDynamicVariable,
+} from "../../common/attachments/chatVariables.js";
+import { IToolAndToolSetEnablementMap } from "../../common/tools/languageModelToolsService.js";
+import { IChatWidget, IChatWidgetService } from "../chat.js";
+import { ChatDynamicVariableModel } from "./chatDynamicVariables.js";
+import { Range } from "../../../../../editor/common/core/range.js";
+import { URI } from "../../../../../base/common/uri.js";
 
-export function getDynamicVariablesForWidget(widget: IChatWidget): ReadonlyArray<IDynamicVariable> {
+export function getDynamicVariablesForWidget(
+	widget: IChatWidget,
+): ReadonlyArray<IDynamicVariable> {
 	if (!widget.viewModel || !widget.supportsFileReferences) {
 		return [];
 	}
 
-	const model = widget.getContrib<ChatDynamicVariableModel>(ChatDynamicVariableModel.ID);
+	const model = widget.getContrib<ChatDynamicVariableModel>(
+		ChatDynamicVariableModel.ID,
+	);
 	if (!model) {
 		return [];
 	}
@@ -25,7 +32,10 @@ export function getDynamicVariablesForWidget(widget: IChatWidget): ReadonlyArray
 		return model.variables;
 	}
 
-	if (widget.input.attachmentModel.attachments.length > 0 && widget.viewModel.editing) {
+	if (
+		widget.input.attachmentModel.attachments.length > 0 &&
+		widget.viewModel.editing
+	) {
 		const references: IDynamicVariable[] = [];
 		const editorModel = widget.inputEditor.getModel();
 		const modelTextLength = editorModel?.getValueLength() ?? 0;
@@ -36,7 +46,10 @@ export function getDynamicVariablesForWidget(widget: IChatWidget): ReadonlyArray
 					continue;
 				}
 
-				if (attachment.range.start < 0 || attachment.range.endExclusive > modelTextLength) {
+				if (
+					attachment.range.start < 0 ||
+					attachment.range.endExclusive > modelTextLength
+				) {
 					continue;
 				}
 
@@ -51,11 +64,16 @@ export function getDynamicVariablesForWidget(widget: IChatWidget): ReadonlyArray
 					id: attachment.id,
 					fullName: attachment.name,
 					modelDescription: attachment.modelDescription,
-					range: new Range(startPos.lineNumber, startPos.column, endPos.lineNumber, endPos.column),
+					range: new Range(
+						startPos.lineNumber,
+						startPos.column,
+						endPos.lineNumber,
+						endPos.column,
+					),
 					icon: attachment.icon,
-					isFile: attachment.kind === 'file',
-					isDirectory: attachment.kind === 'directory',
-					data: attachment.value
+					isFile: attachment.kind === "file",
+					isDirectory: attachment.kind === "directory",
+					data: attachment.value,
 				};
 				references.push(referenceObj);
 			}
@@ -67,7 +85,9 @@ export function getDynamicVariablesForWidget(widget: IChatWidget): ReadonlyArray
 	return model.variables;
 }
 
-export function getSelectedToolAndToolSetsForWidget(widget: IChatWidget): IToolAndToolSetEnablementMap {
+export function getSelectedToolAndToolSetsForWidget(
+	widget: IChatWidget,
+): IToolAndToolSetEnablementMap {
 	return widget.input.selectedToolsModel.entriesMap.get();
 }
 
@@ -76,18 +96,22 @@ export class ChatVariablesService implements IChatVariablesService {
 
 	constructor(
 		@IChatWidgetService private readonly chatWidgetService: IChatWidgetService,
-	) { }
+	) {}
 
 	getDynamicVariables(sessionResource: URI): ReadonlyArray<IDynamicVariable> {
-		const widget = this.chatWidgetService.getWidgetBySessionResource(sessionResource);
+		const widget =
+			this.chatWidgetService.getWidgetBySessionResource(sessionResource);
 		if (!widget) {
 			return [];
 		}
 		return getDynamicVariablesForWidget(widget);
 	}
 
-	getSelectedToolAndToolSets(sessionResource: URI): IToolAndToolSetEnablementMap {
-		const widget = this.chatWidgetService.getWidgetBySessionResource(sessionResource);
+	getSelectedToolAndToolSets(
+		sessionResource: URI,
+	): IToolAndToolSetEnablementMap {
+		const widget =
+			this.chatWidgetService.getWidgetBySessionResource(sessionResource);
 		if (!widget) {
 			return new Map();
 		}

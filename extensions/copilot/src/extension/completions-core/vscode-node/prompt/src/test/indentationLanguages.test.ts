@@ -4,7 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 import * as assert from 'assert';
 import dedent from 'ts-dedent';
-import { blankNode, isLine, lineNode, parseTree, topNode, virtualNode, visitTree } from '../indentation';
+import {
+	blankNode,
+	isLine,
+	lineNode,
+	parseTree,
+	topNode,
+	virtualNode,
+	visitTree,
+} from '../indentation';
 import { compareTreeWithSpec } from './testHelpers';
 
 /** Test some language specific parsing techniques */
@@ -30,12 +38,12 @@ suite('Java', function () {
 		const lineLabels: string[] = [];
 		visitTree(
 			javaParsedTree,
-			node => {
+			(node) => {
 				if (isLine(node) && node.label) {
 					lineLabels.push(node.label);
 				}
 			},
-			'topDown'
+			'topDown',
 		);
 		assert.deepStrictEqual(lineLabels, [
 			'comment_single',
@@ -73,7 +81,7 @@ final public class A {
 }
 public interface I { }
 `,
-			'java'
+			'java',
 		);
 		compareTreeWithSpec(
 			tree,
@@ -86,25 +94,37 @@ public interface I { }
 					3,
 					'cla...',
 					[
-						lineNode(4, 4, '/**...', [lineNode(5, 5, '* ...', []), lineNode(5, 6, '* ...', [])], 'javadoc'),
+						lineNode(
+							4,
+							4,
+							'/**...',
+							[
+								lineNode(5, 5, '* ...', []),
+								lineNode(5, 6, '* ...', []),
+							],
+							'javadoc',
+						),
 						lineNode(4, 7, 'public...', [
 							lineNode(8, 8, '//...', [], 'comment_single'),
 							lineNode(
 								8,
 								9,
 								'/*...',
-								[lineNode(9, 10, '* ...', []), lineNode(9, 11, '*/', [])],
-								'comment_multi'
+								[
+									lineNode(9, 10, '* ...', []),
+									lineNode(9, 11, '*/', []),
+								],
+								'comment_multi',
 							),
 							lineNode(8, 12, 'System ...', []),
 							lineNode(4, 13, '}', [], 'closer'),
 						]),
 						lineNode(0, 14, '}', [], 'closer'),
 					],
-					'class'
+					'class',
 				),
 				lineNode(0, 15, 'public...', [], 'interface'),
-			])
+			]),
 		);
 	});
 
@@ -120,7 +140,7 @@ class A {
     @Native int c;
 }
 `,
-			'java'
+			'java',
 		);
 		compareTreeWithSpec(
 			tree,
@@ -137,9 +157,9 @@ class A {
 						lineNode(4, 5, '@Native int c;', [], 'member'),
 						lineNode(0, 6, '}', [], 'closer'),
 					],
-					'class'
+					'class',
 				),
-			])
+			]),
 		);
 	});
 
@@ -158,7 +178,7 @@ class A {
     }
 }
 `,
-			'java'
+			'java',
 		);
 		compareTreeWithSpec(
 			tree,
@@ -174,22 +194,28 @@ class A {
 							4,
 							3,
 							'class Inner ...',
-							[lineNode(8, 4, 'int b;', [], 'member'), lineNode(4, 5, '}', [], 'closer')],
-							'class'
+							[
+								lineNode(8, 4, 'int b;', [], 'member'),
+								lineNode(4, 5, '}', [], 'closer'),
+							],
+							'class',
 						),
 						blankNode(6),
 						lineNode(
 							4,
 							7,
 							'interface InnerInterface ...',
-							[lineNode(8, 8, 'int myMethod();', [], 'member'), lineNode(4, 9, '}', [], 'closer')],
-							'interface'
+							[
+								lineNode(8, 8, 'int myMethod();', [], 'member'),
+								lineNode(4, 9, '}', [], 'closer'),
+							],
+							'interface',
 						),
 						lineNode(0, 10, '}', [], 'closer'),
 					],
-					'class'
+					'class',
 				),
-			])
+			]),
 		);
 	});
 });
@@ -228,38 +254,55 @@ M
 						2,
 						'# B',
 						[
-							virtualNode(0, [lineNode(0, 3, 'C', []), lineNode(0, 4, 'D', []), blankNode(5)]),
+							virtualNode(0, [
+								lineNode(0, 3, 'C', []),
+								lineNode(0, 4, 'D', []),
+								blankNode(5),
+							]),
 							lineNode(
 								0,
 								6,
 								'## E',
-								[lineNode(0, 7, 'F', []), lineNode(0, 8, 'G', []), blankNode(9)],
-								'subheading'
+								[
+									lineNode(0, 7, 'F', []),
+									lineNode(0, 8, 'G', []),
+									blankNode(9),
+								],
+								'subheading',
 							),
 						],
-						'heading'
+						'heading',
 					),
 					lineNode(
 						0,
 						10,
 						'# H',
 						[
-							virtualNode(0, [lineNode(0, 11, 'I', []), blankNode(12)]),
+							virtualNode(0, [
+								lineNode(0, 11, 'I', []),
+								blankNode(12),
+							]),
 							lineNode(
 								0,
 								13,
 								'### J',
 								[
-									virtualNode(0, [lineNode(0, 14, 'K', []), blankNode(15)]),
-									virtualNode(0, [lineNode(0, 16, 'L', []), lineNode(0, 17, 'M', [])]),
+									virtualNode(0, [
+										lineNode(0, 14, 'K', []),
+										blankNode(15),
+									]),
+									virtualNode(0, [
+										lineNode(0, 16, 'L', []),
+										lineNode(0, 17, 'M', []),
+									]),
 								],
-								'subsubheading'
+								'subsubheading',
 							),
 						],
-						'heading'
+						'heading',
 					),
 				]),
-			])
+			]),
 		);
 	});
 });

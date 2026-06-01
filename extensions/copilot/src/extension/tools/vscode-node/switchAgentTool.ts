@@ -4,10 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { IExperimentationService } from '../../../platform/telemetry/common/nullExperimentationService';
 import { CancellationToken } from '../../../util/vs/base/common/cancellation';
-import { LanguageModelTextPart, LanguageModelToolResult, MarkdownString } from '../../../vscodeTypes';
+import {
+	LanguageModelTextPart,
+	LanguageModelToolResult,
+	MarkdownString,
+} from '../../../vscodeTypes';
 import { PlanAgentProvider } from '../../agents/vscode-node/planAgentProvider';
 import { ToolName } from '../common/toolNames';
 import { ICopilotTool, ToolRegistry } from '../common/toolsRegistry';
@@ -21,11 +28,16 @@ export class SwitchAgentTool implements ICopilotTool<ISwitchAgentParams> {
 	public static readonly nonDeferred = true;
 
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@IExperimentationService private readonly experimentationService: IExperimentationService,
-	) { }
+		@IConfigurationService
+		private readonly configurationService: IConfigurationService,
+		@IExperimentationService
+		private readonly experimentationService: IExperimentationService,
+	) {}
 
-	async invoke(options: vscode.LanguageModelToolInvocationOptions<ISwitchAgentParams>, token: CancellationToken): Promise<vscode.LanguageModelToolResult> {
+	async invoke(
+		options: vscode.LanguageModelToolInvocationOptions<ISwitchAgentParams>,
+		token: CancellationToken,
+	): Promise<vscode.LanguageModelToolResult> {
 		const { agentName } = options.input;
 
 		// Only 'Plan' is supported
@@ -33,31 +45,59 @@ export class SwitchAgentTool implements ICopilotTool<ISwitchAgentParams> {
 			throw new Error(vscode.l10n.t('Only "Plan" agent is supported'));
 		}
 
-		const exploreEnabled = this.configurationService.getExperimentBasedConfig(ConfigKey.ExploreAgentEnabled, this.experimentationService);
-		const searchSubagentEnabled = this.configurationService.getExperimentBasedConfig(ConfigKey.Advanced.SearchSubagentToolEnabled, this.experimentationService);
-		const planAgentBody = PlanAgentProvider.buildAgentBody(exploreEnabled, searchSubagentEnabled);
+		const exploreEnabled =
+			this.configurationService.getExperimentBasedConfig(
+				ConfigKey.ExploreAgentEnabled,
+				this.experimentationService,
+			);
+		const searchSubagentEnabled =
+			this.configurationService.getExperimentBasedConfig(
+				ConfigKey.Advanced.SearchSubagentToolEnabled,
+				this.experimentationService,
+			);
+		const planAgentBody = PlanAgentProvider.buildAgentBody(
+			exploreEnabled,
+			searchSubagentEnabled,
+		);
 
 		// Execute command to switch agent
-		await vscode.commands.executeCommand('workbench.action.chat.toggleAgentMode', {
-			modeId: agentName,
-			sessionResource: options.chatSessionResource
-		});
+		await vscode.commands.executeCommand(
+			'workbench.action.chat.toggleAgentMode',
+			{
+				modeId: agentName,
+				sessionResource: options.chatSessionResource,
+			},
+		);
 
 		return new LanguageModelToolResult([
-			new LanguageModelTextPart(`Switched to ${agentName} agent. You are now the ${agentName} agent. This tool may no longer be available in the new agent.\n\n${planAgentBody}`)
+			new LanguageModelTextPart(
+				`Switched to ${agentName} agent. You are now the ${agentName} agent. This tool may no longer be available in the new agent.\n\n${planAgentBody}`,
+			),
 		]);
 	}
 
-	prepareInvocation(options: vscode.LanguageModelToolInvocationPrepareOptions<ISwitchAgentParams>, token: vscode.CancellationToken): vscode.ProviderResult<vscode.PreparedToolInvocation> {
+	prepareInvocation(
+		options: vscode.LanguageModelToolInvocationPrepareOptions<ISwitchAgentParams>,
+		token: vscode.CancellationToken,
+	): vscode.ProviderResult<vscode.PreparedToolInvocation> {
 		const { agentName } = options.input;
 
 		if (agentName !== 'Plan') {
-			throw new Error(vscode.l10n.t('Only "Plan" agent is supported. Received: "{0}"', agentName));
+			throw new Error(
+				vscode.l10n.t(
+					'Only "Plan" agent is supported. Received: "{0}"',
+					agentName,
+				),
+			);
 		}
 
 		return {
-			invocationMessage: new MarkdownString(vscode.l10n.t('Switching to {0} agent', agentName)),
-			pastTenseMessage: new MarkdownString(vscode.l10n.t('Switched to {0} agent', agentName))
+			invocationMessage: new MarkdownString(
+				vscode.l10n.t('Switching to {0} agent', agentName),
+			),
+			pastTenseMessage: new MarkdownString(
+				vscode.l10n.t('Switched to {0} agent', agentName),
+			),
 		};
 	}
 }

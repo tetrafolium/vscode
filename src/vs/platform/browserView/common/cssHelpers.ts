@@ -58,13 +58,39 @@ export interface IFormattedStyles {
  * CSS properties that are inherited by child elements.
  */
 const inheritableCSSProperties = new Set([
-	'color', 'cursor', 'direction', 'font', 'font-family', 'font-feature-settings',
-	'font-kerning', 'font-size', 'font-size-adjust', 'font-stretch', 'font-style',
-	'font-variant', 'font-weight', 'letter-spacing', 'line-height', 'list-style',
-	'list-style-image', 'list-style-position', 'list-style-type', 'orphans',
-	'overflow-wrap', 'quotes', 'tab-size', 'text-align', 'text-align-last',
-	'text-indent', 'text-transform', 'visibility', 'white-space', 'widows',
-	'word-break', 'word-spacing', 'writing-mode',
+	"color",
+	"cursor",
+	"direction",
+	"font",
+	"font-family",
+	"font-feature-settings",
+	"font-kerning",
+	"font-size",
+	"font-size-adjust",
+	"font-stretch",
+	"font-style",
+	"font-variant",
+	"font-weight",
+	"letter-spacing",
+	"line-height",
+	"list-style",
+	"list-style-image",
+	"list-style-position",
+	"list-style-type",
+	"orphans",
+	"overflow-wrap",
+	"quotes",
+	"tab-size",
+	"text-align",
+	"text-align-last",
+	"text-indent",
+	"text-transform",
+	"visibility",
+	"white-space",
+	"widows",
+	"word-break",
+	"word-spacing",
+	"writing-mode",
 ]);
 
 const varReferenceRegex = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
@@ -73,16 +99,29 @@ const varReferenceRegex = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
  * Key computed properties included for hover display in the UI.
  */
 export const keyComputedProperties = new Set([
-	'display', 'position', 'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
-	'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
-	'font-size', 'font-family', 'color', 'background-color',
+	"display",
+	"position",
+	"margin",
+	"margin-top",
+	"margin-right",
+	"margin-bottom",
+	"margin-left",
+	"padding",
+	"padding-top",
+	"padding-right",
+	"padding-bottom",
+	"padding-left",
+	"font-size",
+	"font-family",
+	"color",
+	"background-color",
 ]);
 
 /**
  * Properties always included in resolved values even if only set by user-agent rules,
  * matching Chrome DevTools' `alwaysShownComputedProperties`.
  */
-const alwaysResolvedProperties = new Set(['display', 'height', 'width']);
+const alwaysResolvedProperties = new Set(["display", "height", "width"]);
 
 // -- Helper functions --
 
@@ -99,9 +138,18 @@ function collectVarReferences(value: string, into: Set<string>): void {
  * Collects longhand property names from the `cssProperties` array of a matched rule.
  * Skips variable definitions and disabled properties.
  */
-function collectPropertyNames(cssProperties: Array<{ name: string; value: string; disabled?: boolean }>, into: Set<string>, inheritableOnly?: boolean): void {
+function collectPropertyNames(
+	cssProperties: Array<{ name: string; value: string; disabled?: boolean }>,
+	into: Set<string>,
+	inheritableOnly?: boolean,
+): void {
 	for (const prop of cssProperties) {
-		if (!prop.name || !prop.value || prop.disabled || prop.name.startsWith('--')) {
+		if (
+			!prop.name ||
+			!prop.value ||
+			prop.disabled ||
+			prop.name.startsWith("--")
+		) {
 			continue;
 		}
 		if (inheritableOnly && !inheritableCSSProperties.has(prop.name)) {
@@ -114,17 +162,22 @@ function collectPropertyNames(cssProperties: Array<{ name: string; value: string
 /**
  * Filters CSS declarations to only inheritable properties (not variable definitions).
  */
-export function filterInheritableDeclarations(cssText: string): string | undefined {
-	const declarations = cssText.split(';').map(d => d.trim()).filter(Boolean);
-	const filtered = declarations.filter(decl => {
-		const colonIdx = decl.indexOf(':');
+export function filterInheritableDeclarations(
+	cssText: string,
+): string | undefined {
+	const declarations = cssText
+		.split(";")
+		.map((d) => d.trim())
+		.filter(Boolean);
+	const filtered = declarations.filter((decl) => {
+		const colonIdx = decl.indexOf(":");
 		if (colonIdx === -1) {
 			return false;
 		}
 		const propName = decl.substring(0, colonIdx).trim();
 		return inheritableCSSProperties.has(propName);
 	});
-	return filtered.length > 0 ? filtered.join('; ') : undefined;
+	return filtered.length > 0 ? filtered.join("; ") : undefined;
 }
 
 /**
@@ -151,14 +204,20 @@ export function formatMatchedStyles(matched: IMatchedStyles): IFormattedStyles {
 	if (matched.inlineStyle?.cssText?.trim()) {
 		const cssText = matched.inlineStyle.cssText.trim();
 		collectVarReferences(cssText, referencedVars);
-		collectPropertyNames(matched.inlineStyle.cssProperties, authorPropertyNames);
+		collectPropertyNames(
+			matched.inlineStyle.cssProperties,
+			authorPropertyNames,
+		);
 		lines.push(`element { ${cssText} }`);
 	}
 
 	// Direct author rules: use cssText for display, cssProperties for property tracking
 	for (const ruleEntry of matched.matchedCSSRules ?? []) {
-		if (ruleEntry.rule.origin === 'user-agent') {
-			collectPropertyNames(ruleEntry.rule.style.cssProperties, userAgentPropertyNames);
+		if (ruleEntry.rule.origin === "user-agent") {
+			collectPropertyNames(
+				ruleEntry.rule.style.cssProperties,
+				userAgentPropertyNames,
+			);
 			continue;
 		}
 		const cssText = ruleEntry.rule.style.cssText?.trim();
@@ -167,8 +226,13 @@ export function formatMatchedStyles(matched: IMatchedStyles): IFormattedStyles {
 		}
 		seenCssTexts.add(cssText);
 		collectVarReferences(cssText, referencedVars);
-		collectPropertyNames(ruleEntry.rule.style.cssProperties, authorPropertyNames);
-		const selectors = ruleEntry.rule.selectorList.selectors.map(s => s.text).join(', ');
+		collectPropertyNames(
+			ruleEntry.rule.style.cssProperties,
+			authorPropertyNames,
+		);
+		const selectors = ruleEntry.rule.selectorList.selectors
+			.map((s) => s.text)
+			.join(", ");
 		lines.push(`${selectors} { ${cssText} }`);
 	}
 
@@ -177,8 +241,11 @@ export function formatMatchedStyles(matched: IMatchedStyles): IFormattedStyles {
 		const pseudoLines: string[] = [];
 		for (const pseudo of matched.pseudoElements) {
 			for (const ruleEntry of pseudo.matches ?? []) {
-				if (ruleEntry.rule.origin === 'user-agent') {
-					collectPropertyNames(ruleEntry.rule.style.cssProperties, userAgentPropertyNames);
+				if (ruleEntry.rule.origin === "user-agent") {
+					collectPropertyNames(
+						ruleEntry.rule.style.cssProperties,
+						userAgentPropertyNames,
+					);
 					continue;
 				}
 				const cssText = ruleEntry.rule.style.cssText?.trim();
@@ -187,14 +254,19 @@ export function formatMatchedStyles(matched: IMatchedStyles): IFormattedStyles {
 				}
 				seenCssTexts.add(cssText);
 				collectVarReferences(cssText, referencedVars);
-				collectPropertyNames(ruleEntry.rule.style.cssProperties, authorPropertyNames);
-				const selectors = ruleEntry.rule.selectorList.selectors.map(s => s.text).join(', ');
+				collectPropertyNames(
+					ruleEntry.rule.style.cssProperties,
+					authorPropertyNames,
+				);
+				const selectors = ruleEntry.rule.selectorList.selectors
+					.map((s) => s.text)
+					.join(", ");
 				pseudoLines.push(`${selectors} { ${cssText} }`);
 			}
 		}
 		if (pseudoLines.length > 0) {
-			lines.push('');
-			lines.push('/* Pseudo-elements */');
+			lines.push("");
+			lines.push("/* Pseudo-elements */");
 			lines.push(...pseudoLines);
 		}
 	}
@@ -203,8 +275,12 @@ export function formatMatchedStyles(matched: IMatchedStyles): IFormattedStyles {
 	const inheritedLines: string[] = [];
 	for (const entry of matched.inherited ?? []) {
 		for (const ruleEntry of entry.matchedCSSRules ?? []) {
-			if (ruleEntry.rule.origin === 'user-agent') {
-				collectPropertyNames(ruleEntry.rule.style.cssProperties, userAgentPropertyNames, true);
+			if (ruleEntry.rule.origin === "user-agent") {
+				collectPropertyNames(
+					ruleEntry.rule.style.cssProperties,
+					userAgentPropertyNames,
+					true,
+				);
 				continue;
 			}
 			const cssText = ruleEntry.rule.style.cssText?.trim();
@@ -219,15 +295,21 @@ export function formatMatchedStyles(matched: IMatchedStyles): IFormattedStyles {
 			seenCssTexts.add(filtered);
 			// Track: use cssProperties longhands, inheritable only
 			collectVarReferences(filtered, referencedVars);
-			collectPropertyNames(ruleEntry.rule.style.cssProperties, authorPropertyNames, true);
-			const selectors = ruleEntry.rule.selectorList.selectors.map(s => s.text).join(', ');
+			collectPropertyNames(
+				ruleEntry.rule.style.cssProperties,
+				authorPropertyNames,
+				true,
+			);
+			const selectors = ruleEntry.rule.selectorList.selectors
+				.map((s) => s.text)
+				.join(", ");
 			inheritedLines.push(`${selectors} { ${filtered} }`);
 		}
 	}
 
 	if (inheritedLines.length > 0) {
-		lines.push('');
-		lines.push('/* Inherited */');
+		lines.push("");
+		lines.push("/* Inherited */");
 		lines.push(...inheritedLines);
 	}
 
@@ -236,7 +318,12 @@ export function formatMatchedStyles(matched: IMatchedStyles): IFormattedStyles {
 		authorPropertyNames.add(prop);
 	}
 
-	return { rulesText: lines.join('\n'), referencedVars, authorPropertyNames, userAgentPropertyNames };
+	return {
+		rulesText: lines.join("\n"),
+		referencedVars,
+		authorPropertyNames,
+		userAgentPropertyNames,
+	};
 }
 
 /**
@@ -263,22 +350,60 @@ interface IBoxShorthand {
 
 const boxShorthands: IBoxShorthand[] = [
 	// margin: <margin-top> <margin-right> <margin-bottom> <margin-left>
-	{ shorthand: 'margin', sides: ['margin-top', 'margin-right', 'margin-bottom', 'margin-left'] },
+	{
+		shorthand: "margin",
+		sides: ["margin-top", "margin-right", "margin-bottom", "margin-left"],
+	},
 	// padding: <padding-top> <padding-right> <padding-bottom> <padding-left>
-	{ shorthand: 'padding', sides: ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'] },
+	{
+		shorthand: "padding",
+		sides: ["padding-top", "padding-right", "padding-bottom", "padding-left"],
+	},
 	// border-radius: <TL> <TR> <BR> <BL>   (clockwise from top-left)
-	{ shorthand: 'border-radius', sides: ['border-top-left-radius', 'border-top-right-radius', 'border-bottom-right-radius', 'border-bottom-left-radius'] },
+	{
+		shorthand: "border-radius",
+		sides: [
+			"border-top-left-radius",
+			"border-top-right-radius",
+			"border-bottom-right-radius",
+			"border-bottom-left-radius",
+		],
+	},
 ];
 
 // -- Border per-side groups (collapse to border: W S C when uniform) --
 
 const borderSideGroups: IBoxShorthand[] = [
 	// border-width: initial medium per MDN (but computed is always an absolute length)
-	{ shorthand: 'border-width', sides: ['border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width'] },
+	{
+		shorthand: "border-width",
+		sides: [
+			"border-top-width",
+			"border-right-width",
+			"border-bottom-width",
+			"border-left-width",
+		],
+	},
 	// border-style: initial none per MDN
-	{ shorthand: 'border-style', sides: ['border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style'] },
+	{
+		shorthand: "border-style",
+		sides: [
+			"border-top-style",
+			"border-right-style",
+			"border-bottom-style",
+			"border-left-style",
+		],
+	},
 	// border-color: initial currentcolor per MDN
-	{ shorthand: 'border-color', sides: ['border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color'] },
+	{
+		shorthand: "border-color",
+		sides: [
+			"border-top-color",
+			"border-right-color",
+			"border-bottom-color",
+			"border-left-color",
+		],
+	},
 ];
 
 // -- Longhands that are dropped entirely when all at their initial values --
@@ -292,18 +417,18 @@ const dropWhenAllDefault: IDefaultsGroup[] = [
 	// border-image  (CSS Backgrounds & Borders 3 section 6.8)
 	{
 		longhands: {
-			'border-image-source': 'none',
-			'border-image-slice': '100%',
-			'border-image-width': '1',
-			'border-image-outset': '0',
-			'border-image-repeat': 'stretch',
+			"border-image-source": "none",
+			"border-image-slice": "100%",
+			"border-image-width": "1",
+			"border-image-outset": "0",
+			"border-image-repeat": "stretch",
 		},
 	},
 	// animation-range  (CSS Scroll-driven Animations section 5.2)  initial: normal
 	{
 		longhands: {
-			'animation-range-start': 'normal',
-			'animation-range-end': 'normal',
+			"animation-range-start": "normal",
+			"animation-range-end": "normal",
 		},
 	},
 ];
@@ -318,17 +443,17 @@ interface IBackgroundCollapseGroup {
 }
 
 const backgroundCollapse: IBackgroundCollapseGroup = {
-	colorLonghand: 'background-color',
+	colorLonghand: "background-color",
 	otherLonghands: {
 		// MDN background formal definition initial values:
-		'background-image': 'none',            // initial: none
-		'background-position-x': '0px',        // initial: 0% (computed as 0px)
-		'background-position-y': '0px',        // initial: 0%
-		'background-size': 'auto',             // initial: auto auto
-		'background-repeat': 'repeat',         // initial: repeat
-		'background-attachment': 'scroll',     // initial: scroll
-		'background-origin': 'padding-box',    // initial: padding-box
-		'background-clip': 'border-box',       // initial: border-box
+		"background-image": "none", // initial: none
+		"background-position-x": "0px", // initial: 0% (computed as 0px)
+		"background-position-y": "0px", // initial: 0%
+		"background-size": "auto", // initial: auto auto
+		"background-repeat": "repeat", // initial: repeat
+		"background-attachment": "scroll", // initial: scroll
+		"background-origin": "padding-box", // initial: padding-box
+		"background-clip": "border-box", // initial: border-box
 	},
 };
 
@@ -343,12 +468,12 @@ const simpleShorthands: ISimpleShorthand[] = [
 	// text-decoration (CSS Text Decoration 4 section 3)
 	// Constituents: text-decoration-line || text-decoration-style || text-decoration-color || text-decoration-thickness
 	{
-		shorthand: 'text-decoration',
+		shorthand: "text-decoration",
 		longhands: [
-			{ name: 'text-decoration-line', initial: 'none' },
-			{ name: 'text-decoration-style', initial: 'solid' },
-			{ name: 'text-decoration-color', initial: 'currentcolor' },
-			{ name: 'text-decoration-thickness', initial: 'auto' },
+			{ name: "text-decoration-line", initial: "none" },
+			{ name: "text-decoration-style", initial: "solid" },
+			{ name: "text-decoration-color", initial: "currentcolor" },
+			{ name: "text-decoration-thickness", initial: "auto" },
 		],
 	},
 ];
@@ -357,13 +482,17 @@ const simpleShorthands: ISimpleShorthand[] = [
 // Shorthand for white-space-collapse || text-wrap-mode.
 // Named keyword mappings for the well-known combinations:
 
-const whiteSpaceKeywords: Array<{ collapse: string; wrap: string; keyword: string }> = [
-	{ collapse: 'collapse', wrap: 'wrap', keyword: 'normal' },
-	{ collapse: 'collapse', wrap: 'nowrap', keyword: 'nowrap' },
-	{ collapse: 'preserve', wrap: 'nowrap', keyword: 'pre' },
-	{ collapse: 'preserve', wrap: 'wrap', keyword: 'pre-wrap' },
-	{ collapse: 'preserve-breaks', wrap: 'wrap', keyword: 'pre-line' },
-	{ collapse: 'break-spaces', wrap: 'wrap', keyword: 'break-spaces' },
+const whiteSpaceKeywords: Array<{
+	collapse: string;
+	wrap: string;
+	keyword: string;
+}> = [
+	{ collapse: "collapse", wrap: "wrap", keyword: "normal" },
+	{ collapse: "collapse", wrap: "nowrap", keyword: "nowrap" },
+	{ collapse: "preserve", wrap: "nowrap", keyword: "pre" },
+	{ collapse: "preserve", wrap: "wrap", keyword: "pre-wrap" },
+	{ collapse: "preserve-breaks", wrap: "wrap", keyword: "pre-line" },
+	{ collapse: "break-spaces", wrap: "wrap", keyword: "break-spaces" },
 ];
 
 // -- Comma-separated list shorthands (transition, animation) --
@@ -377,13 +506,13 @@ const listShorthands: IListShorthand[] = [
 	// transition (CSS Transitions 1 section 2.1)
 	// Constituents: transition-property || transition-duration || transition-timing-function || transition-delay || transition-behavior
 	{
-		shorthand: 'transition',
+		shorthand: "transition",
 		longhands: [
-			{ name: 'transition-property', initial: 'all' },
-			{ name: 'transition-duration', initial: '0s' },
-			{ name: 'transition-timing-function', initial: 'ease' },
-			{ name: 'transition-delay', initial: '0s' },
-			{ name: 'transition-behavior', initial: 'normal' },
+			{ name: "transition-property", initial: "all" },
+			{ name: "transition-duration", initial: "0s" },
+			{ name: "transition-timing-function", initial: "ease" },
+			{ name: "transition-delay", initial: "0s" },
+			{ name: "transition-behavior", initial: "normal" },
 		],
 	},
 	// animation (CSS Animations 1 section 3 + Scroll-driven Animations section 5)
@@ -391,17 +520,17 @@ const listShorthands: IListShorthand[] = [
 	//             || animation-iteration-count || animation-direction || animation-fill-mode
 	//             || animation-play-state || animation-timeline
 	{
-		shorthand: 'animation',
+		shorthand: "animation",
 		longhands: [
-			{ name: 'animation-name', initial: 'none' },
-			{ name: 'animation-duration', initial: '0s' },
-			{ name: 'animation-timing-function', initial: 'ease' },
-			{ name: 'animation-delay', initial: '0s' },
-			{ name: 'animation-iteration-count', initial: '1' },
-			{ name: 'animation-direction', initial: 'normal' },
-			{ name: 'animation-fill-mode', initial: 'none' },
-			{ name: 'animation-play-state', initial: 'running' },
-			{ name: 'animation-timeline', initial: 'auto' },
+			{ name: "animation-name", initial: "none" },
+			{ name: "animation-duration", initial: "0s" },
+			{ name: "animation-timing-function", initial: "ease" },
+			{ name: "animation-delay", initial: "0s" },
+			{ name: "animation-iteration-count", initial: "1" },
+			{ name: "animation-direction", initial: "normal" },
+			{ name: "animation-fill-mode", initial: "none" },
+			{ name: "animation-play-state", initial: "running" },
+			{ name: "animation-timeline", initial: "auto" },
 		],
 	},
 ];
@@ -412,14 +541,22 @@ const listShorthands: IListShorthand[] = [
  * Tries to collapse a box shorthand (4 sides → 1-4 value shorthand).
  * Returns the collapsed value or undefined if not all sides are present.
  */
-function collapseBoxValues(entries: Map<string, string>, sides: [string, string, string, string]): string | undefined {
+function collapseBoxValues(
+	entries: Map<string, string>,
+	sides: [string, string, string, string],
+): string | undefined {
 	const [topKey, rightKey, bottomKey, leftKey] = sides;
 	const top = entries.get(topKey);
 	const right = entries.get(rightKey);
 	const bottom = entries.get(bottomKey);
 	const left = entries.get(leftKey);
 
-	if (top === undefined || right === undefined || bottom === undefined || left === undefined) {
+	if (
+		top === undefined ||
+		right === undefined ||
+		bottom === undefined ||
+		left === undefined
+	) {
 		return undefined;
 	}
 
@@ -450,11 +587,11 @@ function splitCSSList(value: string): string[] {
 	let start = 0;
 	for (let i = 0; i < value.length; i++) {
 		const ch = value[i];
-		if (ch === '(') {
+		if (ch === "(") {
 			depth++;
-		} else if (ch === ')') {
+		} else if (ch === ")") {
 			depth--;
-		} else if (ch === ',' && depth === 0) {
+		} else if (ch === "," && depth === 0) {
 			items.push(value.substring(start, i).trim());
 			start = i + 1;
 		}
@@ -473,13 +610,13 @@ function collapseListShorthand(
 	longhands: Array<{ name: string; initial: string }>,
 ): void {
 	const values = longhands.map(({ name }) => entries.get(name));
-	if (!values.every(v => v !== undefined)) {
+	if (!values.every((v) => v !== undefined)) {
 		return;
 	}
 
-	const lists = values.map(v => splitCSSList(v as string));
+	const lists = values.map((v) => splitCSSList(v as string));
 	const itemCount = lists[0].length;
-	if (!lists.every(l => l.length === itemCount)) {
+	if (!lists.every((l) => l.length === itemCount)) {
 		return;
 	}
 
@@ -496,10 +633,10 @@ function collapseListShorthand(
 				parts.push(val);
 			}
 		}
-		items.push(parts.length > 0 ? parts.join(' ') : longhands[0].initial);
+		items.push(parts.length > 0 ? parts.join(" ") : longhands[0].initial);
 	}
 
-	output.push(`${shorthand}: ${items.join(', ')};`);
+	output.push(`${shorthand}: ${items.join(", ")};`);
 }
 
 // -- Main entry point --
@@ -522,17 +659,25 @@ export function collapseToShorthands(entries: Map<string, string>): string[] {
 
 	// 2. Border: try full `border: W S C` when all four sides are uniform,
 	//    otherwise collapse each group (border-width, border-style, border-color).
-	const borderVals = borderSideGroups.map(g => g.sides.map(s => entries.get(s)));
-	const hasAllBorderProps = borderVals.every(group => group.every(v => v !== undefined));
+	const borderVals = borderSideGroups.map((g) =>
+		g.sides.map((s) => entries.get(s)),
+	);
+	const hasAllBorderProps = borderVals.every((group) =>
+		group.every((v) => v !== undefined),
+	);
 	if (hasAllBorderProps) {
-		const allUniform = borderVals.every(group => group.every(v => v === group[0]));
+		const allUniform = borderVals.every((group) =>
+			group.every((v) => v === group[0]),
+		);
 		if (allUniform) {
 			for (const group of borderSideGroups) {
 				for (const side of group.sides) {
 					entries.delete(side);
 				}
 			}
-			shorthandLines.push(`border: ${borderVals[0][0]} ${borderVals[1][0]} ${borderVals[2][0]};`);
+			shorthandLines.push(
+				`border: ${borderVals[0][0]} ${borderVals[1][0]} ${borderVals[2][0]};`,
+			);
 		} else {
 			for (const group of borderSideGroups) {
 				const collapsed = collapseBoxValues(entries, group.sides);
@@ -545,8 +690,10 @@ export function collapseToShorthands(entries: Map<string, string>): string[] {
 
 	// 3. Drop-when-all-default groups (border-image, etc.)
 	for (const { longhands } of dropWhenAllDefault) {
-		const allDefault = Object.entries(longhands).every(([k, v]) => entries.get(k) === v);
-		if (allDefault && Object.keys(longhands).some(k => entries.has(k))) {
+		const allDefault = Object.entries(longhands).every(
+			([k, v]) => entries.get(k) === v,
+		);
+		if (allDefault && Object.keys(longhands).some((k) => entries.has(k))) {
 			for (const key of Object.keys(longhands)) {
 				entries.delete(key);
 			}
@@ -557,7 +704,9 @@ export function collapseToShorthands(entries: Map<string, string>): string[] {
 	{
 		const { colorLonghand, otherLonghands } = backgroundCollapse;
 		const bgColor = entries.get(colorLonghand);
-		const allOthersDefault = Object.entries(otherLonghands).every(([k, v]) => entries.get(k) === v);
+		const allOthersDefault = Object.entries(otherLonghands).every(
+			([k, v]) => entries.get(k) === v,
+		);
 		if (allOthersDefault && bgColor !== undefined) {
 			entries.delete(colorLonghand);
 			for (const key of Object.keys(otherLonghands)) {
@@ -586,18 +735,24 @@ export function collapseToShorthands(entries: Map<string, string>): string[] {
 				parts.push(val);
 			}
 		}
-		shorthandLines.push(`${shorthand}: ${parts.length > 0 ? parts.join(' ') : longhands[0].initial};`);
+		shorthandLines.push(
+			`${shorthand}: ${parts.length > 0 ? parts.join(" ") : longhands[0].initial};`,
+		);
 	}
 
 	// 6. white-space (CSS Text 4) — map longhand pair to named keyword
 	{
-		const wsCollapse = entries.get('white-space-collapse');
-		const textWrap = entries.get('text-wrap-mode');
+		const wsCollapse = entries.get("white-space-collapse");
+		const textWrap = entries.get("text-wrap-mode");
 		if (wsCollapse !== undefined && textWrap !== undefined) {
-			entries.delete('white-space-collapse');
-			entries.delete('text-wrap-mode');
-			const match = whiteSpaceKeywords.find(k => k.collapse === wsCollapse && k.wrap === textWrap);
-			shorthandLines.push(`white-space: ${match ? match.keyword : `${wsCollapse} ${textWrap}`};`);
+			entries.delete("white-space-collapse");
+			entries.delete("text-wrap-mode");
+			const match = whiteSpaceKeywords.find(
+				(k) => k.collapse === wsCollapse && k.wrap === textWrap,
+			);
+			shorthandLines.push(
+				`white-space: ${match ? match.keyword : `${wsCollapse} ${textWrap}`};`,
+			);
 		}
 	}
 
@@ -608,7 +763,9 @@ export function collapseToShorthands(entries: Map<string, string>): string[] {
 
 	// 8. Remaining properties as individual lines, sorted
 	const remainingLines: string[] = [];
-	for (const [name, value] of Array.from(entries.entries()).sort(([a], [b]) => a.localeCompare(b))) {
+	for (const [name, value] of Array.from(entries.entries()).sort(([a], [b]) =>
+		a.localeCompare(b),
+	)) {
 		remainingLines.push(`${name}: ${value};`);
 	}
 

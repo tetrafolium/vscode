@@ -16,23 +16,31 @@ export function sliceRecording(
 	workspaceRecording: ResolvedRecording,
 	step: number,
 	historyMaxTimeMs: number,
-	options: { includeSelection: boolean; mergeEdits: boolean; includeReasons: boolean } = { includeSelection: false, mergeEdits: true, includeReasons: false }
+	options: {
+		includeSelection: boolean;
+		mergeEdits: boolean;
+		includeReasons: boolean;
+	} = { includeSelection: false, mergeEdits: true, includeReasons: false },
 ): LogEntry[] {
 	const currentOp = workspaceRecording.operations[step];
 	const startTime = currentOp.time - historyMaxTimeMs;
-	const firstOp = findFirstMonotonous(workspaceRecording.operations, op => op.time >= startTime)!;
+	const firstOp = findFirstMonotonous(
+		workspaceRecording.operations,
+		(op) => op.time >= startTime,
+	)!;
 
 	let nextDocId = 0;
 	const events: LogEntry[] = [];
 
 	events.push({
-		kind: 'meta', data: {
+		kind: 'meta',
+		data: {
 			kind: 'log-origin',
 			uuid: workspaceRecording.uuid,
 			repoRootUri: workspaceRecording.repoRootUri,
 			opStart: firstOp.operationIdx,
-			opEndEx: currentOp.operationIdx + 1
-		}
+			opEndEx: currentOp.operationIdx + 1,
+		},
 	});
 
 	const getDocumentRecorder = new CachedFunction((documentId: number) => {
@@ -41,57 +49,122 @@ export function sliceRecording(
 
 		let initialized = false;
 		const init = () => {
-			events.push({ kind: 'documentEncountered', id, time: currentOp.time, relativePath: doc.documentRelativePath });
+			events.push({
+				kind: 'documentEncountered',
+				id,
+				time: currentOp.time,
+				relativePath: doc.documentRelativePath,
+			});
 			initialized = true;
 		};
 
-		function editExtends(edit: StringEdit, previousEdit: StringEdit): boolean {
+		function editExtends(
+			edit: StringEdit,
+			previousEdit: StringEdit,
+		): boolean {
 			const newRanges = previousEdit.getNewRanges();
-			return edit.replacements.every(e => intersectsOrTouches(e.replaceRange, newRanges));
+			return edit.replacements.every((e) =>
+				intersectsOrTouches(e.replaceRange, newRanges),
+			);
 		}
 
-		function intersectsOrTouches(range: OffsetRange, sortedRanges: readonly OffsetRange[]): boolean {
-			const firstCandidate = findFirstMonotonous(sortedRanges, r => r.endExclusive >= range.start);
-			return firstCandidate ? firstCandidate.intersectsOrTouches(range) : false;
+		function intersectsOrTouches(
+			range: OffsetRange,
+			sortedRanges: readonly OffsetRange[],
+		): boolean {
+			const firstCandidate = findFirstMonotonous(
+				sortedRanges,
+				(r) => r.endExclusive >= range.start,
+			);
+			return firstCandidate
+				? firstCandidate.intersectsOrTouches(range)
+				: false;
 		}
 
-		let lastEdit: { edit: StringEdit; timeMs: number } | undefined = undefined;
+		let lastEdit: { edit: StringEdit; timeMs: number } | undefined =
+			undefined;
 
 		return {
 			id: id,
 			addSetContentEvent: (documentStateId: number) => {
-				if (!initialized) { return; } // Wait for first change event
+				if (!initialized) {
+					return;
+				} // Wait for first change event
 
 				const content = doc.getState(documentStateId).value;
-				events.push({ kind: 'setContent', id: id, time: currentOp.time, content, v: documentStateId });
+				events.push({
+					kind: 'setContent',
+					id: id,
+					time: currentOp.time,
+					content,
+					v: documentStateId,
+				});
 
 				lastEdit = undefined;
 			},
-			addEditEvent: (timeMs: number, edit: StringEdit, documentStateBeforeId: number, documentStateAfterId: number) => {
+			addEditEvent: (
+				timeMs: number,
+				edit: StringEdit,
+				documentStateBeforeId: number,
+				documentStateAfterId: number,
+			) => {
 				if (!initialized) {
 					init();
 					const content = doc.getState(documentStateBeforeId).value;
-					events.push({ kind: 'setContent', id: id, time: currentOp.time, content, v: documentStateBeforeId });
+					events.push({
+						kind: 'setContent',
+						id: id,
+						time: currentOp.time,
+						content,
+						v: documentStateBeforeId,
+					});
 				}
 
-				if (options.mergeEdits && lastEdit && events.at(-1)!.kind === 'changed' && editExtends(edit, lastEdit.edit) && timeMs - lastEdit.timeMs < 1000) {
+				if (
+					options.mergeEdits &&
+					lastEdit &&
+					events.at(-1)!.kind === 'changed' &&
+					editExtends(edit, lastEdit.edit) &&
+					timeMs - lastEdit.timeMs < 1000
+				) {
 					events.pop();
 					edit = lastEdit.edit.compose(edit);
 				}
 
-				events.push({ kind: 'changed', id: id, time: timeMs, edit: serializeStringEdit(edit), v: documentStateAfterId });
+				events.push({
+					kind: 'changed',
+					id: id,
+					time: timeMs,
+					edit: serializeStringEdit(edit),
+					v: documentStateAfterId,
+				});
 
 				lastEdit = { edit, timeMs };
 			},
-			addSelectionEvent: (timeMs: number, selection: readonly OffsetRange[], documentStateBeforeId: number) => {
+			addSelectionEvent: (
+				timeMs: number,
+				selection: readonly OffsetRange[],
+				documentStateBeforeId: number,
+			) => {
 				if (!initialized) {
 					init();
 					const content = doc.getState(documentStateBeforeId).value;
-					events.push({ kind: 'setContent', id: id, time: currentOp.time, content, v: documentStateBeforeId });
+					events.push({
+						kind: 'setContent',
+						id: id,
+						time: currentOp.time,
+						content,
+						v: documentStateBeforeId,
+					});
 				}
 
-				events.push({ kind: 'selectionChanged', id: id, time: timeMs, selection: selection.map(s => [s.start, s.endExclusive]) });
-			}
+				events.push({
+					kind: 'selectionChanged',
+					id: id,
+					time: timeMs,
+					selection: selection.map((s) => [s.start, s.endExclusive]),
+				});
+			},
 		};
 	});
 
@@ -107,16 +180,34 @@ export function sliceRecording(
 			}
 
 			case OperationKind.Changed: {
-				d.addEditEvent(op.time, op.edit, op.documentStateIdBefore, op.documentStateIdAfter);
+				d.addEditEvent(
+					op.time,
+					op.edit,
+					op.documentStateIdBefore,
+					op.documentStateIdAfter,
+				);
 				if (op.reason && options.includeReasons) {
-					events.push({ kind: 'documentEvent', time: op.time, id: d.id, data: { sourceId: 'TextModel.setChangeReason', source: op.reason, v: op.documentStateIdAfter } satisfies DocumentEventLogEntryData });
+					events.push({
+						kind: 'documentEvent',
+						time: op.time,
+						id: d.id,
+						data: {
+							sourceId: 'TextModel.setChangeReason',
+							source: op.reason,
+							v: op.documentStateIdAfter,
+						} satisfies DocumentEventLogEntryData,
+					});
 				}
 				break;
 			}
 
 			case OperationKind.SelectionChanged: {
 				if (options.includeSelection) {
-					d.addSelectionEvent(op.time, op.selection, op.documentStateIdBefore);
+					d.addSelectionEvent(
+						op.time,
+						op.selection,
+						op.documentStateIdBefore,
+					);
 				}
 				break;
 			}

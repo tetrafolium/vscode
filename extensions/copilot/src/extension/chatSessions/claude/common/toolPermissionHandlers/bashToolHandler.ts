@@ -8,7 +8,11 @@ import { CancellationToken } from '../../../../../util/vs/base/common/cancellati
 import { LanguageModelTextPart } from '../../../../../vscodeTypes';
 import { ToolName } from '../../../../tools/common/toolNames';
 import { IToolsService } from '../../../../tools/common/toolsService';
-import { ClaudeToolPermissionContext, ClaudeToolPermissionResult, IClaudeToolPermissionHandler } from '../claudeToolPermission';
+import {
+	ClaudeToolPermissionContext,
+	ClaudeToolPermissionResult,
+	IClaudeToolPermissionHandler,
+} from '../claudeToolPermission';
 import { registerToolPermissionHandler } from '../claudeToolPermissionRegistry';
 import { ClaudeToolNames } from '../claudeTools';
 
@@ -25,43 +29,45 @@ const DenyToolMessage = 'The user declined to run the tool';
 export class BashToolHandler implements IClaudeToolPermissionHandler<ClaudeToolNames.Bash> {
 	public readonly toolNames = [ClaudeToolNames.Bash] as const;
 
-	constructor(
-		@IToolsService private readonly toolsService: IToolsService,
-	) { }
+	constructor(@IToolsService private readonly toolsService: IToolsService) {}
 
 	public async handle(
 		_toolName: ClaudeToolNames.Bash,
 		input: BashInput,
-		context: ClaudeToolPermissionContext
+		context: ClaudeToolPermissionContext,
 	): Promise<ClaudeToolPermissionResult> {
 		try {
-			const result = await this.toolsService.invokeTool(ToolName.CoreTerminalConfirmationTool, {
-				input: {
-					message: input.description || input.command,
-					command: input.command,
-					isBackground: input.run_in_background ?? false
+			const result = await this.toolsService.invokeTool(
+				ToolName.CoreTerminalConfirmationTool,
+				{
+					input: {
+						message: input.description || input.command,
+						command: input.command,
+						isBackground: input.run_in_background ?? false,
+					},
+					toolInvocationToken: context.toolInvocationToken,
 				},
-				toolInvocationToken: context.toolInvocationToken,
-			}, CancellationToken.None);
+				CancellationToken.None,
+			);
 
 			const firstResultPart = result.content.at(0);
-			if (firstResultPart instanceof LanguageModelTextPart && firstResultPart.value === 'yes') {
+			if (
+				firstResultPart instanceof LanguageModelTextPart &&
+				firstResultPart.value === 'yes'
+			) {
 				return {
 					behavior: 'allow',
-					updatedInput: input as unknown as Record<string, unknown>
+					updatedInput: input as unknown as Record<string, unknown>,
 				};
 			}
-		} catch { }
+		} catch {}
 
 		return {
 			behavior: 'deny',
-			message: DenyToolMessage
+			message: DenyToolMessage,
 		};
 	}
 }
 
 // Self-register the handler
-registerToolPermissionHandler(
-	[ClaudeToolNames.Bash],
-	BashToolHandler
-);
+registerToolPermissionHandler([ClaudeToolNames.Bash], BashToolHandler);

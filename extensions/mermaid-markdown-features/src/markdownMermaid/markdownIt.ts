@@ -2,13 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import type MarkdownIt from 'markdown-it';
+import type MarkdownIt from "markdown-it";
 
-const mermaidLanguageId = 'mermaid';
-const containerTokenName = 'mermaidContainer';
+const mermaidLanguageId = "mermaid";
+const containerTokenName = "mermaidContainer";
 
 const minMarkers = 3;
-const markerStr = ':';
+const markerStr = ":";
 const markerChar = markerStr.charCodeAt(0);
 const markerLen = markerStr.length;
 
@@ -19,9 +19,17 @@ const markerLen = markerStr.length;
  * block syntax is properly parsed by markdown-it. All actual mermaid rendering happens in the webview
  * where the markdown is rendered.
  */
-export function extendMarkdownItWithMermaid(md: MarkdownIt, config: { languageIds(): readonly string[] }): MarkdownIt {
+export function extendMarkdownItWithMermaid(
+	md: MarkdownIt,
+	config: { languageIds(): readonly string[] },
+): MarkdownIt {
 	md.use((md: MarkdownIt) => {
-		function container(state: MarkdownIt.StateBlock, startLine: number, endLine: number, silent: boolean): boolean {
+		function container(
+			state: MarkdownIt.StateBlock,
+			startLine: number,
+			endLine: number,
+			silent: boolean,
+		): boolean {
 			let pos: number;
 			let autoClosed = false;
 			let start = state.bMarks[startLine] + state.tShift[startLine];
@@ -45,7 +53,7 @@ export function extendMarkdownItWithMermaid(md: MarkdownIt, config: { languageId
 
 			const markup = state.src.slice(start, pos);
 			const params = state.src.slice(pos, max);
-			if (params.trim().split(' ')[0].toLowerCase() !== mermaidLanguageId) {
+			if (params.trim().split(" ")[0].toLowerCase() !== mermaidLanguageId) {
 				return false;
 			}
 
@@ -55,7 +63,7 @@ export function extendMarkdownItWithMermaid(md: MarkdownIt, config: { languageId
 
 			let nextLine = startLine;
 
-			for (; ;) {
+			for (;;) {
 				nextLine++;
 				if (nextLine >= endLine) {
 					break;
@@ -99,16 +107,21 @@ export function extendMarkdownItWithMermaid(md: MarkdownIt, config: { languageId
 
 			const oldParent = state.parentType;
 			const oldLineMax = state.lineMax;
-			state.parentType = 'container' as MarkdownIt.StateBlock.ParentType;
+			state.parentType = "container" as MarkdownIt.StateBlock.ParentType;
 
 			state.lineMax = nextLine;
 
-			const containerToken = state.push(containerTokenName, 'div', 1);
+			const containerToken = state.push(containerTokenName, "div", 1);
 			containerToken.markup = markup;
 			containerToken.block = true;
 			containerToken.info = params;
 			containerToken.map = [startLine, nextLine];
-			containerToken.content = state.getLines(startLine + 1, nextLine, state.blkIndent, true);
+			containerToken.content = state.getLines(
+				startLine + 1,
+				nextLine,
+				state.blkIndent,
+				true,
+			);
 
 			state.parentType = oldParent;
 			state.lineMax = oldLineMax;
@@ -117,10 +130,13 @@ export function extendMarkdownItWithMermaid(md: MarkdownIt, config: { languageId
 			return true;
 		}
 
-		md.block.ruler.before('fence', containerTokenName, container, {
-			alt: ['paragraph', 'reference', 'blockquote', 'list']
+		md.block.ruler.before("fence", containerTokenName, container, {
+			alt: ["paragraph", "reference", "blockquote", "list"],
 		});
-		md.renderer.rules[containerTokenName] = (tokens: MarkdownIt.Token[], idx: number) => {
+		md.renderer.rules[containerTokenName] = (
+			tokens: MarkdownIt.Token[],
+			idx: number,
+		) => {
 			const token = tokens[idx];
 			const src = token.content;
 			return `<div class="${mermaidLanguageId}">${preProcess(src)}</div>`;
@@ -129,7 +145,10 @@ export function extendMarkdownItWithMermaid(md: MarkdownIt, config: { languageId
 
 	const highlight = md.options.highlight;
 	md.options.highlight = (code: string, lang: string, attrs: string) => {
-		const reg = new RegExp('\\b(' + config.languageIds().map(escapeRegExp).join('|') + ')\\b', 'i');
+		const reg = new RegExp(
+			"\\b(" + config.languageIds().map(escapeRegExp).join("|") + ")\\b",
+			"i",
+		);
 		if (lang && reg.test(lang)) {
 			return `<pre class="${mermaidLanguageId}" style="all: unset;">${preProcess(code)}</pre>`;
 		}
@@ -140,13 +159,13 @@ export function extendMarkdownItWithMermaid(md: MarkdownIt, config: { languageId
 
 function preProcess(source: string): string {
 	return source
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/\n+$/, '')
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/\n+$/, "")
 		.trimStart();
 }
 
 function escapeRegExp(string: string): string {
-	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

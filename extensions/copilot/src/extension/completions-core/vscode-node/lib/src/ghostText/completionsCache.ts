@@ -13,7 +13,10 @@ interface CompletionsCacheContents {
 	}[];
 }
 
-export const ICompletionsCacheService = createServiceIdentifier<ICompletionsCacheService>('ICompletionsCacheService');
+export const ICompletionsCacheService =
+	createServiceIdentifier<ICompletionsCacheService>(
+		'ICompletionsCacheService',
+	);
 export interface ICompletionsCacheService {
 	readonly _serviceBrand: undefined;
 
@@ -37,16 +40,21 @@ export class CompletionsCache implements ICompletionsCacheService {
 		return this.cache.findAll(prefix).flatMap(({ remainingKey, value }) =>
 			value.content
 				.filter(
-					c =>
+					(c) =>
 						c.suffix === suffix &&
 						c.choice.completionText.startsWith(remainingKey) &&
-						c.choice.completionText.length > remainingKey.length
+						c.choice.completionText.length > remainingKey.length,
 				)
-				.map(c => ({
+				.map((c) => ({
 					...c.choice,
-					completionText: c.choice.completionText.slice(remainingKey.length),
-					telemetryData: c.choice.telemetryData.extendedBy({}, { foundOffset: remainingKey.length }),
-				}))
+					completionText: c.choice.completionText.slice(
+						remainingKey.length,
+					),
+					telemetryData: c.choice.telemetryData.extendedBy(
+						{},
+						{ foundOffset: remainingKey.length },
+					),
+				})),
 		);
 	}
 
@@ -56,7 +64,9 @@ export class CompletionsCache implements ICompletionsCacheService {
 		// Append to an existing array if there is an exact match.
 		if (existing.length > 0 && existing[0].remainingKey === '') {
 			const content = existing[0].value.content;
-			this.cache.set(prefix, { content: [...content, { suffix, choice }] });
+			this.cache.set(prefix, {
+				content: [...content, { suffix, choice }],
+			});
 		} else {
 			// Otherwise, add a new value.
 			this.cache.set(prefix, { content: [{ suffix, choice }] });

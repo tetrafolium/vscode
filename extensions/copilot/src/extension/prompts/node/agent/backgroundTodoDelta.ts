@@ -6,20 +6,31 @@
 import type * as vscode from 'vscode';
 import { URI } from '../../../../util/vs/base/common/uri';
 import { Turn } from '../../../prompt/common/conversation';
-import { IBuildPromptContext, IToolCallRound } from '../../../prompt/common/intents';
+import {
+	IBuildPromptContext,
+	IToolCallRound,
+} from '../../../prompt/common/intents';
 import { classifyTool } from './backgroundTodoProcessor';
 
 /**
  * Extract the session resource as a Uri from a prompt context.
  */
-export function extractSessionResource(promptContext: IBuildPromptContext): vscode.Uri | undefined {
+export function extractSessionResource(
+	promptContext: IBuildPromptContext,
+): vscode.Uri | undefined {
 	const fromRequest = promptContext.request?.sessionResource;
 	if (fromRequest) {
 		return fromRequest;
 	}
-	const fromToken = (promptContext.tools?.toolInvocationToken as { sessionResource?: string | vscode.Uri } | undefined)?.sessionResource;
+	const fromToken = (
+		promptContext.tools?.toolInvocationToken as
+			| { sessionResource?: string | vscode.Uri }
+			| undefined
+	)?.sessionResource;
 	if (fromToken) {
-		return typeof fromToken === 'string' ? URI.parse(fromToken) as vscode.Uri : fromToken;
+		return typeof fromToken === 'string'
+			? (URI.parse(fromToken) as vscode.Uri)
+			: fromToken;
 	}
 	return undefined;
 }
@@ -72,7 +83,6 @@ export interface IBackgroundTodoDeltaMetadata {
  * to request a delta and what to do with it.
  */
 export class BackgroundTodoDeltaTracker {
-
 	/** Set of round IDs already processed by the background todo agent. */
 	private readonly _processedRoundIds = new Set<string>();
 
@@ -84,7 +94,9 @@ export class BackgroundTodoDeltaTracker {
 	 * Returns `undefined` when there is no new activity since the last
 	 * committed cursor position.
 	 */
-	peekDelta(promptContext: IBuildPromptContext): IBackgroundTodoDelta | undefined {
+	peekDelta(
+		promptContext: IBuildPromptContext,
+	): IBackgroundTodoDelta | undefined {
 		const currentRounds = promptContext.toolCallRounds ?? [];
 		const newRounds: IToolCallRound[] = [];
 		const seenRoundIds = new Set<string>();
@@ -93,7 +105,10 @@ export class BackgroundTodoDeltaTracker {
 		// pruned first if the background prompt exceeds its budget.
 		for (const turn of promptContext.history) {
 			for (const round of turn.rounds) {
-				if (!this._processedRoundIds.has(round.id) && !seenRoundIds.has(round.id)) {
+				if (
+					!this._processedRoundIds.has(round.id) &&
+					!seenRoundIds.has(round.id)
+				) {
 					seenRoundIds.add(round.id);
 					newRounds.push(round);
 				}
@@ -101,7 +116,10 @@ export class BackgroundTodoDeltaTracker {
 		}
 
 		for (const round of currentRounds) {
-			if (!this._processedRoundIds.has(round.id) && !seenRoundIds.has(round.id)) {
+			if (
+				!this._processedRoundIds.has(round.id) &&
+				!seenRoundIds.has(round.id)
+			) {
 				seenRoundIds.add(round.id);
 				newRounds.push(round);
 			}
@@ -169,7 +187,9 @@ export class BackgroundTodoDeltaTracker {
 	 * Convenience alias that behaves like the old `getDelta` — peeks and
 	 * returns the snapshot without committing.
 	 */
-	getDelta(promptContext: IBuildPromptContext): IBackgroundTodoDelta | undefined {
+	getDelta(
+		promptContext: IBuildPromptContext,
+	): IBackgroundTodoDelta | undefined {
 		return this.peekDelta(promptContext);
 	}
 

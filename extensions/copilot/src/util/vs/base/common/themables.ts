@@ -17,14 +17,17 @@ export interface ThemeColor {
 
 export namespace ThemeColor {
 	export function isThemeColor(obj: unknown): obj is ThemeColor {
-		return !!obj && typeof obj === 'object' && typeof (<ThemeColor>obj).id === 'string';
+		return (
+			!!obj &&
+			typeof obj === 'object' &&
+			typeof (<ThemeColor>obj).id === 'string'
+		);
 	}
 }
 
 export function themeColorFromId(id: ColorIdentifier) {
 	return { id };
 }
-
 
 export interface ThemeIcon {
 	readonly id: string;
@@ -37,7 +40,9 @@ export namespace ThemeIcon {
 	export const iconModifierExpression = '~[A-Za-z]+';
 	export const iconNameCharacter = '[A-Za-z0-9~-]';
 
-	const ThemeIconIdRegex = new RegExp(`^(${iconNameExpression})(${iconModifierExpression})?$`);
+	const ThemeIconIdRegex = new RegExp(
+		`^(${iconNameExpression})(${iconModifierExpression})?$`,
+	);
 
 	export function asClassNameArray(icon: ThemeIcon): string[] {
 		const match = ThemeIconIdRegex.exec(icon.id);
@@ -61,10 +66,18 @@ export namespace ThemeIcon {
 	}
 
 	export function isThemeIcon(obj: unknown): obj is ThemeIcon {
-		return !!obj && typeof obj === 'object' && typeof (<ThemeIcon>obj).id === 'string' && (typeof (<ThemeIcon>obj).color === 'undefined' || ThemeColor.isThemeColor((<ThemeIcon>obj).color));
+		return (
+			!!obj &&
+			typeof obj === 'object' &&
+			typeof (<ThemeIcon>obj).id === 'string' &&
+			(typeof (<ThemeIcon>obj).color === 'undefined' ||
+				ThemeColor.isThemeColor((<ThemeIcon>obj).color))
+		);
 	}
 
-	const _regexFromString = new RegExp(`^\\$\\((${ThemeIcon.iconNameExpression}(?:${ThemeIcon.iconModifierExpression})?)\\)$`);
+	const _regexFromString = new RegExp(
+		`^\\$\\((${ThemeIcon.iconNameExpression}(?:${ThemeIcon.iconModifierExpression})?)\\)$`,
+	);
 
 	export function fromString(str: string): ThemeIcon | undefined {
 		const match = _regexFromString.exec(str);
@@ -79,7 +92,10 @@ export namespace ThemeIcon {
 		return { id };
 	}
 
-	export function modify(icon: ThemeIcon, modifier: 'disabled' | 'spin' | undefined): ThemeIcon {
+	export function modify(
+		icon: ThemeIcon,
+		modifier: 'disabled' | 'spin' | undefined,
+	): ThemeIcon {
 		let id = icon.id;
 		const tildeIndex = id.lastIndexOf('~');
 		if (tildeIndex !== -1) {

@@ -8,7 +8,7 @@ import { IExtensionContribution } from '../../common/contributions';
 
 export class LifecycleTelemetryContrib implements IExtensionContribution {
 	constructor(
-		@ITelemetryService private readonly telemetryService: ITelemetryService
+		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		telemetryService.sendGHTelemetryEvent('extension.activate');
 	}

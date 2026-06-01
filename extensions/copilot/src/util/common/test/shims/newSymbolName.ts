@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 export enum NewSymbolNameTag {
-	AIGenerated = 1
+	AIGenerated = 1,
 }
 
 export enum NewSymbolNameTriggerKind {

@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { parse } from '../parser';
-import { strictEqual } from 'node:assert';
+import fs from "node:fs";
+import path from "node:path";
+import { parse } from "../parser";
+import { strictEqual } from "node:assert";
 
 function parseCommand(command: string): string {
-	return JSON.stringify(parse(command), null, '  ');
+	return JSON.stringify(parse(command), null, "  ");
 }
 
 /**
@@ -22,15 +22,15 @@ function getData(
 	nameComment: string,
 ): [name: string, value: string][] {
 	if (!fs.existsSync(filePath)) {
-		fs.writeFileSync(filePath, '');
+		fs.writeFileSync(filePath, "");
 		return [];
 	}
 	return fs
-		.readFileSync(filePath, { encoding: 'utf8' })
-		.replaceAll('\r\n', '\n')
-		.split('\n\n')
+		.readFileSync(filePath, { encoding: "utf8" })
+		.replaceAll("\r\n", "\n")
+		.split("\n\n")
 		.map((testCase) => {
-			const firstNewline = testCase.indexOf('\n');
+			const firstNewline = testCase.indexOf("\n");
 			const title = testCase.slice(0, firstNewline);
 			const block = testCase.slice(firstNewline);
 			return [title.slice(nameComment.length).trim(), block.trim()];
@@ -70,16 +70,19 @@ function getData(
 // 	];
 // }
 
-suite('fig/shell-parser/ fixtures', () => {
-	const fixturesPath = path.join(__dirname, '../../../../fixtures/shell-parser');
+suite("fig/shell-parser/ fixtures", () => {
+	const fixturesPath = path.join(
+		__dirname,
+		"../../../../fixtures/shell-parser",
+	);
 	const fixtures = fs.readdirSync(fixturesPath);
 	for (const fixture of fixtures) {
 		// console.log('fixture', fixture);
 		suite(fixture, () => {
-			const inputFile = path.join(fixturesPath, fixture, 'input.sh');
-			const outputFile = path.join(fixturesPath, fixture, 'output.txt');
-			const inputData = new Map(getData(inputFile, '###'));
-			const outputData = new Map(getData(outputFile, '//'));
+			const inputFile = path.join(fixturesPath, fixture, "input.sh");
+			const outputFile = path.join(fixturesPath, fixture, "output.txt");
+			const inputData = new Map(getData(inputFile, "###"));
+			const outputData = new Map(getData(outputFile, "//"));
 
 			// clean diffs and regenerate files if required.
 			// if (!process.env.NO_FIXTURES_EDIT) {
@@ -97,7 +100,7 @@ suite('fig/shell-parser/ fixtures', () => {
 				if (caseName) {
 					test(caseName, () => {
 						const output = outputData.get(caseName);
-						strictEqual(parseCommand(input ?? ''), output);
+						strictEqual(parseCommand(input ?? ""), output);
 					});
 				}
 			}

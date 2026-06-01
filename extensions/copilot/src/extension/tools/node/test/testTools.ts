@@ -14,11 +14,19 @@ import { IPromptPathRepresentationService } from '../../../../platform/prompts/c
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry';
 import { IWorkspaceService } from '../../../../platform/workspace/common/workspaceService';
 import { IInstantiationService } from '../../../../util/vs/platform/instantiation/common/instantiation';
-import { LanguageModelPromptTsxPart, LanguageModelToolResult } from '../../../../vscodeTypes';
+import {
+	LanguageModelPromptTsxPart,
+	LanguageModelToolResult,
+} from '../../../../vscodeTypes';
 import { renderPromptElementJSON } from '../../../prompts/node/base/promptRenderer';
 import { ICodeMapperService } from '../../../prompts/node/codeMapper/codeMapperService';
 import { IEditToolLearningService } from '../../common/editToolLearningService';
-import { ContributedToolName, mapContributedToolNamesInSchema, mapContributedToolNamesInString, ToolName } from '../../common/toolNames';
+import {
+	ContributedToolName,
+	mapContributedToolNamesInSchema,
+	mapContributedToolNamesInString,
+	ToolName,
+} from '../../common/toolNames';
 import { IToolsService } from '../../common/toolsService';
 import { ActionType } from '../applyPatch/parser';
 import { EditFileResult } from '../editFileToolResult';
@@ -38,50 +46,89 @@ export class TestEditFileTool extends EditFileTool {
 
 	constructor(
 		private readonly stream: vscode.ChatResponseStream,
-		@ICodeMapperService private readonly codeMapperService: ICodeMapperService,
+		@ICodeMapperService
+		private readonly codeMapperService: ICodeMapperService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IWorkspaceService workspaceService: IWorkspaceService,
-		@IPromptPathRepresentationService promptPathRepresentationService: IPromptPathRepresentationService,
+		@IPromptPathRepresentationService
+		promptPathRepresentationService: IPromptPathRepresentationService,
 		@IToolsService toolsService: IToolsService,
 		@INotebookService notebookService: INotebookService,
-		@ILanguageDiagnosticsService languageDiagnosticsService: ILanguageDiagnosticsService,
-		@IAlternativeNotebookContentService alternativeNotebookContentService: IAlternativeNotebookContentService,
+		@ILanguageDiagnosticsService
+		languageDiagnosticsService: ILanguageDiagnosticsService,
+		@IAlternativeNotebookContentService
+		alternativeNotebookContentService: IAlternativeNotebookContentService,
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IEndpointProvider endpointProvider: IEndpointProvider,
-		@IEditToolLearningService editToolLearningService: IEditToolLearningService,
+		@IEditToolLearningService
+		editToolLearningService: IEditToolLearningService,
 		@ILogService logService: ILogService,
 	) {
-		super(promptPathRepresentationService, instantiationService, workspaceService, toolsService, notebookService, languageDiagnosticsService, alternativeNotebookContentService, telemetryService, endpointProvider, editToolLearningService, logService);
-		const contributedTool = packageJson.contributes.languageModelTools.find(contributedTool => contributedTool.name === ContributedToolName.EditFile);
+		super(
+			promptPathRepresentationService,
+			instantiationService,
+			workspaceService,
+			toolsService,
+			notebookService,
+			languageDiagnosticsService,
+			alternativeNotebookContentService,
+			telemetryService,
+			endpointProvider,
+			editToolLearningService,
+			logService,
+		);
+		const contributedTool = packageJson.contributes.languageModelTools.find(
+			(contributedTool) =>
+				contributedTool.name === ContributedToolName.EditFile,
+		);
 		if (!contributedTool) {
-			throw new Error(`Tool ${ContributedToolName.EditFile} is not in package.json`);
+			throw new Error(
+				`Tool ${ContributedToolName.EditFile} is not in package.json`,
+			);
 		}
 		this.info = {
 			name: ToolName.EditFile,
 			tags: contributedTool.tags ?? [],
-			description: mapContributedToolNamesInString(contributedTool.modelDescription),
+			description: mapContributedToolNamesInString(
+				contributedTool.modelDescription,
+			),
 			source: undefined,
-			inputSchema: contributedTool.inputSchema && mapContributedToolNamesInSchema(contributedTool.inputSchema),
+			inputSchema:
+				contributedTool.inputSchema &&
+				mapContributedToolNamesInSchema(contributedTool.inputSchema),
 		};
 	}
 
-	override async invoke(options: vscode.LanguageModelToolInvocationOptions<IEditToolParams>, token: vscode.CancellationToken) {
+	override async invoke(
+		options: vscode.LanguageModelToolInvocationOptions<IEditToolParams>,
+		token: vscode.CancellationToken,
+	) {
 		const parameters: IEditToolParams = options.input;
-		const uri = this.promptPathRepresentationService.resolveFilePath(options.input.filePath);
+		const uri = this.promptPathRepresentationService.resolveFilePath(
+			options.input.filePath,
+		);
 		if (!uri) {
 			throw new Error('Invalid file path');
 		}
 
 		const mapperResult = await this.codeMapperService.mapCode(
 			{
-				codeBlock: { code: parameters.code, resource: uri, markdownBeforeBlock: parameters.explanation },
+				codeBlock: {
+					code: parameters.code,
+					resource: uri,
+					markdownBeforeBlock: parameters.explanation,
+				},
 			},
-			this.stream, undefined, token);
+			this.stream,
+			undefined,
+			token,
+		);
 		if (mapperResult?.errorDetails) {
 			throw new Error(mapperResult.errorDetails.message);
 		}
 
-		const document = await this.workspaceService.openTextDocumentAndSnapshot(uri);
+		const document =
+			await this.workspaceService.openTextDocumentAndSnapshot(uri);
 
 		// Showing the document is necessary for some extensions to report diagnostics when running in the ext host simulator
 		await this.workspaceService.showTextDocument(document.document);
@@ -91,16 +138,27 @@ export class TestEditFileTool extends EditFileTool {
 				await renderPromptElementJSON(
 					this.instantiationService,
 					EditFileResult,
-					{ files: [{ operation: ActionType.UPDATE, uri, isNotebook: false }], toolName: ToolName.EditFile, requestId: 'test', model: undefined },
+					{
+						files: [
+							{
+								operation: ActionType.UPDATE,
+								uri,
+								isNotebook: false,
+							},
+						],
+						toolName: ToolName.EditFile,
+						requestId: 'test',
+						model: undefined,
+					},
 					// If we are not called with tokenization options, have _some_ fake tokenizer
 					// otherwise we end up returning the entire document
 					options.tokenizationOptions ?? {
 						tokenBudget: 1000,
-						countTokens: (t) => Promise.resolve(t.length * 3 / 4)
+						countTokens: (t) => Promise.resolve((t.length * 3) / 4),
 					},
 					token,
 				),
-			)
+			),
 		]);
 	}
 }

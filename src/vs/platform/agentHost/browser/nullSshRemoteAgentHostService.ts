@@ -3,9 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Event } from '../../../base/common/event.js';
-import { URI } from '../../../base/common/uri.js';
-import type { ISSHRemoteAgentHostService, ISSHAgentHostConnection, ISSHAgentHostConfig, ISSHConnectProgress, ISSHResolvedConfig } from '../common/sshRemoteAgentHost.js';
+import { Event } from "../../../base/common/event.js";
+import { URI } from "../../../base/common/uri.js";
+import type {
+	ISSHRemoteAgentHostService,
+	ISSHAgentHostConnection,
+	ISSHAgentHostConfig,
+	ISSHConnectProgress,
+	ISSHResolvedConfig,
+} from "../common/sshRemoteAgentHost.js";
 
 /**
  * Null implementation of {@link ISSHRemoteAgentHostService} for browser contexts
@@ -17,18 +23,20 @@ export class NullSSHRemoteAgentHostService implements ISSHRemoteAgentHostService
 	readonly onDidReportConnectProgress: Event<ISSHConnectProgress> = Event.None;
 	readonly connections: readonly ISSHAgentHostConnection[] = [];
 
-	async connect(_config: ISSHAgentHostConfig): Promise<ISSHAgentHostConnection> {
-		throw new Error('SSH connections are not supported in the browser.');
+	async connect(
+		_config: ISSHAgentHostConfig,
+	): Promise<ISSHAgentHostConnection> {
+		throw new Error("SSH connections are not supported in the browser.");
 	}
 
-	async disconnect(_host: string): Promise<void> { }
+	async disconnect(_host: string): Promise<void> {}
 
 	async listSSHConfigHosts(): Promise<string[]> {
 		return [];
 	}
 
 	async ensureUserSSHConfig(): Promise<URI> {
-		throw new Error('SSH is not supported in the browser.');
+		throw new Error("SSH is not supported in the browser.");
 	}
 
 	async listSSHConfigFiles(): Promise<URI[]> {
@@ -36,10 +44,13 @@ export class NullSSHRemoteAgentHostService implements ISSHRemoteAgentHostService
 	}
 
 	async resolveSSHConfig(_host: string): Promise<ISSHResolvedConfig> {
-		throw new Error('SSH is not supported in the browser.');
+		throw new Error("SSH is not supported in the browser.");
 	}
 
-	async reconnect(_sshConfigHost: string, _name: string): Promise<ISSHAgentHostConnection> {
-		throw new Error('SSH connections are not supported in the browser.');
+	async reconnect(
+		_sshConfigHost: string,
+		_name: string,
+	): Promise<ISSHAgentHostConnection> {
+		throw new Error("SSH connections are not supported in the browser.");
 	}
 }

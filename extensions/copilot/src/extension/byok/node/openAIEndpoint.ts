@@ -4,14 +4,26 @@
  *--------------------------------------------------------------------------------------------*/
 import type { CancellationToken } from 'vscode';
 import { IChatMLFetcher } from '../../../platform/chat/common/chatMLFetcher';
-import { ChatFetchResponseType, ChatResponse } from '../../../platform/chat/common/commonTypes';
-import { ConfigKey, IConfigurationService } from '../../../platform/configuration/common/configurationService';
+import {
+	ChatFetchResponseType,
+	ChatResponse,
+} from '../../../platform/chat/common/commonTypes';
+import {
+	ConfigKey,
+	IConfigurationService,
+} from '../../../platform/configuration/common/configurationService';
 import { IDomainService } from '../../../platform/endpoint/common/domainService';
 import { IChatModelInformation } from '../../../platform/endpoint/common/endpointProvider';
 import { ChatEndpoint } from '../../../platform/endpoint/node/chatEndpoint';
 import { ILogService } from '../../../platform/log/common/logService';
 import { isOpenAiFunctionTool } from '../../../platform/networking/common/fetch';
-import { createCapiRequestBody, IChatEndpoint, ICreateEndpointBodyOptions, IEndpointBody, IMakeChatRequestOptions } from '../../../platform/networking/common/networking';
+import {
+	createCapiRequestBody,
+	IChatEndpoint,
+	ICreateEndpointBodyOptions,
+	IEndpointBody,
+	IMakeChatRequestOptions,
+} from '../../../platform/networking/common/networking';
 import { RawMessageConversionCallback } from '../../../platform/networking/common/openai';
 import { IChatWebSocketManager } from '../../../platform/networking/node/chatWebSocketManager';
 import { IExperimentationService } from '../../../platform/telemetry/common/nullExperimentationService';
@@ -19,7 +31,10 @@ import { ITokenizerProvider } from '../../../platform/tokenizer/node/tokenizer';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 
 function hydrateBYOKErrorMessages(response: ChatResponse): ChatResponse {
-	if (response.type === ChatFetchResponseType.Failed && response.streamError) {
+	if (
+		response.type === ChatFetchResponseType.Failed &&
+		response.streamError
+	) {
 		return {
 			type: response.type,
 			requestId: response.requestId,
@@ -31,11 +46,13 @@ function hydrateBYOKErrorMessages(response: ChatResponse): ChatResponse {
 			type: response.type,
 			requestId: response.requestId,
 			serverRequestId: response.serverRequestId,
-			reason: response.capiError ? 'Rate limit exceeded\n\n' + JSON.stringify(response.capiError) : 'Rate limit exceeded',
+			reason: response.capiError
+				? 'Rate limit exceeded\n\n' + JSON.stringify(response.capiError)
+				: 'Rate limit exceeded',
 			rateLimitKey: '',
 			retryAfter: undefined,
 			isAuto: false,
-			capiError: response.capiError
+			capiError: response.capiError,
 		};
 	}
 	return response;
@@ -50,7 +67,11 @@ export function isBYOKModel(endpoint: IChatEndpoint | undefined): number {
 	if (!endpoint) {
 		return -1;
 	}
-	return (endpoint instanceof OpenAIEndpoint || endpoint.isExtensionContributed) ? 1 : (endpoint.customModel ? 2 : -1);
+	return endpoint instanceof OpenAIEndpoint || endpoint.isExtensionContributed
+		? 1
+		: endpoint.customModel
+			? 2
+			: -1;
 }
 
 export class OpenAIEndpoint extends ChatEndpoint {
@@ -103,7 +124,8 @@ export class OpenAIEndpoint extends ChatEndpoint {
 	]);
 
 	// RFC 7230 compliant header name pattern: token characters only
-	private static readonly _validHeaderNamePattern = /^[!#$%&'*+\-.0-9A-Z^_`a-z|~]+$/;
+	private static readonly _validHeaderNamePattern =
+		/^[!#$%&'*+\-.0-9A-Z^_`a-z|~]+$/;
 
 	// Maximum limits to prevent abuse
 	private static readonly _maxHeaderNameLength = 256;
@@ -118,11 +140,12 @@ export class OpenAIEndpoint extends ChatEndpoint {
 		@IDomainService domainService: IDomainService,
 		@IChatMLFetcher chatMLFetcher: IChatMLFetcher,
 		@ITokenizerProvider tokenizerProvider: ITokenizerProvider,
-		@IInstantiationService protected instantiationService: IInstantiationService,
+		@IInstantiationService
+		protected instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IExperimentationService expService: IExperimentationService,
 		@IChatWebSocketManager chatWebSocketService: IChatWebSocketManager,
-		@ILogService protected logService: ILogService
+		@ILogService protected logService: ILogService,
 	) {
 		super(
 			_modelMetadata,
@@ -133,9 +156,11 @@ export class OpenAIEndpoint extends ChatEndpoint {
 			configurationService,
 			expService,
 			chatWebSocketService,
-			logService
+			logService,
 		);
-		this._customHeaders = this._sanitizeCustomHeaders(_modelMetadata.requestHeaders);
+		this._customHeaders = this._sanitizeCustomHeaders(
+			_modelMetadata.requestHeaders,
+		);
 	}
 
 	/**
@@ -149,7 +174,9 @@ export class OpenAIEndpoint extends ChatEndpoint {
 		return OpenAIEndpoint._reservedHeaders.has(lowerKey);
 	}
 
-	private _sanitizeCustomHeaders(headers: Readonly<Record<string, string>> | undefined): Record<string, string> {
+	private _sanitizeCustomHeaders(
+		headers: Readonly<Record<string, string>> | undefined,
+	): Record<string, string> {
 		if (!headers) {
 			return {};
 		}
@@ -157,7 +184,9 @@ export class OpenAIEndpoint extends ChatEndpoint {
 		const entries = Object.entries(headers);
 
 		if (entries.length > OpenAIEndpoint._maxCustomHeaderCount) {
-			this.logService.warn(`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has ${entries.length} custom headers, exceeding limit of ${OpenAIEndpoint._maxCustomHeaderCount}. Only first ${OpenAIEndpoint._maxCustomHeaderCount} will be processed.`);
+			this.logService.warn(
+				`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has ${entries.length} custom headers, exceeding limit of ${OpenAIEndpoint._maxCustomHeaderCount}. Only first ${OpenAIEndpoint._maxCustomHeaderCount} will be processed.`,
+			);
 		}
 
 		const sanitized: Record<string, string> = {};
@@ -170,45 +199,63 @@ export class OpenAIEndpoint extends ChatEndpoint {
 
 			const key = rawKey.trim();
 			if (!key) {
-				this.logService.warn(`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has empty header name, skipping.`);
+				this.logService.warn(
+					`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has empty header name, skipping.`,
+				);
 				continue;
 			}
 
 			if (key.length > OpenAIEndpoint._maxHeaderNameLength) {
-				this.logService.warn(`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has header name exceeding ${OpenAIEndpoint._maxHeaderNameLength} characters, skipping.`);
+				this.logService.warn(
+					`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has header name exceeding ${OpenAIEndpoint._maxHeaderNameLength} characters, skipping.`,
+				);
 				continue;
 			}
 
 			if (!OpenAIEndpoint._validHeaderNamePattern.test(key)) {
-				this.logService.warn(`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has invalid header name format: '${key}', Skipping.`);
+				this.logService.warn(
+					`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has invalid header name format: '${key}', Skipping.`,
+				);
 				continue;
 			}
 
 			const lowerKey = key.toLowerCase();
 			if (this._isReservedHeader(lowerKey)) {
-				this.logService.warn(`[OpenAIEndpoint] Model '${this.modelMetadata.id}' attempted to override reserved header '${key}', skipping.`);
+				this.logService.warn(
+					`[OpenAIEndpoint] Model '${this.modelMetadata.id}' attempted to override reserved header '${key}', skipping.`,
+				);
 				continue;
 			}
 
 			// Check for pattern-based forbidden headers
 			if (lowerKey.startsWith('proxy-') || lowerKey.startsWith('sec-')) {
-				this.logService.warn(`[OpenAIEndpoint] Model '${this.modelMetadata.id}' attempted to set forbidden header pattern '${key}', skipping.`);
+				this.logService.warn(
+					`[OpenAIEndpoint] Model '${this.modelMetadata.id}' attempted to set forbidden header pattern '${key}', skipping.`,
+				);
 				continue;
 			}
 
 			// Check for X-HTTP-Method* headers with forbidden methods
-			if ((lowerKey === 'x-http-method' || lowerKey === 'x-http-method-override' || lowerKey === 'x-method-override')) {
+			if (
+				lowerKey === 'x-http-method' ||
+				lowerKey === 'x-http-method-override' ||
+				lowerKey === 'x-method-override'
+			) {
 				const forbiddenMethods = ['connect', 'trace', 'track'];
 				const methodValue = String(rawValue).toLowerCase().trim();
 				if (forbiddenMethods.includes(methodValue)) {
-					this.logService.warn(`[OpenAIEndpoint] Model '${this.modelMetadata.id}' attempted to set forbidden method '${methodValue}' in header '${key}', skipping.`);
+					this.logService.warn(
+						`[OpenAIEndpoint] Model '${this.modelMetadata.id}' attempted to set forbidden method '${methodValue}' in header '${key}', skipping.`,
+					);
 					continue;
 				}
 			}
 
 			const sanitizedValue = this._sanitizeHeaderValue(rawValue);
 			if (sanitizedValue === undefined) {
-				this.logService.warn(`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has invalid value for header '${key}': '${rawValue}', skipping.`);
+				this.logService.warn(
+					`[OpenAIEndpoint] Model '${this.modelMetadata.id}' has invalid value for header '${key}': '${rawValue}', skipping.`,
+				);
 				continue;
 			}
 
@@ -245,7 +292,9 @@ export class OpenAIEndpoint extends ChatEndpoint {
 		return trimmed;
 	}
 
-	override createRequestBody(options: ICreateEndpointBodyOptions): IEndpointBody {
+	override createRequestBody(
+		options: ICreateEndpointBodyOptions,
+	): IEndpointBody {
 		if (this.useResponsesApi) {
 			// Handle Responses API: customize the body directly
 			const zdr = !!this.modelMetadata.zeroDataRetentionEnabled;
@@ -260,7 +309,10 @@ export class OpenAIEndpoint extends ChatEndpoint {
 				body.reasoning = undefined;
 				body.include = undefined;
 			}
-			if (body.previous_response_id && (!body.previous_response_id.startsWith('resp_') || zdr)) {
+			if (
+				body.previous_response_id &&
+				(!body.previous_response_id.startsWith('resp_') || zdr)
+			) {
 				// Don't use a response ID from CAPI or when zero data retention is enabled
 				body.previous_response_id = undefined;
 			}
@@ -271,11 +323,14 @@ export class OpenAIEndpoint extends ChatEndpoint {
 			return super.createRequestBody(options);
 		} else {
 			// Handle Chat Completions: provide callback for thinking data processing
-			const supportsThinking = !!this.modelMetadata.capabilities.supports.thinking;
+			const supportsThinking =
+				!!this.modelMetadata.capabilities.supports.thinking;
 			const callback: RawMessageConversionCallback = (out, data) => {
 				if (data && data.id) {
 					out.cot_id = data.id;
-					const text = Array.isArray(data.text) ? data.text.join('') : data.text;
+					const text = Array.isArray(data.text)
+						? data.text.join('')
+						: data.text;
 					out.cot_summary = text;
 					if (supportsThinking) {
 						// Reasoning models require the assistant message to echo back its
@@ -300,16 +355,27 @@ export class OpenAIEndpoint extends ChatEndpoint {
 	 * `IChatModelInformation.reasoningEffortFormat` overrides the default so users hosting OpenAI-compatible servers
 	 * with diverging conventions (e.g. nested `reasoning.effort` on `/chat/completions`) can opt in deterministically.
 	 */
-	private _applyReasoningEffort(body: IEndpointBody, options: ICreateEndpointBodyOptions): void {
+	private _applyReasoningEffort(
+		body: IEndpointBody,
+		options: ICreateEndpointBodyOptions,
+	): void {
 		const supports = this.supportsReasoningEffort;
 		if (!supports?.length) {
 			return;
 		}
-		const format = this.modelMetadata.reasoningEffortFormat
-			?? (this.useResponsesApi ? 'responses' : 'chat-completions');
-		const override = this._configurationService.getConfig(ConfigKey.Advanced.ReasoningEffortOverride);
-		const requested = override || options.modelCapabilities?.reasoningEffort || body.reasoning?.effort || body.reasoning_effort;
-		const effort = requested && supports.includes(requested) ? requested : undefined;
+		const format =
+			this.modelMetadata.reasoningEffortFormat ??
+			(this.useResponsesApi ? 'responses' : 'chat-completions');
+		const override = this._configurationService.getConfig(
+			ConfigKey.Advanced.ReasoningEffortOverride,
+		);
+		const requested =
+			override ||
+			options.modelCapabilities?.reasoningEffort ||
+			body.reasoning?.effort ||
+			body.reasoning_effort;
+		const effort =
+			requested && supports.includes(requested) ? requested : undefined;
 		// Scrub any pre-populated effort first so unsupported values (e.g. the hard-coded `medium` default
 		// from `createResponsesRequestBody`) cannot leak through, then write the resolved value into the
 		// expected shape.
@@ -335,9 +401,15 @@ export class OpenAIEndpoint extends ChatEndpoint {
 		}
 
 		if (body?.tools) {
-			body.tools = body.tools.map(tool => {
-				if (isOpenAiFunctionTool(tool) && tool.function.parameters === undefined) {
-					tool.function.parameters = { type: 'object', properties: {} };
+			body.tools = body.tools.map((tool) => {
+				if (
+					isOpenAiFunctionTool(tool) &&
+					tool.function.parameters === undefined
+				) {
+					tool.function.parameters = {
+						type: 'object',
+						properties: {},
+					};
 				}
 				return tool;
 			});
@@ -359,7 +431,7 @@ export class OpenAIEndpoint extends ChatEndpoint {
 				delete body.max_tokens;
 			}
 			if (!this.useResponsesApi && !this.useMessagesApi && body.stream) {
-				body['stream_options'] = { 'include_usage': true };
+				body['stream_options'] = { include_usage: true };
 			}
 		}
 	}
@@ -370,7 +442,7 @@ export class OpenAIEndpoint extends ChatEndpoint {
 
 	public override getExtraHeaders(): Record<string, string> {
 		const headers: Record<string, string> = {
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
 		};
 		if (this._modelUrl.includes('openai.azure')) {
 			headers['api-key'] = this._apiKey;
@@ -383,14 +455,30 @@ export class OpenAIEndpoint extends ChatEndpoint {
 		return headers;
 	}
 
-	override cloneWithTokenOverride(modelMaxPromptTokens: number): IChatEndpoint {
-		const newModelInfo = { ...this.modelMetadata, maxInputTokens: modelMaxPromptTokens };
-		return this.instantiationService.createInstance(OpenAIEndpoint, newModelInfo, this._apiKey, this._modelUrl);
+	override cloneWithTokenOverride(
+		modelMaxPromptTokens: number,
+	): IChatEndpoint {
+		const newModelInfo = {
+			...this.modelMetadata,
+			maxInputTokens: modelMaxPromptTokens,
+		};
+		return this.instantiationService.createInstance(
+			OpenAIEndpoint,
+			newModelInfo,
+			this._apiKey,
+			this._modelUrl,
+		);
 	}
 
-	public override async makeChatRequest2(options: IMakeChatRequestOptions, token: CancellationToken): Promise<ChatResponse> {
+	public override async makeChatRequest2(
+		options: IMakeChatRequestOptions,
+		token: CancellationToken,
+	): Promise<ChatResponse> {
 		// Use ignoreStatefulMarker: false as the initial request default; the parent retry flow can override it on InvalidStatefulMarker retries.
-		const modifiedOptions: IMakeChatRequestOptions = { ...options, ignoreStatefulMarker: options.ignoreStatefulMarker ?? false };
+		const modifiedOptions: IMakeChatRequestOptions = {
+			...options,
+			ignoreStatefulMarker: options.ignoreStatefulMarker ?? false,
+		};
 		const response = await super.makeChatRequest2(modifiedOptions, token);
 		return hydrateBYOKErrorMessages(response);
 	}

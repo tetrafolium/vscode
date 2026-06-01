@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Command } from '../commandManager';
-import { MarkdownItEngine } from '../markdownEngine';
-import { MarkdownPreviewManager } from '../preview/previewManager';
+import { Command } from "../commandManager";
+import { MarkdownItEngine } from "../markdownEngine";
+import { MarkdownPreviewManager } from "../preview/previewManager";
 
 export class RefreshPreviewCommand implements Command {
-	public readonly id = 'markdown.preview.refresh';
+	public readonly id = "markdown.preview.refresh";
 
 	readonly #webviewManager: MarkdownPreviewManager;
 	readonly #engine: MarkdownItEngine;
 
 	public constructor(
 		webviewManager: MarkdownPreviewManager,
-		engine: MarkdownItEngine
+		engine: MarkdownItEngine,
 	) {
 		this.#webviewManager = webviewManager;
 		this.#engine = engine;

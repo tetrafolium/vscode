@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { DeferredPromise, IntervalTimer } from '../../../../util/vs/base/common/async';
+import {
+	DeferredPromise,
+	IntervalTimer,
+} from '../../../../util/vs/base/common/async';
 import { CancellationToken } from '../../../../util/vs/base/common/cancellation';
 import { Emitter, Event } from '../../../../util/vs/base/common/event';
 import { Disposable } from '../../../../util/vs/base/common/lifecycle';
@@ -36,11 +39,12 @@ interface CodeSearchRepoTracker {
 
 	initialize(): Promise<void>;
 	getAllRepos(): Iterable<RepoEntry>;
-	diffWithIndexedCommit(repoInfo: RepoEntry): Promise<CodeSearchDiff | undefined>;
+	diffWithIndexedCommit(
+		repoInfo: RepoEntry,
+	): Promise<CodeSearchDiff | undefined>;
 }
 
 export class CodeSearchWorkspaceDiffTracker extends Disposable {
-
 	private static readonly _diffRefreshInterval = 1000 * 60 * 2; // 2 minutes
 
 	private static readonly _maxDiffFiles = 10000;
@@ -54,7 +58,9 @@ export class CodeSearchWorkspaceDiffTracker extends Disposable {
 	 */
 	private readonly _locallyChangedFiles = new ResourceSet();
 
-	private readonly _onDidChangeDiffFiles = this._register(new Emitter<readonly URI[]>());
+	private readonly _onDidChangeDiffFiles = this._register(
+		new Emitter<readonly URI[]>(),
+	);
 	public readonly onDidChangeDiffFiles = this._onDidChangeDiffFiles.event;
 
 	private readonly _diffRefreshTimer = this._register(new IntervalTimer());
@@ -65,35 +71,43 @@ export class CodeSearchWorkspaceDiffTracker extends Disposable {
 	constructor(
 		repoTracker: CodeSearchRepoTracker,
 		@ILogService private readonly _logService: ILogService,
-		@IWorkspaceFileIndex private readonly _workspaceFileIndex: IWorkspaceFileIndex,
-		@ISimulationTestContext private readonly _simulationTestContext: ISimulationTestContext,
+		@IWorkspaceFileIndex
+		private readonly _workspaceFileIndex: IWorkspaceFileIndex,
+		@ISimulationTestContext
+		private readonly _simulationTestContext: ISimulationTestContext,
 	) {
 		super();
 
 		this._repoTracker = repoTracker;
 
-		this._register(this._repoTracker.onDidAddOrUpdateRepo(repoEntry => {
-			if (repoEntry.status !== CodeSearchRepoStatus.Ready) {
-				return;
-			}
-			const entry = this._repos.get(repoEntry.info.rootUri);
-			if (entry) {
-				this.refreshRepoDiff(entry);
-			} else {
-				this.openRepo(repoEntry);
-			}
-		}));
-		this._register(this._repoTracker.onDidRemoveRepo(repo => this.closeRepo(repo)));
+		this._register(
+			this._repoTracker.onDidAddOrUpdateRepo((repoEntry) => {
+				if (repoEntry.status !== CodeSearchRepoStatus.Ready) {
+					return;
+				}
+				const entry = this._repos.get(repoEntry.info.rootUri);
+				if (entry) {
+					this.refreshRepoDiff(entry);
+				} else {
+					this.openRepo(repoEntry);
+				}
+			}),
+		);
+		this._register(
+			this._repoTracker.onDidRemoveRepo((repo) => this.closeRepo(repo)),
+		);
 
-		this._register(Event.any(
-			this._workspaceFileIndex.onDidCreateFiles,
-			this._workspaceFileIndex.onDidChangeFiles
-		)(async uris => {
-			for (const uri of uris) {
-				this._locallyChangedFiles.add(uri);
-			}
-			this._onDidChangeDiffFiles.fire(uris);
-		}));
+		this._register(
+			Event.any(
+				this._workspaceFileIndex.onDidCreateFiles,
+				this._workspaceFileIndex.onDidChangeFiles,
+			)(async (uris) => {
+				for (const uri of uris) {
+					this._locallyChangedFiles.add(uri);
+				}
+				this._onDidChangeDiffFiles.fire(uris);
+			}),
+		);
 
 		this._diffRefreshTimer.cancelAndSet(() => {
 			this.refreshRepoDiffs();
@@ -102,19 +116,24 @@ export class CodeSearchWorkspaceDiffTracker extends Disposable {
 		this.init();
 	}
 
-	@LogExecTime(self => self._logService, 'CodeSearchWorkspaceDiff::init')
+	@LogExecTime((self) => self._logService, 'CodeSearchWorkspaceDiff::init')
 	private async init() {
 		try {
 			await Promise.all([
 				this._workspaceFileIndex.initialize(),
-				this._repoTracker.initialize()
+				this._repoTracker.initialize(),
 			]);
 
-			await Promise.allSettled(Array.from(this._repoTracker.getAllRepos(), repo => {
-				if (repo.status === CodeSearchRepoStatus.Ready || repo.status === CodeSearchRepoStatus.NotYetIndexed) {
-					return this.openRepo(repo);
-				}
-			}));
+			await Promise.allSettled(
+				Array.from(this._repoTracker.getAllRepos(), (repo) => {
+					if (
+						repo.status === CodeSearchRepoStatus.Ready ||
+						repo.status === CodeSearchRepoStatus.NotYetIndexed
+					) {
+						return this.openRepo(repo);
+					}
+				}),
+			);
 		} finally {
 			this._initialized.complete();
 		}
@@ -153,8 +172,14 @@ export class CodeSearchWorkspaceDiffTracker extends Disposable {
 	/**
 	 * Get the diff file count per tracked repo.
 	 */
-	getRepoDiffCounts(): ReadonlyMap<URI, { state: string; diffFileCount: number }> {
-		const result = new ResourceMap<{ state: string; diffFileCount: number }>();
+	getRepoDiffCounts(): ReadonlyMap<
+		URI,
+		{ state: string; diffFileCount: number }
+	> {
+		const result = new ResourceMap<{
+			state: string;
+			diffFileCount: number;
+		}>();
 		for (const [uri, repoEntry] of this._repos) {
 			result.set(uri, {
 				state: RepoState[repoEntry.state],
@@ -181,40 +206,67 @@ export class CodeSearchWorkspaceDiffTracker extends Disposable {
 		this._repos.delete(info.info.rootUri);
 	}
 
-	private async tryGetDiffedIndexedFiles(info: RepoEntry): Promise<URI[] | undefined> {
+	private async tryGetDiffedIndexedFiles(
+		info: RepoEntry,
+	): Promise<URI[] | undefined> {
 		const diff = await this.tryGetDiff(info);
-		this._logService.trace(`CodeSearchWorkspaceDiff::tryGetDiffedIndexedFiles() Got ${diff?.changes.length ?? 0} initially changed files for ${info.info.rootUri}`);
+		this._logService.trace(
+			`CodeSearchWorkspaceDiff::tryGetDiffedIndexedFiles() Got ${diff?.changes.length ?? 0} initially changed files for ${info.info.rootUri}`,
+		);
 		if (!diff) {
 			return;
 		}
 
 		const initialChanges = new ResourceSet();
-		await Promise.all(diff.changes.slice(0, CodeSearchWorkspaceDiffTracker._maxDiffFiles).map(async change => {
-			if (await this._workspaceFileIndex.shouldIndexWorkspaceFile(change.uri, CancellationToken.None)) {
-				initialChanges.add(change.uri);
-			}
-		}));
+		await Promise.all(
+			diff.changes
+				.slice(0, CodeSearchWorkspaceDiffTracker._maxDiffFiles)
+				.map(async (change) => {
+					if (
+						await this._workspaceFileIndex.shouldIndexWorkspaceFile(
+							change.uri,
+							CancellationToken.None,
+						)
+					) {
+						initialChanges.add(change.uri);
+					}
+				}),
+		);
 
-		this._logService.trace(`CodeSearchWorkspaceDiff::tryGetDiffedIndexedFiles() Returning ${initialChanges} changes for ${info.info.rootUri}`);
+		this._logService.trace(
+			`CodeSearchWorkspaceDiff::tryGetDiffedIndexedFiles() Returning ${initialChanges} changes for ${info.info.rootUri}`,
+		);
 
 		return Array.from(initialChanges);
 	}
 
-	private async tryGetDiff(repoInfo: RepoEntry): Promise<CodeSearchDiff | undefined> {
+	private async tryGetDiff(
+		repoInfo: RepoEntry,
+	): Promise<CodeSearchDiff | undefined> {
 		return this._repoTracker.diffWithIndexedCommit(repoInfo);
 	}
 
 	private async refreshRepoDiffs() {
-		await Promise.all(Array.from(this._repos.values(), repo => this.refreshRepoDiff(repo)));
-		this._logService.trace(`CodeSearchWorkspaceDiff: Refreshed all diffs. New local diffs count: ${this._locallyChangedFiles.size}`);
+		await Promise.all(
+			Array.from(this._repos.values(), (repo) =>
+				this.refreshRepoDiff(repo),
+			),
+		);
+		this._logService.trace(
+			`CodeSearchWorkspaceDiff: Refreshed all diffs. New local diffs count: ${this._locallyChangedFiles.size}`,
+		);
 	}
 
 	private async refreshRepoDiff(repo: RepoDiffState) {
-		this._logService.trace(`CodeSearchWorkspaceDiff: refreshing diff for ${repo.info.info.rootUri}`);
+		this._logService.trace(
+			`CodeSearchWorkspaceDiff: refreshing diff for ${repo.info.info.rootUri}`,
+		);
 
 		if (this._simulationTestContext.isInSimulationTests) {
 			// In simulation tests, we don't want to refresh the diff
-			this._logService.trace(`CodeSearchWorkspaceDiff: Skipping diff refresh for ${repo.info.info.rootUri} in simulation tests`);
+			this._logService.trace(
+				`CodeSearchWorkspaceDiff: Skipping diff refresh for ${repo.info.info.rootUri} in simulation tests`,
+			);
 			repo.state = RepoState.Ready;
 			return;
 		}
@@ -228,29 +280,43 @@ export class CodeSearchWorkspaceDiffTracker extends Disposable {
 					repo.initialChanges.add(changedFile);
 				}
 
-				this._logService.trace(`CodeSearchWorkspaceDiff: Refreshed diff for ${repo.info.info.rootUri}. New diff count: ${repo.initialChanges.size}`);
+				this._logService.trace(
+					`CodeSearchWorkspaceDiff: Refreshed diff for ${repo.info.info.rootUri}. New diff count: ${repo.initialChanges.size}`,
+				);
 
 				// Delete any local changes that have no longer changed
 				for (const locallyChangedFile of this._locallyChangedFiles) {
-					if (isEqualOrParent(locallyChangedFile, repo.info.info.rootUri)) {
-						const file = this._workspaceFileIndex.get(locallyChangedFile);
+					if (
+						isEqualOrParent(
+							locallyChangedFile,
+							repo.info.info.rootUri,
+						)
+					) {
+						const file =
+							this._workspaceFileIndex.get(locallyChangedFile);
 						if (file) {
 							// The diff git returns to use only includes the files from disk.
 							// Any dirty files still have to be considered changed.
 							if (!file.isDirty()) {
-								this._locallyChangedFiles.delete(locallyChangedFile);
+								this._locallyChangedFiles.delete(
+									locallyChangedFile,
+								);
 							}
 						}
 					}
 				}
 				repo.state = RepoState.Ready;
-
 			} else {
-				this._logService.error(`CodeSearchWorkspaceDiff: Failed to get new diff for ${repo.info.info.rootUri}.`);
+				this._logService.error(
+					`CodeSearchWorkspaceDiff: Failed to get new diff for ${repo.info.info.rootUri}.`,
+				);
 				repo.state = RepoState.Error;
 			}
 		} catch (e) {
-			this._logService.error(`CodeSearchWorkspaceDiff: Failed to refresh diff for ${repo.info.info.rootUri}.`, e);
+			this._logService.error(
+				`CodeSearchWorkspaceDiff: Failed to refresh diff for ${repo.info.info.rootUri}.`,
+				e,
+			);
 			repo.state = RepoState.Error;
 		}
 	}
@@ -260,4 +326,3 @@ export interface CodeSearchDiff {
 	readonly changes: readonly Change[];
 	readonly mayBeOutdated?: boolean;
 }
-

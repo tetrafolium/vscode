@@ -5,10 +5,19 @@
 
 import * as vscode from 'vscode';
 import { ITelemetryService } from '../../../platform/telemetry/common/telemetry';
-import { getLanguage, getLanguageForResource, ILanguage, WellKnownLanguageId, wellKnownLanguages } from '../../../util/common/languages';
+import {
+	getLanguage,
+	getLanguageForResource,
+	ILanguage,
+	WellKnownLanguageId,
+	wellKnownLanguages,
+} from '../../../util/common/languages';
 import { isUri } from '../../../util/common/types';
 import { createSha256Hash } from '../../../util/common/crypto';
-import { IInstantiationService, ServicesAccessor } from '../../../util/vs/platform/instantiation/common/instantiation';
+import {
+	IInstantiationService,
+	ServicesAccessor,
+} from '../../../util/vs/platform/instantiation/common/instantiation';
 import { Location, Range, Uri } from '../../../vscodeTypes';
 import { findWordInReferences } from '../../linkify/vscode-node/findWord';
 import { PromptReference } from '../../prompt/common/conversation';
@@ -40,32 +49,69 @@ const languageReferenceGroups: readonly Set<string>[] = [
 	]),
 
 	// Put all other languages in their own group
-	...Array.from(wellKnownLanguages.keys(), lang => new Set([lang]))
+	...Array.from(wellKnownLanguages.keys(), (lang) => new Set([lang])),
 ];
 
 /**
  * Provides support for Intellisense chat code blocks.
  */
-class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode.ImplementationProvider, vscode.TypeDefinitionProvider, vscode.HoverProvider {
-
+class CodeBlockIntelliSenseProvider
+	implements
+		vscode.DefinitionProvider,
+		vscode.ImplementationProvider,
+		vscode.TypeDefinitionProvider,
+		vscode.HoverProvider
+{
 	constructor(
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@IInstantiationService
+		private readonly instantiationService: IInstantiationService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
-	) { }
+	) {}
 
-	async provideDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.LocationLink[] | undefined> {
-		return this.goTo('vscode.experimental.executeDefinitionProvider_recursive', document, position, token);
+	async provideDefinition(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		token: vscode.CancellationToken,
+	): Promise<vscode.LocationLink[] | undefined> {
+		return this.goTo(
+			'vscode.experimental.executeDefinitionProvider_recursive',
+			document,
+			position,
+			token,
+		);
 	}
 
-	async provideImplementation(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.LocationLink[] | undefined> {
-		return this.goTo('vscode.experimental.executeImplementationProvider_recursive', document, position, token);
+	async provideImplementation(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		token: vscode.CancellationToken,
+	): Promise<vscode.LocationLink[] | undefined> {
+		return this.goTo(
+			'vscode.experimental.executeImplementationProvider_recursive',
+			document,
+			position,
+			token,
+		);
 	}
 
-	async provideTypeDefinition(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.LocationLink[] | undefined> {
-		return this.goTo('vscode.experimental.executeTypeDefinitionProvider_recursive', document, position, token);
+	async provideTypeDefinition(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		token: vscode.CancellationToken,
+	): Promise<vscode.LocationLink[] | undefined> {
+		return this.goTo(
+			'vscode.experimental.executeTypeDefinitionProvider_recursive',
+			document,
+			position,
+			token,
+		);
 	}
 
-	async provideHover(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.Hover | undefined> {
+	async provideHover(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		token: vscode.CancellationToken,
+	): Promise<vscode.Hover | undefined> {
 		const localHoverResponse = await this.execHover(document.uri, position);
 		const localHovers = this.filterOutGenericHovers(localHoverResponse);
 		if (localHovers?.length) {
@@ -76,13 +122,20 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 			return;
 		}
 
-		const referencesCtx = await this.getReferencesContext(document, position, token);
+		const referencesCtx = await this.getReferencesContext(
+			document,
+			position,
+			token,
+		);
 		if (!referencesCtx || token.isCancellationRequested) {
 			return;
 		}
 
 		for (const wordMatch of referencesCtx.wordMatches) {
-			const hovers = await this.execHover(wordMatch.uri, wordMatch.range.start);
+			const hovers = await this.execHover(
+				wordMatch.uri,
+				wordMatch.range.start,
+			);
 			if (token.isCancellationRequested) {
 				return;
 			}
@@ -94,19 +147,33 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 		return this.convertHover(localHoverResponse);
 	}
 
-	private async execHover(uri: Uri, position: vscode.Position): Promise<vscode.Hover[]> {
-		return vscode.commands.executeCommand<vscode.Hover[]>('vscode.experimental.executeHoverProvider_recursive', uri, position);
+	private async execHover(
+		uri: Uri,
+		position: vscode.Position,
+	): Promise<vscode.Hover[]> {
+		return vscode.commands.executeCommand<vscode.Hover[]>(
+			'vscode.experimental.executeHoverProvider_recursive',
+			uri,
+			position,
+		);
 	}
 
-	private convertHover(hovers: readonly vscode.Hover[]): vscode.Hover | undefined {
-		return hovers.length ?
-			new vscode.Hover(hovers.flatMap(x => x.contents), hovers[0].range)
+	private convertHover(
+		hovers: readonly vscode.Hover[],
+	): vscode.Hover | undefined {
+		return hovers.length
+			? new vscode.Hover(
+					hovers.flatMap((x) => x.contents),
+					hovers[0].range,
+				)
 			: undefined;
 	}
 
-	private filterOutGenericHovers(localHoverResponse: vscode.Hover[]): vscode.Hover[] {
-		return localHoverResponse.filter(hover => {
-			return hover.contents.some(entry => {
+	private filterOutGenericHovers(
+		localHoverResponse: vscode.Hover[],
+	): vscode.Hover[] {
+		return localHoverResponse.filter((hover) => {
+			return hover.contents.some((entry) => {
 				if (typeof entry === 'string') {
 					return entry.length;
 				}
@@ -126,8 +193,12 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 		});
 	}
 
-
-	private async goTo(command: string, document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<vscode.LocationLink[] | undefined> {
+	private async goTo(
+		command: string,
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		token: vscode.CancellationToken,
+	): Promise<vscode.LocationLink[] | undefined> {
 		const codeBlockId = await createSha256Hash(document.uri.fragment);
 		if (token.isCancellationRequested) {
 			return;
@@ -148,7 +219,11 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 			codeBlockId,
 		});
 
-		const localLocations = await this.executeGoToInChatBlocks(command, document, position);
+		const localLocations = await this.executeGoToInChatBlocks(
+			command,
+			document,
+			position,
+		);
 		if (localLocations?.length) {
 			return localLocations;
 		}
@@ -157,10 +232,19 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 			return;
 		}
 
-		return this.executeGoToInChatReferences(command, document, position, token);
+		return this.executeGoToInChatReferences(
+			command,
+			document,
+			position,
+			token,
+		);
 	}
 
-	private async executeGoToInChatBlocks(command: string, document: vscode.TextDocument, position: vscode.Position): Promise<vscode.LocationLink[] | undefined> {
+	private async executeGoToInChatBlocks(
+		command: string,
+		document: vscode.TextDocument,
+		position: vscode.Position,
+	): Promise<vscode.LocationLink[] | undefined> {
 		const result = await this.executeGoTo(command, document.uri, position);
 		return result?.map((result): vscode.LocationLink => {
 			if ('uri' in result) {
@@ -174,18 +258,33 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 		});
 	}
 
-	private async executeGoTo(command: string, uri: vscode.Uri, position: vscode.Position): Promise<Array<vscode.Location | vscode.LocationLink> | undefined> {
-		return vscode.commands.executeCommand<Array<vscode.Location | vscode.LocationLink>>(command, uri, position);
+	private async executeGoTo(
+		command: string,
+		uri: vscode.Uri,
+		position: vscode.Position,
+	): Promise<Array<vscode.Location | vscode.LocationLink> | undefined> {
+		return vscode.commands.executeCommand<
+			Array<vscode.Location | vscode.LocationLink>
+		>(command, uri, position);
 	}
 
-	private async executeGoToInChatReferences(command: string, document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<Array<vscode.LocationLink> | undefined> {
+	private async executeGoToInChatReferences(
+		command: string,
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		token: vscode.CancellationToken,
+	): Promise<Array<vscode.LocationLink> | undefined> {
 		const ctx = await this.getReferencesContext(document, position, token);
 		if (!ctx || token.isCancellationRequested) {
 			return;
 		}
 
 		for (const wordMatch of ctx.wordMatches) {
-			const result = await this.executeGoTo(command, wordMatch.uri, wordMatch.range.start);
+			const result = await this.executeGoTo(
+				command,
+				wordMatch.uri,
+				wordMatch.range.start,
+			);
 			if (token.isCancellationRequested) {
 				return;
 			}
@@ -213,7 +312,13 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 		return undefined;
 	}
 
-	private async getReferencesContext(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Promise<{ wordRange: vscode.Range; wordMatches: vscode.Location[] } | undefined> {
+	private async getReferencesContext(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		token: vscode.CancellationToken,
+	): Promise<
+		{ wordRange: vscode.Range; wordMatches: vscode.Location[] } | undefined
+	> {
 		const references = this.getReferences(document);
 		if (!references?.length) {
 			return;
@@ -225,11 +330,16 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 		}
 
 		const word = document.getText(wordRange);
-		const wordMatches = await this.instantiationService.invokeFunction(accessor => findWordInReferences(accessor, references, word, {}, token));
+		const wordMatches = await this.instantiationService.invokeFunction(
+			(accessor) =>
+				findWordInReferences(accessor, references, word, {}, token),
+		);
 		return { wordRange, wordMatches };
 	}
 
-	private getReferences(document: vscode.TextDocument): readonly PromptReference[] {
+	private getReferences(
+		document: vscode.TextDocument,
+	): readonly PromptReference[] {
 		const refs = this.extractReferences(document);
 
 		// Filter out references that don't belong to the same language family
@@ -240,7 +350,7 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 			return refs;
 		}
 
-		return refs.filter(ref => {
+		return refs.filter((ref) => {
 			const uri = refToUri(ref);
 			if (!uri) {
 				return false;
@@ -255,19 +365,31 @@ class CodeBlockIntelliSenseProvider implements vscode.DefinitionProvider, vscode
 		});
 	}
 
-	private extractReferences(document: vscode.TextDocument): readonly PromptReference[] {
+	private extractReferences(
+		document: vscode.TextDocument,
+	): readonly PromptReference[] {
 		try {
 			const fragment = decodeURIComponent(document.uri.fragment);
 			const parsedFragment = JSON.parse(fragment);
-			return parsedFragment.references.map((ref: any): PromptReference => {
-				if ('range' in ref) {
-					return new PromptReference(new Location(
-						Uri.from(ref.uri),
-						new Range(ref.range.startLineNumber - 1, ref.range.startColumn - 1, ref.range.endLineNumber - 1, ref.range.endColumn - 1)));
-				} else {
-					return new PromptReference(Uri.from(ref.uri));
-				}
-			});
+			return parsedFragment.references.map(
+				(ref: any): PromptReference => {
+					if ('range' in ref) {
+						return new PromptReference(
+							new Location(
+								Uri.from(ref.uri),
+								new Range(
+									ref.range.startLineNumber - 1,
+									ref.range.startColumn - 1,
+									ref.range.endLineNumber - 1,
+									ref.range.endColumn - 1,
+								),
+							),
+						);
+					} else {
+						return new PromptReference(Uri.from(ref.uri));
+					}
+				},
+			);
 		} catch {
 			return [];
 		}
@@ -279,16 +401,25 @@ function refToUri(ref: PromptReference) {
 		? ref.anchor
 		: 'uri' in ref.anchor
 			? ref.anchor.uri
-			: 'value' in ref.anchor && isUri(ref.anchor.value) ? ref.anchor.value : undefined;
+			: 'value' in ref.anchor && isUri(ref.anchor.value)
+				? ref.anchor.value
+				: undefined;
 }
 
 function getReferenceGroupForLanguage(docLang: ILanguage) {
-	return languageReferenceGroups.find(group => group.has(docLang.languageId));
+	return languageReferenceGroups.find((group) =>
+		group.has(docLang.languageId),
+	);
 }
 
 export function register(accessor: ServicesAccessor): vscode.Disposable {
-	const goToProvider = accessor.get(IInstantiationService).createInstance(CodeBlockIntelliSenseProvider);
-	const selector: vscode.DocumentSelector = { scheme: codeBlockScheme, exclusive: true };
+	const goToProvider = accessor
+		.get(IInstantiationService)
+		.createInstance(CodeBlockIntelliSenseProvider);
+	const selector: vscode.DocumentSelector = {
+		scheme: codeBlockScheme,
+		exclusive: true,
+	};
 
 	return vscode.Disposable.from(
 		vscode.languages.registerDefinitionProvider(selector, goToProvider),

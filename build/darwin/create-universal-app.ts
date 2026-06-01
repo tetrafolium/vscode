@@ -3,16 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import path from 'path';
-import fs from 'fs';
-import minimatch from 'minimatch';
-import { makeUniversalApp } from 'vscode-universal-bundler';
+import path from "path";
+import fs from "fs";
+import minimatch from "minimatch";
+import { makeUniversalApp } from "vscode-universal-bundler";
 
 const root = path.dirname(path.dirname(import.meta.dirname));
 
 const nodeModulesBases = [
-	path.join('Contents', 'Resources', 'app', 'node_modules'),
-	path.join('Contents', 'Resources', 'app', 'node_modules.asar.unpacked')
+	path.join("Contents", "Resources", "app", "node_modules"),
+	path.join("Contents", "Resources", "app", "node_modules.asar.unpacked"),
 ];
 
 /**
@@ -21,7 +21,11 @@ const nodeModulesBases = [
  * platform-specific native module directories that npm only installs for the
  * host architecture.
  */
-function crossCopyPlatformDir(x64AppPath: string, arm64AppPath: string, relativePath: string): void {
+function crossCopyPlatformDir(
+	x64AppPath: string,
+	arm64AppPath: string,
+	relativePath: string,
+): void {
 	const inX64 = path.join(x64AppPath, relativePath);
 	const inArm64 = path.join(arm64AppPath, relativePath);
 
@@ -35,19 +39,32 @@ function crossCopyPlatformDir(x64AppPath: string, arm64AppPath: string, relative
 }
 
 async function main(buildDir?: string) {
-	const arch = process.env['VSCODE_ARCH'];
+	const arch = process.env["VSCODE_ARCH"];
 
 	if (!buildDir) {
-		throw new Error('Build dir not provided');
+		throw new Error("Build dir not provided");
 	}
 
-	const product = JSON.parse(fs.readFileSync(path.join(root, 'product.json'), 'utf8'));
-	const appName = product.nameLong + '.app';
-	const x64AppPath = path.join(buildDir, 'VSCode-darwin-x64', appName);
-	const arm64AppPath = path.join(buildDir, 'VSCode-darwin-arm64', appName);
-	const asarRelativePath = path.join('Contents', 'Resources', 'app', 'node_modules.asar');
+	const product = JSON.parse(
+		fs.readFileSync(path.join(root, "product.json"), "utf8"),
+	);
+	const appName = product.nameLong + ".app";
+	const x64AppPath = path.join(buildDir, "VSCode-darwin-x64", appName);
+	const arm64AppPath = path.join(buildDir, "VSCode-darwin-arm64", appName);
+	const asarRelativePath = path.join(
+		"Contents",
+		"Resources",
+		"app",
+		"node_modules.asar",
+	);
 	const outAppPath = path.join(buildDir, `VSCode-darwin-${arch}`, appName);
-	const productJsonPath = path.resolve(outAppPath, 'Contents', 'Resources', 'app', 'product.json');
+	const productJsonPath = path.resolve(
+		outAppPath,
+		"Contents",
+		"Resources",
+		"app",
+		"product.json",
+	);
 
 	// Copilot SDK ships platform-specific native binaries that npm only installs
 	// for the host architecture. The universal app merger requires both builds to
@@ -55,47 +72,89 @@ async function main(buildDir?: string) {
 	// other build. The binaries are then excluded from comparison (filesToSkip)
 	// and the x64 binary is tagged as arch-specific (x64ArchFiles) so the merger
 	// keeps both.
-	for (const plat of ['darwin-x64', 'darwin-arm64']) {
+	for (const plat of ["darwin-x64", "darwin-arm64"]) {
 		for (const base of nodeModulesBases) {
 			// @github/copilot-{platform} packages (e.g. copilot-darwin-x64)
-			crossCopyPlatformDir(x64AppPath, arm64AppPath, path.join(base, '@github', `copilot-${plat}`));
+			crossCopyPlatformDir(
+				x64AppPath,
+				arm64AppPath,
+				path.join(base, "@github", `copilot-${plat}`),
+			);
 			// @github/copilot/prebuilds/{platform} (pty.node, spawn-helper)
-			crossCopyPlatformDir(x64AppPath, arm64AppPath, path.join(base, '@github', 'copilot', 'prebuilds', plat));
+			crossCopyPlatformDir(
+				x64AppPath,
+				arm64AppPath,
+				path.join(base, "@github", "copilot", "prebuilds", plat),
+			);
 			// @vscode/ripgrep-universal/bin/{platform} (rg binary)
-			crossCopyPlatformDir(x64AppPath, arm64AppPath, path.join(base, '@vscode', 'ripgrep-universal', 'bin', plat));
+			crossCopyPlatformDir(
+				x64AppPath,
+				arm64AppPath,
+				path.join(base, "@vscode", "ripgrep-universal", "bin", plat),
+			);
 		}
 
-		const copilotExtensionNodeModules = path.join('Contents', 'Resources', 'app', 'extensions', 'copilot', 'node_modules');
+		const copilotExtensionNodeModules = path.join(
+			"Contents",
+			"Resources",
+			"app",
+			"extensions",
+			"copilot",
+			"node_modules",
+		);
 		// @github/copilot/sdk/prebuilds/{platform} (pty.node, spawn-helper)
-		crossCopyPlatformDir(x64AppPath, arm64AppPath, path.join(copilotExtensionNodeModules, '@github', 'copilot', 'sdk', 'prebuilds', plat));
+		crossCopyPlatformDir(
+			x64AppPath,
+			arm64AppPath,
+			path.join(
+				copilotExtensionNodeModules,
+				"@github",
+				"copilot",
+				"sdk",
+				"prebuilds",
+				plat,
+			),
+		);
 		// @github/copilot/sdk/ripgrep/bin/{platform} (ripgrep shim)
-		crossCopyPlatformDir(x64AppPath, arm64AppPath, path.join(copilotExtensionNodeModules, '@github', 'copilot', 'sdk', 'ripgrep', 'bin', plat));
+		crossCopyPlatformDir(
+			x64AppPath,
+			arm64AppPath,
+			path.join(
+				copilotExtensionNodeModules,
+				"@github",
+				"copilot",
+				"sdk",
+				"ripgrep",
+				"bin",
+				plat,
+			),
+		);
 	}
 
 	const filesToSkip = [
-		'**/CodeResources',
-		'**/Credits.rtf',
-		'**/policies/{*.mobileconfig,**/*.plist}',
-		'**/node_modules/@github/copilot-darwin-x64/**',
-		'**/node_modules/@github/copilot-darwin-arm64/**',
-		'**/node_modules.asar.unpacked/@github/copilot-darwin-x64/**',
-		'**/node_modules.asar.unpacked/@github/copilot-darwin-arm64/**',
-		'**/node_modules/@github/copilot/prebuilds/darwin-x64/**',
-		'**/node_modules/@github/copilot/prebuilds/darwin-arm64/**',
-		'**/node_modules.asar.unpacked/@github/copilot/prebuilds/darwin-x64/**',
-		'**/node_modules.asar.unpacked/@github/copilot/prebuilds/darwin-arm64/**',
-		'**/node_modules/@github/copilot/sdk/prebuilds/darwin-x64/**',
-		'**/node_modules/@github/copilot/sdk/prebuilds/darwin-arm64/**',
-		'**/node_modules/@github/copilot/sdk/ripgrep/bin/darwin-x64/**',
-		'**/node_modules/@github/copilot/sdk/ripgrep/bin/darwin-arm64/**',
-		'**/node_modules/@vscode/ripgrep-universal/bin/darwin-x64/**',
-		'**/node_modules/@vscode/ripgrep-universal/bin/darwin-arm64/**',
-		'**/node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/darwin-x64/**',
-		'**/node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/darwin-arm64/**',
+		"**/CodeResources",
+		"**/Credits.rtf",
+		"**/policies/{*.mobileconfig,**/*.plist}",
+		"**/node_modules/@github/copilot-darwin-x64/**",
+		"**/node_modules/@github/copilot-darwin-arm64/**",
+		"**/node_modules.asar.unpacked/@github/copilot-darwin-x64/**",
+		"**/node_modules.asar.unpacked/@github/copilot-darwin-arm64/**",
+		"**/node_modules/@github/copilot/prebuilds/darwin-x64/**",
+		"**/node_modules/@github/copilot/prebuilds/darwin-arm64/**",
+		"**/node_modules.asar.unpacked/@github/copilot/prebuilds/darwin-x64/**",
+		"**/node_modules.asar.unpacked/@github/copilot/prebuilds/darwin-arm64/**",
+		"**/node_modules/@github/copilot/sdk/prebuilds/darwin-x64/**",
+		"**/node_modules/@github/copilot/sdk/prebuilds/darwin-arm64/**",
+		"**/node_modules/@github/copilot/sdk/ripgrep/bin/darwin-x64/**",
+		"**/node_modules/@github/copilot/sdk/ripgrep/bin/darwin-arm64/**",
+		"**/node_modules/@vscode/ripgrep-universal/bin/darwin-x64/**",
+		"**/node_modules/@vscode/ripgrep-universal/bin/darwin-arm64/**",
+		"**/node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/darwin-x64/**",
+		"**/node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/darwin-arm64/**",
 		// @microsoft/mxc-sdk ships per-arch native binaries under bin/<arch>;
 		// the package includes both arm64 and x64 trees regardless of host arch.
-		'**/node_modules/@microsoft/mxc-sdk/bin/**',
-		'**/node_modules.asar.unpacked/@microsoft/mxc-sdk/bin/**',
+		"**/node_modules/@microsoft/mxc-sdk/bin/**",
+		"**/node_modules.asar.unpacked/@microsoft/mxc-sdk/bin/**",
 	];
 
 	await makeUniversalApp({
@@ -105,7 +164,8 @@ async function main(buildDir?: string) {
 		outAppPath,
 		force: true,
 		mergeASARs: true,
-		x64ArchFiles: '{*/kerberos.node,**/extensions/microsoft-authentication/dist/libmsalruntime.dylib,**/extensions/microsoft-authentication/dist/msal-node-runtime.node,**/node_modules/@github/copilot-darwin-*/copilot,**/node_modules/@github/copilot/prebuilds/darwin-*/*,**/node_modules.asar.unpacked/@github/copilot-darwin-*/copilot,**/node_modules.asar.unpacked/@github/copilot/prebuilds/darwin-*/*,**/extensions/copilot/node_modules/@github/copilot/sdk/prebuilds/darwin-*/*,**/extensions/copilot/node_modules/@github/copilot/sdk/ripgrep/bin/darwin-*/*,**/node_modules/@vscode/ripgrep-universal/bin/darwin-*/*,**/node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/darwin-*/*,**/node_modules/@microsoft/mxc-sdk/bin/**,**/node_modules.asar.unpacked/@microsoft/mxc-sdk/bin/**}',
+		x64ArchFiles:
+			"{*/kerberos.node,**/extensions/microsoft-authentication/dist/libmsalruntime.dylib,**/extensions/microsoft-authentication/dist/msal-node-runtime.node,**/node_modules/@github/copilot-darwin-*/copilot,**/node_modules/@github/copilot/prebuilds/darwin-*/*,**/node_modules.asar.unpacked/@github/copilot-darwin-*/copilot,**/node_modules.asar.unpacked/@github/copilot/prebuilds/darwin-*/*,**/extensions/copilot/node_modules/@github/copilot/sdk/prebuilds/darwin-*/*,**/extensions/copilot/node_modules/@github/copilot/sdk/ripgrep/bin/darwin-*/*,**/node_modules/@vscode/ripgrep-universal/bin/darwin-*/*,**/node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/darwin-*/*,**/node_modules/@microsoft/mxc-sdk/bin/**,**/node_modules.asar.unpacked/@microsoft/mxc-sdk/bin/**}",
 		filesToSkipComparison: (file: string) => {
 			for (const expected of filesToSkip) {
 				if (minimatch(file, expected)) {
@@ -113,18 +173,18 @@ async function main(buildDir?: string) {
 				}
 			}
 			return false;
-		}
+		},
 	});
 
-	const productJson = JSON.parse(fs.readFileSync(productJsonPath, 'utf8'));
+	const productJson = JSON.parse(fs.readFileSync(productJsonPath, "utf8"));
 	Object.assign(productJson, {
-		darwinUniversalAssetId: 'darwin-universal'
+		darwinUniversalAssetId: "darwin-universal",
 	});
-	fs.writeFileSync(productJsonPath, JSON.stringify(productJson, null, '\t'));
+	fs.writeFileSync(productJsonPath, JSON.stringify(productJson, null, "\t"));
 }
 
 if (import.meta.main) {
-	main(process.argv[2]).catch(err => {
+	main(process.argv[2]).catch((err) => {
 		console.error(err);
 		process.exit(1);
 	});

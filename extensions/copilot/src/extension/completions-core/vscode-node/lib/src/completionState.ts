@@ -3,7 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { Position, ProposedTextEdit, TextEdit } from '../../types/src';
-import { IntelliSenseInsertion, ITextDocument, type TextDocumentContents } from './textDocument';
+import {
+	IntelliSenseInsertion,
+	ITextDocument,
+	type TextDocumentContents,
+} from './textDocument';
 
 export class CompletionState {
 	readonly originalPosition: Position;
@@ -17,11 +21,14 @@ export class CompletionState {
 		edits: ProposedTextEdit[] = [],
 		originalPosition?: Position,
 		originalVersion?: number,
-		originalOffset?: number
+		originalOffset?: number,
 	) {
-		this.originalPosition = originalPosition ?? Position.create(_position.line, _position.character);
+		this.originalPosition =
+			originalPosition ??
+			Position.create(_position.line, _position.character);
 		this.originalVersion = originalVersion ?? _textDocument.version;
-		this.originalOffset = originalOffset ?? _textDocument.offsetAt(this.originalPosition);
+		this.originalOffset =
+			originalOffset ?? _textDocument.offsetAt(this.originalPosition);
 		this._editsWithPosition = [...edits];
 	}
 
@@ -37,14 +44,18 @@ export class CompletionState {
 		return [...this._editsWithPosition];
 	}
 
-	private updateState(textDocument: ITextDocument, position: Position, edits?: ProposedTextEdit[]): CompletionState {
+	private updateState(
+		textDocument: ITextDocument,
+		position: Position,
+		edits?: ProposedTextEdit[],
+	): CompletionState {
 		return new CompletionState(
 			textDocument,
 			position,
 			edits ?? this.editsWithPosition,
 			this.originalPosition,
 			this.originalVersion,
-			this.originalOffset
+			this.originalOffset,
 		);
 	}
 
@@ -52,8 +63,14 @@ export class CompletionState {
 		return this.updateState(this._textDocument, position);
 	}
 
-	addSelectedCompletionInfo(selectedCompletionInfo: IntelliSenseInsertion): CompletionState {
-		if (this.editsWithPosition.find(edit => edit.source === 'selectedCompletionInfo')) {
+	addSelectedCompletionInfo(
+		selectedCompletionInfo: IntelliSenseInsertion,
+	): CompletionState {
+		if (
+			this.editsWithPosition.find(
+				(edit) => edit.source === 'selectedCompletionInfo',
+			)
+		) {
 			throw new Error('Selected completion info already applied');
 		}
 
@@ -64,7 +81,10 @@ export class CompletionState {
 		return this.applyEdits([edit], true);
 	}
 
-	applyEdits(edits: TextEdit[], isSelectedCompletionInfo = false): CompletionState {
+	applyEdits(
+		edits: TextEdit[],
+		isSelectedCompletionInfo = false,
+	): CompletionState {
 		if (isSelectedCompletionInfo && edits.length > 1) {
 			throw new Error('Selected completion info should be a single edit');
 		}
@@ -85,7 +105,10 @@ export class CompletionState {
 				const edit: ProposedTextEdit = {
 					range,
 					newText,
-					positionAfterEdit: Position.create(position.line, position.character),
+					positionAfterEdit: Position.create(
+						position.line,
+						position.character,
+					),
 				};
 				if (isSelectedCompletionInfo) {
 					edit.source = 'selectedCompletionInfo';
@@ -101,7 +124,10 @@ export class CompletionState {
 			const edit: ProposedTextEdit = {
 				range,
 				newText,
-				positionAfterEdit: Position.create(position.line, position.character),
+				positionAfterEdit: Position.create(
+					position.line,
+					position.character,
+				),
 			};
 			if (isSelectedCompletionInfo) {
 				edit.source = 'selectedCompletionInfo';
@@ -113,6 +139,9 @@ export class CompletionState {
 	}
 }
 
-export function createCompletionState(textDocument: ITextDocument, position: Position): CompletionState {
+export function createCompletionState(
+	textDocument: ITextDocument,
+	position: Position,
+): CompletionState {
 	return new CompletionState(textDocument, position);
 }

@@ -3,9 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableStore, MutableDisposable } from '../../../../../../../base/common/lifecycle.js';
-import { Emitter, Event } from '../../../../../../../base/common/event.js';
-import { disposableTimeout } from '../../../../../../../base/common/async.js';
+import {
+	Disposable,
+	DisposableStore,
+	MutableDisposable,
+} from "../../../../../../../base/common/lifecycle.js";
+import { Emitter, Event } from "../../../../../../../base/common/event.js";
+import { disposableTimeout } from "../../../../../../../base/common/async.js";
 
 /**
  * The auto-expand algorithm for terminal tool progress parts.
@@ -68,9 +72,7 @@ export class TerminalToolAutoExpand extends Disposable {
 	private readonly _onDidRequestExpand = this._register(new Emitter<void>());
 	readonly onDidRequestExpand: Event<void> = this._onDidRequestExpand.event;
 
-	constructor(
-		private readonly _options: ITerminalToolAutoExpandOptions,
-	) {
+	constructor(private readonly _options: ITerminalToolAutoExpandOptions) {
 		super();
 		this._setupListeners();
 	}
@@ -78,54 +80,68 @@ export class TerminalToolAutoExpand extends Disposable {
 	private _setupListeners(): void {
 		const store = this._register(new DisposableStore());
 
-		store.add(this._options.onCommandExecuted(() => {
-			// Auto-expand for long-running commands:
-			if (this._options.shouldAutoExpand() && !this._noDataTimeout.value) {
-				this._noDataTimeout.value = disposableTimeout(() => {
-					this._noDataTimeout.clear();
-					const shouldExpand = this._options.shouldAutoExpand();
-					const hasOutput = this._options.hasRealOutput();
-					// Don't check receivedData here - data events can fire before onCommandExecuted
-					// (shell integration sequences), and the DataEvent path may not have expanded
-					// if hasRealOutput was false at that time
-					if (shouldExpand && hasOutput) {
-						// Cancel the DataEvent timeout since we're expanding via the NoData path
-						this._dataEventTimeout.clear();
-						this._onDidRequestExpand.fire();
-					}
-				}, TerminalToolAutoExpandTimeout.NoData, store);
-			}
-		}));
+		store.add(
+			this._options.onCommandExecuted(() => {
+				// Auto-expand for long-running commands:
+				if (this._options.shouldAutoExpand() && !this._noDataTimeout.value) {
+					this._noDataTimeout.value = disposableTimeout(
+						() => {
+							this._noDataTimeout.clear();
+							const shouldExpand = this._options.shouldAutoExpand();
+							const hasOutput = this._options.hasRealOutput();
+							// Don't check receivedData here - data events can fire before onCommandExecuted
+							// (shell integration sequences), and the DataEvent path may not have expanded
+							// if hasRealOutput was false at that time
+							if (shouldExpand && hasOutput) {
+								// Cancel the DataEvent timeout since we're expanding via the NoData path
+								this._dataEventTimeout.clear();
+								this._onDidRequestExpand.fire();
+							}
+						},
+						TerminalToolAutoExpandTimeout.NoData,
+						store,
+					);
+				}
+			}),
+		);
 
 		// 2. Wait for first data event - when hit, wait 50ms and expand if command not yet finished
 		// Also checks for real output since shell integration sequences trigger onWillData
 		// Important: We don't cancel _noDataTimeout here because early data might just be shell
 		// integration sequences. The NoData path should still run if the DataEvent path doesn't
 		// find real output.
-		store.add(this._options.onWillData(() => {
-			if (this._receivedData) {
-				return;
-			}
-			this._receivedData = true;
-			// Wait 50ms and expand if command hasn't finished yet and has real output
-			if (this._options.shouldAutoExpand() && !this._dataEventTimeout.value) {
-				this._dataEventTimeout.value = disposableTimeout(() => {
-					this._dataEventTimeout.clear();
-					const shouldExpand = this._options.shouldAutoExpand();
-					const hasOutput = this._options.hasRealOutput();
-					if (!this._commandFinished && shouldExpand && hasOutput) {
-						// Cancel the NoData timeout since we're expanding via the DataEvent path
-						this._noDataTimeout.clear();
-						this._onDidRequestExpand.fire();
-					}
-				}, TerminalToolAutoExpandTimeout.DataEvent, store);
-			}
-		}));
+		store.add(
+			this._options.onWillData(() => {
+				if (this._receivedData) {
+					return;
+				}
+				this._receivedData = true;
+				// Wait 50ms and expand if command hasn't finished yet and has real output
+				if (this._options.shouldAutoExpand() && !this._dataEventTimeout.value) {
+					this._dataEventTimeout.value = disposableTimeout(
+						() => {
+							this._dataEventTimeout.clear();
+							const shouldExpand = this._options.shouldAutoExpand();
+							const hasOutput = this._options.hasRealOutput();
+							if (!this._commandFinished && shouldExpand && hasOutput) {
+								// Cancel the NoData timeout since we're expanding via the DataEvent path
+								this._noDataTimeout.clear();
+								this._onDidRequestExpand.fire();
+							}
+						},
+						TerminalToolAutoExpandTimeout.DataEvent,
+						store,
+					);
+				}
+			}),
+		);
 
-		store.add(this._options.onCommandFinished(() => {
-			this._commandFinished = true;
-			this._clearAutoExpandTimeouts();
-		}));
+		store.add(
+			this._options.onCommandFinished(() => {
+				this._commandFinished = true;
+				this._clearAutoExpandTimeouts();
+			}),
+		);
 	}
 
 	private _clearAutoExpandTimeouts(): void {

@@ -12,7 +12,10 @@ import type { HttpHeaders, HttpResponse } from './fetchTypes';
 export interface CloneableResponse {
 	readonly status: number;
 	readonly headers: HttpHeaders;
-	readonly body: ReadableStream<Uint8Array> | { toReadableStream(): ReadableStream<Uint8Array> } | null;
+	readonly body:
+		| ReadableStream<Uint8Array>
+		| { toReadableStream(): ReadableStream<Uint8Array> }
+		| null;
 }
 
 /**
@@ -25,22 +28,35 @@ export interface CloneableResponse {
  * Accepts either an {@link HttpResponse} (with `ReadableStream` body) or a
  * platform `Response` (with `DestroyableStream` body) transparently.
  */
-export function cloneResponse(response: CloneableResponse): [HttpResponse, HttpResponse] {
+export function cloneResponse(
+	response: CloneableResponse,
+): [HttpResponse, HttpResponse] {
 	const { status, headers } = response;
 
 	if (!response.body) {
-		return [makeHttpResponse(status, headers, null), makeHttpResponse(status, headers, null)];
+		return [
+			makeHttpResponse(status, headers, null),
+			makeHttpResponse(status, headers, null),
+		];
 	}
 
-	const readable: ReadableStream<Uint8Array> = 'toReadableStream' in response.body
-		? response.body.toReadableStream()
-		: response.body;
+	const readable: ReadableStream<Uint8Array> =
+		'toReadableStream' in response.body
+			? response.body.toReadableStream()
+			: response.body;
 
 	const [a, b] = readable.tee();
-	return [makeHttpResponse(status, headers, a), makeHttpResponse(status, headers, b)];
+	return [
+		makeHttpResponse(status, headers, a),
+		makeHttpResponse(status, headers, b),
+	];
 }
 
-function makeHttpResponse(status: number, headers: HttpHeaders, body: ReadableStream<Uint8Array> | null): HttpResponse {
+function makeHttpResponse(
+	status: number,
+	headers: HttpHeaders,
+	body: ReadableStream<Uint8Array> | null,
+): HttpResponse {
 	return {
 		status,
 		headers,

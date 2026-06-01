@@ -39,13 +39,23 @@ export interface TreeSitterPointRange {
 /** Util functions to deal with `TreeSitterOffsetRange` type */
 export const TreeSitterOffsetRange = {
 	/** check if `container` contains `containee` (non-strict, ie [0, 3] contains [0, 3] */
-	doesContain: (container: TreeSitterOffsetRange, containee: TreeSitterOffsetRange): boolean => container.startIndex <= containee.startIndex && containee.endIndex <= container.endIndex,
+	doesContain: (
+		container: TreeSitterOffsetRange,
+		containee: TreeSitterOffsetRange,
+	): boolean =>
+		container.startIndex <= containee.startIndex &&
+		containee.endIndex <= container.endIndex,
 
-	ofSyntaxNode: (n: SyntaxNode): TreeSitterOffsetRange => ({ startIndex: n.startIndex, endIndex: n.endIndex }),
+	ofSyntaxNode: (n: SyntaxNode): TreeSitterOffsetRange => ({
+		startIndex: n.startIndex,
+		endIndex: n.endIndex,
+	}),
 
 	/** sort by `node.startIndex`, break ties by `node.endIndex` (so that nodes with same start index are sorted in descending order) */
-	compare: (a: TreeSitterOffsetRange, b: TreeSitterOffsetRange): number => a.startIndex - b.startIndex || b.endIndex - a.endIndex,
-	isEqual: (a: TreeSitterOffsetRange, b: TreeSitterOffsetRange): boolean => TreeSitterOffsetRange.compare(a, b) === 0,
+	compare: (a: TreeSitterOffsetRange, b: TreeSitterOffsetRange): number =>
+		a.startIndex - b.startIndex || b.endIndex - a.endIndex,
+	isEqual: (a: TreeSitterOffsetRange, b: TreeSitterOffsetRange): boolean =>
+		TreeSitterOffsetRange.compare(a, b) === 0,
 
 	doIntersect: (a: TreeSitterOffsetRange, b: TreeSitterOffsetRange) => {
 		const start = Math.max(a.startIndex, b.startIndex);
@@ -56,7 +66,10 @@ export const TreeSitterOffsetRange = {
 	len: (n: TreeSitterOffsetRange) => n.endIndex - n.startIndex,
 
 	/** Given offset ranges [a0, a1] and [b0, b1], returns overlap size */
-	intersectionSize: (a: TreeSitterOffsetRange, b: TreeSitterOffsetRange): number => {
+	intersectionSize: (
+		a: TreeSitterOffsetRange,
+		b: TreeSitterOffsetRange,
+	): number => {
 		const start = Math.max(a.startIndex, b.startIndex);
 		const end = Math.min(a.endIndex, b.endIndex);
 		return Math.max(end - start, 0);
@@ -64,18 +77,23 @@ export const TreeSitterOffsetRange = {
 
 	/** Check the given object extends TreeSitterOffsetRange  */
 	isTreeSitterOffsetRange(obj: any): obj is TreeSitterOffsetRange {
-		return typeof obj.startIndex === 'number' && typeof obj.endIndex === 'number';
+		return (
+			typeof obj.startIndex === 'number' &&
+			typeof obj.endIndex === 'number'
+		);
 	},
 };
 
 export const TreeSitterPoint = {
-
 	isEqual(n: TreeSitterPoint, other: TreeSitterPoint): boolean {
 		return n.row === other.row && n.column === other.column;
 	},
 
 	isBefore(n: TreeSitterPoint, other: TreeSitterPoint): boolean {
-		if (n.row < other.row || (n.row === other.row && n.column < other.column)) {
+		if (
+			n.row < other.row ||
+			(n.row === other.row && n.column < other.column)
+		) {
 			return true;
 		}
 		return false;
@@ -104,24 +122,38 @@ export const TreeSitterPoint = {
 
 	ofPoint: (n: Point): TreeSitterPoint => ({
 		row: n.row,
-		column: n.column
+		column: n.column,
 	}),
 };
 
 export const TreeSitterPointRange = {
-
 	/** check if `container` contains `containee` (non-strict) */
-	doesContain: (container: TreeSitterPointRange, containee: TreeSitterPointRange): boolean => {
-		return TreeSitterPoint.isBeforeOrEqual(container.startPosition, containee.startPosition) && TreeSitterPoint.isAfterOrEqual(container.endPosition, containee.endPosition);
+	doesContain: (
+		container: TreeSitterPointRange,
+		containee: TreeSitterPointRange,
+	): boolean => {
+		return (
+			TreeSitterPoint.isBeforeOrEqual(
+				container.startPosition,
+				containee.startPosition,
+			) &&
+			TreeSitterPoint.isAfterOrEqual(
+				container.endPosition,
+				containee.endPosition,
+			)
+		);
 	},
 
 	equals: (a: TreeSitterPointRange, b: TreeSitterPointRange): boolean => {
-		return TreeSitterPoint.equals(a.startPosition, b.startPosition) && TreeSitterPoint.equals(a.endPosition, b.endPosition);
+		return (
+			TreeSitterPoint.equals(a.startPosition, b.startPosition) &&
+			TreeSitterPoint.equals(a.endPosition, b.endPosition)
+		);
 	},
 
 	ofSyntaxNode: (n: SyntaxNode): TreeSitterPointRange => ({
 		startPosition: n.startPosition,
-		endPosition: n.endPosition
+		endPosition: n.endPosition,
 	}),
 };
 
@@ -165,7 +197,9 @@ export class OverlayNode {
 		public readonly children: OverlayNode[],
 	) {
 		if (startIndex > endIndex) {
-			throw new BugIndicatingError('startIndex must be less than endIndex');
+			throw new BugIndicatingError(
+				'startIndex must be less than endIndex',
+			);
 		}
 		let minStartIndex = startIndex;
 		for (const child of children) {
@@ -182,8 +216,10 @@ export class OverlayNode {
 	toString() {
 		const printedNodes: string[] = [];
 		function toString(node: OverlayNode, indent = '') {
-			printedNodes.push(`${indent}${node.kind} [${node.startIndex}, ${node.endIndex}]`);
-			node.children.forEach(child => toString(child, indent + '    '));
+			printedNodes.push(
+				`${indent}${node.kind} [${node.startIndex}, ${node.endIndex}]`,
+			);
+			node.children.forEach((child) => toString(child, indent + '    '));
 		}
 		toString(this);
 		return printedNodes.join('\n');

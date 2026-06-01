@@ -12,9 +12,7 @@
  *   the upstream MCP PR is merged or closed.
  */
 export namespace MCP {
-
 	// Nothing, yet
-
 }
 
 //#endregion
@@ -40,9 +38,9 @@ export namespace MCP {
 		| JSONRPCError;
 
 	/** @internal */
-	export const LATEST_PROTOCOL_VERSION = "2025-11-25";
+	export const LATEST_PROTOCOL_VERSION = '2025-11-25';
 	/** @internal */
-	export const JSONRPC_VERSION = "2.0";
+	export const JSONRPC_VERSION = '2.0';
 
 	/**
 	 * A progress token, used to associate progress notifications with the original request.
@@ -209,8 +207,10 @@ export namespace MCP {
 	 *
 	 * @internal
 	 */
-	export interface URLElicitationRequiredError
-		extends Omit<JSONRPCError, "error"> {
+	export interface URLElicitationRequiredError extends Omit<
+		JSONRPCError,
+		'error'
+	> {
 		error: Error & {
 			code: typeof URL_ELICITATION_REQUIRED;
 			data: {
@@ -264,7 +264,7 @@ export namespace MCP {
 	 * @category `notifications/cancelled`
 	 */
 	export interface CancelledNotification extends JSONRPCNotification {
-		method: "notifications/cancelled";
+		method: 'notifications/cancelled';
 		params: CancelledNotificationParams;
 	}
 
@@ -289,7 +289,7 @@ export namespace MCP {
 	 * @category `initialize`
 	 */
 	export interface InitializeRequest extends JSONRPCRequest {
-		method: "initialize";
+		method: 'initialize';
 		params: InitializeRequestParams;
 	}
 
@@ -320,7 +320,7 @@ export namespace MCP {
 	 * @category `notifications/initialized`
 	 */
 	export interface InitializedNotification extends JSONRPCNotification {
-		method: "notifications/initialized";
+		method: 'notifications/initialized';
 		params?: NotificationParams;
 	}
 
@@ -519,7 +519,7 @@ export namespace MCP {
 		 *
 		 * If not provided, the client should assume the icon can be used with any theme.
 		 */
-		theme?: "light" | "dark";
+		theme?: 'light' | 'dark';
 	}
 
 	/**
@@ -596,7 +596,7 @@ export namespace MCP {
 	 * @category `ping`
 	 */
 	export interface PingRequest extends JSONRPCRequest {
-		method: "ping";
+		method: 'ping';
 		params?: RequestParams;
 	}
 
@@ -636,7 +636,7 @@ export namespace MCP {
 	 * @category `notifications/progress`
 	 */
 	export interface ProgressNotification extends JSONRPCNotification {
-		method: "notifications/progress";
+		method: 'notifications/progress';
 		params: ProgressNotificationParams;
 	}
 
@@ -675,7 +675,7 @@ export namespace MCP {
 	 * @category `resources/list`
 	 */
 	export interface ListResourcesRequest extends PaginatedRequest {
-		method: "resources/list";
+		method: 'resources/list';
 	}
 
 	/**
@@ -693,7 +693,7 @@ export namespace MCP {
 	 * @category `resources/templates/list`
 	 */
 	export interface ListResourceTemplatesRequest extends PaginatedRequest {
-		method: "resources/templates/list";
+		method: 'resources/templates/list';
 	}
 
 	/**
@@ -724,7 +724,7 @@ export namespace MCP {
 	 *
 	 * @category `resources/read`
 	 */
-	export interface ReadResourceRequestParams extends ResourceRequestParams { }
+	export interface ReadResourceRequestParams extends ResourceRequestParams {}
 
 	/**
 	 * Sent from the client to the server, to read a specific resource URI.
@@ -732,7 +732,7 @@ export namespace MCP {
 	 * @category `resources/read`
 	 */
 	export interface ReadResourceRequest extends JSONRPCRequest {
-		method: "resources/read";
+		method: 'resources/read';
 		params: ReadResourceRequestParams;
 	}
 
@@ -751,7 +751,7 @@ export namespace MCP {
 	 * @category `notifications/resources/list_changed`
 	 */
 	export interface ResourceListChangedNotification extends JSONRPCNotification {
-		method: "notifications/resources/list_changed";
+		method: 'notifications/resources/list_changed';
 		params?: NotificationParams;
 	}
 
@@ -760,7 +760,7 @@ export namespace MCP {
 	 *
 	 * @category `resources/subscribe`
 	 */
-	export interface SubscribeRequestParams extends ResourceRequestParams { }
+	export interface SubscribeRequestParams extends ResourceRequestParams {}
 
 	/**
 	 * Sent from the client to request resources/updated notifications from the server whenever a particular resource changes.
@@ -768,7 +768,7 @@ export namespace MCP {
 	 * @category `resources/subscribe`
 	 */
 	export interface SubscribeRequest extends JSONRPCRequest {
-		method: "resources/subscribe";
+		method: 'resources/subscribe';
 		params: SubscribeRequestParams;
 	}
 
@@ -777,7 +777,7 @@ export namespace MCP {
 	 *
 	 * @category `resources/unsubscribe`
 	 */
-	export interface UnsubscribeRequestParams extends ResourceRequestParams { }
+	export interface UnsubscribeRequestParams extends ResourceRequestParams {}
 
 	/**
 	 * Sent from the client to request cancellation of resources/updated notifications from the server. This should follow a previous resources/subscribe request.
@@ -785,7 +785,7 @@ export namespace MCP {
 	 * @category `resources/unsubscribe`
 	 */
 	export interface UnsubscribeRequest extends JSONRPCRequest {
-		method: "resources/unsubscribe";
+		method: 'resources/unsubscribe';
 		params: UnsubscribeRequestParams;
 	}
 
@@ -809,7 +809,7 @@ export namespace MCP {
 	 * @category `notifications/resources/updated`
 	 */
 	export interface ResourceUpdatedNotification extends JSONRPCNotification {
-		method: "notifications/resources/updated";
+		method: 'notifications/resources/updated';
 		params: ResourceUpdatedNotificationParams;
 	}
 
@@ -944,7 +944,7 @@ export namespace MCP {
 	 * @category `prompts/list`
 	 */
 	export interface ListPromptsRequest extends PaginatedRequest {
-		method: "prompts/list";
+		method: 'prompts/list';
 	}
 
 	/**
@@ -978,7 +978,7 @@ export namespace MCP {
 	 * @category `prompts/get`
 	 */
 	export interface GetPromptRequest extends JSONRPCRequest {
-		method: "prompts/get";
+		method: 'prompts/get';
 		params: GetPromptRequestParams;
 	}
 
@@ -1038,7 +1038,7 @@ export namespace MCP {
 	 *
 	 * @category Common Types
 	 */
-	export type Role = "user" | "assistant";
+	export type Role = 'user' | 'assistant';
 
 	/**
 	 * Describes a message returned as part of a prompt.
@@ -1061,7 +1061,7 @@ export namespace MCP {
 	 * @category Content
 	 */
 	export interface ResourceLink extends Resource {
-		type: "resource_link";
+		type: 'resource_link';
 	}
 
 	/**
@@ -1073,7 +1073,7 @@ export namespace MCP {
 	 * @category Content
 	 */
 	export interface EmbeddedResource {
-		type: "resource";
+		type: 'resource';
 		resource: TextResourceContents | BlobResourceContents;
 
 		/**
@@ -1092,7 +1092,7 @@ export namespace MCP {
 	 * @category `notifications/prompts/list_changed`
 	 */
 	export interface PromptListChangedNotification extends JSONRPCNotification {
-		method: "notifications/prompts/list_changed";
+		method: 'notifications/prompts/list_changed';
 		params?: NotificationParams;
 	}
 
@@ -1103,7 +1103,7 @@ export namespace MCP {
 	 * @category `tools/list`
 	 */
 	export interface ListToolsRequest extends PaginatedRequest {
-		method: "tools/list";
+		method: 'tools/list';
 	}
 
 	/**
@@ -1170,7 +1170,7 @@ export namespace MCP {
 	 * @category `tools/call`
 	 */
 	export interface CallToolRequest extends JSONRPCRequest {
-		method: "tools/call";
+		method: 'tools/call';
 		params: CallToolRequestParams;
 	}
 
@@ -1180,7 +1180,7 @@ export namespace MCP {
 	 * @category `notifications/tools/list_changed`
 	 */
 	export interface ToolListChangedNotification extends JSONRPCNotification {
-		method: "notifications/tools/list_changed";
+		method: 'notifications/tools/list_changed';
 		params?: NotificationParams;
 	}
 
@@ -1257,7 +1257,7 @@ export namespace MCP {
 		 *
 		 * Default: "forbidden"
 		 */
-		taskSupport?: "forbidden" | "optional" | "required";
+		taskSupport?: 'forbidden' | 'optional' | 'required';
 	}
 
 	/**
@@ -1278,7 +1278,7 @@ export namespace MCP {
 		 */
 		inputSchema: {
 			$schema?: string;
-			type: "object";
+			type: 'object';
 			properties?: { [key: string]: object };
 			required?: string[];
 		};
@@ -1297,7 +1297,7 @@ export namespace MCP {
 		 */
 		outputSchema?: {
 			$schema?: string;
-			type: "object";
+			type: 'object';
 			properties?: { [key: string]: object };
 			required?: string[];
 		};
@@ -1323,11 +1323,11 @@ export namespace MCP {
 	 * @category `tasks`
 	 */
 	export type TaskStatus =
-		| "working" // The request is currently being processed
-		| "input_required" // The task is waiting for input (e.g., elicitation or sampling)
-		| "completed" // The request completed successfully and results are available
-		| "failed" // The associated request did not complete successfully. For tool calls specifically, this includes cases where the tool call result has `isError` set to true.
-		| "cancelled"; // The request was cancelled before completion
+		| 'working' // The request is currently being processed
+		| 'input_required' // The task is waiting for input (e.g., elicitation or sampling)
+		| 'completed' // The request completed successfully and results are available
+		| 'failed' // The associated request did not complete successfully. For tool calls specifically, this includes cases where the tool call result has `isError` set to true.
+		| 'cancelled'; // The request was cancelled before completion
 
 	/**
 	 * Metadata for augmenting a request with task execution.
@@ -1411,7 +1411,7 @@ export namespace MCP {
 	 * @category `tasks/get`
 	 */
 	export interface GetTaskRequest extends JSONRPCRequest {
-		method: "tasks/get";
+		method: 'tasks/get';
 		params: {
 			/**
 			 * The task identifier to query.
@@ -1433,7 +1433,7 @@ export namespace MCP {
 	 * @category `tasks/result`
 	 */
 	export interface GetTaskPayloadRequest extends JSONRPCRequest {
-		method: "tasks/result";
+		method: 'tasks/result';
 		params: {
 			/**
 			 * The task identifier to retrieve results for.
@@ -1459,7 +1459,7 @@ export namespace MCP {
 	 * @category `tasks/cancel`
 	 */
 	export interface CancelTaskRequest extends JSONRPCRequest {
-		method: "tasks/cancel";
+		method: 'tasks/cancel';
 		params: {
 			/**
 			 * The task identifier to cancel.
@@ -1481,7 +1481,7 @@ export namespace MCP {
 	 * @category `tasks/list`
 	 */
 	export interface ListTasksRequest extends PaginatedRequest {
-		method: "tasks/list";
+		method: 'tasks/list';
 	}
 
 	/**
@@ -1506,7 +1506,7 @@ export namespace MCP {
 	 * @category `notifications/tasks/status`
 	 */
 	export interface TaskStatusNotification extends JSONRPCNotification {
-		method: "notifications/tasks/status";
+		method: 'notifications/tasks/status';
 		params: TaskStatusNotificationParams;
 	}
 
@@ -1530,7 +1530,7 @@ export namespace MCP {
 	 * @category `logging/setLevel`
 	 */
 	export interface SetLevelRequest extends JSONRPCRequest {
-		method: "logging/setLevel";
+		method: 'logging/setLevel';
 		params: SetLevelRequestParams;
 	}
 
@@ -1560,7 +1560,7 @@ export namespace MCP {
 	 * @category `notifications/message`
 	 */
 	export interface LoggingMessageNotification extends JSONRPCNotification {
-		method: "notifications/message";
+		method: 'notifications/message';
 		params: LoggingMessageNotificationParams;
 	}
 
@@ -1573,14 +1573,14 @@ export namespace MCP {
 	 * @category Common Types
 	 */
 	export type LoggingLevel =
-		| "debug"
-		| "info"
-		| "notice"
-		| "warning"
-		| "error"
-		| "critical"
-		| "alert"
-		| "emergency";
+		| 'debug'
+		| 'info'
+		| 'notice'
+		| 'warning'
+		| 'error'
+		| 'critical'
+		| 'alert'
+		| 'emergency';
 
 	/* Sampling */
 	/**
@@ -1605,7 +1605,7 @@ export namespace MCP {
 		 * Default is "none". Values "thisServer" and "allServers" are soft-deprecated. Servers SHOULD only use these values if the client
 		 * declares ClientCapabilities.sampling.context. These values may be removed in future spec releases.
 		 */
-		includeContext?: "none" | "thisServer" | "allServers";
+		includeContext?: 'none' | 'thisServer' | 'allServers';
 		/**
 		 * @TJS-type number
 		 */
@@ -1646,7 +1646,7 @@ export namespace MCP {
 		 * - "required": Model MUST use at least one tool before completing
 		 * - "none": Model MUST NOT use any tools
 		 */
-		mode?: "auto" | "required" | "none";
+		mode?: 'auto' | 'required' | 'none';
 	}
 
 	/**
@@ -1655,7 +1655,7 @@ export namespace MCP {
 	 * @category `sampling/createMessage`
 	 */
 	export interface CreateMessageRequest extends JSONRPCRequest {
-		method: "sampling/createMessage";
+		method: 'sampling/createMessage';
 		params: CreateMessageRequestParams;
 	}
 
@@ -1683,7 +1683,12 @@ export namespace MCP {
 		 *
 		 * This field is an open string to allow for provider-specific stop reasons.
 		 */
-		stopReason?: "endTurn" | "stopSequence" | "maxTokens" | "toolUse" | string;
+		stopReason?:
+			| 'endTurn'
+			| 'stopSequence'
+			| 'maxTokens'
+			| 'toolUse'
+			| string;
 	}
 
 	/**
@@ -1759,7 +1764,7 @@ export namespace MCP {
 	 * @category Content
 	 */
 	export interface TextContent {
-		type: "text";
+		type: 'text';
 
 		/**
 		 * The text content of the message.
@@ -1783,7 +1788,7 @@ export namespace MCP {
 	 * @category Content
 	 */
 	export interface ImageContent {
-		type: "image";
+		type: 'image';
 
 		/**
 		 * The base64-encoded image data.
@@ -1814,7 +1819,7 @@ export namespace MCP {
 	 * @category Content
 	 */
 	export interface AudioContent {
-		type: "audio";
+		type: 'audio';
 
 		/**
 		 * The base64-encoded audio data.
@@ -1845,7 +1850,7 @@ export namespace MCP {
 	 * @category `sampling/createMessage`
 	 */
 	export interface ToolUseContent {
-		type: "tool_use";
+		type: 'tool_use';
 
 		/**
 		 * A unique identifier for this tool use.
@@ -1879,7 +1884,7 @@ export namespace MCP {
 	 * @category `sampling/createMessage`
 	 */
 	export interface ToolResultContent {
-		type: "tool_result";
+		type: 'tool_result';
 
 		/**
 		 * The ID of the tool use this result corresponds to.
@@ -2043,7 +2048,7 @@ export namespace MCP {
 	 * @category `completion/complete`
 	 */
 	export interface CompleteRequest extends JSONRPCRequest {
-		method: "completion/complete";
+		method: 'completion/complete';
 		params: CompleteRequestParams;
 	}
 
@@ -2075,7 +2080,7 @@ export namespace MCP {
 	 * @category `completion/complete`
 	 */
 	export interface ResourceTemplateReference {
-		type: "ref/resource";
+		type: 'ref/resource';
 		/**
 		 * The URI or URI template of the resource.
 		 *
@@ -2090,7 +2095,7 @@ export namespace MCP {
 	 * @category `completion/complete`
 	 */
 	export interface PromptReference extends BaseMetadata {
-		type: "ref/prompt";
+		type: 'ref/prompt';
 	}
 
 	/* Roots */
@@ -2106,7 +2111,7 @@ export namespace MCP {
 	 * @category `roots/list`
 	 */
 	export interface ListRootsRequest extends JSONRPCRequest {
-		method: "roots/list";
+		method: 'roots/list';
 		params?: RequestParams;
 	}
 
@@ -2156,7 +2161,7 @@ export namespace MCP {
 	 * @category `notifications/roots/list_changed`
 	 */
 	export interface RootsListChangedNotification extends JSONRPCNotification {
-		method: "notifications/roots/list_changed";
+		method: 'notifications/roots/list_changed';
 		params?: NotificationParams;
 	}
 
@@ -2169,7 +2174,7 @@ export namespace MCP {
 		/**
 		 * The elicitation mode.
 		 */
-		mode?: "form";
+		mode?: 'form';
 
 		/**
 		 * The message to present to the user describing what information is being requested.
@@ -2182,7 +2187,7 @@ export namespace MCP {
 		 */
 		requestedSchema: {
 			$schema?: string;
-			type: "object";
+			type: 'object';
 			properties: {
 				[key: string]: PrimitiveSchemaDefinition;
 			};
@@ -2199,7 +2204,7 @@ export namespace MCP {
 		/**
 		 * The elicitation mode.
 		 */
-		mode: "url";
+		mode: 'url';
 
 		/**
 		 * The message to present to the user explaining why the interaction is needed.
@@ -2235,7 +2240,7 @@ export namespace MCP {
 	 * @category `elicitation/create`
 	 */
 	export interface ElicitRequest extends JSONRPCRequest {
-		method: "elicitation/create";
+		method: 'elicitation/create';
 		params: ElicitRequestParams;
 	}
 
@@ -2255,12 +2260,12 @@ export namespace MCP {
 	 * @category `elicitation/create`
 	 */
 	export interface StringSchema {
-		type: "string";
+		type: 'string';
 		title?: string;
 		description?: string;
 		minLength?: number;
 		maxLength?: number;
-		format?: "email" | "uri" | "date" | "date-time";
+		format?: 'email' | 'uri' | 'date' | 'date-time';
 		default?: string;
 	}
 
@@ -2268,7 +2273,7 @@ export namespace MCP {
 	 * @category `elicitation/create`
 	 */
 	export interface NumberSchema {
-		type: "number" | "integer";
+		type: 'number' | 'integer';
 		title?: string;
 		description?: string;
 		minimum?: number;
@@ -2280,7 +2285,7 @@ export namespace MCP {
 	 * @category `elicitation/create`
 	 */
 	export interface BooleanSchema {
-		type: "boolean";
+		type: 'boolean';
 		title?: string;
 		description?: string;
 		default?: boolean;
@@ -2292,7 +2297,7 @@ export namespace MCP {
 	 * @category `elicitation/create`
 	 */
 	export interface UntitledSingleSelectEnumSchema {
-		type: "string";
+		type: 'string';
 		/**
 		 * Optional title for the enum field.
 		 */
@@ -2317,7 +2322,7 @@ export namespace MCP {
 	 * @category `elicitation/create`
 	 */
 	export interface TitledSingleSelectEnumSchema {
-		type: "string";
+		type: 'string';
 		/**
 		 * Optional title for the enum field.
 		 */
@@ -2359,7 +2364,7 @@ export namespace MCP {
 	 * @category `elicitation/create`
 	 */
 	export interface UntitledMultiSelectEnumSchema {
-		type: "array";
+		type: 'array';
 		/**
 		 * Optional title for the enum field.
 		 */
@@ -2380,7 +2385,7 @@ export namespace MCP {
 		 * Schema for the array items.
 		 */
 		items: {
-			type: "string";
+			type: 'string';
 			/**
 			 * Array of enum values to choose from.
 			 */
@@ -2398,7 +2403,7 @@ export namespace MCP {
 	 * @category `elicitation/create`
 	 */
 	export interface TitledMultiSelectEnumSchema {
-		type: "array";
+		type: 'array';
 		/**
 		 * Optional title for the enum field.
 		 */
@@ -2454,7 +2459,7 @@ export namespace MCP {
 	 * @category `elicitation/create`
 	 */
 	export interface LegacyTitledEnumSchema {
-		type: "string";
+		type: 'string';
 		title?: string;
 		description?: string;
 		enum: string[];
@@ -2487,7 +2492,7 @@ export namespace MCP {
 		 * - "decline": User explicitly decline the action
 		 * - "cancel": User dismissed without making an explicit choice
 		 */
-		action: "accept" | "decline" | "cancel";
+		action: 'accept' | 'decline' | 'cancel';
 
 		/**
 		 * The submitted form data, only present when action is "accept" and mode was "form".
@@ -2503,7 +2508,7 @@ export namespace MCP {
 	 * @category `notifications/elicitation/complete`
 	 */
 	export interface ElicitationCompleteNotification extends JSONRPCNotification {
-		method: "notifications/elicitation/complete";
+		method: 'notifications/elicitation/complete';
 		params: {
 			/**
 			 * The ID of the elicitation that completed.

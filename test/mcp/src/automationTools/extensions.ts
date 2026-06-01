@@ -3,14 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ApplicationService } from '../application';
-import { z } from 'zod';
+import {
+	McpServer,
+	RegisteredTool,
+} from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ApplicationService } from "../application";
+import { z } from "zod";
 
 /**
  * Extensions Tools
  */
-export function applyExtensionsTools(server: McpServer, appService: ApplicationService): RegisteredTool[] {
+export function applyExtensionsTools(
+	server: McpServer,
+	appService: ApplicationService,
+): RegisteredTool[] {
 	const tools: RegisteredTool[] = [];
 
 	// Playwright can probably figure this out
@@ -32,24 +38,30 @@ export function applyExtensionsTools(server: McpServer, appService: ApplicationS
 	// 	}
 	// );
 
-	tools.push(server.tool(
-		'vscode_automation_extensions_open',
-		'Open an extension by ID',
-		{
-			extensionId: z.string().describe('Extension ID to open (e.g., "ms-python.python")')
-		},
-		async (args) => {
-			const { extensionId } = args;
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.extensions.openExtension(extensionId);
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `Opened extension: ${extensionId}`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_extensions_open",
+			"Open an extension by ID",
+			{
+				extensionId: z
+					.string()
+					.describe('Extension ID to open (e.g., "ms-python.python")'),
+			},
+			async (args) => {
+				const { extensionId } = args;
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.extensions.openExtension(extensionId);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Opened extension: ${extensionId}`,
+						},
+					],
+				};
+			},
+		),
+	);
 
 	// Playwright can probably figure this out
 	// server.tool(
@@ -70,25 +82,38 @@ export function applyExtensionsTools(server: McpServer, appService: ApplicationS
 	// 	}
 	// );
 
-	tools.push(server.tool(
-		'vscode_automation_extensions_install',
-		'Install an extension by ID',
-		{
-			extensionId: z.string().describe('Extension ID to install (e.g., "ms-python.python")'),
-			waitUntilEnabled: z.boolean().optional().default(true).describe('Whether to wait until the extension is enabled')
-		},
-		async (args) => {
-			const { extensionId, waitUntilEnabled = true } = args;
-			const app = await appService.getOrCreateApplication();
-			await app.workbench.extensions.installExtension(extensionId, waitUntilEnabled);
-			return {
-				content: [{
-					type: 'text' as const,
-					text: `Installed extension: ${extensionId}${waitUntilEnabled ? ' (waited until enabled)' : ''}`
-				}]
-			};
-		}
-	));
+	tools.push(
+		server.tool(
+			"vscode_automation_extensions_install",
+			"Install an extension by ID",
+			{
+				extensionId: z
+					.string()
+					.describe('Extension ID to install (e.g., "ms-python.python")'),
+				waitUntilEnabled: z
+					.boolean()
+					.optional()
+					.default(true)
+					.describe("Whether to wait until the extension is enabled"),
+			},
+			async (args) => {
+				const { extensionId, waitUntilEnabled = true } = args;
+				const app = await appService.getOrCreateApplication();
+				await app.workbench.extensions.installExtension(
+					extensionId,
+					waitUntilEnabled,
+				);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: `Installed extension: ${extensionId}${waitUntilEnabled ? " (waited until enabled)" : ""}`,
+						},
+					],
+				};
+			},
+		),
+	);
 
 	return tools;
 }

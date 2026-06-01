@@ -13,8 +13,12 @@ const { mockStartMcpGateway } = vi.hoisted(() => ({
 
 vi.mock('vscode', () => ({
 	lm: {
-		get mcpServerDefinitions() { return []; },
-		get onDidChangeMcpServerDefinitions() { return () => ({ dispose() { } }); },
+		get mcpServerDefinitions() {
+			return [];
+		},
+		get onDidChangeMcpServerDefinitions() {
+			return () => ({ dispose() {} });
+		},
 		startMcpGateway: mockStartMcpGateway,
 	},
 }));
@@ -24,8 +28,13 @@ import { McpService } from '../mcpServiceImpl';
 
 function createMockGateway() {
 	return {
-		servers: [{ label: 'test-server', address: { toString: () => 'http://localhost:1234' } }],
-		onDidChangeServers: () => ({ dispose() { } }),
+		servers: [
+			{
+				label: 'test-server',
+				address: { toString: () => 'http://localhost:1234' },
+			},
+		],
+		onDidChangeServers: () => ({ dispose() {} }),
 		dispose: vi.fn(),
 	};
 }
@@ -72,7 +81,9 @@ describe('McpService', () => {
 	test('startMcpGateway creates separate gateways for different resources', async () => {
 		const gateway1 = createMockGateway();
 		const gateway2 = createMockGateway();
-		mockStartMcpGateway.mockResolvedValueOnce(gateway1).mockResolvedValueOnce(gateway2);
+		mockStartMcpGateway
+			.mockResolvedValueOnce(gateway1)
+			.mockResolvedValueOnce(gateway2);
 
 		const first = await service.startMcpGateway(resource1);
 		const second = await service.startMcpGateway(resource2);
@@ -109,7 +120,9 @@ describe('McpService', () => {
 		const result = await service.startMcpGateway(resource1);
 
 		expect(result).toBeUndefined();
-		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('gateway failed'));
+		expect(warnSpy).toHaveBeenCalledWith(
+			expect.stringContaining('gateway failed'),
+		);
 	});
 
 	test('startMcpGateway allows retry after failure', async () => {
@@ -147,7 +160,9 @@ describe('McpService', () => {
 	test('disposing the service disposes all tracked gateways', async () => {
 		const gateway1 = createMockGateway();
 		const gateway2 = createMockGateway();
-		mockStartMcpGateway.mockResolvedValueOnce(gateway1).mockResolvedValueOnce(gateway2);
+		mockStartMcpGateway
+			.mockResolvedValueOnce(gateway1)
+			.mockResolvedValueOnce(gateway2);
 
 		await service.startMcpGateway(resource1);
 		await service.startMcpGateway(resource2);
@@ -162,7 +177,9 @@ describe('McpService', () => {
 	test('service dispose does not double-dispose individually disposed gateways', async () => {
 		const gateway1 = createMockGateway();
 		const gateway2 = createMockGateway();
-		mockStartMcpGateway.mockResolvedValueOnce(gateway1).mockResolvedValueOnce(gateway2);
+		mockStartMcpGateway
+			.mockResolvedValueOnce(gateway1)
+			.mockResolvedValueOnce(gateway2);
 
 		const tracked1 = await service.startMcpGateway(resource1);
 		await service.startMcpGateway(resource2);

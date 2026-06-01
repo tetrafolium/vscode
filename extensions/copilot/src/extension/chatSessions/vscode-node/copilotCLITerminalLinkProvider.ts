@@ -5,13 +5,26 @@
 
 import * as l10n from '@vscode/l10n';
 import { homedir } from 'os';
-import { CancellationToken, FileType, Range, Terminal, TerminalLink, TerminalLinkContext, TerminalLinkProvider, Uri, window, workspace } from 'vscode';
+import {
+	CancellationToken,
+	FileType,
+	Range,
+	Terminal,
+	TerminalLink,
+	TerminalLinkContext,
+	TerminalLinkProvider,
+	Uri,
+	window,
+	workspace,
+} from 'vscode';
 import { ILogService } from '../../../platform/log/common/logService';
 import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
 import { extUriBiasedIgnorePathCase } from '../../../util/vs/base/common/resources';
 import { getCopilotHome } from '../copilotcli/node/cliHelpers';
 
-const UNTRUSTED_COPILOT_HOME_MESSAGE = l10n.t('The Copilot home directory is not trusted. Please trust the directory to open this file.');
+const UNTRUSTED_COPILOT_HOME_MESSAGE = l10n.t(
+	'The Copilot home directory is not trusted. Please trust the directory to open this file.',
+);
 
 /**
  *
@@ -27,13 +40,31 @@ const EXCLUDED_START_STANDALONE_CHARS = '[^\\0<>\\?\\s!`&*()\\[\\]\'":;\\\\/]';
 const MAX_NESTED_LOOKUP_DIRS = 400;
 const MAX_NESTED_LOOKUP_ENTRIES = 10000;
 
-const PATH_WITH_SEPARATOR_CLAUSE = '(?:(?:\\.\\.?|~)|(?:' + EXCLUDED_START_PATH_CHARS + EXCLUDED_PATH_CHARS + '*))?(?:[\\\\/](?:' + EXCLUDED_PATH_CHARS + ')+)+';
-const STANDALONE_DOTTED_FILENAME_CLAUSE = '(?:' + EXCLUDED_START_STANDALONE_CHARS + EXCLUDED_STANDALONE_CHARS + '*\\.[^\\0<>\\?\\s!`&*()\'":;\\\\/.]+' + EXCLUDED_STANDALONE_CHARS + '*)';
-const PATH_CLAUSE = '(?<path>(?:' + PATH_WITH_SEPARATOR_CLAUSE + ')|(?:' + STANDALONE_DOTTED_FILENAME_CLAUSE + '))';
+const PATH_WITH_SEPARATOR_CLAUSE =
+	'(?:(?:\\.\\.?|~)|(?:' +
+	EXCLUDED_START_PATH_CHARS +
+	EXCLUDED_PATH_CHARS +
+	'*))?(?:[\\\\/](?:' +
+	EXCLUDED_PATH_CHARS +
+	')+)+';
+const STANDALONE_DOTTED_FILENAME_CLAUSE =
+	'(?:' +
+	EXCLUDED_START_STANDALONE_CHARS +
+	EXCLUDED_STANDALONE_CHARS +
+	'*\\.[^\\0<>\\?\\s!`&*()\'":;\\\\/.]+' +
+	EXCLUDED_STANDALONE_CHARS +
+	'*)';
+const PATH_CLAUSE =
+	'(?<path>(?:' +
+	PATH_WITH_SEPARATOR_CLAUSE +
+	')|(?:' +
+	STANDALONE_DOTTED_FILENAME_CLAUSE +
+	'))';
 
 const PATH_REGEX = new RegExp(PATH_CLAUSE, 'g');
 const PATH_BEFORE_SUFFIX_REGEX = new RegExp(PATH_CLAUSE + '$');
-const LINK_SUFFIX_REGEX = /(?::(?<line>\d+)(?::(?<col>\d+))?|\((?<parenLine>\d+),\s*(?<parenCol>\d+)\))/g;
+const LINK_SUFFIX_REGEX =
+	/(?::(?<line>\d+)(?::(?<col>\d+))?|\((?<parenLine>\d+),\s*(?<parenCol>\d+)\))/g;
 
 interface DetectedLinkCandidate {
 	startIndex: number;
@@ -63,7 +94,6 @@ export type SessionDirResolver = (terminal: Terminal) => Promise<Uri[]>;
  * workspace root. VS Code's built-in detector cannot resolve that context.
  */
 export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<CopilotCLITerminalLink> {
-
 	private readonly _copilotTerminals = new WeakSet<Terminal>();
 	private readonly _terminalSessionDirs = new WeakMap<Terminal, Uri>();
 	private _sessionDirResolver: SessionDirResolver | undefined;
@@ -71,7 +101,7 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 	constructor(
 		private readonly logService: ILogService,
 		private readonly workspaceService?: IWorkspaceService,
-	) { }
+	) {}
 
 	/**
 	 * Marks a terminal as a Copilot CLI terminal.
@@ -94,7 +124,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 		this._sessionDirResolver = resolver;
 	}
 
-	async provideTerminalLinks(context: TerminalLinkContext, token: CancellationToken): Promise<CopilotCLITerminalLink[]> {
+	async provideTerminalLinks(
+		context: TerminalLinkContext,
+		token: CancellationToken,
+	): Promise<CopilotCLITerminalLink[]> {
 		const line = context.line;
 		// Match VS Code's built-in MaxLineLength limit (terminalLocalLinkDetector.ts).
 		if (!line.trim() || line.length > 2000) {
@@ -102,7 +135,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 		}
 
 		const sessionDirs = await this._getSessionDirs(context.terminal);
-		if (!this._copilotTerminals.has(context.terminal) && sessionDirs.length === 0) {
+		if (
+			!this._copilotTerminals.has(context.terminal) &&
+			sessionDirs.length === 0
+		) {
 			return [];
 		}
 		const links: CopilotCLITerminalLink[] = [];
@@ -155,11 +191,19 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 
 			// Skip absolute paths; the built-in detector handles them.
 			// Unix: /foo, Windows: C:\foo or \Users\foo
-			if (pathText.startsWith('/') || pathText.startsWith('\\') || /^[a-zA-Z]:[/\\]/.test(pathText)) {
+			if (
+				pathText.startsWith('/') ||
+				pathText.startsWith('\\') ||
+				/^[a-zA-Z]:[/\\]/.test(pathText)
+			) {
 				continue;
 			}
 
-			const resolved = await this._resolvePath(pathText, sessionDirs, token);
+			const resolved = await this._resolvePath(
+				pathText,
+				sessionDirs,
+				token,
+			);
 			if (!resolved) {
 				continue;
 			}
@@ -182,19 +226,28 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 	async handleTerminalLink(link: CopilotCLITerminalLink): Promise<void> {
 		try {
 			const sessionDirs = await this._getSessionDirs(link.terminal);
-			const resolvedCandidates = await this._resolveAllPaths(link.pathText, sessionDirs);
-			let uriToOpen = link.uri
-				?? resolvedCandidates[0]
-				?? this._getFallbackUri(link.pathText, sessionDirs);
+			const resolvedCandidates = await this._resolveAllPaths(
+				link.pathText,
+				sessionDirs,
+			);
+			let uriToOpen =
+				link.uri ??
+				resolvedCandidates[0] ??
+				this._getFallbackUri(link.pathText, sessionDirs);
 
 			if (resolvedCandidates.length > 1) {
 				const pick = await window.showQuickPick(
-					resolvedCandidates.map(uri => ({
+					resolvedCandidates.map((uri) => ({
 						label: this._labelCandidate(uri, sessionDirs),
 						description: this._describeCandidate(uri, sessionDirs),
 						uri,
 					})),
-					{ placeHolder: l10n.t("Select which '{0}' to open", link.pathText) }
+					{
+						placeHolder: l10n.t(
+							"Select which '{0}' to open",
+							link.pathText,
+						),
+					},
 				);
 				if (!pick) {
 					return;
@@ -207,24 +260,26 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 			}
 
 			if (this.workspaceService && this._isInCopilotHome(uriToOpen)) {
-				const trusted = await this.workspaceService.requestResourceTrust({
-					uri: Uri.file(getCopilotHome()),
-					message: UNTRUSTED_COPILOT_HOME_MESSAGE,
-				});
+				const trusted =
+					await this.workspaceService.requestResourceTrust({
+						uri: Uri.file(getCopilotHome()),
+						message: UNTRUSTED_COPILOT_HOME_MESSAGE,
+					});
 				if (!trusted) {
 					return;
 				}
 			}
 
 			await window.showTextDocument(uriToOpen, {
-				selection: link.line !== undefined
-					? new Range(
-						link.line - 1,
-						(link.col ?? 1) - 1,
-						link.line - 1,
-						(link.col ?? 1) - 1
-					)
-					: undefined,
+				selection:
+					link.line !== undefined
+						? new Range(
+								link.line - 1,
+								(link.col ?? 1) - 1,
+								link.line - 1,
+								(link.col ?? 1) - 1,
+							)
+						: undefined,
 			});
 		} catch (e) {
 			this.logService.error('Failed to open terminal link', e);
@@ -242,7 +297,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 	 * files may still be on disk). See https://github.com/microsoft/vscode/issues/301594.
 	 */
 	private _isInCopilotHome(uri: Uri): boolean {
-		return extUriBiasedIgnorePathCase.isEqualOrParent(uri, Uri.file(getCopilotHome()));
+		return extUriBiasedIgnorePathCase.isEqualOrParent(
+			uri,
+			Uri.file(getCopilotHome()),
+		);
 	}
 
 	private async _getSessionDirs(terminal: Terminal): Promise<Uri[]> {
@@ -256,7 +314,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 			// If the cached dir is not among the active sessions it is stale
 			// (the session ended). Append it as a fallback instead of
 			// putting it first where it would shadow the current session.
-			if (cached && !resolved.some(dir => dir.fsPath === cachedFsPath)) {
+			if (
+				cached &&
+				!resolved.some((dir) => dir.fsPath === cachedFsPath)
+			) {
 				dirs.push(cached);
 			}
 			return dirs;
@@ -275,11 +336,22 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 	 * 2. Workspace folders
 	 * 3. `files/` under each session dir (non-bare paths only)
 	 */
-	private async _resolvePath(pathText: string, sessionDirs: readonly Uri[], token?: CancellationToken): Promise<Uri | undefined> {
-		const isBareFilename = !pathText.includes('/') && !pathText.includes('\\');
-		const isDotRelative = pathText.startsWith('./') || pathText.startsWith('.\\') || pathText.startsWith('../') || pathText.startsWith('..\\');
-		const alreadyFilesRelative = pathText.startsWith('files/') || pathText.startsWith('files\\');
-		const shouldTryFilesFallback = !isBareFilename && !isDotRelative && !alreadyFilesRelative;
+	private async _resolvePath(
+		pathText: string,
+		sessionDirs: readonly Uri[],
+		token?: CancellationToken,
+	): Promise<Uri | undefined> {
+		const isBareFilename =
+			!pathText.includes('/') && !pathText.includes('\\');
+		const isDotRelative =
+			pathText.startsWith('./') ||
+			pathText.startsWith('.\\') ||
+			pathText.startsWith('../') ||
+			pathText.startsWith('..\\');
+		const alreadyFilesRelative =
+			pathText.startsWith('files/') || pathText.startsWith('files\\');
+		const shouldTryFilesFallback =
+			!isBareFilename && !isDotRelative && !alreadyFilesRelative;
 
 		// Session-state directories first; CLI paths are relative to them.
 		for (const sessionDir of sessionDirs) {
@@ -290,11 +362,20 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 			if (await this._exists(Uri.joinPath(sessionDir, pathText))) {
 				return Uri.joinPath(sessionDir, pathText);
 			}
-			if (isBareFilename && await this._exists(Uri.joinPath(sessionDir, 'files', pathText))) {
+			if (
+				isBareFilename &&
+				(await this._exists(
+					Uri.joinPath(sessionDir, 'files', pathText),
+				))
+			) {
 				return Uri.joinPath(sessionDir, 'files', pathText);
 			}
 			if (isBareFilename) {
-				const nested = await this._findNestedBareFilenameInSessionDir(sessionDir, pathText, token);
+				const nested = await this._findNestedBareFilenameInSessionDir(
+					sessionDir,
+					pathText,
+					token,
+				);
 				if (nested) {
 					return nested;
 				}
@@ -319,7 +400,11 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 				if (token?.isCancellationRequested) {
 					return undefined;
 				}
-				if (await this._exists(Uri.joinPath(sessionDir, 'files', pathText))) {
+				if (
+					await this._exists(
+						Uri.joinPath(sessionDir, 'files', pathText),
+					)
+				) {
 					return Uri.joinPath(sessionDir, 'files', pathText);
 				}
 			}
@@ -336,11 +421,21 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 	 *
 	 * Same search order as {@link _resolvePath} but collects all hits.
 	 */
-	private async _resolveAllPaths(pathText: string, sessionDirs: readonly Uri[]): Promise<Uri[]> {
-		const isBareFilename = !pathText.includes('/') && !pathText.includes('\\');
-		const isDotRelative = pathText.startsWith('./') || pathText.startsWith('.\\') || pathText.startsWith('../') || pathText.startsWith('..\\');
-		const alreadyFilesRelative = pathText.startsWith('files/') || pathText.startsWith('files\\');
-		const shouldTryFilesFallback = !isBareFilename && !isDotRelative && !alreadyFilesRelative;
+	private async _resolveAllPaths(
+		pathText: string,
+		sessionDirs: readonly Uri[],
+	): Promise<Uri[]> {
+		const isBareFilename =
+			!pathText.includes('/') && !pathText.includes('\\');
+		const isDotRelative =
+			pathText.startsWith('./') ||
+			pathText.startsWith('.\\') ||
+			pathText.startsWith('../') ||
+			pathText.startsWith('..\\');
+		const alreadyFilesRelative =
+			pathText.startsWith('files/') || pathText.startsWith('files\\');
+		const shouldTryFilesFallback =
+			!isBareFilename && !isDotRelative && !alreadyFilesRelative;
 
 		const resolved: Uri[] = [];
 		const seen = new Set<string>();
@@ -359,7 +454,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 			await addIfExists(Uri.joinPath(sessionDir, pathText));
 			if (isBareFilename) {
 				await addIfExists(Uri.joinPath(sessionDir, 'files', pathText));
-				const nested = await this._findNestedBareFilenameInSessionDir(sessionDir, pathText);
+				const nested = await this._findNestedBareFilenameInSessionDir(
+					sessionDir,
+					pathText,
+				);
 				if (nested && !seen.has(nested.fsPath)) {
 					seen.add(nested.fsPath);
 					resolved.push(nested);
@@ -392,23 +490,37 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 	}
 
 	private _labelCandidate(uri: Uri, sessionDirs: readonly Uri[]): string {
-		return this._relativeTo(uri, sessionDirs)
-			?? this._relativeTo(uri, workspace.workspaceFolders?.map(f => f.uri) ?? [])
-			?? uri.fsPath.split(/[\\/]/).pop()
-			?? uri.fsPath;
+		return (
+			this._relativeTo(uri, sessionDirs) ??
+			this._relativeTo(
+				uri,
+				workspace.workspaceFolders?.map((f) => f.uri) ?? [],
+			) ??
+			uri.fsPath.split(/[\\/]/).pop() ??
+			uri.fsPath
+		);
 	}
 
 	private _describeCandidate(uri: Uri, sessionDirs: readonly Uri[]): string {
 		const normalizedCandidatePath = uri.fsPath.replace(/\\/g, '/');
 		for (const sessionDir of sessionDirs) {
-			const normalizedSessionPath = sessionDir.fsPath.replace(/\\/g, '/').replace(/\/$/, '');
-			if (normalizedCandidatePath.startsWith(`${normalizedSessionPath}/`)) {
+			const normalizedSessionPath = sessionDir.fsPath
+				.replace(/\\/g, '/')
+				.replace(/\/$/, '');
+			if (
+				normalizedCandidatePath.startsWith(`${normalizedSessionPath}/`)
+			) {
 				const sessionId = normalizedSessionPath.split('/').pop();
 				return `session-state/${sessionId}`;
 			}
 		}
 
-		if (this._relativeTo(uri, workspace.workspaceFolders?.map(f => f.uri) ?? [])) {
+		if (
+			this._relativeTo(
+				uri,
+				workspace.workspaceFolders?.map((f) => f.uri) ?? [],
+			)
+		) {
 			return 'workspace';
 		}
 
@@ -420,10 +532,15 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 	 * or `undefined` if `uri` is not inside any of them. Compares with
 	 * normalized separators.
 	 */
-	private _relativeTo(uri: Uri, baseDirs: readonly Uri[]): string | undefined {
+	private _relativeTo(
+		uri: Uri,
+		baseDirs: readonly Uri[],
+	): string | undefined {
 		const normalizedCandidatePath = uri.fsPath.replace(/\\/g, '/');
 		for (const baseDir of baseDirs) {
-			const normalizedBasePath = baseDir.fsPath.replace(/\\/g, '/').replace(/\/$/, '');
+			const normalizedBasePath = baseDir.fsPath
+				.replace(/\\/g, '/')
+				.replace(/\/$/, '');
 			const prefix = `${normalizedBasePath}/`;
 			if (normalizedCandidatePath.startsWith(prefix)) {
 				return normalizedCandidatePath.slice(prefix.length);
@@ -432,7 +549,11 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 		return undefined;
 	}
 
-	private async _findNestedBareFilenameInSessionDir(sessionDir: Uri, basename: string, token?: CancellationToken): Promise<Uri | undefined> {
+	private async _findNestedBareFilenameInSessionDir(
+		sessionDir: Uri,
+		basename: string,
+		token?: CancellationToken,
+	): Promise<Uri | undefined> {
 		const queue: Uri[] = [sessionDir];
 		const matches: Uri[] = [];
 		const visited = new Set<string>();
@@ -440,7 +561,11 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 		let scannedEntryCount = 0;
 
 		for (let i = 0; i < queue.length; i++) {
-			if (token?.isCancellationRequested || scannedDirCount >= MAX_NESTED_LOOKUP_DIRS || scannedEntryCount >= MAX_NESTED_LOOKUP_ENTRIES) {
+			if (
+				token?.isCancellationRequested ||
+				scannedDirCount >= MAX_NESTED_LOOKUP_DIRS ||
+				scannedEntryCount >= MAX_NESTED_LOOKUP_ENTRIES
+			) {
 				break;
 			}
 
@@ -461,7 +586,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 
 			for (const [name, type] of entries) {
 				scannedEntryCount++;
-				if (token?.isCancellationRequested || scannedEntryCount >= MAX_NESTED_LOOKUP_ENTRIES) {
+				if (
+					token?.isCancellationRequested ||
+					scannedEntryCount >= MAX_NESTED_LOOKUP_ENTRIES
+				) {
 					break;
 				}
 
@@ -471,7 +599,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 					continue;
 				}
 
-				if ((type & FileType.Directory) !== 0 && (type & FileType.SymbolicLink) === 0) {
+				if (
+					(type & FileType.Directory) !== 0 &&
+					(type & FileType.SymbolicLink) === 0
+				) {
 					queue.push(candidate);
 				}
 			}
@@ -481,13 +612,19 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 			return undefined;
 		}
 
-		const normalizedSessionPath = sessionDir.fsPath.replace(/\\/g, '/').replace(/\/$/, '');
+		const normalizedSessionPath = sessionDir.fsPath
+			.replace(/\\/g, '/')
+			.replace(/\/$/, '');
 		const sessionPathPrefix = `${normalizedSessionPath}/`;
 		matches.sort((a, b) => {
 			const pathA = a.fsPath.replace(/\\/g, '/');
 			const pathB = b.fsPath.replace(/\\/g, '/');
-			const relA = pathA.startsWith(sessionPathPrefix) ? pathA.slice(sessionPathPrefix.length) : pathA;
-			const relB = pathB.startsWith(sessionPathPrefix) ? pathB.slice(sessionPathPrefix.length) : pathB;
+			const relA = pathA.startsWith(sessionPathPrefix)
+				? pathA.slice(sessionPathPrefix.length)
+				: pathA;
+			const relB = pathB.startsWith(sessionPathPrefix)
+				? pathB.slice(sessionPathPrefix.length)
+				: pathB;
 
 			const scoreA = this._nestedBareFilenameScore(relA, basename);
 			const scoreB = this._nestedBareFilenameScore(relB, basename);
@@ -510,7 +647,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 		return /^\d+(?:\.\d+)+$/.test(pathText);
 	}
 
-	private _nestedBareFilenameScore(relativePath: string, basename: string): number {
+	private _nestedBareFilenameScore(
+		relativePath: string,
+		basename: string,
+	): number {
 		if (relativePath === `files/${basename}`) {
 			return 0;
 		}
@@ -526,7 +666,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 		return 10 + relativePath.split('/').length;
 	}
 
-	private _getFallbackUri(pathText: string, sessionDirs: readonly Uri[]): Uri | undefined {
+	private _getFallbackUri(
+		pathText: string,
+		sessionDirs: readonly Uri[],
+	): Uri | undefined {
 		const sessionDir = sessionDirs[0];
 		if (sessionDir) {
 			return Uri.joinPath(sessionDir, pathText);
@@ -544,7 +687,10 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 		const candidates: DetectedLinkCandidate[] = [];
 
 		// Phase 1: Detect suffixes and resolve a path directly before each suffix.
-		const suffixRegex = new RegExp(LINK_SUFFIX_REGEX.source, LINK_SUFFIX_REGEX.flags);
+		const suffixRegex = new RegExp(
+			LINK_SUFFIX_REGEX.source,
+			LINK_SUFFIX_REGEX.flags,
+		);
 		for (const match of line.matchAll(suffixRegex)) {
 			const suffixStartIndex = match.index;
 			if (suffixStartIndex === undefined) {
@@ -560,7 +706,8 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 
 			const startIndex = suffixStartIndex - pathText.length;
 			const length = pathText.length + match[0].length;
-			const lineText = match.groups?.['line'] ?? match.groups?.['parenLine'];
+			const lineText =
+				match.groups?.['line'] ?? match.groups?.['parenLine'];
 			const colText = match.groups?.['col'] ?? match.groups?.['parenCol'];
 
 			candidates.push({
@@ -582,7 +729,16 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 			}
 
 			const endIndex = startIndex + pathText.length;
-			if (candidates.some(candidate => this._rangesOverlap(startIndex, endIndex, candidate.startIndex, candidate.startIndex + candidate.length))) {
+			if (
+				candidates.some((candidate) =>
+					this._rangesOverlap(
+						startIndex,
+						endIndex,
+						candidate.startIndex,
+						candidate.startIndex + candidate.length,
+					),
+				)
+			) {
 				continue;
 			}
 
@@ -597,7 +753,12 @@ export class CopilotCLITerminalLinkProvider implements TerminalLinkProvider<Copi
 		return candidates;
 	}
 
-	private _rangesOverlap(startA: number, endA: number, startB: number, endB: number): boolean {
+	private _rangesOverlap(
+		startA: number,
+		endA: number,
+		startB: number,
+		endB: number,
+	): boolean {
 		return startA < endB && startB < endA;
 	}
 }

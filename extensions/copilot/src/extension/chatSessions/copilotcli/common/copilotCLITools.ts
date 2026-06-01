@@ -3,9 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import type { SessionEvent, ToolExecutionCompleteEvent, ToolExecutionStartEvent } from '@github/copilot/sdk';
+import type {
+	SessionEvent,
+	ToolExecutionCompleteEvent,
+	ToolExecutionStartEvent,
+} from '@github/copilot/sdk';
 import * as l10n from '@vscode/l10n';
-import type { CancellationToken, ChatParticipantToolToken, ChatPromptReference, ChatSimpleToolResultData, ChatTerminalToolInvocationData, LanguageModelToolDefinition, LanguageModelToolInformation, LanguageModelToolInvocationOptions, LanguageModelToolResult2 } from 'vscode';
+import type {
+	CancellationToken,
+	ChatParticipantToolToken,
+	ChatPromptReference,
+	ChatSimpleToolResultData,
+	ChatTerminalToolInvocationData,
+	LanguageModelToolDefinition,
+	LanguageModelToolInformation,
+	LanguageModelToolInvocationOptions,
+	LanguageModelToolResult2,
+} from 'vscode';
 import { ILogger } from '../../../../platform/log/common/logService';
 import { IChatEndpoint } from '../../../../platform/networking/common/networking';
 import { isLocation } from '../../../../util/common/types';
@@ -13,21 +27,57 @@ import { findLast } from '../../../../util/vs/base/common/arraysFind';
 import { decodeBase64 } from '../../../../util/vs/base/common/buffer';
 import { Emitter } from '../../../../util/vs/base/common/event';
 import { ResourceMap } from '../../../../util/vs/base/common/map';
-import { constObservable, IObservable } from '../../../../util/vs/base/common/observable';
-import { isAbsolutePath, isEqual } from '../../../../util/vs/base/common/resources';
+import {
+	constObservable,
+	IObservable,
+} from '../../../../util/vs/base/common/observable';
+import {
+	isAbsolutePath,
+	isEqual,
+} from '../../../../util/vs/base/common/resources';
 import { URI } from '../../../../util/vs/base/common/uri';
-import { ChatMcpToolInvocationData, ChatReferenceBinaryData, ChatRequestTurn2, ChatResponseMarkdownPart, ChatResponseThinkingProgressPart, ChatResponseTurn2, ChatSubagentToolInvocationData, ChatToolInvocationPart, LanguageModelTextPart, Location, MarkdownString, McpToolInvocationContentData, Range, Uri } from '../../../../vscodeTypes';
+import {
+	ChatMcpToolInvocationData,
+	ChatReferenceBinaryData,
+	ChatRequestTurn2,
+	ChatResponseMarkdownPart,
+	ChatResponseThinkingProgressPart,
+	ChatResponseTurn2,
+	ChatSubagentToolInvocationData,
+	ChatToolInvocationPart,
+	LanguageModelTextPart,
+	Location,
+	MarkdownString,
+	McpToolInvocationContentData,
+	Range,
+	Uri,
+} from '../../../../vscodeTypes';
 import type { MCP } from '../../../common/modelContextProtocol';
 import { ToolName } from '../../../tools/common/toolNames';
 import { ICopilotTool } from '../../../tools/common/toolsRegistry';
-import { IOnWillInvokeToolEvent, IToolsService, IToolValidationResult } from '../../../tools/common/toolsService';
+import {
+	IOnWillInvokeToolEvent,
+	IToolsService,
+	IToolValidationResult,
+} from '../../../tools/common/toolsService';
 import { formatUriForFileWidget } from '../../../tools/common/toolUtils';
 import { StoredModeInstructions } from '../../common/chatSessionMetadataStore';
-import { formatModelDetails, ModelDetailsInfo } from '../../../../platform/chat/common/chatModelDetails';
-import { appendResponsePartsForEvent, createResponseEventRenderContext, flushPendingAssistantMessage, ResponseEventRenderContext, ToolEventHandlers } from '../../common/sessionEventRenderer';
-import { extractChatPromptReferences, getFolderAttachmentPath } from './copilotCLIPrompt';
+import {
+	formatModelDetails,
+	ModelDetailsInfo,
+} from '../../../../platform/chat/common/chatModelDetails';
+import {
+	appendResponsePartsForEvent,
+	createResponseEventRenderContext,
+	flushPendingAssistantMessage,
+	ResponseEventRenderContext,
+	ToolEventHandlers,
+} from '../../common/sessionEventRenderer';
+import {
+	extractChatPromptReferences,
+	getFolderAttachmentPath,
+} from './copilotCLIPrompt';
 import { IChatDelegationSummaryService } from './delegationSummaryService';
-
 
 interface CreateTool {
 	toolName: 'create';
@@ -241,18 +291,18 @@ type TaskCompleteTool = {
 type AskUserTool = {
 	toolName: 'ask_user';
 	arguments:
-	| {
-		question: string;
-		choices?: string[];
-		allow_freeform?: boolean;
-	}
-	| {
-		message: string;
-		requestedSchema: {
-			properties: Record<string, unknown>;
-			required?: string[];
-		};
-	};
+		| {
+				question: string;
+				choices?: string[];
+				allow_freeform?: boolean;
+		  }
+		| {
+				message: string;
+				requestedSchema: {
+					properties: Record<string, unknown>;
+					required?: string[];
+				};
+		  };
 };
 
 type SkillTool = {
@@ -394,41 +444,93 @@ type CodeQLCheckerTool = {
 	arguments: Record<string, never>;
 };
 
-
-type StringReplaceArgumentTypes = CreateTool | ViewTool | StrReplaceTool | EditTool | InsertTool;
+type StringReplaceArgumentTypes =
+	| CreateTool
+	| ViewTool
+	| StrReplaceTool
+	| EditTool
+	| InsertTool;
 type ToStringReplaceEditorArguments<T extends StringReplaceArgumentTypes> = {
 	command: T['toolName'];
 } & T['arguments'];
 type StringReplaceEditorTool = {
 	toolName: 'str_replace_editor';
-	arguments: ToStringReplaceEditorArguments<CreateTool> | ToStringReplaceEditorArguments<ViewTool> | ToStringReplaceEditorArguments<EditTool> | ToStringReplaceEditorArguments<StrReplaceTool> |
-	ToStringReplaceEditorArguments<InsertTool>;
+	arguments:
+		| ToStringReplaceEditorArguments<CreateTool>
+		| ToStringReplaceEditorArguments<ViewTool>
+		| ToStringReplaceEditorArguments<EditTool>
+		| ToStringReplaceEditorArguments<StrReplaceTool>
+		| ToStringReplaceEditorArguments<InsertTool>;
 };
-export type ToolInfo = StringReplaceEditorTool | EditTool | CreateTool | ViewTool | InsertTool |
-	ShellTool | WriteShellTool | ReadShellTool | StopShellTool | ListShellTool |
-	GrepTool | GLobTool |
-	ReportIntentTool | ThinkTool | ReportProgressTool |
-	SearchCodeSubagentTool |
-	ReplyToCommentTool | CodeReviewTool | WebFetchTool | UpdateTodoTool | WebSearchTool |
-	ShowFileTool | FetchCopilotCliDocumentationTool | ProposeWorkTool | TaskCompleteTool |
-	AskUserTool | SkillTool | TaskTool | ListAgentsTool | ReadAgentTool | WriteAgentTool |
-	ExitPlanModeTool | SqlTool | LspTool | CreatePullRequestTool | DependencyCheckerTool | StoreMemoryTool | ParallelValidationTool |
-	ApplyPatchTool | McpReloadTool | McpValidateTool | ToolSearchTool | CodeQLCheckerTool;
+export type ToolInfo =
+	| StringReplaceEditorTool
+	| EditTool
+	| CreateTool
+	| ViewTool
+	| InsertTool
+	| ShellTool
+	| WriteShellTool
+	| ReadShellTool
+	| StopShellTool
+	| ListShellTool
+	| GrepTool
+	| GLobTool
+	| ReportIntentTool
+	| ThinkTool
+	| ReportProgressTool
+	| SearchCodeSubagentTool
+	| ReplyToCommentTool
+	| CodeReviewTool
+	| WebFetchTool
+	| UpdateTodoTool
+	| WebSearchTool
+	| ShowFileTool
+	| FetchCopilotCliDocumentationTool
+	| ProposeWorkTool
+	| TaskCompleteTool
+	| AskUserTool
+	| SkillTool
+	| TaskTool
+	| ListAgentsTool
+	| ReadAgentTool
+	| WriteAgentTool
+	| ExitPlanModeTool
+	| SqlTool
+	| LspTool
+	| CreatePullRequestTool
+	| DependencyCheckerTool
+	| StoreMemoryTool
+	| ParallelValidationTool
+	| ApplyPatchTool
+	| McpReloadTool
+	| McpValidateTool
+	| ToolSearchTool
+	| CodeQLCheckerTool;
 
 export type ToolCall = ToolInfo & {
 	toolCallId: string;
 	mcpServerName?: string | undefined;
 	mcpToolName?: string | undefined;
 };
-export type UnknownToolCall = { toolName: string; arguments: unknown; toolCallId: string };
+export type UnknownToolCall = {
+	toolName: string;
+	arguments: unknown;
+	toolCallId: string;
+};
 
 function isInstructionAttachmentPath(path: string): boolean {
 	const normalizedPath = path.replace(/\\/g, '/');
-	return normalizedPath.endsWith('/.github/copilot-instructions.md')
-		|| (normalizedPath.includes('/.github/instructions/') && normalizedPath.endsWith('.md'));
+	return (
+		normalizedPath.endsWith('/.github/copilot-instructions.md') ||
+		(normalizedPath.includes('/.github/instructions/') &&
+			normalizedPath.endsWith('.md'))
+	);
 }
 
-export function isCopilotCliEditToolCall(data: { toolName: string; arguments?: unknown }): boolean {
+export function isCopilotCliEditToolCall(data: {
+	toolName: string;
+	arguments?: unknown;
+}): boolean {
 	const toolCall = data as ToolCall;
 	if (toolCall.toolName === 'str_replace_editor') {
 		return toolCall.arguments.command !== 'view';
@@ -436,7 +538,9 @@ export function isCopilotCliEditToolCall(data: { toolName: string; arguments?: u
 	return toolCall.toolName === 'create' || toolCall.toolName === 'edit';
 }
 
-export function isCopilotCLIToolThatCouldRequirePermissions(event: ToolExecutionStartEvent): boolean {
+export function isCopilotCLIToolThatCouldRequirePermissions(
+	event: ToolExecutionStartEvent,
+): boolean {
 	const toolCall = event.data as unknown as ToolCall;
 	if (isCopilotCliEditToolCall(toolCall)) {
 		return true;
@@ -453,16 +557,26 @@ export function isCopilotCLIToolThatCouldRequirePermissions(event: ToolExecution
 	return false;
 }
 
-export function getAffectedUrisForEditTool(data: { toolName: string; arguments?: unknown }): URI[] {
+export function getAffectedUrisForEditTool(data: {
+	toolName: string;
+	arguments?: unknown;
+}): URI[] {
 	const toolCall = data as ToolCall;
 	// Old versions used str_replace_editor
 	// This should be removed eventually
 	// TODO @DonJayamanne verify with SDK & Padawan folk.
-	if (toolCall.toolName === 'str_replace_editor' && toolCall.arguments.command !== 'view' && typeof toolCall.arguments.path === 'string') {
+	if (
+		toolCall.toolName === 'str_replace_editor' &&
+		toolCall.arguments.command !== 'view' &&
+		typeof toolCall.arguments.path === 'string'
+	) {
 		return [URI.file(toolCall.arguments.path)];
 	}
 
-	if ((toolCall.toolName === 'create' || toolCall.toolName === 'edit') && typeof toolCall.arguments.path === 'string') {
+	if (
+		(toolCall.toolName === 'create' || toolCall.toolName === 'edit') &&
+		typeof toolCall.arguments.path === 'string'
+	) {
 		return [URI.file(toolCall.arguments.path)];
 	}
 
@@ -496,7 +610,17 @@ export interface RequestIdDetails {
  * Build chat history from SDK events for VS Code chat session
  * Converts SDKEvents into ChatRequestTurn2 and ChatResponseTurn2 objects
  */
-export function buildChatHistoryFromEvents(sessionId: string, modelId: string | undefined, events: readonly SessionEvent[], getVSCodeRequestId: (sdkRequestId: string) => RequestIdDetails | undefined, delegationSummaryService: IChatDelegationSummaryService, logger: ILogger, workingDirectory?: URI, defaultModeInstructionsForLastRequest?: StoredModeInstructions, modelDetailsById?: ReadonlyMap<string, ModelDetailsInfo>): (ChatRequestTurn2 | ChatResponseTurn2)[] {
+export function buildChatHistoryFromEvents(
+	sessionId: string,
+	modelId: string | undefined,
+	events: readonly SessionEvent[],
+	getVSCodeRequestId: (sdkRequestId: string) => RequestIdDetails | undefined,
+	delegationSummaryService: IChatDelegationSummaryService,
+	logger: ILogger,
+	workingDirectory?: URI,
+	defaultModeInstructionsForLastRequest?: StoredModeInstructions,
+	modelDetailsById?: ReadonlyMap<string, ModelDetailsInfo>,
+): (ChatRequestTurn2 | ChatResponseTurn2)[] {
 	const turns: (ChatRequestTurn2 | ChatResponseTurn2)[] = [];
 
 	let details: RequestIdDetails | undefined;
@@ -510,31 +634,52 @@ export function buildChatHistoryFromEvents(sessionId: string, modelId: string | 
 	// processed message ids, and the response parts being accumulated for the
 	// current response turn. The shared renderer reads/writes these in place;
 	// `flushResponseParts` drains `currentResponseParts` between turns.
-	const ctx: ResponseEventRenderContext<ToolCall> = createResponseEventRenderContext(
-		logger,
-		CLI_TOOL_EVENT_HANDLERS,
-		workingDirectory,
-		toolCallId => details?.toolIdEditMap?.[toolCallId],
-	);
+	const ctx: ResponseEventRenderContext<ToolCall> =
+		createResponseEventRenderContext(
+			logger,
+			CLI_TOOL_EVENT_HANDLERS,
+			workingDirectory,
+			(toolCallId) => details?.toolIdEditMap?.[toolCallId],
+		);
 
-	function getModelInfo(modelId: string | undefined): ModelDetailsInfo | undefined {
+	function getModelInfo(
+		modelId: string | undefined,
+	): ModelDetailsInfo | undefined {
 		if (!modelId || !modelDetailsById) {
 			return undefined;
 		}
 		return modelDetailsById.get(modelId.trim().toLowerCase());
 	}
 
-	function createResultForModel(modelId: string | undefined, creditsUsed: number | undefined) {
+	function createResultForModel(
+		modelId: string | undefined,
+		creditsUsed: number | undefined,
+	) {
 		const modelInfo = getModelInfo(modelId);
 		if (modelInfo) {
-			return { details: formatModelDetails(modelInfo.name, modelInfo.multiplier, creditsUsed) };
+			return {
+				details: formatModelDetails(
+					modelInfo.name,
+					modelInfo.multiplier,
+					creditsUsed,
+				),
+			};
 		}
 		return {};
 	}
 
 	function flushResponseParts() {
 		if (ctx.currentResponseParts.length > 0) {
-			turns.push(new ChatResponseTurn2([...ctx.currentResponseParts], createResultForModel(currentResponseModelId ?? currentModelId, currentCreditsUsed), ''));
+			turns.push(
+				new ChatResponseTurn2(
+					[...ctx.currentResponseParts],
+					createResultForModel(
+						currentResponseModelId ?? currentModelId,
+						currentCreditsUsed,
+					),
+					'',
+				),
+			);
 			ctx.currentResponseParts.length = 0;
 		}
 		currentResponseModelId = undefined;
@@ -548,11 +693,25 @@ export function buildChatHistoryFromEvents(sessionId: string, modelId: string | 
 		}
 		const turn = turns[currentRequestTurnIndex];
 		if (turn instanceof ChatRequestTurn2 && turn.modelId !== modelId) {
-			turns[currentRequestTurnIndex] = new ChatRequestTurn2(turn.prompt, turn.command, turn.references, turn.participant, [...turn.toolReferences], turn.editedFileEvents, turn.id, modelId, turn.modeInstructions2);
+			turns[currentRequestTurnIndex] = new ChatRequestTurn2(
+				turn.prompt,
+				turn.command,
+				turn.references,
+				turn.participant,
+				[...turn.toolReferences],
+				turn.editedFileEvents,
+				turn.id,
+				modelId,
+				turn.modeInstructions2,
+			);
 		}
 	}
 
-	const lastUserMessageId = findLast(events, event => event.type === 'user.message' && !isSyntheticUserMessage(event))?.id;
+	const lastUserMessageId = findLast(
+		events,
+		(event) =>
+			event.type === 'user.message' && !isSyntheticUserMessage(event),
+	)?.id;
 	for (const event of events) {
 		// Flush buffered `assistant.message_delta` chunks before any non-message
 		// event runs so lifecycle guards like `ctx.currentResponseParts.length === 0`
@@ -570,7 +729,10 @@ export function buildChatHistoryFromEvents(sessionId: string, modelId: string | 
 			}
 			case 'session.model_change': {
 				currentModelId = event.data.newModel;
-				if (currentRequestTurnIndex !== undefined && ctx.currentResponseParts.length === 0) {
+				if (
+					currentRequestTurnIndex !== undefined &&
+					ctx.currentResponseParts.length === 0
+				) {
 					currentResponseModelId = currentModelId;
 					updateCurrentRequestModelId(currentModelId);
 				}
@@ -596,41 +758,77 @@ export function buildChatHistoryFromEvents(sessionId: string, modelId: string | 
 				const references: ChatPromptReference[] = [];
 
 				try {
-					references.push(...extractChatPromptReferences(event.data.content || ''));
+					references.push(
+						...extractChatPromptReferences(
+							event.data.content || '',
+						),
+					);
 				} catch (ex) {
 					// ignore errors from parsing references
 				}
 				const existingReferences = new ResourceMap<Range | undefined>();
-				references.forEach(ref => {
+				references.forEach((ref) => {
 					if (URI.isUri(ref.value)) {
 						existingReferences.set(ref.value, undefined);
 					} else if (isLocation(ref.value)) {
 						existingReferences.set(ref.value.uri, ref.value.range);
 					}
 				});
-				((event.data.attachments || []))
-					.filter(attachment => attachment.type === 'selection' || attachment.type === 'github_reference' || attachment.type === 'blob' ? true : !isInstructionAttachmentPath(attachment.path))
-					.forEach(attachment => {
+				(event.data.attachments || [])
+					.filter((attachment) =>
+						attachment.type === 'selection' ||
+						attachment.type === 'github_reference' ||
+						attachment.type === 'blob'
+							? true
+							: !isInstructionAttachmentPath(attachment.path),
+					)
+					.forEach((attachment) => {
 						if (attachment.type === 'github_reference') {
 							return;
 						}
 						if (attachment.type === 'selection') {
-							const range = attachment.displayName ? getRangeInPrompt(event.data.content || '', attachment.displayName) : undefined;
+							const range = attachment.displayName
+								? getRangeInPrompt(
+										event.data.content || '',
+										attachment.displayName,
+									)
+								: undefined;
 							const uri = Uri.file(attachment.filePath);
-							if (existingReferences.has(uri) && !existingReferences.get(uri)) {
+							if (
+								existingReferences.has(uri) &&
+								!existingReferences.get(uri)
+							) {
 								return; // Skip duplicates
 							}
 							references.push({
 								id: attachment.filePath,
 								name: attachment.displayName,
-								value: new Location(uri, new Range(attachment.selection.start.line - 1, attachment.selection.start.character - 1, attachment.selection.end.line - 1, attachment.selection.end.character - 1)),
-								range
+								value: new Location(
+									uri,
+									new Range(
+										attachment.selection.start.line - 1,
+										attachment.selection.start.character -
+											1,
+										attachment.selection.end.line - 1,
+										attachment.selection.end.character - 1,
+									),
+								),
+								range,
 							});
-						} else if (attachment.type === 'file' || attachment.type === 'directory') {
-							const range = attachment.displayName ? getRangeInPrompt(event.data.content || '', attachment.displayName) : undefined;
-							const attachmentPath = attachment.type === 'directory' ?
-								getFolderAttachmentPath(attachment.path) :
-								attachment.path;
+						} else if (
+							attachment.type === 'file' ||
+							attachment.type === 'directory'
+						) {
+							const range = attachment.displayName
+								? getRangeInPrompt(
+										event.data.content || '',
+										attachment.displayName,
+									)
+								: undefined;
+							const attachmentPath =
+								attachment.type === 'directory'
+									? getFolderAttachmentPath(attachment.path)
+									: attachment.path;
 							const uri = Uri.file(attachmentPath);
 							if (existingReferences.has(uri)) {
 								return; // Skip duplicates
@@ -639,47 +837,70 @@ export function buildChatHistoryFromEvents(sessionId: string, modelId: string | 
 								id: attachment.path,
 								name: attachment.displayName,
 								value: uri,
-								range
+								range,
 							});
 						} else if (attachment.type === 'blob') {
 							const binaryDataSupplier = async () => {
 								try {
 									return decodeBase64(attachment.data).buffer;
 								} catch (error) {
-									logger.error(error, `Failed to decode blob attachment ${attachment.displayName || ''}`);
+									logger.error(
+										error,
+										`Failed to decode blob attachment ${attachment.displayName || ''}`,
+									);
 									throw error;
 								}
 							};
 							references.push({
 								id: `${attachment.displayName || ''}-${attachment.mimeType}-${attachment.type}`,
 								name: attachment.displayName || '',
-								value: new ChatReferenceBinaryData(attachment.mimeType, binaryDataSupplier),
+								value: new ChatReferenceBinaryData(
+									attachment.mimeType,
+									binaryDataSupplier,
+								),
 							});
 						}
 					});
 
 				let prompt = stripReminders(event.data.content || '');
-				const info = isFirstUserMessage ? delegationSummaryService.extractPrompt(sessionId, prompt) : undefined;
+				const info = isFirstUserMessage
+					? delegationSummaryService.extractPrompt(sessionId, prompt)
+					: undefined;
 				if (info) {
 					prompt = info.prompt;
 					references.push(info.reference);
 				}
 				isFirstUserMessage = false;
-				let modeInstructions2 = details?.modeInstructions ? {
-					uri: details.modeInstructions.uri ? Uri.parse(details.modeInstructions.uri) : undefined,
-					name: details.modeInstructions.name,
-					content: details.modeInstructions.content,
-					metadata: details.modeInstructions.metadata,
-					isBuiltin: details.modeInstructions.isBuiltin,
-				} : undefined;
+				let modeInstructions2 = details?.modeInstructions
+					? {
+							uri: details.modeInstructions.uri
+								? Uri.parse(details.modeInstructions.uri)
+								: undefined,
+							name: details.modeInstructions.name,
+							content: details.modeInstructions.content,
+							metadata: details.modeInstructions.metadata,
+							isBuiltin: details.modeInstructions.isBuiltin,
+						}
+					: undefined;
 
-				if (lastUserMessageId && event.id === lastUserMessageId && defaultModeInstructionsForLastRequest && !modeInstructions2) {
+				if (
+					lastUserMessageId &&
+					event.id === lastUserMessageId &&
+					defaultModeInstructionsForLastRequest &&
+					!modeInstructions2
+				) {
 					modeInstructions2 = modeInstructions2 ?? {
-						uri: defaultModeInstructionsForLastRequest.uri ? Uri.parse(defaultModeInstructionsForLastRequest.uri) : undefined,
+						uri: defaultModeInstructionsForLastRequest.uri
+							? Uri.parse(
+									defaultModeInstructionsForLastRequest.uri,
+								)
+							: undefined,
 						name: defaultModeInstructionsForLastRequest.name,
 						content: defaultModeInstructionsForLastRequest.content,
-						metadata: defaultModeInstructionsForLastRequest.metadata,
-						isBuiltin: defaultModeInstructionsForLastRequest.isBuiltin,
+						metadata:
+							defaultModeInstructionsForLastRequest.metadata,
+						isBuiltin:
+							defaultModeInstructionsForLastRequest.isBuiltin,
 					};
 				}
 				let commandPrefix = '';
@@ -697,10 +918,23 @@ export function buildChatHistoryFromEvents(sessionId: string, modelId: string | 
 				// Prefer the persisted resolved model id (from `assistant.usage`) so that on reload
 				// `auto` sessions show the actual model used to produce the response. Falls back to
 				// the currently tracked model id (from `session.start`/`session.model_change`).
-				const resolvedRequestModelId = details?.responseModelId ?? currentModelId;
+				const resolvedRequestModelId =
+					details?.responseModelId ?? currentModelId;
 				currentResponseModelId = resolvedRequestModelId;
 				currentCreditsUsed = details?.creditsUsed;
-				turns.push(new ChatRequestTurn2(`${commandPrefix}${prompt}`, undefined, references, '', [], undefined, details?.requestId ?? event.id, resolvedRequestModelId, modeInstructions2));
+				turns.push(
+					new ChatRequestTurn2(
+						`${commandPrefix}${prompt}`,
+						undefined,
+						references,
+						'',
+						[],
+						undefined,
+						details?.requestId ?? event.id,
+						resolvedRequestModelId,
+						modeInstructions2,
+					),
+				);
 				currentRequestTurnIndex = turns.length - 1;
 				continue;
 			}
@@ -715,7 +949,10 @@ export function buildChatHistoryFromEvents(sessionId: string, modelId: string | 
 	return turns;
 }
 
-function getRangeInPrompt(prompt: string, referencedName: string): [number, number] | undefined {
+function getRangeInPrompt(
+	prompt: string,
+	referencedName: string,
+): [number, number] | undefined {
 	referencedName = `#${referencedName}`;
 	const index = prompt.indexOf(referencedName);
 	if (index >= 0) {
@@ -734,7 +971,10 @@ function getRangeInPrompt(prompt: string, referencedName: string): [number, numb
  * tool invocation renderer understands, so that MCP tool results can be displayed
  * consistently alongside other chat responses.
  */
-function convertMcpContentToToolInvocationData(result: ToolExecutionCompleteEvent['data']['result'], logger: ILogger): McpToolInvocationContentData[] {
+function convertMcpContentToToolInvocationData(
+	result: ToolExecutionCompleteEvent['data']['result'],
+	logger: ILogger,
+): McpToolInvocationContentData[] {
 	const output: McpToolInvocationContentData[] = [];
 	const encoder = new TextEncoder();
 
@@ -747,26 +987,32 @@ function convertMcpContentToToolInvocationData(result: ToolExecutionCompleteEven
 			switch (block.type) {
 				case 'text':
 					// Convert text to UTF-8 bytes with text/plain mime type
-					output.push(new McpToolInvocationContentData(
-						encoder.encode(block.text),
-						'text/plain'
-					));
+					output.push(
+						new McpToolInvocationContentData(
+							encoder.encode(block.text),
+							'text/plain',
+						),
+					);
 					break;
 
 				case 'image':
 					// Decode base64 image data and preserve mime type
-					output.push(new McpToolInvocationContentData(
-						decodeBase64(block.data).buffer,
-						block.mimeType
-					));
+					output.push(
+						new McpToolInvocationContentData(
+							decodeBase64(block.data).buffer,
+							block.mimeType,
+						),
+					);
 					break;
 
 				case 'audio':
 					// Decode base64 audio data and preserve mime type
-					output.push(new McpToolInvocationContentData(
-						decodeBase64(block.data).buffer,
-						block.mimeType
-					));
+					output.push(
+						new McpToolInvocationContentData(
+							decodeBase64(block.data).buffer,
+							block.mimeType,
+						),
+					);
 					break;
 
 				case 'resource': {
@@ -775,17 +1021,22 @@ function convertMcpContentToToolInvocationData(result: ToolExecutionCompleteEven
 					if ('text' in resource) {
 						// TextResourceContents
 						const mimeType = resource.mimeType || 'text/plain';
-						output.push(new McpToolInvocationContentData(
-							encoder.encode(resource.text),
-							mimeType
-						));
+						output.push(
+							new McpToolInvocationContentData(
+								encoder.encode(resource.text),
+								mimeType,
+							),
+						);
 					} else if ('blob' in resource) {
 						// BlobResourceContents
-						const mimeType = resource.mimeType || 'application/octet-stream';
-						output.push(new McpToolInvocationContentData(
-							decodeBase64(resource.blob).buffer,
-							mimeType
-						));
+						const mimeType =
+							resource.mimeType || 'application/octet-stream';
+						output.push(
+							new McpToolInvocationContentData(
+								decodeBase64(resource.blob).buffer,
+								mimeType,
+							),
+						);
 					}
 					break;
 				}
@@ -793,17 +1044,24 @@ function convertMcpContentToToolInvocationData(result: ToolExecutionCompleteEven
 				case 'resource_link': {
 					// Format resource link as readable text with name and URI
 					const displayName = block.title || block.name;
-					const linkText = displayName ? `Resource: ${displayName}\nURI: ${block.uri}` : block.uri;
-					output.push(new McpToolInvocationContentData(
-						encoder.encode(linkText),
-						'text/plain'
-					));
+					const linkText = displayName
+						? `Resource: ${displayName}\nURI: ${block.uri}`
+						: block.uri;
+					output.push(
+						new McpToolInvocationContentData(
+							encoder.encode(linkText),
+							'text/plain',
+						),
+					);
 					break;
 				}
 			}
 		} catch (error) {
 			// Log conversion errors but continue processing other blocks
-			logger.error(error, `Failed to convert MCP content block of type ${block.type}:`);
+			logger.error(
+				error,
+				`Failed to convert MCP content block of type ${block.type}:`,
+			);
 		}
 	}
 
@@ -819,7 +1077,18 @@ export function enrichToolInvocationWithSubagentMetadata(
 	toolCallId: string,
 	agentDisplayName: string,
 	agentDescription: string | undefined,
-	pendingToolInvocations: Map<string, [ChatToolInvocationPart | ChatResponseMarkdownPart | ChatResponseThinkingProgressPart, toolData: ToolCall, parentToolCallId: string | undefined]>
+	pendingToolInvocations: Map<
+		string,
+		[
+			(
+				| ChatToolInvocationPart
+				| ChatResponseMarkdownPart
+				| ChatResponseThinkingProgressPart
+			),
+			toolData: ToolCall,
+			parentToolCallId: string | undefined,
+		]
+	>,
 ): void {
 	const invocation = pendingToolInvocations.get(toolCallId);
 	if (!invocation) {
@@ -838,23 +1107,59 @@ export function enrichToolInvocationWithSubagentMetadata(
 	}
 }
 
-export function processToolExecutionStart(event: ToolExecutionStartEvent, pendingToolInvocations: Map<string, [ChatToolInvocationPart | ChatResponseMarkdownPart | ChatResponseThinkingProgressPart, toolData: ToolCall, parentToolCallId: string | undefined]>, workingDirectory?: URI): ChatToolInvocationPart | ChatResponseMarkdownPart | ChatResponseThinkingProgressPart | undefined {
-	const toolInvocation = createCopilotCLIToolInvocation(event.data as ToolCall, undefined, workingDirectory);
+export function processToolExecutionStart(
+	event: ToolExecutionStartEvent,
+	pendingToolInvocations: Map<
+		string,
+		[
+			(
+				| ChatToolInvocationPart
+				| ChatResponseMarkdownPart
+				| ChatResponseThinkingProgressPart
+			),
+			toolData: ToolCall,
+			parentToolCallId: string | undefined,
+		]
+	>,
+	workingDirectory?: URI,
+):
+	| ChatToolInvocationPart
+	| ChatResponseMarkdownPart
+	| ChatResponseThinkingProgressPart
+	| undefined {
+	const toolInvocation = createCopilotCLIToolInvocation(
+		event.data as ToolCall,
+		undefined,
+		workingDirectory,
+	);
 	if (toolInvocation) {
-		if (toolInvocation instanceof ChatToolInvocationPart && event.data.parentToolCallId) {
+		if (
+			toolInvocation instanceof ChatToolInvocationPart &&
+			event.data.parentToolCallId
+		) {
 			// Resolve to the root ancestor so all descendants are grouped under the
 			// top-level subagent container instead of creating intermediate containers.
-			toolInvocation.subAgentInvocationId = resolveRootSubagentId(event.data.parentToolCallId, pendingToolInvocations);
+			toolInvocation.subAgentInvocationId = resolveRootSubagentId(
+				event.data.parentToolCallId,
+				pendingToolInvocations,
+			);
 
 			// Nested task tools should not create their own subagent container —
 			// clear ChatSubagentToolInvocationData so the widget treats them as
 			// regular child tool invocations within the parent container.
-			if (toolInvocation.toolSpecificData instanceof ChatSubagentToolInvocationData) {
+			if (
+				toolInvocation.toolSpecificData instanceof
+				ChatSubagentToolInvocationData
+			) {
 				toolInvocation.toolSpecificData = undefined;
 			}
 		}
 		// Store pending invocation to update with result later
-		pendingToolInvocations.set(event.data.toolCallId, [toolInvocation, event.data as ToolCall, event.data.parentToolCallId]);
+		pendingToolInvocations.set(event.data.toolCallId, [
+			toolInvocation,
+			event.data as ToolCall,
+			event.data.parentToolCallId,
+		]);
 	}
 	return toolInvocation;
 }
@@ -865,7 +1170,18 @@ export function processToolExecutionStart(event: ToolExecutionStartEvent, pendin
  */
 function resolveRootSubagentId(
 	parentToolCallId: string,
-	pendingToolInvocations: Map<string, [ChatToolInvocationPart | ChatResponseMarkdownPart | ChatResponseThinkingProgressPart, toolData: ToolCall, parentToolCallId: string | undefined]>
+	pendingToolInvocations: Map<
+		string,
+		[
+			(
+				| ChatToolInvocationPart
+				| ChatResponseMarkdownPart
+				| ChatResponseThinkingProgressPart
+			),
+			toolData: ToolCall,
+			parentToolCallId: string | undefined,
+		]
+	>,
 ): string {
 	let currentId = parentToolCallId;
 	const visited = new Set<string>();
@@ -883,54 +1199,117 @@ function resolveRootSubagentId(
 	return currentId;
 }
 
-export function processToolExecutionComplete(event: ToolExecutionCompleteEvent, pendingToolInvocations: Map<string, [ChatToolInvocationPart | ChatResponseMarkdownPart | ChatResponseThinkingProgressPart, toolData: ToolCall, parentToolCallId: string | undefined]>, logger: ILogger, workingDirectory?: URI): [ChatToolInvocationPart | ChatResponseMarkdownPart | ChatResponseThinkingProgressPart, toolData: ToolCall, parentToolCallId: string | undefined] | undefined {
+export function processToolExecutionComplete(
+	event: ToolExecutionCompleteEvent,
+	pendingToolInvocations: Map<
+		string,
+		[
+			(
+				| ChatToolInvocationPart
+				| ChatResponseMarkdownPart
+				| ChatResponseThinkingProgressPart
+			),
+			toolData: ToolCall,
+			parentToolCallId: string | undefined,
+		]
+	>,
+	logger: ILogger,
+	workingDirectory?: URI,
+):
+	| [
+			(
+				| ChatToolInvocationPart
+				| ChatResponseMarkdownPart
+				| ChatResponseThinkingProgressPart
+			),
+			toolData: ToolCall,
+			parentToolCallId: string | undefined,
+	  ]
+	| undefined {
 	const invocation = pendingToolInvocations.get(event.data.toolCallId);
 	pendingToolInvocations.delete(event.data.toolCallId);
 
 	if (invocation && invocation[0] instanceof ChatToolInvocationPart) {
 		invocation[0].isComplete = true;
 		invocation[0].isError = !!event.data.error;
-		invocation[0].invocationMessage = event.data.error?.message || invocation[0].invocationMessage;
-		if (!event.data.success && (event.data.error?.code === 'rejected' || event.data.error?.code === 'denied')) {
+		invocation[0].invocationMessage =
+			event.data.error?.message || invocation[0].invocationMessage;
+		if (
+			!event.data.success &&
+			(event.data.error?.code === 'rejected' ||
+				event.data.error?.code === 'denied')
+		) {
 			invocation[0].isConfirmed = false;
 		} else {
 			invocation[0].isConfirmed = true;
 		}
 		const toolCall = invocation[1];
 		if (Object.hasOwn(ToolFriendlyNameAndHandlers, toolCall.toolName)) {
-			const [, , postFormatter] = ToolFriendlyNameAndHandlers[toolCall.toolName];
+			const [, , postFormatter] =
+				ToolFriendlyNameAndHandlers[toolCall.toolName];
 			try {
-				(postFormatter as PostInvocationFormatter)(invocation[0], toolCall, event.data, workingDirectory);
+				(postFormatter as PostInvocationFormatter)(
+					invocation[0],
+					toolCall,
+					event.data,
+					workingDirectory,
+				);
 			} catch (err) {
-				logger.error(err, `Failed to format tool invocation completion for tool: ${toolCall.toolName}`);
+				logger.error(
+					err,
+					`Failed to format tool invocation completion for tool: ${toolCall.toolName}`,
+				);
 				try {
-					genericToolInvocationCompleted(invocation[0], toolCall, event.data);
+					genericToolInvocationCompleted(
+						invocation[0],
+						toolCall,
+						event.data,
+					);
 				} catch {
 					// ignore
 				}
 			}
 		} else if (toolCall.mcpServerName && toolCall.mcpToolName) {
 			// Use tool arguments as input, formatted as JSON
-			const input = toolCall.arguments ? JSON.stringify(toolCall.arguments, null, 2) : '';
-			const output = convertMcpContentToToolInvocationData(event.data.result, logger);
+			const input = toolCall.arguments
+				? JSON.stringify(toolCall.arguments, null, 2)
+				: '';
+			const output = convertMcpContentToToolInvocationData(
+				event.data.result,
+				logger,
+			);
 			if (output.length) {
 				invocation[0].toolSpecificData = {
 					input,
-					output
+					output,
 				} satisfies ChatMcpToolInvocationData;
 			} else {
 				// If we don't have any structured output, at least include the raw text of the result for visibility in the chat UI.
-				genericToolInvocationCompleted(invocation[0], toolCall, event.data);
+				genericToolInvocationCompleted(
+					invocation[0],
+					toolCall,
+					event.data,
+				);
 			}
 		} else {
 			if (!!event.data.error && event.data.error?.message) {
-				invocation[0] = new ChatToolInvocationPart(invocation[0].toolName, invocation[0].toolCallId, event.data.error.message);
+				invocation[0] = new ChatToolInvocationPart(
+					invocation[0].toolName,
+					invocation[0].toolCallId,
+					event.data.error.message,
+				);
 				invocation[0].isComplete = true;
 				invocation[0].isError = true;
-				invocation[0].invocationMessage = event.data.error?.message || invocation[0].invocationMessage;
+				invocation[0].invocationMessage =
+					event.data.error?.message ||
+					invocation[0].invocationMessage;
 				invocation[0].pastTenseMessage = `Used tool: ${invocation[0].toolName}`;
 			} else {
-				genericToolInvocationCompleted(invocation[0], toolCall, event.data);
+				genericToolInvocationCompleted(
+					invocation[0],
+					toolCall,
+					event.data,
+				);
 			}
 		}
 	}
@@ -954,18 +1333,42 @@ export const CLI_TOOL_EVENT_HANDLERS: ToolEventHandlers<ToolCall> = {
 /**
  * Creates a formatted tool invocation part for CopilotCLI tools
  */
-export function createCopilotCLIToolInvocation(data: {
-	toolCallId: string; toolName: string; arguments?: unknown; mcpServerName?: string | undefined;
-	mcpToolName?: string | undefined;
-}, editId?: string, workingDirectory?: URI, logger?: ILogger): ChatToolInvocationPart | ChatResponseMarkdownPart | ChatResponseThinkingProgressPart | undefined {
+export function createCopilotCLIToolInvocation(
+	data: {
+		toolCallId: string;
+		toolName: string;
+		arguments?: unknown;
+		mcpServerName?: string | undefined;
+		mcpToolName?: string | undefined;
+	},
+	editId?: string,
+	workingDirectory?: URI,
+	logger?: ILogger,
+):
+	| ChatToolInvocationPart
+	| ChatResponseMarkdownPart
+	| ChatResponseThinkingProgressPart
+	| undefined {
 	if (!Object.hasOwn(ToolFriendlyNameAndHandlers, data.toolName)) {
 		const mcpServer = l10n.t('MCP Server');
-		const toolName = data.mcpServerName && data.mcpToolName ? `${data.mcpServerName}, ${data.mcpToolName} (${mcpServer})` : data.toolName;
-		const invocation = new ChatToolInvocationPart(toolName ?? 'unknown', data.toolCallId ?? '');
+		const toolName =
+			data.mcpServerName && data.mcpToolName
+				? `${data.mcpServerName}, ${data.mcpToolName} (${mcpServer})`
+				: data.toolName;
+		const invocation = new ChatToolInvocationPart(
+			toolName ?? 'unknown',
+			data.toolCallId ?? '',
+		);
 		invocation.isConfirmed = false;
 		invocation.isComplete = false;
-		invocation.invocationMessage = l10n.t("Using tool: {0}", toolName ?? 'unknown');
-		invocation.pastTenseMessage = l10n.t("Used tool: {0}", toolName ?? 'unknown');
+		invocation.invocationMessage = l10n.t(
+			'Using tool: {0}',
+			toolName ?? 'unknown',
+		);
+		invocation.pastTenseMessage = l10n.t(
+			'Used tool: {0}',
+			toolName ?? 'unknown',
+		);
 		return invocation;
 	}
 
@@ -976,8 +1379,13 @@ export function createCopilotCLIToolInvocation(data: {
 		return undefined; // Ignore these for now
 	}
 	if (toolCall.toolName === 'think') {
-		if (toolCall.arguments && typeof toolCall.arguments.thought === 'string') {
-			return new ChatResponseThinkingProgressPart(toolCall.arguments.thought);
+		if (
+			toolCall.arguments &&
+			typeof toolCall.arguments.thought === 'string'
+		) {
+			return new ChatResponseThinkingProgressPart(
+				toolCall.arguments.thought,
+			);
 		}
 		return undefined;
 	}
@@ -997,112 +1405,375 @@ export function createCopilotCLIToolInvocation(data: {
 		return undefined;
 	}
 
-	const [friendlyToolName, formatter] = ToolFriendlyNameAndHandlers[toolCall.toolName];
-	const invocation = new ChatToolInvocationPart(friendlyToolName ?? toolCall.toolName ?? 'unknown', toolCall.toolCallId ?? '');
+	const [friendlyToolName, formatter] =
+		ToolFriendlyNameAndHandlers[toolCall.toolName];
+	const invocation = new ChatToolInvocationPart(
+		friendlyToolName ?? toolCall.toolName ?? 'unknown',
+		toolCall.toolCallId ?? '',
+	);
 	invocation.isConfirmed = false;
 	invocation.isComplete = false;
 
 	try {
-		(formatter as Formatter)(invocation, toolCall, editId, workingDirectory);
+		(formatter as Formatter)(
+			invocation,
+			toolCall,
+			editId,
+			workingDirectory,
+		);
 	} catch (err) {
-		logger?.error(err, `Failed to format tool invocation for tool: ${toolCall.toolName}`);
+		logger?.error(
+			err,
+			`Failed to format tool invocation for tool: ${toolCall.toolName}`,
+		);
 	}
 	return invocation;
 }
 
-type Formatter = (invocation: ChatToolInvocationPart, toolCall: ToolCall, editId?: string, workingDirectory?: URI) => void;
-type PostInvocationFormatter = (invocation: ChatToolInvocationPart, toolCall: ToolCall, result: ToolCallResult, workingDirectory?: URI) => void;
-type ToolCallFor<T extends ToolCall['toolName']> = Extract<ToolCall, { toolName: T }>;
+type Formatter = (
+	invocation: ChatToolInvocationPart,
+	toolCall: ToolCall,
+	editId?: string,
+	workingDirectory?: URI,
+) => void;
+type PostInvocationFormatter = (
+	invocation: ChatToolInvocationPart,
+	toolCall: ToolCall,
+	result: ToolCallResult,
+	workingDirectory?: URI,
+) => void;
+type ToolCallFor<T extends ToolCall['toolName']> = Extract<
+	ToolCall,
+	{ toolName: T }
+>;
 type ToolCallResult = ToolExecutionCompleteEvent['data'];
 
-const ToolFriendlyNameAndHandlers: { [K in ToolCall['toolName']]: [title: string, pre: (invocation: ChatToolInvocationPart, toolCall: ToolCallFor<K>, editId?: string, workingDirectory?: URI) => void, post: (invocation: ChatToolInvocationPart, toolCall: ToolCallFor<K>, result: ToolCallResult, workingDirectory?: URI) => void] } = {
-	'str_replace_editor': [l10n.t('Edit File'), formatStrReplaceEditorInvocation, genericToolInvocationCompleted],
-	'edit': [l10n.t('Edit File'), formatEditToolInvocation, emptyToolInvocationCompleted],
-	'str_replace': [l10n.t('Edit File'), formatEditToolInvocation, emptyToolInvocationCompleted],
-	'create': [l10n.t('Create File'), formatCreateToolInvocation, emptyToolInvocationCompleted],
-	'insert': [l10n.t('Edit File'), formatInsertToolInvocation, emptyToolInvocationCompleted],
-	'view': [l10n.t('Read'), formatViewToolInvocation, emptyToolInvocationCompleted],
-	'bash': [l10n.t('Run Shell Command'), formatShellInvocation, formatShellInvocationCompleted],
-	'powershell': [l10n.t('Run Shell Command'), formatShellInvocation, formatShellInvocationCompleted],
-	'write_bash': [l10n.t('Write to Bash'), emptyInvocation, genericToolInvocationCompleted],
-	'write_powershell': [l10n.t('Write to PowerShell'), emptyInvocation, genericToolInvocationCompleted],
-	'read_bash': [l10n.t('Read Terminal'), emptyInvocation, genericToolInvocationCompleted],
-	'read_powershell': [l10n.t('Read Terminal'), emptyInvocation, genericToolInvocationCompleted],
-	'stop_bash': [l10n.t('Stop Terminal Session'), emptyInvocation, genericToolInvocationCompleted],
-	'stop_powershell': [l10n.t('Stop Terminal Session'), emptyInvocation, genericToolInvocationCompleted],
-	'grep': [l10n.t('Search'), formatSearchToolInvocation, formatSearchToolInvocationCompleted],
-	'rg': [l10n.t('Search'), formatSearchToolInvocation, formatSearchToolInvocationCompleted],
-	'glob': [l10n.t('Search'), formatSearchToolInvocation, formatSearchToolInvocationCompleted],
-	'search_code_subagent': [l10n.t('Search Code'), formatSearchToolInvocation, emptyToolInvocationCompleted],
-	'reply_to_comment': [l10n.t('Reply to Comment'), formatReplyToCommentInvocation, genericToolInvocationCompleted],
-	'code_review': [l10n.t('Code Review'), formatCodeReviewInvocation, genericToolInvocationCompleted],
-	'report_intent': [l10n.t('Report Intent'), emptyInvocation, genericToolInvocationCompleted],
-	'think': [l10n.t('Thinking'), emptyInvocation, genericToolInvocationCompleted],
-	'report_progress': [l10n.t('Progress update'), formatProgressToolInvocation, genericToolInvocationCompleted],
-	'web_fetch': [l10n.t('Fetch Web Content'), emptyInvocation, genericToolInvocationCompleted],
-	'web_search': [l10n.t('Web Search'), emptyInvocation, genericToolInvocationCompleted],
-	'update_todo': [l10n.t('Update Todo'), formatUpdateTodoInvocation, formatUpdateTodoInvocationCompleted],
-	'show_file': [l10n.t('Show File'), formatShowFileInvocation, genericToolInvocationCompleted],
-	'fetch_copilot_cli_documentation': [l10n.t('Fetch Documentation'), emptyInvocation, genericToolInvocationCompleted],
-	'propose_work': [l10n.t('Propose Work'), formatProposeWorkInvocation, genericToolInvocationCompleted],
-	'task_complete': [l10n.t('Task Complete'), formatTaskCompleteInvocation, genericToolInvocationCompleted],
-	'ask_user': [l10n.t('Ask User'), formatAskUserInvocation, genericToolInvocationCompleted],
-	'skill': [l10n.t('Invoke Skill'), formatSkillInvocation, genericToolInvocationCompleted],
-	'task': [l10n.t('Delegate Task'), formatTaskInvocation, formatTaskInvocationCompleted],
-	'list_agents': [l10n.t('List Agents'), emptyInvocation, genericToolInvocationCompleted],
-	'read_agent': [l10n.t('Read Agent'), formatReadAgentInvocation, genericToolInvocationCompleted],
-	'exit_plan_mode': [l10n.t('Exit Plan Mode'), formatExitPlanModeInvocation, genericToolInvocationCompleted],
-	'sql': [l10n.t('Execute SQL'), formatSqlInvocation, genericToolInvocationCompleted],
-	'lsp': [l10n.t('Language Server'), formatLspInvocation, genericToolInvocationCompleted],
-	'create_pull_request': [l10n.t('Create Pull Request'), formatCreatePullRequestInvocation, genericToolInvocationCompleted],
-	'gh-advisory-database': [l10n.t('Check Dependencies'), emptyInvocation, genericToolInvocationCompleted],
-	'store_memory': [l10n.t('Store Memory'), formatStoreMemoryInvocation, genericToolInvocationCompleted],
-	'list_bash': [l10n.t('List Shell Sessions'), emptyInvocation, genericToolInvocationCompleted],
-	'list_powershell': [l10n.t('List Shell Sessions'), emptyInvocation, genericToolInvocationCompleted],
-	'parallel_validation': [l10n.t('Validate Changes'), emptyInvocation, genericToolInvocationCompleted],
-	'apply_patch': [l10n.t('Apply Patch'), formatApplyPatchInvocation, genericToolInvocationCompleted],
-	'write_agent': [l10n.t('Write to Agent'), formatWriteAgentInvocation, genericToolInvocationCompleted],
-	'mcp_reload': [l10n.t('Reload MCP Config'), emptyInvocation, genericToolInvocationCompleted],
-	'mcp_validate': [l10n.t('Validate MCP Config'), formatMcpValidateInvocation, genericToolInvocationCompleted],
-	'tool_search_tool_regex': [l10n.t('Search Tools'), formatToolSearchInvocation, genericToolInvocationCompleted],
-	'codeql_checker': [l10n.t('CodeQL Security Scan'), emptyInvocation, genericToolInvocationCompleted],
+const ToolFriendlyNameAndHandlers: {
+	[K in ToolCall['toolName']]: [
+		title: string,
+		pre: (
+			invocation: ChatToolInvocationPart,
+			toolCall: ToolCallFor<K>,
+			editId?: string,
+			workingDirectory?: URI,
+		) => void,
+		post: (
+			invocation: ChatToolInvocationPart,
+			toolCall: ToolCallFor<K>,
+			result: ToolCallResult,
+			workingDirectory?: URI,
+		) => void,
+	];
+} = {
+	str_replace_editor: [
+		l10n.t('Edit File'),
+		formatStrReplaceEditorInvocation,
+		genericToolInvocationCompleted,
+	],
+	edit: [
+		l10n.t('Edit File'),
+		formatEditToolInvocation,
+		emptyToolInvocationCompleted,
+	],
+	str_replace: [
+		l10n.t('Edit File'),
+		formatEditToolInvocation,
+		emptyToolInvocationCompleted,
+	],
+	create: [
+		l10n.t('Create File'),
+		formatCreateToolInvocation,
+		emptyToolInvocationCompleted,
+	],
+	insert: [
+		l10n.t('Edit File'),
+		formatInsertToolInvocation,
+		emptyToolInvocationCompleted,
+	],
+	view: [
+		l10n.t('Read'),
+		formatViewToolInvocation,
+		emptyToolInvocationCompleted,
+	],
+	bash: [
+		l10n.t('Run Shell Command'),
+		formatShellInvocation,
+		formatShellInvocationCompleted,
+	],
+	powershell: [
+		l10n.t('Run Shell Command'),
+		formatShellInvocation,
+		formatShellInvocationCompleted,
+	],
+	write_bash: [
+		l10n.t('Write to Bash'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	write_powershell: [
+		l10n.t('Write to PowerShell'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	read_bash: [
+		l10n.t('Read Terminal'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	read_powershell: [
+		l10n.t('Read Terminal'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	stop_bash: [
+		l10n.t('Stop Terminal Session'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	stop_powershell: [
+		l10n.t('Stop Terminal Session'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	grep: [
+		l10n.t('Search'),
+		formatSearchToolInvocation,
+		formatSearchToolInvocationCompleted,
+	],
+	rg: [
+		l10n.t('Search'),
+		formatSearchToolInvocation,
+		formatSearchToolInvocationCompleted,
+	],
+	glob: [
+		l10n.t('Search'),
+		formatSearchToolInvocation,
+		formatSearchToolInvocationCompleted,
+	],
+	search_code_subagent: [
+		l10n.t('Search Code'),
+		formatSearchToolInvocation,
+		emptyToolInvocationCompleted,
+	],
+	reply_to_comment: [
+		l10n.t('Reply to Comment'),
+		formatReplyToCommentInvocation,
+		genericToolInvocationCompleted,
+	],
+	code_review: [
+		l10n.t('Code Review'),
+		formatCodeReviewInvocation,
+		genericToolInvocationCompleted,
+	],
+	report_intent: [
+		l10n.t('Report Intent'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	think: [
+		l10n.t('Thinking'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	report_progress: [
+		l10n.t('Progress update'),
+		formatProgressToolInvocation,
+		genericToolInvocationCompleted,
+	],
+	web_fetch: [
+		l10n.t('Fetch Web Content'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	web_search: [
+		l10n.t('Web Search'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	update_todo: [
+		l10n.t('Update Todo'),
+		formatUpdateTodoInvocation,
+		formatUpdateTodoInvocationCompleted,
+	],
+	show_file: [
+		l10n.t('Show File'),
+		formatShowFileInvocation,
+		genericToolInvocationCompleted,
+	],
+	fetch_copilot_cli_documentation: [
+		l10n.t('Fetch Documentation'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	propose_work: [
+		l10n.t('Propose Work'),
+		formatProposeWorkInvocation,
+		genericToolInvocationCompleted,
+	],
+	task_complete: [
+		l10n.t('Task Complete'),
+		formatTaskCompleteInvocation,
+		genericToolInvocationCompleted,
+	],
+	ask_user: [
+		l10n.t('Ask User'),
+		formatAskUserInvocation,
+		genericToolInvocationCompleted,
+	],
+	skill: [
+		l10n.t('Invoke Skill'),
+		formatSkillInvocation,
+		genericToolInvocationCompleted,
+	],
+	task: [
+		l10n.t('Delegate Task'),
+		formatTaskInvocation,
+		formatTaskInvocationCompleted,
+	],
+	list_agents: [
+		l10n.t('List Agents'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	read_agent: [
+		l10n.t('Read Agent'),
+		formatReadAgentInvocation,
+		genericToolInvocationCompleted,
+	],
+	exit_plan_mode: [
+		l10n.t('Exit Plan Mode'),
+		formatExitPlanModeInvocation,
+		genericToolInvocationCompleted,
+	],
+	sql: [
+		l10n.t('Execute SQL'),
+		formatSqlInvocation,
+		genericToolInvocationCompleted,
+	],
+	lsp: [
+		l10n.t('Language Server'),
+		formatLspInvocation,
+		genericToolInvocationCompleted,
+	],
+	create_pull_request: [
+		l10n.t('Create Pull Request'),
+		formatCreatePullRequestInvocation,
+		genericToolInvocationCompleted,
+	],
+	'gh-advisory-database': [
+		l10n.t('Check Dependencies'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	store_memory: [
+		l10n.t('Store Memory'),
+		formatStoreMemoryInvocation,
+		genericToolInvocationCompleted,
+	],
+	list_bash: [
+		l10n.t('List Shell Sessions'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	list_powershell: [
+		l10n.t('List Shell Sessions'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	parallel_validation: [
+		l10n.t('Validate Changes'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	apply_patch: [
+		l10n.t('Apply Patch'),
+		formatApplyPatchInvocation,
+		genericToolInvocationCompleted,
+	],
+	write_agent: [
+		l10n.t('Write to Agent'),
+		formatWriteAgentInvocation,
+		genericToolInvocationCompleted,
+	],
+	mcp_reload: [
+		l10n.t('Reload MCP Config'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
+	mcp_validate: [
+		l10n.t('Validate MCP Config'),
+		formatMcpValidateInvocation,
+		genericToolInvocationCompleted,
+	],
+	tool_search_tool_regex: [
+		l10n.t('Search Tools'),
+		formatToolSearchInvocation,
+		genericToolInvocationCompleted,
+	],
+	codeql_checker: [
+		l10n.t('CodeQL Security Scan'),
+		emptyInvocation,
+		genericToolInvocationCompleted,
+	],
 };
 
-
-function formatProgressToolInvocation(invocation: ChatToolInvocationPart, toolCall: ReportProgressTool): void {
+function formatProgressToolInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: ReportProgressTool,
+): void {
 	const args = toolCall.arguments;
-	invocation.invocationMessage = args.prDescription?.trim() || 'Progress Update';
+	invocation.invocationMessage =
+		args.prDescription?.trim() || 'Progress Update';
 	if (args.commitMessage) {
 		invocation.originMessage = `Commit: ${args.commitMessage}`;
 	}
 }
 
-
-
-function formatViewToolInvocation(invocation: ChatToolInvocationPart, toolCall: ViewTool): void {
+function formatViewToolInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: ViewTool,
+): void {
 	const args = toolCall.arguments;
 
 	if (!args.path) {
 		return;
-	} else if (args.view_range && args.view_range.length === 2 && args.view_range[1] >= args.view_range[0] && args.view_range[0] >= 0) {
+	} else if (
+		args.view_range &&
+		args.view_range.length === 2 &&
+		args.view_range[1] >= args.view_range[0] &&
+		args.view_range[0] >= 0
+	) {
 		const [start, end] = args.view_range;
-		const location = new Location(Uri.file(args.path), new Range(start === 0 ? start : start - 1, 0, end, 0));
+		const location = new Location(
+			Uri.file(args.path),
+			new Range(start === 0 ? start : start - 1, 0, end, 0),
+		);
 		const display = formatUriForFileWidget(location);
-		const localizedMessage = start === end
-			? l10n.t("Reading {0}, line {1}", display, start)
-			: l10n.t("Reading {0}, lines {1} to {2}", display, start, end);
-		const localizedPastTenseMessage = start === end
-			? l10n.t("Read {0}, line {1}", display, start)
-			: l10n.t("Read {0}, lines {1} to {2}", display, start, end);
+		const localizedMessage =
+			start === end
+				? l10n.t('Reading {0}, line {1}', display, start)
+				: l10n.t('Reading {0}, lines {1} to {2}', display, start, end);
+		const localizedPastTenseMessage =
+			start === end
+				? l10n.t('Read {0}, line {1}', display, start)
+				: l10n.t('Read {0}, lines {1} to {2}', display, start, end);
 		invocation.invocationMessage = new MarkdownString(localizedMessage);
-		invocation.pastTenseMessage = new MarkdownString(localizedPastTenseMessage);
+		invocation.pastTenseMessage = new MarkdownString(
+			localizedPastTenseMessage,
+		);
 	} else {
 		const display = formatUriForFileWidget(Uri.file(args.path));
-		invocation.invocationMessage = new MarkdownString(l10n.t("Read {0}", display));
+		invocation.invocationMessage = new MarkdownString(
+			l10n.t('Read {0}', display),
+		);
 	}
 }
 
-function formatStrReplaceEditorInvocation(invocation: ChatToolInvocationPart, toolCall: StringReplaceEditorTool, editId?: string): void {
+function formatStrReplaceEditorInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: StringReplaceEditorTool,
+	editId?: string,
+): void {
 	if (!toolCall.arguments.path) {
 		return;
 	}
@@ -1110,52 +1781,93 @@ function formatStrReplaceEditorInvocation(invocation: ChatToolInvocationPart, to
 	const display = formatUriForFileWidget(Uri.file(args.path));
 	switch (args.command) {
 		case 'view':
-			formatViewToolInvocation(invocation, { toolName: 'view', arguments: args } as ViewTool);
+			formatViewToolInvocation(invocation, {
+				toolName: 'view',
+				arguments: args,
+			} as ViewTool);
 			break;
 		case 'edit':
-			formatEditToolInvocation(invocation, { toolName: 'edit', arguments: args } as EditTool);
+			formatEditToolInvocation(invocation, {
+				toolName: 'edit',
+				arguments: args,
+			} as EditTool);
 			break;
 		case 'insert':
-			formatInsertToolInvocation(invocation, { toolName: 'insert', arguments: args } as InsertTool);
+			formatInsertToolInvocation(invocation, {
+				toolName: 'insert',
+				arguments: args,
+			} as InsertTool);
 			break;
 		case 'create':
-			formatCreateToolInvocation(invocation, { toolName: 'create', arguments: args } as CreateTool);
+			formatCreateToolInvocation(invocation, {
+				toolName: 'create',
+				arguments: args,
+			} as CreateTool);
 			break;
 		default:
-			invocation.invocationMessage = new MarkdownString(l10n.t("Modified {0}", display));
+			invocation.invocationMessage = new MarkdownString(
+				l10n.t('Modified {0}', display),
+			);
 	}
 }
 
-function formatInsertToolInvocation(invocation: ChatToolInvocationPart, toolCall: InsertTool): void {
+function formatInsertToolInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: InsertTool,
+): void {
 	const args = toolCall.arguments;
 	if (args.path) {
-		invocation.invocationMessage = new MarkdownString(l10n.t("Inserted text in {0}", formatUriForFileWidget(Uri.file(args.path))));
+		invocation.invocationMessage = new MarkdownString(
+			l10n.t(
+				'Inserted text in {0}',
+				formatUriForFileWidget(Uri.file(args.path)),
+			),
+		);
 	}
 }
 
-function formatEditToolInvocation(invocation: ChatToolInvocationPart, toolCall: EditTool, editId?: string): void {
+function formatEditToolInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: EditTool,
+	editId?: string,
+): void {
 	const args = toolCall.arguments;
-	const display = args.path ? formatUriForFileWidget(Uri.file(args.path)) : '';
+	const display = args.path
+		? formatUriForFileWidget(Uri.file(args.path))
+		: '';
 
 	invocation.invocationMessage = display
-		? new MarkdownString(l10n.t("Editing {0}", display))
-		: new MarkdownString(l10n.t("Editing file"));
+		? new MarkdownString(l10n.t('Editing {0}', display))
+		: new MarkdownString(l10n.t('Editing file'));
 	invocation.pastTenseMessage = display
-		? new MarkdownString(l10n.t("Edited {0}", display))
-		: new MarkdownString(l10n.t("Edited file"));
+		? new MarkdownString(l10n.t('Edited {0}', display))
+		: new MarkdownString(l10n.t('Edited file'));
 }
 
-
-function formatCreateToolInvocation(invocation: ChatToolInvocationPart, toolCall: CreateTool, editId?: string): void {
+function formatCreateToolInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: CreateTool,
+	editId?: string,
+): void {
 	const args = toolCall.arguments;
-	const display = args.path ? formatUriForFileWidget(Uri.file(args.path)) : '';
+	const display = args.path
+		? formatUriForFileWidget(Uri.file(args.path))
+		: '';
 
 	if (display) {
-		invocation.invocationMessage = new MarkdownString(l10n.t("Creating {0}", display));
-		invocation.pastTenseMessage = new MarkdownString(l10n.t("Created {0}", display));
+		invocation.invocationMessage = new MarkdownString(
+			l10n.t('Creating {0}', display),
+		);
+		invocation.pastTenseMessage = new MarkdownString(
+			l10n.t('Created {0}', display),
+		);
 	} else {
-		invocation.invocationMessage = new MarkdownString(l10n.t("Creating file"));
-		invocation.pastTenseMessage = new MarkdownString(l10n.t("Created file"));
+		invocation.invocationMessage = new MarkdownString(
+			l10n.t('Creating file'),
+		);
+		invocation.pastTenseMessage = new MarkdownString(
+			l10n.t('Created file'),
+		);
 	}
 }
 
@@ -1163,11 +1875,14 @@ function formatCreateToolInvocation(invocation: ChatToolInvocationPart, toolCall
  * Extracts a `cd <dir> &&` (or PowerShell equivalent) prefix from a command line,
  * returning the directory and remaining command.
  */
-export function extractCdPrefix(commandLine: string, isPowershell: boolean): { directory: string; command: string } | undefined {
+export function extractCdPrefix(
+	commandLine: string,
+	isPowershell: boolean,
+): { directory: string; command: string } | undefined {
 	const cdPrefixMatch = commandLine.match(
 		isPowershell
 			? /^(?:cd(?: \/d)?|Set-Location(?: -Path)?) (?<dir>"[^"]*"|[^\s]+) ?(?:&&|;)\s+(?<suffix>.+)$/i
-			: /^cd (?<dir>"[^"]*"|[^\s]+) &&\s+(?<suffix>.+)$/
+			: /^cd (?<dir>"[^"]*"|[^\s]+) &&\s+(?<suffix>.+)$/,
 	);
 	const cdDir = cdPrefixMatch?.groups?.dir;
 	const cdSuffix = cdPrefixMatch?.groups?.suffix;
@@ -1184,7 +1899,11 @@ export function extractCdPrefix(commandLine: string, isPowershell: boolean): { d
 /**
  * Returns presentationOverrides only when the cd prefix directory matches the working directory.
  */
-export function getCdPresentationOverrides(commandLine: string, isPowershell: boolean, workingDirectory?: URI): { commandLine: string } | undefined {
+export function getCdPresentationOverrides(
+	commandLine: string,
+	isPowershell: boolean,
+	workingDirectory?: URI,
+): { commandLine: string } | undefined {
 	const cdPrefix = extractCdPrefix(commandLine, isPowershell);
 	if (!cdPrefix || !workingDirectory) {
 		return undefined;
@@ -1196,51 +1915,88 @@ export function getCdPresentationOverrides(commandLine: string, isPowershell: bo
 	return undefined;
 }
 
-function formatShellInvocation(invocation: ChatToolInvocationPart, toolCall: ShellTool, _editId?: string, workingDirectory?: URI): void {
+function formatShellInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: ShellTool,
+	_editId?: string,
+	workingDirectory?: URI,
+): void {
 	const args = toolCall.arguments;
 	const command = args.command ?? '';
 	const isPowershell = toolCall.toolName === 'powershell';
-	const presentationOverrides = getCdPresentationOverrides(command, isPowershell, workingDirectory);
-	invocation.invocationMessage = args.description ? new MarkdownString(args.description) : '';
+	const presentationOverrides = getCdPresentationOverrides(
+		command,
+		isPowershell,
+		workingDirectory,
+	);
+	invocation.invocationMessage = args.description
+		? new MarkdownString(args.description)
+		: '';
 	invocation.toolSpecificData = {
 		commandLine: {
-			original: presentationOverrides?.commandLine ?? command
+			original: presentationOverrides?.commandLine ?? command,
 		},
 		language: isPowershell ? 'powershell' : 'bash',
-		presentationOverrides
+		presentationOverrides,
 	} as ChatTerminalToolInvocationData;
 }
-function formatShellInvocationCompleted(invocation: ChatToolInvocationPart, toolCall: ShellTool, result: ToolCallResult, workingDirectory?: URI): void {
+function formatShellInvocationCompleted(
+	invocation: ChatToolInvocationPart,
+	toolCall: ShellTool,
+	result: ToolCallResult,
+	workingDirectory?: URI,
+): void {
 	const resultContent = result.result?.content || '';
 	// Exit code will be at the end of the result in the last line in the form of `<exited with exit code ${output.exitCode}>`,
-	const exitCodeStr = resultContent ? /<exited with exit code (\d+)>$/.exec(resultContent)?.[1] : undefined;
+	const exitCodeStr = resultContent
+		? /<exited with exit code (\d+)>$/.exec(resultContent)?.[1]
+		: undefined;
 	const exitCode = exitCodeStr ? parseInt(exitCodeStr, 10) : undefined;
 	// Lets remove the last line containing the exit code from the output.
-	const text = (exitCode !== undefined ? resultContent.replace(/<exited with exit code \d+>$/, '').trimEnd() : resultContent).replace(/\n/g, '\r\n');
+	const text = (
+		exitCode !== undefined
+			? resultContent
+					.replace(/<exited with exit code \d+>$/, '')
+					.trimEnd()
+			: resultContent
+	).replace(/\n/g, '\r\n');
 	const isPowershell = toolCall.toolName === 'powershell';
-	const presentationOverrides = getCdPresentationOverrides(toolCall.arguments.command, isPowershell, workingDirectory);
+	const presentationOverrides = getCdPresentationOverrides(
+		toolCall.arguments.command,
+		isPowershell,
+		workingDirectory,
+	);
 	const toolSpecificData: ChatTerminalToolInvocationData = {
 		commandLine: {
-			original: presentationOverrides?.commandLine ?? toolCall.arguments.command
+			original:
+				presentationOverrides?.commandLine ??
+				toolCall.arguments.command,
 		},
 		language: isPowershell ? 'powershell' : 'bash',
 		presentationOverrides,
 		state: {
-			exitCode
+			exitCode,
 		},
 		output: {
-			text
-		}
+			text,
+		},
 	};
 	invocation.toolSpecificData = toolSpecificData;
 }
-function formatSearchToolInvocation(invocation: ChatToolInvocationPart, toolCall: SearchCodeSubagentTool | GLobTool | GrepTool): void {
+function formatSearchToolInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: SearchCodeSubagentTool | GLobTool | GrepTool,
+): void {
 	if (toolCall.toolName === 'glob') {
-		const searchInPath = toolCall.arguments.path ? ` in \`${toolCall.arguments.path}\`` : '';
+		const searchInPath = toolCall.arguments.path
+			? ` in \`${toolCall.arguments.path}\``
+			: '';
 		invocation.invocationMessage = `Search for files matching \`${toolCall.arguments.pattern}\`${searchInPath}`;
 		invocation.pastTenseMessage = `Searched for files matching \`${toolCall.arguments.pattern}\`${searchInPath}`;
 	} else if (toolCall.toolName === 'grep' || toolCall.toolName === 'rg') {
-		const searchInPath = toolCall.arguments.path ? ` in \`${toolCall.arguments.path}\`` : '';
+		const searchInPath = toolCall.arguments.path
+			? ` in \`${toolCall.arguments.path}\``
+			: '';
 		invocation.invocationMessage = `Search for files matching \`${toolCall.arguments.pattern}\`${searchInPath}`;
 		invocation.pastTenseMessage = `Searched for files matching \`${toolCall.arguments.pattern}\`${searchInPath}`;
 	} else if (toolCall.toolName === 'search_code_subagent') {
@@ -1249,185 +2005,370 @@ function formatSearchToolInvocation(invocation: ChatToolInvocationPart, toolCall
 	}
 }
 
-function formatSearchToolInvocationCompleted(invocation: ChatToolInvocationPart, toolCall: SearchCodeSubagentTool | GLobTool | GrepTool, result: ToolCallResult, workingDirectory?: URI): void {
-	if (toolCall.toolName === 'glob' || toolCall.toolName === 'grep' || toolCall.toolName === 'rg') {
-		const messagesIndicatingNoMatches = ['Pattern matched but no output generated', 'Pattern matched but no files found', 'No matches found', 'no files matched the pattern'].map(msg => msg.toLowerCase());
+function formatSearchToolInvocationCompleted(
+	invocation: ChatToolInvocationPart,
+	toolCall: SearchCodeSubagentTool | GLobTool | GrepTool,
+	result: ToolCallResult,
+	workingDirectory?: URI,
+): void {
+	if (
+		toolCall.toolName === 'glob' ||
+		toolCall.toolName === 'grep' ||
+		toolCall.toolName === 'rg'
+	) {
+		const messagesIndicatingNoMatches = [
+			'Pattern matched but no output generated',
+			'Pattern matched but no files found',
+			'No matches found',
+			'no files matched the pattern',
+		].map((msg) => msg.toLowerCase());
 
-		let searchPath = toolCall.arguments.path ? Uri.file(toolCall.arguments.path) : workingDirectory;
-		if (toolCall.arguments.path && workingDirectory && searchPath && !isAbsolutePath(searchPath)) {
-			searchPath = Uri.joinPath(workingDirectory, toolCall.arguments.path);
+		let searchPath = toolCall.arguments.path
+			? Uri.file(toolCall.arguments.path)
+			: workingDirectory;
+		if (
+			toolCall.arguments.path &&
+			workingDirectory &&
+			searchPath &&
+			!isAbsolutePath(searchPath)
+		) {
+			searchPath = Uri.joinPath(
+				workingDirectory,
+				toolCall.arguments.path,
+			);
 		}
-		const searchInPath = toolCall.arguments.path ? ` in \`${toolCall.arguments.path}\`` : '';
+		const searchInPath = toolCall.arguments.path
+			? ` in \`${toolCall.arguments.path}\``
+			: '';
 		let files: string[] = [];
-		if (Array.isArray(result.result?.contents) && result.result.contents.length > 0 && result.result.contents[0].type === 'terminal' && typeof result.result.contents[0].text === 'string') {
+		if (
+			Array.isArray(result.result?.contents) &&
+			result.result.contents.length > 0 &&
+			result.result.contents[0].type === 'terminal' &&
+			typeof result.result.contents[0].text === 'string'
+		) {
 			const matches = result.result.contents[0].text.trim();
 			const noMatches = matches.length === 0;
 			files = !noMatches && result.success ? matches.split('\n') : [];
 		} else {
-			const noMatches = messagesIndicatingNoMatches.some(msg => (result.result?.content || '').toLowerCase().includes(msg));
-			files = !noMatches && result.success && typeof result.result?.content === 'string' ? result.result.content.split('\n') : [];
+			const noMatches = messagesIndicatingNoMatches.some((msg) =>
+				(result.result?.content || '').toLowerCase().includes(msg),
+			);
+			files =
+				!noMatches &&
+				result.success &&
+				typeof result.result?.content === 'string'
+					? result.result.content.split('\n')
+					: [];
 		}
 
-		const successMessage = files.length ? `, ${files.length} result${files.length > 1 ? 's' : ''}` : '.';
+		const successMessage = files.length
+			? `, ${files.length} result${files.length > 1 ? 's' : ''}`
+			: '.';
 		invocation.pastTenseMessage = `Searched for files matching \`${toolCall.arguments.pattern}\`${searchInPath}${successMessage}`;
 		invocation.toolSpecificData = {
-			values: files.map(file => {
+			values: files.map((file) => {
 				if (!file.startsWith('./') || !searchPath) {
 					return Uri.file(file);
 				}
 				return Uri.joinPath(searchPath, file.substring(2));
-			})
+			}),
 		};
 	}
 }
 
-function formatCodeReviewInvocation(invocation: ChatToolInvocationPart, toolCall: CodeReviewTool): void {
+function formatCodeReviewInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: CodeReviewTool,
+): void {
 	invocation.invocationMessage = toolCall.arguments.prTitle;
 	invocation.originMessage = toolCall.arguments.prDescription;
 }
 
-function formatReplyToCommentInvocation(invocation: ChatToolInvocationPart, toolCall: ReplyToCommentTool): void {
+function formatReplyToCommentInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: ReplyToCommentTool,
+): void {
 	invocation.invocationMessage = `Replying to comment_id ${toolCall.arguments.comment_id}`;
 	invocation.pastTenseMessage = `Replied to comment_id ${toolCall.arguments.comment_id}`;
 	invocation.originMessage = toolCall.arguments.reply;
 }
 
-function formatShowFileInvocation(invocation: ChatToolInvocationPart, toolCall: ShowFileTool): void {
+function formatShowFileInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: ShowFileTool,
+): void {
 	const args = toolCall.arguments;
 	if (!args.path) {
 		return;
 	}
 	const display = formatUriForFileWidget(Uri.file(args.path));
 	if (args.diff) {
-		invocation.invocationMessage = new MarkdownString(l10n.t("Showing diff of {0}", display));
-		invocation.pastTenseMessage = new MarkdownString(l10n.t("Showed diff of {0}", display));
+		invocation.invocationMessage = new MarkdownString(
+			l10n.t('Showing diff of {0}', display),
+		);
+		invocation.pastTenseMessage = new MarkdownString(
+			l10n.t('Showed diff of {0}', display),
+		);
 	} else if (args.view_range && args.view_range.length >= 2) {
 		const [start, end] = args.view_range;
-		invocation.invocationMessage = new MarkdownString(l10n.t("Showing {0}, lines {1} to {2}", display, start, end));
-		invocation.pastTenseMessage = new MarkdownString(l10n.t("Showed {0}, lines {1} to {2}", display, start, end));
+		invocation.invocationMessage = new MarkdownString(
+			l10n.t('Showing {0}, lines {1} to {2}', display, start, end),
+		);
+		invocation.pastTenseMessage = new MarkdownString(
+			l10n.t('Showed {0}, lines {1} to {2}', display, start, end),
+		);
 	} else if (args.view_range && args.view_range.length === 1) {
 		const [line] = args.view_range;
-		invocation.invocationMessage = new MarkdownString(l10n.t("Showing {0}, line {1}", display, line));
-		invocation.pastTenseMessage = new MarkdownString(l10n.t("Showed {0}, line {1}", display, line));
+		invocation.invocationMessage = new MarkdownString(
+			l10n.t('Showing {0}, line {1}', display, line),
+		);
+		invocation.pastTenseMessage = new MarkdownString(
+			l10n.t('Showed {0}, line {1}', display, line),
+		);
 	} else {
-		invocation.invocationMessage = new MarkdownString(l10n.t("Showing {0}", display));
-		invocation.pastTenseMessage = new MarkdownString(l10n.t("Showed {0}", display));
+		invocation.invocationMessage = new MarkdownString(
+			l10n.t('Showing {0}', display),
+		);
+		invocation.pastTenseMessage = new MarkdownString(
+			l10n.t('Showed {0}', display),
+		);
 	}
 }
 
-function formatProposeWorkInvocation(invocation: ChatToolInvocationPart, toolCall: ProposeWorkTool): void {
-	invocation.invocationMessage = toolCall.arguments.workTitle || 'Proposing work';
-	invocation.pastTenseMessage = toolCall.arguments.workTitle || 'Proposed work';
+function formatProposeWorkInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: ProposeWorkTool,
+): void {
+	invocation.invocationMessage =
+		toolCall.arguments.workTitle || 'Proposing work';
+	invocation.pastTenseMessage =
+		toolCall.arguments.workTitle || 'Proposed work';
 }
 
-function formatTaskCompleteInvocation(invocation: ChatToolInvocationPart, toolCall: TaskCompleteTool): void {
-	invocation.invocationMessage = toolCall.arguments.summary || l10n.t('Marking task as complete');
-	invocation.pastTenseMessage = toolCall.arguments.summary || l10n.t('Task completed');
+function formatTaskCompleteInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: TaskCompleteTool,
+): void {
+	invocation.invocationMessage =
+		toolCall.arguments.summary || l10n.t('Marking task as complete');
+	invocation.pastTenseMessage =
+		toolCall.arguments.summary || l10n.t('Task completed');
 }
 
-function formatAskUserInvocation(invocation: ChatToolInvocationPart, toolCall: AskUserTool): void {
+function formatAskUserInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: AskUserTool,
+): void {
 	if ('question' in toolCall.arguments) {
-		invocation.invocationMessage = toolCall.arguments.question || l10n.t('Asking user a question');
-		invocation.pastTenseMessage = toolCall.arguments.question || l10n.t('Asked user a question');
+		invocation.invocationMessage =
+			toolCall.arguments.question || l10n.t('Asking user a question');
+		invocation.pastTenseMessage =
+			toolCall.arguments.question || l10n.t('Asked user a question');
 		return;
 	}
 
-	invocation.invocationMessage = toolCall.arguments.message || l10n.t('Asking user for input');
-	invocation.pastTenseMessage = toolCall.arguments.message || l10n.t('Asked user for input');
+	invocation.invocationMessage =
+		toolCall.arguments.message || l10n.t('Asking user for input');
+	invocation.pastTenseMessage =
+		toolCall.arguments.message || l10n.t('Asked user for input');
 }
 
-function formatSkillInvocation(invocation: ChatToolInvocationPart, toolCall: SkillTool): void {
-	invocation.invocationMessage = l10n.t("Invoking skill: {0}", toolCall.arguments.skill);
-	invocation.pastTenseMessage = l10n.t("Invoked skill: {0}", toolCall.arguments.skill);
+function formatSkillInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: SkillTool,
+): void {
+	invocation.invocationMessage = l10n.t(
+		'Invoking skill: {0}',
+		toolCall.arguments.skill,
+	);
+	invocation.pastTenseMessage = l10n.t(
+		'Invoked skill: {0}',
+		toolCall.arguments.skill,
+	);
 }
 
-function formatTaskInvocation(invocation: ChatToolInvocationPart, toolCall: TaskTool): void {
-	invocation.invocationMessage = toolCall.arguments.description || l10n.t('Delegating task');
-	invocation.pastTenseMessage = toolCall.arguments.description || l10n.t('Delegated task');
+function formatTaskInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: TaskTool,
+): void {
+	invocation.invocationMessage =
+		toolCall.arguments.description || l10n.t('Delegating task');
+	invocation.pastTenseMessage =
+		toolCall.arguments.description || l10n.t('Delegated task');
 	invocation.toolSpecificData = new ChatSubagentToolInvocationData(
 		toolCall.arguments.description,
 		toolCall.arguments.agent_type,
-		toolCall.arguments.prompt);
+		toolCall.arguments.prompt,
+	);
 }
 
-function formatTaskInvocationCompleted(invocation: ChatToolInvocationPart, _toolCall: TaskTool, result: ToolCallResult): void {
-	if (invocation.toolSpecificData instanceof ChatSubagentToolInvocationData && result.success && result.result?.content) {
-		const content = typeof result.result.content === 'string' ? result.result.content : JSON.stringify(result.result.content, null, 2);
+function formatTaskInvocationCompleted(
+	invocation: ChatToolInvocationPart,
+	_toolCall: TaskTool,
+	result: ToolCallResult,
+): void {
+	if (
+		invocation.toolSpecificData instanceof ChatSubagentToolInvocationData &&
+		result.success &&
+		result.result?.content
+	) {
+		const content =
+			typeof result.result.content === 'string'
+				? result.result.content
+				: JSON.stringify(result.result.content, null, 2);
 		invocation.toolSpecificData.result = content;
 	}
 }
 
-function formatReadAgentInvocation(invocation: ChatToolInvocationPart, toolCall: ReadAgentTool): void {
-	invocation.invocationMessage = l10n.t("Reading agent {0}", toolCall.arguments.agent_id);
-	invocation.pastTenseMessage = l10n.t("Read agent {0}", toolCall.arguments.agent_id);
+function formatReadAgentInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: ReadAgentTool,
+): void {
+	invocation.invocationMessage = l10n.t(
+		'Reading agent {0}',
+		toolCall.arguments.agent_id,
+	);
+	invocation.pastTenseMessage = l10n.t(
+		'Read agent {0}',
+		toolCall.arguments.agent_id,
+	);
 }
 
-function formatExitPlanModeInvocation(invocation: ChatToolInvocationPart, toolCall: ExitPlanModeTool): void {
-	invocation.invocationMessage = toolCall.arguments.summary ? l10n.t('Presenting plan') : l10n.t('Exiting plan mode');
+function formatExitPlanModeInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: ExitPlanModeTool,
+): void {
+	invocation.invocationMessage = toolCall.arguments.summary
+		? l10n.t('Presenting plan')
+		: l10n.t('Exiting plan mode');
 	invocation.pastTenseMessage = l10n.t('Exited plan mode');
 }
 
-function formatSqlInvocation(invocation: ChatToolInvocationPart, toolCall: SqlTool): void {
-	invocation.invocationMessage = toolCall.arguments.description || l10n.t('Executing SQL query');
-	invocation.pastTenseMessage = toolCall.arguments.description || l10n.t('Executed SQL query');
+function formatSqlInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: SqlTool,
+): void {
+	invocation.invocationMessage =
+		toolCall.arguments.description || l10n.t('Executing SQL query');
+	invocation.pastTenseMessage =
+		toolCall.arguments.description || l10n.t('Executed SQL query');
 }
 
-function formatLspInvocation(invocation: ChatToolInvocationPart, toolCall: LspTool): void {
+function formatLspInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: LspTool,
+): void {
 	const op = toolCall.arguments.operation;
 	const file = toolCall.arguments.file;
 	if (file) {
 		const display = formatUriForFileWidget(Uri.file(file));
-		invocation.invocationMessage = new MarkdownString(l10n.t("LSP {0} on {1}", op, display));
+		invocation.invocationMessage = new MarkdownString(
+			l10n.t('LSP {0} on {1}', op, display),
+		);
 	} else {
-		invocation.invocationMessage = l10n.t("LSP {0}", op);
+		invocation.invocationMessage = l10n.t('LSP {0}', op);
 	}
 }
 
-function formatCreatePullRequestInvocation(invocation: ChatToolInvocationPart, toolCall: CreatePullRequestTool): void {
-	invocation.invocationMessage = toolCall.arguments.title || l10n.t('Creating pull request');
-	invocation.pastTenseMessage = toolCall.arguments.title || l10n.t('Created pull request');
+function formatCreatePullRequestInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: CreatePullRequestTool,
+): void {
+	invocation.invocationMessage =
+		toolCall.arguments.title || l10n.t('Creating pull request');
+	invocation.pastTenseMessage =
+		toolCall.arguments.title || l10n.t('Created pull request');
 	if (toolCall.arguments.description) {
 		invocation.originMessage = toolCall.arguments.description;
 	}
 }
 
-function formatStoreMemoryInvocation(invocation: ChatToolInvocationPart, toolCall: StoreMemoryTool): void {
-	invocation.invocationMessage = l10n.t("Storing memory: {0}", toolCall.arguments.subject);
-	invocation.pastTenseMessage = l10n.t("Stored memory: {0}", toolCall.arguments.subject);
+function formatStoreMemoryInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: StoreMemoryTool,
+): void {
+	invocation.invocationMessage = l10n.t(
+		'Storing memory: {0}',
+		toolCall.arguments.subject,
+	);
+	invocation.pastTenseMessage = l10n.t(
+		'Stored memory: {0}',
+		toolCall.arguments.subject,
+	);
 }
 
-function formatApplyPatchInvocation(invocation: ChatToolInvocationPart, _toolCall: ApplyPatchTool): void {
+function formatApplyPatchInvocation(
+	invocation: ChatToolInvocationPart,
+	_toolCall: ApplyPatchTool,
+): void {
 	invocation.invocationMessage = l10n.t('Applying patch to files');
 	invocation.pastTenseMessage = l10n.t('Applied patch to files');
 }
 
-function formatWriteAgentInvocation(invocation: ChatToolInvocationPart, toolCall: WriteAgentTool): void {
-	invocation.invocationMessage = l10n.t("Writing to agent {0}", toolCall.arguments.agent_id);
-	invocation.pastTenseMessage = l10n.t("Wrote to agent {0}", toolCall.arguments.agent_id);
+function formatWriteAgentInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: WriteAgentTool,
+): void {
+	invocation.invocationMessage = l10n.t(
+		'Writing to agent {0}',
+		toolCall.arguments.agent_id,
+	);
+	invocation.pastTenseMessage = l10n.t(
+		'Wrote to agent {0}',
+		toolCall.arguments.agent_id,
+	);
 }
 
-function formatMcpValidateInvocation(invocation: ChatToolInvocationPart, toolCall: McpValidateTool): void {
-	const display = toolCall.arguments.path ? formatUriForFileWidget(Uri.file(toolCall.arguments.path)) : '';
+function formatMcpValidateInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: McpValidateTool,
+): void {
+	const display = toolCall.arguments.path
+		? formatUriForFileWidget(Uri.file(toolCall.arguments.path))
+		: '';
 	invocation.invocationMessage = display
-		? new MarkdownString(l10n.t("Validating MCP config {0}", display))
+		? new MarkdownString(l10n.t('Validating MCP config {0}', display))
 		: l10n.t('Validating MCP config');
 	invocation.pastTenseMessage = display
-		? new MarkdownString(l10n.t("Validated MCP config {0}", display))
+		? new MarkdownString(l10n.t('Validated MCP config {0}', display))
 		: l10n.t('Validated MCP config');
 }
 
-function formatToolSearchInvocation(invocation: ChatToolInvocationPart, toolCall: ToolSearchTool): void {
-	invocation.invocationMessage = l10n.t("Searching tools matching: {0}", toolCall.arguments.pattern);
-	invocation.pastTenseMessage = l10n.t("Searched tools matching: {0}", toolCall.arguments.pattern);
+function formatToolSearchInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: ToolSearchTool,
+): void {
+	invocation.invocationMessage = l10n.t(
+		'Searching tools matching: {0}',
+		toolCall.arguments.pattern,
+	);
+	invocation.pastTenseMessage = l10n.t(
+		'Searched tools matching: {0}',
+		toolCall.arguments.pattern,
+	);
 }
 
-
-export function parseTodoMarkdown(markdown: string): { title: string; todoList: Array<{ id: number; title: string; status: 'not-started' | 'in-progress' | 'completed' }> } {
+export function parseTodoMarkdown(markdown: string): {
+	title: string;
+	todoList: Array<{
+		id: number;
+		title: string;
+		status: 'not-started' | 'in-progress' | 'completed';
+	}>;
+} {
 	const lines = markdown.split('\n');
-	const todoList: Array<{ id: number; title: string; status: 'not-started' | 'in-progress' | 'completed' }> = [];
+	const todoList: Array<{
+		id: number;
+		title: string;
+		status: 'not-started' | 'in-progress' | 'completed';
+	}> = [];
 	let title = 'Updated todo list';
 	let inCodeBlock = false;
-	let currentItem: { title: string; status: 'not-started' | 'in-progress' | 'completed' } | null = null;
+	let currentItem: {
+		title: string;
+		status: 'not-started' | 'in-progress' | 'completed';
+	} | null = null;
 
 	for (const line of lines) {
 		// Track code fences
@@ -1445,7 +2386,10 @@ export function parseTodoMarkdown(markdown: string): { title: string; todoList: 
 		if (title === 'Updated todo list' && line.trim()) {
 			const trimmed = line.trim();
 			// Check if it's not a list item
-			if (!trimmed.match(/^[-*+]\s+\[.\]/) && !trimmed.match(/^\d+[.)]\s+\[.\]/)) {
+			if (
+				!trimmed.match(/^[-*+]\s+\[.\]/) &&
+				!trimmed.match(/^\d+[.)]\s+\[.\]/)
+			) {
 				// Strip leading # for headings
 				title = trimmed.replace(/^#+\s*/, '');
 			}
@@ -1462,7 +2406,7 @@ export function parseTodoMarkdown(markdown: string): { title: string; todoList: 
 				todoList.push({
 					id: todoList.length + 1,
 					title: currentItem.title.trim(),
-					status: currentItem.status
+					status: currentItem.status,
 				});
 			}
 
@@ -1480,7 +2424,11 @@ export function parseTodoMarkdown(markdown: string): { title: string; todoList: 
 			}
 
 			currentItem = { title: itemTitle, status };
-		} else if (currentItem && line.trim() && (line.startsWith('  ') || line.startsWith('\t'))) {
+		} else if (
+			currentItem &&
+			line.trim() &&
+			(line.startsWith('  ') || line.startsWith('\t'))
+		) {
 			// Continuation line - append to current item
 			currentItem.title += ' ' + line.trim();
 		}
@@ -1491,16 +2439,21 @@ export function parseTodoMarkdown(markdown: string): { title: string; todoList: 
 		todoList.push({
 			id: todoList.length + 1,
 			title: currentItem.title.trim(),
-			status: currentItem.status
+			status: currentItem.status,
 		});
 	}
 
 	return { title, todoList };
 }
 
-function formatUpdateTodoInvocation(invocation: ChatToolInvocationPart, toolCall: UpdateTodoTool): void {
+function formatUpdateTodoInvocation(
+	invocation: ChatToolInvocationPart,
+	toolCall: UpdateTodoTool,
+): void {
 	const args = toolCall.arguments;
-	const parsed = args.todos ? parseTodoMarkdown(args.todos) : { title: '', todoList: [] };
+	const parsed = args.todos
+		? parseTodoMarkdown(args.todos)
+		: { title: '', todoList: [] };
 	if (!args.todos || !parsed) {
 		invocation.invocationMessage = 'Updating todo list';
 		invocation.pastTenseMessage = 'Updated todo list';
@@ -1510,18 +2463,33 @@ function formatUpdateTodoInvocation(invocation: ChatToolInvocationPart, toolCall
 	invocation.invocationMessage = parsed.title;
 	invocation.toolSpecificData = {
 		output: '',
-		input: [`# ${parsed.title}`, ...parsed.todoList.map(item => `- [${item.status === 'completed' ? 'x' : item.status === 'in-progress' ? '>' : ' '}] ${item.title}`)].join('\n')
+		input: [
+			`# ${parsed.title}`,
+			...parsed.todoList.map(
+				(item) =>
+					`- [${item.status === 'completed' ? 'x' : item.status === 'in-progress' ? '>' : ' '}] ${item.title}`,
+			),
+		].join('\n'),
 	};
 }
 
-function formatUpdateTodoInvocationCompleted(invocation: ChatToolInvocationPart, toolCall: UpdateTodoTool, result: ToolCallResult): void {
-	const input = (invocation.toolSpecificData ? (invocation.toolSpecificData as ChatSimpleToolResultData).input : '') || '';
+function formatUpdateTodoInvocationCompleted(
+	invocation: ChatToolInvocationPart,
+	toolCall: UpdateTodoTool,
+	result: ToolCallResult,
+): void {
+	const input =
+		(invocation.toolSpecificData
+			? (invocation.toolSpecificData as ChatSimpleToolResultData).input
+			: '') || '';
 	invocation.toolSpecificData = {
-		output: typeof result.result?.content === 'string' ? result.result.content : JSON.stringify(result.result?.content || '', null, 2),
-		input
+		output:
+			typeof result.result?.content === 'string'
+				? result.result.content
+				: JSON.stringify(result.result?.content || '', null, 2),
+		input,
 	};
 }
-
 
 /**
  * Check whether a SQL query writes to the `todos` or `todo_deps` table.
@@ -1529,7 +2497,8 @@ function formatUpdateTodoInvocationCompleted(invocation: ChatToolInvocationPart,
  */
 export function isTodoRelatedSqlQuery(query: string): boolean {
 	const normalized = query.replace(/\s+/g, ' ').toLowerCase();
-	const targetsTodoTable = /\btodos\b/.test(normalized) || /\btodo_deps\b/.test(normalized);
+	const targetsTodoTable =
+		/\btodos\b/.test(normalized) || /\btodo_deps\b/.test(normalized);
 	if (!targetsTodoTable) {
 		return false;
 	}
@@ -1543,7 +2512,9 @@ interface SqlTodoItem {
 	readonly status: 'pending' | 'in_progress' | 'done' | 'blocked';
 }
 
-function mapSqlStatusToTodoStatus(status: string): 'not-started' | 'in-progress' | 'completed' {
+function mapSqlStatusToTodoStatus(
+	status: string,
+): 'not-started' | 'in-progress' | 'completed' {
 	switch (status) {
 		case 'done':
 			return 'completed';
@@ -1563,32 +2534,45 @@ export async function updateTodoListFromSqlItems(
 	items: readonly SqlTodoItem[],
 	toolsService: IToolsService,
 	toolInvocationToken: ChatParticipantToolToken,
-	token: CancellationToken
+	token: CancellationToken,
 ): Promise<void> {
-	await toolsService.invokeTool(ToolName.CoreManageTodoList, {
-		input: {
-			operation: 'write',
-			todoList: items.map((item, i) => ({
-				id: i,
-				title: item.title,
-				description: item.description || '',
-				status: mapSqlStatusToTodoStatus(item.status)
-			} satisfies IManageTodoListToolInputParams['todoList'][number])),
-		} satisfies IManageTodoListToolInputParams,
-		toolInvocationToken,
-	}, token);
+	await toolsService.invokeTool(
+		ToolName.CoreManageTodoList,
+		{
+			input: {
+				operation: 'write',
+				todoList: items.map(
+					(item, i) =>
+						({
+							id: i,
+							title: item.title,
+							description: item.description || '',
+							status: mapSqlStatusToTodoStatus(item.status),
+						}) satisfies IManageTodoListToolInputParams['todoList'][number],
+				),
+			} satisfies IManageTodoListToolInputParams,
+			toolInvocationToken,
+		},
+		token,
+	);
 }
 
-export async function clearTodoList(toolsService: IToolsService,
+export async function clearTodoList(
+	toolsService: IToolsService,
 	toolInvocationToken: ChatParticipantToolToken,
-	token: CancellationToken): Promise<void> {
-	await toolsService.invokeTool(ToolName.CoreManageTodoList, {
-		input: {
-			operation: 'write',
-			todoList: []
-		} satisfies IManageTodoListToolInputParams,
-		toolInvocationToken,
-	}, token);
+	token: CancellationToken,
+): Promise<void> {
+	await toolsService.invokeTool(
+		ToolName.CoreManageTodoList,
+		{
+			input: {
+				operation: 'write',
+				todoList: [],
+			} satisfies IManageTodoListToolInputParams,
+			toolInvocationToken,
+		},
+		token,
+	);
 }
 
 interface IManageTodoListToolInputParams {
@@ -1605,28 +2589,41 @@ interface IManageTodoListToolInputParams {
  * No-op formatter for tool invocations that do not require custom formatting.
  * The `toolCall` parameter is unused and present for interface consistency.
  */
-function emptyInvocation(_invocation: ChatToolInvocationPart, _toolCall: UnknownToolCall): void {
+function emptyInvocation(
+	_invocation: ChatToolInvocationPart,
+	_toolCall: UnknownToolCall,
+): void {
 	// No custom formatting needed
 }
 
 /**
  * No-op post-invocation formatter for tools whose completion requires no custom display.
  */
-function emptyToolInvocationCompleted(_invocation: ChatToolInvocationPart, _toolCall: UnknownToolCall, _result: ToolCallResult): void {
+function emptyToolInvocationCompleted(
+	_invocation: ChatToolInvocationPart,
+	_toolCall: UnknownToolCall,
+	_result: ToolCallResult,
+): void {
 	// No custom post-invocation formatting needed
 }
 
-
-function genericToolInvocationCompleted(invocation: ChatToolInvocationPart, toolCall: UnknownToolCall, result: ToolCallResult): void {
+function genericToolInvocationCompleted(
+	invocation: ChatToolInvocationPart,
+	toolCall: UnknownToolCall,
+	result: ToolCallResult,
+): void {
 	if (result.success && result.result?.content) {
 		invocation.toolSpecificData = {
-			output: typeof result.result.content === 'string' ? result.result.content : JSON.stringify(result.result.content, null, 2),
-			input: toolCall.arguments ? JSON.stringify(toolCall.arguments, null, 2) : ''
+			output:
+				typeof result.result.content === 'string'
+					? result.result.content
+					: JSON.stringify(result.result.content, null, 2),
+			input: toolCall.arguments
+				? JSON.stringify(toolCall.arguments, null, 2)
+				: '',
 		};
 	}
-
 }
-
 
 /**
  * Mock tools service that can be configured for different test scenarios
@@ -1655,31 +2652,61 @@ export class FakeToolsService implements IToolsService {
 		this._invokeToolCalls = [];
 	}
 
-	invokeToolWithEndpoint(name: string, options: LanguageModelToolInvocationOptions<unknown>, endpoint: IChatEndpoint | undefined, token: CancellationToken): Thenable<LanguageModelToolResult2> {
+	invokeToolWithEndpoint(
+		name: string,
+		options: LanguageModelToolInvocationOptions<unknown>,
+		endpoint: IChatEndpoint | undefined,
+		token: CancellationToken,
+	): Thenable<LanguageModelToolResult2> {
 		return this.invokeTool(name, options);
 	}
 
-	modelSpecificTools: IObservable<{ definition: LanguageModelToolDefinition; tool: ICopilotTool<unknown> }[]> = constObservable([]);
+	modelSpecificTools: IObservable<
+		{
+			definition: LanguageModelToolDefinition;
+			tool: ICopilotTool<unknown>;
+		}[]
+	> = constObservable([]);
 
 	async invokeTool(
 		name: string,
-		options: LanguageModelToolInvocationOptions<unknown>
+		options: LanguageModelToolInvocationOptions<unknown>,
 	): Promise<LanguageModelToolResult2> {
 		this._invokeToolCalls.push({ name, input: options.input });
 
-		if (name === ToolName.CoreConfirmationTool || name === ToolName.CoreTerminalConfirmationTool) {
+		if (
+			name === ToolName.CoreConfirmationTool ||
+			name === ToolName.CoreTerminalConfirmationTool
+		) {
 			return {
-				content: [new LanguageModelTextPart(this._confirmationResult)]
+				content: [new LanguageModelTextPart(this._confirmationResult)],
 			};
 		}
 
 		if (name === 'vscode_reviewPlan') {
 			if (this._confirmationResult === 'no') {
-				return { content: [new LanguageModelTextPart(JSON.stringify({ rejected: true }))] };
+				return {
+					content: [
+						new LanguageModelTextPart(
+							JSON.stringify({ rejected: true }),
+						),
+					],
+				};
 			}
-			const input = options.input as { actions?: Array<{ label: string }> } | undefined;
+			const input = options.input as
+				| { actions?: Array<{ label: string }> }
+				| undefined;
 			const firstAction = input?.actions?.[0]?.label;
-			return { content: [new LanguageModelTextPart(JSON.stringify({ action: firstAction, rejected: false }))] };
+			return {
+				content: [
+					new LanguageModelTextPart(
+						JSON.stringify({
+							action: firstAction,
+							rejected: false,
+						}),
+					),
+				],
+			};
 		}
 
 		return { content: [] };
@@ -1710,11 +2737,16 @@ export class FakeToolsService implements IToolsService {
 	}
 }
 
-
 /**
  * CLI sends 'synthetic' user messages for cases such as Skill invocations.
  * We need to ensure these user.messages are not treated as regular user messages in the UI, which could cause confusion as they may not be directly from the user.
  */
-export function isSyntheticUserMessage(event: Extract<SessionEvent, { type: 'user.message' }>): boolean {
-	return event.type === 'user.message' && !!event.data.source && (event.data.source ?? '').toLowerCase() !== 'user';
+export function isSyntheticUserMessage(
+	event: Extract<SessionEvent, { type: 'user.message' }>,
+): boolean {
+	return (
+		event.type === 'user.message' &&
+		!!event.data.source &&
+		(event.data.source ?? '').toLowerCase() !== 'user'
+	);
 }

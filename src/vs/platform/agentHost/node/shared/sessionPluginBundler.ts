@@ -3,24 +3,38 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { VSBuffer } from '../../../../base/common/buffer.js';
-import { hash } from '../../../../base/common/hash.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
-import { basename, dirname } from '../../../../base/common/resources.js';
-import { URI } from '../../../../base/common/uri.js';
-import { IFileService } from '../../../files/common/files.js';
-import { IAgentPluginManager } from '../../common/agentPluginManager.js';
-import { customizationId, type ClientPluginCustomization } from '../../common/state/sessionState.js';
-import { CustomizationType, type URI as ProtocolURI } from '../../common/state/protocol/state.js';
-import { DiscoveredType, type IDiscoveredDirectory } from '../copilot/sessionCustomizationDiscovery.js';
+import { VSBuffer } from "../../../../base/common/buffer.js";
+import { hash } from "../../../../base/common/hash.js";
+import { Disposable } from "../../../../base/common/lifecycle.js";
+import { basename, dirname } from "../../../../base/common/resources.js";
+import { URI } from "../../../../base/common/uri.js";
+import { IFileService } from "../../../files/common/files.js";
+import { IAgentPluginManager } from "../../common/agentPluginManager.js";
+import {
+	customizationId,
+	type ClientPluginCustomization,
+} from "../../common/state/sessionState.js";
+import {
+	CustomizationType,
+	type URI as ProtocolURI,
+} from "../../common/state/protocol/state.js";
+import {
+	DiscoveredType,
+	type IDiscoveredDirectory,
+} from "../copilot/sessionCustomizationDiscovery.js";
 
-const DISPLAY_NAME = 'VS Code Synced Data';
-const HOST_DISCOVERY_DIR = 'host-discovery';
+const DISPLAY_NAME = "VS Code Synced Data";
+const HOST_DISCOVERY_DIR = "host-discovery";
 
-const MANIFEST_CONTENT = JSON.stringify({
-	name: DISPLAY_NAME,
-	description: 'Customization data discovered from this workspace and your home directory',
-}, null, '\t');
+const MANIFEST_CONTENT = JSON.stringify(
+	{
+		name: DISPLAY_NAME,
+		description:
+			"Customization data discovered from this workspace and your home directory",
+	},
+	null,
+	"\t",
+);
 
 /**
  * Maps a {@link DiscoveredType} to the plugin sub-directory under which that
@@ -28,9 +42,12 @@ const MANIFEST_CONTENT = JSON.stringify({
  */
 function pluginDirForType(type: DiscoveredType): string {
 	switch (type) {
-		case DiscoveredType.Agent: return 'agents';
-		case DiscoveredType.Skill: return 'skills';
-		case DiscoveredType.Instruction: return 'rules';
+		case DiscoveredType.Agent:
+			return "agents";
+		case DiscoveredType.Skill:
+			return "skills";
+		case DiscoveredType.Instruction:
+			return "rules";
 	}
 }
 
@@ -54,7 +71,6 @@ interface IBundleResult {
  * match) and skip the rewrite.
  */
 export class SessionPluginBundler extends Disposable {
-
 	private readonly _rootUri: URI;
 	private _lastNonce: string | undefined;
 
@@ -65,7 +81,11 @@ export class SessionPluginBundler extends Disposable {
 	) {
 		super();
 		const authority = `host-${hash(workingDirectory.toString())}`;
-		this._rootUri = URI.joinPath(pluginManager.basePath, HOST_DISCOVERY_DIR, authority);
+		this._rootUri = URI.joinPath(
+			pluginManager.basePath,
+			HOST_DISCOVERY_DIR,
+			authority,
+		);
 	}
 
 	get rootUri(): URI {
@@ -83,7 +103,9 @@ export class SessionPluginBundler extends Disposable {
 	 * {@link ClientPluginCustomization} pointing at the on-disk plugin root
 	 * with a content-based nonce, or `undefined` when there are no files.
 	 */
-	async bundle(directories: readonly IDiscoveredDirectory[]): Promise<IBundleResult | undefined> {
+	async bundle(
+		directories: readonly IDiscoveredDirectory[],
+	): Promise<IBundleResult | undefined> {
 		if (directories.length === 0) {
 			return undefined;
 		}
@@ -94,8 +116,11 @@ export class SessionPluginBundler extends Disposable {
 			// Directory may not exist on first bundle.
 		}
 
-		const manifestUri = URI.joinPath(this._rootUri, '.plugin', 'plugin.json');
-		await this._fileService.writeFile(manifestUri, VSBuffer.fromString(MANIFEST_CONTENT));
+		const manifestUri = URI.joinPath(this._rootUri, ".plugin", "plugin.json");
+		await this._fileService.writeFile(
+			manifestUri,
+			VSBuffer.fromString(MANIFEST_CONTENT),
+		);
 
 		const hashParts: string[] = [];
 
@@ -124,7 +149,7 @@ export class SessionPluginBundler extends Disposable {
 		}
 
 		hashParts.sort();
-		const nonce = String(hash(hashParts.join('\n')));
+		const nonce = String(hash(hashParts.join("\n")));
 		this._lastNonce = nonce;
 
 		const rootUriString = this._rootUri.toString() as ProtocolURI;

@@ -3,17 +3,26 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancellationToken } from '../../../../../../../base/common/cancellation.js';
-import { Disposable, IDisposable } from '../../../../../../../base/common/lifecycle.js';
-import { URI } from '../../../../../../../base/common/uri.js';
-import { Position } from '../../../../../../../editor/common/core/position.js';
-import { Range } from '../../../../../../../editor/common/core/range.js';
-import { CompletionItem, CompletionList } from '../../../../../../../editor/common/languages.js';
-import { ITextModel } from '../../../../../../../editor/common/model.js';
-import { LanguageFilter } from '../../../../../../../editor/common/languageSelector.js';
-import { ILanguageFeaturesService } from '../../../../../../../editor/common/services/languageFeatures.js';
-import { IChatInputCompletionItem, IChatSessionsService } from '../../../../common/chatSessionsService.js';
-import { isAtTriggerCharacterToken } from './chatInputCompletionUtils.js';
+import { CancellationToken } from "../../../../../../../base/common/cancellation.js";
+import {
+	Disposable,
+	IDisposable,
+} from "../../../../../../../base/common/lifecycle.js";
+import { URI } from "../../../../../../../base/common/uri.js";
+import { Position } from "../../../../../../../editor/common/core/position.js";
+import { Range } from "../../../../../../../editor/common/core/range.js";
+import {
+	CompletionItem,
+	CompletionList,
+} from "../../../../../../../editor/common/languages.js";
+import { ITextModel } from "../../../../../../../editor/common/model.js";
+import { LanguageFilter } from "../../../../../../../editor/common/languageSelector.js";
+import { ILanguageFeaturesService } from "../../../../../../../editor/common/services/languageFeatures.js";
+import {
+	IChatInputCompletionItem,
+	IChatSessionsService,
+} from "../../../../common/chatSessionsService.js";
+import { isAtTriggerCharacterToken } from "./chatInputCompletionUtils.js";
 
 /**
  * Shared plumbing for Monaco completion providers that delegate to an
@@ -36,8 +45,10 @@ import { isAtTriggerCharacterToken } from './chatInputCompletionUtils.js';
  * characters, performing the host RPC, cancellation, and registering
  * the Monaco provider with the host-announced trigger characters.
  */
-export abstract class AgentHostInputCompletionsBase<TContext, TRegData = void> extends Disposable {
-
+export abstract class AgentHostInputCompletionsBase<
+	TContext,
+	TRegData = void,
+> extends Disposable {
 	constructor(
 		protected readonly _languageFeaturesService: ILanguageFeaturesService,
 		protected readonly _chatSessionsService: IChatSessionsService,
@@ -50,13 +61,20 @@ export abstract class AgentHostInputCompletionsBase<TContext, TRegData = void> e
 	 * for `model`, along with any subclass-specific context that should
 	 * flow into {@link _buildItem}. Return `undefined` to skip.
 	 */
-	protected abstract _resolveContext(model: ITextModel, regData: TRegData): { sessionResource: URI; context: TContext } | undefined;
+	protected abstract _resolveContext(
+		model: ITextModel,
+		regData: TRegData,
+	): { sessionResource: URI; context: TContext } | undefined;
 
 	/**
 	 * Build the Monaco completion item — including the accept command —
 	 * for one item returned by the host.
 	 */
-	protected abstract _buildItem(position: Position, item: IChatInputCompletionItem, context: TContext): CompletionItem;
+	protected abstract _buildItem(
+		position: Position,
+		item: IChatInputCompletionItem,
+		context: TContext,
+	): CompletionItem;
 
 	/**
 	 * Register a Monaco completion provider that delegates to this
@@ -68,15 +86,27 @@ export abstract class AgentHostInputCompletionsBase<TContext, TRegData = void> e
 	 * registration is firing (e.g. its scheme) and ignore models that
 	 * don't belong to it.
 	 */
-	protected _registerProvider(filter: LanguageFilter, debugName: string, triggerCharacters: readonly string[], regData: TRegData): IDisposable {
+	protected _registerProvider(
+		filter: LanguageFilter,
+		debugName: string,
+		triggerCharacters: readonly string[],
+		regData: TRegData,
+	): IDisposable {
 		return this._languageFeaturesService.completionProvider.register(filter, {
 			_debugDisplayName: debugName,
 			triggerCharacters: [...triggerCharacters],
-			provideCompletionItems: (model, position, _context, token) => this._provide(model, position, token, triggerCharacters, regData),
+			provideCompletionItems: (model, position, _context, token) =>
+				this._provide(model, position, token, triggerCharacters, regData),
 		});
 	}
 
-	private async _provide(model: ITextModel, position: Position, token: CancellationToken, triggerCharacters: readonly string[], regData: TRegData): Promise<CompletionList | null> {
+	private async _provide(
+		model: ITextModel,
+		position: Position,
+		token: CancellationToken,
+		triggerCharacters: readonly string[],
+		regData: TRegData,
+	): Promise<CompletionList | null> {
 		// Only consult the agent host when the cursor sits inside a token
 		// led by one of the host-announced trigger characters. Without
 		// this gate Monaco re-invokes the provider on every keystroke
@@ -93,7 +123,11 @@ export abstract class AgentHostInputCompletionsBase<TContext, TRegData = void> e
 
 		const text = model.getValue();
 		const offset = model.getOffsetAt(position);
-		const result = await this._chatSessionsService.provideChatInputCompletions(ctx.sessionResource, { text, offset }, token);
+		const result = await this._chatSessionsService.provideChatInputCompletions(
+			ctx.sessionResource,
+			{ text, offset },
+			token,
+		);
 		if (token.isCancellationRequested || !result) {
 			return null;
 		}
@@ -111,11 +145,24 @@ export abstract class AgentHostInputCompletionsBase<TContext, TRegData = void> e
 	 * used directly. When omitted, the ranges default to a zero-length
 	 * span at the cursor (Monaco then inserts without replacing).
 	 */
-	protected static computeRange(position: Position, item: IChatInputCompletionItem): { insert: Range; replace: Range } {
+	protected static computeRange(
+		position: Position,
+		item: IChatInputCompletionItem,
+	): { insert: Range; replace: Range } {
 		const start = item.start ?? position;
 		const end = item.end ?? position;
-		const replace = new Range(start.lineNumber, start.column, end.lineNumber, end.column);
-		const insert = new Range(start.lineNumber, start.column, position.lineNumber, position.column);
+		const replace = new Range(
+			start.lineNumber,
+			start.column,
+			end.lineNumber,
+			end.column,
+		);
+		const insert = new Range(
+			start.lineNumber,
+			start.column,
+			position.lineNumber,
+			position.column,
+		);
 		return { insert, replace };
 	}
 }

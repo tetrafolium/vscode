@@ -14,14 +14,39 @@ import { ServicesAccessor } from '../../../util/vs/platform/instantiation/common
 import { Source } from '../../chat/common/chatMLFetcher';
 import type { ChatLocation, ChatResponse } from '../../chat/common/commonTypes';
 import { ICAPIClientService } from '../../endpoint/common/capiClient';
-import { CustomModel, EndpointEditToolName } from '../../endpoint/common/endpointProvider';
+import {
+	CustomModel,
+	EndpointEditToolName,
+} from '../../endpoint/common/endpointProvider';
 import { ILogService } from '../../log/common/logService';
-import { ITelemetryService, TelemetryProperties } from '../../telemetry/common/telemetry';
+import {
+	ITelemetryService,
+	TelemetryProperties,
+} from '../../telemetry/common/telemetry';
 import { TelemetryData } from '../../telemetry/common/telemetryData';
 import { AnthropicMessagesTool, ContextManagement } from './anthropic';
-import { FinishedCallback, OpenAiFunctionTool, OpenAiResponsesFunctionTool, OpenAiToolSearchTool, OptionalChatRequestParams, Prediction } from './fetch';
-import { FetcherId, FetchOptions, IAbortController, IFetcherService, PaginationOptions, Response } from './fetcherService';
-import { ChatCompletion, OpenAIContextManagement, RawMessageConversionCallback, rawMessageToCAPI } from './openai';
+import {
+	FinishedCallback,
+	OpenAiFunctionTool,
+	OpenAiResponsesFunctionTool,
+	OpenAiToolSearchTool,
+	OptionalChatRequestParams,
+	Prediction,
+} from './fetch';
+import {
+	FetcherId,
+	FetchOptions,
+	IAbortController,
+	IFetcherService,
+	PaginationOptions,
+	Response,
+} from './fetcherService';
+import {
+	ChatCompletion,
+	OpenAIContextManagement,
+	RawMessageConversionCallback,
+	rawMessageToCAPI,
+} from './openai';
 
 /**
  * Encapsulates all the functionality related to making GET/POST requests using
@@ -38,7 +63,10 @@ export interface IFetcher {
 	isFetcherError(err: any): boolean;
 	isNetworkProcessCrashedError(err: any): boolean;
 	getUserMessageForFetcherError(err: any): string;
-	fetchWithPagination<T>(baseUrl: string, options: PaginationOptions<T>): Promise<T[]>;
+	fetchWithPagination<T>(
+		baseUrl: string,
+		options: PaginationOptions<T>,
+	): Promise<T[]>;
 }
 
 export const userAgentLibraryHeader = 'X-VSCode-User-Agent-Library-Version';
@@ -55,14 +83,18 @@ export interface HeaderContributor {
 // The maximum time to wait for a request to complete.
 const requestTimeoutMs = 30 * 1000; // 30 seconds
 
-
 /**
  * Rough shape of an endpoint body. A superset of the parameters of any request,
  * but provided to at least have rough typings.
  */
 export interface IEndpointBody {
 	/** General or completions: */
-	tools?: (OpenAiFunctionTool | OpenAiResponsesFunctionTool | AnthropicMessagesTool | OpenAiToolSearchTool)[];
+	tools?: (
+		| OpenAiFunctionTool
+		| OpenAiResponsesFunctionTool
+		| AnthropicMessagesTool
+		| OpenAiToolSearchTool
+	)[];
 	model?: string;
 	previous_response_id?: string;
 	max_tokens?: number;
@@ -76,7 +108,10 @@ export interface IEndpointBody {
 	messages?: any[];
 	n?: number;
 	reasoning?: { effort?: string; summary?: string };
-	tool_choice?: OptionalChatRequestParams['tool_choice'] | { type: 'function'; name: string } | string;
+	tool_choice?:
+		| OptionalChatRequestParams['tool_choice']
+		| { type: 'function'; name: string }
+		| string;
 	top_logprobs?: number;
 	intent?: boolean;
 	intent_threshold?: number;
@@ -132,7 +167,10 @@ export interface IEndpointFetchOptions {
 
 export interface IEndpoint {
 	readonly urlOrRequestMetadata: string | RequestMetadata;
-	getExtraHeaders?(location?: ChatLocation, interactionTypeOverride?: InteractionTypeOverride): Record<string, string>;
+	getExtraHeaders?(
+		location?: ChatLocation,
+		interactionTypeOverride?: InteractionTypeOverride,
+	): Record<string, string>;
 	getEndpointFetchOptions?(): IEndpointFetchOptions;
 	interceptBody?(body: IEndpointBody | undefined): void;
 	acquireTokenizer(): ITokenizer;
@@ -143,7 +181,9 @@ export interface IEndpoint {
 	readonly tokenizer: TokenizerType;
 }
 
-export function stringifyUrlOrRequestMetadata(urlOrRequestMetadata: string | RequestMetadata): string {
+export function stringifyUrlOrRequestMetadata(
+	urlOrRequestMetadata: string | RequestMetadata,
+): string {
 	if (typeof urlOrRequestMetadata === 'string') {
 		return urlOrRequestMetadata;
 	}
@@ -381,7 +421,10 @@ export interface IChatEndpoint extends IEndpoint {
 	 * Flights a request from the chat endpoint returning a chat response.
 	 * Most of the time this is ChatMLFetcher#fetchOne, but it can be overridden for special cases.
 	 */
-	makeChatRequest2(options: IMakeChatRequestOptions, token: CancellationToken): Promise<ChatResponse>;
+	makeChatRequest2(
+		options: IMakeChatRequestOptions,
+		token: CancellationToken,
+	): Promise<ChatResponse>;
 
 	/**
 	 * Creates the request body to be sent to the endpoint based on the request.
@@ -392,7 +435,11 @@ export interface IChatEndpoint extends IEndpoint {
 }
 
 /** Function to create a standard request body for CAPI completions */
-export function createCapiRequestBody(options: ICreateEndpointBodyOptions, model: string, callback?: RawMessageConversionCallback) {
+export function createCapiRequestBody(
+	options: ICreateEndpointBodyOptions,
+	model: string,
+	callback?: RawMessageConversionCallback,
+) {
 	// FIXME@ulugbekna: need to investigate why language configs have such stop words, eg
 	// python has `\ndef` and `\nclass` which must be stop words for ghost text
 	// const stops = getLanguageConfig<string[]>(accessor, ConfigKey.Stops);
@@ -439,7 +486,10 @@ export interface INetworkRequestOptions {
  *   (e.g. chat title generation, conversation summarization, prompt categorization,
  *   branch name suggestion, background todo processing).
  */
-export type InteractionTypeOverride = 'conversation-subagent' | 'conversation-compaction' | 'conversation-background';
+export type InteractionTypeOverride =
+	| 'conversation-subagent'
+	| 'conversation-compaction'
+	| 'conversation-background';
 
 function networkRequest(
 	accessor: ServicesAccessor,
@@ -448,20 +498,35 @@ function networkRequest(
 	const fetcher = accessor.get(IFetcherService);
 	const telemetryService = accessor.get(ITelemetryService);
 	const capiClientService = accessor.get(ICAPIClientService);
-	const { requestType, endpointOrUrl, secretKey, intent, requestId, body, additionalHeaders, cancelToken, useFetcher, canRetryOnce = true, location } = options;
+	const {
+		requestType,
+		endpointOrUrl,
+		secretKey,
+		intent,
+		requestId,
+		body,
+		additionalHeaders,
+		cancelToken,
+		useFetcher,
+		canRetryOnce = true,
+		location,
+	} = options;
 
 	// TODO @lramos15 Eventually don't even construct this fake endpoint object.
-	const endpoint = typeof endpointOrUrl === 'string' || 'type' in endpointOrUrl ? {
-		modelMaxPromptTokens: 0,
-		urlOrRequestMetadata: endpointOrUrl,
-		family: '',
-		tokenizer: TokenizerType.O200K,
-		acquireTokenizer: () => {
-			throw new Error('Method not implemented.');
-		},
-		name: '',
-		version: '',
-	} satisfies IEndpoint : endpointOrUrl;
+	const endpoint =
+		typeof endpointOrUrl === 'string' || 'type' in endpointOrUrl
+			? ({
+					modelMaxPromptTokens: 0,
+					urlOrRequestMetadata: endpointOrUrl,
+					family: '',
+					tokenizer: TokenizerType.O200K,
+					acquireTokenizer: () => {
+						throw new Error('Method not implemented.');
+					},
+					name: '',
+					version: '',
+				} satisfies IEndpoint)
+			: endpointOrUrl;
 	const agentInteractionType = options.interactionTypeOverride ?? intent;
 
 	const headers: ReqHeaders = {
@@ -470,7 +535,12 @@ function networkRequest(
 		'OpenAI-Intent': intent, // Tells CAPI who flighted this request. Helps find buggy features
 		'X-GitHub-Api-Version': '2026-01-09',
 		...additionalHeaders,
-		...(endpoint.getExtraHeaders ? endpoint.getExtraHeaders(location, options.interactionTypeOverride) : {}),
+		...(endpoint.getExtraHeaders
+			? endpoint.getExtraHeaders(
+					location,
+					options.interactionTypeOverride,
+				)
+			: {}),
 	};
 	headers['X-Interaction-Type'] = agentInteractionType;
 	headers['X-Agent-Task-Id'] = requestId;
@@ -487,7 +557,7 @@ function networkRequest(
 		json: body,
 		timeout: requestTimeoutMs,
 		useFetcher,
-		suppressIntegrationId: endpointFetchOptions?.suppressIntegrationId
+		suppressIntegrationId: endpointFetchOptions?.suppressIntegrationId,
 	};
 
 	if (cancelToken) {
@@ -503,22 +573,32 @@ function networkRequest(
 		request.signal = abort.signal;
 	}
 	if (typeof endpoint.urlOrRequestMetadata === 'string') {
-		const requestPromise = fetcher.fetch(endpoint.urlOrRequestMetadata, request).catch(reason => {
-			if (canRetryOnce && canRetryOnceNetworkError(reason)) {
-				// disconnect and retry the request once if the connection was reset
-				telemetryService.sendGHTelemetryEvent('networking.disconnectAll');
-				return fetcher.disconnectAll().then(() => {
-					return fetcher.fetch(endpoint.urlOrRequestMetadata as string, request);
-				});
-			} else if (fetcher.isAbortError(reason)) {
-				throw new CancellationError();
-			} else {
-				throw reason;
-			}
-		});
+		const requestPromise = fetcher
+			.fetch(endpoint.urlOrRequestMetadata, request)
+			.catch((reason) => {
+				if (canRetryOnce && canRetryOnceNetworkError(reason)) {
+					// disconnect and retry the request once if the connection was reset
+					telemetryService.sendGHTelemetryEvent(
+						'networking.disconnectAll',
+					);
+					return fetcher.disconnectAll().then(() => {
+						return fetcher.fetch(
+							endpoint.urlOrRequestMetadata as string,
+							request,
+						);
+					});
+				} else if (fetcher.isAbortError(reason)) {
+					throw new CancellationError();
+				} else {
+					throw reason;
+				}
+			});
 		return requestPromise;
 	} else {
-		return capiClientService.makeRequest(request, endpoint.urlOrRequestMetadata as RequestMetadata);
+		return capiClientService.makeRequest(
+			request,
+			endpoint.urlOrRequestMetadata as RequestMetadata,
+		);
 	}
 }
 
@@ -550,7 +630,8 @@ export function getRequest(
 	return networkRequest(accessor, { ...options, requestType: 'GET' });
 }
 
-export const IHeaderContributors = createServiceIdentifier<HeaderContributors>('headerContributors');
+export const IHeaderContributors =
+	createServiceIdentifier<HeaderContributors>('headerContributors');
 
 export interface IHeaderContributors {
 	readonly _serviceBrand: undefined;

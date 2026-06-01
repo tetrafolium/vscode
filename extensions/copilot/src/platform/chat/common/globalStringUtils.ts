@@ -10,7 +10,14 @@ import { assertNever } from '../../../util/vs/base/common/assert';
  * Gets the text content part out of the message.
  * In the event it is an `ChatCompletionContentPart`, it will extract out the `ChatCompletionContentPartText`.
  **/
-export function getTextPart(message: string | Raw.ChatCompletionContentPart[] | Raw.ChatCompletionContentPart | OpenAI.ChatCompletionContentPart[] | OpenAI.ChatCompletionContentPart): string {
+export function getTextPart(
+	message:
+		| string
+		| Raw.ChatCompletionContentPart[]
+		| Raw.ChatCompletionContentPart
+		| OpenAI.ChatCompletionContentPart[]
+		| OpenAI.ChatCompletionContentPart,
+): string {
 	if (!message) {
 		return '';
 	}
@@ -20,25 +27,37 @@ export function getTextPart(message: string | Raw.ChatCompletionContentPart[] | 
 	}
 
 	if (!Array.isArray(message)) {
-		return message.type === Raw.ChatCompletionContentPartKind.Text ? message.text : '';
+		return message.type === Raw.ChatCompletionContentPartKind.Text
+			? message.text
+			: '';
 	}
 
-	return message.map(c => (c.type === Raw.ChatCompletionContentPartKind.Text || c.type === 'text') ? c.text : '').join('');
+	return message
+		.map((c) =>
+			c.type === Raw.ChatCompletionContentPartKind.Text ||
+			c.type === 'text'
+				? c.text
+				: '',
+		)
+		.join('');
 }
-
 
 export function toTextPart(message: string): Raw.ChatCompletionContentPartText {
 	return {
 		type: Raw.ChatCompletionContentPartKind.Text,
-		text: message
+		text: message,
 	};
 }
 
-export function toTextParts(message: string): Raw.ChatCompletionContentPartText[] {
+export function toTextParts(
+	message: string,
+): Raw.ChatCompletionContentPartText[] {
 	return [toTextPart(message)];
 }
 
-export function roleToString(role: Raw.ChatRole): 'system' | 'user' | 'assistant' | 'tool' {
+export function roleToString(
+	role: Raw.ChatRole,
+): 'system' | 'user' | 'assistant' | 'tool' {
 	switch (role) {
 		case Raw.ChatRole.System:
 			return 'system';

@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 import { SyncDescriptor } from '../../../util/vs/platform/instantiation/common/descriptors';
 import { InlineChatIntent } from '../../inlineChat2/node/inlineChatIntent';
 import { IntentRegistry } from '../../prompt/node/intentRegistry';

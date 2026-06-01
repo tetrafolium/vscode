@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export { };
+export {};
 
 declare global {
-
-	type TextDecoder = { decode: (input: Uint8Array, opts?: { stream?: boolean }) => string };
+	type TextDecoder = {
+		decode: (input: Uint8Array, opts?: { stream?: boolean }) => string;
+	};
 	type TextEncoder = { encode: (input: string) => Uint8Array };
 }

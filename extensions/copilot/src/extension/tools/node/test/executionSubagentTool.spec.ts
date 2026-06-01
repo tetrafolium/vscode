@@ -12,8 +12,12 @@ import '../executionSubagentTool';
 
 suite('ExecutionSubagentTool', () => {
 	test('is registered and categorized as Core', () => {
-		const isRegistered = ToolRegistry.getTools().some(t => t.toolName === ToolName.ExecutionSubagent);
+		const isRegistered = ToolRegistry.getTools().some(
+			(t) => t.toolName === ToolName.ExecutionSubagent,
+		);
 		expect(isRegistered).toBe(true);
-		expect(toolCategories[ToolName.ExecutionSubagent]).toBe(ToolCategory.Core);
+		expect(toolCategories[ToolName.ExecutionSubagent]).toBe(
+			ToolCategory.Core,
+		);
 	});
 });

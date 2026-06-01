@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { IConfigurationService } from '../../../platform/configuration/common/configurationService';
-import { IChatModelInformation, ModelSupportedEndpoint } from '../../../platform/endpoint/common/endpointProvider';
+import {
+	IChatModelInformation,
+	ModelSupportedEndpoint,
+} from '../../../platform/endpoint/common/endpointProvider';
 import { ILogService } from '../../../platform/log/common/logService';
 import { IFetcherService } from '../../../platform/networking/common/fetcherService';
 import { IExperimentationService } from '../../../platform/telemetry/common/nullExperimentationService';
@@ -13,7 +16,6 @@ import { AbstractOpenAICompatibleLMProvider } from './abstractLanguageModelChatP
 import { IBYOKStorageService } from './byokStorageService';
 
 export class OAIBYOKLMProvider extends AbstractOpenAICompatibleLMProvider {
-
 	public static readonly providerName = 'OpenAI';
 	public static readonly providerId = this.providerName.toLowerCase();
 
@@ -24,7 +26,7 @@ export class OAIBYOKLMProvider extends AbstractOpenAICompatibleLMProvider {
 		@ILogService logService: ILogService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IConfigurationService configurationService: IConfigurationService,
-		@IExperimentationService expService: IExperimentationService
+		@IExperimentationService expService: IExperimentationService,
 	) {
 		super(
 			OAIBYOKLMProvider.providerId,
@@ -35,7 +37,7 @@ export class OAIBYOKLMProvider extends AbstractOpenAICompatibleLMProvider {
 			logService,
 			instantiationService,
 			configurationService,
-			expService
+			expService,
 		);
 	}
 
@@ -43,11 +45,14 @@ export class OAIBYOKLMProvider extends AbstractOpenAICompatibleLMProvider {
 		return 'https://api.openai.com/v1';
 	}
 
-	protected override getModelInfo(modelId: string, modelUrl: string): IChatModelInformation {
+	protected override getModelInfo(
+		modelId: string,
+		modelUrl: string,
+	): IChatModelInformation {
 		const modelInfo = super.getModelInfo(modelId, modelUrl);
 		modelInfo.supported_endpoints = [
 			ModelSupportedEndpoint.ChatCompletions,
-			ModelSupportedEndpoint.Responses
+			ModelSupportedEndpoint.Responses,
 		];
 		return modelInfo;
 	}

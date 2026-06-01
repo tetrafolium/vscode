@@ -11,5 +11,8 @@ export enum DocumentSwitchTriggerStrategy {
 }
 
 export namespace DocumentSwitchTriggerStrategy {
-	export const VALIDATOR = vEnum(DocumentSwitchTriggerStrategy.Always, DocumentSwitchTriggerStrategy.AfterAcceptance);
+	export const VALIDATOR = vEnum(
+		DocumentSwitchTriggerStrategy.Always,
+		DocumentSwitchTriggerStrategy.AfterAcceptance,
+	);
 }

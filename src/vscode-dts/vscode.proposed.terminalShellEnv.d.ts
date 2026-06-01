@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
+declare module "vscode" {
 	// @anthonykim1 https://github.com/microsoft/vscode/issues/227467
 
 	export interface TerminalShellIntegrationEnvironment {

@@ -27,7 +27,9 @@ export interface IClaudeMcpServerContributor {
  * The instantiation service will handle dependency injection.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type IClaudeMcpServerContributorCtor = new (...args: any[]) => IClaudeMcpServerContributor;
+export type IClaudeMcpServerContributorCtor = new (
+	...args: any[]
+) => IClaudeMcpServerContributor;
 
 /**
  * Global registry of MCP server contributor constructors.
@@ -55,7 +57,9 @@ const contributorRegistry: IClaudeMcpServerContributorCtor[] = [];
  * registerClaudeMcpServerContributor(MyMcpServers);
  * ```
  */
-export function registerClaudeMcpServerContributor(ctor: IClaudeMcpServerContributorCtor): void {
+export function registerClaudeMcpServerContributor(
+	ctor: IClaudeMcpServerContributorCtor,
+): void {
 	contributorRegistry.push(ctor);
 }
 
@@ -77,7 +81,7 @@ export function getClaudeMcpServerContributorRegistry(): readonly IClaudeMcpServ
  * @returns Merged MCP server configurations ready to pass to Claude SDK Options, or undefined if none
  */
 export async function buildMcpServersFromRegistry(
-	instantiationService: IInstantiationService
+	instantiationService: IInstantiationService,
 ): Promise<Record<string, McpServerConfig> | undefined> {
 	if (contributorRegistry.length === 0) {
 		return undefined;

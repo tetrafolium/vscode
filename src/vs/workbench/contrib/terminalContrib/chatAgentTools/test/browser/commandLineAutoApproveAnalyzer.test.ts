@@ -3,18 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { strictEqual } from 'assert';
-import { OperatingSystem } from '../../../../../../base/common/platform.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import type { IInstantiationService } from '../../../../../../platform/instantiation/common/instantiation.js';
-import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
-import type { ICommandLineAnalyzerOptions } from '../../browser/tools/commandLineAnalyzer/commandLineAnalyzer.js';
-import { CommandLineAutoApproveAnalyzer } from '../../browser/tools/commandLineAnalyzer/commandLineAutoApproveAnalyzer.js';
-import { RunInTerminalToolTelemetry } from '../../browser/runInTerminalToolTelemetry.js';
-import { TreeSitterCommandParser, TreeSitterCommandParserLanguage } from '../../browser/treeSitterCommandParser.js';
+import { strictEqual } from "assert";
+import { OperatingSystem } from "../../../../../../base/common/platform.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../../../base/test/common/utils.js";
+import type { IInstantiationService } from "../../../../../../platform/instantiation/common/instantiation.js";
+import { TestConfigurationService } from "../../../../../../platform/configuration/test/common/testConfigurationService.js";
+import { workbenchInstantiationService } from "../../../../../test/browser/workbenchTestServices.js";
+import type { ICommandLineAnalyzerOptions } from "../../browser/tools/commandLineAnalyzer/commandLineAnalyzer.js";
+import { CommandLineAutoApproveAnalyzer } from "../../browser/tools/commandLineAnalyzer/commandLineAutoApproveAnalyzer.js";
+import { RunInTerminalToolTelemetry } from "../../browser/runInTerminalToolTelemetry.js";
+import {
+	TreeSitterCommandParser,
+	TreeSitterCommandParserLanguage,
+} from "../../browser/treeSitterCommandParser.js";
 
-suite('CommandLineAutoApproveAnalyzer', () => {
+suite("CommandLineAutoApproveAnalyzer", () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
 	let instantiationService: IInstantiationService;
@@ -22,33 +25,38 @@ suite('CommandLineAutoApproveAnalyzer', () => {
 
 	setup(() => {
 		const configurationService = new TestConfigurationService();
-		instantiationService = workbenchInstantiationService({
-			configurationService: () => configurationService
-		}, store);
+		instantiationService = workbenchInstantiationService(
+			{
+				configurationService: () => configurationService,
+			},
+			store,
+		);
 
 		const parser = {
 			extractSubCommands: async () => [],
 		} as unknown as TreeSitterCommandParser;
 		const telemetry = {
-			logPrepare: () => { },
+			logPrepare: () => {},
 		} as unknown as RunInTerminalToolTelemetry;
 
-		analyzer = store.add(instantiationService.createInstance(
-			CommandLineAutoApproveAnalyzer,
-			parser,
-			telemetry,
-			() => { }
-		));
+		analyzer = store.add(
+			instantiationService.createInstance(
+				CommandLineAutoApproveAnalyzer,
+				parser,
+				telemetry,
+				() => {},
+			),
+		);
 	});
 
-	test('should not allow auto approve when sub-command parsing returns an empty list', async () => {
+	test("should not allow auto approve when sub-command parsing returns an empty list", async () => {
 		const options: ICommandLineAnalyzerOptions = {
-			commandLine: 'rm -- file.txt',
+			commandLine: "rm -- file.txt",
 			cwd: undefined,
-			shell: 'pwsh',
+			shell: "pwsh",
 			os: OperatingSystem.Windows,
 			treeSitterLanguage: TreeSitterCommandParserLanguage.PowerShell,
-			terminalToolSessionId: 'test',
+			terminalToolSessionId: "test",
 			chatSessionResource: undefined,
 		};
 
@@ -58,14 +66,14 @@ suite('CommandLineAutoApproveAnalyzer', () => {
 		strictEqual(result.disclaimers?.length ?? 0, 0);
 	});
 
-	test('should auto approve empty command strings when sub-command parsing returns an empty list', async () => {
+	test("should auto approve empty command strings when sub-command parsing returns an empty list", async () => {
 		const options: ICommandLineAnalyzerOptions = {
-			commandLine: '   ',
+			commandLine: "   ",
 			cwd: undefined,
-			shell: 'pwsh',
+			shell: "pwsh",
 			os: OperatingSystem.Windows,
 			treeSitterLanguage: TreeSitterCommandParserLanguage.PowerShell,
-			terminalToolSessionId: 'test',
+			terminalToolSessionId: "test",
 			chatSessionResource: undefined,
 		};
 

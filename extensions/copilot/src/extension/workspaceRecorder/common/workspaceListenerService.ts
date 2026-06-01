@@ -8,7 +8,10 @@ import { IDocumentEventDataSetChangeReason } from '../../../platform/workspaceRe
 import { Event } from '../../../util/vs/base/common/event';
 import { createDecorator as createServiceIdentifier } from '../../../util/vs/platform/instantiation/common/instantiation';
 
-export const IWorkspaceListenerService = createServiceIdentifier<IWorkspaceListenerService>('IWorkspaceListenerService');
+export const IWorkspaceListenerService =
+	createServiceIdentifier<IWorkspaceListenerService>(
+		'IWorkspaceListenerService',
+	);
 
 export interface IWorkspaceListenerService {
 	readonly _serviceBrand: undefined;
@@ -16,7 +19,12 @@ export interface IWorkspaceListenerService {
 	onStructuredData: Event<IRecordableLogEntry | IRecordableEditorLogEntry>;
 
 	// If it fires, it is guaranteed to fire 10 seconds after the corresponding model version.
-	onHandleChangeReason: Event<{ documentUri: string; documentVersion: number; reason: string; metadata: ITextModelEditReasonMetadata }>;
+	onHandleChangeReason: Event<{
+		documentUri: string;
+		documentVersion: number;
+		reason: string;
+		metadata: ITextModelEditReasonMetadata;
+	}>;
 }
 
 export interface IRecordableLogEntry {
@@ -30,7 +38,14 @@ export interface IRecordableEditorLogEntry extends IRecordableLogEntry {
 }
 
 export interface ITextModelEditReasonMetadata extends IDocumentEventDataSetChangeReason {
-	source: 'inlineSuggestion.accept' | 'snippet' | 'Chat.applyEdits' | 'inlineChat.applyEdit' | 'reloadFromDisk' | 'formatEditsCommand' | string;
+	source:
+		| 'inlineSuggestion.accept'
+		| 'snippet'
+		| 'Chat.applyEdits'
+		| 'inlineChat.applyEdit'
+		| 'reloadFromDisk'
+		| 'formatEditsCommand'
+		| string;
 	extensionId?: string;
 	nes?: boolean;
 	type?: 'word' | 'line';

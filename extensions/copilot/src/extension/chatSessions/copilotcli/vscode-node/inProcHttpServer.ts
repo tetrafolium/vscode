@@ -11,7 +11,10 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ILogger } from '../../../../platform/log/common/logService';
-import { Disposable, toDisposable } from '../../../../util/vs/base/common/lifecycle';
+import {
+	Disposable,
+	toDisposable,
+} from '../../../../util/vs/base/common/lifecycle';
 import { generateUuid } from '../../../../util/vs/base/common/uuid';
 import { ICopilotCLISessionTracker } from './copilotCLISessionTracker';
 
@@ -19,7 +22,10 @@ interface McpProviderOptions {
 	id: string;
 	serverLabel: string;
 	serverVersion: string;
-	registerTools: (server: McpServer, sessionId: string) => Promise<void> | void;
+	registerTools: (
+		server: McpServer,
+		sessionId: string,
+	) => Promise<void> | void;
 	registerPushNotifications?: () => Promise<void> | void;
 }
 
@@ -27,7 +33,7 @@ class AsyncLazy<T> {
 	private _value: T | undefined;
 	private _promise: Promise<T> | undefined;
 
-	constructor(private readonly factory: () => Promise<T>) { }
+	constructor(private readonly factory: () => Promise<T>) {}
 
 	get value(): Promise<T> {
 		if (this._value !== undefined) {
@@ -38,7 +44,7 @@ class AsyncLazy<T> {
 			return this._promise;
 		}
 
-		this._promise = this.factory().then(value => {
+		this._promise = this.factory().then((value) => {
 			this._value = value;
 			return value;
 		});
@@ -48,10 +54,17 @@ class AsyncLazy<T> {
 }
 
 export class InProcHttpServer extends Disposable {
-	private readonly _transports: Record<string, StreamableHTTPServerTransport> = {};
-	private readonly _onDidClientConnect = this._register(new vscode.EventEmitter<string>());
+	private readonly _transports: Record<
+		string,
+		StreamableHTTPServerTransport
+	> = {};
+	private readonly _onDidClientConnect = this._register(
+		new vscode.EventEmitter<string>(),
+	);
 	public readonly onDidClientConnect = this._onDidClientConnect.event;
-	private readonly _onDidClientDisconnect = this._register(new vscode.EventEmitter<string>());
+	private readonly _onDidClientDisconnect = this._register(
+		new vscode.EventEmitter<string>(),
+	);
 	public readonly onDidClientDisconnect = this._onDidClientDisconnect.event;
 	constructor(
 		private readonly _logger: ILogger,
@@ -60,7 +73,10 @@ export class InProcHttpServer extends Disposable {
 		super();
 	}
 
-	broadcastNotification(method: string, params: Record<string, unknown>): void {
+	broadcastNotification(
+		method: string,
+		params: Record<string, unknown>,
+	): void {
 		const message = {
 			jsonrpc: '2.0' as const,
 			method,
@@ -69,15 +85,23 @@ export class InProcHttpServer extends Disposable {
 
 		for (const sessionId in this._transports) {
 			this._transports[sessionId].send(message).catch(() => {
-				this._logger.debug(`Failed to send notification "${method}" to client ${sessionId}`);
+				this._logger.debug(
+					`Failed to send notification "${method}" to client ${sessionId}`,
+				);
 			});
 		}
 	}
 
-	sendNotification(sessionId: string, method: string, params: Record<string, unknown>): void {
+	sendNotification(
+		sessionId: string,
+		method: string,
+		params: Record<string, unknown>,
+	): void {
 		const transport = this._getTransport(sessionId);
 		if (!transport) {
-			this._logger.debug(`Cannot send notification "${method}": session ${sessionId} not found`);
+			this._logger.debug(
+				`Cannot send notification "${method}": session ${sessionId} not found`,
+			);
 			return;
 		}
 
@@ -88,7 +112,9 @@ export class InProcHttpServer extends Disposable {
 		};
 
 		transport.send(message).catch(() => {
-			this._logger.debug(`Failed to send notification "${method}" to client ${sessionId}`);
+			this._logger.debug(
+				`Failed to send notification "${method}" to client ${sessionId}`,
+			);
 		});
 	}
 
@@ -101,7 +127,9 @@ export class InProcHttpServer extends Disposable {
 	): Promise<{ serverUri: vscode.Uri; headers: Record<string, string> }> {
 		let socketPath: string | undefined;
 
-		this._logger.debug(`Starting MCP HTTP server for ${mcpOptions.serverLabel}...`);
+		this._logger.debug(
+			`Starting MCP HTTP server for ${mcpOptions.serverLabel}...`,
+		);
 
 		try {
 			const nonce = generateUuid();
@@ -113,17 +141,29 @@ export class InProcHttpServer extends Disposable {
 			} & typeof import('express');
 			const expressApp = expressModule.default || expressModule;
 
-			const app: express.Application = (expressApp as () => express.Application)();
+			const app: express.Application = (
+				expressApp as () => express.Application
+			)();
 
 			// MCP requests like open_diff include full file contents which can exceed the default ~100KB limit
 			app.use(expressApp.json({ limit: '10mb' }));
-			app.use((req: express.Request, res: express.Response, next: express.NextFunction) =>
-				this._authMiddleware(nonce, req, res, next),
+			app.use(
+				(
+					req: express.Request,
+					res: express.Response,
+					next: express.NextFunction,
+				) => this._authMiddleware(nonce, req, res, next),
 			);
 
-			app.post('/mcp', (req: express.Request, res: express.Response) => this._handlePost(mcpOptions, req, res));
-			app.get('/mcp', (req: express.Request, res: express.Response) => this._handleGetDelete(req, res));
-			app.delete('/mcp', (req: express.Request, res: express.Response) => this._handleGetDelete(req, res));
+			app.post('/mcp', (req: express.Request, res: express.Response) =>
+				this._handlePost(mcpOptions, req, res),
+			);
+			app.get('/mcp', (req: express.Request, res: express.Response) =>
+				this._handleGetDelete(req, res),
+			);
+			app.delete('/mcp', (req: express.Request, res: express.Response) =>
+				this._handleGetDelete(req, res),
+			);
 
 			const httpServer = app.listen(socketPath);
 			this._logger.debug('HTTP server listening on socket');
@@ -134,21 +174,23 @@ export class InProcHttpServer extends Disposable {
 				await Promise.resolve(mcpOptions.registerPushNotifications());
 			}
 
-			this._register(toDisposable(() => {
-				this._logger.info('Shutting down MCP server...');
-				for (const sessionId in this._transports) {
-					void this._transports[sessionId].close();
-					this._unregisterTransport(sessionId);
-				}
+			this._register(
+				toDisposable(() => {
+					this._logger.info('Shutting down MCP server...');
+					for (const sessionId in this._transports) {
+						void this._transports[sessionId].close();
+						this._unregisterTransport(sessionId);
+					}
 
-				if (httpServer.listening) {
-					httpServer.close();
-					httpServer.closeAllConnections();
-				}
+					if (httpServer.listening) {
+						httpServer.close();
+						httpServer.closeAllConnections();
+					}
 
-				void tryCleanupSocket(socketPath);
-				this._logger.debug('MCP server shutdown complete');
-			}));
+					void tryCleanupSocket(socketPath);
+					this._logger.debug('MCP server shutdown complete');
+				}),
+			);
 			return {
 				serverUri: vscode.Uri.from({
 					scheme: os.platform() === 'win32' ? 'pipe' : 'unix',
@@ -165,7 +207,10 @@ export class InProcHttpServer extends Disposable {
 		}
 	}
 
-	private _registerTransport(sessionId: string, transport: StreamableHTTPServerTransport): void {
+	private _registerTransport(
+		sessionId: string,
+		transport: StreamableHTTPServerTransport,
+	): void {
 		this._transports[sessionId] = transport;
 		this._onDidClientConnect.fire(sessionId);
 		this._logger.info(`Client connected: ${sessionId}`);
@@ -177,13 +222,22 @@ export class InProcHttpServer extends Disposable {
 		this._logger.info(`Client disconnected: ${sessionId}`);
 	}
 
-	private _getTransport(sessionId: string): StreamableHTTPServerTransport | undefined {
+	private _getTransport(
+		sessionId: string,
+	): StreamableHTTPServerTransport | undefined {
 		return this._transports[sessionId];
 	}
 
-	private _authMiddleware(nonce: string, req: express.Request, res: express.Response, next: express.NextFunction): void {
+	private _authMiddleware(
+		nonce: string,
+		req: express.Request,
+		res: express.Response,
+		next: express.NextFunction,
+	): void {
 		if (req.headers.authorization !== `Nonce ${nonce}`) {
-			this._logger.debug(`Unauthorized request to ${req.method} ${req.path}`);
+			this._logger.debug(
+				`Unauthorized request to ${req.method} ${req.path}`,
+			);
 			res.status(401).send('Unauthorized');
 			return;
 		}
@@ -191,31 +245,53 @@ export class InProcHttpServer extends Disposable {
 		next();
 	}
 
-	private async _handlePost(mcpOptions: McpProviderOptions, req: express.Request, res: express.Response): Promise<void> {
-		const sessionId = req.headers['mcp-session-id'] ?? req.headers['x-copilot-session-id'];
-		if (Array.isArray(sessionId) || !sessionId || typeof sessionId !== 'string') {
+	private async _handlePost(
+		mcpOptions: McpProviderOptions,
+		req: express.Request,
+		res: express.Response,
+	): Promise<void> {
+		const sessionId =
+			req.headers['mcp-session-id'] ??
+			req.headers['x-copilot-session-id'];
+		if (
+			Array.isArray(sessionId) ||
+			!sessionId ||
+			typeof sessionId !== 'string'
+		) {
 			res.status(400).json({
 				jsonrpc: '2.0',
-				error: { code: -32000, message: 'Bad Request: Session ID must be a single, defined, string value' },
+				error: {
+					code: -32000,
+					message:
+						'Bad Request: Session ID must be a single, defined, string value',
+				},
 				id: null,
 			});
 			return;
 		}
-		this._logger.trace(`POST /mcp request, sessionId: ${sessionId ?? '(none)'}`);
+		this._logger.trace(
+			`POST /mcp request, sessionId: ${sessionId ?? '(none)'}`,
+		);
 
 		const isInitializeRequest = await isInitializeRequestLazy.value;
-		const { StreamableHTTPServerTransport } = await streamableHttpLazy.value;
+		const { StreamableHTTPServerTransport } =
+			await streamableHttpLazy.value;
 
 		let transport: StreamableHTTPServerTransport;
-		const existingTransport = sessionId ? this._getTransport(sessionId) : undefined;
+		const existingTransport = sessionId
+			? this._getTransport(sessionId)
+			: undefined;
 		if (sessionId && existingTransport) {
 			if (isInitializeRequest(req.body)) {
-				this._logger.debug(`Rejecting duplicate initialize for session ${sessionId}`);
+				this._logger.debug(
+					`Rejecting duplicate initialize for session ${sessionId}`,
+				);
 				res.status(409).json({
 					jsonrpc: '2.0',
 					error: {
 						code: -32000,
-						message: 'Conflict: A connection for this session already exists',
+						message:
+							'Conflict: A connection for this session already exists',
 					},
 					id: null,
 				});
@@ -224,18 +300,28 @@ export class InProcHttpServer extends Disposable {
 			transport = existingTransport;
 		} else if (sessionId && isInitializeRequest(req.body)) {
 			this._logger.debug('Creating new MCP session...');
-			const clientPid = parseInt(req.headers['x-copilot-pid'] as string, 10);
-			const clientPpid = parseInt(req.headers['x-copilot-parent-pid'] as string, 10);
+			const clientPid = parseInt(
+				req.headers['x-copilot-pid'] as string,
+				10,
+			);
+			const clientPpid = parseInt(
+				req.headers['x-copilot-parent-pid'] as string,
+				10,
+			);
 			let sessionRegistration: { dispose(): void } | undefined;
 			transport = new StreamableHTTPServerTransport({
 				sessionIdGenerator: () => sessionId,
 				onsessioninitialized: (mcpSessionId) => {
 					this._registerTransport(mcpSessionId, transport);
 					if (!isNaN(clientPid) && !isNaN(clientPpid)) {
-						sessionRegistration = this._sessionTracker.registerSession(mcpSessionId, { pid: clientPid, ppid: clientPpid });
+						sessionRegistration =
+							this._sessionTracker.registerSession(mcpSessionId, {
+								pid: clientPid,
+								ppid: clientPpid,
+							});
 					}
 				},
-				onsessionclosed: closedSessionId => {
+				onsessionclosed: (closedSessionId) => {
 					this._unregisterTransport(closedSessionId);
 					sessionRegistration?.dispose();
 				},
@@ -252,7 +338,9 @@ export class InProcHttpServer extends Disposable {
 
 			try {
 				this._logger.debug('Registering MCP tools...');
-				await Promise.resolve(mcpOptions.registerTools(server, sessionId));
+				await Promise.resolve(
+					mcpOptions.registerTools(server, sessionId),
+				);
 			} catch (err) {
 				const errMsg = err instanceof Error ? err.message : String(err);
 				this._logger.error(`Failed to register MCP tools: ${errMsg}`);
@@ -284,13 +372,20 @@ export class InProcHttpServer extends Disposable {
 		await transport.handleRequest(req, res, req.body);
 	}
 
-	private async _handleGetDelete(req: express.Request, res: express.Response): Promise<void> {
+	private async _handleGetDelete(
+		req: express.Request,
+		res: express.Response,
+	): Promise<void> {
 		const sessionId = req.headers['mcp-session-id'] as string | undefined;
-		this._logger.trace(`${req.method} /mcp request, sessionId: ${sessionId ?? '(none)'}`);
+		this._logger.trace(
+			`${req.method} /mcp request, sessionId: ${sessionId ?? '(none)'}`,
+		);
 
 		const transport = sessionId ? this._getTransport(sessionId) : undefined;
 		if (!sessionId || !transport) {
-			this._logger.debug(`Invalid or missing session ID for ${req.method} request`);
+			this._logger.debug(
+				`Invalid or missing session ID for ${req.method} request`,
+			);
 			res.status(400).send('Invalid or missing session ID');
 			return;
 		}
@@ -328,9 +423,15 @@ async function tryCleanupSocket(socketPath: string | undefined): Promise<void> {
 }
 
 const expressLazy = new AsyncLazy(async () => await import('express'));
-const streamableHttpLazy = new AsyncLazy(async () => await import('@modelcontextprotocol/sdk/server/streamableHttp.js'));
-const mcpServerLazy = new AsyncLazy(async () => await import('@modelcontextprotocol/sdk/server/mcp.js'));
+const streamableHttpLazy = new AsyncLazy(
+	async () =>
+		await import('@modelcontextprotocol/sdk/server/streamableHttp.js'),
+);
+const mcpServerLazy = new AsyncLazy(
+	async () => await import('@modelcontextprotocol/sdk/server/mcp.js'),
+);
 const isInitializeRequestLazy = new AsyncLazy(async () => {
-	const { isInitializeRequest } = await import('@modelcontextprotocol/sdk/types.js');
+	const { isInitializeRequest } =
+		await import('@modelcontextprotocol/sdk/types.js');
 	return isInitializeRequest;
 });

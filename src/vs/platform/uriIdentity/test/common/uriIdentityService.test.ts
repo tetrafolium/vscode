@@ -3,18 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
-import { UriIdentityService } from '../../common/uriIdentityService.js';
-import { mock } from '../../../../base/test/common/mock.js';
-import { IFileService, FileSystemProviderCapabilities } from '../../../files/common/files.js';
-import { URI } from '../../../../base/common/uri.js';
-import { Event } from '../../../../base/common/event.js';
-import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
+import assert from "assert";
+import { UriIdentityService } from "../../common/uriIdentityService.js";
+import { mock } from "../../../../base/test/common/mock.js";
+import {
+	IFileService,
+	FileSystemProviderCapabilities,
+} from "../../../files/common/files.js";
+import { URI } from "../../../../base/common/uri.js";
+import { Event } from "../../../../base/common/event.js";
+import { ensureNoDisposablesAreLeakedInTestSuite } from "../../../../base/test/common/utils.js";
 
-suite('URI Identity', function () {
-
+suite("URI Identity", function () {
 	class FakeFileService extends mock<IFileService>() {
-
 		override onDidChangeFileSystemProviderCapabilities = Event.None;
 		override onDidChangeFileSystemProviderRegistrations = Event.None;
 
@@ -24,7 +25,10 @@ suite('URI Identity', function () {
 		override hasProvider(uri: URI) {
 			return this.data.has(uri.scheme);
 		}
-		override hasCapability(uri: URI, flag: FileSystemProviderCapabilities): boolean {
+		override hasCapability(
+			uri: URI,
+			flag: FileSystemProviderCapabilities,
+		): boolean {
 			const mask = this.data.get(uri.scheme) ?? 0;
 			return Boolean(mask & flag);
 		}
@@ -33,10 +37,14 @@ suite('URI Identity', function () {
 	let _service: UriIdentityService;
 
 	setup(function () {
-		_service = new UriIdentityService(new FakeFileService(new Map([
-			['bar', FileSystemProviderCapabilities.PathCaseSensitive],
-			['foo', FileSystemProviderCapabilities.None]
-		])));
+		_service = new UriIdentityService(
+			new FakeFileService(
+				new Map([
+					["bar", FileSystemProviderCapabilities.PathCaseSensitive],
+					["foo", FileSystemProviderCapabilities.None],
+				]),
+			),
+		);
 	});
 
 	teardown(function () {
@@ -45,17 +53,21 @@ suite('URI Identity', function () {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	function assertCanonical(input: URI, expected: URI, service: UriIdentityService = _service) {
+	function assertCanonical(
+		input: URI,
+		expected: URI,
+		service: UriIdentityService = _service,
+	) {
 		const actual = service.asCanonicalUri(input);
 		assert.strictEqual(actual.toString(), expected.toString());
 		assert.ok(service.extUri.isEqual(actual, expected));
 	}
 
-	test('extUri (isEqual)', function () {
-		const a = URI.parse('foo://bar/bang');
-		const a1 = URI.parse('foo://bar/BANG');
-		const b = URI.parse('bar://bar/bang');
-		const b1 = URI.parse('bar://bar/BANG');
+	test("extUri (isEqual)", function () {
+		const a = URI.parse("foo://bar/bang");
+		const a1 = URI.parse("foo://bar/BANG");
+		const b = URI.parse("bar://bar/bang");
+		const b1 = URI.parse("bar://bar/BANG");
 
 		assert.strictEqual(_service.extUri.isEqual(a, a1), true);
 		assert.strictEqual(_service.extUri.isEqual(a1, a), true);
@@ -64,12 +76,11 @@ suite('URI Identity', function () {
 		assert.strictEqual(_service.extUri.isEqual(b1, b), false);
 	});
 
-	test('asCanonicalUri (casing)', function () {
-
-		const a = URI.parse('foo://bar/bang');
-		const a1 = URI.parse('foo://bar/BANG');
-		const b = URI.parse('bar://bar/bang');
-		const b1 = URI.parse('bar://bar/BANG');
+	test("asCanonicalUri (casing)", function () {
+		const a = URI.parse("foo://bar/bang");
+		const a1 = URI.parse("foo://bar/BANG");
+		const b = URI.parse("bar://bar/bang");
+		const b1 = URI.parse("bar://bar/BANG");
 
 		assertCanonical(a, a);
 		assertCanonical(a1, a);
@@ -78,31 +89,45 @@ suite('URI Identity', function () {
 		assertCanonical(b1, b1); // case sensitive
 	});
 
-	test('asCanonicalUri (normalization)', function () {
-		const a = URI.parse('foo://bar/bang');
+	test("asCanonicalUri (normalization)", function () {
+		const a = URI.parse("foo://bar/bang");
 		assertCanonical(a, a);
-		assertCanonical(URI.parse('foo://bar/./bang'), a);
-		assertCanonical(URI.parse('foo://bar/./bang'), a);
-		assertCanonical(URI.parse('foo://bar/./foo/../bang'), a);
+		assertCanonical(URI.parse("foo://bar/./bang"), a);
+		assertCanonical(URI.parse("foo://bar/./bang"), a);
+		assertCanonical(URI.parse("foo://bar/./foo/../bang"), a);
 	});
 
-	test('asCanonicalUri (keep fragement)', function () {
-
-		const a = URI.parse('foo://bar/bang');
+	test("asCanonicalUri (keep fragement)", function () {
+		const a = URI.parse("foo://bar/bang");
 
 		assertCanonical(a, a);
-		assertCanonical(URI.parse('foo://bar/./bang#frag'), a.with({ fragment: 'frag' }));
-		assertCanonical(URI.parse('foo://bar/./bang#frag'), a.with({ fragment: 'frag' }));
-		assertCanonical(URI.parse('foo://bar/./bang#frag'), a.with({ fragment: 'frag' }));
-		assertCanonical(URI.parse('foo://bar/./foo/../bang#frag'), a.with({ fragment: 'frag' }));
+		assertCanonical(
+			URI.parse("foo://bar/./bang#frag"),
+			a.with({ fragment: "frag" }),
+		);
+		assertCanonical(
+			URI.parse("foo://bar/./bang#frag"),
+			a.with({ fragment: "frag" }),
+		);
+		assertCanonical(
+			URI.parse("foo://bar/./bang#frag"),
+			a.with({ fragment: "frag" }),
+		);
+		assertCanonical(
+			URI.parse("foo://bar/./foo/../bang#frag"),
+			a.with({ fragment: "frag" }),
+		);
 
-		const b = URI.parse('foo://bar/bazz#frag');
+		const b = URI.parse("foo://bar/bazz#frag");
 		assertCanonical(b, b);
-		assertCanonical(URI.parse('foo://bar/bazz'), b.with({ fragment: '' }));
-		assertCanonical(URI.parse('foo://bar/BAZZ#DDD'), b.with({ fragment: 'DDD' })); // lower-case path, but fragment is kept
+		assertCanonical(URI.parse("foo://bar/bazz"), b.with({ fragment: "" }));
+		assertCanonical(
+			URI.parse("foo://bar/BAZZ#DDD"),
+			b.with({ fragment: "DDD" }),
+		); // lower-case path, but fragment is kept
 	});
 
-	test('[perf] clears cache when overflown with respect to access time', () => {
+	test("[perf] clears cache when overflown with respect to access time", () => {
 		const CACHE_SIZE = 2 ** 16;
 		const getUri = (i: number) => URI.parse(`foo://bar/${i}`);
 
@@ -123,10 +148,13 @@ suite('URI Identity', function () {
 		// First URI should still be the same object.
 		assert.strictEqual(_service.asCanonicalUri(getUri(FIRST)), firstCached);
 		// But the second URI should be a new object, since it was evicted.
-		assert.notStrictEqual(_service.asCanonicalUri(getUri(SECOND)), secondCached);
+		assert.notStrictEqual(
+			_service.asCanonicalUri(getUri(SECOND)),
+			secondCached,
+		);
 	});
 
-	test('[perf] preserves order of access time on cache cleanup', () => {
+	test("[perf] preserves order of access time on cache cleanup", () => {
 		const SIZE = 2 ** 16;
 		const getUri = (i: number) => URI.parse(`foo://bar/${i}`);
 
@@ -163,15 +191,26 @@ suite('URI Identity', function () {
 
 		// But the URIs from the second batch should still be the same objects.
 		// Except for the first one, which is removed as a median value.
-		assert.notStrictEqual(_service.asCanonicalUri(getUri(BATCH2_FIRST)), batch2FirstCached);
-		assert.deepStrictEqual(_service.asCanonicalUri(getUri(BATCH2_SECOND)), batch2SecondCached);
-		assert.deepStrictEqual(_service.asCanonicalUri(getUri(BATCH2_THIRD)), batch2ThirdCached);
-		assert.deepStrictEqual(_service.asCanonicalUri(getUri(BATCH2_LAST)), batch2LastCached);
+		assert.notStrictEqual(
+			_service.asCanonicalUri(getUri(BATCH2_FIRST)),
+			batch2FirstCached,
+		);
+		assert.deepStrictEqual(
+			_service.asCanonicalUri(getUri(BATCH2_SECOND)),
+			batch2SecondCached,
+		);
+		assert.deepStrictEqual(
+			_service.asCanonicalUri(getUri(BATCH2_THIRD)),
+			batch2ThirdCached,
+		);
+		assert.deepStrictEqual(
+			_service.asCanonicalUri(getUri(BATCH2_LAST)),
+			batch2LastCached,
+		);
 	});
 
-	test('[perf] CPU pegged after some builds #194853', function () {
-
-		const n = 100 + (2 ** 16);
+	test("[perf] CPU pegged after some builds #194853", function () {
+		const n = 100 + 2 ** 16;
 		for (let i = 0; i < n; i++) {
 			const uri = URI.parse(`foo://bar/${i}`);
 			const uri2 = _service.asCanonicalUri(uri);

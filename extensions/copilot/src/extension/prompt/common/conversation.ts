@@ -4,7 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { PromptReference, Raw } from '@vscode/prompt-tsx';
-import type { ChatLanguageModelToolReference, ChatRequest, ChatRequestEditedFileEvent, ChatResponseStream, ChatResult, LanguageModelToolResult } from 'vscode';
+import type {
+	ChatLanguageModelToolReference,
+	ChatRequest,
+	ChatRequestEditedFileEvent,
+	ChatResponseStream,
+	ChatResult,
+	LanguageModelToolResult,
+} from 'vscode';
 import { FilterReason } from '../../../platform/networking/common/openai';
 import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
 import { isLocation, toLocation } from '../../../util/common/types';
@@ -16,7 +23,11 @@ import { ServicesAccessor } from '../../../util/vs/platform/instantiation/common
 import { Location, Range } from '../../../vscodeTypes';
 import { InternalToolReference, IToolCallRound } from '../common/intents';
 import { ChatVariablesCollection } from './chatVariablesCollection';
-import { isContinueOnError, isSwitchToAutoOnRateLimit, isToolCallLimitAcceptance } from './specialRequestTypes';
+import {
+	isContinueOnError,
+	isSwitchToAutoOnRateLimit,
+	isToolCallLimitAcceptance,
+} from './specialRequestTypes';
 import { ToolCallRound } from './toolCallRound';
 export { PromptReference } from '@vscode/prompt-tsx';
 
@@ -31,11 +42,17 @@ export enum TurnStatus {
 }
 
 export type TurnMessage = {
-	readonly type: 'user' | 'follow-up' | 'template' | 'offtopic-detection' | 'model' | 'meta' | 'server';
+	readonly type:
+		| 'user'
+		| 'follow-up'
+		| 'template'
+		| 'offtopic-detection'
+		| 'model'
+		| 'meta'
+		| 'server';
 	readonly name?: string;
-	/* readonly  */message: string;
+	/* readonly  */ message: string;
 };
-
 
 export abstract class PromptMetadata {
 	readonly _marker: undefined;
@@ -51,15 +68,19 @@ export class RequestDebugInformation {
 		readonly languageId: string,
 		readonly initialDocumentText: string,
 		readonly userPrompt: string,
-		readonly userSelection: Range
-	) { }
+		readonly userSelection: Range,
+	) {}
 }
 
 export class Turn {
-
 	private _references: readonly PromptReference[] = [];
 
-	private _responseInfo?: { message: TurnMessage | undefined; status: TurnStatus; responseId: string | undefined; chatResult?: ChatResult };
+	private _responseInfo?: {
+		message: TurnMessage | undefined;
+		status: TurnStatus;
+		responseId: string | undefined;
+		chatResult?: ChatResult;
+	};
 
 	private readonly _metadata = new Map<unknown, unknown[]>();
 
@@ -68,10 +89,7 @@ export class Turn {
 
 	public readonly startTime = Date.now();
 
-	static fromRequest(
-		id: string | undefined,
-		request: ChatRequest
-	) {
+	static fromRequest(id: string | undefined, request: ChatRequest) {
 		return new Turn(
 			id,
 			{ message: request.prompt, type: 'user' },
@@ -79,7 +97,9 @@ export class Turn {
 			request.toolReferences.map(InternalToolReference.from),
 			request.editedFileEvents,
 			request.acceptedConfirmationData,
-			isToolCallLimitAcceptance(request) || isContinueOnError(request) || isSwitchToAutoOnRateLimit(request),
+			isToolCallLimitAcceptance(request) ||
+				isContinueOnError(request) ||
+				isSwitchToAutoOnRateLimit(request),
 			request.modeInstructions2,
 		);
 	}
@@ -87,13 +107,15 @@ export class Turn {
 	constructor(
 		readonly id: string = generateUuid(),
 		readonly request: TurnMessage,
-		private readonly _promptVariables: ChatVariablesCollection | undefined = undefined,
+		private readonly _promptVariables:
+			| ChatVariablesCollection
+			| undefined = undefined,
 		private readonly _toolReferences: readonly InternalToolReference[] = [],
 		readonly editedFileEvents?: ChatRequestEditedFileEvent[],
 		readonly acceptedConfirmationData?: unknown[],
 		readonly isContinuation = false,
 		readonly modeInstructions?: ChatRequest['modeInstructions2'],
-	) { }
+	) {}
 
 	get promptVariables(): ChatVariablesCollection | undefined {
 		return this._promptVariables;
@@ -108,7 +130,10 @@ export class Turn {
 	}
 
 	addReferences(newReferences: readonly PromptReference[]) {
-		this._references = getUniqueReferences([...this._references, ...newReferences]);
+		this._references = getUniqueReferences([
+			...this._references,
+			...newReferences,
+		]);
 	}
 
 	// --- response
@@ -133,7 +158,10 @@ export class Turn {
 		return this._responseInfo?.chatResult?.metadata;
 	}
 
-	get renderedUserMessage(): string | Raw.ChatCompletionContentPart[] | undefined {
+	get renderedUserMessage():
+		| string
+		| Raw.ChatCompletionContentPart[]
+		| undefined {
 		const metadata = this.resultMetadata;
 		return metadata?.renderedUserMessage;
 	}
@@ -153,14 +181,21 @@ export class Turn {
 
 			// Should always have at least one round
 			const response = this.responseMessage?.message ?? '';
-			this._filledInMissingRounds = [new ToolCallRound(response, [], undefined, this.id)];
+			this._filledInMissingRounds = [
+				new ToolCallRound(response, [], undefined, this.id),
+			];
 			return this._filledInMissingRounds;
 		}
 
 		return rounds;
 	}
 
-	setResponse(status: TurnStatus, message: TurnMessage | undefined, responseId: string | undefined, chatResult: ChatResult | undefined) {
+	setResponse(
+		status: TurnStatus,
+		message: TurnMessage | undefined,
+		responseId: string | undefined,
+		chatResult: ChatResult | undefined,
+	) {
 		if (this._responseInfo?.status === TurnStatus.Cancelled) {
 			// The cancelled result can be assigned from inside ToolCallingLoop
 			return;
@@ -170,18 +205,21 @@ export class Turn {
 		this._responseInfo = { message, status, responseId, chatResult };
 	}
 
-
 	// --- metadata
 	// Using 'any' for constructor args here because TS will complain about passing any class if 'unknown' is used, I'm not totally sure why.
 	// The idea of this is that you pass in a class and we return instances of that class.
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	getMetadata<T extends object>(key: new (...args: any[]) => T): T | undefined {
+	getMetadata<T extends object>(
+		key: new (...args: any[]) => T,
+	): T | undefined {
 		return this._metadata.get(key)?.at(-1) as T | undefined;
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	getAllMetadata<T extends object>(key: new (...args: any[]) => T): T[] | undefined {
+	getAllMetadata<T extends object>(
+		key: new (...args: any[]) => T,
+	): T[] | undefined {
 		return this._metadata.get(key) as T[] | undefined;
 	}
 
@@ -201,7 +239,10 @@ export class Turn {
 		this._pendingSummaries.push({ toolCallRoundId, text });
 	}
 
-	get pendingSummaries(): readonly { toolCallRoundId: string; text: string }[] {
+	get pendingSummaries(): readonly {
+		toolCallRoundId: string;
+		text: string;
+	}[] {
 		return this._pendingSummaries;
 	}
 }
@@ -218,19 +259,27 @@ export function normalizeSummariesOnRounds(turns: readonly Turn[]): void {
 	for (const [idx, turn] of turns.entries()) {
 		// Try persisted summaries from resultMetadata first, fall back to pending
 		// summaries that were stored during the tool-call loop (before setResponse).
-		const turnSummaries = turn.resultMetadata?.summaries ?? (turn.resultMetadata?.summary ? [turn.resultMetadata.summary] : turn.pendingSummaries);
+		const turnSummaries =
+			turn.resultMetadata?.summaries ??
+			(turn.resultMetadata?.summary
+				? [turn.resultMetadata.summary]
+				: turn.pendingSummaries);
 		// Each summary supersedes all previous ones, so only the last one matters for restoration
 		const turnSummary = turnSummaries.at(-1);
 		if (!turnSummary) {
 			continue;
 		}
-		const roundInTurn = turn.rounds.find(round => round.id === turnSummary.toolCallRoundId);
+		const roundInTurn = turn.rounds.find(
+			(round) => round.id === turnSummary.toolCallRoundId,
+		);
 		if (roundInTurn) {
 			roundInTurn.summary = turnSummary.text;
 		} else {
 			const previousTurns = turns.slice(0, idx);
 			for (const turn of previousTurns) {
-				const roundInPreviousTurn = turn.rounds.find(round => round.id === turnSummary.toolCallRoundId);
+				const roundInPreviousTurn = turn.rounds.find(
+					(round) => round.id === turnSummary.toolCallRoundId,
+				);
 				if (roundInPreviousTurn) {
 					roundInPreviousTurn.summary = turnSummary.text;
 					break;
@@ -245,14 +294,16 @@ export interface IConversationState {
 }
 
 export class Conversation {
-
 	private readonly _turns: Turn[] = [];
 
 	constructor(
 		readonly sessionId: string,
-		turns: Turn[]
+		turns: Turn[],
 	) {
-		assertType(turns.length > 0, 'A conversation must have at least one turn');
+		assertType(
+			turns.length > 0,
+			'A conversation must have at least one turn',
+		);
 		this._turns = turns;
 	}
 
@@ -265,11 +316,16 @@ export class Conversation {
 	}
 }
 
+export type ResponseStreamParticipant = (
+	inStream: ChatResponseStream,
+) => ChatResponseStream;
 
-export type ResponseStreamParticipant = (inStream: ChatResponseStream) => ChatResponseStream;
-
-export function getUniqueReferences(references: PromptReference[]): PromptReference[] {
-	const groupedPromptReferences: ResourceMap<PromptReference[] | PromptReference> = new ResourceMap();
+export function getUniqueReferences(
+	references: PromptReference[],
+): PromptReference[] {
+	const groupedPromptReferences: ResourceMap<
+		PromptReference[] | PromptReference
+	> = new ResourceMap();
 	const variableReferences: PromptReference[] = [];
 
 	const getCombinedRange = (a: Range, b: Range): Range | undefined => {
@@ -281,9 +337,10 @@ export function getUniqueReferences(references: PromptReference[]): PromptRefere
 			return b;
 		}
 
-		const [firstRange, lastRange] = (a.start.line < b.start.line) ? [a, b] : [b, a];
+		const [firstRange, lastRange] =
+			a.start.line < b.start.line ? [a, b] : [b, a];
 		// check if a is before b
-		if (firstRange.end.line >= (lastRange.start.line - 1)) {
+		if (firstRange.end.line >= lastRange.start.line - 1) {
 			return new Range(firstRange.start, lastRange.end);
 		}
 
@@ -291,7 +348,7 @@ export function getUniqueReferences(references: PromptReference[]): PromptRefere
 	};
 
 	// remove overlaps from within the same promptContext
-	references.forEach(targetReference => {
+	references.forEach((targetReference) => {
 		const refAnchor = targetReference.anchor;
 		if ('variableName' in refAnchor) {
 			variableReferences.push(targetReference);
@@ -305,12 +362,18 @@ export function getUniqueReferences(references: PromptReference[]): PromptRefere
 				return;
 			}
 			if (!existingRefs) {
-				groupedPromptReferences.set(refAnchor.uri, [new PromptReference(asValidLocation, undefined, targetReference.options)]);
+				groupedPromptReferences.set(refAnchor.uri, [
+					new PromptReference(
+						asValidLocation,
+						undefined,
+						targetReference.options,
+					),
+				]);
 			} else if (!(existingRefs instanceof PromptReference)) {
 				// check if existingRefs isn't already a full file
 				const oldLocationsToKeep: Location[] = [];
 				let newRange = asValidLocation.range;
-				existingRefs.forEach(existingRef => {
+				existingRefs.forEach((existingRef) => {
 					if ('variableName' in existingRef.anchor) {
 						return;
 					}
@@ -323,7 +386,10 @@ export function getUniqueReferences(references: PromptReference[]): PromptRefere
 					if (!existingRange) {
 						return;
 					}
-					const combinedRange = getCombinedRange(newRange, existingRange.range);
+					const combinedRange = getCombinedRange(
+						newRange,
+						existingRange.range,
+					);
 					if (combinedRange) {
 						// if we can consume this range, incorporate it into the new range and don't add it to the locations to keep
 						newRange = combinedRange;
@@ -338,9 +404,20 @@ export function getUniqueReferences(references: PromptReference[]): PromptRefere
 				groupedPromptReferences.set(
 					refAnchor.uri,
 					[...oldLocationsToKeep, newRangeLocation]
-						.sort((a, b) => a.range.start.line - b.range.start.line || a.range.end.line - b.range.end.line)
-						.map(location => new PromptReference(location, undefined, targetReference.options)));
-
+						.sort(
+							(a, b) =>
+								a.range.start.line - b.range.start.line ||
+								a.range.end.line - b.range.end.line,
+						)
+						.map(
+							(location) =>
+								new PromptReference(
+									location,
+									undefined,
+									targetReference.options,
+								),
+						),
+				);
 			}
 		}
 	});
@@ -348,22 +425,25 @@ export function getUniqueReferences(references: PromptReference[]): PromptRefere
 	// sort values
 	const finalValues = Array.from(groupedPromptReferences.keys())
 		.sort((a, b) => a.toString().localeCompare(b.toString()))
-		.map(e => {
+		.map((e) => {
 			const values = groupedPromptReferences.get(e);
 			if (!values) {
 				// should not happen, these are all keys
 				return [];
 			}
 			return values;
-		}).flat();
+		})
+		.flat();
 
-	return [
-		...finalValues,
-		...variableReferences
-	];
+	return [...finalValues, ...variableReferences];
 }
 
-export type CodeBlock = { readonly code: string; readonly language?: string; readonly resource?: URI; readonly markdownBeforeBlock?: string };
+export type CodeBlock = {
+	readonly code: string;
+	readonly language?: string;
+	readonly resource?: URI;
+	readonly markdownBeforeBlock?: string;
+};
 
 export interface IResultMetadata {
 	modelMessageId: string;
@@ -379,7 +459,7 @@ export interface IResultMetadata {
 
 	/**
 	 * All code blocks that were in the response
-	*/
+	 */
 	codeBlocks?: readonly CodeBlock[];
 
 	toolCallRounds?: readonly IToolCallRound[];
@@ -402,7 +482,11 @@ export interface IResultMetadata {
 		contextLengthBefore?: number;
 		numRounds?: number;
 		numRoundsSinceLastSummarization?: number;
-		usage?: { prompt_tokens: number; completion_tokens: number; prompt_tokens_details?: { cached_tokens?: number } };
+		usage?: {
+			prompt_tokens: number;
+			completion_tokens: number;
+			prompt_tokens_details?: { cached_tokens?: number };
+		};
 	};
 	summaries?: readonly {
 		toolCallRoundId: string;
@@ -415,7 +499,11 @@ export interface IResultMetadata {
 		contextLengthBefore?: number;
 		numRounds?: number;
 		numRoundsSinceLastSummarization?: number;
-		usage?: { prompt_tokens: number; completion_tokens: number; prompt_tokens_details?: { cached_tokens?: number } };
+		usage?: {
+			prompt_tokens: number;
+			completion_tokens: number;
+			prompt_tokens_details?: { cached_tokens?: number };
+		};
 	}[];
 	resolvedModel?: string;
 	promptTokens?: number;
@@ -435,14 +523,14 @@ export interface ICopilotChatResult extends ChatResult {
 export class RenderedUserMessageMetadata {
 	constructor(
 		readonly renderedUserMessage: Raw.ChatCompletionContentPart[],
-	) { }
+	) {}
 }
 
 export class GlobalContextMessageMetadata {
 	constructor(
 		readonly renderedGlobalContext: Raw.ChatCompletionContentPart[],
-		readonly cacheKey: string
-	) { }
+		readonly cacheKey: string,
+	) {}
 }
 
 /**
@@ -461,9 +549,11 @@ export class GlobalContextMessageMetadata {
 export class CustomizationsIndexMetadata {
 	constructor(
 		readonly value: string,
-		readonly toolReferences: readonly ChatLanguageModelToolReference[] | undefined,
-		readonly cacheKey: string
-	) { }
+		readonly toolReferences:
+			| readonly ChatLanguageModelToolReference[]
+			| undefined,
+		readonly cacheKey: string,
+	) {}
 }
 
 /**
@@ -480,10 +570,13 @@ export class TurnTokenUsageMetadata {
 		readonly promptTokens: number,
 		/** Number of output/completion tokens reported by the server. */
 		readonly outputTokens: number,
-	) { }
+	) {}
 }
 
 export function getGlobalContextCacheKey(accessor: ServicesAccessor): string {
 	const workspaceService = accessor.get(IWorkspaceService);
-	return workspaceService.getWorkspaceFolders().map(folder => folder.toString()).join(',');
+	return workspaceService
+		.getWorkspaceFolders()
+		.map((folder) => folder.toString())
+		.join(',');
 }

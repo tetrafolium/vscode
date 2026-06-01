@@ -16,23 +16,36 @@ interface UserConfigProperties {
 	sku?: string;
 }
 
-function propertiesFromCopilotToken(copilotToken: Omit<CopilotToken, 'token'>): UserConfigProperties | undefined {
+function propertiesFromCopilotToken(
+	copilotToken: Omit<CopilotToken, 'token'>,
+): UserConfigProperties | undefined {
 	const trackingId = copilotToken.getTokenValue('tid');
 	const organizationsList = copilotToken.organizationList;
 	const enterpriseList = copilotToken.enterpriseList;
 	const sku = copilotToken.getTokenValue('sku');
 
-	if (!trackingId) { return; }
+	if (!trackingId) {
+		return;
+	}
 	// The tracking id is also updated in reporters directly
 	// in the AppInsightsReporter class and set in the `ai.user.id` tag.
 	const props: UserConfigProperties = { copilot_trackingId: trackingId };
-	if (organizationsList) { props.organizations_list = organizationsList.toString(); }
-	if (enterpriseList) { props.enterprise_list = enterpriseList.toString(); }
-	if (sku) { props.sku = sku; }
+	if (organizationsList) {
+		props.organizations_list = organizationsList.toString();
+	}
+	if (enterpriseList) {
+		props.enterprise_list = enterpriseList.toString();
+	}
+	if (sku) {
+		props.sku = sku;
+	}
 	return props;
 }
 
-export const ICompletionsTelemetryUserConfigService = createServiceIdentifier<ICompletionsTelemetryUserConfigService>('ICompletionsTelemetryUserConfigService');
+export const ICompletionsTelemetryUserConfigService =
+	createServiceIdentifier<ICompletionsTelemetryUserConfigService>(
+		'ICompletionsTelemetryUserConfigService',
+	);
 export interface ICompletionsTelemetryUserConfigService {
 	readonly _serviceBrand: undefined;
 	getProperties(): Partial<UserConfigProperties>;
@@ -41,18 +54,25 @@ export interface ICompletionsTelemetryUserConfigService {
 	ftFlag: string;
 }
 
-export class TelemetryUserConfig extends Disposable implements ICompletionsTelemetryUserConfigService {
+export class TelemetryUserConfig
+	extends Disposable
+	implements ICompletionsTelemetryUserConfigService
+{
 	declare _serviceBrand: undefined;
 	#properties: Partial<UserConfigProperties> = {};
 	optedIn = false;
 	ftFlag = '';
 
 	constructor(
-		@IAuthenticationService authenticationService: IAuthenticationService
+		@IAuthenticationService authenticationService: IAuthenticationService,
 	) {
 		super();
 
-		this._register(onCopilotToken(authenticationService, copilotToken => this.updateFromToken(copilotToken)));
+		this._register(
+			onCopilotToken(authenticationService, (copilotToken) =>
+				this.updateFromToken(copilotToken),
+			),
+		);
 
 		const maybeToken = authenticationService.copilotToken;
 		if (maybeToken) {

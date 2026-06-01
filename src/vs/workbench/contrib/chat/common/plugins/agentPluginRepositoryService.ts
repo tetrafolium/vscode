@@ -3,12 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { URI } from '../../../../../base/common/uri.js';
-import { createDecorator } from '../../../../../platform/instantiation/common/instantiation.js';
-import { IMarketplacePlugin, IMarketplaceReference, IPluginSourceDescriptor, MarketplaceType, PluginSourceKind } from './pluginMarketplaceService.js';
-import { IPluginSource } from './pluginSource.js';
+import { URI } from "../../../../../base/common/uri.js";
+import { createDecorator } from "../../../../../platform/instantiation/common/instantiation.js";
+import {
+	IMarketplacePlugin,
+	IMarketplaceReference,
+	IPluginSourceDescriptor,
+	MarketplaceType,
+	PluginSourceKind,
+} from "./pluginMarketplaceService.js";
+import { IPluginSource } from "./pluginSource.js";
 
-export const IAgentPluginRepositoryService = createDecorator<IAgentPluginRepositoryService>('agentPluginRepositoryService');
+export const IAgentPluginRepositoryService =
+	createDecorator<IAgentPluginRepositoryService>(
+		"agentPluginRepositoryService",
+	);
 
 /**
  * Options for ensuring a marketplace repository is available locally.
@@ -54,7 +63,10 @@ export interface IAgentPluginRepositoryService {
 	 * Returns the local cache URI for a marketplace repository reference.
 	 * Uses a storage-backed marketplace index when available.
 	 */
-	getRepositoryUri(marketplace: IMarketplaceReference, marketplaceType?: MarketplaceType): URI;
+	getRepositoryUri(
+		marketplace: IMarketplaceReference,
+		marketplaceType?: MarketplaceType,
+	): URI;
 
 	/**
 	 * Returns the local install URI for a plugin source directory inside its
@@ -65,13 +77,19 @@ export interface IAgentPluginRepositoryService {
 	/**
 	 * Ensures a marketplace repository is cloned locally and returns its cache URI.
 	 */
-	ensureRepository(marketplace: IMarketplaceReference, options?: IEnsureRepositoryOptions): Promise<URI>;
+	ensureRepository(
+		marketplace: IMarketplaceReference,
+		options?: IEnsureRepositoryOptions,
+	): Promise<URI>;
 
 	/**
 	 * Pulls latest changes for a cloned marketplace repository.
 	 * Returns `true` if the pull brought in new changes.
 	 */
-	pullRepository(marketplace: IMarketplaceReference, options?: IPullRepositoryOptions): Promise<boolean>;
+	pullRepository(
+		marketplace: IMarketplaceReference,
+		options?: IPullRepositoryOptions,
+	): Promise<boolean>;
 
 	/**
 	 * Returns the local install URI for a plugin based on its
@@ -86,7 +104,10 @@ export interface IAgentPluginRepositoryService {
 	 * this clones the repository into the cache. For npm/pip sources this is
 	 * a no-op (installation via terminal is handled by the install service).
 	 */
-	ensurePluginSource(plugin: IMarketplacePlugin, options?: IEnsureRepositoryOptions): Promise<URI>;
+	ensurePluginSource(
+		plugin: IMarketplacePlugin,
+		options?: IEnsureRepositoryOptions,
+	): Promise<URI>;
 
 	/**
 	 * Updates a plugin source that is stored outside the marketplace repository.
@@ -94,7 +115,10 @@ export interface IAgentPluginRepositoryService {
 	 * ref/sha checkout. For npm/pip sources this is a no-op.
 	 * Returns `true` if the update brought in new changes.
 	 */
-	updatePluginSource(plugin: IMarketplacePlugin, options?: IPullRepositoryOptions): Promise<boolean>;
+	updatePluginSource(
+		plugin: IMarketplacePlugin,
+		options?: IPullRepositoryOptions,
+	): Promise<boolean>;
 
 	/**
 	 * Returns the {@link IPluginSource} strategy for the given
@@ -115,7 +139,10 @@ export interface IAgentPluginRepositoryService {
 	 *
 	 * This is best-effort: failures are logged but do not throw.
 	 */
-	cleanupPluginSource(plugin: IMarketplacePlugin, otherInstalledDescriptors?: readonly IPluginSourceDescriptor[]): Promise<void>;
+	cleanupPluginSource(
+		plugin: IMarketplacePlugin,
+		otherInstalledDescriptors?: readonly IPluginSourceDescriptor[],
+	): Promise<void>;
 
 	/**
 	 * Silently fetches remote refs for a cloned marketplace repository and

@@ -15,7 +15,7 @@ export enum ToolCategory {
 	Testing = 'Testing',
 	RedundantButSpecific = 'Redundant but Specific',
 	// Core tools that should not be grouped
-	Core = 'Core'
+	Core = 'Core',
 }
 
 export enum ToolName {
@@ -152,7 +152,9 @@ export const byokEditToolNamesToToolNames = {
 
 const toolNameToContributedToolNames = new Map<ToolName, ContributedToolName>();
 const contributedToolNameToToolNames = new Map<ContributedToolName, ToolName>();
-for (const [contributedNameKey, contributedName] of Object.entries(ContributedToolName)) {
+for (const [contributedNameKey, contributedName] of Object.entries(
+	ContributedToolName,
+)) {
 	const toolName = ToolName[contributedNameKey as keyof typeof ToolName];
 	if (toolName) {
 		toolNameToContributedToolNames.set(toolName, contributedName);
@@ -160,12 +162,18 @@ for (const [contributedNameKey, contributedName] of Object.entries(ContributedTo
 	}
 }
 
-export function getContributedToolName(name: string | ToolName): string | ContributedToolName {
+export function getContributedToolName(
+	name: string | ToolName,
+): string | ContributedToolName {
 	return toolNameToContributedToolNames.get(name as ToolName) ?? name;
 }
 
-export function getToolName(name: string | ContributedToolName): string | ToolName {
-	return contributedToolNameToToolNames.get(name as ContributedToolName) ?? name;
+export function getToolName(
+	name: string | ContributedToolName,
+): string | ToolName {
+	return (
+		contributedToolNameToToolNames.get(name as ContributedToolName) ?? name
+	);
 }
 
 export function mapContributedToolNamesInString(str: string): string {
@@ -177,7 +185,11 @@ export function mapContributedToolNamesInString(str: string): string {
 }
 
 export function mapContributedToolNamesInSchema(inputSchema: object): object {
-	return cloneAndChange(inputSchema, value => typeof value === 'string' ? mapContributedToolNamesInString(value) : undefined);
+	return cloneAndChange(inputSchema, (value) =>
+		typeof value === 'string'
+			? mapContributedToolNamesInString(value)
+			: undefined,
+	);
 }
 
 /**
@@ -269,13 +281,13 @@ export const toolCategories: Record<ToolName, ToolCategory> = {
 	[ToolName.SessionStoreSql]: ToolCategory.Core,
 } as const;
 
-
-
 /**
  * Get the category for a tool, checking both ToolName enum and external tools.
  */
 export function getToolCategory(toolName: string): ToolCategory | undefined {
-	return toolCategories.hasOwnProperty(toolName) ? toolCategories[toolName as ToolName] : undefined;
+	return toolCategories.hasOwnProperty(toolName)
+		? toolCategories[toolName as ToolName]
+		: undefined;
 }
 
 /**

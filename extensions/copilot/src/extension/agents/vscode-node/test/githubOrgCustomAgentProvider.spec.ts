@@ -9,7 +9,11 @@ import type { ExtensionContext } from 'vscode';
 import { Scalar } from 'yaml';
 import { PromptsType } from '../../../../platform/customInstructions/common/promptTypes';
 import { MockFileSystemService } from '../../../../platform/filesystem/node/test/mockFileSystemService';
-import { CustomAgentDetails, CustomAgentListItem, CustomAgentListOptions } from '../../../../platform/github/common/githubService';
+import {
+	CustomAgentDetails,
+	CustomAgentListItem,
+	CustomAgentListOptions,
+} from '../../../../platform/github/common/githubService';
 import { MockAuthenticationService } from '../../../../platform/ignore/node/test/mockAuthenticationService';
 import { MockGitService } from '../../../../platform/ignore/node/test/mockGitService';
 import { MockWorkspaceService } from '../../../../platform/ignore/node/test/mockWorkspaceService';
@@ -19,7 +23,11 @@ import { URI } from '../../../../util/vs/base/common/uri';
 import { parse } from '../../../../util/vs/base/common/yaml';
 import { createExtensionUnitTestingServices } from '../../../test/node/services';
 import { GitHubOrgChatResourcesService } from '../githubOrgChatResourcesService';
-import { GitHubOrgCustomAgentProvider, looksLikeNumber, yamlString } from '../githubOrgCustomAgentProvider';
+import {
+	GitHubOrgCustomAgentProvider,
+	looksLikeNumber,
+	yamlString,
+} from '../githubOrgCustomAgentProvider';
 import { MockOctoKitService } from './mockOctoKitService';
 
 suite('GitHubOrgCustomAgentProvider', () => {
@@ -56,12 +64,15 @@ suite('GitHubOrgCustomAgentProvider', () => {
 		mockWorkspaceService.setWorkspaceFolders([URI.file('/workspace')]);
 		mockGitService.setRepositoryFetchUrls({
 			rootUri: URI.file('/workspace'),
-			remoteFetchUrls: ['https://github.com/testorg/repo.git']
+			remoteFetchUrls: ['https://github.com/testorg/repo.git'],
 		});
 
 		// Set up testing services
-		const testingServiceCollection = createExtensionUnitTestingServices(disposables);
-		accessor = disposables.add(testingServiceCollection.createTestingAccessor());
+		const testingServiceCollection =
+			createExtensionUnitTestingServices(disposables);
+		accessor = disposables.add(
+			testingServiceCollection.createTestingAccessor(),
+		);
 	});
 
 	afterEach(() => {
@@ -105,9 +116,15 @@ suite('GitHubOrgCustomAgentProvider', () => {
 	/**
 	 * Helper to pre-populate cache files in mock filesystem.
 	 */
-	function prepopulateCache(orgName: string, files: Map<string, string>): void {
+	function prepopulateCache(
+		orgName: string,
+		files: Map<string, string>,
+	): void {
 		const cacheDir = URI.file(`${storagePath}/github/${orgName}/agents`);
-		const dirEntries: [string, import('../../../../platform/filesystem/common/fileTypes').FileType][] = [];
+		const dirEntries: [
+			string,
+			import('../../../../platform/filesystem/common/fileTypes').FileType,
+		][] = [];
 		for (const [filename, content] of files) {
 			mockFileSystem.mockFile(URI.joinPath(cacheDir, filename), content);
 			dirEntries.push([filename, 1 /* FileType.File */]);
@@ -151,7 +168,10 @@ name: Test Agent
 description: A test agent
 ---
 Test prompt content`;
-		prepopulateCache('testorg', new Map([['test_agent.agent.md', agentContent]]));
+		prepopulateCache(
+			'testorg',
+			new Map([['test_agent.agent.md', agentContent]]),
+		);
 
 		// Re-enable testorg for cache reading (user is in org, but no workspace repo)
 		mockOctoKitService.setUserOrganizations(['testorg']);
@@ -164,7 +184,10 @@ Test prompt content`;
 		const agents = await provider.provideCustomAgents({}, {} as any);
 
 		assert.equal(agents.length, 1);
-		const agentName = agents[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const agentName = agents[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(agentName, 'test_agent');
 	});
 
@@ -197,13 +220,19 @@ Test prompt content`;
 		// Second call should return newly cached agents from memory
 		const agents2 = await provider.provideCustomAgents({}, {} as any);
 		assert.equal(agents2.length, 1);
-		const agentName2 = agents2[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const agentName2 = agents2[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(agentName2, 'api_agent');
 
 		// Third call should also return from memory cache without file I/O
 		const agents3 = await provider.provideCustomAgents({}, {} as any);
 		assert.equal(agents3.length, 1);
-		const agentName3 = agents3[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const agentName3 = agents3[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(agentName3, 'api_agent');
 	});
 
@@ -237,7 +266,11 @@ Test prompt content`;
 		await waitForPolling();
 
 		// Check cached file content using the real service
-		const content = await resourcesService.readCacheFile(PromptsType.agent, 'testorg', 'full_agent.agent.md');
+		const content = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'testorg',
+			'full_agent.agent.md',
+		);
 
 		const expectedContent = `---
 name: Full Agent
@@ -282,7 +315,11 @@ Detailed prompt content
 		await provider.provideCustomAgents({}, {} as any);
 		await waitForPolling();
 
-		const content = await resourcesService.readCacheFile(PromptsType.agent, 'testorg', 'invocable_agent.agent.md');
+		const content = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'testorg',
+			'invocable_agent.agent.md',
+		);
 
 		const expectedContent = `---
 name: Invocable Agent
@@ -322,7 +359,11 @@ Invocable prompt content
 		await provider.provideCustomAgents({}, {} as any);
 		await waitForPolling();
 
-		const content = await resourcesService.readCacheFile(PromptsType.agent, 'testorg', 'false_flags_agent.agent.md');
+		const content = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'testorg',
+			'false_flags_agent.agent.md',
+		);
 
 		const expectedContent = `---
 name: False Flags Agent
@@ -364,7 +405,11 @@ False flags prompt
 		await waitForPolling();
 
 		// File is created with the exact agent name (no sanitization)
-		const content = await resourcesService.readCacheFile(PromptsType.agent, 'testorg', 'my-agent_name.agent.md');
+		const content = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'testorg',
+			'my-agent_name.agent.md',
+		);
 		assert.ok(content, 'File should exist with agent name as filename');
 	});
 
@@ -420,7 +465,11 @@ False flags prompt
 		const provider = createProvider();
 
 		let capturedOptions: CustomAgentListOptions | undefined;
-		mockOctoKitService.getCustomAgents = async (owner: string, repo: string, options?: CustomAgentListOptions) => {
+		mockOctoKitService.getCustomAgents = async (
+			owner: string,
+			repo: string,
+			options?: CustomAgentListOptions,
+		) => {
 			capturedOptions = options;
 			return [];
 		};
@@ -439,7 +488,7 @@ False flags prompt
 		mockOctoKitService.getCustomAgents = async () => {
 			apiCallCount++;
 			// Simulate slow API call - use real timer for this
-			await new Promise(resolve => {
+			await new Promise((resolve) => {
 				const realSetTimeout = globalThis.setTimeout;
 				realSetTimeout(resolve, 50);
 			});
@@ -497,7 +546,10 @@ name: Agent 1
 description: First agent
 ---
 Agent 1 prompt`;
-		prepopulateCache('testorg', new Map([['agent1.agent.md', agentContent]]));
+		prepopulateCache(
+			'testorg',
+			new Map([['agent1.agent.md', agentContent]]),
+		);
 
 		const provider = createProvider();
 		await waitForPolling();
@@ -506,7 +558,10 @@ Agent 1 prompt`;
 		// So the existing file cache is returned with the one successful agent
 		const cachedAgents = await provider.provideCustomAgents({}, {} as any);
 		assert.equal(cachedAgents.length, 1);
-		const cachedAgentName = cachedAgents[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const cachedAgentName = cachedAgents[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(cachedAgentName, 'agent1');
 	});
 
@@ -535,7 +590,10 @@ Agent 1 prompt`;
 		// After successful fetch, subsequent calls return from memory
 		const agents1 = await provider.provideCustomAgents({}, {} as any);
 		assert.equal(agents1.length, 1);
-		const agentName1 = agents1[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const agentName1 = agents1[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(agentName1, 'initial_agent');
 
 		// Even if API is updated, memory cache is used
@@ -559,7 +617,10 @@ Agent 1 prompt`;
 		// Memory cache returns old results without refetching
 		const agents2 = await provider.provideCustomAgents({}, {} as any);
 		assert.equal(agents2.length, 1);
-		const agentName2ForMemory = agents2[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const agentName2ForMemory = agents2[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(agentName2ForMemory, 'initial_agent');
 	});
 
@@ -590,8 +651,14 @@ Agent 1 prompt`;
 			},
 		];
 		mockOctoKitService.setCustomAgents(agents);
-		mockOctoKitService.setAgentDetails('agent1', { ...agents[0], prompt: 'Prompt 1' });
-		mockOctoKitService.setAgentDetails('agent2', { ...agents[1], prompt: 'Prompt 2' });
+		mockOctoKitService.setAgentDetails('agent1', {
+			...agents[0],
+			prompt: 'Prompt 1',
+		});
+		mockOctoKitService.setAgentDetails('agent2', {
+			...agents[1],
+			prompt: 'Prompt 2',
+		});
 
 		const provider = createProvider();
 		await waitForPolling();
@@ -606,8 +673,14 @@ Agent 1 prompt`;
 		// Memory cache still returns both agents (no refetch)
 		const cachedAgents2 = await provider.provideCustomAgents({}, {} as any);
 		assert.equal(cachedAgents2.length, 2);
-		const cachedAgent2Name1 = cachedAgents2[0].uri.path.split('/').pop()?.replace('.agent.md', '');
-		const cachedAgent2Name2 = cachedAgents2[1].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const cachedAgent2Name1 = cachedAgents2[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
+		const cachedAgent2Name2 = cachedAgents2[1].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(cachedAgent2Name1, 'agent1');
 		assert.equal(cachedAgent2Name2, 'agent2');
 	});
@@ -680,7 +753,10 @@ Agent 1 prompt`;
 		// Memory cache still returns the agent (no refetch)
 		const agents2 = await provider.provideCustomAgents({}, {} as any);
 		assert.equal(agents2.length, 1);
-		const temporaryAgentName = agents2[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const temporaryAgentName = agents2[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(temporaryAgentName, 'temporary_agent');
 	});
 
@@ -710,7 +786,11 @@ Agent 1 prompt`;
 		await provider.provideCustomAgents({}, {} as any);
 		await waitForPolling();
 
-		const content = await resourcesService.readCacheFile(PromptsType.agent, 'testorg', 'minimal_agent.agent.md');
+		const content = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'testorg',
+			'minimal_agent.agent.md',
+		);
 		assert.ok(content, 'Agent file should exist');
 
 		// Should have name and description, but no tools (empty array)
@@ -748,7 +828,11 @@ Agent 1 prompt`;
 		await provider.provideCustomAgents({}, {} as any);
 		await waitForPolling();
 
-		const content = await resourcesService.readCacheFile(PromptsType.agent, 'testorg', 'wildcard_agent.agent.md');
+		const content = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'testorg',
+			'wildcard_agent.agent.md',
+		);
 		assert.ok(content, 'Agent file should exist');
 
 		// Tools field should be excluded when it's just ['*']
@@ -771,10 +855,13 @@ description: A valid agent
 Valid prompt`;
 		// File without frontmatter - parser extracts name from filename, description is empty
 		const noFrontmatterContent = `Just some content without any frontmatter`;
-		prepopulateCache('testorg', new Map([
-			['valid_agent.agent.md', validContent],
-			['no_frontmatter.agent.md', noFrontmatterContent],
-		]));
+		prepopulateCache(
+			'testorg',
+			new Map([
+				['valid_agent.agent.md', validContent],
+				['no_frontmatter.agent.md', noFrontmatterContent],
+			]),
+		);
 
 		// Re-enable testorg for cache reading
 		mockOctoKitService.setUserOrganizations(['testorg']);
@@ -788,9 +875,15 @@ Valid prompt`;
 
 		// Parser is lenient - both agents are returned, one with empty description
 		assert.equal(agents.length, 2);
-		const validAgentName = agents[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const validAgentName = agents[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(validAgentName, 'valid_agent');
-		const noFrontmatterAgentName = agents[1].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const noFrontmatterAgentName = agents[1].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(noFrontmatterAgentName, 'no_frontmatter');
 	});
 
@@ -800,10 +893,17 @@ Valid prompt`;
 		const provider = createProvider();
 
 		// Set up multiple organizations - testorg is the default preferred org
-		mockOctoKitService.setUserOrganizations(['testorg', 'otherorg1', 'otherorg2']);
+		mockOctoKitService.setUserOrganizations([
+			'testorg',
+			'otherorg1',
+			'otherorg2',
+		]);
 
 		const capturedOrgs: string[] = [];
-		mockOctoKitService.getCustomAgents = async (owner: string, repo: string) => {
+		mockOctoKitService.getCustomAgents = async (
+			owner: string,
+			repo: string,
+		) => {
 			capturedOrgs.push(owner);
 			return [];
 		};
@@ -820,7 +920,8 @@ Valid prompt`;
 		const provider = createProvider();
 
 		// Agent with a very long description that would normally be wrapped at 80 characters
-		const longDescription = 'Just for fun agent that teaches computer science concepts (while pretending to plot world domination).';
+		const longDescription =
+			'Just for fun agent that teaches computer science concepts (while pretending to plot world domination).';
 		const mockAgent: CustomAgentListItem = {
 			name: 'world_domination',
 			repo_owner_id: 1,
@@ -843,7 +944,11 @@ Valid prompt`;
 		await provider.provideCustomAgents({}, {} as any);
 		await waitForPolling();
 
-		const content = await resourcesService.readCacheFile(PromptsType.agent, 'testorg', 'world_domination.agent.md');
+		const content = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'testorg',
+			'world_domination.agent.md',
+		);
 
 		const expectedContent = `---
 name: World Domination
@@ -884,7 +989,11 @@ You are a world-class computer scientist.
 		await provider.provideCustomAgents({}, {} as any);
 		await waitForPolling();
 
-		const content = await resourcesService.readCacheFile(PromptsType.agent, 'testorg', 'special_chars_agent.agent.md');
+		const content = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'testorg',
+			'special_chars_agent.agent.md',
+		);
 
 		const expectedContent = `---
 name: Special Chars Agent
@@ -900,7 +1009,8 @@ Test prompt with special characters
 		const provider = createProvider();
 
 		// Agent with description containing actual newline characters
-		const descriptionWithNewlines = 'First line of description.\nSecond line of description.\nThird line.';
+		const descriptionWithNewlines =
+			'First line of description.\nSecond line of description.\nThird line.';
 		const mockAgent: CustomAgentListItem = {
 			name: 'multiline_agent',
 			repo_owner_id: 1,
@@ -923,7 +1033,11 @@ Test prompt with special characters
 		await provider.provideCustomAgents({}, {} as any);
 		await waitForPolling();
 
-		const content = await resourcesService.readCacheFile(PromptsType.agent, 'testorg', 'multiline_agent.agent.md');
+		const content = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'testorg',
+			'multiline_agent.agent.md',
+		);
 
 		// Newlines should be escaped using double quotes to keep description on a single line
 		// (the custom YAML parser doesn't support multi-line strings)
@@ -942,7 +1056,9 @@ Test prompt
 
 		// Setup multiple organizations to ensure we have multiple steps
 		mockOctoKitService.setUserOrganizations(['org1', 'org2']);
-		mockOctoKitService.getOrganizationRepositories = async (org) => ['repo'];
+		mockOctoKitService.getOrganizationRepositories = async (org) => [
+			'repo',
+		];
 
 		// Mock getCustomAgents to simulate sign out after first org
 		let callCount = 0;
@@ -951,9 +1067,16 @@ Test prompt
 			callCount++;
 			if (callCount === 1) {
 				// Sign out user after first call
-				mockOctoKitService.getCurrentAuthedUser = async () => undefined as any;
+				mockOctoKitService.getCurrentAuthedUser = async () =>
+					undefined as any;
 			}
-			return originalGetCustomAgents.call(mockOctoKitService, owner, repo, options, {});
+			return originalGetCustomAgents.call(
+				mockOctoKitService,
+				owner,
+				repo,
+				options,
+				{},
+			);
 		};
 
 		await provider.provideCustomAgents({}, {} as any);
@@ -983,7 +1106,10 @@ Test prompt
 		};
 
 		// Mock getCustomAgents to return the same enterprise agent for both orgs
-		mockOctoKitService.getCustomAgents = async (owner: string, repo: string) => {
+		mockOctoKitService.getCustomAgents = async (
+			owner: string,
+			repo: string,
+		) => {
 			// Both orgs return the same enterprise agent (same repo_owner, repo_name, name, version)
 			return [enterpriseAgent];
 		};
@@ -1000,18 +1126,32 @@ Test prompt
 
 		// Should only have one agent, not two (deduped)
 		assert.equal(agents.length, 1);
-		const enterpriseAgentName = agents[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const enterpriseAgentName = agents[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(enterpriseAgentName, 'enterprise_agent');
 
 		// Verify it was only written to one org directory
 		// Check which org has the agent file
-		const orgAContent = await resourcesService.readCacheFile(PromptsType.agent, 'orga', 'enterprise_agent.agent.md');
-		const orgBContent = await resourcesService.readCacheFile(PromptsType.agent, 'orgb', 'enterprise_agent.agent.md');
+		const orgAContent = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'orga',
+			'enterprise_agent.agent.md',
+		);
+		const orgBContent = await resourcesService.readCacheFile(
+			PromptsType.agent,
+			'orgb',
+			'enterprise_agent.agent.md',
+		);
 		const orgAHasAgent = orgAContent !== undefined;
 		const orgBHasAgent = orgBContent !== undefined;
 
 		// Agent should be in exactly one org directory (the first one processed)
-		assert.ok(orgAHasAgent && !orgBHasAgent, 'Enterprise agent should only be cached in first org');
+		assert.ok(
+			orgAHasAgent && !orgBHasAgent,
+			'Enterprise agent should only be cached in first org',
+		);
 	});
 
 	test('deduplicates agents with same repo regardless of version', async () => {
@@ -1044,7 +1184,10 @@ Test prompt
 		};
 
 		let callCount = 0;
-		mockOctoKitService.getCustomAgents = async (owner: string, repo: string) => {
+		mockOctoKitService.getCustomAgents = async (
+			owner: string,
+			repo: string,
+		) => {
 			callCount++;
 			if (callCount === 1) {
 				// First org returns v1 and v2
@@ -1055,7 +1198,12 @@ Test prompt
 			}
 		};
 
-		mockOctoKitService.getCustomAgentDetails = async (owner: string, repo: string, agentName: string, version?: string) => {
+		mockOctoKitService.getCustomAgentDetails = async (
+			owner: string,
+			repo: string,
+			agentName: string,
+			version?: string,
+		) => {
 			if (version === 'v1.0') {
 				return { ...agentV1, prompt: 'Version 1 prompt' };
 			} else if (version === 'v2.0') {
@@ -1071,7 +1219,10 @@ Test prompt
 
 		// Different versions are deduplicated, only the first one is kept
 		assert.equal(agents.length, 1);
-		const versionedAgentName = agents[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const versionedAgentName = agents[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(versionedAgentName, 'versioned_agent');
 	});
 
@@ -1107,11 +1258,19 @@ Test prompt
 		};
 
 		// API returns both agents for single org (enterprise agents are included via includeSources)
-		mockOctoKitService.getCustomAgents = async (owner: string, repo: string) => {
+		mockOctoKitService.getCustomAgents = async (
+			owner: string,
+			repo: string,
+		) => {
 			return [orgAAgent, enterpriseAgent];
 		};
 
-		mockOctoKitService.getCustomAgentDetails = async (owner: string, repo: string, agentName: string, version?: string) => {
+		mockOctoKitService.getCustomAgentDetails = async (
+			owner: string,
+			repo: string,
+			agentName: string,
+			version?: string,
+		) => {
 			// The API is called with the repo_owner, not the org name
 			if (owner === 'testorg') {
 				return { ...orgAAgent, prompt: 'Org prompt' };
@@ -1129,7 +1288,10 @@ Test prompt
 		// Since both agents have the same name, only one file is written (last one wins)
 		// The filename is just `${agent.name}.agent.md`, so both would write to same file
 		assert.equal(agents.length, 1);
-		const agentName = agents[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const agentName = agents[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(agentName, 'shared_agent');
 	});
 
@@ -1162,7 +1324,10 @@ Test prompt
 		};
 
 		let callCount = 0;
-		mockOctoKitService.getCustomAgents = async (owner: string, repo: string) => {
+		mockOctoKitService.getCustomAgents = async (
+			owner: string,
+			repo: string,
+		) => {
 			callCount++;
 			// Return agents in different orders for different orgs
 			if (callCount === 1) {
@@ -1174,7 +1339,12 @@ Test prompt
 			}
 		};
 
-		mockOctoKitService.getCustomAgentDetails = async (owner: string, repo: string, agentName: string, version?: string) => {
+		mockOctoKitService.getCustomAgentDetails = async (
+			owner: string,
+			repo: string,
+			agentName: string,
+			version?: string,
+		) => {
 			if (agentName === 'enterprise_agent1') {
 				return { ...enterpriseAgent1, prompt: 'Prompt 1' };
 			} else if (agentName === 'enterprise_agent2') {
@@ -1192,8 +1362,13 @@ Test prompt
 		assert.equal(agents.length, 2);
 
 		// Verify both agent names are present
-		const agentNames = agents.map(a => a.uri.path.split('/').pop()?.replace('.agent.md', '')).sort();
-		assert.deepEqual(agentNames, ['enterprise_agent1', 'enterprise_agent2']);
+		const agentNames = agents
+			.map((a) => a.uri.path.split('/').pop()?.replace('.agent.md', ''))
+			.sort();
+		assert.deepEqual(agentNames, [
+			'enterprise_agent1',
+			'enterprise_agent2',
+		]);
 	});
 
 	test('deduplication key does not include version so different versions are deduplicated', async () => {
@@ -1222,7 +1397,12 @@ Test prompt
 			return [agentV1, agentV2];
 		};
 
-		mockOctoKitService.getCustomAgentDetails = async (owner: string, repo: string, agentName: string, version?: string) => {
+		mockOctoKitService.getCustomAgentDetails = async (
+			owner: string,
+			repo: string,
+			agentName: string,
+			version?: string,
+		) => {
 			if (version === 'v1.0') {
 				return { ...agentV1, prompt: 'Prompt for v1' };
 			} else if (version === 'v2.0') {
@@ -1238,13 +1418,15 @@ Test prompt
 
 		// Different versions are deduplicated, only the first one is kept
 		assert.equal(agents.length, 1);
-		const multiVersionAgentName = agents[0].uri.path.split('/').pop()?.replace('.agent.md', '');
+		const multiVersionAgentName = agents[0].uri.path
+			.split('/')
+			.pop()
+			?.replace('.agent.md', '');
 		assert.equal(multiVersionAgentName, 'multi_version_agent');
 	});
 });
 
 suite('looksLikeNumber', () => {
-
 	test('returns false for empty string', () => {
 		assert.strictEqual(looksLikeNumber(''), false);
 	});
@@ -1289,7 +1471,6 @@ suite('looksLikeNumber', () => {
 });
 
 suite('yamlString', () => {
-
 	test('returns plain string for simple text', () => {
 		const result = yamlString('hello');
 		assert.strictEqual(result, 'hello');
@@ -1301,7 +1482,6 @@ suite('yamlString', () => {
 	});
 
 	suite('quoting for special characters', () => {
-
 		test('quotes strings containing hash (comment)', () => {
 			const result = yamlString('value with # hash');
 			assert.ok(result instanceof Scalar);
@@ -1351,7 +1531,6 @@ suite('yamlString', () => {
 	});
 
 	suite('quoting for values starting with quotes', () => {
-
 		test('quotes strings starting with single quote', () => {
 			const result = yamlString(`'quoted value`);
 			assert.ok(result instanceof Scalar);
@@ -1366,7 +1545,6 @@ suite('yamlString', () => {
 	});
 
 	suite('quoting for whitespace', () => {
-
 		test('quotes strings with leading space', () => {
 			const result = yamlString(' leading space');
 			assert.ok(result instanceof Scalar);
@@ -1381,7 +1559,6 @@ suite('yamlString', () => {
 	});
 
 	suite('quoting for YAML keywords', () => {
-
 		test('quotes "true" to preserve as string', () => {
 			const result = yamlString('true');
 			assert.ok(result instanceof Scalar);
@@ -1418,7 +1595,6 @@ suite('yamlString', () => {
 	});
 
 	suite('quoting for numeric strings', () => {
-
 		test('quotes integer strings', () => {
 			const result = yamlString('123');
 			assert.ok(result instanceof Scalar);
@@ -1444,7 +1620,6 @@ suite('yamlString', () => {
 	});
 
 	suite('quote type selection', () => {
-
 		test('uses single quotes by default when quoting', () => {
 			const result = yamlString('value with # hash');
 			assert.ok(result instanceof Scalar);
@@ -1537,6 +1712,9 @@ suite('yamlString round-trip with custom YAML parser', () => {
 
 	test('round-trips string with single quotes and special chars', () => {
 		// When both single quote and special char are present, double quotes are used
-		assert.strictEqual(roundTrip(`it's a value: with colon`), `it's a value: with colon`);
+		assert.strictEqual(
+			roundTrip(`it's a value: with colon`),
+			`it's a value: with colon`,
+		);
 	});
 });

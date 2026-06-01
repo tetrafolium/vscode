@@ -16,14 +16,17 @@ class GitConfigParser {
 	private static readonly _lineSeparator = /\r?\n/;
 
 	private static readonly _propertyRegex = /^\s*(\w+)\s*=\s*"?([^"]+)"?$/;
-	private static readonly _sectionRegex = /^\s*\[\s*([^\]]+?)\s*(\"[^"]+\")*\]\s*$/;
+	private static readonly _sectionRegex =
+		/^\s*\[\s*([^\]]+?)\s*(\"[^"]+\")*\]\s*$/;
 
 	static parse(raw: string): GitConfigSection[] {
 		const config: { sections: GitConfigSection[] } = { sections: [] };
 		let section: GitConfigSection = { name: 'DEFAULT', properties: {} };
 
 		const addSection = (section?: GitConfigSection) => {
-			if (!section) { return; }
+			if (!section) {
+				return;
+			}
 			config.sections.push(section);
 		};
 
@@ -32,14 +35,21 @@ class GitConfigParser {
 			const sectionMatch = line.match(GitConfigParser._sectionRegex);
 			if (sectionMatch?.length === 3) {
 				addSection(section);
-				section = { name: sectionMatch[1], subSectionName: sectionMatch[2]?.replaceAll('"', ''), properties: {} };
+				section = {
+					name: sectionMatch[1],
+					subSectionName: sectionMatch[2]?.replaceAll('"', ''),
+					properties: {},
+				};
 
 				continue;
 			}
 
 			// Property
 			const propertyMatch = line.match(GitConfigParser._propertyRegex);
-			if (propertyMatch?.length === 3 && !Object.keys(section.properties).includes(propertyMatch[1])) {
+			if (
+				propertyMatch?.length === 3 &&
+				!Object.keys(section.properties).includes(propertyMatch[1])
+			) {
 				section.properties[propertyMatch[1]] = propertyMatch[2];
 			}
 		}
@@ -53,13 +63,17 @@ class GitConfigParser {
 export function parseGitRemotes(raw: string): Remote[] {
 	const remotes: Remote[] = [];
 
-	for (const remoteSection of GitConfigParser.parse(raw).filter(s => s.name === 'remote')) {
+	for (const remoteSection of GitConfigParser.parse(raw).filter(
+		(s) => s.name === 'remote',
+	)) {
 		if (remoteSection.subSectionName) {
 			remotes.push({
 				name: remoteSection.subSectionName,
 				fetchUrl: remoteSection.properties['url'],
-				pushUrl: remoteSection.properties['pushurl'] ?? remoteSection.properties['url'],
-				isReadOnly: false
+				pushUrl:
+					remoteSection.properties['pushurl'] ??
+					remoteSection.properties['url'],
+				isReadOnly: false,
 			});
 		}
 	}
@@ -82,10 +96,14 @@ export interface GitUriOptions {
 // As a mitigation for extensions like ESLint showing warnings and errors
 // for git URIs, let's change the file extension of these uris to .git,
 // when `replaceFileExtension` is true.
-export function toGitUri(uri: vscode.Uri, ref: string, options: GitUriOptions = {}): vscode.Uri {
+export function toGitUri(
+	uri: vscode.Uri,
+	ref: string,
+	options: GitUriOptions = {},
+): vscode.Uri {
 	const params: GitUriParams = {
 		path: uri.fsPath,
-		ref
+		ref,
 	};
 
 	if (options.submoduleOf) {
@@ -100,5 +118,9 @@ export function toGitUri(uri: vscode.Uri, ref: string, options: GitUriOptions = 
 		path = `${path}.diff`;
 	}
 
-	return uri.with({ scheme: options.scheme ?? 'git', path, query: JSON.stringify(params) });
+	return uri.with({
+		scheme: options.scheme ?? 'git',
+		path,
+		query: JSON.stringify(params),
+	});
 }

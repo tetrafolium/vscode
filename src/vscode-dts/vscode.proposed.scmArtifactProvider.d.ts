@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-declare module 'vscode' {
+declare module "vscode" {
 	// https://github.com/microsoft/vscode/issues/253665
 
 	export interface SourceControl {
@@ -13,8 +13,13 @@ declare module 'vscode' {
 	export interface SourceControlArtifactProvider {
 		readonly onDidChangeArtifacts: Event<string[]>;
 
-		provideArtifactGroups(token: CancellationToken): ProviderResult<SourceControlArtifactGroup[]>;
-		provideArtifacts(group: string, token: CancellationToken): ProviderResult<SourceControlArtifact[]>;
+		provideArtifactGroups(
+			token: CancellationToken,
+		): ProviderResult<SourceControlArtifactGroup[]>;
+		provideArtifacts(
+			group: string,
+			token: CancellationToken,
+		): ProviderResult<SourceControlArtifact[]>;
 	}
 
 	export interface SourceControlArtifactGroup {
